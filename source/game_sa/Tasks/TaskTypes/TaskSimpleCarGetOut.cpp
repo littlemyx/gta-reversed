@@ -91,7 +91,7 @@ auto CTaskSimpleCarGetOut::ComputeAnimID() -> std::pair<AssocGroupId, AnimationI
                 case TARGET_DOOR_REAR_LEFT:
                     return ANIM_ID_DEFAULT_CAR_CRAWLOUTRHS_0;
                 default:
-                    NOTSA_UNREACHABLE();
+                    NOTSA_UNREACHABLE_RET(ANIM_ID_DEFAULT_CAR_CRAWLOUTRHS_1);
                 }
             }()
         };
@@ -108,7 +108,7 @@ auto CTaskSimpleCarGetOut::ComputeAnimID() -> std::pair<AssocGroupId, AnimationI
         case TARGET_DOOR_REAR_LEFT:
             return ANIM_ID_CAR_GETOUT_LHS_1;
         default:
-            NOTSA_UNREACHABLE();
+            NOTSA_UNREACHABLE_RET(ANIM_ID_CAR_GETOUT_RHS_0);
         }
     }();
     return { m_veh->GetAnimGroup().GetGroup(animId), animId };

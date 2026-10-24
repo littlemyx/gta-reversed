@@ -37,4 +37,4 @@ public:
 
     friend auto TransformObject(const CSphere& sp, const CMatrix& transform) -> CSphere;
 };
-VALIDATE_SIZE(CSphere, 0x10);
+VALIDATE_SIZE_FILE(CSphere, 0x10);

@@ -1,6 +1,6 @@
 #include "StdInc.h"
 
-#ifdef NOTSA_STANDALONE_RUN
+#if defined(NOTSA_STANDALONE_RUN) && !defined(NOTSA_PORTABLE) // (portable build: see the #elif at the end of the file)
 #include <atomic>
 #include <crtdbg.h>
 #include <float.h>
@@ -290,6 +290,101 @@ void InstallDiagnostics() {
     _CrtSetReportHook(CrtReportHook);
     _CrtSetReportHookW2(_CRT_RPTHOOK_INSTALL, CrtReportHookW);
 #endif
+}
+} // namespace Fixups
+} // namespace notsa::standalone
+#elif defined(NOTSA_STANDALONE_RUN) // NOTSA_PORTABLE (GTASA_PORTABLE, preset PortableMac, slice A-1 of .notes/STREAM_C_PLAN.md)
+// The Win32 / SEH / CRT-debug diagnostics above are Windows-only. The portable build keeps the API of Fixups.h (Log, Fatal, ...), implemented with the C++ standard
+// library only: lines go to stderr and to `standalone.log` in the working directory (NOTSA_STANDALONE_LOG=<path> overrides). No x87, no process-wide exception filter.
+#include <atomic>
+#include <csignal>
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
+#include <exception>
+#include <mutex>
+#include "Fixups.h"
+
+namespace notsa::standalone {
+namespace {
+std::mutex& LogMutex() {
+    // Never destroyed (MAC-W2): Log is also called from std::atexit handlers (OnAtExit) and static destructors; a function-local `static std::mutex`
+    // constructed on the first Log (after atexit(OnAtExit) was registered) is destroyed BEFORE those run, and libc++'s try_lock on a destroyed mutex throws
+    // std::system_error inside the exit sequence -> terminate -> abort (exit 139 after cmd:quit).
+    static std::mutex* const s_Mutex = new std::mutex;
+    return *s_Mutex;
+}
+void OnAtExit() { Fixups::Log("atexit handler ran (exit() or normal return from main)"); }
+void OnTerminate() {
+    Fixups::Log("std::terminate called");
+    std::abort();
+}
+} // namespace
+
+namespace Fixups {
+void Log(const char* fmt, ...) {
+    char line[1100];
+    va_list va;
+    va_start(va, fmt);
+    const int n = std::vsnprintf(line, sizeof(line), fmt, va);
+    va_end(va);
+    if (n < 0) {
+        return;
+    }
+    const std::lock_guard lock{ LogMutex() };
+    std::fprintf(stderr, "%s\n", line);
+    const char* path = std::getenv("NOTSA_STANDALONE_LOG");
+    if (std::FILE* f = std::fopen(path ? path : "standalone.log", "ab")) {
+        std::fprintf(f, "%s\n", line);
+        std::fclose(f);
+    }
+}
+
+void LogFpuState(const char* where) {
+    Log("FPU[%s]: portable build (no x87 precision control; float semantics come from the compiler flags)", where);
+}
+
+void LogGameStateTrace(int, unsigned long, unsigned long, unsigned long) { /* Windows run build diagnostics only */ }
+
+void PoolBadDelete(const void* pool, const void* obj, const void* storage, unsigned capacity, unsigned objSize, const void* caller) {
+    Log("POOLBAD: Delete(%p) outside pool %p [storage %p, %u x 0x%X]; caller %p", obj, pool, storage, capacity, objSize, caller);
+}
+
+// NOTSA_UNREACHABLE in the run build: log each site once (first 512 distinct sites) and continue (see Base.h)
+void UnreachableHit(const char* fn, const char* file, int line) {
+    struct Site { const char* File; int Line; };
+    static Site s_seen[512];
+    static int  s_n;
+    bool known = false;
+    {
+        const std::lock_guard lock{ LogMutex() };
+        for (int i = 0; i < s_n && !known; i++) {
+            known = s_seen[i].File == file && s_seen[i].Line == line;
+        }
+        if (!known && s_n < 512) {
+            s_seen[s_n++] = { file, line };
+        } else {
+            known = true; // table full: stay silent
+        }
+    }
+    if (!known) {
+        Log("UNREACHABLE hit: %s (%s:%d)", fn, file, line);
+    }
+}
+
+[[noreturn]] void Fatal(const char* fmt, ...) {
+    char msg[1024];
+    va_list va;
+    va_start(va, fmt);
+    std::vsnprintf(msg, sizeof(msg), fmt, va);
+    va_end(va);
+    Log("FATAL: %s", msg);
+    std::abort();
+}
+
+void InstallDiagnostics() {
+    std::atexit(OnAtExit);
+    std::set_terminate(OnTerminate);
 }
 } // namespace Fixups
 } // namespace notsa::standalone

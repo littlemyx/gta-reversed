@@ -33,8 +33,8 @@ using namespace notsa::script::commands::ported::g25_26;
 */
 
 namespace {
-static_assert(offsetof(CVehicle, m_fHealth) == 0x4C0);
-static_assert(offsetof(CPlayerInfo, m_PlayerData) + offsetof(CPlayerPedData, m_nModelIndexOfLastBuildingShot) == 0xA0);
+VALIDATE_OFFSET(CVehicle, m_fHealth, 0x4C0);
+VALIDATE_LAYOUT(offsetof(CPlayerInfo, m_PlayerData) + offsetof(CPlayerPedData, m_nModelIndexOfLastBuildingShot) == 0xA0);
 static_assert(offsetof(tUsedObject, nModelIndex) == 0x18 && sizeof(tUsedObject) == 0x1C);
 
 //! 2602 IS_THIS_HELP_MESSAGE_BEING_DISPLAYED (case @0x479E75): text label (8) => compare flag. No CollectParameters.
@@ -123,12 +123,12 @@ OpcodeResult GetRandomCharInAreaOffsetNoSave(CRunningScript& S) {
     S.CollectParameters(6);
     const float x = ScriptParams[0].fParam, y = ScriptParams[1].fParam, z = ScriptParams[2].fParam;
     const float dx = ScriptParams[3].fParam, dy = ScriptParams[4].fParam, dz = ScriptParams[5].fParam;
-    const float minX = (float)((double)x - (double)dx);
-    const float minY = (float)((double)y - (double)dy);
-    const float minZ = (float)((double)z - (double)dz);
-    const float maxX = (float)((double)dx + (double)x);
-    const float maxY = (float)((double)dy + (double)y);
-    const float maxZ = (float)((double)dz + (double)z);
+    const float minX = (float)((x87d)x - (x87d)dx);
+    const float minY = (float)((x87d)y - (x87d)dy);
+    const float minZ = (float)((x87d)z - (x87d)dz);
+    const float maxX = (float)((x87d)dx + (x87d)x);
+    const float maxY = (float)((x87d)dy + (x87d)y);
+    const float maxZ = (float)((x87d)dz + (x87d)z);
 
     int32 result = -1;
     for (auto i = GetPedPool()->GetSize(); i-- > 0;) {

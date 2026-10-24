@@ -55,23 +55,23 @@ using namespace notsa::script::commands::ported::g24;
 // Raw offsets the exe uses directly in these cases
 static_assert(offsetof(CPad, bDisablePlayerCycleWeapon) == 0x11D && offsetof(CPad, bDisablePlayerDisplayVitalStats) == 0x11F);
 static_assert(sizeof(CPad) == 0x134); // CPad::GetPad (0x53FB70): 0xB73458 + id * 0x134
-static_assert(offsetof(CTaskSimpleSwim, m_nSwimState) == 0xA);
-static_assert(offsetof(CPhysical, m_pEntityIgnoredCollision) == 0x128);
-static_assert(offsetof(CVehicle, vehicleFlags) == 0x428);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_ObstructingEntity) == 0x420);
-static_assert(offsetof(CVehicle, m_nDoorLock) == 0x4F8);
-static_assert(offsetof(CTrain, m_nTrainFlags) + 1 == 0x5B9);
-static_assert(offsetof(CVehicleModelInfo, m_nNumColorVariations) == 0x2D0);
-static_assert(offsetof(CVehicleModelInfo, m_nHandlingId) == 0x4A);
+VALIDATE_OFFSET(CTaskSimpleSwim, m_nSwimState, 0xA);
+VALIDATE_OFFSET(CPhysical, m_pEntityIgnoredCollision, 0x128);
+VALIDATE_OFFSET(CVehicle, vehicleFlags, 0x428);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_ObstructingEntity) == 0x420);
+VALIDATE_OFFSET(CVehicle, m_nDoorLock, 0x4F8);
+VALIDATE_LAYOUT(offsetof(CTrain, m_nTrainFlags) + 1 == 0x5B9);
+VALIDATE_OFFSET(CVehicleModelInfo, m_nNumColorVariations, 0x2D0);
+VALIDATE_OFFSET(CVehicleModelInfo, m_nHandlingId, 0x4A);
 static_assert(sizeof(tHandlingData) == 0xE0 && offsetof(cHandlingDataMgr, m_aVehicleHandling) == 0x14);
 static_assert(offsetof(tHandlingData, m_nHandlingFlags) == 0xD0);
-static_assert(offsetof(CPlayerInfo, m_pPed) == 0 && sizeof(CPlayerInfo) == 0x190); // Players[PlayerInFocus] @0xB7CD98 + id * 0x190
-static_assert(sizeof(tScriptEffectSystem) == 8 && offsetof(tScriptEffectSystem, m_pFxSystem) == 4);
+VALIDATE_OFFSET(CPlayerInfo, m_pPed, 0); VALIDATE_SIZE(CPlayerInfo, 0x190); // Players[PlayerInFocus] @0xB7CD98 + id * 0x190
+VALIDATE_SIZE(tScriptEffectSystem, 8); VALIDATE_OFFSET(tScriptEffectSystem, m_pFxSystem, 4);
 static_assert(SCRIPT_THING_EFFECT_SYSTEM == 1 && SCRIPT_THING_FIRE == 5 && SCRIPT_THING_DECISION_MAKER == 7);
 static_assert(MISSION_CLEANUP_ENTITY_TYPE_PARTICLE == 4 && MISSION_CLEANUP_ENTITY_TYPE_DECISION_MAKER == 9 && RESOURCE_TYPE_DECISION_MAKER == 3);
 static_assert(TASK_SECONDARY_FACIAL_COMPLEX == 3 && (int32)eFacialExpression::NONE == -1 && (int32)eFacialExpression::TALKING == 7);
 static_assert(CMenuSystem::MENU_TYPE_GRID == 1);
-static_assert(offsetof(CRunningScript, m_UsesMissionCleanup) == 0xC6);
+VALIDATE_OFFSET(CRunningScript, m_UsesMissionCleanup, 0xC6);
 static_assert(sizeof(CDecisionMaker) == 0x99C);
 static_assert(offsetof(CDecisionMakerTypes, m_DecisionMakers) == 4);
 static_assert(offsetof(CDecisionMakerTypes, m_DefaultMissionPedDecisionMaker) == 0xCB50);
@@ -116,7 +116,7 @@ void SetEntryExitFlagByName(const char* name, uint16 flag, bool enable) {
 
 //! 0x4082C0 (`CVector::Magnitude`): the sum of squares and the square root stay in extended precision
 double MagnitudeOriginal(const CVector& v) {
-    return std::sqrt(((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z);
+    return std::sqrt(((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z);
 }
 
 //! 2400 SET_PLAYER_DISPLAY_VITAL_STATS_BUTTON (case @0x47803E): pad, enable  -- CPad::GetPad(pad)->bDisablePlayerDisplayVitalStats (+0x11F) = (enable == 0)
@@ -133,15 +133,15 @@ void SetCharKeepTask(CPed& ped, int32 flag) {
 //! Same as CREATE_MENU (2260) but with the grid menu type (1). x = x * (maximumWidth * 1/640) [0x859520], width = width * (maximumWidth * 1/640),
 //! y = y * (maximumHeight * 1/448) [0x859524] (all x87, stored as float)
 OpcodeResult CreateMenuGrid(CRunningScript& S) {
-    static_assert(offsetof(RsGlobalType, maximumWidth) == 4 && offsetof(RsGlobalType, maximumHeight) == 8); // 0xC17044 / 0xC17048
+    VALIDATE_OFFSET(RsGlobalType, maximumWidth, 4); VALIDATE_OFFSET(RsGlobalType, maximumHeight, 8); // 0xC17044 / 0xC17048
     char title[16]{};
     ReadMenuText(S, title);
     S.CollectParameters(7);
-    const double widthScale  = (double)RsGlobal.maximumWidth * (double)SCREEN_RECIPROCAL_X; // 0x859520
-    const double heightScale = (double)RsGlobal.maximumHeight * (double)SCREEN_RECIPROCAL_Y; // 0x859524
-    const float  x           = (float)((double)ScriptParams[0].fParam * widthScale);
-    const float  w           = (float)(widthScale * (double)ScriptParams[2].fParam);
-    const float  y           = (float)(heightScale * (double)ScriptParams[1].fParam);
+    const x87d widthScale  = (x87d)RsGlobal.maximumWidth * (x87d)SCREEN_RECIPROCAL_X; // 0x859520
+    const x87d heightScale = (x87d)RsGlobal.maximumHeight * (x87d)SCREEN_RECIPROCAL_Y; // 0x859524
+    const float  x           = (float)((x87d)ScriptParams[0].fParam * widthScale);
+    const float  w           = (float)(widthScale * (x87d)ScriptParams[2].fParam);
+    const float  y           = (float)(heightScale * (x87d)ScriptParams[1].fParam);
     const auto   id          = CMenuSystem::CreateNewMenu(
         CMenuSystem::MENU_TYPE_GRID,
         title,

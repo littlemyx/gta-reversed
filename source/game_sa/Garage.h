@@ -91,7 +91,7 @@ public:
     void Clear() { m_wModelIndex = 0; }
     bool HasCar() const { return m_wModelIndex != 0; }
 };
-VALIDATE_SIZE(CStoredCar, 0x40);
+VALIDATE_SIZE_FILE(CStoredCar, 0x40);
 
 class CGarage {
 public:
@@ -205,4 +205,4 @@ struct CSaveGarage {
     void CopyGarageOutOfSaveGarage(CGarage& garage) const;
 };
 
-VALIDATE_SIZE(CSaveGarage, 0x50);
+VALIDATE_SIZE_FILE(CSaveGarage, 0x50);

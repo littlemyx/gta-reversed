@@ -3,7 +3,7 @@
 #include "RealTimeShadowManager.h"
 #include "Shadows.h"
 
-NOTSA_GLOBAL(g_realTimeShadowMan, 0xC40350, (CRealTimeShadowManager), {}); static_assert(sizeof(g_realTimeShadowMan) == 84);
+NOTSA_GLOBAL(g_realTimeShadowMan, 0xC40350, (CRealTimeShadowManager), {}); VALIDATE_SIZE(g_realTimeShadowMan, 84);
 
 void CRealTimeShadowManager::InjectHooks() {
     RH_ScopedClass(CRealTimeShadowManager);

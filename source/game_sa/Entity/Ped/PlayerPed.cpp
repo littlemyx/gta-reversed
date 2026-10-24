@@ -131,7 +131,7 @@ struct CPlayerPedDataSaveStructure {
     // float          Multiplier{}; // Mobile
 };
 
-VALIDATE_SIZE(CPlayerPedDataSaveStructure, 0x84 /* + 0x4 */);
+VALIDATE_SIZE_FILE(CPlayerPedDataSaveStructure, 0x84 /* + 0x4 */);
 
 // 0x5D46E0
 bool CPlayerPed::Load() {
@@ -161,7 +161,7 @@ bool CPlayerPed::Save() {
     saveData.ClothesDesc  = *GetPlayerData()->m_pPedClothesDesc;
 
     CPed::Save();
-    CGenericGameStorage::SaveDataToWorkBuffer(sizeof(CPlayerPedDataSaveStructure));
+    CGenericGameStorage::SaveDataToWorkBuffer<uint32>(sizeof(CPlayerPedDataSaveStructure));
     CGenericGameStorage::SaveDataToWorkBuffer(saveData);
 
     return true;
@@ -170,7 +170,7 @@ bool CPlayerPed::Save() {
 // 0x6093B0 (the scalar deleting destructor in the vtable is 0x60A9A0). Missing until VT-OVERRIDES: the standalone ran CPed's only, so deleting a player ped leaked
 // the two melee-anim block references (CAnimManager::RemoveAnimBlockRef) and the player's ped group (CPedGroups::RemoveGroup)
 CPlayerPed::~CPlayerPed() {
-    static_assert(offsetof(CPlayerPedData, m_nMeleeWeaponAnimReferenced) == 0x48 && offsetof(CPlayerPedData, m_nMeleeWeaponAnimReferencedExtra) == 0x4C && offsetof(CPlayerPedData, m_nPlayerGroup) == 0x38);
+    VALIDATE_OFFSET(CPlayerPedData, m_nMeleeWeaponAnimReferenced, 0x48); VALIDATE_OFFSET(CPlayerPedData, m_nMeleeWeaponAnimReferencedExtra, 0x4C); VALIDATE_OFFSET(CPlayerPedData, m_nPlayerGroup, 0x38);
     if (const auto ref = m_pPlayerData->m_nMeleeWeaponAnimReferenced) {
         CAnimManager::RemoveAnimBlockRef(CAnimManager::GetAnimationBlockIndex((AssocGroupId)ref));
         m_pPlayerData->m_nMeleeWeaponAnimReferenced = 0;
@@ -897,27 +897,27 @@ float CPlayerPed::ControlButtonSprint(eSprintType sprintType) {
                     : nullptr;
 
     const auto& set = PLAYER_SPRINT_SET[sprintType];
-    const double ts = CTimer::GetTimeStep();
+    const x87d ts = CTimer::GetTimeStep();
 
     const bool canSprint = !pd->m_bPlayerSprintDisabled && (pd->m_fMoveSpeed > 0.0f || pd->m_fTimeCanRun > 0.0f);
 
     if (pad->SprintJustDown() && canSprint) { // 0x5407F0
         // The original keeps the sum in extended precision (and compares it as such)
-        const double sum = (double)set.field_0 + (double)pd->m_fMoveSpeed;
+        const x87d sum = (x87d)set.field_0 + (x87d)pd->m_fMoveSpeed;
         pd->m_fMoveSpeed = set.field_10 < sum ? set.field_10 : (float)sum;
     } else if (pad->GetSprint() && canSprint) { // 0x5407A0
-        const double val = (double)pd->m_fMoveSpeed - ts * (double)set.field_4;
+        const x87d val = (x87d)pd->m_fMoveSpeed - ts * (x87d)set.field_4;
         pd->m_fMoveSpeed = 1.0f > val ? 1.0f : (float)val;
     } else if (pd->m_fMoveSpeed > 0.0f) {
-        const double val = (double)pd->m_fMoveSpeed - ts * (double)set.field_8;
+        const x87d val = (x87d)pd->m_fMoveSpeed - ts * (x87d)set.field_8;
         pd->m_fMoveSpeed = 0.0f > val ? 0.0f : (float)val;
     }
 
     float  progress;
     float  energyRate;
-    double progressD;
+    x87d progressD;
     if (pd->m_fMoveSpeed > set.field_C) {
-        progressD  = (double)pd->m_fMoveSpeed / (double)set.field_C;
+        progressD  = (x87d)pd->m_fMoveSpeed / (x87d)set.field_C;
         progress   = (float)progressD;
         energyRate = set.field_18;
         if (!(progressD > 0.0)) {
@@ -936,8 +936,8 @@ float CPlayerPed::ControlButtonSprint(eSprintType sprintType) {
         return 0.0f;
     }
 
-    const double excess = (double)progress - 1.0;
-    return (float)((0.0 > excess ? 0.0 : excess) * (double)set.field_1C + 1.0);
+    const x87d excess = (x87d)progress - (x87d)1.0;
+    return (float)(((x87d)0.0 > excess ? (x87d)0.0 : excess) * (x87d)set.field_1C + (x87d)1.0);
 }
 
 // 0x60A820
@@ -947,8 +947,8 @@ float CPlayerPed::GetButtonSprintResults(eSprintType sprintType) {
         return moveSpeed > 0.0f ? 1.0f : 0.0f;
     }
     // The original keeps the intermediate results in extended precision, hence `double`
-    const auto progress = std::max(0.0, (double)moveSpeed / (double)PLAYER_SPRINT_THRESHOLD - 1.0);
-    return (float)(progress * (double)PLAYER_SPRINT_SET[sprintType].field_1C + 1.0);
+    const auto progress = std::max((x87d)0.0, (x87d)moveSpeed / (x87d)PLAYER_SPRINT_THRESHOLD - (x87d)1.0);
+    return (float)(progress * (x87d)PLAYER_SPRINT_SET[sprintType].field_1C + (x87d)1.0);
 }
 
 // 0x60A8A0
@@ -1060,7 +1060,7 @@ void CPlayerPed::SetRealMoveAnim() {
                     turn = CAnimManager::BlendAnimation(clump, ANIM_GROUP_DEFAULT, ANIM_ID_TURN_R, 16.f);
                 }
             }
-            turn->m_Speed = (float)(std::abs((double)GetPadFromPlayer()->AimWeaponLeftRight(nullptr)) * 1.0 * 0.0078125);
+            turn->m_Speed = (float)(std::abs((x87d)GetPadFromPlayer()->AimWeaponLeftRight(nullptr)) * (x87d)1.0 * (x87d)0.0078125);
 
             if (idle && idle->m_BlendAmount <= 0.01f) {
                 delete idle;
@@ -1143,7 +1143,7 @@ void CPlayerPed::SetRealMoveAnim() {
     if (walkStart) { // 0x60AFED
         // NOTE: x87 keeps the sum in extended precision
         if (!IsPlaying(walkStart)
-            || (double)walkStart->m_BlendHier->m_fTotalTime <= (double)walkStart->m_TimeStep + (double)walkStart->m_CurrentTime
+            || (double)walkStart->m_BlendHier->m_fTotalTime <= (x87d)walkStart->m_TimeStep + (x87d)walkStart->m_CurrentTime
         ) {
             delete walkStart;
             walk->m_Flags |= ANIMATION_IS_PLAYING;
@@ -1168,7 +1168,7 @@ void CPlayerPed::SetRealMoveAnim() {
             }
         } else if (pd->m_fMoveBlendRatio < 0.4f) { // 0x60B0EE
             // NOTE: x87 division in extended precision
-            const auto stopAnimId = ((double)sprint->m_CurrentTime / (double)sprint->m_BlendHier->m_fTotalTime < 0.5)
+            const auto stopAnimId = ((x87d)sprint->m_CurrentTime / (x87d)sprint->m_BlendHier->m_fTotalTime < 0.5)
                 ? ANIM_ID_RUN_STOP
                 : ANIM_ID_RUN_STOPR;
             auto* const stop = CAnimManager::AddAnimation(clump, ANIM_GROUP_DEFAULT, stopAnimId);
@@ -1213,7 +1213,7 @@ void CPlayerPed::SetRealMoveAnim() {
                 if (run->m_BlendDelta <= 0.f) {
                     run = CAnimManager::BlendAnimation(clump, m_nAnimGroup, ANIM_ID_RUN, 4.f);
                 }
-                pd->m_fMoveBlendRatio = (float)((double)run->m_BlendDelta + 1.0);
+                pd->m_fMoveBlendRatio = (float)((x87d)run->m_BlendDelta + (x87d)1.0);
                 goto tail;
             }
             sprint = CAnimManager::BlendAnimation(clump, m_nAnimGroup, ANIM_ID_SPRINT, 2.f); // 0x60B2A6
@@ -1236,8 +1236,8 @@ void CPlayerPed::SetRealMoveAnim() {
         m_nMoveState = PEDMOVE_WALK;
     } else if (pd->m_fMoveBlendRatio < 2.f) { // 0x60B330
         // NOTE: x87 - single rounding on the store
-        walk->m_BlendAmount = (float)(2.0 - (double)pd->m_fMoveBlendRatio);
-        run->m_BlendAmount  = (float)((double)pd->m_fMoveBlendRatio - 1.0);
+        walk->m_BlendAmount = (float)((x87d)2.0 - (x87d)pd->m_fMoveBlendRatio);
+        run->m_BlendAmount  = (float)((x87d)pd->m_fMoveBlendRatio - (x87d)1.0);
         walk->m_BlendDelta  = 0.f;
         run->m_BlendDelta   = 0.f;
         m_nMoveState = PEDMOVE_RUN;
@@ -1360,28 +1360,28 @@ void CPlayerPed::Compute3rdPersonMouseTarget(bool meleeWeapon) {
             dest   = cam.m_vecFront;
 
             // NOTE: The original keeps all of the intermediate values in x87 registers (extended precision)
-            const double dx = (double)source.x - (double)pos.x;
-            const double dy = (double)source.y - (double)pos.y;
-            const double dz = (double)source.z - (double)pos.z;
+            const x87d dx = (x87d)source.x - (x87d)pos.x;
+            const x87d dy = (x87d)source.y - (x87d)pos.y;
+            const x87d dz = (x87d)source.z - (x87d)pos.z;
 
             // Distance of the camera in front of the ped (along the camera's direction)
-            const double d = ((double)dest.y * dy + (double)dest.z * dz) + dx * (double)dest.x;
+            const x87d d = ((x87d)dest.y * dy + (x87d)dest.z * dz) + dx * (x87d)dest.x;
             if (d < 0.0) {
                 // Move the source to the plane of the ped
-                const double ax = d * (double)dest.x;
-                const double ay = (double)dest.y * d;
-                const double az = (double)dest.z * d;
-                source.x = (float)((double)source.x - ax);
-                source.y = (float)((double)source.y - ay);
-                source.z = (float)((double)source.z - az);
+                const x87d ax = d * (x87d)dest.x;
+                const x87d ay = (x87d)dest.y * d;
+                const x87d az = (x87d)dest.z * d;
+                source.x = (float)((x87d)source.x - ax);
+                source.y = (float)((x87d)source.y - ay);
+                source.z = (float)((x87d)source.z - az);
             }
 
-            const double fx = (double)dest.x * (double)range;
-            const double fy = (double)dest.y * (double)range;
-            const float  fz = (float)((double)dest.z * (double)range); // This one is stored to memory before use
-            dest.x = (float)((double)source.x + fx);
-            dest.y = (float)(fy + (double)source.y);
-            dest.z = (float)((double)fz + (double)source.z);
+            const x87d fx = (x87d)dest.x * (x87d)range;
+            const x87d fy = (x87d)dest.y * (x87d)range;
+            const float  fz = (float)((x87d)dest.z * (x87d)range); // This one is stored to memory before use
+            dest.x = (float)((x87d)source.x + fx);
+            dest.y = (float)(fy + (x87d)source.y);
+            dest.z = (float)((x87d)fz + (x87d)source.z);
         }
 
         CColPoint colPoint;
@@ -1463,33 +1463,33 @@ void CPlayerPed::DrawTriangleForMouseRecruitPed() {
     // The x87 code keeps all of the following intermediates in extended precision, hence `double`
 
     // Health bar color: red (low health) => green (full health)
-    double healthRatio = (double)target->m_fHealth / (double)target->m_fMaxHealth;
+    x87d healthRatio = (x87d)target->m_fHealth / (x87d)target->m_fMaxHealth;
     if (healthRatio > 1.0) { // NOTE: NaN doesn't take this branch
-        healthRatio = 1.0;
+        healthRatio = (x87d)1.0;
     }
     uint8 colR{}, colG{}, colB{};
     if (healthRatio > 0.0) { // NOTE: NaN takes the "all zero" branch
-        const double inv = 1.0 - healthRatio;
-        colR = (uint8)(int32)(inv * 255.0 + healthRatio * 0.0);
-        colG = (uint8)(int32)(healthRatio * 255.0 + inv * 0.0);
-        colB = (uint8)(int32)(healthRatio * 0.0 + inv * 0.0);
+        const x87d inv = (x87d)1.0 - healthRatio;
+        colR = (uint8)(int32)(inv * (x87d)255.0 + healthRatio * (x87d)0.0);
+        colG = (uint8)(int32)(healthRatio * (x87d)255.0 + inv * (x87d)0.0);
+        colB = (uint8)(int32)(healthRatio * (x87d)0.0 + inv * (x87d)0.0);
     }
 
     // Size of the triangle depends on the distance to the ped
     const auto& selfPos   = GetPosition();
     const auto& targetPos = target->GetPosition();
-    const double dx = (double)targetPos.x - (double)selfPos.x;
-    const double dy = (double)targetPos.y - (double)selfPos.y;
-    const double dz = (double)targetPos.z - (double)selfPos.z;
-    double scale = std::sqrt(dz * dz + dy * dy + dx * dx) - 10.0; // 0x85862C
+    const x87d dx = (x87d)targetPos.x - (x87d)selfPos.x;
+    const x87d dy = (x87d)targetPos.y - (x87d)selfPos.y;
+    const x87d dz = (x87d)targetPos.z - (x87d)selfPos.z;
+    x87d scale = std::sqrt(dz * dz + dy * dy + dx * dx) - (x87d)10.0; // 0x85862C
     if (!(scale > 0.0)) {
-        scale = 0.0;
+        scale = (x87d)0.0;
     }
-    scale *= (double)0.02f; // 0x858B38
+    scale *= (x87d)0.02f; // 0x858B38
     if (1.0 < scale) {
-        scale = 1.0;
+        scale = (x87d)1.0;
     }
-    scale = scale * (double)0.825f + (double)0.175f; // 0x86D1DC, 0x85A5C8
+    scale = scale * (x87d)0.825f + (x87d)0.175f; // 0x86D1DC, 0x85A5C8
 
     // Camera's right vector (as there might be no matrix, it's computed from the heading then)
     double right_x, right_y;
@@ -1505,12 +1505,12 @@ void CPlayerPed::DrawTriangleForMouseRecruitPed() {
         right_y = x87::sin((double)heading);
         right_z = 0.f;
     }
-    const float rx = (float)(right_x * scale);
-    const float ry = (float)(right_y * scale);
-    const float rz = (float)((double)right_z * scale);
-    const float k  = (float)(0.0 * scale); // Always 0
+    const float rx = (float)(X87R(right_x * scale));
+    const float ry = (float)(X87R(right_y * scale));
+    const float rz = (float)((x87d)right_z * scale);
+    const float k  = (float)((x87d)0.0 * scale); // Always 0
 
-    const float posZ = (float)((double)targetPos.z + 1.0);
+    const float posZ = (float)((x87d)targetPos.z + (x87d)1.0);
 
     CVector verts[3];
     if (target->m_nPedType == PED_TYPE_GANG1) { // Triangle pointing downwards
@@ -1518,18 +1518,18 @@ void CPlayerPed::DrawTriangleForMouseRecruitPed() {
         verts[1] = CVector{
             (targetPos.x - rx) + k,
             k + (targetPos.y - ry),
-            (float)((double)(posZ - rz) + scale)
+            (float)((x87d)(posZ - rz) + scale)
         };
         verts[2] = CVector{
             (targetPos.x + rx) + k,
             k + (targetPos.y + ry),
-            (float)(scale + (double)(posZ + rz))
+            (float)(scale + (x87d)(posZ + rz))
         };
     } else { // Triangle pointing upwards
         verts[0] = CVector{
             targetPos.x + k,
             k + targetPos.y,
-            (float)((double)posZ + scale)
+            (float)((x87d)posZ + scale)
         };
         verts[1] = CVector{ targetPos.x + rx, ry + targetPos.y, posZ + rz };
         verts[2] = CVector{ targetPos.x - rx, targetPos.y - ry, posZ - rz };
@@ -1542,9 +1542,9 @@ void CPlayerPed::DrawTriangleForMouseRecruitPed() {
 
         // NOTE: Inlined 0x59C910 (`CVector::Normalise`): The sum of squares, `1 / sqrt` and the multiplication are all done
         //       in extended precision (`double` here) and only the results are rounded to float. The shared `CVector::Normalise` is float-only.
-        const double sumSq = ((double)toCam.x * toCam.x + (double)toCam.y * toCam.y) + (double)toCam.z * toCam.z;
+        const x87d sumSq = ((x87d)toCam.x * toCam.x + (x87d)toCam.y * toCam.y) + (x87d)toCam.z * toCam.z;
         if (sumSq > 0.0) { // NOTE: NaN takes the other branch
-            const double recip = 1.0 / std::sqrt(sumSq);
+            const x87d recip = (x87d)1.0 / std::sqrt(sumSq);
             toCam.x = (float)(toCam.x * recip);
             toCam.y = (float)(toCam.y * recip);
             toCam.z = (float)(toCam.z * recip);
@@ -1657,16 +1657,16 @@ void CPlayerPed::KeepAreaAroundPlayerClear() {
         }
 
         const auto& vehPos = veh->GetPosition();
-        const double dx = (double)vehPos.x - (double)center.x;
-        const double dy = (double)vehPos.y - (double)center.y;
-        const double dz = (double)vehPos.z - (double)center.z;
+        const x87d dx = (x87d)vehPos.x - (x87d)center.x;
+        const x87d dy = (x87d)vehPos.y - (x87d)center.y;
+        const x87d dz = (x87d)vehPos.z - (x87d)center.z;
         if (dz * dz + dy * dy + dx * dx > (double)25.f) { // 0x858FE8 - NOTE: NaN takes the other branch
             veh->m_autoPilot.SetTempAction(TEMPACT_WAIT, 5000);
         } else {
             // BUG: Dereferences the matrix without checking if there's one
             const auto& fwd = veh->m_matrix->GetForward();
-            const double dot = ((double)center.y - (double)vehPos.y) * (double)fwd.y
-                             + ((double)center.x - (double)vehPos.x) * (double)fwd.x;
+            const x87d dot = ((x87d)center.y - (x87d)vehPos.y) * (x87d)fwd.y
+                             + ((x87d)center.x - (x87d)vehPos.x) * (x87d)fwd.x;
             veh->m_autoPilot.SetTempAction(dot > 0.0 ? TEMPACT_REVERSE : TEMPACT_GOFORWARD, 2000);
         }
         CCarCtrl::PossiblyRemoveVehicle(veh);
@@ -1965,9 +1965,9 @@ void CPlayerPed::EvaluateTarget(CEntity* target, CEntity *& outTarget, float & o
     // 0x60D045: `target - self` (the differences stay on the x87 stack for the distance)
     const auto& selfPos   = GetPosition();
     const auto& targetPos = target->GetPosition();
-    const double ddx = (double)targetPos.x - (double)selfPos.x;
-    const double ddy = (double)targetPos.y - (double)selfPos.y;
-    const double ddz = (double)targetPos.z - (double)selfPos.z;
+    const x87d ddx = (x87d)targetPos.x - (x87d)selfPos.x;
+    const x87d ddy = (x87d)targetPos.y - (x87d)selfPos.y;
+    const x87d ddz = (x87d)targetPos.z - (x87d)selfPos.z;
     const float dist = (float)std::sqrt(ddz * ddz + ddy * ddy + ddx * ddx); // 0x60D065: z*z + y*y + x*x, in this order
 
     if (!(dist <= maxDistance)) // 0x60D071: FCOMP + `test ah, 0x41` + `jp` (NaN returns too)
@@ -1978,15 +1978,15 @@ void CPlayerPed::EvaluateTarget(CEntity* target, CEntity *& outTarget, float & o
 
     // 0x60D0E9: `GetATanOfXY`'s result stays unrounded on the x87 stack through `- compensationRotRad`, the inlined `LimitRadianAngle` loops,
     // `* 57.29578f` (0x859878), the sign flip and `/ 140.0f`; the multiplier is spilled to a float at 0x60D156
-    double targetAngle = CGeneral::GetATanOfXYExt((float)ddx, (float)ddy) - (double)compensationRotRad;
+    x87d targetAngle = X87R(CGeneral::GetATanOfXYExt((float)ddx, (float)ddy) - (double)compensationRotRad);
     constexpr auto PI = std::numbers::pi_v<float>; // 0x858CB8
     while (targetAngle > (double)PI) {
-        targetAngle -= (double)(2.f * PI); // 0x858CBC
+        targetAngle -= (x87d)(2.f * PI); // 0x858CBC
     }
     while (targetAngle < (double)-PI) { // 0x858CC0
-        targetAngle += (double)(2.f * PI);
+        targetAngle += (x87d)(2.f * PI);
     }
-    double targetAngleDeg = targetAngle * (double)RAD_TO_DEG;
+    x87d targetAngleDeg = targetAngle * (x87d)RAD_TO_DEG;
     if (targetAngleDeg < 0.0) { // FCOM + `jp` + FCHS (NaN keeps its sign)
         targetAngleDeg = -targetAngleDeg;
     }
@@ -2007,9 +2007,9 @@ void CPlayerPed::EvaluateNeighbouringTarget(CEntity* target, CEntity** outTarget
     // The original keeps the intermediate results in extended precision, hence `double`
     const auto& selfPos   = GetPosition();
     const auto& targetPos = target->GetPosition();
-    const double dx = (double)targetPos.x - (double)selfPos.x;
-    const double dy = (double)targetPos.y - (double)selfPos.y;
-    const double dz = (double)targetPos.z - (double)selfPos.z;
+    const x87d dx = (x87d)targetPos.x - (x87d)selfPos.x;
+    const x87d dy = (x87d)targetPos.y - (x87d)selfPos.y;
+    const x87d dz = (x87d)targetPos.z - (x87d)selfPos.z;
     if (!(std::sqrt(dz * dz + dy * dy + dx * dx) <= (double)maxDistance)) { // NOTE: NaN returns too
         return;
     }
@@ -2022,13 +2022,13 @@ void CPlayerPed::EvaluateNeighbouringTarget(CEntity* target, CEntity** outTarget
     const auto& camPos = TheCamera.GetPosition();
     const float diffY = targetPos.y - camPos.y;
     const float diffX = targetPos.x - camPos.x;
-    double angle = CGeneral::GetATanOfXYExt(diffX, diffY) - (double)arg4;
+    x87d angle = X87R(CGeneral::GetATanOfXYExt(diffX, diffY) - (double)arg4);
     constexpr auto PI = std::numbers::pi_v<float>; // 0x858CB8
     while (angle > (double)PI) {
-        angle -= (double)(2.f * PI); // 0x858CBC
+        angle -= (x87d)(2.f * PI); // 0x858CBC
     }
     while (angle < (double)-PI) { // 0x858CC0
-        angle += (double)(2.f * PI);
+        angle += (x87d)(2.f * PI);
     }
 
     constexpr auto MAX_ANGLE = 0.8726646304130554f; // 0x86D1D0 (50 deg)
@@ -2039,11 +2039,11 @@ void CPlayerPed::EvaluateNeighbouringTarget(CEntity* target, CEntity** outTarget
     // `arg5` selects which side of the camera's view direction the target has to be on
     // Priority is the (negated) angle distance, or a big negative number if the target is on the wrong side.
     constexpr auto WRONG_SIDE_PRIORITY = -100000.f; // 0x86D1E8
-    double priority;
+    x87d priority;
     if (!arg5) {
-        priority = !(angle >= 0.0) ? angle : (double)WRONG_SIDE_PRIORITY;
+        priority = !(angle >= 0.0) ? angle : (x87d)WRONG_SIDE_PRIORITY;
     } else {
-        priority = !(angle <= 0.0) ? -angle : (double)WRONG_SIDE_PRIORITY;
+        priority = !(angle <= 0.0) ? -angle : (x87d)WRONG_SIDE_PRIORITY;
     }
 
     if (priority > (double)*outTargetPriority) {
@@ -2062,7 +2062,7 @@ void CPlayerPed::ProcessGroupBehaviour(CPad* pad) {
 
     // `CTimer::ms_fTimeStepNonClipped * 0.02f * 1000.0f` kept in extended precision, then truncated by _ftol (0x821B40)
     const auto TimeStepInMS = [] {
-        return (uint16)(int32)((double)CTimer::GetTimeStepNonClipped() * (double)0.02f * 1000.0);
+        return (uint16)(int32)((x87d)CTimer::GetTimeStepNonClipped() * (x87d)0.02f * (x87d)1000.0);
     };
 
     // 0x609380 (inlined here)
@@ -2310,11 +2310,11 @@ bool CPlayerPed::FindWeaponLockOnTarget() {
     if (m_pTargetedObject) {
         const auto& targetPos = m_pTargetedObject->GetPosition();
         const auto& selfPos   = GetPosition();
-        const double dx = (double)targetPos.x - (double)selfPos.x;
-        const double dy = (double)targetPos.y - (double)selfPos.y;
+        const x87d dx = (x87d)targetPos.x - (x87d)selfPos.x;
+        const x87d dy = (x87d)targetPos.y - (x87d)selfPos.y;
         const float  dist = (float)std::sqrt(dy * dy + dx * dx);
         const float  mult = CWeapon::TargetWeaponRangeMultiplier(m_pTargetedObject, this); // 0x73B380
-        if (!((double)mult * (double)wepRange >= (double)dist)) { // NOTE: `TEST AH, 1` after FCOMP => also taken if unordered
+        if (!((x87d)mult * (x87d)wepRange >= (double)dist)) { // NOTE: `TEST AH, 1` after FCOMP => also taken if unordered
             CEntity::ClearReference(m_pTargetedObject);
             return false;
         }
@@ -2338,7 +2338,7 @@ bool CPlayerPed::FindWeaponLockOnTarget() {
         const auto upDown    = pad->GetPedWalkUpDown();
         const auto leftRight = pad->GetPedWalkLeftRight();
         const double stickAngle = CGeneral::GetRadianAngleBetweenPointsExt(0.0f, 0.0f, (float)-(int32)leftRight, (float)upDown); // 0x53CBE0
-        aimAngle = CGeneral::LimitRadianAngle((float)(stickAngle - (double)TheCamera.m_fOrientation + (double)HALF_PI));
+        aimAngle = CGeneral::LimitRadianAngle((float)(X87R(stickAngle - (double)TheCamera.m_fOrientation) + (x87d)HALF_PI));
     }
 
     // Spray can => look for a tag to spray first
@@ -2350,9 +2350,9 @@ bool CPlayerPed::FindWeaponLockOnTarget() {
 
         const auto& selfPos = GetPosition();
         const CVector center{
-            (float)((double)fwd.x * 8.0 + (double)selfPos.x), // 0x859000
-            (float)((double)fwd.y * 8.0 + (double)selfPos.y),
-            (float)((double)fwd.z * 8.0 + (double)selfPos.z),
+            (float)((x87d)fwd.x * (x87d)8.0 + (x87d)selfPos.x), // 0x859000
+            (float)((x87d)fwd.y * (x87d)8.0 + (x87d)selfPos.y),
+            (float)((x87d)fwd.z * (x87d)8.0 + (x87d)selfPos.z),
         };
 
         int16    numFound{};
@@ -2367,18 +2367,18 @@ bool CPlayerPed::FindWeaponLockOnTarget() {
             }
 
             const auto& ePos = e->GetPosition();
-            const double dx = (double)ePos.x - (double)GetPosition().x;
-            const double dy = (double)ePos.y - (double)GetPosition().y;
-            const double dz = (double)ePos.z - (double)GetPosition().z;
-            if (!((double)wepRange * (double)wepRange > (dx * dx + dz * dz) + dy * dy)) {
+            const x87d dx = (x87d)ePos.x - (x87d)GetPosition().x;
+            const x87d dy = (x87d)ePos.y - (x87d)GetPosition().y;
+            const x87d dz = (x87d)ePos.z - (x87d)GetPosition().z;
+            if (!((x87d)wepRange * (x87d)wepRange > (dx * dx + dz * dz) + dy * dy)) {
                 continue;
             }
 
-            double delta = x87::atan2(-dx, dy) - (double)heading;
+            x87d delta = X87R(x87::atan2(-dx, dy) - (double)heading);
             if (delta < (double)-PI) {
-                delta += (double)TWO_PI;
+                delta += (x87d)TWO_PI;
             } else if (delta > (double)PI) {
-                delta -= (double)TWO_PI;
+                delta -= (x87d)TWO_PI;
             }
 
             if (delta < (double)bestDelta || !bestTag) {
@@ -2423,8 +2423,8 @@ bool CPlayerPed::FindWeaponLockOnTarget() {
         // Is the ped within the view cone?
         const auto& pedPos  = ped->GetPosition();
         const auto& selfPos = GetPosition();
-        const double angleToPed = CGeneral::GetATanOfXYExt(pedPos.x - selfPos.x, pedPos.y - selfPos.y); // 0x53CC70
-        if (!(WrapAngleAbs(angleToPed - (double)aimAngle) < (double)PLAYER_MAX_TARGET_VIEW_ANGLE * (double)FOV_SCALE)) {
+        const x87d angleToPed = CGeneral::GetATanOfXYExt(pedPos.x - selfPos.x, pedPos.y - selfPos.y); // 0x53CC70
+        if (!(WrapAngleAbs(angleToPed - (x87d)aimAngle) < (x87d)PLAYER_MAX_TARGET_VIEW_ANGLE * (x87d)FOV_SCALE)) {
             continue;
         }
 
@@ -2433,12 +2433,12 @@ bool CPlayerPed::FindWeaponLockOnTarget() {
         fwdNorm.Normalise(); // 0x59C910
         const CVector behindPos = GetPosition() - fwdNorm * NOTSA_GLOBAL_EXPR(0x8D2440, (float), k_8D2440); // 3.0f
         const double angleToPedFromBehind = CGeneral::GetATanOfXYExt(ped->GetPosition().x - behindPos.x, ped->GetPosition().y - behindPos.y); // 0x53CC70
-        if (!(WrapAngleAbs(angleToPedFromBehind - (double)aimAngle) < (double)NOTSA_GLOBAL_EXPR(0x8D2438, (float), k_8D2438) * (double)FOV_SCALE)) { // 90.0f
+        if (!(WrapAngleAbs(X87R(angleToPedFromBehind - (double)aimAngle)) < (x87d)NOTSA_GLOBAL_EXPR(0x8D2438, (float), k_8D2438) * (x87d)FOV_SCALE)) { // 90.0f
             continue;
         }
 
         const float dist    = (ped->GetPosition() - GetPosition()).Magnitude();
-        const float maxDist = (float)((double)CWeapon::TargetWeaponRangeMultiplier(ped, this) * (double)wepRange);
+        const float maxDist = (float)((x87d)CWeapon::TargetWeaponRangeMultiplier(ped, this) * (x87d)wepRange);
         if (!(dist < maxDist)) { // NOTE: `JP` after FCOMP => also skipped if unordered
             continue;
         }
@@ -2543,7 +2543,7 @@ bool CPlayerPed::FindNextWeaponLockOnTarget(CEntity* currentTarget, bool arg1) {
             continue;
         }
         const float mult = CWeapon::TargetWeaponRangeMultiplier(ped, this); // 0x73B380
-        EvaluateNeighbouringTarget(ped, &bestTarget, &bestPriority, (float)((double)mult * (double)wepRange), angle, arg1); // 0x60D1C0
+        EvaluateNeighbouringTarget(ped, &bestTarget, &bestPriority, (float)((x87d)mult * (x87d)wepRange), angle, arg1); // 0x60D1C0
     }
 
     // Objects
@@ -2556,7 +2556,7 @@ bool CPlayerPed::FindNextWeaponLockOnTarget(CEntity* currentTarget, bool arg1) {
             continue;
         }
         const float mult = CWeapon::TargetWeaponRangeMultiplier(notsa::IsFixBugs() ? (CEntity*)obj : rangeTarget, this);
-        EvaluateNeighbouringTarget(obj, &bestTarget, &bestPriority, (float)((double)mult * (double)wepRange), angle, arg1);
+        EvaluateNeighbouringTarget(obj, &bestTarget, &bestPriority, (float)((x87d)mult * (x87d)wepRange), angle, arg1);
     }
 
     // Vehicles (co-op only)
@@ -2570,7 +2570,7 @@ bool CPlayerPed::FindNextWeaponLockOnTarget(CEntity* currentTarget, bool arg1) {
                 continue;
             }
             const float mult = CWeapon::TargetWeaponRangeMultiplier(notsa::IsFixBugs() ? (CEntity*)veh : rangeTarget, this);
-            EvaluateNeighbouringTarget(veh, &bestTarget, &bestPriority, (float)((double)mult * (double)wepRange), angle, arg1);
+            EvaluateNeighbouringTarget(veh, &bestTarget, &bestPriority, (float)((x87d)mult * (x87d)wepRange), angle, arg1);
         }
     }
 

@@ -24,7 +24,7 @@ void FxSystemBP_c::InjectHooks() {
 }
 
 // 0x4AA100
-void* FxSystemBP_c::operator new(unsigned size) {
+void* FxSystemBP_c::operator new(size_t size) {
     return g_fxMan.GetMemPool().GetMem(size);
 }
 

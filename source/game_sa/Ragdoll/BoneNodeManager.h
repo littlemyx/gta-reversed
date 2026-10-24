@@ -82,4 +82,4 @@ private: // notsa section
 };
 VALIDATE_SIZE(BoneNodeManager_c, 0x4C0C);
 
-NOTSA_GLOBAL_HDR(g_boneNodeMan, 0xC10820, (BoneNodeManager_c), {}); static_assert(sizeof(g_boneNodeMan) == 19468);
+NOTSA_GLOBAL_HDR(g_boneNodeMan, 0xC10820, (BoneNodeManager_c), {}); VALIDATE_SIZE(g_boneNodeMan, 19468);

@@ -21,16 +21,35 @@ namespace fs = std::filesystem;
 
 #define PLUGIN_API
 
-#define VALIDATE_SIZE(struc, size) static_assert(sizeof(struc) == size, "Invalid structure size of " #struc)
-#define VALIDATE_OFFSET(struc, member, offset) \
+// Layout checks. Two kinds, because the original exe is a 32-bit x86 program and a 64-bit build cannot (and need not) keep the in-memory layout:
+//  * VALIDATE_SIZE / VALIDATE_OFFSET      - the x86 IN-MEMORY layout of the original exe (the struct is only ever accessed through memory, never
+//                                           as raw bytes of a file). Enforced when the code is built as the 32-bit x86 reference; compiled out
+//                                           under NOTSA_PORTABLE (pointers, size_t, long ... grow on 64-bit targets).
+//  * VALIDATE_SIZE_FILE / VALIDATE_OFFSET_FILE - the layout is an ON-DISK / raw-byte format (read or written with fread / CFileMgr::Read /
+//                                           RwStreamRead / memcpy from a file buffer / save-game blocks / IMG, COL, IPL, IFP, DAT headers /
+//                                           script-file structures). Enforced in EVERY build, including NOTSA_PORTABLE: a failure on a 64-bit
+//                                           target means the struct needs a portable on-disk definition. There is deliberately no switch that
+//                                           disables these.
+#define VALIDATE_SIZE_FILE(struc, size) static_assert(sizeof(struc) == size, "Invalid structure size of " #struc)
+#define VALIDATE_OFFSET_FILE(struc, member, offset) \
 	static_assert(offsetof(struc, member) == offset, "The offset of " #member " in " #struc " is not " #offset "...")
+#define VALIDATE_LAYOUT_FILE(...) static_assert(__VA_ARGS__) // any other constant expression over an on-disk layout (arguments of static_assert)
+#ifdef NOTSA_PORTABLE
+#define VALIDATE_SIZE(struc, size) static_assert(true) // x86 in-memory layout: not checked in a portable build
+#define VALIDATE_OFFSET(struc, member, offset) static_assert(true)
+#define VALIDATE_LAYOUT(...) static_assert(true)
+#else
+#define VALIDATE_SIZE(struc, size) VALIDATE_SIZE_FILE(struc, size)
+#define VALIDATE_OFFSET(struc, member, offset) VALIDATE_OFFSET_FILE(struc, member, offset)
+#define VALIDATE_LAYOUT(...) static_assert(__VA_ARGS__) // any other constant expression over the x86 in-memory layout (arguments of static_assert)
+#endif
 
-VALIDATE_SIZE(bool, 1);
-VALIDATE_SIZE(char, 1);
-VALIDATE_SIZE(short, 2);
-VALIDATE_SIZE(int, 4);
-VALIDATE_SIZE(float, 4);
-VALIDATE_SIZE(long long, 8);
+VALIDATE_SIZE_FILE(bool, 1);
+VALIDATE_SIZE_FILE(char, 1);
+VALIDATE_SIZE_FILE(short, 2);
+VALIDATE_SIZE_FILE(int, 4);
+VALIDATE_SIZE_FILE(float, 4);
+VALIDATE_SIZE_FILE(long long, 8);
 
 // Use this to add const that wasn't there in the original code
 #define Const const
@@ -50,6 +69,31 @@ typedef uintptr_t uintptr;
 typedef uint8     bool8;
 typedef uint16    bool16;
 typedef uint32    bool32;
+
+//! x87d: the type of an arithmetic expression the exe evaluates on the x87 stack with the FPU precision control at PC=24 (D3D9 CreateDevice without
+//! FPU_PRESERVE): EVERY operation result is rounded to a 24 bit significand, so the faithful equivalent on SSE/arm64 is IEEE single arithmetic per operation.
+//! The reversed code often spells such expressions with (double) casts / double locals; write them with x87d instead (tools/portable/pc24_scan.py finds and
+//! rewrites them). `double` in every non-portable build (the Win32 reference keeps its x87 code, bytes unchanged), `float` when NOTSA_PORTABLE. RR_PLAN 11.8.
+//! Exact-float literals in such an expression are written `(x87d)1.0`; a literal that is not exactly a float (0.02) needs fp::MulD / fp::AddD (Core/Fp.h).
+#ifdef NOTSA_PORTABLE
+typedef float x87d;
+#else
+typedef double x87d;
+#endif
+//! X87R(expr): `expr` is evaluated as written (it has a genuine 53 bit operand: a double global / call result / x87:: transcendental), the exe rounds the RESULT of the
+//! operation to a 24 bit significand (PC=24): portable rounds to float, every other build leaves the TOKENS untouched (neither a cast nor parentheses: MSVC /fp:precise spills at both).
+#ifdef NOTSA_PORTABLE
+#define X87R(...) ((x87d)(__VA_ARGS__))
+#else
+#define X87R(...) __VA_ARGS__
+#endif
+//! X87W(expr): `expr` (an x87d / float-valued expression, already rounded per operation) is handed to a CRT function taking a DOUBLE (log10 / pow / exp ...): portable widens it
+//! explicitly so that std::log10 & co. pick the double overload (a float argument selects the float overload = less precise than the exe's CRT call); every other build leaves the TOKENS untouched.
+#ifdef NOTSA_PORTABLE
+#define X87W(...) ((double)(__VA_ARGS__))
+#else
+#define X87W(...) __VA_ARGS__
+#endif
 
 #if (defined(__GNUC__) || defined(__GNUG__) || defined(__clang__))
 #define UNREACHABLE_INTRINSIC(...) __builtin_unreachable()
@@ -129,6 +173,15 @@ namespace notsa::standalone::Fixups { void UnreachableHit(const char* fn, const 
 #endif
 #define NOTSA_UNUSED_FUNCTION() NOTSA_UNREACHABLE("Unused Function")
 #define NOTSA_UNREACHABLE_CASE(val) NOTSA_UNREACHABLE("Unreachable switch case with value: {}", val)
+// NOTSA_UNREACHABLE at the end of a non-void function / lambda: the Win32 build (MSVC) keeps the exact text of NOTSA_UNREACHABLE (the exe just runs off the end of
+// the function and returns whatever is in EAX / ST0; the site is logged by the run build), while the portable build (clang: falling off the end of a non-void
+// function is UB, it turns the path into `unreachable` and runs into the next function) logs the site and returns RET. RET is the first argument, the others are
+// the (optional) format arguments of NOTSA_UNREACHABLE. MAC-C3, -Werror=return-type of the portable preset.
+#ifdef NOTSA_PORTABLE
+#define NOTSA_UNREACHABLE_RET(RET, ...) do { NOTSA_UNREACHABLE(__VA_ARGS__); return RET; } while (false)
+#else
+#define NOTSA_UNREACHABLE_RET(RET, ...) NOTSA_UNREACHABLE(__VA_ARGS__)
+#endif
 
 // NOTSA-AUDIT (.notes/reports/NOTSA-AUDIT.md): an upstream NOTSA change that makes the game behave differently from the exe. The standalone run build
 // (NOTSA_STANDALONE_RUN) must behave like the exe, so it takes `exeExpr`; the DLL build keeps upstream's `upstreamExpr` (the macro expands to exactly that
@@ -183,6 +236,19 @@ namespace notsa::standalone::Fixups { void UnreachableHit(const char* fn, const 
 #define SCANF_S_STR(s) s, std::size(s)
 
 #define NOTSA_FORCEINLINE __forceinline
+
+//! 32-bit identity key of an object address (corona / rope / streak / crime / shadow / marker ids, srand seeds, bug-compatible "pointer passed as int").
+//! x86: the address itself, code identical to `(uint32)p`. 64-bit: its low 32 bits - the keys are only compared / hashed, never converted back
+//! to a pointer; objects of one pool differ in the low bits (pools are far smaller than 4 GiB). A macro on purpose: an (even always-inlined) function
+//! template would still be emitted as an unreferenced COMDAT by cl and change the object file of every user (wine A/B, P-4c).
+#ifdef NOTSA_STATEHASH
+// RR-1 (.notes/RR_PLAN.md row 8): ASLR makes object addresses differ from run to run on every OS, and some of these keys seed the game's RNG (`srand(NOTSA_PTR_ID32(this) + days)`),
+// so the state-hash harness replaces them with a stable id (pool tag + slot index; see portable/statehash.cpp). Only defined with -DGTASA_STATEHASH=ON.
+namespace notsa::rr { uint32_t StableId(const void* p); }
+#define NOTSA_PTR_ID32(p) ::notsa::rr::StableId(p)
+#else
+#define NOTSA_PTR_ID32(p) static_cast<uint32>(reinterpret_cast<uintptr_t>(p))
+#endif
 
 /*!
 * @brief Used for static variable references

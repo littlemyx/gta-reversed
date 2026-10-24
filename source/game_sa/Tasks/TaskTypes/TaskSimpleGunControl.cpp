@@ -214,7 +214,7 @@ bool CTaskSimpleGunControl::ProcessPed(CPed* ped) {
         case END_LEISURE:
             return { END_LEISURE, true };
         default:
-            NOTSA_UNREACHABLE();
+            NOTSA_UNREACHABLE_RET({});
         }
     }();
 

@@ -34,7 +34,7 @@ public:
     FxSystemBP_c* Constructor();
     FxSystemBP_c* Destructor();
 
-    static void* operator new(unsigned size);
+    static void* operator new(size_t size);
     static void  operator delete(void* data);
 
     void Load(Const char* filename, FILESTREAM file, int32 version);

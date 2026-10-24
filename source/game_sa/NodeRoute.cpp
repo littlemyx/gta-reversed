@@ -9,7 +9,7 @@ void CNodeRoute::InjectHooks() {
     RH_ScopedInstall(operator delete, 0x41B870);
 }
 
-void* CNodeRoute::operator new(uint32 size) {
+void* CNodeRoute::operator new(size_t size) {
     return GetNodeRoutePool()->New();
 }
 

@@ -734,13 +734,13 @@ void CBike::ProcessRiderAnims(CPed* rider, CVehicle* vehicle, CRideAnimData* rid
             && (numContactWheels > 0 || (vehicle->GetUp().z < -0.5f && CTimer::GetTimeInMS() - vehicle->m_nLastCollisionTime < 100u))
         ) {
             KnockOffRiderAndPassenger();
-        } else if (vehicle->m_GasPedal < 0.0f && fwdSpeed > maxReverseVelocity * 1.5) { // 0x86C680 is a double
+        } else if (vehicle->m_GasPedal < 0.0f && fwdSpeed > maxReverseVelocity * (x87d)1.5) { // 0x86C680 is a double
             // Pushing the bike backwards
             if (NeedsNewBlend(pushAnim)) {
                 pushAnim = CAnimManager::BlendAnimation(clump, rideData->AnimGroup, ANIM_ID_BIKE_PUSHES, 4.0f);
             }
         } else {
-            if (isPlayer && fwdSpeed < maxReverseVelocity * 1.5) {
+            if (isPlayer && fwdSpeed < maxReverseVelocity * (x87d)1.5) {
                 fwdLeanTarget = -1.0f;
             }
             FadeOutStillAndPushAnims();
@@ -1498,7 +1498,7 @@ void CBike::ProcessControl() {
             } else if (rightZ < -1.0f) {
                 rollSin = -1.0f;
             }
-            const auto lean = decay * m_RideAnimData.DesiredLeanAngle - (1.0f - decay) * (x87::asin(rollSin) + 0.2617994f);
+            const auto lean = decay * m_RideAnimData.DesiredLeanAngle - (1.0f - decay) * (X87R(x87::asin(rollSin) + 0.2617994f));
             m_RideAnimData.DesiredLeanAngle = lean;
             m_RideAnimData.LeanAngle        = lean;
         }
@@ -1752,9 +1752,9 @@ void CBike::ProcessControl() {
                 m_RideAnimData.BarSteerAngle = CTimer::GetTimeStep() * 0.02617994f + m_RideAnimData.BarSteerAngle;
             }
         } else if (std::fabs(m_vecMoveSpeed.x) < 0.01f && std::fabs(m_vecMoveSpeed.y) < 0.01f && m_fSteerAngle == 0.0f) {
-            m_RideAnimData.BarSteerAngle = static_cast<float>(std::pow(static_cast<double>(0.96f), static_cast<double>(CTimer::GetTimeStep())) * m_RideAnimData.BarSteerAngle); // 0x86F0E0 (double)
+            m_RideAnimData.BarSteerAngle = static_cast<float>(X87R(std::pow(static_cast<double>(0.96f), static_cast<double>(CTimer::GetTimeStep())) * m_RideAnimData.BarSteerAngle)); // 0x86F0E0 (double)
         } else {
-            double steerFactor = 1.0; // NOTE: x87 keeps the whole `steerFactor` chain in extended precision
+            x87d steerFactor = (x87d)1.0; // NOTE: x87 keeps the whole `steerFactor` chain in extended precision
             if (forwardSpeed > 0.01f && (m_WheelCounts[0] > 0.0f || m_WheelCounts[1] > 0.0f) && GetStatus() == STATUS_PLAYER) {
                 CColPoint tarmacColPoint{};
                 tarmacColPoint.m_nSurfaceTypeA = SURFACE_WHEELBASE;
@@ -1771,18 +1771,18 @@ void CBike::ProcessControl() {
                     gripRatio = 1.0f;
                 }
 
-                steerFactor = x87::asin(static_cast<double>(gripRatio)) / (static_cast<double>(m_pHandlingData->m_fSteeringLock) * static_cast<double>(0.017453292f));
+                steerFactor = X87R(x87::asin(static_cast<double>(gripRatio)) / (static_cast<x87d>(m_pHandlingData->m_fSteeringLock) * static_cast<x87d>(0.017453292f)));
                 if ((m_fSteerAngle < 0.0f && m_RideAnimData.LeanAngle < 0.0f) || (m_fSteerAngle > 0.0f && m_RideAnimData.LeanAngle > 0.0f)) {
                     steerFactor += steerFactor;
                 }
                 if (steerFactor > 1.0) {
-                    steerFactor = 1.0;
+                    steerFactor = (x87d)1.0;
                 }
             }
             if (GetStatus() != STATUS_PLAYER) {
-                steerFactor = 1.0;
+                steerFactor = (x87d)1.0;
             }
-            m_RideAnimData.BarSteerAngle = static_cast<float>(steerFactor * static_cast<double>(m_fSteerAngle));
+            m_RideAnimData.BarSteerAngle = static_cast<float>(steerFactor * static_cast<x87d>(m_fSteerAngle));
         }
 
         const CVector moveSpeedBeforeWheels = m_vecMoveSpeed;
@@ -2032,20 +2032,20 @@ void CBike::ProcessControl() {
         if (!(extraHandlingFlags & BIKE_EXTRA_PLAYER_CONTROLLED) && !bikeFlags.bGettingPickedUp) {
             if (bikeFlags.bOnSideStand) {
                 const auto decay = static_cast<float>(std::pow(static_cast<double>(0.97f), static_cast<double>(CTimer::GetTimeStep()))); // 0x866FD0 (double)
-                lean = decay * m_RideAnimData.DesiredLeanAngle - (1.0f - decay) * ((x87::asin(GetRight().z) + stillAnimLean) + 0.2617994f);
+                lean = decay * m_RideAnimData.DesiredLeanAngle - (1.0f - decay) * ((X87R(x87::asin(GetRight().z) + stillAnimLean)) + 0.2617994f);
             } else {
-                lean = static_cast<float>(std::pow(static_cast<double>(0.95f), static_cast<double>(CTimer::GetTimeStep())) * m_RideAnimData.DesiredLeanAngle); // 0x86C3C8 (double)
+                lean = static_cast<float>(X87R(std::pow(static_cast<double>(0.95f), static_cast<double>(CTimer::GetTimeStep())) * m_RideAnimData.DesiredLeanAngle)); // 0x86C3C8 (double)
             }
         } else {
             m_vecGroundRight = CrossProduct(GetForward(), m_vecAveGroundNormal);
             m_vecGroundRight.Normalise();
 
             // NOTE: x87 keeps everything until the single store of `lateral` in extended precision
-            double lateralAccel;
+            x87d lateralAccel;
             if (m_pAttachedTo) {
-                lateralAccel = 0.0;
+                lateralAccel = (x87d)0.0;
             } else if (m_nNoOfContactWheels == 0) {
-                lateralAccel = ((static_cast<double>(m_fSteerAngle) / (static_cast<double>(m_pHandlingData->m_fSteeringLock) * static_cast<double>(0.017453292f))) * static_cast<double>(CTimer::GetTimeStep())) * static_cast<double>(-0.004f);
+                lateralAccel = ((static_cast<x87d>(m_fSteerAngle) / (static_cast<x87d>(m_pHandlingData->m_fSteeringLock) * static_cast<x87d>(0.017453292f))) * static_cast<x87d>(CTimer::GetTimeStep())) * static_cast<x87d>(-0.004f);
             } else {
                 CVector minuend, subtrahend;
                 if (physicalFlags.bDisableCollisionForce) {
@@ -2056,16 +2056,16 @@ void CBike::ProcessControl() {
                     minuend    = m_vecMoveSpeed;
                     subtrahend = moveSpeedBeforeWheels;
                 }
-                const double dx = static_cast<double>(minuend.x) - static_cast<double>(subtrahend.x);
-                const double dy = static_cast<double>(minuend.y) - static_cast<double>(subtrahend.y);
-                const double dz = static_cast<double>(minuend.z) - static_cast<double>(subtrahend.z);
-                lateralAccel = (dy * static_cast<double>(m_vecGroundRight.y) + dz * static_cast<double>(m_vecGroundRight.z)) + dx * static_cast<double>(m_vecGroundRight.x);
+                const x87d dx = static_cast<x87d>(minuend.x) - static_cast<x87d>(subtrahend.x);
+                const x87d dy = static_cast<x87d>(minuend.y) - static_cast<x87d>(subtrahend.y);
+                const x87d dz = static_cast<x87d>(minuend.z) - static_cast<x87d>(subtrahend.z);
+                lateralAccel = (dy * static_cast<x87d>(m_vecGroundRight.y) + dz * static_cast<x87d>(m_vecGroundRight.z)) + dx * static_cast<x87d>(m_vecGroundRight.x);
             }
 
             const auto timeStepForLean = CTimer::GetTimeStep() >= 0.01f ? CTimer::GetTimeStep() : 0.01f;
-            double     lateral         = lateralAccel / (static_cast<double>(timeStepForLean) * static_cast<double>(0.008f));
+            x87d     lateral         = lateralAccel / (static_cast<x87d>(timeStepForLean) * static_cast<x87d>(0.008f));
 
-            const double maxLean = m_nWheelStatus[0] == 1 ? static_cast<double>(0.4f) * static_cast<double>(m_BikeHandling->m_fMaxLean) : static_cast<double>(m_BikeHandling->m_fMaxLean);
+            const x87d maxLean = m_nWheelStatus[0] == 1 ? static_cast<x87d>(0.4f) * static_cast<x87d>(m_BikeHandling->m_fMaxLean) : static_cast<x87d>(m_BikeHandling->m_fMaxLean);
             if (lateral > maxLean) {
                 lateral = maxLean;
             } else if (lateral < -maxLean) {
@@ -2073,7 +2073,7 @@ void CBike::ProcessControl() {
             }
 
             const auto desLeanPow = std::pow(m_BikeHandling->m_fDesLean, CTimer::GetTimeStep());
-            lean = (x87::asin(static_cast<float>(lateral)) - stillAnimLean) * (1.0f - desLeanPow) + desLeanPow * m_RideAnimData.DesiredLeanAngle;
+            lean = (X87R(x87::asin(static_cast<float>(lateral)) - stillAnimLean)) * (1.0f - desLeanPow) + desLeanPow * m_RideAnimData.DesiredLeanAngle;
         }
         m_RideAnimData.DesiredLeanAngle = lean;
         m_RideAnimData.LeanAngle        = lean;
@@ -2104,7 +2104,7 @@ void CBike::ProcessControl() {
         }
 
         // NOTE: x87 keeps the product in extended precision before truncating it
-        const auto timeStepInMS = static_cast<int32>(static_cast<double>(CTimer::GetTimeStep()) * static_cast<double>(0.02f) * static_cast<double>(1000.0f));
+        const auto timeStepInMS = static_cast<int32>(static_cast<x87d>(CTimer::GetTimeStep()) * static_cast<x87d>(0.02f) * static_cast<x87d>(1000.0f));
         auto       timeStepF    = static_cast<float>(timeStepInMS);
         if (timeStepInMS < 0) {
             timeStepF += 4294967296.0f;
@@ -2158,18 +2158,18 @@ void CBike::ProcessControl() {
 
     if ((suspensionShake > 0.0f || roughnessShake > 0.0f) && GetStatus() == STATUS_PLAYER) {
         // NOTE: x87 keeps all of this in extended precision (until the values are truncated to integers)
-        const double speedSq = static_cast<double>(m_vecMoveSpeed.x) * static_cast<double>(m_vecMoveSpeed.x)
-                             + static_cast<double>(m_vecMoveSpeed.y) * static_cast<double>(m_vecMoveSpeed.y)
-                             + static_cast<double>(m_vecMoveSpeed.z) * static_cast<double>(m_vecMoveSpeed.z);
+        const x87d speedSq = static_cast<x87d>(m_vecMoveSpeed.x) * static_cast<x87d>(m_vecMoveSpeed.x)
+                             + static_cast<x87d>(m_vecMoveSpeed.y) * static_cast<x87d>(m_vecMoveSpeed.y)
+                             + static_cast<x87d>(m_vecMoveSpeed.z) * static_cast<x87d>(m_vecMoveSpeed.z);
         if (speedSq > static_cast<double>(BIKE_SHAKE_MIN_SPEED_SQ)) {
-            const double speedPerMass = std::sqrt(speedSq) / static_cast<double>(m_fMass);
+            const x87d speedPerMass = std::sqrt(speedSq) / static_cast<x87d>(m_fMass);
             if (suspensionShake > 0.0f) {
-                const auto frequency = static_cast<uint8>(static_cast<int32>(std::min((speedPerMass * static_cast<double>(suspensionShake)) * 400000.0 + 100.0, 250.0)));
-                const auto time      = static_cast<int32>((static_cast<double>(CTimer::GetTimeStep()) * 20000.0) / static_cast<double>(frequency));
+                const auto frequency = static_cast<uint8>(static_cast<int32>(std::min((speedPerMass * static_cast<x87d>(suspensionShake)) * (x87d)400000.0 + (x87d)100.0, (x87d)250.0)));
+                const auto time      = static_cast<int32>((static_cast<x87d>(CTimer::GetTimeStep()) * (x87d)20000.0) / static_cast<x87d>(frequency));
                 CPad::GetPad(0)->StartShake(static_cast<int16>(time), frequency, 0);
             } else {
-                const auto frequency = static_cast<uint8>(static_cast<int32>(std::min((speedPerMass * static_cast<double>(roughnessShake)) * 400000.0 + 40.0, 150.0)));
-                const auto time      = static_cast<int32>((static_cast<double>(CTimer::GetTimeStep()) * 5000.0) / static_cast<double>(frequency));
+                const auto frequency = static_cast<uint8>(static_cast<int32>(std::min((speedPerMass * static_cast<x87d>(roughnessShake)) * (x87d)400000.0 + (x87d)40.0, (x87d)150.0)));
+                const auto time      = static_cast<int32>((static_cast<x87d>(CTimer::GetTimeStep()) * (x87d)5000.0) / static_cast<x87d>(frequency));
                 CPad::GetPad(0)->StartShake(static_cast<int16>(time), frequency, 0);
             }
         }
@@ -2348,14 +2348,14 @@ void CBike::DoSoftGroundResistance(uint32& extraHandlingFlags) {
 
     if (IsAnyWheelOnSurface([](auto surface) { return g_surfaceInfos.GetAdhesionGroup(surface) == ADHESION_GROUP_SAND; })) {
         // Speed component along the up vector
-        const double upSpeed = m_vecMoveSpeed.z * up.z + m_vecMoveSpeed.y * up.y + m_vecMoveSpeed.x * up.x;
+        const x87d upSpeed = m_vecMoveSpeed.z * up.z + m_vecMoveSpeed.y * up.y + m_vecMoveSpeed.x * up.x;
 
         const float upX = (float)(upSpeed * up.x);
         const float upY = (float)(upSpeed * up.y);
         const float upZ = (float)(upSpeed * up.z);
 
-        double vx = m_vecMoveSpeed.x - upX;
-        double vy = m_vecMoveSpeed.y - upY;
+        x87d vx = m_vecMoveSpeed.x - upX;
+        x87d vy = m_vecMoveSpeed.y - upY;
         float  vz = (float)(m_vecMoveSpeed.z - upZ);
 
         if (m_GasPedal > 0.3f) {
@@ -2365,30 +2365,30 @@ void CBike::DoSoftGroundResistance(uint32& extraHandlingFlags) {
 
             // Remove the forward component
             const auto& fwd = GetForward();
-            const double fwdSpeed = vz * fwd.z + vy * fwd.y + vx * fwd.x;
+            const x87d fwdSpeed = vz * fwd.z + vy * fwd.y + vx * fwd.x;
 
             const float  fwdX = (float)(fwdSpeed * fwd.x);
             const float  fwdY = (float)(fwdSpeed * fwd.y);
-            const double fwdZ = fwdSpeed * fwd.z;
+            const x87d fwdZ = fwdSpeed * fwd.z;
 
             vx -= fwdX;
             vy -= fwdY;
             vz = (float)(vz - fwdZ);
         }
 
-        const double mult  = -(CTimer::GetTimeStep() * m_fMass * 0.02f);
+        const x87d mult  = -(CTimer::GetTimeStep() * m_fMass * 0.02f);
         const float  multF = (float)mult; // `fst` spills it, the x product still uses the register
         ApplyMoveForce(CVector{ (float)(mult * vx), (float)(vy * multF), vz * multF });
         return;
     }
 
     if (IsAnyWheelOnSurface([](auto surface) { return surface == SURFACE_RAILTRACK; })) {
-        const double upSpeed = m_vecMoveSpeed.z * up.z + m_vecMoveSpeed.y * up.y + m_vecMoveSpeed.x * up.x;
-        const double upX     = upSpeed * up.x; // stays in the register
+        const x87d upSpeed = m_vecMoveSpeed.z * up.z + m_vecMoveSpeed.y * up.y + m_vecMoveSpeed.x * up.x;
+        const x87d upX     = upSpeed * up.x; // stays in the register
         const float  upY     = (float)(upSpeed * up.y);
         const float  upZ     = (float)(upSpeed * up.z);
-        const double vx      = m_vecMoveSpeed.x - upX;
-        const double vy      = m_vecMoveSpeed.y - upY;
+        const x87d vx      = m_vecMoveSpeed.x - upX;
+        const x87d vy      = m_vecMoveSpeed.y - upY;
         const float  vz      = (float)(m_vecMoveSpeed.z - upZ);
         const float  mult    = (float)-(CTimer::GetTimeStep() * m_fMass * 0.003f);
         ApplyMoveForce(CVector{ (float)(vx * mult), (float)(vy * mult), vz * mult });
@@ -2418,11 +2418,11 @@ void CBike::CalculateLeanMatrix() {
     const auto& up  = GetUp();
     const float upX = up.x * minZ;
     const float upY = up.y * minZ;
-    const double upZ = (double)up.z * minZ;
-    const float k   = (float)(1.0 - x87::cos(m_RideAnimData.LeanAngle));
+    const x87d upZ = (x87d)up.z * minZ;
+    const float k   = (float)(X87R(1.0 - x87::cos(m_RideAnimData.LeanAngle)));
     auto& lp = m_mLeanMatrix.GetPosition();
-    lp.x = (float)((double)upX * k + lp.x);
-    lp.y = (float)((double)upY * k + lp.y);
+    lp.x = (float)((x87d)upX * k + lp.x);
+    lp.y = (float)((x87d)upY * k + lp.y);
     lp.z = (float)(upZ * k + lp.z);
     m_bLeanMatrixCalculated = true;
 }
@@ -2706,7 +2706,7 @@ void CBike::PreRender() {
             }
 
             auto&      colPt   = m_aWheelColPoints[colPtIdx];
-            const auto offsetX = x87::sin(m_RideAnimData.LeanAngle) * GetColModel()->m_boundBox.m_vecMin.z * 0.8f;
+            const auto offsetX = X87R(x87::sin(m_RideAnimData.LeanAngle) * GetColModel()->m_boundBox.m_vecMin.z) * 0.8f;
             CVector    pos     = colPt.m_vecPoint + GetRight() * offsetX;
 
             if (m_bWheelBloody[wheel]) {
@@ -2878,7 +2878,7 @@ void CBike::PreRender() {
 
     // Rear forks (swing arm)
     if (const auto forkRear = m_aBikeNodes[BIKE_FORKS_REAR]) {
-        const auto angle = x87::asin((m_aWheelSuspensionHeights[1] - m_aWheelOrigHeights[1]) / m_fSwingArmLength) * -1.0f;
+        const auto angle = X87R(x87::asin((m_aWheelSuspensionHeights[1] - m_aWheelOrigHeights[1]) / m_fSwingArmLength) * -1.0f);
         mat.Attach(RwFrameGetMatrix(forkRear), false);
         const CVector savedPos = mat.GetPosition();
         mat.SetRotate(angle, 0.0f, 0.0f);
@@ -2896,7 +2896,7 @@ void CBike::PreRender() {
     wheelOffset.y = ((cd->m_pLines[1].m_vecStart.y + cd->m_pLines[0].m_vecStart.y) * 0.5f - m_fForkYOffset)
                   - (m_aWheelSuspensionHeights[0] - m_aWheelOrigHeights[0]) * m_fSteerAngleTan;
     if (m_nWheelStatus[0] == 1) {
-        mat.SetRotate(m_aWheelPitchAngles[0], 0.0f, x87::sin(m_aWheelPitchAngles[0]) * 0.05f);
+        mat.SetRotate(m_aWheelPitchAngles[0], 0.0f, X87R(x87::sin(m_aWheelPitchAngles[0]) * 0.05f));
     } else {
         mat.SetRotateX(m_aWheelPitchAngles[0]);
     }
@@ -2914,7 +2914,7 @@ void CBike::PreRender() {
     {
         const CVector savedPos = mat.GetPosition();
         if (m_nWheelStatus[1] == 1) {
-            mat.SetRotate(m_aWheelPitchAngles[1], 0.0f, x87::sin(m_aWheelPitchAngles[1]) * 0.07f);
+            mat.SetRotate(m_aWheelPitchAngles[1], 0.0f, X87R(x87::sin(m_aWheelPitchAngles[1]) * 0.07f));
         } else {
             mat.SetRotateX(m_aWheelPitchAngles[1]);
         }
@@ -2928,7 +2928,7 @@ void CBike::PreRender() {
     if (const auto chassis = m_aBikeNodes[BIKE_CHASSIS]) {
         mat.Attach(RwFrameGetMatrix(chassis), false);
         CVector offset = mat.GetPosition();
-        offset.z = (1.0f - x87::cos(m_RideAnimData.LeanAngle)) * cm->m_boundBox.m_vecMin.z * 0.9f;
+        offset.z = (X87R(1.0f - x87::cos(m_RideAnimData.LeanAngle))) * cm->m_boundBox.m_vecMin.z * 0.9f;
         mat.SetRotateX(std::abs(m_RideAnimData.LeanAngle) * -0.05f);
         mat.RotateY(m_RideAnimData.LeanAngle);
         mat.GetPosition().x = mat.GetPosition().x + offset.x;
@@ -3289,10 +3289,10 @@ void CBike::DoBurstAndSoftGroundRatios() {
             const float wheelSizeInv = 1.0f / wheelSizeFactor;
 
             const float rotation     = wheelSizeInv * m_aWheelPitchAngles[wheel];
-            const float rotationFrac = rotation - static_cast<float>(std::floor(static_cast<double>(rotation)));
+            const float rotationFrac = rotation - static_cast<float>(std::floor(static_cast<x87d>(rotation)));
 
             const float nextRotation     = (CTimer::GetTimeStep() * m_aWheelAngularVelocity[wheel] + m_aWheelPitchAngles[wheel]) * wheelSizeInv;
-            const float nextRotationFrac = nextRotation - static_cast<float>(std::floor(static_cast<double>(nextRotation)));
+            const float nextRotationFrac = nextRotation - static_cast<float>(std::floor(static_cast<x87d>(nextRotation)));
 
             if (   (m_aWheelAngularVelocity[wheel] > 0.0f && nextRotationFrac < rotationFrac)
                 || (m_aWheelAngularVelocity[wheel] < 0.0f && nextRotationFrac > rotationFrac)

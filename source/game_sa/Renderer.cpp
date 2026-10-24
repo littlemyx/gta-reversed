@@ -75,7 +75,7 @@ void CWorldScan::InjectHooks() {
 // `_floor` (0x8219F0) / `_ceil` (0x823820) results go through `_ftol` (0x821B40).
 void CWorldScan::ScanWorld(CVector2D* points, int32 pointsCount, tScanFunction scanFunction) {
     using notsa::detail::Ftol;
-    const auto FloorI = [](double v) { return Ftol(std::floor(v)); };
+    const auto FloorI = [](double v) { return Ftol(X87R(std::floor(v))); };
 
     int32 n = pointsCount;
 
@@ -123,16 +123,16 @@ void CWorldScan::ScanWorld(CVector2D* points, int32 pointsCount, tScanFunction s
             if (i == cur) {
                 continue;
             }
-            double angle = CGeneral::GetATanOfXYExt(points[i].x - points[cur].x, points[i].y - points[cur].y) - (double)hullAngle; // 0x53CC70 (unrounded ST0)
+            x87d angle = X87R(CGeneral::GetATanOfXYExt(points[i].x - points[cur].x, points[i].y - points[cur].y) - (double)hullAngle); // 0x53CC70 (unrounded ST0)
             if (angle < 0.0) { // 0x858B50 = 0.0f
                 do {
-                    angle += (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
+                    angle += (x87d)(2.f * std::numbers::pi_v<float>); // 0x858CBC
                 } while (angle < 0.0);
             }
             // NOTE: `>=` and not `!(<)`: the original skips this for NaN (FCOM sets C0 when unordered), `!(<)` would loop forever
             if (angle >= (double)(2.f * std::numbers::pi_v<float>)) {
                 do {
-                    angle -= (double)(2.f * std::numbers::pi_v<float>);
+                    angle -= (x87d)(2.f * std::numbers::pi_v<float>);
                 } while (angle >= (double)(2.f * std::numbers::pi_v<float>));
             }
             if (angle < (double)bestAngle) {
@@ -143,7 +143,7 @@ void CWorldScan::ScanWorld(CVector2D* points, int32 pointsCount, tScanFunction s
         if (visited[best]) {
             break;
         }
-        hullAngle = (float)((double)bestAngle + (double)hullAngle);
+        hullAngle = (float)((x87d)bestAngle + (x87d)hullAngle);
         hull[hullCount++] = points[best];
         visited[best] = 1;
         cur = best;
@@ -184,7 +184,7 @@ void CWorldScan::ScanWorld(CVector2D* points, int32 pointsCount, tScanFunction s
         if ((double)minX > (double)hull[la].x) {
             minX = FloorI(hull[la].x);
         }
-        const float nextY = (float)std::floor((double)hull[lb].y);
+        const float nextY = (float)std::floor((x87d)hull[lb].y);
         if (!(FloorI(hull[la].y) == Ftol((double)nextY) && cnt < hullCount)) {
             break;
         }
@@ -202,17 +202,17 @@ void CWorldScan::ScanWorld(CVector2D* points, int32 pointsCount, tScanFunction s
         if ((double)maxX < (double)hull[ra].x) {
             maxX = FloorI(hull[ra].x);
         }
-        const float nextY = (float)std::floor((double)hull[rb].y);
+        const float nextY = (float)std::floor((x87d)hull[rb].y);
         if (!(FloorI(hull[ra].y) == Ftol((double)nextY) && cnt < hullCount)) {
             break;
         }
     }
 
     const auto Slope = [](const CVector2D& from, const CVector2D& to) {
-        return (float)(((double)to.x - (double)from.x) / ((double)to.y - (double)from.y));
+        return (float)(((x87d)to.x - (x87d)from.x) / ((x87d)to.y - (x87d)from.y));
     };
     const auto StartX = [](const CVector2D& from, float slope) {
-        return (float)((std::ceil((double)from.y) - (double)from.y) * (double)slope + (double)from.x);
+        return (float)((std::ceil((x87d)from.y) - (x87d)from.y) * (x87d)slope + (x87d)from.x);
     };
 
     float rs = Slope(hull[ra], hull[rb]);
@@ -265,14 +265,14 @@ void CWorldScan::ScanWorld(CVector2D* points, int32 pointsCount, tScanFunction s
             } while (x <= maxX);
         }
 
-        rx = (float)((double)rs + (double)rx);
+        rx = (float)((x87d)rs + (x87d)rx);
         y++;
-        lx = (float)((double)ls + (double)lx);
+        lx = (float)((x87d)ls + (x87d)lx);
 
         // Left edge
         if (y == FloorI(hull[lb].y)) {
             if (y != yEnd) {
-                const double t = (ls < 0.f) ? (double)hull[lb].x : (double)lx - (double)ls;
+                const x87d t = (ls < 0.f) ? (x87d)hull[lb].x : (x87d)lx - (x87d)ls;
                 minX = FloorI(t);
                 do {
                     la = lb;
@@ -294,7 +294,7 @@ void CWorldScan::ScanWorld(CVector2D* points, int32 pointsCount, tScanFunction s
                 }
             } else {
                 if (!(ls < 0.f)) {
-                    minX = FloorI((double)lx - (double)ls);
+                    minX = FloorI((x87d)lx - (x87d)ls);
                 } else {
                     do {
                         minX = FloorI(hull[lb].x);
@@ -306,14 +306,14 @@ void CWorldScan::ScanWorld(CVector2D* points, int32 pointsCount, tScanFunction s
                 }
             }
         } else {
-            const double t = (ls < 0.f) ? (double)lx : (double)lx - (double)ls;
+            const x87d t = (ls < 0.f) ? (x87d)lx : (x87d)lx - (x87d)ls;
             minX = FloorI(t);
         }
 
         // Right edge
         if (y == FloorI(hull[rb].y)) {
             if (y != yEnd) {
-                const double t = (rs >= 0.f) ? (double)hull[rb].x : (double)rx - (double)rs;
+                const x87d t = (rs >= 0.f) ? (x87d)hull[rb].x : (x87d)rx - (x87d)rs;
                 maxX = FloorI(t);
                 do {
                     ra = rb;
@@ -335,7 +335,7 @@ void CWorldScan::ScanWorld(CVector2D* points, int32 pointsCount, tScanFunction s
                 }
             } else {
                 if (!(rs >= 0.f)) {
-                    maxX = FloorI((double)rx - (double)rs);
+                    maxX = FloorI((x87d)rx - (x87d)rs);
                 } else {
                     do {
                         maxX = FloorI(hull[rb].x);
@@ -347,7 +347,7 @@ void CWorldScan::ScanWorld(CVector2D* points, int32 pointsCount, tScanFunction s
                 }
             }
         } else {
-            const double t = (rs >= 0.f) ? (double)rx : (double)rx - (double)rs;
+            const x87d t = (rs >= 0.f) ? (x87d)rx : (x87d)rx - (x87d)rs;
             maxX = FloorI(t);
         }
     }
@@ -361,8 +361,8 @@ void CWorldScan::ScanWorld(CVector2D* points, int32 pointsCount, tScanFunction s
 // 0x72D5E0
 void CWorldScan::SetExtraRectangleToScan(float minX, float maxX, float minY, float maxY) {
     using notsa::detail::Ftol;
-    for (auto x = Ftol(std::floor((double)minX)); x < Ftol(std::ceil((double)maxX)); x++) {
-        for (auto y = Ftol(std::floor((double)minY)); y < Ftol(std::ceil((double)maxY)); y++) {
+    for (auto x = Ftol(std::floor((x87d)minX)); x < Ftol(std::ceil((x87d)maxX)); x++) {
+        for (auto y = Ftol(std::floor((x87d)minY)); y < Ftol(std::ceil((x87d)maxY)); y++) {
             // BUG: no bounds check, the original arrays hold 4 entries (Y array is directly followed by the X array)
             // NOTE: The count is cached in a register in the original: when it's 4, `X[4]` aliases the count itself, but the count is
             // stored back as `cached + 1` (not re-read), so we must not re-read it either
@@ -483,9 +483,17 @@ void CRenderer::AddEntityToRenderList(CEntity* entity, float fDistance)
     }
 }
 
+// PC_Scratch holds the tScanLists (5 list pointers) at +0 and the LOD render list right behind them. The exe has 4-byte pointers: tScanLists = 0x14 bytes, LOD list at +24.
+// NOTSA: with 8-byte pointers tScanLists is 40 bytes, so a fixed +24 put the first LOD entries over scanLists->pedsList / dummiesList and ScanSectorList then walked a "list"
+// that was a CBuilding (SIGBUS in CRenderer::ScanSectorList when a LOD parent with >1 children was added mid-scan, R9-1). max(24, sizeof) is 24 on the exe (sizeof == 20): code unchanged.
+static constexpr size_t LOD_RENDER_LIST_OFFSET = sizeof(tScanLists) > 24 ? sizeof(tScanLists) : 24;
+static_assert(LOD_RENDER_LIST_OFFSET >= sizeof(tScanLists), "the LOD render list must not overlap the scan lists");
+static_assert(LOD_RENDER_LIST_OFFSET % alignof(tRenderListEntry) == 0, "the LOD render list must be aligned");
+static_assert(LOD_RENDER_LIST_OFFSET < 0x2000, "the LOD render list must stay below the LOD don't-render list");
+
 // 0x5536D0
 tRenderListEntry* CRenderer::GetLodRenderListBase() {
-    return reinterpret_cast<tRenderListEntry*>(&PC_Scratch[24]);
+    return reinterpret_cast<tRenderListEntry*>(&PC_Scratch[LOD_RENDER_LIST_OFFSET]);
 }
 
 // 0x5536E0
@@ -1065,9 +1073,9 @@ void CRenderer::ScanSectorList(int32 sectorX, int32 sectorY) {
     bool bRequestModel = false;
     float fDistanceX = CWorld::GetSectorPosX(sectorX) - ms_vecCameraPosition.x;
     float fDistanceY = CWorld::GetSectorPosY(sectorY) - ms_vecCameraPosition.y;
-    float fAngleInRadians = x87::atan2(-fDistanceX, fDistanceY) - ms_fCameraHeading;
+    float fAngleInRadians = X87R(x87::atan2(-fDistanceX, fDistanceY) - ms_fCameraHeading);
     if (CVector2D(fDistanceX, fDistanceY).SquaredMagnitude() < MAX_STREAMING_RADIUS_SQUARED ||
-        std::fabs(CGeneral::LimitRadianAngleExt(fAngleInRadians)) < (double)STREAMING_ANGLE_THRESHOLD_RAD // x87: 0x53CB50 leaves the result unrounded in ST0
+        X87R(std::fabs(CGeneral::LimitRadianAngleExt(fAngleInRadians))) < (double)STREAMING_ANGLE_THRESHOLD_RAD // x87: 0x53CB50 leaves the result unrounded in ST0
     ) {
         bRequestModel = true;
     }
@@ -1157,9 +1165,9 @@ void CRenderer::ScanBigBuildingList(int32 sectorX, int32 sectorY) {
     bool bRequestModel = false;
     float fDistanceX = CWorld::GetLodSectorPosX(sectorX) - ms_vecCameraPosition.x;
     float fDistanceY = CWorld::GetLodSectorPosY(sectorY) - ms_vecCameraPosition.y;
-    float fAngleInRadians = x87::atan2(-fDistanceX, fDistanceY) - ms_fCameraHeading;
+    float fAngleInRadians = X87R(x87::atan2(-fDistanceX, fDistanceY) - ms_fCameraHeading);
     if (CVector2D(fDistanceX, fDistanceY).SquaredMagnitude() < MAX_BIGBUILDING_STREAMING_RADIUS_SQUARED ||
-        std::fabs(CGeneral::LimitRadianAngleExt(fAngleInRadians)) <= (double)BIGBUILDING_STREAMING_ANGLE_THRESHOLD_RAD // x87: 0x53CB50 leaves the result unrounded in ST0
+        X87R(std::fabs(CGeneral::LimitRadianAngleExt(fAngleInRadians))) <= (double)BIGBUILDING_STREAMING_ANGLE_THRESHOLD_RAD // x87: 0x53CB50 leaves the result unrounded in ST0
     ) {
         bRequestModel = true;
     }

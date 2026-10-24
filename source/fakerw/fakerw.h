@@ -24,12 +24,16 @@
 #define NOMINMAX
 #endif
 #include <Windows.h>
+#ifndef NOTSA_PORTABLE // portable build: librw GL3 (RW_GL3 comes from the librw target), no D3D9
 #include <d3d9.h>
 #ifndef WITH_D3D
 #define WITH_D3D
 #endif
 #ifndef RW_D3D9
 #define RW_D3D9
+#endif
+#else
+#include "d3d9_lite.h"
 #endif
 
 #include <rw.h>
@@ -46,7 +50,11 @@
 // Basic types (os/win/ostypes: ILP32, LP64 never matters here)
 //--------------------------------------------------------------------------------------------------
 #define rwLITTLEENDIAN
+#ifndef NOTSA_PORTABLE
 typedef long                RwFixed;
+#else
+typedef int                 RwFixed; // R-1: `long` is 8 bytes on LP64; RW's RwFixed is a 32-bit value
+#endif
 typedef int                 RwInt32;
 typedef unsigned int        RwUInt32;
 typedef short               RwInt16;
@@ -143,7 +151,38 @@ typedef RxVertexIndex           RwImVertexIndex;
 
 // 3D immediate-mode / object-space vertex: librw's D3D9 vertex (position, normal, color, u, v) = RW's RxObjSpace3DVertex field for field,
 // only the first member is named `position` instead of `objVertex` (and `normal` for `objNormal`): ~20 direct uses are rewritten in P2B-00d.
+#ifndef NOTSA_PORTABLE
 typedef rw::d3d::Im3DVertex     RxObjSpace3DVertex;
+#else
+// R-1 (GL3): rw::d3d::Im3DVertex does not exist; the game-owned twin has the same 36-byte layout and the same helpers. The colour is packed
+// ARGB (what RwIm3DVertexSetRGBA / RxObjSpace3DVertexSetPreLitColor write); the Im3D twin converts to rw::gl3::Im3DVertex (r,g,b,a bytes) when it draws (R-4).
+struct RxObjSpace3DVertex {
+    RwV3d    position;
+    RwV3d    normal;
+    RwUInt32 color;
+    RwReal   u, v;
+
+    void setX(float x) { position.x = x; }
+    void setY(float y) { position.y = y; }
+    void setZ(float z) { position.z = z; }
+    void setNormalX(float x) { normal.x = x; }
+    void setNormalY(float y) { normal.y = y; }
+    void setNormalZ(float z) { normal.z = z; }
+    void setColor(uint8_t r, uint8_t g, uint8_t b, uint8_t a) { color = ((RwUInt32)a << 24) | ((RwUInt32)r << 16) | ((RwUInt32)g << 8) | (RwUInt32)b; }
+    void setU(float u_) { u = u_; }
+    void setV(float v_) { v = v_; }
+
+    float getX() { return position.x; }
+    float getY() { return position.y; }
+    float getZ() { return position.z; }
+    float getNormalX() { return normal.x; }
+    float getNormalY() { return normal.y; }
+    float getNormalZ() { return normal.z; }
+    rw::RGBA getColor() { return rw::makeRGBA(color >> 16 & 0xFF, color >> 8 & 0xFF, color & 0xFF, color >> 24 & 0xFF); }
+    float getU() { return u; }
+    float getV() { return v; }
+};
+#endif
 typedef RxObjSpace3DVertex      RxObjSpace3DLitVertex;
 typedef RxObjSpace3DLitVertex   RwIm3DVertex;
 
@@ -194,7 +233,9 @@ struct RwVideoMode {
 struct RwEngineOpenParams {
     void* displayID;
 };
+#ifndef NOTSA_PORTABLE
 static_assert(sizeof(RwEngineOpenParams) == sizeof(rw::EngineOpenParams));
+#endif // portable (GL3/SDL3): rw::EngineOpenParams = {SDL_Window**, fullscreen, width, height, title}; the engine twin (R-3a) builds it from `displayID` (the SDL_Window*)
 #define RW_SUBSYSTEMNAME_MAXLEN 80
 
 //--------------------------------------------------------------------------------------------------
@@ -269,13 +310,19 @@ struct RtQuatSlerpArgandCache {
 
 // ---- Custom pipelines (P2B-07 emulates the RxPipeline API over librw's ObjPipeline): atomics/materials point at the ObjPipeline directly ----
 typedef rw::ObjPipeline                 RxPipeline;
+// rwd3d9.h is platform-neutral plain data in librw (compiled under RW_GL3 too), so these stay aliases in the portable build as well (R-1): the pipeline code the game
+// owns keeps compiling; the GL3 pipelines (R-8/R-9) use rw::gl3::InstanceDataHeader directly.
 typedef rw::d3d9::InstanceDataHeader    RxD3D9ResEntryHeader;
 typedef rw::d3d9::InstanceData          RxD3D9InstanceData;
 
 //--------------------------------------------------------------------------------------------------
 // Layout / value pins. If one of these fires, the corresponding type/enum can no longer be a plain alias.
 //--------------------------------------------------------------------------------------------------
+#ifndef NOTSA_PORTABLE
 static_assert(sizeof(RwChar) == 1 && sizeof(RwInt32) == 4 && sizeof(RwReal) == 4 && sizeof(RwFixed) == 4 && sizeof(void*) == 4, "x86 ILP32 expected");
+#else
+static_assert(sizeof(RwChar) == 1 && sizeof(RwInt32) == 4 && sizeof(RwReal) == 4 && sizeof(RwFixed) == 4, "RW scalar widths expected"); // R-1: LP64, pointers are 8 bytes
+#endif
 
 static_assert(sizeof(RwV2d) == 8  && offsetof(RwV2d, x) == 0 && offsetof(RwV2d, y) == 4);
 static_assert(sizeof(RwV3d) == 12 && offsetof(RwV3d, x) == 0 && offsetof(RwV3d, y) == 4 && offsetof(RwV3d, z) == 8);
@@ -288,8 +335,13 @@ static_assert(sizeof(RwBBox) == 24 && offsetof(RwBBox, sup) == 0 && offsetof(RwB
 static_assert(sizeof(RwPlane) == 16 && offsetof(RwPlane, normal) == 0 && offsetof(RwPlane, distance) == 12);
 static_assert(sizeof(RwRect) == 16 && offsetof(RwRect, x) == 0 && offsetof(RwRect, y) == 4 && offsetof(RwRect, w) == 8 && offsetof(RwRect, h) == 12);
 static_assert(sizeof(RwLine) == 24);
+#ifndef NOTSA_PORTABLE
 static_assert(sizeof(RwLLLink) == 8 && offsetof(RwLLLink, next) == 0 && offsetof(RwLLLink, prev) == 4);
 static_assert(sizeof(RwLinkList) == 8);
+#else // R-1: same layout with 8-byte pointers
+static_assert(sizeof(RwLLLink) == 2 * sizeof(void*) && offsetof(RwLLLink, next) == 0 && offsetof(RwLLLink, prev) == sizeof(void*));
+static_assert(sizeof(RwLinkList) == sizeof(RwLLLink));
+#endif
 static_assert(sizeof(RtQuat) == sizeof(rw::Quat) && offsetof(RtQuat, imag) == offsetof(rw::Quat, x) && offsetof(RtQuat, real) == offsetof(rw::Quat, w) &&
               offsetof(rw::Quat, y) == 4 && offsetof(rw::Quat, z) == 8, "RtQuat = {imag(x,y,z), real} = rw::Quat {x,y,z,w}");
 static_assert(sizeof(RwSurfaceProperties) == 12);
@@ -300,8 +352,13 @@ static_assert(std::is_standard_layout_v<RwMatrix> && std::is_trivially_copyable_
 static_assert(std::is_standard_layout_v<RwV3d> && std::is_trivially_copyable_v<RwV3d>);
 
 // RwObject header: {type, subType, flags, privateFlags, parent}
+#ifndef NOTSA_PORTABLE
 static_assert(sizeof(RwObject) == 8 && offsetof(RwObject, type) == 0 && offsetof(RwObject, subType) == 1 && offsetof(RwObject, flags) == 2 &&
               offsetof(RwObject, privateFlags) == 3 && offsetof(RwObject, parent) == 4);
+#else // R-1: header {type, subType, flags, privateFlags} + pointer (8-byte aligned on LP64)
+static_assert(sizeof(RwObject) == 2 * sizeof(void*) && offsetof(RwObject, type) == 0 && offsetof(RwObject, subType) == 1 && offsetof(RwObject, flags) == 2 &&
+              offsetof(RwObject, privateFlags) == 3 && offsetof(RwObject, parent) == sizeof(void*));
+#endif
 static_assert(sizeof(RpTriangle) == 8 && offsetof(RpTriangle, v) == 0 && offsetof(RpTriangle, matId) == 6, "RpTriangle = {vertIndex[3], matIndex}");
 static_assert(sizeof(RwMatrixWeights) == 16 && sizeof(RwD3D9Vertex) == 28 && sizeof(RwIm2DVertex) == 28);
 static_assert(sizeof(RxObjSpace3DVertex) == 36 && offsetof(RxObjSpace3DVertex, position) == 0 && offsetof(RxObjSpace3DVertex, normal) == 12 &&

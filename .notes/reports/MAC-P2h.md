@@ -1,0 +1,35 @@
+# MAC-P2h report: CPathNode_File + LoadPathFindData (2026-10-24, portable/main)
+
+## Commit
+See `git log` (P-2h). Source: FileRecords/PathNodeFile.hpp [new: CPathNode_File 0x1C + bit constants], PathFind.h (CPathNode `VALIDATE_SIZE_FILE` -> `VALIDATE_SIZE`, `notsa::FileRecord<CPathNode>` + `notsa::LoadPathNodesFromFile`, 2 includes), PathFind.cpp (one `#ifdef NOTSA_PORTABLE` block at the node read; the raw read stays in `#else`). Tests/tools: tests/portable/p2h_pathnode_test.cpp, tools/portable/run_p2h_test.sh, tools/portable/p2h_scan_nodes.py (independent Python census), gen_x86_golden.py (CPathNode_File + 3 cases). No CMake / FileRecord.hpp / GenericGameStorage.h change.
+
+## Design
+| item | change |
+|---|---|
+| CPathNode_File (0x1C) | links u32[2]@0 (m_next,m_prev), pos i16[3]@8, totalDist@0xE, baseLinkId@0x10, areaId@0x12, nodeId@0x14, pathWidth@0x16, floodFill@0x17, flags u32@0x18 (bit positions in `kCPathNode*` constants). |
+| FromFile | all data members; both links = nullptr; bit-fields decoded member by member (byte 3 of the word has no member). ToFile is the inverse (links 0, byte 3 = 0); nothing in the game writes a nodes file, it is for the test round trip. |
+| Loader | `notsa::LoadPathNodesFromFile(nodes, n, read)` reads 256-record batches of `CPathNode_File` (stride 0x1C whatever `sizeof(CPathNode)` is) and FromFile's each. PathFind.cpp passes a lambda over `RwStreamRead`. |
+| asserts | `VALIDATE_SIZE_FILE(CPathNode, 0x1C)` -> `VALIDATE_SIZE` (x86 in-memory; 40 B on LP64); on-disk 0x1C asserted in PathNodeFile.hpp. x86 static_assert in the trait: raw CPathNode == record (size + every member offset + bit-field word right after floodFill) - evaluated by cl.exe under wine (compiled OK) and the MSVC-mode census. |
+
+## Finding that corrects the plan
+The plan said "first 8 file bytes unused/zero". **Real data: `m_prev` is always 0, but `m_next` is a stale non-zero heap pointer in 66,601 of 68,237 nodes** (runs of nodes share the value, e.g. 0x01A80608). Harmless: `AddNodeToList` assigns both links before `DoPathSearch` walks a bucket, and the hash table is cleared at the start of every search (PathFind.cpp:728, 746, 2401-2416), so the port nulls them. Documented in the header.
+
+## Results
+| gate | result |
+|---|---|
+| host test `tools/portable/run_p2h_test.sh mutate` (ASan+UBSan) | ALL OK, **mutants 21/21 caught** (bit order, every field lost/swapped, mask widths, link-nulling, batch-skip, stride = sizeof(CPathNode), over-read, ToFile bit dropped). Real PathNodeFile.hpp / FileRecord.hpp; `class CPathNode` .. `// P-2h END` cut verbatim from PathFind.h; the NOTSA_PORTABLE block cut verbatim from PathFind.cpp and run around a memory RwStream. Checks: goldens (gen_x86_golden.py) basic/extreme/chain (stale links), each of 24 bits alone, 20000 random records round trip, loader at 0/1/2/255/256/257/511/512/513/1000 nodes (exact consumption, destination `new CPathNode[n]` under ASan), source scan (raw read only in `#else`; exactly 2 `sizeof(CPathNode)` left: the raw read + the interior-node Malloc). |
+| **real data**: all 64 NODES0..63.DAT of the Steam copy (`data/paths/`, 3,575,144 B; never copied/committed) | 68,237 nodes (30,587 veh + 37,650 ped), 31,466 car links, 143,622 addresses. Every file: `numNodes == veh+ped`; `file_size == 20 + 28n + 14*links + 8*addrs + 1152` (the 1152 = 6 x 192: nodeLinks/linkLengths/intersections are stored with `numAddresses + 16*12` entries, naviLinks with `numAddresses`; this is exactly what LoadPathFindData reads); areaId == file index and nodeId == node index for all 68,237; byte 3 of the flag word is 0 everywhere; floodFill never 0; max numLinks 6; **sum(numLinks) == numAddresses**; every node's link range inside the address table, every link target (area < 64, node < numNodes of that area) valid, 0 invalid markers; file -> node -> file is the identity for all nodes (links aside). **STATS line of the C++ run (fields decoded through CPathNode_File/FromFile/loader, bit-field members summed one by one) == Python census p2h_scan_nodes.py (raw struct decode): MATCH**. |
+| layout_diff.py run (work /private/tmp/p2h_ld) | `CPathNode_File` 28/28 **identical**; in-memory CPathNode 28/40 known-diff (intended). Totals identical 123, known-diff 13, NEW 2 (pre-existing HAnimNodeInfo pair), not found 2. `gen_x86_golden.py selfcheck`: OK (record offsets incl. the three bit-field bytes == i686 CPathNode dump). |
+| native census (PathFind, CarCtrl, AutoPilot, PathCommands, TaskComplexFollowNodeRoute, Group13_15, VehicleRecording, TaskComplexEnterCar, TheScripts + 6 others: 15 TUs, snapshot census, HEAD vs HEAD+mine) | 1 diagnostic gone (`PathFind.h:186 sizeof(CPathNode) == 28`), 0 new; only the two pre-existing MS inline-asm lines moved 2051/2155 -> 2056/2160. |
+| msvc-mode census (same TUs, StandaloneRelease compdb, A vs B tree) | identical TSV (7 pre-existing parse errors in Replay.h / WaterLevel.h, none from PathFind). |
+| wine cl.exe A/B (A = HEAD via git archive, B = A + my 3 source files; NOTSA_SIG_NORM_STRINGS=1, no PCH; /private/tmp/claude-501/p2h_ab) | 10 TUs **code+relocs+data identical**: CarCtrl, AutoPilot, PathCommands, TaskComplexFollowNodeRoute, Group13_15, VehicleRecording, InjectHooksMain, Pickups, TaskComplexEnterCar, TheScripts. **PathFind.cpp: 2 functions (.text$mn 890 B and 159 B) differ only by `__LINE__` immediates** (my 5 added lines shift the asserts below line 1064). Proof: A' = A + 5 blank lines at the same spot vs B -> code+relocs+data **identical** (obj size differs by 532 B of debug info for the new header types). PathFind.h is in StdInc.h, so the sample covers all-TU header effects. |
+
+## Consumer audit
+* NODES%d.DAT bytes: only `CPathFind::LoadPathFindData(RwStream*, int32)` (PathFind.cpp:1052; area/stream overloads feed it). Node-array consumers use the in-memory `CPathNode` (m_pPathNodes, GetPathNode, DoPathSearch, AddNodeToList/RemoveNodeFromList, interior-node builder at :1533 which Mallocs `sizeof(CPathNode)` in-memory nodes). `sizeof(CPathNode)` elsewhere: tests/standalone/physics_oracle_cd.inc (x86 hash of a fake node set). The other arrays of the file (CCarPathLink 14, CNodeAddress 4, CCarPathLinkAddress 2, CPathIntersectionInfo 1, u8 lengths) are layout_diff-identical on arm64 and stay raw reads. Nothing writes a nodes file.
+* `new CPathNode[n]` leaves nodes uninitialised exactly as before; FromFile now sets every member (the exe's raw read also took `m_isSwitchedOffOriginal`/unk bits from the file; both kept).
+* v4 game check (soak/gameplay_regress) not possible on the Mac (no exe yet); MSVC bytes are unchanged (A/B above).
+
+## Open items
+1. NodeRoute.h:10 `operator new(uint32)` and the CarCtrl/Group13_15 `operator new` diagnostics are P-4 (not mine).
+2. The NODES64..71 interior areas are built at runtime (no files), so nothing else to decode.
+3. CMake: wire run_p2h_test.sh (W0 owns CMake); needs build/PortableMac/compile_commands.json, and for the real-data part the Steam NODES*.DAT (P2H_NODES_DIR / GTA env).

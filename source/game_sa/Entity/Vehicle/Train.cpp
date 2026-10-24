@@ -363,15 +363,15 @@ void CTrain::ReadAndInterpretTrackFile(const char* filename, CTrainNode** nodes,
 
     // Calculate the distance of each node from the start of the track
     if (*lineCount > 0) {
-        double total = 0.0;
+        x87d total = (x87d)0.0;
         for (auto i = 0; i < *lineCount; i++) {
             const auto& node = (*nodes)[i];
             const auto& nextNode = (*nodes)[(i + 1) % *lineCount];
 
-            (*nodes)[i].m_nDistanceFromStart = (uint16)(int32)(total * 3.0);
+            (*nodes)[i].m_nDistanceFromStart = (uint16)(int32)(total * (x87d)3.0);
 
-            const double dy = (double)node.GetY() - (double)nextNode.GetY();
-            const double dx = (double)node.GetX() - (double)nextNode.GetX();
+            const x87d dy = (x87d)node.GetY() - (x87d)nextNode.GetY();
+            const x87d dx = (x87d)node.GetX() - (x87d)nextNode.GetX();
             total += std::sqrt(dy * dy + dx * dx);
         }
         *totalDist = (float)total;
@@ -835,7 +835,7 @@ void CTrain::FindPositionOnTrackFromCoors() {
             }
 
             // 0x6F6F8D (oracle-proven): the inlined magnitude sums z, y, x in that order; the dot product is (dy*vy + vz*0) + dx*vx
-            const float speed = (float)x87::sqrt((double)((m_vecMoveSpeed.z * m_vecMoveSpeed.z + m_vecMoveSpeed.y * m_vecMoveSpeed.y) + m_vecMoveSpeed.x * m_vecMoveSpeed.x));
+            const float speed = (float)x87::sqrt((x87d)((m_vecMoveSpeed.z * m_vecMoveSpeed.z + m_vecMoveSpeed.y * m_vecMoveSpeed.y) + m_vecMoveSpeed.x * m_vecMoveSpeed.x));
             m_fTrainSpeed = speed;
 
             const float dot = ((nextY - nodeY) * m_vecMoveSpeed.y + m_vecMoveSpeed.z * 0.0f) + (nextX - nodeX) * m_vecMoveSpeed.x;

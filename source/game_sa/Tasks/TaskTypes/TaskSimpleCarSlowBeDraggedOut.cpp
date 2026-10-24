@@ -32,7 +32,7 @@ auto CTaskSimpleCarSlowBeDraggedOut::ComputeAnimID() {
         case TARGET_DOOR_REAR_RIGHT: return ANIM_ID_CAR_JACKEDRHS;
         case TARGET_DOOR_DRIVER:
         case TARGET_DOOR_REAR_LEFT:  return ANIM_ID_CAR_JACKEDLHS;
-        default:                     NOTSA_UNREACHABLE();
+        default:                     NOTSA_UNREACHABLE_RET(ANIM_ID_CAR_JACKEDRHS);
         }
     }();
     return std::make_tuple(m_Vehicle->GetAnimGroup().GetGroup(animId), animId);

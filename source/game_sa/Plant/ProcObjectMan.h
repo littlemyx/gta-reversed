@@ -43,4 +43,4 @@ public:
 };
 VALIDATE_SIZE(ProcObjectMan_c, 0x4C14);
 
-NOTSA_GLOBAL_HDR(g_procObjMan, 0xBB7CB0, (ProcObjectMan_c), {}); static_assert(sizeof(g_procObjMan) == 19476);
+NOTSA_GLOBAL_HDR(g_procObjMan, 0xBB7CB0, (ProcObjectMan_c), {}); VALIDATE_SIZE(g_procObjMan, 19476);

@@ -9,11 +9,11 @@ namespace {
 // 0x59C910 - `CVector::Normalise` as the original evaluates it: the sum of squares and the reciprocal root stay in the FPU
 // (extended precision), every component is stored as float. A length of 0 (or less) only writes `x = 1` (NaN takes the sqrt path).
 void NormaliseExt(CVector& v) {
-    const double sumSq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    const x87d sumSq = ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
     if (sumSq <= 0.0) {
         v.x = 1.0f;
     } else {
-        const double recip = 1.0 / std::sqrt(sumSq);
+        const x87d recip = (x87d)1.0 / std::sqrt(sumSq);
         v.x = (float)(v.x * recip);
         v.y = (float)(v.y * recip);
         v.z = (float)(v.z * recip);
@@ -77,16 +77,16 @@ bool CPedStuckChecker::TestPedStuck(CPed* ped, CEventGroup* eventGroup) {
         const float timeStep = (0.01f > CTimer::ms_fTimeStep) ? 0.01f : CTimer::ms_fTimeStep; // 0x858C58
         const float radiusF  = (float)m_radius;
         const auto  CanBeStuckForThisLong = [&](double tsFactor) { // `radius > 50 / (tsFactor * ts)`
-            return (double)radiusF > 50.0 / (tsFactor * (double)timeStep);                      // 0x858B40
+            return (double)radiusF > (x87d)50.0 / (X87R(tsFactor * (double)timeStep));                      // 0x858B40
         };
         const auto HasBarelyMovedInZ = [&] {
-            return (double)radiusF * (double)0.004f > (double)std::abs(delta.z); // 0x859CE0
+            return (x87d)radiusF * (x87d)0.004f > (double)std::abs(delta.z); // 0x859CE0
         };
 
         bool attemptUnstuck{};
         {
-            const double sqDist = ((double)delta.x * delta.x + (double)delta.y * delta.y) + (double)delta.z * delta.z; // 0x406DA0
-            if (CanBeStuckForThisLong(4.0) && (double)radiusF * (double)0.01f > sqDist) {
+            const x87d sqDist = ((x87d)delta.x * delta.x + (x87d)delta.y * delta.y) + (x87d)delta.z * delta.z; // 0x406DA0
+            if (CanBeStuckForThisLong(4.0) && (x87d)radiusF * (x87d)0.01f > sqDist) {
                 attemptUnstuck = true;
             }
         }
@@ -130,7 +130,7 @@ bool CPedStuckChecker::TestPedStuck(CPed* ped, CEventGroup* eventGroup) {
             }
 
             if (ped->bHeadStuckInCollision) {
-                if (!((double)colPoint.m_vecPoint.z + 1.0 < (double)ped->GetPosition().z)) { // 0x602EF0
+                if (!((x87d)colPoint.m_vecPoint.z + (x87d)1.0 < (double)ped->GetPosition().z)) { // 0x602EF0
                     ped->bIsStanding = true;
                     return ResetState();
                 }
@@ -139,7 +139,7 @@ bool CPedStuckChecker::TestPedStuck(CPed* ped, CEventGroup* eventGroup) {
             const bool pushedByPed = ped->m_fDamageIntensity > 0.0f && ped->m_pDamageEntity && ped->m_pDamageEntity->GetIsTypePed()
                 && ped->m_vecLastCollisionImpactVelocity.z > 0.3f; // 0x858C24
             if (!pushedByPed) {
-                origin.z = (float)((double)colPoint.m_vecPoint.z + 1.0);
+                origin.z = (float)((x87d)colPoint.m_vecPoint.z + (x87d)1.0);
                 ped->SetPosn(origin); // 0x4241C0
                 ped->bHeadStuckInCollision = false;
             }
@@ -171,7 +171,7 @@ bool CPedStuckChecker::TestPedStuck(CPed* ped, CEventGroup* eventGroup) {
             if (a0 > 5000.0f && a4 > 5000.0f) { // 0x86CD78
                 side = -1; // Nothing found
             } else {
-                const auto  pedZ     = [&] { return (double)ped->GetPosition().z - 1.0; };
+                const auto  pedZ     = [&] { return (x87d)ped->GetPosition().z - (x87d)1.0; };
                 if (pedZ() < a0 && a0 < 5000.0f && (a4 < 5001.0f || a0 < a4)) { // 0x86CD74
                     side = 1;
                 } else if (pedZ() < a4 && a4 < 5001.0f) {

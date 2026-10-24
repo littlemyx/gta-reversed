@@ -27,8 +27,14 @@ namespace {
 // RW's RpHAnimStdKeyFrame / RpHAnimStdInterpFrame: {pointer, pointer-or-time, quaternion x y z w, translation} = librw's HAnimKeyFrame / HAnimInterpFrame
 // (36 bytes). The exe's callbacks address both at the same offsets: q at +8, t at +0x18.
 using StdFrame = rw::HAnimInterpFrame;
+#ifndef NOTSA_PORTABLE
 static_assert(sizeof(rw::HAnimKeyFrame) == 0x24 && sizeof(StdFrame) == 0x24 && offsetof(StdFrame, q) == 8 && offsetof(StdFrame, t) == 0x18 &&
               offsetof(rw::HAnimKeyFrame, q) == 8 && offsetof(rw::HAnimKeyFrame, t) == 0x18 && offsetof(rw::HAnimKeyFrame, time) == 4);
+#else // R-1: LP64: HAnimKeyFrame = 40 bytes (q at 12, t at 28), HAnimInterpFrame = 48 bytes (q at 16, t at 32); the stream record stays 0x24 bytes (kFileKeyFrameSize)
+static_assert(offsetof(rw::HAnimKeyFrame, time) == 8 && sizeof(rw::HAnimKeyFrame) >= 0x24 && sizeof(StdFrame) >= 0x24);
+#endif
+// size of one key frame record in the .anm stream (4 byte prev offset, time, q, t) = RW's ILP32 sizeof(RpHAnimStdKeyFrame)
+constexpr RwUInt32 kFileKeyFrameSize = 0x24;
 
 inline rw::HAnimData* Ext(RwFrame* f) { return rw::HAnimData::get(f); }
 
@@ -321,8 +327,8 @@ void RpHAnimKeyFrameBlend(void* voidOut, void* voidIn1, void* voidIn2, RwReal al
     float scale0 = 1.0f - alpha;
     float scale1 = alpha;
     if (!(cosom >= 0.999f)) {
-        const double omega  = rwtrig::ACos(cosom);
-        const double invSin = 1.0 / rwtrig::SinMinusPiToPi(omega);
+        const x87d omega  = rwtrig::ACos(cosom);
+        const x87d invSin = (x87d)1.0 / rwtrig::SinMinusPiToPi(omega);
         scale0 = (float)(rwtrig::SinMinusPiToPi(omega * scale0) * invSin);
         scale1 = (float)(rwtrig::SinMinusPiToPi(omega * alpha) * invSin);
     }
@@ -388,7 +394,7 @@ RtAnimAnimation* RpHAnimKeyFrameStreamRead(RwStream* stream, RtAnimAnimation* an
         if (RwStreamRead(stream, &prevOffset, 4) != 4) {
             return nullptr;
         }
-        frames[i].prev = &frames[prevOffset / sizeof(rw::HAnimKeyFrame)];
+        frames[i].prev = &frames[prevOffset / kFileKeyFrameSize];
     }
     return animation;
 }
@@ -400,7 +406,11 @@ RwBool RpHAnimKeyFrameStreamWrite(const RtAnimAnimation* animation, RwStream* st
         if (!RwStreamWrite(stream, &frames[i].time, 0x20)) {
             return FALSE;
         }
+#ifndef NOTSA_PORTABLE
         const RwInt32 prevOffset = static_cast<RwInt32>(reinterpret_cast<const char*>(frames[i].prev) - reinterpret_cast<const char*>(frames));
+#else // R-1: the offset is in stream records, not in LP64 in-memory bytes
+        const RwInt32 prevOffset = static_cast<RwInt32>((frames[i].prev - frames) * kFileKeyFrameSize);
+#endif
         if (!RwStreamWrite(stream, &prevOffset, 4)) {
             return FALSE;
         }
@@ -410,6 +420,6 @@ RwBool RpHAnimKeyFrameStreamWrite(const RtAnimAnimation* animation, RwStream* st
 
 // W: exe 0x7C65B0.
 RwInt32 RpHAnimKeyFrameStreamGetSize(const RtAnimAnimation* animation) {
-    return animation->numFrames * static_cast<RwInt32>(sizeof(rw::HAnimKeyFrame));
+    return animation->numFrames * static_cast<RwInt32>(kFileKeyFrameSize);
 }
 #endif // NOTSA_RW_LIBRW

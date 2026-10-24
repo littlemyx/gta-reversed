@@ -311,7 +311,7 @@ void TeleportDebugModule::AddSettingsHandler(ImGuiContext* ctx) {
         UNUSED(ctx);
 
         const auto self    = (TeleportDebugModule*)handler->UserData;
-        const auto version = reinterpret_cast<int>(entry);
+        const auto version = static_cast<int>(reinterpret_cast<intptr_t>(entry));
 
         // If already read from the JSON just skip this part
         if (self->m_IsStateFromDeserialization) {
@@ -371,7 +371,7 @@ void TeleportDebugModule::AddSettingsHandler(ImGuiContext* ctx) {
 
         int version{2};
         VERIFY(sscanf_s(name, "Version %d", &version) == 1);
-        return (void*)version; // Has to return a non-null value, otherwise `ReadLine` won't be called
+        return (void*)(intptr_t)version; // Has to return a non-null value, otherwise `ReadLine` won't be called
     };
     ctx->SettingsHandlers.push_back(ih);
 }

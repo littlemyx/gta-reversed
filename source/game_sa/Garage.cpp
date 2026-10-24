@@ -53,7 +53,7 @@ void CGarage::InjectHooks() {
 void CGarage::BuildRotatedDoorMatrix(CEntity* entity, float fDoorPosition) {
     // fld door; fmul [0x859998] (= float -pi/2, 0xBFC90FDB): the product stays in ST(0) UNROUNDED (48 significant bits, exact in a double)
     // and feeds fsin / fcos directly - it is never stored as a float.
-    const double fAngle = (double)fDoorPosition * (double)-HALF_PI;
+    const x87d fAngle = (x87d)fDoorPosition * (x87d)-HALF_PI;
     // fsin -> fstp dword, fcos -> fstp dword: both are rounded to FLOAT straight from the FPU stack (no double local in between!)
     const float fSin = (float)x87::sin(fAngle);
     const float fCos = (float)x87::cos(fAngle);
@@ -62,8 +62,8 @@ void CGarage::BuildRotatedDoorMatrix(CEntity* entity, float fDoorPosition) {
     const auto& vecForward = matrix.GetForward(); // +0x10
     // Temp up vector on the stack: x = -(sin * fwd.y), y = sin * fwd.x, z = cos. float*float is exact in ST(0), then one fstp dword rounding.
     const CVector vecUp{
-        (float)(-((double)fSin * vecForward.y)),
-        (float)((double)fSin * vecForward.x),
+        (float)(-((x87d)fSin * vecForward.y)),
+        (float)((x87d)fSin * vecForward.x),
         fCos
     };
 
@@ -74,9 +74,9 @@ void CGarage::BuildRotatedDoorMatrix(CEntity* entity, float fDoorPosition) {
     const auto& a = vecForward;
     const auto& b = vecUp;
     const CVector vecRight{
-        (float)((double)a.y * b.z - (double)a.z * b.y),
-        (float)((double)a.z * b.x - (double)b.z * a.x),
-        (float)((double)a.x * b.y - (double)b.x * a.y)
+        (float)((x87d)a.y * b.z - (x87d)a.z * b.y),
+        (float)((x87d)a.z * b.x - (x87d)b.z * a.x),
+        (float)((x87d)a.x * b.y - (x87d)b.x * a.y)
     };
 
     matrix.GetRight() = vecRight; // +0x00..0x08
@@ -87,21 +87,21 @@ void CGarage::BuildRotatedDoorMatrix(CEntity* entity, float fDoorPosition) {
 static CVector TransformPointExt(const CMatrix& m, const CVector& v) {
     const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp(), &p = m.GetPosition();
     return CVector{
-        (float)((((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x) + p.x),
-        (float)((((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y) + p.y),
-        (float)((((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y) + p.z)
+        (float)((((x87d)u.x * v.z + (x87d)f.x * v.y) + (x87d)r.x * v.x) + p.x),
+        (float)((((x87d)u.y * v.z + (x87d)r.y * v.x) + (x87d)f.y * v.y) + p.y),
+        (float)((((x87d)u.z * v.z + (x87d)r.z * v.x) + (x87d)f.z * v.y) + p.z)
     };
 }
 
 // 0x59C910 - CVector::Normalise as the original evaluates it: the sum of squares and the reciprocal root stay in the FPU
 // (extended precision), every component is stored as float. A length of 0 (or less) yields (1, y, z) - only x is written.
 static void NormaliseExt(CVector& v) {
-    const double sq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    const x87d sq = ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
     if (sq <= 0.0) { // FCOM + JP: NaN takes the sqrt path
         v.x = 1.0f;
         return;
     }
-    const double inv = 1.0 / std::sqrt(sq);
+    const x87d inv = (x87d)1.0 / std::sqrt(sq);
     v.x = (float)(v.x * inv);
     v.y = (float)(v.y * inv);
     v.z = (float)(v.z * inv);
@@ -231,12 +231,12 @@ bool CGarage::IsEntityTouching3D(CEntity* entity) {
     // Bounding sphere radius of the model's collision (not of the entity's own `GetColModel()`)
     const float radius = CModelInfo::GetModelInfo(entity->m_nModelIndex)->m_pColModel->GetBoundRadius();
     const auto& pos    = entity->GetPosition();
-    if ((double)m_fLeftCoord  - radius > pos.x) { return false; }
-    if ((double)radius + m_fRightCoord < pos.x) { return false; }
-    if ((double)m_fFrontCoord - radius > pos.y) { return false; }
-    if ((double)radius + m_fBackCoord  < pos.y) { return false; }
-    if ((double)m_vPosn.z     - radius > pos.z) { return false; }
-    if ((double)radius + m_fTopZ       < pos.z) { return false; }
+    if ((x87d)m_fLeftCoord  - radius > pos.x) { return false; }
+    if ((x87d)radius + m_fRightCoord < pos.x) { return false; }
+    if ((x87d)m_fFrontCoord - radius > pos.y) { return false; }
+    if ((x87d)radius + m_fBackCoord  < pos.y) { return false; }
+    if ((x87d)m_vPosn.z     - radius > pos.z) { return false; }
+    if ((x87d)radius + m_fTopZ       < pos.z) { return false; }
 
     // NOTE: `m_pColData` is dereferenced unchecked in the original too
     const auto* const colData = entity->GetColModel()->m_pColData;
@@ -253,8 +253,8 @@ bool CGarage::IsEntityTouching3D(CEntity* entity) {
 bool CGarage::IsEntityEntirelyOutside(CEntity* entity, float radius) {
     const auto& pos = entity->GetPosition();
     // Position inside the rectangle grown by `radius` => not outside (all four comparisons are strict, NaN falls through to the spheres)
-    if ((double)m_fLeftCoord - radius < pos.x && (double)radius + m_fRightCoord > pos.x &&
-        (double)m_fFrontCoord - radius < pos.y && (double)radius + m_fBackCoord > pos.y) {
+    if ((x87d)m_fLeftCoord - radius < pos.x && (x87d)radius + m_fRightCoord > pos.x &&
+        (x87d)m_fFrontCoord - radius < pos.y && (x87d)radius + m_fBackCoord > pos.y) {
         return false;
     }
 
@@ -301,7 +301,7 @@ bool CGarage::IsStaticPlayerCarEntirelyInside() {
     if (ay > 0.01f) { return false; }
     const float az = speed.z < 0.0f ? -speed.z : speed.z;
     if (az > 0.01f) { return false; }
-    if (((double)ay * ay + (double)az * az) + (double)ax * ax > (double)0.0001f) {
+    if (((x87d)ay * ay + (x87d)az * az) + (x87d)ax * ax > (double)0.0001f) {
         return false;
     }
     return IsEntityEntirelyInside3D(car, 0.0f);
@@ -310,12 +310,12 @@ bool CGarage::IsStaticPlayerCarEntirelyInside() {
 // 0x448BE0
 bool CGarage::IsEntityEntirelyInside3D(CEntity* entity, float radius) {
     const auto& pos = entity->GetPosition();
-    if ((double)m_fLeftCoord  - radius > pos.x) { return false; }
-    if ((double)radius + m_fRightCoord < pos.x) { return false; }
-    if ((double)m_fFrontCoord - radius > pos.y) { return false; }
-    if ((double)radius + m_fBackCoord  < pos.y) { return false; }
-    if ((double)m_vPosn.z     - radius > pos.z) { return false; }
-    if ((double)radius + m_fTopZ       < pos.z) { return false; }
+    if ((x87d)m_fLeftCoord  - radius > pos.x) { return false; }
+    if ((x87d)radius + m_fRightCoord < pos.x) { return false; }
+    if ((x87d)m_fFrontCoord - radius > pos.y) { return false; }
+    if ((x87d)radius + m_fBackCoord  < pos.y) { return false; }
+    if ((x87d)m_vPosn.z     - radius > pos.z) { return false; }
+    if ((x87d)radius + m_fTopZ       < pos.z) { return false; }
 
     const auto* const colData = entity->GetColModel()->m_pColData;
     if (!colData) {
@@ -338,14 +338,14 @@ bool CGarage::IsPointInsideGarage(CVector point) {
 
     // dy is spilled to a float; dx stays extended for the first product and is spilled (rounded) for the second
     const float  dy = point.y - m_vPosn.y;
-    const double dx = (double)point.x - m_vPosn.x;
+    const x87d dx = (x87d)point.x - m_vPosn.x;
     const float  dxf = (float)dx;
 
-    const double a = dx * m_vDirectionA.x + (double)dy * m_vDirectionA.y;
+    const x87d a = dx * m_vDirectionA.x + (x87d)dy * m_vDirectionA.y;
     if (a < 0.0)     { return false; }
     if (a > m_fWidth) { return false; }
 
-    const double b = (double)dxf * m_vDirectionB.x + (double)dy * m_vDirectionB.y;
+    const x87d b = (x87d)dxf * m_vDirectionB.x + (x87d)dy * m_vDirectionB.y;
     if (b < 0.0)      { return false; }
     if (b > m_fHeight) { return false; }
     return true;
@@ -420,39 +420,39 @@ void CGarage::InitDoorsAtStart() {
 
 // 0x4487D0
 bool CGarage::IsPointInsideGarage(CVector point, float radius) {
-    if ((double)m_vPosn.z - radius > point.z) { return false; }
-    if ((double)radius + m_fTopZ < point.z)   { return false; }
+    if ((x87d)m_vPosn.z - radius > point.z) { return false; }
+    if ((x87d)radius + m_fTopZ < point.z)   { return false; }
 
     // dy is spilled to a float; dx stays extended for the first product and is spilled (rounded) for the second
     const float  dy  = point.y - m_vPosn.y;
-    const double dx  = (double)point.x - m_vPosn.x;
+    const x87d dx  = (x87d)point.x - m_vPosn.x;
     const float  dxf = (float)dx;
     const float  negRadius = -radius;
 
-    const double a = dx * m_vDirectionA.x + (double)dy * m_vDirectionA.y;
+    const x87d a = dx * m_vDirectionA.x + (x87d)dy * m_vDirectionA.y;
     if (a < negRadius)                       { return false; }
-    if (a > (double)radius + m_fWidth)       { return false; }
+    if (a > (x87d)radius + m_fWidth)       { return false; }
 
-    const double b = (double)dxf * m_vDirectionB.x + (double)dy * m_vDirectionB.y;
+    const x87d b = (x87d)dxf * m_vDirectionB.x + (x87d)dy * m_vDirectionB.y;
     if (b < negRadius)                       { return false; }
-    if (b > (double)radius + m_fHeight)      { return false; }
+    if (b > (x87d)radius + m_fHeight)      { return false; }
     return true;
 }
 
 // 0x447D80
 float CGarage::CalcDistToGarageRectangleSquared(float x, float y) {
     // The differences stay on the x87 stack (extended precision); only the result is returned (st0)
-    double dx = 0.0;
+    x87d dx = (x87d)0.0;
     if (x < m_fLeftCoord) {
-        dx = (double)x - m_fLeftCoord;
+        dx = (x87d)x - m_fLeftCoord;
     } else if (x > m_fRightCoord) {
-        dx = (double)x - m_fRightCoord;
+        dx = (x87d)x - m_fRightCoord;
     }
-    double dy = 0.0;
+    x87d dy = (x87d)0.0;
     if (y < m_fFrontCoord) {
-        dy = (double)y - m_fFrontCoord;
+        dy = (x87d)y - m_fFrontCoord;
     } else if (y > m_fBackCoord) {
-        dy = (double)y - m_fBackCoord;
+        dy = (x87d)y - m_fBackCoord;
     }
     return (float)(dy * dy + dx * dx);
 }
@@ -489,9 +489,9 @@ void CGarage::NeatlyLineUpStoredCars(CStoredCar* cars) {
     const float by      = (m_vDirectionB.y * m_fHeight) * 0.5f;
     const float bz      = (m_fHeight * 0.0f) * 0.5f;
 
-    const float cy = (float)((double)by + (float)((double)m_vPosn.y + ay));
-    const float cz = (float)((double)bz + (float)((double)zRaised + az));
-    const float cx = (float)((double)bx + ((double)ax + m_vPosn.x));
+    const float cy = (float)((x87d)by + (float)((x87d)m_vPosn.y + ay));
+    const float cz = (float)((x87d)bz + (float)((x87d)zRaised + az));
+    const float cx = (float)((x87d)bx + ((x87d)ax + m_vPosn.x));
 
     // Direction in which the cars are lined up: the garage's A direction in 2D, with length 4
     CVector dir{ m_vDirectionA.x, m_vDirectionA.y, 0.0f };
@@ -501,17 +501,17 @@ void CGarage::NeatlyLineUpStoredCars(CStoredCar* cars) {
     const float stepZ = dir.z * 4.0f;
 
     // Position of the "-1st" car; the i-th one is `start + step * i`
-    const float startX = (float)((double)cx - stepX);
-    const float startY = (float)((double)cy - stepY);
-    const float startZ = (float)((double)cz - stepZ);
+    const float startX = (float)((x87d)cx - stepX);
+    const float startY = (float)((x87d)cy - stepY);
+    const float startZ = (float)((x87d)cz - stepZ);
 
     for (auto i = 0; i < 3 && cars[i].HasCar(); i++) {
         auto& car = cars[i];
-        car.m_vPosn.x = (float)((double)stepX * i + startX);
-        car.m_vPosn.y = (float)((double)stepY * i + startY);
-        car.m_vPosn.z = (float)((double)i * stepZ + startZ);
-        car.m_nPackedForwardX = (uint8)(int32)((double)dir.y * 100.0);    // 0x858628
-        car.m_nPackedForwardY = (uint8)(int32)((double)(-dir.x) * 100.0);
+        car.m_vPosn.x = (float)((x87d)stepX * i + startX);
+        car.m_vPosn.y = (float)((x87d)stepY * i + startY);
+        car.m_vPosn.z = (float)((x87d)i * stepZ + startZ);
+        car.m_nPackedForwardX = (uint8)(int32)((x87d)dir.y * (x87d)100.0);    // 0x858628
+        car.m_nPackedForwardY = (uint8)(int32)((x87d)(-dir.x) * (x87d)100.0);
         car.m_nPackedForwardZ = 0;
     }
 }
@@ -604,20 +604,20 @@ void CGarage::ThrowCarsNearDoorOutOfGarage(CVehicle* ignoredVehicle) {
             // A sphere sticks out: push the car away from the garage's center (2D), only once per car
             const auto& pos = veh->GetPosition();
             CVector dir{
-                (float)(pos.x - ((double)m_fRightCoord + m_fLeftCoord) * 0.5),
-                (float)(pos.y - ((double)m_fBackCoord + m_fFrontCoord) * 0.5),
+                (float)(pos.x - ((x87d)m_fRightCoord + m_fLeftCoord) * (x87d)0.5),
+                (float)(pos.y - ((x87d)m_fBackCoord + m_fFrontCoord) * (x87d)0.5),
                 0.0f
             };
             NormaliseExt(dir);
 
             const float ts = CTimer::ms_fTimeStep;
-            const double dx = (double)dir.x * 0.02f; // 0x858B38
-            const double dy = (double)dir.y * 0.02f;
+            const x87d dx = (x87d)dir.x * 0.02f; // 0x858B38
+            const x87d dy = (x87d)dir.y * 0.02f;
             const float  dz = dir.z * 0.02f;
             // NOTE: the original spills `dx * timestep` to a float temp before adding the speed (y and z stay in the FPU)
-            veh->m_vecMoveSpeed.x = (float)((double)(float)(dx * ts) + veh->m_vecMoveSpeed.x);
+            veh->m_vecMoveSpeed.x = (float)((x87d)(float)(dx * ts) + veh->m_vecMoveSpeed.x);
             veh->m_vecMoveSpeed.y = (float)(dy * ts + veh->m_vecMoveSpeed.y);
-            veh->m_vecMoveSpeed.z = (float)((double)dz * ts + veh->m_vecMoveSpeed.z);
+            veh->m_vecMoveSpeed.z = (float)((x87d)dz * ts + veh->m_vecMoveSpeed.z);
             break;
         }
     }
@@ -667,7 +667,7 @@ void CGarage::StoreAndRemoveCarsForThisImpoundingGarage(CStoredCar* storedCars, 
 // 0x44A660
 bool CGarage::SlideDoorOpen() {
     const bool isHangar = m_nType == HANGAR_AT400 || m_nType == HANGAR_ABANDONED_AIRPORT;
-    m_fDoorPosition = (float)((double)CTimer::ms_fTimeStep * (isHangar ? 0.0011f : 0.011f) + m_fDoorPosition); // 0x8599AC / 0x8599A8
+    m_fDoorPosition = (float)((x87d)CTimer::ms_fTimeStep * (isHangar ? 0.0011f : 0.011f) + m_fDoorPosition); // 0x8599AC / 0x8599A8
 
     CObject* door1{};
     CObject* door2{};
@@ -689,7 +689,7 @@ bool CGarage::SlideDoorOpen() {
 // 0x44A750
 bool CGarage::SlideDoorClosed() {
     const bool isHangar = m_nType == HANGAR_AT400 || m_nType == HANGAR_ABANDONED_AIRPORT;
-    m_fDoorPosition = (float)(m_fDoorPosition - (double)CTimer::ms_fTimeStep * (isHangar ? 0.0013f : 0.013f)); // 0x8599B4 / 0x8599B0
+    m_fDoorPosition = (float)(m_fDoorPosition - (x87d)CTimer::ms_fTimeStep * (isHangar ? 0.0013f : 0.013f)); // 0x8599B4 / 0x8599B0
 
     CObject* door1{};
     CObject* door2{};
@@ -744,10 +744,10 @@ void ReleasePlayerFromGarage() {
 // The original re-queries the player's position for every operand; the sum is kept at extended precision.
 double PlayerDistSqFromGarageCenter(const CGarage& g) {
     const CVector pc = FindPlayerCoors();
-    const double  cx = ((double)g.m_fRightCoord + g.m_fLeftCoord) * 0.5;
-    const double  cy = ((double)g.m_fFrontCoord + g.m_fBackCoord) * 0.5;
+    const x87d  cx = ((x87d)g.m_fRightCoord + g.m_fLeftCoord) * (x87d)0.5;
+    const x87d  cy = ((x87d)g.m_fFrontCoord + g.m_fBackCoord) * (x87d)0.5;
     const float   dyF = (float)(pc.y - cy); // spilled to a float temp
-    return (pc.y - cy) * (double)dyF + (pc.x - cx) * (pc.x - cx);
+    return (pc.y - cy) * (x87d)dyF + (pc.x - cx) * (pc.x - cx);
 }
 
 // 0x44B9C3 (type specific checks come before): open once the player's vehicle is close enough
@@ -1322,8 +1322,8 @@ void UpdateHideOut(CGarage& g) {
                 const auto DoorDistSq = [](const CObject* door) {
                     const auto& dp = door->GetPosition();
                     const auto& vp = FindPlayerVehicle(-1, false)->GetPosition();
-                    const double dy = (double)dp.y - vp.y;
-                    const double dx = (double)dp.x - vp.x;
+                    const x87d dy = (x87d)dp.y - vp.y;
+                    const x87d dx = (x87d)dp.x - vp.x;
                     return dy * dy + dx * dx;
                 };
                 if (!(first && DoorDistSq(first) < 25.0f)) { // 0x858FE8
@@ -1497,7 +1497,7 @@ void UpdateImpound(CGarage& g) {
     // The player is in the garage's height range
     const auto IsPlayerInHeightRange = [&g] {
         bool bRes = false;
-        if ((double)g.m_fTopZ - 2.0 > FindPlayerCoors().z) { // 2.0f @ 0x858CA0
+        if ((x87d)g.m_fTopZ - (x87d)2.0 > FindPlayerCoors().z) { // 2.0f @ 0x858CA0
             if (FindPlayerCoors().z > g.m_vPosn.z) {
                 bRes = true;
             }
@@ -1623,7 +1623,7 @@ void CGarage::Update(int32 garageId) {
             }
             if (playerVeh->m_nModelIndex == MODEL_MRWHOOP) { // 0x1A7
                 const auto& pos = playerVeh->GetPosition();
-                if ((double)m_fLeftCoord - 0.5 < pos.x && pos.x < (double)m_fRightCoord + 0.5 && (double)m_fFrontCoord - 0.5 < pos.y && pos.y < (double)m_fBackCoord + 0.5) { // 0.5f @ 0x858B8C
+                if ((x87d)m_fLeftCoord - (x87d)0.5 < pos.x && pos.x < (x87d)m_fRightCoord + (x87d)0.5 && (x87d)m_fFrontCoord - (x87d)0.5 < pos.y && pos.y < (x87d)m_fBackCoord + (x87d)0.5) { // 0.5f @ 0x858B8C
                     CGarages::bCamShouldBeOutside = true;
                     TheCamera.m_pToGarageWeAreIn  = this;
                 }
@@ -1843,9 +1843,9 @@ void CStoredCar::StoreCar(CVehicle* vehicle) {
 
     // Forward vector packed as signed bytes (x100); `_ftol` truncates, the product is kept at extended precision
     const auto& fwd  = vehicle->m_matrix->GetForward();
-    m_nPackedForwardX = static_cast<uint8>(static_cast<int32>(double(fwd.x) * 100.0));
-    m_nPackedForwardY = static_cast<uint8>(static_cast<int32>(double(fwd.y) * 100.0));
-    m_nPackedForwardZ = static_cast<uint8>(static_cast<int32>(double(fwd.z) * 100.0));
+    m_nPackedForwardX = static_cast<uint8>(static_cast<int32>(X87R(x87d(fwd.x) * (x87d)100.0)));
+    m_nPackedForwardY = static_cast<uint8>(static_cast<int32>(X87R(x87d(fwd.y) * (x87d)100.0)));
+    m_nPackedForwardZ = static_cast<uint8>(static_cast<int32>(X87R(x87d(fwd.z) * (x87d)100.0)));
 
     m_nPrimaryColor    = vehicle->m_nPrimaryColor;
     m_nSecondaryColor  = vehicle->m_nSecondaryColor;
@@ -1941,9 +1941,9 @@ CVehicle* CStoredCar::RestoreCar() {
     }
 
     // The packed forward vector (x0.01, signed bytes); the products stay extended until stored
-    const auto fwdX = (float)((double)(int8)m_nPackedForwardX * 0.01f);
-    const auto fwdY = (float)((double)(int8)m_nPackedForwardY * 0.01f);
-    const auto fwdZ = (float)((double)(int8)m_nPackedForwardZ * 0.01f);
+    const auto fwdX = (float)((x87d)(int8)m_nPackedForwardX * 0.01f);
+    const auto fwdY = (float)((x87d)(int8)m_nPackedForwardY * 0.01f);
+    const auto fwdZ = (float)((x87d)(int8)m_nPackedForwardZ * 0.01f);
     // NOTE: the matrix is dereferenced unchecked in the original from here on
     auto& mat = *veh->m_matrix;
     mat.GetForward() = CVector{ fwdX, fwdY, fwdZ };
@@ -1994,13 +1994,13 @@ void CGarage::FindDoorsWithGarage(CObject** ppFirstDoor, CObject** ppSecondDoor)
     // Center of the garage's door area (intermediates are rounded to float where the original spills them)
     const auto garageIdx = static_cast<int8>(this - CGarages::aGarages);
     const float halfW    = m_fWidth * 0.5f;
-    const float t1       = (float)((double)m_vDirectionA.x * halfW);
+    const float t1       = (float)((x87d)m_vDirectionA.x * halfW);
     const float x1       = t1 + m_vPosn.x;
-    const double y1      = (double)m_vDirectionA.y * halfW + m_vPosn.y;
+    const x87d y1      = (x87d)m_vDirectionA.y * halfW + m_vPosn.y;
     const float halfH    = m_fHeight * 0.5f;
-    const float t3       = (float)((double)m_vDirectionB.x * halfH);
+    const float t3       = (float)((x87d)m_vDirectionB.x * halfH);
     const float cx       = t3 + x1;
-    const float cy       = (float)((double)m_vDirectionB.y * halfH + y1);
+    const float cy       = (float)((x87d)m_vDirectionB.y * halfH + y1);
 
     float dist1  = 99999.9f; // 0x85999C
     float dist2  = 99999.9f;
@@ -2015,8 +2015,8 @@ void CGarage::FindDoorsWithGarage(CObject** ppFirstDoor, CObject** ppSecondDoor)
         }
 
         const auto& pos = obj->GetPosition();
-        const double dx = (double)cx - pos.x;
-        const double dy = (double)cy - pos.y;
+        const x87d dx = (x87d)cx - pos.x;
+        const x87d dy = (x87d)cy - pos.y;
         const float dist = (float)std::sqrt(dx * dx + dy * dy);
 
         if (!*ppFirstDoor) {

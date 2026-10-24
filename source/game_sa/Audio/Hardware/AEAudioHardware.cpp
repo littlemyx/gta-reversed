@@ -11,7 +11,7 @@
 #include "AEAudioTap.h"
 #include "AEAudioStats.h"
 
-NOTSA_GLOBAL(AEAudioHardware, 0xB5F8B8, (CAEAudioHardware), {}); static_assert(sizeof(AEAudioHardware) == 4116);
+NOTSA_GLOBAL(AEAudioHardware, 0xB5F8B8, (CAEAudioHardware), {}); VALIDATE_SIZE(AEAudioHardware, 4116);
 
 void CAEAudioHardware::InjectHooks() {
     RH_ScopedClass(CAEAudioHardware);
@@ -260,7 +260,7 @@ void CAEAudioHardware::PlaySound(int16 channel, uint16 channelSlot, uint16 sound
         return;
     }
 
-#ifdef NOTSA_STANDALONE_RUN
+#if defined(NOTSA_STANDALONE_RUN) && !defined(NOTSA_PORTABLE) // MAC-W0: DirectSound vtable tap/mute are Windows debug tools
     notsa::audio_tap::NotePlaySound(bufferSize); // NOTSA: NOTSA_AUDIO_TAP
 #endif
     const auto loopOffset = m_pMP3BankLoader->GetLoopOffset((eSoundID)soundIdInSlot, (eSoundBankSlot)bankSlot);
@@ -282,8 +282,8 @@ void CAEAudioHardware::PlaySound(int16 channel, uint16 channelSlot, uint16 sound
 
     const int32 length = ch->GetLength();
     if ((flags & 0x8) && (int16)startPos > 0) { // Play position is a percentage
-        const auto  scaled = (float)((double)(int16)startPos * (double)0.01f * (double)length);
-        startPos = (int32)std::floor((double)scaled); // 0x406CE0 = `floor`, then `_ftol`
+        const auto  scaled = (float)((x87d)(int16)startPos * (x87d)0.01f * (x87d)length);
+        startPos = (int32)std::floor((x87d)scaled); // 0x406CE0 = `floor`, then `_ftol`
     }
     if ((int16)startPos > length) {
         startPos = length;
@@ -699,7 +699,7 @@ void CAEAudioHardware::GetBeatInfo(tBeatInfo* beatInfo) {
     }
 
     // 0x4D9346 and 0x4D9088 combined - Copy beats at the beginning of the time window
-    for (auto k = 0u; k < std::min(10u, i); k++) {
+    for (auto k = 0u; k < std::min<size_t>(10u, i); k++) {
         auto& beat    = bi->BeatWindow[10 - i];
         beat          = trkInfo->m_aBeats[i - k - 1];
         beat.m_nTime -= trkPlayTime;
@@ -712,7 +712,7 @@ void CAEAudioHardware::GetBeatInfo(tBeatInfo* beatInfo) {
         }
 
         // 0x4D91A9
-        for (auto k = 0u; k < std::min(std::size(trkInfo->m_aBeats) - i, 10u); k++) { // Copy beats towards the end
+        for (auto k = 0u; k < std::min<size_t>(std::size(trkInfo->m_aBeats) - i, 10u); k++) { // Copy beats towards the end
             auto& beat = bi->BeatWindow[10 + i];
             if (beat.m_nKey) {
                 beat         =  trkInfo->m_aBeats[i + k];

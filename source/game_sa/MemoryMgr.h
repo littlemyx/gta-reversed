@@ -12,6 +12,12 @@
 #define MEMORY_MGR_TRACKING_NUM_IDS     33 // from XBOX
 #define MEMORY_MGR_HEAP_SIZE            MEMORY_MGR_PC_HEAP_SIZE
 
+#if defined(MEMORY_MGR_USE_MEMORY_HEAP) && defined(NOTSA_PORTABLE)
+// CMemoryHeap is x86-only: HeapBlockDesc holds pointers, so on a 64-bit target it is larger than MEMORY_HEAP_ALIGN (16) and the VALIDATE_LAYOUT in
+// MemoryHeap.cpp is compiled out. The macro is defined nowhere today (MemoryMgr falls to ::malloc); fail loudly if someone turns it on for a portable build.
+#error "MEMORY_MGR_USE_MEMORY_HEAP is not supported with NOTSA_PORTABLE (HeapBlockDesc is pointer-sized, see P-2b / MAC-P1-REV F1)"
+#endif
+
 #ifdef MEMORY_MGR_USE_MEMORY_HEAP
 #define MEMORY_MGR_OVERLOAD_NEW_DELETE
 #define MEMORY_MGR_USE_HEAP_FLAGS
@@ -65,7 +71,7 @@ enum eMemoryId {
 };
 
 static inline NOTSA_GLOBAL_ALIAS(s_MemoryHeapBuffer, 0xC8E0C8, (char[16384]), PC_Scratch); // same storage as `PC_Scratch` (common.h owns the 16 KB scratch buffer)
-NOTSA_GLOBAL_HDR(g_Heaps, 0xC87B40, (std::array<CMemoryHeap, 3>), {}); static_assert(sizeof(g_Heaps) == 216);
+NOTSA_GLOBAL_HDR(g_Heaps, 0xC87B40, (std::array<CMemoryHeap, 3>), {}); VALIDATE_SIZE(g_Heaps, 216);
 
 // todo fixed stack
 template <typename _Type, uint32 _nSize> class CStack {

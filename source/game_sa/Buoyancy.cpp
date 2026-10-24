@@ -2,7 +2,7 @@
 
 #include "Buoyancy.h"
 
-NOTSA_GLOBAL(mod_Buoyancy, 0xC1C890, (cBuoyancy), {}); static_assert(sizeof(mod_Buoyancy) == 208);
+NOTSA_GLOBAL(mod_Buoyancy, 0xC1C890, (cBuoyancy), {}); VALIDATE_SIZE(mod_Buoyancy, 208);
 
 void cBuoyancy::InjectHooks()
 {
@@ -247,20 +247,20 @@ void cBuoyancy::PreCalcSetup(CPhysical* entity, float fBuoyancy)
     m_vecCenterOffset.y = (m_vecBoundingMax.y - m_vecBoundingMin.y) * 0.5F;
     m_vecCenterOffset.z = (m_vecBoundingMax.z - m_vecBoundingMin.z) * 0.5F;
     if (m_vecCenterOffset.z > m_vecCenterOffset.x && m_vecCenterOffset.z > m_vecCenterOffset.y) {
-        const double recip = 1.0 / (double)m_vecCenterOffset.z;
+        const x87d recip = (x87d)1.0 / (x87d)m_vecCenterOffset.z;
         m_vecNormalizedCenterOffset.z = 1.0F;
-        m_vecNormalizedCenterOffset.x = (float)((double)m_vecCenterOffset.x * recip);
-        m_vecNormalizedCenterOffset.y = (float)((double)m_vecCenterOffset.y * recip);
+        m_vecNormalizedCenterOffset.x = (float)((x87d)m_vecCenterOffset.x * recip);
+        m_vecNormalizedCenterOffset.y = (float)((x87d)m_vecCenterOffset.y * recip);
     } else if (m_vecCenterOffset.y > m_vecCenterOffset.x && m_vecCenterOffset.y > m_vecCenterOffset.z) {
-        const double recip = 1.0 / (double)m_vecCenterOffset.y;
+        const x87d recip = (x87d)1.0 / (x87d)m_vecCenterOffset.y;
         m_vecNormalizedCenterOffset.y = 1.0F;
-        m_vecNormalizedCenterOffset.x = (float)((double)m_vecCenterOffset.x * recip);
-        m_vecNormalizedCenterOffset.z = (float)(recip * (double)m_vecCenterOffset.z);
+        m_vecNormalizedCenterOffset.x = (float)((x87d)m_vecCenterOffset.x * recip);
+        m_vecNormalizedCenterOffset.z = (float)(recip * (x87d)m_vecCenterOffset.z);
     } else {
-        const double recip = 1.0 / (double)m_vecCenterOffset.x;
+        const x87d recip = (x87d)1.0 / (x87d)m_vecCenterOffset.x;
         m_vecNormalizedCenterOffset.x = 1.0F;
-        m_vecNormalizedCenterOffset.y = (float)(recip * (double)m_vecCenterOffset.y);
-        m_vecNormalizedCenterOffset.z = (float)(recip * (double)m_vecCenterOffset.z);
+        m_vecNormalizedCenterOffset.y = (float)(recip * (x87d)m_vecCenterOffset.y);
+        m_vecNormalizedCenterOffset.z = (float)(recip * (x87d)m_vecCenterOffset.z);
     }
     m_fNumCheckedPoints = 1.0F;
     m_vecTurnPoint.Set(0.0F, 0.0F, 0.0F);

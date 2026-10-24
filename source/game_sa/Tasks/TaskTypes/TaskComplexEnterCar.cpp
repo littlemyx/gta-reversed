@@ -358,7 +358,7 @@ CTask* CTaskComplexEnterCar::CreateNextSubTask(CPed* ped) {
         return nullptr;
 
     default:
-        NOTSA_UNREACHABLE("SubTaskType = {}", tt);
+        NOTSA_UNREACHABLE_RET(nullptr, "SubTaskType = {}", tt);
     }
 }
 
@@ -738,7 +738,7 @@ CTask* CTaskComplexEnterCar::CreateSubTask(eTaskType taskType, CPed* ped) {
     case TASK_SIMPLE_STAND_STILL:
         return new CTaskSimpleStandStill{}; // 0x63E0CE
     default:
-        NOTSA_UNREACHABLE("taskType = {}", taskType);
+        NOTSA_UNREACHABLE_RET(nullptr, "taskType = {}", taskType);
     }
 }
 
@@ -868,43 +868,43 @@ void CTaskComplexEnterCar::GetCameraStickModifier(CPed* ped, float zoomDist, flo
     }
 
     // NOTE: x87 extended precision is kept by the original, unless specified otherwise
-    constexpr double PI      = (double)std::numbers::pi_v<float>;     // 0x858CB8
-    constexpr double TWO_PI  = (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
-    constexpr double HALF_PI = (double)(std::numbers::pi_v<float> / 2.f); // 0x858FE4
+    constexpr x87d PI      = (x87d)std::numbers::pi_v<float>;     // 0x858CB8
+    constexpr x87d TWO_PI  = (x87d)(2.f * std::numbers::pi_v<float>); // 0x858CBC
+    constexpr x87d HALF_PI = (x87d)(std::numbers::pi_v<float> / 2.f); // 0x858FE4
 
     const auto& carMat = *m_Car->m_matrix; // BUG: Used w/o checking for null (below it is checked, though)
     const auto  carHeading = m_Car->m_matrix
         ? x87::atan2((double)-carMat.GetForward().x, (double)carMat.GetForward().y)
         : (double)m_Car->m_placement.m_fHeading;
-    const float heading = (float)(carHeading - HALF_PI); // Rounded to float
+    const float heading = (float)(X87R(carHeading - HALF_PI)); // Rounded to float
 
     const auto& carPos = m_Car->GetPosition();
     const auto& pedPos = ped->GetPosition();
     const auto& right  = carMat.GetRight();
-    const double sideDist = (((double)pedPos.z - carPos.z) * right.z + ((double)pedPos.y - carPos.y) * right.y) + ((double)pedPos.x - carPos.x) * right.x;
+    const x87d sideDist = (((x87d)pedPos.z - carPos.z) * right.z + ((x87d)pedPos.y - carPos.y) * right.y) + ((x87d)pedPos.x - carPos.x) * right.x;
     const float  sideDistF = (float)sideDist;
 
-    float angle = (float)(x87::atan2(sideDist, (double)zoomDist) * (double)0.7f); // 0x86E690 - Rounded to float
+    float angle = (float)(X87R(x87::atan2(sideDist, (double)zoomDist) * (double)0.7f)); // 0x86E690 - Rounded to float
     if (-m_Car->GetColModel()->m_boundBox.m_vecMin.y > zoomDist) {
         angle = angle > 0.f ? -0.13962634f : 0.13962634f; // 0x86E694
     }
 
-    double target = m_CamMovementChoice == 1
-        ? (double)angle + ((double)heading + PI)
-        : (double)heading - angle;
-    if (target > (double)horzAngle + PI) {
+    x87d target = m_CamMovementChoice == 1
+        ? (x87d)angle + ((x87d)heading + PI)
+        : (x87d)heading - angle;
+    if (target > (x87d)horzAngle + PI) {
         target -= TWO_PI;
-    } else if (target < (double)horzAngle - PI) {
+    } else if (target < (x87d)horzAngle - PI) {
         target += TWO_PI;
     }
-    double delta = target - horzAngle;
+    x87d delta = target - horzAngle;
 
     // Choose in which direction to go
     const bool flip = (sideDistF > 0.f) == (m_CamMovementChoice == 1)
         ? delta <= -HALF_PI /* 0x859998 */
         : delta >= HALF_PI;
     if (flip) {
-        delta *= -1.0; // 0x858C1C
+        delta *= -(x87d)1.0; // 0x858C1C
     }
 
     const NOTSA_GLOBAL_LOCAL_NS(s_Limits, 0x86E684, (std::array<float, 3>), { 0.1f, 0.2f, 0.2f });
@@ -918,7 +918,7 @@ void CTaskComplexEnterCar::GetCameraStickModifier(CPed* ped, float zoomDist, flo
     stickLR = (float)(delta * s_Factors[m_CamMovementChoice] + stickLR);
 
     if (vertAngle > NOTSA_GLOBAL_EXPR(0x8D2ECC, (float), k_8D2ECC)) { // .data global in the original (-10 degrees, ~-0.17453294)
-        stickUD = (float)((double)stickUD - (double)s_Factors[m_CamMovementChoice] * s_Limits[m_CamMovementChoice]);
+        stickUD = (float)((x87d)stickUD - (x87d)s_Factors[m_CamMovementChoice] * s_Limits[m_CamMovementChoice]);
     }
 }
 

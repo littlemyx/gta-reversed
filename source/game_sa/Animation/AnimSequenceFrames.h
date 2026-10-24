@@ -39,7 +39,7 @@ struct KeyFrameTransCompressed : KeyFrameCompressed {
     FixedVector<int16, 1024.f> Trans;
 };
 
-VALIDATE_SIZE(KeyFrameCompressed, 0xA);
-VALIDATE_SIZE(KeyFrameTransCompressed, 0x10);
-VALIDATE_SIZE(KeyFrame, 0x14);
-VALIDATE_SIZE(KeyFrameTrans, 0x20);
+VALIDATE_SIZE_FILE(KeyFrameCompressed, 0xA);
+VALIDATE_SIZE_FILE(KeyFrameTransCompressed, 0x10);
+VALIDATE_SIZE_FILE(KeyFrame, 0x14);
+VALIDATE_SIZE_FILE(KeyFrameTrans, 0x20);

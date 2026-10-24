@@ -174,7 +174,7 @@ void CReplay::StorePedUpdate(CPed* ped, uint8 index) {
         if (ped->IsInVehicle()) {
             return GetVehiclePool()->GetIndex(ped->GetVehicleIfInOne()) + 1;
         } else {
-            return 0;
+            return ptrdiff_t{0};
         }
     }();
 
@@ -632,9 +632,9 @@ void CReplay::ProcessLookAroundCam() {
             }
 
             auto target = CVector{
-                    (float)(x87::sin(playerCameraDirAngle) * x87::cos(viewAngle) * playerCameraDistance),
-                    (float)(x87::cos(playerCameraDirAngle) * x87::cos(viewAngle) * playerCameraDistance),
-                    (float)(x87::sin(viewAngle) * playerCameraDistance)
+                    (float)(X87R(x87::sin(playerCameraDirAngle) * x87::cos(viewAngle)) * playerCameraDistance),
+                    (float)(X87R(x87::cos(playerCameraDirAngle) * x87::cos(viewAngle)) * playerCameraDistance),
+                    (float)(X87R(x87::sin(viewAngle) * playerCameraDistance))
             } + CameraFocus;
 
             CColPoint colPoint;
@@ -909,7 +909,11 @@ void CReplay::RecordThisFrame() {
         .matrix               = 0 /* to be filled */,
         .firstFocusPosn       = FindPlayerCoors()
     };
+#ifdef NOTSA_PORTABLE
+    cameraPacket.WriteMatrix(TheCamera.GetMatrix());
+#else
     cameraPacket.GetMatrix() = TheCamera.GetMatrix();
+#endif
     Record.Write(cameraPacket);
 
     Record.Write<tReplayClockBlock>({
@@ -1130,7 +1134,7 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer& buffer, flo
                         case VEHICLE_TYPE_TRAILER:
                             return new (poolIdx << 8) CTrailer(modelId, MISSION_VEHICLE);
                         default:
-                            NOTSA_UNREACHABLE("Unknown vehicle subtype ={}", (int)vehiclePacket.vehicleSubType);
+                            NOTSA_UNREACHABLE_RET(nullptr, "Unknown vehicle subtype ={}", (int)vehiclePacket.vehicleSubType);
                         }
                     }();
 
@@ -1170,7 +1174,11 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer& buffer, flo
         case REPLAY_PACKET_GENERAL: {
             auto cameraPacket = buffer.Read<tReplayCameraBlock>();
 
+#ifdef NOTSA_PORTABLE
+            TheCamera.GetMatrix() = Lerp(TheCamera.GetMatrix(), cameraPacket.ReadMatrix(), interpolation);
+#else
             TheCamera.GetMatrix() = Lerp(TheCamera.GetMatrix(), cameraPacket.GetMatrix(), interpolation);
+#endif
             auto modelling = TheCamera.GetRwMatrix();
             modelling->pos = TheCamera.GetMatrix().GetPosition();
             modelling->at = TheCamera.GetMatrix().GetForward();

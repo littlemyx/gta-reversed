@@ -215,16 +215,16 @@ LineUpBlends GetLineUpBlends(CVehicle* vehicle, CAnimBlendAssociation* assoc) {
     // Used by the anims that open the door (when entering): ramps up around the critical time
     const auto RampUp = [&](double cmp, float edge, float t) -> float {
         if (cmp <= 0.0) {
-            return t < edge ? 0.f : (float)(((double)t - edge) / (1.0 - edge));
+            return t < edge ? 0.f : (float)(((x87d)t - edge) / ((x87d)1.0 - edge));
         }
         return t < edge ? t / edge : 1.f;
     };
     // Used by the anims that close the door (when exiting): ramps down around the critical time
     const auto RampDown = [&](float crit, float edge, float t) -> float {
         if (crit <= 0.f) {
-            return t < edge ? 1.f : (float)(1.0 - ((double)t - edge) / (1.0 - edge));
+            return t < edge ? 1.f : (float)((x87d)1.0 - ((x87d)t - edge) / ((x87d)1.0 - edge));
         }
-        return t < edge ? (float)(1.0 - (double)t / edge) : 0.f;
+        return t < edge ? (float)((x87d)1.0 - (x87d)t / edge) : 0.f;
     };
     // Hack for the AT-400, it never uses the blend...
     const auto IsAT400 = [&] { return vehicle->GetModelIndex() == MODEL_AT400; }; // 0x241
@@ -243,7 +243,7 @@ LineUpBlends GetLineUpBlends(CVehicle* vehicle, CAnimBlendAssociation* assoc) {
         float      zBlend  = 0.f;
         if (critAbs >= 10.f) {
             const auto edge = critAbs - 11.f;
-            zBlend = RampUp((double)crit - 11.0, edge, progress());
+            zBlend = RampUp((x87d)crit - (x87d)11.0, edge, progress());
         }
         if (IsAT400()) {
             zBlend = 1.f;
@@ -338,25 +338,25 @@ RtQuat SlerpOriginal(RtQuat from, RtQuat to, float t) {
 
     // `RwSinMinusPiToPiMacro`
     const auto Sin = [](double x) {
-        const double z = x * x;
-        const double v = z * x;
-        return x + v * ((((((z * _RW_S6 + _RW_S5) * z + _RW_S4) * z + _RW_S3) * z + _RW_S2) * z) + _RW_S1);
+        const x87d z = X87R(x * x);
+        const x87d v = X87R(z * x);
+        return X87R(x + v * ((((((z * _RW_S6 + _RW_S5) * z + _RW_S4) * z + _RW_S3) * z + _RW_S2) * z) + _RW_S1));
     };
 
-    double sclFrom = 1.0 - t, sclTo = t;
+    x87d sclFrom = (x87d)1.0 - t, sclTo = t;
     if (!cache.nearlyZeroOm) {
-        sclFrom = Sin(sclFrom * cache.omega);
-        sclTo   = Sin(sclTo * cache.omega);
+        sclFrom = Sin(X87R(sclFrom * cache.omega));
+        sclTo   = Sin(X87R(sclTo * cache.omega));
     }
 
     RtQuat res;
-    res.imag.x = (float)(cache.raTo.imag.x * sclTo + cache.raFrom.imag.x * sclFrom);
-    res.imag.y = (float)(cache.raTo.imag.y * sclTo + cache.raFrom.imag.y * sclFrom);
+    res.imag.x = (float)(X87R(cache.raTo.imag.x * sclTo) + X87R(cache.raFrom.imag.x * sclFrom));
+    res.imag.y = (float)(X87R(cache.raTo.imag.y * sclTo) + X87R(cache.raFrom.imag.y * sclFrom));
     {   // NOTE: The original stores the `from` part to memory (rounding it to float) before adding the `to` part
-        const float fromZ = (float)(cache.raFrom.imag.z * sclFrom);
-        res.imag.z = (float)(cache.raTo.imag.z * sclTo + fromZ);
+        const float fromZ = (float)(X87R(cache.raFrom.imag.z * sclFrom));
+        res.imag.z = (float)(X87R(cache.raTo.imag.z * sclTo) + fromZ);
     }
-    res.real = (float)(cache.raTo.real * sclTo + cache.raFrom.real * sclFrom);
+    res.real = (float)(X87R(cache.raTo.real * sclTo) + X87R(cache.raFrom.real * sclFrom));
     return res;
 }
 
@@ -372,12 +372,12 @@ RtQuat QuatFromMatrix(const CMatrix& mat) {
 //! Sets the orientation of the ped to the quaternion `q` and the position to `pos`
 //! (`RtQuatConvertToMatrix` essentially, but with the original's evaluation order)
 void SetPedMatrixFromQuat(CPed* ped, const RtQuat& q, const CVector& pos) {
-    const double x = q.imag.x, y = q.imag.y, z = q.imag.z, w = q.real;
+    const x87d x = q.imag.x, y = q.imag.y, z = q.imag.z, w = q.real;
 
-    const double s  = 2.0 / (((y * y + x * x) + z * z) + w * w);
-    const double xs = x * s;
+    const x87d s  = (x87d)2.0 / (((y * y + x * x) + z * z) + w * w);
+    const x87d xs = x * s;
     const float  ys = (float)(s * y);
-    const double zs = s * z;
+    const x87d zs = s * z;
 
     const float xw = (float)(xs * w);
     const float yw = (float)(ys * w);
@@ -386,14 +386,14 @@ void SetPedMatrixFromQuat(CPed* ped, const RtQuat& q, const CVector& pos) {
     const float yy = (float)(ys * y);
     const float zz = (float)(z * zs);
     const float yz = (float)(zs * y);
-    const double xz = xs * z;
-    const double xy = ys * x;
+    const x87d xz = xs * z;
+    const x87d xy = ys * x;
 
     RwMatrix rw{};
-    rw.right = { (float)(1.0 - ((double)zz + yy)), (float)(zw + xy), (float)(xz - yw) };
+    rw.right = { (float)((x87d)1.0 - ((x87d)zz + yy)), (float)(zw + xy), (float)(xz - yw) };
     rw.flags = 3;
-    rw.up    = { (float)(xy - zw), (float)(1.0 - ((double)zz + xx)), (float)((double)yz + xw) };
-    rw.at    = { (float)(xz + yw), (float)((double)yz - xw), (float)(1.0 - ((double)yy + xx)) };
+    rw.up    = { (float)(xy - zw), (float)((x87d)1.0 - ((x87d)zz + xx)), (float)((x87d)yz + xw) };
+    rw.at    = { (float)(xz + yw), (float)((x87d)yz - xw), (float)((x87d)1.0 - ((x87d)yy + xx)) };
     rw.pos   = { 0.f, 0.f, 0.f };
 
     CMatrix mat;
@@ -422,13 +422,13 @@ bool CTaskUtilityLineUpPedWithCar::ProcessPed(CPed* ped, CVehicle* vehicle, CAni
     const bool bVehicleFlipped = vehicle->GetUp().z <= -0.8f; // 0x858C9C - (NOTE: Unlike `IsUpsideDown` this is -0.8)
     if (!bVehicleFlipped) {
         if (m_nDoorIdx == 18) {
-            ped->m_fAimingRotation = (float)(GetVehicleHeading() + PI_F);
+            ped->m_fAimingRotation = (float)(X87R(GetVehicleHeading() + PI_F));
         } else if (m_nDoorOpenPosType != 2) {
             ped->m_fAimingRotation = (float)GetVehicleHeading();
         }
     } else {
         if (m_nDoorIdx == 8 || m_nDoorIdx == 9) {
-            ped->m_fAimingRotation = (float)(GetVehicleHeading() - PI_F);
+            ped->m_fAimingRotation = (float)(X87R(GetVehicleHeading() - PI_F));
         } else {
             ped->m_fAimingRotation = (float)GetVehicleHeading();
         }
@@ -470,16 +470,16 @@ bool CTaskUtilityLineUpPedWithCar::ProcessPed(CPed* ped, CVehicle* vehicle, CAni
         }
 
         // How far (along the right vector) the door position is from the vehicle
-        const float dot = (float)((rightZ * ((double)doorPos.z - vehPos.z) + rightY * ((double)doorPos.y - vehPos.y)) + ((double)doorPos.x - vehPos.x) * rightX);
+        const float dot = (float)((rightZ * ((x87d)doorPos.z - vehPos.z) + X87R(rightY * ((x87d)doorPos.y - vehPos.y))) + ((x87d)doorPos.x - vehPos.x) * rightX);
 
         const float origZ = doorPos.z;
-        const auto  z     = (float)((((double)vehPos.z - vehicle->GetHeightAboveRoad()) + (double)rightZ * dot) + 1.0);
+        const auto  z     = (float)((((x87d)vehPos.z - vehicle->GetHeightAboveRoad()) + (x87d)rightZ * dot) + (x87d)1.0);
 
         // Find the ground below the door
         doorPos = CPedPlacement::FindZCoorForPed(doorPos).first;
 
         // Ignore the found ground if it's too low (compared to the vehicle)
-        if ((double)z - 0.5 > doorPos.z) {
+        if ((x87d)z - (x87d)0.5 > doorPos.z) {
             doorPos.z = origZ;
         }
     } else if (vehicle->m_nVehicleType == VEHICLE_TYPE_BOAT && vehicle->IsUpsideDown()) {
@@ -489,7 +489,7 @@ bool CTaskUtilityLineUpPedWithCar::ProcessPed(CPed* ped, CVehicle* vehicle, CAni
 
     if (m_nDoorOpenPosType == 1 || m_nDoorOpenPosType == 2) {
         const auto& pedPos    = ped->GetPosition();
-        const double speedZ   = (double)ped->m_vecMoveSpeed.z - (double)CTimer::GetTimeStep() * 0.008f; // 0x863984
+        const x87d speedZ   = (x87d)ped->m_vecMoveSpeed.z - (x87d)CTimer::GetTimeStep() * 0.008f; // 0x863984
         if (speedZ + pedPos.z < m_fDoorOpenPosZ) { // Below the door
             targetPos.z = m_fDoorOpenPosZ;
             ped->m_vecMoveSpeed = CVector{};
@@ -501,7 +501,7 @@ bool CTaskUtilityLineUpPedWithCar::ProcessPed(CPed* ped, CVehicle* vehicle, CAni
 
     // Blend the Z coordinate (towards the door)
     const auto BlendTargetZ = [&] {
-        targetPos.z = (float)((((double)targetPos.z - m_fDoorOpenPosZ) * zBlend) + m_fDoorOpenPosZ);
+        targetPos.z = (float)((((x87d)targetPos.z - m_fDoorOpenPosZ) * zBlend) + m_fDoorOpenPosZ);
     };
     if (m_fDoorOpenPosZ > targetPos.z) {
         if (vehicle->m_nVehicleType == VEHICLE_TYPE_BIKE && assoc && assoc->GetAnimId() != ANIM_ID_CAR_GETIN_BIKE_FRONT) {
@@ -526,7 +526,7 @@ bool CTaskUtilityLineUpPedWithCar::ProcessPed(CPed* ped, CVehicle* vehicle, CAni
                 break;
             }
             const auto& vehPos = vehicle->GetPosition();
-            targetPos.z = (float)(((((double)vehPos.z - vehicle->GetHeightAboveRoad()) + 1.0) - m_fDoorOpenPosZ) * k + m_fDoorOpenPosZ);
+            targetPos.z = (float)(((((x87d)vehPos.z - vehicle->GetHeightAboveRoad()) + (x87d)1.0) - m_fDoorOpenPosZ) * k + m_fDoorOpenPosZ);
         } else {
             BlendTargetZ();
         }
@@ -541,9 +541,9 @@ bool CTaskUtilityLineUpPedWithCar::ProcessPed(CPed* ped, CVehicle* vehicle, CAni
 
         // Seconds-ish left
         const int32 timeLeft = (int32)((uint32)m_fTime - CTimer::GetTimeInMS());
-        double t = timeLeft;
+        x87d t = timeLeft;
         if (timeLeft < 0) {
-            t += 4294967296.0; // 0x858C54
+            t += (x87d)4294967296.0; // 0x858C54
         }
         t *= 0.0016666667f; // 0x865060
         if (t <= 0.0) {
@@ -554,18 +554,18 @@ bool CTaskUtilityLineUpPedWithCar::ProcessPed(CPed* ped, CVehicle* vehicle, CAni
 
         const float offY = (float)(t * m_Offset.y);
         const float offX = (float)(t * m_Offset.x);
-        targetPos.x = (float)((double)targetPos.x - offX);
-        targetPos.y = (float)((double)targetPos.y - offY);
-        targetPos.z = (float)((double)targetPos.z - 0.0 * t);
+        targetPos.x = (float)((x87d)targetPos.x - offX);
+        targetPos.y = (float)((x87d)targetPos.y - offY);
+        targetPos.z = (float)((x87d)targetPos.z - (x87d)0.0 * t);
 
         // Make sure the rotation we're blending to is within [-pi, pi] of the current one
-        double rot = aimRot;
-        if ((double)curRot + PI_F < rot) {
+        x87d rot = aimRot;
+        if ((x87d)curRot + PI_F < rot) {
             rot -= TWO_PI_F;
-        } else if ((double)curRot - PI_F > rot) {
+        } else if ((x87d)curRot - PI_F > rot) {
             rot += TWO_PI_F;
         }
-        ped->m_fCurrentRotation = (float)(curRot - (curRot - rot) * (1.0 - t));
+        ped->m_fCurrentRotation = (float)(curRot - (curRot - rot) * ((x87d)1.0 - t));
     } else {
         ped->m_fCurrentRotation = ped->m_fAimingRotation;
     }

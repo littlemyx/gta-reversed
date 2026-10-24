@@ -137,18 +137,18 @@ void CTaskSimpleBeHitWhileMoving::StartAnim(CPed* ped) {
             }
 
             // Set the time the ped stays down for
-            const double ms    = (double)CTimer::GetTimeInMS();
+            const x87d ms    = (x87d)CTimer::GetTimeInMS();
             const auto   rem   = (uint32)((uint32)ped->m_nRandomSeed + CTimer::GetFrameCounter()) % 1000u;
             if (ped->IsPlayer()) {
                 if (!assoc) {
                     ped->m_nUnconsciousTimer = rem + CTimer::GetTimeInMS() + 1000u;
                 } else if (assoc->m_AnimId == ANIM_ID_DEFAULT_CAR_ROLLOUT_LHS || assoc->m_AnimId == ANIM_ID_DEFAULT_CAR_ROLLOUT_RHS) {
                     ped->m_nUnconsciousTimer = (uint32)(int32)(
-                        ((double)assoc->m_BlendHier->m_fTotalTime * 1000.0 + ms) - (double)assoc->m_CurrentTime * 1000.0 + 100.0
+                        ((x87d)assoc->m_BlendHier->m_fTotalTime * (x87d)1000.0 + ms) - (x87d)assoc->m_CurrentTime * (x87d)1000.0 + (x87d)100.0
                     );
                 } else {
                     ped->m_nUnconsciousTimer = (uint32)(int32)(
-                        ((double)assoc->m_BlendHier->m_fTotalTime * 1000.0 + ms) + 500.0
+                        ((x87d)assoc->m_BlendHier->m_fTotalTime * (x87d)1000.0 + ms) + (x87d)500.0
                     );
                 }
             } else {
@@ -156,7 +156,7 @@ void CTaskSimpleBeHitWhileMoving::StartAnim(CPed* ped) {
                     ped->m_nUnconsciousTimer = rem + CTimer::GetTimeInMS() + 1000u;
                 } else {
                     ped->m_nUnconsciousTimer = (uint32)(int32)(
-                        (((double)(int32)rem + (double)assoc->m_BlendHier->m_fTotalTime * 1000.0) + ms) + 500.0
+                        (((x87d)(int32)rem + (x87d)assoc->m_BlendHier->m_fTotalTime * (x87d)1000.0) + ms) + (x87d)500.0
                     );
                 }
             }

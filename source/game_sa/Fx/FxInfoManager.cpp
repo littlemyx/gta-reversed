@@ -164,7 +164,7 @@ void FxInfoManager_c::Load(FILESTREAM file, int32 version) {
                     return type;
                 }
             }
-            NOTSA_UNREACHABLE("Unknown FX Info: %s", field); // NOTSA
+            NOTSA_UNREACHABLE_RET(0, "Unknown FX Info: %s", field); // NOTSA
         };
         const auto infoType = GetType();
 

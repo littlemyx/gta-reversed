@@ -8,6 +8,9 @@
 #include <ShlObj.h>
 
 #include "FileMgr.h"
+#ifdef NOTSA_PORTABLE
+#include "portable/path_resolve.h"
+#endif
 
 #include "extensions/Configs/Miscellaneous.hpp"
 
@@ -19,6 +22,10 @@ constexpr size_t PATH_SIZE = 256;
 
 inline void createDirectory(const wchar_t* path)
 {
+#ifdef NOTSA_PORTABLE
+    std::error_code ec; // like CreateDirectoryW's result, the outcome is not checked by the callers
+    fs::create_directory(fs::path(path), ec);
+#else
     HANDLE folderHandle = CreateFileW(
         path,
         GENERIC_READ,
@@ -32,6 +39,7 @@ inline void createDirectory(const wchar_t* path)
         CreateDirectoryW(path, nullptr);
     else
         CloseHandle(folderHandle);
+#endif
 }
 
 // 0x744FB0
@@ -44,8 +52,13 @@ char* InitUserDirectories()
     static std::array<wchar_t, MAX_PATH> gtaUserDirWide;
     static std::array<wchar_t, MAX_PATH> userGalleryDirWide;
     static std::array<wchar_t, MAX_PATH> userTracksDirWide;
+#ifdef NOTSA_PORTABLE
+    constexpr const wchar_t*             GALLERY    = L"./Gallery"; // W-7: '/' separators on this platform
+    constexpr const wchar_t*             USERTRACKS = L"./User Tracks";
+#else
     constexpr const wchar_t*             GALLERY    = L".\\Gallery";
     constexpr const wchar_t*             USERTRACKS = L".\\User Tracks";
+#endif
 
 #ifdef NOTSA_STANDALONE_RUN
     // NOTSA_STANDALONE_USERDIR=<path> (run build only; unset = the exe's behaviour, Documents\GTA San Andreas User Files): use <path> as the user-files
@@ -68,7 +81,11 @@ char* InitUserDirectories()
             return gta_user_dir_path;
         }
 
+#ifdef NOTSA_PORTABLE
+        constexpr const wchar_t* USERFILES = L"/GTA San Andreas User Files";
+#else
         constexpr const wchar_t* USERFILES = L"\\GTA San Andreas User Files";
+#endif
         // Base GTASA User Files
         if ((wcslen(gtaUserDirWide.data()) + wcslen(USERFILES)) >= MAX_PATH) {
             wcscpy_s(gtaUserDirWide.data(), gtaUserDirWide.size(), L".");
@@ -143,7 +160,11 @@ void CFileMgr::Initialise()
     else
         VERIFY(_getcwd(ms_rootDirName, DIRNAMELENGTH));
 
+#ifdef NOTSA_PORTABLE
+    ms_rootDirName[strlen(ms_rootDirName)] = '/'; // W-7
+#else
     ms_rootDirName[strlen(ms_rootDirName)] = '\\';
+#endif
 }
 
 // 0x538730
@@ -167,11 +188,19 @@ int32 CFileMgr::ChangeDir(const char *path)
         strcat_s(ms_dirName, path);
 
         char *lastPos = strchr(ms_dirName, 0) - 1;
+#ifdef NOTSA_PORTABLE
+        if (*lastPos != '\\' && *lastPos != '/') // W-7: the root is '/'-terminated, the game's sub-paths use '\\'
+            lastPos[1] = '/';
+#else
         if (*lastPos != '\\')
             lastPos[1] = '\\';
+#endif
     }
 
     int32 r;
+#ifdef NOTSA_PORTABLE
+    r = notsa::portable::ChdirResolved(ms_dirName); // W-7: '\\' -> '/', case-insensitive components
+#else
     if (WindowsCharset != CP_UTF8)
     {
         std::wstring pathWide = UTF8ToUnicode(ms_dirName);
@@ -179,6 +208,7 @@ int32 CFileMgr::ChangeDir(const char *path)
     }
     else
         r = _chdir(ms_dirName);
+#endif
 
     return r;
 }
@@ -200,11 +230,19 @@ int32 CFileMgr::SetDir(const char *path)
         strcat_s(ms_dirName, destSizeAfterConcat, path);
 
         char *lastPos = strchr(ms_dirName, 0) - 1;
+#ifdef NOTSA_PORTABLE
+        if (*lastPos != '\\' && *lastPos != '/') // W-7: the root is '/'-terminated, the game's sub-paths use '\\'
+            lastPos[1] = '/';
+#else
         if (*lastPos != '\\')
             lastPos[1] = '\\';
+#endif
     }
 
     int32 r;
+#ifdef NOTSA_PORTABLE
+    r = notsa::portable::ChdirResolved(ms_dirName); // W-7: '\\' -> '/', case-insensitive components
+#else
     if (WindowsCharset != CP_UTF8)
     {
         std::wstring pathWide = UTF8ToUnicode(ms_dirName);
@@ -212,6 +250,7 @@ int32 CFileMgr::SetDir(const char *path)
     }
     else
         r = _chdir(ms_dirName);
+#endif
 
     return r;
 }
@@ -229,6 +268,9 @@ int32 CFileMgr::SetDirMyDocuments()
     strcpy_s(ms_dirName, userDir);
 
     int32 r;
+#ifdef NOTSA_PORTABLE
+    r = notsa::portable::ChdirResolved(ms_dirName); // W-7: '\\' -> '/', case-insensitive components
+#else
     if (WindowsCharset != CP_UTF8)
     {
         std::wstring pathWide = UTF8ToUnicode(ms_dirName);
@@ -236,6 +278,7 @@ int32 CFileMgr::SetDirMyDocuments()
     }
     else
         r = _chdir(ms_dirName);
+#endif
 
     return r;
 }
@@ -261,6 +304,12 @@ FILESTREAM CFileMgr::OpenFile(const char *path, const char *mode) {
     ZoneScoped;
 
     FILESTREAM fs{nullptr};
+#ifdef NOTSA_PORTABLE
+    fs = notsa::portable::OpenResolvedText(path, mode); // W-7: '\\' -> '/', case-insensitive components; "r" = MSVC text mode (CRLF -> LF)
+    if (!fs) {
+        NOTSA_LOG_WARN("CFileMgr::OpenFile('{}', '{}') failed (errno {})", path, mode, errno);
+    }
+#else
     if (WindowsCharset == CP_UTF8) {
         fopen_s(&fs, path, mode);
     } else {
@@ -270,6 +319,7 @@ FILESTREAM CFileMgr::OpenFile(const char *path, const char *mode) {
         std::wstring modeWide = UTF8ToUnicode(mode);
         _wfopen_s(&fs, pathWide.c_str(), modeWide.c_str());
     }
+#endif
     return fs;
 }
 

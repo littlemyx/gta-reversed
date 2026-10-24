@@ -137,7 +137,7 @@ struct CControllerConfig {
     eContSetOrder m_uiSetOrder;
 };
 
-VALIDATE_SIZE(CControllerConfig, 0x8);
+VALIDATE_SIZE_FILE(CControllerConfig, 0x8);
 
 struct CControllerAction {
     CControllerConfig Keys[+eControllerType::CONTROLLER_TYPES_COUNT]{};

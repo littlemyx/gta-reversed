@@ -60,11 +60,11 @@ CTaskComplexSequence* CTaskComplexPartnerChat::GetPartnerSequence() {
     seq->AddTask(new CTaskComplexTurnToFaceEntityOrCoord(m_partner, 0.5f, 0.001f));
 
     // Pseudo-random durations seeded by the point; the sum stays in extended precision (x87) until `_ftol`
-    const auto seed = (double)(m_updateDirectionCount << 4) + (double)m_point.z + (double)m_point.y + (double)m_point.x;
-    const auto t    = (double)((int32)(int64)seed & 0x7F) * (double)0.0078125f;
-    const auto inv  = (float)(1.0 - t);
-    const auto a    = (int32)(int64)(t * (double)3000.0f + (double)3500.0f);
-    const auto b    = (int32)(int64)((double)inv * (double)3000.0f + (double)3500.0f);
+    const auto seed = (x87d)(m_updateDirectionCount << 4) + (x87d)m_point.z + (x87d)m_point.y + (x87d)m_point.x;
+    const auto t    = (x87d)((int32)(int64)seed & 0x7F) * (x87d)0.0078125f;
+    const auto inv  = (float)((x87d)1.0 - t);
+    const auto a    = (int32)(int64)(t * (x87d)3000.0f + (x87d)3500.0f);
+    const auto b    = (int32)(int64)((x87d)inv * (x87d)3000.0f + (x87d)3500.0f);
 
     if (!m_leadSpeaker) {
         m_conversationEnabled = static_cast<CTaskComplexPartnerChat*>(m_partner->GetIntelligence()->FindTaskByType(TASK_COMPLEX_PARTNER_CHAT))->m_conversationEnabled;

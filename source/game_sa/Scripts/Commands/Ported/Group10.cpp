@@ -149,7 +149,7 @@ void SetTotalNumberOfMissions(int32 count) {
 
 //! 1069 CONVERT_METRES_TO_FEET_INT (case @0x489D82): metres => feet (int, truncated by `_ftol`)
 int32 ConvertMetresToFeetInt(int32 metres) {
-    return notsa::detail::Ftol((double)metres * (double)3.3333333f); // `fild`, `fmul` 0x859F60, `call _ftol`
+    return notsa::detail::Ftol((x87d)metres * (x87d)3.3333333f); // `fild`, `fmul` 0x859F60, `call _ftol`
 }
 
 //! 1070 REGISTER_FASTEST_TIME (case @0x489DB4): stat, time
@@ -191,12 +191,12 @@ int32 GetCarModel(CVehicle& veh) {
 }
 }; // namespace
 
-static_assert(offsetof(CPlayerInfo, m_bFreeHealthCare) == 0x152);
-static_assert(offsetof(CVehicle, m_nMaxPassengers) == 0x488);
-static_assert(offsetof(CBike, nBikeFlags) == 0x614 && offsetof(CAutomobile, autoFlags) == 0x868);
-static_assert(offsetof(CCamera, m_bIgnoreFadingStuffForMusic) == 0x25);
-static_assert(offsetof(CAutomobile, m_fCarTraction) == 0x8A0);
-static_assert(offsetof(CBike, m_fExtraTractionMult) == 0x794);
+VALIDATE_OFFSET(CPlayerInfo, m_bFreeHealthCare, 0x152);
+VALIDATE_OFFSET(CVehicle, m_nMaxPassengers, 0x488);
+VALIDATE_OFFSET(CBike, nBikeFlags, 0x614); VALIDATE_OFFSET(CAutomobile, autoFlags, 0x868);
+VALIDATE_OFFSET(CCamera, m_bIgnoreFadingStuffForMusic, 0x25);
+VALIDATE_OFFSET(CAutomobile, m_fCarTraction, 0x8A0);
+VALIDATE_OFFSET(CBike, m_fExtraTractionMult, 0x794);
 
 void notsa::script::commands::ported::g09_12::RegisterG10() {
     REGISTER_COMMAND_HANDLER_BEGIN("Ported g10");

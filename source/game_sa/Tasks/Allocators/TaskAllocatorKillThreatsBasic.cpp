@@ -93,9 +93,9 @@ void CTaskAllocatorKillThreatsBasic::ComputeClosestPeds(CPedGroup& group1, CPedG
             const auto& aPos = a->GetPosition();
             const auto& bPos = b->GetPosition();
             // x87: Sum is kept in extended precision (and in this order)
-            const double dx = (double)aPos.x - (double)bPos.x;
-            const double dy = (double)aPos.y - (double)bPos.y;
-            const double dz = (double)aPos.z - (double)bPos.z;
+            const x87d dx = (x87d)aPos.x - (x87d)bPos.x;
+            const x87d dy = (x87d)aPos.y - (x87d)bPos.y;
+            const x87d dz = (x87d)aPos.z - (x87d)bPos.z;
             dists[i][j] = (float)(dz * dz + dx * dx + dy * dy);
         }
     }

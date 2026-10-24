@@ -91,6 +91,9 @@ void CGame::InjectHooks() {
 }
 
 // 0x72FD90
+#ifdef NOTSA_PORTABLE
+#define CameraDestroy Game_CameraDestroy_static // MSVC gives this `static` internal linkage; clang keeps the extern linkage of app.h's declaration and the symbol would clash with app_camera.cpp's
+#endif
 static void CameraDestroy(RwCamera* rwCamera) {
     if (!rwCamera)
         return;
@@ -928,6 +931,6 @@ void CGame::ReloadIPLs() {
 
 #ifdef NOTSA_GLOBALS_DETACHED
 // The fight strike model (CTaskSimpleFight::FightSetUpCol): col1 (ctor 0x40FB60) and the CCollisionData behind it (ctor 0x40F030); declared extern in Game.h
-NOTSA_GLOBAL(col1, 0xC17824, (CColModel), {}); static_assert(sizeof(col1) == 48);
-NOTSA_GLOBAL(col1Data, 0xC17854, (CCollisionData), {}); static_assert(sizeof(col1Data) == 48);
+NOTSA_GLOBAL(col1, 0xC17824, (CColModel), {}); VALIDATE_SIZE(col1, 48);
+NOTSA_GLOBAL(col1Data, 0xC17854, (CCollisionData), {}); VALIDATE_SIZE(col1Data, 48);
 #endif

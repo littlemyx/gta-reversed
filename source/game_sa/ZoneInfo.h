@@ -57,4 +57,4 @@ public:
         );
     }
 };
-VALIDATE_SIZE(CZoneInfo, 0x11);
+VALIDATE_SIZE_FILE(CZoneInfo, 0x11);

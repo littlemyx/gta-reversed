@@ -20,7 +20,7 @@ public:
     bool m_bHandbrakeUsed;
     CVector m_vecPosn;
 };
-VALIDATE_SIZE(CVehicleStateEachFrame, 0x20);
+VALIDATE_SIZE_FILE(CVehicleStateEachFrame, 0x20);
 
 constexpr auto TOTAL_VEHICLE_RECORDS = 16;
 

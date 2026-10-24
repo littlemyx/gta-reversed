@@ -8,9 +8,9 @@
 #include "Scripts/TheScripts.h"
 #include "Pools/Pools.h"
 
-static_assert(offsetof(CVehicle, m_autoPilot) == 0x390);
-static_assert(offsetof(CVehicle, vehicleFlags) == 0x428);
-static_assert(offsetof(CPlayerInfo, m_nTimeOfRemoteVehicleExplosion) == 0xE0);
+VALIDATE_OFFSET(CVehicle, m_autoPilot, 0x390);
+VALIDATE_OFFSET(CVehicle, vehicleFlags, 0x428);
+VALIDATE_OFFSET(CPlayerInfo, m_nTimeOfRemoteVehicleExplosion, 0xE0);
 
 void CRemote::InjectHooks() {
     RH_ScopedClass(CRemote);
@@ -56,7 +56,7 @@ void CRemote::GivePlayerRemoteControlledCar(CVector pos, float rotation, int16 m
     bool isGroundZFound{};
     const float groundZ = CWorld::FindGroundZFor3DCoord({ pos.x, pos.y, pos.z + 2.f }, &isGroundZFound, nullptr); // 0x858CA0 = 2.0f
     const float height  = veh->GetDistanceFromCentreOfMassToBaseOfModel();
-    pos.z               = (float)((double)height + (double)groundZ);
+    pos.z               = (float)((x87d)height + (x87d)groundZ);
 
     veh->GetMatrix().SetRotateZOnly(rotation); // NOTE: the original doesn't check if `m_matrix` exists here
     if (veh->m_matrix) {

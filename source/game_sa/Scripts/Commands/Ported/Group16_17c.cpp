@@ -37,12 +37,12 @@ using namespace notsa::script;
 */
 
 namespace {
-static_assert(offsetof(CVehicleModelInfo, m_anUpgrades) == 0x2D6);
-static_assert(offsetof(CRunningScript, m_SceneSkipIP) == 0xD8);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCarMission) == 0x3BA);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCruiseSpeed) == 0x3D0);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTimeToStartMission) == 0x3AC);
-static_assert(offsetof(CEntity, m_nModelIndex) == 0x22);
+VALIDATE_OFFSET(CVehicleModelInfo, m_anUpgrades, 0x2D6);
+VALIDATE_OFFSET(CRunningScript, m_SceneSkipIP, 0xD8);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCarMission) == 0x3BA);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCruiseSpeed) == 0x3D0);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nTimeToStartMission) == 0x3AC);
+VALIDATE_OFFSET(CEntity, m_nModelIndex, 0x22);
 
 //! x87-compare idiom `fcom -100.0f; test ah, 0x41; jp skip`: the ground Z is looked up only when `z <= -100.0f` (ordered).
 float GroundZIfAuto(float x, float y, float z) {
@@ -266,7 +266,7 @@ void SetPlaybackSpeed(CVehicle* veh, float speed) {
 //! squared 3D magnitude (0x406DA0: ((x*x + y*y) + z*z)) strictly < radiusSq (`test ah, 5; jp`: ordered "below") sets the flag
 bool AreAnyCharsNearChar(CPed& ped, float radius) {
     const CVector pos    = ped.GetPosition();
-    const float   radSq  = (float)((double)radius * (double)radius);
+    const float   radSq  = (float)((x87d)radius * (x87d)radius);
     auto* const   pool   = GetPedPool();
     bool          result = false;
     for (auto i = pool->GetSize(); i != 0;) {
@@ -280,7 +280,7 @@ bool AreAnyCharsNearChar(CPed& ped, float radius) {
         }
         const CVector otherPos = other->GetPosition();
         const CVector d{ otherPos.x - pos.x, otherPos.y - pos.y, otherPos.z - pos.z };
-        const double  sq = ((double)d.x * d.x + (double)d.y * d.y) + (double)d.z * d.z;
+        const x87d  sq = ((x87d)d.x * d.x + (x87d)d.y * d.y) + (x87d)d.z * d.z;
         if (sq < (double)radSq) {
             result = true;
         }

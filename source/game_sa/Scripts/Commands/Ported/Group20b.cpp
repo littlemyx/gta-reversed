@@ -46,27 +46,27 @@ namespace {
 constexpr float DEG_TO_RAD_F = std::bit_cast<float>(0x3C8EFA35u);
 
 // Raw offsets the asm relies on
-static_assert(offsetof(CPed, m_nWeaponSkill) == 0x72C);
-static_assert(offsetof(CPed, m_nFightingStyle) == 0x72D);
-static_assert(offsetof(CPed, m_nAllowedAttackMoves) == 0x72E);
+VALIDATE_OFFSET(CPed, m_nWeaponSkill, 0x72C);
+VALIDATE_OFFSET(CPed, m_nFightingStyle, 0x72D);
+VALIDATE_OFFSET(CPed, m_nAllowedAttackMoves, 0x72E);
 static_assert(sizeof(eFightingStyle) == 1 && sizeof(eWeaponSkill) == 1);
-static_assert(offsetof(CPedIntelligence, m_nEventId) == 0xD1);
-static_assert(offsetof(CVehicle, handlingFlags) == 0x38C);
-static_assert(offsetof(CVehicle, vehicleFlags) == 0x428);
-static_assert(offsetof(CVehicle, m_nVehicleSubType) == 0x594);
-static_assert(offsetof(CAutomobile, m_fHeliRotorSpeed) == 0x84C);
-static_assert(offsetof(CPlane, m_fPropSpeed) == 0x9C4);
-static_assert(offsetof(CPhysical, m_vecMoveSpeed) == 0x44);
+VALIDATE_OFFSET(CPedIntelligence, m_nEventId, 0xD1);
+VALIDATE_OFFSET(CVehicle, handlingFlags, 0x38C);
+VALIDATE_OFFSET(CVehicle, vehicleFlags, 0x428);
+VALIDATE_OFFSET(CVehicle, m_nVehicleSubType, 0x594);
+VALIDATE_OFFSET(CAutomobile, m_fHeliRotorSpeed, 0x84C);
+VALIDATE_OFFSET(CPlane, m_fPropSpeed, 0x9C4);
+VALIDATE_OFFSET(CPhysical, m_vecMoveSpeed, 0x44);
 static_assert(TASK_SIMPLE_FALL == 0xCF);
 
 //! 0x4119D0 - `v / s`. x87: the reciprocal is kept in extended precision for the Z, and rounded to float for X and Y
 CVector DivideOriginal(const CVector& v, float s) {
-    const double recip  = 1.0 / (double)s;
-    const double recipF = (double)(float)recip;
+    const x87d recip  = (x87d)1.0 / (x87d)s;
+    const x87d recipF = (x87d)(float)recip;
     return {
-        (float)((double)v.x * recipF),
-        (float)((double)v.y * recipF),
-        (float)((double)v.z * recip),
+        (float)((x87d)v.x * recipF),
+        (float)((x87d)v.y * recipF),
+        (float)((x87d)v.z * recip),
     };
 }
 
@@ -133,7 +133,7 @@ void TaskCharSlideToCoordAndPlayAnim(eScriptCommands command, CRunningScript& S)
     S.CollectParameters(6); // 0x464080
     const int32   pedHandle = ScriptParams[0].iParam;
     const CVector pos{ ScriptParams[1].fParam, ScriptParams[2].fParam, ScriptParams[3].fParam };
-    const float   heading   = (float)((double)ScriptParams[4].fParam * (double)DEG_TO_RAD_F); // x87 product, stored as float
+    const float   heading   = (float)((x87d)ScriptParams[4].fParam * (x87d)DEG_TO_RAD_F); // x87 product, stored as float
     float         speed     = ScriptParams[5].fParam;
     if (speed < 0.0f) { // 0x858B50
         speed = 0.1f;
@@ -212,14 +212,14 @@ void TaskPlayAnimNonInterruptable(eScriptCommands command, CRunningScript& S) {
 void AddStuntJump(CVector startCentre, CVector startSize, CVector endCentre, CVector endSize, CVector camera, int32 reward) {
     const auto MakeBox = [](const CVector& c, const CVector& s) {
         const CVector min{
-            (float)((double)c.x - (double)s.x),
-            (float)((double)c.y - (double)s.y),
-            (float)((double)c.z - (double)s.z)
+            (float)((x87d)c.x - (x87d)s.x),
+            (float)((x87d)c.y - (x87d)s.y),
+            (float)((x87d)c.z - (x87d)s.z)
         };
         const CVector max{
-            (float)((double)c.x + (double)s.x),
-            (float)((double)c.y + (double)s.y),
-            (float)((double)c.z + (double)s.z)
+            (float)((x87d)c.x + (x87d)s.x),
+            (float)((x87d)c.y + (x87d)s.y),
+            (float)((x87d)c.z + (x87d)s.z)
         };
         CBoundingBox box;
         box.SetMinMax(min, max); // 0x470100
@@ -295,7 +295,7 @@ bool IsCharInAir(CPed& ped) {
 float GetCharHeightAboveGround(CPed& ped) {
     const CVector pos = ped.GetPosition();
     const float   groundZ = CWorld::FindGroundZFor3DCoord(pos, nullptr, nullptr);
-    return (float)((double)pos.z - (double)groundZ);
+    return (float)((x87d)pos.z - (x87d)groundZ);
 }
 
 //! 2074 SET_CHAR_WEAPON_SKILL (case @0x473DA3): ped, skill  (the ped isn't null checked) -- only the low byte is stored at +0x72C

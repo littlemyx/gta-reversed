@@ -30,7 +30,7 @@ void CDecisionSimple::MakeDecision(int32 taskType, int16& outTaskType, int32& ou
     }
 
     // Otherwise pick one randomly
-    const float roll = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL); // 0x858C7C
+    const float roll = (float)((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL); // 0x858C7C
     for (auto i = 0; i < (int32)m_nCount; i++) {
         if (roll <= m_afChances[i]) { // FCOMP + JNP (exactly one of C0/C3 set): `roll <= chance`, NaN => no match
             outTaskType      = (int16)m_anTasks[i];

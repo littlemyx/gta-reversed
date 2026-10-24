@@ -16,7 +16,7 @@ class CPhysical;
 
 class CPointRoute : public notsa::Route<CVector> {
 public:
-    static void* operator new(uint32 size);
+    static void* operator new(size_t size);
     static void operator delete(void* ptr, size_t sz);
 };
 VALIDATE_SIZE(CPointRoute, 0x64);

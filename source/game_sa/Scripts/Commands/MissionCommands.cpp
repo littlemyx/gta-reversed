@@ -39,7 +39,7 @@ void LoadAndLaunchMissionInternal(int32 missionId) {
 
             return bytesRead;
         }
-        return 0u;
+        return size_t{0};
     };
 
     if (CGame::bMissionPackGame) {

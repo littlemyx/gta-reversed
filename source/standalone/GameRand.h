@@ -8,7 +8,11 @@
 // advance it (see .notes/INITTERM_AUDIT.md), so the value the game sees at `main` is LCG^19(1).
 // The host CRT's rand() is per-thread (and not necessarily the same constants/state), so the standalone build routes
 // every `rand()` / `srand()` of the game code through ONE state owned here.
-#ifdef NOTSA_STANDALONE_RUN
+#ifdef NOTSA_PORTABLE
+// Portable (non-MSVC) builds: the MSVC CRT LCG, PER THREAD like the exe, plus RAND_MAX == 0x7FFF (P4-S1, source/portable/msvc_rand.h).
+// The Windows standalone build below keeps its single global state (byte-identical MSVC output).
+#include "portable/msvc_rand.h"
+#elif defined(NOTSA_STANDALONE_RUN)
 
 #include <cstdlib> // must precede the macros below (declares ::rand(void) / ::srand(unsigned))
 #include <stdlib.h>

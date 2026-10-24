@@ -12,12 +12,12 @@ namespace {
 //! 0x59C910 - `CVector::Normalise` as the original evaluates it: the sum of squares and the reciprocal root stay in the FPU
 //! (extended precision), every component is stored as float. A length of 0 (or less) yields (1, y, z) - only x is written.
 void NormaliseExt(CVector& v) {
-    const double sq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    const x87d sq = ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
     if (sq <= 0.0) { // FCOM + JP: NaN takes the sqrt path
         v.x = 1.0f;
         return;
     }
-    const double inv = 1.0 / std::sqrt(sq);
+    const x87d inv = (x87d)1.0 / std::sqrt(sq);
     v.x = (float)(v.x * inv);
     v.y = (float)(v.y * inv);
     v.z = (float)(v.z * inv);
@@ -111,40 +111,40 @@ CTask* CTaskComplexFollowPatrolRoute::CreateFirstSubTask(CPed* ped) {
         const auto& next    = m_Route->m_Pos[nextIdx];
 
         // Direction + length of the segment
-        const double dzExt = (double)next.z - (double)cur.z;
+        const x87d dzExt = (x87d)next.z - (x87d)cur.z;
         CVector      dir{
-            (float)((double)next.x - (double)cur.x),
-            (float)((double)next.y - (double)cur.y),
+            (float)((x87d)next.x - (x87d)cur.x),
+            (float)((x87d)next.y - (x87d)cur.y),
             (float)dzExt
         };
-        const float lenSq = (float)(((dzExt * (double)dir.z) + (double)dir.x * dir.x) + (double)dir.y * dir.y); // `fmul` on the (float) memory operand => z is `dzExt * dir.z`
+        const float lenSq = (float)(((dzExt * (x87d)dir.z) + (x87d)dir.x * dir.x) + (x87d)dir.y * dir.y); // `fmul` on the (float) memory operand => z is `dzExt * dir.z`
         NormaliseExt(dir); // 0x59C910
 
         // Where on the segment is the closest point to the ped?
-        const double dxp = (double)pedPos.x - (double)cur.x;
-        const double dyp = (double)pedPos.y - (double)cur.y;
-        const double dzp = (double)pedPos.z - (double)cur.z;
-        const double t   = (dzp * dir.z + dxp * dir.x) + dyp * dir.y;
+        const x87d dxp = (x87d)pedPos.x - (x87d)cur.x;
+        const x87d dyp = (x87d)pedPos.y - (x87d)cur.y;
+        const x87d dzp = (x87d)pedPos.z - (x87d)cur.z;
+        const x87d t   = (dzp * dir.z + dxp * dir.x) + dyp * dir.y;
         const float  tF  = (float)t;
         if (!(t > 0.0)) { // FCOMP + JNE
             continue;
         }
-        if (!(std::sqrt((double)lenSq) > (double)tF)) { // FCOMP (vs the float version)
+        if (!(std::sqrt((x87d)lenSq) > (double)tF)) { // FCOMP (vs the float version)
             continue;
         }
 
         // Closest point on the segment
-        const float  pX   = (float)((double)dir.x * tF + (double)cur.x);
-        const double pY   = (double)dir.y * tF + (double)cur.y;
-        const float  dirZt = (float)((double)dir.z * tF);
-        const double pZ   = (double)dirZt + (double)cur.z;
+        const float  pX   = (float)((x87d)dir.x * tF + (x87d)cur.x);
+        const x87d pY   = (x87d)dir.y * tF + (x87d)cur.y;
+        const float  dirZt = (float)((x87d)dir.z * tF);
+        const x87d pZ   = (x87d)dirZt + (x87d)cur.z;
 
-        const float  dX = (float)((double)pedPos.x - (double)pX);
-        const float  dY = (float)((double)pedPos.y - pY);
-        const double dZ = (double)pedPos.z - pZ;
+        const float  dX = (float)((x87d)pedPos.x - (x87d)pX);
+        const float  dY = (float)((x87d)pedPos.y - pY);
+        const x87d dZ = (x87d)pedPos.z - pZ;
 
-        const double distSq = (dZ * dZ + (double)dY * dY) + (double)dX * dX;
-        if (distSq < (double)best * (double)best) { // FCOMPP + JP
+        const x87d distSq = (dZ * dZ + (x87d)dY * dY) + (x87d)dX * dX;
+        if (distSq < (x87d)best * (x87d)best) { // FCOMPP + JP
             best    = (float)distSq;
             bestIdx = nextIdx;
         }
@@ -156,11 +156,11 @@ CTask* CTaskComplexFollowPatrolRoute::CreateFirstSubTask(CPed* ped) {
         float best2 = std::numeric_limits<float>::max(); // 0x863A3C
         for (int32 k = 0; k < numNodes; k++) { // (Unrolled by 4 in the original)
             const auto&  pos = m_Route->m_Pos[k];
-            const double dx  = (double)pedPos.x - (double)pos.x;
-            const double dy  = (double)pedPos.y - (double)pos.y;
-            const double dz  = (double)pedPos.z - (double)pos.z;
-            const double s   = (dz * dz + dy * dy) + dx * dx;
-            if (s < (double)best2 * (double)best2) {
+            const x87d dx  = (x87d)pedPos.x - (x87d)pos.x;
+            const x87d dy  = (x87d)pedPos.y - (x87d)pos.y;
+            const x87d dz  = (x87d)pedPos.z - (x87d)pos.z;
+            const x87d s   = (dz * dz + dy * dy) + dx * dx;
+            if (s < (x87d)best2 * (x87d)best2) {
                 best2   = (float)s;
                 bestIdx = k;
             }

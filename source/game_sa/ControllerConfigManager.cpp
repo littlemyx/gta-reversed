@@ -9,7 +9,7 @@
 
 using enum eControllerAction;
 
-NOTSA_GLOBAL(ControlsManager, 0xB70198, (CControllerConfigManager), {}); static_assert(sizeof(ControlsManager) == 4836);
+NOTSA_GLOBAL(ControlsManager, 0xB70198, (CControllerConfigManager), {}); VALIDATE_SIZE(ControlsManager, 4836);
 
 void CControllerConfigManager::InjectHooks() {
     RH_ScopedClass(CControllerConfigManager);
@@ -1014,7 +1014,7 @@ bool CControllerConfigManager::GetIsKeyBlank(KeyCode key, eControllerType type) 
     case eControllerType::OPTIONAL_EXTRA_KEY: return key == rsNULL;
     case eControllerType::MOUSE:
     case eControllerType::JOY_STICK:          return key == 0;
-    default:                                  NOTSA_UNREACHABLE();
+    default:                                  NOTSA_UNREACHABLE_RET(false);
     }
 }
 
@@ -1471,7 +1471,7 @@ int16& CControllerConfigManager::GetControllerStateJoyStick(CPad& pad, KeyCode b
     case eJoyButtons::JOYBUTTON_FOURTEEN:  return pad.PCTempJoyState.DPadRight;
     case eJoyButtons::JOYBUTTON_FIFTHTEEN: return pad.PCTempJoyState.DPadDown;
     case eJoyButtons::JOYBUTTON_SIXTEEN:   return pad.PCTempJoyState.DPadLeft;
-    default:                               NOTSA_UNREACHABLE("Invalid button ({})", (uint32)button);
+    default:                               NOTSA_UNREACHABLE_RET(pad.PCTempJoyState.ButtonCross, "Invalid button ({})", (uint32)button);
     }
 }
 
@@ -1583,6 +1583,6 @@ CControllerState& CControllerConfigManager::GetControllerState(CPad& pad, eContr
     case eControllerType::OPTIONAL_EXTRA_KEY: return pad.PCTempKeyState;
     case eControllerType::MOUSE:              return pad.PCTempMouseState;
     case eControllerType::JOY_STICK:          return pad.PCTempJoyState;
-    default:                                  NOTSA_UNREACHABLE();
+    default:                                  NOTSA_UNREACHABLE_RET(pad.PCTempKeyState);
     }
 }

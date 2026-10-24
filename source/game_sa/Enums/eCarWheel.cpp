@@ -14,6 +14,6 @@ eCarPiece CarWheelToCarPiece(eCarWheel i) {
     case CAR_WHEEL_REAR_RIGHT:
         return CAR_PIECE_WHEEL_RR;
     default:
-        NOTSA_UNREACHABLE();
+        NOTSA_UNREACHABLE_RET({});
     }
 }

@@ -32,9 +32,9 @@ using namespace notsa::script::commands::ported::g25_26;
 */
 
 namespace {
-static_assert(offsetof(CVehicle, handlingFlags) == 0x38C);
-static_assert(offsetof(CVehicle, m_nTertiaryColor) == 0x436 && offsetof(CVehicle, m_nPrimaryColor) == 0x434 && offsetof(CVehicle, m_nSecondaryColor) == 0x435);
-static_assert(sizeof(tScriptSearchlight) == 0x7C && offsetof(tScriptSearchlight, m_bEnableShadow) == 2);
+VALIDATE_OFFSET(CVehicle, handlingFlags, 0x38C);
+VALIDATE_OFFSET(CVehicle, m_nTertiaryColor, 0x436); VALIDATE_OFFSET(CVehicle, m_nPrimaryColor, 0x434); VALIDATE_OFFSET(CVehicle, m_nSecondaryColor, 0x435);
+VALIDATE_SIZE(tScriptSearchlight, 0x7C); VALIDATE_OFFSET(tScriptSearchlight, m_bEnableShadow, 2);
 
 //! 2556 IS_OBJECT_INTERSECTING_WORLD (case @0x47B509): object => compare flag = object->TestCollision(false) (vtable +0x34)
 bool IsObjectIntersectingWorld(CObject& obj) {

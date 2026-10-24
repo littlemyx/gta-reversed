@@ -50,7 +50,7 @@ CTask* CTaskComplexSignalAtPed::CreateNextSubTask(CPed* ped) {
     case TASK_COMPLEX_TURN_TO_FACE_ENTITY: {
         auto pauseMs = m_initialPause;
         if (pauseMs == -1) { // `rand() & 0xFFFF` * 2^-15 * 2000 [truncated]
-            pauseMs = (int32)((double)(CGeneral::GetRandomNumber() & 0xFFFF) * 3.0517578125e-05 * 2000.0);
+            pauseMs = (int32)((x87d)(CGeneral::GetRandomNumber() & 0xFFFF) * (x87d)3.0517578125e-05 * (x87d)2000.0);
         }
         return new CTaskSimpleStandStill{pauseMs, false, false, 8.f};
     }
@@ -59,7 +59,7 @@ CTask* CTaskComplexSignalAtPed::CreateNextSubTask(CPed* ped) {
     case TASK_SIMPLE_DO_HAND_SIGNAL:
         if (m_areAnimsReferenced && m_playAnimAtEnd) {
             // `rand() & 0xFFFF` * 2^-15 * 8 [truncated] => [0, 7]
-            const auto idx = (int32)((double)(CGeneral::GetRandomNumber() & 0xFFFF) * 3.0517578125e-05 * 8.0);
+            const auto idx = (int32)((x87d)(CGeneral::GetRandomNumber() & 0xFFFF) * (x87d)3.0517578125e-05 * (x87d)8.0);
             return new CTaskSimpleRunAnim{ANIM_GROUP_GANGS, (AnimationId)(ANIM_ID_PRTIAL_GNGTLKA + idx), 4.f, false};
         }
         return nullptr;

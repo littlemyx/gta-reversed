@@ -1,0 +1,47 @@
+# RR-1 route (NOTSA_STANDALONE_INPUT format; all times are VIRTUAL ms when NOTSA_RR=1: 20 ms = one game frame): main menu -> New Game -> skip the intro cutscene -> control -> record + walk.
+# Keys: up/return as in tools/portable/mac_boot_run.sh (the menu pointer hovers a row at start, so `up` first).
+until:menu:600000
+wait:1500
+key:up
+wait:500
+key:return
+wait:1200
+key:return
+wait:1500
+key:return
+wait:1500
+key:return
+mark:newgame_started
+cmd:rr_stat:newgame
+# this port's new game gives control without the intro cutscene (probe, MAC-RR-DESIGN a4): wait for control, then put some life in the world deterministically
+until:control:900000
+mark:control
+cmd:rr_stat:control
+wait:1000
+cmd:rr_stat:pre_spawn
+cmd:spawnmany:6:7:0
+cmd:spawnveh:596:1:14
+wait:600
+cmd:rr_stat:pre_start
+cmd:rr_start
+wait:1000
+down:w
+wait:3000
+up:w
+wait:500
+down:d
+wait:1500
+up:d
+wait:500
+down:w
+down:lshift
+wait:3000
+up:lshift
+up:w
+wait:2000
+down:a
+wait:2500
+up:a
+wait:4000
+cmd:rr_stop
+cmd:quit

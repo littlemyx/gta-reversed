@@ -102,12 +102,14 @@ public:
 
     static inline NOTSA_GLOBAL(ObjPipeline, 0xC02D24, (RxPipeline*), {});
 
-    NOTSA_GLOBAL_ZERO(fakeEnvMapPipeMatData, 0xC02D18, (CustomEnvMapPipeMaterialData)); static_assert(sizeof(fakeEnvMapPipeMatData) == 12); // zero .bss in the exe (not the repo default ctor values)
+    NOTSA_GLOBAL_ZERO(fakeEnvMapPipeMatData, 0xC02D18, (CustomEnvMapPipeMaterialData)); VALIDATE_SIZE(fakeEnvMapPipeMatData, 12); // zero .bss in the exe (not the repo default ctor values)
     static inline NOTSA_GLOBAL(m_gEnvMapPipeMatDataPool, 0xC02D28, (CustomEnvMapPipeMaterialDataPool*), {});
     static inline NOTSA_GLOBAL(m_gEnvMapPipeAtmDataPool, 0xC02D2C, (CustomEnvMapPipeAtomicDataPool*), {});
     static inline NOTSA_GLOBAL(m_gSpecMapPipeMatDataPool, 0xC02D30, (CustomSpecMapPipeMaterialDataPool*), {});
 
+#ifndef NOTSA_PORTABLE // FF light of the D3D9 render callback (R-9 uses its own uniform under GL3)
     static inline NOTSA_GLOBAL(g_GameLight, 0xC02CB0, (D3DLIGHT9), {});
+#endif
 
 public:
     static void InjectHooks();

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "FileRecord.hpp"
+
 static constexpr auto MAX_SAVEGAME_SLOTS{ 8u };
 
 enum class eSlotState {
@@ -58,8 +60,13 @@ public:
     static inline NOTSA_GLOBAL(ms_WorkBufferSize, 0x8D2BE0, (uint32), { 51200 });
     static inline NOTSA_GLOBAL(ms_SaveFileNameJustSaved, 0xC16030, (char[MAX_PATH]), {});
     static inline NOTSA_GLOBAL(ms_SaveFileName, 0xC16DB8, (char[256]), {});
+#ifdef NOTSA_PORTABLE // MAC-PLAY1: the exe's 104-byte buffers overflow (into the neighbouring statics) for a save path longer than ~100 characters (a long macOS user dir, NOTSA_STANDALONE_USERDIR)
+    static inline NOTSA_GLOBAL(ms_LoadFileName, 0xC15FC8, (char[1024]), {});
+    static inline NOTSA_GLOBAL(ms_LoadFileNameWithPath, 0xC15F60, (char[1024]), {});
+#else
     static inline NOTSA_GLOBAL(ms_LoadFileName, 0xC15FC8, (char[104]), {});
     static inline NOTSA_GLOBAL(ms_LoadFileNameWithPath, 0xC15F60, (char[104]), {});
+#endif
     static inline NOTSA_GLOBAL(ms_CheckSum, 0xC16134, (uint32), {});
     static inline NOTSA_GLOBAL(ms_WorkBuffer, 0xC16EE8, (uint8*), {});
     static inline NOTSA_GLOBAL(ms_WorkBufferPos, 0xC16EEC, (int32), {});
@@ -96,14 +103,50 @@ public:
     static bool RestoreForStartLoad();
 
     // NOTSA
+    // Typed access. Under NOTSA_PORTABLE a type with a notsa::FileRecord<T> specialisation goes through its fixed-width file record (FileRecord.hpp, P-2);
+    // otherwise (and always in the MSVC build) the raw sizeof(T) copy of the exe. The 64-bit scalar guard is a compile-time check (vacuous on x86).
     template<typename T>
-    static bool LoadDataFromWorkBuffer(T& data) { return LoadDataFromWorkBuffer((void*)&data, sizeof(T)); }
+    static bool LoadDataFromWorkBuffer(T& data) NOTSA_FILE_SCALAR_GUARD(T) {
+#ifdef NOTSA_PORTABLE
+        if constexpr (notsa::HasFileRecord<T>) {
+            typename notsa::FileRecord<T>::Type rec{};
+            if (!LoadDataFromWorkBuffer((void*)&rec, (int32)sizeof(rec))) {
+                return false;
+            }
+            notsa::FileRecord<T>::FromFile(data, rec);
+            return true;
+        } else
+#endif
+        {
+            if constexpr (sizeof(void*) > 4) { notsa::FileScalarCheck<T>(); }
+            return LoadDataFromWorkBuffer((void*)&data, sizeof(T));
+        }
+    }
 
     template<typename T>
-    static T LoadDataFromWorkBuffer() { T data; LoadDataFromWorkBuffer((void*)&data, sizeof(T)); return data; }
+    static T LoadDataFromWorkBuffer() NOTSA_FILE_SCALAR_GUARD(T) {
+        T data;
+#ifdef NOTSA_PORTABLE
+        LoadDataFromWorkBuffer(data);
+#else
+        LoadDataFromWorkBuffer((void*)&data, sizeof(T));
+#endif
+        return data;
+    }
 
     template<typename T>
-    static bool SaveDataToWorkBuffer(const T& data) { return SaveDataToWorkBuffer(const_cast<void*>((const void*)&data), sizeof(T)); }
+    static bool SaveDataToWorkBuffer(const T& data) NOTSA_FILE_SCALAR_GUARD(T) {
+#ifdef NOTSA_PORTABLE
+        if constexpr (notsa::HasFileRecord<T>) {
+            auto rec = notsa::FileRecord<T>::ToFile(data);
+            return SaveDataToWorkBuffer((void*)&rec, (int32)sizeof(rec));
+        } else
+#endif
+        {
+            if constexpr (sizeof(void*) > 4) { notsa::FileScalarCheck<T>(); }
+            return SaveDataToWorkBuffer(const_cast<void*>((const void*)&data), sizeof(T));
+        }
+    }
 private:
     static const char* GetBlockName(eBlocks);
 };

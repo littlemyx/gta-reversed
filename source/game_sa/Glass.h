@@ -31,7 +31,7 @@ public:
     static inline NOTSA_GLOBAL(PanePolyCenterPositions, 0xC71B30, (std::array<CVector2D, 5>), {});
     static inline NOTSA_GLOBAL(apEntitiesToBeRendered, 0xC71B58, (CEntity*[32]), {});
     static inline NOTSA_GLOBAL(NumGlassEntities, 0xC71BD8, (uint32), {});
-    static inline NOTSA_GLOBAL(aGlassPanes, 0xC71BF8, (std::array<CFallingGlassPane, 45>), {}); static_assert(sizeof(aGlassPanes) == 5040); // 45 panes: the exe loops end at 0xC73015 (+0x6D of pane 44) and the array ends at LastColCheckMS 0xC72FA8
+    static inline NOTSA_GLOBAL(aGlassPanes, 0xC71BF8, (std::array<CFallingGlassPane, 45>), {}); VALIDATE_SIZE(aGlassPanes, 5040); // 45 panes: the exe loops end at 0xC73015 (+0x6D of pane 44) and the array ends at LastColCheckMS 0xC72FA8
     static inline NOTSA_GLOBAL(LastColCheckMS, 0xC72FA8, (uint32), {});
 
 public:

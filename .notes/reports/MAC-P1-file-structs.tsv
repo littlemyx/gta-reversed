@@ -1,0 +1,136 @@
+struct	kind	evidence file:line	note
+CRunningScript	direct	source/game_sa/Scripts/TheScripts.cpp:1254,1375	WHOLE object LoadData/SaveDataToWorkBuffer(*script); has ptrs m_pNext,m_pPrev,m_BaseIP,m_IP,m_IPStack[8] (patched after load) -> size/offsets change on 64-bit
+tScriptParam	nested	source/game_sa/Scripts/RunningScript.h (m_LocalVars array)	member of CRunningScript
+CStuntJump	direct	source/game_sa/StuntJumpManager.cpp:55,65	save block
+CGangInfo	direct	source/game_sa/Gangs.cpp:32,40	each CGangInfo in CGangs::Gang saved raw
+CGangs::Gang	nested	source/game_sa/Gangs.cpp:32	array var of CGangInfo (sizeof(CGangs::Gang) assert)
+CStoredCar	direct	source/game_sa/Garages.cpp:556,595	aCarsInSafeHouse; two definitions (StoredCar.h and Garage.h)
+CSaveGarage	direct	source/game_sa/Garages.cpp:561,602	save block
+CSetPiece	direct	source/game_sa/SetPieces.cpp:43,50	whole aSetPieces array raw
+CPickup	direct	source/game_sa/Pickups.cpp:1057,1074	whole CPickup raw; has CObject* m_pObject (nulled on load) -> grows on 64-bit
+tUser3dMarker	direct	source/game_sa/3dMarkers.cpp:687,695	save block
+CGangWarsSaveStructure	direct	source/game_sa/GangWars.cpp:66,76	save block; prefixed by sizeof() written as size_t (see notes)
+CPlayerInfoSaveStructure	direct	source/game_sa/PlayerInfo.cpp:1456,1466	save block; size prefix written as sizeof (size_t) but read as int32
+CPedSaveStructure	direct	source/game_sa/Entity/Ped/Ped.cpp:533,548	save block; contains CWeapon m_weapons[13]
+CPlayerPedDataSaveStructure	direct	source/game_sa/Entity/Ped/PlayerPed.cpp:141,165	save block; contains CPedClothesDesc
+CObjectSaveStructure	direct	source/game_sa/Entity/Object/Object.cpp:600,611	save block; contains CCompressedMatrixNotAligned
+CVehicleSaveStructure	direct	source/game_sa/Entity/Vehicle/Vehicle.cpp:1146,1155	save block; contains full CMatrix (has RwMatrix* m_pAttachMatrix) -> grows on 64-bit
+CSimpleVariablesSaveStructure	direct	source/game_sa/C_PcSave.cpp:58; GenericGameStorage.cpp:272,444	save-file header block (also read in C_PcSave for slot list); contains SYSTEMTIME (not asserted)
+CDamageManager	direct	source/game_sa/Entity/Vehicle/Automobile.cpp:3450,3457	m_damageManager raw in CAutomobile::Save/Load
+CCarGenerator	direct	source/game_sa/TheCarGenerators.cpp:67,129	save block
+tCarGenPlateText	direct	source/game_sa/TheCarGenerators.cpp:73,134	save block
+CZone	direct	source/game_sa/TheZones.cpp:470,478	NavigationZoneArray/MapZoneArray elements raw
+CZoneInfo	direct	source/game_sa/TheZones.cpp:474	ZoneInfoArray elements raw
+ZoneInfoArray	nested	source/game_sa/TheZones.cpp:474	var (array of CZoneInfo) with sizeof assert
+tRadarTrace	direct	source/game_sa/Radar.cpp:2516,2549	whole trace raw; union holds CEntryExit* (pool idx swapped in during save) -> grows on 64-bit
+PriceModifier	direct	source/game_sa/Shopping.cpp:814,825	save block
+CNodesSwitchedOnOrOff	direct	source/game_sa/PathFind.cpp:1986,1995	m_aNodeSwitches raw
+CWeapon	nested	source/game_sa/Entity/Ped/PedSaveStructure.h (m_weapons[13])	member of CPedSaveStructure; has FxSystem_c* m_FxSystem -> grows on 64-bit
+CPedClothesDesc	nested	source/game_sa/Entity/Ped/PlayerPed.cpp:126-131	member of CPlayerPedDataSaveStructure
+CMatrix	nested	source/game_sa/VehicleSaveStructure.h; ReplayBlockType.h:164	member of CVehicleSaveStructure; replay camera block uses uint8 matrix[sizeof(CMatrix)]; has RwMatrix* m_pAttachMatrix
+CCompressedMatrixNotAligned	nested	source/game_sa/ObjectSaveStructure.h; ReplayBlockType.h (vehicle/ped blocks)	member of CObjectSaveStructure and replay blocks
+CVector	nested	source/game_sa/Restart.cpp:222,230,236,240; GameLogic.cpp:260; many structs	saved raw directly (CVector arrays) and member of most FILE structs
+RwV3d	nested	source/game_sa/Core/Vector.h:16	base class of CVector; also read raw from RW stream (Breakable/2dfx)
+CBoundingBox	nested	source/game_sa/StuntJumpManager.h (CStuntJump start/end); ColHelpers.h TFaceGroup/TBounds; Collision/ColAccel.h	member of CStuntJump, COL TFaceGroup/TBounds, CColAccelColEntry
+CBox	nested	source/game_sa/Collision/ColHelpers.h:82	base of TBox and CColBox; base-ish of CBoundingBox
+CSphere	nested	source/game_sa/Collision/ColHelpers.h:169; ColSphere.h	base of V2::TSphere and CColSphere; member of V2::TBounds, CColAccelColEntry
+CRect	nested	source/game_sa/Collision/ColAccel.h:5; IplDef.h	member of CColAccelColBound and IplDef
+CQuaternion	nested	source/game_sa/FileObjectInstance.h; Animation/AnimSequenceFrames.h	member of CFileObjectInstance, KeyFrame
+FileHeader	direct	source/game_sa/FileLoader.cpp:508,551,592	COL header, reinterpret_cast over file buffers
+FileHeader::FileInfo	direct	source/game_sa/FileLoader.cpp:504,548,588	COL fourcc+size
+TSurface	nested	source/game_sa/Collision/ColHelpers.h:74	member of TBox/V1::TSphere/V1::TFace/V2::TSphere
+TBox	direct	source/game_sa/FileLoader.cpp:662	V1 COL box raw
+TFaceGroup	direct	source/game_sa/Collision/CollisionData.cpp:245	face groups live raw before m_pTriangles
+TSphere	direct	source/game_sa/FileLoader.cpp:645	ColHelpers V1::TSphere and V2::TSphere (same name asserted twice)
+TFace	direct	source/game_sa/FileLoader.cpp:686	ColHelpers V1::TFace and V2::TFace
+TBounds	nested	source/game_sa/Collision/ColHelpers.h:144,175	member of ColHelpers Header (V1/V2)
+TVertex	direct	source/game_sa/FileLoader.cpp:675	V1 CVector / V2 CompressedVector aliases
+Header	direct	source/game_sa/FileLoader.cpp:632,712,785,857	ColHelpers V1/V2/V3/V4 Header (asserted 3 times)
+CColSphere	direct	source/game_sa/FileLoader.cpp:760 (SetColDataPtr cd->m_pSpheres)	V2/3/4: file bytes memcpy'd and used as CColSphere[]
+CColBox	direct	source/game_sa/FileLoader.cpp:761 (SetColDataPtr cd->m_pBoxes)	same, CColBox[]
+CColLine	direct	source/game_sa/FileLoader.cpp:762 (SetColDataPtr cd->m_pLines)	same, CColLine[]
+CColTriangle	direct	source/game_sa/FileLoader.cpp:764 (SetColDataPtr cd->m_pTriangles)	same, CColTriangle[]
+CColSurface	nested	source/game_sa/Collision/ColSphere.h	member of CColSphere/CColBox
+tColLighting	nested	source/game_sa/Collision/ColPoint.h:29	member of TSurface/CColSurface/CColTriangle
+CColTrianglePlane	doubt	source/game_sa/FileLoader.cpp:766 (m_pTrianglePlanes=nullptr; header has offPlanes)	computed in memory in practice; not seen read from file
+CColDisk	doubt	source/game_sa/Collision/CollisionData.h:46 (m_pLines/m_pDisks union)	bUsesDisks=false on load; CColSphere subclass
+CColAccelColBound	direct	source/game_sa/Collision/ColAccel.cpp:51	CINFO.BIN cache write (and cacheLoad read)
+CColAccelColEntry	direct	source/game_sa/Collision/ColAccel.cpp:46	CINFO.BIN
+CColAccelIPLEntry	direct	source/game_sa/Collision/ColAccel.cpp:53	CINFO.BIN
+IplDef	direct	source/game_sa/Collision/ColAccel.cpp:49	CINFO.BIN, whole IplDef[TOTAL_IPL_MODEL_IDS]
+tBinaryIplFile	direct	source/game_sa/IplStore.cpp:396,477	reinterpret_cast over stream-IPL buffer
+CFileObjectInstance	direct	source/game_sa/tBinaryIplFile.h:26	binary IPL instance records
+CFileCarGenerator	direct	source/game_sa/tBinaryIplFile.h:27	binary IPL car generator records
+CDirectory::DirectoryInfo	direct	source/game_sa/Directory.cpp:86,97; Streaming.cpp:1119	IMG/dir entries
+CdStreamPos	nested	source/game_sa/CdStreamInfo.h:18	member of DirectoryInfo (uint32 bitfield)
+KeyFrame	direct	source/game_sa/Animation/AnimManager.cpp:912	ANPK/ANP2/3 frames read raw
+KeyFrameTrans	direct	source/game_sa/Animation/AnimManager.cpp:912	
+KeyFrameCompressed	direct	source/game_sa/Animation/AnimManager.cpp:912	
+KeyFrameTransCompressed	direct	source/game_sa/Animation/AnimManager.cpp:912	
+CPathNode	direct	source/game_sa/PathFind.cpp:1064	nodes*.dat via RwStreamRead; has m_next,m_prev pointers (file has 4-byte placeholders) -> 64-bit size mismatch with file
+CCarPathLink	direct	source/game_sa/PathFind.cpp:1072	nodes*.dat
+CNodeAddress	direct	source/game_sa/PathFind.cpp:1084; RoadBlocks.cpp:39	nodes*.dat, roadblox.dat
+CCarPathLinkAddress	direct	source/game_sa/PathFind.cpp:1085	nodes*.dat
+CPathIntersectionInfo	direct	source/game_sa/PathFind.cpp:1087	nodes*.dat
+t2dEffectLightStreamData	direct	source/game_sa/Plugins/TwoDEffectPlugin/2dEffect.cpp:214	RW plugin stream
+t2dEffectRoadsignStreamData	direct	source/game_sa/Plugins/TwoDEffectPlugin/2dEffect.cpp:248	contains CRoadsignAttrFlags, RwV2d, RwV3d
+t2dEffectEnExStreamData	direct	source/game_sa/Plugins/TwoDEffectPlugin/2dEffect.cpp:266	
+t2dEffectCoverPointStreamData	direct	source/game_sa/Plugins/TwoDEffectPlugin/2dEffect.cpp:290	
+t2dEffectSlotMachineWheelStreamData	direct	source/game_sa/Plugins/TwoDEffectPlugin/2dEffect.cpp:307	
+t2dEffectEscalatorStreamData	direct	source/game_sa/Plugins/TwoDEffectPlugin/2dEffect.cpp:320	
+t2dEffectPedAttractorStreamData	direct	source/game_sa/Plugins/TwoDEffectPlugin/2dEffect.cpp:336	
+t2dEffectParticleStreamData	direct	source/game_sa/Plugins/TwoDEffectPlugin/2dEffect.cpp:354	
+CRoadsignAttrFlags	nested	source/game_sa/Plugins/TwoDEffectPlugin/2dEffectStream.h:40	member of t2dEffectRoadsignStreamData (assert spelled CRoadsignAttrFlags)
+RwV2d	nested	source/game_sa/Plugins/TwoDEffectPlugin/2dEffectStream.h:40,49,69	member of 2dfx stream structs
+RwRGBA	nested	source/game_sa/Plugins/TwoDEffectPlugin/2dEffectStream.h:14; BreakablePlugin.cpp:86; CustomBuildingDNPipeline.cpp:85	member of Light stream data; also raw element arrays (Breakable colors, DN night colors)
+RwTexCoords	direct	source/game_sa/Plugins/BreakablePlugin/BreakablePlugin.cpp:83,124	raw element array from RW stream
+BreakInfo_t	direct	source/game_sa/Plugins/BreakablePlugin/BreakablePlugin.cpp:71,122	whole struct incl. 7 pointers read/written raw to DFF stream -> 64-bit size mismatch
+BreakInfoColor	direct	source/game_sa/Plugins/BreakablePlugin/BreakablePlugin.cpp:101,130	
+BreakablePlugin	direct	source/game_sa/Plugins/BreakablePlugin/BreakablePlugin.cpp:66,118	union {uint32 header; BreakInfo_t*}: only 4 bytes streamed
+tPipelinePlugin	direct	source/game_sa/Plugins/PipelinePlugin/PipelinePlugin.cpp:46	RwUInt32 pipelineId streamed
+ExtraVertColour	doubt	source/game_sa/Pipelines/CustomBuilding/CustomBuildingDNPipeline.cpp:100	write CB does RwStreamWrite(&NightColors,sizeof(NightColors)) = pointer-sized write, reader expects uint32 -> breaks DFF on 64-bit
+AEBankLookup	direct	source/game_sa/Audio/Loaders/AEBankLoader.cpp:38	BANKLKUP.DAT
+CAEBankSlot	direct	source/game_sa/Audio/Loaders/AEBankLoader.cpp:64	BANKSLOT.DAT; contains AEBankSlotItems=std::array<CAEBankSlotItem,400>
+CAEBankSlotItem	nested	source/game_sa/Audio/Loaders/AEBankLoader.h:36	array member of CAEBankSlot (via alias AEBankSlotItems)
+AEPakLookup	direct	source/game_sa/Audio/Loaders/AEBankLoader.cpp:91	PAKFILES.DAT
+StreamPack	direct	source/game_sa/Audio/Loaders/AEMP3TrackLoader.cpp:86	STRMPAKS.DAT
+tTrackLookup	direct	source/game_sa/Audio/Loaders/AEMP3TrackLoader.cpp:117	TRAKLKUP.DAT
+tTrackInfo	direct	source/game_sa/Audio/Loaders/AEMP3TrackLoader.cpp:157	FillBuffer(trackInfo,sizeof(tTrackInfo)) from stream file
+tTrackInfo::tBeat	nested	source/game_sa/Audio/Loaders/AETrackLoader.h:16	array member of tTrackInfo
+tUserTracksInfo	direct	source/game_sa/Audio/Managers/AEUserRadioTrackManager.cpp:174,286	user track index file
+ChunkHeader	direct	source/game_sa/Text/Text.cpp:403	GXT chunk header
+tSCMChunkHeader	direct	source/game_sa/Scripts/TheScripts.h:573,584	reinterpret_cast over ScriptSpace (main.scm); base of all SCM chunks
+tSCMGlobalVarChunk	direct	source/game_sa/Scripts/TheScripts.cpp:1272	SCM chunk
+tSCMUsedObjectsChunk	direct	source/game_sa/Scripts/TheScripts.cpp:268	SCM chunk
+tSCMScriptFileInfoChunk	direct	source/game_sa/Scripts/TheScripts.cpp:292	SCM chunk
+tSCMStreamedScriptFileInfoChunk	direct	source/game_sa/StreamedScripts.cpp:105	SCM chunk
+tSCMStreamedScriptFileInfoChunk::StreamScriptDefinition	nested	source/game_sa/Scripts/SCMChunks.hpp:72	member array element of tSCMStreamedScriptFileInfoChunk
+tSCMUnknownChunk3	direct	source/game_sa/Scripts/SCMChunks.hpp:93	SCM chunk (derived from tSCMChunkHeader)
+tSCMExtraInfoChunk	direct	source/game_sa/Scripts/SCMChunks.hpp:101	SCM chunk
+tReplayBlockBase	direct	source/game_sa/Replay.cpp:435,456; ReplayBlockType.h:60	replay.rep raw buffers of packed blocks (base of all blocks)
+tReplayPedUpdateBlock	direct	source/game_sa/Replay.cpp:183-197	replay.rep; contains CStoredAnimationState + CCompressedMatrixNotAligned
+CStoredAnimationState	nested	source/game_sa/ReplayBlockType.h:54	member of tReplayPedUpdateBlock (alias std::array<AnimationState,3>)
+AnimationState	nested	source/game_sa/ReplayBlockType.h:47	element of CStoredAnimationState
+tReplayVehicleBlock	direct	source/game_sa/Replay.cpp:1614	NOT in asserts.txt: asserted via VALIDATE_BLOCK macro in Replay.cpp:1612
+tReplayBikeBlock	direct	source/game_sa/Replay.cpp:1615	VALIDATE_BLOCK only
+tReplayPedHeaderBlock	direct	source/game_sa/Replay.cpp:1616	VALIDATE_BLOCK only
+tReplayCameraBlock	direct	source/game_sa/Replay.cpp:1618; ReplayBlockType.h:164	VALIDATE_BLOCK only; uint8 matrix[sizeof(CMatrix)] stored in file -> changes with CMatrix size on 64-bit
+tReplayClockBlock	direct	source/game_sa/Replay.cpp:1619	VALIDATE_BLOCK only
+tReplayWeatherBlock	direct	source/game_sa/Replay.cpp:1620	VALIDATE_BLOCK only
+tReplayEOFBlock	direct	source/game_sa/Replay.cpp:1621	VALIDATE_BLOCK only
+tReplayTimerBlock	direct	source/game_sa/Replay.cpp:1622	VALIDATE_BLOCK only
+CVehicleStateEachFrame	direct	source/game_sa/VehicleRecording.cpp:106; CarCtrl.cpp:6296	carrec .rrr data read raw via RwStreamRead and reinterpret_cast
+CControllerConfig	direct	source/game_sa/ControllerConfigManager.cpp:463,482	controller settings: Keys[type] 8 bytes read/written raw
+rw::HAnimKeyFrame	direct	source/standalone/rw/hanim.cpp:384	first 0x20 bytes (time,q,t) streamed raw; prev pointer rebuilt from offset
+StdFrame	doubt	source/standalone/rw/hanim.cpp:30	same 0x24 layout as HAnimKeyFrame (keyframe with prev ptr)
+RwChunkHeaderInfo	doubt	source/game_sa/Streaming.cpp:467	filled by RwStreamReadChunkHeaderInfo (librw side); 5 x 32-bit, no pointers
+RwMatrix	doubt	source/fakerw/fakerw.h:296	frame/clump stream data handled in librw; 64 bytes no pointers
+RpTriangle	doubt	source/fakerw/fakerw.h:305	geometry stream data handled in librw; no pointers
+RpHAnimNodeInfo	doubt	source/fakerw/fakerw.h:136	hanim hierarchy stream data (librw); no pointers
+rw::HAnimNodeInfo	doubt	source/fakerw/fakerw.h:136	librw twin of RpHAnimNodeInfo
+RtQuat	doubt	source/fakerw/fakerw.h:293	anim keyframe data (librw); no pointers
+rw::Quat	doubt	source/fakerw/fakerw.h:293	librw twin of RtQuat
+# NOTE: save-game size prefixes (CPed/CPlayerPed/CPlayerInfo/CObject/CGangWars) are written with SaveDataToWorkBuffer(sizeof(X)) = size_t (8 bytes on arm64 vs 4 in file), loads read int32/uint32.
+# NOTE: names asserted via other macros not caught by VALIDATE_SIZE/sizeof grep: Replay.cpp:1612 VALIDATE_BLOCK (9 block types, listed above).
+# NOTE: assert names that are variables not types (listed only where FILE-typed): ZoneInfoArray, CGangs::Gang. Ambiguous spellings: TSphere/TFace/TBounds/Header exist in ColHelpers V1..V4 namespaces.
+# NOT FILE (positively seen, no raw path): CCollisionData/CColModel (built in memory, file bytes memcpy'd after header), CStreamingInfo, CStreamedScripts::CStreamedScriptInfo, CustomEnvMap*/SpecMap* pipeline data (use *Buffer structs), CPlayerInfo/CPed/CVehicle/CEntity/CCamera (only memory copies in CReplay), CDirectory, CScriptResourceManager (Save/Load assert(false)).

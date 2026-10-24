@@ -7,6 +7,9 @@
 #include "StdInc.h"
 
 #include "FxManager.h"
+#ifdef NOTSA_PORTABLE
+#include "portable/path_resolve.h"
+#endif
 #include "FxEmitterPrt.h"
 #include "CustomBuildingDNPipeline.h"
 #include "FxTools.h"
@@ -15,7 +18,7 @@
 #include "FxPrimBP.h"
 #include "Particle.h"
 
-NOTSA_GLOBAL(g_fxMan, 0xA9AE80, (FxManager_c), {}); static_assert(sizeof(g_fxMan) == 188);
+NOTSA_GLOBAL(g_fxMan, 0xA9AE80, (FxManager_c), {}); VALIDATE_SIZE(g_fxMan, 188);
 
 void FxManager_c::InjectHooks() {
     RH_ScopedClass(FxManager_c);
@@ -131,7 +134,11 @@ bool FxManager_c::LoadFxProject(const char* path) {
     strcpy(&txdPath[strlen(path) - strlen(".fxp")], "PC.txd");
 
     // NOTSA: sanity check
+#ifdef NOTSA_PORTABLE
+    if (!notsa::portable::ExistsResolved(txdPath)) { // W-7
+#else
     if (!fs::exists(txdPath)) {
+#endif
         NOTSA_LOG_ERR("Fx TXD file '{}' doesn't exists. Game will crash after trying to render a fx!", txdPath);
     }
 
@@ -221,12 +228,12 @@ void FxManager_c::CalcFrustumInfo(RwCamera* camera) {
     constexpr float kRadToDeg = std::bit_cast<float>(0x42652EEDu); // 0x85A998
     constexpr float kDegToRad = std::bit_cast<float>(0x3C8EFA2Eu); // 0x85A7BC
     const float dist    = std::sqrt(viewWindow->x * viewWindow->x + viewWindow->y * viewWindow->y);
-    const float angle   = (float)(x87::atan2((double)dist, 1.0) * (double)kRadToDeg);
+    const float angle   = (float)(X87R(x87::atan2((double)dist, 1.0) * (double)kRadToDeg));
     const float radius0 = std::sqrt(dist * dist + 1.0f) * farClip;
     const double sinB   = x87::sin((double)((180.0f - (angle + angle)) * kDegToRad));
-    const float  q      = (float)((double)radius0 / sinB);
+    const float  q      = (float)(X87R((double)radius0 / sinB));
     const double sinA   = x87::sin((double)(angle * kDegToRad));
-    const float  radius = (float)((double)q * sinA);
+    const float  radius = (float)(X87R((double)q * sinA));
     const float  atX = matrix->at.x * radius, atY = matrix->at.y * radius, atZ = matrix->at.z * radius;
 
     // the exe writes the centre and the radius only: m_Sphere.m_nNumPlanesPassed (+0x10) keeps its value

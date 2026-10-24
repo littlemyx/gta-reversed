@@ -3,6 +3,9 @@
 #include "app.h"
 #include "FileMgr.h"
 #include "MemoryMgr.h"
+#ifdef NOTSA_PORTABLE
+#include "portable/path_resolve.h"
+#endif
 
 void CAEMP3TrackLoader::InjectHooks() {
     RH_ScopedClass(CAEMP3TrackLoader);
@@ -61,11 +64,16 @@ bool CAEMP3TrackLoader::Initialise() {
 // 0x4E0970
 bool CAEMP3TrackLoader::LoadStreamPackTable(void) {
     // NOTSA: Originally Win32 file API was used.
+#ifdef NOTSA_PORTABLE
+    auto* fp = notsa::portable::OpenResolved("AUDIO\\CONFIG\\STRMPAKS.DAT", "rb"); // W-7: case-insensitive; a missing file is not created in the game directory
+    if (!fp) {
+#else
     auto* fp = fopen("AUDIO\\CONFIG\\STRMPAKS.DAT", "rb");
     if (!fp) {
         // Win32 API creates a file if it doesn't exists, and reads 0 bytes.
         fp = fopen("AUDIO\\CONFIG\\STRMPAKS.DAT", "w");
         fclose(fp);
+#endif
 
         // NOTSA: Originally (StreamPack*)CMemoryMgr::Malloc(0), return value is implementation-dependent.
         m_paStreamPacks = nullptr;
@@ -92,11 +100,16 @@ bool CAEMP3TrackLoader::LoadStreamPackTable(void) {
 // 0x4E09F0
 bool CAEMP3TrackLoader::LoadTrackLookupTable(void) {
     // NOTSA: Originally Win32 file API was used.
+#ifdef NOTSA_PORTABLE
+    auto* fp = notsa::portable::OpenResolved("AUDIO\\CONFIG\\TRAKLKUP.DAT", "rb"); // W-7: case-insensitive; a missing file is not created in the game directory
+    if (!fp) {
+#else
     auto* fp = fopen("AUDIO\\CONFIG\\TRAKLKUP.DAT", "rb");
     if (!fp) {
         // Win32 API creates a file if it doesn't exists, and reads 0 bytes.
         fp = fopen("AUDIO\\CONFIG\\TRAKLKUP.DAT", "w");
         fclose(fp);
+#endif
 
         // NOTSA: Originally (tTrackLookup*)CMemoryMgr::Malloc(0), return value is implementation-dependent.
         m_paTrackLookups = nullptr;

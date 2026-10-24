@@ -438,7 +438,7 @@ float CPlantMgr::CalculateWindBending() {
         fWindOffset *= 0.015F;
         return fWindOffset;
     } else {
-        return x87::sin(scalingFactor * (float)(CTimer::GetTimeInMS() % 4'096)) / (CWeather::Wind >= 0.2f ? 125.0f : 200.0f);
+        return X87R(x87::sin(scalingFactor * (float)(CTimer::GetTimeInMS() % 4'096)) / (CWeather::Wind >= 0.2f ? 125.0f : 200.0f));
     }
 }
 

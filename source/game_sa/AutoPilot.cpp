@@ -63,7 +63,7 @@ void CAutoPilot::ModifySpeed(float target) {
     }
 
     // `(now - field_C)` is treated as unsigned (the original adds 2^32 if negative), divided as a signed int
-    const auto progress = (float)((double)(uint32)(CTimer::GetTimeInMS() - (uint32)field_C) / (double)(int32)m_nSpeedScaleFactor);
+    const auto progress = (float)((x87d)(uint32)(CTimer::GetTimeInMS() - (uint32)field_C) / (x87d)(int32)m_nSpeedScaleFactor);
     m_speed = target;
 
     if (!ThePaths.IsAreaLoaded(m_nCurrentPathNodeInfo.m_wAreaId) || !ThePaths.IsAreaLoaded(m_nNextPathNodeInfo.m_wAreaId)) {
@@ -80,35 +80,35 @@ void CAutoPilot::ModifySpeed(float target) {
     const auto rawA8  = reinterpret_cast<const int8*>(&linkA);
     const auto rawB8  = reinterpret_cast<const int8*>(&linkB);
 
-    const double curr = _smthCurr;
-    const double next = _smthNext;
+    const x87d curr = _smthCurr;
+    const x87d next = _smthNext;
 
-    const auto Dir = [](int8 d, double s) { return (float)((double)d * (double)c01 * s); };
+    const auto Dir = [](int8 d, double s) { return (float)(X87R((x87d)d * (x87d)c01 * s)); };
     const float adx = Dir(rawA8[8], curr);
     const float ady = Dir(rawA8[9], curr);
     const float bdx = Dir(rawB8[8], next);
     const float bdy = Dir(rawB8[9], next);
 
-    const auto k1 = (float)((linkA.OneWayLaneOffsetExtended() + (double)m_nCurrentLane) * (double)c54);
-    const auto k2 = (linkB.OneWayLaneOffsetExtended() + (double)m_nNextLane) * (double)c54; // not rounded to float
+    const auto k1 = (float)((X87R(linkA.OneWayLaneOffsetExtended() + (double)m_nCurrentLane)) * (x87d)c54);
+    const auto k2 = (X87R(linkB.OneWayLaneOffsetExtended() + (double)m_nNextLane)) * (x87d)c54; // not rounded to float
 
     const CVector end{
-        (float)((double)rawB16[0] * (double)c0125 + k2 * (double)bdy),
-        (float)((double)rawB16[1] * (double)c0125 - k2 * (double)bdx),
+        (float)((x87d)rawB16[0] * (x87d)c0125 + k2 * (x87d)bdy),
+        (float)((x87d)rawB16[1] * (x87d)c0125 - k2 * (x87d)bdx),
         0.0f
     };
     const CVector start{
-        (float)((double)rawA16[0] * (double)c0125 + (double)k1 * (double)ady),
-        (float)((double)rawA16[1] * (double)c0125 - (double)k1 * (double)adx),
+        (float)((x87d)rawA16[0] * (x87d)c0125 + (x87d)k1 * (x87d)ady),
+        (float)((x87d)rawA16[1] * (x87d)c0125 - (x87d)k1 * (x87d)adx),
         0.0f
     };
 
     const auto scale = CCurves::CalcSpeedScaleFactor(start, end, adx, ady, bdx, bdy);
 
     // `_ftol` truncates, the products are kept at extended precision
-    const auto newScale = (int32)((double)scale * (1000.0 / (double)m_speed));
+    const auto newScale = (int32)((x87d)scale * ((x87d)1000.0 / (x87d)m_speed));
     m_nSpeedScaleFactor = (uint32)newScale;
-    field_C             = (int32)((double)CTimer::GetTimeInMS() - (double)newScale * (double)progress);
+    field_C             = (int32)((x87d)CTimer::GetTimeInMS() - (x87d)newScale * (x87d)progress);
 }
 
 // 0x41B950

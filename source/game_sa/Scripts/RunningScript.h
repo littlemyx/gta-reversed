@@ -13,6 +13,8 @@
 #include "CommandParser/Utility.hpp"
 #include "ScriptParam.h"
 #include "TheScripts.h"
+#include "FileRecord.hpp"
+#include "FileRecords/ScriptFile.hpp"
 
 enum ePedType : uint32;
 
@@ -413,4 +415,80 @@ public:
     }
 };
 
-VALIDATE_SIZE(CRunningScript, 0xE0);
+VALIDATE_SIZE(CRunningScript, 0xE0); // x86 in-memory (10 pointer slots widen it on LP64); the on-disk 0xE0 is VALIDATE_SIZE_FILE(CRunningScript_File) in FileRecords/ScriptFile.hpp
+
+// P-2g: file layout (0xE0) used under NOTSA_PORTABLE by the typed CGenericGameStorage Save/Load (CTheScripts::Save/Load: `SaveDataToWorkBuffer(*s)` / `LoadDataFromWorkBuffer(*script)`).
+// ToFile: m_pNext/m_pPrev are written as 0 (discarded by the loader); m_BaseIP / m_IP / m_IPStack[] as exe VAs (ScriptSpaceExeVA + offset) when they point into ScriptSpace, else 0 - the u32
+// offsets that follow the record in the save are the authoritative IPs and are unchanged. FromFile: restores every data member; the list links are NOT touched (the loader keeps the
+// freshly started script's links, as the exe does), m_IP and m_IPStack are nulled (set from the trailing offsets right after), m_BaseIP is rebuilt (VA inside ScriptSpace -> pointer,
+// otherwise `m_ThisMustBeTheOnlyMissionRunning ? MissionBlock : ScriptSpace`; the exe kept the saved VA verbatim and only a debug log reads it).
+template<> struct notsa::FileRecord<CRunningScript> {
+    using Type = CRunningScript_File;
+    static Type ToFile(const CRunningScript& s) {
+        Type f{};
+        const auto* space = CTheScripts::ScriptSpace.data();
+        const auto  size  = CTheScripts::ScriptSpace.size();
+        f.next = 0;
+        f.prev = 0;
+        std::memcpy(f.name, s.m_szName, sizeof(f.name));
+        f.baseIP = notsa::script_file::ToExeVA(s.m_BaseIP, space, size);
+        f.ip     = notsa::script_file::ToExeVA(s.m_IP, space, size);
+        for (size_t i = 0; i < s.m_IPStack.size(); i++) {
+            f.ipStack[i] = notsa::script_file::ToExeVA(s.m_IPStack[i], space, size);
+        }
+        f.stackDepth = s.m_StackDepth;
+        for (size_t i = 0; i < s.m_LocalVars.size(); i++) {
+            f.localVars[i] = s.m_LocalVars[i].uParam;
+        }
+        f.isActive                       = s.m_IsActive ? 1 : 0;
+        f.condResult                     = s.m_CondResult ? 1 : 0;
+        f.usesMissionCleanup             = s.m_UsesMissionCleanup ? 1 : 0;
+        f.isExternal                     = s.m_IsExternal ? 1 : 0;
+        f.isTextBlockOverride            = s.m_IsTextBlockOverride ? 1 : 0;
+        f.externalType                   = s.m_ExternalType;
+        f.wakeTime                       = s.m_WakeTime;
+        f.andOrState                     = s.m_AndOrState;
+        f.notFlag                        = s.m_NotFlag ? 1 : 0;
+        f.isDeathArrestCheckEnabled      = s.m_IsDeathArrestCheckEnabled ? 1 : 0;
+        f.doneDeathArrest                = s.m_DoneDeathArrest ? 1 : 0;
+        f.sceneSkipIP                    = s.m_SceneSkipIP;
+        f.thisMustBeTheOnlyMissionRunning = s.m_ThisMustBeTheOnlyMissionRunning ? 1 : 0;
+        return f;
+    }
+    static void FromFile(CRunningScript& s, const Type& f) {
+        std::memcpy(s.m_szName, f.name, sizeof(f.name));
+        s.m_IP = nullptr;
+        s.m_IPStack.fill(nullptr);
+        s.m_StackDepth = f.stackDepth;
+        for (size_t i = 0; i < s.m_LocalVars.size(); i++) {
+            s.m_LocalVars[i].uParam = f.localVars[i];
+        }
+        s.m_IsActive                  = f.isActive != 0;
+        s.m_CondResult                = f.condResult != 0;
+        s.m_UsesMissionCleanup        = f.usesMissionCleanup != 0;
+        s.m_IsExternal                = f.isExternal != 0;
+        s.m_IsTextBlockOverride       = f.isTextBlockOverride != 0;
+        s.m_ExternalType              = f.externalType;
+        s.m_WakeTime                  = f.wakeTime;
+        s.m_AndOrState                = f.andOrState;
+        s.m_NotFlag                   = f.notFlag != 0;
+        s.m_IsDeathArrestCheckEnabled = f.isDeathArrestCheckEnabled != 0;
+        s.m_DoneDeathArrest           = f.doneDeathArrest != 0;
+        s.m_SceneSkipIP               = f.sceneSkipIP;
+        s.m_ThisMustBeTheOnlyMissionRunning = f.thisMustBeTheOnlyMissionRunning != 0;
+        auto* base = notsa::script_file::FromExeVA(f.baseIP, CTheScripts::ScriptSpace.data(), CTheScripts::ScriptSpace.size());
+        s.m_BaseIP = base ? base : (s.m_ThisMustBeTheOnlyMissionRunning ? CTheScripts::MissionBlock.data() : CTheScripts::ScriptSpace.data());
+    }
+    // x86: the record IS the raw object (same size, same member offsets) - proves the MSVC raw copy == the record path
+    static_assert(sizeof(void*) != 4 || (sizeof(CRunningScript) == sizeof(Type)
+        && offsetof(CRunningScript, m_pNext) == offsetof(Type, next) && offsetof(CRunningScript, m_pPrev) == offsetof(Type, prev) && offsetof(CRunningScript, m_szName) == offsetof(Type, name)
+        && offsetof(CRunningScript, m_BaseIP) == offsetof(Type, baseIP) && offsetof(CRunningScript, m_IP) == offsetof(Type, ip) && offsetof(CRunningScript, m_IPStack) == offsetof(Type, ipStack)
+        && offsetof(CRunningScript, m_StackDepth) == offsetof(Type, stackDepth) && offsetof(CRunningScript, m_LocalVars) == offsetof(Type, localVars)
+        && offsetof(CRunningScript, m_IsActive) == offsetof(Type, isActive) && offsetof(CRunningScript, m_CondResult) == offsetof(Type, condResult)
+        && offsetof(CRunningScript, m_UsesMissionCleanup) == offsetof(Type, usesMissionCleanup) && offsetof(CRunningScript, m_IsExternal) == offsetof(Type, isExternal)
+        && offsetof(CRunningScript, m_IsTextBlockOverride) == offsetof(Type, isTextBlockOverride) && offsetof(CRunningScript, m_ExternalType) == offsetof(Type, externalType)
+        && offsetof(CRunningScript, m_WakeTime) == offsetof(Type, wakeTime) && offsetof(CRunningScript, m_AndOrState) == offsetof(Type, andOrState) && offsetof(CRunningScript, m_NotFlag) == offsetof(Type, notFlag)
+        && offsetof(CRunningScript, m_IsDeathArrestCheckEnabled) == offsetof(Type, isDeathArrestCheckEnabled) && offsetof(CRunningScript, m_DoneDeathArrest) == offsetof(Type, doneDeathArrest)
+        && offsetof(CRunningScript, m_SceneSkipIP) == offsetof(Type, sceneSkipIP) && offsetof(CRunningScript, m_ThisMustBeTheOnlyMissionRunning) == offsetof(Type, thisMustBeTheOnlyMissionRunning)));
+    static_assert(sizeof(tScriptParam) == sizeof(uint32_t) && sizeof(CRunningScript::m_LocalVars) == sizeof(Type::localVars));
+};

@@ -134,11 +134,11 @@ void CVehicleRecording::SmoothRecording(int32 recordId) {
     auto* const frames = path.m_pData;
     for (size_t j = 2; j * sizeof(CVehicleStateEachFrame) - 0x20u < limit; j++) {
         const uint32 sum = frames[j - 2].m_nTime + frames[j].m_nTime;
-        double       v   = (double)(int32)sum;
+        x87d       v   = (double)(int32)sum;
         if ((int32)sum < 0) {
-            v += 4294967296.0; // 0x858C54
+            v += (x87d)4294967296.0; // 0x858C54
         }
-        frames[j - 1].m_nTime = (uint32)notsa::detail::Ftol(v * 0.5);
+        frames[j - 1].m_nTime = (uint32)notsa::detail::Ftol(v * (x87d)0.5);
     }
 }
 
@@ -295,7 +295,7 @@ void CVehicleRecording::RestoreInfoForCar(CVehicle* vehicle, const CVehicleState
     }
 
     if (vehicle->m_nVehicleType == VEHICLE_TYPE_BIKE) {
-        static_assert(offsetof(CBike, nBikeFlags) == 0x614);
+        VALIDATE_OFFSET(CBike, nBikeFlags, 0x614);
         static_cast<CBike*>(vehicle)->nBikeFlags &= 0xE7; // bGettingPickedUp, bOnSideStand
     }
 }

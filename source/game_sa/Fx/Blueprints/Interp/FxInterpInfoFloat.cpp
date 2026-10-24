@@ -52,71 +52,71 @@ void FxInterpInfoFloat_c::Allocate(int32 count) {
 float FxInterpInfoFloat_c::GetVal(int32 attrib, float time, float deltaTime) {
     // Integrates the piecewise linear key curve of `attrib` over [time - deltaTime, time] (trapezoid rule per segment).
     // Everything is kept on the x87 stack in the original => `double` here.
-    constexpr double TIME_SCALE = 0.00390625; // 0x859AA0 (1/256)
-    constexpr double HALF       = 0.5;        // 0x858B8C
+    constexpr x87d TIME_SCALE = (x87d)0.00390625; // 0x859AA0 (1/256)
+    constexpr x87d HALF       = (x87d)0.5;        // 0x858B8C
 
     const float* const keys = m_Keys[attrib];
     if (m_nNumKeys == 1) {
-        return (float)((double)deltaTime * (double)keys[0]);
+        return (float)((x87d)deltaTime * (x87d)keys[0]);
     }
 
     const int32 n = m_nNumKeys;
-    double      t = (double)time - (double)deltaTime;
-    double      acc = 0.0; // 0x858B50
+    x87d      t = (x87d)time - (x87d)deltaTime;
+    x87d      acc = (x87d)0.0; // 0x858B50
 
     // Find the first key with `t < keyTime`
     int32 j = 0;
     for (; j < n; j++) {
-        if (t < (double)m_pTimes[j] * TIME_SCALE) {
+        if (t < (x87d)m_pTimes[j] * TIME_SCALE) {
             break;
         }
     }
 
     if (j == n) { // `t` is past the last key
-        return (float)((double)deltaTime * (double)keys[n - 1]);
+        return (float)((x87d)deltaTime * (x87d)keys[n - 1]);
     }
     if (j > n) { // n < 0
         return 0.0f;
     }
 
     // Value at `t`
-    double S;
+    x87d S;
     if (j > 0) {
-        const double T0 = (double)m_pTimes[j - 1] * TIME_SCALE;
-        const double T1 = (double)m_pTimes[j] * TIME_SCALE;
-        const double r  = (t - T0) / (T1 - T0);
-        S               = r * ((double)keys[j] - (double)keys[j - 1]) + (double)keys[j - 1];
+        const x87d T0 = (x87d)m_pTimes[j - 1] * TIME_SCALE;
+        const x87d T1 = (x87d)m_pTimes[j] * TIME_SCALE;
+        const x87d r  = (t - T0) / (T1 - T0);
+        S               = r * ((x87d)keys[j] - (x87d)keys[j - 1]) + (x87d)keys[j - 1];
     } else {
-        S = (double)keys[0];
+        S = (x87d)keys[0];
     }
 
     for (; j < n; j++) {
-        const auto Tj = (float)((double)m_pTimes[j] * TIME_SCALE);
+        const auto Tj = (float)((x87d)m_pTimes[j] * TIME_SCALE);
         // BUG: For j == 0 this reads `m_pTimes[-1]` and `keys[-1]` (out of bounds), but only if `time` is before the first key
-        const auto Tp = (float)((double)m_pTimes[j - 1] * TIME_SCALE);
+        const auto Tp = (float)((x87d)m_pTimes[j - 1] * TIME_SCALE);
         if (Tj == time) { // 0x4A8732
-            const double w = ((double)keys[j] - S) * HALF + S;
-            acc += w * ((double)Tj - t);
+            const x87d w = ((x87d)keys[j] - S) * HALF + S;
+            acc += w * ((x87d)Tj - t);
             return (float)acc;
         }
         if (Tj < time) { // 0x4A86E9
-            const double w = ((double)keys[j] - S) * HALF + S;
-            acc += w * ((double)Tj - t);
-            S = (double)keys[j];
-            t = (double)Tj;
+            const x87d w = ((x87d)keys[j] - S) * HALF + S;
+            acc += w * ((x87d)Tj - t);
+            S = (x87d)keys[j];
+            t = (x87d)Tj;
         } else if (Tj > time) { // 0x4A874B
-            const double r  = ((double)time - (double)Tp) / ((double)Tj - (double)Tp);
-            const double v  = r * ((double)keys[j] - (double)keys[j - 1]) + (double)keys[j - 1];
-            const double w  = (v - S) * HALF + S;
-            acc += w * ((double)time - t);
+            const x87d r  = ((x87d)time - (x87d)Tp) / ((x87d)Tj - (x87d)Tp);
+            const x87d v  = r * ((x87d)keys[j] - (x87d)keys[j - 1]) + (x87d)keys[j - 1];
+            const x87d w  = (v - S) * HALF + S;
+            acc += w * ((x87d)time - t);
             return (float)acc;
         }
         // (unordered => just go to the next key)
     }
 
     // `time` is past the last key
-    const double w = ((double)keys[n - 1] - S) * HALF + S;
-    acc += w * ((double)m_pTimes[n - 1] * TIME_SCALE - t);
+    const x87d w = ((x87d)keys[n - 1] - S) * HALF + S;
+    acc += w * ((x87d)m_pTimes[n - 1] * TIME_SCALE - t);
     return (float)acc;
 }
 

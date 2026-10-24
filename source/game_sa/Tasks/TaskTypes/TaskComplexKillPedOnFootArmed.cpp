@@ -224,9 +224,9 @@ CTask* CTaskComplexKillPedOnFootArmed::CreateSubTask(eTaskType taskType, CPed* p
                 dir.Normalise();
 
                 const float  sideX = -dir.y * 1.5f;                 // Stored as a float
-                const double sideY = (double)dir.x * (double)1.5f; // x87: Kept in extended precision
-                const CVector pos1{ sideX + targetPos.x, (float)(sideY + (double)targetPos.y), targetPos.z };
-                const CVector pos2{ targetPos.x - sideX, (float)((double)targetPos.y - sideY), targetPos.z };
+                const x87d sideY = (x87d)dir.x * (x87d)1.5f; // x87: Kept in extended precision
+                const CVector pos1{ sideX + targetPos.x, (float)(sideY + (x87d)targetPos.y), targetPos.z };
+                const CVector pos2{ targetPos.x - sideX, (float)((x87d)targetPos.y - sideY), targetPos.z };
 
                 if (CWorld::GetIsLineOfSightClear(targetPos, pos1, true, true, false, false, true, false, false)) {
                     task = new CTaskComplexGoToPointAndStandStill{ PEDMOVE_RUN, pos1, 0.5f, 2.f, false, false }; // 0x86FC84, 0x86FC88
@@ -236,7 +236,7 @@ CTask* CTaskComplexKillPedOnFootArmed::CreateSubTask(eTaskType taskType, CPed* p
                     task = SeekTarget(1.f);
                 }
             } else {
-                task = SeekTarget((float)(6.0 - ((double)timeSince - 3000.0) * (double)0.001f));
+                task = SeekTarget((float)((x87d)6.0 - ((x87d)timeSince - (x87d)3000.0) * (x87d)0.001f));
             }
         }
 
@@ -317,9 +317,9 @@ CTask* CTaskComplexKillPedOnFootArmed::CreateNextSubTask(CPed* ped) {
 
     // x87: Sum of squares & sqrt is in extended precision, final result is a float
     const float dist = [&] {
-        const double dx = (double)targetPos.x - (double)ourPos.x;
-        const double dy = (double)targetPos.y - (double)ourPos.y;
-        const double dz = (double)targetPos.z - (double)ourPos.z;
+        const x87d dx = (x87d)targetPos.x - (x87d)ourPos.x;
+        const x87d dy = (x87d)targetPos.y - (x87d)ourPos.y;
+        const x87d dz = (x87d)targetPos.z - (x87d)ourPos.z;
         return (float)std::sqrt(dx * dx + dy * dy + dz * dz);
     }();
 
@@ -342,9 +342,9 @@ CTask* CTaskComplexKillPedOnFootArmed::CreateNextSubTask(CPed* ped) {
         if (ped->bStayInSamePlace || ped->bKindaStayInSamePlace) {
             const auto diff = targetPos - ourPos;
             // x87: kept in extended precision
-            const double diffSq   = (double)diff.x * (double)diff.x + (double)diff.y * (double)diff.y + (double)diff.z * (double)diff.z;
+            const x87d diffSq   = (x87d)diff.x * (x87d)diff.x + (x87d)diff.y * (x87d)diff.y + (x87d)diff.z * (x87d)diff.z;
             const auto   newTask  = CreateSubTask(
-                ((double)range * (double)range <= diffSq || !LineOfSightClearForAttack(ped)) ? TASK_SIMPLE_PAUSE : TASK_SIMPLE_GUN_CTRL,
+                ((x87d)range * (x87d)range <= diffSq || !LineOfSightClearForAttack(ped)) ? TASK_SIMPLE_PAUSE : TASK_SIMPLE_GUN_CTRL,
                 ped
             );
             m_needToMoveInCloserTime = 0;
@@ -402,16 +402,16 @@ CTask* CTaskComplexKillPedOnFootArmed::CreateNextSubTask(CPed* ped) {
 
     {
         // x87: kept in extended precision
-        double maxDist = (double)range * (double)0.8f;
+        x87d maxDist = (x87d)range * (x87d)0.8f;
         if (23.0 <= maxDist) {
-            maxDist = 23.0;
+            maxDist = (x87d)23.0;
         }
 
         if ((double)dist > maxDist) {
             if (ped->bKindaStayInSamePlace) {
                 goto PauseStep;
             }
-            double v = (double)range * (double)0.6f;
+            x87d v = (x87d)range * (x87d)0.6f;
             task = SeekTarget(v >= 20.0 ? 20.f : (float)v);
             goto AfterTask;
         }
@@ -437,7 +437,7 @@ CTask* CTaskComplexKillPedOnFootArmed::CreateNextSubTask(CPed* ped) {
         if (CCover::FindCoordinatesCoverPoint(*ped->m_pCoverPoint, ped, targetPos, coverPos)) {
             const CVector2D pedToCover{ ourPos.x - coverPos.x, ourPos.y - coverPos.y };
             // x87: sqrt is kept in extended precision
-            if (std::sqrt((double)pedToCover.y * (double)pedToCover.y + (double)pedToCover.x * (double)pedToCover.x) < (double)0.75f) {
+            if (std::sqrt((x87d)pedToCover.y * (x87d)pedToCover.y + (x87d)pedToCover.x * (x87d)pedToCover.x) < (double)0.75f) {
                 if (ped->m_pCoverPoint->GetUsage() == CCoverPoint::eUsage::LOWCOVER) {
                     if (dist < 12.f
                         && !ped->bNotAllowedToDuck
@@ -491,7 +491,7 @@ PostCover:
 
             const CVector2D coverToTarget{ coverPos.x - targetPos.x, coverPos.y - targetPos.y };
             // x87: sqrt is kept in extended precision
-            if (std::sqrt((double)coverToTarget.x * (double)coverToTarget.x + (double)coverToTarget.y * (double)coverToTarget.y) < (double)range * (double)0.75f) {
+            if (std::sqrt((x87d)coverToTarget.x * (x87d)coverToTarget.x + (x87d)coverToTarget.y * (x87d)coverToTarget.y) < (x87d)range * (x87d)0.75f) {
                 if (CWorld::GetIsLineOfSightClear(coverPos, ourPos, true, true, false, false, false, false, false)) {
                     if (ped->GetGroup()) {
                         ped->Say(CTX_GLOBAL_COVER_ME);

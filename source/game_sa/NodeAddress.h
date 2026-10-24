@@ -25,7 +25,7 @@ public:
 
     operator bool() const { return IsValid(); }
 };
-VALIDATE_SIZE(CNodeAddress, 0x4);
+VALIDATE_SIZE_FILE(CNodeAddress, 0x4);
 
 // The exe fills its global CNodeAddress arrays with static ctors that store ONLY the area id (0xFFFF); the node id stays 0 (ctors 0x84A040 / 0x84A080 / 0x84A640).
 // The NSDMI above is {-1, -1}: the detached globals use this to reproduce the exe image byte for byte.

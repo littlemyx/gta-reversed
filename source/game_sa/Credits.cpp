@@ -53,12 +53,12 @@ void CCredits::PrintCreditText(float scaleX, float scaleY, const GxtChar* text, 
         CFont::PrintString((float)(RsGlobal.maximumWidth / 2 - 1), pos - 1.0f, text);
     }
 
-    position = (uint32)notsa::detail::Ftol((double)scaleY * 20.0 + (double)position); // exe: _ftol2(scaleY * 20 + position) (NOT `(uint32)scaleY * 20`)
+    position = (uint32)notsa::detail::Ftol((x87d)scaleY * (x87d)20.0 + (x87d)position); // exe: _ftol2(scaleY * 20 + position) (NOT `(uint32)scaleY * 20`)
 }
 
 // 0x5A87C0
 void CCredits::PrintCreditSpace(float spaceSize, uint32& position) {
-    position = (uint32)notsa::detail::Ftol((double)spaceSize * 25.0 + (double)position); // 0x858FE8
+    position = (uint32)notsa::detail::Ftol((x87d)spaceSize * (x87d)25.0 + (x87d)position); // 0x858FE8
 }
 
 // 0x5A87F0

@@ -64,10 +64,10 @@ CFire* CTaskComplexExtinguishFireOnFoot::FindFireNearPed(CPed* ped) {
 
     // x87 evaluates this in extended precision, in this order
     const auto& firePos = fire->GetPosition();
-    const double dx = (double)pedPos.x - (double)firePos.x;
-    const double dy = (double)pedPos.y - (double)firePos.y;
-    const double dz = (double)pedPos.z - (double)firePos.z;
-    const double distSq = (dz * dz + dx * dx) + dy * dy;
+    const x87d dx = (x87d)pedPos.x - (x87d)firePos.x;
+    const x87d dy = (x87d)pedPos.y - (x87d)firePos.y;
+    const x87d dz = (x87d)pedPos.z - (x87d)firePos.z;
+    const x87d distSq = (dz * dz + dx * dx) + dy * dy;
     return distSq < 100.0 // 0x858628
         ? fire
         : nullptr;

@@ -499,7 +499,7 @@ void CEntity::PreRender() {
                 );
 
                 CCoronas::RegisterCorona(
-                    (uint32)this, nullptr,
+                    NOTSA_PTR_ID32(this), nullptr,
                     static_cast<uint8>(fRand * 255.0F),
                     static_cast<uint8>(fRand * 220.0F),
                     static_cast<uint8>(fRand * 190.0F), 255, vecPos,
@@ -529,7 +529,7 @@ void CEntity::PreRender() {
             );
 
             CCoronas::RegisterCorona(
-                (uint32)this, nullptr,
+                NOTSA_PTR_ID32(this), nullptr,
                 static_cast<uint8>(fRand * 255.0F),
                 static_cast<uint8>(fRand * 255.0F),
                 static_cast<uint8>(fRand * 255.0F), 255, vecPos,
@@ -552,7 +552,7 @@ void CEntity::PreRender() {
             
             if (CVector2D(obj->m_vecMoveSpeed).Magnitude() > 0.03F) {
                 CMotionBlurStreaks::RegisterStreak(
-                    reinterpret_cast<uint32>(this), 100, 100, 100, 255, 
+                    NOTSA_PTR_ID32(this), 100, 100, 100, 255, 
                     vecStreakStart, vecStreakEnd
                 );
             }
@@ -567,7 +567,7 @@ void CEntity::PreRender() {
                 if (!CWaterLevel::GetWaterLevelNoWaves(vecPos, &fWaterLevel, nullptr, nullptr) || 
                     vecPos.z > fWaterLevel) {
                     CMotionBlurStreaks::RegisterStreak(
-                        reinterpret_cast<uint32>(this), 255, 160, 100, 255, 
+                        NOTSA_PTR_ID32(this), 255, 160, 100, 255, 
                         vecStreakStart, vecStreakEnd
                     );
                 }
@@ -712,7 +712,29 @@ void CEntity::UpdateRwFrame() {
 void CEntity::UpdateRpHAnim() {
     if (const auto atomic = GetFirstAtomic(GetRpClump())) {
         if (RpSkinGeometryGetSkin(RpAtomicGetGeometry(atomic)) && !m_bDontUpdateHierarchy) {
+#if defined(NOTSA_STATEHASH) && defined(NOTSA_PORTABLE) // RR-3: F6 diagnostics (clang builtins), portable only
+            if (std::getenv("NOTSA_RR_HOLDLOG") && GetIsTypePed() && GetPedPool()->GetIndex(AsPed()) == 11) { // RR diagnostics for the held-prop bone matrix (RR_PLAN section 9.5)
+                static int s_N = 0;
+                if (s_N++ < 40) { NOTSA_LOG_INFO("rru frame={} ped=11 caller={:x} firstAssoc={} dontUpdate={}", CTimer::GetFrameCounter(), (unsigned long long)((uintptr_t)__builtin_return_address(0) - (uintptr_t)(void*)&notsa::rr::StableId), (void*)RpAnimBlendClumpGetFirstAssociation(GetRpClump()) != nullptr, (int)m_bDontUpdateHierarchy); }
+            }
+#endif
+#if defined(NOTSA_STATEHASH) && defined(NOTSA_PORTABLE) // RR-3: F6 diagnostics (clang builtins), portable only
+            if (std::getenv("NOTSA_RR_HOLDLOG") && GetIsTypePed() && GetPedPool()->GetIndex(AsPed()) == 11) {
+                static int s_M = 0;
+                auto* h = GetAnimHierarchyFromSkinClump(GetRpClump());
+                const float* m = h ? (const float*)RpHAnimHierarchyGetMatrixArray(h) : nullptr;
+                if (s_M++ < 6 && h) { NOTSA_LOG_INFO("rru2 frame={} flags={:x} nodes={} anim={} curTime={} m_before={:08x},{:08x},{:08x}", CTimer::GetFrameCounter(), (unsigned)h->flags, (int)h->numNodes, (void*)h->interpolator, h->interpolator ? h->interpolator->currentTime : -1.f, m ? std::bit_cast<uint32_t>(m[0]) : 0u, m ? std::bit_cast<uint32_t>(m[12]) : 0u, m ? std::bit_cast<uint32_t>(m[13]) : 0u); }
+            }
+#endif
             RpHAnimHierarchyUpdateMatrices(GetAnimHierarchyFromSkinClump(GetRpClump()));
+#if defined(NOTSA_STATEHASH) && defined(NOTSA_PORTABLE) // RR-3: F6 diagnostics (clang builtins), portable only
+            if (std::getenv("NOTSA_RR_HOLDLOG") && GetIsTypePed() && GetPedPool()->GetIndex(AsPed()) == 11) {
+                static int s_A = 0;
+                auto* h = GetAnimHierarchyFromSkinClump(GetRpClump());
+                const float* m = h ? (const float*)RpHAnimHierarchyGetMatrixArray(h) : nullptr;
+                if (s_A++ < 6 && h) { NOTSA_LOG_INFO("rru3 frame={} m_after={:08x},{:08x},{:08x}", CTimer::GetFrameCounter(), m ? std::bit_cast<uint32_t>(m[0]) : 0u, m ? std::bit_cast<uint32_t>(m[12]) : 0u, m ? std::bit_cast<uint32_t>(m[13]) : 0u); }
+            }
+#endif
         }
     }
 }
@@ -910,8 +932,8 @@ void CEntity::SetRwObjectAlpha(int32 alpha) {
         return;
     }
     switch (const auto type = RwObjectGetType(object)) {
-    case rpATOMIC: SetAtomicAlpha(GetRpAtomic(), (void*)(alpha)); break;
-    case rpCLUMP:  RpClumpForAllAtomics(GetRpClump(), SetAtomicAlpha, (void*)alpha); break;
+    case rpATOMIC: SetAtomicAlpha(GetRpAtomic(), (void*)(uintptr_t)(alpha)); break;
+    case rpCLUMP:  RpClumpForAllAtomics(GetRpClump(), SetAtomicAlpha, (void*)(uintptr_t)alpha); break;
     default:       NOTSA_UNREACHABLE_CASE(type);
     }
 }
@@ -989,7 +1011,7 @@ C2dEffect* CEntity::GetRandom2dEffect(int32 effectType, bool mustBeFree) {
         }
     }
 
-    return numCandidates ? candidates[CGeneral::GetRandomNumberInRange(0u, numCandidates)] : nullptr;
+    return numCandidates ? candidates[CGeneral::GetRandomNumberInRange<size_t>(0u, numCandidates)] : nullptr;
 }
 
 // Transforms a point from the entity's local (object) space to world space
@@ -1053,7 +1075,7 @@ void CEntity::CreateEffects() {
                 if (effect->enEx.m_nTimeOn > effect->enEx.m_nTimeOff && CClock::ms_nGameClockHours < effect->enEx.m_nTimeOff) {
                     ucDays--;
                 }
-                srand(std::bit_cast<uint32>(this) + ucDays);
+                srand(NOTSA_PTR_ID32(this) + ucDays);
             }
 
             const auto fHeading = GetHeading();
@@ -1297,6 +1319,9 @@ bool CEntity::GetIsTouching(const CVector& centre, float radius) const {
     const float cbx = centreB.x, cby = centreB.y, cbz = centreB.z;
     const CVector* const c = &centre;
     uint16 status;
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/Entity_GetIsTouching.inc"
+#else
     __asm {
         mov  eax, c
         fld  dword ptr [boundRadius]
@@ -1324,6 +1349,7 @@ bool CEntity::GetIsTouching(const CVector& centre, float radius) const {
         fstp st(0)
         fstp st(0)
     }
+#endif
     return (status & 0x4100) == 0;
 }
 
@@ -1406,10 +1432,10 @@ void CEntity::ModifyMatrixForTreeInWind() {
         fWindOffset *= 0.015F;
 
     } else {
-        auto uiTimeOffset = (reinterpret_cast<uint32>(this) + CTimer::GetTimeInMS()) & 0xFFF;
+        auto uiTimeOffset = (NOTSA_PTR_ID32(this) + CTimer::GetTimeInMS()) & 0xFFF;
 
         constexpr float scalingFactor = 6.28f / 4096.f;
-        fWindOffset = x87::sin(uiTimeOffset * scalingFactor) * 0.005F;
+        fWindOffset = X87R(x87::sin(uiTimeOffset * scalingFactor) * 0.005F);
         if (CWeather::Wind >= 0.2F) {
             fWindOffset *= 1.6F;
         }
@@ -1997,7 +2023,7 @@ void CEntity::ProcessLightsForEntity() {
                 skipCoronaChecks = true;
 
                 CCoronas::RegisterCorona(
-                    (uint32)this + C,
+                    NOTSA_PTR_ID32(this) + C,
                     nullptr,
                     0,
                     0,
@@ -2063,7 +2089,7 @@ void CEntity::ProcessLightsForEntity() {
                 const auto coronaSize = effect->light.m_fCoronaSize * sizeMult;
 
                 CCoronas::RegisterCorona(
-                    (uint32)this + C,
+                    NOTSA_PTR_ID32(this) + C,
                     nullptr,
                     static_cast<uint8>(static_cast<float>(effect->light.m_color.red) * TimeFade),
                     static_cast<uint8>(static_cast<float>(effect->light.m_color.green) * TimeFade),
@@ -2094,7 +2120,7 @@ void CEntity::ProcessLightsForEntity() {
         if (!skipCoronaChecks && ApplyOnVersion) {
             skipCoronaChecks = true;
             CCoronas::RegisterCorona(
-                (uint32)this + C,
+                NOTSA_PTR_ID32(this) + C,
                 nullptr,
                 0,
                 0,
@@ -2120,7 +2146,7 @@ void CEntity::ProcessLightsForEntity() {
 
         if (!skipCoronaChecks && UpdateCoors) {
             CCoronas::UpdateCoronaCoors(
-                (uint32)this + C,
+                NOTSA_PTR_ID32(this) + C,
                 effectPos,
                 effect->light.m_fCoronaFarClip,
                 0.0f
@@ -2209,7 +2235,7 @@ void CEntity::ProcessLightsForEntity() {
                 color.blue = static_cast<uint8>(static_cast<float>(color.blue) * colorMult);
 
                 CShadows::StoreStaticShadow(
-                    (uint32)this + C,
+                    NOTSA_PTR_ID32(this) + C,
                     eShadowType::SHADOW_ADDITIVE,
                     effect->light.m_pShadowTex,
                     effectPos,
@@ -2229,7 +2255,7 @@ void CEntity::ProcessLightsForEntity() {
                 );
             } else if (ApplyOnVersion) {
                 CShadows::StoreStaticShadow(
-                    (uint32)this + C,
+                    NOTSA_PTR_ID32(this) + C,
                     eShadowType::SHADOW_ADDITIVE,
                     effect->light.m_pShadowTex,
                     effectPos,
@@ -2388,7 +2414,7 @@ RpAtomic* CEntity::GetRpAtomicOrFirstAtomicOfClump() const noexcept {
     switch (const auto type = RwObjectGetType(obj)) {
     case rpATOMIC: return GetRpAtomic();                /* If we're an atomic, use that */
     case rpCLUMP:  return GetFirstAtomic(GetRpClump()); /* Otherwise use the first atomic of the clump */
-    default:       NOTSA_UNREACHABLE_CASE(type);        /* Invalid type */
+    default:       NOTSA_UNREACHABLE_RET(nullptr, "Unreachable switch case with value: {}", type);        /* Invalid type */
     }
 }
 

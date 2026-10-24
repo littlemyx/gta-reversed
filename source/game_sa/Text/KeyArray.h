@@ -3,7 +3,18 @@
 struct CKeyEntry {
     const GxtChar* string; // relative to TKEY block; need to call update after reading
     uint32      hash;      // name hash
+#ifdef NOTSA_PORTABLE
+    uint32      m_fileOffset; // portable: the 32 bit file offset the exe keeps in the 4 byte `string` slot until Update() (see CKeyEntry_File)
+#endif
 };
+
+// A record of the TKEY chunk of a .gxt file: { offset into the TDAT block, name hash }. The exe reads the chunk straight into CKeyEntry[] (8 bytes on x86);
+// CKeyEntry is 16 (24 with the offset) bytes on LP64, so a portable build reads these and converts. On-disk layout, identical on every platform.
+struct CKeyEntry_File {
+    uint32 offset;
+    uint32 hash;
+};
+VALIDATE_SIZE_FILE(CKeyEntry_File, 0x8);
 
 // TKEY block
 class CKeyArray {

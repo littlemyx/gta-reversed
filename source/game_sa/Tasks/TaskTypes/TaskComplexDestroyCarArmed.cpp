@@ -54,16 +54,16 @@ void CTaskComplexDestroyCarArmed::CalculateSearchPositionAndRanges(CPed* ped) {
     m_PedToVehDirUnnorm = m_VehiclePos - m_PedPos;
     // The original sums the squares and takes the root on the x87 stack (extended precision), then stores a float
     m_PedVehDist = (float)std::sqrt(
-        (double)m_PedToVehDirUnnorm.x * m_PedToVehDirUnnorm.x
-      + (double)m_PedToVehDirUnnorm.y * m_PedToVehDirUnnorm.y
-      + (double)m_PedToVehDirUnnorm.z * m_PedToVehDirUnnorm.z
+        (x87d)m_PedToVehDirUnnorm.x * m_PedToVehDirUnnorm.x
+      + (x87d)m_PedToVehDirUnnorm.y * m_PedToVehDirUnnorm.y
+      + (x87d)m_PedToVehDirUnnorm.z * m_PedToVehDirUnnorm.z
     );
 
     const auto& weapon = ped->GetActiveWeapon();
     const auto& winfo  = weapon.GetWeaponInfo(ped);
     m_fWeaponRange = winfo.m_fWeaponRange * 0.5f; // 0x858B8C (exact)
     // The 0.9 product stays in extended precision until it is compared to / stored as float
-    const auto clamped = (double)m_fWeaponRange * (double)0.9f; // 0x858C20
+    const auto clamped = (x87d)m_fWeaponRange * (x87d)0.9f; // 0x858C20
     m_fWeaponRangeClamped = (0.8f > clamped) ? 0.8f : (float)clamped; // 0x858C98 (FCOMP + JNE)
     m_fWeaponRange *= 1.1f; // 0x858F14
 }

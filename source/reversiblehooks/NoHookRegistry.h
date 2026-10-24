@@ -16,3 +16,10 @@
 #define NOTSA_NO_HOOK_REGISTRY 1
 #endif
 #endif
+
+// Portable build (GTASA_PORTABLE, .notes/STREAM_C_PLAN.md slice A-1): the same, whatever else is defined. ReversibleHooks.h then includes PortableStub.h instead of the registry.
+#ifdef NOTSA_PORTABLE
+#ifndef NOTSA_NO_HOOK_REGISTRY
+#define NOTSA_NO_HOOK_REGISTRY 1
+#endif
+#endif

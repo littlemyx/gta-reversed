@@ -3,7 +3,7 @@
 #include "InterestingEvents.h"
 #include "DbgDangling.h"
 
-NOTSA_GLOBAL(g_InterestingEvents, 0xC0B058, (CInterestingEvents), {}); static_assert(sizeof(g_InterestingEvents) == 344);
+NOTSA_GLOBAL(g_InterestingEvents, 0xC0B058, (CInterestingEvents), {}); VALIDATE_SIZE(g_InterestingEvents, 344);
 
 /*
  * Commented hooks aren't tested.

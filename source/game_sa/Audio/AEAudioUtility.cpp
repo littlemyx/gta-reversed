@@ -87,6 +87,12 @@ float CAEAudioUtility::GetPiecewiseLinear(float x, int16 dataCount, const float 
 
 // 0x4d9e50 - the exe's code verbatim: the unrounded extended result of `fldlg2; fld p; fyl2x` stays in ST0 (callers multiply it by 10 / 20 and round ONCE; a float return would round twice)
 static const float kAudioLog10Min = 0.00001f, kAudioLog10Floor = -5.0f;   // 0x858C14 and the -5.0f the exe loads; `p < 1e-5f` or NaN (fcomp unordered sets C0) -> -5
+#ifdef NOTSA_PORTABLE
+// portable (no naked / x87): fcomp against 1e-5f (NaN and p < 1e-5f -> the -5 constant), else log10 = fyl2x(lg2, p) on the soft x87. The exe returns the UNROUNDED 64 bit value in ST0
+// and every caller multiplies it by 10 / 20 and rounds ONCE; a C++ float return rounds before that multiplication. F-4 TODO: not bit-exact in that product (ULP table in
+// tests/portable/f4a_lift_test.cpp rows AudioLog10_x20 / _x10: the function result itself is bit-exact vs the asm).
+float CAEAudioUtility::AudioLog10(float p) { return notsa::fp::sites::AudioLog10(p, kAudioLog10Min, kAudioLog10Floor); }
+#else
 __declspec(naked) float CAEAudioUtility::AudioLog10(float p) {
     __asm {
         fld   dword ptr [esp + 4]
@@ -103,6 +109,7 @@ __declspec(naked) float CAEAudioUtility::AudioLog10(float p) {
         ret
     }
 }
+#endif
 
 // REFACTORED
 // 0x4d9e80
@@ -121,7 +128,7 @@ uint64 CAEAudioUtility::GetCurrentTimeInMS() {
 namespace {
 //! The exe's uint32 -> x87 conversion: `fild` of the SIGNED dword, then `fadd 4294967296.0f` (0x858C54) when the sign bit is set (rounded to the x87 precision in force)
 double U32ToX87(uint32 v) {
-    double d = (double)(int32)v;
+    x87d d = (x87d)(int32)v;
     if ((int32)v < 0) {
         d += 4294967296.0f;
     }
@@ -132,13 +139,13 @@ double U32ToX87(uint32 v) {
 // 0x4d9ef0
 uint32 CAEAudioUtility::ConvertFromBytesToMS(uint32 lengthInBytes, uint32 sampleRate, uint16 numChannels) {
     // x87: the unsigned operands are loaded exactly (fild), `rate * channels * 0.002f` stays on the stack (0x858F44 = 1/500 as float), the quotient is passed to floor() as a double
-    return static_cast<uint32>(std::floor(U32ToX87(lengthInBytes) / (U32ToX87(sampleRate * numChannels) * (double)ExeRecip(500.0f))));
+    return static_cast<uint32>(std::floor(X87R(U32ToX87(lengthInBytes) / (X87R(U32ToX87(sampleRate * numChannels) * (double)ExeRecip(500.0f))))));
 }
 
 // 0x4d9f40
 uint32 CAEAudioUtility::ConvertFromMSToBytes(uint32 a, uint32 frequency, uint16 frequencyMult) {
     // exe: a * ((frequency * mult) * 0.002f) (NOT (a * f) / 500), then the signed idiv by 2 * mult
-    const auto value = static_cast<int32>(static_cast<uint32>(std::floor(U32ToX87(a) * (U32ToX87(frequency * frequencyMult) * (double)ExeRecip(500.0f)))));
+    const auto value = static_cast<int32>(static_cast<uint32>(std::floor(X87R(U32ToX87(a) * (X87R(U32ToX87(frequency * frequencyMult) * (double)ExeRecip(500.0f)))))));
     return static_cast<uint32>(value + value % (2 * (int32)frequencyMult));
 }
 

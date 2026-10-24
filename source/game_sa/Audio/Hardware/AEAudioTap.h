@@ -36,7 +36,7 @@
 //!   FREQ_REJECTED   SetFrequency returned an error
 //!   STREAM_STALL    CAEStreamThread loop iteration (Service + FillBuffer) took > 300 ms or the gap between iterations was > 400 ms
 //!   LONG_FRAME      (info, not an anomaly) main loop frame > 50 ms
-#ifdef NOTSA_STANDALONE_RUN
+#if defined(NOTSA_STANDALONE_RUN) && !defined(NOTSA_PORTABLE) // MAC-W0: DirectSound vtable tap/mute are Windows debug tools
 namespace notsa::audio_tap {
 namespace detail {
 // IDirectSoundBuffer8 vtable slots (see AEDirectSoundMute.h)

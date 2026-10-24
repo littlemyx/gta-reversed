@@ -189,7 +189,7 @@ AssocGroupId CAnimManager::GetAnimationGroupIdByName(notsa::ci_string_view name)
             return (AssocGroupId)(i);
         }
     }
-    NOTSA_UNREACHABLE("Couldn't find group with name {}", name);
+    NOTSA_UNREACHABLE_RET({}, "Couldn't find group with name {}", name);
 }
 
 // 0x4D3A40

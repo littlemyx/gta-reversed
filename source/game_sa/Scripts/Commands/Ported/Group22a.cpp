@@ -43,10 +43,10 @@ using namespace notsa::script::commands::ported::g22;
 */
 
 namespace {
-static_assert(offsetof(CPed, m_nPedType) == 0x598);
-static_assert(offsetof(CPed, m_fMaxHealth) == 0x544);
-static_assert(offsetof(CPed, m_pEnex) == 0x78C);
-static_assert(offsetof(CPedModelInfo, m_nPedFlags) == 0x32);
+VALIDATE_OFFSET(CPed, m_nPedType, 0x598);
+VALIDATE_OFFSET(CPed, m_fMaxHealth, 0x544);
+VALIDATE_OFFSET(CPed, m_pEnex, 0x78C);
+VALIDATE_OFFSET(CPedModelInfo, m_nPedFlags, 0x32);
 
 //! 0x6002F0 (unnamed in the symbol table; used by TASK_USE_CLOSEST_MAP_ATTRACTOR): finds the closest 2D effect of type `EFFECT_ATTRACTOR` whose
 //! attractor type is `attractorType`, around `pos`. Outputs (both cleared first) the effect and the entity owning it; returns whether one was found.
@@ -99,10 +99,10 @@ bool FindClosestScriptedAttractor(
                 continue;
             }
             const CVector w  = entity->TransformFromObjectSpace(fx->m_Pos); // 0x5334F0
-            const double  dx = (double)pos.x - (double)w.x;
-            const double  dy = (double)pos.y - (double)w.y;
-            const double  dz = (double)pos.z - (double)w.z;
-            const double  sq = (dz * dz + dy * dy) + dx * dx;
+            const x87d  dx = (x87d)pos.x - (x87d)w.x;
+            const x87d  dy = (x87d)pos.y - (x87d)w.y;
+            const x87d  dz = (x87d)pos.z - (x87d)w.z;
+            const x87d  sq = (dz * dz + dy * dy) + dx * dx;
             if (sq < (double)best) { // fcom + `test ah, 5; jp skip`: only when strictly less (ordered)
                 best      = (float)sq;
                 outEffect = fx;

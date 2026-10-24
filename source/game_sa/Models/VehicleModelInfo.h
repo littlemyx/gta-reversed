@@ -83,11 +83,31 @@ enum eComponentsRules {
     FULL_RANDOM = 4,
 };
 
+#ifdef NOTSA_PORTABLE
+// The exe saves "the 4 bytes at m_pAddress" in `void* m_pValue` (a RwTexture* slot, the 4 colour bytes, the first float of the surface properties) and restores
+// them with `*(uint32*)m_pAddress = (uint32)m_pValue`. On LP64 a texture slot is 8 bytes (restoring 4 would corrupt the pointer) and `*(void**)colour` over-reads 4 bytes
+// past the colour: portable entries carry the raw bytes and their own size. In-memory only (gRestoreEntries is never serialised).
+struct tRestoreEntry {
+    void*  m_pAddress;
+    uint64 m_nValue; // the saved bytes, zero-extended (little endian)
+    uint8  m_nSize;  // number of bytes saved / restored (<= 8)
+
+    void Save(void* address, size_t size) {
+        m_pAddress = address;
+        m_nSize    = (uint8)size;
+        m_nValue   = 0;
+        std::memcpy(&m_nValue, address, size);
+    }
+    void Restore() const { std::memcpy(m_pAddress, &m_nValue, m_nSize); }
+};
+VALIDATE_SIZE(tRestoreEntry, 0x8); // x86 size: not checked in a portable build (macro is a no-op there)
+#else
 struct tRestoreEntry {
     void* m_pAddress;
     void* m_pValue;
 };
 VALIDATE_SIZE(tRestoreEntry, 0x8);
+#endif
 
 union tVehicleCompsUnion {
     uint32 m_nComps;
@@ -154,7 +174,7 @@ public:
     public:
         CVehicleStructure();
         ~CVehicleStructure();
-        static void* operator new(unsigned size);
+        static void* operator new(size_t size);
         static void  operator delete(void* data);
 
     public:

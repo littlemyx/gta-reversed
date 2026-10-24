@@ -12,6 +12,8 @@
 #include "NodeRoute.h"
 #include <extensions/FixedFloat.hpp>
 #include <functional>
+#include "FileRecord.hpp"
+#include "FileRecords/PathNodeFile.hpp"
 
 static constexpr auto NUM_PATH_MAP_AREA_X{ 8 };
 static constexpr auto NUM_PATH_MAP_AREA_Y{ 8 };
@@ -44,7 +46,7 @@ public:
     bool  isOff;
     bool  isCars;
 };
-VALIDATE_SIZE(CNodesSwitchedOnOrOff, 0x1C);
+VALIDATE_SIZE_FILE(CNodesSwitchedOnOrOff, 0x1C);
 
 class CCarPathLinkAddress {
 public:
@@ -69,7 +71,7 @@ public:
         return *reinterpret_cast<uint16*>(this) != 0xFFFF;
     }
 };
-VALIDATE_SIZE(CCarPathLinkAddress, 0x2);
+VALIDATE_SIZE_FILE(CCarPathLinkAddress, 0x2);
 
 class CPathIntersectionInfo {
 public:
@@ -80,7 +82,7 @@ public:
         *(uint8*)this = 0u;
     }
 };
-VALIDATE_SIZE(CPathIntersectionInfo, 0x1);
+VALIDATE_SIZE_FILE(CPathIntersectionInfo, 0x1);
 
 class CCarPathLink { // "Navi Nodes"
 public:
@@ -100,15 +102,15 @@ public:
     }
 
     //! 0x44DB00 - The original returns this at extended precision (x87 `st0`), use this if the result is used in further float math
-    double OneWayLaneOffsetExtended() const {
+    x87d OneWayLaneOffsetExtended() const {
         if (m_numOppositeDirLanes == 0) {
-            return 0.5 - (double)m_numSameDirLanes * 0.5;
+            return (x87d)0.5 - (x87d)m_numSameDirLanes * (x87d)0.5;
         }
         if (m_numSameDirLanes == 0) {
-            return 0.5 - (double)m_numOppositeDirLanes * 0.5;
+            return (x87d)0.5 - (x87d)m_numOppositeDirLanes * (x87d)0.5;
         }
         // The width is used as the raw (unsigned) byte here. 0.011574074f = 1 / 86.4f (0x858EEC)
-        return (double)*reinterpret_cast<const uint8*>(&m_nPathNodeWidth) * (double)0.011574074f + 0.5;
+        return (x87d)*reinterpret_cast<const uint8*>(&m_nPathNodeWidth) * (x87d)0.011574074f + (x87d)0.5;
     }
 
     //! 0x44DB00
@@ -121,7 +123,7 @@ public:
         return m_posn;
     }
 };
-VALIDATE_SIZE(CCarPathLink, 0xE);
+VALIDATE_SIZE_FILE(CCarPathLink, 0xE);
 
 class CPathNode {
 public:
@@ -183,7 +185,87 @@ public:
         }
     }
 };
-VALIDATE_SIZE(CPathNode, 0x1C);
+VALIDATE_SIZE(CPathNode, 0x1C); // x86 in-memory (the two hash-chain pointers widen it to 40 B on LP64); the on-disk 0x1C is VALIDATE_SIZE_FILE(CPathNode_File) in FileRecords/PathNodeFile.hpp
+
+// P-2h: file layout (0x1C) of one node of NODES%d.DAT, used under NOTSA_PORTABLE by CPathFind::LoadPathFindData (via LoadPathNodesFromFile below).
+// FromFile: every data member from the record, hash-chain links = nullptr (the exe read the file's stale m_next pointer / 0 into them; AddNodeToList overwrites both before any use). ToFile is the inverse (links 0, padding byte 0); nothing in the game writes
+// a nodes file, it exists for the host test round trip.
+template<> struct notsa::FileRecord<CPathNode> {
+    using Type = CPathNode_File;
+    static Type ToFile(const CPathNode& n) {
+        Type f{};
+        f.pos[0] = n.m_vPos.x.Raw(); f.pos[1] = n.m_vPos.y.Raw(); f.pos[2] = n.m_vPos.z.Raw();
+        f.totalDistFromOrigin = n.m_totalDistFromOrigin;
+        f.baseLinkId = n.m_wBaseLinkId;
+        f.areaId     = n.m_wAreaId;
+        f.nodeId     = n.m_wNodeId;
+        f.pathWidth  = n.m_nPathWidth;
+        f.floodFill  = n.m_nFloodFill;
+        f.flags = ((uint32_t)n.m_nNumLinks & kCPathNodeNumLinksMask) << kCPathNodeNumLinksShift
+                | (uint32_t)n.m_onDeadEnd << kCPathNodeOnDeadEndBit | (uint32_t)n.m_isSwitchedOff << kCPathNodeIsSwitchedOffBit
+                | (uint32_t)n.m_bRoadBlocks << kCPathNodeRoadBlocksBit | (uint32_t)n.m_bWaterNode << kCPathNodeWaterNodeBit
+                | (uint32_t)n.m_isSwitchedOffOriginal << kCPathNodeSwitchedOffOriginalBit | (uint32_t)n.unk1 << kCPathNodeUnk1Bit
+                | (uint32_t)n.m_bDontWander << kCPathNodeDontWanderBit | (uint32_t)n.unk2 << kCPathNodeUnk2Bit
+                | (uint32_t)n.m_bNotHighway << kCPathNodeNotHighwayBit | (uint32_t)n.m_bHighway << kCPathNodeHighwayBit
+                | (uint32_t)n.unk3 << kCPathNodeUnk3Bit | (uint32_t)n.unk4 << kCPathNodeUnk4Bit
+                | ((uint32_t)n.m_nSpawnProbability & kCPathNodeSpawnProbabilityMask) << kCPathNodeSpawnProbabilityShift
+                | ((uint32_t)n.m_nBehaviourType & kCPathNodeBehaviourTypeMask) << kCPathNodeBehaviourTypeShift;
+        return f;
+    }
+    static void FromFile(CPathNode& n, const Type& f) {
+        n.m_next = nullptr;
+        n.m_prev = nullptr;
+        n.m_vPos = CompressedLargeVector{ f.pos[0], f.pos[1], f.pos[2] }; // raw (pre-compressed) int16 values
+        n.m_totalDistFromOrigin = f.totalDistFromOrigin;
+        n.m_wBaseLinkId = f.baseLinkId;
+        n.m_wAreaId     = f.areaId;
+        n.m_wNodeId     = f.nodeId;
+        n.m_nPathWidth  = f.pathWidth;
+        n.m_nFloodFill  = f.floodFill;
+        const auto w = f.flags;
+        n.m_nNumLinks                = (w >> kCPathNodeNumLinksShift) & kCPathNodeNumLinksMask;
+        n.m_onDeadEnd                = (w >> kCPathNodeOnDeadEndBit) & 1;
+        n.m_isSwitchedOff            = (w >> kCPathNodeIsSwitchedOffBit) & 1;
+        n.m_bRoadBlocks              = (w >> kCPathNodeRoadBlocksBit) & 1;
+        n.m_bWaterNode               = (w >> kCPathNodeWaterNodeBit) & 1;
+        n.m_isSwitchedOffOriginal    = (w >> kCPathNodeSwitchedOffOriginalBit) & 1;
+        n.unk1                       = (w >> kCPathNodeUnk1Bit) & 1;
+        n.m_bDontWander              = (w >> kCPathNodeDontWanderBit) & 1;
+        n.unk2                       = (w >> kCPathNodeUnk2Bit) & 1;
+        n.m_bNotHighway              = (w >> kCPathNodeNotHighwayBit) & 1;
+        n.m_bHighway                 = (w >> kCPathNodeHighwayBit) & 1;
+        n.unk3                       = (w >> kCPathNodeUnk3Bit) & 1;
+        n.unk4                       = (w >> kCPathNodeUnk4Bit) & 1;
+        n.m_nSpawnProbability        = (w >> kCPathNodeSpawnProbabilityShift) & kCPathNodeSpawnProbabilityMask;
+        n.m_nBehaviourType           = (w >> kCPathNodeBehaviourTypeShift) & kCPathNodeBehaviourTypeMask;
+    }
+    // x86: the record IS the raw object (same size, same member offsets) - proves the MSVC raw read == the record path
+    static_assert(sizeof(void*) != 4 || (sizeof(CPathNode) == sizeof(Type)
+        && offsetof(CPathNode, m_next) == offsetof(Type, links) && offsetof(CPathNode, m_prev) == offsetof(Type, links) + 4 && offsetof(CPathNode, m_vPos) == offsetof(Type, pos)
+        && offsetof(CPathNode, m_totalDistFromOrigin) == offsetof(Type, totalDistFromOrigin) && offsetof(CPathNode, m_wBaseLinkId) == offsetof(Type, baseLinkId)
+        && offsetof(CPathNode, m_wAreaId) == offsetof(Type, areaId) && offsetof(CPathNode, m_wNodeId) == offsetof(Type, nodeId)
+        && offsetof(CPathNode, m_nPathWidth) == offsetof(Type, pathWidth) && offsetof(CPathNode, m_nFloodFill) == offsetof(Type, floodFill)
+        && offsetof(CPathNode, m_nFloodFill) + sizeof(CPathNode::m_nFloodFill) == offsetof(Type, flags)));
+};
+
+namespace notsa {
+//! Portable read of `count` CPathNode records of a nodes file: `read(void* dst, size_t bytes)` pulls bytes from the stream (RwStreamRead in the game). The file stride is
+//! sizeof(CPathNode_File) = 0x1C, whatever sizeof(CPathNode) is. `nodes` must hold `count` elements.
+template<typename ReadFn>
+inline void LoadPathNodesFromFile(CPathNode* nodes, uint32 count, ReadFn&& read) {
+    constexpr uint32 kBatch = 256;
+    CPathNode_File batch[kBatch];
+    for (uint32 done = 0; done < count;) {
+        const uint32 n = count - done < kBatch ? count - done : kBatch;
+        read((void*)batch, sizeof(CPathNode_File) * n);
+        for (uint32 i = 0; i < n; ++i) {
+            FileRecord<CPathNode>::FromFile(nodes[done + i], batch[i]);
+        }
+        done += n;
+    }
+}
+} // namespace notsa
+// P-2h END
 
 class CPathFind {
     static constexpr auto NUM_TOTAL_PATH_NODE_AREAS = NUM_PATH_MAP_AREAS + NUM_PATH_INTERIOR_AREAS;
@@ -625,4 +707,4 @@ public:
 
 VALIDATE_SIZE(CPathFind, 0x3C80);
 
-NOTSA_GLOBAL_ZERO_HDR(ThePaths, 0x96F050, (CPathFind)); static_assert(sizeof(ThePaths) == 15488); // zero .bss in the exe (not the repo default ctor values)
+NOTSA_GLOBAL_ZERO_HDR(ThePaths, 0x96F050, (CPathFind)); VALIDATE_SIZE(ThePaths, 15488); // zero .bss in the exe (not the repo default ctor values)

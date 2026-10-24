@@ -41,4 +41,4 @@ public:
 
     float GetPtDotNormal(const CVector& pt) const { return pt.Dot(m_normal) - m_normalOffset; }
 };
-VALIDATE_SIZE(CColTrianglePlane, 0xA);
+VALIDATE_SIZE_FILE(CColTrianglePlane, 0xA);

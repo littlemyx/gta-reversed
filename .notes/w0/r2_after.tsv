@@ -1,0 +1,656 @@
+category	file	line	msg
+C: two-phase lookup / template / incomplete type	/opt/homebrew/Cellar/llvm/23.1.2/bin/../include/c++/v1/__memory/unique_ptr.h	72	invalid application of 'sizeof' to an incomplete type 'OALBase'
+other	/opt/homebrew/include/jmorecfg.h	141	type alias redefinition with different types ('long' vs 'int32_t' (aka 'int'))
+other: header not found (bindings/imgui_impl_sdl3.h)	source/app/platform/SDLWrapper.cpp	6	'bindings/imgui_impl_sdl3.h' file not found
+P: pointer/int width (cast/narrowing)	source/extensions/Shapes/AngledRect.cpp	43	cast to smaller integer type 'unsigned int' from 'const notsa::shapes::AngledRect *' [-Werror,-Wpointer-to-int-cast]
+P: 64-bit layout (sizeof/offsetof static_assert)	source/game_sa/Animation/AnimManager.h	30	static assertion failed due to requirement 'sizeof(std::array<CAnimBlendHierarchy, 2500>) == 60000'
+P: pointer/int width (cast/narrowing)	source/game_sa/AttractorScanner.cpp	214	cast to smaller integer type 'int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/AttractorScanner.cpp	215	cast to smaller integer type 'int' from 'C2dEffect *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/AttractorScanner.cpp	226	cast to 'C2dEffect *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/AttractorScanner.cpp	227	cast to 'CEntity *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/AttractorScanner.cpp	235	cast to 'C2dEffect *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/AttractorScanner.cpp	236	cast to 'CEntity *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-pointer-cast]
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Attractors/PedAttractor.h	18	'operator new' takes type size_t ('unsigned long') as 1st parameter
+F/C: inline asm / naked	source/game_sa/Audio/AEAudioUtility.cpp	91	unsupported architecture 'arm64' for MS-style inline assembly
+P: integer width / mixed-type overload	source/game_sa/Audio/Entities/AEPedSpeechAudioEntity.cpp	918	no matching function for call to 'GetRandomNumberInRange'
+P: integer width / mixed-type overload	source/game_sa/Audio/Entities/AEPedSpeechAudioEntity.cpp	919	no matching function for call to 'min'
+P: integer width / mixed-type overload	source/game_sa/Audio/Entities/AEVehicleAudioEntity.cpp	2023	no matching function for call to 'min'
+P: integer width / mixed-type overload	source/game_sa/Audio/Entities/AEVehicleAudioEntity.cpp	2025	no matching function for call to 'GetRandomNumberInRange'
+P: integer width / mixed-type overload	source/game_sa/Audio/Hardware/AEAudioHardware.cpp	702	no matching function for call to 'min'
+P: integer width / mixed-type overload	source/game_sa/Audio/Hardware/AEAudioHardware.cpp	715	no matching function for call to 'min'
+P: integer width / mixed-type overload	source/game_sa/Birds.cpp	159	no matching function for call to 'min'
+other: conversion/overload	source/game_sa/CarCtrl.cpp	621	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	181	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	184	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	187	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	221	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	224	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	227	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	230	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	233	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	236	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	240	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	244	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	247	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	436	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	438	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	440	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	442	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	444	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	446	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	448	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	453	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	458	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	460	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Cheat.cpp	695	no matching function for call to 'operator new'
+P: pointer/int width (cast/narrowing)	source/game_sa/Collision/ColModel.cpp	100	cast to smaller integer type 'unsigned int' from 'void *' [-Werror,-Wvoid-pointer-to-int-cast]
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Collision/ColModel.h	34	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Collision/ColStore.h	20	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Core/EntryInfoNode.h	20	'operator new' takes type size_t ('unsigned long') as 1st parameter
+F/C: inline asm / naked	source/game_sa/Core/Matrix.cpp	235	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Matrix.cpp	321	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Matrix.cpp	404	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Matrix.cpp	485	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Matrix.cpp	566	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Matrix.cpp	844	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Matrix.cpp	1054	unsupported architecture 'arm64' for MS-style inline assembly
+P: integer width / mixed-type overload	source/game_sa/Core/Pool.h	311	no matching function for call to 'min'
+F/C: inline asm / naked	source/game_sa/Core/Quaternion.cpp	126	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Quaternion.cpp	283	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Cover.cpp	442	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Cover.cpp	470	unsupported architecture 'arm64' for MS-style inline assembly
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Entity/Building.h	14	'operator new' takes type size_t ('unsigned long') as 1st parameter
+other	source/game_sa/Entity/Dummy/Dummy.cpp	33	explicit instantiation of '(anonymous namespace)::DummyPoolRob' must occur in namespace ''
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	502	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	532	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	555	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	570	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	913	cast to 'void *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-void-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	914	cast to 'void *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-void-pointer-cast]
+P: integer width / mixed-type overload	source/game_sa/Entity/Entity.cpp	992	no matching function for call to 'GetRandomNumberInRange'
+other: conversion/overload	source/game_sa/Entity/Entity.cpp	1056	no matching function for call to 'bit_cast'
+F/C: inline asm / naked	source/game_sa/Entity/Entity.cpp	1300	unsupported architecture 'arm64' for MS-style inline assembly
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	1409	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	2000	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	2066	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	2097	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	2123	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	2212	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	2232	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Object/Object.cpp	708	cast to smaller integer type 'unsigned int' from 'CObject *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Object/Object.cpp	714	cast to smaller integer type 'unsigned int' from 'CObject *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Object/Object.cpp	720	cast to smaller integer type 'unsigned int' from 'CObject *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Object/Object.cpp	726	cast to smaller integer type 'unsigned int' from 'CObject *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Object/Object.cpp	1303	cast to smaller integer type 'unsigned int' from 'CObject *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Object/Object.cpp	1395	cast to smaller integer type 'unsigned int' from 'CObject *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Object/Object.cpp	1407	cast to smaller integer type 'unsigned int' from 'CObject *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Object/Object.cpp	1412	cast to smaller integer type 'unsigned int' from 'CObject *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Object/Object.cpp	1416	cast to smaller integer type 'unsigned int' from 'CObject *' [-Werror,-Wpointer-to-int-cast]
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Entity/Ped/Ped.cpp	391	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Entity/Ped/Ped.cpp	398	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Entity/Ped/Ped.h	385	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Entity/Ped/Ped.h	386	'operator new' takes type size_t ('unsigned long') as 1st parameter
+other: conversion/overload	source/game_sa/Entity/Ped/PlayerPed.cpp	2147	no matching function for call to 'operator new'
+F/C: inline asm / naked	source/game_sa/Entity/Placeable.cpp	112	unsupported architecture 'arm64' for MS-style inline assembly
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Automobile.cpp	6670	cast to smaller integer type 'unsigned int' from 'CAutomobile *' [-Werror,-Wpointer-to-int-cast]
+other: conversion/overload	source/game_sa/Entity/Vehicle/Heli.cpp	569	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Entity/Vehicle/Heli.cpp	570	no matching function for call to 'operator new'
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Heli.cpp	1275	cast to smaller integer type 'unsigned int' from 'CHeli *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Heli.cpp	1594	cast to smaller integer type 'unsigned int' from 'CHeli *' [-Werror,-Wpointer-to-int-cast]
+other: conversion/overload	source/game_sa/Entity/Vehicle/Plane.cpp	689	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Entity/Vehicle/Plane.cpp	750	no matching function for call to 'operator new'
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Plane.cpp	1343	cast to smaller integer type 'unsigned int' from 'CPlane *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Plane.cpp	1350	cast to smaller integer type 'unsigned int' from 'CPlane *' [-Werror,-Wpointer-to-int-cast]
+other: conversion/overload	source/game_sa/Entity/Vehicle/Train.cpp	934	no matching function for call to 'operator new'
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Vehicle.cpp	408	cast to smaller integer type 'unsigned int' from 'CVehicle *' [-Werror,-Wpointer-to-int-cast]
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Entity/Vehicle/Vehicle.cpp	418	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Entity/Vehicle/Vehicle.cpp	426	'operator new' takes type size_t ('unsigned long') as 1st parameter
+other: conversion/overload	source/game_sa/Entity/Vehicle/Vehicle.cpp	1939	no matching function for call to 'bit_cast'
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Vehicle.cpp	1960	cast to 'void *' from smaller integer type 'uint32' (aka 'unsigned int') [-Werror,-Wint-to-void-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Vehicle.cpp	1961	cast to 'void *' from smaller integer type 'uint32' (aka 'unsigned int') [-Werror,-Wint-to-void-pointer-cast]
+P: integer width / mixed-type overload	source/game_sa/Entity/Vehicle/Vehicle.cpp	2058	no matching function for call to 'GetRandomNumberInRange'
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Vehicle.cpp	6511	cast to smaller integer type 'int' from 'CMatrixLink **' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Vehicle.cpp	6991	cast to 'CEntity *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Vehicle.cpp	6992	cast to 'CEntity *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Vehicle.cpp	7016	cast to 'CEntity *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Vehicle.cpp	7017	cast to 'CEntity *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Vehicle.cpp	7032	cast to smaller integer type 'int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Entity/Vehicle/Vehicle.h	446	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Entity/Vehicle/Vehicle.h	449	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Vehicle.h	751	cast to smaller integer type 'unsigned int' from 'const unsigned int *' [-Werror,-Wpointer-to-int-cast]
+F/C: inline asm / naked	source/game_sa/EntryExit.cpp	127	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/EntryExit.cpp	134	unsupported architecture 'arm64' for MS-style inline assembly
+P: pointer/int width (cast/narrowing)	source/game_sa/EntryExitManager.cpp	119	cast to smaller integer type 'unsigned int' from 'CEntryExit *' [-Werror,-Wpointer-to-int-cast]
+C: syntax / extension	source/game_sa/Enums/eCarWheel.h	12	ISO C++ forbids forward references to 'enum' types
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Events/Event.h	18	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: pointer/int width (cast/narrowing)	source/game_sa/Events/EventDamage.cpp	218	cast to smaller integer type 'unsigned int' from 'CPed *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Events/EventDamage.cpp	224	cast to smaller integer type 'unsigned int' from 'CPed *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Events/EventDamage.cpp	230	cast to smaller integer type 'unsigned int' from 'CPed *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Events/EventKnockOffBike.cpp	102	cast to smaller integer type 'unsigned int' from 'CPed *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Events/EventVehicleDamage.cpp	71	cast to smaller integer type 'unsigned int' from 'CPed *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Events/EventVehicleHitAndRun.cpp	41	cast to smaller integer type 'unsigned int' from 'CPed *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Events/EventVehicleHitAndRun.cpp	43	cast to smaller integer type 'unsigned int' from 'CPed *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/FireManager.cpp	455	cast to smaller integer type 'unsigned int' from 'CFire *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/FireManager.cpp	484	cast to smaller integer type 'unsigned int' from 'CFire *' [-Werror,-Wpointer-to-int-cast]
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Fx/FxSphere.h	13	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Fx/FxSystemBP.h	37	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: integer width / mixed-type overload	source/game_sa/GangInfo.h	25	no matching function for call to 'max'
+other: conversion/overload	source/game_sa/GangWars.cpp	335	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/GangWars.cpp	478	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Garage.cpp	1920	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Garage.cpp	1921	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Garage.cpp	1922	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Garage.cpp	1923	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Garage.cpp	1924	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Garage.cpp	1926	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Garage.cpp	1930	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Garage.cpp	1933	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Garage.cpp	1934	no matching function for call to 'operator new'
+other static_assert	source/game_sa/General.cpp	199	static assertion failed due to requirement '2147483647 == 32767': PC-generated random numbers should not exceed 32767
+P: integer width / mixed-type overload	source/game_sa/LoadingScreen.cpp	335	no matching function for call to 'max'
+F/C: inline asm / naked	source/game_sa/Maths.cpp	17	unsupported architecture 'arm64' for MS-style inline assembly
+P: pointer/int width (cast/narrowing)	source/game_sa/MemoryMgr.cpp	133	cast to 'void *' from smaller integer type 'uint32' (aka 'unsigned int') [-Werror,-Wint-to-void-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/MemoryMgr.cpp	133	cast to smaller integer type 'unsigned int' from 'unsigned char *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/MemoryMgr.cpp	338	cast to 'void *' from smaller integer type 'uint32' (aka 'unsigned int') [-Werror,-Wint-to-void-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/MemoryMgr.cpp	338	cast to smaller integer type 'unsigned int' from 'unsigned char *' [-Werror,-Wpointer-to-int-cast]
+other: conversion/overload	source/game_sa/Models/PedModelInfo.cpp	40	no matching function for call to 'RpClumpForAllAtomics'
+P: pointer/int width (cast/narrowing)	source/game_sa/Models/VehicleModelInfo.cpp	539	cast to 'void *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-void-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Models/VehicleModelInfo.cpp	900	cast to smaller integer type 'unsigned int' from 'void *' [-Werror,-Wvoid-pointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Models/VehicleModelInfo.cpp	923	cast to smaller integer type 'unsigned int' from 'void *' [-Werror,-Wvoid-pointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Models/VehicleModelInfo.cpp	1149	cast to smaller integer type 'int' from 'void *' [-Werror,-Wvoid-pointer-to-int-cast]
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Models/VehicleModelInfo.h	157	'operator new' takes type size_t ('unsigned long') as 1st parameter
+other: conversion/overload	source/game_sa/Models/WeaponModelInfo.cpp	32	no matching function for call to 'RpClumpForAllAtomics'
+P: 64-bit (size_t in operator new/delete)	source/game_sa/NodeRoute.h	10	'operator new' takes type size_t ('unsigned long') as 1st parameter
+F/C: inline asm / naked	source/game_sa/PathFind.cpp	2051	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/PathFind.cpp	2155	unsupported architecture 'arm64' for MS-style inline assembly
+P: 64-bit layout (sizeof/offsetof static_assert)	source/game_sa/PathFind.h	186	static assertion failed due to requirement 'sizeof(CPathNode) == 28': Invalid structure size of CPathNode
+P: 64-bit (size_t in operator new/delete)	source/game_sa/PedGeometryAnalyser.h	19	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: 64-bit (size_t in operator new/delete)	source/game_sa/PedIntelligence.h	75	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: pointer/int width (cast/narrowing)	source/game_sa/Pickups.cpp	194	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Pickups.cpp	213	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Pickups.cpp	249	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Pickups.cpp	268	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Pipelines/CustomBuilding/CustomBuildingDNPipeline.cpp	158	cast to smaller integer type 'unsigned int' from 'rw::Atomic *' [-Werror,-Wpointer-to-int-cast]
+other: conversion/overload	source/game_sa/Pools.cpp	243	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Pools.cpp	246	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Pools.cpp	249	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Pools.cpp	252	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Pools.cpp	255	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Pools.cpp	258	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Pools.cpp	261	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Pools.cpp	265	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Pools.cpp	269	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Pools.cpp	272	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Population.cpp	839	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Population.cpp	857	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Population.cpp	881	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Population.cpp	884	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Population.cpp	886	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Population.cpp	1179	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Population.cpp	1231	no matching function for call to 'operator new'
+P: integer width / mixed-type overload	source/game_sa/Population.cpp	1544	no matching function for call to 'GetRandomNumberInRange'
+F/C: inline asm / naked	source/game_sa/Radar.cpp	441	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Radar.cpp	443	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Radar.cpp	449	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Radar.cpp	508	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Radar.cpp	525	unsupported architecture 'arm64' for MS-style inline assembly
+P: 64-bit layout (sizeof/offsetof static_assert)	source/game_sa/Radar.h	196	static assertion failed due to requirement 'sizeof(tRadarTrace) == 40': Invalid structure size of tRadarTrace
+other: conversion/overload	source/game_sa/Remote.cpp	48	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Remote.cpp	50	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Remote.cpp	52	no matching function for call to 'operator new'
+other	source/game_sa/Replay.cpp	177	return type 'int' must match previous return type '__ptrdiff_t' (aka 'long') when lambda expression has unspecified explicit return type
+C: nested DMI inside enclosing class	source/game_sa/Replay.h	143	default member initializer for 'm_bSlot' needed within definition of enclosing class 'CReplay' outside of member functions
+C: nested DMI inside enclosing class	source/game_sa/Replay.h	143	default member initializer for 'm_nOffset' needed within definition of enclosing class 'CReplay' outside of member functions
+C: nested DMI inside enclosing class	source/game_sa/Replay.h	143	default member initializer for 'm_pBase' needed within definition of enclosing class 'CReplay' outside of member functions
+C: syntax / extension	source/game_sa/Replay.h	166	expected ']'
+C: syntax / extension	source/game_sa/Replay.h	171	expected ']'
+other: conversion/overload	source/game_sa/RoadBlocks.cpp	455	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/RoadBlocks.cpp	457	no matching function for call to 'operator new'
+P: integer width / mixed-type overload	source/game_sa/RoadBlocks.cpp	532	no matching function for call to 'min'
+P: pointer/int width (cast/narrowing)	source/game_sa/RwHelper.cpp	263	cast to smaller integer type 'unsigned int' from 'void *' [-Werror,-Wvoid-pointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/RwHelper.cpp	270	cast to 'void *' from smaller integer type 'unsigned int' [-Werror,-Wint-to-void-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/RwHelper.cpp	276	cast to smaller integer type 'unsigned int' from 'void *' [-Werror,-Wvoid-pointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/RwHelper.cpp	282	cast to 'void *' from smaller integer type 'unsigned int' [-Werror,-Wint-to-void-pointer-cast]
+other: conversion/overload	source/game_sa/Scripts/Commands/CharacterCommands.cpp	1570	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Scripts/Commands/CharacterCommands.cpp	1572	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Scripts/Commands/CharacterCommands.cpp	1573	no matching function for call to 'operator new'
+other	source/game_sa/Scripts/Commands/MissionCommands.cpp	42	return type 'unsigned int' must match previous return type 'size_t' (aka 'unsigned long') when lambda expression has unspecified explicit return type
+other: conversion/overload	source/game_sa/Scripts/Commands/ObjectCommands.cpp	53	no matching function for call to 'bit_cast'
+P: pointer/int width (cast/narrowing)	source/game_sa/Scripts/Commands/PlayerCommands.cpp	57	cast to smaller integer type 'unsigned int' from 'CRunningScript *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Scripts/Commands/PlayerCommands.cpp	57	cast to smaller integer type 'unsigned int' from 'unsigned char *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Scripts/Commands/PlayerCommands.cpp	72	cast to smaller integer type 'unsigned int' from 'CRunningScript *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Scripts/Commands/PlayerCommands.cpp	72	cast to smaller integer type 'unsigned int' from 'unsigned char *' [-Werror,-Wpointer-to-int-cast]
+other: conversion/overload	source/game_sa/Scripts/Commands/Ported/Group01_04.cpp	86	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Scripts/Commands/Ported/Group01_04.cpp	88	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Scripts/Commands/Ported/Group01_04.cpp	89	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Scripts/Commands/Ported/Group01_04.cpp	520	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Scripts/Commands/Ported/Group01_04.cpp	522	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Scripts/Commands/Ported/Group01_04.cpp	523	no matching function for call to 'operator new'
+P: 64-bit layout (sizeof/offsetof static_assert)	source/game_sa/Scripts/Commands/Ported/Group05_08.cpp	83	static assertion failed due to requirement '__builtin_offsetof(CRunningScript, m_IP) == 20': The offset of m_IP in CRunningScript is not 0x14...
+other: conversion/overload	source/game_sa/Scripts/Commands/Ported/Group05_08.cpp	1041	no matching function for call to 'operator new'
+P: pointer/int width (cast/narrowing)	source/game_sa/Scripts/Commands/Ported/Group09_12.hpp	44	cast to smaller integer type 'unsigned int' from 'const CRunningScript *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Scripts/Commands/Ported/Group09_12.hpp	44	cast to smaller integer type 'unsigned int' from 'unsigned char *' [-Werror,-Wpointer-to-int-cast]
+P: 64-bit layout (sizeof/offsetof static_assert)	source/game_sa/Scripts/Commands/Ported/Group13_15.cpp	81	static assertion failed due to requirement '__builtin_offsetof(CRunningScript, m_szName) == 8': The offset of m_szName in CRunningScript is not 0x8...
+F/C: inline asm / naked	source/game_sa/Scripts/Commands/Ported/Group13_15.cpp	394	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Scripts/Commands/Ported/Group13_15.cpp	415	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Scripts/Commands/Ported/Group13_15.cpp	569	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Scripts/Commands/Ported/Group13_15.cpp	606	unsupported architecture 'arm64' for MS-style inline assembly
+other: conversion/overload	source/game_sa/Scripts/Commands/Ported/Group13_15.cpp	1020	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Scripts/Commands/Ported/Group13_15.cpp	1022	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Scripts/Commands/Ported/Group13_15.cpp	1023	no matching function for call to 'operator new'
+P: 64-bit layout (sizeof/offsetof static_assert)	source/game_sa/Scripts/Commands/Ported/Group16_17c.cpp	41	static assertion failed due to requirement '__builtin_offsetof(CRunningScript, m_SceneSkipIP) == 216': The offset of m_SceneSkipIP in CRunningScript is not 0xD8...
+P: 64-bit layout (sizeof/offsetof static_assert)	source/game_sa/Scripts/Commands/Ported/Group20a.cpp	56	static assertion failed due to requirement '__builtin_offsetof(CRunningScript, m_UsesMissionCleanup) == 198': The offset of m_UsesMissionCleanup in CRunningScript is not 0xC6...
+P: 64-bit layout (sizeof/offsetof static_assert)	source/game_sa/Scripts/Commands/Ported/Group24a.cpp	74	static assertion failed due to requirement '__builtin_offsetof(CRunningScript, m_UsesMissionCleanup) == 198': The offset of m_UsesMissionCleanup in CRunningScript is not 0xC6...
+P: 64-bit layout (sizeof/offsetof static_assert)	source/game_sa/Scripts/Commands/Ported/Group24b.cpp	60	static assertion failed due to requirement '__builtin_offsetof(CRunningScript, m_IsTextBlockOverride) == 200': The offset of m_IsTextBlockOverride in CRunningScript is not 0xC8...
+P: 64-bit layout (sizeof/offsetof static_assert)	source/game_sa/Scripts/Commands/Ported/Group24b.cpp	60	static assertion failed due to requirement '__builtin_offsetof(CRunningScript, m_UsesMissionCleanup) == 198': The offset of m_UsesMissionCleanup in CRunningScript is not 0xC6...
+F/C: inline asm / naked	source/game_sa/Scripts/Commands/Ported/Group24b.cpp	91	unsupported architecture 'arm64' for MS-style inline assembly
+P: pointer/int width (cast/narrowing)	source/game_sa/Scripts/RunningScript.cpp	355	cast to smaller integer type 'int' from 'const CRunningScript *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Scripts/RunningScript.cpp	355	cast to smaller integer type 'int' from 'unsigned char *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Scripts/RunningScript.cpp	1809	cast to smaller integer type 'int' from 'CRunningScript *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Scripts/RunningScript.cpp	1809	cast to smaller integer type 'int' from 'unsigned char *' [-Werror,-Wpointer-to-int-cast]
+P: 64-bit layout (sizeof/offsetof static_assert)	source/game_sa/Scripts/RunningScript.h	413	static assertion failed due to requirement 'sizeof(CRunningScript) == 224': Invalid structure size of CRunningScript
+other: conversion/overload	source/game_sa/SetPiece.cpp	53	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/SetPiece.cpp	68	no matching function for call to 'operator new'
+P: pointer/int width (cast/narrowing)	source/game_sa/Shadows.cpp	2005	cast to smaller integer type 'unsigned int' from 'CVehicle *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Shadows.cpp	2040	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/SpecialFX.cpp	95	cast to smaller integer type 'unsigned int' from 'rw::Clump *' [-Werror,-Wpointer-to-int-cast]
+other	source/game_sa/Streaming.cpp	1600	non-const lvalue reference to type 'size_t' (aka 'unsigned long') cannot bind to a value of unrelated type 'uint32' (aka 'unsigned int')
+other	source/game_sa/Streaming.cpp	1613	non-const lvalue reference to type 'size_t' (aka 'unsigned long') cannot bind to a value of unrelated type 'uint32' (aka 'unsigned int')
+P: pointer/int width (cast/narrowing)	source/game_sa/Tasks/TaskTypes/TaskComplexStareAtPed.cpp	97	cast to smaller integer type 'int' from 'int *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Tasks/TaskTypes/TaskComplexStareAtPed.cpp	112	cast to smaller integer type 'int' from 'int *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Tasks/TaskTypes/TaskSimpleEvasiveDive.cpp	71	cast to smaller integer type 'unsigned int' from 'CPed *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Tasks/TaskTypes/TaskSimpleEvasiveDive.cpp	72	cast to smaller integer type 'unsigned int' from 'CPed *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Text/KeyArray.cpp	38	cast to smaller integer type 'unsigned int' from 'const unsigned char *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/TrafficLights.cpp	202	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/TrafficLights.cpp	266	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/VisibilityPlugins.cpp	310	cast to smaller integer type 'int' from 'void *' [-Werror,-Wvoid-pointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/VisibilityPlugins.cpp	316	cast to 'void *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-void-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/VisibilityPlugins.cpp	364	cast to 'CClumpModelInfo *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/VisibilityPlugins.cpp	397	cast to 'CClumpModelInfo *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/VisibilityPlugins.cpp	1077	cast to smaller integer type 'int' from 'void *' [-Werror,-Wvoid-pointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/VisibilityPlugins.cpp	1084	cast to 'void *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-void-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/VisibilityPlugins.cpp	1109	cast to smaller integer type 'int' from 'CClumpModelInfo *' [-Werror,-Wpointer-to-int-cast]
+P: integer width / mixed-type overload	source/game_sa/WaterCreatureManager_c.cpp	159	no matching function for call to 'min'
+C: syntax / extension	source/game_sa/WaterLevel.cpp	1335	statement requires expression of integer type ('void' invalid)
+other	source/game_sa/WaterLevel.cpp	1336	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other	source/game_sa/WaterLevel.cpp	1338	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other: conversion/overload	source/game_sa/WaterLevel.cpp	1339	no matching function for call to object of type 'const (lambda at /Users/Andrei.Mukhin/github/recomp/gta-reversed/source/game_sa/WaterLevel.cpp:1327:33)'
+other	source/game_sa/WaterLevel.cpp	1340	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other: conversion/overload	source/game_sa/WaterLevel.cpp	1341	no matching function for call to object of type 'const (lambda at /Users/Andrei.Mukhin/github/recomp/gta-reversed/source/game_sa/WaterLevel.cpp:1330:32)'
+other	source/game_sa/WaterLevel.cpp	1342	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other	source/game_sa/WaterLevel.cpp	1344	no viable overloaded operator[] for type 'std::type_identity_t<std::array<PolyInfo, 700>>' (aka 'std::array<CWaterLevel::PolyInfo, 700>')
+C: syntax / extension	source/game_sa/WaterLevel.cpp	1475	statement requires expression of integer type ('void' invalid)
+other	source/game_sa/WaterLevel.cpp	1476	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other: conversion/overload	source/game_sa/WaterLevel.cpp	1477	no matching function for call to object of type 'const (lambda at /Users/Andrei.Mukhin/github/recomp/gta-reversed/source/game_sa/WaterLevel.cpp:1446:27)'
+other	source/game_sa/WaterLevel.cpp	1481	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other	source/game_sa/WaterLevel.cpp	1482	no viable overloaded operator[] for type 'std::type_identity_t<std::array<PolyInfo, 700>>' (aka 'std::array<CWaterLevel::PolyInfo, 700>')
+C: syntax / extension	source/game_sa/WaterLevel.cpp	1683	statement requires expression of integer type ('void' invalid)
+other	source/game_sa/WaterLevel.cpp	1684	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other	source/game_sa/WaterLevel.cpp	1685	no viable overloaded operator[] for type 'std::type_identity_t<std::array<CWaterQuad, 301>>' (aka 'std::array<CWaterPolygon<4>, 301>')
+other	source/game_sa/WaterLevel.cpp	1687	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other	source/game_sa/WaterLevel.cpp	1688	no viable overloaded operator[] for type 'std::type_identity_t<std::array<CWaterTriangle, 6>>' (aka 'std::array<CWaterPolygon<3>, 6>')
+C: syntax / extension	source/game_sa/WaterLevel.cpp	1694	statement requires expression of integer type ('void' invalid)
+other	source/game_sa/WaterLevel.cpp	1695	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other	source/game_sa/WaterLevel.cpp	1696	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other	source/game_sa/WaterLevel.cpp	1699	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other: conversion/overload	source/game_sa/WaterLevel.cpp	1700	no matching function for call to object of type 'const __drop::__fn'
+C: syntax / extension	source/game_sa/WaterLevel.cpp	2257	statement requires expression of integer type ('void' invalid)
+other	source/game_sa/WaterLevel.cpp	2258	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other	source/game_sa/WaterLevel.cpp	2262	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other	source/game_sa/WaterLevel.cpp	2263	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+C: nested DMI inside enclosing class	source/game_sa/WaterLevel.h	196	default member initializer for 'm_id' needed within definition of enclosing class 'CWaterLevel' outside of member functions
+C: nested DMI inside enclosing class	source/game_sa/WaterLevel.h	196	default member initializer for 'm_type' needed within definition of enclosing class 'CWaterLevel' outside of member functions
+C: syntax / extension	source/game_sa/Weapon.h	18	ISO C++ forbids forward references to 'enum' types
+P: integer width / mixed-type overload	source/game_sa/World.cpp	1307	no matching function for call to 'min'
+other: undeclared/unknown identifier	source/game_sa/common.h	297	use of undeclared identifier 'GetACP'
+F/C: inline asm / naked	source/standalone/FtolExe.cpp	12	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/standalone/FtolExe.cpp	29	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/standalone/FtolExe.cpp	33	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/standalone/FtolExe.cpp	40	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/standalone/FtolExe.cpp	43	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/standalone/FtolExe.cpp	47	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/standalone/FtolExe.cpp	80	unsupported architecture 'arm64' for MS-style inline assembly
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	41	no member named 'd3d9Globals' in namespace 'rw::d3d'
+W/R: DirectX	source/standalone/rw/camera.cpp	74	unknown type name 'D3DFORMAT'
+W/R: DirectX	source/standalone/rw/camera.cpp	75	use of undeclared identifier 'D3DFMT_D15S1'; did you mean 'rw::d3d::D3DFMT_D15S1'?
+W/R: DirectX	source/standalone/rw/camera.cpp	75	use of undeclared identifier 'D3DFMT_D24FS8'; did you mean 'rw::d3d::D3DFMT_D24FS8'?
+W/R: DirectX	source/standalone/rw/camera.cpp	75	use of undeclared identifier 'D3DFMT_D24S8'
+W/R: DirectX	source/standalone/rw/camera.cpp	75	use of undeclared identifier 'D3DFMT_D24X4S4'; did you mean 'rw::d3d::D3DFMT_D24X4S4'?
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	82	no member named 'd3ddevice' in namespace 'rw::d3d'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	85	use of undeclared identifier 'd3d9Globals'
+W/R: DirectX	source/standalone/rw/camera.cpp	86	use of undeclared identifier 'D3DPRESENT_INTERVAL_ONE'
+W/R: DirectX	source/standalone/rw/camera.cpp	87	use of undeclared identifier 'D3DPRESENT_INTERVAL_IMMEDIATE'
+W/R: DirectX	source/standalone/rw/camera.cpp	87	use of undeclared identifier 'D3DPRESENT_INTERVAL_ONE'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	89	no member named 'd3ddevice' in namespace 'rw::d3d'
+W/R: DirectX	source/standalone/rw/camera.cpp	89	use of undeclared identifier 'D3D_OK'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	123	no member named 'd3ddevice' in namespace 'rw::d3d'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	128	no member named 'd3ddevice' in namespace 'rw::d3d'
+W/R: DirectX	source/standalone/rw/camera.cpp	128	unknown type name 'D3DMATRIX'
+W/R: DirectX	source/standalone/rw/camera.cpp	128	use of undeclared identifier 'D3DTS_VIEW'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	129	no member named 'd3ddevice' in namespace 'rw::d3d'
+W/R: DirectX	source/standalone/rw/camera.cpp	129	unknown type name 'D3DMATRIX'
+W/R: DirectX	source/standalone/rw/camera.cpp	129	use of undeclared identifier 'D3DTS_PROJECTION'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	149	no member named 'd3ddevice' in namespace 'rw::d3d'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	161	no member named 'd3ddevice' in namespace 'rw::d3d'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	165	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	179	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	185	no member named 'd3ddevice' in namespace 'rw::d3d'
+W/R: DirectX	source/standalone/rw/camera.cpp	185	use of undeclared identifier 'D3DCLEAR_STENCIL'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	229	no member named 'd3ddevice' in namespace 'rw::d3d'
+W/R: DirectX	source/standalone/rw/camera.cpp	229	unknown type name 'IDirect3DDevice9'
+C: syntax / extension	source/standalone/rw/camera.cpp	230	expected ';' at end of declaration
+W/R: DirectX	source/standalone/rw/camera.cpp	230	unknown type name 'IDirect3DSurface9'
+W/R: DirectX	source/standalone/rw/camera.cpp	231	use of undeclared identifier 'D3DBACKBUFFER_TYPE_MONO'
+W/R: DirectX	source/standalone/rw/camera.cpp	234	unknown type name 'D3DSURFACE_DESC'
+W/R: DirectX	source/standalone/rw/camera.cpp	237	unknown type name 'IDirect3DSurface9'
+W/R: DirectX	source/standalone/rw/camera.cpp	238	unknown type name 'IDirect3DSurface9'
+W/R: DirectX	source/standalone/rw/camera.cpp	239	use of undeclared identifier 'D3DMULTISAMPLE_NONE'
+W/R: DirectX	source/standalone/rw/camera.cpp	240	use of undeclared identifier 'D3DMULTISAMPLE_NONE'
+W/R: DirectX	source/standalone/rw/camera.cpp	240	use of undeclared identifier 'D3DTEXF_NONE'
+W/R: DirectX	source/standalone/rw/camera.cpp	244	use of undeclared identifier 'D3DPOOL_SYSTEMMEM'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	244	use of undeclared identifier 'sys'
+W/R: DirectX	source/standalone/rw/camera.cpp	245	unknown type name 'D3DLOCKED_RECT'
+W/R: DirectX	source/standalone/rw/camera.cpp	246	use of undeclared identifier 'D3DLOCK_READONLY'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	246	use of undeclared identifier 'sys'
+W/R: DirectX	source/standalone/rw/camera.cpp	264	use of undeclared identifier 'D3DFMT_R5G6B5'
+W/R: DirectX	source/standalone/rw/camera.cpp	267	use of undeclared identifier 'D3DFMT_A2R10G10B10'; did you mean 'rw::d3d::D3DFMT_A2R10G10B10'?
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	278	use of undeclared identifier 'sys'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	281	use of undeclared identifier 'sys'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	288	no member named 'd3ddevice' in namespace 'rw::d3d'
+other: undeclared/unknown type	source/standalone/rw/camera.cpp	296	unknown type name '_CrtMemState'
+other: undeclared/unknown type	source/standalone/rw/camera.cpp	299	unknown type name 'MEMORY_BASIC_INFORMATION'
+W: Win32 API / type	source/standalone/rw/camera.cpp	301	use of undeclared identifier 'MEM_COMMIT'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	393	no member named 'd3ddevice' in namespace 'rw::d3d'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	397	use of undeclared identifier 'd3d9Globals'
+W: Win32 API / type	source/standalone/rw/camera.cpp	400	use of undeclared identifier 'IsWindow'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	403	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	404	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	405	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	406	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	407	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	408	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	411	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/camera.cpp	412	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	32	no member named 'd3d9Globals' in namespace 'rw::d3d'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	78	use of undeclared identifier 'd3d9Globals'
+W/R: DirectX	source/standalone/rw/engine.cpp	82	unknown type name 'D3DFORMAT'
+W/R: DirectX	source/standalone/rw/engine.cpp	84	use of undeclared identifier 'D3DFMT_A8R8G8B8'
+W/R: DirectX	source/standalone/rw/engine.cpp	85	use of undeclared identifier 'D3DFMT_A2R10G10B10'; did you mean 'rw::d3d::D3DFMT_A2R10G10B10'?
+W/R: DirectX	source/standalone/rw/engine.cpp	86	use of undeclared identifier 'D3DFMT_X8R8G8B8'
+W/R: DirectX	source/standalone/rw/engine.cpp	87	use of undeclared identifier 'D3DFMT_R5G6B5'
+W/R: DirectX	source/standalone/rw/engine.cpp	88	use of undeclared identifier 'D3DFMT_X1R5G5B5'
+W/R: DirectX	source/standalone/rw/engine.cpp	89	use of undeclared identifier 'D3DFMT_A1R5G5B5'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	137	use of undeclared identifier 'd3d9Globals'
+W: Win32 API / type	source/standalone/rw/engine.cpp	141	use of undeclared identifier 'IsWindowVisible'
+W: Win32 API / type	source/standalone/rw/engine.cpp	141	use of undeclared identifier 'WS_CAPTION'
+W: Win32 API / type	source/standalone/rw/engine.cpp	141	use of undeclared identifier 'WS_MINIMIZEBOX'
+W: Win32 API / type	source/standalone/rw/engine.cpp	141	use of undeclared identifier 'WS_SYSMENU'
+W: Win32 API / type	source/standalone/rw/engine.cpp	141	use of undeclared identifier 'WS_VISIBLE'
+W: Win32 API / type	source/standalone/rw/engine.cpp	143	use of undeclared identifier 'WS_VISIBLE'
+other: undeclared/unknown type	source/standalone/rw/engine.cpp	146	unknown type name 'MONITORINFO'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	147	use of undeclared identifier 'MONITOR_DEFAULTTOPRIMARY'
+W: Win32 API / type	source/standalone/rw/engine.cpp	150	use of undeclared identifier 'GWL_STYLE'
+W: Win32 API / type	source/standalone/rw/engine.cpp	151	use of undeclared identifier 'HWND_NOTOPMOST'
+W: Win32 API / type	source/standalone/rw/engine.cpp	151	use of undeclared identifier 'SWP_FRAMECHANGED'
+W: Win32 API / type	source/standalone/rw/engine.cpp	151	use of undeclared identifier 'SWP_NOACTIVATE'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	167	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	196	use of undeclared identifier 'd3d9Globals'
+W/R: DirectX	source/standalone/rw/engine.cpp	200	unknown type name 'D3DFORMAT'
+W/R: DirectX	source/standalone/rw/engine.cpp	200	use of undeclared identifier 'D3DFMT_A2R10G10B10'; did you mean 'rw::d3d::D3DFMT_A2R10G10B10'?
+W/R: DirectX	source/standalone/rw/engine.cpp	200	use of undeclared identifier 'D3DFMT_R5G6B5'
+W/R: DirectX	source/standalone/rw/engine.cpp	200	use of undeclared identifier 'D3DFMT_X8R8G8B8'
+W/R: DirectX	source/standalone/rw/engine.cpp	202	unknown type name 'D3DFORMAT'
+C: syntax / extension	source/standalone/rw/engine.cpp	206	expected expression
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	206	no member named 'DisplayMode' in namespace 'rw::d3d'; did you mean 'eReplayMode'?
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	207	no member named 'DisplayMode' in namespace 'rw::d3d'; did you mean 'eReplayMode'?
+W/R: DirectX	source/standalone/rw/engine.cpp	211	use of undeclared identifier 'D3DFMT_A1R5G5B5'
+W/R: DirectX	source/standalone/rw/engine.cpp	211	use of undeclared identifier 'D3DFMT_A8R8G8B8'
+W/R: DirectX	source/standalone/rw/engine.cpp	211	use of undeclared identifier 'D3DFMT_R5G6B5'
+W/R: DirectX	source/standalone/rw/engine.cpp	211	use of undeclared identifier 'D3DFMT_X1R5G5B5'
+W/R: DirectX	source/standalone/rw/engine.cpp	211	use of undeclared identifier 'D3DFMT_X8R8G8B8'
+W/R: DirectX	source/standalone/rw/engine.cpp	222	unknown type name 'D3DFORMAT'
+W/R: DirectX	source/standalone/rw/engine.cpp	225	unknown type name 'D3DDISPLAYMODE'
+W/R: DirectX	source/standalone/rw/engine.cpp	251	unknown type name 'D3DFORMAT'
+W/R: DirectX	source/standalone/rw/engine.cpp	251	use of undeclared identifier 'D3DFMT_R5G6B5'
+W/R: DirectX	source/standalone/rw/engine.cpp	251	use of undeclared identifier 'D3DFMT_X8R8G8B8'
+W/R: DirectX	source/standalone/rw/engine.cpp	253	use of undeclared identifier 'D3DDEVTYPE_HAL'
+W/R: DirectX	source/standalone/rw/engine.cpp	253	use of undeclared identifier 'D3DFMT_D16'
+W/R: DirectX	source/standalone/rw/engine.cpp	253	use of undeclared identifier 'D3DRTYPE_SURFACE'
+W/R: DirectX	source/standalone/rw/engine.cpp	253	use of undeclared identifier 'D3DUSAGE_DEPTHSTENCIL'
+W/R: DirectX	source/standalone/rw/engine.cpp	253	use of undeclared identifier 'D3D_OK'
+W/R: DirectX	source/standalone/rw/engine.cpp	254	use of undeclared identifier 'D3DDEVTYPE_HAL'
+W/R: DirectX	source/standalone/rw/engine.cpp	254	use of undeclared identifier 'D3DFMT_D15S1'
+W/R: DirectX	source/standalone/rw/engine.cpp	254	use of undeclared identifier 'D3DRTYPE_SURFACE'
+W/R: DirectX	source/standalone/rw/engine.cpp	254	use of undeclared identifier 'D3DUSAGE_DEPTHSTENCIL'
+W/R: DirectX	source/standalone/rw/engine.cpp	254	use of undeclared identifier 'D3D_OK'
+W/R: DirectX	source/standalone/rw/engine.cpp	255	use of undeclared identifier 'D3DDEVTYPE_HAL'
+W/R: DirectX	source/standalone/rw/engine.cpp	255	use of undeclared identifier 'D3DFMT_D24S8'
+W/R: DirectX	source/standalone/rw/engine.cpp	255	use of undeclared identifier 'D3DRTYPE_SURFACE'
+W/R: DirectX	source/standalone/rw/engine.cpp	255	use of undeclared identifier 'D3DUSAGE_DEPTHSTENCIL'
+W/R: DirectX	source/standalone/rw/engine.cpp	255	use of undeclared identifier 'D3D_OK'
+W/R: DirectX	source/standalone/rw/engine.cpp	256	use of undeclared identifier 'D3DDEVTYPE_HAL'
+W/R: DirectX	source/standalone/rw/engine.cpp	256	use of undeclared identifier 'D3DFMT_D24X4S4'
+W/R: DirectX	source/standalone/rw/engine.cpp	256	use of undeclared identifier 'D3DRTYPE_SURFACE'
+W/R: DirectX	source/standalone/rw/engine.cpp	256	use of undeclared identifier 'D3DUSAGE_DEPTHSTENCIL'
+W/R: DirectX	source/standalone/rw/engine.cpp	256	use of undeclared identifier 'D3D_OK'
+W/R: DirectX	source/standalone/rw/engine.cpp	257	use of undeclared identifier 'D3DDEVTYPE_HAL'
+W/R: DirectX	source/standalone/rw/engine.cpp	257	use of undeclared identifier 'D3DFMT_D24X8'
+W/R: DirectX	source/standalone/rw/engine.cpp	257	use of undeclared identifier 'D3DRTYPE_SURFACE'
+W/R: DirectX	source/standalone/rw/engine.cpp	257	use of undeclared identifier 'D3DUSAGE_DEPTHSTENCIL'
+W/R: DirectX	source/standalone/rw/engine.cpp	257	use of undeclared identifier 'D3D_OK'
+W/R: DirectX	source/standalone/rw/engine.cpp	258	use of undeclared identifier 'D3DDEVTYPE_HAL'
+W/R: DirectX	source/standalone/rw/engine.cpp	258	use of undeclared identifier 'D3DFMT_D32'
+W/R: DirectX	source/standalone/rw/engine.cpp	258	use of undeclared identifier 'D3DRTYPE_SURFACE'
+W/R: DirectX	source/standalone/rw/engine.cpp	258	use of undeclared identifier 'D3DUSAGE_DEPTHSTENCIL'
+W/R: DirectX	source/standalone/rw/engine.cpp	258	use of undeclared identifier 'D3D_OK'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	279	no member named 'd3ddevice' in namespace 'rw::d3d'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	282	use of undeclared identifier 'd3d9Globals'
+W/R: DirectX	source/standalone/rw/engine.cpp	283	use of undeclared identifier 'D3DPRESENT_INTERVAL_ONE'
+W/R: DirectX	source/standalone/rw/engine.cpp	284	use of undeclared identifier 'D3DPRESENT_INTERVAL_IMMEDIATE'
+W/R: DirectX	source/standalone/rw/engine.cpp	284	use of undeclared identifier 'D3DPRESENT_INTERVAL_ONE'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	286	no member named 'd3ddevice' in namespace 'rw::d3d'
+W/R: DirectX	source/standalone/rw/engine.cpp	286	use of undeclared identifier 'D3D_OK'
+W/R: DirectX	source/standalone/rw/engine.cpp	290	unknown type name 'D3DFORMAT'
+W/R: DirectX	source/standalone/rw/engine.cpp	292	use of undeclared identifier 'D3DFMT_X8R8G8B8'
+W/R: DirectX	source/standalone/rw/engine.cpp	293	use of undeclared identifier 'D3DDEVTYPE_HAL'
+W/R: DirectX	source/standalone/rw/engine.cpp	293	use of undeclared identifier 'D3DFMT_A8R8G8B8'
+W/R: DirectX	source/standalone/rw/engine.cpp	293	use of undeclared identifier 'D3D_OK'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	293	use of undeclared identifier 'd3d9Globals'
+W/R: DirectX	source/standalone/rw/engine.cpp	294	use of undeclared identifier 'D3DFMT_A8R8G8B8'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	296	no member named 'findFormatDepth' in namespace 'rw::d3d'
+W/R: DirectX	source/standalone/rw/engine.cpp	296	use of undeclared identifier 'D3DFMT_D16'
+W/R: DirectX	source/standalone/rw/engine.cpp	296	use of undeclared identifier 'D3DFMT_D24S8'
+W/R: DirectX	source/standalone/rw/engine.cpp	309	unknown type name 'D3DFORMAT'
+C: syntax / extension	source/standalone/rw/engine.cpp	310	expected ':'
+C: syntax / extension	source/standalone/rw/engine.cpp	310	expected ']'
+C: syntax / extension	source/standalone/rw/engine.cpp	310	expected expression
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	310	use of undeclared identifier 'd3d9Globals'
+C: syntax / extension	source/standalone/rw/engine.cpp	313	expected ']'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	313	use of undeclared identifier 'd3d9Globals'
+W/R: DirectX	source/standalone/rw/engine.cpp	318	unknown type name 'D3DFORMAT'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	320	use of undeclared identifier 'd3d9Globals'
+W/R: DirectX	source/standalone/rw/engine.cpp	324	use of undeclared identifier 'D3DDEVTYPE_HAL'
+W/R: DirectX	source/standalone/rw/engine.cpp	324	use of undeclared identifier 'D3DMULTISAMPLE_TYPE'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	324	use of undeclared identifier 'd3d9Globals'
+W/R: DirectX	source/standalone/rw/engine.cpp	329	use of undeclared identifier 'D3DDEVTYPE_HAL'
+W/R: DirectX	source/standalone/rw/engine.cpp	329	use of undeclared identifier 'D3DMULTISAMPLE_NONMASKABLE'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	329	use of undeclared identifier 'd3d9Globals'
+W/R: DirectX	source/standalone/rw/engine.cpp	349	use of undeclared identifier 'D3DDEVTYPE_HAL'
+W/R: DirectX	source/standalone/rw/engine.cpp	349	use of undeclared identifier 'D3DMULTISAMPLE_TYPE'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	349	use of undeclared identifier 'd3d9Globals'
+W/R: DirectX	source/standalone/rw/engine.cpp	360	unknown type name 'D3DPRESENT_PARAMETERS'
+W/R: DirectX	source/standalone/rw/engine.cpp	361	use of undeclared identifier 'D3DMULTISAMPLE_NONE'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	363	use of undeclared identifier 'd3d9Globals'
+W/R: DirectX	source/standalone/rw/engine.cpp	367	use of undeclared identifier 'D3DDEVTYPE_HAL'
+W/R: DirectX	source/standalone/rw/engine.cpp	367	use of undeclared identifier 'D3DMULTISAMPLE_TYPE'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	367	use of undeclared identifier 'd3d9Globals'
+W/R: DirectX	source/standalone/rw/engine.cpp	369	use of undeclared identifier 'D3DMULTISAMPLE_TYPE'
+W/R: DirectX	source/standalone/rw/engine.cpp	373	use of undeclared identifier 'D3DDEVTYPE_HAL'
+W/R: DirectX	source/standalone/rw/engine.cpp	373	use of undeclared identifier 'D3DMULTISAMPLE_NONMASKABLE'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	373	use of undeclared identifier 'd3d9Globals'
+W/R: DirectX	source/standalone/rw/engine.cpp	379	use of undeclared identifier 'D3DMULTISAMPLE_NONMASKABLE'
+W/R: DirectX	source/standalone/rw/engine.cpp	383	use of undeclared identifier 'D3DMULTISAMPLE_NONE'
+W/R: DirectX	source/standalone/rw/engine.cpp	384	use of undeclared identifier 'D3DSWAPEFFECT_DISCARD'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	392	use of undeclared identifier 'd3d9Globals'
+W/R: DirectX	source/standalone/rw/engine.cpp	396	unknown type name 'D3DFORMAT'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	397	use of undeclared identifier 'depth'
+W: Win32 API / type	source/standalone/rw/engine.cpp	406	use of undeclared identifier 'GWL_STYLE'
+W: Win32 API / type	source/standalone/rw/engine.cpp	408	use of undeclared identifier 'GWL_STYLE'
+W: Win32 API / type	source/standalone/rw/engine.cpp	408	use of undeclared identifier 'WS_POPUP'
+W: Win32 API / type	source/standalone/rw/engine.cpp	408	use of undeclared identifier 'WS_VISIBLE'
+W: Win32 API / type	source/standalone/rw/engine.cpp	409	use of undeclared identifier 'HWND_TOP'
+W: Win32 API / type	source/standalone/rw/engine.cpp	409	use of undeclared identifier 'SWP_FRAMECHANGED'
+W: Win32 API / type	source/standalone/rw/engine.cpp	409	use of undeclared identifier 'SWP_SHOWWINDOW'
+W/R: DirectX	source/standalone/rw/engine.cpp	412	use of undeclared identifier 'D3DPRESENT_RATE_DEFAULT'
+W: Win32 API / type	source/standalone/rw/engine.cpp	415	use of undeclared identifier 'GWL_STYLE'
+W: Win32 API / type	source/standalone/rw/engine.cpp	416	use of undeclared identifier 'SWP_FRAMECHANGED'
+W: Win32 API / type	source/standalone/rw/engine.cpp	416	use of undeclared identifier 'SWP_NOMOVE'
+W: Win32 API / type	source/standalone/rw/engine.cpp	416	use of undeclared identifier 'SWP_NOSIZE'
+W: Win32 API / type	source/standalone/rw/engine.cpp	416	use of undeclared identifier 'SWP_NOZORDER'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	427	use of undeclared identifier 'depth'
+other: conversion/overload	source/standalone/rw/engine.cpp	465	incompatible pointer types assigning to 'SDL_Window **' (aka 'struct SDL_Window **') from 'HWND' (aka 'HWND__ *')
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	469	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	499	no member named 'd3ddevice' in namespace 'rw::d3d'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	508	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	509	use of undeclared identifier 'd3d9Globals'
+W/R: DirectX	source/standalone/rw/engine.cpp	513	unknown type name 'D3DMULTISAMPLE_TYPE'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	513	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	514	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	515	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	516	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	574	use of undeclared identifier 'd3d9Globals'
+W/R: DirectX	source/standalone/rw/engine.cpp	577	unknown type name 'D3DADAPTER_IDENTIFIER9'
+W/R: DirectX	source/standalone/rw/engine.cpp	578	use of undeclared identifier 'D3D_OK'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	578	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	595	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	612	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	637	use of undeclared identifier 'd3d9Globals'
+W/R: DirectX	source/standalone/rw/engine.cpp	651	unknown type name 'D3DPRESENT_PARAMETERS'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	653	no member named 'd3ddevice' in namespace 'rw::d3d'
+W/R: DirectX	source/standalone/rw/engine.cpp	654	unknown type name 'IDirect3DSwapChain9'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	655	no member named 'd3ddevice' in namespace 'rw::d3d'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	661	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	663	no member named 'd3ddevice' in namespace 'rw::d3d'
+W/R: DirectX	source/standalone/rw/engine.cpp	663	use of undeclared identifier 'D3D_OK'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	678	no member named 'd3ddevice' in namespace 'rw::d3d'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	698	no member named 'd3ddevice' in namespace 'rw::d3d'
+W/R: DirectX	source/standalone/rw/engine.cpp	705	unknown type name 'D3DPRESENT_PARAMETERS'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	705	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	707	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	712	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	720	use of undeclared identifier 'd3d9Globals'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	723	no member named 'd3ddevice' in namespace 'rw::d3d'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	727	use of undeclared identifier 'd3d9Globals'
+C: syntax / extension	source/standalone/rw/engine.cpp	730	expected ']'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	730	use of undeclared identifier 'd3d9Globals'
+W/R: DirectX	source/standalone/rw/engine.cpp	731	unknown type name 'D3DFORMAT'
+W/R: DirectX	source/standalone/rw/engine.cpp	731	use of undeclared identifier 'D3DFMT_DXT1'
+W/R: DirectX	source/standalone/rw/engine.cpp	731	use of undeclared identifier 'D3DFMT_DXT3'
+W/R: DirectX	source/standalone/rw/engine.cpp	731	use of undeclared identifier 'D3DFMT_DXT5'
+W/R: DirectX	source/standalone/rw/engine.cpp	732	use of undeclared identifier 'D3DDEVTYPE_HAL'
+W/R: DirectX	source/standalone/rw/engine.cpp	732	use of undeclared identifier 'D3DRTYPE_TEXTURE'
+other: undeclared/unknown identifier	source/standalone/rw/engine.cpp	732	use of undeclared identifier 'd3d9Globals'
+W/R: DirectX	source/standalone/rw/platform.cpp	38	unknown type name 'D3DPRESENT_PARAMETERS'
+W/R: DirectX	source/standalone/rw/platform.cpp	38	unknown type name 'IDirect3DDevice9'
+W/R: DirectX	source/standalone/rw/platform.cpp	42	unknown type name 'IDirect3DDevice9'
+W: Win32 API / type	source/standalone/rw/platform.cpp	51	use of undeclared identifier 'PAGE_READWRITE'
+other: undeclared/unknown identifier	source/standalone/rw/platform.cpp	53	use of undeclared identifier 'VirtualProtect'
+W/R: DirectX	source/standalone/rw/platform.cpp	57	unknown type name 'D3DPRESENT_PARAMETERS'
+W/R: DirectX	source/standalone/rw/platform.cpp	57	unknown type name 'IDirect3DDevice9'
+other: undeclared/unknown identifier	source/standalone/rw/platform.cpp	82	no member named 'd3d9Globals' in namespace 'rw::d3d'
+other: undeclared/unknown identifier	source/standalone/rw/platform.cpp	83	no member named 'd3d9Globals' in namespace 'rw::d3d'
+W: Win32 API / type	source/standalone/rw/platform.cpp	86	use of undeclared identifier 'IsIconic'
+W: Win32 API / type	source/standalone/rw/platform.cpp	89	use of undeclared identifier 'SWP_NOACTIVATE'
+W: Win32 API / type	source/standalone/rw/platform.cpp	89	use of undeclared identifier 'SWP_NOZORDER'
+other: undeclared/unknown identifier	source/standalone/rw/platform.cpp	124	no member named 'd3ddevice' in namespace 'rw::d3d'
+other: undeclared/unknown identifier	source/standalone/rw/raster.cpp	75	no member named 'd3ddevice' in namespace 'rw::d3d'
+other: undeclared/unknown identifier	source/standalone/rw/raster.cpp	84	no member named 'd3ddevice' in namespace 'rw::d3d'
+W/R: DirectX	source/standalone/rw/raster.cpp	84	unknown type name 'IDirect3DDevice9'
+W/R: DirectX	source/standalone/rw/raster.cpp	86	unknown type name 'IDirect3DTexture9'
+C: syntax / extension	source/standalone/rw/raster.cpp	90	expected ';' at end of declaration
+W/R: DirectX	source/standalone/rw/raster.cpp	90	unknown type name 'IDirect3DSurface9'
+other	source/standalone/rw/raster.cpp	91	member reference base type 'void' is not a structure or union
+W/R: DirectX	source/standalone/rw/raster.cpp	94	unknown type name 'D3DSURFACE_DESC'
+W/R: DirectX	source/standalone/rw/raster.cpp	96	use of undeclared identifier 'D3DPOOL_SYSTEMMEM'
+other: undeclared/unknown identifier	source/standalone/rw/raster.cpp	96	use of undeclared identifier 'sys'
+other: undeclared/unknown identifier	source/standalone/rw/raster.cpp	98	use of undeclared identifier 'sys'
+W/R: DirectX	source/standalone/rw/raster.cpp	101	unknown type name 'D3DLOCKED_RECT'
+W/R: DirectX	source/standalone/rw/raster.cpp	102	use of undeclared identifier 'D3DLOCK_NOSYSLOCK'; did you mean 'rw::d3d::D3DLOCK_NOSYSLOCK'?
+W/R: DirectX	source/standalone/rw/raster.cpp	102	use of undeclared identifier 'D3DLOCK_NO_DIRTY_UPDATE'
+W/R: DirectX	source/standalone/rw/raster.cpp	102	use of undeclared identifier 'D3DLOCK_READONLY'
+other: undeclared/unknown identifier	source/standalone/rw/raster.cpp	102	use of undeclared identifier 'sys'
+other: undeclared/unknown identifier	source/standalone/rw/raster.cpp	103	use of undeclared identifier 'sys'
+other: undeclared/unknown identifier	source/standalone/rw/raster.cpp	104	use of undeclared identifier 'sys'
+other: undeclared/unknown identifier	source/standalone/rw/raster.cpp	108	use of undeclared identifier 'sys'
+other: undeclared/unknown identifier	source/standalone/rw/raster.cpp	125	no member named 'd3ddevice' in namespace 'rw::d3d'
+W/R: DirectX	source/standalone/rw/raster.cpp	125	unknown type name 'IDirect3DDevice9'
+W/R: DirectX	source/standalone/rw/raster.cpp	129	unknown type name 'IDirect3DSurface9'
+other: undeclared/unknown identifier	source/standalone/rw/raster.cpp	132	no member named 'd3d9Globals' in namespace 'rw::d3d'
+W/R: DirectX	source/standalone/rw/raster.cpp	134	unknown type name 'IDirect3DTexture9'
+other	source/standalone/rw/raster.cpp	135	member reference base type 'void' is not a structure or union
+W/R: DirectX	source/standalone/rw/raster.cpp	140	unknown type name 'IDirect3DSurface9'
+W/R: DirectX	source/standalone/rw/raster.cpp	141	unknown type name 'D3DVIEWPORT9'
+W/R: DirectX	source/standalone/rw/raster.cpp	149	unknown type name 'D3DRECT'
+W/R: DirectX	source/standalone/rw/raster.cpp	156	use of undeclared identifier 'D3DCLEAR_TARGET'
+other: undeclared/unknown identifier	source/standalone/rw/raster.cpp	173	no member named 'd3ddevice' in namespace 'rw::d3d'
+other: undeclared/unknown type	source/standalone/rw/raster.cpp	186	no type named 'Im2DVertex' in namespace 'rw::d3d'
+other: undeclared/unknown identifier	source/standalone/rw/raster.cpp	406	no member named 'd3ddevice' in namespace 'rw::d3d'
+other: undeclared/unknown identifier	source/standalone/rw/raster.cpp	477	no member named 'd3ddevice' in namespace 'rw::d3d'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	45	use of undeclared identifier 'D3DCMP_EQUAL'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	45	use of undeclared identifier 'D3DCMP_LESS'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	45	use of undeclared identifier 'D3DCMP_NEVER'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	46	use of undeclared identifier 'D3DCMP_GREATER'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	46	use of undeclared identifier 'D3DCMP_LESSEQUAL'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	46	use of undeclared identifier 'D3DCMP_NOTEQUAL'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	47	use of undeclared identifier 'D3DCMP_ALWAYS'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	47	use of undeclared identifier 'D3DCMP_GREATEREQUAL'
+other: undeclared/unknown identifier	source/standalone/rw/renderstate.cpp	94	no member named 'd3ddevice' in namespace 'rw::d3d'
+other: undeclared/unknown identifier	source/standalone/rw/renderstate.cpp	108	no member named 'd3d9Globals' in namespace 'rw::d3d'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	115	use of undeclared identifier 'D3DRS_FOGTABLEMODE'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	116	use of undeclared identifier 'D3DFOG_NONE'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	118	use of undeclared identifier 'D3DFOG_NONE'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	118	use of undeclared identifier 'D3DRS_FOGTABLEMODE'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	129	use of undeclared identifier 'D3DRS_FOGSTART'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	130	use of undeclared identifier 'D3DRS_FOGEND'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	141	use of undeclared identifier 'D3DFOG_EXP'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	142	use of undeclared identifier 'D3DFOG_EXP2'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	143	use of undeclared identifier 'D3DFOG_LINEAR'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	224	use of undeclared identifier 'D3DRS_SHADEMODE'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	230	use of undeclared identifier 'D3DSAMP_BORDERCOLOR'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	233	use of undeclared identifier 'D3DRS_FOGENABLE'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	239	use of undeclared identifier 'D3DRS_FOGDENSITY'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	251	use of undeclared identifier 'D3DRS_ALPHAFUNC'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	255	use of undeclared identifier 'D3DRS_ALPHABLENDENABLE'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	257	use of undeclared identifier 'D3DRS_ALPHATESTENABLE'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	365	use of undeclared identifier 'D3DRS_LIGHTING'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	366	use of undeclared identifier 'D3DMCS_MATERIAL'; did you mean 'ID_MATERIAL'?
+W/R: DirectX	source/standalone/rw/renderstate.cpp	366	use of undeclared identifier 'D3DRS_DIFFUSEMATERIALSOURCE'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	367	use of undeclared identifier 'D3DMCS_MATERIAL'; did you mean 'ID_MATERIAL'?
+W/R: DirectX	source/standalone/rw/renderstate.cpp	367	use of undeclared identifier 'D3DRS_SPECULARMATERIALSOURCE'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	368	use of undeclared identifier 'D3DMCS_MATERIAL'; did you mean 'ID_MATERIAL'?
+W/R: DirectX	source/standalone/rw/renderstate.cpp	368	use of undeclared identifier 'D3DRS_AMBIENTMATERIALSOURCE'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	369	use of undeclared identifier 'D3DPRASTERCAPS_DITHER'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	369	use of undeclared identifier 'D3DRS_DITHERENABLE'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	370	use of undeclared identifier 'D3DRS_SPECULARENABLE'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	371	use of undeclared identifier 'D3DRS_LOCALVIEWER'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	372	use of undeclared identifier 'D3DRS_AMBIENT'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	373	use of undeclared identifier 'D3DRS_NORMALIZENORMALS'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	375	use of undeclared identifier 'D3DTOP_SELECTARG2'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	375	use of undeclared identifier 'D3DTSS_COLOROP'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	376	use of undeclared identifier 'D3DTA_DIFFUSE'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	376	use of undeclared identifier 'D3DTSS_COLORARG2'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	377	use of undeclared identifier 'D3DTOP_SELECTARG2'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	377	use of undeclared identifier 'D3DTSS_ALPHAOP'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	378	use of undeclared identifier 'D3DTA_DIFFUSE'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	378	use of undeclared identifier 'D3DTSS_ALPHAARG2'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	386	use of undeclared identifier 'D3DSAMP_BORDERCOLOR'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	387	use of undeclared identifier 'D3DTOP_DISABLE'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	387	use of undeclared identifier 'D3DTSS_COLOROP'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	388	use of undeclared identifier 'D3DTOP_DISABLE'
+W/R: DirectX	source/standalone/rw/renderstate.cpp	388	use of undeclared identifier 'D3DTSS_ALPHAOP'
+other: header not found (libs/imgui/misc/cpp/imgui_stdlib.h)	source/toolsmenu/DebugModules/BugsDebugModule.cpp	4	'libs/imgui/misc/cpp/imgui_stdlib.h' file not found
+P: pointer/int width (cast/narrowing)	source/toolsmenu/DebugModules/CTeleportDebugModule.cpp	314	cast to smaller integer type 'int' from 'void *' [-Werror,-Wvoid-pointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/toolsmenu/DebugModules/CTeleportDebugModule.cpp	374	cast to 'void *' from smaller integer type 'int' [-Werror,-Wint-to-void-pointer-cast]
+other: header not found (libs/imgui/misc/cpp/imgui_stdlib.h)	source/toolsmenu/DebugModules/Script/MissionDebugModule.cpp	4	'libs/imgui/misc/cpp/imgui_stdlib.h' file not found
+other: conversion/overload	source/toolsmenu/DebugModules/SpawnerDebugModule.cpp	597	no matching function for call to 'operator new'
+other: header not found (libs/imgui/misc/cpp/imgui_stdlib.h)	source/toolsmenu/UIRenderer.cpp	17	'libs/imgui/misc/cpp/imgui_stdlib.h' file not found

@@ -17,7 +17,9 @@
 #include "CStreamingDebugModule.h"
 #include "CPickupsDebugModule.h"
 #include "CDarkelDebugModule.h"
+#ifndef NOTSA_PORTABLE // the hook registry UI is not part of the portable build (GTASA_PORTABLE)
 #include "HooksDebugModule/HooksDebugModule.h"
+#endif
 #include "CTeleportDebugModule.h"
 #include "ParticleDebugModule.h"
 #include "PostEffectsDebugModule.h"
@@ -41,22 +43,18 @@
 #include "DoorDebugModule.hpp"
 #include "Audio/SoundManagerDebugModule.hpp"
 #include "Audio/AudioDebugModule.hpp"
-
 DebugModules::DebugModules(ImGuiContext* ctx) :
     m_ImCtx(ctx)
 {
     CreateModules();
 }
-
 DebugModules::~DebugModules() {
     DoSerializeModules();
 }
-
 void DebugModules::PreRenderUpdate() {
     for (auto& module : m_Modules) {
         module->Update();
     }
-
     // Handle DebugModule serialization
     const auto now = CTimer::GetTimeInMS();
     if ((now - m_LastSerializationTimeMs) >= MODULE_SERIALIZATION_INTERVAL_MS) {
@@ -94,7 +92,9 @@ void DebugModules::CreateModules() {
     Add<CheatDebugModule>();
 
     // "Settings" menu
+#ifndef NOTSA_PORTABLE
     Add<HooksDebugModule>();
+#endif
     Add<PostEffectsDebugModule>();
     Add<notsa::debugmodules::BugsDebugModule>();
 

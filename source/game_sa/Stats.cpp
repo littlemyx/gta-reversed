@@ -65,7 +65,7 @@ int32& IntStatCell(uint32 stat) { return StaticRef<int32>(0xB78E20 + 4u * stat);
 
 //! x87: `CTimer::ms_fTimeStep * 0.02f * 1000.0f` kept in extended precision, then truncated by _ftol (0x821B40)
 uint32 TimeStepInMS() {
-    return (uint32)(int32)((double)CTimer::ms_fTimeStep * (double)0.02f * 1000.0);
+    return (uint32)(int32)((x87d)CTimer::ms_fTimeStep * (x87d)0.02f * (x87d)1000.0);
 }
 }
 
@@ -239,18 +239,18 @@ int32 CStats::FindCriminalRatingNumber() {
     const auto I = [](eStats st) { return (double)IntStatCell(st); };
     const int32 money = CWorld::Players[CWorld::PlayerInFocus].m_nMoney;
 
-    double v = I(STAT_TOTAL_LEGITIMATE_KILLS) - I(STAT_TIMES_BUSTED) * 3.0;
-    v        = v - I(STAT_NUMBER_OF_HOSPITAL_VISITS) * 3.0;
-    v        = v + (I(STAT_HIGHEST_FIREFIGHTER_MISSION_LEVEL) + I(STAT_HIGHEST_PARAMEDIC_MISSION_LEVEL)) * 10.0;
-    v        = v + (double)(money / 5000);
-    v        = v + I(STAT_PLANES_HELICOPTERS_DESTROYED) * 30.0;
-    v        = v + I(STAT_TOTAL_FIRES_EXTINGUISHED);
-    v        = v + I(STAT_CRIMINALS_KILLED_ON_VIGILANTE_MISSION);
-    v        = v + I(STAT_PEOPLE_SAVED_IN_AN_AMBULANCE);
+    x87d v = X87R(I(STAT_TOTAL_LEGITIMATE_KILLS) - X87R(I(STAT_TIMES_BUSTED) * 3.0));
+    v        = v - X87R(I(STAT_NUMBER_OF_HOSPITAL_VISITS) * 3.0);
+    v        = v + (X87R(I(STAT_HIGHEST_FIREFIGHTER_MISSION_LEVEL) + I(STAT_HIGHEST_PARAMEDIC_MISSION_LEVEL))) * (x87d)10.0;
+    v        = v + (x87d)(money / 5000);
+    v        = v + X87R(I(STAT_PLANES_HELICOPTERS_DESTROYED) * 30.0);
+    v        = X87R(v + I(STAT_TOTAL_FIRES_EXTINGUISHED));
+    v        = X87R(v + I(STAT_CRIMINALS_KILLED_ON_VIGILANTE_MISSION));
+    v        = X87R(v + I(STAT_PEOPLE_SAVED_IN_AN_AMBULANCE));
     int32 value = (int32)v;
 
     if (CCheat::m_bHasPlayerCheated || I(STAT_TIMES_CHEATED) > 0.0) {
-        value = (int32)((double)value - I(STAT_TIMES_CHEATED) * 10.0);
+        value = (int32)((x87d)value - X87R(I(STAT_TIMES_CHEATED) * 10.0));
         if (!(value > -10000)) {
             value = -10000;
         }
@@ -259,15 +259,15 @@ int32 CStats::FindCriminalRatingNumber() {
     }
 
     if (I(STAT_BULLETS_FIRED) > 100.0) { // strictly greater (the port used >=)
-        value = (int32)(I(STAT_BULLETS_THAT_HIT) / I(STAT_BULLETS_FIRED) * 500.0 + (double)value);
+        value = (int32)(X87R(I(STAT_BULLETS_THAT_HIT) / I(STAT_BULLETS_FIRED)) * (x87d)500.0 + (x87d)value);
     }
 
     // the progress part is inlined here: progress / total * 1000 (not GetPercentageProgress), skipped when the total is exactly 0
-    const double total = (double)StatTypesFloat[STAT_TOTAL_PROGRESS];
+    const x87d total = (x87d)StatTypesFloat[STAT_TOTAL_PROGRESS];
     if (total == 0.0 && !std::isnan(total)) {
         return value;
     }
-    return (int32)((double)StatTypesFloat[STAT_PROGRESS_MADE] / total * 1000.0 + (double)value);
+    return (int32)((x87d)StatTypesFloat[STAT_PROGRESS_MADE] / total * (x87d)1000.0 + (x87d)value);
 }
 
 // 0x5591E0
@@ -328,7 +328,7 @@ void CStats::BuildStatLine(char* line, void* pValue1, int32 metrics, void* pValu
         case 5: {
             const int32 pounds = *(int32*)pValue1;
             if (CLocalisation::Metric()) {
-                const double kgs = (double)pounds * (double)0.4536f; // x87: FILD * 0.4536f, pushed as double
+                const x87d kgs = (x87d)pounds * (x87d)0.4536f; // x87: FILD * 0.4536f, pushed as double
                 if constexpr (notsa::IsFixBugs()) {
                     Print("%dkgs", (int32)kgs);
                 } else {
@@ -346,7 +346,7 @@ void CStats::BuildStatLine(char* line, void* pValue1, int32 metrics, void* pValu
             Print("%.2fm", (double)*(float*)pValue1);
             break;
         case 8: // feet
-            Print("%.2fft", (double)*(float*)pValue1 * (double)3.3333333f);
+            Print("%.2fft", (x87d)*(float*)pValue1 * (x87d)3.3333333f);
             break;
         case 9: // seconds
             Print("%d %s", *(int32*)pValue1, Txt("ST_SECS"));
@@ -400,7 +400,7 @@ bool CStats::SafeToShowThisStat(eStats stat) {
 // 0x5595F0
 bool CStats::CheckForThreshold(float* pValue, float range) {
     // 0x5595F0: (p + 40 < range) || (p - 40 > range); NaN => false
-    if ((double)*pValue + 40.0 < (double)range || (double)*pValue - 40.0 > (double)range) {
+    if ((x87d)*pValue + (x87d)40.0 < (double)range || (x87d)*pValue - (x87d)40.0 > (double)range) {
         *pValue = range;
         return true;
     }
@@ -467,7 +467,7 @@ void CStats::CheckForStatsMessage() {
         if (msg.displayed) {
             continue;
         }
-        const double stat = GetStatValue((eStats)(uint16)msg.stat_num);
+        const x87d stat = GetStatValue((eStats)(uint16)msg.stat_num);
         const bool   show = msg.condition
             ? stat >= (double)msg.value  // morethan
             : stat <= (double)msg.value; // lessthan
@@ -562,19 +562,19 @@ int32 CStats::FindMaxNumberOfGroupMembers() {
 // 0x559AF0
 float CStats::GetFatAndMuscleModifier(eStatModAbilities statMod) {
     // x87: the original keeps every intermediate in extended precision, so doubles are used here
-    const double fat      = StatTypesFloat[STAT_FAT];
-    const double stamina  = StatTypesFloat[STAT_STAMINA];
-    const double muscle   = StatTypesFloat[STAT_MUSCLE];
-    const double cycling  = StatTypesInt[STAT_CYCLING_SKILL - FIRST_INT_STAT];
+    const x87d fat      = StatTypesFloat[STAT_FAT];
+    const x87d stamina  = StatTypesFloat[STAT_STAMINA];
+    const x87d muscle   = StatTypesFloat[STAT_MUSCLE];
+    const x87d cycling  = StatTypesInt[STAT_CYCLING_SKILL - FIRST_INT_STAT];
 
-    const double fatBase = kMod_FatBase, muscleBase = kMod_MuscleBase;
-    const double fatDen    = 1000.0 - fatBase;
-    const double muscleDen = 1000.0 - muscleBase;
+    const x87d fatBase = kMod_FatBase, muscleBase = kMod_MuscleBase;
+    const x87d fatDen    = (x87d)1000.0 - fatBase;
+    const x87d muscleDen = (x87d)1000.0 - muscleBase;
 
     const auto Max0 = [](float b) { return 0.0f > b ? 0.0f : b; };    // 0x420800(0, b): NaN => b
     const auto Min1 = [](float b) { return 1.0f < b ? 1.0f : b; };    // 0x404330(1, b): NaN => b
     const auto BikeTerm = [&]() {
-        return Min1((float)((double)StatTypesInt[STAT_BIKE_SKILL - FIRST_INT_STAT] * (double)0.001f));
+        return Min1((float)((x87d)StatTypesInt[STAT_BIKE_SKILL - FIRST_INT_STAT] * (x87d)0.001f));
     };
 
     switch (statMod) {
@@ -590,7 +590,7 @@ float CStats::GetFatAndMuscleModifier(eStatModAbilities statMod) {
     }
     case STAT_MOD_1: {
         const float r = Max0((float)((fat - fatBase) / fatDen));
-        const double res = r * (double)kMod_1_Fat + 1.0 + (muscle - muscleBase) * kMod_1_Muscle / muscleDen;
+        const x87d res = r * (x87d)kMod_1_Fat + (x87d)1.0 + (muscle - muscleBase) * kMod_1_Muscle / muscleDen;
         if (res < 0.7f) {
             return 0.7f;
         }
@@ -598,31 +598,31 @@ float CStats::GetFatAndMuscleModifier(eStatModAbilities statMod) {
     }
     case STAT_MOD_2: {
         const float r = Max0((float)((fat - fatBase) / fatDen));
-        const double res = r * (double)kMod_2_Fat + 1.0 + (muscle - muscleBase) * kMod_2_Muscle / muscleDen;
+        const x87d res = r * (x87d)kMod_2_Fat + (x87d)1.0 + (muscle - muscleBase) * kMod_2_Muscle / muscleDen;
         if (res < 0.8f) {
             return 0.8f;
         }
         return (float)res;
     }
     case STAT_MOD_3: {
-        const double res = (fat - fatBase) * kMod_3_Fat / fatDen + 1.0 + (muscle - muscleBase) * kMod_3_Muscle / muscleDen;
+        const x87d res = (fat - fatBase) * kMod_3_Fat / fatDen + (x87d)1.0 + (muscle - muscleBase) * kMod_3_Muscle / muscleDen;
         if (res < 0.8f) {
             return 0.8f;
         }
         return (float)res;
     }
     case STAT_MOD_4: {
-        const double res = (fat - fatBase) * kMod_4_Fat / fatDen + 1.0 + (muscle - muscleBase) * kMod_4_Muscle / muscleDen;
+        const x87d res = (fat - fatBase) * kMod_4_Fat / fatDen + (x87d)1.0 + (muscle - muscleBase) * kMod_4_Muscle / muscleDen;
         if (!(res > 2.0)) {
             return (float)res;
         }
         return 2.0f;
     }
     case STAT_MOD_5: {
-        const double res =
-              (fat - fatBase) * kMod_5_Fat / fatDen + 1.0 + (muscle - muscleBase) * kMod_5_Muscle / muscleDen
-            + stamina * (double)0.001f * kMod_5_Stamina
-            + cycling * (double)0.001f * kMod_5_Cycling;
+        const x87d res =
+              (fat - fatBase) * kMod_5_Fat / fatDen + (x87d)1.0 + (muscle - muscleBase) * kMod_5_Muscle / muscleDen
+            + stamina * (x87d)0.001f * kMod_5_Stamina
+            + cycling * (x87d)0.001f * kMod_5_Cycling;
         if (res > 2.0) {
             return 2.0f;
         }
@@ -632,9 +632,9 @@ float CStats::GetFatAndMuscleModifier(eStatModAbilities statMod) {
         return (float)res;
     }
     case STAT_MOD_6: {
-        const double res =
-              (fat - fatBase) * kMod_6_Fat / fatDen + 1.0
-            + cycling * (double)0.001f * kMod_6_Cycling;
+        const x87d res =
+              (fat - fatBase) * kMod_6_Fat / fatDen + (x87d)1.0
+            + cycling * (x87d)0.001f * kMod_6_Cycling;
         if (res > 2.0) {
             return 2.0f;
         }
@@ -644,31 +644,31 @@ float CStats::GetFatAndMuscleModifier(eStatModAbilities statMod) {
         return (float)res;
     }
     case STAT_MOD_TIME_CAN_RUN:
-        return (float)(stamina * (double)0.001f * kMod_TimeCanRun + 150.0);
+        return (float)(stamina * (x87d)0.001f * kMod_TimeCanRun + (x87d)150.0);
     case STAT_MOD_AIR_IN_LUNG: {
-        const double lung = StatTypesInt[STAT_LUNG_CAPACITY - FIRST_INT_STAT];
-        return (float)((lung + stamina) * (double)0.0005f * kMod_Air + 1000.0);
+        const x87d lung = StatTypesInt[STAT_LUNG_CAPACITY - FIRST_INT_STAT];
+        return (float)((lung + stamina) * (x87d)0.0005f * kMod_Air + (x87d)1000.0);
     }
     case STAT_MOD_MAX_HEALTH:
-        return (float)((double)StatTypesFloat[STAT_MAX_HEALTH] * (double)0.001f * kMod_MaxHealth);
+        return (float)((x87d)StatTypesFloat[STAT_MAX_HEALTH] * (x87d)0.001f * kMod_MaxHealth);
     case STAT_MOD_10:
         return kMod_MaxHealth;
     case STAT_MOD_11:
-        return (float)(BikeTerm() * (double)kMod_B_Bike + 1.0);
+        return (float)(BikeTerm() * (x87d)kMod_B_Bike + (x87d)1.0);
     case STAT_MOD_12:
-        return (float)(BikeTerm() * (double)kMod_C_Bike + 1.0);
+        return (float)(BikeTerm() * (x87d)kMod_C_Bike + (x87d)1.0);
     case STAT_MOD_13:
-        return (float)(BikeTerm() * (double)kMod_D_Bike + 1.0);
+        return (float)(BikeTerm() * (x87d)kMod_D_Bike + (x87d)1.0);
     case STAT_MOD_DRIVING_SKILL: {
-        const double driving = StatTypesInt[STAT_DRIVING_SKILL - FIRST_INT_STAT];
-        const double res = (fat - fatBase) * kMod_E_Fat / fatDen + (driving * (double)0.001f * kMod_E_Driving + 1.0);
+        const x87d driving = StatTypesInt[STAT_DRIVING_SKILL - FIRST_INT_STAT];
+        const x87d res = (fat - fatBase) * kMod_E_Fat / fatDen + (driving * (x87d)0.001f * kMod_E_Driving + (x87d)1.0);
         if (res > 1.0) {
             return 1.0f;
         }
         return (float)res;
     }
     case STAT_MOD_15: {
-        const double res = (fat - fatBase) * kMod_F_Fat / fatDen + 1.0 + (muscle - muscleBase) * kMod_F_Muscle / muscleDen;
+        const x87d res = (fat - fatBase) * kMod_F_Fat / fatDen + (x87d)1.0 + (muscle - muscleBase) * kMod_F_Muscle / muscleDen;
         if (res < kMod_Fat1000Min2) {
             return kMod_Fat1000Min2;
         }
@@ -695,7 +695,7 @@ void CStats::DecrementStat(eStats stat, float value) {
 
     const auto idx = static_cast<uint16>(stat);
     if (idx < FIRST_UNUSED_STAT) {
-        const double v = (double)StatTypesFloat[idx] - (double)value;
+        const x87d v = (x87d)StatTypesFloat[idx] - (x87d)value;
         StatTypesFloat[idx] = (float)v;
         StatTypesFloat[idx] = (float)(v > 0.0 ? v : 0.0); // `fcom` + je: only a strictly positive result is kept (NaN => 0)
     } else {
@@ -726,8 +726,8 @@ void CStats::SetNewRecordStat(eStats stat, float value) {
         auto&        slot    = StaticRef<int32>(0xB78E20 + 4u * idx); // == StatTypesInt[idx - FIRST_INT_STAT]
 #endif
 #line 715
-        const double current = slot;
-        const double best    = current > (double)value ? current : (double)value;
+        const x87d current = slot;
+        const x87d best    = current > (x87d)value ? current : (x87d)value;
         slot = (int32)(int16)(int32)best; // _ftol + `movsx eax, ax`: the record is truncated to 16 bits
     }
     CheckForStatsMessage();
@@ -737,13 +737,13 @@ void CStats::SetNewRecordStat(eStats stat, float value) {
 static void RegisterRecordLowest(eStats stat, int32 value) {
     const auto idx = static_cast<uint16>(stat);
     const bool isFloat = idx < CStats::FIRST_UNUSED_STAT;
-    const double cur = isFloat ? (double)CStats::StatTypesFloat[idx] : (double)IntStatCell(idx);
-    double best;
+    const x87d cur = isFloat ? (x87d)CStats::StatTypesFloat[idx] : (x87d)IntStatCell(idx);
+    x87d best;
     if (cur == 0.0) {
-        best = (double)value;
+        best = (x87d)value;
     } else {
         const float vf = (float)value;
-        best = (cur < (double)vf) ? cur : (double)vf;
+        best = (cur < (x87d)vf) ? cur : (x87d)vf;
     }
     if (isFloat) {
         CStats::StatTypesFloat[idx] = (float)best;
@@ -856,11 +856,11 @@ const GxtChar* CStats::FindCriminalRatingString() {
     }
 
     if (rating < 500000) { // Special case, FLIGHT_TIME; x87: kept in extended precision, then truncated by _ftol
-        const auto flightTime = (int32)((double)StatTypesInt[STAT_FLIGHT_TIME - FIRST_INT_STAT] * (double)(1.6666667e-05f) * (double)0.016666668f);
+        const auto flightTime = (int32)((x87d)StatTypesInt[STAT_FLIGHT_TIME - FIRST_INT_STAT] * (x87d)(1.6666667e-05f) * (x87d)0.016666668f);
         return TheText.Get(flightTime > 10 ? "RATNG50" : "RATNG49");
     }
 
-    static_assert(offsetof(CPlayerInfo, m_nDisplayMoney) == 0xBC);
+    VALIDATE_OFFSET(CPlayerInfo, m_nDisplayMoney, 0xBC);
     if (rating >= 1000000 && CWorld::Players[CWorld::PlayerInFocus].m_nDisplayMoney > 10000000 /* NOTE: not m_nMoney */) {
         return TheText.Get("RATNG52");
     }
@@ -1046,7 +1046,7 @@ int32 CStats::ConstructStatLine(int32 arg0, uint8 arg1) {
     };
     // x87: `_ftol(FILD(value) * 1/60000)`, split into minutes and seconds with a signed division by 60
     const auto TimeStat = [&](uint32 id, int32& minutes, int32& seconds) {
-        const int32 total = (int32)((double)IntStat(id) * (double)1.6666667e-05f);
+        const int32 total = (int32)((x87d)IntStat(id) * (x87d)1.6666667e-05f);
         minutes = total / 60;
         seconds = total % 60;
     };
@@ -1104,7 +1104,7 @@ int32 CStats::ConstructStatLine(int32 arg0, uint8 arg1) {
                 const int32 pounds = (int32)GetStatValue((eStats)id);
                 gString2[0] = '\0';
                 if (CLocalisation::Metric()) { // 0x56D220
-                    const double kgs = (double)pounds * (double)0.4536f; // x87: FILD * 0.4536f, pushed as a double
+                    const x87d kgs = (x87d)pounds * (x87d)0.4536f; // x87: FILD * 0.4536f, pushed as a double
                     if constexpr (notsa::IsFixBugs()) {
                         Print(gString2, "%dkgs", (int32)kgs);
                     } else {
@@ -1135,7 +1135,7 @@ int32 CStats::ConstructStatLine(int32 arg0, uint8 arg1) {
                 if (line != arg0) {
                     return R::Count;
                 }
-                return PrintValue("%.2fft", (double)GetStatValue((eStats)id) * (double)3.3333333f); // x87: kept in extended precision
+                return PrintValue("%.2fft", (x87d)GetStatValue((eStats)id) * (x87d)3.3333333f); // x87: kept in extended precision
             case 9: { // 0x55A998, minutes:seconds
                 if (line != arg0) {
                     return R::Count;
@@ -1354,9 +1354,9 @@ int32 CStats::ConstructStatLine(int32 arg0, uint8 arg1) {
                 return R::Count;
             }
             case 0x14E: { // 0x55AECB, money lost gambling (never negative)
-                double lost = (double)StatTypesFloat[STAT_MONEY_SPENT_GAMBLING] - (double)StatTypesFloat[STAT_MONEY_WON_GAMBLING]; // x87
+                x87d lost = (x87d)StatTypesFloat[STAT_MONEY_SPENT_GAMBLING] - (x87d)StatTypesFloat[STAT_MONEY_WON_GAMBLING]; // x87
                 if (lost < 0.0) {
-                    lost = 0.0;
+                    lost = (x87d)0.0;
                 }
                 if (line != arg0) {
                     return R::Count;
@@ -1367,7 +1367,7 @@ int32 CStats::ConstructStatLine(int32 arg0, uint8 arg1) {
                 if (line != arg0) {
                     return R::Count;
                 }
-                return PrintValue("%0.2f%%", (double)CGangWars::TerritoryUnderControlPercentage * (double)100.0f);
+                return PrintValue("%0.2f%%", (x87d)CGangWars::TerritoryUnderControlPercentage * (x87d)100.0f);
             default: // 0x141, 0x14F, 0x150
                 return R::Skip;
             }
@@ -1502,16 +1502,16 @@ int32 CStats::ConstructStatLine(int32 arg0, uint8 arg1) {
 void CStats::ProcessReactionStatsOnIncrement(eStats stat) {
     // 0x55B900: the stat id is compared as a BYTE (STAT_STAMINA 0x16, STAT_ENERGY 0xA5, STAT_LUNG_CAPACITY 0xE1); STAT_ENERGY is an int stat
     const auto id     = static_cast<uint8>(stat);
-    const double energy = (double)IntStatCell(STAT_ENERGY);
+    const x87d energy = (x87d)IntStatCell(STAT_ENERGY);
     if (id == (uint8)STAT_STAMINA || id == (uint8)STAT_LUNG_CAPACITY) {
         if (energy < 0.0) {
-            const double fat = (double)StatTypesFloat[STAT_FAT] - 23.0;
+            const x87d fat = (x87d)StatTypesFloat[STAT_FAT] - (x87d)23.0;
             StatTypesFloat[STAT_FAT] = (float)(fat > 0.0 ? fat : 0.0);
             CheckForStatsMessage();
         }
     } else if (id == (uint8)STAT_ENERGY) {
         if (energy > 1000.0) {
-            IncrementStat(STAT_FAT, (float)(energy - 1000.0));
+            IncrementStat(STAT_FAT, (float)(energy - (x87d)1000.0));
         }
     }
 }
@@ -1606,26 +1606,26 @@ void CStats::UpdateRespectStat(uint8 arg0) {
     }
 
     // NOTE: the original keeps intermediates on the x87 stack (extended precision), we use doubles
-    const double A  = (double)StatTypesFloat[STAT_RESPECT] * (double)0.4f;
-    const double B  = (double)StatTypesInt[STAT_RESPECT_MISSION - FIRST_INT_STAT] * 1000.0;
-    const double D  = (double)StatTypesInt[STAT_RESPECT_MISSION_TOTAL - FIRST_INT_STAT] < 1.0 ? 1.0 : (double)StatTypesInt[STAT_RESPECT_MISSION_TOTAL - FIRST_INT_STAT];
-    const double C  = (B / D) * (double)0.36f;
-    const double S1 = (A + C) + (double)StatTypesFloat[STAT_GIRLFRIEND_RESPECT] * (double)0.03f;
+    const x87d A  = (x87d)StatTypesFloat[STAT_RESPECT] * (x87d)0.4f;
+    const x87d B  = (x87d)StatTypesInt[STAT_RESPECT_MISSION - FIRST_INT_STAT] * (x87d)1000.0;
+    const x87d D  = (x87d)StatTypesInt[STAT_RESPECT_MISSION_TOTAL - FIRST_INT_STAT] < (x87d)1.0 ? (x87d)1.0 : (x87d)StatTypesInt[STAT_RESPECT_MISSION_TOTAL - FIRST_INT_STAT];
+    const x87d C  = (B / D) * (x87d)0.36f;
+    const x87d S1 = (A + C) + (x87d)StatTypesFloat[STAT_GIRLFRIEND_RESPECT] * (x87d)0.03f;
 
-    double territory = (double)CGangWars::TerritoryUnderControlPercentage - (double)0.2f;
+    x87d territory = (x87d)CGangWars::TerritoryUnderControlPercentage - (x87d)0.2f;
     if (territory < 0.0) {
-        territory = 0.0;
+        territory = (x87d)0.0;
     }
-    const float S2 = (float)(territory * 1250.0 * (double)0.05f + S1);
+    const float S2 = (float)(territory * (x87d)1250.0 * (x87d)0.05f + S1);
 
-    const double money = (double)CWorld::Players[CWorld::PlayerInFocus].m_nMoney * (double)1.0e-7f;
+    const x87d money = (x87d)CWorld::Players[CWorld::PlayerInFocus].m_nMoney * (x87d)1.0e-7f;
     const float  moneyFactor = 1.0 < money ? 1.0f : (float)money;
 
     const float muscle  = StatTypesFloat[STAT_MUSCLE];
     const float clothes = StatTypesFloat[STAT_CLOTHES_RESPECT];
 
-    const double tagged = (double)(CTagManager::GetPercentageTagged() * 10) * (double)0.05f; // 0x49CDA0
-    const double sumExt = tagged + (((double)moneyFactor * 1000.0 * (double)0.05f + (double)S2) + (double)muscle * (double)0.03f + (double)clothes * (double)0.03f);
+    const x87d tagged = (x87d)(CTagManager::GetPercentageTagged() * 10) * (x87d)0.05f; // 0x49CDA0
+    const x87d sumExt = tagged + (((x87d)moneyFactor * (x87d)1000.0 * (x87d)0.05f + (x87d)S2) + (x87d)muscle * (x87d)0.03f + (x87d)clothes * (x87d)0.03f);
 
     float respect = (float)sumExt;
     if (sumExt < 0.0) {
@@ -1676,20 +1676,20 @@ void CStats::UpdateSexAppealStat() {
         m_pSexAppealVehicle->RegisterReference(reinterpret_cast<CEntity**>(&m_pSexAppealVehicle)); // 0x571B70
     }
 
-    double result;
+    x87d result;
     if (m_pSexAppealVehicle) {
         const auto& vehPos    = m_pSexAppealVehicle->GetPosition();
         const auto  playerPos = FindPlayerCoors(-1);
-        const double dx = (double)vehPos.x - (double)playerPos.x;
-        const double dy = (double)vehPos.y - (double)playerPos.y;
+        const x87d dx = (x87d)vehPos.x - (x87d)playerPos.x;
+        const x87d dy = (x87d)vehPos.y - (x87d)playerPos.y;
         if (std::sqrt(dx * dx + dy * dy) < 35.0) {
-            appeal = (float)(m_pSexAppealVehicle->m_fHealth * 2.0 - 1000.0);
+            appeal = (float)(m_pSexAppealVehicle->m_fHealth * (x87d)2.0 - (x87d)1000.0);
             // x87: clamp to [0, 1000]
-            double scaled;
+            x87d scaled;
             if (1000.0f < appeal) {
-                scaled = 1000.0;
+                scaled = (x87d)1000.0;
             } else if (appeal < 0.0f) {
-                scaled = 0.0;
+                scaled = (x87d)0.0;
             } else {
                 scaled = appeal;
             }
@@ -1698,7 +1698,7 @@ void CStats::UpdateSexAppealStat() {
             case 5:  // VEHICLE_CLASS_BIG
             case 7:  // VEHICLE_CLASS_MOPED
             case 11: // VEHICLE_CLASS_BICYCLE
-                scaled *= (double)0.1f;
+                scaled *= (x87d)0.1f;
                 break;
             case 2: // VEHICLE_CLASS_RICHFAMILY
             case 3: // VEHICLE_CLASS_EXECUTIVE
@@ -1707,27 +1707,27 @@ void CStats::UpdateSexAppealStat() {
             case 4:  // VEHICLE_CLASS_WORKER
             case 6:  // VEHICLE_CLASS_TAXI
             case 10: // VEHICLE_CLASS_WORKERBOAT
-                scaled *= (double)0.3f;
+                scaled *= (x87d)0.3f;
                 break;
             default:
-                scaled *= 0.5;
+                scaled *= (x87d)0.5;
                 break;
             }
-            result = scaled * 0.5 + (double)base;
+            result = scaled * (x87d)0.5 + (x87d)base;
         } else {
-            result = (double)appeal * 0.5 + (double)base;
+            result = (x87d)appeal * (x87d)0.5 + (x87d)base;
         }
     } else {
-        result = (double)appeal * 0.5 + (double)base;
+        result = (x87d)appeal * (x87d)0.5 + (x87d)base;
     }
 
     if (result < 0.0) {
-        result = 0.0;
+        result = (x87d)0.0;
     } else if (result > 1000.0) {
-        result = 1000.0;
+        result = (x87d)1000.0;
     }
     if (CCheat::IsActive(CHEAT_MAX_SEX_APPEAL)) {
-        result = 1000.0;
+        result = (x87d)1000.0;
     }
     StatTypesFloat[STAT_SEX_APPEAL] = (float)result;
 
@@ -1742,7 +1742,7 @@ void CStats::IncrementStat(eStats stat, float value) {
 
     const auto idx = static_cast<uint16>(stat);
     if (idx < FIRST_UNUSED_STAT) { // float
-        const double sum = (double)StatTypesFloat[idx] + (double)value;
+        const x87d sum = (x87d)StatTypesFloat[idx] + (x87d)value;
         StatTypesFloat[idx] = (float)sum;
         if (IsStatCapped(stat)) {
             StatTypesFloat[idx] = (float)(sum < 1000.0 ? sum : 1000.0); // NaN / >= 1000 => 1000
@@ -1755,12 +1755,12 @@ void CStats::IncrementStat(eStats stat, float value) {
     auto& info = CWorld::Players[CWorld::PlayerInFocus];
 
     if (idx == STAT_CALORIES) {
-        const int32 healthDiff = (int32)((double)info.m_nMaxHealth - (double)info.m_pPed->m_fHealth); // _ftol: truncated to an integer, BEFORE the nested increment below
+        const int32 healthDiff = (int32)((x87d)info.m_nMaxHealth - (x87d)info.m_pPed->m_fHealth); // _ftol: truncated to an integer, BEFORE the nested increment below
 
         IncrementStat(STAT_RIOT_MISSION_ACCOMPLISHED, value);
 
         if ((double)value > (double)healthDiff) {
-            IncrementStat(STAT_FAT, (float)(((double)value - (double)healthDiff) * 0.5));
+            IncrementStat(STAT_FAT, (float)(((x87d)value - (x87d)healthDiff) * (x87d)0.5));
         }
 
         ProcessReactionStatsOnIncrement(stat);
@@ -1770,22 +1770,22 @@ void CStats::IncrementStat(eStats stat, float value) {
 
     if (idx == STAT_RIOT_MISSION_ACCOMPLISHED) { // eating: the "calories" go into the player's health
         // 0x55C283: (int16) m_nNumHoursDidntEat - value * 0.5, clamped to [0, 36] (NaN => 36)
-        const float tmp = (float)((double)(int16)info.m_nNumHoursDidntEat - (double)value * 0.5);
-        double hours;
+        const float tmp = (float)((x87d)(int16)info.m_nNumHoursDidntEat - (x87d)value * (x87d)0.5);
+        x87d hours;
         if (0.0 > (double)tmp) {
-            hours = 0.0;
+            hours = (x87d)0.0;
         } else {
-            hours = (double)tmp < 36.0 ? (double)tmp : 36.0;
+            hours = (x87d)tmp < (x87d)36.0 ? (x87d)tmp : (x87d)36.0;
         }
         info.m_nNumHoursDidntEat = (uint16)(int16)(int32)hours;
 
-        const int32 healthDiff = (int32)((double)info.m_nMaxHealth - (double)info.m_pPed->m_fHealth);
+        const int32 healthDiff = (int32)((x87d)info.m_nMaxHealth - (x87d)info.m_pPed->m_fHealth);
         if (!((double)value < (double)healthDiff)) { // value >= diff (or NaN): only the missing health is added and the hunger is gone
             value = (float)healthDiff;
             info.m_nNumHoursDidntEat = 0;
         }
 
-        info.m_pPed->m_fHealth = (float)((double)value + (double)info.m_pPed->m_fHealth);
+        info.m_pPed->m_fHealth = (float)((x87d)value + (x87d)info.m_pPed->m_fHealth);
         UpdateStatsAddToHealth((uint32)(int32)value);
         ProcessReactionStatsOnIncrement(stat);
         CheckForStatsMessage();
@@ -1803,12 +1803,12 @@ void CStats::IncrementStat(eStats stat, float value) {
 
 // 0x55C470
 void CStats::UpdateFatAndMuscleStats(uint32 value) {
-    if ((double)StatReactionValue[STAT_TIMELIMIT_FAT_ADJUST] * 1000.0 < (double)m_FatCounter) {
+    if ((x87d)StatReactionValue[STAT_TIMELIMIT_FAT_ADJUST] * (x87d)1000.0 < (double)m_FatCounter) {
         m_FatCounter = 0;
 
         if (StatTypesFloat[STAT_FAT] > 0.0f) {
             if (StatReactionValue[STAT_DEC_FAT] > 0.0f) {
-                const double fat = (double)StatTypesFloat[STAT_FAT] - (double)StatReactionValue[STAT_DEC_FAT];
+                const x87d fat = (x87d)StatTypesFloat[STAT_FAT] - (x87d)StatReactionValue[STAT_DEC_FAT];
                 StatTypesFloat[STAT_FAT] = fat > 0.0 ? (float)fat : 0.0f;
                 CheckForStatsMessage();
             }
@@ -1822,7 +1822,7 @@ void CStats::UpdateFatAndMuscleStats(uint32 value) {
             }
         } else {
             if (StatReactionValue[STAT_DEC_BODY_MUSCLE] > 0.0f) {
-                const double muscle = (double)StatTypesFloat[STAT_MUSCLE] - (double)StatReactionValue[STAT_DEC_BODY_MUSCLE];
+                const x87d muscle = (x87d)StatTypesFloat[STAT_MUSCLE] - (x87d)StatReactionValue[STAT_DEC_BODY_MUSCLE];
                 StatTypesFloat[STAT_MUSCLE] = muscle > 0.0 ? (float)muscle : 0.0f;
                 CheckForStatsMessage();
             }
@@ -1833,7 +1833,7 @@ void CStats::UpdateFatAndMuscleStats(uint32 value) {
         m_FatCounter += (uint32)TimeStepInMS() * value / 10;
     }
 
-    if ((double)StatReactionValue[STAT_TIMELIMIT_MAX_HEALTH] * 1000.0 < (double)m_MaxHealthCounter) {
+    if ((x87d)StatReactionValue[STAT_TIMELIMIT_MAX_HEALTH] * (x87d)1000.0 < (double)m_MaxHealthCounter) {
         IncrementStat(STAT_MAX_HEALTH, StatReactionValue[STAT_INC_MAX_HEALTH]);
         DisplayScriptStatUpdateMessage(STAT_UPDATE_INCREASE, STAT_MAX_HEALTH, StatReactionValue[STAT_INC_MAX_HEALTH]);
         m_MaxHealthCounter = 0;
@@ -1871,7 +1871,7 @@ void CStats::UpdateStatsWhenCycling(bool arg0, CBmx* bmx) {
     if (std::abs(bmx->m_GasPedal) > 0.0f || arg0) {
         UpdateFatAndMuscleStats(static_cast<uint32>(StatReactionValue[arg0 ? STAT_EXERCISE_RATE_CYCLE_SPRINT : STAT_EXERCISE_RATE_CYCLE]));
 
-        if ((double)StatReactionValue[STAT_TIMELIMIT_CYCLE_STAMINA] * 1000.0 < (double)m_CycleStaminaCounter) {
+        if ((x87d)StatReactionValue[STAT_TIMELIMIT_CYCLE_STAMINA] * (x87d)1000.0 < (double)m_CycleStaminaCounter) {
             m_CycleStaminaCounter = 0;
             IncrementStat(STAT_STAMINA, StatReactionValue[STAT_INC_CYCLE_STAMINA]);
             DisplayScriptStatUpdateMessage(STAT_UPDATE_INCREASE, STAT_STAMINA, StatReactionValue[STAT_INC_CYCLE_STAMINA]);
@@ -1880,7 +1880,7 @@ void CStats::UpdateStatsWhenCycling(bool arg0, CBmx* bmx) {
         }
     }
 
-    if ((double)StatReactionValue[STAT_TIMELIMIT_CYCLE_SKILL] * 1000.0 < (double)m_CycleSkillCounter) {
+    if ((x87d)StatReactionValue[STAT_TIMELIMIT_CYCLE_SKILL] * (x87d)1000.0 < (double)m_CycleSkillCounter) {
         m_CycleSkillCounter = 0;
         IncrementStat(STAT_CYCLING_SKILL, StatReactionValue[STAT_INC_CYCLE_SKILL]);
         DisplayScriptStatUpdateMessage(STAT_UPDATE_INCREASE, STAT_CYCLING_SKILL, StatReactionValue[STAT_INC_CYCLE_SKILL]);
@@ -1888,14 +1888,14 @@ void CStats::UpdateStatsWhenCycling(bool arg0, CBmx* bmx) {
     }
 
     // x87: (x*x + y*y) + z*z in extended precision
-    const double speedSq = (double)bmx->m_vecMoveSpeed.x * bmx->m_vecMoveSpeed.x
-                         + (double)bmx->m_vecMoveSpeed.y * bmx->m_vecMoveSpeed.y
-                         + (double)bmx->m_vecMoveSpeed.z * bmx->m_vecMoveSpeed.z;
+    const x87d speedSq = (x87d)bmx->m_vecMoveSpeed.x * bmx->m_vecMoveSpeed.x
+                         + (x87d)bmx->m_vecMoveSpeed.y * bmx->m_vecMoveSpeed.y
+                         + (x87d)bmx->m_vecMoveSpeed.z * bmx->m_vecMoveSpeed.z;
 
     float rate;
-    if (bmx->m_nNoOfContactWheels < 2 && (double)0.05f * (double)0.05f < speedSq) {
+    if (bmx->m_nNoOfContactWheels < 2 && (x87d)0.05f * (x87d)0.05f < speedSq) {
         rate = 3.0f;
-    } else if ((double)0.2f * (double)0.2f < speedSq) {
+    } else if ((x87d)0.2f * (x87d)0.2f < speedSq) {
         rate = arg0 ? 1.5f : 1.0f;
     } else {
         return;
@@ -1904,14 +1904,14 @@ void CStats::UpdateStatsWhenCycling(bool arg0, CBmx* bmx) {
         return;
     }
 
-    m_CycleSkillCounter += (int32)std::ceil((double)(uint32)TimeStepInMS() * (double)rate);
+    m_CycleSkillCounter += (int32)std::ceil((x87d)(uint32)TimeStepInMS() * (x87d)rate);
 }
 
 // 0x55C990
 void CStats::UpdateStatsWhenSwimming(bool arg0, bool arg1) {
     UpdateFatAndMuscleStats(static_cast<uint32>(StatReactionValue[(arg0 || arg1) ? STAT_EXERCISE_RATE_SWIM_SPRINT : STAT_EXERCISE_RATE_SWIM]));
 
-    if ((double)StatReactionValue[STAT_TIMELIMIT_SWIM_STAMINA] * 1000.0 < (double)m_SwimStaminaCounter) {
+    if ((x87d)StatReactionValue[STAT_TIMELIMIT_SWIM_STAMINA] * (x87d)1000.0 < (double)m_SwimStaminaCounter) {
         m_SwimStaminaCounter = 0;
         IncrementStat(STAT_STAMINA, StatReactionValue[STAT_INC_SWIM_STAMINA]);
         DisplayScriptStatUpdateMessage(STAT_UPDATE_INCREASE, STAT_STAMINA, StatReactionValue[STAT_INC_SWIM_STAMINA]);
@@ -1920,7 +1920,7 @@ void CStats::UpdateStatsWhenSwimming(bool arg0, bool arg1) {
     }
 
     if (arg0) {
-        if ((double)StatReactionValue[STAT_TIMELIMIT_BREATH_UNDERWATER] * 1000.0 < (double)m_SwimUnderWaterCounter) {
+        if ((x87d)StatReactionValue[STAT_TIMELIMIT_BREATH_UNDERWATER] * (x87d)1000.0 < (double)m_SwimUnderWaterCounter) {
             m_SwimUnderWaterCounter = 0;
             IncrementStat(STAT_LUNG_CAPACITY, StatReactionValue[STAT_INC_BREATH_UNDERWATER]);
             DisplayScriptStatUpdateMessage(STAT_UPDATE_INCREASE, STAT_LUNG_CAPACITY, StatReactionValue[STAT_INC_BREATH_UNDERWATER]);
@@ -1935,17 +1935,17 @@ void CStats::UpdateStatsWhenDriving(CVehicle* vehicle) {
     const auto* const automobile = vehicle->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE ? vehicle->AsAutomobile() : nullptr;
 
     const float counter = (float)m_DrivingCounter; // x87: spilled to a float temp
-    if ((double)StatReactionValue[STAT_TIMELIMIT_DRIVING_SKILL] * 1000.0 < (double)counter) {
+    if ((x87d)StatReactionValue[STAT_TIMELIMIT_DRIVING_SKILL] * (x87d)1000.0 < (double)counter) {
         m_DrivingCounter = 0;
         IncrementStat(STAT_DRIVING_SKILL, StatReactionValue[STAT_INC_DRIVING_SKILL]);
         DisplayScriptStatUpdateMessage(STAT_UPDATE_INCREASE, STAT_DRIVING_SKILL, StatReactionValue[STAT_INC_DRIVING_SKILL]);
         return;
     }
 
-    const double speed = std::sqrt(
-          (double)vehicle->m_vecMoveSpeed.x * vehicle->m_vecMoveSpeed.x
-        + (double)vehicle->m_vecMoveSpeed.y * vehicle->m_vecMoveSpeed.y
-        + (double)vehicle->m_vecMoveSpeed.z * vehicle->m_vecMoveSpeed.z
+    const x87d speed = std::sqrt(
+          (x87d)vehicle->m_vecMoveSpeed.x * vehicle->m_vecMoveSpeed.x
+        + (x87d)vehicle->m_vecMoveSpeed.y * vehicle->m_vecMoveSpeed.y
+        + (x87d)vehicle->m_vecMoveSpeed.z * vehicle->m_vecMoveSpeed.z
     );
 
     float rate;
@@ -1956,7 +1956,7 @@ void CStats::UpdateStatsWhenDriving(CVehicle* vehicle) {
     } else {
         return;
     }
-    m_DrivingCounter = (int32)((double)(uint32)TimeStepInMS() * (double)rate + (double)counter);
+    m_DrivingCounter = (int32)((x87d)(uint32)TimeStepInMS() * (x87d)rate + (x87d)counter);
 }
 
 // 0x55CC00
@@ -1966,7 +1966,7 @@ void CStats::UpdateStatsWhenFlying(CVehicle* vehicle) {
     }
 
     const float counter = (float)m_FlyingCounter; // x87: spilled to a float temp
-    if ((double)StatReactionValue[STAT_TIMELIMIT_FLYING_SKILL] * 1000.0 < (double)counter) {
+    if ((x87d)StatReactionValue[STAT_TIMELIMIT_FLYING_SKILL] * (x87d)1000.0 < (double)counter) {
         m_FlyingCounter = 0;
         IncrementStat(STAT_FLYING_SKILL, StatReactionValue[STAT_INC_FLYING_SKILL]);
         DisplayScriptStatUpdateMessage(STAT_UPDATE_INCREASE, STAT_FLYING_SKILL, StatReactionValue[STAT_INC_FLYING_SKILL]);
@@ -1977,10 +1977,10 @@ void CStats::UpdateStatsWhenFlying(CVehicle* vehicle) {
         return;
     }
 
-    const double speed = std::sqrt(
-          (double)vehicle->m_vecMoveSpeed.x * vehicle->m_vecMoveSpeed.x
-        + (double)vehicle->m_vecMoveSpeed.y * vehicle->m_vecMoveSpeed.y
-        + (double)vehicle->m_vecMoveSpeed.z * vehicle->m_vecMoveSpeed.z
+    const x87d speed = std::sqrt(
+          (x87d)vehicle->m_vecMoveSpeed.x * vehicle->m_vecMoveSpeed.x
+        + (x87d)vehicle->m_vecMoveSpeed.y * vehicle->m_vecMoveSpeed.y
+        + (x87d)vehicle->m_vecMoveSpeed.z * vehicle->m_vecMoveSpeed.z
     );
 
     float rate;
@@ -1991,7 +1991,7 @@ void CStats::UpdateStatsWhenFlying(CVehicle* vehicle) {
     } else {
         return;
     }
-    m_FlyingCounter = (int32)((double)(uint32)TimeStepInMS() * (double)rate + (double)counter);
+    m_FlyingCounter = (int32)((x87d)(uint32)TimeStepInMS() * (x87d)rate + (x87d)counter);
 }
 
 // 0x55CD60
@@ -2038,9 +2038,9 @@ void CStats::UpdateStatsWhenWeaponHit(eWeaponType weaponType) {
         return;
     }
 
-    const double counter = (double)m_WeaponCounter;
+    const x87d counter = (x87d)m_WeaponCounter;
     if (counter > (double)StatReactionValue[STAT_TIMELIMIT_PISTOL_SKILL + reactId]) {
-        DisplayScriptStatUpdateMessage(STAT_UPDATE_INCREASE, stat, (float)(counter * (double)increment));
+        DisplayScriptStatUpdateMessage(STAT_UPDATE_INCREASE, stat, (float)(counter * (x87d)increment));
         m_WeaponCounter = 0;
         return;
     }

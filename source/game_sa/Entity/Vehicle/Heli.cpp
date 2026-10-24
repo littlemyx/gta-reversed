@@ -35,11 +35,11 @@ namespace HeliImpl {
 
 //! 0x59C910 - `CVector::Normalise`. A length of 0 (or less) only writes `x = 1` (NaN takes the sqrt path)
 void NormaliseOriginal(CVector& v) {
-    const double sumSq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    const x87d sumSq = ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
     if (sumSq <= 0.0) {
         v.x = 1.0f;
     } else {
-        const double recip = 1.0 / std::sqrt(sumSq);
+        const x87d recip = (x87d)1.0 / std::sqrt(sumSq);
         v.x = (float)(v.x * recip);
         v.y = (float)(v.y * recip);
         v.z = (float)(v.z * recip);
@@ -49,9 +49,9 @@ void NormaliseOriginal(CVector& v) {
 //! 0x59C730 - `CrossProduct`
 CVector CrossProductOriginal(const CVector& a, const CVector& b) {
     return {
-        (float)((double)b.z * a.y - (double)a.z * b.y),
-        (float)((double)a.z * b.x - (double)b.z * a.x),
-        (float)((double)a.x * b.y - (double)b.x * a.y),
+        (float)((x87d)b.z * a.y - (x87d)a.z * b.y),
+        (float)((x87d)a.z * b.x - (x87d)b.z * a.x),
+        (float)((x87d)a.x * b.y - (x87d)b.x * a.y),
     };
 }
 
@@ -59,9 +59,9 @@ CVector CrossProductOriginal(const CVector& a, const CVector& b) {
 CVector Multiply3x3Original(const CMatrix& m, const CVector& v) {
     const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp();
     return CVector{
-        (float)(((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x),
-        (float)(((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y),
-        (float)(((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y)
+        (float)(((x87d)u.x * v.z + (x87d)f.x * v.y) + (x87d)r.x * v.x),
+        (float)(((x87d)u.y * v.z + (x87d)r.y * v.x) + (x87d)f.y * v.y),
+        (float)(((x87d)u.z * v.z + (x87d)r.z * v.x) + (x87d)f.z * v.y)
     };
 }
 
@@ -279,10 +279,10 @@ void CHeli::SearchLightCone(int32 coronaIndex,
     NormaliseOriginal(dir);
 
     // 0x6C593E - Extend the ray by 3 units, and stop at the first building
-    const float dirZ3 = (float)((double)dir.z * 3.0f); // 0x858B3C
-    target.x = (float)((double)dir.x * 3.0f + target.x);
-    target.y = (float)((double)dir.y * 3.0f + target.y);
-    target.z = (float)((double)dirZ3 + target.z);
+    const float dirZ3 = (float)((x87d)dir.z * 3.0f); // 0x858B3C
+    target.x = (float)((x87d)dir.x * 3.0f + target.x);
+    target.y = (float)((x87d)dir.y * 3.0f + target.y);
+    target.z = (float)((x87d)dirZ3 + target.z);
 
     CColPoint colPoint;
     CEntity*  hitEntity{};
@@ -291,25 +291,25 @@ void CHeli::SearchLightCone(int32 coronaIndex,
     }
 
     // 0x6C59F7 - The point 100 units down the light
-    const float dirZ100 = (float)((double)dir.z * 100.0f); // 0x858628
+    const float dirZ100 = (float)((x87d)dir.z * 100.0f); // 0x858628
     const CVector farMid{
-        (float)((double)dir.x * 100.0f + origin.x),
-        (float)((double)dir.y * 100.0f + origin.y),
-        (float)((double)dirZ100 + origin.z)
+        (float)((x87d)dir.x * 100.0f + origin.x),
+        (float)((x87d)dir.y * 100.0f + origin.y),
+        (float)((x87d)dirZ100 + origin.z)
     };
 
     // 0x6C5A50 - Direction to the camera
     CVector toCam{ camPos.x - origin.x, camPos.y - origin.y, camPos.z - origin.z };
     NormaliseOriginal(toCam);
 
-    double camDot = ((double)toCam.x * dir.x + (double)toCam.y * dir.y) + (double)toCam.z * dir.z;
+    x87d camDot = ((x87d)toCam.x * dir.x + (x87d)toCam.y * dir.y) + (x87d)toCam.z * dir.z;
     if (camDot < 0.0) { // 0x858B50
-        camDot = 0.0;
+        camDot = (x87d)0.0;
     }
 
     // 0x6C5ABF - Corona at the origin, brighter the more we look into the light
     {
-        const double pow6 = ((((camDot * camDot) * camDot) * camDot) * camDot) * camDot;
+        const x87d pow6 = ((((camDot * camDot) * camDot) * camDot) * camDot) * camDot;
         CCoronas::RegisterCorona(
             coronaIndex,
             nullptr,
@@ -349,72 +349,72 @@ void CHeli::SearchLightCone(int32 coronaIndex,
         CVector up = CrossProductOriginal(right, dir);
         NormaliseOriginal(up);
 
-        const double angle = (double)i * (double)std::bit_cast<float>(0x3E20D97Cu); // 0x8717B4 (pi / 20)
+        const x87d angle = (x87d)i * (x87d)std::bit_cast<float>(0x3E20D97Cu); // 0x8717B4 (pi / 20)
         const float  sinA  = (float)x87::sin(angle);
         const float  cosA  = (float)x87::cos(angle);
 
         // 0x6C5BCD
-        const double rightXs  = (double)right.x * sinA;
+        const x87d rightXs  = (x87d)right.x * sinA;
         const float  rightXsF = (float)rightXs;
-        const double rightYs  = (double)right.y * sinA;
-        const double rightZs  = (double)right.z * sinA;
+        const x87d rightYs  = (x87d)right.y * sinA;
+        const x87d rightZs  = (x87d)right.z * sinA;
         const float  rightZsF = (float)rightZs;
 
-        const float  nearRightX = (float)((double)rightXsF * baseRadius);
+        const float  nearRightX = (float)((x87d)rightXsF * baseRadius);
         const float  nearRightY = (float)(rightYs * baseRadius);
-        const double nearRightZ = rightZs * baseRadius;
-        const double nearRightXOrigin = (double)nearRightX + origin.x;
-        const float  nearTmpY = (float)((double)nearRightY + origin.y);
+        const x87d nearRightZ = rightZs * baseRadius;
+        const x87d nearRightXOrigin = (x87d)nearRightX + origin.x;
+        const float  nearTmpY = (float)((x87d)nearRightY + origin.y);
         const float  nearTmpZ = (float)(nearRightZ + origin.z);
 
         // 0x6C5C54
-        const double upXc = (double)up.x * cosA;
-        const double upYc = (double)up.y * cosA;
+        const x87d upXc = (x87d)up.x * cosA;
+        const x87d upYc = (x87d)up.y * cosA;
         const float  upXcF = (float)upXc;
         const float  upYcF = (float)upYc;
-        const float  upZcF = (float)((double)up.z * cosA);
+        const float  upZcF = (float)((x87d)up.z * cosA);
 
         const float nearUpX = (float)(upXc * baseRadius);
         const float nearUpY = (float)(upYc * baseRadius);
-        const float nearUpZ = (float)((double)upZcF * baseRadius);
+        const float nearUpZ = (float)((x87d)upZcF * baseRadius);
 
         // The vertex on the small circle (near the origin)
         const CVector P{
-            (float)((double)nearUpX + nearRightXOrigin),
-            (float)((double)nearUpY + nearTmpY),
-            (float)((double)nearUpZ + nearTmpZ)
+            (float)((x87d)nearUpX + nearRightXOrigin),
+            (float)((x87d)nearUpY + nearTmpY),
+            (float)((x87d)nearUpZ + nearTmpZ)
         };
 
         // 0x6C5CF3 - The point on the big circle (at the end of the light)
-        const float  farRightX = (float)((double)rightXsF * targetRadius);
+        const float  farRightX = (float)((x87d)rightXsF * targetRadius);
         const float  farRightY = (float)(rightYs * targetRadius);
-        const double farRightZ = (double)rightZsF * targetRadius;
+        const x87d farRightZ = (x87d)rightZsF * targetRadius;
 
-        const float  farTmpY = (float)((double)farRightY + farMid.y);
+        const float  farTmpY = (float)((x87d)farRightY + farMid.y);
         const float  farTmpZ = (float)(farRightZ + farMid.z);
-        const double farTmpX = (double)farRightX + farMid.x;
+        const x87d farTmpX = (x87d)farRightX + farMid.x;
 
-        const float farUpX = (float)((double)upXcF * targetRadius);
-        const float farUpY = (float)((double)upYcF * targetRadius);
-        const float farUpZ = (float)((double)upZcF * targetRadius);
+        const float farUpX = (float)((x87d)upXcF * targetRadius);
+        const float farUpY = (float)((x87d)upYcF * targetRadius);
+        const float farUpZ = (float)((x87d)upZcF * targetRadius);
 
-        const double Qx = farTmpX + farUpX;
-        const double Qy = (double)farUpY + farTmpY;
-        const float  Qz = (float)((double)farUpZ + farTmpZ);
+        const x87d Qx = farTmpX + farUpX;
+        const x87d Qy = (x87d)farUpY + farTmpY;
+        const float  Qz = (float)((x87d)farUpZ + farTmpZ);
 
         // 0x6C5DB5 - Intersect P->Q with the plane at the target's height
-        const float  t  = (float)(((double)P.z - target.z) / ((double)P.z - Qz));
+        const float  t  = (float)(((x87d)P.z - target.z) / ((x87d)P.z - Qz));
         const float  dX = (float)(Qx - P.x);
-        const double dY = Qy - P.y;
-        const double dZ = (double)Qz - P.z;
+        const x87d dY = Qy - P.y;
+        const x87d dZ = (x87d)Qz - P.z;
 
-        const float  tX = (float)((double)dX * t);
+        const float  tX = (float)((x87d)dX * t);
         const float  tY = (float)(dY * t);
-        const double tZ = dZ * t;
+        const x87d tZ = dZ * t;
 
         CVector R{
-            (float)((double)tX + P.x),
-            (float)((double)tY + P.y),
+            (float)((x87d)tX + P.x),
+            (float)((x87d)tY + P.y),
             (float)(tZ + P.z)
         };
 
@@ -426,24 +426,24 @@ void CHeli::SearchLightCone(int32 coronaIndex,
         }
 
         // 0x6C5E7B - Limit the length of P->R to 100 units
-        const double rpX = (double)R.x - P.x;
-        const double rpY = (double)R.y - P.y;
-        const double rpZ = (double)R.z - P.z;
+        const x87d rpX = (x87d)R.x - P.x;
+        const x87d rpY = (x87d)R.y - P.y;
+        const x87d rpZ = (x87d)R.z - P.z;
         const float  rpYF = (float)rpY;
         const float  rpZF = (float)rpZ;
         if (std::sqrt((rpZ * rpZ + rpY * rpY) + rpX * rpX) > 100.0) { // 0x858628
             CVector v{ (float)rpX, rpYF, rpZF };
             NormaliseOriginal(v);
 
-            const float vZ100 = (float)((double)v.z * 100.0f);
-            R.x = (float)((double)v.x * 100.0f + P.x);
-            R.y = (float)((double)v.y * 100.0f + P.y);
-            R.z = (float)((double)vZ100 + P.z);
+            const float vZ100 = (float)((x87d)v.z * 100.0f);
+            R.x = (float)((x87d)v.x * 100.0f + P.x);
+            R.y = (float)((x87d)v.y * 100.0f + P.y);
+            R.z = (float)((x87d)vZ100 + P.z);
         }
 
         // 0x6C5F5D
         const auto idx = (int32)uiTempBufferVerticesStored;
-        const auto fade = (float)((double)CCustomBuildingDNPipeline::m_fDNBalanceParam * 0.15f + 0.1f); // 0x8D12C0, 0x858FCC, 0x858B1C
+        const auto fade = (float)((x87d)CCustomBuildingDNPipeline::m_fDNBalanceParam * 0.15f + 0.1f); // 0x8D12C0, 0x858FCC, 0x858B1C
 
         auto& vtxNear = TempBufferVertices.m_3d[idx];
         auto& vtxFar  = TempBufferVertices.m_3d[idx + 1];
@@ -457,11 +457,11 @@ void CHeli::SearchLightCone(int32 coronaIndex,
         CVector toVtx{ P.x - origin.x, P.y - origin.y, P.z - origin.z };
         NormaliseOriginal(toVtx);
 
-        double vtxCamDot = ((double)toVtx.x * toCam.x + (double)toVtx.z * toCam.z) + (double)toVtx.y * toCam.y;
+        x87d vtxCamDot = ((x87d)toVtx.x * toCam.x + (x87d)toVtx.z * toCam.z) + (x87d)toVtx.y * toCam.y;
         if (vtxCamDot < 0.0) {
             vtxCamDot = -vtxCamDot;
         }
-        const double vtxCamDotSq = vtxCamDot * vtxCamDot;
+        const x87d vtxCamDotSq = vtxCamDot * vtxCamDot;
         if (vtxCamDotSq > (double)maxDotSq) {
             maxDotSq = (float)vtxCamDotSq;
         }
@@ -493,9 +493,9 @@ void CHeli::SearchLightCone(int32 coronaIndex,
     // 0x6C60D5 - Colour of every vertex
     const auto numVertices = (int32)uiTempBufferVerticesStored;
     {
-        const double k = 1.0 / (double)maxDotSq; // 0x858624
+        const x87d k = (x87d)1.0 / (x87d)maxDotSq; // 0x858624
         for (int32 j = 0; j < numVertices; j++) {
-            const double v  = ((double)vtxDotSq[j] * (double)vtxFade[j]) * k;
+            const x87d v  = ((x87d)vtxDotSq[j] * (x87d)vtxFade[j]) * k;
             const auto   c1 = (uint8)Ftol(200.0f * v); // 0x858A48
             const auto   c2 = (uint8)Ftol(v * 255.0f); // 0x859AAC
             TempBufferVertices.m_3d[j].color = ((uint32)c1 << 16) | ((uint32)c1 << 8) | (uint32)c2;
@@ -528,27 +528,27 @@ void CHeli::SearchLightCone(int32 coronaIndex,
         return;
     }
 
-    CVector shadowPos{ target.x, target.y, (float)((double)target.z + 5.0f) }; // 0x858C80
-    const auto topX   = (float)((double)useless1.x * 1.2f); // 0x858F08
-    const auto topY   = (float)((double)useless1.y * 1.2f);
-    const auto rightX = (float)((double)useless2.x * 1.2f);
-    const auto rightY = (float)((double)useless2.y * 1.2f);
+    CVector shadowPos{ target.x, target.y, (float)((x87d)target.z + 5.0f) }; // 0x858C80
+    const auto topX   = (float)((x87d)useless1.x * 1.2f); // 0x858F08
+    const auto topY   = (float)((x87d)useless1.y * 1.2f);
+    const auto rightX = (float)((x87d)useless2.x * 1.2f);
+    const auto rightY = (float)((x87d)useless2.y * 1.2f);
 
-    if (!(std::sqrt((double)topX * topX + (double)topY * topY) < 100.0)) { // 0x858628
+    if (!(std::sqrt((x87d)topX * topX + (x87d)topY * topY) < 100.0)) { // 0x858628
         return;
     }
-    if (!(std::sqrt((double)rightX * rightX + (double)rightY * rightY) < 100.0)) {
+    if (!(std::sqrt((x87d)rightX * rightX + (x87d)rightY * rightY) < 100.0)) {
         return;
     }
 
-    const double dx = (double)target.x - camPos.x;
-    const double dy = (double)target.y - camPos.y;
-    const double camDist = std::sqrt(dy * dy + dx * dx);
+    const x87d dx = (x87d)target.x - camPos.x;
+    const x87d dy = (x87d)target.y - camPos.y;
+    const x87d camDist = std::sqrt(dy * dy + dx * dx);
     if (camDist > 25.0) { // 0x858FE8
         return;
     }
 
-    const double s = ((1.0 - camDist * 0.04f) * (double)power) * 0.5; // 0x858CEC, 0x858B8C
+    const x87d s = (((x87d)1.0 - camDist * 0.04f) * (x87d)power) * (x87d)0.5; // 0x858CEC, 0x858B8C
     const auto red   = (uint8)Ftol(200.0f * s); // 0x858A48
     const auto blue  = (uint8)Ftol(255.0f * s); // 0x859AAC
     const auto inten = (int16)Ftol(s * 128.0f); // 0x858BF4
@@ -577,37 +577,37 @@ CHeli* CHeli::GenerateHeli(CPed* target, bool newsHeli) {
 
     // 0x6C65A0 - Pick a spot 250 units away from the target, in a random direction
     const CVector targetPos = target->GetPosition();
-    const double  angle0    = (double)(rand() & 0xFF) * (double)std::bit_cast<float>(0x3CC8F5C3u); // 0x859C44
+    const x87d  angle0    = (x87d)(rand() & 0xFF) * (x87d)std::bit_cast<float>(0x3CC8F5C3u); // 0x859C44
     float         angle     = (float)angle0;
 
     CVector pos{
-        (float)(x87::cos(angle0) * 250.0f + targetPos.x), // 0x859F80
-        (float)(x87::sin((double)angle) * 250.0f + targetPos.y),
+        (float)(X87R(x87::cos(angle0) * 250.0f) + targetPos.x), // 0x859F80
+        (float)(X87R(x87::sin((double)angle) * 250.0f) + targetPos.y),
         targetPos.z
     };
 
     // 0x6C660F - Out of the map? Then the opposite direction
     if (pos.x < -3000.0f || pos.x > 3000.0f || pos.y < -3000.0f || pos.y > 3000.0f) { // 0x859A90, 0x859A94
-        angle = (float)((double)angle + std::numbers::pi_v<float>); // 0x858CB8
+        angle = (float)((x87d)angle + std::numbers::pi_v<float>); // 0x858CB8
 
         const CVector targetPos2 = target->GetPosition();
         pos = CVector{
-            (float)(x87::cos((double)angle) * 250.0f + targetPos2.x),
-            (float)(x87::sin((double)angle) * 250.0f + targetPos2.y),
+            (float)(X87R(x87::cos((double)angle) * 250.0f) + targetPos2.x),
+            (float)(X87R(x87::sin((double)angle) * 250.0f) + targetPos2.y),
             targetPos2.z
         };
     }
 
     // 0x6C66A8
-    float z = (float)((double)pos.z + 50.0f); // 0x858B40
-    const auto toChiliadX = (double)pos.x - NOTSA_GLOBAL_EXPR(0x8717C0, (float), k_8717C0);
-    const auto toChiliadY = (double)pos.y - NOTSA_GLOBAL_EXPR(0x8717BC, (float), k_8717BC);
+    float z = (float)((x87d)pos.z + 50.0f); // 0x858B40
+    const auto toChiliadX = (x87d)pos.x - NOTSA_GLOBAL_EXPR(0x8717C0, (float), k_8717C0);
+    const auto toChiliadY = (x87d)pos.y - NOTSA_GLOBAL_EXPR(0x8717BC, (float), k_8717BC);
     if (std::sqrt(toChiliadY * toChiliadY + toChiliadX * toChiliadX) < 350.0f) { // Too close to Mt. Chiliad? Spawn right above the target. 0x858A4C
         const CVector targetPos3 = target->GetPosition();
         pos.x = targetPos3.x;
         pos.y = targetPos3.y;
 
-        double zz = (double)targetPos3.z + 200.0f; // 0x858A48
+        x87d zz = (x87d)targetPos3.z + 200.0f; // 0x858A48
         if (!(zz > (double)NOTSA_GLOBAL_EXPR(0x8717B8, (float), k_8717B8))) {
             zz = NOTSA_GLOBAL_EXPR(0x8717B8, (float), k_8717B8);
         }
@@ -615,7 +615,7 @@ CHeli* CHeli::GenerateHeli(CPed* target, bool newsHeli) {
     }
 
     // 0x6C6730 - Not underground please
-    const double groundZ = (double)CWorld::FindGroundZForCoord(pos.x, pos.y) + 20.0f; // 0x858BA4
+    const x87d groundZ = (x87d)CWorld::FindGroundZForCoord(pos.x, pos.y) + 20.0f; // 0x858BA4
     const float  finalZ  = !((double)z > groundZ) ? (float)groundZ : z;
 
     heli->GetMatrix().SetTranslate({ pos.x, pos.y, finalZ });
@@ -641,7 +641,7 @@ CHeli* CHeli::GenerateHeli(CPed* target, bool newsHeli) {
     }
 
     // 0x6C6813 - Orientation: heading = angle + pi
-    const float heading = (float)((double)angle + std::numbers::pi_v<float>);
+    const float heading = (float)((x87d)angle + std::numbers::pi_v<float>);
     heli->m_fHeliRotorSpeed = 0.165f; // 0x3E28F5C3
 
     auto& mat = heli->GetMatrix();
@@ -676,7 +676,7 @@ void CHeli::TestSniperCollision(CVector* origin, CVector* target) {
 
         const auto mat = (CMatrix*)heli->m_matrix;
         if (CCollision::DistToLine(*origin, *target, mat->TransformPoint({ -0.43f, 1.49f, 1.5f })) < 0.8f) {
-            heli->m_fRotationBalance = (float)(CGeneral::GetRandomNumber() < pow(2, 14) - 1) * 0.1f - 0.05f; // 2^14 - 1 = 16383 [-0.05, 0.05]
+            heli->m_fRotationBalance = (float)(CGeneral::GetRandomNumber() < X87R(pow(2, 14) - 1)) * 0.1f - 0.05f; // 2^14 - 1 = 16383 [-0.05, 0.05]
             heli->BlowUpCar(FindPlayerPed(), false);
             heli->m_nNumSwatOccupants = 0;
         };
@@ -695,14 +695,14 @@ bool CHeli::SendDownSwat() {
 
     // 0x6C6A3E - Close enough to the target and slow enough?
     const auto& pos = GetPosition();
-    const double dX = (double)pos.x - targetPos.x;
-    const double dY = (double)pos.y - targetPos.y;
-    const double dZ = (double)pos.z - targetPos.z;
+    const x87d dX = (x87d)pos.x - targetPos.x;
+    const x87d dY = (x87d)pos.y - targetPos.y;
+    const x87d dZ = (x87d)pos.z - targetPos.z;
     if (std::sqrt((dX * dX + dY * dY) + dZ * dZ) > 50.0f) { // 0x858B40
         return false;
     }
 
-    const double speed = std::sqrt(((double)m_vecMoveSpeed.x * m_vecMoveSpeed.x + (double)m_vecMoveSpeed.y * m_vecMoveSpeed.y) + (double)m_vecMoveSpeed.z * m_vecMoveSpeed.z); // 0x4082C0
+    const x87d speed = std::sqrt(((x87d)m_vecMoveSpeed.x * m_vecMoveSpeed.x + (x87d)m_vecMoveSpeed.y * m_vecMoveSpeed.y) + (x87d)m_vecMoveSpeed.z * m_vecMoveSpeed.z); // 0x4082C0
     if (speed > 0.1f) { // 0x858B1C
         return false;
     }
@@ -717,7 +717,7 @@ bool CHeli::SendDownSwat() {
     const auto groundZ = CWorld::FindGroundZFor3DCoord(ropePos, nullptr, nullptr);
 
     // 0x6C6B2E - Is the ground close to the target?
-    double zDiff = (double)targetPos.z - groundZ;
+    x87d zDiff = (x87d)targetPos.z - groundZ;
     if (zDiff < 0.0) { // 0x858B50
         zDiff = -zDiff;
     }
@@ -842,9 +842,9 @@ void CHeli::UpdateHelis() {
 
         const auto& helipos = heli->GetPosition();
         const auto  plypos  = FindPlayerCoors(); // 0x56E010
-        const double dX = (double)plypos.x - helipos.x;
-        const double dY = (double)plypos.y - helipos.y;
-        const double dZ = (double)plypos.z - helipos.z;
+        const x87d dX = (x87d)plypos.x - helipos.x;
+        const x87d dY = (x87d)plypos.y - helipos.y;
+        const x87d dZ = (x87d)plypos.z - helipos.z;
         if (std::abs(std::sqrt((dZ * dZ + dY * dY) + dX * dX)) > 170.0f) { // NOTE: the original adds z, y, x in this order // 0x858F98
             CWorld::Remove(heli);
             delete slot;
@@ -1041,14 +1041,14 @@ void CHeli::ProcessControlInputs(uint8 playerNum) {
         if (useMouse) {
             m_nLastControlInput = eControllerType::MOUSE;
             if (pad->NewState.m_bVehicleMouseLook == 0) {
-                m_fSteeringLeftRight = (float)((double)m_fSteeringLeftRight - (double)mouseMoved.x * (double)0.0025f); // 0x871674
-                m_fSteeringUpDown    = (float)((double)mouseMoved.y * (double)0.0025f + (double)m_fSteeringUpDown);
+                m_fSteeringLeftRight = (float)((x87d)m_fSteeringLeftRight - (x87d)mouseMoved.x * (x87d)0.0025f); // 0x871674
+                m_fSteeringUpDown    = (float)((x87d)mouseMoved.y * (x87d)0.0025f + (x87d)m_fSteeringUpDown);
             }
             if (std::abs(m_fSteeringLeftRight) < 0.5f) {
-                m_fSteeringLeftRight = (float)(std::pow((double)0.98f, (double)CTimer::GetTimeStep()) * (double)m_fSteeringLeftRight); // 0x87167C
+                m_fSteeringLeftRight = (float)(X87R(std::pow((double)0.98f, (double)CTimer::GetTimeStep()) * (double)m_fSteeringLeftRight)); // 0x87167C
             }
             if (std::abs(m_fSteeringUpDown) < 0.5f) {
-                m_fSteeringUpDown = (float)(std::pow((double)0.98f, (double)CTimer::GetTimeStep()) * (double)m_fSteeringUpDown);
+                m_fSteeringUpDown = (float)(X87R(std::pow((double)0.98f, (double)CTimer::GetTimeStep()) * (double)m_fSteeringUpDown));
             }
         } else if (pad->GetSteeringLeftRight() != 0 || pad->GetSteeringUpDown() != 0 || m_nLastControlInput != eControllerType::MOUSE) { // 0x6C492E
             SteerWithPad();
@@ -1072,13 +1072,13 @@ void CHeli::ProcessControlInputs(uint8 playerNum) {
 
         auto pitchDir = CrossProduct(CVector{ 0.0f, 0.0f, 1.0f }, GetRight());
         pitchDir.Normalise();
-        const double pitch = ((double)pitchDir.y * speed.y + (double)pitchDir.z * speed.z + (double)pitchDir.x * speed.x) * (double)flying->m_fPitchStab;
-        m_fSteeringUpDown = (float)std::clamp(pitch, -2.0, 2.0);
+        const x87d pitch = ((x87d)pitchDir.y * speed.y + (x87d)pitchDir.z * speed.z + (x87d)pitchDir.x * speed.x) * (x87d)flying->m_fPitchStab;
+        m_fSteeringUpDown = (float)std::clamp(pitch, -(x87d)2.0, (x87d)2.0);
 
         auto rollDir = CrossProduct(GetForward(), CVector{ 0.0f, 0.0f, 1.0f });
         rollDir.Normalise();
-        const double roll = ((double)rollDir.y * speed.y + (double)rollDir.z * speed.z + (double)rollDir.x * speed.x) * (double)flying->m_fRollStab;
-        m_fSteeringLeftRight = (float)std::clamp(roll, -2.0, 2.0);
+        const x87d roll = ((x87d)rollDir.y * speed.y + (x87d)rollDir.z * speed.z + (x87d)rollDir.x * speed.x) * (x87d)flying->m_fRollStab;
+        m_fSteeringLeftRight = (float)std::clamp(roll, -(x87d)2.0, (x87d)2.0);
     }
 
     m_fSteerAngle = 0.0f; // 0x6C4D75
@@ -1089,9 +1089,9 @@ void CHeli::ProcessControlInputs(uint8 playerNum) {
     if (pad->DisablePlayerControls) {
         FindPlayerPed()->KeepAreaAroundPlayerClear();
 
-        const double mag = std::sqrt((double)m_vecMoveSpeed.x * m_vecMoveSpeed.x + (double)m_vecMoveSpeed.y * m_vecMoveSpeed.y + (double)m_vecMoveSpeed.z * m_vecMoveSpeed.z);
+        const x87d mag = std::sqrt((x87d)m_vecMoveSpeed.x * m_vecMoveSpeed.x + (x87d)m_vecMoveSpeed.y * m_vecMoveSpeed.y + (x87d)m_vecMoveSpeed.z * m_vecMoveSpeed.z);
         if (mag > (double)0.28f) { // 0x871254
-            const double scale = (double)0.28f / mag;
+            const x87d scale = (x87d)0.28f / mag;
             m_vecMoveSpeed.x = (float)(scale * m_vecMoveSpeed.x);
             m_vecMoveSpeed.y = (float)(scale * m_vecMoveSpeed.y);
             m_vecMoveSpeed.z = (float)(scale * m_vecMoveSpeed.z);
@@ -1100,7 +1100,7 @@ void CHeli::ProcessControlInputs(uint8 playerNum) {
 
     if (m_fHealth < 250.0f) { // 0x6C4E1A
         m_fAccelerationBreakStatus = -0.1f;
-        m_fLeftRightSkid = (float)((double)m_fLeftRightSkid + 0.5);
+        m_fLeftRightSkid = (float)((x87d)m_fLeftRightSkid + (x87d)0.5);
     }
 }
 
@@ -1163,10 +1163,10 @@ void CHeli::ProcessFlyingCarStuff() {
         vehicleFlags.bEngineOn = false;
 
         // Rotor spins down
-        const double decay = (double)CTimer::GetTimeStep() * (double)0.00055f; // 0x8717B0
+        const x87d decay = (x87d)CTimer::GetTimeStep() * (x87d)0.00055f; // 0x8717B0
         if (decay < m_fHeliRotorSpeed) {
             m_nFakePhysics = 0;
-            m_fHeliRotorSpeed = (float)((double)m_fHeliRotorSpeed - decay);
+            m_fHeliRotorSpeed = (float)((x87d)m_fHeliRotorSpeed - decay);
         } else {
             m_fHeliRotorSpeed = 0.0f;
         }
@@ -1217,7 +1217,7 @@ void CHeli::ProcessFlyingCarStuff() {
             // 0x6C513A - Wind
             const auto statusNow = GetStatus();
             if ((statusNow == STATUS_PLAYER || statusNow == STATUS_PHYSICS) && m_fHeliRotorSpeed > 0.0075f) { // 0x8717A4
-                const double power = (double)m_fHeliRotorSpeed * (double)6.666667f; // 0x866FBC
+                const x87d power = (x87d)m_fHeliRotorSpeed * (x87d)6.666667f; // 0x866FBC
                 CWindModifiers::RegisterOne(GetPosition(), 1, 1.0 < power ? 1.0f : (float)power);
             } else if (statusNow == STATUS_SIMPLE) {
                 CWindModifiers::RegisterOne(GetPosition(), 1, 1.0f);
@@ -1236,25 +1236,25 @@ void CHeli::ProcessFlyingCarStuff() {
 
         const float  dz  = camPos.z - pos.z;
         const float  dy  = camPos.y - pos.y;
-        const double dxe = (double)camPos.x - (double)pos.x; // Not rounded to float on the x87 stack
+        const x87d dxe = (x87d)camPos.x - (x87d)pos.x; // Not rounded to float on the x87 stack
         const float  dx  = (float)dxe;
 
-        const double distSq = dxe * dx + (double)dy * dy + (double)dz * dz;
-        if (distSq < 400.0 && std::abs((double)m_fPropRotate - (double)m_wheelRotation[1]) > (double)0.5235988f) { // 0x85A700, 0x858F20
+        const x87d distSq = dxe * dx + (x87d)dy * dy + (x87d)dz * dz;
+        if (distSq < 400.0 && std::abs((x87d)m_fPropRotate - (x87d)m_wheelRotation[1]) > (double)0.5235988f) { // 0x85A700, 0x858F20
             CMatrix rotorMat{ RwFrameGetMatrix(m_aCarNodes[HELI_STATIC_ROTOR]), false };
             // NOTSA: The original also constructs a second, never used, local CMatrix here
 
             const auto& right = rotorMat.GetRight();
             const auto& mat   = GetMatrix();
             const CVector bladeDir{
-                (float)((double)mat.GetUp().x * right.z + (double)mat.GetForward().x * right.y + (double)mat.GetRight().x * right.x),
-                (float)((double)mat.GetUp().y * right.z + (double)mat.GetRight().y * right.x + (double)mat.GetForward().y * right.y),
-                (float)((double)mat.GetUp().z * right.z + (double)mat.GetRight().z * right.x + (double)mat.GetForward().z * right.y),
+                (float)((x87d)mat.GetUp().x * right.z + (x87d)mat.GetForward().x * right.y + (x87d)mat.GetRight().x * right.x),
+                (float)((x87d)mat.GetUp().y * right.z + (x87d)mat.GetRight().y * right.x + (x87d)mat.GetForward().y * right.y),
+                (float)((x87d)mat.GetUp().z * right.z + (x87d)mat.GetRight().z * right.x + (x87d)mat.GetForward().z * right.y),
             };
 
-            const double dist    = std::sqrt((double)(float)distSq);
-            const double invDist = 1.0 / (dist < (double)0.01f ? (double)0.01f : dist); // 0x858C58 (clamp: min 0.01)
-            const double dot     = (double)bladeDir.z * (invDist * dz) + (double)bladeDir.y * (invDist * dy) + (double)bladeDir.x * (dx * invDist);
+            const x87d dist    = std::sqrt((x87d)(float)distSq);
+            const x87d invDist = (x87d)1.0 / (dist < (x87d)0.01f ? (x87d)0.01f : dist); // 0x858C58 (clamp: min 0.01)
+            const x87d dot     = (x87d)bladeDir.z * (invDist * dz) + (x87d)bladeDir.y * (invDist * dy) + (x87d)bladeDir.x * (dx * invDist);
             if (std::abs(dot) > (double)0.95f) { // 0x858EF0
                 m_vehicleAudio.AddAudioEvent(AE_HELI_BLADE, 0.0f); // 0x6C53CB
                 m_fPropRotate = m_wheelRotation[1];
@@ -1278,7 +1278,7 @@ void CHeli::PreRender() {
             m_vecSearchLightTarget,
             20.0f,
             m_fSearchLightIntensity,
-            reinterpret_cast<uint32>(this) + 11, // Corona index
+            NOTSA_PTR_ID32(this) + 11, // Corona index
             1,
             1
         );
@@ -1291,21 +1291,21 @@ void CHeli::PreRender() {
         DoBurstAndSoftGroundRatios();
 
         for (auto i = 0; i < 4; i++) {
-            const double t = 1.0 - (double)m_aSuspensionSpringLength[i] / (double)m_aSuspensionLineLength[i];
-            const float  v = (float)(((double)m_fWheelsSuspensionCompression[i] - t) / (1.0 - t));
+            const x87d t = (x87d)1.0 - (x87d)m_aSuspensionSpringLength[i] / (x87d)m_aSuspensionLineLength[i];
+            const float  v = (float)(((x87d)m_fWheelsSuspensionCompression[i] - t) / ((x87d)1.0 - t));
 
             CVector wheelPos;
             mi->GetWheelPosn(i, wheelPos, true);
 
-            double wheelZ = (double)wheelPos.z + (double)m_pHandlingData->m_fSuspensionUpperLimit;
+            x87d wheelZ = (x87d)wheelPos.z + (x87d)m_pHandlingData->m_fSuspensionUpperLimit;
             if (v > 0.0f) {
-                wheelZ -= (double)v * (double)m_aSuspensionSpringLength[i];
+                wheelZ -= (x87d)v * (x87d)m_aSuspensionSpringLength[i];
             }
 
-            const double curZ = m_wheelPosition[i];
+            const x87d curZ = m_wheelPosition[i];
             if (!(wheelZ > curZ)) {
                 if (!physicalFlags.bAddMovingCollisionSpeed || !handlingFlags.bHydraulicInst) {
-                    wheelZ = (wheelZ - curZ) * (double)0.75f + curZ; // 0x858F34
+                    wheelZ = (wheelZ - curZ) * (x87d)0.75f + curZ; // 0x858F34
                 }
             }
             m_wheelPosition[i] = (float)wheelZ;
@@ -1329,14 +1329,14 @@ void CHeli::PreRender() {
                              || m_nModelIndex == MODEL_MAVERICK
                              || m_nModelIndex == MODEL_VCNMAV
                              || m_nModelIndex == MODEL_POLMAV;
-        const double step = isBigRotor
-            ? (double)CTimer::GetTimeStep() * (double)m_fHeliRotorSpeed * (double)1.66f // 0x8D33A0
-            : (double)CTimer::GetTimeStep() * (double)m_fHeliRotorSpeed;
-        m_fRotorZ = (float)((double)m_fRotorZ - step);
+        const x87d step = isBigRotor
+            ? (x87d)CTimer::GetTimeStep() * (x87d)m_fHeliRotorSpeed * (x87d)1.66f // 0x8D33A0
+            : (x87d)CTimer::GetTimeStep() * (x87d)m_fHeliRotorSpeed;
+        m_fRotorZ = (float)((x87d)m_fRotorZ - step);
         if (m_fRotorZ < -TWO_PI_F) { // 0x863234
-            double angle = (double)m_fRotorZ + (double)TWO_PI_F;
+            x87d angle = (x87d)m_fRotorZ + (x87d)TWO_PI_F;
             while (angle < -(double)TWO_PI_F) {
-                angle += (double)TWO_PI_F;
+                angle += (x87d)TWO_PI_F;
             }
             m_fRotorZ = (float)angle;
         }
@@ -1344,17 +1344,17 @@ void CHeli::PreRender() {
 
     // 0x6C568A - Second rotor angle
     {
-        double step = (double)CTimer::GetTimeStep() * (double)m_fHeliRotorSpeed;
+        x87d step = (x87d)CTimer::GetTimeStep() * (x87d)m_fHeliRotorSpeed;
         if (m_nModelIndex == MODEL_LEVIATHN) {
             step = step + step;
         } else {
-            step = step * (double)2.3f; // 0x858F54
+            step = step * (x87d)2.3f; // 0x858F54
         }
-        m_fSecondRotorZ = (float)((double)m_fSecondRotorZ - step);
+        m_fSecondRotorZ = (float)((x87d)m_fSecondRotorZ - step);
         if (m_fSecondRotorZ > TWO_PI_F) {
-            double angle = m_fSecondRotorZ;
+            x87d angle = m_fSecondRotorZ;
             do {
-                angle -= (double)TWO_PI_F;
+                angle -= (x87d)TWO_PI_F;
             } while (angle > (double)TWO_PI_F);
             m_fSecondRotorZ = (float)angle;
         }
@@ -1444,9 +1444,9 @@ void CHeli::ProcessControl() {
 
                 const auto  fwd = GetForwardVector(); // 0x41CCB0
                 const auto& pos = GetPosition();
-                targetPos.x = (float)((double)fwd.x * 10.0 + (double)pos.x + (double)offset.x); // 0x85862C
-                targetPos.y = (float)((double)(float)(fwd.y * 10.0f) + (double)pos.y + (double)offset.y);
-                targetPos.z = (float)((double)(float)((float)(fwd.z * 10.0f) + pos.z) + (double)offset.z);
+                targetPos.x = (float)((x87d)fwd.x * (x87d)10.0 + (x87d)pos.x + (x87d)offset.x); // 0x85862C
+                targetPos.y = (float)((x87d)(float)(fwd.y * 10.0f) + (x87d)pos.y + (x87d)offset.y);
+                targetPos.z = (float)((x87d)(float)((float)(fwd.z * 10.0f) + pos.z) + (x87d)offset.z);
                 targetVel   = m_vecMoveSpeed;
             }
 
@@ -1454,8 +1454,8 @@ void CHeli::ProcessControl() {
             const uint32 now = CTimer::GetTimeInMS();
             int32        timeSinceLastRecord = (int32)(now - m_nSearchLightTimer);
             if (timeSinceLastRecord > 1000) {
-                const double fx = (double)targetVel.x * 100.0; // 0x858628
-                const double fy = (double)targetVel.y * 100.0;
+                const x87d fx = (x87d)targetVel.x * (x87d)100.0; // 0x858628
+                const x87d fy = (x87d)targetVel.y * (x87d)100.0;
 
                 int32 numRecords = (int32)((uint32)(timeSinceLastRecord - 1001) / 1000u) + 1;
                 timeSinceLastRecord -= numRecords * 1000;
@@ -1465,26 +1465,26 @@ void CHeli::ProcessControl() {
                         m_aSearchLightHistoryY[i] = m_aSearchLightHistoryY[i - 1];
                     }
                     m_nSearchLightTimer += 1000;
-                    m_aSearchLightHistoryX[0] = (float)(fx + (double)targetPos.x);
-                    m_aSearchLightHistoryY[0] = (float)((double)targetPos.y + fy);
+                    m_aSearchLightHistoryX[0] = (float)(fx + (x87d)targetPos.x);
+                    m_aSearchLightHistoryY[0] = (float)((x87d)targetPos.y + fy);
                 } while (--numRecords != 0);
             }
 
             // 0x6C7352 - Interpolate between the recorded positions
-            const double blend    = (double)timeSinceLastRecord * (double)0.001f; // 0x858CDC
-            const double blendInv = 1.0 - blend;
+            const x87d blend    = (x87d)timeSinceLastRecord * (x87d)0.001f; // 0x858CDC
+            const x87d blendInv = (x87d)1.0 - blend;
             m_vecSearchLightTarget.z = targetPos.z;
             const float  curX = (float)(blend * m_aSearchLightHistoryX[1] + blendInv * m_aSearchLightHistoryX[2]);
             m_vecSearchLightTarget.x = curX;
-            const double curY = blend * m_aSearchLightHistoryY[1] + blendInv * m_aSearchLightHistoryY[2];
+            const x87d curY = blend * m_aSearchLightHistoryY[1] + blendInv * m_aSearchLightHistoryY[2];
             m_vecSearchLightTarget.y = (float)curY;
 
             // 0x6C73A8 - Light intensity falls off with the distance
             {
                 const auto& pos = GetPosition();
-                const double dy   = curY - (double)pos.y;
-                const double dx   = (double)curX - (double)pos.x; // Not rounded to float on the x87 stack
-                const double dist = std::sqrt(dy * dy + dx * dx);
+                const x87d dy   = curY - (x87d)pos.y;
+                const x87d dx   = (x87d)curX - (x87d)pos.x; // Not rounded to float on the x87 stack
+                const x87d dist = std::sqrt(dy * dy + dx * dx);
                 if (dist > (double)60.0f) { // 0x858B34
                     m_fSearchLightIntensity = 0.0f;
                 } else {
@@ -1492,14 +1492,14 @@ void CHeli::ProcessControl() {
                     if (distF < 40.0f) { // 0x858A10
                         m_fSearchLightIntensity = 1.0f;
                     } else {
-                        m_fSearchLightIntensity = (float)(1.0 - ((double)distF - (double)40.0f) * (double)0.05f); // 0x858C28
+                        m_fSearchLightIntensity = (float)((x87d)1.0 - ((x87d)distF - (x87d)40.0f) * (x87d)0.05f); // 0x858C28
                     }
                 }
             }
 
-            const float  dxToTarget = (float)((double)targetPos.x - (double)curX);
-            const double dyToTarget = (double)targetPos.y - curY;
-            if (m_fSearchLightIntensity < 0.9f || dyToTarget * dyToTarget + (double)dxToTarget * dxToTarget > 49.0) { // 0x858C20, 0x8717C4
+            const float  dxToTarget = (float)((x87d)targetPos.x - (x87d)curX);
+            const x87d dyToTarget = (x87d)targetPos.y - curY;
+            if (m_fSearchLightIntensity < 0.9f || dyToTarget * dyToTarget + (x87d)dxToTarget * dxToTarget > 49.0) { // 0x858C20, 0x8717C4
                 m_nShootTimer             = now;
                 m_nTimeForMinigunFiring   = now;
             } else if (now > m_nPoliceShoutTimer) {
@@ -1548,8 +1548,8 @@ void CHeli::ProcessControl() {
 
                     if (CTimer::GetTimeInMS() > m_nShootTimer + (uint32)interval && CTimer::GetTimeInMS() > m_nTimeForMinigunFiring) { // 0x6C760F
                         CVector shotTarget = targetPos;
-                        shotTarget.x = (float)((double)((rand() & 0xFF) - 0x80) * (double)0.02f + (double)shotTarget.x); // 0x858B38
-                        shotTarget.y = (float)((double)((rand() & 0xFF) - 0x80) * (double)0.02f + (double)shotTarget.y);
+                        shotTarget.x = (float)((x87d)((rand() & 0xFF) - 0x80) * (x87d)0.02f + (x87d)shotTarget.x); // 0x858B38
+                        shotTarget.y = (float)((x87d)((rand() & 0xFF) - 0x80) * (x87d)0.02f + (x87d)shotTarget.y);
 
                         CVector dir{
                             targetPos.x - origin.x,
@@ -1559,18 +1559,18 @@ void CHeli::ProcessControl() {
                         dir.Normalise();
 
                         // 3.0f = 0x858B3C
-                        const float  dx3f   = (float)((double)dir.x * 3.0);
-                        const double dy3    = (double)dir.y * 3.0;
-                        const double dz3    = (double)dir.z * 3.0;
+                        const float  dx3f   = (float)((x87d)dir.x * (x87d)3.0);
+                        const x87d dy3    = (x87d)dir.y * (x87d)3.0;
+                        const x87d dz3    = (x87d)dir.z * (x87d)3.0;
                         const float  dz3f   = (float)dz3;
-                        shotTarget.x = (float)((double)dx3f + (double)shotTarget.x);
-                        shotTarget.y = (float)(dy3 + (double)shotTarget.y);
-                        shotTarget.z = (float)((double)shotTarget.z + dz3);
+                        shotTarget.x = (float)((x87d)dx3f + (x87d)shotTarget.x);
+                        shotTarget.y = (float)(dy3 + (x87d)shotTarget.y);
+                        shotTarget.z = (float)((x87d)shotTarget.z + dz3);
 
                         const CVector start{
-                            (float)((double)dx3f + (double)origin.x),
-                            (float)((double)origin.y + dy3),
-                            (float)((double)origin.z + (double)dz3f),
+                            (float)((x87d)dx3f + (x87d)origin.x),
+                            (float)((x87d)origin.y + dy3),
+                            (float)((x87d)origin.z + (x87d)dz3f),
                         };
 
                         FireOneInstantHitRound(start, shotTarget, 20); // 0x6C7773
@@ -1597,7 +1597,7 @@ void CHeli::ProcessControl() {
 
         state--;
 
-        const auto ropeId = reinterpret_cast<uint32>(this) + i; // The rope is identified by `this + i`
+        const auto ropeId = NOTSA_PTR_ID32(this) + i; // The rope is identified by `this + i`
         const auto swatOffset = FindSwatPositionRelativeToHeli(i);
         CRopes::RegisterRope(ropeId, 8, GetMatrix().TransformPoint(swatOffset), false, 0, 0, nullptr, 20000);
 
@@ -1607,8 +1607,8 @@ void CHeli::ProcessControl() {
             const auto& mat = GetMatrix();
             // 0x59C790 (Multiply3x3)
             const auto rotated = CVector{
-                (float)((double)mat.GetUp().x * v.z + (double)mat.GetForward().x * v.y + (double)mat.GetRight().x * v.x),
-                (float)((double)mat.GetUp().y * v.z + (double)mat.GetRight().y * v.x + (double)mat.GetForward().y * v.y),
+                (float)((x87d)mat.GetUp().x * v.z + (x87d)mat.GetForward().x * v.y + (x87d)mat.GetRight().x * v.x),
+                (float)((x87d)mat.GetUp().y * v.z + (x87d)mat.GetRight().y * v.x + (x87d)mat.GetForward().y * v.y),
                 0.0f, // z isn't used
             };
             CRopes::SetSpeedOfTopNode(ropeId, rotated);
@@ -1619,11 +1619,11 @@ void CHeli::ProcessControl() {
     ProcessWeapons();
 
     if (g_InterestingEvents.m_b1) { // 0xC0B184
-        float chance = (float)((double)CTimer::GetTimeStep() * (double)0.02f * (double)0.1f); // 0x858B38, 0x858B1C
+        float chance = (float)((x87d)CTimer::GetTimeStep() * (x87d)0.02f * (x87d)0.1f); // 0x858B38, 0x858B1C
         if (shootAtTarget) {
             chance += chance;
         }
-        if ((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL < (double)chance) { // 0x858C7C
+        if ((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL < (double)chance) { // 0x858C7C
             g_InterestingEvents.Add(CInterestingEvents::INTERESTING_EVENT_21, this);
         }
     }

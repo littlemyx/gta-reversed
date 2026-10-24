@@ -54,7 +54,7 @@ CVector GetPlayerCoordinates(CPlayerInfo& pinfo) {
 /// IS_PLAYER_IN_AREA_2D(0056) - Originally unsupported
 bool IsPlayerInArea2D(CRunningScript* S, CPlayerPed& player, CRect area, bool highlightArea) {
     if (highlightArea) {
-        CTheScripts::HighlightImportantArea((uint32)S + (uint32)S->m_IP, area, MAP_Z_LOW_LIMIT);
+        CTheScripts::HighlightImportantArea(NOTSA_PTR_ID32(S) + NOTSA_PTR_ID32(S->m_IP), area, MAP_Z_LOW_LIMIT);
     }
 
     if (CTheScripts::DbgFlag) {
@@ -69,7 +69,7 @@ bool IsPlayerInArea2D(CRunningScript* S, CPlayerPed& player, CRect area, bool hi
 /// IS_PLAYER_IN_AREA_3D(0057) - Originally unsupported
 bool IsPlayerInArea3D(CRunningScript* S, CPlayerPed& player, CVector p1, CVector p2, bool highlightArea) {
     if (highlightArea) {
-        CTheScripts::HighlightImportantArea((uint32)S + (uint32)S->m_IP, p1.x, p1.y, p2.x, p2.y, (p1.z + p2.z) / 2.0f);
+        CTheScripts::HighlightImportantArea(NOTSA_PTR_ID32(S) + NOTSA_PTR_ID32(S->m_IP), p1.x, p1.y, p2.x, p2.y, (p1.z + p2.z) / 2.0f);
     }
 
     if (CTheScripts::DbgFlag) {

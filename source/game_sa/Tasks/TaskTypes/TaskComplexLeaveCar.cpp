@@ -221,7 +221,7 @@ bool CTaskComplexLeaveCar::MakeAbortable(CPed* ped, eAbortPriority priority, con
                 ) {
                     // x87: `Magnitude` isn't rounded to float
                     const auto& speed = m_pTargetVehicle->m_vecMoveSpeed;
-                    const auto  mag   = std::sqrt(((double)speed.x * (double)speed.x + (double)speed.y * (double)speed.y) + (double)speed.z * (double)speed.z);
+                    const auto  mag   = std::sqrt(((x87d)speed.x * (x87d)speed.x + (x87d)speed.y * (x87d)speed.y) + (x87d)speed.z * (x87d)speed.z);
                     if (m_pTargetVehicle->m_nVehicleSubType != VEHICLE_TYPE_PLANE || !(mag > 0.2f)) {
                         if (!ped->IsPlayer()) {
                             return false;

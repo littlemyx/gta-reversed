@@ -22,6 +22,14 @@ CTaskSimplePlayHandSignalAnim::CTaskSimplePlayHandSignalAnim(AnimationId animati
 }
 
 CTaskSimplePlayHandSignalAnim::~CTaskSimplePlayHandSignalAnim() {
+#ifdef NOTSA_PORTABLE
+    // MAC-PLAY1: CWorld::ShutDown deletes the sector lists one by one; a hand object (CObject) can already be gone when the ped that owns this task is deleted
+    // (peds are deleted after objects of earlier sectors). The exe then virtual-calls `Remove` through the stale vtable of a freed pool slot, which happens to be harmless
+    // on Win32 (the slot keeps a base vtable followed by other code pointers) but is a null call under clang. Skip hands whose pool slot is already free.
+    const auto IsAlive = [](CObject* obj) { return GetObjectPool()->IsObjectValid(obj); };
+    if (m_LeftHand && !IsAlive(m_LeftHand)) { m_LeftHand = nullptr; }
+    if (m_RightHand && !IsAlive(m_RightHand)) { m_RightHand = nullptr; }
+#endif
     if (m_LeftHand) {
         CWorld::Remove(m_LeftHand);
         delete m_LeftHand;

@@ -529,7 +529,7 @@ void CRoadBlocks::GenerateRoadBlocks() {
         }
 
         const auto counter1      = MAX_ROADBLOCKS * (CTimer::GetFrameCounter() % 16 + 1);
-        const auto rbsToGenerate = std::min((uint32)NumRoadBlocks, ((counter1 % 16) + counter1) / 16);
+        const auto rbsToGenerate = std::min<size_t>((uint32)NumRoadBlocks, ((counter1 % 16) + counter1) / 16);
         auto       counter2      = MAX_ROADBLOCKS * (CTimer::GetFrameCounter() % 16) / 16;
 
         for (; counter2 < rbsToGenerate; counter2++) {

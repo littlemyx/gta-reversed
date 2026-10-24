@@ -18,7 +18,7 @@
 #include "Hud.h"
 #include "ControllerConfigManager.h"
 
-NOTSA_GLOBAL(FrontEndMenuManager, 0xBA6748, (CMenuManager), {}); static_assert(sizeof(FrontEndMenuManager) == 7032);
+NOTSA_GLOBAL(FrontEndMenuManager, 0xBA6748, (CMenuManager), {}); VALIDATE_SIZE(FrontEndMenuManager, 7032);
 
 CMenuManager& GetMenu() {
     return FrontEndMenuManager;
@@ -405,13 +405,13 @@ void CMenuManager::DoSettingsBeforeStartingAGame() {
 // 0x5733E0
 float CMenuManager::StretchX(float x) {
     // exe: `(W * x) * (1/640)` (0x859520): NOT SCREEN_STRETCH_X's `W * (1/640) * x` (multiplication order differs in the last bit)
-    return (RsGlobal.maximumWidth == DEFAULT_SCREEN_WIDTH) ? x : (float)((double)RsGlobal.maximumWidth * (double)x * (double)SCREEN_RECIPROCAL_X);
+    return (RsGlobal.maximumWidth == DEFAULT_SCREEN_WIDTH) ? x : (float)((x87d)RsGlobal.maximumWidth * (x87d)x * (x87d)SCREEN_RECIPROCAL_X);
 }
 
 // 0x573410
 float CMenuManager::StretchY(float y) {
     // exe: `(H * y) * (1/448)` (0x859524), see StretchX
-    return (RsGlobal.maximumHeight == DEFAULT_SCREEN_HEIGHT) ? y : (float)((double)RsGlobal.maximumHeight * (double)y * (double)SCREEN_RECIPROCAL_Y);
+    return (RsGlobal.maximumHeight == DEFAULT_SCREEN_HEIGHT) ? y : (float)((x87d)RsGlobal.maximumHeight * (x87d)y * (x87d)SCREEN_RECIPROCAL_Y);
 }
 
 // 0x573680

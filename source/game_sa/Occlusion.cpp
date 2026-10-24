@@ -49,20 +49,20 @@ void COcclusion::AddOne(float centerX, float centerY, float centerZ, float width
         : &Occluders[NumOccludersOnMap++];
 
     occl->m_Center   = CVector{ centerX, centerY, centerZ };
-    const auto CompressExtent = [](int32 v) { return (int16)(int32)((double)v * (double)4.f); };
+    const auto CompressExtent = [](int32 v) { return (int16)(int32)((x87d)v * (x87d)4.f); };
     occl->m_Length   = decltype(occl->m_Length){ CompressExtent(l) }; // pre-compressed
     occl->m_Width    = decltype(occl->m_Width){ CompressExtent(w) };
     occl->m_Height   = decltype(occl->m_Height){ CompressExtent(h) };
     // 0x71DD22..0x71DE37: each angle is brought into [0, 360] by repeated +-360 (no `+ 180`, no CGeneral::LimitAngle), multiplied by 0x8595EC (pi/180 as float) and stored as a float
     const auto AngleToRad = [](float deg) {
-        double a = deg;
+        x87d a = deg;
         if (a < 0.0) {
-            do { a += (double)360.f; } while (a < 0.0);
+            do { a += (x87d)360.f; } while (a < 0.0);
         }
         if (a > (double)360.f) {
-            do { a -= (double)360.f; } while (a > (double)360.f);
+            do { a -= (x87d)360.f; } while (a > (double)360.f);
         }
-        return (float)(a * (double)std::bit_cast<float>(0x3C8EFA35u));
+        return (float)(a * (x87d)std::bit_cast<float>(0x3C8EFA35u));
     };
     // 0x71DE13..0x71DF0C: the angle arguments are stored in the order +0xC (m_RotZ) = 1st, +0xD (m_RotY) = 2nd, +0xE (m_RotX) = 3rd
     occl->m_RotZ     = AngleToRad(rotZ);

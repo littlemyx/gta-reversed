@@ -75,7 +75,7 @@ void CAEAmbienceTrackManager::UpdateAmbienceTrackAndVolume() {
         if (CWeather::Sandstorm > 0.f) {
             if (CGame::CanSeeOutSideFromCurrArea() && !CCullZones::PlayerNoRain() && !CCullZones::CamNoRain()) {
                 specialTrackId = 167;
-                volume         = (float)(std::log10((double)CWeather::Sandstorm) * 20.0 - 6.0);
+                volume         = (float)(X87R(std::log10((double)CWeather::Sandstorm) * 20.0) - (x87d)6.0);
             }
             isSandstorm = true;
         }
@@ -308,9 +308,9 @@ void CAEAmbienceTrackManager::UpdateAmbienceTrackAndVolume() {
     } else {
         const auto camZ = TheCamera.GetPosition().z;
         const auto dist = std::sqrt(
-              (double)TheCamera.m_fDistanceToWater * (double)TheCamera.m_fDistanceToWater
-            + ((double)camZ - (double)TheCamera.m_fHeightOfNearestWater) * ((double)camZ - (double)TheCamera.m_fHeightOfNearestWater)
-        ) * (double)(4.f / 7.f);
+              (x87d)TheCamera.m_fDistanceToWater * (x87d)TheCamera.m_fDistanceToWater
+            + ((x87d)camZ - (x87d)TheCamera.m_fHeightOfNearestWater) * ((x87d)camZ - (x87d)TheCamera.m_fHeightOfNearestWater)
+        ) * (x87d)(4.f / 7.f);
         volume           = CAEAudioEnvironment::GetDistanceAttenuation((float)dist) - 12.f;
         targetFreqFactor = 1.f;
 

@@ -6,4 +6,4 @@ struct CColSurface {
     tColLighting m_nLighting{};
     uint8        m_nLight{};
 };
-VALIDATE_SIZE(CColSurface, 0x4);
+VALIDATE_SIZE_FILE(CColSurface, 0x4);

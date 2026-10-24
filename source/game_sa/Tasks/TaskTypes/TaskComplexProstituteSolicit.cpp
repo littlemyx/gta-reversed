@@ -27,9 +27,9 @@ void CTaskComplexProstituteSolicit::InjectHooks() {
 static CVector TransformPointOriginal(const CMatrix& m, const CVector& v) {
     const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp(), &p = m.GetPosition();
     return CVector{
-        (float)((((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x) + p.x),
-        (float)((((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y) + p.y),
-        (float)((((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y) + p.z)
+        (float)((((x87d)u.x * v.z + (x87d)f.x * v.y) + (x87d)r.x * v.x) + p.x),
+        (float)((((x87d)u.y * v.z + (x87d)r.y * v.x) + (x87d)f.y * v.y) + p.y),
+        (float)((((x87d)u.z * v.z + (x87d)r.z * v.x) + (x87d)f.z * v.y) + p.z)
     };
 }
 
@@ -113,14 +113,14 @@ CTask* CTaskComplexProstituteSolicit::CreateSubTask(eTaskType taskType, CPed* pr
         // Pick the door closer to the prostitute. The x87 code keeps everything in extended precision except
         // the x delta of the first door, which is stored as float.
         const auto& pos = prostitute->GetPosition();
-        const double d10x = (float)((double)pos.x - (double)door10.x);
-        const double d10y = (double)pos.y - (double)door10.y;
-        const double d10z = (double)pos.z - (double)door10.z;
-        const double d8x  = (double)pos.x - (double)door8.x;
-        const double d8y  = (double)pos.y - (double)door8.y;
-        const double d8z  = (double)pos.z - (double)door8.z;
-        const double distSq10 = (d10x * d10x + d10y * d10y) + d10z * d10z;
-        const double distSq8  = (d8x * d8x + d8y * d8y) + d8z * d8z;
+        const x87d d10x = (float)((x87d)pos.x - (x87d)door10.x);
+        const x87d d10y = (x87d)pos.y - (x87d)door10.y;
+        const x87d d10z = (x87d)pos.z - (x87d)door10.z;
+        const x87d d8x  = (x87d)pos.x - (x87d)door8.x;
+        const x87d d8y  = (x87d)pos.y - (x87d)door8.y;
+        const x87d d8z  = (x87d)pos.z - (x87d)door8.z;
+        const x87d distSq10 = (d10x * d10x + d10y * d10y) + d10z * d10z;
+        const x87d distSq8  = (d8x * d8x + d8y * d8y) + d8z * d8z;
 
         const auto offset = TransformPointOriginal(invVehMat, !(distSq8 > distSq10) ? door8 : door10); // 0x59C890
 
@@ -273,7 +273,7 @@ CTask* CTaskComplexProstituteSolicit::CreateNextSubTask(CPed* ped) {
 CTask* CTaskComplexProstituteSolicit::ControlSubTask(CPed* ped) {
     // 0x406DA0 - squared magnitude, summed in extended precision in this order
     const auto SquaredMagnitude = [](const CVector& v) {
-        return ((double)v.x * (double)v.x + (double)v.y * (double)v.y) + (double)v.z * (double)v.z;
+        return ((x87d)v.x * (x87d)v.x + (x87d)v.y * (x87d)v.y) + (x87d)v.z * (x87d)v.z;
     };
 
     bMoveCameraDown = bSexProcessStarted;
@@ -284,7 +284,7 @@ CTask* CTaskComplexProstituteSolicit::ControlSubTask(CPed* ped) {
     }
 
     // x87: `timeStep * 0.02f * 1000.0f` stays in extended precision until `_ftol`
-    const auto dt = (int32)(int64)((double)CTimer::GetTimeStep() * (double)0.02f * (double)1000.0f);
+    const auto dt = (int32)(int64)((x87d)CTimer::GetTimeStep() * (x87d)0.02f * (x87d)1000.0f);
 
     if (bTaskCanBeFinished) {
         if (m_nCurrentTimer == 0) {
@@ -324,9 +324,9 @@ CTask* CTaskComplexProstituteSolicit::ControlSubTask(CPed* ped) {
 
     if (subTaskType == TASK_COMPLEX_SEEK_ENTITY || subTaskType == TASK_COMPLEX_ENTER_CAR_AS_PASSENGER) {
         const auto  vehPos = m_pClient->m_pVehicle->GetPosition();
-        const double dx = (double)vehPos.x - (double)m_vecVehiclePosn.x;
-        const double dy = (double)vehPos.y - (double)m_vecVehiclePosn.y;
-        const double dz = (double)vehPos.z - (double)m_vecVehiclePosn.z;
+        const x87d dx = (x87d)vehPos.x - (x87d)m_vecVehiclePosn.x;
+        const x87d dy = (x87d)vehPos.y - (x87d)m_vecVehiclePosn.y;
+        const x87d dz = (x87d)vehPos.z - (x87d)m_vecVehiclePosn.z;
         if ((dx * dx + dz * dz) + dy * dy > 16.0f) { // the asm sums x, z, y
             bTaskCanBeFinished = true;
         }
@@ -465,7 +465,7 @@ CTask* CTaskComplexProstituteSolicit::ControlSubTask(CPed* ped) {
         } else if (m_nCurrentTimer > 1000) {
             m_nVehicleMovementTimer = 120;
         } else {
-            shakeScale = (float)((double)shakeScale * (double)0.5f);
+            shakeScale = (float)((x87d)shakeScale * (x87d)0.5f);
             m_nVehicleMovementTimer = 850;
             CPad::GetPad(0)->StartShake(1000, 120, 0);
         }
@@ -479,9 +479,9 @@ CTask* CTaskComplexProstituteSolicit::ControlSubTask(CPed* ped) {
         const float mass    = minMass > m_pClient->m_fMass ? minMass : m_pClient->m_fMass;
 
         const auto& pointSrc = (randVal & 1) ? clientPos : ped->GetPosition();
-        const float pointY   = (float)((double)pointSrc.y - (double)vehPos.y);
-        const float pointX   = (float)((double)pointSrc.x - (double)vehPos.x);
-        veh->ApplyTurnForce(CVector{ 0.0f, 0.0f, (float)((double)mass * (double)shakeScale) }, CVector{ pointX, pointY, 0.0f });
+        const float pointY   = (float)((x87d)pointSrc.y - (x87d)vehPos.y);
+        const float pointX   = (float)((x87d)pointSrc.x - (x87d)vehPos.x);
+        veh->ApplyTurnForce(CVector{ 0.0f, 0.0f, (float)((x87d)mass * (x87d)shakeScale) }, CVector{ pointX, pointY, 0.0f });
         veh->m_vehicleAudio.AddAudioEvent(AE_SUSPENSION_BOUNCE, 0.0f);
 
         if (b10 && (uint32)randVal > 0xFFFFFFFu) { // NOTE: never true, `rand()` is at most 0x7FFF

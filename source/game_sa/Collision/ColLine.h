@@ -47,4 +47,4 @@ public:
 
 };
 
-VALIDATE_SIZE(CColLine, 0x20);
+VALIDATE_SIZE_FILE(CColLine, 0x20);

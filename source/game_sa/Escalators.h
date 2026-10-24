@@ -17,7 +17,7 @@ public:
     }
 
 private:
-    static inline NOTSA_GLOBAL(aEscalators, 0xC6E9A8, (std::array<CEscalator, NUM_ESCALATORS>), {}); static_assert(sizeof(aEscalators) == 10752);
+    static inline NOTSA_GLOBAL(aEscalators, 0xC6E9A8, (std::array<CEscalator, NUM_ESCALATORS>), {}); VALIDATE_SIZE(aEscalators, 10752);
 
 private:
     friend void InjectHooksMain();

@@ -10,6 +10,9 @@
 #endif
 
 #include "LoadingScreen.h"
+#ifdef NOTSA_STATEHASH
+#include "portable/statehash.h"
+#endif
 #include "ControllerConfigManager.h"
 #include "Gamma.h"
 
@@ -18,6 +21,12 @@
 #include "WinPlatform.h"
 
 #include "extensions/Configs/FastLoader.hpp"
+#ifdef NOTSA_PORTABLE
+#include <cfenv>
+#include "portable/app_platform.h"
+#include "portable/app_window.h"
+#include "portable/app_pad.h"
+#endif
 
 #ifndef NOTSA_USE_SDL3
 #include "WinInput.h"
@@ -43,6 +52,9 @@ constexpr auto NO_FOREGROUND_PAUSE = true;
 
 // 0x747300
 char* getDvdGamePath() {
+#ifdef NOTSA_PORTABLE
+    return notsa::portable::FindDvdGamePath(); // /Volumes/GTA_SAN_ANDREAS/ if such a volume is mounted
+#else
     SetErrorMode(SEM_FAILCRITICALERRORS);
 
     size_t bufferSize = GetLogicalDriveStringsA(0, nullptr);
@@ -75,6 +87,7 @@ char* getDvdGamePath() {
 
     delete[] drivesBuffer;
     return nullptr;
+#endif
 }
 
 // 0x746870
@@ -131,6 +144,9 @@ auto Win32_InitInstance(HINSTANCE hInstance) {
 
 // 0x7468E0
 bool IsAlreadyRunning() {
+#ifdef NOTSA_PORTABLE
+    return !notsa::portable::AcquireSingleInstance();
+#else
     CreateEvent(nullptr, false, true, APP_CLASS);
     if (GetLastError() != ERROR_ALREADY_EXISTS) {
         return false;
@@ -140,6 +156,7 @@ bool IsAlreadyRunning() {
     SetForegroundWindow(fgwnd != INVALID_HANDLE_VALUE ? fgwnd : PSGLOBAL(window));
     
     return true;
+#endif
 };
 
 // 0x746060
@@ -235,7 +252,7 @@ bool ProcessGameLogic(INT nCmdShow) {
                 switch (gGameState) {
                 case GAME_STATE_PLAYING_LOGO:  return GAME_STATE_TITLE;
                 case GAME_STATE_PLAYING_INTRO: return GAME_STATE_FRONTEND_LOADING;
-                default:                       NOTSA_UNREACHABLE();
+                default:                       NOTSA_UNREACHABLE_RET(GAME_STATE_TITLE);
                 }
             }());
         }
@@ -264,7 +281,12 @@ bool ProcessGameLogic(INT nCmdShow) {
         }
         CGame::InitialiseCoreDataAfterRW();
         ChangeGameStateTo(GAME_STATE_FRONTEND_LOADED);
+#ifdef NOTSA_PORTABLE
+        notsa::portable::Unsupported("GPU capability query (anisotropic filtering assumed supported: GL3 core on macOS has EXT_texture_filter_anisotropic)"); // W-A4
+        anisotropySupportedByGFX = true;
+#else
         anisotropySupportedByGFX = (((const D3DCAPS9*)RwD3D9GetCaps())->RasterCaps & D3DPRASTERCAPS_ANISOTROPY) != 0; // todo: func
+#endif
 
 #ifdef NOTSA_WINDOWED_MODE
         RwCameraClear(Scene.m_pRwCamera, &gColourTop, rwCAMERACLEARZ);
@@ -292,8 +314,12 @@ bool ProcessGameLogic(INT nCmdShow) {
     case GAME_STATE_FRONTEND_IDLE: { // 0x748CB2
         ZoneScopedN("FRONTEND_IDLE");
 
+#ifdef NOTSA_PORTABLE
+        const struct { int showCmd; } wndpl{ (SDL_GetWindowFlags(PSGLOBAL(sdlWindow)) & SDL_WINDOW_MINIMIZED) ? SW_SHOWMINIMIZED : SW_SHOWNORMAL };
+#else
         WINDOWPLACEMENT wndpl{ .length = sizeof(WINDOWPLACEMENT) };
         VERIFY(GetWindowPlacement(PSGLOBAL(window), &wndpl));
+#endif
         if (g_FastLoaderConfig.ShouldLoadSaveGame()) {
             RsEventHandler(rsFRONTENDIDLE, nullptr); // We need to still run the frontend processing once because it has some important stuff
             if ((GetAsyncKeyState(g_FastLoaderConfig.SkipSaveGameLoadKey) & 0xF000) == 0) {
@@ -336,6 +362,12 @@ bool ProcessGameLogic(INT nCmdShow) {
 
         auto v9_1 = 1000.0f / (float)RsGlobal.frameLimit;
         auto v9_2 = (float)CTimer::GetCurrentTimeInCycles() / (float)CTimer::GetCyclesPerMillisecond();
+#ifdef NOTSA_STATEHASH
+        if (notsa::rr::Active()) { // RR: the frame-stepped virtual clock only moves inside Idle, so the frame-limiter wait below would never end; every iteration is a frame
+            RsEventHandler(rsIDLE, (void*)true);
+            break;
+        }
+#endif
         if (!FrontEndMenuManager.m_bPrefsFrameLimiter && CReplay::Mode != eReplayMode::MODE_PLAYBACK && !AudioEngine.IsBeatInfoPresent() || v9_1 < v9_2) {
             RsEventHandler(rsIDLE, (void*)true);
         }
@@ -405,7 +437,9 @@ void MainLoop(INT nCmdShow) {
 
 // 0x748710
 INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdLine, INT nCmdShow) {
+#ifndef NOTSA_PORTABLE
     SystemParametersInfo(SPI_SETFOREGROUNDLOCKTIMEOUT, 0u, nullptr, 2);
+#endif
     if (IsAlreadyRunning()) {
         return false;
     }
@@ -434,18 +468,33 @@ INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdL
     // Dirty fix for crash in crt when trying to free cmd line args
     // Yeah we leak memory, but who cares
     // Crash was in `uninitialize_allocated_io_buffers` (`C:\Program Files (x86)\Windows Kits\10\Source\<Win 10 SDK Version>\ucrt\internal\initialization.cpp`)
+#ifndef NOTSA_PORTABLE
     __argc  = 0;
     __argv  = nullptr;
     __wargv = nullptr;
+#endif
 
 #ifdef NOTSA_USE_SDL3
     SDL_Window* sdlWnd = SDL_CreateWindow(
         APP_CLASS,
         APP_DEFAULT_WIDTH, APP_DEFAULT_HEIGHT,
         SDL_WINDOW_RESIZABLE  //| SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS// | SDL_WINDOW_MOUSE_GRABBED | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS
+#ifdef NOTSA_PORTABLE
+        | SDL_WINDOW_OPENGL // R-3a: librw's gl3 backend adopts this window (gl3device.cpp startSDL3: GL context with depth 24 / stencil 8 on it)
+        | notsa::portable::HiDpiWindowFlag() // MAC-W2: drawable in pixels (NOTSA_STANDALONE_HIDPI=0 keeps the 1x backing store)
+#endif
     );
     PSGLOBAL(sdlWindow) = sdlWnd;
+#ifdef NOTSA_PORTABLE
+    if (sdlWnd) {
+        notsa::portable::OnWindowCreated(sdlWnd); // MAC-W2: log sizes, hide the system cursor, windowed default size in points
+    }
+#endif
+#ifdef NOTSA_PORTABLE
+    PSGLOBAL(window) = (HWND)sdlWnd; // no Win32 window: the HWND slot carries the SDL_Window* (portable/app_win32_compat.h)
+#else
     PSGLOBAL(window) = (HWND)(SDL_GetPointerProperty(SDL_GetWindowProperties(sdlWnd), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL)); // NOTE/TODO: Hacky, but required due to RW
+#endif
 #else
     PSGLOBAL(window) = Win32_InitInstance(instance);
 #endif
@@ -459,11 +508,18 @@ INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdL
 #ifndef NOTSA_USE_SDL3
     VERIFY(WinInput::Initialise());
 #endif
+#ifdef NOTSA_PORTABLE
+    notsa::portable::PadInit(); // MAC-W2: connected gamepads -> AllValidWinJoys (ReinitControls adds the default joypad bindings when pad 1 is attached)
+#endif
     ControlsManager.ReinitControls();
 
     // 0x748847
     if (RsEventHandler(rsRWINITIALIZE, PSGLOBAL(window)) == rsEVENTERROR) {
+#ifdef NOTSA_PORTABLE
+        SDL_DestroyWindow(PSGLOBAL(sdlWindow));
+#else
         DestroyWindow(PSGLOBAL(window));
+#endif
         RsEventHandler(rsTERMINATE, nullptr);
         return false;
     }
@@ -488,6 +544,9 @@ INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdL
     RwRect rect{ 0, 0, RsGlobal.maximumWidth, RsGlobal.maximumHeight };
     RsEventHandler(rsCAMERASIZE, &rect);
 
+#ifdef NOTSA_PORTABLE
+    SDL_DisableScreenSaver(); // = SPI_SETSCREENSAVEACTIVE 0; the power-off / low-power timeouts and the sticky-keys accessibility flag are Windows-only and not touched
+#else
     SystemParametersInfo(SPI_SETSCREENSAVEACTIVE, 0u, nullptr, 2u);
     SystemParametersInfo(SPI_SETPOWEROFFACTIVE, 0u, nullptr, 2u);
     SystemParametersInfo(SPI_SETLOWPOWERACTIVE, 0u, nullptr, 2u);
@@ -497,6 +556,7 @@ INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdL
     SystemParametersInfo(SPI_SETSTICKYKEYS, sizeof(STICKYKEYS), &pvParam1, 2u);
 
     UpdateWindow(PSGLOBAL(window));
+#endif
 
 #ifdef NOTSA_USE_SDL3
     SDL_SetWindowFocusable(sdlWnd, true);
@@ -522,7 +582,9 @@ INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdL
     }
     CFileMgr::SetDir("");
 
+#ifndef NOTSA_PORTABLE
     SetErrorMode(SEM_FAILCRITICALERRORS);
+#endif
 
     notsa::ui::UIRenderer::CreateInstance();
 
@@ -540,6 +602,15 @@ INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdL
     AudioEngine.Shutdown();
     FreeVideoModeList();
     RsEventHandler(rsRWTERMINATE, nullptr);
+#ifdef NOTSA_PORTABLE
+    notsa::portable::PadShutdown();
+    SDL_DestroyWindow(PSGLOBAL(sdlWindow));
+    RsEventHandler(rsTERMINATE, nullptr);
+    // (argv is the process's own array here, not a CRT allocation: not freed)
+    SDL_ShowCursor();
+
+    SDL_EnableScreenSaver();
+#else
     DestroyWindow(PSGLOBAL(window));
     RsEventHandler(rsTERMINATE, nullptr);
     free(argv);
@@ -551,6 +622,7 @@ INT WINAPI NOTSA_WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdL
     SystemParametersInfo(SPI_SETSCREENSAVEACTIVE, 1u, nullptr, 2u);
     // nullsub_0x72F3C0()
     SetErrorMode(0);
+#endif
 
     return 0; // Msg.wParam
 }
@@ -586,9 +658,15 @@ INT WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdLine, I
     notsa::standalone::Fixups::InstallDiagnostics();
 
     // D7: the original's CRT runs x87 libm (VS2005); the 32-bit UCRT would otherwise route sin/cos/pow/... to its SSE2 implementations on any SSE2 CPU
+#ifndef NOTSA_PORTABLE
     _set_SSE2_enable(0);
+#endif // (portable: arm64 has no x87/SSE2 libm split; bit-exact libm behaviour is stream F's)
     notsa::standalone::Fixups::LogFpuState("WinMain");
+#ifdef NOTSA_PORTABLE
+    std::feclearexcept(FE_ALL_EXCEPT); // start without sticky exception flags
+#else
     _clearfp(); // the CRT's _FPinit ends with fnclex: start without sticky exception flags
+#endif
 
     // The hook macros are no-ops here (reversiblehooks/NoHookRegistry.h): InjectHooksMain only runs the non-hook part (script command handlers, logger, CLI)
     ReversibleHooks::RHManager::CreateInstance();
@@ -597,9 +675,9 @@ INT WINAPI WinMain(HINSTANCE instance, HINSTANCE hPrevInstance, LPSTR cmdLine, I
     }};
     InjectHooksMain();
 
-    // (3 lines of the removed image fixup pass, kept so the __LINE__ of the hooks below stay identical in the DLL build)
-    //
-    //
+#ifdef NOTSA_PORTABLE
+    void LoadConfigurations(); LoadConfigurations(); // gta-reversed.ini; dllmain.cpp (where the DLL build loads it) is not part of the portable target, defined at the end of this file
+#endif
     NOTSA_VERIFY_GLOBALS_BOOT(); // A2: boot dump for tools/standalone/verify_globals.py (nothing unless NOTSA_VERIFY_GLOBALS)
     NOTSA_IMAGE_DIAG_ARM();      // A3: dev-only stray-access census / poison over the mapped original image (nothing unless GTASA_IMAGE_DIAG and the env variable is set)
     return NOTSA_WinMain(instance, hPrevInstance, cmdLine, nCmdShow);
@@ -623,3 +701,14 @@ void InjectWinMainStuff() {
     RH_ScopedGlobalInstall(Win32_InitInstance, 0x745560, {.Locked = true});
 #endif
 }
+
+#ifdef NOTSA_PORTABLE
+// Portable build: the body of dllmain.cpp's LoadConfigurations() (same INI file, same configs); dllmain.cpp is excluded from the portable target.
+// Placed at the end of the file so that no __LINE__ above it moves.
+#include "extensions/Configs/Miscellaneous.hpp"
+void LoadConfigurations() {
+    g_ConfigurationMgr.Load("gta-reversed.ini");
+    g_FastLoaderConfig.Load();
+    g_MiscConfig.Load();
+}
+#endif

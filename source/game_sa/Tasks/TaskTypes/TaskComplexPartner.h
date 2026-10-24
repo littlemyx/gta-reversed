@@ -31,6 +31,9 @@ public:
     bool          m_makePedAlwaysFacePartner;
     char          m_animBlockName[16];
     bool          m_requiredAnimsStreamedIn;
+#ifdef NOTSA_PORTABLE
+    int16         m_goToPointFrameCounter{}; // NOTSA (portable only), see GetGoToPointFrameCounter()
+#endif
 
 public:
     static constexpr auto Type = TASK_COMPLEX_PARTNER;
@@ -50,7 +53,12 @@ protected:
     void CalculateMeetingPoints(CPed* ped, CVector* point, CVector* targetPoint); // 0x681FE0
 
     // NOTSA: the base class code uses a 16-bit counter at +0x70, which is `field_70` of the derived classes (the base is 0x70 bytes)
+#ifdef NOTSA_PORTABLE
+    // LP64: the base is larger than 0x70 bytes (8-byte vptr / pointers), so +0x70 lies INSIDE the base and the counter overwrote its own fields: own member instead
+    int16& GetGoToPointFrameCounter() { return m_goToPointFrameCounter; }
+#else
     int16& GetGoToPointFrameCounter() { return *reinterpret_cast<int16*>(reinterpret_cast<uint8*>(this) + 0x70); }
+#endif
 
 private:
     friend void InjectHooksMain();

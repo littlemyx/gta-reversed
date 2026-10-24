@@ -6,7 +6,7 @@ static_assert(offsetof(tScriptSearchlight, m_Target) == 0x14);
 static_assert(offsetof(tScriptSearchlight, m_PathCoord1) == 0x28);
 static_assert(offsetof(tScriptSearchlight, m_PathCoord2) == 0x34);
 static_assert(offsetof(tScriptSearchlight, m_fPathSpeed) == 0x40);
-static_assert(offsetof(tScriptSearchlight, m_FollowingEntity) == 0x48);
+VALIDATE_OFFSET(tScriptSearchlight, m_FollowingEntity, 0x48);
 
 void CSearchLight::InjectHooks() {
     RH_ScopedClass(CSearchLight);
@@ -22,16 +22,16 @@ void CSearchLight::InjectHooks() {
 //! 0x59C970 (`CVector::NormaliseAndMag`) the way the original runs it: the sum of squares, the reciprocal and the returned
 //! magnitude stay in x87 registers (extended precision, `double` here), only the components are rounded to float.
 static double NormaliseAndMagOriginal(CVector& v) {
-    const double sq = ((double)v.x * (double)v.x + (double)v.y * (double)v.y) + (double)v.z * (double)v.z;
+    const x87d sq = ((x87d)v.x * (x87d)v.x + (x87d)v.y * (x87d)v.y) + (x87d)v.z * (x87d)v.z;
     if (sq <= 0.0) { // FCOM + JP: only taken (=> normalise) for `sq > 0` and NaN
         v.x = 1.0f;
         return 1.0;
     }
-    const double recip = 1.0 / std::sqrt(sq);
-    v.x = (float)(recip * (double)v.x);
-    v.y = (float)(recip * (double)v.y);
-    v.z = (float)(recip * (double)v.z);
-    return 1.0 / recip;
+    const x87d recip = (x87d)1.0 / std::sqrt(sq);
+    v.x = (float)(recip * (x87d)v.x);
+    v.y = (float)(recip * (x87d)v.y);
+    v.z = (float)(recip * (x87d)v.z);
+    return (x87d)1.0 / recip;
 }
 
 // NOTSA name (the original has no symbol)
@@ -45,18 +45,18 @@ bool CSearchLight::IsPointInsideLitEllipse(const CVector& point, int32 searchLig
     const float  lenA = (float)NormaliseAndMagOriginal(axisA); // Spilled to the stack as a float
     const double lenB = NormaliseAndMagOriginal(axisB);        // Stays in the x87 stack
 
-    const double dx = (double)point.x - (double)light.m_TargetSpot.x;
-    const double dy = (double)point.y - (double)light.m_TargetSpot.y;
-    const double dz = (double)point.z - (double)light.m_TargetSpot.z;
+    const x87d dx = (x87d)point.x - (x87d)light.m_TargetSpot.x;
+    const x87d dy = (x87d)point.y - (x87d)light.m_TargetSpot.y;
+    const x87d dz = (x87d)point.z - (x87d)light.m_TargetSpot.z;
 
-    const double dotA = ((double)axisA.z * dz + (double)axisA.y * dy) + (double)axisA.x * dx;
-    const float  distA = (float)(dotA / (double)lenA); // Spilled to the stack as a float
+    const x87d dotA = ((x87d)axisA.z * dz + (x87d)axisA.y * dy) + (x87d)axisA.x * dx;
+    const float  distA = (float)(dotA / (x87d)lenA); // Spilled to the stack as a float
 
-    const double dotB  = ((double)axisB.z * dz + (double)axisB.y * dy) + (double)axisB.x * dx;
-    const double distB = dotB / lenB;
+    const x87d dotB  = ((x87d)axisB.z * dz + (x87d)axisB.y * dy) + (x87d)axisB.x * dx;
+    const x87d distB = X87R(dotB / lenB);
 
     // FCOMP + JNP: true for `<= 1.0` (and false for NaN)
-    return distB * distB + (double)distA * (double)distA <= 1.0;
+    return distB * distB + (x87d)distA * (x87d)distA <= 1.0;
 }
 
 // NOTSA name (the original has no symbol)
@@ -103,12 +103,12 @@ void CSearchLight::SetPathBetween(int32 scriptIndex, CVector p1, CVector p2, flo
     auto& light = CTheScripts::ScriptSearchLightArray[idx];
 
     // The squared (XY) distances of the current target to both path points (x87 extended precision)
-    const double d1x = (double)light.m_Target.x - (double)p1.x;
-    const double d1y = (double)light.m_Target.y - (double)p1.y;
-    const double dist1 = d1y * d1y + d1x * d1x;
-    const double d2x = (double)light.m_Target.x - (double)p2.x;
-    const double d2y = (double)light.m_Target.y - (double)p2.y;
-    const double dist2 = d2y * d2y + d2x * d2x;
+    const x87d d1x = (x87d)light.m_Target.x - (x87d)p1.x;
+    const x87d d1y = (x87d)light.m_Target.y - (x87d)p1.y;
+    const x87d dist1 = d1y * d1y + d1x * d1x;
+    const x87d d2x = (x87d)light.m_Target.x - (x87d)p2.x;
+    const x87d d2y = (x87d)light.m_Target.y - (x87d)p2.y;
+    const x87d dist2 = d2y * d2y + d2x * d2x;
 
     light.m_PathCoord1 = p1;
     light.m_PathCoord2 = p2;

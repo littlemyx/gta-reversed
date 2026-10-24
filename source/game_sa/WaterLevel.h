@@ -193,15 +193,24 @@ class CWaterLevel {
         };
 
     public:
+#ifdef __clang__
+        constexpr PolyInfo() : m_id(0), m_type(0) {} // NOTSA: clang rejects the bit-field DMIs being needed inside the enclosing class (m_BlockPolyInfo below); not used with cl.exe (a user ctor makes m_BlockPolyInfo / m_PolyCombos dynamically initialised there)
+#else
         PolyInfo() = default;
+#endif
         PolyInfo(uint16 id, PType type) : m_id(id), m_type((uint16)type) {} // NOTSA
 
         auto Id()   const { return m_id; }
         auto Type() const { return (PType)(m_type); }
 
     private:
+#ifdef __clang__
+        uint16 m_id   : 14;
+        uint16 m_type : 2;  //< See PType
+#else
         uint16 m_id   : 14{};
         uint16 m_type : 2{};  //< See PType
+#endif
     };
 
     //! A block might have a simple shape (tri/quad) or a combo (That is just a combination of quads and triangles)

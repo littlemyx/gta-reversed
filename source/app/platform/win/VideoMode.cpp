@@ -3,6 +3,10 @@
 #include "VideoMode.h"
 #include "WinPlatform.h"
 #include "PostEffects.h"
+#ifdef NOTSA_PORTABLE
+#include <SDL3/SDL.h>
+#include "portable/app_window.h"
+#endif
 
 // todo: "2014/12/07 [nick7]: is it related to streaming memory (45M default?)?"
 #define GAME_FREE_VIDEO_MEM_REQUIRED (45 * 1024 * 1024)
@@ -84,6 +88,16 @@ void SetVideoMode(int32 mode) {
     VIDEO_MODE_LOG("Changing Video Mode to {} ({})", mode, gVideoModes ? gVideoModes[mode] : "unknown");
 
     RwD3D9ChangeVideoMode(mode);
+#ifdef NOTSA_PORTABLE
+    // MAC-W2: video modes are in drawable pixels; the engine sizes the window in points (HiDPI: twice too large). Re-size it so that pixels == the mode.
+    if (PSGLOBAL(sdlWindow) && !(SDL_GetWindowFlags(PSGLOBAL(sdlWindow)) & SDL_WINDOW_FULLSCREEN)) {
+        RwVideoMode vm{};
+        if (RwEngineGetVideoModeInfo(&vm, mode) && !(vm.flags & rwVIDEOMODEEXCLUSIVE)) {
+            SDL_SetWindowSize(PSGLOBAL(sdlWindow), notsa::portable::PointsFromPixels(vm.width), notsa::portable::PointsFromPixels(vm.height));
+            SDL_SyncWindow(PSGLOBAL(sdlWindow));
+        }
+    }
+#endif
 #ifdef NOTSA_USE_SDL3
     // exe 0x7F8640 (RwD3D9ChangeVideoMode) resizes the window with SetWindowPos; the resulting WM_SIZE is SENT to the game's window procedure, i.e. it runs
     // synchronously inside the call: __MainWndProc 0x747F04 -> RsEventHandler(rsCAMERASIZE) -> CameraSize resizes the camera / z rasters to the new client size.

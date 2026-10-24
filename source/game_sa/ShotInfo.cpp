@@ -3,7 +3,7 @@
 #include <algorithm>
 
 constexpr auto      MAX_SHOT_INFOS = 100u;
-NOTSA_GLOBAL_ZERO(aShotInfos, 0xC89690, (std::array<CShotInfo, MAX_SHOT_INFOS>)); static_assert(sizeof(aShotInfos) == 4400); // zero .bss in the exe (not the repo default ctor values)
+NOTSA_GLOBAL_ZERO(aShotInfos, 0xC89690, (std::array<CShotInfo, MAX_SHOT_INFOS>)); VALIDATE_SIZE(aShotInfos, 4400); // zero .bss in the exe (not the repo default ctor values)
 
 // Originally CShotInfo::ms_afRandTable
 static inline NOTSA_GLOBAL(RandTable, 0xC89628, (std::array<float, 20>), {});
@@ -64,7 +64,7 @@ bool CShotInfo::AddShot(CEntity* creator, eWeaponType weaponType, CVector origin
     shot->m_vecTargetOffset *= speed;
 
     // TODO: overflow handling?
-    const auto now      = (float)(double(CTimer::GetTimeInMS()) + ((CTimer::GetTimeInMS() & 0x80000000) ? 4294967300.0 : 0.0));
+    const auto now      = (float)(X87R(double(CTimer::GetTimeInMS()) + ((CTimer::GetTimeInMS() & 0x80000000) ? 4294967300.0 : 0.0)));
     shot->m_DestroyTime = now + weapInfo->m_fLifespan;
     return true;
 }
@@ -100,9 +100,9 @@ void CShotInfo::Update() {
         if (weaponInfo.flags.bSlowdown) {
             // 0x739EF8: the double result of pow stays unrounded on the x87 stack while the 3 components are multiplied
             const double slowdown = pow((double)0.96f, (double)CTimer::GetTimeStep());
-            shot.m_vecTargetOffset.x = (float)(slowdown * shot.m_vecTargetOffset.x);
-            shot.m_vecTargetOffset.y = (float)(slowdown * shot.m_vecTargetOffset.y);
-            shot.m_vecTargetOffset.z = (float)(slowdown * shot.m_vecTargetOffset.z);
+            shot.m_vecTargetOffset.x = (float)(X87R(slowdown * shot.m_vecTargetOffset.x));
+            shot.m_vecTargetOffset.y = (float)(X87R(slowdown * shot.m_vecTargetOffset.y));
+            shot.m_vecTargetOffset.z = (float)(X87R(slowdown * shot.m_vecTargetOffset.z));
         }
 
         if (weaponInfo.flags.bRangeIncreasesOverTime) {
@@ -111,12 +111,12 @@ void CShotInfo::Update() {
 
         // 0x739F2B: the x / y products stay on the x87 stack (extended exponent range), the z one is spilled to a float
         {
-            const double ts = CTimer::GetTimeStep();
-            const double px = ts * shot.m_vecTargetOffset.x, py = ts * shot.m_vecTargetOffset.y;
+            const x87d ts = CTimer::GetTimeStep();
+            const x87d px = ts * shot.m_vecTargetOffset.x, py = ts * shot.m_vecTargetOffset.y;
             const float  pz = (float)(ts * shot.m_vecTargetOffset.z);
             shot.m_vecOrigin.x = (float)(px + shot.m_vecOrigin.x);
             shot.m_vecOrigin.y = (float)(py + shot.m_vecOrigin.y);
-            shot.m_vecOrigin.z = (float)((double)pz + shot.m_vecOrigin.z);
+            shot.m_vecOrigin.z = (float)((x87d)pz + shot.m_vecOrigin.z);
         }
 
         if (shot.m_pCreator) {

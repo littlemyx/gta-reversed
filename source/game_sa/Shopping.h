@@ -26,7 +26,7 @@ class CShopping {
         uint32 key;
         uint32 price;
     };
-    VALIDATE_SIZE(PriceModifier, 0x8);
+    VALIDATE_SIZE_FILE(PriceModifier, 0x8);
 
     struct ItemPrice {
         uint32 key;

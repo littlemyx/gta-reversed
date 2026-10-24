@@ -61,7 +61,7 @@ public:
     FxSystem_c** m_pGunParticles;
     uint8        m_nFiringMultiplier;
     int32        field_9DC;
-    int32        field_9E0;
+    CEntity*     field_9E0;                 // NOTSA: was int32 holding the lock-on target pointer
     int32        field_9E4;
     std::array<FxSystem_c*, 4> m_apJettrusParticles;
     FxSystem_c*  m_pSmokeParticle;

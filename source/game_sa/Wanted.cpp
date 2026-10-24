@@ -368,7 +368,7 @@ void CWanted::ReportCrimeNow(eCrimeType crimeType, const CVector& posn, bool bPo
         NOTSA_LOG_DEBUG("{} : {} (Mult:{})", crimeType, m_WantedLevel, mul); // IV
 
         // 0x56225F: fiadd [chaos] on the unrounded x87 product, then _ftol (the sum is NOT `chaos + (int)product`)
-        m_ChaosLevel = (int32)((double)mul * (double)factor + (double)m_ChaosLevel);
+        m_ChaosLevel = (int32)((x87d)mul * (x87d)factor + (x87d)m_ChaosLevel);
     }
 
     m_ChaosLevel = std::max(m_ChaosLevel, m_ChaosLevelBeforeParole);
@@ -526,9 +526,9 @@ bool CWanted::IsClosestCop(CPed* ped, const int32 numCopsToCheck) const {
     const auto& playerPos = FindPlayerPed()->GetPosition(); // NOTE: the ped's position, NOT FindPlayerCoors() (which is the vehicle's when driving)
     for (auto i = 0u; i < numCops; i++) {
         const auto& copPos = cops[i]->GetPosition();
-        const double dx = (double)playerPos.x - (double)copPos.x;
-        const double dy = (double)playerPos.y - (double)copPos.y;
-        const double dz = (double)playerPos.z - (double)copPos.z;
+        const x87d dx = (x87d)playerPos.x - (x87d)copPos.x;
+        const x87d dy = (x87d)playerPos.y - (x87d)copPos.y;
+        const x87d dz = (x87d)playerPos.z - (x87d)copPos.z;
         dists[i] = (float)(dz * dz + dx * dx + dy * dy);
     }
 

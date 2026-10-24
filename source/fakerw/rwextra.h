@@ -123,7 +123,11 @@ void RwD3D9SetVertexShader(void* shader);
 void RwD3D9SetPixelShader(void* shader);
 void RwD3D9DrawIndexedPrimitive(RwUInt32 primitiveType, RwInt32 baseVertexIndex, RwUInt32 minIndex, RwUInt32 numVertices, RwUInt32 startIndex, RwUInt32 primitiveCount);
 void RwD3D9DrawPrimitive(RwUInt32 primitiveType, RwUInt32 startVertex, RwUInt32 primitiveCount);
+#ifndef NOTSA_PORTABLE
 inline IDirect3DDevice9* GetD3D9Device() { return rw::d3d::d3ddevice; }
+#else
+inline void* GetD3D9Device() { return nullptr; } // R-1: no D3D9 device under GL3 (callers are D3D-only code, excluded or guarded)
+#endif
 
 // 02c: the rest of the RwD3D9 fixed-function/device state API (source/standalone/rw/rwd3d_ff.cpp). The game only needs the functions above plus
 // the ones declared in rwapi.h; these are the matching Get* / helper entry points (same names and argument order as the original RW 3.6 D3D9 API).
@@ -181,7 +185,11 @@ struct RwFileFunctions {
     int     (*rwfflush)(void* fp);
     long    (*rwftell)(void* fp);
 };
+#ifndef NOTSA_PORTABLE
 static_assert(sizeof(RwFileFunctions) == 0x2C);
+#else
+static_assert(sizeof(RwFileFunctions) == 11 * sizeof(void*)); // R-1: LP64
+#endif
 RwFileFunctions* RwOsGetFileInterface();
 
 //--------------------------------------------------------------------------------------------------

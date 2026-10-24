@@ -121,10 +121,10 @@ bool CConversationForPed::IsPlayerInPositionForConversation(bool randomConversat
 
     // Distance in extended precision (term order: z, y, x), compared as `dist > 4.0f`
     {
-        const double dx = (double)playerPos.x - (double)pedPos->x;
-        const double dy = (double)playerPos.y - (double)pedPos->y;
-        const double dz = (double)playerPos.z - (double)pedPos->z;
-        const double dist = std::sqrt(dz * dz + dy * dy + dx * dx);
+        const x87d dx = (x87d)playerPos.x - (x87d)pedPos->x;
+        const x87d dy = (x87d)playerPos.y - (x87d)pedPos->y;
+        const x87d dz = (x87d)playerPos.z - (x87d)pedPos->z;
+        const x87d dist = std::sqrt(dz * dz + dy * dy + dx * dx);
         if (dist > 4.0f) {
             return false;
         }
@@ -134,7 +134,7 @@ bool CConversationForPed::IsPlayerInPositionForConversation(bool randomConversat
     {
         const auto& pedFwd    = m_pPed->GetForward();
         const auto& playerFwd = FindPlayerPed()->GetForward();
-        const double dot      = (double)playerFwd.z * (double)pedFwd.z + (double)playerFwd.y * (double)pedFwd.y + (double)playerFwd.x * (double)pedFwd.x;
+        const x87d dot      = (x87d)playerFwd.z * (x87d)pedFwd.z + (x87d)playerFwd.y * (x87d)pedFwd.y + (x87d)playerFwd.x * (x87d)pedFwd.x;
         if (dot > 0.0f) {
             return false;
         }
@@ -143,7 +143,7 @@ bool CConversationForPed::IsPlayerInPositionForConversation(bool randomConversat
     // Player must (nearly) stand still
     {
         const auto& spd = FindPlayerPed()->m_vecMoveSpeed;
-        const double speed = std::sqrt((double)spd.x * (double)spd.x + (double)spd.y * (double)spd.y);
+        const x87d speed = std::sqrt((x87d)spd.x * (x87d)spd.x + (x87d)spd.y * (x87d)spd.y);
         if (speed > 0.01f) {
             return false;
         }

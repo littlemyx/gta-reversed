@@ -19,7 +19,7 @@ struct CStuntJump {
     bool         found;
 };
 
-VALIDATE_SIZE(CStuntJump, 0x44);
+VALIDATE_SIZE_FILE(CStuntJump, 0x44);
 
 typedef CPool<CStuntJump> CStuntJumpsPool;
 

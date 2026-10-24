@@ -557,6 +557,23 @@ bool CGenericGameStorage::GenericSave() {
         }
     }
     LOG_SAVE("SAVE - END");
+#ifdef NOTSA_PORTABLE
+    // MAC-PLAY1: pad the file to SIZE_OF_ONE_GAME_IN_BYTES like the exe (0x5D15C2..0x5D16A0): while (pos + filePos < SIZE) { rem = SIZE - filePos; if (rem < BUFFER_SIZE) { pos = rem; break; }
+    // pos = BUFFER_SIZE; SaveWorkBuffer(false) }. The reversed loop below never sets `pos = rem` when the remainder is smaller than a buffer (a save whose data is already > ~150 KB: every
+    // new-game save), so the file stays unpadded: its size is not a multiple of 4 and CGenericGameStorage::LoadWorkBuffer rejects it ("Load Failed"). See .notes/PORTABLE_SYNC.md.
+    while (ms_WorkBufferPos + ms_FilePos < SIZE_OF_ONE_GAME_IN_BYTES) {
+        const uint32 remaining = SIZE_OF_ONE_GAME_IN_BYTES - ms_FilePos;
+        if (remaining < BUFFER_SIZE) {
+            ms_WorkBufferPos = (int32)remaining;
+            break;
+        }
+        ms_WorkBufferPos = (int32)BUFFER_SIZE;
+        if (!SaveWorkBuffer(false)) {
+            CloseFile();
+            return false;
+        }
+    }
+#else
     while (ms_WorkBufferPos + ms_FilePos < SIZE_OF_ONE_GAME_IN_BYTES && (SIZE_OF_ONE_GAME_IN_BYTES - ms_FilePos) >= BUFFER_SIZE) {
         ms_WorkBufferPos = BUFFER_SIZE;
         if (!SaveWorkBuffer(false)) {
@@ -569,6 +586,7 @@ bool CGenericGameStorage::GenericSave() {
         }
         ms_WorkBufferPos = SIZE_OF_ONE_GAME_IN_BYTES - ms_FilePos;
     }
+#endif
 
     if (!SaveWorkBuffer(true)) {
         CloseFile();

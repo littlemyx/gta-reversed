@@ -11,7 +11,13 @@ The TU list and the defines come from <build-dir>/compile_commands.json (the MSV
 real build configuration.  Nothing is written outside --out.
 
   clang_census.py run     --mode msvc --build-dir build/StandaloneRelease --out DIR [-j 6] [--only REGEX] [--llvm /opt/homebrew/opt/llvm]
+  clang_census.py run     --mode native --compdb build/PortableMac/compile_commands.json --out DIR      (C-0 in portable mode, see below)
   clang_census.py report  --out DIR     (aggregate DIR/logs into DIR/errors.tsv + summary.json)
+
+--compdb FILE (slice C-0 of .notes/STREAM_C_PLAN.md, portable mode): take the TU list and the -D / -I / -isystem set from a compile_commands.json of the
+PORTABLE configuration (cmake --preset PortableMac: GTASA_PORTABLE=ON, NOTSA_PORTABLE=1, hook registry / Win32 startup sources not part of the target) instead of the
+MSVC Windows run build. The compdb is clang-style (-o / -isystem / -Xclang -include-pch); only the game target (gta_reversed.dir) is used. Everything else (target,
+-std, -fms-extensions, -mms-bitfields, winstub headers, the PCH over StdInc.h) is the same native syntax-only census.
 
 The run step is quiet and resumable (a TU whose log exists is skipped unless --force).
 """
@@ -23,8 +29,8 @@ SRC = os.path.join(REPO, 'source') + os.sep
 LLVM_DEFAULT = '/opt/homebrew/opt/llvm'
 
 
-def load_tus(build_dir, only):
-    cc = json.load(open(os.path.join(build_dir, 'compile_commands.json')))
+def load_tus(build_dir, only, compdb=None):
+    cc = json.load(open(compdb or os.path.join(build_dir, 'compile_commands.json')))
     tus, seen = [], set()
     for e in cc:
         f = e['file']
@@ -32,6 +38,8 @@ def load_tus(build_dir, only):
             continue
         cmd = shlex.split(e['command'])
         fo = next((a for a in cmd if a.startswith('/Fo')), '')
+        if not fo and '-o' in cmd[:-1]:            # clang-style compdb (PortableMac)
+            fo = cmd[cmd.index('-o') + 1]
         if 'gta_reversed.dir' not in fo:   # only the game target (tests re-compile the same files)
             continue
         if f in seen:
@@ -56,6 +64,9 @@ def split_cmd(cmd):
             sysincs.append(p)
         elif a.startswith('-I'):
             incs.append(a[2:])
+    for i, a in enumerate(cmd[:-1]):               # clang-style: `-isystem DIR` (conan packages in the PortableMac compdb)
+        if a == '-isystem':
+            sysincs.append(cmd[i + 1])
     return defs, incs, sysincs
 
 
@@ -79,13 +90,24 @@ def msvc_flags(llvm, defs, incs, sysincs, extra):
 STUB = os.path.join(REPO, 'tools', 'standalone', 'winstub')
 
 
+def sdk_root():
+    """macOS SDK for the native pass: brew LLVM has no default sysroot (without it <inttypes.h>, <stdio.h> ... are not found). SDKROOT wins, then xcrun."""
+    r = os.environ.get('SDKROOT')
+    if not r:
+        try:
+            r = subprocess.run(['xcrun', '--show-sdk-path'], capture_output=True, text=True).stdout.strip()
+        except OSError:
+            r = ''
+    return r
+
+
 def native_flags(llvm, defs, incs, sysincs, extra):
     # Apple clang is fine; brew LLVM is used when given (newer libc++, same front end)
     cxx = os.path.join(llvm, 'bin', 'clang++') if llvm and os.path.exists(os.path.join(llvm, 'bin', 'clang++')) else 'clang++'
     skip_sys = ('/tools/msvc/',)
     incs = [i for i in incs if not any(s in i for s in skip_sys)]
     sysincs = [i for i in sysincs if not any(s in i for s in skip_sys)]
-    return ([cxx, '-target', 'arm64-apple-macos15', '-std=c++23', '-fsyntax-only', '-x', 'c++', '-Wno-everything', '-fno-color-diagnostics',
+    return ([cxx, '-target', 'arm64-apple-macos15'] + (['-isysroot', sdk_root()] if sdk_root() and not any(x == '-isysroot' for x in extra) else []) + ['-std=c++23', '-fsyntax-only', '-x', 'c++', '-Wno-everything', '-fno-color-diagnostics',
              '-fno-caret-diagnostics', '-ferror-limit=0', '-fms-extensions', '-mms-bitfields', '-fno-delayed-template-parsing',
              # the width bugs the census is about: warnings by default, made errors so that they are counted (-w hides everything else)
              '-Werror=pointer-to-int-cast', '-Werror=int-to-pointer-cast', '-Werror=pointer-integer-compare', '-Werror=int-conversion',
@@ -118,7 +140,7 @@ def run_one(args):
 def cmd_run(a):
     out = os.path.abspath(a.out)
     os.makedirs(os.path.join(out, 'logs'), exist_ok=True)
-    tus = load_tus(a.build_dir, a.only)
+    tus = load_tus(a.build_dir, a.only, a.compdb)
     extra = shlex.split(a.extra or '')
     pch_flags = []
     if a.pch:
@@ -155,7 +177,7 @@ def cmd_run(a):
     def flags_for(c):
         if pch_flags is not None:
             return pch_flags
-        if not any(x.startswith('/Yu') for x in c):
+        if not any(x.startswith('/Yu') or x == '-include-pch' for x in c):     # MSVC /Yu, or clang -Xclang -include-pch (compdb of PortableMac)
             return []
         return ['-include', hxx] if a.mode == 'native' else ['/FI' + hxx]
     work = [(a.mode, a.llvm, out, f, c, flags_for(c), a.force, extra) for f, c in tus]
@@ -201,6 +223,7 @@ def main():
     r = sp.add_parser('run')
     r.add_argument('--mode', choices=['msvc', 'native'], required=True)
     r.add_argument('--build-dir', default=os.path.join(REPO, 'build', 'StandaloneRelease'))
+    r.add_argument('--compdb', help='compile_commands.json to take the TU list and -D/-I set from (default: <build-dir>/compile_commands.json); e.g. build/PortableMac/compile_commands.json')
     r.add_argument('--out', required=True)
     r.add_argument('--llvm', default=LLVM_DEFAULT)
     r.add_argument('-j', '--jobs', type=int, default=6)

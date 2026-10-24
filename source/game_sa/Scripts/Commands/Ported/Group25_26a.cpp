@@ -52,28 +52,28 @@ using namespace notsa::script::commands::ported::g25_26;
 
 namespace {
 // Raw offsets the asm relies on
-static_assert(offsetof(CVehicle, vehicleFlags) == 0x428);
-static_assert(offsetof(CVehicle, m_nVehicleType) == 0x590);
-static_assert(offsetof(CVehicle, m_nTertiaryColor) == 0x436 && offsetof(CVehicle, m_nQuaternaryColor) == 0x437);
-static_assert(offsetof(CVehicle, m_fHealth) == 0x4C0);
-static_assert(offsetof(CPhysical, m_nPhysicalFlags) == 0x40);
-static_assert(offsetof(CTrain, m_nTrainFlags) == 0x5B8);
-static_assert(offsetof(CBike, m_nNoOfContactWheels) == 0x804);
-static_assert(offsetof(CAutomobile, m_nNumContactWheels) == 0x960);
-static_assert(offsetof(CAutomobile, m_wMiscComponentAngle) == 0x86C);
-static_assert(offsetof(CPed, m_nAnimGroup) == 0x4D4);
-static_assert(offsetof(CPed, m_pGogglesObject) == 0x4FC);
-static_assert(offsetof(CPlayerPedData, m_nPlayerGroup) == 0x38);
-static_assert(offsetof(CPlayerPedData, m_nScriptLimitToGangSize) == 0x43);
-static_assert(offsetof(CPlayerPedData, m_bDontAllowWeaponChange) == 0x85);
-static_assert(offsetof(CPlayerPedData, m_bForceInteriorLighting) == 0x86);
+VALIDATE_OFFSET(CVehicle, vehicleFlags, 0x428);
+VALIDATE_OFFSET(CVehicle, m_nVehicleType, 0x590);
+VALIDATE_OFFSET(CVehicle, m_nTertiaryColor, 0x436); VALIDATE_OFFSET(CVehicle, m_nQuaternaryColor, 0x437);
+VALIDATE_OFFSET(CVehicle, m_fHealth, 0x4C0);
+VALIDATE_OFFSET(CPhysical, m_nPhysicalFlags, 0x40);
+VALIDATE_OFFSET(CTrain, m_nTrainFlags, 0x5B8);
+VALIDATE_OFFSET(CBike, m_nNoOfContactWheels, 0x804);
+VALIDATE_OFFSET(CAutomobile, m_nNumContactWheels, 0x960);
+VALIDATE_OFFSET(CAutomobile, m_wMiscComponentAngle, 0x86C);
+VALIDATE_OFFSET(CPed, m_nAnimGroup, 0x4D4);
+VALIDATE_OFFSET(CPed, m_pGogglesObject, 0x4FC);
+VALIDATE_OFFSET(CPlayerPedData, m_nPlayerGroup, 0x38);
+VALIDATE_OFFSET(CPlayerPedData, m_nScriptLimitToGangSize, 0x43);
+VALIDATE_OFFSET(CPlayerPedData, m_bDontAllowWeaponChange, 0x85);
+VALIDATE_OFFSET(CPlayerPedData, m_bForceInteriorLighting, 0x86);
 static_assert(offsetof(CPad, DisablePlayerControls) == 0x10E);
-static_assert(offsetof(CPickup, m_nPickupType) == 0x1C && sizeof(CPickup) == 0x20);
+VALIDATE_OFFSET(CPickup, m_nPickupType, 0x1C); VALIDATE_SIZE(CPickup, 0x20); // x86 in-memory; the file record is CPickup_File (P-2e)
 static_assert(MAX_NUM_PICKUPS == 620); // 0x4D80 / 0x20
-static_assert(offsetof(CVehicleModelInfo, m_nHandlingId) == 0x4A);
+VALIDATE_OFFSET(CVehicleModelInfo, m_nHandlingId, 0x4A);
 static_assert(offsetof(cHandlingDataMgr, m_aVehicleHandling) + offsetof(tHandlingData, m_nMonetaryValue) == 236); // 0xC2BAB4 - 0xC2B9C8 (gHandlingDataMgr @0xC2B9C8)
 static_assert(sizeof(tHandlingData) == 0xE0);
-static_assert(sizeof(CPlayerInfo) == 0x190);
+VALIDATE_SIZE(CPlayerInfo, 0x190);
 
 //! 0x859A3C: 1/255
 constexpr float ONE_OVER_255 = std::bit_cast<float>(0x3B808081u);
@@ -182,7 +182,7 @@ bool IsMoneyPickupAtCoords(CVector coords) {
 //! width = _ftol2( (maximumWidth [0xC17044] * 0x859520) * (int)(uint16)width ) -- x87: every step rounded by the PC=24 mode
 //! CMenuSystem::SetColumnWidth(menu, column, (uint16)result) [0x582050]
 void SetMenuColumnWidth(int32 menu, int32 column, int32 width) {
-    const double scaled = ((double)RsGlobal.maximumWidth * (double)SCREEN_RECIPROCAL_X) * (double)(int32)(uint16)width;
+    const x87d scaled = ((x87d)RsGlobal.maximumWidth * (x87d)SCREEN_RECIPROCAL_X) * (x87d)(int32)(uint16)width;
     CMenuSystem::SetColumnWidth((MenuId)(uint8)menu, (uint8)column, (uint16)Ftol(scaled));
 }
 
@@ -223,7 +223,7 @@ OpcodeResult CreateCarGeneratorWithPlate(CRunningScript& S) {
     const float y = ScriptParams[1].fParam;
     float       z = ScriptParams[2].fParam;
     if (z > -100.0f) {
-        z = (float)((double)z + (double)std::bit_cast<float>(0x3C75C28Fu));
+        z = (float)((x87d)z + (x87d)std::bit_cast<float>(0x3C75C28Fu));
     }
     const int32 id = CTheCarGenerators::CreateCarGenerator(
         CVector{ x, y, z },
@@ -267,9 +267,9 @@ void SetAircraftCarrierSamSite(int32 flag) {
 //! CPointLights::AddLight(0, pos, (0, 0, 0), range, r/255, g/255, b/255, fogType 0, extra shadows 1, no entity) [0x7000E0];
 //! each colour = (float)((double)int * (float)0x859A3C [1/255]) (fild; fmul; fstp)
 void DrawLightWithRange(CVector pos, int32 red, int32 green, int32 blue, float range) {
-    const float b = (float)((double)blue * (double)ONE_OVER_255);
-    const float g = (float)((double)green * (double)ONE_OVER_255);
-    const float r = (float)((double)red * (double)ONE_OVER_255);
+    const float b = (float)((x87d)blue * (x87d)ONE_OVER_255);
+    const float g = (float)((x87d)green * (x87d)ONE_OVER_255);
+    const float r = (float)((x87d)red * (x87d)ONE_OVER_255);
     CPointLights::AddLight(0, pos, CVector{ 0.0f, 0.0f, 0.0f }, range, r, g, b, 0, true, nullptr);
 }
 

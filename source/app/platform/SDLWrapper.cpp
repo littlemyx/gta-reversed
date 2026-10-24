@@ -68,9 +68,24 @@ void NotsaRwMsaaState(char* buf, size_t n);   // standalone/rw/engine.cpp: selec
 bool NotsaGrCmd(const char* name, const std::string& args); // GameplayRegress.cpp (gameplay regression suite)
 void NotsaGrTick();
 #endif
+#ifdef NOTSA_PORTABLE
+namespace notsa::portable { bool AudioCmd(const char* name, const std::string& args); } // portable/audio_cmd.cpp (MAC-W3)
+#include "portable/app_pad.h"    // MAC-W2: gamepad feed + injector commands padattach / padbtn / padaxis / padstat / menustat
+#include "portable/app_window.h" // MAC-W2: HiDPI, mouse mode, present pacing; injector commands presentstat / windowstat / fakeocclude
+#endif
+#ifdef NOTSA_STATEHASH
+#include "portable/statehash.h" // RR-1: virtual script clock + cmd:rr_*
+#endif
 struct NotsaInjectMissionInfo { int32 offset; uint8 bytes[16]; };
 bool NotsaInjectStartMission(int32 missionId, NotsaInjectMissionInfo* info); // toolsmenu/DebugModules/Script/MissionDebugModule.cpp
 namespace {
+#ifdef NOTSA_STATEHASH
+// the script clock source: wall clock, or (NOTSA_RR=1) the frame-stepped virtual clock of the state-hash harness, so `wait:N` / `until:` count game frames, not host time
+uint64_t InjNowMs() { return notsa::rr::Active() ? notsa::rr::VirtualMs() : (uint64_t)GetTickCount64(); }
+#define NOTSA_INJ_NOW_MS() InjNowMs()
+#else
+#define NOTSA_INJ_NOW_MS() GetTickCount64()
+#endif
 struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; int vmode = -1; int vw = 0, vh = 0; int aa = -1; int mission = -1; std::string mark; std::string probe; std::string cmd; std::string until; uint64_t maxMs = 0; std::string skipIf, label; size_t skipTo = 0; };
 std::vector<InjEv> s_InjEvents;
 size_t             s_InjNext = 0;
@@ -240,7 +255,7 @@ void InjInit() {
             if (s_InjEvents[i].skipIf.empty() && s_InjEvents[i].label == ev.label) { ev.skipTo = i; break; }
         }
     }
-    s_InjStart = GetTickCount64();
+    s_InjStart = NOTSA_INJ_NOW_MS();
     NOTSA_INJ_LOG("input injector: %u events", (unsigned)s_InjEvents.size());
 }
 
@@ -372,6 +387,13 @@ static void InjRunCmd(const std::string& c) {
     char name[32] = {}; float a = 0, b = 0, d = 0; int w = 0, n = 0;
     std::sscanf(c.c_str(), "%31[^:]", name);
     const std::string args = c.size() > strlen(name) ? c.substr(strlen(name) + 1) : "";
+#ifdef NOTSA_PORTABLE
+    if (::notsa::portable::AudioCmd(name, args)) { return; } // MAC-W3: cmd:radio:ID / cmd:track:ID / cmd:audiostat (audio runs on the native Mac)
+    if (::notsa::portable::InputCmd(name, args) || ::notsa::portable::WindowCmd(name, args)) { return; } // MAC-W2
+#endif
+#ifdef NOTSA_STATEHASH
+    if (notsa::rr::Cmd(name, args)) { return; } // RR-1: cmd:rr_start[:SEED] / rr_stop / rr_stat
+#endif
     if (NotsaGrCmd(name, args)) { return; } // gameplay regression suite commands (GameplayRegress.cpp: snap, spawncop, spawnveh, shootlast, shootdrv, hitplayer, time, quit)
     NOTSA_INJ_LOG("[cmd] %s", c.c_str());
     if (!pl) return;
@@ -528,7 +550,7 @@ void InjPump() {
     ProbeDump();
     NotsaGrTick();
 #endif
-    const uint64_t real = GetTickCount64() - s_InjStart;
+    const uint64_t real = NOTSA_INJ_NOW_MS() - s_InjStart;
     // script clock: frozen at the barrier's time while it holds, shifted by the total hold time afterwards
     const auto clock = [&]() -> uint64_t { return s_InjHolding ? s_InjEvents[s_InjNext].t : (uint64_t)((int64_t)real - s_InjShift); };
     while (s_InjNext < s_InjEvents.size() && s_InjEvents[s_InjNext].t <= clock()) {
@@ -650,8 +672,13 @@ void InjPump() {
         }
         if (ev.mx >= 0) {
             e.type     = SDL_EVENT_MOUSE_MOTION;
+#ifdef NOTSA_PORTABLE
+            e.motion.x = notsa::portable::MouseFromGame((float)ev.mx); // `mouse:x,y` is in game pixels, SDL positions are window points
+            e.motion.y = notsa::portable::MouseFromGame((float)ev.my);
+#else
             e.motion.x = (float)ev.mx;
             e.motion.y = (float)ev.my;
+#endif
             SDL_PushEvent(&e);
             NOTSA_INJ_LOG("injected mouse %d,%d at %u ms", ev.mx, ev.my, (unsigned)now);
             continue;
@@ -755,6 +782,9 @@ void ProcessEvents() {
 #endif
 #endif
 
+#ifdef NOTSA_PORTABLE
+    notsa::portable::UpdateMouseMode(); // MAC-W2: relative in game, absolute pointer in the front-end menu
+#endif
     // Now process events
     const auto* const imCtx = ImGui::GetCurrentContext();
     const auto* const imIO  = imCtx ? &imCtx->IO : nullptr;
@@ -765,6 +795,11 @@ void ProcessEvents() {
         }
 #endif
 
+#ifdef NOTSA_PORTABLE
+        if (notsa::portable::PadOnEvent(e)) { // MAC-W2: gamepad hot plug
+            continue;
+        }
+#endif
         switch (e.type) {
         case SDL_EVENT_QUIT: {
             RsGlobal.quit = true;
@@ -792,8 +827,13 @@ void ProcessEvents() {
                 s_MousePos.x += e.motion.xrel * CCamera::m_fMouseAccelHorzntl * 100.f;
                 s_MousePos.y += e.motion.yrel * CCamera::m_fMouseAccelVertical * 100.f;
             } else {
+#ifdef NOTSA_PORTABLE
+                s_MousePos.x = notsa::portable::MouseToGame(e.motion.x); // window points -> game (drawable) pixels
+                s_MousePos.y = notsa::portable::MouseToGame(e.motion.y);
+#else
                 s_MousePos.x = e.motion.x;
                 s_MousePos.y = e.motion.y;
+#endif
             }
             FrontEndMenuManager.m_nMousePosWinX = (int32)(s_MousePos.x);
             FrontEndMenuManager.m_nMousePosWinY = (int32)(s_MousePos.y);

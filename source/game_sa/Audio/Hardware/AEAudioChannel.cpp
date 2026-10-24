@@ -97,7 +97,7 @@ void CAEAudioChannel::SetFrequencyScalingFactor(float factor) {
         return;
     }
 
-    const auto newFreq = static_cast<uint32>(double(float(m_nOriginalFrequency)) * double(factor)); // 0x4D7D67: fild; fmul dword; _ftol (product stays extended)
+    const auto newFreq = static_cast<uint32>(x87d(float(m_nOriginalFrequency)) * x87d(factor)); // 0x4D7D67: fild; fmul dword; _ftol (product stays extended)
     SetFrequency(newFreq);
 
     if (m_bPaused) {

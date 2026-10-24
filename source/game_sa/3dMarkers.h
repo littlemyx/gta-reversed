@@ -30,7 +30,7 @@ struct tUser3dMarker {
     void Render(RpClump* clump) const;
 };
 
-VALIDATE_SIZE(tUser3dMarker, 0x1C);
+VALIDATE_SIZE_FILE(tUser3dMarker, 0x1C);
 
 struct tDirectionArrow {
     bool    m_bIsUsed;
@@ -60,7 +60,7 @@ public:
     static inline NOTSA_GLOBAL(m_pRpClumpArray, 0xC7C6DC, (std::array<RpClump*, 7>), {});
     static inline NOTSA_GLOBAL(ms_directionArrows, 0xC802E8, (std::array<tDirectionArrow, 5>), {});
     static inline NOTSA_GLOBAL(ms_user3dMarkers, 0xC80258, (std::array<tUser3dMarker, 5>), {});
-    static inline NOTSA_GLOBAL(m_aMarkerArray, 0xC7DD58, (std::array<C3dMarker, 32>), = ExeZero<std::array<C3dMarker, 32>>()); static_assert(sizeof(m_aMarkerArray) == 5120); // zero .bss in the exe (ctor 0x720F60 writes nothing)
+    static inline NOTSA_GLOBAL(m_aMarkerArray, 0xC7DD58, (std::array<C3dMarker, 32>), = ExeZero<std::array<C3dMarker, 32>>()); VALIDATE_SIZE(m_aMarkerArray, 5120); // zero .bss in the exe (ctor 0x720F60 writes nothing)
 
 public:
     static void InjectHooks();

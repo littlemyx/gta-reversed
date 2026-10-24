@@ -116,7 +116,7 @@ void CEntryExitManager::Update() {
                         }
 
                         CVector markerPos{ enexCenter.x, enexCenter.y, enexCenter.z + 1.f };
-                        C3dMarkers::PlaceMarkerCone((uint32)enex, markerPos, 2.0, 255, 255, 0, 255, 1024, 1.0, 5, 0);
+                        C3dMarkers::PlaceMarkerCone(NOTSA_PTR_ID32(enex), markerPos, 2.0, 255, 255, 0, 255, 1024, 1.0, 5, 0);
                     }
                 }
             }

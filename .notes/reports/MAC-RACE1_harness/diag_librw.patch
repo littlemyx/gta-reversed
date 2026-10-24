@@ -1,0 +1,51 @@
+diff --git a/src/frame.cpp b/src/frame.cpp
+index a86642b..523369d 100644
+--- a/src/frame.cpp
++++ b/src/frame.cpp
+@@ -25,6 +25,30 @@ Frame::registerModule(void)
+ 	Engine::registerPlugin(0, ID_FRAMEMODULE, frameOpen, frameClose);
+ }
+ 
++
++// RACE1-DIAG begin
++#include <execinfo.h>
++#include <stdio.h>
++namespace {
++struct RwDiagEnt { void* p; int n; void* bt[14]; int kind; };
++RwDiagEnt g_rwDiag[16384]; unsigned g_rwDiagN = 0;
++void rwDiagRec(void* p, int kind) {
++	RwDiagEnt& e = g_rwDiag[g_rwDiagN++ & 16383];
++	e.p = p; e.kind = kind; e.n = backtrace(e.bt, 14);
++}
++}
++extern "C" void rwdiag_dump(void* p) {
++	for (unsigned i = 0; i < 16384; i++) {
++		RwDiagEnt& e = g_rwDiag[i];
++		if (e.p == p) {
++			fprintf(stderr, "RACE1 frame %p freed kind=%d (entry %u of %u):\n", p, e.kind, i, g_rwDiagN);
++			fflush(stderr);
++			backtrace_symbols_fd(e.bt, e.n, 2);
++		}
++	}
++}
++// RACE1-DIAG end
++
+ Frame*
+ Frame::create(void)
+ {
+@@ -55,6 +79,7 @@ Frame::cloneHierarchy(void)
+ void
+ Frame::destroy(void)
+ {
++	rwDiagRec(this, 1);
+ 	FORLIST(lnk, this->objectList)
+ 		ObjectWithFrame::fromFrame(lnk)->setFrame(nil);
+ 	s_plglist.destruct(this);
+@@ -71,6 +96,7 @@ Frame::destroy(void)
+ void
+ Frame::destroyHierarchy(void)
+ {
++	rwDiagRec(this, 2);
+ 	Frame *next;
+ 	for(Frame *child = this->child; child; child = next){
+ 		next = child->next;

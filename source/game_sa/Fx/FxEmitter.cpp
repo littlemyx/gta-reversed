@@ -73,7 +73,7 @@ void FxEmitter_c::AddParticle(const CVector& pos, const CVector& vel, float time
 
     if (auto* const particle = CreateParticle(emission, *finalMat, &vel, timeSince, fxMults, brightness, createLocal)) {
         if (rotZ >= 0.0f) {
-            particle->m_RotZ = (uint8)notsa::detail::Ftol((double)rotZ * 0.5); // 0x858B8C
+            particle->m_RotZ = (uint8)notsa::detail::Ftol((x87d)rotZ * (x87d)0.5); // 0x858B8C
         }
     }
 
@@ -108,7 +108,7 @@ void FxEmitter_c::AddParticle(const RwMatrix& mat, const CVector& vel, float tim
 
     if (auto* const particle = CreateParticle(emission, *finalMat, &vel, timeSince, fxMults, brightness, createLocal)) {
         if (rotZ >= 0.0f) {
-            particle->m_RotZ = (uint8)notsa::detail::Ftol((double)rotZ * 0.5); // 0x858B8C
+            particle->m_RotZ = (uint8)notsa::detail::Ftol((x87d)rotZ * (x87d)0.5); // 0x858B8C
         }
     }
 
@@ -122,23 +122,23 @@ void FxEmitter_c::CreateParticles(float currentTime, float deltaTime) {
     EmissionInfo_t emission;
     m_PrimBP->m_FxInfoManager.ProcessEmissionInfo(currentTime, deltaTime, m_System->m_SystemBP->m_fLength, m_System->m_UseConstTime, &emission);
 
-    const double rateMult = (double)m_System->m_nRateMult * 0.001f;                    // 0x858CDC
-    const float  lodStart = (float)((double)m_PrimBP->m_FxInfoManager.m_nLodStart * 0.015625f); // 0x85A7D4 (1/64)
-    const float  lodEnd   = (float)((double)m_PrimBP->m_FxInfoManager.m_nLodEnd * 0.015625f);
+    const x87d rateMult = (x87d)m_System->m_nRateMult * 0.001f;                    // 0x858CDC
+    const float  lodStart = (float)((x87d)m_PrimBP->m_FxInfoManager.m_nLodStart * 0.015625f); // 0x85A7D4 (1/64)
+    const float  lodEnd   = (float)((x87d)m_PrimBP->m_FxInfoManager.m_nLodEnd * 0.015625f);
 
     const float camDist = m_System->m_fCameraDistance;
-    double      visibility;
+    x87d      visibility;
     if (!(camDist < lodStart)) {
         if (!(camDist > lodEnd)) {
-            visibility = 1.0 - ((double)camDist - lodStart) / ((double)lodEnd - lodStart);
+            visibility = (x87d)1.0 - ((x87d)camDist - lodStart) / ((x87d)lodEnd - lodStart);
         } else {
-            visibility = 0.0;
+            visibility = (x87d)0.0;
         }
     } else {
-        visibility = 1.0;
+        visibility = (x87d)1.0;
     }
 
-    m_fEmissionIntensity = (float)((double)emission.m_fCount * visibility * rateMult + m_fEmissionIntensity);
+    m_fEmissionIntensity = (float)((x87d)emission.m_fCount * visibility * rateMult + m_fEmissionIntensity);
 
     // NaN semantics: the original only bails out on an ordered "less than" / "greater than"
     if (   !(CWeather::Wind < emission.m_fMinWind)
@@ -165,10 +165,10 @@ void FxEmitter_c::CreateParticles(float currentTime, float deltaTime) {
         // The intensity is re-read (and re-truncated) on every iteration, but it doesn't change in the loop
         for (int32 i = 0; i < notsa::detail::Ftol(m_fEmissionIntensity); i++) {
             FxPrtMult_c prtMult;
-            const float timeSince = (float)((double)i / m_fEmissionIntensity * deltaTime);
+            const float timeSince = (float)((x87d)i / m_fEmissionIntensity * deltaTime);
             CreateParticle(emission, *finalMat, nullptr, timeSince, prtMult, 1.2f, m_System->m_createLocal);
         }
-        m_fEmissionIntensity = (float)((double)m_fEmissionIntensity - (double)notsa::detail::Ftol(m_fEmissionIntensity));
+        m_fEmissionIntensity = (float)((x87d)m_fEmissionIntensity - (x87d)notsa::detail::Ftol(m_fEmissionIntensity));
 
         g_fxMan.FxRwMatrixDestroy(worldMat);
         g_fxMan.FxRwMatrixDestroy(finalMat);
@@ -254,10 +254,10 @@ FxEmitterPrt_c* FxEmitter_c::CreateParticle(const EmissionInfo_t& emissionInfo, 
     } else {
         // exe (0x4A2925..0x4A298D): `rand() % 10000 * 0.0001f` (0x858FC4) scaled by its OWN constants 6.2831802f (0x85A7C0) and 0.0174532793f (0x85A7BC);
         // the lerp is `(max - min) * t + min`, angles are spilled to floats
-        const auto Rand01 = [] { return (double)(rand() % 10000) * (double)std::bit_cast<float>(0x38D1B717u); };
-        const auto randomAngle = (float)(Rand01() * (double)std::bit_cast<float>(0x40C90FD0u));
-        const auto minAngle    = (float)((double)emissionInfo.m_fAngleMin * (double)std::bit_cast<float>(0x3C8EFA2Eu));
-        const auto randomAngleBetweenMinMax = (float)(((double)emissionInfo.m_fAngleMax * (double)std::bit_cast<float>(0x3C8EFA2Eu) - (double)minAngle) * Rand01() + (double)minAngle);
+        const auto Rand01 = [] { return (x87d)(rand() % 10000) * (x87d)std::bit_cast<float>(0x38D1B717u); };
+        const auto randomAngle = (float)(X87R(Rand01() * (x87d)std::bit_cast<float>(0x40C90FD0u)));
+        const auto minAngle    = (float)((x87d)emissionInfo.m_fAngleMin * (x87d)std::bit_cast<float>(0x3C8EFA2Eu));
+        const auto randomAngleBetweenMinMax = (float)(X87R(((x87d)emissionInfo.m_fAngleMax * (x87d)std::bit_cast<float>(0x3C8EFA2Eu) - (x87d)minAngle) * Rand01()) + (x87d)minAngle);
 
         CVector randomizedAngleVec{
             CMaths::GetCosFast(randomAngle) * CMaths::GetSinFast(randomAngleBetweenMinMax),

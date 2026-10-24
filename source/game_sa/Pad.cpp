@@ -17,6 +17,9 @@
 #ifdef NOTSA_USE_SDL3
 #include <SDL3/SDL.h>
 #include <SDLWrapper.hpp>
+#ifdef NOTSA_PORTABLE
+#include "portable/app_pad.h"
+#endif
 #endif
 
 
@@ -422,6 +425,9 @@ void CPad::ProcessPad(ePadID padID) {
         UpdateJoyStickPosition(rightStickPos.x, pPad.PCTempJoyState.RightStickY, pPad.PCTempJoyState.RightStickX, FrontEndMenuManager.m_bInvertPadX2, FrontEndMenuManager.m_bSwapPadAxis2);
         UpdateJoyStickPosition(rightStickPos.y, pPad.PCTempJoyState.RightStickX, pPad.PCTempJoyState.RightStickY, FrontEndMenuManager.m_bInvertPadY2, FrontEndMenuManager.m_bSwapPadAxis2);
     }
+#endif
+#ifdef NOTSA_PORTABLE
+    notsa::portable::PadProcess((int)padID); // MAC-W2: the SDL3 gamepad takes the place of the DirectInput device above (portable/app_pad.cpp)
 #endif
 }
 
@@ -1256,15 +1262,15 @@ int16 CPad::LookAroundLeftRight() noexcept {
     const float stick = (float)Pads[0].NewState.RightStickX;
     if (std::fabs(stick) > 100.0f && (DisablePlayerControls || !NewState.ShockButtonR)) {
         if (stick > 0.0f) {
-            return (int16)(int32)((double)stick - 100.0 + 50.0);
+            return (int16)(int32)((x87d)stick - (x87d)100.0 + (x87d)50.0);
         }
-        return (int16)(int32)((double)stick + 100.0 - 50.0);
+        return (int16)(int32)((x87d)stick + (x87d)100.0 - (x87d)50.0);
     }
     if (TheCamera.m_aCams[0].Using3rdPersonMouseCam() && std::fabs(stick) > 50.0f) { // 0x50A850
         if (stick > 0.0f) {
-            return (int16)(int32)(((double)stick - 50.0) * 0.5f);
+            return (int16)(int32)(((x87d)stick - (x87d)50.0) * 0.5f);
         }
-        return (int16)(int32)(((double)stick + 50.0) * 0.5f);
+        return (int16)(int32)(((x87d)stick + (x87d)50.0) * 0.5f);
     }
     return 0;
 }

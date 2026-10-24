@@ -8,6 +8,8 @@
 
 #include "Vector.h"
 #include "CompressedVector.h"
+#include "FileRecord.hpp"
+#include "FileRecords/PickupFile.hpp"
 
 class CObject;
 class CVehicle;
@@ -89,4 +91,54 @@ public:
     static ePickupPropertyText FindTextIndexForString(const char* message);
     static const char* FindStringForTextIndex(ePickupPropertyText index);
 };
-VALIDATE_SIZE(CPickup, 0x20);
+VALIDATE_SIZE(CPickup, 0x20); // x86 in-memory (m_pObject widens it to 0x28 on LP64); the on-disk 0x20 is VALIDATE_SIZE_FILE(CPickup_File) in FileRecords/PickupFile.hpp
+
+// P-2e: file layout (0x20) used under NOTSA_PORTABLE by the typed CGenericGameStorage Save/Load (CPickups::Save/Load).
+// ToFile: m_pObject is written as 0/1 (the exe wrote the live pointer; the loader only tests it for null). FromFile reproduces the exe loader exactly:
+// `if (type != PICKUP_NONE && file.object) { m_pObject = nullptr; bVisible = false; }`; m_pObject is always null after a load (a 32-bit value cannot be a pointer here);
+// PICKUP_NONE entries keep bVisible from the file.
+template<> struct notsa::FileRecord<CPickup> {
+    using Type = CPickup_File;
+    static Type ToFile(const CPickup& p) {
+        Type f{};
+        f.revenueValue     = p.m_fRevenueValue;
+        f.object           = p.m_pObject ? 1u : 0u;
+        f.ammo             = p.m_nAmmo;
+        f.regenerationTime = p.m_nRegenerationTime;
+        f.pos[0] = p.m_vecPos.x.Raw(); f.pos[1] = p.m_vecPos.y.Raw(); f.pos[2] = p.m_vecPos.z.Raw();
+        f.moneyPerDay      = p.m_nMoneyPerDay;
+        f.modelIndex       = p.m_nModelIndex;
+        f.referenceIndex   = p.m_nReferenceIndex;
+        f.pickupType       = (uint8)p.m_nPickupType;
+        f.flags            = uint8((p.m_nFlags.bDisabled ? kCPickupFlagDisabled : 0) | (p.m_nFlags.bEmpty ? kCPickupFlagEmpty : 0)
+                                 | (p.m_nFlags.bHelpMessageDisplayed ? kCPickupFlagHelpDisplayed : 0) | (p.m_nFlags.bVisible ? kCPickupFlagVisible : 0)
+                                 | ((p.m_nFlags.nPropertyTextIndex & kCPickupPropertyTextMask) << kCPickupPropertyTextShift));
+        return f;
+    }
+    static void FromFile(CPickup& p, const Type& f) {
+        p.m_fRevenueValue     = f.revenueValue;
+        p.m_pObject           = nullptr;
+        p.m_nAmmo             = f.ammo;
+        p.m_nRegenerationTime = f.regenerationTime;
+        p.m_vecPos            = CompressedLargeVector{ f.pos[0], f.pos[1], f.pos[2] }; // raw (pre-compressed) int16 values
+        p.m_nMoneyPerDay      = f.moneyPerDay;
+        p.m_nModelIndex       = f.modelIndex;
+        p.m_nReferenceIndex   = f.referenceIndex;
+        p.m_nPickupType       = (ePickupType)f.pickupType;
+        p.m_nFlags.bDisabled              = (f.flags & kCPickupFlagDisabled) != 0;
+        p.m_nFlags.bEmpty                 = (f.flags & kCPickupFlagEmpty) != 0;
+        p.m_nFlags.bHelpMessageDisplayed  = (f.flags & kCPickupFlagHelpDisplayed) != 0;
+        p.m_nFlags.bVisible               = (f.flags & kCPickupFlagVisible) != 0;
+        p.m_nFlags.nPropertyTextIndex     = (f.flags >> kCPickupPropertyTextShift) & kCPickupPropertyTextMask;
+        if (p.m_nPickupType != PICKUP_NONE && f.object != 0) { // the exe CPickups::Load rule (0x5D35A0)
+            p.m_nFlags.bVisible = false;
+        }
+    }
+    // x86: the record IS the raw object (same size, same member offsets) - proves the MSVC raw copy == the record path
+    static_assert(sizeof(CompressedLargeVector) == 6 && sizeof(decltype(CPickup::m_nFlags)) == 1);
+    static_assert(sizeof(void*) != 4 || (sizeof(CPickup) == sizeof(Type)
+        && offsetof(CPickup, m_fRevenueValue) == offsetof(Type, revenueValue) && offsetof(CPickup, m_pObject) == offsetof(Type, object) && offsetof(CPickup, m_nAmmo) == offsetof(Type, ammo)
+        && offsetof(CPickup, m_nRegenerationTime) == offsetof(Type, regenerationTime) && offsetof(CPickup, m_vecPos) == offsetof(Type, pos) && offsetof(CPickup, m_nMoneyPerDay) == offsetof(Type, moneyPerDay)
+        && offsetof(CPickup, m_nModelIndex) == offsetof(Type, modelIndex) && offsetof(CPickup, m_nReferenceIndex) == offsetof(Type, referenceIndex)
+        && offsetof(CPickup, m_nPickupType) == offsetof(Type, pickupType) && offsetof(CPickup, m_nFlags) == offsetof(Type, flags)));
+};

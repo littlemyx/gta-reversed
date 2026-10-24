@@ -2,6 +2,9 @@
 
 #ifdef NOTSA_USE_SDL3
 #include <SDL3/SDL.h>
+#ifdef NOTSA_PORTABLE
+#include "portable/app_input_map.h"
+#endif
 
 bool CPad::ProcessMouseEvent(const SDL_Event& e, CMouseControllerState& ms) {
     switch (e.type) {
@@ -50,6 +53,58 @@ bool CPad::ProcessKeyboardEvent(const SDL_Event& e, CKeyboardState& ks) {
         //NOTSA_LOG_DEBUG("SDL: Key ({}): {}", (char)(e.key.key), e.key.down);
 
         const auto s = e.key.down ? 255 : 0;
+#ifdef NOTSA_PORTABLE
+        // MAC-W2: the key -> CKeyboardState table of the Win32 build (portable/app_input_map.h, host tested): numpad operators by SCANCODE (SDL3 reports '/', '-',
+        // '.' of the main block and the keypad with the same keycode), Backspace -> `back`, characters > 0xFF never reach std::toupper.
+        {
+            using notsa::portable::input::KeySlot;
+            const auto t = notsa::portable::input::MapKey(e.key.scancode, e.key.key);
+            switch (t.slot) {
+            case KeySlot::None:     return true;
+            case KeySlot::FKey:     ks.FKeys[t.index] = s; return true;
+            case KeySlot::Esc:      ks.esc = s; return true;
+            case KeySlot::Insert:   ks.insert = s; return true;
+            case KeySlot::Del:      ks.del = s; return true;
+            case KeySlot::Home:     ks.home = s; return true;
+            case KeySlot::End:      ks.end = s; return true;
+            case KeySlot::PgUp:     ks.pgup = s; return true;
+            case KeySlot::PgDn:     ks.pgdn = s; return true;
+            case KeySlot::Up:       ks.up = s; return true;
+            case KeySlot::Down:     ks.down = s; return true;
+            case KeySlot::Left:     ks.left = s; return true;
+            case KeySlot::Right:    ks.right = s; return true;
+            case KeySlot::Scroll:   ks.scroll = s; return true;
+            case KeySlot::Pause:    ks.pause = s; return true;
+            case KeySlot::NumLock:  ks.numlock = s; return true;
+            case KeySlot::Div:      ks.div = s; return true;
+            case KeySlot::Mul:      ks.mul = s; return true;
+            case KeySlot::Sub:      ks.sub = s; return true;
+            case KeySlot::Add:      ks.add = s; return true;
+            case KeySlot::Enter:    ks.enter = s; return true;
+            case KeySlot::Decimal:  ks.decimal = s; return true;
+            case KeySlot::Num: {
+                int16* const nums[10] = { &ks.num0, &ks.num1, &ks.num2, &ks.num3, &ks.num4, &ks.num5, &ks.num6, &ks.num7, &ks.num8, &ks.num9 };
+                *nums[t.index] = s;
+                return true;
+            }
+            case KeySlot::Back:     ks.back = s; return true;
+            case KeySlot::Tab:      ks.tab = s; return true;
+            case KeySlot::CapsLock: ks.capslock = s; return true;
+            case KeySlot::ExtEnter: ks.extenter = s; return true;
+            case KeySlot::LShift:   ks.lshift = s; ks.shift = (ks.rshift || ks.lshift) ? 255 : 0; return true;
+            case KeySlot::RShift:   ks.rshift = s; ks.shift = (ks.rshift || ks.lshift) ? 255 : 0; return true;
+            case KeySlot::LCtrl:    ks.lctrl = s; return true;
+            case KeySlot::RCtrl:    ks.rctrl = s; return true;
+            case KeySlot::LAlt:     ks.lalt = s; return true;
+            case KeySlot::RAlt:     ks.ralt = s; return true;
+            case KeySlot::LWin:     ks.lwin = s; return true;
+            case KeySlot::RWin:     ks.rwin = s; return true;
+            case KeySlot::Apps:     ks.apps = s; return true;
+            case KeySlot::Standard: ks.standardKeys[t.index] = s; return true;
+            }
+            return true;
+        }
+#endif
 
         // Keypad doesn't have individual key values in SDL3
         switch (e.key.scancode) { 

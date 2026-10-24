@@ -502,7 +502,7 @@ bool CTaskSimpleUseGun::ProcessPed(CPed* ped) {
     if (const auto pd = ped->GetPlayerData()) {
         if (pd->m_fAttackButtonCounter > 0.0) {
             // 0x62A4CD - pow(0.96f, timestep)
-            pd->m_fAttackButtonCounter = (float)(std::pow((double)0.96f, (double)CTimer::GetTimeStep()) * (double)pd->m_fAttackButtonCounter);
+            pd->m_fAttackButtonCounter = (float)(X87R(std::pow((double)0.96f, (double)CTimer::GetTimeStep()) * (double)pd->m_fAttackButtonCounter));
         }
     }
 
@@ -593,16 +593,16 @@ bool CTaskSimpleUseGun::ProcessPed(CPed* ped) {
                 if (anim->m_BlendAmount > 0.9f
                     && anim->m_BlendDelta >= 0.f
                     && anim->m_CurrentTime > pistolWhipHitTimes[isDucking]
-                    && (double)anim->m_CurrentTime - (double)anim->m_TimeStep < (double)pistolWhipHitTimes[isDucking]
+                    && (x87d)anim->m_CurrentTime - (x87d)anim->m_TimeStep < (double)pistolWhipHitTimes[isDucking]
                 ) {
                     // 0x62A6E9 - Transform the offset into world space (Same as `MultiplyMatrixWithVector` 0x59C890)
                     const auto& offset = pistolWhipHitOffs[pistolWhipHitIdx[isDucking]];
                     const auto& mat    = ped->GetMatrix();
                     const auto &mr = mat.GetRight(), &mf = mat.GetForward(), &mu = mat.GetUp(), &mp = mat.GetPosition();
                     CVector hitPos{
-                        (float)(mu.x * (double)offset.z + mf.x * (double)offset.y + mr.x * (double)offset.x + mp.x),
-                        (float)(mu.y * (double)offset.z + mr.y * (double)offset.x + mf.y * (double)offset.y + mp.y),
-                        (float)(mu.z * (double)offset.z + mr.z * (double)offset.x + mf.z * (double)offset.y + mp.z)
+                        (float)(mu.x * (x87d)offset.z + mf.x * (x87d)offset.y + mr.x * (x87d)offset.x + mp.x),
+                        (float)(mu.y * (x87d)offset.z + mr.y * (x87d)offset.x + mf.y * (x87d)offset.y + mp.y),
+                        (float)(mu.z * (x87d)offset.z + mr.z * (x87d)offset.x + mf.z * (x87d)offset.y + mp.z)
                     };
 
                     // 0x62A709 - Create a temporary fight task, and make it strike
@@ -643,7 +643,7 @@ bool CTaskSimpleUseGun::ProcessPed(CPed* ped) {
                 const float animStart = wi->GetAnimLoopStart(isDucking); // 0x62A813
                 const float animEnd   = wi->GetAnimLoopEnd(isDucking);   // 0x62A81F
                 const float animFire  = isDucking ? wi->m_fAnimLoop2Fire : wi->m_fAnimLoopFire; // 0x62A82B
-                const float animFire2 = (float)(((double)animEnd - (double)animStart) * 0.5f + (double)animFire); // 0x62A834 - Time at which the 2nd gun fires
+                const float animFire2 = (float)(((x87d)animEnd - (x87d)animStart) * 0.5f + (x87d)animFire); // 0x62A834 - Time at which the 2nd gun fires
 
                 const auto isReloading = [ped] { return ped->GetActiveWeapon().GetState() == WEAPONSTATE_RELOADING; };
 
@@ -654,7 +654,7 @@ bool CTaskSimpleUseGun::ProcessPed(CPed* ped) {
                         // 0x62A89A
                         if (anim->IsPlaying()
                             && anim->m_CurrentTime >= animStart
-                            && (double)anim->m_CurrentTime - (double)anim->m_TimeStep < (double)animStart
+                            && (x87d)anim->m_CurrentTime - (x87d)anim->m_TimeStep < (double)animStart
                         ) {
                             anim->SetFlag(ANIMATION_IS_PLAYING, false);
                             anim->SetCurrentTime(animStart);
@@ -697,7 +697,7 @@ bool CTaskSimpleUseGun::ProcessPed(CPed* ped) {
                     // 0x62A99A - Fire right hand
                     if (anim->IsPlaying()
                         && anim->m_CurrentTime > animFire
-                        && (double)anim->m_CurrentTime - (double)anim->m_TimeStep <= (double)animFire
+                        && (x87d)anim->m_CurrentTime - (x87d)anim->m_TimeStep <= (double)animFire
                         && IsFireCmd(m_LastCmd)
                     ) {
                         m_IsFiringGunRightHandThisFrame = true;
@@ -712,7 +712,7 @@ bool CTaskSimpleUseGun::ProcessPed(CPed* ped) {
                         && !ped->bLeftArmBlocked
                         && anim->IsPlaying()
                         && anim->m_CurrentTime > animFire2
-                        && (double)anim->m_CurrentTime - (double)anim->m_TimeStep <= (double)animFire2
+                        && (x87d)anim->m_CurrentTime - (x87d)anim->m_TimeStep <= (double)animFire2
                         && IsFireCmd(m_LastCmd)
                     ) {
                         m_IsFiringGunLeftHandThisFrame = true;
@@ -731,7 +731,7 @@ bool CTaskSimpleUseGun::ProcessPed(CPed* ped) {
                 ) {
                     // 0x62AB35
                     if (m_LastCmd == eGunCommand::AIM && isPlaying) {
-                        const auto cur = (double)anim->m_CurrentTime, step = (double)anim->m_TimeStep;
+                        const auto cur = (x87d)anim->m_CurrentTime, step = (x87d)anim->m_TimeStep;
                         if ((cur >= animStart && cur - step < animStart) || cur + step >= animStart) { // 0x62AB6F
                             anim->SetFlag(ANIMATION_IS_PLAYING, false);
                             anim->SetCurrentTime(animStart);
@@ -767,7 +767,7 @@ bool CTaskSimpleUseGun::ProcessPed(CPed* ped) {
                 }
 
                 // 0x62AB80
-                if (anim->m_CurrentTime > animEnd && (double)anim->m_CurrentTime - (double)anim->m_TimeStep <= (double)animEnd) {
+                if (anim->m_CurrentTime > animEnd && (x87d)anim->m_CurrentTime - (x87d)anim->m_TimeStep <= (double)animEnd) {
                     if (IsFireCmd(m_NextCmd)
                         || (m_LastCmd == eGunCommand::FIREBURST && (int16)m_BurstShots > 0 && m_NextCmd != eGunCommand::RELOAD)
                     ) {
@@ -832,22 +832,22 @@ bool CTaskSimpleUseGun::ProcessPed(CPed* ped) {
                     aimPos.Normalise();
 
                     // 0x62ADFE - Angle between ped's heading, and the aim direction (limited to [-PI, PI])
-                    double aimAngle = x87::atan2((double)-aimPos.x, (double)aimPos.y) - (double)ped->m_fCurrentRotation;
+                    x87d aimAngle = X87R(x87::atan2((double)-aimPos.x, (double)aimPos.y) - (double)ped->m_fCurrentRotation);
                     if (aimAngle > (double)PI) {
-                        aimAngle -= (double)TWO_PI;
+                        aimAngle -= (x87d)TWO_PI;
                     } else if (aimAngle < (double)-PI) {
-                        aimAngle += (double)TWO_PI;
+                        aimAngle += (x87d)TWO_PI;
                     }
 
                     // 0x62AE38 - 115 deg, -130 deg, 40 deg
-                    const auto deadPedExtra = (double)isTargetPedDead * 0.69813174f;
-                    if ((double)2.0071287f - deadPedExtra < aimAngle || aimAngle < (double)-2.268928f + deadPedExtra) {
+                    const auto deadPedExtra = (x87d)isTargetPedDead * 0.69813174f;
+                    if ((x87d)2.0071287f - deadPedExtra < aimAngle || aimAngle < (x87d)-2.268928f + deadPedExtra) {
                         m_SkipAim = true;
                     }
 
                     // 0x62AE7D
                     const auto up = ped->m_matrix ? ped->GetUp() : CVector{ 0.f, 0.f, 1.f }; // 0x50E420
-                    if (isTargetPedDead && (double)aimPos.y * up.y + (double)aimPos.z * up.z + (double)aimPos.x * up.x < (double)-0.8f) {
+                    if (isTargetPedDead && (x87d)aimPos.y * up.y + (x87d)aimPos.z * up.z + (x87d)aimPos.x * up.x < (double)-0.8f) {
                         m_SkipAim = true;
                     }
                 }

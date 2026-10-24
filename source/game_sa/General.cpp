@@ -33,10 +33,10 @@ void CGeneral::InjectHooks() {
 
 namespace {
 // The float constants the original uses (.rdata), widened exactly
-constexpr double K_HALF_PI     = (double)1.5707963705062866f; // 0x858FE4 (0x3FC90FDB), -K_HALF_PI at 0x859998
-constexpr double K_PI          = (double)3.1415927410125732f; // 0x858CB8 (0x40490FDB), -K_PI at 0x858CC0
-constexpr double K_TWO_PI      = (double)6.2831854820251465f; // 0x858CBC (0x40C90FDB)
-constexpr double K_ONE_HALF_PI = (double)4.71238899230957f;   // 0x863AC4 (0x4096CBE4)
+constexpr x87d K_HALF_PI     = (x87d)1.5707963705062866f; // 0x858FE4 (0x3FC90FDB), -K_HALF_PI at 0x859998
+constexpr x87d K_PI          = (x87d)3.1415927410125732f; // 0x858CB8 (0x40490FDB), -K_PI at 0x858CC0
+constexpr x87d K_TWO_PI      = (x87d)6.2831854820251465f; // 0x858CBC (0x40C90FDB)
+constexpr x87d K_ONE_HALF_PI = (x87d)4.71238899230957f;   // 0x863AC4 (0x4096CBE4)
 
 // `fpatan` with ST0 = 1: atan2(v, 1)
 inline double AtanExt(double v) {
@@ -50,7 +50,7 @@ float CGeneral::LimitAngle(float angle) {
 }
 
 double CGeneral::LimitAngleExt(float angle) {
-    double result = angle;
+    x87d result = angle;
     if (!(result < 180.0f) && result == result) { // 0x85A994; FCOM + JNE on C0: NaN counts as "less" and skips
         do {
             result -= 360.0f; // 0x859E2C
@@ -68,9 +68,9 @@ float CGeneral::LimitRadianAngle(float angle) {
 }
 
 double CGeneral::LimitRadianAngleExt(float angle) {
-    double result = angle;
+    x87d result = angle;
     if (-25.0f > result) { // 0x863AC0; FCOMP: NaN / equal / greater fall to the next check
-        result = -25.0;
+        result = -(x87d)25.0;
         do {
             result += K_TWO_PI; // do-while: the add happens before the first check
         } while (result < -K_PI);
@@ -79,7 +79,7 @@ double CGeneral::LimitRadianAngleExt(float angle) {
 
     bool subtract = false;
     if (25.0f < result) { // 0x858FE8
-        result   = 25.0;
+        result   = (x87d)25.0;
         subtract = true; // The first subtraction happens unconditionally
     } else if (!(result < K_PI) && result == result) { // FCOM: NaN counts as "less"
         subtract = true;
@@ -104,20 +104,20 @@ float CGeneral::GetRadianAngleBetweenPoints(float x1, float y1, float x2, float 
 }
 
 double CGeneral::GetRadianAngleBetweenPointsExt(float x1, float y1, float x2, float y2) {
-    const double x = (double)x2 - (double)x1;
-    double       y = (double)y2 - (double)y1;
+    const x87d x = (x87d)x2 - (x87d)x1;
+    x87d       y = (x87d)y2 - (x87d)y1;
     if (y == 0.0) { // FCOM + JP: NaN keeps its value
-        y = (double)0.0001f; // 0x858FC4
+        y = (x87d)0.0001f; // 0x858FC4
     }
     const double at = AtanExt(x / y);
     if (x > 0.0) {
         return y > 0.0
-            ? (K_HALF_PI - at) + K_HALF_PI
-            : K_HALF_PI - (at + K_HALF_PI);
+            ? (X87R(K_HALF_PI - at)) + K_HALF_PI
+            : K_HALF_PI - (X87R(at + K_HALF_PI));
     }
     return y > 0.0
-        ? -K_HALF_PI - (at + K_HALF_PI) // 0x859998
-        : (K_HALF_PI - at) - K_HALF_PI;
+        ? -K_HALF_PI - (X87R(at + K_HALF_PI)) // 0x859998
+        : (X87R(K_HALF_PI - at)) - K_HALF_PI;
 }
 
 // 0x53CC70
@@ -131,25 +131,25 @@ double CGeneral::GetATanOfXYExt(float x, float y) {
     }
     const float  xabs = x < 0.0f ? -x : x; // FCOMP + JP + FCHS: NaN stays NaN
     const float  yabs = y < 0.0f ? -y : y;
-    const double dx = x, dy = y;
+    const x87d dx = x, dy = y;
     if (xabs < yabs) {
         if (y > 0.0f) {
             return x > 0.0f
-                ? K_HALF_PI - AtanExt(dx / dy)
-                : AtanExt((-1.0 / dy) * dx) + K_HALF_PI; // 0x858C1C = -1.0
+                ? X87R(K_HALF_PI - AtanExt(dx / dy))
+                : X87R(AtanExt((-(x87d)1.0 / dy) * dx) + K_HALF_PI); // 0x858C1C = -1.0
         }
         return x > 0.0f
-            ? AtanExt((-1.0 / dy) * dx) + K_ONE_HALF_PI
-            : K_ONE_HALF_PI - AtanExt(dx / dy);
+            ? X87R(AtanExt((-(x87d)1.0 / dy) * dx) + K_ONE_HALF_PI)
+            : X87R(K_ONE_HALF_PI - AtanExt(dx / dy));
     }
     if (y > 0.0f) {
         return x > 0.0f
             ? AtanExt(dy / dx)
-            : K_PI - AtanExt((-1.0 / dx) * dy);
+            : X87R(K_PI - AtanExt((-(x87d)1.0 / dx) * dy));
     }
     return x > 0.0f
-        ? K_TWO_PI - AtanExt((-1.0 / dx) * dy)
-        : AtanExt(dy / dx) + K_PI;
+        ? X87R(K_TWO_PI - AtanExt((-(x87d)1.0 / dx) * dy))
+        : X87R(AtanExt(dy / dx) + K_PI);
 }
 
 // 0x53CDC0
@@ -158,13 +158,13 @@ uint32 CGeneral::GetNodeHeadingFromVector(float x, float y) {
     if (angle < 0.0) {
         angle += K_TWO_PI;
     }
-    angle = K_TWO_PI - angle + (double)0.39269909f; // 0x859F50 (22.5 deg)
+    angle = X87R(K_TWO_PI - angle) + (x87d)0.39269909f; // 0x859F50 (22.5 deg)
     if (!(angle < K_TWO_PI) && angle == angle) { // FCOM + JNE on C0: NaN skips the subtraction
         angle -= K_TWO_PI;
     }
     // 0x8594F0 (1 / 2pi), 0x859000 (8.0); floor (0x8219F0) + _ftol2 (0x821B40): `fistp qword`, only the LOW dword is returned (NaN / inf / out of range => the
     // indefinite 0x8000000000000000 => 0, big values wrap), NOT the saturating 0x80000000 of a 32-bit conversion
-    return (uint32)(uint64)(int64)floor(angle * (double)0.15915494f * 8.0);
+    return (uint32)(uint64)(int64)floor(X87R(angle * (double)0.15915494f) * (x87d)8.0);
 }
 
 /*!
@@ -174,15 +174,15 @@ uint32 CGeneral::GetNodeHeadingFromVector(float x, float y) {
 */
 bool CGeneral::SolveQuadratic(float a, float b, float c, float& x1, float& x2) {
     // x12 = (-b ± √(b²-4ac)) / 2a, in the exe's x87 form (0x53CE30): disc = b*b - (a*c)*4, recip = 1 / a, x = ((±-b ± s) * recip) * 0.5
-    const double discr = (double)b * b - ((double)a * c) * 4.0f;
+    const x87d discr = (x87d)b * b - ((x87d)a * c) * 4.0f;
     if (discr < 0.0f) { // `fcom; test ah, 5; jp`: NaN continues
         return false; // No solution
     }
 
-    const double s     = std::sqrt(discr);
-    const double recip = 1.0 / (double)a;
+    const x87d s     = std::sqrt(discr);
+    const x87d recip = (x87d)1.0 / (x87d)a;
     x2 = (float)(((s - b) * recip) * 0.5f);
-    x1 = (float)(((-(double)b - s) * recip) * 0.5f);
+    x1 = (float)(((-(x87d)b - s) * recip) * 0.5f);
     return true;
 }
 
@@ -192,11 +192,11 @@ float CGeneral::GetAngleBetweenPoints(float x1, float y1, float x2, float y2) {
 }
 
 double CGeneral::GetAngleBetweenPointsExt(float x1, float y1, float x2, float y2) {
-    return GetRadianAngleBetweenPointsExt(x1, y1, x2, y2) * (double)57.2957764f; // 0x859878
+    return X87R(GetRadianAngleBetweenPointsExt(x1, y1, x2, y2) * (double)57.2957764f); // 0x859878
 }
 
 uint16 CGeneral::GetRandomNumber() { // Why does this return `uint16`? Should be `int32` (same as retval of `rand()`)
-    static_assert(RAND_MAX == 0x7FFF, "PC-generated random numbers should not exceed 32767");
+    static_assert(RAND_MAX == 0x7FFF, "PC-generated random numbers should not exceed 32767"); static_assert(RAND_MAX_FLOAT_RECIPROCAL == 1.0f / 32767.0f);
 #ifdef BETTER_RNG
     static_assert(false, "PC-generated random numbers should not exceed 32767");
 #else

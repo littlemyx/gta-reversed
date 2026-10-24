@@ -185,10 +185,10 @@ void CPedIntelligence::SetSeeingRange(float range) {
 bool CPedIntelligence::IsInHearingRange(const CVector& posn) {
     // The original accumulates the squared distance on the x87 stack as ((z^2 + x^2) + y^2)
     const auto& pedPos = m_pPed->GetPosition();
-    const double dx = (double)posn.x - (double)pedPos.x;
-    const double dy = (double)posn.y - (double)pedPos.y;
-    const double dz = (double)posn.z - (double)pedPos.z;
-    const double range = m_fHearingRange;
+    const x87d dx = (x87d)posn.x - (x87d)pedPos.x;
+    const x87d dy = (x87d)posn.y - (x87d)pedPos.y;
+    const x87d dz = (x87d)posn.z - (x87d)pedPos.z;
+    const x87d range = m_fHearingRange;
     return range * range > dz * dz + dx * dx + dy * dy;
 }
 
@@ -873,14 +873,14 @@ float CPedIntelligence::CanSeeEntityWithLights(CEntity* entity, int32 unUsed) {
     // the light terms are ((distance / 30) * L) * L (NOT distance / 30 * L^2), and both compares are `fcom` + `test ah, 0x41` (<= 0 and unordered take the same branch)
     const auto& pedPos = ped->GetPosition();
     const auto& thisPos = m_pPed->GetPosition();
-    const double dx = (double)pedPos.x - (double)thisPos.x;
-    const double dy = (double)pedPos.y - (double)thisPos.y;
-    const double dz = (double)pedPos.z - (double)thisPos.z;
-    const float fMagnitude = (float)(std::sqrt(dz * dz + dx * dx + dy * dy) - (double)0.7f);
-    double result = (double)fLightingTotal * fLightingTotal - (double)fMagnitude / 30.0f * LIGHT_AI_LEVEL_MAX * LIGHT_AI_LEVEL_MAX;
+    const x87d dx = (x87d)pedPos.x - (x87d)thisPos.x;
+    const x87d dy = (x87d)pedPos.y - (x87d)thisPos.y;
+    const x87d dz = (x87d)pedPos.z - (x87d)thisPos.z;
+    const float fMagnitude = (float)(std::sqrt(dz * dz + dx * dx + dy * dy) - (x87d)0.7f);
+    x87d result = (x87d)fLightingTotal * fLightingTotal - (x87d)fMagnitude / 30.0f * LIGHT_AI_LEVEL_MAX * LIGHT_AI_LEVEL_MAX;
     if (result > 0.0) // 0x605606
         return (float)result;
-    result = result * result - (double)fMagnitude / 50.0f * LIGHT_AI_LEVEL_MAX * LIGHT_AI_LEVEL_MAX;
+    result = result * result - (x87d)fMagnitude / 50.0f * LIGHT_AI_LEVEL_MAX * LIGHT_AI_LEVEL_MAX;
     if (!(result > 0.0)) // 0x60562F: <= 0 or NaN
         return 0.0f;
     return (float)(result * -1.0f);
@@ -1007,7 +1007,7 @@ void CPedIntelligence::IncrementAngerAtPlayer(uint8 anger) {
 }
 
 // 0x6074A0
-void* CPedIntelligence::operator new(unsigned size) {
+void* CPedIntelligence::operator new(size_t size) {
     return GetPedIntelligencePool()->New();
 }
 

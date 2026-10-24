@@ -13,7 +13,7 @@ struct AEBankLookup {
     uint32 NumBytes;
 };
 
-VALIDATE_SIZE(AEBankLookup, 0xC);
+VALIDATE_SIZE_FILE(AEBankLookup, 0xC);
 
 struct CAEBankSlotItem {
     uint32 BankOffsetBytes;
@@ -21,7 +21,7 @@ struct CAEBankSlotItem {
     uint16 SampleFrequency;
     int16  Headroom;
 };
-VALIDATE_SIZE(CAEBankSlotItem, 0xC);
+VALIDATE_SIZE_FILE(CAEBankSlotItem, 0xC);
 
 constexpr auto AE_BANK_MAX_NUM_SOUNDS = 400;
 using AEBankSlotItems = std::array<CAEBankSlotItem, AE_BANK_MAX_NUM_SOUNDS>;
@@ -46,7 +46,7 @@ struct CAEBankSlot {
         return next - Sounds[id].BankOffsetBytes;
     }
 };
-VALIDATE_SIZE(CAEBankSlot, 0x12D4);
+VALIDATE_SIZE_FILE(CAEBankSlot, 0x12D4);
 
 using AEPakID = int16;
 
@@ -54,7 +54,7 @@ struct AEPakLookup {
     char   BaseFilename[12];
     std::array<uint32, 10> FileCopyLSNs;
 };
-VALIDATE_SIZE(AEPakLookup, 0x34);
+VALIDATE_SIZE_FILE(AEPakLookup, 0x34);
 
 // NOTSA
 #pragma warning(push)

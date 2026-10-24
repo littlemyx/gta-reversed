@@ -19,6 +19,10 @@ public:
 };
 
 VALIDATE_SIZE(CGamma, 0x10);
+#ifdef NOTSA_PORTABLE
+#include <cmath>
+#define gamma notsa_gamma // glibc <math.h> declares a function gamma(double): the game's global CGamma `gamma` is renamed (the libm declaration is already in)
+#endif
 
 NOTSA_GLOBAL_HDR(gbGammaChanged, 0xC920C8, (bool), {});
 NOTSA_GLOBAL_HDR(gamma, 0xC92134, (CGamma), {});

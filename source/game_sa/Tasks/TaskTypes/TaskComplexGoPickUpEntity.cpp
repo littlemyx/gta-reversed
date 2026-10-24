@@ -20,9 +20,9 @@ static inline NOTSA_GLOBAL(s_PickUpTimeoutMs, 0x8D2FFC, (uint32), { 8000 });
 static CVector TransformPointExt(const CMatrix& m, const CVector& v) {
     const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp(), &p = m.GetPosition();
     return CVector{
-        (float)((((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x) + p.x),
-        (float)((((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y) + p.y),
-        (float)((((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y) + p.z)
+        (float)((((x87d)u.x * v.z + (x87d)f.x * v.y) + (x87d)r.x * v.x) + p.x),
+        (float)((((x87d)u.y * v.z + (x87d)r.y * v.x) + (x87d)f.y * v.y) + p.y),
+        (float)((((x87d)u.z * v.z + (x87d)r.z * v.x) + (x87d)f.z * v.y) + p.z)
     };
 }
 
@@ -99,12 +99,12 @@ CTask* CTaskComplexGoPickUpEntity::CreateNextSubTask(CPed* ped) {
         if (m_nAnimGroupId == ANIM_GROUP_CARRY) {
             const auto& entityPos = m_pEntity->GetPosition();
             const auto* const colModel = m_pEntity->GetColModel();
-            const double entityBottomZ = (double)colModel->m_boundBox.m_vecMin.z + entityPos.z;
+            const x87d entityBottomZ = (x87d)colModel->m_boundBox.m_vecMin.z + entityPos.z;
             const auto& pedPos = ped->GetPosition();
             if (entityBottomZ > pedPos.z) {
                 m_nAnimGroupId = ANIM_GROUP_CARRY105;
                 animSpeed      = 0.2f; // 0x870A88
-            } else if (pedPos.z < (double)0.55f + entityBottomZ) { // 0x866CAC
+            } else if (pedPos.z < (x87d)0.55f + entityBottomZ) { // 0x866CAC
                 m_nAnimGroupId = ANIM_GROUP_CARRY05;
                 animSpeed      = 0.26666668f; // 0x870A84
             }
@@ -144,14 +144,14 @@ CTask* CTaskComplexGoPickUpEntity::CreateFirstSubTask(CPed* ped) {
     const auto& bb = CModelInfo::GetModelInfo(entity->m_nModelIndex)->m_pColModel->m_boundBox;
 
     m_vecPosition.x = -0.2f; // 0x870A74
-    m_vecPosition.y = (float)(-(double)bb.m_vecMin.y - (double)0.2f); // 0x870A78
+    m_vecPosition.y = (float)(-(x87d)bb.m_vecMin.y - (x87d)0.2f); // 0x870A78
     m_vecPosition.z = -bb.m_vecMin.z;
 
-    if (2.0 * bb.m_vecMax.y < bb.m_vecMax.x) {
+    if ((x87d)2.0 * bb.m_vecMax.y < bb.m_vecMax.x) {
         entity->SetHeading(AtanF(-dx, dy));
-    } else if (2.0 * bb.m_vecMax.x < bb.m_vecMax.y) {
+    } else if ((x87d)2.0 * bb.m_vecMax.x < bb.m_vecMax.y) {
         // The FPATAN result stays in the FPU (not rounded to float) until after the subtraction
-        entity->SetHeading((float)(x87::atan2((double)-dx, (double)dy) - (double)(std::numbers::pi_v<float> / 2.f))); // 0x858FE4: pi/2 as float
+        entity->SetHeading((float)(X87R(x87::atan2((double)-dx, (double)dy) - (double)(std::numbers::pi_v<float> / 2.f)))); // 0x858FE4: pi/2 as float
     } else {
         if (entity->GetMatrix().GetUp().z < 0.9f) { // 0x858C20
             const auto& fwd = entity->GetMatrix().GetForward();
@@ -173,23 +173,23 @@ CTask* CTaskComplexGoPickUpEntity::CreateFirstSubTask(CPed* ped) {
     const auto& f   = mat.GetForward();
 
     // Evaluation order of the original: z, y, x terms
-    const float  dotR = (float)(((double)dz * r.z + (double)dy * r.y) + (double)dx * r.x);
-    const double dotF = ((double)dz * f.z + (double)dy * f.y) + (double)dx * f.x; // stays in extended precision
-    const double absF = std::abs(dotF);
+    const float  dotR = (float)(((x87d)dz * r.z + (x87d)dy * r.y) + (x87d)dx * r.x);
+    const x87d dotF = ((x87d)dz * f.z + (x87d)dy * f.y) + (x87d)dx * f.x; // stays in extended precision
+    const x87d absF = std::abs(dotF);
 
     if ((double)dotR > absF) {
-        m_vecPickupPosition.x = (float)((double)0.4f + bb.m_vecMax.x); // 0x870A7C
+        m_vecPickupPosition.x = (float)((x87d)0.4f + bb.m_vecMax.x); // 0x870A7C
         m_vecPickupPosition.y = 0.f;
     } else if (-absF > (double)dotR) {
-        m_vecPickupPosition.x = (float)((double)bb.m_vecMin.x - (double)0.4f);
+        m_vecPickupPosition.x = (float)((x87d)bb.m_vecMin.x - (x87d)0.4f);
         m_vecPickupPosition.y = 0.f;
     } else {
         m_vecPickupPosition.x = 0.f;
         m_vecPickupPosition.y = dotF > 0.0
-            ? (float)((double)0.4f + bb.m_vecMax.y)
-            : (float)((double)bb.m_vecMin.y - (double)0.4f);
+            ? (float)((x87d)0.4f + bb.m_vecMax.y)
+            : (float)((x87d)bb.m_vecMin.y - (x87d)0.4f);
     }
-    m_vecPickupPosition.z = (float)((double)bb.m_vecMin.z + 1.0); // 0x858624
+    m_vecPickupPosition.z = (float)((x87d)bb.m_vecMin.z + (x87d)1.0); // 0x858624
 
     const CVector target = TransformPointExt(entity->GetMatrix(), m_vecPickupPosition); // 0x59C890
     return new CTaskComplexGoToPointAndStandStill{ PEDMOVE_WALK, target, 0.2f, 0.f, false, true };
@@ -243,22 +243,22 @@ CTask* CTaskComplexGoPickUpEntity::ControlSubTask(CPed* ped) {
 
         const float walkUpDown    = (float)pad->GetPedWalkUpDown();
         const int32 walkLeftRight = pad->GetPedWalkLeftRight();
-        const float stickMag      = (float)(std::sqrt((double)walkUpDown * walkUpDown + (double)walkLeftRight * walkLeftRight) * 0.0078125); // 0x858B88
+        const float stickMag      = (float)(std::sqrt((x87d)walkUpDown * walkUpDown + (x87d)walkLeftRight * walkLeftRight) * (x87d)0.0078125); // 0x858B88
 
         // Heading from the ped to the go-to point
         const auto& pedPos = ped->GetPosition();
         // The differences are not rounded to float before FPATAN in the original
-        const float heading = (float)x87::atan2(-((double)goTo->m_vecTargetPoint.x - pedPos.x), (double)goTo->m_vecTargetPoint.y - pedPos.y);
+        const float heading = (float)x87::atan2(-((x87d)goTo->m_vecTargetPoint.x - pedPos.x), (x87d)goTo->m_vecTargetPoint.y - pedPos.y);
 
         // Heading of the stick relative to the camera
-        float stickAngle = (float)(CGeneral::GetRadianAngleBetweenPointsExt(0.f, 0.f, -(float)walkLeftRight, walkUpDown) - (double)TheCamera.m_fOrientation);
+        float stickAngle = (float)(X87R(CGeneral::GetRadianAngleBetweenPointsExt(0.f, 0.f, -(float)walkLeftRight, walkUpDown) - (double)TheCamera.m_fOrientation));
 
         constexpr auto kPi    = std::numbers::pi_v<float>;     // 0x858CB8
         constexpr auto kTwoPi = 2.f * std::numbers::pi_v<float>; // 0x858CBC
-        if ((double)heading + kPi < stickAngle) {
-            stickAngle = (float)((double)stickAngle - kTwoPi);
-        } else if ((double)heading - kPi > stickAngle) {
-            stickAngle = (float)((double)stickAngle + kTwoPi);
+        if ((x87d)heading + kPi < stickAngle) {
+            stickAngle = (float)((x87d)stickAngle - kTwoPi);
+        } else if ((x87d)heading - kPi > stickAngle) {
+            stickAngle = (float)((x87d)stickAngle + kTwoPi);
         }
 
         bool abort = pad->JumpJustDown() || pad->SprintJustDown();
@@ -267,7 +267,7 @@ CTask* CTaskComplexGoPickUpEntity::ControlSubTask(CPed* ped) {
                 break;
             }
             // BUG: the original tests `(stickAngle - heading) > pi/4` (no fabs), so only one side of the arc aborts
-            abort = (double)stickAngle - (double)heading > (double)(std::numbers::pi_v<float> / 4.f); // 0x859AB0
+            abort = (x87d)stickAngle - (x87d)heading > (double)(std::numbers::pi_v<float> / 4.f); // 0x859AB0
         }
         if (abort) {
             m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_URGENT, nullptr);

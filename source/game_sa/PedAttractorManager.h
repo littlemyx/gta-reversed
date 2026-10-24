@@ -206,7 +206,7 @@ private:
         case PED_ATTRACTOR_SCRIPTED:       return std::invoke(visitor, m_Scripted);
         case PED_ATTRACTOR_PARK:           return std::invoke(visitor, m_Parks);
         case PED_ATTRACTOR_STEP:           return std::invoke(visitor, m_Steps);
-        default:                           NOTSA_UNREACHABLE();
+        default:                           NOTSA_UNREACHABLE_RET(std::remove_cvref_t<decltype(std::invoke(visitor, m_ATMs))>{});
         }    
     }
 };

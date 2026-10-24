@@ -97,7 +97,7 @@ void CTaskSimpleAchieveHeading::SetUpIK(CPed* ped) {
         return;
     }
 
-    CVector lookAt = ped->GetPosition() + CVector{ (float)(2.f * x87::sin(m_DesiredHeadingRad)), (float)(2.f * x87::cos(m_DesiredHeadingRad)), 0.61f };
+    CVector lookAt = ped->GetPosition() + CVector{ (float)(X87R(2.f * x87::sin(m_DesiredHeadingRad))), (float)(X87R(2.f * x87::cos(m_DesiredHeadingRad))), 0.61f };
     g_ikChainMan.LookAt("TaskAchvHeading", ped, nullptr, 5'000, BONE_UNKNOWN, &lookAt, false, 0.25f, 500, 3, false);
     m_IsDoingIK = true;
 }

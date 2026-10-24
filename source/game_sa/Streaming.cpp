@@ -1585,7 +1585,7 @@ void CStreaming::RequestModelStream(int32 chIdx) {
 
     tStreamingChannel& ch = ms_channel[chIdx];
     CdStreamPos pos;
-    uint32 modelSizeSectors = 0;
+    size_t modelSizeSectors = 0;
     CStreamingInfo* streamingInfo = &GetInfo(modelId);
 
     // Find first model that has to be loaded

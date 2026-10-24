@@ -103,11 +103,44 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-23	ORACLE-C-VEH	v4	class C wave (partial)	274254	159	47	vtable-swap helper W3FuncCase(vtCls); +24 class-C vehicle rows, 2 fixes (delayed explosion step, BlowUpCarsInPath flag)
 2026-10-23	ORACLE-C-VEH-2	v4	class C wave (small)	287661	152	68	11 process-killing rows were SafeSEH in the fixture (/SAFESEH:NO); Vehicle 239 -> 244, 3 fixes (bus doors, lean matrix, SpecialEntityPreCollisionStuff flag bit); own soak 1 crash in UncompressAnimation, 1 OK
 2026-10-23	REGRESS-SETUP	v4	regress fix (partial)	122706	67	100	dismount gated until:onfoot + retry, mount retry, retried SETUP = info; 2/3 suites PASS=70, final routes only partial (4 scn x2); saw UncompressAnimation AV in cheats
+2026-10-23	MAC-A1	v4	mac portable option+preset+census	317154	104	26	done: stream A 71->0, no-op 8/8 TUs + 1281 cmds identical
+2026-10-23	MAC-C6	v4	mac win types/CRT shim + libc++ gaps	-	-	75	done: CRT 305->8, libc++ 0, no-op 5 TUs identical; swept one P1 line into its commit
+2026-10-23	MAC-P1	v4	mac VALIDATE split codemod 161 files	203138	75	41	done: P 927->33, clean TUs 404->858, no-op 6/6; review pending
+2026-10-23	MAC-P1-REV	v4	review P-1 codemod	-	-	-	clean, 1 debatable (MemoryHeap invariant)
 2026-10-23	ORACLE-W3-MISC	v4	oracle wave (small)	348668	172	93	platform 0->11, WinPs 0->3, CustomBuildingRenderer 0->2, Renderer 11->17 (4815 -> 4838); 4 Renderer fixes (LOD phase 2 never ran, NaN stream test, draw-last flag, alpha peds unsorted); no soak (lock contention); over 250k budget
 2026-10-23	ANIM-CRASH	v4	crash hunt (no fix)	235817	125	90	1 anim crash + 1 shadow crash in 19 cheats runs; null m_BlendHier slot of a 40-slot group, group/id not captured; diag patch left; found regress retry hiding crashes
+2026-10-23	MAC-A1b	v4	mac preset brew llvm + GL3 defines	174111	53	20	done: no-op 7/7, clean TUs 845, R honest 1315
+2026-10-23	MAC-P2-DESIGN	v4	design P-2 (read-only)	250399	68	13	done: 11 slices
+2026-10-23	MAC-P2a	v4	P-2 infra trait+guard+layout_diff	205263	68	33	done: 10 guard hits, 17 layout diffs
+2026-10-23	MAC-W0	v4	platform layer compile gate	318451	99	71	done: W 915->3, clean 945; #line hack to undo
+2026-10-23	MAC-P2b	v4	P-2b save scalar fixes	-	-	-	done: guard 10->0, 15/15 A/B
+2026-10-23	MAC-P2c	v4	P-2c matrix/vehicle records	-	-	-	done: 9/11 identical + 2 __LINE__ only
+2026-10-23	MAC-W0-REV	v4	review W0 + drop #line	185712	51	30	done: 3 bugs fixed, 6 listed
 2026-10-23	ORACLE-C-TASKS	v4	class C wave (small)	256971	105	87	TaskTypes 1355 -> 1430 (game 4838 -> 4913), 5 fixes (RoadRage target vehicle, IKChain offset bone, IKManager null slots, InvestigateDeadPed x2); 70 skip rows (CReferences diff, port-only faults)
 2026-10-23	CRASH-HUNT	v4	crash hunt (1 of 2 fixed)	258428	128	89	shadow AV root-caused (AllocateData malloc without ctor: header garbage) + fixed 216181de; anim AV not captured in 13 cdb runs; GR_WRAP cdb harness, GR_NORETRY
+2026-10-24	MAC-R-DESIGN	v4	design stream R (read-only)	242783	54	10	done: 14 slices
+2026-10-24	MAC-P2d	v4	P-2d ped/weapon records	181645	50	18	done: 10/10 A/B after by-value fix
+2026-10-24	MAC-P2e	v4	P-2e pickup record	-	-	-	done: 9/9 A/B
+2026-10-24	MAC-R1	v4	R-1 fakerw under GL3	-	-	-	done: unique 1992->1752, 10/10 A/B
+2026-10-24	MAC-P2i	v4	P-2i breakable record + real data	-	-	-	done: 16264 chunks ok, 4/4 A/B
+2026-10-24	MAC-P2f	v4	P-2f radar + P-2j test	-	-	-	done
 2026-10-23	ORACLE-C-TASKS-2	v4	class C fixes (over cap)	410889	244	108	16 skip rows un-skipped (CReferences = fixture artefact), 7 row-proven + 6 audit fixes (cover refs, PassObject, TrackEntity 50 ms, DuckToggle null, SayEvent, ReportFinishedTask...); soak OK; 410k tokens = 1.6x budget
+2026-10-24	MAC-R2	v4	R-2 exclusions/guards/stubs	-	-	50	done: R 1269->344, total 655
+2026-10-24	MAC-P2g	v4	P-2g script record + real main.scm	-	-	-	done: 13/13 A/B
+2026-10-24	MAC-R3a	v4	R-3a engine/window/smoke	-	-	-	done: smoke OK on Mac GL4.1, total 462
+2026-10-24	MAC-R3b	v4	R-3b camera/raster/renderstate	310104	79	34	done: R 152->6, total 308, smoke 86 ok
+2026-10-24	MAC-P2h	v4	P-2h path nodes + real data	-	-	-	done: 64 NODES ok
+2026-10-24	MAC-P4	v4	P-4 width triage + mechanical fixes	-	-	-	done: 320->45, 68/71 identical + 3 dead COMDAT
+2026-10-24	MAC-P4-REV	v4	review P-4	-	-	-	clean
+2026-10-24	MAC-P2k	v4	P-2k verification + ctest + strict	235824	137	90	done; p2d red from P-4f
+2026-10-24	MAC-F4a	v4	F inline asm lift (soft x87)	-	-	-	done: 36->0, 40/43 bit-exact
+2026-10-24	MAC-BUILD1	v4	first full build + link	-	-	-	done: links, runs 0.3 s to FileMgr
+2026-10-24	MAC-P4b	v4	P-4 S1-S6 + rand shim	-	-	-	done; file_records test red (permission)
+2026-10-24	MAC-F4a-REV	v4	review x87 lift	-	-	-	2 bugs fixed
+2026-10-24	MAC-R4	v4	R-4 Im2D/Im3D GL3	-	-	-	done: smoke OK
+2026-10-24	MAC-BOOT1	v4	W-7 paths + boot loop	355266	162	33	done: main menu reached
+2026-10-24	MAC-W3	v4	W-3/W-4 OpenAL audio	-	-	-	done: audio + radio native
+2026-10-24	MAC-R5	v4	R-5 TXD to GL3	290479	80	27	done: 32823 textures 0 fail
 2026-10-23	ORACLE-C-EVENTS	v4	class C wave (no fixes)	330588	160	91	Events 337 -> 391, Ped 102 -> 122 (game 4914 -> 4988); 5 suspected bugs left open (GunAimedAt null task, PassiveCollision 62/150, HitAndRun null AV); 35 min lost on build.lock
 2026-10-23	ORACLE-C-MODELS	v4	class C wave (no fixes)	214653	85	28	Models 105 -> 126 (game 4930 -> 4951), 21 rows all pass; RW-bound frame walkers + Entity root left (recipe in report)
 2026-10-24	ORACLE-C-EVENTS-2	v4	class C fixes (small)	252409	144	33	4 of 5 findings real: GunAimedAt null task + flee mapping, PassiveCollision inverted, DeadPed NaN + safe distance 60 (port 100000), DisablePedSpeech word compare; HitAndRun = fixture; soak OK
@@ -119,3 +152,20 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-24	CHEATS-ARMOUR	v4	regress artefacts	223097	144	98	armour 97 = Ballas peds shooting CJ under slow frames (gr_check reads [pc-dmg]); free_start SETUP = dismount before mission flag cleared (until:nomission); 8 runs clean; no port bug
 2026-10-24	RD-NOISE	v4	lockstep slice 2 (branch)	321122	211	99	frame-1 rand 317 -> 74 = GenerateRandomCars burst every frame + missing train/plane/emergency generation (9ac69102, branch rd-noise); orig-orig prefix 91 -> 1520-2177, port-port 7-9; gate not done
 2026-10-24	KILL-AUDIT	v5	scripts fix (small)	103995	20	4	own_kill.sh helper; build_locked / orig_run / fps_run kill only their own job tree or private-dir processes; dummy-process tests
+2026-10-24	MAC-W2	v4	W-1/2/8 input vsync exit hidpi	-	-	-	done
+2026-10-24	MAC-R6	v4	R-6 stock pipes + NVC	-	-	-	done: new game playable
+2026-10-24	MAC-RR-DESIGN	v4	RR plan + RR-1 harness	-	-	-	done; 1 nondeterminism left
+2026-10-24	MAC-RR2	v4	RR self-determinism root cause	-	-	-	done: rtanim LP64 pointer overwrite
+2026-10-24	MAC-PLAY1	v4	gameplay smoke + triage	-	-	-	all scenarios PASS, 3 fixes
+2026-10-24	MAC-R9	v4	R-9 + R-8 env/specular GL3	-	-	-	done; found regression R9-1
+2026-10-24	MAC-RR3	v4	Win32 RR trace under wine + first diff	375069	160	73	done: first divergence = F (PC24) in ChooseModel
+2026-10-24	MAC-FLOOP1	v4	RR fidelity loop 1	-	-	-	rng 0->57, player 0->56
+2026-10-24	MAC-BISECT1	v4	bisect R9-1 crash	-	-	-	fixed: PC_Scratch LP64 overlap
+2026-10-24	MAC-FLOOP2	v4	PC24 sweep tool+mechanism, 213 TUs	-	-	-	done: idle frames identical
+2026-10-24	MAC-P5	v4	LP64 latent-bug audit	-	-	-	done: 10 bugs fixed incl. Fx names
+2026-10-24	MAC-FLOOP2-REV	v4	review PC24 codemod	-	-	-	3 real bugs + 6 misses fixed
+2026-10-24	MAC-C3	v4	return-type + UB sweep + exit abort	-	-	-	done; load race open
+2026-10-24	MAC-FLOOP3	v4	RR loop 3 + tool v3	-	-	-	done: walk routes bit-identical
+2026-10-24	MAC-FRFIX	v4	file_records strict warn step	-	-	-	done: ctest 18/18 + 12/12
+2026-10-24	MAC-RACE1	v4	load-dependent crash hunt	-	-	-	root chain found, writer unknown
+2026-10-24	MAC-LNX1	v4	Linux x64 build + CI	251113	91	45	links in container; CI blocked on librw access

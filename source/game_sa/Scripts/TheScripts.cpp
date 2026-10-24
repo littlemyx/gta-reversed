@@ -329,7 +329,7 @@ uint32 CTheScripts::AddScriptCheckpoint(CVector at, CVector pointTo, float radiu
         case eCheckpointType::TORUS_DOWN:
             return { 255, 0, 0, 96 };
         default:
-            NOTSA_UNREACHABLE();
+            NOTSA_UNREACHABLE_RET({});
         }
     }();
     const auto index = GetNewUniqueScriptThingIndex(std::distance(ScriptCheckpointArray.begin(), cp), SCRIPT_THING_CHECKPOINT);
@@ -1296,7 +1296,7 @@ void CTheScripts::Save() {
             CGenericGameStorage::SaveDataToWorkBuffer(ScriptSavedObjectType::BUILDING);
 
             // Add 1 to the index because 0 is considered invalid and index can be 0.
-            CGenericGameStorage::SaveDataToWorkBuffer(GetBuildingPool()->GetIndex(b) + 1);
+            CGenericGameStorage::SaveDataToWorkBuffer<uint32>(GetBuildingPool()->GetIndex(b) + 1);
         } else {
             CGenericGameStorage::SaveDataToWorkBuffer(ScriptSavedObjectType::NONE);
             CGenericGameStorage::SaveDataToWorkBuffer(0);
@@ -1320,15 +1320,15 @@ void CTheScripts::Save() {
             break;
         case ENTITY_TYPE_BUILDING:
             CGenericGameStorage::SaveDataToWorkBuffer(ScriptSavedObjectType::BUILDING);
-            CGenericGameStorage::SaveDataToWorkBuffer(GetBuildingPool()->GetIndex(is->AsBuilding()) + 1);
+            CGenericGameStorage::SaveDataToWorkBuffer<uint32>(GetBuildingPool()->GetIndex(is->AsBuilding()) + 1);
             break;
         case ENTITY_TYPE_OBJECT:
             CGenericGameStorage::SaveDataToWorkBuffer(ScriptSavedObjectType::OBJECT);
-            CGenericGameStorage::SaveDataToWorkBuffer(GetObjectPool()->GetIndex(is->AsObject()) + 1);
+            CGenericGameStorage::SaveDataToWorkBuffer<uint32>(GetObjectPool()->GetIndex(is->AsObject()) + 1);
             break;
         case ENTITY_TYPE_DUMMY:
             CGenericGameStorage::SaveDataToWorkBuffer(ScriptSavedObjectType::DUMMY);
-            CGenericGameStorage::SaveDataToWorkBuffer(GetDummyPool()->GetIndex(is->AsDummy()) + 1);
+            CGenericGameStorage::SaveDataToWorkBuffer<uint32>(GetDummyPool()->GetIndex(is->AsDummy()) + 1);
             break;
         default:
             NOTSA_UNREACHABLE();
@@ -1811,14 +1811,14 @@ void CTheScripts::DrawScriptSpritesAndRectangles(bool drawBeforeFade) {
             // This is 2D rotation, couldn't find a better function aside from
             // using matricies or quaternions.
             ScriptSprites[rt.m_nTextureId].Draw(
-                -cos * vAM.x + sin * vAM.y + mid.x,
-                -sin * vAM.x - cos * vAM.y + mid.y,
-                +sin * vAM.y + cos * vAM.x + mid.x,
-                +sin * vAM.x - cos * vAM.y + mid.y,
-                -cos * vAM.x - sin * vAM.y + mid.x,
-                +cos * vAM.y - sin * vAM.x + mid.y,
-                +cos * vAM.x - sin * vAM.y + mid.x,
-                +sin * vAM.x + cos * vAM.y + mid.y,
+                X87R(-cos * vAM.x) + X87R(sin * vAM.y) + mid.x,
+                X87R(-sin * vAM.x) - X87R(cos * vAM.y) + mid.y,
+                X87R(+sin * vAM.y) + X87R(cos * vAM.x) + mid.x,
+                X87R(+sin * vAM.x) - X87R(cos * vAM.y) + mid.y,
+                X87R(-cos * vAM.x) - X87R(sin * vAM.y) + mid.x,
+                X87R(+cos * vAM.y) - X87R(sin * vAM.x) + mid.y,
+                X87R(+cos * vAM.x) - X87R(sin * vAM.y) + mid.x,
+                X87R(+sin * vAM.x) + X87R(cos * vAM.y) + mid.y,
                 rt.m_nTransparentColor
             );
             break;
@@ -1847,10 +1847,10 @@ void CTheScripts::ScriptDebugCircle2D(float x, float y, float width, float heigh
         return (r << 24) | (a << 16) | (b << 8) | g;
     };
     const auto Point = [&](int32 i) { // x87: everything kept in extended precision until the float store
-        const double angle = (double)i * (double)(std::numbers::pi_v<float> / 8.f); // 0x859F50 (float)
+        const x87d angle = (x87d)i * (x87d)(std::numbers::pi_v<float> / 8.f); // 0x859F50 (float)
         return CVector2D{
-            (float)(x87::sin(angle) * (double)width  + (double)x),
-            (float)(x87::cos(angle) * (double)height + (double)y)
+            (float)(X87R(x87::sin(angle) * (double)width)  + (x87d)x),
+            (float)(X87R(x87::cos(angle) * (double)height) + (x87d)y)
         };
     };
 

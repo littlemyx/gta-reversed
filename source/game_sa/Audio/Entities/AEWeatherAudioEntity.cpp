@@ -19,8 +19,8 @@ enum class eWeatherEvent {
 constexpr CVector DEFAULT_POS = { -0.906f, 0.423f, 0.f };
 
 NOTSA_GLOBAL(m_snLastRainDropSoundID, 0x8CC310, (int16), { 2 }); // TODO: Use `eSoundID`. NOTE: The original loads 32 bits (high half is always 0) but stores only 16 (`mov word ptr [0x8CC310], di`)
-NOTSA_GLOBAL(m_sRainSoundL, 0xB6BB18, (CAETwinLoopSoundEntity), {}); static_assert(sizeof(m_sRainSoundL) == 168);  // dunno about names
-NOTSA_GLOBAL(m_sRainSoundR, 0xB6BBC0, (CAETwinLoopSoundEntity), {}); static_assert(sizeof(m_sRainSoundR) == 168);
+NOTSA_GLOBAL(m_sRainSoundL, 0xB6BB18, (CAETwinLoopSoundEntity), {}); VALIDATE_SIZE(m_sRainSoundL, 168);  // dunno about names
+NOTSA_GLOBAL(m_sRainSoundR, 0xB6BBC0, (CAETwinLoopSoundEntity), {}); VALIDATE_SIZE(m_sRainSoundR, 168);
 
 // 0x72A620
 CAEWeatherAudioEntity::CAEWeatherAudioEntity() : CAEAudioEntity() {
@@ -81,20 +81,20 @@ void CAEWeatherAudioEntity::AddAudioEvent(eAudioEvents event) {
 namespace {
 //! 0x59C910 - `CVector::Normalise`, the squared length is accumulated at extended precision, in this exact term order
 void NormaliseX87(CVector& v) {
-    const double len2 = ((double)v.x * (double)v.x + (double)v.y * (double)v.y) + (double)v.z * (double)v.z;
+    const x87d len2 = ((x87d)v.x * (x87d)v.x + (x87d)v.y * (x87d)v.y) + (x87d)v.z * (x87d)v.z;
     if (len2 <= 0.0) { // `!(len2 > 0)` but without NaN
         v.x = 1.0f; // NOTE: Only X is set by the original
         return;
     }
-    const double inv = 1.0 / std::sqrt(len2);
-    v.x = (float)(inv * (double)v.x);
-    v.y = (float)(inv * (double)v.y);
-    v.z = (float)(inv * (double)v.z);
+    const x87d inv = (x87d)1.0 / std::sqrt(len2);
+    v.x = (float)(inv * (x87d)v.x);
+    v.y = (float)(inv * (x87d)v.y);
+    v.z = (float)(inv * (x87d)v.z);
 }
 
 //! 0x4082C0 - `CVector::Magnitude`, the result is returned at extended precision (never rounded to float)
 double MagnitudeX87(const CVector& v) {
-    return std::sqrt(((double)v.x * (double)v.x + (double)v.y * (double)v.y) + (double)v.z * (double)v.z);
+    return std::sqrt(((x87d)v.x * (x87d)v.x + (x87d)v.y * (x87d)v.y) + (x87d)v.z * (x87d)v.z);
 }
 }
 
@@ -111,23 +111,23 @@ void CAEWeatherAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) 
             sound->StopSoundAndForget();
             return;
         }
-        const double v = (double)vol - (double)0.6f;
+        const x87d v = (x87d)vol - (x87d)0.6f;
         sound->SetVolume(v > -50.0 ? (float)v : -50.f);
     };
 
     switch (sound->m_Event) {
     case +eWeatherEvent::THUNDER: { // 0x505A85
         const uint32 duration = CWeather::LightningDuration;
-        const float  reqVolume = (float)(std::log10((double)duration * (double)0.0375f + 0.25) * 20.0 + (double)GetDefaultVolume(AE_THUNDER));
+        const float  reqVolume = (float)(X87R(std::log10(X87W((x87d)duration * (x87d)0.0375f + (x87d)0.25)) * (x87d)20.0) + (x87d)GetDefaultVolume(AE_THUNDER));
 
         const uint32 pos       = (uint32)(int32)curPlayPos; // Sign extended
         const uint32 reqPlayPos = 600u - 500u * (duration / 20u);
         if (pos <= reqPlayPos) { // 0x505AED
-            sound->SetVolume((float)(std::log10((double)(int32)pos / (double)reqPlayPos) * 20.0 + (double)reqVolume));
+            sound->SetVolume((float)(X87R(std::log10(X87W((x87d)(int32)pos / (x87d)reqPlayPos)) * (x87d)20.0) + (x87d)reqVolume));
         } else if (pos <= reqPlayPos + 200u && reqVolume > 0.f) { // 0x505B2E
-            const double vol = std::pow(10.0, (double)reqVolume * (double)0.05f);
-            const double t   = (double)(pos - reqPlayPos);
-            sound->SetVolume((float)(std::log10((t * (1.0 - vol)) * (double)0.005f + vol) * 20.0));
+            const x87d vol = std::pow(10.0, (x87d)reqVolume * (x87d)0.05f);
+            const x87d t   = (x87d)(pos - reqPlayPos);
+            sound->SetVolume((float)(X87R(std::log10(X87W(X87R((t * (X87R((x87d)1.0 - vol))) * (x87d)0.005f + vol))) * 20.0)));
         } else { // 0x505B97
             sound->SetVolume(reqVolume < 0.f ? reqVolume : 0.f);
         }
@@ -161,9 +161,9 @@ void CAEWeatherAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) 
 
             float  dopplerVol = 0.f;
             float  speed      = 1.f;
-            double outSpeed   = 1.0; // Kept at extended precision until it's stored in the sound
+            x87d outSpeed   = (x87d)1.0; // Kept at extended precision until it's stored in the sound
 
-            if (hitEntity && hitEntity != lastEntity && std::abs((double)TheCamera.GetPosition().z - (double)pov.z) < 6.0) { // 0x505D4A
+            if (hitEntity && hitEntity != lastEntity && std::abs((x87d)TheCamera.GetPosition().z - (x87d)pov.z) < 6.0) { // 0x505D4A
                 CVector playerVel{};
                 if (player && player->bInVehicle && player->m_pVehicle) {
                     playerVel = player->m_pVehicle->GetMoveSpeed();
@@ -176,8 +176,8 @@ void CAEWeatherAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) 
                 CVector fwd = TheCamera.GetForwardVector();
                 NormaliseX87(fwd);
 
-                const auto dotPlayer = (float)(((double)fwd.z * (double)playerVel.z + (double)fwd.y * (double)playerVel.y) + (double)fwd.x * (double)playerVel.x);
-                const auto dotHit    = (float)(((double)fwd.z * (double)hitVel.z    + (double)fwd.y * (double)hitVel.y)    + (double)fwd.x * (double)hitVel.x);
+                const auto dotPlayer = (float)(((x87d)fwd.z * (x87d)playerVel.z + (x87d)fwd.y * (x87d)playerVel.y) + (x87d)fwd.x * (x87d)playerVel.x);
+                const auto dotHit    = (float)(((x87d)fwd.z * (x87d)hitVel.z    + (x87d)fwd.y * (x87d)hitVel.y)    + (x87d)fwd.x * (x87d)hitVel.x);
 
                 // 0x40FE90: `scalar * vec`, 0x40FE60: `a - b`
                 const CVector hitProj{ dotHit * fwd.x, dotHit * fwd.y, dotHit * fwd.z };
@@ -186,24 +186,24 @@ void CAEWeatherAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) 
 
                 const double relSpeed = MagnitudeX87(relVel);
                 if (relSpeed > (double)0.35f) { // 0x505E82
-                    speed = (float)((relSpeed - (double)0.35f) * (double)1.0526316f);
+                    speed = (float)((X87R(relSpeed - (double)0.35f)) * (x87d)1.0526316f);
 
                     const CVector toHit{
-                        (float)(((double)right.x + (double)pov.x) - (double)hitCP.m_vecPoint.x),
-                        (float)(((double)pov.y + (double)right.y) - (double)hitCP.m_vecPoint.y),
-                        (float)((double)(float)((double)right.z + (double)pov.z) - (double)hitCP.m_vecPoint.z) // The Z sum is rounded to float first
+                        (float)(((x87d)right.x + (x87d)pov.x) - (x87d)hitCP.m_vecPoint.x),
+                        (float)(((x87d)pov.y + (x87d)right.y) - (x87d)hitCP.m_vecPoint.y),
+                        (float)((x87d)(float)((x87d)right.z + (x87d)pov.z) - (x87d)hitCP.m_vecPoint.z) // The Z sum is rounded to float first
                     };
                     const double dist = MagnitudeX87(toHit);
-                    dopplerVol = (float)(std::log10((1.0 - dist * (double)ExeRecip(6.f)) * (double)speed) * 20.0 + 30.0);
-                    outSpeed   = (double)speed * (double)1.75f + (double)1.75f;
+                    dopplerVol = (float)(X87R(std::log10(X87W(((x87d)1.0 - X87R(dist * (double)ExeRecip(6.f))) * (x87d)speed)) * 20.0) + (x87d)30.0);
+                    outSpeed   = (x87d)speed * (x87d)1.75f + (x87d)1.75f;
                 }
             }
 
             // 0x505F2C
             const float vol    = sound->GetVolume();
-            const float target = (float)((double)baseVol + (double)dopplerVol);
+            const float target = (float)((x87d)baseVol + (x87d)dopplerVol);
             if (vol < target) {
-                const double v = ((double)vol + (double)dopplerVol) + (double)0.3f;
+                const x87d v = ((x87d)vol + (x87d)dopplerVol) + (x87d)0.3f;
                 sound->SetVolume(v < (double)target ? (float)v : target);
                 sound->SetSpeed((float)outSpeed);
                 lastEntity = hitEntity;
@@ -212,18 +212,18 @@ void CAEWeatherAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) 
             }
             if (vol > target) { // 0x505F8F
                 if (!(residue > 0.f)) { // 0x5060A5
-                    const double v = (double)vol - (double)0.3f;
+                    const x87d v = (x87d)vol - (x87d)0.3f;
                     sound->SetVolume(v > (double)baseVol ? (float)v : baseVol);
                 } else { // 0x505FB5
                     const float  limit = 1.3f < residue ? 1.3f : residue;
-                    const double vmExt = (double)vol - (double)0.3f;
+                    const x87d vmExt = (x87d)vol - (x87d)0.3f;
                     const float  vm    = (float)vmExt;
-                    if ((double)baseVol - (double)limit < vmExt - (double)limit) {
-                        sound->SetVolume((float)((double)vm - (double)limit));
+                    if ((x87d)baseVol - (x87d)limit < vmExt - (x87d)limit) {
+                        sound->SetVolume((float)((x87d)vm - (x87d)limit));
                     } else {
-                        sound->SetVolume((float)((double)baseVol - (double)limit));
+                        sound->SetVolume((float)((x87d)baseVol - (x87d)limit));
                     }
-                    residue = (float)((double)residue - (double)limit);
+                    residue = (float)((x87d)residue - (x87d)limit);
                 }
             }
             sound->SetSpeed((float)outSpeed);
@@ -261,20 +261,20 @@ void CAEWeatherAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) 
         NOTSA_GLOBAL_LOCAL(sWindTableA, 0x8CC2D0, (float[3][2]), { {}, { 0.3f, 0.4f }, { 1.0001f, 0.5f } });
         NOTSA_GLOBAL_LOCAL(sWindTableB, 0x8CC2E8, (float[3][2]), { { 0.0f, 0.5f }, { 0.3f, 1.0f }, { 1.0001f, 1.0f } });
 
-        const double zFactor = (double)TheCamera.GetPosition().z * (double)0.002f;
+        const x87d zFactor = (x87d)TheCamera.GetPosition().z * (x87d)0.002f;
         const float  t       = zFactor > 1.0 ? 1.f : (zFactor < 0.0 ? 0.f : (float)zFactor);
 
         const float a = CAEAudioUtility::GetPiecewiseLinear(t, 3, sWindTableA);
         const float b = CAEAudioUtility::GetPiecewiseLinear(t, 3, sWindTableB);
 
         const float wind = CWeather::WindClipped > 1.f ? 1.f : (CWeather::WindClipped < 0.f ? 0.f : CWeather::WindClipped);
-        const auto ratio = (float)(((double)b - (double)a) * (double)wind + (double)a);
+        const auto ratio = (float)(((x87d)b - (x87d)a) * (x87d)wind + (x87d)a);
 
         if (CAEAudioUtility::ResolveProbability(0.07f)) { // 0x506642
             sbWindOffset = !sbWindOffset;
         }
-        sfWindOffset = (float)((21.0 * (double)sbWindOffset) * (double)ratio);          // 0x506678
-        sfWindFreq   = (float)(((double)sbWindOffset * (double)1.2f) * (double)ratio); // 0x506684
+        sfWindOffset = (float)(((x87d)21.0 * (x87d)sbWindOffset) * (x87d)ratio);          // 0x506678
+        sfWindFreq   = (float)(((x87d)sbWindOffset * (x87d)1.2f) * (x87d)ratio); // 0x506684
 
         if (CGame::currArea != AREA_CODE_NORMAL_WORLD) { // 0x506694
             FadeSoundOut();
@@ -282,23 +282,23 @@ void CAEWeatherAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) 
         }
 
         // 0x50669A - Volume
-        const float target = (float)(-33.0 + (double)sfWindOffset);
+        const float target = (float)(-(x87d)33.0 + (x87d)sfWindOffset);
         const float vol    = sound->GetVolume();
         if (vol < target) {
-            const double v = (double)vol + (double)0.6f;
+            const x87d v = (x87d)vol + (x87d)0.6f;
             sound->SetVolume(v < (double)target ? (float)v : target);
         } else if (vol > target) {
-            const double v = (double)vol - (double)0.6f;
+            const x87d v = (x87d)vol - (x87d)0.6f;
             sound->SetVolume(v > (double)target ? (float)v : target);
         }
 
         // 0x5066FD - Frequency
         const float freq = sfWindFreq;
         if (sfOldFreqLeft < freq) {
-            const double v = (double)sfOldFreqLeft + (double)0.1f;
+            const x87d v = (x87d)sfOldFreqLeft + (x87d)0.1f;
             sfOldFreqLeft  = v < (double)freq ? (float)v : freq;
         } else if (sfOldFreqLeft > freq) {
-            const double v = (double)sfOldFreqLeft - (double)0.1f;
+            const x87d v = (x87d)sfOldFreqLeft - (x87d)0.1f;
             sfOldFreqLeft  = v > 1.0 ? (float)v : 1.f;
         }
         sound->SetSpeed(sfOldFreqLeft);
@@ -376,7 +376,7 @@ void CAEWeatherAudioEntity::Service() {
                 // NOTE: The original calls the random number generator BEFORE `ResolveProbability`
                 // and computes `(vol - 15) + rand` with `vol - 15` in extended precision.
                 const auto rnd = CAEAudioUtility::GetRandomNumberInRange(-6.f, 6.f);
-                const auto vol = (float)(((double)m_sfRainVolume - 15.0) + (double)rnd);
+                const auto vol = (float)(((x87d)m_sfRainVolume - (x87d)15.0) + (x87d)rnd);
                 AESoundManager.PlaySound({
                     .BankSlotID = SND_BANK_SLOT_WEATHER,
                     .SoundID    = (eSoundID)(m_snLastRainDropSoundID),
@@ -408,29 +408,29 @@ void CAEWeatherAudioEntity::Service() {
     };
 
     // The target volume is kept in extended precision by the original until it's compared / stored, so use doubles
-    double targetVolume;
+    x87d targetVolume;
     if (CWeather::Rain <= 0.f || CCullZones::PlayerNoRain() || CCullZones::CamNoRain() || !CGame::CanSeeOutSideFromCurrArea()) { // 0x5055A3
-        targetVolume = -100.0;
+        targetVolume = -(x87d)100.0;
     } else { // 0x5055D5
         if (!(m_sfRainVolume > -50.f)) {
             m_sfRainVolume = -50.f;
         }
-        double x = (double)CWeather::Rain - (double)0.2f;
+        x87d x = (x87d)CWeather::Rain - (x87d)0.2f;
         if (!(x > 0.0)) {
-            x = 0.0;
+            x = (x87d)0.0;
         }
-        x *= 1.25; // 0x8595F0 (NOT a division by 0.8)
+        x *= (x87d)1.25; // 0x8595F0 (NOT a division by 0.8)
         // NOTE: Raw `fyl2x`, NOT `AudioLog10` (no clamp, log10(0) = -inf)
-        targetVolume = std::log10(x) * 20.0 + (double)GetDefaultVolume(AE_RAIN); // 0x505608
+        targetVolume = X87R(std::log10(X87W(x)) * (x87d)20.0) + (x87d)GetDefaultVolume(AE_RAIN); // 0x505608
     }
 
     // 0x505634: step `m_sfRainVolume` towards the target by 0.5
-    const double cur = m_sfRainVolume;
+    const x87d cur = m_sfRainVolume;
     if (targetVolume < cur) {
-        const double dec = cur - 0.5;
+        const x87d dec = cur - (x87d)0.5;
         m_sfRainVolume = dec > targetVolume ? (float)dec : (float)targetVolume;
     } else if (targetVolume > cur) {
-        const double inc = cur + 0.5;
+        const x87d inc = cur + (x87d)0.5;
         m_sfRainVolume = inc < targetVolume ? (float)inc : (float)targetVolume;
     } // else: equal or unordered => unchanged
 

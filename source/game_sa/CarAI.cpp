@@ -873,7 +873,7 @@ void CCarAI::UpdateCarAI(CVehicle* veh) {
                         case MISSION_ESCORT_RIGHT: return MISSION_ESCORT_RIGHT_FARAWAY;
                         case MISSION_ESCORT_REAR:  return MISSION_ESCORT_REAR_FARAWAY;
                         case MISSION_ESCORT_FRONT: return MISSION_ESCORT_FRONT_FARAWAY;
-                        default:                   NOTSA_UNREACHABLE();
+                        default:                   NOTSA_UNREACHABLE_RET(MISSION_ESCORT_LEFT_FARAWAY);
                         }
                     }();
                 }
@@ -1031,7 +1031,7 @@ void CCarAI::UpdateCarAI(CVehicle* veh) {
                     case MISSION_ESCORT_RIGHT_FARAWAY: return MISSION_ESCORT_RIGHT;
                     case MISSION_ESCORT_REAR_FARAWAY:  return MISSION_ESCORT_REAR;
                     case MISSION_ESCORT_FRONT_FARAWAY: return MISSION_ESCORT_FRONT;
-                    default:                           NOTSA_UNREACHABLE();
+                    default:                           NOTSA_UNREACHABLE_RET(MISSION_ESCORT_LEFT);
                     }
                 }();
             }
@@ -1235,7 +1235,7 @@ void CCarAI::UpdateCarAI(CVehicle* veh) {
                         // the inlined `LimitRadianAngle` (0x4201BF..0x420213: `< -pi` loop first, then `> pi`) keeps extended precision until the store
                         const auto toPlyrPos = plyrCoors + plyrVelocity3D * 120.f - veh->GetPosition();
                         const auto angleToPlyr = CGeneral::GetATanOfXY(toPlyrPos.x, toPlyrPos.y);
-                        double     steerDiff   = (double)angleToPlyr - CGeneral::GetATanOfXYExt(veh->GetForward().x, veh->GetForward().y); // (the raw matrix forward, [matrix + 0x10 / 0x14], not the normalised copy)
+                        x87d     steerDiff   = X87R((double)angleToPlyr - CGeneral::GetATanOfXYExt(veh->GetForward().x, veh->GetForward().y)); // (the raw matrix forward, [matrix + 0x10 / 0x14], not the normalised copy)
                         constexpr auto pi = std::numbers::pi_v<float>; // 0x858CB8 / 0x858CC0
                         while (steerDiff < -pi) {
                             steerDiff += 2.0f * pi; // 0x858CBC

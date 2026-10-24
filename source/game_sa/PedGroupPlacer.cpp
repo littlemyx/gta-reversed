@@ -44,8 +44,8 @@ int32 PlacePedsInCircle(ePedType type, uint32 numOfPeds, const CVector& origin, 
         const auto radiusJitter = ((float)rand() * RAND_MAX_FLOAT_RECIPROCAL * 0.4f - 0.2f) * radius;
         const auto angle        = (float)i * stepAngle + angleJitter;
         const auto dist         = radiusJitter + radius;
-        const float offsetX      = x87::cos(angle) * dist;
-        const float offsetY      = x87::sin(angle) * dist;
+        const float offsetX      = X87R(x87::cos(angle) * dist);
+        const float offsetY      = X87R(x87::sin(angle) * dist);
 
         bool       foundGround{};
         auto       groundZ = CWorld::FindGroundZFor3DCoord(CVector{ offsetX + origin.x, offsetY + origin.y, origin.z + 1.0f }, &foundGround, nullptr) + 1.0f;
@@ -206,7 +206,7 @@ bool CPedGroupPlacer::PlaceChatGroup(ePedType type, uint32 numOfPeds, const CVec
     }
 
     const auto stepAngle = TWO_PI / (float)numOfPeds;
-    const auto radius    = std::sqrt(0.5f / (1.0f - x87::cos(stepAngle)));
+    const auto radius    = std::sqrt(0.5f / (X87R(1.0f - x87::cos(stepAngle))));
     if (!CanPlaceGroupAt(origin, radius)) {
         return false;
     }
@@ -245,7 +245,7 @@ bool CPedGroupPlacer::PlaceRandomGroup(ePedType type, uint32 numOfPeds, const CV
     }
 
     const auto stepAngle = TWO_PI / (float)numOfPeds;
-    const auto radius    = std::sqrt(0.5f / (1.0f - x87::cos(stepAngle)));
+    const auto radius    = std::sqrt(0.5f / (X87R(1.0f - x87::cos(stepAngle))));
     if (!CanPlaceGroupAt(origin, radius)) {
         return false;
     }
@@ -283,6 +283,6 @@ bool CPedGroupPlacer::PlaceGroup(ePedType type, uint32 numOfPeds, const CVector&
     case STAND_STILL:
     case CHAT:             return PlaceChatGroup(type, numOfPeds, origin, allocType);
     case RANDOM:           return PlaceRandomGroup(type, numOfPeds, origin, allocType);
-    default:               NOTSA_UNREACHABLE();
+    default:               NOTSA_UNREACHABLE_RET(false);
     }
 }

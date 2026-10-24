@@ -37,7 +37,7 @@ void CPedModelInfo::SetClump(RpClump* clump) {
     if (!m_pHitColModel)
         CPedModelInfo::CreateHitColModelSkinned(clump);
 
-    RpClumpForAllAtomics(GetRpClump(), CClumpModelInfo::SetAtomicRendererCB, CVisibilityPlugins::RenderPedCB);
+    RpClumpForAllAtomics(GetRpClump(), CClumpModelInfo::SetAtomicRendererCB, (void*)CVisibilityPlugins::RenderPedCB);
     GetAnimHierarchyFromClump(GetRpClump()); // Unused? Or indirectly passes through EAX somehow?
 }
 

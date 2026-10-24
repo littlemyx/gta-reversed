@@ -124,14 +124,18 @@ CEntryExit* CEntryExit::GetEntryExitToDisplayNameOf() {
 // TODO: `_asm` shouldn't be removed, because the caller `EntryExitManager::GetPositionRelativeToOutsideWorld`
 // uses it as well (and without reserving `edx` it is going to crash)
 void CEntryExit::GetPositionRelativeToOutsideWorld(CVector& outPos) {
+#ifndef NOTSA_PORTABLE
     _asm { push edx };
+#endif
 
     const auto enex = GetLinkedOrThis(); // this = GetLinkedOrThis();
     if (enex->m_nArea != eAreaCodes::AREA_CODE_NORMAL_WORLD) {
         outPos += GetPosition() - enex->m_vecExitPos;
     }
 
+#ifndef NOTSA_PORTABLE
     _asm { pop edx };
+#endif
 }
 
 // Return center of entrance rect
@@ -175,8 +179,8 @@ void CEntryExit::FindValidTeleportPoint(CVector& outTeleportPoint) {
         for (auto i = 0; i < NumTestPoints; i++) {
             const auto rot{ (float)i * TWO_PI / (float)NumTestPoints };
             const auto point = outTeleportPoint + CVector{
-                (float)(x87::cos(rot) * r),
-                (float)(x87::sin(rot) * r),
+                (float)(X87R(x87::cos(rot) * r)),
+                (float)(X87R(x87::sin(rot) * r)),
                 0.f
             };
             if (IsTeleportPointValid(outTeleportPoint, point)) {

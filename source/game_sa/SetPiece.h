@@ -61,4 +61,4 @@ public:
     float GetTargetCoord2X() const { return m_TargetCoord2.x; }
     float GetTargetCoord2Y() const { return m_TargetCoord2.y; }
 };
-VALIDATE_SIZE(CSetPiece, 0x20);
+VALIDATE_SIZE_FILE(CSetPiece, 0x20);

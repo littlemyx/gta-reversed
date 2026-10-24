@@ -2,7 +2,7 @@
 
 #include "WaterCreatureManager_c.h"
 
-NOTSA_GLOBAL(g_waterCreatureMan, 0xC1DF30, (WaterCreatureManager_c), {}); static_assert(sizeof(g_waterCreatureMan) == 6684);
+NOTSA_GLOBAL(g_waterCreatureMan, 0xC1DF30, (WaterCreatureManager_c), {}); VALIDATE_SIZE(g_waterCreatureMan, 6684);
 
 void WaterCreatureManager_c::InjectHooks() {
     RH_ScopedClass(WaterCreatureManager_c);
@@ -156,7 +156,7 @@ void WaterCreatureManager_c::Update(float deltaTime) {
                     const auto& creatureInfo = GetCreatureInfo(id);
 
                     uint32 randNumToCreate = CGeneral::GetRandomNumberInRange(creatureInfo.m_nMinCreated, creatureInfo.m_nMaxCreated);
-                    uint32 numToCreate = std::min(randNumToCreate, m_waterCreaturePool.GetNumItems());
+                    uint32 numToCreate = std::min<size_t>(randNumToCreate, m_waterCreaturePool.GetNumItems());
 
                     WaterCreature_c* leader = nullptr;
 

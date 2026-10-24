@@ -234,7 +234,7 @@ void CFont::PrintChar(float x, float y, char character) {
         return;
     }
 
-    const float v = (float)((double)row * 0.078125);
+    const float v = (float)((x87d)row * (x87d)0.078125);
     if (zeroed) {
         return;
     }
@@ -315,7 +315,7 @@ void CFont::RenderString(float x, float y, const char* text, const char* textEnd
 
     // The original keeps these on the x87 stack, hence `double`
     const auto Scale = [](int32 screenDim, float factor, int32 offset) {
-        return (double)screenDim * (double)factor * (double)offset;
+        return (x87d)screenDim * (x87d)factor * (x87d)offset;
     };
     const auto SetDropColorAndBlip = [&] {
         m_Color        = m_FontDropColor;
@@ -329,13 +329,13 @@ void CFont::RenderString(float x, float y, const char* text, const char* textEnd
         m_nFontShadow = 0;
 
         if (m_fSlant != 0.0f) {
-            m_fSlantRefPoint.x = (float)(Scale(RsGlobal.maximumWidth,  SCALE_X, shadow) + (double)m_fSlantRefPoint.x); // 0x859520
-            m_fSlantRefPoint.y = (float)(Scale(RsGlobal.maximumHeight, SCALE_Y, shadow) + (double)m_fSlantRefPoint.y); // 0x859524
+            m_fSlantRefPoint.x = (float)(Scale(RsGlobal.maximumWidth,  SCALE_X, shadow) + (x87d)m_fSlantRefPoint.x); // 0x859520
+            m_fSlantRefPoint.y = (float)(Scale(RsGlobal.maximumHeight, SCALE_Y, shadow) + (x87d)m_fSlantRefPoint.y); // 0x859524
         }
 
         RenderString(
-            (float)(Scale(RsGlobal.maximumWidth,  SCALE_X, shadow) + (double)x),
-            (float)(Scale(RsGlobal.maximumHeight, SCALE_Y, shadow) + (double)y),
+            (float)(Scale(RsGlobal.maximumWidth,  SCALE_X, shadow) + (x87d)x),
+            (float)(Scale(RsGlobal.maximumHeight, SCALE_Y, shadow) + (x87d)y),
             text, textEnd, wrap
         );
 
@@ -349,20 +349,20 @@ void CFont::RenderString(float x, float y, const char* text, const char* textEnd
         m_nFontOutlineSize = 0;
 
         if (m_fSlant != 0.0f) {
-            m_fSlantRefPoint.x = (float)(Scale(RsGlobal.maximumWidth,  SCALE_X, outline) + (double)m_fSlantRefPoint.x);
-            m_fSlantRefPoint.y = (float)(Scale(RsGlobal.maximumHeight, SCALE_Y, outline) + (double)m_fSlantRefPoint.y);
+            m_fSlantRefPoint.x = (float)(Scale(RsGlobal.maximumWidth,  SCALE_X, outline) + (x87d)m_fSlantRefPoint.x);
+            m_fSlantRefPoint.y = (float)(Scale(RsGlobal.maximumHeight, SCALE_Y, outline) + (x87d)m_fSlantRefPoint.y);
         }
 
         const auto dx = Scale(RsGlobal.maximumWidth,  SCALE_X, outline);
         const auto dy = Scale(RsGlobal.maximumHeight, SCALE_Y, outline);
-        RenderString((float)(dx + (double)x), (float)((double)y - dy), text, textEnd, wrap);
-        RenderString((float)((double)x - dx), (float)((double)y - dy), text, textEnd, wrap);
-        RenderString((float)(dx + (double)x), (float)(dy + (double)y), text, textEnd, wrap);
-        RenderString((float)((double)x - dx), (float)(dy + (double)y), text, textEnd, wrap);
-        RenderString((float)(dx + (double)x), y,                       text, textEnd, wrap);
-        RenderString((float)((double)x - dx), y,                       text, textEnd, wrap);
-        RenderString(x,                       (float)(dy + (double)y), text, textEnd, wrap);
-        RenderString(x,                       (float)((double)y - dy), text, textEnd, wrap);
+        RenderString((float)(dx + (x87d)x), (float)((x87d)y - dy), text, textEnd, wrap);
+        RenderString((float)((x87d)x - dx), (float)((x87d)y - dy), text, textEnd, wrap);
+        RenderString((float)(dx + (x87d)x), (float)(dy + (x87d)y), text, textEnd, wrap);
+        RenderString((float)((x87d)x - dx), (float)(dy + (x87d)y), text, textEnd, wrap);
+        RenderString((float)(dx + (x87d)x), y,                       text, textEnd, wrap);
+        RenderString((float)((x87d)x - dx), y,                       text, textEnd, wrap);
+        RenderString(x,                       (float)(dy + (x87d)y), text, textEnd, wrap);
+        RenderString(x,                       (float)((x87d)y - dy), text, textEnd, wrap);
 
         m_Color            = savedColor;
         m_nFontOutlineSize = outline;
@@ -1149,7 +1149,7 @@ float GetScriptLetterSize(uint8 letterId) {
     const int32 width = text.IsProportional
         ? fontData->m_propValues.data()[charIdx]
         : fontData->m_unpropValue;
-    return (float)((double)text.Scale.x * (double)(width + (int32)text.TextEdge));
+    return (float)((x87d)text.Scale.x * (x87d)(width + (int32)text.TextEdge));
 }
 
 // 0x7192C0

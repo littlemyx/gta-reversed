@@ -11,11 +11,11 @@
 // 0x44E480 - `CVector2D::Normalise` as the exe has it: the squared length and `1 / sqrt` stay in extended precision,
 // a NaN length is normalised (JP), a non-positive one yields (1, y)
 static void NormaliseOriginal(CVector2D& v) {
-    const double sq = (double)v.x * (double)v.x + (double)v.y * (double)v.y;
+    const x87d sq = (x87d)v.x * (x87d)v.x + (x87d)v.y * (x87d)v.y;
     if (!(sq <= 0.0)) {
-        const double recip = 1.0 / std::sqrt(sq);
-        v.x = (float)((double)v.x * recip);
-        v.y = (float)((double)v.y * recip);
+        const x87d recip = (x87d)1.0 / std::sqrt(sq);
+        v.x = (float)((x87d)v.x * recip);
+        v.y = (float)((x87d)v.y * recip);
     } else {
         v.x = 1.0f;
     }
@@ -24,9 +24,9 @@ static void NormaliseOriginal(CVector2D& v) {
 // 0x59C910 - `CVector::Normalise` as the exe has it: the sum of squares and the reciprocal root stay in extended precision,
 // a non-positive length (NaN takes the sqrt path) only writes `x = 1`
 static void NormaliseOriginal(CVector& v) {
-    const double sq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    const x87d sq = ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
     if (!(sq <= 0.0)) {
-        const double recip = 1.0 / std::sqrt(sq);
+        const x87d recip = (x87d)1.0 / std::sqrt(sq);
         v.x = (float)(v.x * recip);
         v.y = (float)(v.y * recip);
         v.z = (float)(v.z * recip);
@@ -130,32 +130,32 @@ CTask* CTaskComplexPartner::CreateNextSubTask(CPed* ped) {
         // The mix of float stores and extended precision temporaries follows the x87 code
         const CVector2D pedPos     = ped->GetPosition();
         const CVector2D partnerPos = m_partner->GetPosition();
-        const auto      dyExt      = (double)pedPos.y - (double)partnerPos.y;
-        CVector2D       diff{ (float)((double)pedPos.x - (double)partnerPos.x), (float)dyExt };
-        const auto      dist = std::sqrt((double)diff.x * (double)diff.x + dyExt * dyExt);
+        const auto      dyExt      = (x87d)pedPos.y - (x87d)partnerPos.y;
+        CVector2D       diff{ (float)((x87d)pedPos.x - (x87d)partnerPos.x), (float)dyExt };
+        const auto      dist = std::sqrt((x87d)diff.x * (x87d)diff.x + dyExt * dyExt);
         if (dist > 0.99f && dist < 1.01f) { // `!(dist > c)` / `dist >= c` ⇒ normalise (NaN included)
             m_partnerState = PARTNER_STATE_UNK_6;
             return MakeStandStill();
         }
 
         NormaliseOriginal(diff); // 0x44E480
-        const auto txExt = ((double)diff.x + (double)partnerPos.x) - (double)pedPos.x;
-        const auto tyExt = ((double)diff.y + (double)partnerPos.y) - (double)pedPos.y;
+        const auto txExt = ((x87d)diff.x + (x87d)partnerPos.x) - (x87d)pedPos.x;
+        const auto tyExt = ((x87d)diff.y + (x87d)partnerPos.y) - (x87d)pedPos.y;
         CVector2D  t{ (float)txExt, (float)tyExt };
-        const auto len = std::sqrt(txExt * txExt + (double)t.y * (double)t.y);
-        double     x, y;
+        const auto len = std::sqrt(txExt * txExt + (x87d)t.y * (x87d)t.y);
+        x87d     x, y;
         if (len > 0.02f) {
             NormaliseOriginal(t); // 0x44E480
-            x = (double)t.x * (double)0.02f;
-            y = (double)t.y * (double)0.02f;
+            x = (x87d)t.x * (x87d)0.02f;
+            y = (x87d)t.y * (x87d)0.02f;
         } else {
             x = t.x;
             y = t.y;
         }
         const auto& right = ped->GetRight();
         const auto& fwd   = ped->GetForward();
-        ped->m_vecAnimMovingShiftLocal.x = (float)((double)right.x * x + (double)right.y * y);
-        ped->m_vecAnimMovingShiftLocal.y = (float)((double)fwd.x * x + (double)fwd.y * y);
+        ped->m_vecAnimMovingShiftLocal.x = (float)((x87d)right.x * x + (x87d)right.y * y);
+        ped->m_vecAnimMovingShiftLocal.y = (float)((x87d)fwd.x * x + (x87d)fwd.y * y);
         return MakeStandStill();
     }
     case PARTNER_STATE_UNK_4: {
@@ -225,14 +225,14 @@ void CTaskComplexPartner::CalculateMeetingPoints(CPed* ped, CVector* point, CVec
     const CVector partnerPos = m_partner->GetPosition();
 
     CVector dir{
-        (float)((double)partnerPos.x - pedPos.x),
-        (float)((double)partnerPos.y - pedPos.y),
-        (float)((double)partnerPos.z - pedPos.z)
+        (float)((x87d)partnerPos.x - pedPos.x),
+        (float)((x87d)partnerPos.y - pedPos.y),
+        (float)((x87d)partnerPos.z - pedPos.z)
     };
 
-    double cx = (float)((double)dir.x * m_distanceMultiplier + pedPos.x);
-    double cy = (float)((double)(float)((double)dir.y * m_distanceMultiplier) + pedPos.y);
-    double cz = (float)((double)(float)((double)dir.z * m_distanceMultiplier) + pedPos.z);
+    x87d cx = (float)((x87d)dir.x * m_distanceMultiplier + pedPos.x);
+    x87d cy = (float)((x87d)(float)((x87d)dir.y * m_distanceMultiplier) + pedPos.y);
+    x87d cz = (float)((x87d)(float)((x87d)dir.z * m_distanceMultiplier) + pedPos.z);
 
     NormaliseOriginal(dir);
 
@@ -277,11 +277,11 @@ void CTaskComplexPartner::CalculateMeetingPoints(CPed* ped, CVector* point, CVec
 
     point->x = (float)(cx - hx);
     point->y = (float)(cy - hy);
-    point->z = (float)((double)czF - hz);
+    point->z = (float)((x87d)czF - hz);
 
     targetPoint->x = (float)(cx + hx);
-    targetPoint->y = (float)((double)hy + cyF);
-    targetPoint->z = (float)((double)hz + czF);
+    targetPoint->y = (float)((x87d)hy + cyF);
+    targetPoint->z = (float)((x87d)hz + czF);
 }
 
 // 0x681F20 (also the target of the 5-byte thunk 0x6823B0 used by `CTaskComplexPartnerDeal`)

@@ -99,7 +99,7 @@ void CEventKnockOffBike::ReportCriminalEvent(CPed* ped)
 {
     if (IsCriminalEvent()) {
         if (ped->m_nPedType == PED_TYPE_COP && m_ped && m_ped->IsPlayer())
-            FindPlayerWanted()->RegisterCrime(eCrimeType::CRIME_DAMAGE_COP_CAR, ped->GetPosition(), (uint32)ped, false);
+            FindPlayerWanted()->RegisterCrime(eCrimeType::CRIME_DAMAGE_COP_CAR, ped->GetPosition(), NOTSA_PTR_ID32(ped), false);
     }
 }
 
@@ -289,7 +289,7 @@ bool CEventKnockOffBike::SetPedSafePosition(CPed* ped)
     if (m_vehicle->GetUp().z >= 0.0f)
         ped->m_fAimingRotation = (float)m_vehicle->GetHeadingExt();
     else
-        ped->m_fAimingRotation = CGeneral::LimitRadianAngle((float)(m_vehicle->GetHeadingExt() + (double)PI));
+        ped->m_fAimingRotation = CGeneral::LimitRadianAngle((float)(X87R(m_vehicle->GetHeadingExt() + (double)PI)));
 
     ped->m_fCurrentRotation = ped->m_fAimingRotation;
     ped->SetHeading(ped->m_fAimingRotation);

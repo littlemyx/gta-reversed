@@ -22,11 +22,15 @@
 // in-use flag, `-100` listener volume, ...) are for sounds on the stack / heap; in static storage they must not run, or the boot state would differ from the exe's data image.
 namespace notsa {
 bool IsInExeImage(const void* p) {
+#ifdef NOTSA_PORTABLE
+    const auto range = notsa::portable::MainImageRange(); // Mach-O segments of the main executable
+#else
     static const auto range = [] {
         const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
         const auto nt   = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + reinterpret_cast<const IMAGE_DOS_HEADER*>(base)->e_lfanew);
         return std::pair{ base, base + nt->OptionalHeader.SizeOfImage };
     }();
+#endif
     const auto a = reinterpret_cast<uintptr_t>(p);
     return a >= range.first && a < range.second;
 }

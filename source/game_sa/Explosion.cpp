@@ -106,8 +106,8 @@ void CExplosion::RemoveAllExplosionsInArea(CVector pos, float radius) {
             continue;
 
         // 0x7369E0: the squared distance (summed x, z, y) and the squared radius stay in extended precision (a huge delta does not overflow)
-        const double dx = (double)exp.m_vecPosition.x - pos.x, dy = (double)exp.m_vecPosition.y - pos.y, dz = (double)exp.m_vecPosition.z - pos.z;
-        if ((dx * dx + dz * dz) + dy * dy < (double)radius * radius) {
+        const x87d dx = (x87d)exp.m_vecPosition.x - pos.x, dy = (x87d)exp.m_vecPosition.y - pos.y, dz = (x87d)exp.m_vecPosition.z - pos.z;
+        if ((dx * dx + dz * dz) + dy * dy < (x87d)radius * radius) {
             exp.m_nActiveCounter = 0;
         }
     }
@@ -392,14 +392,14 @@ void CExplosion::AddExplosion(CEntity* victim, CEntity* creator, eExplosionType 
                 for (auto i = 0; i < numFires; i++) {
                     CVector firePos = exp->m_vecPosition;
                     if (i) { // 0x7372D4: the first fire is started exactly at the explosion, only the others are scattered
-                        firePos.x = (float)(((double)rand() * RAND_MAX_FLOAT_RECIPROCAL * 8.0f + firePos.x) - 4.0f);
-                        firePos.y = (float)(((double)rand() * RAND_MAX_FLOAT_RECIPROCAL * 8.0f + firePos.y) - 4.0f);
+                        firePos.x = (float)(((x87d)rand() * RAND_MAX_FLOAT_RECIPROCAL * 8.0f + firePos.x) - 4.0f);
+                        firePos.y = (float)(((x87d)rand() * RAND_MAX_FLOAT_RECIPROCAL * 8.0f + firePos.y) - 4.0f);
                     }
                     bool bHitGround{};
                     firePos.z = CWorld::FindGroundZFor3DCoord({firePos.x, firePos.y, firePos.z + 3.0f}, &bHitGround, nullptr); // 0x73735C
                     if (bHitGround && std::fabs(firePos.z - exp->m_vecPosition.z) < 10.0f) {
                         // 0x737386: burn time = (rand01 * 0.4 * 7000 + 5600) (0.4 is 0x3ECCCCCE here, not 0x3ECCCCCD)
-                        const auto burnTime = (int32)(float)((double)rand() * RAND_MAX_FLOAT_RECIPROCAL * std::bit_cast<float>(0x3ECCCCCEu) * 7000.0f + 5600.0f);
+                        const auto burnTime = (int32)(float)((x87d)rand() * RAND_MAX_FLOAT_RECIPROCAL * std::bit_cast<float>(0x3ECCCCCEu) * 7000.0f + 5600.0f);
                         gFireManager.StartFire(firePos, 0.8f, 0, exp->m_pCreator, (uint32)burnTime, 3, 1);
                     }
                 }
@@ -536,5 +536,5 @@ void CExplosion::Update() {
     }
 }
 
-NOTSA_GLOBAL_DEF(CExplosion, m_ExplosionAudioEntity, 0xC888D0, (CAEExplosionAudioEntity), {}); static_assert(sizeof(CExplosion::m_ExplosionAudioEntity) == 128);
-NOTSA_GLOBAL_ZERO_DEF(CExplosion, aExplosions, 0xC88950, (std::array<CExplosion, 16>)); static_assert(sizeof(CExplosion::aExplosions) == 1984); // zero .bss in the exe (not the repo default ctor values)
+NOTSA_GLOBAL_DEF(CExplosion, m_ExplosionAudioEntity, 0xC888D0, (CAEExplosionAudioEntity), {}); VALIDATE_SIZE(CExplosion::m_ExplosionAudioEntity, 128);
+NOTSA_GLOBAL_ZERO_DEF(CExplosion, aExplosions, 0xC88950, (std::array<CExplosion, 16>)); VALIDATE_SIZE(CExplosion::aExplosions, 1984); // zero .bss in the exe (not the repo default ctor values)

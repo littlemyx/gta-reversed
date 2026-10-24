@@ -130,7 +130,7 @@ void CPedToPlayerConversations::Update() {
 
             // Scales the stat with the random seed of the ped (so it varies from ped to ped)
             const auto StatWithSeed = [&](eStats stat, uint16 seedMask, float offset) {
-                return (int32)((double)CStats::GetStatValue(stat) + (double)(ped->m_nRandomSeed & seedMask) - (double)offset);
+                return (int32)((x87d)CStats::GetStatValue(stat) + (x87d)(ped->m_nRandomSeed & seedMask) - (x87d)offset);
             };
 
             const auto Success = [&] {
@@ -150,7 +150,7 @@ void CPedToPlayerConversations::Update() {
                     break;
                 }
                 const auto delta = m_pPlayerVehicle->GetPosition() - ped->GetPosition();
-                if (!(std::sqrt((double)delta.y * (double)delta.y + (double)delta.x * (double)delta.x) < 20.0)) {
+                if (!(std::sqrt((x87d)delta.y * (x87d)delta.y + (x87d)delta.x * (x87d)delta.x) < 20.0)) {
                     break;
                 }
                 switch (CModelInfo::GetVehicleModelInfo(m_pPlayerVehicle->m_nModelIndex)->m_nVehicleClass) {

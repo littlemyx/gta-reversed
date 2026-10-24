@@ -3,9 +3,13 @@
 #include <string>
 
 #include "NoHookRegistry.h"
+#ifdef NOTSA_PORTABLE
+#include "PortableStub.h" // portable build: no hook registry, no Windows API (NOTSA_NO_HOOK_REGISTRY is implied by NoHookRegistry.h)
+#else
 #include "VMTInfo.h"
 #include "HooksUtility.hpp"
 #include "RHManager.h"
+#endif
 
 //
 // Helper macros - For help regarding usage see how they're used (`Find all references` and take a look)

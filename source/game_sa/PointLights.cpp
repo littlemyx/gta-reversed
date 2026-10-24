@@ -40,53 +40,53 @@ float CPointLights::GenerateLightsAffectingObject(const CVector* point, float* t
         }
         const float radius = light.m_fRadius;
         const float nRad   = -radius;
-        const float dx = (float)((double)light.m_vecPosn.x - (double)point->x);
+        const float dx = (float)((x87d)light.m_vecPosn.x - (x87d)point->x);
         if (!(dx > nRad && dx < radius)) {
             continue;
         }
-        const float dy = (float)((double)light.m_vecPosn.y - (double)point->y);
+        const float dy = (float)((x87d)light.m_vecPosn.y - (x87d)point->y);
         if (!(dy > nRad && dy < radius)) {
             continue;
         }
-        const float dz = (float)((double)light.m_vecPosn.z - (double)point->z);
+        const float dz = (float)((x87d)light.m_vecPosn.z - (x87d)point->z);
         if (!(dz > nRad && dz < radius)) {
             continue;
         }
-        const float dist = (float)x87::sqrt((double)dz * dz + (double)dy * dy + (double)dx * dx);
+        const float dist = (float)x87::sqrt((x87d)dz * dz + (x87d)dy * dy + (x87d)dx * dx);
         if (!(dist < radius)) {
             continue;
         }
 
-        const double ratio = (double)dist / (double)radius;
+        const x87d ratio = (x87d)dist / (x87d)radius;
         if (light.m_nType == PLTYPE_ANTILIGHT) {
-            antilightMult = (float)(ratio * (double)antilightMult);
+            antilightMult = (float)(ratio * (x87d)antilightMult);
             continue;
         }
 
-        constexpr double k3 = (double)ExeRecip(3.0f);
-        const double oneMinusRatio = 1.0 - ratio;
+        constexpr x87d k3 = (x87d)ExeRecip(3.0f);
+        const x87d oneMinusRatio = (x87d)1.0 - ratio;
         if (totalLighting) {
             *totalLighting = (float)(oneMinusRatio * light.m_fColorRed * k3 + *totalLighting);
-            *totalLighting = (float)((double)*totalLighting + oneMinusRatio * light.m_fColorGreen * k3);
-            *totalLighting = (float)(oneMinusRatio * light.m_fColorBlue * k3 + (double)*totalLighting);
+            *totalLighting = (float)((x87d)*totalLighting + oneMinusRatio * light.m_fColorGreen * k3);
+            *totalLighting = (float)(oneMinusRatio * light.m_fColorBlue * k3 + (x87d)*totalLighting);
         }
 
-        float intensity = (ratio >= 0.5 || ratio != ratio) ? (float)(1.0 - (ratio - 0.5) * 2.0) : 1.0f;
+        float intensity = (ratio >= 0.5 || ratio != ratio) ? (float)((x87d)1.0 - (ratio - (x87d)0.5) * (x87d)2.0) : 1.0f;
         if (dist == 0.0f) {
             continue;
         }
-        const double inv = 1.0 / (double)dist;
-        const float  nx = (float)((double)dx * inv), ny = (float)((double)dy * inv), nz = (float)((double)dz * inv);
+        const x87d inv = (x87d)1.0 / (x87d)dist;
+        const float  nx = (float)((x87d)dx * inv), ny = (float)((x87d)dy * inv), nz = (float)((x87d)dz * inv);
         if (light.m_nType == PLTYPE_DIRECTIONAL && light.m_pEntityToLight != entity) {
-            const double dot = -((double)nz * light.m_vecDirection.z + (double)ny * light.m_vecDirection.y + (double)nx * light.m_vecDirection.x) - 0.5;
+            const x87d dot = -((x87d)nz * light.m_vecDirection.z + (x87d)ny * light.m_vecDirection.y + (x87d)nx * light.m_vecDirection.x) - (x87d)0.5;
             const float  t   = (float)(dot + dot);
-            intensity = (float)((t < 0.0f ? 0.0f : t) * (double)intensity);
+            intensity = (float)((t < 0.0f ? 0.0f : t) * (x87d)intensity);
         }
         if (intensity > 0.0f) {
             AddAnExtraDirectionalLight(Scene.m_pRpWorld, nx, ny, nz,
-                (float)((double)intensity * light.m_fColorRed),
-                (float)((double)intensity * light.m_fColorGreen),
-                (float)((double)intensity * light.m_fColorBlue));
+                (float)((x87d)intensity * light.m_fColorRed),
+                (float)((x87d)intensity * light.m_fColorGreen),
+                (float)((x87d)intensity * light.m_fColorBlue));
         }
     }
     return antilightMult;
@@ -95,36 +95,36 @@ float CPointLights::GenerateLightsAffectingObject(const CVector* point, float* t
 // 0x6FFE70
 float CPointLights::GetLightMultiplier(const CVector* point) {
     // Exact x87 form of the exe (see GenerateLightsAffectingObject): the anti-light product and the light sum stay in extended precision, each colour channel is added separately
-    double antilightMult = 1.0;
-    double lightSum      = 0.0;
+    x87d antilightMult = (x87d)1.0;
+    x87d lightSum      = (x87d)0.0;
     for (const auto& light : GetActiveLights()) {
         if (light.m_nType == PLTYPE_ONLYFOGEFFECT_ALWAYS || light.m_nType == PLTYPE_ONLYFOGEFFECT) {
             continue;
         }
         const float radius = light.m_fRadius;
         const float nRad   = -radius;
-        const float dx = (float)((double)light.m_vecPosn.x - (double)point->x);
+        const float dx = (float)((x87d)light.m_vecPosn.x - (x87d)point->x);
         if (!(dx > nRad && dx < radius)) {
             continue;
         }
-        const float dy = (float)((double)light.m_vecPosn.y - (double)point->y);
+        const float dy = (float)((x87d)light.m_vecPosn.y - (x87d)point->y);
         if (!(dy > nRad && dy < radius)) {
             continue;
         }
-        const float dz = (float)((double)light.m_vecPosn.z - (double)point->z);
+        const float dz = (float)((x87d)light.m_vecPosn.z - (x87d)point->z);
         if (!(dz > nRad && dz < radius)) {
             continue;
         }
-        const double dist = x87::sqrt((double)dz * dz + (double)dy * dy + (double)dx * dx);
+        const x87d dist = x87::sqrt((x87d)dz * dz + (x87d)dy * dy + (x87d)dx * dx);
         if (!(dist < radius)) {
             continue;
         }
-        const double ratio = dist / (double)radius;
+        const x87d ratio = dist / (x87d)radius;
         if (light.m_nType == PLTYPE_ANTILIGHT) {
             antilightMult *= ratio;
         } else {
-            constexpr double k3 = (double)ExeRecip(3.0f);
-            const double om = 1.0 - ratio;
+            constexpr x87d k3 = (x87d)ExeRecip(3.0f);
+            const x87d om = (x87d)1.0 - ratio;
             lightSum += om * light.m_fColorRed * k3;
             lightSum += om * light.m_fColorGreen * k3;
             lightSum += om * light.m_fColorBlue * k3;
@@ -167,7 +167,7 @@ void CPointLights::AddLight(uint8 lightType, CVector point, CVector direction, f
     // test (fields assigned one by one: the padding byte is left alone), the colours are scaled by the extended-precision fade factor
     const float   maxDist = radius + 15.0f;
     const CVector camPos  = TheCamera.GetPosition();
-    const float dx = (float)((double)point.x - (double)camPos.x);
+    const float dx = (float)((x87d)point.x - (x87d)camPos.x);
     if (!(dx < maxDist)) {
         return;
     }
@@ -175,15 +175,15 @@ void CPointLights::AddLight(uint8 lightType, CVector point, CVector direction, f
     if (!(dx > nMax)) {
         return;
     }
-    const float dy = (float)((double)point.y - (double)camPos.y);
+    const float dy = (float)((x87d)point.y - (x87d)camPos.y);
     if (!(dy < maxDist) || !(dy > nMax)) {
         return;
     }
     if (NumLights >= MAX_POINT_LIGHTS) {
         return;
     }
-    const double dz   = (double)point.z - (double)camPos.z;
-    const float  dist = (float)x87::sqrt(dz * dz + (double)dy * dy + (double)dx * dx);
+    const x87d dz   = (x87d)point.z - (x87d)camPos.z;
+    const float  dist = (float)x87::sqrt(dz * dz + (x87d)dy * dy + (x87d)dx * dx);
     if (!(dist < maxDist)) {
         return;
     }
@@ -196,7 +196,7 @@ void CPointLights::AddLight(uint8 lightType, CVector point, CVector direction, f
     l.m_fRadius         = radius;
     l.m_bGenerateShadows = generateExtraShadows;
     l.m_pEntityToLight  = entityAffected;
-    if ((double)dist < (double)maxDist * 0.75) { // (dist cannot be NaN here)
+    if ((double)dist < (x87d)maxDist * (x87d)0.75) { // (dist cannot be NaN here)
         l.m_fColorRed   = red;
         l.m_fColorGreen = green;
         l.m_fColorBlue  = blue;
@@ -204,7 +204,7 @@ void CPointLights::AddLight(uint8 lightType, CVector point, CVector direction, f
     } else {
         NumLights++;
         // fade the colour out starting at 75% of the max distance
-        const double fade = 1.0 - ((double)dist / (double)maxDist - 0.75) * 4.0;
+        const x87d fade = (x87d)1.0 - ((x87d)dist / (x87d)maxDist - (x87d)0.75) * (x87d)4.0;
         l.m_fColorRed   = (float)(red * fade);
         l.m_fColorGreen = (float)(green * fade);
         l.m_fColorBlue  = (float)(blue * fade);

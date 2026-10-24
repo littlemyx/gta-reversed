@@ -28,7 +28,7 @@ public:
     int32 m_nMinDelay;
     int32 m_nMaxDelay;
 };
-VALIDATE_SIZE(CFileCarGenerator, 0x30);
+VALIDATE_SIZE_FILE(CFileCarGenerator, 0x30);
 
 class CCarGenerator {
 public:
@@ -82,4 +82,4 @@ public:
     static CVehicle* CreateVehicle(eModelID model, eVehicleCreatedBy createdBy);
 };
 
-VALIDATE_SIZE(CCarGenerator, 0x20);
+VALIDATE_SIZE_FILE(CCarGenerator, 0x20);

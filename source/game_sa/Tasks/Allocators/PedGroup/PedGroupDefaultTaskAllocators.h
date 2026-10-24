@@ -13,12 +13,12 @@
 
 class CPedGroupDefaultTaskAllocators {
 private:
-    static inline const NOTSA_GLOBAL(ms_FollowAnyMeansAllocator, 0xC09908, (CPedGroupDefaultTaskAllocatorFollowAnyMeans), {}); static_assert(sizeof(ms_FollowAnyMeansAllocator) == 4);
-    static inline const NOTSA_GLOBAL(ms_FollowLimitedAllocator,  0xC0990C, (CPedGroupDefaultTaskAllocatorFollowLimited), {}); static_assert(sizeof(ms_FollowLimitedAllocator) == 4);
-    static inline const NOTSA_GLOBAL(ms_StandStillAllocator,     0xC09910, (CPedGroupDefaultTaskAllocatorStandStill), {}); static_assert(sizeof(ms_StandStillAllocator) == 4);
-    static inline const NOTSA_GLOBAL(ms_ChatAllocator,           0xC09914, (CPedGroupDefaultTaskAllocatorChat), {}); static_assert(sizeof(ms_ChatAllocator) == 4);
-    static inline const NOTSA_GLOBAL(ms_SitInLeaderCarAllocator, 0xC0991C, (CPedGroupDefaultTaskAllocatorSitInLeaderCar), {}); static_assert(sizeof(ms_SitInLeaderCarAllocator) == 4);
-    static inline const NOTSA_GLOBAL(ms_RandomAllocator,         0xC09918, (CPedGroupDefaultTaskAllocatorRandom), {}); static_assert(sizeof(ms_RandomAllocator) == 4);
+    static inline const NOTSA_GLOBAL(ms_FollowAnyMeansAllocator, 0xC09908, (CPedGroupDefaultTaskAllocatorFollowAnyMeans), {}); VALIDATE_SIZE(ms_FollowAnyMeansAllocator, 4);
+    static inline const NOTSA_GLOBAL(ms_FollowLimitedAllocator,  0xC0990C, (CPedGroupDefaultTaskAllocatorFollowLimited), {}); VALIDATE_SIZE(ms_FollowLimitedAllocator, 4);
+    static inline const NOTSA_GLOBAL(ms_StandStillAllocator,     0xC09910, (CPedGroupDefaultTaskAllocatorStandStill), {}); VALIDATE_SIZE(ms_StandStillAllocator, 4);
+    static inline const NOTSA_GLOBAL(ms_ChatAllocator,           0xC09914, (CPedGroupDefaultTaskAllocatorChat), {}); VALIDATE_SIZE(ms_ChatAllocator, 4);
+    static inline const NOTSA_GLOBAL(ms_SitInLeaderCarAllocator, 0xC0991C, (CPedGroupDefaultTaskAllocatorSitInLeaderCar), {}); VALIDATE_SIZE(ms_SitInLeaderCarAllocator, 4);
+    static inline const NOTSA_GLOBAL(ms_RandomAllocator,         0xC09918, (CPedGroupDefaultTaskAllocatorRandom), {}); VALIDATE_SIZE(ms_RandomAllocator, 4);
 
 public:
     static const CPedGroupDefaultTaskAllocator& Get(ePedGroupDefaultTaskAllocatorType type) {

@@ -13,7 +13,7 @@
 #include <DebugModules/Audio/SoundManagerDebugModule.hpp>
 #include <UIRenderer.h>
 
-NOTSA_GLOBAL(AESoundManager, 0xB62CB0, (CAESoundManager), {}); static_assert(sizeof(AESoundManager) == 36028);
+NOTSA_GLOBAL(AESoundManager, 0xB62CB0, (CAESoundManager), {}); VALIDATE_SIZE(AESoundManager, 36028);
 
 void CAESoundManager::InjectHooks() {
     RH_ScopedClass(CAESoundManager);
@@ -357,7 +357,7 @@ CAESound* CAESoundManager::RequestNewSound(CAESound* pSound) {
 
 #ifdef NOTSA_DEBUG
     notsa::ui::UIRenderer::GetInstance().GetDebugModules().GetModule<notsa::debugmodules::SoundManagerDebugModule>()->SetSoundInfo(sidx, {
-        .StackTrace = std::stacktrace::current()
+        .StackTrace = notsa::StackTrace::current()
     });
 #endif
 
@@ -515,6 +515,10 @@ uint32 SafeVptrRva(const void* obj) {
     if (!obj) {
         return 0;
     }
+#ifdef NOTSA_PORTABLE
+    // W-B8: no SEH on this platform, the read is not fault-protected (objects come from the sound manager's own tables); 64-bit vptr minus the image start
+    return (uint32)(*reinterpret_cast<const uintptr_t*>(obj) - notsa::portable::MainImageRange().first);
+#else
     uint32 v = 0;
     __try {
         v = *reinterpret_cast<const uint32*>(obj);
@@ -523,6 +527,7 @@ uint32 SafeVptrRva(const void* obj) {
     }
     const auto base = reinterpret_cast<uint32>(GetModuleHandleW(nullptr));
     return v - base;
+#endif
 }
 } // namespace
 

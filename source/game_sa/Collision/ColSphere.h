@@ -45,4 +45,4 @@ public:
 
     friend auto TransformObject(const CColSphere& sp, const CMatrix& mat) -> CColSphere;
 };
-VALIDATE_SIZE(CColSphere, 0x14);
+VALIDATE_SIZE_FILE(CColSphere, 0x14);

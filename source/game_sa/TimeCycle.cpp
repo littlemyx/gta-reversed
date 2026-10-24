@@ -200,11 +200,11 @@ void CTimeCycle::Initialise(bool padFile) {
 
     CFileMgr::CloseFile(file);
     // exe (0x5BC026): x87 `fcos`/`fsin` of the doubles at 0x86A6C8 (-3PI/4 as widened float) and 0x86A6D0 (PI/4 as widened float), products stored as floats
-    constexpr double ANGLE_XY = -2.356194496154785;  // 0x86A6C8 (float 0xC016CBE4)
-    constexpr double ANGLE_Z  = 0.7853981852531433;  // 0x86A6D0 (float 0x3F490FDB)
+    constexpr x87d ANGLE_XY = -(x87d)2.356194496154785;  // 0x86A6C8 (float 0xC016CBE4)
+    constexpr x87d ANGLE_Z  = (x87d)0.7853981852531433;  // 0x86A6D0 (float 0x3F490FDB)
     const double     cosZ     = x87::cos(ANGLE_Z);
-    m_vecDirnLightToSun.x = (float)(x87::cos(ANGLE_XY) * cosZ); // -0.5f
-    m_vecDirnLightToSun.y = (float)(x87::sin(ANGLE_XY) * cosZ); // -0.5f
+    m_vecDirnLightToSun.x = (float)(X87R(x87::cos(ANGLE_XY) * cosZ)); // -0.5f
+    m_vecDirnLightToSun.y = (float)(X87R(x87::sin(ANGLE_XY) * cosZ)); // -0.5f
     m_vecDirnLightToSun.z = (float)x87::sin(ANGLE_Z);
     m_vecDirnLightToSun.Normalise();
     m_FogReduction = 0;
@@ -287,8 +287,8 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
     // Rewritten from the asm (0x5603D0..0x5616CD): the x87 stack keeps hours / t / f / the box factors unrounded (double here), every colour channel goes
     // through `_ftol`, and the table-range tests of the exe differ from the old port's (`cmp eax, -1` on a zero-extended byte never skips).
     // 0x5604C8 - hours today: (minutes * (1/60f) + seconds * (1/3600f)) + hours, in extended precision
-    double hours = ((double)CClock::GetGameClockMinutes() * (double)std::bit_cast<float>(0x3C888889u) + (double)CClock::GetGameClockSeconds() * (double)std::bit_cast<float>(0x3991A2B4u)) + (double)CClock::GetGameClockHours();
-    hours = (hours < (double)std::bit_cast<float>(0x41BFFDF4u)) ? hours : (double)std::bit_cast<float>(0x41BFFDF4u); // 23.999f, NaN -> 23.999f
+    x87d hours = ((x87d)CClock::GetGameClockMinutes() * (x87d)std::bit_cast<float>(0x3C888889u) + (x87d)CClock::GetGameClockSeconds() * (x87d)std::bit_cast<float>(0x3991A2B4u)) + (x87d)CClock::GetGameClockHours();
+    hours = (hours < (x87d)std::bit_cast<float>(0x41BFFDF4u)) ? hours : (x87d)std::bit_cast<float>(0x41BFFDF4u); // 23.999f, NaN -> 23.999f
 
     // 0x560528 - Find sample index for current hour
     int32 currSampleIdx = 0;
@@ -297,8 +297,8 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
     }
     const auto nextSampleIdx = (currSampleIdx + 1) % NUM_HOURS;
 
-    const float timeT    = (float)((hours - (double)TimeSamples[currSampleIdx]) / (double)(TimeSamples[currSampleIdx + 1] - TimeSamples[currSampleIdx])); // fidiv, spilled
-    const float invTimeT = (float)(1.0 - (double)timeT);
+    const float timeT    = (float)((hours - (x87d)TimeSamples[currSampleIdx]) / (x87d)(TimeSamples[currSampleIdx + 1] - TimeSamples[currSampleIdx])); // fidiv, spilled
+    const float invTimeT = (float)((x87d)1.0 - (x87d)timeT);
 
     // 0x5605B3 - the exe stores the (16 bit) old / new weather types in a pair of globals
 #ifdef NOTSA_GLOBALS_DETACHED
@@ -324,13 +324,13 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
 
     // 0x56064B - camera height factor: ((z - 20) * 0.005f) clamped to [0, 1] (NaN passes), spilled to float
     const auto& camPos = TheCamera.GetPosition();
-    float f = (float)(((double)camPos.z - 20.0f) * (double)std::bit_cast<float>(0x3BA3D70Au));
+    float f = (float)(((x87d)camPos.z - 20.0f) * (x87d)std::bit_cast<float>(0x3BA3D70Au));
     if (0.0f > f) {
         f = 0.0f;
     } else if (1.0f < f) {
         f = 1.0f;
     }
-    const float invF = (float)(1.0 - (double)f);
+    const float invF = (float)((x87d)1.0 - (x87d)f);
 
     { // 0x5606B7
         CColourSet currentOld(currSampleIdx, CWeather::OldWeatherType);
@@ -373,15 +373,15 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
             CColourSet a{}, b{};
             a.Interpolate(&currentOld, &nextOld, invTimeT, timeT, false);
             b.Interpolate(&currentNew, &nextNew, invTimeT, timeT, false);
-            set->Interpolate(&a, &b, (float)(1.0 - (double)t), t, false);
+            set->Interpolate(&a, &b, (float)((x87d)1.0 - (x87d)t), t, false);
         }
     }
 
     // 0x5608C6 - sky colours: ftol(channel * ((1 / LightsMult + 3) * 0.25)), low 16 bits, clamped (unsigned) to 255
     {
-        const double lightMult = (1.0 / (double)CCoronas::LightsMult + 3.0f) * 0.25f;
+        const x87d lightMult = ((x87d)1.0 / (x87d)CCoronas::LightsMult + 3.0f) * 0.25f;
         const auto   Sky = [&](uint16& v) {
-            const uint16 r = (uint16)(int32)((double)v * lightMult);
+            const uint16 r = (uint16)(int32)((x87d)v * lightMult);
             v = r < 0xFF ? r : (uint16)0xFF;
         };
         Sky(set->m_nSkyTopRed);    Sky(set->m_nSkyTopGreen);    Sky(set->m_nSkyTopBlue);
@@ -389,58 +389,58 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
     }
 
     if (m_FogReduction) { // 0x5609F8: `farClip > x ? farClip : x`
-        const double x = (double)m_FogReduction * (double)std::bit_cast<float>(0x41228000u); // 10.15625f
+        const x87d x = (x87d)m_FogReduction * (x87d)std::bit_cast<float>(0x41228000u); // 10.15625f
         set->m_fFarClip = (set->m_fFarClip > x) ? set->m_fFarClip : (float)x;
     }
 
     // 0x560A26 - sun vector: the angle is not rounded to float before fsin / fcos
     m_CurrentStoredValue = (m_CurrentStoredValue + 1) & 15;
     {
-        const double minutes  = (double)((int32)CClock::GetGameClockHours() * 60 + (int32)CClock::GetGameClockMinutes()) + (double)CClock::GetGameClockSeconds() * (double)std::bit_cast<float>(0x3C888889u);
-        const double sunAngle = minutes * (double)std::bit_cast<float>(0x3B8EFA35u);
+        const x87d minutes  = (x87d)((int32)CClock::GetGameClockHours() * 60 + (int32)CClock::GetGameClockMinutes()) + (x87d)CClock::GetGameClockSeconds() * (x87d)std::bit_cast<float>(0x3C888889u);
+        const x87d sunAngle = minutes * (x87d)std::bit_cast<float>(0x3B8EFA35u);
         auto& sun = m_VectorToSun[m_CurrentStoredValue];
-        sun.x = (float)(x87::sin(sunAngle) + 0.7f);
+        sun.x = (float)(X87R(x87::sin(sunAngle) + 0.7f));
         sun.y = -0.7f;
-        sun.z = (float)(0.2f - x87::cos(sunAngle));
+        sun.z = (float)(X87R(0.2f - x87::cos(sunAngle)));
         sun.Normalise(); // 0x59C910
     }
 
     // 0x560AB3 - weather box
     if (weatherBox && weatherBox->ExtraColor >= 0) {
-        const double boxf    = (double)weatherBox_T * weatherBox->Strength;
-        const double invboxf = 1.0 - boxf;
+        const x87d boxf    = (x87d)weatherBox_T * weatherBox->Strength;
+        const x87d invboxf = (x87d)1.0 - boxf;
         const auto   tbl     = [&](auto& table) -> double { return (double)table[boxHour][boxWeather]; };
 
         // sky: ftol(set * (1 - boxf) + table * boxf), 16 bit store. The `cmp eax, -1` guards on the byte tables never skip
-        const auto Sky = [&](uint16& v, auto& table) { v = (uint16)(int32)((double)v * invboxf + tbl(table) * boxf); };
+        const auto Sky = [&](uint16& v, auto& table) { v = (uint16)(int32)((x87d)v * invboxf + X87R(tbl(table) * boxf)); };
         Sky(set->m_nSkyTopRed, m_nSkyTopRed);       Sky(set->m_nSkyTopGreen, m_nSkyTopGreen);       Sky(set->m_nSkyTopBlue, m_nSkyTopBlue);
         Sky(set->m_nSkyBottomRed, m_nSkyBottomRed); Sky(set->m_nSkyBottomGreen, m_nSkyBottomGreen); Sky(set->m_nSkyBottomBlue, m_nSkyBottomBlue);
 
         // others: table * boxf + (1 - boxf) * set
-        const auto Lerp = [&](float& v, auto& table) { v = (float)(tbl(table) * boxf + invboxf * (double)v); };
+        const auto Lerp = [&](float& v, auto& table) { v = (float)(X87R(tbl(table) * boxf) + invboxf * (x87d)v); };
         Lerp(set->m_fWaterRed, m_fWaterRed); Lerp(set->m_fWaterGreen, m_fWaterGreen); Lerp(set->m_fWaterBlue, m_fWaterBlue); Lerp(set->m_fWaterAlpha, m_fWaterAlpha);
         Lerp(set->m_fAmbientRed, m_nAmbientRed); Lerp(set->m_fAmbientGreen, m_nAmbientGreen); Lerp(set->m_fAmbientBlue, m_nAmbientBlue);
         Lerp(set->m_fAmbientRed_Obj, m_nAmbientRed_Obj); Lerp(set->m_fAmbientGreen_Obj, m_nAmbientGreen_Obj); Lerp(set->m_fAmbientBlue_Obj, m_nAmbientBlue_Obj);
 
         if (m_fFarClip[boxHour][boxWeather] != -1) { // 0x560D08: int16 table, -1 = unused
-            const double v = ((double)m_fFarClip[boxHour][boxWeather] < set->m_fFarClip) ? (double)m_fFarClip[boxHour][boxWeather] : (double)set->m_fFarClip;
-            set->m_fFarClip = (float)(v * boxf + invboxf * (double)set->m_fFarClip); // always stored
+            const x87d v = ((x87d)m_fFarClip[boxHour][boxWeather] < set->m_fFarClip) ? (x87d)m_fFarClip[boxHour][boxWeather] : (x87d)set->m_fFarClip;
+            set->m_fFarClip = (float)(v * boxf + invboxf * (x87d)set->m_fFarClip); // always stored
         }
         if (m_fFogStart[boxHour][boxWeather] != -1) { // 0x560D3E
-            set->m_fFogStart = (float)(tbl(m_fFogStart) * boxf + invboxf * (double)set->m_fFogStart);
+            set->m_fFogStart = (float)(X87R(tbl(m_fFogStart) * boxf) + invboxf * (x87d)set->m_fFogStart);
         }
         Lerp(set->m_fPostFx1Red, m_fPostFx1Red); Lerp(set->m_fPostFx1Green, m_fPostFx1Green); Lerp(set->m_fPostFx1Blue, m_fPostFx1Blue); Lerp(set->m_fPostFx1Alpha, m_fPostFx1Alpha);
         Lerp(set->m_fPostFx2Red, m_fPostFx2Red); Lerp(set->m_fPostFx2Green, m_fPostFx2Green); Lerp(set->m_fPostFx2Blue, m_fPostFx2Blue); Lerp(set->m_fPostFx2Alpha, m_fPostFx2Alpha);
     }
 
     if (lodBoxA) { // 0x560E6F
-        set->m_fLodDistMult = (float)(((double)lodBoxA->LodDistMult * (double)std::bit_cast<float>(0x3D000000u)) * (double)lodBoxA_T + (1.0 - (double)lodBoxA_T) * (double)set->m_fLodDistMult);
+        set->m_fLodDistMult = (float)(((x87d)lodBoxA->LodDistMult * (x87d)std::bit_cast<float>(0x3D000000u)) * (x87d)lodBoxA_T + ((x87d)1.0 - (x87d)lodBoxA_T) * (x87d)set->m_fLodDistMult);
     }
 
     const auto FarClipBox = [&](const CTimeCycleBox* box, float T) { // 0x560EA5 / 0x560EE0
-        const double clip = box->FarClip;
-        const double v    = (clip < (double)set->m_fFarClip) ? clip : (double)set->m_fFarClip;
-        set->m_fFarClip   = (float)(v * (double)T + (1.0 - (double)T) * (double)set->m_fFarClip);
+        const x87d clip = box->FarClip;
+        const x87d v    = (clip < (x87d)set->m_fFarClip) ? clip : (x87d)set->m_fFarClip;
+        set->m_fFarClip   = (float)(v * (x87d)T + ((x87d)1.0 - (x87d)T) * (x87d)set->m_fFarClip);
     };
     if (farBoxA) {
         FarClipBox(farBoxA, farBoxA_T);
@@ -451,10 +451,10 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
 
     // 0x560F1B - extra colour fade
     {
-        const double inc   = (double)CTimer::GetTimeStep() * (double)std::bit_cast<float>(0x3C088889u);
+        const x87d inc   = (x87d)CTimer::GetTimeStep() * (x87d)std::bit_cast<float>(0x3C088889u);
         bool         apply = false;
         if (m_bExtraColourOn) {
-            const double x = inc + (double)m_ExtraColourInter;
+            const x87d x = inc + (x87d)m_ExtraColourInter;
             if (1.0 < x) {
                 m_ExtraColourInter = 1.0f;
                 apply = true;
@@ -463,7 +463,7 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
                 apply = m_ExtraColourInter > 0.0f;
             }
         } else {
-            const double x = (double)m_ExtraColourInter - inc;
+            const x87d x = (x87d)m_ExtraColourInter - inc;
             if (0.0 > x) {
                 m_ExtraColourInter = 0.0f;
             } else {
@@ -472,7 +472,7 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
             }
         }
         if (apply) {
-            const float   inv = (float)(1.0 - (double)m_ExtraColourInter);
+            const float   inv = (float)((x87d)1.0 - (x87d)m_ExtraColourInter);
             CColourSet    extra(m_ExtraColour, m_ExtraColourWeatherType);
             const bool    ignoreSky = m_nSkyTopRed[m_ExtraColour][m_ExtraColourWeatherType] == 0 && m_nSkyTopGreen[m_ExtraColour][m_ExtraColourWeatherType] == 0 && m_nSkyTopBlue[m_ExtraColour][m_ExtraColourWeatherType] == 0;
             set->Interpolate(set, &extra, inv, m_ExtraColourInter, ignoreSky);
@@ -484,19 +484,19 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
         CColourSet next(nextSampleIdx, 20);
         CColourSet tmp{};
         tmp.Interpolate(&current, &next, invTimeT, timeT, false);
-        set->Interpolate(set, &tmp, (float)(1.0 - (double)CWeather::UnderWaterness), CWeather::UnderWaterness, false);
+        set->Interpolate(set, &tmp, (float)((x87d)1.0 - (x87d)CWeather::UnderWaterness), CWeather::UnderWaterness, false);
     }
 
     if (CWeather::InTunnelness > 0.0f) { // 0x561124
         const int32 tHour = TunnelWeather % NUM_HOURS, tWeather = TunnelWeather / NUM_HOURS + WEATHER_EXTRA_START;
         CColourSet  tunnel(tHour, tWeather);
         const bool  ignoreSky = m_nSkyTopRed[tHour][tWeather] == 0 && m_nSkyTopGreen[tHour][tWeather] == 0 && m_nSkyTopBlue[tHour][tWeather] == 0;
-        set->Interpolate(set, &tunnel, (float)(1.0 - (double)CWeather::InTunnelness), CWeather::InTunnelness, ignoreSky);
+        set->Interpolate(set, &tunnel, (float)((x87d)1.0 - (x87d)CWeather::InTunnelness), CWeather::InTunnelness, ignoreSky);
     }
 
     // 0x5611C2 - ambient: ftol(channel) * (1/255f): the channels are TRUNCATED to integers first
     for (float* v : { &set->m_fAmbientRed, &set->m_fAmbientGreen, &set->m_fAmbientBlue, &set->m_fAmbientRed_Obj, &set->m_fAmbientGreen_Obj, &set->m_fAmbientBlue_Obj }) {
-        *v = (float)((double)(int32)*v * (double)std::bit_cast<float>(0x3B808081u));
+        *v = (float)((x87d)(int32)*v * (x87d)std::bit_cast<float>(0x3B808081u));
     }
 
     // 0x561256
@@ -519,11 +519,11 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
 
     // 0x56131B - far clip by altitude (z >= 200): z <= 500: (1 - t) * farClip + t * 1000 for farClip > 1000; above: min(farClip, 1000)
     if (!(camPos.z < 200.0f)) {
-        const double fc = set->m_fFarClip;
+        const x87d fc = set->m_fFarClip;
         if (!(camPos.z > 500.0f)) {
             if (fc > 1000.0) {
-                const double tt = ((double)camPos.z - 200.0f) * (double)std::bit_cast<float>(0x3B5A740Eu);
-                set->m_fFarClip = (float)((1.0 - tt) * fc + tt * 1000.0f);
+                const x87d tt = ((x87d)camPos.z - 200.0f) * (x87d)std::bit_cast<float>(0x3B5A740Eu);
+                set->m_fFarClip = (float)(((x87d)1.0 - tt) * fc + tt * 1000.0f);
             }
         } else {
             set->m_fFarClip = (fc < 1000.0) ? (float)fc : 1000.0f;
@@ -532,12 +532,12 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
 
     // 0x5613A6 - the colour below the horizon: an integer grey (ftol, low byte) blended with the previous sky-bottom colour
     {
-        const int32 grey = (int32)((double)GreyValuesDuringDay[currSampleIdx] * invTimeT + (double)GreyValuesDuringDay[nextSampleIdx] * timeT);
-        const double uw  = CWeather::UnderWaterness;
-        const double g   = (double)(int32)(uint8)grey * (1.0 - uw);
-        m_BelowHorizonGrey.red   = (uint8)(int32)((double)m_CurrentColours.m_nSkyBottomRed   * uw + g);
-        m_BelowHorizonGrey.green = (uint8)(int32)((double)m_CurrentColours.m_nSkyBottomGreen * uw + g);
-        m_BelowHorizonGrey.blue  = (uint8)(int32)((double)m_CurrentColours.m_nSkyBottomBlue  * uw + g);
+        const int32 grey = (int32)((x87d)GreyValuesDuringDay[currSampleIdx] * invTimeT + (x87d)GreyValuesDuringDay[nextSampleIdx] * timeT);
+        const x87d uw  = CWeather::UnderWaterness;
+        const x87d g   = (x87d)(int32)(uint8)grey * ((x87d)1.0 - uw);
+        m_BelowHorizonGrey.red   = (uint8)(int32)((x87d)m_CurrentColours.m_nSkyBottomRed   * uw + g);
+        m_BelowHorizonGrey.green = (uint8)(int32)((x87d)m_CurrentColours.m_nSkyBottomGreen * uw + g);
+        m_BelowHorizonGrey.blue  = (uint8)(int32)((x87d)m_CurrentColours.m_nSkyBottomBlue  * uw + g);
     }
 
     set->m_fAmbientBeforeBrightnessRed   = set->m_fAmbientRed;
@@ -545,27 +545,27 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
     set->m_fAmbientBeforeBrightnessBlue  = set->m_fAmbientBlue;
 
     // 0x561468 - brightness setting; `fm` stays on the x87 stack (extended)
-    const double brightness = (double)FrontEndMenuManager.m_PrefsBrightness;
-    double fm;
+    const x87d brightness = (x87d)FrontEndMenuManager.m_PrefsBrightness;
+    x87d fm;
     const auto MaxRGB = [&]() { // red > green ? red : green, then (that > blue) ? that : blue
-        const double m1 = (set->m_fAmbientRed > set->m_fAmbientGreen) ? (double)set->m_fAmbientRed : (double)set->m_fAmbientGreen;
+        const x87d m1 = (set->m_fAmbientRed > set->m_fAmbientGreen) ? (x87d)set->m_fAmbientRed : (x87d)set->m_fAmbientGreen;
         return (m1 > (double)set->m_fAmbientBlue) ? m1 : (double)set->m_fAmbientBlue;
     };
     if (!(brightness < 256.0f)) {
-        fm = (brightness - 256.0f) * (double)std::bit_cast<float>(0x3C000000u) + 1.0f; // 1/128
-        const double add = MaxRGB() * fm - MaxRGB();
-        set->m_fAmbientRed   = (float)((double)set->m_fAmbientRed   + add);
-        set->m_fAmbientGreen = (float)((double)set->m_fAmbientGreen + add);
-        set->m_fAmbientBlue  = (float)((double)set->m_fAmbientBlue  + add);
+        fm = (brightness - 256.0f) * (x87d)std::bit_cast<float>(0x3C000000u) + 1.0f; // 1/128
+        const x87d add = X87R(X87R(MaxRGB() * fm) - MaxRGB());
+        set->m_fAmbientRed   = (float)((x87d)set->m_fAmbientRed   + add);
+        set->m_fAmbientGreen = (float)((x87d)set->m_fAmbientGreen + add);
+        set->m_fAmbientBlue  = (float)((x87d)set->m_fAmbientBlue  + add);
     } else {
-        fm = (brightness * (double)std::bit_cast<float>(0x3B800000u)) * (double)std::bit_cast<float>(0x3F4CCCCDu) + (double)std::bit_cast<float>(0x3E4CCCCDu); // 1/256, 0.8f, 0.2f
-        set->m_fAmbientRed   = (float)((double)set->m_fAmbientRed   * fm);
-        set->m_fAmbientGreen = (float)((double)set->m_fAmbientGreen * fm);
-        set->m_fAmbientBlue  = (float)((double)set->m_fAmbientBlue  * fm);
+        fm = (brightness * (x87d)std::bit_cast<float>(0x3B800000u)) * (x87d)std::bit_cast<float>(0x3F4CCCCDu) + (x87d)std::bit_cast<float>(0x3E4CCCCDu); // 1/256, 0.8f, 0.2f
+        set->m_fAmbientRed   = (float)((x87d)set->m_fAmbientRed   * fm);
+        set->m_fAmbientGreen = (float)((x87d)set->m_fAmbientGreen * fm);
+        set->m_fAmbientBlue  = (float)((x87d)set->m_fAmbientBlue  * fm);
     }
 
     if (fm > 1.0f) { // 0x5614FE
-        const double bonus = (fm - 1.0f) * (double)std::bit_cast<float>(0x3D75C28Fu); // 0.06f
+        const x87d bonus = (fm - 1.0f) * (x87d)std::bit_cast<float>(0x3D75C28Fu); // 0.06f
         double       mx    = MaxRGB();
         const float  r = set->m_fAmbientRed, g = set->m_fAmbientGreen, b = set->m_fAmbientBlue;
         if (mx == 0.0) {
@@ -573,10 +573,10 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
             set->m_fAmbientRed = set->m_fAmbientGreen = set->m_fAmbientBlue = 0.001f;
         }
         if (bonus > mx) {
-            const double k = bonus / mx;
-            set->m_fAmbientRed   = (float)((double)set->m_fAmbientRed   * k);
-            set->m_fAmbientGreen = (float)((double)set->m_fAmbientGreen * k);
-            set->m_fAmbientBlue  = (float)((double)set->m_fAmbientBlue  * k);
+            const x87d k = X87R(bonus / mx);
+            set->m_fAmbientRed   = (float)((x87d)set->m_fAmbientRed   * k);
+            set->m_fAmbientGreen = (float)((x87d)set->m_fAmbientGreen * k);
+            set->m_fAmbientBlue  = (float)((x87d)set->m_fAmbientBlue  * k);
         }
         m_BrightnessAddedToAmbientRed   = set->m_fAmbientRed   - r;
         m_BrightnessAddedToAmbientGreen = set->m_fAmbientGreen - g;
@@ -585,22 +585,22 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
 
     // 0x5615D2 - level of detail outside the world bounds
     {
-        double d = 0.0;
+        x87d d = (x87d)0.0;
         if (point.x < -3000.0f) {
-            d = -3000.0f - (double)point.x;
+            d = -3000.0f - (x87d)point.x;
         } else if (!(point.x <= 3000.0f) && !std::isnan(point.x)) {
-            d = (double)point.x - 3000.0f;
+            d = (x87d)point.x - 3000.0f;
         }
         if (point.y < -3000.0f) {
-            d = d - ((double)point.y + 3000.0f);
+            d = d - ((x87d)point.y + 3000.0f);
         } else if (!(point.y <= 3000.0f) && !std::isnan(point.y)) {
-            d = d + ((double)point.y - 3000.0f);
+            d = d + ((x87d)point.y - 3000.0f);
         }
 
         if (d >= 1000.0f) {
             set->m_fLodDistMult = set->m_fLodDistMult + set->m_fLodDistMult;
         } else if (d >= 0.0f) {
-            set->m_fLodDistMult = (float)((d * (double)std::bit_cast<float>(0x3A83126Fu) + 1.0f) * (double)set->m_fLodDistMult);
+            set->m_fLodDistMult = (float)((d * (x87d)std::bit_cast<float>(0x3A83126Fu) + 1.0f) * (x87d)set->m_fLodDistMult);
         }
     }
 
@@ -644,9 +644,9 @@ void CTimeCycle::FindTimeCycleBox(
         }
 
         // Check if the point is at least within the `FallOff`. Every compare is of the form `fcomp; test ah, 0x41/1; jp/jne` => an unordered (NaN) compare SKIPS the box
-        const float falloffZ = (float)((double)v.Falloff * (double)std::bit_cast<float>(0x3EAAAAABu)); // 0x560085 (spilled)
+        const float falloffZ = (float)((x87d)v.Falloff * (x87d)std::bit_cast<float>(0x3EAAAAABu)); // 0x560085 (spilled)
         const auto  Skip = [&](int32 i, float tolerance) {
-            return !((double)v.Box.m_vecMin[i] - tolerance <= (double)pos[i]) || !((double)v.Box.m_vecMax[i] + tolerance >= (double)pos[i]);
+            return !((x87d)v.Box.m_vecMin[i] - tolerance <= (double)pos[i]) || !((x87d)v.Box.m_vecMax[i] + tolerance >= (double)pos[i]);
         };
         if (Skip(0, v.Falloff) || Skip(1, v.Falloff) || Skip(2, falloffZ)) {
             continue;
@@ -655,17 +655,17 @@ void CTimeCycle::FindTimeCycleBox(
         // Calculate the distance to the box (0x5600E6, inlined `GetShortestVectorDistToPt`): `p > max ? p - max : (p >= min || NaN ? 0 : min - p)`
         const auto Axis = [&](int32 i) -> double {
             if (pos[i] > v.Box.m_vecMax[i]) {
-                return (double)pos[i] - v.Box.m_vecMax[i];
+                return (x87d)pos[i] - v.Box.m_vecMax[i];
             }
             if (pos[i] < v.Box.m_vecMin[i]) {
-                return (double)v.Box.m_vecMin[i] - pos[i];
+                return (x87d)v.Box.m_vecMin[i] - pos[i];
             }
             return 0.0;
         };
-        const double dx = Axis(0), dy = Axis(1), dz = Axis(2) * 3.0f;
-        const double dist = std::sqrt((dz * dz + dy * dy) + dx * dx); // 0x560178
+        const double dx = Axis(0), dy = Axis(1), dz = X87R(Axis(2) * 3.0f);
+        const x87d dist = std::sqrt((X87R(dz * dz) + X87R(dy * dy)) + X87R(dx * dx)); // 0x560178
         if (!(dist <= 0.0)) { // `fcom 0; test ah, 0x41; jp`: NaN takes this branch
-            const double t = 1.0 - dist / v.Falloff; // Point not inside the box, but within `FallOff`
+            const x87d t = (x87d)1.0 - dist / v.Falloff; // Point not inside the box, but within `FallOff`
             if (t > *interpolation) {
                 *curr          = &v;
                 *interpolation = (float)t;

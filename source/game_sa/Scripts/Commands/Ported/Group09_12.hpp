@@ -33,14 +33,14 @@ inline void SortPair(float& a, float& b) {
 inline CVector TransformVectorOriginal(const CMatrix& m, const CVector& v) {
     const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp();
     return CVector{
-        (float)(((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x),
-        (float)(((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y),
-        (float)(((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y)
+        (float)(((x87d)u.x * v.z + (x87d)f.x * v.y) + (x87d)r.x * v.x),
+        (float)(((x87d)u.y * v.z + (x87d)r.y * v.x) + (x87d)f.y * v.y),
+        (float)(((x87d)u.z * v.z + (x87d)r.z * v.x) + (x87d)f.z * v.y)
     };
 }
 
 //! The id the exe derives from the script pointer + IP (`this + this->m_IP`, used e.g. by the sphere / marker commands)
 inline uint32 ScriptThingIdFromIP(const CRunningScript& S) {
-    return reinterpret_cast<uint32>(&S) + reinterpret_cast<uint32>(S.m_IP);
+    return NOTSA_PTR_ID32(&S) + NOTSA_PTR_ID32(S.m_IP);
 }
 } // namespace notsa::script::commands::ported::g09_12

@@ -1,7 +1,10 @@
 #pragma once
 
-template<typename T, typename Deleter = std::default_delete<T>, typename Alloc = std::allocator<T>>
-using HeapPtrArray = std::vector<std::unique_ptr<T, Deleter>, Alloc>;
+#include <AL/al.h>
+
+// Non-owning list of heap allocated OpenAL wrapper objects (they own themselves through the refcount + `OALBase::trashCan`)
+template<typename T>
+using HeapPtrArray = std::vector<T*>;
 
 // This class has to be heap allocated! (with `new`)
 class OALBase {
@@ -10,7 +13,7 @@ public:
     static inline uint32 livingCount{};
 
     // To be garbage collected OpenAL objects.
-    static inline HeapPtrArray<OALBase> trashCan{};
+    static std::vector<std::unique_ptr<OALBase>> trashCan; // defined in OALBase.cpp: an in-class initializer needs OALBase complete (unique_ptr<incomplete> dtor), libc++ checks it
 
     uint32 m_refCount;
 

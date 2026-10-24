@@ -68,21 +68,21 @@ using namespace notsa::script;
 */
 
 namespace {
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCarMission)   == 0x3BA);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_TargetEntity)  == 0x41C);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCruiseSpeed)  == 0x3D0);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_ucHeliTargetDist) == 0x3D8);
-static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_ucHeliSpeedMult)  == 0x3D9);
-static_assert(offsetof(CHeli, m_fMinAltitude) == 0x9B0);
-static_assert(offsetof(CVehicle, m_pTowingVehicle) == 0x4C4 && offsetof(CVehicle, m_pVehicleBeingTowed) == 0x4C8);
-static_assert(offsetof(CPed, m_acquaintance) == 0x4E0);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCarMission)   == 0x3BA);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_TargetEntity)  == 0x41C);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_nCruiseSpeed)  == 0x3D0);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_ucHeliTargetDist) == 0x3D8);
+VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_ucHeliSpeedMult)  == 0x3D9);
+VALIDATE_OFFSET(CHeli, m_fMinAltitude, 0x9B0);
+VALIDATE_OFFSET(CVehicle, m_pTowingVehicle, 0x4C4); VALIDATE_OFFSET(CVehicle, m_pVehicleBeingTowed, 0x4C8);
+VALIDATE_OFFSET(CPed, m_acquaintance, 0x4E0);
 static_assert(offsetof(CWeaponInfo, m_nModelId1) == 0xC && offsetof(CWeaponInfo, m_nSlot) == 0x14);
-static_assert(offsetof(CVehicleModelInfo, m_nPlateType) == 0x31 && offsetof(CVehicleModelInfo, m_pPlateMaterial) == 0x24);
+VALIDATE_OFFSET(CVehicleModelInfo, m_nPlateType, 0x31); VALIDATE_OFFSET(CVehicleModelInfo, m_pPlateMaterial, 0x24);
 static_assert(offsetof(tBeatInfo, IsBeatInfoPresent) == 0xA0 && offsetof(tBeatInfo, BeatNumber) == 0xA8 && sizeof(tTrackInfo::tBeat) == 8);
-static_assert(offsetof(CTaskComplexUseSequence, m_nCurrentTaskIndex) == 0x10 && offsetof(CTaskComplexUseSequence, m_nEndTaskIndex) == 0x14);
-static_assert(offsetof(CTaskComplexJump, m_UsePlayerLaunchForce) == 0x10);
-static_assert(sizeof(CPedGroup) == 0x2D4);
-static_assert(sizeof(tScriptSearchlight) == 0x7C);
+VALIDATE_OFFSET(CTaskComplexUseSequence, m_nCurrentTaskIndex, 0x10); VALIDATE_OFFSET(CTaskComplexUseSequence, m_nEndTaskIndex, 0x14);
+VALIDATE_OFFSET(CTaskComplexJump, m_UsePlayerLaunchForce, 0x10);
+VALIDATE_SIZE(CPedGroup, 0x2D4);
+VALIDATE_SIZE(tScriptSearchlight, 0x7C);
 static_assert(PEDMOVE_WALK == 4);
 static_assert(MISSION_HELI_KEEP_ENTITY_IN_VIEW == 0x33 && MISSION_PLANE_CRASH_AND_BURN == 0x39 && MISSION_HELI_CRASH_AND_BURN == 0x3A);
 static_assert(TASK_COMPLEX_USE_SEQUENCE == 0x113);
@@ -239,13 +239,13 @@ void ClearAllCharRelationships(CPed& ped, int32 acquaintanceId) {
 //! (`fcomp 0.0f`, ordered `< 0`) is made on the x87 register (NOT rounded to float: a tiny negative product that rounds to -0.0f still adds); then
 //! + 360.0f (0x859E2C) onto the stored float; then the float > 360 (ordered) => - 360.
 float GetCarPitchScript(CVehicle& veh) {
-    const double product = (double)static_cast<CAutomobile&>(veh).GetCarPitch() * (double)57.2957763671875f;
+    const x87d product = (x87d)static_cast<CAutomobile&>(veh).GetCarPitch() * (x87d)57.2957763671875f;
     float        pitch   = (float)product;
     if (product < 0.0) {
-        pitch = (float)((double)pitch + 360.0);
+        pitch = (float)((x87d)pitch + (x87d)360.0);
     }
     if (pitch > 360.0f) {
-        pitch = (float)((double)pitch - 360.0);
+        pitch = (float)((x87d)pitch - (x87d)360.0);
     }
     return pitch;
 }
@@ -622,7 +622,7 @@ void ListenToPlayerGroupCommands(CPed& ped, int32 listen) {
 //! CTaskSimpleSlideToCoord(pos, angle, speed) (0x66C3E0).
 void TaskCharSlideToCoord(CRunningScript& S, eScriptCommands cmd, int32 pedHandle, float x, float y, float z, float heading, float speed) {
     const CVector pos{ x, y, z };
-    const float   angle = (float)((double)heading * (double)0.017453292f);
+    const float   angle = (float)((x87d)heading * (x87d)0.017453292f);
     if (speed < 0.0f) {
         speed = 0.1f; // 0x3DCCCCCD
     }

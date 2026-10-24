@@ -220,7 +220,7 @@ bool CTaskSimpleHoldEntity::ProcessPed(CPed* ped) {
                 objectToHold->m_nFakePhysics = 0;
             }
 
-            m_fRotation = (float)(entityToHold->GetHeadingExt() - (double)ped->m_fCurrentRotation); // 0x693DA5..0x693DAF: the heading stays unrounded in ST0 for the subtraction
+            m_fRotation = (float)(X87R(entityToHold->GetHeadingExt() - (double)ped->m_fCurrentRotation)); // 0x693DA5..0x693DAF: the heading stays unrounded in ST0 for the subtraction
         }
     }
 
@@ -299,12 +299,27 @@ bool CTaskSimpleHoldEntity::SetPedPosition(CPed* ped) {
     if (bUpdateEntityToHoldPosition) {
         if (m_pEntityToHold) {
             m_pEntityToHold->SetIsVisible(ped->GetIsVisible());
+#if defined(NOTSA_STATEHASH) && defined(NOTSA_PORTABLE) // RR-3: F6 diagnostics, portable only
+            if (std::getenv("NOTSA_RR_HOLDLOG")) { // RR diagnostics: every bone read of a held prop (first 80)
+                static int s_N = 0;
+                if (s_N++ < 80) {
+                    RpHAnimHierarchy* h = GetAnimHierarchyFromSkinClump(ped->GetRpClump());
+                    const int32 ai = h ? RpHAnimIDGetIndex(h, ped->m_apBones[m_nBoneFrameId]->BoneTag) : -2;
+                    const float* m = (h && ai >= 0) ? (const float*)&RpHAnimHierarchyGetMatrixArray(h)[ai] : nullptr;
+                    NOTSA_LOG_INFO("rrh frame={} ped={} model={} calledPreRender={} transOnly={} ai={} m0={:08x} m12={:08x} m13={:08x}", CTimer::GetFrameCounter(), (int)GetPedPool()->GetIndex(ped), (int)m_pEntityToHold->m_nModelIndex, (int)ped->bCalledPreRender,
+                        (int)((m_bBoneFlags & HOLD_ENTITY_UPDATE_TRANSLATION_ONLY) != 0), ai, m ? std::bit_cast<uint32_t>(m[0]) : 0u, m ? std::bit_cast<uint32_t>(m[12]) : 0u, m ? std::bit_cast<uint32_t>(m[13]) : 0u);
+                }
+            }
+#endif
             if (ped->bCalledPreRender) {
                 if (m_bBoneFlags & HOLD_ENTITY_UPDATE_TRANSLATION_ONLY) {
                     CVector entityToHoldPos = m_vecPosition;
                     RpHAnimHierarchy* pHAnimHierarchy = GetAnimHierarchyFromSkinClump(ped->GetRpClump());
                     int32 animIndex = RpHAnimIDGetIndex(pHAnimHierarchy, ped->m_apBones[m_nBoneFrameId]->BoneTag);
                     RwMatrix* pBoneMatrix = &RpHAnimHierarchyGetMatrixArray(pHAnimHierarchy)[animIndex];
+#ifdef NOTSA_STATEHASH // RR diagnostics: a bone matrix read that is not a finite matrix (or a negative index) is the source of NaN positions of held props
+    if (animIndex < 0 || !std::isfinite(pBoneMatrix->pos.x) || !std::isfinite(pBoneMatrix->right.x)) { NOTSA_LOG_WARN("rr: HoldEntity(translation) animIndex={} bonetag={} pos=({},{},{}) right.x={} nodes={}", animIndex, ped->m_apBones[m_nBoneFrameId]->BoneTag, pBoneMatrix->pos.x, pBoneMatrix->pos.y, pBoneMatrix->pos.z, pBoneMatrix->right.x, pHAnimHierarchy ? pHAnimHierarchy->numNodes : -1); }
+#endif
                     RwV3dTransformPoints((RwV3d*)&entityToHoldPos, (RwV3d*)&entityToHoldPos, 1, pBoneMatrix);
                     m_pEntityToHold->GetMatrix().UpdateMatrix(pBoneMatrix);
                     m_pEntityToHold->SetPosn(entityToHoldPos);
@@ -314,6 +329,9 @@ bool CTaskSimpleHoldEntity::SetPedPosition(CPed* ped) {
                     RpHAnimHierarchy* pHAnimHierarchy = GetAnimHierarchyFromSkinClump(ped->GetRpClump());
                     int32 animIndex = RpHAnimIDGetIndex(pHAnimHierarchy, ped->m_apBones[m_nBoneFrameId]->BoneTag);
                     RwMatrix* pBoneMatrix = RpHAnimHierarchyGetMatrixArray(pHAnimHierarchy);
+#ifdef NOTSA_STATEHASH
+                    if (animIndex < 0 || !std::isfinite(pBoneMatrix[animIndex].pos.x)) { NOTSA_LOG_WARN("rr: HoldEntity animIndex={} bonetag={} pos=({},{},{}) nodes={} ped={} frame={}", animIndex, ped->m_apBones[m_nBoneFrameId]->BoneTag, pBoneMatrix[animIndex].pos.x, pBoneMatrix[animIndex].pos.y, pBoneMatrix[animIndex].pos.z, pHAnimHierarchy ? pHAnimHierarchy->numNodes : -1, (void*)ped, CTimer::GetFrameCounter()); }
+#endif
                     entityToHoldPos += *RwMatrixGetPos(&pBoneMatrix[animIndex]);
                     CMatrix rotationMatrix(ped->GetMatrix());
                     rotationMatrix.RotateZ(m_fRotation);

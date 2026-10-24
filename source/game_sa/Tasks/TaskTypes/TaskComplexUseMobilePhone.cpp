@@ -185,7 +185,7 @@ CTask* CTaskComplexUseMobilePhone::ControlSubTask(CPed* ped) {
         } else if (phoneOut) {
             // 0x86E4A0 = 1.566 (double)
             if (!((double)phoneOut->m_CurrentTime < 1.566)) {
-                if (!(((double)phoneOut->m_CurrentTime - (double)phoneOut->m_TimeStep) >= 1.566)) { // jp after test ah,5 => taken for ">=" only
+                if (!(((x87d)phoneOut->m_CurrentTime - (x87d)phoneOut->m_TimeStep) >= 1.566)) { // jp after test ah,5 => taken for ">=" only
                     HidePhone(ped);
                 }
             }

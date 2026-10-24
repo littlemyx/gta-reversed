@@ -77,10 +77,10 @@ CVector CTaskComplexGangFollower::CalculateOffsetPosition() {
 
     // Squared distance the leader moved since the last update (the original evaluates it in extended precision: (dz^2 + dy^2) + dx^2)
     const auto& leaderPos = leader->GetPosition();
-    const double dx = (double)leaderPos.x - (double)m_PedPosn.x;
-    const double dy = (double)leaderPos.y - (double)m_PedPosn.y;
-    const double dz = (double)leaderPos.z - (double)m_PedPosn.z;
-    const double distSq = (dz * dz + dy * dy) + dx * dx;
+    const x87d dx = (x87d)leaderPos.x - (x87d)m_PedPosn.x;
+    const x87d dy = (x87d)leaderPos.y - (x87d)m_PedPosn.y;
+    const x87d dz = (x87d)leaderPos.z - (x87d)m_PedPosn.z;
+    const x87d distSq = (dz * dz + dy * dy) + dx * dx;
 
     if (bLeaderMoving) {
         const auto& moving = CTaskComplexFollowLeaderInFormation::ms_offsets.MovingOffsets[m_Arg3C];

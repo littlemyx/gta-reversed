@@ -331,8 +331,8 @@ void CRope::Update() {
     {
         // NOTE: x87 keeps the differences, their squares and the root in extended precision
         const auto&  camPos = TheCamera.GetPosition();
-        const double dy     = (double)camPos.y - (double)m_aSegments[0].y;
-        const double dx     = (double)camPos.x - (double)m_aSegments[0].x;
+        const x87d dy     = (x87d)camPos.y - (x87d)m_aSegments[0].y;
+        const x87d dx     = (x87d)camPos.x - (x87d)m_aSegments[0].x;
         if (!(std::sqrt(dx * dx + dy * dy) < 200.0)) {
             return;
         }
@@ -349,8 +349,8 @@ void CRope::Update() {
     // Expired rope: let the top segment fall
     if (!(m_nFlags2 & 1) && m_nTime < CTimer::GetTimeInMS()) {
         // NOTE: The products stay in extended precision until the single float store
-        const double ts = CTimer::GetTimeStep();
-        m_aSpeed[0].z    = (float)((double)m_aSpeed[0].z - ts * 0.0015f);
+        const x87d ts = CTimer::GetTimeStep();
+        m_aSpeed[0].z    = (float)((x87d)m_aSpeed[0].z - ts * 0.0015f);
         m_aSegments[0].x = (float)(ts * m_aSpeed[0].x + m_aSegments[0].x);
         m_aSegments[0].y = (float)(ts * m_aSpeed[0].y + m_aSegments[0].y);
         m_aSegments[0].z = (float)(ts * m_aSpeed[0].z + m_aSegments[0].z);
@@ -387,23 +387,23 @@ void CRope::Update() {
 
             // Wind (NOTE: Not applied to Z)
             // NOTE: x87 keeps the product in extended precision before it's added and stored
-            speed.x = (float)((double)((rand() & 0xF) - 8) * 0.001f + speed.x);
-            speed.y = (float)((double)((rand() & 0xF) - 8) * 0.001f + speed.y);
+            speed.x = (float)((x87d)((rand() & 0xF) - 8) * 0.001f + speed.x);
+            speed.y = (float)((x87d)((rand() & 0xF) - 8) * 0.001f + speed.y);
 
             // Speed is a blend of the previous segment's one and own
             // NOTE: Only for Z the products aren't stored (rounded) before they are added
             speed = CVector{
                 oneMinusDamping * prevSpeed.x + damping * speed.x,
                 oneMinusDamping * prevSpeed.y + damping * speed.y,
-                (float)((double)damping * speed.z + (double)oneMinusDamping * prevSpeed.z)
+                (float)((x87d)damping * speed.z + (x87d)oneMinusDamping * prevSpeed.z)
             };
 
             // Gravity
-            pos.z = (float)((double)pos.z - (double)CTimer::GetTimeStep() * 0.15f);
+            pos.z = (float)((x87d)pos.z - (x87d)CTimer::GetTimeStep() * 0.15f);
 
             // Don't go below the ground
             if (m_nFlags2 & 4) {
-                const double minZ = (double)m_fGroundZ + 0.3f; // NOTE: Not rounded to float for the comparison
+                const x87d minZ = (x87d)m_fGroundZ + 0.3f; // NOTE: Not rounded to float for the comparison
                 if (!((double)pos.z > minZ)) {
                     pos.z = (float)minZ;
                 }
@@ -411,15 +411,15 @@ void CRope::Update() {
 
             // Constrain the distance to the previous segment
             // NOTE: A mix of what's stored as a float (`dz`, `dx` for the multiplication, the squared length) and what isn't (`dy`, the others)
-            const double dxE    = (double)pos.x - prevPos.x;
-            const double dyE    = (double)pos.y - prevPos.y;
+            const x87d dxE    = (x87d)pos.x - prevPos.x;
+            const x87d dyE    = (x87d)pos.y - prevPos.y;
             const float  dz     = pos.z - prevPos.z;
             const float  dx     = (float)dxE;
-            const float  lenSq  = (float)(dxE * dxE + dyE * dyE + (double)dz * dz);
-            const double k      = (double)m_fTotalLength / std::sqrt((double)lenSq); // NOTE: `m_fTotalLength` is really the length of a single segment
-            const float  newDx  = (float)((double)dx * k);
+            const float  lenSq  = (float)(dxE * dxE + dyE * dyE + (x87d)dz * dz);
+            const x87d k      = (x87d)m_fTotalLength / std::sqrt((x87d)lenSq); // NOTE: `m_fTotalLength` is really the length of a single segment
+            const float  newDx  = (float)((x87d)dx * k);
             const float  newDy  = (float)(dyE * k);
-            const float  newDz  = (float)((double)dz * k);
+            const float  newDz  = (float)((x87d)dz * k);
             pos = CVector{
                 newDx + prevPos.x,
                 newDy + prevPos.y,
@@ -432,7 +432,7 @@ void CRope::Update() {
             speed = CVector{
                 (pos.x - scratch.x) * invTimeStep,
                 (pos.y - scratch.y) * invTimeStep,
-                (float)(((double)pos.z - scratch.z) * (1.0 / (double)CTimer::GetTimeStep()))
+                (float)(((x87d)pos.z - scratch.z) * ((x87d)1.0 / (x87d)CTimer::GetTimeStep()))
             };
         }
     }
@@ -460,7 +460,7 @@ void CRope::Update() {
             const int16 stick = CPad::GetPad(0)->GetCarGunUpDown();
             if ((stick < 0 && CTheScripts::bEnableCraneRaise) || (stick > 0 && CTheScripts::bEnableCraneLower)) {
                 // NOTE: The whole expression is evaluated in extended precision before the store
-                m_fSegmentLength = (float)((double)m_fSegmentLength - (double)stick * CTimer::GetTimeStep() * 0.00001f);
+                m_fSegmentLength = (float)((x87d)m_fSegmentLength - (x87d)stick * CTimer::GetTimeStep() * 0.00001f);
             }
             if (0.84f < m_fSegmentLength) {
                 m_fSegmentLength = 0.84f;
@@ -468,15 +468,15 @@ void CRope::Update() {
         } else { // Digital (the other types are always one of CRANE_MAGNO, WRECKING_BALL, QUARRY_CRANE_ARM and CRANE_TROLLEY here)
             if (CTheScripts::bEnableCraneRaise) {
                 // NOTE: Evaluated in extended precision, rounded to float only when stored. Same for the sums below
-                const float delta = (float)((double)CPad::GetPad(0)->NewState.ButtonSquare * CTimer::GetTimeStep() * 0.00001f);
-                if (delta > 0.f && (double)delta + m_fSegmentLength < 0.9f) {
+                const float delta = (float)((x87d)CPad::GetPad(0)->NewState.ButtonSquare * CTimer::GetTimeStep() * 0.00001f);
+                if (delta > 0.f && (x87d)delta + m_fSegmentLength < 0.9f) {
                     AudioEngine.ReportMissionAudioEvent(0x68, m_pRopeHolder->AsPhysical(), 0.f, 1.f);
                 }
                 m_fSegmentLength = delta + m_fSegmentLength;
             }
             if (CTheScripts::bEnableCraneLower) {
-                const float delta = (float)((double)CPad::GetPad(0)->NewState.ButtonCross * CTimer::GetTimeStep() * 0.00001f);
-                if (delta > 0.f && (double)m_fSegmentLength - delta > 0.01f) {
+                const float delta = (float)((x87d)CPad::GetPad(0)->NewState.ButtonCross * CTimer::GetTimeStep() * 0.00001f);
+                if (delta > 0.f && (x87d)m_fSegmentLength - delta > 0.01f) {
                     AudioEngine.ReportMissionAudioEvent(0x68, m_pRopeHolder->AsPhysical(), 0.f, 1.f);
                 }
                 m_fSegmentLength = m_fSegmentLength - delta;
@@ -501,9 +501,9 @@ void CRope::Update() {
             mass = 750.f;
         }
         // NOTE: x87 keeps the whole expression and the comparison in extended precision
-        double blend = (double)kMassBlendFactor * std::bit_cast<float>(0x3a5a740eu) * mass + kBaseBlend; // 0x863E30: 1/1200
+        x87d blend = (x87d)kMassBlendFactor * std::bit_cast<float>(0x3a5a740eu) * mass + kBaseBlend; // 0x863E30: 1/1200
         if (0.5 < blend) {
-            blend = 0.5;
+            blend = (x87d)0.5;
         }
         hangingBlend = (float)blend;
         hanging->AsPhysical()->m_nFakePhysics = 0;
@@ -544,24 +544,24 @@ void CRope::Update() {
             // Remove the speed component that's along the rope (away from the start)
             // NOTE: x87 keeps `dot` (the comparison), the X component and the sums below in extended precision.
             //       Only `dot` (for the products), `scratch.y`, `scratch.z` and the differences of Y and Z are stored as floats.
-            const double dotE = (double)dir.z * scratch.z + (double)dir.x * scratch.x + (double)dir.y * scratch.y;
+            const x87d dotE = (x87d)dir.z * scratch.z + (x87d)dir.x * scratch.x + (x87d)dir.y * scratch.y;
             const float  dot  = (float)dotE;
-            double       speedX = scratch.x;
+            x87d       speedX = scratch.x;
             if (dotE > 0.0) {
-                speedX    = (double)scratch.x - (double)dir.x * dot;
-                scratch.y = (float)((double)scratch.y - (double)dot * dir.y);
-                scratch.z = (float)((double)scratch.z - (double)dot * dir.z);
+                speedX    = (x87d)scratch.x - (x87d)dir.x * dot;
+                scratch.y = (float)((x87d)scratch.y - (x87d)dot * dir.y);
+                scratch.z = (float)((x87d)scratch.z - (x87d)dot * dir.z);
             }
-            const double newSpeedX = speedX + holderSpeed.x;
-            const double newSpeedY = (double)holderSpeed.y + scratch.y;
-            const double newSpeedZ = (double)holderSpeed.z + scratch.z;
+            const x87d newSpeedX = speedX + holderSpeed.x;
+            const x87d newSpeedY = (x87d)holderSpeed.y + scratch.y;
+            const x87d newSpeedZ = (x87d)holderSpeed.z + scratch.z;
 
             // The speed change is shared between the hanging entity and the holder
             const float  dvz = (float)(newSpeedZ - hangingPhy->m_vecMoveSpeed.z);
             const float  dvy = (float)(newSpeedY - hangingPhy->m_vecMoveSpeed.y);
-            const double dvx = newSpeedX - hangingPhy->m_vecMoveSpeed.x;
+            const x87d dvx = newSpeedX - hangingPhy->m_vecMoveSpeed.x;
 
-            const double hangingShare = 1.0 - hangingBlend;
+            const x87d hangingShare = (x87d)1.0 - hangingBlend;
             const float  hangingDvz   = (float)(dvz * hangingShare);
             const float  hangingDvy   = (float)(dvy * hangingShare);
             const float  hangingDvx   = (float)(dvx * hangingShare);
@@ -569,9 +569,9 @@ void CRope::Update() {
             hangingPhy->m_vecMoveSpeed.y = hangingDvy + hangingPhy->m_vecMoveSpeed.y;
             hangingPhy->m_vecMoveSpeed.x = hangingDvx + hangingPhy->m_vecMoveSpeed.x;
 
-            const float holderDvz = (float)(dvz * (double)hangingBlend);
-            const float holderDvy = (float)(dvy * (double)hangingBlend);
-            const float holderDvx = (float)(dvx * (double)hangingBlend);
+            const float holderDvz = (float)(dvz * (x87d)hangingBlend);
+            const float holderDvy = (float)(dvy * (x87d)hangingBlend);
+            const float holderDvx = (float)(dvx * (x87d)hangingBlend);
             holder->m_vecMoveSpeed.z = holder->m_vecMoveSpeed.z - holderDvz;
             holder->m_vecMoveSpeed.y = holder->m_vecMoveSpeed.y - holderDvy;
             holder->m_vecMoveSpeed.x = holder->m_vecMoveSpeed.x - holderDvx;
@@ -587,7 +587,7 @@ void CRope::Update() {
                 const CMatrix forced{ mat };
                 // NOTE: The products aren't rounded before they are added
                 const auto Blend = [](float prevVal, float forcedVal) {
-                    return (float)((double)prevVal * 0.9f + (double)forcedVal * 0.1f);
+                    return (float)((x87d)prevVal * 0.9f + (x87d)forcedVal * 0.1f);
                 };
                 mat.GetRight().x   = Blend(prev.GetRight().x,   forced.GetRight().x);
                 mat.GetRight().y   = Blend(prev.GetRight().y,   forced.GetRight().y);
@@ -653,8 +653,8 @@ void CRope::Update() {
     //       but the result is the same (the value is rounded to float on the way out in both cases).
     const auto OnPickedUp = [&](double dzRope) {
         if (dzRope > 0.0) {
-            const double invMass = 1.0 / (double)m_fMass;
-            m_fSegmentLength     = RopeMax((float)((m_fSegmentLength - dzRope * invMass) - invMass * m_fTotalLength), 0.01f);
+            const x87d invMass = (x87d)1.0 / (x87d)m_fMass;
+            m_fSegmentLength     = RopeMax((float)((m_fSegmentLength - X87R(dzRope * invMass)) - invMass * m_fTotalLength), 0.01f);
         }
     };
 
@@ -681,9 +681,9 @@ void CRope::Update() {
             }
             const auto& pedPos = ped->GetPosition();
             // NOTE: x87 keeps the differences, the squares and the root in extended precision (same everywhere below)
-            const double dx    = (double)pedPos.x - lastPos.x;
-            const double dy    = (double)pedPos.y - lastPos.y;
-            const double dz    = (double)pedPos.z - lastPos.z;
+            const x87d dx    = (x87d)pedPos.x - lastPos.x;
+            const x87d dy    = (x87d)pedPos.y - lastPos.y;
+            const x87d dz    = (x87d)pedPos.z - lastPos.z;
             if (!(std::sqrt(dz * dz + dy * dy + dx * dx) < 2.5)) {
                 continue;
             }
@@ -696,7 +696,7 @@ void CRope::Update() {
 
             // BUG: `scratch.z` (a stale value: the last thing written to that stack slot before, see its declaration) is used
             //      instead of the position of what's being picked up (copy-paste from the other cases)
-            OnPickedUp((double)lastPos.z - scratch.z);
+            OnPickedUp((x87d)lastPos.z - scratch.z);
             break;
         }
         return Finish();
@@ -752,9 +752,9 @@ void CRope::Update() {
             const float height = CRopes::FindPickupHeight(veh);
             scratch            = veh->GetMatrix().TransformPoint(CVector{ 0.f, 0.f, height });
 
-            const double dx = (double)scratch.x - lastPos.x;
-            const double dy = (double)scratch.y - lastPos.y;
-            const double dz = (double)scratch.z - lastPos.z;
+            const x87d dx = (x87d)scratch.x - lastPos.x;
+            const x87d dy = (x87d)scratch.y - lastPos.y;
+            const x87d dz = (x87d)scratch.z - lastPos.z;
             if (!(std::sqrt(dx * dx + dz * dz + dy * dy) < 2.5)) {
                 continue;
             }
@@ -769,7 +769,7 @@ void CRope::Update() {
             m_pAttachedEntity->SetPosn(veh->GetMatrix().TransformPoint(CVector{ 0.f, 0.f, height }));
             m_pAttachedEntity->SetUsesCollision(false);
 
-            OnPickedUp((double)lastPos.z - scratch.z);
+            OnPickedUp((x87d)lastPos.z - scratch.z);
             break;
         }
 
@@ -843,9 +843,9 @@ void CRope::Update() {
             }
         }
 
-        const double dx = (double)scratch.x - lastPos.x;
-        const double dy = (double)scratch.y - lastPos.y;
-        const double dz = (double)scratch.z - lastPos.z;
+        const x87d dx = (x87d)scratch.x - lastPos.x;
+        const x87d dy = (x87d)scratch.y - lastPos.y;
+        const x87d dz = (x87d)scratch.z - lastPos.z;
         if (!(std::sqrt(dz * dz + dy * dy + dx * dx) < 2.5)) {
             continue;
         }
@@ -863,7 +863,7 @@ void CRope::Update() {
         }
         obj->physicalFlags.bAttachedToEntity = true;
 
-        OnPickedUp((double)lastPos.z - scratch.z);
+        OnPickedUp((x87d)lastPos.z - scratch.z);
 
         // Rotate around the forward axis (right => up => left => down)
         for (; rotations != 0; rotations--) {

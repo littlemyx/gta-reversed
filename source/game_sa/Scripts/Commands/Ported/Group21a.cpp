@@ -52,7 +52,7 @@ void ConnectLods(int32 handleA, int32 handleB) {
 
 //! 2088 SET_MAX_FIRE_GENERATIONS (case @0x47418F): n  -- raw dword store to 0xB728E0 (= `gFireManager.m_nMaxFireGenerationsAllowed`, right behind the 60 fires)
 void SetMaxFireGenerations(int32 n) {
-    static_assert(offsetof(CFireManager, m_nMaxFireGenerationsAllowed) == 0x960); // 0xB71F80 + 0x960 == 0xB728E0
+    VALIDATE_OFFSET(CFireManager, m_nMaxFireGenerationsAllowed, 0x960); // 0xB71F80 + 0x960 == 0xB728E0
     gFireManager.m_nMaxFireGenerationsAllowed = (uint32)n;
 }
 
@@ -88,7 +88,7 @@ void SetPoolTableCoords(float minX, float minY, float minZ, float maxX, float ma
 
 //! 2099 HAS_OBJECT_BEEN_PHOTOGRAPHED (case @0x474322): object => compare flag  -- true (and the flag is CLEARED) if the object exists and has `bIsPhotographed` (+0x140 bit 0x1000)
 bool HasObjectBeenPhotographed(int32 objectHandle) {
-    static_assert(offsetof(CObject, objectFlags) == 0x140);
+    VALIDATE_OFFSET(CObject, objectFlags, 0x140);
     auto* const obj = GetObjectPool()->GetAtRef(objectHandle); // 0x465040
     if (obj && obj->objectFlags.bIsPhotographed) {
         obj->objectFlags.bIsPhotographed = false;
@@ -115,7 +115,7 @@ void SetVehicleAreaVisible(CVehicle& veh, int32 area) {
 
 //! 2113 SELECT_WEAPONS_FOR_VEHICLE (case @0x470E86): car, weapon  -- byte store to +0x513 (`m_nVehicleWeaponInUse`)
 void SelectWeaponsForVehicle(CVehicle& veh, int32 weapon) {
-    static_assert(offsetof(CVehicle, m_nVehicleWeaponInUse) == 0x513 && sizeof(eCarWeapon) == 1);
+    VALIDATE_OFFSET(CVehicle, m_nVehicleWeaponInUse, 0x513); VALIDATE_SIZE(eCarWeapon, 1);
     veh.m_nVehicleWeaponInUse = (eCarWeapon)(uint8)weapon;
 }
 
@@ -157,18 +157,18 @@ void TaskFollowFootsteps(eScriptCommands command, CRunningScript& S, int32 pedHa
 //! otherwise (or NaN armour) rest = amount - armour, armour = 0). health = health - rest (the extended `rest` is subtracted, the result is
 //! stored as float). If the (unrounded) result is <= 0: health = 0 and a CEventScriptCommand(3, CTaskComplexDie(...)) is added to the ped's event group.
 void DamageChar(CPed& ped, int32 amount, int32 armourFirst) {
-    double rest = (double)amount; // fild
+    x87d rest = (x87d)amount; // fild
     if (armourFirst != 0) {
-        const double armour = ped.m_fArmour;
+        const x87d armour = ped.m_fArmour;
         if (rest <= armour) {
             ped.m_fArmour = (float)(armour - rest);
-            rest          = 0.0;
+            rest          = (x87d)0.0;
         } else { // (also: NaN armour)
             rest          = rest - armour;
             ped.m_fArmour = 0.0f;
         }
     }
-    const double health = (double)ped.m_fHealth - rest;
+    const x87d health = (x87d)ped.m_fHealth - rest;
     ped.m_fHealth       = (float)health;
     if (!(health <= 0.0)) { // fcomp + `test ah, 0x41; jp` => returns if health > 0 or unordered
         return;
@@ -182,13 +182,13 @@ void DamageChar(CPed& ped, int32 amount, int32 armourFirst) {
 
 //! 2130 SET_CAR_CAN_BE_VISIBLY_DAMAGED (case @0x471161): car, flag  -- byte +0x868 bit 0x10 (CAutomobile `autoFlags.bCanBeVisiblyDamaged`), no vehicle type check
 void SetCarCanBeVisiblyDamaged(CVehicle& veh, int32 flag) {
-    static_assert(offsetof(CAutomobile, autoFlags) == 0x868);
+    VALIDATE_OFFSET(CAutomobile, autoFlags, 0x868);
     static_cast<CAutomobile&>(veh).autoFlags.bCanBeVisiblyDamaged = flag != 0;
 }
 
 //! 2131 SET_HELI_REACHED_TARGET_DISTANCE (case @0x4711AB): heli, distance  -- byte store to +0x3DF
 void SetHeliReachedTargetDistance(CVehicle& veh, int32 dist) {
-    static_assert(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_ucHeliTargetDist2) == 0x3DF);
+    VALIDATE_LAYOUT(offsetof(CVehicle, m_autoPilot) + offsetof(CAutoPilot, m_ucHeliTargetDist2) == 0x3DF);
     veh.m_autoPilot.m_ucHeliTargetDist2 = (uint8)dist;
 }
 

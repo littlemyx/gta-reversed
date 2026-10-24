@@ -127,6 +127,16 @@ RwBool RtAnimInterpolatorSetCurrentAnim(RtAnimInterpolator* animI, RtAnimAnimati
             animI->interpCB(animI->getInterpFrame(i), animI->getAnimFrame(i), animI->getAnimFrame(n + i), 0.0f, anim->customData);
         }
     }
+#if defined(NOTSA_PORTABLE) || defined(NOTSA_STATEHASH) // RR-3: the Win32 state-hash variant skips the stores too: its q.x/q.y would otherwise hold heap-address bits (ASLR / wine allocator dependent), a trace input of no meaning
+    // MAC-RR2: the game's scheme (rwID_RPANIMBLENDPLUGIN) has interp frames of 0x1C bytes = {q, t} WITHOUT a header (RpHAnimBlendInterpFrame), so the
+    // exe's pointer stores overwrite q: on x86 two 4-byte heap addresses land in q.x/q.y (as floats they are ~1e-38, i.e. the frame stays an identity
+    // rotation), on LP64 two 8-byte pointers overwrite the WHOLE quaternion with address bits (random floats, NaN, 1e-45) and the first skeleton update
+    // of every new ped (CCivilianPed ctor -> UpdateRpHAnim) reads them: address-dependent bone matrices (non-deterministic across runs, NaN props).
+    // Not storing the pointers keeps the identity frame RpAnimBlendKeyFrameInterpolate just wrote (= the x86 result up to 1e-38).
+    // Same fix as the game's own rtanim.cpp (`IsFixBugs()` branch); the pointers are never read for this scheme.
+    constexpr int32_t kAnimBlendSchemeID = 0x0253F2FB;   // rwID_RPANIMBLENDPLUGIN = MAKECHUNKID(rwVENDORID_DEVELOPER 0x0253F2, 0xFB)
+    if (info->id != kAnimBlendSchemeID)
+#endif
     for (int32_t i = 0; i < n; i++) {
         rw::InterpFrameHeader* f = animI->getInterpFrame(i);
         f->keyFrame1 = animI->getAnimFrame(i);

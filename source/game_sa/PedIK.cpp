@@ -114,7 +114,7 @@ bool CPedIK::PointGunInDirection(float zAngle, float distance, bool flag, float 
     }
 
     const auto head = &RpHAnimHierarchyGetMatrixArray(hier)[PED_NODE_HEAD];
-    const auto headAngle = -CGeneral::LimitRadianAngle(x87::atan2(-head->at.y, -head->at.x) - m_pPed->m_fCurrentRotation);
+    const auto headAngle = -CGeneral::LimitRadianAngle(X87R(x87::atan2(-head->at.y, -head->at.x) - m_pPed->m_fCurrentRotation));
 
     const auto axis = CVector{
         0.0f,
@@ -196,18 +196,18 @@ void CPedIK::PitchForSlope() {
                 // the max() to the wrong factor.) The byte at 0xC0AFC0 that selects the fabs() variant of the thigh angle is never written (always 0).
                 const auto Leg = [&](eBoneTag thigh, eBoneTag calf, eBoneTag foot) {
                     const float  asinUp = (float)x87::asin((double)GetAnimHierarchyMatrix(thigh)->up.z);
-                    const double pitch  = (double)m_fSlopePitch;
+                    const x87d pitch  = (x87d)m_fSlopePitch;
 
-                    RotateBone(thigh, (float)((30.0 * pitch) * (double)asinUp), ZaxisIK, rwCOMBINEPOSTCONCAT); // 0x86C8A0 = 30
+                    RotateBone(thigh, (float)(((x87d)30.0 * pitch) * (x87d)asinUp), ZaxisIK, rwCOMBINEPOSTCONCAT); // 0x86C8A0 = 30
 
-                    double calfVal = -((double)asinUp * pitch);
+                    x87d calfVal = -((x87d)asinUp * pitch);
                     if (0.0 > calfVal) { // fcomp + `test ah, 0x41; jne`: a NaN keeps the value
-                        calfVal = 0.0;
+                        calfVal = (x87d)0.0;
                     }
-                    RotateBone(calf, (float)(calfVal * -30.0), ZaxisIK, rwCOMBINEPOSTCONCAT); // 0x86C89C = -30
+                    RotateBone(calf, (float)(calfVal * -(x87d)30.0), ZaxisIK, rwCOMBINEPOSTCONCAT); // 0x86C89C = -30
 
-                    const double footVal = (0.0 > (double)asinUp) ? 0.0 : (double)asinUp;
-                    RotateBone(foot, (float)((footVal * pitch) * -30.0), ZaxisIK, rwCOMBINEPOSTCONCAT); // 0x86C8A4 = -30
+                    const x87d footVal = (0.0 > (double)asinUp) ? (x87d)0.0 : (x87d)asinUp;
+                    RotateBone(foot, (float)((footVal * pitch) * -(x87d)30.0), ZaxisIK, rwCOMBINEPOSTCONCAT); // 0x86C8A4 = -30
                 };
                 Leg(BONE_R_THIGH, BONE_R_CALF, BONE_R_FOOT);
                 Leg(BONE_L_THIGH, BONE_L_CALF, BONE_L_FOOT);
@@ -219,7 +219,7 @@ void CPedIK::PitchForSlope() {
                 result *= translate;
 
                 result.GetPosition() += m_pPed->GetForward() * 0.75f * x87::sin(m_fSlopePitch);
-                result.GetPosition().z += 0.3f / x87::cos(m_fSlopeRoll) - 0.3f;
+                result.GetPosition().z += X87R(0.3f / x87::cos(m_fSlopeRoll)) - 0.3f;
                 result.UpdateRW();
                 m_pPed->UpdateRwFrame();
             }
@@ -230,7 +230,7 @@ void CPedIK::PitchForSlope() {
         if (std::abs(m_fSlopeRoll) > 0.01f) {
             const auto RotateFoot = [&](eBoneTag bone) {
                 const auto hierMatrix = GetAnimHierarchyMatrix(bone);
-                const auto angle = CGeneral::LimitRadianAngle(x87::atan2(hierMatrix->at.y, hierMatrix->at.x) - m_pPed->m_fCurrentRotation);
+                const auto angle = CGeneral::LimitRadianAngle(X87R(x87::atan2(hierMatrix->at.y, hierMatrix->at.x) - m_pPed->m_fCurrentRotation));
 
                 RotateBone(bone, RadiansToDegrees(m_fSlopeRoll), CVector{0.0f, (float)(x87::cos(angle)), (float)(x87::sin(angle))});
             };

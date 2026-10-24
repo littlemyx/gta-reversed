@@ -5,6 +5,9 @@
     Do not delete this comment block. Respect others' work!
 */
 #include "StdInc.h"
+#ifdef NOTSA_STATEHASH
+#include "portable/statehash.h"
+#endif
 
 #include "World.h"
 #include "Ragdoll/IKChainManager.h"
@@ -1304,7 +1307,7 @@ eSprayPaintState CWorld::SprayPaintWorld(CVector& posn, CVector& outDir, float r
         uint8 newAlpha{ 0 };
         uint8 currAlpha = CTagManager::GetAlpha(*entity);
         if (processTagAlphaState) {
-            newAlpha = (uint8)std::min((size_t)(currAlpha + SPRAY_ALPHA_CHANGE), 255u);
+            newAlpha = (uint8)std::min<size_t>((size_t)(currAlpha + SPRAY_ALPHA_CHANGE), 255u);
         }
 
         if (currAlpha != 255 && newAlpha == 255) {
@@ -2238,7 +2241,13 @@ void CWorld::Process() {
             }
         };
 
+#ifdef NOTSA_STATEHASH
+        notsa::rr::Probe("pre_control");
+#endif
         IterateMovingList(DoProcessMovingEntity);
+#ifdef NOTSA_STATEHASH
+        notsa::rr::Probe("post_control1");
+#endif
         bForceProcessControl = true;
         IterateMovingList([&](CEntity* entity) {
             if (entity->GetWasPostponed()) {
@@ -2247,6 +2256,9 @@ void CWorld::Process() {
         });
         bForceProcessControl = false;
     }
+#ifdef NOTSA_STATEHASH
+    notsa::rr::Probe("post_control2");
+#endif
 
     for (auto* const obj : ms_listObjectsWithControlCode) {
         obj->ProcessControlLogic();
@@ -2280,11 +2292,17 @@ void CWorld::Process() {
 
             bNoMoreCollisionTorque = false;
             ProcessMovingEntityCollisions();
+#ifdef NOTSA_STATEHASH
+            notsa::rr::Probe("coll0");
+#endif
             bNoMoreCollisionTorque = true;
 
             // Process entities a few more times..
             for (auto i = 0; i < 4; i++) {
                 ProcessMovingEntityCollisions();
+#ifdef NOTSA_STATEHASH
+                notsa::rr::Probe(i == 0 ? "coll1" : i == 1 ? "coll2" : i == 2 ? "coll3" : "coll4");
+#endif
             }
 
             // Mark entities as `stuck` if they're still in unsafe positions

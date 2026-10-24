@@ -11,7 +11,7 @@
 #include "PedAttractorManager.h"
 #include "Models/ModelInfo.h"
 
-static_assert(sizeof(C2dEffect) == 0x40 && sizeof(tUserList) == 0x24); // Strides used by the original (0xC3AB00, 0xC3A200)
+VALIDATE_SIZE(C2dEffect, 0x40); VALIDATE_SIZE(tUserList, 0x24); // Strides used by the original (0xC3AB00, 0xC3A200)
 
 void CAttractorScanner::InjectHooks() {
     RH_ScopedClass(CAttractorScanner);
@@ -28,8 +28,8 @@ void CAttractorScanner::InjectHooks() {
 // 0x5FFF90
 void CAttractorScanner::Clear() {
     for (auto i = 0; i < 10; i++) {
-        field_18[i] = 0;
-        field_40[i] = 0;
+        field_18[i] = nullptr;
+        field_40[i] = nullptr;
         field_68[i] = 15.0f * 15.0f; // 0x86C52C = 15.0f
         if (i != 4 && i != 7) {
             field_68[i] = 25.0f;
@@ -72,11 +72,11 @@ void CAttractorScanner::ScanForAttractors(CPed& ped) {
     // Sector range, the original evaluates this on the x87 stack and passes a double to `floor` (0x8219F0)
     // `pos - 15.0f` for the lower bound, `15.0f + pos` for the upper one (0x86C52C = 15.0f, 0x858B38 = 0.02f, 0x858B34 = 60.0f)
     const auto  pos       = ped.GetPosition();
-    const auto  ToSector  = [](double v) { return (int32)std::floor(v * (double)0.02f + 60.0); };
-    const int32 sectorX0  = ToSector((double)pos.x - 15.0);
-    const int32 sectorY0  = ToSector((double)pos.y - 15.0);
-    const int32 sectorX1  = ToSector(15.0 + (double)pos.x);
-    const int32 sectorY1  = ToSector(15.0 + (double)pos.y);
+    const auto  ToSector  = [](double v) { return (int32)std::floor(X87R(v * (double)0.02f) + (x87d)60.0); };
+    const int32 sectorX0  = ToSector((x87d)pos.x - (x87d)15.0);
+    const int32 sectorY0  = ToSector((x87d)pos.y - (x87d)15.0);
+    const int32 sectorX1  = ToSector((x87d)15.0 + (x87d)pos.x);
+    const int32 sectorY1  = ToSector((x87d)15.0 + (x87d)pos.y);
     const int32 minX      = sectorX0 > 0 ? sectorX0 : 0;
     const int32 minY      = sectorY0 > 0 ? sectorY0 : 0;
     const int32 maxX      = sectorX1 < MAX_SECTORS_X - 1 ? sectorX1 : MAX_SECTORS_X - 1;
@@ -186,10 +186,10 @@ void CAttractorScanner::AddEffect(C2dEffect* effect, CEntity* entity, CPed& ped)
     const CVector pedPos    = ped.GetPosition();
 
     // The original keeps the sum on the x87 stack (extended precision): `(dz^2 + dy^2) + dx^2`
-    const double dx       = (double)pedPos.x - (double)effectPos.x;
-    const double dy       = (double)pedPos.y - (double)effectPos.y;
-    const double dz       = (double)pedPos.z - (double)effectPos.z;
-    const double distSq   = (dz * dz + dy * dy) + dx * dx;
+    const x87d dx       = (x87d)pedPos.x - (x87d)effectPos.x;
+    const x87d dy       = (x87d)pedPos.y - (x87d)effectPos.y;
+    const x87d dz       = (x87d)pedPos.z - (x87d)effectPos.z;
+    const x87d distSq   = (dz * dz + dy * dy) + dx * dx;
     const float  distSqF  = (float)distSq;
     if (!(distSq < (double)field_68[type])) {
         return;
@@ -198,7 +198,7 @@ void CAttractorScanner::AddEffect(C2dEffect* effect, CEntity* entity, CPed& ped)
     if (type == PED_ATTRACTOR_SCRIPTED) {
         const auto radius = CScripted2dEffects::ms_radii[CScripted2dEffects::GetIndex(reinterpret_cast<C2dEffectPedAttractor*>(effect))]; // 0x6F9F60
         if (!(radius < 0.0f)) { // 0x858B50 = 0.0f
-            if (!((double)distSqF < (double)radius * (double)radius)) {
+            if (!((double)distSqF < (x87d)radius * (x87d)radius)) {
                 return;
             }
         }
@@ -211,8 +211,8 @@ void CAttractorScanner::AddEffect(C2dEffect* effect, CEntity* entity, CPed& ped)
     const auto mat = entity ? CMatrix{entity->GetMatrix()} : CMatrix::Identity(); // 0x60010F | 0x600120
     if (CPedAttractorManager::IsApproachable(reinterpret_cast<C2dEffectPedAttractor*>(effect), mat, 0, &ped)) { // 0x60013B
         field_68[type] = distSqF;
-        field_18[type] = (int32)entity;
-        field_40[type] = (int32)effect;
+        field_18[type] = entity;
+        field_40[type] = effect;
     }
 }
 
@@ -256,9 +256,9 @@ CPed* CAttractorScanner::GetClosestPedToEffect(C2dEffect* effect) {
         }
 
         const CVector pedPos = ped->GetPosition();
-        const double  dx     = (double)effect->m_Pos.x - (double)pedPos.x;
-        const double  dy     = (double)effect->m_Pos.y - (double)pedPos.y;
-        const double  dz     = (double)effect->m_Pos.z - (double)pedPos.z;
+        const x87d  dx     = (x87d)effect->m_Pos.x - (x87d)pedPos.x;
+        const x87d  dy     = (x87d)effect->m_Pos.y - (x87d)pedPos.y;
+        const x87d  dz     = (x87d)effect->m_Pos.z - (x87d)pedPos.z;
         const float   distSq = (float)((dz * dz + dy * dy) + dx * dx); // Extended precision sum, rounded on store
         if (!(distSq < best)) {
             continue;

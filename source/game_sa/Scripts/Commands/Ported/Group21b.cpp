@@ -36,18 +36,18 @@ using namespace notsa::script::commands::ported::g20_21;
 */
 
 namespace {
-static_assert(offsetof(CEntity, m_nFlags) == 0x1C);
-static_assert(offsetof(CPhysical, m_nPhysicalFlags) == 0x40);
-static_assert(offsetof(CPhysical, m_fAirResistance) == 0x98);
-static_assert(offsetof(CObject, m_nObjectFlags) == 0x140);
-static_assert(offsetof(CVehicle, m_pHandlingData) == 0x384);
-static_assert(offsetof(CVehicle, m_fDirtLevel) == 0x4B0);
+VALIDATE_OFFSET(CEntity, m_nFlags, 0x1C);
+VALIDATE_OFFSET(CPhysical, m_nPhysicalFlags, 0x40);
+VALIDATE_OFFSET(CPhysical, m_fAirResistance, 0x98);
+VALIDATE_OFFSET(CObject, m_nObjectFlags, 0x140);
+VALIDATE_OFFSET(CVehicle, m_pHandlingData, 0x384);
+VALIDATE_OFFSET(CVehicle, m_fDirtLevel, 0x4B0);
 static_assert(offsetof(tHandlingData, m_fDragMult) == 0x10);
-static_assert(offsetof(CPed, m_fTurretAngleA) == 0x778);
-static_assert(offsetof(CPed, m_fTurretAngleB) == 0x77C);
-static_assert(offsetof(CPlayerInfo, m_PlayerData) + offsetof(CPlayerPedData, m_pPedClothesDesc) == 0x8);
-static_assert(sizeof(CPlayerInfo) == 0x190);
-static_assert(sizeof(CPedGroup) == 0x2D4);
+VALIDATE_OFFSET(CPed, m_fTurretAngleA, 0x778);
+VALIDATE_OFFSET(CPed, m_fTurretAngleB, 0x77C);
+VALIDATE_LAYOUT(offsetof(CPlayerInfo, m_PlayerData) + offsetof(CPlayerPedData, m_pPedClothesDesc) == 0x8);
+VALIDATE_SIZE(CPlayerInfo, 0x190);
+VALIDATE_SIZE(CPedGroup, 0x2D4);
 static_assert(std::bit_cast<uint32>(0.017453292f) == 0x3C8EFA35); // 0x8595EC
 static_assert(BLIP_DISPLAY_BOTH == 3 && BLIP_CHAR == 2);
 
@@ -212,8 +212,12 @@ void SetGroupSequence(int32 groupHandle, int32 sequenceHandle) {
     if (sequenceHandle != -1) {
         seq = CTheScripts::GetActualScriptThingIndex(sequenceHandle, SCRIPT_THING_SEQUENCE_TASK);
     }
+#ifdef NOTSA_PORTABLE
+    CPedGroups::ms_groups[group].GetIntelligence().SetTaskSeqId(seq); // x86 offset +0x2CC (CPedGroup has pointers: the byte offset differs on LP64)
+#else
     auto* const taskSeqId = reinterpret_cast<int32*>(reinterpret_cast<uint8*>(&CPedGroups::ms_groups[group]) + 0x2CC);
     *taskSeqId = seq;
+#endif
 }
 
 //! 2180 REGISTER_ATTRACTOR_SCRIPT_BRAIN_FOR_CODE_USE (case @0x471C8F): streamed script index, brain name (8 chars)
@@ -258,11 +262,11 @@ void SetVehicleAirResistanceMultiplier(CVehicle& veh, float mult) {
         return;
     }
     if (h->m_fDragMult > 0.01f) {
-        veh.m_fAirResistance = (float)((double)h->m_fDragMult / (double)1000.0f * (double)0.5f);
+        veh.m_fAirResistance = (float)((x87d)h->m_fDragMult / (x87d)1000.0f * (x87d)0.5f);
     } else {
         veh.m_fAirResistance = h->m_fDragMult;
     }
-    veh.m_fAirResistance = (float)((double)mult * (double)veh.m_fAirResistance);
+    veh.m_fAirResistance = (float)((x87d)mult * (x87d)veh.m_fAirResistance);
 }
 
 //! 2188 SET_CAR_COORDINATES_NO_OFFSET (case @0x471EA5): car, x, y, z  => CCarCtrl::SetCoordsOfScriptCar(car, x, y, z, 0, 0) [0x4342A0]; the handle isn't checked

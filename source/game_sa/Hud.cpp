@@ -1430,7 +1430,7 @@ void CHud::DrawRadar() {
         const auto& mat = *vehicle->m_matrix;
         const float a   = -mat.GetRight().z;
         const float b   = mat.GetUp().z;
-        const double ang0 = -x87::atan2((double)a, (double)b) - (double)0.7853982f; // 0x859AB0 = pi/4
+        const x87d ang0 = X87R(-x87::atan2((double)a, (double)b) - (double)0.7853982f); // 0x859AB0 = pi/4
 
         const float X0 = 94.0f * ws;
         const float cx = X0 - 18.0f * ws; // radius X (spilled)
@@ -1443,11 +1443,11 @@ void CHud::DrawRadar() {
 
         float vx[4], vy[4];
         for (auto i = 0; i < 4; i++) {
-            const double th = (double)i * (double)1.5707964f + ang0; // 0x858FE4 = pi/2
+            const x87d th = (x87d)i * (x87d)1.5707964f + ang0; // 0x858FE4 = pi/2
             const double s  = x87::sin(th);
             const double c  = x87::cos(th);
-            vx[i] = (float)((((0.0 * c + s) * (double)cx) + (double)ex) + (double)hx);
-            vy[i] = (float)((((c - s * 0.0) * (double)cy) + (double)hy) + (double)by);
+            vx[i] = (float)((((X87R(X87R(0.0 * c) + s)) * (x87d)cx) + (x87d)ex) + (x87d)hx);
+            vy[i] = (float)((((X87R(c - X87R(s * 0.0))) * (x87d)cy) + (x87d)hy) + (x87d)by);
         }
         Sprites[SPRITE_RADAR_RING_PLANE].Draw(vx[1], vy[1], vx[0], vy[0], vx[2], vy[2], vx[3], vy[3], CRGBA(255, 255, 255, 255));
     }
@@ -1686,7 +1686,7 @@ void CHud::DrawSuccessFailedMessage() {
     }
 
     CFont::SetBackground(false, false);
-    CFont::SetScale((float)((double)SCREEN_STRETCH_X(1.0f) * 1.3), (float)((double)SCREEN_STRETCH_Y(1.0f) * 1.8));
+    CFont::SetScale((float)(X87R((double)SCREEN_STRETCH_X(1.0f) * 1.3)), (float)(X87R((double)SCREEN_STRETCH_Y(1.0f) * 1.8)));
     CFont::SetProportional(true);
     CFont::SetJustify(false);
     CFont::SetOrientation(eFontAlignment::ALIGN_CENTER);
@@ -1921,7 +1921,7 @@ void CHud::DrawVitalStats() {
         if (statValue > 999.0f) {
             progress = 1.0f;
         } else {
-            progress = (float)std::floor((double)((b * 0.1f + statValue) / ab)) * ab * 0.001f;
+            progress = (float)std::floor((x87d)((b * 0.1f + statValue) / ab)) * ab * 0.001f;
         }
         DrawBar(progress * 100.0f);
         NextRowY();

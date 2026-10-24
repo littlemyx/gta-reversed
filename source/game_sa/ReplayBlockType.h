@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <cstring>
 #include <concepts>
 
 #include "CompressedMatrixNotAligned.h"
@@ -44,7 +45,7 @@ struct AnimationState {
     }
 };
 #pragma pack(pop)
-VALIDATE_SIZE(AnimationState, 0x6);
+VALIDATE_SIZE_FILE(AnimationState, 0x6);
 
 /*
 struct CStoredAnimationState {
@@ -54,7 +55,7 @@ struct CStoredAnimationState {
 };
 */
 using CStoredAnimationState = std::array<AnimationState, 3>;
-VALIDATE_SIZE(CStoredAnimationState, 0x12);
+VALIDATE_SIZE_FILE(CStoredAnimationState, 0x12);
 
 #pragma pack(push, 1)
 struct tReplayBlockBase {
@@ -66,7 +67,7 @@ struct tReplayBlockBase {
         return reinterpret_cast<T*>(this);
     }
 };
-VALIDATE_SIZE(tReplayBlockBase, 0x1);
+VALIDATE_SIZE_FILE(tReplayBlockBase, 0x1);
 
 struct tReplayEndBlock : tReplayBlockBase {
     static constexpr auto Type = REPLAY_PACKET_END;
@@ -161,13 +162,29 @@ struct tReplayCameraBlock : tReplayBlockBase {
 
     bool isUsingRemoteVehicle;
     uint8 __pad[2];
-    uint8 matrix[sizeof(CMatrix)]; // Use GetMatrix() to access
+    uint8 matrix[sizeof(CMatrix_File)]; // portable: ReadMatrix()/WriteMatrix(); x86: GetMatrix() (0x48 bytes on file == sizeof(CMatrix) on x86)
     CVector firstFocusPosn;
 
+#ifdef NOTSA_PORTABLE
+    // P-2c: CMatrix is 0x50 on LP64 (attach pointer); the block holds the 0x48 byte file record
+    CMatrix ReadMatrix() const {
+        CMatrix_File rec;
+        std::memcpy(&rec, matrix, sizeof(rec));
+        CMatrix out;
+        notsa::FileRecord<CMatrix>::FromFile(out, rec);
+        return out;
+    }
+    void WriteMatrix(const CMatrix& m) {
+        const auto rec = notsa::FileRecord<CMatrix>::ToFile(m);
+        std::memcpy(matrix, &rec, sizeof(rec));
+    }
+#else
     // TODO/FIXME: Remove this func and properly handle CMatrix element
+    // (x86 keeps exactly this reinterpret and the original call sites in Replay.cpp: new member functions would add out-of-line code to the MSVC object)
     CMatrix& GetMatrix() {
         return *(CMatrix*)&matrix;
     }
+#endif
 };
 
 struct tReplayClockBlock : tReplayBlockBase {

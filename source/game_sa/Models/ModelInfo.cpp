@@ -10,16 +10,16 @@
 #include "ModelInfo.h"
 #include "TempColModels.h"
 
-NOTSA_GLOBAL_DEF(CModelInfo, ms_atomicModelInfoStore, 0xAAE950, (CStore<CAtomicModelInfo, CModelInfo::NUM_ATOMIC_MODEL_INFOS>), {}); static_assert(sizeof(CModelInfo::ms_atomicModelInfoStore) == 448004);
-NOTSA_GLOBAL_DEF(CModelInfo, ms_damageAtomicModelInfoStore, 0xB1BF58, (CStore<CDamageAtomicModelInfo, CModelInfo::NUM_DAMAGE_ATOMIC_MODEL_INFOS>), {}); static_assert(sizeof(CModelInfo::ms_damageAtomicModelInfoStore) == 2524);
-NOTSA_GLOBAL_DEF(CModelInfo, ms_lodAtomicModelInfoStore, 0xB1C934, (CStore<CLodAtomicModelInfo, CModelInfo::NUM_LOD_ATOMIC_MODEL_INFOS>), {}); static_assert(sizeof(CModelInfo::ms_lodAtomicModelInfoStore) == 40);
-NOTSA_GLOBAL_DEF(CModelInfo, ms_timeModelInfoStore, 0xB1C960, (CStore<CTimeModelInfo, CModelInfo::NUM_TIME_MODEL_INFOS>), {}); static_assert(sizeof(CModelInfo::ms_timeModelInfoStore) == 6088);
-NOTSA_GLOBAL_DEF(CModelInfo, ms_lodTimeModelInfoStore, 0xB1E128, (CStore<CLodTimeModelInfo, CModelInfo::NUM_LOD_TIME_MODEL_INFOS>), {}); static_assert(sizeof(CModelInfo::ms_lodTimeModelInfoStore) == 44);
-NOTSA_GLOBAL_DEF(CModelInfo, ms_weaponModelInfoStore, 0xB1E158, (CStore<CWeaponModelInfo, CModelInfo::NUM_WEAPON_MODEL_INFOS>), {}); static_assert(sizeof(CModelInfo::ms_weaponModelInfoStore) == 2044);
-NOTSA_GLOBAL_DEF(CModelInfo, ms_clumpModelInfoStore, 0xB1E958, (CStore<CClumpModelInfo, CModelInfo::NUM_CLUMP_MODEL_INFOS>), {}); static_assert(sizeof(CModelInfo::ms_clumpModelInfoStore) == 3316);
-NOTSA_GLOBAL_DEF(CModelInfo, ms_vehicleModelInfoStore, 0xB1F650, (CStore<CVehicleModelInfo, CModelInfo::NUM_VEHICLE_MODEL_INFOS>), {}); static_assert(sizeof(CModelInfo::ms_vehicleModelInfoStore) == 164516);
-NOTSA_GLOBAL_DEF(CModelInfo, ms_pedModelInfoStore, 0xB478F8, (CStore<CPedModelInfo, CModelInfo::NUM_PED_MODEL_INFOS>), {}); static_assert(sizeof(CModelInfo::ms_pedModelInfoStore) == 18908);
-NOTSA_GLOBAL_DEF(CModelInfo, ms_2dFXInfoStore, 0xB4C2D8, (CStore<C2dEffect, CModelInfo::NUM_2DFX_INFOS>), {}); static_assert(sizeof(CModelInfo::ms_2dFXInfoStore) == 6404);
+NOTSA_GLOBAL_DEF(CModelInfo, ms_atomicModelInfoStore, 0xAAE950, (CStore<CAtomicModelInfo, CModelInfo::NUM_ATOMIC_MODEL_INFOS>), {}); VALIDATE_SIZE(CModelInfo::ms_atomicModelInfoStore, 448004);
+NOTSA_GLOBAL_DEF(CModelInfo, ms_damageAtomicModelInfoStore, 0xB1BF58, (CStore<CDamageAtomicModelInfo, CModelInfo::NUM_DAMAGE_ATOMIC_MODEL_INFOS>), {}); VALIDATE_SIZE(CModelInfo::ms_damageAtomicModelInfoStore, 2524);
+NOTSA_GLOBAL_DEF(CModelInfo, ms_lodAtomicModelInfoStore, 0xB1C934, (CStore<CLodAtomicModelInfo, CModelInfo::NUM_LOD_ATOMIC_MODEL_INFOS>), {}); VALIDATE_SIZE(CModelInfo::ms_lodAtomicModelInfoStore, 40);
+NOTSA_GLOBAL_DEF(CModelInfo, ms_timeModelInfoStore, 0xB1C960, (CStore<CTimeModelInfo, CModelInfo::NUM_TIME_MODEL_INFOS>), {}); VALIDATE_SIZE(CModelInfo::ms_timeModelInfoStore, 6088);
+NOTSA_GLOBAL_DEF(CModelInfo, ms_lodTimeModelInfoStore, 0xB1E128, (CStore<CLodTimeModelInfo, CModelInfo::NUM_LOD_TIME_MODEL_INFOS>), {}); VALIDATE_SIZE(CModelInfo::ms_lodTimeModelInfoStore, 44);
+NOTSA_GLOBAL_DEF(CModelInfo, ms_weaponModelInfoStore, 0xB1E158, (CStore<CWeaponModelInfo, CModelInfo::NUM_WEAPON_MODEL_INFOS>), {}); VALIDATE_SIZE(CModelInfo::ms_weaponModelInfoStore, 2044);
+NOTSA_GLOBAL_DEF(CModelInfo, ms_clumpModelInfoStore, 0xB1E958, (CStore<CClumpModelInfo, CModelInfo::NUM_CLUMP_MODEL_INFOS>), {}); VALIDATE_SIZE(CModelInfo::ms_clumpModelInfoStore, 3316);
+NOTSA_GLOBAL_DEF(CModelInfo, ms_vehicleModelInfoStore, 0xB1F650, (CStore<CVehicleModelInfo, CModelInfo::NUM_VEHICLE_MODEL_INFOS>), {}); VALIDATE_SIZE(CModelInfo::ms_vehicleModelInfoStore, 164516);
+NOTSA_GLOBAL_DEF(CModelInfo, ms_pedModelInfoStore, 0xB478F8, (CStore<CPedModelInfo, CModelInfo::NUM_PED_MODEL_INFOS>), {}); VALIDATE_SIZE(CModelInfo::ms_pedModelInfoStore, 18908);
+NOTSA_GLOBAL_DEF(CModelInfo, ms_2dFXInfoStore, 0xB4C2D8, (CStore<C2dEffect, CModelInfo::NUM_2DFX_INFOS>), {}); VALIDATE_SIZE(CModelInfo::ms_2dFXInfoStore, 6404);
 
 void CModelInfo::InjectHooks()
 {

@@ -33,12 +33,12 @@ static inline NOTSA_GLOBAL(s_FightColSphere, 0xC17884, (CColSphere), {});
 // 0x59C910 - CVector::Normalise as the original evaluates it: the sum of squares and the reciprocal root stay in the FPU
 // (extended precision), every component is stored as float. A length of 0 (or less) yields (1, y, z) - only x is written.
 static void NormaliseExt(CVector& v) {
-    const double sq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    const x87d sq = ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
     if (sq <= 0.0) { // FCOM + JP: NaN takes the sqrt path
         v.x = 1.0f;
         return;
     }
-    const double inv = 1.0 / std::sqrt(sq);
+    const x87d inv = (x87d)1.0 / std::sqrt(sq);
     v.x = (float)(v.x * inv);
     v.y = (float)(v.y * inv);
     v.z = (float)(v.z * inv);
@@ -57,9 +57,9 @@ NOTSA_GLOBAL_SYNTH(k_8D2E94_0p4, 0x8D2E94, (float), { 0.4f });
 static CVector TransformPointExt(const CMatrix& m, const CVector& v) {
     const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp(), &p = m.GetPosition();
     return CVector{
-        (float)((((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x) + p.x),
-        (float)((((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y) + p.y),
-        (float)((((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y) + p.z)
+        (float)((((x87d)u.x * v.z + (x87d)f.x * v.y) + (x87d)r.x * v.x) + p.x),
+        (float)((((x87d)u.y * v.z + (x87d)r.y * v.x) + (x87d)f.y * v.y) + p.y),
+        (float)((((x87d)u.z * v.z + (x87d)r.z * v.x) + (x87d)f.z * v.y) + p.z)
     };
 }
 
@@ -417,9 +417,9 @@ bool CTaskSimpleFight::IsTargetInRange(CPed* ped) {
 
     // x87: The sum isn't rounded to float
     // NOTE: `m_nComboSet` can be < 4 here
-    const double reach = (double)m_aHitOffsets[2].y + (double)GetComboFloatRaw(m_nComboSet, offsetof(CMeleeInfo, m_fRadius) + 3 * sizeof(float)); // 0xC177EC + (0xC1710C + ..)
-    const float  limitA = (float)((double)0.2f + reach); // 0x858CC4 - Limit for the "right" axis
-    float        limitB = (float)(reach + (double)0.4f);  // 0x858EE8 - Limit for the "forward" axis
+    const x87d reach = (x87d)m_aHitOffsets[2].y + (x87d)GetComboFloatRaw(m_nComboSet, offsetof(CMeleeInfo, m_fRadius) + 3 * sizeof(float)); // 0xC177EC + (0xC1710C + ..)
+    const float  limitA = (float)((x87d)0.2f + reach); // 0x858CC4 - Limit for the "right" axis
+    float        limitB = (float)(reach + (x87d)0.4f);  // 0x858EE8 - Limit for the "forward" axis
 
     CVector bonePos{};
     auto* const target = m_pTargetEntity;
@@ -433,11 +433,11 @@ bool CTaskSimpleFight::IsTargetInRange(CPed* ped) {
         tped->GetBonePosition(&bonePos, BONE_SPINE1, false); // 0x5E4280
         if (tped->IsAlive()) { // 0x5E0170
             // Is the bone at least as high as the ped's feet?
-            if (!((double)ped->GetPosition().z - (double)0.2f > (double)bonePos.z)) {
+            if (!((x87d)ped->GetPosition().z - (x87d)0.2f > (double)bonePos.z)) {
                 if (!tped->bIsDucking) {
                     return false;
                 }
-                limitB = (float)((double)limitB - (double)0.4f);
+                limitB = (float)((x87d)limitB - (x87d)0.4f);
             }
         }
 
@@ -458,9 +458,9 @@ bool CTaskSimpleFight::IsTargetInRange(CPed* ped) {
 
         // x87: The 1st dot product uses the unrounded differences
         {
-            const double dx = (double)tp.x - (double)pp.x;
-            const double dy = (double)tp.y - (double)pp.y;
-            const double dz = (double)tp.z - (double)pp.z;
+            const x87d dx = (x87d)tp.x - (x87d)pp.x;
+            const x87d dy = (x87d)tp.y - (x87d)pp.y;
+            const x87d dz = (x87d)tp.z - (x87d)pp.z;
             const auto&  f  = tm.GetForward();
             if (!(std::fabs((dz * f.z + dy * f.y) + dx * f.x) < (double)limitB)) {
                 return false;
@@ -469,12 +469,12 @@ bool CTaskSimpleFight::IsTargetInRange(CPed* ped) {
 
         // 0x40FE60 (rounds to float), 0x40FDB0 (the sum stays in the FPU)
         const CVector d{
-            (float)((double)tp.x - (double)pp.x),
-            (float)((double)tp.y - (double)pp.y),
-            (float)((double)tp.z - (double)pp.z)
+            (float)((x87d)tp.x - (x87d)pp.x),
+            (float)((x87d)tp.y - (x87d)pp.y),
+            (float)((x87d)tp.z - (x87d)pp.z)
         };
         const auto& r = tm.GetRight();
-        return std::fabs(((double)d.z * r.z + (double)d.y * r.y) + (double)d.x * r.x) < (double)limitA;
+        return std::fabs(((x87d)d.z * r.z + (x87d)d.y * r.y) + (x87d)d.x * r.x) < (double)limitA;
     }
 
     // No target => only the player looks for one
@@ -495,7 +495,7 @@ bool CTaskSimpleFight::IsTargetInRange(CPed* ped) {
         CVector candBone{};
         cand->GetBonePosition(&candBone, BONE_SPINE1, false); // 0x5E4280
         if (cand->m_nPedState != PEDSTATE_DEAD) {
-            if (!((double)ped->GetPosition().z - (double)0.2f > (double)candBone.z)) {
+            if (!((x87d)ped->GetPosition().z - (x87d)0.2f > (double)candBone.z)) {
                 continue;
             }
         }
@@ -503,28 +503,28 @@ bool CTaskSimpleFight::IsTargetInRange(CPed* ped) {
         const auto& pp = ped->GetPosition();
         const auto& cp = cand->GetPosition();
         // x87: X and Y are rounded to float, Z isn't
-        const float  dx = (float)((double)cp.x - (double)pp.x);
-        const float  dy = (float)((double)cp.y - (double)pp.y);
-        const double dz = (double)cp.z - (double)pp.z;
+        const float  dx = (float)((x87d)cp.x - (x87d)pp.x);
+        const float  dy = (float)((x87d)cp.y - (x87d)pp.y);
+        const x87d dz = (x87d)cp.z - (x87d)pp.z;
 
         // NOTE: Like in the original, there's no check for the matrix
         const auto& cm = *cand->m_matrix;
-        if (!(std::fabs((dz * cm.GetForward().z + (double)dy * cm.GetForward().y) + (double)dx * cm.GetForward().x) < (double)limitB)) {
+        if (!(std::fabs((dz * cm.GetForward().z + (x87d)dy * cm.GetForward().y) + (x87d)dx * cm.GetForward().x) < (double)limitB)) {
             continue;
         }
-        if (!(std::fabs((dz * cm.GetRight().z + (double)dy * cm.GetRight().y) + (double)dx * cm.GetRight().x) < (double)limitA)) {
+        if (!(std::fabs((dz * cm.GetRight().z + (x87d)dy * cm.GetRight().y) + (x87d)dx * cm.GetRight().x) < (double)limitA)) {
             continue;
         }
 
         const float ang  = (float)x87::atan2(-(double)dx, (double)dy);
-        double      diff = (double)ang - (double)ped->m_fCurrentRotation;
+        x87d      diff = (x87d)ang - (x87d)ped->m_fCurrentRotation;
         if (diff < -(double)std::numbers::pi_v<float>) { // 0x858CC0
-            diff += (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
+            diff += (x87d)(2.f * std::numbers::pi_v<float>); // 0x858CBC
         } else if (diff > (double)std::numbers::pi_v<float>) { // 0x858CB8
-            diff -= (double)(2.f * std::numbers::pi_v<float>);
+            diff -= (x87d)(2.f * std::numbers::pi_v<float>);
         }
         if (diff < 0.0) {
-            diff *= -1.0; // 0x858C1C
+            diff *= -(x87d)1.0; // 0x858C1C
         }
         if (!(diff < (double)(std::numbers::pi_v<float> / 3.f))) { // 0x8630F8
             continue;
@@ -713,20 +713,20 @@ int16 CTaskSimpleFight::ChooseAttackPlayer(CPed* ped) {
             // x87: the differences aren't rounded to float
             const auto& pedPos  = ped->GetPosition();
             const auto& candPos = cand->GetPosition();
-            const double dx = (double)candPos.x - (double)pedPos.x;
-            const double dy = (double)candPos.y - (double)pedPos.y;
-            const double dz = (double)candPos.z - (double)pedPos.z;
-            const double distSq = (dz * dz + dy * dy) + dx * dx;
-            if (!((double)range * (double)range > distSq)) {
+            const x87d dx = (x87d)candPos.x - (x87d)pedPos.x;
+            const x87d dy = (x87d)candPos.y - (x87d)pedPos.y;
+            const x87d dz = (x87d)candPos.z - (x87d)pedPos.z;
+            const x87d distSq = (dz * dz + dy * dy) + dx * dx;
+            if (!((x87d)range * (x87d)range > distSq)) {
                 continue;
             }
 
             const double angle = x87::atan2(-dx, dy);
-            double       diff  = angle - (double)ped->m_fCurrentRotation;
+            x87d       diff  = X87R(angle - (double)ped->m_fCurrentRotation);
             if (diff > (double)std::numbers::pi_v<float>) { // 0x858CB8
-                diff -= (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
+                diff -= (x87d)(2.f * std::numbers::pi_v<float>); // 0x858CBC
             } else if (diff < -(double)std::numbers::pi_v<float>) { // 0x858CC0
-                diff += (double)(2.f * std::numbers::pi_v<float>);
+                diff += (x87d)(2.f * std::numbers::pi_v<float>);
             }
             diff = std::fabs(diff);
             if (diff < (double)bestDiff) {
@@ -750,7 +750,7 @@ int16 CTaskSimpleFight::ChooseAttackAI(CPed* ped) {
     }
 
     // x87: The product is exact, but only the second use sees it rounded to float
-    const double rollD = (double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL; // 0x821B1E, 0x858C7C
+    const x87d rollD = (x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL; // 0x821B1E, 0x858C7C
     const float  rollF = (float)rollD;
 
     if (rollD > (double)0.8f && (moves & 2)) { // 0x858C98
@@ -981,12 +981,12 @@ void CTaskSimpleFight::SetPlayerMoveAnim(CPlayerPed* player) {
 
     if (m_nNextCommand != 0 || m_nComboSet != 0) {
         const auto  mv  = player->GetPlayerData()->m_vecFightMovement;
-        const double len = std::sqrt((double)mv.x * mv.x + (double)mv.y * mv.y); // x87
+        const x87d len = std::sqrt((x87d)mv.x * mv.x + (x87d)mv.y * mv.y); // x87
         if (!(len < (double)0.1f)) { // 0x858B1C (NaN normalises)
             // Normalise so that |x| + |y| == 1
-            const double scale = (double)1.f / (std::fabs((double)mv.y) + std::fabs((double)mv.x)); // 0x858624
-            const float  x     = (float)(scale * (double)mv.x);
-            const float  y     = (float)(scale * (double)mv.y);
+            const x87d scale = (x87d)1.f / (std::fabs((x87d)mv.y) + std::fabs((x87d)mv.x)); // 0x858624
+            const float  x     = (float)(scale * (x87d)mv.x);
+            const float  y     = (float)(scale * (x87d)mv.y);
 
             if (x > 0.f) {
                 if (left) {
@@ -1102,7 +1102,7 @@ bool CTaskSimpleFight::ProcessPed(CPed* ped) {
 
     if (m_nComboSet == 0 || !m_bIsInControl) {
         // x87: 0.02 (0x858B38) and 1000.0 (0x858C4C) are applied in extended precision, then truncated (0x821B40)
-        m_nIdleCounter += (int16)(int32)((double)CTimer::GetTimeStep() * (double)0.02f * (double)1000.0f);
+        m_nIdleCounter += (int16)(int32)((x87d)CTimer::GetTimeStep() * (x87d)0.02f * (x87d)1000.0f);
     } else {
         m_nIdleCounter = 0;
     }
@@ -1216,7 +1216,7 @@ bool CTaskSimpleFight::ProcessPed(CPed* ped) {
             auto* const anim = m_pAnim;
             if (m_nLastCommand == 8 || m_nLastCommand == 10) {
                 // x87: Division is done in extended precision
-                if ((double)anim->m_CurrentTime / (double)anim->m_BlendHier->m_fTotalTime > (double)NOTSA_GLOBAL_EXPR(0x8D2E94, (float), k_8D2E94_0p4) // 0.4f
+                if ((x87d)anim->m_CurrentTime / (x87d)anim->m_BlendHier->m_fTotalTime > (double)NOTSA_GLOBAL_EXPR(0x8D2E94, (float), k_8D2E94_0p4) // 0.4f
                  && anim->m_BlendDelta > -4.f // 0x859C3C
                 ) {
                     anim->m_BlendDelta = -4.f; // 0xC0800000
@@ -1236,8 +1236,8 @@ bool CTaskSimpleFight::ProcessPed(CPed* ped) {
                 if (m_nNextCommand == 2) {
                     auto* const anim = m_pAnim;
                     if (anim->m_Flags & ANIMATION_IS_PLAYING) {
-                        const double cur  = anim->m_CurrentTime;
-                        const double next = (double)anim->m_TimeStep + cur;
+                        const x87d cur  = anim->m_CurrentTime;
+                        const x87d next = (x87d)anim->m_TimeStep + cur;
                         if ((cur < combo.ABlockHit && combo.ABlockHit <= next)
                          || (cur < combo.ABlockChain && combo.ABlockChain <= next)
                         ) {
@@ -1262,9 +1262,9 @@ bool CTaskSimpleFight::ProcessPed(CPed* ped) {
                 auto* const anim = m_pAnim;
                 if (anim->m_BlendAmount > 0.9f && anim->m_BlendDelta >= 0.f) { // 0x858C20
                     const int32  move = m_nCurrentMove;
-                    const double cur  = anim->m_CurrentTime;
-                    const double hit  = combo.m_fHit[move];
-                    if (cur > hit && cur - (double)anim->m_TimeStep < hit) {
+                    const x87d cur  = anim->m_CurrentTime;
+                    const x87d hit  = combo.m_fHit[move];
+                    if (cur > hit && cur - (x87d)anim->m_TimeStep < hit) {
                         // The strike frame
                         ped->GetAE().AddAudioEvent(AE_PED_SWING, 0.f, 1.f, nullptr, (eSurfaceType)0, combo.m_Hit[move], 0); // 0x4E2BB0
                         if (m_nComboSet == 5 && m_nCurrentMove >= 0 && m_nCurrentMove <= 2) {
@@ -1299,7 +1299,7 @@ bool CTaskSimpleFight::ProcessPed(CPed* ped) {
                         }
                         case 4: {
                             if (m_nComboSet == 12 && ped->IsPlayer()) {
-                                m_pAnim->SetCurrentTime((float)((double)combo.m_fHit[m_nCurrentMove] - (double)0.01f)); // 0x858C58
+                                m_pAnim->SetCurrentTime((float)((x87d)combo.m_fHit[m_nCurrentMove] - (x87d)0.01f)); // 0x858C58
                             } else {
                                 m_nComboSet = GetAvailableComboSet(ped, (int8)m_nNextCommand);
                                 StartAnim(ped, ped->IsPlayer() ? ChooseAttackPlayer(ped) : m_nCurrentMove + 1);
@@ -1318,11 +1318,15 @@ tail:
         // x87: The differences aren't rounded to float
         const auto& pedPos = ped->GetPosition();
         const auto& tgtPos = m_pTargetEntity->GetPosition();
-        const double dx = (double)tgtPos.x - (double)pedPos.x;
-        const double dy = (double)tgtPos.y - (double)pedPos.y;
+        const x87d dx = (x87d)tgtPos.x - (x87d)pedPos.x;
+        const x87d dy = (x87d)tgtPos.y - (x87d)pedPos.y;
         ped->m_fAimingRotation = (float)x87::atan2(-dx, dy); // +0x55C
     } else if (ped->IsPlayer() && CCamera::m_bUseMouse3rdPerson && static_cast<CPlayerPed*>(ped)->GetPadFromPlayer()->GetTarget()) {
+#ifdef NOTSA_PORTABLE
+        const NOTSA_GLOBAL_ALIAS(v, 0xB6F32C, (CVector), TheCamera.m_aCams[0].m_vecFront); // x86 TheCamera + 772 = m_aCams[0].m_vecFront (CCamera has pointers: the byte offset is wrong on LP64)
+#else
         const NOTSA_GLOBAL_ALIAS(v, 0xB6F32C, (CVector), *reinterpret_cast<CVector*>(reinterpret_cast<uint8*>(&TheCamera) + 772));
+#endif
         ped->m_fAimingRotation = (float)x87::atan2(-(double)v.x, (double)v.y);
     }
 
@@ -1351,10 +1355,10 @@ bool CTaskSimpleFight::BeHitWhileBlocking(CPed* victim, CPed* creator, int8 comb
     const auto& victimPos  = victim->GetPosition();
     const auto& creatorPos = creator->GetPosition();
     const auto& fwd        = victim->m_matrix->GetForward();
-    const double dx = (double)creatorPos.x - (double)victimPos.x;
-    const double dy = (double)creatorPos.y - (double)victimPos.y;
-    const double dz = (double)creatorPos.z - (double)victimPos.z;
-    const double dot = (dz * fwd.z + dy * fwd.y) + dx * fwd.x;
+    const x87d dx = (x87d)creatorPos.x - (x87d)victimPos.x;
+    const x87d dy = (x87d)creatorPos.y - (x87d)victimPos.y;
+    const x87d dz = (x87d)creatorPos.z - (x87d)victimPos.z;
+    const x87d dot = (dz * fwd.z + dy * fwd.y) + dx * fwd.x;
     const bool   bNotFacing = dot < (double)0.3f; // 0x858C24
 
     switch (comboSet) {
@@ -1388,18 +1392,18 @@ bool CTaskSimpleFight::BeHitWhileBlocking(CPed* victim, CPed* creator, int8 comb
 
 // Strike damage the way the original leaves it in st0 (the products are not rounded to float, and `FightHitPed` truncates them)
 static double GetStrikeDamageExt(const CTaskSimpleFight& task, CPed* ped) {
-    const double base = (double)CTaskSimpleFight::m_aComboData[task.m_nComboSet - 4].m_nDamage[task.m_nCurrentMove];
+    const x87d base = (double)CTaskSimpleFight::m_aComboData[task.m_nComboSet - 4].m_nDamage[task.m_nCurrentMove];
 
     if (ped->IsPlayer()) {
         if (ped->GetPlayerData()->m_bAdrenaline) {
             return 50.0; // 0x858B40
         }
-        return base * (double)CStats::GetFatAndMuscleModifier(STAT_MOD_4);
+        return base * (x87d)CStats::GetFatAndMuscleModifier(STAT_MOD_4);
     }
 
     switch (ped->GetActiveWeapon().m_Type) {
-    case WEAPON_BRASSKNUCKLE: return base * (double)1.5f; // 0x858CE8
-    case WEAPON_UNARMED:      return base * (double)ped->m_pStats->m_fAttackStrength;
+    case WEAPON_BRASSKNUCKLE: return base * (x87d)1.5f; // 0x858CE8
+    case WEAPON_UNARMED:      return base * (x87d)ped->m_pStats->m_fAttackStrength;
     default:                  return base;
     }
 }
@@ -1457,7 +1461,7 @@ CPed* CTaskSimpleFight::FightHitPed(CPed* creator, CPed* victim, const CVector& 
                 victim,
                 SURFACE_DEFAULT,
                 0,
-                (uint32)(int32)((double)s_HitSoundMaxVolume[m_nCurrentMove] * (double)2.8f) // 0x86D6A8 (ftol)
+                (uint32)(int32)((x87d)s_HitSoundMaxVolume[m_nCurrentMove] * (x87d)2.8f) // 0x86D6A8 (ftol)
             );
         } else {
             creatorAE.AddAudioEvent((eAudioEvents)combo.m_Hit[m_nCurrentMove], 0.f, 1.f, victim, SURFACE_DEFAULT, 0, 0);
@@ -1486,10 +1490,10 @@ CPed* CTaskSimpleFight::FightHitPed(CPed* creator, CPed* victim, const CVector& 
     } else if (m_nComboSet == 4 && m_nCurrentMove == FIGHT_ATTACK_FIGHTIDLE) {
         bloodChance = -1;
     } else {
-        bloodChance = (int32)((double)100.f - (double)victim->m_fHealth); // 0x858628 (ftol)
+        bloodChance = (int32)((x87d)100.f - (x87d)victim->m_fHealth); // 0x858628 (ftol)
     }
 
-    const auto roll = (int32)(((double)(CGeneral::GetRandomNumber() & 0xFFFF) * (double)(1.f / 32768.f)) * (double)100.f); // 0x858B14, 0x858628 (ftol)
+    const auto roll = (int32)(((x87d)(CGeneral::GetRandomNumber() & 0xFFFF) * (x87d)(1.f / 32768.f)) * (x87d)100.f); // 0x858B14, 0x858628 (ftol)
     if (roll < bloodChance) {
         const CVector bloodPos = point;
 
@@ -1601,7 +1605,7 @@ void CTaskSimpleFight::FightHitCar(CPed* ped, CVehicle* vehicle, const CVector& 
         g_fx.AddSparks(point, CVector{mat.at.x, mat.at.y, mat.at.z}, 5.f, 32, CVector{}, SPARK_PARTICLE_SPARK, 0.3f, 1.f);
 
         vehicle->VehicleDamage(
-            (float)((double)vehicle->m_pHandlingData->m_fMass * (double)strikeDamage * (double)0.00075f), // 0x86D6AC
+            (float)((x87d)vehicle->m_pHandlingData->m_fMass * (x87d)strikeDamage * (x87d)0.00075f), // 0x86D6AC
             (eVehicleCollisionComponent)piece,
             ped,
             const_cast<CVector*>(&point),
@@ -1610,7 +1614,7 @@ void CTaskSimpleFight::FightHitCar(CPed* ped, CVehicle* vehicle, const CVector& 
         );
     } else {
         vehicle->VehicleDamage(
-            (float)((double)vehicle->m_pHandlingData->m_fMass * (double)strikeDamage * (double)0.01f), // 0x858C58
+            (float)((x87d)vehicle->m_pHandlingData->m_fMass * (x87d)strikeDamage * (x87d)0.01f), // 0x858C58
             (eVehicleCollisionComponent)piece,
             ped,
             const_cast<CVector*>(&point),
@@ -1701,11 +1705,11 @@ bool CTaskSimpleFight::FightStrike(CPed* ped, CVector& pos) {
         }
 
         // Max distance to the entity
-        float maxDist = (float)((double)CModelInfo::GetModelInfo(entity->m_nModelIndex)->GetColModel()->GetBoundRadius() + (double)combo.m_fRadius[m_nCurrentMove]);
+        float maxDist = (float)((x87d)CModelInfo::GetModelInfo(entity->m_nModelIndex)->GetColModel()->GetBoundRadius() + (x87d)combo.m_fRadius[m_nCurrentMove]);
 
         if (candPed) {
             if (combo.m_nHitLevel[m_nCurrentMove] >= 4) {
-                maxDist = (float)((double)combo.m_fRadius[m_nCurrentMove] * (double)0.5f + (double)maxDist);
+                maxDist = (float)((x87d)combo.m_fRadius[m_nCurrentMove] * (x87d)0.5f + (x87d)maxDist);
             }
 
             // Skip peds that don't use collision, are alive, and aren't riding a bike
@@ -1724,20 +1728,20 @@ bool CTaskSimpleFight::FightStrike(CPed* ped, CVector& pos) {
         }
 
         // Is it close enough?
-        double distSq;
+        x87d distSq;
         if (candPed) {
             const auto c  = candPed->GetBoundCentre();
-            const auto dx = (double)c.x - (double)pos.x;
-            const auto dy = (double)c.y - (double)pos.y;
+            const auto dx = (x87d)c.x - (x87d)pos.x;
+            const auto dy = (x87d)c.y - (x87d)pos.y;
             distSq = dx * dx + dy * dy;
         } else {
             const auto c  = entity->GetBoundCentre();
-            const auto dx = (double)c.x - (double)pos.x;
-            const auto dy = (double)c.y - (double)pos.y;
-            const auto dz = (double)c.z - (double)pos.z;
+            const auto dx = (x87d)c.x - (x87d)pos.x;
+            const auto dy = (x87d)c.y - (x87d)pos.y;
+            const auto dz = (x87d)c.z - (x87d)pos.z;
             distSq = (dx * dx + dy * dy) + dz * dz;
         }
-        if (!(distSq < (double)maxDist * (double)maxDist)) {
+        if (!(distSq < (x87d)maxDist * (x87d)maxDist)) {
             continue;
         }
 
@@ -1750,13 +1754,13 @@ bool CTaskSimpleFight::FightStrike(CPed* ped, CVector& pos) {
                 for (auto s = 0; s < (int16)colData->m_nNumSpheres; s++) {
                     const auto& sphere = colData->m_pSpheres[s];
 
-                    const float  dxf = (float)((double)sphere.m_vecCenter.x - (double)pos.x);
-                    const double dyd = (double)sphere.m_vecCenter.y - (double)pos.y;
-                    const double dzd = (double)sphere.m_vecCenter.z - (double)pos.z;
+                    const float  dxf = (float)((x87d)sphere.m_vecCenter.x - (x87d)pos.x);
+                    const x87d dyd = (x87d)sphere.m_vecCenter.y - (x87d)pos.y;
+                    const x87d dzd = (x87d)sphere.m_vecCenter.z - (x87d)pos.z;
                     const CVector diff{dxf, (float)dyd, (float)dzd};
 
-                    const double sphereDistSq = ((double)dxf * (double)dxf + dyd * dyd) + dzd * dzd;
-                    const double r            = (double)sphere.m_fRadius + (double)combo.m_fRadius[m_nCurrentMove];
+                    const x87d sphereDistSq = ((x87d)dxf * (x87d)dxf + dyd * dyd) + dzd * dzd;
+                    const x87d r            = (x87d)sphere.m_fRadius + (x87d)combo.m_fRadius[m_nCurrentMove];
                     if (sphereDistSq < r * r) {
                         if (const auto hit = FightHitPed(ped, candPed, pos, diff, 3)) {
                             hitPed = hit;
@@ -1772,16 +1776,16 @@ bool CTaskSimpleFight::FightStrike(CPed* ped, CVector& pos) {
 
                 // Nothing hit yet => move the strike position forward a bit, and try again (once)
                 const auto&  fwd    = ped->m_matrix->GetForward();
-                const double fx     = (double)fwd.x * (double)1.5f; // 0x858CE8
-                const double fy     = (double)fwd.y * (double)1.5f;
-                const double fz     = (double)fwd.z * (double)1.5f;
+                const x87d fx     = (x87d)fwd.x * (x87d)1.5f; // 0x858CE8
+                const x87d fy     = (x87d)fwd.y * (x87d)1.5f;
+                const x87d fz     = (x87d)fwd.z * (x87d)1.5f;
                 const float  fxf    = (float)fx;
-                const double radius = combo.m_fRadius[m_nCurrentMove];
+                const x87d radius = combo.m_fRadius[m_nCurrentMove];
                 tries++;
-                pos.x = (float)((double)fxf * radius + (double)pos.x);
-                pos.y = (float)(fy * radius + (double)pos.y);
+                pos.x = (float)((x87d)fxf * radius + (x87d)pos.x);
+                pos.y = (float)(fy * radius + (x87d)pos.y);
                 const float zOffs = (float)(fz * radius);
-                pos.z = (float)((double)zOffs + (double)pos.z);
+                pos.z = (float)((x87d)zOffs + (x87d)pos.z);
                 if (tries >= 2) {
                     break;
                 }

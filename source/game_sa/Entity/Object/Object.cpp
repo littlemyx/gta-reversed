@@ -607,7 +607,7 @@ bool CObject::Load() {
 bool CObject::Save() {
     CObjectSaveStructure data;
     data.Construct(this);
-    CGenericGameStorage::SaveDataToWorkBuffer(sizeof(CObjectSaveStructure));
+    CGenericGameStorage::SaveDataToWorkBuffer<uint32>(sizeof(CObjectSaveStructure));
     CGenericGameStorage::SaveDataToWorkBuffer(data);
     return true;
 }
@@ -705,25 +705,25 @@ void CObject::SetRemapTexture(RwTexture* remapTexture, int16 txdIndex) {
 
 // 0x59F380
 float CObject::GetRopeHeight() {
-    const auto ropeIndex = CRopes::FindRope(reinterpret_cast<uint32>(this));
+    const auto ropeIndex = CRopes::FindRope(NOTSA_PTR_ID32(this));
     return CRopes::GetRope(ropeIndex).m_fSegmentLength;
 }
 
 // 0x59F3A0
 void CObject::SetRopeHeight(float height) {
-    const auto ropeIndex = CRopes::FindRope(reinterpret_cast<uint32>(this));
+    const auto ropeIndex = CRopes::FindRope(NOTSA_PTR_ID32(this));
     CRopes::GetRope(ropeIndex).m_fSegmentLength = height;
 }
 
 // 0x59F3C0
 CEntity* CObject::GetObjectCarriedWithRope() {
-    const auto ropeIndex = CRopes::FindRope(reinterpret_cast<uint32>(this));
+    const auto ropeIndex = CRopes::FindRope(NOTSA_PTR_ID32(this));
     return CRopes::GetRope(ropeIndex).m_pAttachedEntity;
 }
 
 // 0x59F3E0
 void CObject::ReleaseObjectCarriedWithRope() {
-    const auto ropeIndex = CRopes::FindRope(reinterpret_cast<uint32>(this));
+    const auto ropeIndex = CRopes::FindRope(NOTSA_PTR_ID32(this));
     CRopes::GetRope(ropeIndex).ReleasePickedUpObject();
 }
 
@@ -927,7 +927,7 @@ void CObject::ProcessSamSiteBehaviour() {
             const auto fAngle    = (float)fAngleExt;
 
             // `fAngle - fHeading`, then the inlined `LimitRadianAngle` loops (0x5A094C..0x5A09A3); NaN skips both loops
-            double fAngleDiffExt = fAngleExt - (double)fHeading;
+            x87d fAngleDiffExt = X87R(fAngleExt - (double)fHeading);
             while (fAngleDiffExt > PI) {
                 fAngleDiffExt -= 2.0f * PI; // 0x858CBC
             }
@@ -1300,7 +1300,7 @@ bool CObject::IsCraneMovingPart() const {
 void CObject::GrabObjectToCarryWithRope(CPhysical* attachTo) {
     // 0x5A1AB0: the grabbed entity goes into the rope's `m_pRopeAttachObject` slot (+0x318, reference registered there) and it is the rope's HOOK object (`m_pAttachedEntity`, +0x314)
     // that is moved to the top of the grabbed entity (its matrix applied to (0, 0, pickup height)) and loses its collision
-    const auto iRopeInd = CRopes::FindRope(reinterpret_cast<uint32>(this));
+    const auto iRopeInd = CRopes::FindRope(NOTSA_PTR_ID32(this));
     auto& rope = CRopes::GetRope(iRopeInd);
     rope.ReleasePickedUpObject();
     rope.m_pRopeAttachObject = attachTo;
@@ -1370,11 +1370,11 @@ void CObject::SetMatrixForTrainCrossing(CMatrix* matrix, float fAngle) {
     // z gets the sine rounded to float (it is stored / reloaded) added
     const double fCos = x87::cos(fAngle);
     const double fSin = x87::sin(fAngle);
-    const float  zeroSin = (float)(0.0f * fSin);
+    const float  zeroSin = (float)(X87R(0.0f * fSin));
     const float  sinF    = (float)fSin;
-    vecForward.x = (float)((double)zeroSin + (double)(float)((double)vecForward.x * fCos));
-    vecForward.y = (float)((double)zeroSin + (double)(float)((double)vecForward.y * fCos));
-    vecForward.z = (float)((double)sinF + (double)(float)(fCos * (double)vecForward.z));
+    vecForward.x = (float)((x87d)zeroSin + (double)(float)(X87R((double)vecForward.x * fCos)));
+    vecForward.y = (float)((x87d)zeroSin + (double)(float)(X87R((double)vecForward.y * fCos)));
+    vecForward.z = (float)((x87d)sinF + (double)(float)(X87R(fCos * (double)vecForward.z)));
 
     matrix->GetUp() = CrossProduct(matrix->GetRight(), vecForward);
     matrix->GetForward() = vecForward;
@@ -1392,7 +1392,7 @@ void CObject::ProcessControlLogic() {
         || m_nModelIndex == ModelIndices::MI_CRANETROLLEY
         || m_nModelIndex == ModelIndices::MI_QUARRYCRANE_ARM
     ) {
-        const auto iRopeInd = CRopes::FindRope(reinterpret_cast<uint32>(this));
+        const auto iRopeInd = CRopes::FindRope(NOTSA_PTR_ID32(this));
         uint8 nSegments = 0;
         auto fRopeLengthChange = 0.0F;
         if (iRopeInd >= 0) {
@@ -1404,16 +1404,16 @@ void CObject::ProcessControlLogic() {
         if (m_nModelIndex == ModelIndices::MI_MAGNOCRANE) {
             auto vecRopePoint = m_matrix->TransformPoint(CVector(0.0F, 36.64F, -1.69F));
             vecRopePoint.z += fRopeLengthChange;
-            CRopes::RegisterRope((uint32)this, static_cast<uint32>(eRopeType::CRANE_MAGNO), vecRopePoint, false, nSegments, 1u, this, 20'000u);
+            CRopes::RegisterRope(NOTSA_PTR_ID32(this), static_cast<uint32>(eRopeType::CRANE_MAGNO), vecRopePoint, false, nSegments, 1u, this, 20'000u);
         } else if (m_nModelIndex == ModelIndices::MI_CRANETROLLEY) {
             const auto nRopeType = static_cast<const uint32>(GetPosition().x >= 0 ? eRopeType::CRANE_TROLLEY : eRopeType::WRECKING_BALL);
             auto vecRopePoint = m_matrix->TransformPoint(CVector(0.0F, 0.0F, 0.0F));
             vecRopePoint.z += fRopeLengthChange;
-            CRopes::RegisterRope((uint32)this, nRopeType, vecRopePoint, false, nSegments, 1u, this, 20'000u);
+            CRopes::RegisterRope(NOTSA_PTR_ID32(this), nRopeType, vecRopePoint, false, nSegments, 1u, this, 20'000u);
         } else {
             auto vecRopePoint = m_matrix->TransformPoint(CVector(0.0F, 0.0F, 59.0F));
             vecRopePoint.z += fRopeLengthChange;
-            CRopes::RegisterRope((uint32)this, static_cast<uint32>(eRopeType::QUARRY_CRANE_ARM), vecRopePoint, false, nSegments, 1u, this, 20'000u);
+            CRopes::RegisterRope(NOTSA_PTR_ID32(this), static_cast<uint32>(eRopeType::QUARRY_CRANE_ARM), vecRopePoint, false, nSegments, 1u, this, 20'000u);
         }
     }
 

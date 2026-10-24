@@ -35,7 +35,7 @@ struct t2dEffectLightStreamData {
     uint8              OffsetZ;
 };
 static_assert(std::is_trivially_copyable_v<t2dEffectLightStreamData>);
-VALIDATE_SIZE(t2dEffectLightStreamData, 80);
+VALIDATE_SIZE_FILE(t2dEffectLightStreamData, 80);
 
 struct t2dEffectRoadsignStreamData {
     RwV2d              Size;
@@ -44,7 +44,7 @@ struct t2dEffectRoadsignStreamData {
     RwChar             Text[4][16];
 };
 static_assert(std::is_trivially_copyable_v<t2dEffectRoadsignStreamData>);
-VALIDATE_SIZE(t2dEffectRoadsignStreamData, 88);
+VALIDATE_SIZE_FILE(t2dEffectRoadsignStreamData, 88);
 
 struct t2dEffectEnExStreamData {
     static constexpr auto SizeOfRequiredFields = 44 - 4;
@@ -64,20 +64,20 @@ struct t2dEffectEnExStreamData {
     uint8  Flags2;
 };
 static_assert(std::is_trivially_copyable_v<t2dEffectEnExStreamData>);
-VALIDATE_SIZE(t2dEffectEnExStreamData, 44);
+VALIDATE_SIZE_FILE(t2dEffectEnExStreamData, 44);
 
 struct t2dEffectCoverPointStreamData {
     RwV2d               Dir;
     CCoverPoint::eUsage Usage;
 };
 static_assert(std::is_trivially_copyable_v<t2dEffectCoverPointStreamData>);
-VALIDATE_SIZE(t2dEffectCoverPointStreamData, 12);
+VALIDATE_SIZE_FILE(t2dEffectCoverPointStreamData, 12);
 
 struct t2dEffectSlotMachineWheelStreamData {
     int32 PointId;
 };
 static_assert(std::is_trivially_copyable_v<t2dEffectSlotMachineWheelStreamData>);
-VALIDATE_SIZE(t2dEffectSlotMachineWheelStreamData, 4);
+VALIDATE_SIZE_FILE(t2dEffectSlotMachineWheelStreamData, 4);
 
 struct t2dEffectEscalatorStreamData {
     RwV3d Bottom;
@@ -86,7 +86,7 @@ struct t2dEffectEscalatorStreamData {
     uint8 Direction; // 0 - down, 1 - up
 };
 static_assert(std::is_trivially_copyable_v<t2dEffectEscalatorStreamData>);
-VALIDATE_SIZE(t2dEffectEscalatorStreamData, 40);
+VALIDATE_SIZE_FILE(t2dEffectEscalatorStreamData, 40);
 
 struct t2dEffectPedAttractorStreamData {
     ePedAttractorType Type;
@@ -101,8 +101,8 @@ struct t2dEffectPedAttractorStreamData {
     uint8             __not_used2;
 };
 static_assert(std::is_trivially_copyable_v<t2dEffectPedAttractorStreamData>);
-VALIDATE_SIZE(t2dEffectPedAttractorStreamData, 56);
+VALIDATE_SIZE_FILE(t2dEffectPedAttractorStreamData, 56);
 
 using t2dEffectParticleStreamData = RwChar[24];
 static_assert(std::is_trivially_copyable_v<t2dEffectParticleStreamData>);
-VALIDATE_SIZE(t2dEffectParticleStreamData, 24);
+VALIDATE_SIZE_FILE(t2dEffectParticleStreamData, 24);

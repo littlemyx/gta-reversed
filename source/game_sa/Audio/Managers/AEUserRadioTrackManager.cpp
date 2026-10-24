@@ -277,7 +277,11 @@ DWORD __stdcall CAEUserRadioTrackManager::WriteUserTracksThread(CAEUserRadioTrac
         std::vector<tUserTracksInfo> offsets;
 
         // Retrieve all user tracks info
+        #ifdef NOTSA_PORTABLE
+        int32 amountOfTracks = self->WriteUserTracksFile((fs::path(CFileMgr::ms_dirName) / "User Tracks").string().c_str(), dummy, ufiles, offsets, 0);
+#else
         int32 amountOfTracks = self->WriteUserTracksFile(fs::path(CFileMgr::ms_dirName) / "User Tracks", dummy, ufiles, offsets, 0);
+#endif
         CFileMgr::CloseFile(ufiles);
 
         // Open sa-utrax.dat containing the offsets
@@ -327,7 +331,11 @@ int32 CAEUserRadioTrackManager::WriteUserTracksFile(const std::wstring& dir, siz
     for (auto& entry : fs::directory_iterator(dir)) {
         if (fs::is_directory(entry)) {
             // NOTE: STD can also do recursive search, maybe use that?
+#ifdef NOTSA_PORTABLE
+            numTracks += WriteUserTracksFile(entry.path().wstring(), currentLength, file, offsets, depth + 1);
+#else
             numTracks += WriteUserTracksFile(entry.path(), currentLength, file, offsets, depth + 1);
+#endif
             continue;
         }
 
@@ -343,7 +351,11 @@ int32 CAEUserRadioTrackManager::WriteUserTracksFile(const std::wstring& dir, siz
 
         // if shortcut was a directory.
         if (fs::is_directory(path)) {
+#ifdef NOTSA_PORTABLE
+            numTracks += WriteUserTracksFile(path.wstring(), currentLength, file, offsets, depth + 1);
+#else
             numTracks += WriteUserTracksFile(path, currentLength, file, offsets, depth + 1);
+#endif
             continue;
         }
 
@@ -373,6 +385,11 @@ char* CAEUserRadioTrackManager::ResolveShortcut(const char* path) {
 }
 
 std::wstring CAEUserRadioTrackManager::ResolveShortcut(const std::wstring& path) {
+#ifdef NOTSA_PORTABLE
+    // W-B7: .lnk shortcuts are resolved by the Windows shell (IShellLink); there is no equivalent here, so the shortcut stays unresolved (empty path)
+    NOTSA_LOG_ERR("W-B7: ResolveShortcut: Windows shell links are not supported on this platform");
+    return {};
+#else
     IShellLinkW* shellLink{};
     IPersistFile* persistFile{};
 
@@ -398,6 +415,7 @@ std::wstring CAEUserRadioTrackManager::ResolveShortcut(const std::wstring& path)
     shellLink->Release();
 
     return target;
+#endif
 }
 
 void CAEUserRadioTrackManager::InjectHooks() {

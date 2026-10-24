@@ -362,16 +362,16 @@ void CRadar::DrawLegend(int32 x, int32 y, eRadarSprite blipType) {
 float CRadar::LimitRadarPoint(CVector2D& point) {
     // Exact x87 form of the exe (0x5832F0): x*x + y*y and the sqrt stay in extended range (float math would overflow to inf for |x| > 1.8e19) and the
     // magnitude is returned unrounded (the caller stores it); the normalisation multiplies by the extended-precision 1/mag, only the stores round to float
-    const double x   = point.x;
-    const double y   = point.y;
-    const double mag = x87::sqrt(x * x + y * y);
+    const x87d x   = point.x;
+    const x87d y   = point.y;
+    const x87d mag = x87::sqrt(x * x + y * y);
 
     if (FrontEndMenuManager.m_bDrawingMap)
         return (float)mag;
 
     if (mag > 1.0) {
         // not in unit circle (NaN: no normalisation)
-        const double r = 1.0 / mag;
+        const x87d r = (x87d)1.0 / mag;
         point.x = (float)(r * x);
         point.y = (float)(r * y);
     }
@@ -384,24 +384,24 @@ void CRadar::LimitToMap(float& x, float& y) {
     // Exact x87 form of the exe (0x583350): the zoom is truncated to an int16 (ftol), the bounds are `(origin -+ zoom) * (W * (1/640))`
     // and compared/stored without std::clamp (no assert on min > max, NaN keeps the input)
     using notsa::detail::Ftol;
-    const double zoom = FrontEndMenuManager.m_bMapLoaded ? (double)(int16)Ftol((double)FrontEndMenuManager.m_fMapZoom) : 140.0;
-    const double wk   = (double)RsGlobal.maximumWidth * (double)SCREEN_RECIPROCAL_X; // 0x859520
-    const double hk   = (double)RsGlobal.maximumHeight * (double)SCREEN_RECIPROCAL_Y; // 0x859524
+    const x87d zoom = FrontEndMenuManager.m_bMapLoaded ? (x87d)(int16)Ftol((double)FrontEndMenuManager.m_fMapZoom) : (x87d)140.0;
+    const x87d wk   = (x87d)RsGlobal.maximumWidth * (x87d)SCREEN_RECIPROCAL_X; // 0x859520
+    const x87d hk   = (x87d)RsGlobal.maximumHeight * (x87d)SCREEN_RECIPROCAL_Y; // 0x859524
 
-    const double minX = ((double)FrontEndMenuManager.m_vMapOrigin.x - zoom) * wk;
+    const x87d minX = ((x87d)FrontEndMenuManager.m_vMapOrigin.x - zoom) * wk;
     if (minX > (double)x) {
         x = (float)minX;
     }
-    const double maxX = (zoom + (double)FrontEndMenuManager.m_vMapOrigin.x) * wk;
+    const x87d maxX = (zoom + (x87d)FrontEndMenuManager.m_vMapOrigin.x) * wk;
     if (maxX < (double)x) {
         x = (float)maxX;
     }
 
-    const double minY = ((double)FrontEndMenuManager.m_vMapOrigin.y - zoom) * hk;
+    const x87d minY = ((x87d)FrontEndMenuManager.m_vMapOrigin.y - zoom) * hk;
     if (minY > (double)y) {
         y = (float)minY;
     }
-    const double maxY = (zoom + (double)FrontEndMenuManager.m_vMapOrigin.y) * hk;
+    const x87d maxY = (zoom + (x87d)FrontEndMenuManager.m_vMapOrigin.y) * hk;
     if (maxY < (double)y) {
         y = (float)maxY;
     }
@@ -423,13 +423,13 @@ uint8 CRadar::CalculateBlipAlpha(float distance) {
     // Exact form of the exe (0x583420): _ftol of dist * (1/6) * 255, `255 - that` as a signed int converted back to float (+2^32 when negative, i.e. as uint32),
     // max with 70.0, _ftol again (low byte returned)
     using notsa::detail::Ftol;
-    const int32  alpha = 255 - Ftol((double)distance * (double)ExeRecip(6.0f) * 255.0);
-    double       value = (double)alpha;
+    const int32  alpha = 255 - Ftol((x87d)distance * (x87d)ExeRecip(6.0f) * (x87d)255.0);
+    x87d       value = (x87d)alpha;
     if (alpha < 0) {
-        value += 4294967296.0;
+        value += (x87d)4294967296.0;
     }
     if (70.0 > value) {
-        value = 70.0;
+        value = (x87d)70.0;
     }
     return (uint8)Ftol(value);
 }
@@ -440,23 +440,29 @@ uint8 CRadar::CalculateBlipAlpha(float distance) {
  */
 CVector2D CRadar::TransformRadarPointToScreenSpace(const CVector2D& in) {
     // CRadar::DrawRadarSection assumes this function won't spoil EDX, but it does, so we need to keep it up to data.
+#ifndef NOTSA_PORTABLE
     _asm { push edx };
+#endif
     if (FrontEndMenuManager.m_bDrawingMap) {
+#ifndef NOTSA_PORTABLE
         _asm { pop edx };
+#endif
         return {
             FrontEndMenuManager.m_vMapOrigin.x + FrontEndMenuManager.m_fMapZoom * in.x,
             FrontEndMenuManager.m_vMapOrigin.y - FrontEndMenuManager.m_fMapZoom * in.y
         };
     } else {
+#ifndef NOTSA_PORTABLE
         _asm { pop edx };
+#endif
         // Exact x87 form of the exe (0x583480), everything stays in extended precision: wk = W * (1/640), hk = (1/448) * H
-        const double wk = (double)RsGlobal.maximumWidth * (double)SCREEN_RECIPROCAL_X; // 0x859520
-        const double hk = (double)SCREEN_RECIPROCAL_Y * (double)RsGlobal.maximumHeight; // 0x859524
-        const double a  = 94.0 * wk;
-        const double g  = 76.0 * hk;
+        const x87d wk = (x87d)RsGlobal.maximumWidth * (x87d)SCREEN_RECIPROCAL_X; // 0x859520
+        const x87d hk = (x87d)SCREEN_RECIPROCAL_Y * (x87d)RsGlobal.maximumHeight; // 0x859524
+        const x87d a  = (x87d)94.0 * wk;
+        const x87d g  = (x87d)76.0 * hk;
         return {
-            (float)((0.5 * a + wk * 40.0) + (a * (double)in.x) * 0.5),
-            (float)(((double)RsGlobal.maximumHeight - hk * 104.0 + g * 0.5) - (g * (double)in.y) * 0.5)
+            (float)(((x87d)0.5 * a + wk * (x87d)40.0) + (a * (x87d)in.x) * (x87d)0.5),
+            (float)(((x87d)RsGlobal.maximumHeight - hk * (x87d)104.0 + g * (x87d)0.5) - (g * (x87d)in.y) * (x87d)0.5)
         };
     }
 }
@@ -467,15 +473,15 @@ CVector2D CRadar::TransformRadarPointToScreenSpace(const CVector2D& in) {
  */
 CVector2D CRadar::TransformRealWorldPointToRadarSpace(const CVector2D& in) {
     // Exact x87 form of the exe (0x583530): k = 1.0 / range (extended); k * dx is STORED as a float temp, k * dy stays extended; both rotated with the cached sin / cos
-    const double k  = 1.0 / (double)m_radarRange;
-    const double dx = (double)in.x - (double)vec2DRadarOrigin.x;
-    const double dy = (double)in.y - (double)vec2DRadarOrigin.y;
+    const x87d k  = (x87d)1.0 / (x87d)m_radarRange;
+    const x87d dx = (x87d)in.x - (x87d)vec2DRadarOrigin.x;
+    const x87d dy = (x87d)in.y - (x87d)vec2DRadarOrigin.y;
     const float  tx = (float)(k * dx);
-    const double ty = k * dy;
-    const double sn = cachedSin, cs = cachedCos;
+    const x87d ty = k * dy;
+    const x87d sn = cachedSin, cs = cachedCos;
     return {
-        (float)(sn * ty + cs * (double)tx),
-        (float)(cs * ty - sn * (double)tx)
+        (float)(sn * ty + cs * (x87d)tx),
+        (float)(cs * ty - sn * (x87d)tx)
     };
 }
 
@@ -501,6 +507,15 @@ CVector2D CRadar::TransformRealWorldToTexCoordSpace(const CVector2D& in, int32 x
 // 0x583670
 namespace {
 // atan2(y, x) via fpatan (the extended result stays on the FPU stack), stored as the radar orientation, and its sin / cos computed from the UNROUNDED angle (0x5837B5 / 0x5837E9)
+#ifdef NOTSA_PORTABLE
+// portable: the same fld/fpatan/fst/fsin/fcos sequence on the soft x87 (X87Sites.h, PC24): fpatan's unrounded result is stored as the orientation (rounded to float) and its sin / cos are
+// taken from the UNROUNDED value (tests/portable/f4a_lift_test.cpp rows Radar_SetRadarAngle*: bit-exact vs the asm)
+float* const s_pRadarOrientation = &CRadar::m_fRadarOrientation;
+float* const s_pRadarSin         = &CRadar::cachedSin;
+float* const s_pRadarCos         = &CRadar::cachedCos;
+void SetRadarAngleAtan2(float y, float x) { notsa::fp::sites::RadarAngleAtan2(y, x, s_pRadarOrientation, s_pRadarSin, s_pRadarCos); }
+void SetRadarAngle(float a) { notsa::fp::sites::RadarAngle(a, s_pRadarOrientation, s_pRadarSin, s_pRadarCos); }
+#else
 #ifdef NOTSA_GLOBALS_DETACHED
 // detached: the asm stores through pointers to the globals (same fld/fst/fsin/fstp sequence; eax is scratch in cdecl)
 float* const s_pRadarOrientation = &CRadar::m_fRadarOrientation;
@@ -567,6 +582,7 @@ __declspec(naked) void __cdecl SetRadarAngle(float a) {
     }
 }
 #endif
+#endif // NOTSA_PORTABLE
 #line 529
 }
 
@@ -1084,8 +1100,8 @@ void CRadar::DrawRotatingRadarSprite(CSprite2d& sprite, float x, float y, float 
     for (auto i = 0u; i < std::size(verts); i++) {
         const auto theta = (float)i * HALF_PI + (angle - FRAC_PI_4);
 
-        verts[i].x = x87::sin(theta) * (float)width + x;
-        verts[i].y = x87::cos(theta) * (float)height + y;
+        verts[i].x = X87R(x87::sin(theta) * (float)width) + x;
+        verts[i].y = X87R(x87::cos(theta) * (float)height) + y;
     }
 
     sprite.Draw(verts[3].x, verts[3].y, verts[2].x, verts[2].y, verts[0].x, verts[0].y, verts[1].x, verts[1].y, color);
@@ -1102,13 +1118,13 @@ void CRadar::DrawYouAreHereSprite(float x, float y) {
     }
 
     if (mapYouAreHereDisplay) {
-        const float angle = (float)(FindPlayerHeadingExt(0) + (double)DegreesToRadians(180.0f)); // 0x5849B8..0x5849D0: FindPlayerHeading leaves the heading unrounded in ST0; `+ PI` [0x858CB8], then the store to float
+        const float angle = (float)(X87R(FindPlayerHeadingExt(0) + (double)DegreesToRadians(180.0f))); // 0x5849B8..0x5849D0: FindPlayerHeading leaves the heading unrounded in ST0; `+ PI` [0x858CB8], then the store to float
         const auto circleAngle = angle + DegreesToRadians(90.0f);
 
         DrawRotatingRadarSprite(
             RadarBlipSprites[RADAR_SPRITE_MAP_HERE],
-            x + 17.0f * x87::cos(circleAngle),
-            y - 17.0f * x87::sin(circleAngle),
+            x + X87R(17.0f * x87::cos(circleAngle)),
+            y - X87R(17.0f * x87::sin(circleAngle)),
             angle,
             (uint32)(SCREEN_STRETCH_X(25.0f)),
             (uint32)(SCREEN_STRETCH_Y(25.0f)),
@@ -1198,20 +1214,20 @@ void GetTextureCorners(int32 x, int32 y, CVector2D* corners) {
 int32 LineRadarBoxCollision(CVector2D& result, const CVector2D& lineStart, const CVector2D& lineEnd) {
     // Exact x87 form of the exe (0x584E00): the distances, their product and the interpolation stay in extended range; the parameter of the first three edges is
     // stored as a float (and becomes the new closest), the last edge keeps it unrounded and does not update anything; there is no `param >= 0` test and no early return
-    double closest = 1.0;
+    x87d closest = (x87d)1.0;
     int32  side    = -1;
 
     const auto Edge = [&](double a, double b, bool edgeIsX, float edgeCoord, int32 edgeSide, bool storeT) {
-        if (!(a * b < 0.0)) {
+        if (!(X87R(a * b) < 0.0)) {
             return false;
         }
-        double t = a / (a - b);
+        x87d t = X87R(a / (X87R(a - b)));
         if (storeT) {
-            t = (double)(float)t;
+            t = (x87d)(float)t;
         }
-        const double s   = edgeIsX ? lineStart.y : lineStart.x;
-        const double e   = edgeIsX ? lineEnd.y : lineEnd.x;
-        const double val = (e - s) * t + s;
+        const x87d s   = edgeIsX ? lineStart.y : lineStart.x;
+        const x87d e   = edgeIsX ? lineEnd.y : lineEnd.x;
+        const x87d val = (e - s) * t + s;
         const float  v   = (float)val;
         if (val < -1.0 || !(v <= 1.0f) || !(t <= closest)) {
             return false;
@@ -1230,10 +1246,10 @@ int32 LineRadarBoxCollision(CVector2D& result, const CVector2D& lineStart, const
         return true;
     };
 
-    Edge(-1.0 - (double)lineStart.x, -1.0 - (double)lineEnd.x, true, -1.0f, 3, true);
-    Edge((double)lineStart.x - 1.0, (double)lineEnd.x - 1.0, true, 1.0f, 1, true);
-    Edge(-1.0 - (double)lineStart.y, -1.0 - (double)lineEnd.y, false, -1.0f, 0, true);
-    Edge((double)lineStart.y - 1.0, (double)lineEnd.y - 1.0, false, 1.0f, 2, false);
+    Edge(-(x87d)1.0 - (x87d)lineStart.x, -(x87d)1.0 - (x87d)lineEnd.x, true, -1.0f, 3, true);
+    Edge((x87d)lineStart.x - (x87d)1.0, (x87d)lineEnd.x - (x87d)1.0, true, 1.0f, 1, true);
+    Edge(-(x87d)1.0 - (x87d)lineStart.y, -(x87d)1.0 - (x87d)lineEnd.y, false, -1.0f, 0, true);
+    Edge((x87d)lineStart.y - (x87d)1.0, (x87d)lineEnd.y - (x87d)1.0, false, 1.0f, 2, false);
 
     return side;
 }
@@ -1299,10 +1315,10 @@ int32 CRadar::ClipRadarPoly(CVector2D* out, const CVector2D* in) {
 
     if (numOut == 0) {
         // Polygon encloses the whole radar? Slopes stay in extended precision in the original
-        const double slope1 = (double(in[0].y) - double(in[1].y)) / (double(in[0].x) - double(in[1].x));
-        const float  slope2 = (float)((double(in[0].y) - double(in[3].y)) / (double(in[0].x) - double(in[3].x)));
+        const x87d slope1 = (x87d(in[0].y) - x87d(in[1].y)) / (x87d(in[0].x) - x87d(in[1].x));
+        const float  slope2 = (float)((x87d(in[0].y) - x87d(in[3].y)) / (x87d(in[0].x) - x87d(in[3].x)));
         if ((slope1 * in[3].x - in[3].y) * (slope1 * in[0].x - in[0].y) < 0.0
-         && (double(slope2) * in[1].x - in[1].y) * (double(slope2) * in[0].x - in[0].y) < 0.0) {
+         && (x87d(slope2) * in[1].x - in[1].y) * (x87d(slope2) * in[0].x - in[0].y) < 0.0) {
             for (int32 k = 0; k < 4; k++) {
                 out[k] = corners[k];
             }
@@ -1388,8 +1404,8 @@ void CRadar::DrawRadarMask() {
 
         // Then generate a quarter of the circle
         for (auto j = 0; j < 7; j++) {
-            in.x = corner.x * x87::cos(float(j) * (FRAC_PI_2 / 6.0f));
-            in.y = corner.y * x87::sin(float(j) * (FRAC_PI_2 / 6.0f));
+            in.x = X87R(corner.x * x87::cos(float(j) * (FRAC_PI_2 / 6.0f)));
+            in.y = X87R(corner.y * x87::sin(float(j) * (FRAC_PI_2 / 6.0f)));
             out[j + 1] = TransformRadarPointToScreenSpace(in);
         };
 
@@ -1719,7 +1735,7 @@ void CRadar::DrawRadarGangOverlay(bool inMenu) {
                 const auto timeInMS = FrontEndMenuManager.m_bDrawingMap ? CTimer::GetTimeInMSPauseMode() : CTimer::GetTimeInMS();
 
                 auto zoneColor = info->ZoneColor;
-                zoneColor.a = (uint8)((x87::sin((float)(timeInMS % 1024) * (1024.f / TWO_PI)) + 1.0f) / 2.0f * (float)zoneColor.a);
+                zoneColor.a = (uint8)((X87R(x87::sin((float)(timeInMS % 1024) * (1024.f / TWO_PI)) + 1.0f)) / 2.0f * (float)zoneColor.a);
 
                 return zoneColor;
             }();
@@ -1929,7 +1945,7 @@ void CRadar::DrawEntityBlip(int32 blipIndex, uint8 arg1) {
     const bool isSprite = arg1 != 0;
 
     // 0x859CF8 / 0xA444A2 / 0xA444A3 / 0xBA67A1 / 0xBA678F are named globals, see CTheScripts / FrontEndMenuManager
-    static_assert(sizeof(CSprite2d) == 4);
+    VALIDATE_SIZE(CSprite2d, 4);
     constexpr float kInv640   = 1.f / 640.f;                       // 0x859520
     constexpr float kInv448   = 1.f / 448.f;                       // 0x859524
     constexpr float kDegToRad = std::bit_cast<float>(0x3C8EFA35u); // 0x8595EC
@@ -2001,8 +2017,8 @@ void CRadar::DrawEntityBlip(int32 blipIndex, uint8 arg1) {
         const auto& vehPos = FindPlayerVehicle()->GetPosition();
         const auto& strip  = airstrip_table[airstrip_location];
 
-        const double dy = (double)strip.position.y - (double)vehPos.y;
-        const double dx = (double)strip.position.x - (double)vehPos.x;
+        const x87d dy = (x87d)strip.position.y - (x87d)vehPos.y;
+        const x87d dx = (x87d)strip.position.x - (x87d)vehPos.x;
         airstripDist    = (float)std::sqrt(dy * dy + dx * dx);
 
         // BUG: In the original `pos` is left uninitialised (a stale stack slot, whatever the caller's previous calls left there,
@@ -2030,14 +2046,14 @@ void CRadar::DrawEntityBlip(int32 blipIndex, uint8 arg1) {
             pos = trace.m_vPosition;
             (void)TransformRealWorldPointToRadarSpace(pos); // NOTE: Result is overwritten below
 
-            const double theta = (double)strip.direction * (double)kDegToRad; // 0x8595EC
-            pos.x = (float)(x87::cos(theta) * (double)range + (double)pos.x);
-            pos.y = (float)((double)pos.y - x87::sin(theta) * (double)range);
+            const x87d theta = (x87d)strip.direction * (x87d)kDegToRad; // 0x8595EC
+            pos.x = (float)(X87R(x87::cos(theta) * (double)range) + (x87d)pos.x);
+            pos.y = (float)((x87d)pos.y - X87R(x87::sin(theta) * (double)range));
 
             auto radarPos = TransformRealWorldPointToRadarSpace(pos);
 
             const auto frame = CTimer::m_snTimeInMillisecondsPauseMode;
-            const double dist = std::sqrt((double)radarPos.y * (double)radarPos.y + (double)radarPos.x * (double)radarPos.x);
+            const x87d dist = std::sqrt((x87d)radarPos.y * (x87d)radarPos.y + (x87d)radarPos.x * (x87d)radarPos.x);
             if (dist >= (double)0.9f || (uint32)(frame - s_lastTime) > 3) { // 0x858C20
                 range       = (int16)(range + 100);
                 s_currRange = range;
@@ -2068,7 +2084,7 @@ void CRadar::DrawEntityBlip(int32 blipIndex, uint8 arg1) {
 
     if ((trace.m_nBlipDisplayFlag == BLIP_DISPLAY_BOTH || trace.m_nBlipDisplayFlag == BLIP_DISPLAY_MARKERONLY) && CTheScripts::DbgFlag) {
         ShowRadarMarker(pos, color, trace.m_fSphereRadius);
-        trace.m_fSphereRadius = (float)((double)trace.m_fSphereRadius - (double)0.1f); // 0x858B1C
+        trace.m_fSphereRadius = (float)((x87d)trace.m_fSphereRadius - (x87d)0.1f); // 0x858B1C
         if (trace.m_fSphereRadius < 1.f) {                                              // 0x858624
             trace.m_fSphereRadius = 5.f;
         }
@@ -2093,11 +2109,11 @@ void CRadar::DrawEntityBlip(int32 blipIndex, uint8 arg1) {
     }
 
     const auto RadarVecLength = [&] {
-        return std::sqrt((double)radarPos.y * (double)radarPos.y + (double)radarPos.x * (double)radarPos.x);
+        return std::sqrt((x87d)radarPos.y * (x87d)radarPos.y + (x87d)radarPos.x * (x87d)radarPos.x);
     };
     // x87: `maximum{Width|Height} * 1/{640|448} * scale` is kept in extended precision until `_ftol`
-    const auto ScaledWidth  = [&](float scale) { return (uint32)Ftol((double)RsGlobal.maximumWidth  * (double)kInv640  * (double)scale); }; // 0x859520
-    const auto ScaledHeight = [&](float scale) { return (uint32)Ftol((double)RsGlobal.maximumHeight * (double)kInv448 * (double)scale); }; // 0x859524
+    const auto ScaledWidth  = [&](float scale) { return (uint32)Ftol((x87d)RsGlobal.maximumWidth  * (x87d)kInv640  * (x87d)scale); }; // 0x859520
+    const auto ScaledHeight = [&](float scale) { return (uint32)Ftol((x87d)RsGlobal.maximumHeight * (x87d)kInv448 * (x87d)scale); }; // 0x859524
     const auto Size         = (uint32)(int32)(int16)trace.m_nBlipSize;
 
     if (CTheScripts::RadarZoomValue && !FindPlayerVehicle() && trace.m_nBlipType != BLIP_OBJECT && trace.m_nBlipType != BLIP_PICKUP) {
@@ -2118,14 +2134,14 @@ void CRadar::DrawEntityBlip(int32 blipIndex, uint8 arg1) {
         }
 
         const auto playerZ = FindPlayerCentreOfWorldForMap(0).z;
-        if ((double)pos.z - 2.0 > (double)playerZ) {
+        if ((x87d)pos.z - (x87d)2.0 > (double)playerZ) {
             if (!CTheScripts::RadarShowBlipOnAllLevels) {
                 return;
             }
             ShowRadarTraceWithHeight(screenPos.x, screenPos.y, Size, color >> 24, color >> 16, color >> 8, color, RADAR_TRACE_LOW);
             return;
         }
-        if ((double)pos.z + 4.0 < (double)playerZ) {
+        if ((x87d)pos.z + (x87d)4.0 < (double)playerZ) {
             if (!CTheScripts::RadarShowBlipOnAllLevels) {
                 return;
             }
@@ -2137,13 +2153,13 @@ void CRadar::DrawEntityBlip(int32 blipIndex, uint8 arg1) {
         if (TheCamera.GetActiveCam().m_nMode == MODE_TOPDOWN) {
             DrawRotatingRadarSprite(
                 RadarBlipSprites[RADAR_SPRITE_CENTRE], screenPos.x, screenPos.y,
-                (float)((double)heading + (double)std::numbers::pi_v<float>),
+                (float)((x87d)heading + (x87d)std::numbers::pi_v<float>),
                 ScaledWidth(8.f), ScaledHeight(8.f), arrowColor
             );
         } else {
             DrawRotatingRadarSprite(
                 RadarBlipSprites[RADAR_SPRITE_CENTRE], screenPos.x, screenPos.y,
-                (float)((double)heading - ((double)m_fRadarOrientation + (double)std::numbers::pi_v<float>)),
+                (float)((x87d)heading - ((x87d)m_fRadarOrientation + (x87d)std::numbers::pi_v<float>)),
                 ScaledWidth(8.f), ScaledHeight(8.f), arrowColor
             );
         }
@@ -2171,13 +2187,13 @@ void CRadar::DrawEntityBlip(int32 blipIndex, uint8 arg1) {
     if (searchlight) {
         if (RadarVecLength() <= (double)0.9f && !isDrawingMap) {
             const float radius = (float)(
-                (double)RsGlobal.maximumWidth * (double)kInv640 * (double)94.f / (double)m_radarRange
-                * (double)searchlight->m_fTargetRadius * (double)0.6f
+                (x87d)RsGlobal.maximumWidth * (x87d)kInv640 * (x87d)94.f / (x87d)m_radarRange
+                * (x87d)searchlight->m_fTargetRadius * (x87d)0.6f
             ); // 0x859520, 0x866B78, 0x858CC8
             CSprite2d::DrawCircleAtNearClip(screenPos, radius, CRGBA{ 0, 0, 0, 150 }, 15);
             CSprite2d::DrawCircleAtNearClip(
                 screenPos,
-                (float)((double)radius - (double)RsGlobal.maximumWidth * (double)kInv640),
+                (float)((x87d)radius - (x87d)RsGlobal.maximumWidth * (x87d)kInv640),
                 CRGBA{ 220, 220, 220, 200 },
                 15
             );
@@ -2203,11 +2219,11 @@ void CRadar::DrawEntityBlip(int32 blipIndex, uint8 arg1) {
         if (isDrawingMap) {
             float dir = strip.direction;
             if (airstrip_location != AIRSTRIP_SF_AIRPORT) {
-                dir = (float)((double)dir - (double)90.f); // 0x85991C
+                dir = (float)((x87d)dir - (x87d)90.f); // 0x85991C
             }
             DrawRotatingRadarSprite(
                 RadarBlipSprites[RADAR_SPRITE_RUNWAY], screenPos.x, screenPos.y,
-                (float)((double)dir * (double)kDegToRad),
+                (float)((x87d)dir * (x87d)kDegToRad),
                 ScaledWidth(16.f), ScaledHeight(16.f), white // 0x8599D0
             );
             AddBlipToLegendList(false, RADAR_SPRITE_RUNWAY);
@@ -2217,17 +2233,17 @@ void CRadar::DrawEntityBlip(int32 blipIndex, uint8 arg1) {
             }
             DrawRotatingRadarSprite(
                 RadarBlipSprites[RADAR_SPRITE_RUNWAY], screenPos.x, screenPos.y,
-                (float)((double)(-m_fRadarOrientation) - ((double)strip.direction - (double)90.f) * (double)kDegToRad),
+                (float)((x87d)(-m_fRadarOrientation) - ((x87d)strip.direction - (x87d)90.f) * (x87d)kDegToRad),
                 ScaledWidth(16.f), ScaledHeight(16.f), white
             );
         }
     } else {
         const auto playerZ = FindPlayerCentreOfWorldForMap(0).z;
         eRadarTraceHeight height;
-        if ((double)pos.z - 2.0 > (double)playerZ) {
+        if ((x87d)pos.z - (x87d)2.0 > (double)playerZ) {
             height = RADAR_TRACE_LOW;
         } else {
-            height = ((double)pos.z + 4.0 < (double)playerZ) ? RADAR_TRACE_HIGH : RADAR_TRACE_NORMAL;
+            height = ((x87d)pos.z + (x87d)4.0 < (double)playerZ) ? RADAR_TRACE_HIGH : RADAR_TRACE_NORMAL;
         }
         // NOTE: The original passes a dword whose upper 3 bytes are stack garbage (only the low byte is set), the callee uses the low byte
         ShowRadarTraceWithHeight(screenPos.x, screenPos.y, Size, color >> 24, color >> 16, color >> 8, color, height);
@@ -2512,12 +2528,24 @@ void CRadar::DrawBlips() {
 bool CRadar::Load() {
     Initialise();
 
+#ifdef NOTSA_PORTABLE
+    // P-2f: the file holds tRadarTrace_File (0x28, enex pool index+1 in a plain u32); the in-memory trace (pointer in the union, 0x30 on LP64) is never read from the stream.
+    for (auto& trace : ms_RadarTrace) {
+        tRadarTrace_File rec{};
+        CGenericGameStorage::LoadDataFromWorkBuffer(rec);
+        notsa::FileRecord<tRadarTrace>::FromFile(trace, rec);
+        if (rec.entryExitPoolInd) {
+            trace.m_pEntryExit = CEntryExitManager::GetInSlot(rec.entryExitPoolInd - 1);
+        }
+    }
+#else
     for (auto& trace : ms_RadarTrace) {
         CGenericGameStorage::LoadDataFromWorkBuffer(trace);
         if (trace.m_EntryExitPoolInd) {
             trace.m_pEntryExit = CEntryExitManager::GetInSlot(trace.m_EntryExitPoolInd - 1);
         }
     }
+#endif
 
     return true;
 }
@@ -2527,6 +2555,29 @@ bool CRadar::Load() {
  * @addr 0x5D5860
  */
 bool CRadar::Save() {
+#ifdef NOTSA_PORTABLE
+    // P-2f: no in-place union patching: serialise a copy through tRadarTrace_File. Differences from the exe: a trace whose enex is not a live pool slot writes index 0
+    // (the exe wrote the raw pointer's low 32 bits there); m_bTrackingBlip is cleared in the record only (the live trace is never touched).
+    for (auto& trace : ms_RadarTrace) {
+        uint32 enexInd = 0;
+        if (trace.m_pEntryExit) {
+            const auto index = CEntryExitManager::GetPool()->GetIndex(trace.m_pEntryExit);
+            if (CEntryExitManager::GetPool()->IsIndexInBounds(index) && !CEntryExitManager::GetPool()->IsFreeSlotAtIndex(index)) {
+                enexInd = (uint32)(index + 1);
+            }
+        }
+
+        auto copy = trace;
+        if (copy.m_nBlipType != BLIP_COORD && copy.m_nBlipType != BLIP_CONTACT_POINT) {
+            copy.m_bTrackingBlip = false;
+        }
+
+        const auto rec = notsa::FileRecord<tRadarTrace>::ToFile(copy, enexInd);
+        CGenericGameStorage::SaveDataToWorkBuffer(rec);
+    }
+
+    return true;
+#else
     for (auto& trace : ms_RadarTrace) {
         CEntryExit* savedEnex = nullptr;
         if (trace.m_pEntryExit) {
@@ -2556,7 +2607,7 @@ bool CRadar::Save() {
     }
 
     return true;
-
+#endif
 }
 
 /*!

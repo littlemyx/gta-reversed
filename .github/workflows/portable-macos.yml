@@ -1,0 +1,90 @@
+name: Portable macOS
+
+# MAC-LNX1: native macOS arm64 build of the portable game (preset PortableMac: Homebrew LLVM clang + libc++, librw GL3 + SDL3, openal-soft) and the data-free host tests (ctest -L portable).
+# Fork-only workflow (pushes to portable/main, by hand). The game is not run (no game data on CI). NOT yet run on a runner: needs the librw secret (see tools/portable/ci_librw_access.sh).
+on:
+  push:
+    branches: [portable/main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: portable-macos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 330
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: false
+
+      - name: librw submodule (private repo, needs the secret LIBRW_DEPLOY_KEY or LIBRW_TOKEN)
+        env:
+          LIBRW_DEPLOY_KEY: ${{ secrets.LIBRW_DEPLOY_KEY }}
+          LIBRW_TOKEN: ${{ secrets.LIBRW_TOKEN }}
+        run: tools/portable/ci_fetch_librw.sh
+
+      - name: Toolchain (Homebrew LLVM, SDL3 is built by conan, openal-soft, cmake >= 4.2, conan)
+        run: |
+          brew update
+          brew install llvm openal-soft ninja cmake pipx || true
+          pipx install conan || pip3 install --break-system-packages conan
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          cmake --version; /opt/homebrew/opt/llvm/bin/clang++ --version | head -1
+
+      - name: Conan cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.conan2/p
+          key: conan-macos-${{ hashFiles('conanfile.py', 'conan/profiles/macos-arm64.txt') }}
+
+      - name: Conan install
+        run: |
+          # the profile pins the author's Xcode (apple-clang 21): use the runner's
+          conan profile detect --exist-ok
+          echo "runner clang: $(clang --version | head -1)"
+          CONAN_EXTRA_ARGS="-s compiler.version=$(clang --version | sed -n 's/.*version \([0-9]*\)\..*/\1/p' | head -1)" tools/portable/conan_install_mac.sh Release
+
+      - name: Configure
+        run: cmake --preset PortableMac 2>&1 | tee configure.log
+
+      - name: Build (ninja -k 0)
+        id: build
+        run: |
+          start=$(date +%s)
+          cmake --build build/PortableMac -- -k 0 2>&1 | tee build.log
+          rc=${PIPESTATUS[0]}
+          echo "build wall time: $(( $(date +%s) - start )) s, rc=$rc" | tee -a build.log
+          exit $rc
+
+      - name: Host tests (ctest -L portable)
+        if: steps.build.outcome == 'success'
+        run: ctest --test-dir build/PortableMac -L portable --output-on-failure -j3 2>&1 | tee ctest.log
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: portable-macos-logs
+          path: |
+            configure.log
+            build.log
+            ctest.log
+          if-no-files-found: ignore
+
+      - name: Upload binary
+        if: steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: gta_reversed-macos-arm64
+          path: build/PortableMac/bin/gta_reversed

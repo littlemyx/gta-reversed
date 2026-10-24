@@ -52,13 +52,13 @@ using namespace notsa::script::commands::ported::g09_12;
 
 // Raw offsets the exe uses directly in these cases
 static_assert(offsetof(CPad, bDisablePlayerCycleWeapon) == 0x11D);
-static_assert(offsetof(CPed, m_pVehicle) == 0x58C && offsetof(CVehicle, m_nVehicleType) == 0x590);
-static_assert(offsetof(CPed, m_nBodypartToRemove) == 0x754);
-static_assert(offsetof(CPhysical, m_fContactSurfaceBrightness) == 0x12C);
-static_assert(offsetof(CVehicleModelInfo, m_nVehicleClass) == 0x4D);
-static_assert(offsetof(CVehicle, m_nDoorLock) == 0x4F8 && offsetof(CAutomobile, m_damageManager) == 0x5A0);
-static_assert(offsetof(CRunningScript, m_UsesMissionCleanup) == 0xC6 && offsetof(CRunningScript, m_IsTextBlockOverride) == 0xC8);
-static_assert(offsetof(CCheckpoint, m_ID) == 4 && sizeof(tScriptCheckpoint) == 8 && offsetof(tScriptCheckpoint, m_Checkpoint) == 4);
+VALIDATE_OFFSET(CPed, m_pVehicle, 0x58C); VALIDATE_OFFSET(CVehicle, m_nVehicleType, 0x590);
+VALIDATE_OFFSET(CPed, m_nBodypartToRemove, 0x754);
+VALIDATE_OFFSET(CPhysical, m_fContactSurfaceBrightness, 0x12C);
+VALIDATE_OFFSET(CVehicleModelInfo, m_nVehicleClass, 0x4D);
+VALIDATE_OFFSET(CVehicle, m_nDoorLock, 0x4F8); VALIDATE_OFFSET(CAutomobile, m_damageManager, 0x5A0);
+VALIDATE_OFFSET(CRunningScript, m_UsesMissionCleanup, 0xC6); VALIDATE_OFFSET(CRunningScript, m_IsTextBlockOverride, 0xC8);
+VALIDATE_OFFSET(CCheckpoint, m_ID, 4); VALIDATE_SIZE(tScriptCheckpoint, 8); VALIDATE_OFFSET(tScriptCheckpoint, m_Checkpoint, 4);
 static_assert(STAT_RESPECT_MISSION_TOTAL == 228 && STAT_RESPECT_MISSION == 224);
 static_assert(sizeof(eCrossHairType) == 4);
 static_assert(TASK_SIMPLE_HOLD_ENTITY == 0x133 && ABORT_PRIORITY_URGENT == 1);
@@ -74,20 +74,23 @@ namespace {
 //! the same way (0x44E480: in place, float stores; non-positive squared length => x = 1.0f only) and dotAD in [0, |AD|] (NaN => false).
 //! (The debug highlight call 0x486990 is only done if the byte 0x859CF8 is set; it is 0.)
 bool IsPointInAngledAreaOriginal(const CVector& p, float x1, float y1, float x2, float y2, float width) {
-    constexpr double PI_HALF = (double)1.5707963705062866f; // 0x858FE4
-    constexpr double TWO_PI  = (double)6.2831854820251465f; // 0x858CBC
-    double angle = CGeneral::GetRadianAngleBetweenPointsExt(x1, y1, x2, y2) + PI_HALF; // 0x53CBE0, keeps the extended result
+    constexpr x87d PI_HALF = (x87d)1.5707963705062866f; // 0x858FE4
+    constexpr x87d TWO_PI  = (x87d)6.2831854820251465f; // 0x858CBC
+    x87d angle = X87R(CGeneral::GetRadianAngleBetweenPointsExt(x1, y1, x2, y2) + PI_HALF); // 0x53CBE0, keeps the extended result
     while (angle < 0.0) { // fcom 0.0; test ah, 5; jp (exits the loop if not less)
         angle += TWO_PI;
     }
     while (angle > TWO_PI) { // fcom 2pi; test ah, 0x41; jne
         angle -= TWO_PI;
     }
-    double sn, cs;
+    double sn, cs; // fsin / fcos results, stored as qword by the exe (the lifted asm reads / writes 8 bytes: NOT x87d)
     {
         // fsin / fcos of the extended angle
         const double a = angle;
         double       s, c;
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/Group24b_SinCos.inc"
+#else
         __asm {
             fld   qword ptr [a]
             fld   st(0)
@@ -96,37 +99,38 @@ bool IsPointInAngledAreaOriginal(const CVector& p, float x1, float y1, float x2,
             fcos
             fstp  qword ptr [c]
         }
+#endif
         sn = s;
         cs = c;
     }
-    const float cosW = (float)(-(cs * (double)width)); // fchs; fst dword
-    const float dx   = (float)(sn * (double)width + (double)x1);
-    const float dy   = (float)((double)cosW + (double)y1);
+    const float cosW = (float)(-(cs * (x87d)width)); // fchs; fst dword
+    const float dx   = (float)(X87R(sn * (x87d)width) + (x87d)x1);
+    const float dy   = (float)((x87d)cosW + (x87d)y1);
 
     // AB
     const float  abx = x2 - x1;
-    const double aby = (double)y2 - (double)y1; // stays in the FPU
+    const x87d aby = (x87d)y2 - (x87d)y1; // stays in the FPU
     // AD
     const float adx = dx - x1;
     const float ady = dy - y1;
-    const double abSq = aby * aby + (double)abx * abx;
+    const x87d abSq = aby * aby + (x87d)abx * abx;
     const float  abLen = (float)std::sqrt(abSq);
-    const double adSq = (double)ady * ady + (double)adx * adx;
+    const x87d adSq = (x87d)ady * ady + (x87d)adx * adx;
     const float  adLen = (float)std::sqrt(adSq);
     const float  relx = p.x - x1;
     const float  rely = p.y - y1;
 
-    double nx, ny;
+    x87d nx, ny;
     if (abSq > 0.0 || std::isnan(abSq)) { // fcom 0.0; test ah, 0x41; jp -> normalise
-        const double inv  = 1.0 / std::sqrt(abSq);
+        const x87d inv  = (x87d)1.0 / std::sqrt(abSq);
         const float  invF = (float)inv; // fst dword [temp]
-        nx = inv * (double)abx;
-        ny = aby * (double)invF;
+        nx = inv * (x87d)abx;
+        ny = aby * (x87d)invF;
     } else {
-        nx = 1.0;
+        nx = (x87d)1.0;
         ny = aby;
     }
-    const double dotAB = ny * (double)rely + (double)relx * nx;
+    const x87d dotAB = ny * (x87d)rely + (x87d)relx * nx;
     if (dotAB < 0.0 || std::isnan(dotAB)) { // fcom 0.0; test ah, 1; jne
         return false;
     }
@@ -137,16 +141,16 @@ bool IsPointInAngledAreaOriginal(const CVector& p, float x1, float y1, float x2,
     // 0x44E480: CVector2D::Normalise (in place)
     float adnx = adx, adny = ady;
     {
-        const double sq = (double)adny * adny + (double)adnx * adnx; // fld [ecx+4]; fld [ecx]; ...
+        const x87d sq = (x87d)adny * adny + (x87d)adnx * adnx; // fld [ecx+4]; fld [ecx]; ...
         if (sq > 0.0 || std::isnan(sq)) {
-            const double inv = 1.0 / std::sqrt(sq);
-            adnx = (float)(inv * (double)adnx);
-            adny = (float)(inv * (double)ady);
+            const x87d inv = (x87d)1.0 / std::sqrt(sq);
+            adnx = (float)(inv * (x87d)adnx);
+            adny = (float)(inv * (x87d)ady);
         } else {
             adnx = 1.0f;
         }
     }
-    const double dotAD = (double)rely * adny + (double)relx * adnx;
+    const x87d dotAD = (x87d)rely * adny + (x87d)relx * adnx;
     if (dotAD < 0.0 || std::isnan(dotAD)) {
         return false;
     }

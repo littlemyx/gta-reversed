@@ -115,6 +115,10 @@ if (MSVC AND NOT "${GTASA_COMPILE_CACHE}" STREQUAL "OFF" AND NOT "${GTASA_COMPIL
     endfunction()
 endif()
 
+# Portable build only (P-2k): ctest registers the host tests of tools/portable (`ctest --test-dir build/PortableMac -L portable`); the Windows configure is unchanged.
+if (GTASA_PORTABLE)
+    enable_testing()
+endif()
 add_subdirectory(source)
 
 function(create_source_group target)

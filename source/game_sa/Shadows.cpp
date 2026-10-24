@@ -478,19 +478,19 @@ void CShadows::CalcPedShadowValues(
     // 0x7076C0: the exe stores -x / -y into the outputs first, runs the x87 math on those, spills every result to float and halves each output in a separate step
     frontX = -sunPosn.x;
     frontY = -sunPosn.y;
-    const double sunDist = std::sqrt((double)frontX * frontX + (double)frontY * frontY);
-    const double recip   = 1.0 / sunDist;
-    const double mult    = (sunDist + 1.0) * recip;
+    const x87d sunDist = std::sqrt((x87d)frontX * frontX + (x87d)frontY * frontY);
+    const x87d recip   = (x87d)1.0 / sunDist;
+    const x87d mult    = (sunDist + (x87d)1.0) * recip;
 
     displacementX = frontX; // the duplicated -x / -y stay on the x87 stack and are stored as the displacement
     displacementY = frontY;
     frontX = (float)(frontX * mult);
     frontY = (float)(frontY * mult);
-    sideX  = (float)(-((double)sunPosn.y * recip));
-    sideY  = (float)((double)sunPosn.x * recip);
+    sideX  = (float)(-((x87d)sunPosn.y * recip));
+    sideY  = (float)((x87d)sunPosn.x * recip);
 
     for (float* v : { &frontX, &frontY, &sideX, &sideY, &displacementX, &displacementY }) {
-        *v = (float)((double)*v * 0.5f);
+        *v = (float)((x87d)*v * 0.5f);
     }
 }
 
@@ -2002,7 +2002,7 @@ void CShadows::StoreCarLightShadow(CVehicle* vehicle, int32 id, RwTexture* textu
         );
     } else {
         StoreStaticShadow(
-            reinterpret_cast<uint32>(vehicle) + id,
+            NOTSA_PTR_ID32(vehicle) + id,
             SHADOW_ADDITIVE,
             texture,
             posn,
@@ -2037,7 +2037,7 @@ void CShadows::StoreShadowForPole(CEntity* entity, float offsetX, float offsetY,
     const auto right     = CVector2D{ CTimeCycle::GetShadowSide() } * poleWidth;
 
     StoreStaticShadow(
-        reinterpret_cast<uint32>(entity->GetLod()) + localId + 3,
+        NOTSA_PTR_ID32(entity->GetLod()) + localId + 3,
         SHADOW_DEFAULT,
         gpPostShadowTex,
         mat.GetPosition() + CVector{ front, 0.f } + CVector{

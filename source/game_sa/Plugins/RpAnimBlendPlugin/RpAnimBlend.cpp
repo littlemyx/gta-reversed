@@ -206,7 +206,7 @@ void RpAnimBlendClumpInit(RpClump* clump) {
 
 // 0x4D6790
 CAnimBlendAssociation* RpAnimBlendClumpAddAssociation(RpClump* clump, CAnimBlendAssociation* association, uint32 playFlags, float startTime, float blendAmount) {
-    NOTSA_UNREACHABLE("Unused function");
+    NOTSA_UNREACHABLE_RET(nullptr, "Unused function");
 }
 
 //! @notsa
@@ -660,11 +660,11 @@ float CalculateTotalBlendOfPartial(AnimBlendUpdateData* c, AnimBlendFrameData* f
  *        and so is the reciprocal, only the products are rounded to float.
  */
 static void NormaliseQuatX87(CQuaternion& q) {
-    const double sqMag = (((double)q.x * q.x + (double)q.y * q.y) + (double)q.z * q.z) + (double)q.w * q.w;
+    const x87d sqMag = (((x87d)q.x * q.x + (x87d)q.y * q.y) + (x87d)q.z * q.z) + (x87d)q.w * q.w;
     if (sqMag == 0.0) { // `fcom` + `test ah, 0x44` + `jp`: only taken if unordered => NaN is normalised (like everything else non-zero)
         q.w = 1.f;
     } else {
-        const double invLen = 1.0 / std::sqrt(sqMag);
+        const x87d invLen = (x87d)1.0 / std::sqrt(sqMag);
         q.x = (float)(q.x * invLen);
         q.y = (float)(q.y * invLen);
         q.z = (float)(q.z * invLen);
@@ -676,7 +676,7 @@ static void NormaliseQuatX87(CQuaternion& q) {
  * @brief Dot product of 2 quaternions, in the order the exe does it (w, z, y, x), without rounding the intermediates to float.
  */
 static double DotQuatX87(const CQuaternion& a, const CQuaternion& b) {
-    return (((double)a.w * b.w + (double)a.z * b.z) + (double)a.y * b.y) + (double)a.x * b.x;
+    return (((x87d)a.w * b.w + (x87d)a.z * b.z) + (x87d)a.y * b.y) + (x87d)a.x * b.x;
 }
 
 template<bool IsCompressed, bool IsSkinned, bool ExtractVelocity, bool Extract3DVelocity>
@@ -870,9 +870,9 @@ void FrameUpdateCallBackT(AnimBlendFrameData* fd, AnimBlendUpdateData* c) {
                     const float z = t->z;
                     if (!(z < -0.8f)) {
                         // Everything is kept on the x87 stack => no float rounding until the store
-                        const double add = !(z < -0.4f)
-                            ? (double)nodePos.z
-                            : ((double)z * 2.5f + 2.f) * nodePos.z;
+                        const x87d add = !(z < -0.4f)
+                            ? (x87d)nodePos.z
+                            : ((x87d)z * 2.5f + 2.f) * nodePos.z;
                         t->z = (float)(add + z);
                     }
                 }
@@ -890,7 +890,7 @@ void FrameUpdateCallBackT(AnimBlendFrameData* fd, AnimBlendUpdateData* c) {
                 t->y = nextT.y;
                 t->z = nextT.z;
             }
-            const double invBlend = 1.0 - nextBlendT; // Not rounded to float
+            const x87d invBlend = (x87d)1.0 - nextBlendT; // Not rounded to float
             t->x = (float)(invBlend * nodePos.x + t->x);
             t->y = (float)(invBlend * nodePos.y + t->y);
             t->z = (float)(invBlend * nodePos.z + t->z);

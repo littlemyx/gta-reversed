@@ -28,4 +28,4 @@ public:
         return matrix;
     }
 };
-VALIDATE_SIZE(CCompressedMatrixNotAligned, 20);
+VALIDATE_SIZE_FILE(CCompressedMatrixNotAligned, 20);

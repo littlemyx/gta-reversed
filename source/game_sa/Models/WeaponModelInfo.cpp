@@ -29,7 +29,7 @@ void CWeaponModelInfo::Init()
 void CWeaponModelInfo::SetClump(RpClump* clump)
 {
     CClumpModelInfo::SetClump(clump);
-    RpClumpForAllAtomics(clump, CClumpModelInfo::SetAtomicRendererCB, CVisibilityPlugins::RenderWeaponCB);
+    RpClumpForAllAtomics(clump, CClumpModelInfo::SetAtomicRendererCB, (void*)CVisibilityPlugins::RenderWeaponCB);
 
     auto flashFrame = CClumpModelInfo::GetFrameFromName(clump, "gunflash");
     if (!flashFrame)

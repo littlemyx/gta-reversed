@@ -22,7 +22,7 @@ struct CdStreamPos {
     uint32 ToInt() const { return ((FileID & 0xFF) << 24) | (Offset & 0xFFFFFF); }
     friend auto operator<=>(const CdStreamPos&, const CdStreamPos&) = default;
 };
-VALIDATE_SIZE(CdStreamPos, sizeof(uint32));
+VALIDATE_SIZE_FILE(CdStreamPos, sizeof(uint32));
 
 union SyncObj {
     HANDLE             hSemaphore;

@@ -426,7 +426,7 @@ CVehicle::~CVehicle() {
         m_pCustomCarPlate = nullptr;
     }
 
-    const auto iRopeInd = CRopes::FindRope(reinterpret_cast<uint32>(this) + 1);
+    const auto iRopeInd = CRopes::FindRope(NOTSA_PTR_ID32(this) + 1);
     if (iRopeInd >= 0) {
         CRopes::GetRope(iRopeInd).Remove();
     }
@@ -436,7 +436,7 @@ CVehicle::~CVehicle() {
     }
 }
 
-void* CVehicle::operator new(unsigned size) {
+void* CVehicle::operator new(size_t size) {
     return GetVehiclePool()->New();
 }
 
@@ -444,7 +444,7 @@ void CVehicle::operator delete(void* data) {
     GetVehiclePool()->Delete(static_cast<CVehicle*>(data));
 }
 
-void* CVehicle::operator new(unsigned size, int32 poolRef) {
+void* CVehicle::operator new(size_t size, int32 poolRef) {
     return GetVehiclePool()->NewAt(poolRef);
 }
 
@@ -1050,15 +1050,15 @@ float CVehicle::GetHeightAboveRoad() {
 bool CVehicle::CanPedStepOutCar(bool bIgnoreSpeedUpright) const {
     // 0x6D1F30: FCOMP forms on extended precision values (NaN -> 'upright' and 'slow enough')
     const float fUpZ = m_matrix->GetUp().z;
-    const auto  Mag2D = [&] { return std::sqrt((double)m_vecMoveSpeed.x * m_vecMoveSpeed.x + (double)m_vecMoveSpeed.y * m_vecMoveSpeed.y); };
+    const auto  Mag2D = [&] { return std::sqrt((x87d)m_vecMoveSpeed.x * m_vecMoveSpeed.x + (x87d)m_vecMoveSpeed.y * m_vecMoveSpeed.y); };
     const auto  TurnSlowEnough = [&] { // 0x6D1FA4
-        const double sq = ((double)m_vecTurnSpeed.x * m_vecTurnSpeed.x + (double)m_vecTurnSpeed.y * m_vecTurnSpeed.y) + (double)m_vecTurnSpeed.z * m_vecTurnSpeed.z;
+        const x87d sq = ((x87d)m_vecTurnSpeed.x * m_vecTurnSpeed.x + (x87d)m_vecTurnSpeed.y * m_vecTurnSpeed.y) + (x87d)m_vecTurnSpeed.z * m_vecTurnSpeed.z;
         return !(sq > (double)0.0004F);
     };
     const bool tilted = !(fUpZ <= 0.1F) || fUpZ < -0.1F; // |up.z| > 0.1 (or NaN): the car is not on its side
 
     if (!tilted) {
-        if (std::fabs((double)m_vecMoveSpeed.z) > 0.05F || Mag2D() > 0.01F) {
+        if (std::fabs((x87d)m_vecMoveSpeed.z) > 0.05F || Mag2D() > 0.01F) {
             return false;
         }
         return TurnSlowEnough();
@@ -1072,7 +1072,7 @@ bool CVehicle::CanPedStepOutCar(bool bIgnoreSpeedUpright) const {
 
     if (Mag2D() > 0.01F)
         return false;
-    if (std::fabs((double)m_vecMoveSpeed.z) > 0.05F)
+    if (std::fabs((x87d)m_vecMoveSpeed.z) > 0.05F)
         return false;
     return TurnSlowEnough();
 }
@@ -1139,11 +1139,19 @@ bool CVehicle::GetTowBarPos(CVector& outPos, bool bCheckModelInfo, CVehicle* veh
 
 // 0x5D4760
 bool CVehicle::Save() {
+#ifdef NOTSA_PORTABLE
+    uint32 size = (uint32)notsa::FileSizeOf<CVehicleSaveStructure>; // 0x68 on file (the in-memory object is larger on LP64)
+#else
     uint32 size = sizeof(CVehicleSaveStructure);
+#endif
     CVehicleSaveStructure data;
     data.Construct(this);
     CGenericGameStorage::SaveDataToWorkBuffer(&size, sizeof(uint32)); // Unused, game ignores it on load and uses const value
+#ifdef NOTSA_PORTABLE
+    CGenericGameStorage::SaveDataToWorkBuffer(data);
+#else
     CGenericGameStorage::SaveDataToWorkBuffer(&data, size);
+#endif
     return true;
 }
 
@@ -1152,7 +1160,11 @@ bool CVehicle::Load() {
     uint32 size;
     CVehicleSaveStructure data;
     CGenericGameStorage::LoadDataFromWorkBuffer(&size, sizeof(uint32));
+#ifdef NOTSA_PORTABLE
+    CGenericGameStorage::LoadDataFromWorkBuffer(data); // BUG (kept): the size read above is ignored, the constant record size is used
+#else
     CGenericGameStorage::LoadDataFromWorkBuffer(&data, sizeof(CVehicleSaveStructure)); // BUG: Should use the value readen line above this, not constant
+#endif
     data.Extract(this);
     return true;
 }
@@ -1343,7 +1355,7 @@ float CVehicle::ProcessWheelRotation(tWheelState wheelState, const CVector& arg1
         return 0.0f;
 
     // 0x6D123C: the dot product accumulates (z + y) + x, the quotient stays on the x87 stack until the negation
-    const double dot = ((double)arg1.z * arg2.z + (double)arg1.y * arg2.y) + (double)arg1.x * arg2.x;
+    const x87d dot = ((x87d)arg1.z * arg2.z + (x87d)arg1.y * arg2.y) + (x87d)arg1.x * arg2.x;
     return (float)-(dot / arg3);
 }
 
@@ -1757,7 +1769,7 @@ bool CVehicle::CanPedEnterCar() {
     if (!(IsBike() || !(upZ <= 0.1f) || upZ < -0.1f)) {
         return false;
     }
-    const auto SqMag = [](const CVector& v) { return ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z; };
+    const auto SqMag = [](const CVector& v) { return ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z; };
     return !(SqMag(m_vecMoveSpeed) > (double)sq(0.2f)) && !(SqMag(m_vecTurnSpeed) > (double)sq(0.2f));
 }
 
@@ -1945,7 +1957,7 @@ float CVehicle::HeightAboveCeiling(float height, eFlightModel flightModel) {
 RwObject* SetVehicleAtomicVisibilityCB(RwObject* object, void* data) {
     assert(RwObjectGetType(object) == rpATOMIC);
     const auto atomic      = reinterpret_cast<RpAtomic*>(object);
-    const auto toSet = std::bit_cast<eAtomicComponentFlag>(data);
+    const auto toSet = static_cast<eAtomicComponentFlag>(reinterpret_cast<uintptr_t>(data));
     if (const auto current = CVisibilityPlugins::GetUserValue(atomic) & ATOMIC_MASK; current != ATOMIC_NONE) {
         RpAtomicSetFlags(atomic, current != toSet ? 0 : rpATOMICRENDER);
     }
@@ -1966,8 +1978,8 @@ void CVehicle::SetComponentVisibility(RwFrame* component, uint32 visibilityState
         if (visibilityState == eAtomicComponentFlag::ATOMIC_DAMAGED) {
             vehicleFlags.bIsDamaged = true;
         }
-        RwFrameForAllObjects(component, SetVehicleAtomicVisibilityCB, (void*)visibilityState);
-        RwFrameForAllChildren(component, SetVehicleAtomicVisibilityCB, (void*)visibilityState);
+        RwFrameForAllObjects(component, SetVehicleAtomicVisibilityCB, (void*)(uintptr_t)visibilityState);
+        RwFrameForAllChildren(component, SetVehicleAtomicVisibilityCB, (void*)(uintptr_t)visibilityState);
     }
 }
 
@@ -2064,7 +2076,7 @@ void CVehicle::UpdatePassengerList() {
 CPed* CVehicle::PickRandomPassenger() {
     // TODO: Add a function for this to random.hpp
 
-    const auto rnd = CGeneral::GetRandomNumberInRange(0u, std::size(m_apPassengers));
+    const auto rnd = CGeneral::GetRandomNumberInRange<size_t>(0u, std::size(m_apPassengers));
     for (auto i = 0u; i < std::size(m_apPassengers); i++) {
         if (const auto psgr = m_apPassengers[(rnd + i) % std::size(m_apPassengers)]) {
             return psgr;
@@ -2583,7 +2595,7 @@ void CVehicle::AddReplacementUpgrade(int32 modelIndex, int32 nodeId) {
         if (m_pHandlingData->m_bDoubleExhaust) {
             const auto second = CreateReplacementAtomic(mi, frame, (eAtomicComponentFlag)oldAtomicFlags, false, true);
             const auto mat = RwFrameGetMatrix(RpAtomicGetFrame(second));
-            mat->pos.x = (float)((double)RwFrameGetMatrix(frame)->pos.x * -2.0f); // 0x858B18 = -2.0f
+            mat->pos.x = (float)((x87d)RwFrameGetMatrix(frame)->pos.x * -2.0f); // 0x858B18 = -2.0f
             RwMatrixUpdate(mat);
         }
     } else if (nodeId == CAR_BUMP_FRONT || nodeId == CAR_BUMP_REAR) {
@@ -3138,18 +3150,18 @@ namespace {
 // 0x59C730 - a x b, each component computed in extended precision, then stored as float
 CVector Cross_x87(const CVector& a, const CVector& b) {
     return {
-        (float)((double)a.y * b.z - (double)a.z * b.y),
-        (float)((double)a.z * b.x - (double)a.x * b.z),
-        (float)((double)a.x * b.y - (double)a.y * b.x)
+        (float)((x87d)a.y * b.z - (x87d)a.z * b.y),
+        (float)((x87d)a.z * b.x - (x87d)a.x * b.z),
+        (float)((x87d)a.x * b.y - (x87d)a.y * b.x)
     };
 }
 
 // 0x59C790 - Rotates `v` by the 3x3 part of `m` (no translation)
 CVector Multiply3x3_x87(const CMatrix& m, const CVector& v) {
     return {
-        (float)(((double)m.GetUp().x * v.z + (double)m.GetForward().x * v.y) + (double)m.GetRight().x * v.x),
-        (float)(((double)m.GetUp().y * v.z + (double)m.GetRight().y * v.x) + (double)m.GetForward().y * v.y),
-        (float)(((double)m.GetUp().z * v.z + (double)m.GetRight().z * v.x) + (double)m.GetForward().z * v.y)
+        (float)(((x87d)m.GetUp().x * v.z + (x87d)m.GetForward().x * v.y) + (x87d)m.GetRight().x * v.x),
+        (float)(((x87d)m.GetUp().y * v.z + (x87d)m.GetRight().y * v.x) + (x87d)m.GetForward().y * v.y),
+        (float)(((x87d)m.GetUp().z * v.z + (x87d)m.GetRight().z * v.x) + (x87d)m.GetForward().z * v.y)
     };
 }
 
@@ -3157,22 +3169,22 @@ CVector Multiply3x3_x87(const CMatrix& m, const CVector& v) {
 CVector TransformPoint_x87(const CMatrix& m, const CVector& v) {
     const auto& p = m.GetPosition();
     return {
-        (float)((((double)m.GetUp().x * v.z + (double)m.GetForward().x * v.y) + (double)m.GetRight().x * v.x) + (double)p.x),
-        (float)((((double)m.GetUp().y * v.z + (double)m.GetRight().y * v.x) + (double)m.GetForward().y * v.y) + (double)p.y),
-        (float)((((double)m.GetUp().z * v.z + (double)m.GetRight().z * v.x) + (double)m.GetForward().z * v.y) + (double)p.z)
+        (float)((((x87d)m.GetUp().x * v.z + (x87d)m.GetForward().x * v.y) + (x87d)m.GetRight().x * v.x) + (x87d)p.x),
+        (float)((((x87d)m.GetUp().y * v.z + (x87d)m.GetRight().y * v.x) + (x87d)m.GetForward().y * v.y) + (x87d)p.y),
+        (float)((((x87d)m.GetUp().z * v.z + (x87d)m.GetRight().z * v.x) + (x87d)m.GetForward().z * v.y) + (x87d)p.z)
     };
 }
 
 // 0x406DA0 - x^2 + y^2 + z^2 (the result stays in extended precision in the original)
 double SquaredMagnitude_x87(const CVector& v) {
-    return ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    return ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
 }
 
 // 0x59C910 - In place normalisation
 void Normalise_x87(CVector& v) {
     const double sq = SquaredMagnitude_x87(v);
     if (sq > 0.0 || std::isnan(sq)) {
-        const double inv = 1.0 / std::sqrt(sq);
+        const x87d inv = (x87d)1.0 / X87R(std::sqrt(sq));
         v.x = (float)(inv * v.x);
         v.y = (float)(inv * v.y);
         v.z = (float)(inv * v.z);
@@ -3212,14 +3224,14 @@ void CVehicle::FireUnguidedMissile(eOrdnanceType type, bool bCheckTime) {
 
         // This places a point somewhere in front of us, depending on our velocity's direction (x87 evaluation order, see asm)
         const auto& fwd      = m_matrix->GetForward();
-        const double speedFwd = ((double)m_vecMoveSpeed.z * fwd.z + (double)m_vecMoveSpeed.y * fwd.y) + (double)m_vecMoveSpeed.x * fwd.x;
-        const double s        = speedFwd < 0.0 ? 0.0 : speedFwd; // Note: NaN is passed through
+        const x87d speedFwd = ((x87d)m_vecMoveSpeed.z * fwd.z + (x87d)m_vecMoveSpeed.y * fwd.y) + (x87d)m_vecMoveSpeed.x * fwd.x;
+        const x87d s        = speedFwd < (x87d)0.0 ? (x87d)0.0 : speedFwd; // Note: NaN is passed through
         const float  fy       = (float)(s * fwd.y);
         const float  fz       = (float)(s * fwd.z);
         const CVector offset{
             (float)((s * fwd.x) * CTimer::ms_fTimeStep),
-            (float)((double)fy * CTimer::ms_fTimeStep),
-            (float)((double)fz * CTimer::ms_fTimeStep)
+            (float)((x87d)fy * CTimer::ms_fTimeStep),
+            (float)((x87d)fz * CTimer::ms_fTimeStep)
         };
 
         const CVector posn = TransformPoint_x87(*m_matrix, ordnancePos);
@@ -3409,35 +3421,35 @@ void CVehicle::ProcessWheel(CVector& wheelFwd, CVector& wheelRight,
     const auto& cs = wheelContactSpeed;
 
     // 0x6D6C10 - ((y + x) + z), spilled to float
-    const float contactSpeedFwd = (float)(((double)wheelFwd.y * cs.y + (double)wheelFwd.x * cs.x) + (double)cs.z * wheelFwd.z);
+    const float contactSpeedFwd = (float)(((x87d)wheelFwd.y * cs.y + (x87d)wheelFwd.x * cs.x) + (x87d)cs.z * wheelFwd.z);
 
     bBraking = !(brake == 0.0f); // `fcom; test ah, 0x44; jnp`: NaN counts as braking
     bDriving = !bBraking && !(thrust == 0.0f);
 
-    adhesion = (float)((double)CTimer::GetTimeStep() * adhesion); // spilled
+    adhesion = (float)((x87d)CTimer::GetTimeStep() * adhesion); // spilled
     if (*wheelState != WHEEL_STATE_NORMAL) {
-        adhesion = (float)((double)adhesion * m_pHandlingData->m_fTractionLoss);
+        adhesion = (float)((x87d)adhesion * m_pHandlingData->m_fTractionLoss);
         bAlreadySkidding = true;
         if (*wheelState == WHEEL_STATE_SPINNING && statusIsPlayerLike()) {
-            adhesion = (float)((1.0 - std::fabs((double)m_GasPedal) * WS_ALREADY_SPINNING_LOSS) * adhesion);
+            adhesion = (float)(((x87d)1.0 - std::fabs((x87d)m_GasPedal) * WS_ALREADY_SPINNING_LOSS) * adhesion);
         }
     }
     *wheelState = WHEEL_STATE_NORMAL;
 
     // 0x6D6CEC - ((y + z) + x), spilled to float
-    const float contactSpeedRight = (float)(((double)wheelRight.y * cs.y + (double)wheelRight.z * cs.z) + (double)wheelRight.x * cs.x);
+    const float contactSpeedRight = (float)(((x87d)wheelRight.y * cs.y + (x87d)wheelRight.z * cs.z) + (x87d)wheelRight.x * cs.x);
 
-    double right = 0.0;   // the x87 stack value
+    x87d right = (x87d)0.0;   // the x87 stack value
     float  fwd   = 0.0f;  // [esp + 0x10]
     if (!(contactSpeedRight == 0.0f)) {
-        const float rightF = (float)(-((double)contactSpeedRight / wheelsOnGround)); // fild; fdivr; fchs; fst
+        const float rightF = (float)(-((x87d)contactSpeedRight / wheelsOnGround)); // fild; fdivr; fchs; fst
         right = rightF;
         if (wheelStatus == WHEEL_STATUS_BURST) {
             const float speed = (contactSpeedFwd < fBurstSpeedMax) ? contactSpeedFwd : fBurstSpeedMax;
             const float hi    = fBurstTyreMod;
-            const float lo    = (float)((double)fBurstTyreMod * -1.0f);
-            const double rnd  = (double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL; // 0x6D6D76: rnd * (hi - lo) + lo
-            right = ((rnd * ((double)hi - lo) + lo) * speed) + rightF;
+            const float lo    = (float)((x87d)fBurstTyreMod * -1.0f);
+            const x87d rnd  = (x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL; // 0x6D6D76: rnd * (hi - lo) + lo
+            right = ((rnd * ((x87d)hi - lo) + lo) * speed) + rightF;
         }
     }
 
@@ -3454,14 +3466,14 @@ void CVehicle::ProcessWheel(CVector& wheelFwd, CVector& wheelRight,
             }
         }
     } else if (!(contactSpeedFwd == 0.0f)) {
-        fwd = (float)(-((double)contactSpeedFwd / wheelsOnGround));
-        double brakeV = brake;
+        fwd = (float)(-((x87d)contactSpeedFwd / wheelsOnGround));
+        x87d brakeV = brake;
         if (!bBraking && std::fabs(m_GasPedal) < 0.01f) { // `fcomp 0.01; test ah, 5; jp` => NaN keeps the passed brake
-            const double fric = gHandlingDataMgr.fWheelFriction;
+            const x87d fric = gHandlingDataMgr.fWheelFriction;
             if (m_nVehicleType == VEHICLE_TYPE_BIKE) {
-                brakeV = (fric * 0.6f) / ((double)m_pHandlingData->m_fMass + 200.0f);
+                brakeV = (fric * 0.6f) / ((x87d)m_pHandlingData->m_fMass + 200.0f);
             } else if (IsSubPlane()) {
-                brakeV = 0.0;
+                brakeV = (x87d)0.0;
             } else {
                 brakeV = fric / m_pHandlingData->m_fMass;
                 if (m_pHandlingData->m_fMass < 500.0f) {
@@ -3480,7 +3492,7 @@ void CVehicle::ProcessWheel(CVector& wheelFwd, CVector& wheelRight,
                 fwd = (float)brakeV;
             }
         } else {
-            const double negBrake = -brakeV;
+            const x87d negBrake = -brakeV;
             if (fwd < negBrake) {
                 fwd = (float)negBrake;
             }
@@ -3488,24 +3500,24 @@ void CVehicle::ProcessWheel(CVector& wheelFwd, CVector& wheelRight,
     }
 
     // 0x6D6F32
-    const double sumSq  = right * right + (double)fwd * fwd;
+    const x87d sumSq  = right * right + (x87d)fwd * fwd;
     const float  sumSqF = (float)sumSq;
-    if (sumSq > (double)adhesion * adhesion) {
+    if (sumSq > (x87d)adhesion * adhesion) {
         if (*wheelState != WHEEL_STATE_FIXED) {
-            double tractionLimit = WS_TRAC_FRAC_LIMIT;
+            x87d tractionLimit = WS_TRAC_FRAC_LIMIT;
             if (contactSpeedFwd > 0.15f && (wheelId == 0 || wheelId == 2)) { // `test al, al; je / cmp al, 2`
                 tractionLimit += tractionLimit;
             }
-            *wheelState = (bDriving && tractionLimit * adhesion < std::fabs((double)fwd)) ? WHEEL_STATE_SPINNING : WHEEL_STATE_SKIDDING;
+            *wheelState = (bDriving && tractionLimit * adhesion < std::fabs((x87d)fwd)) ? WHEEL_STATE_SPINNING : WHEEL_STATE_SKIDDING;
         }
-        double tractionLoss = m_pHandlingData->m_fTractionLoss;
+        x87d tractionLoss = m_pHandlingData->m_fTractionLoss;
         if (bAlreadySkidding) {
-            tractionLoss = 1.0;
+            tractionLoss = (x87d)1.0;
         } else if (*wheelState == WHEEL_STATE_SPINNING && statusIsPlayerLike()) {
-            tractionLoss = (1.0 - std::fabs((double)m_GasPedal) * WS_ALREADY_SPINNING_LOSS) * tractionLoss;
+            tractionLoss = ((x87d)1.0 - std::fabs((x87d)m_GasPedal) * WS_ALREADY_SPINNING_LOSS) * tractionLoss;
         }
-        const double scale = (tractionLoss / std::sqrt((double)sumSqF)) * adhesion;
-        fwd   = (float)((double)fwd * scale);
+        const x87d scale = (tractionLoss / std::sqrt((x87d)sumSqF)) * adhesion;
+        fwd   = (float)((x87d)fwd * scale);
         right = right * scale;
     }
 
@@ -3514,39 +3526,39 @@ void CVehicle::ProcessWheel(CVector& wheelFwd, CVector& wheelRight,
     }
 
     // 0x6D703C - total force direction: spilled products, y/z sums rounded to float, z of the right product unrounded
-    const float fx = (float)((double)fwd * wheelFwd.x), fy = (float)((double)fwd * wheelFwd.y), fz = (float)((double)fwd * wheelFwd.z);
+    const float fx = (float)((x87d)fwd * wheelFwd.x), fy = (float)((x87d)fwd * wheelFwd.y), fz = (float)((x87d)fwd * wheelFwd.z);
     const float rx = (float)(right * wheelRight.x), ry = (float)(right * wheelRight.y);
-    const double rzExt = right * wheelRight.z;
-    const CVector total{ (float)((double)rx + fx), (float)((double)ry + fy), (float)(rzExt + fz) };
+    const x87d rzExt = right * wheelRight.z;
+    const CVector total{ (float)((x87d)rx + fx), (float)((x87d)ry + fy), (float)(rzExt + fz) };
 
     CVector turnDir = total;
     bool    separateTurnForce = false;
     const float antiDive = m_pHandlingData->m_fSuspensionAntiDiveMultiplier;
     if (antiDive > 0.0f && (bBraking || bDriving)) { // 0x6D70AC
-        const double m = bBraking ? (double)antiDive : (double)antiDive * 0.5f;
+        const x87d m = bBraking ? (x87d)antiDive : (x87d)antiDive * 0.5f;
         separateTurnForce = true;
-        const double mfx = m * wheelFwd.x;
+        const x87d mfx = m * wheelFwd.x;
         const float  mfy = (float)(m * wheelFwd.y), mfz = (float)(m * wheelFwd.z);
-        const double ax  = mfx * fwd;
-        const double ay  = (double)mfy * fwd;
-        const float  az  = (float)((double)mfz * fwd);
-        turnDir.x = (float)((double)total.x - ax);
-        turnDir.y = (float)((double)total.y - ay);
-        turnDir.z = (float)((double)total.z - az);
+        const x87d ax  = mfx * fwd;
+        const x87d ay  = (x87d)mfy * fwd;
+        const float  az  = (float)((x87d)mfz * fwd);
+        turnDir.x = (float)((x87d)total.x - ax);
+        turnDir.y = (float)((x87d)total.y - ay);
+        turnDir.z = (float)((x87d)total.z - az);
     }
 
     // 0x6D7141 - magnitudes ((z^2 + y^2) + x^2), spilled to float
-    const float speed = (float)std::sqrt(((double)total.z * total.z + (double)total.y * total.y) + (double)total.x * total.x);
+    const float speed = (float)std::sqrt(((x87d)total.z * total.z + (x87d)total.y * total.y) + (x87d)total.x * total.x);
     float turnSpeed   = speed;
     if (separateTurnForce) {
-        turnSpeed = (float)std::sqrt(((double)turnDir.z * turnDir.z + (double)turnDir.y * turnDir.y) + (double)turnDir.x * turnDir.x);
+        turnSpeed = (float)std::sqrt(((x87d)turnDir.z * turnDir.z + (x87d)turnDir.y * turnDir.y) + (x87d)turnDir.x * turnDir.x);
     }
 
     CVector direction = total; // 0x6D71BF: normalise (reciprocal in extended precision, x = 1 for a zero length)
     if (!(speed > 0.0f) && !std::isnan(speed)) {
         direction.x = 1.0f;
     } else {
-        const double recip = 1.0 / (double)speed;
+        const x87d recip = (x87d)1.0 / (x87d)speed;
         direction.x = (float)(total.x * recip);
         direction.y = (float)(total.y * recip);
         direction.z = (float)(total.z * recip);
@@ -3556,7 +3568,7 @@ void CVehicle::ProcessWheel(CVector& wheelFwd, CVector& wheelRight,
     } else if (!(turnSpeed > 0.0f) && !std::isnan(turnSpeed)) {
         turnDir.x = 1.0f;
     } else {
-        const double recip = 1.0 / (double)turnSpeed;
+        const x87d recip = (x87d)1.0 / (x87d)turnSpeed;
         turnDir.x = (float)(turnDir.x * recip);
         turnDir.y = (float)(turnDir.y * recip);
         turnDir.z = (float)(turnDir.z * recip);
@@ -3564,13 +3576,13 @@ void CVehicle::ProcessWheel(CVector& wheelFwd, CVector& wheelRight,
 
     // 0x6D7291 - 0x59C730 cross product (extended), then 1 / (|cross|^2 / turnMass + 1 / mass) * turnSpeed
     const CVector cross{
-        (float)((double)turnDir.z * wheelContactPoint.y - (double)wheelContactPoint.z * turnDir.y),
-        (float)((double)turnDir.x * wheelContactPoint.z - (double)wheelContactPoint.x * turnDir.z),
-        (float)((double)turnDir.y * wheelContactPoint.x - (double)wheelContactPoint.y * turnDir.x)
+        (float)((x87d)turnDir.z * wheelContactPoint.y - (x87d)wheelContactPoint.z * turnDir.y),
+        (float)((x87d)turnDir.x * wheelContactPoint.z - (x87d)wheelContactPoint.x * turnDir.z),
+        (float)((x87d)turnDir.y * wheelContactPoint.x - (x87d)wheelContactPoint.y * turnDir.x)
     };
-    const double force = (double)m_fMass * speed;
-    const double cpSq  = ((double)cross.x * cross.x + (double)cross.y * cross.y) + (double)cross.z * cross.z;
-    const double turnForce = (1.0 / (cpSq / m_fTurnMass + 1.0 / m_fMass)) * turnSpeed;
+    const x87d force = (x87d)m_fMass * speed;
+    const x87d cpSq  = ((x87d)cross.x * cross.x + (x87d)cross.y * cross.y) + (x87d)cross.z * cross.z;
+    const x87d turnForce = ((x87d)1.0 / (cpSq / m_fTurnMass + (x87d)1.0 / m_fMass)) * turnSpeed;
 
     ApplyMoveForce(CVector{ (float)(force * direction.x), (float)(force * direction.y), (float)(force * direction.z) }); // 0x5429F0
     ApplyTurnForce(CVector{ (float)(turnForce * turnDir.x), (float)(turnForce * turnDir.y), (float)(turnForce * turnDir.z) }, wheelContactPoint); // 0x542A50
@@ -3585,10 +3597,10 @@ void CVehicle::ProcessBikeWheel(CVector& wheelFwd, CVector& wheelRight, CVector&
     NOTSA_GLOBAL_LOCAL(bReversing, 0xC1CDB0, (bool), {}); // thrust < 0 (only set while not braking)
     NOTSA_GLOBAL_LOCAL(bAlreadySkidding, 0xC1CDAF, (bool), {}); // BUG: never reset to false by the original
 
-    const float contactSpeedFwd = (float)((double)wheelFwd.y * wheelContactSpeed.y + (double)wheelFwd.z * wheelContactSpeed.z + (double)wheelFwd.x * wheelContactSpeed.x);
+    const float contactSpeedFwd = (float)((x87d)wheelFwd.y * wheelContactSpeed.y + (x87d)wheelFwd.z * wheelContactSpeed.z + (x87d)wheelFwd.x * wheelContactSpeed.x);
 
     float  fwdOut = 0.f;
-    double right  = 0.0;
+    x87d right  = (x87d)0.0;
 
     if (brake == 0.f) {
         bBraking   = false;
@@ -3612,15 +3624,15 @@ void CVehicle::ProcessBikeWheel(CVector& wheelFwd, CVector& wheelRight, CVector&
     }
 
     if (special != 2 && special != 3) {
-        const float contactSpeedRight = (float)((double)wheelRight.z * wheelContactSpeed.z + (double)wheelRight.y * wheelContactSpeed.y + (double)wheelRight.x * wheelContactSpeed.x);
+        const float contactSpeedRight = (float)((x87d)wheelRight.z * wheelContactSpeed.z + (x87d)wheelRight.y * wheelContactSpeed.y + (x87d)wheelRight.x * wheelContactSpeed.x);
         if (contactSpeedRight != 0.f) {
-            right = -((double)contactSpeedRight / wheelsOnGround);
+            right = -((x87d)contactSpeedRight / wheelsOnGround);
             if (wheelStatus == WHEEL_STATUS_BURST) {
                 const float  rightF  = (float)right;
                 const float  speed   = contactSpeedFwd < fBurstBikeSpeedMax ? contactSpeedFwd : fBurstBikeSpeedMax;
-                const double lo      = -(double)fBurstBikeTyreMod;
-                const double rnd     = (double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL;
-                right = (rnd * ((double)fBurstBikeTyreMod - lo) + lo) * speed + rightF;
+                const x87d lo      = -(x87d)fBurstBikeTyreMod;
+                const x87d rnd     = (x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL;
+                right = (rnd * ((x87d)fBurstBikeTyreMod - lo) + lo) * speed + rightF;
             }
         }
     }
@@ -3636,20 +3648,20 @@ void CVehicle::ProcessBikeWheel(CVector& wheelFwd, CVector& wheelRight, CVector&
             right = adhesion;
         }
     } else if (contactSpeedFwd != 0.f) {
-        fwdOut = (float)-((double)contactSpeedFwd / wheelsOnGround);
+        fwdOut = (float)-((x87d)contactSpeedFwd / wheelsOnGround);
 
-        double brakeVal = brake;
+        x87d brakeVal = brake;
         if (!bBraking && std::fabs(m_GasPedal) < 0.01f) {
             const auto fric = gHandlingDataMgr.fWheelFriction;
             const auto mass = m_pHandlingData->m_fMass;
             if (m_nVehicleSubType == VEHICLE_TYPE_BMX) {
                 if (fwdOut > -0.05f && fwdOut < 0.05f) {
-                    brakeVal = ((double)fric * 0.5f) / ((double)mass + 200.0f);
+                    brakeVal = ((x87d)fric * 0.5f) / ((x87d)mass + 200.0f);
                 }
             } else if (m_nVehicleType == VEHICLE_TYPE_BIKE) {
-                brakeVal = ((double)fric * 0.6f) / ((double)mass + 200.0f);
+                brakeVal = ((x87d)fric * 0.6f) / ((x87d)mass + 200.0f);
             } else {
-                brakeVal = (double)fric / mass;
+                brakeVal = (x87d)fric / mass;
                 if (mass < 500.f || m_nModelIndex == MODEL_RCBANDIT) {
                     brakeVal *= 0.2f;
                 }
@@ -3665,7 +3677,7 @@ void CVehicle::ProcessBikeWheel(CVector& wheelFwd, CVector& wheelRight, CVector&
                 fwdOut = (float)brakeVal;
             }
         } else {
-            const double negBrake = -brakeVal;
+            const x87d negBrake = -brakeVal;
             if (fwdOut < negBrake) {
                 fwdOut = (float)negBrake;
             }
@@ -3673,14 +3685,14 @@ void CVehicle::ProcessBikeWheel(CVector& wheelFwd, CVector& wheelRight, CVector&
     }
 
     const float adhesionSq = adhesion * adhesion;
-    const double sumSq     = right * right + (double)fwdOut * fwdOut;
+    const x87d sumSq     = right * right + (x87d)fwdOut * fwdOut;
     const float  sumSqF    = (float)sumSq;
     if (!(sumSq <= adhesionSq)) {
         if (*wheelState != WHEEL_STATE_FIXED) {
             *wheelState = (bDriving && contactSpeedFwd < 0.1f) ? WHEEL_STATE_SPINNING : WHEEL_STATE_SKIDDING;
         }
         const float tractionLoss = alreadySkidding ? 1.f : m_pHandlingData->m_fTractionLoss;
-        const double scale = ((double)tractionLoss / std::sqrt((double)sumSqF)) * adhesion;
+        const x87d scale = ((x87d)tractionLoss / std::sqrt((x87d)sumSqF)) * adhesion;
         fwdOut = (float)(fwdOut * scale);
         right  = right * scale;
         if (destabTraction < 1.f) {
@@ -3690,8 +3702,8 @@ void CVehicle::ProcessBikeWheel(CVector& wheelFwd, CVector& wheelRight, CVector&
         if (!alreadySkidding) {
             destabTraction = destabTraction * m_pHandlingData->m_fTractionLoss;
         }
-        if ((double)adhesionSq * destabTraction * destabTraction < sumSqF) {
-            right = (((double)adhesion * destabTraction) / std::sqrt((double)sumSqF)) * right;
+        if ((x87d)adhesionSq * destabTraction * destabTraction < sumSqF) {
+            right = (((x87d)adhesion * destabTraction) / std::sqrt((x87d)sumSqF)) * right;
         }
     }
 
@@ -3712,54 +3724,54 @@ void CVehicle::ProcessBikeWheel(CVector& wheelFwd, CVector& wheelRight, CVector&
     };
     const CVector forceBeforeNorm = force;
     { // 0x59C910 - the sum of squares and the reciprocal stay in the FPU registers (extended precision); the shared `CVector::Normalise` rounds them to float
-        const double sumSq = (double)force.x * force.x + (double)force.y * force.y + (double)force.z * force.z;
+        const x87d sumSq = (x87d)force.x * force.x + (x87d)force.y * force.y + (x87d)force.z * force.z;
         if (sumSq <= 0.0) {
             force.x = 1.f;
         } else {
-            const double recip = 1.0 / std::sqrt(sumSq);
+            const x87d recip = (x87d)1.0 / std::sqrt(sumSq);
             force.x = (float)(force.x * recip);
             force.y = (float)(force.y * recip);
             force.z = (float)(force.z * recip);
         }
     }
 
-    const float mag = (float)std::sqrt((double)forceBeforeNorm.z * forceBeforeNorm.z + (double)forceBeforeNorm.y * forceBeforeNorm.y + (double)forceBeforeNorm.x * forceBeforeNorm.x);
+    const float mag = (float)std::sqrt((x87d)forceBeforeNorm.z * forceBeforeNorm.z + (x87d)forceBeforeNorm.y * forceBeforeNorm.y + (x87d)forceBeforeNorm.x * forceBeforeNorm.x);
     // 0x59C730 - the products stay in the FPU registers (extended precision); the shared `CrossProduct` rounds them to float
     const CVector cp{
-        (float)((double)wheelContactPoint.y * force.z - (double)wheelContactPoint.z * force.y),
-        (float)((double)wheelContactPoint.z * force.x - (double)wheelContactPoint.x * force.z),
-        (float)((double)wheelContactPoint.x * force.y - (double)wheelContactPoint.y * force.x)
+        (float)((x87d)wheelContactPoint.y * force.z - (x87d)wheelContactPoint.z * force.y),
+        (float)((x87d)wheelContactPoint.z * force.x - (x87d)wheelContactPoint.x * force.z),
+        (float)((x87d)wheelContactPoint.x * force.y - (x87d)wheelContactPoint.y * force.x)
     };
-    const double cpSq = ((double)cp.x * cp.x + (double)cp.y * cp.y) + (double)cp.z * cp.z;
-    const double moveScale = (double)m_fMass * mag;
-    const double turnScale = (1.0 / (cpSq / m_fTurnMass + 1.0 / m_fMass)) * mag;
+    const x87d cpSq = ((x87d)cp.x * cp.x + (x87d)cp.y * cp.y) + (x87d)cp.z * cp.z;
+    const x87d moveScale = (x87d)m_fMass * mag;
+    const x87d turnScale = ((x87d)1.0 / (cpSq / m_fTurnMass + (x87d)1.0 / m_fMass)) * mag;
 
     ApplyMoveForce(CVector{ (float)(force.x * moveScale), (float)(force.y * moveScale), (float)(force.z * moveScale) }); // 0x5429F0
     const CVector turnForce{ (float)(force.x * turnScale), (float)(force.y * turnScale), (float)(force.z * turnScale) };
 
     const auto& R = m_matrix->GetRight();
     const auto& F = m_matrix->GetForward();
-    const float turnRight = (float)(((double)turnForce.z * R.z + (double)turnForce.y * R.y) + (double)turnForce.x * R.x);
-    const float cpRight   = (float)(((double)R.y * wheelContactPoint.y + (double)R.z * wheelContactPoint.z) + (double)wheelContactPoint.x * R.x);
-    const float cpFwd     = (float)(((double)F.y * wheelContactPoint.y + (double)F.z * wheelContactPoint.z) + (double)wheelContactPoint.x * F.x);
+    const float turnRight = (float)(((x87d)turnForce.z * R.z + (x87d)turnForce.y * R.y) + (x87d)turnForce.x * R.x);
+    const float cpRight   = (float)(((x87d)R.y * wheelContactPoint.y + (x87d)R.z * wheelContactPoint.z) + (x87d)wheelContactPoint.x * R.x);
+    const float cpFwd     = (float)(((x87d)F.y * wheelContactPoint.y + (x87d)F.z * wheelContactPoint.z) + (x87d)wheelContactPoint.x * F.x);
 
     if (wheelId != 1 || (!bBraking && !bReversing)) {
-        const double ax = (double)cpRight * R.x;
-        const double ay = (double)cpRight * R.y;
+        const x87d ax = (x87d)cpRight * R.x;
+        const x87d ay = (x87d)cpRight * R.y;
         const float  az = cpRight * R.z;
         const CVector point{
             (float)(wheelContactPoint.x - ax),
             (float)(wheelContactPoint.y - ay),
             (float)(wheelContactPoint.z - az)
         };
-        const double bx = (double)turnRight * R.x;
-        const double by = (double)turnRight * R.y;
+        const x87d bx = (x87d)turnRight * R.x;
+        const x87d by = (x87d)turnRight * R.y;
         const float  bz = turnRight * R.z;
         const float  tx = (float)(turnForce.x - bx);
         const CVector f{
             tx * fTweakBikeWheelTurnForce,
             (float)((turnForce.y - by) * fTweakBikeWheelTurnForce),
-            (float)((turnForce.z - (double)bz) * fTweakBikeWheelTurnForce)
+            (float)((turnForce.z - (x87d)bz) * fTweakBikeWheelTurnForce)
         };
         ApplyTurnForce(f, point); // 0x542A50
     }
@@ -3778,8 +3790,8 @@ auto CVehicle::FindTyreNearestPoint(CVector2D point) -> eNearestCarWheel {
     const auto  pos = GetPosition();
     const float relX = point.x - pos.x, relY = point.y - pos.y;
     const auto  fwd = mat.GetForward(), right = mat.GetRight();
-    const double dotFwd = ((double)relY * fwd.y + (double)relX * fwd.x) + (double)fwd.z * 0.0f;
-    const float  dotRight = (float)(((double)relY * right.y + (double)relX * right.x) + (double)right.z * 0.0f);
+    const x87d dotFwd = ((x87d)relY * fwd.y + (x87d)relX * fwd.x) + (x87d)fwd.z * 0.0f;
+    const float  dotRight = (float)(((x87d)relY * right.y + (x87d)relX * right.x) + (x87d)right.z * 0.0f);
     const bool isFront = dotFwd > 0.0;
     if (IsBike()) { // only distinguishes front vs rear
         return isFront ? eNearestCarWheel::FRONT_LEFT : eNearestCarWheel::REAR_LEFT;
@@ -4024,20 +4036,20 @@ bool CVehicle::IsSphereTouchingVehicle(CVector posn, float radius) {
 
 // 0x4082C0 / 0x406DA0 - (squared) magnitude, left in the FPU
 static double SquaredMagnitudeExt(const CVector& v) {
-    return ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    return ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
 }
 
 // 0x40FDB0 - `DotProduct`, left in the FPU
 static double DotProductExt(const CVector& a, const CVector& b) {
-    return ((double)a.z * b.z + (double)a.y * b.y) + (double)a.x * b.x;
+    return ((x87d)a.z * b.z + (x87d)a.y * b.y) + (x87d)a.x * b.x;
 }
 
 // 0x59C730 - `CrossProduct`, the products stay in the FPU registers
 static CVector CrossProductExt(const CVector& a, const CVector& b) {
     return {
-        (float)((double)a.y * b.z - (double)a.z * b.y),
-        (float)((double)a.z * b.x - (double)a.x * b.z),
-        (float)((double)a.x * b.y - (double)b.x * a.y)
+        (float)((x87d)a.y * b.z - (x87d)a.z * b.y),
+        (float)((x87d)a.z * b.x - (x87d)a.x * b.z),
+        (float)((x87d)a.x * b.y - (x87d)b.x * a.y)
     };
 }
 
@@ -4045,16 +4057,16 @@ static CVector CrossProductExt(const CVector& a, const CVector& b) {
 static CVector Multiply3x3Ext(const CMatrix& m, const CVector& v) {
     const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp();
     return {
-        (float)(((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x),
-        (float)(((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y),
-        (float)(((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y)
+        (float)(((x87d)u.x * v.z + (x87d)f.x * v.y) + (x87d)r.x * v.x),
+        (float)(((x87d)u.y * v.z + (x87d)r.y * v.x) + (x87d)f.y * v.y),
+        (float)(((x87d)u.z * v.z + (x87d)r.z * v.x) + (x87d)f.z * v.y)
     };
 }
 
 // Hydra: the thrust direction rotates with the nozzles (0x6D8FFF & 0x6D9C10)
 static CVector FlyingControlHydraDirection(const CVehicle& v) {
     const auto&  mat   = *v.m_matrix;
-    const double angle = ((double)v.AsAutomobile()->m_wMiscComponentAngle * 1.5707964f) / (double)(int16)CPlane::HARRIER_NOZZLE_ROTATE_LIMIT;
+    const x87d angle = ((x87d)v.AsAutomobile()->m_wMiscComponentAngle * 1.5707964f) / (x87d)(int16)CPlane::HARRIER_NOZZLE_ROTATE_LIMIT;
     const float  cosA  = (float)x87::cos(angle);
     const float  sinA  = (float)x87::sin(angle);
     return (mat.GetForward() * cosA) + (mat.GetUp() * sinA);
@@ -4084,38 +4096,38 @@ static void FlyingControlModel0(const FlyingControlCtx& c) {
     const float   ts  = CTimer::ms_fTimeStep;
     const CVector right = mat.GetRight(), fwd = mat.GetForward(), up = mat.GetUp();
 
-    const float rightDot = (float)((((double)V.z * right.z + (double)V.y * right.y) + (double)V.x * right.x) * -1.0f);
-    const float rightFac = (float)((double)rightDot / MagnitudeExt(V));
+    const float rightDot = (float)((((x87d)V.z * right.z + (x87d)V.y * right.y) + (x87d)V.x * right.x) * -1.0f);
+    const float rightFac = (float)(X87R((double)rightDot / MagnitudeExt(V)));
 
-    const float dotFwd = (float)(((double)fwd.y * V.y + (double)fwd.x * V.x) + (double)fwd.z * V.z);
-    const float k      = (float)((SquaredMagnitudeExt(V) * dotFwd) * dotFwd);
+    const float dotFwd = (float)(((x87d)fwd.y * V.y + (x87d)fwd.x * V.x) + (x87d)fwd.z * V.z);
+    const float k      = (float)((X87R(SquaredMagnitudeExt(V) * dotFwd)) * dotFwd);
 
     const CVector fwdScaled = fwd * -4.0f;
 
-    const float steerTurn = (float)(((((double)v.m_fSteerAngle * 0.001 + (double)rightFac * 0.003) * ts) * k) * v.m_fTurnMass);
+    const float steerTurn = (float)((((X87R((double)v.m_fSteerAngle * 0.001) + X87R((double)rightFac * 0.003)) * ts) * k) * v.m_fTurnMass);
     v.ApplyTurnForce(right * steerTurn, fwdScaled);
 
-    const float moveScale = (float)(((((double)ts * v.m_fMass) * k) * rightFac) * 0.2f);
+    const float moveScale = (float)(((((x87d)ts * v.m_fMass) * k) * rightFac) * 0.2f);
     const CVector sideMove = right * moveScale;
     v.ApplyMoveForce(sideMove);
     v.ApplyTurnForce(sideMove, up * 2.0f);
 
-    const float upDot = (float)((((double)V.z * up.z + (double)V.y * up.y) + (double)V.x * up.x) * -1.0f);
-    const float upFac = (float)((double)upDot / MagnitudeExt(V));
+    const float upDot = (float)((((x87d)V.z * up.z + (x87d)V.y * up.y) + (x87d)V.x * up.x) * -1.0f);
+    const float upFac = (float)(X87R((double)upDot / MagnitudeExt(V)));
 
-    double pitchIn = 0.0;
+    x87d pitchIn = (x87d)0.0;
     if (c.pad) {
-        pitchIn = (double)(int32)c.pad->GetSteeringUpDown() * -0.0078125f;
+        pitchIn = (x87d)(int32)c.pad->GetSteeringUpDown() * -0.0078125f;
     }
     pitchIn *= 0.001f;
-    const float pitchTurn = (float)(((((pitchIn + (double)upFac * 0.002f) * ts) * k) * v.m_fTurnMass));
+    const float pitchTurn = (float)(((((pitchIn + (x87d)upFac * 0.002f) * ts) * k) * v.m_fTurnMass));
     v.ApplyTurnForce(up * pitchTurn, fwdScaled);
 
-    float lift = (float)((((((double)upFac * 3.5 + 0.5) * v.m_fMass) * ts) * k) * 0.05);
+    float lift = (float)(X87R((((((x87d)upFac * (x87d)3.5 + (x87d)0.5) * v.m_fMass) * ts) * k) * 0.05));
     if (v.GetStatus() == STATUS_PLAYER || v.GetStatus() == STATUS_REMOTE_CONTROLLED) {
-        if (((double)ts * v.m_fMass) * 0.008f < lift) {
+        if (((x87d)ts * v.m_fMass) * 0.008f < lift) {
             if (v.HeightAboveCeiling(v.GetPosition().z, FLIGHT_MODEL_UNK) > 0.0f) {
-                lift = (float)(((double)v.m_fMass * ts) * (double)0.0072f);
+                lift = (float)(((x87d)v.m_fMass * ts) * (x87d)0.0072f);
             }
         }
     }
@@ -4123,7 +4135,7 @@ static void FlyingControlModel0(const FlyingControlCtx& c) {
     v.ApplyMoveForce(liftForce);
     v.ApplyTurnForce(liftForce, (up * 2.0f) + c.com);
 
-    v.m_vecTurnSpeed.y = (float)(std::pow((double)0.9f, (double)ts) * v.m_vecTurnSpeed.y);
+    v.m_vecTurnSpeed.y = (float)(X87R(std::pow((double)0.9f, (double)ts) * v.m_vecTurnSpeed.y));
 }
 
 // 0x6D8B1D - flight models 1 (baron), 3 (plane), 4, 5 (boat)
@@ -4144,44 +4156,44 @@ static void FlyingControlModel1345(FlyingControlCtx& c) {
     if (skid == FLYING_CONTROL_NOT_SET) {
         skid = 0.0f;
         if (pad) {
-            skid = (float)((double)(int32)pad->GetSteeringLeftRight() * 0.0078125f);
+            skid = (float)((x87d)(int32)pad->GetSteeringLeftRight() * 0.0078125f);
         }
     }
     if (upDown == FLYING_CONTROL_NOT_SET) {
         upDown = 0.0f;
         if (pad) {
-            upDown = (float)((double)(int32)pad->GetSteeringUpDown() * 0.0078125f);
-            if (std::fabs((double)(int32)pad->GetCarGunUpDown()) > 1.0) {
-                upDown = (float)((double)(-(int32)pad->GetCarGunUpDown()) * 0.0078125f);
+            upDown = (float)((x87d)(int32)pad->GetSteeringUpDown() * 0.0078125f);
+            if (std::fabs((x87d)(int32)pad->GetCarGunUpDown()) > 1.0) {
+                upDown = (float)((x87d)(-(int32)pad->GetCarGunUpDown()) * 0.0078125f);
             }
         }
     }
 
     // Scale the inputs by 1 / cos(angle to the nearest axis)
     const float inputAngle = (float)x87::atan2((double)upDown, (double)skid);
-    constexpr double PI = std::numbers::pi_v<float>, HALF_PI = 1.5707964f;
-    double angleFac = 1.0;
+    constexpr x87d PI = std::numbers::pi_v<float>, HALF_PI = 1.5707964f;
+    x87d angleFac = (x87d)1.0;
     {
-        const double a = inputAngle;
+        const x87d a = inputAngle;
         if (inputAngle > -0.7853981852531433f && inputAngle <= 0.7853981852531433f) {
-            angleFac = 1.0 / x87::cos(a);
+            angleFac = X87R(1.0 / x87::cos(a));
         } else if (inputAngle > 0.7853981852531433f && inputAngle <= 2.356194496154785f) {
-            angleFac = 1.0 / x87::cos(a - HALF_PI);
+            angleFac = X87R(1.0 / x87::cos(a - HALF_PI));
         } else if (inputAngle > 2.356194496154785f) {
-            angleFac = 1.0 / x87::cos(a - PI);
+            angleFac = X87R(1.0 / x87::cos(a - PI));
         } else if (inputAngle <= -2.356194496154785f) {
-            angleFac = 1.0 / x87::cos(a + PI);
+            angleFac = X87R(1.0 / x87::cos(a + PI));
         } else if (inputAngle < -0.7853981852531433f) {
-            angleFac = 1.0 / x87::cos(a + HALF_PI);
+            angleFac = X87R(1.0 / x87::cos(a + HALF_PI));
         }
     }
-    skid   = (float)((double)skid * angleFac);
+    skid   = (float)((x87d)skid * angleFac);
     upDown = (float)(-(angleFac * upDown));
 
     const CVector fwd  = mat.GetForward();
     const CVector rear = fwd * v.GetColModel()->GetBoundingBox().m_vecMin.y; // (+4 = min.y)
 
-    const double dotFwdExt = ((double)fwd.y * V.y + (double)fwd.x * V.x) + (double)fwd.z * V.z;
+    const x87d dotFwdExt = ((x87d)fwd.y * V.y + (x87d)fwd.x * V.x) + (x87d)fwd.z * V.z;
     const float  dotFwd    = (float)dotFwdExt;
     const float  dotFwdSq  = (float)(dotFwdExt * dotFwd);
 
@@ -4195,7 +4207,7 @@ static void FlyingControlModel1345(FlyingControlCtx& c) {
         if (pad) {
             const int32 acc = pad->GetAccelerate();
             const int32 brk = pad->GetBrake();
-            accel = (float)((double)(acc - brk) * 0.003921568859368563);
+            accel = (float)((x87d)(acc - brk) * (x87d)0.003921568859368563);
         }
     }
 
@@ -4223,14 +4235,14 @@ static void FlyingControlModel1345(FlyingControlCtx& c) {
             if (!(accel < 0.0f) || !(DotProductExt(fwd, v.m_vecMoveSpeed) < 0.02f)) {
                 accel = 0.0f;
             } else {
-                double val = (double)accel - (double)dotFwd * 7.76f;
+                x87d val = (x87d)accel - (x87d)dotFwd * 7.76f;
                 if (0.0 < val) {
-                    val = 0.0;
+                    val = (x87d)0.0;
                 }
                 accel = (float)(val * fh->m_fThrust);
             }
         } else {
-            double val = (double)accel;
+            x87d val = (x87d)accel;
             if (modelIdx == 0x21B) {
                 val = val * fh->m_fThrust;
             } else {
@@ -4239,26 +4251,26 @@ static void FlyingControlModel1345(FlyingControlCtx& c) {
             accel = (float)val;
 
             if (dotFwd > 0.0f && fh->m_fThrustFallOff < 1.0f) {
-                double g;
+                x87d g;
                 if (!(fh->m_fThrustFallOff < 0.0f)) {
-                    const double d = (double)dotFwd - fh->m_fThrustFallOff;
+                    const x87d d = (x87d)dotFwd - fh->m_fThrustFallOff;
                     g = (d * d) * 0.65f;
                 } else {
-                    const double d = (double)dotFwd + fh->m_fThrustFallOff;
+                    const x87d d = (x87d)dotFwd + fh->m_fThrustFallOff;
                     g = (d * d) * 3.0f;
                 }
-                double h = 1.0 - g;
+                x87d h = (x87d)1.0 - g;
                 if (0.0 > h) {
-                    h = 0.0;
+                    h = (x87d)0.0;
                 }
                 accel = (float)(h * accel);
             }
         }
     }
     if (model == FLIGHT_MODEL_UNK2) {
-        accel = (float)((double)accel * 0.3f);
+        accel = (float)((x87d)accel * 0.3f);
     } else if (model == FLIGHT_MODEL_BOAT) {
-        accel = (float)((double)accel * 0.1f);
+        accel = (float)((x87d)accel * 0.1f);
     }
 
     // Direction of the thrust
@@ -4268,55 +4280,55 @@ static void FlyingControlModel1345(FlyingControlCtx& c) {
     }
 
     {
-        const double thrustScale = 0.008f;
-        const float  tx = (float)(((double)thrustDir.x * thrustScale) * accel);
-        const double ty = ((double)thrustDir.y * thrustScale) * accel;
-        const float  tz = (float)((double)thrustDir.z * thrustScale);
-        const float  mx = (float)((double)tx * v.m_fMass);
+        const x87d thrustScale = 0.008f;
+        const float  tx = (float)(((x87d)thrustDir.x * thrustScale) * accel);
+        const x87d ty = ((x87d)thrustDir.y * thrustScale) * accel;
+        const float  tz = (float)((x87d)thrustDir.z * thrustScale);
+        const float  mx = (float)((x87d)tx * v.m_fMass);
         const float  my = (float)(ty * v.m_fMass);
-        const double mz = ((double)tz * accel) * v.m_fMass;
-        v.ApplyMoveForce({ (float)((double)mx * ts), (float)((double)my * ts), (float)(mz * ts) });
+        const x87d mz = ((x87d)tz * accel) * v.m_fMass;
+        v.ApplyMoveForce({ (float)((x87d)mx * ts), (float)((x87d)my * ts), (float)(mz * ts) });
     }
 
     const CVector right = mat.GetRight(), up = mat.GetUp();
 
     // Side drag
     {
-        const double d = (((double)V.z * right.z + (double)V.y * right.y) + (double)V.x * right.x) * -1.0f;
-        const double g = d * (std::fabs(d) * fh->m_fSideSlip);
-        const double gx = (double)right.x * g;
-        const float  gy = (float)((double)right.y * g);
-        const float  gz = (float)((double)right.z * g);
-        const double xm = gx * v.m_fMass;
-        const double ym = (double)gy * v.m_fMass;
-        const float  zm = (float)((double)gz * v.m_fMass);
-        v.ApplyMoveForce({ (float)(xm * ts), (float)(ym * ts), (float)((double)zm * ts) });
+        const x87d d = (((x87d)V.z * right.z + (x87d)V.y * right.y) + (x87d)V.x * right.x) * -1.0f;
+        const x87d g = d * (std::fabs(d) * fh->m_fSideSlip);
+        const x87d gx = (x87d)right.x * g;
+        const float  gy = (float)((x87d)right.y * g);
+        const float  gz = (float)((x87d)right.z * g);
+        const x87d xm = gx * v.m_fMass;
+        const x87d ym = (x87d)gy * v.m_fMass;
+        const float  zm = (float)((x87d)gz * v.m_fMass);
+        v.ApplyMoveForce({ (float)(xm * ts), (float)(ym * ts), (float)((x87d)zm * ts) });
     }
 
     // Yaw (rudder / skid)
     {
         const CVector spd = v.GetSpeed(rear);
-        const double  h   = (((double)spd.z * right.z + (double)spd.y * right.y) + (double)spd.x * right.x) * -1.0f;
+        const x87d  h   = (((x87d)spd.z * right.z + (x87d)spd.y * right.y) + (x87d)spd.x * right.x) * -1.0f;
 
-        double m;
+        x87d m;
         if (modelIdx == 0x21B) {
             if (dotFwd > 0.0f || std::isnan(dotFwd)) { // (0x6D9280: JP)
-                m = dotFwd > accel ? (double)dotFwd : (double)accel;
+                m = dotFwd > accel ? (x87d)dotFwd : (x87d)accel;
             } else {
-                m = dotFwd < accel ? (double)dotFwd : (double)accel;
+                m = dotFwd < accel ? (x87d)dotFwd : (x87d)accel;
             }
         } else {
             m = dotFwd;
         }
-        const double hh  = (std::fabs(h) * fh->m_fYawStab) * h;
+        const x87d hh  = (std::fabs(h) * fh->m_fYawStab) * h;
         const float  s   = (float)((((hh + ((m * fh->m_fYaw) * skid)) * ts) * v.m_fTurnMass));
         v.ApplyTurnForce(right * s, c.com + rear);
     }
 
     // Roll
     {
-        const double in = leftRight == FLYING_CONTROL_NOT_SET ? (double)skid : (double)leftRight;
-        const float  s  = (float)(((((double)ts * fh->m_fRoll) * dotFwd) * in) * v.m_fTurnMass);
+        const x87d in = leftRight == FLYING_CONTROL_NOT_SET ? (x87d)skid : (x87d)leftRight;
+        const float  s  = (float)(((((x87d)ts * fh->m_fRoll) * dotFwd) * in) * v.m_fTurnMass);
         v.ApplyTurnForce(right * s, c.com + up);
     }
 
@@ -4326,10 +4338,10 @@ static void FlyingControlModel1345(FlyingControlCtx& c) {
         if (!(up.z > 0.0f)) {
             cross = cross * -1.0f;
         }
-        const double sign = right.z > 0.0f ? -1.0f : 1.0f;
-        const double t1   = 1.0 - std::fabs((double)mat.GetForward().z);
-        const double t2   = 1.0 - (((double)cross.z * right.z + (double)cross.y * right.y) + (double)cross.x * right.x);
-        const double w    = t1 * (t2 * sign);
+        const x87d sign = right.z > 0.0f ? -1.0f : 1.0f;
+        const x87d t1   = (x87d)1.0 - std::fabs((x87d)mat.GetForward().z);
+        const x87d t2   = (x87d)1.0 - (((x87d)cross.z * right.z + (x87d)cross.y * right.y) + (x87d)cross.x * right.x);
+        const x87d w    = t1 * (t2 * sign);
         const float  s    = (float)(((((w * fh->m_fRollStab) * ts) * v.m_fTurnMass) * 0.5f));
         v.ApplyTurnForce(right * s, c.com + up);
     }
@@ -4337,43 +4349,43 @@ static void FlyingControlModel1345(FlyingControlCtx& c) {
     // Pitch
     {
         const CVector spd = v.GetSpeed(rear);
-        const double  d   = (((double)spd.z * up.z + (double)spd.y * up.y) + (double)spd.x * up.x) * -1.0f;
-        const double  g   = d * (std::fabs(d) * fh->m_fPitchStab);
-        const double  s   = ((g + (((double)dotFwd * fh->m_fPitch) * upDown)) * ts) * v.m_fTurnMass;
+        const x87d  d   = (((x87d)spd.z * up.z + (x87d)spd.y * up.y) + (x87d)spd.x * up.x) * -1.0f;
+        const x87d  g   = d * (std::fabs(d) * fh->m_fPitchStab);
+        const x87d  s   = ((g + (((x87d)dotFwd * fh->m_fPitch) * upDown)) * ts) * v.m_fTurnMass;
         const CVector f{ (float)(up.x * s), (float)(up.y * s), (float)(up.z * s) };
         v.ApplyTurnForce(f, c.com + rear);
     }
 
     // Lift
     {
-        const double upDot  = (((double)V.z * up.z + (double)V.y * up.y) + (double)V.x * up.x);
+        const x87d upDot  = (((x87d)V.z * up.z + (x87d)V.y * up.y) + (x87d)V.x * up.x);
         const float  upDotF = (float)upDot;
         const float  speedF = (float)MagnitudeExt(V);
         const float  den    = (0.01f > speedF) ? 0.01f : speedF;     // 0x420800
-        const float  r1     = (float)((double)upDotF / den);
+        const float  r1     = (float)((x87d)upDotF / den);
         const float  r2     = (1.0f < r1) ? 1.0f : r1;               // 0x404330
         const float  r3     = (-1.0f > r2) ? -1.0f : r2;             // 0x420800
-        const double pitch  = x87::asin((double)r3) * -1.0f;         // 0x821E70
+        const x87d pitch  = X87R(x87::asin((double)r3) * -1.0f);         // 0x821E70
         if (v.m_nVehicleSubType == VEHICLE_TYPE_PLANE && pitch > 0.3490658700466156f) {
-            v.AsPlane()->field_9A0 += (int32)(((double)ts * 0.02f) * 1000.0f);
+            v.AsPlane()->field_9A0 += (int32)(((x87d)ts * 0.02f) * 1000.0f);
         }
 
-        double formLift = fh->m_fFormLift;
+        x87d formLift = fh->m_fFormLift;
         if (model == FLIGHT_MODEL_BARON) {
-            const float limit = (float)((double)fFlyingLiftLimit * 0.008f);
-            if ((double)dotFwdSq * formLift > limit) {
-                formLift = (double)limit / dotFwdSq;
+            const float limit = (float)((x87d)fFlyingLiftLimit * 0.008f);
+            if ((x87d)dotFwdSq * formLift > limit) {
+                formLift = (x87d)limit / dotFwdSq;
             }
         } else if (v.m_nVehicleSubType == VEHICLE_TYPE_PLANE && v.AsPlane()->m_fLandingGearStatus < 1.0f) {
             formLift = formLift * fh->m_fGearDownL;
         }
 
-        const double lift  = (((pitch * fh->m_fAttackLift + formLift) * v.m_fMass) * ts) * dotFwdSq;
+        const x87d lift  = (((pitch * fh->m_fAttackLift + formLift) * v.m_fMass) * ts) * dotFwdSq;
         float        liftF = (float)lift;
-        if (lift > ((double)ts * v.m_fMass) * 0.008f) {
+        if (lift > ((x87d)ts * v.m_fMass) * 0.008f) {
             const float height = v.HeightAboveCeiling(v.GetPosition().z, model);
             if (height > 0.0f) {
-                const double factor = (1.0 - (double)height * 0.02f) < 0.0 ? 0.0 : (1.0 - (double)height * 0.02f); // NOTE: the original calls `HeightAboveCeiling` 3 times
+                const x87d factor = ((x87d)1.0 - (x87d)height * 0.02f) < (x87d)0.0 ? (x87d)0.0 : ((x87d)1.0 - (x87d)height * 0.02f); // NOTE: the original calls `HeightAboveCeiling` 3 times
                 liftF = (float)(((factor * v.m_fMass) * ts) * 0.008f);
             }
         }
@@ -4383,13 +4395,13 @@ static void FlyingControlModel1345(FlyingControlCtx& c) {
 
 // `in * dir * coeff * turnMass * timeStep`, with the original's float roundings (0x6DA4DA, 0x6DA5BF, 0x6DA84B)
 static CVector FlyingControlTorque(float in, const CVector& dir, float coeff, float turnMass, float ts) {
-    const float  xa = (float)(((double)in * dir.x) * coeff);
-    const float  xb = (float)((double)xa * turnMass);
-    const double ya = ((double)in * dir.y) * coeff;
+    const float  xa = (float)(((x87d)in * dir.x) * coeff);
+    const float  xb = (float)((x87d)xa * turnMass);
+    const x87d ya = ((x87d)in * dir.y) * coeff;
     const float  yb = (float)(ya * turnMass);
-    const float  za = (float)((double)in * dir.z);
-    const double zb = ((double)za * coeff) * turnMass;
-    return { (float)((double)xb * ts), (float)((double)yb * ts), (float)(zb * ts) };
+    const float  za = (float)((x87d)in * dir.z);
+    const x87d zb = ((x87d)za * coeff) * turnMass;
+    return { (float)((x87d)xb * ts), (float)((x87d)yb * ts), (float)(zb * ts) };
 }
 
 // 0x6D986E - flight models 2 (RC), 6 (heli), 8
@@ -4410,30 +4422,30 @@ static void FlyingControlModel268(FlyingControlCtx& c) {
     // Move speed drag
     {
         const double r = std::pow((double)fh->m_fMoveRes, (double)ts);
-        ms.x = (float)(r * ms.x);
-        ms.y = (float)(r * ms.y);
-        ms.z = (float)(r * ms.z);
+        ms.x = (float)(X87R(r * ms.x));
+        ms.y = (float)(X87R(r * ms.y));
+        ms.z = (float)(X87R(r * ms.z));
     }
 
     if ((int32)model == 8) {
         const CVector fwd = mat.GetForward();
-        const float   dotF = (float)(((double)V.z * fwd.z + (double)V.y * fwd.y) + (double)V.x * fwd.x);
+        const float   dotF = (float)(((x87d)V.z * fwd.z + (x87d)V.y * fwd.y) + (x87d)V.x * fwd.x);
 
-        double throttle = (double)accel;
+        x87d throttle = (x87d)accel;
         if (accel == FLYING_CONTROL_NOT_SET) {
-            throttle = 0.0;
+            throttle = (x87d)0.0;
             if (pad) {
-                throttle = (double)((int32)pad->GetAccelerate() - (int32)pad->GetBrake()) * 0.003921568859368563;
+                throttle = (x87d)((int32)pad->GetAccelerate() - (int32)pad->GetBrake()) * (x87d)0.003921568859368563;
             }
         }
 
         float thrust;
         if (dotF > 0.0f || throttle > 0.0) {
-            thrust = (float)((throttle - (double)dotF * fh->m_fThrustFallOff) * fh->m_fThrust);
+            thrust = (float)((throttle - (x87d)dotF * fh->m_fThrustFallOff) * fh->m_fThrust);
         } else {
-            double x = throttle - (((double)dotF * fh->m_fThrustFallOff) * 8.0f);
+            x87d x = throttle - (((x87d)dotF * fh->m_fThrustFallOff) * 8.0f);
             if (0.0 < x) {
-                x = 0.0;
+                x = (x87d)0.0;
             }
             thrust = (float)(x * fh->m_fThrust);
         }
@@ -4441,21 +4453,21 @@ static void FlyingControlModel268(FlyingControlCtx& c) {
 
         CVector tilt = mat.GetUp() - (mat.GetForward() * AUTOGYRO_ROTORTILT_ANGLE);
         NormaliseExt(tilt); // 0x59C910
-        float tiltDot = (float)(((double)tilt.x * V.x + (double)tilt.z * V.z) + (double)tilt.y * V.y);
+        float tiltDot = (float)(((x87d)tilt.x * V.x + (x87d)tilt.z * V.z) + (x87d)tilt.y * V.y);
 
         float rotorSpin = 0.22f; // 0x8717AC
         if (v.m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE) {
             auto&        spin = v.AsAutomobile()->m_fHeliRotorSpeed;
-            const double lo   = -AUTOGYRO_ROTORSPIN_MULTLIMIT;
+            const x87d lo   = -AUTOGYRO_ROTORSPIN_MULTLIMIT;
             if (0.0 < ((lo > tiltDot) ? lo : (double)tiltDot)) {
                 tiltDot = 0.0f;
             } else if (lo > tiltDot) {
                 tiltDot = (float)lo;
             }
 
-            const float spinNew = (float)((double)spin - (((double)tiltDot * ts) * AUTOGYRO_ROTORSPIN_MULT));
+            const float spinNew = (float)((x87d)spin - (((x87d)tiltDot * ts) * AUTOGYRO_ROTORSPIN_MULT));
             spin = spinNew;
-            const double damped = std::pow((double)AUTOGYRO_ROTORSPIN_DAMP, (double)ts) * spinNew;
+            const x87d damped = X87R(std::pow((double)AUTOGYRO_ROTORSPIN_DAMP, (double)ts) * spinNew);
             spin = (float)damped;
             if (damped > 0.4f) {
                 spin = 0.4f;
@@ -4465,21 +4477,21 @@ static void FlyingControlModel268(FlyingControlCtx& c) {
             rotorSpin = spin;
         }
 
-        const float lift = (float)(((double)rotorSpin * AUTOGYRO_ROTORLIFT_MULT) - ((double)tiltDot * AUTOGYRO_ROTORLIFT_FALLOFF));
+        const float lift = (float)(((x87d)rotorSpin * AUTOGYRO_ROTORLIFT_MULT) - ((x87d)tiltDot * AUTOGYRO_ROTORLIFT_FALLOFF));
         v.ApplyMoveForce((((tilt * 0.008f) * lift) * v.m_fMass) * ts);
     } else {
         CVector dir = mat.GetUp();
         if (v.vehicleFlags.bHeliMinimumTilt) { // +0x42B & 0x10
-            dir.x = (float)x87::sin(x87::asin((double)dir.x) * 4.0f);
-            dir.y = (float)x87::sin(x87::asin((double)dir.y) * 4.0f);
-            dir.z = (float)x87::cos(x87::acos((double)dir.z) * 4.0f);
+            dir.x = (float)x87::sin(X87R(x87::asin((double)dir.x) * 4.0f));
+            dir.y = (float)x87::sin(X87R(x87::asin((double)dir.y) * 4.0f));
+            dir.z = (float)x87::cos(X87R(x87::acos((double)dir.z) * 4.0f));
         } else if (v.m_nModelIndex == 0x208) {
             dir = FlyingControlHydraDirection(v);
         }
 
-        float dirDot = (float)(((double)V.z * dir.z + (double)V.y * dir.y) + (double)V.x * dir.x);
+        float dirDot = (float)(((x87d)V.z * dir.z + (x87d)V.y * dir.y) + (x87d)V.x * dir.x);
         if (dirDot > 0.0f) {
-            dirDot = (float)((double)dirDot + dirDot);
+            dirDot = (float)((x87d)dirDot + dirDot);
         }
 
         if (accel == FLYING_CONTROL_NOT_SET) {
@@ -4487,20 +4499,20 @@ static void FlyingControlModel268(FlyingControlCtx& c) {
             if (pad) {
                 const int32 acc = pad->GetAccelerate();
                 const int32 brk = pad->GetBrake();
-                accel = (float)((double)(acc - brk) * 0.003921568859368563);
-                if (std::fabs((double)(int32)pad->GetCarGunUpDown()) > 1.0) {
-                    accel = (float)((double)(int32)pad->GetCarGunUpDown() * 0.0078125f);
+                accel = (float)((x87d)(acc - brk) * (x87d)0.003921568859368563);
+                if (std::fabs((x87d)(int32)pad->GetCarGunUpDown()) > 1.0) {
+                    accel = (float)((x87d)(int32)pad->GetCarGunUpDown() * 0.0078125f);
                 }
             }
         }
 
-        float thrust = (float)((double)accel * fh->m_fThrust + 0.45f);
-        const float hover = (float)(0.5f - (double)ms.z);
+        float thrust = (float)((x87d)accel * fh->m_fThrust + 0.45f);
+        const float hover = (float)(0.5f - (x87d)ms.z);
         v.ApplyMoveForce(((((CVector{ 0.0f, 0.0f, 1.0f } * hover) * 0.008f) * v.m_fMass) * ts));
 
-        thrust = (float)((double)thrust - (double)dirDot * fh->m_fThrustFallOff);
+        thrust = (float)((x87d)thrust - (x87d)dirDot * fh->m_fThrustFallOff);
         if (v.HeightAboveCeiling(v.GetPosition().z, model) > 0.0f) {
-            thrust = (float)(((double)thrust / ((double)v.HeightAboveCeiling(v.GetPosition().z, model) + 10.0f)) * 10.0f);
+            thrust = (float)(((x87d)thrust / ((x87d)v.HeightAboveCeiling(v.GetPosition().z, model) + 10.0f)) * 10.0f);
         }
         v.ApplyMoveForce((((dir * 0.008f) * thrust) * v.m_fMass) * ts);
     }
@@ -4512,10 +4524,10 @@ static void FlyingControlModel268(FlyingControlCtx& c) {
         wind += (CWeather::WindDir * fh->m_fWindMult);
         NormaliseExt(wind);
 
-        const double lo = -fh->m_fFormLift;
+        const x87d lo = -fh->m_fFormLift;
         const auto Clamp = [&](const CVector& axis) -> float {
-            const auto dot = [&] { return ((double)wind.z * axis.z + (double)wind.y * axis.y) + (double)wind.x * axis.x; };
-            const double m = (lo > dot()) ? lo : dot();
+            const auto dot = [&] { return ((x87d)wind.z * axis.z + (x87d)wind.y * axis.y) + (x87d)wind.x * axis.x; };
+            const x87d m = (lo > dot()) ? lo : dot();
             if (m > fh->m_fFormLift) {
                 return fh->m_fFormLift;
             }
@@ -4523,23 +4535,23 @@ static void FlyingControlModel268(FlyingControlCtx& c) {
         };
         {
             const float val = Clamp(right);
-            const float s   = (float)(((((double)-val * fh->m_fAttackLift) * ts) * v.m_fTurnMass));
+            const float s   = (float)(((((x87d)-val * fh->m_fAttackLift) * ts) * v.m_fTurnMass));
             v.ApplyTurnForce(up * s, right + c.com);
         }
         {
             const float val = Clamp(fwd);
-            const float s   = (float)(((((double)-val * fh->m_fAttackLift) * ts) * v.m_fTurnMass));
+            const float s   = (float)(((((x87d)-val * fh->m_fAttackLift) * ts) * v.m_fTurnMass));
             v.ApplyTurnForce(up * s, fwd + c.com);
         }
     } else {
         {
             const float val = right.z < 0.0f ? fh->m_fFormLift : -fh->m_fFormLift;
-            const float s   = (float)((((double)val * fh->m_fAttackLift) * ts) * v.m_fTurnMass);
+            const float s   = (float)((((x87d)val * fh->m_fAttackLift) * ts) * v.m_fTurnMass);
             v.ApplyTurnForce(up * s, right + c.com);
         }
         {
             const float val = fwd.z < 0.0f ? fh->m_fFormLift : -fh->m_fFormLift;
-            const float s   = (float)((((double)val * fh->m_fAttackLift) * ts) * v.m_fTurnMass);
+            const float s   = (float)((((x87d)val * fh->m_fAttackLift) * ts) * v.m_fTurnMass);
             v.ApplyTurnForce(up * s, fwd + c.com);
         }
     }
@@ -4549,13 +4561,13 @@ static void FlyingControlModel268(FlyingControlCtx& c) {
         if (upDown == FLYING_CONTROL_NOT_SET) {
             upDown = 0.0f;
             if (pad) {
-                upDown = (float)((double)(int32)pad->GetSteeringUpDown() * 0.0078125f);
+                upDown = (float)((x87d)(int32)pad->GetSteeringUpDown() * 0.0078125f);
             }
         }
         if (leftRight == FLYING_CONTROL_NOT_SET) {
             leftRight = 0.0f;
             if (pad) {
-                leftRight = (float)((double)(-(int32)pad->GetSteeringLeftRight()) * 0.0078125f);
+                leftRight = (float)((x87d)(-(int32)pad->GetSteeringLeftRight()) * 0.0078125f);
             }
         }
         if (skid == FLYING_CONTROL_NOT_SET) {
@@ -4565,8 +4577,8 @@ static void FlyingControlModel268(FlyingControlCtx& c) {
                 if (pad->GetLookLeft()) {
                     skid = -1.0f;
                 }
-                if (std::fabs((double)(int32)pad->GetCarGunLeftRight()) > 1.0) {
-                    skid = (float)((double)(int32)pad->GetCarGunLeftRight() * 0.0078125f);
+                if (std::fabs((x87d)(int32)pad->GetCarGunLeftRight()) > 1.0) {
+                    skid = (float)((x87d)(int32)pad->GetCarGunLeftRight() * 0.0078125f);
                 }
             }
         }
@@ -4574,7 +4586,7 @@ static void FlyingControlModel268(FlyingControlCtx& c) {
         if (upDown == FLYING_CONTROL_NOT_SET) {
             upDown = 0.0f;
             if (pad) {
-                upDown = (float)((double)(int32)pad->GetSteeringUpDown() * 0.0078125f);
+                upDown = (float)((x87d)(int32)pad->GetSteeringUpDown() * 0.0078125f);
             }
         }
         if (leftRight == FLYING_CONTROL_NOT_SET) {
@@ -4589,13 +4601,13 @@ static void FlyingControlModel268(FlyingControlCtx& c) {
                 if (pad->GetLookRight()) {
                     leftRight = -1.0f;
                 }
-                skid = (float)((double)(int32)pad->GetSteeringLeftRight() * 0.0078125f);
+                skid = (float)((x87d)(int32)pad->GetSteeringLeftRight() * 0.0078125f);
             }
         }
     }
 
     if (v.vehicleFlags.bHeliMinimumTilt) {
-        const double s = (x87::sin(x87::asin((double)fh->m_fPitch / (double)fh->m_fAttackLift) * 0.25f) / fh->m_fPitch) * fh->m_fAttackLift;
+        const x87d s = (X87R(x87::sin(X87R(x87::asin((x87d)fh->m_fPitch / (x87d)fh->m_fAttackLift) * 0.25f)) / fh->m_fPitch)) * fh->m_fAttackLift;
         upDown    = (float)(upDown * s);
         leftRight = (float)(s * leftRight);
     }
@@ -4606,22 +4618,22 @@ static void FlyingControlModel268(FlyingControlCtx& c) {
 
     // Side drag
     {
-        const float  d    = (float)((((double)V.z * right.z + (double)V.y * right.y) + (double)V.x * right.x) * -1.0f);
+        const float  d    = (float)((((x87d)V.z * right.z + (x87d)V.y * right.y) + (x87d)V.x * right.x) * -1.0f);
         const float  dAbs = std::fabsf(d);
-        const double g    = ((double)dAbs * fh->m_fSideSlip) * d;
-        const double xg   = (double)right.x * g;
-        const float  yg   = (float)((double)right.y * g);
-        const float  zg   = (float)((double)right.z * g);
-        const double xm   = xg * v.m_fMass;
-        const double ym   = (double)yg * v.m_fMass;
-        const float  zm   = (float)((double)zg * v.m_fMass);
-        v.ApplyMoveForce({ (float)(xm * ts), (float)(ym * ts), (float)((double)zm * ts) });
+        const x87d g    = ((x87d)dAbs * fh->m_fSideSlip) * d;
+        const x87d xg   = (x87d)right.x * g;
+        const float  yg   = (float)((x87d)right.y * g);
+        const float  zg   = (float)((x87d)right.z * g);
+        const x87d xm   = xg * v.m_fMass;
+        const x87d ym   = (x87d)yg * v.m_fMass;
+        const float  zm   = (float)((x87d)zg * v.m_fMass);
+        v.ApplyMoveForce({ (float)(xm * ts), (float)(ym * ts), (float)((x87d)zm * ts) });
 
         // Yaw
-        const double hh = ((double)dAbs * fh->m_fYawStab) * d;
-        const double s  = ((hh + (double)skid * fh->m_fYaw) * ts) * v.m_fTurnMass;
+        const x87d hh = ((x87d)dAbs * fh->m_fYawStab) * d;
+        const x87d s  = ((hh + (x87d)skid * fh->m_fYaw) * ts) * v.m_fTurnMass;
         const CVector yawForce{ (float)(right.x * s), (float)(right.y * s), (float)(right.z * s) };
-        const CVector yawPoint{ (float)((double)-fwd.x + c.com.x), (float)((double)-fwd.y + c.com.y), (float)((double)-fwd.z + c.com.z) };
+        const CVector yawPoint{ (float)((x87d)-fwd.x + c.com.x), (float)((x87d)-fwd.y + c.com.y), (float)((x87d)-fwd.z + c.com.z) };
         v.ApplyTurnForce(yawForce, yawPoint);
     }
 
@@ -4633,9 +4645,9 @@ static void FlyingControlModel268(FlyingControlCtx& c) {
 static CVector InverseMultiply3x3Ext(const CVector& v, const CMatrix& m) {
     const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp();
     return {
-        (float)(((double)r.y * v.y + (double)r.z * v.z) + (double)v.x * r.x),
-        (float)(((double)f.y * v.y + (double)f.x * v.x) + (double)f.z * v.z),
-        (float)(((double)u.y * v.y + (double)u.x * v.x) + (double)u.z * v.z)
+        (float)(((x87d)r.y * v.y + (x87d)r.z * v.z) + (x87d)v.x * r.x),
+        (float)(((x87d)f.y * v.y + (x87d)f.x * v.x) + (x87d)f.z * v.z),
+        (float)(((x87d)u.y * v.y + (x87d)u.x * v.x) + (x87d)u.z * v.z)
     };
 }
 
@@ -4644,14 +4656,14 @@ static void FlyingControlClampSpeed(CVector& v, double threshold, float factor) 
     const double sq  = SquaredMagnitudeExt(v);
     const float  sqF = (float)sq;
     if (sq > threshold) {
-        const double x   = (double)v.x * factor;
-        const double y   = (double)v.y * factor;
-        const float  z   = (float)((double)v.z * factor);
-        const double inv = 1.0 / std::sqrt((double)sqF);
+        const x87d x   = (x87d)v.x * factor;
+        const x87d y   = (x87d)v.y * factor;
+        const float  z   = (float)((x87d)v.z * factor);
+        const x87d inv = (x87d)1.0 / std::sqrt((x87d)sqF);
         const float  invF = (float)inv;
         v.x = (float)(inv * x);
         v.y = (float)(y * invF);
-        v.z = (float)((double)z * invF);
+        v.z = (float)((x87d)z * invF);
     }
 }
 
@@ -4676,14 +4688,14 @@ static void FlyingControlDrag(FlyingControlCtx& c) {
     case FLIGHT_MODEL_PLANE:
     case FLIGHT_MODEL_UNK2:
     case FLIGHT_MODEL_BOAT:
-        exponent = (float)(std::sqrt(SquaredMagnitudeExt(ms)) * 2.0);
+        exponent = (float)(X87R(std::sqrt(SquaredMagnitudeExt(ms))) * (x87d)2.0);
         break;
     case FLIGHT_MODEL_BARON:
-        exponent = (float)(MagnitudeExt(ms) * 6.0f);
+        exponent = (float)(X87R(MagnitudeExt(ms) * 6.0f));
         break;
     case FLIGHT_MODEL_HELI:
     case 8:
-        exponent = (float)(MagnitudeExt(ms) + 1.0f);
+        exponent = (float)(X87R(MagnitudeExt(ms) + 1.0f));
         break;
     default:
         break;
@@ -4691,10 +4703,10 @@ static void FlyingControlDrag(FlyingControlCtx& c) {
 
     const auto Axis = [&](float speedRes, float base, float& localAxis, float& accAxis) {
         if (speedRes > 0.0f) {
-            const double q = (double)base / (((double)localAxis * localAxis) * speedRes + 1.0);
-            accAxis = (float)(std::pow(q, (double)ts) * localAxis - localAxis);
+            const x87d q = (x87d)base / (((x87d)localAxis * localAxis) * speedRes + (x87d)1.0);
+            accAxis = (float)(X87R(std::pow(q, (double)ts) * localAxis) - localAxis);
         } else {
-            localAxis = (float)(std::pow((double)base, (double)exponent) * localAxis);
+            localAxis = (float)(X87R(std::pow((double)base, (double)exponent) * localAxis));
         }
     };
     Axis(fh->m_vecSpeedRes.x, baseX, local.x, acc.x);
@@ -4708,10 +4720,10 @@ static void FlyingControlDrag(FlyingControlCtx& c) {
 
     const auto Apply = [&](float amount, const CVector& dir, const CVector& point) {
         const float  lx = (float)(amount * (dir.x * -1.0f));
-        const double ly = (double)amount * (dir.y * -1.0f);
-        const double lz = (double)amount * (dir.z * -1.0f);
+        const x87d ly = (x87d)amount * (dir.y * -1.0f);
+        const x87d lz = (x87d)amount * (dir.z * -1.0f);
         v.ApplyTurnForce(
-            { (float)((double)lx * tm), (float)(ly * tm), (float)(lz * tm) },
+            { (float)((x87d)lx * tm), (float)(ly * tm), (float)(lz * tm) },
             point
         );
     };
@@ -4756,13 +4768,13 @@ void CVehicle::FlyingControl(eFlightModel flightModel, float leftRightSkid, floa
         CVector wind{ 0.0f, 0.0f, 0.0f };
         if (m_nCreatedBy != MISSION_VEHICLE) {
             const float s = m_pFlyingHandlingData->m_fWindMult;
-            wind = CVector{ (float)((double)CWeather::WindDir.x * s), (float)((double)CWeather::WindDir.y * s), (float)((double)s * CWeather::WindDir.z) };
+            wind = CVector{ (float)((x87d)CWeather::WindDir.x * s), (float)((x87d)CWeather::WindDir.y * s), (float)((x87d)s * CWeather::WindDir.z) };
             wind = CVector{ -wind.x, -wind.y, -wind.z };
         }
         c.speed = CVector{
-            (float)((double)wind.x + m_vecMoveSpeed.x),
-            (float)((double)wind.y + m_vecMoveSpeed.y),
-            (float)((double)wind.z + m_vecMoveSpeed.z)
+            (float)((x87d)wind.x + m_vecMoveSpeed.x),
+            (float)((x87d)wind.y + m_vecMoveSpeed.y),
+            (float)((x87d)wind.z + m_vecMoveSpeed.z)
         };
     }
     c.com = Multiply3x3Ext(*m_matrix, m_vecCentreOfMass); // 0x59C790
@@ -4810,7 +4822,7 @@ bool CVehicle::BladeColSectorList(PtrListType& ptrList, CColModel& colModel, CMa
         case  1: return {  matrix.GetRight(),   {  0.2f,  0.0f,  0.0f }, }; // right
         case  2: return {  matrix.GetForward(), {  0.0f,  0.2f,  0.0f }, }; // forward
         case  3: return {  matrix.GetUp(),      {  0.0f,  0.0f,  0.2f }, }; // up
-        default: NOTSA_UNREACHABLE("Unknown rotorType");
+        default: NOTSA_UNREACHABLE_RET({}, "Unknown rotorType");
         }
     };
 
@@ -5337,16 +5349,16 @@ void CVehicle::ProcessBoatControl(tBoatHandlingData* boatHandling, float* fLastW
 static CVector TransformPointExt(const CMatrix& m, const CVector& v) {
     const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp(), &p = m.GetPosition();
     return CVector{
-        (float)((((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x) + p.x),
-        (float)((((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y) + p.y),
-        (float)((((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y) + p.z)
+        (float)((((x87d)u.x * v.z + (x87d)f.x * v.y) + (x87d)r.x * v.x) + p.x),
+        (float)((((x87d)u.y * v.z + (x87d)r.y * v.x) + (x87d)f.y * v.y) + p.y),
+        (float)((((x87d)u.z * v.z + (x87d)r.z * v.x) + (x87d)f.z * v.y) + p.z)
     };
 }
 
 // 0x6DD130
 void CVehicle::DoBoatSplashes(float fWaterDamping) {
     // NOTE: The original keeps intermediates on the x87 stack (53-bit precision), hence the `double`s below.
-    const double speedSqExt = (double)m_vecMoveSpeed.x * m_vecMoveSpeed.x + (double)m_vecMoveSpeed.y * m_vecMoveSpeed.y + (double)m_vecMoveSpeed.z * m_vecMoveSpeed.z;
+    const x87d speedSqExt = (x87d)m_vecMoveSpeed.x * m_vecMoveSpeed.x + (x87d)m_vecMoveSpeed.y * m_vecMoveSpeed.y + (x87d)m_vecMoveSpeed.z * m_vecMoveSpeed.z;
     const float  speedSq    = (float)speedSqExt; // The original stores it as a float, but compares the unrounded value
     if (!(speedSqExt > 0.0025f) || !(GetUp().z > 0.0f) || TheCamera.GetLookingForwardFirstPerson() || !IsVisible()) {
         return;
@@ -5366,7 +5378,7 @@ void CVehicle::DoBoatSplashes(float fWaterDamping) {
 
     const bool isSkimmer = m_nModelIndex == MODEL_SKIMMER;
 
-    double intensity = std::sqrt((double)speedSq) * 0.075f * fWaterDamping;
+    x87d intensity = std::sqrt((x87d)speedSq) * 0.075f * fWaterDamping;
     if (isSkimmer) {
         intensity *= 3.0f;
         if (!(intensity <= 0.5f)) {
@@ -5381,7 +5393,7 @@ void CVehicle::DoBoatSplashes(float fWaterDamping) {
 
     float scaled = (float)(intensity * 0.75f);
     if (isCruising) {
-        const double doubled = (double)scaled + scaled;
+        const x87d doubled = (x87d)scaled + scaled;
         scaled = doubled >= 1.0 ? 1.0f : (float)doubled;
     }
 
@@ -5390,25 +5402,25 @@ void CVehicle::DoBoatSplashes(float fWaterDamping) {
         alphaByte = 0x40;
     }
 
-    const double velScaleD = (double)scaled * 10.0f;
+    const x87d velScaleD = (x87d)scaled * 10.0f;
     const float  velScale  = (float)velScaleD;
     const float  sizeBase  = (float)(velScaleD + 0.75f);
     const float  lifeRand  = CGeneral::GetRandomNumberInRange(0.8f, 1.2f);
-    const float  lifeBase  = (float)((((double)scaled + scaled) + 0.3f) * lifeRand);
+    const float  lifeBase  = (float)((((x87d)scaled + scaled) + 0.3f) * lifeRand);
 
     if (dist > 50.0f) {
-        alphaByte = (uint8)(int32)(((80.0 - dist) * 0.033333335f) * alphaByte); // 0x858F10
+        alphaByte = (uint8)(int32)((((x87d)80.0 - dist) * 0.033333335f) * alphaByte); // 0x858F10
     }
 
     FxPrtMult_c particleData(1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f);
     {
-        const float alpha = (float)((double)alphaByte * 0.003921569f); // 1 / 255
+        const float alpha = (float)((x87d)alphaByte * 0.003921569f); // 1 / 255
         particleData.m_Color.alpha = alpha >= 1.0f ? 1.0f : alpha;
 
-        const float size = (float)((double)sizeBase * 0.1f);
+        const float size = (float)((x87d)sizeBase * 0.1f);
         particleData.m_fSize = size >= 1.0f ? 1.0f : size;
 
-        const float life = (float)((double)lifeBase * 0.2f);
+        const float life = (float)((x87d)lifeBase * 0.2f);
         particleData.m_fLife = life >= 1.0f ? 1.0f : life;
     }
 
@@ -5455,12 +5467,12 @@ void CVehicle::DoBoatSplashes(float fWaterDamping) {
 // 0x59C910 - `CVector::Normalise` as the original evaluates it: the sum of squares and the reciprocal root stay in the FPU registers
 // (extended precision), every component is stored as float. A length of 0 (or less) only writes `x = 1`; NaN takes the sqrt path.
 static void NormaliseExt(CVector& v) {
-    const double sq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    const x87d sq = ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
     if (sq <= 0.0) {
         v.x = 1.0f;
         return;
     }
-    const double inv = 1.0 / std::sqrt(sq);
+    const x87d inv = (x87d)1.0 / std::sqrt(sq);
     v.x = (float)(v.x * inv);
     v.y = (float)(v.y * inv);
     v.z = (float)(v.z * inv);
@@ -5468,12 +5480,12 @@ static void NormaliseExt(CVector& v) {
 
 // 0x44E480 - `CVector2D::Normalise` as the original evaluates it (see `NormaliseExt`)
 static void Normalise2DExt(CVector2D& v) {
-    const double sq = (double)v.x * v.x + (double)v.y * v.y;
+    const x87d sq = (x87d)v.x * v.x + (x87d)v.y * v.y;
     if (sq <= 0.0) {
         v.x = 1.0f;
         return;
     }
-    const double inv = 1.0 / std::sqrt(sq);
+    const x87d inv = (x87d)1.0 / std::sqrt(sq);
     v.x = (float)(v.x * inv);
     v.y = (float)(v.y * inv);
 }
@@ -5487,13 +5499,13 @@ void CVehicle::DoSunGlare() {
 
     // Vehicle -> camera, scaled to a length of 2 (`vToCam`)
     const CVector toCam = TheCamera.GetPosition() - GetPosition();
-    const float   dist  = (float)std::sqrt(((double)toCam.x * toCam.x + (double)toCam.z * toCam.z) + (double)toCam.y * toCam.y);
-    const double  scale = 2.0f / (double)dist;
+    const float   dist  = (float)std::sqrt(((x87d)toCam.x * toCam.x + (x87d)toCam.z * toCam.z) + (x87d)toCam.y * toCam.y);
+    const x87d  scale = 2.0f / (x87d)dist;
     const CVector vToCam{ (float)(toCam.x * scale), (float)(toCam.y * scale), (float)(toCam.z * scale) };
 
     // Sun direction (+ vToCam) in the vehicle's (right, forward) basis
     const auto&  vecToSun = CTimeCycle::m_VectorToSun[CTimeCycle::m_CurrentStoredValue];
-    const double sx = (double)vToCam.x + vecToSun.x, sy = (double)vToCam.y + vecToSun.y, sz = (double)vToCam.z + vecToSun.z;
+    const x87d sx = (x87d)vToCam.x + vecToSun.x, sy = (x87d)vToCam.y + vecToSun.y, sz = (x87d)vToCam.z + vecToSun.z;
     const auto&  right = m_matrix->GetRight();
     const auto&  fwd   = m_matrix->GetForward();
     CVector glareDir{
@@ -5508,12 +5520,12 @@ void CVehicle::DoSunGlare() {
     Normalise2DExt(fwd2D);
     Normalise2DExt(toCam2D);
 
-    double facing = (double)toCam2D.y * fwd2D.y + (double)toCam2D.x * fwd2D.x;
+    x87d facing = (x87d)toCam2D.y * fwd2D.y + (x87d)toCam2D.x * fwd2D.x;
     if (facing < 0.0) {
         facing = -facing;
     }
 
-    double intensity;
+    x87d intensity;
     if (facing > 0.995f) {
         intensity = 1.0f;
     } else if (facing > 0.99f) {
@@ -5526,12 +5538,12 @@ void CVehicle::DoSunGlare() {
         if (!(dist > 13.0f)) {
             return;
         }
-        intensity = (intensity * ((double)dist - 13.0f)) * 0.05882353f; // 0x871FC0
+        intensity = (intensity * ((x87d)dist - 13.0f)) * 0.05882353f; // 0x871FC0
     }
 
-    const double colorScale = intensity * 0.8f;
+    const x87d colorScale = intensity * 0.8f;
     const auto   ToColor    = [&](uint16 core) { // 0x821B40 (_ftol) truncates
-        return (uint8)(int32)((((double)(core + 0x1FE) * colorScale) * CWeather::SunGlare) * 0.33333334f);
+        return (uint8)(int32)((((x87d)(core + 0x1FE) * colorScale) * CWeather::SunGlare) * 0.33333334f);
     };
     const auto& colours = CTimeCycle::m_CurrentColours;
     const uint8 red     = ToColor(colours.m_nSunCoreRed);
@@ -5569,40 +5581,40 @@ void CVehicle::DoSunGlare() {
         }
 
         // Quad center
-        const double sumX01 = (double)v1.x + v0.x;
-        const double sumY01 = (double)v1.y + v0.y;
-        const float  sumZ01 = (float)((double)v1.z + v0.z);
+        const x87d sumX01 = (x87d)v1.x + v0.x;
+        const x87d sumY01 = (x87d)v1.y + v0.y;
+        const float  sumZ01 = (float)((x87d)v1.z + v0.z);
         const float  sumX   = (float)(sumX01 + v2.x);
-        const double sumY   = sumY01 + v2.y;
-        const double sumZ   = (double)sumZ01 + v2.z;
-        const float  centerX = (float)((double)(float)((double)v3.x + sumX) * 0.25f);
-        const float  centerY = (float)((double)(float)((double)v3.y + sumY) * 0.25f);
-        const double centerZ = ((double)v3.z + sumZ) * 0.25f;
+        const x87d sumY   = sumY01 + v2.y;
+        const x87d sumZ   = (x87d)sumZ01 + v2.z;
+        const float  centerX = (float)((x87d)(float)((x87d)v3.x + sumX) * 0.25f);
+        const float  centerY = (float)((x87d)(float)((x87d)v3.y + sumY) * 0.25f);
+        const x87d centerZ = ((x87d)v3.z + sumZ) * 0.25f;
 
         // Smaller of the |center - v0| deltas
-        const double dx    = (double)centerX - v0.x;
-        const double dy    = (double)centerY - v0.y;
+        const x87d dx    = (x87d)centerX - v0.x;
+        const x87d dy    = (x87d)centerY - v0.y;
         const float  dyF   = (float)dy; // stored to a float temporary in the original
-        const double adx   = dx < 0.0 ? -dx : dx;
-        const double ady   = dy < 0.0 ? -dy : dy;
-        double       delta = adx < ady ? dx : (double)dyF;
+        const x87d adx   = dx < (x87d)0.0 ? -dx : dx;
+        const x87d ady   = dy < (x87d)0.0 ? -dy : dy;
+        x87d       delta = adx < ady ? dx : (x87d)dyF;
         if (delta < 0.0) {
             delta = -delta;
         }
-        const double glare = delta * 1.4f;
+        const x87d glare = delta * 1.4f;
         if (!(glare > 0.6f)) {
             continue;
         }
 
-        const double offX = (double)glareDir.x * glare;
-        const double offY = glare * glareDir.y;
+        const x87d offX = (x87d)glareDir.x * glare;
+        const x87d offY = glare * glareDir.y;
         const float  offZ = (float)(glare * glareDir.z);
-        const CVector localPos{ (float)(offX + centerX), (float)(offY + centerY), (float)((double)offZ + centerZ) };
+        const CVector localPos{ (float)(offX + centerX), (float)(offY + centerY), (float)((x87d)offZ + centerZ) };
         const CVector worldPos = TransformPointExt(*m_matrix, localPos); // 0x59C890
         const CVector coronaPos{
-            (float)((double)worldPos.x + vToCam.x),
-            (float)((double)worldPos.y + vToCam.y),
-            (float)((double)worldPos.z + vToCam.z)
+            (float)((x87d)worldPos.x + vToCam.x),
+            (float)((x87d)worldPos.y + vToCam.y),
+            (float)((x87d)worldPos.z + vToCam.z)
         };
 
         CCoronas::RegisterCorona( // 0x6FC580
@@ -5776,26 +5788,26 @@ void CVehicle::AddExhaustParticles() {
 
 // 0x41BD90 - `CGeneral::GetRandomNumberInRange(min, max)` as the original evaluates it (CRT `rand()`; the result is left in the FPU)
 static double RandomInRangeExt(float min, float max) {
-    return ((double)max - (double)min) * ((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL) + (double)min;
+    return ((x87d)max - (x87d)min) * ((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL) + (x87d)min;
 }
 
 // 0x4082C0 - `CVector::Magnitude` (the result is left in the FPU)
 static double MagnitudeExt(const CVector& v) {
-    return std::sqrt(((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z);
+    return std::sqrt(((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z);
 }
 
 // 0x59C970 - `CVector::NormaliseAndMag` as the original evaluates it. A length of 0 (or less) only writes `x = 1` and returns 1.
 static float NormaliseAndMagExt(CVector& v) {
-    const double sq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    const x87d sq = ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
     if (sq <= 0.0) {
         v.x = 1.0f;
         return 1.0f;
     }
-    const double inv = 1.0 / std::sqrt(sq);
+    const x87d inv = (x87d)1.0 / std::sqrt(sq);
     v.x = (float)(v.x * inv);
     v.y = (float)(v.y * inv);
     v.z = (float)(v.z * inv);
-    return (float)(1.0 / inv);
+    return (float)((x87d)1.0 / inv);
 }
 
 // always return false?
@@ -5810,8 +5822,8 @@ bool CVehicle::AddSingleWheelParticles(tWheelState wheelState, uint32 arg1, floa
     // Distance to the camera
     const auto& vehPos = GetPosition();
     const auto& camPos = TheCamera.GetPosition();
-    const double dx = (double)camPos.x - vehPos.x, dy = (double)camPos.y - vehPos.y, dz = (double)camPos.z - vehPos.z;
-    const double distSq = (dz * dz + dy * dy) + dx * dx;
+    const x87d dx = (x87d)camPos.x - vehPos.x, dy = (x87d)camPos.y - vehPos.y, dz = (x87d)camPos.z - vehPos.z;
+    const x87d distSq = (dz * dz + dy * dy) + dx * dx;
     if (distSq > 625.0f && !vehicleFlags.bAlwaysSkidMarks) {
         return false;
     }
@@ -5847,14 +5859,14 @@ bool CVehicle::AddSingleWheelParticles(tWheelState wheelState, uint32 arg1, floa
     // Sparks (metal on tarmac...)
     if (arg1 == 1 && (arg3 > 0.1f || wheelState == WHEEL_STATE_SPINNING) && g_surfaceInfos.GetFrictionEffect(colPoint->m_nSurfaceTypeB) == 1) {
         CVector sparkDir{
-            (float)((double)m_vecMoveSpeed.x * -50.0f),
-            (float)((double)m_vecMoveSpeed.y * -50.0f),
-            (float)((double)m_vecMoveSpeed.z * -50.0f + 2.5f)
+            (float)((x87d)m_vecMoveSpeed.x * -50.0f),
+            (float)((x87d)m_vecMoveSpeed.y * -50.0f),
+            (float)((x87d)m_vecMoveSpeed.z * -50.0f + 2.5f)
         };
-        float sparkForce = (float)((double)arg3 * 32.0f);
+        float sparkForce = (float)((x87d)arg3 * 32.0f);
         if (wheelState == WHEEL_STATE_SPINNING && arg3 < 0.2f) {
             const CVector back = (m_matrix->GetForward() * m_GasPedal) * -12.0f;
-            sparkDir   = CVector{ back.x, back.y, (float)((double)back.z + 2.5f) };
+            sparkDir   = CVector{ back.x, back.y, (float)((x87d)back.z + 2.5f) };
             sparkForce = 10.0f;
         }
         const float sparkMag = NormaliseAndMagExt(sparkDir);
@@ -5900,16 +5912,16 @@ bool CVehicle::AddSingleWheelParticles(tWheelState wheelState, uint32 arg1, floa
         }
 
         const CVector step  = m_vecMoveSpeed * CTimer::ms_fTimeStep;
-        const int32   num   = (int32)(MagnitudeExt(step) * countScale); // _ftol
+        const int32   num   = (int32)(X87R(MagnitudeExt(step) * countScale)); // _ftol
         const int32   count = num >= 1 ? num : 1;
         const float   countF = (float)count;
         for (int32 i = 0; i < count; i++) {
             const double rnd = RandomInRangeExt(0.5f, 1.0f);
             mults.m_Color.blue  = (float)rnd;
-            mults.m_Color.green = (float)(rnd * 0.9f);
-            mults.m_Color.red   = (float)(rnd * 0.9f);
+            mults.m_Color.green = (float)(X87R(rnd * 0.9f));
+            mults.m_Color.red   = (float)(X87R(rnd * 0.9f));
 
-            const float   frac = (float)(1.0 - (double)i / (double)countF);
+            const float   frac = (float)((x87d)1.0 - (x87d)i / (x87d)countF);
             const CVector pos  = *wheelPos - step * frac;
             g_fx.m_SmokeII3expand->AddParticle(pos, vel, 0.3f, mults, -1.0f, m_fContactSurfaceBrightness, 0.6f, false); // 0x4AA440
         }
@@ -5952,14 +5964,14 @@ bool CVehicle::AddSingleWheelParticles(tWheelState wheelState, uint32 arg1, floa
 
             const float gas = fabsf(m_GasPedal);
             CVector     vel;
-            vel.x = (float)RandomInRangeExt(0.0f, (float)(((double)gas * m_vecMoveSpeed.x) * -30.0f));
-            vel.y = (float)RandomInRangeExt(0.0f, (float)(((double)gas * m_vecMoveSpeed.y) * -30.0f));
-            vel.z = (float)((double)(rand() % 10000) * 0.0001f * 0.8f);
+            vel.x = (float)RandomInRangeExt(0.0f, (float)(((x87d)gas * m_vecMoveSpeed.x) * -30.0f));
+            vel.y = (float)RandomInRangeExt(0.0f, (float)(((x87d)gas * m_vecMoveSpeed.y) * -30.0f));
+            vel.z = (float)((x87d)(rand() % 10000) * 0.0001f * 0.8f);
 
             const double rnd = RandomInRangeExt(0.5f, 1.0f);
             mults.m_Color.blue  = (float)rnd;
-            mults.m_Color.green = (float)(rnd * 0.9f);
-            mults.m_Color.red   = (float)(rnd * 0.9f);
+            mults.m_Color.green = (float)(X87R(rnd * 0.9f));
+            mults.m_Color.red   = (float)(X87R(rnd * 0.9f));
             g_fx.m_SmokeII3expand->AddParticle(*wheelPos, vel, 0.0f, mults, -1.0f, m_fContactSurfaceBrightness, 0.6f, false); // 0x4AA440
         }
         AddSkidmark();
@@ -5987,7 +5999,7 @@ bool CVehicle::AddSingleWheelParticles(tWheelState wheelState, uint32 arg1, floa
             AddWheelDirtAndWater(*colPoint, isLowArg3, false, inWater);
         }
 
-        const bool alwaysSkid = vehicleFlags.bAlwaysSkidMarks && ((uint8)wheelId & 1) && std::sqrt(((double)m_vecMoveSpeed.x * m_vecMoveSpeed.x) + (double)m_vecMoveSpeed.y * m_vecMoveSpeed.y) > 0.04f;
+        const bool alwaysSkid = vehicleFlags.bAlwaysSkidMarks && ((uint8)wheelId & 1) && std::sqrt(((x87d)m_vecMoveSpeed.x * m_vecMoveSpeed.x) + (x87d)m_vecMoveSpeed.y * m_vecMoveSpeed.y) > 0.04f;
         if (!alwaysSkid && !*bloodState && !(flags & 2)) {
             return false;
         }
@@ -6114,9 +6126,9 @@ void CVehicle::UpdateTrailerLink(bool arg0, bool arg1) {
 
     // Is the link too stretched?
     CVector delta = barPos - hitchPos;
-    const auto distSq = (float)(((double)delta.z * delta.z + (double)delta.y * delta.y) + (double)delta.x * delta.x);
+    const auto distSq = (float)(((x87d)delta.z * delta.z + (x87d)delta.y * delta.y) + (x87d)delta.x * delta.x);
     const auto maxStretch = (CTimer::ms_fTimeStep > 0.7f ? CTimer::ms_fTimeStep : 0.7f) * 1.f;
-    if (maxStretch < std::sqrt((double)distSq)) { // Note: NaN doesn't break the link
+    if (maxStretch < std::sqrt((x87d)distSq)) { // Note: NaN doesn't break the link
         BreakTowLink();
         return;
     }
@@ -6124,14 +6136,14 @@ void CVehicle::UpdateTrailerLink(bool arg0, bool arg1) {
     // Are we facing roughly the same way?
     const auto& tractorFwd = tractor->m_matrix->GetForward();
     const auto& myFwd      = m_matrix->GetForward();
-    const auto  fwdDot     = ((double)tractorFwd.z * myFwd.z + (double)tractorFwd.y * myFwd.y) + (double)tractorFwd.x * myFwd.x;
+    const auto  fwdDot     = ((x87d)tractorFwd.z * myFwd.z + (x87d)tractorFwd.y * myFwd.y) + (x87d)tractorFwd.x * myFwd.x;
     if (fwdDot < -0.3f) {
         BreakTowLink();
         return;
     }
     const auto& tractorUp = tractor->m_matrix->GetUp();
     const auto& myUp      = m_matrix->GetUp();
-    const auto  upDot     = ((double)tractorUp.z * myUp.z + (double)tractorUp.y * myUp.y) + (double)tractorUp.x * myUp.x;
+    const auto  upDot     = ((x87d)tractorUp.z * myUp.z + (x87d)tractorUp.y * myUp.y) + (x87d)tractorUp.x * myUp.x;
     if (upDot < 0.0) {
         BreakTowLink();
         return;
@@ -6159,19 +6171,19 @@ void CVehicle::UpdateTrailerLink(bool arg0, bool arg1) {
     if (!arg0 && arg1) {
         const auto step = 1.f > CTimer::ms_fTimeStep ? 1.f : CTimer::ms_fTimeStep;
         const CVector scaled{ 0.3f * delta.x, 0.3f * delta.y, 0.3f * delta.z };
-        const double  invStep = 1.0 / (double)step; // Note: `z` uses the unrounded value, `x` and `y` the rounded one
+        const x87d  invStep = (x87d)1.0 / (x87d)step; // Note: `z` uses the unrounded value, `x` and `y` the rounded one
         const auto    invStepF = (float)invStep;
         relSpeed = CVector{
             scaled.x * invStepF,
             scaled.y * invStepF,
-            (float)((double)scaled.z * invStep)
+            (float)((x87d)scaled.z * invStep)
         };
     }
 
     if (m_nVehicleSubType == VEHICLE_TYPE_TRAILER && static_cast<CTrailer*>(this)->m_fTrailerTowedRatio == -1000.f) { // 0x6D0AF0 - Baggage trailer
         // Remove the vertical component
         const auto& up   = m_matrix->GetUp();
-        const auto  proj = (float)(((double)relSpeed.z * up.z + (double)relSpeed.y * up.y) + (double)relSpeed.x * up.x);
+        const auto  proj = (float)(((x87d)relSpeed.z * up.z + (x87d)relSpeed.y * up.y) + (x87d)relSpeed.x * up.x);
         relSpeed.x -= proj * up.x;
         relSpeed.y -= proj * up.y;
         relSpeed.z -= proj * up.z;
@@ -6185,7 +6197,7 @@ void CVehicle::UpdateTrailerLink(bool arg0, bool arg1) {
     const CVector lever{ hitchPos.x - com.x, hitchPos.y - com.y, hitchPos.z - com.z };
     const CVector cross = Cross_x87(lever, dir);
 
-    const auto impulse = (float)(1.0 / (SquaredMagnitude_x87(cross) / (double)m_fTurnMass + 1.0 / (double)m_fMass));
+    const auto impulse = (float)((x87d)1.0 / (X87R(SquaredMagnitude_x87(cross) / (double)m_fTurnMass) + (x87d)1.0 / (x87d)m_fMass));
     ApplyForce(relSpeed * impulse, hitchPos, true);
 }
 
@@ -6224,22 +6236,22 @@ void CVehicle::UpdateTractorLink(bool arg0, bool arg1) {
 
     if (!arg0) {
         // Scale by the (inverse) mass ratio - the factor stays unrounded in the original
-        const double scale = (1.0 - (double)m_fMass / ((double)trailer->m_fMass + (double)m_fMass)) * 0.5f;
+        const x87d scale = ((x87d)1.0 - (x87d)m_fMass / ((x87d)trailer->m_fMass + (x87d)m_fMass)) * 0.5f;
         relSpeed = CVector{
-            (float)((double)relSpeed.x * scale),
-            (float)((double)relSpeed.y * scale),
-            (float)((double)relSpeed.z * scale)
+            (float)((x87d)relSpeed.x * scale),
+            (float)((x87d)relSpeed.y * scale),
+            (float)((x87d)relSpeed.z * scale)
         };
 
         if (arg1) {
             const auto step = 1.f > CTimer::ms_fTimeStep ? 1.f : CTimer::ms_fTimeStep;
             const CVector scaled{ 0.1f * delta.x, 0.1f * delta.y, 0.1f * delta.z };
-            const double  invStep  = 1.0 / (double)step; // Note: `z` uses the unrounded value, `x` and `y` the rounded one
+            const x87d  invStep  = (x87d)1.0 / (x87d)step; // Note: `z` uses the unrounded value, `x` and `y` the rounded one
             const auto    invStepF = (float)invStep;
             relSpeed = CVector{
                 scaled.x * invStepF,
                 scaled.y * invStepF,
-                (float)((double)scaled.z * invStep)
+                (float)((x87d)scaled.z * invStep)
             };
         }
     }
@@ -6247,7 +6259,7 @@ void CVehicle::UpdateTractorLink(bool arg0, bool arg1) {
     if (trailer->m_nVehicleSubType == VEHICLE_TYPE_TRAILER && static_cast<CTrailer*>(trailer)->m_fTrailerTowedRatio == -1000.f) { // 0x6D0AF0 - Baggage trailer
         // Remove the vertical component
         const auto& up   = trailer->m_matrix->GetUp();
-        const auto  proj = (float)(((double)relSpeed.z * up.z + (double)relSpeed.y * up.y) + (double)relSpeed.x * up.x);
+        const auto  proj = (float)(((x87d)relSpeed.z * up.z + (x87d)relSpeed.y * up.y) + (x87d)relSpeed.x * up.x);
         relSpeed.x -= proj * up.x;
         relSpeed.y -= proj * up.y;
         relSpeed.z -= proj * up.z;
@@ -6262,9 +6274,9 @@ void CVehicle::UpdateTractorLink(bool arg0, bool arg1) {
     const CVector cross = Cross_x87(lever, dir);
 
     // Note: Unlike in `UpdateTrailerLink` the impulse isn't rounded to a float before being applied
-    const double impulse = 1.0 / (SquaredMagnitude_x87(cross) / (double)m_fTurnMass + 1.0 / (double)m_fMass);
+    const x87d impulse = (x87d)1.0 / (X87R(SquaredMagnitude_x87(cross) / (double)m_fTurnMass) + (x87d)1.0 / (x87d)m_fMass);
     ApplyForce(
-        CVector{ (float)((double)relSpeed.x * impulse), (float)((double)relSpeed.y * impulse), (float)((double)relSpeed.z * impulse) },
+        CVector{ (float)((x87d)relSpeed.x * impulse), (float)((x87d)relSpeed.y * impulse), (float)((x87d)relSpeed.z * impulse) },
         barPos,
         true
     );
@@ -6326,23 +6338,23 @@ void CVehicle::FireHeatSeakingMissile(CEntity* targetEntity, eOrdnanceType type,
     const auto&   fwd           = m_matrix->GetForward();
 
     // Alternate between the left/right hard-point
-    const double ordnanceX = m_nOrdnanceCycleIndex != 0 ? -(double)ordnancePos.x : (double)ordnancePos.x;
+    const x87d ordnanceX = m_nOrdnanceCycleIndex != 0 ? -(x87d)ordnancePos.x : (x87d)ordnancePos.x;
     m_nOrdnanceCycleIndex = m_nOrdnanceCycleIndex == 0 ? 1 : 0;
 
     // Place the missile somewhere in front of us, depending on our velocity (x87 evaluation order, see asm)
-    const double speedFwd = ((double)m_vecMoveSpeed.z * fwd.z + (double)m_vecMoveSpeed.y * fwd.y) + (double)m_vecMoveSpeed.x * fwd.x;
-    const double s        = speedFwd < 0.0 ? 0.0 : speedFwd; // Note: NaN is passed through
-    const double offX     = (s * fwd.x) * CTimer::ms_fTimeStep;
+    const x87d speedFwd = ((x87d)m_vecMoveSpeed.z * fwd.z + (x87d)m_vecMoveSpeed.y * fwd.y) + (x87d)m_vecMoveSpeed.x * fwd.x;
+    const x87d s        = speedFwd < (x87d)0.0 ? (x87d)0.0 : speedFwd; // Note: NaN is passed through
+    const x87d offX     = (s * fwd.x) * CTimer::ms_fTimeStep;
     const float  fy       = (float)(s * fwd.y);
     const float  fz       = (float)(s * fwd.z);
-    const double offY     = (double)fy * CTimer::ms_fTimeStep;
-    const float  offZ     = (float)((double)fz * CTimer::ms_fTimeStep);
+    const x87d offY     = (x87d)fy * CTimer::ms_fTimeStep;
+    const float  offZ     = (float)((x87d)fz * CTimer::ms_fTimeStep);
     const float  x        = (float)(offX + ordnanceX);
 
     const CVector posn{
         pos.x + x,
-        (float)((double)pos.y + ((double)ordnancePos.y + offY)),
-        (float)((double)pos.z + ((double)ordnancePos.z + (double)offZ))
+        (float)((x87d)pos.y + ((x87d)ordnancePos.y + offY)),
+        (float)((x87d)pos.z + ((x87d)ordnancePos.z + (x87d)offZ))
     };
     const CVector direction = fwd;
     CProjectileInfo::AddProjectile(this, WEAPON_ROCKET_HS, posn, 0.f, &direction, targetEntity);
@@ -6517,7 +6529,7 @@ void CVehicle::DoHeadLightReflectionImpl(CMatrix& vehicleMatrix, eVehicleLightsF
 
         CShadows::StoreCarLightShadow(
             this,
-            reinterpret_cast<int32>(&m_matrix) + 2,
+            static_cast<int32>(NOTSA_PTR_ID32(&m_matrix)) + 2,
             doTwin ? gpShadowHeadLightsTex : gpShadowHeadLightsTex2,
             GetPosition() + CVector(lightPos2D, 2.0f),
             shdwFront.x, shdwFront.y,
@@ -6836,8 +6848,8 @@ void CVehicle::FillVehicleWithPeds(bool setClothesToAfro) {
 
 // 0x6E2E50
 bool CVehicle::DoBladeCollision(CVector pos, CMatrix& matrix, int16 rotorType, float radius, float damageMult) {
-    NOTSA_GLOBAL_LOCAL(s_TestBladeCol, 0xC1CD38, (CColModel), {}); static_assert(sizeof(s_TestBladeCol) == 48);
-    NOTSA_GLOBAL_LOCAL(s_TestBladeColData, 0xC1CD68, (CCollisionData), {}); static_assert(sizeof(s_TestBladeColData) == 48);
+    NOTSA_GLOBAL_LOCAL(s_TestBladeCol, 0xC1CD38, (CColModel), {}); VALIDATE_SIZE(s_TestBladeCol, 48);
+    NOTSA_GLOBAL_LOCAL(s_TestBladeColData, 0xC1CD68, (CCollisionData), {}); VALIDATE_SIZE(s_TestBladeColData, 48);
     NOTSA_GLOBAL_LOCAL(s_TestBladeColSphere, 0xC1CD98, (CColSphere), {});
 
     // Set-up collision model for the blade
@@ -6997,8 +7009,8 @@ CEntity* CVehicle::GetPlaneWeaponFiringStatus(bool& status, eOrdnanceType& ordna
         auto&       crossHair = gCrossHair[0];
         if (pad.CarGunJustDown() == 2) {
             if (CWeaponEffects::IsLockedOn(0) && plane->field_9DC) {
-                CEntity* const target = ScanAndMarkTargetForHeatSeekingMissile((CEntity*)plane->field_9E0);
-                if (target && target == (CEntity*)plane->field_9E0 && now - (uint32)plane->field_9DC > 1500) {
+                CEntity* const target = ScanAndMarkTargetForHeatSeekingMissile(plane->field_9E0);
+                if (target && target == plane->field_9E0 && now - (uint32)plane->field_9DC > 1500) {
                     ordnanceType = 2;
                     crossHair.m_color.r      = 255;
                     crossHair.m_color.g      = 0;
@@ -7014,7 +7026,7 @@ CEntity* CVehicle::GetPlaneWeaponFiringStatus(bool& status, eOrdnanceType& ordna
 
         if (pad.GetEnterTargeting()) {
             plane->field_9DC = now;
-            plane->field_9E0 = 0;
+            plane->field_9E0 = nullptr;
             return nullptr;
         }
 
@@ -7022,8 +7034,8 @@ CEntity* CVehicle::GetPlaneWeaponFiringStatus(bool& status, eOrdnanceType& ordna
             if (!plane->field_9DC) {
                 plane->field_9DC = now;
             }
-            CEntity* const target = ScanAndMarkTargetForHeatSeekingMissile((CEntity*)plane->field_9E0);
-            if (!target || target != (CEntity*)plane->field_9E0) {
+            CEntity* const target = ScanAndMarkTargetForHeatSeekingMissile(plane->field_9E0);
+            if (!target || target != plane->field_9E0) {
                 plane->field_9DC = now;
             }
             crossHair.m_nTimeWhenToDeactivate = 0;
@@ -7038,12 +7050,12 @@ CEntity* CVehicle::GetPlaneWeaponFiringStatus(bool& status, eOrdnanceType& ordna
                 crossHair.m_color.b   = 255;
                 crossHair.m_fRotation = 0.f;
             }
-            plane->field_9E0 = (int32)target;
+            plane->field_9E0 = target;
             return nullptr;
         }
 
         plane->field_9DC = 0;
-        plane->field_9E0 = 0;
+        plane->field_9E0 = nullptr;
         return nullptr;
     }
     }
@@ -7207,11 +7219,11 @@ void CVehicle::FireFixedMachineGuns() {
     }
 
     const auto& fwd = m_matrix->GetForward();
-    double len = std::sqrt((double)fwd.y * fwd.y + (double)fwd.x * fwd.x);
+    x87d len = std::sqrt((x87d)fwd.y * fwd.y + (x87d)fwd.x * fwd.x);
     if (0.1f > len) {
         len = 0.1f;
     }
-    const double invLen = 1.0 / len;
+    const x87d invLen = (x87d)1.0 / len;
 
     m_nGunFiringTime = now;
 
@@ -7223,14 +7235,14 @@ void CVehicle::FireFixedMachineGuns() {
     // NOTE: The offsets are `double`s because the first gun uses the unrounded products (in the FPU registers) while the second one uses their float copies
     const auto FireFromGun = [&](CVector localPos, double scaledOffX, double scaledOffY) {
         CVector start = TransformPointExt(*m_matrix, localPos); // 0x59C890
-        CVector end{ (float)(scaledOffX + start.x), (float)(start.y + scaledOffY), start.z };
+        CVector end{ (float)(X87R(scaledOffX + start.x)), (float)(X87R(start.y + scaledOffY)), start.z };
 
         const auto r1 = rand();
         const auto r2 = rand();
         const float jitterX = (float)(int32)((r2 & 0xFF) - 0x80) * 0.015f;
         const float jitterY = (float)(int32)((r1 & 0xFF) - 0x80) * 0.015f;
         const auto  r3 = rand();
-        const double jitterZ = (double)(int32)((r3 & 0xFF) - 0x80) * 0.02f;
+        const x87d jitterZ = (x87d)(int32)((r3 & 0xFF) - 0x80) * 0.02f;
 
         end.x = jitterX + end.x;
         end.y = end.y + jitterY;
@@ -7242,7 +7254,7 @@ void CVehicle::FireFixedMachineGuns() {
 
     const float scaledOffX = (float)(offX * 60.f);
     const float scaledOffY = (float)(offY * 60.f);
-    FireFromGun({  2.f, 2.5f, 1.f }, (double)offX * 60.f, (double)offY * 60.f);
+    FireFromGun({  2.f, 2.5f, 1.f }, (x87d)offX * 60.f, (x87d)offY * 60.f);
     FireFromGun({ -2.f, 2.5f, 1.f }, scaledOffX, scaledOffY);
 
     AudioEngine.ReportWeaponEvent(AE_WEAPON_FIRE_PLANE, WEAPON_M4, this); // 0x506F40

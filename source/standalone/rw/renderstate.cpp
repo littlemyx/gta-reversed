@@ -16,7 +16,9 @@
 // Needs only fakerw + librw + the CRT; excluded from the unity build (see source/CMakeLists.txt).
 #ifdef NOTSA_RW_LIBRW
 #include "fakerw.h"
+#ifndef NOTSA_PORTABLE
 #include <src/d3d/rwd3dimpl.h> // d3d9Globals (device caps)
+#endif
 
 #include <cstdint>
 #include <cstring>
@@ -41,16 +43,21 @@ static_assert(rwFILTERNEAREST == rw::Texture::NEAREST && rwFILTERLINEAR == rw::T
               rwFILTERMIPLINEAR == rw::Texture::MIPLINEAR && rwFILTERLINEARMIPNEAREST == rw::Texture::LINEARMIPNEAREST && rwFILTERLINEARMIPLINEAR == rw::Texture::LINEARMIPLINEAR);
 static_assert(rwTEXTUREADDRESSWRAP == rw::Texture::WRAP && rwTEXTUREADDRESSMIRROR == rw::Texture::MIRROR && rwTEXTUREADDRESSCLAMP == rw::Texture::CLAMP &&
               rwTEXTUREADDRESSBORDER == rw::Texture::BORDER);
+#ifndef NOTSA_PORTABLE
 // RW's alpha-test compare enum == D3DCMP (NEVER=1 .. ALWAYS=8)
 static_assert(rwALPHATESTFUNCTIONNEVER == D3DCMP_NEVER && rwALPHATESTFUNCTIONLESS == D3DCMP_LESS && rwALPHATESTFUNCTIONEQUAL == D3DCMP_EQUAL &&
               rwALPHATESTFUNCTIONLESSEQUAL == D3DCMP_LESSEQUAL && rwALPHATESTFUNCTIONGREATER == D3DCMP_GREATER && rwALPHATESTFUNCTIONNOTEQUAL == D3DCMP_NOTEQUAL &&
               rwALPHATESTFUNCTIONGREATEREQUAL == D3DCMP_GREATEREQUAL && rwALPHATESTFUNCTIONALWAYS == D3DCMP_ALWAYS);
 static_assert(rwSHADEMODEFLAT == D3DSHADE_FLAT && rwSHADEMODEGOURAUD == D3DSHADE_GOURAUD);
+#endif
 
 constexpr int kNumStates = rwRENDERSTATEALPHATESTFUNCTIONREF + 1;
 
 // Last value passed to RwRenderStateSet (RW view, i.e. before any conversion) with RW's defaults before the first Set.
 u32 g_shadow[kNumStates] = {};
+#ifdef NOTSA_PORTABLE
+void* g_shadowRaster = nullptr; // the TEXTURERASTER state is a pointer: g_shadow (32 bit) cannot hold it on a 64 bit build
+#endif
 bool g_shadowInit = false;
 
 void InitShadow() {
@@ -91,7 +98,11 @@ void InitShadow() {
 
 // A started D3D9 device: only then may librw's render-state device (which dereferences the D3D9 device for some states) be called.
 bool DeviceLive() {
+#ifndef NOTSA_PORTABLE
     return rw::engine && rw::Engine::state == rw::Engine::Started && rw::d3d::d3ddevice;
+#else
+    return rw::engine && rw::Engine::state == rw::Engine::Started; // gl3: the started engine owns the context (RwEngineStart fails without one)
+#endif
 }
 
 bool IsValidState(int state) {
@@ -99,6 +110,7 @@ bool IsValidState(int state) {
     return state > rwRENDERSTATENARENDERSTATE && state < kNumStates && state != 18 && state != 19;
 }
 
+#ifndef NOTSA_PORTABLE
 u32 ToD3DFogTableMode(u32 rwFogType);
 
 // D3DPRASTERCAPS the exe tests (0x7FE43B / 0x7FE530): fog support, table + W fog
@@ -130,12 +142,14 @@ void ApplyFogType(u32 rwFogType) {
         rw::d3d::setRenderState(D3DRS_FOGEND, end);
     }
 }
+#endif
 
 // RW 0xAARRGGBB <-> librw 0xAABBGGRR
 u32 SwapRB(u32 c) {
     return (c & 0xFF00FF00u) | ((c & 0x00FF0000u) >> 16) | ((c & 0x000000FFu) << 16);
 }
 
+#ifndef NOTSA_PORTABLE
 u32 ToD3DFogTableMode(u32 rwFogType) {
     switch (rwFogType) {
     case rwFOGTYPEEXPONENTIAL:  return D3DFOG_EXP;
@@ -143,6 +157,7 @@ u32 ToD3DFogTableMode(u32 rwFogType) {
     default:                    return D3DFOG_LINEAR; // rwFOGTYPELINEAR (and the invalid NA value)
     }
 }
+#endif
 
 // Value ranges of the enums librw indexes tables with; out-of-range values would read past those tables.
 bool InRange(u32 v, u32 lo, u32 hi) { return v >= lo && v <= hi; }
@@ -164,6 +179,9 @@ namespace notsa_rw02c {
 void ResetRenderStateShadow() {
     g_shadowInit = false;
     std::memset(g_shadow, 0, sizeof(g_shadow));
+#ifdef NOTSA_PORTABLE
+    g_shadowRaster = nullptr;
+#endif
 }
 } // namespace notsa_rw02c
 
@@ -200,11 +218,18 @@ RwBool RwRenderStateSet(RwRenderState state, void* pValue) {
         // exe 0x7FE8CF: no state at all, the return value is (value != 0)
         return v != 0 ? TRUE : FALSE;
     }
+#ifndef NOTSA_PORTABLE
     if (state == rwRENDERSTATEFOGENABLE && b && !g_shadow[rwRENDERSTATEFOGENABLE] && DeviceLive() && !(RasterCaps() & kRasterFogVertexOrTable)) {
         return TRUE; // exe 0x7FE44D: fog is only switched on when the device supports vertex or table fog; the RW flag stays off
     }
+#endif
 
     g_shadow[state] = v;
+#ifdef NOTSA_PORTABLE
+    if (state == rwRENDERSTATETEXTURERASTER) {
+        g_shadowRaster = pValue;
+    }
+#endif
     // TEXTUREADDRESS sets both axes (what librw's own device does for stage 0)
     if (state == rwRENDERSTATETEXTUREADDRESS) {
         g_shadow[rwRENDERSTATETEXTUREADDRESSU] = v;
@@ -221,22 +246,30 @@ RwBool RwRenderStateSet(RwRenderState state, void* pValue) {
     case rwRENDERSTATETEXTUREADDRESSU:     SetRenderState(TEXTUREADDRESSU, v); break;
     case rwRENDERSTATETEXTUREADDRESSV:     SetRenderState(TEXTUREADDRESSV, v); break;
     case rwRENDERSTATEZTESTENABLE:         SetRenderState(ZTESTENABLE, b); break;
+#ifndef NOTSA_PORTABLE
     case rwRENDERSTATESHADEMODE:           d3d::setRenderState(D3DRS_SHADEMODE, v); break;
+#endif
     case rwRENDERSTATEZWRITEENABLE:        SetRenderState(ZWRITEENABLE, b); break;
     case rwRENDERSTATETEXTUREFILTER:       SetRenderState(TEXTUREFILTER, v); break;
     case rwRENDERSTATESRCBLEND:            SetRenderState(SRCBLEND, v); break;
     case rwRENDERSTATEDESTBLEND:           SetRenderState(DESTBLEND, v); break;
     case rwRENDERSTATEVERTEXALPHAENABLE:   SetRenderState(VERTEXALPHA, b); break;
+#ifndef NOTSA_PORTABLE
     case rwRENDERSTATEBORDERCOLOR:         d3d::setSamplerState(0, D3DSAMP_BORDERCOLOR, v); break;
+#endif
     case rwRENDERSTATEFOGENABLE:
         SetRenderState(FOGENABLE, b);                 // librw: shader fog constants
+#ifndef NOTSA_PORTABLE
         d3d::setRenderState(D3DRS_FOGENABLE, b);      // fixed-function pipelines
+#endif
         break;
     case rwRENDERSTATEFOGCOLOR:
         SetRenderState(FOGCOLOR, SwapRB(v));          // librw also writes D3DRS_FOGCOLOR (D3DCOLOR_RGBA of the same bytes = 0xAARRGGBB)
         break;
+#ifndef NOTSA_PORTABLE
     case rwRENDERSTATEFOGTYPE:             ApplyFogType(v); break;
     case rwRENDERSTATEFOGDENSITY:          d3d::setRenderState(D3DRS_FOGDENSITY, v); break; // float bits, as RW passed them
+#endif
     case rwRENDERSTATECULLMODE:            SetRenderState(CULLMODE, v); break;
     case rwRENDERSTATESTENCILENABLE:       SetRenderState(STENCILENABLE, b); break;
     case rwRENDERSTATESTENCILFAIL:         SetRenderState(STENCILFAIL, v); break;
@@ -248,6 +281,7 @@ RwBool RwRenderStateSet(RwRenderState state, void* pValue) {
     case rwRENDERSTATESTENCILFUNCTIONWRITEMASK: SetRenderState(STENCILFUNCTIONWRITEMASK, v); break;
     case rwRENDERSTATEALPHATESTFUNCTION:
         SetRenderState(ALPHATESTFUNC, NearestLibrwAlphaFunc(v)); // keeps librw's cache coherent
+#ifndef NOTSA_PORTABLE
         d3d::setRenderState(D3DRS_ALPHAFUNC, v);                  // exact compare (RW enum == D3DCMP)
         {   // exe 0x7FE96D: while alpha blending is on, the alpha test is on exactly when the compare is not ALWAYS.
             // (librw's own vertex/texture-alpha toggles write ALPHATESTENABLE = blend again; the game never selects ALWAYS.)
@@ -257,6 +291,7 @@ RwBool RwRenderStateSet(RwRenderState state, void* pValue) {
                 d3d::setRenderState(D3DRS_ALPHATESTENABLE, v != rwALPHATESTFUNCTIONALWAYS ? 1u : 0u);
             }
         }
+#endif
         break;
     case rwRENDERSTATEALPHATESTFUNCTIONREF: SetRenderState(ALPHATESTREF, v); break;
     default: break;
@@ -273,6 +308,12 @@ RwBool RwRenderStateGet(RwRenderState state, void* pValue) {
         return FALSE;
     }
     InitShadow();
+#ifdef NOTSA_PORTABLE
+    if (state == rwRENDERSTATETEXTURERASTER) { // pointer valued state: 8 bytes on a 64 bit build (the u32 path below would leave the upper half unwritten)
+        *static_cast<void**>(pValue) = DeviceLive() ? static_cast<void*>(rw::GetRenderStatePtr(rw::TEXTURERASTER)) : g_shadowRaster;
+        return TRUE;
+    }
+#endif
     u32 v = g_shadow[state];
     RwBool ok = TRUE;
     if (state == rwRENDERSTATETEXTUREADDRESS) {
@@ -361,6 +402,7 @@ void NotsaRwRenderState_OnEngineStarted() {
     set(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONGREATER);
     set(rwRENDERSTATEALPHATESTFUNCTIONREF, 0);
 
+#ifndef NOTSA_PORTABLE
     // fixed-function defaults of the same exe code (D3D9 FF state RW owns; ids as in D3DRS_*)
     RwD3D9SetRenderState(D3DRS_LIGHTING, FALSE);
     RwD3D9SetRenderState(D3DRS_DIFFUSEMATERIALSOURCE, D3DMCS_MATERIAL);
@@ -387,5 +429,6 @@ void NotsaRwRenderState_OnEngineStarted() {
         RwD3D9SetTextureStageState(st, D3DTSS_COLOROP, D3DTOP_DISABLE);
         RwD3D9SetTextureStageState(st, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
     }
+#endif
 }
 #endif // NOTSA_RW_LIBRW

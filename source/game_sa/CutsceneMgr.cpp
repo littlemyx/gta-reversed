@@ -21,7 +21,7 @@ uint32 MAX_NUM_CUTSCENE_ITEMS_TO_HIDE = 50;
 uint32 MAX_NUM_CUTSCENE_ATTACHMENTS = 50;
 
 //! Is the cutscene close to finishing (If this is set the camera is already fading in)
-static inline NOTSA_GLOBAL(g_bCutSceneFinishing, 0xBC1CF8, (bool), {}); NOTSA_GLOBAL_DEF(CCutsceneMgr, ms_cutsceneAssociations, 0xBC4020, (CAnimBlendAssocGroup), {}); static_assert(sizeof(CAnimBlendAssocGroup) == 20);
+static inline NOTSA_GLOBAL(g_bCutSceneFinishing, 0xBC1CF8, (bool), {}); NOTSA_GLOBAL_DEF(CCutsceneMgr, ms_cutsceneAssociations, 0xBC4020, (CAnimBlendAssocGroup), {}); VALIDATE_SIZE(CAnimBlendAssocGroup, 20);
 
 // 0x5B0380
 int32 CCutsceneMgr::AddCutsceneHead(CObject* object, int32 arg1) {
@@ -44,7 +44,8 @@ void CCutsceneMgr::AppendToNextCutscene(const char* objectName, const char* anim
 // 0x5B0450
 void CCutsceneMgr::AttachObjectToBone(CCutsceneObject* attachment, CCutsceneObject* object, int32 boneId) {
     attachment->m_pAttachmentObject = object;
-    attachment->m_nAttachBone       = RpHAnimIDGetIndex(GetAnimHierarchyFromSkinClump(object->GetRpClump()), boneId);
+    // the bone index lives in the (pointer sized) m_pAttachToFrame / m_nAttachBone union: write all of it so a previous frame pointer leaves no stale upper half on LP64
+    attachment->m_pAttachToFrame    = reinterpret_cast<RwFrame*>(static_cast<uintptr_t>(static_cast<uint32>(RpHAnimIDGetIndex(GetAnimHierarchyFromSkinClump(object->GetRpClump()), boneId))));
 }
 
 // 0x5B0480
@@ -263,7 +264,7 @@ void CCutsceneMgr::FinishCutscene() {
 uint64 CCutsceneMgr::GetCutsceneTimeInMilleseconds() {
     // 0x5B0550: `fld [timerS]; fmul 1000.0f; jmp _ftol2` - scale first, then truncate (the old code truncated the seconds BEFORE the multiply).
     // _ftol2 = fistp qword; edx:eax (0x8000000000000000 on NaN/overflow). All exe callers read EAX only.
-    const double v = (double)ms_cutsceneTimerS * (double)1000.0f;
+    const x87d v = (x87d)ms_cutsceneTimerS * (x87d)1000.0f;
     if (!(v > -9223372036854775808.0 && v < 9223372036854775808.0)) { // also catches NaN
         return 0x8000000000000000ull;
     }

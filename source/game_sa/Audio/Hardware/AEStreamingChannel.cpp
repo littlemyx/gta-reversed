@@ -155,7 +155,7 @@ void CAEStreamingChannel::SetFrequencyScalingFactor(float factor) {
         DirectSoundBufferFadeToSilence();
         m_nState = StreamingChannelState::Paused;
     } else {
-        SetFrequency(static_cast<uint32>(double(float(m_nOriginalFrequency)) * double(factor))); // 0x4F20D4: fild; fmul dword; _ftol
+        SetFrequency(static_cast<uint32>(x87d(float(m_nOriginalFrequency)) * x87d(factor))); // 0x4F20D4: fild; fmul dword; _ftol
 
         if (m_nState != StreamingChannelState::Paused)
             return;

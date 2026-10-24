@@ -23,7 +23,7 @@ uint8* CMatrix::EulerIndices2 = (uint8*)0x866D94;
 #endif
 #line 14
 NOTSA_GLOBAL(numMatrices, 0xB74238, (int32), {});
-NOTSA_GLOBAL(gDummyMatrix, 0xB74240, (CMatrix), { CMatrix::Identity() }); static_assert(sizeof(gDummyMatrix) == 72); // ctor 0x59AED0 = SetScale(1.0f)
+NOTSA_GLOBAL(gDummyMatrix, 0xB74240, (CMatrix), { CMatrix::Identity() }); VALIDATE_SIZE(gDummyMatrix, 72); // ctor 0x59AED0 = SetScale(1.0f)
 
 
 void CMatrix::InjectHooks()
@@ -243,6 +243,9 @@ void CMatrix::SetRotate(float x, float y, float z) {
     const float a_y = y;
     const float a_z = z;
     CMatrix* self_ = this;
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/Matrix_SetRotate.inc"
+#else
     __asm {
         push dword ptr [a_z]
         push dword ptr [a_y]
@@ -318,6 +321,7 @@ void CMatrix::SetRotate(float x, float y, float z) {
         ret 12
     L_END:
     }
+#endif
 }
 
 // 0x59B1E0: the exe's x87 code verbatim (the sin is spilled to a float, the cos stays unrounded on the FPU stack, every row is mixed with the
@@ -329,6 +333,9 @@ void CMatrix::RotateX(float angle, bool bKeepPos)
     float         A[1] = { angle };
     float         L[8];
     CMatrix*      self = this;
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/Matrix_RotateX.inc"
+#else
     __asm {
         mov ecx, self
         fld dword ptr [A + 0]
@@ -398,6 +405,7 @@ void CMatrix::RotateX(float angle, bool bKeepPos)
         mov dword ptr [ecx + 0x38], edx
         fstp dword ptr [ecx + 8]
     }
+#endif
     if (bKeepPos) {
         m_pos = savedPos;
     }
@@ -412,6 +420,9 @@ void CMatrix::RotateY(float angle, bool bKeepPos)
     float         A[1] = { angle };
     float         L[8];
     CMatrix*      self = this;
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/Matrix_RotateY.inc"
+#else
     __asm {
         mov ecx, self
         fld dword ptr [A + 0]
@@ -479,6 +490,7 @@ void CMatrix::RotateY(float angle, bool bKeepPos)
         mov dword ptr [ecx + 0x38], edx
         fstp dword ptr [ecx + 8]
     }
+#endif
     if (bKeepPos) {
         m_pos = savedPos;
     }
@@ -493,6 +505,9 @@ void CMatrix::RotateZ(float angle, bool bKeepPos)
     float         A[1] = { angle };
     float         L[8];
     CMatrix*      self = this;
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/Matrix_RotateZ.inc"
+#else
     __asm {
         mov ecx, self
         fld dword ptr [A + 0]
@@ -562,6 +577,7 @@ void CMatrix::RotateZ(float angle, bool bKeepPos)
         mov dword ptr [ecx + 0x34], edx
         fstp dword ptr [ecx + 4]
     }
+#endif
     if (bKeepPos) {
         m_pos = savedPos;
     }
@@ -574,6 +590,9 @@ void CMatrix::Rotate(CVector rotation)
     float    A[3] = { rotation.x, rotation.y, rotation.z };
     float    L[21];
     CMatrix* self = this;
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/Matrix_Rotate.inc"
+#else
     __asm {
         mov ecx, self
         fld dword ptr [A + 0]
@@ -761,6 +780,7 @@ void CMatrix::Rotate(CVector rotation)
         mov dword ptr [ecx + 0x34], eax
         mov dword ptr [ecx + 0x38], edx
     }
+#endif
 }
 
 void CMatrix::Reorthogonalise()
@@ -768,7 +788,7 @@ void CMatrix::Reorthogonalise()
     // 0x59B6A0: fully inlined x87 code. Squared lengths are summed z, y, x on the x87 stack; the reciprocal 1 / sqrt(..) is stored as a float
     // (the x component is scaled with the unrounded one), cy / cz / nz / my / mz / the cross products are spilled to floats.
     const auto NormaliseInline = [](float x, float y, float z) {
-        const double recip = 1.0 / std::sqrt((double)z * z + (double)y * y + (double)x * x);
+        const x87d recip = (x87d)1.0 / std::sqrt((x87d)z * z + (x87d)y * y + (x87d)x * x);
         const float  recipF = (float)recip;
         return CVector{ (float)(x * recip), (float)(recipF * y), (float)(recipF * z) };
     };
@@ -852,6 +872,9 @@ void CMatrix::ConvertToEulerAngles(float* pX, float* pY, float* pZ, uint32 uiFla
     const float* a_pZ = pZ;
     const uint32 a_uiFlags = uiFlags;
     CMatrix* self_ = this;
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/Matrix_ConvertToEulerAngles.inc"
+#else
     __asm {
         push dword ptr [a_uiFlags]
         push dword ptr [a_pZ]
@@ -1049,6 +1072,7 @@ void CMatrix::ConvertToEulerAngles(float* pX, float* pY, float* pZ, uint32 uiFla
         ret 16
     L_END:
     }
+#endif
 }
 
 void CMatrix::ConvertFromEulerAngles(float x, float y, float z, uint32 uiFlags) {
@@ -1062,6 +1086,9 @@ void CMatrix::ConvertFromEulerAngles(float x, float y, float z, uint32 uiFlags) 
     const float a_z = z;
     const uint32 a_uiFlags = uiFlags;
     CMatrix* self_ = this;
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/Matrix_ConvertFromEulerAngles.inc"
+#else
     __asm {
         push dword ptr [a_uiFlags]
         push dword ptr [a_z]
@@ -1258,6 +1285,7 @@ void CMatrix::ConvertFromEulerAngles(float x, float y, float z, uint32 uiFlags) 
         ret 16
     L_END:
     }
+#endif
 }
 
 void CMatrix::operator=(const CMatrix& other) {

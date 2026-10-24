@@ -6,12 +6,12 @@ struct tTrackLookup {
     uint32 m_nOffset;
     uint32 m_nSize;
 };
-VALIDATE_SIZE(tTrackLookup, 0xC);
+VALIDATE_SIZE_FILE(tTrackLookup, 0xC);
 
 struct StreamPack {
     char m_szName[16];
 };
-VALIDATE_SIZE(StreamPack, 0x10);
+VALIDATE_SIZE_FILE(StreamPack, 0x10);
 
 struct tTrackInfo {
     struct tBeat {
@@ -23,8 +23,8 @@ struct tTrackInfo {
     std::array<uint32, 16> field_1F40;
     uint16 field_1F80;
 };
-VALIDATE_SIZE(tTrackInfo, 0x1F84);
-VALIDATE_SIZE(tTrackInfo::tBeat, 0x8);
+VALIDATE_SIZE_FILE(tTrackInfo, 0x1F84);
+VALIDATE_SIZE_FILE(tTrackInfo::tBeat, 0x8);
 
 class CAETrackLoader {
 public:

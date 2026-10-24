@@ -11,7 +11,7 @@ struct tCarGenPlateText {
     char m_szPlateText[12];
 };
 
-VALIDATE_SIZE(tCarGenPlateText, 0x10);
+VALIDATE_SIZE_FILE(tCarGenPlateText, 0x10);
 
 class CSpecialPlateHandler {
 public:

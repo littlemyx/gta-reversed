@@ -15,7 +15,7 @@ private:
     static inline NOTSA_GLOBAL(g_currSubGroupId, 0xBAB37C, (uint16), {});
     static inline NOTSA_GLOBAL(g_currFurnitureId, 0xBAB378, (uint16), {});
     friend class FurnitureSubGroup_c; // FurnitureSubGroup_c::AddFurniture reads/increments g_currFurnitureId (exe 0x5C00C0)
-    static inline NOTSA_GLOBAL(g_subGroupStore, 0xBAD3F8, (std::array<FurnitureSubGroup_c, 128>), {}); static_assert(sizeof(std::array<FurnitureSubGroup_c, 128>) == 3584);
+    static inline NOTSA_GLOBAL(g_subGroupStore, 0xBAD3F8, (std::array<FurnitureSubGroup_c, 128>), {}); VALIDATE_LAYOUT(sizeof(std::array<FurnitureSubGroup_c, 128>) == 3584);
 
 public:
     static void InjectHooks();
@@ -40,7 +40,7 @@ private:
 };
 VALIDATE_SIZE(FurnitureManager_c, 0x2078);
 
-NOTSA_GLOBAL_HDR(g_furnitureMan, 0xBAB380, (FurnitureManager_c), {}); static_assert(sizeof(FurnitureManager_c) == 8312);
+NOTSA_GLOBAL_HDR(g_furnitureMan, 0xBAB380, (FurnitureManager_c), {}); VALIDATE_SIZE(FurnitureManager_c, 8312);
 
 #ifdef NOTSA_GLOBALS_DETACHED
 // Interior_c.cpp reaches `m_FurnitureList` (12 bytes at 0x206C = 0xBAD3EC) as the pool of `FurnitureEntity_c`: both item types are 16 bytes behind the same ListItem_c, the exe uses one list for both.

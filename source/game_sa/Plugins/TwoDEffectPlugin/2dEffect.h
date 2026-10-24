@@ -149,7 +149,7 @@ struct CRoadsignAttrFlags {
     uint16 m_nSymbolsPerLine : 2;
     uint16 m_nTextColor : 2;
 };
-VALIDATE_SIZE(CRoadsignAttrFlags, 0x2);
+VALIDATE_SIZE_FILE(CRoadsignAttrFlags, 0x2);
 
 struct tEffectRoadsign {
     static inline constexpr e2dEffectType Type = EFFECT_ROADSIGN;
@@ -222,6 +222,9 @@ VALIDATE_SIZE(tEffectInterior, 0x34 - 0x10);
 struct C2dEffectBase {
     CVector       m_Pos;
     e2dEffectType m_Type;
+    uint8         m_Pad0D[3]; // explicit tail padding (x86: the same 3 bytes, sizeof is still 0x10). Without it the Itanium ABI (clang on arm64/x86-64) has dsize == 13 and
+                              // C2dEffectParticle's first base (tEffectParticle, char[24]) lands at 13 instead of 16, so the particle name was stored over the type's upper bytes
+                              // and read at +16 without its first 3 characters ("cigarette_smoke" -> "arette_smoke").
 
     // Casting.hpp support //
     template<typename From, typename Self>
@@ -241,6 +244,23 @@ struct C2dEffectSlotMachineWheel : C2dEffectBase, tEffectSlotMachineWheel {};
 struct C2dEffectCoverPoint       : C2dEffectBase, tEffectCoverPoint {};
 struct C2dEffectEscalator        : C2dEffectBase, tEffectEscalator {};
 struct C2dEffectInterior         : C2dEffectBase, tEffectInterior {};
+
+struct C2dEffect;
+#ifdef NOTSA_PORTABLE
+// every C2dEffectXxx view must put its payload exactly where the C2dEffect union has it (Cast<> is a reinterpret_cast)
+#define NOTSA_2DFX_VIEW_ASSERT(View, Member, UnionMember) \
+    static_assert(offsetof(View, Member) == 0x10, #View "::" #Member " is not at +0x10 (tail-padding reuse of C2dEffectBase?)");
+NOTSA_2DFX_VIEW_ASSERT(C2dEffectLight, m_color, light)
+NOTSA_2DFX_VIEW_ASSERT(C2dEffectParticle, m_szName, particle)
+NOTSA_2DFX_VIEW_ASSERT(C2dEffectPedAttractor, m_vecQueueDir, pedAttractor)
+NOTSA_2DFX_VIEW_ASSERT(C2dEffectEnEx, m_fEnterAngle, enEx)
+NOTSA_2DFX_VIEW_ASSERT(C2dEffectRoadsign, m_vecSize, roadsign)
+NOTSA_2DFX_VIEW_ASSERT(C2dEffectSlotMachineWheel, m_nId, slotMachineIndex)
+NOTSA_2DFX_VIEW_ASSERT(C2dEffectCoverPoint, m_DirOfCover, coverPoint)
+NOTSA_2DFX_VIEW_ASSERT(C2dEffectEscalator, m_vecBottom, escalator)
+NOTSA_2DFX_VIEW_ASSERT(C2dEffectInterior, m_type, interior)
+#undef NOTSA_2DFX_VIEW_ASSERT
+#endif
 
 struct C2dEffect : public C2dEffectBase {
     union {

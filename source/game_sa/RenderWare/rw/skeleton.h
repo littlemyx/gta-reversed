@@ -134,10 +134,17 @@ struct psGlobalType {
     RwV2d     lastMousePos;
     uint32    lastRenderTime;
 
+#ifndef NOTSA_PORTABLE
     LPDIRECTINPUT8 diInterface;
     LPDIRECTINPUTDEVICE8 diMouse;
     LPDIRECTINPUTDEVICE8 diDevice1;
     LPDIRECTINPUTDEVICE8 diDevice2;
+#else // R-1: no DirectInput; the slots stay (WinPs.cpp zeroes them), input is SDL3
+    void* diInterface;
+    void* diMouse;
+    void* diDevice1;
+    void* diDevice2;
+#endif
 
 #ifdef NOTSA_USE_SDL3
     SDL_Window* sdlWindow;

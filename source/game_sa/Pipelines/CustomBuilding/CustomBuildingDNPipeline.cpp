@@ -97,7 +97,13 @@ RwStream* CCustomBuildingDNPipeline::pluginExtraVertColourStreamWriteCB(RwStream
     const auto self = GetExtraVertColourPtr(object);
     const auto geo  = static_cast<const RpGeometry*>(object);
 
+#ifdef NOTSA_PORTABLE
+    // The chunk starts with a 32 bit "night colours present" magic (the exe writes the raw heap pointer, whose width is 4 on x86 and 8 on 64-bit; the reader only tests != 0).
+    const uint32 magicNumber = self->NightColors ? 1u : 0u;
+    RwStreamWrite(stream, &magicNumber, sizeof(magicNumber));
+#else
     RwStreamWrite(stream, &self->NightColors, sizeof(self->NightColors));
+#endif
     if (self->NightColors) {
         RwStreamWrite(stream, self->NightColors, sizeof(RwRGBA) * RpGeometryGetNumVertices(geo));
     }
@@ -113,7 +119,17 @@ RwInt32 CCustomBuildingDNPipeline::pluginExtraVertColourStreamGetSizeCB(const vo
 
 // 0x5D5FC0
 bool AtomicHasNVCPipeline(RpAtomic* atomic) {
+#ifndef NOTSA_PORTABLE
     return atomic->pipeline == CCustomBuildingDNPipeline::ObjPipeline;
+#else
+    // R-6: under GL3 ObjPipeline is null (the atomic keeps librw's stock pipeline, so `pipeline == ObjPipeline` is true for EVERY atomic with a stock pipeline and
+    // NVCPipelineProcess crashed on DayColors == nullptr). The atomic is an NVC atomic when CustomPipeAtomicSetup tagged it and the day / night colours exist.
+    if (GetPipelineID(atomic) != CUSTOM_BUILDING_DN_PIPELINE_ID) {
+        return false;
+    }
+    const auto* const data = CCustomBuildingDNPipeline::GetExtraVertColourPtr(RpAtomicGetGeometry(atomic));
+    return data->NightColors && data->DayColors;
+#endif
 }
 
 // 0x5D6850 [AKA `NVC__Process`]
@@ -127,9 +143,9 @@ void NVCPipelineProcess(RpAtomic* a, float DNBalance) {
 
     // exe (0x5D6850, unrolled by 4): out = _ftol(night * t + day * (1.0f - t)) per channel, evaluated in extended precision (the products are exact
     // in a double) and TRUNCATED, so e.g. day == night can come out one less when t + (1 - t) != 1 in float
-    const auto t   = (double)DNBalance;
-    const auto omt = (double)(1.f - DNBalance); // stored as float by the exe
-    const auto Mix = [&](uint8 day, uint8 night) { return (uint8)(int32)((double)night * t + (double)day * omt); };
+    const auto t   = (x87d)DNBalance;
+    const auto omt = (x87d)(1.f - DNBalance); // stored as float by the exe
+    const auto Mix = [&](uint8 day, uint8 night) { return (uint8)(int32)((x87d)night * t + (x87d)day * omt); };
 
     geo = RpGeometryLock(geo, rpGEOMETRYLOCKPRELIGHT);
     auto* const prelit = RpGeometryGetPreLightColors(geo);
@@ -153,7 +169,7 @@ void CCustomBuildingDNPipeline::PreRenderUpdate(RpAtomic* a, bool ignoreDNBalanc
     if (intensity <= 0.01f && !ignoreDNBalanceParam) {
         return;
     }
-    if (((uint32)a / 0x70) % 16 != s_Magic1 && !s_Magic2 && !ignoreDNBalanceParam && intensity <= 0.3f) {
+    if ((NOTSA_PTR_ID32(a) / 0x70) % 16 != s_Magic1 && !s_Magic2 && !ignoreDNBalanceParam && intensity <= 0.3f) {
         return;
     }
     NVCPipelineProcess(a, m_fDNBalanceParam);
@@ -169,8 +185,14 @@ void CCustomBuildingDNPipeline::PreRenderUpdate(RpClump* clump, bool ignoreDNBal
 
 // 0x5D7100
 bool CCustomBuildingDNPipeline::CreatePipe() {
+#ifndef NOTSA_PORTABLE
     ObjPipeline = CreateCustomObjPipe();
     return ObjPipeline != nullptr;
+#else
+    extern RxPipeline* NotsaGl3CreateBuildingDNPipe(); // R-8: portable/render/pipelines_saenv_game_gl3.cpp (gl3 default instance + env shader; the CPU colour blend is NVCPipelineProcess)
+    ObjPipeline = NotsaGl3CreateBuildingDNPipe(); // null (NOTSA_R9_OFF / pool failure): the atomics keep librw's stock pipeline
+    return true;
+#endif
 }
 
 // 0x5D6750
@@ -262,6 +284,7 @@ RpMaterial* CCustomBuildingDNPipeline::CustomPipeMaterialSetup(RpMaterial* mater
 
 // 0x5D6480
 void CCustomBuildingDNPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* object, uint8 type, uint32 rxGeoFlags) {
+#ifndef NOTSA_PORTABLE // R-2: D3D9 fixed-function render callback, never invoked under GL3 (R-8 twin)
     // 0x7FE0A0 - `_rwD3D9RenderStateVertexAlphaEnable`
     const auto D3D9RenderStateVertexAlphaEnable = [](bool enable) {
         RwCompatVertexAlphaEnable(enable);
@@ -354,6 +377,7 @@ void CCustomBuildingDNPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* o
     RwD3D9SetTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
     RwD3D9SetTextureStageState(1, D3DTSS_TEXCOORDINDEX, 1);
     RwD3D9SetTextureStageState(1, D3DTSS_TEXTURETRANSFORMFLAGS, NULL);
+#endif
 }
 
 // 0x5D6E90

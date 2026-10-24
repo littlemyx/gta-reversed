@@ -1,4 +1,7 @@
 #include "StdInc.h"
+#ifdef NOTSA_STATEHASH
+#include "portable/statehash.h"
+#endif
 
 NOTSA_GLOBAL(gStreamFileHandles, 0x8E4010, (HANDLE[MAX_CD_STREAM_HANDLES]), {});
 NOTSA_GLOBAL(gCdImageNames, 0x8E4098, (char[MAX_CD_STREAM_HANDLES][MAX_CD_STREAM_IMAGE_NAME_SIZE]), {});
@@ -167,6 +170,32 @@ eCdStreamStatus CdStreamGetStatus(int32 streamId) {
     return eCdStreamStatus::READING_SUCCESS;
 }
 
+#ifdef NOTSA_STATEHASH
+// RR-3: the body of CdStreamThread's read, run inline on the calling thread (NOTSA_RR=1: synchronous streaming, like the portable build's cdstream_portable.cpp DoRead)
+static void RrReadNow(CdStream& stream) {
+    if (stream.status != eCdStreamStatus::READING_SUCCESS) {
+        return;
+    }
+    const DWORD numberOfBytesToRead = stream.nSectorsToRead * STREAMING_SECTOR_SIZE;
+    const DWORD overlappedOffset = stream.nSectorOffset * STREAMING_SECTOR_SIZE;
+    if (gOverlappedIO) {
+        stream.overlapped.Offset = overlappedOffset;
+        if (ReadFile(stream.hFile, stream.lpBuffer, numberOfBytesToRead, nullptr, &stream.overlapped)) {
+            stream.status = eCdStreamStatus::READING_SUCCESS;
+        } else if (GetLastError() != ERROR_IO_PENDING) {
+            stream.status = eCdStreamStatus::READING_FAILURE;
+        } else {
+            DWORD numberOfBytesTransferred = 0;
+            stream.status = GetOverlappedResult(stream.hFile, &stream.overlapped, &numberOfBytesTransferred, true) ? eCdStreamStatus::READING_SUCCESS : eCdStreamStatus::READING_FAILURE;
+        }
+    } else {
+        SetFilePointer(stream.hFile, overlappedOffset, nullptr, 0u);
+        DWORD numberOfBytesRead = 0;
+        stream.status = ReadFile(stream.hFile, stream.lpBuffer, numberOfBytesToRead, &numberOfBytesRead, nullptr) ? eCdStreamStatus::READING_SUCCESS : eCdStreamStatus::READING_FAILURE;
+    }
+}
+#endif
+
 // When CdStreamRead is called, it will update CdStream information for the channel and
 // signal gStreamSemaphore, so the secondary thread `CdStreamThread` can start reading the models.
 // If this function is called with the same channelId/streamId whilst CdStreamThread is still reading the previous model
@@ -187,6 +216,13 @@ bool CdStreamRead(int32 streamId, void* lpBuffer, CdStreamPos pos, int32 sectorC
         stream.nSectorsToRead = sectorCount;
         stream.lpBuffer = lpBuffer;
         stream.bLocked = false;
+#ifdef NOTSA_STATEHASH
+        if (notsa::rr::Active()) { // RR: synchronous streaming - the request completes inside this call (when a model is "loaded" is a function of the game's own calls, not of thread timing)
+            RrReadNow(stream);
+            stream.nSectorsToRead = 0;
+            return true;
+        }
+#endif
         AddToQueue(&gStreamQueue, streamId);
         if (!ReleaseSemaphore(gStreamSemaphore, 1, nullptr))
             NOTSA_LOG_DEBUG("Signal Sema Error");

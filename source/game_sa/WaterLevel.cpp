@@ -283,7 +283,7 @@ auto CWaterLevel::GetWaterLayerTexInfo(int32 layer) -> WaterLayerTexInfo {
     switch (layer) {
     case 0: return { { TextureShiftFirstU,  TextureShiftFirstV  }, 25.0f };
     case 1: return { { TextureShiftSecondU, TextureShiftSecondV }, 12.5f };
-    default: NOTSA_UNREACHABLE();
+    default: NOTSA_UNREACHABLE_RET({});
     }
 }
 
@@ -408,7 +408,7 @@ void CWaterLevel::RenderWakeSegment(
                 p /= 32.f;   // TODO: Magic number (maybe meaningful this time) 
                 return p - std::floor(p); // Extract fractional part
             };
-            const float  z   = wakeZ + x87::sin((CalcAngleOfPos(corners[i].x) + CalcAngleOfPos(corners[i].y)) * PI * 2.f + angle) * windRadius;
+            const float  z   = wakeZ + X87R(x87::sin((CalcAngleOfPos(corners[i].x) + CalcAngleOfPos(corners[i].y)) * PI * 2.f + angle) * windRadius);
             const auto& rgb = WakeSegmentPartColors[i];
             RenderBuffer::PushVertex(
                 CVector{ corners[i], z },
@@ -584,11 +584,11 @@ void CWaterLevel::RenderFlatWaterRectangle_OneLayer(int32 minX, int32 maxX, int3
 void CWaterLevel::RenderHighDetailWaterRectangle(int32 minX, int32 maxX, int32 Y1, int32 Y2, CRenPar P1, CRenPar P2, CRenPar P3, CRenPar P4) {
     // Bounding sphere of the rectangle (in 2D, Z is the one of the 1st vertex)
     const int32  dx     = maxX - minX;
-    const double halfDX = (double)dx * 0.5;
-    const double halfDY = (double)(Y1 - Y2) * 0.5;
+    const x87d halfDX = (x87d)dx * (x87d)0.5;
+    const x87d halfDY = (x87d)(Y1 - Y2) * (x87d)0.5;
     const CVector center{
-        (float)((double)(minX + maxX) * 0.5),
-        (float)((double)(Y1 + Y2) * 0.5),
+        (float)((x87d)(minX + maxX) * (x87d)0.5),
+        (float)((x87d)(Y1 + Y2) * (x87d)0.5),
         P1.z
     };
     const float radius = (float)std::sqrt(halfDY * halfDY + halfDX * halfDX);
@@ -621,7 +621,7 @@ void CWaterLevel::RenderHighDetailWaterRectangle(int32 minX, int32 maxX, int32 Y
 
     // Split along Y. Note: This isn't the same as `SplitWaterRectangleAlongYLine`, as `t` is calculated using `Y1` and `Y2` directly
     const int32 splitAtY = minY + (numCellsY / 2) * 2;
-    const float t        = (float)((double)(splitAtY - Y1) / (double)(Y2 - Y1));
+    const float t        = (float)((x87d)(splitAtY - Y1) / (x87d)(Y2 - Y1));
     const auto  P13      = lerpBlend(P1, P3, t);
     const auto  P24      = lerpBlend(P2, P4, t);
 
@@ -657,13 +657,13 @@ void CWaterLevel::RenderHighDetailWaterRectangle_OneLayer(int32 minX, int32 maxX
     s_VtxColorCacheIdx = 0;
     RenderBuffer::RenderAndEmptyRenderBuffer(); // 0x6E7680
 
-    const float invX = (float)(1.0 / (double)numCellsX);
+    const float invX = (float)((x87d)1.0 / (x87d)numCellsX);
     const int32 stepX = (maxX - minX) / numCellsX;
-    const float invY = (float)(1.0 / (double)numCellsY);
+    const float invY = (float)((x87d)1.0 / (x87d)numCellsY);
     const int32 stepY = (Y2 - Y1) / numCellsY;
 
     const auto Grad = [](float a, float b, float inv) {
-        return (float)(((double)a - (double)b) * (double)inv);
+        return (float)(((x87d)a - (x87d)b) * (x87d)inv);
     };
 
     // Gradients of the "upper" triangle (P1, P2, P3) - origin is P1
@@ -682,18 +682,18 @@ void CWaterLevel::RenderHighDetailWaterRectangle_OneLayer(int32 minX, int32 maxX
     switch (WaterLayer) {
     case 0:
         uvScale = 0.08f; // 0x859018
-        baseU   = (float)((double)minX * (double)uvScale + (double)TextureShiftSecondU);
-        baseV   = (float)((double)Y1   * (double)uvScale + (double)TextureShiftSecondV);
+        baseU   = (float)((x87d)minX * (x87d)uvScale + (x87d)TextureShiftSecondU);
+        baseV   = (float)((x87d)Y1   * (x87d)uvScale + (x87d)TextureShiftSecondV);
         break;
     case 1:
         uvScale = 0.04f; // 0x858CEC
-        baseU   = (float)((double)minX * (double)uvScale + (double)TextureShiftFirstU);
-        baseV   = (float)((double)Y1   * (double)uvScale + (double)TextureShiftFirstV);
+        baseU   = (float)((x87d)minX * (x87d)uvScale + (x87d)TextureShiftFirstU);
+        baseV   = (float)((x87d)Y1   * (x87d)uvScale + (x87d)TextureShiftFirstV);
         break;
     }
     if (WaterLayer == 0 || WaterLayer == 1) {
-        baseU = (float)((double)baseU - std::floor((double)baseU)); // 0x8219F0 = floor
-        baseV = (float)((double)baseV - std::floor((double)baseV));
+        baseU = (float)((x87d)baseU - std::floor((x87d)baseU)); // 0x8219F0 = floor
+        baseV = (float)((x87d)baseV - std::floor((x87d)baseV));
     }
 
     const CVector camPos = TheCamera.GetPosition();
@@ -704,45 +704,45 @@ void CWaterLevel::RenderHighDetailWaterRectangle_OneLayer(int32 minX, int32 maxX
 
     for (int32 j = 0; j <= numCellsY; j++) {
         const float fj = (float)j;
-        const float jInvY = (float)((double)fj * (double)invY);
+        const float jInvY = (float)((x87d)fj * (x87d)invY);
 
         for (int32 i = 0; i <= numCellsX; i++) {
             const float fi = (float)i;
 
             int32  X, Y;
             float  z, smallWaves;
-            double bigWaves; // Stays in extended precision
-            if ((double)fi * (double)invX + (double)jInvY < 1.0) {
+            x87d bigWaves; // Stays in extended precision
+            if ((x87d)fi * (x87d)invX + (x87d)jInvY < 1.0) {
                 X = minX + i * stepX;
                 Y = Y1   + j * stepY;
-                z          = (float)((double)fj * (double)zY_A + (double)fi * (double)zX_A + (double)P1.z);
-                bigWaves   = (double)fj * (double)bY_A + (double)fi * (double)bX_A + (double)P1.bigWaves;
-                smallWaves = (float)((double)fi * (double)sX_A + (double)fj * (double)sY_A + (double)P1.smallWaves);
+                z          = (float)((x87d)fj * (x87d)zY_A + (x87d)fi * (x87d)zX_A + (x87d)P1.z);
+                bigWaves   = (x87d)fj * (x87d)bY_A + (x87d)fi * (x87d)bX_A + (x87d)P1.bigWaves;
+                smallWaves = (float)((x87d)fi * (x87d)sX_A + (x87d)fj * (x87d)sY_A + (x87d)P1.smallWaves);
             } else {
                 const float rj = (float)(numCellsY - j);
                 const float ri = (float)(numCellsX - i);
                 X = startX_B + i * stepX;
                 Y = startY_B + j * stepY;
-                z          = (float)((double)rj * (double)zY_B + (double)ri * (double)zX_B + (double)P4.z);
-                bigWaves   = (double)rj * (double)bY_B + (double)ri * (double)bX_B + (double)P4.bigWaves;
-                smallWaves = (float)((double)rj * (double)sY_B + (double)ri * (double)sX_B + (double)P4.smallWaves);
+                z          = (float)((x87d)rj * (x87d)zY_B + (x87d)ri * (x87d)zX_B + (x87d)P4.z);
+                bigWaves   = (x87d)rj * (x87d)bY_B + (x87d)ri * (x87d)bX_B + (x87d)P4.bigWaves;
+                smallWaves = (float)((x87d)rj * (x87d)sY_B + (x87d)ri * (x87d)sX_B + (x87d)P4.smallWaves);
             }
 
             const float fX = (float)X;
             const float fY = (float)Y;
 
             // Fade the waves out with the distance from the camera
-            const float dx = (float)((double)camPos.x - (double)X);
-            const float dy = (float)((double)camPos.y - (double)Y);
-            const double dist = std::sqrt((double)dy * (double)dy + (double)dx * (double)dx) / (double)DETAILEDWATERDIST;
-            double fade;
+            const float dx = (float)((x87d)camPos.x - (x87d)X);
+            const float dy = (float)((x87d)camPos.y - (x87d)Y);
+            const x87d dist = std::sqrt((x87d)dy * (x87d)dy + (x87d)dx * (x87d)dx) / (x87d)DETAILEDWATERDIST;
+            x87d fade;
             if (dist > 1.0) {
-                fade = 0.0; // 0x858B50
+                fade = (x87d)0.0; // 0x858B50
             } else {
-                const double distF = (double)(float)dist;
-                fade = distF > 0.75 // 0x858F34
-                    ? (1.0 - distF) * 4.0 // 0x858B90
-                    : 1.0;
+                const x87d distF = (x87d)(float)dist;
+                fade = distF > (x87d)0.75 // 0x858F34
+                    ? ((x87d)1.0 - distF) * (x87d)4.0 // 0x858B90
+                    : (x87d)1.0;
             }
 
             const int32 uOff = i * stepX;
@@ -754,7 +754,7 @@ void CWaterLevel::RenderHighDetailWaterRectangle_OneLayer(int32 minX, int32 maxX
                 CalculateWavesOnlyForCoordinate(
                     X, Y,
                     (float)(fade * bigWaves),
-                    (float)((double)smallWaves * fade),
+                    (float)((x87d)smallWaves * fade),
                     z, colorMult, glare, s_WaveNormalSink
                 );
 
@@ -764,9 +764,9 @@ void CWaterLevel::RenderHighDetailWaterRectangle_OneLayer(int32 minX, int32 maxX
                 RwIm3DVertexSetV(vtx, (float)((double)vOff * (double)uvScale + (double)baseV));
 
                 // Truncated to 8 bits (no clamping)
-                const auto r = (uint8)(int32)((double)WaterColor.r * (double)colorMult);
-                const auto g = (uint8)(int32)((double)WaterColor.g * (double)colorMult);
-                const auto b = (uint8)(int32)((double)WaterColor.b * (double)colorMult);
+                const auto r = (uint8)(int32)((x87d)WaterColor.r * (x87d)colorMult);
+                const auto g = (uint8)(int32)((x87d)WaterColor.g * (x87d)colorMult);
+                const auto b = (uint8)(int32)((x87d)WaterColor.b * (x87d)colorMult);
                 RwIm3DVertexSetRGBA(vtx, r, g, b, (uint8)WaterLayerAlpha[0]);
 
                 s_VtxColorCacheG[s_VtxColorCacheIdx] = g;
@@ -822,7 +822,7 @@ void CWaterLevel::RenderHighDetailWaterTriangle_OneLayer(int32 X1, int32 Y1, CRe
     s_VtxColorCacheIdx = 0;
     RenderBuffer::RenderAndEmptyRenderBuffer(); // 0x6E7680
 
-    const double inv = 1.0 / (double)numCells; // Stays on the x87 stack => extended precision
+    const x87d inv = (x87d)1.0 / (x87d)numCells; // Stays on the x87 stack => extended precision
 
     const bool       isFirstOrigin = X1 == X3;
     const CRenPar&   O             = isFirstOrigin ? P1 : P2; // Origin
@@ -833,7 +833,7 @@ void CWaterLevel::RenderHighDetailWaterTriangle_OneLayer(int32 X1, int32 Y1, CRe
     const int32      stepY         = (Y3 - Y0) / numCells;
 
     const auto Grad = [&](float a, float b) {
-        return (float)(((double)a - (double)b) * inv);
+        return (float)(((x87d)a - (x87d)b) * inv);
     };
     const float zX = Grad(Pa.z,          O.z),          zY = Grad(P3.z,          O.z);
     const float bX = Grad(Pa.bigWaves,   O.bigWaves),   bY = Grad(P3.bigWaves,   O.bigWaves);
@@ -845,18 +845,18 @@ void CWaterLevel::RenderHighDetailWaterTriangle_OneLayer(int32 X1, int32 Y1, CRe
     switch (WaterLayer) {
     case 0:
         uvScale = 0.08f; // 0x859018
-        baseU   = (float)((double)X0 * (double)uvScale + (double)TextureShiftSecondU);
-        baseV   = (float)((double)Y0 * (double)uvScale + (double)TextureShiftSecondV);
+        baseU   = (float)((x87d)X0 * (x87d)uvScale + (x87d)TextureShiftSecondU);
+        baseV   = (float)((x87d)Y0 * (x87d)uvScale + (x87d)TextureShiftSecondV);
         break;
     case 1:
         uvScale = 0.04f; // 0x858CEC
-        baseU   = (float)((double)X0 * (double)uvScale + (double)TextureShiftFirstU);
-        baseV   = (float)((double)Y0 * (double)uvScale + (double)TextureShiftFirstV);
+        baseU   = (float)((x87d)X0 * (x87d)uvScale + (x87d)TextureShiftFirstU);
+        baseV   = (float)((x87d)Y0 * (x87d)uvScale + (x87d)TextureShiftFirstV);
         break;
     }
     if (WaterLayer == 0 || WaterLayer == 1) {
-        baseU = (float)((double)baseU - std::floor((double)baseU)); // 0x8219F0 = floor
-        baseV = (float)((double)baseV - std::floor((double)baseV));
+        baseU = (float)((x87d)baseU - std::floor((x87d)baseU)); // 0x8219F0 = floor
+        baseV = (float)((x87d)baseV - std::floor((x87d)baseV));
     }
 
     const CVector camPos = TheCamera.GetPosition();
@@ -866,33 +866,33 @@ void CWaterLevel::RenderHighDetailWaterTriangle_OneLayer(int32 X1, int32 Y1, CRe
     int32 X{}, Y = Y0;
     for (int32 j = 0; j <= numCells; j++) {
         const int32 numInRow = numCells - j;
-        const float zJ = (float)((double)j * (double)zY);
-        const float bJ = (float)((double)j * (double)bY);
-        const float sJ = (float)((double)j * (double)sY);
+        const float zJ = (float)((x87d)j * (x87d)zY);
+        const float bJ = (float)((x87d)j * (x87d)bY);
+        const float sJ = (float)((x87d)j * (x87d)sY);
         const float fY = (float)Y;
 
         uOff = 0;
         X    = X0;
         for (int32 i = 0; i <= numInRow; i++) {
-            const float z0         = (float)((double)zX * (double)i + (double)zJ + (double)O.z);
-            const float bigWaves   = (float)((double)bX * (double)i + (double)bJ + (double)O.bigWaves);
-            const float smallWaves = (float)((double)i * (double)sX + (double)sJ + (double)O.smallWaves);
+            const float z0         = (float)((x87d)zX * (x87d)i + (x87d)zJ + (x87d)O.z);
+            const float bigWaves   = (float)((x87d)bX * (x87d)i + (x87d)bJ + (x87d)O.bigWaves);
+            const float smallWaves = (float)((x87d)i * (x87d)sX + (x87d)sJ + (x87d)O.smallWaves);
             float       z          = z0;
 
             const float fX = (float)X;
 
             // Fade the waves out with the distance from the camera
-            const float dx = (float)((double)camPos.x - (double)X);
-            const float dy = (float)((double)camPos.y - (double)fY);
-            const double dist = std::sqrt((double)dy * (double)dy + (double)dx * (double)dx) / (double)DETAILEDWATERDIST;
-            double fade;
+            const float dx = (float)((x87d)camPos.x - (x87d)X);
+            const float dy = (float)((x87d)camPos.y - (x87d)fY);
+            const x87d dist = std::sqrt((x87d)dy * (x87d)dy + (x87d)dx * (x87d)dx) / (x87d)DETAILEDWATERDIST;
+            x87d fade;
             if (dist > 1.0) {
-                fade = 0.0; // 0x858B50
+                fade = (x87d)0.0; // 0x858B50
             } else {
-                const double distF = (double)(float)dist;
-                fade = distF > 0.75 // 0x858F34
-                    ? (1.0 - distF) * 4.0 // 0x858B90
-                    : 1.0;
+                const x87d distF = (x87d)(float)dist;
+                fade = distF > (x87d)0.75 // 0x858F34
+                    ? ((x87d)1.0 - distF) * (x87d)4.0 // 0x858B90
+                    : (x87d)1.0;
             }
 
             auto* const vtx = &TempBufferVertices.m_3d[uiTempBufferVerticesStored];
@@ -901,8 +901,8 @@ void CWaterLevel::RenderHighDetailWaterTriangle_OneLayer(int32 X1, int32 Y1, CRe
                 float colorMult;
                 CalculateWavesOnlyForCoordinate(
                     X, Y,
-                    (float)(fade * (double)bigWaves),
-                    (float)((double)smallWaves * fade),
+                    (float)(fade * (x87d)bigWaves),
+                    (float)((x87d)smallWaves * fade),
                     z, colorMult, glare, s_WaveNormalSink
                 );
                 (void)colorMult; // The original overwrites it with 0.577f (0x872004) and doesn't use it
@@ -912,9 +912,9 @@ void CWaterLevel::RenderHighDetailWaterTriangle_OneLayer(int32 X1, int32 Y1, CRe
                 RwIm3DVertexSetV(vtx, (float)((double)vOff * (double)uvScale + (double)baseV));
 
                 // Truncated to 8 bits (no clamping)
-                const auto r = (uint8)(int32)((double)WaterColor.r * (double)0.577f); // 0x872004
-                const auto g = (uint8)(int32)((double)WaterColor.g * (double)0.577f);
-                const auto b = (uint8)(int32)((double)WaterColor.b * (double)0.577f);
+                const auto r = (uint8)(int32)((x87d)WaterColor.r * (x87d)0.577f); // 0x872004
+                const auto g = (uint8)(int32)((x87d)WaterColor.g * (x87d)0.577f);
+                const auto b = (uint8)(int32)((x87d)WaterColor.b * (x87d)0.577f);
                 RwIm3DVertexSetRGBA(vtx, r, g, b, (uint8)WaterLayerAlpha[0]);
 
                 s_VtxColorCacheR[s_VtxColorCacheIdx] = r;
@@ -939,7 +939,7 @@ void CWaterLevel::RenderHighDetailWaterTriangle_OneLayer(int32 X1, int32 Y1, CRe
                 RwIm3DVertexSetU(vtx, (float)((double)uOff * (double)TextureJitterMult + (double)TextureShiftThirdU));
                 RwIm3DVertexSetV(vtx, (float)((double)vOff * (double)TextureJitterMult + (double)TextureShiftThirdV));
                 RwIm3DVertexSetPos(vtx, fX, fY, (float)((double)z + (double)0.1f)); // 0x858B1C
-                const auto a = (uint8)(int32)((double)NOTSA_GLOBAL_EXPR(0x8D3810, (int32), static_cast<int32>(WaterLayerAlpha[2])) * (double)glare);
+                const auto a = (uint8)(int32)((x87d)NOTSA_GLOBAL_EXPR(0x8D3810, (int32), static_cast<int32>(WaterLayerAlpha[2])) * (x87d)glare);
                 RwIm3DVertexSetRGBA(vtx, a, a, a, 0xFF);
                 break;
             }
@@ -1208,20 +1208,20 @@ bool CWaterQuad::GetWaterLevel(float x, float y, float z, float* outWaterLevel, 
         return false;
     }
 
-    const float  u = (float)(((double)x - (double)x0) / (double)(v1.x - v0.x));
-    const double v = ((double)y - (double)y0) / (double)(v2.y - v0.y);
+    const float  u = (float)(((x87d)x - (x87d)x0) / (x87d)(v1.x - v0.x));
+    const x87d v = ((x87d)y - (x87d)y0) / (x87d)(v2.y - v0.y);
 
     // Interpolate `Get` (a member of `CRenPar`) in the triangle `base`, `a`, `b`: `base + (a - base) * wa + (b - base) * wb`
     const auto Interpolate = [](auto get, const CWaterVertex& base, const CWaterVertex& a, double wa, const CWaterVertex& b, double wb) {
-        return ((double)get(a.rp) - (double)get(base.rp)) * wa + ((double)get(b.rp) - (double)get(base.rp)) * wb + (double)get(base.rp);
+        return X87R(((double)get(a.rp) - (double)get(base.rp)) * wa) + X87R(((double)get(b.rp) - (double)get(base.rp)) * wb) + (double)get(base.rp);
     };
     const auto GetZ     = [](const CRenPar& rp) { return rp.z; };
     const auto GetBig   = [](const CRenPar& rp) { return rp.bigWaves; };
     const auto GetSmall = [](const CRenPar& rp) { return rp.smallWaves; };
 
-    if (!((double)u + v <= 1.0)) { // Upper triangle (v1, v2, v3)
-        const double a = 1.0 - (double)u;
-        const double b = 1.0 - v;
+    if (!((x87d)u + v <= 1.0)) { // Upper triangle (v1, v2, v3)
+        const x87d a = (x87d)1.0 - (x87d)u;
+        const x87d b = (x87d)1.0 - v;
         *outWaterLevel = (float)Interpolate(GetZ, v3, v2, a, v1, b);
         if (!outBigWaves) {
             return true; // NOTE: The original returns here (skipping the depth tests below), unlike the triangle's
@@ -1238,10 +1238,10 @@ bool CWaterQuad::GetWaterLevel(float x, float y, float z, float* outWaterLevel, 
     }
 
     // Limited depth polys only apply to the water close to `z`
-    if ((double)*outWaterLevel - (double)6.f > (double)z && bLimitedDepth) {
+    if ((x87d)*outWaterLevel - (x87d)6.f > (double)z && bLimitedDepth) {
         return false;
     }
-    return !((double)*outWaterLevel + (double)20.f < (double)z);
+    return !((x87d)*outWaterLevel + (x87d)20.f < (double)z);
 }
 
 // 0x6E5E90
@@ -1269,19 +1269,19 @@ bool CWaterTriangle::GetWaterLevel(float x, float y, float z, float* outWaterLev
     }
 
     const float y0 = (float)v0.y;
-    const float u  = (float)(((double)x - (double)x0) / (double)(v1.x - v0.x));
-    const float v  = (float)(((double)y - (double)y0) / (double)(v2.y - v0.y));
+    const float u  = (float)(((x87d)x - (x87d)x0) / (x87d)(v1.x - v0.x));
+    const float v  = (float)(((x87d)y - (x87d)y0) / (x87d)(v2.y - v0.y));
 
     // `base + (a - base) * wa + (b - base) * wb`
     const auto Interpolate = [](auto get, const CWaterVertex& base, const CWaterVertex& a, double wa, const CWaterVertex& b, double wb) {
-        return ((double)get(a.rp) - (double)get(base.rp)) * wa + ((double)get(b.rp) - (double)get(base.rp)) * wb + (double)get(base.rp);
+        return X87R(((double)get(a.rp) - (double)get(base.rp)) * wa) + X87R(((double)get(b.rp) - (double)get(base.rp)) * wb) + (double)get(base.rp);
     };
     const auto GetZ     = [](const CRenPar& rp) { return rp.z; };
     const auto GetBig   = [](const CRenPar& rp) { return rp.bigWaves; };
     const auto GetSmall = [](const CRenPar& rp) { return rp.smallWaves; };
 
     if (v0.x == v2.x) { // Vertical left edge => (v0, v1, v2) with (u, v) as is
-        if (!((double)v + (double)u <= 1.0)) {
+        if (!((x87d)v + (x87d)u <= 1.0)) {
             return false;
         }
         *outWaterLevel = (float)Interpolate(GetZ, v0, v1, (double)u, v2, (double)v);
@@ -1293,7 +1293,7 @@ bool CWaterTriangle::GetWaterLevel(float x, float y, float z, float* outWaterLev
         if (!(u >= v)) {
             return false;
         }
-        const double a = 1.0 - (double)u;
+        const x87d a = (x87d)1.0 - (x87d)u;
         *outWaterLevel = (float)Interpolate(GetZ, v1, v2, (double)v, v0, a);
         if (outBigWaves) {
             *outBigWaves   = (float)Interpolate(GetBig,   v1, v0, a, v2, (double)v);
@@ -1301,10 +1301,10 @@ bool CWaterTriangle::GetWaterLevel(float x, float y, float z, float* outWaterLev
         }
     }
 
-    if ((double)*outWaterLevel - (double)6.f > (double)z && bLimitedDepth) {
+    if ((x87d)*outWaterLevel - (x87d)6.f > (double)z && bLimitedDepth) {
         return false;
     }
-    return !((double)*outWaterLevel + (double)20.f < (double)z);
+    return !((x87d)*outWaterLevel + (x87d)20.f < (double)z);
 }
 
 // 0x6E8580
@@ -1391,7 +1391,7 @@ bool CWaterLevel::GetWaterDepth(const CVector& vecPos, float* pOutWaterDepth, fl
 // 0x6EA8A0
 bool CWaterLevel::GetGroundLevel(const CVector& pos, float* outGroundZ, ColData* outColData, float radius) {
     // NOTE: Starts `radius` above `pos`, and looks `radius` downwards
-    const CVector origin{ pos.x, pos.y, (float)((double)radius + (double)pos.z) };
+    const CVector origin{ pos.x, pos.y, (float)((x87d)radius + (x87d)pos.z) };
 
     CColPoint colPoint;
     CEntity*  entity{}; // The original reuses the `radius` argument's stack slot for this
@@ -1424,7 +1424,7 @@ bool CWaterLevel::TestLineAgainstWater(CVector start, CVector end, CVector* outH
 
     // 0x821B40 (ftol => truncation) of `v * 0.002 + 6`
     const auto ToBlock = [](float v) {
-        return (int32)((double)v * (double)0.002f + (double)6.f); // 0x858F44, 0x858B44
+        return (int32)((x87d)v * (x87d)0.002f + (x87d)6.f); // 0x858F44, 0x858B44
     };
     const int32 minBlockY = ToBlock(minY);
     const int32 maxBlockX = ToBlock(maxX);
@@ -1433,18 +1433,18 @@ bool CWaterLevel::TestLineAgainstWater(CVector start, CVector end, CVector* outH
 
     // Calculates the point where the line crosses z = 0 (`t` is the fraction of the way) and writes it to the output
     const auto CalcHitPos = [&] {
-        const float t  = (float)(std::fabs((double)start.z) / ((double)maxZ - (double)minZ));
-        const float dx = (float)(((double)end.x - (double)start.x) * (double)t);      // Rounded to float
-        const double dy = ((double)end.y - (double)start.y) * (double)t;              // NOT rounded
-        const float dz = (float)((double)end.z - (double)start.z);                    // Rounded to float
-        outHitPos->x = (float)((double)dx + (double)start.x);
-        outHitPos->y = (float)(dy + (double)start.y);
-        outHitPos->z = (float)((double)dz * (double)t + (double)start.z);
+        const float t  = (float)(std::fabs((x87d)start.z) / ((x87d)maxZ - (x87d)minZ));
+        const float dx = (float)(((x87d)end.x - (x87d)start.x) * (x87d)t);      // Rounded to float
+        const x87d dy = ((x87d)end.y - (x87d)start.y) * (x87d)t;              // NOT rounded
+        const float dz = (float)((x87d)end.z - (x87d)start.z);                    // Rounded to float
+        outHitPos->x = (float)((x87d)dx + (x87d)start.x);
+        outHitPos->y = (float)(dy + (x87d)start.y);
+        outHitPos->z = (float)((x87d)dz * (x87d)t + (x87d)start.z);
     };
 
     // Tests the quad: Does the line cross z = 0 here, and is the hit pos inside the quad?
     const auto TestQuad = [&](uint32 quadId) {
-        if (!((double)start.z * (double)end.z < 0.0)) { // 0x858B50
+        if (!((x87d)start.z * (x87d)end.z < 0.0)) { // 0x858B50
             return false;
         }
         CalcHitPos();
@@ -1624,8 +1624,8 @@ void CWaterLevel::CalculateWavesOnlyForCoordinate(
     // `neg` for negative values (INT_MIN stays negative), then (v - (v >> 31)) >> 1 & 7
     const auto Abs = [](int32 v) { return v < 0 ? (int32)(0u - (uint32)v) : v; };
     const int32 ax = Abs(x), ay = Abs(y);
-    const double waveMult = (double)faWaveMultipliersX[(((ax - (ax >> 31)) >> 1) & 7)] * (double)faWaveMultipliersY[(((ay - (ay >> 31)) >> 1) & 7)] * (double)CWeather::Wavyness;
-    const double fX = (double)ax, fY = (double)ay;
+    const x87d waveMult = (x87d)faWaveMultipliersX[(((ax - (ax >> 31)) >> 1) & 7)] * (x87d)faWaveMultipliersY[(((ay - (ay >> 31)) >> 1) & 7)] * (x87d)CWeather::Wavyness;
+    const x87d fX = (x87d)ax, fY = (x87d)ay;
 
     constexpr float PHASE_TO_LUT = 40.7436638f; // 0x85A778
     const auto TimeStep = [](uint32 period) { return (CTimer::m_snTimeInMilliseconds - m_nWaterTimeOffset) % period; };
@@ -1633,10 +1633,10 @@ void CWaterLevel::CalculateWavesOnlyForCoordinate(
 
     // Wave 1
     {
-        const double phase = (double)TimeStep(5000) * (double)0.00125663704f /* 0x872020 */ + (fY + fX) * (double)0.0981747732f /* 0x87201C */;
-        const double scaled = phase * (double)PHASE_TO_LUT;
-        outWave = (float)(LutAt(scaled) * (double)2.0f * waveMult * (double)bigWavesAmplitude + (double)outWave);
-        const double d = LutAt(scaled + 64.0) * (double)2.0f * waveMult * (double)bigWavesAmplitude * (double)0.0981747732f;
+        const x87d phase = (x87d)TimeStep(5000) * (x87d)0.00125663704f /* 0x872020 */ + (fY + fX) * (x87d)0.0981747732f /* 0x87201C */;
+        const x87d scaled = phase * (x87d)PHASE_TO_LUT;
+        outWave = (float)(X87R(LutAt(scaled) * (double)2.0f) * waveMult * (x87d)bigWavesAmplitude + (x87d)outWave);
+        const x87d d = X87R(LutAt(scaled + (x87d)64.0) * (double)2.0f) * waveMult * (x87d)bigWavesAmplitude * (x87d)0.0981747732f;
         const float  n = (float)-d;
         vecNormal.x = n;
         vecNormal.y = n;
@@ -1644,34 +1644,34 @@ void CWaterLevel::CalculateWavesOnlyForCoordinate(
     }
     // Wave 2
     {
-        const double phase = ((double)TimeStep(3500) * (double)0.00179519586f /* 0x872018 */ + fY * (double)0.120830491f /* 0x872014 */) + fX * (double)0.241660982f /* 0x872010 */;
-        const double scaled = phase * (double)PHASE_TO_LUT;
-        outWave = (float)(LutAt(scaled) * (double)1.0f * waveMult * (double)smallWavesAmplitude + (double)outWave);
-        const double d = LutAt(scaled + 64.0) * (double)1.0f * waveMult * (double)smallWavesAmplitude * (double)0.241660982f;
-        vecNormal.x = (float)(d + (double)vecNormal.x);
-        vecNormal.y = (float)(d + (double)vecNormal.y);
+        const x87d phase = ((x87d)TimeStep(3500) * (x87d)0.00179519586f /* 0x872018 */ + fY * (x87d)0.120830491f /* 0x872014 */) + fX * (x87d)0.241660982f /* 0x872010 */;
+        const x87d scaled = phase * (x87d)PHASE_TO_LUT;
+        outWave = (float)(X87R(LutAt(scaled) * (double)1.0f) * waveMult * (x87d)smallWavesAmplitude + (x87d)outWave);
+        const x87d d = X87R(LutAt(scaled + (x87d)64.0) * (double)1.0f) * waveMult * (x87d)smallWavesAmplitude * (x87d)0.241660982f;
+        vecNormal.x = (float)(d + (x87d)vecNormal.x);
+        vecNormal.y = (float)(d + (x87d)vecNormal.y);
     }
     // Wave 3
     {
-        const double phase = (double)TimeStep(3000) * (double)0.00209439523f /* 0x87200C */ + fY * (double)0.314159274f /* 0x872008 */;
-        const double scaled = phase * (double)PHASE_TO_LUT;
-        outWave = (float)(LutAt(scaled) * (double)0.5f * waveMult * (double)smallWavesAmplitude + (double)outWave);
-        const double d = LutAt(scaled + 64.0) * (double)0.5f * waveMult * (double)smallWavesAmplitude * (double)0.314159274f;
-        vecNormal.x = (float)(d + (double)vecNormal.x);
+        const x87d phase = (x87d)TimeStep(3000) * (x87d)0.00209439523f /* 0x87200C */ + fY * (x87d)0.314159274f /* 0x872008 */;
+        const x87d scaled = phase * (x87d)PHASE_TO_LUT;
+        outWave = (float)(X87R(LutAt(scaled) * (double)0.5f) * waveMult * (x87d)smallWavesAmplitude + (x87d)outWave);
+        const x87d d = X87R(LutAt(scaled + (x87d)64.0) * (double)0.5f) * waveMult * (x87d)smallWavesAmplitude * (x87d)0.314159274f;
+        vecNormal.x = (float)(d + (x87d)vecNormal.x);
     }
 
     vecNormal.Normalise();
 
     constexpr float K = 0.577f; // 0x872004
     // colour multiplier: ((z + y) + x) * K, max(., 0) (NaN passes), * 0.65f (0x8D3924) + 0.27f (0x8D3920)
-    const double g1 = (((double)vecNormal.z + (double)vecNormal.y) + (double)vecNormal.x) * (double)K;
-    colorMult = (float)((g1 < 0.0 ? 0.0 : g1) * (double)0.65f + (double)0.27f);
+    const x87d g1 = (((x87d)vecNormal.z + (x87d)vecNormal.y) + (x87d)vecNormal.x) * (x87d)K;
+    colorMult = (float)((g1 < (x87d)0.0 ? (x87d)0.0 : g1) * (x87d)0.65f + (x87d)0.27f);
 
     // glare: (z*K + y*K) + K*x, 8*g - 5 (0x859000 / 0x858C80), clamped to [0, 0.99f] (0x862CD0), * SunGlare
-    const double g2 = (((double)vecNormal.z * (double)K + (double)vecNormal.y * (double)K) + (double)K * (double)vecNormal.x);
-    const double v  = g2 * 8.0 - 5.0;
-    const double c  = (double)0.99f < v ? (double)0.99f : (v < 0.0 ? 0.0 : v);
-    glare = (float)(c * (double)CWeather::SunGlare);
+    const x87d g2 = (((x87d)vecNormal.z * (x87d)K + (x87d)vecNormal.y * (x87d)K) + (x87d)K * (x87d)vecNormal.x);
+    const x87d v  = g2 * (x87d)8.0 - (x87d)5.0;
+    const x87d c  = (x87d)0.99f < v ? (x87d)0.99f : (v < (x87d)0.0 ? (x87d)0.0 : v);
+    glare = (float)(c * (x87d)CWeather::SunGlare);
 }
 
 // 0x6E5810
@@ -1721,28 +1721,28 @@ void CWaterLevel::CalculateWavesOnlyForCoordinate2( // TODO: Original name didn'
     x = std::abs(x);
     y = std::abs(y);
 
-    const double waveMult = (double)faWaveMultipliersX[(x / 2) & 7] * (double)faWaveMultipliersY[(y / 2) & 7] * (double)CWeather::Wavyness;
+    const x87d waveMult = (x87d)faWaveMultipliersX[(x / 2) & 7] * (x87d)faWaveMultipliersY[(y / 2) & 7] * (x87d)CWeather::Wavyness;
     const float  yf       = (float)y; // Spilled to the stack as a float
 
     constexpr float PHASE_TO_LUT = 40.7436638f; // 0x85A778 (= 256 / 2pi)
     const auto TimeStep = [](uint32 period) { return (CTimer::m_snTimeInMilliseconds - m_nWaterTimeOffset) % period; };
     const auto LutSin   = [&](double phase) { // `phase * PHASE_TO_LUT` is truncated by `_ftol2`
-        return (double)SIN_LUT[(int32)(phase * (double)PHASE_TO_LUT) & 0xFF];
+        return (double)SIN_LUT[(int32)(X87R(phase * (double)PHASE_TO_LUT)) & 0xFF];
     };
 
     // Wave 1 (big)
-    const double phase1 = (double)TimeStep(5000) * (double)0.00125663704f /* 0x872020 */ + ((double)yf + (double)x) * (double)0.0981747732f /* 0x87201C */;
-    *pResultHeight = (float)(LutSin(phase1) * (double)2.0f /* 0x871FF8 */ * waveMult * (double)bigWavesAmpl + (double)*pResultHeight);
+    const x87d phase1 = (x87d)TimeStep(5000) * (x87d)0.00125663704f /* 0x872020 */ + ((x87d)yf + (x87d)x) * (x87d)0.0981747732f /* 0x87201C */;
+    *pResultHeight = (float)(X87R(LutSin(phase1) * (double)2.0f) /* 0x871FF8 */ * waveMult * (x87d)bigWavesAmpl + (x87d)*pResultHeight);
     const float afterWave1 = *pResultHeight; // Spilled as a float
 
     // Wave 2 (small)
-    const double phase2 = ((double)TimeStep(3500) * (double)0.00179519586f /* 0x872018 */ + (double)yf * (double)0.120830491f /* 0x872014 */) + (double)x * (double)0.241660982f /* 0x872010 */;
-    const double afterWave2 = LutSin(phase2) * (double)1.0f /* 0x871FFC */ * waveMult * (double)smallWavesAmpl + (double)afterWave1;
+    const x87d phase2 = ((x87d)TimeStep(3500) * (x87d)0.00179519586f /* 0x872018 */ + (x87d)yf * (x87d)0.120830491f /* 0x872014 */) + (x87d)x * (x87d)0.241660982f /* 0x872010 */;
+    const x87d afterWave2 = X87R(LutSin(phase2) * (double)1.0f) /* 0x871FFC */ * waveMult * (x87d)smallWavesAmpl + (x87d)afterWave1;
     *pResultHeight = (float)afterWave2;
 
     // Wave 3 (small). Note: `afterWave2` is NOT rounded to a float here (it is still on the x87 stack)
-    const double phase3 = (double)TimeStep(3000) * (double)0.00209439523f /* 0x87200C */ + (double)yf * (double)0.314159274f /* 0x872008 */;
-    *pResultHeight = (float)(LutSin(phase3) * (double)0.5f /* 0x872000 */ * waveMult * (double)smallWavesAmpl + afterWave2);
+    const x87d phase3 = (x87d)TimeStep(3000) * (x87d)0.00209439523f /* 0x87200C */ + (x87d)yf * (x87d)0.314159274f /* 0x872008 */;
+    *pResultHeight = (float)(X87R(LutSin(phase3) * (double)0.5f) /* 0x872000 */ * waveMult * (x87d)smallWavesAmpl + afterWave2);
 }
 
 // 0x6E6CA0
@@ -1777,11 +1777,11 @@ void CWaterLevel::ScanThroughBlocks() {
 void CWaterLevel::RenderHighDetailWaterTriangle(int32 X1, int32 Y1, CRenPar P1, int32 X2, int32 Y2, CRenPar P2, int32 X3, int32 Y3, CRenPar P3) {
     // Bounding sphere of the triangle (in 2D, Z is the one of the 1st vertex). NOTE: x87 => `double` intermediates, the radius is based on `X2 - X1` only
     const CVector center{
-        (float)((double)(X1 + X2 + X3) * (double)std::bit_cast<float>(0x3EAAAAAAu)), // 0x8594EC (1/3, one ULP below the nearest float to 1/3)
-        (float)((double)(Y1 + Y2 + Y3) * (double)std::bit_cast<float>(0x3EAAAAAAu)),
+        (float)((x87d)(X1 + X2 + X3) * (x87d)std::bit_cast<float>(0x3EAAAAAAu)), // 0x8594EC (1/3, one ULP below the nearest float to 1/3)
+        (float)((x87d)(Y1 + Y2 + Y3) * (x87d)std::bit_cast<float>(0x3EAAAAAAu)),
         P1.z
     };
-    const float radius = (float)((double)(X2 - X1) * (double)0.71f); // 0x872168
+    const float radius = (float)((x87d)(X2 - X1) * (x87d)0.71f); // 0x872168
 
     // 0x420C40 and (if the mirror is active) the same for the mirrored view
     if (!TheCamera.IsSphereVisible(center, radius)) {
@@ -1818,7 +1818,7 @@ void CWaterLevel::RenderSeaBedSegment(int32 blockX, int32 blockY, float minX, fl
 
     // The block coordinates are converted to float first, and the sums are done in extended precision
     const auto CalcPos = [](int32 block, float frac) {
-        return (float)(((double)(float)block + (double)frac) * 500.0 - 3000.0);
+        return (float)(((x87d)(float)block + (x87d)frac) * (x87d)500.0 - (x87d)3000.0);
     };
 
     const auto x0 = CalcPos(blockX, minX), x1 = CalcPos(blockX, maxX);
@@ -1838,8 +1838,8 @@ void CWaterLevel::RenderDetailedSeaBedSegment(int32 blockX, int32 blockY, float 
     constexpr auto CELLS_PER_BLOCK  = 4.f; // 0x858B90
 
     // Number of cells to split the segment into (At least 1 on each axis)
-    const auto spanX = (double)maxX - (double)minX;
-    const auto spanY = (double)maxY - (double)minY;
+    const auto spanX = (x87d)maxX - (x87d)minX;
+    const auto spanY = (x87d)maxY - (x87d)minY;
     const auto numX  = std::max(1, (int32)(spanX * CELLS_PER_BLOCK));
     const auto numY  = std::max(1, (int32)(spanY * CELLS_PER_BLOCK));
     const auto widthX  = (float)spanX;
@@ -1847,21 +1847,21 @@ void CWaterLevel::RenderDetailedSeaBedSegment(int32 blockX, int32 blockY, float 
 
     for (int32 ix = 0; ix < numX; ix++) {
         // The start is kept in extended precision, the end is rounded to float (as the original does)
-        const auto fx0 = (double)ix * widthX / (double)numX + (double)minX;
-        const auto fx1 = (float)((double)(ix + 1) * widthX / (double)numX + (double)minX);
+        const auto fx0 = (x87d)ix * widthX / (x87d)numX + (x87d)minX;
+        const auto fx1 = (float)((x87d)(ix + 1) * widthX / (x87d)numX + (x87d)minX);
 
         const auto u0 = (float)(UV_SCALE * fx0);
         const auto u1 = fx1 * UV_SCALE;
 
-        const auto x0 = (float)(((double)(float)blockX + fx0) * 500.0 - 3000.0);
-        const auto x1 = (float)(((double)(float)blockX + (double)fx1) * 500.0 - 3000.0);
+        const auto x0 = (float)(((x87d)(float)blockX + fx0) * (x87d)500.0 - (x87d)3000.0);
+        const auto x1 = (float)(((x87d)(float)blockX + (x87d)fx1) * (x87d)500.0 - (x87d)3000.0);
 
         for (int32 iy = 0; iy < numY; iy++) {
-            const auto fy0 = (float)((double)iy * heightY / (double)numY + (double)minY);
-            const auto fy1 = (float)((double)(iy + 1) * heightY / (double)numY + (double)minY);
+            const auto fy0 = (float)((x87d)iy * heightY / (x87d)numY + (x87d)minY);
+            const auto fy1 = (float)((x87d)(iy + 1) * heightY / (x87d)numY + (x87d)minY);
 
-            const auto y0 = (float)(((double)(float)blockY + (double)fy0) * 500.0 - 3000.0);
-            const auto y1 = (float)(((double)(float)blockY + (double)fy1) * 500.0 - 3000.0);
+            const auto y0 = (float)(((x87d)(float)blockY + (x87d)fy0) * (x87d)500.0 - (x87d)3000.0);
+            const auto y1 = (float)(((x87d)(float)blockY + (x87d)fy1) * (x87d)500.0 - (x87d)3000.0);
 
             RenderBuffer::PushIndices({ 0, 1, 2, 3, 1, 2 }, true);
 
@@ -1904,10 +1904,10 @@ void CWaterLevel::RenderWater() {
 
         // Is the block close enough to the camera to use the detailed version?
         const auto& camPos = TheCamera.GetPosition();
-        const auto  blockCenterX = ((double)blockX + 0.5) * (double)WATER_BLOCK_SIZE - 3000.0;
-        const auto  blockCenterY = (float)(((double)blockY + 0.5) * (double)WATER_BLOCK_SIZE - 3000.0); // Rounded to float, but X isn't!
-        const auto  distX = (double)camPos.x - blockCenterX;
-        const auto  distY = (double)camPos.y - (double)blockCenterY;
+        const auto  blockCenterX = ((x87d)blockX + (x87d)0.5) * (x87d)WATER_BLOCK_SIZE - (x87d)3000.0;
+        const auto  blockCenterY = (float)(((x87d)blockY + (x87d)0.5) * (x87d)WATER_BLOCK_SIZE - (x87d)3000.0); // Rounded to float, but X isn't!
+        const auto  distX = (x87d)camPos.x - blockCenterX;
+        const auto  distY = (x87d)camPos.y - (x87d)blockCenterY;
         const bool  isNear = std::sqrt(distX * distX + distY * distY) < (double)DETAILEDSEABEDDIST;
 
         const auto RenderSegment = [&](float minX, float maxX, float minY, float maxY) {
@@ -1961,11 +1961,11 @@ void CWaterLevel::RenderWater() {
     RwRenderStateSet(rwRENDERSTATETEXTUREADDRESS, RWRSTATE(WaterTextureAddressing));
 
     // The intermediate results are kept in extended precision by the original
-    const double flowScrollX = (double)CTimer::GetTimeStep() * (double)m_CurrentFlow.x * (double)TextureFlowScrollMult;
-    TextureScrollSecondU = (float)(0.08f * flowScrollX + (double)TextureScrollSecondU);
+    const x87d flowScrollX = (x87d)CTimer::GetTimeStep() * (x87d)m_CurrentFlow.x * (x87d)TextureFlowScrollMult;
+    TextureScrollSecondU = (float)(0.08f * flowScrollX + (x87d)TextureScrollSecondU);
 
-    const double flowScrollY = (double)CTimer::GetTimeStep() * (double)m_CurrentFlow.y * (double)TextureFlowScrollMult;
-    TextureScrollSecondV = (float)(0.08f * flowScrollY + (double)TextureScrollSecondV);
+    const x87d flowScrollY = (x87d)CTimer::GetTimeStep() * (x87d)m_CurrentFlow.y * (x87d)TextureFlowScrollMult;
+    TextureScrollSecondV = (float)(0.08f * flowScrollY + (x87d)TextureScrollSecondV);
 
     if (TextureScrollSecondU > 1.f) {
         TextureScrollSecondU -= 1.f;
@@ -1974,8 +1974,8 @@ void CWaterLevel::RenderWater() {
         TextureScrollSecondV -= 1.f;
     }
 
-    TextureScrollFirstU = (float)(flowScrollX * 0.04f + (double)TextureScrollFirstU);
-    TextureScrollFirstV = (float)(flowScrollY * 0.04f + (double)TextureScrollFirstV);
+    TextureScrollFirstU = (float)(flowScrollX * 0.04f + (x87d)TextureScrollFirstU);
+    TextureScrollFirstV = (float)(flowScrollY * 0.04f + (x87d)TextureScrollFirstV);
 
     if (TextureScrollFirstU > 1.f) {
         TextureScrollFirstU -= 1.f;
@@ -1986,23 +1986,23 @@ void CWaterLevel::RenderWater() {
 
     constexpr auto PI_F = std::numbers::pi_v<float>;
 
-    const double angle1 = (double)(float)(CTimer::GetTimeInMS() & 0xFFF) * (2.f * PI_F / 4096.f);
-    TextureShiftSecondU = (float)(x87::sin(angle1) * (double)CWeather::Wavyness * 0.08f + (double)TextureScrollSecondU);
-    TextureShiftSecondV = (float)(x87::cos(angle1) * (double)CWeather::Wavyness * 0.08f + (double)TextureScrollSecondV);
+    const x87d angle1 = (x87d)(float)(CTimer::GetTimeInMS() & 0xFFF) * (2.f * PI_F / 4096.f);
+    TextureShiftSecondU = (float)(X87R(x87::sin(angle1) * (double)CWeather::Wavyness) * 0.08f + (x87d)TextureScrollSecondU);
+    TextureShiftSecondV = (float)(X87R(x87::cos(angle1) * (double)CWeather::Wavyness) * 0.08f + (x87d)TextureScrollSecondV);
 
     const float angle2 = (float)(CTimer::GetTimeInMS() & 0x1FFF) * (PI_F / 4096.f);
     TextureShiftFirstU = TextureScrollFirstU;
     const double cosAngle2d = x87::cos((double)angle2);
     const float  cosAngle2  = (float)cosAngle2d; // Original stores it as float too
-    TextureShiftFirstV = (float)(cosAngle2d * 0.024f + (double)TextureScrollFirstV);
+    TextureShiftFirstV = (float)(X87R(cosAngle2d * 0.024f) + (x87d)TextureScrollFirstV);
 
     constexpr auto RAND_NORM = 1.f / 32767.f; // 0x858C7C (Not 1 / RAND_MAX, but that is the original value)
 
     const int32 rand1 = rand();
-    TextureShiftThirdU = (float)((double)(float)rand1 * RAND_NORM * (double)TextureRandomShiftMult);
+    TextureShiftThirdU = (float)((x87d)(float)rand1 * RAND_NORM * (x87d)TextureRandomShiftMult);
     const int32 rand2 = rand();
-    TextureShiftThirdU = (float)(x87::sin((double)angle2) * (double)TextureJitterMult + (double)TextureShiftThirdU);
-    TextureShiftThirdV = (float)((double)(float)rand2 * RAND_NORM * (double)TextureRandomShiftMult + (double)cosAngle2 * (double)TextureJitterMult);
+    TextureShiftThirdU = (float)(X87R(x87::sin((double)angle2) * (double)TextureJitterMult) + (x87d)TextureShiftThirdU);
+    TextureShiftThirdV = (float)((x87d)(float)rand2 * RAND_NORM * (x87d)TextureRandomShiftMult + (x87d)cosAngle2 * (x87d)TextureJitterMult);
 
     // Water colors
     WaterColor.r = (uint8)(int32)CTimeCycle::m_CurrentColours.m_fWaterRed;

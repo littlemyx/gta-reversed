@@ -8,4 +8,4 @@ struct tUserTracksInfo {
     eAudioFileType fileType;
 };
 
-VALIDATE_SIZE(tUserTracksInfo, 0xc);
+VALIDATE_SIZE_FILE(tUserTracksInfo, 0xc);

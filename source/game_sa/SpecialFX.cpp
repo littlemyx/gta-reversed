@@ -92,7 +92,7 @@ void CSpecialFX::AddWeaponStreak(eWeaponType weaponType) {
         *LTM      = *RwFrameGetLTM(RpAtomicGetFrame(plyr->m_pWeaponObject));
         attachMat = CMatrix(LTM, false);
         CMotionBlurStreaks::RegisterStreak(
-            reinterpret_cast<uint32>(plyr->m_pWeaponObject),
+            NOTSA_PTR_ID32(plyr->m_pWeaponObject),
             100,
             100,
             100,

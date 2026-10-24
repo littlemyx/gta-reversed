@@ -31,7 +31,7 @@ public:
     CColModel();
     ~CColModel();
 
-    static void* operator new(unsigned size);
+    static void* operator new(size_t size);
     static void operator delete(void* data);
     CColModel& operator=(const CColModel& colModel);
 

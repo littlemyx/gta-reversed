@@ -59,20 +59,20 @@ using namespace notsa::script;
 */
 
 namespace {
-static_assert(offsetof(CObject, m_nObjectFlags) == 0x140);
-static_assert(offsetof(CObject, m_nLastWeaponDamage) == 0x148);
-static_assert(offsetof(CPhysical, m_nPhysicalFlags) == 0x40);
-static_assert(offsetof(CPhysical, m_vecTurnSpeed) == 0x50);
-static_assert(offsetof(CPhysical, m_fMass) == 0x8C && offsetof(CPhysical, m_fTurnMass) == 0x90);
-static_assert(offsetof(CPed, m_pEnex) == 0x78C);
-static_assert(offsetof(CPlane, m_fLandingGearStatus) == 0x9CC);
-static_assert(offsetof(CAutomobile, m_damageManager) == 0x5A0 && offsetof(CAutomobile, m_doors) == 0x5B8 && sizeof(CDoor) == 0x18);
-static_assert(offsetof(CAutomobile, m_swingingChassis) == 0x70C);
+VALIDATE_OFFSET(CObject, m_nObjectFlags, 0x140);
+VALIDATE_OFFSET(CObject, m_nLastWeaponDamage, 0x148);
+VALIDATE_OFFSET(CPhysical, m_nPhysicalFlags, 0x40);
+VALIDATE_OFFSET(CPhysical, m_vecTurnSpeed, 0x50);
+VALIDATE_OFFSET(CPhysical, m_fMass, 0x8C); VALIDATE_OFFSET(CPhysical, m_fTurnMass, 0x90);
+VALIDATE_OFFSET(CPed, m_pEnex, 0x78C);
+VALIDATE_OFFSET(CPlane, m_fLandingGearStatus, 0x9CC);
+VALIDATE_OFFSET(CAutomobile, m_damageManager, 0x5A0); VALIDATE_OFFSET(CAutomobile, m_doors, 0x5B8); VALIDATE_SIZE(CDoor, 0x18);
+VALIDATE_OFFSET(CAutomobile, m_swingingChassis, 0x70C);
 static_assert(offsetof(CDoor, m_doorState) == 0xB && offsetof(CDoor, m_angle) == 0xC);
-static_assert(offsetof(CGarage, m_nFlags) == 0x4E);
-static_assert(offsetof(CPedGroup, m_bMembersEnterLeadersVehicle) == 4 && offsetof(CPedGroup, m_groupMembership) == 8 && sizeof(CPedGroup) == 0x2D4);
-static_assert(offsetof(tScriptSearchlight, m_bClipIfColliding) == 1 && sizeof(tScriptSearchlight) == 0x7C);
-static_assert(sizeof(CStreamedScripts::CStreamedScriptInfo) == 0x20 && offsetof(CStreamedScripts::CStreamedScriptInfo, m_NumberOfUsers) == 4);
+VALIDATE_OFFSET(CGarage, m_nFlags, 0x4E);
+VALIDATE_OFFSET(CPedGroup, m_bMembersEnterLeadersVehicle, 4); VALIDATE_OFFSET(CPedGroup, m_groupMembership, 8); VALIDATE_SIZE(CPedGroup, 0x2D4);
+VALIDATE_OFFSET(tScriptSearchlight, m_bClipIfColliding, 1); VALIDATE_SIZE(tScriptSearchlight, 0x7C);
+VALIDATE_SIZE(CStreamedScripts::CStreamedScriptInfo, 0x20); VALIDATE_OFFSET(CStreamedScripts::CStreamedScriptInfo, m_NumberOfUsers, 4);
 static_assert(offsetof(CEntryExit, m_recEntrance) == 8 && offsetof(CEntryExit, m_fEntranceZ) == 0x18 && offsetof(CEntryExit, m_vecExitPos) == 0x20);
 static_assert(offsetof(CEntryExit, m_fExitAngle) == 0x2C && offsetof(CEntryExit, m_pLink) == 0x38);
 static_assert(SCRIPT_THING_PED_GROUP == 8 && SCRIPT_THING_SEARCH_LIGHT == 2);
@@ -167,10 +167,10 @@ bool FindClosestScriptedAttractor(
                 continue;
             }
             const CVector w  = entity->TransformFromObjectSpace(fx->m_Pos); // 0x5334F0
-            const double  dx = (double)pos.x - (double)w.x;
-            const double  dy = (double)pos.y - (double)w.y;
-            const double  dz = (double)pos.z - (double)w.z;
-            const double  sq = (dz * dz + dy * dy) + dx * dx;
+            const x87d  dx = (x87d)pos.x - (x87d)w.x;
+            const x87d  dy = (x87d)pos.y - (x87d)w.y;
+            const x87d  dz = (x87d)pos.z - (x87d)w.z;
+            const x87d  sq = (dz * dz + dy * dy) + dx * dx;
             if (sq < (double)best) { // fcom + `test ah, 5; jp skip`: only when strictly less (ordered)
                 best      = (float)sq;
                 outEffect = fx;
@@ -188,7 +188,7 @@ bool FindClosestScriptedAttractor(
 int32 CreateCollectiblePickup(float x, float y, float z, eStats stat, uint16 model, ePickupType type) {
     CStats::IncrementStat(stat, 1.0f); // 0x55C180
     if (z <= -100.0f) {
-        z = (float)((double)CWorld::FindGroundZForCoord(x, y) + (double)0.5f); // 0x569660
+        z = (float)((x87d)CWorld::FindGroundZForCoord(x, y) + (x87d)0.5f); // 0x569660
     }
     return CPickups::GenerateNewOne({ x, y, z }, (uint32)model, type, 0, 0, false, nullptr).num; // 0x456F20
 }
@@ -425,9 +425,9 @@ float GetWaterHeightAtCoords(float x, float y, int32 withWaves) {
 //! Each rotation component = (float)(deg * 0.017453292f (0x8595EC)); `car->AttachEntityToEntity(object, offset, rotation)` (0x54D570). No null checks.
 void AttachCarToObject(CVehicle& veh, CObject& obj, float ox, float oy, float oz, float rx, float ry, float rz) {
     const CVector rot{
-        (float)((double)rx * (double)DEG_TO_RAD),
-        (float)((double)ry * (double)DEG_TO_RAD),
-        (float)((double)rz * (double)DEG_TO_RAD)
+        (float)((x87d)rx * (x87d)DEG_TO_RAD),
+        (float)((x87d)ry * (x87d)DEG_TO_RAD),
+        (float)((x87d)rz * (x87d)DEG_TO_RAD)
     };
     veh.AttachEntityToEntity(&obj, CVector{ ox, oy, oz }, rot);
 }
@@ -525,11 +525,11 @@ OpcodeResult GetPositionOfEntryExitCharUsed(CRunningScript& S) {
             x     = RawF(enex->m_vecExitPos.x);
             y     = RawF(enex->m_vecExitPos.y);
             z     = RawF(enex->m_vecExitPos.z);
-            angle = (float)((double)enex->m_fExitAngle * (double)DEG_TO_RAD);
+            angle = (float)((x87d)enex->m_fExitAngle * (x87d)DEG_TO_RAD);
         } else {
             const auto& r = enex->m_recEntrance; // CRect: left, bottom, right, top (+8, +0xC, +0x10, +0x14)
-            x = RawF((float)(((double)r.right + (double)r.left) * (double)0.5f));
-            y = RawF((float)(((double)r.top + (double)r.bottom) * (double)0.5f));
+            x = RawF((float)(((x87d)r.right + (x87d)r.left) * (x87d)0.5f));
+            y = RawF((float)(((x87d)r.top + (x87d)r.bottom) * (x87d)0.5f));
             z = RawF(enex->m_fEntranceZ);
         }
         ScriptParams[0].iParam = x;
@@ -609,7 +609,7 @@ bool HasObjectBeenUprooted(CObject& obj) {
 //! 2396 ADD_SMOKE_PARTICLE (case @0x4779EC): pos (3), velocity (3), r, g, b, a, size, life (12 floats)
 //! `FxPrtMult_c mults(r, g, b, a, size, 1.0f, life)` (0x4AB290); `g_fx.m_SmokeHuge (0xA9AE20)->AddParticle(pos, vel, 0.0f, mults, -1.0f, 1.2f (0x3F99999A), 0.6f (0x3F19999A), false)` (0x4AA440). No null check on the system.
 void AddSmokeParticle(float px, float py, float pz, float vx, float vy, float vz, float r, float g, float b, float a, float size, float life) {
-    static_assert(offsetof(Fx_c, m_SmokeHuge) == 32); // exe 0xA9AE20 - g_fx 0xA9AE00
+    VALIDATE_OFFSET(Fx_c, m_SmokeHuge, 32); // exe 0xA9AE20 - g_fx 0xA9AE00
     const CVector     pos{ px, py, pz };
     const CVector     vel{ vx, vy, vz };
     const FxPrtMult_c mults{ r, g, b, a, size, 1.0f, life };
@@ -630,7 +630,7 @@ OpcodeResult ControlCarDoor(CRunningScript& S) {
     CVehicle* const veh    = GetVehiclePool()->GetAtRef(ScriptParams[0].iParam); // no null check
     const int32     door   = ScriptParams[1].iParam;
     const int32     status = ScriptParams[2].iParam;
-    const double    ratioD = (double)ScriptParams[3].iParam; // fild
+    const x87d    ratioD = (x87d)ScriptParams[3].iParam; // fild
     const float     ratio  = (float)ratioD;                  // fst
     if (door < 6) {
         auto* const car = static_cast<CAutomobile*>(veh);
@@ -644,7 +644,7 @@ OpcodeResult ControlCarDoor(CRunningScript& S) {
         if (!(ratioD < 0.0)) {
             car->m_swingingChassis.Open(ratio);
         }
-        *(reinterpret_cast<uint8*>(car) + 0x717) = (uint8)status; // m_swingingChassis.m_doorState
+        car->m_swingingChassis.m_doorState = static_cast<eDoorState>(status); // x86 car + 0x717 (CAutomobile has pointers: the byte offset differs on LP64)
     }
     return OR_CONTINUE;
 }

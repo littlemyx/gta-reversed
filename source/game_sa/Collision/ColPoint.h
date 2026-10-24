@@ -26,7 +26,7 @@ struct tColLighting {
 
     [[nodiscard]] float GetCurrentLighting(float fScale = 0.5F) const;
 };
-VALIDATE_SIZE(tColLighting, 0x1);
+VALIDATE_SIZE_FILE(tColLighting, 0x1);
 
 class CColPoint {
 public:

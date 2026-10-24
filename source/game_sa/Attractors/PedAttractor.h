@@ -15,7 +15,7 @@ class NOTSA_EXPORT_VTABLE CPedAttractor {
 public:
     static void InjectHooks();
 
-    void* operator new(unsigned size);
+    void* operator new(size_t size);
     void  operator delete(void* object);
 
     CPedAttractor(

@@ -5,7 +5,7 @@
 #include "HandShaker.h"
 #include "Fx/FxFtol.h"
 
-NOTSA_GLOBAL(gIdleCam, 0xB6FDA0, (CIdleCam), {}); static_assert(sizeof(gIdleCam) == 156);
+NOTSA_GLOBAL(gIdleCam, 0xB6FDA0, (CIdleCam), {}); VALIDATE_SIZE(gIdleCam, 156);
 NOTSA_GLOBAL(gbCineyCamProcessedOnFrame, 0xB6EC40, (uint32), {});
 
 void CIdleCam::InjectHooks() {
@@ -136,10 +136,10 @@ void CIdleCam::ProcessFOVZoom(float time) {
         GetLookAtPositionOnTarget(m_Target, lookAtPos);
 
         // exe: x87, term order z, y, x
-        const double dx   = (double)m_Cam->m_vecSource.x - (double)lookAtPos.x;
-        const double dy   = (double)m_Cam->m_vecSource.y - (double)lookAtPos.y;
-        const double dz   = (double)m_Cam->m_vecSource.z - (double)lookAtPos.z;
-        const double dist = std::sqrt(dz * dz + dy * dy + dx * dx);
+        const x87d dx   = (x87d)m_Cam->m_vecSource.x - (x87d)lookAtPos.x;
+        const x87d dy   = (x87d)m_Cam->m_vecSource.y - (x87d)lookAtPos.y;
+        const x87d dz   = (x87d)m_Cam->m_vecSource.z - (x87d)lookAtPos.z;
+        const x87d dist = std::sqrt(dz * dz + dy * dy + dx * dx);
 
         if (m_Target->GetType() == ENTITY_TYPE_PED) {
             const auto pedType = m_Target->AsPed()->m_nPedType;
@@ -218,7 +218,7 @@ void CIdleCam::ProcessFOVZoom(float time) {
     // Interpolates the FOV between `m_ZoomFrom` and `m_ZoomTo`
     const auto InterpolateFOV = [&] {
         const float t = (270.0f - ((curTimeMs - m_TimeZoomStarted) / m_DurationFOVZoom) * 180.0f) * 0.017453292f;
-        m_CurFOV = (float)((double)(m_ZoomTo - m_ZoomFrom) * ((x87::sin((double)t) + 1.0) * 0.5) + (double)m_ZoomFrom); // fsin result stays unrounded on the x87 stack
+        m_CurFOV = (float)((x87d)(m_ZoomTo - m_ZoomFrom) * ((X87R(x87::sin((double)t) + 1.0)) * (x87d)0.5) + (x87d)m_ZoomFrom); // fsin result stays unrounded on the x87 stack
     };
 
     switch (m_ZoomState) {
@@ -265,10 +265,10 @@ bool CIdleCam::IsTargetValid(CEntity* target) {
     GetLookAtPositionOnTarget(target, lookAtPos);
 
     // exe: x87, term order z, y, x
-    const double dx   = (double)m_Cam->m_vecSource.x - (double)lookAtPos.x;
-    const double dy   = (double)m_Cam->m_vecSource.y - (double)lookAtPos.y;
-    const double dz   = (double)m_Cam->m_vecSource.z - (double)lookAtPos.z;
-    const double dist = std::sqrt(dz * dz + dy * dy + dx * dx);
+    const x87d dx   = (x87d)m_Cam->m_vecSource.x - (x87d)lookAtPos.x;
+    const x87d dy   = (x87d)m_Cam->m_vecSource.y - (x87d)lookAtPos.y;
+    const x87d dz   = (x87d)m_Cam->m_vecSource.z - (x87d)lookAtPos.z;
+    const x87d dist = std::sqrt(dz * dz + dy * dy + dx * dx);
     if (dist < (double)m_DistTooClose || dist > (double)m_DistTooFar) {
         return false;
     }
@@ -388,6 +388,8 @@ static double X87SinP1Half(double x) {
     }
     return x;
 }
+#elif defined(NOTSA_PORTABLE)
+static double X87SinP1Half(double x) { return notsa::fp::sites::SinP1Half(x); }
 #else
 static double X87SinP1Half(double x) { return (x87::sin(x) + 1.0) * 0.5; }
 #endif
@@ -407,11 +409,11 @@ float CIdleCam::ProcessSlerp(float& outX, float& outZ) {
     // slerp-from vector are spilled to float, the 2nd atan of the look-at vector stays in extended precision until the final store
     const CVector fromVec = m_PositionToSlerpFrom - m_Cam->m_vecSource;
     // exe: x*x + y*y stays on the x87 stack (extended exponent range, no float overflow) and only the sqrt is spilled to float
-    const auto Mag2D = [](const CVector& v) { return (float)std::sqrt((double)v.x * (double)v.x + (double)v.y * (double)v.y); };
+    const auto Mag2D = [](const CVector& v) { return (float)std::sqrt((x87d)v.x * (x87d)v.x + (x87d)v.y * (x87d)v.y); };
     const CVector toVec   = lookAtPos - m_Cam->m_vecSource;
-    float  slerpAtan      = (float)(CGeneral::GetATanOfXYExt(fromVec.x, fromVec.y) + 3.1415927f);
+    float  slerpAtan      = (float)(X87R(CGeneral::GetATanOfXYExt(fromVec.x, fromVec.y) + 3.1415927f));
     float  slerpDistAtan  = (float)CGeneral::GetATanOfXYExt(Mag2D(fromVec), fromVec.z);
-    float  lookAtAtan     = (float)(CGeneral::GetATanOfXYExt(toVec.x, toVec.y) + 3.1415927f);
+    float  lookAtAtan     = (float)(X87R(CGeneral::GetATanOfXYExt(toVec.x, toVec.y) + 3.1415927f));
     double lookAtDistAtan = CGeneral::GetATanOfXYExt(Mag2D(toVec), toVec.z);
 
     constexpr float PI_F     = 3.1415927f; // 0x858CB8
@@ -424,7 +426,7 @@ float CIdleCam::ProcessSlerp(float& outX, float& outZ) {
         }
     };
 
-    ClampAngle(lookAtDistAtan, lookAtDistAtan - (double)slerpDistAtan);
+    ClampAngle(lookAtDistAtan, X87R(lookAtDistAtan - (double)slerpDistAtan));
     ClampAngle(lookAtAtan, lookAtAtan - slerpAtan);
 
     float slerpT = ((float)beginTime - m_TimeLastTargetSelected) / m_SlerpDuration;
@@ -436,8 +438,8 @@ float CIdleCam::ProcessSlerp(float& outX, float& outZ) {
     const double lerpT = X87SinP1Half((double)((270.0f - slerpT * 180.0f) * 0.017453292f)); // stays unrounded on the x87 stack
 
     // NOTE: NOT the common.h `lerp` (that one is `to * t + from * (1 - t)`); the exe computes `(to - from) * t + from`
-    outX = (float)((lookAtDistAtan - (double)slerpDistAtan) * lerpT + (double)slerpDistAtan);
-    outZ = (float)(((double)lookAtAtan - (double)slerpAtan) * lerpT + (double)slerpAtan);
+    outX = (float)(X87R((X87R(lookAtDistAtan - (double)slerpDistAtan)) * lerpT) + (x87d)slerpDistAtan);
+    outZ = (float)(X87R(((x87d)lookAtAtan - (x87d)slerpAtan) * lerpT) + (x87d)slerpAtan);
     return slerpT;
 }
 
@@ -449,8 +451,8 @@ void CIdleCam::FinaliseIdleCamera(float curAngleX, float curAngleY, float shakeD
 
     // x87: the products stay unrounded until the float store
     vecFwd = CVector{
-        (float)-(x87::cos((double)curAngleY) * x87::cos((double)curAngleX)),
-        (float)-(x87::sin((double)curAngleY) * x87::cos((double)curAngleX)),
+        (float)-(X87R(x87::cos((double)curAngleY) * x87::cos((double)curAngleX))),
+        (float)-(X87R(x87::sin((double)curAngleY) * x87::cos((double)curAngleX))),
         (float)x87::sin((double)curAngleX)
     };
     vecFwd.Normalise();

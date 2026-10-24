@@ -244,7 +244,7 @@ bool CPedGeometryAnalyser::ComputeClosestSurfacePoint(const CVector& posn, const
         const float edgeX = b.x - a.x;
         const float edgeY = b.y - a.y;
         const float edgeZ = b.z - a.z;
-        const float len   = (float)std::sqrt((double)edgeZ * edgeZ + (double)edgeY * edgeY + (double)edgeX * edgeX); // 0x5F2C6A: the exe sums z, y, x on the x87 stack (no float overflow of the squares); the sqrt is stored as a float
+        const float len   = (float)std::sqrt((x87d)edgeZ * edgeZ + (x87d)edgeY * edgeY + (x87d)edgeX * edgeX); // 0x5F2C6A: the exe sums z, y, x on the x87 stack (no float overflow of the squares); the sqrt is stored as a float
         const float inv   = 1.f / len;
 
         // The direction is rounded to float first, then dotted with (posn - a) in z, y, x order
@@ -261,7 +261,7 @@ bool CPedGeometryAnalyser::ComputeClosestSurfacePoint(const CVector& posn, const
             const float dx = posn.x - p.x;
             const float dy = posn.y - p.y;
             const float dz = posn.z - p.z;
-            const double distSq = (double)dz * dz + (double)dy * dy + (double)dx * dx; // compared unrounded, the stored closest is the float copy (0x5F2D6E / 0x5F2D87)
+            const x87d distSq = (x87d)dz * dz + (x87d)dy * dy + (x87d)dx * dx; // compared unrounded, the stored closest is the float copy (0x5F2D6E / 0x5F2D87)
             if (distSq < closestDistSq) {
                 point         = p;
                 found         = true;
@@ -275,7 +275,7 @@ bool CPedGeometryAnalyser::ComputeClosestSurfacePoint(const CVector& posn, const
         for (auto i = 0u; i < 4; i++) {
             const auto& c = corners[i];
             const float dx = c.x - posn.x, dy = c.y - posn.y, dz = c.z - posn.z;
-            const double distSq = (double)dz * dz + (double)dy * dy + (double)dx * dx; // 0x5F2DC0: z, y, x order, unrounded compare
+            const x87d distSq = (x87d)dz * dz + (x87d)dy * dy + (x87d)dx * dx; // 0x5F2DC0: z, y, x order, unrounded compare
             if (distSq < closestDistSq) {
                 point         = c;
                 found         = true;
@@ -408,7 +408,7 @@ void CPedGeometryAnalyser::ComputeEntityBoundingBoxCornersUncached(float zPos, C
     const CVector center = mat.TransformPoint(localCenter);
 
     // Find the axis of the entity (right, forward or up) that is the longest when projected onto the XY plane
-    const double projX = (double)halfX * rightLen2D * 2.0; // 0x5F24E1: stays on the x87 stack (unrounded exponent) while projY / projZ are stored as floats (0x5F24F1 / 0x5F24FF)
+    const x87d projX = (x87d)halfX * rightLen2D * (x87d)2.0; // 0x5F24E1: stays on the x87 stack (unrounded exponent) while projY / projZ are stored as floats (0x5F24F1 / 0x5F24FF)
     const float projY = halfY * fwdLen2D * 2.f;
     const float projZ = halfZ * upLen2D * 2.f;
 
@@ -686,18 +686,18 @@ int32 CPedGeometryAnalyser::ComputePedHitSide(const CPed& ped, const CVector& ve
 
 // 0x5F13F0
 int32 CPedGeometryAnalyser::ComputePedShotSide(const CPed& ped, const CVector& posn) {
-    constexpr double QUARTER_PI  = 0.78539818525314331; // 0x859AB0 (float)
-    constexpr double TWO_PI_F    = 6.2831854820251465;  // 0x858CBC (float)
-    constexpr double TWO_OVER_PI = 0.63661974668502808; // 0x858FB8 (float)
+    constexpr x87d QUARTER_PI  = (x87d)0.78539818525314331; // 0x859AB0 (float)
+    constexpr x87d TWO_PI_F    = (x87d)6.2831854820251465;  // 0x858CBC (float)
+    constexpr x87d TWO_OVER_PI = (x87d)0.63661974668502808; // 0x858FB8 (float)
 
     const auto& pedPos = ped.GetPosition();
 
-    double angle = x87::atan2(-((double)posn.x - (double)pedPos.x), (double)posn.y - (double)pedPos.y); // Heading from the ped to `posn`
-    angle = angle - (double)ped.m_fCurrentRotation + QUARTER_PI;
+    double angle = x87::atan2(-((x87d)posn.x - (x87d)pedPos.x), (x87d)posn.y - (x87d)pedPos.y); // Heading from the ped to `posn`
+    angle = X87R(angle - (double)ped.m_fCurrentRotation) + QUARTER_PI;
     if (angle < 0.0) {
         angle += TWO_PI_F;
     }
-    return (int32)(angle * TWO_OVER_PI); // Quadrant => `eDirection`
+    return (int32)(X87R(angle * TWO_OVER_PI)); // Quadrant => `eDirection`
 }
 
 // 0x5F6110
@@ -1038,11 +1038,11 @@ bool CPedGeometryAnalyser::ComputeRouteRoundSphere(const CPed& ped, const CColSp
     }
 
     // Is `a5` closer to the ped than the first intersection point? (0x5F198D: x87 stack values, summed in z, y, x order; only p1.z - ped.z is spilled to a float)
-    const double d5x = (double)a5.x - pedPos.x, d5y = (double)a5.y - pedPos.y, d5z = (double)a5.z - pedPos.z;
-    const double e1x = (double)p1.x - pedPos.x, e1y = (double)p1.y - pedPos.y;
-    const float  e1z = (float)((double)p1.z - pedPos.z);
-    const double distA5Sq = d5z * d5z + d5y * d5y + d5x * d5x;
-    const double distP1Sq = (double)e1z * e1z + e1y * e1y + e1x * e1x;
+    const x87d d5x = (x87d)a5.x - pedPos.x, d5y = (x87d)a5.y - pedPos.y, d5z = (x87d)a5.z - pedPos.z;
+    const x87d e1x = (x87d)p1.x - pedPos.x, e1y = (x87d)p1.y - pedPos.y;
+    const float  e1z = (float)((x87d)p1.z - pedPos.z);
+    const x87d distA5Sq = d5z * d5z + d5y * d5y + d5x * d5x;
+    const x87d distP1Sq = (x87d)e1z * e1z + e1y * e1y + e1x * e1x;
     if (distA5Sq < distP1Sq) {
         a6 = a5;
         return false;
@@ -1050,7 +1050,7 @@ bool CPedGeometryAnalyser::ComputeRouteRoundSphere(const CPed& ped, const CColSp
 
     if (sphere.IntersectRay(pedPos, dir, p1, p2)) {
         // Find the point on the ray that is the closest to the center of the sphere (0x5F1A29: the dot product is summed in z, y, x order and stays on the x87 stack)
-        const double t = ((double)sphere.m_vecCenter.z - pedPos.z) * dir.z + ((double)sphere.m_vecCenter.y - pedPos.y) * dir.y + ((double)sphere.m_vecCenter.x - pedPos.x) * dir.x;
+        const x87d t = ((x87d)sphere.m_vecCenter.z - pedPos.z) * dir.z + ((x87d)sphere.m_vecCenter.y - pedPos.y) * dir.y + ((x87d)sphere.m_vecCenter.x - pedPos.x) * dir.x;
         const CVector closestOnRay = {
             (float)(dir.x * t + pedPos.x),
             (float)(dir.y * t + pedPos.y),
@@ -1328,7 +1328,7 @@ bool CPedGeometryAnalyser::LiesInsideBoundingBox(const CPed& ped, const CVector&
 }
 
 // 0x41B7C0
-void* CPointRoute::operator new(uint32 size) {
+void* CPointRoute::operator new(size_t size) {
     return GetPointRoutePool()->New();
 }
 

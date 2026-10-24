@@ -2,7 +2,11 @@
 
 #include "app_debug.h"
 #include <windows.h>
+#ifndef NOTSA_PORTABLE
 #include <DbgHelp.h>
+#else
+#include "portable/app_platform.h"
+#endif
 #include <spdlog/async.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -59,6 +63,7 @@ void FlushObrsPrintfs() {
 }
 
 // This probably should be in winps :D
+#ifndef NOTSA_PORTABLE
 LONG WINAPI WindowsExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo) {
     // If this function itself crashes it's invoked again
     // So let's prevent the recusion with this simple hack
@@ -181,6 +186,7 @@ LONG WINAPI WindowsExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo) {
 
     return EXCEPTION_EXECUTE_HANDLER;
 }
+#endif // !NOTSA_PORTABLE (W-A3: portable crash handler = signal handler in portable/app_platform.cpp, no register dump)
 
 notsa::Logging::Logging() {
     using namespace std::chrono_literals;
@@ -202,7 +208,11 @@ notsa::Logging::Logging() {
     spdlog::set_default_logger(Create("default"));
     spdlog::flush_every(100ms);
 
+#ifdef NOTSA_PORTABLE
+    notsa::portable::InstallCrashHandler();
+#else
     SetUnhandledExceptionFilter(WindowsExceptionHandler);
+#endif
 }
 
 notsa::Logging::~Logging() {

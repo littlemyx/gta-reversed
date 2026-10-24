@@ -19,12 +19,20 @@
 #include <float.h>
 #endif
 
+// x87d (source/Base.h): double on Win32, float when NOTSA_PORTABLE. The game runs with the x87 at PC=24, so every temporary the exe's asm keeps on the FPU stack is rounded
+// to a float PER OPERATION; the portable build (no x87) has to round the same way. A repeated identical typedef is legal where Base.h is included as well (unit tests do not).
+#ifdef NOTSA_PORTABLE
+typedef float x87d;
+#else
+typedef double x87d;
+#endif
+
 namespace rwx {
 
 inline uint32_t Bits(float f) { uint32_t u; std::memcpy(&u, &f, 4); return u; }
 inline float    FromBits(uint32_t u) { float f; std::memcpy(&f, &u, 4); return f; }
-inline double   D(float f) { return static_cast<double>(f); }
-inline float    F(double d) { return static_cast<float>(d); }
+inline x87d     D(float f) { return static_cast<x87d>(f); }
+inline float    F(x87d d) { return static_cast<float>(d); }
 
 //--------------------------------------------------------------------------------------------------
 // Sqrt / inverse sqrt tables (exe: allocated by the engine init 0x7EDE90, 2 x 4096 dwords)
@@ -51,14 +59,14 @@ inline const SqrtTables& Tables() {
         SqrtTables r{};
         uint32_t   fb = 0x3F800000u; // 1.0f; the exe walks the float bit pattern in steps of 0x1000 across [1, 4)
         for (int i = 0; i < 2048; i++, fb += 0x1000u) {
-            const double f = D(FromBits(fb));
-            r.sq[2048 + i]  = Bits(F(std::sqrt(f))) - 0x1FC00000u;
-            r.isq[2048 + i] = Bits(F(1.0 / std::sqrt(f))) - 0x20000000u;
+            const double f = D(FromBits(fb)); // pc53
+            r.sq[2048 + i]  = Bits(F(std::sqrt(f))) - 0x1FC00000u; // pc53
+            r.isq[2048 + i] = Bits(F(1.0 / std::sqrt(f))) - 0x20000000u; // pc53
         }
         for (int i = 0; i < 2048; i++, fb += 0x1000u) {
-            const double f = D(FromBits(fb));
-            r.sq[i]  = Bits(F(std::sqrt(f))) - 0x20000000u;
-            r.isq[i] = Bits(F(1.0 / std::sqrt(f))) - 0x1FC00000u;
+            const double f = D(FromBits(fb)); // pc53
+            r.sq[i]  = Bits(F(std::sqrt(f))) - 0x20000000u; // pc53
+            r.isq[i] = Bits(F(1.0 / std::sqrt(f))) - 0x1FC00000u; // pc53
         }
         return r;
     }();
@@ -110,9 +118,9 @@ inline float V3dNormalize(RwV3d* out, const RwV3d* in) {
 inline void TransformPoint(RwV3d* out, const RwV3d* in, const RwMatrix* m) {
     const float x = in->x, y = in->y, z = in->z;
     const float xry = F(D(x) * m->right.y), xrz = F(D(x) * m->right.z);
-    const double A  = D(y) * m->up.x + D(x) * m->right.x;
-    const double B  = D(y) * m->up.y + xry;
-    const double C  = D(y) * m->up.z + xrz;
+    const x87d A  = D(y) * m->up.x + D(x) * m->right.x;
+    const x87d B  = D(y) * m->up.y + xry;
+    const x87d C  = D(y) * m->up.z + xrz;
     const float by  = F(D(z) * m->at.y + B);
     out->x = F((D(z) * m->at.x + A) + m->pos.x);
     out->y = F(D(m->pos.y) + by);
@@ -121,8 +129,8 @@ inline void TransformPoint(RwV3d* out, const RwV3d* in, const RwMatrix* m) {
 inline void TransformVector(RwV3d* out, const RwV3d* in, const RwMatrix* m) {
     const float x = in->x, y = in->y, z = in->z;
     const float xry = F(D(x) * m->right.y), xrz = F(D(x) * m->right.z);
-    const double A  = D(y) * m->up.x + D(x) * m->right.x;
-    const double B  = D(y) * m->up.y + xry;
+    const x87d A  = D(y) * m->up.x + D(x) * m->right.x;
+    const x87d B  = D(y) * m->up.y + xry;
     const float  Cf = F(D(y) * m->up.z + xrz);
     out->x = F(D(z) * m->at.x + A);
     out->y = F(D(z) * m->at.y + B);
@@ -173,11 +181,11 @@ inline void InvertGeneral(RwMatrix* dst, const RwMatrix* s) {
     RwMatrix t = *dst; // keeps the pad dwords of dst like the exe (only xyz / pos / flags are written)
     t.right.x = F(D(s->at.z) * s->up.y - D(s->at.y) * s->up.z);
     t.right.y = F(-(D(s->at.z) * s->right.y - D(s->at.y) * s->right.z));
-    const double Drz = D(s->up.z) * s->right.y - D(s->up.y) * s->right.z; // kept unrounded on the x87 stack
+    const x87d Drz = D(s->up.z) * s->right.y - D(s->up.y) * s->right.z; // kept unrounded on the x87 stack
     t.right.z = F(Drz);
     const float detf = F(D(s->up.x) * t.right.y + D(s->at.x) * Drz + D(t.right.x) * s->right.x);
-    const double inv = Bits(detf) == 0 ? 1.0 : 1.0 / D(detf);
-    const double RXp = inv * D(t.right.x);
+    const x87d inv = Bits(detf) == 0 ? (x87d)1.0 : (x87d)1.0 / D(detf);
+    const x87d RXp = inv * D(t.right.x);
     t.right.x = F(RXp);
     t.right.y = F(inv * D(t.right.y));
     t.right.z = F(inv * D(t.right.z));
@@ -219,31 +227,31 @@ inline RwMatrix* Invert(RwMatrix* out, const RwMatrix* in) {
 // Returns false for an invalid op (the exe raises an RW error and returns NULL).
 inline bool RotateOneMinusCosineSine(RwMatrix* m, const RwV3d* axis, float omc, float sn, int combineOp) {
     const float x = axis->x, y = axis->y, z = axis->z;
-    const double t = omc;
-    const double X = 1.0 - D(x) * x;
-    const double Y = 1.0 - D(y) * y;
-    const float  Zf = F(1.0 - D(z) * z);
+    const x87d t = omc;
+    const x87d X = (x87d)1.0 - D(x) * x;
+    const x87d Y = (x87d)1.0 - D(y) * y;
+    const float  Zf = F((x87d)1.0 - D(z) * z);
     const float  Xtf = F(X * t);
-    const double Yt = Y * t;
-    const double Zt = D(Zf) * t;
+    const x87d Yt = Y * t;
+    const x87d Zt = D(Zf) * t;
     const float  xyf = F(D(y) * x);
     const float  yztf = F((D(y) * z) * t);
-    const double zxt = (D(z) * x) * t;
-    const double xyt = D(xyf) * t;
+    const x87d zxt = (D(z) * x) * t;
+    const x87d xyt = D(xyf) * t;
     const float  sxf = F(D(sn) * x);
     const float  syf = F(D(y) * sn);
-    const double sz  = D(z) * sn;
+    const x87d sz  = D(z) * sn;
     RwMatrix r;
     std::memset(&r, 0, sizeof(r));
-    r.right.x = F(1.0 - D(Xtf));
+    r.right.x = F((x87d)1.0 - D(Xtf));
     r.right.y = F(sz + xyt);
     r.right.z = F(zxt - D(syf));
     r.up.x    = F(xyt - sz);
-    r.up.y    = F(1.0 - Yt);
+    r.up.y    = F((x87d)1.0 - Yt);
     r.up.z    = F(D(sxf) + D(yztf));
     r.at.x    = F(D(syf) + zxt);
     r.at.y    = F(D(yztf) - D(sxf));
-    r.at.z    = F(1.0 - Zt);
+    r.at.z    = F((x87d)1.0 - Zt);
     r.flags   = 3u;
     switch (combineOp) {
     case 0:
@@ -280,7 +288,7 @@ inline RwMatrix* Rotate(RwMatrix* m, const RwV3d* axis, float angle, int combine
     an.y = F(D(rcp) * axis->y);
     an.z = F(D(rcp) * axis->z);
     const float sn  = F(std::sin(D(ang)));
-    const float omc = F(1.0 - std::cos(D(ang)));
+    const float omc = F((x87d)1.0 - std::cos(D(ang)));
     RotateOneMinusCosineSine(m, &an, omc, sn, combineOp);
     return m;
 }
@@ -401,11 +409,11 @@ inline RwMatrix* OrthoNormalize(RwMatrix* dst, const RwMatrix* src) {
     } else if (!(rA > 0.0f)) {
         b = R; s = U; d = A;
     } else {
-        double dAU = F((D(A[1]) * U[1] + D(A[0]) * U[0]) + D(A[2]) * U[2]);
+        x87d dAU = F((D(A[1]) * U[1] + D(A[0]) * U[0]) + D(A[2]) * U[2]);
         if (dAU < 0.0) dAU = -dAU;
-        double dAR = F((D(A[1]) * R[1] + D(A[0]) * R[0]) + D(A[2]) * R[2]);
+        x87d dAR = F((D(A[1]) * R[1] + D(A[0]) * R[0]) + D(A[2]) * R[2]);
         if (dAR < 0.0) dAR = -dAR;
-        double dUR = (D(U[1]) * R[1] + D(U[0]) * R[0]) + D(U[2]) * R[2]; // stays unrounded on the x87 stack
+        x87d dUR = (D(U[1]) * R[1] + D(U[0]) * R[0]) + D(U[2]) * R[2]; // stays unrounded on the x87 stack
         if (dUR < 0.0) dUR = -dUR;
         if (dAU < dAR) {
             if (dAU < dUR) { b = U; s = A; d = R; } else { b = R; s = U; d = A; }
@@ -416,20 +424,20 @@ inline RwMatrix* OrthoNormalize(RwMatrix* dst, const RwMatrix* src) {
     // d = b x s
     d[0] = F(D(s[2]) * b[1] - D(s[1]) * b[2]);
     d[1] = F(D(b[2]) * s[0] - D(s[2]) * b[0]);
-    const double Dz = D(s[1]) * b[0] - D(b[1]) * s[0];
+    const x87d Dz = D(s[1]) * b[0] - D(b[1]) * s[0];
     d[2] = F(Dz);
     {
         const float r = InvSqrt(F((D(d[0]) * d[0] + D(d[1]) * d[1]) + Dz * Dz));
         d[0] = F(D(d[0]) * r);
-        const double Dy2 = D(d[1]) * r;
+        const x87d Dy2 = D(d[1]) * r;
         d[1] = F(Dy2);
-        const double Dz2 = D(d[2]) * r;
+        const x87d Dz2 = D(d[2]) * r;
         d[2] = F(Dz2);
         // s = d x b (the first component uses the unrounded scaled y / z of d)
         s[0] = F(D(b[2]) * Dy2 - D(b[1]) * Dz2);
     }
     s[1] = F(D(d[2]) * b[0] - D(b[2]) * d[0]);
-    const double Sz = D(b[1]) * d[0] - D(d[1]) * b[0];
+    const x87d Sz = D(b[1]) * d[0] - D(d[1]) * b[0];
     s[2] = F(Sz);
     {
         const float r = InvSqrt(F((D(s[0]) * s[0] + D(s[1]) * s[1]) + Sz * Sz));
@@ -455,7 +463,7 @@ inline float WorldSphereRadius(const RwMatrix* ltm, float radius) {
     if ((ltm->flags & kTypeMask) == 3u) {
         return radius;
     }
-    const double s0 = (D(ltm->right.x) * ltm->right.x + D(ltm->right.y) * ltm->right.y) + D(ltm->right.z) * ltm->right.z;
+    const x87d s0 = (D(ltm->right.x) * ltm->right.x + D(ltm->right.y) * ltm->right.y) + D(ltm->right.z) * ltm->right.z;
     const float  s1 = F((D(ltm->up.x) * ltm->up.x + D(ltm->up.y) * ltm->up.y) + D(ltm->up.z) * ltm->up.z);
     const float  s2 = F((D(ltm->at.x) * ltm->at.x + D(ltm->at.y) * ltm->at.y) + D(ltm->at.z) * ltm->at.z);
     const float  m12 = (s1 < s2) ? s2 : s1;
@@ -479,11 +487,11 @@ inline void MorphTargetSphere(const RwV3d* v, int32_t n, RwV3d* centre, float* r
             if (hi.z < v[i].z) hi.z = v[i].z;
         }
     }
-    const RwV3d c{F((D(hi.x) + D(lo.x)) * 0.5), F((D(hi.y) + D(lo.y)) * 0.5), F(D(F(D(hi.z) + D(lo.z))) * 0.5)};
+    const RwV3d c{F((D(hi.x) + D(lo.x)) * (x87d)0.5), F((D(hi.y) + D(lo.y)) * (x87d)0.5), F(D(F(D(hi.z) + D(lo.z))) * (x87d)0.5)};
     float maxSq = 0.0f;
     for (int32_t i = 0; v && i < n; i++) {
-        const double dx = D(v[i].x) - D(c.x), dy = D(v[i].y) - D(c.y), dz = D(v[i].z) - D(c.z);
-        const double d  = (dy * dy + dx * dx) + dz * dz;
+        const x87d dx = D(v[i].x) - D(c.x), dy = D(v[i].y) - D(c.y), dz = D(v[i].z) - D(c.z);
+        const x87d d  = (dy * dy + dx * dx) + dz * dz;
         if (d > D(maxSq)) {
             maxSq = F(d);
         }

@@ -346,8 +346,8 @@ void CalculateAngledAreaCorners(float x1, float y1, float x2, float y2, float wi
     }
     const auto s = x87::sin(angle);
     const auto co = x87::cos(angle);
-    c = CVector2D{ (float)(x2 + s * width), (float)(-(co * width) + y2) };
-    d = CVector2D{ (float)(s * width + x1), (float)(-(co * width) + y1) };
+    c = CVector2D{ (float)(x2 + X87R(s * width)), (float)(-(X87R(co * width)) + y2) };
+    d = CVector2D{ (float)(X87R(s * width) + x1), (float)(-(X87R(co * width)) + y1) };
 }
 
 //! Checks if the point is within the angled area (ignoring Z)
@@ -372,7 +372,7 @@ bool IsPointInAngledArea2D(float px, float py, float x1, float y1, float x2, flo
 
 //! The id used to identify the highlighted area (original: `m_IP + this`)
 int32 GetHighlightId(const CRunningScript* s) {
-    return reinterpret_cast<int32>(s) + reinterpret_cast<int32>(s->m_IP);
+    return static_cast<int32>(NOTSA_PTR_ID32(s) + NOTSA_PTR_ID32(s->m_IP));
 }
 } // namespace
 
@@ -1831,7 +1831,7 @@ OpcodeResult CRunningScript::Process() {
 }
 
 void CRunningScript::HighlightImportantArea(CVector2D from, CVector2D to, float z) {
-    CTheScripts::HighlightImportantArea(reinterpret_cast<int32>(this) + reinterpret_cast<int32>(m_IP), from.x, from.y, to.x, to.y, z);
+    CTheScripts::HighlightImportantArea(NOTSA_PTR_ID32(this) + NOTSA_PTR_ID32(m_IP), from.x, from.y, to.x, to.y, z);
 }
 
 void CRunningScript::HighlightImportantArea(CRect area, float z) {

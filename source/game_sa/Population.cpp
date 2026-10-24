@@ -767,7 +767,7 @@ int32 CPopulation::FindNumberOfPedsWeCanPlaceOnBenches() {
     const float maxPeds = (float)(int32)MaxNumberOfPedsInUse;
     const float lim     = (maxPeds < CPopCycle::m_NumOther_Peds) ? maxPeds : CPopCycle::m_NumOther_Peds;
     const int32 base = CGame::CanSeeOutSideFromCurrArea()
-        ? (int32)((double)(int32)lim * PedDensityMultiplier * FindPedDensityMultiplierCullZone())
+        ? (int32)((x87d)(int32)lim * PedDensityMultiplier * FindPedDensityMultiplierCullZone())
         : (int32)(NumberOfPedsInUseInterior);
     return base - (int32)(ms_nNumCivMale) - (int32)(ms_nNumCivFemale) + 2;
 }
@@ -885,7 +885,7 @@ CPed* CPopulation::AddPed(ePedType pedType, eModelID modelIndex, const CVector& 
         case PED_TYPE_COP: // 0x61280C
             return new CCopPed(modelIndex);
         default:
-            NOTSA_UNREACHABLE();
+            NOTSA_UNREACHABLE_RET(nullptr);
         }
     }();
 
@@ -1379,10 +1379,10 @@ void CPopulation::PlaceCouple(ePedType husbandPedType, eModelID husbandModelId, 
     // NOTE: Not `CanCameraSeeAPedHere`, as the original uses a different radius (1.5), `>` instead of `>=` and a `sqrt`-ed distance
     if (TheCamera.IsSphereVisible(placeAt, 1.5f)) {
         const auto playerPos = FindPlayerPed(-1)->GetPosition();
-        const double dx = static_cast<double>(placeAt.x) - static_cast<double>(playerPos.x);
-        const double dy = static_cast<double>(placeAt.y) - static_cast<double>(playerPos.y);
+        const x87d dx = static_cast<x87d>(placeAt.x) - static_cast<x87d>(playerPos.x);
+        const x87d dy = static_cast<x87d>(placeAt.y) - static_cast<x87d>(playerPos.y);
         const auto   dist = static_cast<float>(std::sqrt(dx * dx + dy * dy));
-        if (static_cast<double>(PedCreationDistMultiplier()) * 42.5 > static_cast<double>(dist)) {
+        if (static_cast<x87d>(PedCreationDistMultiplier()) * (x87d)42.5 > static_cast<double>(dist)) {
             return;
         }
     }
@@ -1541,7 +1541,7 @@ eModelID CPopulation::PickGangCar(eGangID forGang) {
 // 0x6144B0
 eModelID CPopulation::PickRiotRoadBlockCar() {
     // First try gang cars: start at a random gang and walk all of them (wrapping around)
-    const auto baseIdx = CGeneral::GetRandomNumberInRange(0u, (size_t)TOTAL_GANGS);
+    const auto baseIdx = CGeneral::GetRandomNumberInRange<size_t>(0u, (size_t)TOTAL_GANGS);
     for (size_t i{}; i < TOTAL_GANGS; i++) {
         const auto model = PickGangCar((eGangID)((baseIdx + i) % TOTAL_GANGS)); // 0x6144E0: idiv by 10
         if (model != MODEL_INVALID) {
@@ -1638,13 +1638,13 @@ static NOTSA_GLOBAL_ALIAS(s_CopsNeededTotalCarsThreshold, 0x8A5B24, (int32), rei
 //! 0x610DB0 (not hooked, it's inlined here) - How many members a gang group has
 int32 GetNumGangMembersToPlace() {
     constexpr int32 MIN = 1, MAX = 5; // 0x86C6C4, 0x86C6C8 (in `.rdata`)
-    return MIN + static_cast<int32>(static_cast<double>(rand() & 0xFFFF) * 0x1p-15 * (MAX - MIN));
+    return MIN + static_cast<int32>(static_cast<x87d>(rand() & 0xFFFF) * (x87d)0x1p-15 * (MAX - MIN));
 }
 
 //! 0x6EABA0 - `CWaterLevel::CreateBeachToy` (not declared in `WaterLevel.h`). `toyType`: 1 = ball, 2-4 = loungers, 5 = random lounger, 6 = lotion, 7-10 = towels, 11 = random towel
 CObject* CreateBeachToy(const CVector& pos, int32 toyType) {
     using namespace ModelIndices;
-    static_assert(offsetof(CObject, m_nObjectType) == 0x13C && offsetof(CObject, m_nRemovalTime) == 0x150);
+    VALIDATE_OFFSET(CObject, m_nObjectType, 0x13C); VALIDATE_OFFSET(CObject, m_nRemovalTime, 0x150);
 
     if (CObject::nNoTempObjects >= 0x96) {
         return nullptr;
@@ -1703,14 +1703,14 @@ CObject* CreateBeachToy(const CVector& pos, int32 toyType) {
 
 //! Distance (as a float, like the original stored it) between `a` and `b` in 2D (calculated using extended precision)
 float Distance2D(const CVector& a, const CVector& b) {
-    const double dy = static_cast<double>(a.y) - static_cast<double>(b.y);
-    const double dx = static_cast<double>(a.x) - static_cast<double>(b.x);
+    const x87d dy = static_cast<x87d>(a.y) - static_cast<x87d>(b.y);
+    const x87d dx = static_cast<x87d>(a.x) - static_cast<x87d>(b.x);
     return static_cast<float>(std::sqrt(dx * dx + dy * dy));
 }
 
 //! The original does `max(z, groundZ + offset)` this way (the sum isn't rounded to a float before the comparison)
 float MaxZ(float z, float groundZ, float offset) {
-    const double minZ = static_cast<double>(groundZ) + static_cast<double>(offset);
+    const x87d minZ = static_cast<x87d>(groundZ) + static_cast<x87d>(offset);
     return static_cast<double>(z) > minZ ? z : static_cast<float>(minZ);
 }
 
@@ -1723,7 +1723,7 @@ void AddCoupleToPopulation(eModelID husbandModel, eModelID wifeModel, const CVec
     // Don't create them right in front of the player
     if (TheCamera.IsSphereVisible(pos, 1.5f)) {
         const auto dist = Distance2D(pos, FindPlayerPed(-1)->GetPosition());
-        if (static_cast<double>(CPopulation::PedCreationDistMultiplier()) * 42.5 > static_cast<double>(dist)) {
+        if (static_cast<x87d>(CPopulation::PedCreationDistMultiplier()) * (x87d)42.5 > static_cast<double>(dist)) {
             return;
         }
     }
@@ -1763,7 +1763,7 @@ void AddCoupleToPopulation(eModelID husbandModel, eModelID wifeModel, const CVec
     if (wifeWalkSpeed < 0.75f || husbandWalkSpeed < 0.75f) {
         return;
     }
-    if (std::abs(static_cast<double>(wifeWalkSpeed) - static_cast<double>(husbandWalkSpeed)) > static_cast<double>(0.45f)) {
+    if (std::abs(static_cast<x87d>(wifeWalkSpeed) - static_cast<x87d>(husbandWalkSpeed)) > static_cast<double>(0.45f)) {
         return;
     }
 
@@ -1871,7 +1871,7 @@ bool TryMakePedSunbathe(CPed* ped, const CVector& pos) {
 
     // BUG: (nx + ny) * 0.0f + nz is just `nz`, probably they meant something else (maybe `normal.Magnitude2D() * 0.f`)
     const auto& normal = towelCP.m_vecNormal;
-    if (!((static_cast<double>(normal.x) + static_cast<double>(normal.y)) * 0.0 + static_cast<double>(normal.z) > static_cast<double>(0.95f))) {
+    if (!((static_cast<x87d>(normal.x) + static_cast<x87d>(normal.y)) * (x87d)0.0 + static_cast<x87d>(normal.z) > static_cast<double>(0.95f))) {
         return true;
     }
 
@@ -1993,7 +1993,7 @@ void AddPedsToPopulation(ePedType pedType, eModelID pedModel, int32 numPeds, CVe
         bool canCreate = true;
         if (TheCamera.IsSphereVisible(pos, 2.f)) {
             const auto dist = Distance2D(pos, playerCentre);
-            if (static_cast<double>(CPopulation::PedCreationDistMultiplier()) * 42.5 > static_cast<double>(dist)) { // Too close, and visible
+            if (static_cast<x87d>(CPopulation::PedCreationDistMultiplier()) * (x87d)42.5 > static_cast<double>(dist)) { // Too close, and visible
                 canCreate = false;
             }
         }
@@ -2075,7 +2075,7 @@ bool CPopulation::AddToPopulation(float minRadius, float maxRadius, float minRad
                 + CCarCtrl::NumLawEnforcerCars
             );
             if (   CCarCtrl::NumLawEnforcerCars >= wanted->m_MaxCopCarsInPursuit
-                || static_cast<double>(playerInfo.m_nCarDensityForCurrentZone) * static_cast<double>(s_CopsNeededCarDensityScale) <= static_cast<double>(CCarCtrl::NumRandomCars)
+                || static_cast<x87d>(playerInfo.m_nCarDensityForCurrentZone) * static_cast<x87d>(s_CopsNeededCarDensityScale) <= static_cast<double>(CCarCtrl::NumRandomCars)
                 || numCars >= s_CopsNeededTotalCarsThreshold
             ) {
                 createCop = true;
@@ -2091,7 +2091,7 @@ bool CPopulation::AddToPopulation(float minRadius, float maxRadius, float minRad
     // Maximum number of peds
     auto maxPeds = static_cast<float>(static_cast<int32>(MaxNumberOfPedsInUse));
     (void)CDarkel::FrenzyOnGoing(); // NOTSA: Result isn't used by the original
-    const auto pedsAllowedByPopCycle = static_cast<double>(CPopCycle::m_NumOther_Peds) + CPopCycle::m_NumCops_Peds + CPopCycle::m_NumGangs_Peds + CPopCycle::m_NumDealers_Peds;
+    const auto pedsAllowedByPopCycle = static_cast<x87d>(CPopCycle::m_NumOther_Peds) + CPopCycle::m_NumCops_Peds + CPopCycle::m_NumGangs_Peds + CPopCycle::m_NumDealers_Peds;
     if (!(static_cast<double>(maxPeds) < pedsAllowedByPopCycle)) {
         maxPeds = static_cast<float>(pedsAllowedByPopCycle);
     }
@@ -2099,7 +2099,7 @@ bool CPopulation::AddToPopulation(float minRadius, float maxRadius, float minRad
         maxPeds = static_cast<float>(static_cast<int32>(NumberOfPedsInUseInterior));
     }
     const auto fewerPedsScale = CCullZones::FewerPeds() ? 0.6f : 1.f;
-    const auto targetNumPeds  = static_cast<double>(fewerPedsScale) * PedDensityMultiplier * maxPeds;
+    const auto targetNumPeds  = static_cast<x87d>(fewerPedsScale) * PedDensityMultiplier * maxPeds;
 
     // NOTE: Returns true if there are less peds than there should be - even if we've failed to create one
     const bool result = static_cast<double>(static_cast<int32>(ms_nTotalPeds)) < targetNumPeds;

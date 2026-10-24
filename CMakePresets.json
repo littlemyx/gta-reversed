@@ -67,6 +67,68 @@
                 "GTASA_VERIFY_GLOBALS": "ON",
                 "GTASA_IMAGE_DIAG": "ON"
             }
+        },
+        {
+            "name": "PortableMac",
+            "displayName": "Portable build, native macOS arm64 (Homebrew LLVM clang, libc++): GTASA_PORTABLE=ON, hook registry / Win32 startup / exe-oracle compiled out. Produces compile_commands.json for the C-0 census",
+            "description": "Slices A-1 + C-0 of .notes/STREAM_C_PLAN.md. Run tools/portable/conan_install_mac.sh once (conan install from a scratch copy of conanfile.py into build/PortableMac/generators with conan/profiles/macos-arm64.txt: ConanPresets.json and source/libs/imgui are not touched), then `cmake --preset PortableMac`. Compiler: Homebrew LLVM (/opt/homebrew/opt/llvm, `brew install llvm`): its libc++ has std::views::enumerate / ranges::shift_right that Apple clang 21 lacks (MAC-C6 finding); the macOS SDK comes from CMAKE_OSX_SYSROOT=macosx (cmake resolves it with xcrun and passes -isysroot; brew clang finds no C headers without it) and the executable links brew libc++ (-L/-rpath .../llvm/lib/c++). Apple clang 21 fallback: add -DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_CXX_COMPILER=/usr/bin/clang++ -DCMAKE_EXE_LINKER_FLAGS= (it fails on enumerate / shift_right until shims exist). Render backend: librw GL3 + SDL3 (RW_GL3, no D3D9 defines); source/portable/winshim is on the include path for the direct <Windows.h> includers. The game does not compile on arm64 yet (streams P/W/F/R/C): the target is configured and its TUs are checked with `python3 tools/standalone/clang_census.py run --mode native --compdb build/PortableMac/compile_commands.json`, not linked.",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/PortableMac",
+            "toolchainFile": "${sourceDir}/build/PortableMac/generators/conan_toolchain.cmake",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Darwin"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_C_COMPILER": "/opt/homebrew/opt/llvm/bin/clang",
+                "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++",
+                "CMAKE_OSX_SYSROOT": "macosx",
+                "CMAKE_EXE_LINKER_FLAGS": "-L/opt/homebrew/opt/llvm/lib/c++ -Wl,-rpath,/opt/homebrew/opt/llvm/lib/c++",
+                "CMAKE_CXX_FLAGS_RELEASE": "-O2 -DNDEBUG",
+                "CMAKE_C_FLAGS_RELEASE": "-O2 -DNDEBUG",
+                "GTASA_STANDALONE": "ON",
+                "GTASA_STANDALONE_DUMP_HOOKS_ONLY": "OFF",
+                "GTASA_PORTABLE": "ON",
+                "GTASA_STANDALONE_RELEASE": "ON",
+                "GTASA_NO_EDIT_AND_CONTINUE": "ON",
+                "GTASA_WITH_SCRIPT_COMMAND_HOOKS": "OFF",
+                "GTASA_USE_SDL3": "ON",
+                "GTASA_UNITY_BUILD": "OFF"
+            }
+        },
+        {
+            "name": "PortableLinux",
+            "displayName": "Portable build, native Linux x86_64 (clang 23 + libc++ from apt.llvm.org): GTASA_PORTABLE=ON, librw GL3 + SDL3, OpenAL",
+            "description": "MAC-LNX1 (.notes/reports/MAC-LNX1.md). Linux twin of PortableMac. Run tools/portable/linux_deps.sh once (apt: clang-23, libc++-23-dev, lld, OpenAL, X11/GL dev headers; pip: cmake>=4.2, ninja, conan), then tools/portable/conan_install_linux.sh (conan install with conan/profiles/linux-x64.txt into build/PortableLinux/generators; deps are built with the same clang 23 + libc++, one ABI), then `cmake --preset PortableLinux && cmake --build --preset PortableLinux -- -k 0`. Compiler: clang 23 because the game needs libc++ >= 23 (std::views::enumerate, ranges::shift_right; libstdc++ 13 of Ubuntu 24.04 has neither, gcc is not supported yet). Render backend, audio and flags as PortableMac (RW_GL3 + SDL3, openal-soft via find_package(OpenAL CONFIG)).",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/PortableLinux",
+            "toolchainFile": "${sourceDir}/build/PortableLinux/generators/conan_toolchain.cmake",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_POLICY_VERSION_MINIMUM": "3.5",
+                "CMAKE_C_COMPILER": "clang-23",
+                "CMAKE_CXX_COMPILER": "clang++-23",
+                "CMAKE_CXX_FLAGS": "-stdlib=libc++",
+                "CMAKE_EXE_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld",
+                "CMAKE_SHARED_LINKER_FLAGS": "-stdlib=libc++ -fuse-ld=lld",
+                "CMAKE_CXX_FLAGS_RELEASE": "-O2 -DNDEBUG",
+                "CMAKE_C_FLAGS_RELEASE": "-O2 -DNDEBUG",
+                "GTASA_STANDALONE": "ON",
+                "GTASA_STANDALONE_DUMP_HOOKS_ONLY": "OFF",
+                "GTASA_PORTABLE": "ON",
+                "GTASA_STANDALONE_RELEASE": "ON",
+                "GTASA_NO_EDIT_AND_CONTINUE": "ON",
+                "GTASA_WITH_SCRIPT_COMMAND_HOOKS": "OFF",
+                "GTASA_USE_SDL3": "ON",
+                "GTASA_UNITY_BUILD": "OFF"
+            }
         }
     ],
     "include": [

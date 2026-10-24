@@ -25,16 +25,16 @@
 #include "Weapon.h"
 
 // Sanity checks for the raw offsets used by the original
-static_assert(offsetof(CPed, m_pContactEntity) == 0x584 && offsetof(CPed, m_standingOnEntity) == 0x568);
-static_assert(offsetof(CPed, m_vecAnimMovingShift) == 0x550);
-static_assert(offsetof(CPhysical, m_fMass) == 0x8C && offsetof(CPhysical, m_pAttachedTo) == 0xFC && offsetof(CPhysical, m_pEntityIgnoredCollision) == 0x128);
-static_assert(offsetof(CPhysical, m_fDamageIntensity) == 0xD8 && offsetof(CPhysical, m_pDamageEntity) == 0xDC && offsetof(CPhysical, m_nPieceType) == 0xF8);
-static_assert(offsetof(CPhysical, m_vecLastCollisionImpactVelocity) == 0xE0 && offsetof(CPhysical, m_vecLastCollisionPosn) == 0xEC && offsetof(CPhysical, m_vecTurnSpeed) == 0x50);
+VALIDATE_OFFSET(CPed, m_pContactEntity, 0x584); VALIDATE_OFFSET(CPed, m_standingOnEntity, 0x568);
+VALIDATE_OFFSET(CPed, m_vecAnimMovingShift, 0x550);
+VALIDATE_OFFSET(CPhysical, m_fMass, 0x8C); VALIDATE_OFFSET(CPhysical, m_pAttachedTo, 0xFC); VALIDATE_OFFSET(CPhysical, m_pEntityIgnoredCollision, 0x128);
+VALIDATE_OFFSET(CPhysical, m_fDamageIntensity, 0xD8); VALIDATE_OFFSET(CPhysical, m_pDamageEntity, 0xDC); VALIDATE_OFFSET(CPhysical, m_nPieceType, 0xF8);
+VALIDATE_OFFSET(CPhysical, m_vecLastCollisionImpactVelocity, 0xE0); VALIDATE_OFFSET(CPhysical, m_vecLastCollisionPosn, 0xEC); VALIDATE_OFFSET(CPhysical, m_vecTurnSpeed, 0x50);
 
 namespace {
 //! 0x40FDB0 - `a.z * b.z + a.y * b.y + a.x * b.x` (the result is left in an x87 register => extended precision)
 double DotProductX87(const CVector& a, const CVector& b) {
-    return (double)a.z * b.z + (double)a.y * b.y + (double)a.x * b.x;
+    return (x87d)a.z * b.z + (x87d)a.y * b.y + (x87d)a.x * b.x;
 }
 
 //! 0x59C890 - the original evaluation order; each component is summed in extended precision, stored as float
@@ -44,9 +44,9 @@ CVector MultiplyMatrixWithVectorX87(const CMatrix& m, const CVector& v) {
     const auto& u = m.GetUp();
     const auto& p = m.GetPosition();
     return {
-        (float)((double)u.x * v.z + (double)f.x * v.y + (double)r.x * v.x + (double)p.x),
-        (float)((double)u.y * v.z + (double)r.y * v.x + (double)f.y * v.y + (double)p.y),
-        (float)((double)u.z * v.z + (double)r.z * v.x + (double)f.z * v.y + (double)p.z),
+        (float)((x87d)u.x * v.z + (x87d)f.x * v.y + (x87d)r.x * v.x + (x87d)p.x),
+        (float)((x87d)u.y * v.z + (x87d)r.y * v.x + (x87d)f.y * v.y + (x87d)p.y),
+        (float)((x87d)u.z * v.z + (x87d)r.z * v.x + (x87d)f.z * v.y + (x87d)p.z),
     };
 }
 
@@ -106,7 +106,7 @@ void CCollisionEventScanner::ScanForCollisionEvents(CPed* victim, CEventGroup* e
             auto* const veh = static_cast<CVehicle*>(hitEntity);
 
             const CVector& vehSpeed = veh->m_vecMoveSpeed;
-            const float    speedSq  = (float)((double)vehSpeed.x * vehSpeed.x + (double)vehSpeed.y * vehSpeed.y + (double)vehSpeed.z * vehSpeed.z); // 0x406DA0, stored as float
+            const float    speedSq  = (float)((x87d)vehSpeed.x * vehSpeed.x + (x87d)vehSpeed.y * vehSpeed.y + (x87d)vehSpeed.z * vehSpeed.z); // 0x406DA0, stored as float
             // 0x86C924 / 0x86C920 - Both are 0x3B23D70B (not 0.0025f, which is 0x3B23D70A)
             const float    threshold = veh->m_pTowingVehicle ? std::bit_cast<float>(0x3B23D70Bu) : std::bit_cast<float>(0x3B23D70Bu);
 
@@ -124,9 +124,9 @@ void CCollisionEventScanner::ScanForCollisionEvents(CPed* victim, CEventGroup* e
             if (speedSq > threshold) { // 0x604624
                 float damage = ped.m_fDamageIntensity; // 0x60463E
                 if (ped.bIsStanding) { // 0x604637
-                    const double dot = (double)ped.m_vecLastCollisionImpactVelocity.x * ped.m_vecAnimMovingShift.x + (double)ped.m_vecLastCollisionImpactVelocity.y * ped.m_vecAnimMovingShift.y;
+                    const x87d dot = (x87d)ped.m_vecLastCollisionImpactVelocity.x * ped.m_vecAnimMovingShift.x + (x87d)ped.m_vecLastCollisionImpactVelocity.y * ped.m_vecAnimMovingShift.y;
                     if (dot < 0.0) {
-                        const double v = dot * ped.m_fMass + damage;
+                        const x87d v = dot * ped.m_fMass + damage;
                         damage = (0.0 > v) ? 0.f : (float)v;
                     }
                 }
@@ -146,22 +146,22 @@ void CCollisionEventScanner::ScanForCollisionEvents(CPed* victim, CEventGroup* e
                     const CVector pedPos = ped.GetPosition();
                     const CVector pedToCenter = bbCenterWS - pedPos; // 0x40FE60 (0x604791)
                     const auto    centerAngle = x87::atan2((double)-pedToCenter.x, (double)pedToCenter.y); // fpatan, 0x6047AD
-                    const float   angleDiff   = CGeneral::LimitRadianAngle((float)((double)heading - centerAngle)); // 0x6047BF
+                    const float   angleDiff   = CGeneral::LimitRadianAngle((float)(X87R((double)heading - centerAngle))); // 0x6047BF
 
-                    const float halfAngle = (float)x87::atan2((double)bbMax.x - (double)bbMin.x, (double)bbMax.y - (double)bbMin.y); // 0x6047EA
+                    const float halfAngle = (float)x87::atan2((x87d)bbMax.x - (x87d)bbMin.x, (x87d)bbMax.y - (x87d)bbMin.y); // 0x6047EA
 
                     CVector dir = pedPos - veh->GetPosition(); // 0x60480E
                     dir.Normalise(); // 0x60481D
 
                     const float absAngle = std::abs(angleDiff);
                     double      result;
-                    if (absAngle < halfAngle || ((double)std::numbers::pi_v<float> - (double)halfAngle < (double)absAngle)) { // 0x604828, pi = 0x858CB8
-                        result = (double)dir.y * vehSpeed.y + (double)dir.z * vehSpeed.z + (double)dir.x * vehSpeed.x; // 0x6048DF
+                    if (absAngle < halfAngle || ((x87d)std::numbers::pi_v<float> - (x87d)halfAngle < (double)absAngle)) { // 0x604828, pi = 0x858CB8
+                        result = (x87d)dir.y * vehSpeed.y + (x87d)dir.z * vehSpeed.z + (x87d)dir.x * vehSpeed.x; // 0x6048DF
                     } else if (angleDiff > 0.f) { // 0x604850
                         const CVector negRight = -1.f * veh->GetMatrix().GetRight(); // 0x40FE90
                         result = DotProductX87(negRight, vehSpeed);
                     } else { // 0x604886
-                        const double r1 = DotProductX87(veh->GetMatrix().GetRight(), vehSpeed);
+                        const x87d r1 = DotProductX87(veh->GetMatrix().GetRight(), vehSpeed);
                         result = r1;
                         if (speedSq > std::bit_cast<float>(0x3C23D70Bu) && r1 < (double)0.1f) { // 0x86CD7C (0x3C23D70B, not 0.01f), 0x858B1C
                             // The original calculates `Dot(vehRight, pedForward)` here, but its only effect is a dead store.
@@ -262,9 +262,9 @@ void CCollisionEventScanner::ScanForCollisionEvents(CPed* victim, CEventGroup* e
                 break;
             }
             const CVector invVelocity{
-                (float)((double)ped.m_vecLastCollisionImpactVelocity.x * -1.0), // 0x858C1C
-                (float)((double)ped.m_vecLastCollisionImpactVelocity.y * -1.0),
-                (float)((double)ped.m_vecLastCollisionImpactVelocity.z * -1.0),
+                (float)((x87d)ped.m_vecLastCollisionImpactVelocity.x * -(x87d)1.0), // 0x858C1C
+                (float)((x87d)ped.m_vecLastCollisionImpactVelocity.y * -(x87d)1.0),
+                (float)((x87d)ped.m_vecLastCollisionImpactVelocity.z * -(x87d)1.0),
             };
             if (hitter->IsPlayer()) { // 0x604D8C
                 CEventPlayerCollisionWithPed event{
@@ -311,7 +311,7 @@ void CCollisionEventScanner::ScanForCollisionEvents(CPed* victim, CEventGroup* e
             const bool bStanding = ped.bIsStanding;
             float      damage    = ped.m_fDamageIntensity;
             if (bStanding && !hitEntity->GetIsStatic()) { // 0x604F83
-                const double dot = (double)ped.m_vecLastCollisionImpactVelocity.x * ped.m_vecAnimMovingShift.x + (double)ped.m_vecLastCollisionImpactVelocity.y * ped.m_vecAnimMovingShift.y;
+                const x87d dot = (x87d)ped.m_vecLastCollisionImpactVelocity.x * ped.m_vecAnimMovingShift.x + (x87d)ped.m_vecLastCollisionImpactVelocity.y * ped.m_vecAnimMovingShift.y;
                 if (dot < 0.0) {
                     const float v = (float)(dot * ped.m_fMass + damage); // 0x604FBF - passed as a float to 0x420800 (`max(0, v)`)
                     damage = (0.f > v) ? 0.f : v;
@@ -335,7 +335,7 @@ void CCollisionEventScanner::ScanForCollisionEvents(CPed* victim, CEventGroup* e
                 };
                 eventGroup->Add(&event, false);
             } else { // 0x605036
-                const float scaledDamage = (float)((double)damage / threshold * 10.0); // 0x8D23A8
+                const float scaledDamage = (float)((x87d)damage / threshold * (x87d)10.0); // 0x8D23A8
                 const CVector2D dir{ -ped.m_vecLastCollisionImpactVelocity.x, -ped.m_vecLastCollisionImpactVelocity.y };
                 const auto localDir = ped.GetLocalDirection(dir); // 0x60506F
                 CWeapon::GenerateDamageEvent(&ped, ped.m_pDamageEntity, WEAPON_FALL, Ftol(scaledDamage), PED_PIECE_TORSO, (uint8)localDir); // 0x60508B

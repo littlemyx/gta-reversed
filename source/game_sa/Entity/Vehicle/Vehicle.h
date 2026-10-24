@@ -97,7 +97,7 @@ enum eVehicleOverrideLightsState {
     FORCE_CAR_LIGHTS_ON = 2
 };
 
-enum eCarPiece {
+enum eCarPiece : int {
     CAR_PIECE_DEFAULT     = 0,
     CAR_PIECE_BONNET      = 1,
     CAR_PIECE_BOOT        = 2,
@@ -432,7 +432,7 @@ public:
     static inline NOTSA_GLOBAL(m_bEnableMouseFlying, 0xC1CC03, (bool), { true });
     static inline NOTSA_GLOBAL(m_nLastControlInput, 0xC1CC04, (eControllerType), {});
     static NOTSA_GLOBAL_DECL(CVehicle, m_aSpecialColVehicle, 0xC1CC08, (std::array<CVehicle*, 4>));
-    static inline NOTSA_GLOBAL(m_aSpecialColModel, 0xC1CC78, (std::array<CColModel, 4>), {}); static_assert(sizeof(std::array<CColModel, 4>) == 192);
+    static inline NOTSA_GLOBAL(m_aSpecialColModel, 0xC1CC78, (std::array<CColModel, 4>), {}); VALIDATE_LAYOUT(sizeof(std::array<CColModel, 4>) == 192);
     static inline NOTSA_GLOBAL(ms_forceVehicleLightsOff, 0xC1CC18, (bool), {});
     static inline NOTSA_GLOBAL(s_bPlaneGunsEjectShellCasings, 0xC1CC19, (bool), {});
     static inline NOTSA_GLOBAL(m_aSpecialHydraulicData, 0xC1CB60, (std::array<tHydraulicData, 4>), {});
@@ -443,10 +443,10 @@ public:
     CVehicle(eVehicleCreatedBy createdBy);
     ~CVehicle() override;
 
-    static void* operator new(unsigned size);
+    static void* operator new(size_t size);
     static void operator delete(void* data);
 
-    static void* operator new(unsigned size, int32 poolRef);
+    static void* operator new(size_t size, int32 poolRef);
     static void operator delete(void* data, int32 poolRef);
 
     void SetModelIndex(uint32 index) override;
@@ -748,7 +748,7 @@ protected:
     float GetNewSteeringAmt();
 
 public:
-    [[nodiscard]] auto GetRopeID() const { return (uint32)&m_nFlags + 1; } // yep, flags + 1
+    [[nodiscard]] auto GetRopeID() const { return NOTSA_PTR_ID32(&m_nFlags) + 1; } // yep, flags + 1
     [[nodiscard]] CVehicleAnimGroup& GetAnimGroup() const;
     [[nodiscard]] AssocGroupId GetAnimGroupId() const;
 

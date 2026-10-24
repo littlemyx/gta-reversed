@@ -214,4 +214,4 @@ public:
     }
 };
 
-VALIDATE_SIZE(CPlayerInfoSaveStructure, 0x28);
+VALIDATE_SIZE_FILE(CPlayerInfoSaveStructure, 0x28);

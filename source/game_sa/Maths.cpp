@@ -14,12 +14,16 @@ static_assert(std::bit_cast<float>(0x3CC90FDBu) == 0x1.921fb6p-6f);
 static float SinTableEntry(int32 i) {
     static const float step = std::bit_cast<float>(0x3CC90FDBu); // 0x859BBC
     float res;
+#ifdef NOTSA_PORTABLE
+#include "x87_lifted/Maths_SinTableEntry.inc"
+#else
     __asm {
         fild  i
         fmul  step
         fsin
         fstp  res
     }
+#endif
     return res;
 }
 
@@ -34,13 +38,13 @@ NOTSA_GLOBAL_INIT(SIN_LUT, 0xBB3E00, (std::array<float, SIN_LUT_SIZE>), []() {
 // 0x4A1340
 float CMaths::GetSinFast(float rad) {
     // exe: `fld rad; fmul 40.7436637878418f (0x85A778); _ftol2; and eax, 0xFF` (the product stays in extended precision)
-    return SIN_LUT[(uint32)notsa::detail::Ftol((double)rad * (double)40.7436637878418f) & (SIN_LUT_SIZE - 1)];
+    return SIN_LUT[(uint32)notsa::detail::Ftol((x87d)rad * (x87d)40.7436637878418f) & (SIN_LUT_SIZE - 1)];
 }
 
 // 0x4A1360
 float CMaths::GetCosFast(float rad) {
     // exe: `fld rad; fmul 40.7436637878418f; fadd 64.0f (0x859A44); _ftol2; and eax, 0xFF`
-    return SIN_LUT[(uint32)notsa::detail::Ftol((double)rad * (double)40.7436637878418f + 64.0) & (SIN_LUT_SIZE - 1)];
+    return SIN_LUT[(uint32)notsa::detail::Ftol((x87d)rad * (x87d)40.7436637878418f + (x87d)64.0) & (SIN_LUT_SIZE - 1)];
 }
 
 void CMaths::InitMathsTables() {

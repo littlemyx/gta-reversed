@@ -75,17 +75,17 @@ bool CTaskSimpleChoking::ProcessPed(CPed* ped) {
         const auto& fwd         = ped->GetForward(); // Original code accesses the matrix directly (BUG: crashes if the ped has no matrix)
 
         // x87: kept in extended precision
-        const double dx = (double)attackerPos.x - (double)pedPos.x;
-        const double dy = (double)attackerPos.y - (double)pedPos.y;
-        const double dz = (double)attackerPos.z - (double)pedPos.z;
-        const double dot = dz * (double)fwd.z + dy * (double)fwd.y + dx * (double)fwd.x;
+        const x87d dx = (x87d)attackerPos.x - (x87d)pedPos.x;
+        const x87d dy = (x87d)attackerPos.y - (x87d)pedPos.y;
+        const x87d dz = (x87d)attackerPos.z - (x87d)pedPos.z;
+        const x87d dot = dz * (x87d)fwd.z + dy * (x87d)fwd.y + dx * (x87d)fwd.x;
         if (dot > 0.0) {
             ped->m_fAimingRotation = (float)x87::atan2(-dx, dy);
         }
     }
 
     // x87: `timestep * 0.02f * 1000.f` is computed in extended precision before truncation
-    const auto decr = (uint32)((double)CTimer::GetTimeStep() * (double)0.02f * 1000.0);
+    const auto decr = (uint32)((x87d)CTimer::GetTimeStep() * (x87d)0.02f * (x87d)1000.0);
     if (m_nTimeRemaining > decr) {
         m_nTimeRemaining -= decr;
     } else {
@@ -95,7 +95,7 @@ bool CTaskSimpleChoking::ProcessPed(CPed* ped) {
     if (!m_pAnim) {
         m_pAnim = CAnimManager::BlendAnimation(ped->GetRpClump(), ANIM_GROUP_DEFAULT, ANIM_ID_GAS_CWR, 4.f);
         m_pAnim->SetFinishCallback(ChokeAnimFinishCB, this);
-        m_pAnim->m_Speed = (float)((double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL * (double)0.25f + (double)0.75f);
+        m_pAnim->m_Speed = (float)((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (x87d)0.25f + (x87d)0.75f);
     } else if (m_nTimeRemaining == 0) {
         if (m_pAnim->m_AnimId == ANIM_ID_GAS_CWR) {
             m_pAnim->SetDefaultFinishCallback();

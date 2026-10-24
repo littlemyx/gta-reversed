@@ -17,13 +17,19 @@
 #ifdef NOTSA_RW_LIBRW
 #include "fakerw.h"
 
+#ifndef NOTSA_PORTABLE
 // librw's D3D9 device internals (d3ddevice, d3d9Globals)
 #include <src/d3d/rwd3dimpl.h>
+#endif
 
+#ifndef NOTSA_PORTABLE
 #include "camera_sync.h"   // 01r: the exe's camera sync callback 0x7EE5A0 (lifted from the asm, bit-exact vs the exe), replaces librw's cameraSync
+#endif
 
 #include <cassert>
+#ifndef NOTSA_PORTABLE
 #include <crtdbg.h>
+#endif
 #include <Windows.h>
 #include "standalone/Fixups.h"
 #include <cstdio>
@@ -38,14 +44,18 @@ static_assert(rwPERSPECTIVE == rw::Camera::PERSPECTIVE && rwPARALLEL == rw::Came
 static_assert(rwRASTERFLIPWAITVSYNC == rw::Raster::FLIPWAITVSYNCH);
 
 namespace {
+#ifndef NOTSA_PORTABLE
 using rw::d3d::d3d9Globals;
+#endif
 
 RwUInt32 s_StencilClear = 0; // RwD3D9SetStencilClear (the exe's StencilClearValue, default 0)
 
+#ifndef NOTSA_PORTABLE
 // 01r: sync callback of every camera (0x7EE5A0 ported bit-exactly in camera_sync.h): view matrix, frustum corners, planes (table _rwInvSqrt), bound box
 void NotsaCameraSyncCB(rw::ObjectWithFrame* obj) {
     rwx::CameraSync(reinterpret_cast<rw::Camera*>(obj));
 }
+#endif
 
 // 01r: the exe's zScale / zShift (0x7EE200), evaluated as the asm does. librw's calczShiftScale is algebraically the same for the perspective case but
 // shrinks the device range differently (it updates N before using it for F); here delta = (F - N) * 1e-4f is taken once. n, f are 1/near, 1/far for a
@@ -71,6 +81,7 @@ void CalcZShiftScale(RwCamera* cam) {
     cam->zShift        = static_cast<float>(0.5 * ((static_cast<double>(far2) + near2) - (n + f) * zs));
 }
 
+#ifndef NOTSA_PORTABLE
 bool DepthFormatHasStencil(D3DFORMAT f) {
     return f == D3DFMT_D24S8 || f == D3DFMT_D24X4S4 || f == D3DFMT_D24FS8 || f == D3DFMT_D15S1;
 }
@@ -88,14 +99,25 @@ bool ResetDeviceNow() {
     rw::engine->device.showRaster(reinterpret_cast<rw::Raster*>(1), vsync ? rw::Raster::FLIPWAITVSYNCH : 0);
     return rw::d3d::d3ddevice->TestCooperativeLevel() == D3D_OK;
 }
+#endif
 } // namespace
+#ifdef NOTSA_PORTABLE
+
+// Stream R / R-3b: the stencil clear value RwD3D9SetStencilClear stored, for portable/render/camera_gl3.cpp (RwCameraClear twin)
+RwUInt32 NotsaRwGetStencilClear() { return s_StencilClear; }
+#endif
 
 // D (+ zScale/zShift init, librw leaves the whole camera uninitialised past the fields create() sets): a new camera has no frame, no
 // rasters and RW's defaults (view window 1x1, near 0.05, far 10, fog 5, perspective).
 RwCamera* RwCameraCreate(void) {
     RwCamera* cam = rw::Camera::create();
     if (cam) {
+#ifndef NOTSA_PORTABLE
         cam->originalSync = NotsaCameraSyncCB;   // librw's world plugin wraps the sync callback (worldCameraSync -> originalSync): replace the inner one
+#else
+        // portable build (R3b-3): keeps librw's own cameraSync. The lifted exe callback marshals 32 bit guest pointers (ILP32 only: it crashes on arm64); librw's
+        // plane normalisation / view matrix expression order differ from the exe's by ~1e-4 (frustum sphere test edge cases), until a 64 bit safe lift exists (F stream)
+#endif
         CalcZShiftScale(cam);
     }
     return cam;
@@ -119,6 +141,7 @@ RwBool RwCameraDestroy(RwCamera* camera) {
 // count", the env-map pipeline's once-per-frame key): the only writer in the whole exe is the world's render callback 0x750430 (inc word [engine + 8] at
 // 0x750453), reached through RpWorldRender 0x74F570, which the game never calls (no call/jmp/data reference anywhere in the exe) - SA renders through its
 // own CRenderer -> RpAtomicRender. So renderFrame stays at its initial 0 for the whole run (the env-map guard `RenderFrame != renderFrame` never fires).
+#ifndef NOTSA_PORTABLE
 RwCamera* RwCameraBeginUpdate(RwCamera* camera) {
     if (!camera || !camera->getFrame() || !camera->frameBuffer || !rw::d3d::d3ddevice) {
         return nullptr;
@@ -129,6 +152,7 @@ RwCamera* RwCameraBeginUpdate(RwCamera* camera) {
     rw::d3d::d3ddevice->SetTransform(D3DTS_PROJECTION, reinterpret_cast<const D3DMATRIX*>(&camera->devProj));
     return camera;
 }
+#endif
 
 // 01r: RpWorldRender's counter bump (exe 0x750453, the world render callback 0x750430)
 void NotsaRwBumpRenderFrame() {
@@ -144,6 +168,7 @@ RpWorld* RpWorldRender(RpWorld* world) {
     return world;
 }
 
+#ifndef NOTSA_PORTABLE
 // D: EndScene; RW clears curCamera outside an update.
 RwCamera* RwCameraEndUpdate(RwCamera* camera) {
     if (!camera || !rw::d3d::d3ddevice) {
@@ -324,6 +349,7 @@ RwCamera* RwCameraShowRaster(RwCamera* camera, void* /*pDev*/, RwUInt32 flags) {
     camera->showRaster(flags);
     return camera;
 }
+#endif
 
 // 0x7EE2D0: 6 planes in RW's order (far, near, right, top, left, bottom), distance = (n.y*c.y + n.x*c.x) + n.z*c.z - plane distance (x87 order);
 // OUTSIDE (0) if it exceeds the radius for any plane, else BOUNDARY (1) if it is above -radius for any plane, else INSIDE (2). NaN counts as inside.
@@ -386,6 +412,7 @@ void RwD3D9SetStencilClear(RwUInt32 stencilClear) {
     s_StencilClear = stencilClear;
 }
 
+#ifndef NOTSA_PORTABLE
 // W: attach the camera's swap chain to another window (WindowedMode.cpp used it when switching between its main and top-level windows;
 // librw has no API). Only the single device window exists in the standalone build, so attaching to it (or to null) is a no-op; another
 // HWND becomes the device window and the device is reset in place (windowed: the back buffer takes the new client size).
@@ -415,4 +442,5 @@ RwBool RwD3D9CameraAttachWindow(void* camera, void* hwnd) {
     }
     return TRUE;
 }
+#endif
 #endif

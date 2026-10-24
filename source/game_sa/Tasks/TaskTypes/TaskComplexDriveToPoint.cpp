@@ -50,10 +50,10 @@ CTask* CTaskComplexDriveToPoint::Drive(CPed* ped) {
     const auto veh     = m_Veh;
 
     const auto& vehPos = veh->GetPosition();
-    const double dx = (double)m_Point.x - vehPos.x;
-    const double dy = (double)m_Point.y - vehPos.y;
-    const double dz = (double)m_Point.z - vehPos.z;
-    const double dist = std::sqrt((dy * dy + dz * dz) + dx * dx); // Kept in extended precision by the original
+    const x87d dx = (x87d)m_Point.x - vehPos.x;
+    const x87d dy = (x87d)m_Point.y - vehPos.y;
+    const x87d dz = (x87d)m_Point.z - vehPos.z;
+    const x87d dist = std::sqrt((dy * dy + dz * dz) + dx * dx); // Kept in extended precision by the original
 
     if (dist < (double)m_Radius) {
         veh->m_autoPilot.m_nCarMission = MISSION_NONE;
@@ -88,9 +88,9 @@ CTask* CTaskComplexDriveToPoint::Drive(CPed* ped) {
 // 0x6452C0
 bool CTaskComplexDriveToPoint::IsTargetBlocked(CPed* ped) const {
     const auto& pedPos = ped->GetPosition();
-    const double dx = (double)pedPos.x - m_Point.x;
-    const double dy = (double)pedPos.y - m_Point.y;
-    const double dz = (double)pedPos.z - m_Point.z;
+    const x87d dx = (x87d)pedPos.x - m_Point.x;
+    const x87d dy = (x87d)pedPos.y - m_Point.y;
+    const x87d dz = (x87d)pedPos.z - m_Point.z;
     if (36.0 < (dz * dz + dx * dx) + dy * dy) { // NaN => doesn't return
         return false;
     }
@@ -109,9 +109,9 @@ bool CTaskComplexDriveToPoint::IsTargetBlocked(CPed* ped, CEntity** entities, in
     const float vehRadius = veh->GetModelInfo()->GetColModel()->GetBoundRadius();
 
     const auto& vehPos = veh->GetPosition();
-    const double vx = (double)vehPos.x - m_Point.x;
-    const double vy = (double)vehPos.y - m_Point.y;
-    const double vz = (double)vehPos.z - m_Point.z;
+    const x87d vx = (x87d)vehPos.x - m_Point.x;
+    const x87d vy = (x87d)vehPos.y - m_Point.y;
+    const x87d vz = (x87d)vehPos.z - m_Point.z;
     const float  vehDistSq = (float)((vz * vz + vy * vy) + vx * vx);
 
     for (auto i = 0; i < numEntities; ++i) {
@@ -121,18 +121,18 @@ bool CTaskComplexDriveToPoint::IsTargetBlocked(CPed* ped, CEntity** entities, in
         }
 
         const auto& entPos = entity->GetPosition();
-        const double ex = (double)entPos.x - m_Point.x;
-        const double ey = (double)entPos.y - m_Point.y;
-        const double ez = (double)entPos.z - m_Point.z;
-        const double entDistSq = (ez * ez + ey * ey) + ex * ex;
+        const x87d ex = (x87d)entPos.x - m_Point.x;
+        const x87d ey = (x87d)entPos.y - m_Point.y;
+        const x87d ez = (x87d)entPos.z - m_Point.z;
+        const x87d entDistSq = (ez * ez + ey * ey) + ex * ex;
 
         const float entRadius = entity->GetModelInfo()->GetColModel()->GetBoundRadius();
-        if (!((double)entRadius * entRadius > entDistSq)) { // Target is not inside the entity's bounding sphere
+        if (!((x87d)entRadius * entRadius > entDistSq)) { // Target is not inside the entity's bounding sphere
             continue;
         }
 
-        const double radiusSum = (double)entRadius + vehRadius;
-        if ((radiusSum * radiusSum) * 1.5 > (double)vehDistSq) {
+        const x87d radiusSum = (x87d)entRadius + vehRadius;
+        if ((radiusSum * radiusSum) * (x87d)1.5 > (double)vehDistSq) {
             return true;
         }
     }

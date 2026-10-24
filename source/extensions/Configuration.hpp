@@ -3,7 +3,7 @@
 #include <optional>
 #include <unordered_map>
 #include <fstream>
-
+#include "portable/stdcompat.h" // notsa::compat::from_chars (std:: on MSVC); keeps the line numbers of this file
 #include "app_debug.h"
 
 static inline class {
@@ -24,7 +24,7 @@ public:
         } else if constexpr (notsa::is_standard_integer<Ret> || std::is_floating_point_v<Ret>) {
             Ret rt{};
 
-            auto [_, ec] = std::from_chars(str.data(), str.data() + str.size(), rt);
+            auto [_, ec] = notsa::compat::from_chars(str.data(), str.data() + str.size(), rt);
             if (ec != std::errc{})
                 return {};
 

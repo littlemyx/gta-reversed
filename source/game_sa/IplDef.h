@@ -32,4 +32,4 @@ struct IplDef {
         strcpy_s(this->name, name);
     }
 };
-VALIDATE_SIZE(IplDef, 0x34);
+VALIDATE_SIZE_FILE(IplDef, 0x34);

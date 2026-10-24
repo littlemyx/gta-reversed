@@ -146,7 +146,7 @@ CTask* CTaskComplexKillPedOnFoot::ControlSubTask(CPed* ped) {
         };
         // x87: Everything is kept in extended precision
         const auto GetSpeed2D = [](const CVehicle* veh) {
-            return std::sqrt((double)veh->m_vecMoveSpeed.x * (double)veh->m_vecMoveSpeed.x + (double)veh->m_vecMoveSpeed.y * (double)veh->m_vecMoveSpeed.y);
+            return std::sqrt((x87d)veh->m_vecMoveSpeed.x * (x87d)veh->m_vecMoveSpeed.x + (x87d)veh->m_vecMoveSpeed.y * (x87d)veh->m_vecMoveSpeed.y);
         };
 
         if (m_pSubTask->GetTaskType() == TASK_SIMPLE_PAUSE) {
@@ -455,7 +455,7 @@ CTask* CTaskComplexKillPedOnFoot::CreateNextSubTask(CPed* ped) {
         if (CCullZones::NoPolice()
             || (m_target->m_standingOnEntity
                 && m_target->m_standingOnEntity != ped->m_standingOnEntity
-                && std::sqrt((double)dz * (double)dz + (double)dy * (double)dy + (double)dx * (double)dx) < 5.f) // x87: Kept in extended precision
+                && std::sqrt((x87d)dz * (x87d)dz + (x87d)dy * (x87d)dy + (x87d)dx * (x87d)dx) < 5.f) // x87: Kept in extended precision
         ) {
             if (player && player->GetPlayerData()->m_bStoppedMoving) {
                 GivePistolToPedIfPlayerIsStandingStill(ped);
@@ -492,9 +492,9 @@ CTask* CTaskComplexKillPedOnFoot::CreateFirstSubTask(CPed* ped) {
     // x87: Kept in extended precision, but then stored as a float
     const auto& pedPos = ped->GetPosition();
     const auto& tgtPos = m_target->GetPosition();
-    const double dx    = (double)tgtPos.x - (double)pedPos.x;
-    const double dy    = (double)tgtPos.y - (double)pedPos.y;
-    const double dz    = (double)tgtPos.z - (double)pedPos.z;
+    const x87d dx    = (x87d)tgtPos.x - (x87d)pedPos.x;
+    const x87d dy    = (x87d)tgtPos.y - (x87d)pedPos.y;
+    const x87d dz    = (x87d)tgtPos.z - (x87d)pedPos.z;
     const float dist   = (float)std::sqrt((dz * dz + dy * dy) + dx * dx);
 
     CPed* const player = m_target->IsPlayer() ? m_target : nullptr;
@@ -521,7 +521,7 @@ CTask* CTaskComplexKillPedOnFoot::CreateFirstSubTask(CPed* ped) {
 
             taskType = TASK_COMPLEX_DESTROY_CAR;
             // x87: Kept in extended precision
-            const double speed2D = std::sqrt((double)tgtVeh->m_vecMoveSpeed.y * (double)tgtVeh->m_vecMoveSpeed.y + (double)tgtVeh->m_vecMoveSpeed.x * (double)tgtVeh->m_vecMoveSpeed.x);
+            const x87d speed2D = std::sqrt((x87d)tgtVeh->m_vecMoveSpeed.y * (x87d)tgtVeh->m_vecMoveSpeed.y + (x87d)tgtVeh->m_vecMoveSpeed.x * (x87d)tgtVeh->m_vecMoveSpeed.x);
             if (tgtVeh->m_nVehicleSubType != VEHICLE_TYPE_HELI
                 && tgtVeh->m_nVehicleSubType != VEHICLE_TYPE_PLANE
                 && !ped->bStayInSamePlace

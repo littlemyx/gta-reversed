@@ -350,10 +350,10 @@ int32 GetMaxWantedLevel() {
 }
 }; // namespace
 
-static_assert(offsetof(CPlayerInfo, m_nBestCarTwoWheelsTimeMs) == 0x118 && offsetof(CPlayerInfo, m_fBestBikeStoppieDistM) == 0x12C);
-static_assert(offsetof(CPhysical, m_pEntityIgnoredCollision) == 0x128 && offsetof(CPhysical, m_nNumEntitiesCollided) == 0xB9);
-static_assert(offsetof(CAutomobile, m_fHeliRotorSpeed) == 0x84C);
-static_assert(offsetof(CVehicle, m_matrix) == 0x14 && offsetof(CVehicle, m_pHandlingData) == 0x384);
+VALIDATE_OFFSET(CPlayerInfo, m_nBestCarTwoWheelsTimeMs, 0x118); VALIDATE_OFFSET(CPlayerInfo, m_fBestBikeStoppieDistM, 0x12C);
+VALIDATE_OFFSET(CPhysical, m_pEntityIgnoredCollision, 0x128); VALIDATE_OFFSET(CPhysical, m_nNumEntitiesCollided, 0xB9);
+VALIDATE_OFFSET(CAutomobile, m_fHeliRotorSpeed, 0x84C);
+VALIDATE_OFFSET(CVehicle, m_matrix, 0x14); VALIDATE_OFFSET(CVehicle, m_pHandlingData, 0x384);
 
 void notsa::script::commands::ported::g09_12::RegisterG12() {
     REGISTER_COMMAND_HANDLER_BEGIN("Ported g12");

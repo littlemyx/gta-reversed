@@ -16,7 +16,7 @@ struct ChunkHeader {
     char  magic[4];
     int32 size;
 };
-VALIDATE_SIZE(ChunkHeader, 0x8);
+VALIDATE_SIZE_FILE(ChunkHeader, 0x8);
 
 enum eTextLangCode : char {
     ENGLISH = 'e',
@@ -85,4 +85,4 @@ private:
 };
 VALIDATE_SIZE(CText, 0xA90);
 
-NOTSA_GLOBAL_HDR(TheText, 0xC1B340, (CText), {}); static_assert(sizeof(TheText) == 2704);
+NOTSA_GLOBAL_HDR(TheText, 0xC1B340, (CText), {}); VALIDATE_SIZE(TheText, 2704);

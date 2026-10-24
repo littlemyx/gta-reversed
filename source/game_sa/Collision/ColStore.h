@@ -17,7 +17,7 @@ struct ColDef {
     bool   m_bProcedural;
     bool   m_bInterior;
 
-    static void* operator new(unsigned size);
+    static void* operator new(size_t size);
     static void  operator delete(void* data);
 };
 VALIDATE_SIZE(ColDef, 0x2C);

@@ -5,7 +5,7 @@
 #include "ClothesBuilder.h"
 #include "PedClothesDesc.h"
 
-NOTSA_GLOBAL(playerImg, 0xBC12C0, (CDirectory), {}); static_assert(sizeof(playerImg) == 16);
+NOTSA_GLOBAL(playerImg, 0xBC12C0, (CDirectory), {}); VALIDATE_SIZE(playerImg, 16);
 NOTSA_GLOBAL(playerImgEntries, 0xBBCDC8, (CDirectory::DirectoryInfo[550]), {}); // 550 entries (playerImg.Init(550, ...)), NOT one: the table audit declared a single DirectoryInfo
 
 NOTSA_GLOBAL(gBoneIndices, 0xBBC8C8, (notsa::mdarray<int16, 10, 64>), {});

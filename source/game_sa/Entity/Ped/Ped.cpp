@@ -390,14 +390,14 @@ CPed::~CPed() {
 /*!
 * @addr 0x5E4720
 */
-void* CPed::operator new(unsigned size) {
+void* CPed::operator new(size_t size) {
     return GetPedPool()->New();
 }
 
 /*!
 * @addr 0x5E4730
 */
-void* CPed::operator new(unsigned size, int32 poolRef) {
+void* CPed::operator new(size_t size, int32 poolRef) {
     return GetPedPool()->NewAt(poolRef);
 }
 
@@ -531,7 +531,7 @@ bool CPed::Load() {
     // Would be nice if someone with more knowledge of templates and shit can fix that
     CPedSaveStructure save;
     CGenericGameStorage::LoadDataFromWorkBuffer(save);
-    assert(size == sizeof(save));
+    assert(size == notsa::FileSizeOf<CPedSaveStructure>); // P-2d: the prefix is the FILE size (0x18C); sizeof(save) is larger on LP64 (CWeapon::m_FxSystem). == sizeof on x86
 
     save.Extract(this);
     return true;
@@ -544,7 +544,7 @@ bool CPed::Save() {
     CPedSaveStructure save;
     save.Construct(this);
 
-    CGenericGameStorage::SaveDataToWorkBuffer(sizeof(save));
+    CGenericGameStorage::SaveDataToWorkBuffer<uint32>(uint32(notsa::FileSizeOf<CPedSaveStructure>)); // P-2d: file record size (0x18C), == sizeof(save) on x86; by-value so x86 codegen is unchanged (no ref to the variable)
     CGenericGameStorage::SaveDataToWorkBuffer(save);
 
     return true;
@@ -867,11 +867,11 @@ void CPed::ClearAimFlag() {
 int32 CPed::GetLocalDirection(const CVector2D& point) const {
     // Exact x87 form of the exe (0x5DEF60): everything stays in extended precision (doubles), the angle is truncated by _ftol2 after `* (2/PI)` (0x858FB8)
     // and then reduced with `(dir - 4) & 3` for dir > 3 (== dir & 3).
-    double angle = x87::atan2(-(double)point.x, (double)point.y) - (double)m_fCurrentRotation + (double)std::bit_cast<float>(0x3F490FDBu); // 0x859AB0 (PI / 4)
+    x87d angle = X87R(x87::atan2(-(double)point.x, (double)point.y) - (double)m_fCurrentRotation) + (double)std::bit_cast<float>(0x3F490FDBu); // 0x859AB0 (PI / 4)
     while (angle < 0.0) {
-        angle += (double)TWO_PI; // 0x858CBC
+        angle += (x87d)TWO_PI; // 0x858CBC
     }
-    int32 dir = notsa::detail::Ftol(angle * (double)std::bit_cast<float>(0x3F22F983u)); // 0x858FB8 (2 / PI)
+    int32 dir = notsa::detail::Ftol(angle * (x87d)std::bit_cast<float>(0x3F22F983u)); // 0x858FB8 (2 / PI)
     if (dir > 3) {
         dir = dir - 4 - (int32)(((uint32)(dir - 4) >> 2) << 2);
     }
@@ -1658,23 +1658,23 @@ void CPed::SetPedDefaultDecisionMaker() {
 bool CPed::CanSeeEntity(CEntity* entity, float limitAngle) {
     // 0x5E0730: R* used the degree returning function and converted to radians (0x8595EC); both the point angle and the ped's own rotation are wrapped into [0, 2PI]
     // once, everything stays on the x87 stack
-    constexpr double ExeTwoPi = (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
-    const auto Wrap = [](double angle) {
+    constexpr x87d ExeTwoPi = (x87d)(2.f * std::numbers::pi_v<float>); // 0x858CBC
+    const auto Wrap = [](double angle) -> x87d {
         if (angle > ExeTwoPi) {
-            return angle - ExeTwoPi;
+            return X87R(angle - ExeTwoPi);
         }
-        return angle < 0.0 ? angle + ExeTwoPi : angle;
+        return angle < 0.0 ? X87R(angle + ExeTwoPi) : angle;
     };
 
     const double deg        = CGeneral::GetAngleBetweenPointsExt(entity->GetPosition2D().x, entity->GetPosition2D().y, GetPosition2D().x, GetPosition2D().y);
-    const double pointAngle = Wrap(deg * (double)0.017453292f);
-    const double ownAngle   = Wrap(m_fCurrentRotation);
+    const x87d pointAngle = Wrap(X87R(deg * (double)0.017453292f));
+    const x87d ownAngle   = Wrap(m_fCurrentRotation);
 
-    double delta = pointAngle - ownAngle;
+    x87d delta = pointAngle - ownAngle;
     if (delta < 0.0) {
         delta = -delta;
     }
-    return delta < (double)limitAngle || delta > ExeTwoPi - (double)limitAngle;
+    return delta < (double)limitAngle || delta > ExeTwoPi - (x87d)limitAngle;
 }
 
 /*!
@@ -1949,7 +1949,7 @@ bool CPed::OurPedCanSeeThisEntity(CEntity* entity, bool isSpotted) {
 #ifdef NOTSA_STANDALONE_RUN
         // NOTSA-AUDIT (0x5E1660): `fcomp 0; test ah, 1; jne` = !(dot >= 0) (NaN too); then `fsqrt (dy*dy + dx*dx); fcomp 40; test ah, 5; jp` = !(dist < 40); upstream compared the squared distance
         if (   !(DotProduct2D(dir2D, m_matrix->GetForward()) >= 0.f) // Is behind us
-            || !(x87::sqrt((double)(dir2D.y * dir2D.y + dir2D.x * dir2D.x)) < 40.0)
+            || !(x87::sqrt((x87d)(dir2D.y * dir2D.y + dir2D.x * dir2D.x)) < 40.0)
         ) {
 #else
 #line 1931
@@ -1986,9 +1986,9 @@ void CPed::SortPeds(CPed** pedList, int32 lo, int32 hi) {
     const auto DistTo = [this](const CPed* other) -> double {
         const auto& a = GetPosition();
         const auto& b = other->GetPosition();
-        const double dx = (double)a.x - b.x;
-        const double dy = (double)a.y - b.y;
-        const double dz = (double)a.z - b.z;
+        const x87d dx = (x87d)a.x - b.x;
+        const x87d dy = (x87d)a.y - b.y;
+        const x87d dz = (x87d)a.z - b.z;
         return std::sqrt((dz * dz + dy * dy) + dx * dx);
     };
 
@@ -2520,23 +2520,23 @@ bool CPed::TurnBody() {
 
     // 0x5E406F: the limited angle stays on the x87 stack (unrounded) while it is compared with the current rotation. It is the LOOK direction that is moved by a full
     // turn (not the current rotation) so that both are less than half a turn apart.
-    constexpr double ExePi    = (double)std::numbers::pi_v<float>;     // 0x858CB8
-    constexpr double ExeTwoPi = (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
+    constexpr x87d ExePi    = (x87d)std::numbers::pi_v<float>;     // 0x858CB8
+    constexpr x87d ExeTwoPi = (x87d)(2.f * std::numbers::pi_v<float>); // 0x858CBC
     double look = CGeneral::LimitRadianAngleExt(m_fLookDirection);
-    if (ExePi + (double)m_fCurrentRotation < look) {
+    if (ExePi + (x87d)m_fCurrentRotation < look) {
         look -= ExeTwoPi;
-    } else if ((double)m_fCurrentRotation - ExePi > look) {
+    } else if ((x87d)m_fCurrentRotation - ExePi > look) {
         look += ExeTwoPi;
     }
 
     m_fAimingRotation = (float)look;
 
-    const double diff = (double)m_fCurrentRotation - look;
+    const x87d diff = X87R((double)m_fCurrentRotation - look);
     m_fLookDirection  = (float)look;
     if (!(std::abs(diff) > 0.05f)) { // 0x858C28; a NaN difference takes this branch, too
         return true;
     }
-    m_fCurrentRotation = (float)((double)m_fCurrentRotation - diff * (double)std::bit_cast<float>(0x3E4CCCCDu)); // 0x858CC4 (0.2f)
+    m_fCurrentRotation = (float)((x87d)m_fCurrentRotation - diff * (x87d)std::bit_cast<float>(0x3E4CCCCDu)); // 0x858CC4 (0.2f)
     return false;
 }
 
@@ -2671,19 +2671,19 @@ void CPed::CalculateNewVelocity() {
         && m_nPedState != PEDSTATE_DIE && m_nPedState != PEDSTATE_DEAD && m_nPedState != PEDSTATE_ARRESTED
     ) {
         // 0x5E4C89: the x87 stack keeps intermediates unrounded (exponent range) - hence the doubles
-        const float turnRate = (float)((double)m_fHeadingChangeRate * (double)0.017453292f /* 0x8595EC */ * (double)timeStep);
+        const float turnRate = (float)((x87d)m_fHeadingChangeRate * (x87d)0.017453292f /* 0x8595EC */ * (x87d)timeStep);
 
         m_fCurrentRotation = CGeneral::LimitRadianAngle(m_fCurrentRotation);
 
-        constexpr double ExePi    = (double)std::numbers::pi_v<float>;         // 0x858CB8
-        constexpr double ExeTwoPi = (double)(2.f * std::numbers::pi_v<float>); // 0x858CBC
+        constexpr x87d ExePi    = (x87d)std::numbers::pi_v<float>;         // 0x858CB8
+        constexpr x87d ExeTwoPi = (x87d)(2.f * std::numbers::pi_v<float>); // 0x858CBC
         double targetRot = CGeneral::LimitRadianAngleExt(m_fAimingRotation);
-        if ((double)m_fCurrentRotation + ExePi < targetRot) {
+        if ((x87d)m_fCurrentRotation + ExePi < targetRot) {
             targetRot -= ExeTwoPi;
-        } else if ((double)m_fCurrentRotation - ExePi > targetRot) {
+        } else if ((x87d)m_fCurrentRotation - ExePi > targetRot) {
             targetRot += ExeTwoPi;
         }
-        diff = (float)(targetRot - (double)m_fCurrentRotation);
+        diff = (float)(X87R(targetRot - (double)m_fCurrentRotation));
 
         const auto isPlayer = IsPlayer();
         if (isPlayer) {
@@ -2695,25 +2695,25 @@ void CPed::CalculateNewVelocity() {
         }
 
         bool turned{};
-        const double maxTurn = (double)std::abs(m_fMoveAnim) * (double)turnRate;
+        const x87d maxTurn = (x87d)std::abs(m_fMoveAnim) * (x87d)turnRate;
         if (diff > maxTurn) {
-            m_fCurrentRotation = (float)((double)m_fCurrentRotation + maxTurn);
-            m_fMoveAnim        = (float)((double)timeStep * 0.1f + m_fMoveAnim);
+            m_fCurrentRotation = (float)((x87d)m_fCurrentRotation + maxTurn);
+            m_fMoveAnim        = (float)((x87d)timeStep * 0.1f + m_fMoveAnim);
             if (m_fMoveAnim > 1.0f) {
                 m_fMoveAnim = 1.0f;
             }
             turned = true;
-        } else if (-1.0 * maxTurn > diff) {
-            m_fCurrentRotation = (float)((double)m_fCurrentRotation - maxTurn);
-            m_fMoveAnim        = (float)((double)m_fMoveAnim - (double)timeStep * 0.1f);
+        } else if (-(x87d)1.0 * maxTurn > diff) {
+            m_fCurrentRotation = (float)((x87d)m_fCurrentRotation - maxTurn);
+            m_fMoveAnim        = (float)((x87d)m_fMoveAnim - (x87d)timeStep * 0.1f);
             if (m_fMoveAnim < -1.0f) {
                 m_fMoveAnim = -1.0f;
             }
             turned = true;
         } else {
-            if (isPlayer || !(0.1f * (double)turnRate < (double)std::abs(diff))) { // 0x5E4E56 (fcompp): NaN -> this branch
+            if (isPlayer || !(0.1f * (x87d)turnRate < (double)std::abs(diff))) { // 0x5E4E56 (fcompp): NaN -> this branch
                 m_fCurrentRotation += diff;
-                float anim = (float)((double)std::abs(diff) / turnRate);
+                float anim = (float)((x87d)std::abs(diff) / turnRate);
                 if (0.1f > anim) {
                     anim = 0.1f;
                 }
@@ -2750,7 +2750,7 @@ void CPed::CalculateNewVelocity() {
     };
 
     const auto UpdateSlopeRollFromRight = [&] { m_pedIK.m_fSlopeRoll = AsinClamped(rightDot); };
-    const auto UpdateSlopePitchFromFwd  = [&] { m_pedIK.m_fSlopePitch = 0.75f * m_pedIK.m_fSlopePitch + (1.0f - 0.75f) * AsinClamped(fwdDot); };
+    const auto UpdateSlopePitchFromFwd  = [&] { m_pedIK.m_fSlopePitch = 0.75f * m_pedIK.m_fSlopePitch + X87R((1.0f - 0.75f) * AsinClamped(fwdDot)); };
 
     if (!m_pedIK.bSlopePitch) {
         if (m_nMoveState >= PEDMOVE_WALK && !IsPlayer()) {
@@ -2796,28 +2796,28 @@ void CPed::CalculateNewVelocity() {
     // 0x5E51A5: `0.0 > x ? 0.0 : x` (a NaN stays a NaN, unlike std::max)
     const auto ClampNeg = [](float x) { return 0.0f > x ? 0.0f : x; };
     const float fwdScale = std::sqrt(ClampNeg(1.0f - fwdDot * fwdDot)); // stored to a float (0x5E51CC)
-    const double rightScale = std::sqrt((double)ClampNeg(1.0f - rightDot * rightDot)); // stays on the x87 stack (0x5E523D)
+    const x87d rightScale = std::sqrt((x87d)ClampNeg(1.0f - rightDot * rightDot)); // stays on the x87 stack (0x5E523D)
 
     // The products live on the x87 stack (no denormal rounding) until they are added to the shift; the y terms are stored as floats first
     m_vecAnimMovingShift = CVector2D{};
     {
-        const double fwdShift = (double)fwdScale * m_vecAnimMovingShiftLocal.y;
+        const x87d fwdShift = (x87d)fwdScale * m_vecAnimMovingShiftLocal.y;
         const float  yTerm    = (float)(fwdShift * mat.GetForward().y);
         m_vecAnimMovingShift.x = (float)(fwdShift * mat.GetForward().x + m_vecAnimMovingShift.x);
-        m_vecAnimMovingShift.y = (float)((double)yTerm + m_vecAnimMovingShift.y);
+        m_vecAnimMovingShift.y = (float)((x87d)yTerm + m_vecAnimMovingShift.y);
     }
     {
-        const double rightShift = rightScale * m_vecAnimMovingShiftLocal.x;
+        const x87d rightShift = rightScale * m_vecAnimMovingShiftLocal.x;
         const float  yTerm      = (float)(rightShift * mat.GetRight().y);
         m_vecAnimMovingShift.x = (float)(rightShift * mat.GetRight().x + m_vecAnimMovingShift.x);
-        m_vecAnimMovingShift.y = (float)((double)yTerm + m_vecAnimMovingShift.y);
+        m_vecAnimMovingShift.y = (float)((x87d)yTerm + m_vecAnimMovingShift.y);
     }
 
     if (timeStep < 0.01f && !CTimer::bSlowMotionActive) {
         m_vecAnimMovingShift.x *= 0.01f;
         m_vecAnimMovingShift.y *= 0.01f;
     } else {
-        const double invTimeStep = 1.0 / (double)timeStep;
+        const x87d invTimeStep = (x87d)1.0 / (x87d)timeStep;
         m_vecAnimMovingShift.x = (float)(invTimeStep * m_vecAnimMovingShift.x);
         m_vecAnimMovingShift.y = (float)(invTimeStep * m_vecAnimMovingShift.y);
     }
@@ -3736,7 +3736,7 @@ void CPed::PreRenderAfterTest()
     if (m_Wobble > 0.0f) {
         static constexpr float WOBBLE_FACTOR = 5.0f; // 0x8D21F0
 
-        const auto angle = x87::sin(m_Wobble) * -WOBBLE_FACTOR;
+        const auto angle = X87R(x87::sin(m_Wobble) * -WOBBLE_FACTOR);
         m_Wobble -= CTimer::GetTimeStep() * m_WobbleSpeed;
 
         if (IsPlayer()) {
@@ -4525,7 +4525,7 @@ void CPed::KillPedWithCar(CVehicle* car, float fDamageIntensity, bool bPlayDeadA
             const float carSpeed = car->m_vecMoveSpeed.Magnitude();
             const float time     = length / carSpeed; // Time it takes the car to go over
             const float zSpeed   = (targetZ - GetPosition().z) / time;
-            const float randMult = (float)(((double)(CGeneral::GetRandomNumber() & 0xFF) * 0.002 + 1.5) * (double)zSpeed);
+            const float randMult = (float)((X87R((double)(CGeneral::GetRandomNumber() & 0xFF) * 0.002) + (x87d)1.5) * (x87d)zSpeed);
 
             CVector newVel = car->m_vecMoveSpeed;
             newVel.Normalise();
@@ -4606,7 +4606,7 @@ void CPed::KillPedWithCar(CVehicle* car, float fDamageIntensity, bool bPlayDeadA
                 animBlend = car->m_vecMoveSpeed.Magnitude() * 8.0f + 4.0f;
             } else {
                 animBlend = car->m_vecMoveSpeed.Magnitude() * 12.0f + 4.0f;
-                animSpeed = (float)((double)car->m_vecMoveSpeed.Magnitude() * 16.0 + 1.0);
+                animSpeed = (float)((x87d)car->m_vecMoveSpeed.Magnitude() * (x87d)16.0 + (x87d)1.0);
             }
 
             calculator.ComputeDamageResponse(this, event.m_damageResponse, true);
@@ -4896,7 +4896,7 @@ void CPed::ProcessControl()
 {
     // x87 keeps the (x*x + y*y) + z*z sum in extended precision (0x406DA0 returns it in ST0 without a sqrt)
     const auto SquaredMagnitudeExt = [](const CVector& v) -> double {
-        return ((double)v.x * (double)v.x + (double)v.y * (double)v.y) + (double)v.z * (double)v.z;
+        return ((x87d)v.x * (x87d)v.x + (x87d)v.y * (x87d)v.y) + (x87d)v.z * (x87d)v.z;
     };
 
     m_pedAudio.Service(); // 0x4E2EE0
@@ -4977,7 +4977,7 @@ void CPed::ProcessControl()
     }
 
     if (bHeadStuckInCollision && bCheckColAboveHead) {
-        if ((double)GetPosition().z + (double)1.5f < (double)field_588) { // 0x858CE8
+        if ((x87d)GetPosition().z + (x87d)1.5f < (double)field_588) { // 0x858CE8
             bHeadStuckInCollision = false;
         }
     }
@@ -4998,7 +4998,7 @@ void CPed::ProcessControl()
         if (alpha <= 0) {
             return;
         }
-        const double x = (double)CTimer::ms_fTimeStep * (double)0.02f * (double)1000.f; // 0x858B38, 0x858C4C
+        const x87d x = (x87d)CTimer::ms_fTimeStep * (x87d)0.02f * (x87d)1000.f; // 0x858B38, 0x858C4C
         const auto   d = (int32)x; // _ftol
         const auto   decrement = (uint32)(int32)prog * (uint32)d;
         if ((uint32)(int32)alpha <= decrement) {
@@ -5097,12 +5097,12 @@ void CPed::ProcessControl()
             const auto& camPos = TheCamera.GetPosition();
             const auto  diff   = GetPosition() - camPos;
             if (SquaredMagnitudeExt(diff) < (double)2500.f) { // 0x8598B0
-                const auto size = (float)((double)(rand() & 0x7F) * (double)0.0015f + (double)0.15f); // 0x863E38, 0x858FCC
+                const auto size = (float)((x87d)(rand() & 0x7F) * (x87d)0.0015f + (x87d)0.15f); // 0x863E38, 0x858FCC
 
                 CVector pos;
-                pos.x = (float)((double)((rand() & 0x7F) - 0x40) * (double)0.007f + (double)GetPosition().x); // 0x86C3C0
-                pos.y = (float)((double)((rand() & 0x7F) - 0x40) * (double)0.007f + (double)GetPosition().y);
-                pos.z = (float)((double)GetPosition().z + (double)1.f); // 0x858624
+                pos.x = (float)((x87d)((rand() & 0x7F) - 0x40) * (x87d)0.007f + (x87d)GetPosition().x); // 0x86C3C0
+                pos.y = (float)((x87d)((rand() & 0x7F) - 0x40) * (x87d)0.007f + (x87d)GetPosition().y);
+                pos.z = (float)((x87d)GetPosition().z + (x87d)1.f); // 0x858624
 
                 CShadows::AddPermanentShadow(
                     SHADOW_DEFAULT, // 1
@@ -5270,10 +5270,10 @@ uint8 CPed::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSetting
         return 1;
     }
 
-    const double ts = CTimer::GetTimeStep();
+    const x87d ts = CTimer::GetTimeStep();
 
     // The original keeps everything on the x87 stack (extended precision) up to the final stores
-    const double sqMoveSpeed = (double)m_vecMoveSpeed.x * m_vecMoveSpeed.x + (double)m_vecMoveSpeed.y * m_vecMoveSpeed.y + (double)m_vecMoveSpeed.z * m_vecMoveSpeed.z;
+    const x87d sqMoveSpeed = (x87d)m_vecMoveSpeed.x * m_vecMoveSpeed.x + (x87d)m_vecMoveSpeed.y * m_vecMoveSpeed.y + (x87d)m_vecMoveSpeed.z * m_vecMoveSpeed.z;
 
     if (!m_pPlayerData) {
         // 0x5E3EE5: `TEST DL, AH` after FCOMP => taken if less than OR unordered
@@ -5282,7 +5282,7 @@ uint8 CPed::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSetting
         }
     }
 
-    const double moveSpeed = std::sqrt(sqMoveSpeed) * ts;
+    const x87d moveSpeed = std::sqrt(sqMoveSpeed) * ts;
 
     int32 steps;
     if (!m_pPlayerData) {
@@ -5292,13 +5292,13 @@ uint8 CPed::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSetting
         // is `FSTP double` of the unrounded product. The clamp decision is made on that first ceil;
         // when it is not taken, `ceil` is called AGAIN with the float-rounded copy and that result is used.
         const auto Calc = [&](float mult, double minSteps) {
-            const double product = moveSpeed * mult;
-            const double ceiled0 = std::ceil(product);
+            const x87d product = moveSpeed * mult;
+            const x87d ceiled0 = std::ceil(product);
             // FCOMP + `TEST AH, 5` + JP => take the clamp only if ceiled0 < minSteps (ordered)
             if (ceiled0 < minSteps) {
                 return (int32)minSteps;
             }
-            return (int32)std::ceil((double)(float)product);
+            return (int32)std::ceil((x87d)(float)product);
         };
         steps = m_standingOnEntity
             ? Calc(6.6666665f, 4.0)
@@ -5558,7 +5558,7 @@ int32 CPed::ProcessEntityCollision(CEntity* entity, CColPoint* colPoint) {
     constexpr float FALL_DEADLY_SPEED_Z     = -0.6f;       // 0x86C2A0
     constexpr float MOVE_THRESHOLD          = 0.01f;       // 0x858C58 / -0x86C310
     constexpr float WALL_NORMAL_Z           = -0.99f;      // 0x86C314
-    constexpr double SAVED_HEADING_THRESHOLD = -1000.0;    // 0x86C318 (double)
+    constexpr x87d SAVED_HEADING_THRESHOLD = -(x87d)1000.0;    // 0x86C318 (double)
     constexpr float CONTACT_LIGHT_SCALE     = 0.033333335f; // 0x858F10
     constexpr float EXTRA_POINT_DIST        = 0.35f;       // 0x858F9C
 
@@ -5621,11 +5621,11 @@ int32 CPed::ProcessEntityCollision(CEntity* entity, CColPoint* colPoint) {
 
         if (bCheckColAboveHead) {
             // The original keeps this in extended precision
-            const double t = ((double)spheres[0].m_vecCenter.z - (double)spheres[0].m_fRadius) + 1.0;
+            const x87d t = ((x87d)spheres[0].m_vecCenter.z - (x87d)spheres[0].m_fRadius) + (x87d)1.0;
             lines[1].m_vecStart.z = sphereTop;
-            lines[1].m_vecStart.z = (float)((double)lines[1].m_vecStart.z - t);
+            lines[1].m_vecStart.z = (float)((x87d)lines[1].m_vecStart.z - t);
             lines[1].m_vecEnd.z   = sphereTop;
-            lines[1].m_vecEnd.z   = (float)(t + (double)lines[1].m_vecEnd.z);
+            lines[1].m_vecEnd.z   = (float)(t + (x87d)lines[1].m_vecEnd.z);
 
             colData->m_nNumLines = 2;
             colModel->m_boundSphere.m_fRadius = lines[1].m_vecEnd.z;
@@ -5673,10 +5673,10 @@ int32 CPed::ProcessEntityCollision(CEntity* entity, CColPoint* colPoint) {
             bool bProcessGround;
             if (!bWasOnGround) {
                 bProcessGround = true;
-            } else if ((double)lineCP0.m_vecPoint.z + 1.0 > (double)m_matrix->GetPosition().z) {
+            } else if ((x87d)lineCP0.m_vecPoint.z + (x87d)1.0 > (double)m_matrix->GetPosition().z) {
                 bProcessGround = true;
             } else {
-                bProcessGround = bEntityIsBoat && ((double)lineCP0.m_vecPoint.z + 3.0 > (double)m_matrix->GetPosition().z); // 0x858B3C
+                bProcessGround = bEntityIsBoat && ((x87d)lineCP0.m_vecPoint.z + (x87d)3.0 > (double)m_matrix->GetPosition().z); // 0x858B3C
             }
 
             if (bProcessGround) {
@@ -5690,13 +5690,13 @@ int32 CPed::ProcessEntityCollision(CEntity* entity, CColPoint* colPoint) {
                 // Update the brightness of the surface the ped is on
                 // The original keeps the intermediate results in extended precision, hence `double`
                 {
-                    const double a = (double)CTimer::GetTimeStep() * (double)NOTSA_GLOBAL_EXPR(0x8D21E4, (float), k_8D21E4);
-                    const double d = (double)lineCP0.m_nLightingB.day   * (double)CONTACT_LIGHT_SCALE;
-                    const double n = (double)lineCP0.m_nLightingB.night * (double)CONTACT_LIGHT_SCALE;
-                    const double w = (double)CCustomBuildingDNPipeline::m_fDNBalanceParam;
-                    const double blended = (1.0 - w) * d + w * n;
+                    const x87d a = (x87d)CTimer::GetTimeStep() * (x87d)NOTSA_GLOBAL_EXPR(0x8D21E4, (float), k_8D21E4);
+                    const x87d d = (x87d)lineCP0.m_nLightingB.day   * (x87d)CONTACT_LIGHT_SCALE;
+                    const x87d n = (x87d)lineCP0.m_nLightingB.night * (x87d)CONTACT_LIGHT_SCALE;
+                    const x87d w = (x87d)CCustomBuildingDNPipeline::m_fDNBalanceParam;
+                    const x87d blended = ((x87d)1.0 - w) * d + w * n;
                     if (m_nPedType == PED_TYPE_PLAYER1 || m_nPedType == PED_TYPE_PLAYER2) {
-                        m_fContactSurfaceBrightness = (float)(blended * a + (1.0 - a) * (double)m_fContactSurfaceBrightness);
+                        m_fContactSurfaceBrightness = (float)(blended * a + ((x87d)1.0 - a) * (x87d)m_fContactSurfaceBrightness);
                     } else {
                         m_fContactSurfaceBrightness = (float)blended;
                     }
@@ -5736,12 +5736,12 @@ int32 CPed::ProcessEntityCollision(CEntity* entity, CColPoint* colPoint) {
                 }
 
                 bool bUseExtraNormal;
-                if (bHeadStuckInCollision && !((double)lineCP0.m_vecPoint.z + 1.0 < (double)m_matrix->GetPosition().z)) {
+                if (bHeadStuckInCollision && !((x87d)lineCP0.m_vecPoint.z + (x87d)1.0 < (double)m_matrix->GetPosition().z)) {
                     if (otherType != ENTITY_TYPE_BUILDING) {
                         bUseExtraNormal = true;
                     } else {
-                        const double dot = ((double)lineCP0.m_vecNormal.y * (double)m_vecMoveSpeed.y + (double)lineCP0.m_vecNormal.z * (double)m_vecMoveSpeed.z)
-                                         + (double)lineCP0.m_vecNormal.x * (double)m_vecMoveSpeed.x;
+                        const x87d dot = ((x87d)lineCP0.m_vecNormal.y * (x87d)m_vecMoveSpeed.y + (x87d)lineCP0.m_vecNormal.z * (x87d)m_vecMoveSpeed.z)
+                                         + (x87d)lineCP0.m_vecNormal.x * (x87d)m_vecMoveSpeed.x;
                         bUseExtraNormal = !(dot > 0.0);
                     }
                 } else {
@@ -5756,17 +5756,17 @@ int32 CPed::ProcessEntityCollision(CEntity* entity, CColPoint* colPoint) {
                         extraNormal = lineCP0.m_vecNormal;
                     }
                 } else if (!(field_588 < NO_CEILING_Z)) {
-                    m_matrix->GetPosition().z = (float)((double)lineCP0.m_vecPoint.z + 1.0);
+                    m_matrix->GetPosition().z = (float)((x87d)lineCP0.m_vecPoint.z + (x87d)1.0);
                     bHeadStuckInCollision = false;
                 } else {
-                    double newZ = (double)lineCP0.m_vecPoint.z + 1.0;
-                    if (((double)lineCP0.m_vecPoint.z + (double)sphereTop) + 1.0 > (double)field_588) {
+                    x87d newZ = (x87d)lineCP0.m_vecPoint.z + (x87d)1.0;
+                    if (((x87d)lineCP0.m_vecPoint.z + (x87d)sphereTop) + (x87d)1.0 > (double)field_588) {
                         extraNormal = lineCP0.m_vecNormal;
 
-                        const double ceilingZ = (double)field_588 - (double)sphereTop;
+                        const x87d ceilingZ = (x87d)field_588 - (x87d)sphereTop;
                         const float  ceilingZF = (float)ceilingZ;
                         if (ceilingZ < newZ) {
-                            newZ = (double)ceilingZF;
+                            newZ = (x87d)ceilingZF;
                         }
                     }
                     m_matrix->GetPosition().z = (float)newZ;
@@ -5799,7 +5799,7 @@ int32 CPed::ProcessEntityCollision(CEntity* entity, CColPoint* colPoint) {
 
             bool bFallDamage = false;
             if (!bWasStanding) {
-                const double speedXY = std::sqrt((double)vel.y * (double)vel.y + (double)vel.x * (double)vel.x);
+                const x87d speedXY = std::sqrt((x87d)vel.y * (x87d)vel.y + (x87d)vel.x * (x87d)vel.x);
                 const float  speedXYF = (float)speedXY;
 
                 bool bCheckFall;
@@ -5813,25 +5813,25 @@ int32 CPed::ProcessEntityCollision(CEntity* entity, CColPoint* colPoint) {
                     bFallDamage = true;
 
                     float  landingFallSpeedZ = FALL_SPEED_Z; // 0x86C294
-                    double softLanding;
+                    x87d softLanding;
                     if (g_surfaceInfos.IsSoftLanding(lineCP0.m_nSurfaceTypeB)) { // 0x55E690
-                        softLanding = (double)SOFT_LANDING_SPEED;
+                        softLanding = (x87d)SOFT_LANDING_SPEED;
                         landingFallSpeedZ = landingFallSpeedZ * 1.5f; // 0x858CE8
                     } else {
-                        softLanding = 0.25;
+                        softLanding = (x87d)0.25;
                     }
 
-                    double dXY = (double)speedXYF - softLanding;
+                    x87d dXY = (x87d)speedXYF - softLanding;
                     if (0.0 > dXY) {
-                        dXY = 0.0;
+                        dXY = (x87d)0.0;
                     }
-                    const double dmgXY = dXY * (double)FALL_DMG_MULT_XY;
+                    const x87d dmgXY = dXY * (x87d)FALL_DMG_MULT_XY;
 
-                    double dZ = (double)landingFallSpeedZ - (double)vel.z;
+                    x87d dZ = (x87d)landingFallSpeedZ - (x87d)vel.z;
                     if (0.0 > dZ) {
-                        dZ = 0.0;
+                        dZ = (x87d)0.0;
                     }
-                    const double dmgZ = dZ * (double)FALL_DMG_MULT_Z;
+                    const x87d dmgZ = dZ * (x87d)FALL_DMG_MULT_Z;
 
                     float damage = (float)(dmgZ + dmgXY);
                     if (vel.z < FALL_DEADLY_SPEED_Z) {
@@ -5854,7 +5854,7 @@ int32 CPed::ProcessEntityCollision(CEntity* entity, CColPoint* colPoint) {
             }
 
             if (!bFallDamage) {
-                if (!bWasStanding && fallAnim && (double)CTimer::GetTimeStep() * (double)FALL_ANIM_Z_MULT > (double)vel.z && m_pVehicle != entity) {
+                if (!bWasStanding && fallAnim && (x87d)CTimer::GetTimeStep() * (x87d)FALL_ANIM_Z_MULT > (double)vel.z && m_pVehicle != entity) {
                     CEventDamage event{ entity, CTimer::GetTimeInMS(), WEAPON_FALL, PED_PIECE_TORSO, 2, false, false };
                     if (event.AffectsPed(this)) {
                         CPedDamageResponseCalculator calc{ entity, 15.0f, WEAPON_FALL, PED_PIECE_TORSO, false };
@@ -5868,7 +5868,7 @@ int32 CPed::ProcessEntityCollision(CEntity* entity, CColPoint* colPoint) {
             m_vecMoveSpeed.z = 0.0f;
 
             // Moved up by more than a bit => check again without the line tests
-            if ((double)colPedZ + (double)0.1f < (double)m_matrix->GetPosition().z // 0x858B1C
+            if ((x87d)colPedZ + (x87d)0.1f < (double)m_matrix->GetPosition().z // 0x858B1C
                 && colData->m_nNumLines == 0
                 && (m_nPedType == PED_TYPE_PLAYER1 || m_nPedType == PED_TYPE_PLAYER2)
             ) {
@@ -5891,8 +5891,8 @@ int32 CPed::ProcessEntityCollision(CEntity* entity, CColPoint* colPoint) {
             ) {
                 field_588 = lineCP1.m_vecPoint.z;
                 if (bIsStanding) {
-                    if ((double)sphereTop + (double)GetPosition().z > (double)lineCP1.m_vecPoint.z) {
-                        m_matrix->GetPosition().z = (float)((double)lineCP1.m_vecPoint.z - (double)sphereTop);
+                    if ((x87d)sphereTop + (x87d)GetPosition().z > (double)lineCP1.m_vecPoint.z) {
+                        m_matrix->GetPosition().z = (float)((x87d)lineCP1.m_vecPoint.z - (x87d)sphereTop);
                     }
                 }
             }
@@ -5965,23 +5965,23 @@ int32 CPed::ProcessEntityCollision(CEntity* entity, CColPoint* colPoint) {
 
             if (n.z < WALL_NORMAL_Z && cp.m_nPieceTypeA == 2 && (m_nPedType == PED_TYPE_PLAYER1 || m_nPedType == PED_TYPE_PLAYER2)) {
                 // Wedged under something => push the ped down and away from its movement direction
-                double speed = std::sqrt((double)m_vecMoveSpeed.x * (double)m_vecMoveSpeed.x + (double)m_vecMoveSpeed.y * (double)m_vecMoveSpeed.y);
+                x87d speed = std::sqrt((x87d)m_vecMoveSpeed.x * (x87d)m_vecMoveSpeed.x + (x87d)m_vecMoveSpeed.y * (x87d)m_vecMoveSpeed.y);
                 if (speed < 0.001f) { // 0x858CDC
-                    speed = (double)0.001f;
+                    speed = (x87d)0.001f;
                 }
-                const double mult = (double)-1.0f / speed; // 0x858C1C
-                n.x = (float)(mult * (double)m_vecMoveSpeed.x);
-                n.y = (float)(mult * (double)m_vecMoveSpeed.y);
+                const x87d mult = (x87d)-1.0f / speed; // 0x858C1C
+                n.x = (float)(mult * (x87d)m_vecMoveSpeed.x);
+                n.y = (float)(mult * (x87d)m_vecMoveSpeed.y);
 
-                m_matrix->GetPosition().z = (float)((double)m_matrix->GetPosition().z - (double)0.05f); // 0x858C28
+                m_matrix->GetPosition().z = (float)((x87d)m_matrix->GetPosition().z - (x87d)0.05f); // 0x858C28
                 bHeadStuckInCollision = true;
                 bHitSteepSlope        = true; // 0x200020
             } else {
-                const double len = std::sqrt((double)n.y * (double)n.y + (double)n.x * (double)n.x);
+                const x87d len = std::sqrt((x87d)n.y * (x87d)n.y + (x87d)n.x * (x87d)n.x);
                 if (!(len == 0.0)) {
-                    const double mult = 1.0 / len;
-                    n.x = (float)((double)n.x * mult);
-                    n.y = (float)((double)n.y * mult);
+                    const x87d mult = (x87d)1.0 / len;
+                    n.x = (float)((x87d)n.x * mult);
+                    n.y = (float)((x87d)n.y * mult);
                 }
             }
             n.Normalise(); // 0x59C910
@@ -6002,12 +6002,12 @@ int32 CPed::ProcessEntityCollision(CEntity* entity, CColPoint* colPoint) {
         cp.m_vecNormal.Normalise(); // 0x59C910
 
         const auto& pos = GetPosition();
-        const double nx = (double)cp.m_vecNormal.x * (double)EXTRA_POINT_DIST;
-        const double ny = (double)cp.m_vecNormal.y * (double)EXTRA_POINT_DIST;
-        const float  nz = (float)((double)cp.m_vecNormal.z * (double)EXTRA_POINT_DIST);
-        cp.m_vecPoint.x = (float)((double)pos.x - nx);
-        cp.m_vecPoint.y = (float)((double)pos.y - ny);
-        cp.m_vecPoint.z = (float)((double)pos.z - (double)nz);
+        const x87d nx = (x87d)cp.m_vecNormal.x * (x87d)EXTRA_POINT_DIST;
+        const x87d ny = (x87d)cp.m_vecNormal.y * (x87d)EXTRA_POINT_DIST;
+        const float  nz = (float)((x87d)cp.m_vecNormal.z * (x87d)EXTRA_POINT_DIST);
+        cp.m_vecPoint.x = (float)((x87d)pos.x - nx);
+        cp.m_vecPoint.y = (float)((x87d)pos.y - ny);
+        cp.m_vecPoint.z = (float)((x87d)pos.z - (x87d)nz);
 
         numCols++;
         bHitSteepSlope = true;
@@ -6122,7 +6122,7 @@ int32 CPed::GetPadNumber() const {
     switch (m_nPedType) {
     case PED_TYPE_PLAYER1: return 0;
     case PED_TYPE_PLAYER2: return 1;
-    default:               NOTSA_UNREACHABLE();
+    default:               NOTSA_UNREACHABLE_RET(0);
     }
 }
 

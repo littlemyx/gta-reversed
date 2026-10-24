@@ -53,7 +53,7 @@ void CCustomCarEnvMapPipeline::InjectHooks() {
 
 // 0x5DA450
 bool CCustomCarEnvMapPipeline::RegisterPlugin() {
-    ms_envMapPluginOffset = RpMaterialRegisterPlugin(4, rwID_ENVMAPPLUGIN, pluginEnvMatConstructorCB, pluginEnvMatDestructorCB, pluginEnvMatCopyConstructorCB);
+    ms_envMapPluginOffset = RpMaterialRegisterPlugin(sizeof(void*), rwID_ENVMAPPLUGIN, pluginEnvMatConstructorCB, pluginEnvMatDestructorCB, pluginEnvMatCopyConstructorCB);
     if (ms_envMapPluginOffset < 0) {
         NOTSA_LOG_DEBUG("Failed to register Env Map Plugin");
         return false;
@@ -66,13 +66,13 @@ bool CCustomCarEnvMapPipeline::RegisterPlugin() {
 
     SetCustomEnvMapPipeMaterialDataDefaults(&fakeEnvMapPipeMatData);
 
-    ms_envMapAtmPluginOffset = RpAtomicRegisterPlugin(4, rwID_ENVMAPATMPLUGIN, pluginEnvAtmConstructorCB, pluginEnvAtmDestructorCB, pluginEnvAtmCopyConstructorCB);
+    ms_envMapAtmPluginOffset = RpAtomicRegisterPlugin(sizeof(void*), rwID_ENVMAPATMPLUGIN, pluginEnvAtmConstructorCB, pluginEnvAtmDestructorCB, pluginEnvAtmCopyConstructorCB);
     if (ms_envMapAtmPluginOffset < 0) {
         NOTSA_LOG_DEBUG("Failed to register Env Map Atm Plugin");
         return false;
     }
 
-    ms_specularMapPluginOffset = RpMaterialRegisterPlugin(4, rwID_SPECMAPATMPLUGIN, pluginSpecMatConstructorCB, pluginSpecMatDestructorCB, pluginSpecMatCopyConstructorCB);
+    ms_specularMapPluginOffset = RpMaterialRegisterPlugin(sizeof(void*), rwID_SPECMAPATMPLUGIN, pluginSpecMatConstructorCB, pluginSpecMatDestructorCB, pluginSpecMatCopyConstructorCB);
     if (ms_specularMapPluginOffset < 0) {
         NOTSA_LOG_DEBUG("Failed to register Specular Map Plugin");
         return false;
@@ -87,6 +87,7 @@ bool CCustomCarEnvMapPipeline::RegisterPlugin() {
 }
 
 // 0x5D8980
+#ifndef NOTSA_PORTABLE // R-2: D3DCAPS9 query, no FF device under GL3
 bool IsEnvironmentMappingSupported() {
     const auto caps = (D3DCAPS9*)RwD3D9GetCaps();
     return caps->MaxTextureBlendStages > 1 &&
@@ -95,14 +96,20 @@ bool IsEnvironmentMappingSupported() {
         (caps->TextureOpCaps & D3DTEXOPCAPS_MULTIPLYADD) &&
         (caps->ShadeCaps & D3DPSHADECAPS_SPECULARGOURAUDRGB);
 }
+#endif
 
 // 0x5DA020
 bool CCustomCarEnvMapPipeline::CreatePipe() {
+#ifndef NOTSA_PORTABLE
     ObjPipeline = CreateCustomObjPipe();
     if (!ObjPipeline || !IsEnvironmentMappingSupported()) {
         return false;
     }
     std::memset(&g_GameLight, 0, sizeof(g_GameLight));
+#else
+    extern RxPipeline* NotsaGl3CreateCarEnvPipe(); // R-9: portable/render/pipelines_saenv_game_gl3.cpp, a gl3 ObjPipeline (env map + specular shader)
+    ObjPipeline = NotsaGl3CreateCarEnvPipe();
+#endif // the data pools below are needed by the EnvMat / SpecMat / EnvAtm plugins
     m_gEnvMapPipeMatDataPool = new CustomEnvMapPipeMaterialDataPool(4096, "CustomEnvMapPipeMatDataPool");
     m_gEnvMapPipeAtmDataPool = new CustomEnvMapPipeAtomicDataPool(1024, "CustomEnvMapPipeAtmDataPool");
     m_gSpecMapPipeMatDataPool = new CustomSpecMapPipeMaterialDataPool(4096, "CustomSpecMapPipeMaterialDataPool");
@@ -122,6 +129,7 @@ void CCustomCarEnvMapPipeline::DestroyPipe() {
 
 // 0x5D8870
 void CCustomCarEnvMapPipeline::PreRenderUpdate() {
+#ifndef NOTSA_PORTABLE // R-2: fills the FF directional light of the render callback (D3DLIGHT9); R-9 feeds its own uniform
     std::memset(&g_GameLight, 0, sizeof(g_GameLight));
     const auto dir = CVector{ *RwMatrixGetAt(RwFrameGetMatrix(RpLightGetFrame(pDirect))) }.Normalized();
     g_GameLight.Direction    = D3DVECTOR{ dir.x, dir.y, dir.z };
@@ -134,6 +142,7 @@ void CCustomCarEnvMapPipeline::PreRenderUpdate() {
     g_GameLight.Attenuation0 = 1.0f;
     g_GameLight.Attenuation1 = 0.0f;
     g_GameLight.Attenuation2 = 0.0f;
+#endif
 }
 
 // 0x5DA560
@@ -204,6 +213,7 @@ RwBool CCustomCarEnvMapPipeline::CustomPipeInstanceCB(void* object, RwResEntry* 
 
 // 0x5D9900
 void CCustomCarEnvMapPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* object, RwUInt8 type, RwUInt32 rxGeoFlags) {
+#ifndef NOTSA_PORTABLE // R-2: D3D9 fixed-function render callback, never invoked under GL3 (R-9 twin)
     assert(type == rpATOMIC);
 
     const auto specIntensity = gSpecIntensity * 1.85f;
@@ -521,6 +531,7 @@ void CCustomCarEnvMapPipeline::CustomPipeRenderCB(RwResEntry* resEntry, void* ob
     RwD3D9SetTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
     RwD3D9SetTextureStageState(1, D3DTSS_TEXCOORDINDEX, D3DTSS_TCI_PASSTHRU | 1);
     RwD3D9SetTextureStageState(1, D3DTSS_TEXTURETRANSFORMFLAGS, NULL);
+#endif
 }
 
 // According to the docs, `specular` isn't used, so I guess that they've just reused it for the flags

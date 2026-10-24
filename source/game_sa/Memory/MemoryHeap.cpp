@@ -5,7 +5,7 @@
 
 #define CORE_COMMON_SIZE_COUNT 64
 
-static_assert(sizeof(HeapBlockDesc) <= MEMORY_HEAP_ALIGN, "HeapBlockDesc is too big");
+VALIDATE_LAYOUT(sizeof(HeapBlockDesc) <= MEMORY_HEAP_ALIGN, "HeapBlockDesc is too big"); // x86 in-memory layout only (pointers; compiled out under NOTSA_PORTABLE); MEMORY_MGR_USE_MEMORY_HEAP + NOTSA_PORTABLE is an #error in MemoryMgr.h
 
 uint32 memMoved = 0;
 

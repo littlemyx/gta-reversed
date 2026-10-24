@@ -200,16 +200,16 @@ bool CRopes::FindCoorsAlongRope(uint32 ropeId, float fDistAlongRope, CVector* ou
         fDistAlongRope = 0.999f;
     }
 
-    const double scaledDist = (double)fDistAlongRope * 31.0;
+    const x87d scaledDist = (x87d)fDistAlongRope * (x87d)31.0;
     const auto   segIdx     = (size_t)(int32)scaledDist;
-    const double frac       = scaledDist - (double)(int32)scaledDist;
+    const x87d frac       = scaledDist - (x87d)(int32)scaledDist;
 
     const auto& s0 = rope.m_aSegments[segIdx];
     const auto& s1 = rope.m_aSegments[segIdx + 1];
-    const double inv = 1.0 - frac;
-    outPosn->x = (float)((double)(float)(inv * s0.x) + frac * (double)s1.x);
-    outPosn->y = (float)(inv * s0.y) + (float)(frac * (double)s1.y);
-    outPosn->z = (float)(inv * s0.z) + (float)(frac * (double)s1.z);
+    const x87d inv = (x87d)1.0 - frac;
+    outPosn->x = (float)((x87d)(float)(inv * s0.x) + frac * (x87d)s1.x);
+    outPosn->y = (float)(inv * s0.y) + (float)(frac * (x87d)s1.y);
+    outPosn->z = (float)(inv * s0.z) + (float)(frac * (x87d)s1.z);
 
     if (outSpeed) {
         *outSpeed = rope.m_aSpeed[segIdx + 1];

@@ -4,6 +4,7 @@
 #include <rw/rwplcore.h>
 #include <rw/rwcore.h>
 
+#ifndef NOTSA_PORTABLE // R-2: FF texture-stage helpers of the D3D9 render callbacks; the GL3 twins live in portable/render (R-8, R-9)
 // Helper
 inline void SetTextureStagesForLighting(bool isGeoTextured, RwTexture* tex) {
     if (isGeoTextured) {
@@ -41,3 +42,4 @@ inline void RxD3D9InstanceDataRenderLighting(RxD3D9ResEntryHeader* header, RxD3D
     SetTextureStagesForLighting((rxGeoFlags & (rxGEOMETRY_TEXTURED2 | rxGEOMETRY_TEXTURED)) != 0, tex);
     RxD3D9InstanceDataRender(header, mesh);
 }
+#endif

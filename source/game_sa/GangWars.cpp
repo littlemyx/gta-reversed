@@ -72,7 +72,7 @@ bool CGangWars::Load() {
 bool CGangWars::Save() {
     CGangWarsSaveStructure data{};
     data.Construct();
-    CGenericGameStorage::SaveDataToWorkBuffer(sizeof(CGangWarsSaveStructure));
+    CGenericGameStorage::SaveDataToWorkBuffer<uint32>(sizeof(CGangWarsSaveStructure));
     CGenericGameStorage::SaveDataToWorkBuffer(data);
     return true;
 }
@@ -469,8 +469,8 @@ bool CGangWars::CreateDefendingGroup(int32 unused) {
         auto angle = (float)i * TWO_PI / (float)pedCount;
 
         auto pedPos = CVector{
-            (float)(nodePos.x + x87::sin(angle) * CGeneral::GetRandomNumberInRange(0.0f, 3.0f) + 2.0f),
-            (float)(nodePos.y + x87::cos(angle) * CGeneral::GetRandomNumberInRange(0.0f, 3.0f) + 2.0f),
+            (float)(nodePos.x + X87R(x87::sin(angle) * CGeneral::GetRandomNumberInRange(0.0f, 3.0f)) + 2.0f),
+            (float)(nodePos.y + X87R(x87::cos(angle) * CGeneral::GetRandomNumberInRange(0.0f, 3.0f)) + 2.0f),
             nodePos.z + 2.0f
         };
         pedPos.z = CWorld::FindGroundZFor3DCoord(pedPos, nullptr, nullptr);

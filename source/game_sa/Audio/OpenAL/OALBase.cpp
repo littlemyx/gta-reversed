@@ -1,6 +1,8 @@
 #include "StdInc.h"
 #include "OALBase.h"
 
+std::vector<std::unique_ptr<OALBase>> OALBase::trashCan{};
+
 OALBase::OALBase() {
     m_refCount = 1;
     ++livingCount;
@@ -15,7 +17,7 @@ void OALBase::Release() {
         return;
 
     // OS_MutexObtain(trashMutex);
-    trashCan.push_back(this);
+    trashCan.emplace_back(this); // the garbage collector owns it from now on
     // OS_MutexRelease(trashMutex);
 }
 

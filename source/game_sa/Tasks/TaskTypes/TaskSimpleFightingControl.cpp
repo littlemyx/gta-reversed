@@ -59,11 +59,11 @@ int16 CTaskSimpleFightingControl::CalcMoveCommand(CPed* ped) {
     // Check if target is outside of the attacking angle
     // 0x624BB5..0x624BF2: the DIFFERENCE heading - m_fCurrentRotation is wrapped once into [-PI, PI] (x87, unrounded heading), not the heading alone;
     // |diff| > max attacks, equal / NaN continue
-    double diffAngle = x87::atan2(-(double)segmentPedToTarget.x, (double)segmentPedToTarget.y) - (double)ped->m_fCurrentRotation;
+    x87d diffAngle = X87R(x87::atan2(-(double)segmentPedToTarget.x, (double)segmentPedToTarget.y) - (double)ped->m_fCurrentRotation);
     if (diffAngle > (double)PI) {
-        diffAngle -= (double)TWO_PI;
+        diffAngle -= (x87d)TWO_PI;
     } else if (diffAngle < (double)-PI) {
-        diffAngle += (double)TWO_PI;
+        diffAngle += (x87d)TWO_PI;
     }
     if (std::abs(diffAngle) > (double)FIGHT_CTRL_MAX_ATTACK_ANGLE_RAD) {
         m_nextAttackTime += (uint32)CTimer::GetTimeStepInMS();
@@ -157,7 +157,7 @@ bool CTaskSimpleFightingControl::MakeAbortable(CPed* ped, eAbortPriority priorit
                     case EVENT_BUILDING_COLLISION:
                         return static_cast<const CEventBuildingCollision*>(event)->m_impactNormal;
                     default:
-                        NOTSA_UNREACHABLE();
+                        NOTSA_UNREACHABLE_RET(CVector{});
                     }
                 }();
 
@@ -219,12 +219,12 @@ bool CTaskSimpleFightingControl::ProcessPed(CPed* ped) {
             // x87: `2.0 * rate * 0.025` is kept in extended precision for the comparison
             if (   m_target->GetType() == ENTITY_TYPE_PED
                 && m_someTime == 0
-                && (double)CGeneral::GetRandomNumberInRange(0.f, 100.f) < 2.0 * (double)shootingRate * (double)0.025f
+                && (double)CGeneral::GetRandomNumberInRange(0.f, 100.f) < (x87d)2.0 * (x87d)shootingRate * (x87d)0.025f
             ) {
                 m_someTime = (uint32)CGeneral::GetRandomNumberInRange(500, 2000); // 0x8D2E58, 0x8D2E5C
                 moveCmd    = 2;
             } else if (m_someTime != 0) {
-                const auto decr = (uint32)((double)CTimer::GetTimeStep() * (double)0.02f * 1000.0);
+                const auto decr = (uint32)((x87d)CTimer::GetTimeStep() * (x87d)0.02f * (x87d)1000.0);
                 m_someTime      = m_someTime > decr ? m_someTime - decr : 0;
                 moveCmd         = 2;
             }
@@ -236,9 +236,9 @@ bool CTaskSimpleFightingControl::ProcessPed(CPed* ped) {
 
     if (m_nextAttackTime == 0) {
         // x87: the whole chain is kept in extended precision until the final truncation
-        const double r    = (double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL + (double)0.25f;
-        const double div  = (double)shootingRate * (double)m_unk3 * (double)0.025f * (double)0.7f + (double)0.3f;
-        const auto   wait = (int32)(r / div * 2000.0); // 0x8D2E4C = 2000
+        const x87d r    = (x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL + (x87d)0.25f;
+        const x87d div  = (x87d)shootingRate * (x87d)m_unk3 * (x87d)0.025f * (x87d)0.7f + (x87d)0.3f;
+        const auto   wait = (int32)(r / div * (x87d)2000.0); // 0x8D2E4C = 2000
         m_nextAttackTime = (uint32)wait + CTimer::GetTimeInMS();
     }
 

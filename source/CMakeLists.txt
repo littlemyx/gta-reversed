@@ -9,6 +9,22 @@ option(${RE_PROJECT}_WITH_OPENAL "Use OpenAL" OFF)
 option(${RE_PROJECT}_USE_SDL3 "Use SDL3" OFF)
 option(${RE_PROJECT}_STANDALONE "Build standalone executable" OFF)
 option(${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY "Dump hooks only" OFF)
+# Portable (non-Windows / non-x86) build of the runnable standalone exe, preset PortableMac (.notes/STREAM_C_PLAN.md, slice A-1 + C-0). Needs STANDALONE=ON (the detached run
+# configuration). OFF (default): nothing below changes, every compile command and every Windows build artefact stays as it was (the Win32 x86 MSVC build is the fidelity reference).
+# ON: defines NOTSA_PORTABLE=1 on the game target and
+#   * the hook registry is not built: reversiblehooks/*.cpp, reversiblehooks/ReversibleHook/*.cpp, the hook UI (toolsmenu/DebugModules/HooksDebugModule/*.cpp), dllmain.cpp (ASI entry),
+#     PluginBase.cpp (GetModuleHandle based plugin-sdk base address). The RH_Scoped* macros are already no-ops in the detached run build (reversiblehooks/NoHookRegistry.h; NOTSA_PORTABLE
+#     implies NOTSA_NO_HOOK_REGISTRY) and ReversibleHooks.h includes only reversiblehooks/PortableStub.h (empty RHManager, HookInstallOptions::HS) instead of the registry headers.
+#     InjectHooksMain.cpp stays: it calls the (empty) X::InjectHooks() and the non-hook part (script command handler registration, CommandLine::PostHooksInjected).
+#   * standalone/Fixups.cpp keeps only the portable part (Log / Fatal / InstallDiagnostics, std C++); its Win32 / SEH / CRT-debug code is `#if !NOTSA_PORTABLE`.
+#   * the exe-oracle / shim unit tests (tests/standalone, EXCLUDE_FROM_ALL, they map gta_sa_compact.exe) are not defined, GTASA_IMAGE_DIAG / GTASA_VERIFY_GLOBALS are rejected.
+#   * the Windows system libraries (d3d9 ddraw dxguid strmiids Winmm dsound), /SUBSYSTEM and the .exe suffix are not applied; warnings are off (-w) and not errors (stream C-3 audits them).
+option(${RE_PROJECT}_PORTABLE "Portable (macOS arm64) build: hook registry / exe-oracle / Win32 startup compiled out, see source/CMakeLists.txt" OFF)
+if (${RE_PROJECT}_PORTABLE)
+    if (NOT ${RE_PROJECT}_STANDALONE OR ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
+        message(FATAL_ERROR "${RE_PROJECT}_PORTABLE requires ${RE_PROJECT}_STANDALONE=ON and ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY=OFF (the detached run configuration)")
+    endif()
+endif()
 
 if (${RE_PROJECT}_USE_SDL3)
     add_compile_definitions(NOTSA_USE_SDL3)
@@ -20,6 +36,12 @@ endif()
 option(${RE_PROJECT}_INPUT_INJECT "Enable the NOTSA_STANDALONE_INPUT key injector in the DLL build" OFF)
 if (${RE_PROJECT}_INPUT_INJECT)
     add_compile_definitions(NOTSA_INPUT_INJECT) # also #undefs TRACY_ENABLE in StdInc.h (no profiler server -> events queue forever)
+endif()
+# RR-1 (.notes/RR_PLAN.md): deterministic record/replay state-hash harness (per-frame hashes of player / peds / vehicles / RNG / timer, trace file, virtual clock).
+# OFF by default => every TU is byte-identical to a build without it. The Windows reference host builds StandaloneRelease with -DGTASA_STATEHASH=ON to produce traces.
+option(${RE_PROJECT}_STATEHASH "Compile the NOTSA_STATEHASH deterministic state-hash harness hooks" OFF)
+if (${RE_PROJECT}_STATEHASH)
+    add_compile_definitions(NOTSA_STATEHASH)
 endif()
 if (${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
     if (NOT ${RE_PROJECT}_STANDALONE)
@@ -131,6 +153,52 @@ if (${RE_PROJECT}_RW_LIBRW)
     list(REMOVE_ITEM SOURCE_FILES_WITHOUT_MODULES_LIST app/platform/win/WindowedMode.cpp)
 endif()
 
+if (${RE_PROJECT}_PORTABLE)
+    # Hook registry, hook UI, ASI entry point and the plugin-sdk base address are not part of the portable exe (documented at the option above)
+    file(
+        GLOB_RECURSE PORTABLE_EXCLUDED_FILES
+        LIST_DIRECTORIES false
+        RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/reversiblehooks/*.c*"
+        "${CMAKE_CURRENT_SOURCE_DIR}/toolsmenu/DebugModules/HooksDebugModule/*.c*"
+    )
+    list(APPEND PORTABLE_EXCLUDED_FILES dllmain.cpp PluginBase.cpp)
+    # MAC-W0: Win32-only translation units that have a portable counterpart in source/portable/*.cpp (oswrapper_win.cpp -> portable/oswrapper_portable.cpp)
+    list(APPEND PORTABLE_EXCLUDED_FILES oswrapper/oswrapper_win.cpp)
+    # MAC-W0: Win32 overlapped-I/O CdStream -> portable/cdstream_portable.cpp; Media Foundation / WMA user-track decoders -> portable/audio_decoders_portable.cpp
+    list(APPEND PORTABLE_EXCLUDED_FILES game_sa/CdStreamInfo.cpp game_sa/Audio/Loaders/AEMFDecoder.cpp game_sa/Audio/Loaders/AEWMADecoder.cpp)
+    # MAC-W0a (app/): Win32-only app/platform TUs replaced by portable/app_*.cpp
+    set(PORTABLE_EXCLUDED_APP_FILES app/platform/win/VideoPlayer/VideoPlayer.cpp app/platform/win/VideoModeSelectDialog.cpp extensions/debug.cpp)
+    list(APPEND PORTABLE_EXCLUDED_FILES ${PORTABLE_EXCLUDED_APP_FILES})
+    # MAC-R2 (stream R, .notes/STREAM_R_PLAN.md): the D3D9 fixed-function render facade has no GL counterpart; librw's gl3 pipelines replace it.
+    # Symbols still referenced from kept TUs are stubbed in portable/render/rw_stubs_gl3.cpp (honest Unsupported + failure), see tools/portable/rw_symbol_audit.py.
+    set(PORTABLE_EXCLUDED_RENDER_FILES
+        standalone/rw/pipeline.cpp standalone/rw/pipeline_matfx.cpp standalone/rw/rwd3d_ff.cpp
+        standalone/rw/pipeline_skin.cpp standalone/rw/pipeline_skin_cpu.cpp standalone/rw/skin_vs.cpp
+        standalone/rw/im2d_im3d.cpp
+        game_sa/RenderWare/D3DResourceSystem.cpp game_sa/RenderWare/D3DTextureBuffer.cpp game_sa/RenderWare/D3DIndexDataBuffer.cpp)
+    # MAC-R3a: platform.cpp is the D3D9 Reset watch -> portable/render/platform_gl3.cpp (engine.cpp stays, its D3D parts are guarded; twin: portable/render/engine_gl3.cpp)
+    list(APPEND PORTABLE_EXCLUDED_RENDER_FILES standalone/rw/platform.cpp)
+    list(APPEND PORTABLE_EXCLUDED_FILES ${PORTABLE_EXCLUDED_RENDER_FILES})
+    # MAC-BUILD1: the ImGui D3D9 backend needs <d3d9.h>; the GL3 build drives ImGui through the SDL3 (+ GL) bindings instead
+    list(APPEND PORTABLE_EXCLUDED_FILES libs/imgui/bindings/imgui_impl_dx9.cpp)
+    list(REMOVE_ITEM SOURCE_FILES_WITHOUT_MODULES_LIST ${PORTABLE_EXCLUDED_FILES})
+else()
+    # source/portable/*.cpp are the portable-only implementations (MAC-W0); the Windows builds never see them (headers there are fine: they are never compiled on their own)
+    file(
+        GLOB_RECURSE PORTABLE_ONLY_FILES
+        LIST_DIRECTORIES false
+        RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/portable/*.c*"
+    )
+    list(REMOVE_ITEM SOURCE_FILES_WITHOUT_MODULES_LIST ${PORTABLE_ONLY_FILES})
+    if (${RE_PROJECT}_STATEHASH)
+        # RR-3: the state-hash harness is the one source/portable/ TU that also builds into the Win32 StandaloneRelease variant (the portable-only parts of it are #ifdef NOTSA_PORTABLE).
+        # Nothing is added when the option is OFF.
+        list(APPEND SOURCE_FILES_WITHOUT_MODULES_LIST portable/statehash.cpp)
+    endif()
+endif()
+
 #
 # Source files that should be scanned for modules
 #
@@ -168,10 +236,18 @@ if (NOT ${RE_PROJECT}_STANDALONE_RELEASE)
         "$<$<CXX_COMPILER_ID:MSVC>:/INCREMENTAL>"
     )
 endif()
+if (${RE_PROJECT}_PORTABLE)
+    # Provisional portable flag set (C-8 decides the final one): the front-end flags the census (tools/standalone/clang_census.py) uses, plus the codegen flags that keep the
+    # original's semantics (no FMA contraction, MSVC bit-field layout, signed char, no TBAA/overflow tricks). Warnings are not errors here (C-3 audits them).
+    target_compile_options(${RE_PROJECT_LIB_NAME} PRIVATE
+        "$<$<COMPILE_LANGUAGE:CXX>:-fms-extensions;-mms-bitfields;-fno-delayed-template-parsing;-ffp-contract=off;-fsigned-char;-fno-strict-aliasing;-fwrapv;-w>"
+    )
+else()
 target_compile_options(${RE_PROJECT_LIB_NAME} PRIVATE
     "$<$<CXX_COMPILER_ID:MSVC>:/MP;/Zc:preprocessor;/W3;/wd4200;/wd4251;/wd4275;/wd4996;/wd26495;/wd26812;/wd28159>"
     "$<$<OR:$<CXX_COMPILER_ID:Clang,GCC>,$<CXX_COMPILER_ID:GNU>>:-Wall;-Wno-switch>"
 )
+endif()
 
 #--------------------------------------------------------------------
 # The run build has no original data image (slices A2..F3 of .notes/DETACH_DATA_PLAN.md)
@@ -193,6 +269,24 @@ if (${RE_PROJECT}_VERIFY_GLOBALS OR ${RE_PROJECT}_IMAGE_DIAG)
 endif()
 if (${RE_PROJECT}_STANDALONE_RUN_BUILD)
     target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_DETACHED_GLOBALS)
+endif()
+if (${RE_PROJECT}_PORTABLE)
+    if (${RE_PROJECT}_VERIFY_GLOBALS OR ${RE_PROJECT}_IMAGE_DIAG)
+        message(FATAL_ERROR "${RE_PROJECT}_VERIFY_GLOBALS / ${RE_PROJECT}_IMAGE_DIAG are dev configurations of the Windows run exe (original data image); not available with ${RE_PROJECT}_PORTABLE")
+    endif()
+    target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_PORTABLE=1)
+    # P-2k: the 64-bit width guard of the typed save/stream templates (FileRecord.hpp) is an ERROR in the portable build: `layout_diff.py guard` lists 0 offenders after P-2b..j,
+    # so a new SaveDataToWorkBuffer/LoadDataFromWorkBuffer/RwStreamRead<T> with a pointer/long/size_t/ptrdiff_t fails to compile instead of writing 8 bytes into a 4-byte slot.
+    target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_FILE_SCALAR_STRICT)
+    # MAC-C3: falling off the end of a non-void function / lambda is UB that clang exploits (the path becomes `unreachable` and execution runs into the next function); MSVC
+    # (and so the exe) returns whatever is in EAX / ST0. -Wreturn-type is an ERROR here (0 sites after MAC-C3: NOTSA_UNREACHABLE_RET, Base.h), and -fno-strict-return makes a
+    # path the compiler cannot see (e.g. a template instantiation) return an unspecified value instead of being miscompiled.
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(${RE_PROJECT_LIB_NAME} PRIVATE -Werror=return-type -fno-strict-return)
+        # The game is full of MSVC-only type punning (-Wundefined-reinterpret-cast: FileLoader col buffers `reinterpret_cast<T*&>(it)++`, int<->float script words, GangWars/Group12 raw bits):
+        # MSVC has no type-based alias analysis, clang -O2 has. -fno-strict-aliasing keeps the exe's semantics.
+        target_compile_options(${RE_PROJECT_LIB_NAME} PRIVATE -fno-strict-aliasing)
+    endif()
 endif()
 if (${RE_PROJECT}_VERIFY_GLOBALS)
     target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_VERIFY_GLOBALS)
@@ -217,7 +311,11 @@ set_target_properties(${RE_PROJECT_LIB_NAME}
     RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE}/"
     COMPILE_WARNING_AS_ERROR ON
 )
+if (${RE_PROJECT}_PORTABLE)
+    set_target_properties(${RE_PROJECT_LIB_NAME} PROPERTIES SUFFIX "" COMPILE_WARNING_AS_ERROR OFF)
+else()
 target_link_options(${RE_PROJECT_LIB_NAME} PRIVATE "/SUBSYSTEM:WINDOWS")
+endif()
 
 if (${RE_PROJECT}_STANDALONE AND NOT ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
     # F3: a normal exe image. Default image base, ASLR (/DYNAMICBASE) and a relocation table: nothing in the run code depends on a fixed address any more (the census proves it
@@ -294,7 +392,14 @@ endif()
 if (${RE_PROJECT}_RW_LIBRW)
     # librw as a static library built with the same (static) CRT. Options are forced before add_subdirectory (cache vars of the subproject).
     # NOTE: must come BEFORE the add_dependency() calls below: that macro leaks junk tokens into the directory-wide compile options.
-    set(LIBRW_PLATFORM D3D9 CACHE STRING "" FORCE)
+    if (${RE_PROJECT}_PORTABLE)
+        # librw offers NULL / GL3 off Windows. The portable build renders through librw's GL3 backend (RW_GL3, public define of the librw target) with SDL3 as the window/GL
+        # context library (stream W-1); the platform glue itself is not part of this slice. The D3D9 defines (RW_D3D9 / USE_D3D9 / WITH_D3D) are not set at all.
+        set(LIBRW_PLATFORM GL3 CACHE STRING "" FORCE)
+        set(LIBRW_GL3_GFXLIB SDL3 CACHE STRING "" FORCE)
+    else()
+        set(LIBRW_PLATFORM D3D9 CACHE STRING "" FORCE)
+    endif()
     set(LIBRW_TOOLS OFF CACHE BOOL "" FORCE)
     set(LIBRW_INSTALL OFF CACHE BOOL "" FORCE)
     set(LIBRW_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -304,7 +409,13 @@ if (${RE_PROJECT}_RW_LIBRW)
     add_subdirectory("${PROJECT_SOURCE_DIR}/vendor/librw" "${CMAKE_BINARY_DIR}/vendor/librw")
     # librw is third-party code: never -Werror (COMPILE_WARNING_AS_ERROR is set per target on ${RE_PROJECT_LIB_NAME} only)
     set_target_properties(librw PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+    if (${RE_PROJECT}_PORTABLE)
+        # C-8 (MAC-FLOOP1): librw's matrix / quaternion / animation math must not be FMA-contracted either (clang's default is -ffp-contract=on: arm64 fuses a*b+c inside one statement, the exe's x87 rounds twice)
+        target_compile_options(librw PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:-ffp-contract=off>")
+    endif()
 
+    # Portable build: no exe-oracle / shim unit tests (they map gta_sa_compact.exe at its original VAs and link Windows libraries; they would also pollute compile_commands.json)
+    if (NOT ${RE_PROJECT}_PORTABLE)
     # P2B-01 unit test (defined here, before add_dependency() leaks junk into the directory compile options) of the RW math/stream shim (not part of `all`): ninja rw_math_stream_test
     if (EXISTS "${PROJECT_SOURCE_DIR}/tests/standalone/rw_math_stream_test.cpp")
         add_executable(rw_math_stream_test EXCLUDE_FROM_ALL
@@ -2413,6 +2524,7 @@ if (${RE_PROJECT}_RW_LIBRW)
             target_sources(${_t} PRIVATE "${PROJECT_SOURCE_DIR}/tests/standalone/fixups_log_stub.cpp")
         endif()
     endforeach()
+    endif() # NOT PORTABLE
 endif()
 
 #--------------------------------------------------------------------
@@ -2454,7 +2566,11 @@ endif()
 
 if (${RE_PROJECT}_RW_LIBRW)
     target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE librw)
-    target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_RW_LIBRW RW_D3D9)
+    if (${RE_PROJECT}_PORTABLE)
+        target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_RW_LIBRW) # RW_GL3 comes from the librw target (PUBLIC)
+    else()
+        target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_RW_LIBRW RW_D3D9)
+    endif()
     # fakerw headers (same file names as the RenderWare headers) take precedence over game_sa/RenderWare/rw/
     target_include_directories(${RE_PROJECT_LIB_NAME} BEFORE PRIVATE fakerw)
     # P2B-02a: engine.cpp is the shim's RwEngine*/RwD3D9 device layer and includes librw's private d3d9 header (rwd3dimpl.h)
@@ -2478,6 +2594,18 @@ if (${RE_PROJECT}_RW_LIBRW)
     set_source_files_properties(standalone/rw/matfx.cpp standalone/rw/uvanim.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 endif()
 
+if (${RE_PROJECT}_PORTABLE)
+    target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE
+        nlohmann_json::nlohmann_json
+        Ogg::ogg
+        spdlog::spdlog
+        Tracy::TracyClient
+        vorbis::vorbis
+        imgui::imgui
+        libjpeg-turbo::libjpeg-turbo
+        Boost::headers
+    )
+else()
 target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE
     nlohmann_json::nlohmann_json
     Ogg::ogg
@@ -2493,6 +2621,7 @@ target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE
     d3d9
     Boost::headers
 )
+endif()
 if (${RE_PROJECT}_USE_SDL3)
     target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE
         SDL3::SDL3
@@ -2571,9 +2700,13 @@ target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE
     EXTRA_DEBUG_FEATURES
     NOTSA_WINDOWED_MODE # NOTE: This is a workaround for the game to run in windowed mode, and it must be enabled, otherwise shit's gonna crash
     SA_SKINNED_PEDS
-
-    USE_D3D9 # TODO
 )
+if (NOT ${RE_PROJECT}_PORTABLE)
+    target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE USE_D3D9) # TODO (portable: librw GL3, no D3D9 code path)
+else()
+    # The ~10 files that #include <Windows.h> directly get the shim (source/portable/winshim/Windows.h -> wintypes.h + crt.h)
+    target_include_directories(${RE_PROJECT_LIB_NAME} PRIVATE portable/winshim)
+endif()
 # D8 (.notes/PHASE2_STATUS.md "D8 defaults"): the runnable standalone build reproduces the ORIGINAL behaviour, so no FIX_BUGS (EXTRA_DEBUG_FEATURES only adds the occlusion debug-module header; the debug UI itself is disabled in source)
 if (NOT ${RE_PROJECT}_STANDALONE_RUN_BUILD)
     target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE FIX_BUGS)
@@ -2611,6 +2744,15 @@ endif()
 #--------------------------------------------------------------------
 if (${RE_PROJECT}_WITH_OPENAL)
     target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE USE_OPENAL)
+    if (${RE_PROJECT}_PORTABLE)
+        # openal-soft (Homebrew: `brew install openal-soft`, keg-only; installs OpenALConfig.cmake, headers <AL/al.h>). The macOS OpenAL.framework (<OpenAL/al.h>) is
+        # deliberately not used: it is deprecated and lacks the ALC/EFX extensions the EAX replacement needs. A conan route (openal-soft) works the same way via CMAKE_PREFIX_PATH.
+        find_package(OpenAL CONFIG REQUIRED HINTS /opt/homebrew/opt/openal-soft /usr/local/opt/openal-soft)
+        target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE OpenAL::OpenAL)
+        # The hardware layer (CAEAudioChannel & co) is still DirectSound code: USE_DSOUND selects it, its types come from source/portable/winshim/dsound.h
+        # (abstract interfaces; DirectSoundCreate8 logs and fails, so audio is disabled at run time) until the OpenAL hardware layer replaces it (stream W-3/W-4).
+        target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE USE_DSOUND)
+    endif()
 
     target_include_directories(${RE_PROJECT_LIB_NAME} PRIVATE
         game_sa/Audio/OpenAL
@@ -2619,6 +2761,32 @@ else()
     target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE USE_DSOUND)
 
     target_link_libraries(${RE_PROJECT_LIB_NAME} PRIVATE dsound)
+endif()
+
+
+#--------------------------------------------------------------------
+# Case-sensitive file systems (Linux): MAC-LNX1
+#--------------------------------------------------------------------
+# The sources were written on Windows: a handful of #includes differ from the file name in letter case (Audio/entities/ vs Entities/, Common.h vs common.h, ...).
+# tools/portable/gen_case_shim.py scans the sources at configure time and links each such include (as written) to the real file in ${CMAKE_BINARY_DIR}/case_shim, which is
+# the LAST include directory (correctly spelled includes never reach it). No source file is touched.
+if (${RE_PROJECT}_PORTABLE AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    get_target_property(_case_inc_dirs ${RE_PROJECT_LIB_NAME} INCLUDE_DIRECTORIES)
+    set(_case_abs_dirs)
+    foreach (_d IN LISTS _case_inc_dirs)
+        cmake_path(ABSOLUTE_PATH _d BASE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" NORMALIZE OUTPUT_VARIABLE _dabs)
+        list(APPEND _case_abs_dirs "${_dabs}")
+    endforeach()
+    execute_process(
+        COMMAND "${Python3_EXECUTABLE}" -I "${PROJECT_SOURCE_DIR}/tools/portable/gen_case_shim.py" "${PROJECT_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/case_shim" ${_case_abs_dirs}
+        RESULT_VARIABLE _case_rc OUTPUT_VARIABLE _case_out ERROR_VARIABLE _case_err)
+    if (NOT _case_rc EQUAL 0)
+        message(FATAL_ERROR "gen_case_shim.py failed: ${_case_err}")
+    endif()
+    string(REGEX MATCH "case shim: [0-9]+ includes" _case_summary "${_case_out}")
+    message(STATUS "${_case_summary} (${CMAKE_BINARY_DIR}/case_shim)")
+    target_include_directories(${RE_PROJECT_LIB_NAME} PRIVATE "${CMAKE_BINARY_DIR}/case_shim")
 endif()
 
 
@@ -2651,4 +2819,9 @@ if (${RE_PROJECT}_INSTALL)
     if (MSVC)
         install(FILES $<TARGET_PDB_FILE:${RE_PROJECT_LIB_NAME}> DESTINATION "." OPTIONAL)
     endif()
+endif()
+
+# Portable build only (P-2k): host tests of the portable layer as ctest tests, label "portable" (fast) / "mutation" (slow). enable_testing() is in the top-level CMakeLists.txt.
+if (${RE_PROJECT}_PORTABLE)
+    include("${PROJECT_SOURCE_DIR}/tools/portable/portable_tests.cmake")
 endif()

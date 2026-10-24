@@ -8,7 +8,7 @@ NOTSA_GLOBAL(ms_pColPool, 0x965560, (CColPool*), {});
 using ColTreeNode  = CQuadTreeNode<ColDef*>;
 NOTSA_GLOBAL(ms_pQuadTree, 0x96555C, (ColTreeNode*), {});
 
-void* ColDef::operator new(unsigned size) {
+void* ColDef::operator new(size_t size) {
     return ms_pColPool->New();
 }
 

@@ -1,4 +1,7 @@
 #include "StdInc.h"
+#ifdef NOTSA_STATEHASH
+#include "portable/statehash.h"
+#endif
 
 #include <cstdlib>
 
@@ -117,7 +120,7 @@ void CMemoryMgr::SetHint(void* memory, const char* hint) {
 
 // 0x72F480
 void CMemoryMgr::InitScratchPad() {
-    static_assert(sizeof(CMemoryHeap) * HEAP_SCRATCH == 0x90); // OG passes ECX = 0xC87BD0 = g_Heaps (0xC87B40) + 0x90
+    VALIDATE_LAYOUT(sizeof(CMemoryHeap) * HEAP_SCRATCH == 0x90); // OG passes ECX = 0xC87BD0 = g_Heaps (0xC87B40) + 0x90
     g_Heaps[HEAP_SCRATCH].Init(s_MemoryHeapBuffer, sizeof(s_MemoryHeapBuffer), false);
 }
 
@@ -130,7 +133,7 @@ void* CMemoryMgr::MallocFromScratchPad(uint32 size) {
 void* CMemoryMgr::MallocAlignFromScratchPad(uint32 size, uint32 align) {
     void* memory = MallocFromScratchPad(size + align);
 
-    void* result = (void*)(uint32((uint8*)memory + align) & ~(align - 1));
+    void* result = (void*)(uintptr_t((uint8*)memory + align) & ~uintptr_t(align - 1));
     *((void**)result - 1) = memory;
     return result;
 }
@@ -250,6 +253,9 @@ void* CMemoryMgr::Malloc(uint32 size, uint32 nHint) {
     _UNLOCK_MEMORYHEAP();
     return memory;
 #elif defined(NOTSA_STANDALONE_RUN)
+#ifdef NOTSA_STATEHASH
+    if (notsa::rr::Active()) { return ::calloc(1, size); } // RR: zeroed (e.g. CAnimBlendClumpData::m_FrameDatas is read by the constructor's UpdateRpHAnim before any animation wrote it, RR_PLAN section 9.5)
+#endif
     return ::malloc(size); // 0x72F420 => CRT malloc (0x824257)
 #else
     return plugin::CallAndReturn<void*, 0x72F420, size_t>(size);
@@ -338,7 +344,7 @@ uint8* CMemoryMgr::Calloc(uint32 numObj, uint32 sizeObj, uint32 hint) {
 uint8* CMemoryMgr::MallocAlign(uint32 size, uint32 align, uint32 nHint) {
     auto* memory = Malloc(size + align, nHint);
 
-    auto* result = (void*)(uint32((uint8*)memory + align) & ~(align - 1));
+    auto* result = (void*)(uintptr_t((uint8*)memory + align) & ~uintptr_t(align - 1));
     *((void**)result - 1) = memory;
     return static_cast<uint8*>(result);
 }

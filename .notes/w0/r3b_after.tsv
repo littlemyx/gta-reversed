@@ -1,0 +1,309 @@
+category	file	line	msg
+C: two-phase lookup / template / incomplete type	/opt/homebrew/Cellar/llvm/23.1.2/bin/../include/c++/v1/__memory/unique_ptr.h	72	invalid application of 'sizeof' to an incomplete type 'OALBase'
+other	/opt/homebrew/include/jmorecfg.h	141	type alias redefinition with different types ('long' vs 'int32_t' (aka 'int'))
+other: header not found (bindings/imgui_impl_sdl3.h)	source/app/platform/SDLWrapper.cpp	6	'bindings/imgui_impl_sdl3.h' file not found
+P: pointer/int width (cast/narrowing)	source/extensions/Shapes/AngledRect.cpp	43	cast to smaller integer type 'unsigned int' from 'const notsa::shapes::AngledRect *' [-Werror,-Wpointer-to-int-cast]
+P: 64-bit layout (sizeof/offsetof static_assert)	source/game_sa/Animation/AnimManager.h	30	static assertion failed due to requirement 'sizeof(std::array<CAnimBlendHierarchy, 2500>) == 60000'
+P: pointer/int width (cast/narrowing)	source/game_sa/AttractorScanner.cpp	214	cast to smaller integer type 'int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/AttractorScanner.cpp	215	cast to smaller integer type 'int' from 'C2dEffect *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/AttractorScanner.cpp	226	cast to 'C2dEffect *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/AttractorScanner.cpp	227	cast to 'CEntity *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/AttractorScanner.cpp	235	cast to 'C2dEffect *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/AttractorScanner.cpp	236	cast to 'CEntity *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-pointer-cast]
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Attractors/PedAttractor.h	18	'operator new' takes type size_t ('unsigned long') as 1st parameter
+F/C: inline asm / naked	source/game_sa/Audio/AEAudioUtility.cpp	91	unsupported architecture 'arm64' for MS-style inline assembly
+P: integer width / mixed-type overload	source/game_sa/Audio/Entities/AEPedSpeechAudioEntity.cpp	918	no matching function for call to 'GetRandomNumberInRange'
+P: integer width / mixed-type overload	source/game_sa/Audio/Entities/AEPedSpeechAudioEntity.cpp	919	no matching function for call to 'min'
+P: integer width / mixed-type overload	source/game_sa/Audio/Entities/AEVehicleAudioEntity.cpp	2023	no matching function for call to 'min'
+P: integer width / mixed-type overload	source/game_sa/Audio/Entities/AEVehicleAudioEntity.cpp	2025	no matching function for call to 'GetRandomNumberInRange'
+P: integer width / mixed-type overload	source/game_sa/Audio/Hardware/AEAudioHardware.cpp	702	no matching function for call to 'min'
+P: integer width / mixed-type overload	source/game_sa/Audio/Hardware/AEAudioHardware.cpp	715	no matching function for call to 'min'
+P: integer width / mixed-type overload	source/game_sa/Birds.cpp	159	no matching function for call to 'min'
+other: conversion/overload	source/game_sa/CarCtrl.cpp	621	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	181	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	184	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	187	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	221	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	224	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	227	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	230	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	233	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	236	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	240	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	244	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	247	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	436	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	438	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	440	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	442	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	444	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	446	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	448	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	453	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	458	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/CarGenerator.cpp	460	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Cheat.cpp	695	no matching function for call to 'operator new'
+P: pointer/int width (cast/narrowing)	source/game_sa/Collision/ColModel.cpp	100	cast to smaller integer type 'unsigned int' from 'void *' [-Werror,-Wvoid-pointer-to-int-cast]
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Collision/ColModel.h	34	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Collision/ColStore.h	20	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Core/EntryInfoNode.h	20	'operator new' takes type size_t ('unsigned long') as 1st parameter
+F/C: inline asm / naked	source/game_sa/Core/Matrix.cpp	235	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Matrix.cpp	321	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Matrix.cpp	404	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Matrix.cpp	485	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Matrix.cpp	566	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Matrix.cpp	844	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Matrix.cpp	1054	unsupported architecture 'arm64' for MS-style inline assembly
+P: integer width / mixed-type overload	source/game_sa/Core/Pool.h	311	no matching function for call to 'min'
+F/C: inline asm / naked	source/game_sa/Core/Quaternion.cpp	126	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Core/Quaternion.cpp	283	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Cover.cpp	442	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Cover.cpp	470	unsupported architecture 'arm64' for MS-style inline assembly
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Entity/Building.h	14	'operator new' takes type size_t ('unsigned long') as 1st parameter
+other	source/game_sa/Entity/Dummy/Dummy.cpp	33	explicit instantiation of '(anonymous namespace)::DummyPoolRob' must occur in namespace ''
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	502	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	532	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	555	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	570	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	913	cast to 'void *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-void-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	914	cast to 'void *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-void-pointer-cast]
+P: integer width / mixed-type overload	source/game_sa/Entity/Entity.cpp	992	no matching function for call to 'GetRandomNumberInRange'
+other: conversion/overload	source/game_sa/Entity/Entity.cpp	1056	no matching function for call to 'bit_cast'
+F/C: inline asm / naked	source/game_sa/Entity/Entity.cpp	1300	unsupported architecture 'arm64' for MS-style inline assembly
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	1409	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	2000	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	2066	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	2097	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	2123	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	2212	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Entity.cpp	2232	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Object/Object.cpp	708	cast to smaller integer type 'unsigned int' from 'CObject *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Object/Object.cpp	714	cast to smaller integer type 'unsigned int' from 'CObject *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Object/Object.cpp	720	cast to smaller integer type 'unsigned int' from 'CObject *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Object/Object.cpp	726	cast to smaller integer type 'unsigned int' from 'CObject *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Object/Object.cpp	1303	cast to smaller integer type 'unsigned int' from 'CObject *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Object/Object.cpp	1395	cast to smaller integer type 'unsigned int' from 'CObject *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Object/Object.cpp	1407	cast to smaller integer type 'unsigned int' from 'CObject *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Object/Object.cpp	1412	cast to smaller integer type 'unsigned int' from 'CObject *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Object/Object.cpp	1416	cast to smaller integer type 'unsigned int' from 'CObject *' [-Werror,-Wpointer-to-int-cast]
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Entity/Ped/Ped.cpp	391	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Entity/Ped/Ped.cpp	398	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Entity/Ped/Ped.h	385	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Entity/Ped/Ped.h	386	'operator new' takes type size_t ('unsigned long') as 1st parameter
+other: conversion/overload	source/game_sa/Entity/Ped/PlayerPed.cpp	2147	no matching function for call to 'operator new'
+F/C: inline asm / naked	source/game_sa/Entity/Placeable.cpp	112	unsupported architecture 'arm64' for MS-style inline assembly
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Automobile.cpp	6670	cast to smaller integer type 'unsigned int' from 'CAutomobile *' [-Werror,-Wpointer-to-int-cast]
+other: conversion/overload	source/game_sa/Entity/Vehicle/Heli.cpp	569	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Entity/Vehicle/Heli.cpp	570	no matching function for call to 'operator new'
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Heli.cpp	1275	cast to smaller integer type 'unsigned int' from 'CHeli *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Heli.cpp	1594	cast to smaller integer type 'unsigned int' from 'CHeli *' [-Werror,-Wpointer-to-int-cast]
+other: conversion/overload	source/game_sa/Entity/Vehicle/Plane.cpp	689	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Entity/Vehicle/Plane.cpp	750	no matching function for call to 'operator new'
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Plane.cpp	1343	cast to smaller integer type 'unsigned int' from 'CPlane *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Plane.cpp	1350	cast to smaller integer type 'unsigned int' from 'CPlane *' [-Werror,-Wpointer-to-int-cast]
+other: conversion/overload	source/game_sa/Entity/Vehicle/Train.cpp	934	no matching function for call to 'operator new'
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Vehicle.cpp	408	cast to smaller integer type 'unsigned int' from 'CVehicle *' [-Werror,-Wpointer-to-int-cast]
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Entity/Vehicle/Vehicle.cpp	418	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Entity/Vehicle/Vehicle.cpp	426	'operator new' takes type size_t ('unsigned long') as 1st parameter
+other: conversion/overload	source/game_sa/Entity/Vehicle/Vehicle.cpp	1939	no matching function for call to 'bit_cast'
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Vehicle.cpp	1960	cast to 'void *' from smaller integer type 'uint32' (aka 'unsigned int') [-Werror,-Wint-to-void-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Vehicle.cpp	1961	cast to 'void *' from smaller integer type 'uint32' (aka 'unsigned int') [-Werror,-Wint-to-void-pointer-cast]
+P: integer width / mixed-type overload	source/game_sa/Entity/Vehicle/Vehicle.cpp	2058	no matching function for call to 'GetRandomNumberInRange'
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Vehicle.cpp	6511	cast to smaller integer type 'int' from 'CMatrixLink **' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Vehicle.cpp	6991	cast to 'CEntity *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Vehicle.cpp	6992	cast to 'CEntity *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Vehicle.cpp	7016	cast to 'CEntity *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Vehicle.cpp	7017	cast to 'CEntity *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Vehicle.cpp	7032	cast to smaller integer type 'int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Entity/Vehicle/Vehicle.h	446	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Entity/Vehicle/Vehicle.h	449	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: pointer/int width (cast/narrowing)	source/game_sa/Entity/Vehicle/Vehicle.h	751	cast to smaller integer type 'unsigned int' from 'const unsigned int *' [-Werror,-Wpointer-to-int-cast]
+F/C: inline asm / naked	source/game_sa/EntryExit.cpp	127	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/EntryExit.cpp	134	unsupported architecture 'arm64' for MS-style inline assembly
+P: pointer/int width (cast/narrowing)	source/game_sa/EntryExitManager.cpp	119	cast to smaller integer type 'unsigned int' from 'CEntryExit *' [-Werror,-Wpointer-to-int-cast]
+C: syntax / extension	source/game_sa/Enums/eCarWheel.h	12	ISO C++ forbids forward references to 'enum' types
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Events/Event.h	18	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: pointer/int width (cast/narrowing)	source/game_sa/Events/EventDamage.cpp	218	cast to smaller integer type 'unsigned int' from 'CPed *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Events/EventDamage.cpp	224	cast to smaller integer type 'unsigned int' from 'CPed *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Events/EventDamage.cpp	230	cast to smaller integer type 'unsigned int' from 'CPed *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Events/EventKnockOffBike.cpp	102	cast to smaller integer type 'unsigned int' from 'CPed *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Events/EventVehicleDamage.cpp	71	cast to smaller integer type 'unsigned int' from 'CPed *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Events/EventVehicleHitAndRun.cpp	41	cast to smaller integer type 'unsigned int' from 'CPed *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Events/EventVehicleHitAndRun.cpp	43	cast to smaller integer type 'unsigned int' from 'CPed *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/FireManager.cpp	455	cast to smaller integer type 'unsigned int' from 'CFire *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/FireManager.cpp	484	cast to smaller integer type 'unsigned int' from 'CFire *' [-Werror,-Wpointer-to-int-cast]
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Fx/FxSphere.h	13	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Fx/FxSystemBP.h	37	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: integer width / mixed-type overload	source/game_sa/GangInfo.h	25	no matching function for call to 'max'
+other: conversion/overload	source/game_sa/GangWars.cpp	335	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/GangWars.cpp	478	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Garage.cpp	1920	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Garage.cpp	1921	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Garage.cpp	1922	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Garage.cpp	1923	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Garage.cpp	1924	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Garage.cpp	1926	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Garage.cpp	1930	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Garage.cpp	1933	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Garage.cpp	1934	no matching function for call to 'operator new'
+other static_assert	source/game_sa/General.cpp	199	static assertion failed due to requirement '2147483647 == 32767': PC-generated random numbers should not exceed 32767
+P: integer width / mixed-type overload	source/game_sa/LoadingScreen.cpp	335	no matching function for call to 'max'
+F/C: inline asm / naked	source/game_sa/Maths.cpp	17	unsupported architecture 'arm64' for MS-style inline assembly
+P: pointer/int width (cast/narrowing)	source/game_sa/MemoryMgr.cpp	133	cast to 'void *' from smaller integer type 'uint32' (aka 'unsigned int') [-Werror,-Wint-to-void-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/MemoryMgr.cpp	133	cast to smaller integer type 'unsigned int' from 'unsigned char *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/MemoryMgr.cpp	338	cast to 'void *' from smaller integer type 'uint32' (aka 'unsigned int') [-Werror,-Wint-to-void-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/MemoryMgr.cpp	338	cast to smaller integer type 'unsigned int' from 'unsigned char *' [-Werror,-Wpointer-to-int-cast]
+other: conversion/overload	source/game_sa/Models/PedModelInfo.cpp	40	no matching function for call to 'RpClumpForAllAtomics'
+P: pointer/int width (cast/narrowing)	source/game_sa/Models/VehicleModelInfo.cpp	539	cast to 'void *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-void-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Models/VehicleModelInfo.cpp	900	cast to smaller integer type 'unsigned int' from 'void *' [-Werror,-Wvoid-pointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Models/VehicleModelInfo.cpp	923	cast to smaller integer type 'unsigned int' from 'void *' [-Werror,-Wvoid-pointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Models/VehicleModelInfo.cpp	1149	cast to smaller integer type 'int' from 'void *' [-Werror,-Wvoid-pointer-to-int-cast]
+P: 64-bit (size_t in operator new/delete)	source/game_sa/Models/VehicleModelInfo.h	157	'operator new' takes type size_t ('unsigned long') as 1st parameter
+other: conversion/overload	source/game_sa/Models/WeaponModelInfo.cpp	32	no matching function for call to 'RpClumpForAllAtomics'
+P: 64-bit (size_t in operator new/delete)	source/game_sa/NodeRoute.h	10	'operator new' takes type size_t ('unsigned long') as 1st parameter
+F/C: inline asm / naked	source/game_sa/PathFind.cpp	2051	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/PathFind.cpp	2155	unsupported architecture 'arm64' for MS-style inline assembly
+P: 64-bit layout (sizeof/offsetof static_assert)	source/game_sa/PathFind.h	186	static assertion failed due to requirement 'sizeof(CPathNode) == 28': Invalid structure size of CPathNode
+P: 64-bit (size_t in operator new/delete)	source/game_sa/PedGeometryAnalyser.h	19	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: 64-bit (size_t in operator new/delete)	source/game_sa/PedIntelligence.h	75	'operator new' takes type size_t ('unsigned long') as 1st parameter
+P: pointer/int width (cast/narrowing)	source/game_sa/Pickups.cpp	194	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Pickups.cpp	213	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Pickups.cpp	249	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Pickups.cpp	268	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Pipelines/CustomBuilding/CustomBuildingDNPipeline.cpp	158	cast to smaller integer type 'unsigned int' from 'rw::Atomic *' [-Werror,-Wpointer-to-int-cast]
+other: conversion/overload	source/game_sa/Pools.cpp	243	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Pools.cpp	246	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Pools.cpp	249	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Pools.cpp	252	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Pools.cpp	255	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Pools.cpp	258	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Pools.cpp	261	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Pools.cpp	265	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Pools.cpp	269	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Pools.cpp	272	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Population.cpp	839	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Population.cpp	857	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Population.cpp	881	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Population.cpp	884	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Population.cpp	886	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Population.cpp	1179	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Population.cpp	1231	no matching function for call to 'operator new'
+P: integer width / mixed-type overload	source/game_sa/Population.cpp	1544	no matching function for call to 'GetRandomNumberInRange'
+F/C: inline asm / naked	source/game_sa/Radar.cpp	441	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Radar.cpp	443	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Radar.cpp	449	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Radar.cpp	508	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Radar.cpp	525	unsupported architecture 'arm64' for MS-style inline assembly
+other: conversion/overload	source/game_sa/Remote.cpp	48	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Remote.cpp	50	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Remote.cpp	52	no matching function for call to 'operator new'
+other	source/game_sa/Replay.cpp	177	return type 'int' must match previous return type '__ptrdiff_t' (aka 'long') when lambda expression has unspecified explicit return type
+C: nested DMI inside enclosing class	source/game_sa/Replay.h	143	default member initializer for 'm_bSlot' needed within definition of enclosing class 'CReplay' outside of member functions
+C: nested DMI inside enclosing class	source/game_sa/Replay.h	143	default member initializer for 'm_nOffset' needed within definition of enclosing class 'CReplay' outside of member functions
+C: nested DMI inside enclosing class	source/game_sa/Replay.h	143	default member initializer for 'm_pBase' needed within definition of enclosing class 'CReplay' outside of member functions
+C: syntax / extension	source/game_sa/Replay.h	166	expected ']'
+C: syntax / extension	source/game_sa/Replay.h	171	expected ']'
+other: conversion/overload	source/game_sa/RoadBlocks.cpp	455	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/RoadBlocks.cpp	457	no matching function for call to 'operator new'
+P: integer width / mixed-type overload	source/game_sa/RoadBlocks.cpp	532	no matching function for call to 'min'
+P: pointer/int width (cast/narrowing)	source/game_sa/RwHelper.cpp	263	cast to smaller integer type 'unsigned int' from 'void *' [-Werror,-Wvoid-pointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/RwHelper.cpp	270	cast to 'void *' from smaller integer type 'unsigned int' [-Werror,-Wint-to-void-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/RwHelper.cpp	276	cast to smaller integer type 'unsigned int' from 'void *' [-Werror,-Wvoid-pointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/RwHelper.cpp	282	cast to 'void *' from smaller integer type 'unsigned int' [-Werror,-Wint-to-void-pointer-cast]
+other: conversion/overload	source/game_sa/Scripts/Commands/CharacterCommands.cpp	1570	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Scripts/Commands/CharacterCommands.cpp	1572	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Scripts/Commands/CharacterCommands.cpp	1573	no matching function for call to 'operator new'
+other	source/game_sa/Scripts/Commands/MissionCommands.cpp	42	return type 'unsigned int' must match previous return type 'size_t' (aka 'unsigned long') when lambda expression has unspecified explicit return type
+other: conversion/overload	source/game_sa/Scripts/Commands/ObjectCommands.cpp	53	no matching function for call to 'bit_cast'
+P: pointer/int width (cast/narrowing)	source/game_sa/Scripts/Commands/PlayerCommands.cpp	57	cast to smaller integer type 'unsigned int' from 'CRunningScript *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Scripts/Commands/PlayerCommands.cpp	57	cast to smaller integer type 'unsigned int' from 'unsigned char *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Scripts/Commands/PlayerCommands.cpp	72	cast to smaller integer type 'unsigned int' from 'CRunningScript *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Scripts/Commands/PlayerCommands.cpp	72	cast to smaller integer type 'unsigned int' from 'unsigned char *' [-Werror,-Wpointer-to-int-cast]
+other: conversion/overload	source/game_sa/Scripts/Commands/Ported/Group01_04.cpp	86	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Scripts/Commands/Ported/Group01_04.cpp	88	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Scripts/Commands/Ported/Group01_04.cpp	89	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Scripts/Commands/Ported/Group01_04.cpp	520	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Scripts/Commands/Ported/Group01_04.cpp	522	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Scripts/Commands/Ported/Group01_04.cpp	523	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Scripts/Commands/Ported/Group05_08.cpp	1041	no matching function for call to 'operator new'
+P: pointer/int width (cast/narrowing)	source/game_sa/Scripts/Commands/Ported/Group09_12.hpp	44	cast to smaller integer type 'unsigned int' from 'const CRunningScript *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Scripts/Commands/Ported/Group09_12.hpp	44	cast to smaller integer type 'unsigned int' from 'unsigned char *' [-Werror,-Wpointer-to-int-cast]
+F/C: inline asm / naked	source/game_sa/Scripts/Commands/Ported/Group13_15.cpp	394	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Scripts/Commands/Ported/Group13_15.cpp	415	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Scripts/Commands/Ported/Group13_15.cpp	569	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/game_sa/Scripts/Commands/Ported/Group13_15.cpp	606	unsupported architecture 'arm64' for MS-style inline assembly
+other: conversion/overload	source/game_sa/Scripts/Commands/Ported/Group13_15.cpp	1020	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Scripts/Commands/Ported/Group13_15.cpp	1022	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/Scripts/Commands/Ported/Group13_15.cpp	1023	no matching function for call to 'operator new'
+F/C: inline asm / naked	source/game_sa/Scripts/Commands/Ported/Group24b.cpp	91	unsupported architecture 'arm64' for MS-style inline assembly
+P: pointer/int width (cast/narrowing)	source/game_sa/Scripts/RunningScript.cpp	355	cast to smaller integer type 'int' from 'const CRunningScript *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Scripts/RunningScript.cpp	355	cast to smaller integer type 'int' from 'unsigned char *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Scripts/RunningScript.cpp	1809	cast to smaller integer type 'int' from 'CRunningScript *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Scripts/RunningScript.cpp	1809	cast to smaller integer type 'int' from 'unsigned char *' [-Werror,-Wpointer-to-int-cast]
+other: conversion/overload	source/game_sa/SetPiece.cpp	53	no matching function for call to 'operator new'
+other: conversion/overload	source/game_sa/SetPiece.cpp	68	no matching function for call to 'operator new'
+P: pointer/int width (cast/narrowing)	source/game_sa/Shadows.cpp	2005	cast to smaller integer type 'unsigned int' from 'CVehicle *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Shadows.cpp	2040	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/SpecialFX.cpp	95	cast to smaller integer type 'unsigned int' from 'rw::Clump *' [-Werror,-Wpointer-to-int-cast]
+other	source/game_sa/Streaming.cpp	1600	non-const lvalue reference to type 'size_t' (aka 'unsigned long') cannot bind to a value of unrelated type 'uint32' (aka 'unsigned int')
+other	source/game_sa/Streaming.cpp	1613	non-const lvalue reference to type 'size_t' (aka 'unsigned long') cannot bind to a value of unrelated type 'uint32' (aka 'unsigned int')
+P: pointer/int width (cast/narrowing)	source/game_sa/Tasks/TaskTypes/TaskComplexStareAtPed.cpp	97	cast to smaller integer type 'int' from 'int *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Tasks/TaskTypes/TaskComplexStareAtPed.cpp	112	cast to smaller integer type 'int' from 'int *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Tasks/TaskTypes/TaskSimpleEvasiveDive.cpp	71	cast to smaller integer type 'unsigned int' from 'CPed *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Tasks/TaskTypes/TaskSimpleEvasiveDive.cpp	72	cast to smaller integer type 'unsigned int' from 'CPed *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/Text/KeyArray.cpp	38	cast to smaller integer type 'unsigned int' from 'const unsigned char *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/TrafficLights.cpp	202	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/TrafficLights.cpp	266	cast to smaller integer type 'unsigned int' from 'CEntity *' [-Werror,-Wpointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/VisibilityPlugins.cpp	310	cast to smaller integer type 'int' from 'void *' [-Werror,-Wvoid-pointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/VisibilityPlugins.cpp	316	cast to 'void *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-void-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/VisibilityPlugins.cpp	364	cast to 'CClumpModelInfo *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/VisibilityPlugins.cpp	397	cast to 'CClumpModelInfo *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/VisibilityPlugins.cpp	1077	cast to smaller integer type 'int' from 'void *' [-Werror,-Wvoid-pointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/VisibilityPlugins.cpp	1084	cast to 'void *' from smaller integer type 'int32' (aka 'int') [-Werror,-Wint-to-void-pointer-cast]
+P: pointer/int width (cast/narrowing)	source/game_sa/VisibilityPlugins.cpp	1109	cast to smaller integer type 'int' from 'CClumpModelInfo *' [-Werror,-Wpointer-to-int-cast]
+P: integer width / mixed-type overload	source/game_sa/WaterCreatureManager_c.cpp	159	no matching function for call to 'min'
+C: syntax / extension	source/game_sa/WaterLevel.cpp	1335	statement requires expression of integer type ('void' invalid)
+other	source/game_sa/WaterLevel.cpp	1336	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other	source/game_sa/WaterLevel.cpp	1338	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other: conversion/overload	source/game_sa/WaterLevel.cpp	1339	no matching function for call to object of type 'const (lambda at /Users/Andrei.Mukhin/github/recomp/gta-reversed/source/game_sa/WaterLevel.cpp:1327:33)'
+other	source/game_sa/WaterLevel.cpp	1340	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other: conversion/overload	source/game_sa/WaterLevel.cpp	1341	no matching function for call to object of type 'const (lambda at /Users/Andrei.Mukhin/github/recomp/gta-reversed/source/game_sa/WaterLevel.cpp:1330:32)'
+other	source/game_sa/WaterLevel.cpp	1342	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other	source/game_sa/WaterLevel.cpp	1344	no viable overloaded operator[] for type 'std::type_identity_t<std::array<PolyInfo, 700>>' (aka 'std::array<CWaterLevel::PolyInfo, 700>')
+C: syntax / extension	source/game_sa/WaterLevel.cpp	1475	statement requires expression of integer type ('void' invalid)
+other	source/game_sa/WaterLevel.cpp	1476	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other: conversion/overload	source/game_sa/WaterLevel.cpp	1477	no matching function for call to object of type 'const (lambda at /Users/Andrei.Mukhin/github/recomp/gta-reversed/source/game_sa/WaterLevel.cpp:1446:27)'
+other	source/game_sa/WaterLevel.cpp	1481	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other	source/game_sa/WaterLevel.cpp	1482	no viable overloaded operator[] for type 'std::type_identity_t<std::array<PolyInfo, 700>>' (aka 'std::array<CWaterLevel::PolyInfo, 700>')
+C: syntax / extension	source/game_sa/WaterLevel.cpp	1683	statement requires expression of integer type ('void' invalid)
+other	source/game_sa/WaterLevel.cpp	1684	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other	source/game_sa/WaterLevel.cpp	1685	no viable overloaded operator[] for type 'std::type_identity_t<std::array<CWaterQuad, 301>>' (aka 'std::array<CWaterPolygon<4>, 301>')
+other	source/game_sa/WaterLevel.cpp	1687	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other	source/game_sa/WaterLevel.cpp	1688	no viable overloaded operator[] for type 'std::type_identity_t<std::array<CWaterTriangle, 6>>' (aka 'std::array<CWaterPolygon<3>, 6>')
+C: syntax / extension	source/game_sa/WaterLevel.cpp	1694	statement requires expression of integer type ('void' invalid)
+other	source/game_sa/WaterLevel.cpp	1695	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other	source/game_sa/WaterLevel.cpp	1696	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other	source/game_sa/WaterLevel.cpp	1699	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other: conversion/overload	source/game_sa/WaterLevel.cpp	1700	no matching function for call to object of type 'const __drop::__fn'
+C: syntax / extension	source/game_sa/WaterLevel.cpp	2257	statement requires expression of integer type ('void' invalid)
+other	source/game_sa/WaterLevel.cpp	2258	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other	source/game_sa/WaterLevel.cpp	2262	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+other	source/game_sa/WaterLevel.cpp	2263	value of type 'CWaterLevel::PolyInfo::PType' is not implicitly convertible to 'int'
+C: nested DMI inside enclosing class	source/game_sa/WaterLevel.h	196	default member initializer for 'm_id' needed within definition of enclosing class 'CWaterLevel' outside of member functions
+C: nested DMI inside enclosing class	source/game_sa/WaterLevel.h	196	default member initializer for 'm_type' needed within definition of enclosing class 'CWaterLevel' outside of member functions
+C: syntax / extension	source/game_sa/Weapon.h	18	ISO C++ forbids forward references to 'enum' types
+P: integer width / mixed-type overload	source/game_sa/World.cpp	1307	no matching function for call to 'min'
+other: undeclared/unknown identifier	source/game_sa/common.h	297	use of undeclared identifier 'GetACP'
+F/C: inline asm / naked	source/standalone/FtolExe.cpp	12	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/standalone/FtolExe.cpp	29	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/standalone/FtolExe.cpp	33	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/standalone/FtolExe.cpp	40	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/standalone/FtolExe.cpp	43	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/standalone/FtolExe.cpp	47	unsupported architecture 'arm64' for MS-style inline assembly
+F/C: inline asm / naked	source/standalone/FtolExe.cpp	80	unsupported architecture 'arm64' for MS-style inline assembly
+other: header not found (libs/imgui/misc/cpp/imgui_stdlib.h)	source/toolsmenu/DebugModules/BugsDebugModule.cpp	4	'libs/imgui/misc/cpp/imgui_stdlib.h' file not found
+P: pointer/int width (cast/narrowing)	source/toolsmenu/DebugModules/CTeleportDebugModule.cpp	314	cast to smaller integer type 'int' from 'void *' [-Werror,-Wvoid-pointer-to-int-cast]
+P: pointer/int width (cast/narrowing)	source/toolsmenu/DebugModules/CTeleportDebugModule.cpp	374	cast to 'void *' from smaller integer type 'int' [-Werror,-Wint-to-void-pointer-cast]
+other: header not found (libs/imgui/misc/cpp/imgui_stdlib.h)	source/toolsmenu/DebugModules/Script/MissionDebugModule.cpp	4	'libs/imgui/misc/cpp/imgui_stdlib.h' file not found
+other: conversion/overload	source/toolsmenu/DebugModules/SpawnerDebugModule.cpp	597	no matching function for call to 'operator new'
+other: header not found (libs/imgui/misc/cpp/imgui_stdlib.h)	source/toolsmenu/UIRenderer.cpp	17	'libs/imgui/misc/cpp/imgui_stdlib.h' file not found

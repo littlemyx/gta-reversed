@@ -257,6 +257,9 @@ public:
         //    CheckFill(DEADLAND_FILL, ptr); // Theoretically `isFirstAllocation ? NOMANSLAND_FILL : DEADLAND_FILL` would work, but we don't have every and all constructor of this class hooked
         //}
         DoFillDebug(CLEANLAND_FILL, ptr);
+#ifdef NOTSA_STATEHASH
+        std::memset((void*)ptr, 0, sizeof(StorageType)); // RR: a fresh slot is zero, not the previous tenant's bytes (CBike::m_vecAveGroundNormal and others are read before they are written, see .notes/RR_PLAN.md section 9)
+#endif
         return (T*)(void*)(ptr);
     }
 
@@ -286,6 +289,9 @@ public:
         StorageType* ptr = &m_Storage[idx];
         CreateAtRef(ref);
         DoFillDebug(CLEANLAND_FILL, ptr);
+#ifdef NOTSA_STATEHASH
+        std::memset((void*)ptr, 0, sizeof(StorageType)); // RR: a fresh slot is zero, not the previous tenant's bytes (CBike::m_vecAveGroundNormal and others are read before they are written, see .notes/RR_PLAN.md section 9)
+#endif
         return (T*)(void*)(ptr);
     }
 
@@ -308,7 +314,7 @@ public:
 #endif
         const auto idx = GetIndex(obj);
         m_SlotState[idx].IsEmpty = true;
-        m_LastFreeSlot          = std::min(m_LastFreeSlot, idx);
+        m_LastFreeSlot          = std::min<int32>(m_LastFreeSlot, idx);
         DoFillDebug(DEADLAND_FILL, (StorageType*)(obj)); // the exe only sets the 0x80 flag (0x5E4784) and lowers the first-free index
     }
 

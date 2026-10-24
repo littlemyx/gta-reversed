@@ -1,0 +1,14 @@
+until:menu:600000
+wait:1500
+key:up
+wait:500
+key:return
+wait:1200
+key:return
+wait:1500
+key:return
+wait:1500
+key:return
+mark:newgame_started
+wait:40000
+cmd:quit

@@ -11,12 +11,12 @@ namespace {
 //! 0x59C910 - `CVector::Normalise` as the original evaluates it: the sum of squares and the reciprocal root stay in the FPU
 //! (extended precision), every component is stored as float. A length of 0 (or less) yields (1, y, z) - only x is written.
 void NormaliseExt(CVector& v) {
-    const double sq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    const x87d sq = ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
     if (sq <= 0.0) { // FCOM + JP: NaN takes the sqrt path
         v.x = 1.0f;
         return;
     }
-    const double inv = 1.0 / std::sqrt(sq);
+    const x87d inv = (x87d)1.0 / std::sqrt(sq);
     v.x = (float)(v.x * inv);
     v.y = (float)(v.y * inv);
     v.z = (float)(v.z * inv);
@@ -24,7 +24,7 @@ void NormaliseExt(CVector& v) {
 
 //! 0x406DA0
 double SqMagnitudeExt(const CVector& v) {
-    return ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    return ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
 }
 
 constexpr auto LOOK_AT_PURPOSE = "TaskAvoidEntity"; // 0x86FF2C
@@ -97,13 +97,13 @@ CTask* CTaskComplexAvoidEntity::ControlSubTask(CPed* ped) {
     // Finish if we're too far from the entity (> 15 units)
     const auto& entityPos = m_Entity->GetPosition();
     const auto& pedPos    = ped->GetPosition();
-    const double dx = (double)pedPos.x - (double)entityPos.x;
-    const double dy = (double)pedPos.y - (double)entityPos.y;
-    const double dz = (double)pedPos.z - (double)entityPos.z;
-    const double distSq = (dz * dz + dx * dx) + dy * dy;
+    const x87d dx = (x87d)pedPos.x - (x87d)entityPos.x;
+    const x87d dy = (x87d)pedPos.y - (x87d)entityPos.y;
+    const x87d dz = (x87d)pedPos.z - (x87d)entityPos.z;
+    const x87d distSq = (dz * dz + dx * dx) + dy * dy;
     // FCOMPP: ST(0)=7.5*7.5*4 (0x86C8FC, 0x858B90), ST(1)=distSq; JP taken (=> keep going) if 225 > distSq, 225 == distSq or unordered.
     // Not taken (=> finish) only if 225 < distSq.
-    if ((double)7.5f * (double)7.5f * (double)4.f < distSq) {
+    if ((x87d)7.5f * (x87d)7.5f * (x87d)4.f < distSq) {
         StopLooking(ped);
         return nullptr;
     }
@@ -146,16 +146,16 @@ void CTaskComplexAvoidEntity::LookAtTarget(CPed* ped) {
 
     // Don't bother if the target is (more or less) in front of the ped
     const auto&  fwd = ped->GetMatrix().GetForward();
-    const double dot = ((double)dir.z * fwd.z + (double)dir.y * fwd.y) + (double)dir.x * fwd.x;
+    const x87d dot = ((x87d)dir.z * fwd.z + (x87d)dir.y * fwd.y) + (x87d)dir.x * fwd.x;
     if (!(dot < (double)CTaskSimpleGoTo::ms_fLookAtThresholdDotProduct)) { // 0xC18D48
         return;
     }
 
     // Look at a point 2 units behind the target
     CVector lookAtPos{
-        (float)((double)m_TargetPos.x + (double)dir.x * 2.0),
-        (float)((double)m_TargetPos.y + (double)dir.y * 2.0),
-        (float)(((double)dir.z * 2.0 + (double)pedPos.z) + (double)0.61f) // 0x86FD40
+        (float)((x87d)m_TargetPos.x + (x87d)dir.x * (x87d)2.0),
+        (float)((x87d)m_TargetPos.y + (x87d)dir.y * (x87d)2.0),
+        (float)(((x87d)dir.z * (x87d)2.0 + (x87d)pedPos.z) + (x87d)0.61f) // 0x86FD40
     };
     g_ikChainMan.LookAt(LOOK_AT_PURPOSE, ped, nullptr, 5000, BONE_UNKNOWN, &lookAtPos, false, 0.25f, 500, 3, false); // 0x618970
     m_IsLookingAt = true;
@@ -191,31 +191,31 @@ void CTaskComplexAvoidEntity::ComputeBoundingSphere(CColSphere& out, CEntity* co
         if (const auto e = entities[i]) {
             const auto& pos = e->GetPosition();
             count++;
-            sum.x = (float)((double)sum.x + pos.x);
-            sum.y = (float)((double)sum.y + pos.y);
-            sum.z = (float)((double)sum.z + pos.z);
+            sum.x = (float)((x87d)sum.x + pos.x);
+            sum.y = (float)((x87d)sum.y + pos.y);
+            sum.z = (float)((x87d)sum.z + pos.z);
         }
     }
-    const double inv = (double)1.f / (double)count; // 0x858624 (FDIVR)
+    const x87d inv = (x87d)1.f / (x87d)count; // 0x858624 (FDIVR)
     CVector centre{
-        (float)((double)sum.x * inv),
-        (float)((double)sum.y * inv),
+        (float)((x87d)sum.x * inv),
+        (float)((x87d)sum.y * inv),
         0.f
     };
 
     // Radius = max of (Distance^2 + BoundRadius^2) of all entities
-    double maxSq = 0.0; // 0x858B50
+    x87d maxSq = (x87d)0.0; // 0x858B50
     for (auto i = 0; i < 16; i++) {
         if (const auto e = entities[i]) {
             const auto& pos = e->GetPosition();
-            const double dx = (double)pos.x - (double)centre.x;
-            const double dy = (double)pos.y - (double)centre.y;
-            const double r  = e->GetModelInfo()->GetColModel()->GetBoundRadius();
-            const double v  = (dy * dy + dx * dx) + r * r;
+            const x87d dx = (x87d)pos.x - (x87d)centre.x;
+            const x87d dy = (x87d)pos.y - (x87d)centre.y;
+            const x87d r  = e->GetModelInfo()->GetColModel()->GetBoundRadius();
+            const x87d v  = (dy * dy + dx * dx) + r * r;
             if (v > maxSq) {
-                maxSq = (double)(float)v; // Stored to a float temp, and reloaded
+                maxSq = (x87d)(float)v; // Stored to a float temp, and reloaded
             }
         }
     }
-    out.Set((float)(std::sqrt(maxSq) + (double)0.7f), centre, SURFACE_DEFAULT, 0, tColLighting{ 0xFF }); // 0x86FCC8, 0x40FD10
+    out.Set((float)(std::sqrt(maxSq) + (x87d)0.7f), centre, SURFACE_DEFAULT, 0, tColLighting{ 0xFF }); // 0x86FCC8, 0x40FD10
 }

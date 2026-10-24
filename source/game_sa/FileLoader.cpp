@@ -1242,7 +1242,7 @@ CEntity* CFileLoader::LoadObjectInstance(CFileObjectInstance* objInstance, const
     else
     {
         const auto fMult = rot.z < 0.0f ? 2.0f : -2.0f;
-        const auto fHeading = x87::acos(objInstance->m_qRotation.real) * fMult;
+        const auto fHeading = X87R(x87::acos(objInstance->m_qRotation.real) * fMult);
         newEntity->SetHeading(fHeading);
     }
 
@@ -2658,3 +2658,7 @@ void LoadingScreenLoadingFile(const char* str) {
     sprintf_s(gString, "Loading %s", screenName);
     LoadingScreen("Loading the Game", gString);
 }
+#ifdef NOTSA_PORTABLE
+// The hook registration (RH_ScopedOverloadedInstall(LoadLine, ..., char* (*)(FILESTREAM))) is what instantiates this `auto` overload on Windows; the portable build has no hook registry
+template char* CFileLoader::LoadLine<FILESTREAM>(FILESTREAM);
+#endif

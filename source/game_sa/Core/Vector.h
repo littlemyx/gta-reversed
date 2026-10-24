@@ -221,7 +221,7 @@ public:
 
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(CVector, x, y, z);
 };
-VALIDATE_SIZE(CVector, 0xC);
+VALIDATE_SIZE_FILE(CVector, 0xC);
 
 constexpr inline CVector operator-(const CVector& vecOne, const CVector& vecTwo) {
     return { vecOne.x - vecTwo.x, vecOne.y - vecTwo.y, vecOne.z - vecTwo.z };
@@ -298,6 +298,6 @@ static CVector ProjectVector(const CVector& what, const CVector& onto) {
     return onto * (DotProduct(what, onto) / onto.SquaredMagnitude());
 }
 
-[[deprecated]] inline CVector Multiply3x3_MV(const CMatrix& m, const CVector& v) { NOTSA_UNREACHABLE("Use `m.TransformVector(v)` instead"); }
-[[deprecated]] inline CVector Multiply3x3_VM(const CVector& v, const CMatrix& m) { NOTSA_UNREACHABLE("Use `m.InverseTransformVector(v)` m"); }
-[[deprecated]] inline CVector MultiplyMatrixWithVector(const CMatrix& mat, const CVector& vec) { NOTSA_UNREACHABLE("Use `m.TransformPoint(v)` instead"); }
+[[deprecated]] inline CVector Multiply3x3_MV(const CMatrix& m, const CVector& v) { NOTSA_UNREACHABLE_RET(CVector{}, "Use `m.TransformVector(v)` instead"); }
+[[deprecated]] inline CVector Multiply3x3_VM(const CVector& v, const CMatrix& m) { NOTSA_UNREACHABLE_RET(CVector{}, "Use `m.InverseTransformVector(v)` m"); }
+[[deprecated]] inline CVector MultiplyMatrixWithVector(const CMatrix& mat, const CVector& vec) { NOTSA_UNREACHABLE_RET(CVector{}, "Use `m.TransformPoint(v)` instead"); }

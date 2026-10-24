@@ -47,11 +47,11 @@ namespace notsa::audit {
 // every game restart after a marker existed) - the reason the run build used to keep a `m_Mat.Detach()` in `DeleteMarkerObject` (removed: the exe has none).
 // Note `m_Normal` is (0, 0, 1) here (+0x80 = 1.0f), not zero as in the DLL build.
 void ResetMarkers3dLikeExe(C3dMarker* markers, size_t count) {
-    static_assert(offsetof(C3dMarker, m_Atomic) == 0x48 && offsetof(C3dMarker, m_Type) == 0x50 && offsetof(C3dMarker, m_IsInUse) == 0x52 && offsetof(C3dMarker, m_IsActive) == 0x53
-               && offsetof(C3dMarker, m_ID) == 0x54 && offsetof(C3dMarker, m_Color) == 0x58 && offsetof(C3dMarker, m_PulsePeriod) == 0x5C && offsetof(C3dMarker, m_RotateRate) == 0x5E
-               && offsetof(C3dMarker, m_StartTime) == 0x60 && offsetof(C3dMarker, m_PulseFraction) == 0x64 && offsetof(C3dMarker, m_StdSize) == 0x68 && offsetof(C3dMarker, m_Size) == 0x6C
-               && offsetof(C3dMarker, m_Brightness) == 0x70 && offsetof(C3dMarker, m_DistToCam2D) == 0x74 && offsetof(C3dMarker, m_Normal) == 0x78 && offsetof(C3dMarker, m_LastMapReadX) == 0x84
-               && offsetof(C3dMarker, m_RoofHeight) == 0x8C && offsetof(C3dMarker, m_LastPosition) == 0x90 && sizeof(C3dMarker) == 0xA0);
+    VALIDATE_OFFSET(C3dMarker, m_Atomic, 0x48); VALIDATE_OFFSET(C3dMarker, m_Type, 0x50); VALIDATE_OFFSET(C3dMarker, m_IsInUse, 0x52); VALIDATE_OFFSET(C3dMarker, m_IsActive, 0x53); VALIDATE_OFFSET(C3dMarker, m_ID, 0x54); VALIDATE_OFFSET(C3dMarker, m_Color, 0x58); VALIDATE_OFFSET(C3dMarker, m_PulsePeriod, 0x5C); VALIDATE_OFFSET(C3dMarker, m_RotateRate, 0x5E); VALIDATE_OFFSET(C3dMarker, m_StartTime, 0x60); VALIDATE_OFFSET(C3dMarker, m_PulseFraction, 0x64); VALIDATE_OFFSET(C3dMarker, m_StdSize, 0x68); VALIDATE_OFFSET(C3dMarker, m_Size, 0x6C); VALIDATE_OFFSET(C3dMarker, m_Brightness, 0x70); VALIDATE_OFFSET(C3dMarker, m_DistToCam2D, 0x74); VALIDATE_OFFSET(C3dMarker, m_Normal, 0x78); VALIDATE_OFFSET(C3dMarker, m_LastMapReadX, 0x84); VALIDATE_OFFSET(C3dMarker, m_RoofHeight, 0x8C); VALIDATE_OFFSET(C3dMarker, m_LastPosition, 0x90); VALIDATE_SIZE(C3dMarker, 0xA0)
+
+
+
+;
     for (auto& m : std::span{ markers, count }) {
         m.m_Atomic        = nullptr;                    // +0x48
         m.m_Type          = MARKER3D_NA;                // word 0x101 at +0x50
@@ -423,7 +423,7 @@ C3dMarker* C3dMarkers::PlaceMarker(
         switch (type) {
         case MARKER3D_CONE:
         case MARKER3D_CONE_NO_COLLISION: {
-            pos.z += x87::sin(DegreesToRadians(m_angleDiamondDeg)) * (m->m_RoofHeight < 65535.f ? 0.15f : 0.3f);
+            pos.z += X87R(x87::sin(DegreesToRadians(m_angleDiamondDeg)) * (m->m_RoofHeight < 65535.f ? 0.15f : 0.3f));
         }
         }
 
@@ -440,7 +440,7 @@ C3dMarker* C3dMarkers::PlaceMarker(
         //> 0x7256D1 -> Moved after the `if` branch
 
         //> 0x72577E
-        m->m_Size = m->m_StdSize - x87::sin(0.f) * m->m_StdSize * pulseFraction;
+        m->m_Size = m->m_StdSize - X87R(x87::sin(0.f) * m->m_StdSize) * pulseFraction;
         if (m->m_RotateRate) {
             const auto lastPos = m->m_Mat.GetPosition();
             m->m_Mat.RotateZ(DegreesToRadians((float)(m->m_RotateRate) * CTimer::GetTimeStep()));
@@ -738,7 +738,7 @@ void tUser3dMarker::Render(RpClump* clump) const {
 
     // Update position
     CVector pos = m_vecPosition;
-    pos.z += x87::sin(DegreesToRadians(C3dMarkers::m_angleDiamondDeg)) * 0.25f;
+    pos.z += X87R(x87::sin(DegreesToRadians(C3dMarkers::m_angleDiamondDeg)) * 0.25f);
     RwFrameTranslate(frame, &pos, rwCOMBINEREPLACE);
 
     // Apply color to material of clump

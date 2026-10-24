@@ -13,6 +13,7 @@
 #include <cstdlib> // must precede the macros below (declares ::rand(void) / ::srand(unsigned))
 #include <stdlib.h>
 #include <cstdint>
+#include <source_location>
 
 namespace notsa {
 constexpr uint32_t RandStep(uint32_t seed) { return seed * 214013u + 2531011u; }
@@ -26,11 +27,18 @@ constexpr uint32_t InitialRandSeed() {
 
 inline uint32_t g_RandSeed = InitialRandSeed();
 
-inline int GameRand() {
+inline uint32_t g_RandCalls = 0; // rand() calls since the last REPLAY-DIFF trace line (Lockstep.cpp)
+// REPLAY-DIFF hook (Lockstep.cpp installs it only when NOTSA_LOCKSTEP_OUT is set; null = inert): may rewrite a srand() seed and logs the call with its source location
+inline void (*g_SrandHook)(unsigned& seed, const char* file, unsigned line) = nullptr;
+
+inline void (*g_RandHook)(const char* file, unsigned line) = nullptr; // REPLAY-DIFF pin bit 32 (per-call log "R fc file:line"); null = inert
+inline int GameRand(const std::source_location loc = std::source_location::current()) {
+    g_RandCalls++;
+    if (g_RandHook) g_RandHook(loc.file_name(), loc.line());
     g_RandSeed = RandStep(g_RandSeed);
     return (int)((g_RandSeed >> 16) & 0x7FFF);
 }
-inline void GameSRand(unsigned seed) { g_RandSeed = seed; }
+inline void GameSRand(unsigned seed, const std::source_location loc = std::source_location::current()) { if (g_SrandHook) g_SrandHook(seed, loc.file_name(), loc.line()); g_RandSeed = seed; }
 } // namespace notsa
 
 #define rand()       (::notsa::GameRand())

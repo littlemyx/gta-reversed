@@ -1,7 +1,8 @@
 /* REPLAY-DIFF probe v0: in-process frame tracer for the ORIGINAL gta_sa.exe (v1.0 US compact), loaded as a vorbisFile.dll proxy (the exe imports vorbisFile statically, so
  * DllMain runs before the exe's entry point; the 7 imports are forwarded to vorbisFile_real.dll, see rd_orig.def). Reads the game's globals at their original addresses.
  * Env: RD_OUT=<trace file>  RD_PIN=<bits> 1 = time-derived srand() seeds replaced by a constant, 2 = CTimer clock (fn at 0x5617A0) = anchor + frame*RD_STEP ms,
- *      8 = RNG re-seeded to a constant at the first traced frame (the loading screen consumes a real-time dependent number of rand() calls), 4 = psTimer (0x745270, RsTimer/OS_TimeMS) = 1000 + frame*RD_STEP once the frame counter is > 0     RD_STEP=<ms, default 16>   RD_MAXF=<frames, default 20000>
+ *      8 = RNG re-seeded to a constant at the first traced frame = the ARM POINT (the loading screen consumes a real-time dependent number of rand() calls),
+ *      16 = frame counter (0xB7CB4C) jumps FORWARD to the next multiple of 0x100000 at the arm point (game logic uses fc % n; the menu length differs per run), the pinned clock anchor is shifted back by the same number of slots (continuous clock), 4 = psTimer (0x745270, RsTimer/OS_TimeMS) = 1000 + frame*RD_STEP once the frame counter is > 0     RD_STEP=<ms, default 16>   RD_MAXF=<frames, default 20000>
  * Hooks (whole-function replacement by jmp, never calling the original): CRT rand 0x821B1E / srand 0x821B11 (one global LCG like source/standalone/GameRand.h), CTimer fn 0x5617A0, psTimer 0x745270.
  * Tick = the CTimer::Update call of the timer function (return address in 0x561B10..0x561C10): one trace line per frame, taken at the start of CTimer::Update.
  * Line: "F fc tms rng ncalls px py pz hp peds vehs scrhash"   (floats as hex bit patterns);  "S fc ra arg" for every srand() call. */
@@ -12,10 +13,12 @@
 #include <string.h>
 typedef unsigned long long u64; typedef unsigned u32;
 static FILE* g_f; static u32 g_pin, g_step = 16, g_maxf = 20000;
+#define FC_GRANULE 0x100000u
+static u32 g_rlog, g_nf; /* pin bit 32 + RD_RLOG=<n>: "R fc ra" for every rand() call of the first n traced frames */
 static volatile u32 g_seed = 1, g_calls; static int g_started; static u64 g_anchor; static int g_anchor_set;
 #define U32(a) (*(volatile u32*)(size_t)(a))
 static u64 realq(void){ LARGE_INTEGER q; QueryPerformanceCounter(&q); return (u64)q.QuadPart; }
-static int __cdecl my_rand(void){ g_seed = g_seed * 214013u + 2531011u; g_calls++; return (int)((g_seed >> 16) & 0x7FFF); }
+static int __cdecl my_rand(void){ if((g_pin & 32) && g_rlog && g_f && g_started && g_nf <= g_rlog) fprintf(g_f, "R %u %08x\n", U32(0xB7CB4C), (u32)(size_t)_ReturnAddress()); g_seed = g_seed * 214013u + 2531011u; g_calls++; return (int)((g_seed >> 16) & 0x7FFF); }
 static void __cdecl my_srand(u32 s){
   u32 a = (u32)(size_t)_ReturnAddress();
   /* time-derived seeds: GameInit 0x5BF3B0 (srand(RsTimer())), CLoadingScreen::LoadSplashes 0x5900B0 (srand(QPC)) */
@@ -25,9 +28,11 @@ static void __cdecl my_srand(u32 s){
 }
 static u32 fnv(u32 h, const void* p, int n){ const unsigned char* b = (const unsigned char*)p; while(n--){ h ^= *b++; h *= 16777619u; } return h; }
 static void tick(void){
-  static u32 nf; if(!g_f || nf >= g_maxf) return;
-  if(!g_started){ __try { if(!U32(0xB7CD98)) return; } __except(1) { return; } g_started = 1; if(g_pin & 8) g_seed = 0x2468ACE1; }   /* trace from the first frame with a player ped (game started); pin bit 8 re-seeds the RNG there */
-  nf++;
+  u32 nf = g_nf; if(!g_f || nf >= g_maxf) return;
+  if(!g_started){ __try { if(!U32(0xB7CD98)) return; } __except(1) { return; } g_started = 1; if(g_pin & 8) g_seed = 0x2468ACE1;
+    if(g_pin & 16){ u32 fc0 = U32(0xB7CB4C), to = (fc0 / FC_GRANULE + 1) * FC_GRANULE; if(g_pin & 2) g_anchor -= (u64)(to - fc0) * g_step * U32(0xB7CB2C); U32(0xB7CB4C) = to; }
+    g_calls = 0; }   /* trace from the first frame with a player ped (game started); pin bit 8 re-seeds the RNG there */
+  g_nf = ++nf;
   u32 fc = U32(0xB7CB4C), tms = U32(0xB7CB84), ped = 0, hp = 0, np = 0, nv = 0, sh = 2166136261u; float pos[3] = {0, 0, 0};
   __try {
     ped = U32(0xB7CD98);
@@ -44,11 +49,12 @@ static void tick(void){
  * the reads made by CTimer::Update / CTimer::Initialise (the "frame reads") return anchor + fc*step, every other read anchor + (fc+1)*step ("end of the frame's slot").
  * Consecutive frames therefore differ by exactly `step` (>= 14) in both kinds, and the very first Idle of a game session (g_LastTickTime = 0) sees 16 ms at fc = 0. */
 static u64 __cdecl my_timer(void){
-  u32 fc = U32(0xB7CB4C), div = U32(0xB7CB2C); u32 ra = (u32)(size_t)_ReturnAddress();
+  u32 ra = (u32)(size_t)_ReturnAddress();
   int upd = ra >= 0x561B10 && ra < 0x561C10, ini = ra >= 0x5617E0 && ra < 0x561890;
-  if(upd) tick();
+  if(upd) tick();   /* may jump fc / shift the anchor (pin 16), so fc is read after it */
+  u32 fc = U32(0xB7CB4C), div = U32(0xB7CB2C);
   if(!(g_pin & 2)) return realq();
-  if(fc) g_anchor_set = 0; else if(!g_anchor_set){ g_anchor = realq(); g_anchor_set = 1; }
+  if(g_started) { /* anchor fixed from the arm point on */ } else if(fc) g_anchor_set = 0; else if(!g_anchor_set){ g_anchor = realq(); g_anchor_set = 1; }
   return g_anchor + (u64)(fc + ((upd || ini) ? 0 : 1)) * g_step * div;
 }
 static u32 __cdecl my_pstimer(void){
@@ -73,6 +79,7 @@ BOOL WINAPI DllMain(HINSTANCE h, DWORD why, LPVOID r){
     if((e = getenv("RD_PIN"))) g_pin = strtoul(e, 0, 0);
     if((e = getenv("RD_STEP"))) g_step = atoi(e);
     if((e = getenv("RD_MAXF"))) g_maxf = atoi(e);
+    if((e = getenv("RD_RLOG"))) g_rlog = atoi(e);
     if((e = getenv("RD_OUT"))) g_f = fopen(e, "w");
     if(GetModuleHandleA(0) != (HMODULE)0x400000) return TRUE; /* not the original image */
     patch(0x821B1E, my_rand); patch(0x821B11, my_srand); patch(0x5617A0, my_timer); patch(0x745270, my_pstimer);

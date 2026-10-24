@@ -168,3 +168,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-24	MAC-R10	v4	R-10 skin audit	-	-	-	done: fog + palette bugs fixed
 2026-10-24	MAC-R12	v4	R-12 D3D FF lighting	-	-	-	done; hang in GL swap seen
 2026-10-24	MAC-WIN64	v4	portable Win x64 build	-	-	-	done: links
+2026-10-24	MAC-HL1	v4	GL loader guard + Windows CI workflow	-	-	-	done

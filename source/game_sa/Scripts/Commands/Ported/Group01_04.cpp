@@ -174,7 +174,7 @@ void SetCarCruiseSpeed(CVehicle& veh, float speed) {
     veh.m_autoPilot.m_nCruiseSpeed = speedByte; // dead store in the original (overwritten below), kept for fidelity
     // 0x858B34 = 60.0f; handling+0x88 = m_transmissionData.m_MaxFlatVelocity
     const float maxCruise = veh.m_pHandlingData->m_transmissionData.m_MaxFlatVelocity * 60.0f;
-    const double cur = (double)speedByte;
+    const x87d cur = (x87d)speedByte;
     veh.m_autoPilot.m_nCruiseSpeed = (uint8)(int32)(cur < (double)maxCruise ? cur : (double)maxCruise); // `fcom` + jnp: take `cur` only if cur < max
 }
 
@@ -198,7 +198,7 @@ bool IsCarInArea2D(CRunningScript& S, CVehicle& veh, float x1, float y1, float x
 bool IsCarInArea3D(CRunningScript& S, CVehicle& veh, CVector p1, CVector p2, int32 drawSphere) {
     const bool inArea = veh.IsWithinArea(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
     if (drawSphere) {
-        S.HighlightImportantArea({ p1.x, p1.y }, { p2.x, p2.y }, (float)(((double)p2.z + (double)p1.z) * 0.5)); // x87 stack: (z2 + z1) * 0.5f (0x858B8C), one float spill
+        S.HighlightImportantArea({ p1.x, p1.y }, { p2.x, p2.y }, (float)(((x87d)p2.z + (x87d)p1.z) * (x87d)0.5)); // x87 stack: (z2 + z1) * 0.5f (0x858B8C), one float spill
     }
     return inArea;
 }
@@ -350,12 +350,12 @@ void OverrideNextRestart(CVector pos, float heading) {
 //! 372 GET_CAR_HEADING (case @0x47CBE1): car => 1 float (degrees)
 float GetCarHeading(CVehicle& veh) {
     constexpr float RAD_TO_DEG = 57.2957763671875f; // 0x859878
-    float heading = (float)((double)veh.GetHeading() * (double)RAD_TO_DEG); // fmul + fst (float spill)
+    float heading = (float)((x87d)veh.GetHeading() * (x87d)RAD_TO_DEG); // fmul + fst (float spill)
     if (heading < 0.0f) {                                                   // fcomp 0.0 (0x858B50), `test ah,5; jp`
-        heading = (float)((double)heading + 360.0);                         // 0x859E2C
+        heading = (float)((x87d)heading + (x87d)360.0);                         // 0x859E2C
     }
     if (heading > 360.0f) {                                                 // fcomp 360.0, `test ah,0x41; jne`
-        heading = (float)((double)heading - 360.0);
+        heading = (float)((x87d)heading - (x87d)360.0);
     }
     return heading;
 }
@@ -363,14 +363,14 @@ float GetCarHeading(CVehicle& veh) {
 //! 373 SET_CAR_HEADING (case @0x47CC64): car, heading (degrees)
 void SetCarHeading(CVehicle& veh, float headingDeg) {
     constexpr float DEG_TO_RAD = 0.01745329238474369f; // 0x8595EC (float)
-    double heading = headingDeg; // stays on the x87 stack until the single float spill into the call
+    x87d heading = headingDeg; // stays on the x87 stack until the single float spill into the call
     if (heading < 0.0) {
-        heading += 360.0;
+        heading += (x87d)360.0;
     }
     if (heading > 360.0) {
-        heading -= 360.0;
+        heading -= (x87d)360.0;
     }
-    veh.SetHeading((float)(heading * (double)DEG_TO_RAD));
+    veh.SetHeading((float)(heading * (x87d)DEG_TO_RAD));
     veh.UpdateRwMatrix();
 }
 

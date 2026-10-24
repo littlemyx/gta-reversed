@@ -103,7 +103,7 @@ float GroundZIfAuto(float x, float y, float z) {
 //! Same as above, but followed by `fadd 0.5f` (0x858B8C) on the looked up Z (the `fstp` after it stores a float)
 float GroundZIfAutoPlusHalf(float x, float y, float z) {
     if (z <= -100.0f) {
-        return (float)((double)CWorld::FindGroundZForCoord(x, y) + 0.5);
+        return (float)((x87d)CWorld::FindGroundZForCoord(x, y) + (x87d)0.5);
     }
     return z;
 }
@@ -117,9 +117,9 @@ void VehSetEngineOn(CVehicle& veh) {
 CVector TransformPointOriginal(const CMatrix& m, const CVector& v) {
     const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp(), &p = m.GetPosition();
     return CVector{
-        (float)((((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x) + p.x),
-        (float)((((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y) + p.y),
-        (float)((((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y) + p.z)
+        (float)((((x87d)u.x * v.z + (x87d)f.x * v.y) + (x87d)r.x * v.x) + p.x),
+        (float)((((x87d)u.y * v.z + (x87d)r.y * v.x) + (x87d)f.y * v.y) + p.y),
+        (float)((((x87d)u.z * v.z + (x87d)r.z * v.x) + (x87d)f.z * v.y) + p.z)
     };
 }
 
@@ -150,7 +150,7 @@ int32 ReadKillFrenzyStatus() {
 
 //! 507 SQRT (case @0x47E331): float => float (`fsqrt`)
 float Sqrt(float value) {
-    return (float)std::sqrt((double)value);
+    return (float)std::sqrt((x87d)value);
 }
 
 //! 522 LOCK_CAR_DOORS (case @0x47E40A): car, lock. A null car is skipped (the 2 params are still read)
@@ -285,12 +285,12 @@ void SetAnimGroupForChar(CPed& ped, const char* name) {
 void DrawCorona(CRunningScript& S, float x, float y, float z, float size, int32 type, int32 flare, int32 r, int32 g, int32 b) {
     const CVector pos{ x, y, GroundZIfAuto(x, y, z) };
 
-    const int32  t1 = Ftol(((double)y - (double)-3000.0f) * (double)12001.0f); // 0x859A90, 0x859F1C
-    double       u  = (double)t1;
+    const int32  t1 = Ftol(((x87d)y - (x87d)-3000.0f) * (x87d)12001.0f); // 0x859A90, 0x859F1C
+    x87d       u  = (x87d)t1;
     if (t1 < 0) {
-        u += (double)4294967296.0f; // 0x858C54
+        u += (x87d)4294967296.0f; // 0x858C54
     }
-    const int32  t2 = Ftol(u + ((double)x - (double)-3000.0f));
+    const int32  t2 = Ftol(u + ((x87d)x - (x87d)-3000.0f));
     const uint32 id = (uint32)t2 + (uint32)(uintptr_t)S.m_IP + (uint32)(uintptr_t)&S;
 
     CCoronas::RegisterCorona(
@@ -454,7 +454,7 @@ MultiRet<CVector, bool> GetClosestCarNode(CVector pos) {
 //! z <= -100 => ground Z; then `z += veh->GetDistanceFromCentreOfMassToBaseOfModel()`.
 void CarGotoCoordinatesAccurate(CVehicle& veh, CVector pos) {
     pos.z = GroundZIfAuto(pos.x, pos.y, pos.z);
-    pos.z = (float)((double)veh.GetDistanceFromCentreOfMassToBaseOfModel() + (double)pos.z);
+    pos.z = (float)((x87d)veh.GetDistanceFromCentreOfMassToBaseOfModel() + (x87d)pos.z);
 
     const bool joined = CCarCtrl::JoinCarWithRoadSystemGotoCoors(&veh, pos, false, false);
     auto&      ap     = veh.m_autoPilot;
@@ -565,7 +565,7 @@ void StartCutscene() {
 //! NOTE: computed here and not through CCutsceneMgr::GetCutsceneTimeInMilleseconds - that function does `(uint64)timerS * 1000`
 //! (truncates the seconds BEFORE scaling) and is wrong against the exe.
 int32 GetCutsceneTime() {
-    return Ftol((double)CCutsceneMgr::ms_cutsceneTimerS * (double)1000.0f);
+    return Ftol((x87d)CCutsceneMgr::ms_cutsceneTimerS * (x87d)1000.0f);
 }
 
 //! 745 HAS_CUTSCENE_FINISHED (case @0x480761): no params => compare flag
@@ -602,13 +602,13 @@ bool IsProjectileInArea(float x1, float y1, float z1, float x2, float y2, float 
 //! 760 GET_CAR_FORWARD_X (case @0x4809B2): car => 1 float. `fx / sqrt(fy*fy + fx*fx)` (x87 intermediates)
 float GetCarForwardX(CVehicle& veh) {
     const auto& fwd = veh.m_matrix->GetForward();
-    return (float)((double)fwd.x / std::sqrt((double)fwd.y * (double)fwd.y + (double)fwd.x * (double)fwd.x));
+    return (float)((x87d)fwd.x / std::sqrt((x87d)fwd.y * (x87d)fwd.y + (x87d)fwd.x * (x87d)fwd.x));
 }
 
 //! 761 GET_CAR_FORWARD_Y (case @0x480A04): car => 1 float. `fy / sqrt(fy*fy + fx*fx)` (x87 intermediates)
 float GetCarForwardY(CVehicle& veh) {
     const auto& fwd = veh.m_matrix->GetForward();
-    return (float)((double)fwd.y / std::sqrt((double)fwd.y * (double)fwd.y + (double)fwd.x * (double)fwd.x));
+    return (float)((x87d)fwd.y / std::sqrt((x87d)fwd.y * (x87d)fwd.y + (x87d)fwd.x * (x87d)fwd.x));
 }
 
 //! 762 CHANGE_GARAGE_TYPE (case @0x480A57): name(8), type (byte). Nothing happens if the garage doesn't exist.
@@ -785,34 +785,34 @@ bool RotateObject(CObject& obj, float target, float rate, int32 collisionCheck) 
     constexpr float RAD_TO_DEG = 57.2957763671875f; // 0x859878
     constexpr float DEG_TO_RAD = 0.01745329238474369f; // 0x8595EC
 
-    double cur = (double)obj.GetHeading() * (double)RAD_TO_DEG;
+    x87d cur = (x87d)obj.GetHeading() * (x87d)RAD_TO_DEG;
     if (cur < 0.0) {
-        cur += 360.0;
+        cur += (x87d)360.0;
     }
     if (cur == (double)target) { // fcom + `test ah, 0x44; jp`: only an exact (ordered) equality
         return true;
     }
 
-    float d1 = (float)((double)target - cur); // stored to memory
-    double e = cur - (double)target;          // stays on the FPU stack
+    float d1 = (float)((x87d)target - cur); // stored to memory
+    x87d e = cur - (x87d)target;          // stays on the FPU stack
     if (d1 < 0.0f) {
-        d1 = (float)((double)d1 + 360.0);
+        d1 = (float)((x87d)d1 + (x87d)360.0);
     }
     if (e < 0.0) {
-        e += 360.0;
+        e += (x87d)360.0;
     }
 
     float newAngle;
     if (d1 < e) {
-        newAngle = (d1 < rate) ? target : (float)((double)rate + cur);
+        newAngle = (d1 < rate) ? target : (float)((x87d)rate + cur);
     } else {
-        newAngle = (e < (double)rate) ? target : (float)(cur - (double)rate);
+        newAngle = (e < (double)rate) ? target : (float)(cur - (x87d)rate);
     }
 
     if (collisionCheck != 0) {
         const CVector pos = obj.GetPosition();
         CMatrix       M;
-        M.SetRotateZ((float)((double)newAngle * (double)DEG_TO_RAD));
+        M.SetRotateZ((float)((x87d)newAngle * (x87d)DEG_TO_RAD));
         M.GetPosition().x = M.GetPosition().x + pos.x;
         M.GetPosition().y = M.GetPosition().y + pos.y;
         M.GetPosition().z = M.GetPosition().z + pos.z;
@@ -821,7 +821,7 @@ bool RotateObject(CObject& obj, float target, float rate, int32 collisionCheck) 
         }
     }
 
-    obj.SetHeading((float)((double)newAngle * (double)DEG_TO_RAD));
+    obj.SetHeading((float)((x87d)newAngle * (x87d)DEG_TO_RAD));
     obj.UpdateRwMatrix();
     obj.UpdateRwFrame();
     return newAngle == target; // `test ah, 0x44; jp` => only an exact (ordered) equality
@@ -842,18 +842,18 @@ bool SlideObject(CObject& obj, float tx, float ty, float tz, float sx, float sy,
     //! One axis: d = c - t; d >= 0: `d > s ? c - s : t`; d < 0 or NaN: `-d > s ? s + c : t`
     //! X: `d` stays on the FPU stack (extended precision, NOT rounded to float); Y and Z: `d` is spilled to a float temp first.
     const auto Step = [](float c, float t, float s, bool spill) -> float {
-        double d = (double)c - (double)t;
+        x87d d = (x87d)c - (x87d)t;
         if (spill) {
-            d = (double)(float)d;
+            d = (x87d)(float)d;
         }
         if (!(d < 0.0) && !std::isnan(d)) { // `fcom 0; test ah, 1; jne neg`: C0 (less) is also set for NaN
             if (d > (double)s) {
-                return (float)((double)c - (double)s);
+                return (float)((x87d)c - (x87d)s);
             }
             return t;
         }
         if (-d > (double)s) {
-            return (float)((double)s + (double)c);
+            return (float)((x87d)s + (x87d)c);
         }
         return t;
     };
@@ -929,7 +929,7 @@ void MakeObjectTargettable(CObject& obj, int32 targettable) {
 //! armour += amount; players are limited to their max armour (`!(max > armour) => max`), others to 100 (`!(armour < 100) => 100`);
 //! finally `!(armour > 0) => 0`.
 void AddArmourToChar(CPed& ped, int32 amount) {
-    ped.m_fArmour = (float)((double)amount + (double)ped.m_fArmour);
+    ped.m_fArmour = (float)((x87d)amount + (x87d)ped.m_fArmour);
     if (ped.IsPlayer()) {
         const auto  slot = CWorld::FindPlayerSlotWithPedPointer(&ped);
         const float max  = (float)CWorld::Players[slot].m_nMaxArmour;
@@ -967,7 +967,7 @@ void CloseGarage(const char* garageName) {
 void SetVisibilityOfClosestObjectOfType(CVector pos, float radius, notsa::script::Model model, int32 visible) {
     pos.z = GroundZIfAuto(pos.x, pos.y, pos.z);
 
-    float best = (float)((double)radius + (double)radius); // `fadd st(0), st(0)`, stored as float
+    float best = (float)((x87d)radius + (x87d)radius); // `fadd st(0), st(0)`, stored as float
     CEntity* closest = nullptr;
 
     CEntity* entities[16];
@@ -979,10 +979,10 @@ void SetVisibilityOfClosestObjectOfType(CVector pos, float radius, notsa::script
     for (uint16 i = 0; (int32)i < (int32)count; i++) {
         CEntity* const entity = entities[i];
         const CVector  ep     = entity->GetPosition();
-        const double   dz     = (double)ep.z - (double)pos.z;
-        const double   dy     = (double)ep.y - (double)pos.y;
-        const double   dx     = (double)ep.x - (double)pos.x;
-        const double   dist   = std::sqrt((dx * dx + dy * dy) + dz * dz);
+        const x87d   dz     = (x87d)ep.z - (x87d)pos.z;
+        const x87d   dy     = (x87d)ep.y - (x87d)pos.y;
+        const x87d   dx     = (x87d)ep.x - (x87d)pos.x;
+        const x87d   dist   = std::sqrt((dx * dx + dy * dy) + dz * dz);
         if (dist < (double)best) { // `fcom; test ah, 5; jp skip`
             best    = (float)dist;
             closest = entity;
@@ -1043,7 +1043,7 @@ CPed* CreateRandomChar(CRunningScript& S, CVector pos) {
     ped->SetCharCreatedBy(PED_MISSION);
     ped->bAllowMedicsToReviveMe = false; // `&= 0x7FFFFFFF` of the flags at +0x46C
 
-    pos.z = (float)((double)GroundZIfAuto(pos.x, pos.y, pos.z) + 1.0);
+    pos.z = (float)((x87d)GroundZIfAuto(pos.x, pos.y, pos.z) + (x87d)1.0);
     ped->SetPosn(pos);
     ped->SetOrientation(0.0f, 0.0f, 0.0f);
     CTheScripts::ClearSpaceForMissionEntity(pos, ped);

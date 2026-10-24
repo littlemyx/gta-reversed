@@ -74,20 +74,20 @@ namespace {
 //! the same way (0x44E480: in place, float stores; non-positive squared length => x = 1.0f only) and dotAD in [0, |AD|] (NaN => false).
 //! (The debug highlight call 0x486990 is only done if the byte 0x859CF8 is set; it is 0.)
 bool IsPointInAngledAreaOriginal(const CVector& p, float x1, float y1, float x2, float y2, float width) {
-    constexpr double PI_HALF = (double)1.5707963705062866f; // 0x858FE4
-    constexpr double TWO_PI  = (double)6.2831854820251465f; // 0x858CBC
-    double angle = CGeneral::GetRadianAngleBetweenPointsExt(x1, y1, x2, y2) + PI_HALF; // 0x53CBE0, keeps the extended result
+    constexpr x87d PI_HALF = (x87d)1.5707963705062866f; // 0x858FE4
+    constexpr x87d TWO_PI  = (x87d)6.2831854820251465f; // 0x858CBC
+    x87d angle = X87R(CGeneral::GetRadianAngleBetweenPointsExt(x1, y1, x2, y2) + PI_HALF); // 0x53CBE0, keeps the extended result
     while (angle < 0.0) { // fcom 0.0; test ah, 5; jp (exits the loop if not less)
         angle += TWO_PI;
     }
     while (angle > TWO_PI) { // fcom 2pi; test ah, 0x41; jne
         angle -= TWO_PI;
     }
-    double sn, cs;
+    x87d sn, cs;
     {
         // fsin / fcos of the extended angle
-        const double a = angle;
-        double       s, c;
+        const x87d a = angle;
+        x87d       s, c;
 #ifdef NOTSA_PORTABLE
 #include "x87_lifted/Group24b_SinCos.inc"
 #else
@@ -103,34 +103,34 @@ bool IsPointInAngledAreaOriginal(const CVector& p, float x1, float y1, float x2,
         sn = s;
         cs = c;
     }
-    const float cosW = (float)(-(cs * (double)width)); // fchs; fst dword
-    const float dx   = (float)(sn * (double)width + (double)x1);
-    const float dy   = (float)((double)cosW + (double)y1);
+    const float cosW = (float)(-(cs * (x87d)width)); // fchs; fst dword
+    const float dx   = (float)(sn * (x87d)width + (x87d)x1);
+    const float dy   = (float)((x87d)cosW + (x87d)y1);
 
     // AB
     const float  abx = x2 - x1;
-    const double aby = (double)y2 - (double)y1; // stays in the FPU
+    const x87d aby = (x87d)y2 - (x87d)y1; // stays in the FPU
     // AD
     const float adx = dx - x1;
     const float ady = dy - y1;
-    const double abSq = aby * aby + (double)abx * abx;
+    const x87d abSq = aby * aby + (x87d)abx * abx;
     const float  abLen = (float)std::sqrt(abSq);
-    const double adSq = (double)ady * ady + (double)adx * adx;
+    const x87d adSq = (x87d)ady * ady + (x87d)adx * adx;
     const float  adLen = (float)std::sqrt(adSq);
     const float  relx = p.x - x1;
     const float  rely = p.y - y1;
 
-    double nx, ny;
+    x87d nx, ny;
     if (abSq > 0.0 || std::isnan(abSq)) { // fcom 0.0; test ah, 0x41; jp -> normalise
-        const double inv  = 1.0 / std::sqrt(abSq);
+        const x87d inv  = (x87d)1.0 / std::sqrt(abSq);
         const float  invF = (float)inv; // fst dword [temp]
-        nx = inv * (double)abx;
-        ny = aby * (double)invF;
+        nx = inv * (x87d)abx;
+        ny = aby * (x87d)invF;
     } else {
-        nx = 1.0;
+        nx = (x87d)1.0;
         ny = aby;
     }
-    const double dotAB = ny * (double)rely + (double)relx * nx;
+    const x87d dotAB = ny * (x87d)rely + (x87d)relx * nx;
     if (dotAB < 0.0 || std::isnan(dotAB)) { // fcom 0.0; test ah, 1; jne
         return false;
     }
@@ -141,16 +141,16 @@ bool IsPointInAngledAreaOriginal(const CVector& p, float x1, float y1, float x2,
     // 0x44E480: CVector2D::Normalise (in place)
     float adnx = adx, adny = ady;
     {
-        const double sq = (double)adny * adny + (double)adnx * adnx; // fld [ecx+4]; fld [ecx]; ...
+        const x87d sq = (x87d)adny * adny + (x87d)adnx * adnx; // fld [ecx+4]; fld [ecx]; ...
         if (sq > 0.0 || std::isnan(sq)) {
-            const double inv = 1.0 / std::sqrt(sq);
-            adnx = (float)(inv * (double)adnx);
-            adny = (float)(inv * (double)ady);
+            const x87d inv = (x87d)1.0 / std::sqrt(sq);
+            adnx = (float)(inv * (x87d)adnx);
+            adny = (float)(inv * (x87d)ady);
         } else {
             adnx = 1.0f;
         }
     }
-    const double dotAD = (double)rely * adny + (double)relx * adnx;
+    const x87d dotAD = (x87d)rely * adny + (x87d)relx * adnx;
     if (dotAD < 0.0 || std::isnan(dotAD)) {
         return false;
     }

@@ -99,10 +99,10 @@ bool FindClosestScriptedAttractor(
                 continue;
             }
             const CVector w  = entity->TransformFromObjectSpace(fx->m_Pos); // 0x5334F0
-            const double  dx = (double)pos.x - (double)w.x;
-            const double  dy = (double)pos.y - (double)w.y;
-            const double  dz = (double)pos.z - (double)w.z;
-            const double  sq = (dz * dz + dy * dy) + dx * dx;
+            const x87d  dx = (x87d)pos.x - (x87d)w.x;
+            const x87d  dy = (x87d)pos.y - (x87d)w.y;
+            const x87d  dz = (x87d)pos.z - (x87d)w.z;
+            const x87d  sq = (dz * dz + dy * dy) + dx * dx;
             if (sq < (double)best) { // fcom + `test ah, 5; jp skip`: only when strictly less (ordered)
                 best      = (float)sq;
                 outEffect = fx;

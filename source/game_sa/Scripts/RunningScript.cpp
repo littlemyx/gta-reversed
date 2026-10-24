@@ -346,8 +346,8 @@ void CalculateAngledAreaCorners(float x1, float y1, float x2, float y2, float wi
     }
     const auto s = x87::sin(angle);
     const auto co = x87::cos(angle);
-    c = CVector2D{ (float)(x2 + s * width), (float)(-(co * width) + y2) };
-    d = CVector2D{ (float)(s * width + x1), (float)(-(co * width) + y1) };
+    c = CVector2D{ (float)(x2 + X87R(s * width)), (float)(-(X87R(co * width)) + y2) };
+    d = CVector2D{ (float)(X87R(s * width) + x1), (float)(-(X87R(co * width)) + y1) };
 }
 
 //! Checks if the point is within the angled area (ignoring Z)

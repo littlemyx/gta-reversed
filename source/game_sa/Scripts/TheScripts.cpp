@@ -1811,14 +1811,14 @@ void CTheScripts::DrawScriptSpritesAndRectangles(bool drawBeforeFade) {
             // This is 2D rotation, couldn't find a better function aside from
             // using matricies or quaternions.
             ScriptSprites[rt.m_nTextureId].Draw(
-                -cos * vAM.x + sin * vAM.y + mid.x,
-                -sin * vAM.x - cos * vAM.y + mid.y,
-                +sin * vAM.y + cos * vAM.x + mid.x,
-                +sin * vAM.x - cos * vAM.y + mid.y,
-                -cos * vAM.x - sin * vAM.y + mid.x,
-                +cos * vAM.y - sin * vAM.x + mid.y,
-                +cos * vAM.x - sin * vAM.y + mid.x,
-                +sin * vAM.x + cos * vAM.y + mid.y,
+                X87R(-cos * vAM.x) + X87R(sin * vAM.y) + mid.x,
+                X87R(-sin * vAM.x) - X87R(cos * vAM.y) + mid.y,
+                X87R(+sin * vAM.y) + X87R(cos * vAM.x) + mid.x,
+                X87R(+sin * vAM.x) - X87R(cos * vAM.y) + mid.y,
+                X87R(-cos * vAM.x) - X87R(sin * vAM.y) + mid.x,
+                X87R(+cos * vAM.y) - X87R(sin * vAM.x) + mid.y,
+                X87R(+cos * vAM.x) - X87R(sin * vAM.y) + mid.x,
+                X87R(+sin * vAM.x) + X87R(cos * vAM.y) + mid.y,
                 rt.m_nTransparentColor
             );
             break;
@@ -1847,10 +1847,10 @@ void CTheScripts::ScriptDebugCircle2D(float x, float y, float width, float heigh
         return (r << 24) | (a << 16) | (b << 8) | g;
     };
     const auto Point = [&](int32 i) { // x87: everything kept in extended precision until the float store
-        const double angle = (double)i * (double)(std::numbers::pi_v<float> / 8.f); // 0x859F50 (float)
+        const x87d angle = (x87d)i * (x87d)(std::numbers::pi_v<float> / 8.f); // 0x859F50 (float)
         return CVector2D{
-            (float)(x87::sin(angle) * (double)width  + (double)x),
-            (float)(x87::cos(angle) * (double)height + (double)y)
+            (float)(X87R(x87::sin(angle) * (double)width)  + (x87d)x),
+            (float)(X87R(x87::cos(angle) * (double)height) + (x87d)y)
         };
     };
 

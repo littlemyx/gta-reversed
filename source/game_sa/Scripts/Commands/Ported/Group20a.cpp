@@ -72,12 +72,12 @@ CPointRoute& ScriptRoute() { return NOTSA_GLOBAL_EXPR(0xC18D50, (CPointRoute), n
 //! 0x59C910 (`CVector::Normalise`): the squared length and the inverse length stay in extended precision.
 //! A non-positive squared length only sets `x = 1.0f` (y and z are left as they are); NaN goes the regular (sqrt) way.
 void NormaliseOriginal(CVector& v) {
-    const double magSq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    const x87d magSq = ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
     if (magSq <= 0.0) { // 0x858B50 (0.0f); fcom + test ah, 0x41 + jp
         v.x = 1.0f;
         return;
     }
-    const double inv = 1.0 / std::sqrt(magSq); // fsqrt; fdivr 1.0f (0x858624)
+    const x87d inv = (x87d)1.0 / std::sqrt(magSq); // fsqrt; fdivr 1.0f (0x858624)
     v.x = (float)(inv * v.x);
     v.y = (float)(inv * v.y);
     v.z = (float)(inv * v.z);
@@ -86,15 +86,15 @@ void NormaliseOriginal(CVector& v) {
 //! 0x59C730 (`CrossProduct(out, a, b)`): each component is a difference of two (exact) products, rounded to float once
 CVector CrossProductOriginal(const CVector& a, const CVector& b) {
     return CVector{
-        (float)((double)b.z * a.y - (double)a.z * b.y),
-        (float)((double)a.z * b.x - (double)b.z * a.x),
-        (float)((double)a.x * b.y - (double)b.x * a.y)
+        (float)((x87d)b.z * a.y - (x87d)a.z * b.y),
+        (float)((x87d)a.z * b.x - (x87d)b.z * a.x),
+        (float)((x87d)a.x * b.y - (x87d)b.x * a.y)
     };
 }
 
 //! 0x406DA0 (squared length): `(x*x + y*y) + z*z` kept in extended precision (not rounded to float)
 double SquaredMagnitudeOriginal(const CVector& v) {
-    return ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    return ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
 }
 
 //! 0x6070F0 (unreversed): adds a copy of a decision maker (by index; -1 => the default mission ped (type 0) / group (type != 0) one)
@@ -173,7 +173,7 @@ void ApplyForceToCar(CVehicle& veh, CVector force, CVector offset) {
     const CVector comWorld2 = TransformVectorOriginal(mat, veh.m_vecCentreOfMass); // (the exe transforms it a second time)
     const CVector rel{ offset.x - comWorld2.x, offset.y - comWorld2.y, offset.z - comWorld2.z }; // 0x40FE60
     const CVector torque = CrossProductOriginal(rel, dir); // 0x59C730 (rel x dir)
-    const float   scale  = (float)(1.0 / (SquaredMagnitudeOriginal(torque) / (double)veh.m_fTurnMass + 1.0 / (double)veh.m_fMass)); // 0x406DA0
+    const float   scale  = (float)((x87d)1.0 / (X87R(SquaredMagnitudeOriginal(torque) / (double)veh.m_fTurnMass) + (x87d)1.0 / (x87d)veh.m_fMass)); // 0x406DA0
 
     force.x = force.x * scale; // 0x40FEF0 (`force *= scale`)
     force.y = force.y * scale;
@@ -329,7 +329,7 @@ bool HasObjectOfTypeBeenSmashed(float x, float y, float z, float radius, notsa::
         }
         const CVector objPos = obj->GetPosition(); // matrix ? matrix->pos : placement
         const CVector diff{ pos.x - objPos.x, pos.y - objPos.y, pos.z - objPos.z }; // 0x40FE60
-        const double  dist = std::sqrt(SquaredMagnitudeOriginal(diff)); // 0x4082C0 (kept in extended precision)
+        const x87d  dist = X87R(std::sqrt(SquaredMagnitudeOriginal(diff))); // 0x4082C0 (kept in extended precision)
         if (dist <= (double)radius) { // fcomp + test ah, 0x41 + jp: ordered `<=`
             found = true;
         }

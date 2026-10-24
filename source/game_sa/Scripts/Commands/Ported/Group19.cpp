@@ -239,13 +239,13 @@ void ClearAllCharRelationships(CPed& ped, int32 acquaintanceId) {
 //! (`fcomp 0.0f`, ordered `< 0`) is made on the x87 register (NOT rounded to float: a tiny negative product that rounds to -0.0f still adds); then
 //! + 360.0f (0x859E2C) onto the stored float; then the float > 360 (ordered) => - 360.
 float GetCarPitchScript(CVehicle& veh) {
-    const double product = (double)static_cast<CAutomobile&>(veh).GetCarPitch() * (double)57.2957763671875f;
+    const x87d product = (x87d)static_cast<CAutomobile&>(veh).GetCarPitch() * (x87d)57.2957763671875f;
     float        pitch   = (float)product;
     if (product < 0.0) {
-        pitch = (float)((double)pitch + 360.0);
+        pitch = (float)((x87d)pitch + (x87d)360.0);
     }
     if (pitch > 360.0f) {
-        pitch = (float)((double)pitch - 360.0);
+        pitch = (float)((x87d)pitch - (x87d)360.0);
     }
     return pitch;
 }
@@ -622,7 +622,7 @@ void ListenToPlayerGroupCommands(CPed& ped, int32 listen) {
 //! CTaskSimpleSlideToCoord(pos, angle, speed) (0x66C3E0).
 void TaskCharSlideToCoord(CRunningScript& S, eScriptCommands cmd, int32 pedHandle, float x, float y, float z, float heading, float speed) {
     const CVector pos{ x, y, z };
-    const float   angle = (float)((double)heading * (double)0.017453292f);
+    const float   angle = (float)((x87d)heading * (x87d)0.017453292f);
     if (speed < 0.0f) {
         speed = 0.1f; // 0x3DCCCCCD
     }

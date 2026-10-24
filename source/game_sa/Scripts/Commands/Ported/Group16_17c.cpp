@@ -266,7 +266,7 @@ void SetPlaybackSpeed(CVehicle* veh, float speed) {
 //! squared 3D magnitude (0x406DA0: ((x*x + y*y) + z*z)) strictly < radiusSq (`test ah, 5; jp`: ordered "below") sets the flag
 bool AreAnyCharsNearChar(CPed& ped, float radius) {
     const CVector pos    = ped.GetPosition();
-    const float   radSq  = (float)((double)radius * (double)radius);
+    const float   radSq  = (float)((x87d)radius * (x87d)radius);
     auto* const   pool   = GetPedPool();
     bool          result = false;
     for (auto i = pool->GetSize(); i != 0;) {
@@ -280,7 +280,7 @@ bool AreAnyCharsNearChar(CPed& ped, float radius) {
         }
         const CVector otherPos = other->GetPosition();
         const CVector d{ otherPos.x - pos.x, otherPos.y - pos.y, otherPos.z - pos.z };
-        const double  sq = ((double)d.x * d.x + (double)d.y * d.y) + (double)d.z * d.z;
+        const x87d  sq = ((x87d)d.x * d.x + (x87d)d.y * d.y) + (x87d)d.z * d.z;
         if (sq < (double)radSq) {
             result = true;
         }

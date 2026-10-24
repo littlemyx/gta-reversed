@@ -157,18 +157,18 @@ void TaskFollowFootsteps(eScriptCommands command, CRunningScript& S, int32 pedHa
 //! otherwise (or NaN armour) rest = amount - armour, armour = 0). health = health - rest (the extended `rest` is subtracted, the result is
 //! stored as float). If the (unrounded) result is <= 0: health = 0 and a CEventScriptCommand(3, CTaskComplexDie(...)) is added to the ped's event group.
 void DamageChar(CPed& ped, int32 amount, int32 armourFirst) {
-    double rest = (double)amount; // fild
+    x87d rest = (x87d)amount; // fild
     if (armourFirst != 0) {
-        const double armour = ped.m_fArmour;
+        const x87d armour = ped.m_fArmour;
         if (rest <= armour) {
             ped.m_fArmour = (float)(armour - rest);
-            rest          = 0.0;
+            rest          = (x87d)0.0;
         } else { // (also: NaN armour)
             rest          = rest - armour;
             ped.m_fArmour = 0.0f;
         }
     }
-    const double health = (double)ped.m_fHealth - rest;
+    const x87d health = (x87d)ped.m_fHealth - rest;
     ped.m_fHealth       = (float)health;
     if (!(health <= 0.0)) { // fcomp + `test ah, 0x41; jp` => returns if health > 0 or unordered
         return;

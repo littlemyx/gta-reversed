@@ -122,7 +122,7 @@ void TurnCarToFaceCoord(CVehicle& veh, float x, float y) {
     const float dx = pos.x - x; // both differences are spilled to float temps
     const float dy = pos.y - y;
     // The arctangent stays on the x87 stack, `+ pi/2` (0x858FE4) is rounded together with it, the result is spilled to a float
-    float heading = (float)(CGeneral::GetATanOfXYExt(dx, dy) + (double)1.5707963705062866f);
+    float heading = (float)(X87R(CGeneral::GetATanOfXYExt(dx, dy) + (double)1.5707963705062866f));
     if (heading > 6.2831854820251465f) { // 2 pi, 0x858CBC
         heading -= 6.2831854820251465f;
     }

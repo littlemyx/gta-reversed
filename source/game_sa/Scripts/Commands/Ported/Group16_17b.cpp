@@ -86,7 +86,7 @@ void TaskGotoCharOffset(eScriptCommands command, CRunningScript& S, int32 pedHan
     if (time < 0) { // `test edi, edi; jge`
         time = 50000;
     }
-    const float angle = (float)((double)angleDeg * (double)DEG_TO_RAD_F); // `fmul` + `fstp dword`
+    const float angle = (float)((x87d)angleDeg * (x87d)DEG_TO_RAD_F); // `fmul` + `fstp dword`
     auto* const task  = new CTaskComplexSeekEntityRadiusAngleOffset{
         target, time, 1000, 1.0f, 2.0f, 2.0f, true, true,
         CEntitySeekPosCalculatorRadiusAngleOffset{ radius, angle }

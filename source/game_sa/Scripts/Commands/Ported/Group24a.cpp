@@ -116,7 +116,7 @@ void SetEntryExitFlagByName(const char* name, uint16 flag, bool enable) {
 
 //! 0x4082C0 (`CVector::Magnitude`): the sum of squares and the square root stay in extended precision
 double MagnitudeOriginal(const CVector& v) {
-    return std::sqrt(((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z);
+    return std::sqrt(((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z);
 }
 
 //! 2400 SET_PLAYER_DISPLAY_VITAL_STATS_BUTTON (case @0x47803E): pad, enable  -- CPad::GetPad(pad)->bDisablePlayerDisplayVitalStats (+0x11F) = (enable == 0)
@@ -137,11 +137,11 @@ OpcodeResult CreateMenuGrid(CRunningScript& S) {
     char title[16]{};
     ReadMenuText(S, title);
     S.CollectParameters(7);
-    const double widthScale  = (double)RsGlobal.maximumWidth * (double)SCREEN_RECIPROCAL_X; // 0x859520
-    const double heightScale = (double)RsGlobal.maximumHeight * (double)SCREEN_RECIPROCAL_Y; // 0x859524
-    const float  x           = (float)((double)ScriptParams[0].fParam * widthScale);
-    const float  w           = (float)(widthScale * (double)ScriptParams[2].fParam);
-    const float  y           = (float)(heightScale * (double)ScriptParams[1].fParam);
+    const x87d widthScale  = (x87d)RsGlobal.maximumWidth * (x87d)SCREEN_RECIPROCAL_X; // 0x859520
+    const x87d heightScale = (x87d)RsGlobal.maximumHeight * (x87d)SCREEN_RECIPROCAL_Y; // 0x859524
+    const float  x           = (float)((x87d)ScriptParams[0].fParam * widthScale);
+    const float  w           = (float)(widthScale * (x87d)ScriptParams[2].fParam);
+    const float  y           = (float)(heightScale * (x87d)ScriptParams[1].fParam);
     const auto   id          = CMenuSystem::CreateNewMenu(
         CMenuSystem::MENU_TYPE_GRID,
         title,

@@ -94,7 +94,7 @@ float GroundZIfAuto(float x, float y, float z) {
 //! Same as above, but followed by `fadd 0.5f` (0x858B8C) on the looked up Z (the `fstp` after it stores a float)
 float GroundZIfAutoPlusHalf(float x, float y, float z) {
     if (z <= -100.0f) {
-        return (float)((double)CWorld::FindGroundZForCoord(x, y) + 0.5);
+        return (float)((x87d)CWorld::FindGroundZForCoord(x, y) + (x87d)0.5);
     }
     return z;
 }
@@ -103,9 +103,9 @@ float GroundZIfAutoPlusHalf(float x, float y, float z) {
 CVector TransformPointOriginal(const CMatrix& m, const CVector& v) {
     const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp(), &p = m.GetPosition();
     return CVector{
-        (float)((((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x) + p.x),
-        (float)((((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y) + p.y),
-        (float)((((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y) + p.z)
+        (float)((((x87d)u.x * v.z + (x87d)f.x * v.y) + (x87d)r.x * v.x) + p.x),
+        (float)((((x87d)u.y * v.z + (x87d)r.y * v.x) + (x87d)f.y * v.y) + p.y),
+        (float)((((x87d)u.z * v.z + (x87d)r.z * v.x) + (x87d)f.z * v.y) + p.z)
     };
 }
 
@@ -343,11 +343,11 @@ void FreezeCarPositionAndDontLoadCollision(CRunningScript& S, CVehicle& veh, int
 
 //! 0x59C910 - `CVector::Normalise` as the original evaluates it (sum of squares and reciprocal root stay in extended precision)
 void NormaliseOriginal(CVector& v) {
-    const double sumSq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    const x87d sumSq = ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
     if (sumSq <= 0.0) {
         v.x = 1.0f; // (NaN takes the sqrt path)
     } else {
-        const double recip = 1.0 / std::sqrt(sumSq);
+        const x87d recip = (x87d)1.0 / std::sqrt(sumSq);
         v.x = (float)(v.x * recip);
         v.y = (float)(v.y * recip);
         v.z = (float)(v.z * recip);
@@ -357,9 +357,9 @@ void NormaliseOriginal(CVector& v) {
 //! 0x59C730 - `CrossProduct(a, b)`; the products stay in the FPU registers
 CVector CrossProductOriginal(const CVector& a, const CVector& b) {
     return {
-        (float)((double)b.z * a.y - (double)a.z * b.y),
-        (float)((double)b.x * a.z - (double)a.x * b.z),
-        (float)((double)b.y * a.x - (double)a.y * b.x),
+        (float)((x87d)b.z * a.y - (x87d)a.z * b.y),
+        (float)((x87d)b.x * a.z - (x87d)a.x * b.z),
+        (float)((x87d)b.y * a.x - (x87d)a.y * b.x),
     };
 }
 
@@ -367,9 +367,9 @@ CVector CrossProductOriginal(const CVector& a, const CVector& b) {
 CVector TransformVectorOriginal(const CMatrix& m, const CVector& v) {
     const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp();
     return CVector{
-        (float)(((double)u.x * v.z + (double)f.x * v.y) + (double)r.x * v.x),
-        (float)(((double)u.y * v.z + (double)r.y * v.x) + (double)f.y * v.y),
-        (float)(((double)u.z * v.z + (double)r.z * v.x) + (double)f.z * v.y)
+        (float)(((x87d)u.x * v.z + (x87d)f.x * v.y) + (x87d)r.x * v.x),
+        (float)(((x87d)u.y * v.z + (x87d)r.y * v.x) + (x87d)f.y * v.y),
+        (float)(((x87d)u.z * v.z + (x87d)r.z * v.x) + (x87d)f.z * v.y)
     };
 }
 
@@ -377,15 +377,15 @@ CVector TransformVectorOriginal(const CMatrix& m, const CVector& v) {
 CVector Multiply3x3VMOriginal(const CVector& v, const CMatrix& m) {
     const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp();
     return CVector{
-        (float)(((double)r.y * v.y + (double)r.z * v.z) + (double)v.x * r.x),
-        (float)(((double)f.y * v.y + (double)f.x * v.x) + (double)f.z * v.z),
-        (float)(((double)u.y * v.y + (double)u.x * v.x) + (double)u.z * v.z)
+        (float)(((x87d)r.y * v.y + (x87d)r.z * v.z) + (x87d)v.x * r.x),
+        (float)(((x87d)f.y * v.y + (x87d)f.x * v.x) + (x87d)f.z * v.z),
+        (float)(((x87d)u.y * v.y + (x87d)u.x * v.x) + (x87d)u.z * v.z)
     };
 }
 
 //! 0x4082C0 - `CVector::Magnitude`, the result stays in the FPU register
 double MagnitudeOriginal(const CVector& v) {
-    return std::sqrt(((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z);
+    return std::sqrt(((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z);
 }
 
 //! 0x411A30 - `CVector::operator/=(float)`: the reciprocal `1.0f / d` is computed ONCE by the FPU (rounded to the current precision control: the
@@ -505,7 +505,7 @@ void ShuffleCardDecks(int32 numDecks) {
         for (int32 deck = 0; deck < numDecks; deck++) {
             const int32 count = (int16)remaining; // movsx esi, di
             const int32 r     = rand() & 0xFFFF;
-            const int32 idx   = (int16)(int32)(double)((double)r * (double)(1.0f / 32768.0f) * (double)count); // 0x858B14, _ftol, movsx
+            const int32 idx   = (int16)(int32)(double)((x87d)r * (x87d)(1.0f / 32768.0f) * (x87d)count); // 0x858B14, _ftol, movsx
             const int32 card  = avail[idx];
             CTheScripts::CardStack[card] = (int16)value;
             if (idx < count) {
@@ -537,12 +537,12 @@ int32 FetchNextCard() {
 //! SetIsStatic(false) (vtable +0x10) + AddToMovingList().
 void AddToObjectRotationVelocity(CObject& obj, CVector v) {
     constexpr float K = 0.02f; // 0x858B38
-    const CVector   scaled{ (float)((double)v.x * K), (float)((double)v.y * K), (float)((double)v.z * K) };
+    const CVector   scaled{ (float)((x87d)v.x * K), (float)((x87d)v.y * K), (float)((x87d)v.z * K) };
     CVector         turn = obj.m_vecTurnSpeed;
     const CVector   rot  = TransformVectorOriginal(obj.GetMatrix(), scaled); // 0x59C790
-    turn.x = (float)((double)turn.x + (double)rot.x);
-    turn.y = (float)((double)turn.y + (double)rot.y);
-    turn.z = (float)((double)turn.z + (double)rot.z);
+    turn.x = (float)((x87d)turn.x + (x87d)rot.x);
+    turn.y = (float)((x87d)turn.y + (x87d)rot.y);
+    turn.z = (float)((x87d)turn.z + (x87d)rot.z);
     if (obj.m_nFlags & 4) {
         obj.SetIsStatic(false);
         obj.AddToMovingList();
@@ -554,14 +554,14 @@ void AddToObjectRotationVelocity(CObject& obj, CVector v) {
 //! turnSpeed = rotate(matrix, (x, y, z) * timeStep) * 0.02f (static handling as above, before the store)
 void SetObjectRotationVelocity(CObject& obj, CVector v) {
     constexpr float K    = 0.02f; // 0x858B38
-    const double    step = CTimer::ms_fTimeStep;
+    const x87d    step = CTimer::ms_fTimeStep;
     const CVector   scaled{ (float)(step * v.x), (float)(step * v.y), (float)(step * v.z) };
     const CVector   rot = TransformVectorOriginal(obj.GetMatrix(), scaled);
     if (obj.m_nFlags & 4) {
         obj.SetIsStatic(false);
         obj.AddToMovingList();
     }
-    obj.m_vecTurnSpeed = CVector{ (float)((double)rot.x * K), (float)((double)rot.y * K), (float)((double)rot.z * K) }; // 0x45AFB0
+    obj.m_vecTurnSpeed = CVector{ (float)((x87d)rot.x * K), (float)((x87d)rot.y * K), (float)((x87d)rot.z * K) }; // 0x45AFB0
 }
 
 //! 1443 IS_OBJECT_STATIC (case @0x48F260): object (no null check) => compare flag = GetIsStatic()
@@ -572,10 +572,10 @@ bool IsObjectStatic(CObject& obj) {
 //! The CRT acos (0x822380 -> 0x82239D) on the x87 stack at the CURRENT precision control: |x| < 1 => atan2(sqrt((1 + x) * (1 - x)), x) (fpatan); x == 1 => 0;
 //! x == -1 => pi; other (|x| > 1, inf) => the negative QNaN constant (0x8E3130); NaN => returned as is. (Same sequence as CQuaternion::CalcThetaFromQuats.)
 double AcosCrt(double x) {
-    const double ad   = std::fabs(x);
+    const x87d ad   = X87R(std::fabs(x));
     const int    mode = ad < 1.0 ? 0 : x == 1.0 ? 1 : x == -1.0 ? 2 : x != x ? 4 : 3;
     static const unsigned char qnan[10] = { 0, 0, 0, 0, 0, 0, 0, 0xC0, 0xFF, 0xFF };
-    double                     out;
+    x87d                     out;
 #ifdef NOTSA_PORTABLE
 #include "x87_lifted/Group13_AcosCrt.inc"
 #else
@@ -632,25 +632,25 @@ double Fsqrt(double v) {
 //! 1444 GET_ANGLE_BETWEEN_2D_VECTORS (case @0x48F2A2): ax, ay, bx, by => 1 float (degrees)
 //! acos(dot / (|a| * |b|)) * 57.29578 (0x859878); everything stays on the x87 stack (acos = the CRT's x87 sequence, see AcosCrt).
 float GetAngleBetween2DVectors(float ax, float ay, float bx, float by) {
-    const double dot = (double)by * ay + (double)bx * ax;
-    const double lb  = Fsqrt((double)by * by + (double)bx * bx);
-    const double la  = Fsqrt((double)ay * ay + (double)ax * ax);
-    const double c   = dot / (lb * la);
-    return (float)(AcosCrt(c) * (double)57.2957763671875f);
+    const x87d dot = (x87d)by * ay + (x87d)bx * ax;
+    const double lb  = Fsqrt((x87d)by * by + (x87d)bx * bx);
+    const double la  = Fsqrt((x87d)ay * ay + (x87d)ax * ax);
+    const x87d c   = dot / (X87R(lb * la));
+    return (float)(X87R(AcosCrt(c) * (double)57.2957763671875f));
 }
 
 //! 1445 DO_2D_RECTANGLES_COLLIDE (case @0x48F339): cx1, cy1, w1, h1, cx2, cy2, w2, h2 => compare flag
 //! Rectangles given by centre and size. false if rect2.minY (unrounded, > rect1.maxY unrounded), minY1 > maxY2, maxX1 < minX2 or minX1 > maxX2 (all ordered; NaN keeps true).
 bool Do2DRectanglesCollide(float p0, float p1, float p2, float p3, float p4, float p5, float p6, float p7) {
-    const double h1 = (double)p3 * 0.5, h2 = (double)p7 * 0.5, w1 = (double)p2 * 0.5, w2 = (double)p6 * 0.5;
-    const float  A = (float)((double)p1 - h1); // rect1.minY
-    const float  B = (float)((double)p5 + h2); // rect2.maxY
-    const float  C = (float)((double)p0 - w1); // rect1.minX
-    const float  D = (float)((double)p4 - w2); // rect2.minX
-    const float  E = (float)((double)p0 + w1); // rect1.maxX
-    const float  F = (float)((double)p4 + w2); // rect2.maxX
-    const double top1 = (double)p1 + h1;
-    const double bot2 = (double)p5 - h2;
+    const x87d h1 = (x87d)p3 * (x87d)0.5, h2 = (x87d)p7 * (x87d)0.5, w1 = (x87d)p2 * (x87d)0.5, w2 = (x87d)p6 * (x87d)0.5;
+    const float  A = (float)((x87d)p1 - h1); // rect1.minY
+    const float  B = (float)((x87d)p5 + h2); // rect2.maxY
+    const float  C = (float)((x87d)p0 - w1); // rect1.minX
+    const float  D = (float)((x87d)p4 - w2); // rect2.minX
+    const float  E = (float)((x87d)p0 + w1); // rect1.maxX
+    const float  F = (float)((x87d)p4 + w2); // rect2.maxX
+    const x87d top1 = (x87d)p1 + h1;
+    const x87d bot2 = (x87d)p5 - h2;
     bool         result = true;
     if (bot2 > top1) {
         result = false;
@@ -670,7 +670,7 @@ bool Do2DRectanglesCollide(float p0, float p1, float p2, float p3, float p4, flo
 //! 1446 GET_OBJECT_ROTATION_VELOCITY (case @0x48F461): object => 3 floats = (turnSpeed * transposed rotation) * 50.0f
 MultiRet<float, float, float> GetObjectRotationVelocity(CObject& obj) {
     const CVector r = Multiply3x3VMOriginal(obj.m_vecTurnSpeed, obj.GetMatrix()); // 0x59C810
-    return { (float)((double)r.x * 50.0f), (float)((double)r.y * 50.0f), (float)((double)r.z * 50.0f) }; // 0x858B40
+    return { (float)((x87d)r.x * 50.0f), (float)((x87d)r.y * 50.0f), (float)((x87d)r.z * 50.0f) }; // 0x858B40
 }
 
 //! 1447 ADD_VELOCITY_RELATIVE_TO_OBJECT_VELOCITY (case @0x48F4E9): object, x, y, z. No null check.
@@ -678,9 +678,9 @@ MultiRet<float, float, float> GetObjectRotationVelocity(CObject& obj) {
 //! t1 = normalise(m x (0,0,1)), t2 = normalise(t1 x m): moveSpeed += t1 * v.x + m * v.y + t2 * v.z.
 void AddVelocityRelativeToObjectVelocity(CObject& obj, CVector v) {
     const float step = CTimer::ms_fTimeStep;
-    v.x = (float)((double)step * v.x); // 0x40FEF0 (operator*=)
-    v.y = (float)((double)step * v.y);
-    v.z = (float)((double)step * v.z);
+    v.x = (float)((x87d)step * v.x); // 0x40FEF0 (operator*=)
+    v.y = (float)((x87d)step * v.y);
+    v.z = (float)((x87d)step * v.z);
     DivideAssignOriginal(v, 50.0f); // 0x411A30
     if (obj.m_nFlags & 4) {
         return;
@@ -697,10 +697,10 @@ void AddVelocityRelativeToObjectVelocity(CObject& obj, CVector v) {
     NormaliseOriginal(t2);
     CVector speed = obj.m_vecMoveSpeed;
     const auto Mad = [&](const CVector& d, float k) { // operator*(CVector, float) (0x40FEC0) then operator+= (0x411A00)
-        const CVector scaled{ (float)((double)d.x * k), (float)((double)d.y * k), (float)((double)d.z * k) };
-        speed.x = (float)((double)scaled.x + (double)speed.x);
-        speed.y = (float)((double)scaled.y + (double)speed.y);
-        speed.z = (float)((double)scaled.z + (double)speed.z);
+        const CVector scaled{ (float)((x87d)d.x * k), (float)((x87d)d.y * k), (float)((x87d)d.z * k) };
+        speed.x = (float)((x87d)scaled.x + (x87d)speed.x);
+        speed.y = (float)((x87d)scaled.y + (x87d)speed.y);
+        speed.z = (float)((x87d)scaled.z + (x87d)speed.z);
     };
     Mad(t1, v.x);
     Mad(M2, v.y);
@@ -714,7 +714,7 @@ void AddVelocityRelativeToObjectVelocity(CObject& obj, CVector v) {
 
 //! 1448 GET_OBJECT_SPEED (case @0x48F73F): object => 1 float = |moveSpeed| * 50.0f
 float GetObjectSpeed(CObject& obj) {
-    return (float)(MagnitudeOriginal(obj.m_vecMoveSpeed) * 50.0f);
+    return (float)(X87R(MagnitudeOriginal(obj.m_vecMoveSpeed) * 50.0f));
 }
 
 //! 1456 GET_2D_LINES_INTERSECT_POINT (case @0x48F830): x1,y1,x2,y2 (line 1), x3,y3,x4,y4 (line 2) => compare flag, 2 floats
@@ -722,28 +722,28 @@ float GetObjectSpeed(CObject& obj) {
 //! extended by 0.01; otherwise the result is (-1000000.0f, -1000000.0f) and the flag false. The flag is set BEFORE the 2 results are stored.
 OpcodeResult Get2DLinesIntersectPoint(CRunningScript& S, float p0, float p1, float p2, float p3, float p4, float p5, float p6, float p7) {
     bool         ok  = true;
-    const double d1  = (double)p0 - (double)p2;
+    const x87d d1  = (x87d)p0 - (x87d)p2;
     const float  dx1 = (d1 == 0.0) ? 1.0e-6f : (float)d1; // 0x358637BD
-    double       d2  = (double)p4 - (double)p6;
+    x87d       d2  = (x87d)p4 - (x87d)p6;
     if (d2 == 0.0) {
-        d2 = (double)1.0e-6f; // 0x858C18
+        d2 = (x87d)1.0e-6f; // 0x858C18
     }
-    const double e1  = (double)p1 - (double)p3;
+    const x87d e1  = (x87d)p1 - (x87d)p3;
     const float  e1f = (float)e1;
-    const double m1  = e1 / (double)dx1;
-    const double e2  = (double)p5 - (double)p7;
+    const x87d m1  = e1 / (x87d)dx1;
+    const x87d e2  = (x87d)p5 - (x87d)p7;
     const float  m2f = (float)(e2 / d2);
-    const float  c1f = (float)((double)p1 - m1 * (double)p0);
-    const float  c2f = (float)((double)p5 - (double)m2f * (double)p4);
-    const double nm1 = -m1, nm2 = -(double)m2f;
+    const float  c1f = (float)((x87d)p1 - m1 * (x87d)p0);
+    const float  c2f = (float)((x87d)p5 - (x87d)m2f * (x87d)p4);
+    const x87d nm1 = -m1, nm2 = -(x87d)m2f;
     const float  den = (float)(nm1 - nm2);
-    const float  num = (float)((nm1 * (double)c2f) - (nm2 * (double)c1f));
+    const float  num = (float)((nm1 * (x87d)c2f) - (nm2 * (x87d)c1f));
     float        x = 0.0f, y = 0.0f;
     if (den == 0.0f) {
         ok = false;
     } else {
-        x = (d1 == 0.0) ? p0 : (float)(((double)c1f - (double)c2f) / (double)den);
-        y = (e1f == 0.0f) ? p1 : (float)((double)num / (double)den);
+        x = (d1 == 0.0) ? p0 : (float)(((x87d)c1f - (x87d)c2f) / (x87d)den);
+        y = (e1f == 0.0f) ? p1 : (float)((x87d)num / (x87d)den);
         // the 8 range checks (each fails for NaN)
         const float xlo1 = (p0 > p2) ? p2 : p0, xhi1 = (p0 > p2) ? p0 : p2;
         const float ylo1 = (p1 > p3) ? p3 : p1, yhi1 = (p1 > p3) ? p1 : p3;
@@ -751,10 +751,10 @@ OpcodeResult Get2DLinesIntersectPoint(CRunningScript& S, float p0, float p1, flo
         const float ylo2 = (p5 > p7) ? p7 : p5, yhi2 = (p5 > p7) ? p5 : p7;
         constexpr double T = 0.01; // 0x85A308
         const bool inside =
-               ((double)xlo1 - T <= (double)x) && ((double)xhi1 + T >= (double)x)
-            && ((double)xlo2 - T <= (double)x) && ((double)xhi2 + T >= (double)x)
-            && ((double)ylo1 - T <= (double)y) && ((double)yhi1 + T >= (double)y)
-            && ((double)ylo2 - T <= (double)y) && ((double)yhi2 + T >= (double)y);
+               (X87R((double)xlo1 - T) <= (double)x) && (X87R((double)xhi1 + T) >= (double)x)
+            && (X87R((double)xlo2 - T) <= (double)x) && (X87R((double)xhi2 + T) >= (double)x)
+            && (X87R((double)ylo1 - T) <= (double)y) && (X87R((double)yhi1 + T) >= (double)y)
+            && (X87R((double)ylo2 - T) <= (double)y) && (X87R((double)yhi2 + T) >= (double)y);
         if (!inside) {
             ok = false;
         }
@@ -813,9 +813,9 @@ void CharStoppedInAngledAreaInCar(CRunningScript& S, eScriptCommands command) {
 //! 1540 GET_HEADING_FROM_VECTOR_2D (case @0x49137C): x, y => 1 float
 //! atan2-like GetATanOfXY(x, y) * 57.29578 (0x859878) - 90.0 (0x85991C); while negative (ordered) add 360.0 (0x859E2C).
 float GetHeadingFromVector2D(float x, float y) {
-    double h = CGeneral::GetATanOfXYExt(x, y) * (double)57.2957763671875f - 90.0;
+    x87d h = X87R(CGeneral::GetATanOfXYExt(x, y) * (double)57.2957763671875f) - (x87d)90.0;
     while (h < 0.0) {
-        h += 360.0;
+        h += (x87d)360.0;
     }
     return (float)h;
 }

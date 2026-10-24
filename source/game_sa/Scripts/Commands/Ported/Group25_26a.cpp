@@ -182,7 +182,7 @@ bool IsMoneyPickupAtCoords(CVector coords) {
 //! width = _ftol2( (maximumWidth [0xC17044] * 0x859520) * (int)(uint16)width ) -- x87: every step rounded by the PC=24 mode
 //! CMenuSystem::SetColumnWidth(menu, column, (uint16)result) [0x582050]
 void SetMenuColumnWidth(int32 menu, int32 column, int32 width) {
-    const double scaled = ((double)RsGlobal.maximumWidth * (double)SCREEN_RECIPROCAL_X) * (double)(int32)(uint16)width;
+    const x87d scaled = ((x87d)RsGlobal.maximumWidth * (x87d)SCREEN_RECIPROCAL_X) * (x87d)(int32)(uint16)width;
     CMenuSystem::SetColumnWidth((MenuId)(uint8)menu, (uint8)column, (uint16)Ftol(scaled));
 }
 
@@ -223,7 +223,7 @@ OpcodeResult CreateCarGeneratorWithPlate(CRunningScript& S) {
     const float y = ScriptParams[1].fParam;
     float       z = ScriptParams[2].fParam;
     if (z > -100.0f) {
-        z = (float)((double)z + (double)std::bit_cast<float>(0x3C75C28Fu));
+        z = (float)((x87d)z + (x87d)std::bit_cast<float>(0x3C75C28Fu));
     }
     const int32 id = CTheCarGenerators::CreateCarGenerator(
         CVector{ x, y, z },
@@ -267,9 +267,9 @@ void SetAircraftCarrierSamSite(int32 flag) {
 //! CPointLights::AddLight(0, pos, (0, 0, 0), range, r/255, g/255, b/255, fogType 0, extra shadows 1, no entity) [0x7000E0];
 //! each colour = (float)((double)int * (float)0x859A3C [1/255]) (fild; fmul; fstp)
 void DrawLightWithRange(CVector pos, int32 red, int32 green, int32 blue, float range) {
-    const float b = (float)((double)blue * (double)ONE_OVER_255);
-    const float g = (float)((double)green * (double)ONE_OVER_255);
-    const float r = (float)((double)red * (double)ONE_OVER_255);
+    const float b = (float)((x87d)blue * (x87d)ONE_OVER_255);
+    const float g = (float)((x87d)green * (x87d)ONE_OVER_255);
+    const float r = (float)((x87d)red * (x87d)ONE_OVER_255);
     CPointLights::AddLight(0, pos, CVector{ 0.0f, 0.0f, 0.0f }, range, r, g, b, 0, true, nullptr);
 }
 

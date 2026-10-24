@@ -84,11 +84,11 @@ OpcodeResult ScriptCreateMenu(CRunningScript& S) {
     char title[16]{};
     ReadMenuText(S, title);
     S.CollectParameters(7);
-    const double widthScale  = (double)RsGlobal.maximumWidth * (double)SCREEN_RECIPROCAL_X; // 0x859520
-    const double heightScale = (double)RsGlobal.maximumHeight * (double)SCREEN_RECIPROCAL_Y; // 0x859524
-    const float  x           = (float)((double)ScriptParams[0].fParam * widthScale);
-    const float  w           = (float)(widthScale * (double)ScriptParams[2].fParam);
-    const float  y           = (float)(heightScale * (double)ScriptParams[1].fParam);
+    const x87d widthScale  = (x87d)RsGlobal.maximumWidth * (x87d)SCREEN_RECIPROCAL_X; // 0x859520
+    const x87d heightScale = (x87d)RsGlobal.maximumHeight * (x87d)SCREEN_RECIPROCAL_Y; // 0x859524
+    const float  x           = (float)((x87d)ScriptParams[0].fParam * widthScale);
+    const float  w           = (float)(widthScale * (x87d)ScriptParams[2].fParam);
+    const float  y           = (float)(heightScale * (x87d)ScriptParams[1].fParam);
     const auto   id          = CMenuSystem::CreateNewMenu(
         (CMenuSystem::eMenuType)0,
         title,
@@ -193,7 +193,7 @@ int32 FindNumberTagsTagged() {
 
 //! 2274 GET_TERRITORY_UNDER_CONTROL_PERCENTAGE (case @0x475996): => _ftol2(0x96AB9C * 100.0f [0x858628])
 int32 GetTerritoryUnderControlPercentage() {
-    return Ftol((double)CGangWars::TerritoryUnderControlPercentage * (double)100.0f);
+    return Ftol((x87d)CGangWars::TerritoryUnderControlPercentage * (x87d)100.0f);
 }
 
 //! 2275 IS_OBJECT_IN_ANGLED_AREA_2D / 2276 IS_OBJECT_IN_ANGLED_AREA_3D (shared case @0x4759BC): CRunningScript::ObjectInAngledAreaCheckCommand(command) [0x4883F0]

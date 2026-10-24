@@ -79,11 +79,11 @@ float GroundZIfAuto(float x, float y, float z) {
 
 //! 0x59C910 - `CVector::Normalise` as the original evaluates it (sum of squares and reciprocal root stay in extended precision)
 void NormaliseOriginal(CVector& v) {
-    const double sumSq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    const x87d sumSq = ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
     if (sumSq <= 0.0) {
         v.x = 1.0f; // (NaN takes the sqrt path); y, z untouched
     } else {
-        const double recip = 1.0 / std::sqrt(sumSq);
+        const x87d recip = (x87d)1.0 / std::sqrt(sumSq);
         v.x = (float)(v.x * recip);
         v.y = (float)(v.y * recip);
         v.z = (float)(v.z * recip);
@@ -234,15 +234,15 @@ void TaskLookAtObject(int32 pedHandle, CObject* obj, int32 time) {
 
 //! 1622 LIMIT_ANGLE (case @0x4945D5): float => float. Wraps into [0, 360] by repeated +-360 (x87 stack values => double)
 float LimitAngle(float angle) {
-    double a = angle;
+    x87d a = angle;
     if (a < 0.0) {
         do {
-            a += 360.0; // 0x859E2C
+            a += (x87d)360.0; // 0x859E2C
         } while (a < 0.0);
     }
     if (a > 360.0) {
         do {
-            a -= 360.0;
+            a -= (x87d)360.0;
         } while (a > 360.0);
     }
     return (float)a;
@@ -438,7 +438,7 @@ void AddPedTypeAsAttractorUser(int32 effectId, int32 pedType) {
 
 //! The 3 + 3 float pack of the attach commands: offset (p2..p4) as is, rotation (p5..p7) * deg2rad (0x8595EC = 0.017453292f) rounded to float
 CVector RotationToRadians(float rx, float ry, float rz) {
-    const double k = 0.01745329238474369; // (double)0.017453292f
+    const x87d k = (x87d)0.01745329238474369; // (double)0.017453292f
     return { (float)(rx * k), (float)(ry * k), (float)(rz * k) };
 }
 
@@ -452,8 +452,8 @@ void DetachPhysical(CPhysical* phys, float x, float y, float z, int32 flag) {
     if (!phys || !phys->m_pAttachedTo) {
         return;
     }
-    const float  y1 = (float)((double)y * (double)-1.0f); // 0x858C1C
-    const double k  = 0.01745329238474369;
+    const float  y1 = (float)((x87d)y * (x87d)-1.0f); // 0x858C1C
+    const x87d k  = (x87d)0.01745329238474369;
     phys->DettachEntityFromEntity((float)(x * k), (float)(y1 * k), z, flag != 0);
 }
 

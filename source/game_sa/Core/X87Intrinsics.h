@@ -206,7 +206,13 @@ inline double acos(double x)              { return soft_detail::AsinAcos(x, true
 inline double log2(double x)              { return soft_detail::Out(notsa::fp::soft::Yl2x(notsa::fp::soft::One(), soft_detail::In(x))); }
 inline double log10(double x)             { return soft_detail::Out(notsa::fp::soft::Yl2x(notsa::fp::soft::kLg2, soft_detail::In(x))); }
 inline double ln(double x)                { return soft_detail::Out(notsa::fp::soft::Yl2x(notsa::fp::soft::kLn2, soft_detail::In(x))); }
-inline void   sincos(double x, double& s, double& c) { s = sin(x); c = cos(x); }
+// fsincos; fstp qword [cos]; fstp qword [sin]: both results are STORED as doubles (round to nearest, not the round-to-odd of the float-level helpers above); |x| >= 2^63 pushes nothing, so the
+// first fstp stores x and the second pops an empty stack (real indefinite). (MAC-F4a-REV: was sin()/cos() = round-to-odd doubles; tests/portable/f4a_lift_test.cpp rows x87::sincos_*)
+inline void   sincos(double x, double& s, double& c) {
+    const auto r = notsa::fp::soft::SinCos(soft_detail::In(x));
+    if (r.c2) { s = notsa::fp::soft::ToDouble(notsa::fp::soft::Indefinite()); c = x; return; }
+    s = notsa::fp::soft::ToDouble(r.sin); c = notsa::fp::soft::ToDouble(r.cos);
+}
 #else
 #define NOTSA_X87_ASM 0
 inline double sin(double x)               { return std::sin(x); }

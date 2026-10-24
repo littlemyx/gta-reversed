@@ -155,3 +155,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-24	MAC-RR3	v4	Win32 RR trace under wine + first diff	375069	160	73	done: first divergence = F (PC24) in ChooseModel
 2026-10-24	MAC-FLOOP1	v4	RR fidelity loop 1	-	-	-	rng 0->57, player 0->56
 2026-10-24	MAC-BISECT1	v4	bisect R9-1 crash	-	-	-	fixed: PC_Scratch LP64 overlap
+2026-10-24	MAC-FLOOP2	v4	PC24 sweep tool+mechanism, 213 TUs	-	-	-	done: idle frames identical

@@ -435,7 +435,7 @@ void CCover::FindCoverPointsForThisBuilding(CBuilding* building) {
 CCoverPoint::Dir CCover::FindDirFromVector(CVector dir) {
     // 0x698D40: atan2(-x, y) * 256 / 2pi on the x87 stack, truncated by _ftol2 (the product is NOT rounded to float first).
     static const uint32 K85A778 = 0x4222F983u;
-    x87d res;
+    double res; // the lifted asm stores 8 bytes (fstp qword)
     const float a_x = dir.x;
     const float a_y = dir.y;
     const float a_z = dir.z;

@@ -572,10 +572,10 @@ bool IsObjectStatic(CObject& obj) {
 //! The CRT acos (0x822380 -> 0x82239D) on the x87 stack at the CURRENT precision control: |x| < 1 => atan2(sqrt((1 + x) * (1 - x)), x) (fpatan); x == 1 => 0;
 //! x == -1 => pi; other (|x| > 1, inf) => the negative QNaN constant (0x8E3130); NaN => returned as is. (Same sequence as CQuaternion::CalcThetaFromQuats.)
 double AcosCrt(double x) {
-    const x87d ad   = X87R(std::fabs(x));
+    const double ad = std::fabs(x);
     const int    mode = ad < 1.0 ? 0 : x == 1.0 ? 1 : x == -1.0 ? 2 : x != x ? 4 : 3;
     static const unsigned char qnan[10] = { 0, 0, 0, 0, 0, 0, 0, 0xC0, 0xFF, 0xFF };
-    x87d                     out;
+    double                   out; // the lifted asm stores 8 bytes (qword)
 #ifdef NOTSA_PORTABLE
 #include "x87_lifted/Group13_AcosCrt.inc"
 #else

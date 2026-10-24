@@ -5690,7 +5690,7 @@ int32 CPed::ProcessEntityCollision(CEntity* entity, CColPoint* colPoint) {
                 // Update the brightness of the surface the ped is on
                 // The original keeps the intermediate results in extended precision, hence `double`
                 {
-                    const double a = (x87d)CTimer::GetTimeStep() * (x87d)NOTSA_GLOBAL_EXPR(0x8D21E4, (float), k_8D21E4);
+                    const x87d a = (x87d)CTimer::GetTimeStep() * (x87d)NOTSA_GLOBAL_EXPR(0x8D21E4, (float), k_8D21E4);
                     const x87d d = (x87d)lineCP0.m_nLightingB.day   * (x87d)CONTACT_LIGHT_SCALE;
                     const x87d n = (x87d)lineCP0.m_nLightingB.night * (x87d)CONTACT_LIGHT_SCALE;
                     const x87d w = (x87d)CCustomBuildingDNPipeline::m_fDNBalanceParam;

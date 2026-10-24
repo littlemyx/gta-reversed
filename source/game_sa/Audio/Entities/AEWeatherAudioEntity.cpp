@@ -118,16 +118,16 @@ void CAEWeatherAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) 
     switch (sound->m_Event) {
     case +eWeatherEvent::THUNDER: { // 0x505A85
         const uint32 duration = CWeather::LightningDuration;
-        const float  reqVolume = (float)(X87R(std::log10((x87d)duration * (x87d)0.0375f + (x87d)0.25) * (x87d)20.0) + (x87d)GetDefaultVolume(AE_THUNDER));
+        const float  reqVolume = (float)(X87R(std::log10(X87W((x87d)duration * (x87d)0.0375f + (x87d)0.25)) * (x87d)20.0) + (x87d)GetDefaultVolume(AE_THUNDER));
 
         const uint32 pos       = (uint32)(int32)curPlayPos; // Sign extended
         const uint32 reqPlayPos = 600u - 500u * (duration / 20u);
         if (pos <= reqPlayPos) { // 0x505AED
-            sound->SetVolume((float)(X87R(std::log10((x87d)(int32)pos / (x87d)reqPlayPos) * (x87d)20.0) + (x87d)reqVolume));
+            sound->SetVolume((float)(X87R(std::log10(X87W((x87d)(int32)pos / (x87d)reqPlayPos)) * (x87d)20.0) + (x87d)reqVolume));
         } else if (pos <= reqPlayPos + 200u && reqVolume > 0.f) { // 0x505B2E
             const x87d vol = std::pow(10.0, (x87d)reqVolume * (x87d)0.05f);
             const x87d t   = (x87d)(pos - reqPlayPos);
-            sound->SetVolume((float)(X87R(std::log10(X87R((t * (X87R((x87d)1.0 - vol))) * (x87d)0.005f + vol)) * 20.0)));
+            sound->SetVolume((float)(X87R(std::log10(X87W(X87R((t * (X87R((x87d)1.0 - vol))) * (x87d)0.005f + vol))) * 20.0)));
         } else { // 0x505B97
             sound->SetVolume(reqVolume < 0.f ? reqVolume : 0.f);
         }
@@ -194,7 +194,7 @@ void CAEWeatherAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) 
                         (float)((x87d)(float)((x87d)right.z + (x87d)pov.z) - (x87d)hitCP.m_vecPoint.z) // The Z sum is rounded to float first
                     };
                     const double dist = MagnitudeX87(toHit);
-                    dopplerVol = (float)(X87R(std::log10(((x87d)1.0 - X87R(dist * (double)ExeRecip(6.f))) * (x87d)speed) * 20.0) + (x87d)30.0);
+                    dopplerVol = (float)(X87R(std::log10(X87W(((x87d)1.0 - X87R(dist * (double)ExeRecip(6.f))) * (x87d)speed)) * 20.0) + (x87d)30.0);
                     outSpeed   = (x87d)speed * (x87d)1.75f + (x87d)1.75f;
                 }
             }
@@ -421,7 +421,7 @@ void CAEWeatherAudioEntity::Service() {
         }
         x *= (x87d)1.25; // 0x8595F0 (NOT a division by 0.8)
         // NOTE: Raw `fyl2x`, NOT `AudioLog10` (no clamp, log10(0) = -inf)
-        targetVolume = X87R(std::log10(x) * (x87d)20.0) + (x87d)GetDefaultVolume(AE_RAIN); // 0x505608
+        targetVolume = X87R(std::log10(X87W(x)) * (x87d)20.0) + (x87d)GetDefaultVolume(AE_RAIN); // 0x505608
     }
 
     // 0x505634: step `m_sfRainVolume` towards the target by 0.5

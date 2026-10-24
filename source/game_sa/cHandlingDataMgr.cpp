@@ -344,7 +344,7 @@ void cHandlingDataMgr::ConvertDataToGameUnits(tHandlingData* h) {
     h->m_fBuoyancyConstant = (float)(((x87d)h->m_fMass * 0.8f) / (x87d)h->m_nPercentSubmerged);
     h->m_fCollisionDamageMultiplier = (float)((massRecpr * h->m_fCollisionDamageMultiplier) * 2000.f);
 
-    double maxVelocity = maxVelNew;
+    x87d maxVelocity = maxVelNew; // PC24: every `-= 0.01` rounds to float
     while (maxVelocity > 0.0) {
         maxVelocity -= 0.01;
         const x87d engineAccelLimit = X87R(accelNew * std::bit_cast<double>(0x3FC5555555555554ull)); // 0.16666666666666663

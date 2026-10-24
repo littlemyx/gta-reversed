@@ -65,7 +65,7 @@ NOTSA_GLOBAL_VERIFY(0x8AD908, kSurfaceHitTable);
 // 0x4DA510
 static float GetSurfaceHitVolume(uint8 surfaceId) {
     NOTSA_GLOBAL_LOCAL_REF(table, 0x8AD908, (const tSurfaceHitEntry[195]), kSurfaceHitTable); const auto percent = table[surfaceId].percent;
-    return (float)(X87R(std::log10((x87d)percent * (x87d)0.01f) * (x87d)20.0));
+    return (float)(X87R(std::log10(X87W((x87d)percent * (x87d)0.01f)) * (x87d)20.0));
 }
 
 void CAEPedAudioEntity::InjectHooks() {

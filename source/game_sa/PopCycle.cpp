@@ -206,7 +206,7 @@ int32 CPopCycle::GetCurrentPercOther_Peds() {
     const auto percOther = (int32)m_nPercOther[CPopCycle::m_nCurrentTimeIndex][CPopCycle::m_nCurrentTimeOfWeek][CPopCycle::m_nCurrentZoneType];
 
     // 0x610339: `1.0f - sqrt(Rain) * 0.8f`, spilled to a float
-    float factor = 1.f - x87::sqrt(CWeather::Rain) * 0.8f;
+    float factor = 1.f - X87R(x87::sqrt(CWeather::Rain) * 0.8f);
 
     if (CTheScripts::IsPlayerOnAMission()) {
         if (const auto plyr = FindPlayerPed()) {

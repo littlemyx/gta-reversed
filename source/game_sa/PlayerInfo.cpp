@@ -1029,8 +1029,8 @@ void CPlayerInfo::DrawCrosshair(int32 playerIndex) {
                 const x87d angle = (x87d)n * (x87d)1.5707964f /* 0x858FE4 */ + (x87d)0.78539819f /* 0x859AB0 */;
                 const double cosV  = x87::cos(angle);
                 const double sinV  = x87::sin(angle);
-                const float  posY  = (float)(X87R(cosV * (double)radius) * (x87d)pulse + ((double)yHist[step] + (x87d)1.0) * (x87d)RsGlobal.maximumHeight * (x87d)0.5);
-                const float  posX  = (float)(X87R(sinV * (double)radius) * (x87d)pulse + ((double)xHist[step] + (x87d)1.0) * (x87d)RsGlobal.maximumWidth * (x87d)0.5);
+                const float  posY  = (float)(X87R(cosV * (double)radius) * (x87d)pulse + ((x87d)yHist[step] + (x87d)1.0) * (x87d)RsGlobal.maximumHeight * (x87d)0.5);
+                const float  posX  = (float)(X87R(sinV * (double)radius) * (x87d)pulse + ((x87d)xHist[step] + (x87d)1.0) * (x87d)RsGlobal.maximumWidth * (x87d)0.5);
                 CSprite::RenderOneXLUSprite_Rotate_Aspect(
                     { posX, posY, 100.0f },
                     { 15.0f, 15.0f },

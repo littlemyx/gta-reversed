@@ -87,6 +87,13 @@ typedef double x87d;
 #else
 #define X87R(...) __VA_ARGS__
 #endif
+//! X87W(expr): `expr` (an x87d / float-valued expression, already rounded per operation) is handed to a CRT function taking a DOUBLE (log10 / pow / exp ...): portable widens it
+//! explicitly so that std::log10 & co. pick the double overload (a float argument selects the float overload = less precise than the exe's CRT call); every other build leaves the TOKENS untouched.
+#ifdef NOTSA_PORTABLE
+#define X87W(...) ((double)(__VA_ARGS__))
+#else
+#define X87W(...) __VA_ARGS__
+#endif
 
 #if (defined(__GNUC__) || defined(__GNUG__) || defined(__clang__))
 #define UNREACHABLE_INTRINSIC(...) __builtin_unreachable()

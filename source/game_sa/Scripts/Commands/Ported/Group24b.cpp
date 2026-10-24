@@ -83,11 +83,11 @@ bool IsPointInAngledAreaOriginal(const CVector& p, float x1, float y1, float x2,
     while (angle > TWO_PI) { // fcom 2pi; test ah, 0x41; jne
         angle -= TWO_PI;
     }
-    x87d sn, cs;
+    double sn, cs; // fsin / fcos results, stored as qword by the exe (the lifted asm reads / writes 8 bytes: NOT x87d)
     {
         // fsin / fcos of the extended angle
-        const x87d a = angle;
-        x87d       s, c;
+        const double a = angle;
+        double       s, c;
 #ifdef NOTSA_PORTABLE
 #include "x87_lifted/Group24b_SinCos.inc"
 #else
@@ -104,7 +104,7 @@ bool IsPointInAngledAreaOriginal(const CVector& p, float x1, float y1, float x2,
         cs = c;
     }
     const float cosW = (float)(-(cs * (x87d)width)); // fchs; fst dword
-    const float dx   = (float)(sn * (x87d)width + (x87d)x1);
+    const float dx   = (float)(X87R(sn * (x87d)width) + (x87d)x1);
     const float dy   = (float)((x87d)cosW + (x87d)y1);
 
     // AB

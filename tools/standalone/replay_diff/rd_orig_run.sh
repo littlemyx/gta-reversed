@@ -20,9 +20,11 @@ awk -v d="$GRD/orig" '/^#include / { f = d "/" $2 ".inc"; while ((getline l < f)
 echo "wait:$((SECS*1000))" >> "$OUT/$TAG.script"
 BK="$OUT/$TAG.userfiles_backup"
 HELD=0
+kill_ours() {   # rules v5: only the gta_sa.exe running from OUR private dir, never by image name
+  RD_DIR="$(cygpath -m "$DIR")" RD_PX="$(cygpath -m "$PX")" powershell.exe -NoProfile -Command 'Get-Process gta_sa,inputdrv -ErrorAction SilentlyContinue | Where-Object { $_.Path -and (($_.Path -replace "\\","/") -like ($env:RD_DIR + "/*") -or ($_.Path -replace "\\","/") -like ($env:RD_PX + "/*")) } | Stop-Process -Force' >/dev/null 2>&1; return 0; }
 cleanup() {   # only what this script holds: the game is killed and the Documents files restored only while WE own gpu.lock (another owner may be running a game)
   if [ "$HELD" = 1 ]; then
-    taskkill //F //IM gta_sa.exe >/dev/null 2>&1; taskkill //F //IM inputdrv.exe >/dev/null 2>&1
+    kill_ours
     docs_restore "$BK"
     "$HERE/../gpu_locked.sh" --release $$; HELD=0
   fi
@@ -31,7 +33,7 @@ trap cleanup EXIT
 "$HERE/../gpu_locked.sh" --acquire "REPLAY-DIFF orig $TAG" $$
 HELD=1
 docs_backup "$BK"   # after the lock: nobody else is running an original-exe leg that writes the same directory
-taskkill //F //IM gta_sa.exe >/dev/null 2>&1
+kill_ours
 "$PY" -I - "$DOCS_USERFILES/gta_sa.set" "$GRD/orig/gta_sa.set.good" <<'EOPY'
 import sys
 b = bytearray(open(sys.argv[2], 'rb').read())

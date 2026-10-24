@@ -39,11 +39,11 @@ wait:$((SECS*1000))
 cmd:quit
 EOR
 LOCK="$HERE/../gpu_locked.sh"; HELD=0
-cleanup() { if [ "$HELD" = 1 ]; then taskkill //F //IM gta_reversed.exe >/dev/null 2>&1; "$LOCK" --release $$; HELD=0; fi; }   # kill only while WE own gpu.lock
+kill_ours() { [ -n "${WPID:-}" ] || return 0; local wp; wp=$(cat /proc/$WPID/winpid 2>/dev/null); [ -n "$wp" ] && taskkill //F //T //PID "$wp" >/dev/null 2>&1; kill -9 "$WPID" 2>/dev/null; return 0; }   # rules v5: only our own game, by pid
+cleanup() { kill_ours; if [ "$HELD" = 1 ]; then "$LOCK" --release $$; HELD=0; fi; }
 trap cleanup EXIT
 "$LOCK" --acquire "REPLAY-DIFF port $TAG" $$; HELD=1
 cd "$DATA" || exit 2
-taskkill //F //IM gta_reversed.exe >/dev/null 2>&1
 rm -f gta_reversed.exe standalone*.log; rm -rf logs; cp "$EXE" gta_reversed.exe
 (
   export NOTSA_STANDALONE_SKIP_VIDEOS=1 NOTSA_STANDALONE_MUTE=1 NOTSA_STANDALONE_INPUT="$OUT/$TAG.route" NOTSA_STANDALONE_USERDIR="$UD" NOTSA_STANDALONE_WINDOWED=960x600 NOTSA_STANDALONE_NOVSYNC=1 NOTSA_STANDALONE_NOPRESENT=1
@@ -53,6 +53,6 @@ rm -f gta_reversed.exe standalone*.log; rm -rf logs; cp "$EXE" gta_reversed.exe
 )
 WPID=$(cat "$OUT/$TAG.pid"); t0=$(date +%s)
 while kill -0 "$WPID" 2>/dev/null; do sleep 3; [ $(( $(date +%s) - t0 )) -gt $((SECS+120)) ] && break; done
-taskkill //F //IM gta_reversed.exe >/dev/null 2>&1
+kill_ours
 cp -f standalone.log logs/log.log "$OUT/" 2>/dev/null
 echo "rd_port_run $TAG pin=$PIN: $(grep -c '^F ' "$OUT/$TAG.trace" 2>/dev/null) frames traced"

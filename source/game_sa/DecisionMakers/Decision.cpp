@@ -5,7 +5,7 @@
 
 // _ftol (0x821B40) truncates to int64 (0x8000000000000000 on overflow/NaN); only the low byte is stored
 static uint8 FtolToByte(float f) {
-    const double v = f;
+    const x87d v = f;
     if (!(v > -9223372036854775808.0 && v < 9223372036854775808.0)) {
         return 0;
     }
@@ -124,16 +124,16 @@ void CDecision::MakeDecision(int32 eventSourceType, bool bIsPedInVehicle, eTaskT
 
     // Build the cumulative distribution (`CDecisionSimple::Set`, inlined in the original)
     CDecisionSimple simple;
-    double sum = 0.0; // x87 register
+    x87d sum = (x87d)0.0; // x87 register
     for (auto i = 0; i < MAX_NUM_CHOICES; i++) {
         simple.m_anTasks[i] = (eTaskType)tasks[i];
-        sum += (double)probs[i];
+        sum += (x87d)probs[i];
         simple.m_afChances[i] = (float)sum;
     }
     simple.m_nCount = MAX_NUM_CHOICES;
-    const double scale = (double)1.0f / sum; // 0x858624 = 1.0f
+    const x87d scale = (x87d)1.0f / sum; // 0x858624 = 1.0f
     for (auto i = 0; i < MAX_NUM_CHOICES; i++) {
-        simple.m_afChances[i] = (float)(scale * (double)simple.m_afChances[i]);
+        simple.m_afChances[i] = (float)(scale * (x87d)simple.m_afChances[i]);
     }
 
     int32 decisionIdx; // Unused

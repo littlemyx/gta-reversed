@@ -561,20 +561,25 @@ int32 CStats::FindMaxNumberOfGroupMembers() {
 
 // 0x559AF0
 float CStats::GetFatAndMuscleModifier(eStatModAbilities statMod) {
-    // x87: the original keeps every intermediate in extended precision, so doubles are used here
-    const double fat      = StatTypesFloat[STAT_FAT];
-    const double stamina  = StatTypesFloat[STAT_STAMINA];
-    const double muscle   = StatTypesFloat[STAT_MUSCLE];
-    const double cycling  = StatTypesInt[STAT_CYCLING_SKILL - FIRST_INT_STAT];
+    // x87: the exe runs at PC=24, so every operation is rounded to FLOAT (not kept in extended precision): Real = float in the portable build (RR_PLAN 11.5 D2), double elsewhere
+#ifdef NOTSA_PORTABLE
+    using Real = float;
+#else
+    using Real = double;
+#endif
+    const Real fat      = StatTypesFloat[STAT_FAT];
+    const Real stamina  = StatTypesFloat[STAT_STAMINA];
+    const Real muscle   = StatTypesFloat[STAT_MUSCLE];
+    const Real cycling  = StatTypesInt[STAT_CYCLING_SKILL - FIRST_INT_STAT];
 
-    const double fatBase = kMod_FatBase, muscleBase = kMod_MuscleBase;
-    const double fatDen    = 1000.0 - fatBase;
-    const double muscleDen = 1000.0 - muscleBase;
+    const Real fatBase = kMod_FatBase, muscleBase = kMod_MuscleBase;
+    const Real fatDen    = Real(1000.0) - fatBase;
+    const Real muscleDen = Real(1000.0) - muscleBase;
 
     const auto Max0 = [](float b) { return 0.0f > b ? 0.0f : b; };    // 0x420800(0, b): NaN => b
     const auto Min1 = [](float b) { return 1.0f < b ? 1.0f : b; };    // 0x404330(1, b): NaN => b
     const auto BikeTerm = [&]() {
-        return Min1((float)((double)StatTypesInt[STAT_BIKE_SKILL - FIRST_INT_STAT] * (double)0.001f));
+        return Min1((float)((Real)StatTypesInt[STAT_BIKE_SKILL - FIRST_INT_STAT] * (Real)0.001f));
     };
 
     switch (statMod) {
@@ -590,7 +595,7 @@ float CStats::GetFatAndMuscleModifier(eStatModAbilities statMod) {
     }
     case STAT_MOD_1: {
         const float r = Max0((float)((fat - fatBase) / fatDen));
-        const double res = r * (double)kMod_1_Fat + 1.0 + (muscle - muscleBase) * kMod_1_Muscle / muscleDen;
+        const Real res = r * (Real)kMod_1_Fat + Real(1.0) + (muscle - muscleBase) * kMod_1_Muscle / muscleDen;
         if (res < 0.7f) {
             return 0.7f;
         }
@@ -598,32 +603,32 @@ float CStats::GetFatAndMuscleModifier(eStatModAbilities statMod) {
     }
     case STAT_MOD_2: {
         const float r = Max0((float)((fat - fatBase) / fatDen));
-        const double res = r * (double)kMod_2_Fat + 1.0 + (muscle - muscleBase) * kMod_2_Muscle / muscleDen;
+        const Real res = r * (Real)kMod_2_Fat + Real(1.0) + (muscle - muscleBase) * kMod_2_Muscle / muscleDen;
         if (res < 0.8f) {
             return 0.8f;
         }
         return (float)res;
     }
     case STAT_MOD_3: {
-        const double res = (fat - fatBase) * kMod_3_Fat / fatDen + 1.0 + (muscle - muscleBase) * kMod_3_Muscle / muscleDen;
+        const Real res = (fat - fatBase) * kMod_3_Fat / fatDen + Real(1.0) + (muscle - muscleBase) * kMod_3_Muscle / muscleDen;
         if (res < 0.8f) {
             return 0.8f;
         }
         return (float)res;
     }
     case STAT_MOD_4: {
-        const double res = (fat - fatBase) * kMod_4_Fat / fatDen + 1.0 + (muscle - muscleBase) * kMod_4_Muscle / muscleDen;
-        if (!(res > 2.0)) {
+        const Real res = (fat - fatBase) * kMod_4_Fat / fatDen + Real(1.0) + (muscle - muscleBase) * kMod_4_Muscle / muscleDen;
+        if (!(res > Real(2.0))) {
             return (float)res;
         }
         return 2.0f;
     }
     case STAT_MOD_5: {
-        const double res =
-              (fat - fatBase) * kMod_5_Fat / fatDen + 1.0 + (muscle - muscleBase) * kMod_5_Muscle / muscleDen
-            + stamina * (double)0.001f * kMod_5_Stamina
-            + cycling * (double)0.001f * kMod_5_Cycling;
-        if (res > 2.0) {
+        const Real res =
+              (fat - fatBase) * kMod_5_Fat / fatDen + Real(1.0) + (muscle - muscleBase) * kMod_5_Muscle / muscleDen
+            + stamina * (Real)0.001f * kMod_5_Stamina
+            + cycling * (Real)0.001f * kMod_5_Cycling;
+        if (res > Real(2.0)) {
             return 2.0f;
         }
         if (res < 0.25f) {
@@ -632,10 +637,10 @@ float CStats::GetFatAndMuscleModifier(eStatModAbilities statMod) {
         return (float)res;
     }
     case STAT_MOD_6: {
-        const double res =
-              (fat - fatBase) * kMod_6_Fat / fatDen + 1.0
-            + cycling * (double)0.001f * kMod_6_Cycling;
-        if (res > 2.0) {
+        const Real res =
+              (fat - fatBase) * kMod_6_Fat / fatDen + Real(1.0)
+            + cycling * (Real)0.001f * kMod_6_Cycling;
+        if (res > Real(2.0)) {
             return 2.0f;
         }
         if (res < 0.5f) {
@@ -644,31 +649,31 @@ float CStats::GetFatAndMuscleModifier(eStatModAbilities statMod) {
         return (float)res;
     }
     case STAT_MOD_TIME_CAN_RUN:
-        return (float)(stamina * (double)0.001f * kMod_TimeCanRun + 150.0);
+        return (float)(stamina * (Real)0.001f * kMod_TimeCanRun + Real(150.0));
     case STAT_MOD_AIR_IN_LUNG: {
-        const double lung = StatTypesInt[STAT_LUNG_CAPACITY - FIRST_INT_STAT];
-        return (float)((lung + stamina) * (double)0.0005f * kMod_Air + 1000.0);
+        const Real lung = StatTypesInt[STAT_LUNG_CAPACITY - FIRST_INT_STAT];
+        return (float)((lung + stamina) * (Real)0.0005f * kMod_Air + Real(1000.0));
     }
     case STAT_MOD_MAX_HEALTH:
-        return (float)((double)StatTypesFloat[STAT_MAX_HEALTH] * (double)0.001f * kMod_MaxHealth);
+        return (float)((Real)StatTypesFloat[STAT_MAX_HEALTH] * (Real)0.001f * kMod_MaxHealth);
     case STAT_MOD_10:
         return kMod_MaxHealth;
     case STAT_MOD_11:
-        return (float)(BikeTerm() * (double)kMod_B_Bike + 1.0);
+        return (float)(BikeTerm() * (Real)kMod_B_Bike + Real(1.0));
     case STAT_MOD_12:
-        return (float)(BikeTerm() * (double)kMod_C_Bike + 1.0);
+        return (float)(BikeTerm() * (Real)kMod_C_Bike + Real(1.0));
     case STAT_MOD_13:
-        return (float)(BikeTerm() * (double)kMod_D_Bike + 1.0);
+        return (float)(BikeTerm() * (Real)kMod_D_Bike + Real(1.0));
     case STAT_MOD_DRIVING_SKILL: {
-        const double driving = StatTypesInt[STAT_DRIVING_SKILL - FIRST_INT_STAT];
-        const double res = (fat - fatBase) * kMod_E_Fat / fatDen + (driving * (double)0.001f * kMod_E_Driving + 1.0);
-        if (res > 1.0) {
+        const Real driving = StatTypesInt[STAT_DRIVING_SKILL - FIRST_INT_STAT];
+        const Real res = (fat - fatBase) * kMod_E_Fat / fatDen + (driving * (Real)0.001f * kMod_E_Driving + Real(1.0));
+        if (res > Real(1.0)) {
             return 1.0f;
         }
         return (float)res;
     }
     case STAT_MOD_15: {
-        const double res = (fat - fatBase) * kMod_F_Fat / fatDen + 1.0 + (muscle - muscleBase) * kMod_F_Muscle / muscleDen;
+        const Real res = (fat - fatBase) * kMod_F_Fat / fatDen + Real(1.0) + (muscle - muscleBase) * kMod_F_Muscle / muscleDen;
         if (res < kMod_Fat1000Min2) {
             return kMod_Fat1000Min2;
         }

@@ -391,8 +391,13 @@ eModelID CCarCtrl::ChooseGangCarModel(eGangID loadedCarGroupId) {
 
 // 0x424CE0
 int32 CCarCtrl::ChooseModel(int32* carType) {
+#ifdef NOTSA_PORTABLE
+    // The exe runs with the FPU at PC=24 (D3D9 CreateDevice without FPU_PRESERVE): every partial sum is rounded to float, NOT kept in double/extended precision (RR_PLAN 11.5 D1)
+    const auto total = (int32)(((CPopCycle::m_NumOther_Cars + CPopCycle::m_NumCops_Cars) + CPopCycle::m_NumGangs_Cars) + CPopCycle::m_NumDealers_Cars);
+#else
     // x87: The sum of the (float) counts is kept in extended precision
     const auto total = (int32)((((double)CPopCycle::m_NumOther_Cars + CPopCycle::m_NumCops_Cars) + CPopCycle::m_NumGangs_Cars) + CPopCycle::m_NumDealers_Cars);
+#endif
     if (total <= 0) {
         return -1;
     }
@@ -407,9 +412,15 @@ int32 CCarCtrl::ChooseModel(int32* carType) {
     const auto rnd           = (float)((double)rand() * RAND_MAX_FLOAT_RECIPROCAL); // Stored as float. 0x858C7C
     const auto gangsControl  = CCheat::IsActive(CHEAT_GANGS_CONTROLS_THE_STREETS); // 0x96915B
     const auto totalF        = (float)total;
+#ifdef NOTSA_PORTABLE
+    const float numCops      = CPopCycle::m_NumCops_Cars; // PC=24: the divisions / sums below are rounded to float per operation
+    const float numGangs     = CPopCycle::m_NumGangs_Cars;
+    const float numDealers   = CPopCycle::m_NumDealers_Cars;
+#else
     const auto numCops       = (double)CPopCycle::m_NumCops_Cars;
     const auto numGangs      = (double)CPopCycle::m_NumGangs_Cars;
     const auto numDealers    = (double)CPopCycle::m_NumDealers_Cars;
+#endif
 
     // The chance of each type is its share of the total (dealers, then gangs, cops, anything else)
     if (numDealers / totalF > rnd && !gangsControl) {
@@ -8819,12 +8830,22 @@ void CCarCtrl::GenerateOneRandomCar() {
         density *= 0.6f; // 0x858CC8
     }
     const float numCarsF = (float)numCars;
+#ifdef NOTSA_PORTABLE
+    // PC=24: each operation is rounded to float (the double chain rounds differently in rare cases, RR_PLAN 11.5 D3)
+    if (CPopulation::FindCarMultiplierMotorway() * (float)(int32)MaxNumberOfCarsInUse * density <= numCarsF) { // 0x43012D
+        return;
+    }
+    if ((((CPopCycle::m_NumOther_Cars + CPopCycle::m_NumCops_Cars) + CPopCycle::m_NumGangs_Cars) + CPopCycle::m_NumDealers_Cars) * CPopulation::FindCarMultiplierMotorway() * density <= numCarsF) { // 0x43015F
+        return;
+    }
+#else
     if ((double)CPopulation::FindCarMultiplierMotorway() * (int32)MaxNumberOfCarsInUse * density <= numCarsF) { // 0x43012D
         return;
     }
     if (((double)CPopCycle::m_NumOther_Cars + CPopCycle::m_NumCops_Cars + CPopCycle::m_NumGangs_Cars + CPopCycle::m_NumDealers_Cars) * CPopulation::FindCarMultiplierMotorway() * density <= numCarsF) { // 0x43015F
         return;
     }
+#endif
 
     // 0x43016C
     if (!ChooseRandomCarModel(s.modelId, s.carType)) {

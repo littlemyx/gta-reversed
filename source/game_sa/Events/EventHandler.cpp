@@ -1074,23 +1074,32 @@ void CEventHandler::ComputeDamageResponse(CEventDamage* e, CTask* tactive, CTask
             }
 
             // Otherwise
-            if (!e->m_bFallDown && !notsa::contains({ ANIM_ID_NO_ANIMATION_SET, ANIM_ID_DOOR_LHINGE_O }, e->m_nAnimID)) {
+            if (e->m_bFallDown) { // 0x4C042B: test [e+0x25], 2
+                m_PhysicalResponseTask = new CTaskComplexFallAndGetUp{ // 0x4C047E
+                    e->GetAnimId(),
+                    e->GetAnimGroup(),
+                    (int32)(1000.f / ((float)m_Ped->m_nWeaponShootingRate * ExeRecip(40.f)))
+                };
+            } else if (!notsa::contains({ ANIM_ID_NO_ANIMATION_SET, ANIM_ID_DOOR_LHINGE_O }, e->m_nAnimID)) { // 0x4C0488: cmp id, 0xBF / 0xC0 -> skip (no response task)
+                // (The port used to fold the 0xBF/0xC0 sentinels into the CTaskComplexFallAndGetUp branch above: a CEventDamage whose
+                //  MakeAbortable failed carries DOOR_LHINGE_O (EventDamage.cpp) and got a fall task with anim 0xC0 in the default group,
+                //  i.e. a slot past the end of the group = garbage hierarchy => AV in CAnimBlendNode::SetupKeyFrameCompressed.)
                 if (CAnimManager::GetAnimAssociation(e->m_nAnimGroup, e->m_nAnimID)->m_Flags & ANIMATION_DONT_ADD_TO_PARTIAL_BLEND) { // 0x4C04B7
-                    if (!e->GetAnimAdded()) {
-                        if (!notsa::contains({ANIM_ID_SHOT_PARTIAL, ANIM_ID_SHOT_LEFTP, ANIM_ID_SHOT_PARTIAL_B, ANIM_ID_SHOT_RIGHTP}, e->m_nAnimID)) {
-                            const auto a = CAnimManager::BlendAnimation(m_Ped->GetRpClump(), e->m_nAnimGroup, e->m_nAnimID, e->m_fAnimBlend);
+                    if (!e->GetAnimAdded()) { // 0x4C04C4
+                        CAnimBlendAssociation* a;
+                        if (!notsa::contains({ANIM_ID_SHOT_PARTIAL, ANIM_ID_SHOT_LEFTP, ANIM_ID_SHOT_PARTIAL_B, ANIM_ID_SHOT_RIGHTP}, e->m_nAnimID)) { // 0x4C04CD: 0x1C..0x1F
+                            a = CAnimManager::BlendAnimation(m_Ped->GetRpClump(), e->m_nAnimGroup, e->m_nAnimID, e->m_fAnimBlend); // 0x4C053A
                             a->SetSpeed(e->m_fAnimSpeed);
-                            a->SetCurrentTime(0.f);
-                            e->m_bAnimAdded = true;
                         } else {
-                            auto a = RpAnimBlendClumpGetAssociation(m_Ped->GetRpClump(), e->GetAnimId()); // 0x4C04DE
+                            a = RpAnimBlendClumpGetAssociation(m_Ped->GetRpClump(), e->GetAnimId()); // 0x4C04DE
                             if (!a) {
-                                a = CAnimManager::BlendAnimation(m_Ped->GetRpClump(), e->GetAnimGroup(), e->GetAnimId());
+                                a = CAnimManager::AddAnimation(m_Ped->GetRpClump(), e->GetAnimGroup(), e->GetAnimId()); // 0x4C04F8
                             }
-                            a->SetBlend(0.f, e->m_fAnimBlend);
+                            a->SetBlend(0.f, e->m_fAnimBlend); // 0x4C0500: [a+0x18] = 0, [a+0x1C] = blend
                             a->SetSpeed(e->m_fAnimSpeed);
-                            a->SetCurrentTime(0.f);
                         }
+                        a->SetCurrentTime(0.f);
+                        e->m_bAnimAdded = true; // 0x4C0551 / 0x4C051C: or [e+0x25], 4
                     }
                 } else { // 0x4C0593 
                     const auto tBeHit = new CTaskSimpleBeHit{
@@ -1105,12 +1114,6 @@ void CEventHandler::ComputeDamageResponse(CEventDamage* e, CTask* tactive, CTask
                     tBeHit->m_nAnimGroup = e->GetAnimGroup();
                     tBeHit->m_bAnimAdded = e->GetAnimAdded();
                 }
-            } else {
-                m_PhysicalResponseTask = new CTaskComplexFallAndGetUp{
-                    e->GetAnimId(),
-                    e->GetAnimGroup(),
-                    (int32)(1000.f / ((float)m_Ped->m_nWeaponShootingRate * ExeRecip(40.f)))
-                };
             }
 
             return DoComputeDamageAndResponseForPersonality();

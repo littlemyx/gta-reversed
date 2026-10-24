@@ -1,0 +1,10 @@
+# Conan host profile for the PortableWin64 preset built on a NATIVE Windows host (windows-latest CI, or an "x64 Native Tools" shell): same settings as
+# conan/profiles/windows-x64-msvc.txt, plus what the preset needs from the generated toolchain. Selected by tools/portable/win64/conan_install_win64.sh with PROFILE=native
+# (the default under git-bash / msys). VS 2022 toolset: pass CONAN_EXTRA_ARGS="-s compiler.version=194" (the base profile says 195 = VS 2026).
+include(../../../conan/profiles/windows-x64-msvc.txt)
+
+[conf]
+# the preset is a Ninja one: the conan toolchain (and the dependency builds) must not pick a Visual Studio generator + platform/toolset
+tools.cmake.cmaketoolchain:generator=Ninja
+# the project sets COMPILE_WARNING_AS_ERROR; NOMINMAX is defined on the command line and again in winincl.h (same flags as the wine profile)
+tools.build:cxxflags=["/WX-", "/wd4005"]

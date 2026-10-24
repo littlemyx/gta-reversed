@@ -6,14 +6,15 @@
 # usage: tools/portable/win64/conan_install_win64.sh [Release|Debug]
 #   env: CONAN, TMPDIR, CONAN_EXTRA_ARGS
 #        PROFILE=wine  (default on Darwin/Linux) msvc-wine cross route: tools/portable/win64/conanprofile-wine.txt (needs wine on PATH, WINEPREFIX, ~/tools/msvc)
-#        PROFILE=native (default on Windows) conan/profiles/windows-x64-msvc.txt (run from an x64 Native Tools shell, git-bash/msys)
+#        PROFILE=native (default on Windows) tools/portable/win64/conanprofile-native.txt = conan/profiles/windows-x64-msvc.txt + Ninja (x64 Native Tools shell / msvc-dev-cmd, git-bash/msys;
+#                       VS 2022: CONAN_EXTRA_ARGS="-s compiler.version=194")
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../../.." && pwd)"
 CONAN="${CONAN:-$(command -v conan || echo $HOME/.local/bin/conan)}"
 BT="${1:-Release}"
 case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) PROFILE="${PROFILE:-native}";; *) PROFILE="${PROFILE:-wine}";; esac
-if [ "$PROFILE" = wine ]; then HP="$HERE/conanprofile-wine.txt"; else HP="$ROOT/conan/profiles/windows-x64-msvc.txt"; fi
+if [ "$PROFILE" = wine ]; then HP="$HERE/conanprofile-wine.txt"; else HP="$HERE/conanprofile-native.txt"; fi
 DST="$ROOT/build/PortableWin64/generators"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/portable-conan.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT

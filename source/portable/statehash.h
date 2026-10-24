@@ -34,6 +34,8 @@ void OnFrame();
 bool Cmd(const char* name, const std::string& args);
 //! true while a trace is being recorded
 bool Recording();
+//! debug probe (NOTSA_RR_PROBE=A-B in Idle frames): logs a hash of all vehicles + the state of vehicle slot NOTSA_RR_PROBE_SLOT at a named point inside the frame (bisecting where two runs diverge)
+void Probe(const char* tag);
 //! (declared in msvc_rand.h) logs a draw of the game thread's rand() when NOTSA_RR_RANDLOG is set
 void RandHook(uint32_t stateBefore);
 //! (declared in Base.h for NOTSA_PTR_ID32) stable replacement of an object address: pool tag + slot index for pool objects, else the offset from this module's code

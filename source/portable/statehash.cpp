@@ -6,6 +6,7 @@
 #include "dsound_al.h"
 
 #include <atomic>
+#include <mach/mach.h>
 #include <thread>
 #include <bit>
 #include <cmath>
@@ -328,6 +329,27 @@ __attribute__((noinline)) void RandHook(uint32_t stateBefore) {
     std::fprintf(r.f, "%u %u %08x %llx %llx %llx %llx %llx\n", g_idleFrames, r.idx++, stateBefore, (unsigned long long)ra[0], (unsigned long long)ra[1], (unsigned long long)ra[2], (unsigned long long)ra[3], (unsigned long long)ra[4]);
 }
 
+void Probe(const char* tag) {
+    static const std::pair<uint32_t, uint32_t> rg = [] { unsigned a = 1, b = 0; if (const char* e = std::getenv("NOTSA_RR_PROBE")) { std::sscanf(e, "%u-%u", &a, &b); if (!b) b = a; } else { a = 1; b = 0; } return std::pair<uint32_t, uint32_t>{ a, b }; }();
+    static const uint32_t slot = [] { const char* e = std::getenv("NOTSA_RR_PROBE_SLOT"); return e ? (uint32_t)std::strtoul(e, nullptr, 0) : 3u; }();
+    if (g_idleFrames < rg.first || g_idleFrames > rg.second) return;
+    auto* vp = GetVehiclePool();
+    if (!vp) return;
+    Acc all;
+    for (size_t i = 0; i < (size_t)vp->GetSize(); i++) { if (auto* v = vp->GetAt(i)) { Sink s; s.U("slot", (uint32_t)i); VehicleFields(s, *v); all.Mix(s.acc); } }
+    std::string l;
+    if (auto* v = vp->GetAt(slot)) {
+        char b[220];
+        std::snprintf(b, sizeof b, " pos=%08x,%08x,%08x mv=%08x,%08x,%08x tv=%08x,%08x,%08x ft=%08x,%08x,%08x force=%08x,%08x,%08x tq=%08x,%08x,%08x dmg=%08x", std::bit_cast<uint32_t>(v->GetPosition().x), std::bit_cast<uint32_t>(v->GetPosition().y), std::bit_cast<uint32_t>(v->GetPosition().z),
+            std::bit_cast<uint32_t>(v->m_vecMoveSpeed.x), std::bit_cast<uint32_t>(v->m_vecMoveSpeed.y), std::bit_cast<uint32_t>(v->m_vecMoveSpeed.z), std::bit_cast<uint32_t>(v->m_vecTurnSpeed.x), std::bit_cast<uint32_t>(v->m_vecTurnSpeed.y), std::bit_cast<uint32_t>(v->m_vecTurnSpeed.z),
+            std::bit_cast<uint32_t>(v->m_vecFrictionTurnSpeed.x), std::bit_cast<uint32_t>(v->m_vecFrictionTurnSpeed.y), std::bit_cast<uint32_t>(v->m_vecFrictionTurnSpeed.z), std::bit_cast<uint32_t>(v->m_vecForce.x), std::bit_cast<uint32_t>(v->m_vecForce.y), std::bit_cast<uint32_t>(v->m_vecForce.z),
+            std::bit_cast<uint32_t>(v->m_vecTorque.x), std::bit_cast<uint32_t>(v->m_vecTorque.y), std::bit_cast<uint32_t>(v->m_vecTorque.z), std::bit_cast<uint32_t>(v->m_fDamageIntensity));
+        l = b;
+        if (v->IsBike()) { std::snprintf(b, sizeof b, " avgn=%08x,%08x,%08x", std::bit_cast<uint32_t>(((CBike*)v)->m_vecAveGroundNormal.x), std::bit_cast<uint32_t>(((CBike*)v)->m_vecAveGroundNormal.y), std::bit_cast<uint32_t>(((CBike*)v)->m_vecAveGroundNormal.z)); l += b; }
+    }
+    NOTSA_LOG_INFO("rrp {} {} all={:016x}{}", g_idleFrames, tag, all.e, l);
+}
+
 void AdvanceClock() {
     if (!Active()) return;
     g_vns.fetch_add((uint64_t)Cfg().stepMs * 1'000'000ull, std::memory_order_relaxed);
@@ -360,6 +382,14 @@ void OnFrame() {
             }
         }
     }
+    if (Active() && (g_idleFrames == 100 || g_idleFrames == 200)) { // which threads exist (any thread that touches game state is a suspect for a nondeterminism)
+        thread_act_array_t th; mach_msg_type_number_t n = 0;
+        if (task_threads(mach_task_self(), &th, &n) == KERN_SUCCESS) {
+            std::string l = "rr: threads=" + std::to_string(n) + " cpu%:";
+            for (mach_msg_type_number_t i = 0; i < n; i++) { thread_basic_info_data_t bi; mach_msg_type_number_t c = THREAD_BASIC_INFO_COUNT; if (thread_info(th[i], THREAD_BASIC_INFO, (thread_info_t)&bi, &c) == KERN_SUCCESS) { l += " " + std::to_string(bi.cpu_usage / 10) + (bi.run_state == TH_STATE_RUNNING ? "r" : "s"); } }
+            NOTSA_LOG_INFO("{}", l);
+        }
+    }
     if (Active() && g_idleFrames % 250 == 0) { NOTSA_LOG_INFO("rr: idle frame {} (virtual {} ms, game frame {}, recording {})", g_idleFrames, VirtualMs(), CTimer::GetFrameCounter(), g_recording); }
     if (!g_recording || !g_f) return;
     Record();
@@ -379,6 +409,12 @@ bool Cmd(const char* name, const std::string& args) {
     if (!std::strcmp(name, "rr_stop")) {
         NOTSA_LOG_INFO("rr_stop: {} frames", g_frame);
         CloseTrace();
+        return true;
+    }
+    if (!std::strcmp(name, "rr_offsets")) { // layout of the fields a raw byte diff of two runs points at
+        NOTSA_LOG_INFO("rr_offsets: moveSpeed={:#x} turnSpeed={:#x} frictionMove={:#x} frictionTurn={:#x} force={:#x} torque={:#x} mass={:#x} damageIntensity={:#x} collidedCnt={:#x} CBike={:#x}",
+            offsetof(CPhysical, m_vecMoveSpeed), offsetof(CPhysical, m_vecTurnSpeed), offsetof(CPhysical, m_vecFrictionMoveSpeed), offsetof(CPhysical, m_vecFrictionTurnSpeed), offsetof(CPhysical, m_vecForce), offsetof(CPhysical, m_vecTorque),
+            offsetof(CPhysical, m_fMass), offsetof(CPhysical, m_fDamageIntensity), offsetof(CPhysical, m_nNumEntitiesCollided), sizeof(CBike));
         return true;
     }
     if (!std::strcmp(name, "rr_stat")) {

@@ -8,7 +8,7 @@
 # The original has NO windowed mode and no injector: it runs exclusive fullscreen (the desktop mode is switched for the run), needs the foreground (inputdrv aborts when another window has it) and is silent through
 # the dsound proxy. gta_sa.set is written from orig/gta_sa.set.good (video mode 800x600, limiter / radio auto-select off) and the WHOLE Documents\GTA San Andreas User Files dir (the original cannot be redirected) is backed up first and restored afterwards (hostenv.sh docs_backup / docs_restore).
 set -u
-. "$(dirname "$0")/../hostenv.sh"
+. "$(dirname "$0")/../hostenv.sh"; . "$(dirname "$0")/../own_kill.sh"
 SCN="$1"; OUT="$(hp "$2")"
 GRD="$(cd "$(dirname "$0")" && pwd)"; GRD="$(hp "$GRD")"
 DIR="$(hp "${GR_ORIG_DIR:-C:/gta-perf/orig}")"; PX="$(hp "${GR_PX:-C:/gta-perf/px}")"
@@ -27,9 +27,11 @@ esac
 awk -v d="$GRD/orig" '/^#include / { f = d "/" $2 ".inc"; while ((getline l < f) > 0) print l; close(f); next } { print }' "$SCRIPT" > "$od/script.txt"
 DOC="$DOCS_USERFILES"; SET="$DOC/gta_sa.set"; BK="$od/userfiles_backup"
 docs_backup "$BK"
-LOCK="$DEF_SCRATCH/gpu.lock"; HELD=0
+LOCK="$DEF_SCRATCH/gpu.lock"; HELD=0; GPID=""
+# kill only OUR original exe (rules v5 item 1): the job we started (+ its tree), and any stray gta_sa.exe running from $DIR (the private original install dir; we hold gpu.lock)
+kill_orig() { own_kill_pid "$GPID"; own_kill_in_dir gta_sa "$DIR"; }
 cleanup() {
-  taskkill //F //IM gta_sa.exe >/dev/null 2>&1
+  kill_orig
   [ -n "${SPID:-}" ] && kill "$SPID" 2>/dev/null
   [ -n "${TPID:-}" ] && kill "$TPID" 2>/dev/null
   docs_restore "$BK"
@@ -38,7 +40,7 @@ cleanup() {
 trap cleanup EXIT
 "$GRD/../gpu_locked.sh" --acquire "GAMEPLAY-REGRESS orig $SCN" $$   # INFRA-FAST: pid-recording lock, same lock dir (dead-holder detection)
 HELD=1
-taskkill //F //IM gta_sa.exe >/dev/null 2>&1
+kill_orig   # a stray original of an earlier, killed run of this script
 "$PY" -I - "$SET" "$GRD/orig/gta_sa.set.good" <<'EOPY'
 import sys
 b = bytearray(open(sys.argv[2], 'rb').read())
@@ -51,6 +53,7 @@ cp "$PX/d3d9.dll" "$PX/dsound.dll" .
 export D3D9PX_OUT="$(cygpath -w "$od/px.bin")" D3D9PX_NOVSYNC=1 D3D9PX_CAPFILE="$od/cap" D3D9PX_SHOTFILE="$od/shot.req"
 echo 60 > "$od/cap"
 ./gta_sa.exe > "$od/run.out" 2>&1 &
+GPID=$!
 sleep 5
 tasklist | grep -qi gta_sa.exe || { echo "orig_run: gta_sa.exe did not start"; exit 2; }
 # every original leg also runs the poller that teleports CJ to the Idlewood street (2100,-1790) (2 s after he stepped off the tutorial BMX), like the routes do with cmd:tp

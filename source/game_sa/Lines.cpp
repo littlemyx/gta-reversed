@@ -28,12 +28,12 @@ void CLines::RenderLineNoClipping(float startX, float startY, float startZ, floa
 // 0x6FF4F0
 void CLines::RenderLineWithClipping(float startX, float startY, float startZ, float endX, float endY, float endZ, uint32 startColor, uint32 endColor) {
     // NOTE: The original keeps all of the below at extended precision (x87), hence the `double`s.
-    const double dx   = (double)startX - (double)endX;
-    const double dy   = (double)startY - (double)endY;
-    const double dz   = (double)startZ - (double)endZ;
-    double       iters = std::sqrt(dz * dz + dy * dy + dx * dx) * (double)0.4f + 1.0;
+    const x87d dx   = (x87d)startX - (x87d)endX;
+    const x87d dy   = (x87d)startY - (x87d)endY;
+    const x87d dz   = (x87d)startZ - (x87d)endZ;
+    x87d       iters = std::sqrt(dz * dz + dy * dy + dx * dx) * (x87d)0.4f + (x87d)1.0;
     if (7.0 < iters) { // `FCOMP` + `TEST AH, 5` + `JP`: unordered (NaN) leaves `iters` as is (-> `_ftol` of NaN = 0 vertices)
-        iters = 7.0;
+        iters = (x87d)7.0;
     }
     const auto numVerts = (int16)notsa::detail::Ftol(iters); // _ftol
 
@@ -43,22 +43,22 @@ void CLines::RenderLineWithClipping(float startX, float startY, float startZ, fl
     const int32 delta[4] = { eb[0] - sb[0], eb[1] - sb[1], eb[2] - sb[2], eb[3] - sb[3] };
 
     // The deltas of the positions are rounded to float in the original
-    const float deltaX = (float)((double)endX - (double)startX);
-    const float deltaY = (float)((double)endY - (double)startY);
-    const float deltaZ = (float)((double)endZ - (double)startZ);
+    const float deltaX = (float)((x87d)endX - (x87d)startX);
+    const float deltaY = (float)((x87d)endY - (x87d)startY);
+    const float deltaZ = (float)((x87d)endZ - (x87d)startZ);
 
     for (int32 i = 0; i < numVerts; i++) {
-        const double t[2] = { (double)i / (double)numVerts, (double)(i + 1) / (double)numVerts };
+        const double t[2] = { (x87d)i / (x87d)numVerts, (x87d)(i + 1) / (x87d)numVerts };
         for (int32 k = 0; k < 2; k++) {
             auto& vert = TempBufferVertices.m_3d[i * 2 + k];
 
-            const auto Channel = [&](int32 c) { return (uint32)(uint8)notsa::detail::Ftol((double)delta[c] * t[k] + (double)sb[c]); };
+            const auto Channel = [&](int32 c) { return (uint32)(uint8)notsa::detail::Ftol(X87R((double)delta[c] * t[k]) + (x87d)sb[c]); };
             const uint32 c0 = Channel(0), c3 = Channel(3), c2 = Channel(2), c1 = Channel(1); // Same order as in the original
             vert.color = c0 << 24 | c3 << 16 | c2 << 8 | c1;
 
-            RwCompatVertexPos(vert).x = (float)((double)deltaX * t[k] + (double)startX);
-            RwCompatVertexPos(vert).y = (float)((double)deltaY * t[k] + (double)startY);
-            RwCompatVertexPos(vert).z = (float)((double)deltaZ * t[k] + (double)startZ);
+            RwCompatVertexPos(vert).x = (float)(X87R((double)deltaX * t[k]) + (x87d)startX);
+            RwCompatVertexPos(vert).y = (float)(X87R((double)deltaY * t[k]) + (x87d)startY);
+            RwCompatVertexPos(vert).z = (float)(X87R((double)deltaZ * t[k]) + (x87d)startZ);
         }
     }
 

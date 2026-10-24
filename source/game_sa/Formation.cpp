@@ -108,8 +108,8 @@ void CFormation::GenerateGatherDestinations(CPedList& pedList, CPed* ped) {
             ? ped->m_fCurrentRotation + HALF_PI
             : PI / (float)count + (float)i / (float)count * TWO_PI - ped->m_fCurrentRotation;
         m_Destinations.AddPoint({
-            (float)(x87::sin(angle) * radius + pos.x),
-            (float)(x87::cos(angle) * radius + pos.y),
+            (float)(X87R(x87::sin(angle) * radius) + pos.x),
+            (float)(X87R(x87::cos(angle) * radius) + pos.y),
             pos.z,
         });
     }
@@ -265,7 +265,7 @@ void CFormation::DistributeDestinations_PedsToAttack(const CPedList& pedList) {
     }
 
     // Each target can be attacked by at most this many peds
-    const auto maxPerTarget = std::max(2, (int32)std::ceil((double)(int32)numPeds / (double)(int32)numTargets));
+    const auto maxPerTarget = std::max(2, (int32)std::ceil((x87d)(int32)numPeds / (x87d)(int32)numTargets));
     rng::fill(remainingForTarget | rngv::take(numTargets), maxPerTarget);
 
     size_t bestTargetIdx = 0, bestPedIdx = 0; // Not reset per iteration, same as the original

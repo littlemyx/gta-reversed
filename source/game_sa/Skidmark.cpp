@@ -156,29 +156,29 @@ void CSkidmark::RegisterNewPart(CVector posn, CVector2D dir, float length, bool*
                 const CVector prevPosn = m_vPosn[m_nNumParts - 1];
                 // Exact x87 form of the exe (0x720B70): the two 2D normalisations are inlined with a FLOAT-rounded reciprocal and extended-precision products;
                 // a zero length gives (1, y unchanged) (CVector2D::Normalise), the abs-dot + 1 is extended for X and float-rounded for Y
-                const double a1 = (float)((double)posn.y - (double)prevPosn.y);   // swapped intentionally, unsure why though
-                const double b1 = (double)prevPosn.x - (double)posn.x;
-                double nx1, ny1;
-                if (const double len1 = x87::sqrt(b1 * b1 + a1 * a1); len1 != 0.0) {
-                    const double r = (float)(1.0 / len1);
+                const x87d a1 = (float)((x87d)posn.y - (x87d)prevPosn.y);   // swapped intentionally, unsure why though
+                const x87d b1 = (x87d)prevPosn.x - (x87d)posn.x;
+                x87d nx1, ny1;
+                if (const x87d len1 = x87::sqrt(b1 * b1 + a1 * a1); len1 != 0.0) {
+                    const x87d r = (float)((x87d)1.0 / len1);
                     nx1 = r * a1;
                     ny1 = b1 * r;
                 } else {
-                    nx1 = 1.0;
+                    nx1 = (x87d)1.0;
                     ny1 = b1;
                 }
-                double nx2, ny2;
-                if (const double len2 = x87::sqrt((double)dir.x * dir.x + (double)dir.y * dir.y); len2 != 0.0) {
-                    const double r = (float)(1.0 / len2);
+                x87d nx2, ny2;
+                if (const x87d len2 = x87::sqrt((x87d)dir.x * dir.x + (x87d)dir.y * dir.y); len2 != 0.0) {
+                    const x87d r = (float)((x87d)1.0 / len2);
                     nx2 = r * dir.x;
-                    ny2 = (double)dir.y * r;
+                    ny2 = (x87d)dir.y * r;
                 } else {
-                    nx2 = 1.0;
+                    nx2 = (x87d)1.0;
                     ny2 = dir.y;
                 }
-                const double dot = std::abs(nx1 * nx2 + ny1 * ny2) + 1.0;
-                m_partDirX[m_nNumParts] = (float)(dot * nx1 * length * 0.5);
-                m_partDirY[m_nNumParts] = (float)((double)(float)dot * ny1 * length * 0.5);
+                const x87d dot = std::abs(nx1 * nx2 + ny1 * ny2) + (x87d)1.0;
+                m_partDirX[m_nNumParts] = (float)(dot * nx1 * length * (x87d)0.5);
+                m_partDirY[m_nNumParts] = (float)((x87d)(float)dot * ny1 * length * (x87d)0.5);
 
                 if (m_nNumParts == 1) {
                     m_partDirX[0] = m_partDirX[1];

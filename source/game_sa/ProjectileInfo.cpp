@@ -119,8 +119,8 @@ bool CProjectileInfo::AddProjectile(CEntity* creator, eWeaponType projectileType
         matrix.GetPosition().y += origin.y;
         matrix.GetPosition().z += origin.z;
 
-        velocity.x = x87::sin(angle) * speed * -1.0f;
-        velocity.y = x87::cos(angle) * speed;
+        velocity.x = X87R(x87::sin(angle) * speed) * -1.0f;
+        velocity.y = X87R(x87::cos(angle) * speed);
         velocity.z = (force + 1.0f) * 0.4f * speed;
         if (creator->m_nModelIndex == MODEL_SENTINEL) { // Weird, but the original code checks for this model specifically
             velocity += creator->AsPhysical()->m_vecMoveSpeed;
@@ -145,8 +145,8 @@ bool CProjectileInfo::AddProjectile(CEntity* creator, eWeaponType projectileType
         objInfoFlag = 5;
         elasticity  = 0.5f;
 
-        velocity.x = x87::sin(angle) * speed * -1.0f;
-        velocity.y = x87::cos(angle) * speed;
+        velocity.x = X87R(x87::sin(angle) * speed) * -1.0f;
+        velocity.y = X87R(x87::cos(angle) * speed);
         velocity.z = (force + 1.0f) * 0.4f * speed;
         break;
     }
@@ -165,8 +165,8 @@ bool CProjectileInfo::AddProjectile(CEntity* creator, eWeaponType projectileType
         matrix.GetPosition().y += origin.y;
         matrix.GetPosition().z += origin.z;
 
-        velocity.x = x87::sin(angle) * speed * -1.0f;
-        velocity.y = x87::cos(angle) * speed;
+        velocity.x = X87R(x87::sin(angle) * speed) * -1.0f;
+        velocity.y = X87R(x87::cos(angle) * speed);
         velocity.z = (force * 0.2f + 0.4f) * speed;
         break;
     }

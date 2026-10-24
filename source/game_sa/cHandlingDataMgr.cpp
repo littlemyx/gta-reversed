@@ -323,8 +323,8 @@ void cHandlingDataMgr::ConvertDataToWorldUnits(tHandlingData* h) {
     const float accel = (float)(invAccel * t->m_EngineAcceleration); // spilled to a float
     t->m_MaxVelocity /= VELOCITY_CONST;
     h->m_fBrakeDeceleration = (float)(invAccel * h->m_fBrakeDeceleration);
-    t->m_EngineAcceleration = (float)((double)accel * (t->m_nDriveType == '4' ? 4.0 : 2.0));
-    h->m_fCollisionDamageMultiplier = (float)(((double)h->m_fMass * h->m_fCollisionDamageMultiplier) * ExeRecip(2000.f));
+    t->m_EngineAcceleration = (float)((x87d)accel * (t->m_nDriveType == '4' ? (x87d)4.0 : (x87d)2.0));
+    h->m_fCollisionDamageMultiplier = (float)(((x87d)h->m_fMass * h->m_fCollisionDamageMultiplier) * ExeRecip(2000.f));
 }
 
 // update some handling variables with some game-specific multipliers
@@ -333,26 +333,26 @@ void cHandlingDataMgr::ConvertDataToGameUnits(tHandlingData* h) {
     // 0x6F5080: most intermediates stay on the x87 stack (doubles here); the constants 0.01 and 1/6 are DOUBLES in .rdata (0x85A308 / 0x872350)
     const auto t = &h->GetTransmission();
 
-    const double accelNew = (double)ACCEL_CONST * t->m_EngineAcceleration;
+    const x87d accelNew = (x87d)ACCEL_CONST * t->m_EngineAcceleration;
     t->m_EngineAcceleration = (float)accelNew;
-    const double maxVelNew = (double)VELOCITY_CONST * t->m_MaxVelocity;
+    const x87d maxVelNew = (x87d)VELOCITY_CONST * t->m_MaxVelocity;
     const float  maxVelSpill = (float)maxVelNew;
     t->m_MaxVelocity = maxVelSpill;
-    h->m_fBrakeDeceleration = (float)((double)ACCEL_CONST * h->m_fBrakeDeceleration);
-    const double massRecpr = 1.0 / (double)h->m_fMass;
+    h->m_fBrakeDeceleration = (float)((x87d)ACCEL_CONST * h->m_fBrakeDeceleration);
+    const x87d massRecpr = (x87d)1.0 / (x87d)h->m_fMass;
     h->m_fMassRecpr = (float)massRecpr;
-    h->m_fBuoyancyConstant = (float)(((double)h->m_fMass * 0.8f) / (double)h->m_nPercentSubmerged);
+    h->m_fBuoyancyConstant = (float)(((x87d)h->m_fMass * 0.8f) / (x87d)h->m_nPercentSubmerged);
     h->m_fCollisionDamageMultiplier = (float)((massRecpr * h->m_fCollisionDamageMultiplier) * 2000.f);
 
     double maxVelocity = maxVelNew;
     while (maxVelocity > 0.0) {
         maxVelocity -= 0.01;
-        const double engineAccelLimit = accelNew * std::bit_cast<double>(0x3FC5555555555554ull); // 0.16666666666666663
-        double x;
+        const x87d engineAccelLimit = X87R(accelNew * std::bit_cast<double>(0x3FC5555555555554ull)); // 0.16666666666666663
+        x87d x;
         if (!(h->m_fDragMult < 0.01f)) {
-            x = (((double)h->m_fDragMult / 1000.f) * 0.5f) * maxVelocity * maxVelocity;
+            x = X87R(X87R((((x87d)h->m_fDragMult / 1000.f) * 0.5f) * maxVelocity) * maxVelocity);
         } else {
-            x = -((1.0 / (maxVelocity * maxVelocity * h->m_fDragMult + 1.0) - 1.0) * maxVelocity);
+            x = -(X87R(((x87d)1.0 / (X87R(maxVelocity * maxVelocity) * h->m_fDragMult + (x87d)1.0) - (x87d)1.0) * maxVelocity));
         }
         if (!(engineAccelLimit < x)) {
             break;
@@ -364,17 +364,17 @@ void cHandlingDataMgr::ConvertDataToGameUnits(tHandlingData* h) {
         t->m_MaxFlatVelocity    = maxVelSpill;
         t->m_MaxReverseVelocity = -maxVelSpill;
     } else if (h->m_bUseMaxspLimit) {
-        const double flat = (double)maxVelSpill * 0.8333333f; // [0x863278]; the loop result is not used at all on this path
+        const x87d flat = (x87d)maxVelSpill * 0.8333333f; // [0x863278]; the loop result is not used at all on this path
         t->m_MaxFlatVelocity    = (float)flat;
         t->m_MaxReverseVelocity = MinReverse(flat * -0.25f);
     } else {
         t->m_MaxFlatVelocity = (float)maxVelocity;
-        t->m_MaxVelocity     = (float)(maxVelocity * 1.2f);
+        t->m_MaxVelocity     = (float)(X87R(maxVelocity * 1.2f));
         if (h->m_nVehicleId >= VT_BIKE && h->m_nVehicleId <= VT_FREEWAY) {
             // 2 wheelers
             t->m_MaxReverseVelocity = -0.05f;
         } else {
-            t->m_MaxReverseVelocity = MinReverse((double)t->m_MaxFlatVelocity * -0.3f);
+            t->m_MaxReverseVelocity = MinReverse((x87d)t->m_MaxFlatVelocity * -0.3f);
         }
     }
 

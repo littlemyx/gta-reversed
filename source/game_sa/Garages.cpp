@@ -152,13 +152,13 @@ int32 CGarages::AddOne(float x1, float y1, float z1, float frontX, float frontY,
     const auto Max = [](float a, float b) { return a > b ? a : b; };
 
     // The 4th corner is calculated at extended precision, stored as float
-    const float cornerX = (float)((double)frontX + x2 - x1);
+    const float cornerX = (float)((x87d)frontX + x2 - x1);
     const float minX    = Min(Min(x1, frontX), x2);
     garage.m_fLeftCoord = minX < cornerX ? minX : cornerX;
     const float maxX    = Max(Max(x1, frontX), x2);
     garage.m_fRightCoord = maxX > cornerX ? maxX : cornerX;
 
-    const float cornerY  = (float)((double)frontY + y2 - y1);
+    const float cornerY  = (float)((x87d)frontY + y2 - y1);
     const float minY     = Min(Min(y1, frontY), y2);
     garage.m_fFrontCoord = minY < cornerY ? minY : cornerY;
     const float maxY     = Max(Max(y1, frontY), y2);
@@ -167,24 +167,24 @@ int32 CGarages::AddOne(float x1, float y1, float z1, float frontX, float frontY,
     garage.m_vPosn.x = x1;
     garage.m_vPosn.y = y1;
     garage.m_vPosn.z = z1;
-    garage.m_vDirectionA.x = (float)((double)frontX - x1);
-    garage.m_vDirectionA.y = (float)((double)frontY - y1);
-    garage.m_vDirectionB.x = (float)((double)x2 - x1);
-    garage.m_vDirectionB.y = (float)((double)y2 - y1);
+    garage.m_vDirectionA.x = (float)((x87d)frontX - x1);
+    garage.m_vDirectionA.y = (float)((x87d)frontY - y1);
+    garage.m_vDirectionB.x = (float)((x87d)x2 - x1);
+    garage.m_vDirectionB.y = (float)((x87d)y2 - y1);
     garage.m_fTopZ = z2;
 
     // Normalize both directions. The X component is divided by the unrounded (extended precision) length,
     // the Y component by the length rounded to float (as stored in the garage).
     {
-        const double dx = garage.m_vDirectionA.x, dy = garage.m_vDirectionA.y;
-        const double lenExt = std::sqrt(dx * dx + dy * dy);
+        const x87d dx = garage.m_vDirectionA.x, dy = garage.m_vDirectionA.y;
+        const x87d lenExt = std::sqrt(dx * dx + dy * dy);
         garage.m_fWidth = (float)lenExt;
         garage.m_vDirectionA.x = (float)(dx / lenExt);
         garage.m_vDirectionA.y = garage.m_vDirectionA.y / garage.m_fWidth;
     }
     {
-        const double dx = garage.m_vDirectionB.x, dy = garage.m_vDirectionB.y;
-        const double lenExt = std::sqrt(dx * dx + dy * dy);
+        const x87d dx = garage.m_vDirectionB.x, dy = garage.m_vDirectionB.y;
+        const x87d lenExt = std::sqrt(dx * dx + dy * dy);
         garage.m_fHeight = (float)lenExt;
         garage.m_vDirectionB.x = (float)(dx / lenExt);
         garage.m_vDirectionB.y = garage.m_vDirectionB.y / garage.m_fHeight;
@@ -289,25 +289,25 @@ int16 CGarages::FindGarageForObject(CObject* obj) {
         // Centre of the garage, as the original evaluates it: the products and the partial sums stay in the FPU (extended
         // precision) where the asm does not spill them to a float
         const float  hw  = g.m_fWidth * 0.5f;
-        const float  ax  = (float)((double)g.m_vDirectionA.x * hw);
-        const double ay  = (double)g.m_vDirectionA.y * hw;
+        const float  ax  = (float)((x87d)g.m_vDirectionA.x * hw);
+        const x87d ay  = (x87d)g.m_vDirectionA.y * hw;
         const float  z0  = hw * 0.0f;
-        const float  cx1 = (float)((double)ax + g.m_vPosn.x);
-        const double y1  = ay + g.m_vPosn.y;
-        const double z1  = (double)z0 + g.m_vPosn.z;
+        const float  cx1 = (float)((x87d)ax + g.m_vPosn.x);
+        const x87d y1  = ay + g.m_vPosn.y;
+        const x87d z1  = (x87d)z0 + g.m_vPosn.z;
 
         const float  hh  = g.m_fHeight * 0.5f;
-        const float  bx  = (float)((double)g.m_vDirectionB.x * hh);
-        const double by  = (double)g.m_vDirectionB.y * hh;
+        const float  bx  = (float)((x87d)g.m_vDirectionB.x * hh);
+        const x87d by  = (x87d)g.m_vDirectionB.y * hh;
         const float  z0b = hh * 0.0f;
-        const float  cx  = (float)((double)bx + cx1);
+        const float  cx  = (float)((x87d)bx + cx1);
         const float  cy  = (float)(by + y1);
-        const float  cz  = (float)((double)z0b + z1);
+        const float  cz  = (float)((x87d)z0b + z1);
 
-        const double dx = (double)pos.x - cx;
-        const double dy = (double)pos.y - cy;
-        const double dz = (double)pos.z - cz;
-        const double dist = std::sqrt((dy * dy + dz * dz) + dx * dx);
+        const x87d dx = (x87d)pos.x - cx;
+        const x87d dy = (x87d)pos.y - cy;
+        const x87d dz = (x87d)pos.z - cz;
+        const x87d dist = std::sqrt((dy * dy + dz * dz) + dx * dx);
         if (dist < best) { // FCOM + JP: NaN keeps the old best
             best    = (float)dist;
             bestIdx = (int32)i;
@@ -614,9 +614,9 @@ void CGarages::StoreCarInNearestImpoundingGarage(CVehicle* vehicle) {
         if (garage.m_nType < IMPOUND_LS || garage.m_nType > IMPOUND_LV) {
             continue;
         }
-        const double dx   = (double)vehicle->GetPosition().x - garage.m_vPosn.x;
-        const double dy   = (double)vehicle->GetPosition().y - garage.m_vPosn.y;
-        const double dist = std::sqrt(dx * dx + dy * dy); // kept at extended precision for the comparison
+        const x87d dx   = (x87d)vehicle->GetPosition().x - garage.m_vPosn.x;
+        const x87d dy   = (x87d)vehicle->GetPosition().y - garage.m_vPosn.y;
+        const x87d dist = std::sqrt(dx * dx + dy * dy); // kept at extended precision for the comparison
         if (dist < nearestDist) {
             nearestDist = (float)dist;
             nearest     = (int32)i;

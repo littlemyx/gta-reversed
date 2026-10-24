@@ -959,7 +959,7 @@ CVector CPathFind::FindNodeCoorsForScript(CNodeAddress nodeAddrA, CNodeAddress n
     // The heading: `atan2(-dx, dy) * (180 / PI)`, where `dx` is not rounded to float (x87), `dy` is
     const auto dy = (float)((x87d)posB.y - posA.y);
     const auto dx = (x87d)posB.x - posA.x;
-    outHeadingDeg = (float)(std::atan2(-dx, (double)dy) * (double)57.2957763671875f); // 0x859878
+    outHeadingDeg = (float)(X87R(std::atan2(-dx, (double)dy) * (double)57.2957763671875f)); // 0x859878
 
     if (!nodeA.m_nPathWidth) {
         return posA;
@@ -1241,7 +1241,7 @@ void CPathFind::FindNodeClosestInRegion(CNodeAddress* outAddress, uint16 areaId,
         const float dF = (float)d;
 
         // 0x44F190 (returns the unrounded `fsqrt` result in st0)
-        const double total = CalcDistToAnyConnectingLinksUnrounded(*this, node, pos) * (double)0.2f + (double)dF; // 0x858CC4
+        const x87d total = X87R(CalcDistToAnyConnectingLinksUnrounded(*this, node, pos) * (double)0.2f) + (x87d)dF; // 0x858CC4
         if (total < (double)*outDist) {
             *outDist = (float)total;
             outAddress->m_wAreaId = areaId;
@@ -1280,17 +1280,17 @@ CNodeAddress CPathFind::FindNodeClosestToCoors(
     const auto Border = [](int32 cell) { return (x87d)cell * (x87d)750.0 - (x87d)3000.0; };
     float t;
     {
-        const double a = (double)pos.x - Border(xr);
-        const double b = Border(xr + 1) - (double)pos.x;
+        const x87d a = (x87d)pos.x - Border(xr);
+        const x87d b = Border(xr + 1) - (x87d)pos.x;
         t = (float)a;
         if (!((double)t < b)) {
             t = (float)b;
         }
-        const double c = (double)pos.y - Border(yr);
+        const x87d c = (x87d)pos.y - Border(yr);
         if (!((double)t < c)) {
             t = (float)c;
         }
-        const double d = Border(yr + 1) - (double)pos.y;
+        const x87d d = Border(yr + 1) - (x87d)pos.y;
         if (!((double)t < d)) {
             t = (float)d;
         }
@@ -2033,7 +2033,7 @@ size_t CPathFind::FindYRegionForCoors(float y) const {
 void CPathFind::MarkRegionsForCoors(CVector pos, float radius) {
     // 0x44DB60: x87 - `pos - radius` / `pos + radius` are not rounded to float (the CRect(centre, radius) the port used rounds them), and the flags are stored at [xRegion * 8 + yRegion]
     // (the same layout CPathFind::UpdateStreaming reads), not [yRegion * 8 + xRegion]
-    const auto region = [](double v) { return (size_t)std::clamp(notsa::detail::Ftol((v - (double)-3000.f) * (double)0.0013333333f), 0, 7); };
+    const auto region = [](double v) { return (size_t)std::clamp(notsa::detail::Ftol((X87R(v - (double)-3000.f)) * (x87d)0.0013333333f), 0, 7); };
     const size_t minX = region((x87d)pos.x - radius), maxX = region((x87d)pos.x + radius);
     const size_t minY = region((x87d)pos.y - radius), maxY = region((x87d)pos.y + radius);
     for (size_t x = minX; x <= maxX; x++) {
@@ -2215,7 +2215,7 @@ float CPathFind::FindNodeOrientationForCarPlacement(CNodeAddress nodeInfo) {
     };
     NormaliseExt(dir); // 0x59C910
 
-    return (float)(x87::atan2(-(double)dir.x, (double)dir.y) * (double)57.2957763671875f); // 0x859878 - 180/pi
+    return (float)(X87R(x87::atan2(-(double)dir.x, (double)dir.y) * (double)57.2957763671875f)); // 0x859878 - 180/pi
 }
 
 // 0x452160

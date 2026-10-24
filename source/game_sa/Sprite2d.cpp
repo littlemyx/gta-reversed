@@ -412,7 +412,7 @@ void CSprite2d::DrawCircleAtNearClip(const CVector2D& posn, float size, const CR
 // 0x727FD0
 void CSprite2d::SetVerticesForSniper(const CRect& posn, const CRGBA& color1, const CRGBA& color2, const CRGBA& color3, const CRGBA& color4)
 {
-    const float z = (float)((double)NearScreenZ + (double)0.000001f); // Evaluated in an x87 register in the original
+    const float z = (float)((x87d)NearScreenZ + (x87d)0.000001f); // Evaluated in an x87 register in the original
 
     // NOTE: The texture is flipped vertically (v = 0 at the bottom edge)
     // Bottom left
@@ -456,11 +456,11 @@ void CSprite2d::SetVerticesForSniper(const CRect& posn, const CRGBA& color1, con
 void CSprite2d::OffsetTexCoordForBilinearFiltering(float width, float height)
 {
     // NOTE: The offsets are kept in x87 registers (extended precision) in the original
-    const double offsetU = 1.0 / ((double)width + (double)width);
-    const double offsetV = 1.0 / ((double)height + (double)height);
+    const x87d offsetU = (x87d)1.0 / ((x87d)width + (x87d)width);
+    const x87d offsetV = (x87d)1.0 / ((x87d)height + (x87d)height);
     for (auto& vertex : std::span{ maVertices.data(), 4 }) {
-        vertex.u = (float)((double)vertex.u + offsetU);
-        vertex.v = (float)((double)vertex.v + offsetV);
+        vertex.u = (float)((x87d)vertex.u + offsetU);
+        vertex.v = (float)((x87d)vertex.v + offsetV);
     }
 }
 

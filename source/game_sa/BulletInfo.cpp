@@ -69,11 +69,11 @@ void CBulletInfo::Update() {
             info.m_bExists = false;
 
         // 0x736143: half = timeStep * 0.5; the x product stays on the x87 stack, the y / z products are spilled to floats
-        const double half = (double)CTimer::GetTimeStep() * 0.5f;
+        const x87d half = (x87d)CTimer::GetTimeStep() * 0.5f;
         CVector newPosition;
         newPosition.x = (float)(half * info.m_vecVelocity.x + info.m_vecPosition.x);
-        newPosition.y = (float)((double)(float)(half * info.m_vecVelocity.y) + info.m_vecPosition.y);
-        newPosition.z = (float)((double)(float)(half * info.m_vecVelocity.z) + info.m_vecPosition.z);
+        newPosition.y = (float)((x87d)(float)(half * info.m_vecVelocity.y) + info.m_vecPosition.y);
+        newPosition.z = (float)((x87d)(float)(half * info.m_vecVelocity.z) + info.m_vecPosition.z);
         // 0x7361B0: FCOMP + JNP / JE forms, a NaN coordinate counts as inside the (-3000, 3000) bounds
         const auto InsideAxis = [](float v) { return !(v <= -3000.0f) && !(v >= 3000.0f); };
         if (!(InsideAxis(newPosition.x) && InsideAxis(newPosition.y))) {

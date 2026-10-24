@@ -1262,15 +1262,15 @@ int16 CPad::LookAroundLeftRight() noexcept {
     const float stick = (float)Pads[0].NewState.RightStickX;
     if (std::fabs(stick) > 100.0f && (DisablePlayerControls || !NewState.ShockButtonR)) {
         if (stick > 0.0f) {
-            return (int16)(int32)((double)stick - 100.0 + 50.0);
+            return (int16)(int32)((x87d)stick - (x87d)100.0 + (x87d)50.0);
         }
-        return (int16)(int32)((double)stick + 100.0 - 50.0);
+        return (int16)(int32)((x87d)stick + (x87d)100.0 - (x87d)50.0);
     }
     if (TheCamera.m_aCams[0].Using3rdPersonMouseCam() && std::fabs(stick) > 50.0f) { // 0x50A850
         if (stick > 0.0f) {
-            return (int16)(int32)(((double)stick - 50.0) * 0.5f);
+            return (int16)(int32)(((x87d)stick - (x87d)50.0) * 0.5f);
         }
-        return (int16)(int32)(((double)stick + 50.0) * 0.5f);
+        return (int16)(int32)(((x87d)stick + (x87d)50.0) * 0.5f);
     }
     return 0;
 }

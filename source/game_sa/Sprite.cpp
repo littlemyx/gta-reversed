@@ -19,8 +19,8 @@ static constexpr CornerCoords1D s_SpriteVs{ 0.0f, 1.0f, 1.0f, 0.0f };
 // Perspective-corrected screen Z. FP op order matches the original binary - do not re-associate.
 static float CalcSpriteScreenZ(float z, float nearZ, float farZ) {
     // evaluated in extended range in the exe (a float intermediate overflows for huge z)
-    return (float)((((double)z - CDraw::ms_fNearClipZ) * ((double)farZ - nearZ) * CDraw::ms_fFarClipZ)
-        / (((double)CDraw::ms_fFarClipZ - CDraw::ms_fNearClipZ) * z)
+    return (float)((((x87d)z - CDraw::ms_fNearClipZ) * ((x87d)farZ - nearZ) * CDraw::ms_fFarClipZ)
+        / (((x87d)CDraw::ms_fFarClipZ - CDraw::ms_fNearClipZ) * z)
         + nearZ);
 }
 
@@ -60,8 +60,8 @@ static SpriteQuadCoeffs CalcSpriteQuadCoeffs(float rotation) {
     const double fSin = x87::sin(rotation);
     const double fCos = x87::cos(rotation);
     return {
-        .xs = { (float)(-fCos - fSin), (float)(fSin - fCos), (float)(fCos + fSin), (float)(fCos - fSin) },
-        .ys = { (float)(fSin - fCos), (float)(fCos + fSin), (float)(fCos - fSin), (float)(-fCos - fSin) },
+        .xs = { (float)(X87R(-fCos - fSin)), (float)(X87R(fSin - fCos)), (float)(X87R(fCos + fSin)), (float)(X87R(fCos - fSin)) },
+        .ys = { (float)(X87R(fSin - fCos)), (float)(X87R(fCos + fSin)), (float)(X87R(fCos - fSin)), (float)(X87R(-fCos - fSin)) },
     };
 }
 
@@ -210,7 +210,7 @@ bool CSprite::CalcScreenCoors(const RwV3d& posn, RwV3d* out, float* w, float* h,
     *out = TheCamera.GetViewMatrix().TransformPoint(posn);
 
     // 0x70CE30: fcomp / test ah,5 - an unordered compare (NaN z) falls through to the flag test, so a NaN depth is rejected when the check is requested
-    if (!(out->z > (double)CDraw::GetNearClipZ() + 1.0) && checkMinVisible)
+    if (!(out->z > (x87d)CDraw::GetNearClipZ() + (x87d)1.0) && checkMinVisible)
         return false;
 
     if (!(out->z < CDraw::GetFarClipZ()) && checkMaxVisible)
@@ -477,10 +477,10 @@ void CSprite::RenderBufferedOneXLUSprite_Rotate_Dimension(CVector pos, CVector2D
     // sin / cos stay unrounded (extended) in the exe (0x70EAB0); the products are rounded by the PC24 multiplications
     const double fSin = x87::sin(rotation);
     const double fCos = x87::cos(rotation);
-    const float wCos = (float)((double)size.x * fCos);
-    const float hSin = (float)(fSin * (double)size.y);
-    const float hCos = (float)((double)size.y * fCos);
-    const double wSin = fSin * (double)size.x;
+    const float wCos = (float)(X87R((double)size.x * fCos));
+    const float hSin = (float)(X87R(fSin * (double)size.y));
+    const float hCos = (float)(X87R((double)size.y * fCos));
+    const x87d wSin = X87R(fSin * (double)size.x);
 
     const CornerCoords1D xs{
         (pos.x - wCos) - hSin,

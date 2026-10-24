@@ -74,24 +74,24 @@ bool CCoverPoint::FindCoordinatesCoverPoint(CPed* ped, const CVector& targetPos,
 
         // 0x69970B - `fld max.x; fcomp max.y; test ah, 0x41; jne` => y if (x <= y or unordered) else x; then `fadd 0.4f` and a store to a float
         const float maxXY = bb.m_vecMax.x > bb.m_vecMax.y ? bb.m_vecMax.x : bb.m_vecMax.y;
-        const float dist  = (float)((double)maxXY + 0.4f); // 0x858EE8
+        const float dist  = (float)((x87d)maxXY + 0.4f); // 0x858EE8
 
         // 0x699739 - (target - entity) in 2D, stored to floats, z = 0, normalised in 3D (CVector::Normalise 0x59C910)
         const CVector entityPos = entity->GetPosition();
         CVector       dir{
-            (float)((double)targetPos.x - entityPos.x),
-            (float)((double)targetPos.y - entityPos.y),
+            (float)((x87d)targetPos.x - entityPos.x),
+            (float)((x87d)targetPos.y - entityPos.y),
             0.f
         };
         dir.Normalise();
 
         // 0x699763 - entity pos - dir * dist. The products of x / y stay unrounded on the x87 stack, the one of z is stored to a float
-        const double mulX = (double)dir.x * dist;
-        const double mulY = (double)dir.y * dist;
-        const float  mulZ = (float)((double)dir.z * dist);
-        out.x             = (float)((double)entityPos.x - mulX);
-        out.y             = (float)((double)entityPos.y - mulY);
-        out.z             = (float)((double)entityPos.z - mulZ);
+        const x87d mulX = (x87d)dir.x * dist;
+        const x87d mulY = (x87d)dir.y * dist;
+        const float  mulZ = (float)((x87d)dir.z * dist);
+        out.x             = (float)((x87d)entityPos.x - mulX);
+        out.y             = (float)((x87d)entityPos.y - mulY);
+        out.z             = (float)((x87d)entityPos.z - mulZ);
         return true;
     }
     case eType::VEHICLE: { // 0x6995D4
@@ -116,13 +116,13 @@ bool CCoverPoint::FindCoordinatesCoverPoint(CPed* ped, const CVector& targetPos,
 
         // 0x69963E - squared 2D distances of the two points to the PED (not to the target): the first as a float that is then square-rooted, the second not rounded
         const CVector pedPos = ped->GetPosition();
-        const double  d0x    = (double)points.m_Points[0].x - pedPos.x;
-        const double  d0y    = (double)points.m_Points[0].y - pedPos.y;
+        const x87d  d0x    = (x87d)points.m_Points[0].x - pedPos.x;
+        const x87d  d0y    = (x87d)points.m_Points[0].y - pedPos.y;
         const float   d0Sq   = (float)(d0y * d0y + d0x * d0x);
-        const double  d1x    = (double)points.m_Points[1].x - pedPos.x;
-        const double  d1y    = (double)points.m_Points[1].y - pedPos.y;
-        const double  r0     = x87::sqrt(d0Sq);
-        const double  r1     = x87::sqrt(d1y * d1y + d1x * d1x);
+        const x87d  d1x    = (x87d)points.m_Points[1].x - pedPos.x;
+        const x87d  d1y    = (x87d)points.m_Points[1].y - pedPos.y;
+        const x87d  r0     = x87::sqrt(d0Sq);
+        const x87d  r1     = x87::sqrt(d1y * d1y + d1x * d1x);
         out = r1 > r0 ? points.m_Points[0] : points.m_Points[1]; // 0x6996A1 - `fcompp; test ah, 0x41; jne` => the second point unless r1 > r0
         return true;
     }

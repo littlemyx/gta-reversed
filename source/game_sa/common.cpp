@@ -38,8 +38,8 @@ void InjectCommonHooks() {
 void TransformPoint(RwV3d& point, const CSimpleTransform& placement, const RwV3d& vecPos) {
     const auto cos = x87::cos(placement.m_fHeading), sin = x87::sin(placement.m_fHeading);
 
-    point.x = cos * vecPos.x - sin * vecPos.y + placement.m_vPosn.x;
-    point.y = sin * vecPos.x + cos * vecPos.y + placement.m_vPosn.y;
+    point.x = X87R(cos * vecPos.x) - X87R(sin * vecPos.y) + placement.m_vPosn.x;
+    point.y = X87R(sin * vecPos.x) + X87R(cos * vecPos.y) + placement.m_vPosn.y;
     point.z = vecPos.z + placement.m_vPosn.z;
 }
 
@@ -190,12 +190,12 @@ bool DoesInfiniteLineTouchScreen(
         return true;
     }
 
-    const double a   = (double)(-origin.y) * dir.x;                           // kept on the x87 stack
-    const float  c00 = (float)((double)(-origin.x) * dir.y - a);               // spilled to [esp+4]
-    if ((((double)w - origin.x) * dir.y - a) * c00 < 0.0) {                    // top edge
+    const x87d a   = (x87d)(-origin.y) * dir.x;                           // kept on the x87 stack
+    const float  c00 = (float)((x87d)(-origin.x) * dir.y - a);               // spilled to [esp+4]
+    if ((((x87d)w - origin.x) * dir.y - a) * c00 < 0.0) {                    // top edge
         return true;
     }
-    if (((double)(-origin.x) * dir.y - ((double)h - origin.y) * dir.x) * c00 < 0.0) { // left edge
+    if (((x87d)(-origin.x) * dir.y - ((x87d)h - origin.y) * dir.x) * c00 < 0.0) { // left edge
         return true;
     }
     return DoesInfiniteLineCrossFiniteLine({w, 0.f}, {w, h}, origin, dir)      // right edge

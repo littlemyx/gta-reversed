@@ -32,13 +32,13 @@ void CRegisteredCorona::Update() {
             // 0x6FACC1: step towards the target intensity; NaN takes the stepped value (std::min / max would differ); equal values change nothing (not even the immediate update)
             const uint8 faded = m_FadedIntensity, target = m_Color.a;
             if (target > faded) {
-                const float next = (float)((double)faded + (double)CTimer::GetTimeStep() * m_fFadeSpeed);
+                const float next = (float)((x87d)faded + (x87d)CTimer::GetTimeStep() * m_fFadeSpeed);
                 m_FadedIntensity = (uint8)notsa::detail::Ftol((double)target < (double)next ? (double)target : (double)next);
                 if (CCoronas::bChangeBrightnessImmediately) {
                     m_FadedIntensity = target;
                 }
             } else if (target < faded) {
-                const float next = (float)((double)faded - (double)CTimer::GetTimeStep() * m_fFadeSpeed);
+                const float next = (float)((x87d)faded - (x87d)CTimer::GetTimeStep() * m_fFadeSpeed);
                 m_FadedIntensity = (uint8)notsa::detail::Ftol((double)target > (double)next ? (double)target : (double)next);
                 if (CCoronas::bChangeBrightnessImmediately) {
                     m_FadedIntensity = target;
@@ -46,7 +46,7 @@ void CRegisteredCorona::Update() {
             }
 
             if (m_dwId == 2) {
-                const float v = (float)((double)CCoronas::LightsMult - (double)CTimer::GetTimeStep() * (double)std::bit_cast<float>(0x3D75C28Fu)); // 0x859934: 0.06
+                const float v = (float)((x87d)CCoronas::LightsMult - (x87d)CTimer::GetTimeStep() * (x87d)std::bit_cast<float>(0x3D75C28Fu)); // 0x859934: 0.06
                 CCoronas::LightsMult = (0.6f <= v || v != v) ? v : 0.6f;
             }
         }

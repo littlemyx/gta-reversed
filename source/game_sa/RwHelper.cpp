@@ -334,9 +334,9 @@ static RwV3d AtomicGetBoundingSphereCenterTransformed(RpAtomic* atomic) {
 static RpAtomic* ClumpBoundingSphereSumCentersCB(RpAtomic* atomic, void* data) {
     const auto center = AtomicGetBoundingSphereCenterTransformed(atomic);
     const auto sum    = (RwV3d*)data;
-    sum->x = (float)((double)center.x + (double)sum->x);
-    sum->y = (float)((double)center.y + (double)sum->y);
-    sum->z = (float)((double)center.z + (double)sum->z);
+    sum->x = (float)((x87d)center.x + (x87d)sum->x);
+    sum->y = (float)((x87d)center.y + (x87d)sum->y);
+    sum->z = (float)((x87d)center.z + (x87d)sum->z);
     return atomic;
 }
 
@@ -350,10 +350,10 @@ static RpAtomic* ClumpBoundingSphereCalcRadiusCB(RpAtomic* atomic, void* data) {
     }
     const auto center = AtomicGetBoundingSphereCenterTransformed(atomic);
 
-    const double dx = (double)center.x - (double)sphere->center.x;
-    const double dy = (double)center.y - (double)sphere->center.y;
-    const double dz = (double)center.z - (double)sphere->center.z;
-    const double radius = std::sqrt(dz * dz + dy * dy + dx * dx) + (double)atomic->boundingSphere.radius;
+    const x87d dx = (x87d)center.x - (x87d)sphere->center.x;
+    const x87d dy = (x87d)center.y - (x87d)sphere->center.y;
+    const x87d dz = (x87d)center.z - (x87d)sphere->center.z;
+    const x87d radius = std::sqrt(dz * dz + dy * dy + dx * dx) + (x87d)atomic->boundingSphere.radius;
     if (radius > (double)sphere->radius) {
         sphere->radius = (float)radius;
     }
@@ -380,10 +380,10 @@ RpClump* RpClumpGetBoundingSphere(RpClump* clump, RwSphere* sphere, bool bUseLTM
     RwV3d center{};
     RpClumpForAllAtomics(clump, ClumpBoundingSphereSumCentersCB, &center);
 
-    const double recipNumAtomics = 1.0 / (double)numAtomics; // Kept in an x87 register in the original
-    center.x = (float)((double)center.x * recipNumAtomics);
-    center.y = (float)((double)center.y * recipNumAtomics);
-    center.z = (float)((double)center.z * recipNumAtomics);
+    const x87d recipNumAtomics = (x87d)1.0 / (x87d)numAtomics; // Kept in an x87 register in the original
+    center.x = (float)((x87d)center.x * recipNumAtomics);
+    center.y = (float)((x87d)center.y * recipNumAtomics);
+    center.z = (float)((x87d)center.z * recipNumAtomics);
 
     // Radius = max distance to any atomic's sphere center + its radius
     RwSphere worldSphere{ center, 0.f };

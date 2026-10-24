@@ -191,8 +191,8 @@ void CWeaponEffects::Render() {
                     ch.m_fLockOnFade = 0.0f;
                 }
                 ch.m_fRotation = ch.m_fLockOnFade == 0.0f ? 1.0f : 0.0f;
-                gCrossHairLockOffsetSin = x87::sin(rot) * ch.m_fLockOnFade;
-                gCrossHairLockOffsetCos = x87::cos(rot) * ch.m_fLockOnFade;
+                gCrossHairLockOffsetSin = X87R(x87::sin(rot) * ch.m_fLockOnFade);
+                gCrossHairLockOffsetCos = X87R(x87::cos(rot) * ch.m_fLockOnFade);
 
                 for (const float scale : scales) {
                     CSprite::RenderOneXLUSprite_Rotate_Aspect(
@@ -255,7 +255,7 @@ void CWeaponEffects::Render() {
 
                     CSprite::RenderOneXLUSprite_Triangle(v1, v2, v3, 2.5f, 0, 0, 0, 255, 1.0f, 255);
 
-                    v1.x = static_cast<float>(cos2 * SHRINK * 0.1 + v1.x);
+                    v1.x = static_cast<float>(X87R(cos2 * SHRINK * 0.1) + v1.x);
                     const float a2 = SHRINK * sin2;
                     v1.y = 0.1f * a2 + v1.y;
                     v2.x = t * SHRINK * 0.8f + v1.x;
@@ -291,17 +291,17 @@ void CWeaponEffects::Render() {
 
                     const float angle0 = DEG_TO_RAD * a + ch.m_fRingAngle;
                     const float r0     = innerRadius + ring;
-                    const float x0     = -(x87::sin(angle0) * r0);
-                    const float y0     = -(x87::cos(angle0) * r0);
+                    const float x0     = -(X87R(x87::sin(angle0) * r0));
+                    const float y0     = -(X87R(x87::cos(angle0) * r0));
 
                     const float angle1 = (a + 15.0f) * DEG_TO_RAD + ch.m_fRingAngle;
                     const float r1     = outerRadius + ring;
-                    const float x1     = -(x87::sin(angle1) * r1);
-                    const float y1     = -(x87::cos(angle1) * r1);
+                    const float x1     = -(X87R(x87::sin(angle1) * r1));
+                    const float y1     = -(X87R(x87::cos(angle1) * r1));
 
                     const float angle2 = (a - 15.0f) * DEG_TO_RAD + ch.m_fRingAngle;
-                    const float x2     = -(x87::sin(angle2) * r1);
-                    const float y2     = -(x87::cos(angle2) * r1);
+                    const float x2     = -(X87R(x87::sin(angle2) * r1));
+                    const float y2     = -(X87R(x87::cos(angle2) * r1));
 
                     CVector2D v1{ x0 + out.x, y0 + out.y };
                     CVector2D v2{ x1 + out.x, y1 + out.y };

@@ -898,8 +898,8 @@ void CWeapon::SetUpPelletCol(int32 numPellets, CEntity* owner, CEntity* victim, 
         const auto angle  = CGeneral::GetRandomNumberInRange(-PI, PI);
         const auto spread = CGeneral::GetRandomNumberInRange(0.f, depth * 0.8f);
 
-        const float oX = x87::cos(angle) * spread;
-        const float oZ = x87::sin(angle) * spread;
+        const float oX = X87R(x87::cos(angle) * spread);
+        const float oZ = X87R(x87::sin(angle) * spread);
 
         lines[i].Set(
             { oX, -depth * 2.f, oZ },
@@ -1700,7 +1700,7 @@ static double FireInstantHit_Rand01() {
 
 //! NOTSA: `CGeneral::GetRandomNumberInRange<float>` (0x41BD90), but without the assertion
 static float FireInstantHit_RandomInRange(float lo, float hi) {
-    return (float)((double)lo + ((double)hi - (double)lo) * FireInstantHit_Rand01());
+    return (float)((x87d)lo + X87R(((x87d)hi - (x87d)lo) * FireInstantHit_Rand01()));
 }
 
 /*!
@@ -1712,7 +1712,7 @@ static void FireInstantHit_ApplyRandomSpread(CVector& pt, float spread) {
     const auto ry = (float)FireInstantHit_Rand01();
     const auto rx = FireInstantHit_Rand01();
 
-    const auto offsX = (rx * 0.4f - 0.2f) * spread;
+    const auto offsX = (X87R(rx * 0.4f) - 0.2f) * spread;
     const auto offsY = ((x87d)ry * 0.4f - 0.2f) * spread;
     const auto offsZ = (float)(((x87d)rz * 0.2f - 0.1f) * spread);
 
@@ -1750,10 +1750,10 @@ static void FireInstantHit_ApplyAimSway(CVector& pt, const CVector& sinDir, cons
 
 //! @brief `start + dir * range`, with the same rounding as the original
 static CVector FireInstantHit_PointAlongDir(const CVector& start, const CVector& dir, double range) {
-    const auto offsY = (float)((double)dir.y * range);
-    const auto offsZ = (float)((double)dir.z * range);
+    const auto offsY = (float)(X87R((double)dir.y * range));
+    const auto offsZ = (float)(X87R((double)dir.z * range));
     return {
-        (float)(start.x + (double)dir.x * range),
+        (float)(start.x + X87R((double)dir.x * range)),
         offsY + start.y,
         start.z + offsZ
     };
@@ -2508,9 +2508,9 @@ bool CWeapon::FireM16_1stPerson(CPed* owner) {
 
         // Do pad shaking (0x741F05..0x741F99): everything in extended precision, `_ftol` at each int conversion
         const int32  loopFrames = (int32)(((x87d)wi->m_fAnimLoopEnd - (x87d)wi->m_fAnimLoopStart) * 900.0f);
-        const double x          = (20.0 - (double)loopFrames) * 0.0125; // 0x872C88 (double 0.0125, not `/ 80.f`)
-        const double t          = (0.0 > x) ? 0.0 : ((1.0 < x) ? 1.0 : x); // NaN passes through
-        const uint8  shakeFreq  = (uint8)(int32)(t * 80.0 + 130.0); // 130 + 80t, low byte of the _ftol result
+        const x87d x          = X87R(((x87d)20.0 - (x87d)loopFrames) * 0.0125); // 0x872C88 (double 0.0125, not `/ 80.f`)
+        const x87d t          = (0.0 > x) ? (x87d)0.0 : ((1.0 < x) ? (x87d)1.0 : x); // NaN passes through
+        const uint8  shakeFreq  = (uint8)(int32)(t * (x87d)80.0 + (x87d)130.0); // 130 + 80t, low byte of the _ftol result
         CPad::GetPad(owner->GetPadNumber())->StartShake(
             (int16)(int32)((x87d)CTimer::GetTimeStep() * 20000.0f / (x87d)(int32)shakeFreq), // fidiv
             shakeFreq,
@@ -2545,8 +2545,8 @@ bool CWeapon::Fire(CEntity* firedBy, CVector* startPosn, CVector* barrelPosn, CE
         const auto r = 0.15f;
 
         const auto h = firedBy->GetHeading();
-        fxPos->x -= x87::sin(h) * r;
-        fxPos->y += x87::cos(h) * r;
+        fxPos->x -= X87R(x87::sin(h) * r);
+        fxPos->y += X87R(x87::cos(h) * r);
     }
 
     switch (m_State) {

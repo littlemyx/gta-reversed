@@ -408,7 +408,7 @@ void CWaterLevel::RenderWakeSegment(
                 p /= 32.f;   // TODO: Magic number (maybe meaningful this time) 
                 return p - std::floor(p); // Extract fractional part
             };
-            const float  z   = wakeZ + x87::sin((CalcAngleOfPos(corners[i].x) + CalcAngleOfPos(corners[i].y)) * PI * 2.f + angle) * windRadius;
+            const float  z   = wakeZ + X87R(x87::sin((CalcAngleOfPos(corners[i].x) + CalcAngleOfPos(corners[i].y)) * PI * 2.f + angle) * windRadius);
             const auto& rgb = WakeSegmentPartColors[i];
             RenderBuffer::PushVertex(
                 CVector{ corners[i], z },
@@ -1213,7 +1213,7 @@ bool CWaterQuad::GetWaterLevel(float x, float y, float z, float* outWaterLevel, 
 
     // Interpolate `Get` (a member of `CRenPar`) in the triangle `base`, `a`, `b`: `base + (a - base) * wa + (b - base) * wb`
     const auto Interpolate = [](auto get, const CWaterVertex& base, const CWaterVertex& a, double wa, const CWaterVertex& b, double wb) {
-        return ((double)get(a.rp) - (double)get(base.rp)) * wa + ((double)get(b.rp) - (double)get(base.rp)) * wb + (double)get(base.rp);
+        return X87R(((double)get(a.rp) - (double)get(base.rp)) * wa) + X87R(((double)get(b.rp) - (double)get(base.rp)) * wb) + (double)get(base.rp);
     };
     const auto GetZ     = [](const CRenPar& rp) { return rp.z; };
     const auto GetBig   = [](const CRenPar& rp) { return rp.bigWaves; };
@@ -1274,7 +1274,7 @@ bool CWaterTriangle::GetWaterLevel(float x, float y, float z, float* outWaterLev
 
     // `base + (a - base) * wa + (b - base) * wb`
     const auto Interpolate = [](auto get, const CWaterVertex& base, const CWaterVertex& a, double wa, const CWaterVertex& b, double wb) {
-        return ((double)get(a.rp) - (double)get(base.rp)) * wa + ((double)get(b.rp) - (double)get(base.rp)) * wb + (double)get(base.rp);
+        return X87R(((double)get(a.rp) - (double)get(base.rp)) * wa) + X87R(((double)get(b.rp) - (double)get(base.rp)) * wb) + (double)get(base.rp);
     };
     const auto GetZ     = [](const CRenPar& rp) { return rp.z; };
     const auto GetBig   = [](const CRenPar& rp) { return rp.bigWaves; };
@@ -1635,8 +1635,8 @@ void CWaterLevel::CalculateWavesOnlyForCoordinate(
     {
         const x87d phase = (x87d)TimeStep(5000) * (x87d)0.00125663704f /* 0x872020 */ + (fY + fX) * (x87d)0.0981747732f /* 0x87201C */;
         const x87d scaled = phase * (x87d)PHASE_TO_LUT;
-        outWave = (float)(LutAt(scaled) * (double)2.0f * waveMult * (double)bigWavesAmplitude + (double)outWave);
-        const double d = LutAt(scaled + (x87d)64.0) * (double)2.0f * waveMult * (double)bigWavesAmplitude * (double)0.0981747732f;
+        outWave = (float)(X87R(LutAt(scaled) * (double)2.0f) * waveMult * (x87d)bigWavesAmplitude + (x87d)outWave);
+        const x87d d = X87R(LutAt(scaled + (x87d)64.0) * (double)2.0f) * waveMult * (x87d)bigWavesAmplitude * (x87d)0.0981747732f;
         const float  n = (float)-d;
         vecNormal.x = n;
         vecNormal.y = n;
@@ -1646,18 +1646,18 @@ void CWaterLevel::CalculateWavesOnlyForCoordinate(
     {
         const x87d phase = ((x87d)TimeStep(3500) * (x87d)0.00179519586f /* 0x872018 */ + fY * (x87d)0.120830491f /* 0x872014 */) + fX * (x87d)0.241660982f /* 0x872010 */;
         const x87d scaled = phase * (x87d)PHASE_TO_LUT;
-        outWave = (float)(LutAt(scaled) * (double)1.0f * waveMult * (double)smallWavesAmplitude + (double)outWave);
-        const double d = LutAt(scaled + (x87d)64.0) * (double)1.0f * waveMult * (double)smallWavesAmplitude * (double)0.241660982f;
-        vecNormal.x = (float)(d + (double)vecNormal.x);
-        vecNormal.y = (float)(d + (double)vecNormal.y);
+        outWave = (float)(X87R(LutAt(scaled) * (double)1.0f) * waveMult * (x87d)smallWavesAmplitude + (x87d)outWave);
+        const x87d d = X87R(LutAt(scaled + (x87d)64.0) * (double)1.0f) * waveMult * (x87d)smallWavesAmplitude * (x87d)0.241660982f;
+        vecNormal.x = (float)(d + (x87d)vecNormal.x);
+        vecNormal.y = (float)(d + (x87d)vecNormal.y);
     }
     // Wave 3
     {
         const x87d phase = (x87d)TimeStep(3000) * (x87d)0.00209439523f /* 0x87200C */ + fY * (x87d)0.314159274f /* 0x872008 */;
         const x87d scaled = phase * (x87d)PHASE_TO_LUT;
-        outWave = (float)(LutAt(scaled) * (double)0.5f * waveMult * (double)smallWavesAmplitude + (double)outWave);
-        const double d = LutAt(scaled + (x87d)64.0) * (double)0.5f * waveMult * (double)smallWavesAmplitude * (double)0.314159274f;
-        vecNormal.x = (float)(d + (double)vecNormal.x);
+        outWave = (float)(X87R(LutAt(scaled) * (double)0.5f) * waveMult * (x87d)smallWavesAmplitude + (x87d)outWave);
+        const x87d d = X87R(LutAt(scaled + (x87d)64.0) * (double)0.5f) * waveMult * (x87d)smallWavesAmplitude * (x87d)0.314159274f;
+        vecNormal.x = (float)(d + (x87d)vecNormal.x);
     }
 
     vecNormal.Normalise();
@@ -1727,22 +1727,22 @@ void CWaterLevel::CalculateWavesOnlyForCoordinate2( // TODO: Original name didn'
     constexpr float PHASE_TO_LUT = 40.7436638f; // 0x85A778 (= 256 / 2pi)
     const auto TimeStep = [](uint32 period) { return (CTimer::m_snTimeInMilliseconds - m_nWaterTimeOffset) % period; };
     const auto LutSin   = [&](double phase) { // `phase * PHASE_TO_LUT` is truncated by `_ftol2`
-        return (double)SIN_LUT[(int32)(phase * (double)PHASE_TO_LUT) & 0xFF];
+        return (double)SIN_LUT[(int32)(X87R(phase * (double)PHASE_TO_LUT)) & 0xFF];
     };
 
     // Wave 1 (big)
     const x87d phase1 = (x87d)TimeStep(5000) * (x87d)0.00125663704f /* 0x872020 */ + ((x87d)yf + (x87d)x) * (x87d)0.0981747732f /* 0x87201C */;
-    *pResultHeight = (float)(LutSin(phase1) * (double)2.0f /* 0x871FF8 */ * waveMult * (double)bigWavesAmpl + (double)*pResultHeight);
+    *pResultHeight = (float)(X87R(LutSin(phase1) * (double)2.0f) /* 0x871FF8 */ * waveMult * (x87d)bigWavesAmpl + (x87d)*pResultHeight);
     const float afterWave1 = *pResultHeight; // Spilled as a float
 
     // Wave 2 (small)
     const x87d phase2 = ((x87d)TimeStep(3500) * (x87d)0.00179519586f /* 0x872018 */ + (x87d)yf * (x87d)0.120830491f /* 0x872014 */) + (x87d)x * (x87d)0.241660982f /* 0x872010 */;
-    const double afterWave2 = LutSin(phase2) * (double)1.0f /* 0x871FFC */ * waveMult * (double)smallWavesAmpl + (double)afterWave1;
+    const x87d afterWave2 = X87R(LutSin(phase2) * (double)1.0f) /* 0x871FFC */ * waveMult * (x87d)smallWavesAmpl + (x87d)afterWave1;
     *pResultHeight = (float)afterWave2;
 
     // Wave 3 (small). Note: `afterWave2` is NOT rounded to a float here (it is still on the x87 stack)
     const x87d phase3 = (x87d)TimeStep(3000) * (x87d)0.00209439523f /* 0x87200C */ + (x87d)yf * (x87d)0.314159274f /* 0x872008 */;
-    *pResultHeight = (float)(LutSin(phase3) * (double)0.5f /* 0x872000 */ * waveMult * (double)smallWavesAmpl + afterWave2);
+    *pResultHeight = (float)(X87R(LutSin(phase3) * (double)0.5f) /* 0x872000 */ * waveMult * (x87d)smallWavesAmpl + afterWave2);
 }
 
 // 0x6E6CA0
@@ -1987,21 +1987,21 @@ void CWaterLevel::RenderWater() {
     constexpr auto PI_F = std::numbers::pi_v<float>;
 
     const x87d angle1 = (x87d)(float)(CTimer::GetTimeInMS() & 0xFFF) * (2.f * PI_F / 4096.f);
-    TextureShiftSecondU = (float)(x87::sin(angle1) * (double)CWeather::Wavyness * 0.08f + (double)TextureScrollSecondU);
-    TextureShiftSecondV = (float)(x87::cos(angle1) * (double)CWeather::Wavyness * 0.08f + (double)TextureScrollSecondV);
+    TextureShiftSecondU = (float)(X87R(x87::sin(angle1) * (double)CWeather::Wavyness) * 0.08f + (x87d)TextureScrollSecondU);
+    TextureShiftSecondV = (float)(X87R(x87::cos(angle1) * (double)CWeather::Wavyness) * 0.08f + (x87d)TextureScrollSecondV);
 
     const float angle2 = (float)(CTimer::GetTimeInMS() & 0x1FFF) * (PI_F / 4096.f);
     TextureShiftFirstU = TextureScrollFirstU;
     const double cosAngle2d = x87::cos((double)angle2);
     const float  cosAngle2  = (float)cosAngle2d; // Original stores it as float too
-    TextureShiftFirstV = (float)(cosAngle2d * 0.024f + (double)TextureScrollFirstV);
+    TextureShiftFirstV = (float)(X87R(cosAngle2d * 0.024f) + (x87d)TextureScrollFirstV);
 
     constexpr auto RAND_NORM = 1.f / 32767.f; // 0x858C7C (Not 1 / RAND_MAX, but that is the original value)
 
     const int32 rand1 = rand();
     TextureShiftThirdU = (float)((x87d)(float)rand1 * RAND_NORM * (x87d)TextureRandomShiftMult);
     const int32 rand2 = rand();
-    TextureShiftThirdU = (float)(x87::sin((double)angle2) * (double)TextureJitterMult + (double)TextureShiftThirdU);
+    TextureShiftThirdU = (float)(X87R(x87::sin((double)angle2) * (double)TextureJitterMult) + (x87d)TextureShiftThirdU);
     TextureShiftThirdV = (float)((x87d)(float)rand2 * RAND_NORM * (x87d)TextureRandomShiftMult + (x87d)cosAngle2 * (x87d)TextureJitterMult);
 
     // Water colors

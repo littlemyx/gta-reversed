@@ -485,7 +485,7 @@ void CCamera::CamShake(float strength, CVector from) {
     const x87d m2d = std::sqrt(dx * dx + dy * dy);
     const x87d dist = std::clamp(std::sqrt((x87d)dz * dz + m2d * m2d), (x87d)0.0, (x87d)100.0);
 
-    float percentShakeForce = (float)(1.0 - dist * 0.01);
+    float percentShakeForce = (float)((x87d)1.0 - X87R(dist * 0.01));
     float shakeForce = (m_fCamShakeForce - float(CTimer::GetTimeInMS() - m_nCamShakeStart) * ExeRecip(1000.f)) * percentShakeForce;
 
     float toShakeForce = percentShakeForce * strength * 0.35f;
@@ -566,8 +566,8 @@ float CCamera::Find3rdPersonQuickAimPitch() const {
     // https://mathworld.wolfram.com/images/eps-svg/SOHCAHTOA_500.svg
     // 0x50AD40: everything stays on the x87 stack; the exe multiplies by the reciprocal of the aspect ratio (fld1; fdiv; fmulp) instead of dividing
     const x87d adjacent = ((x87d)0.5f - (x87d)m_f3rdPersonCHairMultY) * (x87d)2.0;
-    const double opposite = (double)x87::tan(DegreesToRadians(cam.m_fFOV * 0.5f)) * adjacent;
-    const double relAngle = (double)cam.m_fVerticalAngle + (double)x87::atan(opposite * (1.0 / (double)CDraw::ms_fAspectRatio));
+    const x87d opposite = X87R((double)x87::tan(DegreesToRadians(cam.m_fFOV * 0.5f)) * adjacent);
+    const x87d relAngle = X87R((double)cam.m_fVerticalAngle + (double)x87::atan(opposite * ((x87d)1.0 / (x87d)CDraw::ms_fAspectRatio)));
     return (float)-relAngle; // Flip it
 }
 
@@ -1664,7 +1664,7 @@ void CCamera::VectorMoveLinear(CVector* to, CVector* from, float duration, bool 
     // NOTE: the original reads the ms timer as signed int and corrects negative values by 2^32
     const double now = ExeTimeMS(); // exe 0x50D160: fild kept unrounded on the FPU stack: start = (float)now, end = (float)(now + duration) (one rounding)
     m_fMoveLinearStartTime = static_cast<float>(now);
-    m_fMoveLinearEndTime   = static_cast<float>(now + duration);
+    m_fMoveLinearEndTime   = static_cast<float>(X87R(now + duration));
     m_vecMoveLinearPosnStart = *from;
     m_vecMoveLinearPosnEnd   = *to;
     m_bMoveLinearWithEase    = bMoveLinearWithEase;
@@ -1674,7 +1674,7 @@ void CCamera::VectorMoveLinear(CVector* to, CVector* from, float duration, bool 
 void CCamera::VectorTrackLinear(CVector* to, CVector* from, float duration, bool bEase) {
     const double now = ExeTimeMS(); // exe 0x50D1D0, same as VectorMoveLinear
     m_fTrackLinearStartTime = static_cast<float>(now);
-    m_fTrackLinearEndTime   = static_cast<float>(now + duration);
+    m_fTrackLinearEndTime   = static_cast<float>(X87R(now + duration));
     m_vecTrackLinearStartPoint = *from;
     m_vecTrackLinearEndPoint   = *to;
     m_bTrackLinearWithEase  = bEase;
@@ -1691,14 +1691,14 @@ void CCamera::AddShakeSimple(float durationMs, int32 type, float intensity) {
     m_nShakeType = type;
     const double now = ExeTimeMS(); // exe 0x50D240: end = (float)(now + duration), one rounding
     m_fStartShakeTime = static_cast<float>(now);
-    m_fEndShakeTime = static_cast<float>(now + durationMs);
+    m_fEndShakeTime = static_cast<float>(X87R(now + durationMs));
 }
 
 // 0x50D280
 void CCamera::LerpFOV(float zoomInFactor, float zoomOutFactor, float timeLimit, bool bEase) {
     const double now = ExeTimeMS(); // exe 0x50D280: one rounding for the end time (see VectorMoveLinear)
     m_fStartZoomTime = static_cast<float>(now);
-    m_fEndZoomTime = static_cast<float>(now + timeLimit);
+    m_fEndZoomTime = static_cast<float>(X87R(now + timeLimit));
 
     m_nZoomMode = bEase; // TODO: Rename
     m_fZoomInFactor = zoomInFactor;
@@ -1995,7 +1995,7 @@ bool CCamera::IsItTimeForNewCamera(int32 camSequence, int32 startTime) {
         }
         const auto offset = PlayerOffsetFromCam(true);
         if (MagExt(offset) < 2.0f) { // 0x858CA0
-            double nearClip = MagExt(offset) * 0.5f;
+            x87d nearClip = MagExt(offset) * 0.5f;
             if (nearClip < (double)0.05f) { // 0x858C28
                 nearClip = 0.05f;
             }
@@ -2237,7 +2237,7 @@ void CCamera::ProcessWideScreenOn() {
 void CCamera::ProcessVectorTrackLinear() {
     const double now = ExeTimeMS(); // exe 0x516440: `now` unrounded (fild)
     if (now <= m_fTrackLinearEndTime) {
-        ProcessVectorTrackLinear(static_cast<float>((now - m_fTrackLinearStartTime) / (static_cast<double>(m_fTrackLinearEndTime) - m_fTrackLinearStartTime)));
+        ProcessVectorTrackLinear(static_cast<float>((X87R(now - m_fTrackLinearStartTime)) / (static_cast<x87d>(m_fTrackLinearEndTime) - m_fTrackLinearStartTime)));
     } else if (m_bCameraPersistTrack) {
         m_bVecTrackLinearProcessed = true;
     }
@@ -2249,7 +2249,7 @@ void CCamera::ProcessVectorTrackLinear(float ratio) {
     const CVector& a = m_vecTrackLinearStartPoint;
     const CVector& b = m_vecTrackLinearEndPoint;
     const float t = m_bTrackLinearWithEase
-        ? (x87::sin((270.0f - ratio * 180.0f) * 0.017453292f) + 1.0f) * 0.5f
+        ? (X87R(x87::sin((270.0f - ratio * 180.0f) * 0.017453292f) + 1.0f)) * 0.5f
         : ratio;
     m_vecTrackLinear.x = (b.x - a.x) * t + a.x;
     m_vecTrackLinear.y = (b.y - a.y) * t + a.y;
@@ -2343,7 +2343,7 @@ void CCamera::ProcessVectorMoveLinear(float ratio) {
     const CVector& a = m_vecMoveLinearPosnStart;
     const CVector& b = m_vecMoveLinearPosnEnd;
     const float t = m_bMoveLinearWithEase
-        ? (x87::sin((270.0f - ratio * 180.0f) * 0.017453292f) + 1.0f) * 0.5f
+        ? (X87R(x87::sin((270.0f - ratio * 180.0f) * 0.017453292f) + 1.0f)) * 0.5f
         : ratio;
     m_vecMoveLinear.x = (b.x - a.x) * t + a.x;
     m_vecMoveLinear.y = (b.y - a.y) * t + a.y;
@@ -2353,7 +2353,7 @@ void CCamera::ProcessVectorMoveLinear(float ratio) {
 // 0x516500
 void CCamera::ProcessFOVLerp() {
     if (const auto now = ExeTimeMS(); now <= m_fEndZoomTime) { /* Check if still processing */ // exe 0x516500: `now` stays unrounded (fild), ratio = (now - start) / (end - start) rounded once
-        ProcessFOVLerp(static_cast<float>((now - m_fStartZoomTime) / (static_cast<double>(m_fEndZoomTime) - m_fStartZoomTime)));
+        ProcessFOVLerp(static_cast<float>((X87R(now - m_fStartZoomTime)) / (static_cast<x87d>(m_fEndZoomTime) - m_fStartZoomTime)));
     } else if (m_bBlockZoom) { /* Finished */
         m_bFOVLerpProcessed = true;
     }
@@ -2363,7 +2363,7 @@ void CCamera::ProcessFOVLerp() {
 void CCamera::ProcessFOVLerp(float ratio) {
     m_bFOVLerpProcessed = true;
     if (m_nZoomMode) {
-        m_fFOVNew = (m_fZoomOutFactor - m_fZoomInFactor) * (x87::sin((270.0f - ratio * 180.0f) * 0.017453292f) + 1.0f) * 0.5f + m_fZoomInFactor;
+        m_fFOVNew = (m_fZoomOutFactor - m_fZoomInFactor) * (X87R(x87::sin((270.0f - ratio * 180.0f) * 0.017453292f) + 1.0f)) * 0.5f + m_fZoomInFactor;
     } else {
         m_fFOVNew = (m_fZoomOutFactor - m_fZoomInFactor) * ratio + m_fZoomInFactor;
     }
@@ -2373,7 +2373,7 @@ void CCamera::ProcessFOVLerp(float ratio) {
 void CCamera::ProcessVectorMoveLinear() {
     const double now = ExeTimeMS(); // exe 0x5164A0: `now` unrounded (fild)
     if (now <= m_fMoveLinearEndTime) {
-        ProcessVectorMoveLinear(static_cast<float>((now - m_fMoveLinearStartTime) / (static_cast<double>(m_fMoveLinearEndTime) - m_fMoveLinearStartTime)));
+        ProcessVectorMoveLinear(static_cast<float>((X87R(now - m_fMoveLinearStartTime)) / (static_cast<x87d>(m_fMoveLinearEndTime) - m_fMoveLinearStartTime)));
     } else if (m_bCameraPersistPosition) {
         m_bVecMoveLinearProcessed = true;
     }
@@ -2492,7 +2492,7 @@ void CCamera::Process() {
     constexpr float TWO_PI = 2.f * PI;                  // 0x858CBC
 
     // 0.5 - cos(x * pi) * 0.5 - NOTE: x87 extended precision is kept by the original, so callers decide when to round to float
-    const auto EaseInOut = [](double x) { return 0.5 - x87::cos(x * (double)PI) * 0.5; };
+    const auto EaseInOut = [](double x) { return (x87d)0.5 - X87R(x87::cos(X87R(x * (double)PI)) * 0.5); };
 
     // Keeps the camera at least 1.3 units (2D) away from the target (pushes it out along the same direction)
     const auto KeepAwayFromTarget = [](CVector& pos, const CVector& target) {
@@ -2501,8 +2501,8 @@ void CCamera::Process() {
         const float dy = pos.y - target.y;
         if (std::sqrt((x87d)dy * dy + (x87d)dx * dx) < MIN_DIST) {
             const double angle = CGeneral::GetATanOfXYExt(dx, dy); // 0x52BDD6 / 0x52C125: `fld st(0); fcos ... fsin` consume the unrounded atan result on the x87 stack
-            pos.x = (float)(x87::cos(angle) * MIN_DIST + target.x);
-            pos.y = (float)(x87::sin(angle) * MIN_DIST + target.y);
+            pos.x = (float)(X87R(x87::cos(angle) * MIN_DIST) + target.x);
+            pos.y = (float)(X87R(x87::sin(angle) * MIN_DIST) + target.y);
         }
     };
 
@@ -2637,11 +2637,11 @@ void CCamera::Process() {
             const x87d x = m_fFractionInterToStopMovingTarget != 0.f
                 ? ((x87d)m_fFractionInterToStopMovingTarget - targetT) / m_fFractionInterToStopMovingTarget
                 : (x87d)0.0;
-            const double f = EaseInOut(x);
+            const x87d f = EaseInOut(x);
 
-            const float y = (float)(f * m_vecTargetSpeedAtStartInter.y);
-            const float z = (float)(f * m_vecTargetSpeedAtStartInter.z);
-            m_vecTargetWhenInterPol.x = (float)(f * m_vecTargetSpeedAtStartInter.x + m_vecStartingTargetForInterPol.x);
+            const float y = (float)(X87R(f * m_vecTargetSpeedAtStartInter.y));
+            const float z = (float)(X87R(f * m_vecTargetSpeedAtStartInter.z));
+            m_vecTargetWhenInterPol.x = (float)(X87R(f * m_vecTargetSpeedAtStartInter.x) + m_vecStartingTargetForInterPol.x);
             m_vecTargetWhenInterPol.y = (float)((x87d)y + m_vecStartingTargetForInterPol.y);
             m_vecTargetWhenInterPol.z = (float)((x87d)z + m_vecStartingTargetForInterPol.z);
             target = m_vecTargetWhenInterPol;
@@ -2689,13 +2689,13 @@ void CCamera::Process() {
             const x87d x = m_fFractionInterToStopMoving != 0.f
                 ? ((x87d)m_fFractionInterToStopMoving - t) / m_fFractionInterToStopMoving
                 : (x87d)0.0;
-            const double f = EaseInOut(x);
+            const x87d f = EaseInOut(x);
             t = (float)f;
 
             // Source
             {
                 const float z = (float)((x87d)t * m_vecSourceSpeedAtStartInter.z);
-                m_vecSourceWhenInterPol.x = (float)(f * m_vecSourceSpeedAtStartInter.x + m_vecStartingSourceForInterPol.x);
+                m_vecSourceWhenInterPol.x = (float)(X87R(f * m_vecSourceSpeedAtStartInter.x) + m_vecStartingSourceForInterPol.x);
                 m_vecSourceWhenInterPol.y = (float)((x87d)t * m_vecSourceSpeedAtStartInter.y + m_vecStartingSourceForInterPol.y);
                 m_vecSourceWhenInterPol.z = (float)((x87d)z + m_vecStartingSourceForInterPol.z);
             }
@@ -2779,8 +2779,8 @@ void CCamera::Process() {
         const float  sinF  = (float)sinA;
 
         const x87d sourceMult = (x87d)CMBlur::Drunkness * (x87d)-0.02f; // 0x85904C
-        source.x = (float)(cosA * sourceMult + source.x);
-        source.z = (float)(sinA * sourceMult + source.z);
+        source.x = (float)(X87R(cosA * sourceMult) + source.x);
+        source.z = (float)(X87R(sinA * sourceMult) + source.z);
 
         up.Normalise();
         const x87d upMult = (x87d)CMBlur::Drunkness * (x87d)0.05f; // 0x858C28
@@ -2938,7 +2938,7 @@ void CCamera::Process() {
         constexpr float SAMPLE_DIST = 0.4f; // 0x858EE8
         const auto&     pos         = GetPosition();
         const float     zMult       = (float)((x87d)dirZ * SAMPLE_DIST);
-        samplePos.x = (float)(dirX * SAMPLE_DIST + pos.x);
+        samplePos.x = (float)(X87R(dirX * SAMPLE_DIST) + pos.x);
         samplePos.y = (float)((x87d)dirY * SAMPLE_DIST + pos.y);
         samplePos.z = (float)((x87d)zMult + pos.z);
     }
@@ -2996,8 +2996,8 @@ void CCamera::Find3rdPersonCamTargetVector(float range, CVector gunMuzzle, CVect
     // by the RECIPROCAL of the aspect ratio first; `outTarget` doubles as the direction until the end
     auto& cam = m_aCams[m_nActiveCam];
     const double tanHalfFOV = (double)x87::tan(DegreesToRadians(cam.m_fFOV * 0.5f));
-    const float  horizontal = (float)((((double)m_f3rdPersonCHairMultX - (double)0.5f) * 2.0) * tanHalfFOV);
-    const double vertical   = (((double)0.5f - (double)m_f3rdPersonCHairMultY) * 2.0) * (1.0 / (double)CDraw::ms_fAspectRatio) * tanHalfFOV;
+    const float  horizontal = (float)(X87R((((x87d)m_f3rdPersonCHairMultX - (x87d)0.5f) * (x87d)2.0) * tanHalfFOV));
+    const x87d vertical   = X87R((((x87d)0.5f - (x87d)m_f3rdPersonCHairMultY) * (x87d)2.0) * ((x87d)1.0 / (x87d)CDraw::ms_fAspectRatio) * tanHalfFOV);
 
     outSource = cam.m_vecSource;
     outTarget = cam.m_vecFront;
@@ -3007,9 +3007,9 @@ void CCamera::Find3rdPersonCamTargetVector(float range, CVector gunMuzzle, CVect
     } else {
         CVector& dir = outTarget;
         // dir += up * vertical (the z product is stored as a float before the addition)
-        const float vz = (float)(vertical * (double)cam.m_vecUp.z);
-        dir.x = (float)(vertical * (double)cam.m_vecUp.x + (double)dir.x);
-        dir.y = (float)(vertical * (double)cam.m_vecUp.y + (double)dir.y);
+        const float vz = (float)(vertical * (x87d)cam.m_vecUp.z);
+        dir.x = (float)(vertical * (x87d)cam.m_vecUp.x + (x87d)dir.x);
+        dir.y = (float)(vertical * (x87d)cam.m_vecUp.y + (x87d)dir.y);
         dir.z = vz + dir.z;
 
         // dir += right * horizontal
@@ -3186,7 +3186,7 @@ void CCamera::ImproveNearClip(CVehicle* vehicle, CPed* ped, CVector* source, CVe
                 }
             } else {
                 // Standing ped => near clip based on the closest hit-col sphere along the camera's front vector
-                const float maxDist = (float)(x87::sin(((x87d)90.0 - (x87d)cam.m_fFOV * (x87d)0.5) * (x87d)0.017453292f) * (double)gCamColLastRadius);
+                const float maxDist = (float)(X87R(x87::sin(((x87d)90.0 - (x87d)cam.m_fFOV * (x87d)0.5) * (x87d)0.017453292f) * (double)gCamColLastRadius));
 
                 auto* const pedMI = CModelInfo::GetPedModelInfo(ped->m_nModelIndex);
                 pedMI->AnimatePedColModelSkinnedWorld(ped->GetRpClump());
@@ -3230,7 +3230,7 @@ void CCamera::ImproveNearClip(CVehicle* vehicle, CPed* ped, CVector* source, CVe
                 if (cam.m_vecSource.z - CalculateGroundHeight(eGroundHeightType::ENTITY_BB_BOTTOM) > 10.f) {
                     float nearClip = 5.f * gCurDistForCam;
 
-                    const double distScaled = DistToTarget() * (double)0.1f;
+                    const x87d distScaled = DistToTarget() * (x87d)0.1f;
                     if (distScaled < nearClip) {
                         nearClip = (float)distScaled;
                     }
@@ -3329,10 +3329,10 @@ void SnapToGroundOrRoof(CVector& pos, float heightOffset) {
 
 // Rotate (the XY of) the velocity by `angleOffset` around the heading (the original keeps `cos` in extended precision)
 void RotateHeading(CVector& vel, float angleOffset) {
-    const double angle = CGeneral::GetATanOfXYExt(vel.x, vel.y) + static_cast<double>(angleOffset); // 0x51F5DD / 0x51F82C / 0x51FB14 / 0x51FD8F: `fadd [const]` on the unrounded atan result
+    const x87d angle = X87R(CGeneral::GetATanOfXYExt(vel.x, vel.y) + static_cast<double>(angleOffset)); // 0x51F5DD / 0x51F82C / 0x51FB14 / 0x51FD8F: `fadd [const]` on the unrounded atan result
     const double cosA  = x87::cos(angle);
     const float  sinA  = static_cast<float>(x87::sin(angle));
-    vel.x = static_cast<float>(cosA + static_cast<double>(vel.x));
+    vel.x = static_cast<float>(X87R(cosA + static_cast<double>(vel.x)));
     vel.y = sinA + vel.y;
 }
 
@@ -4554,8 +4554,8 @@ void CCamera::CamControl() {
 
                 if (!gSpecialAimCamPosSet) {
                     CVector camPos{
-                        static_cast<float>(x87::cos(static_cast<double>(angleToCam)) * static_cast<double>(camDist) + static_cast<double>(targetPos.x)),
-                        static_cast<float>(x87::sin(static_cast<double>(angleToCam)) * static_cast<double>(camDist) + static_cast<double>(targetPos.y)),
+                        static_cast<float>(X87R(x87::cos(static_cast<double>(angleToCam)) * static_cast<double>(camDist)) + static_cast<x87d>(targetPos.x)),
+                        static_cast<float>(X87R(x87::sin(static_cast<double>(angleToCam)) * static_cast<double>(camDist)) + static_cast<x87d>(targetPos.y)),
                         targetPos.z + 1.15f
                     };
 
@@ -4811,7 +4811,7 @@ void CCamera::CamControl() {
 
                         const x87d maxHeadingDiff = static_cast<x87d>(gAimCamTargetMaxAngleDeg) * static_cast<x87d>(0.0174532924f);
                         const x87d maxDistance    = (static_cast<x87d>(m_fPedZoomSmoothed) + (x87d)2.0) * static_cast<x87d>(1.5f);
-                        if (maxHeadingDiff < std::abs(aimHeading - camHeading)
+                        if (maxHeadingDiff < std::abs(X87R(aimHeading - camHeading))
                             || maxDistance < static_cast<double>((targetPed->GetPosition() - m_mCameraMatrix.GetPosition()).Magnitude())
                         ) {
                             bJumpCut = true;
@@ -4926,7 +4926,7 @@ void CCamera::CamControl() {
                             // Make the ped face where the camera is looking
                             auto&       cam      = GetActiveCam();
                             // 0x52ACC9: the unrounded atan result minus pi/2 (`fsub [0x858FE4]`), stored twice (`fst` + `fstp`)
-                            const float heading  = (float)(CGeneral::GetATanOfXYExt(cam.m_vecFront.x, cam.m_vecFront.y) - (double)(std::numbers::pi_v<float> / 2.f));
+                            const float heading  = (float)(X87R(CGeneral::GetATanOfXYExt(cam.m_vecFront.x, cam.m_vecFront.y) - (double)(std::numbers::pi_v<float> / 2.f)));
                             m_pTargetEntity->AsPed()->m_fCurrentRotation = heading;
                             m_pTargetEntity->AsPed()->m_fAimingRotation  = heading;
                         }
@@ -4937,7 +4937,7 @@ void CCamera::CamControl() {
                         if (GetActiveCam().m_nMode == MODE_TOP_DOWN_PED) {
                             GetActiveCam().m_fTransitionBeta = CGeneral::GetATanOfXY(0.001f, 1.f);
                         } else {
-                            GetActiveCam().m_fTransitionBeta = (float)(CGeneral::GetATanOfXYExt(GetActiveCam().m_vecFront.x, GetActiveCam().m_vecFront.y) + (double)std::numbers::pi_v<float>); // 0x52ADA6 (`fadd [0x858CB8]` on the unrounded result)
+                            GetActiveCam().m_fTransitionBeta = (float)(X87R(CGeneral::GetATanOfXYExt(GetActiveCam().m_vecFront.x, GetActiveCam().m_vecFront.y) + (double)std::numbers::pi_v<float>)); // 0x52ADA6 (`fadd [0x858CB8]` on the unrounded result)
                         }
                     }
                 }
@@ -5307,7 +5307,7 @@ void CCamera::StartTransition(eCamMode newCamMode) {
     // Handle player rotation for weapon modes
     if (m_pTargetEntity && m_pTargetEntity->GetIsTypePed() && notsa::contains({ MODE_SNIPER, MODE_ROCKETLAUNCHER, MODE_ROCKETLAUNCHER_HS, MODE_M16_1STPERSON, MODE_SNIPER_RUNABOUT, MODE_ROCKETLAUNCHER_RUNABOUT, MODE_ROCKETLAUNCHER_RUNABOUT_HS, MODE_M16_1STPERSON_RUNABOUT, MODE_FIGHT_CAM_RUNABOUT, MODE_HELICANNON_1STPERSON, MODE_CAMERA, MODE_1STPERSON_RUNABOUT }, activeCamMode)) {
         // 0x5152A9: the result of `GetATanOfXY` stays unrounded on the x87 stack; `fsub [0x858FE4]` (pi/2) rounds it, `fst` + `fstp` store the same value twice
-        const float angle                            = (float)(CGeneral::GetATanOfXYExt(activeCam.m_vecFront.x, activeCam.m_vecFront.y) - (double)HALF_PI);
+        const float angle                            = (float)(X87R(CGeneral::GetATanOfXYExt(activeCam.m_vecFront.x, activeCam.m_vecFront.y) - (double)HALF_PI));
         m_pTargetEntity->AsPed()->m_fCurrentRotation = angle;
         m_pTargetEntity->AsPed()->m_fAimingRotation  = angle;
     }
@@ -5331,7 +5331,7 @@ void CCamera::StartTransition(eCamMode newCamMode) {
         break;
     case MODE_FOLLOWPED: {
         if (m_bJustCameOutOfGarage) {
-            activeCam.m_fHorizontalAngle = (float)(CGeneral::GetATanOfXYExt(activeCam.m_vecFront.x, activeCam.m_vecFront.y) + (double)PI); // 0x515463 (`fadd [0x858CB8]` on the unrounded result)
+            activeCam.m_fHorizontalAngle = (float)(X87R(CGeneral::GetATanOfXYExt(activeCam.m_vecFront.x, activeCam.m_vecFront.y) + (double)PI)); // 0x515463 (`fadd [0x858CB8]` on the unrounded result)
             activeCam.m_fTransitionBeta  = 0.0f;
         }
 
@@ -5341,7 +5341,7 @@ void CCamera::StartTransition(eCamMode newCamMode) {
             m_bUseTransitionBeta        = true;
             // 0x5154CA: the atan result stays unrounded on the x87 stack. The original runs the inlined `LimitRadianAngle` + `fabs(...) <= pi/2` on a
             // freshly loaded constant 0.0 (0x858B50), NOT on the angle (`fld 0.0` sits on top of it), so the 235 degree branch (0x8631DC) is always taken.
-            activeCam.m_fTransitionBeta = (float)(CGeneral::GetATanOfXYExt(activeCam.m_vecFront.x, activeCam.m_vecFront.y) + (double)std::bit_cast<float>(0x40833FAFu));
+            activeCam.m_fTransitionBeta = (float)(X87R(CGeneral::GetATanOfXYExt(activeCam.m_vecFront.x, activeCam.m_vecFront.y) + (double)std::bit_cast<float>(0x40833FAFu)));
         }
         break;
     }

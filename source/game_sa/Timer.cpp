@@ -188,9 +188,9 @@ void CTimer::UpdateVariables(float timeElapsed)
     // 0x5618D0, the exe's x87 form: frameDelta stays on the stack (extended); the non-clipped clock is `_ftol(clock + frameDelta)` (NOT clock + (uint32)frameDelta),
     // the step is `frameDelta * 0.05f` (not `/ 20`), the clipped clock adds `min_unsigned((uint32)_ftol(frameDelta), 300)`
     // uint32 -> x87: `fild` (signed) and, for values >= 2^31, `fadd 2^32` (rounded to the current precision control, which is what the exe does at PC=24)
-    const auto u32ToX87 = [](uint32 v) { double d = (double)(int32)v; if ((int32)v < 0) d += 4294967296.0f; return d; };
-    const double frameDelta = (double)timeElapsed / u32ToX87(m_snTimerDivider);
-    m_snTimeInMillisecondsNonClipped = (uint32)(int32)(u32ToX87(m_snTimeInMillisecondsNonClipped) + frameDelta);
+    const auto u32ToX87 = [](uint32 v) { x87d d = (x87d)(int32)v; if ((int32)v < 0) d += 4294967296.0f; return d; };
+    const x87d frameDelta = X87R((x87d)timeElapsed / u32ToX87(m_snTimerDivider));
+    m_snTimeInMillisecondsNonClipped = (uint32)(int32)(X87R(u32ToX87(m_snTimeInMillisecondsNonClipped) + frameDelta));
     ms_fTimeStepNonClipped = (float)(frameDelta * 0.05f);
 
     const uint32 clipped = (uint32)(int32)frameDelta;

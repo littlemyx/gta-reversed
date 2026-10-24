@@ -30,8 +30,8 @@ bool COccluder::ProcessOneOccluder(CActiveOccluder* out) {
 
     // 0x71E6D5: sqrt((l^2 + w^2) + h^2) stays on the x87 stack, `fsubr` from the centre depth, then _ftol2; only the low word is stored
     {
-        const double mag = x87::sqrt(((double)size.y * size.y + (double)size.x * size.x) + (double)size.z * size.z);
-        out->m_DistToCam = (uint16)(int32)((double)CenterOnScreen.z - mag);
+        const x87d mag = x87::sqrt(((x87d)size.y * size.y + (x87d)size.x * size.x) + (x87d)size.z * size.z);
+        out->m_DistToCam = (uint16)(int32)((x87d)CenterOnScreen.z - mag);
     }
 
     // 0x71E743..0x71E7FF: NOT SetRotate(x, y, z) (0x59B120): the exe builds X, Y, Z rotations (0x59B060 / 0x59B0A0 / 0x59B0E0) and multiplies (Y * X) * Z (0x59BE30)
@@ -75,16 +75,16 @@ bool COccluder::ProcessOneOccluder(CActiveOccluder* out) {
         enum class Sum { XYZ, XZY, ZYX };
         const auto IsVertexOnScreen = [&](int32 i, Sum order, bool dxStack) -> bool {
             const auto& d = directions[i];
-            const double dy = ((double)center.y + d.y) - cam.y;
-            double dxD, dzD;
+            const x87d dy = ((x87d)center.y + d.y) - cam.y;
+            x87d dxD, dzD;
             if (!dxStack) { // 0x71EB30: x spilled as float (`fstp [esp+0x10]`), z summed to float then `fsub` stays on the stack
-                dxD = (float)(((double)d.x + center.x) - cam.x);
-                dzD = (double)(float)((double)center.z + d.z) - cam.z;
+                dxD = (float)(((x87d)d.x + center.x) - cam.x);
+                dzD = (x87d)(float)((x87d)center.z + d.z) - cam.z;
             } else { // 0x71ED97 (last face): x summed to float, z subtracted and spilled to float
-                dzD = (float)(((double)center.z + d.z) - cam.z);
-                dxD = (double)(float)((double)center.x + d.x) - cam.x;
+                dzD = (float)(((x87d)center.z + d.z) - cam.z);
+                dxD = (x87d)(float)((x87d)center.x + d.x) - cam.x;
             }
-            double sum;
+            x87d sum;
             switch (order) {
             case Sum::XYZ: sum = (dxD * d.x + dy * d.y) + dzD * d.z; break;
             case Sum::XZY: sum = (dxD * d.x + dzD * d.z) + dy * d.y; break;
@@ -147,7 +147,7 @@ bool COccluder::ProcessOneOccluder(CActiveOccluder* out) {
                     dir.Normalise();
 
                     out->m_FaceNormals[(int8)out->m_NumFaces] = dir;
-                    out->m_FaceOffsets[(int8)out->m_NumFaces] = (float)(((double)vx * dir.x + (double)vy * dir.y) + (double)vz * dir.z);
+                    out->m_FaceOffsets[(int8)out->m_NumFaces] = (float)(((x87d)vx * dir.x + (x87d)vy * dir.y) + (x87d)vz * dir.z);
 
                     ++out->m_NumFaces;
                 }
@@ -198,7 +198,7 @@ bool COccluder::ProcessOneOccluder(CActiveOccluder* out) {
     auto normal = right.Cross(up);
     normal.Normalise();
     out->m_FaceNormals[0] = normal;
-    out->m_FaceOffsets[0] = (float)(((double)normal.x * center.x + (double)normal.y * center.y) + (double)normal.z * center.z);
+    out->m_FaceOffsets[0] = (float)(((x87d)normal.x * center.x + (x87d)normal.y * center.y) + (x87d)normal.z * center.z);
     out->m_NumFaces       = 1;
 
     return true;
@@ -225,10 +225,10 @@ bool COccluder::ProcessLineSegment(int32 idxFrom, int32 idxTo, CActiveOccluder* 
         const auto& from = OccluderCoors[idxFrom];
         const auto& to   = OccluderCoors[idxTo];
 
-        const float  zFrom = (float)((double)TheCamera.m_mViewMatrix.TransformPoint(from).z - (double)1.1F); // spilled to float (`fstp [esp+0x70]`)
-        const double zTo   = (double)TheCamera.m_mViewMatrix.TransformPoint(to).z - (double)1.1F;            // stays on the stack
-        const double t     = std::fabs(zTo) / (std::fabs((double)zFrom) + std::fabs(zTo));
-        const double u     = 1.0 - t;
+        const float  zFrom = (float)((x87d)TheCamera.m_mViewMatrix.TransformPoint(from).z - (x87d)1.1F); // spilled to float (`fstp [esp+0x70]`)
+        const x87d zTo   = (x87d)TheCamera.m_mViewMatrix.TransformPoint(to).z - (x87d)1.1F;            // stays on the stack
+        const x87d t     = std::fabs(zTo) / (std::fabs((x87d)zFrom) + std::fabs(zTo));
+        const x87d u     = (x87d)1.0 - t;
 
         // 0x71E1E0: u * to is spilled for x / y, the z products stay on the stack
         const float ax = (float)(u * to.x);
@@ -265,11 +265,11 @@ bool COccluder::ProcessLineSegment(int32 idxFrom, int32 idxTo, CActiveOccluder* 
     auto* const l = reinterpret_cast<CActiveOccluderLine*>(activeOccluder) + (int8)activeOccluder->m_LinesUsed; // `movsx`
 
     // 0x71E43A: calculate line origin and dir (the deltas stay on the x87 stack)
-    double dx = (double)to->x - from->x;
-    double dy = (double)to->y - from->y;
+    x87d dx = (x87d)to->x - from->x;
+    x87d dy = (x87d)to->y - from->y;
     float  ox = from->x, oy = from->y;
     // IsPointInsideLine(origin, dir, centre, 0): (cx - ox) * dy - (cy - oy) * dx >= 0, the line is flipped when it is < 0 (NaN: not flipped)
-    if (((double)CenterOnScreen.x - from->x) * dy - ((double)CenterOnScreen.y - from->y) * dx < 0.0) {
+    if (((x87d)CenterOnScreen.x - from->x) * dy - ((x87d)CenterOnScreen.y - from->y) * dx < 0.0) {
         // the new origin is `from + delta`, which is not exactly `to`
         ox = (float)(dx + from->x);
         oy = (float)(from->y + dy);
@@ -278,15 +278,15 @@ bool COccluder::ProcessLineSegment(int32 idxFrom, int32 idxTo, CActiveOccluder* 
     }
     // 0x71E4B6: Normalized(&length): fsqrt of the sum of squares, 1.0 / length (the float length), both components multiplied
     const float  len = (float)x87::sqrt(dy * dy + dx * dx);
-    const double inv = 1.0 / (double)len;
+    const x87d inv = (x87d)1.0 / (x87d)len;
     l->Length = len;
     l->Origin = { ox, oy };
     l->Dir    = { (float)(inv * dx), (float)(inv * dy) };
 
     if (!DoesInfiniteLineTouchScreen(l->Origin, l->Dir)) {
         // 0x71E52C: !IsPointInsideLine(origin, dir, screen centre, 0): (W/2 - ox) * dirY - (H/2 - oy) * dirX < 0
-        const double w = (double)RsGlobal.maximumWidth  * 0.5;
-        const double h = (double)RsGlobal.maximumHeight * 0.5;
+        const x87d w = (x87d)RsGlobal.maximumWidth  * (x87d)0.5;
+        const x87d h = (x87d)RsGlobal.maximumHeight * (x87d)0.5;
         return (w - l->Origin.x) * l->Dir.y - (h - l->Origin.y) * l->Dir.x < 0.0;
     }
 
@@ -297,13 +297,13 @@ bool COccluder::ProcessLineSegment(int32 idxFrom, int32 idxTo, CActiveOccluder* 
 // 0x71F960
 bool COccluder::NearCamera() const {
     // 0x71F960: x87 throughout: the extents are the raw halves * 0.25 (exact), the distance is sqrt(dz^2 + dy^2 + dx^2) kept in extended precision, minus half the larger extent
-    const double len = (float)m_Length, wid = (float)m_Width;
-    const double ext = len > wid ? len : wid;
+    const x87d len = (float)m_Length, wid = (float)m_Width;
+    const x87d ext = len > wid ? len : wid;
     const CVector c   = m_Center;
     const CVector cam = TheCamera.GetPosition();
-    const double dx = (double)cam.x - (double)c.x, dy = (double)cam.y - (double)c.y, dz = (double)cam.z - (double)c.z;
-    const double dist = x87::sqrt(dz * dz + dy * dy + dx * dx);
-    return dist - ext * (double)0.5f < (double)250.f;
+    const x87d dx = (x87d)cam.x - (x87d)c.x, dy = (x87d)cam.y - (x87d)c.y, dz = (x87d)cam.z - (x87d)c.z;
+    const x87d dist = x87::sqrt(dz * dz + dy * dy + dx * dx);
+    return dist - ext * (x87d)0.5f < (double)250.f;
 }
 
 int16 COccluder::SetNext(int16 next) {

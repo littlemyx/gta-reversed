@@ -60,14 +60,14 @@ void CClouds::Init() {
 void CClouds::Update() {
     ZoneScoped;
 
-    CloudRotation = x87::sin(TheCamera.m_fOrientation - 0.85f) * CWeather::Wind * 0.001f + CloudRotation;
+    CloudRotation = X87R(x87::sin(TheCamera.m_fOrientation - 0.85f) * CWeather::Wind) * 0.001f + CloudRotation;
     // 0x712FF0: the sum is done in floating point: (float)(uint32)IndividualRotation + step, rounded, then _ftol (the int add of the old port is exact where the exe rounds to 24 bits)
     {
-        double ir = (double)IndividualRotation;
+        x87d ir = (double)IndividualRotation;
         if (IndividualRotation < 0) {
-            ir += 4294967296.0;
+            ir += (x87d)4294967296.0;
         }
-        IndividualRotation = notsa::detail::Ftol(ir + (double)((CTimer::GetTimeStep() * CWeather::Wind * 0.5f + 0.3f) * 60.0f));
+        IndividualRotation = notsa::detail::Ftol(ir + (x87d)((CTimer::GetTimeStep() * CWeather::Wind * 0.5f + 0.3f) * 60.0f));
     }
 }
 

@@ -632,9 +632,9 @@ void CReplay::ProcessLookAroundCam() {
             }
 
             auto target = CVector{
-                    (float)(x87::sin(playerCameraDirAngle) * x87::cos(viewAngle) * playerCameraDistance),
-                    (float)(x87::cos(playerCameraDirAngle) * x87::cos(viewAngle) * playerCameraDistance),
-                    (float)(x87::sin(viewAngle) * playerCameraDistance)
+                    (float)(X87R(x87::sin(playerCameraDirAngle) * x87::cos(viewAngle)) * playerCameraDistance),
+                    (float)(X87R(x87::cos(playerCameraDirAngle) * x87::cos(viewAngle)) * playerCameraDistance),
+                    (float)(X87R(x87::sin(viewAngle) * playerCameraDistance))
             } + CameraFocus;
 
             CColPoint colPoint;

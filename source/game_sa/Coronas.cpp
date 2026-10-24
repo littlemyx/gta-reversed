@@ -352,7 +352,7 @@ void CCoronas::Render() {
                         );
                     };
                     // 0x6FB4F3: ftol(float(Raw * c) * HeadLightsSpectrum * 2^-8)
-                    const auto HeadLightColor = [](int16 raw, uint8 cc) { return (uint8)(float)(((double)(float)(raw * (int32)cc) * (double)CWeather::HeadLightsSpectrum) * (double)ExeRecip(256.f)); };
+                    const auto HeadLightColor = [](int16 raw, uint8 cc) { return (uint8)(float)(((x87d)(float)(raw * (int32)cc) * (x87d)CWeather::HeadLightsSpectrum) * (x87d)ExeRecip(256.f)); };
                     RenderFlareSprite({ HeadLightColor(it->ColorMult.x, c.m_Color.r), 0, 0, 255 }, +0.05f); // 0x6FB561
                     RenderFlareSprite({ 0, 0, HeadLightColor(it->ColorMult.z, c.m_Color.b), 255 }, -0.05f); // 0x6FB5EA
                 }
@@ -525,7 +525,7 @@ void CCoronas::RenderSunReflection() {
         RenderBuffer::PushIndices({ 0, -1, -2, 0, 1, -1 }, true); // Same as the above indices, but with 2 subtracted from each
 
         const auto forward = vecToSun2D * (
-              x87::sin((float)((time + 900 * i) % REFLECTION_PERIOD) / (float)REFLECTION_PERIOD * TWO_PI) * 10.f
+              X87R(x87::sin((float)((time + 900 * i) % REFLECTION_PERIOD) / (float)REFLECTION_PERIOD * TWO_PI) * 10.f)
             + (float)(i * 970 / 20 + 30)
         );
         const auto offset = vecToSun2D * (float)(i * 1'440 / 20 + 60);
@@ -586,8 +586,8 @@ void CCoronas::RegisterCorona(
     // Exact x87 form of the exe (0x6FC180): the squared 2D distance is (y delta)^2 + (x delta)^2 in extended precision and a NaN does NOT reject
     const auto& camPos = TheCamera.GetPosition();
     {
-        const double dy = (double)camPos.y - (double)worldPos.y, dx = (double)camPos.x - (double)worldPos.x;
-        if ((double)range * (double)range < dy * dy + dx * dx) {
+        const x87d dy = (x87d)camPos.y - (x87d)worldPos.y, dx = (x87d)camPos.x - (x87d)worldPos.x;
+        if ((x87d)range * (x87d)range < dy * dy + dx * dx) {
             return; // Corona is beyond far clip distance
         }
     }
@@ -596,14 +596,14 @@ void CCoronas::RegisterCorona(
     // Adjust intensity for neon fade effect if enabled
     uint8 adjustedAlpha = intensity;
     if (neonFade) {
-        const double dz = (double)camPos.z - (double)worldPos.z, dy = (double)camPos.y - (double)worldPos.y, dx = (double)camPos.x - (double)worldPos.x;
+        const x87d dz = (x87d)camPos.z - (x87d)worldPos.z, dy = (x87d)camPos.y - (x87d)worldPos.y, dx = (x87d)camPos.x - (x87d)worldPos.x;
         const float distance3d = (float)x87::sqrt(dz * dz + dy * dy + dx * dx);
         if (distance3d < 35.0f) {
             return;
         }
         if (distance3d < 50.0f) {
             // alpha = ftol((dist - 35) * intensity * (1/15)) (the old port multiplied the alpha by the truncated factor)
-            adjustedAlpha = (uint8)notsa::detail::Ftol(((double)distance3d - 35.0) * (double)intensity * (double)ExeRecip(15.0f));
+            adjustedAlpha = (uint8)notsa::detail::Ftol(((x87d)distance3d - (x87d)35.0) * (x87d)intensity * (x87d)ExeRecip(15.0f));
         }
     }
 
@@ -675,8 +675,8 @@ void CCoronas::RegisterCorona(uint32 id, CEntity* attachTo, uint8 red, uint8 gre
 void CCoronas::UpdateCoronaCoors(uint32 id, const CVector& pos, float range, float normalAngle) {
     // 0x6FC4D0: (y delta)^2 + (x delta)^2 in extended precision, NaN does not reject
     const auto& cam = TheCamera.GetPosition();
-    const double dy = (double)cam.y - (double)pos.y, dx = (double)cam.x - (double)pos.x;
-    if (!((double)range * (double)range < dy * dy + dx * dx)) {
+    const x87d dy = (x87d)cam.y - (x87d)pos.y, dx = (x87d)cam.x - (x87d)pos.x;
+    if (!((x87d)range * (x87d)range < dy * dy + dx * dx)) {
         if (auto* corona = GetCoronaByID(id)) {
             corona->m_vPosn = pos;
             corona->m_fAngle = normalAngle;

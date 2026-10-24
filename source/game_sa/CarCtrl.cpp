@@ -86,12 +86,12 @@ static bool ProbePlaneObstacle(CPlane* plane, float pitch, float heading, float*
 
     // x87: some of the intermediate values are rounded to float, others aren't
     const auto sinPitch  = x87::sin((double)pitch);
-    const auto zero      = (float)(0.0f * sinPitch);
+    const auto zero      = (float)(X87R(0.0f * sinPitch));
     const auto sinPitchF = (float)sinPitch;
     const auto cosPitch  = x87::cos((double)pitch);
-    const auto xc        = (double)dir.x * cosPitch;
-    const auto yc        = (float)((double)dir.y * cosPitch);
-    const auto zc        = (float)(cosPitch * dir.z);
+    const auto xc        = X87R((double)dir.x * cosPitch);
+    const auto yc        = (float)(X87R((double)dir.y * cosPitch));
+    const auto zc        = (float)(X87R(cosPitch * dir.z));
     const auto ux        = (float)(xc + zero);
     const auto uy        = (x87d)yc + zero;
     const auto uz        = (x87d)zc + sinPitchF;
@@ -576,7 +576,7 @@ void CCarCtrl::ClitargetOrientationToLink(CVehicle* vehicle, CCarPathLinkAddress
     const auto origOrientation = *pOrientation;
     auto  diff1  = (x87d)(float)(angle1 - origOrientation);
     auto  diff1f = (float)diff1; // stored copy (only updated if wrapped)
-    auto  diff2  = angle2 - origOrientation;
+    auto  diff2  = X87R(angle2 - origOrientation);
 
     if (diff1 > PI) {
         do { diff1 -= 2.0f * PI; } while (diff1 > PI);
@@ -1019,7 +1019,7 @@ bool CCarCtrl::DealWithBend_Racing(CVehicle* vehicle, CCarPathLinkAddress LinkAd
     // Angle between the heading of the vehicle and the direction of the link (wrapped to -PI..PI)
     const auto& fwd = vehicle->m_matrix->GetForward();
     const float heading = CGeneral::GetATanOfXY(fwd.x, fwd.y); // 0x53CC70
-    double      angle   = (double)heading - CGeneral::GetATanOfXYExt(d2x, d2y); // 0x53CC70 (the result of the 2nd call stays unrounded on the x87 stack)
+    x87d      angle   = X87R((double)heading - CGeneral::GetATanOfXYExt(d2x, d2y)); // 0x53CC70 (the result of the 2nd call stays unrounded on the x87 stack)
     if (angle > std::numbers::pi_v<float>) { // 0x858CB8
         do {
             angle -= 2.0f * std::numbers::pi_v<float>; // 0x858CBC
@@ -1051,14 +1051,14 @@ bool CCarCtrl::DealWithBend_Racing(CVehicle* vehicle, CCarPathLinkAddress LinkAd
     float Fx, Fy, Nx, Ny;
     {
         const double o1 = link1->OneWayLaneOffsetExtended(); // 0x44DB00
-        const float  ax = (float)(((Opposite(link1) - 1.0f) + o1) * d1y * 5.4f + x1);       // 0x858624, 0x858C50
-        const float  ay = (float)(y1 - ((Opposite(link1) - 1.0f) + o1) * d1x * 5.4f);
-        const float  bxx = (float)(x1 - ((Same(link1) - 1.0f) + o1) * d1y * 5.4f);
-        const double byy = ((Same(link1) - 1.0f) + o1) * d1x * 5.4f + y1;
+        const float  ax = (float)((X87R((X87R(Opposite(link1) - 1.0f)) + o1)) * d1y * 5.4f + x1);       // 0x858624, 0x858C50
+        const float  ay = (float)(y1 - (X87R((X87R(Opposite(link1) - 1.0f)) + o1)) * d1x * 5.4f);
+        const float  bxx = (float)(x1 - (X87R((X87R(Same(link1) - 1.0f)) + o1)) * d1y * 5.4f);
+        const x87d byy = (X87R((X87R(Same(link1) - 1.0f)) + o1)) * d1x * 5.4f + y1;
 
-        const double dya = (x87d)ay - by, dxa = (x87d)ax - bx, dyb = byy - by, dxb = (x87d)bxx - bx;
-        const double da = dya * dya + dxa * dxa;
-        const double db = dyb * dyb + dxb * dxb;
+        const x87d dya = (x87d)ay - by, dxa = (x87d)ax - bx, dyb = byy - by, dxb = (x87d)bxx - bx;
+        const x87d da = dya * dya + dxa * dxa;
+        const x87d db = dyb * dyb + dxb * dxb;
         if (db > da) { // (ordered)
             Fx = bxx; Fy = (float)byy;
             Nx = ax;  Ny = ay;
@@ -1084,14 +1084,14 @@ bool CCarCtrl::DealWithBend_Racing(CVehicle* vehicle, CCarPathLinkAddress LinkAd
     float Qx, Qy;
     {
         const double oB = linkB->OneWayLaneOffsetExtended(); // 0x44DB00
-        const float  ax = (float)(((Opposite(linkB) - 1.0f) + oB) * d2y * 5.4f + bx);
-        const float  ay = (float)(by - ((Opposite(linkB) - 1.0f) + oB) * d2x * 5.4f);
-        const float  bxx = (float)(bx - ((Same(linkB) - 1.0f) + oB) * d2y * 5.4f);
-        const double byy = ((Same(linkB) - 1.0f) + oB) * d2x * 5.4f + by;
+        const float  ax = (float)((X87R((X87R(Opposite(linkB) - 1.0f)) + oB)) * d2y * 5.4f + bx);
+        const float  ay = (float)(by - (X87R((X87R(Opposite(linkB) - 1.0f)) + oB)) * d2x * 5.4f);
+        const float  bxx = (float)(bx - (X87R((X87R(Same(linkB) - 1.0f)) + oB)) * d2y * 5.4f);
+        const x87d byy = (X87R((X87R(Same(linkB) - 1.0f)) + oB)) * d2x * 5.4f + by;
 
-        const double dya = (x87d)ay - y1, dxa = (x87d)ax - x1, dyb = byy - y1, dxb = (x87d)bxx - x1;
-        const double da = dya * dya + dxa * dxa;
-        const double db = dyb * dyb + dxb * dxb;
+        const x87d dya = (x87d)ay - y1, dxa = (x87d)ax - x1, dyb = byy - y1, dxb = (x87d)bxx - x1;
+        const x87d da = dya * dya + dxa * dxa;
+        const x87d db = dyb * dyb + dxb * dxb;
         if (db > da) { // (ordered)
             Qx = ax;  Qy = ay;
         } else {
@@ -1109,13 +1109,13 @@ bool CCarCtrl::DealWithBend_Racing(CVehicle* vehicle, CCarPathLinkAddress LinkAd
     }
 
     // Slow down the sharper the bend is (and the closer we are to it)
-    const double bendFactor = [&] {
+    const x87d bendFactor = [&] {
         const x87d t = (x87d)angleF * std::bit_cast<float>(0x3F22F983u); // 0x858FB8 (2/PI, the correctly rounded float; the literal 0.6366197f is one ulp lower)
         const double a = AbsNaN(t);
         return 1.0 < a ? 1.0 : a; // (min(abs(t), 1.0))
     }();
     if (*arg14 < distLim) {
-        *arg12 = (float)(1.0 - (((double)distLim - *arg14) / distLim) * bendFactor * 0.6f); // 0x858CC8
+        *arg12 = (float)((x87d)1.0 - (((x87d)distLim - *arg14) / distLim) * bendFactor * 0.6f); // 0x858CC8
     }
 
     // Decide how far ahead to look
@@ -1191,7 +1191,7 @@ void CCarCtrl::DragCarToPoint(CVehicle* vehicle, CVector* pos) {
     // Finds the Z of the ground at the given position. `centerZExt` is the Z the search is based on (kept in extended precision as in the original)
     const auto FindGroundZ = [&](float x, float y, double centerZExt, CStoredCollPoly* poly, float oldGroundZ) -> float {
         const auto centerZ = (float)centerZExt;
-        const auto lower   = (float)(centerZExt - rangeBelow);
+        const auto lower   = (float)(X87R(centerZExt - rangeBelow));
         const auto upper   = (float)((x87d)centerZ + rangeAbove);
 
         CVector    origin{ x, y, upper };
@@ -1235,8 +1235,8 @@ void CCarCtrl::DragCarToPoint(CVehicle* vehicle, CVector* pos) {
     mat.GetRight().y = (float)(((x87d)targetX - rearX) * ((x87d)-1.0f / len));
     mat.GetRight().z = 0.0f;
 
-    mat.GetForward().x = (float)-(cosPitch * mat.GetRight().y);
-    mat.GetForward().y = (float)(cosPitch * mat.GetRight().x);
+    mat.GetForward().x = (float)-(X87R(cosPitch * mat.GetRight().y));
+    mat.GetForward().y = (float)(X87R(cosPitch * mat.GetRight().x));
     mat.GetForward().z = (float)x87::sin(pitch);
 
     mat.GetUp() = CrossProductOriginal(mat.GetRight(), mat.GetForward()); // 0x59C730
@@ -1348,7 +1348,7 @@ float CCarCtrl::FindAngleToWeaveThroughTraffic(CVehicle* vehicle, CPhysical* phy
     };
 
     // The angle between the target angle and the heading, then the middle of those two
-    double middle = Wrap((x87d)heading - targetAngle) * 0.5f + targetAngle;
+    x87d middle = X87R(Wrap((x87d)heading - targetAngle) * 0.5f) + targetAngle;
     auto   middleF = (float)middle; // Stored as float (and again, after each wrapping)
     if (middle < -pi) {
         do {
@@ -1364,8 +1364,8 @@ float CCarCtrl::FindAngleToWeaveThroughTraffic(CVehicle* vehicle, CPhysical* phy
     }
 
     // How far (absolute) are the ends of the free angle range from the middle
-    const auto lowerDiff = std::abs(Wrap((double)lowerAngle - middle));
-    const auto upperDiff = std::abs(Wrap((x87d)upperAngle - middleF));
+    const auto lowerDiff = X87R(std::abs(Wrap((x87d)lowerAngle - middle)));
+    const auto upperDiff = X87R(std::abs(Wrap((x87d)upperAngle - middleF)));
 
     if (lowerDiff > std::numbers::pi_v<float> / 2.0f && upperDiff > std::numbers::pi_v<float> / 2.0f) { // 0x858FE4
         return middleF;
@@ -1908,7 +1908,7 @@ void CCarCtrl::FlyAIHeliInCertainDirection(CHeli* heli, float angle, float targe
                 (float)((x87d)pos2.y - (x87d)right.y * 10.0f),
                 (float)((x87d)pos2.z - (float)((x87d)right.z * 10.0f))
             };
-            double distL = 1000.0f;
+            x87d distL = 1000.0f;
             if (LineOfSight(pos2, sideL, colPoint)) {
                 distL = 0.0f;
             } else if (LineOfSight(sideL, ProbeTarget(sideL), colPoint)) {
@@ -2151,7 +2151,7 @@ void CCarCtrl::FlyAIHeliToTarget_FixedOrientation(CHeli* heli, float orientation
     // Left/right
     heli->m_fSteeringLeftRight = (std::abs(rightErr) < 5.0f)
         ? speedRight
-        : (float)((double)rightErr * -0.02);
+        : (float)(X87R((double)rightErr * -0.02));
     if (heli->m_fSteeringLeftRight < 0.75f) {
         if (-0.75f > heli->m_fSteeringLeftRight) {
             heli->m_fSteeringLeftRight = -0.75f;
@@ -2163,7 +2163,7 @@ void CCarCtrl::FlyAIHeliToTarget_FixedOrientation(CHeli* heli, float orientation
     // Forward/backward
     heli->m_fSteeringUpDown = ((fwdErr < 0.0 ? -fwdErr : fwdErr) < 5.0f)
         ? speedFwd
-        : (float)(fwdErr * -0.015);
+        : (float)(X87R(fwdErr * -0.015));
     if (heli->m_fSteeringUpDown < 0.5f && -0.5f > heli->m_fSteeringUpDown) {
         heli->m_fSteeringUpDown = -0.5f;
     } else if (!(heli->m_fSteeringUpDown < 0.5f)) {
@@ -2191,10 +2191,10 @@ void CCarCtrl::FlyAIPlaneInCertainDirection(CPlane* plane) {
             targetHeading = (float)curHeadingExt;
             break;
         case TEMPACT_PLANE_SHARP_LEFT:
-            targetHeading = (float)(curHeadingExt - 2.0f);
+            targetHeading = (float)(X87R(curHeadingExt - 2.0f));
             break;
         case TEMPACT_PLANE_SHARP_RIGHT:
-            targetHeading = (float)(2.0f + curHeadingExt);
+            targetHeading = (float)(X87R(2.0f + curHeadingExt));
             break;
         }
 
@@ -2202,7 +2202,7 @@ void CCarCtrl::FlyAIPlaneInCertainDirection(CPlane* plane) {
         plane->m_planeHeadingPrev = plane->m_planeHeading + PI;
 
         // x87: the heading difference is kept in extended precision
-        auto headingDiff = curHeadingExt - (double)targetHeading;
+        auto headingDiff = X87R(curHeadingExt - (double)targetHeading);
         if (headingDiff > PI) {
             do { headingDiff -= 2.0f * PI; } while (headingDiff > PI);
         }
@@ -2272,7 +2272,7 @@ void CCarCtrl::FlyAIPlaneInCertainDirection(CPlane* plane) {
         const auto prevPitch = plane->m_forwardZ;
         const auto timeStep  = (x87d)CTimer::ms_fTimeStep;
         plane->m_forwardZ    = (float)pitch;
-        const auto predictedPitch = (float)((100.0f / timeStep) * (pitch - prevPitch) + pitch);
+        const auto predictedPitch = (float)(X87R((100.0f / timeStep) * (X87R(pitch - prevPitch)) + pitch));
 
         auto climb = ((x87d)plane->m_altitude - predictedZ) * 0.0333333351f;
         if (!(climb < 0.4f)) {
@@ -2558,19 +2558,19 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
                         const double absA = AbsNaN(a);
                         const auto   absB = (float)AbsNaN(b);
 
-                        const auto   cxA = (float)((double)curPos.x * absA);
-                        const double cyA = (double)curPos.y * absA;
-                        const double czA = (double)curPos.z * absA;
+                        const auto   cxA = (float)(X87R((double)curPos.x * absA));
+                        const x87d cyA = X87R((double)curPos.y * absA);
+                        const x87d czA = X87R((double)curPos.z * absA);
                         const auto   nxB = (float)((x87d)nextPos.x * absB);
                         const x87d nyB = (x87d)nextPos.y * absB;
                         const auto   nzB = (float)((x87d)nextPos.z * absB);
                         const auto   px  = (float)((x87d)nxB + cxA);
                         const auto   py  = (float)(nyB + cyA);
-                        const double pz  = (double)nzB + czA;
-                        const double inv = 1.0 / (absA + absB);
+                        const x87d pz  = (x87d)nzB + czA;
+                        const x87d inv = (x87d)1.0 / (X87R(absA + absB));
 
-                        pOrigin->x = (float)((double)px * inv);
-                        pOrigin->y = (float)((double)py * inv);
+                        pOrigin->x = (float)((x87d)px * inv);
+                        pOrigin->y = (float)((x87d)py * inv);
                         pOrigin->z = (float)(pz * inv);
                         if (TheCamera.IsSphereVisible(*pOrigin, 5.0f)) { // 0x420D40
                             *arg11     = (float)((x87d)(float)inv * absB);
@@ -3715,12 +3715,12 @@ void CCarCtrl::PickNextNodeRandomly(CVehicle* vehicle) {
     }
 
     // Calculate the speed scale factor. x87: `k1` is rounded to float, `k2` is not
-    const auto k1 = (float)((curLink.OneWayLaneOffsetExtended() + (double)ap.m_nCurrentLane) * (double)5.4f);   // 0x858C50
-    const auto k2 = (nextLink.OneWayLaneOffsetExtended() + (double)ap.m_nNextLane) * (double)5.4f;
+    const auto k1 = (float)((X87R(curLink.OneWayLaneOffsetExtended() + (double)ap.m_nCurrentLane)) * (x87d)5.4f);   // 0x858C50
+    const auto k2 = (X87R(nextLink.OneWayLaneOffsetExtended() + (double)ap.m_nNextLane)) * (x87d)5.4f;
 
     const CVector end{
-        (float)((double)nextRaw16[0] * (double)0.125f + k2 * (double)nextDirY),
-        (float)((double)nextRaw16[1] * (double)0.125f - k2 * (double)nextDirX),
+        (float)((x87d)nextRaw16[0] * (x87d)0.125f + k2 * (x87d)nextDirY),
+        (float)((x87d)nextRaw16[1] * (x87d)0.125f - k2 * (x87d)nextDirX),
         0.0f
     };
     const CVector start{
@@ -3832,7 +3832,7 @@ bool CCarCtrl::PickNextNodeToChaseCar(CVehicle* vehicle, float destX, float dest
             const auto nodePos = nextNode.GetPosition();
 
             // x87: The angle is kept in extended precision (only the final value is rounded to float)
-            double angle = CGeneral::GetATanOfXYExt(candPos.x - nodePos.x, candPos.y - nodePos.y) - heading; // 0x53CC70
+            x87d angle = X87R(CGeneral::GetATanOfXYExt(candPos.x - nodePos.x, candPos.y - nodePos.y) - heading); // 0x53CC70
             if (angle > std::numbers::pi_v<float>) {
                 do {
                     angle -= 2.0f * std::numbers::pi_v<float>;
@@ -4065,12 +4065,12 @@ bool CCarCtrl::PickNextNodeToFollowPath(CVehicle* vehicle) {
 
     // Calculate the speed scale factor (as in `PickNextNodeRandomly`, but without the `STATUS_SIMPLE` check). x87: `k1` is rounded to float, `k2` is not
     {
-        const auto k1 = (float)((curLink.OneWayLaneOffsetExtended() + (double)ap.m_nCurrentLane) * (double)5.4f); // 0x858C50
-        const auto k2 = (nextLink.OneWayLaneOffsetExtended() + (double)ap.m_nNextLane) * (double)5.4f;
+        const auto k1 = (float)((X87R(curLink.OneWayLaneOffsetExtended() + (double)ap.m_nCurrentLane)) * (x87d)5.4f); // 0x858C50
+        const auto k2 = (X87R(nextLink.OneWayLaneOffsetExtended() + (double)ap.m_nNextLane)) * (x87d)5.4f;
 
         const CVector end{
-            (float)((double)nextRaw16[0] * (double)0.125f + k2 * (double)nextDirY),
-            (float)((double)nextRaw16[1] * (double)0.125f - k2 * (double)nextDirX),
+            (float)((x87d)nextRaw16[0] * (x87d)0.125f + k2 * (x87d)nextDirY),
+            (float)((x87d)nextRaw16[1] * (x87d)0.125f - k2 * (x87d)nextDirX),
             0.0f
         };
         const CVector start{
@@ -5082,7 +5082,7 @@ void CCarCtrl::SteerAIBoatWithPhysicsAttackingPlayer(CVehicle* vehicle, float* p
     const auto  targetY      = (x87d)targetYDelta + FindPlayerCoors().y;
 
     const float targetHeading = CGeneral::GetATanOfXY((float)((x87d)targetX - vehPos.x), (float)(targetY - vehPos.y));
-    const auto  steer         = WrapAngleToPi((double)targetHeading - CGeneral::GetATanOfXYExt(fwd.x, fwd.y)); // (the 2nd `GetATanOfXY` result stays unrounded on the x87 stack)
+    const auto  steer         = WrapAngleToPi(X87R((double)targetHeading - CGeneral::GetATanOfXYExt(fwd.x, fwd.y))); // (the 2nd `GetATanOfXY` result stays unrounded on the x87 stack)
 
     CalcBoatAIGas(vehicle, pGas);
     *pBrake     = 0.0f;
@@ -5115,7 +5115,7 @@ void CCarCtrl::SteerAIBoatWithPhysicsCirclingPlayer(CVehicle* vehicle, float* pS
     const auto fwd = GetNormalizedForward2D(vehicle);
 
     const float targetHeading = CGeneral::GetATanOfXY((float)(targetX - vehPos.x), (float)(targetY - vehPos.y));
-    const auto  steer         = WrapAngleToPi((double)targetHeading - CGeneral::GetATanOfXYExt(fwd.x, fwd.y)); // (the 2nd `GetATanOfXY` result stays unrounded on the x87 stack)
+    const auto  steer         = WrapAngleToPi(X87R((double)targetHeading - CGeneral::GetATanOfXYExt(fwd.x, fwd.y))); // (the 2nd `GetATanOfXY` result stays unrounded on the x87 stack)
 
     CalcBoatAIGas(vehicle, pGas);
     *pBrake     = 0.0f;
@@ -5130,7 +5130,7 @@ void CCarCtrl::SteerAIBoatWithPhysicsHeadingForTarget(CVehicle* vehicle, float x
 
     // Angle needed to turn to face the target (in [-PI, PI])
     const float targetHeading = CGeneral::GetATanOfXY(x - pos.x, y - pos.y);
-    auto        steer         = WrapAngleToPi((double)targetHeading - CGeneral::GetATanOfXYExt(fwd.x, fwd.y)); // (the 2nd `GetATanOfXY` result stays unrounded on the x87 stack)
+    auto        steer         = WrapAngleToPi(X87R((double)targetHeading - CGeneral::GetATanOfXYExt(fwd.x, fwd.y))); // (the 2nd `GetATanOfXY` result stays unrounded on the x87 stack)
 
     // Clamp to [-0.5, 0.5]
     if (steer < -0.5f) {
@@ -5142,7 +5142,7 @@ void CCarCtrl::SteerAIBoatWithPhysicsHeadingForTarget(CVehicle* vehicle, float x
     const auto goingTooFast = CalcBoatAIGas(vehicle, pGas);
     *pBrake = 0.0f;
     *pSteer = goingTooFast
-        ? (float)(steer * -1.0f) // Reverse the steering when slowing down
+        ? (float)(X87R(steer * -1.0f)) // Reverse the steering when slowing down
         : (float)steer;
 }
 
@@ -5177,7 +5177,7 @@ void CCarCtrl::SteerAICarBlockingPlayerForwardAndBack(CVehicle* vehicle, float* 
 
     // x87: all intermediates are kept in extended precision
     const auto [dx, dy, dz] = GetOffsetToPlayer();
-    const auto rightDotOffset = ((double)right.y * dy + dx * right.x) + dz * right.z;
+    const auto rightDotOffset = (X87R((double)right.y * dy) + X87R(dx * right.x)) + X87R(dz * right.z);
     auto       rightDotSpeed  = ((x87d)right.y * speedY + (x87d)right.x * speedX) + (x87d)right.z * 0.0f;
     if (rightDotSpeed == 0.0) {
         rightDotSpeed = 0.01f;
@@ -5195,8 +5195,8 @@ void CCarCtrl::SteerAICarBlockingPlayerForwardAndBack(CVehicle* vehicle, float* 
     const auto  vehSpeedAlongFwd = (float)(((x87d)fwd.y * moveSpeed.y + (x87d)fwd.z * moveSpeed.z) + (x87d)fwd.x * moveSpeed.x);
 
     const auto fwdDotSpeed  = ((x87d)fwd.y * speedY + (x87d)fwd.x * speedX) + (x87d)fwd.z * 0.0f;
-    const auto fwdDotOffset = ((double)fwd.y * dy2 + dx2 * fwd.x) + dz2 * fwd.z;
-    const auto dist         = (fwdDotSpeed * tf + fwdDotOffset) - (double)vehSpeedAlongFwd * tf; // Distance to the player (along forward) when he's level with the vehicle
+    const auto fwdDotOffset = (X87R((double)fwd.y * dy2) + X87R(dx2 * fwd.x)) + X87R(dz2 * fwd.z);
+    const auto dist         = (fwdDotSpeed * tf + fwdDotOffset) - (x87d)vehSpeedAlongFwd * tf; // Distance to the player (along forward) when he's level with the vehicle
 
     if (dist > 0.0) {
         *pGas   = (float)std::min<double>(dist * 0.1f, 1.0f);
@@ -5662,17 +5662,17 @@ void CCarCtrl::SteerAICarWithPhysics(CVehicle* vehicle) {
 
             // x87: The new angle is kept in extended precision (0x859068, 0x859060, 0x859058)
             const auto current = vehicle->m_fSteerAngle;
-            const auto delta   = (double)CTimer::GetTimeStep() * 0.05;
+            const auto delta   = X87R((double)CTimer::GetTimeStep() * 0.05);
             if (current > 0.0f) {
-                double angle = delta + current;
+                x87d angle = delta + current;
                 if (0.5 < angle) {
-                    angle = 0.5;
+                    angle = (x87d)0.5;
                 }
                 steer = (float)angle;
             } else {
-                double angle = current - delta;
+                x87d angle = current - delta;
                 if (-0.5 > angle) {
-                    angle = -0.5;
+                    angle = -(x87d)0.5;
                 }
                 steer = (float)angle;
             }
@@ -5776,23 +5776,23 @@ void CCarCtrl::SteerAICarWithPhysicsFollowPath(CVehicle* vehicle, float* pSteer,
     const auto& pos = vehicle->GetPosition();
 
     // Lane offset of the current link. x87: rounded to float
-    float curK = (float)((LinkOf(ap.m_nCurrentPathNodeInfo).OneWayLaneOffsetExtended() + (double)ap.m_nCurrentLane) * (double)5.4f); // 0x44DB00, 0x858C50
+    float curK = (float)((X87R(LinkOf(ap.m_nCurrentPathNodeInfo).OneWayLaneOffsetExtended() + (double)ap.m_nCurrentLane)) * (x87d)5.4f); // 0x44DB00, 0x858C50
     float distToStart;
     {
         // Lane offset of the next link. x87: NOT rounded to float
-        double nextK = (LinkOf(ap.m_nNextPathNodeInfo).OneWayLaneOffsetExtended() + (double)ap.m_nNextLane) * (double)5.4f;
+        x87d nextK = (X87R(LinkOf(ap.m_nNextPathNodeInfo).OneWayLaneOffsetExtended() + (double)ap.m_nNextLane)) * (x87d)5.4f;
         if (vehicle->m_nVehicleSubType == VEHICLE_TYPE_BMX) {
             constexpr auto BMX_LANE_OFFSET = std::bit_cast<float>(0x3FBA9FBFu); // 0x859010
             curK  = (float)((x87d)curK + (x87d)BMX_LANE_OFFSET);
-            nextK = nextK + (double)BMX_LANE_OFFSET;
+            nextK = nextK + (x87d)BMX_LANE_OFFSET;
         }
 
         const auto& cur  = LinkOf(ap.m_nCurrentPathNodeInfo);
         const auto& next = LinkOf(ap.m_nNextPathNodeInfo);
         const float startX = (float)((x87d)Raw16(cur)[0] * (x87d)0.125f + (x87d)curK * curDirY); // 0x858C48
         const float startY = (float)((x87d)Raw16(cur)[1] * (x87d)0.125f - (x87d)curK * curDirX);
-        const float endX   = (float)((double)Raw16(next)[0] * (double)0.125f + nextK * nextDirY);
-        const float endY   = (float)((double)Raw16(next)[1] * (double)0.125f - nextK * nextDirX);
+        const float endX   = (float)((x87d)Raw16(next)[0] * (x87d)0.125f + nextK * nextDirY);
+        const float endY   = (float)((x87d)Raw16(next)[1] * (x87d)0.125f - nextK * nextDirX);
 
         // x87: the intermediate values are kept in extended precision
         const x87d dx = (x87d)pos.x - startX, dy = (x87d)pos.y - startY;
@@ -5866,7 +5866,7 @@ void CCarCtrl::SteerAICarWithPhysicsFollowPath(CVehicle* vehicle, float* pSteer,
 
             // Note: The BMX offset isn't applied here, and the (old) directions are used for the distance
             const auto& newCur = LinkOf(ap.m_nCurrentPathNodeInfo);
-            curK = (float)((newCur.OneWayLaneOffsetExtended() + (double)ap.m_nCurrentLane) * (double)5.4f); // 0x44DB00, 0x858C50
+            curK = (float)((X87R(newCur.OneWayLaneOffsetExtended() + (double)ap.m_nCurrentLane)) * (x87d)5.4f); // 0x44DB00, 0x858C50
             const x87d dx2 = ((x87d)Raw16(newCur)[0] * (x87d)0.125f + (x87d)curK * curDirY) - pos.x;
             const x87d dy2 = ((x87d)Raw16(newCur)[1] * (x87d)0.125f - (x87d)curK * curDirX) - pos.y;
             distToStart = (float)std::sqrt(dy2 * dy2 + dx2 * dx2);
@@ -5919,7 +5919,7 @@ void CCarCtrl::SteerAICarWithPhysicsFollowPath(CVehicle* vehicle, float* pSteer,
     case DRIVING_STYLE_SLOW_DOWN_FOR_CARS:
     case DRIVING_STYLE_STOP_FOR_CARS_IGNORE_LIGHTS:
     case DRIVING_STYLE_DRIVINGMODE_AVOIDCARS_STOPFORPEDS_OBEYLIGHTS:
-        speedFactor = (float)(FindMaximumSpeedForThisCarInTrafficOriginal(vehicle) / (int32)ap.m_nCruiseSpeed); // 0x434400
+        speedFactor = (float)(X87R(FindMaximumSpeedForThisCarInTrafficOriginal(vehicle) / (int32)ap.m_nCruiseSpeed)); // 0x434400
         break;
     default:
         speedFactor = 1.0f;
@@ -5944,14 +5944,14 @@ void CCarCtrl::SteerAICarWithPhysicsFollowPath(CVehicle* vehicle, float* pSteer,
     }
 
     // Slow down for bends. x87: `curK2` is not rounded to float
-    const auto curK2 = (curLink.OneWayLaneOffsetExtended() + (double)ap.m_nCurrentLane) * (double)5.4f; // 0x44DB00, 0x858C50
-    const auto bendStartX = (float)(((double)curRaw16[0] * (double)0.125f + curK2 * curDirY) - pos.x);
-    const auto bendStartY = (float)(((double)curRaw16[1] * (double)0.125f - curK2 * curDirX) - pos.y);
+    const auto curK2 = (X87R(curLink.OneWayLaneOffsetExtended() + (double)ap.m_nCurrentLane)) * (x87d)5.4f; // 0x44DB00, 0x858C50
+    const auto bendStartX = (float)(((x87d)curRaw16[0] * (x87d)0.125f + curK2 * curDirY) - pos.x);
+    const auto bendStartY = (float)(((x87d)curRaw16[1] * (x87d)0.125f - curK2 * curDirX) - pos.y);
     const auto angleToBend = CGeneral::GetATanOfXYExt(bendStartX, bendStartY); // 0x435452 (unrounded, `fsub [heading]`)
-    const float turnFactor1 = FindSpeedMultiplier((float)(angleToBend - (double)heading), 0.4f, 1.2f, 0.4f); // 0x4224E0
+    const float turnFactor1 = FindSpeedMultiplier((float)(X87R(angleToBend - (double)heading)), 0.4f, 1.2f, 0.4f); // 0x4224E0
     const auto curDirAngle  = CGeneral::GetATanOfXY(curDirX, curDirY); // 0x53CC70
     const auto nextDirAngle = CGeneral::GetATanOfXYExt(nextDirX, nextDirY); // 0x435499 (unrounded, `fsubr [curDirAngle]`)
-    const float turnFactor2 = FindSpeedMultiplier((float)((double)curDirAngle - nextDirAngle), 0.1f, 1.2f, 0.4f); // 0x4224E0
+    const float turnFactor2 = FindSpeedMultiplier((float)(X87R((double)curDirAngle - nextDirAngle)), 0.1f, 1.2f, 0.4f); // 0x4224E0
 
     x87d limit = (x87d)1.0;
     if (!(distToStart > 40.0f) && ap.m_nCruiseSpeed >= 12) { // 0x858A10
@@ -6174,11 +6174,11 @@ void CCarCtrl::SteerAICarWithPhysicsFollowPath_Racing(CVehicle* vehicle, float* 
 
         // x87: kept in extended precision
         const double t  = FindPercDependingOnDistToLinkOriginal(vehicle, ap.m_nCurrentPathNodeInfo); // 0x422620
-        const double tm = 1.0 - t;
+        const x87d tm = X87R(1.0 - t);
         const auto   curP  = LinkPos(ap.m_nCurrentPathNodeInfo);
         const auto   nextP = LinkPos(ap.m_nNextPathNodeInfo);
-        const float  y     = (float)((double)curP.y * t + (double)nextP.y * tm);
-        const float  x     = (float)((double)curP.x * t + (double)nextP.x * tm);
+        const float  y     = (float)(X87R((double)curP.y * t) + (x87d)nextP.y * tm);
+        const float  x     = (float)(X87R((double)curP.x * t) + (x87d)nextP.x * tm);
         ClipOrientation(ap.m_nCurrentPathNodeInfo, ap._smthCurr, x, y);
     } else {
         if (RawOf(ap.m_nCurrentPathNodeInfo) != bendLink) {
@@ -6187,12 +6187,12 @@ void CCarCtrl::SteerAICarWithPhysicsFollowPath_Racing(CVehicle* vehicle, float* 
 
         // x87: kept in extended precision
         const double t  = FindPercDependingOnDistToLinkOriginal(vehicle, ap.m_nCurrentPathNodeInfo); // 0x422620
-        const double u  = (t + 2.0f) * 0.33333334f; // 0x859040
-        const double um = 1.0 - u;
+        const x87d u  = (X87R(t + 2.0f)) * 0.33333334f; // 0x859040
+        const x87d um = (x87d)1.0 - u;
         const auto   curP  = LinkPos(ap.m_nCurrentPathNodeInfo);
         const auto   nextP = LinkPos(ap.m_nNextPathNodeInfo);
-        const float  y     = (float)((double)nextP.y * um + (double)curP.y * u);
-        const float  x     = (float)((double)nextP.x * um + (double)curP.x * u);
+        const float  y     = (float)((x87d)nextP.y * um + (x87d)curP.y * u);
+        const float  x     = (float)((x87d)nextP.x * um + (x87d)curP.x * u);
         ClipOrientation(ap.m_nCurrentPathNodeInfo, ap._smthCurr, x, y);
     }
 
@@ -6405,7 +6405,7 @@ void CCarCtrl::SteerAICarWithPhysicsHeadingForTarget(CVehicle* vehicle, CPhysica
 
     const auto& pos2 = vehicle->GetPosition();
     const auto  targetAngle2 = CGeneral::GetATanOfXYExt((float)((x87d)x - pos2.x), (float)((x87d)y - pos2.y)); // 0x433479 (the unrounded atan goes straight into `fsub [heading]`)
-    const auto  speedMult = FindSpeedMultiplier((float)(targetAngle2 - (double)heading), 0.4f, 1.2f, 0.4f); // 0x4224E0
+    const auto  speedMult = FindSpeedMultiplier((float)(X87R(targetAngle2 - (double)heading)), 0.4f, 1.2f, 0.4f); // 0x4224E0
 
     const auto& ms = vehicle->m_vecMoveSpeed;
     *pBrake = 0.0f;
@@ -6621,7 +6621,7 @@ void CCarCtrl::SteerAICarWithPhysics_OnlyMission(CVehicle* vehicle, float* pStee
 
                 // x87: The threshold is kept in extended precision
                 const auto  relSpeed = playerVeh->m_vecMoveSpeed - vehicle->m_vecMoveSpeed; // 0x40FE60
-                const auto  maxDist  = MagnitudeOriginal(relSpeed) * 12.0f + 2.0f;          // 0x4082C0, 0x858CCC, 0x858CA0
+                const auto  maxDist  = X87R(MagnitudeOriginal(relSpeed) * 12.0f) + 2.0f;          // 0x4082C0, 0x858CCC, 0x858CA0
                 const auto& pos      = vehicle->GetPosition();
                 const auto  dy       = (x87d)pos.y - target.y;
                 const auto  dx       = (x87d)pos.x - target.x;
@@ -6965,7 +6965,7 @@ void CCarCtrl::SteerAIHeliFlyingAwayFromPlayer(CAutomobile* automobile) {
         (float)((x87d)FindPlayerCoors(-1).x - pos.x),
         (float)((x87d)FindPlayerCoors(-1).y - pos.y)
     );
-    FlyAIHeliInCertainDirection(heli, (float)(headingExt + std::numbers::pi_v<float>), 1000.0f, false);
+    FlyAIHeliInCertainDirection(heli, (float)(X87R(headingExt + std::numbers::pi_v<float>)), 1000.0f, false);
 }
 
 // 0x4238E0
@@ -7090,8 +7090,8 @@ void CCarCtrl::SteerAIHeliToKeepEntityInView(CAutomobile* automobile) {
 
     // Rotate to look at the target
     {
-        const auto wantedHeading = (float)(headingExt + PI / 2.0f); // 0x858FE4
-        auto       diff          = (double)wantedHeading - CGeneral::GetATanOfXYExt(heli->m_matrix->GetForward().x, heli->m_matrix->GetForward().y); // (unrounded, 0x42B004)
+        const auto wantedHeading = (float)(X87R(headingExt + PI / 2.0f)); // 0x858FE4
+        auto       diff          = X87R((double)wantedHeading - CGeneral::GetATanOfXYExt(heli->m_matrix->GetForward().x, heli->m_matrix->GetForward().y)); // (unrounded, 0x42B004)
         while (diff > PI) {
             diff -= 2.0f * PI;
         }
@@ -7728,8 +7728,8 @@ void CCarCtrl::UpdateCarOnRails(CVehicle* vehicle) {
     const float nextDirY = Dir(nextRaw8[9], ap._smthNext);
 
     // Lane offsets. x87: rounded to float
-    float curK  = (float)((curLink.OneWayLaneOffsetExtended() + (double)ap.m_nCurrentLane) * (double)5.4f); // 0x44DB00, 0x858C50
-    float nextK = (float)((nextLink.OneWayLaneOffsetExtended() + (double)ap.m_nNextLane) * (double)5.4f);
+    float curK  = (float)((X87R(curLink.OneWayLaneOffsetExtended() + (double)ap.m_nCurrentLane)) * (x87d)5.4f); // 0x44DB00, 0x858C50
+    float nextK = (float)((X87R(nextLink.OneWayLaneOffsetExtended() + (double)ap.m_nNextLane)) * (x87d)5.4f);
     if (vehicle->m_nVehicleSubType == VEHICLE_TYPE_BMX) {
         constexpr auto BMX_LANE_OFFSET = std::bit_cast<float>(0x3FBA9FBFu); // 0x859010
         curK  = (float)((x87d)curK + (x87d)BMX_LANE_OFFSET);
@@ -7801,8 +7801,8 @@ static bool WouldBoxesCollide(
     bool aIsSmaller
 ) {
     // x87: cos/sin and the differences are kept in extended precision
-    const auto relSpeedX = (float)(((double)bSpeedX - x87::cos((double)heading) * aSpeed) * 100.0f);
-    const auto relSpeedY = (float)(((double)bSpeedY - x87::sin((double)heading) * aSpeed) * 100.0f);
+    const auto relSpeedX = (float)(((x87d)bSpeedX - X87R(x87::cos((double)heading) * aSpeed)) * 100.0f);
+    const auto relSpeedY = (float)(((x87d)bSpeedY - X87R(x87::sin((double)heading) * aSpeed)) * 100.0f);
 
     // The relative motion applied to the moving box (swapped if the roles are)
     const auto relX = aIsSmaller ? -relSpeedX : relSpeedX;
@@ -7949,7 +7949,7 @@ void CCarCtrl::WeaveForObject(CEntity* entity, CVehicle* vehicle, float* pLowerA
     const auto toPoleY = (float)(poleY - vehPos.y);
 
     // x87: The result of this is kept in extended precision (the function leaves it in ST0)
-    const double heading = CGeneral::GetATanOfXYExt(toPoleX, toPoleY); // 0x53CC70
+    const x87d heading = CGeneral::GetATanOfXYExt(toPoleX, toPoleY); // 0x53CC70
 
     // Half of the angle (as seen from the vehicle) the pole (and the car) takes up
     const auto poleAngleWidth = (float)(((x87d)CModelInfo::GetModelInfo(vehicle->m_nModelIndex)->GetColModel()->m_boundBox.m_vecMax.x * 2.4f + 0.3f) / std::sqrt((x87d)toPoleY * toPoleY + (x87d)toPoleX * toPoleX));
@@ -7972,7 +7972,7 @@ void CCarCtrl::WeaveForObject(CEntity* entity, CVehicle* vehicle, float* pLowerA
     {
         const auto diff = Wrap(heading - *pLowerAngle);
         if ((diff < 0.0 ? -diff : diff) < halfWidth) {
-            const double lower = heading - halfWidth;
+            const x87d lower = heading - halfWidth;
             *pLowerAngle = (float)lower;
             if (lower < -pi) {
                 x87d angle = *pLowerAngle;
@@ -7988,7 +7988,7 @@ void CCarCtrl::WeaveForObject(CEntity* entity, CVehicle* vehicle, float* pLowerA
     {
         const auto diff = Wrap(heading - *pUpperAngle);
         if ((diff < 0.0 ? -diff : diff) < halfWidth) {
-            const double upper = heading + halfWidth;
+            const x87d upper = heading + halfWidth;
             *pUpperAngle = (float)upper;
             if (upper > pi) {
                 x87d angle = *pUpperAngle;
@@ -8562,7 +8562,7 @@ bool OrientRandomCar(RandomCarState& s) {
             if (len == 0.0) {
                 w.x = 1.0f;
             } else {
-                const double inv = 1.0 / len;
+                const x87d inv = X87R(1.0 / len);
                 w.x = (float)(w.x * inv);
                 w.y = (float)(inv * w.y);
             }
@@ -8591,14 +8591,14 @@ void PlaceRandomCarOnCurve(RandomCarState& s, CVector& outCurveSpeed) {
         const float   d1      = (float)Length2DExt(nextPos - pCur0); // 0x430D21
         const CVector pStart  = GetPathNodeAt(ap.m_startingRouteNode).GetPosition();
         const double  d2      = Length2DExt(nextPos - pStart);
-        const double  ratio   = (double)d1 / (d2 + (double)d1);
+        const x87d  ratio   = (x87d)d1 / (X87R(d2 + (double)d1));
 
         if (ratio > (double)s.fraction) { // 0x430D7D
             const auto&   curLink = GetNaviLinkAt(ap.m_nCurrentPathNodeInfo);
             const CVector pCur    = GetPathNodeAt(ap.m_currentAddress).GetPosition();
             const float   d3      = (float)Length2DExt(GetNaviLinkCoors(curLink) - pCur); // 0x430E1A
             const double  d4      = Length2DExt(s.origin - GetPathNodeAt(ap.m_currentAddress).GetPosition());
-            t = (float)((d4 + (double)d3) / ((double)d3 + (double)d1));
+            t = (float)((X87R(d4 + (double)d3)) / ((x87d)d3 + (x87d)d1));
         } else {
             CCarCtrl::PickNextNodeRandomly(veh); // 0x430E63
             const CVector pCur = GetPathNodeAt(ap.m_currentAddress).GetPosition();
@@ -8607,7 +8607,7 @@ void PlaceRandomCarOnCurve(RandomCarState& s, CVector& outCurveSpeed) {
             const float   d5   = (float)Length2DExt(v2);
             const double  d6   = Length2DExt(s.origin - GetPathNodeAt(ap.m_currentAddress).GetPosition());
             const x87d  d7   = std::sqrt((x87d)v1.x * v1.x + (x87d)v1.y * v1.y);
-            t = (float)(((double)d5 - d6) / (d7 + (double)d5));
+            t = (float)((X87R((double)d5 - d6)) / (d7 + (x87d)d5));
         }
     }
     if (0.0f > t) { // 0x430FD9
@@ -8631,8 +8631,8 @@ void PlaceRandomCarOnCurve(RandomCarState& s, CVector& outCurveSpeed) {
     const float nextDirY = Dir(nextRaw8[9], ap._smthNext);
 
     // Lane offsets (both are rounded to float, in contrast to `JoinCarWithRoadSystem`)
-    float k1 = (float)((curLink.OneWayLaneOffsetExtended() + (double)ap.m_nCurrentLane) * (double)5.4f);  // 0x858C50
-    float k2 = (float)((nextLink.OneWayLaneOffsetExtended() + (double)ap.m_nNextLane) * (double)5.4f);
+    float k1 = (float)((X87R(curLink.OneWayLaneOffsetExtended() + (double)ap.m_nCurrentLane)) * (x87d)5.4f);  // 0x858C50
+    float k2 = (float)((X87R(nextLink.OneWayLaneOffsetExtended() + (double)ap.m_nNextLane)) * (x87d)5.4f);
     if (veh->m_nVehicleSubType == VEHICLE_TYPE_BMX) { // 0x43116F
         constexpr auto BMX_LANE_OFFSET = std::bit_cast<float>(0x3FBA9FBFu); // 0x859010
         k1 = (float)((x87d)k1 + (x87d)BMX_LANE_OFFSET);

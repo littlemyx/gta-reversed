@@ -239,18 +239,18 @@ int32 CStats::FindCriminalRatingNumber() {
     const auto I = [](eStats st) { return (double)IntStatCell(st); };
     const int32 money = CWorld::Players[CWorld::PlayerInFocus].m_nMoney;
 
-    double v = I(STAT_TOTAL_LEGITIMATE_KILLS) - I(STAT_TIMES_BUSTED) * 3.0;
-    v        = v - I(STAT_NUMBER_OF_HOSPITAL_VISITS) * 3.0;
-    v        = v + (I(STAT_HIGHEST_FIREFIGHTER_MISSION_LEVEL) + I(STAT_HIGHEST_PARAMEDIC_MISSION_LEVEL)) * 10.0;
-    v        = v + (double)(money / 5000);
-    v        = v + I(STAT_PLANES_HELICOPTERS_DESTROYED) * 30.0;
-    v        = v + I(STAT_TOTAL_FIRES_EXTINGUISHED);
-    v        = v + I(STAT_CRIMINALS_KILLED_ON_VIGILANTE_MISSION);
-    v        = v + I(STAT_PEOPLE_SAVED_IN_AN_AMBULANCE);
+    x87d v = X87R(I(STAT_TOTAL_LEGITIMATE_KILLS) - X87R(I(STAT_TIMES_BUSTED) * 3.0));
+    v        = v - X87R(I(STAT_NUMBER_OF_HOSPITAL_VISITS) * 3.0);
+    v        = v + (X87R(I(STAT_HIGHEST_FIREFIGHTER_MISSION_LEVEL) + I(STAT_HIGHEST_PARAMEDIC_MISSION_LEVEL))) * (x87d)10.0;
+    v        = v + (x87d)(money / 5000);
+    v        = v + X87R(I(STAT_PLANES_HELICOPTERS_DESTROYED) * 30.0);
+    v        = X87R(v + I(STAT_TOTAL_FIRES_EXTINGUISHED));
+    v        = X87R(v + I(STAT_CRIMINALS_KILLED_ON_VIGILANTE_MISSION));
+    v        = X87R(v + I(STAT_PEOPLE_SAVED_IN_AN_AMBULANCE));
     int32 value = (int32)v;
 
     if (CCheat::m_bHasPlayerCheated || I(STAT_TIMES_CHEATED) > 0.0) {
-        value = (int32)((double)value - I(STAT_TIMES_CHEATED) * 10.0);
+        value = (int32)((x87d)value - X87R(I(STAT_TIMES_CHEATED) * 10.0));
         if (!(value > -10000)) {
             value = -10000;
         }
@@ -259,7 +259,7 @@ int32 CStats::FindCriminalRatingNumber() {
     }
 
     if (I(STAT_BULLETS_FIRED) > 100.0) { // strictly greater (the port used >=)
-        value = (int32)(I(STAT_BULLETS_THAT_HIT) / I(STAT_BULLETS_FIRED) * 500.0 + (double)value);
+        value = (int32)(X87R(I(STAT_BULLETS_THAT_HIT) / I(STAT_BULLETS_FIRED)) * (x87d)500.0 + (x87d)value);
     }
 
     // the progress part is inlined here: progress / total * 1000 (not GetPercentageProgress), skipped when the total is exactly 0

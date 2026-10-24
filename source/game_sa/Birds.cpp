@@ -191,12 +191,12 @@ void CBirds::Update() {
 
                     vecForward.Normalise();
                     uint8 cRand = (uint8)(CGeneral::GetRandomNumber() % 256) - 128;
-                    fSpawnAngleCamRelative = ((float)cRand) / 256.0F + x87::atan2(vecForward.x, vecForward.y); // [0 : 1] + atan2(...)
+                    fSpawnAngleCamRelative = X87R(((float)cRand) / 256.0F + x87::atan2(vecForward.x, vecForward.y)); // [0 : 1] + atan2(...)
                 }
 
                 auto vecBirdSpawnPos = CVector(
-                    x87::sin(fSpawnAngleCamRelative) * fSpawnDistance + camPosn.x,
-                    x87::cos(fSpawnAngleCamRelative) * fSpawnDistance + camPosn.y,
+                    X87R(x87::sin(fSpawnAngleCamRelative) * fSpawnDistance) + camPosn.x,
+                    X87R(x87::cos(fSpawnAngleCamRelative) * fSpawnDistance) + camPosn.y,
                     fBirdSpawnZ
                 );
 
@@ -236,8 +236,8 @@ void CBirds::Update() {
             auto fSinAngle = x87::sin(fCircleProgress);
             auto fCosAngle = x87::cos(fCircleProgress);
 
-            bird.m_vecTargetVelocity.x = fCosAngle * vecCurTarget.x + fSinAngle * vecCurTarget.y;
-            bird.m_vecTargetVelocity.y = fCosAngle * vecCurTarget.y - fSinAngle * vecCurTarget.x;
+            bird.m_vecTargetVelocity.x = X87R(fCosAngle * vecCurTarget.x) + X87R(fSinAngle * vecCurTarget.y);
+            bird.m_vecTargetVelocity.y = X87R(fCosAngle * vecCurTarget.y) - X87R(fSinAngle * vecCurTarget.x);
         }
 
         auto fTimeStep = CTimer::GetTimeStepInSeconds();
@@ -270,15 +270,15 @@ void CBirds::Render() {
         if (bird.m_eBirdMode == eBirdMode::BIRD_DRAW_NOUPDATE || bird.m_eBirdMode == eBirdMode::BIRD_DRAW_UPDATE) {
             auto& vecPos = matBirdTransform.GetPosition();
             auto uiTime = CTimer::GetTimeInMS() + uiWingMoveTimeOffset;
-            vecPos.z += x87::sin((float)(uiTime % bird.m_nWingStillness) * (6.28f / (float)bird.m_nWingStillness)) * 0.1F;
+            vecPos.z += X87R(x87::sin((float)(uiTime % bird.m_nWingStillness) * (6.28f / (float)bird.m_nWingStillness)) * 0.1F);
         }
 
         CVector vecScreenPos;
         float fScreenWidth;
         float fScreenHeight;
         if (CSprite::CalcScreenCoors(matBirdTransform.GetPosition(), &vecScreenPos, &fScreenWidth, &fScreenHeight, false, true)) {
-            auto fCosSize = x87::cos(bird.m_fAngle) * bird.m_fSize;
-            auto fSinSize = x87::sin(bird.m_fAngle) * bird.m_fSize;
+            auto fCosSize = X87R(x87::cos(bird.m_fAngle) * bird.m_fSize);
+            auto fSinSize = X87R(x87::sin(bird.m_fAngle) * bird.m_fSize);
 
             matBirdTransform.GetRight().Set(fCosSize, -fSinSize, 0.0F);
             matBirdTransform.GetForward().Set(fSinSize, fCosSize, 0.0F);
@@ -297,13 +297,13 @@ void CBirds::Render() {
                 auto fSin2 = -x87::sin((float)((uiTime + bird.m_nWingStillness) % bird.m_nWingStillness) * (6.28f / (float)bird.m_nWingStillness));
 
                 auto fSizeUsed = std::max(1.0F, bird.m_fSize);
-                auto fSin1Factor = fSin1 / fSizeUsed;
-                auto fSin2Factor = fSin2 / fSizeUsed;
+                auto fSin1Factor = X87R(fSin1 / fSizeUsed);
+                auto fSin2Factor = X87R(fSin2 / fSizeUsed);
 
-                float fOffX1 = x87::cos(fSin1Factor) * 0.5F;
-                float fOffZ1 = x87::sin(fSin1Factor) * 0.5F;
-                float fOffX2 = x87::cos(fSin2Factor) * 0.5F;
-                float fOffZ2 = x87::sin(fSin2Factor) * 0.5F;
+                float fOffX1 = X87R(x87::cos(fSin1Factor) * 0.5F);
+                float fOffZ1 = X87R(x87::sin(fSin1Factor) * 0.5F);
+                float fOffX2 = X87R(x87::cos(fSin2Factor) * 0.5F);
+                float fOffZ2 = X87R(x87::sin(fSin2Factor) * 0.5F);
 
                 RwUInt8 cAlpha = 255;
                 const auto& vecCameraPos = TheCamera.GetPosition();

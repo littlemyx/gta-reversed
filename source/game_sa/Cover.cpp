@@ -226,10 +226,10 @@ CCoverPoint* CCover::AddCoverPoint(CCoverPoint::eType type, CEntity* coverEntity
             ? coverEntity->GetPosition()
             : *pos;
         // 0x698FDD: dx, dy, dz = cpt - at (x87, the sum is dz*dz + dy*dy + dx*dx) and the exe compares the SQUARE ROOT (fsqrt) with 0.8 / 2.0
-        const double dx = (double)cpt.GetPointOnMap().x - (double)atPos.x;
-        const double dy = (double)cpt.GetPointOnMap().y - (double)atPos.y;
-        const double dz = (double)cpt.GetPointOnMap().z - (double)atPos.z;
-        const double distToCpt = x87::sqrt(dz * dz + dy * dy + dx * dx);
+        const x87d dx = (x87d)cpt.GetPointOnMap().x - (x87d)atPos.x;
+        const x87d dy = (x87d)cpt.GetPointOnMap().y - (x87d)atPos.y;
+        const x87d dz = (x87d)cpt.GetPointOnMap().z - (x87d)atPos.z;
+        const x87d distToCpt = x87::sqrt(dz * dz + dy * dy + dx * dx);
 
         // 0x69901E
         if (distToCpt < (double)0.8f) {
@@ -346,14 +346,14 @@ CCoverPoint* CCover::FindAndReserveCoverPoint(CPed* ped, const CVector& targetPo
 
             // 0x69936B - The point has to face the target: dot((target - pos), (-sin(dir), cos(dir), 0)) > 0
             // `sin` stays unrounded on the x87 stack (and is negated), `cos` is stored to a float, `dz` is multiplied by 0.0
-            const double dx    = (double)targetPos.x - cpt.GetPointOnMap().x;
-            const double dy    = (double)targetPos.y - cpt.GetPointOnMap().y;
-            const double dz    = (double)targetPos.z - cpt.GetPointOnMap().z;
-            const double angle = (double)cpt.GetDir().Raw() * kDirStep;
-            const double nsinX = -x87::sin(angle) * dx;
+            const x87d dx    = (x87d)targetPos.x - cpt.GetPointOnMap().x;
+            const x87d dy    = (x87d)targetPos.y - cpt.GetPointOnMap().y;
+            const x87d dz    = (x87d)targetPos.z - cpt.GetPointOnMap().z;
+            const x87d angle = (x87d)cpt.GetDir().Raw() * kDirStep;
+            const x87d nsinX = X87R(-x87::sin(angle) * dx);
             const float  cosF  = (float)x87::cos(angle);
-            const double dyCos = dy * cosF;
-            const double dot   = (dyCos + nsinX) + dz * 0.0;
+            const x87d dyCos = dy * cosF;
+            const x87d dot   = (dyCos + nsinX) + dz * (x87d)0.0;
             if (!(dot > 0.0)) {
                 continue;
             }
@@ -365,34 +365,34 @@ CCoverPoint* CCover::FindAndReserveCoverPoint(CPed* ped, const CVector& targetPo
 
         // 0x6993C5 - The ped has to be less than 4 units above / below the point
         const CVector pedPos = ped->GetPosition();
-        const double  pedDz  = (double)pedPos.z - cptPos.z;
-        const double  absDz  = pedDz < 0.0 ? -pedDz : pedDz;
+        const x87d  pedDz  = (x87d)pedPos.z - cptPos.z;
+        const x87d  absDz  = pedDz < 0.0 ? -pedDz : pedDz;
         if (!(absDz < 4.0)) {
             continue;
         }
 
         // 0x69941A - and less than 15 units away (2D). The distance is also stored as a float (it is the value that is compared below)
-        const double pedDx    = (double)pedPos.x - cptPos.x;
-        const double pedDy    = (double)pedPos.y - cptPos.y;
-        const double cptDist  = x87::sqrt(pedDy * pedDy + pedDx * pedDx);
+        const x87d pedDx    = (x87d)pedPos.x - cptPos.x;
+        const x87d pedDy    = (x87d)pedPos.y - cptPos.y;
+        const x87d cptDist  = x87::sqrt(pedDy * pedDy + pedDx * pedDx);
         const float  cptDistF = (float)cptDist;
         if (!(cptDist < 15.0)) {
             continue;
         }
 
         // 0x699456 - Distance (float) between the ped and the target, and (not rounded) between the point and the target
-        const double pedTgtDx  = (double)pedPos.x - targetPos.x;
-        const double pedTgtDy  = (double)pedPos.y - targetPos.y;
+        const x87d pedTgtDx  = (x87d)pedPos.x - targetPos.x;
+        const x87d pedTgtDy  = (x87d)pedPos.y - targetPos.y;
         const float  pedToTgt  = (float)x87::sqrt(pedTgtDy * pedTgtDy + pedTgtDx * pedTgtDx);
-        const double cptTgtDx  = (double)cptPos.x - targetPos.x;
-        const double cptTgtDy  = (double)cptPos.y - targetPos.y;
-        const double cptToTgt  = x87::sqrt(cptTgtDy * cptTgtDy + cptTgtDx * cptTgtDx);
+        const x87d cptTgtDx  = (x87d)cptPos.x - targetPos.x;
+        const x87d cptTgtDy  = (x87d)cptPos.y - targetPos.y;
+        const x87d cptToTgt  = x87::sqrt(cptTgtDy * cptTgtDy + cptTgtDx * cptTgtDx);
 
         // 0x6994A1
         if (!(cptDistF < bestDist)) {
             continue;
         }
-        if (isForAttack && !(cptToTgt < (double)pedToTgt + 4.0f)) { // 0x6994CF
+        if (isForAttack && !(cptToTgt < (x87d)pedToTgt + 4.0f)) { // 0x6994CF
             continue;
         }
         bestDist = cptDistF;
@@ -435,7 +435,7 @@ void CCover::FindCoverPointsForThisBuilding(CBuilding* building) {
 CCoverPoint::Dir CCover::FindDirFromVector(CVector dir) {
     // 0x698D40: atan2(-x, y) * 256 / 2pi on the x87 stack, truncated by _ftol2 (the product is NOT rounded to float first).
     static const uint32 K85A778 = 0x4222F983u;
-    double res;
+    x87d res;
     const float a_x = dir.x;
     const float a_y = dir.y;
     const float a_z = dir.z;

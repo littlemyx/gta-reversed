@@ -112,12 +112,12 @@ double CGeneral::GetRadianAngleBetweenPointsExt(float x1, float y1, float x2, fl
     const double at = AtanExt(x / y);
     if (x > 0.0) {
         return y > 0.0
-            ? (K_HALF_PI - at) + K_HALF_PI
-            : K_HALF_PI - (at + K_HALF_PI);
+            ? (X87R(K_HALF_PI - at)) + K_HALF_PI
+            : K_HALF_PI - (X87R(at + K_HALF_PI));
     }
     return y > 0.0
-        ? -K_HALF_PI - (at + K_HALF_PI) // 0x859998
-        : (K_HALF_PI - at) - K_HALF_PI;
+        ? -K_HALF_PI - (X87R(at + K_HALF_PI)) // 0x859998
+        : (X87R(K_HALF_PI - at)) - K_HALF_PI;
 }
 
 // 0x53CC70
@@ -135,21 +135,21 @@ double CGeneral::GetATanOfXYExt(float x, float y) {
     if (xabs < yabs) {
         if (y > 0.0f) {
             return x > 0.0f
-                ? K_HALF_PI - AtanExt(dx / dy)
-                : AtanExt((-(x87d)1.0 / dy) * dx) + K_HALF_PI; // 0x858C1C = -1.0
+                ? X87R(K_HALF_PI - AtanExt(dx / dy))
+                : X87R(AtanExt((-(x87d)1.0 / dy) * dx) + K_HALF_PI); // 0x858C1C = -1.0
         }
         return x > 0.0f
-            ? AtanExt((-(x87d)1.0 / dy) * dx) + K_ONE_HALF_PI
-            : K_ONE_HALF_PI - AtanExt(dx / dy);
+            ? X87R(AtanExt((-(x87d)1.0 / dy) * dx) + K_ONE_HALF_PI)
+            : X87R(K_ONE_HALF_PI - AtanExt(dx / dy));
     }
     if (y > 0.0f) {
         return x > 0.0f
             ? AtanExt(dy / dx)
-            : K_PI - AtanExt((-(x87d)1.0 / dx) * dy);
+            : X87R(K_PI - AtanExt((-(x87d)1.0 / dx) * dy));
     }
     return x > 0.0f
-        ? K_TWO_PI - AtanExt((-(x87d)1.0 / dx) * dy)
-        : AtanExt(dy / dx) + K_PI;
+        ? X87R(K_TWO_PI - AtanExt((-(x87d)1.0 / dx) * dy))
+        : X87R(AtanExt(dy / dx) + K_PI);
 }
 
 // 0x53CDC0
@@ -158,13 +158,13 @@ uint32 CGeneral::GetNodeHeadingFromVector(float x, float y) {
     if (angle < 0.0) {
         angle += K_TWO_PI;
     }
-    angle = K_TWO_PI - angle + (double)0.39269909f; // 0x859F50 (22.5 deg)
+    angle = X87R(K_TWO_PI - angle) + (x87d)0.39269909f; // 0x859F50 (22.5 deg)
     if (!(angle < K_TWO_PI) && angle == angle) { // FCOM + JNE on C0: NaN skips the subtraction
         angle -= K_TWO_PI;
     }
     // 0x8594F0 (1 / 2pi), 0x859000 (8.0); floor (0x8219F0) + _ftol2 (0x821B40): `fistp qword`, only the LOW dword is returned (NaN / inf / out of range => the
     // indefinite 0x8000000000000000 => 0, big values wrap), NOT the saturating 0x80000000 of a 32-bit conversion
-    return (uint32)(uint64)(int64)floor(angle * (double)0.15915494f * 8.0);
+    return (uint32)(uint64)(int64)floor(X87R(angle * (double)0.15915494f) * (x87d)8.0);
 }
 
 /*!
@@ -192,7 +192,7 @@ float CGeneral::GetAngleBetweenPoints(float x1, float y1, float x2, float y2) {
 }
 
 double CGeneral::GetAngleBetweenPointsExt(float x1, float y1, float x2, float y2) {
-    return GetRadianAngleBetweenPointsExt(x1, y1, x2, y2) * (double)57.2957764f; // 0x859878
+    return X87R(GetRadianAngleBetweenPointsExt(x1, y1, x2, y2) * (double)57.2957764f); // 0x859878
 }
 
 uint16 CGeneral::GetRandomNumber() { // Why does this return `uint16`? Should be `int32` (same as retval of `rand()`)

@@ -159,7 +159,7 @@ void CPlayerInfo::EvaluateCarPosition(CEntity* car, CPed* ped, float pedToVehDis
 
     // Find car angle, not relative to our rotation
     // 0x56DB35: its result stays unrounded on the x87 stack (`GetATanOfXY` leaves its `st0`), the whole wrap below happens in extended precision
-    double carAngleFromFront = (double)angleFront - CGeneral::GetATanOfXYExt(carPosn.x - pedPosn.x, carPosn.y - pedPosn.y);
+    x87d carAngleFromFront = X87R((double)angleFront - CGeneral::GetATanOfXYExt(carPosn.x - pedPosn.x, carPosn.y - pedPosn.y));
 
     // Make car's angle relative to our rotation (notice: it's an abs value)
     // Basically, we calculate how much the car is in our FOV.
@@ -176,7 +176,7 @@ void CPlayerInfo::EvaluateCarPosition(CEntity* car, CPed* ped, float pedToVehDis
 
     // Calculate imaginary distance based on the car's angle: The higher the angle the greater the distance
     // 0x56DB92: `fmul [0x8594F0]` = 1 / (2 * pi) as the float constant 0x3E22F983 (not a division)
-    const double distance = (1.0f - carAngleFromFront * std::bit_cast<float>(0x3E22F983u)) * (10.0f - (double)pedToVehDist);
+    const x87d distance = (1.0f - carAngleFromFront * std::bit_cast<float>(0x3E22F983u)) * (10.0f - (x87d)pedToVehDist);
     if (distance >= *outDistance) { // 0x56DBB0: FCOMP + `test ah, 1` + `jne` (skips if less or unordered)
         *outDistance = (float)distance;
         *outVehicle  = car->AsVehicle();
@@ -928,21 +928,21 @@ void CPlayerInfo::ProcessCarGunCrosshair(uint32 playerIndex, CPad* pad) {
     constexpr x87d FOV_SCALE = (x87d)0.008726646f; // 0x8631D4
 
     // Up component
-    const double v1 = x87::tan((x87d)TheCamera.FindCamFOV() * FOV_SCALE) / (double)CDraw::ms_fAspectRatio * (double)crossY;
-    const float  upX = (float)((double)up.x * v1), upY = (float)((double)up.y * v1), upZ = (float)((double)up.z * v1);
+    const x87d v1 = X87R(x87::tan((x87d)TheCamera.FindCamFOV() * FOV_SCALE) / (double)CDraw::ms_fAspectRatio) * (x87d)crossY;
+    const float  upX = (float)((x87d)up.x * v1), upY = (float)((x87d)up.y * v1), upZ = (float)((x87d)up.z * v1);
 
     // Right component
     const double tan2 = x87::tan((x87d)TheCamera.FindCamFOV() * FOV_SCALE);
     const float  rX   = (float)((x87d)right.x * (x87d)crossX);
     const float  rY   = (float)((x87d)right.y * (x87d)crossX);
     const x87d rZ   = (x87d)crossX * (x87d)right.z;
-    const float  aX   = (float)((double)rX * tan2);
-    const float  aY   = (float)((double)rY * tan2);
-    const double aZ   = rZ * tan2;
+    const float  aX   = (float)(X87R((double)rX * tan2));
+    const float  aY   = (float)(X87R((double)rY * tan2));
+    const x87d aZ   = X87R(rZ * tan2);
 
     const x87d t1 = (x87d)fwd.x - (x87d)aX;
     const float  t2 = (float)((x87d)fwd.y - (x87d)aY);
-    const float  t3 = (float)((double)fwd.z - aZ);
+    const float  t3 = (float)((x87d)fwd.z - aZ);
 
     const float dirX = (float)(t1 - (x87d)upX);
     const float dirY = (float)((x87d)t2 - (x87d)upY);
@@ -1022,15 +1022,15 @@ void CPlayerInfo::DrawCrosshair(int32 playerIndex) {
 
     // NOTE: The original keeps all intermediate values on the x87 stack (extended precision) => `double`s
     for (auto step = 0; step < 5; step++) {
-        const float pulse = (float)(x87::sin((x87d)(timeHist[0] & 0x3FF) * (x87d)0.006135923322290182f /* 0x865034 */) * (double)0.2f /* 0x858CC4 */ + (double)1.0f /* 0x858624 */);
+        const float pulse = (float)(X87R(x87::sin((x87d)(timeHist[0] & 0x3FF) * (x87d)0.006135923322290182f /* 0x865034 */) * (double)0.2f) /* 0x858CC4 */ + (x87d)1.0f /* 0x858624 */);
         for (auto ring = 0; ring < 3; ring++) {
             const float radius = (float)((x87d)ring * (x87d)10.0f /* 0x85862C */ + (x87d)20.0f /* 0x858BA4 */);
             for (auto n = 0; n < 4; n++) {
                 const x87d angle = (x87d)n * (x87d)1.5707964f /* 0x858FE4 */ + (x87d)0.78539819f /* 0x859AB0 */;
                 const double cosV  = x87::cos(angle);
                 const double sinV  = x87::sin(angle);
-                const float  posY  = (float)(cosV * (double)radius * (double)pulse + ((double)yHist[step] + 1.0) * (double)RsGlobal.maximumHeight * 0.5);
-                const float  posX  = (float)(sinV * (double)radius * (double)pulse + ((double)xHist[step] + 1.0) * (double)RsGlobal.maximumWidth * 0.5);
+                const float  posY  = (float)(X87R(cosV * (double)radius) * (x87d)pulse + ((double)yHist[step] + (x87d)1.0) * (x87d)RsGlobal.maximumHeight * (x87d)0.5);
+                const float  posX  = (float)(X87R(sinV * (double)radius) * (x87d)pulse + ((double)xHist[step] + (x87d)1.0) * (x87d)RsGlobal.maximumWidth * (x87d)0.5);
                 CSprite::RenderOneXLUSprite_Rotate_Aspect(
                     { posX, posY, 100.0f },
                     { 15.0f, 15.0f },

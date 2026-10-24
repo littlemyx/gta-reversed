@@ -16,16 +16,16 @@ void CCurves::InjectHooks() {
 // 0x43C610
 float CCurves::DistForLineToCrossOtherLine(float lineBaseX, float lineBaseY, float lineDirX, float lineDirY, float otherLineBaseX, float otherLineBaseY, float otherLineDirX, float otherLineDirY) {
     // All intermediates stay on the x87 stack (extended precision) until the return value
-    const double dir = (double)lineDirX * otherLineDirY - (double)lineDirY * otherLineDirX;
+    const x87d dir = (x87d)lineDirX * otherLineDirY - (x87d)lineDirY * otherLineDirX;
 
     if (dir == 0.0) {
         return -1.0f; // Lines are parallel, no intersection
     }
 
-    const double dist = ((double)lineBaseX - otherLineBaseX) * otherLineDirY - ((double)lineBaseY - otherLineBaseY) * otherLineDirX;
+    const x87d dist = ((x87d)lineBaseX - otherLineBaseX) * otherLineDirY - ((x87d)lineBaseY - otherLineBaseY) * otherLineDirX;
 
     // 0x43C652: `fld -1.0; fdiv dir; fmulp` => dist * (-1 / dir), NOT -dist / dir
-    return (float)(dist * (-1.0 / dir));
+    return (float)(dist * (-(x87d)1.0 / dir));
 }
 
 // 0x8594EC: the exe's `1/3` here is 0x3EAAAAAA (truncated, NOT the rounded 0x3EAAAAAB)
@@ -122,13 +122,13 @@ float CCurves::CalcCorrectedDist(float current, float total, float speedVariatio
 
     // 0x43C880: everything stays on the x87 stack (extended precision) except `*outT`; the constants are the exe's float literals
     // (0x40490FDB = pi, 0x40C90FDB = 2pi, 0x3E22F983 = the reciprocal of 2pi folded by the compiler: NOT `1.0f / TWO_PI` evaluated in extended)
-    const double t = (double)current / (double)total;
-    *outT = (float)(0.5 - x87::cos((double)std::numbers::pi_v<float> * t) * 0.5);
+    const x87d t = (x87d)current / (x87d)total;
+    *outT = (float)((x87d)0.5 - X87R(x87::cos((x87d)std::numbers::pi_v<float> * t) * 0.5));
 
-    const double averageSpeed = x87::sin(t * (double)std::bit_cast<float>(0x40C90FDBu));
-    const double sv = speedVariation;
-    const double corrected = averageSpeed * ((double)total * (double)std::bit_cast<float>(0x3E22F983u)) * sv
-                           + ((1.0 - (sv + sv) + 1.0) * 0.5) * (double)current;
+    const double averageSpeed = x87::sin(t * (x87d)std::bit_cast<float>(0x40C90FDBu));
+    const x87d sv = speedVariation;
+    const x87d corrected = X87R(averageSpeed * ((x87d)total * (x87d)std::bit_cast<float>(0x3E22F983u))) * sv
+                           + (((x87d)1.0 - (sv + sv) + (x87d)1.0) * (x87d)0.5) * (x87d)current;
     return (float)corrected;
 }
 
@@ -152,14 +152,14 @@ void CCurves::CalcCurvePoint(const CVector& startCoors, const CVector& endCoors,
         endCoors.x, endCoors.y, -endDir.x, -endDir.y, startCoors.x, startCoors.y, startDir.x, startDir.y
     );
 
-    double x87Total; // `X + Z + [0x50]` of the tail (0x43CDFB): the total length, unrounded
+    x87d x87Total; // `X + Z + [0x50]` of the tail (0x43CDFB): the total length, unrounded
 
     if (!(distToPoint1 > 0.0f) || !(distToPoint2 > 0.0f)) { // 0x43CA10 / 0x43CA21 (NaN included)
         const float straightDist = (startCoors - endCoors).Magnitude2D();
-        const float interpol     = (float)((double)straightDist / (1.0 - (double)speedVariation)); // fdivr, spilled
+        const float interpol     = (float)((x87d)straightDist / ((x87d)1.0 - (x87d)speedVariation)); // fdivr, spilled
 
         float ourTime;
-        const double corrected = CalcCorrectedDist((float)((double)interpol * time), interpol, speedVariation, &ourTime); // x87 return value, `current` spilled
+        const x87d corrected = CalcCorrectedDist((float)((x87d)interpol * time), interpol, speedVariation, &ourTime); // x87 return value, `current` spilled
 
         const CVector coorsOnLine1 = startCoors + startDir * (float)corrected;
         const CVector coorsOnLine2 = endCoors + endDir * (float)(corrected - straightDist);
@@ -170,17 +170,17 @@ void CCurves::CalcCurvePoint(const CVector& startCoors, const CVector& endCoors,
         resultCoor.y = coorsOnLine2.y * ourTime + coorsOnLine1.y * nt;
         resultCoor.z = coorsOnLine2.z * ourTime + coorsOnLine1.z * nt;
 
-        x87Total = ((double)straightDist + 0.0) + 0.0;
+        x87Total = ((x87d)straightDist + (x87d)0.0) + (x87d)0.0;
     } else {
         // 0x43CA27..: m = min(d1, d2) (`d1 < d2 ? d1 : d2`), then min(5, m) (`5 < m ? 5 : m`)
         float m = (distToPoint1 < distToPoint2) ? distToPoint1 : distToPoint2;
         m = (5.0f < m) ? 5.0f : m;
 
         const float  s1 = distToPoint1 - m;            // [0x50], spilled
-        const double s2 = (double)distToPoint2 - m;    // left on the x87 stack unrounded
+        const x87d s2 = (x87d)distToPoint2 - m;    // left on the x87 stack unrounded
         const float  twoM = m + m;                     // [0x48]
 
-        const double totalExt = ((double)twoM + s2) + s1;
+        const x87d totalExt = ((x87d)twoM + s2) + s1;
         const float  total    = (float)totalExt;       // [0x10]
         const float  bdt      = (float)(totalExt * time); // [0x4C]: the unrounded total times time
 
@@ -189,49 +189,49 @@ void CCurves::CalcCurvePoint(const CVector& startCoors, const CVector& endCoors,
         } else if (!((twoM + s1) > bdt)) { // 0x43CAE4: `jne` also takes the unordered case
             resultCoor = endCoors + endDir * (bdt - total);
         } else {
-            const double bi = ((double)bdt - s1) / twoM; // unrounded
+            const x87d bi = ((x87d)bdt - s1) / twoM; // unrounded
 
             // start side: P = startCoors + startDir * s1 (x spilled, y unrounded, z product spilled)
-            const float  Px = (float)((double)startDir.x * s1 + startCoors.x);
-            const double Py = (double)startDir.y * s1 + startCoors.y;
-            const double Pz = (double)(float)(startDir.z * s1) + startCoors.z;
+            const float  Px = (float)((x87d)startDir.x * s1 + startCoors.x);
+            const x87d Py = (x87d)startDir.y * s1 + startCoors.y;
+            const x87d Pz = (x87d)(float)(startDir.z * s1) + startCoors.z;
             // end side: Q = endCoors - endDir * s2 (all spilled to float)
             const float Qx = (float)(endCoors.x - s2 * endDir.x);
             const float Qy = (float)(endCoors.y - s2 * endDir.y);
-            const float Qz = (float)(endCoors.z - (double)(float)(s2 * endDir.z));
+            const float Qz = (float)(endCoors.z - (x87d)(float)(s2 * endDir.z));
             // bendStart = P + (startDir * bi) * m
-            const float  rx = (float)(((double)startDir.x * bi) * m);
-            const double ry = ((double)startDir.y * bi) * m;
-            const float  rz = (float)(((double)(float)(startDir.z * bi)) * m);
-            const float  bsx = (float)((double)rx + Px);
+            const float  rx = (float)(((x87d)startDir.x * bi) * m);
+            const x87d ry = ((x87d)startDir.y * bi) * m;
+            const float  rz = (float)(((x87d)(float)(startDir.z * bi)) * m);
+            const float  bsx = (float)((x87d)rx + Px);
             const float  bsy = (float)(ry + Py);
-            const double bsz = (double)rz + Pz;
+            const x87d bsz = (x87d)rz + Pz;
             // bendEnd = Q - (endDir * (1 - bi)) * m
-            const double nbi = 1.0 - bi;
-            const double exm = (nbi * endDir.x) * m;
+            const x87d nbi = (x87d)1.0 - bi;
+            const x87d exm = (nbi * endDir.x) * m;
             const float  ey  = (float)(nbi * endDir.y);
             const float  ez  = (float)(nbi * endDir.z);
             const float  bex = (float)(Qx - exm);
-            const float  bey = (float)(Qy - (double)ey * m);
-            const float  bez = (float)(Qz - (double)(float)((double)ez * m));
+            const float  bey = (float)(Qy - (x87d)ey * m);
+            const float  bez = (float)(Qz - (x87d)(float)((x87d)ez * m));
             // Lerp(bendStart, bendEnd, bi) = bendStart * (1 - bi) + bendEnd * bi
             const float  ax = (float)(bsx * nbi), ay = (float)(bsy * nbi);
-            const double az = bsz * nbi;
+            const x87d az = bsz * nbi;
             const float  cz = (float)(bez * bi);
             resultCoor.x = (float)(bex * bi + ax);
             resultCoor.y = (float)(bey * bi + ay);
-            resultCoor.z = (float)((double)cz + az);
+            resultCoor.z = (float)((x87d)cz + az);
         }
 
-        x87Total = ((double)twoM + s2) + s1;
+        x87Total = ((x87d)twoM + s2) + s1;
     }
 
     // 0x43CDFB: speed = lerp(startDir, endDir, time) * total / (ms * 0.001f)
-    const double A = 1.0 - (double)time;
-    const double M = (double)traversalTimeInMS * (double)std::bit_cast<float>(0x3A83126Fu);
-    resultSpeed.x = (float)((((double)time * endDir.x + A * startDir.x) * x87Total) / M);
+    const x87d A = (x87d)1.0 - (x87d)time;
+    const x87d M = (x87d)traversalTimeInMS * (x87d)std::bit_cast<float>(0x3A83126Fu);
+    resultSpeed.x = (float)((((x87d)time * endDir.x + A * startDir.x) * x87Total) / M);
     resultSpeed.z = 0.0f;
-    resultSpeed.y = (float)((((double)time * endDir.y + A * startDir.y) * x87Total) / M);
+    resultSpeed.y = (float)((((x87d)time * endDir.y + A * startDir.y) * x87Total) / M);
 }
 
 // unused

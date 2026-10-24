@@ -617,7 +617,7 @@ void CWeather::Update() {
     };
 
     const auto slowIdx = (timeMs / 1024) % std::size(WIND_DIR_OFFSETS);
-    const auto slowT   = 0.5f - x87::cos((float)(timeMs % 1024) / 1024.0f * PI) * 0.5f;
+    const auto slowT   = 0.5f - X87R(x87::cos((float)(timeMs % 1024) / 1024.0f * PI) * 0.5f);
     auto windX = LerpWindDirOffset(slowIdx, slowT) * WindClipped * 0.4f + WindDir.x;
     auto windY = LerpWindDirOffset(slowIdx + 3, slowT) * WindClipped * 0.4f + WindDir.y;
     WindDir.z  = LerpWindDirOffset(slowIdx + 6, slowT) * WindClipped * 0.2f;
@@ -633,7 +633,7 @@ void CWeather::Update() {
 
     // 0x72C5B6
     const auto scaleIdx = (timeMs / 2048) % std::size(WIND_DIR_SCALES);
-    const auto scaleT   = 0.5f - x87::cos((float)(timeMs % 2048) / 2048.0f * PI) * 0.5f;
+    const auto scaleT   = 0.5f - X87R(x87::cos((float)(timeMs % 2048) / 2048.0f * PI) * 0.5f);
     const auto scale    = lerpBlend(WIND_DIR_SCALES[scaleIdx], WIND_DIR_SCALES[(scaleIdx + 1) % std::size(WIND_DIR_SCALES)], scaleT);
     WindDir.x  = scale * windX;
     WindDir.y  = scale * windY;

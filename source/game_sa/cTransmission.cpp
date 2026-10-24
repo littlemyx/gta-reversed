@@ -55,9 +55,9 @@ void cTransmission::InitGearRatios()
         NOTSA_GLOBAL_LOCAL(previousGear, 0xC1CB30, (tTransmissionGear*), {}); // nullptr
         gear = &m_aGears[i];
         previousGear = &m_aGears[i - 1];
-        const double gearMax = ((double)i * maxGearVelocity * recipGears) + averageHalfGearVelocity; // stays on the x87 stack (extended exponent range): `fst` stores it, the subtraction uses the register
+        const x87d gearMax = ((x87d)i * maxGearVelocity * recipGears) + averageHalfGearVelocity; // stays on the x87 stack (extended exponent range): `fst` stores it, the subtraction uses the register
         gear->MaxVelocity = (float)gearMax;
-        const double velocityDifference = gearMax - previousGear->MaxVelocity;
+        const x87d velocityDifference = gearMax - previousGear->MaxVelocity;
         if (i >= m_nNumberOfGears)
         {
             gear->ChangeUpVelocity = m_MaxVelocity;

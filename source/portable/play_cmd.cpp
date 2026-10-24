@@ -16,6 +16,7 @@
 #include "Pickups.h"
 #include "Pools/Pools.h"
 #include "World.h"
+#include "portable/render/pipelines_gl3.h"
 
 namespace notsa::portable {
 template<typename PoolT>
@@ -38,6 +39,10 @@ bool PlayCmd(const char* name, const std::string& args) {
         LogPool("Object", GetObjectPool());
         LogPool("Building", GetBuildingPool());
         LogPool("Dummy", GetDummyPool());
+        return true;
+    }
+    if (!std::strcmp(name, "skinstat")) { // R-10: gl3 skin pipeline counters
+        NotsaGl3LogSkinStats();
         return true;
     }
     if (!std::strcmp(name, "savemenu")) {

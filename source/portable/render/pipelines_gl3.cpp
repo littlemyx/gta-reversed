@@ -58,5 +58,11 @@ void RwShimPipelineEnsure() {
     }
 }
 
-void RwShimPipelineShutdown() {}
+void NotsaGl3LogSkinStats() {
+    const rw::gl3::SkinStats& s = rw::gl3::skinStats;
+    LogF("R-10: skin geometries instanced %d (stream refreshes %d), weights renormalised %d, bone indices clamped %d, over the 64-bone cap %d; draws without hierarchy %d, hierarchy/bone count mismatches %d", (int)s.geosInstanced,
+         (int)s.geosRefreshed, (int)s.geosWeightsRenormalised, (int)s.geosIndexClamped, (int)s.geosOverBoneCap, (int)s.drawsNoHierarchy, (int)s.drawsHierMismatch);
+}
+
+void RwShimPipelineShutdown() { NotsaGl3LogSkinStats(); }
 #endif

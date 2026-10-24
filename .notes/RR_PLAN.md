@@ -207,3 +207,17 @@ Method for the next localisation (reproducible, 10 min per round): a Win32 + nat
 
 ### 11.6 Open
 * Windows-host confirmation run (PORTABLE_SYNC.md). * After D1/D2 are fixed, re-run the diff: the next divergence hides behind them. * Win32 thread-local rand (row 7) stays open; not needed with audio off. * The Win32 trace file is written in text mode (CRLF); `rr_diff.py` copes, `tr -d '\r'` for byte comparison with the portable file.
+
+### 11.7 F-loop iteration 1 (MAC-FLOOP1, 2026-10-24): fixes and the new first divergence
+Commit 4e0ff8bc. All changes `#ifdef NOTSA_PORTABLE` (wine cl.exe A/B of CarCtrl.cpp.obj and Stats.cpp.obj, OFF build: code + relocations identical; the Win32 reference trace is unchanged). FP flags checked once: the game library has `-ffp-contract=off` on all 1117 TUs, no fast-math; librw (62 TUs) had NO `-ffp-contract=off` (clang default `on` = FMA fusion on arm64) -> fixed in source/CMakeLists.txt (C-8, portable only).
+| fix | where | before (portable) | PC24 (Win32) | result |
+|---|---|---|---|---|
+| D1 | `CCarCtrl::ChooseModel` `total` + `numCops/numGangs/numDealers` (double -> float; all divisions/sums per-op float) | `(double)A+B+C+D` = 8 | float chain 6.3f+0.45f -> 6.75, +2.25 = 9 | rng first divergence: recorded frame 0 -> 57 |
+| D3 (2 more sites) | `GenerateOneRandomCar` density checks (0x43012D, 0x43015F): `(double)mult * (int)Max * density`, `(double)A+B+C+D` -> float | double chains | float per op | no visible change (rare flips) |
+| D2 | `CStats::GetFatAndMuscleModifier` (`Real` = float in portable): `(double)569.0f * (double)0.001f * 176.0f` was ONE rounding (100.14400482), the exe rounds twice (100.14399719) | 100.14400482 | 100.14399719 | player exact-hash first divergence: frame 0 -> 56 |
+First divergent frame before -> after (exact / quantised): rng 0/0 -> 57/57; pop 0/0 -> 0/0 (stmem); pl 0/181 -> 56/181; cam 0/57 -> 0/57; pd, vh 0/0 -> 0/0; ob 139/139 -> 139/139. Frame 0 detail diffs 88 -> 86 fields.
+Open, found while localising (rrf/rrfe logs: `NOTSA_RR_LOG_FRAMES=460 NOTSA_RR_LOG_ENTS=1` on both sides, diff the `rrf`/`rrfe` lines; env passes through rr_run_win32.sh; a 3-frame Win32 run takes 11 s):
+* N1 (first in time): menu-phase vehicle (slot 1, model 492) has micro-velocities (mv/tv ~1e-6) that differ in the last digits from idle frame 4 on, positions equal until later: 1-ulp orientation/suspension noise, not located (candidates: placement/SetHeading trig, CAutomobile::ProcessControl suspension, `std::sin/cos` float vs CRT x87). Same class at frame 0 for veh 2-7 matrices (e.g. uz 1.0 vs 0.99999994).
+* N2: RNG diverges at idle frame 168 (new game starts, gf 351 -> 353) and RE-CONVERGES by the harness reseed (rr_stat pre_spawn idle 222 equal on both sides); `stmem` differs from idle 175 (16384 B) to 223232 B at pre_start: a different loaded model set; ped 9 model 0x106 (Win32) vs 0x105 (portable) = driver pick of the spawned taxi. Needs rand-draw call-site logging on the Win32 side (RandHook is portable-only; a Win32 hook means touching GameRand.h = full rebuild) or RR_MARKs in CGame::InitialiseWhenRestarting / CStreaming.
+* N3: camera py 3 ulp (-1262.08105 vs -1262.08069), ped 3 py/pz (10 / 3 ulp) at frame 0: Cam/ped physics float noise.
+* Pattern worth sweeping first (same shape as D1/D2): `(float)((double)A * (double)B * C)` / `(double)x + y` chains in Stats.cpp (187 casts), CarCtrl.cpp (1.1k), Population, PopCycle, Cam: a double product of floats is ONE rounding, the exe does one per op.

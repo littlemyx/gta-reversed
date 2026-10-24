@@ -8,7 +8,10 @@ env:
   build: "${{ github.workspace }}/build"
 
 # Triggers the workflow on push or pull request events for all branches.
-on: [push, pull_request]
+on:
+  push:
+    branches-ignore: [portable/main]
+  pull_request:
 
 permissions:
   contents: read

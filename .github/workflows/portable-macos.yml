@@ -3,8 +3,7 @@ name: Portable macOS
 # MAC-LNX1: native macOS arm64 build of the portable game (preset PortableMac: Homebrew LLVM clang + libc++, librw GL3 + SDL3, openal-soft) and the data-free host tests (ctest -L portable).
 # Fork-only workflow (pushes to portable/main, by hand). The game is not run (no game data on CI). NOT yet run on a runner: needs the librw secret (see tools/portable/ci_librw_access.sh).
 on:
-  push:
-    branches: [portable/main]
+  # manual only until the private librw is reachable from CI (tools/portable/ci_librw_access.sh); push runs only spammed failure mails
   workflow_dispatch:
 
 permissions:

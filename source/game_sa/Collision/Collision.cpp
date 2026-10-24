@@ -495,7 +495,7 @@ float CCollision::DistToLine(const CVector& lineStart, const CVector& lineEnd, c
     ZoneScoped;
 
     // Original (0x417610): the same evaluation as `DistToLineSqr` except for the dot product's terms (see there), and the squared distance is not rounded to a float before the sqrt
-    return (float)std::sqrt(DistToLineSqrD(lineStart, lineEnd, point, true));
+    return (float)X87R(std::sqrt(DistToLineSqrD(lineStart, lineEnd, point, true)));
 }
 
 /*!
@@ -784,7 +784,7 @@ double ClosestSquaredDistanceBetweenFiniteLinesOG(
         Recompute((x87d)b - d);
     }
 
-    const double sc = std::abs(sN) < EPSILON ? 0.0 : sN / sD;
+    const x87d sc = X87R(std::abs(sN)) < EPSILON ? (x87d)0.0 : X87R(sN / sD);
     const x87d tc = std::abs((x87d)tN) < EPSILON ? (x87d)0.0 : (x87d)tN / tD;
 
     const float  tvx = (float)((x87d)v.x * tc);
@@ -792,7 +792,7 @@ double ClosestSquaredDistanceBetweenFiniteLinesOG(
     const x87d tvz = tc * v.z;
     const float  suz = (float)(sc * u.z);
     const float  px  = (float)(sc * u.x + w.x);
-    const double py  = sc * u.y + w.y;
+    const x87d py  = sc * u.y + w.y;
     const float  pz  = (float)((x87d)suz + w.z);
     const float  dx  = (float)((x87d)px - tvx);
     const float  dy  = (float)(py - tvy);
@@ -984,7 +984,7 @@ bool CCollision::TestLineBox_DW(CColLine const& line, CBox const& box) {
 
     // `t` is calculated in extended precision (=> double), the intersection coordinates are rounded to floats
     const auto Coord = [&](int32 axis, double t) {
-        return (float)((double)d[axis] * t + s[axis]);
+        return (float)(X87R((double)d[axis] * t) + s[axis]);
     };
 
     // X planes
@@ -2112,7 +2112,7 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
                                 const auto hitK = DiskHitK(cpInA, disk);
 
                                 if (maxTouchDistances[diskIdx] <= hitK) { // Original: `!(hitK < max)`, NaN rejects
-                                    if (hitK - (double)maxTouchDistances[diskIdx] > (x87d)0.35f * disk.m_fRadius) { // 0x858C0C = 0.35f
+                                    if (X87R(hitK - (double)maxTouchDistances[diskIdx]) > (x87d)0.35f * disk.m_fRadius) { // 0x858C0C = 0.35f
                                         emitCP      = true;
                                         bestBoxDist = minTouchDist;
                                     }
@@ -2674,7 +2674,7 @@ bool CCollision::PointInPoly(
     // Projects onto the plane of the principal axis, then checks which side of each edge the point is on.
     // `side` is the `(P.a - va) * (vn.b - va.b) - (P.b - va.b) * (vn.a - va.a)` test of an edge
     const auto Edge = [](double Pa, double Pb, float va, float vb, float na, float nb) {
-        return (Pa - va) * ((double)nb - vb) - (Pb - vb) * ((double)na - va);
+        return (X87R(Pa - va)) * ((x87d)nb - vb) - (X87R(Pb - vb)) * ((x87d)na - va);
     };
     const auto& v0 = verts[0];
     const auto& v1 = verts[1];

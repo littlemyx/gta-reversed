@@ -1,0 +1,41 @@
+# MAC-P4b: P4 design slices S1..S6 (2026-10-24, portable/main, pushed to fork)
+
+## Commits
+| commit | slice | content |
+|---|---|---|
+| 4677c920 | task 0 | `tests/portable/p2d_ped_test.cpp:10` `enum ePedPieceTypes : int` (matches Weapon.h's P-4f forward declaration); p2d green |
+| 0546bf74 | S1 | `source/portable/msvc_rand.h` (new; included from `crt.h`, `standalone/GameRand.h`, `General.h`), `General.cpp` (+ `static_assert(RAND_MAX_FLOAT_RECIPROCAL == 1/32767)`), golden gen + golden + host test + runner, `tools/portable/rand_proof.py` |
+| 81616817 | S2 | VisibilityPlugins.h/.cpp: portable second slot `CClumpModelInfo* m_modelInfo`; host test |
+| 2c39263d | S3 | VehicleModelInfo.h/.cpp: portable `tRestoreEntry{addr, uint64 value, uint8 size}` + `Save/Restore`; host test |
+| fec5ced2 | S4 | KeyArray.h/.cpp: `CKeyEntry_File{offset,hash}` (8 B, `VALIDATE_SIZE_FILE`), portable `Load` converts, `CKeyEntry::m_fileOffset`; host test on the REAL KeyArray.cpp |
+| f17b8536 | S5/S6 | AnimManager.h `VALIDATE_LAYOUT`; UIRenderer.cpp (`ImGui_ImplDX9_Init` skipped, `SetFocus` -> `SDL_RaiseWindow` under NOTSA_PORTABLE); `portable_tests.cmake` wiring of 4 new tests (+ mutate) |
+
+## S1 decisions
+* The repo already had `standalone/GameRand.h` (NOTSA_STANDALONE_RUN: global LCG, seed LCG^19(1) for the 19 initterm `rand()` calls, `rand()`/`srand(x)` function-like macros). It never touched `RAND_MAX`, so the macOS RAND_MAX 0x7FFFFFFF was the only live defect (General.cpp:199 + `RAND_MAX_FLOAT_RECIPROCAL`, `>= RAND_MAX/2`, `/RAND_MAX`) - P4_PLAN assumed `rand()` itself was the host one.
+* **Per-thread state**, justified from the exe: `_rand` @0x821B1E is `__getptd()->_holdrand` (decomp .notes/decomp/00821B1E__rand.c, INITTERM_AUDIT.md: `_tiddata` +0x14, set to 1 by `_initptd` for every new thread). So a worker thread starts at 41, 18467, 6334...; the main thread starts at LCG^19(1) (the static-init rand() calls, same constant as GameRand.h). Verified against the real MSVC CRT: cl.exe (static CRT) under Wine, `tests/portable/msvc_rand_golden.inc` (seed 1 x1000, srand(12345) x1000, 0/0xFFFFFFFF/0x1234/1, new thread after main srand(777) = seed-1 sequence, main undisturbed by the thread).
+* NOTSA_PORTABLE: `GameRand.h` now includes `msvc_rand.h` (per-thread); the Windows standalone branch of GameRand.h is untouched (global state; MSVC output unchanged). `RAND_MAX` is `#undef/#define 0x7FFF` after `<cstdlib>`; `General.h` includes the shim itself because it computes `RAND_MAX_FLOAT_RECIPROCAL` at namespace scope.
+* Mechanism limits (checked by the runner's scan, 0 hits in source/): function-like macros, so `std::rand`, `&rand`, `.rand(` would not work; none exist (VehicleModelInfo.cpp has a local variable `rand`, untouched by the macro).
+
+## Evidence
+| gate | result |
+|---|---|
+| ctest `-L portable` | 13/14 green incl. p2d, msvc_rand, p4_visplugin, p4_keyarray, p4_restore. **RED: `portable.file_records`** - see open item 1 |
+| ctest `-L mutation` (new) | msvc_rand 10 mutants killed (const, shift, mask, RAND_MAX, srand nop/16 bit, thread seed, global state, main seed), p4_visplugin 7/7, p4_keyarray 5/5, p4_restore 4/4 |
+| S1 test numbers | 100k calls: `>= RAND_MAX/2` 50.2 %, max 32767, mean(v/RAND_MAX) 0.5015 |
+| rand/RAND_MAX proof | `tools/portable/rand_proof.py` on the census snapshot (46 TUs that use rand/srand/RAND_MAX + General.h): -E with the real flags, 0 unexpanded `rand(`/`srand(`/`RAND_MAX` in user code, 169 `Rand()` + 14 `SRand()` expansions; General.cpp `static_assert(RAND_MAX == 0x7FFF)` compiles |
+| native census (snap_census, HEAD + my 13 files, 1166 TUs) | **36 rows, all `F/C: inline asm` (stream F)**; the 9 design rows (RAND_MAX, 3 VisibilityPlugins, VehicleModelInfo restore, KeyArray, AnimManager, UIRenderer x2) = **0**. TSV build/snap_census/p4b_full.tsv (snapshot removed) |
+| MSVC wine cl.exe A/B (no PCH, StandaloneRelease flags + NOTSA_DETACHED_GLOBALS, NOTSA_SIG_NORM_STRINGS=1, A = HEAD before my commits, B = + my 13 files) | 22 TUs: **21 code+relocs+data identical**; UIRenderer.cpp differs only in 2 `__LINE__` immediates (+6 lines before them: 0xd5->0xdb, 0x100->0x106) and the string-literal symbol names derived from them. TUs: AnimManager, CarCtrl, Ped, PlayerPed, Automobile, Heli, Vehicle, Explosion, FireManager, Fx, General, ClumpModelInfo, VehicleModelInfo, RpAnimBlend, PopCycle, TaskSimpleFight, KeyArray, Text, VisibilityPlugins, Weapon, TextDebugModule, UIRenderer. Scratch /private/tmp/claude-501/p4b_ab (drv.py/cmp.py of MAC-P4-REV) |
+| StandaloneRelease CMake neutrality | only `tools/portable/portable_tests.cmake` changed; it is `include()`d at the end of source/CMakeLists.txt inside `if (GTASA_PORTABLE)`; build/StandaloneRelease/CMakeCache has no GTASA_PORTABLE (OFF) => never read there. No CMakeLists.txt edited |
+
+## S2..S5 notes
+* S2: plugin struct portable = `{int32 m_hierarchyId; CClumpModelInfo* m_modelInfo;}` (librw rounds plugin offsets to sizeof(void*), so the pointer is aligned). Semantics = the exe's ONE slot: `SetClumpModelInfo` stores the pointer and `id = low32(ptr)` (never 0), `SetFrameHierarchyId(f, id)` replaces (clears) the pointer, ctor zeroes both, copy ctor copies both. Consumer audit (all grepped): ClumpModelInfo.cpp:220/283/297/311, VehicleModelInfo.cpp:575, RpAnimBlend.cpp:317, Vehicle.cpp:2394/2552 only read/write the id and see a non-zero value on a root exactly as before; `GetClumpModelInfo` readers (TaskSimpleJetPack:70, Ped.cpp:1079/2346/2349, PlayerPed:443, VisibilityPlugins:1007) get the full pointer. `FrustumSphereCB` uses the pointer. The plan's "return 0 for a root" was rejected: it would change `!GetFrameHierarchyId(root)` (name search in ClumpModelInfo.cpp:283 would start matching root frames).
+* S3: Save sites: texture slot `sizeof(void*)`, colour 4 bytes, surface props 4 bytes (bug-compatible: the exe restores only the first float), `RemoveWindowAlphaCB` colour 4. Restore = memcpy of `m_nSize`. The old `*(void**)colour` was an 8-byte over-read; the 4-byte restore of a texture slot would have corrupted the pointer. Only VehicleModelInfo.cpp uses it (6 save sites, 1 restore loop). The material field addresses still come from raw `&material->texture` (librw layout, fine); the R-9 accessor migration is separate.
+* S4: consumers of `CKeyEntry`: KeyArray.cpp, `CText::GetKeys()/GetMissionKeys()` -> TextDebugModule.cpp:55/61 (read `hash`/`string` only), Text.cpp Load paths (TKEY chunks of main + mission .gxt via `CKeyArray::Load/Update`). The trailing slack case (`length % 8`) is consumed from the file but not turned into an entry.
+* S5: `VALIDATE_LAYOUT(sizeof(std::array<CAnimBlendHierarchy,2500>) == 60000)` (x86 only).
+* S6 (UIRenderer): both lines are unreachable in the run build (it returns earlier), now not compiled in portable. Not owned-by-others items (Replay/WaterLevel, platform.cpp, asm, imgui paths) were already at 0 in p4_final; nothing to do.
+
+## Open items
+1. **`portable.file_records` is red** (not caused by P4): `build/PortableMac/compile_commands.json` was regenerated today 01:58 and now carries `-DNOTSA_FILE_SCALAR_STRICT` (CMake from P-2k f6a7e1a6) in every command; `run_file_records_test.sh` takes all `-D` flags from it, so step (2) "warning mode must give exactly 4 guard warnings" sees errors instead (0 warnings). Fix = drop that one `-D` from the harvested flag list in the runner's python (the negative steps define it per case via FR_NEG). The auto-mode classifier denied me that edit as "security test removal", so I did NOT make it - needs the host/user to allow it (one line in tools/portable/run_file_records_test.sh) or to decide otherwise.
+2. The Windows standalone branch of `GameRand.h` keeps ONE global seed for all threads (not per-thread like the exe). Harmless while only the main thread calls rand(); change it only together with a Windows A/B.
+3. TaskComplexStareAtPed / ObjectCommands / CustomBuildingDNPipeline findings of MAC-P4 are unchanged (host decisions).
+4. MAC-F4a's uncommitted files were not touched; I committed with explicit pathspecs. While F4a's X87Intrinsics.h was mid-edit (01:5x-02:2x) 6 ctest tests failed to build (`numeric_limits` in `namespace x87`); they were green again once F4a's header was fixed. I verified p2d on a `git archive HEAD` copy in the meantime.

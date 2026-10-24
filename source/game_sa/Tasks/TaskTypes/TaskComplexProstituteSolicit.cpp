@@ -284,7 +284,7 @@ CTask* CTaskComplexProstituteSolicit::ControlSubTask(CPed* ped) {
     }
 
     // x87: `timeStep * 0.02f * 1000.0f` stays in extended precision until `_ftol`
-    const auto dt = (int32)(int64)((x87d)CTimer::GetTimeStep() * (x87d)0.02f * (x87d)1000.0f);
+    const auto dt = (int32)NOTSA_FTOL(int64, (x87d)CTimer::GetTimeStep() * (x87d)0.02f * (x87d)1000.0f);
 
     if (bTaskCanBeFinished) {
         if (m_nCurrentTimer == 0) {

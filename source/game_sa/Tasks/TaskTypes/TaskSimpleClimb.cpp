@@ -133,7 +133,7 @@ bool CTaskSimpleClimb::ProcessPed(CPed* ped) {
             ped->m_vecMoveSpeed += vecClimbEntSpeed;
 
             if (!(m_Anim->m_Flags & ANIMATION_IS_PLAYING) || m_Anim->m_AnimId == ANIM_ID_CLIMB_IDLE) {
-                m_GetToPosCounter += (uint16)CTimer::GetTimeStepInMS();
+                m_GetToPosCounter += NOTSA_FTOL(uint16, CTimer::GetTimeStepInMS());
                 if (m_GetToPosCounter > 1'000 || m_Anim->m_AnimId == ANIM_ID_CLIMB_IDLE && m_GetToPosCounter > 500) {
                     m_IsInvalidClimb = true;
                     MakeAbortable(ped);

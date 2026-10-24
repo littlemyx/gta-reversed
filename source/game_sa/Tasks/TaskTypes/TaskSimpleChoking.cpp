@@ -85,7 +85,7 @@ bool CTaskSimpleChoking::ProcessPed(CPed* ped) {
     }
 
     // x87: `timestep * 0.02f * 1000.f` is computed in extended precision before truncation
-    const auto decr = (uint32)((x87d)CTimer::GetTimeStep() * (x87d)0.02f * (x87d)1000.0);
+    const auto decr = NOTSA_FTOL(uint32, (x87d)CTimer::GetTimeStep() * (x87d)0.02f * (x87d)1000.0);
     if (m_nTimeRemaining > decr) {
         m_nTimeRemaining -= decr;
     } else {

@@ -1102,7 +1102,7 @@ bool CTaskSimpleFight::ProcessPed(CPed* ped) {
 
     if (m_nComboSet == 0 || !m_bIsInControl) {
         // x87: 0.02 (0x858B38) and 1000.0 (0x858C4C) are applied in extended precision, then truncated (0x821B40)
-        m_nIdleCounter += (int16)(int32)((x87d)CTimer::GetTimeStep() * (x87d)0.02f * (x87d)1000.0f);
+        m_nIdleCounter += (int16)NOTSA_FTOL(int32, (x87d)CTimer::GetTimeStep() * (x87d)0.02f * (x87d)1000.0f);
     } else {
         m_nIdleCounter = 0;
     }

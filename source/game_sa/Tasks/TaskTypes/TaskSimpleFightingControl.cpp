@@ -224,7 +224,7 @@ bool CTaskSimpleFightingControl::ProcessPed(CPed* ped) {
                 m_someTime = (uint32)CGeneral::GetRandomNumberInRange(500, 2000); // 0x8D2E58, 0x8D2E5C
                 moveCmd    = 2;
             } else if (m_someTime != 0) {
-                const auto decr = (uint32)((x87d)CTimer::GetTimeStep() * (x87d)0.02f * (x87d)1000.0);
+                const auto decr = NOTSA_FTOL(uint32, (x87d)CTimer::GetTimeStep() * (x87d)0.02f * (x87d)1000.0);
                 m_someTime      = m_someTime > decr ? m_someTime - decr : 0;
                 moveCmd         = 2;
             }

@@ -479,7 +479,7 @@ bool CTaskSimpleCarDrive::ProcessPed(CPed* ped) {
             }
         }
         if (!pedGroup || pedGroup->GetMembership().IsLeader(ped)) {
-            m_nTimePassedSinceCarUpSideDown += (int32)(CTimer::GetTimeStep() * 0.02f * 1000.f);
+            m_nTimePassedSinceCarUpSideDown += NOTSA_FTOL(int32, CTimer::GetTimeStep() * 0.02f * 1000.f);
             if ((uint32)m_nTimePassedSinceCarUpSideDown > 2000u) {
                 ped->GetEventGroup().Add(CEventCarUpsideDown{m_pVehicle});
             }

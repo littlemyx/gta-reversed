@@ -77,8 +77,10 @@ void UpdateMouseMode() {
     }
     // Absolute pointer in the front-end menu (the pointer's real position is the menu cursor), raw relative deltas otherwise. A window without the input focus is never
     // captured (a focus-less test run keeps the pointer free).
-    const bool focus = (SDL_GetWindowFlags(w) & SDL_WINDOW_INPUT_FOCUS) != 0;
-    const bool want  = focus && !FrontEndMenuManager.m_bMenuActive;
+    // NOTSA_STANDALONE_MOUSE=relative: capture without the focus test (an agent run has no focus; proves the mode switch); =absolute: never capture
+    static const char* const s_Mode = std::getenv("NOTSA_STANDALONE_MOUSE");
+    const bool focus = (SDL_GetWindowFlags(w) & SDL_WINDOW_INPUT_FOCUS) != 0 || (s_Mode && !std::strcmp(s_Mode, "relative"));
+    const bool want  = focus && !FrontEndMenuManager.m_bMenuActive && !(s_Mode && !std::strcmp(s_Mode, "absolute"));
     const bool have  = SDL_GetWindowRelativeMouseMode(w);
     if (want == have) {
         return;

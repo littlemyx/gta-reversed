@@ -51,3 +51,4 @@ Append-only. Newest entry at the bottom. Prefix each entry with `[win]` or `[mac
   Also: P-4 touched ~220 lines in game_sa (operator new(size_t) signatures, explicit std::min/max template args, NOTSA_PTR_ID32(p) for
   pointers used as 32-bit ids, (void*)(uintptr_t) in callback data) — MSVC code bytes identical on 71 TUs; when you write new code,
   prefer these forms.
+- [mac] 2026-10-24: request (P-2k): please commit a real save GTASAsf1.b (mid-game, any slot) and a replay.rep from the Win32 reference build to tools/portable/fixtures/win/ (or attach elsewhere and note the path here) — used for a Load->Save byte round trip of the portable file records.

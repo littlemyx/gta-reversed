@@ -483,9 +483,17 @@ void CRenderer::AddEntityToRenderList(CEntity* entity, float fDistance)
     }
 }
 
+// PC_Scratch holds the tScanLists (5 list pointers) at +0 and the LOD render list right behind them. The exe has 4-byte pointers: tScanLists = 0x14 bytes, LOD list at +24.
+// NOTSA: with 8-byte pointers tScanLists is 40 bytes, so a fixed +24 put the first LOD entries over scanLists->pedsList / dummiesList and ScanSectorList then walked a "list"
+// that was a CBuilding (SIGBUS in CRenderer::ScanSectorList when a LOD parent with >1 children was added mid-scan, R9-1). max(24, sizeof) is 24 on the exe (sizeof == 20): code unchanged.
+static constexpr size_t LOD_RENDER_LIST_OFFSET = sizeof(tScanLists) > 24 ? sizeof(tScanLists) : 24;
+static_assert(LOD_RENDER_LIST_OFFSET >= sizeof(tScanLists), "the LOD render list must not overlap the scan lists");
+static_assert(LOD_RENDER_LIST_OFFSET % alignof(tRenderListEntry) == 0, "the LOD render list must be aligned");
+static_assert(LOD_RENDER_LIST_OFFSET < 0x2000, "the LOD render list must stay below the LOD don't-render list");
+
 // 0x5536D0
 tRenderListEntry* CRenderer::GetLodRenderListBase() {
-    return reinterpret_cast<tRenderListEntry*>(&PC_Scratch[24]);
+    return reinterpret_cast<tRenderListEntry*>(&PC_Scratch[LOD_RENDER_LIST_OFFSET]);
 }
 
 // 0x5536E0

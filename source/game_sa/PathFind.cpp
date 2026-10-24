@@ -36,11 +36,11 @@ namespace {
 // 0x59C910 - `CVector::Normalise` as the original evaluates it: the sum of squares and the reciprocal root stay in the FPU
 // (extended precision), every component is stored as float. A length of 0 (or less) only writes `x = 1` (NaN takes the sqrt path).
 void NormaliseExt(CVector& v) {
-    const double sumSq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    const x87d sumSq = ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
     if (sumSq <= 0.0) {
         v.x = 1.0f;
     } else {
-        const double recip = 1.0 / std::sqrt(sumSq);
+        const x87d recip = (x87d)1.0 / std::sqrt(sumSq);
         v.x = (float)(v.x * recip);
         v.y = (float)(v.y * recip);
         v.z = (float)(v.z * recip);
@@ -50,11 +50,11 @@ void NormaliseExt(CVector& v) {
 // 0x44E480 - `CVector2D::Normalise` as the original evaluates it: the sum of squares and the reciprocal root stay in the FPU (extended precision),
 // the components are stored as float. A length of 0 (or less) only writes `x = 1` (NaN takes the sqrt path).
 void Normalise2DExt(float& x, float& y) {
-    const double sumSq = (double)x * x + (double)y * y;
+    const x87d sumSq = (x87d)x * x + (x87d)y * y;
     if (sumSq <= 0.0) {
         x = 1.0f;
     } else {
-        const double recip = 1.0 / std::sqrt(sumSq);
+        const x87d recip = (x87d)1.0 / std::sqrt(sumSq);
         x = (float)(x * recip);
         y = (float)(y * recip);
     }
@@ -303,8 +303,8 @@ bool CPathFind::GeneratePedCreationCoors(
     bool bLowTraffic,
     CMatrix* transformMatrix
 ) {
-    const auto minSpawnProb = (int32)((double)(rand() & 0xFFFF) * 0x1p-15 * (double)15.0f); // 0x858B14, 0x858B48
-    const float maxRangeSq  = (float)(((double)maxDist1 + (double)30.0f) * ((double)maxDist1 + (double)30.0f)); // 0x858CA4
+    const auto minSpawnProb = (int32)((x87d)(rand() & 0xFFFF) * (x87d)0x1p-15 * (x87d)15.0f); // 0x858B14, 0x858B48
+    const float maxRangeSq  = (float)(((x87d)maxDist1 + (x87d)30.0f) * ((x87d)maxDist1 + (x87d)30.0f)); // 0x858CA4
 
     const auto areaId = FindRegionForCoors({ x, y }); // 0x44D830
 
@@ -315,9 +315,9 @@ bool CPathFind::GeneratePedCreationCoors(
         }
         const auto& node = nodes[(rand() >> 6) % (int32)m_anNumPedNodes[areaId] + (int32)m_anNumVehicleNodes[areaId]];
 
-        const double nodeX = (double)static_cast<float>(node.m_vPos.x);
-        const double nodeY = (double)static_cast<float>(node.m_vPos.y);
-        const double distSqExt = (nodeY - (double)y) * (nodeY - (double)y) + (nodeX - (double)x) * (nodeX - (double)x);
+        const x87d nodeX = (x87d)static_cast<float>(node.m_vPos.x);
+        const x87d nodeY = (x87d)static_cast<float>(node.m_vPos.y);
+        const x87d distSqExt = (nodeY - (x87d)y) * (nodeY - (x87d)y) + (nodeX - (x87d)x) * (nodeX - (x87d)x);
         const float  distSq    = (float)distSqExt;
         if (!(distSqExt < (double)maxRangeSq)) {
             continue;
@@ -343,39 +343,39 @@ bool CPathFind::GeneratePedCreationCoors(
                 continue;
             }
 
-            const float dist = (float)std::sqrt((double)distSq);
+            const float dist = (float)std::sqrt((x87d)distSq);
 
             // x87: `(ly - y)` is kept in extended precision for one factor and rounded to float for the other
-            const double lx = (double)static_cast<float>(linked.m_vPos.x);
-            const double ly = (double)static_cast<float>(linked.m_vPos.y);
-            const float  lyDiffF = (float)(ly - (double)y);
-            const double sum     = (ly - (double)y) * (double)lyDiffF + (lx - (double)x) * (lx - (double)x);
+            const x87d lx = (x87d)static_cast<float>(linked.m_vPos.x);
+            const x87d ly = (x87d)static_cast<float>(linked.m_vPos.y);
+            const float  lyDiffF = (float)(ly - (x87d)y);
+            const x87d sum     = (ly - (x87d)y) * (x87d)lyDiffF + (lx - (x87d)x) * (lx - (x87d)x);
             if (!(dist < maxDist1) && !(std::sqrt(sum) < (double)maxDist1)) {
                 continue;
             }
 
             for (auto tries = 0; tries < 5; tries++) {
-                const float t = (float)((double)(rand() & 0xFF) * (double)0.00390625f); // 0x859AA0
+                const float t = (float)((x87d)(rand() & 0xFF) * (x87d)0.00390625f); // 0x859AA0
                 *outOrientation = t;
 
                 const CVector linkedPos = linked.GetPosition();
-                const float   tx = (float)((double)t * linkedPos.x);
-                const float   ty = (float)((double)t * linkedPos.y);
-                const float   tz = (float)((double)t * linkedPos.z);
+                const float   tx = (float)((x87d)t * linkedPos.x);
+                const float   ty = (float)((x87d)t * linkedPos.y);
+                const float   tz = (float)((x87d)t * linkedPos.z);
                 const float   oneMinusT = 1.0f - t;
 
                 const CVector nodePos = node.GetPosition();
-                const double  nyExt = (double)oneMinusT * nodePos.y;
-                const float   nzF   = (float)((double)oneMinusT * nodePos.z);
+                const x87d  nyExt = (x87d)oneMinusT * nodePos.y;
+                const float   nzF   = (float)((x87d)oneMinusT * nodePos.z);
 
                 const CVector pos{
-                    (float)((double)oneMinusT * nodePos.x + (double)tx),
-                    (float)(nyExt + (double)ty),
+                    (float)((x87d)oneMinusT * nodePos.x + (x87d)tx),
+                    (float)(nyExt + (x87d)ty),
                     nzF + tz
                 };
 
-                const double dx = (double)pos.x - (double)x;
-                const double dy = (double)pos.y - (double)y;
+                const x87d dx = (x87d)pos.x - (x87d)x;
+                const x87d dy = (x87d)pos.y - (x87d)y;
                 const float  posDist = (float)std::sqrt(dy * dy + dx * dx);
 
                 const bool visible = transformMatrix
@@ -393,7 +393,7 @@ bool CPathFind::GeneratePedCreationCoors(
                     bool foundGround{};
                     const auto groundZ = CWorld::FindGroundZFor3DCoord({ pos.x, pos.y, pos.z + 2.0f }, &foundGround, nullptr); // 0x5696C0
                     if (foundGround) {
-                        if (std::abs((double)groundZ - (double)pos.z) > 3.0) { // NOTE: Gives up completely (it doesn't try again)
+                        if (std::abs((x87d)groundZ - (x87d)pos.z) > 3.0) { // NOTE: Gives up completely (it doesn't try again)
                             return false;
                         }
                         outCoords->z = groundZ;
@@ -420,11 +420,11 @@ bool CPathFind::GeneratePedCreationCoors_Interior(float x, float y, CVector* out
         const auto& node = nodes[(rand() >> 6) % (int32)m_anNumPedNodes[areaId] + (int32)m_anNumVehicleNodes[areaId]]; // 0x821B1E
 
         // The original keeps these on the x87 stack (exact: int16 * 0.125)
-        const double nodeX = (double)static_cast<float>(node.m_vPos.x);
-        const double nodeY = (double)static_cast<float>(node.m_vPos.y);
-        const double nodeZ = (double)static_cast<float>(node.m_vPos.z);
+        const x87d nodeX = (x87d)static_cast<float>(node.m_vPos.x);
+        const x87d nodeY = (x87d)static_cast<float>(node.m_vPos.y);
+        const x87d nodeZ = (x87d)static_cast<float>(node.m_vPos.z);
 
-        if (!((nodeY - (double)y) * (nodeY - (double)y) + (nodeX - (double)x) * (nodeX - (double)x) < 2500.0)) {
+        if (!((nodeY - (x87d)y) * (nodeY - (x87d)y) + (nodeX - (x87d)x) * (nodeX - (x87d)x) < 2500.0)) {
             continue;
         }
         if (!(nodeZ > 900.0)) {
@@ -439,13 +439,13 @@ bool CPathFind::GeneratePedCreationCoors_Interior(float x, float y, CVector* out
             const auto& linked = m_pPathNodes[linkedAddr.m_wAreaId][linkedAddr.m_wNodeId];
 
             for (auto tries = 0; tries < 5; tries++) {
-                const double t = (double)(rand() & 0xFF) * (double)0.00390625f; // 0x859AA0
+                const x87d t = (x87d)(rand() & 0xFF) * (x87d)0.00390625f; // 0x859AA0
                 *outOrientation = (float)t;
 
-                const double oneMinusT = (double)(1.0f - (float)t); // Spilled to a float temp
-                const double ax = (double)static_cast<float>(linked.m_vPos.x);
-                const double ay = (double)static_cast<float>(linked.m_vPos.y);
-                const double az = (double)static_cast<float>(linked.m_vPos.z);
+                const x87d oneMinusT = (x87d)(1.0f - (float)t); // Spilled to a float temp
+                const x87d ax = (x87d)static_cast<float>(linked.m_vPos.x);
+                const x87d ay = (x87d)static_cast<float>(linked.m_vPos.y);
+                const x87d az = (x87d)static_cast<float>(linked.m_vPos.z);
 
                 // x and z go through float temporaries, y stays in extended precision
                 outCoords->x = (float)(nodeX * oneMinusT) + (float)(ax * t);
@@ -454,7 +454,7 @@ bool CPathFind::GeneratePedCreationCoors_Interior(float x, float y, CVector* out
 
                 bool foundGround{};
                 const auto groundZ = CWorld::FindGroundZFor3DCoord({ outCoords->x, outCoords->y, outCoords->z + 2.0f }, &foundGround, nullptr); // 0x5696C0
-                if (foundGround && std::abs((double)groundZ - (double)outCoords->z) < 3.0) {
+                if (foundGround && std::abs((x87d)groundZ - (x87d)outCoords->z) < 3.0) {
                     outCoords->z = groundZ;
                     return true;
                 }
@@ -540,16 +540,16 @@ void CPathFind::FindNextNodeWandering(uint8 nodeType, CVector vecPos, CNodeAddre
             // Is the origin close enough?
             const auto& originNode = m_pPathNodes[lastOrigin.m_wAreaId][lastOrigin.m_wNodeId];
             const auto  originPos  = originNode.GetPosition();
-            const double dx = (double)vecPos.x - (double)originPos.x;
-            const double dy = (double)vecPos.y - (double)originPos.y;
-            const double dz = (double)vecPos.z - (double)originPos.z;
+            const x87d dx = (x87d)vecPos.x - (x87d)originPos.x;
+            const x87d dy = (x87d)vecPos.y - (x87d)originPos.y;
+            const x87d dz = (x87d)vecPos.z - (x87d)originPos.z;
             const float  distSq = (float)(dz * dz + dy * dy + dx * dx); // Stored as float in the original
 
-            double radius = (double)originNode.m_nPathWidth * (double)0.125f;
+            x87d radius = (x87d)originNode.m_nPathWidth * (x87d)0.125f;
             if (7.0 > radius) {
-                radius = 7.0;
+                radius = (x87d)7.0;
             }
-            if (!(std::sqrt((double)distSq) > radius)) {
+            if (!(std::sqrt((x87d)distSq) > radius)) {
                 cur         = lastOrigin;
                 findClosest = false;
             }
@@ -569,7 +569,7 @@ void CPathFind::FindNextNodeWandering(uint8 nodeType, CVector vecPos, CNodeAddre
 
         targetAddress->m_wAreaId = (uint16)-1;
 
-        const double angle = (double)dir * (double)0.7853982f; // 0x859AB0 (pi / 4)
+        const x87d angle = (x87d)dir * (x87d)0.7853982f; // 0x859AB0 (pi / 4)
         const float  sinA  = (float)x87::sin(angle);
         const float  cosA  = (float)x87::cos(angle);
 
@@ -588,13 +588,13 @@ void CPathFind::FindNextNodeWandering(uint8 nodeType, CVector vecPos, CNodeAddre
                 continue;
             }
 
-            const double dx  = (double)(float)candNode.m_vPos.x - (double)(float)node.m_vPos.x; // `int16 * 0.125f` is exact
-            const double dy  = (double)(float)candNode.m_vPos.y - (double)(float)node.m_vPos.y;
-            const double inv = 1.0 / std::sqrt(dy * dy + dx * dx);
+            const x87d dx  = (x87d)(float)candNode.m_vPos.x - (x87d)(float)node.m_vPos.x; // `int16 * 0.125f` is exact
+            const x87d dy  = (x87d)(float)candNode.m_vPos.y - (x87d)(float)node.m_vPos.y;
+            const x87d inv = (x87d)1.0 / std::sqrt(dy * dy + dx * dx);
             const float  nx  = (float)(inv * dx);
             const float  ny  = (float)(inv * dy);
 
-            const double dot = (double)ny * (double)cosA + (double)nx * (double)sinA;
+            const x87d dot = (x87d)ny * (x87d)cosA + (x87d)nx * (x87d)sinA;
             if (!(dot >= (double)best)) { // `FCOM` + `TEST AH, 1` + `JNZ`: Skips if less than, or unordered
                 continue;
             }
@@ -930,13 +930,13 @@ CVector CPathFind::FindNodeCoorsForScript(CNodeAddress address, bool* bFound) {
     const auto linkedPos = m_pPathNodes[link.m_wAreaId][link.m_wNodeId].GetPosition();
 
     // Direction to the linked node (stored as float)
-    float dx = (float)((double)linkedPos.x - nodePos.x);
-    float dy = (float)((double)linkedPos.y - nodePos.y);
+    float dx = (float)((x87d)linkedPos.x - nodePos.x);
+    float dy = (float)((x87d)linkedPos.y - nodePos.y);
     Normalise2DExt(dx, dy); // 0x44E480
 
     // The (left) perpendicular of the direction (that is flipped to point to +X, NaN counts as +X), at `width / 16 + 2.7` distance
     const auto perp   = dx < 0.0f ? CVector{ dy, -dx, 0.0f } : CVector{ -dy, dx, 0.0f };
-    const auto offset = (float)((double)node.m_nPathWidth * 0.0625f + 2.7f); // 0x858620, 0x859AA8
+    const auto offset = (float)((x87d)node.m_nPathWidth * 0.0625f + 2.7f); // 0x858620, 0x859AA8
     return nodePos + CVector{ perp.x * offset, perp.y * offset, perp.z * offset };
 }
 
@@ -957,8 +957,8 @@ CVector CPathFind::FindNodeCoorsForScript(CNodeAddress nodeAddrA, CNodeAddress n
     const auto  posB  = m_pPathNodes[nodeAddrB.m_wAreaId][nodeAddrB.m_wNodeId].GetPosition();
 
     // The heading: `atan2(-dx, dy) * (180 / PI)`, where `dx` is not rounded to float (x87), `dy` is
-    const auto dy = (float)((double)posB.y - posA.y);
-    const auto dx = (double)posB.x - posA.x;
+    const auto dy = (float)((x87d)posB.y - posA.y);
+    const auto dx = (x87d)posB.x - posA.x;
     outHeadingDeg = (float)(std::atan2(-dx, (double)dy) * (double)57.2957763671875f); // 0x859878
 
     if (!nodeA.m_nPathWidth) {
@@ -970,7 +970,7 @@ CVector CPathFind::FindNodeCoorsForScript(CNodeAddress nodeAddrA, CNodeAddress n
     NormaliseExt(dir); // 0x59C910
 
     // The (right) perpendicular of the direction, at `width / 16 + 2.7` distance
-    const auto offset = (float)((double)nodeA.m_nPathWidth * 0.0625f + 2.7f); // 0x858620, 0x859AA8
+    const auto offset = (float)((x87d)nodeA.m_nPathWidth * 0.0625f + 2.7f); // 0x858620, 0x859AA8
     return posA + CVector{ dir.y * offset, -dir.x * offset, 0.0f * offset };
 }
 
@@ -1156,9 +1156,9 @@ bool CPathFind::IsWaterNodeNearby(CVector position, float radius) {
             if (!node.m_bWaterNode) {
                 continue;
             }
-            const auto   dx   = (float)((double)position.x - (float)node.m_vPos.x);
-            const double dy   = (double)position.y - (float)node.m_vPos.y;
-            const double dist = std::sqrt(dy * dy + (double)dx * dx);
+            const auto   dx   = (float)((x87d)position.x - (float)node.m_vPos.x);
+            const x87d dy   = (x87d)position.y - (float)node.m_vPos.y;
+            const x87d dist = std::sqrt(dy * dy + (x87d)dx * dx);
             if (dist < radius) {
                 return true;
             }
@@ -1185,7 +1185,7 @@ static double CalcDistToAnyConnectingLinksUnrounded(const CPathFind& paths, cons
             minDistSq = distSq;
         }
     }
-    return std::sqrt((double)minDistSq);
+    return std::sqrt((x87d)minDistSq);
 }
 
 // 0x44F190
@@ -1228,13 +1228,13 @@ void CPathFind::FindNodeClosestInRegion(CNodeAddress* outAddress, uint16 areaId,
 
         // x87: the X is stored as float, Y and Z are kept in extended precision (all are exactly representable in double)
         const float  nodeX = (float)node->m_vPos.x;
-        const double nodeY = (double)(float)node->m_vPos.y;
-        const double nodeZ = (double)(float)node->m_vPos.z;
+        const x87d nodeY = (x87d)(float)node->m_vPos.y;
+        const x87d nodeZ = (x87d)(float)node->m_vPos.z;
 
-        const double dz  = std::abs(nodeZ - (double)pos.z) * (double)3.f; // 0x858B3C
-        const double dy  = std::abs(nodeY - (double)pos.y);
-        const double dx  = std::abs((double)nodeX - (double)pos.x);
-        const double d   = ((dy + dz) + dx) * (double)0.3f; // 0x858C24
+        const x87d dz  = std::abs(nodeZ - (x87d)pos.z) * (x87d)3.f; // 0x858B3C
+        const x87d dy  = std::abs(nodeY - (x87d)pos.y);
+        const x87d dx  = std::abs((x87d)nodeX - (x87d)pos.x);
+        const x87d d   = ((dy + dz) + dx) * (x87d)0.3f; // 0x858C24
         if (!(d < (double)*outDist)) { // NaN => skip
             continue;
         }
@@ -1271,13 +1271,13 @@ CNodeAddress CPathFind::FindNodeClosestToCoors(
 
     // _ftol(), then clamped to [0, 7]
     const auto GridCoordOf = [](float p) {
-        return std::clamp(notsa::detail::Ftol(((double)p - (double)-3000.f) * (double)0.0013333333f), 0, 7); // 0x859A90, 0x859A8C
+        return std::clamp(notsa::detail::Ftol(((x87d)p - (x87d)-3000.f) * (x87d)0.0013333333f), 0, 7); // 0x859A90, 0x859A8C
     };
     const int32 xr = GridCoordOf(pos.x);
     const int32 yr = GridCoordOf(pos.y);
 
     // Distance to the nearest border of the grid cell (x87: borders are calculated in extended precision, `t` is stored as float)
-    const auto Border = [](int32 cell) { return (double)cell * 750.0 - 3000.0; };
+    const auto Border = [](int32 cell) { return (x87d)cell * (x87d)750.0 - (x87d)3000.0; };
     float t;
     {
         const double a = (double)pos.x - Border(xr);
@@ -1333,7 +1333,7 @@ CNodeAddress CPathFind::FindNodeClosestToCoors(
                 }
             }
 
-            t = (float)((double)t + 750.0); // 0x859A98
+            t = (float)((x87d)t + (x87d)750.0); // 0x859A98
             if (dist < t) {
                 break;
             }
@@ -1486,9 +1486,9 @@ void AddNewInteriorNodeLink(int32 areaA, int32 nodeA, int32 areaB, int32 nodeB, 
 
     // The original works with the compressed positions kept at extended precision (the compressed values are exact in float/double)
     const auto Dist3D = [](const CPathNode& a, const CPathNode& b) {
-        const double dx = (double)(float)a.m_vPos.x - (double)(float)b.m_vPos.x;
-        const double dy = (double)(float)a.m_vPos.y - (double)(float)b.m_vPos.y;
-        const double dz = (double)(float)a.m_vPos.z - (double)(float)b.m_vPos.z;
+        const x87d dx = (x87d)(float)a.m_vPos.x - (x87d)(float)b.m_vPos.x;
+        const x87d dy = (x87d)(float)a.m_vPos.y - (x87d)(float)b.m_vPos.y;
+        const x87d dz = (x87d)(float)a.m_vPos.z - (x87d)(float)b.m_vPos.z;
         return std::sqrt(dz * dz + dy * dy + dx * dx);
     };
 
@@ -1504,9 +1504,9 @@ void AddNewInteriorNodeLink(int32 areaA, int32 nodeA, int32 areaB, int32 nodeB, 
         length = 1;
     } else {
         const CVector srcPos = src->GetPosition(), tgtPos = tgt->GetPosition(); // 0x420A10
-        const double  dx = (double)srcPos.x - (double)tgtPos.x;
-        const double  dy = (double)srcPos.y - (double)tgtPos.y;
-        const double  dz = (double)srcPos.z - (double)tgtPos.z;
+        const x87d  dx = (x87d)srcPos.x - (x87d)tgtPos.x;
+        const x87d  dy = (x87d)srcPos.y - (x87d)tgtPos.y;
+        const x87d  dz = (x87d)srcPos.z - (x87d)tgtPos.z;
         length = (uint8)notsa::detail::Ftol(std::sqrt(dz * dz + dy * dy + dx * dx));
     }
     paths.m_pLinkLengths[NUM_PATH_MAP_AREAS + slot][linkIdx]    = length;
@@ -1656,7 +1656,7 @@ CCarPathLinkAddress CPathFind::FindLinkBetweenNodes(CNodeAddress nodeAddrA, CNod
 // 0x44EFC0
 float CPathFind::CalcRoadDensity(float x, float y) {
     // NOTE: The original keeps everything at extended precision (x87), hence the `double`s.
-    double density = 0.0;
+    x87d density = (x87d)0.0;
     for (auto areaId = 0u; areaId < NUM_PATH_MAP_AREAS; areaId++) {
         auto* const nodes = m_pPathNodes[areaId];
         if (!nodes) {
@@ -1666,11 +1666,11 @@ float CPathFind::CalcRoadDensity(float x, float y) {
             const auto& node = nodes[i];
 
             const float nodeX = node.m_vPos.x;
-            if (!(std::abs((double)nodeX - (double)x) < (double)80.f)) {
+            if (!(std::abs((x87d)nodeX - (x87d)x) < (double)80.f)) {
                 continue;
             }
             const float nodeY = node.m_vPos.y;
-            if (!(std::abs((double)nodeY - (double)y) < (double)80.f)) {
+            if (!(std::abs((x87d)nodeY - (x87d)y) < (double)80.f)) {
                 continue;
             }
 
@@ -1683,21 +1683,21 @@ float CPathFind::CalcRoadDensity(float x, float y) {
                 }
                 const auto& linkedNode = m_pPathNodes[linked.m_wAreaId][linked.m_wNodeId];
 
-                const double dx  = (double)nodeX - (double)(float)linkedNode.m_vPos.x;
-                const double dy  = (double)nodeY - (double)(float)linkedNode.m_vPos.y;
-                const double len = std::sqrt(dy * dy + dx * dx);
+                const x87d dx  = (x87d)nodeX - (x87d)(float)linkedNode.m_vPos.x;
+                const x87d dy  = (x87d)nodeY - (x87d)(float)linkedNode.m_vPos.y;
+                const x87d len = std::sqrt(dy * dy + dx * dx);
 
                 const auto navi = m_pNaviLinks[areaId][linkIdx];
                 if (!m_pPathNodes[navi.m_wAreaId]) {
                     continue;
                 }
                 const auto& link = m_pNaviNodes[navi.m_wAreaId][navi.m_wCarPathLinkId];
-                density += (double)link.m_numOppositeDirLanes * len;
-                density += (double)link.m_numSameDirLanes * len;
+                density += (x87d)link.m_numOppositeDirLanes * len;
+                density += (x87d)link.m_numSameDirLanes * len;
             }
         }
     }
-    return (float)(density * (double)0.0004f);
+    return (float)(density * (x87d)0.0004f);
 }
 
 // 0x44DA30
@@ -1714,8 +1714,8 @@ void CPathFind::FindPedCreationPosBetweenNodes(CNodeAddress addr1, CNodeAddress 
     const auto seed  = (int16)randomSeed;
     const auto width = (int32)std::min(node1.m_nPathWidth, node2.m_nPathWidth);
 
-    *outX = (float)((double)(((seed & 0xF) - 7) * width) * (double)0.00775f + (double)*outX);
-    *outY = (float)((double)((((int32)seed >> 4 & 0xF) - 7) * width) * (double)0.00775f + (double)*outY);
+    *outX = (float)((x87d)(((seed & 0xF) - 7) * width) * (x87d)0.00775f + (x87d)*outX);
+    *outY = (float)((x87d)((((int32)seed >> 4 & 0xF) - 7) * width) * (x87d)0.00775f + (x87d)*outY);
 }
 
 // 0x4513F0
@@ -1735,9 +1735,9 @@ CVector CPathFind::FindParkingNodeInArea(float minX, float maxX, float minY, flo
             auto& node = nodes[i];
 
             // x87: `int16 * 0.125f`, compared against the (float) bounds. Strict comparisons, NaN fails
-            const double x = (double)(float)node.m_vPos.x;
-            const double y = (double)(float)node.m_vPos.y;
-            const double z = (double)(float)node.m_vPos.z;
+            const x87d x = (x87d)(float)node.m_vPos.x;
+            const x87d y = (x87d)(float)node.m_vPos.y;
+            const x87d z = (x87d)(float)node.m_vPos.z;
             if (   !(minX < x && x < maxX)
                 || !(minY < y && y < maxY)
                 || !(minZ < z && z < maxZ)
@@ -1855,8 +1855,8 @@ void CPathFind::RemoveBadStartNode(CVector pos, CNodeAddress* address, int16* nu
     const auto posB = m_pPathNodes[address[1].m_wAreaId][address[1].m_wNodeId].GetPosition();
 
     // x87: The 1st factor is rounded to float, the rest is kept in extended precision
-    const auto   tB  = (float)((double)posB.y - pos.y);
-    const double dot = ((double)posA.y - pos.y) * tB + ((double)posB.x - pos.x) * ((double)posA.x - pos.x);
+    const auto   tB  = (float)((x87d)posB.y - pos.y);
+    const x87d dot = ((x87d)posA.y - pos.y) * tB + ((x87d)posB.x - pos.x) * ((x87d)posA.x - pos.x);
     if (dot < 0.0) { // (x87: NaN doesn't remove the node)
         (*numPathFindNodes)--;
         for (int16 i = 0; i < *numPathFindNodes; i++) {
@@ -1931,15 +1931,15 @@ void CPathFind::Find2NodesForCarCreation(CVector pos, CNodeAddress* outAddress1,
 // 0x44FCE0
 CNodeAddress CPathFind::FindNodeClosestToCoorsFavourDirection(CVector pos, ePathType nodeType, CVector2D dir) {
     // NOTE: The original keeps the normalized X of `dir` and the unrounded `dy`, `dot` etc. at extended precision (x87), hence the `double`s.
-    double dirX;
+    x87d dirX;
     {
-        const double len = std::sqrt((double)dir.x * dir.x + (double)dir.y * dir.y);
+        const x87d len = std::sqrt((x87d)dir.x * dir.x + (x87d)dir.y * dir.y);
         if (len == 0.0) { // (NaN is normalized, too)
-            dirX = 1.0; // The Y is left as is
+            dirX = (x87d)1.0; // The Y is left as is
         } else {
-            const auto recip = (float)(1.0 / len); // Stored as float
-            dirX  = (double)recip * dir.x; // Not rounded
-            dir.y = (float)((double)recip * dir.y);
+            const auto recip = (float)((x87d)1.0 / len); // Stored as float
+            dirX  = (x87d)recip * dir.x; // Not rounded
+            dir.y = (float)((x87d)recip * dir.y);
         }
     }
 
@@ -1951,28 +1951,28 @@ CNodeAddress CPathFind::FindNodeClosestToCoorsFavourDirection(CVector pos, ePath
             // Weighted manhattan distance, the sum is kept at extended precision
             const float  nodeX = node.m_vPos.x;
             const float  nodeY = node.m_vPos.y;
-            const double nodeZ = (double)(float)node.m_vPos.z;
-            const double dotScoreExt = (std::abs(nodeZ - pos.z) * 3.0 + std::abs((double)nodeY - pos.y)) + std::abs((double)nodeX - pos.x); // 0x858B3C
+            const x87d nodeZ = (x87d)(float)node.m_vPos.z;
+            const x87d dotScoreExt = (std::abs(nodeZ - pos.z) * (x87d)3.0 + std::abs((x87d)nodeY - pos.y)) + std::abs((x87d)nodeX - pos.x); // 0x858B3C
             const auto   dotScore    = (float)dotScoreExt; // Stored as float
             if (!(dotScoreExt < scoreOfClosest)) { // (`fcomp`, then `jp`: taken for greater, equal, unordered)
                 continue;
             }
 
             // Direction to the node (X stored as float, Y is not rounded)
-            const auto   dx = (float)((double)nodeX - pos.x);
-            const double dy = (double)nodeY - pos.y;
-            double       nx, ny;
-            const double len = std::sqrt(dy * dy + (double)dx * dx);
+            const auto   dx = (float)((x87d)nodeX - pos.x);
+            const x87d dy = (x87d)nodeY - pos.y;
+            x87d       nx, ny;
+            const x87d len = std::sqrt(dy * dy + (x87d)dx * dx);
             if (len == 0.0) { // (NaN is normalized, too)
-                nx = 1.0;
+                nx = (x87d)1.0;
                 ny = dy;
             } else {
-                const auto recip = (float)(1.0 / len); // Stored as float
-                nx = (double)recip * dx;
+                const auto recip = (float)((x87d)1.0 / len); // Stored as float
+                nx = (x87d)recip * dx;
                 ny = dy * recip;
             }
-            const double dot   = nx * dirX + ny * dir.y;
-            const double score = (double)dotScore - (dot - 1.0) * 20.0; // 0x858BA4
+            const x87d dot   = nx * dirX + ny * dir.y;
+            const x87d score = (x87d)dotScore - (dot - (x87d)1.0) * (x87d)20.0; // 0x858BA4
             if (!(score < scoreOfClosest)) {
                 continue;
             }
@@ -2015,7 +2015,7 @@ void CPathFind::SetPathsNeededAtPosition(const CVector& posn) {
 namespace detail {
 //! 0x44D890 / 0x44D8C0 / 0x44D830 - x87: `(p - -3000) * 0.0013333333f` is not rounded to float before `_ftol` (a multiplication by the float reciprocal, not a division), then clamped to [0, 7] (signed)
 inline size_t RegionValueOf(float p) {
-    return (size_t)std::clamp(notsa::detail::Ftol(((double)p - (double)-3000.f) * (double)0.0013333333f), 0, 7); // 0x859A90, 0x859A8C
+    return (size_t)std::clamp(notsa::detail::Ftol(((x87d)p - (x87d)-3000.f) * (x87d)0.0013333333f), 0, 7); // 0x859A90, 0x859A8C
 }
 }; // namespace detail
 
@@ -2034,8 +2034,8 @@ void CPathFind::MarkRegionsForCoors(CVector pos, float radius) {
     // 0x44DB60: x87 - `pos - radius` / `pos + radius` are not rounded to float (the CRect(centre, radius) the port used rounds them), and the flags are stored at [xRegion * 8 + yRegion]
     // (the same layout CPathFind::UpdateStreaming reads), not [yRegion * 8 + xRegion]
     const auto region = [](double v) { return (size_t)std::clamp(notsa::detail::Ftol((v - (double)-3000.f) * (double)0.0013333333f), 0, 7); };
-    const size_t minX = region((double)pos.x - radius), maxX = region((double)pos.x + radius);
-    const size_t minY = region((double)pos.y - radius), maxY = region((double)pos.y + radius);
+    const size_t minX = region((x87d)pos.x - radius), maxX = region((x87d)pos.x + radius);
+    const size_t minY = region((x87d)pos.y - radius), maxY = region((x87d)pos.y + radius);
     for (size_t x = minX; x <= maxX; x++) {
         for (size_t y = minY; y <= maxY; y++) {
             ToBeStreamed[x * NUM_PATH_MAP_AREA_Y + y] = true;
@@ -2093,7 +2093,7 @@ void CPathFind::FindNodePairClosestToCoors(CVector pos, uint8 nodeType, CNodeAdd
             }
 
             const CVector np = node.GetPosition();
-            const double total = (std::fabs((double)np.y - (double)pos.y) + 3.0 * std::fabs((double)np.z - (double)pos.z)) + std::fabs((double)np.x - (double)pos.x); // 0x858B3C = 3.0
+            const x87d total = (std::fabs((x87d)np.y - (x87d)pos.y) + (x87d)3.0 * std::fabs((x87d)np.z - (x87d)pos.z)) + std::fabs((x87d)np.x - (x87d)pos.x); // 0x858B3C = 3.0
             const float  totalF = (float)total; // spilled to [esp+0x30]
             if (!(total < (double)best)) {
                 continue;
@@ -2118,10 +2118,10 @@ void CPathFind::FindNodePairClosestToCoors(CVector pos, uint8 nodeType, CNodeAdd
                 }
 
                 const CVector p2 = node2.GetPosition();
-                const double dx = (double)(float)((double)np.x - (double)p2.x);
-                const double dy = (double)np.y - (double)p2.y;
-                const double dz = (double)np.z - (double)p2.z;
-                const double dist = std::sqrt((dz * dz + dy * dy) + dx * dx);
+                const x87d dx = (x87d)(float)((x87d)np.x - (x87d)p2.x);
+                const x87d dy = (x87d)np.y - (x87d)p2.y;
+                const x87d dz = (x87d)np.z - (x87d)p2.z;
+                const x87d dist = std::sqrt((dz * dz + dy * dy) + dx * dx);
                 if (!(dist > (double)minDist)) { // JNE on C0|C3 => skip when <=, or unordered
                     continue;
                 }
@@ -2209,8 +2209,8 @@ float CPathFind::FindNodeOrientationForCarPlacement(CNodeAddress nodeInfo) {
     const auto& nextNode = m_pPathNodes[nextAddr.m_wAreaId][nextAddr.m_wNodeId];
 
     CVector dir{
-        (float)((double)(float)nextNode.m_vPos.x - (double)(float)node.m_vPos.x),
-        (float)((double)(float)nextNode.m_vPos.y - (double)(float)node.m_vPos.y),
+        (float)((x87d)(float)nextNode.m_vPos.x - (x87d)(float)node.m_vPos.x),
+        (float)((x87d)(float)nextNode.m_vPos.y - (x87d)(float)node.m_vPos.y),
         0.0f
     };
     NormaliseExt(dir); // 0x59C910

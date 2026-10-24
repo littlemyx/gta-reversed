@@ -781,7 +781,7 @@ bool CWeapon::TakePhotograph(CEntity* owner, const CVector* point) {
     // the position is OUT of range (upstream's object loop below used it inverted: objects were only photographed when farther than 125 m).
     const auto IsPosInRange = [&](const CVector& worldPos) {
         const float dx = worldPos.x - camPos.x, dy = worldPos.y - camPos.y, dz = worldPos.z - camPos.z;
-        return !(x87::sqrt((double)((dz * dz + dy * dy) + dx * dx)) < 125.0);
+        return !(x87::sqrt((x87d)((dz * dz + dy * dy) + dx * dx)) < 125.0);
     };
 #else
 #line 779
@@ -1345,13 +1345,13 @@ auto CWeapon::GetProjectileType() {
 float CWeapon::EvaluateTargetForHeatSeekingMissile(CEntity* potentialTarget, const CVector& origin, const CVector& aimingDir, float tolerance, bool arePlanesPriority, CEntity* preferredExistingTarget) {
     // 0x73E560: the distance is summed z, y, x in extended precision and spilled to a float; the result is returned unrounded
     const auto targetPos = potentialTarget->GetPosition();
-    const double dx = (double)targetPos.x - origin.x, dy = (double)targetPos.y - origin.y, dz = (double)targetPos.z - origin.z;
+    const x87d dx = (x87d)targetPos.x - origin.x, dy = (x87d)targetPos.y - origin.y, dz = (x87d)targetPos.z - origin.z;
     const float  potentialTargetDist = (float)std::sqrt((dz * dz + dy * dy) + dx * dx);
 
     const auto potentialTargetDistToLine = CCollision::DistToLine(origin, origin + aimingDir * 250.f, targetPos);
-    auto ret = std::sqrt((double)potentialTargetDist) * ExeRecip(10.f) + (double)potentialTargetDistToLine / potentialTargetDist;
+    auto ret = std::sqrt((x87d)potentialTargetDist) * ExeRecip(10.f) + (x87d)potentialTargetDistToLine / potentialTargetDist;
 
-    if (!((double)potentialTargetDistToLine * tolerance < potentialTargetDist)) { // FCOMP + JP: also taken for a NaN
+    if (!((x87d)potentialTargetDistToLine * tolerance < potentialTargetDist)) { // FCOMP + JP: also taken for a NaN
         return -1.f;
     }
 
@@ -1695,7 +1695,7 @@ bool CWeapon::FireFromCar(CVehicle* vehicle, bool leftSide, bool rightSide) {
 
 //! NOTSA: Original used the CRT `rand()` scaled by `1 / 32767` (0x858C7C), the intermediate results stay in an x87 register
 static double FireInstantHit_Rand01() {
-    return (double)rand() * (double)RAND_MAX_FLOAT_RECIPROCAL;
+    return (x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL;
 }
 
 //! NOTSA: `CGeneral::GetRandomNumberInRange<float>` (0x41BD90), but without the assertion
@@ -1713,8 +1713,8 @@ static void FireInstantHit_ApplyRandomSpread(CVector& pt, float spread) {
     const auto rx = FireInstantHit_Rand01();
 
     const auto offsX = (rx * 0.4f - 0.2f) * spread;
-    const auto offsY = ((double)ry * 0.4f - 0.2f) * spread;
-    const auto offsZ = (float)(((double)rz * 0.2f - 0.1f) * spread);
+    const auto offsY = ((x87d)ry * 0.4f - 0.2f) * spread;
+    const auto offsZ = (float)(((x87d)rz * 0.2f - 0.1f) * spread);
 
     pt.x = (float)(offsX + pt.x);
     pt.y = (float)(pt.y + offsY);
@@ -1727,24 +1727,24 @@ static void FireInstantHit_ApplyRandomSpread(CVector& pt, float spread) {
 static void FireInstantHit_ApplyAimSway(CVector& pt, const CVector& sinDir, const CVector& cosDir, float spread) {
     constexpr auto SWAY_ROT_RATE = 0.0062831854f; // 0x8D6118 (2 * PI / 1000)
 
-    const auto angle = (double)CTimer::GetTimeInMS() * (double)SWAY_ROT_RATE;
+    const auto angle = (x87d)CTimer::GetTimeInMS() * (x87d)SWAY_ROT_RATE;
 
     // Part 1
-    const auto sinZ = (double)sinDir.z * spread; // Not rounded to float
-    const auto sinY = (float)((double)sinDir.y * spread);
-    const auto sinX = (float)((double)sinDir.x * spread);
+    const auto sinZ = (x87d)sinDir.z * spread; // Not rounded to float
+    const auto sinY = (float)((x87d)sinDir.y * spread);
+    const auto sinX = (float)((x87d)sinDir.x * spread);
     const auto s    = (float)x87::sin(angle);
-    pt.x = (float)((double)sinX * s + pt.x);
-    pt.y = (float)(pt.y + (double)sinY * s);
+    pt.x = (float)((x87d)sinX * s + pt.x);
+    pt.y = (float)(pt.y + (x87d)sinY * s);
     const auto z = sinZ * s + pt.z; // Not rounded to float
 
     // Part 2
-    const auto cosZ = (double)cosDir.z * spread; // Not rounded to float
-    const auto cosY = (float)((double)cosDir.y * spread);
-    const auto cosX = (float)((double)cosDir.x * spread);
+    const auto cosZ = (x87d)cosDir.z * spread; // Not rounded to float
+    const auto cosY = (float)((x87d)cosDir.y * spread);
+    const auto cosX = (float)((x87d)cosDir.x * spread);
     const auto c    = (float)x87::cos(angle);
-    pt.x = (float)((double)cosX * c + pt.x);
-    pt.y = (float)(pt.y + (double)cosY * c);
+    pt.x = (float)((x87d)cosX * c + pt.x);
+    pt.y = (float)(pt.y + (x87d)cosY * c);
     pt.z = (float)(cosZ * c + z);
 }
 
@@ -1790,7 +1790,7 @@ bool CWeapon::FireInstantHit(CEntity* firingEntity, CVector* origin, CVector* mu
 
     CTaskSimpleUseGun* taskUseGun{};
     if (ped) {
-        spread = (float)((100.0 - (double)ped->m_nWeaponAccuracy) / (double)wi->m_fAccuracy);
+        spread = (float)(((x87d)100.0 - (x87d)ped->m_nWeaponAccuracy) / (x87d)wi->m_fAccuracy);
         if (ped->GetPlayerData() && ped->bIsDucking) {
             spread *= 0.5f;
         }
@@ -1858,7 +1858,7 @@ bool CWeapon::FireInstantHit(CEntity* firingEntity, CVector* origin, CVector* mu
             const auto offsY = range * fwd.y;
             endPt.x = offsX + muzzlePos.x;
             endPt.y = muzzlePos.y + offsY;
-            endPt.z = (float)((double)range * fwd.z + muzzlePos.z);
+            endPt.z = (float)((x87d)range * fwd.z + muzzlePos.z);
             dir     = firingEntity->GetMatrix().GetForward();
 
             if (ped) {
@@ -1920,9 +1920,9 @@ bool CWeapon::FireInstantHit(CEntity* firingEntity, CVector* origin, CVector* mu
 
             const auto playerData = ped->GetPlayerData();
             if (spread != 0.f) {
-                const auto ratio = ((double)PLAYER_AIM_SCALE_DIST / wi->m_fWeaponRange) * 3.0;
-                const auto scale = 1.0 < ratio
-                    ? 1.0
+                const auto ratio = ((x87d)PLAYER_AIM_SCALE_DIST / wi->m_fWeaponRange) * (x87d)3.0;
+                const auto scale = (x87d)1.0 < ratio
+                    ? (x87d)1.0
                     : ratio;
                 spread = (float)(scale * spread * playerData->m_fAttackButtonCounter * PLAYER_AIM_SCALE);
 
@@ -1945,7 +1945,7 @@ bool CWeapon::FireInstantHit(CEntity* firingEntity, CVector* origin, CVector* mu
                 }
                 FireInstantHit_ApplyAimSway(endPt, sinDir, cosDir, spread);
 
-                playerData->m_fAttackButtonCounter = (float)((double)(int16)wi->m_nDamage * 0.04f + playerData->m_fAttackButtonCounter);
+                playerData->m_fAttackButtonCounter = (float)((x87d)(int16)wi->m_nDamage * 0.04f + playerData->m_fAttackButtonCounter);
             }
 
             if (ped->bInVehicle && ped->m_pVehicle && !ped->m_pVehicle->vehicleFlags.bVehicleCanBeTargetted) {
@@ -1963,10 +1963,10 @@ bool CWeapon::FireInstantHit(CEntity* firingEntity, CVector* origin, CVector* mu
 
             if (hitEntity) {
                 // Check if the hit entity is in range of the weapon
-                const auto dx = (double)colPoint.m_vecPoint.x - camSource.x;
-                const auto dy = (double)colPoint.m_vecPoint.y - camSource.y;
+                const auto dx = (x87d)colPoint.m_vecPoint.x - camSource.x;
+                const auto dy = (x87d)colPoint.m_vecPoint.y - camSource.y;
                 const auto dist2D = (float)std::sqrt(dx * dx + dy * dy);
-                if ((double)TargetWeaponRangeMultiplier(hitEntity, ped) * wi->m_fWeaponRange < dist2D) {
+                if ((x87d)TargetWeaponRangeMultiplier(hitEntity, ped) * wi->m_fWeaponRange < dist2D) {
                     hitEntity = nullptr;
                 } else {
                     CheckForShootingVehicleOccupant(&hitEntity, &colPoint, m_Type, camSource, endPt);
@@ -1993,14 +1993,14 @@ bool CWeapon::FireInstantHit(CEntity* firingEntity, CVector* origin, CVector* mu
 
             //> 0x73FE81 - Direction to the point (Note: The X and Z components are not rounded to float before being used)
             {
-                const auto dx = (double)endPt.x - start.x;
+                const auto dx = (x87d)endPt.x - start.x;
                 const auto dy = endPt.y - start.y;
-                const auto dz = (double)endPt.z - start.z;
-                auto       mag = std::sqrt(dx * dx + (double)dy * dy + dz * dz);
+                const auto dz = (x87d)endPt.z - start.z;
+                auto       mag = std::sqrt(dx * dx + (x87d)dy * dy + dz * dz);
                 if (mag < MIN_AIM_DIR_MAG) {
                     mag = MIN_AIM_DIR_MAG;
                 }
-                const auto invMag = 1.0 / mag;
+                const auto invMag = (x87d)1.0 / mag;
                 endPt.x = (float)(invMag * dx);
                 endPt.y = (float)(invMag * dy);
                 endPt.z = (float)(invMag * dz);
@@ -2011,7 +2011,7 @@ bool CWeapon::FireInstantHit(CEntity* firingEntity, CVector* origin, CVector* mu
             endPt = FireInstantHit_PointAlongDir(
                 start,
                 endPt,
-                (double)TargetWeaponRangeMultiplier(targetEntity, ped) * wi->m_fWeaponRange
+                (x87d)TargetWeaponRangeMultiplier(targetEntity, ped) * wi->m_fWeaponRange
             );
 
             const auto playerData = ped->GetPlayerData();
@@ -2023,19 +2023,19 @@ bool CWeapon::FireInstantHit(CEntity* firingEntity, CVector* origin, CVector* mu
                         const auto m     = speed > 0.33f
                             ? 0.33f
                             : speed;
-                        spread = (float)(((double)m * 0.90909094f + 0.8f) * spread); // 0x872C70, 0x858C98
+                        spread = (float)(((x87d)m * 0.90909094f + 0.8f) * spread); // 0x872C70, 0x858C98
                     }
                     FireInstantHit_ApplyRandomSpread(endPt, spread);
                 }
             } else { // 0x73FF6B
-                const auto ratio = (double)PLAYER_AIM_SCALE_DIST / wi->m_fWeaponRange;
-                const auto scale = 1.0 < ratio
-                    ? 1.0
+                const auto ratio = (x87d)PLAYER_AIM_SCALE_DIST / wi->m_fWeaponRange;
+                const auto scale = (x87d)1.0 < ratio
+                    ? (x87d)1.0
                     : ratio;
                 const auto scaledSpread = scale * spread * playerData->m_fAttackButtonCounter * PLAYER_AIM_SCALE;
                 spread = (float)scaledSpread;
 
-                const auto halfSpread = scaledSpread * 0.5;
+                const auto halfSpread = scaledSpread * (x87d)0.5;
                 const auto minSpread  = 0.2f < halfSpread  // 0x858CC4
                     ? 0.2f
                     : (float)halfSpread;
@@ -2056,7 +2056,7 @@ bool CWeapon::FireInstantHit(CEntity* firingEntity, CVector* origin, CVector* mu
                 }
                 FireInstantHit_ApplyAimSway(endPt, sinDir, cosDir, spread);
 
-                playerData->m_fAttackButtonCounter = (float)((double)(int16)wi->m_nDamage * 0.04f + playerData->m_fAttackButtonCounter);
+                playerData->m_fAttackButtonCounter = (float)((x87d)(int16)wi->m_nDamage * 0.04f + playerData->m_fAttackButtonCounter);
             }
 
             //> 0x7402EE
@@ -2125,7 +2125,7 @@ bool CWeapon::FireInstantHit(CEntity* firingEntity, CVector* origin, CVector* mu
         case WEAPON_MINIGUN: { // 0x740C8C
             // Weapons that fire too fast only get the effects every second shot
             NOTSA_GLOBAL_LOCAL(s_RapidFireCounter, 0xC8A80C, (uint8), {});
-            const auto   animLoopLen        = (int32)(((double)wi->m_fAnimLoopEnd - wi->m_fAnimLoopStart) * 900.0);
+            const auto   animLoopLen        = (int32)(((x87d)wi->m_fAnimLoopEnd - wi->m_fAnimLoopStart) * (x87d)900.0);
             if (animLoopLen < 50) {
                 s_RapidFireCounter++;
                 if (s_RapidFireCounter & 1) {
@@ -2153,9 +2153,9 @@ bool CWeapon::FireInstantHit(CEntity* firingEntity, CVector* origin, CVector* mu
             );
 
             CVector shellPos{
-                (float)((double)muzzlePos.x - (double)dir.x * lightOffset),
-                (float)((double)muzzlePos.y - (double)dir.y * lightOffset),
-                (float)((double)muzzlePos.z - (double)dir.z * lightOffset)
+                (float)((x87d)muzzlePos.x - (x87d)dir.x * lightOffset),
+                (float)((x87d)muzzlePos.y - (x87d)dir.y * lightOffset),
+                (float)((x87d)muzzlePos.z - (x87d)dir.z * lightOffset)
             };
             const auto& right = firingEntity->GetMatrix().GetRight();
             AddGunshell(firingEntity, shellPos, CVector2D{ right.x, right.y }, shellSize);
@@ -2242,7 +2242,7 @@ bool CWeapon::FireInstantHit(CEntity* firingEntity, CVector* origin, CVector* mu
             }
 
             if (hitEntity->GetIsTypePed() || hitEntity->GetIsTypeVehicle()) {
-                if ((pelletTouchDist[0] != 1.f && (double)numHits / numPellets >= 0.5) || numIterations >= 2) {
+                if ((pelletTouchDist[0] != 1.f && (x87d)numHits / numPellets >= 0.5) || numIterations >= 2) {
                     hitEntity = nullptr;
                 } else {
                     // The pellets that missed may continue through the entity
@@ -2476,10 +2476,10 @@ bool CWeapon::FireM16_1stPerson(CPed* owner) {
     if (shotHitEntity) {
         // 0x741DC6: the 2D DISTANCE (sqrt, spilled to float) is compared with `rangeMultiplier * range`; a hit beyond the weapon range is dropped
         // (the old port compared the squared distance with `>=` and dropped hits WITHIN the range)
-        const double dx   = (double)camOriginPos.x - shotCP.m_vecPoint.x;
-        const double dy   = (double)camOriginPos.y - shotCP.m_vecPoint.y;
+        const x87d dx   = (x87d)camOriginPos.x - shotCP.m_vecPoint.x;
+        const x87d dy   = (x87d)camOriginPos.y - shotCP.m_vecPoint.y;
         const float  dist = (float)std::sqrt(dy * dy + dx * dx);
-        if ((double)TargetWeaponRangeMultiplier(shotHitEntity, owner) * wi->m_fWeaponRange < (double)dist) {
+        if ((x87d)TargetWeaponRangeMultiplier(shotHitEntity, owner) * wi->m_fWeaponRange < (double)dist) {
             shotHitEntity = nullptr;
         }
     }
@@ -2503,16 +2503,16 @@ bool CWeapon::FireM16_1stPerson(CPed* owner) {
         }
 
         // Move the camera around a little (0x741EA9): `fild((rand() & 0x7F) - 0x40) * intensity + angle`, the product is not rounded to float
-        cam->m_fHorizontalAngle = (float)((double)((int32)(CGeneral::GetRandomNumber() & 0x7F) - 0x40) * intensity + cam->m_fHorizontalAngle);
-        cam->m_fVerticalAngle   = (float)((double)((int32)(CGeneral::GetRandomNumber() & 0x7F) - 0x40) * intensity + cam->m_fVerticalAngle);
+        cam->m_fHorizontalAngle = (float)((x87d)((int32)(CGeneral::GetRandomNumber() & 0x7F) - 0x40) * intensity + cam->m_fHorizontalAngle);
+        cam->m_fVerticalAngle   = (float)((x87d)((int32)(CGeneral::GetRandomNumber() & 0x7F) - 0x40) * intensity + cam->m_fVerticalAngle);
 
         // Do pad shaking (0x741F05..0x741F99): everything in extended precision, `_ftol` at each int conversion
-        const int32  loopFrames = (int32)(((double)wi->m_fAnimLoopEnd - (double)wi->m_fAnimLoopStart) * 900.0f);
+        const int32  loopFrames = (int32)(((x87d)wi->m_fAnimLoopEnd - (x87d)wi->m_fAnimLoopStart) * 900.0f);
         const double x          = (20.0 - (double)loopFrames) * 0.0125; // 0x872C88 (double 0.0125, not `/ 80.f`)
         const double t          = (0.0 > x) ? 0.0 : ((1.0 < x) ? 1.0 : x); // NaN passes through
         const uint8  shakeFreq  = (uint8)(int32)(t * 80.0 + 130.0); // 130 + 80t, low byte of the _ftol result
         CPad::GetPad(owner->GetPadNumber())->StartShake(
-            (int16)(int32)((double)CTimer::GetTimeStep() * 20000.0f / (double)(int32)shakeFreq), // fidiv
+            (int16)(int32)((x87d)CTimer::GetTimeStep() * 20000.0f / (x87d)(int32)shakeFreq), // fidiv
             shakeFreq,
             0
         );

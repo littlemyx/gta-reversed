@@ -22,9 +22,9 @@
 // stack for the following fst / fadd / fcom (CCamera::VectorMoveLinear, LerpFOV, AddShakeSimple, ProcessVector*Linear, ProcessFOVLerp: 0x50D160 ...).
 static double ExeTimeMS() {
     const auto ms = static_cast<int32>(CTimer::GetTimeInMS());
-    double t = static_cast<double>(ms);
+    x87d t = static_cast<x87d>(ms);
     if (ms < 0) {
-        t += 4294967296.0;
+        t += (x87d)4294967296.0;
     }
     return t;
 }
@@ -480,10 +480,10 @@ void CCamera::CamShake(float strength, CVector from) {
     // The exe (inlined CVector::Magnitude) keeps everything in extended precision: z is spilled to a float, x/y/the 2D length are not, and the length is
     // sqrt(z^2 + (sqrt(x^2 + y^2))^2). The clamped distance is then multiplied by the DOUBLE 0.01 (0x85A308) and subtracted from the double 1.0 (0x85A310)
     const auto& src  = GetActiveCamera().m_vecSource;
-    const double dx  = (double)src.x - (double)from.x, dy = (double)src.y - (double)from.y;
-    const float  dz  = (float)((double)src.z - (double)from.z);
-    const double m2d = std::sqrt(dx * dx + dy * dy);
-    const double dist = std::clamp(std::sqrt((double)dz * dz + m2d * m2d), 0.0, 100.0);
+    const x87d dx  = (x87d)src.x - (x87d)from.x, dy = (x87d)src.y - (x87d)from.y;
+    const float  dz  = (float)((x87d)src.z - (x87d)from.z);
+    const x87d m2d = std::sqrt(dx * dx + dy * dy);
+    const x87d dist = std::clamp(std::sqrt((x87d)dz * dz + m2d * m2d), (x87d)0.0, (x87d)100.0);
 
     float percentShakeForce = (float)(1.0 - dist * 0.01);
     float shakeForce = (m_fCamShakeForce - float(CTimer::GetTimeInMS() - m_nCamShakeStart) * ExeRecip(1000.f)) * percentShakeForce;
@@ -565,7 +565,7 @@ float CCamera::Find3rdPersonQuickAimPitch() const {
 
     // https://mathworld.wolfram.com/images/eps-svg/SOHCAHTOA_500.svg
     // 0x50AD40: everything stays on the x87 stack; the exe multiplies by the reciprocal of the aspect ratio (fld1; fdiv; fmulp) instead of dividing
-    const double adjacent = ((double)0.5f - (double)m_f3rdPersonCHairMultY) * 2.0;
+    const x87d adjacent = ((x87d)0.5f - (x87d)m_f3rdPersonCHairMultY) * (x87d)2.0;
     const double opposite = (double)x87::tan(DegreesToRadians(cam.m_fFOV * 0.5f)) * adjacent;
     const double relAngle = (double)cam.m_fVerticalAngle + (double)x87::atan(opposite * (1.0 / (double)CDraw::ms_fAspectRatio));
     return (float)-relAngle; // Flip it
@@ -1064,11 +1064,11 @@ void CCamera::SetParametersForScriptInterpolation(float interpolationToStopMovin
 void CCamera::SetPercentAlongCutScene(float percent) {
     // 0x50C0A8: `percent * 0.01f` first (0x858C58), then the finish time as an unsigned int converted via fild + 2^32 fixup
     const auto SetTime = [percent](CCam& cam) {
-        double finishTime = (double)(int32)cam.m_nFinishTime; // fild: exact, signed
+        x87d finishTime = (x87d)(int32)cam.m_nFinishTime; // fild: exact, signed
         if ((int32)cam.m_nFinishTime < 0) {
-            finishTime += 4294967296.0; // 0x858C54 (rounded by the x87 add)
+            finishTime += (x87d)4294967296.0; // 0x858C54 (rounded by the x87 add)
         }
-        cam.m_fTimeElapsedFloat = (float)((double)percent * (double)std::bit_cast<float>(0x3C23D70Au) * finishTime);
+        cam.m_fTimeElapsedFloat = (float)((x87d)percent * (x87d)std::bit_cast<float>(0x3C23D70Au) * finishTime);
     };
     auto& cam = m_aCams[m_nActiveCam];
     if (cam.m_nMode == eCamMode::MODE_FLYBY) {
@@ -1418,11 +1418,11 @@ void CCamera::UpdateSoundDistances() {
         : 5.0f; // 0x858C80
     const auto& fwd = m_mCameraMatrix.GetForward();
     const auto  pos = GetPosition();
-    const float fz  = (float)((double)fwd.z * scale);
+    const float fz  = (float)((x87d)fwd.z * scale);
     const CVector point{
-        (float)((double)fwd.x * scale + pos.x),
-        (float)((double)fwd.y * scale + pos.y),
-        (float)((double)fz + pos.z)
+        (float)((x87d)fwd.x * scale + pos.x),
+        (float)((x87d)fwd.y * scale + pos.y),
+        (float)((x87d)fz + pos.z)
     };
 
     const auto idx = (uint16)(CTimer::m_FrameCounter % 12);
@@ -1431,15 +1431,15 @@ void CCamera::UpdateSoundDistances() {
 
         CColPoint colPoint;
         CEntity*  hitEntity;
-        if (CWorld::ProcessVerticalLine(point, (float)((double)point.z + 20.0), colPoint, hitEntity, true, false, false, false, true, false, nullptr)) {
+        if (CWorld::ProcessVerticalLine(point, (float)((x87d)point.z + (x87d)20.0), colPoint, hitEntity, true, false, false, false, true, false, nullptr)) {
             m_fSoundDistUpAsRead = colPoint.m_vecPoint.z - point.z;
         } else {
             m_fSoundDistUpAsRead = 20.f; // 0x858BA4
         }
     }
 
-    const double f = (double)(int16)(idx + 1) * (double)0.16666667f; // 0x85F0A0 (1/6)
-    m_fSoundDistUp = (float)((1.0 - f) * m_fSoundDistUpAsReadOld + f * m_fSoundDistUpAsRead);
+    const x87d f = (x87d)(int16)(idx + 1) * (x87d)0.16666667f; // 0x85F0A0 (1/6)
+    m_fSoundDistUp = (float)(((x87d)1.0 - f) * m_fSoundDistUpAsReadOld + f * m_fSoundDistUpAsRead);
 }
 
 // unused
@@ -1562,24 +1562,24 @@ bool CCamera::IsSphereVisible(const CVector& origin, float radius, RwMatrix* tra
     CVector pos = origin;
     RwV3dTransformPoints(&pos, &pos, 1, transformMatrix);
 
-    const double r = radius;
-    if ((double)pos.y + r < (double)CDraw::ms_fNearClipZ) {
+    const x87d r = radius;
+    if ((x87d)pos.y + r < (double)CDraw::ms_fNearClipZ) {
         return false;
     }
-    if ((double)pos.y - r > (double)CDraw::ms_fFarClipZ) {
+    if ((x87d)pos.y - r > (double)CDraw::ms_fFarClipZ) {
         return false;
     }
     const auto& n = m_avecFrustumNormals;
-    if ((double)pos.x * n[0].x + (double)pos.y * n[0].y > r) {
+    if ((x87d)pos.x * n[0].x + (x87d)pos.y * n[0].y > r) {
         return false;
     }
-    if ((double)pos.x * n[1].x + (double)pos.y * n[1].y > r) {
+    if ((x87d)pos.x * n[1].x + (x87d)pos.y * n[1].y > r) {
         return false;
     }
-    if ((double)pos.z * n[2].z + (double)pos.y * n[2].y > r) {
+    if ((x87d)pos.z * n[2].z + (x87d)pos.y * n[2].y > r) {
         return false;
     }
-    if ((double)pos.z * n[3].z + (double)pos.y * n[3].y > r) {
+    if ((x87d)pos.z * n[3].z + (x87d)pos.y * n[3].y > r) {
         return false;
     }
     return true;
@@ -1877,7 +1877,7 @@ bool CCamera::IsItTimeForNewCamera(int32 camSequence, int32 startTime) {
 
     // NOTE: x87 extended precision in the original: the intermediates are `double`, the vectors are floats
     const auto MagExt = [](const CVector& v) { // 0x4082C0 - `CVector::Magnitude`
-        return std::sqrt(((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z);
+        return std::sqrt(((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z);
     };
 
     if (camSequence < 0) {
@@ -1886,11 +1886,11 @@ bool CCamera::IsItTimeForNewCamera(int32 camSequence, int32 startTime) {
 
     // Time since the start of the cam. NOTE: `FILD` is signed, thus the correction (2^32 from 0x858C54) for times above 2^31
     const uint32 now = CTimer::GetTimeInMS();
-    double       sinceStartExt = (double)(int32)now;
+    x87d       sinceStartExt = (x87d)(int32)now;
     if ((int32)now < 0) {
         sinceStartExt += 4294967296.0f;
     }
-    sinceStartExt -= (double)startTime;
+    sinceStartExt -= (x87d)startTime;
     if (sinceStartExt > (double)s_MaxTimeSinceStartAbs) { // the compare is done before the value is rounded to float
         return true;
     }
@@ -1937,11 +1937,11 @@ bool CCamera::IsItTimeForNewCamera(int32 camSequence, int32 startTime) {
     // Dot product with the player's speed, the term order of the original (the `z` is multiplied by 0.0 and its order varies)
     const auto SpeedDotZFirst = [](const CVector& offset) { // (y * sy + sz * 0) + x * sx
         const auto& speed = FindPlayerSpeed(-1);
-        return ((double)offset.y * speed.y + (double)speed.z * 0.0f) + (double)offset.x * speed.x;
+        return ((x87d)offset.y * speed.y + (x87d)speed.z * 0.0f) + (x87d)offset.x * speed.x;
     };
     const auto SpeedDotZLast = [](const CVector& offset) { // (y * sy + x * sx) + sz * 0
         const auto& speed = FindPlayerSpeed(-1);
-        return ((double)offset.y * speed.y + (double)offset.x * speed.x) + (double)speed.z * 0.0f;
+        return ((x87d)offset.y * speed.y + (x87d)offset.x * speed.x) + (x87d)speed.z * 0.0f;
     };
     const auto SetNearClipAndReturnFalse = [] { // 0x7EE1D0 - `RwCameraSetNearClipPlane`
         RwCameraSetNearClipPlane(Scene.m_pRwCamera, 0.15f);
@@ -2382,9 +2382,9 @@ void CCamera::ProcessVectorMoveLinear() {
 // unused
 // 0x51A6F0
 void CCamera::ProcessShake() {
-    const double timeNow = (double)CTimer::GetTimeInMS();
+    const x87d timeNow = (x87d)CTimer::GetTimeInMS();
     if (timeNow <= m_fEndShakeTime) {
-        ProcessJiggle((float)((timeNow - m_fStartShakeTime) / ((double)m_fEndShakeTime - m_fStartShakeTime)));
+        ProcessJiggle((float)((timeNow - m_fStartShakeTime) / ((x87d)m_fEndShakeTime - m_fStartShakeTime)));
     }
 }
 
@@ -2394,11 +2394,11 @@ namespace {
 
 // 0x59C910 - `CVector::Normalise`. A length of 0 (or less) only writes `x = 1` (NaN takes the sqrt path)
 void NormaliseExt(CVector& v) {
-    const double sumSq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    const x87d sumSq = ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
     if (sumSq <= 0.0) {
         v.x = 1.0f;
     } else {
-        const double recip = 1.0 / std::sqrt(sumSq);
+        const x87d recip = (x87d)1.0 / std::sqrt(sumSq);
         v.x = (float)(v.x * recip);
         v.y = (float)(v.y * recip);
         v.z = (float)(v.z * recip);
@@ -2408,9 +2408,9 @@ void NormaliseExt(CVector& v) {
 // 0x59C730 - `CrossProduct`
 CVector CrossProductExt(const CVector& a, const CVector& b) {
     return CVector{
-        (float)((double)b.z * a.y - (double)a.z * b.y),
-        (float)((double)b.x * a.z - (double)a.x * b.z),
-        (float)((double)b.y * a.x - (double)a.y * b.x)
+        (float)((x87d)b.z * a.y - (x87d)a.z * b.y),
+        (float)((x87d)b.x * a.z - (x87d)a.x * b.z),
+        (float)((x87d)b.y * a.x - (x87d)a.y * b.x)
     };
 }
 
@@ -2418,9 +2418,9 @@ CVector CrossProductExt(const CVector& a, const CVector& b) {
 CVector Multiply3x3VMExt(const CVector& v, const CMatrix& m) {
     const auto &r = m.GetRight(), &f = m.GetForward(), &u = m.GetUp();
     return CVector{
-        (float)(((double)r.y * v.y + (double)r.z * v.z) + (double)v.x * r.x),
-        (float)(((double)f.y * v.y + (double)f.x * v.x) + (double)f.z * v.z),
-        (float)(((double)u.y * v.y + (double)u.x * v.x) + (double)u.z * v.z)
+        (float)(((x87d)r.y * v.y + (x87d)r.z * v.z) + (x87d)v.x * r.x),
+        (float)(((x87d)f.y * v.y + (x87d)f.x * v.x) + (x87d)f.z * v.z),
+        (float)(((x87d)u.y * v.y + (x87d)u.x * v.x) + (x87d)u.z * v.z)
     };
 }
 } // namespace
@@ -2499,7 +2499,7 @@ void CCamera::Process() {
         constexpr float MIN_DIST = 1.3f; // 0x8CCF20
         const float dx = pos.x - target.x;
         const float dy = pos.y - target.y;
-        if (std::sqrt((double)dy * dy + (double)dx * dx) < MIN_DIST) {
+        if (std::sqrt((x87d)dy * dy + (x87d)dx * dx) < MIN_DIST) {
             const double angle = CGeneral::GetATanOfXYExt(dx, dy); // 0x52BDD6 / 0x52C125: `fld st(0); fcos ... fsin` consume the unrounded atan result on the x87 stack
             pos.x = (float)(x87::cos(angle) * MIN_DIST + target.x);
             pos.y = (float)(x87::sin(angle) * MIN_DIST + target.y);
@@ -2569,7 +2569,7 @@ void CCamera::Process() {
     }
 
     { // Did the camera heading change by a lot?
-        double headingDiff = (double)headingAfter - (double)headingBefore;
+        x87d headingDiff = (x87d)headingAfter - (x87d)headingBefore;
         while (headingDiff >= PI) {
             headingDiff -= TWO_PI;
         }
@@ -2585,9 +2585,9 @@ void CCamera::Process() {
         bFollowingVehicle = true;
     }
 
-    const double timeNow = (double)CTimer::GetTimeInMS();
+    const x87d timeNow = (x87d)CTimer::GetTimeInMS();
     if (timeNow <= m_fEndShakeTime) {
-        ProcessJiggle((float)((timeNow - m_fStartShakeTime) / ((double)m_fEndShakeTime - m_fStartShakeTime)));
+        ProcessJiggle((float)((timeNow - m_fStartShakeTime) / ((x87d)m_fEndShakeTime - m_fStartShakeTime)));
     }
 
     // NOTSA: Zero-initialised, the original leaves them uninitialised if the transition progress is NaN or > 1
@@ -2622,33 +2622,33 @@ void CCamera::Process() {
             elapsed = m_nTransitionDuration;
         }
 
-        float t = (float)((double)elapsed / (double)m_nTransitionDuration); // Progress of the source/up/fov interpolation
+        float t = (float)((x87d)elapsed / (x87d)m_nTransitionDuration); // Progress of the source/up/fov interpolation
 
         // Progress of the target interpolation
-        double targetT = (double)elapsed / (double)m_nTransitionDurationTargetCoors;
+        x87d targetT = (x87d)elapsed / (x87d)m_nTransitionDurationTargetCoors;
         if (targetT < 0.0) {
-            targetT = 0.0;
+            targetT = (x87d)0.0;
         } else if (targetT > 1.0) {
-            targetT = 1.0;
+            targetT = (x87d)1.0;
         }
 
         // Target
         if (targetT <= m_fFractionInterToStopMovingTarget) { // Moving with the starting speed
-            const double x = m_fFractionInterToStopMovingTarget != 0.f
-                ? ((double)m_fFractionInterToStopMovingTarget - targetT) / m_fFractionInterToStopMovingTarget
-                : 0.0;
+            const x87d x = m_fFractionInterToStopMovingTarget != 0.f
+                ? ((x87d)m_fFractionInterToStopMovingTarget - targetT) / m_fFractionInterToStopMovingTarget
+                : (x87d)0.0;
             const double f = EaseInOut(x);
 
             const float y = (float)(f * m_vecTargetSpeedAtStartInter.y);
             const float z = (float)(f * m_vecTargetSpeedAtStartInter.z);
             m_vecTargetWhenInterPol.x = (float)(f * m_vecTargetSpeedAtStartInter.x + m_vecStartingTargetForInterPol.x);
-            m_vecTargetWhenInterPol.y = (float)((double)y + m_vecStartingTargetForInterPol.y);
-            m_vecTargetWhenInterPol.z = (float)((double)z + m_vecStartingTargetForInterPol.z);
+            m_vecTargetWhenInterPol.y = (float)((x87d)y + m_vecStartingTargetForInterPol.y);
+            m_vecTargetWhenInterPol.z = (float)((x87d)z + m_vecStartingTargetForInterPol.z);
             target = m_vecTargetWhenInterPol;
         } else if (targetT > m_fFractionInterToStopMovingTarget) { // Catching up with the actual target
-            const double x = m_fFractionInterToStopCatchUpTarget != 0.f
+            const x87d x = m_fFractionInterToStopCatchUpTarget != 0.f
                 ? (targetT - m_fFractionInterToStopMovingTarget) / m_fFractionInterToStopCatchUpTarget
-                : 1.0;
+                : (x87d)1.0;
             const float f = (float)EaseInOut(x);
 
             if (m_fFractionInterToStopMovingTarget == 0.f) {
@@ -2656,14 +2656,14 @@ void CCamera::Process() {
             }
 
             const auto& camTarget = GetActiveCam().m_vecTargetCoorsForFudgeInter;
-            const double dx = (double)camTarget.x - m_vecTargetWhenInterPol.x;
-            const double dy = (double)camTarget.y - m_vecTargetWhenInterPol.y;
+            const x87d dx = (x87d)camTarget.x - m_vecTargetWhenInterPol.x;
+            const x87d dy = (x87d)camTarget.y - m_vecTargetWhenInterPol.y;
             const float  dz = camTarget.z - m_vecTargetWhenInterPol.z;
 
             const float tx = (float)(dx * f);
-            target.x = (float)((double)tx + m_vecTargetWhenInterPol.x);
+            target.x = (float)((x87d)tx + m_vecTargetWhenInterPol.x);
             target.y = (float)(dy * f + m_vecTargetWhenInterPol.y);
-            target.z = (float)((double)dz * f + m_vecTargetWhenInterPol.z);
+            target.z = (float)((x87d)dz * f + m_vecTargetWhenInterPol.z);
         }
 
         // Source, up, fov
@@ -2686,18 +2686,18 @@ void CCamera::Process() {
         };
 
         if (t <= m_fFractionInterToStopMoving) { // Moving with the starting speed
-            const double x = m_fFractionInterToStopMoving != 0.f
-                ? ((double)m_fFractionInterToStopMoving - t) / m_fFractionInterToStopMoving
-                : 0.0;
+            const x87d x = m_fFractionInterToStopMoving != 0.f
+                ? ((x87d)m_fFractionInterToStopMoving - t) / m_fFractionInterToStopMoving
+                : (x87d)0.0;
             const double f = EaseInOut(x);
             t = (float)f;
 
             // Source
             {
-                const float z = (float)((double)t * m_vecSourceSpeedAtStartInter.z);
+                const float z = (float)((x87d)t * m_vecSourceSpeedAtStartInter.z);
                 m_vecSourceWhenInterPol.x = (float)(f * m_vecSourceSpeedAtStartInter.x + m_vecStartingSourceForInterPol.x);
-                m_vecSourceWhenInterPol.y = (float)((double)t * m_vecSourceSpeedAtStartInter.y + m_vecStartingSourceForInterPol.y);
-                m_vecSourceWhenInterPol.z = (float)((double)z + m_vecStartingSourceForInterPol.z);
+                m_vecSourceWhenInterPol.y = (float)((x87d)t * m_vecSourceSpeedAtStartInter.y + m_vecStartingSourceForInterPol.y);
+                m_vecSourceWhenInterPol.z = (float)((x87d)z + m_vecStartingSourceForInterPol.z);
             }
             if (m_bLookingAtPlayer) {
                 KeepAwayFromTarget(m_vecSourceWhenInterPol, target);
@@ -2705,14 +2705,14 @@ void CCamera::Process() {
 
             // Up
             {
-                const float z = (float)((double)t * m_vecUpSpeedAtStartInter.z);
-                m_vecUpWhenInterPol.x = (float)((double)t * m_vecUpSpeedAtStartInter.x + m_vecStartingUpForInterPol.x);
-                m_vecUpWhenInterPol.y = (float)((double)t * m_vecUpSpeedAtStartInter.y + m_vecStartingUpForInterPol.y);
-                m_vecUpWhenInterPol.z = (float)((double)z + m_vecStartingUpForInterPol.z);
+                const float z = (float)((x87d)t * m_vecUpSpeedAtStartInter.z);
+                m_vecUpWhenInterPol.x = (float)((x87d)t * m_vecUpSpeedAtStartInter.x + m_vecStartingUpForInterPol.x);
+                m_vecUpWhenInterPol.y = (float)((x87d)t * m_vecUpSpeedAtStartInter.y + m_vecStartingUpForInterPol.y);
+                m_vecUpWhenInterPol.z = (float)((x87d)z + m_vecStartingUpForInterPol.z);
             }
 
             // FOV
-            m_fFOVWhenInterPol = (float)((double)t * m_fFOVSpeedAtStartInter + m_fStartingFOVForInterPol);
+            m_fFOVWhenInterPol = (float)((x87d)t * m_fFOVSpeedAtStartInter + m_fStartingFOVForInterPol);
 
             source = m_vecSourceWhenInterPol;
             front  = target - source;
@@ -2725,9 +2725,9 @@ void CCamera::Process() {
 
             fov = m_fFOVWhenInterPol;
         } else if (t <= 1.f) { // Catching up with the actual camera
-            const double x = m_fFractionInterToStopCatchUp != 0.f
-                ? ((double)t - m_fFractionInterToStopMoving) / m_fFractionInterToStopCatchUp
-                : 1.0;
+            const x87d x = m_fFractionInterToStopCatchUp != 0.f
+                ? ((x87d)t - m_fFractionInterToStopMoving) / m_fFractionInterToStopCatchUp
+                : (x87d)1.0;
             const float f = (float)EaseInOut(x);
 
             const auto& cam = GetActiveCam();
@@ -2737,7 +2737,7 @@ void CCamera::Process() {
                 KeepAwayFromTarget(source, target);
             }
 
-            fov = (float)(((double)cam.m_fFOV - m_fFOVWhenInterPol) * f + m_fFOVWhenInterPol);
+            fov = (float)(((x87d)cam.m_fFOV - m_fFOVWhenInterPol) * f + m_fFOVWhenInterPol);
 
             up    = m_vecUpWhenInterPol + (cam.m_vecUp - m_vecUpWhenInterPol) * f;
             front = target - source;
@@ -2755,7 +2755,7 @@ void CCamera::Process() {
 
         // Keep track of the speed
         const CVector diff  = source - target;
-        const float   alpha = CGeneral::GetATanOfXY((float)std::sqrt((double)diff.y * diff.y + (double)diff.x * diff.x), diff.z);
+        const float   alpha = CGeneral::GetATanOfXY((float)std::sqrt((x87d)diff.y * diff.y + (x87d)diff.x * diff.x), diff.z);
         const float   beta  = CGeneral::GetATanOfXY(diff.x, diff.y);
         GetActiveCam().KeepTrackOfTheSpeed(source, target, up, alpha, beta, fov);
     }
@@ -2772,26 +2772,26 @@ void CCamera::Process() {
 
     // Drunk camera
     if (CMBlur::Drunkness > 0.f) {
-        const double angle = (double)gDrunkCamAngle * (double)0.017453292f; // 0x8595EC
+        const x87d angle = (x87d)gDrunkCamAngle * (x87d)0.017453292f; // 0x8595EC
         const double cosA  = x87::cos(angle);
         const double sinA  = x87::sin(angle);
         const float  cosF  = (float)cosA;
         const float  sinF  = (float)sinA;
 
-        const double sourceMult = (double)CMBlur::Drunkness * (double)-0.02f; // 0x85904C
+        const x87d sourceMult = (x87d)CMBlur::Drunkness * (x87d)-0.02f; // 0x85904C
         source.x = (float)(cosA * sourceMult + source.x);
         source.z = (float)(sinA * sourceMult + source.z);
 
         up.Normalise();
-        const double upMult = (double)CMBlur::Drunkness * (double)0.05f; // 0x858C28
-        up.x = (float)((double)cosF * upMult + up.x);
-        up.y = (float)((double)sinF * upMult + up.y);
+        const x87d upMult = (x87d)CMBlur::Drunkness * (x87d)0.05f; // 0x858C28
+        up.x = (float)((x87d)cosF * upMult + up.x);
+        up.y = (float)((x87d)sinF * upMult + up.y);
         up.Normalise();
 
         front.Normalise();
-        const double frontMult = (double)CMBlur::Drunkness * (double)-0.1f; // 0x858EF4
-        front.x = (float)((double)cosF * frontMult + front.x);
-        front.y = (float)((double)sinF * frontMult + front.y);
+        const x87d frontMult = (x87d)CMBlur::Drunkness * (x87d)-0.1f; // 0x858EF4
+        front.x = (float)((x87d)cosF * frontMult + front.x);
+        front.y = (float)((x87d)sinF * frontMult + front.y);
         front.Normalise();
 
         CVector right = CrossProduct(front, up);
@@ -2811,7 +2811,7 @@ void CCamera::Process() {
     // Camera shake
     {
         const uint32 sinceShakeStart = CTimer::GetTimeInMS() - m_nCamShakeStart;
-        float shake = (float)((double)m_fCamShakeForce - (double)sinceShakeStart * (double)0.00028f); // 0x863280
+        float shake = (float)((x87d)m_fCamShakeForce - (x87d)sinceShakeStart * (x87d)0.00028f); // 0x863280
         if (shake < 2.f) {
             if (!(shake > 0.f)) {
                 shake = 0.f;
@@ -2821,14 +2821,14 @@ void CCamera::Process() {
         }
 
         const uint32 rnd = CGeneral::GetRandomNumber() & 0xFFFF;
-        const double mult = (double)shake * (double)0.1f; // 0x858B1C
+        const x87d mult = (x87d)shake * (x87d)0.1f; // 0x858B1C
         auto& camPos = m_mCameraMatrix.GetPosition();
-        camPos.x = (float)((double)(int32)((rnd & 0xF) - 7) * mult + camPos.x);
-        camPos.y = (float)((double)(int32)(((rnd >> 4) & 0xF) - 7) * mult + camPos.y);
-        camPos.z = (float)((double)(int32)(((rnd >> 8) & 0xF) - 7) * mult + camPos.z);
+        camPos.x = (float)((x87d)(int32)((rnd & 0xF) - 7) * mult + camPos.x);
+        camPos.y = (float)((x87d)(int32)(((rnd >> 4) & 0xF) - 7) * mult + camPos.y);
+        camPos.z = (float)((x87d)(int32)(((rnd >> 8) & 0xF) - 7) * mult + camPos.z);
 
         if (mult > 0.0 && m_nBlurType != eMotionBlurType::SNIPER) {
-            const int32 alpha = 25 - (int32)((double)shake * -255.0); // 0x86327C
+            const int32 alpha = 25 - (int32)((x87d)shake * -(x87d)255.0); // 0x86327C
             m_nMotionBlurAddAlpha = static_cast<uint32>(std::min(alpha, 150));
         }
     }
@@ -2862,7 +2862,7 @@ void CCamera::Process() {
     m_fGenerationDistMultiplier = m_fLODDistMultiplier;
     m_fLODDistMultiplier        = CRenderer::ms_lodDistScale * m_fLODDistMultiplier;
 
-    RwCameraSetFarClipPlane(Scene.m_pRwCamera, (float)((double)(int32)((double)Scene.m_pRwCamera->farPlane * 100.0) * (double)0.01f));
+    RwCameraSetFarClipPlane(Scene.m_pRwCamera, (float)((x87d)(int32)((x87d)Scene.m_pRwCamera->farPlane * (x87d)100.0) * (x87d)0.01f));
     CDraw::ms_fNearClipZ = m_pRwCamera->nearPlane;
     CDraw::ms_fFarClipZ  = m_pRwCamera->farPlane;
 
@@ -2873,17 +2873,17 @@ void CCamera::Process() {
     }
     {
         const auto& camPos = m_mCameraMatrix.GetPosition();
-        const double dx    = (double)camPos.x - m_vecPreviousCameraPosition.x;
-        const double dy    = (double)camPos.y - m_vecPreviousCameraPosition.y;
-        const double dz    = (double)camPos.z - m_vecPreviousCameraPosition.z;
+        const x87d dx    = (x87d)camPos.x - m_vecPreviousCameraPosition.x;
+        const x87d dy    = (x87d)camPos.y - m_vecPreviousCameraPosition.y;
+        const x87d dz    = (x87d)camPos.z - m_vecPreviousCameraPosition.z;
 
         m_nNumFramesSoFar++;
-        const double speedSoFar = std::sqrt(dz * dz + dy * dy + dx * dx) + m_fCameraSpeedSoFar;
+        const x87d speedSoFar = std::sqrt(dz * dz + dy * dy + dx * dx) + m_fCameraSpeedSoFar;
         m_fCameraSpeedSoFar     = (float)speedSoFar;
         if (m_nNumFramesSoFar == m_nWorkOutSpeedThisNumFrames) {
             m_fCameraSpeedSoFar  = 0.f;
             m_nNumFramesSoFar    = 0;
-            m_fCameraAverageSpeed = (float)(speedSoFar / (double)(int32)m_nWorkOutSpeedThisNumFrames);
+            m_fCameraAverageSpeed = (float)(speedSoFar / (x87d)(int32)m_nWorkOutSpeedThisNumFrames);
         }
     }
 
@@ -2937,15 +2937,15 @@ void CCamera::Process() {
 
         constexpr float SAMPLE_DIST = 0.4f; // 0x858EE8
         const auto&     pos         = GetPosition();
-        const float     zMult       = (float)((double)dirZ * SAMPLE_DIST);
+        const float     zMult       = (float)((x87d)dirZ * SAMPLE_DIST);
         samplePos.x = (float)(dirX * SAMPLE_DIST + pos.x);
-        samplePos.y = (float)((double)dirY * SAMPLE_DIST + pos.y);
-        samplePos.z = (float)((double)zMult + pos.z);
+        samplePos.y = (float)((x87d)dirY * SAMPLE_DIST + pos.y);
+        samplePos.z = (float)((x87d)zMult + pos.z);
     }
 
     float waterLevel;
     if (!CWaterLevel::GetWaterLevel(samplePos.x, samplePos.y, samplePos.z, waterLevel, true, nullptr)
-        || (double)samplePos.z - 0.6f > waterLevel // 0x858CC8 - NOTE: compared in x87 extended precision
+        || (x87d)samplePos.z - 0.6f > waterLevel // 0x858CC8 - NOTE: compared in x87 extended precision
     ) {
         CWeather::UnderWaterness = 0.f;
         return;
@@ -2954,10 +2954,10 @@ void CCamera::Process() {
     const float depth = waterLevel - samplePos.z;
     CWeather::WaterDepth = depth < 0.f ? 0.f : depth;
 
-    if ((double)samplePos.z + 0.6f < waterLevel) {
+    if ((x87d)samplePos.z + 0.6f < waterLevel) {
         CWeather::UnderWaterness = 1.f;
     } else {
-        CWeather::UnderWaterness = (float)(1.0 - ((double)samplePos.z - ((double)waterLevel - 0.6f)) * (double)0.8333333f); // 0x863278
+        CWeather::UnderWaterness = (float)((x87d)1.0 - ((x87d)samplePos.z - ((x87d)waterLevel - 0.6f)) * (x87d)0.8333333f); // 0x863278
     }
 }
 
@@ -3023,21 +3023,21 @@ void CCamera::Find3rdPersonCamTargetVector(float range, CVector gunMuzzle, CVect
     }
 
     // Project the gun muzzle onto the aim line through the camera source: dot summed x, z, y
-    const double dx  = (double)gunMuzzle.x - (double)outSource.x;
-    const double dy  = (double)gunMuzzle.y - (double)outSource.y;
-    const double dz  = (double)gunMuzzle.z - (double)outSource.z;
-    const double dot = (dx * (double)outTarget.x + dz * (double)outTarget.z) + dy * (double)outTarget.y;
-    const float  py  = (float)(dot * (double)outTarget.y);
-    const float  pz  = (float)(dot * (double)outTarget.z);
-    outSource.x = (float)(dot * (double)outTarget.x + (double)outSource.x);
+    const x87d dx  = (x87d)gunMuzzle.x - (x87d)outSource.x;
+    const x87d dy  = (x87d)gunMuzzle.y - (x87d)outSource.y;
+    const x87d dz  = (x87d)gunMuzzle.z - (x87d)outSource.z;
+    const x87d dot = (dx * (x87d)outTarget.x + dz * (x87d)outTarget.z) + dy * (x87d)outTarget.y;
+    const float  py  = (float)(dot * (x87d)outTarget.y);
+    const float  pz  = (float)(dot * (x87d)outTarget.z);
+    outSource.x = (float)(dot * (x87d)outTarget.x + (x87d)outSource.x);
     outSource.y = py + outSource.y;
     outSource.z = pz + outSource.z;
 
     // target = source + dir * range (the y / z products are stored as floats)
-    const float ty = (float)((double)range * (double)outTarget.y);
-    const float tz = (float)((double)range * (double)outTarget.z);
-    const double tx = (double)range * (double)outTarget.x;
-    outTarget.x = (float)((double)outSource.x + tx);
+    const float ty = (float)((x87d)range * (x87d)outTarget.y);
+    const float tz = (float)((x87d)range * (x87d)outTarget.z);
+    const x87d tx = (x87d)range * (x87d)outTarget.x;
+    outTarget.x = (float)((x87d)outSource.x + tx);
     outTarget.y = outSource.y + ty;
     outTarget.z = outSource.z + tz;
 }
@@ -3145,9 +3145,9 @@ void CCamera::ImproveNearClip(CVehicle* vehicle, CPed* ped, CVector* source, CVe
 
     // NOTE: The original keeps the differences in x87 extended precision (no rounding to float), the sum is accumulated in `z, y, x` order
     const auto DistToTarget = [&] {
-        const double dx = (double)source->x - targPosn->x;
-        const double dy = (double)source->y - targPosn->y;
-        const double dz = (double)source->z - targPosn->z;
+        const x87d dx = (x87d)source->x - targPosn->x;
+        const x87d dy = (x87d)source->y - targPosn->y;
+        const x87d dz = (x87d)source->z - targPosn->z;
         return std::sqrt(dz * dz + dy * dy + dx * dx);
     };
 
@@ -3168,7 +3168,7 @@ void CCamera::ImproveNearClip(CVehicle* vehicle, CPed* ped, CVector* source, CVe
 
                     float waterLevel = 0.f;
                     const bool bHasWater = CWaterLevel::GetWaterLevel(source->x, source->y, source->z, waterLevel, false, nullptr);
-                    if (bHasWater && std::abs((double)waterLevel - source->z) < (double)0.3f) { // On the water surface
+                    if (bHasWater && std::abs((x87d)waterLevel - source->z) < (double)0.3f) { // On the water surface
                         RwCameraSetNearClipPlane(Scene.m_pRwCamera, 0.1f);
                     } else if (bUnderwaterSprinting && m_nPedZoom == 1) {
                         RwCameraSetNearClipPlane(Scene.m_pRwCamera, 0.1f);
@@ -3186,7 +3186,7 @@ void CCamera::ImproveNearClip(CVehicle* vehicle, CPed* ped, CVector* source, CVe
                 }
             } else {
                 // Standing ped => near clip based on the closest hit-col sphere along the camera's front vector
-                const float maxDist = (float)(x87::sin((90.0 - (double)cam.m_fFOV * 0.5) * (double)0.017453292f) * (double)gCamColLastRadius);
+                const float maxDist = (float)(x87::sin(((x87d)90.0 - (x87d)cam.m_fFOV * (x87d)0.5) * (x87d)0.017453292f) * (double)gCamColLastRadius);
 
                 auto* const pedMI = CModelInfo::GetPedModelInfo(ped->m_nModelIndex);
                 pedMI->AnimatePedColModelSkinnedWorld(ped->GetRpClump());
@@ -3196,15 +3196,15 @@ void CCamera::ImproveNearClip(CVehicle* vehicle, CPed* ped, CVector* source, CVe
                 const auto& camPos = cam.m_vecSource;
 
                 // NOTE: x87 extended precision is kept along the chain in the original, only the final value is stored as float
-                const float camPosAlongFront = (float)((double)front.z * camPos.z + (double)front.y * camPos.y + (double)camPos.x * front.x);
+                const float camPosAlongFront = (float)((x87d)front.z * camPos.z + (x87d)front.y * camPos.y + (x87d)camPos.x * front.x);
 
                 float minDist = 999999.f; // 0x497423F0
                 for (int32 i = 0; i < CPedModelInfo::NUM_PED_COL_NODE_INFOS; i++) {
                     const auto& sphere = spheres[i];
                     const auto& c      = sphere.m_vecCenter;
-                    double dist = ((double)c.x * front.x + (double)c.z * front.z + (double)c.y * front.y) - camPosAlongFront - sphere.m_fRadius;
+                    x87d dist = ((x87d)c.x * front.x + (x87d)c.z * front.z + (x87d)c.y * front.y) - camPosAlongFront - sphere.m_fRadius;
                     if (sphere.m_Surface.m_nPiece == PED_PIECE_HEAD) {
-                        dist -= 1.0 * sphere.m_fRadius; // 0x8CCCD8
+                        dist -= (x87d)1.0 * sphere.m_fRadius; // 0x8CCCD8
                     }
                     if (dist < minDist) {
                         minDist = (float)dist;
@@ -3220,7 +3220,7 @@ void CCamera::ImproveNearClip(CVehicle* vehicle, CPed* ped, CVector* source, CVe
                     minDist = 0.3f;
                 }
 
-                RwCameraSetNearClipPlane(Scene.m_pRwCamera, (float)((double)(int)((double)minDist * 100.0) * (double)0.01f));
+                RwCameraSetNearClipPlane(Scene.m_pRwCamera, (float)((x87d)(int)((x87d)minDist * (x87d)100.0) * (x87d)0.01f));
             }
         }
     } else {
@@ -4121,7 +4121,7 @@ void PlaceFixedCamForPedInGarage(CCamera& cam, CAttributeZone* stairsZone, bool 
         if (!cam.m_pToGarageWeAreIn && bInStairsZone) {
             dir.Normalise();
             if (stairsZone) {
-                const auto scale = static_cast<float>(static_cast<double>(GetStairsZoneExtent(stairsZone->zoneDef)) * 0.7f + 3.75f);
+                const auto scale = static_cast<float>(static_cast<x87d>(GetStairsZoneExtent(stairsZone->zoneDef)) * 0.7f + 3.75f);
                 pointA           = refPos + scale * dir;
             } else {
                 pointA = pointA + 3.75f * dir;
@@ -4789,9 +4789,9 @@ void CCamera::CamControl() {
                     const bool  bHasJetpack = targetPed->GetIntelligence()->GetTaskJetPack() != nullptr;
                     if (gNewCamMode == MODE_AIMWEAPON && GetActiveCam().m_nMode == MODE_FOLLOWPED && !bHasJetpack) {
                         // Switch immediately if the camera is too far away from where it's supposed to be (heading, or distance)
-                        constexpr double PI      = static_cast<double>(std::numbers::pi_v<float>);
-                        constexpr double HALF_PI = static_cast<double>(std::numbers::pi_v<float> / 2.f);
-                        constexpr double TWO_PI  = static_cast<double>(std::numbers::pi_v<float> * 2.f);
+                        constexpr x87d PI      = static_cast<x87d>(std::numbers::pi_v<float>);
+                        constexpr x87d HALF_PI = static_cast<x87d>(std::numbers::pi_v<float> / 2.f);
+                        constexpr x87d TWO_PI  = static_cast<x87d>(std::numbers::pi_v<float> * 2.f);
 
                         double aimHeading;
                         if (auto* const targeted = targetPed->m_pTargetedObject) {
@@ -4802,15 +4802,15 @@ void CCamera::CamControl() {
                         }
                         aimHeading -= HALF_PI;
 
-                        const double camHeading = GetActiveCam().m_fHorizontalAngle;
+                        const x87d camHeading = GetActiveCam().m_fHorizontalAngle;
                         if (aimHeading > camHeading + PI) {
                             aimHeading -= TWO_PI;
                         } else if (aimHeading < camHeading - PI) {
                             aimHeading += TWO_PI;
                         }
 
-                        const double maxHeadingDiff = static_cast<double>(gAimCamTargetMaxAngleDeg) * static_cast<double>(0.0174532924f);
-                        const double maxDistance    = (static_cast<double>(m_fPedZoomSmoothed) + 2.0) * static_cast<double>(1.5f);
+                        const x87d maxHeadingDiff = static_cast<x87d>(gAimCamTargetMaxAngleDeg) * static_cast<x87d>(0.0174532924f);
+                        const x87d maxDistance    = (static_cast<x87d>(m_fPedZoomSmoothed) + (x87d)2.0) * static_cast<x87d>(1.5f);
                         if (maxHeadingDiff < std::abs(aimHeading - camHeading)
                             || maxDistance < static_cast<double>((targetPed->GetPosition() - m_mCameraMatrix.GetPosition()).Magnitude())
                         ) {
@@ -4888,18 +4888,18 @@ void CCamera::CamControl() {
                     if (targetPed->CanWeRunAndFireWithWeapon() && !targetPed->bIsDucking) {
                         // Switch immediately if the camera isn't looking in the direction the ped is
                         auto&        cam            = GetActiveCam();
-                        const double PI             = static_cast<double>(std::numbers::pi_v<float>);
-                        const double HALF_PI        = static_cast<double>(std::numbers::pi_v<float> / 2.f);
-                        const double TWO_PI         = static_cast<double>(std::numbers::pi_v<float> * 2.f);
-                        double       heading        = static_cast<double>(targetPed->GetHeading()) - HALF_PI;
-                        const double camHeading     = cam.m_fHorizontalAngle;
+                        const x87d PI             = static_cast<x87d>(std::numbers::pi_v<float>);
+                        const x87d HALF_PI        = static_cast<x87d>(std::numbers::pi_v<float> / 2.f);
+                        const x87d TWO_PI         = static_cast<x87d>(std::numbers::pi_v<float> * 2.f);
+                        x87d       heading        = static_cast<x87d>(targetPed->GetHeading()) - HALF_PI;
+                        const x87d camHeading     = cam.m_fHorizontalAngle;
                         if (heading > camHeading + PI) {
                             heading -= TWO_PI;
                         } else if (heading < camHeading - PI) {
                             heading += TWO_PI;
                         }
 
-                        const double maxHeadingDiff = static_cast<double>(gAimCamTargetMaxAngleDeg) * static_cast<double>(0.0174532924f);
+                        const x87d maxHeadingDiff = static_cast<x87d>(gAimCamTargetMaxAngleDeg) * static_cast<x87d>(0.0174532924f);
                         if (maxHeadingDiff < std::abs(heading - camHeading) || !targetPed->bIsStanding) {
                             bSwitchToFollowPedImmediately = true;
                         }
@@ -5213,9 +5213,9 @@ void CCamera::GetScreenRect(CRect* rect) const {
 
     if (m_bWideScreenOn) {
         // exe: the reduction is multiplied by 0.01f (0x858C58), not divided by 100; `half * red * 0.01` stays in extended precision
-        const double reduction = (double)(RsGlobal.maximumHeight / 2) * (double)m_fScreenReductionPercentage * (double)0.01f;
-        rect->top    = (float)(reduction - (double)SCREEN_SCALE_Y(22.0f));
-        rect->bottom = (float)(((double)SCREEN_HEIGHT - reduction) - (double)SCREEN_SCALE_Y(14.0f));
+        const x87d reduction = (x87d)(RsGlobal.maximumHeight / 2) * (x87d)m_fScreenReductionPercentage * (x87d)0.01f;
+        rect->top    = (float)(reduction - (x87d)SCREEN_SCALE_Y(22.0f));
+        rect->bottom = (float)(((x87d)SCREEN_HEIGHT - reduction) - (x87d)SCREEN_SCALE_Y(14.0f));
     } else {
         rect->top    = 0.0f;
         rect->bottom = SCREEN_HEIGHT;

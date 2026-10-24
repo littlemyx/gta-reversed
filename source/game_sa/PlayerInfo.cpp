@@ -214,7 +214,7 @@ namespace {
 // Original: `CTimer::ms_fTimeStep * 0.02f * mult` kept in extended precision until `_ftol` (0x821B40).
 // `mult` is either 1000.0f, or -1000.0f (0x859948).
 int32 TimeStepToMS(float mult = 1000.0f) {
-    return static_cast<int32>(static_cast<double>(CTimer::GetTimeStep()) * static_cast<double>(0.02f) * static_cast<double>(mult));
+    return static_cast<int32>(static_cast<x87d>(CTimer::GetTimeStep()) * static_cast<x87d>(0.02f) * static_cast<x87d>(mult));
 }
 
 // Taxi fare: Score +1 for every second the player drives a taxi with a passenger
@@ -238,9 +238,9 @@ void ProcessTaxiFare(CPlayerInfo& info) {
 // `m_nTempBufferCounter - factor * timestep(ms)`, clamped to 0 (so wheels can leave the ground for a few frames)
 uint32 DecayedTempBufferCounter(const CPlayerInfo& info, float factor) {
     const auto ms = static_cast<uint32>(TimeStepToMS()); // The original adds 2^32 if it's negative, so treats it as unsigned
-    auto       v  = static_cast<double>(info.m_nTempBufferCounter) - static_cast<double>(ms) * static_cast<double>(factor);
+    auto       v  = static_cast<x87d>(info.m_nTempBufferCounter) - static_cast<x87d>(ms) * static_cast<x87d>(factor);
     if (v < 0.0) {
-        v = 0.0;
+        v = (x87d)0.0;
     }
     return static_cast<uint32>(static_cast<int64>(v));
 }
@@ -508,7 +508,7 @@ void ProcessEnterVehicle(CPlayerInfo& s, uint32 playerIndex) {
     const float minY   = pedPos.y - 10.0f;
     const float maxY   = pedPos.y + 10.0f;
 
-    const auto SectorOf = [](float v) { return static_cast<int32>(std::floor(static_cast<float>(static_cast<double>(v) * 0.02f + 60.0f))); };
+    const auto SectorOf = [](float v) { return static_cast<int32>(std::floor(static_cast<float>(static_cast<x87d>(v) * 0.02f + 60.0f))); };
     const auto xMin     = SectorOf(minX);
     const auto yMin     = SectorOf(minY);
     const auto xMax     = SectorOf(maxX);
@@ -788,9 +788,9 @@ void ProcessChaseValue(CPlayerInfo& s) {
     if (CTimer::GetTimeInMS() / 20'000u != CTimer::GetPreviousTimeInMS() / 20'000u) {
         const auto pos = FindPlayerCoors();
         s_bMovedFarFromLast = false;
-        const auto dx   = static_cast<double>(s_LastPlayerPos.x) - static_cast<double>(pos.x);
-        const auto dy   = static_cast<double>(s_LastPlayerPos.y) - static_cast<double>(pos.y);
-        const auto dz   = static_cast<double>(s_LastPlayerPos.z) - static_cast<double>(pos.z);
+        const auto dx   = static_cast<x87d>(s_LastPlayerPos.x) - static_cast<x87d>(pos.x);
+        const auto dy   = static_cast<x87d>(s_LastPlayerPos.y) - static_cast<x87d>(pos.y);
+        const auto dz   = static_cast<x87d>(s_LastPlayerPos.z) - static_cast<x87d>(pos.z);
         if (10.0 <= std::sqrt(dz * dz + dy * dy + dx * dx)) {
             s_bMovedFarFromLast = true;
         }
@@ -810,7 +810,7 @@ void ProcessChaseValue(CPlayerInfo& s) {
     default:                                                  break;
     }
 
-    const auto delta = static_cast<float>((static_cast<double>(targetChase) - static_cast<double>(s.m_fCurrentChaseValue)) * static_cast<double>(CTimer::GetTimeStep()) * static_cast<double>(0.0001f));
+    const auto delta = static_cast<float>((static_cast<x87d>(targetChase) - static_cast<x87d>(s.m_fCurrentChaseValue)) * static_cast<x87d>(CTimer::GetTimeStep()) * static_cast<x87d>(0.0001f));
     if (delta < 0.0f
         || (s_bMovedFarFromLast && s_bIsNearVehicleNode && !CCullZones::NoPolice() && !CCullZones::PoliceAbandonCars() && CGame::currArea == AREA_CODE_NORMAL_WORLD)
     ) {
@@ -852,7 +852,7 @@ void CPlayerInfo::Process(uint32 playerIndex) {
         const auto&          pos       = posEntity->GetPosition();
         m_fRoadDensityAroundPlayer     = ThePaths.CalcRoadDensity(pos.x, pos.y); // 0x44EFC0
     }
-    m_fRoadDensityAroundPlayer = static_cast<float>((static_cast<double>(m_fRoadDensityAroundPlayer) - static_cast<double>(1.0f)) * static_cast<double>(0.6f) + static_cast<double>(1.0f));
+    m_fRoadDensityAroundPlayer = static_cast<float>((static_cast<x87d>(m_fRoadDensityAroundPlayer) - static_cast<x87d>(1.0f)) * static_cast<x87d>(0.6f) + static_cast<x87d>(1.0f));
     if (m_fRoadDensityAroundPlayer < 0.5f) {
         m_fRoadDensityAroundPlayer = 0.5f;
     }
@@ -903,11 +903,11 @@ void CPlayerInfo::ProcessCarGunCrosshair(uint32 playerIndex, CPad* pad) {
     auto&           crossY      = m_vecCrosshairTarget.y;
 
     const float timeStep = CTimer::ms_fTimeStep;
-    crossX = (float)((double)pad->GetSteeringLeftRight() * (double)timeStep * (double)STEER_SCALE + (double)crossX);
+    crossX = (float)((x87d)pad->GetSteeringLeftRight() * (x87d)timeStep * (x87d)STEER_SCALE + (x87d)crossX);
     if (CPad::bInvertLook4Pad) {
-        crossY = (float)((double)pad->GetSteeringUpDown() * (double)CTimer::ms_fTimeStep * (double)STEER_SCALE + (double)crossY);
+        crossY = (float)((x87d)pad->GetSteeringUpDown() * (x87d)CTimer::ms_fTimeStep * (x87d)STEER_SCALE + (x87d)crossY);
     } else {
-        crossY = (float)((double)crossY - (double)pad->GetSteeringUpDown() * (double)CTimer::ms_fTimeStep * (double)STEER_SCALE);
+        crossY = (float)((x87d)crossY - (x87d)pad->GetSteeringUpDown() * (x87d)CTimer::ms_fTimeStep * (x87d)STEER_SCALE);
     }
 
     // Clamp to [-0.9, 0.9] (NaN-safe in the same way as the original)
@@ -925,37 +925,37 @@ void CPlayerInfo::ProcessCarGunCrosshair(uint32 playerIndex, CPad* pad) {
     const auto& right = TheCamera.m_mCameraMatrix.GetRight();
     const auto& fwd   = TheCamera.m_mCameraMatrix.GetForward();
     const auto& up    = TheCamera.m_mCameraMatrix.GetUp();
-    constexpr double FOV_SCALE = (double)0.008726646f; // 0x8631D4
+    constexpr x87d FOV_SCALE = (x87d)0.008726646f; // 0x8631D4
 
     // Up component
-    const double v1 = x87::tan((double)TheCamera.FindCamFOV() * FOV_SCALE) / (double)CDraw::ms_fAspectRatio * (double)crossY;
+    const double v1 = x87::tan((x87d)TheCamera.FindCamFOV() * FOV_SCALE) / (double)CDraw::ms_fAspectRatio * (double)crossY;
     const float  upX = (float)((double)up.x * v1), upY = (float)((double)up.y * v1), upZ = (float)((double)up.z * v1);
 
     // Right component
-    const double tan2 = x87::tan((double)TheCamera.FindCamFOV() * FOV_SCALE);
-    const float  rX   = (float)((double)right.x * (double)crossX);
-    const float  rY   = (float)((double)right.y * (double)crossX);
-    const double rZ   = (double)crossX * (double)right.z;
+    const double tan2 = x87::tan((x87d)TheCamera.FindCamFOV() * FOV_SCALE);
+    const float  rX   = (float)((x87d)right.x * (x87d)crossX);
+    const float  rY   = (float)((x87d)right.y * (x87d)crossX);
+    const x87d rZ   = (x87d)crossX * (x87d)right.z;
     const float  aX   = (float)((double)rX * tan2);
     const float  aY   = (float)((double)rY * tan2);
     const double aZ   = rZ * tan2;
 
-    const double t1 = (double)fwd.x - (double)aX;
-    const float  t2 = (float)((double)fwd.y - (double)aY);
+    const x87d t1 = (x87d)fwd.x - (x87d)aX;
+    const float  t2 = (float)((x87d)fwd.y - (x87d)aY);
     const float  t3 = (float)((double)fwd.z - aZ);
 
-    const float dirX = (float)(t1 - (double)upX);
-    const float dirY = (float)((double)t2 - (double)upY);
-    const float dirZ = (float)((double)t3 - (double)upZ);
+    const float dirX = (float)(t1 - (x87d)upX);
+    const float dirY = (float)((x87d)t2 - (x87d)upY);
+    const float dirZ = (float)((x87d)t3 - (x87d)upZ);
 
     const auto& camPos = TheCamera.m_mCameraMatrix.GetPosition();
-    const double dx = (double)dirX * 200.0; // 0x858A48
-    const double dy = (double)dirY * 200.0;
-    const float  dz = (float)((double)dirZ * 200.0);
+    const x87d dx = (x87d)dirX * (x87d)200.0; // 0x858A48
+    const x87d dy = (x87d)dirY * (x87d)200.0;
+    const float  dz = (float)((x87d)dirZ * (x87d)200.0);
     CVector target{
-        (float)(dx + (double)camPos.x),
-        (float)((double)camPos.y + dy),
-        (float)((double)camPos.z + (double)dz)
+        (float)(dx + (x87d)camPos.x),
+        (float)((x87d)camPos.y + dy),
+        (float)((x87d)camPos.z + (x87d)dz)
     };
 
     CWeapon weapon{ WEAPON_M4, 5000 };
@@ -1022,11 +1022,11 @@ void CPlayerInfo::DrawCrosshair(int32 playerIndex) {
 
     // NOTE: The original keeps all intermediate values on the x87 stack (extended precision) => `double`s
     for (auto step = 0; step < 5; step++) {
-        const float pulse = (float)(x87::sin((double)(timeHist[0] & 0x3FF) * (double)0.006135923322290182f /* 0x865034 */) * (double)0.2f /* 0x858CC4 */ + (double)1.0f /* 0x858624 */);
+        const float pulse = (float)(x87::sin((x87d)(timeHist[0] & 0x3FF) * (x87d)0.006135923322290182f /* 0x865034 */) * (double)0.2f /* 0x858CC4 */ + (double)1.0f /* 0x858624 */);
         for (auto ring = 0; ring < 3; ring++) {
-            const float radius = (float)((double)ring * (double)10.0f /* 0x85862C */ + (double)20.0f /* 0x858BA4 */);
+            const float radius = (float)((x87d)ring * (x87d)10.0f /* 0x85862C */ + (x87d)20.0f /* 0x858BA4 */);
             for (auto n = 0; n < 4; n++) {
-                const double angle = (double)n * (double)1.5707964f /* 0x858FE4 */ + (double)0.78539819f /* 0x859AB0 */;
+                const x87d angle = (x87d)n * (x87d)1.5707964f /* 0x858FE4 */ + (x87d)0.78539819f /* 0x859AB0 */;
                 const double cosV  = x87::cos(angle);
                 const double sinV  = x87::sin(angle);
                 const float  posY  = (float)(cosV * (double)radius * (double)pulse + ((double)yHist[step] + 1.0) * (double)RsGlobal.maximumHeight * 0.5);

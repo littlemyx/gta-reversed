@@ -212,7 +212,7 @@ static AnimationId GetDrivebyAnimForSector(int32 sector, bool bSeatRHS) {
     case 1: return bSeatRHS ? ANIM_ID_DRIVEBYTOP_RHS : ANIM_ID_DRIVEBYLHS;      // 0xEC : 0xE7
     case 2: return bSeatRHS ? ANIM_ID_DRIVEBYRHS_BWD : ANIM_ID_DRIVEBYLHS_BWD;  // 0xEE : 0xEA
     case 3: return bSeatRHS ? ANIM_ID_DRIVEBYRHS : ANIM_ID_DRIVEBYTOP_LHS;      // 0xEB : 0xE8
-    default: NOTSA_UNREACHABLE();
+    default: NOTSA_UNREACHABLE_RET({});
     }
 }
 

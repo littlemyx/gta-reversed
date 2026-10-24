@@ -259,6 +259,6 @@ AnimationId CTaskInteriorLieInBed::GetAnimIdInSeq(AnimSeqIdx sequenceIdx) {
         default: NOTSA_UNREACHABLE();
         }
     default:
-        NOTSA_UNREACHABLE();
+        NOTSA_UNREACHABLE_RET({});
     }
 }

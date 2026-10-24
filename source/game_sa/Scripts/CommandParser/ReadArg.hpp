@@ -159,7 +159,7 @@ inline T Read(CRunningScript* S) {
             return scm::StringRef{ &S->GetAtIPAs<char>(true, size), size, size }; // Pascal strings are not null terminated!
         }
         default:
-            NOTSA_UNREACHABLE("Unknown param type: {}", (int32)(ptype));
+            NOTSA_UNREACHABLE_RET(T{}, "Unknown param type: {}", (int32)(ptype));
         }
     } else if constexpr (std::is_same_v<Y, notsa::ci_string_view>) {
         return Read<scm::StringRef>(S);
@@ -212,7 +212,7 @@ inline T Read(CRunningScript* S) {
                 return S->GetAtIPFromArray<Y>(false);
             }
         }
-        NOTSA_UNREACHABLE("Unknown param type: {}", (int32)(ptype));
+        NOTSA_UNREACHABLE_RET(T{}, "Unknown param type: {}", (int32)(ptype));
     } else if constexpr (std::is_enum_v<Y>) { // Read underlaying arithmetic type and cast (then profit)
         return static_cast<Y>(Read<std::underlying_type_t<Y>>(S));
     } else if constexpr (std::is_same_v<Y, CPlayerPed>) { // Special case for `CPlayerPed` (As the IDs for it aren't from the pool)

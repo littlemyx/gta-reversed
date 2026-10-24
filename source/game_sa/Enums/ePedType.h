@@ -123,6 +123,6 @@ inline eGangID GetGangOfPedType(ePedType ptype) {
     case PED_TYPE_GANG8:  return GANG_AZTECAS;
     case PED_TYPE_GANG9:  return GANG_UNUSED1;
     case PED_TYPE_GANG10: return GANG_UNUSED2;
-    default:              NOTSA_UNREACHABLE();
+    default:              NOTSA_UNREACHABLE_RET({});
     }
 }

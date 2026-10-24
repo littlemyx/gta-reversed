@@ -206,7 +206,7 @@ void RpAnimBlendClumpInit(RpClump* clump) {
 
 // 0x4D6790
 CAnimBlendAssociation* RpAnimBlendClumpAddAssociation(RpClump* clump, CAnimBlendAssociation* association, uint32 playFlags, float startTime, float blendAmount) {
-    NOTSA_UNREACHABLE("Unused function");
+    NOTSA_UNREACHABLE_RET(nullptr, "Unused function");
 }
 
 //! @notsa

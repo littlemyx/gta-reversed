@@ -1733,7 +1733,7 @@ int32 CAutomobile::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoin
         case 1: return door.m_closedAngle;
         case 2: return door.m_angle;
         case 3: return door.m_prevAngle;
-        default: NOTSA_UNREACHABLE();
+        default: NOTSA_UNREACHABLE_RET(door.m_openAngle);
         }
     };
 
@@ -4013,7 +4013,7 @@ void CAutomobile::SetRandomDamage(bool bRemoveStuff) {
                     }
                 }
             }
-            NOTSA_UNREACHABLE(); // This is reached if the first `ncomps` bits are all set - Should never happen
+            NOTSA_UNREACHABLE_RET(n); // This is reached if the first `ncomps` bits are all set - Should never happen
         };
 
         for (size_t i = 0u; i < numToDmg; i++) {

@@ -39,7 +39,7 @@ inline void StoreArg(CRunningScript* S, const T& arg) { // Add requirements to f
         case SCRIPT_PARAM_LOCAL_NUMBER_ARRAY:
             return S->GetAtIPFromArray<T>(false);
         default:
-            NOTSA_UNREACHABLE("Variable type unknown ={:x}", t);
+            NOTSA_UNREACHABLE_RET(S->GetGlobal<T>(0), "Variable type unknown ={:x}", t);
         }
     }();
     static_assert(sizeof(dst) <= sizeof(tScriptParam)); // Otherwise we'd be overwriting the script => bad

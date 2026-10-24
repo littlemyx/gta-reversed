@@ -18,7 +18,16 @@ class AnimBlendFrameData;
 class IKChain_c : public ListItem_c<IKChain_c> {
 public:
     IKChain_c() = default;
+#ifdef NOTSA_PORTABLE
+    // MAC-C3: `g_ikChainMan` is a static object in the portable build, so its chains are destroyed by exit() AFTER the quit path has shut the pools down; the default dtor runs
+    // `CleanUpOldReference` on a freed CPed / CEntity (SIGSEGV, then std::terminate: s2 route "IKChainManager_c::~"). The exe never destroys the manager (plain pointers).
+    ~IKChain_c() {
+        m_Ped.ForgetAtExit();
+        m_TargetEntity.ForgetAtExit();
+    }
+#else
     ~IKChain_c() = default;
+#endif
 
     bool Init(const char* name, eIKChainSlot ikSlot, CPed* ped, eBoneTag32 effectorBone, CVector effectorPos, eBoneTag32 pivotBone, CEntity* entity, eBoneTag32 offsetBone, CVector offsetPos, float speed, int32 priority);
     void Exit();

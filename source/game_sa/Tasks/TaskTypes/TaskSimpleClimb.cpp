@@ -107,7 +107,7 @@ bool CTaskSimpleClimb::ProcessPed(CPed* ped) {
             case CLIMB_FINISHED: return { ms_fStandUpOffsetHorz, ms_fStandUpOffsetVert };
             case CLIMB_FINISHED_V: return { ms_fVaultOffsetHorz, ms_fVaultOffsetVert };
             default:
-                NOTSA_UNREACHABLE();
+                NOTSA_UNREACHABLE_RET({});
             }
         }();
         const CVector targetPt = handPos + GetClimbOffset3D(offset, handAngle);

@@ -173,7 +173,7 @@ bool CCoverPoint::CanBeRemoved() const {
     case CCoverPoint::eType::NONE:
         return false; /* Already removed, no need to remove again */
     }
-    NOTSA_UNREACHABLE();
+    NOTSA_UNREACHABLE_RET(false);
 }
 
 // notsa
@@ -185,7 +185,7 @@ CVector CCoverPoint::GetPos() const {
     case eType::POINTONMAP:
         return GetPointOnMap();
     }
-    NOTSA_UNREACHABLE();
+    NOTSA_UNREACHABLE_RET({});
 }
 
 void CCoverPoint::InjectHooks() {

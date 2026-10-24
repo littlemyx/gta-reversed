@@ -283,6 +283,6 @@ bool CPedGroupPlacer::PlaceGroup(ePedType type, uint32 numOfPeds, const CVector&
     case STAND_STILL:
     case CHAT:             return PlaceChatGroup(type, numOfPeds, origin, allocType);
     case RANDOM:           return PlaceRandomGroup(type, numOfPeds, origin, allocType);
-    default:               NOTSA_UNREACHABLE();
+    default:               NOTSA_UNREACHABLE_RET(false);
     }
 }

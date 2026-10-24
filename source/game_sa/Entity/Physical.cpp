@@ -89,7 +89,7 @@ CPtrListDoubleLink<CPhysical*>* PhysicalGetRepeatSectorList(CRepeatSector& rs, e
     case ENTITY_TYPE_VEHICLE: return reinterpret_cast<CPtrListDoubleLink<CPhysical*>*>(&rs.Vehicles);
     case ENTITY_TYPE_PED:     return reinterpret_cast<CPtrListDoubleLink<CPhysical*>*>(&rs.Peds);
     case ENTITY_TYPE_OBJECT:  return reinterpret_cast<CPtrListDoubleLink<CPhysical*>*>(&rs.Objects);
-    default:                  NOTSA_UNREACHABLE("Invalid physical type {}", (int32)type); // NOTE: Original uses the list from the previous iteration (or uninitialized memory)
+    default:                  NOTSA_UNREACHABLE_RET(nullptr, "Invalid physical type {}", (int32)type); // NOTE: Original uses the list from the previous iteration (or uninitialized memory)
     }
 }
 } // namespace

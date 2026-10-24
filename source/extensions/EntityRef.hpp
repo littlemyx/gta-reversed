@@ -55,6 +55,10 @@ struct EntityRef {
 
     decltype(auto) Get(this auto&& self) noexcept { return self.m_Ptr; }
 
+    //! Drop the pointer WITHOUT unregistering from the entity (`CleanUpOldReference` would write into the entity's reference list).
+    //! Only for static destructors that run after the pools are gone (NOTSA_PORTABLE, MAC-C3: `IKChain_c::~IKChain_c` at exit); never called in the Win32 build.
+    void ForgetAtExit() noexcept { m_Ptr = nullptr; }
+
     operator T*()   const noexcept { return m_Ptr;  }
     operator T*()         noexcept { return m_Ptr;  }
 

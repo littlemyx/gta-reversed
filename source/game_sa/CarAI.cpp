@@ -873,7 +873,7 @@ void CCarAI::UpdateCarAI(CVehicle* veh) {
                         case MISSION_ESCORT_RIGHT: return MISSION_ESCORT_RIGHT_FARAWAY;
                         case MISSION_ESCORT_REAR:  return MISSION_ESCORT_REAR_FARAWAY;
                         case MISSION_ESCORT_FRONT: return MISSION_ESCORT_FRONT_FARAWAY;
-                        default:                   NOTSA_UNREACHABLE();
+                        default:                   NOTSA_UNREACHABLE_RET(MISSION_ESCORT_LEFT_FARAWAY);
                         }
                     }();
                 }
@@ -1031,7 +1031,7 @@ void CCarAI::UpdateCarAI(CVehicle* veh) {
                     case MISSION_ESCORT_RIGHT_FARAWAY: return MISSION_ESCORT_RIGHT;
                     case MISSION_ESCORT_REAR_FARAWAY:  return MISSION_ESCORT_REAR;
                     case MISSION_ESCORT_FRONT_FARAWAY: return MISSION_ESCORT_FRONT;
-                    default:                           NOTSA_UNREACHABLE();
+                    default:                           NOTSA_UNREACHABLE_RET(MISSION_ESCORT_LEFT);
                     }
                 }();
             }

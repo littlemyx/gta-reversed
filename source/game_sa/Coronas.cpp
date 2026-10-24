@@ -297,7 +297,7 @@ void CCoronas::Render() {
                 switch (c.m_nFlareType) {
                 case FLARETYPE_SUN:        return &SunFlareDef[0];
                 case FLARETYPE_HEADLIGHTS: return &HeadLightsFlareDef[0];
-                default:                   NOTSA_UNREACHABLE();
+                default:                   NOTSA_UNREACHABLE_RET(&SunFlareDef[0]);
                 }
             }();
 

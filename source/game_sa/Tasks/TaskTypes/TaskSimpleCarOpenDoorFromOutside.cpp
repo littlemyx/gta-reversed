@@ -76,7 +76,7 @@ auto CTaskSimpleCarOpenDoorFromOutside::ComputeAnimID() -> std::pair<AssocGroupI
         case TARGET_DOOR_REAR_LEFT:
             return ANIM_ID_CAR_OPEN_LHS_1;
         default:
-            NOTSA_UNREACHABLE();
+            NOTSA_UNREACHABLE_RET(ANIM_ID_CAR_OPEN_RHS);
         }
     }();
     return { m_veh->GetAnimGroup().GetGroup(animId), animId };
@@ -163,7 +163,7 @@ bool CTaskSimpleCarOpenDoorFromOutside::ProcessPed(CPed* ped) {
             case TARGET_DOOR_REAR_LEFT:
                 return DOOR_LEFT_REAR;
             default:
-                NOTSA_UNREACHABLE();
+                NOTSA_UNREACHABLE_RET(DOOR_RIGHT_FRONT);
             }
         }();
         m_veh->OpenDoor(ped, m_door, doorId, (1.f - m_anim->m_CurrentTime / doorOpenTiming) * m_doorOpenAngleRatio, false);

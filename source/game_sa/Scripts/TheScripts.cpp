@@ -329,7 +329,7 @@ uint32 CTheScripts::AddScriptCheckpoint(CVector at, CVector pointTo, float radiu
         case eCheckpointType::TORUS_DOWN:
             return { 255, 0, 0, 96 };
         default:
-            NOTSA_UNREACHABLE();
+            NOTSA_UNREACHABLE_RET({});
         }
     }();
     const auto index = GetNewUniqueScriptThingIndex(std::distance(ScriptCheckpointArray.begin(), cp), SCRIPT_THING_CHECKPOINT);

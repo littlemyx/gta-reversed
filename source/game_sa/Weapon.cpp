@@ -278,7 +278,7 @@ bool CWeapon::GenerateDamageEvent(CPed* victim, CEntity* creator, eWeaponType we
 // 0x73A8D0
 bool CWeapon::LaserScopeDot(CVector* outCoord, float* outSize) {
     /* UNUSED */
-    NOTSA_UNREACHABLE();
+    NOTSA_UNREACHABLE_RET(false);
 }
 
 // 0x73AAC0
@@ -1337,7 +1337,7 @@ auto CWeapon::GetProjectileType() {
     case WEAPON_REMOTE_SATCHEL_CHARGE:
         return GetType();
     default:
-        NOTSA_UNREACHABLE();
+        NOTSA_UNREACHABLE_RET(eWeaponType::WEAPON_ROCKET);
     }
 }
 
@@ -2714,7 +2714,7 @@ bool CWeapon::Fire(CEntity* firedBy, CVector* startPosn, CVector* barrelPosn, CE
                 true
             };
         default:
-            NOTSA_UNREACHABLE();
+            NOTSA_UNREACHABLE_RET({});
         }
     }();
 

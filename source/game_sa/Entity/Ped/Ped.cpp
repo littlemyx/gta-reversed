@@ -6122,7 +6122,7 @@ int32 CPed::GetPadNumber() const {
     switch (m_nPedType) {
     case PED_TYPE_PLAYER1: return 0;
     case PED_TYPE_PLAYER2: return 1;
-    default:               NOTSA_UNREACHABLE();
+    default:               NOTSA_UNREACHABLE_RET(0);
     }
 }
 

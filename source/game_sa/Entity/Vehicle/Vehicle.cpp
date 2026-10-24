@@ -4822,7 +4822,7 @@ bool CVehicle::BladeColSectorList(PtrListType& ptrList, CColModel& colModel, CMa
         case  1: return {  matrix.GetRight(),   {  0.2f,  0.0f,  0.0f }, }; // right
         case  2: return {  matrix.GetForward(), {  0.0f,  0.2f,  0.0f }, }; // forward
         case  3: return {  matrix.GetUp(),      {  0.0f,  0.0f,  0.2f }, }; // up
-        default: NOTSA_UNREACHABLE("Unknown rotorType");
+        default: NOTSA_UNREACHABLE_RET({}, "Unknown rotorType");
         }
     };
 

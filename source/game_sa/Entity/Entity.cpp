@@ -2414,7 +2414,7 @@ RpAtomic* CEntity::GetRpAtomicOrFirstAtomicOfClump() const noexcept {
     switch (const auto type = RwObjectGetType(obj)) {
     case rpATOMIC: return GetRpAtomic();                /* If we're an atomic, use that */
     case rpCLUMP:  return GetFirstAtomic(GetRpClump()); /* Otherwise use the first atomic of the clump */
-    default:       NOTSA_UNREACHABLE_CASE(type);        /* Invalid type */
+    default:       NOTSA_UNREACHABLE_RET(nullptr, "Unreachable switch case with value: {}", type);        /* Invalid type */
     }
 }
 

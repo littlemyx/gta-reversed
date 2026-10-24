@@ -1266,7 +1266,7 @@ eSoundBank CAEPedSpeechAudioEntity::GetVoiceSoundBank(eGlobalSpeechContext gCtx,
     case PED_TYPE_PLAYER: return gPlySpeechVoiceToBankLookup[voice];
     case PED_TYPE_GANG:   return gGngSpeechVoiceToBankLookup[voice];
     case PED_TYPE_GFD:    return gGfdSpeechVoiceToBankLookup[voice];
-    default:              NOTSA_UNREACHABLE();
+    default:              NOTSA_UNREACHABLE_RET({});
     }
 }
 

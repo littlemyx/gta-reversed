@@ -252,7 +252,7 @@ bool ProcessGameLogic(INT nCmdShow) {
                 switch (gGameState) {
                 case GAME_STATE_PLAYING_LOGO:  return GAME_STATE_TITLE;
                 case GAME_STATE_PLAYING_INTRO: return GAME_STATE_FRONTEND_LOADING;
-                default:                       NOTSA_UNREACHABLE();
+                default:                       NOTSA_UNREACHABLE_RET(GAME_STATE_TITLE);
                 }
             }());
         }

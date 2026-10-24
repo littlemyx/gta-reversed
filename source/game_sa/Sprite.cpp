@@ -258,7 +258,7 @@ void CSprite::Set4Vertices2D(RwIm2DVertex* verts, const CRect& rt, const CRGBA& 
             case 1: return bottomRightColor.ToIntARGB();
             case 2: return topRightColor.ToIntARGB();
             case 3: return topLeftColor.ToIntARGB();
-            default: NOTSA_UNREACHABLE();
+            default: NOTSA_UNREACHABLE_RET(0u);
         }
         }();
     }

@@ -63,7 +63,7 @@ void CTaskSimpleCarGetIn::StartAnim(CPed const* ped) {
             case TARGET_DOOR_UNK:
                 return ANIM_ID_CAR_GETIN_BIKE_FRONT;
             default:
-                NOTSA_UNREACHABLE("Invalid door: {}", m_door);
+                NOTSA_UNREACHABLE_RET(ANIM_ID_CAR_GETIN_RHS_0, "Invalid door: {}", m_door);
             }
         }();
 

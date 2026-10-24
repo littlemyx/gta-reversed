@@ -278,6 +278,15 @@ if (${RE_PROJECT}_PORTABLE)
     # P-2k: the 64-bit width guard of the typed save/stream templates (FileRecord.hpp) is an ERROR in the portable build: `layout_diff.py guard` lists 0 offenders after P-2b..j,
     # so a new SaveDataToWorkBuffer/LoadDataFromWorkBuffer/RwStreamRead<T> with a pointer/long/size_t/ptrdiff_t fails to compile instead of writing 8 bytes into a 4-byte slot.
     target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_FILE_SCALAR_STRICT)
+    # MAC-C3: falling off the end of a non-void function / lambda is UB that clang exploits (the path becomes `unreachable` and execution runs into the next function); MSVC
+    # (and so the exe) returns whatever is in EAX / ST0. -Wreturn-type is an ERROR here (0 sites after MAC-C3: NOTSA_UNREACHABLE_RET, Base.h), and -fno-strict-return makes a
+    # path the compiler cannot see (e.g. a template instantiation) return an unspecified value instead of being miscompiled.
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(${RE_PROJECT_LIB_NAME} PRIVATE -Werror=return-type -fno-strict-return)
+        # The game is full of MSVC-only type punning (-Wundefined-reinterpret-cast: FileLoader col buffers `reinterpret_cast<T*&>(it)++`, int<->float script words, GangWars/Group12 raw bits):
+        # MSVC has no type-based alias analysis, clang -O2 has. -fno-strict-aliasing keeps the exe's semantics.
+        target_compile_options(${RE_PROJECT_LIB_NAME} PRIVATE -fno-strict-aliasing)
+    endif()
 endif()
 if (${RE_PROJECT}_VERIFY_GLOBALS)
     target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_VERIFY_GLOBALS)

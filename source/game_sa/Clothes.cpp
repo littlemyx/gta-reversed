@@ -100,7 +100,7 @@ void CClothes::LoadClothesFile() {
                     return rule;
                 }
             }
-            NOTSA_UNREACHABLE("Invalid rule tag: {}", strTag);
+            NOTSA_UNREACHABLE_RET(eClothRule::TAG_CUTS, "Invalid rule tag: {}", strTag);
         }();
         AddRule(static_cast<uint32>(ruleTag));
 

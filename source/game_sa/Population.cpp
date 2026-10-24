@@ -885,7 +885,7 @@ CPed* CPopulation::AddPed(ePedType pedType, eModelID modelIndex, const CVector& 
         case PED_TYPE_COP: // 0x61280C
             return new CCopPed(modelIndex);
         default:
-            NOTSA_UNREACHABLE();
+            NOTSA_UNREACHABLE_RET(nullptr);
         }
     }();
 

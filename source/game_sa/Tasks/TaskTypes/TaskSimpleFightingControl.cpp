@@ -157,7 +157,7 @@ bool CTaskSimpleFightingControl::MakeAbortable(CPed* ped, eAbortPriority priorit
                     case EVENT_BUILDING_COLLISION:
                         return static_cast<const CEventBuildingCollision*>(event)->m_impactNormal;
                     default:
-                        NOTSA_UNREACHABLE();
+                        NOTSA_UNREACHABLE_RET(CVector{});
                     }
                 }();
 

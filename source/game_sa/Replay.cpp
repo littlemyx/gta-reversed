@@ -1134,7 +1134,7 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer& buffer, flo
                         case VEHICLE_TYPE_TRAILER:
                             return new (poolIdx << 8) CTrailer(modelId, MISSION_VEHICLE);
                         default:
-                            NOTSA_UNREACHABLE("Unknown vehicle subtype ={}", (int)vehiclePacket.vehicleSubType);
+                            NOTSA_UNREACHABLE_RET(nullptr, "Unknown vehicle subtype ={}", (int)vehiclePacket.vehicleSubType);
                         }
                     }();
 

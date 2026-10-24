@@ -283,7 +283,7 @@ auto CWaterLevel::GetWaterLayerTexInfo(int32 layer) -> WaterLayerTexInfo {
     switch (layer) {
     case 0: return { { TextureShiftFirstU,  TextureShiftFirstV  }, 25.0f };
     case 1: return { { TextureShiftSecondU, TextureShiftSecondV }, 12.5f };
-    default: NOTSA_UNREACHABLE();
+    default: NOTSA_UNREACHABLE_RET({});
     }
 }
 

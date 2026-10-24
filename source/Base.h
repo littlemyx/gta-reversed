@@ -173,6 +173,15 @@ namespace notsa::standalone::Fixups { void UnreachableHit(const char* fn, const 
 #endif
 #define NOTSA_UNUSED_FUNCTION() NOTSA_UNREACHABLE("Unused Function")
 #define NOTSA_UNREACHABLE_CASE(val) NOTSA_UNREACHABLE("Unreachable switch case with value: {}", val)
+// NOTSA_UNREACHABLE at the end of a non-void function / lambda: the Win32 build (MSVC) keeps the exact text of NOTSA_UNREACHABLE (the exe just runs off the end of
+// the function and returns whatever is in EAX / ST0; the site is logged by the run build), while the portable build (clang: falling off the end of a non-void
+// function is UB, it turns the path into `unreachable` and runs into the next function) logs the site and returns RET. RET is the first argument, the others are
+// the (optional) format arguments of NOTSA_UNREACHABLE. MAC-C3, -Werror=return-type of the portable preset.
+#ifdef NOTSA_PORTABLE
+#define NOTSA_UNREACHABLE_RET(RET, ...) do { NOTSA_UNREACHABLE(__VA_ARGS__); return RET; } while (false)
+#else
+#define NOTSA_UNREACHABLE_RET(RET, ...) NOTSA_UNREACHABLE(__VA_ARGS__)
+#endif
 
 // NOTSA-AUDIT (.notes/reports/NOTSA-AUDIT.md): an upstream NOTSA change that makes the game behave differently from the exe. The standalone run build
 // (NOTSA_STANDALONE_RUN) must behave like the exe, so it takes `exeExpr`; the DLL build keeps upstream's `upstreamExpr` (the macro expands to exactly that

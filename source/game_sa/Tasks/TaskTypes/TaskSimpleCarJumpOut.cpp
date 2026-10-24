@@ -72,7 +72,7 @@ auto CTaskSimpleCarJumpOut::ComputeAnimID() -> std::pair<AssocGroupId, Animation
         case TARGET_DOOR_REAR_LEFT:
             return ANIM_ID_CAR_ROLLOUT_LHS;
         default:
-            NOTSA_UNREACHABLE();
+            NOTSA_UNREACHABLE_RET(ANIM_ID_CAR_ROLLOUT_RHS);
         }
     }();
     return { m_veh->GetAnimGroup().GetGroup(animId), animId };

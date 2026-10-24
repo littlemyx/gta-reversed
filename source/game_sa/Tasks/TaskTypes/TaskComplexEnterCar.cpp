@@ -358,7 +358,7 @@ CTask* CTaskComplexEnterCar::CreateNextSubTask(CPed* ped) {
         return nullptr;
 
     default:
-        NOTSA_UNREACHABLE("SubTaskType = {}", tt);
+        NOTSA_UNREACHABLE_RET(nullptr, "SubTaskType = {}", tt);
     }
 }
 
@@ -738,7 +738,7 @@ CTask* CTaskComplexEnterCar::CreateSubTask(eTaskType taskType, CPed* ped) {
     case TASK_SIMPLE_STAND_STILL:
         return new CTaskSimpleStandStill{}; // 0x63E0CE
     default:
-        NOTSA_UNREACHABLE("taskType = {}", taskType);
+        NOTSA_UNREACHABLE_RET(nullptr, "taskType = {}", taskType);
     }
 }
 

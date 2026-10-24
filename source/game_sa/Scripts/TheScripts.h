@@ -592,7 +592,7 @@ public:
             header = reinterpret_cast<tSCMChunkHeader*>(&ScriptSpace[header->m_NextChunkOffset]);
         }
 
-        NOTSA_UNREACHABLE();
+        NOTSA_UNREACHABLE_RET(nullptr);
     }
 
     static int32* GetPointerToScriptVariable(uint32 offset) {

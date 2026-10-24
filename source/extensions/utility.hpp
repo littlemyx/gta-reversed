@@ -84,7 +84,7 @@ constexpr inline auto find_value(auto&& mapping, auto&& needle) {
     if (it != mapping.end()) {
         return it->second;
     }
-    NOTSA_UNREACHABLE("Needle not in the mapping!");
+    NOTSA_UNREACHABLE_RET(std::remove_cvref_t<decltype(it->second)>{}, "Needle not in the mapping!");
 }
 
 /*!

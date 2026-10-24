@@ -318,10 +318,10 @@ void RunR3b(SDL_Window* win, int pw, int ph) {
         for (int y = 0; same && y < 8; y++) {
             for (int x = 0; x < 16 && same; x++) {
                 const RwUInt8* d = q + y * 64 + x * 4;
-                same = d[0] == (RwUInt8)(x * 15) && d[1] == (RwUInt8)(y * 30) && d[2] == 99 && d[3] == (RwUInt8)(255 - x);
+                same = d[2] == (RwUInt8)(x * 15) && d[1] == (RwUInt8)(y * 30) && d[0] == 99 && d[3] == (RwUInt8)(255 - x);
             }
         }
-        Check(same, "8888 raster holds the image pixels (gl3 byte order R,G,B,A)");
+        Check(same, "8888 raster holds the image pixels (d3d9 texel order B,G,R,A)");
         RwRasterUnlock(r8);
         rw::Image* small = rw::Image::create(4, 4, 32);
         small->allocate();
@@ -331,7 +331,7 @@ void RunR3b(SDL_Window* win, int pw, int ph) {
         RwRaster* r3 = RwRasterCreate(16, 8, 24, rwRASTERTYPETEXTURE | rwRASTERFORMAT888);
         Check(r3 && RwRasterSetFromImage(r3, img) == r3, "RwRasterSetFromImage(888)");
         const RwUInt8* q3 = r3 ? RwRasterLock(r3, 0, rwRASTERLOCKREAD) : nullptr;
-        Check(q3 && q3[0] == 0 && q3[1] == 0 && q3[2] == 99 && q3[3 * 15 + 0] == 15 * 15, "888 raster: 3 bytes per texel, R,G,B");
+        Check(q3 && q3[0] == 99 && q3[1] == 0 && q3[2] == 0 && q3[4 * 15 + 2] == 15 * 15 && q3[3] == 0xFF, "888 raster: X8R8G8B8, 4 bytes per texel, B,G,R,X");
         RwRasterUnlock(r3);
         RwRasterDestroy(r3);
         img->destroy();
@@ -341,7 +341,7 @@ void RunR3b(SDL_Window* win, int pw, int ph) {
     {
         RwRaster* tex = RwRasterCreate(16, 8, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
         RwUInt8*  p   = tex ? RwRasterLock(tex, 0, rwRASTERLOCKWRITE | rwRASTERLOCKNOFETCH) : nullptr;
-        for (int i = 0; p && i < 16 * 8; i++) { p[i * 4 + 0] = 200; p[i * 4 + 1] = 100; p[i * 4 + 2] = 50; p[i * 4 + 3] = 255; }
+        for (int i = 0; p && i < 16 * 8; i++) { p[i * 4 + 2] = 200; p[i * 4 + 1] = 100; p[i * 4 + 0] = 50; p[i * 4 + 3] = 255; }
         RwRasterUnlock(tex);
         RwCameraBeginUpdate(cam);
         RwCameraClear(cam, &col, rwCAMERACLEARIMAGE | rwCAMERACLEARZ);
@@ -587,7 +587,7 @@ void RunR4(int pw, int ph) {
     {
         RwRaster* tr = RwRasterCreate(2, 2, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
         RwUInt8*  p  = RwRasterLock(tr, 0, rwRASTERLOCKWRITE | rwRASTERLOCKNOFETCH);
-        const unsigned char texel[4][4] = { { 255, 0, 0, 255 }, { 0, 255, 0, 255 }, { 0, 0, 255, 255 }, { 255, 255, 0, 255 } }; // row 0: red green; row 1: blue yellow (R,G,B,A)
+        const unsigned char texel[4][4] = { { 0, 0, 255, 255 }, { 0, 255, 0, 255 }, { 255, 0, 0, 255 }, { 0, 255, 255, 255 } }; // row 0: red green; row 1: blue yellow (B,G,R,A bytes)
         if (p) {
             for (int y = 0; y < 2; y++) for (int x = 0; x < 2; x++) std::memcpy(p + y * RwRasterGetStride(tr) + x * 4, texel[y * 2 + x], 4);
         }
@@ -599,7 +599,7 @@ void RunR4(int pw, int ph) {
         s.grab(pw, ph);
         {
             const Px a = s.at(420, 220), b = s.at(460, 220), c = s.at(420, 260), d = s.at(460, 260);
-            std::snprintf(what, sizeof(what), "texture quadrants red green / blue yellow (top row first, RGBA texel order): %d,%d,%d %d,%d,%d / %d,%d,%d %d,%d,%d", a.r, a.g, a.b, b.r, b.g, b.b, c.r, c.g, c.b, d.r, d.g, d.b);
+            std::snprintf(what, sizeof(what), "texture quadrants red green / blue yellow (top row first, B,G,R,A texel order): %d,%d,%d %d,%d,%d / %d,%d,%d %d,%d,%d", a.r, a.g, a.b, b.r, b.g, b.b, c.r, c.g, c.b, d.r, d.g, d.b);
             Check(Near(a, 255, 0, 0) && Near(b, 0, 255, 0) && Near(c, 0, 0, 255) && Near(d, 255, 255, 0), what);
         }
         clear();
@@ -764,7 +764,7 @@ void RunR4(int pw, int ph) {
         // indexed quad with UV and a texture; index count 5 rounds down to one triangle
         RwRaster* tr = RwRasterCreate(2, 2, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
         RwUInt8*  p  = RwRasterLock(tr, 0, rwRASTERLOCKWRITE | rwRASTERLOCKNOFETCH);
-        const unsigned char texel[4][4] = { { 255, 0, 0, 255 }, { 0, 255, 0, 255 }, { 0, 0, 255, 255 }, { 255, 255, 0, 255 } };
+        const unsigned char texel[4][4] = { { 0, 0, 255, 255 }, { 0, 255, 0, 255 }, { 255, 0, 0, 255 }, { 0, 255, 255, 255 } };
         if (p) {
             for (int y = 0; y < 2; y++) for (int x = 0; x < 2; x++) std::memcpy(p + y * RwRasterGetStride(tr) + x * 4, texel[y * 2 + x], 4);
         }

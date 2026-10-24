@@ -231,6 +231,7 @@ RwBool RwEngineOpen(RwEngineOpenParams* initParams) {
         }
         return FALSE;
     }
+    rw::gl3::d3dTexelOrder = 1; // R-5: texture rasters hold d3d9 texel words (B,G,R,A bytes, 565, 4444, ...) like the exe's rasters; the TXD reader and RwRGBAToPixel rely on it
     rw::engine->filefuncs.rwfopen = &notsa::portable::RwFopenResolved; // W-7: RwStreamOpen/texture file names are Windows-style ('\\', any case)
     WindowedEmuAfterOpen();
     PublishDeviceRange();

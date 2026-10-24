@@ -31,8 +31,12 @@
 #ifdef NOTSA_RW_LIBRW
 #include "fakerw.h"
 
+#ifndef NOTSA_PORTABLE
 // librw's D3D9 device internals (D3dRaster, createTexture)
 #include <src/d3d/rwd3dimpl.h>
+#else
+#include "portable/render/texture_gl3.h" // R-5: the platform 9 reader for gl3 rasters
+#endif
 
 #include <algorithm>
 #include <cassert>
@@ -45,6 +49,7 @@ static_assert(sizeof(((RwTexture*)nullptr)->name) == 32 && sizeof(((RwTexture*)n
 // D3D9 native texture (chunk 0x15) reader
 //--------------------------------------------------------------------------------------------------
 namespace rwshim {
+#ifndef NOTSA_PORTABLE
 namespace {
 using rw::d3d::D3dRaster;
 
@@ -85,6 +90,7 @@ bool ReadLevel(rw::Stream* s, RwRaster* raster, int level, uint32_t size, int lw
     return true;
 }
 } // namespace
+#endif
 
 // Stream positioned at the STRUCT chunk header of a TEXTURENATIVE chunk (see rw::Texture::streamReadNative); returns the texture or NULL.
 RwTexture* ReadNativeTexture(rw::Stream* stream) {
@@ -97,6 +103,9 @@ RwTexture* ReadNativeTexture(rw::Stream* stream) {
         stream->seek(-16);
         return rw::Texture::streamReadNative(stream);
     }
+#ifdef NOTSA_PORTABLE
+    return NotsaGl3ReadD3D9Texture(stream);
+#else
     RwTexture* tex = rw::Texture::create(nullptr);
     if (!tex) {
         return nullptr;
@@ -174,6 +183,7 @@ RwTexture* ReadNativeTexture(rw::Stream* stream) {
         }
     }
     return tex;
+#endif
 }
 } // namespace rwshim
 

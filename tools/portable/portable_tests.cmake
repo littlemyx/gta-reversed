@@ -31,3 +31,15 @@ foreach(_name _script IN ZIP_LISTS PORTABLE_HOST_TEST_NAMES PORTABLE_HOST_TEST_S
             ENVIRONMENT "COMPDB=${CMAKE_BINARY_DIR}/compile_commands.json;OUT=${PORTABLE_TESTS_OUT}/${_name}_mut;ASAN_OPTIONS=detect_leaks=0:symbolize=0")
     endif()
 endforeach()
+
+# R-5: every TXD of the Steam copy (or $GTA) -> GL3 rasters. Needs a display session (SDL window + GL context) and the game data; both absent = "TXD RESULT SKIP"
+# (exit 0). Own librw build in build/gl_smoke (shared with run_gl_smoke.sh); ~2 s once built.
+add_test(NAME portable.txd_gl
+    COMMAND bash "${PORTABLE_TESTS_DIR}/run_txd_test.sh"
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+set_tests_properties(portable.txd_gl PROPERTIES
+    LABELS "portable"
+    TIMEOUT 900
+    RUN_SERIAL TRUE
+    ENVIRONMENT "OUT=${PORTABLE_TESTS_OUT}/txd_gl;COMPDB=${CMAKE_BINARY_DIR}/compile_commands.json"
+    FAIL_REGULAR_EXPRESSION "TXD RESULT FAIL;COMPILE FAILED;LINK FAILED")

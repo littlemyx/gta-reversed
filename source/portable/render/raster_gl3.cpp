@@ -3,9 +3,10 @@
 //   NotsaGl3DrawQuad         RwRasterRender / RenderScaled (Im2D quad)
 //   NotsaGl3FlipLockedRows   top-down rows for locked camera rasters
 //   NotsaGl3RasterSetFromImage  RwRasterSetFromImage on gl3 rasters
-// Raster storage under gl3 (vendor/librw gl3raster.cpp): NORMAL / TEXTURE / CAMERATEXTURE are GL texture objects (8888 = RGBA bytes, 888 = RGB 3 bytes,
-// 1555 = GL_UNSIGNED_SHORT_5_5_5_1; no PAL, no 565 / 4444 / LUM8; DXT only through the native texture reader), CAMERA is the window's back buffer and
-// ZBUFFER a depth+stencil texture. Pixel byte order therefore differs from the d3d9 raster (BGRA, 888 = 4 bytes): see MAC-R3b.md (hand-over to R-5).
+// Raster storage under gl3 (vendor/librw gl3raster.cpp): NORMAL / TEXTURE / CAMERATEXTURE are GL texture objects, CAMERA is the window's back buffer and
+// ZBUFFER a depth+stencil texture. R-5: with rw::gl3::d3dTexelOrder (set by RwEngineOpen) the texel layout of NORMAL / TEXTURE rasters is the d3d9 one
+// (8888 = B,G,R,A bytes, 888 = X8R8G8B8 4 bytes, 1555 / 565 / 555 / 4444 words, LUM8), so rwpixel.h, RwRGBAToPixel and the game's lock users work unchanged;
+// no PAL (the TXD reader expands), DXT through the TXD reader. CAMERATEXTURE / CAMERA keep gl3's RGBA / RGB layout (R-11b).
 #ifdef NOTSA_RW_LIBRW
 #include "fakerw.h"
 
@@ -147,8 +148,14 @@ RwRaster* NotsaGl3RasterSetFromImage(RwRaster* raster, RwImage* image) {
     if (!nr->texid || nr->isCompressed || image->width != raster->width || image->height != raster->height) {
         return nullptr;
     }
+    // d3d9 texel words (librw gl3 d3dTexelOrder, set by RwEngineOpen): the same conversion as the D3D build (rwpixel.h)
+    const int fmt = raster->format;
     const int bpp = nr->bpp;
-    if (bpp != 4 && bpp != 3 && bpp != 2) {
+    if (rwshim::FormatBytes(fmt) != bpp || (fmt & (rwRASTERFORMATPAL8 | rwRASTERFORMATPAL4))) {
+        return nullptr;
+    }
+    uint32_t probe;
+    if (!rwshim::EncodeTexel({ 0, 0, 0, 0 }, fmt, &probe)) {
         return nullptr;
     }
     uint8_t* base = raster->lock(0, rw::Raster::LOCKWRITE | rw::Raster::LOCKNOFETCH);
@@ -159,16 +166,9 @@ RwRaster* NotsaGl3RasterSetFromImage(RwRaster* raster, RwImage* image) {
     for (int y = 0; y < image->height; ++y) {
         uint8_t* row = base + static_cast<size_t>(y) * static_cast<size_t>(stride);
         for (int x = 0; x < image->width; ++x) {
-            const rwshim::Px p = rwshim::ImageGet(image, x, y);
-            uint8_t*         d = row + x * bpp;
-            if (bpp == 4) {
-                d[0] = p.r; d[1] = p.g; d[2] = p.b; d[3] = p.a;
-            } else if (bpp == 3) {
-                d[0] = p.r; d[1] = p.g; d[2] = p.b;
-            } else { // GL_UNSIGNED_SHORT_5_5_5_1: R[15:11] G[10:6] B[5:1] A[0]
-                const uint16_t w = static_cast<uint16_t>(((p.r >> 3) << 11) | ((p.g >> 3) << 6) | ((p.b >> 3) << 1) | (p.a >= 0x80 ? 1 : 0));
-                std::memcpy(d, &w, 2);
-            }
+            uint32_t texel = 0;
+            rwshim::EncodeTexel(rwshim::ImageGet(image, x, y), fmt, &texel);
+            std::memcpy(row + x * bpp, &texel, bpp);
         }
     }
     raster->unlock(0);

@@ -13,7 +13,7 @@ void     Tick();                                        // one trace line; calle
 bool     PinTimer();                                    // pin bit 2: CTimer::Initialise installs TimerFn
 uint64_t TimerFn();                                     // pinned CTimer clock
 bool     PsTimer(uint32_t& out);                        // pin bit 4: psTimer / OS_TimeMS value once the frame counter is > 0
-void     OnRand(const char* file, unsigned line);       // GameRand.h g_RandHook (pin bit 32 + NOTSA_LOCKSTEP_RLOG=<frames>): "R fc file:line" per rand() call
+uint32_t* OnRand(const char* file, unsigned line);       // GameRand.h g_RandHook (pin bit 32 + NOTSA_LOCKSTEP_RLOG=<frames>): "R fc file:line" per rand() call
 void     OnSrand(unsigned& seed, const char* file, unsigned line); // GameRand.h g_SrandHook (installed only with NOTSA_LOCKSTEP_OUT): trace line + pin bit 1 (time-derived seeds of app_game.cpp / LoadingScreen.cpp)
 } // namespace notsa::lockstep
 #endif

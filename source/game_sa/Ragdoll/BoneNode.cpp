@@ -67,12 +67,12 @@ void BoneNode_c::EulerToQuat(const CVector& angles, RtQuat& outQuat) {
     // Exact x87 form of the exe (0x6171F0): half angles are `deg * PI * (1/180) * 0.5` (0x858CB8, 0x85F0AC, 0x858B8C), NOT DegreesToRadians(deg) / 2;
     // intermediates stay in extended precision (doubles) except where the exe spills to floats. The normalisation multiplies by `1 / (|q|^2)`
     // (no square root, an oddity of the original).
-    constexpr double kPi      = (double)std::numbers::pi_v<float>;                // 0x858CB8
-    constexpr double kInv180  = (double)std::bit_cast<float>(0x3BB60B61u);        // 0x85F0AC
-    const auto       HalfRad  = [&](float deg) { return (double)deg * kPi * kInv180 * (double)0.5f; };
+    constexpr x87d kPi      = (x87d)std::numbers::pi_v<float>;                // 0x858CB8
+    constexpr x87d kInv180  = (double)std::bit_cast<float>(0x3BB60B61u);        // 0x85F0AC
+    const auto       HalfRad  = [&](float deg) { return (x87d)deg * kPi * kInv180 * (x87d)0.5f; };
 
-    const double ex = HalfRad(angles.x);
-    const double ey = HalfRad(angles.y);
+    const x87d ex = HalfRad(angles.x);
+    const x87d ey = HalfRad(angles.y);
     const float  ez = (float)HalfRad(angles.z); // spilled
     const float  cx = (float)x87::cos(ex);
     const float  cy = (float)x87::cos(ey);
@@ -81,24 +81,24 @@ void BoneNode_c::EulerToQuat(const CVector& angles, RtQuat& outQuat) {
     const double sy = x87::sin(ey);
     const double sz = x87::sin((double)ez);
 
-    const float  cc = (float)((double)cz * (double)cx);
-    const double cs = (double)cx * sz;
-    const double sc = (double)sx * (double)cz;
-    const float  ss = (float)(sz * (double)sx);
+    const float  cc = (float)((x87d)cz * (x87d)cx);
+    const x87d cs = X87R((double)cx * sz);
+    const x87d sc = (x87d)sx * (x87d)cz;
+    const float  ss = (float)(X87R(sz * (double)sx));
 
-    const float  A = (float)((double)cy * sc - cs * sy);
-    const float  B = (float)((double)cc * sy + (double)ss * (double)cy);
-    const double C = cs * (double)cy - sc * sy;
-    const double Dx = (double)ss * sy + (double)cc * (double)cy;
+    const float  A = (float)((x87d)cy * sc - X87R(cs * sy));
+    const float  B = (float)(X87R((double)cc * sy) + (x87d)ss * (x87d)cy);
+    const x87d C = cs * (x87d)cy - X87R(sc * sy);
+    const x87d Dx = X87R((double)ss * sy) + (x87d)cc * (x87d)cy;
     const float  D = (float)Dx;
 
-    const double sumSq = ((Dx * (double)D + C * C) + (double)B * (double)B) + (double)A * (double)A;
-    const float  r     = (float)(1.0 / sumSq);
+    const x87d sumSq = ((Dx * (x87d)D + C * C) + (x87d)B * (x87d)B) + (x87d)A * (x87d)A;
+    const float  r     = (float)((x87d)1.0 / sumSq);
 
-    outQuat.imag.x = (float)((double)A * (double)r);
-    outQuat.imag.y = (float)((double)B * (double)r);
-    outQuat.imag.z = (float)((double)r * C);
-    outQuat.real   = (float)((double)r * (double)D);
+    outQuat.imag.x = (float)((x87d)A * (x87d)r);
+    outQuat.imag.y = (float)((x87d)B * (x87d)r);
+    outQuat.imag.z = (float)((x87d)r * C);
+    outQuat.real   = (float)((x87d)r * (x87d)D);
 }
 
 // atan2(y, x) * 180 * (1/pi) on the x87 stack: `fpatan` and both multiplications round at the CURRENT precision control (PC=24 in game); a CRT atan2 returning a double
@@ -131,28 +131,28 @@ void BoneNode_c::QuatToEuler(const RtQuat& quat, CVector& outAngles) {
     // atan2(y, x) * 180 * (1/pi) on the x87 stack: `fpatan` and both multiplications round at the CURRENT precision control (PC=24 in game); a CRT atan2 returning a double
     // followed by separate multiplications double-rounds differently
 
-    const double x = quat.imag.x;
-    const double y = quat.imag.y;
-    const double z = quat.imag.z;
-    const double w = quat.real;
+    const x87d x = quat.imag.x;
+    const x87d y = quat.imag.y;
+    const x87d z = quat.imag.z;
+    const x87d w = quat.real;
 
-    const float  A = (float)((1.0 - 2.0 * (y * y)) - 2.0 * (z * z));
-    const float  B = (float)(2.0 * (z * w) + 2.0 * (x * y));
-    const float  C = (float)(2.0 * (z * y) + 2.0 * (w * x));
-    const float  D = (float)((1.0 - 2.0 * (x * x)) - 2.0 * (y * y));
-    const double s = -(2.0 * (z * x) - 2.0 * (w * y));
-    const float  V = (float)std::sqrt(1.0 - s * s);
+    const float  A = (float)(((x87d)1.0 - (x87d)2.0 * (y * y)) - (x87d)2.0 * (z * z));
+    const float  B = (float)((x87d)2.0 * (z * w) + (x87d)2.0 * (x * y));
+    const float  C = (float)((x87d)2.0 * (z * y) + (x87d)2.0 * (w * x));
+    const float  D = (float)(((x87d)1.0 - (x87d)2.0 * (x * x)) - (x87d)2.0 * (y * y));
+    const x87d s = -((x87d)2.0 * (z * x) - (x87d)2.0 * (w * y));
+    const float  V = (float)std::sqrt((x87d)1.0 - s * s);
 
     outAngles.y = AtanDeg(s, (double)V);
     if (s == 1.0 || s == -1.0) { // Gimbal lock case: Yaw and Roll collapse into a single degree of freedom
-        const double E = (1.0 - 2.0 * (x * x)) - 2.0 * (z * z);
-        const double G = -(2.0 * (z * y) - 2.0 * (w * x));
+        const x87d E = ((x87d)1.0 - (x87d)2.0 * (x * x)) - (x87d)2.0 * (z * z);
+        const x87d G = -((x87d)2.0 * (z * y) - (x87d)2.0 * (w * x));
         outAngles.x = AtanDeg(G, E);
         outAngles.z = AtanDeg(0.0, 1.0);
     } else { // General case
-        const double r = 1.0 / (double)V;
-        outAngles.x = AtanDeg((double)C * r, (double)D * r);
-        outAngles.z = AtanDeg((double)B * r, (double)A * r);
+        const x87d r = (x87d)1.0 / (x87d)V;
+        outAngles.x = AtanDeg((x87d)C * r, (x87d)D * r);
+        outAngles.z = AtanDeg((x87d)B * r, (x87d)A * r);
     }
 }
 

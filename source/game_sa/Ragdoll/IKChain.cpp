@@ -134,7 +134,7 @@ bool IKChain_c::IsFacingTarget() const {
     RwV3dNormalize(&dir, &dir);
 
     // x87: (ty * dy + tx * dx) + tz * dz in extended precision
-    const auto dot = ((double)targetPos.y * (double)dir.y + (double)targetPos.x * (double)dir.x) + (double)targetPos.z * (double)dir.z;
+    const auto dot = ((x87d)targetPos.y * (x87d)dir.y + (x87d)targetPos.x * (x87d)dir.x) + (x87d)targetPos.z * (x87d)dir.z;
     return dot >= 0.95f && m_Blend > 0.98f;
 }
 
@@ -283,7 +283,7 @@ void IKChain_c::MoveBonesToTarget() {
         RtQuatTransformVectors(&axis, &cross, 1, &quat);
         // 0x617AA3: ((speed * acos(dot)) * m_Speed) * (180/pi float), one rounding to float per multiplication (PC=24). The acos result stays unrounded on the x87 stack (FPATAN ignores the
         // precision control: it is NOT a float; only the copy `fst [esp+0x10]` is), so it must not be cast to float before the first multiplication
-        const float angle = RadiansToDegrees((float)((double)bone->GetSpeed() * x87::acos(dot)) * m_Speed);
+        const float angle = RadiansToDegrees((float)(X87R((double)bone->GetSpeed() * x87::acos(dot))) * m_Speed);
         RtQuatRotate(reinterpret_cast<RtQuat*>(&bone->GetOrientation()), &axis, angle, rwCOMBINEPOSTCONCAT);
 
         bone->Limit(m_Blend); // Originally this was in an `if`, but the variable that was checked was always `true`

@@ -7,6 +7,9 @@
 #include "StdInc.h"
 
 #include "FxManager.h"
+#ifdef NOTSA_PORTABLE
+#include "portable/path_resolve.h"
+#endif
 #include "FxEmitterPrt.h"
 #include "CustomBuildingDNPipeline.h"
 #include "FxTools.h"
@@ -131,7 +134,11 @@ bool FxManager_c::LoadFxProject(const char* path) {
     strcpy(&txdPath[strlen(path) - strlen(".fxp")], "PC.txd");
 
     // NOTSA: sanity check
+#ifdef NOTSA_PORTABLE
+    if (!notsa::portable::ExistsResolved(txdPath)) { // W-7
+#else
     if (!fs::exists(txdPath)) {
+#endif
         NOTSA_LOG_ERR("Fx TXD file '{}' doesn't exists. Game will crash after trying to render a fx!", txdPath);
     }
 

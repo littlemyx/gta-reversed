@@ -29,14 +29,23 @@
 #include <cstring>
 #include <new>
 #include <unordered_map>
+#ifdef NOTSA_PORTABLE
+#include "../../portable/path_resolve.h"
+#endif
 
 #ifdef NOTSA_RW_LIBRW
 
 //--------------------------------------------------------------------------------------------------
 // File interface (RwOsGetFileInterface): the CRT, with the argument types RW used
 //--------------------------------------------------------------------------------------------------
+#ifdef NOTSA_PORTABLE
+// W-7: Windows-style names ('\\', any case) -> the real file (portable/path_resolve.h)
+static RwBool  __cdecl FsExist(const RwChar* path) { FILE* f = notsa::portable::OpenResolved(path, "rb"); if (f) { fclose(f); return TRUE; } return FALSE; }
+static void*   __cdecl FsOpen(const RwChar* path, const RwChar* mode) { return notsa::portable::OpenResolved(path, mode); }
+#else
 static RwBool  __cdecl FsExist(const RwChar* path) { FILE* f = fopen(path, "rb"); if (f) { fclose(f); return TRUE; } return FALSE; }
 static void*   __cdecl FsOpen(const RwChar* path, const RwChar* mode) { return fopen(path, mode); }
+#endif
 static int     __cdecl FsClose(void* fp) { return fclose(static_cast<FILE*>(fp)); }
 static size_t  __cdecl FsRead(void* p, size_t size, size_t n, void* fp) { return fread(p, size, n, static_cast<FILE*>(fp)); }
 static size_t  __cdecl FsWrite(const void* p, size_t size, size_t n, void* fp) { return fwrite(p, size, n, static_cast<FILE*>(fp)); }

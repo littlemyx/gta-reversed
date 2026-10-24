@@ -20,6 +20,7 @@
 //
 // Only needs fakerw + librw + SDL3 + the CRT: tests/portable/gl_smoke.cpp builds it (with engine.cpp / platform_gl3.cpp) without the game's PCH.
 #ifdef NOTSA_RW_LIBRW
+#include "../path_resolve.h"
 #include "standalone/Fixups.h"
 #include "fakerw.h"
 #include <src/gl/rwgl3impl.h>
@@ -230,6 +231,7 @@ RwBool RwEngineOpen(RwEngineOpenParams* initParams) {
         }
         return FALSE;
     }
+    rw::engine->filefuncs.rwfopen = &notsa::portable::RwFopenResolved; // W-7: RwStreamOpen/texture file names are Windows-style ('\\', any case)
     WindowedEmuAfterOpen();
     PublishDeviceRange();
     return TRUE;

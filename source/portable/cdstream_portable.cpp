@@ -7,7 +7,7 @@
 //    threaded path (gStreamingInitialized = 1, the one the shipped game uses after CdStreamInit) is the only one. CdStreamInit does not probe it;
 //  * a read that returns fewer bytes than asked (end of file) is a success, like ReadFile; only an I/O error is READING_FAILURE;
 //  * a failed CdStreamOpen leaves the slot free (the Win32 code leaves INVALID_HANDLE_VALUE in it, i.e. leaks the slot);
-//  * paths: '\\' is turned into '/' (the game builds "MODELS\\GTA3.IMG"); case folding / data root is stream W-7;
+//  * paths: '\\' is turned into '/' (the game builds "MODELS\\GTA3.IMG"); case folding is path_resolve.h (W-7);
 //  * CdStreamShutdown stops the thread (flag + semaphore + join) before freeing what it uses; the Win32 version closes the handles under a live thread.
 #include "StdInc.h"
 
@@ -16,6 +16,7 @@
 
 #include "oswrapper.h"
 #include "AEBankLoader.h"
+#include "path_resolve.h"
 
 NOTSA_GLOBAL(gStreamFileHandles, 0x8E4010, (HANDLE[MAX_CD_STREAM_HANDLES]), {});
 NOTSA_GLOBAL(gCdImageNames, 0x8E4098, (char[MAX_CD_STREAM_HANDLES][MAX_CD_STREAM_IMAGE_NAME_SIZE]), {});
@@ -53,8 +54,7 @@ CdStreamHandle CdStreamOpen(const char* lpFileName) {
         NOTSA_LOG_ERR("CdStreamOpen: no free stream slot for '{}'", lpFileName);
         return 0;
     }
-    std::string path = lpFileName;
-    std::replace(path.begin(), path.end(), '\\', '/');
+    const std::string path = notsa::portable::ResolvePath(lpFileName); // W-7: '\\' -> '/', case-insensitive components
     const auto file = std::fopen(path.c_str(), "rb");
     if (!file) {
         NOTSA_LOG_ERR("CdStreamOpen: cannot open '{}' (errno {})", path, errno);

@@ -10,14 +10,23 @@
 
 // For backward compatibility
 typedef FILE* FILESTREAM;
+#ifdef NOTSA_PORTABLE
+constexpr size_t DIRNAMELENGTH = 1024; // W-7: absolute data-root paths on this platform are longer than the exe's 128
+#else
 constexpr size_t DIRNAMELENGTH = 128;
+#endif
 
 static constexpr auto TopLineEmptyFile{ "THIS FILE IS NOT VALID YET" };
 
 class CFileMgr {
 public:
+#ifdef NOTSA_PORTABLE
+    static inline NOTSA_GLOBAL(ms_dirName, 0xb71a60, (char[DIRNAMELENGTH]), {});
+    static inline NOTSA_GLOBAL(ms_rootDirName, 0xb71ae0, (char[DIRNAMELENGTH]), {});
+#else
     static inline NOTSA_GLOBAL(ms_dirName, 0xb71a60, (char[128]), {});
     static inline NOTSA_GLOBAL(ms_rootDirName, 0xb71ae0, (char[128]), {});
+#endif
 
     static void Initialise();
     static int32 ChangeDir(const char* path);

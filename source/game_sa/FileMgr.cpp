@@ -8,6 +8,9 @@
 #include <ShlObj.h>
 
 #include "FileMgr.h"
+#ifdef NOTSA_PORTABLE
+#include "portable/path_resolve.h"
+#endif
 
 #include "extensions/Configs/Miscellaneous.hpp"
 
@@ -157,7 +160,11 @@ void CFileMgr::Initialise()
     else
         VERIFY(_getcwd(ms_rootDirName, DIRNAMELENGTH));
 
+#ifdef NOTSA_PORTABLE
+    ms_rootDirName[strlen(ms_rootDirName)] = '/'; // W-7
+#else
     ms_rootDirName[strlen(ms_rootDirName)] = '\\';
+#endif
 }
 
 // 0x538730
@@ -181,11 +188,19 @@ int32 CFileMgr::ChangeDir(const char *path)
         strcat_s(ms_dirName, path);
 
         char *lastPos = strchr(ms_dirName, 0) - 1;
+#ifdef NOTSA_PORTABLE
+        if (*lastPos != '\\' && *lastPos != '/') // W-7: the root is '/'-terminated, the game's sub-paths use '\\'
+            lastPos[1] = '/';
+#else
         if (*lastPos != '\\')
             lastPos[1] = '\\';
+#endif
     }
 
     int32 r;
+#ifdef NOTSA_PORTABLE
+    r = notsa::portable::ChdirResolved(ms_dirName); // W-7: '\\' -> '/', case-insensitive components
+#else
     if (WindowsCharset != CP_UTF8)
     {
         std::wstring pathWide = UTF8ToUnicode(ms_dirName);
@@ -193,6 +208,7 @@ int32 CFileMgr::ChangeDir(const char *path)
     }
     else
         r = _chdir(ms_dirName);
+#endif
 
     return r;
 }
@@ -214,11 +230,19 @@ int32 CFileMgr::SetDir(const char *path)
         strcat_s(ms_dirName, destSizeAfterConcat, path);
 
         char *lastPos = strchr(ms_dirName, 0) - 1;
+#ifdef NOTSA_PORTABLE
+        if (*lastPos != '\\' && *lastPos != '/') // W-7: the root is '/'-terminated, the game's sub-paths use '\\'
+            lastPos[1] = '/';
+#else
         if (*lastPos != '\\')
             lastPos[1] = '\\';
+#endif
     }
 
     int32 r;
+#ifdef NOTSA_PORTABLE
+    r = notsa::portable::ChdirResolved(ms_dirName); // W-7: '\\' -> '/', case-insensitive components
+#else
     if (WindowsCharset != CP_UTF8)
     {
         std::wstring pathWide = UTF8ToUnicode(ms_dirName);
@@ -226,6 +250,7 @@ int32 CFileMgr::SetDir(const char *path)
     }
     else
         r = _chdir(ms_dirName);
+#endif
 
     return r;
 }
@@ -243,6 +268,9 @@ int32 CFileMgr::SetDirMyDocuments()
     strcpy_s(ms_dirName, userDir);
 
     int32 r;
+#ifdef NOTSA_PORTABLE
+    r = notsa::portable::ChdirResolved(ms_dirName); // W-7: '\\' -> '/', case-insensitive components
+#else
     if (WindowsCharset != CP_UTF8)
     {
         std::wstring pathWide = UTF8ToUnicode(ms_dirName);
@@ -250,6 +278,7 @@ int32 CFileMgr::SetDirMyDocuments()
     }
     else
         r = _chdir(ms_dirName);
+#endif
 
     return r;
 }
@@ -275,6 +304,9 @@ FILESTREAM CFileMgr::OpenFile(const char *path, const char *mode) {
     ZoneScoped;
 
     FILESTREAM fs{nullptr};
+#ifdef NOTSA_PORTABLE
+    fs = notsa::portable::OpenResolvedText(path, mode); // W-7: '\\' -> '/', case-insensitive components; "r" = MSVC text mode (CRLF -> LF)
+#else
     if (WindowsCharset == CP_UTF8) {
         fopen_s(&fs, path, mode);
     } else {
@@ -284,6 +316,7 @@ FILESTREAM CFileMgr::OpenFile(const char *path, const char *mode) {
         std::wstring modeWide = UTF8ToUnicode(mode);
         _wfopen_s(&fs, pathWide.c_str(), modeWide.c_str());
     }
+#endif
     return fs;
 }
 

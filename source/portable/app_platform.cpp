@@ -2,7 +2,11 @@
 #include "StdInc.h"
 
 #include <SDL3/SDL.h>
+#include <chrono>
 #include <climits>
+#include <cstdlib>
+#include <pthread.h>
+#include <thread>
 #include <cstring>
 #include <filesystem>
 #include <string_view>
@@ -134,12 +138,43 @@ uint32_t GetBestRefreshRate(uint32_t w, uint32_t h) {
 }
 
 // ---- crash handler (replaces SetUnhandledExceptionFilter + WindowsExceptionHandler of app_debug.cpp) ----
-static void CrashHandler(int sig, siginfo_t* info, void*) {
+static void CrashHandler(int sig, siginfo_t* info, void* uctx) {
     static volatile sig_atomic_t s_Handled = 0; // a crash inside the handler must not recurse
     if (s_Handled) {
         _exit(128 + sig);
     }
     s_Handled = 1;
+
+    // MAC-BOOT1: raw first (no logger, no allocation): the logger dump below has itself crashed on a corrupted heap
+    {
+        char line[160];
+        const int len = std::snprintf(line, sizeof(line), "\n[crash] signal %d (%s), fault address %p\n", sig, strsignal(sig), info ? info->si_addr : nullptr);
+        if (len > 0) { (void)!::write(2, line, (size_t)len); }
+        void* raw[64];
+        const int rn = ::backtrace(raw, 64);
+        ::backtrace_symbols_fd(raw, rn, 2);
+#if defined(__APPLE__) && defined(__aarch64__)
+        // the faulting thread's own frames: pc, lr and the frame-pointer chain of the interrupted code (backtrace() above starts in the handler)
+        if (uctx) {
+            const auto& ss = ((ucontext_t*)uctx)->uc_mcontext->__ss;
+            void* fr[40]; int fn = 0;
+            fr[fn++] = (void*)__darwin_arm_thread_state64_get_pc(ss);
+            fr[fn++] = (void*)__darwin_arm_thread_state64_get_lr(ss);
+            auto* fp = (void**)__darwin_arm_thread_state64_get_fp(ss);
+            while (fp && fn < 40 && ((uintptr_t)fp & 7) == 0 && (uintptr_t)fp > 0x1000) {
+                fr[fn++] = fp[1];
+                auto* next = (void**)fp[0];
+                if (next <= fp) break;
+                fp = next;
+            }
+            const char* hdr = "[crash] interrupted-code frames (pc, lr, fp chain):\n";
+            (void)!::write(2, hdr, std::strlen(hdr));
+            ::backtrace_symbols_fd(fr, fn, 2);
+        }
+#else
+        (void)uctx;
+#endif
+    }
 
     spdlog::apply_all([](auto&& logger) { logger->dump_backtrace(); });
     SPDLOG_INFO("*********UNHANDLED SIGNAL**********");
@@ -164,6 +199,16 @@ void InstallCrashHandler() {
     sigemptyset(&sa.sa_mask);
     for (const int sig : { SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT, SIGTRAP }) {
         ::sigaction(sig, &sa, nullptr);
+    }
+    // MAC-BOOT1: debuggers cannot attach to this exe on the dev Mac (lldb/sample hang), so a hang is diagnosed in process:
+    // NOTSA_HANG_DUMP_SECS=<n> makes the main thread take SIGABRT after n seconds, i.e. its call stack goes through the handler above and the process dies.
+    if (const char* secs = std::getenv("NOTSA_HANG_DUMP_SECS"); secs && std::atoi(secs) > 0) {
+        const auto mainThread = ::pthread_self();
+        const int  n          = std::atoi(secs);
+        std::thread([mainThread, n] {
+            std::this_thread::sleep_for(std::chrono::seconds(n));
+            ::pthread_kill(mainThread, SIGABRT);
+        }).detach();
     }
 }
 

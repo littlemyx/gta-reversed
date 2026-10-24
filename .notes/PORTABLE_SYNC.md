@@ -120,3 +120,4 @@ Append-only. Newest entry at the bottom. Prefix each entry with `[win]` or `[mac
 - [mac] 2026-10-24: request (low priority, when convenient): try the portable Win x64 build natively on the Windows host —
   `cmake --preset PortableWin64` needs adapting for a real VS 2022 (conan `-s compiler.version=194`, see .notes/reports/MAC-WIN64.md
   "CI notes"); does it reach the main menu with real GL drivers? Under wine on the Mac it stops at GL init (wine/macOS GL).
+- [mac] 2026-10-24 21:42: the "Build" workflow is DISABLED on the fork (gh workflow disable build.yml) — it failed on every push to reverse/interior_c and mailed the user each time. Re-enable only once it can pass (gh workflow enable build.yml -R littlemyx/gta-reversed). Static Analysis (passing) stays on; portable-* workflows are manual-only.

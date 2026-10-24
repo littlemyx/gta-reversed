@@ -158,3 +158,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-24	MAC-FLOOP2	v4	PC24 sweep tool+mechanism, 213 TUs	-	-	-	done: idle frames identical
 2026-10-24	MAC-P5	v4	LP64 latent-bug audit	-	-	-	done: 10 bugs fixed incl. Fx names
 2026-10-24	MAC-FLOOP2-REV	v4	review PC24 codemod	-	-	-	3 real bugs + 6 misses fixed
+2026-10-24	MAC-C3	v4	return-type + UB sweep + exit abort	-	-	-	done; load race open

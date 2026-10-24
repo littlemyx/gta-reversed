@@ -152,3 +152,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-24	MAC-RR2	v4	RR self-determinism root cause	-	-	-	done: rtanim LP64 pointer overwrite
 2026-10-24	MAC-PLAY1	v4	gameplay smoke + triage	-	-	-	all scenarios PASS, 3 fixes
 2026-10-24	MAC-R9	v4	R-9 + R-8 env/specular GL3	-	-	-	done; found regression R9-1
+2026-10-24	MAC-RR3	v4	Win32 RR trace under wine + first diff	375069	160	73	done: first divergence = F (PC24) in ChooseModel

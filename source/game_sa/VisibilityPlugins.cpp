@@ -229,6 +229,11 @@ bool CVisibilityPlugins::InsertEntityIntoReallyDrawLastList(CEntity* entity, flo
 #define FRAMEPLG_HIERARCHYID(frame) \
     (RWPLUGINOFFSET(tFrameVisibilityPlugin, frame, ms_framePluginOffset)->m_hierarchyId)
 
+#ifdef NOTSA_PORTABLE
+#define FRAMEPLG_MODELINFO(frame) \
+    (RWPLUGINOFFSET(tFrameVisibilityPlugin, frame, ms_framePluginOffset)->m_modelInfo)
+#endif
+
 #define CLUMPPLG_VISIBILITYCB(clump) \
     (RWPLUGINOFFSET(tClumpVisibilityPlugin, clump, ms_clumpPluginOffset)->m_visibilityCallBack)
 
@@ -343,12 +348,18 @@ RwBool CVisibilityPlugins::DefaultVisibilityCB(RpClump* clump) {
 // 0x7321B0
 void* CVisibilityPlugins::FrameConstructor(void* frame, RwInt32 offset, RwInt32 size) {
     FRAMEPLG_HIERARCHYID(frame) = 0;
+#ifdef NOTSA_PORTABLE
+    FRAMEPLG_MODELINFO(frame) = nullptr;
+#endif
     return frame;
 }
 
 // 0x7321D0
 void* CVisibilityPlugins::FrameCopyConstructor(void* destFrame, const void* srcFrame, RwInt32 offset, RwInt32 size) {
     FRAMEPLG_HIERARCHYID(destFrame) = FRAMEPLG_HIERARCHYID(srcFrame);
+#ifdef NOTSA_PORTABLE
+    FRAMEPLG_MODELINFO(destFrame) = FRAMEPLG_MODELINFO(srcFrame);
+#endif
     return destFrame;
 }
 
@@ -361,7 +372,11 @@ void* CVisibilityPlugins::FrameDestructor(void* frame, RwInt32 offset, RwInt32 s
 RwBool CVisibilityPlugins::FrustumSphereCB(RpClump* clump) {
     RwSphere sphere{};
     RwFrame* frame = RpClumpGetFrame(clump);
+#ifdef NOTSA_PORTABLE
+    CClumpModelInfo* modelInfo = FRAMEPLG_MODELINFO(frame);
+#else
     CClumpModelInfo* modelInfo = (CClumpModelInfo*)GetFrameHierarchyId(frame);
+#endif
     sphere.radius = modelInfo->GetColModel()->GetBoundRadius();
     sphere.center = modelInfo->GetColModel()->GetBoundCenter();
     RwMatrix* transformMatrix = RwFrameGetLTM(frame);
@@ -394,7 +409,11 @@ int32 CVisibilityPlugins::GetClumpAlpha(RpClump* clump) {
 CClumpModelInfo* CVisibilityPlugins::GetClumpModelInfo(RpClump* clump) {
     RwFrame* frame = RpClumpGetFrame(clump);
 
+#ifdef NOTSA_PORTABLE
+    return FRAMEPLG_MODELINFO(frame);
+#else
     return (CClumpModelInfo*)GetFrameHierarchyId(frame);
+#endif
 }
 
 // The exe sums the squares as (z*z + y*y) + x*x (0x732C80 / 0x732CC0: fld/fmul in z, y, x order); float rounding makes the order observable.
@@ -1106,7 +1125,14 @@ void CVisibilityPlugins::SetClumpAlpha(RpClump* clump, int32 alpha) {
 void CVisibilityPlugins::SetClumpModelInfo(RpClump* clump, CClumpModelInfo* clumpModelInfo) {
     RwFrame* frame = RpClumpGetFrame(clump);
 
+#ifdef NOTSA_PORTABLE
+    // the exe stores the pointer in the id slot: id := low 32 bits (never 0), pointer := the real one (see tFrameVisibilityPlugin)
+    const auto id32 = (int32)NOTSA_PTR_ID32(clumpModelInfo);
+    SetFrameHierarchyId(frame, id32 ? id32 : 1);
+    FRAMEPLG_MODELINFO(frame) = clumpModelInfo;
+#else
     SetFrameHierarchyId(frame, (int32)clumpModelInfo);
+#endif
     if (clumpModelInfo->GetModelType() != MODEL_INFO_VEHICLE) {
         return;
     }
@@ -1122,6 +1148,9 @@ void CVisibilityPlugins::SetClumpModelInfo(RpClump* clump, CClumpModelInfo* clum
 // 0x732A00
 void CVisibilityPlugins::SetFrameHierarchyId(RwFrame* frame, int32 id) {
     FRAMEPLG_HIERARCHYID(frame) = id;
+#ifdef NOTSA_PORTABLE
+    FRAMEPLG_MODELINFO(frame) = nullptr; // one slot in the exe: writing an id replaces a stored model info (Vehicle.cpp:2552 clears a frame this way)
+#endif
 }
 
 // 0x7328C0

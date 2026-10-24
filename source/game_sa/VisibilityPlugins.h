@@ -66,6 +66,12 @@ VALIDATE_SIZE(tClumpVisibilityPlugin, 0x8);
 
 struct tFrameVisibilityPlugin {
     int32 m_hierarchyId;
+#ifdef NOTSA_PORTABLE
+    // The exe keeps the CClumpModelInfo* of a clump's ROOT frame in the 4 byte `m_hierarchyId` slot (SetClumpModelInfo / GetClumpModelInfo / FrustumSphereCB),
+    // which cannot hold a 64-bit pointer. Portable: the pointer lives here; `m_hierarchyId` then holds the low 32 bits of it (never 0), so the readers that
+    // only test it for 0 / compare it with an id (ClumpModelInfo.cpp:283/297/311, Vehicle.cpp:2394) see what they see in the exe.
+    CClumpModelInfo* m_modelInfo;
+#endif
 };
 
 VALIDATE_SIZE(tFrameVisibilityPlugin, 0x4);

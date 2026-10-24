@@ -138,3 +138,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-24	MAC-P4b	v4	P-4 S1-S6 + rand shim	-	-	-	done; file_records test red (permission)
 2026-10-24	MAC-F4a-REV	v4	review x87 lift	-	-	-	2 bugs fixed
 2026-10-24	MAC-R4	v4	R-4 Im2D/Im3D GL3	-	-	-	done: smoke OK
+2026-10-24	MAC-BOOT1	v4	W-7 paths + boot loop	355266	162	33	done: main menu reached

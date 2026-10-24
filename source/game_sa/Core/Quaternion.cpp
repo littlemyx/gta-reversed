@@ -33,25 +33,25 @@ void CQuaternion::InjectHooks() {
 void CQuaternion::Get(RwMatrix* out) const { // 0x59C080
     // x87 (asm 0x59C080): 2x and 2y stay on the FPU stack, 2z is spilled to a float; of the 9 products only y2r and z2r stay unrounded (extended exponent range, no
     // denormal rounding) and enter right.y / right.z / up.x / at.x as such; every sum is evaluated on the stack and rounded to float by the store only.
-    const double x2 = (double)imag.x + imag.x;
-    const double y2 = (double)imag.y + imag.y;
-    const float  z2 = (float)((double)imag.z + imag.z);
+    const x87d x2 = (x87d)imag.x + imag.x;
+    const x87d y2 = (x87d)imag.y + imag.y;
+    const float  z2 = (float)((x87d)imag.z + imag.z);
 
     const float x2x = (float)(x2 * imag.x);
     const float y2x = (float)(y2 * imag.x);
-    const float z2x = (float)((double)z2 * imag.x);
+    const float z2x = (float)((x87d)z2 * imag.x);
 
     const float y2y = (float)(y2 * imag.y);
-    const float z2y = (float)((double)z2 * imag.y);
-    const float z2z = (float)((double)z2 * imag.z);
+    const float z2y = (float)((x87d)z2 * imag.y);
+    const float z2z = (float)((x87d)z2 * imag.z);
 
     const float  x2r = (float)(x2 * real);
-    const double y2r = y2 * real;
-    const double z2r = (double)z2 * real;
+    const x87d y2r = y2 * real;
+    const x87d z2r = (x87d)z2 * real;
 
-    CVector right{(float)(1.0 - ((double)z2z + y2y)), (float)(z2r + y2x), (float)(z2x - y2r)};
-    CVector up{(float)(y2x - z2r), (float)(1.0 - ((double)z2z + x2x)), (float)((double)x2r + z2y)};
-    CVector at{(float)(y2r + z2x), (float)((double)z2y - x2r), (float)(1.0 - ((double)y2y + x2x))};
+    CVector right{(float)((x87d)1.0 - ((x87d)z2z + y2y)), (float)(z2r + y2x), (float)(z2x - y2r)};
+    CVector up{(float)(y2x - z2r), (float)((x87d)1.0 - ((x87d)z2z + x2x)), (float)((x87d)x2r + z2y)};
+    CVector at{(float)(y2r + z2x), (float)((x87d)z2y - x2r), (float)((x87d)1.0 - ((x87d)y2y + x2x))};
     RwV3dAssign(RwMatrixGetRight(out), &right);
     RwV3dAssign(RwMatrixGetUp(out), &up);
     RwV3dAssign(RwMatrixGetAt(out), &at);
@@ -62,7 +62,7 @@ void CQuaternion::Get(float* x, float* y, float* z) { // 0x59C160
     RwMatrix m; // Original only fills right/up/at here (stack garbage elsewhere)
     Get(&m);
 
-    constexpr double TWO_PI = 2.0f * std::numbers::pi_v<float>; // 0x858CBC
+    constexpr x87d TWO_PI = 2.0f * std::numbers::pi_v<float>; // 0x858CBC
 
     // Stores `angle` as float, adds 2pi if it's negative (compared at full precision, as on the x87 stack)
     const auto StoreWrapped = [](float* out, double angle) {
@@ -72,9 +72,9 @@ void CQuaternion::Get(float* x, float* y, float* z) { // 0x59C160
         }
     };
 
-    const double rx = m.right.x, ry = m.right.y, rz = m.right.z;
-    const double ux = m.up.x, uy = m.up.y, uz = m.up.z;
-    const double ay = m.at.y;
+    const x87d rx = m.right.x, ry = m.right.y, rz = m.right.z;
+    const x87d ux = m.up.x, uy = m.up.y, uz = m.up.z;
+    const x87d ay = m.at.y;
 
     StoreWrapped(z, x87::atan2(ry, uy));
     const double sz = x87::sin((double)*z), cz = x87::cos((double)*z); // Re-read from memory (float)
@@ -87,7 +87,7 @@ void CQuaternion::Get(float* x, float* y, float* z) { // 0x59C160
 
 // Quat to axis & angle
 void CQuaternion::Get(RwV3d* axis, float* angle) { // 0x59C230
-    const double theta = x87::acos((double)w + (double)w);
+    const double theta = x87::acos((x87d)w + (x87d)w);
     *angle = (float)theta;
     const double k = 1.0 / x87::sin(theta);
     axis->x = (float)(k * x);
@@ -98,14 +98,14 @@ void CQuaternion::Get(RwV3d* axis, float* angle) { // 0x59C230
 // Stores result of quat multiplication
 void CQuaternion::Multiply(const CQuaternion& a, const CQuaternion& b) { // 0x59C270
     // NOTE: Original writes `this` progressively and re-reads a/b, so aliasing behaviour is kept
-    x = (float)((double)b.z * a.y - (double)a.z * b.y);
-    y = (float)((double)a.z * b.x - (double)a.x * b.z);
-    z = (float)((double)a.x * b.y - (double)b.x * a.y);
+    x = (float)((x87d)b.z * a.y - (x87d)a.z * b.y);
+    y = (float)((x87d)a.z * b.x - (x87d)a.x * b.z);
+    z = (float)((x87d)a.x * b.y - (x87d)b.x * a.y);
 
-    x = (float)(((double)b.w * a.x + (double)a.w * b.x) + x);
-    y = (float)(((double)a.w * b.y + (double)b.w * a.y) + y);
-    z = (float)(((double)a.z * b.w + (double)a.w * b.z) + z);
-    w = (float)((double)a.w * b.w - (((double)a.x * b.x + (double)a.z * b.z) + (double)a.y * b.y));
+    x = (float)(((x87d)b.w * a.x + (x87d)a.w * b.x) + x);
+    y = (float)(((x87d)a.w * b.y + (x87d)b.w * a.y) + y);
+    z = (float)(((x87d)a.z * b.w + (x87d)a.w * b.z) + z);
+    w = (float)((x87d)a.w * b.w - (((x87d)a.x * b.x + (x87d)a.z * b.z) + (x87d)a.y * b.y));
 }
 
 // Spherical linear interpolation
@@ -189,41 +189,41 @@ void CQuaternion::Slerp(const CQuaternion& from, const CQuaternion& to, float ha
 
 // Quat from matrix
 void CQuaternion::Set(const RwMatrix& m) { // 0x59C3E0
-    const double rx = m.right.x, ry = m.right.y, rz = m.right.z;
-    const double ux = m.up.x, uy = m.up.y, uz = m.up.z;
-    const double ax = m.at.x, ay = m.at.y, az = m.at.z;
+    const x87d rx = m.right.x, ry = m.right.y, rz = m.right.z;
+    const x87d ux = m.up.x, uy = m.up.y, uz = m.up.z;
+    const x87d ax = m.at.x, ay = m.at.y, az = m.at.z;
 
-    if (const double tr = uy + rx + az; tr >= 0.0) {
-        const double s = std::sqrt(tr + 1.0);
-        const double k = 0.5 / s;
-        w = (float)(0.5 * s);
+    if (const x87d tr = uy + rx + az; tr >= 0.0) {
+        const x87d s = std::sqrt(tr + (x87d)1.0);
+        const x87d k = (x87d)0.5 / s;
+        w = (float)((x87d)0.5 * s);
         x = (float)((uz - ay) * k);
         y = (float)((ax - rz) * k);
         z = (float)((ry - ux) * k);
         return;
     }
-    if (const double t = rx - uy - az; t >= 0.0) {
-        const double s = std::sqrt(t + 1.0);
-        const double k = 0.5 / s;
-        x = (float)(0.5 * s);
+    if (const x87d t = rx - uy - az; t >= 0.0) {
+        const x87d s = std::sqrt(t + (x87d)1.0);
+        const x87d k = (x87d)0.5 / s;
+        x = (float)((x87d)0.5 * s);
         y = (float)((ux + ry) * k);
         z = (float)((ax + rz) * k);
         w = (float)((uz - ay) * k);
         return;
     }
-    if (const double t = uy - rx - az; t >= 0.0) {
-        const double s = std::sqrt(t + 1.0);
-        const double k = 0.5 / s;
-        y = (float)(0.5 * s);
+    if (const x87d t = uy - rx - az; t >= 0.0) {
+        const x87d s = std::sqrt(t + (x87d)1.0);
+        const x87d k = (x87d)0.5 / s;
+        y = (float)((x87d)0.5 * s);
         w = (float)((ax - rz) * k);
         x = (float)((ux - ry) * k);
         z = (float)((ay + uz) * k);
         return;
     }
     {
-        const double s = std::sqrt((az - (uy + rx)) + 1.0);
-        const double k = 0.5 / s;
-        z = (float)(0.5 * s);
+        const x87d s = std::sqrt((az - (uy + rx)) + (x87d)1.0);
+        const x87d k = (x87d)0.5 / s;
+        z = (float)((x87d)0.5 * s);
         w = (float)((ry - ux) * k);
         x = (float)((ax + rz) * k);
         y = (float)((ay + uz) * k);
@@ -232,7 +232,7 @@ void CQuaternion::Set(const RwMatrix& m) { // 0x59C3E0
 
 // Quat from euler angles
 void CQuaternion::Set(float ex, float ey, float ez) { // 0x59C530
-    const double a1 = (double)ex * 0.5f, a2 = (double)ey * 0.5f, a3 = (double)ez * 0.5f;
+    const x87d a1 = (x87d)ex * 0.5f, a2 = (x87d)ey * 0.5f, a3 = (x87d)ez * 0.5f;
     const double ca1 = x87::cos(a1), ca2 = x87::cos(a2);
     const float  c3 = (float)x87::cos(a3);
     const float  s1 = (float)x87::sin(a1);
@@ -244,15 +244,15 @@ void CQuaternion::Set(float ex, float ey, float ez) { // 0x59C530
     const float R = (float)(s1 * ca2);
     const double S = ca1 * s2;
 
-    w = (float)((double)Q * s3 + (double)P * c3);
-    x = (float)((double)P * s3 - (double)Q * c3);
+    w = (float)((x87d)Q * s3 + (x87d)P * c3);
+    x = (float)((x87d)P * s3 - (x87d)Q * c3);
     y = (float)((double)s3 * S + (double)R * c3);
     z = (float)(S * c3 - (double)R * s3);
 }
 
 // Quat from axis & angle
 void CQuaternion::Set(RwV3d* axis, float angle) { // 0x59C600
-    const double half = (double)angle * 0.5f;
+    const x87d half = (x87d)angle * 0.5f;
     const double s = x87::sin(half);
     x = (float)(s * axis->x);
     y = (float)(s * axis->y);
@@ -271,7 +271,7 @@ void CQuaternion::Slerp(const CQuaternion& from, const CQuaternion& to, float t)
 
 void CQuaternion::CalcThetaFromQuats(const CQuaternion& a, const CQuaternion& b, float& theta, float& invSinTheta) { // 0x4D00E0
     // Dot is accumulated in extended precision in this order (w, z, y, x), stored as float
-    float dot = (float)(((double)a.w * b.w + (double)a.z * b.z + (double)a.y * b.y) + (double)b.x * a.x);
+    float dot = (float)(((x87d)a.w * b.w + (x87d)a.z * b.z + (x87d)a.y * b.y) + (x87d)b.x * a.x);
     if (dot > 1.0f) { // Original: FCOMP + `test ah, 0x41; jne` => clamp only if dot > 1 (NaN is not clamped)
         dot = 1.0f;
     }

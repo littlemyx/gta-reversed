@@ -31,30 +31,30 @@ namespace {
 
 //! x*x + y*y + z*z (0x406DA0 CVector::SquaredMagnitude, result stays unrounded on the x87 stack)
 double SquaredMagnitudeD(const CVector& v) {
-    return (double)v.x * v.x + (double)v.y * v.y + (double)v.z * v.z;
+    return (x87d)v.x * v.x + (x87d)v.y * v.y + (x87d)v.z * v.z;
 }
 
 //! 0x59C790 `CMatrix * CVector` (3x3 part only). Unrounded accumulation in this exact term order, rounded when stored
 CVector TransformVectorOG(const CMatrix& m, const CVector& v) {
     return {
-        (float)((double)m.GetUp().x * v.z + (double)m.GetForward().x * v.y + (double)m.GetRight().x * v.x),
-        (float)((double)m.GetUp().y * v.z + (double)m.GetRight().y * v.x + (double)m.GetForward().y * v.y),
-        (float)((double)m.GetUp().z * v.z + (double)m.GetRight().z * v.x + (double)m.GetForward().z * v.y),
+        (float)((x87d)m.GetUp().x * v.z + (x87d)m.GetForward().x * v.y + (x87d)m.GetRight().x * v.x),
+        (float)((x87d)m.GetUp().y * v.z + (x87d)m.GetRight().y * v.x + (x87d)m.GetForward().y * v.y),
+        (float)((x87d)m.GetUp().z * v.z + (x87d)m.GetRight().z * v.x + (x87d)m.GetForward().z * v.y),
     };
 }
 
 //! 0x59C890 `CMatrix * CVector` (+ translation)
 CVector TransformPointOG(const CMatrix& m, const CVector& v) {
     return {
-        (float)(((double)m.GetUp().x * v.z + (double)m.GetForward().x * v.y + (double)m.GetRight().x * v.x) + m.GetPosition().x),
-        (float)(((double)m.GetUp().y * v.z + (double)m.GetRight().y * v.x + (double)m.GetForward().y * v.y) + m.GetPosition().y),
-        (float)(((double)m.GetUp().z * v.z + (double)m.GetRight().z * v.x + (double)m.GetForward().z * v.y) + m.GetPosition().z),
+        (float)(((x87d)m.GetUp().x * v.z + (x87d)m.GetForward().x * v.y + (x87d)m.GetRight().x * v.x) + m.GetPosition().x),
+        (float)(((x87d)m.GetUp().y * v.z + (x87d)m.GetRight().y * v.x + (x87d)m.GetForward().y * v.y) + m.GetPosition().y),
+        (float)(((x87d)m.GetUp().z * v.z + (x87d)m.GetRight().z * v.x + (x87d)m.GetForward().z * v.y) + m.GetPosition().z),
     };
 }
 
 //! Inverse of the rotation + translation of `m` applied to `p` (0x417BF0 inlines this): `(p - pos) . axis`, unrounded accumulation (terms: x, z, y)
 CVector InverseTransformPointOG(const CMatrix& m, const CVector& p) {
-    const double dx = (double)p.x - m.GetPosition().x, dy = (double)p.y - m.GetPosition().y, dz = (double)p.z - m.GetPosition().z;
+    const x87d dx = (x87d)p.x - m.GetPosition().x, dy = (x87d)p.y - m.GetPosition().y, dz = (x87d)p.z - m.GetPosition().z;
     const auto Dot = [&](const CVector& axis) { return (float)(dx * axis.x + dz * axis.z + dy * axis.y); };
     return { Dot(m.GetRight()), Dot(m.GetForward()), Dot(m.GetUp()) };
 }
@@ -62,7 +62,7 @@ CVector InverseTransformPointOG(const CMatrix& m, const CVector& p) {
 //! 0x4119D0 `operator/(CVector, float)` => multiplies by a (float rounded) reciprocal, it is NOT a component-wise division
 CVector DivideByReciprocal(const CVector& v, float divisor) {
     // 0x4119D0: `fld 1.0; fdiv divisor; fst [inv]` - the z product uses the UNROUNDED reciprocal still on the FPU stack, x and y reload the rounded float
-    const double invE = 1.0 / (double)divisor;
+    const x87d invE = (x87d)1.0 / (x87d)divisor;
     const float  inv  = (float)invE;
     return { v.x * inv, v.y * inv, (float)(invE * v.z) };
 }
@@ -148,15 +148,15 @@ void CCollision::RemoveTrianglePlanes(CCollisionData* colData) {
 void CalculateColPointInsideBox(CBox const& box, CVector const& point, CColPoint& colPoint) {
     // Original (0x411EC0): `(max + min) * 0.5`: the X sum stays unrounded until the product is spilled, the Y sum + product stay
     // on the x87 stack, the Z sum is spilled to a float (before the product). Then `point - center` is spilled to floats.
-    const float  cx = (float)(((double)box.m_vecMax.x + box.m_vecMin.x) * 0.5);
-    const double cy = ((double)box.m_vecMax.y + box.m_vecMin.y) * 0.5;
-    const double cz = (double)(float)((double)box.m_vecMax.z + box.m_vecMin.z) * 0.5;
-    const CVector pointToCenter{ (float)((double)point.x - cx), (float)((double)point.y - cy), (float)((double)point.z - cz) };
+    const float  cx = (float)(((x87d)box.m_vecMax.x + box.m_vecMin.x) * (x87d)0.5);
+    const x87d cy = ((x87d)box.m_vecMax.y + box.m_vecMin.y) * (x87d)0.5;
+    const x87d cz = (x87d)(float)((x87d)box.m_vecMax.z + box.m_vecMin.z) * (x87d)0.5;
+    const CVector pointToCenter{ (float)((x87d)point.x - cx), (float)((x87d)point.y - cy), (float)((x87d)point.z - cz) };
 
     // Distance of the point to the face on each axis (the face on the side of the point's offset from the center).
     // Original: the X distance stays on the x87 stack (unrounded), Y and Z are spilled to floats.
     const auto DistOnAxis = [&](float toCenter, float p, float mn, float mx) -> double {
-        return !(toCenter > 0.f) ? (double)p - mn : (double)mx - p; // `FCOMP` + `test ah, 0x41` + `jne` => <= 0 or NaN
+        return !(toCenter > 0.f) ? (x87d)p - mn : (x87d)mx - p; // `FCOMP` + `test ah, 0x41` + `jne` => <= 0 or NaN
     };
     const double xDist = DistOnAxis(pointToCenter.x, point.x, box.m_vecMin.x, box.m_vecMax.x);
     const float  yDist = (float)DistOnAxis(pointToCenter.y, point.y, box.m_vecMin.y, box.m_vecMax.y);
@@ -191,8 +191,8 @@ bool CCollision::TestSphereBox(CSphere const& sphere, CBox const& box) {
 
     // Original: the sums stay unrounded on the x87 stack. NaN => the axis passes (`FCOMP` + `test ah, 5` / `0x41`)
     for (auto i = 0u; i < 3u; i++) {
-        if ((double)sphere.m_vecCenter[i] + sphere.m_fRadius < box.m_vecMin[i] ||
-            (double)sphere.m_vecCenter[i] - sphere.m_fRadius > box.m_vecMax[i]
+        if ((x87d)sphere.m_vecCenter[i] + sphere.m_fRadius < box.m_vecMin[i] ||
+            (x87d)sphere.m_vecCenter[i] - sphere.m_fRadius > box.m_vecMax[i]
         ) {
             return false;
         }
@@ -363,7 +363,7 @@ bool CCollision::ProcessSphereBox(CColSphere const& sph, CColBox const& box, CCo
         const auto distSqD = SquaredMagnitudeD(dir); // Unrounded on the x87 stack for the compare below
         const auto distSq = (float)distSqD;          // ... but spilled to a float for everything else
         if (distSqD < minDistSq) { // NaN => false
-            const double distD = std::sqrt((double)distSq); // Original: `fsqrt` of the spilled float, compared before it's spilled itself
+            const x87d distD = std::sqrt((x87d)distSq); // Original: `fsqrt` of the spilled float, compared before it's spilled itself
             if (!(distD <= sph.m_fRadius)) { // Original: `dist > radius || NaN` => false (equal passes!)
                 return false;
             }
@@ -395,31 +395,31 @@ bool __stdcall CCollision::PointInTriangle(CVector const& point, CVector const* 
     const CVector& p0 = triPoints[0];
 
     // v1 = tri[1] - tri[0] (extended)
-    const double v1x = (double)triPoints[1].x - p0.x, v1y = (double)triPoints[1].y - p0.y, v1z = (double)triPoints[1].z - p0.z;
+    const x87d v1x = (x87d)triPoints[1].x - p0.x, v1y = (x87d)triPoints[1].y - p0.y, v1z = (x87d)triPoints[1].z - p0.z;
     // v2 = tri[2] - tri[0] (float spill)
     const float  v2x = triPoints[2].x - p0.x, v2y = triPoints[2].y - p0.y, v2z = triPoints[2].z - p0.z;
 
     const float v1_magSq  = (float)(v1z * v1z + v1x * v1x + v1y * v1y);
-    const float v2_magSq  = (float)((double)v2z * v2z + (double)v2y * v2y + (double)v2x * v2x);
+    const float v2_magSq  = (float)((x87d)v2z * v2z + (x87d)v2y * v2y + (x87d)v2x * v2x);
     const float v1_dot_v2 = (float)(v2z * v1z + v2y * v1y + v2x * v1x);
 
     // p = point - tri[0] (float spill, except for `p.z` which is used unrounded for v1 dot p)
     const float  px = point.x - p0.x, py = point.y - p0.y, pz = point.z - p0.z;
-    const double pzExt = (double)point.z - p0.z;
+    const x87d pzExt = (x87d)point.z - p0.z;
 
-    const double v1_dot_p = pzExt * v1z + (double)px * v1x + (double)py * v1y;
-    const double v2_dot_p = (double)pz * v2z + (double)py * v2y + (double)px * v2x;
+    const x87d v1_dot_p = pzExt * v1z + (x87d)px * v1x + (x87d)py * v1y;
+    const x87d v2_dot_p = (x87d)pz * v2z + (x87d)py * v2y + (x87d)px * v2x;
 
-    const double a = v1_dot_p * v2_magSq - v2_dot_p * v1_dot_v2;
+    const x87d a = v1_dot_p * v2_magSq - v2_dot_p * v1_dot_v2;
     if (a < 0.0) { // NaN passes
         return false;
     }
-    const double b = v2_dot_p * v1_magSq - v1_dot_p * v1_dot_v2;
+    const x87d b = v2_dot_p * v1_magSq - v1_dot_p * v1_dot_v2;
     if (b < 0.0) { // NaN passes
         return false;
     }
-    const double c = (double)v2_magSq * v1_magSq - (double)v1_dot_v2 * v1_dot_v2;
-    return !(c < (double)(float)a + b); // `a` is spilled to a float for the sum
+    const x87d c = (x87d)v2_magSq * v1_magSq - (x87d)v1_dot_v2 * v1_dot_v2;
+    return !(c < (x87d)(float)a + b); // `a` is spilled to a float for the sum
 }
 
 namespace {
@@ -428,7 +428,7 @@ double DistToLineSqrD(CVector const& ln0, CVector const& ln1, CVector const& pt,
     // Make line end (l) and pt (pl_ip) relative to ln0 (by this ln0 becomes the space origin)
     // Original (0x412850): `l` stays unrounded on the x87 stack (extended), `p` is spilled to floats.
     // Term orders are fixed by the asm (see below).
-    const double lx = (double)ln1.x - ln0.x, ly = (double)ln1.y - ln0.y, lz = (double)ln1.z - ln0.z;
+    const x87d lx = (x87d)ln1.x - ln0.x, ly = (x87d)ln1.y - ln0.y, lz = (x87d)ln1.z - ln0.z;
     const float  px = pt.x - ln0.x, py = pt.y - ln0.y, pz = pt.z - ln0.z;
 
     //        * P
@@ -447,30 +447,30 @@ double DistToLineSqrD(CVector const& ln0, CVector const& ln1, CVector const& pt,
 
     // Dot product `p . l`. 0x412850 (DistToLineSqr): terms x, z, y of the SPILLED p (0x41288B); 0x417610 (DistToLine): `fst` keeps the unrounded p.z on the FPU stack and
     // multiplies it first (0x41764B): terms z, x, y. The sum is rounded at the current precision control either way.
-    const double pzE = (double)pt.z - ln0.z;
-    const double plD = unroundedZ ? (pzE * lz + (double)px * lx) + (double)py * ly : ((double)px * lx + (double)pz * lz) + (double)py * ly;
+    const x87d pzE = (x87d)pt.z - ln0.z;
+    const x87d plD = unroundedZ ? (pzE * lz + (x87d)px * lx) + (x87d)py * ly : ((x87d)px * lx + (x87d)pz * lz) + (x87d)py * ly;
     const float  pl  = (float)plD;                                   // ... is spilled to a float, but the 1st compare uses the unrounded value
 
     if (plD <= 0.0) { // Before origin (NaN => no)
-        return (double)pz * pz + (double)py * py + (double)px * px; // Dist to origin
+        return (x87d)pz * pz + (x87d)py * py + (x87d)px * px; // Dist to origin
     }
 
-    const double ll = lx * lx + lz * lz + ly * ly; // Line mag. sq.
+    const x87d ll = lx * lx + lz * lz + ly * ly; // Line mag. sq.
 
     if (pl >= ll) { // After end (original 0x4128F0: `fcomp; test ah, 1; jne middle` - C0 is also set for unordered, so NaN goes to the MIDDLE branch)
-        const double ex = (double)pt.x - ln1.x, ey = (double)pt.y - ln1.y, ez = (double)pt.z - ln1.z;
+        const x87d ex = (x87d)pt.x - ln1.x, ey = (x87d)pt.y - ln1.y, ez = (x87d)pt.z - ln1.z;
         return ez * ez + ey * ey + ex * ex; // Dist to end
     }
 
     // Simple Pythagorean here, we gotta find `a^2`
-    const double cSq = (double)pz * pz + (double)py * py + (double)px * px;
+    const x87d cSq = (x87d)pz * pz + (x87d)py * py + (x87d)px * px;
 
     // Clever trick to divide by |l| without taking it's sqrt
     // We have to do this, because `pl` is multiplied by |l|
     // (Result of the dot product)
-    const double bSq = (double)pl * pl / ll;
+    const x87d bSq = (x87d)pl * pl / ll;
 
-    const double aSq = cSq - bSq;
+    const x87d aSq = cSq - bSq;
     return aSq <= 0.0 ? 0.0 : aSq; // Original: `<= 0` => +0.0 (NaN is returned as is)
 }
 }
@@ -506,18 +506,18 @@ float CCollision::DistToMathematicalLine(CVector const* lineStart, CVector const
     ZoneScoped;
 
     // Original (0x412970): `l` and `p.x` stay unrounded on the x87 stack, `p.y`/`p.z` are spilled to floats
-    const double lx = (double)lineEnd->x - lineStart->x, ly = (double)lineEnd->y - lineStart->y, lz = (double)lineEnd->z - lineStart->z;
-    const double px = (double)point->x - lineStart->x;
+    const x87d lx = (x87d)lineEnd->x - lineStart->x, ly = (x87d)lineEnd->y - lineStart->y, lz = (x87d)lineEnd->z - lineStart->z;
+    const x87d px = (x87d)point->x - lineStart->x;
     const float  py = point->y - lineStart->y, pz = point->z - lineStart->z;
 
     // See `DistToLineSqr` for a nice illustration.
     // Simple Pythagorean here, we gotta find side `a`
 
-    const float  dot   = (float)(px * lx + (double)pz * lz + (double)py * ly); // `p . l`
-    const double pMagSq = (double)pz * pz + (double)py * py + px * px;
-    const double lMagSq = lx * lx + lz * lz + ly * ly; // NOTE: the dot product is scaled by `|l|^2` (NOT `|p|^2`)
+    const float  dot   = (float)(px * lx + (x87d)pz * lz + (x87d)py * ly); // `p . l`
+    const x87d pMagSq = (x87d)pz * pz + (x87d)py * py + px * px;
+    const x87d lMagSq = lx * lx + lz * lz + ly * ly; // NOTE: the dot product is scaled by `|l|^2` (NOT `|p|^2`)
 
-    const float aSq = (float)(pMagSq - (double)dot * dot / lMagSq);
+    const float aSq = (float)(pMagSq - (x87d)dot * dot / lMagSq);
     return aSq <= 0.f ? 0.f : std::sqrt(aSq); // Original: `<= 0` => 0, NaN goes into sqrt
 }
 
@@ -529,9 +529,9 @@ float CCollision::DistToMathematicalLine2D(float lineStartX, float lineStartY, f
     ZoneScoped;
 
     // Original (0x412A30): everything stays unrounded on the x87 stack
-    const double px  = (double)pointX - lineStartX, py = (double)pointY - lineStartY;
-    const double dot = px * lineEndX + py * lineEndY;
-    const double distSq = py * py + px * px - dot * dot;
+    const x87d px  = (x87d)pointX - lineStartX, py = (x87d)pointY - lineStartY;
+    const x87d dot = px * lineEndX + py * lineEndY;
+    const x87d distSq = py * py + px * px - dot * dot;
     return distSq <= 0.0 ? 0.f : (float)std::sqrt(distSq); // NaN goes into sqrt
 }
 
@@ -542,7 +542,7 @@ float CCollision::DistToMathematicalLine2D(float lineStartX, float lineStartY, f
 float CCollision::DistAlongLine2D(float lineX, float lineY, float lineDirX, float lineDirY, float pointX, float pointY) {
     ZoneScoped;
 
-    return (float)(((double)pointX - lineX) * lineDirX + ((double)pointY - lineY) * lineDirY); // Unrounded on the x87 stack
+    return (float)(((x87d)pointX - lineX) * lineDirX + ((x87d)pointY - lineY) * lineDirY); // Unrounded on the x87 stack
 }
 
 
@@ -572,19 +572,19 @@ void CCollision::ClosestPointOnLine(const CVector& point, const CVector& lineSta
     ZoneScoped;
 
     // a = point - lineStart (extended), l = lineEnd - lineStart (extended)
-    const double ax = (double)point.x - lineStart.x, ay = (double)point.y - lineStart.y, az = (double)point.z - lineStart.z;
-    const double lx = (double)lineEnd.x - lineStart.x, ly = (double)lineEnd.y - lineStart.y, lz = (double)lineEnd.z - lineStart.z;
+    const x87d ax = (x87d)point.x - lineStart.x, ay = (x87d)point.y - lineStart.y, az = (x87d)point.z - lineStart.z;
+    const x87d lx = (x87d)lineEnd.x - lineStart.x, ly = (x87d)lineEnd.y - lineStart.y, lz = (x87d)lineEnd.z - lineStart.z;
     const float  lzF = (float)lz;
 
     const float len = (float)std::sqrt(lz * lzF + ly * ly + lx * lx);
-    const float inv = (float)(1.0 / len);
+    const float inv = (float)((x87d)1.0 / len);
 
     // Direction (normalized): `z` is spilled to a float, but used unrounded for the dot product
     const float  dirX = (float)(lx * inv), dirY = (float)(ly * inv);
     const float  dirZ = lzF * inv;
-    const double dirZE = (double)lzF * inv;
+    const x87d dirZE = (x87d)lzF * inv;
 
-    const float t = (float)(dirZE * az + (double)dirY * ay + (double)dirX * ax);
+    const float t = (float)(dirZE * az + (x87d)dirY * ay + (x87d)dirX * ax);
 
     if (t < 0.f) {
         closest = lineStart;
@@ -592,9 +592,9 @@ void CCollision::ClosestPointOnLine(const CVector& point, const CVector& lineSta
         closest = lineEnd;
     } else {
         closest = CVector{
-            (float)((double)dirX * t + lineStart.x),
-            (float)((double)dirY * t + lineStart.y),
-            (float)((double)(float)(dirZ * t) + lineStart.z)
+            (float)((x87d)dirX * t + lineStart.x),
+            (float)((x87d)dirY * t + lineStart.y),
+            (float)((x87d)(float)(dirZ * t) + lineStart.z)
         };
     }
 }
@@ -606,11 +606,11 @@ void CCollision::Closest3(CVector* pts, CVector* pt) {
     ZoneScoped;
 
     // Original: d0 is kept unrounded on the x87 stack (term order z, x, y), d1/d2 are spilled to floats (z, y, x)
-    const double d0x = (double)pt->x - pts[0].x, d0y = (double)pt->y - pts[0].y, d0z = (double)pt->z - pts[0].z;
-    const double d0  = d0z * d0z + d0x * d0x + d0y * d0y;
+    const x87d d0x = (x87d)pt->x - pts[0].x, d0y = (x87d)pt->y - pts[0].y, d0z = (x87d)pt->z - pts[0].z;
+    const x87d d0  = d0z * d0z + d0x * d0x + d0y * d0y;
 
     const auto DistSq = [&](const CVector& p) {
-        const double dx = (double)pt->x - p.x, dy = (double)pt->y - p.y, dz = (double)pt->z - p.z;
+        const x87d dx = (x87d)pt->x - p.x, dy = (x87d)pt->y - p.y, dz = (x87d)pt->z - p.z;
         return (float)(dz * dz + dy * dy + dx * dx);
     };
     const float d1 = DistSq(pts[1]);
@@ -738,11 +738,11 @@ double ClosestSquaredDistanceBetweenFiniteLinesOG(
     const CVector v{ s2p1.x - s2p0.x, s2p1.y - s2p0.y, s2p1.z - s2p0.z };
     const CVector w{ s1p0.x - s2p0.x, s1p0.y - s2p0.y, s1p0.z - s2p0.z };
 
-    const float b = (float)(((double)v.z * u.z + (double)v.y * u.y) + (double)v.x * u.x);
-    const float c = (float)(((double)v.x * v.x + (double)v.z * v.z) + (double)v.y * v.y);
-    const float d = (float)(((double)w.z * u.z + (double)w.y * u.y) + (double)w.x * u.x);
-    const float e = (float)(((double)w.x * v.x + (double)w.z * v.z) + (double)w.y * v.y);
-    const float D = (float)((double)c * a - (double)b * b);
+    const float b = (float)(((x87d)v.z * u.z + (x87d)v.y * u.y) + (x87d)v.x * u.x);
+    const float c = (float)(((x87d)v.x * v.x + (x87d)v.z * v.z) + (x87d)v.y * v.y);
+    const float d = (float)(((x87d)w.z * u.z + (x87d)w.y * u.y) + (x87d)w.x * u.x);
+    const float e = (float)(((x87d)w.x * v.x + (x87d)w.z * v.z) + (x87d)w.y * v.y);
+    const float D = (float)((x87d)c * a - (x87d)b * b);
 
     float  sD = D, tD = D, tN;
     double sN; // Stays in the x87 stack (not rounded)
@@ -752,15 +752,15 @@ double ClosestSquaredDistanceBetweenFiniteLinesOG(
         tN = e;
         tD = c;
     } else {
-        sN = (double)e * b - (double)d * c;
-        tN = (float)((double)e * a - (double)d * b);
+        sN = (x87d)e * b - (x87d)d * c;
+        tN = (float)((x87d)e * a - (x87d)d * b);
         if (sN < 0.0) {
             sN = 0.0;
             tN = e;
             tD = c;
         } else if (sN > D) {
             sN = D;
-            tN = (float)((double)e + b);
+            tN = (float)((x87d)e + b);
             tD = c;
         }
     }
@@ -781,23 +781,23 @@ double ClosestSquaredDistanceBetweenFiniteLinesOG(
         Recompute(-(double)d);
     } else if (tN > tD) {
         tN = tD;
-        Recompute((double)b - d);
+        Recompute((x87d)b - d);
     }
 
     const double sc = std::abs(sN) < EPSILON ? 0.0 : sN / sD;
-    const double tc = std::abs((double)tN) < EPSILON ? 0.0 : (double)tN / tD;
+    const x87d tc = std::abs((x87d)tN) < EPSILON ? (x87d)0.0 : (x87d)tN / tD;
 
-    const float  tvx = (float)((double)v.x * tc);
-    const float  tvy = (float)((double)v.y * tc);
-    const double tvz = tc * v.z;
+    const float  tvx = (float)((x87d)v.x * tc);
+    const float  tvy = (float)((x87d)v.y * tc);
+    const x87d tvz = tc * v.z;
     const float  suz = (float)(sc * u.z);
     const float  px  = (float)(sc * u.x + w.x);
     const double py  = sc * u.y + w.y;
-    const float  pz  = (float)((double)suz + w.z);
-    const float  dx  = (float)((double)px - tvx);
+    const float  pz  = (float)((x87d)suz + w.z);
+    const float  dx  = (float)((x87d)px - tvx);
     const float  dy  = (float)(py - tvy);
-    const double dz  = (double)pz - tvz;
-    return (dz * dz + (double)dy * dy) + (double)dx * dx;
+    const x87d dz  = (x87d)pz - tvz;
+    return (dz * dz + (x87d)dy * dy) + (x87d)dx * dx;
 }
 
 float ClosestSquaredDistanceBetweenFiniteLines(
@@ -991,13 +991,13 @@ bool CCollision::TestLineBox_DW(CColLine const& line, CBox const& box) {
     if (code & 0x3) {
         const float invDx = 1.f / d.x;
         if (code & 0x1) { // min.x plane
-            const double t = -((double)(s.x - box.m_vecMin.x) * invDx);
+            const x87d t = -((x87d)(s.x - box.m_vecMin.x) * invDx);
             if (Inside(Coord(1, t), box.m_vecMin.y, box.m_vecMax.y) && Inside(Coord(2, t), box.m_vecMin.z, box.m_vecMax.z)) {
                 return true;
             }
         }
         if (code & 0x2) { // max.x plane
-            const double t = (double)(box.m_vecMax.x - s.x) * invDx;
+            const x87d t = (x87d)(box.m_vecMax.x - s.x) * invDx;
             if (Inside(Coord(1, t), box.m_vecMin.y, box.m_vecMax.y) && Inside(Coord(2, t), box.m_vecMin.z, box.m_vecMax.z)) {
                 return true;
             }
@@ -1008,13 +1008,13 @@ bool CCollision::TestLineBox_DW(CColLine const& line, CBox const& box) {
     if (code & 0xC) {
         const float invDy = 1.f / d.y;
         if (code & 0x4) { // min.y plane
-            const double t = -((double)(s.y - box.m_vecMin.y) * invDy);
+            const x87d t = -((x87d)(s.y - box.m_vecMin.y) * invDy);
             if (Inside(Coord(0, t), box.m_vecMin.x, box.m_vecMax.x) && Inside(Coord(2, t), box.m_vecMin.z, box.m_vecMax.z)) {
                 return true;
             }
         }
         if (code & 0x8) { // max.y plane
-            const double t = (double)(box.m_vecMax.y - s.y) * invDy;
+            const x87d t = (x87d)(box.m_vecMax.y - s.y) * invDy;
             if (Inside(Coord(0, t), box.m_vecMin.x, box.m_vecMax.x) && Inside(Coord(2, t), box.m_vecMin.z, box.m_vecMax.z)) {
                 return true;
             }
@@ -1025,13 +1025,13 @@ bool CCollision::TestLineBox_DW(CColLine const& line, CBox const& box) {
     if (code & 0x30) {
         const float invDz = 1.f / d.z;
         if (code & 0x10) { // min.z plane
-            const double t = -((double)(s.z - box.m_vecMin.z) * invDz);
+            const x87d t = -((x87d)(s.z - box.m_vecMin.z) * invDz);
             if (Inside(Coord(0, t), box.m_vecMin.x, box.m_vecMax.x) && Inside(Coord(1, t), box.m_vecMin.y, box.m_vecMax.y)) {
                 return true;
             }
         }
         if (code & 0x20) { // max.z plane
-            const double t = (double)(box.m_vecMax.z - s.z) * invDz;
+            const x87d t = (x87d)(box.m_vecMax.z - s.z) * invDz;
             if (Inside(Coord(0, t), box.m_vecMin.x, box.m_vecMax.x) && Inside(Coord(1, t), box.m_vecMin.y, box.m_vecMax.y)) {
                 return true;
             }
@@ -1126,14 +1126,14 @@ bool CCollision::ProcessLineBox(CColLine const& line, CColBox const& box, CColPo
     const auto TryPlane = [&](int32 axis, bool isMax) {
         const int32 o1 = (axis + 1) % 3, o2 = (axis + 2) % 3; // The other 2 axies (in ascending order: (y,z), (x,z), (x,y))
 
-        const double a = isMax ? (double)s[axis] - box.m_vecMax[axis] : (double)box.m_vecMin[axis] - s[axis];
-        const double b = isMax ? (double)e[axis] - box.m_vecMax[axis] : (double)box.m_vecMin[axis] - e[axis];
+        const x87d a = isMax ? (x87d)s[axis] - box.m_vecMax[axis] : (x87d)box.m_vecMin[axis] - s[axis];
+        const x87d b = isMax ? (x87d)e[axis] - box.m_vecMax[axis] : (x87d)box.m_vecMin[axis] - e[axis];
         if (!(b * a < 0.0)) { // Points are not on opposite sides of the plane
             return;
         }
         const float t = (float)(a / (a - b));
 
-        const auto Coord = [&](int32 o) { return (float)(((double)e[o] - s[o]) * t + s[o]); };
+        const auto Coord = [&](int32 o) { return (float)(((x87d)e[o] - s[o]) * t + s[o]); };
         const float c1 = Coord(o1), c2 = Coord(o2);
 
         if (   c1 > box.m_vecMin[o1] && c1 < box.m_vecMax[o1]
@@ -1184,14 +1184,14 @@ bool CCollision::Test2DLineAgainst2DLine(float line1StartX, float line1StartY, f
     ZoneScoped;
 
     // Original (0x4138D0): evaluated entirely in extended precision. NaN => the `> 0` tests fail, so NaN counts as "intersecting"
-    const double ax = (double)line2StartX - line1StartX, ay = (double)line2StartY - line1StartY;
-    const double p1 = ((ax + line2EndX) * line1EndY - (ay + line2EndY) * line1EndX) * (ax * line1EndY - ay * line1EndX);
+    const x87d ax = (x87d)line2StartX - line1StartX, ay = (x87d)line2StartY - line1StartY;
+    const x87d p1 = ((ax + line2EndX) * line1EndY - (ay + line2EndY) * line1EndX) * (ax * line1EndY - ay * line1EndX);
     if (p1 > 0.0) {
         return false;
     }
 
-    const double bx = (double)line1StartX - line2StartX, by = (double)line1StartY - line2StartY;
-    const double p2 = ((bx + line1EndX) * line2EndY - (by + line1EndY) * line2EndX) * (bx * line2EndY - by * line2EndX);
+    const x87d bx = (x87d)line1StartX - line2StartX, by = (x87d)line1StartY - line2StartY;
+    const x87d p2 = ((bx + line1EndX) * line2EndY - (by + line1EndY) * line2EndX) * (bx * line2EndY - by * line2EndX);
     return !(p2 > 0.0);
 }
 
@@ -1224,12 +1224,12 @@ bool CCollision::ProcessDiscCollision(
     const auto cpNormal = TransformVectorOG(matBA, tempTriCol.m_vecNormal);
 
     // Dot of the (transformed) normal with the disk's thickness vector (terms: y, z, x)
-    const double normalDot = (double)cpNormal.y * disk.m_vThickness.y + (double)cpNormal.z * disk.m_vThickness.z + (double)cpNormal.x * disk.m_vThickness.x;
+    const x87d normalDot = (x87d)cpNormal.y * disk.m_vThickness.y + (x87d)cpNormal.z * disk.m_vThickness.z + (x87d)cpNormal.x * disk.m_vThickness.x;
 
     // Offset of the point from the disk center, `x`/`y` are unrounded for the thickness test, but rounded when used for the radius test
-    const double dxE = (double)cp.x - disk.m_vecCenter.x;
-    const double dyE = (double)cp.y - disk.m_vecCenter.y;
-    const double dzE = (double)cp.z - disk.m_vecCenter.z;
+    const x87d dxE = (x87d)cp.x - disk.m_vecCenter.x;
+    const x87d dyE = (x87d)cp.y - disk.m_vecCenter.y;
+    const x87d dzE = (x87d)cp.z - disk.m_vecCenter.z;
 
     // Note: The 2nd test is only evaluated if the 1st one passed
     if (!(std::abs(normalDot) < 0.77f) ||
@@ -1242,11 +1242,11 @@ bool CCollision::ProcessDiscCollision(
             return true;
         }
     } else {
-        const double dx = (float)dxE;
-        const double dy = (float)dyE;
-        const double rr = (double)disk.m_fRadius * disk.m_fRadius;
+        const x87d dx = (float)dxE;
+        const x87d dy = (float)dyE;
+        const x87d rr = (x87d)disk.m_fRadius * disk.m_fRadius;
         // NOTE: No clamping of the sqrt argument => NaN if the point is outside of the disk radius (=> `>=` below is false)
-        const double lineRatioNow = std::sqrt((rr - dy * dy) - dx * dx) + cp.z;
+        const x87d lineRatioNow = std::sqrt((rr - dy * dy) - dx * dx) + cp.z;
         if (lineRatioNow >= lineRatio) {
             lineCollision = true;
             lineRatio     = (float)lineRatioNow;
@@ -1643,10 +1643,10 @@ bool CCollision::SphereCastVsSphere(const CColSphere& spA, const CColSphere& spB
 
     // Original (0x417F20): the 1st test is an inlined TestSphereSphere (term order x, y, z)
     {
-        const double dx = (double)spA.m_vecCenter.x - spS.m_vecCenter.x;
-        const double dy = (double)spA.m_vecCenter.y - spS.m_vecCenter.y;
-        const double dz = (double)spA.m_vecCenter.z - spS.m_vecCenter.z;
-        const double sumR = (double)spS.m_fRadius + spA.m_fRadius;
+        const x87d dx = (x87d)spA.m_vecCenter.x - spS.m_vecCenter.x;
+        const x87d dy = (x87d)spA.m_vecCenter.y - spS.m_vecCenter.y;
+        const x87d dz = (x87d)spA.m_vecCenter.z - spS.m_vecCenter.z;
+        const x87d sumR = (x87d)spS.m_fRadius + spA.m_fRadius;
         if (sumR * sumR > dx * dx + dz * dz + dy * dy) { // Term order: x, z, y
             return true;
         }
@@ -1861,12 +1861,12 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
     const auto TestSphereBoxSpilledMinX = [](const CSphere& sph, const CBox& box) {
         const auto& c = sph.m_vecCenter;
         const auto  r = sph.m_fRadius;
-        return !((double)(float)((double)c.x + r) < box.m_vecMin.x
-              || (double)c.x - r > box.m_vecMax.x
-              || (double)c.y + r < box.m_vecMin.y
-              || (double)c.y - r > box.m_vecMax.y
-              || (double)c.z + r < box.m_vecMin.z
-              || (double)c.z - r > box.m_vecMax.z);
+        return !((double)(float)((x87d)c.x + r) < box.m_vecMin.x
+              || (x87d)c.x - r > box.m_vecMax.x
+              || (x87d)c.y + r < box.m_vecMin.y
+              || (x87d)c.y - r > box.m_vecMax.y
+              || (x87d)c.z + r < box.m_vecMin.z
+              || (x87d)c.z - r > box.m_vecMax.z);
     };
     for (auto&& [triIdx, bb] : rngv::enumerate(cdB.GetBoxes())) {
         if (TestSphereBoxSpilledMinX(colABoundSphereSpaceB, bb)) {
@@ -2025,9 +2025,9 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
         // Disk contact height: `sqrt(r^2 - dy^2 - dx^2) + z`, all of it unrounded on the x87 stack and NOT clamped (a negative radicand gives NaN
         // and then fails the comparisons below), the differences are not rounded to float either (0x4191C9, 0x419364)
         const auto DiskHitK = [](const CVector& cpInA, const CColDisk& disk) -> double {
-            const double dy = (double)cpInA.y - disk.m_vecCenter.y;
-            const double dx = (double)cpInA.x - disk.m_vecCenter.x;
-            const double r  = disk.m_fRadius;
+            const x87d dy = (x87d)cpInA.y - disk.m_vecCenter.y;
+            const x87d dx = (x87d)cpInA.x - disk.m_vecCenter.x;
+            const x87d r  = disk.m_fRadius;
             return std::sqrt(r * r - dy * dy - dx * dx) + cpInA.z;
         };
 
@@ -2112,7 +2112,7 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
                                 const auto hitK = DiskHitK(cpInA, disk);
 
                                 if (maxTouchDistances[diskIdx] <= hitK) { // Original: `!(hitK < max)`, NaN rejects
-                                    if (hitK - (double)maxTouchDistances[diskIdx] > (double)0.35f * disk.m_fRadius) { // 0x858C0C = 0.35f
+                                    if (hitK - (double)maxTouchDistances[diskIdx] > (x87d)0.35f * disk.m_fRadius) { // 0x858C0C = 0.35f
                                         emitCP      = true;
                                         bestBoxDist = minTouchDist;
                                     }
@@ -2372,9 +2372,9 @@ namespace {
 //! 0x59C730 `CrossProduct(out, a, b)` - the products stay in the FPU (extended precision), rounded to float only when stored
 CVector CrossProductOG(const CVector& a, const CVector& b) {
     return {
-        (float)((double)b.z * a.y - (double)a.z * b.y),
-        (float)((double)a.z * b.x - (double)b.z * a.x),
-        (float)((double)a.x * b.y - (double)b.x * a.y),
+        (float)((x87d)b.z * a.y - (x87d)a.z * b.y),
+        (float)((x87d)a.z * b.x - (x87d)b.z * a.x),
+        (float)((x87d)a.x * b.y - (x87d)b.x * a.y),
     };
 }
 }
@@ -2399,7 +2399,7 @@ bool CCollision::IsStoredPolyStillValidVerticalLine(const CVector& lineOrigin, f
     const CVector e2{ v2.x - v0.x, v2.y - v0.y, v2.z - v0.z };
     CVector n = CrossProductOG(e2, e1);
     n.Normalise();
-    const float d = (float)(((double)n.z * v0.z + (double)n.y * v0.y) + (double)n.x * v0.x); // 0x414E22
+    const float d = (float)(((x87d)n.z * v0.z + (x87d)n.y * v0.y) + (x87d)n.x * v0.x); // 0x414E22
 
     // 0x414E3E - Find the dominant axis (and the sign of the normal along it)
     const float ax = n.x < 0.f ? -n.x : n.x;
@@ -2415,27 +2415,27 @@ bool CCollision::IsStoredPolyStillValidVerticalLine(const CVector& lineOrigin, f
     }
 
     // 0x414F36 - Which side of the plane are the two end points of the line on?
-    const float  Py_ny = (float)((double)P.y * n.y);
-    const float  Px_nx = (float)((double)P.x * n.x);
-    const double Pz_nz = (double)P.z * n.z;
-    const double s = (((double)P.y * n.y + (double)P.x * n.x) + (double)lnMag * n.z) - d; // line end point (P.x, P.y, lnMag)
-    const double r = (((double)Px_nx + Py_ny) + Pz_nz) - d;                               // line origin
+    const float  Py_ny = (float)((x87d)P.y * n.y);
+    const float  Px_nx = (float)((x87d)P.x * n.x);
+    const x87d Pz_nz = (x87d)P.z * n.z;
+    const x87d s = (((x87d)P.y * n.y + (x87d)P.x * n.x) + (x87d)lnMag * n.z) - d; // line end point (P.x, P.y, lnMag)
+    const x87d r = (((x87d)Px_nx + Py_ny) + Pz_nz) - d;                               // line origin
     if (!(s * r <= 0.0)) { // jp after `test ah, 0x41` => taken if (s * r > 0) or NaN
         collPoly->valid = false;
         return false;
     }
 
     // 0x414F97 - Intersection of the line with the plane
-    const double dx  = (double)P.x - P.x;
-    const double dy  = (double)P.y - P.y;
-    const float  dzf = (float)((double)lnMag - P.z);
-    const double num = (((double)d - Px_nx) - Py_ny) - Pz_nz;
-    const float  t   = (float)(num / (((double)dzf * n.z + dy * n.y) + dx * n.x));
+    const x87d dx  = (x87d)P.x - P.x;
+    const x87d dy  = (x87d)P.y - P.y;
+    const float  dzf = (float)((x87d)lnMag - P.z);
+    const x87d num = (((x87d)d - Px_nx) - Py_ny) - Pz_nz;
+    const float  t   = (float)(num / (((x87d)dzf * n.z + dy * n.y) + dx * n.x));
     const float  hxs = (float)(dx * t);
     CVector hit{
         (float)(hxs + P.x),
         (float)(dy * t + P.y),
-        (float)((double)dzf * t + P.z)
+        (float)((x87d)dzf * t + P.z)
     };
 
     // 0x415021 - Project everything onto the plane of the dominant axis (odd cases = flipped winding => v1 and v2 swapped)
@@ -2451,19 +2451,19 @@ bool CCollision::IsStoredPolyStillValidVerticalLine(const CVector& lineOrigin, f
     }
 
     // 0x415158 - Point in triangle test (in 2D)
-    const double dHa = (double)Ha - v0a;
-    const double dHb = (double)Hb - v0b;
-    const double c1  = ((double)v2a - v0a) * dHb - ((double)v2b - v0b) * dHa;
+    const x87d dHa = (x87d)Ha - v0a;
+    const x87d dHb = (x87d)Hb - v0b;
+    const x87d c1  = ((x87d)v2a - v0a) * dHb - ((x87d)v2b - v0b) * dHa;
     if (c1 < 0.0) { // jp (test ah, 5) => continue if !(c1 < 0)
         collPoly->valid = false;
         return false;
     }
-    const double c2 = ((double)v1a - v0a) * dHb - ((double)v1b - v0b) * dHa;
+    const x87d c2 = ((x87d)v1a - v0a) * dHb - ((x87d)v1b - v0b) * dHa;
     if (c2 > 0.0) { // je (test ah, 0x41) => fail if c2 > 0
         collPoly->valid = false;
         return false;
     }
-    const double c3 = ((double)Hb - v2b) * ((double)v1a - v2a) - ((double)Ha - v2a) * ((double)v1b - v2b);
+    const x87d c3 = ((x87d)Hb - v2b) * ((x87d)v1a - v2a) - ((x87d)Ha - v2a) * ((x87d)v1b - v2b);
     if (c3 < 0.0) { // jnp (test ah, 5) => fail if c3 < 0
         collPoly->valid = false;
         return false;
@@ -2484,8 +2484,8 @@ CColBox CCollision::GetBoundingBoxFromTwoSpheres(const CColSphere& spA, const CC
         const auto a = spA.m_vecCenter[i], b = spB.m_vecCenter[i];
         const auto lo = a < b ? a : b;
         const auto hi = a < b ? b : a;
-        min[i] = (float)((double)lo - spA.m_fRadius);
-        max[i] = (float)((double)spA.m_fRadius + hi); // NOTE: They assume both spheres have the same spRadius, but that might not be the case. Really should be using max(spA.spRadius, spB.spRadius) instead!
+        min[i] = (float)((x87d)lo - spA.m_fRadius);
+        max[i] = (float)((x87d)spA.m_fRadius + hi); // NOTE: They assume both spheres have the same spRadius, but that might not be the case. Really should be using max(spA.spRadius, spB.spRadius) instead!
     }
     return CColBox{ CBox{min, max} };
 }
@@ -2518,14 +2518,14 @@ float GetNearestDistanceOfPedSphereToCameraNearClip(CPed* ped) {
     // Calculate some other shite
     auto&       cam     = TheCamera.GetActiveCamera();
     // 0x50D5E1: the camera's `front . source` is accumulated unrounded (terms z, y, x) and spilled to a float
-    const float offset  = (float)((double)cam.m_vecFront.z * cam.m_vecSource.z + (double)cam.m_vecFront.y * cam.m_vecSource.y + (double)cam.m_vecFront.x * cam.m_vecSource.x);
+    const float offset  = (float)((x87d)cam.m_vecFront.z * cam.m_vecSource.z + (x87d)cam.m_vecFront.y * cam.m_vecSource.y + (x87d)cam.m_vecFront.x * cam.m_vecSource.x);
     const auto  nearClp = RwCameraGetNearClipPlane(Scene.m_pRwCamera);
 
     // Now find the closest sphere's distance sq
     float ret = 1000000.f; // 0x50D5AA: 0x497423F0, NOT FLT_MAX
     for (auto& sp : hitCM->GetData()->GetSpheres()) {
         // 0x50D620: `center . front` (terms z, x, y) unrounded, then `- offset - radius - nearClip`, rounded to a float when spilled
-        const double dot = (double)sp.m_vecCenter.z * cam.m_vecFront.z + (double)sp.m_vecCenter.x * cam.m_vecFront.x + (double)cam.m_vecFront.y * sp.m_vecCenter.y;
+        const x87d dot = (x87d)sp.m_vecCenter.z * cam.m_vecFront.z + (x87d)sp.m_vecCenter.x * cam.m_vecFront.x + (x87d)cam.m_vecFront.y * sp.m_vecCenter.y;
         const float  v   = (float)(((dot - offset) - sp.m_fRadius) - nearClp);
         if (v < ret) { // NaN keeps the old value
             ret = v;
@@ -2565,8 +2565,8 @@ bool CCollision::CheckCameraCollisionPeds(
 
         // 0x4153D6 - extended precision, strict `<` (=> skips if NaN)
         const auto centre = ped->GetBoundCentre();
-        const double dx   = (double)pos.x - centre.x;
-        const double dy   = (double)pos.y - centre.y;
+        const x87d dx   = (x87d)pos.x - centre.x;
+        const x87d dy   = (x87d)pos.y - centre.y;
         if (!(dy * dy + dx * dx < (double)radiusSq)) {
             continue;
         }
@@ -2626,24 +2626,24 @@ bool CCollision::RayPolyPOP(CVector* A, CVector* D, CColTriangle* arg2, CVector*
     ZoneScoped;
 
     // Original: all extended precision, term order z, x, y
-    const double vx = (double)P->x - A->x, vy = (double)P->y - A->y, vz = (double)P->z - A->z;
-    const double sE = vz * N->z + vx * N->x + vy * N->y; // (P - A) . N
+    const x87d vx = (x87d)P->x - A->x, vy = (x87d)P->y - A->y, vz = (x87d)P->z - A->z;
+    const x87d sE = vz * N->z + vx * N->x + vy * N->y; // (P - A) . N
     if (sE > 0.0) {
         return false;
     }
     const float s = (float)sE; // Spilled to a float
 
-    const double q = (double)N->z * D->z + (double)N->y * D->y + (double)D->x * N->x; // D . N
+    const x87d q = (x87d)N->z * D->z + (x87d)N->y * D->y + (x87d)D->x * N->x; // D . N
     if (s <= q) { // NaN passes
         return false;
     }
 
-    const double t = s / q;
+    const x87d t = s / q;
     const float  dy = (float)(t * D->y);
     const float  dz = (float)(t * D->z);
     A->x = (float)(t * D->x + A->x);
-    A->y = (float)((double)dy + A->y);
-    A->z = (float)((double)dz + A->z);
+    A->y = (float)((x87d)dy + A->y);
+    A->z = (float)((x87d)dz + A->z);
     return true;
 }
 
@@ -2721,29 +2721,29 @@ bool CCollision::SphereCastVersusVsPoly(
     const auto& A = spA.m_vecCenter;
 
     // 0x415CF0 - spA => spB (AKA velocity)
-    const double ABzExact = (double)spB.m_vecCenter.z - A.z; // `fst` => the z² uses the unrounded value times the rounded one
+    const x87d ABzExact = (x87d)spB.m_vecCenter.z - A.z; // `fst` => the z² uses the unrounded value times the rounded one
     const CVector spAToB{
         spB.m_vecCenter.x - A.x,
         spB.m_vecCenter.y - A.y,
         (float)ABzExact
     };
-    const float spAToBDistSq = (float)((ABzExact * spAToB.z + (double)spAToB.y * spAToB.y) + (double)spAToB.x * spAToB.x);
+    const float spAToBDistSq = (float)((ABzExact * spAToB.z + (x87d)spAToB.y * spAToB.y) + (x87d)spAToB.x * spAToB.x);
 
     const auto plNorm = triPlane.GetNormal();
 
     const auto spARadius = spA.m_fRadius;
 
     // 0x415DBF - `GetPtDotNormal` (not rounded)
-    const double plSpCenterDist = (((double)A.z * plNorm.z + (double)A.y * plNorm.y) + (double)A.x * plNorm.x) - (float)triPlane.m_normalOffset;
+    const x87d plSpCenterDist = (((x87d)A.z * plNorm.z + (x87d)A.y * plNorm.y) + (x87d)A.x * plNorm.x) - (float)triPlane.m_normalOffset;
     const bool   isSpTouchingPl = !(std::abs(plSpCenterDist) > spARadius); // jne after `test ah, 0x41`
 
     // Sphere's center projected onto the plane's normal
-    const double projDist = isSpTouchingPl ? plSpCenterDist : (double)spARadius;
+    const x87d projDist = isSpTouchingPl ? plSpCenterDist : (x87d)spARadius;
     const float  projZOff = (float)(plNorm.z * projDist);
     const CVector spAProj0{
         (float)(A.x - plNorm.x * projDist),
         (float)(A.y - plNorm.y * projDist),
-        (float)((double)A.z - projZOff)
+        (float)((x87d)A.z - projZOff)
     };
     CVector spAProjPl = spAProj0;
 
@@ -2751,22 +2751,22 @@ bool CCollision::SphereCastVersusVsPoly(
 
     if (!isSpTouchingPl) {
         // 0x415E7E
-        const double vtxAToSpDistSqOnPl = ((((double)vA.z - spAProj0.z) * plNorm.z + ((double)vA.y - spAProj0.y) * plNorm.y) + ((double)vA.x - spAProj0.x) * plNorm.x);
+        const x87d vtxAToSpDistSqOnPl = ((((x87d)vA.z - spAProj0.z) * plNorm.z + ((x87d)vA.y - spAProj0.y) * plNorm.y) + ((x87d)vA.x - spAProj0.x) * plNorm.x);
         if (vtxAToSpDistSqOnPl > 0.0) {
             return false;
         }
         const float  vtxDist           = (float)vtxAToSpDistSqOnPl; // Spilled to the stack
-        const double spAToBDistSqOnPl  = ((double)plNorm.z * spAToB.z + (double)plNorm.y * spAToB.y) + (double)plNorm.x * spAToB.x;
+        const x87d spAToBDistSqOnPl  = ((x87d)plNorm.z * spAToB.z + (x87d)plNorm.y * spAToB.y) + (x87d)plNorm.x * spAToB.x;
         if ((double)vtxDist <= spAToBDistSqOnPl) {
             return false; // If spA was closer than spB then there's no way spB would touch it, so we're finished
         }
-        const double ratio = (double)vtxDist / spAToBDistSqOnPl;
+        const x87d ratio = (x87d)vtxDist / spAToBDistSqOnPl;
         const float  ry    = (float)(spAToB.y * ratio);
         const float  rz    = (float)(spAToB.z * ratio);
         spAProjPl = CVector{
             (float)(spAToB.x * ratio + spAProj0.x),
-            (float)((double)ry + spAProj0.y),
-            (float)((double)rz + spAProj0.z)
+            (float)((x87d)ry + spAProj0.y),
+            (float)((x87d)rz + spAProj0.z)
         };
     }
 
@@ -2779,7 +2779,7 @@ bool CCollision::SphereCastVersusVsPoly(
 
     // 0x416050 - The result of `ClosestSquaredDistanceBetweenFiniteLines` is compared unrounded (st0)
     const auto& pos       = spA.m_vecCenter;
-    const float maxDistSq = (float)((double)spARadius * spARadius);
+    const float maxDistSq = (float)((x87d)spARadius * spARadius);
     return ClosestSquaredDistanceBetweenFiniteLinesOG(pos, vA, vB, spAToB, spAToBDistSq) < maxDistSq
         || ClosestSquaredDistanceBetweenFiniteLinesOG(pos, vC, vB, spAToB, spAToBDistSq) < maxDistSq
         || ClosestSquaredDistanceBetweenFiniteLinesOG(pos, vA, vC, spAToB, spAToBDistSq) < maxDistSq;
@@ -3136,10 +3136,10 @@ CColSphere GetWorldBoundSphereOfEntity(CEntity* entity) {
 //! The test that is inlined in `CheckCameraCollisionBuildings` and `CheckCameraCollisionObjects` (STRICT; unrounded)
 bool IsEntityBoundSphereCloseTo(const CColSphere& spS, CEntity* entity) {
     const auto sp = GetWorldBoundSphereOfEntity(entity);
-    const double dx = (double)spS.m_vecCenter.x - sp.m_vecCenter.x;
-    const double dy = (double)spS.m_vecCenter.y - sp.m_vecCenter.y;
-    const double dz = (double)spS.m_vecCenter.z - sp.m_vecCenter.z;
-    const double r  = (double)sp.m_fRadius + spS.m_fRadius;
+    const x87d dx = (x87d)spS.m_vecCenter.x - sp.m_vecCenter.x;
+    const x87d dy = (x87d)spS.m_vecCenter.y - sp.m_vecCenter.y;
+    const x87d dz = (x87d)spS.m_vecCenter.z - sp.m_vecCenter.z;
+    const x87d r  = (x87d)sp.m_fRadius + spS.m_fRadius;
     return r * r > (dz * dz + dy * dy) + dx * dx; // `fcompp` + `test ah, 0x41` + `jne` => skip if !(r^2 > dist^2)
 }
 }
@@ -3225,9 +3225,9 @@ bool CCollision::CheckCameraCollisionVehicles(
 
         if (plyrVehVel) {
             const auto& ms = entity->GetMoveSpeed();
-            const double dx = (double)plyrVehVel->x - ms.x;
-            const double dy = (double)plyrVehVel->y - ms.y;
-            const double dz = (double)plyrVehVel->z - ms.z;
+            const x87d dx = (x87d)plyrVehVel->x - ms.x;
+            const x87d dy = (x87d)plyrVehVel->y - ms.y;
+            const x87d dz = (x87d)plyrVehVel->z - ms.z;
             if (!((dz * dz + dy * dy) + dx * dx < relVelCamCollisionVehiclesSqr)) { // jp after `test ah, 5` => continue if !(a < b)
                 continue;
             }
@@ -3320,25 +3320,25 @@ bool CCollision::BuildCacheOfCameraCollision(
 
     // 0x41AC5B - Sphere around the box (extended precision, rounded when stored, see the original for what is rounded and what isn't)
     const CColSphere spABBSp = [&] {
-        const double sx = (double)spABBox.m_vecMax.x - spABBox.m_vecMin.x;
-        const double sy = (double)spABBox.m_vecMax.y - spABBox.m_vecMin.y;
-        const double sz = (double)spABBox.m_vecMax.z - spABBox.m_vecMin.z;
-        const float  hz = (float)(sz * 0.5); // Spilled to the stack
+        const x87d sx = (x87d)spABBox.m_vecMax.x - spABBox.m_vecMin.x;
+        const x87d sy = (x87d)spABBox.m_vecMax.y - spABBox.m_vecMin.y;
+        const x87d sz = (x87d)spABBox.m_vecMax.z - spABBox.m_vecMin.z;
+        const float  hz = (float)(sz * (x87d)0.5); // Spilled to the stack
         const CVector center{
-            (float)(sx * 0.5 + spABBox.m_vecMin.x),
-            (float)(sy * 0.5 + spABBox.m_vecMin.y),
-            (float)((double)hz + spABBox.m_vecMin.z)
+            (float)(sx * (x87d)0.5 + spABBox.m_vecMin.x),
+            (float)(sy * (x87d)0.5 + spABBox.m_vecMin.y),
+            (float)((x87d)hz + spABBox.m_vecMin.z)
         };
-        const float radius = (float)(std::sqrt((sz * sz + sy * sy) + sx * sx) * 0.5);
+        const float radius = (float)(std::sqrt((sz * sz + sy * sy) + sx * sx) * (x87d)0.5);
         return CColSphere{ CSphere{ center, radius }, (eSurfaceType)0, 0, tColLighting{ 0xFF } };
     }();
 
     // 0x41ACE9 - `CWorld::GetSectorX/Y` inlined: `(int)floor((double)(v * 0.02f + 60.0f))`.
     // The unrounded (x87) value is used to check the range, while the value that is used is calculated from the value spilled to the stack (float)
     const auto GetSectorCoord = [](float v, auto&& Clamp) {
-        const double ext = (double)v * (double)0.02f + 60.0;
+        const x87d ext = (x87d)v * (x87d)0.02f + (x87d)60.0;
         const auto   a   = (int32)std::floor(ext);
-        const auto   b   = (int32)std::floor((double)(float)ext);
+        const auto   b   = (int32)std::floor((x87d)(float)ext);
         return Clamp(a, b);
     };
     const auto ClampLow  = [](int32 a, int32 b) { return a > 0 ? b : 0; };       // 0x41AD12 jle
@@ -3467,15 +3467,15 @@ bool CCollision::CameraConeCastVsWorldCollision(
     // 0x8A5B10 (float, = 0.001f)
     const float limit = gLimitPrecisionOfBinarySearch;
     float max = 1.f, min = minDist;
-    double rng = 1.0 - (double)minDist; // Unrounded, as the x87 stack
+    x87d rng = (x87d)1.0 - (x87d)minDist; // Unrounded, as the x87 stack
     float dstF;
     do {
-        const double dstExt = rng * 0.5 + min;
+        const x87d dstExt = rng * (x87d)0.5 + min;
         dstF = (float)dstExt;
 
         spCam.m_fRadius = (float)(dstExt * spRadius);
 
-        const CVector scaledVel{ (float)((double)velocity.x * dstF), (float)((double)velocity.y * dstF), (float)((double)velocity.z * dstF) };
+        const CVector scaledVel{ (float)((x87d)velocity.x * dstF), (float)((x87d)velocity.y * dstF), (float)((x87d)velocity.z * dstF) };
 
         int32 numOut = 0;
         if (SphereCastVsCaches(spCam, scaledVel, numIn, in->data(), numOut, out->data())) {
@@ -3485,7 +3485,7 @@ bool CCollision::CameraConeCastVsWorldCollision(
         } else {
             min = dstF;
         }
-        rng = (double)max - min;
+        rng = (x87d)max - min;
     } while (rng > limit); // Uses the NEW range
 
     dst = dstF;
@@ -3519,10 +3519,10 @@ bool CCollision::SphereVsEntity(CColSphere* sphere, CEntity* entity) {
     for (auto i = (int32)cd->m_nNumSpheres - 1; i >= 0; i--) {
         const auto& sp = cd->m_pSpheres[i];
         // Original: unrounded, term order z, y, x. Strict compare (`FCOMPP` + `test ah, 0x41` + `je`)
-        const double dx = (double)sphereOS.m_vecCenter.x - sp.m_vecCenter.x;
-        const double dy = (double)sphereOS.m_vecCenter.y - sp.m_vecCenter.y;
-        const double dz = (double)sphereOS.m_vecCenter.z - sp.m_vecCenter.z;
-        const double sumR = (double)sphereOS.m_fRadius + sp.m_fRadius;
+        const x87d dx = (x87d)sphereOS.m_vecCenter.x - sp.m_vecCenter.x;
+        const x87d dy = (x87d)sphereOS.m_vecCenter.y - sp.m_vecCenter.y;
+        const x87d dz = (x87d)sphereOS.m_vecCenter.z - sp.m_vecCenter.z;
+        const x87d sumR = (x87d)sphereOS.m_fRadius + sp.m_fRadius;
         if (sumR * sumR > dz * dz + dy * dy + dx * dx) {
             return true;
         }

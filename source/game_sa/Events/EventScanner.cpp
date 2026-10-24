@@ -51,10 +51,10 @@ VALIDATE_OFFSET(CPed, m_nPedType, 0x598); VALIDATE_OFFSET(CPed, m_pStats, 0x59C)
 
 // x87 helpers (0x406DA0 and 0x40FDB0 return an extended precision value in ST0)
 static double SqMagnitude(const CVector& v) {
-    return ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    return ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
 }
 static double X87DotProduct(const CVector& a, const CVector& b) {
-    return ((double)a.z * b.z + (double)a.y * b.y) + (double)a.x * b.x;
+    return ((x87d)a.z * b.z + (x87d)a.y * b.y) + (x87d)a.x * b.x;
 }
 
 void CVehiclePotentialCollisionScanner::InjectHooks() {
@@ -261,30 +261,30 @@ void CVehiclePotentialCollisionScanner::ScanForVehiclePotentialCollisionEvents(c
 
     // NOTE: All of the following is evaluated on the x87 stack (extended precision), only the stores to memory round to float
     const CVector up = vehMat.GetUp();
-    const double  planeA = -((double)up.z * bbMaxWS.z + (double)up.y * bbMaxWS.y + (double)up.x * bbMaxWS.x);
-    const float   sz     = (float)((double)up.z * -1.0); // 0x858C1C = -1.0f
-    const float   sy     = (float)((double)up.y * -1.0);
-    const float   sx     = (float)((double)up.x * -1.0);
-    const float   planeB = (float)-(((double)bbMinWS.y * sy + (double)bbMinWS.z * sz) + (double)sx * bbMinWS.x);
+    const x87d  planeA = -((x87d)up.z * bbMaxWS.z + (x87d)up.y * bbMaxWS.y + (x87d)up.x * bbMaxWS.x);
+    const float   sz     = (float)((x87d)up.z * -(x87d)1.0); // 0x858C1C = -1.0f
+    const float   sy     = (float)((x87d)up.y * -(x87d)1.0);
+    const float   sx     = (float)((x87d)up.x * -(x87d)1.0);
+    const float   planeB = (float)-(((x87d)bbMinWS.y * sy + (x87d)bbMinWS.z * sz) + (x87d)sx * bbMinWS.x);
 
     bool bClose = false;
-    if (((double)up.z * pedPos.z + (double)up.y * pedPos.y + (double)up.x * pedPos.x + planeA) < 0.5) { // 0x86C8E8
-        if (((double)sy * pedPos.y + (double)sz * pedPos.z + (double)sx * pedPos.x + (double)planeB) < 0.5) {
+    if (((x87d)up.z * pedPos.z + (x87d)up.y * pedPos.y + (x87d)up.x * pedPos.x + planeA) < 0.5) { // 0x86C8E8
+        if (((x87d)sy * pedPos.y + (x87d)sz * pedPos.z + (x87d)sx * pedPos.x + (x87d)planeB) < 0.5) {
             bClose = true;
         }
     }
 
     // 0x603935
     float dist = veh->m_nVehicleSubType == VEHICLE_TYPE_TRAIN
-        ? (float)((double)5.0f + (double)5.0f) // 0x86C8DC
+        ? (float)((x87d)5.0f + (x87d)5.0f) // 0x86C8DC
         : 5.0f;
     if (!bClose) {
         return;
     }
 
     if (!ped.bHasJustLeftCar) { // `TEST byte [ped+0x474], 8` (9th flags byte, bit 3)
-        const double sqMag = (double)pedToVeh.x * pedToVeh.x + (double)pedToVeh.y * pedToVeh.y + (double)pedToVeh.z * pedToVeh.z; // 0x406DA0
-        if (!((double)dist * dist > sqMag)) {
+        const x87d sqMag = (x87d)pedToVeh.x * pedToVeh.x + (x87d)pedToVeh.y * pedToVeh.y + (x87d)pedToVeh.z * pedToVeh.z; // 0x406DA0
+        if (!((x87d)dist * dist > sqMag)) {
             return;
         }
     }
@@ -324,7 +324,7 @@ void __stdcall CEventScanner::ScanForPedPotentialCollisionEvents(CPed* ped, CPed
 
     // Find the closest ped in front of us whose sphere intersects our path
     CPed* bestPed       = nullptr;
-    float bestDistSq    = (float)((double)2.5f * (double)2.5f); // 0x86C8C0
+    float bestDistSq    = (float)((x87d)2.5f * (x87d)2.5f); // 0x86C8C0
     const CVector pedPos = ped->GetPosition();
     for (auto i = 0; i < 16; i++) {
         const auto other = static_cast<CPed*>(intel->GetPedEntities()[i]); // 0x130 + i * 4
@@ -335,7 +335,7 @@ void __stdcall CEventScanner::ScanForPedPotentialCollisionEvents(CPed* ped, CPed
         const CVector otherPos = other->GetPosition();
         const CVector diff     = otherPos - pedPos; // 0x40FE00
         const auto&   fwd      = ped->GetForward();
-        if (!(((double)diff.y * fwd.y + (double)diff.z * fwd.z) + (double)diff.x * fwd.x > 0.0)) { // 0x858B50 = 0.0
+        if (!(((x87d)diff.y * fwd.y + (x87d)diff.z * fwd.z) + (x87d)diff.x * fwd.x > 0.0)) { // 0x858B50 = 0.0
             continue;
         }
 
@@ -365,7 +365,7 @@ void __stdcall CEventScanner::ScanForPedPotentialCollisionEvents(CPed* ped, CPed
         bestSpeed.z = 0.f;
 
         const float pedSpeedSq  = (float)SqMagnitude(pedSpeed);
-        const float bestSpeedSq = (float)(SqMagnitude(bestSpeed) + (double)0.25f); // 0x86CD94
+        const float bestSpeedSq = (float)(X87R(SqMagnitude(bestSpeed) + (double)0.25f)); // 0x86CD94
 
         if (bestDistSq > 1.f // 0x86CD90
             && !approxEqual(bestSpeedSq, 0.f, 0.01f) // 0x4EEA80
@@ -417,15 +417,15 @@ void CObjectPotentialCollisionScanner::ScanForObjectPotentialCollisionEvents(CPe
 
     const CVector pedPos = ped.GetPosition();
     const CVector diff   = pedPos - obj->GetPosition(); // 0x40FE00
-    if (!((double)7.5f * (double)7.5f > SqMagnitude(diff))) { // 0x86C8FC
+    if (!((x87d)7.5f * (x87d)7.5f > SqMagnitude(diff))) { // 0x86C8FC
         return;
     }
 
     const CVector centre = obj->GetBoundCentre(); // 0x534250
     const float   radius = obj->GetModelInfo()->GetColModel()->GetBoundRadius(); // +0x24 of the col model
-    const float   lowZ   = (float)((double)centre.z - radius);
-    const float   highZ  = (float)((double)pedPos.z + 1.0); // 0x858624 = 1.0f
-    if ((double)pedPos.z - 1.0 > (double)radius + (double)centre.z) {
+    const float   lowZ   = (float)((x87d)centre.z - radius);
+    const float   highZ  = (float)((x87d)pedPos.z + (x87d)1.0); // 0x858624 = 1.0f
+    if ((x87d)pedPos.z - (x87d)1.0 > (x87d)radius + (x87d)centre.z) {
         return;
     }
     if (highZ < lowZ) {
@@ -474,12 +474,12 @@ void CPedAcquaintanceScanner::ScanForPedAcquaintanceEvents(CPed& ped, CEntity** 
 // 0x59C910 - CVector::Normalise as the original evaluates it: the sum of squares and the reciprocal root stay in the FPU
 // (extended precision), every component is stored as float. A length of 0 (or less) yields (1, y, z) - only x is written.
 static void NormaliseExt(CVector& v) {
-    const double sq = ((double)v.x * v.x + (double)v.y * v.y) + (double)v.z * v.z;
+    const x87d sq = ((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z;
     if (sq <= 0.0) { // FCOM + JP: NaN takes the sqrt path
         v.x = 1.0f;
         return;
     }
-    const double inv = 1.0 / std::sqrt(sq);
+    const x87d inv = (x87d)1.0 / std::sqrt(sq);
     v.x = (float)(v.x * inv);
     v.y = (float)(v.y * inv);
     v.z = (float)(v.z * inv);
@@ -507,7 +507,7 @@ void CPedAcquaintanceScanner::ScanForPedAcquaintances(CPed& ped, int32 acquainta
         CVector toOther = other->GetPosition() - ped.GetPosition();
         NormaliseExt(toOther); // 0x59C910
         const auto& fwd = ped.GetMatrix().GetForward();
-        const double dot = ((double)toOther.z * fwd.z + (double)toOther.y * fwd.y) + (double)toOther.x * fwd.x;
+        const x87d dot = ((x87d)toOther.z * fwd.z + (x87d)toOther.y * fwd.y) + (x87d)toOther.x * fwd.x;
         if (!(dot > (double)ms_fThresholdDotProduct) && !ped.bInVehicle && !other->bInVehicle) {
             continue;
         }
@@ -631,8 +631,8 @@ void CSexyPedScanner::ScanForSexyPedEvents(CPed& ped, CEntity** entities, int32 
         const CVector otherPos = other->GetPosition();
         const CVector diff     = otherPos - pedPos;
         // x87: `diff.z` is stored as a float ([esp+0x20]), but ST0 keeps the unrounded difference, which is what gets squared (times the rounded one)
-        const double  dzExact  = (double)otherPos.z - (double)pedPos.z;
-        const double  sqDist   = (dzExact * (double)diff.z + (double)diff.y * diff.y) + (double)diff.x * diff.x;
+        const x87d  dzExact  = (x87d)otherPos.z - (x87d)pedPos.z;
+        const x87d  sqDist   = (dzExact * (x87d)diff.z + (x87d)diff.y * diff.y) + (x87d)diff.x * diff.x;
         const float   sqDistF  = (float)sqDist;
         if (!(sqDist < 10000.0)) { // 0x859AA4
             continue;
@@ -646,7 +646,7 @@ void CSexyPedScanner::ScanForSexyPedEvents(CPed& ped, CEntity** entities, int32 
             continue;
         }
         const auto& fwd = ped.GetForward();
-        if (!(((double)diff.z * fwd.z + (double)diff.y * fwd.y) + (double)diff.x * fwd.x > 0.0)) { // 0x858B50
+        if (!(((x87d)diff.z * fwd.z + (x87d)diff.y * fwd.y) + (x87d)diff.x * fwd.x > 0.0)) { // 0x858B50
             continue;
         }
         if (!CWorld::GetIsLineOfSightClear(pedPos, otherPos, true, false, false, true, false, false, false)) { // 0x56A490
@@ -692,12 +692,12 @@ void CNearbyFireScanner::ScanForNearbyFireEvents(CPed& ped) {
         // dx and dy are kept in the x87 registers (extended precision), dz is stored as a float
         const auto&  firePos = fire->GetPosition();
         const auto&  pedPos  = ped.GetPosition();
-        const double dx      = (double)firePos.x - (double)pedPos.x;
-        const double dy      = (double)firePos.y - (double)pedPos.y;
+        const x87d dx      = (x87d)firePos.x - (x87d)pedPos.x;
+        const x87d dy      = (x87d)firePos.y - (x87d)pedPos.y;
         dz                   = firePos.z - pedPos.z;
-        const double sqDist  = (dy * dy + dx * dx) + (double)dz * dz;
+        const x87d sqDist  = (dy * dy + dx * dx) + (x87d)dz * dz;
         sqDistF              = (float)sqDist;
-        if (sqDist < (double)20.f * 20.f && std::fabs(dz) < 2.f) { // 0x86C918, 0x858CA0
+        if (sqDist < (x87d)20.f * 20.f && std::fabs(dz) < 2.f) { // 0x86C918, 0x858CA0
             CEventFireNearby event{firePos}; // 0x4B1F10
             intel->m_eventGroup.Add(&event, false); // 0x4AB420
         }
@@ -705,7 +705,7 @@ void CNearbyFireScanner::ScanForNearbyFireEvents(CPed& ped) {
 
     if (activeTask && activeTask->GetTaskType() != TASK_COMPLEX_WALK_ROUND_FIRE) { // 0x202
         const auto task = intel->m_TaskMgr.GetSimplestActiveTask();
-        if (task && CTask::IsGoToTask(task) && fire && (double)4.f * 4.f > sqDistF && std::fabs(dz) < 2.f) { // 0x86C91C
+        if (task && CTask::IsGoToTask(task) && fire && (x87d)4.f * 4.f > sqDistF && std::fabs(dz) < 2.f) { // 0x86C91C
             CEventPotentialWalkIntoFire event{fire->GetPosition(), fire->GetStrength(), moveState}; // 0x4B1E20
             intel->m_eventGroup.Add(&event, false); // 0x4AB420
         }

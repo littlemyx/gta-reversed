@@ -1,6 +1,7 @@
 # CTest registration of the portable host tests (P-2k). Included from source/CMakeLists.txt ONLY when GTASA_PORTABLE=ON (the Windows / StandaloneRelease
 # configure never sees this file). Run: `ctest --test-dir build/PortableMac -L portable` (fast set, ~30 s) ; `-L mutation` adds the mutant runs (slow, each mutant must make
 # its test FAIL). The tests are plain scripts: they build single-TU executables with the flags of this build's compile_commands.json (COMPDB) and do not link the game.
+# ASAN_OPTIONS symbolize=0: a crashing/failing mutant must not hang in ASan's `atos` symbolizer when ctest has no tty (seen: p2g/p2i mutants stuck for 30+ min).
 # Real-data parts (gta3.img, NODES*.DAT, main.scm of the Steam copy) are skipped with a NOTE when the data is absent (GTA / P2*_ env vars select another copy).
 set(PORTABLE_TESTS_DIR "${PROJECT_SOURCE_DIR}/tools/portable")
 set(PORTABLE_TESTS_OUT "${CMAKE_BINARY_DIR}/portable_tests")
@@ -18,7 +19,7 @@ foreach(_name _script IN ZIP_LISTS PORTABLE_HOST_TEST_NAMES PORTABLE_HOST_TEST_S
     set_tests_properties(portable.${_name} PROPERTIES
         LABELS "portable"
         TIMEOUT 900
-        ENVIRONMENT "COMPDB=${CMAKE_BINARY_DIR}/compile_commands.json;OUT=${PORTABLE_TESTS_OUT}/${_name}"
+        ENVIRONMENT "COMPDB=${CMAKE_BINARY_DIR}/compile_commands.json;OUT=${PORTABLE_TESTS_OUT}/${_name};ASAN_OPTIONS=detect_leaks=0:symbolize=0"
         FAIL_REGULAR_EXPRESSION "CENSUS MISMATCH;BUILD FAILED")
     if(_name IN_LIST PORTABLE_MUTATE_TESTS)
         add_test(NAME portable.${_name}.mutate
@@ -27,6 +28,6 @@ foreach(_name _script IN ZIP_LISTS PORTABLE_HOST_TEST_NAMES PORTABLE_HOST_TEST_S
         set_tests_properties(portable.${_name}.mutate PROPERTIES
             LABELS "mutation"
             TIMEOUT 3600
-            ENVIRONMENT "COMPDB=${CMAKE_BINARY_DIR}/compile_commands.json;OUT=${PORTABLE_TESTS_OUT}/${_name}_mut")
+            ENVIRONMENT "COMPDB=${CMAKE_BINARY_DIR}/compile_commands.json;OUT=${PORTABLE_TESTS_OUT}/${_name}_mut;ASAN_OPTIONS=detect_leaks=0:symbolize=0")
     endif()
 endforeach()

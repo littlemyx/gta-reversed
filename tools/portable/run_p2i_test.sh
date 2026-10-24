@@ -32,7 +32,7 @@ build() { # $1 = extra include dir (mutated copy) or "", $2 = output exe
   local MUT=""; [ -n "$1" ] && MUT="-I'$1'"
   eval "nice -n 10 $BASE -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer $MUT -I'$REPO/tests/portable/p2i_stubs' -I'$REPO/tests/portable/p2c_stubs' -I$S/game_sa/Core -I$S/game_sa -I$S/game_sa/Enums -I$S -I'$OUT' -w -o '$2' '$REPO/tests/portable/p2i_breakable_test.cpp'" 2>"$2.err"
 }
-export ASAN_OPTIONS=detect_leaks=0
+export ASAN_OPTIONS=detect_leaks=0:symbolize=0
 build "" "$OUT/p2i_breakable_test" || { head -40 "$OUT/p2i_breakable_test.err"; echo "BUILD FAILED"; exit 1; }
 "$OUT/p2i_breakable_test" | tee "$OUT/run.log"; rc=${PIPESTATUS[0]}
 if [ -n "${GTA_IMG:-}" ]; then

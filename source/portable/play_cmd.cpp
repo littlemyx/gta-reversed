@@ -17,11 +17,14 @@
 #include "CarCtrl.h"
 #include "Clock.h"
 #include "PostEffects.h"
+#include "StencilShadows.h"
 #include "Weather.h"
 #include "PathFind.h"
 #include "Pickups.h"
 #include "Pools/Pools.h"
 #include "World.h"
+#include "Draw.h"
+#include "Renderer.h"
 #include "portable/render/pipelines_gl3.h"
 
 namespace rw::gl3 { extern rw::int32 lightingModel; } // librw gl3 (vendor/librw/src/gl/gl3device.cpp): 1 = D3D9 FF lighting order (R-12), 0 = librw's original
@@ -98,6 +101,48 @@ bool PlayCmd(const char* name, const std::string& args) {
     if (!std::strcmp(name, "gfxq")) { // R-11: cmd:gfxq  logs what GraphicsHighQuality() (stencil shadows, pole shadows, vehicle blobs) is derived from
         auto* camRas = RwCameraGetRaster(Scene.m_pRwCamera);
         NOTSA_LOG_INFO("[play] gfxq: GraphicsHighQuality={} fxQuality={} camera raster depth={} type={} format=0x{:x}", (int)GraphicsHighQuality(), (int)g_fx.GetFxQuality(), (int)RwRasterGetDepth(camRas), (int)camRas->type, (unsigned)camRas->format);
+        int nStencil = 0;
+        for (auto* o = CStencilShadows::pFirstActiveStencilShadowObject; o && nStencil < 100; o = o->m_pNext) { nStencil++; }
+        NOTSA_LOG_INFO("[play] gfxq: active stencil shadow objects {}", nStencil);
+        {
+            int nVis = 0, nVisBld = 0, nVisA3 = 0;
+            for (auto* e : CRenderer::GetVisibleEntityPtrs()) {
+                nVis++; nVisBld += e->GetIsTypeBuilding(); nVisA3 += (int)e->GetAreaCode() == 3;
+                if (nVis <= 6) {
+                    auto* ro = e->GetRwObject();
+                    int nAtomics = 0, nTris = 0;
+                    if (ro && RwObjectGetType(ro) == rpATOMIC) { nAtomics = 1; nTris = RpAtomicGetGeometry((RpAtomic*)ro)->numTriangles; }
+                    else if (ro && RwObjectGetType(ro) == rpCLUMP) { RpClumpForAllAtomics((RpClump*)ro, [](RpAtomic* a, void* d) { ((int*)d)[0]++; ((int*)d)[1] += RpAtomicGetGeometry(a)->numTriangles; return a; }, &nAtomics); }
+                    NOTSA_LOG_INFO("[play] gfxq: visible #{} model {} entType {} modelType {} rwType {} atomics {} tris {} pos ({:.1f},{:.1f},{:.1f})", nVis, (int)e->m_nModelIndex, (int)e->GetType(), (int)CModelInfo::GetModelInfo(e->m_nModelIndex)->GetModelType(), ro ? (int)RwObjectGetType(ro) : -1, nAtomics, nTris, e->GetPosition().x, e->GetPosition().y, e->GetPosition().z);
+                }
+            }
+            NOTSA_LOG_INFO("[play] gfxq: visible entities {} (buildings {}, area 3: {}), CGame::currArea {}", nVis, nVisBld, nVisA3, (int)CGame::currArea);
+            if (CGame::currArea != 0) { // R-11: why are the interior's buildings not in the render list? (results of CRenderer::SetupEntityVisibility per building within 25 m of the player)
+                int hist[8] = {}, inArea = 0, onScreen = 0, visible = 0, rw = 0, occl = 0, n = 0;
+                const auto ppos = FindPlayerPed() ? FindPlayerPed()->GetPosition() : CVector{};
+                for (auto& b : GetBuildingPool()->GetAllValid()) {
+                    if ((b.GetPosition() - ppos).Magnitude() > 25.f) { continue; }
+                    n++;
+                    float d = 0.f;
+                    const auto r = CRenderer::SetupEntityVisibility(&b, d);
+                    hist[std::clamp(r, 0, 7)]++;
+                    if (r == RENDERER_CULLED && n <= 40) {
+                        static int dumped = 0;
+                        if (dumped++ < 6) {
+                            CVector pp = b.GetBoundCentre();
+                            RwV3dTransformPoints(&pp, &pp, 1, (RwMatrix*)&TheCamera.m_mMatInverse);
+                            const auto& fn = TheCamera.m_avecFrustumNormals;
+                            NOTSA_LOG_INFO("[play] gfxq: culled bld model {} centre ({:.1f},{:.1f},{:.1f}) r {:.1f} -> camspace ({:.1f},{:.1f},{:.1f}) near {:.2f} far {:.0f} normals ({:.2f},{:.2f}) ({:.2f},{:.2f}) ({:.2f},{:.2f}) ({:.2f},{:.2f})",
+                                           (int)b.m_nModelIndex, b.GetBoundCentre().x, b.GetBoundCentre().y, b.GetBoundCentre().z, CModelInfo::GetModelInfo(b.m_nModelIndex)->GetColModel()->GetBoundRadius(), pp.x, pp.y, pp.z, CDraw::ms_fNearClipZ, CDraw::ms_fFarClipZ,
+                                           fn[0].x, fn[0].y, fn[1].x, fn[1].y, fn[2].z, fn[2].y, fn[3].z, fn[3].y);
+                        }
+                    }
+                    inArea += b.IsInCurrentArea(); onScreen += b.GetIsOnScreen(); visible += b.GetIsVisible(); rw += b.GetRwObject() != nullptr; occl += b.IsEntityOccluded();
+                }
+                NOTSA_LOG_INFO("[play] gfxq: interior buildings {}: visibility enum counts [0]={} [1]={} [2]={} [3]={} [4]={}; inArea {} onScreen {} isVisible {} rwObject {} occluded {}; camera ({:.1f},{:.1f},{:.1f})",
+                               n, hist[0], hist[1], hist[2], hist[3], hist[4], inArea, onScreen, visible, rw, occl, CRenderer::ms_vecCameraPosition.x, CRenderer::ms_vecCameraPosition.y, CRenderer::ms_vecCameraPosition.z);
+            }
+        }
         return true;
     }
     if (!std::strcmp(name, "fx")) { // R-11: cmd:fx:NAME[:0|1]  post effect switches (the game re-derives most of them each frame from camera / weather, so the ones set here persist only for the pure flags)
@@ -136,7 +181,18 @@ bool PlayCmd(const char* name, const std::string& args) {
             CStreaming::LoadScene(pos);
             CStreaming::LoadSceneCollision(pos);
             CStreaming::LoadAllRequestedModels(false);
-            NOTSA_LOG_INFO("[play] interior area {} at ({:.1f},{:.1f},{:.1f})", area, x, y, z);
+            {
+                int nb = 0, nbArea = 0, nbLoaded = 0;
+                for (auto& b : GetBuildingPool()->GetAllValid()) {
+                    if ((b.GetPosition() - pos).Magnitude() > 25.f) { continue; }
+                    nb++;
+                    nbArea += (int)b.GetAreaCode() == area;
+                    nbLoaded += b.GetRwObject() != nullptr;
+                }
+                NOTSA_LOG_INFO("[play] interior: {} buildings within 25 m, {} with area code {}, {} with an RwObject (streamed in)", nb, nbArea, area, nbLoaded);
+            }
+            TheCamera.RestoreWithJumpCut(); // R-11: the camera still sat at the outside position (frames showed 3 shelf boards in a black void)
+            NOTSA_LOG_INFO("[play] interior area {} at ({:.1f},{:.1f},{:.1f}), camera {:.1f} {:.1f} {:.1f}", area, x, y, z, TheCamera.GetPosition().x, TheCamera.GetPosition().y, TheCamera.GetPosition().z);
         }
         return true;
     }

@@ -4,8 +4,9 @@
 //   notsa::FileRecord<X>   specialise next to X (X.h):   using Type = X_File;  static Type ToFile(const X&);  static void FromFile(X&, const Type&);
 //   Absent specialisation  => X is its own file layout (the x86 raw sizeof(X) copy).
 //
-// The typed CGenericGameStorage::SaveDataToWorkBuffer<T> / LoadDataFromWorkBuffer<T> pick the record path ONLY under NOTSA_PORTABLE; the MSVC build keeps the raw
-// sizeof(T) copy (code bytes unchanged). The 64-bit scalar guard below is header-only, compile-time and vacuous when sizeof(void*) == 4.
+// The typed CGenericGameStorage::SaveDataToWorkBuffer<T> / LoadDataFromWorkBuffer<T> pick the record path on EVERY platform (SAVE-LOAD: the Win32 raw copy wrote ASLR process
+// addresses of the script space into the save; the x86 static_asserts of each record prove it is the exe's layout, pointer fields excepted). The 64-bit scalar guard below
+// is header-only, compile-time and vacuous when sizeof(void*) == 4.
 //
 // Standalone header (no StdInc): usable from tests/portable/file_records_test.cpp.
 #include <cstddef>

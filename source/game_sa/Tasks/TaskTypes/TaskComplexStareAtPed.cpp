@@ -94,7 +94,7 @@ CTask* CTaskComplexStareAtPed::ControlSubTask(CPed* ped) {
                     "TaskStareAtPed",
                     ped,
                     m_pPed,
-                    static_cast<int32>(NOTSA_PTR_ID32(&gDefaultTaskTime)),
+                    gDefaultTaskTime, // 0x6606C9 `push 0x98967F` = the VALUE (the port passed the global's address)
                     BONE_HEAD,
                     nullptr,
                     true,
@@ -109,7 +109,7 @@ CTask* CTaskComplexStareAtPed::ControlSubTask(CPed* ped) {
                 "TaskStareAtPed",
                 ped,
                 m_pPed,
-                static_cast<int32>(NOTSA_PTR_ID32(&gDefaultTaskTime)),
+                gDefaultTaskTime, // 0x6606C9 `push 0x98967F` = the VALUE (the port passed the global's address)
                 BONE_HEAD,
                 nullptr,
                 true,

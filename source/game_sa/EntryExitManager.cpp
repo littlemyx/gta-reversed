@@ -445,9 +445,9 @@ bool CEntryExitManager::Load() {
             } else {
                 enex->m_pLink = nullptr;
             }
-        } else {
-            NOTSA_UNREACHABLE(); // NOTSA - Probably corrupted save file or something.
         }
+        // else: 0x5D567A `test esi, esi; je` - the exe silently skips an index that has no entry exit (a save lists exits that the script creates at run time and that do not exist yet
+        // when this block is read, e.g. 379..384 in a save written during the opening mission); the flags / link words were already consumed.
 
         CGenericGameStorage::LoadDataFromWorkBuffer(enexIdx);
     }

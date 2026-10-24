@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Conan dependencies for the PortableWin64 preset (Windows x64, MSVC, static CRT, SDL3 + OpenAL) -> build/PortableWin64/generators.
 # Same scratch-copy approach as conan_install_mac.sh / _linux.sh (ConanPresets.json and source/libs/imgui of the repo are not rewritten, except a fresh checkout's source/libs/imgui is filled).
-# Additionally patches openal-soft into the scratch conanfile (the Windows ASI/exe builds use DirectSound and do not need it).
+# WITH_OPENAL=1 additionally patches openal-soft into the scratch conanfile (not linked yet: the Windows portable build uses the original DirectSound hardware layer, see MAC-WIN64.md).
 #
 # usage: tools/portable/win64/conan_install_win64.sh [Release|Debug]
 #   env: CONAN, TMPDIR, CONAN_EXTRA_ARGS
@@ -18,6 +18,7 @@ DST="$ROOT/build/PortableWin64/generators"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/portable-conan.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 [ -f "$ROOT/ConanPresets.json" ] || echo '{ "version": 4, "vendor": { "conan": {} } }' > "$ROOT/ConanPresets.json"
+if [ "${WITH_OPENAL:-0}" = 1 ]; then
 python3 - "$ROOT/conanfile.py" "$WORK/conanfile.py" <<'PY'
 import sys
 s = open(sys.argv[1]).read()
@@ -26,6 +27,9 @@ assert anchor in s
 s = s.replace(anchor, '        self.requires("openal-soft/1.23.1")  # portable Windows build (tools/portable/win64)\n' + anchor, 1)
 open(sys.argv[2], 'w').write(s)
 PY
+else
+cp "$ROOT/conanfile.py" "$WORK/conanfile.py"
+fi
 mkdir -p "$WORK/source"
 ( cd "$WORK" && "$CONAN" install . -pr:h "$HP" -pr:b default -s build_type="$BT" ${CONAN_EXTRA_ARGS:-} --build=missing -of "$WORK/out" )
 GEN="$(find "$WORK/out" -name conan_toolchain.cmake -print -quit | xargs dirname)"

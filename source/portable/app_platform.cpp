@@ -226,6 +226,21 @@ static LONG WINAPI CrashFilter(EXCEPTION_POINTERS* ep) {
     SPDLOG_INFO("*********UNHANDLED EXCEPTION**********");
     if (ep) {
         SPDLOG_INFO("Code: {:#010x} at {:#018x}", (uint32_t)ep->ExceptionRecord->ExceptionCode, (uintptr_t)ep->ExceptionRecord->ExceptionAddress);
+#ifdef _M_X64
+        // x64 has no frame chain to walk without unwind info lookups: log the image base, RIP and the stack words that look like return addresses into the exe
+        // (a call through a null function pointer faults at RIP 0 with the caller's return address at [rsp]); resolve with the link map (gta_reversed.map)
+        const auto base = (uintptr_t)::GetModuleHandleW(nullptr);
+        SPDLOG_INFO("Image base {:#018x}, RIP {:#018x}, RSP {:#018x}", base, (uintptr_t)ep->ContextRecord->Rip, (uintptr_t)ep->ContextRecord->Rsp);
+        const auto*     sp   = reinterpret_cast<const uintptr_t*>(ep->ContextRecord->Rsp);
+        const auto      size = (uintptr_t)reinterpret_cast<const IMAGE_NT_HEADERS*>(base + reinterpret_cast<const IMAGE_DOS_HEADER*>(base)->e_lfanew)->OptionalHeader.SizeOfImage;
+        int             n    = 0;
+        for (int i = 0; i < 512 && n < 24; i++) {
+            if (!::IsBadReadPtr(sp + i, sizeof(uintptr_t)) && sp[i] >= base && sp[i] < base + size) {
+                SPDLOG_INFO("\tstack[{}] exe+{:#x}", i, sp[i] - base);
+                n++;
+            }
+        }
+#endif
     }
     spdlog::apply_all([](auto&& logger) { logger->flush(); });
     return EXCEPTION_CONTINUE_SEARCH;

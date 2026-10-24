@@ -7,7 +7,7 @@
 #define MAX_PATH 260
 #define NOTSA_GLOBAL(name, addr, type, ...) std::type_identity_t<NOTSA_UNPAREN type> name __VA_ARGS__
 struct CColModel { uint8 bytes[48]; };      // Weapon.h has a `static inline CColModel ms_PelletTestCol` (complete type needed)
-enum ePedPieceTypes { PED_PIECE_TORSO = 3 };  // Weapon.h forward-declares it without an underlying type (the real build has the definition from the enums before)
+enum ePedPieceTypes : int { PED_PIECE_TORSO = 3 };  // Weapon.h forward-declares it without an underlying type (the real build has the definition from the enums before)
 struct CEntity; struct CVehicle; struct CColPoint; struct CMatrix;
 #include "Weapon.h"
 #include "Entity/Ped/PedSaveStructure.h"

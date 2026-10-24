@@ -60,7 +60,9 @@ UIRenderer::UIRenderer() :
 #else
     ImGui_ImplWin32_Init(PSGLOBAL(window));
 #endif
+#ifndef NOTSA_PORTABLE // unreachable in the portable build (it is a NOTSA_STANDALONE_RUN build, returned above); there is no D3D9 backend off Windows
     ImGui_ImplDX9_Init(GetD3D9Device());
+#endif
 
     SetIsActive(false);
 
@@ -97,7 +99,11 @@ void UIRenderer::SetIsActive(bool active) {
             = pad->NewMouseControllerState
             = CMouseControllerState{};
     } else {
+#ifdef NOTSA_PORTABLE
+        SDL_RaiseWindow(PSGLOBAL(sdlWindow)); // Re-focus GTA main window (unreachable in the run build: returned above)
+#else
         SetFocus(PSGLOBAL(window)); // Re-focus GTA main window
+#endif
     }
     pad->Clear(false, true);
 

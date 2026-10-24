@@ -7,10 +7,10 @@ set(PORTABLE_TESTS_DIR "${PROJECT_SOURCE_DIR}/tools/portable")
 set(PORTABLE_TESTS_OUT "${CMAKE_BINARY_DIR}/portable_tests")
 file(MAKE_DIRECTORY "${PORTABLE_TESTS_OUT}")
 
-set(PORTABLE_HOST_TEST_NAMES   file_records p2b p2c p2d p2e p2f p2g p2h p2i p2j)
-set(PORTABLE_HOST_TEST_SCRIPTS run_file_records_test.sh run_p2b_test.sh run_p2c_test.sh run_p2d_test.sh run_p2e_test.sh run_p2f_test.sh run_p2g_test.sh run_p2h_test.sh run_p2i_test.sh run_p2j_test.sh)
+set(PORTABLE_HOST_TEST_NAMES   file_records p2b p2c p2d p2e p2f p2g p2h p2i p2j msvc_rand p4_visplugin p4_keyarray p4_restore)
+set(PORTABLE_HOST_TEST_SCRIPTS run_file_records_test.sh run_p2b_test.sh run_p2c_test.sh run_p2d_test.sh run_p2e_test.sh run_p2f_test.sh run_p2g_test.sh run_p2h_test.sh run_p2i_test.sh run_p2j_test.sh run_msvc_rand_test.sh run_p4_visplugin_test.sh run_p4_keyarray_test.sh run_p4_restore_test.sh)
 # scripts that take a `mutate` argument (source mutants that the test must catch)
-set(PORTABLE_MUTATE_TESTS p2f p2g p2h p2i p2j)
+set(PORTABLE_MUTATE_TESTS p2f p2g p2h p2i p2j msvc_rand p4_visplugin p4_keyarray p4_restore)
 
 foreach(_name _script IN ZIP_LISTS PORTABLE_HOST_TEST_NAMES PORTABLE_HOST_TEST_SCRIPTS)
     add_test(NAME portable.${_name}

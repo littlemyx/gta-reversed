@@ -148,3 +148,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-24	ORACLE-C-ENTITY	v4	class C wave (small)	245549	107	31	Entity 87 -> 94 (game 5049), 1 fix: RemoveEscalatorsForEntity returned after first match (587/600); tokens hit cap in 31 min (~35k tokens per class-C row)
 2026-10-24	MAC-W2	v4	W-1/2/8 input vsync exit hidpi	-	-	-	done
 2026-10-24	MAC-R6	v4	R-6 stock pipes + NVC	-	-	-	done: new game playable
+2026-10-24	MAC-RR-DESIGN	v4	RR plan + RR-1 harness	-	-	-	done; 1 nondeterminism left

@@ -5,7 +5,7 @@
 # presets) and deletes/re-copies source/libs/imgui. This script runs conan from a scratch copy of conanfile.py, so the repository tree is untouched,
 # then keeps only the generators (relocatable: absolute paths into ~/.conan2/p).
 #
-# usage: tools/portable/conan_install_mac.sh [build_type: Release|Debug]     env: CONAN (default ~/.local/bin/conan), TMPDIR
+# usage: tools/portable/conan_install_mac.sh [build_type: Release|Debug]     env: CONAN (default ~/.local/bin/conan), TMPDIR, CONAN_EXTRA_ARGS (extra `conan install` arguments, e.g. -s compiler.version=16 on a CI runner)
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
@@ -16,7 +16,7 @@ WORK="$(mktemp -d "${TMPDIR:-/tmp}/portable-conan.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 cp "$ROOT/conanfile.py" "$WORK/"
 mkdir -p "$WORK/source"
-( cd "$WORK" && "$CONAN" install . -pr:h "$ROOT/conan/profiles/macos-arm64.txt" -pr:b default -s build_type="$BT" \
+( cd "$WORK" && "$CONAN" install . -pr:h "$ROOT/conan/profiles/macos-arm64.txt" -pr:b default -s build_type="$BT" ${CONAN_EXTRA_ARGS:-} \
       --build=missing -of "$WORK/out" )
 GEN="$(find "$WORK/out" -name conan_toolchain.cmake -print -quit | xargs dirname)"
 rm -rf "$DST"; mkdir -p "$(dirname "$DST")"; cp -R "$GEN" "$DST"

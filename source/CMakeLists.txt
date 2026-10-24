@@ -2765,6 +2765,32 @@ endif()
 
 
 #--------------------------------------------------------------------
+# Case-sensitive file systems (Linux): MAC-LNX1
+#--------------------------------------------------------------------
+# The sources were written on Windows: a handful of #includes differ from the file name in letter case (Audio/entities/ vs Entities/, Common.h vs common.h, ...).
+# tools/portable/gen_case_shim.py scans the sources at configure time and links each such include (as written) to the real file in ${CMAKE_BINARY_DIR}/case_shim, which is
+# the LAST include directory (correctly spelled includes never reach it). No source file is touched.
+if (${RE_PROJECT}_PORTABLE AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    get_target_property(_case_inc_dirs ${RE_PROJECT_LIB_NAME} INCLUDE_DIRECTORIES)
+    set(_case_abs_dirs)
+    foreach (_d IN LISTS _case_inc_dirs)
+        cmake_path(ABSOLUTE_PATH _d BASE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" NORMALIZE OUTPUT_VARIABLE _dabs)
+        list(APPEND _case_abs_dirs "${_dabs}")
+    endforeach()
+    execute_process(
+        COMMAND "${Python3_EXECUTABLE}" -I "${PROJECT_SOURCE_DIR}/tools/portable/gen_case_shim.py" "${PROJECT_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/case_shim" ${_case_abs_dirs}
+        RESULT_VARIABLE _case_rc OUTPUT_VARIABLE _case_out ERROR_VARIABLE _case_err)
+    if (NOT _case_rc EQUAL 0)
+        message(FATAL_ERROR "gen_case_shim.py failed: ${_case_err}")
+    endif()
+    string(REGEX MATCH "case shim: [0-9]+ includes" _case_summary "${_case_out}")
+    message(STATUS "${_case_summary} (${CMAKE_BINARY_DIR}/case_shim)")
+    target_include_directories(${RE_PROJECT_LIB_NAME} PRIVATE "${CMAKE_BINARY_DIR}/case_shim")
+endif()
+
+
+#--------------------------------------------------------------------
 # Configure misc. dependencies for Windows
 #--------------------------------------------------------------------
 if(WIN32)

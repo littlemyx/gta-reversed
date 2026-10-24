@@ -1,0 +1,109 @@
+name: Portable Linux
+
+# MAC-LNX1: native Linux x86_64 build of the portable game (preset PortableLinux: clang 23 + libc++, librw GL3 + SDL3, OpenAL) and the data-free host tests (ctest -L portable).
+# Fork-only workflow: runs on pushes to portable/main and by hand. The game is not run (no game data on CI).
+on:
+  push:
+    branches: [portable/main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash # -eo pipefail (the build / test steps pipe through tee)
+
+concurrency:
+  group: portable-linux-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 2G
+      CCACHE_SLOPPINESS: pch_defines,time_macros,include_file_mtime,include_file_ctime
+      CCACHE_COMPILERCHECK: content
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: false
+
+      - name: librw submodule (private repo, needs the secret LIBRW_DEPLOY_KEY or LIBRW_TOKEN)
+        env:
+          LIBRW_DEPLOY_KEY: ${{ secrets.LIBRW_DEPLOY_KEY }}
+          LIBRW_TOKEN: ${{ secrets.LIBRW_TOKEN }}
+        run: tools/portable/ci_fetch_librw.sh
+
+      - name: Toolchain and system packages
+        run: |
+          tools/portable/linux_deps.sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Conan cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.conan2/p
+          key: conan-linux-${{ hashFiles('conanfile.py', 'conan/profiles/linux-x64.txt') }}
+
+      - name: ccache
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-linux-${{ github.sha }}
+          restore-keys: ccache-linux-
+
+      - name: Conan install
+        run: tools/portable/conan_install_linux.sh Release
+
+      - name: Configure
+        run: |
+          cmake --preset PortableLinux -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache 2>&1 | tee configure.log
+          ccache -z
+
+      - name: Build (ninja -k 0, every error is collected)
+        id: build
+        run: |
+          set -o pipefail
+          start=$(date +%s)
+          cmake --build build/PortableLinux -- -k 0 2>&1 | tee build.log
+          rc=${PIPESTATUS[0]}
+          echo "build wall time: $(( $(date +%s) - start )) s, rc=$rc" | tee -a build.log
+          ccache -s | tee -a build.log
+          grep -c ' error: ' build.log || true
+          exit $rc
+
+      - name: Host tests (ctest -L portable, no game data, no display)
+        if: steps.build.outcome == 'success'
+        run: ctest --test-dir build/PortableLinux -L portable --output-on-failure -j2 2>&1 | tee ctest.log
+
+      - name: Binary sanity
+        if: steps.build.outcome == 'success'
+        run: |
+          ls -l build/PortableLinux/bin/
+          file build/PortableLinux/bin/gta_reversed
+          ldd build/PortableLinux/bin/gta_reversed | head -30
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: portable-linux-logs
+          path: |
+            configure.log
+            build.log
+            ctest.log
+            build/PortableLinux/Testing/Temporary/LastTest.log
+            build/PortableLinux/portable_tests/**/*.log
+          if-no-files-found: ignore
+
+      - name: Upload binary
+        if: steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: gta_reversed-linux-x64
+          path: build/PortableLinux/bin/gta_reversed

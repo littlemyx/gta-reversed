@@ -13,6 +13,7 @@
 #include "Wanted.h"
 #include "PedIntelligence.h"
 #include "PostEffects.h"
+#include "MenuManager.h"
 #include "CarCtrl.h"
 #include "Population.h"
 #include "Enums/eTaskType.h"
@@ -169,6 +170,9 @@ bool NotsaGrCmd(const char* name, const std::string& args) {
     if (!std::strcmp(name, "snap")) { Snap(args.empty() ? "snap" : args); return true; }
     if (!std::strcmp(name, "quit")) { GR_LOG("[gr] quit requested"); RsGlobal.quit = true; return true; } // leave the main loop (normal shutdown path), so a finished scenario does not idle until the wall-clock limit
     if (!pl) return std::strcmp(name, "spawncop") == 0 || std::strcmp(name, "spawnveh") == 0 || std::strcmp(name, "shootlast") == 0 || std::strcmp(name, "shootdrv") == 0 || std::strcmp(name, "hitplayer") == 0 || std::strcmp(name, "copattack") == 0 || std::strcmp(name, "time") == 0;
+#ifndef NOTSA_PORTABLE // (portable has the same command in portable/play_cmd.cpp)
+    if (!std::strcmp(name, "savemenu")) { FrontEndMenuManager.m_bIsSaveDone = true; pl->m_vecMoveSpeed = CVector{}; pl->m_vecTurnSpeed = CVector{}; GR_LOG("[gr-cmd] savemenu requested (m_bIsSaveDone = 1)"); return true; } // what ACTIVATE_SAVE_MENU does: the main loop then opens the save-game menu (FID-MAC W1 round trip)
+#endif
     if (!std::strcmp(name, "money")) { FindPlayerInfo().m_nMoney = std::atoi(args.c_str()); GR_LOG("[gr-cmd] money %d", FindPlayerInfo().m_nMoney); return true; } // money:N  the player's money (may be negative or 0: CGameLogic fee tests)
     if (!std::strcmp(name, "spawncop")) { // spawncop[:MODEL[:DIST]]  an armed LAPD cop (ped type COP) DIST m in front of the player, standing
         int mdl = 280; float dist = 6.f;

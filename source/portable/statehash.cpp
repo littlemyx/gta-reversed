@@ -29,6 +29,7 @@
 #include "Streaming.h"
 #include "Weather.h"
 #include "Clock.h"
+#include "MenuManager.h"
 #include "AnimBlendAssociation.h"
 #include "Plugins/RpAnimBlendPlugin/RpAnimBlend.h"
 
@@ -398,6 +399,14 @@ void PinHeap() { PinRwHeap(); }
 void AdvanceClock() {
     if (!Active()) return;
     PinRwHeap();
+    { // the screen size is part of the simulation (CCamera::CalculateFrustumPlanes uses its aspect ratio -> which entities are visible -> CAutomobile::Render -> when a car may be removed): pin it on both sides.
+      // NOTSA_RR_SCREEN=WxH (default 1280x720); the native window / the Wine desktop would otherwise decide (FLOOP3: 2560x1440 vs 1512x982 removed a car one frame apart).
+        static const std::pair<int, int> scr = [] { int w = 1280, h = 720; if (const char* e = std::getenv("NOTSA_RR_SCREEN")) { std::sscanf(e, "%dx%d", &w, &h); } return std::pair<int, int>{ w, h }; }();
+        if (!FrontEndMenuManager.m_bMenuActive && CTimer::GetFrameCounter() > 0) { // not in the menus: the front end hit-tests the pointer against the real size
+            RsGlobal.maximumWidth  = scr.first;
+            RsGlobal.maximumHeight = scr.second;
+        }
+    }
     g_vns.fetch_add((uint64_t)Cfg().stepMs * 1'000'000ull, std::memory_order_relaxed);
 #ifdef NOTSA_PORTABLE
     notsa::portable::dsal::RrPump(Cfg().stepMs); // the software DirectSound mixer: cursors / playing state advance with game time (the audio entities read them and draw random numbers on that basis)

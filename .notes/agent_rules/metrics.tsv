@@ -150,3 +150,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-24	MAC-R6	v4	R-6 stock pipes + NVC	-	-	-	done: new game playable
 2026-10-24	MAC-RR-DESIGN	v4	RR plan + RR-1 harness	-	-	-	done; 1 nondeterminism left
 2026-10-24	MAC-RR2	v4	RR self-determinism root cause	-	-	-	done: rtanim LP64 pointer overwrite
+2026-10-24	MAC-PLAY1	v4	gameplay smoke + triage	-	-	-	all scenarios PASS, 3 fixes

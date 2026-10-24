@@ -373,7 +373,7 @@ void CRoadBlocks::CreateRoadBlockBetween2Points(CVector a, CVector b, bool isGan
         const CVector barMax = barrierBB.m_vecMax;
 
         const float barSize   = (barMax.x - barMin.x) + 0.5f;
-        const int32 numBars   = std::min((int32)(roadLen / barSize), 8);
+        const int32 numBars   = std::min(NOTSA_FTOL(int32, roadLen / barSize), 8);
         const float barSpacing = (roadLen - (float)numBars * barSize) / (float)(numBars + 1);
 
         CObject::DeleteAllTempObjectsInArea(mid, roadLen * 0.5f);

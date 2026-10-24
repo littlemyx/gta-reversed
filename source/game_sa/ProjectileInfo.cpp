@@ -439,7 +439,7 @@ void CProjectileInfo::Update() {
                 CTimer::ms_fTimeStep * proj->m_vecMoveSpeed.y,
                 CTimer::ms_fTimeStep * proj->m_vecMoveSpeed.z,
             };
-            const auto numParticles = std::max(1, static_cast<int32>(std::sqrt((moved.x * moved.x + moved.z * moved.z) + moved.y * moved.y)));
+            const auto numParticles = std::max(1, NOTSA_FTOL(int32, std::sqrt((moved.x * moved.x + moved.z * moved.z) + moved.y * moved.y)));
             for (int32 p = 0; p < numParticles; p++) {
                 const auto shade = Rand01() * 0.25f + 0.25f;
                 prtMult.m_Color.red   = shade;

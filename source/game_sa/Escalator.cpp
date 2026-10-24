@@ -47,9 +47,9 @@ void CEscalator::AddThisOne(const CVector& vecStart, const CVector& vecBottom, c
     m_End    = vecEnd - z;
 
     // 0x717A14
-    m_NumIntermediatePlanes = 1 + static_cast<int32>(DistanceBetweenPoints(m_Bottom, m_Top) * 2.5f);
-    m_NumBottomPlanes       = 1 + static_cast<int32>(DistanceBetweenPoints(m_Bottom, m_Start) / 3.2f);
-    m_NumTopPlanes          = 1 + static_cast<int32>(DistanceBetweenPoints(m_End, m_Top) / 3.2f);
+    m_NumIntermediatePlanes = 1 + NOTSA_FTOL(int32, DistanceBetweenPoints(m_Bottom, m_Top) * 2.5f);
+    m_NumBottomPlanes       = 1 + NOTSA_FTOL(int32, DistanceBetweenPoints(m_Bottom, m_Start) / 3.2f);
+    m_NumTopPlanes          = 1 + NOTSA_FTOL(int32, DistanceBetweenPoints(m_End, m_Top) / 3.2f);
 
     const auto dir = CVector2D{vecStart - vecBottom}.Normalized();
     m_Rotation.GetRight().Set(dir.y, -dir.x, 0.0f);

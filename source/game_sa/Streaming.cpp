@@ -190,7 +190,7 @@ void CStreaming::AddModelsToRequestList(const CVector& point, int32 streamingFla
     const auto min = point - CVector2D{ fRadius, fRadius },
                max = point + CVector2D{ fRadius, fRadius };
 
-    const auto noCheckRadius = static_cast<int32>(CWorld::GetHalfMapSectorX(fRadius));
+    const auto noCheckRadius = NOTSA_FTOL(int32, CWorld::GetHalfMapSectorX(fRadius));
 
     // Smaller radius, models in it are loaded regardless if they're in the rectangle
     // defined by `min` `max` or in `fRadius`.

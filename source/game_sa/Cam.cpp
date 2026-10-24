@@ -2970,7 +2970,7 @@ void CCam::Process_AimWeapon(const CVector& target, float orientation, float spe
             } else if (bIsDriver) {
                 if (lr == 0.0f && ud == 0.0f) {
                     if (!pad->GetWeapon(ped)) {
-                        gAimIdleTime += (int32)(((x87d)ts * (x87d)0.02f) * (x87d)1000.0f);
+                        gAimIdleTime += NOTSA_FTOL(int32, ((x87d)ts * (x87d)0.02f) * (x87d)1000.0f);
                     }
                 } else {
                     gAimIdleTime = 0;
@@ -4904,7 +4904,7 @@ NOTSA_GLOBAL(gFlyByRollSegmentIdx, 0xBC4088, (int32), {}); // Current position i
 //! @param data `[0]` = number of entries, then (starting at `[1]`) 10 floats per entry: time (s), point (3), incoming control point (3), outgoing control point (3)
 //! @param idx  In/out: index (into `data`) of the entry that ends the current segment
 void FlyBySplineVec3(CVector* out, float* data, float time, int32* idx) {
-    const auto count = static_cast<int32>(data[0]);
+    const auto count = NOTSA_FTOL(int32, data[0]);
 
     // BUG: The duration is NOT recalculated after `idx` is changed below, so it is the one of the old segment (the original does the same)
     const x87d duration = (static_cast<x87d>(data[*idx]) - data[*idx - 10]) * (x87d)1000.0;
@@ -4968,7 +4968,7 @@ void FlyBySplineVec3(CVector* out, float* data, float time, int32* idx) {
 //! Same as `FlyBySplineVec3`, but for a spline of floats (4 floats per entry: time (s), value, incoming control value, outgoing control value), 0x5B2330 (cdecl)
 //! The cutscene offset is not added.
 void FlyBySplineFloat(float* out, float* data, float time, int32* idx) {
-    const auto count = static_cast<int32>(data[0]);
+    const auto count = NOTSA_FTOL(int32, data[0]);
 
     const x87d duration = (static_cast<x87d>(data[*idx]) - data[*idx - 4]) * (x87d)1000.0;
     const float  lastTime = data[count * 4 - 3] * 1000.0f;
@@ -5037,7 +5037,7 @@ void CCam::Process_FlyBy(const CVector& target, float orientation, float speedVa
 
     if (!TheCamera.m_bStartingSpline) {
         m_fTimeElapsedFloat = 0.0f;
-        m_nFinishTime       = static_cast<uint32>(static_cast<int32>(static_cast<x87d>(srcPath[static_cast<int32>(srcPath[0]) * 10 - 9]) * (x87d)1000.0));
+        m_nFinishTime       = static_cast<uint32>(static_cast<int32>(static_cast<x87d>(srcPath[NOTSA_FTOL(int32, srcPath[0]) * 10 - 9]) * (x87d)1000.0));
 
         gFlyByRollSegmentIdx = 5;
         gFlyByFovSegmentIdx  = 5;
@@ -5049,7 +5049,7 @@ void CCam::Process_FlyBy(const CVector& target, float orientation, float speedVa
         m_fTimeElapsedFloat = static_cast<float>(static_cast<x87d>(CTimer::GetTimeStepNonClipped()) * 0.02f * 1000.0f + m_fTimeElapsedFloat);
     }
 
-    const float time = static_cast<float>(static_cast<uint32>(static_cast<int32>(m_fTimeElapsedFloat)));
+    const float time = static_cast<float>(static_cast<uint32>(NOTSA_FTOL(int32, m_fTimeElapsedFloat)));
 
     // The up vector is rotated around the front vector by the roll (in degrees)
     const auto ApplyRoll = [&] {

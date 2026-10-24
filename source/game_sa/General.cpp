@@ -164,7 +164,7 @@ uint32 CGeneral::GetNodeHeadingFromVector(float x, float y) {
     }
     // 0x8594F0 (1 / 2pi), 0x859000 (8.0); floor (0x8219F0) + _ftol2 (0x821B40): `fistp qword`, only the LOW dword is returned (NaN / inf / out of range => the
     // indefinite 0x8000000000000000 => 0, big values wrap), NOT the saturating 0x80000000 of a 32-bit conversion
-    return (uint32)(uint64)(int64)floor(X87R(angle * (double)0.15915494f) * (x87d)8.0);
+    return (uint32)(uint64)NOTSA_FTOL(int64, floor(X87R(angle * (double)0.15915494f) * (x87d)8.0));
 }
 
 /*!

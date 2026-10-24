@@ -65,7 +65,7 @@ int32& IntStatCell(uint32 stat) { return StaticRef<int32>(0xB78E20 + 4u * stat);
 
 //! x87: `CTimer::ms_fTimeStep * 0.02f * 1000.0f` kept in extended precision, then truncated by _ftol (0x821B40)
 uint32 TimeStepInMS() {
-    return (uint32)(int32)((x87d)CTimer::ms_fTimeStep * (x87d)0.02f * (x87d)1000.0);
+    return (uint32)NOTSA_FTOL(int32, (x87d)CTimer::ms_fTimeStep * (x87d)0.02f * (x87d)1000.0);
 }
 }
 
@@ -1904,7 +1904,7 @@ void CStats::UpdateStatsWhenCycling(bool arg0, CBmx* bmx) {
         return;
     }
 
-    m_CycleSkillCounter += (int32)std::ceil((x87d)(uint32)TimeStepInMS() * (x87d)rate);
+    m_CycleSkillCounter += NOTSA_FTOL(int32, std::ceil((x87d)(uint32)TimeStepInMS() * (x87d)rate));
 }
 
 // 0x55C990

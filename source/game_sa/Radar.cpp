@@ -1420,8 +1420,8 @@ void CRadar::DrawRadarMask() {
 void CRadar::StreamRadarSections(const CVector& worldPosn) {
     if (!CStreaming::ms_disableStreaming) {
         StreamRadarSections(
-            (int32)std::floor((worldPosn.x + 3000.0f) * ExeRecip(500.0f)),
-            (int32)std::ceil(11.0f - (worldPosn.y + 3000.0f) * ExeRecip(500.0f))
+            NOTSA_FTOL(int32, std::floor((worldPosn.x + 3000.0f) * ExeRecip(500.0f))),
+            NOTSA_FTOL(int32, std::ceil(11.0f - (worldPosn.y + 3000.0f) * ExeRecip(500.0f)))
         );
     }
 }
@@ -1752,8 +1752,8 @@ void CRadar::DrawRadarGangOverlay(bool inMenu) {
 void CRadar::DrawRadarMap() {
     DrawRadarMask();
 
-    auto x = (int32)std::floor((vec2DRadarOrigin.x + 3000.0f) * ExeRecip(500.0f));  // todo: inlined
-    auto y = (int32)std::ceil(11.0f - (vec2DRadarOrigin.y + 3000.0f) * ExeRecip(500.0f));
+    auto x = NOTSA_FTOL(int32, std::floor((vec2DRadarOrigin.x + 3000.0f) * ExeRecip(500.0f)));  // todo: inlined
+    auto y = NOTSA_FTOL(int32, std::ceil(11.0f - (vec2DRadarOrigin.y + 3000.0f) * ExeRecip(500.0f)));
 
     SetupRadarRect(x, y);
     StreamRadarSections(x, y);

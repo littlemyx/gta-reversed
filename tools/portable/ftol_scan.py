@@ -271,6 +271,19 @@ def scan_tu(args):
     return rows, edits_pack(edits, root), None
 
 
+def strip_parens(S, cb, ce):
+    """`(a * b)` -> `a * b` when the outer pair encloses the whole operand: the Win32 macro `(T)(expr)` then has the SAME tokens as the original `(T)(a * b)`"""
+    t = S[cb:ce]
+    if len(t) > 2 and t[:1] == b"(" and t[-1:] == b")" and b'"' not in t and b"'" not in t and b"//" not in t and b"/*" not in t:
+        d = 0
+        for i, c in enumerate(t):
+            d += (c == 0x28) - (c == 0x29)
+            if d == 0 and i < len(t) - 1:
+                return cb, ce
+        return cb + 1, ce - 1
+    return cb, ce
+
+
 def edits_pack(edits, root):
     """-> list of (file, begin, end, replacement)"""
     res = []
@@ -290,7 +303,7 @@ def edits_pack(edits, root):
             cb, ce = child["_p"][2], child["_p"][3]
             if child["_p"][0] != f or ce <= cb or P.skip_wrappers(child) is None:
                 continue
-            res.append((f, b, e, "NOTSA_FTOL(%s, %s)" % (T, S[b:e].decode())))
+            res.append((f, b, e, "NOTSA_FTOL(%s, " % T, b, e, ")"))
             continue
         # explicit
         cp = child.get("_p")
@@ -320,26 +333,57 @@ def edits_pack(edits, root):
                 continue
         if T in ("int", "unsigned", "unsigned int", "short", "unsigned short", "char", "unsigned char", "long", "unsigned long"):
             T = INT_NAMES.get("unsigned int" if T == "unsigned" else T, T)
-        inner = S[cb:ce].decode("utf8", "replace")
-        res.append((f, b, e, "NOTSA_FTOL(%s, %s)" % (T, inner)))
+        cb, ce = strip_parens(S, cb, ce)
+        res.append((f, b, e, "NOTSA_FTOL(%s, " % T, cb, ce, ")"))
     return res
 
 
 def apply_edits(path, es):
+    """edits (f, b, e, head, cb, ce, tail): the range [b, e) becomes head + (operand range [cb, ce) rendered recursively) + tail; nested edits are applied inside the operand"""
     S = open(path, "rb").read()
     es = sorted(set(es), key=lambda t: (t[1], -t[2]))
-    # drop edits nested inside another edit of the same file (the outer rewrite carries the inner text; a second pass picks the inner one up)
-    keep = []
-    last_end = -1
-    for ed in es:
-        if ed[1] < last_end:
-            continue
-        keep.append(ed)
-        last_end = ed[2]
-    for f, b, e, rep in reversed(keep):
-        S = S[:b] + rep.encode() + S[e:]
-    open(path, "wb").write(S)
-    return len(keep)
+
+    def render(lo, hi, i, stop):
+        """text of S[lo:hi] with the edits es[i:stop] (all inside [lo, hi), sorted) applied; -> bytes"""
+        out = []
+        pos = lo
+        while i < stop:
+            f, b, e, head, cb, ce, tail = es[i]
+            j = i + 1
+            while j < stop and es[j][1] < e:      # edits nested in this one
+                j += 1
+            if b < pos:                           # partial overlap (not nested): skip
+                i = j
+                continue
+            out.append(S[pos:b])
+            inner = [k for k in range(i + 1, j) if es[k][1] >= cb and es[k][2] <= ce]
+            # nested edits that are not inside the operand (inside the cast type?) are dropped
+            out.append(head.encode())
+            out.append(render_sub(cb, ce, inner))
+            out.append(tail.encode())
+            pos = e
+            i = j
+        out.append(S[pos:hi])
+        return b"".join(out)
+
+    def render_sub(lo, hi, idxs):
+        sub = [es[k] for k in idxs]
+        return render_sub_list(lo, hi, sub)
+
+    def render_sub_list(lo, hi, sub):
+        nonlocal es
+        saved = es
+        es = sub
+        try:
+            return render(lo, hi, 0, len(sub))
+        finally:
+            es = saved
+
+    n = len(es)
+    # top level edits: those not nested in another
+    S2 = render(0, len(S), 0, n)
+    open(path, "wb").write(S2)
+    return n
 
 
 def main():
@@ -376,10 +420,10 @@ def main():
                 continue
             for f, b, row in rs:
                 rows.setdefault((f, b), row)
-            for (f, b, e, rep) in (eds or []):
-                if a.dir and not re.search(a.dir, f):
+            for ed in (eds or []):
+                if a.dir and not re.search(a.dir, ed[0]):
                     continue
-                byfile.setdefault(f, set()).add((f, b, e, rep))
+                byfile.setdefault(ed[0], set()).add(ed)
     if failed:
         sys.stderr.write("ftol_scan: %d of %d TUs produced no AST; first: %s -> %s\n" % (len(failed), len(jobs), os.path.relpath(failed[0][0], REPO), failed[0][1]))
         if len(failed) * 50 > len(jobs):

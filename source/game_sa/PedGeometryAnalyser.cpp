@@ -194,7 +194,7 @@ void CPedGeometryAnalyser::ComputeClearTarget(const CPed& ped, const CVector& ta
     step.Normalise();
     step *= s_BoundingBoxMargin;
 
-    const auto maxIterations = (int32)(5.f / s_BoundingBoxMargin) + 1;
+    const auto maxIterations = NOTSA_FTOL(int32, 5.f / s_BoundingBoxMargin) + 1;
     for (auto i = 0; i < maxIterations;) {
         i++;
 
@@ -1250,7 +1250,7 @@ CPedGeometryAnalyser::WanderPathClearness CPedGeometryAnalyser::IsWanderPathClea
     }
 
     CVector dir = to - from;
-    const auto numSamples = std::min((int32)std::floor(dir.Magnitude()), maxSamples);
+    const auto numSamples = std::min(NOTSA_FTOL(int32, std::floor(dir.Magnitude())), maxSamples);
     if (numSamples == 0) {
         return WanderPathClearness::CLEAR;
     }

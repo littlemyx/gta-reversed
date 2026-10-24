@@ -289,8 +289,8 @@ public:
     static float GetSectorfY(float y) { return GetHalfMapSectorY(y) + static_cast<float>(MAX_SECTORS_Y / 2); }
 
     // returns sector index in range 0 to 120 (covers full map)
-    static int32 GetSectorX(float x) { return static_cast<int32>(std::floor(GetSectorfX(x))); }
-    static int32 GetSectorY(float y) { return static_cast<int32>(std::floor(GetSectorfY(y))); }
+    static int32 GetSectorX(float x) { return NOTSA_FTOL(int32, std::floor(GetSectorfX(x))); }
+    static int32 GetSectorY(float y) { return NOTSA_FTOL(int32, std::floor(GetSectorfY(y))); }
 
     static float GetSectorPosX(int32 sector) {
         constexpr auto HalfOfTotalSectorsX = MAX_SECTORS_X / 2;
@@ -312,8 +312,8 @@ public:
     static float GetLodSectorfX(float sector) { return GetHalfMapLodSectorX(sector) + static_cast<float>(MAX_LOD_PTR_LISTS_X / 2); }
     static float GetLodSectorfY(float sector) { return GetHalfMapLodSectorY(sector) + static_cast<float>(MAX_LOD_PTR_LISTS_Y / 2); }
     // returns sector index in range 0 to 30 (covers full map)
-    static int32 GetLodSectorX(float fSector) { return static_cast<int32>(std::floor(GetLodSectorfX(fSector))); }
-    static int32 GetLodSectorY(float fSector) { return static_cast<int32>(std::floor(GetLodSectorfY(fSector))); }
+    static int32 GetLodSectorX(float fSector) { return NOTSA_FTOL(int32, std::floor(GetLodSectorfX(fSector))); }
+    static int32 GetLodSectorY(float fSector) { return NOTSA_FTOL(int32, std::floor(GetLodSectorfY(fSector))); }
     static float GetLodSectorPosX(int32 sector) {
         const int32 HalfOfTotalSectorsX = MAX_LOD_PTR_LISTS_X / 2;
         const float fTotalMapUnitsX = static_cast<float>(MAX_WORLD_UNITS / MAX_LOD_PTR_LISTS_X);

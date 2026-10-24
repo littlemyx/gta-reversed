@@ -72,7 +72,7 @@ void CAttractorScanner::ScanForAttractors(CPed& ped) {
     // Sector range, the original evaluates this on the x87 stack and passes a double to `floor` (0x8219F0)
     // `pos - 15.0f` for the lower bound, `15.0f + pos` for the upper one (0x86C52C = 15.0f, 0x858B38 = 0.02f, 0x858B34 = 60.0f)
     const auto  pos       = ped.GetPosition();
-    const auto  ToSector  = [](double v) { return (int32)std::floor(X87R(v * (double)0.02f) + (x87d)60.0); };
+    const auto  ToSector  = [](double v) { return NOTSA_FTOL(int32, std::floor(X87R(v * (double)0.02f) + (x87d)60.0)); };
     const int32 sectorX0  = ToSector((x87d)pos.x - (x87d)15.0);
     const int32 sectorY0  = ToSector((x87d)pos.y - (x87d)15.0);
     const int32 sectorX1  = ToSector((x87d)15.0 + (x87d)pos.x);

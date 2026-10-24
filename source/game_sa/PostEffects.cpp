@@ -124,7 +124,7 @@ static int ExeRasterLog2(int w) { return (int)(std::log((double)w) / std::log(2.
 
 // notsa
 int32 CPostEffects::ExeRasterSize(int32 w) {
-    return (int32)std::pow(2.0, (double)(ExeRasterLog2(w) + 1));
+    return NOTSA_FTOL(int32, std::pow(2.0, (double)(ExeRasterLog2(w) + 1)));
 }
 
 // 0x7043D0
@@ -488,7 +488,7 @@ void CPostEffects::UnderWaterRipple(CRGBA color, float xoffset, float yoffset, f
 
     if (rasterHeight > 0) {
         auto y = 0;
-        for (; y < rasterHeight; y = int32((float)y + yoffset)) {
+        for (; y < rasterHeight; y = NOTSA_FTOL(int32, (float)y + yoffset)) {
             EmitVertex(X87R(x87::sin(freq * (float)y + speed * (float)CTimer::GetTimeInMS()) * xoffset), y);
         }
         EmitVertex(X87R(x87::sin(freq * (float)y + speed * (float)CTimer::GetTimeInMS()) * xoffset), y);
@@ -811,7 +811,7 @@ void CPostEffects::NightVision() {
         RwRenderStateSet(rwRENDERSTATESRCBLEND,  RWRSTATE(rwBLENDONE));
         RwRenderStateSet(rwRENDERSTATEDESTBLEND, RWRSTATE(rwBLENDONE));
 
-        for (auto i = 0, end = (int32)m_fNightVisionSwitchOnFXCount; i < end; i++) {
+        for (auto i = 0, end = NOTSA_FTOL(int32, m_fNightVisionSwitchOnFXCount); i < end; i++) {
             DrawQuad(0.0f, 0.0f, (float)ms_imf.sizeDrawBufferX, (float)ms_imf.sizeDrawBufferY, 8, 8, 8, 255, ms_imf.RasterDrawBuffer);
         }
 
@@ -1028,9 +1028,9 @@ void CPostEffects::CCTV() {
     ImmediateModeRenderStatesStore();
     ImmediateModeRenderStatesSet();
 
-    const auto lineHeight  = static_cast<uint32>(2.0f * SCREEN_STRETCH_Y(1.0f));
+    const auto lineHeight  = NOTSA_FTOL(uint32, 2.0f * SCREEN_STRETCH_Y(1.0f));
     const auto linePadding = 2 * lineHeight;
-    const auto numLines    = static_cast<uint32>(SCREEN_HEIGHT) / linePadding;
+    const auto numLines    = NOTSA_FTOL(uint32, SCREEN_HEIGHT) / linePadding;
     for (auto i = 0u, y = 0u; i < numLines; i++, y += linePadding) {
         DrawQuad(
             0.0f,

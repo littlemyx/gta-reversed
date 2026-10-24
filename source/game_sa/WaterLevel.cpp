@@ -223,8 +223,8 @@ void CWaterLevel::AddWaveToResult(float x, float y, float* pfWaterLevel, float f
     const float scaledY = y * 0.5f;
     const float fracX   = scaledX - (float)std::floor(scaledX);
     const float fracY   = scaledY - (float)std::floor(scaledY);
-    const int32 ix      = (int32)((float)std::floor(scaledX) * 2.0f);
-    const int32 iy      = (int32)((float)std::floor(scaledY) * 2.0f);
+    const int32 ix      = NOTSA_FTOL(int32, (float)std::floor(scaledX) * 2.0f);
+    const int32 iy      = NOTSA_FTOL(int32, (float)std::floor(scaledY) * 2.0f);
 
     if (fracY + fracX < 1.0f) { // Lower triangle
         CalculateWavesOnlyForCoordinate2(ix,     iy,     fUnkn1, fUnkn2, &h0);
@@ -1309,8 +1309,8 @@ bool CWaterTriangle::GetWaterLevel(float x, float y, float z, float* outWaterLev
 
 // 0x6E8580
 bool CWaterLevel::GetWaterLevelNoWaves(CVector pos, float* pOutWaterLevel, float* pOutBigWaves, float* pOutSmallWaves) {
-    const int32 blockX = (int32)std::floor(pos.x * 0.002f + 6.0f);
-    const int32 blockY = (int32)std::floor(pos.y * 0.002f + 6.0f);
+    const int32 blockX = NOTSA_FTOL(int32, std::floor(pos.x * 0.002f + 6.0f));
+    const int32 blockY = NOTSA_FTOL(int32, std::floor(pos.y * 0.002f + 6.0f));
 
     // Outside of the world => Flat water at 0
     if (blockX < 0 || blockX >= NUM_WATER_BLOCKS_ROWCOL || blockY < 0 || blockY >= NUM_WATER_BLOCKS_ROWCOL) {
@@ -1424,7 +1424,7 @@ bool CWaterLevel::TestLineAgainstWater(CVector start, CVector end, CVector* outH
 
     // 0x821B40 (ftol => truncation) of `v * 0.002 + 6`
     const auto ToBlock = [](float v) {
-        return (int32)((x87d)v * (x87d)0.002f + (x87d)6.f); // 0x858F44, 0x858B44
+        return NOTSA_FTOL(int32, (x87d)v * (x87d)0.002f + (x87d)6.f); // 0x858F44, 0x858B44
     };
     const int32 minBlockY = ToBlock(minY);
     const int32 maxBlockX = ToBlock(maxX);
@@ -1506,7 +1506,7 @@ void CWaterLevel::RenderWaterFog() {
         return;
     }
 
-    const int32 numFogLayers = (int32)((float)m_WaterFogDensity * CWeather::WaterFogFXControl);
+    const int32 numFogLayers = NOTSA_FTOL(int32, (float)m_WaterFogDensity * CWeather::WaterFogFXControl);
     if (numFogLayers == 0) {
         gWaterFogIndex = 0;
         return;
@@ -1560,7 +1560,7 @@ void CWaterLevel::RenderWaterFog() {
     RwRenderStateSet(rwRENDERSTATEZTESTENABLE,    RWRSTATE(TRUE));
     RwRenderStateSet(rwRENDERSTATETEXTURERASTER,  RWRSTATE(NULL));
 
-    const int32 numLayersToRender = (int32)((1.f - m_fWaterFogInsideFade) * (float)numFogLayers);
+    const int32 numLayersToRender = NOTSA_FTOL(int32, (1.f - m_fWaterFogInsideFade) * (float)numFogLayers);
     const RwRGBA fogColor{ m_WaterFogCol.r, m_WaterFogCol.g, m_WaterFogCol.b, m_WaterFogCol.a };
 
     uint32 numVerts = 0;
@@ -1629,7 +1629,7 @@ void CWaterLevel::CalculateWavesOnlyForCoordinate(
 
     constexpr float PHASE_TO_LUT = 40.7436638f; // 0x85A778
     const auto TimeStep = [](uint32 period) { return (CTimer::m_snTimeInMilliseconds - m_nWaterTimeOffset) % period; };
-    const auto LutAt    = [&](double v) { return (double)SIN_LUT[(int32)v & 0xFF]; };
+    const auto LutAt    = [&](double v) { return (double)SIN_LUT[NOTSA_FTOL(int32, v) & 0xFF]; };
 
     // Wave 1
     {
@@ -1727,7 +1727,7 @@ void CWaterLevel::CalculateWavesOnlyForCoordinate2( // TODO: Original name didn'
     constexpr float PHASE_TO_LUT = 40.7436638f; // 0x85A778 (= 256 / 2pi)
     const auto TimeStep = [](uint32 period) { return (CTimer::m_snTimeInMilliseconds - m_nWaterTimeOffset) % period; };
     const auto LutSin   = [&](double phase) { // `phase * PHASE_TO_LUT` is truncated by `_ftol2`
-        return (double)SIN_LUT[(int32)(X87R(phase * (double)PHASE_TO_LUT)) & 0xFF];
+        return (double)SIN_LUT[NOTSA_FTOL(int32, X87R(phase * (double)PHASE_TO_LUT)) & 0xFF];
     };
 
     // Wave 1 (big)
@@ -1840,8 +1840,8 @@ void CWaterLevel::RenderDetailedSeaBedSegment(int32 blockX, int32 blockY, float 
     // Number of cells to split the segment into (At least 1 on each axis)
     const auto spanX = (x87d)maxX - (x87d)minX;
     const auto spanY = (x87d)maxY - (x87d)minY;
-    const auto numX  = std::max(1, (int32)(spanX * CELLS_PER_BLOCK));
-    const auto numY  = std::max(1, (int32)(spanY * CELLS_PER_BLOCK));
+    const auto numX  = std::max(1, NOTSA_FTOL(int32, spanX * CELLS_PER_BLOCK));
+    const auto numY  = std::max(1, NOTSA_FTOL(int32, spanY * CELLS_PER_BLOCK));
     const auto widthX  = (float)spanX;
     const auto heightY = (float)spanY;
 
@@ -2081,7 +2081,7 @@ void CWaterLevel::RenderWater() {
         }
 
         const CRenPar par{ 0.f, 1.f, 0.f, 0, 0 };
-        const auto CalcPos = [](int32 block) { return (int32)((float)block - 3000.f); };
+        const auto CalcPos = [](int32 block) { return NOTSA_FTOL(int32, (float)block - 3000.f); };
         RenderWaterRectangle(
             CalcPos(blockX * WATER_BLOCK_SIZE), CalcPos(blockX * WATER_BLOCK_SIZE + WATER_BLOCK_SIZE),
             CalcPos(blockY * WATER_BLOCK_SIZE), CalcPos(blockY * WATER_BLOCK_SIZE + WATER_BLOCK_SIZE),
@@ -2331,8 +2331,8 @@ void CWaterLevel::SetCameraRange() {
 
     const auto& cmpos = TheCamera.GetPosition();
 
-    const auto CalcMin = [](float p) { return 2 * (int32)std::floor((p - (float)DETAILEDWATERDIST) / 2.f); };
-    const auto CalcMax = [](float p) { return 2 * (int32)std::ceil((p + (float)DETAILEDWATERDIST) / 2.f); };
+    const auto CalcMin = [](float p) { return 2 * NOTSA_FTOL(int32, std::floor((p - (float)DETAILEDWATERDIST) / 2.f)); };
+    const auto CalcMax = [](float p) { return 2 * NOTSA_FTOL(int32, std::ceil((p + (float)DETAILEDWATERDIST) / 2.f)); };
 
     CameraRangeMinX = CalcMin(cmpos.x);
     CameraRangeMaxX = CalcMax(cmpos.x);

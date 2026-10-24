@@ -1503,10 +1503,10 @@ void CShadows::RenderStoredShadows() {
 
             // Iterate shadow sectors (Using `CWorld::IterateSectors` for convenience)
             CWorld::IterateSectors(
-                (int32)(std::floor(oshdwRect.left / (float)STEP_SIZE)),
-                (int32)(std::floor(oshdwRect.top / (float)STEP_SIZE)),
-                (int32)(std::ceil(oshdwRect.right / (float)STEP_SIZE)),
-                (int32)(std::ceil(oshdwRect.bottom / (float)STEP_SIZE)),
+                NOTSA_FTOL(int32, std::floor(oshdwRect.left / (float)STEP_SIZE)),
+                NOTSA_FTOL(int32, std::floor(oshdwRect.top / (float)STEP_SIZE)),
+                NOTSA_FTOL(int32, std::ceil(oshdwRect.right / (float)STEP_SIZE)),
+                NOTSA_FTOL(int32, std::ceil(oshdwRect.bottom / (float)STEP_SIZE)),
                 [&](int32 ox, int32 oy) {
                     // 0x70B000 - 0x70B0DA: Start storing 
                     RwIm3DVertex* vtxIt{};
@@ -1590,7 +1590,7 @@ void CShadows::GeneratePolysForStaticShadow(int16 staticShadowIndex) {
 
     // NOTSA: Using `CWorld::GetSectorX` isn't exact here, as the original multiplies (instead of dividing) by 1/50
     const auto GetSector = [](float v) {
-        return (int32)std::floor(v * 0.02f + 60.0f);
+        return NOTSA_FTOL(int32, std::floor(v * 0.02f + 60.0f));
     };
     const auto sectorMinX = std::max(GetSector(minX), 0);
     const auto sectorMinY = std::max(GetSector(minY), 0);

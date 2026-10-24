@@ -302,7 +302,7 @@ bool CGangWars::CreateAttackWave(int32 warFerocity, int32 waveID) {
         dir.y *= 1.2f;
         dir.z *= 1.2f;
 
-        auto numPeds = (int32)((Difficulty * 0.3f + 0.7f) * (float)(warFerocity + 3));
+        auto numPeds = NOTSA_FTOL(int32, (Difficulty * 0.3f + 0.7f) * (float)(warFerocity + 3));
         if (bTrainingMission) {
             numPeds = 2;
         }
@@ -459,7 +459,7 @@ bool CGangWars::CreateDefendingGroup(int32 unused) {
     if (DistanceBetweenPoints2D(playerPos, nodePos) <= 40.0f)
         return false;
 
-    auto pedCount = static_cast<uint32>(10.0f * (0.4f * Difficulty + 0.6f));
+    auto pedCount = NOTSA_FTOL(uint32, 10.0f * (0.4f * Difficulty + 0.6f));
 
     int32 outPedId;
     for (auto i = 0u; i < pedCount; i++) {
@@ -1095,7 +1095,7 @@ void CGangWars::Update() {
             }
         }
         if (State == NOT_IN_WAR) {
-            auto decrease = (float)(uint32)(int32)(CTimer::GetTimeStep() * 0.02f * 1000.0f);
+            auto decrease = (float)(uint32)NOTSA_FTOL(int32, CTimer::GetTimeStep() * 0.02f * 1000.0f);
             if (CWeather::WeatherRegion != WEATHER_REGION_LA) {
                 decrease *= 0.06f;
             }
@@ -1115,7 +1115,7 @@ void CGangWars::Update() {
             break;
         }
 
-        fightTimer += (int32)(CTimer::GetTimeStep() * 0.02f * -1000.0f);
+        fightTimer += NOTSA_FTOL(int32, CTimer::GetTimeStep() * 0.02f * -1000.0f);
         if (fightTimer < 0) {
             ShowMessage("GW_NOSH", "GW_NOSH");
             State2 = NO_ATTACK;
@@ -1137,7 +1137,7 @@ void CGangWars::Update() {
             break;
         }
 
-        fightTimer += (int32)(CTimer::GetTimeStep() * 0.02f * -1000.0f);
+        fightTimer += NOTSA_FTOL(int32, CTimer::GetTimeStep() * 0.02f * -1000.0f);
         if (fightTimer < 0) {
             State2             = NO_ATTACK;
             TimeTillNextAttack = (float)CalculateTimeTillNextAttack();

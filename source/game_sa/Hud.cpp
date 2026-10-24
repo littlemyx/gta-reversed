@@ -872,7 +872,7 @@ float CHud::DrawFadeState(DRAW_FADE_STATE fadingElement, int32 forceFadingIn) {
             alpha = (float)fadeTimer * 0.001f * 255.0f;
             break;
         case NAME_FADE_OUT:
-            fadeTimer += (int32)(CTimer::GetTimeStep() * 0.02f * -1000.0f);
+            fadeTimer += NOTSA_FTOL(int32, CTimer::GetTimeStep() * 0.02f * -1000.0f);
             if (fadeTimer < 0) {
                 fadeTimer = 0;
                 state = NAME_DONT_SHOW;
@@ -1773,7 +1773,7 @@ void CHud::DrawVehicleName() {
         alpha = (float)m_VehicleFadeTimer * 0.001f * 255.0f;
         break;
     case NAME_FADE_OUT:
-        m_VehicleFadeTimer += (int32)(CTimer::GetTimeStep() * 0.02f * -1000.0f);
+        m_VehicleFadeTimer += NOTSA_FTOL(int32, CTimer::GetTimeStep() * 0.02f * -1000.0f);
         if (m_VehicleFadeTimer < 0) {
             m_VehicleState = NAME_DONT_SHOW;
             m_VehicleFadeTimer = 0;
@@ -1781,7 +1781,7 @@ void CHud::DrawVehicleName() {
         alpha = (float)m_VehicleFadeTimer * 0.001f * 255.0f;
         break;
     case NAME_SWITCH:
-        m_VehicleFadeTimer += (int32)(CTimer::GetTimeStep() * 0.02f * -1000.0f);
+        m_VehicleFadeTimer += NOTSA_FTOL(int32, CTimer::GetTimeStep() * 0.02f * -1000.0f);
         if (m_VehicleFadeTimer < 0) {
             m_VehicleNameTimer = 0;
             m_VehicleState = NAME_FADE_IN;

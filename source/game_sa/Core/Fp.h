@@ -219,7 +219,7 @@ inline void SetSseModeGameCompatible() { _mm_setcsr(_mm_getcsr() & ~(0x8000u | 0
 //! `(T)x` for a float / double `x` and an integer (or enum) `T`, with the exe's conversion semantics (MAC-FTOL1, spelled NOTSA_FTOL(T, x) in game code, Base.h): the exe's CRT converts through
 //! `_ftol2` (fistp qword, truncation, LOW dword) for every integer target; the 8 / 16 bit targets are the low bits of that dword (MSVC's `mov al / ax`). So an out-of-range / NaN / inf value gives
 //! the exe's bit pattern (NaN, inf, |x| >= 2^63 -> 0, 2^31 <= |x| < 2^63 wraps) instead of the arm64 saturation / x86 `cvttsd2si` 0x80000000 / UB of a plain cast. In range: exact truncation.
-//! 64 bit targets: Ftol64 (`uint64` = the same bits; values in [2^63, 2^64) are not reproduced: the game has no such site).
+//! 64 bit targets: Ftol64 (`uint64` = the same bits; values in [2^63, 2^64) are not reproduced: the game has no such site). `size_t` is the exception: 32 bits in the exe, so FtolU.
 template<class T, class F>
 [[nodiscard]] inline T FtolCast(F x) {
     static_assert(std::is_floating_point_v<F>);
@@ -227,7 +227,9 @@ template<class T, class F>
         return static_cast<T>(FtolCast<std::underlying_type_t<T>>(x));
     } else {
         static_assert(std::is_integral_v<T> && !std::is_same_v<T, bool>);
-        if constexpr (sizeof(T) == 8) {
+        if constexpr (std::is_same_v<T, size_t>) {
+            return static_cast<T>(FtolU(x));    // the exe's size_t is 32 bits: the low dword of the conversion, zero-extended (never the 64 bit result)
+        } else if constexpr (sizeof(T) == 8) {
             return static_cast<T>(Ftol64(x));
         } else if constexpr (sizeof(T) == 4 && std::is_unsigned_v<T>) {
             return static_cast<T>(FtolU(x));

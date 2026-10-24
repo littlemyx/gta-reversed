@@ -102,7 +102,7 @@ CEntity* CPlayerInfo::FindObjectToSteal(CPed* ped) {
     const CVector center{ offX + pedPos.x, offY + pedPos.y, offZ + pedPos.z };
 
     // Sector range (the original did the clamping in a rather strange way, but the result is the same)
-    const auto SectorOf = [](float v) { return (int32)std::floor(v * 0.02f + 60.0f); };
+    const auto SectorOf = [](float v) { return NOTSA_FTOL(int32, std::floor(v * 0.02f + 60.0f)); };
     const auto xMinSector = SectorOf(center.x - 3.0f);
     const auto yMinSector = SectorOf(center.y - 3.0f);
     const auto xMaxSector = SectorOf(center.x + 3.0f);
@@ -214,7 +214,7 @@ namespace {
 // Original: `CTimer::ms_fTimeStep * 0.02f * mult` kept in extended precision until `_ftol` (0x821B40).
 // `mult` is either 1000.0f, or -1000.0f (0x859948).
 int32 TimeStepToMS(float mult = 1000.0f) {
-    return static_cast<int32>(static_cast<x87d>(CTimer::GetTimeStep()) * static_cast<x87d>(0.02f) * static_cast<x87d>(mult));
+    return NOTSA_FTOL(int32, static_cast<x87d>(CTimer::GetTimeStep()) * static_cast<x87d>(0.02f) * static_cast<x87d>(mult));
 }
 
 // Taxi fare: Score +1 for every second the player drives a taxi with a passenger
@@ -242,7 +242,7 @@ uint32 DecayedTempBufferCounter(const CPlayerInfo& info, float factor) {
     if (v < 0.0) {
         v = (x87d)0.0;
     }
-    return static_cast<uint32>(static_cast<int64>(v));
+    return static_cast<uint32>(NOTSA_FTOL(int64, v));
 }
 
 // Tracks two wheels / wheelie / stoppie stunts (+ records them in the stats)
@@ -508,7 +508,7 @@ void ProcessEnterVehicle(CPlayerInfo& s, uint32 playerIndex) {
     const float minY   = pedPos.y - 10.0f;
     const float maxY   = pedPos.y + 10.0f;
 
-    const auto SectorOf = [](float v) { return static_cast<int32>(std::floor(static_cast<float>(static_cast<x87d>(v) * 0.02f + 60.0f))); };
+    const auto SectorOf = [](float v) { return NOTSA_FTOL(int32, std::floor(static_cast<float>(static_cast<x87d>(v) * 0.02f + 60.0f))); };
     const auto xMin     = SectorOf(minX);
     const auto yMin     = SectorOf(minY);
     const auto xMax     = SectorOf(maxX);

@@ -435,7 +435,7 @@ int32 CCarCtrl::ChooseModel(int32* carType) {
         }
 
         // x87: The product is kept in extended precision. NOTE: The random number is in [0, 1) only because `GetRandomNumber` is <= 0x7FFF
-        auto remaining = (int32)((x87d)CGeneral::GetRandomNumber() * std::bit_cast<float>(0x38000000u) * (x87d)sumGangStrength);
+        auto remaining = NOTSA_FTOL(int32, (x87d)CGeneral::GetRandomNumber() * std::bit_cast<float>(0x38000000u) * (x87d)sumGangStrength);
         auto gang      = 0;
         if (zoneInfo->GangStrength[0] < remaining) {
             do {
@@ -456,7 +456,7 @@ int32 CCarCtrl::ChooseModel(int32* carType) {
         const auto* const gangCars = reinterpret_cast<const int16*>(&CPopulation::m_CarGroups[POPCYCLE_CARGROUP_BALLAS][0]);
         for (auto numTries = 0; numTries < 10;) {
             // x87: kept in extended precision
-            const auto idx   = (int32)((x87d)CGeneral::GetRandomNumber() * std::bit_cast<float>(0x38000000u) * 23.0f); // 0x858F84
+            const auto idx   = NOTSA_FTOL(int32, (x87d)CGeneral::GetRandomNumber() * std::bit_cast<float>(0x38000000u) * 23.0f); // 0x858F84
             const auto model = (uint16)gangCars[gang * 23 + idx];
             if (model == CPopulation::m_DefaultModelIDForUnusedSlot) { // Empty slot (doesn't count as a try)
                 continue;
@@ -1279,11 +1279,11 @@ TrafficSectorRange GetTrafficSectorRange(float minX, float minY, float maxX, flo
     };
     const auto GetMin = [&](float v) -> int32 {
         const auto [ext, rounded] = GetSector(v);
-        return (int32)std::floor(ext) > 0 ? (int32)std::floor((x87d)rounded) : 0;
+        return NOTSA_FTOL(int32, std::floor(ext)) > 0 ? NOTSA_FTOL(int32, std::floor((x87d)rounded)) : 0;
     };
     const auto GetMax = [&](float v) -> int32 {
         const auto [ext, rounded] = GetSector(v);
-        return (int32)std::floor(ext) < 119 ? (int32)std::floor((x87d)rounded) : 119;
+        return NOTSA_FTOL(int32, std::floor(ext)) < 119 ? NOTSA_FTOL(int32, std::floor((x87d)rounded)) : 119;
     };
     return { GetMin(minX), GetMin(minY), GetMax(maxX), GetMax(maxY) };
 }
@@ -4506,11 +4506,11 @@ void CCarCtrl::ScanForPedDanger(CVehicle* vehicle) {
     };
     const auto GetMinSector = [&](float v) -> int32 {
         const auto [ext, rounded] = GetSector(v);
-        return (int32)std::floor(ext) > 0 ? (int32)std::floor((x87d)rounded) : 0;
+        return NOTSA_FTOL(int32, std::floor(ext)) > 0 ? NOTSA_FTOL(int32, std::floor((x87d)rounded)) : 0;
     };
     const auto GetMaxSector = [&](float v) -> int32 {
         const auto [ext, rounded] = GetSector(v);
-        return (int32)std::floor(ext) < 119 ? (int32)std::floor((x87d)rounded) : 119;
+        return NOTSA_FTOL(int32, std::floor(ext)) < 119 ? NOTSA_FTOL(int32, std::floor((x87d)rounded)) : 119;
     };
     const auto sectorMinX = GetMinSector(minX);
     const auto sectorMinY = GetMinSector(minY);

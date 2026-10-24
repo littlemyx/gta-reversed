@@ -430,7 +430,7 @@ void CFireManager::Update() {
 
             if ((fire.GetPosition() - strongest->GetPosition()).Magnitude2D() < 6.0f) {
                 fCombinedStrength += fire.GetStrength();
-                nCombinedCeilStrength += (int32)std::ceil(fire.GetStrength());
+                nCombinedCeilStrength += NOTSA_FTOL(int32, std::ceil(fire.GetStrength()));
                 nFires--;
                 firesVisited[i] = true;
 

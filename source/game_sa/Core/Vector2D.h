@@ -62,7 +62,7 @@ public:
     // Returns length of vector
     // 0x420860 (the exe squares, adds and takes the root in extended precision, only the caller rounds to float: x * x of 2.6e30 does not overflow there)
     [[nodiscard]] inline float Magnitude() const {
-        return (float)std::sqrt((double)x * x + (double)y * y);
+        return (float)std::sqrt((x87d)x * x + (x87d)y * y);
     }
 
     [[nodiscard]] inline bool IsZero() const {

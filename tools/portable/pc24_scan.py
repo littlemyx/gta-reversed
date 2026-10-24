@@ -7,7 +7,8 @@ arithmetic and gives different results (e.g. ChooseModel total 8 vs 9). The port
 
 Mechanism (source/game_sa/Core/Fp.h): `x87d` = `double` on every non-portable build (the MSVC code bytes do not change) and `float` when NOTSA_PORTABLE is defined.
 This tool finds the expression roots and, with --apply, rewrites the clean ones: `(double)` -> `(x87d)`, `double` locals -> `x87d`, exact-float double
-literals `1.0` -> `(x87d)1.0`.
+literals `1.0` -> `(x87d)1.0`; an operation with a genuine 53 bit operand (double global / call result / x87:: result / non-float literal) is computed in
+double and rounded to float: `X87R(a * b)` (Base.h: `((x87d)(...))` portable, plain `(...)` elsewhere: MSVC code bytes unchanged).
 
 usage:
   pc24_scan.py [--cc build/PortableMacRR/compile_commands.json] [--only REGEX]... [--out report.tsv] [--apply] [-j N]
@@ -139,6 +140,11 @@ def callee_name(n):
     return ""
 
 
+CAST_KINDS = ("ImplicitCastExpr", "CStyleCastExpr", "CXXFunctionalCastExpr", "CXXStaticCastExpr")
+CLEAN = ("f", "i", "lit", "node")      # float-valued after the rewrite
+FN_DECLS = ("FunctionDecl", "CXXMethodDecl", "CXXConstructorDecl", "CXXDestructorDecl")
+
+
 class TU:
     def __init__(self, path, root):
         self.path = path
@@ -147,119 +153,155 @@ class TU:
         self.locals = {}      # id -> dict(name, node, defs[], clean)
         self.groups = {}      # DeclStmt id -> [local ids]
 
-    # ---- leaf classification --------------------------------------------------------------------------------------------------------------------------
-    def leaves(self, e, out, ctx):
-        """Collect the leaves of the double expression e into out (list of (kind, text)); returns the list of arithmetic nodes."""
-        e0 = e
-        e = skip_wrappers(e)
-        k = e["kind"]
+    def text(self, n):
+        p = n.get("_p")
+        return self.src[p[2]:p[3]].decode("utf8", "replace") if p else ""
+
+    # ---- operand classification ----------------------------------------------------------------------------------------------------------------------
+    # proc(e, em, depth) -> (kind, opedits)
+    #   kind: 'f' float-valued float expr, 'i' int, 'lit' exact-float double literal, 'node' arithmetic node (float-valued after the rewrite),
+    #         'D' genuine double-valued operand (double global / member / param / call result / dirty local), 'X' x87:: result, 'M' math library result, 'LITD' non-float literal
+    #   opedits: edits that make this operand a float when its parent node is "clean" (explicit (double) casts, exact literals)
+    #   em: list collecting the edits that are needed regardless (wraps of dirty nodes + edits of nested clean nodes); None = dry run
+    def proc(self, e, em, depth=0):
+        while True:
+            k = e["kind"]
+            if k in ("ParenExpr", "ExprWithCleanups", "ConstantExpr", "MaterializeTemporaryExpr"):
+                e = e["inner"][0]
+                continue
+            if k == "ImplicitCastExpr" and e.get("castKind") in ("LValueToRValue", "NoOp", "ToVoid"):
+                e = e["inner"][0]
+                continue
+            if k in ("CStyleCastExpr", "CXXFunctionalCastExpr", "CXXStaticCastExpr") and e.get("castKind") in ("NoOp", "LValueToRValue", "ToVoid"):
+                if is_dbl(e.get("type")):      # explicit (double)X where X is already double typed (a promoted float literal, a double expression ...)
+                    kind, ed = self.proc(e["inner"][0], em, depth)
+                    if kind in CLEAN:
+                        ed = ed + self.cast_edit(e)
+                    return kind, ed
+                e = e["inner"][0]
+                continue
+            break
         t = e.get("type")
-        if k in ("ImplicitCastExpr", "CStyleCastExpr", "CXXFunctionalCastExpr", "CXXStaticCastExpr"):
+        if k in CAST_KINDS:
             ck = e.get("castKind")
             src = e["inner"][0]
+            st = skip_wrappers(src)
             if ck == "FloatingCast":
-                st = skip_wrappers(src)
                 if is_flt(src.get("type")) or is_flt(st.get("type")):
-                    out.append(("f", ""))
-                    ctx["floatsrc"].append(st)
-                    return
-                if not is_dbl(t):
-                    out.append(("f", ""))            # narrowing (float)(double chain): its own root
-                    return
-                return self.leaves(src, out, ctx)
-            if ck == "IntegralToFloating":
-                out.append(("i", ""))
-                return
-            if ck in ("FloatingToIntegral", "IntegralCast", "IntegralToBoolean"):
-                out.append(("i", ""))
-                return
-            return self.leaves(src, out, ctx)
+                    self.proc(st, em, depth + 1)                 # nested nodes in the float operand
+                    ed = []
+                    if k != "ImplicitCastExpr" and is_dbl(t):
+                        ed = self.cast_edit(e)
+                    return "f", ed
+                if not is_dbl(t):                               # narrowing (float)(double expr)
+                    self.proc(src, em, depth + 1)
+                    return "f", []
+                return self.proc(src, em, depth)
+            if ck in ("IntegralToFloating", "FloatingToIntegral", "IntegralCast", "IntegralToBoolean"):
+                return "i", []
+            return self.proc(src, em, depth)
         if k == "FloatingLiteral":
             if is_flt(t):
-                out.append(("f", ""))
-            elif float_exact(e.get("value", "x")):
-                out.append(("lit", e.get("value")))
-            else:
-                out.append(("LIT", e.get("value")))
-            return
-        if k == "IntegerLiteral" or k == "CXXBoolLiteralExpr" or k == "CharacterLiteral":
-            out.append(("i", ""))
-            return
+                return "f", []
+            if float_exact(e.get("value", "x")):
+                return "lit", self.lit_edit(e)
+            return "LITD", []
+        if k in ("IntegerLiteral", "CXXBoolLiteralExpr", "CharacterLiteral"):
+            return "i", []
         if k == "UnaryOperator" and e.get("opcode") in ("-", "+"):
-            return self.leaves(e["inner"][0], out, ctx)
+            return self.proc(e["inner"][0], em, depth)
         if k == "ConditionalOperator":
-            for c in e["inner"][1:]:
-                self.leaves(c, out, ctx)
-            return
-        if k == "BinaryOperator":
-            op = e.get("opcode")
-            if op in ARITH:
-                if is_dbl(t):
-                    ctx["nodes"].append(e)
-                    self.leaves(e["inner"][0], out, ctx)
-                    self.leaves(e["inner"][1], out, ctx)
-                else:
-                    out.append(("f" if is_flt(t) else "i", ""))
-                return
-            if op == ",":
-                return self.leaves(e["inner"][1], out, ctx)
-            if op == "=":
-                return self.leaves(e["inner"][1], out, ctx)
-        if k == "CompoundAssignOperator" and is_dbl(e.get("computeResultType")):
-            ctx["nodes"].append(e)
-            self.leaves(e["inner"][1], out, ctx)
-            lhs = skip_wrappers(e["inner"][0])
-            self.leaves(lhs, out, ctx)
-            return
+            self.proc(e["inner"][0], em, depth + 1)
+            a = self.proc(e["inner"][1], em, depth + 1)
+            b = self.proc(e["inner"][2], em, depth + 1)
+            if a[0] in CLEAN and b[0] in CLEAN:
+                return "f", a[1] + b[1]
+            return "D", []
+        if k == "BinaryOperator" and e.get("opcode") in ARITH:
+            if not is_dbl(t):
+                self.proc(e["inner"][0], em, depth + 1)
+                self.proc(e["inner"][1], em, depth + 1)
+                return ("f" if is_flt(t) else "i"), []
+            kl, el = self.proc(e["inner"][0], em, depth + 1)
+            kr, er = self.proc(e["inner"][1], em, depth + 1)
+            self.node(e, kl, kr, el + er, em, depth)
+            return "node", []
+        if k == "BinaryOperator" and e.get("opcode") in (",", "="):
+            return self.proc(e["inner"][1], em, depth)
+        if k == "CompoundAssignOperator":
+            return "D", []
         if k == "DeclRefExpr":
             rd = e.get("referencedDecl", {})
             if not is_dbl(t):
-                out.append(("f" if is_flt(t) else "i", ""))
-                return
+                return ("f" if is_flt(t) else "i"), []
             if rd.get("id") in self.locals:
-                out.append(("DL", rd["id"]))
-                ctx["locals"].add(rd["id"])
-            else:
-                out.append(("D", rd.get("name", "?")))
-            return
-        if k == "CallExpr" or k == "CXXOperatorCallExpr" or k == "CXXMemberCallExpr":
+                return ("f", []) if self.locals[rd["id"]]["clean"] else ("D", [])
+            return "D", []
+        if k in ("CallExpr", "CXXOperatorCallExpr", "CXXMemberCallExpr"):
             nm = callee_name(e)
             if not is_dbl(t):
-                out.append(("f" if is_flt(t) else "i", ""))
-                return
-            if nm in PASS_FNS and len(e["inner"]) >= 2:
-                ctx["nodes"].append(e)
-                for c in e["inner"][1:]:
-                    self.leaves(c, out, ctx)
-                return
-            if nm in MATH_FNS:
-                ctx["math"].append(e)
-                out.append(("M", nm))
-                return
+                return ("f" if is_flt(t) else "i"), []
+            args = e["inner"][1:]
+            if nm in PASS_FNS and nm not in ("min", "max", "clamp") and len(args) == 1:
+                ka, ea = self.proc(args[0], em, depth + 1)
+                self.node(e, ka, "f", ea, em, depth)
+                return "node", []
+            if nm in ("min", "max", "clamp"):
+                ks = [self.proc(a, em, depth + 1) for a in args]
+                if all(x[0] in CLEAN for x in ks):
+                    return "f", [z for x in ks for z in x[1]]
+                return "D", []
             if e["inner"] and "x87" in self.text(e["inner"][0]):
-                out.append(("X", nm))
-                return
-            out.append(("D", nm + "()"))
-            return
-        if not is_dbl(t):
-            out.append(("f" if is_flt(t) else "i", ""))
-            return
-        out.append(("D", k))
+                return "X", []
+            if nm in MATH_FNS:
+                return "M", []
+            return "D", []
+        return ("D" if is_dbl(t) else ("f" if is_flt(t) else "i")), []
 
-    def text(self, n):
+    def node(self, n, kl, kr, opedits, em, depth):
+        """clean node: apply the operand edits; dirty node (a genuine double operand): compute in double, round the result to float: (x87d)(...)"""
+        if em is None:
+            return
         p = n.get("_p")
         if not p:
-            return ""
-        return self.src[p[2]:p[3]].decode("utf8", "replace")
+            return
+        if kl in CLEAN and kr in CLEAN:
+            em.extend(opedits)
+        else:
+            if p[4]:
+                em.append(("MACRO", 0, 0, 0, ""))
+                return
+            if self.src[p[2]:p[2] + 5] == b"X87R(" or self.src[max(p[2] - 5, 0):p[2]] == b"X87R(":
+                return                       # already wrapped by an earlier run (the node range is the X87R( ) invocation itself, or sits directly inside it)
+            em.append((p[2], p[2], -depth, 0, "X87R("))
+            em.append((p[3], p[3], depth, 1, ")"))
+
+    def cast_edit(self, n):
+        p = n.get("_p")
+        if not p:
+            return []
+        if n.get("_bmacro"):
+            return [("MACRO", 0, 0, 0, "")]
+        txt = self.src[p[2]:p[3]].decode("utf8", "replace")
+        m = re.search(r"\bdouble\b", txt[:40])
+        return [(p[2] + m.start(), p[2] + m.end(), 0, 2, "x87d")] if m else []
+
+    def lit_edit(self, n):
+        p = n.get("_p")
+        if not p:
+            return []
+        if p[4]:
+            return [("MACRO", 0, 0, 0, "")]
+        return [(p[2], p[3], 0, 2, "(x87d)" + self.src[p[2]:p[3]].decode())]
 
 
 def scan_tu(args):
-    """returns (rows, edits) for one TU"""
+    """returns (rows, edits, path) for one TU"""
     cmd_entry, apply_, oracle_addrs = args
     try:
         a = shlex.split(cmd_entry["command"])
     except ValueError:
-        return [], {}
+        return [], [], None
     out = []
     i = 0
     while i < len(a):
@@ -271,24 +313,18 @@ def scan_tu(args):
     out += ["-fsyntax-only", "-Xclang", "-ast-dump=json", cmd_entry["file"]]
     r = subprocess.run(out, capture_output=True, cwd=cmd_entry["directory"])
     if not r.stdout:
-        return [], {}
+        return [], [], None
     root = json.loads(r.stdout)
     annotate(root, Loc())
     path = cmd_entry["file"]
     tu = TU(path, root)
     mainnodes = [n for n in walk(root) if n.get("_p") and n["_p"][0] == path]
 
-    # ---- double locals ---------------------------------------------------------------------------------------------------------------------------------
-    funcs = []   # (begin, end, name)
-    for n in mainnodes:
-        k = n["kind"]
-        if k in ("FunctionDecl", "CXXMethodDecl", "CXXConstructorDecl", "CXXDestructorDecl") and "inner" in n and any(c["kind"] == "CompoundStmt" for c in n["inner"]):
-            funcs.append(n)
     def owner(n):
         o = n["_par"]
         best = None
         while o is not None:
-            if o["kind"] in ("FunctionDecl", "CXXMethodDecl", "CXXConstructorDecl", "CXXDestructorDecl") and o.get("_p"):
+            if o["kind"] in FN_DECLS and o.get("_p"):
                 best = o
                 break
             o = o["_par"]
@@ -298,20 +334,16 @@ def scan_tu(args):
         head = tu.src[p[2]:p[2] + 400].decode("utf8", "replace")
         m = re.search(r"([\w:~<>]+::)?" + re.escape(best.get("name", "")) + r"\s*\(", head)
         nm = (m.group(0)[:-1].strip() if m else best.get("name", "?"))
-        # exe address comment on the line above
         line_start = tu.src.rfind(b"\n", 0, p[2])
         prev_start = tu.src.rfind(b"\n", 0, max(line_start, 0))
         prev = tu.src[prev_start + 1:line_start].decode("utf8", "replace")
         am = re.search(r"//\s*(0x[0-9A-Fa-f]{5,8})", prev)
         return nm, (am.group(1).upper().replace("0X", "0x") if am else None)
 
+    # ---- double locals: clean = float-valued after the rewrite ------------------------------------------------------------------------------------------
     for n in mainnodes:
-        if n["kind"] == "VarDecl" and is_dbl(n.get("type")) and not n.get("storageClass") == "extern":
-            par = n["_par"]
-            tu.locals[n["id"]] = {"name": n.get("name"), "node": n, "defs": [], "clean": True, "param": False}
-        if n["kind"] == "ParmVarDecl" and is_dbl(n.get("type")):
-            pass  # genuine double entity (D)
-    # definitions: init + assignments + compound assigns
+        if n["kind"] == "VarDecl" and is_dbl(n.get("type")) and n.get("storageClass") != "extern":
+            tu.locals[n["id"]] = {"name": n.get("name"), "node": n, "defs": [], "clean": True}
     for lid, L in tu.locals.items():
         n = L["node"]
         if n.get("inner"):
@@ -322,9 +354,9 @@ def scan_tu(args):
             l = skip_wrappers(n["inner"][0])
             if l["kind"] == "DeclRefExpr" and l.get("referencedDecl", {}).get("id") in tu.locals:
                 tu.locals[l["referencedDecl"]["id"]]["defs"].append(n["inner"][1])
-        elif k == "UnaryOperator" and n.get("opcode") == "&":
+        elif k == "UnaryOperator" and n.get("opcode") in ("&", "++", "--"):
             l = skip_wrappers(n["inner"][0])
-            if l["kind"] == "DeclRefExpr" and l.get("referencedDecl", {}).get("id") in tu.locals:
+            if l["kind"] == "DeclRefExpr" and l.get("referencedDecl", {}).get("id") in tu.locals and n.get("opcode") == "&":
                 tu.locals[l["referencedDecl"]["id"]]["clean"] = False
         elif k == "CompoundAssignOperator":
             l = skip_wrappers(n["inner"][0])
@@ -334,28 +366,22 @@ def scan_tu(args):
             ids = [c["id"] for c in n.get("inner", []) if c["kind"] == "VarDecl" and c["id"] in tu.locals]
             if len(ids) > 1:
                 tu.groups[n["id"]] = ids
-        # reference-bound (T& r = local) / call by reference are conservative: detected through DeclRefExpr under a non-const reference parameter is skipped
-
-    def clean_expr(e):
-        ctx = {"nodes": [], "locals": set(), "math": [], "floatsrc": []}
-        lv = []
-        tu.leaves(e, lv, ctx)
-        return all(t in ("f", "i", "lit") or (t == "DL" and tu.locals[v]["clean"]) for t, v in lv)
-
+        elif k == "DeclRefExpr" and is_dbl(n.get("type")):
+            # passed to a non-const reference parameter / captured by reference: conservatively checked below through the parent
+            par = n["_par"]
+            if par is not None and par["kind"] in ("CXXConstructExpr", "CallExpr", "CXXMemberCallExpr") and not False:
+                pass
     changed = True
     while changed:
         changed = False
         for lid, L in tu.locals.items():
             if not L["clean"]:
                 continue
-            ok = bool(L["defs"]) or True
             for d in L["defs"]:
-                if not clean_expr(d):
-                    ok = False
+                if tu.proc(d, None)[0] not in CLEAN:
+                    L["clean"] = False
+                    changed = True
                     break
-            if not ok:
-                L["clean"] = False
-                changed = True
         for gid, ids in tu.groups.items():
             if any(not tu.locals[i]["clean"] for i in ids):
                 for i in ids:
@@ -363,12 +389,11 @@ def scan_tu(args):
                         tu.locals[i]["clean"] = False
                         changed = True
 
-    # ---- roots -----------------------------------------------------------------------------------------------------------------------------------------
     def parent_is_arith(n):
         p = n["_par"]
         while p is not None:
             k = p["kind"]
-            if k in ("ParenExpr", "ImplicitCastExpr", "ExprWithCleanups", "ConstantExpr", "MaterializeTemporaryExpr") or (k in ("CStyleCastExpr", "CXXFunctionalCastExpr", "CXXStaticCastExpr") and p.get("castKind") in ("NoOp", "FloatingCast") and is_dbl(p.get("type"))):
+            if k in ("ParenExpr", "ImplicitCastExpr", "ExprWithCleanups", "ConstantExpr", "MaterializeTemporaryExpr") or (k in CAST_KINDS and p.get("castKind") in ("NoOp", "FloatingCast") and is_dbl(p.get("type"))):
                 p = p["_par"]
                 continue
             if k == "UnaryOperator" and p.get("opcode") in ("-", "+"):
@@ -379,131 +404,141 @@ def scan_tu(args):
                 continue
             if k == "BinaryOperator" and p.get("opcode") in ARITH and is_dbl(p.get("type")):
                 return True
-            if k == "CompoundAssignOperator" and is_dbl(p.get("computeResultType")) and p["inner"][1] is not None:
+            if k == "CompoundAssignOperator" and is_dbl(p.get("computeResultType")):
                 return True
             if k == "CallExpr" and callee_name(p) in PASS_FNS and is_dbl(p.get("type")):
                 return True
             return False
         return False
 
-    def verdict0(kinds, dirtyloc):
-        if "M" in kinds:
-            return "CHECK-M"
-        if "X" in kinds:
-            return "CHECK-X"
-        if "LIT" in kinds:
-            return "CHECK-L"
-        if "D" in kinds or dirtyloc:
-            return "CHECK-D"
-        return "AUTO"
-
     rows = []
-    edits = {}   # (b,e) -> replacement; keyed by offsets
-    lineof = {}
+    edits = []
 
-    def add_edit(b, e, s):
-        edits[(b, e)] = s
+    def vname(kind):
+        return {"D": "CHECK-D", "X": "CHECK-X", "M": "CHECK-M", "LITD": "CHECK-L"}.get(kind, "AUTO")
 
-    def collect_edits(e, seen):
-        """edits for the double expression e: (double) casts, double literals; local ids are handled by the caller. Returns (edits, hit_macro)"""
-        res = []
-        macro = False
-        for n in walk(e):
-            k = n["kind"]
-            if k in ("CStyleCastExpr", "CXXFunctionalCastExpr", "CXXStaticCastExpr") and is_dbl(n.get("type")) and n.get("_p"):
-                p = n["_p"]
-                bl = n.get("_bmacro")
-                txt = tu.src[p[2]:p[3]].decode("utf8", "replace")
-                m = re.search(r"\bdouble\b", txt[:40])
-                if m and bl:
-                    macro = True
-                elif m:
-                    res.append(((p[2] + m.start(), p[2] + m.end()), "x87d"))
-            elif k == "FloatingLiteral" and is_dbl(n.get("type")) and n.get("_p"):
-                p = n["_p"]
-                if p[4]:
-                    macro = True
-                    continue
-                res.append(((p[2], p[3]), "(x87d)" + tu.src[p[2]:p[3]].decode()))
-        return res, macro
+    def leafkinds(n):
+        """leaf kinds of all double operands in the chain (for the report)"""
+        res = set()
+        for c in walk(n):
+            if c is n or c.get("kind") not in ("DeclRefExpr", "FloatingLiteral", "CallExpr", "MemberExpr", "CXXMemberCallExpr", "ArraySubscriptExpr"):
+                continue
+            if not is_dbl(c.get("type")):
+                continue
+            kk = tu.proc(c, None)[0] if c["kind"] != "FloatingLiteral" else ("LITD" if not float_exact(c.get("value", "x")) else "lit")
+            if kk in ("D", "X", "M", "LITD"):
+                res.add(kk + (":" + (c.get("referencedDecl", {}).get("name") or c.get("name") or "") if c["kind"] == "DeclRefExpr" else ""))
+        return res
 
     for n in mainnodes:
         k = n["kind"]
-        isnode = (k == "BinaryOperator" and n.get("opcode") in ARITH and is_dbl(n.get("type"))) or \
-                 (k == "CompoundAssignOperator" and is_dbl(n.get("computeResultType"))) or \
-                 (k == "CallExpr" and is_dbl(n.get("type")) and callee_name(n) in PASS_FNS and len(n["inner"]) >= 2)
-        if not isnode or parent_is_arith(n):
+        isarith = (k == "BinaryOperator" and n.get("opcode") in ARITH and is_dbl(n.get("type"))) or \
+                  (k == "CallExpr" and is_dbl(n.get("type")) and callee_name(n) in PASS_FNS and callee_name(n) not in ("min", "max", "clamp") and len(n["inner"]) == 2)
+        iscomp = k == "CompoundAssignOperator" and is_dbl(n.get("computeResultType"))
+        if not (isarith or iscomp) or parent_is_arith(n):
             continue
-        ctx = {"nodes": [], "locals": set(), "math": [], "floatsrc": []}
-        lv = []
-        tu.leaves(n, lv, ctx)
-        kinds = {t for t, v in lv}
-        dirtyloc = [v for t, v in lv if t == "DL" and not tu.locals[v]["clean"]]
-        ed, macro = collect_edits(n, None) if verdict0(kinds, dirtyloc) == "AUTO" else ([], False)
-        verdict = verdict0(kinds, dirtyloc)
-        if verdict == "AUTO" and macro:
+        em = []
+        if iscomp:
+            lhs = skip_wrappers(n["inner"][0])
+            lclean = lhs["kind"] == "DeclRefExpr" and lhs.get("referencedDecl", {}).get("id") in tu.locals and tu.locals[lhs["referencedDecl"]["id"]]["clean"]
+            kr, er = tu.proc(n["inner"][1], em)
+            if lclean and kr in CLEAN:
+                em.extend(er)
+                verdict = "AUTO"
+            else:
+                verdict = "CHECK-C"
+        else:
+            kind, oe = tu.proc(n, em)
+            verdict = "AUTO"
+        dirtywrap = any(e[4] == "X87R(" for e in em)
+        macro = any(e[0] == "MACRO" for e in em)
+        lk = leafkinds(n)
+        if verdict == "AUTO" and dirtywrap:
+            verdict = "WRAP"
+        if macro:
             verdict = "SKIP-MACRO"
         p = n["_p"]
         txt = " ".join(tu.src[p[2]:p[3]].decode("utf8", "replace").split())
         fn, addr = owner(n)
         orc = "?" if not addr else ("Y" if addr.lower() in oracle_addrs else "N")
-        lvs = ",".join(sorted({(t if t not in ("D", "DL", "X", "M", "LIT") else t + ":" + str(v if t != "DL" else tu.locals[v]["name"])) for t, v in lv}))
-        nops = len(ctx["nodes"]) + len(ctx["math"])
-        rows.append((f"{os.path.relpath(path, REPO)}:{p[1]}", verdict, nops, txt[:140], lvs, fn, orc, ""))
-        if verdict == "AUTO" and apply_:
-            for k_, v_ in ed:
-                add_edit(k_[0], k_[1], v_)
+        nops = sum(1 for c in walk(n) if c.get("kind") == "BinaryOperator" and c.get("opcode") in ARITH and is_dbl(c.get("type")))
+        rows.append((f"{os.path.relpath(path, REPO)}:{p[1]}", verdict, nops, txt[:140], ",".join(sorted(lk)), fn, orc, ""))
+        if verdict in ("AUTO", "WRAP", "CHECK-C") and apply_:
+            edits.extend(e for e in em if e[0] != "MACRO")
 
-    # clean locals: type token + their initialiser / assignment edits
+    # clean locals: the declared type + the edits of their definitions
     for lid, L in tu.locals.items():
         n = L["node"]
         p = n.get("_p")
         if not p:
             continue
-        ctxloc = n["_par"]
-        verdict = "AUTO" if L["clean"] else "CHECK-D"
         fn, addr = owner(n)
         txt = " ".join(tu.src[p[2]:p[3]].decode("utf8", "replace").split())
         orc = "?" if not addr else ("Y" if addr.lower() in oracle_addrs else "N")
-        if p[4]:
-            verdict = "SKIP-MACRO" if verdict == "AUTO" else verdict
-        rows.append((f"{os.path.relpath(path, REPO)}:{p[1]}", "LOCAL-" + verdict, 0, txt[:140], "double local " + str(L["name"]), fn, orc, ""))
-        if L["clean"] and apply_ and not p[4]:
-            head = tu.src[p[2]:n["loc"]["offset"] if "offset" in n.get("loc", {}) else p[3]].decode("utf8", "replace")
-            nloc = n.get("loc", {})
-            off = nloc.get("offset") if "spellingLoc" not in nloc else None
-            if off is not None:
-                head = tu.src[p[2]:off].decode("utf8", "replace")
-                m = re.search(r"\bdouble\b", head)
-                if m:
-                    add_edit(p[2] + m.start(), p[2] + m.end(), "x87d")
+        verdict = "LOCAL-AUTO" if L["clean"] else "LOCAL-CHECK-D"
+        nloc = n.get("loc", {})
+        off = nloc.get("offset") if "spellingLoc" not in nloc else None
+        if L["clean"] and (p[4] or off is None):
+            verdict = "LOCAL-SKIP-MACRO"
+        rows.append((f"{os.path.relpath(path, REPO)}:{p[1]}", verdict, 0, txt[:140], "double local " + str(L["name"]), fn, orc, ""))
+        if L["clean"] and apply_ and verdict == "LOCAL-AUTO":
+            head = tu.src[p[2]:off].decode("utf8", "replace")
+            m = re.search(r"\bdouble\b", head)
+            if m:
+                edits.append((p[2] + m.start(), p[2] + m.end(), 0, 2, "x87d"))
             for d in L["defs"]:
-                ed2, mac2 = collect_edits(d, None)
-                if not mac2:
-                    for k_, v_ in ed2:
-                        add_edit(k_[0], k_[1], v_)
+                em = []
+                kd, od = tu.proc(d, em)
+                if not any(e[0] == "MACRO" for e in em):
+                    edits.extend(em)
+                    if kd in CLEAN:
+                        edits.extend(od)
     return rows, edits, path
 
 
 def apply_edits(path, edits):
+    """edits: (begin, end, depth_key, phase, text). Applied from the end of the file; for equal offsets the order is chosen so that nested wraps nest properly."""
     src = open(path, "rb").read()
-    items = sorted(edits.items(), key=lambda kv: kv[0][0], reverse=True)
-    last = None
+    seen = set()
+    uniq = []
+    for e in edits:
+        if e not in seen:
+            seen.add(e)
+            uniq.append(e)
+    # replacement edits (b<e) must not overlap each other: drop a replacement that lies inside another one (keep the outer)
+    reps = [e for e in uniq if e[0] != e[1]]
+    ins = [e for e in uniq if e[0] == e[1]]
+    keep = []
+    for e in sorted(reps, key=lambda x: (x[0], -x[1])):
+        if keep and e[0] < keep[-1][1]:
+            continue
+        keep.append(e)
+    allx = keep + ins
+    # application order (descending position): at one offset apply: closes (phase 1) of shallower nodes first ... see keys
+    def key(e):
+        b, en, d, ph, txt = e
+        # larger b first; at equal b: replacements (en>b) first, then closing insertions (phase 1: apply outer (small depth) first so inner ends up left of it),
+        # then opening insertions (phase 0: apply inner (large depth) first so outer ends up left)
+        if en > b:
+            return (b, 2, 0)
+        if ph == 1:
+            return (b, 1, -d)
+        return (b, 0, d)
     n = 0
-    for (b, e), s in items:
-        if last is not None and e > last:
-            continue          # overlapping (nested) edit: skip the outer-most duplicate
-        src = src[:b] + s.encode() + src[e:]
-        last = b
+    for e in sorted(allx, key=key, reverse=True):
+        b, en, d, ph, txt = e
+        src = src[:b] + txt.encode() + src[en:]
         n += 1
     open(path, "wb").write(src)
     return n
+
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cc", default=os.path.join(REPO, "build/PortableMacRR/compile_commands.json"))
     ap.add_argument("--only", action="append", default=[])
+    ap.add_argument("--exclude", action="append", default=[], help="regex on the TU path: skip")
     ap.add_argument("--out")
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--summary", action="store_true")
@@ -512,7 +547,7 @@ def main():
     a = ap.parse_args()
     cc = json.load(open(a.cc))
     pats = [re.compile(p) for p in (a.only or [r"/source/game_sa/.*\.cpp$"])]
-    ents = [e for e in cc if any(p.search(e["file"]) for p in pats)]
+    ents = [e for e in cc if any(p.search(e["file"]) for p in pats) and not any(re.search(x, e["file"]) for x in a.exclude)]
     oracle = set()
     for dp, _, fs in os.walk(a.tests):
         for f in fs:

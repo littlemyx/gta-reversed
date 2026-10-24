@@ -80,6 +80,13 @@ typedef float x87d;
 #else
 typedef double x87d;
 #endif
+//! X87R(expr): `expr` is evaluated as written (it has a genuine 53 bit operand: a double global / call result / x87:: transcendental), the exe rounds the RESULT of the
+//! operation to a 24 bit significand (PC=24): portable rounds to float, every other build leaves the TOKENS untouched (neither a cast nor parentheses: MSVC /fp:precise spills at both).
+#ifdef NOTSA_PORTABLE
+#define X87R(...) ((x87d)(__VA_ARGS__))
+#else
+#define X87R(...) __VA_ARGS__
+#endif
 
 #if (defined(__GNUC__) || defined(__GNUG__) || defined(__clang__))
 #define UNREACHABLE_INTRINSIC(...) __builtin_unreachable()

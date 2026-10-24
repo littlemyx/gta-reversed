@@ -161,9 +161,9 @@ public:
     CVector TransformPoint(CVector pt) const {
         // 0x59C890: the 3 products and both adds stay in extended precision (x87, order (up*z + fwd*y) + right*x for x; (up*z + right*x) + fwd*y for y/z), then + pos; one float rounding
         return {
-            (float)((((double)m_up.x * pt.z + (double)m_forward.x * pt.y) + (double)m_right.x * pt.x) + m_pos.x),
-            (float)((((double)m_up.y * pt.z + (double)m_right.y * pt.x) + (double)m_forward.y * pt.y) + m_pos.y),
-            (float)((((double)m_up.z * pt.z + (double)m_right.z * pt.x) + (double)m_forward.z * pt.y) + m_pos.z)
+            (float)((((x87d)m_up.x * pt.z + (x87d)m_forward.x * pt.y) + (x87d)m_right.x * pt.x) + m_pos.x),
+            (float)((((x87d)m_up.y * pt.z + (x87d)m_right.y * pt.x) + (x87d)m_forward.y * pt.y) + m_pos.y),
+            (float)((((x87d)m_up.z * pt.z + (x87d)m_right.z * pt.x) + (x87d)m_forward.z * pt.y) + m_pos.z)
         };
     }
 
@@ -179,9 +179,9 @@ public:
         // > y = (up.y*v.z + right.y*v.x) + fwd.y*v.y
         // > z = (up.z*v.z + right.z*v.x) + fwd.z*v.y
         return {
-            (float)(((double)m_up.x * v.z + (double)m_forward.x * v.y) + (double)m_right.x * v.x),
-            (float)(((double)m_up.y * v.z + (double)m_right.y * v.x) + (double)m_forward.y * v.y),
-            (float)(((double)m_up.z * v.z + (double)m_right.z * v.x) + (double)m_forward.z * v.y)
+            (float)(((x87d)m_up.x * v.z + (x87d)m_forward.x * v.y) + (x87d)m_right.x * v.x),
+            (float)(((x87d)m_up.y * v.z + (x87d)m_right.y * v.x) + (x87d)m_forward.y * v.y),
+            (float)(((x87d)m_up.z * v.z + (x87d)m_right.z * v.x) + (x87d)m_forward.z * v.y)
         };
     }
 
@@ -208,9 +208,9 @@ public:
 
         // 0x59C810 (`Multiply3x3(out, v, m)`): extended precision (x87), the add order of the exe
         return {
-            (float)(((double)m_right.y * v.y + (double)m_right.z * v.z) + (double)v.x * m_right.x),
-            (float)(((double)m_forward.y * v.y + (double)m_forward.x * v.x) + (double)m_forward.z * v.z),
-            (float)(((double)m_up.y * v.y + (double)m_up.x * v.x) + (double)m_up.z * v.z)
+            (float)(((x87d)m_right.y * v.y + (x87d)m_right.z * v.z) + (x87d)v.x * m_right.x),
+            (float)(((x87d)m_forward.y * v.y + (x87d)m_forward.x * v.x) + (x87d)m_forward.z * v.z),
+            (float)(((x87d)m_up.y * v.y + (x87d)m_up.x * v.x) + (x87d)m_up.z * v.z)
         };
     }
 

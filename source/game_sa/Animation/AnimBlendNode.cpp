@@ -57,12 +57,12 @@ bool CAnimBlendNode::FindKeyFrame(float time) {
     }
 
     // `time` lives on the x87 stack (unrounded) for the whole search
-    double t = time;
+    x87d t = time;
 
     // Find kf that spans over the specified `time`
     m_KFCurr = 1;
     while (t > (double)m_Seq->GetUKeyFrame(m_KFCurr)->DeltaTime) { // `test ah, 0x41; jne` => leaves if !(t > dt) (NaN leaves)
-        t -= (double)m_Seq->GetUKeyFrame(m_KFCurr)->DeltaTime;
+        t -= (x87d)m_Seq->GetUKeyFrame(m_KFCurr)->DeltaTime;
 
         if (m_KFCurr + 1 >= m_Seq->m_FramesNum) {
             // reached end of animation
@@ -78,7 +78,7 @@ bool CAnimBlendNode::FindKeyFrame(float time) {
     }
 
     // Now calculate how much we have remaining from this frame
-    m_KFRemainingTime = (float)((double)m_Seq->GetUKeyFrame(m_KFCurr)->DeltaTime - t);
+    m_KFRemainingTime = (float)((x87d)m_Seq->GetUKeyFrame(m_KFCurr)->DeltaTime - t);
 
     CalcDeltas();
     return true;
@@ -114,7 +114,7 @@ void CAnimBlendNode::CalcDeltasCompressed() {
     CQuaternion rotA = kfA->Rot;
 
     // Dot is accumulated in extended precision in this order (w, z, y, x) and NOT rounded before the comparison
-    const double dot = (((double)rotB.w * rotA.w + (double)rotB.z * rotA.z) + (double)rotB.y * rotA.y) + (double)rotB.x * rotA.x;
+    const x87d dot = (((x87d)rotB.w * rotA.w + (x87d)rotB.z * rotA.z) + (x87d)rotB.y * rotA.y) + (x87d)rotB.x * rotA.x;
     if (dot < 0.0) {
         // Flip the CURRENT key frame (A) (not B), and write it back to the key-frame (re-quantised, truncating)
         rotA     = -rotA;

@@ -42,10 +42,13 @@ int main() {
         Check<int8_t>("int8", x, notsa::fp::FtolCast<int8_t>(x), w);
         Check<uint8_t>("uint8", x, notsa::fp::FtolCast<uint8_t>(x), w);
         Check<int64_t>("int64", x, notsa::fp::FtolCast<int64_t>(x), w);
-        Check<size_t>("size_t", x, notsa::fp::FtolCast<size_t>(x), (uint64_t)(uint32_t)w);   // 32 bit size_t in the exe
+        Check<size_t>("size_t", x, notsa::fp::FtolCast<size_t>(x), (uint64_t)(int64_t)(int32_t)w);   // 32 bit size_t in the exe: low dword, sign-extended (wraps mod 2^64 like the 32 bit one mod 2^32)
         const float f = (float)x;
         if (std::isfinite(f) || std::isnan(f)) Check<int32_t>("int32(float)", f, notsa::fp::FtolCast<int32_t>(f), Ref64((double)f));
     }
+    // R-11: the rain hang: `for (i = 1 - NOTSA_FTOL(size_t, Rain * -2.f); i > 0; i--)` must run 1 + 2 * Rain times (the 32 bit exe wraps mod 2^32, a 64 bit size_t must wrap mod 2^64)
+    Check<size_t>("1 - size_t(-4.0) == 5", -4.0, (size_t)1 - notsa::fp::FtolCast<size_t>(-4.0), 5);
+    Check<size_t>("1 - size_t(-0.0) == 1", 0, (size_t)1 - notsa::fp::FtolCast<size_t>(-0.0), 1);
     // the case that crashed the load (MAC-ANIM1): floor(1e19 * 0.02f + 60) must not be INT_MIN..INT_MAX saturation: low dword of the exact integer
     Check<int32_t>("sector1e19", 0, notsa::fp::FtolCast<int32_t>(std::floor(1e19f * 0.02f + 60.0f)), Ref64(std::floor(1e19f * 0.02f + 60.0f)));
     std::printf("FTOLCAST %s (%d checks, %d bad)\n", g_bad ? "FAILED" : "OK", g_n, g_bad);

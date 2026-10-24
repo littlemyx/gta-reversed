@@ -35,4 +35,5 @@ wait:6000
 mark:r11_interior_a
 wait:3000
 mark:r11_interior_b
+wait:700
 cmd:quit

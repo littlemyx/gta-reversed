@@ -95,6 +95,11 @@ bool PlayCmd(const char* name, const std::string& args) {
         NOTSA_LOG_INFO("[play] weather forced to {}", std::atoi(args.c_str()));
         return true;
     }
+    if (!std::strcmp(name, "gfxq")) { // R-11: cmd:gfxq  logs what GraphicsHighQuality() (stencil shadows, pole shadows, vehicle blobs) is derived from
+        auto* camRas = RwCameraGetRaster(Scene.m_pRwCamera);
+        NOTSA_LOG_INFO("[play] gfxq: GraphicsHighQuality={} fxQuality={} camera raster depth={} type={} format=0x{:x}", (int)GraphicsHighQuality(), (int)g_fx.GetFxQuality(), (int)RwRasterGetDepth(camRas), (int)camRas->type, (unsigned)camRas->format);
+        return true;
+    }
     if (!std::strcmp(name, "fx")) { // R-11: cmd:fx:NAME[:0|1]  post effect switches (the game re-derives most of them each frame from camera / weather, so the ones set here persist only for the pure flags)
         char fx[32] = {};
         int  on = 1;

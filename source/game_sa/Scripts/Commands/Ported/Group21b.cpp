@@ -212,8 +212,12 @@ void SetGroupSequence(int32 groupHandle, int32 sequenceHandle) {
     if (sequenceHandle != -1) {
         seq = CTheScripts::GetActualScriptThingIndex(sequenceHandle, SCRIPT_THING_SEQUENCE_TASK);
     }
+#ifdef NOTSA_PORTABLE
+    CPedGroups::ms_groups[group].GetIntelligence().SetTaskSeqId(seq); // x86 offset +0x2CC (CPedGroup has pointers: the byte offset differs on LP64)
+#else
     auto* const taskSeqId = reinterpret_cast<int32*>(reinterpret_cast<uint8*>(&CPedGroups::ms_groups[group]) + 0x2CC);
     *taskSeqId = seq;
+#endif
 }
 
 //! 2180 REGISTER_ATTRACTOR_SCRIPT_BRAIN_FOR_CODE_USE (case @0x471C8F): streamed script index, brain name (8 chars)

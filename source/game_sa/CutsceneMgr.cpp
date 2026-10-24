@@ -44,7 +44,8 @@ void CCutsceneMgr::AppendToNextCutscene(const char* objectName, const char* anim
 // 0x5B0450
 void CCutsceneMgr::AttachObjectToBone(CCutsceneObject* attachment, CCutsceneObject* object, int32 boneId) {
     attachment->m_pAttachmentObject = object;
-    attachment->m_nAttachBone       = RpHAnimIDGetIndex(GetAnimHierarchyFromSkinClump(object->GetRpClump()), boneId);
+    // the bone index lives in the (pointer sized) m_pAttachToFrame / m_nAttachBone union: write all of it so a previous frame pointer leaves no stale upper half on LP64
+    attachment->m_pAttachToFrame    = reinterpret_cast<RwFrame*>(static_cast<uintptr_t>(static_cast<uint32>(RpHAnimIDGetIndex(GetAnimHierarchyFromSkinClump(object->GetRpClump()), boneId))));
 }
 
 // 0x5B0480

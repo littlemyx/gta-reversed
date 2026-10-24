@@ -104,6 +104,7 @@ public:
 
     //! The index of the task sequence (see `CTaskSequences`) used by the group, or `-1` if none
     auto GetTaskSeqId() const { return m_TaskSeqId; }
+    void SetTaskSeqId(int32 seqId) { m_TaskSeqId = seqId; } // NOTSA (SET_GROUP_SEQUENCE_TASK)
 
 private:
     bool ShouldSetHighestPriorityEventAsCurrent();

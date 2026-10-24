@@ -644,7 +644,7 @@ OpcodeResult ControlCarDoor(CRunningScript& S) {
         if (!(ratioD < 0.0)) {
             car->m_swingingChassis.Open(ratio);
         }
-        *(reinterpret_cast<uint8*>(car) + 0x717) = (uint8)status; // m_swingingChassis.m_doorState
+        car->m_swingingChassis.m_doorState = static_cast<eDoorState>(status); // x86 car + 0x717 (CAutomobile has pointers: the byte offset differs on LP64)
     }
     return OR_CONTINUE;
 }

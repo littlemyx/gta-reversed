@@ -180,7 +180,7 @@ static inline NOTSA_GLOBAL(gFollowPedLastBeta, 0x8CCE6C, (float), { -9999.0f });
 // Shared by `Process` and `Process_FollowPed_SA` (names made up)
 static inline NOTSA_GLOBAL(gCamPlayerLastPos, 0x8CCC3C, (CVector), { 0.0f, 0.0f, 10000.0f }); // Position of the followed player of the last frame (`Process_FollowPed_SA` resets it)
 static inline NOTSA_GLOBAL(gCamPlayerPosVel, 0xB6EC7C, (CVector), {}); // Smoothed velocity of the above (`Process_FollowPed_SA` resets it)
-static inline NOTSA_GLOBAL_ALIAS(gCamUnkB6FE34, 0xB6FE34, (int32), *reinterpret_cast<int32*>(reinterpret_cast<uint8*>(&gIdleCam) + 148));   // Compared with 0xB6FDC8 in `Process`, zeroed by `Process_FollowPed_SA` and `CIdleCam::IdleCamGeneralProcess`
+static inline NOTSA_GLOBAL_ALIAS(gCamUnkB6FE34, 0xB6FE34, (int32), gIdleCam.m_IdleTickerFrames); // x86 gIdleCam + 148; a byte offset is wrong on LP64 (CIdleCam::m_Target is 8 bytes there)   // Compared with 0xB6FDC8 in `Process`, zeroed by `Process_FollowPed_SA` and `CIdleCam::IdleCamGeneralProcess`
 
 // 0x4082C0 (and 0x406DA0 for the squared one) - Kept in the FPU registers in the original (extended precision)
 static double SqMagExt(const CVector& v) {
@@ -207,10 +207,10 @@ static float LimitPrecision(float v, int32 digits) {
     //       (0x822130 = pow, 0x8232F0 = modf; the 5.0f / 0.1f are float constants from .rdata)
     double ipart{};
     std::modf(
-        (std::pow(10.0, (double)(digits + 1)) * (double)v + (v < 0.0f ? -5.0 : 5.0)) * (double)0.1f, // !(v < 0) <=> the original's JP after FCOMP (NaN adds)
+        (X87R(std::pow(10.0, (double)(digits + 1)) * (double)v) + (v < 0.0f ? -(x87d)5.0 : (x87d)5.0)) * (x87d)0.1f, // !(v < 0) <=> the original's JP after FCOMP (NaN adds)
         &ipart
     );
-    return (float)(ipart / std::pow(10.0, (double)digits));
+    return (float)(X87R(ipart / std::pow(10.0, (double)digits)));
 }
 
 // 0x50A120
@@ -236,8 +236,8 @@ static bool GetBoatLookLRBehindCamHeight(CEntity* target, float& outHeight) {
 // 0x5132D0 - Computes the camera position/front for the two player camera (`cam` is the `this` of the original)
 static void ComputeTwoPlayerCamPos(CCam& cam, float angle, CVector& outSource, CVector& outFront, CVector& outTarget) {
     const x87d pitch = cam.m_fVerticalAngle;
-    outFront.x         = (float)-(x87::cos((double)angle) * x87::cos(pitch));
-    outFront.y         = (float)-(x87::sin((double)angle) * x87::cos(pitch));
+    outFront.x         = (float)-(X87R(x87::cos((double)angle) * x87::cos(pitch)));
+    outFront.y         = (float)-(X87R(x87::sin((double)angle) * x87::cos(pitch)));
     outFront.z         = (float)x87::sin(pitch);
 
     CVector flatDir{ outFront.x, outFront.y, 0.0f };
@@ -315,8 +315,8 @@ void CCamera::AvoidTheGeometry(const CVector* src, const CVector* dst, CVector* 
     const double pitch = (len2D == 0.f && dz == 0.f)
         ? 0.0
         : CGeneral::GetATanOfXYExt(len2D, dz);
-    dir.x = (float)(x87::cos((double)heading) * x87::cos(pitch));
-    dir.y = (float)(x87::sin((double)heading) * x87::cos(pitch));
+    dir.x = (float)(X87R(x87::cos((double)heading) * x87::cos(pitch)));
+    dir.y = (float)(X87R(x87::sin((double)heading) * x87::cos(pitch)));
     dir.z = (float)x87::sin(pitch);
 
     // Move the camera `len3D` away from the target, along `dir`
@@ -358,7 +358,7 @@ void CCamera::AvoidTheGeometry(const CVector* src, const CVector* dst, CVector* 
     // Don't let the near clip plane cut the player
     if (FindPlayerPed(-1)) {
         const CVector toTarget = *dst - *out;
-        const double  d        = Dist(toTarget, CVector{}) - (double)0.5f; // 0x8CC38C
+        const x87d  d        = Dist(toTarget, CVector{}) - (x87d)0.5f; // 0x8CC38C
         if (d < (double)GetNearClip()) {
             constexpr float MIN_NEAR_CLIP = 0.15f; // 0x8CC390
             RwCameraSetNearClipPlane(Scene.m_pRwCamera, d <= (double)MIN_NEAR_CLIP ? MIN_NEAR_CLIP : (float)d);
@@ -369,9 +369,9 @@ void CCamera::AvoidTheGeometry(const CVector* src, const CVector* dst, CVector* 
     float strengthTarget = 0.f;
     {
         const double halfTan = x87::tan((x87d)FOV * (x87d)0.017453292f * (x87d)0.5f); // 0x8595EC, 0x858B8C
-        const double widthK  = halfTan * (double)CDraw::ms_fAspectRatio * (double)1.15f;    // 0x8CC820
+        const x87d widthK  = X87R(halfTan * (double)CDraw::ms_fAspectRatio) * (x87d)1.15f;    // 0x8CC820
         const float  nearClip = GetNearClip();
-        const float  radius   = (float)((double)nearClip * widthK);
+        const float  radius   = (float)((x87d)nearClip * widthK);
         const float  offX     = (float)((x87d)dir.x * nearClip);
         const float  offY     = (float)((x87d)dir.y * nearClip);
         const CVector center{
@@ -396,7 +396,7 @@ void CCamera::AvoidTheGeometry(const CVector* src, const CVector* dst, CVector* 
                 RwCameraSetNearClipPlane(Scene.m_pRwCamera, MIN_NEAR);
             }
 
-            const float penetration = (float)((double)radius - Dist(toHit, CVector{}));
+            const float penetration = (float)((x87d)radius - Dist(toHit, CVector{}));
             toHit.Normalise();
             CVector normal = hit.m_vecNormal;
             normal.Normalise();
@@ -436,7 +436,7 @@ void CCamera::AvoidTheGeometry(const CVector* src, const CVector* dst, CVector* 
         }
     }
 
-    m_fAvoidTheGeometryProbsTimer = (float)(std::pow((double)0.9f, (double)CTimer::ms_fTimeStep) * m_fAvoidTheGeometryProbsTimer); // 0x8CC81C
+    m_fAvoidTheGeometryProbsTimer = (float)(X87R(std::pow((double)0.9f, (double)CTimer::ms_fTimeStep) * m_fAvoidTheGeometryProbsTimer)); // 0x8CC81C
     WellBufferMe(strengthTarget, gAvoidGeometryStrength, gAvoidGeometrySpeed, 0.2f, 0.05f, false);
     m_vecClearGeometryVec.x = gAvoidGeometryStrength * m_vecClearGeometryVec.x;
     m_vecClearGeometryVec.y = gAvoidGeometryStrength * m_vecClearGeometryVec.y;
@@ -784,7 +784,7 @@ void CCam::Get_TwoPlayer_AimVector(CVector& out) {
         const auto right  = CrossProduct(m_vecFront, m_vecUp);
         const auto tanFov = x87::tan(m_fFOV * PI / 360.0f);
 
-        out = m_fX_Targetting * m_fY_Targetting * tanFov * right + m_vecFront - tanFov / CDraw::ms_fAspectRatio * m_vecUp;
+        out = X87R(m_fX_Targetting * m_fY_Targetting * tanFov) * right + m_vecFront - X87R(tanFov / CDraw::ms_fAspectRatio) * m_vecUp;
     }
     out.Normalise();
 }
@@ -1096,9 +1096,9 @@ void CCam::LookRight(bool bLookRight) {
 
     auto dir = target->GetMatrix().GetForward();
     dir.Normalise();
-    const double angle = (double)sign * (double)1.57079637f + CGeneral::GetATanOfXYExt(dir.x, dir.y); // NOTE: x87 keeps this in extended precision
-    m_vecSource.x      = (float)(x87::cos(angle) * dist + targetPos.x);
-    m_vecSource.y      = (float)(x87::sin(angle) * dist + targetPos.y);
+    const x87d angle = X87R((x87d)sign * (x87d)1.57079637f + CGeneral::GetATanOfXYExt(dir.x, dir.y)); // NOTE: x87 keeps this in extended precision
+    m_vecSource.x      = (float)(X87R(x87::cos(angle) * dist) + targetPos.x);
+    m_vecSource.y      = (float)(X87R(x87::sin(angle) * dist) + targetPos.y);
 
     auto* const colModel = target->GetColModel();
     const float oldZ     = m_vecSource.z;
@@ -1143,7 +1143,7 @@ void CCam::RotCamIfInFrontCar(const CVector& target, float targetOrientation) {
     const auto& moveSpeed     = veh->m_vecMoveSpeed;
     const bool  isMovingFwd   = DotProduct(veh->GetMatrix().GetForward(), moveSpeed) > 0.1f;
     if (sq(moveSpeed.x) + sq(moveSpeed.y) > 0.0036f) {
-        targetOrientation = (float)(x87::atan2((double)-moveSpeed.x, (double)moveSpeed.y) - (double)(PI / 2.0f));
+        targetOrientation = (float)(X87R(x87::atan2((double)-moveSpeed.x, (double)moveSpeed.y) - (double)(PI / 2.0f)));
     }
 
     // NOTE: Unlike `WrapAngleToPi` the original loops here use strict comparisons
@@ -1187,8 +1187,8 @@ void CCam::RotCamIfInFrontCar(const CVector& target, float targetOrientation) {
             m_fHorizontalAngle = m_fTransitionBeta;
         }
 
-        m_vecSource.x = (float)((double)target.x - -(x87::cos((double)m_fHorizontalAngle) * (double)dist2D));
-        m_vecSource.y = (float)((double)target.y - -(x87::sin((double)m_fHorizontalAngle) * (double)dist2D));
+        m_vecSource.x = (float)((x87d)target.x - -(X87R(x87::cos((double)m_fHorizontalAngle) * (double)dist2D)));
+        m_vecSource.y = (float)((x87d)target.y - -(X87R(x87::sin((double)m_fHorizontalAngle) * (double)dist2D)));
 
         if (std::abs(WrapDiff(targetOrientation - m_fHorizontalAngle)) < 0.0349065848f) {
             m_bFixingBeta = false;
@@ -1230,8 +1230,8 @@ void CCam::ClipBeta() {
 // 0x526FC0
 void CCam::Process() {
     // Globals whose purpose is unknown (names made up)
-    static NOTSA_GLOBAL_ALIAS(s_unk_B6FDC8, 0xB6FDC8, (float), *reinterpret_cast<float*>(reinterpret_cast<uint8*>(&gIdleCam) + 40));
-    static NOTSA_GLOBAL_ALIAS(s_unk_C0B184, 0xC0B184, (uint8), *reinterpret_cast<uint8*>(reinterpret_cast<uint8*>(&g_InterestingEvents) + 300));
+    static NOTSA_GLOBAL_ALIAS(s_unk_B6FDC8, 0xB6FDC8, (float), gIdleCam.m_TimeControlsIdleForIdleToKickIn); // x86 gIdleCam + 40
+    static NOTSA_GLOBAL_ALIAS(s_unk_C0B184, 0xC0B184, (uint8), g_InterestingEvents.m_nFlags); // x86 g_InterestingEvents + 300 (m_Events holds pointers: the offset differs on LP64)
     static NOTSA_GLOBAL_ALIAS(s_unk_C8A860, 0xC8A860, (uint8), *reinterpret_cast<uint8*>(reinterpret_cast<uint8*>(&gCrossHair) + 40));
     NOTSA_GLOBAL_LOCAL(s_unk_8CCF00, 0x8CCF00, (bool), { true });
     static NOTSA_GLOBAL_ALIAS(s_firstPersonFlag, 0xB6EC20, (bool), gbFirstPersonRunThisFrame);
@@ -1333,8 +1333,8 @@ void CCam::Process() {
                         bReset        = true;
                     } else {
                         // NOTE: The original computes `1 - pow(..)` first (rounded to float) and derives the other weight from it
-                        const float inv1 = (float)(1.0 - std::pow(0.600000024, (double)CTimer::GetTimeStep()));
-                        const float inv2 = (float)(1.0 - std::pow(0.800000012, (double)CTimer::GetTimeStep()));
+                        const float inv1 = (float)(X87R(1.0 - std::pow(0.600000024, (double)CTimer::GetTimeStep())));
+                        const float inv2 = (float)(X87R(1.0 - std::pow(0.800000012, (double)CTimer::GetTimeStep())));
                         const CVector predicted = gCamPlayerLastPos + gCamPlayerPosVel * CTimer::GetTimeStep();
                         const CVector blended   = predicted * (1.0f - inv1) + playerPos * inv1;
                         target.x                = blended.x;
@@ -2132,10 +2132,10 @@ void CCam::ProcessPedsDeadBaby() {
         const float elapsedTime = (float)(CTimer::GetTimeInMS() - TheCamera.m_nTimeLastChange);
         const float clamped     = std::min(elapsedTime, 1000.0f);
         const float savedZ      = srcZ;
-        const double orbit      = (double)clamped * 0.001f * x87::sin((x87d)elapsedTime / (x87d)600.0);
+        const x87d orbit      = X87R((x87d)clamped * 0.001f * x87::sin((x87d)elapsedTime / (x87d)600.0));
 
-        const float candX = (float)((double)right.x * 2.0 * orbit + targetPos.x);
-        const float candY = (float)((double)(right.y * 2.0f) * orbit) + targetPos.y;
+        const float candX = (float)((x87d)right.x * (x87d)2.0 * orbit + targetPos.x);
+        const float candY = (float)((x87d)(right.y * 2.0f) * orbit) + targetPos.y;
 
         CVector dir{ candX - prevX, candY - prevY, 0.0f };
         dir.Normalise();
@@ -2337,8 +2337,8 @@ void CCam::Process_1rstPersonPedOnPC(const CVector& target, float orientation, f
     const double cosH = x87::cos((double)m_fHorizontalAngle);
     const double sinH = x87::sin((double)m_fHorizontalAngle);
     const float  sinA3 = (float)x87::sin((double)m_fVerticalAngle) * 3.0f;
-    m_vecFront.x = (float)(cosH * cosA * 3.0 + (double)m_vecSource.x) - m_vecSource.x;
-    m_vecFront.y = ((float)(sinH * cosA) * 3.0f + m_vecSource.y) - m_vecSource.y;
+    m_vecFront.x = (float)(X87R(cosH * cosA) * (x87d)3.0 + (x87d)m_vecSource.x) - m_vecSource.x;
+    m_vecFront.y = ((float)(X87R(sinH * cosA)) * 3.0f + m_vecSource.y) - m_vecSource.y;
     m_vecFront.z = (sinA3 + m_vecSource.z) - m_vecSource.z;
     m_vecFront.Normalise();
     m_vecSource.x = m_vecFront.x * 0.4f + m_vecSource.x;
@@ -2683,7 +2683,7 @@ void CCam::Process_AimWeapon(const CVector& target, float orientation, float spe
                 const CVector probeSrc = pedPos + CVector{ 0.0f, 0.0f, 0.75f };
 
                 CVector side      = AimWeaponCrossExt(tgtPos - pedPos, CVector{ 0.0f, 0.0f, 1.0f });
-                const float mag   = (float)std::sqrt(SqMagExt(side));
+                const float mag   = (float)X87R(std::sqrt(SqMagExt(side)));
                 const float limit = (0.7f > mag) ? 0.7f : mag;
                 side *= (float)((x87d)2.0 / (x87d)limit);
 
@@ -2709,18 +2709,18 @@ void CCam::Process_AimWeapon(const CVector& target, float orientation, float spe
             s_LockOnBlend   = 0.0f;
         } else if (!TheCamera.m_bTransitionState) {
             const double p = std::pow((double)0.96f, (double)ts);
-            const double q = 1.0 - p;
-            s_MeleeAimAlpha = (float)((double)wantAlpha * q + (double)s_MeleeAimAlpha * p);
-            s_MeleeAimBeta  = (float)((double)wantBeta * q + (double)s_MeleeAimBeta * p);
-            s_LockOnBlend   = (float)(q * (double)wantBlend + (double)s_LockOnBlend * p);
+            const x87d q = X87R(1.0 - p);
+            s_MeleeAimAlpha = (float)((x87d)wantAlpha * q + X87R((double)s_MeleeAimAlpha * p));
+            s_MeleeAimBeta  = (float)((x87d)wantBeta * q + X87R((double)s_MeleeAimBeta * p));
+            s_LockOnBlend   = (float)(q * (x87d)wantBlend + X87R((double)s_LockOnBlend * p));
         }
         offsetH = s_MeleeAimBeta * DEG2RAD;
         offsetV = s_MeleeAimAlpha * DEG2RAD;
     } else {
         s_LockOnBlend = 0.0f;
         const double tanHalfFov = x87::tan(((x87d)m_fFOV * (x87d)0.5f) * (x87d)DEG2RAD);
-        offsetH = (float)x87::atan2((((double)CCamera::m_f3rdPersonCHairMultX - (double)0.5f) * 2.0) * tanHalfFov, 1.0);
-        offsetV = (float)x87::atan2(tanHalfFov * (((double)0.5f - (double)CCamera::m_f3rdPersonCHairMultY) * 2.0 * (1.0 / (double)CDraw::ms_fAspectRatio)), 1.0);
+        offsetH = (float)x87::atan2(X87R((((x87d)CCamera::m_f3rdPersonCHairMultX - (x87d)0.5f) * (x87d)2.0) * tanHalfFov), 1.0);
+        offsetV = (float)x87::atan2(X87R(tanHalfFov * (((x87d)0.5f - (x87d)CCamera::m_f3rdPersonCHairMultY) * (x87d)2.0 * ((x87d)1.0 / (x87d)CDraw::ms_fAspectRatio))), 1.0);
     }
 
     if (m_bResetStatics) {
@@ -2739,15 +2739,15 @@ void CCam::Process_AimWeapon(const CVector& target, float orientation, float spe
             if (ped->bInVehicle && veh) {
                 m_fHorizontalAngle = (float)(((x87d)ped->m_fCurrentRotation - (x87d)HALF_PI) - (x87d)offsetH);
                 const float fz     = AimWeaponClampUnit(veh->GetMatrix().GetForward().z);
-                m_fVerticalAngle   = (float)(x87::asin((double)fz) + (double)m_fVerticalAngle);
+                m_fVerticalAngle   = (float)(X87R(x87::asin((double)fz) + (double)m_fVerticalAngle));
             } else if (!ped->m_pTargetedObject) {
                 m_fHorizontalAngle = (float)(((x87d)ped->m_fCurrentRotation - (x87d)HALF_PI) + (x87d)offsetH);
                 if (ped->bIsStanding) {
                     const float  c = AimWeaponClampUnit(DotExt(ped->field_578, ped->GetMatrix().GetForward()));
-                    const double a = (double)m_fVerticalAngle - x87::asin((double)c);
+                    const x87d a = X87R((double)m_fVerticalAngle - x87::asin((double)c));
                     m_fVerticalAngle = (float)a;
                     if (weaponType == WEAPON_EXTINGUISHER) {
-                        m_fVerticalAngle = (float)(a + (double)CWeapon::ms_fExtinguisherAimAngle);
+                        m_fVerticalAngle = (float)(a + (x87d)CWeapon::ms_fExtinguisherAimAngle);
                     }
                 }
             }
@@ -2805,11 +2805,11 @@ void CCam::Process_AimWeapon(const CVector& target, float orientation, float spe
         const auto&   right = ped->GetMatrix().GetRight();
         const float   d     = (float)(((x87d)cross.y * (x87d)right.y + (x87d)cross.z * (x87d)right.z) + (x87d)cross.x * (x87d)right.x);
         const float   c     = (1.0f < d) ? 1.0f : ((d < 0.0f) ? 0.0f : d);
-        const double  f     = (1.0 - x87::acos((double)c) * (double)0.63661975f) * (double)lookAtScale;
-        const double  cx    = (double)cross.x * f;
-        const float   cy    = (float)((double)cross.y * f);
-        const float   cz    = (float)((double)cross.z * f);
-        tgt.x               = (float)(cx + (double)tgt.x);
+        const x87d  f     = ((x87d)1.0 - X87R(x87::acos((double)c) * (double)0.63661975f)) * (x87d)lookAtScale;
+        const x87d  cx    = (x87d)cross.x * f;
+        const float   cy    = (float)((x87d)cross.y * f);
+        const float   cz    = (float)((x87d)cross.z * f);
+        tgt.x               = (float)(cx + (x87d)tgt.x);
         tgt.y               = (float)((x87d)tgt.y + (x87d)cy);
         tgt.z               = (float)((x87d)cz + (x87d)tgt.z);
     } else {
@@ -2848,12 +2848,12 @@ void CCam::Process_AimWeapon(const CVector& target, float orientation, float spe
         const x87d dy = (x87d)s_LockOnPos.y - (x87d)tgt.y;
         const float  dz = (float)((x87d)s_LockOnPos.z - (x87d)tgt.z);
 
-        const float yawToTarget = (float)(x87::atan2(-dx, dy) - (double)HALF_PI);
+        const float yawToTarget = (float)(X87R(x87::atan2(-dx, dy) - (double)HALF_PI));
         const float hSq         = (float)(dx * dx + dy * dy);
         float       pitchToTarget = (float)x87::atan2((double)dz, std::sqrt((x87d)hSq));
 
         if (bMelee) {
-            pitchToTarget = (float)(x87::cos((double)offsetH) * (double)pitchToTarget);
+            pitchToTarget = (float)(X87R(x87::cos((double)offsetH) * (double)pitchToTarget));
         } else {
             // Move the target so the crosshair ends up on it
             const x87d ex  = (x87d)tgt.x - (x87d)m_vecSource.x;
@@ -2861,16 +2861,16 @@ void CCam::Process_AimWeapon(const CVector& target, float orientation, float spe
             const x87d ez  = (x87d)tgt.z - (x87d)m_vecSource.z;
             const x87d len = std::sqrt((ez * ez + ey * ey) + ex * ex);
 
-            double dist;
+            x87d dist;
             if (len < (double)settings.baseDist) {
-                dist = std::sqrt(SqMagExt(tgt - m_vecSource));
+                dist = X87R(std::sqrt(SqMagExt(tgt - m_vecSource)));
             } else {
                 dist = (double)settings.baseDist;
             }
             const x87d R     = std::sqrt((x87d)dz * (x87d)dz + (x87d)hSq);
-            const double ratio = (dist + R) / R;
-            offsetV            = (float)((double)offsetV * ratio);
-            offsetH            = (float)(ratio * (double)offsetH);
+            const x87d ratio = (dist + R) / R;
+            offsetV            = (float)((x87d)offsetV * ratio);
+            offsetH            = (float)(ratio * (x87d)offsetH);
         }
 
         x87d yaw   = (x87d)yawToTarget + (x87d)offsetH;
@@ -3067,25 +3067,25 @@ void CCam::Process_AimWeapon(const CVector& target, float orientation, float spe
                     m_fVerticalAngle = (float)((x87d)dAlpha + (x87d)m_fVerticalAngle);
                 } else {
                     const float fz = AimWeaponClampUnit(veh->GetMatrix().GetForward().z);
-                    double      alpha = x87::asin((double)fz) + (double)settings.initialAlpha;
+                    x87d      alpha = X87R(x87::asin((double)fz) + (double)settings.initialAlpha);
                     {
-                        const double u = alpha - (double)m_fVerticalAngle;
+                        const x87d u = alpha - (x87d)m_fVerticalAngle;
                         if (u > (double)PI) {
-                            alpha -= (double)TWO_PI;
+                            alpha -= (x87d)TWO_PI;
                         } else if (u < -(double)PI) {
-                            alpha += (double)TWO_PI;
+                            alpha += (x87d)TWO_PI;
                         }
                     }
-                    double diffA = alpha - (double)m_fVerticalAngle;
+                    x87d diffA = alpha - (x87d)m_fVerticalAngle;
                     if (diffA > (double)deadzone) {
-                        diffA -= (double)deadzone;
+                        diffA -= (x87d)deadzone;
                     } else if (diffA < -(double)deadzone) {
-                        diffA += (double)deadzone;
+                        diffA += (x87d)deadzone;
                     } else {
-                        diffA = 0.0;
+                        diffA = (x87d)0.0;
                     }
                     if (std::abs(diffA) < (double)rate) {
-                        m_fVerticalAngle = (float)(diffA + (double)m_fVerticalAngle);
+                        m_fVerticalAngle = (float)(diffA + (x87d)m_fVerticalAngle);
                     } else if (!(diffA < 0.0)) {
                         m_fVerticalAngle = (float)((x87d)rate + (x87d)m_fVerticalAngle);
                     } else {
@@ -3114,19 +3114,19 @@ void CCam::Process_AimWeapon(const CVector& target, float orientation, float spe
         }
         cosTerm = x87::cos(w);
     }
-    const double dist = (double)settings.baseDist + cosTerm * (double)settings.distScale;
+    const x87d dist = (double)settings.baseDist + X87R(cosTerm * (double)settings.distScale);
 
     {
         const double cosV = x87::cos((double)m_fVerticalAngle);
-        m_vecFront.x      = (float)-(x87::cos((double)m_fHorizontalAngle) * cosV);
-        m_vecFront.y      = (float)-(x87::sin((double)m_fHorizontalAngle) * cosV);
+        m_vecFront.x      = (float)-(X87R(x87::cos((double)m_fHorizontalAngle) * cosV));
+        m_vecFront.y      = (float)-(X87R(x87::sin((double)m_fHorizontalAngle) * cosV));
         m_vecFront.z      = (float)x87::sin((double)m_fVerticalAngle);
     }
     {
-        const double dfx = dist * (double)m_vecFront.x;
-        const float  dfy = (float)(dist * (double)m_vecFront.y);
-        const float  dfz = (float)(dist * (double)m_vecFront.z);
-        m_vecSource.x    = (float)((double)tgt.x - dfx);
+        const x87d dfx = dist * (x87d)m_vecFront.x;
+        const float  dfy = (float)(dist * (x87d)m_vecFront.y);
+        const float  dfz = (float)(dist * (x87d)m_vecFront.z);
+        m_vecSource.x    = (float)((x87d)tgt.x - dfx);
         m_vecSource.y    = (float)((x87d)tgt.y - (x87d)dfy);
         m_vecSource.z    = (float)((x87d)tgt.z - (x87d)dfz);
     }
@@ -3167,7 +3167,7 @@ void CCam::Process_AimWeapon(const CVector& target, float orientation, float spe
     // Turn the player towards where the camera is looking at
     if ((!wi->flags.bAimWithArm || ped->bIsDucking) && !bMelee && !ped->bInVehicle) {
         const auto FrontHeading = [&] {
-            return (float)(x87::atan2(-(double)m_vecFront.x, (double)m_vecFront.y) - (double)offsetH);
+            return (float)(X87R(x87::atan2(-(double)m_vecFront.x, (double)m_vecFront.y) - (double)offsetH));
         };
 
         bool  bHasHeading = true;
@@ -3225,9 +3225,9 @@ void CCam::Process_AttachedCam() {
 
     const double s = x87::sin((double)angle);
     const double c = x87::cos((double)angle);
-    m_vecUp.x      = (float)((double)(float)((double)up.x * c) + (double)right.x * s);
-    m_vecUp.y      = (float)((double)up.y * c) + (float)((double)right.y * s);
-    m_vecUp.z      = (float)((double)up.z * c) + (float)((double)right.z * s);
+    m_vecUp.x      = (float)((x87d)(float)(X87R((double)up.x * c)) + X87R((double)right.x * s));
+    m_vecUp.y      = (float)(X87R((double)up.y * c)) + (float)(X87R((double)right.y * s));
+    m_vecUp.z      = (float)(X87R((double)up.z * c)) + (float)(X87R((double)right.z * s));
 
     CWorld::pIgnoreEntity = nullptr;
 }
@@ -3369,9 +3369,9 @@ void CCam::Process_Cam_TwoPlayer() {
         } else {
             const float f3 = 0.1f * CTimer::GetTimeStep();
             const float f5 = 0.02f * CTimer::GetTimeStep();
-            const double rawAngle = x87::atan2((double)-vel.x, (double)vel.y) - (double)(PI / 2.0f); // NOTE: x87 keeps this unrounded for the next subtraction
+            const x87d rawAngle = X87R(x87::atan2((double)-vel.x, (double)vel.y) - (double)(PI / 2.0f)); // NOTE: x87 keeps this unrounded for the next subtraction
             local70               = (float)rawAngle;
-            const double d        = rawAngle - (double)fVar4;
+            const x87d d        = rawAngle - (x87d)fVar4;
             if (d <= (double)PI) {
                 if (d < (double)-PI) {
                     local70 += 2.0f * PI;
@@ -3510,7 +3510,7 @@ void CCam::Process_Cam_TwoPlayer_InCarAndShooting() {
     }
     if (70.0f < m_fFOV) {
         const double f = std::pow((double)0.98f, (double)CTimer::GetTimeStep());
-        m_fFOV         = (float)(((double)m_fFOV - 70.0) * f + 70.0);
+        m_fFOV         = (float)(X87R(((x87d)m_fFOV - (x87d)70.0) * f) + (x87d)70.0);
     }
     if (m_fFOV <= 100.0f) {
         if (m_fFOV < 70.0f) {
@@ -3542,7 +3542,7 @@ void CCam::Process_Cam_TwoPlayer_InCarAndShooting() {
 
     if (aimTarget && absLR < 120.0f && absUD < 120.0f) {
         const double f = std::pow((double)0.85f, (double)CTimer::GetTimeStep());
-        double       dx = ((double)targetScreenX - m_fX_Targetting) * (1.0 - f);
+        x87d       dx = ((x87d)targetScreenX - m_fX_Targetting) * (X87R(1.0 - f));
         float        lim = CTimer::GetTimeStep() * 0.01f;
         if (dx <= lim) {
             if (dx < -lim) {
@@ -3554,7 +3554,7 @@ void CCam::Process_Cam_TwoPlayer_InCarAndShooting() {
         m_fX_Targetting = (float)(dx + m_fX_Targetting);
 
         const double f2 = std::pow((double)0.85f, (double)CTimer::GetTimeStep());
-        double       dy = ((double)targetScreenY - m_fY_Targetting) * (1.0 - f2);
+        x87d       dy = ((x87d)targetScreenY - m_fY_Targetting) * (X87R(1.0 - f2));
         lim = CTimer::GetTimeStep() * 0.01f;
         if (dy <= lim) {
             if (dy < -lim) {
@@ -3634,7 +3634,7 @@ void CCam::Process_Cam_TwoPlayer_InCarAndShooting() {
     if (dist2D < (float)0.002) {
         dist2D = 0.002f;
     }
-    m_fHorizontalAngle = (float)(x87::atan2((double)-(vehPos.x - m_vecSource.x), (double)(vehPos.y - m_vecSource.y)) - (double)(PI / 2.0f));
+    m_fHorizontalAngle = (float)(X87R(x87::atan2((double)-(vehPos.x - m_vecSource.x), (double)(vehPos.y - m_vecSource.y)) - (double)(PI / 2.0f)));
 
     float clampedDist = camDist;
     if (camDist < dist2D || (clampedDist = minDist, dist2D < minDist)) {
@@ -3650,9 +3650,9 @@ void CCam::Process_Cam_TwoPlayer_InCarAndShooting() {
         if (1.0 < k) {
             k = (x87d)1.0;
         }
-        alphaTarget  = (float)(k * velPitch + alphaTarget);
+        alphaTarget  = (float)(X87R(k * velPitch) + alphaTarget);
         const double f = std::pow((double)0.96f, (double)CTimer::GetTimeStep());
-        m_fVerticalAngle = (float)(f * m_fVerticalAngle + (1.0 - f) * alphaTarget);
+        m_fVerticalAngle = (float)(X87R(f * m_fVerticalAngle) + (X87R(1.0 - f)) * alphaTarget);
     }
 
     float maxAlpha = 0.52359879f;
@@ -3668,7 +3668,7 @@ void CCam::Process_Cam_TwoPlayer_InCarAndShooting() {
     } else {
         m_fVerticalAngle = minAlpha;
     }
-    m_vecSource.z = (float)((double)vehPos.z - x87::sin((double)m_fVerticalAngle) * camDist);
+    m_vecSource.z = (float)((x87d)vehPos.z - X87R(x87::sin((double)m_fVerticalAngle) * camDist));
 
     RotCamIfInFrontCar(vehPos, baseAngle);
 
@@ -3681,9 +3681,9 @@ void CCam::Process_Cam_TwoPlayer_InCarAndShooting() {
         const x87d cosb = (x87d)(float)x87::cos((x87d)rotExcess); // NOTE: the original rounds the cosine to float
         const float  px   = m_vecSource.x;
         const x87d dyv  = (x87d)m_vecSource.y - (x87d)vehPos.y;
-        const float  nx   = (float)(cosb * ((double)px - (double)vehPos.x) + sinb * dyv);
+        const float  nx   = (float)(cosb * ((x87d)px - (x87d)vehPos.x) + X87R(sinb * dyv));
         m_vecSource.x     = nx + vehPos.x;
-        m_vecSource.y     = (float)((cosb * dyv - sinb * ((double)px - (double)vehPos.x)) + (double)vehPos.y);
+        m_vecSource.y     = (float)((cosb * dyv - X87R(sinb * ((x87d)px - (x87d)vehPos.x))) + (x87d)vehPos.y);
     }
 
     m_bResetStatics = false;
@@ -3705,7 +3705,7 @@ void CCam::Process_Cam_TwoPlayer_InCarAndShooting() {
             const x87d tExt   = (x87d)m_fFOV * (x87d)0.00872664619f;
             const float  t      = (float)tExt;
             const float  tanT   = (float)x87::tan(tExt);
-            const auto   upTerm = m_vecUp * (float)((x87::tan((double)t) / (double)CDraw::ms_fAspectRatio) * (double)m_fY_Targetting);
+            const auto   upTerm = m_vecUp * (float)((X87R(x87::tan((double)t) / (double)CDraw::ms_fAspectRatio)) * (x87d)m_fY_Targetting);
             const auto  rightTerm = (right * m_fX_Targetting) * tanT;
             auto        dir    = (m_vecFront + rightTerm) - upTerm;
             dir *= weaponInfo->m_fWeaponRange * 3.0f;
@@ -3772,7 +3772,7 @@ void CCam::Process_Cam_TwoPlayer_Separate_Cars() {
 
     const x87d angle = (x87d)m_fTwoPlayerFocusBlend * (x87d)PI; // NOTE: x87 extended precision
     const float  s     = (float)x87::sin(angle);
-    const float  c     = (float)((x87::cos(angle) + 1.0) * 0.5);
+    const float  c     = (float)((X87R(x87::cos(angle) + 1.0)) * (x87d)0.5);
 
     const CVector dPos = veh1->GetPosition() - veh2->GetPosition();
     const float   dist = std::sqrt((sq(dPos.x) + sq(dPos.z)) + sq(dPos.y)); // NOTE: summation order as in the original (0x5137A1..0x5137C8)
@@ -3986,10 +3986,10 @@ bool CCam::Process_DW_BirdyCam(bool) {
 
     if (!gbExitCam[CAM_ID]) {
         const double s = x87::sin(((x87d)270.0 - (x87d)t * (x87d)180.0) * (x87d)0.017453292f);
-        const double k = (1.0 + s) * 0.5;
-        src.x = (float)(((double)to.x - from.x) * k + from.x);
-        src.y = (float)(((double)to.y - from.y) * k + from.y);
-        src.z = (float)(((double)to.z - from.z) * (s + 1.0) * 0.5 + from.z);
+        const x87d k = (X87R(1.0 + s)) * (x87d)0.5;
+        src.x = (float)(((x87d)to.x - from.x) * k + from.x);
+        src.y = (float)(((x87d)to.y - from.y) * k + from.y);
+        src.z = (float)(((x87d)to.z - from.z) * (X87R(s + 1.0)) * (x87d)0.5 + from.z);
     }
 
     if (IsTimeToExitThisDWCineyCamMode(CAM_ID, src, dest, t, false)) {
@@ -4107,10 +4107,10 @@ bool CCam::Process_DW_CamManCam(bool) {
 
     auto k = (float)(std::sqrt((x87d)sq(dest.y - src.y) + (x87d)sq(dest.z - src.z) + (x87d)sq(dest.x - src.x)) / (x87d)30.0);
     k      = std::clamp(k, 0.0f, 1.0f);
-    float fov = (float)((15.0 - 70.0) * (x87::sin(((x87d)270.0 - (x87d)k * (x87d)180.0) * (x87d)0.017453292f) + 1.0) * 0.5 + 70.0);
+    float fov = (float)(((x87d)15.0 - (x87d)70.0) * (X87R(x87::sin(((x87d)270.0 - (x87d)k * (x87d)180.0) * (x87d)0.017453292f) + 1.0)) * (x87d)0.5 + (x87d)70.0);
     if (t < 0.1f) {
         auto k2 = std::clamp(t / 0.1f, 0.0f, 1.0f);
-        fov     = (float)(((double)fov - 70.0) * (x87::sin(((x87d)270.0 - (x87d)k2 * (x87d)180.0) * (x87d)0.017453292f) + 1.0) * 0.5 + 70.0);
+        fov     = (float)(((x87d)fov - (x87d)70.0) * (X87R(x87::sin(((x87d)270.0 - (x87d)k2 * (x87d)180.0) * (x87d)0.017453292f) + 1.0)) * (x87d)0.5 + (x87d)70.0);
     }
 
     if (IsTimeToExitThisDWCineyCamMode(CAM_ID, src, dest, t, false)) {
@@ -4271,18 +4271,18 @@ bool CCam::Process_DW_HeliChaseCam(bool) {
         src.y = dest.y - dir.y * S.minDist2D;
     }
 
-    double fovBase = S.fovEnd;
+    x87d fovBase = S.fovEnd;
     if (t < S.fovBlendInFraction && !S.bFlag81) {
         const double s = x87::sin(((x87d)270.0 - (x87d)(1.0f / S.fovBlendInFraction) * (x87d)t * (x87d)180.0) * (x87d)0.017453292f);
-        fovBase        = ((double)S.fovEnd - (double)S.fovStart) * (s + 1.0) * 0.5 + (double)S.fovStart;
+        fovBase        = ((double)S.fovEnd - (double)S.fovStart) * (X87R(s + 1.0)) * (x87d)0.5 + (double)S.fovStart;
     }
-    double fovZoom = 0.0;
+    x87d fovZoom = (x87d)0.0;
     const float dist3D = std::sqrt(sq(src.x - dest.x) + sq(src.y - dest.y) + sq(cur.z - dest.z));
     if (S.fovZoomDistMin < dist3D) {
         x87d k = ((x87d)dist3D - S.fovZoomDistMin) / ((x87d)S.fovZoomDistMax - S.fovZoomDistMin);
         k        = std::clamp(k, (x87d)0.0, (x87d)1.0);
         const double s = x87::sin(((x87d)270.0 - k * (x87d)180.0) * (x87d)0.017453292f);
-        fovZoom        = (s + 1.0) * 0.5 * S.fovZoomAmount;
+        fovZoom        = (X87R(s + 1.0)) * (x87d)0.5 * S.fovZoomAmount;
     }
     float fov        = (float)(fovBase - fovZoom);
     const float roll = t * S.rollRate;
@@ -4356,7 +4356,7 @@ bool CCam::Process_DW_HeliChaseCam(bool) {
         x87d f = ((x87d)(int32)now - (x87d)S.fovLerpStartTime) / ((x87d)S.fovLerpEndTime - (x87d)S.fovLerpStartTime);
         f        = std::clamp(f, (x87d)0.0, (x87d)1.0);
         const double s = x87::sin(((x87d)270.0 - f * (x87d)180.0) * (x87d)0.017453292f);
-        fov            = (float)(((double)S.fovStart - (double)S.savedFov) * (s + 1.0) * 0.5 + (double)S.savedFov);
+        fov            = (float)(((double)S.fovStart - (double)S.savedFov) * (X87R(s + 1.0)) * (x87d)0.5 + (double)S.savedFov);
     }
 
     if (IsTimeToExitThisDWCineyCamMode(CAM_ID, src, dest, t, false)) {
@@ -4435,11 +4435,11 @@ bool CCam::Process_DW_PlaneCam1(bool) {
         const float b  = up.y * -150.0f * c4 * s_scale;
         const double sinv = x87::sin((x87d)4 * ((x87d)elapsed / (x87d)duration) * (x87d)360.0 * (x87d)0.017453292f);
         const float c  = up.z * 0.5f;
-        const float e  = (float)((double)up.x * 0.5 * sinv);
-        const float g  = (float)((double)c * sinv);
+        const float e  = (float)(X87R((x87d)up.x * (x87d)0.5 * sinv));
+        const float g  = (float)(X87R((double)c * sinv));
 
         src.x = e + a * s_scale + up.x * 15.0f + v2.x * 30.0f + v1.x * 10.0f + dest.x;
-        src.y = (float)((double)up.y * 0.5 * sinv + (double)(b + up.y * 15.0f + v2.y * 30.0f + cy));
+        src.y = (float)(X87R((x87d)up.y * (x87d)0.5 * sinv) + (x87d)(b + up.y * 15.0f + v2.y * 30.0f + cy));
         src.z = g + up.z * -150.0f * c4 * s_scale + up.z * 15.0f + v1.z * 10.0f + dest.z + v2.z * 30.0f;
 
         CWorld::pIgnoreEntity = entity;
@@ -4548,11 +4548,11 @@ bool CCam::Process_DW_PlaneCam2(bool) {
         const float upZ5 = up.z * 5.0f;
         const double sinv = x87::sin((x87d)4 * ((x87d)elapsed / (x87d)duration) * (x87d)360.0 * (x87d)0.017453292f);
         up.z              = up.z * 0.5f;
-        right.x           = (float)((double)up.x * 0.5 * sinv);
-        const float rz    = (float)((double)up.z * sinv);
+        right.x           = (float)(X87R((x87d)up.x * (x87d)0.5 * sinv));
+        const float rz    = (float)(X87R((double)up.z * sinv));
 
         src.x = right.x + up.x * 5.0f + dirB.x * 30.0f + fwd.x;
-        src.y = (float)((double)up.y * 0.5 * sinv + (double)(up.y * 5.0f + dirB.y * 30.0f + fwd.y));
+        src.y = (float)(X87R((x87d)up.y * (x87d)0.5 * sinv) + (x87d)(up.y * 5.0f + dirB.y * 30.0f + fwd.y));
         src.z = rz + upZ5 + fwd.z + dirB.z * 30.0f;
 
         CWorld::pIgnoreEntity = entity;
@@ -4728,11 +4728,11 @@ bool CCam::Process_DW_PlaneSpotterCam(bool) {
             auto k = (dest - s_target).Magnitude() / 100.0f;
             k      = std::clamp(k, 0.0f, 1.0f);
             auto s = x87::sin((270.0f - k * 180.0f) * 0.0174532924f);
-            fov    = (12.0f - 70.0f) * (s + 1.0f) * 0.5f + 70.0f;
+            fov    = (12.0f - 70.0f) * (X87R(s + 1.0f)) * 0.5f + 70.0f;
             if (t < 0.1f) {
                 auto k2 = std::clamp(t / 0.1f, 0.0f, 1.0f);
                 auto s2 = x87::sin((270.0f - k2 * 180.0f) * 0.0174532924f);
-                fov     = (fov - s_baseFov) * (s2 + 1.0f) * 0.5f + s_baseFov;
+                fov     = (fov - s_baseFov) * (X87R(s2 + 1.0f)) * 0.5f + s_baseFov;
             }
         }
 
@@ -5053,7 +5053,7 @@ void CCam::Process_FlyBy(const CVector& target, float orientation, float speedVa
 
     // The up vector is rotated around the front vector by the roll (in degrees)
     const auto ApplyRoll = [&] {
-        constexpr float DEG_TO_RAD = static_cast<float>(std::numbers::pi / 180.0);
+        constexpr float DEG_TO_RAD = static_cast<float>(X87R(std::numbers::pi / 180.0));
         constexpr float HALF_PI    = std::numbers::pi_v<float> / 2.0f;
         const x87d angle = static_cast<x87d>(roll) * DEG_TO_RAD + HALF_PI;
         m_vecUp.x = static_cast<float>(x87::cos(angle));
@@ -5329,7 +5329,7 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
         }
         if (m_fFOV > 70.0f) {
             const double p = std::pow((double)0.98f, (double)ts);
-            m_fFOV         = (float)(((double)m_fFOV - 70.0) * p + 70.0);
+            m_fFOV         = (float)(X87R(((x87d)m_fFOV - (x87d)70.0) * p) + (x87d)70.0);
         }
         if (m_fFOV > 100.0f) {
             m_fFOV = 100.0f;
@@ -5351,9 +5351,9 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
             const double heading = veh->m_matrix
                 ? x87::atan2(-(double)veh->m_matrix->GetForward().x, (double)veh->m_matrix->GetForward().y)
                 : (double)veh->m_placement.m_fHeading;
-            m_fHorizontalAngle = (float)(heading - (double)HALF_PI);
+            m_fHorizontalAngle = (float)(X87R(heading - (double)HALF_PI));
             if (TheCamera.m_bCamDirectlyInFront) {
-                m_fHorizontalAngle = (float)((heading - (double)HALF_PI) + (double)PI);
+                m_fHorizontalAngle = (float)((X87R(heading - (double)HALF_PI)) + (x87d)PI);
             }
         }
 
@@ -5361,8 +5361,8 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
         m_fBetaSpeed      = 0.0f;
         m_fAlphaSpeed     = 0.0f;
         m_fDistance       = 1000.0f;
-        m_vecFront.x      = (float)-(x87::cos((double)m_fHorizontalAngle) * cosA);
-        m_vecFront.y      = (float)-(x87::sin((double)m_fHorizontalAngle) * cosA);
+        m_vecFront.x      = (float)-(X87R(x87::cos((double)m_fHorizontalAngle) * cosA));
+        m_vecFront.y      = (float)-(X87R(x87::sin((double)m_fHorizontalAngle) * cosA));
         m_vecFront.z      = (float)x87::sin((double)m_fVerticalAngle);
 
         // `out = tgt - len * front`
@@ -5396,24 +5396,24 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
     }
 
     // Horizontal angle behind the vehicle
-    double behindBeta = x87::atan2(-(double)m_vecFront.x, (double)m_vecFront.y) - (double)HALF_PI;
+    x87d behindBeta = X87R(x87::atan2(-(double)m_vecFront.x, (double)m_vecFront.y) - (double)HALF_PI);
     if (behindBeta < (double)-PI) {
-        behindBeta += (double)(2.0f * PI);
+        behindBeta += (x87d)(2.0f * PI);
     }
 
     const auto& moveSpeed = veh->m_vecMoveSpeed;
 
     // Horizontal angle of the vehicle's movement
-    double moveBeta = behindBeta;
+    x87d moveBeta = behindBeta;
     if (std::sqrt((x87d)moveSpeed.x * (x87d)moveSpeed.x + (x87d)moveSpeed.y * (x87d)moveSpeed.y) > 0.02f) {
-        moveBeta = x87::atan2(-(double)moveSpeed.x, (double)moveSpeed.y) - (double)HALF_PI;
+        moveBeta = X87R(x87::atan2(-(double)moveSpeed.x, (double)moveSpeed.y) - (double)HALF_PI);
     }
-    if (moveBeta <= behindBeta + (double)PI) {
-        if (moveBeta < behindBeta - (double)PI) {
-            moveBeta += (double)(2.0f * PI);
+    if (moveBeta <= behindBeta + (x87d)PI) {
+        if (moveBeta < behindBeta - (x87d)PI) {
+            moveBeta += (x87d)(2.0f * PI);
         }
     } else {
-        moveBeta -= (double)(2.0f * PI);
+        moveBeta -= (x87d)(2.0f * PI);
     }
 
     const x87d betaCatchUp    = (x87d)ts * cfg.betaCatchUpMul;
@@ -5430,22 +5430,22 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
         if (1.0 < catchUp) {
             catchUp = (x87d)1.0;
         }
-        double step = (moveBeta - behindBeta) * catchUp;
+        x87d step = (moveBeta - behindBeta) * catchUp;
         if (step > (double)betaStepLimit) {
             step = betaStepLimit;
         } else if (step < (double)-betaStepLimit) {
             step = -betaStepLimit;
         }
 
-        double wantedBeta = behindBeta + step;
+        x87d wantedBeta = behindBeta + step;
         if (wantedBeta <= (x87d)m_fHorizontalAngle + (x87d)PI) {
             if (wantedBeta < (x87d)m_fHorizontalAngle - (x87d)PI) {
-                wantedBeta += (double)(2.0f * PI);
+                wantedBeta += (x87d)(2.0f * PI);
             }
         } else {
-            wantedBeta -= (double)(2.0f * PI);
+            wantedBeta -= (x87d)(2.0f * PI);
         }
-        betaVel = (float)((wantedBeta - (double)m_fHorizontalAngle) / (double)(1.0f <= ts ? ts : 1.0f));
+        betaVel = (float)((wantedBeta - (x87d)m_fHorizontalAngle) / (x87d)(1.0f <= ts ? ts : 1.0f));
     }
 
     // Vertical angle at which the camera looks at the vehicle (at the moment)
@@ -5470,29 +5470,29 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
             const float  zRel        = (float)(((x87d)tgt.z - (x87d)pos.z) + heightAbove);
 
             const x87d relBeta1 = (x87d)m_fHorizontalAngle - ((x87d)veh->GetHeading() - (x87d)HALF_PI);
-            const double phi      = x87::asin(std::fabs(x87::sin(relBeta1)));
+            const double phi      = x87::asin(X87R(std::fabs(x87::sin(relBeta1))));
             const double thr      = x87::atan2((double)bb.m_vecMax.x, -(double)bb.m_vecMin.y);
-            double       d1;
+            x87d       d1;
             if (phi <= thr) {
-                d1 = (1.5f - (double)bb.m_vecMin.y) / x87::cos(phi);
+                d1 = X87R((1.5f - (x87d)bb.m_vecMin.y) / x87::cos(phi));
             } else {
                 const float v   = (float)(1.2f + (x87d)bb.m_vecMax.x);
-                const float arg = (float)((double)HALF_PI - phi);
-                d1              = (double)v / x87::cos((double)FollowCarMax(0.0f, arg));
+                const float arg = (float)(X87R((double)HALF_PI - phi));
+                d1              = X87R((double)v / x87::cos((double)FollowCarMax(0.0f, arg)));
             }
             const float d1f = (float)d1;
 
             const x87d relBeta2 = (x87d)m_fHorizontalAngle - ((x87d)veh->GetHeading() - (x87d)HALF_PI);
             const double pitch    = x87::atan2((double)mat.GetForward().z, std::sqrt((x87d)mat.GetForward().x * (x87d)mat.GetForward().x + (x87d)mat.GetForward().y * (x87d)mat.GetForward().y));
-            const double p1       = pitch * x87::cos(relBeta2);
-            maxAlpha              = (float)(x87::atan2((double)zRel, (x87d)d1f * 1.2f) + p1);
+            const x87d p1       = X87R(pitch * x87::cos(relBeta2));
+            maxAlpha              = (float)(X87R(x87::atan2((double)zRel, (x87d)d1f * 1.2f) + p1));
 
             if (veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE
                 && veh->AsAutomobile()->m_nNumContactWheels > 1
                 && std::fabs(DotProduct(veh->m_vecTurnSpeed, mat.GetForward())) < 0.05f) {
                 const x87d relBeta3 = ((x87d)m_fHorizontalAngle - ((x87d)veh->GetHeading() - (x87d)HALF_PI)) + (x87d)HALF_PI;
                 const double pitchR   = x87::atan2((double)mat.GetRight().z, std::sqrt((x87d)mat.GetRight().y * (x87d)mat.GetRight().y + (x87d)mat.GetRight().x * (x87d)mat.GetRight().x));
-                maxAlpha              = (float)(pitchR * x87::cos(relBeta3) + (double)maxAlpha);
+                maxAlpha              = (float)(X87R(pitchR * x87::cos(relBeta3)) + (x87d)maxAlpha);
             }
         }
     }
@@ -5508,7 +5508,7 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
     float alphaStep; // How much the vertical angle will change
     {
         const double pw   = std::pow((double)cfg.alphaSmoothBase, (double)ts);
-        const double step = ((double)alphaTarget - (double)m_fVerticalAngle) * (1.0 - pw);
+        const x87d step = ((x87d)alphaTarget - (x87d)m_fVerticalAngle) * (X87R(1.0 - pw));
         alphaStep         = (float)step;
         if (step > (double)alphaStepLimit) {
             alphaStep = alphaStepLimit;
@@ -5654,7 +5654,7 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
     m_fHorizontalAngle = (float)((bMouse ? (x87d)yawIn : (x87d)ts * (x87d)m_fBetaSpeed) + (x87d)m_fHorizontalAngle);
 
     if (TheCamera.m_bJustCameOutOfGarage) {
-        m_fHorizontalAngle = (float)(CGeneral::GetATanOfXYExt(m_vecFront.x, m_vecFront.y) + (double)PI);
+        m_fHorizontalAngle = (float)(X87R(CGeneral::GetATanOfXYExt(m_vecFront.x, m_vecFront.y) + (double)PI));
     }
     ClipBeta();
 
@@ -5716,8 +5716,8 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
 
     {
         const double cosA = x87::cos((double)m_fVerticalAngle);
-        m_vecFront.x      = (float)-(x87::cos((double)m_fHorizontalAngle) * cosA);
-        m_vecFront.y      = (float)-(x87::sin((double)m_fHorizontalAngle) * cosA);
+        m_vecFront.x      = (float)-(X87R(x87::cos((double)m_fHorizontalAngle) * cosA));
+        m_vecFront.y      = (float)-(X87R(x87::sin((double)m_fHorizontalAngle) * cosA));
         m_vecFront.z      = (float)x87::sin((double)m_fVerticalAngle);
     }
 
@@ -5743,8 +5743,8 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
 
     {
         const float  cosA = (float)x87::cos((double)alphaTarget);
-        const double ux   = -(x87::cos((double)m_fHorizontalAngle) * (double)cosA);
-        const double uy   = -(x87::sin((double)m_fHorizontalAngle) * (double)cosA);
+        const x87d ux   = -(X87R(x87::cos((double)m_fHorizontalAngle) * (double)cosA));
+        const x87d uy   = -(X87R(x87::sin((double)m_fHorizontalAngle) * (double)cosA));
         const double sinA = x87::sin((double)alphaTarget);
         const float  uxf  = (float)ux;
         const float  sinAf = (float)sinA;
@@ -5752,7 +5752,7 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
         // Where the camera is at its closest
         m_avecTargetHistoryPos[0].x = (float)((x87d)tgt.x - (x87d)(float)((x87d)uxf * (x87d)minDist));
         m_avecTargetHistoryPos[0].y = (float)((x87d)tgt.y - (x87d)(float)(uy * (x87d)minDist));
-        m_avecTargetHistoryPos[0].z = (float)((double)tgt.z - sinA * (double)minDist);
+        m_avecTargetHistoryPos[0].z = (float)((x87d)tgt.z - X87R(sinA * (double)minDist));
 
         // Where the camera is supposed to be
         m_avecTargetHistoryPos[1].x = (float)((x87d)tgt.x - (x87d)(float)((x87d)uxf * (x87d)dist));
@@ -5830,7 +5830,7 @@ void CCam::Process_FollowPedWithMouse(const CVector& target, float orientation, 
             angle = (x87d)orientation + (x87d)PI;
         }
         rotV = 0.0f;
-        rotH = (float)(angle - (double)m_fHorizontalAngle);
+        rotH = (float)(X87R(angle - (double)m_fHorizontalAngle));
     }
 
     if ((((TheCamera.m_bFading && TheCamera.m_nFadeInOutFlag == eFadeFlag::FADE_OUT) && 45 < CDraw::FadeValue) || (200 < CDraw::FadeValue || pad->bPlayerSafe))) {
@@ -5872,7 +5872,7 @@ void CCam::Process_FollowPedWithMouse(const CVector& target, float orientation, 
         }
         cosAlpha = x87::cos(v);
     }
-    float dist = (float)(cosAlpha * 2.0 + 1.7f);
+    float dist = (float)(X87R(cosAlpha * 2.0) + 1.7f);
 
     if (TheCamera.m_bUseTransitionBeta == true) {
         m_fHorizontalAngle = m_fTransitionBeta;
@@ -5888,8 +5888,8 @@ void CCam::Process_FollowPedWithMouse(const CVector& target, float orientation, 
     }
 
     const double cosA = x87::cos((double)m_fVerticalAngle);
-    m_vecFront.x      = (float)-(x87::cos((double)m_fHorizontalAngle) * cosA);
-    m_vecFront.y      = (float)-(x87::sin((double)m_fHorizontalAngle) * cosA);
+    m_vecFront.x      = (float)-(X87R(x87::cos((double)m_fHorizontalAngle) * cosA));
+    m_vecFront.y      = (float)-(X87R(x87::sin((double)m_fHorizontalAngle) * cosA));
     m_vecFront.z      = (float)x87::sin((double)m_fVerticalAngle);
     m_vecSource.x     = tgt.x - dist * m_vecFront.x;
     m_vecSource.y     = tgt.y - dist * m_vecFront.y;
@@ -5940,12 +5940,12 @@ void CCam::Process_FollowPedWithMouse(const CVector& target, float orientation, 
     CWorld::pIgnoreEntity = nullptr;
 
     const auto CalcSphereRadius = [&](float nearClip) {
-        return (float)(x87::tan((x87d)m_fFOV * 0.0174532924f * 0.5f) * (double)CDraw::ms_fAspectRatio * (double)nearClip * 1.1f);
+        return (float)(X87R(x87::tan((x87d)m_fFOV * 0.0174532924f * 0.5f) * (double)CDraw::ms_fAspectRatio) * (x87d)nearClip * 1.1f);
     };
 
     int32 iter = 0;
     float nearClipNow = RwCameraGetNearClipPlane(Scene.m_pRwCamera);
-    const float sphereFactor = (float)(CDraw::ms_fAspectRatio * x87::tan((x87d)m_fFOV * 0.0174532924f * 0.5f) * 1.1f);
+    const float sphereFactor = (float)(X87R(CDraw::ms_fAspectRatio * x87::tan((x87d)m_fFOV * 0.0174532924f * 0.5f)) * 1.1f);
     {
         const CVector probe = m_vecFront * nearClipNow + m_vecSource;
         if (CWorld::TestSphereAgainstWorld(probe, nearClipNow * sphereFactor, nullptr, true, true, false, true, false, false)) {
@@ -5993,7 +5993,7 @@ void CCam::Process_FollowPedWithMouse(const CVector& target, float orientation, 
     const float dist3D = std::sqrt(sq(tgt.x - m_vecSource.x) + sq(tgt.y - m_vecSource.y) + sq(tgt.z - m_vecSource.z));
     if (m_fDistance <= dist3D) {
         const double f = std::pow((double)0.92f, (double)CTimer::GetTimeStep());
-        const double newDist = f * m_fDistance + (1.0 - f) * dist3D;
+        const x87d newDist = X87R(f * m_fDistance) + (X87R(1.0 - f)) * dist3D;
         m_fDistance = (float)newDist;
         if (0.05f < dist3D) {
             const float zD = m_vecSource.z - tgt.z;
@@ -6003,7 +6003,7 @@ void CCam::Process_FollowPedWithMouse(const CVector& target, float orientation, 
             m_vecSource.y = (m_vecSource.y - tgt.y) * fv * inv + tgt.y;
             m_vecSource.z = zD * fv * inv + tgt.z;
         }
-        const double clipTarget = newDist - 0.5f;
+        const x87d clipTarget = newDist - 0.5f;
         if (clipTarget < (double)RwCameraGetNearClipPlane(Scene.m_pRwCamera)) {
             if (clipTarget <= 0.1f) {
                 RwCameraSetNearClipPlane(Scene.m_pRwCamera, 0.1f);
@@ -6140,10 +6140,10 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
 
         const bool bKeepAngles = TheCamera.m_bJustCameOutOfGarage || bFlag;
         if (!bKeepAngles) {
-            const double a     = PedHeadingExt(ped) - (double)HALF_PI;
+            const x87d a     = X87R(PedHeadingExt(ped) - (double)HALF_PI);
             m_fHorizontalAngle = (float)a;
             if (TheCamera.m_bCamDirectlyInFront) {
-                m_fHorizontalAngle = (float)(a + (double)PI);
+                m_fHorizontalAngle = (float)(a + (x87d)PI);
             }
         }
 
@@ -6167,8 +6167,8 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
 
         {
             const double cosV = x87::cos((double)m_fVerticalAngle);
-            m_vecFront.x      = (float)-(x87::cos((double)m_fHorizontalAngle) * cosV);
-            m_vecFront.y      = (float)-(x87::sin((double)m_fHorizontalAngle) * cosV);
+            m_vecFront.x      = (float)-(X87R(x87::cos((double)m_fHorizontalAngle) * cosV));
+            m_vecFront.y      = (float)-(X87R(x87::sin((double)m_fHorizontalAngle) * cosV));
             m_vecFront.z      = (float)x87::sin((double)m_fVerticalAngle);
         }
 
@@ -6204,9 +6204,9 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
         const auto IsTrain = [](const CEntity* e) { return e->GetIsTypeVehicle() && e->AsVehicle()->m_nVehicleType == VEHICLE_TYPE_TRAIN; };
         if (IsTrain(standingOn) || (standingOn->AsPhysical()->m_pAttachedTo && IsTrain(standingOn->AsPhysical()->m_pAttachedTo))) {
             const auto&  vel = standingOn->AsPhysical()->m_vecMoveSpeed;
-            const double mag = std::sqrt(SqMagExt(vel));
+            const x87d mag = X87R(std::sqrt(SqMagExt(vel)));
 
-            const float a     = std::max(0.0f, (float)(mag - (double)0.01f)); // 0x420800
+            const float a     = std::max(0.0f, (float)(mag - (x87d)0.01f)); // 0x420800
             const float b     = std::max(0.01f, (float)mag);
             const float ratio = (float)((x87d)a / (x87d)b);
 
@@ -6236,7 +6236,7 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
     // The beta (horizontal angle) the camera should have, and the one the ped is facing
     float camBeta;
     {
-        const double h = x87::atan2((double)-m_vecFront.x, (double)m_vecFront.y) - (double)HALF_PI;
+        const x87d h = X87R(x87::atan2((double)-m_vecFront.x, (double)m_vecFront.y) - (double)HALF_PI);
         camBeta        = (float)h;
         if (h < (double)-PI) {
             camBeta = camBeta + TWO_PI;
@@ -6244,9 +6244,9 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
     }
     float pedBeta;
     {
-        const double h    = PedHeadingExt(ped) - (double)HALF_PI;
+        const x87d h    = X87R(PedHeadingExt(ped) - (double)HALF_PI);
         pedBeta           = (float)h;
-        const double diff = h - (double)camBeta;
+        const x87d diff = h - (x87d)camBeta;
         if (diff > (double)PI) {
             pedBeta = pedBeta - TWO_PI;
         } else if (diff < (double)-PI) {
@@ -6278,10 +6278,10 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
             // Catch up faster the faster the ped moves
             const CVector* standingOnSpeed = ped->m_standingOnEntity ? &ped->m_standingOnEntity->AsPhysical()->m_vecMoveSpeed : nullptr;
             const auto     Speed           = [&] {
-                return std::sqrt(SqMagExt(standingOnSpeed ? ped->m_vecMoveSpeed - *standingOnSpeed : ped->m_vecMoveSpeed));
+                return X87R(std::sqrt(SqMagExt(standingOnSpeed ? ped->m_vecMoveSpeed - *standingOnSpeed : ped->m_vecMoveSpeed)));
             };
-            const double scaled = Speed() * (double)sp1;
-            sp1                 = (scaled > 1.0) ? 1.0f : (float)(Speed() * (double)sp1);
+            const x87d scaled = X87R(Speed() * (double)sp1);
+            sp1                 = (scaled > 1.0) ? 1.0f : (float)(X87R(Speed() * (double)sp1));
         } else {
             sp1 = sp1 * 0.5f;
             if (1.0f < sp1) {
@@ -6333,14 +6333,14 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
             const float  limit = (float)((x87d)HALF_PI - ((x87d)HALF_PI - (x87d)0.349065870f) * t);
             const double pw    = std::pow((double)0.9f, (double)ts);
             if (alphaCur > limit) {
-                alphaCur = (float)(pw * (double)alphaCur + (1.0 - pw) * (double)limit);
+                alphaCur = (float)(X87R(pw * (double)alphaCur) + (X87R(1.0 - pw)) * (x87d)limit);
             } else if (-limit > alphaCur) {
-                alphaCur = (float)(pw * (double)alphaCur - (1.0 - pw) * (double)limit);
+                alphaCur = (float)(X87R(pw * (double)alphaCur) - (X87R(1.0 - pw)) * (x87d)limit);
             }
         }
     }
 
-    double pitchDelta = 0.0;
+    x87d pitchDelta = (x87d)0.0;
     if (pitchScale != 0.0f || (gbFollowPedCamBehindPlayer && ped->bIsStanding)) {
         double pitchTarget = 0.0;
         if (ped->GetIntelligence()->GetTaskJetPack()) {
@@ -6363,17 +6363,17 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
             sp2       = sp2 * pitchScale;
         }
 
-        double v = (pitchTarget - (double)alphaCur) * pitchRate;
+        x87d v = (X87R(pitchTarget - (double)alphaCur)) * pitchRate;
         if (v <= (double)sp2) {
             if (v < -(double)sp2) {
-                v = -(double)sp2;
+                v = -(x87d)sp2;
             }
         } else {
-            v = (double)sp2;
+            v = (x87d)sp2;
         }
         pitchDelta = v;
     }
-    alphaCur = (float)(((double)alphaCur + pitchDelta) - (double)alphaOff);
+    alphaCur = (float)(((x87d)alphaCur + pitchDelta) - (x87d)alphaOff);
 
     if (alphaCur > alphaMax) {
         alphaCur = alphaMax;
@@ -6386,7 +6386,7 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
     {
         const float  maxAlphaStep = ts * tuning.alphaMaxStep;
         const double pw           = std::pow((double)tuning.alphaPowBase, (double)ts);
-        const double stepExt      = ((double)alphaCur - (double)m_fVerticalAngle) * (1.0 - pw);
+        const x87d stepExt      = ((x87d)alphaCur - (x87d)m_fVerticalAngle) * (X87R(1.0 - pw));
         alphaStep                 = (float)stepExt;
         if (stepExt > (double)maxAlphaStep) {
             alphaStep = maxAlphaStep;
@@ -6535,8 +6535,8 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
 
     {
         const double cosV = x87::cos((double)m_fVerticalAngle);
-        m_vecFront.x      = (float)-(x87::cos((double)m_fHorizontalAngle) * cosV);
-        m_vecFront.y      = (float)-(x87::sin((double)m_fHorizontalAngle) * cosV);
+        m_vecFront.x      = (float)-(X87R(x87::cos((double)m_fHorizontalAngle) * cosV));
+        m_vecFront.y      = (float)-(X87R(x87::sin((double)m_fHorizontalAngle) * cosV));
         m_vecFront.z      = (float)x87::sin((double)m_fVerticalAngle);
     }
     GetVectorsReadyForRW();
@@ -6557,20 +6557,20 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
         const x87d alphaExt = (x87d)alphaCur + (x87d)alphaOff;
         alphaCur              = (float)alphaExt;
         const float  cosA     = (float)x87::cos(alphaExt);
-        const double t1Ext    = -(x87::cos((double)m_fHorizontalAngle) * (double)cosA);
+        const x87d t1Ext    = -(X87R(x87::cos((double)m_fHorizontalAngle) * (double)cosA));
         const float  t1       = (float)t1Ext;
-        const double t2Ext    = -(x87::sin((double)m_fHorizontalAngle) * (double)cosA);
+        const x87d t2Ext    = -(X87R(x87::sin((double)m_fHorizontalAngle) * (double)cosA));
         const double sinAExt  = x87::sin((double)alphaCur);
         const float  sinA     = (float)sinAExt;
 
         const float p1 = t1 * clipDist;
-        const float p2 = (float)(t2Ext * (double)clipDist);
+        const float p2 = (float)(t2Ext * (x87d)clipDist);
         m_avecTargetHistoryPos[0].x = tgt.x - p1;
         m_avecTargetHistoryPos[0].y = tgt.y - p2;
-        m_avecTargetHistoryPos[0].z = (float)((double)tgt.z - sinAExt * (double)clipDist);
+        m_avecTargetHistoryPos[0].z = (float)((x87d)tgt.z - X87R(sinAExt * (double)clipDist));
 
         const float r1 = t1 * zoomDist;
-        const float r2 = (float)(t2Ext * (double)zoomDist);
+        const float r2 = (float)(t2Ext * (x87d)zoomDist);
         m_avecTargetHistoryPos[1].x = tgt.x - r1;
         m_avecTargetHistoryPos[1].y = tgt.y - r2;
         m_avecTargetHistoryPos[1].z = (float)((x87d)tgt.z - (x87d)sinA * (x87d)zoomDist);
@@ -6863,10 +6863,10 @@ void CCam::Process_M16_1stPerson(const CVector& target, float orientation, float
     if ((int32)m_nCamBumpedTime > 0) {
         const uint32 bumpTime = m_nCamBumpedTime;
         const double c        = x87::cos((x87d)(uint32)(CTimer::GetTimeInMS() - bumpTime) / (x87d)gM16CamBumpPeriod * (x87d)kTwoPi);
-        m_fHorizontalAngle    = (float)((double)gM16CamBumpScale * c * m_fCamBumpedHorz + m_fHorizontalAngle);
-        m_fVerticalAngle      = (float)(c * m_fCamBumpedVert * (double)gM16CamBumpScale + m_fVerticalAngle);
-        m_fCamBumpedHorz      = (float)(std::pow((double)gM16CamBumpDecay, (double)CTimer::GetTimeStep()) * m_fCamBumpedHorz);
-        m_fCamBumpedVert      = (float)(std::pow((double)gM16CamBumpDecay, (double)CTimer::GetTimeStep()) * m_fCamBumpedVert);
+        m_fHorizontalAngle    = (float)(X87R((double)gM16CamBumpScale * c) * m_fCamBumpedHorz + m_fHorizontalAngle);
+        m_fVerticalAngle      = (float)(X87R(c * m_fCamBumpedVert) * (double)gM16CamBumpScale + m_fVerticalAngle);
+        m_fCamBumpedHorz      = (float)(X87R(std::pow((double)gM16CamBumpDecay, (double)CTimer::GetTimeStep()) * m_fCamBumpedHorz));
+        m_fCamBumpedVert      = (float)(X87R(std::pow((double)gM16CamBumpDecay, (double)CTimer::GetTimeStep()) * m_fCamBumpedVert));
         if (CTimer::GetTimeInMS() > bumpTime + (uint32)gM16CamBumpDuration) {
             m_nCamBumpedTime = 0;
         }
@@ -6890,15 +6890,15 @@ void CCam::Process_M16_1stPerson(const CVector& target, float orientation, float
             break;
         case 2:
             pitchTarget   = M16ClampedAsin(-attached->GetMatrix().GetForward().z);
-            headingTarget = (float)(M16HeadingExt(*attached) + (double)kHalfPi);
+            headingTarget = (float)(X87R(M16HeadingExt(*attached) + (double)kHalfPi));
             break;
         case 3:
             pitchTarget   = M16ClampedAsin(attached->GetMatrix().GetRight().z);
-            headingTarget = (float)(M16HeadingExt(*attached) - (double)kPi);
+            headingTarget = (float)(X87R(M16HeadingExt(*attached) - (double)kPi));
             break;
         default:
             pitchTarget   = M16ClampedAsin(attached->GetMatrix().GetForward().z);
-            headingTarget = (float)(M16HeadingExt(*attached) - (double)kHalfPi);
+            headingTarget = (float)(X87R(M16HeadingExt(*attached) - (double)kHalfPi));
             break;
         }
 
@@ -7032,8 +7032,8 @@ void CCam::Process_M16_1stPerson(const CVector& target, float orientation, float
 
     {
         const double cosV = x87::cos((double)m_fVerticalAngle);
-        m_vecFront.x      = (float)-(x87::cos((double)m_fHorizontalAngle) * cosV);
-        m_vecFront.y      = (float)-(x87::sin((double)m_fHorizontalAngle) * cosV);
+        m_vecFront.x      = (float)-(X87R(x87::cos((double)m_fHorizontalAngle) * cosV));
+        m_vecFront.y      = (float)-(X87R(x87::sin((double)m_fHorizontalAngle) * cosV));
         m_vecFront.z      = (float)x87::sin((double)m_fVerticalAngle);
     }
 
@@ -7045,9 +7045,9 @@ void CCam::Process_M16_1stPerson(const CVector& target, float orientation, float
     // NOTE: The angles stay in the FPU registers (extended precision) in the original
     const auto IsProbeObstructed = [&](double h, double v) {
         const double cv = x87::cos(v);
-        const float  x  = (float)(x87::cos(h) * cv);
-        const float  y  = (float)(x87::sin(h) * cv);
-        const float  z3 = (float)(x87::sin(v) * 3.0f);
+        const float  x  = (float)(X87R(x87::cos(h) * cv));
+        const float  y  = (float)(X87R(x87::sin(h) * cv));
+        const float  z3 = (float)(X87R(x87::sin(v) * 3.0f));
         const CVector probe{ (float)((x87d)x * 3.0f + m_vecSource.x), (float)((x87d)y * 3.0f) + m_vecSource.y, z3 + m_vecSource.z };
         return !CWorld::GetIsLineOfSightClear(probe, m_vecSource, true, true, false, true, false, true, true);
     };
@@ -7131,14 +7131,14 @@ void CCam::Process_Rocket(const CVector& target, float orientation, float speedV
     ClipAlpha();
 
     m_vecFront.Set(
-        -(x87::cos(m_fHorizontalAngle) * x87::cos(m_fVerticalAngle)),
-        -(x87::sin(m_fHorizontalAngle) * x87::cos(m_fVerticalAngle)),
+        -(X87R(x87::cos(m_fHorizontalAngle) * x87::cos(m_fVerticalAngle))),
+        -(X87R(x87::sin(m_fHorizontalAngle) * x87::cos(m_fVerticalAngle))),
         x87::sin(m_fVerticalAngle)
     );
     GetVectorsReadyForRW();
 
     // 0x511E94: the unrounded atan result minus pi/2 (`fsub [0x858FE4]`), stored twice (`fld st(0)` + 2x `fstp`)
-    const auto heading = (float)(CGeneral::GetATanOfXYExt(m_vecFront.x, m_vecFront.y) - (double)HALF_PI);
+    const auto heading = (float)(X87R(CGeneral::GetATanOfXYExt(m_vecFront.x, m_vecFront.y) - (double)HALF_PI));
     TheCamera.m_pTargetEntity->AsPed()->m_fCurrentRotation = heading;
     TheCamera.m_pTargetEntity->AsPed()->m_fAimingRotation  = heading;
 
@@ -7335,12 +7335,12 @@ bool CCam::Process_WheelCam(const CVector&, float, float, float) {
         ApplyUnderwaterMotionBlur();
     }
 
-    const double angle = x87::cos((x87d)(CTimer::GetTimeInMS() & 0x1FFFF) * (x87d)4.7936901e-05f) * (double)0.4f;
+    const x87d angle = X87R(x87::cos((x87d)(CTimer::GetTimeInMS() & 0x1FFFF) * (x87d)4.7936901e-05f) * (double)0.4f);
     const double s     = x87::sin(angle);
     const double c     = x87::cos(angle);
-    m_vecUp.x          = (float)((double)up.x * c + (float)((double)right.x * s));
-    m_vecUp.y          = (float)((double)up.y * c) + (float)((double)right.y * s);
-    m_vecUp.z          = (float)((double)(float)((double)up.z * c) + (double)right.z * s);
+    m_vecUp.x          = (float)(X87R((double)up.x * c) + (float)(X87R((double)right.x * s)));
+    m_vecUp.y          = (float)(X87R((double)up.y * c)) + (float)(X87R((double)right.y * s));
+    m_vecUp.z          = (float)((x87d)(float)(X87R((double)up.z * c)) + X87R((double)right.z * s));
     m_vecUp.Normalise();
     m_vecFront.Normalise();
 

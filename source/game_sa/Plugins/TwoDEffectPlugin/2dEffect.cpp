@@ -189,7 +189,8 @@ RwStream* Rwt2dEffectPluginDataChunkReadCallBack(RwStream* stream, RwInt32 binar
         return stream;
     }
 
-    auto* e = static_cast<t2dEffectPluginEntry*>(CMemoryMgr::Malloc(numEffects * sizeof(C2dEffect) + sizeof(t2dEffectPluginEntry::m_nObjCount)));
+    // sizeof(entry) = offset of m_pObjects: 4 on x86, 8 on LP64 (C2dEffect has 8-byte alignment there); sizeof(m_nObjCount) under-allocated by 4
+    auto* e = static_cast<t2dEffectPluginEntry*>(CMemoryMgr::Malloc(numEffects * sizeof(C2dEffect) + sizeof(t2dEffectPluginEntry)));
 
     int32 countedNumFx{numEffects};
     for (auto i = 0; i < numEffects; i++) {

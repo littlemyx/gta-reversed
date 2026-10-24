@@ -25,7 +25,7 @@ CCutsceneObject::CCutsceneObject() : CObject() {
     SetUsesCollision(false);
     SetStatus(STATUS_SIMPLE);
     m_nObjectType = eObjectType::OBJECT_TYPE_CUTSCENE;
-    m_nAttachBone = 0;
+    m_pAttachToFrame = nullptr; // exe: `m_nAttachBone = 0` (4 byte store = the whole union); on LP64 that leaves the upper half of m_pAttachToFrame (read below / in CutsceneMgr) undefined
     m_pAttachmentObject = nullptr;
     m_bLightObject = true;
     m_bStreamingDontDelete = true;

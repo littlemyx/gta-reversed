@@ -19,6 +19,10 @@
 #include "PostEffects.h"
 #include "StencilShadows.h"
 #include "Weather.h"
+#include "MenuManager.h"
+#include "Gamma.h"
+#include "CullZones.h"
+#include "WaterLevel.h"
 #include "PathFind.h"
 #include "Pickups.h"
 #include "Pools/Pools.h"
@@ -91,6 +95,63 @@ bool PlayCmd(const char* name, const std::string& args) {
             const auto ref = CPickups::GenerateNewOne_WeaponType(pos, (eWeaponType)w, PICKUP_ONCE, (uint32)n, false, nullptr);
             NOTSA_LOG_INFO("[play] pickup weapon {} ammo {} at ({:.1f},{:.1f},{:.1f}) ref {}", w, n, pos.x, pos.y, pos.z, (int)ref.index);
         }
+        return true;
+    }
+    if (!std::strcmp(name, "tpg")) { // VIS1: cmd:tpg:X:Y[:ZHINT=60]  the player onto the ground below ZHINT+30 (streams the scene first); the camera is cut to him
+        float x = 0.f, y = 0.f, zh = 60.f;
+        std::sscanf(args.c_str(), "%f:%f:%f", &x, &y, &zh);
+        if (pl) {
+            CVector p{ x, y, zh };
+            CStreaming::LoadScene(p);
+            CStreaming::LoadSceneCollision(p);
+            CStreaming::LoadAllRequestedModels(false);
+            bool       found = false;
+            const auto gz    = CWorld::FindGroundZFor3DCoord({ x, y, zh + 30.f }, &found, nullptr);
+            p.z              = (found ? gz : zh) + 1.f;
+            pl->Teleport(p, false);
+            CStreaming::LoadScene(p);
+            CStreaming::LoadAllRequestedModels(false);
+            TheCamera.RestoreWithJumpCut();
+            NOTSA_LOG_INFO("[play] tpg ({:.0f},{:.0f}) ground {} -> z {:.1f}", x, y, found, p.z);
+        }
+        return true;
+    }
+    if (!std::strcmp(name, "vehtp")) { // VIS1: cmd:vehtp:X:Y:Z  the vehicle the player sits in is put at X Y Z (speed cleared); the camera is cut to it
+        float x = 0.f, y = 0.f, z = 0.f;
+        std::sscanf(args.c_str(), "%f:%f:%f", &x, &y, &z);
+        if (pl && pl->m_pVehicle) {
+            CStreaming::LoadScene({ x, y, z });
+            pl->m_pVehicle->SetPosn(x, y, z);
+            pl->m_pVehicle->m_vecMoveSpeed = CVector{};
+            pl->m_pVehicle->m_vecTurnSpeed = CVector{};
+            TheCamera.RestoreWithJumpCut();
+        }
+        NOTSA_LOG_INFO("[play] vehtp ({:.0f},{:.0f},{:.0f}) veh {}", x, y, z, pl ? (void*)pl->m_pVehicle : nullptr);
+        return true;
+    }
+    if (!std::strcmp(name, "mirrorzones")) { // VIS1: cmd:mirrorzones  logs every mirror attribute zone (box corner, size, mirror plane / normal, flags) so a route can tp next to one
+        NOTSA_LOG_INFO("[play] mirror zones: {}", (int)CCullZones::NumMirrorAttributeZones);
+        for (int i = 0; i < CCullZones::NumMirrorAttributeZones; i++) {
+            const auto& z = CCullZones::aMirrorAttributeZones[i];
+            NOTSA_LOG_INFO("[play] mirror zone {}: corner ({},{}) v1 ({},{}) v2 ({},{}) z {}..{} mirrorV {:.1f} normal ({},{},{}) flags {}", i, (int)z.zoneDef.m_cornerX, (int)z.zoneDef.m_cornerY, (int)z.zoneDef.m_vec1X, (int)z.zoneDef.m_vec1Y,
+                (int)z.zoneDef.m_vec2X, (int)z.zoneDef.m_vec2Y, (int)z.zoneDef.m_minZ, (int)z.zoneDef.m_maxZ, z.mirrorV, (int)z.mirrorNormalX, (int)z.mirrorNormalY, (int)z.mirrorNormalZ, (int)z.flags);
+        }
+        return true;
+    }
+    if (!std::strcmp(name, "bright")) { // VIS1: cmd:bright:N  the menu brightness slider (0..384, default 256) -> CGamma::SetGamma(N / 512, fade)
+        const int b = std::clamp(std::atoi(args.c_str()), 0, 384);
+        FrontEndMenuManager.m_PrefsBrightness = b;
+        gamma.SetGamma(b / 512.0f, true); // what the private CMenuManager::SetBrightness does
+        NOTSA_LOG_INFO("[play] brightness {} (gamma enabled {} level {:.3f})", b, (int)gamma.m_IsEnabled, b / 512.0f);
+        return true;
+    }
+    if (!std::strcmp(name, "fxstat")) { // VIS1: cmd:fxstat  heat haze / underwater / water state of this frame
+        float wl = -999.f;
+        const auto cp = TheCamera.GetPosition();
+        CWaterLevel::GetWaterLevelNoWaves(cp, &wl);
+        NOTSA_LOG_INFO("[play] fxstat: weather {}/{} hazeFlagOff {} HeatHaze {:.3f} control {:.3f} fade {:.3f} clock {}:{:02} underWaterness {:.3f} (fx starts {:.3f}) cam z {:.2f} waterlevel {:.2f} waterEnable {}",
+            (int)CWeather::OldWeatherType, (int)CWeather::NewWeatherType, (int)CPostEffects::m_bHeatHazeFX, CWeather::HeatHaze, CWeather::HeatHazeFXControl, CWeather::HeatHazeFXFade,
+            (int)CClock::GetGameClockHours(), (int)CClock::GetGameClockMinutes(), CWeather::UnderWaterness, CPostEffects::m_fWaterFXStartUnderWaterness, cp.z, wl, (int)CPostEffects::m_waterEnable);
         return true;
     }
     if (!std::strcmp(name, "weather")) { // R-11: cmd:weather:ID

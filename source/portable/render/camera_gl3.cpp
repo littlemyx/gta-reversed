@@ -224,6 +224,12 @@ RwCamera* RwCameraShowRaster(RwCamera* camera, void* /*pDev*/, RwUInt32 flags) {
     if (!camera || !camera->frameBuffer || !DeviceLive()) {
         return nullptr;
     }
+    {   // VIS1: screenshots are read before the swap; NOTSA_STANDALONE_SHOT_GAMMA=1 runs librw's final gamma pass first so the frames show the brightness slider (D3D screenshots would not: the ramp is a display setting)
+        static const bool s_ShotGamma = EnvOn("NOTSA_STANDALONE_SHOT_GAMMA");
+        if (s_ShotGamma) {
+            rw::gl3::applyPresentGamma();
+        }
+    }
     DumpBackBuffer();
     if (EnvOn("NOTSA_STANDALONE_NOPRESENT")) { // diagnostics: skip the swap
         return camera;

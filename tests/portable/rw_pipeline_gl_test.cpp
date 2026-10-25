@@ -1112,6 +1112,88 @@ void RunGlState() {
         }
         NoGlError("GLSTATE shader");
     }
+    // 4. GLSTATE-1: the camera raster lock reads the window, not the last viewport (a camera texture update leaves its size in glGlobals.present*)
+    {
+        rw::Raster* cam = reinterpret_cast<rw::Raster*>(g_cam->frameBuffer)->parent;
+        const int   savedW = rw::gl3::glGlobals.presentWidth, savedH = rw::gl3::glGlobals.presentHeight;
+        rw::gl3::glGlobals.presentWidth  = 16;
+        rw::gl3::glGlobals.presentHeight = 16;
+        rw::int32 ww = 0, wh = 0;
+        rw::gl3::getWindowPixelSize(&ww, &wh);
+        uint8_t* px = cam->lock(0, rw::Raster::LOCKREAD);
+        std::snprintf(got, sizeof(got), "locked %s %dx%d, window %dx%d (last viewport 16x16)", px ? "yes" : "NO", px ? cam->width : -1, px ? cam->height : -1, ww, wh);
+        Check(px && cam->width == ww && cam->height == wh && ww == g_pw && wh == g_ph, "camera raster lock has the window size, not the last glViewport size", got);
+        if (px) cam->unlock(0);
+        rw::gl3::glGlobals.presentWidth  = savedW;
+        rw::gl3::glGlobals.presentHeight = savedH;
+        NoGlError("GLSTATE-1");
+    }
+
+    // 5. GLSTATE-2: scissor box / enable and colour write mask are cached; RwCameraClear writes all channels (D3D Clear ignores the mask) and leaves both as found
+    {
+        rw::gl3::setScissorTest(0, 0, 0, g_pw, g_ph);
+        rw::gl3::setColorMask(1, 1, 1, 1);
+        Begin(RwRGBA{ 10, 20, 30, 255 }); End(); // known frame
+        rw::gl3::setScissorTest(1, 8, 8, 20, 20);
+        rw::gl3::setColorMask(0, 1, 1, 1);
+        GLboolean cm[4];
+        glGetBooleanv(GL_COLOR_WRITEMASK, cm);
+        Check(cm[0] == GL_FALSE && cm[1] == GL_TRUE && glIsEnabled(GL_SCISSOR_TEST) && GlI(GL_SCISSOR_BOX) == 8, "setColorMask / setScissorTest reach GL");
+        Begin(RwRGBA{ 200, 100, 50, 255 });
+        End();
+        const Px inside = At(18, g_ph - 19), outside = At(g_pw / 2, g_ph / 2);
+        std::snprintf(what, sizeof(what), "clear with a client scissor and red masked: inside the box (200,100,50) (all channels), outside untouched");
+        std::snprintf(got, sizeof(got), "inside %s outside %s", Str(inside).c_str(), Str(outside).c_str());
+        Check(Near(inside, 200, 100, 50) && Near(outside, 10, 20, 30), what, got);
+        glGetBooleanv(GL_COLOR_WRITEMASK, cm);
+        GLint box[4] = {};
+        glGetIntegerv(GL_SCISSOR_BOX, box);
+        std::snprintf(got, sizeof(got), "mask %d%d%d%d scissor %d box %d,%d,%d,%d", cm[0], cm[1], cm[2], cm[3], (int)glIsEnabled(GL_SCISSOR_TEST), box[0], box[1], box[2], box[3]);
+        Check(cm[0] == GL_FALSE && cm[1] == GL_TRUE && cm[2] == GL_TRUE && cm[3] == GL_TRUE && glIsEnabled(GL_SCISSOR_TEST) && box[0] == 8 && box[1] == 8 && box[2] == 20 && box[3] == 20,
+              "RwCameraClear restores the colour mask and the client scissor", got);
+        rw::bool32 m[4], en = 0;
+        rw::int32  bx[4];
+        rw::gl3::getColorMask(m);
+        rw::gl3::getScissorTest(&en, bx);
+        Check(!m[0] && m[1] && en && bx[0] == 8 && bx[2] == 20, "the caches report the same state as GL");
+        rw::gl3::setScissorTest(0, 0, 0, g_pw, g_ph);
+        rw::gl3::setColorMask(1, 1, 1, 1);
+        Check(!glIsEnabled(GL_SCISSOR_TEST), "setScissorTest(0) disables GL scissor");
+        NoGlError("GLSTATE-2");
+    }
+
+    // 6. VIS1 gamma: the final pass applies out = pow((v + 1) / 256, power) to the window frame buffer and leaves librw's caches valid
+    {
+        Begin(RwRGBA{ 128, 128, 128, 255 });
+        rw::gl3::presentGamma = 0.5f;
+        rw::gl3::applyPresentGamma();
+        End();
+        rw::gl3::presentGamma = 1.0f;
+        const int  expect = (int)std::lround(std::pow(129.0 / 256.0, 0.5) * 255.0);
+        const Px   p = At(g_pw / 2, g_ph / 2);
+        std::snprintf(got, sizeof(got), "%s expected %d", Str(p).c_str(), expect);
+        Check(Near(p, expect, expect, expect, 2), "gamma pass: grey 128 with power 0.5 -> pow(129/256, 0.5)", got);
+        Check(NoGlError("GLSTATE gamma"), "glGetError clean (gamma pass)");
+        // a normal frame after the pass: clear + textured quad, state cache was invalidated
+        const RwRGBA R{ 255, 0, 0, 255 }, cols[4] = { R, R, R, R };
+        RwTexture* t = MakeTex2x2(cols);
+        Begin();
+        RS(rwRENDERSTATEZTESTENABLE, 0);
+        RS(rwRENDERSTATEZWRITEENABLE, 0);
+        Im2DTexRect(RwTextureGetRaster(t), 1.0f);
+        End();
+        RS(rwRENDERSTATETEXTURERASTER, 0);
+        RwTextureDestroy(t);
+        const Px q = At(g_pw / 2, g_ph / 2);
+        Check(Near(q, 255, 0, 0), "a frame drawn after the gamma pass is correct (render state caches resynced)", Str(q).c_str());
+        // power 1 is a no-op
+        Begin(RwRGBA{ 90, 90, 90, 255 });
+        rw::gl3::applyPresentGamma();
+        End();
+        Check(Near(At(5, 5), 90, 90, 90, 2), "gamma power 1: frame unchanged");
+        NoGlError("GLSTATE gamma 2");
+    }
+
     Check(NoGlError("GLSTATE"), "glGetError clean (GLSTATE)");
 }
 

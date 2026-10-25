@@ -343,6 +343,20 @@ void CEntity::DeleteRwObject() {
         return;
     }
 
+#ifdef NOTSA_PORTABLE
+    // MAC-STAB4: the 2dfx particle systems of this entity (CreateEffects -> Fx_c::CreateEntityFx) use the modelling matrix of the entity's
+    // RwFrame as parent matrix. DestroyEffects (below, after the frame is freed) only Kills them; a killed system lives on for a couple of
+    // FxManager updates and CAEFireAudioEntity::UpdateParameters (fire / smoke_flare / ... sounds) still reads its composite matrix =
+    // the freed frame (ASan heap-use-after-free). The exe reads the freed heap block too (it stays mapped and is not reused yet).
+    // Same pattern as CopyParentMatrix callers elsewhere (Weapon, Ped, Fx.cpp): give those systems their own snapshot of the matrix first.
+    if (GetModelInfo()->m_n2dfxCount) {
+        for (auto* it = g_fx.m_FxEntities.GetHead(); it; it = g_fx.m_FxEntities.GetNext(it)) {
+            if (it->m_Entity == this && it->m_System && it->m_System->m_ParentMatrix && !it->m_System->m_allocatedParentMat) {
+                it->m_System->CopyParentMatrix();
+            }
+        }
+    }
+#endif
     switch (RwObjectGetType(GetRwObject())) {
     case rpATOMIC:
         if (auto* frame = RpAtomicGetFrame(GetRpAtomic())) {

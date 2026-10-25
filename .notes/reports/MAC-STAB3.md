@@ -42,3 +42,5 @@ So "ASan clean" is met for everything this task touches; the fire-audio UAF is a
 * STAB2's CMatrixLink::operator= fix stays (still a real latent bug, not the cause here).
 * Eviction guard (STAB1) stays as defence; it never fired in any run on the final tree.
 * Wall clock about 80 min of the 100 min cap.
+
+* UPDATE (STAB4): the fire-audio UAF is fixed, see MAC-STAB4.md.

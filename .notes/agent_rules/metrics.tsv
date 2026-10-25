@@ -186,3 +186,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-25	MAC-VIS1	v4	visual tour + gamma	-	-	-	gamma implemented; colour issues open
 2026-10-25	MAC-VIS2	v4	colour vs Win32 under wine	-	-	-	no bug; references captured
 2026-10-25	MAC-STAB1	v4	stability crashes + soak	-	-	-	2 LP64 heap bugs fixed, soak clean
+2026-10-25	MAC-STAB2	v4	pool audit + matrix list	-	-	-	TaskAllocator slot fixed; root cause narrowed

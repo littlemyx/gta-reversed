@@ -29,6 +29,7 @@
 #include "Pickups.h"
 #include "Pools/Pools.h"
 #include "World.h"
+#include "MatrixLinkList.h"
 #include "Draw.h"
 #include "Renderer.h"
 #include "portable/render/pipelines_gl3.h"
@@ -57,6 +58,7 @@ bool PlayCmd(const char* name, const std::string& args) {
         LogPool("Object", GetObjectPool());
         LogPool("Building", GetBuildingPool());
         LogPool("Dummy", GetDummyPool());
+        NOTSA_LOG_INFO("[play] matrices: free {} list1 {} list2(static) {} numMatrices {}", gMatrixList.GetNumFree(), gMatrixList.GetNumUsed1(), gMatrixList.GetNumUsed2(), (int)numMatrices); // STAB1
         return true;
     }
     if (!std::strcmp(name, "skinstat")) { // R-10: gl3 skin pipeline counters

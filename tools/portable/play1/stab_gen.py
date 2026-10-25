@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# MAC-STAB1: generates stab_soak{1,2,3}.txt (seeded mixes of walk / drive / far teleport hops / weather+time / combat, ~10 min script time each). usage: stab_gen.py (in this dir)
+# MAC-STAB1: generates stab_soak{1,2,3}.txt (seeded mixes of walk / drive / far teleport hops / weather+time / combat, ~7.5 min script time each). usage: stab_gen.py (in this dir)
 import random
 hdr=open('vis1_tour.txt').read().split('cmd:snap:free_ready')[0]
 LS=[(2495,-1665),(2100,-1790),(1550,-1675),(1960,-2200),(2800,-1100)]
@@ -27,7 +27,7 @@ def combat(r):
 blocks=[walk,drive,hop,wthr,combat]
 for n,seed in enumerate((11,22,33),1):
     r=random.Random(seed)
-    s="# MAC-STAB1 soak %d: seeded mix of walk / drive / far teleport hops / weather+time / combat, ~10 min script time, ends with cmd:quit (shutdown path)\n"%n+hdr+"cmd:snap:free_ready\ncmd:health:5000\ncmd:wanted:0\n"
+    s="# MAC-STAB1 soak %d: seeded mix of walk / drive / far teleport hops / weather+time / combat, ~7.5 min script time, ends with cmd:quit (shutdown path)\n"%n+hdr+"cmd:snap:free_ready\ncmd:health:5000\ncmd:wanted:0\n"
     t=0; k=0
     while True:
         b=blocks[k%len(blocks)] if k<5 else r.choice(blocks)
@@ -35,6 +35,6 @@ for n,seed in enumerate((11,22,33),1):
         t+=sum(int(l.split(':')[1]) for l in part.splitlines() if l.startswith('wait:'))+1000
         s+="# block %d %s\n"%(k,b.__name__)+part+"cmd:poolstat\n"
         if k%6==0: s+="mark:soak_%d\n"%k
-        if t>=560000: break
+        if t>=450000: break
     s+="cmd:playerstat\ncmd:poolstat\nmark:soak_end\nwait:500\ncmd:quit\n"
     open('stab_soak%d.txt'%n,'w').write(s)

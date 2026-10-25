@@ -194,12 +194,41 @@ void CPlaceable::RemoveMatrix() {
     m_matrix = nullptr;
 }
 
+#ifdef NOTSA_PORTABLE
+// STAB1: the exe evicts the owner of the oldest list-1 link (`oldest->m_pOwner->RemoveMatrix()`). A link in list 1 whose owner is null or no longer points back at it (seen as a null
+// `this` fault in CPlaceable::GetMatrix from ProcessVerticalLineSectorList after ~4 min of mixed play) is reclaimed directly instead of being dereferenced; an empty list 1 (every
+// matrix static) leaves the allocation to fail (m_matrix stays null) instead of writing through a null link.
+static void NotsaEvictOldestMatrix() {
+    auto* const oldest = gMatrixList.GetOldestLink();
+    if (oldest == &gMatrixList.m_head) {
+        static bool once = false;
+        if (!once) { once = true; NOTSA_LOG_WARN("[matrix] list 1 is empty and the free list too: free {} list1 {} list2 {}", gMatrixList.GetNumFree(), gMatrixList.GetNumUsed1(), gMatrixList.GetNumUsed2()); }
+        return;
+    }
+    auto* const owner = oldest->m_pOwner;
+    if (owner && owner->m_matrix == oldest) {
+        owner->RemoveMatrix();
+        return;
+    }
+    static int n = 0;
+    if (n++ < 5) { NOTSA_LOG_WARN("[matrix] oldest link {} has owner {} whose matrix is {}: reclaimed (free {} list1 {} list2 {})", (void*)oldest, (void*)owner, owner ? (void*)owner->m_matrix : nullptr, gMatrixList.GetNumFree(), gMatrixList.GetNumUsed1(), gMatrixList.GetNumUsed2()); }
+    oldest->m_pOwner = nullptr;
+    gMatrixList.MoveToFreeList(oldest);
+}
+#endif
 void CPlaceable::AllocateStaticMatrix() {
     if (m_matrix)
         return gMatrixList.MoveToList2(m_matrix);
 
+#ifdef NOTSA_PORTABLE
+    if (gMatrixList.IsFull())
+        NotsaEvictOldestMatrix();
+    if (gMatrixList.IsFull())
+        return;
+#else
     if (gMatrixList.IsFull())
         gMatrixList.GetOldestLink()->m_pOwner->RemoveMatrix();
+#endif
 
     m_matrix = gMatrixList.AddToList2();
     m_matrix->m_pOwner = this;
@@ -209,8 +238,15 @@ void CPlaceable::AllocateMatrix() {
     if (m_matrix)
         return;
 
+#ifdef NOTSA_PORTABLE
+    if (gMatrixList.IsFull())
+        NotsaEvictOldestMatrix();
+    if (gMatrixList.IsFull())
+        return;
+#else
     if (gMatrixList.IsFull())
         gMatrixList.GetOldestLink()->m_pOwner->RemoveMatrix();
+#endif
 
     m_matrix = gMatrixList.AddToList1();
     m_matrix->m_pOwner = this;

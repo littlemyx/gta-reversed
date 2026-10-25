@@ -28,7 +28,7 @@ static void rstack(u32 ra){ u32* sp = (u32*)_AddressOfReturnAddress(); int i, n 
   fprintf(g_f, "U %u ents:", U32(0xB7CB4C)); /* stack words that look like a CEntity (vtable in .rdata): this ptr, model index (+0x22), type (+0x36 & 7) */
   for(i = 1; i < 160; i++){ u32 v; __try { v = sp[i]; if(v > 0x10000 && v < 0x7F000000 && (v & 3) == 0){ u32 vt = *(volatile u32*)(size_t)v; if(vt >= 0x860000 && vt < 0x880000) fprintf(g_f, " %08x/m%u/t%u", v, (u32)*(volatile unsigned short*)(size_t)(v + 0x22), (u32)(*(volatile unsigned char*)(size_t)(v + 0x36) & 7)); } } __except(1) { } }
   fprintf(g_f, "\n"); }
-static int __cdecl my_rand(void){ if((g_pin & 128) && g_started && in_audio((u32)(size_t)_ReturnAddress())){ if((g_pin & 32) && g_rlog && g_f && g_nf <= g_rlog && g_nf >= g_rfrom) fprintf(g_f, "R %u %08xA\n", U32(0xB7CB4C), (u32)(size_t)_ReturnAddress()); g_aseed = g_aseed * 214013u + 2531011u; g_acalls++; return (int)((g_aseed >> 16) & 0x7FFF); } if((g_pin & 32) && g_rlog && g_f && g_started && g_nf <= g_rlog && g_nf >= g_rfrom) fprintf(g_f, "R %u %08x\n", U32(0xB7CB4C), (u32)(size_t)_ReturnAddress()); if(g_rs_hi && (u32)(size_t)_ReturnAddress() >= g_rs_lo && (u32)(size_t)_ReturnAddress() < g_rs_hi && g_f) rstack((u32)(size_t)_ReturnAddress()); g_seed = g_seed * 214013u + 2531011u; g_calls++; return (int)((g_seed >> 16) & 0x7FFF); }
+static int __cdecl my_rand(void){ if((g_pin & 128) && g_started && in_audio((u32)(size_t)_ReturnAddress())){ if((g_pin & 32) && g_rlog && g_f && g_nf <= g_rlog && g_nf >= g_rfrom) fprintf(g_f, "R %u %08xA\n", U32(0xB7CB4C), (u32)(size_t)_ReturnAddress()); g_aseed = g_aseed * 214013u + 2531011u; g_acalls++; return (int)((g_aseed >> 16) & 0x7FFF); } if((g_pin & 32) && g_rlog && g_f && g_started && g_nf <= g_rlog && g_nf >= g_rfrom) fprintf(g_f, "R %u %08x %d\n", U32(0xB7CB4C), (u32)(size_t)_ReturnAddress(), (int)(((g_seed * 214013u + 2531011u) >> 16) & 0x7FFF)); if(g_rs_hi && (u32)(size_t)_ReturnAddress() >= g_rs_lo && (u32)(size_t)_ReturnAddress() < g_rs_hi && g_f) rstack((u32)(size_t)_ReturnAddress()); g_seed = g_seed * 214013u + 2531011u; g_calls++; return (int)((g_seed >> 16) & 0x7FFF); }
 static void __cdecl my_srand(u32 s){
   u32 a = (u32)(size_t)_ReturnAddress();
   /* time-derived seeds: GameInit 0x5BF3B0 (srand(RsTimer())), CLoadingScreen::LoadSplashes 0x5900B0 (srand(QPC)) */
@@ -59,9 +59,10 @@ static void tick(void){
     { static const char* dp; static int dpi; if(!dpi){ dpi = 1; dp = getenv("RD_DUMPSCR"); } if(dp && nf <= 4){ char fn[512]; FILE* df; sprintf(fn, "%s.%u", dp, nf); if((df = fopen(fn, "wb"))){ fwrite((void*)0xA49960, 1, 269000, df); fclose(df); } } }   /* RD_DUMPSCR=<prefix>: raw script space at traced frames 1..4 (A-B frame-1 hash hunt) */
   } __except(1) { }
   { static const char* sp; static int spi; if(!spi){ spi = 1; sp = getenv("RD_DUMPSTR"); } if(sp && nf <= 6){ char fn[512]; FILE* df; unsigned char* tab = (unsigned char*)malloc(26316 * 2); u32 k; if(tab){ for(k = 0; k < 26316; k++){ tab[k*2] = *(volatile unsigned char*)(size_t)(0x8E4CC0 + k * 20 + 0x10); tab[k*2+1] = *(volatile unsigned char*)(size_t)(0x8E4CC0 + k * 20 + 6); } sprintf(fn, "%s.%u", sp, nf); if((df = fopen(fn, "wb"))){ fwrite(tab, 1, 26316 * 2, df); fclose(df); } free(tab); } } }   /* RD_DUMPSTR=<prefix>: per model id (load state, flags) of CStreamingInfo at traced frames 1..6 (A-B streaming hunt; counterpart NOTSA_LOCKSTEP_DUMPSTR) */
+  { static const char* pp; static int ppi; if(!ppi){ ppi = 1; pp = getenv("RD_DUMPPN"); } if(pp && nf == 10){ char fn[512]; FILE* df; u32 a; sprintf(fn, "%s.%u", pp, nf); if((df = fopen(fn, "wb"))){ for(a = 0; a < 64; a++){ u32 nodes = U32(0x96F854 + a * 4); if(nodes){ u32 hd[3]; hd[0] = a; hd[1] = U32(0x970114 + a * 4); hd[2] = U32(0x970234 + a * 4); fwrite(hd, 4, 3, df); fwrite((void*)(size_t)nodes, 1, (hd[1] + hd[2]) * 28, df); } } fclose(df); } } }   /* RD_DUMPPN=<prefix>: path nodes of every loaded area at traced frame 10 (A-B population hunt; counterpart NOTSA_LOCKSTEP_DUMPPN) */
   if(g_pin & 64) { u32 pn_lo = 0, pn_hi = 0, pa; int rwc[3] = {0, 0, 0}; { static const u32 pools[3] = { 0xB74498, 0xB744A0, 0xB7449C }, strides[3] = { 0x38, 0x38, 0x19C }; u32 q, i; for(q = 0; q < 3; q++) __try { u32 pl = U32(pools[q]), base = U32(pl), map = U32(pl + 4), sz = U32(pl + 8); for(i = 0; i < sz && i < 20000; i++) if(!(*(unsigned char*)(size_t)(map + i) & 0x80) && U32(base + i * strides[q] + 0x18)) rwc[q]++; } __except(1) { } }  /* rw=<buildings>,<dummies>,<objects> with an RwObject (CEntity +0x18) */ for(pa = 0; pa < 64; pa++) if(U32(0x96F854 + pa * 4)) { if(pa < 32) pn_lo |= 1u << pa; else pn_hi |= 1u << (pa - 32); } /* pin bit 64: "D fc ..." debugging probes, same values as source/standalone/Lockstep.cpp (ignored by rd_diff.py) */
-    fprintf(g_f, "D %u run=%d cd=%d cars=%08x,%08x,%08x,%08x perc=%08x,%08x,%08x,%08x zt=%d tw=%d ti=%d pk=%d,%d,%d bc=%d,%d,%d pn=%08x%08x rw=%d,%d,%d\n", fc, (int)*(unsigned char*)0xB5F851, (int)*(signed char*)0x9690C0,
-            U32(0xC0BC30), U32(0xC0BC34), U32(0xC0BC38), U32(0xC0BC3C), U32(0xC0BC4C), U32(0xC0BC50), U32(0xC0BC54), U32(0xC0BC58), (int)U32(0xC0BC6C), (int)U32(0xC0BC70), (int)U32(0xC0BC74), (int)*(short*)0x9788DA, (int)*(short*)(0x9788DA + 3 * 0x20), (int)*(short*)(0x9788DA + 0x23 * 0x20), (int)*(unsigned short*)0xBA8704, (int)*(unsigned short*)(0xBA8704 + 3 * 40), (int)*(unsigned short*)(0xBA8704 + 0x23 * 40), pn_hi, pn_lo, rwc[0], rwc[1], rwc[2]);
+    fprintf(g_f, "D %u run=%d cd=%d cars=%08x,%08x,%08x,%08x perc=%08x,%08x,%08x,%08x zt=%d tw=%d ti=%d pk=%d,%d,%d bc=%d,%d,%d pn=%08x%08x rw=%d,%d,%d gd=%08x np=%08x,%08x,%08x,%08x pcnt=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", fc, (int)*(unsigned char*)0xB5F851, (int)*(signed char*)0x9690C0,
+            U32(0xC0BC30), U32(0xC0BC34), U32(0xC0BC38), U32(0xC0BC3C), U32(0xC0BC4C), U32(0xC0BC50), U32(0xC0BC54), U32(0xC0BC58), (int)U32(0xC0BC6C), (int)U32(0xC0BC70), (int)U32(0xC0BC74), (int)*(short*)0x9788DA, (int)*(short*)(0x9788DA + 3 * 0x20), (int)*(short*)(0x9788DA + 0x23 * 0x20), (int)*(unsigned short*)0xBA8704, (int)*(unsigned short*)(0xBA8704 + 3 * 40), (int)*(unsigned short*)(0xBA8704 + 0x23 * 40), pn_hi, pn_lo, rwc[0], rwc[1], rwc[2], U32(0xB6F11C), U32(0xC0BC40), U32(0xC0BC44), U32(0xC0BC48), U32(0xC0E978), U32(0xC0EC24), U32(0xC0EC28), U32(0xC0EC2C), U32(0xC0EC30), U32(0xC0EC34), U32(0xC0EC38), U32(0xC0EC3C), U32(0xC0EC40), U32(0xC0EC44), U32(0xC0EC48), U32(0xC0EC4C), U32(0xC0EC50), U32(0xC0EC54), U32(0xC0EC58), U32(0xC0EC5C), U32(0xC0EC60), U32(0xC0EC64), U32(0xC0EC68), U32(0xC0EC6C), U32(0xC0EC70));
   }
   fprintf(g_f, "F %u %u %08x %u %08x %08x %08x %u %u %u %08x\n", fc, tms, g_seed, g_calls, *(u32*)&pos[0], *(u32*)&pos[1], *(u32*)&pos[2], hp, np, nv, sh);
   g_calls = 0; if((nf & 63) == 0) fflush(g_f);
@@ -94,6 +95,21 @@ __declspec(naked) void __cdecl ov_read(void){ __asm jmp dword ptr [g_fw+16] }
 __declspec(naked) void __cdecl ov_info(void){ __asm jmp dword ptr [g_fw+20] }
 __declspec(naked) void __cdecl ov_time_seek(void){ __asm jmp dword ptr [g_fw+24] }
 static void patch(u32 at, void* to){ DWORD o; unsigned char* p = (unsigned char*)(size_t)at; VirtualProtect(p, 5, PAGE_EXECUTE_READWRITE, &o); p[0] = 0xE9; *(int*)(p + 1) = (int)((size_t)to - (at + 5)); VirtualProtect(p, 5, o, &o); }
+/* RD_BP=<hex address> RD_BPFC=<fc>: software breakpoint (int3 + vectored handler, re-armed by single-step) that logs "Z fc ncalls regs", "K" 72 stack dwords and "ST" the 80 FPU register bytes for traced frames fc and fc+1 (A-B hunt, inert without the env vars) */
+static u32 g_bpa, g_bpfc, g_bprearm; static unsigned char g_bpbyte;
+static LONG CALLBACK bp_veh(EXCEPTION_POINTERS* ep){
+  DWORD c = ep->ExceptionRecord->ExceptionCode; CONTEXT* x = ep->ContextRecord;
+  if(c == EXCEPTION_BREAKPOINT && (u32)(size_t)ep->ExceptionRecord->ExceptionAddress == g_bpa){
+    u32 fc = U32(0xB7CB4C), k; unsigned char* ra = (unsigned char*)x->FloatSave.RegisterArea;
+    if(g_f && (fc == g_bpfc || fc == g_bpfc + 1)){
+      fprintf(g_f, "Z %u %u eip=%08x eax=%08x ebx=%08x ecx=%08x edx=%08x esi=%08x edi=%08x ebp=%08x esp=%08x fl=%08x\n", fc, g_calls, g_bpa, x->Eax, x->Ebx, x->Ecx, x->Edx, x->Esi, x->Edi, x->Ebp, x->Esp, x->ContextFlags);
+      fprintf(g_f, "K"); for(k = 0; k < 72; k++) fprintf(g_f, " %08x", U32(x->Esp + k * 4)); fprintf(g_f, "\nST"); for(k = 0; k < 80; k++) fprintf(g_f, " %02x", ra[k]); fprintf(g_f, " sw=%04x tw=%04x\n", (u32)x->FloatSave.StatusWord & 0xFFFF, (u32)x->FloatSave.TagWord & 0xFFFF);
+    }
+    *(unsigned char*)(size_t)g_bpa = g_bpbyte; x->Eip = g_bpa; x->EFlags |= 0x100; g_bprearm = 1; return EXCEPTION_CONTINUE_EXECUTION;
+  }
+  if(c == EXCEPTION_SINGLE_STEP && g_bprearm){ g_bprearm = 0; *(unsigned char*)(size_t)g_bpa = 0xCC; return EXCEPTION_CONTINUE_EXECUTION; }
+  return EXCEPTION_CONTINUE_SEARCH;
+}
 BOOL WINAPI DllMain(HINSTANCE h, DWORD why, LPVOID r){
   if(why == DLL_PROCESS_ATTACH){
     const char* e; HMODULE rv = LoadLibraryA("vorbisFile_real.dll"); int i; for(i = 0; i < 7; i++) g_fw[i] = rv ? GetProcAddress(rv, g_fwn[i]) : 0;
@@ -105,6 +121,7 @@ BOOL WINAPI DllMain(HINSTANCE h, DWORD why, LPVOID r){
     if((e = getenv("RD_RFROM"))) g_rfrom = atoi(e);
     if((e = getenv("RD_OUT"))) g_f = fopen(e, "w");
     if(GetModuleHandleA(0) != (HMODULE)0x400000) return TRUE; /* not the original image */
+    if((e = getenv("RD_BP"))){ DWORD o; g_bpa = strtoul(e, 0, 16); if((e = getenv("RD_BPFC"))) g_bpfc = atoi(e); g_bpbyte = *(unsigned char*)(size_t)g_bpa; VirtualProtect((void*)(size_t)g_bpa, 1, PAGE_EXECUTE_READWRITE, &o); AddVectoredExceptionHandler(1, bp_veh); *(unsigned char*)(size_t)g_bpa = 0xCC; }
     patch(0x821B1E, my_rand); patch(0x821B11, my_srand); patch(0x5617A0, my_timer); patch(0x745270, my_pstimer);
     if(g_pin & 512){ DWORD o; unsigned char* p = (unsigned char*)0x507750; VirtualProtect(p, 1, PAGE_EXECUTE_READWRITE, &o); p[0] = 0xC3; VirtualProtect(p, 1, o, &o); } /* pin bit 512: CAudioEngine::Service() (0x507750, thiscall, no stack args) = ret, as Lockstep.cpp NoAudio() in the port (= NOTSA_RR_NOAUDIO of the RR harness) */
   } else if(why == DLL_PROCESS_DETACH && g_f) fflush(g_f);

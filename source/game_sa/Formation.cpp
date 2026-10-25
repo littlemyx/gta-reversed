@@ -74,7 +74,11 @@ void CFormation::FindCoverPointsBehindBox(
         if (i == shortestSideIdx) {
             continue;
         }
+#ifdef NOTSA_PORTABLE
+        const auto otherCornerIdx = (i - 2) & 3; // The other corner of the side (exe 0x69A325: `& 3`; `% 4` of a negative signed index read corners[-2 / -1])
+#else
         const auto otherCornerIdx = (i - 2) % 4; // The other corner of the side
+#endif
         if (otherCornerIdx == shortestSideIdx) {
             continue;
         }

@@ -185,3 +185,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-25	MAC-GLSTATE	v4	librw gl3 state cache audit	-	-	-	done: 4 bug classes fixed
 2026-10-25	MAC-VIS1	v4	visual tour + gamma	-	-	-	gamma implemented; colour issues open
 2026-10-25	MAC-VIS2	v4	colour vs Win32 under wine	-	-	-	no bug; references captured
+2026-10-25	MAC-STAB1	v4	stability crashes + soak	-	-	-	2 LP64 heap bugs fixed, soak clean

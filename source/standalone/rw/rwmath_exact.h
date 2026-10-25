@@ -27,6 +27,15 @@ typedef float x87d;
 typedef double x87d;
 #endif
 
+// X87W (source/Base.h, token-identical so that a TU seeing both is fine): the unit-test targets do not include Base.h, but rtquat.cpp (and rwtrig.h users) need the macro.
+#ifndef X87W
+#ifdef NOTSA_PORTABLE
+#define X87W(...) ((double)(__VA_ARGS__))
+#else
+#define X87W(...) __VA_ARGS__
+#endif
+#endif
+
 namespace rwx {
 
 inline uint32_t Bits(float f) { uint32_t u; std::memcpy(&u, &f, 4); return u; }

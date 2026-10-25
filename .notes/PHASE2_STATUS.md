@@ -388,3 +388,4 @@
 - 2026-10-25 12:43 orchestrator gate on 53ffc422 (RD-AB-5 ped groups): run_all_tests 74/74, soak OK, gameplay_regress 69 + 1 situational SKIP; C:\gta-play refreshed.
 - 2026-10-25 16:24 orchestrator gate on 70356adb (RD-AB-6): run_all_tests 74/74, soak OK, gameplay_regress 70/70; C:\gta-play refreshed.
 - 2026-10-25 19:52 orchestrator gate on 91b50b68 (RD-AB-7): run_all_tests 74/74, soak OK, gameplay_regress 69 + 1 situational SKIP; C:\gta-play refreshed.
+- [mac] MAC-MERGECHK2 (2026-10-25): merge 8ec264bc (24 interior_c commits) needed no portable changes: PortableMac 1136/1136, ctest -L portable 19/19; scans: author already used x87d; Lockstep path-node fwrite already guarded. 32617dd0

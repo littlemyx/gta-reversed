@@ -785,6 +785,9 @@ void CGame::Process() {
         CUserDisplay::Process();
         CReplay::Update();
         CWorld::Process();
+#ifdef NOTSA_PORTABLE
+        { extern bool NotsaCheckMatrixLists(const char*); NotsaCheckMatrixLists("CGame::Process after CWorld::Process"); }
+#endif
 
         g_LoadMonitor.EndFrame();
 

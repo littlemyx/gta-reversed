@@ -786,6 +786,9 @@ bool CCarCtrl::CreateConvoy(CVehicle* vehicle, int32 carType) {
         }
 
         *car->m_matrix       = *vehicle->m_matrix; // 0x59BBC0
+#ifdef NOTSA_PORTABLE
+        { extern bool NotsaCheckMatrixLists(const char*); NotsaCheckMatrixLists("CCarCtrl convoy car matrix copy (CarCtrl.cpp)"); }
+#endif
         car->GetPosition()   = pos;
         car->m_vecMoveSpeed  = vehicle->m_vecMoveSpeed;
         car->SetStatus(vehicle->GetStatus());
@@ -905,6 +908,9 @@ bool CCarCtrl::CreatePoliceChase(CVehicle* vehicle, int32 carType, CNodeAddress 
 
     // Place the police car right behind it
     *police->m_matrix      = *vehicle->m_matrix; // 0x59BBC0
+#ifdef NOTSA_PORTABLE
+    { extern bool NotsaCheckMatrixLists(const char*); NotsaCheckMatrixLists("CCarCtrl police car matrix copy (CarCtrl.cpp)"); }
+#endif
     police->SetPosn(pos);                        // 0x4241C0
     police->m_vecMoveSpeed = vehicle->m_vecMoveSpeed;
     police->SetStatus(STATUS_PHYSICS);

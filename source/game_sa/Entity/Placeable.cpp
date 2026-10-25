@@ -7,6 +7,10 @@
 #include "StdInc.h"
 
 #include "Placeable.h"
+#ifdef NOTSA_PORTABLE
+#include <execinfo.h>
+static void NotsaMatrixTraceDtor(CPlaceable* self);
+#endif
 
 void CPlaceable::InjectHooks() {
     RH_ScopedVirtualClass(CPlaceable, 0x863C40, 1);
@@ -35,6 +39,9 @@ CPlaceable::CPlaceable() : m_placement() {
 }
 
 CPlaceable::~CPlaceable() {
+#ifdef NOTSA_PORTABLE
+    NotsaMatrixTraceDtor(this);
+#endif
     if (m_matrix) {
         CPlaceable::RemoveMatrix();
         --numMatrices;
@@ -211,9 +218,89 @@ static void NotsaEvictOldestMatrix() {
         return;
     }
     static int n = 0;
-    if (n++ < 5) { NOTSA_LOG_WARN("[matrix] oldest link {} has owner {} whose matrix is {}: reclaimed (free {} list1 {} list2 {})", (void*)oldest, (void*)owner, owner ? (void*)owner->m_matrix : nullptr, gMatrixList.GetNumFree(), gMatrixList.GetNumUsed1(), gMatrixList.GetNumUsed2()); }
+    if (n++ < 50) { std::fprintf(stderr, "[matrix] ERROR: ownerless / stale link reclaimed (guard FIRED #%d): oldest link %p has owner %p whose matrix is %p (free %d list1 %d list2 %d) frame %u\n", n, (void*)oldest, (void*)owner, owner ? (void*)owner->m_matrix : nullptr, gMatrixList.GetNumFree(), gMatrixList.GetNumUsed1(), gMatrixList.GetNumUsed2(), (unsigned)CTimer::GetFrameCounter()); std::fflush(stderr); }
     oldest->m_pOwner = nullptr;
     gMatrixList.MoveToFreeList(oldest);
+}
+#endif
+#ifdef NOTSA_PORTABLE
+// STAB2 diagnostic (env NOTSA_MATRIX_CHECK): does any list-1 / list-2 link already claim `self` as its owner?
+static void* g_notsaLinkBt[900][8]; static int g_notsaLinkBtN[900];
+static void NotsaRecordAlloc(CMatrixLink* l) {
+    static const bool enabled = std::getenv("NOTSA_MATRIX_CHECK") != nullptr;
+    if (!enabled || !l) return;
+    int i = (int)(l - gMatrixList.m_pObjects);
+    if (i >= 0 && i < 900) g_notsaLinkBtN[i] = backtrace(g_notsaLinkBt[i], 8);
+}
+static CMatrixLink* NotsaFindLinkOwnedBy(CPlaceable* self) {
+    CMatrixLink* const heads[2] = { &gMatrixList.m_head, &gMatrixList.m_allocatedListHead };
+    CMatrixLink* const tails[2] = { &gMatrixList.m_tail, &gMatrixList.m_allocatedListTail };
+    for (int li = 0; li < 2; li++) {
+        int n = 0;
+        for (CMatrixLink* c = heads[li]->m_pNext; c != tails[li] && n < 2000; c = c->m_pNext, n++) {
+            if (c->m_pOwner == self) return c;
+        }
+    }
+    return nullptr;
+}
+static void NotsaMatrixTrace(const char* what, CPlaceable* self, CMatrixLink* other) {
+    static const bool enabled = std::getenv("NOTSA_MATRIX_CHECK") != nullptr;
+    if (!enabled) return;
+    CMatrixLink* c = NotsaFindLinkOwnedBy(self);
+    if (!c || c == other) return;
+    static int n = 0;
+    if (n++ >= 8) return;
+    std::fprintf(stderr, "[matrix] %s: %p already owns link %p (#%d, own m_matrix %p) frame %u\n", what, (void*)self, (void*)c, (int)(c - gMatrixList.m_pObjects), (void*)other, (unsigned)CTimer::GetFrameCounter());
+    void* bt[12]; int cnt = backtrace(bt, 12); backtrace_symbols_fd(bt, cnt, 2);
+    int i = (int)(c - gMatrixList.m_pObjects);
+    std::fprintf(stderr, "[matrix] ... the stale link #%d was allocated at:\n", i);
+    if (i >= 0 && i < 900) backtrace_symbols_fd(g_notsaLinkBt[i], g_notsaLinkBtN[i], 2);
+}
+#endif
+#ifdef NOTSA_PORTABLE
+// STAB2: list-integrity checker for the CMatrixLink lists. Walks list 1, list 2 and the free list and verifies prev/next symmetry, the list length (== the capacity in total) and that
+// every used link's owner points back at it (owner->m_matrix == link) and every free link has no owner. Env NOTSA_MATRIX_CHECK=1 enables the per-frame call (CGame::Process) and
+// the call sites that hand-edit link matrices; the first failure of each kind is printed loudly with the frame number and the call site.
+static void NotsaMatrixTraceDtor(CPlaceable* self) {
+    if (!self->m_matrix) NotsaMatrixTrace("dtor without matrix", self, nullptr);
+}
+bool NotsaCheckMatrixLists(const char* where) {
+    static const bool enabled = std::getenv("NOTSA_MATRIX_CHECK") != nullptr;
+    if (!enabled) return true;
+    static int reported = 0, calls = 0;
+    if (calls++ == 0) { std::fprintf(stderr, "[matrix] list checker active (first call at %s, frame %u)\n", where, (unsigned)CTimer::GetFrameCounter()); }
+    if (std::strncmp(where, "CCarCtrl", 8) == 0) { static int sites = 0; if (sites++ < 10) { std::fprintf(stderr, "[matrix] site reached: %s frame %u\n", where, (unsigned)CTimer::GetFrameCounter()); } }
+    auto& L = gMatrixList;
+    CMatrixLink* const heads[3] = { &L.m_head, &L.m_allocatedListHead, &L.m_freeListHead };
+    CMatrixLink* const tails[3] = { &L.m_tail, &L.m_allocatedListTail, &L.m_freeListTail };
+    const char* const names[3] = { "list1", "list2", "free" };
+    int total = 0, bad = 0;
+    char msg[512]{};
+    for (int li = 0; li < 3 && !bad; li++) {
+        int n = 0;
+        for (CMatrixLink* c = heads[li]->m_pNext; c != tails[li]; c = c->m_pNext) {
+            if (++n > 5000 || !c) { std::snprintf(msg, sizeof msg, "%s walk runaway (n %d link %p)", names[li], n, (void*)c); bad = 1; break; }
+            if (c->m_pNext->m_pPrev != c) { std::snprintf(msg, sizeof msg, "%s link %p: next->prev != self", names[li], (void*)c); bad = 1; break; }
+            if (c < L.m_pObjects || c >= L.m_pObjects + CPlaceable::NUM_MATRICES_TO_CREATE) { std::snprintf(msg, sizeof msg, "%s link %p outside the link array", names[li], (void*)c); bad = 1; break; }
+            if (li < 2) {
+                CPlaceable* o = c->m_pOwner;
+                if (!o) { std::snprintf(msg, sizeof msg, "%s link %p (#%d) has NO OWNER", names[li], (void*)c, (int)(c - L.m_pObjects)); bad = 1; break; }
+                if (o->m_matrix != c) {
+                    std::snprintf(msg, sizeof msg, "%s link %p (#%d) owner %p (vehicle pool %d ped %d object %d building %d dummy %d) has m_matrix %p != link", names[li], (void*)c, (int)(c - L.m_pObjects), (void*)o,
+                        (int)GetVehiclePool()->IsPtrFromPool((const CVehicle*)o), (int)GetPedPool()->IsPtrFromPool((const CPed*)o), (int)GetObjectPool()->IsPtrFromPool((const CObject*)o),
+                        (int)GetBuildingPool()->IsPtrFromPool((const CBuilding*)o), (int)GetDummyPool()->IsPtrFromPool((const CDummy*)o), (void*)o->m_matrix);
+                    bad = 1; break;
+                }
+            } else if (c->m_pOwner) { std::snprintf(msg, sizeof msg, "free link %p (#%d) still has owner %p", (void*)c, (int)(c - L.m_pObjects), (void*)c->m_pOwner); bad = 1; break; }
+        }
+        total += n;
+    }
+    if (!bad && total != (int)CPlaceable::NUM_MATRICES_TO_CREATE) { std::snprintf(msg, sizeof msg, "lists hold %d links, capacity %d (a link is lost or duplicated)", total, (int)CPlaceable::NUM_MATRICES_TO_CREATE); bad = 1; }
+    if (bad && reported++ < 12) {
+        std::fprintf(stderr, "[matrix] CHECK FAILED at %s, frame %u: %s\n", where, (unsigned)CTimer::GetFrameCounter(), msg);
+        std::fflush(stderr);
+    }
+    return !bad;
 }
 #endif
 void CPlaceable::AllocateStaticMatrix() {
@@ -232,6 +319,10 @@ void CPlaceable::AllocateStaticMatrix() {
 
     m_matrix = gMatrixList.AddToList2();
     m_matrix->m_pOwner = this;
+#ifdef NOTSA_PORTABLE
+    NotsaMatrixTrace("AllocateStaticMatrix", this, m_matrix);
+    NotsaRecordAlloc(m_matrix);
+#endif
 }
 
 void CPlaceable::AllocateMatrix() {
@@ -250,6 +341,10 @@ void CPlaceable::AllocateMatrix() {
 
     m_matrix = gMatrixList.AddToList1();
     m_matrix->m_pOwner = this;
+#ifdef NOTSA_PORTABLE
+    NotsaMatrixTrace("AllocateMatrix", this, m_matrix);
+    NotsaRecordAlloc(m_matrix);
+#endif
 }
 
 void CPlaceable::SetMatrix(CMatrix& matrix) {

@@ -359,6 +359,7 @@ public:
         return sizeof(S);
     }
 #ifdef NOTSA_PORTABLE
+    static constexpr size_t kSlotSize = sizeof(S); // STAB2: for the compile-time slot-size asserts in Pools.cpp
     // STAB1: the slot is sizeof(S) bytes (the exe's value for its 32-bit layouts); on LP64 a derived class can be wider than S (CPlane 3136 > CHeli 3128: the 8 extra bytes
     // overwrote the vtable pointer of the NEXT vehicle slot). Called from the operator new of the pooled types; reports every distinct oversized size once.
     void NotsaCheckAllocSize(size_t size, const char* what) const {

@@ -478,3 +478,50 @@ CTaskAllocatorPool* GetTaskAllocatorPool() {
 CPedAttractorPool* GetPedAttractorPool() {
     return ms_pPedAttractorPool;
 }
+#ifdef NOTSA_PORTABLE
+
+// STAB2: pool slot = sizeof(S) of CPool<T, S>; on LP64 a derived class can be wider than the exe's chosen widest class (CPlane 3136 > CHeli 3128, CTaskAllocatorAttack 48 > char[32]), and an
+// oversized object overwrites the first bytes (the vtable pointer) of the NEXT slot. These fail to compile when a layout change makes a pooled class outgrow its slot.
+// (CTask / CEvent have 300 / 80 derived classes: the largest known ones are asserted here, every `new` additionally goes through CPool::NotsaCheckAllocSize at run time.)
+#include "Entity/Ped/CopPed.h"
+#include "Entity/Ped/PlayerPed.h"
+#include "Entity/Object/CutsceneObject.h"
+#include "Entity/AnimatedBuilding.h"
+#include "Entity/Dummy/DummyPed.h"
+#include "Entity/Dummy/DummyObject.h"
+#include "Entity/Vehicle/Automobile.h"
+#include "Entity/Vehicle/Bike.h"
+#include "Entity/Vehicle/Bmx.h"
+#include "Entity/Vehicle/Boat.h"
+#include "Entity/Vehicle/QuadBike.h"
+#include "Entity/Vehicle/MonsterTruck.h"
+#include "Entity/Vehicle/Trailer.h"
+#include "Entity/Vehicle/Train.h"
+#include "Entity/Vehicle/Heli.h"
+#include "Entity/Vehicle/Plane.h"
+#include "Tasks/TaskTypes/TaskSimpleSlideToCoord.h"
+#include "Tasks/TaskTypes/TaskSimpleJetPack.h"
+#include "Tasks/TaskTypes/TaskComplexPartnerGreet.h"
+#include "Tasks/TaskTypes/TaskComplexPartnerChat.h"
+#include "Tasks/TaskTypes/TaskComplexPartnerShove.h"
+#include "Tasks/TaskTypes/TaskSimpleCarDriveTimed.h"
+#include "Events/EventDamage.h"
+#include "Events/EventKnockOffBike.h"
+#include "Tasks/Allocators/TaskAllocatorAttack.h"
+#include "Tasks/Allocators/TaskAllocatorPlayerCommandAttack.h"
+#include "Attractors/PedStopAttractor.h"
+#include "Attractors/PedSeatAttractor.h"
+
+namespace {
+template<class Pool, class... Ts> constexpr bool FitsPoolSlot = ((sizeof(Ts) <= Pool::kSlotSize) && ...);
+static_assert(FitsPoolSlot<CPedPool, CPed, CPlayerPed, CCivilianPed, CCopPed, CEmergencyPed>, "ped pool slot too small");
+static_assert(FitsPoolSlot<CVehiclePool, CVehicle, CAutomobile, CBike, CBmx, CBoat, CQuadBike, CMonsterTruck, CTrailer, CTrain, CHeli, CPlane>, "vehicle pool slot too small");
+static_assert(FitsPoolSlot<CObjectPool, CObject, CCutsceneObject, CHandObject, CProjectile>, "object pool slot too small");
+static_assert(FitsPoolSlot<CBuildingPool, CBuilding, CAnimatedBuilding>, "building pool slot too small");
+static_assert(FitsPoolSlot<CDummyPool, CDummy, CDummyObject, CDummyPed>, "dummy pool slot too small");
+static_assert(FitsPoolSlot<CTaskPool, CTask, CTaskSimpleSlideToCoord, CTaskSimpleJetPack, CTaskComplexPartnerGreet, CTaskComplexPartnerChat, CTaskComplexPartnerShove, CTaskSimpleCarDriveTimed>, "task pool slot too small");
+static_assert(FitsPoolSlot<CEventPool, CEvent, CEventDamage, CEventKnockOffBike>, "event pool slot too small");
+static_assert(FitsPoolSlot<CTaskAllocatorPool, CTaskAllocator, CTaskAllocatorAttack, CTaskAllocatorPlayerCommandAttack>, "task allocator pool slot too small");
+static_assert(FitsPoolSlot<CPedAttractorPool, CPedAttractor, CPedStopAttractor, CPedSeatAttractor>, "ped attractor pool slot too small");
+}
+#endif

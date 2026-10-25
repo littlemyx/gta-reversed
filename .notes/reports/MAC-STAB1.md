@@ -27,7 +27,12 @@ Win32 note for the Windows host: PORTABLE_SYNC.md entry [mac] 2026-10-25 (GetWhe
 * `NOTSA_MOVLIST_CHECK` diagnostic (moving list items vs pools) was written, found nothing at Process / Remove entry (the corruption is in the vtable of a live object, not a stale list item) and was removed again.
 
 ## Soak (real time, loopback audio, new game, seeded mix: walk / sprint / jump, drive (10 vehicle models, steering), 4-6 far teleports per hop block over LS / SF / LV / countryside / desert / Chilliad, weather 0..19 x hour 0..23, combat: weapon, 6-12 peds, wanted 2-6, shoot / killall, pickups)
-SOAK_TABLE
+| run | script time / wall | far teleports (tpg) | drives (roadveh, entered) | weather+hour changes | combat rounds (spawnmany N peds, wanted 2-6, shoot, killall) | result |
+|---|---|---|---|---|---|---|
+| soak1 (seed 11) | 7.5 min / 10.5 min wall (631.7 s, includes the 103 s new-game start) | 35 | 5, 3 | 26 | 6 | exit 0 (cmd:quit, full CGame::Shutdown), no crash, no hang, no [matrix] / [pool] warning |
+| soak2 (seed 22) | 7.5 min / 478.3 s | 52 | 3, 2 | 18 | 4 | exit 0, no crash / hang; ONE `[matrix]` warning: oldest list-1 link with an owner whose `m_matrix` is null, reclaimed (free 0, list1 752, list2 148): the exact state that was a null-this segfault (E3) in the first, unguarded soak |
+| soak3 (seed 33) | 7.5 min / 493.8 s | 41 | 3, 1 | 44 | 5 | exit 0, no crash / hang, no warning |
+Totals: 128 far teleports over LS / SF / LV / countryside / desert, 11 car spawns (6 entered and driven, the rest timed out in `until:invehicle`: CJ did not reach the car in 10 s), 88 weather + hour changes, 15 combat rounds, 0 crashes, 0 hangs, 3 clean shutdowns. The soaks are 7.5 min of script time, not the 10 requested (the wall-clock cap, after two earlier soak attempts were cut short by the crashes below). Earlier, unfixed-exe soak attempts (not counted): ASan soak1 died at 1.5 min (replay -> garbage vtable = vehicle pool slot overwrite, fixed), release soak1 at 4.3 min (null matrix owner = E3, guarded).
 
 ## Open / not covered
 * E3 root cause (ownerless matrix link) and what filled the matrix list; the guard only keeps the process alive.

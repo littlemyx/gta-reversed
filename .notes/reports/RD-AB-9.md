@@ -20,4 +20,4 @@ UpdatePedCount: readers/writers of ms_nNumGang = PopCycle PickGangToCreateMember
 RD_BPGANG=1 (X line at a BP in FindNewPedType: type, model, zone strengths, ms_nNumGang, m_NumGangs_Peds), RD_BPINF=1 (X line at a BP on CInformGroupEventQueue::Add: ra, ped model, group, event type). Temporary port Notes (PopCycle, DecisionSimple, InformGroupEvent/Queue) were reverted.
 
 ## Gate (rules v5)
-Release build ok (this tree). Soak: see hand-back (C:/gta-scratch/rd-ab-9/soak). Oracle targets: none touched (no oracle rows for UpdatePedCount / AffectsPedGroup / FindNewPedType). Not run: run_all_tests (orchestrator).
+Release build ok (this tree). Soak (gpu_locked, NOVSYNC+MUTE, 8 min, full route): RESULT OK, errors 0 (C:/gta-scratch/rd-ab-9/soak). Oracle targets: NOT run - logic_oracle_test has a row for CPopCycle::FindNewPedType (0x60FBD0; my change only affects the type-0 gang result); no rows for UpdatePedCount / CEventAcquaintancePed::AffectsPedGroup. Left to the orchestrator gate. Not run: run_all_tests (orchestrator).

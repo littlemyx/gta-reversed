@@ -181,3 +181,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-25	RD-AB-3	v5	A-B fixes	277970	170	95	orig-port prefix 3 -> 10: RemoveBuildingsNotInArea inverted IsInArea (89 dummies lost RwObject at start, no object effects), ProcessBuoyancy dropped rand; frame 10 open (population); shared proxy stale (use RD_PX)
 2026-10-25	MAC-MERGECHK	v4	post-merge build check	-	-	-	fixed portable build break
 2026-10-25	MAC-R11	v4	R-11 PostFX + shadows	-	-	-	done; interiors black open
+2026-10-25	MAC-INT1	v4	interiors black	-	-	-	fixed: librw depth-mask cache

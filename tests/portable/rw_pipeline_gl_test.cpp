@@ -937,6 +937,184 @@ void RunDepthMask() {
     Check(NoGlError("INT1 depth mask"), "glGetError clean (INT1 depth mask)");
 }
 
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------
+// GLSTATE: raw GL state changes / object lifetimes vs librw's caches (bound texture / fbo / program, per-raster sampler state).
+//  1. TEXTUREADDRESS changed while the raster stays bound must reach GL (upstream setAddressU/V had "==" instead of "!=": only a re-bind applied it)
+//  2. a deleted bound texture / fbo / program is unbound by GL and its name is handed out again: the caches must forget it (else the bind of the new object is skipped)
+//  3. rasters created / destroyed / locked while another fbo is bound must not redirect the draws that follow, and camera reads come from the window's frame buffer
+// ---------------------------------------------------------------------------------------------------------------------------------------------
+void Im2DTexRect(RwRaster* ras, float u1) { // full-screen Im2D quad, u 0..u1
+    RwIm2DVertex v[4];
+    const float xs[4] = { 0.0f, 0.0f, (float)g_pw, (float)g_pw }, ys[4] = { 0.0f, (float)g_ph, (float)g_ph, 0.0f }, us[4] = { 0.0f, 0.0f, u1, u1 }, vs[4] = { 0.0f, 1.0f, 1.0f, 0.0f };
+    for (int i = 0; i < 4; ++i) {
+        RwIm2DVertexSetScreenX(&v[i], xs[i]);
+        RwIm2DVertexSetScreenY(&v[i], ys[i]);
+        RwIm2DVertexSetScreenZ(&v[i], RwIm2DGetNearScreenZ());
+        RwIm2DVertexSetRecipCameraZ(&v[i], 1.0f / RwCameraGetNearClipPlane(g_cam));
+        RwIm2DVertexSetU(&v[i], us[i], 1.0f);
+        RwIm2DVertexSetV(&v[i], vs[i], 1.0f);
+        RwIm2DVertexSetIntRGBA(&v[i], 255, 255, 255, 255);
+    }
+    RS(rwRENDERSTATETEXTURERASTER, reinterpret_cast<uintptr_t>(ras));
+    RwIm2DRenderPrimitive(rwPRIMTYPETRIFAN, v, 4);
+}
+
+GLint GlI(GLenum e) { GLint v = -1; glGetIntegerv(e, &v); return v; }
+
+void RunGlState() {
+    std::printf("---- GLSTATE: GL state caches vs raw GL / object lifetimes ----\n");
+    char what[220], got[100];
+    NoGlError("GLSTATE start");
+
+    // 1. texture addressing changed while the raster stays bound. Left column red, right column blue, u runs 0..2 over the screen
+    {
+        const RwRGBA R{ 255, 0, 0, 255 }, B{ 0, 0, 255, 255 }, cols[4] = { R, B, R, B };
+        RwTexture* t = MakeTex2x2(cols);
+        RwRaster*  r = RwTextureGetRaster(t);
+        const int  yMid = g_ph / 2, xWrapRed = (int)(g_pw * 0.625f); // u = 1.25: wrap -> 0.25 (red column), clamp -> blue column
+        auto frame = [&](uintptr_t addr, bool rebind) -> Px {
+            Begin();
+            RS(rwRENDERSTATETEXTUREFILTER, rwFILTERNEAREST);
+            if (rebind) RS(rwRENDERSTATETEXTURERASTER, 0);
+            RS(rwRENDERSTATETEXTUREADDRESS, addr);  // after the bind in the later frames: the raster is already bound to the stage
+            RS(rwRENDERSTATEZTESTENABLE, 0);
+            RS(rwRENDERSTATEZWRITEENABLE, 0);
+            Im2DTexRect(r, 2.0f);
+            End();
+            return At(xWrapRed, yMid);
+        };
+        Px p = frame(rwTEXTUREADDRESSCLAMP, true);   // fresh bind applies CLAMP
+        Check(Near(p, 0, 0, 255), "TEXTUREADDRESS clamp (bound with the mode set): u 1.25 is the edge texel (blue)", Str(p).c_str());
+        p = frame(rwTEXTUREADDRESSWRAP, false);      // same raster still bound: the mode change must reach GL
+        std::snprintf(what, sizeof(what), "TEXTUREADDRESS wrap set while the raster stays bound: u 1.25 wraps to the red column");
+        Check(Near(p, 255, 0, 0), what, Str(p).c_str());
+        p = frame(rwTEXTUREADDRESSCLAMP, false);
+        Check(Near(p, 0, 0, 255), "TEXTUREADDRESS clamp set again while bound: blue", Str(p).c_str());
+        RS(rwRENDERSTATETEXTURERASTER, 0);
+        RwTextureDestroy(t);
+        RS(rwRENDERSTATETEXTUREADDRESS, rwTEXTUREADDRESSWRAP);
+        Check(NoGlError("GLSTATE address"), "glGetError clean (GLSTATE address)");
+    }
+
+    // 2a. a bound texture is deleted, its name comes back with the next raster
+    {
+        RwRaster* a = RwRasterCreate(4, 4, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
+        const GLuint ta = GETGL3RASTEREXT(a)->texid;
+        const uint32_t whiteTex = rw::gl3::bindTexture(ta); // current unit: the cache now holds ta (returns the stage's white texture: put it back at the end)
+        RwRasterDestroy(a);
+        Check(GlI(GL_TEXTURE_BINDING_2D) == 0, "GL unbinds a deleted bound texture (premise)");
+        RwRaster* b = RwRasterCreate(4, 4, 32, rwRASTERTYPETEXTURE | rwRASTERFORMAT8888);
+        const GLuint tb = GETGL3RASTEREXT(b)->texid;
+        const bool reused = tb == ta;
+        bool err = false;
+        for (GLenum e; (e = glGetError()) != GL_NO_ERROR;) err = true; // INVALID_OPERATION: glTexImage2D into texture 0 when the cached name skipped the bind
+        std::snprintf(got, sizeof(got), "name %u -> %u, %s", ta, tb, reused ? "reused" : "NOT reused (premise weak)");
+        Check(!err, "raster created with the name of a deleted bound texture: no GL error (cache forgot the old binding)", got);
+        // the storage really exists
+        rw::gl3::bindTexture(tb);
+        GLint w = 0;
+        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &w);
+        Check(w == 4, "the new raster's storage was allocated (texture 0 would report 0)", got);
+        rw::gl3::bindTexture(whiteTex);
+        RwRasterDestroy(b);
+        NoGlError("GLSTATE texture");
+    }
+
+    // 2b. a bound fbo (camera texture) is destroyed, the name comes back
+    {
+        RwRaster* a = RwRasterCreate(16, 16, 32, rwRASTERTYPECAMERATEXTURE);
+        if (!a) {
+            Check(false, "camera texture raster created");
+        } else {
+            const GLuint fa = GETGL3RASTEREXT(a)->fbo;
+            rw::gl3::bindFramebuffer(fa);
+            RwRasterDestroy(a);
+            std::snprintf(got, sizeof(got), "cache %u gl %d", rw::gl3::getBoundFramebuffer(), GlI(GL_FRAMEBUFFER_BINDING));
+            Check(rw::gl3::getBoundFramebuffer() == 0 && GlI(GL_FRAMEBUFFER_BINDING) == 0, "destroying the bound camera texture: the fbo cache falls back to 0 like GL", got);
+            RwRaster* b = RwRasterCreate(16, 16, 32, rwRASTERTYPECAMERATEXTURE);
+            const GLuint fb = GETGL3RASTEREXT(b)->fbo;
+            rw::gl3::bindFramebuffer(fb);
+            std::snprintf(got, sizeof(got), "fbo %u -> %u, gl binding %d", fa, fb, GlI(GL_FRAMEBUFFER_BINDING));
+            Check((GLuint)GlI(GL_FRAMEBUFFER_BINDING) == fb, "bind of the new camera texture's fbo reaches GL (name reuse)", got);
+            rw::gl3::bindFramebuffer(0);
+            RwRasterDestroy(b);
+        }
+        NoGlError("GLSTATE fbo");
+    }
+
+    // 3a. creating / destroying rasters while another camera texture is the render target keeps that target
+    {
+        RwRaster* target = RwRasterCreate(16, 16, 32, rwRASTERTYPECAMERATEXTURE);
+        const GLuint ft = GETGL3RASTEREXT(target)->fbo;
+        rw::gl3::bindFramebuffer(ft);
+        RwRaster* other = RwRasterCreate(8, 8, 32, rwRASTERTYPECAMERATEXTURE);
+        std::snprintf(got, sizeof(got), "gl binding %d, target %u", GlI(GL_FRAMEBUFFER_BINDING), ft);
+        Check((GLuint)GlI(GL_FRAMEBUFFER_BINDING) == ft && rw::gl3::getBoundFramebuffer() == ft, "creating a camera texture while another is the render target keeps the target bound", got);
+        RwRaster* z = RwRasterCreate(16, 16, 32, rwRASTERTYPEZBUFFER);
+        RwRasterDestroy(z);
+        Check((GLuint)GlI(GL_FRAMEBUFFER_BINDING) == ft, "creating / destroying a z buffer raster keeps the target bound");
+        RwRasterDestroy(other);
+        Check((GLuint)GlI(GL_FRAMEBUFFER_BINDING) == ft, "destroying another camera texture keeps the target bound");
+
+        // 3b. reading the window's frame buffer (lock, RenderFast) with the camera texture bound comes from the window
+        const RwRGBA bg{ 40, 60, 90, 255 };
+        {   // paint the window's back buffer; RwCameraBeginUpdate/Clear bind the main fbo, so rebind the target afterwards
+            Begin(bg);
+            RwCameraEndUpdate(g_cam);
+        }
+        rw::gl3::bindFramebuffer(ft);
+        rw::Raster* cam = reinterpret_cast<rw::Raster*>(g_cam->frameBuffer)->parent;
+        uint8_t* px = cam->lock(0, rw::Raster::LOCKREAD);
+        bool okLock = px != nullptr;
+        std::snprintf(got, sizeof(got), "locked %s, px (%d,%d,%d), gl binding %d", okLock ? "yes" : "NO", okLock ? px[0] : -1, okLock ? px[1] : -1, okLock ? px[2] : -1, GlI(GL_FRAMEBUFFER_BINDING));
+        Check(okLock && std::abs(px[0] - 40) <= 2 && std::abs(px[1] - 60) <= 2 && std::abs(px[2] - 90) <= 2, "camera raster lock with a camera texture bound reads the window frame buffer", got);
+        if (okLock) cam->unlock(0);
+        Check((GLuint)GlI(GL_FRAMEBUFFER_BINDING) == ft && rw::gl3::getBoundFramebuffer() == ft, "camera raster lock leaves the render target bound");
+
+        rw::Raster* dst = rw::Raster::create(cam->width, cam->height, 32, rw::Raster::TEXTURE | rw::Raster::C8888);
+        rw::Raster::pushContext(dst);
+        const int rf = cam->renderFast(0, 0);
+        rw::Raster::popContext();
+        Check(rf != 0 && (GLuint)GlI(GL_FRAMEBUFFER_BINDING) == ft, "RenderFast (camera -> texture) with a camera texture bound keeps the render target bound");
+        uint8_t* tp = dst->lock(0, rw::Raster::LOCKREAD);
+        bool okCopy = false;
+        if (tp) {
+            int lo = std::min({ (int)tp[0], (int)tp[1], (int)tp[2] }), hi = std::max({ (int)tp[0], (int)tp[1], (int)tp[2] });
+            okCopy = std::abs(lo - 40) <= 2 && std::abs(hi - 90) <= 2; // texel order B,G,R (d3d) or R,G,B: the same three values
+            std::snprintf(got, sizeof(got), "texel (%d,%d,%d)", tp[0], tp[1], tp[2]);
+            dst->unlock(0);
+        }
+        Check(okCopy, "RenderFast copies the window frame buffer, not the bound camera texture", got);
+        dst->destroy();
+        rw::gl3::bindFramebuffer(0);
+        RwRasterDestroy(target);
+        NoGlError("GLSTATE fbo restore");
+    }
+
+    // 2c. destroying the current shader program
+    {
+        const char* vsrc[] = { "#version 150\nin vec3 in_pos;\nvoid main(){ gl_Position = vec4(in_pos, 1.0); }\n", nullptr };
+        const char* fsrc[] = { "#version 150\nout vec4 o;\nvoid main(){ o = vec4(1.0); }\n", nullptr };
+        rw::gl3::Shader* a = rw::gl3::Shader::create(vsrc, fsrc);
+        Check(a != nullptr, "test shader compiled");
+        if (a) {
+            a->use();
+            a->destroy();
+            Check(rw::gl3::currentShader == nullptr, "destroying the current shader clears librw's current-shader cache");
+            rw::gl3::Shader* b = rw::gl3::Shader::create(vsrc, fsrc);
+            if (b) {
+                b->use();
+                std::snprintf(got, sizeof(got), "program %d, expected %u", GlI(GL_CURRENT_PROGRAM), b->program);
+                Check((GLuint)GlI(GL_CURRENT_PROGRAM) == b->program, "the next shader (maybe at the dead one's address) really becomes the GL program", got);
+                b->destroy();
+            }
+        }
+        NoGlError("GLSTATE shader");
+    }
+    Check(NoGlError("GLSTATE"), "glGetError clean (GLSTATE)");
+}
+
 // ---------------------------------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------------------------------
 // part B: real data
@@ -1875,11 +2053,13 @@ int main() {
 
     std::string mk = "mkdir -p '" + dumpDir + "'";
     (void)std::system(mk.c_str());
+    if (std::getenv("GLSTATE_ONLY")) { RunGlState(); std::printf("PIPE RESULT %s (GLSTATE_ONLY)\n", g_fail ? "FAIL" : "OK"); return g_fail ? 1 : 0; }
     if (std::getenv("INT1_ONLY")) { RunDepthMask(); if (haveData) RunInterior(gta, dumpDir); std::printf("PIPE RESULT %s (INT1_ONLY)\n", g_fail ? "FAIL" : "OK"); return g_fail ? 1 : 0; }
     RunSynthetic();
     RunSaEnv();
     RunLighting();
     RunDepthMask();
+    RunGlState();
     RunSkinSynthetic();
     if (haveData) {
         RunReal(gta, dumpDir);

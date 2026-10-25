@@ -176,7 +176,9 @@ bool NotsaRwGetGlInfo(NotsaGlInfo* out) {
     out->core = (profile & GL_CONTEXT_CORE_PROFILE_BIT) != 0;
     // the pixel format of the DEFAULT framebuffer as the driver gave it (not what was requested)
     GLint v = 0;
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    GLint prevFbo = 0;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0); // raw bind behind librw's cache: restored below (GLSTATE audit)
     glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_DEPTH, GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE, &v);
     out->depthBits = v;
     v = 0;
@@ -188,6 +190,7 @@ bool NotsaRwGetGlInfo(NotsaGlInfo* out) {
     v = 0;
     glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_BACK_LEFT, GL_FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE, &v);
     out->alphaBits = v;
+    glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prevFbo));
     int sdlDepth = 0, sdlStencil = 0;
     SDL_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &sdlDepth);
     SDL_GL_GetAttribute(SDL_GL_STENCIL_SIZE, &sdlStencil);

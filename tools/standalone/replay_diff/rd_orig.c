@@ -96,15 +96,19 @@ __declspec(naked) void __cdecl ov_info(void){ __asm jmp dword ptr [g_fw+20] }
 __declspec(naked) void __cdecl ov_time_seek(void){ __asm jmp dword ptr [g_fw+24] }
 static void patch(u32 at, void* to){ DWORD o; unsigned char* p = (unsigned char*)(size_t)at; VirtualProtect(p, 5, PAGE_EXECUTE_READWRITE, &o); p[0] = 0xE9; *(int*)(p + 1) = (int)((size_t)to - (at + 5)); VirtualProtect(p, 5, o, &o); }
 /* RD_BP=<hex address> RD_BPFC=<fc>: software breakpoint (int3 + vectored handler, re-armed by single-step) that logs "Z fc ncalls regs", "K" 72 stack dwords and "ST" the 80 FPU register bytes for traced frames fc and fc+1 (A-B hunt, inert without the env vars) */
-static u32 g_bpa, g_bpfc, g_bprearm; static unsigned char g_bpbyte;
+static u32 g_bpa, g_bpfc, g_bprearm, g_bpn = 1; static unsigned char g_bpbyte;
 static LONG CALLBACK bp_veh(EXCEPTION_POINTERS* ep){
   DWORD c = ep->ExceptionRecord->ExceptionCode; CONTEXT* x = ep->ContextRecord;
   if(c == EXCEPTION_BREAKPOINT && (u32)(size_t)ep->ExceptionRecord->ExceptionAddress == g_bpa){
     u32 fc = U32(0xB7CB4C), k; unsigned char* ra = (unsigned char*)x->FloatSave.RegisterArea;
-    if(g_f && (fc == g_bpfc || fc == g_bpfc + 1)){
+    if(g_f && (fc >= g_bpfc && fc <= g_bpfc + g_bpn)){
+      if(getenv("RD_BPARG")){ u32 q = U32(x->Esp + 4); fprintf(g_f, "A %u ra=%08x this=%08x p=%08x,%08x,%08x", fc, U32(x->Esp), x->Ecx, U32(q), U32(q + 4), U32(q + 8)); fputc(10, g_f); goto bp_done; }
       fprintf(g_f, "Z %u %u eip=%08x eax=%08x ebx=%08x ecx=%08x edx=%08x esi=%08x edi=%08x ebp=%08x esp=%08x fl=%08x\n", fc, g_calls, g_bpa, x->Eax, x->Ebx, x->Ecx, x->Edx, x->Esi, x->Edi, x->Ebp, x->Esp, x->ContextFlags);
+      if(getenv("RD_BPMEM")){ u32 t = x->Ecx, m = U32(t + 0x14); fprintf(g_f, "M %u this=%08x model=%u pos=%08x,%08x,%08x raw", fc, t, (u32)*(unsigned short*)(size_t)(t + 0x22), U32(m + 0x30), U32(m + 0x34), U32(m + 0x38)); for(k = 0; k < 64; k++) fprintf(g_f, " %08x", U32(t + 0x1C + k * 4)); fputc(10, g_f); }
+      if(getenv("RD_BPMI")){ u32 t = x->Ecx, mi = U32(0xA9B0C8 + 4 * (u32)*(unsigned short*)(size_t)(t + 0x22)), j; fprintf(g_f, "N %u mi=%08x", fc, mi); for(k = 0; k < 24; k++){ u32 v = U32(mi + k * 4); fprintf(g_f, " [%02x]%08x", k * 4, v); if(v > 0x400000 && !(v & 3) && k > 2 && !IsBadReadPtr((void*)(size_t)v, 24)){ fprintf(g_f, "{"); for(j = 0; j < 6; j++) fprintf(g_f, "%08x ", U32(v + j * 4)); fprintf(g_f, "}"); } } fputc(10, g_f); }
       fprintf(g_f, "K"); for(k = 0; k < 72; k++) fprintf(g_f, " %08x", U32(x->Esp + k * 4)); fprintf(g_f, "\nST"); for(k = 0; k < 80; k++) fprintf(g_f, " %02x", ra[k]); fprintf(g_f, " sw=%04x tw=%04x\n", (u32)x->FloatSave.StatusWord & 0xFFFF, (u32)x->FloatSave.TagWord & 0xFFFF);
     }
+    bp_done:
     *(unsigned char*)(size_t)g_bpa = g_bpbyte; x->Eip = g_bpa; x->EFlags |= 0x100; g_bprearm = 1; return EXCEPTION_CONTINUE_EXECUTION;
   }
   if(c == EXCEPTION_SINGLE_STEP && g_bprearm){ g_bprearm = 0; *(unsigned char*)(size_t)g_bpa = 0xCC; return EXCEPTION_CONTINUE_EXECUTION; }
@@ -121,7 +125,7 @@ BOOL WINAPI DllMain(HINSTANCE h, DWORD why, LPVOID r){
     if((e = getenv("RD_RFROM"))) g_rfrom = atoi(e);
     if((e = getenv("RD_OUT"))) g_f = fopen(e, "w");
     if(GetModuleHandleA(0) != (HMODULE)0x400000) return TRUE; /* not the original image */
-    if((e = getenv("RD_BP"))){ DWORD o; g_bpa = strtoul(e, 0, 16); if((e = getenv("RD_BPFC"))) g_bpfc = atoi(e); g_bpbyte = *(unsigned char*)(size_t)g_bpa; VirtualProtect((void*)(size_t)g_bpa, 1, PAGE_EXECUTE_READWRITE, &o); AddVectoredExceptionHandler(1, bp_veh); *(unsigned char*)(size_t)g_bpa = 0xCC; }
+    if((e = getenv("RD_BP"))){ DWORD o; g_bpa = strtoul(e, 0, 16); if((e = getenv("RD_BPFC"))) g_bpfc = atoi(e); if((e = getenv("RD_BPN"))) g_bpn = atoi(e); g_bpbyte = *(unsigned char*)(size_t)g_bpa; VirtualProtect((void*)(size_t)g_bpa, 1, PAGE_EXECUTE_READWRITE, &o); AddVectoredExceptionHandler(1, bp_veh); *(unsigned char*)(size_t)g_bpa = 0xCC; }
     patch(0x821B1E, my_rand); patch(0x821B11, my_srand); patch(0x5617A0, my_timer); patch(0x745270, my_pstimer);
     if(g_pin & 512){ DWORD o; unsigned char* p = (unsigned char*)0x507750; VirtualProtect(p, 1, PAGE_EXECUTE_READWRITE, &o); p[0] = 0xC3; VirtualProtect(p, 1, o, &o); } /* pin bit 512: CAudioEngine::Service() (0x507750, thiscall, no stack args) = ret, as Lockstep.cpp NoAudio() in the port (= NOTSA_RR_NOAUDIO of the RR harness) */
   } else if(why == DLL_PROCESS_DETACH && g_f) fflush(g_f);

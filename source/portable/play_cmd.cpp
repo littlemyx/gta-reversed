@@ -14,6 +14,7 @@
 #include <string>
 
 #include "Camera.h"
+#include "CutsceneMgr.h"
 #include "CarCtrl.h"
 #include "Clock.h"
 #include "PostEffects.h"
@@ -82,6 +83,14 @@ bool PlayCmd(const char* name, const std::string& args) {
         NOTSA_LOG_INFO("[play] playerstat pos=({:.2f},{:.2f},{:.2f}) heading={:.3f} hp={:.0f} arm={:.0f} money={} clock={:02}:{:02} weapon={} ammo={} inveh={} model={}", p.x, p.y, p.z, pl->GetHeading(),
                        pl->m_fHealth, pl->m_fArmour, FindPlayerInfo().m_nMoney, (int)CClock::GetGameClockHours(), (int)CClock::GetGameClockMinutes(), (int)pl->GetActiveWeapon().GetType(),
                        (int)pl->GetActiveWeapon().GetTotalAmmo(), (int)pl->bInVehicle, (int)pl->m_nModelIndex);
+        return true;
+    }
+    if (!std::strcmp(name, "cutstat")) { // STAB1: cmd:cutstat  cutscene / camera / timer state (is the intro cinematic still running, how far along)
+        const auto& cam = TheCamera.m_aCams[TheCamera.m_nActiveCam];
+        NOTSA_LOG_INFO("[play] cutstat running={} loadStatus={} playStatus={} csTimerS={:.2f} camMode={} finishMs={} alongSpline={:.4f} timerMs={} timeStep={:.3f} wide={} fading={} menu={} skipped={} name={}",
+                       (int)CCutsceneMgr::ms_running, (int)CCutsceneMgr::ms_cutsceneLoadStatus, (int)CCutsceneMgr::ms_cutscenePlayStatus, CCutsceneMgr::ms_cutsceneTimerS, (int)cam.m_nMode,
+                       TheCamera.GetCutSceneFinishTime(), (double)TheCamera.GetPositionAlongSpline(), (unsigned)CTimer::GetTimeInMS(), CTimer::GetTimeStep(), (int)TheCamera.m_bWideScreenOn,
+                       (int)TheCamera.GetFading(), (int)FrontEndMenuManager.m_bMenuActive, (int)CCutsceneMgr::ms_wasCutsceneSkipped, (const char*)CCutsceneMgr::ms_cutsceneName);
         return true;
     }
     if (!std::strcmp(name, "pickup")) {
@@ -332,3 +341,4 @@ bool PlayCmd(const char* name, const std::string& args) {
     return false;
 }
 } // namespace notsa::portable
+

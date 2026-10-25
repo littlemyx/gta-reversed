@@ -413,6 +413,9 @@ static void InjRunCmd(const std::string& c) {
     else if (!std::strcmp(name, "spawnped")) { // spawnped:MODEL:PEDTYPE  a ped 6 m in front of the player (standing, no tasks beyond the default)
         int mdl = 7, ty = 4;
         std::sscanf(args.c_str(), "%d:%d", &mdl, &ty);
+#ifdef NOTSA_PORTABLE
+        if (mdl < 0 || mdl >= (int)CModelInfo::NUM_MODEL_INFOS || !CModelInfo::GetModelInfo(mdl) || CModelInfo::GetModelInfo(mdl)->GetModelType() != MODEL_INFO_PED) { NOTSA_INJ_LOG("[cmd] spawnped model %d is not a ped model (no model info): skipped", mdl); return; }
+#endif
         CStreaming::RequestModel((eModelID)mdl, STREAMING_GAME_REQUIRED); CStreaming::LoadAllRequestedModels(false);
         const auto p = pl->GetPosition() + pl->GetForward() * 6.f;
         auto* np = CPopulation::AddPed((ePedType)ty, (eModelID)mdl, p, false);
@@ -438,9 +441,16 @@ static void InjRunCmd(const std::string& c) {
     else if (!std::strcmp(name, "spawnmany")) { // spawnmany:N:RADIUS:ANGLEOFFSET_DEG  N peds on a ring around the player (models cycle through male/female skins), standing
         int cnt = 8, rad = 5, off = 0;
         std::sscanf(args.c_str(), "%d:%d:%d", &cnt, &rad, &off);
+#ifdef NOTSA_PORTABLE
+        static const int models[] = { 7, 9, 10, 12, 13, 20, 21, 22, 23, 40, 41, 64, 66, 85, 87, 90, 92 }; // STAB1: 65 is a hole in peds.ide (no model info): RequestModel(65) dereferences null in the exe too
+#else
         static const int models[] = { 7, 9, 10, 12, 13, 20, 21, 22, 23, 40, 41, 64, 65, 85, 87, 90, 92 };
+#endif
         for (int i = 0; i < cnt; i++) {
             const int mdl = models[i % (int)std::size(models)];
+#ifdef NOTSA_PORTABLE
+            if (mdl < 0 || mdl >= (int)CModelInfo::NUM_MODEL_INFOS || !CModelInfo::GetModelInfo(mdl) || CModelInfo::GetModelInfo(mdl)->GetModelType() != MODEL_INFO_PED) { NOTSA_INJ_LOG("[cmd] spawnmany %d model %d is not a ped model (no model info): skipped", i, mdl); continue; }
+#endif
             CStreaming::RequestModel((eModelID)mdl, STREAMING_GAME_REQUIRED); CStreaming::LoadAllRequestedModels(false);
             const float ang = DegreesToRadians((float)off) + (float)i * 6.2831853f / (float)cnt;
             const auto p = pl->GetPosition() + CVector{ std::cos(ang) * (float)rad, std::sin(ang) * (float)rad, 0.f };

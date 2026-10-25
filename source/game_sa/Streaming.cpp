@@ -1654,7 +1654,11 @@ void CStreaming::RequestModelStream(int32 chIdx) {
         if (ms_numPriorityRequests && !streamingInfo->IsPriorityRequest())
             break; // There are priority requests, but this isn't one of them
 
+#ifdef NOTSA_PORTABLE
+        CBaseModelInfo* mi = IsModelDFF(modelId) ? CModelInfo::GetModelInfo(modelId) : nullptr; // STAB1: TXD / COL / IFP ids are past the end of ms_modelInfoPtrs (the exe reads the neighbouring global and ignores it; ASan: global-buffer-overflow)
+#else
         CBaseModelInfo* mi = CModelInfo::GetModelInfo(modelId);
+#endif
         if (IsModelDFF(modelId)) {
             if (isPreviousModelPed && mi->GetModelType() == MODEL_INFO_PED)
                 break; // Don't load two peds after each other

@@ -169,8 +169,10 @@ bool CPopCycle::FindNewPedType(ePedType& outPedType, eModelID& outPedMI, bool no
             continue;
         } else if (highestChance == gangChance) { // 0x60FF13
             outPedType = PickGangToCreateMembersOf();
-            assert(IsPedTypeGang(outPedType));
-            outPedMI = CPopulation::ChooseGangOccupation((eGangID)(outPedType - ePedType::PED_TYPE_GANG1));
+            // 0x60FF1C: type 0 (= no gang has any density here) skips ChooseGangOccupation and gives model -1 (0x60FF4E); the old port called it with gang id -7
+            outPedMI = outPedType != (ePedType)0
+                ? CPopulation::ChooseGangOccupation((eGangID)(outPedType - ePedType::PED_TYPE_GANG1))
+                : MODEL_INVALID;
             assert(outPedMI != MODEL_PLAYER);
             if (outPedMI >= 0) {
                 return true;

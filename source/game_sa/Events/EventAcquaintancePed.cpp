@@ -54,7 +54,8 @@ bool CEventAcquaintancePed::AffectsPedGroup(CPedGroup* pedGroup)
             CPed* leader = membership.GetLeader();
             if (leader && leader->IsPlayer())
                 return false;
-            return FindPlayerPed()->GetPlayerGroup().GetMembership().IsMember(m_AcquaintancePed);
+            // 0x4AF9F1..0x4AFA21: `IsMember(...)` true => return false (jne 0x4AF995 = xor al,al), else `mov al, 1`. The port returned IsMember itself (inverted): a LIKE/RESPECT acquaintance who is in the player's group made the group respond (extra CDecisionSimple rand draw, traced frame 73)
+            return !FindPlayerPed()->GetPlayerGroup().GetMembership().IsMember(m_AcquaintancePed);
         }
     }
     return false;

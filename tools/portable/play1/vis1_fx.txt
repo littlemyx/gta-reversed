@@ -33,6 +33,8 @@ cmd:hour:13
 cmd:tpg:-380:2250:45
 cmd:wanted:0
 cmd:health:5000
+wait:1500
+cmd:wanted:0
 wait:3000
 cmd:fxstat
 wait:8000
@@ -63,12 +65,16 @@ cmd:hour:12
 cmd:tpg:388:-1925:6
 cmd:wanted:0
 cmd:health:5000
+wait:1500
+cmd:wanted:0
 wait:6000
 mark:beach_a
 wait:900
 cmd:tpg:2495:-1665:14
 cmd:wanted:0
 cmd:health:5000
+wait:1500
+cmd:wanted:0
 wait:5000
 mark:gamma_default
 wait:900
@@ -85,6 +91,8 @@ wait:1000
 cmd:roadveh:411
 cmd:wanted:0
 cmd:health:5000
+wait:1500
+cmd:wanted:0
 wait:3000
 key:return
 until:invehicle:10000

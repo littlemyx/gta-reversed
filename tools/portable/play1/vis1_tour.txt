@@ -34,6 +34,8 @@ cmd:hour:12
 cmd:tpg:2495:-1665:14
 cmd:wanted:0
 cmd:health:5000
+wait:1500
+cmd:wanted:0
 wait:7000
 mark:ls_day_a
 wait:900
@@ -44,6 +46,8 @@ cmd:hour:23
 cmd:tpg:2495:-1665:14
 cmd:wanted:0
 cmd:health:5000
+wait:1500
+cmd:wanted:0
 wait:4000
 mark:ls_night_a
 wait:900
@@ -54,6 +58,8 @@ cmd:hour:15
 cmd:tpg:2495:-1665:14
 cmd:wanted:0
 cmd:health:5000
+wait:1500
+cmd:wanted:0
 wait:9000
 mark:ls_rain_a
 wait:900
@@ -64,6 +70,8 @@ cmd:hour:10
 cmd:tpg:-2050:300:40
 cmd:wanted:0
 cmd:health:5000
+wait:1500
+cmd:wanted:0
 wait:8000
 mark:fog_a
 wait:900
@@ -72,6 +80,8 @@ cmd:hour:14
 cmd:tpg:-1980:150:27
 cmd:wanted:0
 cmd:health:5000
+wait:1500
+cmd:wanted:0
 wait:8000
 mark:sf_day_a
 wait:900
@@ -82,6 +92,8 @@ cmd:hour:23
 cmd:tpg:2065:1050:11
 cmd:wanted:0
 cmd:health:5000
+wait:1500
+cmd:wanted:0
 wait:8000
 mark:lv_night_a
 wait:900
@@ -92,6 +104,8 @@ cmd:hour:13
 cmd:tpg:-380:2250:45
 cmd:wanted:0
 cmd:health:5000
+wait:1500
+cmd:wanted:0
 wait:8000
 mark:desert_a
 wait:900
@@ -102,6 +116,8 @@ cmd:hour:11
 cmd:tpg:-2150:-2300:30
 cmd:wanted:0
 cmd:health:5000
+wait:1500
+cmd:wanted:0
 wait:8000
 mark:country_a
 wait:900
@@ -110,8 +126,10 @@ cmd:hour:12
 cmd:tpg:2100:-1790:14
 cmd:wanted:0
 cmd:health:5000
+wait:1500
+cmd:wanted:0
 wait:5000
-cmd:spawnmany:14:7:0
+cmd:spawnmany:9:7:0
 wait:3500
 mark:ped_crowd_a
 wait:900
@@ -128,6 +146,12 @@ cmd:interior:207.7:-110.0:1005.1:15
 wait:9000
 mark:interior_binco_a
 wait:900
+cmd:playerstat
+cmd:interior:363.0:-75.0:1001.5:10
+wait:9000
+mark:interior_burger_a
+wait:900
+cmd:playerstat
 key:escape
 wait:1500
 mark:menu_pause

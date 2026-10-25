@@ -19,6 +19,7 @@
 #include "PostEffects.h"
 #include "StencilShadows.h"
 #include "Weather.h"
+#include "TimeCycle.h"
 #include "MenuManager.h"
 #include "Gamma.h"
 #include "CullZones.h"
@@ -31,6 +32,7 @@
 #include "Renderer.h"
 #include "portable/render/pipelines_gl3.h"
 
+namespace rw::gl3 { extern float presentGamma; }
 namespace rw::gl3 { extern rw::int32 lightingModel; } // librw gl3 (vendor/librw/src/gl/gl3device.cpp): 1 = D3D9 FF lighting order (R-12), 0 = librw's original
 
 namespace notsa::portable {
@@ -142,13 +144,31 @@ bool PlayCmd(const char* name, const std::string& args) {
         const int b = std::clamp(std::atoi(args.c_str()), 0, 384);
         FrontEndMenuManager.m_PrefsBrightness = b;
         gamma.SetGamma(b / 512.0f, true); // what the private CMenuManager::SetBrightness does
-        NOTSA_LOG_INFO("[play] brightness {} (gamma enabled {} level {:.3f})", b, (int)gamma.m_IsEnabled, b / 512.0f);
+        NOTSA_LOG_INFO("[play] brightness {} (gamma enabled {} level {:.3f}, present exponent {:.3f})", b, (int)gamma.m_IsEnabled, b / 512.0f, rw::gl3::presentGamma);
+        return true;
+    }
+    if (!std::strcmp(name, "face")) { // VIS1: cmd:face:DEG|sun[:PITCHHINT]  turns the player (and the follow camera behind him) to heading DEG (0 = +Y, counter-clockwise) or towards the sun
+        if (pl) {
+            float h = 0.f;
+            if (args.rfind("sun", 0) == 0) {
+                const auto sv = CTimeCycle::GetVectorToSun();
+                h             = std::atan2(-sv.x, sv.y);
+                NOTSA_LOG_INFO("[play] sun vector ({:.2f},{:.2f},{:.2f}) -> heading {:.2f}", sv.x, sv.y, sv.z, h);
+            } else {
+                h = DegreesToRadians((float)std::atof(args.c_str()));
+            }
+            pl->SetHeading(h);
+            pl->m_fCurrentRotation = h;
+            pl->m_fAimingRotation  = h;
+            TheCamera.RestoreWithJumpCut();
+        }
         return true;
     }
     if (!std::strcmp(name, "fxstat")) { // VIS1: cmd:fxstat  heat haze / underwater / water state of this frame
         float wl = -999.f;
         const auto cp = TheCamera.GetPosition();
         CWaterLevel::GetWaterLevelNoWaves(cp, &wl);
+        NOTSA_LOG_INFO("[play] fxstat: gamma exponent {:.3f} prefsBrightness {} ", rw::gl3::presentGamma, FrontEndMenuManager.m_PrefsBrightness);
         NOTSA_LOG_INFO("[play] fxstat: weather {}/{} hazeFlagOff {} HeatHaze {:.3f} control {:.3f} fade {:.3f} clock {}:{:02} underWaterness {:.3f} (fx starts {:.3f}) cam z {:.2f} waterlevel {:.2f} waterEnable {}",
             (int)CWeather::OldWeatherType, (int)CWeather::NewWeatherType, (int)CPostEffects::m_bHeatHazeFX, CWeather::HeatHaze, CWeather::HeatHazeFXControl, CWeather::HeatHazeFXFade,
             (int)CClock::GetGameClockHours(), (int)CClock::GetGameClockMinutes(), CWeather::UnderWaterness, CPostEffects::m_fWaterFXStartUnderWaterness, cp.z, wl, (int)CPostEffects::m_waterEnable);
@@ -262,7 +282,7 @@ bool PlayCmd(const char* name, const std::string& args) {
                 NOTSA_LOG_INFO("[play] interior: {} buildings within 25 m, {} with area code {}, {} with an RwObject (streamed in)", nb, nbArea, area, nbLoaded);
             }
             TheCamera.RestoreWithJumpCut(); // R-11: the camera still sat at the outside position (frames showed 3 shelf boards in a black void)
-            NOTSA_LOG_INFO("[play] interior area {} at ({:.1f},{:.1f},{:.1f}), camera {:.1f} {:.1f} {:.1f}", area, x, y, z, TheCamera.GetPosition().x, TheCamera.GetPosition().y, TheCamera.GetPosition().z);
+            NOTSA_LOG_INFO("[play] interior area {} at ({:.1f},{:.1f},{:.1f}), camera (still the pre-jump position: RestoreWithJumpCut applies it in the next CCamera::Process, VIS1 INT1-3) {:.1f} {:.1f} {:.1f}", area, x, y, z, TheCamera.GetPosition().x, TheCamera.GetPosition().y, TheCamera.GetPosition().z);
         }
         return true;
     }

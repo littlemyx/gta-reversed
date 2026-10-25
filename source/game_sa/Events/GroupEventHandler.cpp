@@ -290,7 +290,12 @@ CTaskAllocator* CGroupEventHandler::ComputeResponseNewGangMember(const CEventNew
 // 0x5F90A0
 CTaskAllocator* CGroupEventHandler::ComputeResponseLeaderExitedCar(const CEventEditableResponse&, CPedGroup* pg, CPed* originator) {
     const auto leader = pg->GetMembership().GetLeader();
-    for (auto&& [i, m] : rngv::enumerate(pg->GetMembership().GetFollowers())) {
+    // exe 0x5F90D8..0x5F9506: loops over the 7 follower SLOTS (null slots skipped, but `i` is the slot: the leave delay is slot * 500)
+    for (int32 i = 0; i < TOTAL_PED_GROUP_FOLLOWERS; i++) {
+        CPed* const m = pg->GetMembership().GetMember(i);
+        if (!m) {
+            continue;
+        }
         if (m->m_pVehicle && m->bInVehicle && m->m_pVehicle == leader->m_pVehicle) { // Already in the leader's vehicle
             continue; 
         }

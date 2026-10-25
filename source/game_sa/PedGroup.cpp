@@ -158,8 +158,10 @@ void CPedGroup::Teleport(const CVector& pos) {
 
     // Teleport *followers*
     const auto& offsets = CTaskComplexFollowLeaderInFormation::ms_offsets.Offsets;
-    for (auto&& [offsetIdx, f] : rngv::enumerate(GetMembership().GetFollowers())) {
-        if (!f->IsAlive()) {
+    // exe 0x5F7BE0..0x5F7C9B: the offset index is the member SLOT (0..6, null slots skipped but counted), not the rank among the present followers
+    for (int32 offsetIdx = 0; offsetIdx < TOTAL_PED_GROUP_FOLLOWERS; offsetIdx++) {
+        CPed* const f = GetMembership().GetMember(offsetIdx);
+        if (!f || !f->IsAlive()) {
             continue;
         }
         f->Teleport(pos + CVector{ offsets[offsetIdx] }, false);

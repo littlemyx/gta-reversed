@@ -366,3 +366,4 @@
 - 2026-10-24 14:56 orchestrator gate on 136deaaf (portable/main merge): run_all_tests 74/74, soak OK, gameplay_regress 70/70; pushed 3b369d38; C:\gta-play refreshed.
 - 2026-10-24 17:40 orchestrator gate on 14186305 (fid-mac + save-load): run_all_tests 74/74, soak OK, gameplay_regress 70/70; pushed; C:\gta-play refreshed (save -> load works on Win32).
 - 2026-10-24 22:35 orchestrator gate on 3e4d1d67 (CRadar blip counter, lockstep audio-off pin): run_all_tests 74/74, soak OK (1 invehicle gate timeout - seen before the fix too, 0914-resoak), gameplay_regress 70/70; C:\gta-play refreshed.
+- 2026-10-25 04:40 orchestrator gate on fe1fa820 (RD-AB-3 + GATE-FAILS): run_all_tests 74/74, soak OK, gameplay_regress 70/70; C:\gta-play refreshed.

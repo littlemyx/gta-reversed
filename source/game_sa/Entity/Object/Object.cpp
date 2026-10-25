@@ -152,11 +152,17 @@ CObject::~CObject() {
 
 // 0x5A1EE0
 void* CObject::operator new(size_t size) {
+#ifdef NOTSA_PORTABLE
+    GetObjectPool()->NotsaCheckAllocSize(size, "object");
+#endif
     return GetObjectPool()->New();
 }
 
 // 0x5A1EF0
 void* CObject::operator new(size_t size, int32 poolRef) {
+#ifdef NOTSA_PORTABLE
+    GetObjectPool()->NotsaCheckAllocSize(size, "object");
+#endif
     return GetObjectPool()->NewAt(poolRef);
 }
 

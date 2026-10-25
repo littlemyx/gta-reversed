@@ -15,6 +15,9 @@ CTask::~CTask() { }
 
 // 0x61A5A0
 void* CTask::operator new(size_t size) {
+#ifdef NOTSA_PORTABLE
+    GetTaskPool()->NotsaCheckAllocSize(size, "task");
+#endif
     return GetTaskPool()->New();
 }
 

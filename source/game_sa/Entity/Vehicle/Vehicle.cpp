@@ -437,6 +437,9 @@ CVehicle::~CVehicle() {
 }
 
 void* CVehicle::operator new(size_t size) {
+#ifdef NOTSA_PORTABLE
+    GetVehiclePool()->NotsaCheckAllocSize(size, "vehicle");
+#endif
     return GetVehiclePool()->New();
 }
 
@@ -445,6 +448,9 @@ void CVehicle::operator delete(void* data) {
 }
 
 void* CVehicle::operator new(size_t size, int32 poolRef) {
+#ifdef NOTSA_PORTABLE
+    GetVehiclePool()->NotsaCheckAllocSize(size, "vehicle");
+#endif
     return GetVehiclePool()->NewAt(poolRef);
 }
 

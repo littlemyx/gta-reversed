@@ -391,6 +391,9 @@ CPed::~CPed() {
 * @addr 0x5E4720
 */
 void* CPed::operator new(size_t size) {
+#ifdef NOTSA_PORTABLE
+    GetPedPool()->NotsaCheckAllocSize(size, "ped");
+#endif
     return GetPedPool()->New();
 }
 
@@ -398,6 +401,9 @@ void* CPed::operator new(size_t size) {
 * @addr 0x5E4730
 */
 void* CPed::operator new(size_t size, int32 poolRef) {
+#ifdef NOTSA_PORTABLE
+    GetPedPool()->NotsaCheckAllocSize(size, "ped");
+#endif
     return GetPedPool()->NewAt(poolRef);
 }
 

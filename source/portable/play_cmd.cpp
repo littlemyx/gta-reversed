@@ -101,6 +101,15 @@ bool PlayCmd(const char* name, const std::string& args) {
     if (!std::strcmp(name, "gfxq")) { // R-11: cmd:gfxq  logs what GraphicsHighQuality() (stencil shadows, pole shadows, vehicle blobs) is derived from
         auto* camRas = RwCameraGetRaster(Scene.m_pRwCamera);
         NOTSA_LOG_INFO("[play] gfxq: GraphicsHighQuality={} fxQuality={} camera raster depth={} type={} format=0x{:x}", (int)GraphicsHighQuality(), (int)g_fx.GetFxQuality(), (int)RwRasterGetDepth(camRas), (int)camRas->type, (unsigned)camRas->format);
+        { // INT1: clip / fog setup of the camera and the timecycle (interior frames came out black: fog colour on everything beyond the fog start?)
+            RwCamera* cam = Scene.m_pRwCamera;
+            void* fogOn = nullptr; void* fogCol = nullptr;
+            RwRenderStateGet(rwRENDERSTATEFOGENABLE, &fogOn);
+            RwRenderStateGet(rwRENDERSTATEFOGCOLOR, &fogCol);
+            NOTSA_LOG_INFO("[play] gfxq: camera near {:.3f} far {:.1f} fogPlane {:.1f}; timecycle FarClip {:.1f} FogStart {:.1f}; render state fog enable {} colour 0x{:08x}; currArea {}", cam->nearPlane, cam->farPlane, cam->fogPlane, CTimeCycle::GetFarClip(), CTimeCycle::GetFogStart(), (int)(uintptr_t)fogOn, (unsigned)(uintptr_t)fogCol, (int)CGame::currArea);
+            const auto& cc = CTimeCycle::m_CurrentColours;
+            NOTSA_LOG_INFO("[play] gfxq: timecycle ambient ({:.3f},{:.3f},{:.3f}) obj ({:.3f},{:.3f},{:.3f}) skyTop ({},{},{}) skyBot ({},{},{})", cc.m_fAmbientRed, cc.m_fAmbientGreen, cc.m_fAmbientBlue, cc.m_fAmbientRed_Obj, cc.m_fAmbientGreen_Obj, cc.m_fAmbientBlue_Obj, (int)cc.m_nSkyTopRed, (int)cc.m_nSkyTopGreen, (int)cc.m_nSkyTopBlue, (int)cc.m_nSkyBottomRed, (int)cc.m_nSkyBottomGreen, (int)cc.m_nSkyBottomBlue);
+        }
         int nStencil = 0;
         for (auto* o = CStencilShadows::pFirstActiveStencilShadowObject; o && nStencil < 100; o = o->m_pNext) { nStencil++; }
         NOTSA_LOG_INFO("[play] gfxq: active stencil shadow objects {}", nStencil);

@@ -886,6 +886,58 @@ void RunLighting() {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------
+// INT1: the depth-write mask must follow ZWRITEENABLE after a camera clear. librw's clearCamera calls glDepthMask directly (TRUE for the clear, then rwStateCache.zwrite) without telling
+// the GL state cache, so "zwrite 0 flushed, zwrite 1 pending, clear, zwrite 0" left the real mask ON. SA's CMirrors::RenderMirrorBuffer (ZTEST 0 + ZWRITE 0 full-screen Im2D quad at the
+// near plane) then wrote depth 0 over the screen and every interior surface drawn after it failed the depth test (interiors with a mirror came out black, R11-1).
+// ---------------------------------------------------------------------------------------------------------------------------------------------
+void Im2DRect(RwRGBA c, float z) {
+    RwIm2DVertex v[4];
+    const float xs[4] = { 0.0f, 0.0f, (float)g_pw, (float)g_pw }, ys[4] = { 0.0f, (float)g_ph, (float)g_ph, 0.0f };
+    for (int i = 0; i < 4; ++i) {
+        RwIm2DVertexSetScreenX(&v[i], xs[i]);
+        RwIm2DVertexSetScreenY(&v[i], ys[i]);
+        RwIm2DVertexSetScreenZ(&v[i], z);
+        RwIm2DVertexSetRecipCameraZ(&v[i], 1.0f / RwCameraGetNearClipPlane(g_cam));
+        RwIm2DVertexSetU(&v[i], 0.0f, 1.0f);
+        RwIm2DVertexSetV(&v[i], 0.0f, 1.0f);
+        RwIm2DVertexSetIntRGBA(&v[i], c.red, c.green, c.blue, c.alpha);
+    }
+    RS(rwRENDERSTATETEXTURERASTER, 0);
+    RwIm2DRenderPrimitive(rwPRIMTYPETRIFAN, v, 4);
+}
+
+void RunDepthMask() {
+    std::printf("---- INT1: depth write mask after a camera clear (mirror quad, R11-1) ----\n");
+    char what[200];
+    const RwRGBA bg{ 40, 60, 90, 255 };
+    SetLights(0.0f, 0.0f);
+    Quad q = MakeQuad(rpGEOMETRYPRELIT, 4.0f, nullptr, { 255, 255, 255, 255 }, { 0, 200, 0, 255 });
+    for (int variant = 0; variant < 2; ++variant) {
+        // variant 0: the sequence of the bug; variant 1: no pending ZWRITE 1 before the clear (control, must always pass)
+        RwCameraBeginUpdate(g_cam);
+        RwCameraClear(g_cam, const_cast<RwRGBA*>(&bg), rwCAMERACLEARIMAGE | rwCAMERACLEARZ);
+        RS(rwRENDERSTATEZTESTENABLE, 0);
+        RS(rwRENDERSTATEZWRITEENABLE, 0);
+        Im2DRect({ 10, 10, 10, 255 }, RwIm2DGetNearScreenZ()); // flush: the cache now believes the GL mask is 0
+        if (variant == 0) RS(rwRENDERSTATEZWRITEENABLE, 1); // pending, no draw before the clear
+        RwCameraClear(g_cam, const_cast<RwRGBA*>(&bg), rwCAMERACLEARIMAGE | rwCAMERACLEARZ);
+        RS(rwRENDERSTATEZTESTENABLE, 0);
+        RS(rwRENDERSTATEZWRITEENABLE, 0);
+        Im2DRect({ 200, 0, 0, 255 }, RwIm2DGetNearScreenZ()); // RenderMirrorBuffer: ZTEST 0, ZWRITE 0, near plane
+        RS(rwRENDERSTATEZTESTENABLE, 1);
+        RS(rwRENDERSTATEZWRITEENABLE, 1);
+        RS(rwRENDERSTATECULLMODE, rwCULLMODECULLBACK);
+        RpAtomicRender(q.atomic); // the world, drawn over the mirror image
+        End();
+        const Px p = At(g_pw / 2, g_ph / 2);
+        std::snprintf(what, sizeof(what), "ZWRITE 0 full-screen near quad does not hide the geometry drawn after it (%s)", variant == 0 ? "pending ZWRITE 1, clear, ZWRITE 0" : "control");
+        Check(Near(p, 0, 200, 0), what, Str(p).c_str());
+    }
+    FreeQuad(q);
+    Check(NoGlError("INT1 depth mask"), "glGetError clean (INT1 depth mask)");
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------
 // ---------------------------------------------------------------------------------------------------------------------------------------------
 // part B: real data
 struct ImgEntry { long offset, size; };
@@ -1164,6 +1216,100 @@ void RunReal(const std::string& gta, const std::string& dumpDir) {
         RpClumpDestroy(clump);
         if (dict) RwTexDictionaryDestroy(dict);
     }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------
+// INT1: interior shells (gta_int.img) from the INSIDE with the lighting the game uses in an interior (ambient only, no directional light):
+// the shell must not come out black. Prints geometry flags, materials, prelit statistics, and renders four views from the bbox centre.
+// ---------------------------------------------------------------------------------------------------------------------------------------------
+void RunInterior(const std::string& gta, const std::string& dumpDir) {
+    std::printf("---- INT1: interior shells from gta_int.img, camera inside, interior lighting ----\n");
+    const std::string models = gta + "/models";
+    ImgDir intDir;
+    if (!LoadDir(models + "/gta_int.img", intDir)) { std::printf("  PIPE note: no gta_int.img\n"); return; }
+    struct Shell { const char* dff; const char* txd; };
+    const Shell list[] = { { "carlscrap.dff", "carlslounge.txd" }, { "int_la1.dff", "int_la1.txd" } };
+    char what[300];
+    for (const Shell& sh : list) {
+        auto it = intDir.find(sh.dff);
+        if (it == intDir.end()) { std::printf("  %s: not in gta_int.img (skipped)\n", sh.dff); continue; }
+        std::vector<uint8_t> dffBuf, txdBuf;
+        if (!ReadEntry(models + "/gta_int.img", it->second, dffBuf)) { Check(false, sh.dff, "read failed"); continue; }
+        RwTexDictionary* dict = nullptr;
+        auto jt = intDir.find(sh.txd);
+        if (jt != intDir.end() && ReadEntry(models + "/gta_int.img", jt->second, txdBuf)) dict = LoadDict(txdBuf);
+        std::printf("  %s: txd %s %s\n", sh.dff, sh.txd, dict ? "loaded" : "NOT FOUND");
+        RwTexDictionary* prev = RwTexDictionaryGetCurrent();
+        if (dict) RwTexDictionarySetCurrent(dict);
+        RpClump* clump = LoadClump(dffBuf);
+        RwTexDictionarySetCurrent(prev);
+        if (!clump) { Check(false, sh.dff, "clump read failed"); continue; }
+        // geometry dump
+        RpClumpForAllAtomics(clump, [](RpAtomic* a, void*) -> RpAtomic* {
+            rw::Geometry* g = a->geometry;
+            double sr = 0, sg = 0, sb = 0, sa = 0; int nz = 0;
+            if (g->colors) {
+                for (int i = 0; i < g->numVertices; ++i) { sr += g->colors[i].red; sg += g->colors[i].green; sb += g->colors[i].blue; sa += g->colors[i].alpha; nz += (g->colors[i].red | g->colors[i].green | g->colors[i].blue) != 0; }
+                const double n = std::max(1, g->numVertices);
+                std::printf("    atomic: flags 0x%x verts %d tris %d prelit mean (%.0f,%.0f,%.0f,a%.0f) nonblack %d, atomic pipe %p, mats %d\n", (unsigned)g->flags, g->numVertices, g->numTriangles, sr / n, sg / n, sb / n, sa / n, nz, (void*)a->pipeline, g->matList.numMaterials);
+            } else {
+                std::printf("    atomic: flags 0x%x verts %d tris %d NO prelit, atomic pipe %p, mats %d\n", (unsigned)g->flags, g->numVertices, g->numTriangles, (void*)a->pipeline, g->matList.numMaterials);
+            }
+            for (int m = 0; m < g->matList.numMaterials; ++m) {
+                rw::Material* mt = g->matList.materials[m];
+                std::printf("      mat %d: col (%d,%d,%d,%d) tex %s ka %.2f kd %.2f ks %.2f\n", m, mt->color.red, mt->color.green, mt->color.blue, mt->color.alpha, mt->texture ? mt->texture->name : "(none)", mt->surfaceProps.ambient, mt->surfaceProps.diffuse, mt->surfaceProps.specular);
+            }
+            return a;
+        }, nullptr);
+        // bbox centre
+        RwV3d bb[2] = { { 1e30f, 1e30f, 1e30f }, { -1e30f, -1e30f, -1e30f } };
+        RpClumpForAllAtomics(clump, [](RpAtomic* a, void* d) -> RpAtomic* {
+            rw::Geometry* g = a->geometry; auto* b = static_cast<RwV3d*>(d);
+            const RwV3d* v = g->morphTargets[0].vertices;
+            for (int i = 0; v && i < g->numVertices; ++i) {
+                b[0] = { std::min(b[0].x, v[i].x), std::min(b[0].y, v[i].y), std::min(b[0].z, v[i].z) };
+                b[1] = { std::max(b[1].x, v[i].x), std::max(b[1].y, v[i].y), std::max(b[1].z, v[i].z) };
+            }
+            return a;
+        }, bb);
+        const RwV3d c{ (bb[0].x + bb[1].x) * 0.5f, (bb[0].y + bb[1].y) * 0.5f, bb[0].z + 1.2f };
+        std::printf("    bbox (%.1f %.1f %.1f)-(%.1f %.1f %.1f), camera at (%.1f %.1f %.1f)\n", bb[0].x, bb[0].y, bb[0].z, bb[1].x, bb[1].y, bb[1].z, c.x, c.y, c.z);
+        const int nviews = 4;
+        double bestLit = 0;
+        for (int v = 0; v < nviews; ++v) {
+            RwFrame* cf = RpClumpGetFrame(clump);
+            const RwV3d zaxis{ 0, 0, 1 }, xaxis{ 1, 0, 0 };
+            const RwV3d toOrigin{ -c.x, -c.y, -c.z };
+            RwFrameTranslate(cf, &toOrigin, rwCOMBINEREPLACE);
+            RwFrameRotate(cf, &zaxis, 90.0f * v, rwCOMBINEPOSTCONCAT);
+            RwFrameRotate(cf, &xaxis, -90.0f, rwCOMBINEPOSTCONCAT);
+            RwFrameUpdateObjects(cf);
+            RwCameraSetNearClipPlane(g_cam, 0.1f);
+            RwCameraSetFarClipPlane(g_cam, 200.0f);
+            SetLights(std::getenv("INT1_AMB") ? (float)std::atof(std::getenv("INT1_AMB")) : 0.5f, 0.0f); // interior: ambient only
+            Begin({ 40, 60, 90, 255 });
+            RS(rwRENDERSTATEALPHATESTFUNCTION, rwALPHATESTFUNCTIONGREATER);
+            RS(rwRENDERSTATEALPHATESTFUNCTIONREF, 0);
+            RpClumpForAllAtomics(clump, [](RpAtomic* a, void*) -> RpAtomic* { RpAtomicRender(a); return a; }, nullptr);
+            End();
+            size_t covered = 0, lit = 0; double sr = 0, sg = 0, sb = 0;
+            for (size_t i = 0; i < (size_t)g_pw * g_ph; ++i) {
+                const uint8_t* p = &g_frame[i * 4];
+                if (std::abs(p[0] - 40) <= 1 && std::abs(p[1] - 60) <= 1 && std::abs(p[2] - 90) <= 1) continue;
+                covered++; sr += p[0]; sg += p[1]; sb += p[2];
+                if (p[0] + p[1] + p[2] > 60) lit++;
+            }
+            const double tot = (double)g_pw * g_ph;
+            std::printf("    view %d: coverage %.1f%% lit(>60) %.1f%% mean (%.0f,%.0f,%.0f)\n", v, 100.0 * covered / tot, 100.0 * lit / tot, covered ? sr / covered : 0, covered ? sg / covered : 0, covered ? sb / covered : 0);
+            bestLit = std::max(bestLit, (double)lit / tot);
+            DumpPpm(dumpDir + "/" + std::string(sh.dff) + "_inside" + std::to_string(v) + ".ppm");
+        }
+        std::snprintf(what, sizeof(what), "%s: interior shell visible from inside (best view lit %.1f%% of the frame)", sh.dff, bestLit * 100.0);
+        Check(bestLit > 0.25, what);
+        RpClumpDestroy(clump);
+        if (dict) RwTexDictionaryDestroy(dict);
+    }
+    Check(NoGlError("INT1"), "glGetError clean (INT1)");
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------
@@ -1729,12 +1875,15 @@ int main() {
 
     std::string mk = "mkdir -p '" + dumpDir + "'";
     (void)std::system(mk.c_str());
+    if (std::getenv("INT1_ONLY")) { RunDepthMask(); if (haveData) RunInterior(gta, dumpDir); std::printf("PIPE RESULT %s (INT1_ONLY)\n", g_fail ? "FAIL" : "OK"); return g_fail ? 1 : 0; }
     RunSynthetic();
     RunSaEnv();
     RunLighting();
+    RunDepthMask();
     RunSkinSynthetic();
     if (haveData) {
         RunReal(gta, dumpDir);
+        RunInterior(gta, dumpDir);
         RunSkinReal(gta, dumpDir);
         RunSkinAudit(gta);
     } else {

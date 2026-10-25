@@ -790,6 +790,7 @@ void CEventHandler::ComputeChatPartnerResponse(CEventChatPartner* e, CTask* tact
         if (!e->m_partner || m_Ped->GetTaskManager().Has<CTaskComplexPartnerChat>(false)) {
             return nullptr;
         }
+        (void)CGeneral::GetRandomNumberInRange(3, 7); // exe 0x4B9934..0x4B993D: GetRandomNumberInRange(3, 7) whose result is discarded (never reaches the task ctor) but the draw advances the RNG
         return new CTaskComplexPartnerChat{
             "EventChatPartnerResponse",
             e->m_partner,

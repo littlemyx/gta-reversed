@@ -43,6 +43,10 @@ kill_ours() { [ -n "${WPID:-}" ] || return 0; local wp; wp=$(cat /proc/$WPID/win
 cleanup() { kill_ours; if [ "$HELD" = 1 ]; then "$LOCK" --release $$; HELD=0; fi; }
 trap cleanup EXIT
 "$LOCK" --acquire "REPLAY-DIFF port $TAG" $$; HELD=1
+# pin bit 128 (audio RNG partition): audio callers of CGeneral::GetRandomNumber are recognised by return address, from the linker map next to the exe (RD-AB-8: without it every audio
+# rand() - e.g. the footstep sounds, first at traced frame 42 - drew from the gameplay stream while the original's partition put it in the audio stream = a harness A-B divergence)
+if [ -z "${NOTSA_LOCKSTEP_AUDIO_RVA:-}" ] && [ -f "${EXE%.exe}.map" ]; then NOTSA_LOCKSTEP_AUDIO_RVA="$("$PY" -I "$HERE/audio_rva.py" "$(cd "$HERE/../../.." && pwd)" "${EXE%.exe}.map")"; export NOTSA_LOCKSTEP_AUDIO_RVA; fi
+[ "$((PIN & 128))" != 0 ] && [ -z "${NOTSA_LOCKSTEP_AUDIO_RVA:-}" ] && echo "rd_port_run: WARNING pin 128 without NOTSA_LOCKSTEP_AUDIO_RVA (no <exe>.map next to the exe): audio rand() calls from CGeneral stay in the gameplay stream"
 cd "$DATA" || exit 2
 rm -f gta_reversed.exe standalone*.log; rm -rf logs; cp "$EXE" gta_reversed.exe
 (

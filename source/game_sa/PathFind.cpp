@@ -318,7 +318,7 @@ bool CPathFind::GeneratePedCreationCoors(
         const x87d nodeX = (x87d)static_cast<float>(node.m_vPos.x);
         const x87d nodeY = (x87d)static_cast<float>(node.m_vPos.y);
         const x87d distSqExt = (nodeY - (x87d)y) * (nodeY - (x87d)y) + (nodeX - (x87d)x) * (nodeX - (x87d)x);
-        const float  distSq    = (float)distSqExt;
+        float        distSlot  = (float)distSqExt; // the exe keeps this in ONE stack slot [esp+0x20] (0x44E8AD), see `dist` below
         if (!(distSqExt < (double)maxRangeSq)) {
             continue;
         }
@@ -343,7 +343,10 @@ bool CPathFind::GeneratePedCreationCoors(
                 continue;
             }
 
-            const float dist = (float)std::sqrt((x87d)distSq);
+            // 0x44E97E: `fld [esp+0x20]; fsqrt; fstp [esp+0x24]` stores the root back into the SAME slot that held distSq, so every link after the first
+            // that gets this far sees sqrt(previous dist) (e.g. 65 -> 8.06 -> 2.84) and passes the `dist < maxDist1` test (exe bug, kept).
+            const float dist = (float)std::sqrt((x87d)distSlot);
+            distSlot = dist;
 
             // x87: `(ly - y)` is kept in extended precision for one factor and rounded to float for the other
             const x87d lx = (x87d)static_cast<float>(linked.m_vPos.x);

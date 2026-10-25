@@ -9,10 +9,12 @@ for f in glob.glob(os.path.join(repo, 'source', 'game_sa', 'Audio', '**', '*.cpp
 syms = []
 for ln in open(mp, errors='replace'):
     t = ln.split()
-    if len(t) >= 5 and t[0].startswith('0001:') and t[-2] == 'f':   # 'f' = function, 'f i' (inline comdats shared by many objects) are skipped
+    if len(t) >= 5 and t[0].startswith('0001:') and t[-2] in ('f', 'i') and t[-3 if t[-2] == 'i' else -2] == 'f':   # 'f' = function; 'f i' = inline comdat
         try:
             va = int(t[2], 16)
-            if va >= 0x401000: syms.append((va - 0x400000, t[-1]))
+            # RD-AB-8: inline comdats (shared helpers such as CGeneral::GetRandomNumberInRange<int>, first instantiated in whatever object came first) must END a range and never belong to one,
+            # otherwise a general helper placed behind an audio object's last function is taken for audio code; only the audio-specific ones (CAE... templates) count as audio
+            if va >= 0x401000: syms.append((va - 0x400000, t[-1] if (t[-2] == 'f' or 'CAE' in t[1]) else '-inline-'))
         except ValueError: pass
 syms.sort()
 rng = []

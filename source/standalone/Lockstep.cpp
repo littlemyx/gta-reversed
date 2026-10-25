@@ -96,6 +96,15 @@ void Tick() {
     if (const char* dp = std::getenv("NOTSA_LOCKSTEP_DUMPSCR"); dp && nf <= 4) { // raw script space at traced frames 1..4 (A-B hash hunt; counterpart RD_DUMPSCR in rd_orig.c)
         if (FILE* df = std::fopen((std::string{dp} + "." + std::to_string(nf)).c_str(), "wb")) { std::fwrite(CTheScripts::ScriptSpace.data(), 1, CTheScripts::ScriptSpace.size(), df); std::fclose(df); }
     }
+    if (const char* dp = std::getenv("NOTSA_LOCKSTEP_DUMPPN"); dp && nf == 10) { // path nodes of every loaded area at traced frame 10 (A-B population hunt; counterpart RD_DUMPPN in rd_orig.c)
+        if (FILE* df = std::fopen((std::string{dp} + "." + std::to_string(nf)).c_str(), "wb")) {
+            for (uint32_t a = 0; a < 64; a++) if (ThePaths.m_pPathNodes[a]) {
+                const uint32_t hd[3] = { a, (uint32_t)ThePaths.m_anNumVehicleNodes[a], (uint32_t)ThePaths.m_anNumPedNodes[a] };
+                std::fwrite(hd, 4, 3, df); std::fwrite(ThePaths.m_pPathNodes[a], 1, (hd[1] + hd[2]) * 28, df);
+            }
+            std::fclose(df);
+        }
+    }
     if (const char* dp = std::getenv("NOTSA_LOCKSTEP_DUMPSTR"); dp && nf <= 6) { // per model id (load state, flags) of CStreamingInfo at traced frames 1..6 (A-B streaming hunt; counterpart RD_DUMPSTR in rd_orig.c)
         if (FILE* df = std::fopen((std::string{dp} + "." + std::to_string(nf)).c_str(), "wb")) {
             std::vector<unsigned char> tab;
@@ -112,12 +121,15 @@ void Tick() {
         if (auto* pl = GetDummyPool()) for (auto& e : pl->GetAllValid()) rw_d += e.GetRwObject() != nullptr;
         if (auto* pl = GetObjectPool()) for (auto& e : pl->GetAllValid()) rw_o += e.GetRwObject() != nullptr;
         for (int a = 0; a < 64; a++) if (ThePaths.m_pPathNodes[a]) (a < 32 ? pn_lo : pn_hi) |= 1u << (a & 31);
-        std::fprintf(c.f, "D %u run=%d cd=%d cars=%08x,%08x,%08x,%08x perc=%08x,%08x,%08x,%08x zt=%d tw=%d ti=%d pk=%d,%d,%d bc=%d,%d,%d pn=%08x%08x rw=%d,%d,%d\n", (unsigned)CTimer::m_FrameCounter, (int)CCutsceneMgr::ms_running, (int)CCarCtrl::CountDownToCarsAtStart,
+        std::fprintf(c.f, "D %u run=%d cd=%d cars=%08x,%08x,%08x,%08x perc=%08x,%08x,%08x,%08x zt=%d tw=%d ti=%d pk=%d,%d,%d bc=%d,%d,%d pn=%08x%08x rw=%d,%d,%d gd=%08x np=%08x,%08x,%08x,%08x pcnt=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", (unsigned)CTimer::m_FrameCounter, (int)CCutsceneMgr::ms_running, (int)CCarCtrl::CountDownToCarsAtStart,
                      fb(CPopCycle::m_NumOther_Cars), fb(CPopCycle::m_NumCops_Cars), fb(CPopCycle::m_NumGangs_Cars), fb(CPopCycle::m_NumDealers_Cars),
                      fb(CPopCycle::m_fPercOther), fb(CPopCycle::m_fPercCops), fb(CPopCycle::m_fPercGangs), fb(CPopCycle::m_fPercDealers),
                      (int)CPopCycle::m_nCurrentZoneType, (int)CPopCycle::m_nCurrentTimeOfWeek, (int)CPopCycle::m_nCurrentTimeIndex,
                      (int)CPickups::aPickUps[0].m_nReferenceIndex, (int)CPickups::aPickUps[3].m_nReferenceIndex, (int)CPickups::aPickUps[0x23].m_nReferenceIndex,
-                     (int)CRadar::ms_RadarTrace[0].m_nCounter, (int)CRadar::ms_RadarTrace[3].m_nCounter, (int)CRadar::ms_RadarTrace[0x23].m_nCounter, pn_hi, pn_lo, rw_b, rw_d, rw_o);
+                     (int)CRadar::ms_RadarTrace[0].m_nCounter, (int)CRadar::ms_RadarTrace[3].m_nCounter, (int)CRadar::ms_RadarTrace[0x23].m_nCounter, pn_hi, pn_lo, rw_b, rw_d, rw_o, fb(TheCamera.m_fGenerationDistMultiplier), fb(CPopCycle::m_NumOther_Peds), fb(CPopCycle::m_NumCops_Peds), fb(CPopCycle::m_NumGangs_Peds), fb(CPopCycle::m_NumDealers_Peds),
+                     (unsigned)CPopulation::ms_nTotalMissionPeds, (unsigned)CPopulation::ms_nTotalPeds, (unsigned)CPopulation::ms_nTotalGangPeds, (unsigned)CPopulation::ms_nTotalCivPeds, (unsigned)CPopulation::ms_nTotalCarPassengerPeds, (unsigned)CPopulation::ms_nNumDealers,
+                     (unsigned)CPopulation::ms_nNumGang[0], (unsigned)CPopulation::ms_nNumGang[1], (unsigned)CPopulation::ms_nNumGang[2], (unsigned)CPopulation::ms_nNumGang[3], (unsigned)CPopulation::ms_nNumGang[4], (unsigned)CPopulation::ms_nNumGang[5], (unsigned)CPopulation::ms_nNumGang[6], (unsigned)CPopulation::ms_nNumGang[7], (unsigned)CPopulation::ms_nNumGang[8], (unsigned)CPopulation::ms_nNumGang[9],
+                     (unsigned)CPopulation::ms_nNumEmergency, (unsigned)CPopulation::ms_nNumCop, (unsigned)CPopulation::ms_nNumCivFemale, (unsigned)CPopulation::ms_nNumCivMale);
     }
     std::fprintf(c.f, "F %u %u %08x %u %08x %08x %08x %u %u %u %08x\n", (unsigned)CTimer::m_FrameCounter, (unsigned)CTimer::m_snTimeInMilliseconds, (unsigned)g_RandSeed, (unsigned)g_RandCalls,
                  px, py, pz, hp, np, nv, sh);

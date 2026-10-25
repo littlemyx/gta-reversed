@@ -1556,6 +1556,7 @@ static void TestW3TaskFuncs() {
     }, 60);
     Run("CTaskSimpleFight::Destructor 0x61C530", [&](Rng& r, std::string& d) {
         
+        w3t::g_tpost = [](Rng&) { static uint32_t gr_[120][5]; for (uint32_t k = 0; k < 120; ++k) { gr_[k][0] = 0xB5D4A0u + 32u * k; gr_[k][1] = gr_[k][2] = gr_[k][3] = gr_[k][4] = 0; } volatile uint32_t* s_ = reinterpret_cast<volatile uint32_t*>(0xB4EA28); s_[0] = 120; s_[2] = 120; s_[3] = (uint32_t)(uintptr_t)gr_; uint32_t* grp_ = reinterpret_cast<uint32_t*>(w3t::g_tk + 0xC); if (*grp_ != 0x21) *grp_ %= 120; };
         return W3TaskCase(r, d, sizeof(CTaskSimpleFight), { { W2Off_CTaskSimpleFight_m_bIsFinished() + 0, "b"[0] }, { W2Off_CTaskSimpleFight_m_bIsInControl() + 0, "b"[0] }, { W2Off_CTaskSimpleFight_m_bAnimsReferenced() + 0, "b"[0] }, { W2Off_CTaskSimpleFight_m_pTargetEntity() + 0, "e"[0] }, { W2Off_CTaskSimpleFight_m_pAnim() + 0, "n"[0] }, { W2Off_CTaskSimpleFight_m_pIdleAnim() + 0, "n"[0] }, { W2Off_CTaskSimpleFight_m_nCurrentMove() + 0, "u"[0], W2Off_CTaskSimpleFight_m_nCurrentMove_sz() }, { W2Off_CTask_m_Parent() + 0, "n"[0] } }, [&](void* p) -> uint64_t { (void)p; return ((static_cast<CTaskSimpleFight*>(p)->*W2Get(W2F36_T{}))(), uint64_t(0)); }, [&](void* p) -> uint64_t { (void)p; return (oracle::Fn<void __fastcall(void*, int)>(0x61C530)(p, 0), uint64_t(0)); }, true);
     }, 60);
     Run("CTaskSimpleGiveCPR::FinishGiveCPRAnimCB 0x658990", [&](Rng& r, std::string& d) {

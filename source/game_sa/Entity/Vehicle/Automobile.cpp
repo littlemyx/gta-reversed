@@ -2610,15 +2610,13 @@ void CAutomobile::SetupSuspensionLines() {
     }
 
     // 0x6A681C
-    // This was probably inlined? Not sure..
+    // 0x6A681C..0x6A68B4 (exe asm): the bounding box is lowered to the first suspension line end, then the sphere radius is raised to
+    // max(radius, |min|, |max|) - the radius part is NOT inside the if. Without the lowered min.z, GetDistanceFromCentreOfMassToBaseOfModel() (and every
+    // spawn height of a car) is too small (REPLAY-DIFF A-B, frame 30: Greenwood dist 0.5 instead of 0.9).
     if (cd.m_pLines[0].m_vecEnd.z < cm.m_boundBox.m_vecMin.z) {
-        // V570 The 'wcd.m_pLines[0].m_vecEnd.z' variable is assigned to itself.
-        // todo: figure out what they want
-        // wcd.m_pLines[0].m_vecEnd.z = wcd.m_pLines[0].m_vecEnd.z; // Adjust bounding box
-
-        // Adjust bounding sphere radius - Originally outside this `if`, but that's pointless - This was most likely inlined.
-        cm.m_boundSphere.m_fRadius = std::max({ cm.m_boundSphere.m_fRadius, cm.m_boundBox.m_vecMin.Magnitude(), cm.m_boundBox.m_vecMax.Magnitude() });
+        cm.m_boundBox.m_vecMin.z = cd.m_pLines[0].m_vecEnd.z;
     }
+    cm.m_boundSphere.m_fRadius = std::max({ cm.m_boundSphere.m_fRadius, cm.m_boundBox.m_vecMin.Magnitude(), cm.m_boundBox.m_vecMax.Magnitude() });
 
     // 0x6A68C1
     // Adjust sphere sizes for rcbandit

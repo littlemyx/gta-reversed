@@ -165,7 +165,10 @@ void CPedGroupIntelligence::Process() {
     }
 
     bool hasMemberListChanged{};
-    for (auto&& [i, mem] : rngv::enumerate(m_pPedGroup->GetMembership().GetMembers())) {
+    // exe 0x5FC4B1..0x5FC604: compares the 8 task-pair slots with the 8 member SLOTS (7 followers + the leader in slot 7), nulls included (a vacated slot is cleared).
+    // `GetMembers()` skips null slots, so enumerating it numbered the present members 0,1,2.. and put the leader (slot 7) into follower slot 0 => the Random allocator gave every ped a follower task
+    for (int32 i = 0; i < (int32)m_PedTaskPairs.size(); i++) {
+        CPed* const mem = m_pPedGroup->GetMembership().GetMember(i);
         if (m_PedTaskPairs[i].Ped == mem) {
             continue;
         }

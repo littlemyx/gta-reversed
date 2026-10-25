@@ -189,3 +189,9 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-25	MAC-STAB2	v4	pool audit + matrix list	-	-	-	TaskAllocator slot fixed; root cause narrowed
 2026-10-25	MAC-STAB3	v4	matrix list root cause	-	-	-	fixed: ClearSpaceForMissionEntity fidelity bug
 2026-10-25	MAC-STAB4	v4	fire audio UAF	-	-	-	fixed; ASan clean
+2026-10-25	GATE-FAILS	v5	gate failures (small)	158190	76	25	rtquat X87W missing in rw_math_stream_test (macro guard in rwmath_exact.h); tasks row = ASLR-dependent fixture flake in Fight::Destructor (valid group table now)
+2026-10-25	RD-AB-4	v5	A-B fixes	272052	117	96	orig-port prefix 10 -> 19: GeneratePedCreationCoors exe reuses the distSq/dist stack slot (sqrt of previous link, 0x44E97E) - port now mirrors it; TriggerIK mission gate 0x63C500; self-identity 1500/1500 both sides; frame 19 open (car creation walks)
+2026-10-25	RD-AB-5	v5	A-B fixes (over budget)	322640	138	85	orig-port prefix 19 -> 20: GetObjectForPedToHold 33/33/34 split; PedGroupIntelligence::Process slot sync (leader landed in follower slot 0, no GangLeader task ever ran); frame 20 open (BeInGroup replace); 322k tokens > 250k cap
+2026-10-25	RD-AB-6	v5	A-B fixes	259167	130	67	orig-port prefix 20 -> 30: SeekEntity::ControlSubTask returned null for other sub-tasks (follower chain dropped), ChatPartner discarded rand(3,7); slot-index fixes in CPedGroup::Teleport and LeaderExitedCar delay; frame 30 open
+2026-10-25	RD-AB-7	v5	A-B fix	235884	133	55	orig-port prefix 30 -> 42 (3 reps): SetupSuspensionLines skipped the shared col bbox min.z store (cars spawned 0.4 m low); frame 42 open (ChooseModel gang branch)
+2026-10-25	RD-AB-8	v5	A-B harness + trailer	220737	90	58	prefix 42 -> 73: frame 42 was a harness gap (port audio rand partition never armed; RVA from .map now); CTrailer::SetupSuspensionLines 3 deviations fixed, other classes match; frame 73 open, lead gang index 1 vs 8 from frame 14

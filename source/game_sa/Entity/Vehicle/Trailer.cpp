@@ -115,24 +115,30 @@ void CTrailer::SetupSuspensionLines() {
         supportLines[i].m_vecEnd = endPos;
     }
 
-    const float supportLegY = fabs(supportLines[0].m_vecStart.y);
-    const float avgWheelY = (fabs(colData->m_pLines[0].m_vecStart.y) + fabs(colData->m_pLines[1].m_vecStart.y)) * 0.5f;
-    const float weightRatio = supportLegY / (avgWheelY + supportLegY);
+    // 0x6CF4BB..0x6CF547: x87, the ratio and every intermediate stay in extended precision (nothing is spilled until the stores)
+    const x87d supportLegY = std::fabs((x87d)supportLines[0].m_vecStart.y);
+    // BUG (as the exe): |y0 + y1| (fld l1.y; fadd l0.y; fabs), not |y0| + |y1|
+    const x87d avgWheelY   = std::fabs((x87d)colData->m_pLines[1].m_vecStart.y + colData->m_pLines[0].m_vecStart.y) * (x87d)0.5f;
+    const x87d weightRatio = supportLegY / (avgWheelY + supportLegY);
 
-    const float suspensionForceFactor = m_pHandlingData->m_fSuspensionForceLevel * 4.0f;
-    const float heightAboveRoad = m_aSuspensionSpringLength[0] * (1.0f - weightRatio / suspensionForceFactor)
-                                + mi->m_fWheelSizeFront / 2 - colData->m_pLines[0].m_vecStart.z;
+    const x87d suspensionForceFactor = (x87d)m_pHandlingData->m_fSuspensionForceLevel * (x87d)4.0f;
+    // 0x6CF4F3..0x6CF505: spring0 * (1 - ratio / factor) + (wheelSize / 2 - line0.start.z), the parenthesis is summed first
+    const float heightAboveRoad = (float)(((x87d)1.0f - weightRatio / suspensionForceFactor) * (x87d)m_aSuspensionSpringLength[0]
+                                          + ((x87d)mi->m_fWheelSizeFront * (x87d)0.5f - (x87d)colData->m_pLines[0].m_vecStart.z));
 
     m_fFrontHeightAboveRoad = heightAboveRoad;
     m_fRearHeightAboveRoad  = heightAboveRoad;
 
-    const float supportForce = CTrailer::m_fTrailerSuspensionForce * 2.0f;
-    const float newEndZ = supportLines[0].m_vecStart.z - (supportLines[0].m_vecStart.z + heightAboveRoad)
-                        / (1.0f - (1.0f - weightRatio) / supportForce);
+    const x87d supportForce = (x87d)CTrailer::m_fTrailerSuspensionForce + (x87d)CTrailer::m_fTrailerSuspensionForce;
+    const float newEndZ = (float)((x87d)supportLines[0].m_vecStart.z - ((x87d)supportLines[0].m_vecStart.z + (x87d)m_fFrontHeightAboveRoad)
+                        / ((x87d)1.0f - ((x87d)1.0f - weightRatio) / supportForce));
 
     for (int i = 0; i < NUM_TRAILER_SUPPORTS; ++i) {
         supportLines[i].m_vecEnd.z = newEndZ;
-        m_wheelPosition[i] = mi->m_fWheelSizeFront / 2 - m_fFrontHeightAboveRoad;
+    }
+    // 0x6CF560..0x6CF57C: the exe loop runs 4 times (all four wheels), not once per support
+    for (int i = 0; i < NUM_TRAILER_WHEELS; ++i) {
+        m_wheelPosition[i] = (float)((x87d)mi->m_fWheelSizeFront * (x87d)0.5f - (x87d)m_fFrontHeightAboveRoad);
     }
 }
 

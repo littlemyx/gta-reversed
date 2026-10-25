@@ -315,8 +315,8 @@ public:
             case TASK_COMPLEX_FOLLOW_NODE_ROUTE:
             case TASK_COMPLEX_GO_TO_POINT_AND_STAND_STILL:
                 break;
-            default:
-                return nullptr;
+            default: // exe 0x665836..0x665D12: any other sub-task type (the arrived-sequence, turn, tired, stand still ..) keeps running - the result stays the initial `m_pSubTask` (eax = [esi+8], spilled to [esp+0x10] at 0x665790). `nullptr` made CTaskManager::ParentsControlChildren drop the sub-task every frame
+                return m_pSubTask;
             }
 
             if (!m_entityToSeek) {

@@ -103,6 +103,21 @@ void CTaskSimpleCarDrive::TriggerIK(CPed* ped) const {
         return;
     }
 
+    // 0x63C50E: only these car missions get as far as IsLooking / the rand() draw; every other mission returns BEFORE any draw
+    // (the port used to draw for all missions: one extra rand per driving ped per frame -> A-B RNG shift at frame 15).
+    switch (m_pVehicle->m_autoPilot.m_nCarMission) {
+    case MISSION_RAMPLAYER_FARAWAY:
+    case MISSION_RAMPLAYER_CLOSE:
+    case MISSION_BLOCKPLAYER_FARAWAY:
+    case MISSION_BLOCKPLAYER_CLOSE:
+    case MISSION_BLOCKPLAYER_HANDBRAKESTOP:
+    case MISSION_RAMCAR_FARAWAY:
+    case MISSION_RAMCAR_CLOSE:
+        break;
+    default:
+        return;
+    }
+
     // Made an early-out of this, as this same code is used in both possible cases.
     if (g_ikChainMan.IsLooking(ped) || CGeneral::GetRandomNumberInRange(0, 100) >= 5) {
         return;

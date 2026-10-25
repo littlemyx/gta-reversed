@@ -29,4 +29,4 @@ D `pcnt` (ms_nNumGang[], exe 0xC0EC3C..) differs from traced frame 14 on: first 
 Consumer audit (Trailer): m_fFrontHeightAboveRoad/m_fRearHeightAboveRoad (0x898/0x89C) feed the trailer suspension processing (CTrailer::ProcessControl/ProcessSuspension readers) and m_wheelPosition[2..3] used to keep the raw wheel z; no trailer is on the intro route, so no trace effect; no oracle row for SetupSuspensionLines.
 
 ## Gate (rules v5)
-Release build ok (this tree incl. Trailer fix). Soak: see hand-back. Oracle targets: none touched. Not run: run_all_tests (orchestrator).
+Release build ok (this tree incl. Trailer fix). Soak (gpu_locked, NOVSYNC+MUTE, 8 min request, full route): RESULT OK, errors 0 (a first 3-min request ended mid-route = FAIL by length only). Oracle targets: none touched. Not run: run_all_tests (orchestrator).

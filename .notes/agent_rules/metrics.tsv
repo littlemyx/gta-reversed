@@ -187,3 +187,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-25	MAC-VIS2	v4	colour vs Win32 under wine	-	-	-	no bug; references captured
 2026-10-25	MAC-STAB1	v4	stability crashes + soak	-	-	-	2 LP64 heap bugs fixed, soak clean
 2026-10-25	MAC-STAB2	v4	pool audit + matrix list	-	-	-	TaskAllocator slot fixed; root cause narrowed
+2026-10-25	MAC-STAB3	v4	matrix list root cause	-	-	-	fixed: ClearSpaceForMissionEntity fidelity bug

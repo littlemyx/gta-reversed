@@ -183,3 +183,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-25	MAC-R11	v4	R-11 PostFX + shadows	-	-	-	done; interiors black open
 2026-10-25	MAC-INT1	v4	interiors black	-	-	-	fixed: librw depth-mask cache
 2026-10-25	MAC-GLSTATE	v4	librw gl3 state cache audit	-	-	-	done: 4 bug classes fixed
+2026-10-25	MAC-VIS1	v4	visual tour + gamma	-	-	-	gamma implemented; colour issues open

@@ -17,7 +17,7 @@
 | S13 | game_sa/Tasks/TaskTypes | 41 | pending | TaskSimpleGetUp.cpp, TaskSimpleGiveCPR.cpp, TaskSimpleGoTo.cpp, TaskSimpleGoToPoint.cpp, TaskSimpleGoToPointFine.cpp, TaskSimpleGunControl.cpp ... |
 | S14 | game_sa/Tasks/TaskTypes | 41 | pending | TaskSimpleJump.cpp, TaskSimpleKillPedWithCar.cpp, TaskSimpleLand.cpp, TaskSimpleOnEscalator.cpp, TaskSimplePickUpBike.cpp, TaskSimplePickUpEntity.cpp ... |
 | S15 | game_sa/Tasks/TaskTypes | 33 | pending | TaskSimpleSlideToCoord.cpp, TaskSimpleStandStill.cpp, TaskSimpleStandUp.cpp, TaskSimpleStealthKill.cpp, TaskSimpleSwim.cpp, TaskSimpleThrowProjectile.cpp ... |
-| S16 | game_sa/Entity/Vehicle | 48 | pending | Automobile.cpp |
+| S16 | game_sa/Entity/Vehicle | 48 | partial 23/48 (18 M, 5 fixed) -> S16b | Automobile.cpp |
 | S17 | game_sa/Entity/Vehicle | 43 | pending | Bike.cpp, Bmx.cpp, Boat.cpp |
 | S18 | game_sa/Entity/Vehicle | 41 | pending | Heli.cpp, MonsterTruck.cpp, Plane.cpp, QuadBike.cpp |
 | S19 | game_sa/Entity/Vehicle | 108 | pending | Trailer.cpp, Train.cpp, Vehicle.cpp |
@@ -43,3 +43,4 @@
 | S26c | rest of S26b | 2 | pending | Physical.cpp |
 | S22d | rest of S22c | 15 | pending | CarCtrl.cpp |
 | S20b | rest of S20 | 21 | pending | Ped.cpp |
+| S16b | rest of S16 | 25 | pending | Automobile.cpp |

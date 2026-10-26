@@ -4590,10 +4590,11 @@ bool CPhysical::ProcessCollisionSectorList(int32 sectorX, int32 sectorY)
     };
     auto& s = CWorld::GetSector(sectorX, sectorY);
     auto& rs = CWorld::GetRepeatSector(sectorX, sectorY);
+    // 0x54BB50..0x54BB83 (jump table 0x54CFE0): buildings, vehicles, OBJECTS, then peds
     if (   ProcessSectorList(s.Buildings)
         || ProcessSectorList(rs.Vehicles)
-        || ProcessSectorList(rs.Peds)
         || ProcessSectorList(rs.Objects)
+        || ProcessSectorList(rs.Peds)
     ) {
         return true;
     }

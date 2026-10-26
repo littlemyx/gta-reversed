@@ -26,6 +26,10 @@ if [ "$BP" = 1 ] || [ ! -f "$RDX/vorbisFile.dll" ]; then   # the original-exe tr
   ( . "$HERE/../windows/msvcenv.sh" >/dev/null 2>&1; bash "$HERE/build_orig.sh" "$RDX" >/dev/null 2>&1 )
   [ -f "$RDX/vorbisFile.dll" ] || { echo "run.sh: cannot build the tracer proxy"; exit 2; }
 fi
+if [ "$((PIN & 128))" != 0 ] && [ -z "${NOTSA_LOCKSTEP_AUDIO_RVA:-}" ] && case ",$LEGS," in *,p,*) true;; *) false;; esac; then   # RD-ENV: fail before any run, not after 3 short tries
+  if [ -f "${EXE%.exe}.map" ]; then "$PY" -I "$HERE/audio_rva.py" "$(cd "$HERE/../../.." && pwd)" "${EXE%.exe}.map" "$EXE" >/dev/null || { echo "run.sh: ${EXE%.exe}.map is not the map of $EXE"; exit 2; }
+  elif [ ! -f "${EXE%.exe}.audio_rva" ] && [ "${RD_NO_AUDIO_RVA_OK:-0}" != 1 ]; then echo "run.sh: pin 128 needs ${EXE%.exe}.map (or .audio_rva) next to the port exe - copy the .map together with the exe"; exit 2; fi
+fi
 docs_sig() { ( cd "$DOCS_USERFILES" 2>/dev/null && { find . -type f -printf '%p %s %TY%Tm%Td%TH%TM%TS\n' | sort; find . -type f -exec md5sum {} + | sort -k2; } | md5sum ) ; }
 SIG0="$(docs_sig)"; echo "docs signature before: $SIG0"
 export RD_MAXF="$FRAMES" NOTSA_LOCKSTEP_MAXF="$FRAMES" RD_RLOG="$RLOG" NOTSA_LOCKSTEP_RLOG="$RLOG"

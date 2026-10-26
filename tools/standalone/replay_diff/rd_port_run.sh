@@ -42,11 +42,22 @@ LOCK="$HERE/../gpu_locked.sh"; HELD=0
 kill_ours() { [ -n "${WPID:-}" ] || return 0; local wp; wp=$(cat /proc/$WPID/winpid 2>/dev/null); [ -n "$wp" ] && taskkill //F //T //PID "$wp" >/dev/null 2>&1; kill -9 "$WPID" 2>/dev/null; return 0; }   # rules v5: only our own game, by pid
 cleanup() { kill_ours; if [ "$HELD" = 1 ]; then "$LOCK" --release $$; HELD=0; fi; }
 trap cleanup EXIT
-"$LOCK" --acquire "REPLAY-DIFF port $TAG" $$; HELD=1
 # pin bit 128 (audio RNG partition): audio callers of CGeneral::GetRandomNumber are recognised by return address, from the linker map next to the exe (RD-AB-8: without it every audio
-# rand() - e.g. the footstep sounds, first at traced frame 42 - drew from the gameplay stream while the original's partition put it in the audio stream = a harness A-B divergence)
-if [ -z "${NOTSA_LOCKSTEP_AUDIO_RVA:-}" ] && [ -f "${EXE%.exe}.map" ]; then NOTSA_LOCKSTEP_AUDIO_RVA="$("$PY" -I "$HERE/audio_rva.py" "$(cd "$HERE/../../.." && pwd)" "${EXE%.exe}.map")"; export NOTSA_LOCKSTEP_AUDIO_RVA; fi
-[ "$((PIN & 128))" != 0 ] && [ -z "${NOTSA_LOCKSTEP_AUDIO_RVA:-}" ] && echo "rd_port_run: WARNING pin 128 without NOTSA_LOCKSTEP_AUDIO_RVA (no <exe>.map next to the exe): audio rand() calls from CGeneral stay in the gameplay stream"
+# rand() - e.g. the footstep sounds, first at traced frame 42 - drew from the gameplay stream while the original's partition put it in the audio stream = a harness A-B divergence).
+# RD-ENV (2026-10-26): a port exe copied WITHOUT its map only printed a warning and measured equal prefix 42 instead of 98 for a whole session (RD-AB-16: probe*.exe, final.exe, main.exe in a
+# scratch dir). Now fatal, before the GPU lock is taken: the exe needs <exe>.map (same link: the map's "Timestamp is" must equal the exe's PE timestamp) or <exe>.audio_rva (the output of
+# audio_rva.py, kept for exes whose 40 MB map was not copied), or NOTSA_LOCKSTEP_AUDIO_RVA in the environment; RD_NO_AUDIO_RVA_OK=1 allows running without (partition off, only for pins without 128).
+if [ "$((PIN & 128))" != 0 ] && [ -z "${NOTSA_LOCKSTEP_AUDIO_RVA:-}" ]; then
+  if [ -f "${EXE%.exe}.map" ]; then
+    NOTSA_LOCKSTEP_AUDIO_RVA="$("$PY" -I "$HERE/audio_rva.py" "$(cd "$HERE/../../.." && pwd)" "${EXE%.exe}.map" "$EXE")" || { echo "rd_port_run: FATAL stale/foreign ${EXE%.exe}.map (see above)"; exit 2; }
+  elif [ -f "${EXE%.exe}.audio_rva" ]; then NOTSA_LOCKSTEP_AUDIO_RVA="$(cat "${EXE%.exe}.audio_rva")"
+  elif [ "${RD_NO_AUDIO_RVA_OK:-0}" != 1 ]; then
+    echo "rd_port_run: FATAL pin 128 (audio RNG partition) needs ${EXE%.exe}.map or ${EXE%.exe}.audio_rva next to the exe (copy the map with the exe; without it the port's equal prefix drops 98 -> 42 at the first footstep rand)"; exit 2
+  fi
+  export NOTSA_LOCKSTEP_AUDIO_RVA
+fi
+echo "rd_port_run: pin $PIN audio_rva ranges: $(printf '%s' "${NOTSA_LOCKSTEP_AUDIO_RVA:-}" | tr ',' '\n' | grep -c .) (exe $EXE)"
+"$LOCK" --acquire "REPLAY-DIFF port $TAG" $$; HELD=1
 cd "$DATA" || exit 2
 rm -f gta_reversed.exe standalone*.log; rm -rf logs; cp "$EXE" gta_reversed.exe
 (

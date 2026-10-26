@@ -6531,14 +6531,17 @@ bool CAutomobile::RcbanditCheck1CarWheels(CPtrListDoubleLink<CVehicle*>& ptrList
         if (vehicle == this || !vehicle->IsAutomobile())
             continue;
 
-        if (!ModelIndices::IsRCBandit(vehicle->m_nModelIndex) && !vehicle->IsScanCodeCurrent())
+        // 0x6B3FFF: skip the RC Bandit itself (model 0x1B9), skip a vehicle already scanned this scan code, else mark it scanned
+        if (ModelIndices::IsRCBandit(vehicle->m_nModelIndex) || !vehicle->ProcessScan())
             continue;
 
+        // 0x6B4036..0x6B40F7: |dx| < 10 && |dy| < 10 (the exe negates a negative difference)
         CVector distance = GetPosition() - vehicle->GetPosition();
-        if (distance.x < 10.0f && distance.y < 10.0f) {
+        if (std::fabs(distance.x) < 10.0f && std::fabs(distance.y) < 10.0f) {
             auto modelInfo = vehicle->GetVehicleModelInfo();
             for (int32 i = 0; i < 4; i++) {
-                if (m_fWheelsSuspensionCompressionPrev[i] >= 1.0f && GetStatus() != STATUS_SIMPLE)
+                // 0x6B4110: the OTHER vehicle's (ebx) previous suspension compression / status
+                if (!(vehicle->AsAutomobile()->m_fWheelsSuspensionCompressionPrev[i] < 1.0f) && vehicle->GetStatus() != STATUS_SIMPLE)
                     continue;
 
                 static CMatrix wheelMatrix;
@@ -6574,10 +6577,10 @@ bool CAutomobile::RcbanditCheckHitWheels() {
         for (int32 sectorX = startSectorX; sectorX <= endSectorX; ++sectorX) {
             auto& repeatSector = CWorld::GetRepeatSector(sectorX, sectorY);
             if (RcbanditCheck1CarWheels(repeatSector.Vehicles))
-                break;
+                return true; // 0x6B47D2: leaves both loops
         }
     }
-    return true;
+    return false; // 0x6B47E6: xor ax, ax
 }
 
 // 0x729B60

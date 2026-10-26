@@ -634,14 +634,16 @@ CTaskAllocator* CGroupEventHandler::ComputeResponsLeaderQuitEnteringCar(const CE
 // 0x5FAA50
 CTaskAllocator* CGroupEventHandler::ComputeMemberResponses(const CEventEditableResponse& e, CPedGroup* pg, CPed* originator) {
     const std::unique_ptr<CEventEditableResponse> clone{ static_cast<CEventEditableResponse*>(const_cast<CEventEditableResponse&>(e).Clone()) };
-    for (auto* const m : pg->GetMembership().GetFollowers()) {
+    // exe 0x5FAA84..0x5FAB2F: all 8 slots (the LEADER too), and ComputeEventResponseTask runs after ComputeResponseTaskType (no `else`)
+    for (auto* const m : pg->GetMembership().GetMembers()) {
         if (!m->IsAlive()) {
             continue;
         }
         if (clone->HasEditableResponse()) {
             clone->m_TaskId = TASK_NONE;
             clone->ComputeResponseTaskType(m, true);
-        } else if (const auto rt = std::unique_ptr<CTask>(CEventHandler::ComputeEventResponseTask(*m, *clone))) {
+        }
+        if (const auto rt = std::unique_ptr<CTask>(CEventHandler::ComputeEventResponseTask(*m, *clone))) {
             pg->GetIntelligence().SetEventResponseTask(m, *rt);
         }
     }

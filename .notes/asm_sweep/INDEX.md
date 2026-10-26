@@ -25,7 +25,7 @@
 | S21 | game_sa/Entity/Ped | 32 | partial 23/32 (20 M, 3 fixed) -> S21b | PedSaveStructure.cpp, PlayerPed.cpp, PlayerSkin.cpp |
 | S22 | game_sa/CarCtrl.cpp | 55 | partial 21/55 (17 M, 4 fixed) -> S22b | CarCtrl.cpp |
 | S23 | game_sa/Population.cpp | 33 | partial 20/33 (11 M, 9 fixed) -> S23b | Population.cpp |
-| S24 | game_sa/PedIntelligence.cpp | 31 | pending | PedIntelligence.cpp |
+| S24 | game_sa/PedIntelligence.cpp | 31 | done (28 M, 3 fixed) | PedIntelligence.cpp |
 | S25 | game_sa/Events/GroupEventHandler.cpp | 30 | pending | GroupEventHandler.cpp |
 | S26 | game_sa/Entity/Physical.cpp | 28 | partial 19/28 (15 M, 4 fixed) -> S26b | Physical.cpp |
 | S27 | game_sa/World.cpp | 44 | pending | World.cpp |

@@ -1173,9 +1173,10 @@ void CObject::Explode() {
         auto vecDir = CVector(0.0F, 0.0F, 1.0F);
         ObjectDamage(10'000.0F, &vecPos, &vecDir, this, eWeaponType::WEAPON_EXPLOSION);
     } else if (!physicalFlags.bDisableCollisionForce) {
-        m_vecMoveSpeed.x += CGeneral::GetRandomNumberInRange(-0.0256F, 0.0256F);
-        m_vecMoveSpeed.y += CGeneral::GetRandomNumberInRange(-0.0256F, 0.0256F);
+        // exe 0x5A13E9..0x5A1431: x and y get `(float)((rand() & 0xFF) - 128) * 0.0002f` (const 0x85A7D0), not a float-range random
         m_vecMoveSpeed.z += 0.5F;
+        m_vecMoveSpeed.x += static_cast<float>(static_cast<int32>(CGeneral::GetRandomNumber() & 0xFF) - 0x80) * 0.0002F;
+        m_vecMoveSpeed.y += static_cast<float>(static_cast<int32>(CGeneral::GetRandomNumber() & 0xFF) - 0x80) * 0.0002F;
 
         if (GetIsStatic()) {
             SetIsStatic(false);

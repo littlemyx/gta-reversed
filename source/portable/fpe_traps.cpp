@@ -90,6 +90,8 @@ Sym Resolve(std::uint64_t pc) {
 // Sites known to be benign by design (classification: .notes/reports/MAC-FPTRAP.md). Matched against the mangled symbol of the trapping PC and, when `caller` is
 // set, of its caller (lr). A whitelisted site is still counted (summary, marked [WL]) but its first hit is not logged and NOTSA_FPE_MODE=abort does not fire.
 constexpr struct { const char* sym; const char* caller; const char* why; } kWhitelist[] = {
+    { "DistToMathematicalLine", nullptr, "`distSq <= 0 ? 0 : sqrt(distSq)`: clang if-converts it into fsqrt + fcsel, the discarded arm takes the sqrt of a (rounding-)negative distSq (MAC-NAN1: operands are finite, not NaN); the result is 0 as in the exe" },
+    { "_Z20FrameUpdateCallBackTILb", nullptr, "NaN / 1e38 quaternion lane of the LAST key frame of PROLOG1.IFP (exporter junk in the file, MAC-ANIM1): applied for 1-2 frames when a cutscene object's anim reaches its end, the exe evaluates the same data (its fcomp + jp sends NaN to the `!(dot < 0)` branch like the port); consumers are NaN-safe (FtolCast NaN -> 0, NOTSA_MATRIX_CHECK clean)" },
     { "_ZN6CTimer6UpdateEv", nullptr, "game_FPS = 1000 / (clock delta == 0): inf, same masked x87 result in the exe (frozen clock in menus / pause)" },
     { "_Z10CameraSizePN2rw6CameraEPNS_4RectEff", nullptr, "start-up only: viewWindow / CDraw::ms_fAspectRatio while the ratio is still 0 (BSS in the exe too), the view window is set again by CCamera::Process" },
     { "_Z32RpAnimBlendClumpUpdateAnimationsPN2rw5ClumpEfb", nullptr, "clang if-converts `totalTime == 0 ? 1 : totalBlendAmnt / totalTime` into fdiv + fcsel: 0/0 of the discarded arm (variable unused)" },
@@ -211,6 +213,57 @@ bool Emulate(ucontext_t* uc, std::uint32_t insn) {
         if (rd != 31) ss->__x[rd] = r;
         return true;
     }
+    // MAC-NAN1: more forms seen in the logs (every un-emulated instruction runs with the traps masked for ~2 ms and can leave a quiet NaN that a later, trapping consumer then
+    // reports as if it were a producer: the "NaN lane in FrameUpdateCallBackT" of MAC-FPTRAP was one of these artefacts).
+    auto cvtInt = [](double v, bool sf, bool uns, int rmode) -> std::uint64_t { // FCVT{N,P,M,Z}{S,U}: rmode 0 nearest-even, 1 +inf, 2 -inf, 3 zero; NaN -> 0, saturating
+        if (v != v) return 0;
+        double r = rmode == 0 ? __builtin_nearbyint(v) : rmode == 1 ? __builtin_ceil(v) : rmode == 2 ? __builtin_floor(v) : __builtin_trunc(v);
+        if (uns) { return r <= 0 ? 0 : r >= (sf ? 18446744073709551616.0 : 4294967296.0) ? (sf ? ~0ull : 0xFFFFFFFFull) : (std::uint64_t)r; }
+        const double lo = sf ? -9223372036854775808.0 : -2147483648.0, hi = -lo;
+        return r <= lo ? (std::uint64_t)(sf ? INT64_MIN : (std::int64_t)INT32_MIN) : r >= hi ? (std::uint64_t)(sf ? INT64_MAX : (std::int64_t)INT32_MAX) : (std::uint64_t)(std::int64_t)r;
+    };
+    if ((insn & 0x7F260000u) == 0x1E200000u && ty <= 1 && ((insn >> 10) & 0x3F) == 0) { // FCVT{N,P,M,Z}{S,U} (scalar to W / X); the existing Z-only case below is a subset
+        const bool sf = insn >> 31, uns = (insn >> 16) & 1;
+        const double v = ty == 0 ? (double)getF(rn) : getD(rn);
+        std::uint64_t r = cvtInt(v, sf, uns, (int)((insn >> 19) & 3));
+        if (!sf) r &= 0xFFFFFFFFull;
+        if (rd != 31) ss->__x[rd] = r;
+        return true;
+    }
+    if ((insn & 0x7F3F0000u) == 0x1E180000u && ty <= 1) { // FCVTZS fixed point (scalar to W / X, #fbits): scale field = 64 - fbits (sf) / 32 - fbits
+        const bool sf = insn >> 31;
+        const unsigned scale = (insn >> 10) & 0x3F, fbits = (sf ? 64u : 32u) - scale;
+        const double v = (ty == 0 ? (double)getF(rn) : getD(rn)) * __builtin_ldexp(1.0, (int)fbits);
+        std::uint64_t r = cvtInt(v, sf, false, 3);
+        if (!sf) r &= 0xFFFFFFFFull;
+        if (rd != 31) ss->__x[rd] = r;
+        return true;
+    }
+    if ((insn & 0xDFBFFC00u) == 0x5EA1B800u) { // FCVTZS / FCVTZU scalar SIMD (Sd = Sn, Dd = Dn)
+        const bool uns = (insn >> 29) & 1, dbl = (insn >> 22) & 1;
+        const double v = dbl ? getD(rn) : (double)getF(rn);
+        const std::uint64_t r = cvtInt(v, dbl, uns, 3);
+        if (dbl) setD(rd, std::bit_cast<double>(r)); else setF(rd, std::bit_cast<float>((std::uint32_t)r));
+        return true;
+    }
+    if ((insn & 0xFFA0FC00u) == 0x7EA0D400u) { // FABD scalar (S / D)
+        if (((insn >> 22) & 1) == 0) { volatile float a = getF(rn), b = getF(rm); setF(rd, __builtin_fabsf(a - b)); }
+        else { volatile double a = getD(rn), b = getD(rm); setD(rd, __builtin_fabs(a - b)); }
+        return true;
+    }
+    if ((insn & 0xBFA0FC00u) == 0x2EA0E400u || (insn & 0xBFA0FC00u) == 0x2E20E400u) { // FCMGT (U=1, 0x2EA0E4..) / FCMGE (U=1, 0x2E20E4..) vector, register form
+        const bool q = (insn >> 30) & 1, dbl = (insn >> 22) & 1, gt = ((insn >> 23) & 1) == 1; // bit 23 = 1: FCMGT, 0: FCMGE
+        const unsigned lanes = dbl ? (q ? 2 : 1) : (q ? 4 : 2);
+        std::uint8_t out[16] = {}, a[16], b[16];
+        std::memcpy(a, &ns->__v[rn], 16); std::memcpy(b, &ns->__v[rm], 16);
+        for (unsigned i = 0; i < lanes; ++i) {
+            bool m;
+            if (dbl) { double x, y; std::memcpy(&x, a + 8 * i, 8); std::memcpy(&y, b + 8 * i, 8); m = gt ? x > y : x >= y; if (m) std::memset(out + 8 * i, 0xFF, 8); }
+            else { float x, y; std::memcpy(&x, a + 4 * i, 4); std::memcpy(&y, b + 4 * i, 4); m = gt ? x > y : x >= y; if (m) std::memset(out + 4 * i, 0xFF, 4); }
+        }
+        std::memcpy(&ns->__v[rd], out, 16);
+        return true;
+    }
     if ((insn & 0xFF20FC07u) == 0x1E202000u && ty <= 1) { // FCMP / FCMPE (register or #0.0)
         const bool zero = (insn >> 3) & 1;
         double a, b;
@@ -265,6 +318,14 @@ void OnTrap(int sig, siginfo_t* si, void* vuc) {
             for (unsigned i = 0; i < nf; ++i) {
                 const Sym f = Resolve(frames[i]);
                 Outf("[fpe]    #%u %s!%s+%llu (rel 0x%llx)\n", i, f.mod, f.name, (unsigned long long)f.off, (unsigned long long)f.rel);
+            }
+            { // operands of the trapped scalar insn (Rn / Rm as single and double), tells NaN-in (sNaN / loaded garbage) from NaN-made (0/0, sqrt(<0), inf-inf)
+                const std::uint32_t insn = *reinterpret_cast<const std::uint32_t*>(pc);
+                const unsigned rn = (insn >> 5) & 31, rm = (insn >> 16) & 31;
+                auto* ns = &mc->__ns;
+                float fn, fm; double dn, dm; std::memcpy(&fn, &ns->__v[rn], 4); std::memcpy(&fm, &ns->__v[rm], 4); std::memcpy(&dn, &ns->__v[rn], 8); std::memcpy(&dm, &ns->__v[rm], 8);
+                std::uint32_t bn, bm; std::memcpy(&bn, &ns->__v[rn], 4); std::memcpy(&bm, &ns->__v[rm], 4);
+                Outf("[fpe]    insn 0x%08x  Rn(v%u) = %g [0x%08x] / %g   Rm(v%u) = %g [0x%08x] / %g\n", insn, rn, (double)fn, bn, dn, rm, (double)fm, bm, dm);
             }
         }
     }

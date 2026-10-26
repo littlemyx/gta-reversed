@@ -10,3 +10,4 @@
 | v3 | 2026-10-19 | 1–2 parallel by quota pace, 100-min wall-clock cap (replaces call count), orchestrator gates partial landings, lock/cleanup/worktree rules, real oracle fixtures |
 | v4 | 2026-10-21 | gate adds soak (+ daily gameplay_regress); consumer audit for state-layout fixes; agents soak before landing gameplay fixes |
 | v5 | 2026-10-24 | never kill by image name; agents gate on touched targets + soak (orchestrator runs the full suite); gate window with <=1 agent; 200k token stop |
+| v6 | 2026-10-27 | portable coding rules (PORTABLE_GATE.md table) binding for new code; pre-commit grep; PortableWin64 compile for shared-header changes |

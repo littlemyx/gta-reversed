@@ -422,8 +422,8 @@ void psMouseSetPos(RwV2d* pos) {
         SDL_WarpMouseInWindow(PSGLOBAL(sdlWindow), pos->x, pos->y);
 #endif
     }
-    FrontEndMenuManager.m_nMousePosWinX = (int32)pos->x;
-    FrontEndMenuManager.m_nMousePosWinY = (int32)pos->y;
+    FrontEndMenuManager.m_nMousePosWinX = NOTSA_FTOL(int32, pos->x);
+    FrontEndMenuManager.m_nMousePosWinY = NOTSA_FTOL(int32, pos->y);
 #endif
     PSGLOBAL(lastMousePos) = *pos;
 }

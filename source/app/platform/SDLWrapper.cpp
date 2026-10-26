@@ -279,7 +279,7 @@ static void ProbeDump() {
     auto* pl = FindPlayerPed();
     if (!pl) return;
     if (pl->m_fHealth != lastHp || pl->m_fArmour != lastArm) {
-        NOTSA_INJ_LOG("[pc-dmg] t=%lu player hp %d -> %d armour %d -> %d lastDamager=%p weap=%d", (unsigned long)GetTickCount(), (int)lastHp, (int)pl->m_fHealth, (int)lastArm, (int)pl->m_fArmour, (void*)pl->m_pLastEntityDamage, (int)pl->m_nLastWeaponDamage);
+        NOTSA_INJ_LOG("[pc-dmg] t=%lu player hp %d -> %d armour %d -> %d lastDamager=%p weap=%d", (unsigned long)GetTickCount(), NOTSA_FTOL(int32, lastHp), NOTSA_FTOL(int32, pl->m_fHealth), NOTSA_FTOL(int32, lastArm), NOTSA_FTOL(int32, pl->m_fArmour), (void*)pl->m_pLastEntityDamage, (int)pl->m_nLastWeaponDamage);
         lastHp = pl->m_fHealth; lastArm = pl->m_fArmour;
     }
     {
@@ -309,7 +309,7 @@ static void ProbeDump() {
     auto& aw  = pl->GetActiveWeapon();
     auto* pt  = pl->GetIntelligence()->GetTaskManager().GetActiveTask();
     NOTSA_INJ_LOG("[pc] t=%lu frame=%u player pos=(%d,%d,%d) hp=%d arm=%d state=%d wanted=%d chaos=%d backoff=%d/%d/%d weap=%d(ammo %d) task=%d",
-        (unsigned long)GetTickCount(), (unsigned)CTimer::GetFrameCounter(), (int)pos.x, (int)pos.y, (int)pos.z, (int)pl->m_fHealth, (int)pl->m_fArmour, (int)pl->m_nPedState,
+        (unsigned long)GetTickCount(), (unsigned)CTimer::GetFrameCounter(), NOTSA_FTOL(int32, pos.x), NOTSA_FTOL(int32, pos.y), NOTSA_FTOL(int32, pos.z), NOTSA_FTOL(int32, pl->m_fHealth), NOTSA_FTOL(int32, pl->m_fArmour), (int)pl->m_nPedState,
         w ? (int)w->GetWantedLevel() : -1, w ? w->m_ChaosLevel : -1, w ? (int)w->m_bPoliceBackOff : -1, w ? (int)w->m_bPoliceBackOffGarage : -1, w ? (int)w->m_bEverybodyBackOff : -1,
         (int)aw.GetType(), (int)aw.GetTotalAmmo(), pt ? (int)pt->GetTaskType() : -1);
     {
@@ -324,9 +324,9 @@ static void ProbeDump() {
         for (auto& pp : GetPedPool()->GetAllValid()) { (void)pp; nPeds++; }
         for (auto& vv : GetVehiclePool()->GetAllValid()) { (void)vv; nVehs++; }
         NOTSA_INJ_LOG("[pc]   pop: densMul=%d peds(pool)=%d vehs(pool)=%d totalPeds=%d civ=%d gang=%d cop=%d inUseMax=%d | popcycle other=%d cops=%d gangs=%d zoneType=%d | randCars=%d lawCars=%d missCars=%d carDens=%d | noGang=%d onlyGang=%d noCops=%d moreCars=%d polStation=%d",
-            (int)(CPopulation::PedDensityMultiplier * 100.f), nPeds, nVehs, (int)CPopulation::ms_nTotalPeds, (int)CPopulation::ms_nTotalCivPeds, (int)CPopulation::ms_nTotalGangPeds, (int)CPopulation::ms_nNumCop, (int)CPopulation::MaxNumberOfPedsInUse,
-            (int)(CPopCycle::m_NumOther_Peds * 10.f), (int)(CPopCycle::m_NumCops_Peds * 10.f), (int)(CPopCycle::m_NumGangs_Peds * 10.f), (int)CPopCycle::m_nCurrentZoneType,
-            (int)CCarCtrl::NumRandomCars, (int)CCarCtrl::NumLawEnforcerCars, (int)CCarCtrl::NumMissionCars, (int)(CCarCtrl::CarDensityMultiplier * 100.f),
+            NOTSA_FTOL(int32, CPopulation::PedDensityMultiplier * 100.f), nPeds, nVehs, (int)CPopulation::ms_nTotalPeds, (int)CPopulation::ms_nTotalCivPeds, (int)CPopulation::ms_nTotalGangPeds, (int)CPopulation::ms_nNumCop, (int)CPopulation::MaxNumberOfPedsInUse,
+            NOTSA_FTOL(int32, CPopCycle::m_NumOther_Peds * 10.f), NOTSA_FTOL(int32, CPopCycle::m_NumCops_Peds * 10.f), NOTSA_FTOL(int32, CPopCycle::m_NumGangs_Peds * 10.f), (int)CPopCycle::m_nCurrentZoneType,
+            (int)CCarCtrl::NumRandomCars, (int)CCarCtrl::NumLawEnforcerCars, (int)CCarCtrl::NumMissionCars, NOTSA_FTOL(int32, CCarCtrl::CarDensityMultiplier * 100.f),
             (int)CPopulation::m_bDontCreateRandomGangMembers, (int)CPopulation::m_bOnlyCreateRandomGangMembers, (int)CPopulation::m_bDontCreateRandomCops, (int)CPopulation::m_bMoreCarsAndFewerPeds, (int)CPopulation::bInPoliceStation);
     }
     int shown = 0, total = 0;
@@ -344,9 +344,9 @@ static void ProbeDump() {
             n += std::snprintf(chain + n, sizeof(chain) - n, "%d>", (int)t->GetTaskType());
         }
         auto& pw = ped.GetActiveWeapon();
-        NOTSA_INJ_LOG("[pc]   pedpos %p pos10=(%d,%d,%d) area=%d currArea=%d type=%d contact=%p contactModel=%d contactArea=%d", (void*)&ped, (int)(ped.GetPosition().x * 10.f), (int)(ped.GetPosition().y * 10.f), (int)(ped.GetPosition().z * 10.f), (int)ped.GetAreaCode(), (int)CGame::currArea, (int)ped.m_nPedType, (void*)ped.m_pContactEntity, ped.m_pContactEntity ? (int)ped.m_pContactEntity->m_nModelIndex : -1, ped.m_pContactEntity ? (int)ped.m_pContactEntity->GetAreaCode() : -1);
+        NOTSA_INJ_LOG("[pc]   pedpos %p pos10=(%d,%d,%d) area=%d currArea=%d type=%d contact=%p contactModel=%d contactArea=%d", (void*)&ped, NOTSA_FTOL(int32, ped.GetPosition().x * 10.f), NOTSA_FTOL(int32, ped.GetPosition().y * 10.f), NOTSA_FTOL(int32, ped.GetPosition().z * 10.f), (int)ped.GetAreaCode(), (int)CGame::currArea, (int)ped.m_nPedType, (void*)ped.m_pContactEntity, ped.m_pContactEntity ? (int)ped.m_pContactEntity->m_nModelIndex : -1, ped.m_pContactEntity ? (int)ped.m_pContactEntity->GetAreaCode() : -1);
         NOTSA_INJ_LOG("[pc]   ped %p model=%d type=%d d=%d hp=%d st=%d weap=%d(ammo %d, slot %d) tasks=%s evq=%d evhi=%d cur=%d tmpTask=%d perTask=%d",
-            (void*)&ped, (int)ped.m_nModelIndex, (int)ped.m_nPedType, (int)d, (int)ped.m_fHealth, (int)ped.m_nPedState, (int)pw.GetType(), (int)pw.GetTotalAmmo(), (int)ped.m_nActiveWeaponSlot, chain,
+            (void*)&ped, (int)ped.m_nModelIndex, (int)ped.m_nPedType, NOTSA_FTOL(int32, d), NOTSA_FTOL(int32, ped.m_fHealth), (int)ped.m_nPedState, (int)pw.GetType(), (int)pw.GetTotalAmmo(), (int)ped.m_nActiveWeaponSlot, chain,
             (int)ped.GetEventGroup().GetNumEventsInQueue(), ped.GetEventGroup().GetHighestPriorityEvent() ? (int)ped.GetEventGroup().GetHighestPriorityEvent()->GetEventType() : -1,
             ped.GetEventHandlerHistory().GetCurrentEvent() ? (int)ped.GetEventHandlerHistory().GetCurrentEvent()->GetEventType() : -1,
             mgr.GetTemporaryEventResponseTask() ? (int)mgr.GetTemporaryEventResponseTask()->GetTaskType() : -1, mgr.GetPresistentEventResponseTask() ? (int)mgr.GetPresistentEventResponseTask()->GetTaskType() : -1);
@@ -365,14 +365,14 @@ static void ProbeDump() {
             shownV++;
             if (veh.IsAutomobile()) {
                 auto& am = static_cast<CAutomobile&>(veh);
-                NOTSA_INJ_LOG("[pc]   vehy %p z=%d up.z=%d contactWheels=%d physFlags=%08x vehFlags=%08x status=%d nCollided=%d c0=%p c1=%p health=%d fire=%p engineOn=%d", (void*)&veh, (int)veh.GetPosition().z, (int)(veh.GetUp().z * 100.f), (int)am.m_nNumContactWheels,
-                    (unsigned)veh.m_nPhysicalFlags, (unsigned)*(const uint32*)&veh.vehicleFlags, (int)veh.GetStatus(), (int)veh.m_nNumEntitiesCollided, (void*)veh.m_apCollidedEntities[0], (void*)veh.m_apCollidedEntities[1], (int)veh.m_fHealth, (void*)veh.m_pFire, (int)veh.vehicleFlags.bEngineOn);
+                NOTSA_INJ_LOG("[pc]   vehy %p z=%d up.z=%d contactWheels=%d physFlags=%08x vehFlags=%08x status=%d nCollided=%d c0=%p c1=%p health=%d fire=%p engineOn=%d", (void*)&veh, NOTSA_FTOL(int32, veh.GetPosition().z), NOTSA_FTOL(int32, veh.GetUp().z * 100.f), (int)am.m_nNumContactWheels,
+                    (unsigned)veh.m_nPhysicalFlags, (unsigned)*(const uint32*)&veh.vehicleFlags, (int)veh.GetStatus(), (int)veh.m_nNumEntitiesCollided, (void*)veh.m_apCollidedEntities[0], (void*)veh.m_apCollidedEntities[1], NOTSA_FTOL(int32, veh.m_fHealth), (void*)veh.m_pFire, (int)veh.vehicleFlags.bEngineOn);
             }
-            NOTSA_INJ_LOG("[pc]   vehx %p apSpeed=%d maxTraffic=%d style=%d obstruct=%p target=%p gas=%d brake=%d hbrake=%d steer=%d speedScale=%u", (void*)&veh, (int)(veh.m_autoPilot.m_speed * 100.f), (int)(veh.m_autoPilot.m_fMaxTrafficSpeed * 100.f), (int)veh.m_autoPilot.m_nCarDrivingStyle,
-                (void*)veh.m_autoPilot.m_ObstructingEntity, (void*)veh.m_autoPilot.m_TargetEntity, (int)(veh.m_GasPedal * 100.f), (int)(veh.m_BrakePedal * 100.f), (int)veh.vehicleFlags.bIsHandbrakeOn, (int)(veh.m_fSteerAngle * 100.f), (unsigned)veh.m_autoPilot.m_nSpeedScaleFactor);
-            NOTSA_INJ_LOG("[pc]   veh %p model=%d d=%d speed=%d law=%d status=%d mission=%d temp=%d cruise=%d ctrl=%x driver=%d(type %d) dest=(%d,%d) nodes(cur %d/%d next %d/%d)", (void*)&veh, (int)veh.m_nModelIndex, (int)d, (int)(veh.m_vecMoveSpeed.Magnitude() * 100.f),
+            NOTSA_INJ_LOG("[pc]   vehx %p apSpeed=%d maxTraffic=%d style=%d obstruct=%p target=%p gas=%d brake=%d hbrake=%d steer=%d speedScale=%u", (void*)&veh, NOTSA_FTOL(int32, veh.m_autoPilot.m_speed * 100.f), NOTSA_FTOL(int32, veh.m_autoPilot.m_fMaxTrafficSpeed * 100.f), (int)veh.m_autoPilot.m_nCarDrivingStyle,
+                (void*)veh.m_autoPilot.m_ObstructingEntity, (void*)veh.m_autoPilot.m_TargetEntity, NOTSA_FTOL(int32, veh.m_GasPedal * 100.f), NOTSA_FTOL(int32, veh.m_BrakePedal * 100.f), (int)veh.vehicleFlags.bIsHandbrakeOn, NOTSA_FTOL(int32, veh.m_fSteerAngle * 100.f), (unsigned)veh.m_autoPilot.m_nSpeedScaleFactor);
+            NOTSA_INJ_LOG("[pc]   veh %p model=%d d=%d speed=%d law=%d status=%d mission=%d temp=%d cruise=%d ctrl=%x driver=%d(type %d) dest=(%d,%d) nodes(cur %d/%d next %d/%d)", (void*)&veh, (int)veh.m_nModelIndex, NOTSA_FTOL(int32, d), NOTSA_FTOL(int32, veh.m_vecMoveSpeed.Magnitude() * 100.f),
                 (int)veh.IsLawEnforcementVehicle(), (int)veh.GetStatus(), (int)veh.m_autoPilot.m_nCarMission, (int)veh.m_autoPilot.m_nTempAction, (int)veh.m_autoPilot.m_nCruiseSpeed, (unsigned)veh.m_autoPilot.m_nCarCtrlFlags,
-                veh.m_pDriver ? 1 : 0, veh.m_pDriver ? (int)veh.m_pDriver->m_nPedType : -1, (int)veh.m_autoPilot.m_vecDestinationCoors.x, (int)veh.m_autoPilot.m_vecDestinationCoors.y, (int)veh.m_autoPilot.m_currentAddress.m_wAreaId, (int)veh.m_autoPilot.m_currentAddress.m_wNodeId, (int)veh.m_autoPilot.m_startingRouteNode.m_wAreaId, (int)veh.m_autoPilot.m_startingRouteNode.m_wNodeId);
+                veh.m_pDriver ? 1 : 0, veh.m_pDriver ? (int)veh.m_pDriver->m_nPedType : -1, NOTSA_FTOL(int32, veh.m_autoPilot.m_vecDestinationCoors.x), NOTSA_FTOL(int32, veh.m_autoPilot.m_vecDestinationCoors.y), (int)veh.m_autoPilot.m_currentAddress.m_wAreaId, (int)veh.m_autoPilot.m_currentAddress.m_wNodeId, (int)veh.m_autoPilot.m_startingRouteNode.m_wAreaId, (int)veh.m_autoPilot.m_startingRouteNode.m_wNodeId);
         }
     }
     int pk = 0;
@@ -431,7 +431,7 @@ static void InjRunCmd(const std::string& c) {
         CStreaming::RequestModel((eModelID)mdl, STREAMING_GAME_REQUIRED); CStreaming::LoadAllRequestedModels(false);
         const auto p = pl->GetPosition() + pl->GetForward() * 6.f;
         auto* np = CPopulation::AddPed((ePedType)ty, (eModelID)mdl, p, false);
-        NOTSA_INJ_LOG("[cmd] spawned ped %p model %d type %d at (%d,%d,%d)", (void*)np, mdl, ty, (int)p.x, (int)p.y, (int)p.z);
+        NOTSA_INJ_LOG("[cmd] spawned ped %p model %d type %d at (%d,%d,%d)", (void*)np, mdl, ty, NOTSA_FTOL(int32, p.x), NOTSA_FTOL(int32, p.y), NOTSA_FTOL(int32, p.z));
     }
     else if (!std::strcmp(name, "shootnear")) { // shootnear:RANGE  lethal damage event on every non-player ped within range
         int rg = 15; std::sscanf(args.c_str(), "%d", &rg);
@@ -447,7 +447,7 @@ static void InjRunCmd(const std::string& c) {
         for (auto& ped : GetPedPool()->GetAllValid()) {
             if (&ped == pl || (int)ped.m_nPedType != ty || (ped.GetPosition() - pl->GetPosition()).Magnitude() > (float)rg) continue;
             const auto ok = CWeapon::GenerateDamageEvent(&ped, pl, WEAPON_AK47, 500, PED_PIECE_TORSO, 0);
-            NOTSA_INJ_LOG("[cmd] shot ped %p type %d hp %d -> GenerateDamageEvent=%d", (void*)&ped, ty, (int)ped.m_fHealth, (int)ok);
+            NOTSA_INJ_LOG("[cmd] shot ped %p type %d hp %d -> GenerateDamageEvent=%d", (void*)&ped, ty, NOTSA_FTOL(int32, ped.m_fHealth), (int)ok);
         }
     }
     else if (!std::strcmp(name, "spawnmany")) { // spawnmany:N:RADIUS:ANGLEOFFSET_DEG  N peds on a ring around the player (models cycle through male/female skins), standing
@@ -467,7 +467,7 @@ static void InjRunCmd(const std::string& c) {
             const float ang = DegreesToRadians((float)off) + (float)i * 6.2831853f / (float)cnt;
             const auto p = pl->GetPosition() + CVector{ std::cos(ang) * (float)rad, std::sin(ang) * (float)rad, 0.f };
             auto* np = CPopulation::AddPed(PED_TYPE_CIVMALE, (eModelID)mdl, p, false);
-            NOTSA_INJ_LOG("[cmd] spawnmany %d model %d ped %p at (%d,%d,%d)", i, mdl, (void*)np, (int)p.x, (int)p.y, (int)p.z);
+            NOTSA_INJ_LOG("[cmd] spawnmany %d model %d ped %p at (%d,%d,%d)", i, mdl, (void*)np, NOTSA_FTOL(int32, p.x), NOTSA_FTOL(int32, p.y), NOTSA_FTOL(int32, p.z));
         }
     }
     else if (!std::strcmp(name, "killall")) { // killall:WEAPON:PIECE:DIR:RANGE  lethal damage event with the given weapon/piece/direction on every non-player ped within range
@@ -486,7 +486,7 @@ static void InjRunCmd(const std::string& c) {
             if (&ped == pl || (ped.GetPosition() - pl->GetPosition()).Magnitude() > (float)rg) continue;
             auto p = ped.GetPosition(); p.z += (float)h;
             ped.SetPosn(p);
-            NOTSA_INJ_LOG("[cmd] lift ped %p model %d to z=%d", (void*)&ped, (int)ped.m_nModelIndex, (int)p.z);
+            NOTSA_INJ_LOG("[cmd] lift ped %p model %d to z=%d", (void*)&ped, (int)ped.m_nModelIndex, NOTSA_FTOL(int32, p.z));
         }
     }
     else if (!std::strcmp(name, "dumpdead")) {
@@ -498,7 +498,7 @@ static void InjRunCmd(const std::string& c) {
             if (ped.m_nPedState != PEDSTATE_DEAD && ped.m_nPedState != PEDSTATE_DIE) continue;
             const auto& m = ped.GetMatrix();
             DEADLOG("[dead] ped %p model %d state %d hp %d pos=(%.2f,%.2f,%.2f) fwd=(%.2f,%.2f,%.2f) up=(%.2f,%.2f,%.2f) n578=(%.2f,%.2f,%.2f) slopePitch=%.3f slopeRoll=%.3f bSlope=%d standing=%d wasStanding=%d surf=%d coll=%d",
-                (void*)&ped, (int)ped.m_nModelIndex, (int)ped.m_nPedState, (int)ped.m_fHealth, m.GetPosition().x, m.GetPosition().y, m.GetPosition().z, m.GetForward().x, m.GetForward().y, m.GetForward().z, m.GetUp().x, m.GetUp().y, m.GetUp().z,
+                (void*)&ped, (int)ped.m_nModelIndex, (int)ped.m_nPedState, NOTSA_FTOL(int32, ped.m_fHealth), m.GetPosition().x, m.GetPosition().y, m.GetPosition().z, m.GetForward().x, m.GetForward().y, m.GetForward().z, m.GetUp().x, m.GetUp().y, m.GetUp().z,
                 ped.field_578.x, ped.field_578.y, ped.field_578.z, ped.m_pedIK.m_fSlopePitch, ped.m_pedIK.m_fSlopeRoll, (int)ped.m_pedIK.bSlopePitch, (int)ped.bIsStanding, (int)ped.bWasStanding, (int)ped.m_nContactSurface, (int)ped.GetUsesCollision());
             for (auto* a = RpAnimBlendClumpGetFirstAssociation(ped.GetRpClump()); a; a = RpAnimBlendGetNextAssociation(a)) {
                 DEADLOG("[dead]   anim grp %d id %d blend %.3f delta %.3f time %.3f speed %.2f flags %04x", (int)a->m_AnimGroupId, (int)a->m_AnimId, a->m_BlendAmount, a->m_BlendDelta, a->m_CurrentTime, a->m_Speed, (unsigned)a->m_Flags);
@@ -541,7 +541,7 @@ static void InjRunCmd(const std::string& c) {
     else if (!std::strcmp(name, "rigpush")) { // rigpush:VX:VY  set the move speed of the rig vehicles (0.3 = 15 m/s)
         std::sscanf(args.c_str(), "%f:%f", &a, &b);
         for (auto* v : s_InjRig) if (v) { v->m_vecMoveSpeed = CVector{ a, b, 0.f }; }
-        NOTSA_INJ_LOG("[cmd] rigpush (%d,%d)/100 truck=%p trailer=%p", (int)(a * 100.f), (int)(b * 100.f), (void*)s_InjRig[0], (void*)s_InjRig[1]);
+        NOTSA_INJ_LOG("[cmd] rigpush (%d,%d)/100 truck=%p trailer=%p", NOTSA_FTOL(int32, a * 100.f), NOTSA_FTOL(int32, b * 100.f), (void*)s_InjRig[0], (void*)s_InjRig[1]);
     }
     else if (!std::strcmp(name, "nullcol")) { // nullcol:RANGE:MINHEIGHT  drop the col data (not the col model) of every building model within range of the player that is taller than MINHEIGHT (walls / houses, roads stay): the playtest-2 condition, a building whose col model has no data
         int rg = 40; float mh = 3.f; std::sscanf(args.c_str(), "%d:%f", &rg, &mh);
@@ -559,7 +559,7 @@ static void InjRunCmd(const std::string& c) {
         NOTSA_INJ_LOG("[cmd] nullcol range %d: %d building models seen, %d already without col data, %d nulled", rg, seen, already, nulled);
     }
     else if (!std::strcmp(name, "rigstate")) {
-        for (auto* v : s_InjRig) if (v) NOTSA_INJ_LOG("[cmd] rig veh %p model %d pos=(%d,%d,%d) speed*100=%d status=%d towing=%p towed=%p nColl=%d", (void*)v, (int)v->m_nModelIndex, (int)v->GetPosition().x, (int)v->GetPosition().y, (int)v->GetPosition().z, (int)(v->m_vecMoveSpeed.Magnitude() * 100.f), (int)v->GetStatus(), (void*)v->m_pTowingVehicle, (void*)v->m_pVehicleBeingTowed, (int)v->m_nNumEntitiesCollided);
+        for (auto* v : s_InjRig) if (v) NOTSA_INJ_LOG("[cmd] rig veh %p model %d pos=(%d,%d,%d) speed*100=%d status=%d towing=%p towed=%p nColl=%d", (void*)v, (int)v->m_nModelIndex, NOTSA_FTOL(int32, v->GetPosition().x), NOTSA_FTOL(int32, v->GetPosition().y), NOTSA_FTOL(int32, v->GetPosition().z), NOTSA_FTOL(int32, v->m_vecMoveSpeed.Magnitude() * 100.f), (int)v->GetStatus(), (void*)v->m_pTowingVehicle, (void*)v->m_pVehicleBeingTowed, (int)v->m_nNumEntitiesCollided);
     }
     else if (!std::strcmp(name, "hour")) { CClock::SetGameClock((uint8)std::atoi(args.c_str()), 0, 0); } // hour:H  game clock H:00 (heat haze post effect needs >= 10, PLAYTEST-1 U2/U17 checks)
     else if (!std::strcmp(name, "armour")) { pl->m_fArmour = (float)std::atoi(args.c_str()); }
@@ -857,8 +857,8 @@ void ProcessEvents() {
                 s_MousePos.y = e.motion.y;
 #endif
             }
-            FrontEndMenuManager.m_nMousePosWinX = (int32)(s_MousePos.x);
-            FrontEndMenuManager.m_nMousePosWinY = (int32)(s_MousePos.y);
+            FrontEndMenuManager.m_nMousePosWinX = NOTSA_FTOL(int32, s_MousePos.x);
+            FrontEndMenuManager.m_nMousePosWinY = NOTSA_FTOL(int32, s_MousePos.y);
             break;
         }
         }

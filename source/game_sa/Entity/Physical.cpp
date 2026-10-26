@@ -2422,10 +2422,11 @@ void CPhysical::PositionAttachedEntity()
             CMatrix& attachedToEntityMatrix = attachedTo->GetMatrix(); // todo: shadow var
             CVector randomRight = attachedToEntityMatrix.GetRight() * randomNumber;
             CVector randomForward = attachedToEntityMatrix.GetForward() * randomNumber;
-            CVector force = (randomRight + randomForward) * (m_fMass * ExeRecip(50.0f));
+            // 0x547677: the 1st force uses mass * 0.01f (0x858C58); 0x5476E1: the 2nd one up * (mass * 0.02f) (0x858B38), the scalar is computed first
+            CVector force = (randomRight + randomForward) * (m_fMass * ExeRecip(100.0f));
             ApplyMoveForce(force);
             if (attachedToAuto->m_wMiscComponentAngle > attachedToAuto->m_wMiscComponentAnglePrev)
-                ApplyMoveForce(attachedTo->GetMatrix().GetUp() * m_fMass * ExeRecip(50.0f));
+                ApplyMoveForce(attachedTo->GetMatrix().GetUp() * (m_fMass * ExeRecip(50.0f)));
         }
         return;
     }
@@ -2452,13 +2453,13 @@ void CPhysical::PositionAttachedEntity()
                 CVector vecDistance = (vecCenterOfMassMultiplied + GetPosition()) - m_pAttachedTo->GetPosition();
                 m_pAttachedTo->ApplyForce(vecForce * -1.0f, vecDistance, true);
             }
-            float fRotationInRadians = m_pAttachedTo->GetHeading() - GetHeading();
+            float fRotationInRadians = (float)(X87R(m_pAttachedTo->GetHeadingExt() - GetHeadingExt())); // 0x5479D9..0x547A09: FPATAN results stay unrounded, the subtraction rounds
             if (fRotationInRadians > PI)
                 fRotationInRadians -= PI * 2;
             else if (fRotationInRadians < -PI)
                 fRotationInRadians += PI * 2;
             fRotationInRadians = std::clamp(fRotationInRadians, -0.5f, 0.5f);
-            m_vecTurnSpeed.z += fRotationInRadians / 100'000.0f * m_fMass;
+            m_vecTurnSpeed.z += fRotationInRadians * ExeRecip(100'000.0f) * m_fMass; // 0x547A67: fmul 1e-5f (0x8CD7DC), the port divided by 100000
         }
     }
     else {

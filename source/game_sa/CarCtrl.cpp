@@ -4430,7 +4430,7 @@ void CCarCtrl::RemoveCarsIfThePoolGetsFull() {
 
     // Find closest deletable vehicle
     const CVector camPos = TheCamera.GetPosition();
-    float fClosestDist = std::numeric_limits<float>::max();
+    float fClosestDist = 10000000.0f; // 0x4322FD: `mov [esp+0x10], 0x4B189680` (1e7), not FLT_MAX
     CVehicle* closestVeh = nullptr;
     for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValidReverse(), GetVehiclePool()->GetAllValid())) {
         if (IsThisVehicleInteresting(&veh)) {

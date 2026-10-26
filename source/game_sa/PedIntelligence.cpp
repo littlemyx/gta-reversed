@@ -730,22 +730,23 @@ bool CPedIntelligence::TestForStealthKill(CPed* target, bool bFullTest) {
         }
     }
 
-    CEvent* currentEvent = target->GetEventHandlerHistory().GetCurrentEvent();
-    if (currentEvent && currentEvent->GetSourceEntity() == m_pPed)
-    {
-        // todo: IsThreatenedBy ???
-        auto hate = target->GetAcquaintance().GetAcquaintances(ACQUAINTANCE_HATE);
-        auto dislike = target->GetAcquaintance().GetAcquaintances(ACQUAINTANCE_DISLIKE);
-        auto pedFlag = CPedType::GetPedFlag(m_pPed->m_nPedType);
-        bool bAcquaintancesFlagSet = (
-            (hate && (pedFlag & hate)) ||
-            (dislike && (pedFlag & dislike))
-        );
-        if (bAcquaintancesFlagSet && target->GetGroup()) {
-            const auto oe = target->GetGroup()->GetIntelligence().GetCurrentEvent();
-            if (oe && oe->GetSourceEntity() == m_pPed && bAcquaintancesFlagSet) {
-                return false;
-            }
+    // 0x601F5B..0x602036: two independent checks. The target's own current event and the target group's current event each veto the kill
+    // when this ped is their source and the target hates/dislikes this ped's type (the first one needs no group).
+    const auto IsHatedOrDisliked = [&]() {
+        auto& acquaintance = target->GetAcquaintance();
+        const auto pedFlag = CPedType::GetPedFlag(m_pPed->m_nPedType);
+        return (acquaintance.GetAcquaintances(ACQUAINTANCE_HATE) & pedFlag) || (acquaintance.GetAcquaintances(ACQUAINTANCE_DISLIKE) & pedFlag);
+    };
+
+    const CEvent* currentEvent = target->GetEventHandlerHistory().GetCurrentEvent();
+    if (currentEvent && currentEvent->GetSourceEntity() == m_pPed && IsHatedOrDisliked()) {
+        return false;
+    }
+
+    if (const auto grp = target->GetGroup()) {
+        const auto oe = grp->GetIntelligence().GetCurrentEvent();
+        if (oe && oe->GetSourceEntity() == m_pPed && IsHatedOrDisliked()) {
+            return false;
         }
     }
     return true;

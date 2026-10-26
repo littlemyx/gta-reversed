@@ -17,6 +17,7 @@
 #                               table checks). Default 0: the run exe starts WITHOUT any file of the original exe (slice F3), a leftover one in the data dir is deleted.
 #      NOTSA_STANDALONE_NOVSYNC=1  opt-in, passed through to the exe: Present with sync interval 0 (boot/menu/loading ~2 s instead of 30-75 s on the vsync-locked Present of this PC; game logic and
 #                               the 25 fps frame limiter unchanged; NOT for frame-time measurements - those state their mode). Off by default. docs/STANDALONE.md
+#      SOAK_WRAP=<cmd>          Windows host: prefix of the game command (a debugger wrapper, e.g. cdb); WPID is then the wrapper's pid
 #      SOAK_GPU_LOCK=0          Windows host: do not take the GPU mutex (default: re-exec under tools/standalone/gpu_locked.sh; env GPU_OWNER names the holder)
 #      SHOT_EVERY=<frames>      screenshot cadence (default 500 frames, NOTSA_STANDALONE_SCREENSHOT_MAX=40)
 #      SAMPLER=1                enable the in-process profiler (CORRUPTS the x87 state of the game thread, see below: profiling runs only)
@@ -142,7 +143,7 @@ for a in 1 2 3 4 5 6; do
   { echo "# data dir $DATA, $(date '+%F %T'); top-level exe/dll/bin files (sha256, size, name)"; for f in *.exe *.dll *.bin *.json; do [ -f "$f" ] && echo "$(sha256sum "$f" | cut -c1-64) $(stat -c %s "$f") $f"; done
     ls -1 | grep -iE '^(gta_sa(_compact)?\.exe|original_data\..*|data_pointers\..*)$' | sed 's/^/FORBIDDEN-PRESENT: /'; } > "$OUT/datadir_inventory.txt" 2>/dev/null
   if [ "${SOAK_IMAGE:-0}" != 1 ] && grep -q '^FORBIDDEN-PRESENT' "$OUT/datadir_inventory.txt"; then echo "soak: the data dir holds original-exe files (see $OUT/datadir_inventory.txt)"; kill_exe; exit 2; fi
-  if [ "$HOST" = windows ]; then ./gta_reversed.exe > "$RUNOUT" 2>&1 & else wine gta_reversed.exe > "$RUNOUT" 2>&1 & fi
+  if [ "$HOST" = windows ]; then ${SOAK_WRAP:-} ./gta_reversed.exe > "$RUNOUT" 2>&1 & else wine gta_reversed.exe > "$RUNOUT" 2>&1 & fi
   WPID=$!
   for i in $(seq 1 15); do   # 30 s for the window / video mode
     sleep 2

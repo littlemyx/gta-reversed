@@ -76,7 +76,7 @@ bool FxPrimBP_c::Load(FILESTREAM file, int32 version, FxName32_t* textureNames) 
         static_assert(sizeof(FxBufferedMatrix) == 12 * sizeof(int16));
         for (auto i = 0; i < 12; i++) {
             out[i] = std::remove_reference_t<decltype(out[i])>{ // Construct from the pre-compressed value
-                (int16)(int32)((x87d)mat[i] * (x87d)FxBufferedMatrix::FX_RECIPROCAL)
+                (int16)NOTSA_FTOL(int32, (x87d)mat[i] * (x87d)FxBufferedMatrix::FX_RECIPROCAL)
             };
         }
     }

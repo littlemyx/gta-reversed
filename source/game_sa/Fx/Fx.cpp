@@ -607,7 +607,7 @@ void Fx_c::AddBulletImpact(const CVector& posn, const CVector& direction, int32 
         break;
     }
     case 3: // Wood
-        g_fx.AddWood(posn, direction, (int32)((x87d)amount * (x87d)0.5), 1.0f); // 0x858B8C, 0x49EE10
+        g_fx.AddWood(posn, direction, NOTSA_FTOL(int32, (x87d)amount * (x87d)0.5), 1.0f); // 0x858B8C, 0x49EE10
         break;
     default:
         break;

@@ -46,16 +46,16 @@ struct RenderInfo_t {
     float m_SmokeLife;
 
     void SetColor(float red, float green, float blue, float alpha) {
-        m_Color1.red   = (uint8)red;
-        m_Color1.green = (uint8)green;
-        m_Color1.blue  = (uint8)blue;
-        m_Color1.alpha = (uint8)alpha;
+        m_Color1.red   = NOTSA_FTOL(uint8, red);
+        m_Color1.green = NOTSA_FTOL(uint8, green);
+        m_Color1.blue  = NOTSA_FTOL(uint8, blue);
+        m_Color1.alpha = NOTSA_FTOL(uint8, alpha);
     }
 
     void SetRangeColor(float red, float green, float blue) {
-        m_Color2.red   = (uint8)red;
-        m_Color2.green = (uint8)green;
-        m_Color2.blue  = (uint8)blue;
+        m_Color2.red   = NOTSA_FTOL(uint8, red);
+        m_Color2.green = NOTSA_FTOL(uint8, green);
+        m_Color2.blue  = NOTSA_FTOL(uint8, blue);
     }
 
     void Process() {

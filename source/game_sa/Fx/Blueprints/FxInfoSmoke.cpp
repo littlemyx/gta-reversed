@@ -33,7 +33,7 @@ void FxInfoSmoke_c::GetValue(float currentTime, float mult, float totalTime, flo
 
     auto& render = *static_cast<RenderInfo_t*>(info);
 
-    render.m_SmokeType = static_cast<int8>(values[0]);
+    render.m_SmokeType = NOTSA_FTOL(int8, values[0]);
     render.m_SmokeColor.red = values[1];
     render.m_SmokeColor.green = values[2];
     render.m_SmokeColor.blue = values[3];

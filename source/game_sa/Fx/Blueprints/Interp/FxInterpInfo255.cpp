@@ -35,8 +35,8 @@ void FxInterpInfo255_c::Load(FILESTREAM file) {
         m_Keys[i] = g_fxMan.Allocate<int16>(m_nNumKeys);
         for (auto j = 0; j < m_nNumKeys; j++) {
             ReadField<void>(file, "FX_KEYFLOAT_DATA:");
-            m_pTimes[j] = uint16(ReadField<float>(file) * 256.f);
-            m_Keys[i][j] = uint16(ReadField<float>(file) * 128.f);
+            m_pTimes[j] = NOTSA_FTOL(uint16, ReadField<float>(file) * 256.f);
+            m_Keys[i][j] = NOTSA_FTOL(uint16, ReadField<float>(file) * 128.f);
         }
     }
 }

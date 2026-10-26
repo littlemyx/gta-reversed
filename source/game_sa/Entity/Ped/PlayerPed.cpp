@@ -1304,7 +1304,8 @@ void CPlayerPed::MakeChangesForNewWeapon(eWeaponType weaponType) {
     CWeapon& wep = GetActiveWeapon();
     CWeaponInfo& wepInfo = wep.GetWeaponInfo(this);
 
-    wep.m_AmmoInClip = std::min<uint32>(wep.m_TotalAmmo, (uint32)wepInfo.m_nAmmoClip);
+    // 0x60B4E1..0x60B4FA: movsx word clip size, SIGNED compare (jl) against the total ammo
+    wep.m_AmmoInClip = (uint32)std::min((int32)wep.m_TotalAmmo, (int32)(int16)wepInfo.m_nAmmoClip);
 
     if (!wepInfo.flags.bCanAim)
         ClearWeaponTarget();
@@ -1314,7 +1315,7 @@ void CPlayerPed::MakeChangesForNewWeapon(eWeaponType weaponType) {
 
 
     if (auto anim = RpAnimBlendClumpGetAssociation(GetRpClump(), ANIM_ID_FIRE))
-        anim->m_Flags |= ANIMATION_IS_PLAYING & ANIMATION_IS_FINISH_AUTO_REMOVE;
+        anim->m_Flags |= ANIMATION_IS_PLAYING | ANIMATION_IS_FINISH_AUTO_REMOVE; // 0x60B539: or byte [anim+0x2E], 9
 
     TheCamera.ClearPlayerWeaponMode();
 }

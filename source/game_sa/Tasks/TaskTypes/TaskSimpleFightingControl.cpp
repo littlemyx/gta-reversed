@@ -72,18 +72,18 @@ int16 CTaskSimpleFightingControl::CalcMoveCommand(CPed* ped) {
 
     switch (m_target->GetType()) {
     case ENTITY_TYPE_PED: {
-        const auto range = segmentPedToTarget.Magnitude() - m_maxAttackRange;
+        const auto dist = segmentPedToTarget.Magnitude();
+        const auto rnd  = rand(); // 0x624C2B: drawn unconditionally, before the range checks (also when the result is 3)
+        const auto range = dist - m_maxAttackRange;
         if (range > 0.1f) {
             return 3;
         }
-
-        const auto rnd = rand();
 
         if (range > -0.1f) { // Inverted
             return (rnd % 16 == 0) ? 7 : -1;
         }
 
-        if (range >= 0.8f) {
+        if (dist >= 0.8f) { // 0x624C7E..0x624C8D: the plain distance (the stored magnitude) is compared with 0.8, NOT the range
             if (rand() % 64 == 0) {
                 return 8;
             }
@@ -102,7 +102,7 @@ int16 CTaskSimpleFightingControl::CalcMoveCommand(CPed* ped) {
         CPedGeometryAnalyser::ComputeEntityBoundingBoxPlanesUncachedAll(targetPos.z, *m_target, &planes, planesDot);
 
         const auto hitSide = CPedGeometryAnalyser::ComputeEntityHitSide(pedPos, *m_target);
-        if ((DotProduct(planes[hitSide], pedPos) + planesDot[hitSide]) >= 0.7f) {
+        if ((DotProduct(planes[hitSide], pedPos) + planesDot[hitSide]) > 0.7f) { // 0x624D60: fcomp + (C0|C3) => equal is not enough
             return 3;
         }
 

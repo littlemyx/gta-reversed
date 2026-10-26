@@ -1611,7 +1611,7 @@ void CWorld::SetAllCarsCanBeDamaged(bool enable) {
 // 0x566950
 void CWorld::ExtinguishAllCarFiresInArea(CVector point, float radius) {
     for (auto& veh : GetVehiclePool()->GetAllValid()) {
-        if (DistanceBetweenPointsSquared(point, veh.GetPosition()) <= sq(radius)) {
+        if (DistanceBetweenPointsSquared(point, veh.GetPosition()) < sq(radius)) { // exe 0x566A0A..0x566A11: strictly less (fcompp, test ah,0x41)
             veh.ExtinguishCarFire();
         }
     }

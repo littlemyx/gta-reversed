@@ -2616,11 +2616,15 @@ void CPed::GiveObjectToPedToHold(int32 modelIndex, uint8 replace) {
 
     // Deal with ped already holding an entity.
     // If `replace` is `true`, just drop the entity, otherwise do nothing.
-    if (GetTaskManager().HasAnyOf<TASK_SIMPLE_HOLD_ENTITY>()) {
-        if (!GetEntityThatThisPedIsHolding() || !replace) {
-            return;
-        }
+    // 0x5E43B3..0x5E43EA: the drop is decided independently of the HOLD task lookup - GetEntityThatThisPedIsHolding also sees the PICKUP/PUTDOWN tasks
+    const bool hadHoldTask = GetTaskManager().HasAnyOf<TASK_SIMPLE_HOLD_ENTITY>();
+    bool       dropped     = false;
+    if (GetEntityThatThisPedIsHolding() && replace) {
         DropEntityThatThisPedIsHolding(true);
+        dropped = true;
+    }
+    if (hadHoldTask && !dropped) {
+        return;
     }
 
     // Create object

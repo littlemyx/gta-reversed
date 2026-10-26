@@ -1,0 +1,11 @@
+# ASM-S13 (Tasks/TaskTypes: GetUp, GiveCPR, GoTo*, HitHead, HoldEntity, HurtPedWithCar, IK*, InAir, JetPack, GunControl; 41 functions) - 2026-10-26 22:57 .. 23:25
+Result: 29 compared (3 FIXED in 3 commits, 25 MATCH, 1 UNSURE), 12 NOT REACHED (token budget; table in S13.result.tsv). Slice partial.
+Fixes (exe address, one line each):
+- CTaskSimpleIKChain::ProcessPed (0x633D2B, 0x633DB3): only a finite duration expires (`m_Duration != -1`; the port had it inverted, so an infinite-duration chain was dropped on its first update); the blend ratio uses the int-truncated time step (ftol of ts*0.02*1000) and clamps `if (x > 1)`.
+- CTaskSimpleHoldEntity::ChoosePutDownHeight (0x693552/0x693568): put-down heights are the exe floats 0.43333334 / 0.36666667 (port literals 0.433333f / 0.366667f are different floats).
+- CTaskSimpleJetPack::ProcessPed (0x6801FF..0x6802F1, 0x68025F): the dead-ped strafe wobble is `strafe += (rand()&1 ? +1 : -1)` clamped to +-3; the port's `strafe + DoCoinFlip() ? -1 : 1` replaced the strafe by +-1 (precedence) and used DoCoinFlip (rand >= 16383) with the opposite sign. bSwitchedWeapons is set for non-players too.
+UNSURE: CTaskSimpleGoTo::SetUpIK (0x667C02..0x667C76) - look-at z is (2*dir.z + ped.z) + 0.61 summed in x87 extended; port adds ped.z + 0.61f first (possible 1-ulp difference of a stored float, not fixed).
+MATCH: IKChain ctor/dtor/Clone/CreateIKChain, IKLookAt ctor/dtor/CreateIKChain, IKPointArm ctor/dtor/Clone/CreateIKChain, GetUp::ProcessPed, GiveCPR x2, GoToPoint::MakeAbortable, GoToPointFine::ProcessPed, HitHead, HoldEntity MakeAbortable/ctor-2/ctor-3/StartAnim, HurtPedWithCar, JetPack dtor/ProcessAnims/MakeAbortable.
+NOT REACHED: GetUp::StartAnim, GoToPoint::ProcessPed, GoToPointFine::SetBlendedMoveAnim, GunControl::ProcessPed (cap), HoldEntity::ProcessPed/SetPedPosition, InAir::ProcessPed (cap), JetPack RenderJetPack/DropJetPack/DoJetPackEffect/ProcessControlInput (cap)/ProcessThrust (cap).
+Consumer audit: no layout/signature change; the IKChain fix is local to the task's own update; m_bSwitchedWeapons is only read together with IsPlayer().
+Gate: Release build OK (1186/1186); no oracle row covers these functions; soak RESULT: OK (3 min NOVSYNC, 45400 frames, 0 errors).

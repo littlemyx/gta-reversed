@@ -1,0 +1,4 @@
+date	gate_sha	scenario.check	detail	reruns
+2026-10-25	1d56813f	combat.hit.damage_event+car.driver_dies	CJ 1 hp after chase (fixed in ROUTE-FLAKES)	2 PASS
+2026-10-26	d3a8458d	missions.bike.enter_return+reenter_return	BMX not mounted	2 PASS
+2026-10-26	61d2ce08	interior_lspd.cops_present+cops_react	no cops in the interior	2 PASS

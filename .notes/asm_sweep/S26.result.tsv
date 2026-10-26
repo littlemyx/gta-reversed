@@ -1,0 +1,29 @@
+addr	function	verdict	asm range	note	fix commit
+0x542260	CPhysical::Constructor	MATCH	542260-54244d	all field inits and offsets equal (elasticity/buoyancy untouched in both)	
+0x542450	CPhysical::Destructor	MATCH	542450-54248c	ReturnRealTimeShadow + Flush	
+0x542560	CPhysical::RemoveAndAdd	MATCH	542560-5427f6	node reuse/alloc/delete, type->list select equal; x87 PC=24 so sector idx float math equal	
+0x544A30	CPhysical::Add	MATCH	544a30-544c33		
+0x5424C0	CPhysical::Remove	MATCH	5424c0-542552		
+0x5485E0	CPhysical::ProcessControl	MATCH	5485e0-548671	flag masks 0xffffef97/0xbffffdff equal	
+0x54DFB0	CPhysical::ProcessCollision	NOT REACHED			
+0x54DB10	CPhysical::ProcessShift	DEVIATION	54db63-54db92	ped wall-hit damping: exe damps if standingOn==null or !(standingOn+0x40 & 4) or (standingOn+0x40 & 8) (PHYSICAL flags dword), port tested null-standing=no damp and CEntity flags 0x1c; second pass/flags/moving speed match	see git log
+0x54DEC0	CPhysical::TestCollision	MATCH	54dec0-54dfa9		
+0x546D00	CPhysical::ProcessEntityCollision	DEVIATION	546d83-546d96	HasHitWall also set when the entity has m_bIsStaticWaitingForCollision (flag 0x40000), port had only building||static	see git log
+0x5435C0	CPhysical::ApplyCollision-1	DEVIATION	5436ec-54370d, 543776-543793	(a) else-branch dot product order is (n.y*s.y+n.x*s.x)+s.z*n.z, port used z,y,x; (b) collision mass used |n|^2 instead of |r x n|^2 (cross product computed but unused)	see git log
+0x543890	CPhysical::ApplySoftCollision-1	DEVIATION	543a85-543aa1	same collision mass bug: |n|^2 instead of |r x n|^2; the rest (depth/mult/car-line branch/ApplyForce) matches	see git log
+0x5446A0	CPhysical::DettachAutoAttachedEntity	MATCH	5446a0-5447a9		
+0x544D50	CPhysical::ApplyCollisionAlt	NOT REACHED			
+0x5454C0	CPhysical::ApplyFriction-self	NOT REACHED			
+0x546670	CPhysical::ProcessShiftSectorList	NOT REACHED	-	RD-AB-16 fix not re-checked		
+0x546ED0	CPhysical::ApplyScriptCollision	MATCH	546ed0-546fd9		
+0x547B80	CPhysical::ApplySpeed	MATCH (partial)	5480dd-54830d	door-limit tail and non-snooker path match; snooker-table block (bDisableZ) not compared line by line	
+0x548320	CPhysical::UnsetIsInSafePosition	MATCH	548320-5483c2		
+0x5483D0	CPhysical::ApplyFriction-void	MATCH	5483d0-5485d4		
+0x548680	CPhysical::ApplyCollision-2	NOT REACHED			
+0x54A2C0	CPhysical::ApplySoftCollision-2	NOT REACHED			
+0x54BA60	CPhysical::ProcessCollisionSectorList	NOT REACHED			
+0x54CFF0	CPhysical::ProcessCollisionSectorList_SimpleCar	NOT REACHED			
+0x54D920	CPhysical::CheckCollision	MATCH	54d920-54dab0	sector idx: port uses x/50+60 (CWorld::GetSectorX) vs exe x*0.02f+60: UNSURE 1-ulp edge, not changed	
+0x54DAB0	CPhysical::CheckCollision_SimpleCar	MATCH	54dab0-54db03		
+0x546DB0	CPhysical::PlacePhysicalRelativeToOtherPhysical	MATCH	546db0-546eb6		
+0x546FF0	CPhysical::PositionAttachedEntity	NOT REACHED			

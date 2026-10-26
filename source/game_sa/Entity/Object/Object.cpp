@@ -1205,7 +1205,7 @@ void CObject::ObjectFireDamage(float damage, CEntity* damager) {
 
     if (m_nModelIndex == ModelIndices::MI_GRASSPLANT)
     {
-        m_fBurnDamage = 1.0F - (m_fHealth / 2000.0F);
+        m_fBurnDamage = 1.0F - m_fHealth * 0.0005F; // exe 0x5A1620: multiplies by the float constant 0.0005f (0x859978), no division by 2000
         m_nBurnTime = CTimer::GetTimeInMS() + 3000;
     }
 
@@ -1227,7 +1227,7 @@ void CObject::ObjectFireDamage(float damage, CEntity* damager) {
         if (!CEntity::GetIsStatic())
             CPhysical::RemoveFromMovingList();
 
-        SetIsStatic(true);
+        CEntity::SetIsStatic(true); // exe 0x5A16F0: `or [this+0x1C], 4` - not the virtual CObject::SetIsStatic, which would also clear physicalFlags.bDoorHitEndStop
         physicalFlags.bExplosionProof = true;
         ResetMoveSpeed();
         ResetTurnSpeed();

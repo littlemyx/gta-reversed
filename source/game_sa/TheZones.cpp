@@ -65,7 +65,7 @@ bool& CTheZones::GetZoneWasVisited(CVector2D pos) {
 #ifdef FIX_BUGS
     return ZonesVisited[(size_t)((std::clamp(pos.x, -2999.f, 2999.f) + 3000.f) / 600.f)][9LL - (size_t)((std::clamp(pos.y, -2999.f, 2999.f) + 3000.f) / 600.f)];
 #else
-    return reinterpret_cast<bool*>(&ZonesVisited)[10 * (size_t)((pos.x + 3000.f) / 600.f) - (size_t)((pos.y + 3000.f) / 600.f) + 9]; // flat index, unchecked, as the original
+    return reinterpret_cast<bool*>(&ZonesVisited)[10 * NOTSA_FTOL(size_t, (pos.x + 3000.f) / 600.f) - NOTSA_FTOL(size_t, (pos.y + 3000.f) / 600.f) + 9]; // flat index, unchecked, as the original
 #endif
 }
 
@@ -268,8 +268,8 @@ void CTheZones::SetCurrentZoneAsUnlocked() {
     // Same lookup as the one in 0x572130 (the original inlines it a 2nd time to set the flag)
     // The original does this in x87 registers, converts using `_ftol2` (64 bit result) and only keeps the lowest byte
     constexpr float ZONE_SIZE_RECIP = 0.0016666667f; // 1 / 600 (0x865060)
-    const auto      x               = (uint8)(int64)(((x87d)pos.x + (x87d)3000.0) * (x87d)ZONE_SIZE_RECIP);
-    const auto      y               = (uint8)(int64)(((x87d)pos.y + (x87d)3000.0) * (x87d)ZONE_SIZE_RECIP);
+    const auto      x               = (uint8)NOTSA_FTOL(int64, ((x87d)pos.x + (x87d)3000.0) * (x87d)ZONE_SIZE_RECIP);
+    const auto      y               = (uint8)NOTSA_FTOL(int64, ((x87d)pos.y + (x87d)3000.0) * (x87d)ZONE_SIZE_RECIP);
     const ptrdiff_t idx             = 10 * (ptrdiff_t)x - (ptrdiff_t)y + 9;
     // BUG: Not checked, `idx` is out of the 10x10 grid if the position is outside of the map (e.g. `pos.x >= 3000`)
     if (notsa::IsFixBugs() && (idx < 0 || idx >= (ptrdiff_t)sizeof(ZonesVisited))) {
@@ -327,12 +327,12 @@ void CTheZones::CreateZone(
         CopyLabel(z.m_InfoLabel, infoTmp);
         CopyLabel(z.m_TextLabel, textTmp);
         // _ftol, low word stored
-        z.m_fX1 = (int16)(int32)pos1.x;
-        z.m_fY1 = (int16)(int32)pos1.y;
-        z.m_fZ1 = (int16)(int32)pos1.z;
-        z.m_fX2 = (int16)(int32)pos2.x;
-        z.m_fY2 = (int16)(int32)pos2.y;
-        z.m_fZ2 = (int16)(int32)pos2.z;
+        z.m_fX1 = (int16)NOTSA_FTOL(int32, pos1.x);
+        z.m_fY1 = (int16)NOTSA_FTOL(int32, pos1.y);
+        z.m_fZ1 = (int16)NOTSA_FTOL(int32, pos1.z);
+        z.m_fX2 = (int16)NOTSA_FTOL(int32, pos2.x);
+        z.m_fY2 = (int16)NOTSA_FTOL(int32, pos2.y);
+        z.m_fZ2 = (int16)NOTSA_FTOL(int32, pos2.z);
         z.m_nType  = ztype;
         z.m_nLevel = level;
     };

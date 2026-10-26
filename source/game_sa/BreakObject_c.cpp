@@ -226,9 +226,9 @@ void BreakObject_c::SetBreakInfo(BreakInfo_t* info, int32 bJustFaces) {
         const auto& matColor = info->m_pMaterialProperties[textureInd];
         for (auto ind = 0; ind < NUM_BREAK_GROUP_RENDER_INFO; ++ind) {
             auto& vertColor = info->m_pVertexColors[triangle.vertIndex[ind]];
-            auto red   = (uint8)std::min(255.0f, (float)vertColor.red   * matColor.red   + ambientRed);
-            auto green = (uint8)std::min(255.0f, (float)vertColor.green * matColor.green + ambientGreen);
-            auto blue  = (uint8)std::min(255.0f, (float)vertColor.blue  * matColor.blue  + ambientBlue);
+            auto red   = NOTSA_FTOL(uint8, std::min(255.0f, (float)vertColor.red   * matColor.red   + ambientRed));
+            auto green = NOTSA_FTOL(uint8, std::min(255.0f, (float)vertColor.green * matColor.green + ambientGreen));
+            auto blue  = NOTSA_FTOL(uint8, std::min(255.0f, (float)vertColor.blue  * matColor.blue  + ambientBlue));
 
             curRenderInfo.colors[ind].Set(red, green, blue);
             curRenderInfo.texCoords[ind] = info->m_pTexCoors[triangle.vertIndex[ind]];
@@ -304,7 +304,7 @@ void BreakObject_c::DoCollisionResponse(BreakGroup_t* group, float timeStep, con
 
     if (m_AddSparks) {
         CVector particleVelocity = { 0.0f, 0.0f, 1.0f };
-        auto amount = static_cast<int32>(group->m_Velocity.Magnitude() * 100.0f);
+        auto amount = NOTSA_FTOL(int32, group->m_Velocity.Magnitude() * 100.0f);
         g_fx.AddSparks(groupPos, particleVelocity, 2.0f, amount, CVector(0.0f, 0.0f, 0.0f), SPARK_PARTICLE_SPARK, 0.4f, 1.0f);
     }
 }

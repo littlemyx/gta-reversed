@@ -70,11 +70,11 @@ void Snap(const std::string& name) {
         auto* pad = CPad::GetPad(0);
         const bool ctl = pl && pad && !FrontEndMenuManager.m_bMenuActive && !CCutsceneMgr::IsRunning() && !pad->bPlayerSafe && !pad->ArePlayerControlsDisabled() && !TheCamera.GetFading();
         GR_LOG("[gr] %s A t=%lu frame=%u pl=%d x=%d y=%d z=%d head=%d hp=%d arm=%d pst=%d wl=%d chaos=%d mission=%d fail=%d invh=%d vmodel=%d ptasks=%s phit=%d hitevents=%u ctl=%d cut=%d fade=%d menu=%d relmouse=%d cam10=%d camraw10=%d money=%d vspd=%d",
-            id.c_str(), (unsigned long)GetTickCount(), (unsigned)CTimer::GetFrameCounter(), pl ? 1 : 0, (int)pos.x, (int)pos.y, (int)pos.z, pl ? (int)(RadiansToDegrees(pl->GetHeading())) : 0,
-            pl ? (int)pl->m_fHealth : -1, pl ? (int)pl->m_fArmour : -1, pl ? (int)pl->m_nPedState : -1, w ? (int)w->GetWantedLevel() : -1, w ? (int)w->m_ChaosLevel : -1,
+            id.c_str(), (unsigned long)GetTickCount(), (unsigned)CTimer::GetFrameCounter(), pl ? 1 : 0, NOTSA_FTOL(int32, pos.x), NOTSA_FTOL(int32, pos.y), NOTSA_FTOL(int32, pos.z), pl ? NOTSA_FTOL(int32, RadiansToDegrees(pl->GetHeading())) : 0,
+            pl ? NOTSA_FTOL(int32, pl->m_fHealth) : -1, pl ? NOTSA_FTOL(int32, pl->m_fArmour) : -1, pl ? (int)pl->m_nPedState : -1, w ? (int)w->GetWantedLevel() : -1, w ? (int)w->m_ChaosLevel : -1,
             (int)CTheScripts::IsPlayerOnAMission(), (int)CTheScripts::FailCurrentMission, pl ? (int)pl->bInVehicle : 0, pl && pl->m_pVehicle ? (int)pl->m_pVehicle->m_nModelIndex : -1,
             ch.c_str(), (int)hit, s_HitEvents, (int)ctl, (int)CCutsceneMgr::IsRunning(), (int)TheCamera.GetFading(), (int)FrontEndMenuManager.m_bMenuActive,
-            PSGLOBAL(sdlWindow) ? (int)SDL_GetWindowRelativeMouseMode(PSGLOBAL(sdlWindow)) : -1, (int)(s_CamAccum * 572.9578), (int)(CamHeading() * 572.9578), (int)FindPlayerInfo().m_nMoney, pl && pl->m_pVehicle ? (int)(pl->m_pVehicle->m_vecMoveSpeed.Magnitude() * 1000.f) : -1);
+            PSGLOBAL(sdlWindow) ? (int)SDL_GetWindowRelativeMouseMode(PSGLOBAL(sdlWindow)) : -1, NOTSA_FTOL(int32, s_CamAccum * 572.9578), NOTSA_FTOL(int32, CamHeading() * 572.9578), (int)FindPlayerInfo().m_nMoney, pl && pl->m_pVehicle ? NOTSA_FTOL(int32, pl->m_pVehicle->m_vecMoveSpeed.Magnitude() * 1000.f) : -1);
     }
     if (pl && GetPedPool() && GetVehiclePool()) { // (the menu / start-up has no pools yet: only the video part D is logged)
         int peds = 0, cops = 0, copsDead = 0, copsDeadAlive = 0, copsCar = 0, copsFoot = 0, copsEngaged = 0, copsFootEngaged = 0, nearCop = 99999, law = 0, lawDrv = 0, nearLaw = 99999, copsHurtInCar = 0;
@@ -95,8 +95,8 @@ void Snap(const std::string& name) {
                 if (ped.bInVehicle && ped.m_nPedState != PEDSTATE_DEAD && ped.m_nPedState != PEDSTATE_DIE) copsHurtInCar++;
                 continue;
             }
-            nearCop = std::min(nearCop, (int)d);
-            if (d <= 40.f) { if ((ped.GetPosition() - pos).Magnitude2D() < 1.5f && ped.GetPosition().z - pos.z > 0.5f) copsStack++; copsNear40++; if (copsNear40 <= 8) copdz += std::to_string((int)((ped.GetPosition().z - pos.z) * 10.f)) + ","; }
+            nearCop = std::min(nearCop, NOTSA_FTOL(int32, d));
+            if (d <= 40.f) { if ((ped.GetPosition() - pos).Magnitude2D() < 1.5f && ped.GetPosition().z - pos.z > 0.5f) copsStack++; copsNear40++; if (copsNear40 <= 8) copdz += std::to_string(NOTSA_FTOL(int32, (ped.GetPosition().z - pos.z) * 10.f)) + ","; }
             (ped.bInVehicle ? copsCar : copsFoot)++;
             // "engaged": acts against the player: pursuit / arrest / kill tasks
             const bool eng = PedHasTask(ped, TASK_COMPLEX_POLICE_PURSUIT) || PedHasTask(ped, TASK_COMPLEX_ARREST_PED) || PedHasTask(ped, TASK_SIMPLE_ARREST_PED) || PedHasTask(ped, TASK_COMPLEX_COP_ARREST_PED) ||
@@ -109,7 +109,7 @@ void Snap(const std::string& name) {
             if (d > 100.f || !veh.IsLawEnforcementVehicle()) continue;
             law++;
             if (veh.m_pDriver) lawDrv++;
-            nearLaw = std::min(nearLaw, (int)d);
+            nearLaw = std::min(nearLaw, NOTSA_FTOL(int32, d));
         }
         int pk = 0, wpk = 0, pnew = 0; // pnew: pickups that were not active at the previous snapshot (a dead armed ped on foot drops its weapons)
         static std::vector<bool> prevActive;
@@ -129,8 +129,8 @@ void Snap(const std::string& name) {
         const bool cOk = s_LastCop && GetPedPool()->IsObjectValid(s_LastCop);
         const auto dying = [](CPed* p) { return p->m_nPedState == PEDSTATE_DIE || p->m_nPedState == PEDSTATE_DEAD; };
         GR_LOG("[gr] %s C veh=%d vdriver=%d vmodel=%d drv=%d dhp=%d dst=%d ddead=%d dincar=%d dtasks=%s cop=%d chp=%d cst=%d cdead=%d ctasks=%s",
-            id.c_str(), (int)vOk, vOk && s_LastVeh->m_pDriver ? 1 : 0, vOk ? (int)s_LastVeh->m_nModelIndex : -1, (int)dOk, dOk ? (int)s_LastDriver->m_fHealth : -1, dOk ? (int)s_LastDriver->m_nPedState : -1, dOk ? (int)dying(s_LastDriver) : -1,
-            dOk ? (int)s_LastDriver->bInVehicle : -1, dOk ? Chain(*s_LastDriver).c_str() : "-", (int)cOk, cOk ? (int)s_LastCop->m_fHealth : -1, cOk ? (int)s_LastCop->m_nPedState : -1, cOk ? (int)dying(s_LastCop) : -1, cOk ? Chain(*s_LastCop).c_str() : "-");
+            id.c_str(), (int)vOk, vOk && s_LastVeh->m_pDriver ? 1 : 0, vOk ? (int)s_LastVeh->m_nModelIndex : -1, (int)dOk, dOk ? NOTSA_FTOL(int32, s_LastDriver->m_fHealth) : -1, dOk ? (int)s_LastDriver->m_nPedState : -1, dOk ? (int)dying(s_LastDriver) : -1,
+            dOk ? (int)s_LastDriver->bInVehicle : -1, dOk ? Chain(*s_LastDriver).c_str() : "-", (int)cOk, cOk ? NOTSA_FTOL(int32, s_LastCop->m_fHealth) : -1, cOk ? (int)s_LastCop->m_nPedState : -1, cOk ? (int)dying(s_LastCop) : -1, cOk ? Chain(*s_LastCop).c_str() : "-");
     }
     {
         RECT cr{};
@@ -218,7 +218,7 @@ bool NotsaGrCmd(const char* name, const std::string& args) {
             s_LastDriver = CPopulation::AddPedInCar(s_LastVeh, true, -1, 0, false, false);
             if (s_LastDriver) s_LastVeh->m_autoPilot.m_nCarMission = MISSION_CRUISE;
         }
-        GR_LOG("[gr-cmd] spawnveh %p model %d driver %p at (%d,%d,%d)", (void*)s_LastVeh, mdl, (void*)s_LastDriver, (int)p.x, (int)p.y, (int)p.z);
+        GR_LOG("[gr-cmd] spawnveh %p model %d driver %p at (%d,%d,%d)", (void*)s_LastVeh, mdl, (void*)s_LastDriver, NOTSA_FTOL(int32, p.x), NOTSA_FTOL(int32, p.y), NOTSA_FTOL(int32, p.z));
         return true;
     }
     if (!std::strcmp(name, "shootlast") || !std::strcmp(name, "shootdrv")) { // lethal weapon damage event (the path bullets take) on the last spawned cop / the last spawned car's driver

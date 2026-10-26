@@ -113,7 +113,7 @@ void CAESmoothFadeThread::Service() {
             }
 #endif
 
-            const auto dwVolume = static_cast<LONG>(fVolume * (x87d)100.0);
+            const auto dwVolume = NOTSA_FTOL(LONG, fVolume * (x87d)100.0);
             entry.m_pSoundBuffer->SetVolume(dwVolume);
             continue;
         }
@@ -123,7 +123,7 @@ void CAESmoothFadeThread::Service() {
         entry.m_pSoundBuffer->GetVolume((LPLONG)&curVolume);
         const auto fCurVolume = static_cast<float>(curVolume) / 100.0F;
         if (entry.m_bStopBufferAfterFade || approxEqual2(fCurVolume, entry.m_fCurVolume, 0.01F)) {
-            const auto dwTargetVolume = static_cast<LONG>(entry.m_fTargetVolume * 100.0F);
+            const auto dwTargetVolume = NOTSA_FTOL(LONG, entry.m_fTargetVolume * 100.0F);
             entry.m_pSoundBuffer->SetVolume(dwTargetVolume);
             if (entry.m_bStopBufferAfterFade)
                 entry.m_pSoundBuffer->Stop();
@@ -233,7 +233,7 @@ bool CAESmoothFadeThread::RequestFade(IDirectSoundBuffer* buffer, float fTargetV
 }
 
 void CAESmoothFadeThread::SetBufferVolume(IDirectSoundBuffer* buffer, float volume) {
-    const auto newVolume = static_cast<LONG>(volume * 100.0F);
+    const auto newVolume = NOTSA_FTOL(LONG, volume * 100.0F);
     if (m_bSmoothFadesDisabled) {
         buffer->SetVolume(newVolume);
         return;

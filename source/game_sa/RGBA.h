@@ -54,10 +54,10 @@ public:
     //! From float RW color
     constexpr CRGBA(RwRGBAReal rgba) :
         CRGBA{
-            (uint8)(rgba.red * 255.f),
-            (uint8)(rgba.green * 255.f),
-            (uint8)(rgba.blue * 255.f),
-            (uint8)(rgba.alpha * 255.f)
+            NOTSA_FTOL(uint8, rgba.red * 255.f),
+            NOTSA_FTOL(uint8, rgba.green * 255.f),
+            NOTSA_FTOL(uint8, rgba.blue * 255.f),
+            NOTSA_FTOL(uint8, rgba.alpha * 255.f)
         }
     {
     }
@@ -151,9 +151,9 @@ public:
     //! Scale this color by a factor, but keep alpha
     constexpr CRGBA LerpRGB(float t) {
         return {
-            (uint8)((float)(r) * t),
-            (uint8)((float)(g) * t),
-            (uint8)((float)(b) * t),
+            NOTSA_FTOL(uint8, (float)(r) * t),
+            NOTSA_FTOL(uint8, (float)(g) * t),
+            NOTSA_FTOL(uint8, (float)(b) * t),
             a
         };
     }
@@ -178,10 +178,10 @@ public:
 
     constexpr CRGBA operator*(float m) const {
         return {
-            (uint8)((float)r * m),
-            (uint8)((float)g * m),
-            (uint8)((float)b * m),
-            (uint8)((float)a * m)
+            NOTSA_FTOL(uint8, (float)r * m),
+            NOTSA_FTOL(uint8, (float)g * m),
+            NOTSA_FTOL(uint8, (float)b * m),
+            NOTSA_FTOL(uint8, (float)a * m)
         };
     }
 
@@ -217,9 +217,9 @@ public:
 
     // Same as operator* but doesn't touch the alpha.
     CRGBA& ScaleRGB(float mult) {
-        r = (uint8)((float)r * mult);
-        g = (uint8)((float)g * mult);
-        b = (uint8)((float)b * mult);
+        r = NOTSA_FTOL(uint8, (float)r * mult);
+        g = NOTSA_FTOL(uint8, (float)g * mult);
+        b = NOTSA_FTOL(uint8, (float)b * mult);
 
         return *this;
     }

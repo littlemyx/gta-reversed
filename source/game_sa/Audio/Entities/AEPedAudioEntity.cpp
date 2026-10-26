@@ -443,7 +443,7 @@ void CAEPedAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) {
     case AE_PED_JACKED_CAR_KICK:
     case AE_PED_JACKED_BIKE:
     case AE_PED_JACKED_DOZER:
-        if (CTimer::GetTimeInMS() < (uint32)sound->m_ClientVariable)
+        if (CTimer::GetTimeInMS() < NOTSA_FTOL(uint32, sound->m_ClientVariable))
             return;
         sound->m_Speed = 1.0f;
         return;

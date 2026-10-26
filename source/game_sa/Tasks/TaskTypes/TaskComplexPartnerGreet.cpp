@@ -64,7 +64,7 @@ CTaskComplexSequence* CTaskComplexPartnerGreet::GetPartnerSequence() {
 
     // 3000 + 4000 * [0, 2): `fild; fmul 2^-15; fmul -4000.0f; _ftol` (extended precision, exact product)
     const auto RandDuration = []() -> int32 {
-        return 3000 - (int32)((x87d)(rand() & 0xFFFF) * (x87d)(1.0f / 32768.0f) * (x87d)-4000.0f);
+        return 3000 - NOTSA_FTOL(int32, (x87d)(rand() & 0xFFFF) * (x87d)(1.0f / 32768.0f) * (x87d)-4000.0f);
     };
     const auto d1 = RandDuration();
     const auto d2 = RandDuration();

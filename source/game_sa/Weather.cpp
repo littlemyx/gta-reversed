@@ -121,9 +121,9 @@ void CWeather::AddRain() {
     }
 
     // 0x72AB0F
-    const auto numSplashSpots     = (int32)(Rain * 5.0f);
+    const auto numSplashSpots     = NOTSA_FTOL(int32, Rain * 5.0f);
     const auto maxRadius          = std::max(Rain * 10.0f, 40.0f) * 0.5f; // Always 20 for normal rain values, `std::min` looks intended
-    const auto numSplashesPerSpot = 15 - (int32)(Rain * -2.0f);
+    const auto numSplashesPerSpot = 15 - NOTSA_FTOL(int32, Rain * -2.0f);
     for (auto i = 0; i < numSplashSpots; i++) {
         const FxPrtMult_c splashMults(1.0f, 1.0f, 1.0f, 0.25f, 0.02f, 0.0f, 0.03f);
         const CVector     splashVelocity{};
@@ -237,7 +237,7 @@ void CWeather::RenderRainStreaks() {
         return;
 
     {
-        const auto strength = (uint32)((64.0f - (float)CTimeCycle::m_FogReduction) * (Rain * 110.0f) / 64.0f);
+        const auto strength = NOTSA_FTOL(uint32, (64.0f - (float)CTimeCycle::m_FogReduction) * (Rain * 110.0f) / 64.0f);
         if (CurrentRainParticleStrength < strength) {
             if (CurrentRainParticleStrength + 1 <= strength) {
                 CurrentRainParticleStrength++;
@@ -288,7 +288,7 @@ void CWeather::RenderRainStreaks() {
             streakPosX[i] = 0;
             streakPosY[i] = 0;
             streakPosZ[i] = 0;
-            streakStrength[i] = (uint8)((float)CurrentRainParticleStrength * 0.6f);
+            streakStrength[i] = NOTSA_FTOL(uint8, (float)CurrentRainParticleStrength * 0.6f);
         }
     }
 
@@ -300,11 +300,11 @@ void CWeather::RenderRainStreaks() {
         const CVector posn = GetStreakPosition(i);
         if (!streakStrength[i] || posn.z <= 0.0f || (camPos - posn).Magnitude() > 8.0f) {
             const CVector newPosn = CVector::Random(0.0f, 5.0f) + TheCamera.GetForward() * 6.0f + camPos - CVector{2.5f, 2.5f, 2.5f};
-            streakPosX[i] = (int32)(newPosn.x);
-            streakPosY[i] = (int32)(newPosn.y);
-            streakPosZ[i] = (int32)(newPosn.z);
+            streakPosX[i] = NOTSA_FTOL(int32, newPosn.x);
+            streakPosY[i] = NOTSA_FTOL(int32, newPosn.y);
+            streakPosZ[i] = NOTSA_FTOL(int32, newPosn.z);
 
-            streakStrength[i] = (uint8)((float)CurrentRainParticleStrength * 0.6f);
+            streakStrength[i] = NOTSA_FTOL(uint8, (float)CurrentRainParticleStrength * 0.6f);
         }
     };
 
@@ -339,7 +339,7 @@ void CWeather::RenderRainStreaks() {
             aTempBufferIndices[uiTempBufferIndicesStored + v] = GetRealVertexIndex(v);
         }
 
-        streakPosZ[s] -= (int32)CGeneral::GetRandomNumberInRange(0.01f, 0.1f);
+        streakPosZ[s] -= NOTSA_FTOL(int32, CGeneral::GetRandomNumberInRange(0.01f, 0.1f));
         streakStrength[s] = (uint8)std::max(0, (int32)streakStrength[s] - CGeneral::GetRandomNumberInRange(2, 5));
 
         uiTempBufferVerticesStored += 2;

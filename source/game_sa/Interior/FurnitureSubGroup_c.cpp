@@ -40,14 +40,14 @@ bool FurnitureSubGroup_c::AddFurniture(uint16 modelId, int16 id, uint8 wealthMin
     }
 
     // `!(frac < 0.02f)` (not `0.02f <= frac`): an unordered compare (NaN / inf) also rounds up
-    const auto intX = (int32)sizeX;
+    const auto intX = NOTSA_FTOL(int32, sizeX);
     auto wx = (uint8)intX;
     if (!(sizeX - (float)intX < 0.02f)) {
         wx++;
     }
     f.m_nWidthX = wx;
 
-    const auto intY = (int32)sizeY;
+    const auto intY = NOTSA_FTOL(int32, sizeY);
     auto wy = (uint8)intY;
     if (!(sizeY - (float)intY < 0.02f)) {
         wy++;
@@ -85,7 +85,7 @@ Furniture_c* FurnitureSubGroup_c::GetFurniture(int16 id, uint8 wealth) {
             numMatching++;
         }
     }
-    const auto pick = (int32)((float)CGeneral::GetRandomNumber() * (1.f / 32768.f) * (float)numMatching);
+    const auto pick = NOTSA_FTOL(int32, (float)CGeneral::GetRandomNumber() * (1.f / 32768.f) * (float)numMatching);
 
     int32 i = 0;
     for (auto* f = m_Furnitures.GetHead(); f; f = f->m_pNext) {
@@ -109,7 +109,7 @@ int32 FurnitureSubGroup_c::GetRandomId(uint8 wealth) {
             numMatching++;
         }
     }
-    const auto pick = (int32)((float)CGeneral::GetRandomNumber() * (1.f / 32768.f) * (float)numMatching);
+    const auto pick = NOTSA_FTOL(int32, (float)CGeneral::GetRandomNumber() * (1.f / 32768.f) * (float)numMatching);
 
     int32 i = 0;
     for (auto* f = m_Furnitures.GetHead(); f; f = f->m_pNext) {

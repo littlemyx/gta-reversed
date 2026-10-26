@@ -176,7 +176,7 @@ void CAESound::UpdatePlayTime(int16 soundLength, int16 loopStartTime, int16 play
     }
 
     // 0x4EF306: `fild progress; fmul speed; fiadd playTime; _ftol` - the play time is added BEFORE the truncation (the sum is converted, not the product)
-    m_PlayTime = static_cast<int16>(static_cast<int32>(static_cast<float>(playProgress) * m_ListenerSpeed + static_cast<float>(m_PlayTime)));
+    m_PlayTime = static_cast<int16>(NOTSA_FTOL(int32, static_cast<float>(playProgress) * m_ListenerSpeed + static_cast<float>(m_PlayTime)));
     if (m_PlayTime < soundLength) {
         return;
     }

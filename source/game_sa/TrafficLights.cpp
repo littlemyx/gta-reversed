@@ -201,9 +201,9 @@ void CTrafficLights::DisplayActualLight(CEntity* entity) {
         CCoronas::RegisterCorona(
             NOTSA_PTR_ID32(entity) + iFxInd,
             nullptr,
-            static_cast<uint8>((float)aTrafficLightColoursR[iColorState] * fBrightness),
-            static_cast<uint8>((float)aTrafficLightColoursG[iColorState] * fBrightness),
-            static_cast<uint8>((float)aTrafficLightColoursB[iColorState] * fBrightness),
+            NOTSA_FTOL(uint8, (float)aTrafficLightColoursR[iColorState] * fBrightness),
+            NOTSA_FTOL(uint8, (float)aTrafficLightColoursG[iColorState] * fBrightness),
+            NOTSA_FTOL(uint8, (float)aTrafficLightColoursB[iColorState] * fBrightness),
             255,
             vecLightPos,
             fSize,
@@ -258,9 +258,9 @@ void CTrafficLights::DisplayActualLight(CEntity* entity) {
 
             if (CWeather::TrafficLightsBrightness > 0.05F) {
                 auto fColMult = CTimeCycle::m_CurrentColours.m_fLightsOnGroundBrightness * CWeather::TrafficLightsBrightness / 80.0F;
-                auto ucRed   = static_cast<uint8>((float)aTrafficLightColoursR[iLightState] * fColMult);
-                auto ucGreen = static_cast<uint8>((float)aTrafficLightColoursG[iLightState] * fColMult);
-                auto ucBlue  = static_cast<uint8>((float)aTrafficLightColoursB[iLightState] * fColMult);
+                auto ucRed   = NOTSA_FTOL(uint8, (float)aTrafficLightColoursR[iLightState] * fColMult);
+                auto ucGreen = NOTSA_FTOL(uint8, (float)aTrafficLightColoursG[iLightState] * fColMult);
+                auto ucBlue  = NOTSA_FTOL(uint8, (float)aTrafficLightColoursB[iLightState] * fColMult);
 
                 CShadows::StoreStaticShadow(
                     NOTSA_PTR_ID32(entity),

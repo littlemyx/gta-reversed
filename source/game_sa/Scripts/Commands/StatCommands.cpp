@@ -41,7 +41,7 @@ void SetStat(eStats stat, T value) {
 // GET_FLOAT_STAT (1619)
 template<typename T>
 T GetStat(eStats stat) {
-    return (T)(CStats::GetStatValue(stat));
+    if constexpr (std::is_integral_v<T>) { return NOTSA_FTOL(T, CStats::GetStatValue(stat)); } else { return (T)(CStats::GetStatValue(stat)); }
 }
 };
 

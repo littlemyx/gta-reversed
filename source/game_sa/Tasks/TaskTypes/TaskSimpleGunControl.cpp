@@ -219,7 +219,7 @@ bool CTaskSimpleGunControl::ProcessPed(CPed* ped) {
     }();
 
     if (m_leisureDurMs >= 0) {
-        m_leisureDurMs = std::max(m_leisureDurMs - (int32)CTimer::GetTimeStepInMS(), 0);
+        m_leisureDurMs = std::max(m_leisureDurMs - NOTSA_FTOL(int32, CTimer::GetTimeStepInMS()), 0);
     }
 
     if (dontCheckLeisureDur || !m_leisureDurMs) { // 0x625681
@@ -260,7 +260,7 @@ bool CTaskSimpleGunControl::ProcessPed(CPed* ped) {
         period *= CGeneral::GetRandomNumberInRange(0.75f, 1.25f);
         period /= (float)ped->m_nWeaponShootingRate * m_attackIntervalMult * 0.04f;
 
-        m_nextAtkTimeMs = CTimer::GetTimeInMS() + (uint32)period;
+        m_nextAtkTimeMs = CTimer::GetTimeInMS() + NOTSA_FTOL(uint32, period);
     }
 
     bool isRightArmBlockedForPistolWhip{};

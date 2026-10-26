@@ -26,8 +26,8 @@ struct AnimationState {
     static AnimationState Make(int16 animId, float time, float speed, uint8 groupId) {
         AnimationState ret{};
         ret.m_nAnimId   = animId;
-        ret.m_nTime     = static_cast<uint8>(std::clamp(time, 0.0f, 4.0f)  * 63.75f);
-        ret.m_nSpeed    = static_cast<uint8>(std::clamp(speed, 0.0f, 3.0f) * 85.0f);
+        ret.m_nTime     = NOTSA_FTOL(uint8, std::clamp(time, 0.0f, 4.0f)  * 63.75f);
+        ret.m_nSpeed    = NOTSA_FTOL(uint8, std::clamp(speed, 0.0f, 3.0f) * 85.0f);
         ret.m_nGroupId1 = groupId;
 
         return ret;
@@ -36,9 +36,9 @@ struct AnimationState {
     static AnimationState MakeBlend(int16 animId, float time, float speed, uint8 groupId, float blend) {
         AnimationState ret{};
         ret.m_nAnimId   = animId;
-        ret.m_nTime     = static_cast<uint8>(std::clamp(time, 0.0f, 4.0f)  * 63.75f);
-        ret.m_nSpeed    = static_cast<uint8>(std::clamp(speed, 0.0f, 3.0f) * 85.0f);
-        ret.m_nGroupId1 = static_cast<uint8>(std::clamp(blend, 0.0f, 2.0f) * 127.5f);
+        ret.m_nTime     = NOTSA_FTOL(uint8, std::clamp(time, 0.0f, 4.0f)  * 63.75f);
+        ret.m_nSpeed    = NOTSA_FTOL(uint8, std::clamp(speed, 0.0f, 3.0f) * 85.0f);
+        ret.m_nGroupId1 = NOTSA_FTOL(uint8, std::clamp(blend, 0.0f, 2.0f) * 127.5f);
         ret.m_nGroupId2 = groupId;
 
         return ret;

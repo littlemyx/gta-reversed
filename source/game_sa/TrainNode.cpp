@@ -15,17 +15,17 @@ CTrainNode::CTrainNode() {
 
 // 0x6F5380
 void CTrainNode::SetX(float X) {
-    x = int16(X * 8.0f);
+    x = NOTSA_FTOL(int16, X * 8.0f);
 }
 
 // 0x6F53A0
 void CTrainNode::SetY(float Y) {
-    y = int16(Y * 8.0f);
+    y = NOTSA_FTOL(int16, Y * 8.0f);
 }
 
 // 0x6F53C0
 void CTrainNode::SetZ(float Z) {
-    z = int16(Z * 8.0f);
+    z = NOTSA_FTOL(int16, Z * 8.0f);
 }
 
 // 0x6F53E0
@@ -50,7 +50,7 @@ CVector CTrainNode::GetPosn() const {
 
 // 0x6F5490
 void CTrainNode::SetDistanceFromStart(float dist) {
-    m_nDistanceFromStart = int16(dist * 3.0f);
+    m_nDistanceFromStart = NOTSA_FTOL(int16, dist * 3.0f);
 }
 
 // 0x6F54B0

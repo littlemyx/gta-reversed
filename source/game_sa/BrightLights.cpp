@@ -100,7 +100,7 @@ CRGBA tBrightLight::GetColorRGBA() const {
 
         const auto UnadjAlpha = [this] {
             if (m_fDistanceToCamera >= 45.0f)
-                return (uint8)((1.0f - invLerp(45.0f, 60.0f, m_fDistanceToCamera)) * 255.0f);
+                return NOTSA_FTOL(uint8, (1.0f - invLerp(45.0f, 60.0f, m_fDistanceToCamera)) * 255.0f);
             return (uint8)255;
         };
 

@@ -303,7 +303,7 @@ void CSprite::RenderOneXLUSprite_Triangle(CVector2D screen1, CVector2D screen2, 
     if (screenZ < 1.3f) {
         return;
     }
-    const uint32 factor = static_cast<uint32>(std::min(255.0f * (screenZ - 1.3f), 255.0f));
+    const uint32 factor = NOTSA_FTOL(uint32, std::min(255.0f * (screenZ - 1.3f), 255.0f));
     const uint32 R      = (factor * r) >> 8;
     const uint32 G      = (factor * g) >> 8;
     const uint32 B      = (factor * b) >> 8;
@@ -355,7 +355,7 @@ void CSprite::RenderOneXLUSprite_Rotate_Aspect(CVector pos, CVector2D size, uint
 
     // Fade both the colour and intensity between z = 1.3 and z = 2.3.
     if (pos.z < 2.3f) {
-        const auto factor = static_cast<int32>(255.0f * (pos.z - 1.3f));
+        const auto factor = NOTSA_FTOL(int32, 255.0f * (pos.z - 1.3f));
         r = static_cast<uint8>((r * factor) >> 8);
         g = static_cast<uint8>((g * factor) >> 8);
         b = static_cast<uint8>((b * factor) >> 8);
@@ -524,9 +524,9 @@ void CSprite::RenderBufferedOneXLUSprite_Rotate_2Colours(float x, float y, float
         float t = (coeffs.ys[i] * rotFactorY + cx * rotFactorX + 1.0f) * 0.5f;
         t = !(t > 0.0f) ? 0.0f : (t > 1.0f ? 1.0f : t);
         colors[i] = CRGBA{
-            static_cast<uint8>(r2 * (1.0f - t) + r1 * t),
-            static_cast<uint8>(g2 * (1.0f - t) + g1 * t),
-            static_cast<uint8>(b2 * (1.0f - t) + b1 * t),
+            NOTSA_FTOL(uint8, r2 * (1.0f - t) + r1 * t),
+            NOTSA_FTOL(uint8, g2 * (1.0f - t) + g1 * t),
+            NOTSA_FTOL(uint8, b2 * (1.0f - t) + b1 * t),
             alpha
         }.ToIntARGB();
     }

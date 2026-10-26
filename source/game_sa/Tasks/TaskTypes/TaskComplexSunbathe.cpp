@@ -181,7 +181,7 @@ CTask* CTaskComplexSunbathe::CreateFirstSubTask(CPed* ped) {
 
     if (ped->m_nPedType == PED_TYPE_CIVFEMALE) {
         // BUG: yields 2..7 (rand & 0xFFFF is in [0, 65535], not 15 bits), i.e. can go past SUNBATHER_FEMALE_3
-        m_SunbatherType = (eSunbatherType)(2 - (int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * RAND_RECIPROCAL_2POW15 * -3.f));
+        m_SunbatherType = (eSunbatherType)(2 - NOTSA_FTOL(int32, (float)(CGeneral::GetRandomNumber() & 0xFFFF) * RAND_RECIPROCAL_2POW15 * -3.f));
     } else if (CPopulation::IsSunbather(ped)) {
         m_SunbatherType = (eSunbatherType)(CGeneral::GetRandomNumber() < 0x3FFF);
     } else {
@@ -214,7 +214,7 @@ CTask* CTaskComplexSunbathe::CreateFirstSubTask(CPed* ped) {
     // 0x639DCC
     const auto r = (float)(CGeneral::GetRandomNumber() & 0xFFFF);
     m_BathingTimer.m_nStartTime = CTimer::GetTimeInMS();
-    m_BathingTimer.m_nInterval  = 20000 - (int32)(r * RAND_RECIPROCAL_2POW15 * -80000.f);
+    m_BathingTimer.m_nInterval  = 20000 - NOTSA_FTOL(int32, r * RAND_RECIPROCAL_2POW15 * -80000.f);
     m_BathingTimer.m_bStarted   = true;
     m_bBathing                  = true;
     return CreateSubTask(TASK_SIMPLE_SUNBATHE, ped);

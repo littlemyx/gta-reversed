@@ -115,7 +115,7 @@ bool CTaskSimpleInAir::ProcessPed(CPed* ped)
                 if (moveSpeedForward < maxMoveSpeedForward && m_nProcessCounter < 1000)
                 {
                     ped->ApplyMoveForce(ped->GetForward() * ((maxMoveSpeedForward - moveSpeedForward) * ped->m_fMass));
-                    m_nProcessCounter += (uint32)CTimer::GetTimeStepInMS();
+                    m_nProcessCounter += NOTSA_FTOL(uint32, CTimer::GetTimeStepInMS());
                 }
             }
         }

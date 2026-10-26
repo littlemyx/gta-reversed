@@ -139,13 +139,13 @@ double U32ToX87(uint32 v) {
 // 0x4d9ef0
 uint32 CAEAudioUtility::ConvertFromBytesToMS(uint32 lengthInBytes, uint32 sampleRate, uint16 numChannels) {
     // x87: the unsigned operands are loaded exactly (fild), `rate * channels * 0.002f` stays on the stack (0x858F44 = 1/500 as float), the quotient is passed to floor() as a double
-    return static_cast<uint32>(std::floor(X87R(U32ToX87(lengthInBytes) / (X87R(U32ToX87(sampleRate * numChannels) * (double)ExeRecip(500.0f))))));
+    return NOTSA_FTOL(uint32, std::floor(X87R(U32ToX87(lengthInBytes) / (X87R(U32ToX87(sampleRate * numChannels) * (double)ExeRecip(500.0f))))));
 }
 
 // 0x4d9f40
 uint32 CAEAudioUtility::ConvertFromMSToBytes(uint32 a, uint32 frequency, uint16 frequencyMult) {
     // exe: a * ((frequency * mult) * 0.002f) (NOT (a * f) / 500), then the signed idiv by 2 * mult
-    const auto value = static_cast<int32>(static_cast<uint32>(std::floor(X87R(U32ToX87(a) * (X87R(U32ToX87(frequency * frequencyMult) * (double)ExeRecip(500.0f)))))));
+    const auto value = static_cast<int32>(NOTSA_FTOL(uint32, std::floor(X87R(U32ToX87(a) * (X87R(U32ToX87(frequency * frequencyMult) * (double)ExeRecip(500.0f)))))));
     return static_cast<uint32>(value + value % (2 * (int32)frequencyMult));
 }
 

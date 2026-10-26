@@ -77,9 +77,9 @@ void CCullZones::AddMirrorAttributeZone(const CVector& pos, float vec1X, float v
     zone.zoneDef.Init(pos, vec1X, vec1Y, minZ, vec2X, vec2Y, maxZ);
     zone.flags = (eMirrorFlags)flags;
     zone.mirrorV = mirrorV;
-    zone.mirrorNormalX = int8(mirrorNormalX * 100.0f);
-    zone.mirrorNormalY = int8(mirrorNormalY * 100.0f);
-    zone.mirrorNormalZ = int8(mirrorNormalZ * 100.0f);
+    zone.mirrorNormalX = NOTSA_FTOL(int8, mirrorNormalX * 100.0f);
+    zone.mirrorNormalY = NOTSA_FTOL(int8, mirrorNormalY * 100.0f);
+    zone.mirrorNormalZ = NOTSA_FTOL(int8, mirrorNormalZ * 100.0f);
 
     NumMirrorAttributeZones++;
 }

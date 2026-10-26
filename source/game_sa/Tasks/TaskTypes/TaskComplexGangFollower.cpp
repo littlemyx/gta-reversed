@@ -394,7 +394,7 @@ CTask* CTaskComplexGangFollower::ControlSubTask(CPed* ped) {
         const auto rnd = CGeneral::GetRandomNumberInRange(0, 500);
         if (rnd > 50 && rnd < 56) { // 1%
             // BUG: `rand() & 0xFFFF` * 2^-15 * 8 [truncated] => [0, 7]
-            const auto animIdx = (int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.f / 32768.f) * 8.f);
+            const auto animIdx = NOTSA_FTOL(int32, (float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.f / 32768.f) * 8.f);
             ped->GetTaskManager().SetTaskSecondary(
                 new CTaskSimpleRunAnim{ANIM_GROUP_GANGS, (AnimationId)(ANIM_ID_PRTIAL_GNGTLKA + animIdx), 4.f, false},
                 TASK_SECONDARY_PARTIAL_ANIM

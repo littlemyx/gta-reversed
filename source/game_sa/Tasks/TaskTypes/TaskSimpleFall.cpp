@@ -47,7 +47,7 @@ bool CTaskSimpleFall::ProcessPed(CPed* ped)
 
     if (m_bIsFinished && (ped->bIsStanding || ped->bIsDrowning))
     {
-        auto nTimeStep = (uint32)CTimer::GetTimeStepInMS();
+        auto nTimeStep = NOTSA_FTOL(uint32, CTimer::GetTimeStepInMS());
         if (m_nCurrentDownTime <= nTimeStep)
         {
             m_nCurrentDownTime = 0;

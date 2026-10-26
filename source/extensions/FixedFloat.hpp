@@ -49,7 +49,7 @@ public:
 
     //! Set the value (Use this if you want to set using rounding)
     constexpr void Set(float v, bool round = UseRoundingWhenConverting) {
-        value = round ? static_cast<T>(v * CompressValue + 0.5f) : static_cast<T>(v * CompressValue);
+        value = round ? NOTSA_FTOL_SC(T, v * CompressValue + 0.5f) : NOTSA_FTOL_SC(T, v * CompressValue); // NaN / out of range: the exe's _ftol2 low bits (MAC-NAN1; PROLOG1.IFP junk key frames)
     }
 
     // Implementations of (basic) arithmetic ops. Necessary to avoid unnecessary int <=> float conversions

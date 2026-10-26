@@ -92,7 +92,7 @@ bool CTagManager::IsTag(const CEntity& entity) {
 
 // 0x49CDA0
 int32 CTagManager::GetPercentageTagged() {
-    return static_cast<int32>(static_cast<float>(ms_numTagged) / static_cast<float>(ms_numTags) * 100.0F);
+    return NOTSA_FTOL(int32, static_cast<float>(ms_numTagged) / static_cast<float>(ms_numTags) * 100.0F);
 }
 
 // 0x49D0B0

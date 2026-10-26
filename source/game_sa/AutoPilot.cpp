@@ -106,9 +106,9 @@ void CAutoPilot::ModifySpeed(float target) {
     const auto scale = CCurves::CalcSpeedScaleFactor(start, end, adx, ady, bdx, bdy);
 
     // `_ftol` truncates, the products are kept at extended precision
-    const auto newScale = (int32)((x87d)scale * ((x87d)1000.0 / (x87d)m_speed));
+    const auto newScale = NOTSA_FTOL(int32, (x87d)scale * ((x87d)1000.0 / (x87d)m_speed));
     m_nSpeedScaleFactor = (uint32)newScale;
-    field_C             = (int32)((x87d)CTimer::GetTimeInMS() - (x87d)newScale * (x87d)progress);
+    field_C             = NOTSA_FTOL(int32, (x87d)CTimer::GetTimeInMS() - (x87d)newScale * (x87d)progress);
 }
 
 // 0x41B950

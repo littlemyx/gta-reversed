@@ -130,7 +130,7 @@ void CPedToPlayerConversations::Update() {
 
             // Scales the stat with the random seed of the ped (so it varies from ped to ped)
             const auto StatWithSeed = [&](eStats stat, uint16 seedMask, float offset) {
-                return (int32)((x87d)CStats::GetStatValue(stat) + (x87d)(ped->m_nRandomSeed & seedMask) - (x87d)offset);
+                return NOTSA_FTOL(int32, (x87d)CStats::GetStatValue(stat) + (x87d)(ped->m_nRandomSeed & seedMask) - (x87d)offset);
             };
 
             const auto Success = [&] {

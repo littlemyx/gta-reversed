@@ -600,7 +600,7 @@ bool CStencilShadows::RegisterStencilShadows(CVector& cameraPos, bool doNotCreat
 
     // Objects (Buildings and dynamic objects) around the camera
     const auto GetSectorCoord = [](float v) {
-        return (int32)std::floor((x87d)(float)((x87d)(v * 0.02f) + (x87d)60.0));
+        return NOTSA_FTOL(int32, std::floor((x87d)(float)((x87d)(v * 0.02f) + (x87d)60.0)));
     };
     const auto camX = cameraPos.x, camY = cameraPos.y;
     const auto minX = std::max(0, GetSectorCoord(camX - 50.0f));

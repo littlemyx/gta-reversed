@@ -7,6 +7,9 @@ CTaskAllocator::~CTaskAllocator() { }
 
 // 0x69D980
 void* CTaskAllocator::operator new(size_t size) {
+#ifdef NOTSA_PORTABLE
+    GetTaskAllocatorPool()->NotsaCheckAllocSize(size, "taskallocator");
+#endif
     return GetTaskAllocatorPool()->New();
 }
 

@@ -7,15 +7,15 @@ tReplayVehicleBlock tReplayVehicleBlock::MakeVehicleUpdateData(CVehicle& veh, in
     tReplayVehicleBlock ret{};
     ret.type = REPLAY_PACKET_VEHICLE;
     ret.poolRef  = (uint8)poolIdx;
-    ret.health   = (uint8)(std::min(veh.m_fHealth, 1000.0f) / 4.0f);
-    ret.gasPedal = (uint8)(veh.m_GasPedal * 100.0f);
+    ret.health   = NOTSA_FTOL(uint8, std::min(veh.m_fHealth, 1000.0f) / 4.0f);
+    ret.gasPedal = NOTSA_FTOL(uint8, veh.m_GasPedal * 100.0f);
     ret.matrix   = CCompressedMatrixNotAligned::Compress(veh.GetMatrix());
     ret.modelId  = veh.m_nModelIndex;
     ret.panels   = (veh.IsAutomobile()) ? veh.AsAutomobile()->m_damageManager.m_nPanelsStatus : 0;
     ret.vecMoveSpeed = {
-        (int8)(std::clamp(veh.GetMoveSpeed().x, -4.0f, 4.0f) * 8000.0f),
-        (int8)(std::clamp(veh.GetMoveSpeed().y, -4.0f, 4.0f) * 8000.0f),
-        (int8)(std::clamp(veh.GetMoveSpeed().z, -4.0f, 4.0f) * 8000.0f)
+        NOTSA_FTOL(int8, std::clamp(veh.GetMoveSpeed().x, -4.0f, 4.0f) * 8000.0f),
+        NOTSA_FTOL(int8, std::clamp(veh.GetMoveSpeed().y, -4.0f, 4.0f) * 8000.0f),
+        NOTSA_FTOL(int8, std::clamp(veh.GetMoveSpeed().z, -4.0f, 4.0f) * 8000.0f)
     };
     ret.primaryColor   = veh.m_nPrimaryColor;
     ret.secondaryColor = veh.m_nSecondaryColor;
@@ -30,28 +30,28 @@ tReplayVehicleBlock tReplayVehicleBlock::MakeVehicleUpdateData(CVehicle& veh, in
         ret.physicalFlags &= ~2u;
     }
 
-    ret.steerAngle_or_doomVerticalRot = (uint8)[&] {
+    ret.steerAngle_or_doomVerticalRot = NOTSA_FTOL(uint8, [&] {
         if (veh.m_nModelIndex == MODEL_RHINO) {
             return veh.AsAutomobile()->m_fDoomVerticalRotation * HEADING_COMPRESS_VALUE;
         } else {
             return veh.m_fSteerAngle * 50.0f;
         }
-    }();
+    }());
 
     if (veh.IsAutomobile()) {
         auto automobile = veh.AsAutomobile();
 
         for (auto i = 0; i < 4; i++) { // for each wheel
-            ret.wheelsSuspensionCompression[i] = (uint8)(automobile->m_fWheelsSuspensionCompression[i] * 50.0f);
-            ret.wheelRotation[i] = (uint8)(automobile->m_wheelRotation[i] * HEADING_COMPRESS_VALUE);
+            ret.wheelsSuspensionCompression[i] = NOTSA_FTOL(uint8, automobile->m_fWheelsSuspensionCompression[i] * 50.0f);
+            ret.wheelRotation[i] = NOTSA_FTOL(uint8, automobile->m_wheelRotation[i] * HEADING_COMPRESS_VALUE);
         }
-        ret.angleDoorLF = (uint8)(automobile->m_doors[DOOR_LEFT_FRONT].m_angle * 20.222929f);
-        ret.angleDoorRF = (uint8)(automobile->m_doors[DOOR_RIGHT_FRONT].m_angle * 20.222929f);
+        ret.angleDoorLF = NOTSA_FTOL(uint8, automobile->m_doors[DOOR_LEFT_FRONT].m_angle * 20.222929f);
+        ret.angleDoorRF = NOTSA_FTOL(uint8, automobile->m_doors[DOOR_RIGHT_FRONT].m_angle * 20.222929f);
 
         ret.doorStatus = 0u;
         for (auto&& [i, status] : rngv::enumerate(automobile->m_damageManager.GetAllDoorsStatus())) {
             if (status == eDoorState::DOOR_SLAM_SHUT) {
-                ret.doorStatus |= (uint8)std::pow(2, i);
+                ret.doorStatus |= NOTSA_FTOL(uint8, std::pow(2, i));
             }
         }
     }
@@ -88,8 +88,8 @@ tReplayBikeBlock tReplayBikeBlock::MakeBikeUpdateData(CBike& bike, int32 poolIdx
     *ret.As<tReplayVehicleBlock>() = tReplayVehicleBlock::MakeVehicleUpdateData(*bike.AsVehicle(), poolIdx);
 
     ret.type = REPLAY_PACKET_BIKE;
-    ret.animLean = (uint8)(bike.GetRideAnimData()->LeanAngle * 50.0f);
-    ret.steerAngle = (uint8)(bike.GetRideAnimData()->BarSteerAngle * 50.0f);
+    ret.animLean = NOTSA_FTOL(uint8, bike.GetRideAnimData()->LeanAngle * 50.0f);
+    ret.steerAngle = NOTSA_FTOL(uint8, bike.GetRideAnimData()->BarSteerAngle * 50.0f);
     return ret;
 }
 
@@ -167,7 +167,7 @@ void tReplayVehicleBlock::ExtractVehicleUpdateData(CVehicle& veh, float interpol
         }
 
         for (auto i = 0; i < MAX_DOORS; i++) {
-            const auto bitIdx = (uint32)std::pow(2, i);
+            const auto bitIdx = NOTSA_FTOL(uint32, std::pow(2, i));
             const auto door = (eDoors)i;
             if (doorStatus & bitIdx && damageManager.IsDoorPresent(door)) {
                 damageManager.SetDoorStatus(door, DAMSTATE_NOTPRESENT);

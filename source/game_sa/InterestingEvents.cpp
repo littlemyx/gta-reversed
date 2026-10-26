@@ -191,7 +191,7 @@ void CInterestingEvents::ScanForNearbyEntities() {
 
     // NOTE: Not using `CWorld::GetSectorX/Y` here, as the original code clamps the values to the area
     const auto GetSector = [](float coord) {
-        return (int32)std::floor(coord * 0.02f + 60.0f);
+        return NOTSA_FTOL(int32, std::floor(coord * 0.02f + 60.0f));
     };
     const int32 startSectorX = std::max(GetSector(m_vecCenter.x - m_fRadius), 0);
     const int32 startSectorY = std::max(GetSector(m_vecCenter.y - m_fRadius), 0);

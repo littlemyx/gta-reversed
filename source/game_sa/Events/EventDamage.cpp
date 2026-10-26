@@ -874,9 +874,9 @@ void CEventDamage::ComputeDamageAnim(CPed* ped, bool bMakeActiveTaskAbortable) {
             if (ped->IsPlayer()) {
                 if (CTimer::GetTimeInMS() > ped->GetPlayerData()->m_nHitAnimDelayTimer && ped->m_nPedState != PEDSTATE_DRIVING) {
                     if (m_weaponType == WEAPON_M4)
-                        ped->GetPlayerData()->m_nHitAnimDelayTimer = static_cast<uint32>(float(CTimer::GetTimeInMS()) + 2500.0f);
+                        ped->GetPlayerData()->m_nHitAnimDelayTimer = NOTSA_FTOL(uint32, float(CTimer::GetTimeInMS()) + 2500.0f);
                     else
-                        ped->GetPlayerData()->m_nHitAnimDelayTimer = static_cast<uint32>(float(CTimer::GetTimeInMS()) + 1500.0f);
+                        ped->GetPlayerData()->m_nHitAnimDelayTimer = NOTSA_FTOL(uint32, float(CTimer::GetTimeInMS()) + 1500.0f);
                 }
                 else {
                     m_nAnimID = ANIM_ID_NO_ANIMATION_SET;

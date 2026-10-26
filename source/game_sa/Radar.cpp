@@ -1127,8 +1127,8 @@ void CRadar::DrawYouAreHereSprite(float x, float y) {
             x + X87R(17.0f * x87::cos(circleAngle)),
             y - X87R(17.0f * x87::sin(circleAngle)),
             angle,
-            (uint32)(SCREEN_STRETCH_X(25.0f)),
-            (uint32)(SCREEN_STRETCH_Y(25.0f)),
+            NOTSA_FTOL(uint32, SCREEN_STRETCH_X(25.0f)),
+            NOTSA_FTOL(uint32, SCREEN_STRETCH_Y(25.0f)),
             { 255, 255, 255, 255 }
         );
     }
@@ -1421,8 +1421,8 @@ void CRadar::DrawRadarMask() {
 void CRadar::StreamRadarSections(const CVector& worldPosn) {
     if (!CStreaming::ms_disableStreaming) {
         StreamRadarSections(
-            (int32)std::floor((worldPosn.x + 3000.0f) * ExeRecip(500.0f)),
-            (int32)std::ceil(11.0f - (worldPosn.y + 3000.0f) * ExeRecip(500.0f))
+            NOTSA_FTOL(int32, std::floor((worldPosn.x + 3000.0f) * ExeRecip(500.0f))),
+            NOTSA_FTOL(int32, std::ceil(11.0f - (worldPosn.y + 3000.0f) * ExeRecip(500.0f)))
         );
     }
 }
@@ -1736,7 +1736,7 @@ void CRadar::DrawRadarGangOverlay(bool inMenu) {
                 const auto timeInMS = FrontEndMenuManager.m_bDrawingMap ? CTimer::GetTimeInMSPauseMode() : CTimer::GetTimeInMS();
 
                 auto zoneColor = info->ZoneColor;
-                zoneColor.a = (uint8)((X87R(x87::sin((float)(timeInMS % 1024) * (1024.f / TWO_PI)) + 1.0f)) / 2.0f * (float)zoneColor.a);
+                zoneColor.a = NOTSA_FTOL(uint8, (X87R(x87::sin((float)(timeInMS % 1024) * (1024.f / TWO_PI)) + 1.0f)) / 2.0f * (float)zoneColor.a);
 
                 return zoneColor;
             }();
@@ -1753,8 +1753,8 @@ void CRadar::DrawRadarGangOverlay(bool inMenu) {
 void CRadar::DrawRadarMap() {
     DrawRadarMask();
 
-    auto x = (int32)std::floor((vec2DRadarOrigin.x + 3000.0f) * ExeRecip(500.0f));  // todo: inlined
-    auto y = (int32)std::ceil(11.0f - (vec2DRadarOrigin.y + 3000.0f) * ExeRecip(500.0f));
+    auto x = NOTSA_FTOL(int32, std::floor((vec2DRadarOrigin.x + 3000.0f) * ExeRecip(500.0f)));  // todo: inlined
+    auto y = NOTSA_FTOL(int32, std::ceil(11.0f - (vec2DRadarOrigin.y + 3000.0f) * ExeRecip(500.0f)));
 
     SetupRadarRect(x, y);
     StreamRadarSections(x, y);
@@ -2511,8 +2511,8 @@ void CRadar::DrawBlips() {
                 pos.x,
                 pos.y,
                 angle,
-                static_cast<uint32>(SCREEN_STRETCH_X(8.0f)),
-                (notsa::IsFixBugs() ? static_cast<uint32>(SCREEN_STRETCH_Y(8.0f)) : static_cast<uint32>(SCREEN_STRETCH_X(8.0f))),
+                NOTSA_FTOL(uint32, SCREEN_STRETCH_X(8.0f)),
+                (notsa::IsFixBugs() ? NOTSA_FTOL(uint32, SCREEN_STRETCH_Y(8.0f)) : NOTSA_FTOL(uint32, SCREEN_STRETCH_X(8.0f))),
                 player->IsHidden() ? CRGBA{50, 50, 50, 255} : CRGBA{255, 255, 255, 255}
             );
         }

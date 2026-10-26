@@ -365,7 +365,7 @@ int32 CAEUserRadioTrackManager::WriteUserTracksFile(const std::wstring& dir, siz
         if (fileType != AUDIO_FILE_TYPE_UNKNOWN) {
             size_t pathLen = pathStr.length();
             CFileMgr::Write(file, pathStr.c_str(), pathLen);
-            offsets.push_back({currentLength, pathLen, fileType});
+            offsets.push_back({(uint32)currentLength, (uint32)pathLen, fileType});
             currentLength += pathLen;
             numTracks++;
         }

@@ -7,14 +7,14 @@
  * Win32 window; the functions below that take an HWND treat it that way. Implementations: source/portable/app_win32_compat.cpp.
  * Everything that has no honest equivalent is NOT here: it is compiled out in its file under NOTSA_PORTABLE (W-A items, .notes/reports/MAC-W0a.md).
  */
-#ifndef _WIN32
-
-#include "wintypes.h"
-
 namespace notsa::portable {
 //! Logs ONCE per `what` to stderr: a Win32 facility without a portable implementation was reached (the call then reports failure / "nothing")
 void Unsupported(const char* what);
 }
+
+#ifndef _WIN32 // (MAC-WIN64: on Windows only Unsupported() above exists; the rest is the real Windows API)
+
+#include "wintypes.h"
 
 // ---- virtual key codes (winuser.h) ----
 #define VK_BACK     0x08

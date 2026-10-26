@@ -20,8 +20,8 @@ public:
 
     static void ImmediateLine2D(const CVector2D& start, const CVector2D& end, const CRGBA& startColor, const CRGBA& endColor) {
         ImmediateLine2D(
-            static_cast<int32>(start.x), static_cast<int32>(start.y),
-            static_cast<int32>(end.x), static_cast<int32>(end.y),
+            NOTSA_FTOL(int32, start.x), NOTSA_FTOL(int32, start.y),
+            NOTSA_FTOL(int32, end.x), NOTSA_FTOL(int32, end.y),
             startColor.r, startColor.g, startColor.b, startColor.a,
             endColor.r, endColor.g, endColor.b, endColor.a
         );

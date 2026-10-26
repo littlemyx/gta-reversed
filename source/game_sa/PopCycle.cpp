@@ -227,7 +227,7 @@ int32 CPopCycle::GetCurrentPercOther_Peds() {
         factor = 1.f;
     }
 
-    return (int32)((x87d)percOther * (x87d)factor);
+    return NOTSA_FTOL(int32, (x87d)percOther * (x87d)factor);
 }
 
 // 0x610150
@@ -317,7 +317,7 @@ eModelID CPopCycle::PickPedMIToStreamInForCurrentZone() {
         // non-inlined version (random number distribution and `<` instead of `<=` when picking the group)
         const auto grpId = [] {
             const auto& percs = m_nPercTypeGroup[m_nCurrentTimeIndex][m_nCurrentTimeOfWeek][m_pCurrZoneInfo->PopType];
-            auto        rnd   = (int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.f / 32768.f) * 100.f);
+            auto        rnd   = NOTSA_FTOL(int32, (float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.f / 32768.f) * 100.f);
             size_t      grp   = 0;
             while (rnd >= (int32)percs[grp]) {
                 rnd -= (int32)percs[grp];

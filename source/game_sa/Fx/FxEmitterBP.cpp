@@ -389,8 +389,8 @@ bool FxEmitterBP_c::Load(FILESTREAM file, int32 version, FxName32_t* textureName
     FxPrimBP_c::Load(file, version, textureNames);
 
     // NOTSA: The lod values live in the FxInfoManager (+0x38 and +0x3A), not after it
-    m_FxInfoManager.m_nLodStart = uint16(ReadField<float>(file, "LODSTART:") * 64.0f);
-    m_FxInfoManager.m_nLodEnd   = uint16(ReadField<float>(file, "LODEND:") * 64.0f);
+    m_FxInfoManager.m_nLodStart = NOTSA_FTOL(uint16, ReadField<float>(file, "LODSTART:") * 64.0f);
+    m_FxInfoManager.m_nLodEnd   = NOTSA_FTOL(uint16, ReadField<float>(file, "LODEND:") * 64.0f);
 
     return true;
 }
@@ -624,18 +624,18 @@ void FxEmitterBP_c::Render(RwCamera* camera, uint32 txdHashKey, float brightness
 
         uint8 cr, cg, cb;
         if (info.m_bSelfLit) {
-            cr = (uint8)(int32)r;
-            cg = (uint8)(int32)g;
-            cb = (uint8)(int32)b;
+            cr = (uint8)NOTSA_FTOL(int32, r);
+            cg = (uint8)NOTSA_FTOL(int32, g);
+            cb = (uint8)NOTSA_FTOL(int32, b);
         } else {
             if (prt->m_Brightness <= 100u) {
                 brightnessMult = (float)prt->m_Brightness * 0.01f;
             }
-            cr = (uint8)(int32)(r * brightnessMult);
-            cg = (uint8)(int32)(g * brightnessMult);
-            cb = (uint8)(int32)(b * brightnessMult);
+            cr = (uint8)NOTSA_FTOL(int32, r * brightnessMult);
+            cg = (uint8)NOTSA_FTOL(int32, g * brightnessMult);
+            cb = (uint8)NOTSA_FTOL(int32, b * brightnessMult);
         }
-        const auto ca = (uint8)(int32)a;
+        const auto ca = (uint8)NOTSA_FTOL(int32, a);
 
         raster = SelectParticleRaster(m_apTextures, info, raster);
         if (curRaster != raster) {

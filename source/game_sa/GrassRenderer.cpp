@@ -72,7 +72,7 @@ void CGrassRenderer::DrawTriPlants(PPTriPlant* triPlants, int32 numTriPlants, Rp
         std::mt19937 randomGen(*(uint32*)&plant.seed);
 #else
         // Due to how this is set up, the random seed is always 0. the seed is betwee [0:1), so after the cast to int, we can't have any other result.
-        std::mt19937 randomGen(static_cast<uint32>(plant.seed));
+        std::mt19937 randomGen(NOTSA_FTOL_SC(uint32, plant.seed));
 #endif
         std::uniform_real_distribution<float> randomDistribution(0, 1.f);
 
@@ -82,16 +82,16 @@ void CGrassRenderer::DrawTriPlants(PPTriPlant* triPlants, int32 numTriPlants, Rp
         RwRGBA newColorIntensity{};
         if (camDist >= farDist) {
             const auto alpha = std::floor((farDist + 20.0f - camDist) * (float)plant.color.a * ExeRecip(20.0f));
-            newColorIntensity.alpha = (uint8)std::clamp(alpha, 0.0f, 255.0f);
+            newColorIntensity.alpha = NOTSA_FTOL_P(uint8, std::clamp(alpha, 0.0f, 255.0f));
         } else {
             newColorIntensity.alpha = plant.color.a;
         }
 
         // 0x5DAE61
         auto mult = std::min(float(plant.intensity), 255.0f);
-        newColorIntensity.red   = uint16(mult * (float)plant.color.r) / 256;
-        newColorIntensity.green = uint16(mult * (float)plant.color.g) / 256;
-        newColorIntensity.blue  = uint16(mult * (float)plant.color.b) / 256;
+        newColorIntensity.red   = NOTSA_FTOL_FN(uint16, mult * (float)plant.color.r) / 256;
+        newColorIntensity.green = NOTSA_FTOL_FN(uint16, mult * (float)plant.color.g) / 256;
+        newColorIntensity.blue  = NOTSA_FTOL_FN(uint16, mult * (float)plant.color.b) / 256;
 
         // 0x5DAC40
         RenderGrassTexture = plant.texture;

@@ -51,8 +51,8 @@ void CHandShaker::Process(float degree) {
         m_vel[i] += motion;
     }
 
-    const auto twitchT = (float)(size_t)CTimer::GetTimeStepNonClippedInMS() * std::bit_cast<float>(0x3CF5C290u); // 0x85A6EC (one ulp above the literal 0.03f)
-    if (CGeneral::GetRandomNumberInRange((size_t)((float)m_twitchFreq * twitchT)) == 1) { //> 0x50DB97
+    const auto twitchT = (float)NOTSA_FTOL(size_t, CTimer::GetTimeStepNonClippedInMS()) * std::bit_cast<float>(0x3CF5C290u); // 0x85A6EC (one ulp above the literal 0.03f)
+    if (CGeneral::GetRandomNumberInRange(NOTSA_FTOL(size_t, (float)m_twitchFreq * twitchT)) == 1) { //> 0x50DB97
         m_vel += CVector::Random(-m_twitchVel, m_twitchVel);
     }
     m_ang += twitchT * m_vel; //> 0x50DC74

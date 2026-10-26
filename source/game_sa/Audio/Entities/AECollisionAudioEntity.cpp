@@ -57,7 +57,7 @@ void CAECollisionAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos
         if (curPlayPos < 0) {
             return;
         }
-        if (CTimer::GetTimeInMS() < (uint32)(int32)sound->m_ClientVariable) { // 0x4DA39F: `_ftol`, then unsigned `jb`
+        if (CTimer::GetTimeInMS() < (uint32)NOTSA_FTOL(int32, sound->m_ClientVariable)) { // 0x4DA39F: `_ftol`, then unsigned `jb`
             return;
         }
         sound->m_Speed = speed;
@@ -199,7 +199,7 @@ void CAECollisionAudioEntity::PlayOneShotCollisionSound(CEntity* entityA, CEntit
             offset *= 10.f;
         }
         offset *= 500.f;
-        const auto startAt = 100 - std::min(100, (int32)(std::floor(offset))); // 0x4DB2FB
+        const auto startAt = 100 - std::min(100, NOTSA_FTOL(int32, std::floor(offset))); // 0x4DB2FB
         if (startAt >= 100) {
             return true;
         }

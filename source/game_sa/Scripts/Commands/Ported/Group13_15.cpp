@@ -505,7 +505,7 @@ void ShuffleCardDecks(int32 numDecks) {
         for (int32 deck = 0; deck < numDecks; deck++) {
             const int32 count = (int16)remaining; // movsx esi, di
             const int32 r     = rand() & 0xFFFF;
-            const int32 idx   = (int16)(int32)(double)((x87d)r * (x87d)(1.0f / 32768.0f) * (x87d)count); // 0x858B14, _ftol, movsx
+            const int32 idx   = (int16)NOTSA_FTOL(int32, (double)((x87d)r * (x87d)(1.0f / 32768.0f) * (x87d)count)); // 0x858B14, _ftol, movsx
             const int32 card  = avail[idx];
             CTheScripts::CardStack[card] = (int16)value;
             if (idx < count) {

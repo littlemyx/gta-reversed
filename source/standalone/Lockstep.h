@@ -9,6 +9,18 @@
 //   NOTSA_LOCKSTEP_STEP=<ms, 16>   NOTSA_LOCKSTEP_MAXF=<frames, 20000>
 #ifdef NOTSA_STANDALONE_RUN
 #include <cstdint>
+#ifdef NOTSA_PORTABLE
+// Portable builds: the REPLAY-DIFF harness is a Win32-exe-vs-port tool (Lockstep.cpp is Win32-only, GameRand.h has no hooks there); inert stubs so the shared call sites compile.
+namespace notsa::lockstep {
+inline void     FrameRead() {}
+inline void     Tick() {}
+inline bool     NoAudio() { return false; }
+inline void     Note(const char*) {}
+inline bool     PinTimer() { return false; }
+inline uint64_t TimerFn() { return 0; }
+inline bool     PsTimer(uint32_t&) { return false; }
+} // namespace notsa::lockstep
+#else
 namespace notsa::lockstep {
 void     FrameRead();                                   // the next timer-function call is a "frame read" (CTimer::Initialise)
 void     Tick();                                        // one trace line; called from CTimer::Update right before it reads the timer function
@@ -20,4 +32,5 @@ bool     PsTimer(uint32_t& out);                        // pin bit 4: psTimer / 
 uint32_t* OnRand(const char* file, unsigned line);       // GameRand.h g_RandHook (pin bit 32 + NOTSA_LOCKSTEP_RLOG=<frames>): "R fc file:line" per rand() call
 void     OnSrand(unsigned& seed, const char* file, unsigned line); // GameRand.h g_SrandHook (installed only with NOTSA_LOCKSTEP_OUT): trace line + pin bit 1 (time-derived seeds of app_game.cpp / LoadingScreen.cpp)
 } // namespace notsa::lockstep
+#endif // NOTSA_PORTABLE
 #endif

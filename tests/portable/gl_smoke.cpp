@@ -634,6 +634,133 @@ void RunR4(int pw, int ph) {
         RS(rwRENDERSTATETEXTURERASTER, 0);
         RwRasterDestroy(ct);
     }
+    // ---- R-11a: CPostEffects passes through the game's RW calls: front-buffer copy (RwRasterPushContext + RwRasterRenderFast into a camera texture, as
+    // SetupBackBufferVertex/RasterCreatePostEffects), ColourFilter (SRCALPHA/ONE, front buffer * vertex colour) and SetFilterMainColour (ONE/DESTALPHA).
+    // D3D9 SA draws into X8R8G8B8: destination alpha counts as 1. The GL frame buffer has an alpha channel, made 0 here on purpose.
+    {
+        int fw = 1, fh = 1;
+        while (fw <= pw) { fw *= 2; }
+        while (fh <= ph) { fh *= 2; }
+        RwRaster* fbr = RwRasterCreate(fw, fh, 32, rwRASTERTYPEZBUFFER | rwRASTERTYPETEXTURE);
+        Check(fbr != nullptr && (fbr->type & rwRASTERTYPEMASK) == rwRASTERTYPECAMERATEXTURE, "front buffer raster (ZBUFFER|TEXTURE) is a camera texture");
+        const int hx = pw / 2, hy = ph / 2;
+        // scene: four quadrants
+        auto rect = [&](float x0, float y0, float x1, float y1, unsigned r, unsigned g, unsigned b) {
+            RwIm2DVertex q[4] = { V2(x0, y0, 255, r, g, b), V2(x1, y0, 255, r, g, b), V2(x0, y1, 255, r, g, b), V2(x1, y1, 255, r, g, b) };
+            RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, q, 4);
+        };
+        auto drawScene = [&]() {
+            RS(rwRENDERSTATETEXTURERASTER, 0);
+            RS(rwRENDERSTATEVERTEXALPHAENABLE, 0);
+            rect(0, 0, (float)hx, (float)hy, 200, 0, 0);                       // top-left red
+            rect((float)hx, 0, (float)pw, (float)hy, 0, 200, 0);               // top-right green
+            rect(0, (float)hy, (float)hx, (float)ph, 0, 0, 200);               // bottom-left blue
+            rect((float)hx, (float)hy, (float)pw, (float)ph, 200, 200, 0);     // bottom-right yellow
+        };
+        auto zeroAlpha = [&]() { glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE); glClearColor(0, 0, 0, 0); glClear(GL_COLOR_BUFFER_BIT); glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE); };
+        auto fullQuad = [&](unsigned a, unsigned r, unsigned g, unsigned b) {
+            const float W = (float)fw, H = (float)fh;
+            RwIm2DVertex q[4] = { V2(0, 0, a, r, g, b, 0.5f / W, 0.5f / H), V2((float)fw, 0, a, r, g, b, (W + 0.5f) / W, 0.5f / H),
+                                  V2(0, (float)fh, a, r, g, b, 0.5f / W, (H + 0.5f) / H), V2((float)fw, (float)fh, a, r, g, b, (W + 0.5f) / W, (H + 0.5f) / H) };
+            RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, q, 4);
+        };
+        clear();
+        drawScene();
+        RwRasterPushContext(fbr);
+        Check(RwRasterRenderFast(RwCameraGetRaster(cam), 0, 0) == RwCameraGetRaster(cam), "RwRasterRenderFast(camera raster) into the front-buffer camera texture");
+        RwRasterPopContext();
+        Check(NoGlError("front buffer copy"), "glGetError clean after the front-buffer copy");
+        // the colour filter: texture = front buffer, vertex colour (255,255,255) alpha 128, SRCALPHA/ONE on a black frame (pass 1 of ColourFilter)
+        clear();
+        RS(rwRENDERSTATETEXTUREFILTER, rwFILTERNEAREST);
+        RS(rwRENDERSTATETEXTURERASTER, (uintptr_t)fbr);
+        RS(rwRENDERSTATEVERTEXALPHAENABLE, 1);
+        RS(rwRENDERSTATESRCBLEND, rwBLENDSRCALPHA);
+        RS(rwRENDERSTATEDESTBLEND, rwBLENDONE);
+        fullQuad(128, 255, 255, 255);
+        s.grab(pw, ph);
+        std::snprintf(what, sizeof(what), "ColourFilter pass: scene upright and halved (TL %d,%d,%d TR %d,%d,%d BL %d,%d,%d BR %d,%d,%d)", s.at(hx / 2, hy / 2).r, s.at(hx / 2, hy / 2).g, s.at(hx / 2, hy / 2).b,
+                      s.at(hx + hx / 2, hy / 2).r, s.at(hx + hx / 2, hy / 2).g, s.at(hx + hx / 2, hy / 2).b, s.at(hx / 2, hy + hy / 2).r, s.at(hx / 2, hy + hy / 2).g, s.at(hx / 2, hy + hy / 2).b,
+                      s.at(hx + hx / 2, hy + hy / 2).r, s.at(hx + hx / 2, hy + hy / 2).g, s.at(hx + hx / 2, hy + hy / 2).b);
+        Check(s.is(hx / 2, hy / 2, 100, 0, 0, 3) && s.is(hx + hx / 2, hy / 2, 0, 100, 0, 3) && s.is(hx / 2, hy + hy / 2, 0, 0, 100, 3) && s.is(hx + hx / 2, hy + hy / 2, 100, 100, 0, 3), what);
+        // the same pass twice (pass 2 of ColourFilter): additive, 200 -> 200 (100 + 100)
+        fullQuad(128, 255, 255, 255);
+        s.grab(pw, ph);
+        Check(s.is(hx / 2, hy / 2, 200, 0, 0, 4) && s.is(hx / 2, hy + hy / 2, 0, 0, 200, 4), "second ColourFilter pass adds again (100 + 100)");
+        // SetFilterMainColour: ONE / DESTALPHA with a frame whose alpha channel is 0 (X8R8G8B8: destination alpha 1 -> src + dst)
+        clear();
+        {
+            RwRGBA grey{ 40, 40, 40, 255 };
+            RwCameraClear(cam, &grey, rwCAMERACLEARIMAGE | rwCAMERACLEARZ);
+        }
+        zeroAlpha();
+        RS(rwRENDERSTATESRCBLEND, rwBLENDONE);
+        RS(rwRENDERSTATEDESTBLEND, rwBLENDDESTALPHA);
+        fullQuad(255, 128, 128, 128);
+        s.grab(pw, ph);
+        std::snprintf(what, sizeof(what), "SetFilterMainColour (ONE/DESTALPHA) on a frame with alpha 0 = src + dst: TL %d,%d,%d (expected ~140,40,40)", s.at(hx / 2, hy / 2).r, s.at(hx / 2, hy / 2).g, s.at(hx / 2, hy / 2).b);
+        Check(s.is(hx / 2, hy / 2, 140, 40, 40, 4) && s.is(hx + hx / 2, hy + hy / 2, 140, 140, 40, 4), what);
+        // restore the states as the game does
+        RS(rwRENDERSTATETEXTURERASTER, 0);
+        RS(rwRENDERSTATEVERTEXALPHAENABLE, 0);
+        RS(rwRENDERSTATESRCBLEND, rwBLENDSRCALPHA);
+        RS(rwRENDERSTATEDESTBLEND, rwBLENDINVSRCALPHA);
+        Check(NoGlError("post effect passes"), "glGetError clean after the post effect passes");
+        RwRasterDestroy(fbr);
+    }
+    // ---- R-11b: render-target camera round trip: scene drawn into a camera texture by its own camera (no z raster, Im2D), then used as a texture in the main camera
+    {
+        RwRaster* rt = RwRasterCreate(64, 64, 0, rwRASTERTYPECAMERATEXTURE);
+        RwCamera* rc = RwCameraCreate();
+        rc->setFrame(rw::Frame::create());
+        rc->frameBuffer = rt;
+        rc->zBuffer     = nullptr;
+        RwV2d vwin{ 1.0f, 1.0f };
+        RwCameraSetViewWindow(rc, &vwin);
+        Check(RwCameraBeginUpdate(rc) == rc, "RwCameraBeginUpdate(shadow-style camera: camera texture, no z)");
+        RwRGBA white{ 255, 255, 255, 255 };
+        RwCameraClear(rc, &white, rwCAMERACLEARZ | rwCAMERACLEARIMAGE);
+        RS(rwRENDERSTATEZTESTENABLE, 0);
+        RS(rwRENDERSTATEZWRITEENABLE, 0);
+        RS(rwRENDERSTATETEXTURERASTER, 0);
+        RS(rwRENDERSTATEVERTEXALPHAENABLE, 0);
+        RwIm2DVertex sq[4] = { V2(0, 0, 255, 0, 0, 0), V2(32, 0, 255, 0, 0, 0), V2(0, 32, 255, 0, 0, 0), V2(32, 32, 255, 0, 0, 0) }; // black silhouette, top-left quarter
+        Check(RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, sq, 4) == TRUE, "Im2D into the camera texture");
+        // ShadowCamera::InvertRaster: INVDESTCOLOR / ZERO full quad with white = result is the inverted destination
+        RS(rwRENDERSTATESRCBLEND, rwBLENDINVDESTCOLOR);
+        RS(rwRENDERSTATEDESTBLEND, rwBLENDZERO);
+        RS(rwRENDERSTATEVERTEXALPHAENABLE, 1);
+        RwIm2DVertex iq[4] = { V2(0, 0, 255, 255, 255, 255), V2(64, 0, 255, 255, 255, 255), V2(0, 64, 255, 255, 255, 255), V2(64, 64, 255, 255, 255, 255) };
+        RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, iq, 4);
+        RS(rwRENDERSTATEVERTEXALPHAENABLE, 0);
+        RS(rwRENDERSTATESRCBLEND, rwBLENDSRCALPHA);
+        RS(rwRENDERSTATEDESTBLEND, rwBLENDINVSRCALPHA);
+        RwCameraEndUpdate(rc);
+        Check(NoGlError("shadow-style camera"), "glGetError clean after the shadow-style camera pass");
+        const RwUInt8* px = RwRasterLock(rt, 0, rwRASTERLOCKREAD);
+        if (px) {
+            const int st = RwRasterGetStride(rt);
+            std::snprintf(what, sizeof(what), "RT after InvertRaster: silhouette (top-left) white %d, rest black %d (row 0 = top)", px[8 * st + 8 * 3] , px[50 * st + 50 * 3]);
+            Check(px[8 * st + 8 * 3] > 250 && px[50 * st + 50 * 3] < 5 && px[8 * st + 50 * 3] < 5 && px[50 * st + 8 * 3] < 5, what);
+        } else {
+            Check(false, "RwRasterLock(camera texture)");
+        }
+        RwRasterUnlock(rt);
+        // sampled in the main camera (re-begun like the game does after its shadow / mirror cameras): top-left silhouette stays top-left
+        begin();
+        RS(rwRENDERSTATETEXTURERASTER, (uintptr_t)rt);
+        RS(rwRENDERSTATETEXTUREFILTER, rwFILTERNEAREST);
+        RwIm2DVertex tq[4] = { V2(300, 100, 255, 255, 255, 255, 0, 0), V2(364, 100, 255, 255, 255, 255, 1, 0), V2(300, 164, 255, 255, 255, 255, 0, 1), V2(364, 164, 255, 255, 255, 255, 1, 1) };
+        RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, tq, 4);
+        s.grab(pw, ph);
+        Check(s.is(308, 108, 255, 255, 255) && s.is(350, 150, 0, 0, 0) && s.is(350, 108, 0, 0, 0) && s.is(308, 150, 0, 0, 0), "RT sampled by the main camera: silhouette in the top-left quarter");
+        RS(rwRENDERSTATETEXTURERASTER, 0);
+        rc->frameBuffer = nullptr;
+        rc->getFrame()->destroy();
+        rc->destroy();
+        RwRasterDestroy(rt);
+        Check(NoGlError("render target round trip"), "glGetError clean after the render target round trip");
+    }
     // alpha: vertex alpha only counts when the caller enabled vertex alpha (Im2D leaves the blend state to the caller)
     {
         RwIm2DVertex h[3] = { V2(10, 10, 128, 255, 0, 0), V2(110, 10, 128, 255, 0, 0), V2(10, 110, 128, 255, 0, 0) };

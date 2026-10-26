@@ -697,7 +697,7 @@ void CAutomobile::ProcessControl()
             if (GetStatus() == STATUS_PLAYER && !m_pHandlingData->m_bIsBus)
             {
                 if (m_nBusDoorTimerEnd) {
-                    uint32 timeStep = (uint32)CTimer::GetTimeStepInMS();
+                    uint32 timeStep = NOTSA_FTOL(uint32, CTimer::GetTimeStepInMS());
                     if (m_nBusDoorTimerEnd <= timeStep)
                         m_nBusDoorTimerEnd = 0;
                     else
@@ -963,14 +963,14 @@ void CAutomobile::ProcessControl()
             if (suspensionShake > 0.0f) {
                 float frequency = (200.0f * suspensionShake * speed * 2000.0f) / m_fMass + 100.0f;
                 frequency = std::min(frequency, 250.0f);
-                auto time = static_cast<int16>(CTimer::GetTimeStep() * 20000.0f / frequency);
-                CPad::GetPad()->StartShake(time, static_cast<uint8>(frequency), 0);
+                auto time = NOTSA_FTOL(int16, CTimer::GetTimeStep() * 20000.0f / frequency);
+                CPad::GetPad()->StartShake(time, NOTSA_FTOL(uint8, frequency), 0);
             }
             else {
                 float frequency = (200.0f * roughnessShake * speed * 2000.0f) / m_fMass + 40.0f;
                 frequency = std::min(frequency, 150.0f);
-                auto time = static_cast<int16>(CTimer::GetTimeStep() * 5000.0f / frequency);
-                CPad::GetPad()->StartShake(time, static_cast<uint8>(frequency), 0);
+                auto time = NOTSA_FTOL(int16, CTimer::GetTimeStep() * 5000.0f / frequency);
+                CPad::GetPad()->StartShake(time, NOTSA_FTOL(uint8, frequency), 0);
             }
         }
     }
@@ -2741,7 +2741,7 @@ void CAutomobile::DoBurstAndSoftGroundRatios()
         case eCarWheelStatus::WHEEL_STATUS_BURST: {
             // The more opposite the speedsq is to the forward vector the bigger chance
             // The highest chance is when the speedsq is opposite to forward (ie.: It's backwards)
-            const auto val = CGeneral::GetRandomNumberInRange(0, int32(speedToFwdRatio * 40.0f) + 98);
+            const auto val = CGeneral::GetRandomNumberInRange(0, NOTSA_FTOL(int32, speedToFwdRatio * 40.0f) + 98);
             if (val < 100) {
                 compression += GetRemainingSuspensionCompression() / 4.f;
                 compression = std::min(1.0f, compression);
@@ -2981,7 +2981,7 @@ void CAutomobile::VehicleDamage(float damageIntensity, eVehicleCollisionComponen
         // Some shaky-shaky
         if (GetStatus() == STATUS_PLAYER && calcDmgIntensity > 50.f) {
             const auto intensity = std::min(250.f, calcDmgIntensity / m_fMass * 800.f + 100.f);
-            CPad::GetPad()->StartShake(40000 / (uint8)intensity, (uint8)intensity, 2000u);
+            CPad::GetPad()->StartShake(40000 / NOTSA_FTOL(uint8, intensity), NOTSA_FTOL(uint8, intensity), 2000u);
         }
 
         // 0x6A7ACF
@@ -3208,7 +3208,7 @@ void CAutomobile::VehicleDamage(float damageIntensity, eVehicleCollisionComponen
             if (CCheat::IsActive(CHEAT_SMASH_N_BOOM) && m_pDamageEntity && m_pDamageEntity == FindPlayerVehicle()) {
                 BlowUpCar(m_pDamageEntity, false);
             }
-            else if (m_fHealth <= 0.f && (uint16)prevHealth > 0) { // 0x6A8354
+            else if (m_fHealth <= 0.f && NOTSA_FTOL(uint16, prevHealth) > 0) { // 0x6A8354
                 m_fHealth = 1.f; // 0x6A8374
                 if (m_pDamageEntity && ModelIndices::IsRhino(m_pDamageEntity->m_nModelIndex) && FindPlayerVehicle()->AsAutomobile() != this) {
                     BlowUpCar(m_pDamageEntity, false);
@@ -3763,7 +3763,7 @@ bool CAutomobile::UpdateMovingCollision(float angle) {
         }
 
         if (angle >= 0.0f) {
-            m_wMiscComponentAngle = static_cast<uint16>(angle * DEFAULT_COLLISION_EXTENDLIMIT);
+            m_wMiscComponentAngle = NOTSA_FTOL(uint16, angle * DEFAULT_COLLISION_EXTENDLIMIT);
         } else {
             float colAngleMult = 10.0f;
             if (ModelIndices::IsForklift(m_nModelIndex) ) {
@@ -3773,7 +3773,7 @@ bool CAutomobile::UpdateMovingCollision(float angle) {
                     colAngleMult *= -1;
             }
 
-            m_wMiscComponentAngle += static_cast<uint16>(((float)pad->GetCarGunUpDown() / 128.0f) * colAngleMult * CTimer::GetTimeStep());
+            m_wMiscComponentAngle += NOTSA_FTOL(uint16, ((float)pad->GetCarGunUpDown() / 128.0f) * colAngleMult * CTimer::GetTimeStep());
             m_wMiscComponentAngle = std::clamp<uint16>(m_wMiscComponentAngle, 0, DEFAULT_COLLISION_EXTENDLIMIT);
         }
 
@@ -3860,7 +3860,7 @@ bool CAutomobile::UpdateMovingCollision(float angle) {
 
     m_wMiscComponentAnglePrev = m_wMiscComponentAngle;
     if (angle >= 0.0f) { // Inverted
-        m_wMiscComponentAngle = static_cast<uint16>(angle * DEFAULT_COLLISION_EXTENDLIMIT); // 0x6A1DA6
+        m_wMiscComponentAngle = NOTSA_FTOL(uint16, angle * DEFAULT_COLLISION_EXTENDLIMIT); // 0x6A1DA6
         return false;
     }
 
@@ -3868,7 +3868,7 @@ bool CAutomobile::UpdateMovingCollision(float angle) {
         return false;
 
     if (pad->GetCarGunUpDown() < -10) {
-        m_wMiscComponentAngle -= static_cast<uint16>(2 * ((float)pad->GetCarGunUpDown() / 128.0f) * 10.0f * CTimer::GetTimeStep());
+        m_wMiscComponentAngle -= NOTSA_FTOL(uint16, 2 * ((float)pad->GetCarGunUpDown() / 128.0f) * 10.0f * CTimer::GetTimeStep());
         m_wMiscComponentAngle = std::min(m_wMiscComponentAngle, DEFAULT_COLLISION_EXTENDLIMIT);
         return false;
     }
@@ -3876,7 +3876,7 @@ bool CAutomobile::UpdateMovingCollision(float angle) {
     if (!m_wMiscComponentAngle)
         return false;
 
-    m_wMiscComponentAngle -= static_cast<uint16>((float(pad->GetCarGunUpDown() + 100) * 10.0f * CTimer::GetTimeStep()) / 128.0f);
+    m_wMiscComponentAngle -= NOTSA_FTOL(uint16, (float(pad->GetCarGunUpDown() + 100) * 10.0f * CTimer::GetTimeStep()) / 128.0f);
     if (static_cast<int16>(m_wMiscComponentAngle) < 0)
         m_wMiscComponentAngle = 0;
 
@@ -4467,7 +4467,7 @@ void CAutomobile::TowTruckControl() {
     const auto carUpDown = driversPad->GetCarGunUpDown();
     if (std::fabs(carUpDown) > 10.f) {
         const auto speed = carUpDown > 0 ? DOWN_SPEED : UP_SPEED;
-        const auto step = (uint16)(float(carUpDown) * speed * CTimer::GetTimeStep());
+        const auto step = NOTSA_FTOL(uint16, float(carUpDown) * speed * CTimer::GetTimeStep());
 
         while (true) {
             // up
@@ -4892,7 +4892,7 @@ void CAutomobile::dmgDrawCarCollidingParticles(const CVector& position, float fo
             const_cast<CVector&>(position),
             fxDirection,
             speedMag * -10.f,
-            ((int8)force / 10 + 4) % 64,
+            (NOTSA_FTOL(int8, force) / 10 + 4) % 64,
             m_vecMoveSpeed,
             eSparkType::SPARK_PARTICLE_SPARK2,
             0.3f,
@@ -4908,7 +4908,7 @@ void CAutomobile::dmgDrawCarCollidingParticles(const CVector& position, float fo
     // Add smoke
     {
         // The higher our speedsq the more particles we create
-        const auto numSmokes = std::max(1u, (uint32)((m_vecMoveSpeed * CTimer::GetTimeStep()).Magnitude() * 4.f));
+        const auto numSmokes = std::max(1u, NOTSA_FTOL(uint32, (m_vecMoveSpeed * CTimer::GetTimeStep()).Magnitude() * 4.f));
         for (auto i = 0u; i < numSmokes; i++) {
             g_fx.m_SmokeHuge->AddParticle(fxPos, {}, 0.f, FxPrtMult_c{ 0.4f, 0.4f, 0.4f, 0.6f, 0.4f, 1.f, 1.f });
         }
@@ -4918,7 +4918,7 @@ void CAutomobile::dmgDrawCarCollidingParticles(const CVector& position, float fo
     if (m_vecMoveSpeed.SquaredMagnitude() <= sq(0.25f)) {
         auto color = CVehicleModelInfo::ms_vehicleColourTable[m_nPrimaryColor] * m_fContactSurfaceBrightness;
         auto rwcolor = color.ToRwRGBA();
-        g_fx.AddDebris(fxPos, rwcolor, 0.06f, (int32)force / 100 + 1);
+        g_fx.AddDebris(fxPos, rwcolor, 0.06f, NOTSA_FTOL(int32, force) / 100 + 1);
     }
 }
 
@@ -6823,7 +6823,7 @@ void PreRenderSirenLights(CAutomobile& veh, const CVector& rightPos, uint8 altR,
 
     //> 0x6AB63C - Fade in/out at the beginning/end of each 512ms period
     const auto fade = [](uint8 v, double f) {
-        return (uint8)(int)(X87R((double)v * f) * (x87d)0.01f); // 0x858C58
+        return (uint8)NOTSA_FTOL(int32, X87R((double)v * f) * (x87d)0.01f); // 0x858C58
     };
     const auto period = time & 0x1FF;
     if (period < 100) {
@@ -6860,7 +6860,7 @@ void PreRenderSirenLights(CAutomobile& veh, const CVector& rightPos, uint8 altR,
 
     //> 0x6AB823 - Corona colours
     const float spriteBrightness = CTimeCycle::m_CurrentColours.m_fSpriteBrightness; // 0xB7C4E4
-    const auto  coronaColor      = [&](uint8 v) { return (uint8)(int)((x87d)v * (x87d)spriteBrightness * (x87d)0.1f); }; // 0x858B1C
+    const auto  coronaColor      = [&](uint8 v) { return (uint8)NOTSA_FTOL(int32, (x87d)v * (x87d)spriteBrightness * (x87d)0.1f); }; // 0x858B1C
     const uint8 redCoronaR       = coronaColor(RED);
     const uint8 ZERO             = 0; // The original calculates it (`ftol(spriteBrightness * 0.0f)`) - always 0
     const uint8 altCoronaR       = coronaColor(altR);
@@ -6917,7 +6917,7 @@ void PreRenderTaxiLight(CAutomobile& veh, const CVector& localPos) {
 
     const auto pos = TransformPointOriginal(*veh.m_matrix, localPos);
 
-    const auto color = (uint8)(int)((x87d)CTimeCycle::m_CurrentColours.m_fSpriteBrightness * (x87d)10.0f); // 0x85862C
+    const auto color = (uint8)NOTSA_FTOL(int32, (x87d)CTimeCycle::m_CurrentColours.m_fSpriteBrightness * (x87d)10.0f); // 0x85862C
     CCoronas::RegisterCorona(
         reinterpret_cast<uintptr>(&veh) + 0x11, &veh,
         color, color, 0, 0xFF,

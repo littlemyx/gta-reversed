@@ -31,9 +31,9 @@ void COcclusion::Init() {
 // Yes, rotation is z, y, x
 void COcclusion::AddOne(float centerX, float centerY, float centerZ, float width, float length, float height, float rotZ, float rotY, float rotX, uint32 flags, bool isInterior) {
     // 0x71DCD0: `_ftol(fabs(x))` (an INTEGER; the exe's _ftol keeps the low dword for huge values), later `fild; fmul 4.0; _ftol`
-    const int32 l = (int32)std::fabsf(length);
-    const int32 w = (int32)std::fabsf(width);
-    const int32 h = (int32)std::fabsf(height);
+    const int32 l = NOTSA_FTOL(int32, std::fabsf(length));
+    const int32 w = NOTSA_FTOL(int32, std::fabsf(width));
+    const int32 h = NOTSA_FTOL(int32, std::fabsf(height));
     // 0x71DD02..0x71DD1C: the exe counts the zero extents and rejects the occluder when MORE THAN ONE of them is zero (a flat occluder has exactly one)
     if ((int)(l == 0) + (int)(w == 0) + (int)(h == 0) > 1) {
         return;
@@ -49,7 +49,7 @@ void COcclusion::AddOne(float centerX, float centerY, float centerZ, float width
         : &Occluders[NumOccludersOnMap++];
 
     occl->m_Center   = CVector{ centerX, centerY, centerZ };
-    const auto CompressExtent = [](int32 v) { return (int16)(int32)((x87d)v * (x87d)4.f); };
+    const auto CompressExtent = [](int32 v) { return (int16)NOTSA_FTOL(int32, (x87d)v * (x87d)4.f); };
     occl->m_Length   = decltype(occl->m_Length){ CompressExtent(l) }; // pre-compressed
     occl->m_Width    = decltype(occl->m_Width){ CompressExtent(w) };
     occl->m_Height   = decltype(occl->m_Height){ CompressExtent(h) };

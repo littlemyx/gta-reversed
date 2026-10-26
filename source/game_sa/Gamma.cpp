@@ -1,6 +1,9 @@
 #include "StdInc.h"
 
 #include "Gamma.h"
+#ifdef NOTSA_PORTABLE
+namespace rw::gl3 { extern float presentGamma; }
+#endif
 
 void CGamma::InjectHooks() {
     RH_ScopedClass(CGamma);
@@ -31,7 +34,7 @@ void CGamma::Init() {
         m_IsEnabled = false; // No gamma support
     }
 #else
-    m_IsEnabled = false; // R-2: no hardware gamma ramp under GL3 (R-11b applies gamma as a final-pass uniform), SetGamma stays inert
+    m_IsEnabled = true; // VIS1: no hardware gamma ramp under GL3; SetGamma sets the exponent of librw gl3's final present pass instead
 #endif
 }
 
@@ -65,5 +68,7 @@ void CGamma::SetGamma(float gammaLevel, bool fade) {
         ms_GammaTable.red[i] = ms_GammaTable.green[i] = ms_GammaTable.blue[i] = gamma;
     }
     dev->SetGammaRamp(0, D3DSGR_CALIBRATE, &ms_GammaTable);
+#else
+    rw::gl3::presentGamma = 1.0f - level + 0.2f; // the D3D ramp is pow((i + 1) / 256, power), power = 1 - level + 0.2
 #endif
 }

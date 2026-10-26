@@ -222,7 +222,7 @@ void* CMemoryMgr::InternalRealloc(void* memory, uint32 size) {
     }
     void* newMemory = InternalMalloc(size);
     if (newMemory) {
-        uint32 nMinSize = (uint32)std::min(float(GET_HEAP_DESC(memory)->m_nSize), float(size));
+        uint32 nMinSize = NOTSA_FTOL(uint32, std::min(float(GET_HEAP_DESC(memory)->m_nSize), float(size)));
         memcpy(newMemory, memory, nMinSize);
     }
     return newMemory;

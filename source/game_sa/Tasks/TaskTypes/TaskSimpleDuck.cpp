@@ -418,7 +418,7 @@ bool CTaskSimpleDuck::ProcessPed(CPed* ped) {
         }
 
         if (m_ShotWhizzingCounter > 0) { // 0x6944C1
-            m_ShotWhizzingCounter = (int16)(m_LengthOfDuck - (uint16)CTimer::GetTimeStepInMS());
+            m_ShotWhizzingCounter = (int16)(m_LengthOfDuck - NOTSA_FTOL(uint16, CTimer::GetTimeStepInMS()));
         }
 
         if (m_DuckAnim) {

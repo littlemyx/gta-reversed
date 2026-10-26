@@ -214,7 +214,7 @@ void CBoat::PruneWakeTrail() {
 
 // 0x6F2550
 void CBoat::AddWakePoint(CVector pos) {
-    const auto ucIntensity = static_cast<uint8>(m_vecMoveSpeed.Magnitude() * 100.0F);
+    const auto ucIntensity = NOTSA_FTOL(uint8, m_vecMoveSpeed.Magnitude() * 100.0F);
 
     // No wake points existing, early out
     if (m_WakePtCounters[0] <= 0.0F) {
@@ -720,7 +720,7 @@ void CBoat::PreRender() {
     SetComponentRotation(m_BoatNodes[BOAT_REARFLAP_RIGHT], AXIS_Z, fUsedAngle, true);
 
     auto fPropSpeed = std::min(1.0F, m_EngineSpeed * (32.0F / TWO_PI));
-    auto ucTransparency = static_cast<RwUInt8>((1.0F - fPropSpeed) * 255.0F);
+    auto ucTransparency = NOTSA_FTOL(RwUInt8, (1.0F - fPropSpeed) * 255.0F);
 
     m_PropellerAngle += m_EngineSpeed * CTimer::GetTimeStep();
     while (m_PropellerAngle > TWO_PI) {

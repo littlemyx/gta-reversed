@@ -269,7 +269,7 @@ eModelID CPedGroupMembership::GetObjectForPedToHold() {
     using namespace ModelIndices;
     // exe 0x5F6950..0x5F6994: ONE rand() (0x5F6956), r = (int)((x87)(rand & 0xFFFF) * (1/32768) [0x858B14] * 100.0f [0x858628]);
     // r < 33: MI_GANG_SMOKE [0x8CD72C], r < 66: MI_GANG_DRINK [0x8CD728], else nothing (the port had 3 equal parts in the order smoke/nothing/drink)
-    const auto r = (int32)((x87d)(rand() & 0xFFFF) * std::bit_cast<float>(0x38000000u) * 100.0f);
+    const auto r = NOTSA_FTOL(int32, (x87d)(rand() & 0xFFFF) * std::bit_cast<float>(0x38000000u) * 100.0f);
     if (r < 33) {
         return MI_GANG_SMOKE;
     }

@@ -1,0 +1,104 @@
+name: Portable Windows
+
+# MAC-HL1: native Windows x64 build of the portable game (preset PortableWin64: MSVC cl.exe, static CRT, librw GL3 + SDL3, real Windows SDK headers, DirectSound), MSVC from VS 2022 on windows-latest.
+# The wine/Mac route of the same preset is documented in tools/portable/win64/README.txt; the host-specific part (conan profile) is tools/portable/win64/conanprofile-native.txt.
+# Fork-only workflow: runs on pushes to portable/main and by hand. The game is not run (no game data on CI), no test suite is run.
+# The fork is PUBLIC: the artifacts are LOGS ONLY (explicit file list below), never binaries (.exe / .pdb / .map).
+on:
+  # manual only until the private librw is reachable from CI (tools/portable/ci_librw_access.sh); push runs only spammed failure mails
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash # git-bash on the runner: -eo pipefail (the build step pipes through tee)
+
+concurrency:
+  group: portable-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 330
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: false
+
+      - name: librw submodule (private repo, needs the secret LIBRW_DEPLOY_KEY or LIBRW_TOKEN)
+        env:
+          LIBRW_DEPLOY_KEY: ${{ secrets.LIBRW_DEPLOY_KEY }}
+          LIBRW_TOKEN: ${{ secrets.LIBRW_TOKEN }}
+        run: tools/portable/ci_fetch_librw.sh
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: MSVC x64 environment (VS 2022)
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+          vsversion: 2022
+
+      - name: Toolchain (conan, cmake, ninja)
+        run: |
+          # git-bash's /usr/bin/link.exe (coreutils) shadows MSVC link.exe for CMake's linker lookup
+          rm -f /usr/bin/link.exe || true
+          python -m pip install --upgrade conan cmake ninja
+          conan profile detect --force
+          cl 2>&1 | head -1 || true
+          cmake --version | head -1
+          ninja --version
+          conan --version
+
+      - name: Conan cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.conan2/p
+          key: conan-windows-x64-${{ hashFiles('conanfile.py', 'conan/profiles/windows-x64-msvc.txt', 'tools/portable/win64/conanprofile-native.txt') }}
+
+      - name: Conan install (SDL3, spdlog, imgui, ogg, vorbis, jpeg-turbo, ...)
+        run: |
+          # windows-latest has VS 2022 (toolset 14.4x): the profile pins msvc 195 (VS 2026)
+          CONAN_EXTRA_ARGS="-s compiler.version=194" tools/portable/win64/conan_install_win64.sh Release 2>&1 | tee conan.log
+
+      - name: Configure
+        run: cmake --preset PortableWin64 2>&1 | tee configure.log
+
+      - name: Build (ninja -k 0, every error is collected)
+        id: build
+        run: |
+          set -o pipefail
+          start=$(date +%s)
+          cmake --build build/PortableWin64 -- -k 0 2>&1 | tee build.log
+          rc=${PIPESTATUS[0]}
+          echo "build wall time: $(( $(date +%s) - start )) s, rc=$rc" | tee -a build.log
+          grep -cE ': (fatal )?error [A-Z]+[0-9]+' build.log || true
+          exit "$rc"
+
+      - name: Binary sanity (header facts only, the binary itself is not uploaded)
+        if: steps.build.outcome == 'success'
+        run: |
+          {
+            ls -l build/PortableWin64/bin/
+            dumpbin //headers build/PortableWin64/bin/gta_reversed.exe | grep -E "machine|subsystem|size of image"
+            dumpbin //dependents build/PortableWin64/bin/gta_reversed.exe
+          } 2>&1 | tee sanity.log
+
+      - name: Upload logs (logs only, no binaries)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: portable-windows-logs
+          path: |
+            conan.log
+            configure.log
+            build.log
+            sanity.log
+          if-no-files-found: ignore

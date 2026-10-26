@@ -74,7 +74,11 @@ void CFormation::FindCoverPointsBehindBox(
         if (i == shortestSideIdx) {
             continue;
         }
+#ifdef NOTSA_PORTABLE
+        const auto otherCornerIdx = (i - 2) & 3; // The other corner of the side (exe 0x69A325: `& 3`; `% 4` of a negative signed index read corners[-2 / -1])
+#else
         const auto otherCornerIdx = (i - 2) % 4; // The other corner of the side
+#endif
         if (otherCornerIdx == shortestSideIdx) {
             continue;
         }
@@ -265,7 +269,7 @@ void CFormation::DistributeDestinations_PedsToAttack(const CPedList& pedList) {
     }
 
     // Each target can be attacked by at most this many peds
-    const auto maxPerTarget = std::max(2, (int32)std::ceil((x87d)(int32)numPeds / (x87d)(int32)numTargets));
+    const auto maxPerTarget = std::max(2, NOTSA_FTOL(int32, std::ceil((x87d)(int32)numPeds / (x87d)(int32)numTargets)));
     rng::fill(remainingForTarget | rngv::take(numTargets), maxPerTarget);
 
     size_t bestTargetIdx = 0, bestPedIdx = 0; // Not reset per iteration, same as the original

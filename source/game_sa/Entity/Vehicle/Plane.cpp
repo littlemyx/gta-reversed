@@ -630,7 +630,7 @@ void CPlane::FindPlaneCreationCoors(CVector* outCoors, CVector* outTargetCoors, 
         CColSphere   sphere;
         sphere.Set(15.0f, *outCoors, SURFACE_DEFAULT, 0, tColLighting{0xFF});
         if (CWorld::GetIsLineOfSightClear(*outCoors, lineEnd, true, false, false, false, false, false, false)
-            && !CCollision::CheckCameraCollisionBuildings((int32)outCoors->x, (int32)outCoors->y, box, sphere, sphere, sphere)
+            && !CCollision::CheckCameraCollisionBuildings(NOTSA_FTOL(int32, outCoors->x), NOTSA_FTOL(int32, outCoors->y), box, sphere, sphere, sphere)
         ) {
             break;
         }
@@ -1332,7 +1332,7 @@ void CPlane::PreRender() {
         if (alpha < 0.0) {
             alpha = (x87d)0.0;
         }
-        const auto streakAlpha = (uint8)(int32)alpha;
+        const auto streakAlpha = (uint8)NOTSA_FTOL(int32, alpha);
 
         // Right wing
         const CVector& dummy = mi->GetModelDummyPosition(DUMMY_WING_AIR_TRAIL);
@@ -1419,7 +1419,7 @@ void CPlane::ProcessControl() {
     }
 
     if (m_pSmokeParticle) {
-        m_nSmokeTimer += (int32)(CTimer::GetTimeStep() * 0.02f * -1000.0f); // `-CTimer::GetTimeStepInMS()`
+        m_nSmokeTimer += NOTSA_FTOL(int32, CTimer::GetTimeStep() * 0.02f * -1000.0f); // `-CTimer::GetTimeStepInMS()`
 
         RwMatrix mat;
         m_pSmokeParticle->GetCompositeMatrix(&mat);
@@ -1559,7 +1559,7 @@ clampSteering:
             m_wMiscComponentAnglePrev = m_wMiscComponentAngle;
 
             // NOTE: Original code evaluates this expression twice (same result)
-            const auto change = (int16)(int32)((float)pad->GetCarGunUpDown() * CTimer::GetTimeStep() * HARRIER_NOZZLE_ROTATERATE * (1.0f / 128.0f));
+            const auto change = (int16)NOTSA_FTOL(int32, (float)pad->GetCarGunUpDown() * CTimer::GetTimeStep() * HARRIER_NOZZLE_ROTATERATE * (1.0f / 128.0f));
             if ((int32)change + (int32)m_wMiscComponentAngle < 0) {
                 m_wMiscComponentAngle = 0;
             } else {
@@ -1619,8 +1619,8 @@ void CPlane::ProcessFlyingCarStuff() {
         const float waveMax = PLANE_DAMAGE_WAVE_COUNTER_VAR + 1.0f;
         const float waveMin = 1.0f - PLANE_DAMAGE_WAVE_COUNTER_VAR;
         const float wave    = (waveMax - waveMin) * Rand01() + waveMin;
-        const auto  timeMS  = (uint32)(int32)(CTimer::GetTimeStep() * 0.02f * 1000.0f); // `GetTimeStepInMS()`
-        m_planeDamageWave += (int32)((float)timeMS * wave);
+        const auto  timeMS  = (uint32)NOTSA_FTOL(int32, CTimer::GetTimeStep() * 0.02f * 1000.0f); // `GetTimeStepInMS()`
+        m_planeDamageWave += NOTSA_FTOL(int32, (float)timeMS * wave);
     }
 
     const float speedFactor = std::min(m_vecMoveSpeed.Magnitude() * 3.0f, 1.0f);

@@ -757,7 +757,7 @@ BikeSection:
             if (m_Criminal->bInVehicle && m_Criminal->m_pVehicle) {
                 veh->SetStatus(STATUS_PHYSICS);
                 veh->m_autoPilot.m_nCarMission = MISSION_FOLLOWCAR_CLOSE;
-                veh->m_autoPilot.m_nCruiseSpeed = (uint8)(int32)((x87d)m_Criminal->m_pVehicle->m_autoPilot.m_nCruiseSpeed + (x87d)10.0);
+                veh->m_autoPilot.m_nCruiseSpeed = (uint8)NOTSA_FTOL(int32, (x87d)m_Criminal->m_pVehicle->m_autoPilot.m_nCruiseSpeed + (x87d)10.0);
                 veh->m_autoPilot.m_fMaxTrafficSpeed = (float)veh->m_autoPilot.m_nCruiseSpeed;
                 veh->m_autoPilot.m_nCarDrivingStyle = DRIVING_STYLE_AVOID_CARS;
                 veh->m_autoPilot.m_TargetEntity = m_Criminal->m_pVehicle;

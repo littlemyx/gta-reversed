@@ -266,7 +266,7 @@ void CGlass::GeneratePanesForWindow(ePaneType type, CVector point, CVector fwd, 
 
     // Calculate no. of sections, and section size
     const auto CalculateCountOfSectionsAndSizeAxis = [&](auto axisSize) {
-        const auto count = numSectionsMax1 ? 1 : std::min(numSections * (uint32)(axisSize + 0.75f/*make it round upwards*/), 3u);
+        const auto count = numSectionsMax1 ? 1 : std::min(numSections * NOTSA_FTOL(uint32, (axisSize + 0.75f/*make it round upwards*/)), 3u);
         return std::make_pair(count, axisSize / (float)count);
     };
 
@@ -320,7 +320,7 @@ void CGlass::GeneratePanesForWindow(ePaneType type, CVector point, CVector fwd, 
 
                 switch (type) {
                 case ePaneType::DELAYED: {
-                    pane->m_nCreatedTime = CTimer::GetTimeInMS() + (uint32)((mat.GetPosition() - center).Magnitude() * 100.f);
+                    pane->m_nCreatedTime = CTimer::GetTimeInMS() + NOTSA_FTOL(uint32, (mat.GetPosition() - center).Magnitude() * 100.f);
                     break;
                 }
                 case ePaneType::CAR:

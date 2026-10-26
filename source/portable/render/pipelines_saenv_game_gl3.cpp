@@ -13,6 +13,7 @@
 #include "app_light.h"
 #include "VisibilityPlugins.h"
 #include "Fx.h"
+#include "Clock.h"
 
 namespace {
 using C = CCustomCarEnvMapPipeline;
@@ -31,6 +32,15 @@ void FillLight(NotsaSaEnvMesh& out) {
 void CarPrepare(RpAtomic* atomic, RpMaterial* mat, NotsaSaEnvMesh& out) {
     out = NotsaSaEnvMesh{};
     const auto specIntensity = gSpecIntensity * 1.85f;
+    if (static const bool log = std::getenv("NOTSA_R12_LIGHTLOG") != nullptr; log) { // R-12 diagnostics (every 300th mesh, <= 40 lines): CRenderer::SetupLightingForEntity's lighting multiplier
+        static int n = 0, lines = 0, lastHour = -1;
+        const int hourNow = (int)CClock::GetGameClockHours();
+        if (lines < 400 && ((n++ % 300) == 0 || hourNow != lastHour)) { // R-11: also at every game hour change (night values)
+            lastHour = hourNow;
+            lines++;
+            NOTSA_LOG_INFO("[R-12] car mesh: gSpecIntensity (lighting multiplier) = {:.3f}, hour {}", (float)gSpecIntensity, (int)CClock::GetGameClockHours());
+        }
+    }
     auto* const geo          = RpAtomicGetGeometry(atomic);
     const auto atmFlags      = CVisibilityPlugins::GetAtomicId(atomic);
     const auto noReflections = (atmFlags & (ATOMIC_PIPE_NO_EXTRA_PASSES_LOD | ATOMIC_PIPE_NO_EXTRA_PASSES)) != 0;

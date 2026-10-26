@@ -437,6 +437,9 @@ CVehicle::~CVehicle() {
 }
 
 void* CVehicle::operator new(size_t size) {
+#ifdef NOTSA_PORTABLE
+    GetVehiclePool()->NotsaCheckAllocSize(size, "vehicle");
+#endif
     return GetVehiclePool()->New();
 }
 
@@ -445,6 +448,9 @@ void CVehicle::operator delete(void* data) {
 }
 
 void* CVehicle::operator new(size_t size, int32 poolRef) {
+#ifdef NOTSA_PORTABLE
+    GetVehiclePool()->NotsaCheckAllocSize(size, "vehicle");
+#endif
     return GetVehiclePool()->NewAt(poolRef);
 }
 
@@ -673,7 +679,7 @@ uint8 CVehicle::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSet
     else if (fLongestDir < 2.0F)
         unk2 = true;
 
-    return static_cast<uint8>(ceil(fMove));
+    return NOTSA_FTOL(uint8, ceil(fMove));
 }
 
 // 0x6D6480
@@ -697,7 +703,7 @@ void CVehicle::PreRender() {
 // 0x6D0E60
 void CVehicle::Render() {
     auto* mi = GetVehicleModelInfo();
-    const auto iDirtLevel = static_cast<int32>(m_fDirtLevel) & 0xF;
+    const auto iDirtLevel = NOTSA_FTOL(int32, m_fDirtLevel) & 0xF;
     CVehicleModelInfo::SetDirtTextures(mi, iDirtLevel);
 
     CEntity::Render();
@@ -729,7 +735,7 @@ void CVehicle::ProcessOpenDoor(CPed* ped, uint32 doorComponentId_, uint32 animGr
         case COMPONENT_WING_LF: return DOOR_LEFT_REAR;
         default:
             assert(false); // Shouldn't get here
-            return static_cast<eDoors>(fTime);
+            return NOTSA_FTOL(eDoors, fTime);
         }
     }();
 
@@ -1393,7 +1399,7 @@ void CVehicle::ProcessDelayedExplosion() {
     }
 
     // 0x6D1350..0x6D1375: period = _ftol(step * 100/6) as a 32-bit value, timer = timer > period (unsigned) ? timer - period : 0
-    const auto period = (uint32)(int32)(CTimer::GetTimeStep() * (100.0f / 6.0f));
+    const auto period = (uint32)NOTSA_FTOL(int32, CTimer::GetTimeStep() * (100.0f / 6.0f));
     const auto timer = (uint32)(uint16)m_wBombTimer; // movzx
     m_wBombTimer = (int16)(timer > period ? timer - period : 0u);
 
@@ -1783,7 +1789,7 @@ void CVehicle::ProcessCarAlarm() {
     }
 
     // 0x6D2207: the exe converts the step with _ftol (signed 32 bit), compares the 16 bit alarm timer against it unsigned and SUBTRACTS it (the port stored the step itself)
-    const auto ts = (uint32)(int32)CTimer::GetTimeStepInMS();
+    const auto ts = (uint32)NOTSA_FTOL(int32, CTimer::GetTimeStepInMS());
     if (m_nAlarmState >= ts) {
         m_nAlarmState = (uint16)(m_nAlarmState - ts);
     } else {
@@ -2693,7 +2699,7 @@ void CVehicle::UpdateWinch() {
         const auto baseLen = (eRopeType)m_ropeType == eRopeType::MAGNET ? -0.2f : -0.6f;
         if (const auto ropeIdx = CRopes::FindRope(ropeID); ropeIdx >= 0) { // Inverted condition
             const auto& rope = CRopes::GetRope(ropeIdx);
-            const auto segCount = (uint32)(rope.m_fSegmentLength * 32.f);
+            const auto segCount = NOTSA_FTOL(uint32, rope.m_fSegmentLength * 32.f);
             return { (rope.m_fMass * rope.m_fSegmentLength) - ((float)segCount * rope.m_fTotalLength) + baseLen, segCount };
         }
         return { baseLen, 0 };
@@ -2843,10 +2849,10 @@ void CVehicle::SetFiringRateMultiplier(float multiplier) {
     multiplier = std::clamp(multiplier, 0.0f, 15.9375f);
     switch (m_nVehicleSubType) {
     case VEHICLE_TYPE_PLANE:
-        AsPlane()->m_nFiringMultiplier = uint8(multiplier * 16.0f);
+        AsPlane()->m_nFiringMultiplier = NOTSA_FTOL(uint8, multiplier * 16.0f);
         break;
     case VEHICLE_TYPE_HELI:
-        AsHeli()->m_nFiringMultiplier = uint8(multiplier * 16.0f);
+        AsHeli()->m_nFiringMultiplier = NOTSA_FTOL(uint8, multiplier * 16.0f);
         break;
     }
 }
@@ -2869,17 +2875,17 @@ uint32 CVehicle::GetPlaneGunsRateOfFire() {
     switch (m_nModelIndex) {
     case MODEL_SEASPAR:
     case MODEL_RCBARON:
-        return uint32(40.0f / mult);
+        return NOTSA_FTOL(uint32, 40.0f / mult);
     case MODEL_RUSTLER:
-        return uint32(80.0f / mult);
+        return NOTSA_FTOL(uint32, 80.0f / mult);
     case MODEL_HYDRA:
-        return uint32(17.0f / mult);
+        return NOTSA_FTOL(uint32, 17.0f / mult);
     case MODEL_CARGOBOB:
-        return uint32(100.0f / mult);
+        return NOTSA_FTOL(uint32, 100.0f / mult);
     case MODEL_TORNADO:
-        return uint32(45.0f / mult);
+        return NOTSA_FTOL(uint32, 45.0f / mult);
     default:
-        return uint32(60.0f / mult);
+        return NOTSA_FTOL(uint32, 60.0f / mult);
     }
 }
 
@@ -2912,14 +2918,14 @@ uint32 CVehicle::GetPlaneOrdnanceRateOfFire(eOrdnanceType type) {
     const auto mult = GetFiringRateMultiplier();
     switch (m_nModelIndex) {
     case MODEL_HUNTER:
-        return (uint32)((float)500 / mult);
+        return NOTSA_FTOL(uint32, (float)500 / mult);
     case MODEL_SEASPAR:
     case MODEL_RUSTLER:
-        return (uint32)((float)1000 / mult);
+        return NOTSA_FTOL(uint32, (float)1000 / mult);
     case MODEL_HYDRA:
-        return (uint32)((float)(type != 1 ? 1000 : 500) / mult); // todo: heat trap / missile?
+        return NOTSA_FTOL(uint32, (float)(type != 1 ? 1000 : 500) / mult); // todo: heat trap / missile?
     default:
-        return (uint32)((float)350 / mult);
+        return NOTSA_FTOL(uint32, (float)350 / mult);
     }
 }
 
@@ -4367,7 +4373,7 @@ static void FlyingControlModel1345(FlyingControlCtx& c) {
         const float  r3     = (-1.0f > r2) ? -1.0f : r2;             // 0x420800
         const x87d pitch  = X87R(x87::asin((double)r3) * -1.0f);         // 0x821E70
         if (v.m_nVehicleSubType == VEHICLE_TYPE_PLANE && pitch > 0.3490658700466156f) {
-            v.AsPlane()->field_9A0 += (int32)(((x87d)ts * 0.02f) * 1000.0f);
+            v.AsPlane()->field_9A0 += NOTSA_FTOL(int32, ((x87d)ts * 0.02f) * 1000.0f);
         }
 
         x87d formLift = fh->m_fFormLift;
@@ -5397,7 +5403,7 @@ void CVehicle::DoBoatSplashes(float fWaterDamping) {
         scaled = doubled >= 1.0 ? 1.0f : (float)doubled;
     }
 
-    uint8 alphaByte = (uint8)(int32)(scaled * 128.0f);
+    uint8 alphaByte = (uint8)NOTSA_FTOL(int32, scaled * 128.0f);
     if (alphaByte >= 0x40) {
         alphaByte = 0x40;
     }
@@ -5409,7 +5415,7 @@ void CVehicle::DoBoatSplashes(float fWaterDamping) {
     const float  lifeBase  = (float)((((x87d)scaled + scaled) + 0.3f) * lifeRand);
 
     if (dist > 50.0f) {
-        alphaByte = (uint8)(int32)((((x87d)80.0 - dist) * 0.033333335f) * alphaByte); // 0x858F10
+        alphaByte = (uint8)NOTSA_FTOL(int32, (((x87d)80.0 - dist) * 0.033333335f) * alphaByte); // 0x858F10
     }
 
     FxPrtMult_c particleData(1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f);
@@ -5543,7 +5549,7 @@ void CVehicle::DoSunGlare() {
 
     const x87d colorScale = intensity * 0.8f;
     const auto   ToColor    = [&](uint16 core) { // 0x821B40 (_ftol) truncates
-        return (uint8)(int32)((((x87d)(core + 0x1FE) * colorScale) * CWeather::SunGlare) * 0.33333334f);
+        return (uint8)NOTSA_FTOL(int32, (((x87d)(core + 0x1FE) * colorScale) * CWeather::SunGlare) * 0.33333334f);
     };
     const auto& colours = CTimeCycle::m_CurrentColours;
     const uint8 red     = ToColor(colours.m_nSunCoreRed);
@@ -5658,7 +5664,7 @@ void CVehicle::AddWaterSplashParticles() {
         const auto v0v1 = vertices[1] - vertices[0];
         const auto v1v2 = vertices[2] - vertices[1];
 
-        for (auto i = 1 - (size_t)(CWeather::Rain * -2.f); i > 0; i--) {
+        for (auto i = 1 - NOTSA_FTOL(size_t, CWeather::Rain * -2.f); i > 0; i--) {
             g_fx.m_Splash->AddParticle(
                 vertices[0]
                     + v0v1 * CGeneral::GetRandomNumberInRange(0.f, 1.f)
@@ -5870,7 +5876,7 @@ bool CVehicle::AddSingleWheelParticles(tWheelState wheelState, uint32 arg1, floa
             sparkForce = 10.0f;
         }
         const float sparkMag = NormaliseAndMagExt(sparkDir);
-        g_fx.AddSparks(*wheelPos, sparkDir, sparkMag, (int32)sparkForce, m_vecMoveSpeed, SPARK_PARTICLE_SPARK, 0.1f, 0.3f); // 0x49F040
+        g_fx.AddSparks(*wheelPos, sparkDir, sparkMag, NOTSA_FTOL(int32, sparkForce), m_vecMoveSpeed, SPARK_PARTICLE_SPARK, 0.1f, 0.3f); // 0x49F040
         AudioEngine.ReportCollision(
             this,
             FindPlayerPed(0),
@@ -5912,7 +5918,7 @@ bool CVehicle::AddSingleWheelParticles(tWheelState wheelState, uint32 arg1, floa
         }
 
         const CVector step  = m_vecMoveSpeed * CTimer::ms_fTimeStep;
-        const int32   num   = (int32)(X87R(MagnitudeExt(step) * countScale)); // _ftol
+        const int32   num   = NOTSA_FTOL(int32, X87R(MagnitudeExt(step) * countScale)); // _ftol
         const int32   count = num >= 1 ? num : 1;
         const float   countF = (float)count;
         for (int32 i = 0; i < count; i++) {
@@ -6443,7 +6449,7 @@ void CVehicle::DoHeadLightBeam(eVehicleLightId lightId, CMatrix& vehicleMatrix, 
         point -= 2 * pointModelSpace.x * vehicleMatrix.GetRight();
     }
     const CVector pointToCamDir = Normalized(TheCamera.GetPosition() - point);
-    const auto    alpha         = (uint8)((1.0f - std::fabs(DotProduct(pointToCamDir, vehicleMatrix.GetForward()))) * 32.0f);
+    const auto    alpha         = NOTSA_FTOL(uint8, (1.0f - std::fabs(DotProduct(pointToCamDir, vehicleMatrix.GetForward()))) * 32.0f);
 
     RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,         RWRSTATE(FALSE));
     RwRenderStateSet(rwRENDERSTATEZTESTENABLE,          RWRSTATE(TRUE));
@@ -6641,11 +6647,11 @@ bool CVehicle::DoLightEffectImpl(bool isFront, eVehicleLightId lightId, CMatrix&
             }
 
             if (m_pHandlingData->m_bHalogenLights) {
-                lightColorR = static_cast<uint8>(190.0f * intensity);
-                lightColorG = static_cast<uint8>(intensity * 255.0f);
+                lightColorR = NOTSA_FTOL(uint8, 190.0f * intensity);
+                lightColorG = NOTSA_FTOL(uint8, intensity * 255.0f);
             } else {
-                lightColorR = static_cast<uint8>(210.0f * intensity);
-                lightColorG = static_cast<uint8>(intensity * 195.0f);
+                lightColorR = NOTSA_FTOL(uint8, 210.0f * intensity);
+                lightColorG = NOTSA_FTOL(uint8, intensity * 195.0f);
             }
 
             RegisterCorona(reinterpret_cast<uintptr>(this) + 2 * static_cast<uint32>(lightId) + isRight, lightColorR, lightColorR, lightColorG, 128u, tweakedDummy, coronaSize, eCoronaType::CORONATYPE_HEADLIGHT, eCoronaReflType::CORREFL_SIMPLE, 0.5f);
@@ -6653,10 +6659,10 @@ bool CVehicle::DoLightEffectImpl(bool isFront, eVehicleLightId lightId, CMatrix&
             uint8 redIntensity = 0u;
 
             if (m_pDriver && m_BrakePedal > 0.0f && !vehicleFlags.bIsHandbrakeOn) {
-                redIntensity = static_cast<uint8>(128.0f * intensity);
+                redIntensity = NOTSA_FTOL(uint8, 128.0f * intensity);
                 isBraking    = true;
             } else if (staticEmission) {
-                redIntensity = static_cast<uint8>(96.0f * intensity);
+                redIntensity = NOTSA_FTOL(uint8, 96.0f * intensity);
                 isBraking    = true;
             }
 

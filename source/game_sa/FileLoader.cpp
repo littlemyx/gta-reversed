@@ -1084,9 +1084,9 @@ void CFileLoader::Load2dEffect(const char* line) {
         );
 
         fx->m_type   = (uint8)interiorType;
-        fx->m_width  = (uint8)(int32)width;
-        fx->m_depth  = (uint8)(int32)depth;
-        fx->m_height = (uint8)(int32)height;
+        fx->m_width  = (uint8)NOTSA_FTOL(int32, width);
+        fx->m_depth  = (uint8)NOTSA_FTOL(int32, depth);
+        fx->m_height = (uint8)NOTSA_FTOL(int32, height);
         fx->m_door   = (int8)door;
         fx->m_seed   = (uint8)seed;
         fx->m_groupId = (int8)groupId;

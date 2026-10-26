@@ -12,9 +12,16 @@ void CEvent::InjectHooks() {
 }
 
 // 0x4B5620
+#ifdef NOTSA_PORTABLE
+void* CEvent::operator new(size_t size) {
+    GetEventPool()->NotsaCheckAllocSize(size, "event");
+    return GetEventPool()->New();
+}
+#else
 void* CEvent::operator new(size_t) {
     return GetEventPool()->New();
 }
+#endif
 
 // 0x4B5630
 void CEvent::operator delete(void* object) {

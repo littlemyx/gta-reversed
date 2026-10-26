@@ -27,7 +27,7 @@ void CRegisteredCorona::Update() {
     if (!m_bCheckObstacles || ((!CCoronas::SunBlockedByClouds || m_dwId != 2)
         && CWorld::GetIsLineOfSightClear(m_vPosn, camPos, true, false, false, false, false, false, false))) {
         if (m_bOffScreen || (m_bOnlyFromBelow && camPos.z > m_vPosn.z)) {
-            m_FadedIntensity = (uint8)(std::max(0.f, (float)(m_FadedIntensity)-fadeStep));
+            m_FadedIntensity = NOTSA_FTOL(uint8, std::max(0.f, (float)(m_FadedIntensity)-fadeStep));
         } else {
             // 0x6FACC1: step towards the target intensity; NaN takes the stepped value (std::min / max would differ); equal values change nothing (not even the immediate update)
             const uint8 faded = m_FadedIntensity, target = m_Color.a;
@@ -51,7 +51,7 @@ void CRegisteredCorona::Update() {
             }
         }
     } else {
-        m_FadedIntensity = (uint8)(std::max(0.f, (float)(m_FadedIntensity)-fadeStep));
+        m_FadedIntensity = NOTSA_FTOL(uint8, std::max(0.f, (float)(m_FadedIntensity)-fadeStep));
     }
 
     if (!m_FadedIntensity && !m_bJustCreated) {

@@ -20,7 +20,7 @@ void CPlaneTrail::Init() {
 
 // 0x717180
 void CPlaneTrail::Render(float intensity) {
-    const auto maxAlpha = (int32)(intensity * 110.0f);
+    const auto maxAlpha = NOTSA_FTOL(int32, intensity * 110.0f);
     if (!maxAlpha) {
         return;
     }
@@ -33,7 +33,7 @@ void CPlaneTrail::Render(float intensity) {
             RxObjSpace3DVertex& vert = vertBuff[i];
 
             const float fAlphaMult = std::min(1.0f, ((float)POINT_EXPIRATION_TIME - (float)timeDelta) / 10'000.0f); // Clamped to 1.0f
-            RwIm3DVertexSetRGBA(&vert, 255, 255, 255, (uint8)((float)maxAlpha * fAlphaMult));
+            RwIm3DVertexSetRGBA(&vert, 255, 255, 255, NOTSA_FTOL(uint8, (float)maxAlpha * fAlphaMult));
 
             RwV3dAssign(RwIm3DVertexGetPos(&vert), &m_Positions[i]);
 

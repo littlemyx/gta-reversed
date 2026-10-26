@@ -368,7 +368,7 @@ void CWanted::ReportCrimeNow(eCrimeType crimeType, const CVector& posn, bool bPo
         NOTSA_LOG_DEBUG("{} : {} (Mult:{})", crimeType, m_WantedLevel, mul); // IV
 
         // 0x56225F: fiadd [chaos] on the unrounded x87 product, then _ftol (the sum is NOT `chaos + (int)product`)
-        m_ChaosLevel = (int32)((x87d)mul * (x87d)factor + (x87d)m_ChaosLevel);
+        m_ChaosLevel = NOTSA_FTOL(int32, (x87d)mul * (x87d)factor + (x87d)m_ChaosLevel);
     }
 
     m_ChaosLevel = std::max(m_ChaosLevel, m_ChaosLevelBeforeParole);

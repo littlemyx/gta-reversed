@@ -66,7 +66,7 @@ int16 CTaskSimpleFightingControl::CalcMoveCommand(CPed* ped) {
         diffAngle += (x87d)TWO_PI;
     }
     if (std::abs(diffAngle) > (double)FIGHT_CTRL_MAX_ATTACK_ANGLE_RAD) {
-        m_nextAttackTime += (uint32)CTimer::GetTimeStepInMS();
+        m_nextAttackTime += NOTSA_FTOL(uint32, CTimer::GetTimeStepInMS());
         return 0;
     }
 
@@ -202,7 +202,7 @@ bool CTaskSimpleFightingControl::ProcessPed(CPed* ped) {
     auto& taskMgr = ped->GetTaskManager();
     if (!taskMgr.GetTaskSecondary(TASK_SECONDARY_ATTACK)) {
         // 0x8D2E50 = 60000.f (Idle period)
-        taskMgr.SetTaskSecondary(new CTaskSimpleFight{ m_target, 0, (uint32)FIGHT_CTRL_FIGHT_IDLE_TIME }, TASK_SECONDARY_ATTACK);
+        taskMgr.SetTaskSecondary(new CTaskSimpleFight{ m_target, 0, NOTSA_FTOL(uint32, FIGHT_CTRL_FIGHT_IDLE_TIME) }, TASK_SECONDARY_ATTACK);
         m_nextAttackTime = 0;
     } else {
         if (taskMgr.GetTaskSecondary(TASK_SECONDARY_ATTACK)->GetTaskType() != TASK_SIMPLE_FIGHT) {
@@ -224,7 +224,7 @@ bool CTaskSimpleFightingControl::ProcessPed(CPed* ped) {
                 m_someTime = (uint32)CGeneral::GetRandomNumberInRange(500, 2000); // 0x8D2E58, 0x8D2E5C
                 moveCmd    = 2;
             } else if (m_someTime != 0) {
-                const auto decr = (uint32)((x87d)CTimer::GetTimeStep() * (x87d)0.02f * (x87d)1000.0);
+                const auto decr = NOTSA_FTOL(uint32, (x87d)CTimer::GetTimeStep() * (x87d)0.02f * (x87d)1000.0);
                 m_someTime      = m_someTime > decr ? m_someTime - decr : 0;
                 moveCmd         = 2;
             }
@@ -238,7 +238,7 @@ bool CTaskSimpleFightingControl::ProcessPed(CPed* ped) {
         // x87: the whole chain is kept in extended precision until the final truncation
         const x87d r    = (x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL + (x87d)0.25f;
         const x87d div  = (x87d)shootingRate * (x87d)m_unk3 * (x87d)0.025f * (x87d)0.7f + (x87d)0.3f;
-        const auto   wait = (int32)(r / div * (x87d)2000.0); // 0x8D2E4C = 2000
+        const auto   wait = NOTSA_FTOL(int32, r / div * (x87d)2000.0); // 0x8D2E4C = 2000
         m_nextAttackTime = (uint32)wait + CTimer::GetTimeInMS();
     }
 

@@ -267,7 +267,7 @@ bool CPedGroupPlacer::PlaceRandomGroup(ePedType type, uint32 numOfPeds, const CV
         group.GetMembership().Process();
         group.GetIntelligence().Process();
 
-        const auto dir = (uint8)(int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f) * 8.0f);
+        const auto dir = (uint8)NOTSA_FTOL(int32, (float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f) * 8.0f);
         peds[i]->GetTaskManager().SetTask(new CTaskComplexWanderGang((eMoveState)4, dir, 5000, true, 0.5f), TASK_PRIMARY_DEFAULT, false);
         SetTaskBeInGroup(peds[i], groupId, false);
     }

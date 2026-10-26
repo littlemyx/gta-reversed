@@ -343,6 +343,20 @@ void CEntity::DeleteRwObject() {
         return;
     }
 
+#ifdef NOTSA_PORTABLE
+    // MAC-STAB4: the 2dfx particle systems of this entity (CreateEffects -> Fx_c::CreateEntityFx) use the modelling matrix of the entity's
+    // RwFrame as parent matrix. DestroyEffects (below, after the frame is freed) only Kills them; a killed system lives on for a couple of
+    // FxManager updates and CAEFireAudioEntity::UpdateParameters (fire / smoke_flare / ... sounds) still reads its composite matrix =
+    // the freed frame (ASan heap-use-after-free). The exe reads the freed heap block too (it stays mapped and is not reused yet).
+    // Same pattern as CopyParentMatrix callers elsewhere (Weapon, Ped, Fx.cpp): give those systems their own snapshot of the matrix first.
+    if (GetModelInfo()->m_n2dfxCount) {
+        for (auto* it = g_fx.m_FxEntities.GetHead(); it; it = g_fx.m_FxEntities.GetNext(it)) {
+            if (it->m_Entity == this && it->m_System && it->m_System->m_ParentMatrix && !it->m_System->m_allocatedParentMat) {
+                it->m_System->CopyParentMatrix();
+            }
+        }
+    }
+#endif
     switch (RwObjectGetType(GetRwObject())) {
     case rpATOMIC:
         if (auto* frame = RpAtomicGetFrame(GetRpAtomic())) {
@@ -486,9 +500,9 @@ void CEntity::PreRender() {
                 CShadows::StoreShadowToBeRendered(
                     eShadowTextureType::SHADOW_TEX_PED, gpShadowExplosionTex, vecPos,
                     8.0F, 0.0F, 0.0F, -8.0F, 255,
-                    static_cast<uint8>(fRand * 200.0F),
-                    static_cast<uint8>(fRand * 160.0F),
-                    static_cast<uint8>(fRand * 120.0F),
+                    NOTSA_FTOL(uint8, fRand * 200.0F),
+                    NOTSA_FTOL(uint8, fRand * 160.0F),
+                    NOTSA_FTOL(uint8, fRand * 120.0F),
                     20.0F, false, 1.0F, nullptr, false
                 );
 
@@ -500,9 +514,9 @@ void CEntity::PreRender() {
 
                 CCoronas::RegisterCorona(
                     NOTSA_PTR_ID32(this), nullptr,
-                    static_cast<uint8>(fRand * 255.0F),
-                    static_cast<uint8>(fRand * 220.0F),
-                    static_cast<uint8>(fRand * 190.0F), 255, vecPos,
+                    NOTSA_FTOL(uint8, fRand * 255.0F),
+                    NOTSA_FTOL(uint8, fRand * 220.0F),
+                    NOTSA_FTOL(uint8, fRand * 190.0F), 255, vecPos,
                     fRand * 6.0F, 300.0F, gpCoronaTexture[CORONATYPE_SHINYSTAR],
                     eCoronaFlareType::FLARETYPE_NONE, eCoronaReflType::CORREFL_SIMPLE,
                     eCoronaLOSCheck::LOSCHECK_OFF, eCoronaTrail::TRAIL_OFF,
@@ -516,9 +530,9 @@ void CEntity::PreRender() {
             CShadows::StoreShadowToBeRendered(
                 eShadowTextureType::SHADOW_TEX_PED, gpShadowExplosionTex, vecPos,
                 8.0F, 0.0F, 0.0F, -8.0F, 255,
-                static_cast<uint8>(fRand * 200.0F),
-                static_cast<uint8>(fRand * 200.0F),
-                static_cast<uint8>(fRand * 200.0F),
+                NOTSA_FTOL(uint8, fRand * 200.0F),
+                NOTSA_FTOL(uint8, fRand * 200.0F),
+                NOTSA_FTOL(uint8, fRand * 200.0F),
                 20.0F, false, 1.0F, nullptr, false
             );
 
@@ -530,9 +544,9 @@ void CEntity::PreRender() {
 
             CCoronas::RegisterCorona(
                 NOTSA_PTR_ID32(this), nullptr,
-                static_cast<uint8>(fRand * 255.0F),
-                static_cast<uint8>(fRand * 255.0F),
-                static_cast<uint8>(fRand * 255.0F), 255, vecPos,
+                NOTSA_FTOL(uint8, fRand * 255.0F),
+                NOTSA_FTOL(uint8, fRand * 255.0F),
+                NOTSA_FTOL(uint8, fRand * 255.0F), 255, vecPos,
                 fRand * 6.0F, 300.0F, gpCoronaTexture[CORONATYPE_SHINYSTAR],
                 eCoronaFlareType::FLARETYPE_NONE, eCoronaReflType::CORREFL_SIMPLE,
                 eCoronaLOSCheck::LOSCHECK_OFF, eCoronaTrail::TRAIL_OFF,
@@ -1464,7 +1478,7 @@ void CEntity::ModifyMatrixForBannerInWind() {
     }
 
     auto vecPos = CVector2D(GetPosition());
-    auto uiOffset = static_cast<uint16>(16 * (CTimer::GetTimeInMS() + (static_cast<uint16>(vecPos.x + vecPos.y) * 64)));
+    auto uiOffset = static_cast<uint16>(16 * (CTimer::GetTimeInMS() + (NOTSA_FTOL(uint16, vecPos.x + vecPos.y) * 64)));
 
     float wind;
     if (CWeather::Wind < 0.1f) {
@@ -1862,9 +1876,9 @@ void CEntity::ProcessLightsForEntity() {
                 CCoronas::RegisterCorona(
                     m_nRandomSeed + C + 1,
                     nullptr,
-                    static_cast<uint8>((CTimeCycle::m_CurrentColours.m_nSunCoreRed + 510) * glare * ExeRecip(3.0f)),
-                    static_cast<uint8>((CTimeCycle::m_CurrentColours.m_nSunCoreGreen + 510) * glare * ExeRecip(3.0f)),
-                    static_cast<uint8>((CTimeCycle::m_CurrentColours.m_nSunCoreBlue + 510) * glare * ExeRecip(3.0f)),
+                    NOTSA_FTOL(uint8, (CTimeCycle::m_CurrentColours.m_nSunCoreRed + 510) * glare * ExeRecip(3.0f)),
+                    NOTSA_FTOL(uint8, (CTimeCycle::m_CurrentColours.m_nSunCoreGreen + 510) * glare * ExeRecip(3.0f)),
+                    NOTSA_FTOL(uint8, (CTimeCycle::m_CurrentColours.m_nSunCoreBlue + 510) * glare * ExeRecip(3.0f)),
                     255,
                     effectPos,
                     radius,
@@ -1990,8 +2004,8 @@ void CEntity::ProcessLightsForEntity() {
             case e2dCoronaFlashType::FLASH_4ON_6OFF: {
                 ApplyLight = true;
                 uint32 offset = CTimer::GetTimeInMS() + 3'333 * (flashType - 11);
-                offset += static_cast<uint32>(entityPos.x * 20.0f);
-                offset += static_cast<uint32>(entityPos.y * 10.0f);
+                offset += NOTSA_FTOL(uint32, entityPos.x * 20.0f);
+                offset += NOTSA_FTOL(uint32, entityPos.y * 10.0f);
 
                 const auto mode = 9 * (offset % 10'000 / 10'000);
                 const auto fade = (offset % 10'000 - (1'111 * mode)) * FADE_RATE;
@@ -2091,10 +2105,10 @@ void CEntity::ProcessLightsForEntity() {
                 CCoronas::RegisterCorona(
                     NOTSA_PTR_ID32(this) + C,
                     nullptr,
-                    static_cast<uint8>(static_cast<float>(effect->light.m_color.red) * TimeFade),
-                    static_cast<uint8>(static_cast<float>(effect->light.m_color.green) * TimeFade),
-                    static_cast<uint8>(static_cast<float>(effect->light.m_color.blue) * TimeFade),
-                    static_cast<uint8>(LightFade * 255.0f),
+                    NOTSA_FTOL(uint8, static_cast<float>(effect->light.m_color.red) * TimeFade),
+                    NOTSA_FTOL(uint8, static_cast<float>(effect->light.m_color.green) * TimeFade),
+                    NOTSA_FTOL(uint8, static_cast<float>(effect->light.m_color.blue) * TimeFade),
+                    NOTSA_FTOL(uint8, LightFade * 255.0f),
                     effectPos,
                     coronaSize,
                     effect->light.m_fCoronaFarClip,
@@ -2230,9 +2244,9 @@ void CEntity::ProcessLightsForEntity() {
             if (ApplyLight) {
                 auto color = effect->light.m_color;
                 const float colorMult = effect->light.m_nShadowColorMultiplier * TimeFade / 256.0f;
-                color.red = static_cast<uint8>(static_cast<float>(color.red) * colorMult);
-                color.green = static_cast<uint8>(static_cast<float>(color.green) * colorMult);
-                color.blue = static_cast<uint8>(static_cast<float>(color.blue) * colorMult);
+                color.red = NOTSA_FTOL(uint8, static_cast<float>(color.red) * colorMult);
+                color.green = NOTSA_FTOL(uint8, static_cast<float>(color.green) * colorMult);
+                color.blue = NOTSA_FTOL(uint8, static_cast<float>(color.blue) * colorMult);
 
                 CShadows::StoreStaticShadow(
                     NOTSA_PTR_ID32(this) + C,

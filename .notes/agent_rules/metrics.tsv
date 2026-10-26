@@ -169,10 +169,26 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-24	MAC-FRFIX	v4	file_records strict warn step	-	-	-	done: ctest 18/18 + 12/12
 2026-10-24	MAC-RACE1	v4	load-dependent crash hunt	-	-	-	root chain found, writer unknown
 2026-10-24	MAC-LNX1	v4	Linux x64 build + CI	251113	91	45	links in container; CI blocked on librw access
+2026-10-24	MAC-ANIM1	v4	cutscene anim crash	-	-	-	fixed: IFP garbage + ftol saturation
+2026-10-24	MAC-FTOL1	v4	float->int class A sweep	-	-	-	done: 155 sites
+2026-10-24	MAC-R10	v4	R-10 skin audit	-	-	-	done: fog + palette bugs fixed
+2026-10-24	MAC-R12	v4	R-12 D3D FF lighting	-	-	-	done; hang in GL swap seen
+2026-10-24	MAC-WIN64	v4	portable Win x64 build	-	-	-	done: links
+2026-10-24	MAC-HL1	v4	GL loader guard + Windows CI workflow	-	-	-	done
 2026-10-24	FID-MAC	v5	fidelity items (Mac-found)	249803	131	29	9 items: 6 port bugs fixed (W1 save padding, F7 fire corona, F8 GetUpperCase, F9, W3 enex load, P4 StareAtPed value, DELETE_OBJECT handle), 3 faithful; found W6 save-load crash; branch fid-mac
 2026-10-24	SAVE-LOAD	v5	save/load fix	254457	129	58	W6 = save made during a mission (exe never restores mission code; same in exe); real fix 4b231249: Win32 saved ASLR addresses in CRunningScript IPs instead of exe VAs; round trip OK (777 money, 3.6 min after load); branch save-load
 2026-10-24	RD-NOISE-2	v5	lockstep + A-B fix	271740	153	101	port-port prefix 7-9 -> 2985-2999 (audio-off pin 512); A-B frame 1 = CRadar::Initialise blip counter 1 (0x587FF2) fixed; frame 3 open (FxSystem Play, GenerateCarCreationCoors2 start node); checked out the main checkout detached (rule breach)
 2026-10-25	RD-AB-3	v5	A-B fixes	277970	170	95	orig-port prefix 3 -> 10: RemoveBuildingsNotInArea inverted IsInArea (89 dummies lost RwObject at start, no object effects), ProcessBuoyancy dropped rand; frame 10 open (population); shared proxy stale (use RD_PX)
+2026-10-25	MAC-MERGECHK	v4	post-merge build check	-	-	-	fixed portable build break
+2026-10-25	MAC-R11	v4	R-11 PostFX + shadows	-	-	-	done; interiors black open
+2026-10-25	MAC-INT1	v4	interiors black	-	-	-	fixed: librw depth-mask cache
+2026-10-25	MAC-GLSTATE	v4	librw gl3 state cache audit	-	-	-	done: 4 bug classes fixed
+2026-10-25	MAC-VIS1	v4	visual tour + gamma	-	-	-	gamma implemented; colour issues open
+2026-10-25	MAC-VIS2	v4	colour vs Win32 under wine	-	-	-	no bug; references captured
+2026-10-25	MAC-STAB1	v4	stability crashes + soak	-	-	-	2 LP64 heap bugs fixed, soak clean
+2026-10-25	MAC-STAB2	v4	pool audit + matrix list	-	-	-	TaskAllocator slot fixed; root cause narrowed
+2026-10-25	MAC-STAB3	v4	matrix list root cause	-	-	-	fixed: ClearSpaceForMissionEntity fidelity bug
+2026-10-25	MAC-STAB4	v4	fire audio UAF	-	-	-	fixed; ASan clean
 2026-10-25	GATE-FAILS	v5	gate failures (small)	158190	76	25	rtquat X87W missing in rw_math_stream_test (macro guard in rwmath_exact.h); tasks row = ASLR-dependent fixture flake in Fight::Destructor (valid group table now)
 2026-10-25	RD-AB-4	v5	A-B fixes	272052	117	96	orig-port prefix 10 -> 19: GeneratePedCreationCoors exe reuses the distSq/dist stack slot (sqrt of previous link, 0x44E97E) - port now mirrors it; TriggerIK mission gate 0x63C500; self-identity 1500/1500 both sides; frame 19 open (car creation walks)
 2026-10-25	RD-AB-5	v5	A-B fixes (over budget)	322640	138	85	orig-port prefix 19 -> 20: GetObjectForPedToHold 33/33/34 split; PedGroupIntelligence::Process slot sync (leader landed in follower slot 0, no GangLeader task ever ran); frame 20 open (BeInGroup replace); 322k tokens > 250k cap
@@ -188,6 +204,9 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-26	RD-AB-13	v5	A-B fix	243077	100	48	CBike ctor m_aRatioHistory 1.0f (exe 0x6BF6E0): fresh BMX took the idle branch, scan code lag fixed; prefix still 88 (exe drops ground contact of all peds on buildings at fc 664); one stale-exe run by mistake, Documents signature verified ee0a22fe by orchestrator
 2026-10-26	RD-AB-14	v5	A-B root cause (partial fix)	282407	136	53	frame 88 = cutscene LoadScene unloads 8 IPL slots in the exe (loadRequested=0) incl. the peds contact building; port keeps them requested (caller not found); fixed LoadIpls mission-cleanup vehicle status filter (inverted) and slot loop order
 2026-10-26	RD-AB-15	v5	A-B fixes	253803	116	60	prefix 88 -> 98: EnsureIplsAreInMemory must clear loadRequested on every requested slot (0x4054AD); RequestIpls/HaveIplsLoaded call SetIplsRequired first (HaveIplsLoaded was always true); frame 98 open (GoToPoint arrival)
+2026-10-26	MAC-FTOL2	v4	float->int class B	-	-	-	done: 911 sites
+2026-10-26	MAC-FPTRAP	v4	x64 FP-trap audit	-	-	-	2 bugs fixed, 3 NaNs open
+2026-10-26	MAC-NAN1	v4	3 NaN sources	-	-	-	done: junk IFP + clang speculation
 2026-10-26	RD-AB-16	v5	A-B fix (prefix hidden)	255480	103	82	ProcessShiftSectorList ped shift scale clamp(1.5*depth,0.005,0.3) (0x546B0D) fixed, ped 8 bit-equal; prefix measured 42 for every port exe incl. the 13:06 gate exe (RD-AB-15 had 98 at 14:18) -> environment shift at ~14:38, port side
 2026-10-26	RD-ENV	v5	harness fix	142384	62	33	98->42 drop = exe copies without gta_reversed.map (audio partition silently off); now fatal / timestamp-checked; HEAD prefix 145
 2026-10-26	RD-AB-17	v5	A-B narrowing (no fix)	226866	105	96	frame 145 symptom; earliest real: driven car slot 7 shifted 0.0157 m from fc 612 (call order not found); parked cars 1-2 ulp speed; lockstep paused in favour of ASM sweep

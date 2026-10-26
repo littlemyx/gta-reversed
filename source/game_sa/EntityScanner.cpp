@@ -59,7 +59,7 @@ void CEntityScanner::ScanForEntitiesInRange(const eRepeatSectorList sectorList, 
     int32 numFound = 0;
 
     // Sector coordinates of the bounding box around the ped
-    const auto ToSector = [](float coord) { return (int32)std::floor(coord * 0.02f + 60.f); };
+    const auto ToSector = [](float coord) { return NOTSA_FTOL(int32, std::floor(coord * 0.02f + 60.f)); };
     const int32 minX = std::max(0, ToSector(pedPos.x - range));
     const int32 minY = std::max(0, ToSector(pedPos.y - range));
     const int32 maxX = std::min((int32)MAX_SECTORS_X - 1, ToSector(range + pedPos.x));

@@ -391,6 +391,9 @@ CPed::~CPed() {
 * @addr 0x5E4720
 */
 void* CPed::operator new(size_t size) {
+#ifdef NOTSA_PORTABLE
+    GetPedPool()->NotsaCheckAllocSize(size, "ped");
+#endif
     return GetPedPool()->New();
 }
 
@@ -398,6 +401,9 @@ void* CPed::operator new(size_t size) {
 * @addr 0x5E4730
 */
 void* CPed::operator new(size_t size, int32 poolRef) {
+#ifdef NOTSA_PORTABLE
+    GetPedPool()->NotsaCheckAllocSize(size, "ped");
+#endif
     return GetPedPool()->NewAt(poolRef);
 }
 
@@ -4476,7 +4482,7 @@ void CPed::KillPedWithCar(CVehicle* car, float fDamageIntensity, bool bPlayDeadA
             // Rumble the pad
             const float invMass = 1.0f / car->m_fMass;
             const float shake   = std::min(car->m_vecMoveSpeed.Magnitude() * invMass * 200000.0f + 80.0f, 250.0f);
-            const uint8 freq    = (uint8)(int32)shake;
+            const uint8 freq    = (uint8)NOTSA_FTOL(int32, shake);
             CPad::GetPad(0)->StartShake((int16)(40000 / freq), freq, 0);
         }
 
@@ -5030,7 +5036,7 @@ void CPed::ProcessControl()
             return;
         }
         const x87d x = (x87d)CTimer::ms_fTimeStep * (x87d)0.02f * (x87d)1000.f; // 0x858B38, 0x858C4C
-        const auto   d = (int32)x; // _ftol
+        const auto   d = NOTSA_FTOL(int32, x); // _ftol
         const auto   decrement = (uint32)(int32)prog * (uint32)d;
         if ((uint32)(int32)alpha <= decrement) {
             alpha = 0;
@@ -5317,7 +5323,7 @@ uint8 CPed::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSetting
 
     int32 steps;
     if (!m_pPlayerData) {
-        steps = (int32)std::ceil(moveSpeed * 5.0f); // 0x5E3FA8 (the product is stored as a double)
+        steps = NOTSA_FTOL(int32, std::ceil(moveSpeed * 5.0f)); // 0x5E3FA8 (the product is stored as a double)
     } else {
         // 0x5E3F2B..: `FST float [tmp]` keeps a float-rounded copy, but the argument of the first `ceil`
         // is `FSTP double` of the unrounded product. The clamp decision is made on that first ceil;
@@ -5327,9 +5333,9 @@ uint8 CPed::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSetting
             const x87d ceiled0 = std::ceil(product);
             // FCOMP + `TEST AH, 5` + JP => take the clamp only if ceiled0 < minSteps (ordered)
             if (ceiled0 < minSteps) {
-                return (int32)minSteps;
+                return NOTSA_FTOL(int32, minSteps);
             }
-            return (int32)std::ceil((x87d)(float)product);
+            return NOTSA_FTOL(int32, std::ceil((x87d)(float)product));
         };
         steps = m_standingOnEntity
             ? Calc(6.6666665f, 4.0)

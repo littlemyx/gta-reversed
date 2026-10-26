@@ -155,17 +155,17 @@ void CTimeCycle::Initialise(bool padFile) {
             m_nSunCoronaGreen[h][w] = sunCoronaG;
             m_nSunCoronaBlue[h][w]  = sunCoronaB;
 
-            m_fSunSize[h][w]          = int8(sunSize * 10.0f + 0.5f);
-            m_fSpriteSize[h][w]       = int8(spriteSize * 10.0f + 0.5f);
-            m_fSpriteBrightness[h][w] = int8(spriteBrightness * 10.0f + 0.5f);
+            m_fSunSize[h][w]          = NOTSA_FTOL(int8, sunSize * 10.0f + 0.5f);
+            m_fSpriteSize[h][w]       = NOTSA_FTOL(int8, spriteSize * 10.0f + 0.5f);
+            m_fSpriteBrightness[h][w] = NOTSA_FTOL(int8, spriteBrightness * 10.0f + 0.5f);
 
             m_nShadowStrength[h][w]      = shadowStrength;
             m_nLightShadowStrength[h][w] = lightShadowStrength;
             m_nPoleShadowStrength[h][w]  = poleShadowStrength;
 
-            m_fFarClip[h][w]  = (int16)farClip;
-            m_fFogStart[h][w] = (int16)fogStart;
-            m_fLightsOnGroundBrightness[h][w] = uint8(lightOnGround * 10.0f + 0.5f);
+            m_fFarClip[h][w]  = NOTSA_FTOL(int16, farClip);
+            m_fFogStart[h][w] = NOTSA_FTOL(int16, fogStart);
+            m_fLightsOnGroundBrightness[h][w] = NOTSA_FTOL(uint8, lightOnGround * 10.0f + 0.5f);
 
             m_nLowCloudsRed[h][w]   = lowCloudR;
             m_nLowCloudsGreen[h][w] = lowCloudG;
@@ -175,26 +175,26 @@ void CTimeCycle::Initialise(bool padFile) {
             m_nFluffyCloudsBottomGreen[h][w] = (uint8)bottomCloudG;
             m_nFluffyCloudsBottomBlue[h][w]  = (uint8)bottomCloudB;
 
-            m_fWaterRed[h][w]   = (uint8)waterR;
-            m_fWaterGreen[h][w] = (uint8)waterG;
-            m_fWaterBlue[h][w]  = (uint8)waterB;
-            m_fWaterAlpha[h][w] = (uint8)waterA;
+            m_fWaterRed[h][w]   = NOTSA_FTOL(uint8, waterR);
+            m_fWaterGreen[h][w] = NOTSA_FTOL(uint8, waterG);
+            m_fWaterBlue[h][w]  = NOTSA_FTOL(uint8, waterB);
+            m_fWaterAlpha[h][w] = NOTSA_FTOL(uint8, waterA);
 
-            m_fPostFx1Red[h][w]   = (uint8)postFx1R;
-            m_fPostFx1Green[h][w] = (uint8)postFx1G;
-            m_fPostFx1Blue[h][w]  = (uint8)postFx1B;
+            m_fPostFx1Red[h][w]   = NOTSA_FTOL(uint8, postFx1R);
+            m_fPostFx1Green[h][w] = NOTSA_FTOL(uint8, postFx1G);
+            m_fPostFx1Blue[h][w]  = NOTSA_FTOL(uint8, postFx1B);
 
-            m_fPostFx2Red[h][w]   = (uint8)postFx2R;
-            m_fPostFx2Green[h][w] = (uint8)postFx2G;
-            m_fPostFx2Blue[h][w]  = (uint8)postFx2B;
+            m_fPostFx2Red[h][w]   = NOTSA_FTOL(uint8, postFx2R);
+            m_fPostFx2Green[h][w] = NOTSA_FTOL(uint8, postFx2G);
+            m_fPostFx2Blue[h][w]  = NOTSA_FTOL(uint8, postFx2B);
 
-            m_fPostFx1Alpha[h][w] = uint8(postFx1A * 2.f);
-            m_fPostFx2Alpha[h][w] = uint8(postFx2A * 2.f);
+            m_fPostFx1Alpha[h][w] = NOTSA_FTOL(uint8, postFx1A * 2.f);
+            m_fPostFx2Alpha[h][w] = NOTSA_FTOL(uint8, postFx2A * 2.f);
 
-            m_fCloudAlpha[h][w]            = (uint8)cloudAlpha;
+            m_fCloudAlpha[h][w]            = NOTSA_FTOL(uint8, cloudAlpha);
             m_nHighLightMinIntensity[h][w] = (uint8)highLightMinIntensity;
             m_nWaterFogAlpha[h][w]         = (uint8)waterFogAlpha;
-            m_nDirectionalMult[h][w]       = uint8((uint8)dirMult * 100.0f);
+            m_nDirectionalMult[h][w]       = NOTSA_FTOL(uint8, NOTSA_FTOL(uint8, dirMult) * 100.0f);
         }
     }
 
@@ -254,7 +254,7 @@ void CTimeCycle::AddOne(CBox& box, int16 farClip, int32 m_ExtraColor, float stre
     m_aBoxes[m_NumBoxes].ExtraColor = m_ExtraColor;
     m_aBoxes[m_NumBoxes].Strength = strength * ExeRecip(100.0f);
     m_aBoxes[m_NumBoxes].Falloff = falloff;
-    m_aBoxes[m_NumBoxes].LodDistMult = (uint8)(std::min(lodDistMult, 4.0f) * 32.0f);
+    m_aBoxes[m_NumBoxes].LodDistMult = NOTSA_FTOL(uint8, std::min(lodDistMult, 4.0f) * 32.0f);
     m_NumBoxes++;
 }
 
@@ -381,7 +381,7 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
     {
         const x87d lightMult = ((x87d)1.0 / (x87d)CCoronas::LightsMult + 3.0f) * 0.25f;
         const auto   Sky = [&](uint16& v) {
-            const uint16 r = (uint16)(int32)((x87d)v * lightMult);
+            const uint16 r = (uint16)NOTSA_FTOL(int32, (x87d)v * lightMult);
             v = r < 0xFF ? r : (uint16)0xFF;
         };
         Sky(set->m_nSkyTopRed);    Sky(set->m_nSkyTopGreen);    Sky(set->m_nSkyTopBlue);
@@ -412,7 +412,7 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
         const auto   tbl     = [&](auto& table) -> double { return (double)table[boxHour][boxWeather]; };
 
         // sky: ftol(set * (1 - boxf) + table * boxf), 16 bit store. The `cmp eax, -1` guards on the byte tables never skip
-        const auto Sky = [&](uint16& v, auto& table) { v = (uint16)(int32)((x87d)v * invboxf + X87R(tbl(table) * boxf)); };
+        const auto Sky = [&](uint16& v, auto& table) { v = (uint16)NOTSA_FTOL(int32, (x87d)v * invboxf + X87R(tbl(table) * boxf)); };
         Sky(set->m_nSkyTopRed, m_nSkyTopRed);       Sky(set->m_nSkyTopGreen, m_nSkyTopGreen);       Sky(set->m_nSkyTopBlue, m_nSkyTopBlue);
         Sky(set->m_nSkyBottomRed, m_nSkyBottomRed); Sky(set->m_nSkyBottomGreen, m_nSkyBottomGreen); Sky(set->m_nSkyBottomBlue, m_nSkyBottomBlue);
 
@@ -496,7 +496,7 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
 
     // 0x5611C2 - ambient: ftol(channel) * (1/255f): the channels are TRUNCATED to integers first
     for (float* v : { &set->m_fAmbientRed, &set->m_fAmbientGreen, &set->m_fAmbientBlue, &set->m_fAmbientRed_Obj, &set->m_fAmbientGreen_Obj, &set->m_fAmbientBlue_Obj }) {
-        *v = (float)((x87d)(int32)*v * (x87d)std::bit_cast<float>(0x3B808081u));
+        *v = (float)((x87d)NOTSA_FTOL(int32, *v) * (x87d)std::bit_cast<float>(0x3B808081u));
     }
 
     // 0x561256
@@ -532,12 +532,12 @@ void CTimeCycle::CalcColoursForPoint(CVector point, CColourSet* set) {
 
     // 0x5613A6 - the colour below the horizon: an integer grey (ftol, low byte) blended with the previous sky-bottom colour
     {
-        const int32 grey = (int32)((x87d)GreyValuesDuringDay[currSampleIdx] * invTimeT + (x87d)GreyValuesDuringDay[nextSampleIdx] * timeT);
+        const int32 grey = NOTSA_FTOL(int32, (x87d)GreyValuesDuringDay[currSampleIdx] * invTimeT + (x87d)GreyValuesDuringDay[nextSampleIdx] * timeT);
         const x87d uw  = CWeather::UnderWaterness;
         const x87d g   = (x87d)(int32)(uint8)grey * ((x87d)1.0 - uw);
-        m_BelowHorizonGrey.red   = (uint8)(int32)((x87d)m_CurrentColours.m_nSkyBottomRed   * uw + g);
-        m_BelowHorizonGrey.green = (uint8)(int32)((x87d)m_CurrentColours.m_nSkyBottomGreen * uw + g);
-        m_BelowHorizonGrey.blue  = (uint8)(int32)((x87d)m_CurrentColours.m_nSkyBottomBlue  * uw + g);
+        m_BelowHorizonGrey.red   = (uint8)NOTSA_FTOL(int32, (x87d)m_CurrentColours.m_nSkyBottomRed   * uw + g);
+        m_BelowHorizonGrey.green = (uint8)NOTSA_FTOL(int32, (x87d)m_CurrentColours.m_nSkyBottomGreen * uw + g);
+        m_BelowHorizonGrey.blue  = (uint8)NOTSA_FTOL(int32, (x87d)m_CurrentColours.m_nSkyBottomBlue  * uw + g);
     }
 
     set->m_fAmbientBeforeBrightnessRed   = set->m_fAmbientRed;

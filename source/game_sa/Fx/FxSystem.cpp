@@ -174,7 +174,7 @@ void FxSystem_c::AttachToBone(CEntity* entity, eBoneTag boneId) {
 
 auto CanAddParticle() {
     // NOTSA: original rolled `(int32)(rand * 100)` and compared with 50 / 25 (`< 50` => skip), inlined in both AddParticle overloads
-    const auto roll = (int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f) * 100.0f);
+    const auto roll = NOTSA_FTOL(int32, (float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f) * 100.0f);
     if (g_fx.GetFxQuality() == FX_QUALITY_LOW && roll < 50) {
         return false;
     }
@@ -235,17 +235,17 @@ void FxSystem_c::AddOffsetPos(const CVector& pos) {
 // 0x4AA6C0
 void FxSystem_c::SetConstTime(bool on, float time) {
     m_UseConstTime = on;
-    m_nConstTime   = (uint16)(time * 256.0f);
+    m_nConstTime   = NOTSA_FTOL(uint16, time * 256.0f);
 }
 
 // 0x4AA6F0
 void FxSystem_c::SetRateMult(float mult) {
-    m_nRateMult = (uint16)(mult * 1000.0f);
+    m_nRateMult = NOTSA_FTOL(uint16, mult * 1000.0f);
 }
 
 // 0x4AA710
 void FxSystem_c::SetTimeMult(float mult) {
-    m_nTimeMult = (uint16)(mult * 1000.0f);
+    m_nTimeMult = NOTSA_FTOL(uint16, mult * 1000.0f);
 }
 
 // 0x4AA730

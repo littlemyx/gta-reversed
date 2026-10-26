@@ -1,0 +1,12 @@
+until:menu:600000
+wait:1500
+key:return
+wait:1200
+key:return
+wait:1500
+key:return
+wait:1500
+key:return
+mark:ns
+wait:6000
+cmd:quit

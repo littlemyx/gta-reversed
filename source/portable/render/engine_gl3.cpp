@@ -29,7 +29,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <strings.h>
+#include "portable/posix_compat_win.h"
 #include <vector>
 
 #include "engine_gl3.h"
@@ -149,8 +149,18 @@ void RwShimPipelineEnsure();
 //--------------------------------------------------------------------------------------------------
 // GL info (RwEngineStart logs it; the smoke test asserts on it)
 //--------------------------------------------------------------------------------------------------
+// Name of the first thing NotsaRwGetGlInfo needs and does not have (nullptr = all there). The entry points come from librw's glad loader; when it failed (or the driver lacks them) they are null.
+static const char* GlInfoBlocker() {
+    if (!SDL_GL_GetCurrentContext())                return "no current GL context";
+    if (!glGetString)                               return "glGetString";
+    if (!glGetIntegerv)                             return "glGetIntegerv";
+    if (!glBindFramebuffer)                         return "glBindFramebuffer";
+    if (!glGetFramebufferAttachmentParameteriv)     return "glGetFramebufferAttachmentParameteriv";
+    return nullptr;
+}
+
 bool NotsaRwGetGlInfo(NotsaGlInfo* out) {
-    if (!out || !SDL_GL_GetCurrentContext()) {
+    if (!out || GlInfoBlocker()) { // never call through a null GL entry point
         return false;
     }
     *out = {};
@@ -166,7 +176,9 @@ bool NotsaRwGetGlInfo(NotsaGlInfo* out) {
     out->core = (profile & GL_CONTEXT_CORE_PROFILE_BIT) != 0;
     // the pixel format of the DEFAULT framebuffer as the driver gave it (not what was requested)
     GLint v = 0;
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    GLint prevFbo = 0;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0); // raw bind behind librw's cache: restored below (GLSTATE audit)
     glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_DEPTH, GL_FRAMEBUFFER_ATTACHMENT_DEPTH_SIZE, &v);
     out->depthBits = v;
     v = 0;
@@ -178,6 +190,7 @@ bool NotsaRwGetGlInfo(NotsaGlInfo* out) {
     v = 0;
     glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, GL_BACK_LEFT, GL_FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE, &v);
     out->alphaBits = v;
+    glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prevFbo));
     int sdlDepth = 0, sdlStencil = 0;
     SDL_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &sdlDepth);
     SDL_GL_GetAttribute(SDL_GL_STENCIL_SIZE, &sdlStencil);
@@ -238,15 +251,51 @@ RwBool RwEngineOpen(RwEngineOpenParams* initParams) {
     return TRUE;
 }
 
+// Reports a fatal engine-start problem: log line + (unless NOTSA_NO_MESSAGEBOX is set, for headless runs / smoke tests) an SDL message box; the caller then fails RwEngineStart
+// and the game exits through the normal RsRwInitialize failure path.
+static void ReportGlStartFailure(const char* what) {
+    const char* sdlErr = SDL_GetError();
+    LogF("FATAL: OpenGL 3.3 core is not available: %s (SDL: %s)", what, sdlErr && *sdlErr ? sdlErr : "-");
+    if (!SDL_getenv("NOTSA_NO_MESSAGEBOX")) {
+        char msg[512];
+        std::snprintf(msg, sizeof(msg),
+                      "This game needs an OpenGL 3.3 (core profile) capable graphics driver.\n\n%s\n\nUpdate the graphics driver, or run on a GPU / session with OpenGL 3.3 support.", what);
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Grand Theft Auto: San Andreas", msg, s_Window);
+    }
+}
+
 // A: Engine::start creates the GL context (adopting the window) and initialises the gl3 device; its result is dropped by librw, so the context is checked here.
+// librw's startSDL3 fails (no context kept, glGlobals.glcontext stays null) when the context cannot be created, gladLoadGLLoader fails or a required GL entry point is null.
 RwBool RwEngineStart(void) {
     if (!Is(rw::Engine::Opened) || !rw::engine) {
         return FALSE;
     }
     rw::Engine::start();
-    if (!SDL_GL_GetCurrentContext()) {
-        LogF("RwEngineStart: no GL context (%s)", SDL_GetError());
+    if (!glGlobals.glcontext || !SDL_GL_GetCurrentContext()) {
+        ReportGlStartFailure("The OpenGL context could not be created, or the GL function loader / a required GL function is missing (see the log).");
         rw::Engine::state = rw::Engine::Opened; // what RW reports for a failed start; RwEngineClose is then valid
+        return FALSE;
+    }
+    if (rw::gl3::gl3Caps.gles || rw::gl3::gl3Caps.glversion < 33) { // librw falls back to core 2.1 / ES contexts when 3.3 core is refused; those lack the framebuffer / UBO entry points
+        char what[256];
+        std::snprintf(what, sizeof(what), "The driver only provided an OpenGL %d.%d%s context.", rw::gl3::gl3Caps.glversion / 10, rw::gl3::gl3Caps.glversion % 10, rw::gl3::gl3Caps.gles ? " ES" : "");
+        ReportGlStartFailure(what);
+        rw::Engine::state = rw::Engine::Opened;
+        return FALSE;
+    }
+    NotsaGlInfo gl{};
+    if (!NotsaRwGetGlInfo(&gl)) {
+        char what[256];
+        std::snprintf(what, sizeof(what), "Required OpenGL functions could not be loaded from the driver (%s).", GlInfoBlocker());
+        ReportGlStartFailure(what);
+        rw::Engine::state = rw::Engine::Opened;
+        return FALSE;
+    }
+    if (!gl.core || gl.major < 3 || (gl.major == 3 && gl.minor < 3)) {
+        char what[256];
+        std::snprintf(what, sizeof(what), "The driver gave an OpenGL %d.%d %s context (%s).", gl.major, gl.minor, gl.core ? "core" : "compatibility", gl.renderer);
+        ReportGlStartFailure(what);
+        rw::Engine::state = rw::Engine::Opened;
         return FALSE;
     }
     PublishDeviceRange();

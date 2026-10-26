@@ -52,7 +52,7 @@ void CLoadMonitor::EndFrame() {
             ? ped->GetVehicleIfInOne()->GetMoveSpeed()
             : ped->GetMoveSpeed();
 
-        m_iCyclesThisFrame[+eLoadType::MOVE_SPEED] = (uint32)(movevec.Magnitude() * 50.f);
+        m_iCyclesThisFrame[+eLoadType::MOVE_SPEED] = NOTSA_FTOL(uint32, movevec.Magnitude() * 50.f);
     }
 
     // 0x53D143 - 0x53D1D3
@@ -87,7 +87,7 @@ void CLoadMonitor::EndFrame() {
 
         for (auto&& [ch, acts] : rngv::zip(m_iCyclesHistory, m_fAveragedCyclesThisSecond)) {
             rng::shift_right(ch, 1);
-            ch[0] = (uint32)acts;
+            ch[0] = NOTSA_FTOL(uint32, acts);
             acts = 0.0f;
         }
 

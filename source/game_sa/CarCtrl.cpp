@@ -392,14 +392,14 @@ eModelID CCarCtrl::ChooseGangCarModel(eGangID loadedCarGroupId) {
 // 0x424CE0
 int32 CCarCtrl::ChooseModel(int32* carType) {
     // x87: The sum of the (float) counts is kept in extended precision
-    const auto total = (int32)((((x87d)CPopCycle::m_NumOther_Cars + CPopCycle::m_NumCops_Cars) + CPopCycle::m_NumGangs_Cars) + CPopCycle::m_NumDealers_Cars);
+    const auto total = NOTSA_FTOL(int32, (((x87d)CPopCycle::m_NumOther_Cars + CPopCycle::m_NumCops_Cars) + CPopCycle::m_NumGangs_Cars) + CPopCycle::m_NumDealers_Cars);
     if (total <= 0) {
         return -1;
     }
 
     if (CCheat::IsActive(CHEAT_REDUCED_TRAFFIC)) { // 0x96917A
         // Only create a car ~0.5% of the time. 0x858B14 = 1/32768
-        if ((int32)((x87d)CGeneral::GetRandomNumber() * std::bit_cast<float>(0x38000000u) * 100.0f) != 0) { // 0x858628
+        if (NOTSA_FTOL(int32, (x87d)CGeneral::GetRandomNumber() * std::bit_cast<float>(0x38000000u) * 100.0f) != 0) { // 0x858628
             return -1;
         }
     }
@@ -435,7 +435,7 @@ int32 CCarCtrl::ChooseModel(int32* carType) {
         }
 
         // x87: The product is kept in extended precision. NOTE: The random number is in [0, 1) only because `GetRandomNumber` is <= 0x7FFF
-        auto remaining = (int32)((x87d)CGeneral::GetRandomNumber() * std::bit_cast<float>(0x38000000u) * (x87d)sumGangStrength);
+        auto remaining = NOTSA_FTOL(int32, (x87d)CGeneral::GetRandomNumber() * std::bit_cast<float>(0x38000000u) * (x87d)sumGangStrength);
         auto gang      = 0;
         if (zoneInfo->GangStrength[0] < remaining) {
             do {
@@ -456,7 +456,7 @@ int32 CCarCtrl::ChooseModel(int32* carType) {
         const auto* const gangCars = reinterpret_cast<const int16*>(&CPopulation::m_CarGroups[POPCYCLE_CARGROUP_BALLAS][0]);
         for (auto numTries = 0; numTries < 10;) {
             // x87: kept in extended precision
-            const auto idx   = (int32)((x87d)CGeneral::GetRandomNumber() * std::bit_cast<float>(0x38000000u) * 23.0f); // 0x858F84
+            const auto idx   = NOTSA_FTOL(int32, (x87d)CGeneral::GetRandomNumber() * std::bit_cast<float>(0x38000000u) * 23.0f); // 0x858F84
             const auto model = (uint16)gangCars[gang * 23 + idx];
             if (model == CPopulation::m_DefaultModelIDForUnusedSlot) { // Empty slot (doesn't count as a try)
                 continue;
@@ -705,7 +705,7 @@ bool CCarCtrl::CreateConvoy(CVehicle* vehicle, int32 carType) {
     bool      created = false;
 
     // x87: kept in extended precision. 0x858B14 = 1/32768
-    const auto numCars = ((int32)((x87d)CGeneral::GetRandomNumber() * std::bit_cast<float>(0x38000000u) * 100.0f) > 50 ? 1 : 0) + 2; // 0x858628
+    const auto numCars = (NOTSA_FTOL(int32, (x87d)CGeneral::GetRandomNumber() * std::bit_cast<float>(0x38000000u) * 100.0f) > 50 ? 1 : 0) + 2; // 0x858628
 
     const auto radius = CModelInfo::GetModelInfo(vehicle->m_nModelIndex)->GetColModel()->GetBoundRadius();
     vehicle->m_nForcedRandomRouteSeed = vehicle->m_nRandomSeed;
@@ -786,6 +786,9 @@ bool CCarCtrl::CreateConvoy(CVehicle* vehicle, int32 carType) {
         }
 
         *car->m_matrix       = *vehicle->m_matrix; // 0x59BBC0
+#ifdef NOTSA_PORTABLE
+        { extern bool NotsaCheckMatrixLists(const char*); NotsaCheckMatrixLists("CCarCtrl convoy car matrix copy (CarCtrl.cpp)"); }
+#endif
         car->GetPosition()   = pos;
         car->m_vecMoveSpeed  = vehicle->m_vecMoveSpeed;
         car->SetStatus(vehicle->GetStatus());
@@ -829,7 +832,7 @@ bool CCarCtrl::CreatePoliceChase(CVehicle* vehicle, int32 carType, CNodeAddress 
     if (!(CPopCycle::m_NumGangs_Cars == 0.0f)) {
         if (carType < 14 || carType > 23) { // Not a gang car
             // x87: kept in extended precision. 0x858B14 = 1/32768, 0x858B90 = 4.0
-            if ((int32)((x87d)CGeneral::GetRandomNumber() * std::bit_cast<float>(0x38000000u) * 4.0f) != 0) {
+            if (NOTSA_FTOL(int32, (x87d)CGeneral::GetRandomNumber() * std::bit_cast<float>(0x38000000u) * 4.0f) != 0) {
                 return false;
             }
         }
@@ -889,7 +892,7 @@ bool CCarCtrl::CreatePoliceChase(CVehicle* vehicle, int32 carType, CNodeAddress 
 
     // Make `vehicle` flee
     auto&      ap     = vehicle->m_autoPilot;
-    const auto cruise = (uint8)(int32)((x87d)ap.m_nCruiseSpeed + 10.0f); // 0x85862C
+    const auto cruise = (uint8)NOTSA_FTOL(int32, (x87d)ap.m_nCruiseSpeed + 10.0f); // 0x85862C
     vehicle->SetStatus(STATUS_PHYSICS);
     ap.m_nCarDrivingStyle           = DRIVING_STYLE_AVOID_CARS;
     vehicle->vehicleFlags.bMadDriver = true;
@@ -905,6 +908,9 @@ bool CCarCtrl::CreatePoliceChase(CVehicle* vehicle, int32 carType, CNodeAddress 
 
     // Place the police car right behind it
     *police->m_matrix      = *vehicle->m_matrix; // 0x59BBC0
+#ifdef NOTSA_PORTABLE
+    { extern bool NotsaCheckMatrixLists(const char*); NotsaCheckMatrixLists("CCarCtrl police car matrix copy (CarCtrl.cpp)"); }
+#endif
     police->SetPosn(pos);                        // 0x4241C0
     police->m_vecMoveSpeed = vehicle->m_vecMoveSpeed;
     police->SetStatus(STATUS_PHYSICS);
@@ -1279,11 +1285,11 @@ TrafficSectorRange GetTrafficSectorRange(float minX, float minY, float maxX, flo
     };
     const auto GetMin = [&](float v) -> int32 {
         const auto [ext, rounded] = GetSector(v);
-        return (int32)std::floor(ext) > 0 ? (int32)std::floor((x87d)rounded) : 0;
+        return NOTSA_FTOL(int32, std::floor(ext)) > 0 ? NOTSA_FTOL(int32, std::floor((x87d)rounded)) : 0;
     };
     const auto GetMax = [&](float v) -> int32 {
         const auto [ext, rounded] = GetSector(v);
-        return (int32)std::floor(ext) < 119 ? (int32)std::floor((x87d)rounded) : 119;
+        return NOTSA_FTOL(int32, std::floor(ext)) < 119 ? NOTSA_FTOL(int32, std::floor((x87d)rounded)) : 119;
     };
     return { GetMin(minX), GetMin(minY), GetMax(maxX), GetMax(maxY) };
 }
@@ -3744,7 +3750,7 @@ void CCarCtrl::PickNextNodeRandomly(CVehicle* vehicle) {
     };
 
     const auto scale    = CCurves::CalcSpeedScaleFactor(start, end, curDirX, curDirY, nextDirX, nextDirY); // 0x43C710
-    const auto newScale = (int32)((x87d)scale * (1000.0f / (x87d)ap.m_speed));                          // 0x858C4C
+    const auto newScale = NOTSA_FTOL(int32, (x87d)scale * (1000.0f / (x87d)ap.m_speed));                          // 0x858C4C
     ap.m_nSpeedScaleFactor = newScale > 10 ? newScale : 10;
 }
 
@@ -4094,7 +4100,7 @@ bool CCarCtrl::PickNextNodeToFollowPath(CVehicle* vehicle) {
         };
 
         const auto scale    = CCurves::CalcSpeedScaleFactor(start, end, curDirX, curDirY, nextDirX, nextDirY); // 0x43C710
-        const auto newScale = (int32)((x87d)scale * (1000.0f / (x87d)ap.m_speed));                          // 0x858C4C
+        const auto newScale = NOTSA_FTOL(int32, (x87d)scale * (1000.0f / (x87d)ap.m_speed));                          // 0x858C4C
         ap.m_nSpeedScaleFactor = newScale > 10 ? newScale : 10;
     }
 
@@ -4520,11 +4526,11 @@ void CCarCtrl::ScanForPedDanger(CVehicle* vehicle) {
     };
     const auto GetMinSector = [&](float v) -> int32 {
         const auto [ext, rounded] = GetSector(v);
-        return (int32)std::floor(ext) > 0 ? (int32)std::floor((x87d)rounded) : 0;
+        return NOTSA_FTOL(int32, std::floor(ext)) > 0 ? NOTSA_FTOL(int32, std::floor((x87d)rounded)) : 0;
     };
     const auto GetMaxSector = [&](float v) -> int32 {
         const auto [ext, rounded] = GetSector(v);
-        return (int32)std::floor(ext) < 119 ? (int32)std::floor((x87d)rounded) : 119;
+        return NOTSA_FTOL(int32, std::floor(ext)) < 119 ? NOTSA_FTOL(int32, std::floor((x87d)rounded)) : 119;
     };
     const auto sectorMinX = GetMinSector(minX);
     const auto sectorMinY = GetMinSector(minY);
@@ -6546,7 +6552,7 @@ void CCarCtrl::SteerAICarWithPhysicsTryingToBlockTarget_Stop(CVehicle* vehicle, 
 
     // The timer counts the time the player is not moving
     if (FindPlayerVehicle() && GetPlayerVehicleSpeed() < 0.05f) {
-        vehicle->m_nCopsInCarTimer = (int16)(int64)((x87d)CTimer::GetTimeStep() * 16.666666f + (x87d)(uint16)vehicle->m_nCopsInCarTimer); // 0x821B40 (ftol)
+        vehicle->m_nCopsInCarTimer = (int16)NOTSA_FTOL(int64, (x87d)CTimer::GetTimeStep() * 16.666666f + (x87d)(uint16)vehicle->m_nCopsInCarTimer); // 0x821B40 (ftol)
     } else {
         vehicle->m_nCopsInCarTimer = 0;
     }
@@ -8463,7 +8469,7 @@ void InitRandomCarMission(CVehicle* veh, int32 carType, int32 modelId, bool bBoa
     auto& ap = veh->m_autoPilot;
 
     const auto SetCruiseSpeed = [&](float min, float max) { // 0x41BD90 + 0x821B40 (ftol)
-        ap.m_nCruiseSpeed = (uint8)(int32)CGeneral::GetRandomNumberInRange(min, max);
+        ap.m_nCruiseSpeed = (uint8)NOTSA_FTOL(int32, CGeneral::GetRandomNumberInRange(min, max));
     };
 
     if (carType == 13) { // 0x43080B
@@ -8682,11 +8688,11 @@ void PlaceRandomCarOnCurve(RandomCarState& s, CVector& outCurveSpeed) {
     };
 
     const auto scale      = CCurves::CalcSpeedScaleFactor(start, end, curDirX, curDirY, nextDirX, nextDirY); // 0x4313F1
-    const auto speedScale = (int32)((x87d)scale * (1000.0f / (x87d)ap.m_speed));                          // 0x858C4C
+    const auto speedScale = NOTSA_FTOL(int32, (x87d)scale * (1000.0f / (x87d)ap.m_speed));                          // 0x858C4C
     ap.m_nSpeedScaleFactor = (uint32)speedScale;
 
     const auto now       = CTimer::GetTimeInMS();
-    const auto startTime = (int32)((x87d)now - (x87d)t * (x87d)speedScale); // 0x43143A, x87: extended precision
+    const auto startTime = NOTSA_FTOL(int32, (x87d)now - (x87d)t * (x87d)speedScale); // 0x43143A, x87: extended precision
     ap.field_C           = startTime;
 
     const float time = (float)((x87d)(uint32)(now - (uint32)startTime) / (x87d)speedScale);
@@ -9119,7 +9125,7 @@ void CCarCtrl::GenerateOneRandomCar() {
                 SetUpDriverAndPassengersForVehicle(veh, s.carType, 1, true, false, 99); // 0x431DF9
                 veh->SetStatus(STATUS_PHYSICS);
                 ap.m_nCarDrivingStyle = DRIVING_STYLE_AVOID_CARS;
-                ap.m_nCruiseSpeed     = (uint8)(int32)((x87d)ap.m_nCruiseSpeed + 10.0f); // 0x431E1C, 0x85862C
+                ap.m_nCruiseSpeed     = (uint8)NOTSA_FTOL(int32, (x87d)ap.m_nCruiseSpeed + 10.0f); // 0x431E1C, 0x85862C
                 veh->m_vecMoveSpeed   = (veh->GetForwardVector() * (float)ap.m_nCruiseSpeed) * 0.02f; // 0x431E4F, 0x431E5D, 0x431E6E (0x3CA3D70A)
                 if (CGameLogic::LaRiotsActiveHere() || CCheat::IsActive(CHEAT_AGGRESSIVE_DRIVERS)) { // 0x431E87
                     if (veh->m_pDriver) {

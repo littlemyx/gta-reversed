@@ -387,7 +387,7 @@ void CCarGenerator::Setup(CVector posn, float angle, int32 modelId, int16 color1
     constexpr float magic = 256.0f / 360.0f; // 0x8722E8 original expression 128.0f / 180.0f
 
     m_vecPosn = posn;
-    m_nAngle = (char)(angle * magic);
+    m_nAngle = NOTSA_FTOL(int8, angle * magic);
     m_nModelId = modelId;
     m_nPrimaryColor = (uint8)(color1);
     m_nSecondaryColor = (uint8)(color2);

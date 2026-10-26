@@ -184,10 +184,10 @@ void CReplay::StorePedUpdate(CPed* ped, uint8 index) {
     static_assert(sizeof(tReplayPedUpdateBlock) == 52);
     block->type                     = REPLAY_PACKET_PED_UPDATE;
     block->poolRef                  = index;
-    block->heading                  = (int8)(ped->m_fCurrentRotation * HEADING_COMPRESS_VALUE);
+    block->heading                  = NOTSA_FTOL(int8, ped->m_fCurrentRotation * HEADING_COMPRESS_VALUE);
     block->matrix.CompressFromFullMatrix(ped->GetMatrix());
     block->weaponModel              = (int16)ped->m_nWeaponModelId;
-    block->contactSurfaceBrightness = (uint8)(ped->m_fContactSurfaceBrightness * 100.0f);
+    block->contactSurfaceBrightness = NOTSA_FTOL(uint8, ped->m_fContactSurfaceBrightness * 100.0f);
     block->flags.stillOnValidPoly   = (bool)ped->bStillOnValidPoly;
     block->flags.usesCollision      = ped->GetUsesCollision();
     block->flags.isTalking          = (bool)(ped == FindPlayerPed() && gbFirstPersonRunThisFrame && ped->bIsTalking);
@@ -1030,8 +1030,8 @@ void CReplay::StoreClothesDesc(const CPedClothesDesc& desc, tReplayClothesBlock&
     packet.type = REPLAY_PACKET_CLOTHES;
     rng::copy(desc.m_anModelKeys, packet.modelKeys.begin());
     rng::copy(desc.m_anTextureKeys, packet.textureKeys.begin());
-    packet.fatStat = (int16)desc.m_fFatStat;
-    packet.muscleStat = (int16)desc.m_fMuscleStat;
+    packet.fatStat = NOTSA_FTOL(int16, desc.m_fFatStat);
+    packet.muscleStat = NOTSA_FTOL(int16, desc.m_fMuscleStat);
 }
 
 // 0x45C7D0

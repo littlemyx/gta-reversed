@@ -506,7 +506,7 @@ void CHud::DrawAreaName() {
 
     case NAME_FADE_IN:
         if (!TheCamera.GetFading() && TheCamera.GetScreenFadeStatus() != NAME_FADE_IN) {
-            m_ZoneFadeTimer += (int32)OGTimeStepInMS();
+            m_ZoneFadeTimer += NOTSA_FTOL(int32, OGTimeStepInMS());
         }
 
         if (m_ZoneFadeTimer > 1000) {
@@ -524,7 +524,7 @@ void CHud::DrawAreaName() {
 
     case NAME_FADE_OUT:
         if (!TheCamera.GetFading() && TheCamera.GetScreenFadeStatus() != NAME_FADE_IN) {
-            m_ZoneFadeTimer -= (int32)OGTimeStepInMS();
+            m_ZoneFadeTimer -= NOTSA_FTOL(int32, OGTimeStepInMS());
         }
 
         if (m_ZoneFadeTimer < 0) {
@@ -540,7 +540,7 @@ void CHud::DrawAreaName() {
         break;
 
     case NAME_SWITCH:
-        m_ZoneFadeTimer -= (int32)OGTimeStepInMS();
+        m_ZoneFadeTimer -= NOTSA_FTOL(int32, OGTimeStepInMS());
         if (m_ZoneFadeTimer < 0) {
             m_ZoneFadeTimer = 0;
             m_ZoneState = NAME_FADE_IN;
@@ -558,22 +558,22 @@ void CHud::DrawAreaName() {
         return;
     }
 
-    m_ZoneNameTimer += (uint32)(int32)OGTimeStepInMS();
+    m_ZoneNameTimer += (uint32)NOTSA_FTOL(int32, OGTimeStepInMS());
     CFont::SetProportional(true);
     CFont::SetBackground(false, false);
     CFont::SetScaleForCurrentLanguage(SCREEN_STRETCH_X(1.2f), SCREEN_STRETCH_Y(1.9f));
     CFont::SetEdge(2);
     CFont::SetOrientation(eFontAlignment::ALIGN_RIGHT);
     CFont::SetRightJustifyWrap(SCREEN_STRETCH_X(180.0f));
-    CFont::SetDropColor({ 0, 0, 0, (uint8)alpha });
+    CFont::SetDropColor({ 0, 0, 0, NOTSA_FTOL(uint8, alpha) });
     CFont::SetFontStyle(FONT_GOTHIC);
 
     const CZoneInfo* info = CPopCycle::m_pCurrZoneInfo;
     const auto& color = info->ZoneColor; // Cppcheck: (warning) nullPointerRedundantCheck: Either the condition 'info' is redundant or there is possible null pointer dereference: info.
     if (CGangWars::bGangWarsActive && info && color.r && color.g && color.b) {
-        CFont::SetColor({ color.r, color.g, color.b, (uint8)alpha});
+        CFont::SetColor({ color.r, color.g, color.b, NOTSA_FTOL(uint8, alpha)});
     } else {
-        CFont::SetColor(HudColour.GetRGBA(HUD_COLOUR_LIGHT_BLUE, (uint8)alpha));
+        CFont::SetColor(HudColour.GetRGBA(HUD_COLOUR_LIGHT_BLUE, NOTSA_FTOL(uint8, alpha)));
     }
 
     CFont::PrintStringFromBottom((float)RsGlobal.maximumWidth - SCREEN_STRETCH_X(32.0f), ((float)RsGlobal.maximumHeight - SCREEN_STRETCH_Y(104.0f)) + SCREEN_STRETCH_Y(76.0f), m_ZoneToPrint);
@@ -614,7 +614,7 @@ void CHud::DrawBustedWastedMessage() {
         return;
     }
 
-    messageAlpha += (float)(uint32)(int32)OGTimeStepInMS() * 0.4f;
+    messageAlpha += (float)(uint32)NOTSA_FTOL(int32, OGTimeStepInMS()) * 0.4f;
     messageAlpha = std::min(messageAlpha, 255.0f);
 
     CFont::SetBackground(false, false);
@@ -624,8 +624,8 @@ void CHud::DrawBustedWastedMessage() {
     CFont::SetOrientation(eFontAlignment::ALIGN_CENTER);
     CFont::SetFontStyle(FONT_GOTHIC);
     CFont::SetEdge(3);
-    CFont::SetDropColor({ 0, 0, 0, (uint8)messageAlpha });
-    CFont::SetColor(HudColour.GetRGBA(HUD_COLOUR_LIGHT_GRAY, (uint8)messageAlpha));
+    CFont::SetDropColor({ 0, 0, 0, NOTSA_FTOL(uint8, messageAlpha) });
+    CFont::SetColor(HudColour.GetRGBA(HUD_COLOUR_LIGHT_GRAY, NOTSA_FTOL(uint8, messageAlpha)));
     CFont::PrintStringFromBottom((float)(RsGlobal.maximumWidth / 2), posY, message);
 }
 
@@ -864,7 +864,7 @@ float CHud::DrawFadeState(DRAW_FADE_STATE fadingElement, int32 forceFadingIn) {
             }
             break;
         case NAME_FADE_IN:
-            fadeTimer += (int32)OGTimeStepInMS();
+            fadeTimer += NOTSA_FTOL(int32, OGTimeStepInMS());
             if (fadeTimer > 1000) {
                 fadeTimer = 1000;
                 state = NAME_SHOW;
@@ -872,7 +872,7 @@ float CHud::DrawFadeState(DRAW_FADE_STATE fadingElement, int32 forceFadingIn) {
             alpha = (float)fadeTimer * 0.001f * 255.0f;
             break;
         case NAME_FADE_OUT:
-            fadeTimer += (int32)(CTimer::GetTimeStep() * 0.02f * -1000.0f);
+            fadeTimer += NOTSA_FTOL(int32, CTimer::GetTimeStep() * 0.02f * -1000.0f);
             if (fadeTimer < 0) {
                 fadeTimer = 0;
                 state = NAME_DONT_SHOW;
@@ -882,7 +882,7 @@ float CHud::DrawFadeState(DRAW_FADE_STATE fadingElement, int32 forceFadingIn) {
         default:
             break;
         }
-        timer += (int32)OGTimeStepInMS();
+        timer += NOTSA_FTOL(int32, OGTimeStepInMS());
     }
 
     switch (fadingElement) {
@@ -976,7 +976,7 @@ void CHud::DrawHelpText() {
         break;
     case 2:
         if (!TheCamera.m_bWideScreenOn) {
-            m_nHelpMessageFadeTimer += (int32)OGTimeStepInMS() * 2;
+            m_nHelpMessageFadeTimer += NOTSA_FTOL(int32, OGTimeStepInMS()) * 2;
             if (0.0f < (float)(int32)m_nHelpMessageFadeTimer) {
                 m_nHelpMessageFadeTimer = 0;
                 m_nHelpMessageState     = 1;
@@ -985,7 +985,7 @@ void CHud::DrawHelpText() {
         }
         break;
     case 3:
-        m_nHelpMessageFadeTimer -= (int32)OGTimeStepInMS() * 2;
+        m_nHelpMessageFadeTimer -= NOTSA_FTOL(int32, OGTimeStepInMS()) * 2;
         if ((float)(int32)m_nHelpMessageFadeTimer < 0.0f || TheCamera.m_bWideScreenOn) {
             m_nHelpMessageFadeTimer = 0;
             m_nHelpMessageState     = 0;
@@ -993,7 +993,7 @@ void CHud::DrawHelpText() {
         alphaFade = GetFadeAlpha();
         break;
     case 4:
-        m_nHelpMessageFadeTimer -= (int32)OGTimeStepInMS() * 2;
+        m_nHelpMessageFadeTimer -= NOTSA_FTOL(int32, OGTimeStepInMS()) * 2;
         if ((float)(int32)m_nHelpMessageFadeTimer < 0.0f) {
             m_nHelpMessageFadeTimer = 0;
             m_nHelpMessageState     = 2;
@@ -1009,7 +1009,7 @@ void CHud::DrawHelpText() {
         return;
     }
 
-    m_nHelpMessageTimer += (int32)OGTimeStepInMS();
+    m_nHelpMessageTimer += NOTSA_FTOL(int32, OGTimeStepInMS());
     CFont::SetAlphaFade(alphaFade);
     CFont::SetProportional(true);
     CFont::SetScaleForCurrentLanguage(SCREEN_STRETCH_X(0.52f), SCREEN_STRETCH_Y(1.1f));
@@ -1031,7 +1031,7 @@ void CHud::DrawHelpText() {
         CFont::SetFontStyle(FONT_SUBTITLES);
         CFont::SetBackground(true, true);
         CFont::SetDropShadowPosition(0);
-        CFont::SetBackgroundColor(CRGBA{ 0, 0, 0, (uint8)(int32)alphaFade });
+        CFont::SetBackgroundColor(CRGBA{ 0, 0, 0, (uint8)NOTSA_FTOL(int32, alphaFade) });
         CFont::SetColor(HudColour.GetRGB(HUD_COLOUR_LIGHT_GRAY));
 
         const int32 yOffset = (TheCamera.m_bWideScreenOn && !FrontEndMenuManager.m_bWidescreenOn) ? 0x38 : 0;
@@ -1064,7 +1064,7 @@ void CHud::DrawHelpText() {
     CFont::SetFontStyle(FONT_SUBTITLES);
     CFont::SetBackground(true, true);
     CFont::SetDropShadowPosition(0);
-    const auto alpha = (uint8)(int32)alphaFade;
+    const auto alpha = (uint8)NOTSA_FTOL(int32, alphaFade);
     CFont::SetBackgroundColor(CRGBA{ 0, 0, 0, alpha });
     CFont::SetColor(HudColour.GetRGB(HUD_COLOUR_LIGHT_GRAY));
 
@@ -1095,10 +1095,10 @@ void CHud::DrawHelpText() {
     CSprite2d::DrawBarChart(
         x,
         (155.0f - PagerXOffset) * 0.6f + hs * 28.0f,
-        (uint16)(int32)SCREEN_STRETCH_X(62.0f),
-        (uint8)(int32)(hs * 12.0f),
+        (uint16)NOTSA_FTOL(int32, SCREEN_STRETCH_X(62.0f)),
+        (uint8)NOTSA_FTOL(int32, hs * 12.0f),
         progress,
-        (int8)(int32)progressAdd,
+        (int8)NOTSA_FTOL(int32, progressAdd),
         0,
         0,
         barColor,
@@ -1222,8 +1222,8 @@ void CHud::DrawMissionTimers() {
             CSprite2d::DrawBarChart(
                 (SCREEN_WIDTH - ws * 32.0f) - ws * 61.0f,
                 SCREEN_STRETCH_Y(1.0f) * 6.0f + y,
-                (uint16)(int32)(ws * 61.0f),
-                (uint8)(int32)(SCREEN_STRETCH_Y(1.0f) * 9.0f),
+                (uint16)NOTSA_FTOL(int32, ws * 61.0f),
+                (uint8)NOTSA_FTOL(int32, SCREEN_STRETCH_Y(1.0f) * 9.0f),
                 (float)value * 0.01f * 100.0f,
                 0,
                 0,
@@ -1275,7 +1275,7 @@ void CHud::DrawMissionTitle() {
         messageX += CTimer::GetTimeStep();
         if (!(messageX < 120.0f)) {
             messageX = 120.0f;
-            messageAlpha -= (float)(uint32)(int32)OGTimeStepInMS();
+            messageAlpha -= (float)(uint32)NOTSA_FTOL(int32, OGTimeStepInMS());
         }
         if (messageAlpha <= 0.0f) {
             messageAlpha = 0.0f;
@@ -1284,12 +1284,12 @@ void CHud::DrawMissionTitle() {
         }
     } else {
         messageAlpha = 255.0f;
-        messageInUse += (float)(uint32)(int32)OGTimeStepInMS() * 0.3f;
+        messageInUse += (float)(uint32)NOTSA_FTOL(int32, OGTimeStepInMS()) * 0.3f;
     }
 
     CFont::SetEdge(2);
-    CFont::SetDropColor({ 0, 0, 0, uint8(messageAlpha) });
-    CFont::SetColor(HudColour.GetRGBA(HUD_COLOUR_GOLD, (uint8)messageAlpha));
+    CFont::SetDropColor({ 0, 0, 0, NOTSA_FTOL(uint8, messageAlpha) });
+    CFont::SetColor(HudColour.GetRGBA(HUD_COLOUR_GOLD, NOTSA_FTOL(uint8, messageAlpha)));
     CFont::PrintStringFromBottom(SCREEN_SCALE_FROM_RIGHT(20.0f), SCREEN_SCALE_FROM_BOTTOM(115.0f), message);
     CFont::SetEdge(0);
 }
@@ -1347,7 +1347,7 @@ void CHud::DrawOddJobMessage(bool displayImmediately) {
     }
 
     if (OddJob2OffTimer > 0.0f) {
-        OddJob2OffTimer -= (float)(uint32)(int32)OGTimeStepInMS();
+        OddJob2OffTimer -= (float)(uint32)NOTSA_FTOL(int32, OGTimeStepInMS());
     }
 
     const auto& m5 = m_BigMessage[STYLE_WHITE_MIDDLE_SMALLER];
@@ -1371,7 +1371,7 @@ void CHud::DrawOddJobMessage(bool displayImmediately) {
         }
         break;
     case 2:
-        OddJob2Timer += (uint16)(int32)OGTimeStepInMS();
+        OddJob2Timer += (uint16)NOTSA_FTOL(int32, OGTimeStepInMS());
         if ((int16)OddJob2Timer > 1500) { // OG: signed 16-bit compare
             OddJob2On = 3;
         }
@@ -1693,11 +1693,11 @@ void CHud::DrawSuccessFailedMessage() {
     CFont::SetCentreSize(SCREEN_STRETCH_X(1.0f) * 590.0f);
     CFont::SetFontStyle(FONT_PRICEDOWN);
     CFont::SetEdge(2);
-    CFont::SetDropColor({ 0, 0, 0, (uint8)(int32)messageAlpha });
-    CFont::SetColor(HudColour.GetRGBA(HUD_COLOUR_GOLD, (uint8)(int32)messageAlpha));
+    CFont::SetDropColor({ 0, 0, 0, (uint8)NOTSA_FTOL(int32, messageAlpha) });
+    CFont::SetColor(HudColour.GetRGBA(HUD_COLOUR_GOLD, (uint8)NOTSA_FTOL(int32, messageAlpha)));
 
     if ((float)(RsGlobal.maximumWidth - 20) > messageInUse) {
-        const float delta = (float)(uint32)(int32)OGTimeStepInMS() * 0.3f;
+        const float delta = (float)(uint32)NOTSA_FTOL(int32, OGTimeStepInMS()) * 0.3f;
         messageInUse += delta;
         messageAlpha = delta + messageAlpha;
         if (messageAlpha > 255.0f) {
@@ -1707,7 +1707,7 @@ void CHud::DrawSuccessFailedMessage() {
         messageX = CTimer::GetTimeStep() + messageX;
         if (!(messageX < 120.0f)) {
             messageX = 120.0f;
-            messageAlpha = messageAlpha - (float)(uint32)(int32)OGTimeStepInMS() * 0.3f;
+            messageAlpha = messageAlpha - (float)(uint32)NOTSA_FTOL(int32, OGTimeStepInMS()) * 0.3f;
         }
         if (messageAlpha <= 0.0f) {
             messageAlpha = 0.0f;
@@ -1765,7 +1765,7 @@ void CHud::DrawVehicleName() {
         alpha = 255.0f;
         break;
     case NAME_FADE_IN:
-        m_VehicleFadeTimer += (int32)OGTimeStepInMS();
+        m_VehicleFadeTimer += NOTSA_FTOL(int32, OGTimeStepInMS());
         if (m_VehicleFadeTimer > 1000) {
             m_VehicleFadeTimer = 1000;
             m_VehicleState = NAME_SHOW;
@@ -1773,7 +1773,7 @@ void CHud::DrawVehicleName() {
         alpha = (float)m_VehicleFadeTimer * 0.001f * 255.0f;
         break;
     case NAME_FADE_OUT:
-        m_VehicleFadeTimer += (int32)(CTimer::GetTimeStep() * 0.02f * -1000.0f);
+        m_VehicleFadeTimer += NOTSA_FTOL(int32, CTimer::GetTimeStep() * 0.02f * -1000.0f);
         if (m_VehicleFadeTimer < 0) {
             m_VehicleState = NAME_DONT_SHOW;
             m_VehicleFadeTimer = 0;
@@ -1781,7 +1781,7 @@ void CHud::DrawVehicleName() {
         alpha = (float)m_VehicleFadeTimer * 0.001f * 255.0f;
         break;
     case NAME_SWITCH:
-        m_VehicleFadeTimer += (int32)(CTimer::GetTimeStep() * 0.02f * -1000.0f);
+        m_VehicleFadeTimer += NOTSA_FTOL(int32, CTimer::GetTimeStep() * 0.02f * -1000.0f);
         if (m_VehicleFadeTimer < 0) {
             m_VehicleNameTimer = 0;
             m_VehicleState = NAME_FADE_IN;
@@ -1795,7 +1795,7 @@ void CHud::DrawVehicleName() {
     }
 
     if (!m_Message[0]) {
-        m_VehicleNameTimer += (int32)OGTimeStepInMS();
+        m_VehicleNameTimer += NOTSA_FTOL(int32, OGTimeStepInMS());
         CFont::SetProportional(true);
         CFont::SetBackground(false, false);
         CFont::SetScaleForCurrentLanguage(SCREEN_STRETCH_X(1.0f), SCREEN_SCALE_Y(1.5f));
@@ -1803,8 +1803,8 @@ void CHud::DrawVehicleName() {
         CFont::SetRightJustifyWrap(0.0f);
         CFont::SetFontStyle(eFontStyle::FONT_MENU);
         CFont::SetEdge(2);
-        CFont::SetColor(HudColour.GetRGBA(HUD_COLOUR_GREEN, (uint8)alpha));
-        CFont::SetDropColor({ 0, 0, 0, (uint8)alpha });
+        CFont::SetColor(HudColour.GetRGBA(HUD_COLOUR_GREEN, NOTSA_FTOL(uint8, alpha)));
+        CFont::SetDropColor({ 0, 0, 0, NOTSA_FTOL(uint8, alpha) });
         if (CTheScripts::bDisplayHud) {
             CFont::PrintString(
                 SCREEN_STRETCH_FROM_RIGHT(32.0f),
@@ -1838,9 +1838,9 @@ void CHud::DrawVitalStats() {
     CFont::SetProportional(true);
 
     const float ws        = SCREEN_STRETCH_X(1.0f);
-    const auto  labelX    = (int16)(int32)(ws * 10.0f + 40.0f); // OG: sVar5
-    const auto  barX      = (int16)(int32)(ws * 90.0f + 40.0f); // OG: sVar6
-    const auto  barYShift = (int16)(int32)(SCREEN_STRETCH_Y(1.0f) * 5.0f); // OG: sVar7
+    const auto  labelX    = (int16)NOTSA_FTOL(int32, ws * 10.0f + 40.0f); // OG: sVar5
+    const auto  barX      = (int16)NOTSA_FTOL(int32, ws * 90.0f + 40.0f); // OG: sVar6
+    const auto  barYShift = (int16)NOTSA_FTOL(int32, SCREEN_STRETCH_Y(1.0f) * 5.0f); // OG: sVar7
 
     const auto GetPlayerTaskSwim = [] {
         return CWorld::Players[CWorld::PlayerInFocus].m_pPed->GetIntelligence()->GetTaskSwim();
@@ -1869,7 +1869,7 @@ void CHud::DrawVitalStats() {
             yf = bottom + hs * 15.0f;
         }
     }
-    auto y = (int16)(int32)yf;
+    auto y = (int16)NOTSA_FTOL(int32, yf);
 
     CFont::SetFontStyle(FONT_SUBTITLES);
     CFont::SetOrientation(eFontAlignment::ALIGN_LEFT);
@@ -1878,14 +1878,14 @@ void CHud::DrawVitalStats() {
     CFont::SetEdge(0);
 
     const auto NextRowY = [&] {
-        y = (int16)(int32)(SCREEN_STRETCH_Y(1.0f) * 15.0f + (float)y);
+        y = (int16)NOTSA_FTOL(int32, SCREEN_STRETCH_Y(1.0f) * 15.0f + (float)y);
     };
     const auto DrawBar = [&](float progress) {
         CSprite2d::DrawBarChart(
             (float)barX,
             (float)(barYShift + y),
-            (uint16)(int32)(SCREEN_STRETCH_X(1.0f) * 70.0f),
-            (uint8)(int32)(SCREEN_STRETCH_Y(1.0f) * 10.0f),
+            (uint16)NOTSA_FTOL(int32, SCREEN_STRETCH_X(1.0f) * 70.0f),
+            (uint8)NOTSA_FTOL(int32, SCREEN_STRETCH_Y(1.0f) * 10.0f),
             progress,
             0,
             0,
@@ -1933,7 +1933,7 @@ void CHud::DrawVitalStats() {
     DrawStatRow("STAT025", STAT_SEX_APPEAL);
 
     // Game day
-    y = (int16)(int32)((SCREEN_STRETCH_Y(1.0f) * 3.0f + SCREEN_STRETCH_Y(15.0f)) + (float)y);
+    y = (int16)NOTSA_FTOL(int32, (SCREEN_STRETCH_Y(1.0f) * 3.0f + SCREEN_STRETCH_Y(15.0f)) + (float)y);
 
     CFont::SetFontStyle(FONT_PRICEDOWN);
     CFont::SetOrientation(eFontAlignment::ALIGN_RIGHT);
@@ -2038,7 +2038,7 @@ void CHud::DrawAmmo(CPed* ped, int32 x, int32 y, float alpha) {
         return;
     }
 
-    CFont::SetColor(HudColour.GetRGBA(HUD_COLOUR_LIGHT_BLUE, (uint8)alpha));
+    CFont::SetColor(HudColour.GetRGBA(HUD_COLOUR_LIGHT_BLUE, NOTSA_FTOL(uint8, alpha)));
     CFont::PrintString((float)x, (float)y, gGxtString);
     CFont::SetEdge(0);
 }
@@ -2123,14 +2123,14 @@ void CHud::DrawPlayerInfo() {
     ProcessInlinedFadeState(m_EnergyLostState, m_EnergyLostFadeTimer, m_EnergyLostTimer, m_LastTimeEnergyLost, (int32)playerInfo.m_nLastTimeEnergyLost);
     if (m_EnergyLostState != 0) {
         const auto GetBarY = [&](float pos, int8 offset) {
-            return (int32)GetYPosBasedOnHealth(focus, pos, offset);
+            return NOTSA_FTOL(int32, GetYPosBasedOnHealth(focus, pos, offset));
         };
         // Position for the 2nd player's bars: shifted twice (OG calls `GetYPosBasedOnHealth` with both player IDs)
         const auto GetBarY2P = [&](float pos) {
-            return (int32)GetYPosBasedOnHealth(1, GetYPosBasedOnHealth(focus, pos, 12), 12);
+            return NOTSA_FTOL(int32, GetYPosBasedOnHealth(1, GetYPosBasedOnHealth(focus, pos, 12), 12));
         };
         const auto GetBarX = [](float offsetFromRight) {
-            return (int32)SCREEN_STRETCH_FROM_RIGHT(offsetFromRight);
+            return NOTSA_FTOL(int32, SCREEN_STRETCH_FROM_RIGHT(offsetFromRight));
         };
 
         RenderHealthBar(focus, GetBarX(141.0f), GetBarY(SCREEN_STRETCH_Y(77.0f), 10));
@@ -2184,7 +2184,7 @@ void CHud::DrawPlayerInfo() {
     {
         const auto alpha = ProcessInlinedFadeState(m_DisplayScoreState, m_DisplayScoreFadeTimer, m_DisplayScoreTimer, m_LastDisplayScore, playerInfo.m_nDisplayMoney);
         if (m_DisplayScoreState != 0) {
-            DrawMoney(playerInfo, (uint8)(int32)alpha);
+            DrawMoney(playerInfo, (uint8)NOTSA_FTOL(int32, alpha));
         }
     }
 
@@ -2249,20 +2249,20 @@ inline void CHud::DrawWeapon(CPlayerPed* ped0, CPlayerPed* ped1, float alpha) {
     const float hs = SCREEN_STRETCH_Y(1.0f);
     const float weaponIconOffset = SCREEN_WIDTH * 0.17343046f; // todo: magic
 
-    DrawWeaponIcon(ped0, (int32)(SCREEN_WIDTH - (ws * 32.0f + weaponIconOffset)), (int32)(hs * 20.0f), alpha);
+    DrawWeaponIcon(ped0, NOTSA_FTOL(int32, SCREEN_WIDTH - (ws * 32.0f + weaponIconOffset)), NOTSA_FTOL(int32, hs * 20.0f), alpha);
     if (ped1) {
         DrawWeaponIcon(
             ped1,
-            (int32)(SCREEN_WIDTH - (ws * 32.0f + 111.0f)),
-            (int32)GetYPosBasedOnHealth(CWorld::PlayerInFocus, hs * 138.0f, 12),
+            NOTSA_FTOL(int32, SCREEN_WIDTH - (ws * 32.0f + 111.0f)),
+            NOTSA_FTOL(int32, GetYPosBasedOnHealth(CWorld::PlayerInFocus, hs * 138.0f, 12)),
             alpha
         );
     }
 
     const float ammoX = (SCREEN_WIDTH - (SCREEN_WIDTH * 0.17343046f + ws * 32.0f)) + ws * 47.0f * 0.5f;
-    DrawAmmo(ped0, (int32)ammoX, (int32)(hs * 20.0f + hs * 43.0f), alpha);
+    DrawAmmo(ped0, NOTSA_FTOL(int32, ammoX), NOTSA_FTOL(int32, hs * 20.0f + hs * 43.0f), alpha);
     if (ped1) {
-        DrawAmmo(ped1, (int32)ammoX, (int32)GetYPosBasedOnHealth(CWorld::PlayerInFocus, hs * 138.0f + hs * 43.0f, 12), alpha);
+        DrawAmmo(ped1, NOTSA_FTOL(int32, ammoX), NOTSA_FTOL(int32, GetYPosBasedOnHealth(CWorld::PlayerInFocus, hs * 138.0f + hs * 43.0f, 12)), alpha);
     }
 }
 
@@ -2328,7 +2328,7 @@ void CHud::DrawWanted() {
         return;
     }
 
-    const auto alpha8 = (uint8)(int32)alpha;
+    const auto alpha8 = (uint8)NOTSA_FTOL(int32, alpha);
     for (auto i = 0; i < 6; i++) {
         CFont::SetEdge(1);
         CFont::SetDropColor({ 0, 0, 0, alpha8 });
@@ -2347,16 +2347,16 @@ void CHud::DrawWanted() {
             // Flashing "parole" star (darker gold)
             const auto& gold = HudColour.m_aColours[HUD_COLOUR_GOLD];
             CFont::SetColor(CRGBA{
-                (uint8)(int32)((float)gold.r * 0.8f),
-                (uint8)(int32)((float)gold.g * 0.8f),
-                (uint8)(int32)((float)gold.b * 0.8f),
+                (uint8)NOTSA_FTOL(int32, (float)gold.r * 0.8f),
+                (uint8)NOTSA_FTOL(int32, (float)gold.g * 0.8f),
+                (uint8)NOTSA_FTOL(int32, (float)gold.b * 0.8f),
                 alpha8
             });
             CFont::PrintString(posX, GetYPosBasedOnHealth(CWorld::PlayerInFocus, SCREEN_STRETCH_Y(1.0f) * 114.0f, 12), starText);
         } else if (wantedLevel <= i) {
             // Empty star
             CFont::SetEdge(0);
-            CFont::SetColor(CRGBA{ 0, 0, 0, (uint8)(int32)(alpha * 0.7f) });
+            CFont::SetColor(CRGBA{ 0, 0, 0, (uint8)NOTSA_FTOL(int32, alpha * 0.7f) });
             CFont::SetScale(SCREEN_STRETCH_X(1.0f) * 0.605f * 1.2f, SCREEN_STRETCH_Y(1.0f) * 1.21f * 1.2f);
             const float hs = SCREEN_STRETCH_Y(1.0f);
             CFont::PrintString(posX, GetYPosBasedOnHealth(CWorld::PlayerInFocus, hs * 114.0f, 12) - (hs + hs), starText);
@@ -2380,7 +2380,7 @@ void CHud::DrawWeaponIcon(CPed* ped, int32 x, int32 y, float alpha) {
 
     auto modelId = ped->GetActiveWeapon().GetWeaponInfo().m_nModelId1;
     if (modelId <= 0) {
-        Sprites[SPRITE_FIST].Draw({ x0, y0, width + x0, height + y0 }, CRGBA(255, 255, 255, (uint8)alpha));
+        Sprites[SPRITE_FIST].Draw({ x0, y0, width + x0, height + y0 }, CRGBA(255, 255, 255, NOTSA_FTOL(uint8, alpha)));
         return;
     }
 
@@ -2416,8 +2416,8 @@ void CHud::RenderArmorBar(int32 playerId, int32 x, int32 y) {
     CSprite2d::DrawBarChart(
         (float)x,
         (float)y,
-        (uint16)SCREEN_STRETCH_X(62.0f),
-        (uint8)SCREEN_STRETCH_Y(9.0f),
+        NOTSA_FTOL(uint16, SCREEN_STRETCH_X(62.0f)),
+        NOTSA_FTOL(uint8, SCREEN_STRETCH_Y(9.0f)),
         player->m_fArmour / (float)info->m_nMaxArmour * 100.0f,
         false,
         false,
@@ -2436,8 +2436,8 @@ void CHud::RenderBreathBar(int32 playerId, int32 x, int32 y) {
     CSprite2d::DrawBarChart(
         (float)x,
         (float)y,
-        (uint16)SCREEN_STRETCH_X(62.0f),
-        (uint8)SCREEN_STRETCH_Y(9.0f),
+        NOTSA_FTOL(uint16, SCREEN_STRETCH_X(62.0f)),
+        NOTSA_FTOL(uint8, SCREEN_STRETCH_Y(9.0f)),
         player->GetPlayerData()->m_fBreath / CStats::GetFatAndMuscleModifier(STAT_MOD_AIR_IN_LUNG) * 100.0f,
         false,
         false,
@@ -2466,7 +2466,7 @@ void CHud::RenderHealthBar(int32 playerId, int32 x, int32 y) {
         x109 - (float)totalWidth + (float)x,
         (float)y,
         totalWidth,
-        (uint8)SCREEN_STRETCH_Y(9.0f),
+        NOTSA_FTOL(uint8, SCREEN_STRETCH_Y(9.0f)),
         player->m_fHealth * 100.0f / (float)info->m_nMaxHealth,
         false,
         false,

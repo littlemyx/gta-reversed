@@ -295,7 +295,7 @@ void cBuoyancy::AddSplashParticles(CPhysical* entity, CVector vecFrom, CVector v
 
     auto vecVelocityModifier = vecUsedSpeed * CVector(0.0F, 0.0F, -1.0F) * 120.0F;
 
-    auto iNumParticles = std::max(1, static_cast<int32>(fDistBetweenPoints + fDistBetweenPoints));
+    auto iNumParticles = std::max(1, NOTSA_FTOL(int32, fDistBetweenPoints + fDistBetweenPoints));
     for (int32 iIter = 0; iIter < iNumParticles; ++iIter) {
         auto fCurrentProgress = static_cast<float>(iIter) / static_cast<float>(iNumParticles);
         auto vecCurPoint = Lerp(vecFrom, vecTo, fCurrentProgress);

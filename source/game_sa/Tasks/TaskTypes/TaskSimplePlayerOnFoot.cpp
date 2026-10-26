@@ -889,7 +889,7 @@ void CTaskSimplePlayerOnFoot::PlayerControlFighter(CPlayerPed* player) {
         }
 
         if (!player->m_pTargetedObject && y <= 0.f && lastCmd < 11) {
-            m_nTimer += (int32)((x87d)CTimer::GetTimeStep() * (x87d)0.02f * (x87d)1000.0);
+            m_nTimer += NOTSA_FTOL(int32, (x87d)CTimer::GetTimeStep() * (x87d)0.02f * (x87d)1000.0);
         } else {
             m_nTimer = 0;
         }

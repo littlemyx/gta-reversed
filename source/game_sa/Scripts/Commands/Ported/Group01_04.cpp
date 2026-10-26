@@ -170,12 +170,12 @@ void SetCarCoordinates(CVehicle& veh, CVector pos) {
 //! 173 SET_CAR_CRUISE_SPEED (case @0x467E05): car, speed(float)
 void SetCarCruiseSpeed(CVehicle& veh, float speed) {
     // `_ftol` truncation, then only the low byte is kept (movzx edx, al)
-    const uint8 speedByte = (uint8)(int32)speed;
+    const uint8 speedByte = (uint8)NOTSA_FTOL(int32, speed);
     veh.m_autoPilot.m_nCruiseSpeed = speedByte; // dead store in the original (overwritten below), kept for fidelity
     // 0x858B34 = 60.0f; handling+0x88 = m_transmissionData.m_MaxFlatVelocity
     const float maxCruise = veh.m_pHandlingData->m_transmissionData.m_MaxFlatVelocity * 60.0f;
     const x87d cur = (x87d)speedByte;
-    veh.m_autoPilot.m_nCruiseSpeed = (uint8)(int32)(cur < (double)maxCruise ? cur : (double)maxCruise); // `fcom` + jnp: take `cur` only if cur < max
+    veh.m_autoPilot.m_nCruiseSpeed = (uint8)NOTSA_FTOL(int32, cur < (double)maxCruise ? cur : (double)maxCruise); // `fcom` + jnp: take `cur` only if cur < max
 }
 
 //! 175 SET_CAR_MISSION (case @0x467EC1): car, mission

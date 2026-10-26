@@ -183,7 +183,7 @@ void CWaterCannon::Render() {
 
                 // Set alpha depending on current `i`. The higher, the lower the alpha.
                 const float progress = (float)i / (float)SECTIONS_COUNT;
-                const auto  alpha = (RwUInt8)(64.0f * (1.0f - progress));
+                const auto  alpha = NOTSA_FTOL(RwUInt8, 64.0f * (1.0f - progress));
                 RwRGBA color{ 200, 200, 255, alpha };
                 for (auto& vertice : vertices) {
                     RxObjSpace3DVertexSetPreLitColor(&vertice, &color);

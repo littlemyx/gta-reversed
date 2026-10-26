@@ -11,7 +11,7 @@
 #include "Glass.h"
 #include "TaskSimpleClimb.h"
 #include "RealTimeShadowManager.h"
-
+#include "PhysicalSectors.h"
 // NOTSA: Defined in `CarCtrl.cpp`. Returns the (x87) unrounded result of `CCarCtrl::FindGhostRoadHeight` (0x422370)
 double FindGhostRoadHeightOriginal(CVehicle* vehicle);
 
@@ -75,7 +75,7 @@ void PhysicalApplyForceImpl(CPhysical& p, const CVector& force, CVector point, C
 
 // Sector index calculation as done by `Add`/`RemoveAndAdd` (`floor(v * 0.02f + 60.0f)`, constants at 0x858B38 and 0x858B34)
 int32 PhysicalGetSectorIdx(float v) {
-    return static_cast<int32>(std::floor(v * 0.02f + 60.0f));
+    return notsa::PhysicalSectorIdx(v);
 }
 
 // Original (0x4072A0) uses `& 0xF` (also for negative coordinates), while `CWorld::GetRepeatSector` uses `abs(c) % 16`, which differs for negative values
@@ -234,8 +234,8 @@ void CPhysical::Add()
     const auto rect       = GetBoundRect();
     const auto minSectorX = PhysicalGetSectorIdx(rect.left);
     const auto minSectorY = PhysicalGetSectorIdx(rect.bottom);
-    const auto maxSectorX = PhysicalGetSectorIdx(rect.right);
-    const auto maxSectorY = PhysicalGetSectorIdx(rect.top);
+    const auto maxSectorX = notsa::PhysicalLimitSectorSpan(minSectorX, PhysicalGetSectorIdx(rect.right));
+    const auto maxSectorY = notsa::PhysicalLimitSectorSpan(minSectorY, PhysicalGetSectorIdx(rect.top));
     for (int32 sectorY = minSectorY; sectorY <= maxSectorY; ++sectorY) {
         for (int32 sectorX = minSectorX; sectorX <= maxSectorX; ++sectorX) {
             auto& rs   = PhysicalGetRepeatSector(sectorX, sectorY);
@@ -685,8 +685,8 @@ void CPhysical::RemoveAndAdd() {
     const auto rect       = GetBoundRect();
     const auto minSectorX = PhysicalGetSectorIdx(rect.left);
     const auto minSectorY = PhysicalGetSectorIdx(rect.bottom);
-    const auto maxSectorX = PhysicalGetSectorIdx(rect.right);
-    const auto maxSectorY = PhysicalGetSectorIdx(rect.top);
+    const auto maxSectorX = notsa::PhysicalLimitSectorSpan(minSectorX, PhysicalGetSectorIdx(rect.right));
+    const auto maxSectorY = notsa::PhysicalLimitSectorSpan(minSectorY, PhysicalGetSectorIdx(rect.top));
     for (int32 sectorY = minSectorY; sectorY <= maxSectorY; ++sectorY) {
         for (int32 sectorX = minSectorX; sectorX <= maxSectorX; ++sectorX) {
             auto& rs   = PhysicalGetRepeatSector(sectorX, sectorY);

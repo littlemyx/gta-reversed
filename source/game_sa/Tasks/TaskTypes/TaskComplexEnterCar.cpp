@@ -197,7 +197,7 @@ CTask* CTaskComplexEnterCar::CreateNextSubTask(CPed* ped) {
     case TASK_SIMPLE_CAR_OPEN_LOCKED_DOOR_FROM_OUTSIDE: { // 0x63ED58
         // This does not make sense, i have no idea why R* put it here
         if (m_Car && m_CruiseSpeed >= 0.f) {
-            m_Car->m_autoPilot.m_nCruiseSpeed = (uint32)m_CruiseSpeed;
+            m_Car->m_autoPilot.m_nCruiseSpeed = NOTSA_FTOL(uint32, m_CruiseSpeed);
         }
         return C(TASK_SIMPLE_STAND_STILL);
     }
@@ -670,7 +670,7 @@ CTask* CTaskComplexEnterCar::CreateSubTask(eTaskType taskType, CPed* ped) {
 
         if (m_Car && m_CruiseSpeed >= 0.f) {
             if (ped->IsPlayer() ? !ped->bInVehicle && m_Car->m_pDriver && m_bQuitAfterOpeningDoor : ped->bInVehicle) {  // 0x63E7A4 - NOTE/BUG: Why is it checking `!bInVehicle` for the player? Typo?
-                m_Car->m_autoPilot.SetCruiseSpeed((uint32)m_CruiseSpeed);
+                m_Car->m_autoPilot.SetCruiseSpeed(NOTSA_FTOL(uint32, m_CruiseSpeed));
             }
         }
 

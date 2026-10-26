@@ -70,7 +70,7 @@ void CFire::ExtinguishWithWater(float fWaterStrength) {
     /* Re-create fx / extinguish */
     m_IsBeingExtinguished = true;
     if (m_Strength >= 0.0f) {
-        if ((intmax_t)fOriginalStrength != (intmax_t)m_Strength) { /* Check if integer part has changed */
+        if (NOTSA_FTOL(intmax_t, fOriginalStrength) != NOTSA_FTOL(intmax_t, m_Strength)) { /* Check if integer part has changed */
             CreateFxSysForStrength(m_Position, nullptr); /* Yes, so needs a new fx */
         }
     } else {
@@ -86,7 +86,7 @@ void CFire::Start(CEntity* creator, CVector pos, uint32 nTimeToBurn, uint8 nGens
     m_IsBeingExtinguished = false;
     m_IsFirstGeneration = true;
 
-    m_TimeToBurn = CTimer::GetTimeInMS() + (uint32_t)(CGeneral::GetRandomNumberInRange(1.0f, 1.3f) * (float)nTimeToBurn);
+    m_TimeToBurn = CTimer::GetTimeInMS() + NOTSA_FTOL(uint32_t, CGeneral::GetRandomNumberInRange(1.0f, 1.3f) * (float)nTimeToBurn);
 
     SetEntityOnFire(nullptr);
     SetEntityStartedFire(creator);
@@ -248,7 +248,7 @@ void CFire::Extinguish() {
 void CFire::ProcessFire() {
     {
         const float newStrength = std::min(3.0f, m_Strength + CTimer::GetTimeStep() * ExeRecip(500.0f));
-        if ((uint32)(m_Strength) != (uint32)(newStrength)) {
+        if (NOTSA_FTOL(uint32, m_Strength) != NOTSA_FTOL(uint32, newStrength)) {
             m_Strength = newStrength; // Not sure why they do this, probably just some hack
         }
     }

@@ -121,7 +121,7 @@ void CAEStaticChannel::SynchPlayback() {
     if (m_bUnkn2) {
         m_pDirectSoundBuffer->SetVolume(-10000);
         if (!AESmoothFadeThread.RequestFade(m_pDirectSoundBuffer, m_Volume, -2, false)) {
-            const auto dwVolume = static_cast<LONG>(m_Volume * 100.0F);
+            const auto dwVolume = NOTSA_FTOL(LONG, m_Volume * 100.0F);
             m_pDirectSoundBuffer->SetVolume(dwVolume);
         }
     }

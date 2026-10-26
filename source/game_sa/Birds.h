@@ -37,9 +37,9 @@ public:
     }
 
     inline void Scale(RwReal fScale) {
-        cRed = static_cast<RwUInt8>(static_cast<RwReal>(cRed) * fScale);
-        cGreen = static_cast<RwUInt8>(static_cast<RwReal>(cGreen) * fScale);
-        cBlue = static_cast<RwUInt8>(static_cast<RwReal>(cBlue) * fScale);
+        cRed = NOTSA_FTOL(RwUInt8, static_cast<RwReal>(cRed) * fScale);
+        cGreen = NOTSA_FTOL(RwUInt8, static_cast<RwReal>(cGreen) * fScale);
+        cBlue = NOTSA_FTOL(RwUInt8, static_cast<RwReal>(cBlue) * fScale);
     }
 };
 VALIDATE_SIZE(CBirdColor, 0x3);

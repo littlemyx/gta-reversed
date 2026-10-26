@@ -240,10 +240,10 @@ void CPointLights::RenderFogEffect() {
         CSprite::RenderBufferedOneXLUSprite_Rotate_Aspect(
             screen.x, screen.y, screen.z,
             w * sizeMult, h * sizeMult * aspect,
-            (uint8)(intensity * light.m_fColorRed),
-            (uint8)(intensity * light.m_fColorGreen),
-            (uint8)(intensity * light.m_fColorBlue),
-            (int16)intensity,
+            NOTSA_FTOL(uint8, intensity * light.m_fColorRed),
+            NOTSA_FTOL(uint8, intensity * light.m_fColorGreen),
+            NOTSA_FTOL(uint8, intensity * light.m_fColorBlue),
+            NOTSA_FTOL(int16, intensity),
             1.0f / screen.z,
             angle,
             255
@@ -281,10 +281,10 @@ void CPointLights::RenderFogEffect() {
             const auto [minY, maxY] = std::minmax(pos.y, end.y);
 
             // Truncate before snapping to the grid, including at negative coordinates.
-            const int32 startX = static_cast<int32>(minX - FOG_RADIUS) / 4 * 4;
-            const int32 startY = static_cast<int32>(minY - FOG_RADIUS) / 4 * 4;
-            const int32 endX   = static_cast<int32>(maxX + FOG_RADIUS) + 4;
-            const int32 endY   = static_cast<int32>(maxY + FOG_RADIUS) + 4;
+            const int32 startX = NOTSA_FTOL(int32, minX - FOG_RADIUS) / 4 * 4;
+            const int32 startY = NOTSA_FTOL(int32, minY - FOG_RADIUS) / 4 * 4;
+            const int32 endX   = NOTSA_FTOL(int32, maxX + FOG_RADIUS) + 4;
+            const int32 endY   = NOTSA_FTOL(int32, maxY + FOG_RADIUS) + 4;
             for (int32 x = startX; x <= endX; x += 4) {
                 for (int32 y = startY; y <= endY; y += 4) {
                     const auto pattern = ((x >> 2) ^ (y >> 2)) & 0xF;
@@ -333,10 +333,10 @@ void CPointLights::RenderFogEffect() {
             }
 
             // Truncate before snapping to the grid, including at negative coordinates.
-            const int32 startX = static_cast<int32>(pos.x - fogSize) / 2 * 2;
-            const int32 startY = static_cast<int32>(pos.y - fogSize) / 2 * 2;
-            const int32 endX   = static_cast<int32>(pos.x + fogSize) + 2;
-            const int32 endY   = static_cast<int32>(pos.y + fogSize) + 2;
+            const int32 startX = NOTSA_FTOL(int32, pos.x - fogSize) / 2 * 2;
+            const int32 startY = NOTSA_FTOL(int32, pos.y - fogSize) / 2 * 2;
+            const int32 endX   = NOTSA_FTOL(int32, pos.x + fogSize) + 2;
+            const int32 endY   = NOTSA_FTOL(int32, pos.y + fogSize) + 2;
             for (int32 x = startX; x <= endX; x += 2) {
                 for (int32 y = startY; y <= endY; y += 2) {
                     // Cheap spatial hashing to get somewhat a random number for fog generation

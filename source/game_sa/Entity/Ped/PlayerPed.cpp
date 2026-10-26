@@ -968,7 +968,7 @@ void CPlayerPed::HandlePlayerBreath(bool bDecreaseAir, float fMultiplier) {
         if (breath > 0.0f && bDrownsInWater)
             breath = std::max(0.0f, breath - decreaseAmount);
         else
-            CWeapon::GenerateDamageEvent(this, this, eWeaponType::WEAPON_DROWNING, (int32)(decreaseAmount * 3.0f), PED_PIECE_TORSO, 0);
+            CWeapon::GenerateDamageEvent(this, this, eWeaponType::WEAPON_DROWNING, NOTSA_FTOL(int32, decreaseAmount * 3.0f), PED_PIECE_TORSO, 0);
     }
     GetPlayerData()->m_bRequireHandleBreath = false;
 }
@@ -1471,9 +1471,9 @@ void CPlayerPed::DrawTriangleForMouseRecruitPed() {
     uint8 colR{}, colG{}, colB{};
     if (healthRatio > 0.0) { // NOTE: NaN takes the "all zero" branch
         const x87d inv = (x87d)1.0 - healthRatio;
-        colR = (uint8)(int32)(inv * (x87d)255.0 + healthRatio * (x87d)0.0);
-        colG = (uint8)(int32)(healthRatio * (x87d)255.0 + inv * (x87d)0.0);
-        colB = (uint8)(int32)(healthRatio * (x87d)0.0 + inv * (x87d)0.0);
+        colR = (uint8)NOTSA_FTOL(int32, inv * (x87d)255.0 + healthRatio * (x87d)0.0);
+        colG = (uint8)NOTSA_FTOL(int32, healthRatio * (x87d)255.0 + inv * (x87d)0.0);
+        colB = (uint8)NOTSA_FTOL(int32, healthRatio * (x87d)0.0 + inv * (x87d)0.0);
     }
 
     // Size of the triangle depends on the distance to the ped
@@ -2063,7 +2063,7 @@ void CPlayerPed::ProcessGroupBehaviour(CPad* pad) {
 
     // `CTimer::ms_fTimeStepNonClipped * 0.02f * 1000.0f` kept in extended precision, then truncated by _ftol (0x821B40)
     const auto TimeStepInMS = [] {
-        return (uint16)(int32)((x87d)CTimer::GetTimeStepNonClipped() * (x87d)0.02f * (x87d)1000.0);
+        return (uint16)NOTSA_FTOL(int32, (x87d)CTimer::GetTimeStepNonClipped() * (x87d)0.02f * (x87d)1000.0);
     };
 
     // 0x609380 (inlined here)
@@ -2715,9 +2715,9 @@ void CPlayerPed::ProcessControl() {
                 setRGB = false;
         }
         if (setRGB) {
-            r = static_cast<uint8>((1.0f - markColor) * 255.0f);
-            g = static_cast<uint8>(markColor * 255.0f);
-            b = static_cast<uint8>(0.0f);
+            r = NOTSA_FTOL(uint8, (1.0f - markColor) * 255.0f);
+            g = NOTSA_FTOL(uint8, markColor * 255.0f);
+            b = NOTSA_FTOL(uint8, 0.0f);
         }
         CVector distance = effectPos - GetPosition();
         float size = 1.0f - distance.Magnitude() * 0.02f;
@@ -2775,7 +2775,7 @@ void CPlayerPed::ProcessControl() {
                 }
             }
             SetLookFlag(lookDir, true, false);
-            SetLookTimer(static_cast<uint32>((CTimer::GetTimeStep() * 0.02f * 1000.0f) * 5.0f));
+            SetLookTimer(NOTSA_FTOL(uint32, (CTimer::GetTimeStep() * 0.02f * 1000.0f) * 5.0f));
         } else {
             ClearLookFlag();
         }
@@ -2823,7 +2823,7 @@ void CPlayerPed::ProcessControl() {
             float playerMaxZ = pos.z + box.m_vecMax.z;
             if (GetPlayerData()->m_fWaterHeight < playerMaxZ) {
                 if (GetPlayerData()->m_fWaterHeight > playerMinZ)
-                    GetPlayerData()->m_nWaterCoverPerc = static_cast<uint8>((GetPlayerData()->m_fWaterHeight - playerMinZ) / (playerMaxZ - playerMinZ) * 100.0f);
+                    GetPlayerData()->m_nWaterCoverPerc = NOTSA_FTOL(uint8, (GetPlayerData()->m_fWaterHeight - playerMinZ) / (playerMaxZ - playerMinZ) * 100.0f);
                 else
                     GetPlayerData()->m_nWaterCoverPerc = 0;
             } else {

@@ -525,16 +525,16 @@ void CMenuManager::AdditionalOptionInput(bool* upPressed, bool* downPressed) {
             panY = pad->GetLeftStickY();
         }
         if (pad->NewState.DPadUp) {
-            panY = static_cast<int16>(pad->NewState.DPadUp * -0.6f);
+            panY = NOTSA_FTOL(int16, pad->NewState.DPadUp * -0.6f);
         }
         if (pad->NewState.DPadDown) {
-            panY = static_cast<int16>(pad->NewState.DPadDown * 0.6f);
+            panY = NOTSA_FTOL(int16, pad->NewState.DPadDown * 0.6f);
         }
         if (pad->NewState.DPadLeft) {
-            panX = static_cast<int16>(pad->NewState.DPadLeft * -0.6f);
+            panX = NOTSA_FTOL(int16, pad->NewState.DPadLeft * -0.6f);
         }
         if (pad->NewState.DPadRight) {
-            panX = static_cast<int16>(pad->NewState.DPadRight * 0.6f);
+            panX = NOTSA_FTOL(int16, pad->NewState.DPadRight * 0.6f);
         }
 
         // 0x577C50 - Pan the map
@@ -554,14 +554,14 @@ void CMenuManager::AdditionalOptionInput(bool* upPressed, bool* downPressed) {
                     // 0x577D43 - LMB held: pan according to cursor offset from screen centre
                     markerFreeFromEdge = true;
                     if (m_nMousePosX < RsGlobal.maximumWidth / 2) {
-                        panX = static_cast<int16>(float(m_nMousePosX) / StretchX(MAP_CENTER_X) * 128.0f - 128.0f);
+                        panX = NOTSA_FTOL(int16, float(m_nMousePosX) / StretchX(MAP_CENTER_X) * 128.0f - 128.0f);
                     } else if (m_nMousePosX > RsGlobal.maximumWidth / 2) {
-                        panX = static_cast<int16>((float(m_nMousePosX) - StretchX(MAP_CENTER_X)) / StretchX(MAP_CENTER_X) * 128.0f);
+                        panX = NOTSA_FTOL(int16, (float(m_nMousePosX) - StretchX(MAP_CENTER_X)) / StretchX(MAP_CENTER_X) * 128.0f);
                     }
                     if (m_nMousePosY < RsGlobal.maximumHeight / 2) {
-                        panY = static_cast<int16>(float(m_nMousePosY) / StretchY(MAP_CENTER_Y) * 128.0f - 128.0f);
+                        panY = NOTSA_FTOL(int16, float(m_nMousePosY) / StretchY(MAP_CENTER_Y) * 128.0f - 128.0f);
                     } else if (m_nMousePosY > RsGlobal.maximumHeight / 2) {
-                        panY = static_cast<int16>((float(m_nMousePosY) - StretchY(MAP_CENTER_Y)) / StretchY(MAP_CENTER_Y) * 128.0f);
+                        panY = NOTSA_FTOL(int16, (float(m_nMousePosY) - StretchY(MAP_CENTER_Y)) / StretchY(MAP_CENTER_Y) * 128.0f);
                     }
                 } else {
                     // 0x577F95 - No LMB: marker tracks the mouse cursor, no panning
@@ -891,7 +891,7 @@ void CMenuManager::CheckSliderMovement(int32 LeftRight) {
 
     switch (item.m_nActionType) {
     case MENU_ACTION_BRIGHTNESS:
-        m_PrefsBrightness = std::clamp<int32>(LeftRight * int32(363.0f * ExeRecip(15.0f)) + m_PrefsBrightness, 0, 384);
+        m_PrefsBrightness = std::clamp<int32>(LeftRight * NOTSA_FTOL(int32, 363.0f * ExeRecip(15.0f)) + m_PrefsBrightness, 0, 384);
         SetBrightness((float)m_PrefsBrightness, false);
         break;
     case MENU_ACTION_RADIO_VOL: {

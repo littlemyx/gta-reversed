@@ -12,6 +12,15 @@ using uint8 = uint8_t; using uint16 = uint16_t; using uint32 = uint32_t; using u
 using int8 = int8_t; using int16 = int16_t; using int32 = int32_t; using int64 = int64_t;
 using GxtChar = uint16;
 #define PLUGIN_API
+// MAC-FTOL2: the real headers spell float -> integer casts NOTSA_FTOL(T, expr) (Base.h)
+#ifdef NOTSA_PORTABLE
+#include "game_sa/Core/Fp.h"
+#define NOTSA_FTOL(T, ...) (::notsa::fp::FtolCast<T>(__VA_ARGS__))
+#define NOTSA_FTOL_SC(T, ...) (::notsa::fp::FtolCast<T>(__VA_ARGS__))
+#else
+#define NOTSA_FTOL(T, ...) (T)(__VA_ARGS__)
+#define NOTSA_FTOL_SC(T, ...) static_cast<T>(__VA_ARGS__)
+#endif
 #define NOTSA_UNPAREN(...) __VA_ARGS__
 #define NOTSA_GLOBAL_EXTERN(name, type) extern std::type_identity_t<NOTSA_UNPAREN type> name
 #define VALIDATE_SIZE_FILE(struc, size) static_assert(sizeof(struc) == size, "Invalid structure size of " #struc)

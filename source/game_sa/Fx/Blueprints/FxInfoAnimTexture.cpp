@@ -34,5 +34,5 @@ void FxInfoAnimTexture_c::GetValue(float currentTime, float mult, float totalTim
 
     auto& render = *static_cast<RenderInfo_t*>(info);
     render.m_bHasAnimTextures = true;
-    render.m_nCurrentTexId = static_cast<int8>(values[0]);
+    render.m_nCurrentTexId = NOTSA_FTOL(int8, values[0]);
 }

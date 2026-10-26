@@ -49,6 +49,12 @@ void* FxMemoryPool_c::GetMem(int32 size, int32 align) {
 
 // 0x4A9CD0
 void FxMemoryPool_c::Optimise() {
+#ifdef NOTSA_PORTABLE
+    // STAB1: the exe's heap (CMemoryMgr::Realloc) shrinks a block IN PLACE; the platform realloc is allowed to move it (ASan always does), and every blueprint / system
+    // carved out of the pool by GetMem() (FxManager_c::m_FxSystemBPs, ...) keeps pointing into the old block (heap use-after-free in FindFxSystemBP). Keep the block, shrink only the size.
+    m_nSize = m_nPosition;
+#else
     m_pData = static_cast<uint8*>(CMemoryMgr::Realloc(m_pData, m_nPosition));
     m_nSize = m_nPosition;
+#endif
 }

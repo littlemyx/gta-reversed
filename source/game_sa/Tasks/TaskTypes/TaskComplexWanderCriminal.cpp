@@ -21,7 +21,7 @@ void CTaskComplexWanderCriminal::ScanForStuff(CPed* ped) {
     if (!m_TaskTimer.IsStarted()) {
         m_TaskTimer.Start(50);
         // NOTE: The original multiplies by -30000.0f (0x870110) and *subtracts* the truncated result => `now + [0, 30000)`
-        m_nMinNextScanTime = CTimer::GetTimeInMS() - (uint32)(int32)((x87d)(CGeneral::GetRandomNumber() & 0xFFFF) * ((x87d)1.0 / (x87d)32768.0) * -(x87d)30000.0);
+        m_nMinNextScanTime = CTimer::GetTimeInMS() - (uint32)NOTSA_FTOL(int32, (x87d)(CGeneral::GetRandomNumber() & 0xFFFF) * ((x87d)1.0 / (x87d)32768.0) * -(x87d)30000.0);
     }
 
     if (m_TaskTimer.IsOutOfTime()) {

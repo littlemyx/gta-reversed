@@ -129,6 +129,26 @@
                 "GTASA_USE_SDL3": "ON",
                 "GTASA_UNITY_BUILD": "OFF"
             }
+        },
+        {
+            "name": "PortableWin64",
+            "displayName": "Portable build, Windows x64 (MSVC cl.exe, native or msvc-wine): GTASA_PORTABLE=ON, librw GL3 + SDL3, real Windows SDK headers",
+            "description": "MAC-WIN64 (.notes/reports/MAC-WIN64.md). Windows x64 twin of PortableMac/PortableLinux: same portable code paths (x87 lifted branches, SDL3 app layer, librw GL3, FileRecord 64-bit guards), but the real Windows SDK headers instead of source/portable/winshim, and the original Win32 OS services (oswrapper_win, overlapped CdStream, Media Foundation decoders, DirectSound). Deps: tools/portable/win64/conan_install_win64.sh (profile conan/profiles/windows-x64-msvc.txt; on a Mac/Linux box with msvc-wine tools/portable/win64/conanprofile-wine.txt, see tools/portable/win64/README.txt), then `cmake --preset PortableWin64 && ninja -C build/PortableWin64 -k 0`. Needs the msvc x64 environment (cl.exe/link.exe on PATH + INCLUDE/LIB: an x64 Native Tools shell, or the wine toolchain file) when not configured through the Conan toolchain.",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/PortableWin64",
+            "toolchainFile": "${sourceDir}/build/PortableWin64/generators/conan_toolchain.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_POLICY_DEFAULT_CMP0091": "NEW",
+                "GTASA_STANDALONE": "ON",
+                "GTASA_STANDALONE_DUMP_HOOKS_ONLY": "OFF",
+                "GTASA_PORTABLE": "ON",
+                "GTASA_STANDALONE_RELEASE": "ON",
+                "GTASA_NO_EDIT_AND_CONTINUE": "ON",
+                "GTASA_WITH_SCRIPT_COMMAND_HOOKS": "OFF",
+                "GTASA_USE_SDL3": "ON",
+                "GTASA_UNITY_BUILD": "OFF"
+            }
         }
     ],
     "include": [

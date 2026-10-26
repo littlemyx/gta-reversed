@@ -188,7 +188,7 @@ void CPickups::DoCollectableEffects(CEntity* entity) {
 
     if (const auto d = DistanceBetweenPoints(TheCamera.GetPosition(), entityPos); d < 14.0f) {
         // shade of gray
-        const auto t = (uint8)((X87R(x87::sin((float)(((uint16)std::bit_cast<uintptr_t>(entity) + (uint16)CTimer::GetTimeInMS()) % 2048) * 0.0030664064f) + 1.0f)) / 2.0f * ((14.0f - d) * ExeRecip(14.0f)) * 255.0f);
+        const auto t = NOTSA_FTOL(uint8, (X87R(x87::sin((float)(((uint16)std::bit_cast<uintptr_t>(entity) + (uint16)CTimer::GetTimeInMS()) % 2048) * 0.0030664064f) + 1.0f)) / 2.0f * ((14.0f - d) * ExeRecip(14.0f)) * 255.0f);
 
         CShadows::StoreStaticShadow(
             NOTSA_PTR_ID32(entity),
@@ -243,7 +243,7 @@ void CPickups::DoMineEffects(CEntity* entity) {
 
     if (const auto d = DistanceBetweenPoints(TheCamera.GetPosition(), entityPos); d < 20.0f) {
         // shade of red
-        const auto t = (uint8)((X87R(x87::sin((float)(((uint16)std::bit_cast<uintptr_t>(entity) + (uint16)CTimer::GetTimeInMS()) % 512) * 0.012265625f) + 1.0f)) / 2.0f * ((20.0f - d) * ExeRecip(20.0f)) * 64.0f);
+        const auto t = NOTSA_FTOL(uint8, (X87R(x87::sin((float)(((uint16)std::bit_cast<uintptr_t>(entity) + (uint16)CTimer::GetTimeInMS()) % 512) * 0.012265625f) + 1.0f)) / 2.0f * ((20.0f - d) * ExeRecip(20.0f)) * 64.0f);
 
         CShadows::StoreStaticShadow(
             NOTSA_PTR_ID32(entity),
@@ -336,14 +336,14 @@ void CPickups::DoPickUpEffects(CEntity* entity) {
             obj->objectFlags.bDoNotRender = true;
             if (CClock::GetGameClockHours() < 5 || CPostEffects::IsVisionFXActive()) {
                 // 0x859B60 = -50.0f
-                const auto alphaRoll = 100 - (int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f) * -50.0f);
+                const auto alphaRoll = 100 - NOTSA_FTOL(int32, (float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f) * -50.0f);
                 const auto size      = (X87R(x87::sin((float)(CTimer::GetTimeInMS() & 0x1FFF) * 0.00076660159f) + 1.7f)) * 3.7f;
                 CCoronas::RegisterCorona(
                     NOTSA_EXE_OR([] { static char s_SharedCoronaId; return (uint32)(uintptr_t)&s_SharedCoronaId; }(), (uint32)(uintptr_t)obj + 1), // NOTSA: original passed the address of a stack slot of this function here (0x45584B `lea eax, [esp+0x85]`: the SAME id for every pickup, so they share one corona; the run build shares one id as well; NOTSA-AUDIT)
                     nullptr,
                     (uint8)alphaRoll,
-                    (uint8)(int32)((float)alphaRoll * 0.7f),
-                    (uint8)(int32)((float)alphaRoll * 0.7f),
+                    (uint8)NOTSA_FTOL(int32, (float)alphaRoll * 0.7f),
+                    (uint8)NOTSA_FTOL(int32, (float)alphaRoll * 0.7f),
                     255,
                     obj->GetPosition(),
                     size,
@@ -422,7 +422,7 @@ void CPickups::DoPickUpEffects(CEntity* entity) {
                 msg.color.r = color.r;
                 msg.color.g = color.g;
                 msg.color.b = color.b;
-                msg.color.a = (uint8)(int32)((1.0f - dist * ExeRecip(14.0f)) * 255.0f);
+                msg.color.a = (uint8)NOTSA_FTOL(int32, (1.0f - dist * ExeRecip(14.0f)) * 255.0f);
 
                 if (obj->objectFlags.bPickupInShopOutOfStock) {
                     msg.flags |= 1;
@@ -665,7 +665,7 @@ bool CPickups::GivePlayerGoodiesWithPickUpMI(uint16 modelId, int32 playerId) {
 
     if (modelId == MI_PICKUP_HEALTH) {
         auto maxHealth = FindPlayerInfo(playerId).m_nMaxHealth;
-        CStats::UpdateStatsAddToHealth((uint32)((float)maxHealth - ped->m_fHealth));
+        CStats::UpdateStatsAddToHealth(NOTSA_FTOL(uint32, (float)maxHealth - ped->m_fHealth));
         ped->m_fHealth = (float)maxHealth;
         AudioEngine.ReportFrontendAudioEvent(AE_FRONTEND_PICKUP_HEALTH);
         return true;
@@ -765,7 +765,7 @@ void CPickups::PickedUpHorseShoe() {
         CGarages::TriggerMessage("HO_ALL");
         FindPlayerInfo().m_nMoney += 100'000; // originally rewarded to the player 1.
     } else {
-        CGarages::TriggerMessage("HO_ONE", static_cast<int16>(collected), 5000u, static_cast<int16>(total));
+        CGarages::TriggerMessage("HO_ONE", NOTSA_FTOL(int16, collected), 5000u, NOTSA_FTOL(int16, total));
     }
 }
 
@@ -782,7 +782,7 @@ void CPickups::PickedUpOyster() {
         CGarages::TriggerMessage("OY_ALL");
         FindPlayerInfo().m_nMoney += 100'000; // originally rewarded to the player 1.
     } else {
-        CGarages::TriggerMessage("OY_ONE", static_cast<int16>(collected), 5000u, static_cast<int16>(total));
+        CGarages::TriggerMessage("OY_ONE", NOTSA_FTOL(int16, collected), 5000u, NOTSA_FTOL(int16, total));
     }
 }
 
@@ -823,7 +823,7 @@ void CPickups::PictureTaken() {
         CGarages::TriggerMessage("SN_ALL");
         FindPlayerInfo().m_nMoney += 100'000;
     } else {
-        CGarages::TriggerMessage("SN_ONE", static_cast<int16>(taken), 5000u, static_cast<int16>(total));
+        CGarages::TriggerMessage("SN_ONE", NOTSA_FTOL(int16, taken), 5000u, NOTSA_FTOL(int16, total));
     }
 }
 

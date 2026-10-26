@@ -1097,7 +1097,7 @@ void CEventHandler::ComputeDamageResponse(CEventDamage* e, CTask* tactive, CTask
                 m_PhysicalResponseTask = new CTaskComplexFallAndGetUp{ // 0x4C047E
                     e->GetAnimId(),
                     e->GetAnimGroup(),
-                    (int32)(1000.f / ((float)m_Ped->m_nWeaponShootingRate * ExeRecip(40.f)))
+                    NOTSA_FTOL(int32, 1000.f / ((float)m_Ped->m_nWeaponShootingRate * ExeRecip(40.f)))
                 };
             } else if (!notsa::contains({ ANIM_ID_NO_ANIMATION_SET, ANIM_ID_DOOR_LHINGE_O }, e->m_nAnimID)) { // 0x4C0488: cmp id, 0xBF / 0xC0 -> skip (no response task)
                 // (The port used to fold the 0xBF/0xC0 sentinels into the CTaskComplexFallAndGetUp branch above: a CEventDamage whose
@@ -1125,7 +1125,7 @@ void CEventHandler::ComputeDamageResponse(CEventDamage* e, CTask* tactive, CTask
                         eventSrcPed,
                         e->m_pedPieceType,
                         e->m_ucDirection,
-                        (int32)e->GetDamageResponse().GetTotalDamage()
+                        NOTSA_FTOL(int32, e->GetDamageResponse().GetTotalDamage())
                     };
                     m_PhysicalResponseTask = tBeHit;
 
@@ -1577,7 +1577,7 @@ void CEventHandler::ComputeKnockOffBikeResponse(CEvent* e, CTask* tactive, CTask
         const auto moveSpeed = CVector{ veh->m_vecMoveSpeed.x * 0.75f, veh->m_vecMoveSpeed.y * 0.75f, veh->m_vecMoveSpeed.z * 0.75f };
 
         // `rand() & 0xFFFF` * (1/32768) * 4 => [0, 4)
-        const auto dir = (uint8)(int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.f / 32768.f) * 4.f);
+        const auto dir = (uint8)NOTSA_FTOL(int32, (float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.f / 32768.f) * 4.f);
         const auto impactDir = GetKnockOffImpactDir(dir);
 
         knockOffEvent = CEventKnockOffBike{

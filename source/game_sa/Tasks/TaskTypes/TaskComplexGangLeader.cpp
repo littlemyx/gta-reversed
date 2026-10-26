@@ -194,7 +194,7 @@ bool CTaskComplexGangLeader::MakeAbortable(CPed* ped, eAbortPriority priority, C
 CTask* CTaskComplexGangLeader::CreateNextSubTask(CPed* ped) {
     // The original scales `rand() & 0xFFFF` by 1/32768 (0x858B14) and by the range, all on the x87 stack, then truncates
     const auto RandScaled = [](double range) {
-        return (int32)(X87R((x87d)CGeneral::GetRandomNumber() * (x87d)(1.f / 32768.f) * range));
+        return NOTSA_FTOL(int32, X87R((x87d)CGeneral::GetRandomNumber() * (x87d)(1.f / 32768.f) * range));
     };
 
     auto& membership = m_gang->GetMembership();
@@ -285,7 +285,7 @@ CTask* CTaskComplexGangLeader::ControlSubTask(CPed* ped) {
 
     // If ped isn't already looking at someone, find a random meber to look at them
     // 0x662574 - `(int)(r * 100) > 95`, i.e. 4% (NOT 5%)
-    if (!g_ikChainMan.IsLooking(ped) && (int32)((x87d)CGeneral::GetRandomNumber() * (x87d)(1.f / 32768.f) * (x87d)100.0) > 95) {
+    if (!g_ikChainMan.IsLooking(ped) && NOTSA_FTOL(int32, (x87d)CGeneral::GetRandomNumber() * (x87d)(1.f / 32768.f) * (x87d)100.0) > 95) {
         // NOTE: Order of the random calls is the same as in the original: look time first, then the member slot
         const auto lookTime = CGeneral::GetRandomNumberInRange(3000, 5000);
         if (const auto mem = m_gang->GetMembership().GetMember(CGeneral::GetRandomNumberInRange(0, 8))) { // Random slot, may be empty

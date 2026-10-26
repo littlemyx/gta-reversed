@@ -116,7 +116,7 @@ bool InteriorManager_c::Update() {
             const auto& fxPos = ifx.Entity->GetPosition();
 
             i->m_box        = ifx.Effects[k];
-            i->m_interiorId = (uint32)(fxPos.x * fxPos.y * fxPos.z) + ifx.FxIds[k];
+            i->m_interiorId = NOTSA_FTOL(uint32, fxPos.x * fxPos.y * fxPos.z) + ifx.FxIds[k];
             i->m_areaCode   = ifx.Entity->GetAreaCode();
             i->m_pGroup     = grp;
 
@@ -275,7 +275,7 @@ size_t InteriorManager_c::GetVisibleEffects(InteriorEffectInfo_t* intFxInfos, ui
                 .Entity   = e,
                 .NumFx    = 1,
                 .Effects  = { ifx },
-                .FxIds    = { i },
+                .FxIds    = { (uint32)i },
                 .IsCulled = false,
             };
 

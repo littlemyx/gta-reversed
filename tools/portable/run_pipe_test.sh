@@ -37,6 +37,8 @@ while i < len(c):
 print(' '.join(shlex.quote(k) for k in keep))
 PY
 )
+# rtquat.cpp (no StdInc.h) uses X87W from source/Base.h; portable meaning = widen to double (R-10: the F-loop 3 commit left this test build without it)
+BASE="$BASE '-DX87W(...)=((double)(__VA_ARGS__))'"
 [ -n "$BASE" ] || { echo "no compile flags (build/PortableMac/compile_commands.json missing?)"; exit 1; }
 INC="-I$S/fakerw -I$S -I$S/portable/winshim -I$S/game_sa -I$S/game_sa/RenderWare -I$S/game_sa/RenderWare/rw -I${LIBRW_SRC:-$REPO/vendor/librw} -isystem $SDL3/include"
 FILES=("$REPO/tests/portable/rw_pipeline_gl_test.cpp" "$S/portable/render/pipelines_gl3.cpp" "$S/portable/render/pipelines_carenv_gl3.cpp" "$S/portable/render/texture_gl3.cpp" "$S/portable/render/engine_gl3.cpp" "$S/portable/render/platform_gl3.cpp"

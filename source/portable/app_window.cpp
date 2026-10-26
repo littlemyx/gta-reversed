@@ -13,6 +13,7 @@
 #include "app_present_mac.h"
 #include "app_present_pacer.h"
 #include "app_window.h"
+#include "posix_compat_win.h"
 #include "MenuManager.h"
 
 namespace notsa::portable {

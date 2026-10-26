@@ -1,0 +1,306 @@
+diff --git a/source/game_sa/Animation/AnimBlendNode.h b/source/game_sa/Animation/AnimBlendNode.h
+index 56dd533d..0131049f 100644
+--- a/source/game_sa/Animation/AnimBlendNode.h
++++ b/source/game_sa/Animation/AnimBlendNode.h
+@@ -259,6 +259,10 @@ public:
+         const x87d blendExt = AnimBlendNodeX87::BlendAmountExt(m_BlendAssoc, weight);
+         const float  blend    = (float)blendExt;
+         if (IsCompressed ? blendExt > 0.0 : blend > 0.0f) {
++            if (m_KFCurr < 0 || m_KFPrev < 0 || m_KFCurr >= m_Seq->m_FramesNum || m_KFPrev >= m_Seq->m_FramesNum) { // RACE1-DIAG
++                static int cnt = 0;
++                if (cnt++ < 10) { fprintf(stderr, "RACE1 AnimNode OOB cur=%d prev=%d frames=%d rem=%g step=%g flags=%x cmp=%d\n", (int)m_KFCurr, (int)m_KFPrev, (int)m_Seq->m_FramesNum, m_KFRemainingTime, m_BlendAssoc->m_TimeStep, (unsigned)m_BlendAssoc->m_Flags, (int)IsCompressed); fflush(stderr); }
++            }
+             const auto kfA = m_Seq->GetKeyFrame<IsCompressed>(m_KFCurr);
+             const auto kfB = m_Seq->GetKeyFrame<IsCompressed>(m_KFPrev);
+ 
+diff --git a/source/game_sa/CutsceneMgr.cpp b/source/game_sa/CutsceneMgr.cpp
+index 77fbf299..a83b4d0d 100644
+--- a/source/game_sa/CutsceneMgr.cpp
++++ b/source/game_sa/CutsceneMgr.cpp
+@@ -88,6 +88,79 @@ RpAtomic* CalculateBoundingSphereRadiusCB(RpAtomic* atomic, void* data) {
+     return atomic;
+ }
+ 
++extern "C" void rwdiag_dump(void* p); // RACE1-DIAG
++
++// RACE1-DIAG begin
++namespace {
++struct RaceSeqSum { CAnimBlendSequence* seq; void* frames; size_t bytes; uint64 sum; int hier; int idx; std::vector<uint8> copy; bool comp; };
++std::vector<RaceSeqSum> g_raceSums;
++uint64 RaceSumBytes(const void* p, size_t n) { uint64 h = 1469598103934665603ull; for (size_t i = 0; i < n; i++) { h = (h ^ ((const uint8*)p)[i]) * 1099511628211ull; } return h; }
++// ANIM1-DIAG: the engine legitimately flips the sign of a whole key-frame rotation in place (CalcThetaFromQuats / CalcDeltasCompressed), so hash |rot|, delta time and translation only
++uint64 RaceSumSeq(const CAnimBlendSequence& sq) {
++    uint64 h = 1469598103934665603ull;
++    const auto mix = [&](const void* p, size_t n) { for (size_t i = 0; i < n; i++) { h = (h ^ ((const uint8*)p)[i]) * 1099511628211ull; } };
++    const auto stride = sq.GetDataSize(sq.m_bIsCompressed) / std::max<size_t>(1, sq.m_FramesNum);
++    for (int f = 0; f < (int)sq.m_FramesNum; f++) {
++        const uint8* k = (const uint8*)sq.m_Frames + f * stride;
++        if (sq.m_bIsCompressed) {
++            if (stride > 10) mix(k + 10, stride - 10); // rot (8) and delta time (2, absolute stamps until the lazy CalcTotalTimeCompressed) are legitimately rewritten
++        } else {
++            const float* r = (const float*)k;
++            for (int c = 0; c < 4; c++) { const float a = std::fabs(r[c]); mix(&a, 4); }
++            mix(k + 16, stride - 16);
++        }
++    }
++    return h;
++}
++void RaceScanSeq(CAnimBlendSequence& sq, int hier, int idx, const char* why) { // ANIM1-DIAG
++    if (sq.m_bIsCompressed) return;
++    int bad = 0;
++    for (int f = 0; f < (int)sq.m_FramesNum; f++) {
++        const auto* k = sq.GetUKeyFrame(f);
++        const float n2 = k->Rot.x * k->Rot.x + k->Rot.y * k->Rot.y + k->Rot.z * k->Rot.z + k->Rot.w * k->Rot.w;
++        bool b = !(std::fabs(n2 - 1.f) < 0.1f) || !(k->DeltaTime >= 0.f && k->DeltaTime < 20.f);
++        if (sq.m_bHasTranslation) { const CVector& t = k->Trans; b = b || !(std::fabs(t.x) < 1e4f && std::fabs(t.y) < 1e4f && std::fabs(t.z) < 1e4f); }
++        if (b && bad++ < 3) fprintf(stderr, "ANIM1 SCAN %s: hier=%d seq=%d frame=%d/%d hasT=%d ext=%d ptr=%p rot=(%g %g %g %g) dt=%g\n", why, hier, idx, f, (int)sq.m_FramesNum, (int)sq.m_bHasTranslation, (int)sq.m_bUsingExternalMemory, sq.m_Frames, k->Rot.x, k->Rot.y, k->Rot.z, k->Rot.w, k->DeltaTime);
++    }
++    if (bad) { fprintf(stderr, "ANIM1 SCAN %s: hier=%d seq=%d %d bad frames of %d\n", why, hier, idx, bad, (int)sq.m_FramesNum); fflush(stderr); }
++}
++void RaceSnapshotAnims() {
++    g_raceSums.clear();
++    const CAnimBlock* ab = nullptr;
++    for (auto& b : CAnimManager::GetAnimBlocks()) ab = &b;
++    if (!ab) return;
++    fprintf(stderr, "RACE1 snapshot block %s first=%d num=%u\n", ab->Name, (int)ab->FirstAnimIdx, (unsigned)ab->NumAnims);
++    for (uint32 a = 0; a < ab->NumAnims; a++) {
++        auto& h = CAnimManager::GetAnimation((AnimationId)(ab->FirstAnimIdx + a));
++        for (int i = 0; i < (int)h.m_nSeqCount; i++) {
++            auto& sq = h.m_pSequences[i];
++            if (!sq.m_Frames) continue;
++            const size_t bytes = sq.GetDataSize(sq.m_bIsCompressed);
++            if (getenv("NOTSA_ANIM1_JUNK") && !sq.m_bIsCompressed && sq.m_bHasTranslation && sq.m_FramesNum > 10) { // ANIM1-DIAG: synthetic exporter junk in the last key frame
++                auto* lk = sq.GetUKeyFrame(sq.m_FramesNum - 1); lk->Trans = CVector{2.9e29f, 1.8e28f, 8.0f};
++            }
++            g_raceSums.push_back({&sq, sq.m_Frames, bytes, RaceSumSeq(sq), (int)a, i, std::vector<uint8>((uint8*)sq.m_Frames, (uint8*)sq.m_Frames + bytes), (bool)sq.m_bIsCompressed});
++            RaceScanSeq(sq, (int)a, i, "load"); // ANIM1-DIAG
++        }
++    }
++    fprintf(stderr, "RACE1 snapshot %zu sequences\n", g_raceSums.size()); fflush(stderr);
++}
++void RaceVerifyAnims(const char* why) {
++    int bad = 0;
++    for (auto& r : g_raceSums) {
++        const auto cur = RaceSumSeq(*r.seq);
++        if (r.seq->m_Frames != r.frames || cur != r.sum) {
++            if (bad < 6 && r.seq->m_Frames == r.frames && r.bytes == r.copy.size()) { // ANIM1-DIAG: first differing frame / byte offsets
++                const size_t stride = r.bytes / std::max<int>(1, r.seq->m_FramesNum); int nd = 0;
++                for (size_t b = 0; b < r.bytes && nd < 6; b++) if (((uint8*)r.frames)[b] != r.copy[b]) { fprintf(stderr, "ANIM1 DIFF hier=%d seq=%d comp=%d->%d byte %zu (frame %zu off %zu of stride %zu): %02x -> %02x\n", r.hier, r.idx, (int)r.comp, (int)r.seq->m_bIsCompressed, b, b / stride, b % stride, stride, r.copy[b], ((uint8*)r.frames)[b]); nd++; }
++            }
++            if (bad++ < 6) fprintf(stderr, "RACE1 ANIMSUM %s: hier=%d seq=%d changed frames %p->%p bytes=%zu nframes=%d hasT=%d\n", why, r.hier, r.idx, r.frames, r.seq->m_Frames, r.bytes, (int)r.seq->m_FramesNum, (int)r.seq->m_bHasTranslation);
++        }
++    }
++    if (bad) { fprintf(stderr, "RACE1 ANIMSUM %s: %d of %zu sequences changed\n", why, bad, g_raceSums.size()); fflush(stderr); }
++}
++}
++// RACE1-DIAG end
+ // 0x5B01E0
+ void CCutsceneMgr::UpdateCutsceneObjectBoundingBox(RpClump* clump, eModelID modelId) {
+     assert(IsModelIDForCutScene(modelId));
+@@ -97,6 +170,26 @@ void CCutsceneMgr::UpdateCutsceneObjectBoundingBox(RpClump* clump, eModelID mode
+     float radius = 0.f;
+     RpClumpForAllAtomics(clump, CalculateBoundingSphereRadiusCB, &radius);
+ 
++    if (!(radius < 1000.f)) { // RACE1-DIAG
++        static int cnt = 0;
++        if (cnt++ < 4) {
++            RaceVerifyAnims("atBAD");
++            fprintf(stderr, "RACE1 CutObjBB BAD model=%d radius=%g csTimer=%g ts=%g frame=%u\n", (int)modelId, radius, ms_cutsceneTimerS, CTimer::GetTimeStep(), (unsigned)CTimer::m_FrameCounter);
++            RpClumpForAllAtomics(clump, +[](RpAtomic* a, void*) -> RpAtomic* {
++                const auto sp = RpAtomicGetBoundingSphere(a);
++                fprintf(stderr, "RACE1   atomic %p sphere c=(%g %g %g) r=%g geo=%p\n", (void*)a, sp->center.x, sp->center.y, sp->center.z, sp->radius, (void*)RpAtomicGetGeometry(a));
++                int d = 0;
++                for (RwFrame* f = RpAtomicGetFrame(a); f && d < 12; f = RwFrameGetParent(f), d++) {
++                    const auto m = RwFrameGetMatrix(f);
++                    { const unsigned char* b = (const unsigned char*)f; if (m->pos.x > 1e10f || m->pos.x < -1e10f) { fprintf(stderr, "RACE1 RAW frame %p:", (void*)f); for (int i = 0; i < 256; i++) fprintf(stderr, "%02x%s", b[i], (i % 16 == 15) ? "\n      " : " "); fprintf(stderr, "\nRACE1 ASCII: "); for (int i = 0; i < 256; i++) fputc((b[i] >= 32 && b[i] < 127) ? b[i] : '.', stderr); fprintf(stderr, "\n"); } }
++                    fprintf(stderr, "RACE1     frame%d %p right=(%g %g %g) up=(%g %g %g) at=(%g %g %g) pos=(%g %g %g)\n", d, (void*)f, m->right.x, m->right.y, m->right.z, m->up.x, m->up.y, m->up.z, m->at.x, m->at.y, m->at.z, m->pos.x, m->pos.y, m->pos.z);
++                }
++                return a;
++            }, nullptr);
++            fflush(stderr);
++        }
++    }
++    if (getenv("NOTSA_ANIM1_BBOX") && ms_cutsceneTimerS > 6.f) radius = 1.8e19f; // ANIM1-DIAG: what the junk key frame produces (sqrt(FLT_MAX))
+     // Now update the col model with it
+     auto& cm = CTempColModels::ms_colModelCutObj[modelId - MODEL_CUTOBJ01];
+     cm.GetBoundingSphere().m_fRadius = radius;
+@@ -474,6 +567,7 @@ void CCutsceneMgr::LoadCutsceneData_postload() {
+             RwStreamSkip(stream, pos.Offset * STREAMING_SECTOR_SIZE);
+             CAnimManager::LoadAnimFile(stream, 1, ms_aUncompressedCutsceneAnims.data());
+ 
++            RaceSnapshotAnims(); // RACE1-DIAG
+             // Now create the anims in memory
+             assert(ms_cLoadAnimName.size() == ms_cLoadObjectName.size());
+             assert(std::size(ms_cLoadAnimName[0]) == std::size(ms_cLoadObjectName[0]));
+@@ -1066,6 +1160,7 @@ void CCutsceneMgr::Update_overlay() {
+             ms_currTextOutput++;
+         }
+ 
++        { static unsigned lastChk = 0; if ((unsigned)CTimer::m_FrameCounter - lastChk >= 20) { lastChk = CTimer::m_FrameCounter; RaceVerifyAnims("periodic"); } } // RACE1-DIAG
+         // Update cutscene specific model bounding boxes
+         for (const auto csobj : ms_pCutsceneObjects | rngv::take(ms_numCutsceneObjs)) {
+             if (IsModelIDForCutScene(csobj->GetModelId())) {
+diff --git a/source/game_sa/Entity/Object/CutsceneObject.cpp b/source/game_sa/Entity/Object/CutsceneObject.cpp
+index 1ae72ee8..a66bfa45 100644
+--- a/source/game_sa/Entity/Object/CutsceneObject.cpp
++++ b/source/game_sa/Entity/Object/CutsceneObject.cpp
+@@ -61,6 +61,17 @@ void CCutsceneObject::ProcessControl() {
+             auto* hierarchy = GetAnimHierarchyFromClump(m_pAttachmentObject->GetRpClump());
+             auto* matArr = RpHAnimHierarchyGetMatrixArray(hierarchy);
+             const auto boneMat = CMatrix(&matArr[m_nAttachBone], false);
++            { // RACE1-DIAG
++                const auto& p = boneMat.GetPosition();
++                if (!std::isfinite(p.x + p.y + p.z) || std::abs(p.x) + std::abs(p.y) + std::abs(p.z) > 20000.f) {
++                    static int cnt = 0;
++                    if (cnt++ < 20) {
++                        fprintf(stderr, "RACE1 CutsceneObject::ProcessControl BAD bone matrix this=%p model=%d bone=%d host=%p hier=%p pos=(%g %g %g) frame=%u ts=%g\n",
++                            (void*)this, (int)m_nModelIndex, (int)m_nAttachBone, (void*)m_pAttachmentObject, (void*)hierarchy, p.x, p.y, p.z, (unsigned)CTimer::m_FrameCounter, CTimer::GetTimeStep());
++                        fflush(stderr);
++                    }
++                }
++            }
+             *static_cast<CMatrix*>(m_matrix) = boneMat;
+         } else {
+             auto* pLtm = RwFrameGetLTM(m_pAttachToFrame);
+diff --git a/source/game_sa/Entity/Physical.cpp b/source/game_sa/Entity/Physical.cpp
+index 77c0b803..59e0f10b 100644
+--- a/source/game_sa/Entity/Physical.cpp
++++ b/source/game_sa/Entity/Physical.cpp
+@@ -11,6 +11,8 @@
+ #include "Glass.h"
+ #include "TaskSimpleClimb.h"
+ #include "RealTimeShadowManager.h"
++#include "CutsceneMgr.h" // RACE1-DIAG
++#include "Core/Fp.h"
+ 
+ // NOTSA: Defined in `CarCtrl.cpp`. Returns the (x87) unrounded result of `CCarCtrl::FindGhostRoadHeight` (0x422370)
+ double FindGhostRoadHeightOriginal(CVehicle* vehicle);
+@@ -75,7 +77,18 @@ void PhysicalApplyForceImpl(CPhysical& p, const CVector& force, CVector point, C
+ 
+ // Sector index calculation as done by `Add`/`RemoveAndAdd` (`floor(v * 0.02f + 60.0f)`, constants at 0x858B38 and 0x858B34)
+ int32 PhysicalGetSectorIdx(float v) {
++#ifdef NOTSA_PORTABLE
++    // The exe converts with floor (0x8219F0) + `_ftol2` (0x821B40): `fistp qword`, LOW dword returned (see notsa::fp::Ftol). A plain `static_cast<int32>` saturates on arm64 and is UB
++    // for huge values. Those do occur: the cutscene IFPs (PROLOG1: csplay / csstew / cstaxi92 ...) keep uninitialised exporter memory in the LAST key frame of many sequences
++    // (rotation / translation of 1e22..1e38, text like "bump_front_"); it is evaluated for the last frames of the cutscene, the object bound rect becomes +-1.8e19 and the exe's
++    // wrap makes both sector bounds 0 (float ulp > 2^32 => low dword 0) => ONE iteration, whereas the saturated INT_MIN..INT_MAX range loops ~2^32 times and exhausts the
++    // CEntryInfoNode pool (new => null => AV in RemoveAndAdd). MAC-ANIM1, .notes/reports/MAC-ANIM1.md
++    static const bool oldCast = getenv("NOTSA_ANIM1_NOFIX") != nullptr; // ANIM1-DIAG
++    if (oldCast) return static_cast<int32>(std::floor(v * 0.02f + 60.0f)); // ANIM1-DIAG
++    return notsa::fp::Ftol(std::floor(v * 0.02f + 60.0f));
++#else
+     return static_cast<int32>(std::floor(v * 0.02f + 60.0f));
++#endif
+ }
+ 
+ // Original (0x4072A0) uses `& 0xF` (also for negative coordinates), while `CWorld::GetRepeatSector` uses `abs(c) % 16`, which differs for negative values
+@@ -236,6 +249,15 @@ void CPhysical::Add()
+     const auto minSectorY = PhysicalGetSectorIdx(rect.bottom);
+     const auto maxSectorX = PhysicalGetSectorIdx(rect.right);
+     const auto maxSectorY = PhysicalGetSectorIdx(rect.top);
++    { // RACE1-DIAG
++        static int cnt = 0;
++        if (((int64)maxSectorX - minSectorX > 6 || (int64)maxSectorY - minSectorY > 6 || maxSectorX < minSectorX || !std::isfinite(rect.left + rect.right + rect.top + rect.bottom)) && cnt++ < 20) {
++            fprintf(stderr, "RACE1 Add BAD this=%p type=%d model=%d rect=(%g %g %g %g) sec=(%d %d %d %d) pos=(%g %g %g) attached=%p frame=%u ts=%g cutscene=%d\n",
++                (void*)this, (int)GetType(), (int)m_nModelIndex, rect.left, rect.bottom, rect.right, rect.top, minSectorX, minSectorY, maxSectorX, maxSectorY,
++                GetPosition().x, GetPosition().y, GetPosition().z, (void*)m_pAttachedTo, (unsigned)CTimer::m_FrameCounter, CTimer::GetTimeStep(), (int)CCutsceneMgr::ms_running);
++            fflush(stderr);
++        }
++    }
+     for (int32 sectorY = minSectorY; sectorY <= maxSectorY; ++sectorY) {
+         for (int32 sectorX = minSectorX; sectorX <= maxSectorX; ++sectorX) {
+             auto& rs   = PhysicalGetRepeatSector(sectorX, sectorY);
+@@ -683,6 +705,29 @@ void CPhysical::RemoveAndAdd() {
+     const auto minSectorY = PhysicalGetSectorIdx(rect.bottom);
+     const auto maxSectorX = PhysicalGetSectorIdx(rect.right);
+     const auto maxSectorY = PhysicalGetSectorIdx(rect.top);
++    { // RACE1-DIAG pool usage
++        static unsigned lastFrame = ~0u; static int lastUsed = -1;
++        auto* np = GetEntryInfoNodePool(); auto* dp = GetPtrNodeDoubleLinkPool();
++        const int used = (int)np->GetNoOfUsedSpaces();
++        if (CCutsceneMgr::ms_running && ((unsigned)CTimer::m_FrameCounter / 30 != lastFrame / 30 || used > 400) && (used != lastUsed)) {
++            lastFrame = CTimer::m_FrameCounter; lastUsed = used;
++            fprintf(stderr, "RACE1 pools frame=%u eNode=%d/%d dbl=%d/%d this=%p type=%d model=%d rect=(%g %g %g %g) pos=(%g %g %g) ts=%g\n", lastFrame, used, (int)np->GetSize(), (int)dp->GetNoOfUsedSpaces(), (int)dp->GetSize(), (void*)this, (int)GetType(), (int)m_nModelIndex, rect.left, rect.bottom, rect.right, rect.top, GetPosition().x, GetPosition().y, GetPosition().z, CTimer::GetTimeStep());
++            fflush(stderr);
++        }
++    }
++    { // RACE1-DIAG
++        static int cnt = 0;
++        if (((int64)maxSectorX - minSectorX > 6 || (int64)maxSectorY - minSectorY > 6 || maxSectorX < minSectorX || !std::isfinite(rect.left + rect.right + rect.top + rect.bottom)) && cnt++ < 20) {
++            fprintf(stderr, "RACE1 RemoveAndAdd BAD this=%p type=%d model=%d rect=(%g %g %g %g) sec=(%d %d %d %d) pos=(%g %g %g) attached=%p frame=%u ts=%g cutscene=%d\n",
++                (void*)this, (int)GetType(), (int)m_nModelIndex, rect.left, rect.bottom, rect.right, rect.top, minSectorX, minSectorY, maxSectorX, maxSectorY,
++                GetPosition().x, GetPosition().y, GetPosition().z, (void*)m_pAttachedTo, (unsigned)CTimer::m_FrameCounter, CTimer::GetTimeStep(), (int)CCutsceneMgr::ms_running);
++            { auto* mi = CModelInfo::GetModelInfo(m_nModelIndex); auto* cm = mi->GetColModel();
++                fprintf(stderr, "RACE1 BAD detail: mi=%p key=%08x colModel=%p sphere=(%g %g %g r=%g) bb=(%g %g %g)-(%g %g %g) centre=(%g %g %g) level=%d\n", (void*)mi, (unsigned)mi->m_nKey, (void*)cm,
++                    cm->GetBoundCenter().x, cm->GetBoundCenter().y, cm->GetBoundCenter().z, cm->GetBoundRadius(), cm->GetBoundingBox().m_vecMin.x, cm->GetBoundingBox().m_vecMin.y, cm->GetBoundingBox().m_vecMin.z,
++                    cm->GetBoundingBox().m_vecMax.x, cm->GetBoundingBox().m_vecMax.y, cm->GetBoundingBox().m_vecMax.z, CEntity::GetBoundCentre().x, CEntity::GetBoundCentre().y, CEntity::GetBoundCentre().z, (int)cm->m_nColSlot); }
++                fflush(stderr);
++        }
++    }
+     for (int32 sectorY = minSectorY; sectorY <= maxSectorY; ++sectorY) {
+         for (int32 sectorX = minSectorX; sectorX <= maxSectorX; ++sectorX) {
+             auto& rs   = PhysicalGetRepeatSector(sectorX, sectorY);
+diff --git a/source/game_sa/MemoryMgr.cpp b/source/game_sa/MemoryMgr.cpp
+index b8b66fbf..ea2fecc0 100644
+--- a/source/game_sa/MemoryMgr.cpp
++++ b/source/game_sa/MemoryMgr.cpp
+@@ -4,6 +4,7 @@
+ #endif
+ 
+ #include <cstdlib>
++#include <malloc/malloc.h> // ANIM1-DIAG
+ 
+ #ifdef MEMORY_MGR_USE_MEMORY_HEAP
+ static CRITICAL_SECTION   gstrucMemoryHeapCS;
+@@ -256,6 +257,12 @@ void* CMemoryMgr::Malloc(uint32 size, uint32 nHint) {
+ #ifdef NOTSA_STATEHASH
+     if (notsa::rr::Active()) { return ::calloc(1, size); } // RR: zeroed (e.g. CAnimBlendClumpData::m_FrameDatas is read by the constructor's UpdateRpHAnim before any animation wrote it, RR_PLAN section 9.5)
+ #endif
++    { // ANIM1-DIAG
++        static const bool poison = getenv("NOTSA_MALLOC_POISON") != nullptr;
++        void* m = ::malloc(size);
++        if (poison && m) memset(m, 0x7F, size);
++        return m;
++    }
+     return ::malloc(size); // 0x72F420 => CRT malloc (0x824257)
+ #else
+     return plugin::CallAndReturn<void*, 0x72F420, size_t>(size);
+@@ -277,6 +284,10 @@ void CMemoryMgr::Free(void* memory) {
+     }
+     UNLOCK_MEMORYHEAP();
+ #elif defined(NOTSA_STANDALONE_RUN)
++    { // ANIM1-DIAG
++        static const bool poison = getenv("NOTSA_MALLOC_POISON") != nullptr;
++        if (poison && memory) memset(memory, 0x7E, malloc_size(memory));
++    }
+     ::free(memory); // 0x72F430 => CRT free (0x82413F)
+ #else
+     // The original (0x72F430) is a plain jump to the exe's CRT `free` (small block heap / HeapFree).
+diff --git a/source/game_sa/Plugins/RpAnimBlendPlugin/RpAnimBlend.cpp b/source/game_sa/Plugins/RpAnimBlendPlugin/RpAnimBlend.cpp
+index c790e964..7d4c8304 100644
+--- a/source/game_sa/Plugins/RpAnimBlendPlugin/RpAnimBlend.cpp
++++ b/source/game_sa/Plugins/RpAnimBlendPlugin/RpAnimBlend.cpp
+@@ -772,6 +772,23 @@ void FrameUpdateCallBackT(AnimBlendFrameData* fd, AnimBlendUpdateData* c) {
+         CVector t;
+         CQuaternion q;
+         const auto looped = node->I_Update<IsCompressed>(t, q, partialScale); // 0x4D06C0 / 0x4D08D0
++        if (node->GetSeq()->m_FramesNum == 42 && (node->GetAnimAssoc()->m_CurrentTime > 21.9f || CTimer::m_FrameCounter % 150 == 0)) { // ANIM1-DIAG trace of the taxi root near the end
++            static int cnt2 = 0;
++            if (cnt2++ < 400) { fprintf(stderr, "ANIM1 TRACE taxi curTime=%.5f total=%.5f step=%.5f cur=%d prev=%d rem=%g t=(%g %g %g) flags=%x blend=%g playing=%d frame=%u\n", node->GetAnimAssoc()->m_CurrentTime, node->GetAnimAssoc()->m_BlendHier->GetTotalTime(), node->GetAnimAssoc()->m_TimeStep, (int)node->m_KFCurr, (int)node->m_KFPrev, node->m_KFRemainingTime, t.x, t.y, t.z, (unsigned)node->GetAnimAssoc()->m_Flags, node->GetAnimAssoc()->m_BlendAmount, (int)node->GetAnimAssoc()->IsPlaying(), (unsigned)CTimer::m_FrameCounter); fflush(stderr); }
++        }
++        if (!(std::abs(t.x) < 1e6f && std::abs(t.y) < 1e6f && std::abs(t.z) < 1e6f)) { // RACE1-DIAG
++            static int cnt = 0;
++            if (cnt++ < 10) {
++                fprintf(stderr, "RACE1 FrameUpdate BAD t=(%g %g %g) node=%p seq=%p frames=%d hasT=%d hasR=%d cur=%d prev=%d rem=%g step=%g assocFlags=%x curTime=%g blend=%g compressed=%d skinned=%d frame=%p\n",
++                    t.x, t.y, t.z, (void*)node, (void*)node->GetSeq(), (int)node->GetSeq()->m_FramesNum, (int)node->GetSeq()->m_bHasTranslation, (int)node->GetSeq()->m_bHasRotation, (int)node->m_KFCurr, (int)node->m_KFPrev, node->m_KFRemainingTime, node->GetAnimAssoc()->m_TimeStep, (unsigned)node->GetAnimAssoc()->m_Flags, node->GetAnimAssoc()->m_CurrentTime, node->GetAnimAssoc()->m_BlendAmount, (int)IsCompressed, (int)IsSkinned, (void*)fd->Frame);
++                if constexpr (!IsCompressed) {
++                    const auto* a = node->GetSeq()->GetKeyFrame<false>(node->m_KFCurr);
++                    const auto* b = node->GetSeq()->GetKeyFrame<false>(node->m_KFPrev);
++                    fprintf(stderr, "RACE1   kfA(cur)=%p T=(%g %g %g) dt=%g | kfB(prev)=%p T=(%g %g %g) dt=%g | seq0=%p stride=%d firstT=(%g %g %g) theta=%g\n", (void*)a, a->Trans.x, a->Trans.y, a->Trans.z, a->DeltaTime, (void*)b, b->Trans.x, b->Trans.y, b->Trans.z, b->DeltaTime, (void*)node->GetSeq()->GetKeyFrame<false>(0), (int)sizeof(*a), node->GetSeq()->GetKeyFrame<false>(0)->Trans.x, node->GetSeq()->GetKeyFrame<false>(0)->Trans.y, node->GetSeq()->GetKeyFrame<false>(0)->Trans.z, node->m_Theta);
++                }
++                fflush(stderr);
++            }
++        }
+ 
+         if constexpr (NeedsRemoveQuatFlips<IsCompressed, IsSkinned, ExtractVelocity, Extract3DVelocity>{}) {
+             // `jp` after `fcomp`: taken if `dot >= 0 || isnan(dot)`

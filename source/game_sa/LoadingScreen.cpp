@@ -240,8 +240,8 @@ void CLoadingScreen::RenderLoadingBar() {
     CSprite2d::DrawBarChart(
         SCREEN_STRETCH_X(50.0f),
         SCREEN_STRETCH_FROM_BOTTOM(40.0f),
-        (uint16)SCREEN_STRETCH_X(180.0f),
-        (uint8)SCREEN_STRETCH_Y(10.0f),
+        NOTSA_FTOL(uint16, SCREEN_STRETCH_X(180.0f)),
+        NOTSA_FTOL(uint8, SCREEN_STRETCH_Y(10.0f)),
         m_PercentLoaded,
         0,
         false,
@@ -301,7 +301,7 @@ void CLoadingScreen::DoPCTitleFadeIn() {
     m_bFading = true;
 
     for (auto i = 0; i < 50; i++) {
-        m_FadeAlpha = static_cast<uint8>(i * 5.0f);
+        m_FadeAlpha = NOTSA_FTOL(uint8, i * 5.0f);
         DisplayPCScreen();
     }
 
@@ -322,7 +322,7 @@ void CLoadingScreen::DoPCTitleFadeOut() {
     }
 
     for (auto i = 50u; i > 0u; i--) {
-        m_FadeAlpha = static_cast<uint8>(i * 5.0f);
+        m_FadeAlpha = NOTSA_FTOL(uint8, i * 5.0f);
         DisplayPCScreen();
     }
 
@@ -353,7 +353,7 @@ void CLoadingScreen::DoPCScreenChange(bool isLastOne) {
 
     for (auto i = 0u; i < 50u; i++) {
         float alpha = (float)i * 5.0f;
-        m_FadeAlpha = (uint8)alpha;
+        m_FadeAlpha = NOTSA_FTOL(uint8, alpha);
 
         if (isLastOne || m_bFadeInNextSplashFromBlack) {
             float amp = (isLastOne && m_bFadeOutCurrSplashToBlack)
@@ -469,7 +469,7 @@ void CLoadingScreen::Update() {
                 m_bFadeOutCurrSplashToBlack = false;
             }
         } else {
-            m_FadeAlpha = static_cast<uint8>((elapsed / duration) * 255.0f);
+            m_FadeAlpha = NOTSA_FTOL(uint8, (elapsed / duration) * 255.0f);
         }
     } else {
         m_FadeAlpha = 255;

@@ -147,7 +147,7 @@ uint32 CTimer::GetCyclesPerMillisecond()
 // 0x561A50
 uint32 CTimer::GetCyclesPerFrame()
 {
-    return (uint32)((float)m_snTimerDivider * 20.0f);
+    return NOTSA_FTOL(uint32, (float)m_snTimerDivider * 20.0f);
 }
 
 // 0x561A80
@@ -199,10 +199,10 @@ void CTimer::UpdateVariables(float timeElapsed)
     // uint32 -> x87: `fild` (signed) and, for values >= 2^31, `fadd 2^32` (rounded to the current precision control, which is what the exe does at PC=24)
     const auto u32ToX87 = [](uint32 v) { x87d d = (x87d)(int32)v; if ((int32)v < 0) d += 4294967296.0f; return d; };
     const x87d frameDelta = X87R((x87d)timeElapsed / u32ToX87(m_snTimerDivider));
-    m_snTimeInMillisecondsNonClipped = (uint32)(int32)(X87R(u32ToX87(m_snTimeInMillisecondsNonClipped) + frameDelta));
+    m_snTimeInMillisecondsNonClipped = (uint32)NOTSA_FTOL(int32, X87R(u32ToX87(m_snTimeInMillisecondsNonClipped) + frameDelta));
     ms_fTimeStepNonClipped = (float)(frameDelta * 0.05f);
 
-    const uint32 clipped = (uint32)(int32)frameDelta;
+    const uint32 clipped = (uint32)NOTSA_FTOL(int32, frameDelta);
     m_snTimeInMilliseconds += clipped > 300u ? 300u : clipped;
 
     if (ms_fTimeStepNonClipped < 0.01f && !m_UserPause && !m_CodePause && !CSpecialFX::bSnapShotActive) {
@@ -243,7 +243,7 @@ void CTimer::Update() {
     if (!GetIsPaused())
         fTimeDelta *= ms_fTimeScale;
 
-    m_snTimeInMillisecondsPauseMode += (uint32)(fTimeDelta / float(m_snTimerDivider));
+    m_snTimeInMillisecondsPauseMode += NOTSA_FTOL(uint32, fTimeDelta / float(m_snTimerDivider));
     if (GetIsPaused())
         fTimeDelta = 0.0f;
 

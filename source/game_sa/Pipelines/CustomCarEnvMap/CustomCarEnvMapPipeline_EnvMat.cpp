@@ -134,7 +134,7 @@ float CCustomCarEnvMapPipeline::GetFxEnvShininess(RpMaterial* material) {
 void CCustomCarEnvMapPipeline::SetFxEnvShininess(RpMaterial* material, float value) {
     auto* const data = CCustomBuildingDNPipeline::SetFxEnvTexture(&EnvMapPlGetData(material)); // exe 0x5D70A0: calls 0x5D9570 first (unshares the fake data)
     if (data) {
-        data->Shininess = FixedFloat<uint8, 255.f>{ (uint8)(int32)(value * 255.f) }; // exe: _ftol(value * 255.0f), truncated, stored as a byte
+        data->Shininess = FixedFloat<uint8, 255.f>{ (uint8)NOTSA_FTOL(int32, value * 255.f) }; // exe: _ftol(value * 255.0f), truncated, stored as a byte
     }
 }
 

@@ -20,6 +20,7 @@ void Unsupported(const char* what) {
 }
 } // namespace notsa::portable
 
+#ifndef _WIN32 // MAC-WIN64: the Win32 API twins below are the real Windows API on Windows
 // VK code -> SDL scancode (0 = SDL_SCANCODE_UNKNOWN: not mapped, key reported as up)
 static SDL_Scancode VkToScancode(int vk) {
     if (vk >= 'A' && vk <= 'Z') { return (SDL_Scancode)(SDL_SCANCODE_A + (vk - 'A')); }
@@ -100,3 +101,4 @@ BOOL GetClientRect(HWND hwnd, RECT* rect) {
     *rect = RECT{ 0, 0, w, h };
     return TRUE;
 }
+#endif // !_WIN32

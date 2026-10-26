@@ -29,6 +29,7 @@
 #include "standalone/Fixups.h"
 #include "raster_gl3.h" // + librw gl3 internals (rwgl3impl.h is unguarded: included once, there)
 
+#include <chrono>
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
@@ -109,6 +110,37 @@ rw::gl3::Im2DVertex* ConvertIm2D(const RwIm2DVertex* src, RwInt32 n) {
     return s_Im2DScratch.data();
 }
 
+
+// INT1 diagnostics (NOTSA_INT1_DEPTH=1): logs when an Im2D draw changes the depth value at the screen centre (interior frames: depth was 0 before the shell draw)
+void Int1DepthProbe(const char* what, const RwIm2DVertex* v, int n, bool post) {
+    static const bool on = std::getenv("NOTSA_INT1_DEPTH") != nullptr;
+    static int        lines = 0;
+    static float      pre = -2.f;
+    static const auto t0 = std::chrono::steady_clock::now();
+    if (!on || lines > 80 || std::chrono::steady_clock::now() - t0 < std::chrono::seconds(std::atoi(std::getenv("NOTSA_INT1_DEPTH")))) {
+        return;
+    }
+    GLint fb = 0;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &fb);
+    if (fb != 0) {
+        return;
+    }
+    float d = -3.f;
+    glReadPixels(640, 360, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &d);
+    if (!post) {
+        pre = d;
+        return;
+    }
+    if (d != pre) {
+        GLboolean dm = 0;
+        GLint     df = 0;
+        glGetBooleanv(GL_DEPTH_WRITEMASK, &dm);
+        glGetIntegerv(GL_DEPTH_FUNC, &df);
+        lines++;
+        notsa::standalone::Fixups::Log("INT1 depth: %s (%d verts, z0 %.3f) changed centre depth %.4f -> %.4f; rw ZTEST %d ZWRITE %d; GL depthTest %d mask %d func 0x%x", what, n, v ? v->z : 0.f, pre, d, (int)rw::GetRenderState(rw::ZTESTENABLE), (int)rw::GetRenderState(rw::ZWRITEENABLE), (int)glIsEnabled(GL_DEPTH_TEST), (int)dm, df);
+    }
+}
+
 RwBool Im2DDraw(RwPrimitiveType type, const RwIm2DVertex* verts, RwInt32 numVerts) {
     if (!verts || numVerts < 0 || !ValidPrimType(type) || !CanDraw()) {
         return FALSE;
@@ -120,7 +152,9 @@ RwBool Im2DDraw(RwPrimitiveType type, const RwIm2DVertex* verts, RwInt32 numVert
     if (primCount == 0) {
         return TRUE; // empty draw (too few vertices for one list primitive, point lists): the exe still "draws" and gets S_OK
     }
+    Int1DepthProbe("RenderPrimitive", verts, numVerts, false);
     rw::im2d::RenderPrimitive(static_cast<rw::PrimitiveType>(type), ConvertIm2D(verts, numVerts), numVerts);
+    Int1DepthProbe("RenderPrimitive", verts, numVerts, true);
     return TRUE;
 }
 
@@ -243,7 +277,9 @@ RwBool RwIm2DRenderIndexedPrimitive(RwPrimitiveType primType, RwIm2DVertex* vert
     if (primCount == 0) {
         return TRUE; // empty draw (see Im2DDraw)
     }
+    Int1DepthProbe("RenderIndexedPrimitive", vertices, numVertices, false);
     rw::im2d::RenderIndexedPrimitive(static_cast<rw::PrimitiveType>(primType), ConvertIm2D(vertices, numVertices), numVertices, indices, numIndices);
+    Int1DepthProbe("RenderIndexedPrimitive", vertices, numVertices, true);
     return TRUE;
 }
 

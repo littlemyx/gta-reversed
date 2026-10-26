@@ -94,7 +94,7 @@ CTask* CTaskComplexCopInCar::CreateSubTask(eTaskType taskType, CPed* copPed) {
                 m_Vehicle,
                 targetEntity,
                 GetDrivingMission(),
-                (eCarDrivingStyle)style,
+                NOTSA_FTOL(eCarDrivingStyle, style),
                 10.f
             );
         }

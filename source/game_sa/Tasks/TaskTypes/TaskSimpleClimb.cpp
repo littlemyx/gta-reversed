@@ -133,7 +133,7 @@ bool CTaskSimpleClimb::ProcessPed(CPed* ped) {
             ped->m_vecMoveSpeed += vecClimbEntSpeed;
 
             if (!(m_Anim->m_Flags & ANIMATION_IS_PLAYING) || m_Anim->m_AnimId == ANIM_ID_CLIMB_IDLE) {
-                m_GetToPosCounter += (uint16)CTimer::GetTimeStepInMS();
+                m_GetToPosCounter += NOTSA_FTOL(uint16, CTimer::GetTimeStepInMS());
                 if (m_GetToPosCounter > 1'000 || m_Anim->m_AnimId == ANIM_ID_CLIMB_IDLE && m_GetToPosCounter > 500) {
                     m_IsInvalidClimb = true;
                     MakeAbortable(ped);
@@ -369,7 +369,7 @@ CEntity* CTaskSimpleClimb::ScanToGrabSectorList(PtrListType* sectorList, CPed* p
                     continue;
                 }
 
-                int32 fatModifier = ped->GetPlayerData() && !ped->GetIntelligence()->GetTaskSwim() ? (int32)CStats::GetFatAndMuscleModifier(STAT_MOD_0) : 0;
+                int32 fatModifier = ped->GetPlayerData() && !ped->GetIntelligence()->GetTaskSwim() ? NOTSA_FTOL(int32, CStats::GetFatAndMuscleModifier(STAT_MOD_0)) : 0;
 
                 if (!isLaunch || fatModifier >= 1) {
                     if (nColSphereIndex == 5 || nColSphereIndex == 11 || nColSphereIndex == 17) {
@@ -671,7 +671,7 @@ void CTaskSimpleClimb::GetCameraStickModifier(CEntity* entity, float& outAlpha, 
         CColPoint colPoint{};
         CEntity*  colEntity{};
         m_FallAfterVault = CWorld::ProcessVerticalLine(pos, pos.z - 3.0f, colPoint, colEntity, true, true, false, true)
-            ? (int8)(std::max(pos.z - colPoint.m_vecPoint.z - 1.0f, 0.0F) * 10.0f)
+            ? NOTSA_FTOL(int8, std::max(pos.z - colPoint.m_vecPoint.z - 1.0f, 0.0F) * 10.0f)
             : 20;
 
         const float d = m_FallAfterVault > 8 ? -0.6f : -0.1f;

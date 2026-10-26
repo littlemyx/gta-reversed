@@ -235,7 +235,7 @@ void CCoronas::Render() {
         const auto rz = 1.f / onScrPos.z;
 
         //< 0x6FB0A7 - Start fading out at half the far clip distance
-        const auto intensity = (int16)((float)c.m_FadedIntensity * c.CalculateIntensity(onScrPos.z, c.m_fFarClip));
+        const auto intensity = NOTSA_FTOL(int16, (float)c.m_FadedIntensity * c.CalculateIntensity(onScrPos.z, c.m_fFarClip));
 
         //< 0x6FB0D9 - Enable/disable Z test if necessary
         if (c.m_bCheckObstacles == zTestEnable) {
@@ -244,7 +244,7 @@ void CCoronas::Render() {
         }
 
         const auto LerpColorC = [](uint8 cc, float t) {
-            return (uint8)((float)cc * t);
+            return NOTSA_FTOL(uint8, (float)cc * t);
         };
 
         //< 0x6FB131 - Render with texture
@@ -321,9 +321,9 @@ void CCoronas::Render() {
                     )) { //< 0x6FB409
                     // 0x6FB370: the product with the raw table value is an INTEGER multiplication (`imul`), converted to float afterwards
                     CRGBA color = {
-                        static_cast<uint8>(static_cast<float>(it->ColorMult.x * (int32)c.m_Color.r) * colorVariationMult),
-                        static_cast<uint8>(static_cast<float>(it->ColorMult.y * (int32)c.m_Color.g) * colorVariationMult),
-                        static_cast<uint8>(static_cast<float>(it->ColorMult.z * (int32)c.m_Color.b) * colorVariationMult),
+                        NOTSA_FTOL(uint8, static_cast<float>(it->ColorMult.x * (int32)c.m_Color.r) * colorVariationMult),
+                        NOTSA_FTOL(uint8, static_cast<float>(it->ColorMult.y * (int32)c.m_Color.g) * colorVariationMult),
+                        NOTSA_FTOL(uint8, static_cast<float>(it->ColorMult.z * (int32)c.m_Color.b) * colorVariationMult),
                         255
                     };
                     CSprite::RenderBufferedOneXLUSprite2D(
@@ -352,7 +352,7 @@ void CCoronas::Render() {
                         );
                     };
                     // 0x6FB4F3: ftol(float(Raw * c) * HeadLightsSpectrum * 2^-8)
-                    const auto HeadLightColor = [](int16 raw, uint8 cc) { return (uint8)(float)(((x87d)(float)(raw * (int32)cc) * (x87d)CWeather::HeadLightsSpectrum) * (x87d)ExeRecip(256.f)); };
+                    const auto HeadLightColor = [](int16 raw, uint8 cc) { return NOTSA_FTOL(uint8, (float)(((x87d)(float)(raw * (int32)cc) * (x87d)CWeather::HeadLightsSpectrum) * (x87d)ExeRecip(256.f))); };
                     RenderFlareSprite({ HeadLightColor(it->ColorMult.x, c.m_Color.r), 0, 0, 255 }, +0.05f); // 0x6FB561
                     RenderFlareSprite({ 0, 0, HeadLightColor(it->ColorMult.z, c.m_Color.b), 255 }, -0.05f); // 0x6FB5EA
                 }
@@ -421,7 +421,7 @@ void CCoronas::RenderReflections() {
                                      * c.CalculateIntensity(onScrPos.z, clampedFarClip)
                                      * invLerp(20.f, 0.f, c.m_fHeightAboveGround)
                                      * 230.f](uint8 cc) {
-            return (uint8)((uint16)((float)cc * t) >> 8 & 0xFF); // divide by 256
+            return (uint8)(NOTSA_FTOL(uint16, (float)cc * t) >> 8 & 0xFF); // divide by 256
         };
         CSprite::RenderBufferedOneXLUSprite(
             { onScrPos.x, onScrPos.y, notsa::bugfixes::PS2CoronaRendering ? onScrPos.z : RwIm2DGetNearScreenZMacro() },
@@ -497,7 +497,7 @@ void CCoronas::RenderSunReflection() {
     const auto vecToSunCorona2D = vecToSun2D * REFLECTION_SIZE;
 
 #define CalcColorC(_color) \
-    (uint8)((float)(CTimeCycle::m_CurrentColours.m_nSunCorona##_color + CTimeCycle::m_CurrentColours.m_nSunCore##_color) * t)
+    NOTSA_FTOL(uint8, (float)(CTimeCycle::m_CurrentColours.m_nSunCorona##_color + CTimeCycle::m_CurrentColours.m_nSunCore##_color) * t)
     const auto PushVertex = [
         &,
         color = CRGBA{ CalcColorC(Red), CalcColorC(Green), CalcColorC(Blue), 255 },

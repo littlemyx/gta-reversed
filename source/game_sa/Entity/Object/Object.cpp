@@ -874,7 +874,7 @@ void CObject::Init() {
 void CObject::DoBurnEffect() const {
     const auto& box = GetModelInfo()->GetColModel()->GetBoundingBox();
     const auto& vecSize = box.GetSize();
-    const auto nUsedSize = static_cast<int32>(vecSize.x * vecSize.y * vecSize.z * m_fBurnDamage * 0.05F); // exe 0x59FBC3: multiplies by the float 0.05f (0x858C28), no division by 20
+    const auto nUsedSize = NOTSA_FTOL_SC(int32, vecSize.x * vecSize.y * vecSize.z * m_fBurnDamage * 0.05F); // exe 0x59FBC3: multiplies by the float 0.05f (0x858C28), no division by 20
     if (nUsedSize <= 0)
         return;
 

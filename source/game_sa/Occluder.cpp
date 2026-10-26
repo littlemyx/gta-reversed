@@ -31,7 +31,7 @@ bool COccluder::ProcessOneOccluder(CActiveOccluder* out) {
     // 0x71E6D5: sqrt((l^2 + w^2) + h^2) stays on the x87 stack, `fsubr` from the centre depth, then _ftol2; only the low word is stored
     {
         const x87d mag = x87::sqrt(((x87d)size.y * size.y + (x87d)size.x * size.x) + (x87d)size.z * size.z);
-        out->m_DistToCam = (uint16)(int32)((x87d)CenterOnScreen.z - mag);
+        out->m_DistToCam = (uint16)NOTSA_FTOL(int32, (x87d)CenterOnScreen.z - mag);
     }
 
     // 0x71E743..0x71E7FF: NOT SetRotate(x, y, z) (0x59B120): the exe builds X, Y, Z rotations (0x59B060 / 0x59B0A0 / 0x59B0E0) and multiplies (Y * X) * Z (0x59BE30)

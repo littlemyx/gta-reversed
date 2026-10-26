@@ -223,7 +223,7 @@ bool CPickup::Update(CPlayerPed* player, CVehicle* vehicle, int32 playerId) {
         m_fRevenueValue = std::min(m_fRevenueValue, (float)m_nAmmo);
 
         if (m_pObject) {
-            m_pObject->m_wCostValue = (uint16)m_fRevenueValue >= 10 ? (uint16)m_fRevenueValue / 5 : 0;
+            m_pObject->m_wCostValue = NOTSA_FTOL_P(uint16, m_fRevenueValue) >= 10 ? NOTSA_FTOL_P(uint16, m_fRevenueValue) / 5 : 0;
         }
     }
 
@@ -563,7 +563,7 @@ bool CPickup::Update(CPlayerPed* player, CVehicle* vehicle, int32 playerId) {
                                 SetRemoved();
                                 break;
                             case PICKUP_ASSET_REVENUE:
-                                FindPlayerInfo(playerId).m_nMoney += (int32)m_fRevenueValue;
+                                FindPlayerInfo(playerId).m_nMoney += NOTSA_FTOL_P(int32, m_fRevenueValue);
                                 m_fRevenueValue = 0.0f;
                                 AudioEngine.ReportFrontendAudioEvent(AE_FRONTEND_PICKUP_MONEY);
                                 break;

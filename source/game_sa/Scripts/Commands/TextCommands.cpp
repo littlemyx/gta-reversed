@@ -96,8 +96,8 @@ void DisplayTextWithFloat(CVector2D pos, const char* key, float value, float pre
     I_DisplayText(
         pos,
         key,
-        (int32)(whole),
-        (int32)(std::pow(10.f, precision) * fract)
+        NOTSA_FTOL(int32, whole),
+        NOTSA_FTOL(int32, std::pow(10.f, precision) * fract)
     );
 }
 

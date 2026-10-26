@@ -474,9 +474,9 @@ char* CFont::ParseToken(char* text, CRGBA& color, bool isBlip, char* tag) {
     case 'h':
         if (!isBlip) {
             color = {
-                (uint8)std::min((float)color.r * 1.5f, 255.0f),
-                (uint8)std::min((float)color.g * 1.5f, 255.0f),
-                (uint8)std::min((float)color.b * 1.5f, 255.0f),
+                NOTSA_FTOL(uint8, std::min((float)color.r * 1.5f, 255.0f)),
+                NOTSA_FTOL(uint8, std::min((float)color.g * 1.5f, 255.0f)),
+                NOTSA_FTOL(uint8, std::min((float)color.b * 1.5f, 255.0f)),
                 color.a
             };
         }
@@ -601,7 +601,7 @@ void CFont::SetColor(CRGBA color) {
     m_Color = color;
 
     if (m_fFontAlpha < 255.0f) {
-        m_Color.a = (uint8)(float(color.a) * m_fFontAlpha * ExeRecip(255.0f));
+        m_Color.a = NOTSA_FTOL(uint8, float(color.a) * m_fFontAlpha * ExeRecip(255.0f));
     }
 }
 
@@ -652,7 +652,7 @@ void CFont::SetDropColor(CRGBA color) {
     m_FontDropColor = color;
 
     if (m_fFontAlpha < 255.0f) {
-        m_FontDropColor.a = (uint8)(float(m_Color.a) * m_fFontAlpha * ExeRecip(255.0f)); // 0x71954F..0x719555: * alpha * (1/255) (0x859A3C), like SetColor
+        m_FontDropColor.a = NOTSA_FTOL(uint8, float(m_Color.a) * m_fFontAlpha * ExeRecip(255.0f)); // 0x71954F..0x719555: * alpha * (1/255) (0x859A3C), like SetColor
     }
 }
 

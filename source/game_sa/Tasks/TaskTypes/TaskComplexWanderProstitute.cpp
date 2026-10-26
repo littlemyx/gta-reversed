@@ -49,7 +49,7 @@ void CTaskComplexWanderProstitute::ScanForStuff(CPed* ped) {
 
         // Chance based on the vehicle's value
         const auto veh = other->m_pVehicle;
-        if (!((uint32)(int32)((x87d)(CGeneral::GetRandomNumber() & 0xFFFF) * ((x87d)1.0 / (x87d)32768.0) * (x87d)50000.0) < veh->m_pHandlingData->m_nMonetaryValue)) {
+        if (!((uint32)NOTSA_FTOL(int32, (x87d)(CGeneral::GetRandomNumber() & 0xFFFF) * ((x87d)1.0 / (x87d)32768.0) * (x87d)50000.0) < veh->m_pHandlingData->m_nMonetaryValue)) {
             continue;
         }
 

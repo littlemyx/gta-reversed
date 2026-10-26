@@ -112,7 +112,7 @@ bool CTaskSimpleGangDriveBy::CheckLineOfSight(CPed* ped, const CVector& targetPo
             CWorld::pIgnoreEntity = nullptr;
         }
         // Next check in [1750, 2250) ms. (x87: rand * 2^-15 * -500.0 (0x85AB78) is truncated, then subtracted)
-        m_nLOSCheckTime = (uint32)((int32)now - (int32)((x87d)(CGeneral::GetRandomNumber() & 0xFFFF) * (x87d)(1.f / 32768.f) * (x87d)-500.f) + 0x6D6); // 0x858B14
+        m_nLOSCheckTime = (uint32)((int32)now - NOTSA_FTOL(int32, (x87d)(CGeneral::GetRandomNumber() & 0xFFFF) * (x87d)(1.f / 32768.f) * (x87d)-500.f) + 0x6D6); // 0x858B14
     }
     return !m_nLOSBlocked;
 }
@@ -245,7 +245,7 @@ void CTaskSimpleGangDriveBy::ProcessPlayerPed(CPed* ped) {
             rel += (x87d)(2.f * std::numbers::pi_v<float>);
         }
         rel *= (double)NOTSA_GLOBAL_EXPR(0x858FB8, (float), k_858FB8_TwoOverPi); // 2/pi
-        const auto sector = (int8)(int32)rel; // 0x821B40 (truncated), only the low byte is used
+        const auto sector = (int8)NOTSA_FTOL(int32, rel); // 0x821B40 (truncated), only the low byte is used
         if ((uint32)(int32)sector <= 3) {
             m_nRequiredAnimID = GetDrivebyAnimForSector(sector, m_bSeatRHS);
         }
@@ -346,7 +346,7 @@ void CTaskSimpleGangDriveBy::ProcessAIPed(CPed* ped) {
         if (v < 0.0) {
             v += (x87d)(2.f * PI);
         }
-        sector = (int8)(int32)(v * (x87d)NOTSA_GLOBAL_EXPR(0x858FB8, (float), k_858FB8_TwoOverPi)); // 2/pi, 0x821B40 (truncated)
+        sector = (int8)NOTSA_FTOL(int32, v * (x87d)NOTSA_GLOBAL_EXPR(0x858FB8, (float), k_858FB8_TwoOverPi)); // 2/pi, 0x821B40 (truncated)
 
         constexpr float DEG_15  = std::bit_cast<float>(0x3E860A92u); // 0x858F1C
         constexpr float DEG_165 = std::bit_cast<float>(0x40384E89u); // 0x86DB10
@@ -694,7 +694,7 @@ bool CTaskSimpleGangDriveBy::ProcessPed(CPed* ped) {
             && (a->m_BlendHier->m_fTotalTime > a->m_CurrentTime || a->m_BlendDelta >= 0.f)
         ) {
             a->m_Flags |= ANIMATION_IS_PLAYING;
-            m_nBurstShots = (int8)CGeneral::GetRandomNumberInRange(1, (int32)((x87d)(int16)m_pWeaponInfo->m_nAmmoClip * (x87d)0.5f)); // 0x858B8C
+            m_nBurstShots = (int8)CGeneral::GetRandomNumberInRange(1, NOTSA_FTOL(int32, (x87d)(int16)m_pWeaponInfo->m_nAmmoClip * (x87d)0.5f)); // 0x858B8C
             m_nLastCommand = m_nNextCommand;
             m_nNextCommand = 0;
         } else if (!bPlaying) {
@@ -754,7 +754,7 @@ bool CTaskSimpleGangDriveBy::ProcessPed(CPed* ped) {
     }
 
     // x87: Time step * 0.02 (0x858B38) * 1000.0 (0x858C4C) is truncated
-    const auto TimeStepMS = [] { return (int32)((x87d)CTimer::GetTimeStep() * (x87d)0.02f * (x87d)1000.0f); };
+    const auto TimeStepMS = [] { return NOTSA_FTOL(int32, (x87d)CTimer::GetTimeStep() * (x87d)0.02f * (x87d)1000.0f); };
 
     if (m_nAttackTimer < 0) {
         m_nAttackTimer = (int16)CGeneral::GetRandomNumberInRange(200, (100 - m_nFrequencyPercentage) * 100);

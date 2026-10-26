@@ -33,6 +33,6 @@ void FxInfoColourBright_c::GetValue(float currentTime, float mult, float totalTi
 
     auto& render = *static_cast<RenderInfo_t*>(info);
     render.SetColor(values[0], values[1], values[2], values[3]);
-    render.m_Color2.alpha = (uint8)values[4];
+    render.m_Color2.alpha = NOTSA_FTOL(uint8, values[4]);
     render.m_nColorType = ERenderColorType::BRIGHT;
 }

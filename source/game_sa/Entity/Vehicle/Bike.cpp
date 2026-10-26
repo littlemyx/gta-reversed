@@ -2105,7 +2105,7 @@ void CBike::ProcessControl() {
         }
 
         // NOTE: x87 keeps the product in extended precision before truncating it
-        const auto timeStepInMS = static_cast<int32>(static_cast<x87d>(CTimer::GetTimeStep()) * static_cast<x87d>(0.02f) * static_cast<x87d>(1000.0f));
+        const auto timeStepInMS = NOTSA_FTOL(int32, static_cast<x87d>(CTimer::GetTimeStep()) * static_cast<x87d>(0.02f) * static_cast<x87d>(1000.0f));
         auto       timeStepF    = static_cast<float>(timeStepInMS);
         if (timeStepInMS < 0) {
             timeStepF += 4294967296.0f;
@@ -2165,12 +2165,12 @@ void CBike::ProcessControl() {
         if (speedSq > static_cast<double>(BIKE_SHAKE_MIN_SPEED_SQ)) {
             const x87d speedPerMass = std::sqrt(speedSq) / static_cast<x87d>(m_fMass);
             if (suspensionShake > 0.0f) {
-                const auto frequency = static_cast<uint8>(static_cast<int32>(std::min((speedPerMass * static_cast<x87d>(suspensionShake)) * (x87d)400000.0 + (x87d)100.0, (x87d)250.0)));
-                const auto time      = static_cast<int32>((static_cast<x87d>(CTimer::GetTimeStep()) * (x87d)20000.0) / static_cast<x87d>(frequency));
+                const auto frequency = static_cast<uint8>(NOTSA_FTOL(int32, std::min((speedPerMass * static_cast<x87d>(suspensionShake)) * (x87d)400000.0 + (x87d)100.0, (x87d)250.0)));
+                const auto time      = NOTSA_FTOL(int32, (static_cast<x87d>(CTimer::GetTimeStep()) * (x87d)20000.0) / static_cast<x87d>(frequency));
                 CPad::GetPad(0)->StartShake(static_cast<int16>(time), frequency, 0);
             } else {
-                const auto frequency = static_cast<uint8>(static_cast<int32>(std::min((speedPerMass * static_cast<x87d>(roughnessShake)) * (x87d)400000.0 + (x87d)40.0, (x87d)150.0)));
-                const auto time      = static_cast<int32>((static_cast<x87d>(CTimer::GetTimeStep()) * (x87d)5000.0) / static_cast<x87d>(frequency));
+                const auto frequency = static_cast<uint8>(NOTSA_FTOL(int32, std::min((speedPerMass * static_cast<x87d>(roughnessShake)) * (x87d)400000.0 + (x87d)40.0, (x87d)150.0)));
+                const auto time      = NOTSA_FTOL(int32, (static_cast<x87d>(CTimer::GetTimeStep()) * (x87d)5000.0) / static_cast<x87d>(frequency));
                 CPad::GetPad(0)->StartShake(static_cast<int16>(time), frequency, 0);
             }
         }
@@ -2750,7 +2750,7 @@ void CBike::PreRender() {
 
     //> Police bike siren
     if (m_nModelIndex == MODEL_COPBIKE && vehicleFlags.bSirenOrAlarm && vehicleFlags.bEngineOn && !physicalFlags.bRenderScorched) {
-        const auto coronaIntensity = static_cast<uint8>(static_cast<int32>(CTimeCycle::m_CurrentColours.m_fSpriteBrightness * 25.5f));
+        const auto coronaIntensity = static_cast<uint8>(NOTSA_FTOL(int32, CTimeCycle::m_CurrentColours.m_fSpriteBrightness * 25.5f));
         const auto time            = CTimer::GetTimeInMS() & 0x1FF;
         const auto timeByte        = static_cast<uint8>(time);
 
@@ -3262,8 +3262,8 @@ void CBike::DoBurstAndSoftGroundRatios() {
         case 1: { // Burst
             // NOTSA: original also computed an unused `float(rand() & 0xFFFF) * 2^-15` and ftol'd `fwdSpeed * 40`
             const auto rnd = static_cast<float>(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f);
-            const auto maxRnd = static_cast<float>(static_cast<uint16>(static_cast<int32>(fwdSpeed * 40.0f)) + 98);
-            if (static_cast<int32>(rnd * maxRnd) < 100) {
+            const auto maxRnd = static_cast<float>(static_cast<uint16>(NOTSA_FTOL(int32, fwdSpeed * 40.0f)) + 98);
+            if (NOTSA_FTOL(int32, rnd * maxRnd) < 100) {
                 const auto change = CompressionLeft(susp0) * 0.2f;
 
                 const auto r0 = change + m_aWheelRatios[susp0];

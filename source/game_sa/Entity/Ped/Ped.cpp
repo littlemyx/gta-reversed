@@ -1642,9 +1642,8 @@ float CPed::GetWalkAnimSpeed() {
     //       It won't work correctly if first frame has no translation, nor if the animation happens on any other axis than Y, etc..
 
     const auto lastFrame = seq->GetUKeyFrame(seq->m_FramesNum - 1);
-    const auto lastFrameY = seq->HasTranslation()
-        ? lastFrame->Trans.y
-        : ((KeyFrame*)lastFrame)->Rot.imag.y;
+    // 0x5E04FB: without translation the exe still reads +0x18 of the (20-byte stride) frame, i.e. `Trans.y` of the GetUKeyFrame pointer - not the rotation's y
+    const auto lastFrameY = lastFrame->Trans.y;
     const auto firstFrameY = seq->GetUKeyFrame(0)->Trans.y;
     return (lastFrameY - firstFrameY) / hier->m_fTotalTime;
 }

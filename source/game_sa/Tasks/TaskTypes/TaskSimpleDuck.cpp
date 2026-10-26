@@ -141,7 +141,7 @@ void CTaskSimpleDuck::AbortBecauseOfOtherDuck(CPed* ped) {
 
     if (m_MoveAnim) {
         m_MoveAnim->m_BlendDelta = -8.0;
-        m_DuckAnim->SetDefaultFinishCallback();
+        m_MoveAnim->SetDefaultFinishCallback(); // 0x692375: on the MOVE anim (this used m_DuckAnim, which was already nulled above => null deref)
         m_MoveAnim = nullptr;
     }
 

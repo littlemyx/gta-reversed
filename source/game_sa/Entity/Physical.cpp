@@ -4641,8 +4641,9 @@ bool CPhysical::ProcessCollisionSectorList_SimpleCar(CRepeatSector* repeatSector
 
     // Find entity we're colliding with
     CPhysical* entity;
-    if (!(entity = ProcessSectorList(repeatSector->Vehicles))) {
-        if (!(entity = ProcessSectorList(repeatSector->Objects))) {
+    // 0x54D050..0x54D12B: the exe scans the objects list first (repeatSector + 8), then the vehicles list (repeatSector + 0)
+    if (!(entity = ProcessSectorList(repeatSector->Objects))) {
+        if (!(entity = ProcessSectorList(repeatSector->Vehicles))) {
             return false;
         }
     }

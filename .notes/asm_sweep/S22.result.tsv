@@ -7,7 +7,7 @@ addr	function	verdict	asm_range	note	fix_commit
 0x42ACB0	SteerAIHeliFlyingAwayFromPlayer	MATCH	0x42ACB0-0x42AD28		
 0x42FBC0	ScriptGenerateOneEmergencyServicesCar	MATCH	0x42FBC0-0x42FC3B		
 0x4341C0	GenerateRandomCars	MATCH	0x4341C0-0x434290		
-0x432CB0	JoinCarWithRoadAccordingToMission	FIXED	0x432D31-0x432D63	target-entity missions did m_TargetEntity->GetPosition() without the exe's null check (je 0x432D63); jump tables 0x432D7C/0x432D68 otherwise identical	d4a6b87a
+0x432CB0	JoinCarWithRoadAccordingToMission	FIXED	0x432D31-0x432D63	target-entity missions did m_TargetEntity->GetPosition() without the exe's null check (je 0x432D63); jump tables 0x432D7C/0x432D68 otherwise identical	6d0f101c
 0x4222A0	SwitchBetweenPhysicsAndGhost	MATCH	0x4222A0-0x42236B		
 0x429780	GetAIPlaneToAttackPlayer	MATCH	0x429780-0x42987C		
 0x42A630	SteerAIHeliTowardsTargetCoors	MATCH	0x42A630-0x42A722		
@@ -17,9 +17,9 @@ addr	function	verdict	asm_range	note	fix_commit
 0x42F870	JoinCarWithRoadSystemGotoCoors	MATCH	0x42F870-0x42F9B6		
 0x4217C0	SetUpDriverAndPassengersForVehicle	MATCH	0x4217C0-0x4218F2		
 0x42F5A0	JoinCarWithRoadSystem	MATCH	0x42F5A0-0x42F86B		
-0x4322B0	RemoveCarsIfThePoolGetsFull	FIXED	0x4322FD	initial closest distance 1e7 (0x4B189680), not FLT_MAX; unobservable in practice	ce13551e
-0x434790	SlowCarOnRailsDownForTrafficAndLights	FIXED	0x4348A3-0x4348FB	max==speed: exe returns without ModifySpeed (which restarts the speed interpolation); port called ModifySpeed(max) every update	4730a16c
-0x429600	PossiblyFireHSMissile	FIXED	0x4296B7-0x4296E5	dot(forward, NORMALISED dir) > 0.8; port dotted a copy taken before Normalise (fired at far wider angles)	78934271
+0x4322B0	RemoveCarsIfThePoolGetsFull	FIXED	0x4322FD	initial closest distance 1e7 (0x4B189680), not FLT_MAX; unobservable in practice	1b61d3c9
+0x434790	SlowCarOnRailsDownForTrafficAndLights	FIXED	0x4348A3-0x4348FB	max==speed: exe returns without ModifySpeed (which restarts the speed interpolation); port called ModifySpeed(max) every update	eb37ef5e
+0x429600	PossiblyFireHSMissile	FIXED	0x4296B7-0x4296E5	dot(forward, NORMALISED dir) > 0.8; port dotted a copy taken before Normalise (fired at far wider angles)	09f94990
 0x426EF0	PickNextNodeToChaseCar	NOT_REACHED		token budget	
 0x427740	PickNextNodeToFollowPath	NOT_REACHED		token budget	
 0x428040	DealWithBend_Racing	NOT_REACHED		token budget	

@@ -5,7 +5,7 @@ A = a git worktree of BASE (default: the commit before the edits), B = this work
 build/StandaloneRelease/compile_commands.json (/O2 /arch:IA32 ...), WITHOUT the PCH (StdInc.cpp is force-included from the respective tree), then tools/standalone/obj_code_sig.py
 compares the code sections + relocation names (NOTSA_SIG_NORM_STRINGS=1: the two trees live in different directories).
 
-usage: ftol_ab.py --base <commit> [--scratch DIR] [-j N] <TU.cpp>...      (paths relative to the repo or absolute)
+usage: ftol_ab.py --base <commit> [--head TREE] [--scratch DIR] [-j N] <TU.cpp>...      (paths relative to the repo or absolute)
 exit 0 when every TU is identical.
 """
 import argparse
@@ -63,6 +63,7 @@ def main():
     ap.add_argument("--base", required=True)
     ap.add_argument("--scratch", default="/private/tmp/claude-501/ftol_ab")
     ap.add_argument("-j", type=int, default=6)
+    ap.add_argument("--head", default=REPO, help="tree for side B (default: this working tree; pass a git worktree to let the work tree move on meanwhile)")
     ap.add_argument("tus", nargs="+")
     a = ap.parse_args()
     a.tus = [t for x in a.tus for t in (open(x[1:]).read().split() if x.startswith("@") else [x])]      # @listfile
@@ -75,7 +76,7 @@ def main():
     else:
         sh(["git", "-C", wt, "checkout", "-q", "--detach", a.base])
     tus = [os.path.relpath(os.path.abspath(t), REPO) if os.path.isabs(t) or os.path.exists(t) else t for t in a.tus]
-    jobs = [(wt, t, a.scratch, "A") for t in tus] + [(REPO, t, a.scratch, "B") for t in tus]
+    jobs = [(wt, t, a.scratch, "A") for t in tus] + [(os.path.abspath(a.head), t, a.scratch, "B") for t in tus]
     res = {}
     with cf.ThreadPoolExecutor(a.j) as ex:
         for tag, t, obj, ok, log in ex.map(compile_tu, jobs):

@@ -97,7 +97,7 @@ void CAEAudioChannel::SetFrequencyScalingFactor(float factor) {
         return;
     }
 
-    const auto newFreq = static_cast<uint32>(x87d(float(m_nOriginalFrequency)) * x87d(factor)); // 0x4D7D67: fild; fmul dword; _ftol (product stays extended)
+    const auto newFreq = NOTSA_FTOL(uint32, x87d(float(m_nOriginalFrequency)) * x87d(factor)); // 0x4D7D67: fild; fmul dword; _ftol (product stays extended)
     SetFrequency(newFreq);
 
     if (m_bPaused) {
@@ -110,7 +110,7 @@ void CAEAudioChannel::SetFrequencyScalingFactor(float factor) {
             m_pDirectSoundBuffer->Play(0, 0, m_bLooped);
 
             if (curPos != 0 && !AESmoothFadeThread.RequestFade(m_pDirectSoundBuffer, m_Volume, -2, false)) {
-                const auto volume = static_cast<LONG>(m_Volume * 100.0F);
+                const auto volume = NOTSA_FTOL(LONG, m_Volume * 100.0F);
                 m_pDirectSoundBuffer->SetVolume(volume);
             }
         }
@@ -137,7 +137,7 @@ void CAEAudioChannel::SetVolume(float volume) {
         return;
 
     // 0x4D7C7B: the difference is truncated to an int first (_ftol), then abs() - a 60.5 dB step does NOT start a fade
-    if (IsBufferPlaying() && std::abs(static_cast<int32>(volume - m_Volume)) > 60) {
+    if (IsBufferPlaying() && std::abs(NOTSA_FTOL(int32, volume - m_Volume)) > 60) {
         if (volume <= m_Volume) {
             if (AESmoothFadeThread.RequestFade(m_pDirectSoundBuffer, volume, -1, false)) {
                 m_Volume = volume;

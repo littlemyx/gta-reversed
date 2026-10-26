@@ -57,7 +57,7 @@ void CAECollisionAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos
         if (curPlayPos < 0) {
             return;
         }
-        if (CTimer::GetTimeInMS() < (uint32)(int32)sound->m_ClientVariable) { // 0x4DA39F: `_ftol`, then unsigned `jb`
+        if (CTimer::GetTimeInMS() < (uint32)NOTSA_FTOL(int32, sound->m_ClientVariable)) { // 0x4DA39F: `_ftol`, then unsigned `jb`
             return;
         }
         sound->m_Speed = speed;

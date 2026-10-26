@@ -1433,7 +1433,7 @@ void CAEVehicleAudioEntity::CancelVehicleEngineSound(eVehicleEngineSoundType st)
         m_ACPlayPositionLastFrame   = -1;
 
         m_ACPlayPercentWhenStopped = soundLength > 0
-            ? (int16)(std::clamp((float)(m_ACPlayPositionWhenStopped) / (float)(soundLength), 0.0f, 1.0f) * 100.f)
+            ? NOTSA_FTOL(int16, std::clamp((float)(m_ACPlayPositionWhenStopped) / (float)(soundLength), 0.0f, 1.0f) * 100.f)
             : 0;
     }
 }
@@ -1563,7 +1563,7 @@ void CAEVehicleAudioEntity::RequestNewPlayerCarEngineSound(eVehicleEngineSoundTy
             }
 
             // 0x4F7EC1 - Play the sound now
-            DoPlayerACEngineSound((int16)(pos));
+            DoPlayerACEngineSound(NOTSA_FTOL(int16, pos));
         } else { // Loop back to beginning (Must, as we're past the end of the sound)
             DoPlayerACEngineSound(0);
         }

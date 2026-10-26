@@ -155,7 +155,7 @@ void CAEStreamingChannel::SetFrequencyScalingFactor(float factor) {
         DirectSoundBufferFadeToSilence();
         m_nState = StreamingChannelState::Paused;
     } else {
-        SetFrequency(static_cast<uint32>(x87d(float(m_nOriginalFrequency)) * x87d(factor))); // 0x4F20D4: fild; fmul dword; _ftol
+        SetFrequency(NOTSA_FTOL(uint32, x87d(float(m_nOriginalFrequency)) * x87d(factor))); // 0x4F20D4: fild; fmul dword; _ftol
 
         if (m_nState != StreamingChannelState::Paused)
             return;
@@ -168,7 +168,7 @@ void CAEStreamingChannel::SetFrequencyScalingFactor(float factor) {
 
         // 0x4F2132: the exe passes bStopBufferAfterFade = 0 here (the port passed true: the fade-in ended with Stop() on the radio buffer)
         if (!AESmoothFadeThread.RequestFade(m_pDirectSoundBuffer, m_Volume, 35, false))
-            m_pDirectSoundBuffer->SetVolume(static_cast<int32>(m_Volume * 100.0f));
+            m_pDirectSoundBuffer->SetVolume(NOTSA_FTOL(int32, m_Volume * 100.0f));
 
         m_nState = StreamingChannelState::Started;
     }
@@ -326,20 +326,20 @@ int32 CAEStreamingChannel::UpdatePlayTime() {
     auto freqFactor = m_nFrequency * ExeRecip(250.f);
     auto upperLimit = 393216.f / freqFactor; //TODO: Magic number (393.216 khz can be found often with oscilators / clock generators, also that's 0x60000 in hex)
     auto curStep    = currentPlayCursor / freqFactor;
-    if ((uint32(freqFactor) / 0x60000) > 0) {
+    if ((NOTSA_FTOL(uint32, freqFactor) / 0x60000) > 0) {
         if (m_lastWrittenSlot == 1) {
-            m_nPlayTime = static_cast<int32>(m_nStreamPlayTimeMs + curStep - (2 * upperLimit));
+            m_nPlayTime = NOTSA_FTOL(int32, m_nStreamPlayTimeMs + curStep - (2 * upperLimit));
         } else {
-            m_nPlayTime = static_cast<int32>(m_nStreamPlayTimeMs + curStep - upperLimit);
+            m_nPlayTime = NOTSA_FTOL(int32, m_nStreamPlayTimeMs + curStep - upperLimit);
         }
     } else if (m_lastWrittenSlot == 0) {
-        m_nPlayTime = static_cast<int32>(m_nStreamPlayTimeMs + curStep - upperLimit);
+        m_nPlayTime = NOTSA_FTOL(int32, m_nStreamPlayTimeMs + curStep - upperLimit);
     } else {
-        m_nPlayTime = static_cast<int32>(m_nStreamPlayTimeMs + curStep);
+        m_nPlayTime = NOTSA_FTOL(int32, m_nStreamPlayTimeMs + curStep);
     }
 
     if (m_nPlayTime >= upperLimit) {
-        m_nPlayTime -= static_cast<int32>(upperLimit);
+        m_nPlayTime -= NOTSA_FTOL(int32, upperLimit);
     }
 
     m_nLastUpdateTime = CAEAudioUtility::GetCurrentTimeInMS();
@@ -462,7 +462,7 @@ void CAEStreamingChannel::Play(int16 startOffsetMs, int8 soundFlags, float freqF
     }
 
     m_nState = StreamingChannelState::Started;
-    m_pDirectSoundBuffer->SetVolume(static_cast<int32>(m_Volume * 100.0f));
+    m_pDirectSoundBuffer->SetVolume(NOTSA_FTOL(int32, m_Volume * 100.0f));
     m_pDirectSoundBuffer->Play(0, 0, DSBPLAY_LOOPING);
 }
 

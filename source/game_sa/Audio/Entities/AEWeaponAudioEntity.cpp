@@ -951,13 +951,13 @@ void CAEWeaponAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) {
         break;
     }
     case AE_WEAPON_SOUND_CAT_STEALTH_KNIFE_IN: { // 0x504E8B
-        if ((uint32)sound->m_ClientVariable + 820 < CTimer::GetTimeInMS()) {
+        if (NOTSA_FTOL(uint32, sound->m_ClientVariable) + 820 < CTimer::GetTimeInMS()) {
             sound->m_Speed = 0.84f;
         }
         break;
     }
     case AE_WEAPON_SOUND_CAT_STEALTH_KNIFE_OUT: { // 0x504EBF
-        if ((uint32)sound->m_ClientVariable + 2200 < CTimer::GetTimeInMS()) {
+        if (NOTSA_FTOL(uint32, sound->m_ClientVariable) + 2200 < CTimer::GetTimeInMS()) {
             sound->m_Speed = 1.f;
         }
         break;

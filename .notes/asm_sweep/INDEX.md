@@ -12,7 +12,7 @@
 | S08 | game_sa/Tasks/TaskTypes | 41 | pending | TaskComplexStareAtPed.cpp, TaskComplexStealCar.cpp, TaskComplexStuckInAir.cpp, TaskComplexSunbathe.cpp, TaskComplexTrackEntity.cpp, TaskComplexTreatAccident.cpp ... |
 | S09 | game_sa/Tasks/TaskTypes | 40 | pending | TaskComplexWaitForBackup.cpp, TaskComplexWaitForPed.cpp, TaskComplexWalkAlongsidePed.cpp, TaskComplexWalkRoundBuildingAttempt.cpp, TaskComplexWalkRoundCar.cpp, TaskComplexWalkRoundObject.cpp ... |
 | S10 | game_sa/Tasks/TaskTypes | 41 | pending | TaskLeanOnVehicle.cpp, TaskSimpleAnim.cpp, TaskSimpleArrestPed.cpp, TaskSimpleBeHit.cpp, TaskSimpleBeHitWhileMoving.cpp, TaskSimpleBeKickedOnGround.cpp ... |
-| S11 | game_sa/Tasks/TaskTypes | 48 | pending | TaskSimpleCarGetOut.cpp, TaskSimpleCarGoToPointNearDoorUntilDoorNotInUse.cpp, TaskSimpleCarJumpOut.cpp, TaskSimpleCarOpenDoorFromOutside.cpp, TaskSimpleCarOpenLockedDoorFromOutside.cpp, TaskSimpleCarSetPedInAsDriver.cpp ... |
+| S11 | game_sa/Tasks/TaskTypes | 48 | partial 39/48 (30 M, 9 fixed) -> S11b | TaskSimpleCarGetOut.cpp, TaskSimpleCarGoToPointNearDoorUntilDoorNotInUse.cpp, TaskSimpleCarJumpOut.cpp, TaskSimpleCarOpenDoorFromOutside.cpp, TaskSimpleCarOpenLockedDoorFromOutside.cpp, TaskSimpleCarSetPedInAsDriver.cpp ... |
 | S12 | game_sa/Tasks/TaskTypes | 46 | pending | TaskSimpleCreateCarAndGetIn.cpp, TaskSimpleDead.cpp, TaskSimpleDie.cpp, TaskSimpleDieInCar.cpp, TaskSimpleDoHandSignal.cpp, TaskSimpleDrown.cpp ... |
 | S13 | game_sa/Tasks/TaskTypes | 41 | partial 29/41 (25 M, 3 fixed, 1 U) -> S13b | TaskSimpleGetUp.cpp, TaskSimpleGiveCPR.cpp, TaskSimpleGoTo.cpp, TaskSimpleGoToPoint.cpp, TaskSimpleGoToPointFine.cpp, TaskSimpleGunControl.cpp ... |
 | S14 | game_sa/Tasks/TaskTypes | 41 | pending | TaskSimpleJump.cpp, TaskSimpleKillPedWithCar.cpp, TaskSimpleLand.cpp, TaskSimpleOnEscalator.cpp, TaskSimplePickUpBike.cpp, TaskSimplePickUpEntity.cpp ... |
@@ -49,3 +49,4 @@
 | S27b | rest of S27 | 15 | pending | World.cpp |
 | S29b | rest of S29 | 5 | pending | HandObject.cpp, Object.cpp |
 | S13b | rest of S13 | 12 | pending | TaskSimpleGetUp.cpp, TaskSimpleGoToPoint.cpp, TaskSimpleGoToPointFine.cpp, TaskSimpleGunControl.cpp, TaskSimpleHoldEntity.cpp, TaskSimpleInAir.cpp, TaskSimpleJetPack.cpp |
+| S11b | rest of S11 | 9 | pending | TaskSimpleCarSetPedInAsDriver.cpp, TaskSimpleCarSetPedInAsPassenger.cpp, TaskSimpleCarSetPedSlowDraggedOut.cpp, TaskSimpleClimb.cpp |

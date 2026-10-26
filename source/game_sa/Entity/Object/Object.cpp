@@ -992,7 +992,7 @@ void CObject::ProcessTrainCrossingBehaviour() {
         return;
 
     const float fAngle = x87::acos(m_matrix->GetUp().z);
-    const auto fTimeStep = CTimer::GetTimeStep() / 200.0F;
+    const auto fTimeStep = CTimer::GetTimeStep() * 0.005F; // exe 0x5A0CE7: multiplies by the float 0.005f (0x858B4C), no division by 200
     if (objectFlags.bTrainCrossEnabled)
         SetMatrixForTrainCrossing(m_matrix, std::max(0.0F, fAngle - fTimeStep));
     else

@@ -15,9 +15,9 @@ NOTSA_STANDALONE_NOVSYNC=1 OUT=$S tools/standalone/soak.sh build/StandaloneRelea
 echo "soak: $(grep -a -E '^RESULT' $S.log | tail -1) rc=$rc ($S.log)"
 if [ "$1" = regress ]; then
   GR_SKIP=render_firststart NOTSA_STANDALONE_NOVSYNC=1 tools/standalone/gameplay_regress.sh > $S.regress.log 2>&1
-  echo "regress rc=$? $(grep -a -E 'PASS|FAIL' $S.regress.log | tail -3 | tr '\n' ' ')"
+  grc=$?; echo "regress rc=$grc $(grep -a -E 'PASS|FAIL' $S.regress.log | tail -3 | tr '\n' ' ')"
 fi
-if [ $rc = 0 ] && [ $trc = 0 ]; then
+if [ $rc = 0 ] && [ $trc = 0 ] && [ "${grc:-0}" = 0 ]; then
   o=$(cat C:/gta-scratch/gpu.lock/owner 2>/dev/null)
   case "$o" in USER-PLAY*) echo "user playing, skip copy";; *) cp build/StandaloneRelease/bin/gta_reversed.exe /c/gta-play/ && echo "C:\\gta-play refreshed";; esac
 else echo "SOAK FAILED - C:\\gta-play NOT refreshed"; fi

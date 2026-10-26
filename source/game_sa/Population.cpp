@@ -2538,12 +2538,25 @@ void CPopulation::RemovePedsIfThePoolGetsFull() {
     if (GetPedPool()->GetNoOfFreeSpaces() >= 8) {
         return;
     }
-    const auto closest = rng::min( // It's guaranteed there to be a ped
-        GetPedPool()->GetAllValid<CPed*>(),
-        {},
-        [campos = TheCamera.GetPosition()](CPed* ped) { return (ped->GetPosition() - campos).SquaredMagnitude(); }
-    );
-    RemovePed(closest);
+    // 0x616300: The closest ped (to the camera) that `CanBeDeleted` (so never the player, group members, ...), iterating from the last slot, strict `<`, starting at 1e7.
+    // The distance is a real distance (sqrt) stored as a float; the sum is (z^2 + x^2) + y^2 (FPU precision control = 24 bit => x87d is float)
+    const CVector campos = TheCamera.GetPosition();
+    CPed*         closest = nullptr;
+    float         closestDist = 10'000'000.f;
+    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValidReverse(), GetPedPool()->GetAllValid())) {
+        if (!ped.CanBeDeleted()) {
+            continue;
+        }
+        const CVector d = campos - ped.GetPosition();
+        const float   dist = std::sqrt(d.z * d.z + d.x * d.x + d.y * d.y);
+        if (dist < closestDist) {
+            closestDist = dist;
+            closest     = &ped;
+        }
+    }
+    if (closest) {
+        RemovePed(closest);
+    }
 }
 
 // 0x616420

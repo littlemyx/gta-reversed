@@ -1,0 +1,40 @@
+addr	function	verdict	asm range	note	fix commit
+0x5B1B20	CCutsceneObject::SetModelIndex	MATCH	5b1b20-5b1b89	anim data flags 0x10 = HasZVelocity, PedPosition at +0xC	
+0x553F40	CCutsceneObject::SetupLighting	MATCH	553f40-553f52		
+0x5533F0	CCutsceneObject::RemoveLighting	MATCH	5533f0-553408	arg ignored in the exe too (bRenderScorched = 0x20000000)	
+0x5B1B90	CCutsceneObject::ProcessControl	FIXED	5b1b90-5b1ddf	attachment-object branch: UpdateRpHAnim on the attachment object first, clear bWasPostponed after	1d711b46
+0x5B1E00	CCutsceneObject::PreRender	FIXED	5b1e00-5b208e	blend factor timestep*0.1f (0x858B1C), not /10	9d937cf0
+0x5B1AB0	CCutsceneObject::SetupCarPipeAtomicsForClump	MATCH	5b1ab0-5b1b17	6 hash keys, callback 0x5b1a90 = CustomCarPipeAtomicSetup	
+0x59EC40	CHandObject::ProcessControl	MATCH	59ec40-59eccf		
+0x59ECD0	CHandObject::PreRender	MATCH	59ecd0-59ee78	bone-matrix zeroing loop equal (push=2 / pop=1, do-while)	
+0x59EE80	CHandObject::Render	NOT_REACHED	59ee80-	401 lines (cap); port is 3 lines (SetTexture on first atomic's material 0, CObject::Render)	
+0x59F110	CObject::CreateRwObject	MATCH	59f110	jmp CEntity::CreateRwObject	
+0x5A2130	CObject::ProcessControl	NOT_REACHED	5a2130-	401 lines (cap)	
+0x5A17B0	CObject::Teleport	MATCH	5a17b0-5a183c		
+0x59FD50	CObject::PreRender	MATCH	59fd50-59fedf	scale block sets+clears bIsScaled like the exe; null RwObject with scale!=1 derefs in both	
+0x59F180	CObject::Render	MATCH	59f180-59f1f3		
+0x554FA0	CObject::SetupLighting	MATCH	554fa0-554fdf		
+0x553E10	CObject::RemoveLighting	MATCH	553e10-553e30		
+0x59FEE0	CObject::SpecialEntityPreCollisionStuff	FIXED	59fee0-5a02d3	lamp post ped/vehicle swapped; missing bbox.max<1 gate; missing grenade-below-ped disable; lamp post with other types continues	e829205b
+0x5A02E0	CObject::SpecialEntityCalcCollisionSteps	NOT_REACHED	5a02e0-	349 lines, token budget	
+0x59F840	CObject::Init	FIXED	59f840-59fb40	bCanBeAttachedToMagnet always set (consumer Rope.cpp:790 reads it); sway COM outside the has-volumes if. UNSURE/benign: port zeroes m_nCarColor[2..3] which the exe leaves	a9e5846c
+0x44A4D0	CObject::ProcessGarageDoorBehaviour	FIXED	44a4d0-44a654	plain door z: *0.9090909f not /1.1f	cb36d6d0
+0x59F2D0	CObject::TryToExplode	MATCH	59f2d0-59f2fa		
+0x59F4B0	CObject::ResetDoorAngle	MATCH	59f4b0-59f5b8		
+0x59FB50	CObject::DoBurnEffect	FIXED	59fb50-59fcf6	count = size product * 0.05f, not /20	0d163928
+0x59FD00	CObject::GetLightingFromCollisionBelow	MATCH	59fd00-59fd4d		
+0x5A07D0	CObject::ProcessSamSiteBehaviour	NOT_REACHED	5a07d0-	286 lines, token budget	
+0x5A0B50	CObject::ProcessTrainCrossingBehaviour	FIXED	5a0b50-5a0d80	angle step *0.005f, not /200	c5a8d5d3
+0x5A0D90	CObject::ObjectDamage	NOT_REACHED	5a0d90-	354 lines, token budget	
+0x5A1340	CObject::Explode	FIXED	5a1340-5a157f	speed kick ((rand&0xFF)-128)*0.0002f on x,y (was float-range random +-0.0256)	e0d89c7a
+0x5A1580	CObject::ObjectFireDamage	FIXED	5a1580-5a17a2	burn damage *0.0005f not /2000; breaking sets only the static bit (not virtual SetIsStatic)	6353c662
+0x5A1B60	CObject::CanBeUsedToTakeCoverBehind	MATCH	5a1b60-5a1bfd		
+0x5A29A0	CObject::ProcessControlLogic	MATCH	5a29a0-5a2b85	rope math and register args equal	
+0x5A1F60	CObject::Create-intbool	MATCH	5a1f60-5a2064		
+0x5A2070	CObject::Create-dummy	MATCH	5a2070-5a212b		
+0x5A1840	CObject::TryToFreeUpTempObjects	FIXED	5a1840-5a18ae	loop stops once numObjects freed	1bc1d1e5
+0x5A18B0	CObject::DeleteAllTempObjects	MATCH	5a18b0-5a190e		
+0x5A1910	CObject::DeleteAllMissionObjects	MATCH	5a1910-5a1972		
+0x5A1980	CObject::DeleteAllTempObjectsInArea	MATCH	5a1980-5a1a8f	dist^2 summed z,y,x in the exe (x87 PC=24, compare only): not a finding	
+0x5D2830	CObject::Save	MATCH	5d2830-5d2862		
+0x5D2870	CObject::Load	MATCH	5d2870-5d28a1		

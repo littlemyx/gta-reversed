@@ -842,6 +842,16 @@ void ProcessEvents() {
             if (notsa::ui::UIRenderer::GetInstance().IsActive()) {
                 break;
             }
+#ifdef NOTSA_PORTABLE
+            { // MAC-NAN1: a scripted run (NOTSA_STANDALONE_INPUT) ignores the REAL pointer: the front-end menu cursor follows it, so a person using the machine (or the game's own
+              // SDL_WarpMouseInWindow) moved the cursor off "New Game" and the scripted Returns opened Controller Setup. Injected `mouse:x,y` events have which == 0.
+              // NOTSA_STANDALONE_REALMOUSE=1 restores the real pointer.
+                static const bool s_IgnoreReal = [] { const char* i = std::getenv("NOTSA_STANDALONE_INPUT"); const char* r = std::getenv("NOTSA_STANDALONE_REALMOUSE"); return i && *i && !(r && *r == '1'); }();
+                if (s_IgnoreReal && e.motion.which != 0) {
+                    break;
+                }
+            }
+#endif
             static CVector2D s_MousePos{};
 
             // Use desktop cursor speed if it's windowed, accelerate ingame otherwise.

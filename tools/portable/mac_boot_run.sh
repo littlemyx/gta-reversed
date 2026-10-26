@@ -20,6 +20,23 @@ if [ ! -d "$G" ]; then
   for e in Text anim audio autorun.inf data models movies stream.ini; do [ -e "$STEAM/$e" ] && ln -s "$STEAM/$e" "$G/$e"; done
 fi
 cd "$G" || exit 1
+# MAC-NAN1: a scripted run ignores the REAL pointer (SDLWrapper), so the menu cursor stays where the game puts it: on "Options". Routes that start with "key:return" (no "key:up") relied on the
+# parked real pointer to have "Start Game" selected: hover it explicitly (mouse:636,290 = the item, 1280x720 game pixels) in a per-run copy of the route.
+if [ -f "$SCRIPT" ] && grep -q '^until:menu' "$SCRIPT"; then
+  python3 - "$SCRIPT" "$OUT/route_$TAG.txt" <<'PY'
+import sys
+src, dst = sys.argv[1:3]
+L = open(src).read().split("\n"); o = []; done = False
+for i, l in enumerate(L):
+    o.append(l)
+    if not done and l.startswith("until:menu"):
+        done = True
+        if i + 2 < len(L) and L[i + 1].startswith("wait:") and L[i + 2] == "key:return":  # the "key:up" preambles select Start Game by keyboard
+            o += ["wait:600", "mouse:636,290", "wait:400"]
+open(dst, "w").write("\n".join(o))
+PY
+  SCRIPT="$OUT/route_$TAG.txt"
+fi
 export NOTSA_AUDIO="${NOTSA_AUDIO:-loopback}" NOTSA_AUDIO_WAV="${NOTSA_AUDIO_WAV:-$OUT/$TAG.wav}"
 export NOTSA_STANDALONE_USERDIR="$OUT/userdir" NOTSA_STANDALONE_SKIP_VIDEOS=1 NOTSA_STANDALONE_NOVSYNC="${NOTSA_STANDALONE_NOVSYNC:-1}" NOTSA_HANG_DUMP_SECS=$((TMO-2)) NOTSA_STANDALONE_INPUT="$SCRIPT"
 python3 - "$EXE" "$OUT/$TAG.out" "$TMO" <<'PY'

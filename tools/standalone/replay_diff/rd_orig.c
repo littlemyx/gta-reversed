@@ -60,6 +60,9 @@ static void tick(void){
       u32 pl = U32(0xB74490), base = U32(pl), fl = U32(pl + 4), n = U32(pl + 8), i;
       if(g_pin & 16384){ u32 mi = U32(0xA9B0C8 + 4 * 17613), col = mi ? U32(mi + 0x14) : 0; /* RD-AB-12: "B fc model-17613 (Grove building under the gang) col model state" */
         fprintf(g_f, "B %u mi=%d col=%d slot=%u flags=%02x data=%d refs=%u\n", fc, mi != 0, col != 0, col ? (u32)*(unsigned char*)(size_t)(col + 0x28) : 0u, col ? (u32)*(unsigned char*)(size_t)(col + 0x29) : 0u, col ? U32(col + 0x2C) != 0 : 0, mi ? (u32)*(unsigned short*)(size_t)(mi + 8) : 0u); }
+      if(g_pin & 32768){ u32 vp = U32(0xB74494), vb = U32(vp), vf = U32(vp + 4), vn = U32(vp + 8), vi; /* RD-AB-17 pin bit 32768: "Q fc slot model pos(3) movespeed(3) turnspeed(3) fwd(3) status" for every used vehicle pool slot (stride 0xA18); counterpart in Lockstep.cpp */
+        for(vi = 0; vi < vn; vi++) if(!(*(unsigned char*)(size_t)(vf + vi) & 0x80)){ u32 vd = vb + vi * 0xA18, vm = U32(vd + 0x14), *vq = (u32*)(size_t)(vm ? vm + 0x30 : vd + 4);
+          fprintf(g_f, "Q %u %u %u %08x,%08x,%08x %08x,%08x,%08x %08x,%08x,%08x %08x,%08x,%08x %u\n", fc, vi, (u32)*(unsigned short*)(size_t)(vd + 0x22), vq[0], vq[1], vq[2], U32(vd + 0x44), U32(vd + 0x48), U32(vd + 0x4C), U32(vd + 0x50), U32(vd + 0x54), U32(vd + 0x58), vm ? U32(vm + 0x10) : 0, vm ? U32(vm + 0x14) : 0, vm ? U32(vm + 0x18) : 0, (u32)(*(unsigned char*)(size_t)(vd + 0x42) >> 3)); } }
       for(i = 0; i < n; i++) if(!(*(unsigned char*)(size_t)(fl + i) & 0x80)){ u32 pd = base + i * 0x7C4, m = U32(pd + 0x14), *pp = (u32*)(size_t)(m ? m + 0x30 : pd + 4);
         fprintf(g_f, "P %u %u %u %08x,%08x,%08x %08x,%08x,%08x %08x,%08x %08x,%08x %08x,%08x\n", fc, i, (u32)*(unsigned short*)(size_t)(pd + 0x22), pp[0], pp[1], pp[2], U32(pd + 0x44), U32(pd + 0x48), U32(pd + 0x4C), U32(pd + 0x558), U32(pd + 0x55C), U32(pd + 0x4D8), U32(pd + 0x4DC), U32(pd + 0x550), U32(pd + 0x554));
         if(g_pin & 8192) fprintf(g_f, "K %u %u dmg=%08x ent=%d vel=%08x,%08x,%08x posn=%08x,%08x,%08x ptype=%d\n", fc, i, U32(pd + 0xD8), U32(pd + 0xDC) != 0, U32(pd + 0xE0), U32(pd + 0xE4), U32(pd + 0xE8), U32(pd + 0xEC), U32(pd + 0xF0), U32(pd + 0xF4), (int)*(short*)(size_t)(pd + 0xF8)); /* pin bit 8192: last-collision damage record of the ped (CPhysical +0xD8..0xF8) */
@@ -202,7 +205,7 @@ static LONG CALLBACK ps_veh(EXCEPTION_POINTERS* ep){
 }
 /* RD-AB-13: RD_WATCH=<hex addr of a 16-bit global> RD_WFC=<fc> RD_WN=<n>: hardware write watchpoint (DR0, len 2) on the main thread, set by a helper thread (cannot wait inside DllMain).
  * Every write in traced frames fc..fc+n logs "V fc newvalue eip <call-site candidates on the stack>" (eip = the instruction after the write; for CWorld::ms_nCurrentScanCode 0xB7CD78 the inlined AdvanceCurrentScanCode). */
-static u32 g_wfc, g_wn = 1; static HANDLE g_wth; static u32 g_wa; static int g_wdyn = -1; static u32 g_wdoff, g_wlen = 2; /* RD-AB-14: RD_WDYN=<building pool slot>:<hex offset> RD_WLEN=1|2|4 - the watch address is resolved from the building pool once the frame counter reaches RD_WFC-3 */
+static u32 g_wfc, g_wn = 1; static HANDLE g_wth; static u32 g_wa; static int g_wdyn = -1; static u32 g_wdoff, g_wlen = 2; /* RD-AB-17: RD_WPED=1 makes RD_WDYN=<ped pool slot>:<hex offset> an offset into the ped's matrix (ped+0x14 deref; RD_WLEN=4, offset 0x30 = x) */ /* RD-AB-14: RD_WDYN=<building pool slot>:<hex offset> RD_WLEN=1|2|4 - the watch address is resolved from the building pool once the frame counter reaches RD_WFC-3 */
 static LONG CALLBACK w_veh(EXCEPTION_POINTERS* ep){
   CONTEXT* x = ep->ContextRecord;
   if(ep->ExceptionRecord->ExceptionCode == EXCEPTION_SINGLE_STEP && (x->Dr6 & 1)){
@@ -216,7 +219,7 @@ static LONG CALLBACK w_veh(EXCEPTION_POINTERS* ep){
   }
   return EXCEPTION_CONTINUE_SEARCH;
 }
-static DWORD WINAPI w_thread(LPVOID p){ CONTEXT cx; (void)p; if(g_wdyn >= 0){ for(;;){ u32 fc = U32(0xB7CB4C), pl = U32(0xB74498); if(pl && U32(pl) && fc + 3 >= g_wfc && fc < 0x7FFFFFFF && fc >= 0x100000){ g_wa = g_wdoff == 0xFFFF ? U32(U32(pl) + 4) + g_wdyn : U32(pl) + g_wdyn * 0x38 + g_wdoff; break; } Sleep(1); } } SuspendThread(g_wth); cx.ContextFlags = CONTEXT_DEBUG_REGISTERS; if(GetThreadContext(g_wth, &cx)){ cx.Dr0 = g_wa; cx.Dr6 = 0; cx.Dr7 = 1 | (1 << 16) | ((g_wlen == 4 ? 3u : g_wlen == 2 ? 1u : 0u) << 18); SetThreadContext(g_wth, &cx); } ResumeThread(g_wth); return 0; }
+static DWORD WINAPI w_thread(LPVOID p){ CONTEXT cx; (void)p; if(g_wdyn >= 0){ for(;;){ u32 fc = U32(0xB7CB4C), pl = U32(0xB74498); if(pl && U32(pl) && fc + 3 >= g_wfc && fc < 0x7FFFFFFF && fc >= 0x100000){ if(getenv("RD_WPED")){ u32 pp = U32(0xB74490), pb = pp ? U32(pp) : 0, mx = pb ? U32(pb + g_wdyn * 0x7C4 + 0x14) : 0; if(!mx){ Sleep(1); continue; } g_wa = mx + g_wdoff; break; } g_wa = g_wdoff == 0xFFFF ? U32(U32(pl) + 4) + g_wdyn : U32(pl) + g_wdyn * 0x38 + g_wdoff; break; } Sleep(1); } } SuspendThread(g_wth); cx.ContextFlags = CONTEXT_DEBUG_REGISTERS; if(GetThreadContext(g_wth, &cx)){ cx.Dr0 = g_wa; cx.Dr6 = 0; cx.Dr7 = 1 | (1 << 16) | ((g_wlen == 4 ? 3u : g_wlen == 2 ? 1u : 0u) << 18); SetThreadContext(g_wth, &cx); } ResumeThread(g_wth); return 0; }
 BOOL WINAPI DllMain(HINSTANCE h, DWORD why, LPVOID r){
   if(why == DLL_PROCESS_ATTACH){
     const char* e; HMODULE rv = LoadLibraryA("vorbisFile_real.dll"); int i; for(i = 0; i < 7; i++) g_fw[i] = rv ? GetProcAddress(rv, g_fwn[i]) : 0;

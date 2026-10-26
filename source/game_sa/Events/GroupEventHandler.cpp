@@ -104,9 +104,10 @@ bool IsPedInPlayersGroup(CPedGroup* pg, CPed* p) {
 }
 
 void MaybeAdjustTaskOfGroupThreatEvent(const CEventEditableResponse& e, CPedGroup* pg, CPed* originator, CPed* srcPed) {
-    if (pg->m_bIsMissionGroup && srcPed->IsPlayer()) {
+    // exe 0x5FBD3F..0x5FBD87 (GunAimedAt) / 0x5FBF80..0x5FBFCB (Damage): only for NON-mission groups, and the leader must not be friendly with the SOURCE ped
+    if (!pg->m_bIsMissionGroup && srcPed->IsPlayer()) {
         if (const auto l = pg->GetMembership().GetLeader()) {
-            if (!l->GetActiveWeapon().IsTypeMelee() && !l->GetIntelligence()->IsFriendlyWith(*originator)) {
+            if (!l->GetActiveWeapon().IsTypeMelee() && !l->GetIntelligence()->IsFriendlyWith(*srcPed)) {
                 const_cast<CEventEditableResponse*>(&e)->m_TaskId = TASK_GROUP_KILL_THREATS_BASIC; // nice R*
             }
         }

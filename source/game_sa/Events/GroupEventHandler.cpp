@@ -302,11 +302,10 @@ CTaskAllocator* CGroupEventHandler::ComputeResponseLeaderExitedCar(const CEventE
         if (!m) {
             continue;
         }
-        if (m->m_pVehicle && m->bInVehicle && m->m_pVehicle == leader->m_pVehicle) { // Already in the leader's vehicle
-            continue; 
-        }
         CVehicle* mveh{};
-        if (const auto t = m->GetTaskManager().Find<CTaskComplexEnterCarAsPassengerWait>(false); !t || !(mveh = t->GetCar())) {
+        if (m->m_pVehicle && m->bInVehicle && m->m_pVehicle == leader->m_pVehicle) { // exe 0x5F90EE..0x5F9106 -> 0x5F9144: in the leader's vehicle => THAT vehicle is the one to leave (the port skipped these members)
+            mveh = m->m_pVehicle;
+        } else if (const auto t = m->GetTaskManager().Find<CTaskComplexEnterCarAsPassengerWait>(false); !t || !(mveh = t->GetCar())) {
             if (const auto t = m->GetTaskManager().Find<CTaskComplexEnterCarAsPassenger>(false); !t || !(mveh = t->GetTargetCar())) {
                 continue;
             }
@@ -357,11 +356,13 @@ CTaskAllocator* CGroupEventHandler::ComputeResponseLeaderExitedCar(const CEventE
                         fEntityPosChangeThreshold
                     }
                 });
-            } else { // 0x5F92E7
+            } else { // 0x5F92AA..0x5F92E7
+                // exe: delay = slot * 500 - (int)(rand() * (1/32768) * -500.0) + 250, i.e. slot * 500 + [250, 749] (NOT rand(-250, 250) as in the burning case)
+                const auto rnd = -(int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.f / 32768.f) * 500.f);
                 SetResponseTask(CTaskComplexLeaveCar{
-                     mveh,
+                    mveh,
                     eTargetDoor::TARGET_DOOR_FRONT_LEFT,
-                    CGeneral::GetRandomNumberInRange(-250, 250) + i * 500, // SEE NOTE
+                    (i * 500 - rnd) + 250,
                     false,
                     false
                 });

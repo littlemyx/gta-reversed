@@ -259,6 +259,10 @@ CTaskAllocator* CGroupEventHandler::ComputeResponsePedFriend(const CEventAcquain
     if (IsPedInPlayersGroup(pg, e.m_AcquaintancePed)) {
         return nullptr;
     }
+    // exe 0x5FB339..0x5FB346: also bails out for the group's own ped and for any member of THIS group
+    if (e.m_AcquaintancePed == pg->m_pPed || pg->GetMembership().IsMember(e.m_AcquaintancePed)) {
+        return nullptr;
+    }
     switch (e.m_TaskId) {
     case TASK_GROUP_PARTNER_DEAL:  return ComputeDoDealResponse(pg, e.m_AcquaintancePed, originator);
     case TASK_GROUP_PARTNER_GREET: return ComputeGreetResponse(pg, e.m_AcquaintancePed, originator);

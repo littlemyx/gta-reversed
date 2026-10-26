@@ -98,11 +98,12 @@ bool CTaskSimpleCreateCarAndGetIn::ProcessPed(CPed* ped) {
         task.ProcessPed(ped);
     }
  
-    if (!m_CreatedVeh->GetIsStatic()) {
+    // 0x64D16A..0x64D179: bIsStatic (0x4) or bIsStaticWaitingForCollision (0x40000) => keep waiting (GetIsStatic() = 0x4633E0)
+    if (m_CreatedVeh->GetIsStatic()) {
         return false;
     }
 
-    // Veh is static now, so remove it, and signal task finish
+    // Veh is not static anymore, so remove it, and signal task finish (0x64D185..0x64D1D9)
     CleanupCreatedVehicle();
     return true;
 }

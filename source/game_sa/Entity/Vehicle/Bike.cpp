@@ -634,7 +634,8 @@ bool CBike::ProcessAI(uint32& extraHandlingFlags) {
 
 // 0x6BF400
 void CBike::ProcessDrivingAnims(CPed* driver, bool blend) {
-    if (m_bOffscreen && GetStatus() == STATUS_PLAYER)
+    // 0x6BF400: `test [this+0x1C], 0x20000; je run; test byte [this+0x36], 0xF8; jne ret` - skipped when offscreen AND the status is NOT STATUS_PLAYER
+    if (m_bOffscreen && GetStatus() != STATUS_PLAYER)
         return;
 
     ProcessRiderAnims(driver, this, &m_RideAnimData, m_BikeHandling, 0);

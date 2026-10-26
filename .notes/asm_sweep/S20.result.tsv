@@ -1,0 +1,76 @@
+addr	function	verdict	asm_range	note	fix_commit
+0x5DEBF0	CPed::DeleteRwObject	MATCH	0x5DEBF0	tail jmp CEntity::DeleteRwObject	
+0x5DEBB0	CPed::Initialise	MATCH	0x5DEBB0..0x5DEBB5		
+0x5E8A20	CPed::PreRender	MATCH	0x5E8A20..0x5E8A2E	state 50 == PEDSTATE_DRIVING	
+0x5533B0	CPed::RemoveLighting	MATCH	0x5533B0..0x5533C8		
+0x553F00	CPed::SetupLighting	MATCH	0x553F00..0x553F12		
+0x5E6530	CPed::ReplaceWeaponForScriptedCutscene	MATCH	0x5E6530..0x5E654E		
+0x5E6550	CPed::RemoveWeaponForScriptedCutscene	MATCH	0x5E6550..0x5E657F		
+0x5E6280	CPed::SetCurrentWeapon-WepType	MATCH	0x5E6280..0x5E629E		
+0x5E61F0	CPed::SetCurrentWeapon-Slot	MATCH	0x5E61F0..0x5E6272		
+0x5EFFB0	CPed::SayScript	MATCH	0x5EFFB0..0x5EFFD5	arg order checked below	
+0x455560	CPed::PedCanPickUpPickUp	FIXED	0x455560..0x45559B	port searched active task + secondaries; exe asks CPedIntelligence::FindTaskByType	7d39fd7c
+0x5E6320	CPed::ClearWeapons	MATCH	0x5E6320..0x5E6367		
+0x5E3A90	CPed::AddGogglesModel	FIXED	0x5E3A90..0x5E3AD6	exe calls RemoveGogglesModel when goggles already exist (port only assert, no-op in Release)	58fa26be
+0x5DDC30	CCivilianPed::Destructor	MATCH	0x5DDC30..0x5DDC4B		
+0x5DDBF0	CCivilianPed::ProcessControl	MATCH	0x5DDBF0..0x5DDC2C		
+0x5E0130	CPed::Dress	MATCH	0x5E0130..0x5E016F	exe stores m_nModelIndex=-1 before SetModelIndex: dead store (NoCreate overwrites, nothing reads it)	
+0x5E00F0	CPed::Undress	MATCH	0x5E00F0..0x5E0126		
+0x5DED10	CPed::StopNonPartialAnims	MATCH	0x5DED10..0x5DED47		
+0x5DED50	CPed::RestartNonPartialAnims	MATCH	0x5DED50..0x5DED84		
+0x5F0140	CPed::RemoveBodyPart	MATCH	0x5F0140..0x5F0183		
+0x5E89B0	CPed::GiveDelayedWeapon	MATCH	0x5E89B0..0x5E8A1F		
+0x5E8910	CPed::RequestDelayedWeapon	MATCH	0x5E8910..0x5E89AB		
+0x5E8BE0	CPed::GiveWeaponWhenJoiningGang	MATCH	0x5E8BE0..0x5E8C80	cheat idx 77/78 checked	
+0x5E8AB0	CPed::GiveWeaponAtStartOfFight	MATCH	0x5E8AB0..0x5E8BC4	jump table decoded: gangs->pistol<400; dealer/criminal/prostitute->knife<200,pistol<400	
+0x5E3AE0	CPed::PutOnGoggles	MATCH	0x5E3AE0..0x5E3B5A		
+0x5E0360	CPed::DropEntityThatThisPedIsHolding	MATCH	0x5E0360..0x5E03ED		
+0x5E6490	CPed::ReplaceWeaponWhenExitingVehicle	MATCH	0x5E6490..0x5E651D	bit 11 of player flags = InVehicleDontAllowWeaponChange	
+0x5DF170	CPed::RemoveGogglesModel	MATCH	0x5DF170..0x5DF1FC		
+0x5E6370	CPed::RemoveWeaponWhenEnteringVehicle	FIXED	0x5E6370..0x5E6489	player with drive-by, SMG slot not Uzi/Tec9/MP5, not jetpack: exe removes weapon model, port did nothing	f9805f75
+0x5F02C0	CPed::IsPedHeadAbovePos	MATCH	0x5F02C0..0x5F034F		
+0x5F01A0	CPed::DoesLOSBulletHitPed	MATCH	0x5F01A0..0x5F024A	NaN colpoint z: exe returns 0, port 2 (ignored)	
+0x5E01C0	CPed::GetTransformedBonePosition	MATCH	0x5E01C0..0x5E0250		
+0x5DDB70	CCivilianPed::Constructor	MATCH	0x5DDB70..0x5DDBCE		
+0x5DE400	CEmergencyPed::ProcessControl	MATCH	0x5DE400..0x5DE46B		
+0x5DE0D0	CCopPed::Destructor	MATCH	0x5DE0D0..0x5DE156	SetPartner(null) == CleanUpOldReference on non-null	
+0x5DDC60	CCopPed::Constructor	MATCH	0x5DDC60..0x5DDE5B	jump table 0x5DDE5C decoded; types/models/weapons/armour/range/accuracy all equal	
+0x5DE160	CCopPed::ProcessControl	MATCH	0x5DE160..0x5DE2B3		
+0x5DFD90	CPed::SetRadioStation	FIXED	0x5DFD90..0x5DFDEF	rand()==0x3FFF picked radio1 in port, exe radio2	bdedb758
+0x4590F0	CPed::CreateDeadPedMoney	FIXED	0x4590F0..0x459178	money==10 dropped nothing in port; exe drops when count>=10	847fd4ac
+0x459180	CPed::CreateDeadPedPickupCoors-	MATCH	0x459180..0x4591C5		
+0x5E7E60	CPed::AttachPedToBike	MATCH	0x5E7E60..0x5E7EAF	exe returns nonzero on success; port void, check callers	
+0x5E04B0	CPed::GetWalkAnimSpeed	FIXED	0x5E04B0..0x5E0516	no-translation branch: exe reads Trans.y at stride 20 (frame+0x18); port read Rot.imag.y (practically unreachable: walk root has translation)	07580c00
+0x5F0250	CPed::RemoveWeaponAnims	MATCH	0x5F0250..0x5F02B9		
+0x5DF340	CPed::DoGunFlash	MATCH	0x5DF340..0x5DF3EF		
+0x5E3990	CPed::RemoveWeaponModel	MATCH	0x5E3990..0x5E3A80		
+0x5E4110	CPed::Teleport	MATCH	0x5E4110..0x5E4219		
+0x5E7EC0	CPed::DettachPedFromEntity	FIXED	0x5E7EC0..0x5E8023	PEDSTATE_DIE force: exe adds +4.0 to z after forward*-4 (fadd [0x858B90]); port omitted	1737a74a
+0x5E7CB0	CPed::AttachPedToEntity	FIXED	0x5E7CB0..0x5E7E54	player path: exe calls CPlayerPed::MakeChangesForNewWeapon(weapon) after m_nChosenWeapon; port omitted	9ca7e2c7
+0x5E5ED0	CPed::AddWeaponModel	MATCH	0x5E5ED0..0x5E600C		
+0x5E6080	CPed::GiveWeapon-	MATCH	0x5E6080..0x5E61EB	ammo cap: exe signed cmp vs port unsigned min (only for ammo >= 2^31)	
+0x5E4390	CPed::GiveObjectToPedToHold	FIXED	0x5E4390..0x5E44EE	drop was nested under the HOLD-task check; exe drops (held entity via HOLD/PICKUP/PUTDOWN) before testing the HOLD task	7576c01d
+0x4591D0	CPed::CreateDeadPedWeaponPickups	FIXED	0x4591D0..0x459321	exe calls ClearWeapons() after the loop (not on the early returns); port left the weapons. Caller TaskSimpleDead does not compensate	fd5bcd7c
+0x5E4880	CPed::SetModelIndex	FIXED	0x5E4880..0x5E49F6	money rand order/count: exe rand() for base amount first, then second rand() for the 3% 400 override; port rolled the 400 first and skipped the second rand on a hit	ac44165e
+0x5E1660	CPed::OurPedCanSeeThisEntity	FIXED	0x5E1660..0x5E17D5	ray start missed the +1.0 z (exe: this pos + 1.0, target + 1.0 for peds)	8fdc3739
+0x5E8030	CPed::Constructor	NOT_REACHED		exedis 342 lines	
+0x5E8620	CPed::Destructor	NOT_REACHED		exedis 139 lines	
+0x5DF560	CPed::ShoulderBoneRotation	NOT_REACHED		exedis 243 lines	
+0x5E57F0	CPed::PlayFootSteps	NOT_REACHED		exedis 401+ lines	
+0x5E5380	CPed::DoFootLanded	NOT_REACHED		exedis 316 lines	
+0x6AE0D0	CPed::MakeTyresMuddySectorList<CPtrListSingleLink<CPhysical*>>	NOT_REACHED		exedis 401+ lines	
+0x5F0360	CPed::KillPedWithCar	NOT_REACHED		exedis 401+ lines	
+0x5E65A0	CPed::PreRenderAfterTest	NOT_REACHED		exedis 401+ lines	
+0x5E1FA0	CPed::ProcessBuoyancy	NOT_REACHED		exedis 382 lines	
+0x5E0820	CPed::PositionPedOutOfCollision	NOT_REACHED		exedis 401+ lines	
+0x5E13C0	CPed::PositionAnyPedOutOfCollision	NOT_REACHED		exedis 234 lines	
+0x6B4200	CPed::DeadPedMakesTyresBloody	NOT_REACHED		exedis 158 lines	
+0x5DF910	CPed::SetPedPositionInCar	NOT_REACHED		exedis 254 lines	
+0x5E8CD0	CPed::ProcessControl	NOT_REACHED		exedis 401+ lines	
+0x5E3C30	CPed::SpecialEntityPreCollisionStuff	NOT_REACHED		exedis 186 lines	
+0x5E3E90	CPed::SpecialEntityCalcCollisionSteps	NOT_REACHED		exedis 109 lines	
+0x5E7680	CPed::Render	NOT_REACHED		exedis 221 lines	
+0x5E2530	CPed::ProcessEntityCollision	NOT_REACHED		exedis 401+ lines	
+0x5E4A00	CPed::SetMoveAnim	NOT_REACHED		exedis 174 lines	
+0x5D5730	CPed::Save	NOT_REACHED		exedis 43 lines	
+0x5D4640	CPed::Load	NOT_REACHED		exedis 42 lines	

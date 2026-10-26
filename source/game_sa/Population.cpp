@@ -802,15 +802,34 @@ bool CPopulation::TestRoomForDummyObject(CObject* object) {
 
 // 0x6123A0
 bool CPopulation::TestSafeForRealObject(CDummyObject* obj) {
-    const auto objCM  = obj->GetColModel();
-    const auto objMat = obj->GetMatrix();
-    return CWorld::IterateSectorsOverlappedByRect(
-        CRect{ obj->GetBoundCentre(), objCM->GetBoundRadius()},
-        [&](int32 x, int32 y) {
+    const auto objCM     = obj->GetColModel();
+    const auto objRadius = objCM->GetBoundRadius();
+    const auto& objPos   = obj->GetPosition(); // The sector range is built around the object's POSITION (0x6123C4..0x612590), not its bound centre
+    const auto objCentre = obj->GetBoundCentre();
+
+    // Sector index = floor((pos -+ radius) * 0.02 + 60) clamped to [0, 120] (0x858B38 / 0x858B34)
+    const auto ToSector = [](float v) { return (int32)std::floor((double)(v * 0.02f + 60.f)); };
+    const auto minX = std::max(ToSector(objPos.x - objRadius), 0);
+    const auto minY = std::max(ToSector(objPos.y - objRadius), 0);
+    const auto maxX = std::min(ToSector(objPos.x + objRadius), 120);
+    const auto maxY = std::min(ToSector(objPos.y + objRadius), 120);
+
+    for (auto y = minY; y <= maxY; ++y) {
+        for (auto x = minX; x <= maxX; ++x) {
             for (auto* const entity : CWorld::GetRepeatSector(x, y).Vehicles) {
+                // NOTE: The original neither increments the scan code here, nor does it skip this for entities it has seen
+                if (entity->GetScanCode() == CWorld::ms_nCurrentScanCode) { // 0x612623
+                    continue;
+                }
+                if (!entity->GetIsTouching(objCentre, objRadius)) { // 0x612643
+                    continue;
+                }
+                entity->SetScanCode(CWorld::ms_nCurrentScanCode);
+                auto& entityMat = entity->GetMatrix(); // 0x61264C: allocated on demand, the entity's first, then the object's
+                auto& objMat    = obj->GetMatrix();
                 if (CCollision::ProcessColModels(
                     objMat, *objCM,
-                    entity->GetMatrix(), *entity->GetColModel(),
+                    entityMat, *entity->GetColModel(),
                     CWorld::m_aTempColPts,
                     nullptr,
                     nullptr,
@@ -819,9 +838,9 @@ bool CPopulation::TestSafeForRealObject(CDummyObject* obj) {
                     return false;
                 }
             }
-            return true;
         }
-    );
+    }
+    return true;
 }
 
 // 0x612710

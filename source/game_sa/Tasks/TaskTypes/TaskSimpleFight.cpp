@@ -1436,7 +1436,7 @@ CPed* CTaskSimpleFight::FightHitPed(CPed* creator, CPed* victim, const CVector& 
 
     // (The original also calls `CWeaponInfo::GetWeaponInfo(<creator's weapon>, 1)` here, but doesn't use the result)
 
-    const int32 damage = (int32)GetStrikeDamageExt(*this, creator); // 0x821B40 (ftol) => truncated
+    const int32 damage = NOTSA_FTOL(int32, GetStrikeDamageExt(*this, creator)); // 0x821B40 (ftol) => truncated
 
     m_nContinueStrike = -1;
 
@@ -1461,7 +1461,7 @@ CPed* CTaskSimpleFight::FightHitPed(CPed* creator, CPed* victim, const CVector& 
                 victim,
                 SURFACE_DEFAULT,
                 0,
-                (uint32)(int32)((x87d)s_HitSoundMaxVolume[m_nCurrentMove] * (x87d)2.8f) // 0x86D6A8 (ftol)
+                (uint32)NOTSA_FTOL(int32, (x87d)s_HitSoundMaxVolume[m_nCurrentMove] * (x87d)2.8f) // 0x86D6A8 (ftol)
             );
         } else {
             creatorAE.AddAudioEvent((eAudioEvents)combo.m_Hit[m_nCurrentMove], 0.f, 1.f, victim, SURFACE_DEFAULT, 0, 0);
@@ -1490,10 +1490,10 @@ CPed* CTaskSimpleFight::FightHitPed(CPed* creator, CPed* victim, const CVector& 
     } else if (m_nComboSet == 4 && m_nCurrentMove == FIGHT_ATTACK_FIGHTIDLE) {
         bloodChance = -1;
     } else {
-        bloodChance = (int32)((x87d)100.f - (x87d)victim->m_fHealth); // 0x858628 (ftol)
+        bloodChance = NOTSA_FTOL(int32, (x87d)100.f - (x87d)victim->m_fHealth); // 0x858628 (ftol)
     }
 
-    const auto roll = (int32)(((x87d)(CGeneral::GetRandomNumber() & 0xFFFF) * (x87d)(1.f / 32768.f)) * (x87d)100.f); // 0x858B14, 0x858628 (ftol)
+    const auto roll = NOTSA_FTOL(int32, ((x87d)(CGeneral::GetRandomNumber() & 0xFFFF) * (x87d)(1.f / 32768.f)) * (x87d)100.f); // 0x858B14, 0x858628 (ftol)
     if (roll < bloodChance) {
         const CVector bloodPos = point;
 

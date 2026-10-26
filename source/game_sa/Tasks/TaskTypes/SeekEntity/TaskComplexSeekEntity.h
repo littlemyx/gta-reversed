@@ -375,7 +375,7 @@ public:
         ped->AttachPedToEntity(
             commonBoat,
             Invert(commonBoat->GetMatrix()).TransformVector(newPedPos - boatPos),
-            (int16)CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(pedToBoatDir, {})),
+            NOTSA_FTOL(int16, CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(pedToBoatDir, {}))),
             0.2f,
             ped->GetActiveWeapon().m_Type
         );

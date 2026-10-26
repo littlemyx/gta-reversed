@@ -38,7 +38,7 @@ void CTaskComplexDriveToPoint::SetUpCar() {
 
     if (m_CruiseSpeed > 0.0f) {
         assert(m_CruiseSpeed < 255.0f);
-        m_Veh->m_autoPilot.SetCruiseSpeed((uint8)m_CruiseSpeed);
+        m_Veh->m_autoPilot.SetCruiseSpeed(NOTSA_FTOL(uint8, m_CruiseSpeed));
     }
     m_Veh->m_autoPilot.m_nCarDrivingStyle    = static_cast<eCarDrivingStyle>(m_CarDrivingStyle);
     m_Veh->m_autoPilot.m_nTimeToStartMission = CTimer::GetTimeInMS();
@@ -67,7 +67,7 @@ CTask* CTaskComplexDriveToPoint::Drive(CPed* ped) {
     }
 
     if (!veh->m_autoPilot.m_nCruiseSpeed) {
-        veh->m_autoPilot.m_nCruiseSpeed = (uint8)(int32)m_CruiseSpeed; // 0x821B40 (_ftol), truncates
+        veh->m_autoPilot.m_nCruiseSpeed = (uint8)NOTSA_FTOL(int32, m_CruiseSpeed); // 0x821B40 (_ftol), truncates
     }
 
     if (IsTargetBlocked(ped)) {

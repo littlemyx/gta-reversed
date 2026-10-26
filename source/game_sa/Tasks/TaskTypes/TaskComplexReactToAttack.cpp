@@ -147,7 +147,7 @@ CTask* CTaskComplexReactToAttack::CreateSubTask(eTaskType taskType) {
     case TASK_SIMPLE_BE_HIT: {
         // 0x821B40 (_ftol => truncation)
         const auto attackerPed = m_Attacker && m_Attacker->GetIsTypePed() ? m_Attacker->AsPed() : nullptr;
-        return new CTaskSimpleBeHit{ attackerPed, m_PieceType, m_HitDir, (int32)m_Damage };
+        return new CTaskSimpleBeHit{ attackerPed, m_PieceType, m_HitDir, NOTSA_FTOL(int32, m_Damage) };
     }
     default: // Including `TASK_FINISHED`
         return nullptr;

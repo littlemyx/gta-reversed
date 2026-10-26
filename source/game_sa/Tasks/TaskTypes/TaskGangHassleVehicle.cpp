@@ -323,7 +323,7 @@ CTask* CTaskGangHassleVehicle::ControlSubTask(CPed* ped) {
             task = new CTaskSimpleRunAnim{ANIM_GROUP_GANGS, ANIM_ID_SHAKE_CARK, 4.f, false};
         } else if (rnd > 70.f) {
             // `rand() & 0xFFFF` * 2^-15 * 8 [truncated] => [0, 7]
-            const auto animIdx = (int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.f / 32768.f) * 8.f);
+            const auto animIdx = NOTSA_FTOL(int32, (float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.f / 32768.f) * 8.f);
             task = new CTaskSimpleRunAnim{ANIM_GROUP_GANGS, (AnimationId)(ANIM_ID_PRTIAL_GNGTLKA + animIdx), 4.f, false};
         } else if (rnd > 60.f) {
             if (ped->IsPlayingHandSignal()) {

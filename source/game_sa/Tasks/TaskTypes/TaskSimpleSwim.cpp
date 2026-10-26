@@ -153,7 +153,7 @@ bool CTaskSimpleSwim::ProcessPed(CPed* ped) {
     if (ped->IsPlayer()) {
         if (m_nTimeStep && m_nSwimState != SWIM_UNDERWATER_SPRINTING) {
             ProcessControlAI(ped);
-            auto swimmingTimeStep = static_cast<uint32>(CTimer::GetTimeStepInMS());
+            auto swimmingTimeStep = NOTSA_FTOL(uint32, CTimer::GetTimeStepInMS());
             if (m_nTimeStep <= swimmingTimeStep)
                 m_nTimeStep = 0;
             else
@@ -658,7 +658,7 @@ void CTaskSimpleSwim::ProcessEffects(CPed* ped) {
         uint32 oxygen = 5;
         if (ped->IsPlayer()) {
             assert(ped->GetPlayerData());
-            oxygen = static_cast<uint32>(((100.0f - ped->GetPlayerData()->m_fBreath / CStats::GetFatAndMuscleModifier(STAT_MOD_AIR_IN_LUNG) * 100.0f) * ExeRecip(3.0f)));
+            oxygen = NOTSA_FTOL(uint32, (100.0f - ped->GetPlayerData()->m_fBreath / CStats::GetFatAndMuscleModifier(STAT_MOD_AIR_IN_LUNG) * 100.0f) * ExeRecip(3.0f));
         }
         if ((unsigned)CGeneral::GetRandomNumberInRange(0, 100) < oxygen) {
             RpHAnimHierarchy* hier = GetAnimHierarchyFromSkinClump(ped->GetRpClump()); // todo: almost CPed::GetBoneMatrix

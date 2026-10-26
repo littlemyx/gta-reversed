@@ -31,7 +31,7 @@ void CTaskComplexCarDriveWander::SetUpCar() {
         CCarCtrl::JoinCarWithRoadSystem(m_Veh);
         m_Veh->SetStatus(STATUS_PHYSICS);
         m_Veh->m_autoPilot.SetCarMission(MISSION_CRUISE);
-        m_Veh->m_autoPilot.SetCruiseSpeed((uint8)m_CruiseSpeed);
+        m_Veh->m_autoPilot.SetCruiseSpeed(NOTSA_FTOL(uint8, m_CruiseSpeed));
         m_Veh->m_autoPilot.m_speed = m_Veh->m_autoPilot.m_nCruiseSpeed;
         m_Veh->m_autoPilot.m_nCarDrivingStyle = static_cast<eCarDrivingStyle>(m_CarDrivingStyle);
     }

@@ -75,7 +75,7 @@ CTask* CTaskGangHasslePed::CreateFirstSubTask(CPed* ped) {
     // `rand() & 0xFFFF` * 2^-15 * (max - min) [truncated] + min
     const auto rnd = (x87d)(CGeneral::GetRandomNumber() & 0xFFFF);
     m_nTime                    = CTimer::GetTimeInMS();
-    m_nSomeRandomShit          = (int32)(rnd * (x87d)3.0517578125e-05 * (x87d)(m_RndMax - m_RndMin)) + m_RndMin;
+    m_nSomeRandomShit          = NOTSA_FTOL(int32, rnd * (x87d)3.0517578125e-05 * (x87d)(m_RndMax - m_RndMin)) + m_RndMin;
     m_bFirstSubTaskInitialised = true;
 
     return new CTaskComplexSeekEntity<CEntitySeekPosCalculatorStandard>{m_Ped, 999'999, 1'000, 1.f * distance, 2.f, 2.f, false, true};
@@ -125,7 +125,7 @@ CTask* CTaskGangHasslePed::ControlSubTask(CPed* ped) {
         CTask* animTask{};
         if (r > 50 && r < 56) {
             // `rand() & 0xFFFF` * 2^-15 * 8 [truncated]
-            const auto idx = (int32)((x87d)(CGeneral::GetRandomNumber() & 0xFFFF) * (x87d)3.0517578125e-05 * (x87d)8.0);
+            const auto idx = NOTSA_FTOL(int32, (x87d)(CGeneral::GetRandomNumber() & 0xFFFF) * (x87d)3.0517578125e-05 * (x87d)8.0);
             animTask = new CTaskSimpleRunAnim{ANIM_GROUP_GANGS, (AnimationId)(ANIM_ID_PRTIAL_GNGTLKA + idx), 4.f, false};
         } else if (r == 100) {
             animTask = new CTaskComplexPlayHandSignalAnim{ANIM_ID_UNDEFINED, 4.f};

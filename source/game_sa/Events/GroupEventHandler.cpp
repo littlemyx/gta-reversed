@@ -615,7 +615,7 @@ CTaskAllocator* CGroupEventHandler::ComputeResponsLeaderQuitEnteringCar(const CE
         }
 
         // This is an inlined `rand() * -500.f` => The result is a number in range [0, 499]
-        const auto rnd = -(int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.f / 32768.f) * 500.f);
+        const auto rnd = -NOTSA_FTOL(int32, (float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.f / 32768.f) * 500.f);
         pg->GetIntelligence().SetEventResponseTask(m, CTaskComplexLeaveCar{
             veh,
             TARGET_DOOR_FRONT_LEFT,

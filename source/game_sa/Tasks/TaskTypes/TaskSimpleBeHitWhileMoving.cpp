@@ -143,11 +143,11 @@ void CTaskSimpleBeHitWhileMoving::StartAnim(CPed* ped) {
                 if (!assoc) {
                     ped->m_nUnconsciousTimer = rem + CTimer::GetTimeInMS() + 1000u;
                 } else if (assoc->m_AnimId == ANIM_ID_DEFAULT_CAR_ROLLOUT_LHS || assoc->m_AnimId == ANIM_ID_DEFAULT_CAR_ROLLOUT_RHS) {
-                    ped->m_nUnconsciousTimer = (uint32)(int32)(
+                    ped->m_nUnconsciousTimer = (uint32)NOTSA_FTOL(int32, 
                         ((x87d)assoc->m_BlendHier->m_fTotalTime * (x87d)1000.0 + ms) - (x87d)assoc->m_CurrentTime * (x87d)1000.0 + (x87d)100.0
                     );
                 } else {
-                    ped->m_nUnconsciousTimer = (uint32)(int32)(
+                    ped->m_nUnconsciousTimer = (uint32)NOTSA_FTOL(int32, 
                         ((x87d)assoc->m_BlendHier->m_fTotalTime * (x87d)1000.0 + ms) + (x87d)500.0
                     );
                 }
@@ -155,7 +155,7 @@ void CTaskSimpleBeHitWhileMoving::StartAnim(CPed* ped) {
                 if (!assoc) {
                     ped->m_nUnconsciousTimer = rem + CTimer::GetTimeInMS() + 1000u;
                 } else {
-                    ped->m_nUnconsciousTimer = (uint32)(int32)(
+                    ped->m_nUnconsciousTimer = (uint32)NOTSA_FTOL(int32, 
                         (((x87d)(int32)rem + (x87d)assoc->m_BlendHier->m_fTotalTime * (x87d)1000.0) + ms) + (x87d)500.0
                     );
                 }

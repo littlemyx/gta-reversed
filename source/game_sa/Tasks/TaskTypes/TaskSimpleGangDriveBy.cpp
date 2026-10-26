@@ -112,7 +112,7 @@ bool CTaskSimpleGangDriveBy::CheckLineOfSight(CPed* ped, const CVector& targetPo
             CWorld::pIgnoreEntity = nullptr;
         }
         // Next check in [1750, 2250) ms. (x87: rand * 2^-15 * -500.0 (0x85AB78) is truncated, then subtracted)
-        m_nLOSCheckTime = (uint32)((int32)now - (int32)((x87d)(CGeneral::GetRandomNumber() & 0xFFFF) * (x87d)(1.f / 32768.f) * (x87d)-500.f) + 0x6D6); // 0x858B14
+        m_nLOSCheckTime = (uint32)((int32)now - NOTSA_FTOL(int32, (x87d)(CGeneral::GetRandomNumber() & 0xFFFF) * (x87d)(1.f / 32768.f) * (x87d)-500.f) + 0x6D6); // 0x858B14
     }
     return !m_nLOSBlocked;
 }
@@ -694,7 +694,7 @@ bool CTaskSimpleGangDriveBy::ProcessPed(CPed* ped) {
             && (a->m_BlendHier->m_fTotalTime > a->m_CurrentTime || a->m_BlendDelta >= 0.f)
         ) {
             a->m_Flags |= ANIMATION_IS_PLAYING;
-            m_nBurstShots = (int8)CGeneral::GetRandomNumberInRange(1, (int32)((x87d)(int16)m_pWeaponInfo->m_nAmmoClip * (x87d)0.5f)); // 0x858B8C
+            m_nBurstShots = (int8)CGeneral::GetRandomNumberInRange(1, NOTSA_FTOL(int32, (x87d)(int16)m_pWeaponInfo->m_nAmmoClip * (x87d)0.5f)); // 0x858B8C
             m_nLastCommand = m_nNextCommand;
             m_nNextCommand = 0;
         } else if (!bPlaying) {

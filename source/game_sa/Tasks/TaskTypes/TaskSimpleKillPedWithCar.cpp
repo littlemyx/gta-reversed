@@ -153,7 +153,7 @@ bool CTaskSimpleKillPedWithCar::ProcessPed(CPed* ped) {
     ped->GetEventGroup().Add(&eventDmg);
 
     if (FindPlayerVehicle() == m_Car) {
-        const auto f = (uint32)std::min(250.f, m_Car->GetMoveSpeed().Magnitude() / m_Car->GetMass() * 200'000.f + 80.f);
+        const auto f = NOTSA_FTOL(uint32, std::min(250.f, m_Car->GetMoveSpeed().Magnitude() / m_Car->GetMass() * 200'000.f + 80.f));
         CPad::GetPad()->StartShake(40'000 / (f % 256), f, 0);
     }
 

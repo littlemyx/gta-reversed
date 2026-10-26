@@ -9,7 +9,7 @@ static uint8 FtolToByte(float f) {
     if (!(v > -9223372036854775808.0 && v < 9223372036854775808.0)) {
         return 0;
     }
-    return (uint8)(int64)v;
+    return (uint8)NOTSA_FTOL(int64, v);
 }
 
 void CDecision::InjectHooks() {    

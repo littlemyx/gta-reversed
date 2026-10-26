@@ -61,7 +61,7 @@ CTaskComplexSequence* CTaskComplexPartnerChat::GetPartnerSequence() {
 
     // Pseudo-random durations seeded by the point; the sum stays in extended precision (x87) until `_ftol`
     const auto seed = (x87d)(m_updateDirectionCount << 4) + (x87d)m_point.z + (x87d)m_point.y + (x87d)m_point.x;
-    const auto t    = (x87d)((int32)(int64)seed & 0x7F) * (x87d)0.0078125f;
+    const auto t    = (x87d)((int32)NOTSA_FTOL(int64, seed) & 0x7F) * (x87d)0.0078125f;
     const auto inv  = (float)((x87d)1.0 - t);
     const auto a    = (int32)NOTSA_FTOL(int64, t * (x87d)3000.0f + (x87d)3500.0f);
     const auto b    = (int32)NOTSA_FTOL(int64, (x87d)inv * (x87d)3000.0f + (x87d)3500.0f);

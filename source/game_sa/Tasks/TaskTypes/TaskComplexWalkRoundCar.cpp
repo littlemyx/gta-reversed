@@ -227,7 +227,7 @@ CTask* CTaskComplexWalkRoundCar::CreateFirstSubTask(CPed* ped) {
     // Time we have to get around the vehicle
     int32 time = m_MoveState == PEDMOVE_WALK ? 20000 : 15000;
     if (m_Veh->m_pVehicleBeingTowed || m_Veh->m_pTowingVehicle) { // Has a trailer/is a trailer
-        time = (int32)((x87d)time * 4.f);
+        time = NOTSA_FTOL(int32, (x87d)time * 4.f);
     }
     m_Timer.Start(time);
 

@@ -589,7 +589,7 @@ void CPad::StartShake_Train(CVector2D point) {
     const auto fDistSq = (camPos.y - point.y) * (camPos.y - point.y) + (camPos.x - point.x) * (camPos.x - point.x);
     if (ShakeDur < 100 && fDistSq < 4900.0f) {
         ShakeDur = 100;
-        ShakeFreq = static_cast<uint8>(70.0f - sqrt(fDistSq) + 30.0f);
+        ShakeFreq = NOTSA_FTOL(uint8, 70.0f - sqrt(fDistSq) + 30.0f);
     }
 }
 
@@ -1253,7 +1253,7 @@ int16 CPad::LookAroundLeftRight(CPed* ped) noexcept {
     }
 
     constexpr auto UNK = 1.3763441f;
-    return static_cast<int16>((static_cast<float>(s1) + (s1 < 0 ? 35.0f : -35.0f)) * UNK);
+    return NOTSA_FTOL(int16, (static_cast<float>(s1) + (s1 < 0 ? 35.0f : -35.0f)) * UNK);
 }
 
 // 0x540E80
@@ -1262,15 +1262,15 @@ int16 CPad::LookAroundLeftRight() noexcept {
     const float stick = (float)Pads[0].NewState.RightStickX;
     if (std::fabs(stick) > 100.0f && (DisablePlayerControls || !NewState.ShockButtonR)) {
         if (stick > 0.0f) {
-            return (int16)(int32)((x87d)stick - (x87d)100.0 + (x87d)50.0);
+            return (int16)NOTSA_FTOL(int32, (x87d)stick - (x87d)100.0 + (x87d)50.0);
         }
-        return (int16)(int32)((x87d)stick + (x87d)100.0 - (x87d)50.0);
+        return (int16)NOTSA_FTOL(int32, (x87d)stick + (x87d)100.0 - (x87d)50.0);
     }
     if (TheCamera.m_aCams[0].Using3rdPersonMouseCam() && std::fabs(stick) > 50.0f) { // 0x50A850
         if (stick > 0.0f) {
-            return (int16)(int32)(((x87d)stick - (x87d)50.0) * 0.5f);
+            return (int16)NOTSA_FTOL(int32, ((x87d)stick - (x87d)50.0) * 0.5f);
         }
-        return (int16)(int32)(((x87d)stick + (x87d)50.0) * 0.5f);
+        return (int16)NOTSA_FTOL(int32, ((x87d)stick + (x87d)50.0) * 0.5f);
     }
     return 0;
 }
@@ -1302,7 +1302,7 @@ int16 CPad::LookAroundUpDown(CPed* ped) noexcept {
     }
 
     constexpr auto UNK = 1.3763441f;
-    return static_cast<int16>((static_cast<float>(s1) + (s1 < 0 ? 35.0f : -35.0f)) * UNK);
+    return NOTSA_FTOL(int16, (static_cast<float>(s1) + (s1 < 0 ? 35.0f : -35.0f)) * UNK);
 }
 
 // 0x540F80
@@ -1317,7 +1317,7 @@ int16 CPad::LookAroundUpDown() noexcept {
     }
     if (TheCamera.m_aCams[0].Using3rdPersonMouseCam() && std::abs((int32)stick) > 50) { // 0x50A850
         const int32 v = stick > 0 ? stick - 50 : stick + 50;
-        return (int16)(int32)((float)v * 0.5f);
+        return (int16)NOTSA_FTOL(int32, (float)v * 0.5f);
     }
     return 0;
 }

@@ -833,7 +833,7 @@ void CPlayerInfo::Process(uint32 playerIndex) {
     ProcessDisplayMoney(*this);
 
     m_pPed->m_fMaxHealth = CStats::GetFatAndMuscleModifier(STAT_MOD_MAX_HEALTH);
-    m_nMaxHealth         = static_cast<uint8>(static_cast<int32>(m_pPed->m_fMaxHealth));
+    m_nMaxHealth         = static_cast<uint8>(NOTSA_FTOL(int32, m_pPed->m_fMaxHealth));
 
     if (m_pPed->bInVehicle && CStats::GetStatValue(STAT_FLYING_SKILL) >= 400.0f) {
         StreamParachuteWeapon(true);
@@ -1236,12 +1236,12 @@ void CPlayerInfo::StreamParachuteWeapon(bool unk) {
 
     if (m_pPed && m_pPed->IsInVehicle()) {
         if (m_pPed->m_pVehicle->IsSubPlane() || m_pPed->m_pVehicle->IsSubHeli()) {
-            if (m_nRequireParachuteTimer <= (uint32)CTimer::GetTimeStepInMS()) {
+            if (m_nRequireParachuteTimer <= NOTSA_FTOL(uint32, CTimer::GetTimeStepInMS())) {
                 const auto groundHeight = TheCamera.CalculateGroundHeight(eGroundHeightType::ENTITY_BB_BOTTOM);
                 const auto vehToGroundZDist = m_pPed->m_pVehicle->GetPosition().z - groundHeight;
                 m_nRequireParachuteTimer = (vehToGroundZDist <= 50.f) ? 0 : 5000;
             } else {
-                m_nRequireParachuteTimer -= (uint32)CTimer::GetTimeStepInMS();
+                m_nRequireParachuteTimer -= NOTSA_FTOL(uint32, CTimer::GetTimeStepInMS());
             }
         }
     }

@@ -139,7 +139,7 @@ bool CGangWars::AttackWaveOvercome() {
 
 // 0x443DB0
 uint32 CGangWars::CalculateTimeTillNextAttack() {
-    return (uint32)CGeneral::GetRandomNumberInRange(648'000.0f, 1'620'000.0f); // todo: convert to human readable time HH::MM::SS
+    return NOTSA_FTOL(uint32, CGeneral::GetRandomNumberInRange(648'000.0f, 1'620'000.0f)); // todo: convert to human readable time HH::MM::SS
 }
 
 // 0x443F80
@@ -347,7 +347,7 @@ bool CGangWars::CreateAttackWave(int32 warFerocity, int32 waveID) {
                 ped->GiveWeapon(weapon, 5000, false);
                 ped->SetCurrentWeapon(weapon);
 
-                ped->SetWeaponAccuracy((uint8)(int32)(Difficulty * 25.0f + 70.0f));
+                ped->SetWeaponAccuracy((uint8)NOTSA_FTOL(int32, Difficulty * 25.0f + 70.0f));
                 ped->bPartOfAttackWave = true;
                 ped->bClearRadarBlipOnDeath = true;
                 ped->m_fMaxHealth = 120.0f;
@@ -487,7 +487,7 @@ bool CGangWars::CreateDefendingGroup(int32 unused) {
         CEventScriptCommand event(TASK_PRIMARY_PRIMARY, task, false);
         ped->GetEventGroup().Add(&event);
 
-        ped->SetWeaponAccuracy(static_cast<uint8_t>(90.0f - Difficulty * 60.0f));
+        ped->SetWeaponAccuracy(NOTSA_FTOL(uint8_t, 90.0f - Difficulty * 60.0f));
         ped->GetAcquaintance().SetAsAcquaintance(ACQUAINTANCE_HATE, CPedType::GetPedFlag(PED_TYPE_PLAYER1));
 
         eWeaponType weaponToGive = [&i]{
@@ -640,7 +640,7 @@ bool CGangWars::MakePlayerGainInfluenceInZone(float removeMult) {
         auto& density = pZoneInfoToFightOver->GangStrength[gang];
         auto densityInitial = density;
 
-        density = static_cast<uint8>((1.0f - removeMult) * (float)density);
+        density = NOTSA_FTOL(uint8, (1.0f - removeMult) * (float)density);
         if (density < 4u) {
             density = 0u;
         }
@@ -805,7 +805,7 @@ void CGangWars::StartDefensiveGangWar() {
         Difficulty = TerritoryUnderControlPercentage;
         CHud::SetHelpMessage(TheText.Get("GW_ATK"), true, false, true);
         State2 = WAR_NOTIFIED;
-        FightTimer = static_cast<uint32>(DistanceBetweenPoints2D(PointOfAttack, FindPlayerCoors()) * 200.0f + 240'000.0f);
+        FightTimer = NOTSA_FTOL(uint32, DistanceBetweenPoints2D(PointOfAttack, FindPlayerCoors()) * 200.0f + 240'000.0f);
         RadarBlip = CRadar::SetCoordBlip(BLIP_COORD, PointOfAttack, GetGangColor(Gang1), BLIP_DISPLAY_BLIPONLY, nullptr);
 
         CRadar::SetBlipSprite(RadarBlip, [] {

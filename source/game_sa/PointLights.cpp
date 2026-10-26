@@ -240,10 +240,10 @@ void CPointLights::RenderFogEffect() {
         CSprite::RenderBufferedOneXLUSprite_Rotate_Aspect(
             screen.x, screen.y, screen.z,
             w * sizeMult, h * sizeMult * aspect,
-            (uint8)(intensity * light.m_fColorRed),
-            (uint8)(intensity * light.m_fColorGreen),
-            (uint8)(intensity * light.m_fColorBlue),
-            (int16)intensity,
+            NOTSA_FTOL(uint8, intensity * light.m_fColorRed),
+            NOTSA_FTOL(uint8, intensity * light.m_fColorGreen),
+            NOTSA_FTOL(uint8, intensity * light.m_fColorBlue),
+            NOTSA_FTOL(int16, intensity),
             1.0f / screen.z,
             angle,
             255

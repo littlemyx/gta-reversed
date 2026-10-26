@@ -765,7 +765,7 @@ int32 CPopulation::FindNumberOfPedsWeCanPlaceOnBenches() {
     const float maxPeds = (float)(int32)MaxNumberOfPedsInUse;
     const float lim     = (maxPeds < CPopCycle::m_NumOther_Peds) ? maxPeds : CPopCycle::m_NumOther_Peds;
     const int32 base = CGame::CanSeeOutSideFromCurrArea()
-        ? (int32)((x87d)(int32)lim * PedDensityMultiplier * FindPedDensityMultiplierCullZone())
+        ? NOTSA_FTOL(int32, (x87d)NOTSA_FTOL(int32, lim) * PedDensityMultiplier * FindPedDensityMultiplierCullZone())
         : (int32)(NumberOfPedsInUseInterior);
     return base - (int32)(ms_nNumCivMale) - (int32)(ms_nNumCivFemale) + 2;
 }
@@ -1636,7 +1636,7 @@ static NOTSA_GLOBAL_ALIAS(s_CopsNeededTotalCarsThreshold, 0x8A5B24, (int32), rei
 //! 0x610DB0 (not hooked, it's inlined here) - How many members a gang group has
 int32 GetNumGangMembersToPlace() {
     constexpr int32 MIN = 1, MAX = 5; // 0x86C6C4, 0x86C6C8 (in `.rdata`)
-    return MIN + static_cast<int32>(static_cast<x87d>(rand() & 0xFFFF) * (x87d)0x1p-15 * (MAX - MIN));
+    return MIN + NOTSA_FTOL(int32, static_cast<x87d>(rand() & 0xFFFF) * (x87d)0x1p-15 * (MAX - MIN));
 }
 
 //! 0x6EABA0 - `CWaterLevel::CreateBeachToy` (not declared in `WaterLevel.h`). `toyType`: 1 = ball, 2-4 = loungers, 5 = random lounger, 6 = lotion, 7-10 = towels, 11 = random towel

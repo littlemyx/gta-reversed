@@ -227,7 +227,7 @@ int32 CPopCycle::GetCurrentPercOther_Peds() {
         factor = 1.f;
     }
 
-    return (int32)((x87d)percOther * (x87d)factor);
+    return NOTSA_FTOL(int32, (x87d)percOther * (x87d)factor);
 }
 
 // 0x610150

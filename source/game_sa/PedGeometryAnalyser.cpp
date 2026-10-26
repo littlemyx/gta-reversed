@@ -697,7 +697,7 @@ int32 CPedGeometryAnalyser::ComputePedShotSide(const CPed& ped, const CVector& p
     if (angle < 0.0) {
         angle += TWO_PI_F;
     }
-    return (int32)(X87R(angle * TWO_OVER_PI)); // Quadrant => `eDirection`
+    return NOTSA_FTOL(int32, X87R(angle * TWO_OVER_PI)); // Quadrant => `eDirection`
 }
 
 // 0x5F6110

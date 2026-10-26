@@ -475,7 +475,7 @@ void CPostEffects::UnderWaterRipple(CRGBA color, float xoffset, float yoffset, f
         TempBufferVertices.m_2d[i].v             = float(y) / fRasterHeight;
         TempBufferVertices.m_2d[i].emissiveColor = color.ToIntABGR();
 
-        TempBufferVertices.m_2d[i + 1].x             = float(int32(2.0f * xoffset) + rasterWidth);
+        TempBufferVertices.m_2d[i + 1].x             = float(NOTSA_FTOL(int32, 2.0f * xoffset) + rasterWidth);
         TempBufferVertices.m_2d[i + 1].y             = float(y);
         TempBufferVertices.m_2d[i + 1].z             = RwIm2DGetNearScreenZ();
         TempBufferVertices.m_2d[i + 1].rhw           = recipNearClip;
@@ -521,50 +521,50 @@ void CPostEffects::HeatHazeFXInit() {
         m_HeatHazeFXRandomShift = 0;
         m_HeatHazeFXSpeedMin    = 12;
         m_HeatHazeFXSpeedMax    = 18;
-        m_HeatHazeFXScanSizeX   = uint32(SCREEN_STRETCH_X(47.0f));
-        m_HeatHazeFXScanSizeY   = uint32(SCREEN_STRETCH_Y(47.0f));
-        m_HeatHazeFXRenderSizeX = uint32(SCREEN_STRETCH_X(50.0f));
-        m_HeatHazeFXRenderSizeY = uint32(SCREEN_STRETCH_Y(50.0f));
+        m_HeatHazeFXScanSizeX   = NOTSA_FTOL(uint32, SCREEN_STRETCH_X(47.0f));
+        m_HeatHazeFXScanSizeY   = NOTSA_FTOL(uint32, SCREEN_STRETCH_Y(47.0f));
+        m_HeatHazeFXRenderSizeX = NOTSA_FTOL(uint32, SCREEN_STRETCH_X(50.0f));
+        m_HeatHazeFXRenderSizeY = NOTSA_FTOL(uint32, SCREEN_STRETCH_Y(50.0f));
         break;
     case HEAT_HAZE_1:
         m_HeatHazeFXIntensity   = 32;
         m_HeatHazeFXRandomShift = 0;
         m_HeatHazeFXSpeedMin    = 6;
         m_HeatHazeFXSpeedMax    = 10;
-        m_HeatHazeFXScanSizeX   = uint32(SCREEN_STRETCH_X(100.0f));
-        m_HeatHazeFXScanSizeY   = uint32(SCREEN_STRETCH_Y(52.0f));
-        m_HeatHazeFXRenderSizeX = uint32(SCREEN_STRETCH_X(100.0f));
-        m_HeatHazeFXRenderSizeY = uint32(SCREEN_STRETCH_Y(60.0f));
+        m_HeatHazeFXScanSizeX   = NOTSA_FTOL(uint32, SCREEN_STRETCH_X(100.0f));
+        m_HeatHazeFXScanSizeY   = NOTSA_FTOL(uint32, SCREEN_STRETCH_Y(52.0f));
+        m_HeatHazeFXRenderSizeX = NOTSA_FTOL(uint32, SCREEN_STRETCH_X(100.0f));
+        m_HeatHazeFXRenderSizeY = NOTSA_FTOL(uint32, SCREEN_STRETCH_Y(60.0f));
         break;
     case HEAT_HAZE_2:
         m_HeatHazeFXIntensity   = 32;
         m_HeatHazeFXRandomShift = 0;
         m_HeatHazeFXSpeedMin    = 4;
         m_HeatHazeFXSpeedMax    = 8;
-        m_HeatHazeFXScanSizeX   = uint32(SCREEN_STRETCH_X(70.0f));
-        m_HeatHazeFXScanSizeY   = uint32(SCREEN_STRETCH_Y(70.0f));
-        m_HeatHazeFXRenderSizeX = uint32(SCREEN_STRETCH_X(80.0f));
-        m_HeatHazeFXRenderSizeY = uint32(SCREEN_STRETCH_Y(80.0f));
+        m_HeatHazeFXScanSizeX   = NOTSA_FTOL(uint32, SCREEN_STRETCH_X(70.0f));
+        m_HeatHazeFXScanSizeY   = NOTSA_FTOL(uint32, SCREEN_STRETCH_Y(70.0f));
+        m_HeatHazeFXRenderSizeX = NOTSA_FTOL(uint32, SCREEN_STRETCH_X(80.0f));
+        m_HeatHazeFXRenderSizeY = NOTSA_FTOL(uint32, SCREEN_STRETCH_Y(80.0f));
         break;
     case HEAT_HAZE_3:
         m_HeatHazeFXRandomShift = 0;
         m_HeatHazeFXIntensity   = 150;
         m_HeatHazeFXSpeedMin    = 5;
         m_HeatHazeFXSpeedMax    = 8;
-        m_HeatHazeFXScanSizeX   = uint32(SCREEN_STRETCH_X(60.0f));
-        m_HeatHazeFXScanSizeY   = uint32(SCREEN_STRETCH_Y(24.0f));
-        m_HeatHazeFXRenderSizeX = uint32(SCREEN_STRETCH_X(62.0f));
-        m_HeatHazeFXRenderSizeY = uint32(SCREEN_STRETCH_Y(24.0f));
+        m_HeatHazeFXScanSizeX   = NOTSA_FTOL(uint32, SCREEN_STRETCH_X(60.0f));
+        m_HeatHazeFXScanSizeY   = NOTSA_FTOL(uint32, SCREEN_STRETCH_Y(24.0f));
+        m_HeatHazeFXRenderSizeX = NOTSA_FTOL(uint32, SCREEN_STRETCH_X(62.0f));
+        m_HeatHazeFXRenderSizeY = NOTSA_FTOL(uint32, SCREEN_STRETCH_Y(24.0f));
         break;
     case HEAT_HAZE_4:
         m_HeatHazeFXRandomShift = 1;
         m_HeatHazeFXIntensity   = 150;
         m_HeatHazeFXSpeedMin    = 5;
         m_HeatHazeFXSpeedMax    = 8;
-        m_HeatHazeFXScanSizeX   = uint32(SCREEN_STRETCH_X(60.0f));
-        m_HeatHazeFXScanSizeY   = uint32(SCREEN_STRETCH_Y(24.0f));
-        m_HeatHazeFXRenderSizeX = uint32(SCREEN_STRETCH_X(62.0f));
-        m_HeatHazeFXRenderSizeY = uint32(SCREEN_STRETCH_Y(24.0f));
+        m_HeatHazeFXScanSizeX   = NOTSA_FTOL(uint32, SCREEN_STRETCH_X(60.0f));
+        m_HeatHazeFXScanSizeY   = NOTSA_FTOL(uint32, SCREEN_STRETCH_Y(24.0f));
+        m_HeatHazeFXRenderSizeX = NOTSA_FTOL(uint32, SCREEN_STRETCH_X(62.0f));
+        m_HeatHazeFXRenderSizeY = NOTSA_FTOL(uint32, SCREEN_STRETCH_Y(24.0f));
         break;
     default:
         break;
@@ -636,7 +636,7 @@ void CPostEffects::HeatHazeFX(float fIntensity, bool bAlphaMaskMode) {
     RwRenderStateSet(rwRENDERSTATEFOGENABLE,         RWRSTATE(FALSE));
     RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(TRUE));
 
-    const auto alpha = (int32)((float)m_HeatHazeFXIntensity * fIntensity);
+    const auto alpha = NOTSA_FTOL(int32, (float)m_HeatHazeFXIntensity * fIntensity);
     uiTempBufferVerticesStored = 0;
 
     if (useStencil) {
@@ -671,8 +671,8 @@ void CPostEffects::HeatHazeFX(float fIntensity, bool bAlphaMaskMode) {
             auto py = sy - halfDY;
 
             if (const auto shift = m_HeatHazeFXRandomShift; shift > 0) {
-                px += (int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f) * (float)(shift - -shift)) + -shift;
-                py += (int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f) * (float)(m_HeatHazeFXRandomShift - -m_HeatHazeFXRandomShift)) + -m_HeatHazeFXRandomShift;
+                px += NOTSA_FTOL(int32, (float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f) * (float)(shift - -shift)) + -shift;
+                py += NOTSA_FTOL(int32, (float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f) * (float)(m_HeatHazeFXRandomShift - -m_HeatHazeFXRandomShift)) + -m_HeatHazeFXRandomShift;
             }
 
             const auto rasterW = RwRasterGetWidth(frontRaster);
@@ -734,11 +734,11 @@ void CPostEffects::HeatHazeFX(float fIntensity, bool bAlphaMaskMode) {
             uiTempBufferVerticesStored += 4;
 
             // Move this haze quad
-            hpY[i] -= (int32)(CTimer::GetTimeStep() * 0.5f * (float)hpS[i]);
+            hpY[i] -= NOTSA_FTOL(int32, CTimer::GetTimeStep() * 0.5f * (float)hpS[i]);
             if (hpY[i] < 0) {
-                hpX[i] = (int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f) * (float)(RwRasterGetWidth(pRasterFrontBuffer) - scanX));
+                hpX[i] = NOTSA_FTOL(int32, (float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f) * (float)(RwRasterGetWidth(pRasterFrontBuffer) - scanX));
                 hpY[i] = RwRasterGetHeight(pRasterFrontBuffer) - scanY;
-                hpS[i] = (int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f) * (float)(m_HeatHazeFXSpeedMax - m_HeatHazeFXSpeedMin)) + m_HeatHazeFXSpeedMin;
+                hpS[i] = NOTSA_FTOL(int32, (float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.0f / 32768.0f) * (float)(m_HeatHazeFXSpeedMax - m_HeatHazeFXSpeedMin)) + m_HeatHazeFXSpeedMin;
             }
         }
     } else {
@@ -1554,7 +1554,7 @@ void CPostEffects::Render() {
     if (m_waterEnable || CWeather::UnderWaterness >= m_fWaterFXStartUnderWaterness) {
         CRGBA color{m_waterCol};
         color.r = std::min(color.r + 184, 255);
-        color.g = static_cast<uint8>(std::min(float(color.g) + s_WaterGreen + 184.0f, 255.0f));
+        color.g = NOTSA_FTOL(uint8, std::min(float(color.g) + s_WaterGreen + 184.0f, 255.0f));
         color.b = std::min(color.b + 184, 255);
 
         const auto depthDarkness = m_bWaterDepthDarkness

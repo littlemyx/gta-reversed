@@ -303,7 +303,7 @@ bool CPathFind::GeneratePedCreationCoors(
     bool bLowTraffic,
     CMatrix* transformMatrix
 ) {
-    const auto minSpawnProb = (int32)((x87d)(rand() & 0xFFFF) * (x87d)0x1p-15 * (x87d)15.0f); // 0x858B14, 0x858B48
+    const auto minSpawnProb = NOTSA_FTOL(int32, (x87d)(rand() & 0xFFFF) * (x87d)0x1p-15 * (x87d)15.0f); // 0x858B14, 0x858B48
     const float maxRangeSq  = (float)(((x87d)maxDist1 + (x87d)30.0f) * ((x87d)maxDist1 + (x87d)30.0f)); // 0x858CA4
 
     const auto areaId = FindRegionForCoors({ x, y }); // 0x44D830

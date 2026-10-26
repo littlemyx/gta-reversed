@@ -510,8 +510,8 @@ void CGarage::NeatlyLineUpStoredCars(CStoredCar* cars) {
         car.m_vPosn.x = (float)((x87d)stepX * i + startX);
         car.m_vPosn.y = (float)((x87d)stepY * i + startY);
         car.m_vPosn.z = (float)((x87d)i * stepZ + startZ);
-        car.m_nPackedForwardX = (uint8)(int32)((x87d)dir.y * (x87d)100.0);    // 0x858628
-        car.m_nPackedForwardY = (uint8)(int32)((x87d)(-dir.x) * (x87d)100.0);
+        car.m_nPackedForwardX = (uint8)NOTSA_FTOL(int32, (x87d)dir.y * (x87d)100.0);    // 0x858628
+        car.m_nPackedForwardY = (uint8)NOTSA_FTOL(int32, (x87d)(-dir.x) * (x87d)100.0);
         car.m_nPackedForwardZ = 0;
     }
 }
@@ -1843,9 +1843,9 @@ void CStoredCar::StoreCar(CVehicle* vehicle) {
 
     // Forward vector packed as signed bytes (x100); `_ftol` truncates, the product is kept at extended precision
     const auto& fwd  = vehicle->m_matrix->GetForward();
-    m_nPackedForwardX = static_cast<uint8>(static_cast<int32>(X87R(x87d(fwd.x) * (x87d)100.0)));
-    m_nPackedForwardY = static_cast<uint8>(static_cast<int32>(X87R(x87d(fwd.y) * (x87d)100.0)));
-    m_nPackedForwardZ = static_cast<uint8>(static_cast<int32>(X87R(x87d(fwd.z) * (x87d)100.0)));
+    m_nPackedForwardX = static_cast<uint8>(NOTSA_FTOL(int32, X87R(x87d(fwd.x) * (x87d)100.0)));
+    m_nPackedForwardY = static_cast<uint8>(NOTSA_FTOL(int32, X87R(x87d(fwd.y) * (x87d)100.0)));
+    m_nPackedForwardZ = static_cast<uint8>(NOTSA_FTOL(int32, X87R(x87d(fwd.z) * (x87d)100.0)));
 
     m_nPrimaryColor    = vehicle->m_nPrimaryColor;
     m_nSecondaryColor  = vehicle->m_nSecondaryColor;

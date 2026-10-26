@@ -1332,13 +1332,13 @@ bool LOSBlockedBetweenPeds(CEntity* entity1, CEntity* entity2) {
     }
 
     const auto target = entity2->GetIsTypePed()
-        ? entity1->AsPed()->GetBonePosition(eBoneTag::BONE_NECK, false)
-        : entity1->GetPosition();
+        ? entity2->AsPed()->GetBonePosition(eBoneTag::BONE_NECK, false)
+        : entity2->GetPosition(); // 0x60B5B0..0x60B5F2: the target is entity2's neck / position
 
     CColPoint colPoint;
     CEntity* hitEntity;
     if (CWorld::ProcessLineOfSight(origin, target, colPoint, hitEntity, true, false, false, true, false, false, false, true))
-        return hitEntity != entity2;
+        return entity1 != entity2; // 0x60B627: `cmp [arg1], arg2; setne` - the exe compares the two arguments, not the hit entity
     return false;
 }
 

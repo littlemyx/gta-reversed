@@ -146,7 +146,8 @@ bool CTaskSimpleCarOpenDoorFromOutside::ProcessPed(CPed* ped) {
     }
 
     const auto doorOpenTiming = m_veh->GetAnimGroup().GetInOutTiming(TIMING_START)[OPEN_START];
-    if (m_veh->IsAutomobile() || m_anim->m_CurrentTime >= doorOpenTiming) {
+    // 0x64D818..0x64D82B: the door is opened visually (OpenDoor) only for an automobile whose anim time is still before the door-open timing; otherwise ProcessOpenDoor
+    if (!m_veh->IsAutomobile() || !(m_anim->m_CurrentTime < doorOpenTiming)) {
         const auto [groupId, animId] = ComputeAnimID();
         m_veh->ProcessOpenDoor(ped, m_door, groupId, m_anim->m_AnimId, m_anim->m_CurrentTime);        
     } else {

@@ -702,7 +702,7 @@ CTaskAllocator* CGroupEventHandler::ComputeHassleThreatResponse(CPedGroup* pg, C
     if (!leader) {
         return nullptr;
     }
-    if ((leader->GetPosition() - threat->GetPosition()).SquaredMagnitude() >= sq(12.f)) {
+    if ((leader->GetPosition() - threat->GetPosition()).SquaredMagnitude() > 144.f) { // exe 0x5F9DCF..0x5F9DE0: fcomp [0x86C824] (144.0), bails out only when STRICTLY greater
         return nullptr;
     }
     for (auto* const m : pg->GetMembership().GetMembers()) {

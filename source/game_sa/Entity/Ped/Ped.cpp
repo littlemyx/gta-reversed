@@ -3932,6 +3932,7 @@ CEntity* CPed::AttachPedToEntity(CEntity* entity, CVector offset, uint16 turretA
         }
 
         GetPlayerData()->m_nChosenWeapon = weaponType;
+        AsPlayer()->MakeChangesForNewWeapon(weaponType); // 0x5E7D93: missing in the port
 
         if (weaponType == WEAPON_CAMERA) {
             TheCamera.SetNewPlayerWeaponMode(eCamMode::MODE_CAMERA);

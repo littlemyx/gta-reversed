@@ -711,6 +711,9 @@ void CPed::CreateDeadPedWeaponPickups() {
             );
         }
     }
+
+    // 0x459315: the exe empties the dead ped's inventory once the pickups are dropped (not reached on the early returns above)
+    ClearWeapons();
 }
 
 /*!

@@ -4876,13 +4876,17 @@ void CPed::SetModelIndex(uint32 modelIndex) {
 
     // Set random money count
     const auto GetRandomMoneyCount = [this]() -> int16 {
-        if (CGeneral::GetRandomNumberInRange(0.f, 100.f) < 3.f) { // Moved up here
-            return 400;
-        } else if (CPopCycle::IsPedInGroupTheseGroups(m_nModelIndex, { POPCYCLE_GROUP_BUSINESS, POPCYCLE_GROUP_CASUAL_RICH })) {
-            return CGeneral::GetRandomNumber() % 50 + 20;
+        // 0x5E4915..0x5E49A0: the exe ALWAYS rolls the base amount first (1st rand()), and only then the 3% chance of 400 (2nd rand()) - the order and the rand() count matter
+        int16 money;
+        if (CPopCycle::IsPedInGroupTheseGroups(m_nModelIndex, { POPCYCLE_GROUP_BUSINESS, POPCYCLE_GROUP_CASUAL_RICH })) {
+            money = CGeneral::GetRandomNumber() % 50 + 20;
         } else {
-            return CGeneral::GetRandomNumber() % 25;
+            money = CGeneral::GetRandomNumber() % 25;
         }
+        if (CGeneral::GetRandomNumberInRange(0.f, 100.f) < 3.f) {
+            money = 400;
+        }
+        return money;
     };
     m_nMoneyCount = GetRandomMoneyCount();
 

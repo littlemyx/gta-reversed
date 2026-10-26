@@ -2107,16 +2107,15 @@ bool CPhysical::ProcessShiftSectorList(int32 sectorX, int32 sectorY)
 
     int32 totalAcceptableColPoints = 0;
     const auto ProcessSectorList = [&]<typename PtrListType>(PtrListType& list) {
-        bool bProcessEntityCollision = true;
         for (CEntity* const entity : list) {
-            if (!entity->GetIsTypeBuilding() && (!entity->GetIsTypeObject() || !entity->AsPhysical()->physicalFlags.bDisableCollisionForce))
-            {
-                if (!GetIsTypePed() || !entity->GetIsTypeObject()
-                    || !entity->GetIsStatic()
-                    || entity->AsObject()->objectFlags.bIsExploded)
-                {
-                    bProcessEntityCollision = false;
-                }
+            // 0x5467A2..0x5467E0: recomputed for EVERY entity (the port kept the value across the list);
+            // true for buildings, objects with bDisableCollisionForce, and (for a ped) a static (GetIsStatic = bIsStatic or 0x40000) object that is not exploded (objectFlags bit 0x40)
+            bool bProcessEntityCollision = false;
+            if (entity->GetIsTypeBuilding() || (entity->GetIsTypeObject() && entity->AsPhysical()->physicalFlags.bDisableCollisionForce)) {
+                bProcessEntityCollision = true;
+            } else if (GetIsTypePed() && entity->GetIsTypeObject() && entity->GetIsStatic()
+                       && !entity->AsObject()->objectFlags.bIsExploded) {
+                bProcessEntityCollision = true;
             }
             if (entity != this
                 && !entity->IsScanCodeCurrent()
@@ -2130,19 +2129,18 @@ bool CPhysical::ProcessShiftSectorList(int32 sectorX, int32 sectorY)
                     bool bThisOrCollidedEntityStuck = false;
                     if (entity->GetIsTypeBuilding())
                     {
+                        // 0x54683E..0x5468F6: IsSubTrain is read from THIS (edi+0x594), not from the building; m_pAttachedTo is not an exclusive branch:
+                        // when it does not disable the collision the m_pEntityIgnoredCollision / bDisableZ / flyers checks still run
                         if (physicalFlags.bDisableCollisionForce
-                            && (!GetIsTypeVehicle() || entity->AsVehicle()->IsSubTrain()))
+                            && (!GetIsTypeVehicle() || AsVehicle()->IsSubTrain()))
                         {
                             bCollisionDisabled = true;
                         }
                         else
                         {
-                            if (m_pAttachedTo)
+                            if (m_pAttachedTo && m_pAttachedTo->GetIsTypePhysical() && m_pAttachedTo->physicalFlags.bDisableCollisionForce)
                             {
-                                if (m_pAttachedTo->GetIsTypePhysical() && m_pAttachedTo->physicalFlags.bDisableCollisionForce)
-                                {
-                                    bCollisionDisabled = true;
-                                }
+                                bCollisionDisabled = true;
                             }
                             else if (m_pEntityIgnoredCollision == entity)
                             {
@@ -2218,16 +2216,17 @@ bool CPhysical::ProcessShiftSectorList(int32 sectorX, int32 sectorY)
 
     auto& s = CWorld::GetSector(sectorX, sectorY);
     auto& rs = CWorld::GetRepeatSector(sectorX, sectorY);
-    ProcessSectorList(s.Buildings);
-    ProcessSectorList(rs.Vehicles);
-    ProcessSectorList(rs.Peds);
+    // 0x54674E..0x546A50: the exe walks the lists from the last to the first: objects, peds, vehicles, buildings (jump table 0x546CF0)
     ProcessSectorList(rs.Objects);
+    ProcessSectorList(rs.Peds);
+    ProcessSectorList(rs.Vehicles);
+    ProcessSectorList(s.Buildings);
 
     if (totalAcceptableColPoints == 0) {
         return false;
     }
 
-    float shiftMagnitude = vecShift.Magnitude();
+    const float shiftMagnitude = (float)std::sqrt(((x87d)vecShift.x * vecShift.x + (x87d)vecShift.z * vecShift.z) + (x87d)vecShift.y * vecShift.y); // 0x546A62: (x*x + z*z) + y*y
     if (shiftMagnitude > 1.0f) { // normalize the shift boi
         float shiftMultiplier = 1.0f / shiftMagnitude;
         vecShift *= shiftMultiplier;

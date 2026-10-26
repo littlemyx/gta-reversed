@@ -1123,8 +1123,9 @@ bool CPhysical::ApplySoftCollision(CEntity* entity, const CColPoint& colPoint, f
     }
 
     CVector vecDifference = vecDistanceToPointFromThis - vecCentreOfMassMultiplied;
-    CVector vecSpeedCrossProduct = CrossProduct(vecDifference, vecMoveDirection);
-    float fSquaredMagnitude = vecMoveDirection.SquaredMagnitude();
+    CVector vecSpeedCrossProduct = PhysicalCrossProductOriginal(vecDifference, vecMoveDirection); // 0x59C730
+    // 0x543A85..0x543AA1: squared magnitude of the CROSS product (r x n), not of the normal
+    float fSquaredMagnitude = vecSpeedCrossProduct.SquaredMagnitude();
     float fCollisionMass = 1.0f / (fSquaredMagnitude / m_fTurnMass + 1.0f / m_fMass);
 
     if (!GetIsTypeVehicle() || vehicle->m_nVehicleSubType // todo: m_nVehicleSubType

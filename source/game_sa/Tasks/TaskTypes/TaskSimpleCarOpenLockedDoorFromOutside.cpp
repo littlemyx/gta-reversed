@@ -54,8 +54,9 @@ void CTaskSimpleCarOpenLockedDoorFromOutside::StartAnim(CPed* ped) {
     const auto animationId = [this] {
         switch ((eTargetDoor)m_door) {
         case TARGET_DOOR_DRIVER:
+        case TARGET_DOOR_REAR_LEFT: // 0x64AE06..0x64AE16: doors 10 and 11 use the LHS anim
             return ANIM_ID_CAR_DOORLOCKED_LHS;
-        default: // TODO: Perhaps add more cases so R/L handside anims are used properly?
+        default:
             return ANIM_ID_CAR_DOORLOCKED_RHS;
         }
     }();
@@ -78,7 +79,7 @@ bool CTaskSimpleCarOpenLockedDoorFromOutside::MakeAbortable(CPed* ped, eAbortPri
 
 // 0x64D8E0
 bool CTaskSimpleCarOpenLockedDoorFromOutside::ProcessPed(CPed* ped) {
-    if (m_hasAnimFinished) {
+    if (m_hasAnimFinished || !m_veh) { // 0x64D8E0..0x64D8EC
         return true;
     }
 

@@ -2458,7 +2458,10 @@ void CPopulation::ManageDummy(CDummy* dummy, const CVector& posn) {
     if (!dummy->IsInCurrentArea() || !dummy->GetIsVisible()) {
         return;
     }
-    if ((posn - dummy->GetPosition()).SquaredMagnitude() >= sq(FindDummyDistForModel(dummy->GetModelId()))) {
+    // 0x616000: the exe compares the real distance (sqrt, summed z^2 + y^2 + x^2 at 24 bit precision) with the limit, not the squared ones
+    const CVector d = dummy->GetPosition() - posn;
+    const float dist = std::sqrt(d.z * d.z + d.y * d.y + d.x * d.x);
+    if (!(dist < FindDummyDistForModel(dummy->GetModelId()))) {
         return;
     }
     ConvertToRealObject(static_cast<CDummyObject*>(dummy));

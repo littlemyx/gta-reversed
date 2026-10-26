@@ -154,6 +154,7 @@ void LoadGroup(const char* fileName, auto& outModelsInGroup, auto& outNumOfModel
     size_t currGrpIdx{}, lineno{1};
     for (;const auto l = CFileLoader::LoadLine(file); lineno++) { // Also replaces `,` with ` ` (space) (Important to know)
         uint16 npeds{};
+        size_t nTokens{}; // 0x5BD0C0..0x5BD122: the original counts every token (resolved or not) towards the group capacity (`ebp`), and a line with tokens whose models all failed to resolve still starts a (zero-sized) group (`dl`)
         for (auto begin = l, end = l; *begin; begin = end) {
             begin = CFileLoader::FindFirstNonNullOrWS(begin);
             if (*begin == '#') {
@@ -175,11 +176,12 @@ void LoadGroup(const char* fileName, auto& outModelsInGroup, auto& outNumOfModel
             // but we want to print a useful error message, so the
             // loop is let to do one more iteration before breaking
             // to see if there are any more models to be added
-            if (npeds >= outModelsInGroup[currGrpIdx].size()) {
+            if (nTokens >= outModelsInGroup[currGrpIdx].size()) {
                 POP_LOG_DEBUG("There are models to be added to the group, but there's no memory! [Group ID: {}; Line: {}]", currGrpIdx, lineno);
                 break;
             }
             
+            nTokens++;
             char modelName[256]{};
             strncpy_s(modelName, begin, end - begin);
             if (int32 pedModelIdx{ MODEL_INVALID }; CModelInfo::GetModelInfo(modelName, &pedModelIdx)) {
@@ -190,7 +192,7 @@ void LoadGroup(const char* fileName, auto& outModelsInGroup, auto& outNumOfModel
             }
         }
         
-        if (npeds == 0) {
+        if (nTokens == 0) {
             continue; // Blank line
         }
 

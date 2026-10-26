@@ -175,21 +175,21 @@ void CIplStore::EnsureIplsAreInMemory(const CVector& posn) {
             continue;
         }
 
-        if (!def->bb.IsPointInside(posn, -190.f) || CStreaming::IsModelLoaded(IPLToModelId(slot))) {
-            continue;
+        // 0x4054AD / 0x4054B3 -> 0x4054F9: the exe clears `loadRequested` of EVERY requested slot (also one outside the 190 unit box or already loaded); the port `continue`d and left
+        // the flag set, so the slots stayed "required" into the next CIplStore::LoadIpls call (RD-AB-15: the cutscene LoadScene at fc 664 kept the Grove IPLs, exe unloads them)
+        if (def->bb.IsPointInside(posn, -190.f) && !CStreaming::IsModelLoaded(IPLToModelId(slot))) {
+            // Load IPL
+
+            CStreaming::RequestModel(IPLToModelId(slot), STREAMING_PRIORITY_REQUEST | STREAMING_KEEP_IN_MEMORY);
+
+            if (TheCamera.GetScreenFadeStatus() == 0) {
+                FrontEndMenuManager.MessageScreen("LOADCOL", false, false);
+            }
+
+            CTimer::Suspend();
+            CStreaming::LoadAllRequestedModels(true);
+            CTimer::Resume();
         }
-
-        // Load IPL
-
-        CStreaming::RequestModel(IPLToModelId(slot), STREAMING_PRIORITY_REQUEST | STREAMING_KEEP_IN_MEMORY);
-
-        if (TheCamera.GetScreenFadeStatus() == 0) {
-            FrontEndMenuManager.MessageScreen("LOADCOL", false, false);
-        }
-
-        CTimer::Suspend();
-        CStreaming::LoadAllRequestedModels(true);
-        CTimer::Resume();
 
         def->loadRequested = false;
     }
@@ -245,7 +245,8 @@ int32 CIplStore::GetNewIplEntityIndexArray(int32 entitiesCount) {
  * @addr 0x405600
  * @returns If all IPLs around `coords` in a 190 unit radius have loaded
  */
-bool CIplStore::HaveIplsLoaded(const CVector& coords, int32 /*playerNumber*/) {
+bool CIplStore::HaveIplsLoaded(const CVector& coords, int32 playerNumber) {
+    SetIplsRequired(coords, playerNumber); // 0x405611 (the port skipped it, so nothing was ever "requested" here)
     // Can't use `ms_pPool->GetAllValid()` here, because we must ignore the first slot (whenever it's valid or not).
     bool ret = true;
     for (auto slot = 1; slot < TOTAL_IPL_MODEL_IDS; slot++) {
@@ -682,6 +683,7 @@ void CIplStore::RequestIplAndIgnore(int32 iplSlotIndex) {
  * @addr 0x405520
  */
 void CIplStore::RequestIpls(const CVector& posn, int32 playerNumber) {
+    SetIplsRequired(posn, playerNumber); // 0x405531
     for (auto slot = 1 /*skip first*/; slot < TOTAL_IPL_MODEL_IDS; slot++) {
         const auto def = GetInSlot(slot);
         if (!def) {

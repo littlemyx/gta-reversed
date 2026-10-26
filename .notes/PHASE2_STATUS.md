@@ -375,3 +375,4 @@
 - 2026-10-26 02:27 orchestrator gate on da5c6902 (RD-AB-9): run_all_tests 74/74, soak OK, gameplay_regress 70/70; C:\gta-play refreshed.
 - 2026-10-26 10:03 orchestrator gate on d3a8458d (RD-AB-11 walk speed, RD-AB-12 events, TP-HEAP, ROUTE-FLAKES): run_all_tests 74/74, soak OK, gameplay_regress FAIL 2 (missions.bike enter/reenter: BMX not mounted) - missions re-run x2 PASS 11/11 -> flake; C:\gta-play refreshed. Gate now also requires regress rc 0 to refresh (cfd1f5f3); rw_* tests take gpu.lock (d3a8458d).
 - 2026-10-26 13:30 orchestrator gate on 61d2ce08 (RD-AB-13 bike ctor): run_all_tests 74/74, soak OK, gameplay_regress FAIL 2 (interior_lspd no cops) - re-run x2 PASS 7/7 -> flake (see .notes/regress_flakes.tsv); C:\gta-play refreshed manually.
+- 2026-10-26 16:21 orchestrator gate on f39f4a1d (RD-AB-14 IplStore): run_all_tests 74/74, soak OK, gameplay_regress 70/70; C:\gta-play refreshed.

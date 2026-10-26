@@ -550,16 +550,19 @@ void CPhysical::ProcessShift() {
     {
         if (GetHasHitWall())
         {
-            CPed* ped = AsPed();
-            bool bSomeSpecificFlagsSet = false;
-            if (GetIsTypePed() && ped->m_standingOnEntity)
-            {
-                if (!ped->m_standingOnEntity->m_bIsStatic || ped->m_standingOnEntity->GetHasContacted())
-                {
-                    bSomeSpecificFlagsSet = true;
+            // 0x54DB63..0x54DB92: for a ped the exe damps the speeds when it has no standing entity, or when the DWORD at +0x40 of the standing
+            // entity (physicalFlags - NOT the CEntity flags at +0x1C; for a CBuilding this is the next pool slot's data) does not have bit 2 set or has
+            // bit 3 set; otherwise (and for all non-peds) only CWorld::bSecondShift decides.
+            bool bPedDamp = false;
+            if (GetIsTypePed()) {
+                const auto* standingOn = AsPed()->m_standingOnEntity;
+                bPedDamp = !standingOn;
+                if (standingOn) {
+                    const auto standingFlags = *reinterpret_cast<const uint32*>(reinterpret_cast<const uint8*>(standingOn) + 0x40);
+                    bPedDamp = !(standingFlags & 4) || (standingFlags & 8);
                 }
             }
-            if ((GetIsTypePed() && bSomeSpecificFlagsSet) || CWorld::bSecondShift)
+            if (bPedDamp || CWorld::bSecondShift)
             {
                 float fMoveSpeedShift = pow(CPhysical::PHYSICAL_SHIFT_SPEED_DAMP, CTimer::GetTimeStep());
                 m_vecMoveSpeed *= fMoveSpeedShift;

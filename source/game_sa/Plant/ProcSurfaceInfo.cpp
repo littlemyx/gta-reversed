@@ -183,7 +183,7 @@ int32 ProcSurfaceInfo_c::AddObjects(CPlantLocTri* plant) {
 
         auto randSeed    = (plant->m_V1 + plant->m_V2 + plant->m_V3).ComponentwiseSum() + m_ModelIndex;
         auto oldRandSeed = rand(); // R* usage of srand and rand seems rather weird.
-        srand((uint32)randSeed);
+        srand(NOTSA_FTOL(uint32, randSeed));
 
         if (density <= 0.0f) {
             srand(oldRandSeed);

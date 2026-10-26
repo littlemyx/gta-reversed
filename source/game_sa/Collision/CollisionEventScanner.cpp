@@ -55,7 +55,7 @@ int32 Ftol(double v) {
     if (!(v > -9223372036854775808.0 && v < 9223372036854775808.0)) {
         return 0;
     }
-    return (int32)(int64)v;
+    return (int32)NOTSA_FTOL(int64, v);
 }
 }; // namespace
 

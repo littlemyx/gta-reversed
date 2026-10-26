@@ -43,9 +43,9 @@ CPlantLocTri* CPlantLocTri::Add(const CVector& p1, const CVector& p2, const CVec
 
     auto properties = CPlantSurfPropMgr::GetSurfProperties(surface);
     auto densityMult = GetPlantDensity(this);
-    auto density1 = (uint16)(densityMult * properties->m_Plants[0].density);
-    auto density2 = (uint16)(densityMult * properties->m_Plants[1].density);
-    auto density3 = (uint16)(densityMult * properties->m_Plants[2].density);
+    auto density1 = NOTSA_FTOL(uint16, densityMult * properties->m_Plants[0].density);
+    auto density2 = NOTSA_FTOL(uint16, densityMult * properties->m_Plants[1].density);
+    auto density3 = NOTSA_FTOL(uint16, densityMult * properties->m_Plants[2].density);
     if (density1 + density2 + density3 > 0) {
         rng::generate(m_Seed, [] { return CGeneral::GetRandomNumberInRange(0.0f, 1.0f); });
         m_nMaxNumPlants[0] = density1;

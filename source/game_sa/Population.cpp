@@ -1201,7 +1201,9 @@ void CPopulation::CreateWaitingCoppers(CVector createAt, float createaWithHeadin
     createAt.z += 1.f;
 
     // Create cop cars
-    if (auto numOfCars = NUM_CARS_FOR_WANTED_LEVEL[+plyrWantedLvl]) {
+    auto numOfCars = NUM_CARS_FOR_WANTED_LEVEL[+plyrWantedLvl];
+    const auto copCarModel = numOfCars ? CStreaming::GetDefaultCopCarModel() : MODEL_INVALID; // 0x613499
+    if (numOfCars && copCarModel > MODEL_INVALID) { // 0x6134A7: `jle` - no cop car model => no cars at all
         CNodeAddress createPosNodes[3]{};
         createPosNodes[0] = ThePaths.FindNthNodeClosestToCoors(
             createAt,
@@ -1214,8 +1216,6 @@ void CPopulation::CreateWaitingCoppers(CVector createAt, float createaWithHeadin
             true,
             &createPosNodes[1]
         );
-
-        const auto copCarModel = CStreaming::GetDefaultCopCarModel();
 
         for (const auto nodeAddr : createPosNodes) {
             if (!nodeAddr.IsValid()) {
@@ -1243,6 +1243,9 @@ void CPopulation::CreateWaitingCoppers(CVector createAt, float createaWithHeadin
             }
 
             CCarCtrl::JoinCarWithRoadSystem(veh);
+            if (veh->UsesSiren() && (rand() & 1)) { // 0x61369D
+                veh->vehicleFlags.bSirenOrAlarm = true;
+            }
             CWorld::Add(veh);
 
             if (!--numOfCars) {
@@ -1254,8 +1257,9 @@ void CPopulation::CreateWaitingCoppers(CVector createAt, float createaWithHeadin
     // Create cop peds
     if (auto numOfCopPeds = NUM_COPS_FOR_WANTED_LEVEL[+plyrWantedLvl]) {
         for (int32 i{}; i < 20; i++) { // int32 angleOffset = 0; angleOffset > -20; angleOffset--
+            const auto dist      = CGeneral::GetRandomNumberInRange(8.f, 10.f); // 0x6136E0: the distance is rolled BEFORE the heading
             const auto heading   = CGeneral::GetRandomNumberInRange(0.f, (float)(i) * 0.4f) - (float)(i) * 0.2f + createaWithHeading;
-            auto       copPedPos = CVector{ CVector2D{createAt} + CVector2D{(float)x87::sin(heading), (float)x87::cos(heading)} *CGeneral::GetRandomNumberInRange(8.f, 10.f), createAt.z };
+            auto       copPedPos = CVector{ CVector2D{createAt} + CVector2D{(float)x87::sin(heading), (float)x87::cos(heading)} * dist, createAt.z };
 
             if (!CWorld::GetIsLineOfSightClear(createAt, copPedPos, true, true, false, true)) {
                 continue;
@@ -1269,7 +1273,7 @@ void CPopulation::CreateWaitingCoppers(CVector createAt, float createaWithHeadin
             }
 
             bool bGroundHit{};
-            copPedPos.z = CWorld::FindGroundZFor3DCoord(copPedPos, &bGroundHit, nullptr);
+            copPedPos.z = CWorld::FindGroundZFor3DCoord(copPedPos, &bGroundHit, nullptr) + 1.f; // 0x6137F7
             if (!bGroundHit) {
                 continue;
             }
@@ -1277,7 +1281,9 @@ void CPopulation::CreateWaitingCoppers(CVector createAt, float createaWithHeadin
             const auto ped = new CCopPed{ 0 };
 
             ped->SetPosn(copPedPos);
-            ped->m_fAimingRotation = ped->m_fCurrentRotation = CVector2D{ createAt - copPedPos }.Heading();
+            auto toCreateAt = createAt - copPedPos;
+            toCreateAt.Normalise(); // 0x6138A3: 3D normalise first
+            ped->m_fAimingRotation = ped->m_fCurrentRotation = CVector2D{ toCreateAt }.Heading();
             ped->SetHeading(ped->m_fCurrentRotation);
 
             CWorld::Add(ped);

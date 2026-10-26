@@ -630,7 +630,7 @@ void CPed::CreateDeadPedMoney() {
         return;
     }
 
-    if (m_nMoneyCount > 10) {
+    if (m_nMoneyCount >= 10) { // 0x45913C: `cmp cx, 0xA; jb return`
         CPickups::CreateSomeMoney(GetPosition(), m_nMoneyCount);
         m_nMoneyCount = 0;
     }

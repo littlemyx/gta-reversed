@@ -156,6 +156,8 @@ void CTaskSimpleDuck::RestartTask(CPed* ped) {
         m_bNeedToSetDuckFlag = false;
     }
 
+    m_StartTime = CTimer::GetTimeInMS(); // 0x6923B6: the start time is reset on every restart
+
     if (m_ShotWhizzingCounter >= 0) {
         m_ShotWhizzingCounter = CGeneral::GetRandomNumberInRange(1000, 2500);
     }

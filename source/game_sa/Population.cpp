@@ -858,7 +858,8 @@ CPed* CPopulation::AddPed(ePedType pedType, eModelID modelIndex, const CVector& 
             const auto ped = new CCivilianPed(pedType, modelIndex);
 
             if (CCheat::IsAnyActive({ CHEAT_EVERYONE_ARMED, CHEAT_PEDS_ATTACK_OTHER_WITH_GOLFCLUB })) {
-                GiveAndSetPedWeapon(ped, CGeneral::RandomChoiceFromList({ WEAPON_PISTOL, WEAPON_BASEBALLBAT, WEAPON_SHOTGUN, WEAPON_M4, WEAPON_RLAUNCHER }));
+                constexpr eWeaponType CHEAT_WEAPONS[]{ WEAPON_PISTOL, WEAPON_BASEBALLBAT, WEAPON_SHOTGUN, WEAPON_M4, WEAPON_RLAUNCHER };
+                GiveAndSetPedWeapon(ped, CHEAT_WEAPONS[rand() % 5]); // 0x612797: `rand() % 5` (idiv), not the 0..1 scaled GetRandomNumberInRange
             }
 
             return ped;
@@ -877,8 +878,17 @@ CPed* CPopulation::AddPed(ePedType pedType, eModelID modelIndex, const CVector& 
 
             if (CCheat::IsActive(CHEAT_NINJA_THEME) && pedType == PED_TYPE_GANG7) {
                 GiveAndSetPedWeapon(ped, WEAPON_KATANA);
-            } else if (CGeneral::RandomBool(33)) { // Give random weapon
-                if (const auto wtype = CGangs::Gang[GetGangOfPedType(pedType)].GetRandomWeapon(); wtype != WEAPON_UNARMED) {
+            } else if (CGeneral::GetRandomNumberInRange(0, 100) < 33) { // 0x61290C: int version, `>= 33` skips
+                // 0x612921: second int roll, thresholds 33 / 66 (3 weapons) or 50 (2 weapons)
+                const auto& weapons = CGangs::Gang[GetGangOfPedType(pedType)].m_nGangWeapons;
+                const auto  roll    = CGeneral::GetRandomNumberInRange(0, 100);
+                eWeaponType wtype;
+                if (weapons[2] != WEAPON_UNARMED) {
+                    wtype = roll < 33 ? weapons[0] : roll < 66 ? weapons[1] : weapons[2];
+                } else {
+                    wtype = (weapons[1] != WEAPON_UNARMED && roll >= 50) ? weapons[1] : weapons[0];
+                }
+                if (wtype != WEAPON_UNARMED) {
                     GiveAndSetPedWeapon(ped, wtype);
                 }
             }
@@ -940,13 +950,25 @@ CPed* CPopulation::AddPed(ePedType pedType, eModelID modelIndex, const CVector& 
 
     if (CCheat::IsActive(CHEAT_SLUT_MAGNET) && pedType == PED_TYPE_PROSTITUTE) {
         ped->GetEventGroup().Add(CEventSexyPed{ FindPlayerPed(), TASK_COMPLEX_GANG_HASSLE_PED });
-        GiveAndSetPedWeapon(ped, CGeneral::RandomChoiceFromList({ WEAPON_DILDO1, WEAPON_DILDO2, WEAPON_VIBE1, WEAPON_VIBE2 }), 1);
+        GiveAndSetPedWeapon(ped, CGeneral::RandomChoiceFromList({ WEAPON_DILDO1, WEAPON_DILDO2, WEAPON_VIBE1, WEAPON_VIBE2 }), 0); // 0x612B3F: ammo 0
     }
 
     if (CCheat::IsActive(CHEAT_PEDS_ATTACK_OTHER_WITH_GOLFCLUB)) {
-        auto& pedsc = ped->GetIntelligence()->GetPedScanner();
-        pedsc.ScanForPedsInRange(*ped);
-        if (const auto closest = pedsc.GetClosestPedInRange()) { // Not what they did, but better (though possibly hacky)
+        // 0x612B5E: the closest other ped of the whole pool (any distance), pool walked in reverse, strict `<`
+        CPed* closest{};
+        float closestDistSq{};
+        for (auto& other : GetPedPool()->GetAllValidReverse()) {
+            if (&other == ped) {
+                continue;
+            }
+            const auto d = other.GetPosition() - ped->GetPosition();
+            const auto distSq = d.x * d.x + d.y * d.y + d.z * d.z;
+            if (!closest || distSq < closestDistSq) {
+                closest       = &other;
+                closestDistSq = distSq;
+            }
+        }
+        if (closest) {
             ped->GetEventGroup().Add(CEventAcquaintancePedHate{ closest, TASK_COMPLEX_KILL_PED_ON_FOOT });
         }
     }

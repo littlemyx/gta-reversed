@@ -23,7 +23,7 @@
 | S19 | game_sa/Entity/Vehicle | 108 | pending | Trailer.cpp, Train.cpp, Vehicle.cpp |
 | S20 | game_sa/Entity/Ped | 75 | pending | CivilianPed.cpp, CopPed.cpp, EmergencyPed.cpp, Ped.cpp |
 | S21 | game_sa/Entity/Ped | 32 | pending | PedSaveStructure.cpp, PlayerPed.cpp, PlayerSkin.cpp |
-| S22 | game_sa/CarCtrl.cpp | 55 | pending | CarCtrl.cpp |
+| S22 | game_sa/CarCtrl.cpp | 55 | partial 21/55 (17 M, 4 fixed) -> S22b | CarCtrl.cpp |
 | S23 | game_sa/Population.cpp | 33 | pending | Population.cpp |
 | S24 | game_sa/PedIntelligence.cpp | 31 | pending | PedIntelligence.cpp |
 | S25 | game_sa/Events/GroupEventHandler.cpp | 30 | pending | GroupEventHandler.cpp |
@@ -36,3 +36,4 @@
 | S32 | game_sa/Radar.cpp | 28 | pending | Radar.cpp |
 | S33 | game_sa/WaterLevel.cpp | 26 | pending | WaterLevel.cpp |
 | S34 | game_sa/Interior/Interior_c.cpp | 41 | pending | Interior_c.cpp |
+| S22b | game_sa/CarCtrl.cpp (rest of S22) | 34 | pending | CarCtrl.cpp |

@@ -3729,7 +3729,7 @@ void CCam::Process_Cam_TwoPlayer_InCarAndShooting() {
         if (diff < 0.0) {
             diff += (x87d)(2.0f * PI);
         }
-        const auto fakeShootDirn = (int32)(diff * (x87d)0.6366197466850281f);
+        const auto fakeShootDirn = NOTSA_FTOL(int32, diff * (x87d)0.6366197466850281f);
 
         CTaskSimpleGangDriveBy task{ nullptr, nullptr, 100.0f, 100, (eDrivebyStyle)8, seatRHS };
         task.m_pWeaponInfo = CWeaponInfo::GetWeaponInfo(shooter->GetActiveWeapon().m_Type, shooter->GetWeaponSkill());
@@ -5037,7 +5037,7 @@ void CCam::Process_FlyBy(const CVector& target, float orientation, float speedVa
 
     if (!TheCamera.m_bStartingSpline) {
         m_fTimeElapsedFloat = 0.0f;
-        m_nFinishTime       = static_cast<uint32>(static_cast<int32>(static_cast<x87d>(srcPath[NOTSA_FTOL(int32, srcPath[0]) * 10 - 9]) * (x87d)1000.0));
+        m_nFinishTime       = static_cast<uint32>(NOTSA_FTOL(int32, static_cast<x87d>(srcPath[NOTSA_FTOL(int32, srcPath[0]) * 10 - 9]) * (x87d)1000.0));
 
         gFlyByRollSegmentIdx = 5;
         gFlyByFovSegmentIdx  = 5;
@@ -5068,10 +5068,10 @@ void CCam::Process_FlyBy(const CVector& target, float orientation, float speedVa
     };
 
     if (static_cast<double>(m_nFinishTime) <= time) { // Finished => stay at the end of the splines
-        gFlyBySrcSegmentIdx  = (static_cast<int32>(srcPath[0]) - 1) * 10 + 1;
-        gFlyByLookSegmentIdx = (static_cast<int32>(lookPath[0]) - 1) * 10 + 1;
-        gFlyByRollSegmentIdx = static_cast<int32>(rollPath[0]) * 4 - 3;
-        gFlyByFovSegmentIdx  = static_cast<int32>(fovPath[0]) * 4 - 3;
+        gFlyBySrcSegmentIdx  = (NOTSA_FTOL(int32, srcPath[0]) - 1) * 10 + 1;
+        gFlyByLookSegmentIdx = (NOTSA_FTOL(int32, lookPath[0]) - 1) * 10 + 1;
+        gFlyByRollSegmentIdx = NOTSA_FTOL(int32, rollPath[0]) * 4 - 3;
+        gFlyByFovSegmentIdx  = NOTSA_FTOL(int32, fovPath[0]) * 4 - 3;
 
         FlyBySplineVec3(&m_vecSource, srcPath, time, &gFlyBySrcSegmentIdx);
         FlyBySplineVec3(&m_vecFront, lookPath, time, &gFlyByLookSegmentIdx);
@@ -7363,9 +7363,9 @@ void CCam::ApplyUnderwaterMotionBlur() {
     const x87d factor = colorMag > (x87d)UNDERWATER_CAM_MAG_LIMIT ? (x87d)UNDERWATER_CAM_MAG_LIMIT / colorMag : (x87d)1.0;
 
     TheCamera.SetMotionBlur(
-        static_cast<uint32>(factor * red),
-        static_cast<uint32>(factor * green),
-        static_cast<uint32>(factor * blue),
+        NOTSA_FTOL(uint32, factor * red),
+        NOTSA_FTOL(uint32, factor * green),
+        NOTSA_FTOL(uint32, factor * blue),
         UNDERWATER_CAM_BLUR,
         eMotionBlurType::LIGHT_SCENE
     );

@@ -399,7 +399,7 @@ void CExplosion::AddExplosion(CEntity* victim, CEntity* creator, eExplosionType 
                     firePos.z = CWorld::FindGroundZFor3DCoord({firePos.x, firePos.y, firePos.z + 3.0f}, &bHitGround, nullptr); // 0x73735C
                     if (bHitGround && std::fabs(firePos.z - exp->m_vecPosition.z) < 10.0f) {
                         // 0x737386: burn time = (rand01 * 0.4 * 7000 + 5600) (0.4 is 0x3ECCCCCE here, not 0x3ECCCCCD)
-                        const auto burnTime = (int32)(float)((x87d)rand() * RAND_MAX_FLOAT_RECIPROCAL * std::bit_cast<float>(0x3ECCCCCEu) * 7000.0f + 5600.0f);
+                        const auto burnTime = NOTSA_FTOL(int32, (float)((x87d)rand() * RAND_MAX_FLOAT_RECIPROCAL * std::bit_cast<float>(0x3ECCCCCEu) * 7000.0f + 5600.0f));
                         gFireManager.StartFire(firePos, 0.8f, 0, exp->m_pCreator, (uint32)burnTime, 3, 1);
                     }
                 }
@@ -504,12 +504,12 @@ void CExplosion::Update() {
             }
 
             // 0x7376E6: the remaining time is (int)(expireTime - (float)timeInMS), expired when <= 0
-            if ((int32)(exp.m_nExpireTime - (float)CTimer::GetTimeInMS()) <= 0)
+            if (NOTSA_FTOL(int32, exp.m_nExpireTime - (float)CTimer::GetTimeInMS()) <= 0)
                 exp.m_nActiveCounter = 0;
             else
                 exp.m_nActiveCounter++;
 
-            exp.m_nFuelTimer += (int32)CTimer::GetTimeStepInMS();
+            exp.m_nFuelTimer += NOTSA_FTOL(int32, CTimer::GetTimeStepInMS());
 
             if ((uint32)exp.m_nFuelTimer > 200u) // 0x737A31: JA, an unsigned compare
                 continue;

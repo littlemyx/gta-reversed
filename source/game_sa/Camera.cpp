@@ -1721,14 +1721,14 @@ void CCamera::ProcessFade() {
             : (m_fFadeAlpha -= CTimer::GetTimeStepInSeconds() / m_fFadeDuration * 255.0f);
 
         if (m_fFadeAlpha > 0.0f) {
-            CDraw::FadeValue = static_cast<uint8>(m_fFadeAlpha);
+            CDraw::FadeValue = NOTSA_FTOL(uint8, m_fFadeAlpha);
             return;
         }
 
         m_bFading = false;
     } else {
         if (m_nFadeInOutFlag == eFadeFlag::FADE_OUT) { // stupid, why not use a switch instead?
-            CDraw::FadeValue = static_cast<uint8>(m_fFadeAlpha);
+            CDraw::FadeValue = NOTSA_FTOL(uint8, m_fFadeAlpha);
             return;
         }
 
@@ -1743,13 +1743,13 @@ void CCamera::ProcessFade() {
             : (m_fFadeAlpha += CTimer::GetTimeStepInSeconds() / m_fFadeDuration * 255.0f);
 
         if (m_fFadeAlpha < 255.0f) {
-            CDraw::FadeValue = static_cast<uint8>(m_fFadeAlpha);
+            CDraw::FadeValue = NOTSA_FTOL(uint8, m_fFadeAlpha);
             return;
         }
     }
 
     m_fFadeAlpha = fadeAlpha;
-    CDraw::FadeValue = static_cast<uint8>(m_fFadeAlpha);
+    CDraw::FadeValue = NOTSA_FTOL(uint8, m_fFadeAlpha);
 }
 
 // 0x50B6D0
@@ -2828,7 +2828,7 @@ void CCamera::Process() {
         camPos.z = (float)((x87d)(int32)(((rnd >> 8) & 0xF) - 7) * mult + camPos.z);
 
         if (mult > 0.0 && m_nBlurType != eMotionBlurType::SNIPER) {
-            const int32 alpha = 25 - (int32)((x87d)shake * -(x87d)255.0); // 0x86327C
+            const int32 alpha = 25 - NOTSA_FTOL(int32, (x87d)shake * -(x87d)255.0); // 0x86327C
             m_nMotionBlurAddAlpha = static_cast<uint32>(std::min(alpha, 150));
         }
     }
@@ -2862,7 +2862,7 @@ void CCamera::Process() {
     m_fGenerationDistMultiplier = m_fLODDistMultiplier;
     m_fLODDistMultiplier        = CRenderer::ms_lodDistScale * m_fLODDistMultiplier;
 
-    RwCameraSetFarClipPlane(Scene.m_pRwCamera, (float)((x87d)(int32)((x87d)Scene.m_pRwCamera->farPlane * (x87d)100.0) * (x87d)0.01f));
+    RwCameraSetFarClipPlane(Scene.m_pRwCamera, (float)((x87d)NOTSA_FTOL(int32, (x87d)Scene.m_pRwCamera->farPlane * (x87d)100.0) * (x87d)0.01f));
     CDraw::ms_fNearClipZ = m_pRwCamera->nearPlane;
     CDraw::ms_fFarClipZ  = m_pRwCamera->farPlane;
 
@@ -3220,7 +3220,7 @@ void CCamera::ImproveNearClip(CVehicle* vehicle, CPed* ped, CVector* source, CVe
                     minDist = 0.3f;
                 }
 
-                RwCameraSetNearClipPlane(Scene.m_pRwCamera, (float)((x87d)(int)((x87d)minDist * (x87d)100.0) * (x87d)0.01f));
+                RwCameraSetNearClipPlane(Scene.m_pRwCamera, (float)((x87d)NOTSA_FTOL(int32, (x87d)minDist * (x87d)100.0) * (x87d)0.01f));
             }
         }
     } else {

@@ -109,9 +109,9 @@ void CBulletTraces::AddTrace(const CVector& from, const CVector& to, float radiu
         // This way we can kinda make sure all traces will be visible (even if for only a brief amount of time)
         const auto traceIdx = GetTraceIndex(pTrace);
         if (traceIdx < 10) {
-            pTrace->m_nLifeTime = (uint32)(traceIdx < 5 ? disappearTime : disappearTime / 2.0f);
+            pTrace->m_nLifeTime = NOTSA_FTOL(uint32, traceIdx < 5 ? disappearTime : disappearTime / 2.0f);
         } else {
-            pTrace->m_nLifeTime = (uint32)(disappearTime / 4.0f);
+            pTrace->m_nLifeTime = NOTSA_FTOL(uint32, disappearTime / 4.0f);
         }
     }
     PlayFrontEndSoundForTrace(from, to);
@@ -212,7 +212,7 @@ void CBulletTraces::Render() {
         for (auto& vert : verts) {
             RwIm3DVertexSetRGBA(&vert, 255, 255, 128, 0);
         }
-        RwIm3DVertexSetRGBA(&verts[3], 255, 255, 128, (char)((float)trace.m_nTransparency * t)); // Only vertex 3 has non-zero alpha
+        RwIm3DVertexSetRGBA(&verts[3], 255, 255, 128, NOTSA_FTOL(int8, (float)trace.m_nTransparency * t)); // Only vertex 3 has non-zero alpha
 
         if (RwIm3DTransform(verts, std::size(verts), nullptr, rwIM3D_VERTEXRGBA)) {
             RwImVertexIndex indices[] = {

@@ -269,7 +269,7 @@ void CClouds::MovingFogRender() {
             { pos - fogRight + fogUp,  {0.f, 1.f} }, // Top left
         };
 
-        const auto alpha = static_cast<int32>(MovingFog_GetFXIntensity() * ms_mf.m_fIntensity[fogIdx] * CurrentFogIntensity);
+        const auto alpha = NOTSA_FTOL(int32, MovingFog_GetFXIntensity() * ms_mf.m_fIntensity[fogIdx] * CurrentFogIntensity);
         for (const auto& vertIdx : ms_mf.m_nPrimIndices) {
             const auto& corner = corners[vertIdx];
 
@@ -321,7 +321,7 @@ void CClouds::Render_MaybeRenderMoon(float colorBalance) {
         return;
     }
 
-    const auto moonVisibilityTimeMins = (size_t)std::abs(CClock::GetMinutesToday() - (float)MOON_VISIBILITY_RANGE_MINS);
+    const auto moonVisibilityTimeMins = NOTSA_FTOL(size_t, std::abs(CClock::GetMinutesToday() - (float)MOON_VISIBILITY_RANGE_MINS));
     if (!s_DebugSettings.Moon.Force) {
         if (moonVisibilityTimeMins >= MOON_VISIBILITY_RANGE_MINS) { // Check is the moon not visible at the current time
             return;
@@ -398,7 +398,7 @@ void CClouds::Render_MaybeRenderMoon(float colorBalance) {
     CSprite::RenderOneXLUSprite(
         { moonPosScr.x, moonPosScr.y, z },
         moonSz,
-        colorRG, colorRG, (uint8)((float)colorB * 0.85f), 255,
+        colorRG, colorRG, NOTSA_FTOL(uint8, (float)colorB * 0.85f), 255,
         rhw,
         255,
         0,
@@ -607,9 +607,9 @@ void CClouds::Render_MaybeRenderRainbows() {
         CSprite::RenderBufferedOneXLUSprite(
             rblinePosScr,
             rblineSizeScr,
-            (uint8)((float)clr.r * CWeather::Rainbow),
-            (uint8)((float)clr.g * CWeather::Rainbow),
-            (uint8)((float)clr.b * CWeather::Rainbow),
+            NOTSA_FTOL(uint8, (float)clr.r * CWeather::Rainbow),
+            NOTSA_FTOL(uint8, (float)clr.g * CWeather::Rainbow),
+            NOTSA_FTOL(uint8, (float)clr.b * CWeather::Rainbow),
             clr.a,
             1.f / rblinePosScr.z,
             255
@@ -735,9 +735,9 @@ void CClouds::RenderSkyPolys() {
     fBlendFactor = std::max(fBlendFactor, CWeather::Foggyness);
 
     RwRGBA belowHorizonGrey = CTimeCycle::m_BelowHorizonGrey;
-    belowHorizonGrey.red   += static_cast<RwUInt8>(fBlendFactor * static_cast<float>(CTimeCycle::m_CurrentColours.m_nSkyBottomRed - belowHorizonGrey.red));
-    belowHorizonGrey.green += static_cast<RwUInt8>(fBlendFactor * static_cast<float>(CTimeCycle::m_CurrentColours.m_nSkyBottomGreen - belowHorizonGrey.green));
-    belowHorizonGrey.blue  += static_cast<RwUInt8>(fBlendFactor * static_cast<float>(CTimeCycle::m_CurrentColours.m_nSkyBottomBlue - belowHorizonGrey.blue));
+    belowHorizonGrey.red   += NOTSA_FTOL(RwUInt8, fBlendFactor * static_cast<float>(CTimeCycle::m_CurrentColours.m_nSkyBottomRed - belowHorizonGrey.red));
+    belowHorizonGrey.green += NOTSA_FTOL(RwUInt8, fBlendFactor * static_cast<float>(CTimeCycle::m_CurrentColours.m_nSkyBottomGreen - belowHorizonGrey.green));
+    belowHorizonGrey.blue  += NOTSA_FTOL(RwUInt8, fBlendFactor * static_cast<float>(CTimeCycle::m_CurrentColours.m_nSkyBottomBlue - belowHorizonGrey.blue));
 
     RwRenderStateSet(rwRENDERSTATETEXTURERASTER,     RWRSTATE(NULL));
     RwRenderStateSet(rwRENDERSTATEZTESTENABLE,       RWRSTATE(NULL));
@@ -897,9 +897,9 @@ void CClouds::RenderBottomFromHeight() {
     const int32 blue  = cc.m_nFluffyCloudsBottomBlue;
 
     // Brightened color, used by the first vertex of every cloud quad
-    const int32 brightRed   = (int32)std::min(255.0f, (float)red * 2.0f + 20.0f);
-    const int32 brightGreen = (int32)std::min(255.0f, (float)green * 1.5f);
-    const int32 brightBlue  = (int32)std::min(255.0f, (float)blue * 1.5f);
+    const int32 brightRed   = NOTSA_FTOL(int32, std::min(255.0f, (float)red * 2.0f + 20.0f));
+    const int32 brightGreen = NOTSA_FTOL(int32, std::min(255.0f, (float)green * 1.5f));
+    const int32 brightBlue  = NOTSA_FTOL(int32, std::min(255.0f, (float)blue * 1.5f));
 
     const auto& camPos = TheCamera.GetPosition();
     if (camPos.z < -90.0f) {
@@ -927,7 +927,7 @@ void CClouds::RenderBottomFromHeight() {
     RwRenderStateSet(rwRENDERSTATEDESTBLEND,         RWRSTATE(rwBLENDINVSRCALPHA));
     RwRenderStateSet(rwRENDERSTATETEXTURERASTER,     RWRSTATE(RwTextureGetRaster(gpCloudMaskTex)));
 
-    const int32 cloudAlpha = (int32)cc.m_fCloudAlpha;
+    const int32 cloudAlpha = NOTSA_FTOL(int32, cc.m_fCloudAlpha);
 
     // Pass 1: Bottoms of the fluffy clouds (colored quads)
     if (cloudAlpha != 0) {
@@ -945,8 +945,8 @@ void CClouds::RenderBottomFromHeight() {
             const float y1 = (randTable[i % 80] * 512.0f + t) - camPos.y;
 
             // Wrap the position around the camera (grid of 512 units)
-            const float dx = x1 - (float)(((int32)x1 & ~0x1FF) + 0x100);
-            const float dy = y1 - (float)(((int32)y1 & ~0x1FF) + 0x100);
+            const float dx = x1 - (float)((NOTSA_FTOL(int32, x1) & ~0x1FF) + 0x100);
+            const float dy = y1 - (float)((NOTSA_FTOL(int32, y1) & ~0x1FF) + 0x100);
 
             const float vx = dx + camPos.x;
             const float vy = dy + camPos.y;
@@ -954,7 +954,7 @@ void CClouds::RenderBottomFromHeight() {
 
             int32 alpha = cloudAlpha;
             if (vz - camPos.z > 0.0f) { // Fade out the clouds that are above the camera
-                alpha = (int32)((1.0f - (vz - camPos.z) * 0.004f) * (float)cloudAlpha);
+                alpha = NOTSA_FTOL(int32, (1.0f - (vz - camPos.z) * 0.004f) * (float)cloudAlpha);
             }
             if (alpha <= 0) {
                 continue;
@@ -965,7 +965,7 @@ void CClouds::RenderBottomFromHeight() {
             const float ady  = std::abs(camPos.y - vy);
             const float dist = (adx <= ady ? ady : adx) * 0.00390625f;
             if (dist > 0.75f) {
-                alpha = (int32)((1.0f - (dist - 0.75f) * 4.0f) * (float)alpha);
+                alpha = NOTSA_FTOL(int32, (1.0f - (dist - 0.75f) * 4.0f) * (float)alpha);
             }
             if (alpha <= 0) {
                 continue;
@@ -1042,8 +1042,8 @@ void CClouds::RenderBottomFromHeight() {
             const float ex = (w + offsetXTbl[j]) - camPos.x;
             const float ey = (w + offsetYTbl[j]) - camPos.y;
 
-            const float dx = ex - (float)(((int32)ex & ~0xFF) + 0x80);
-            const float dy = ey - (float)(((int32)ey & ~0xFF) + 0x80);
+            const float dx = ex - (float)((NOTSA_FTOL(int32, ex) & ~0xFF) + 0x80);
+            const float dy = ey - (float)((NOTSA_FTOL(int32, ey) & ~0xFF) + 0x80);
 
             const CVector pos{
                 dx + camPos.x,
@@ -1052,7 +1052,7 @@ void CClouds::RenderBottomFromHeight() {
             };
 
             const float dz = std::abs(camPos.z - pos.z);
-            int32 alpha = (int32)((1.0f - dz * 0.004f) * (float)cloudAlpha);
+            int32 alpha = NOTSA_FTOL(int32, (1.0f - dz * 0.004f) * (float)cloudAlpha);
             if (alpha <= 0) {
                 continue;
             }
@@ -1067,14 +1067,14 @@ void CClouds::RenderBottomFromHeight() {
                 if (dist >= 1.0f) {
                     dist = 1.0f;
                 }
-                alpha = (int32)((1.0f - (dist - 0.75f) * 4.0f) * (float)alpha);
+                alpha = NOTSA_FTOL(int32, (1.0f - (dist - 0.75f) * 4.0f) * (float)alpha);
             }
 
             if (dist <= 0.05f) {
                 continue;
             }
             if (dist < 0.1f) { // Fade out when close to the camera
-                alpha = (int32)(((dist - 0.05f) * (float)alpha) * 20.0f);
+                alpha = NOTSA_FTOL(int32, ((dist - 0.05f) * (float)alpha) * 20.0f);
             }
 
             CVector   screenPos;
@@ -1442,7 +1442,7 @@ void CClouds::VolumetricCloudsRender() {
         }
 
         //> 0x7167DC - Alpha calculation [I don't understand it either]
-        auto vcAlpha = std::max(0, ms_vc.alpha[vcidx] - (int32)gfVolumetricCloudFader);
+        auto vcAlpha = std::max(0, ms_vc.alpha[vcidx] - NOTSA_FTOL(int32, gfVolumetricCloudFader));
         if (vcDistToCam > fadeOutBeginDist) {
             if (!vcAlpha) {
                 continue;
@@ -1450,7 +1450,7 @@ void CClouds::VolumetricCloudsRender() {
             if (vcDistToCam > m_fVolumetricCloudMaxDistance) {
                 continue;
             }
-            const auto distAlpha = std::max<int32>(0, (int32)(((m_fVolumetricCloudMaxDistance - fadeOutBeginDist) - (vcDistToCam - fadeOutBeginDist)) * (float)vcAlpha / (m_fVolumetricCloudMaxDistance - fadeOutBeginDist)));
+            const auto distAlpha = std::max<int32>(0, NOTSA_FTOL(int32, ((m_fVolumetricCloudMaxDistance - fadeOutBeginDist) - (vcDistToCam - fadeOutBeginDist)) * (float)vcAlpha / (m_fVolumetricCloudMaxDistance - fadeOutBeginDist)));
             vcAlpha = std::min<int32>(vcAlpha, distAlpha);
             if (!vcAlpha) {
                 continue;
@@ -1467,7 +1467,7 @@ void CClouds::VolumetricCloudsRender() {
                 vcClr,
                 vcClr,
                 vcClr,
-                (uint8)(std::abs(vcToCamDir.Dot(ms_vc.quadNormal[i])) * (float)vcAlpha)
+                NOTSA_FTOL(uint8, std::abs(vcToCamDir.Dot(ms_vc.quadNormal[i])) * (float)vcAlpha)
             };
         }
 

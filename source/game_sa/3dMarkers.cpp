@@ -446,7 +446,7 @@ C3dMarker* C3dMarkers::PlaceMarker(
             m->m_Mat.RotateZ(DegreesToRadians((float)(m->m_RotateRate) * CTimer::GetTimeStep()));
             m->m_Mat.GetPosition().x = lastPos.x;
             m->m_Mat.GetPosition().y = lastPos.y;
-            if (m->m_LastMapReadX != (uint16)lastPos.x || m->m_LastMapReadY != (uint16)lastPos.y) {
+            if (m->m_LastMapReadX != NOTSA_FTOL(uint16, lastPos.x) || m->m_LastMapReadY != NOTSA_FTOL(uint16, lastPos.y)) {
                 m->m_Mat.GetPosition().z = lastPos.z;
             }
         }
@@ -459,7 +459,7 @@ C3dMarker* C3dMarkers::PlaceMarker(
         case MARKER3D_CONE_NO_COLLISION: {
             m->m_Mat.GetPosition().x = pos.x;
             m->m_Mat.GetPosition().y = pos.y;
-            if (m->m_LastMapReadX != (uint16)pos.x || m->m_LastMapReadY != (uint16)pos.y) {
+            if (m->m_LastMapReadX != NOTSA_FTOL(uint16, pos.x) || m->m_LastMapReadY != NOTSA_FTOL(uint16, pos.y)) {
                 m->m_Mat.GetPosition().z = pos.z;
             }
             break;
@@ -472,7 +472,7 @@ C3dMarker* C3dMarkers::PlaceMarker(
             m->m_Mat.GetPosition().x = pos.x;
             m->m_Mat.GetPosition().y = pos.y;
             if (type == MARKER3D_TUBE && zCheck) {
-                if (m->m_LastMapReadX != (uint16)pos.x || m->m_LastMapReadY != (uint16)pos.y) {
+                if (m->m_LastMapReadX != NOTSA_FTOL(uint16, pos.x) || m->m_LastMapReadY != NOTSA_FTOL(uint16, pos.y)) {
                     m->m_Mat.GetPosition().z = pos.z;
                 }
                 m->UpdateZCoordinate(pos, 10.f);
@@ -549,9 +549,9 @@ C3dMarker* C3dMarkers::PlaceMarker(
         if (size + 12.f <= markerToPlayerDist2D) {
             m->m_Color.a = alpha;
         } else if (size + 1.f >= markerToPlayerDist2D) {
-            m->m_Color.a = (uint8)((float)alpha * 0.65f);
+            m->m_Color.a = NOTSA_FTOL(uint8, (float)alpha * 0.65f);
         } else {
-            m->m_Color.a = (uint8)((float)alpha * (1.f - ((size + 12.f - markerToPlayerDist2D) * 0.35f) / 11.f));
+            m->m_Color.a = NOTSA_FTOL(uint8, (float)alpha * (1.f - ((size + 12.f - markerToPlayerDist2D) * 0.35f) / 11.f));
         }
     }
 
@@ -588,7 +588,7 @@ void C3dMarkers::PlaceMarkerSet(uint32 id, e3dMarkerType type, CVector& posn, fl
         type,
         posn,
         size,
-        red, green, blue, static_cast<uint8>((float)alpha * ExeRecip(3.0f)),
+        red, green, blue, NOTSA_FTOL(uint8, (float)alpha * ExeRecip(3.0f)),
         pulsePeriod,
         pulseFraction,
         1,

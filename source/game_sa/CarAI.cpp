@@ -226,10 +226,10 @@ int32 CCarAI::FindPoliceCarSpeedForWantedLevel(CVehicle* vehicle) {
     case eWantedLevel::WANTED_CLEAN:    return CGeneral::GetRandomNumberInRange<int32>(12, 16);
     case eWantedLevel::WANTED_LEVEL_1:  return 25;
     case eWantedLevel::WANTED_LEVEL_2:  return 34;
-    case eWantedLevel::WANTED_LEVEL_3:  return (int32)(maxVelocity * GAME_SPEED_TO_CAR_AI_SPEED * 0.90f);
-    case eWantedLevel::WANTED_LEVEL_4:  return (int32)(maxVelocity * GAME_SPEED_TO_CAR_AI_SPEED * 1.20f);
-    case eWantedLevel::WANTED_LEVEL_5:  return (int32)(maxVelocity * GAME_SPEED_TO_CAR_AI_SPEED * 1.25f);
-    case eWantedLevel::WANTED_LEVEL_6:  return (int32)(maxVelocity * GAME_SPEED_TO_CAR_AI_SPEED * 1.30f);
+    case eWantedLevel::WANTED_LEVEL_3:  return NOTSA_FTOL(int32, maxVelocity * GAME_SPEED_TO_CAR_AI_SPEED * 0.90f);
+    case eWantedLevel::WANTED_LEVEL_4:  return NOTSA_FTOL(int32, maxVelocity * GAME_SPEED_TO_CAR_AI_SPEED * 1.20f);
+    case eWantedLevel::WANTED_LEVEL_5:  return NOTSA_FTOL(int32, maxVelocity * GAME_SPEED_TO_CAR_AI_SPEED * 1.25f);
+    case eWantedLevel::WANTED_LEVEL_6:  return NOTSA_FTOL(int32, maxVelocity * GAME_SPEED_TO_CAR_AI_SPEED * 1.30f);
     default: NOTSA_UNREACHABLE(); return 0; // 0x41CB4C: out of range wanted level => 0
     }
 }
@@ -555,7 +555,7 @@ void CCarAI::TellCarToFollowOtherCar(CVehicle* follower, CVehicle* toFollow, flo
     follower->m_autoPilot.m_nCarMission     = MISSION_FOLLOWCAR_FARAWAY;
     follower->vehicleFlags.bEngineOn        = follower->vehicleFlags.bEngineBroken == 0;
     follower->m_autoPilot.m_nCruiseSpeed    = std::max(follower->m_autoPilot.m_nCruiseSpeed, (uint8)6);
-    follower->m_autoPilot.m_ucCarFollowDist = (uint8)radius;
+    follower->m_autoPilot.m_ucCarFollowDist = NOTSA_FTOL(uint8, radius);
 }
 
 // unused
@@ -681,7 +681,7 @@ void CCarAI::UpdateCarAI(CVehicle* veh) {
             }
 
             if (plyrVeh && plyrVeh->GetMoveSpeed().SquaredMagnitude() < maxSpeedSq) { // 0x41DE22 | 0x41E18D
-                veh->m_nCopsInCarTimer += (int16)(CTimer::GetTimeStep() * (1000.f / 60.f));
+                veh->m_nCopsInCarTimer += NOTSA_FTOL(int16, CTimer::GetTimeStep() * (1000.f / 60.f));
             } else {
                 veh->m_nCopsInCarTimer = 0;
             }
@@ -896,7 +896,7 @@ void CCarAI::UpdateCarAI(CVehicle* veh) {
 
             if (vehToPlyrDist2DSq <= sq(FindSwitchDistanceFar(veh))) {
                 if (plyrVeh && plyrVeh->GetMoveSpeed().SquaredMagnitude() <= sq(0.05f)) {
-                    veh->m_nCopsInCarTimer += (uint32)CTimer::GetTimeStepInMS();
+                    veh->m_nCopsInCarTimer += NOTSA_FTOL(uint32, CTimer::GetTimeStepInMS());
                 } else {
                     veh->m_nCopsInCarTimer = 0;
                 }

@@ -312,7 +312,7 @@ void CBirds::Render() {
                 if (fCameraDist > fAlphaCutoffDist) { // 0x712AF3 todo: review
                     auto fTransparency = 1.0F - invLerp(fAlphaCutoffDist, bird.m_fMaxBirdDistance, fCameraDist);
                     fTransparency = std::max(fTransparency, 0.0f);
-                    cAlpha = static_cast<RwUInt8>(fTransparency * 255.0F);
+                    cAlpha = NOTSA_FTOL(RwUInt8, fTransparency * 255.0F);
                 }
 
                 for (auto uiVertInd = 0u; uiVertInd < std::size(faRenderPosY); ++uiVertInd) {

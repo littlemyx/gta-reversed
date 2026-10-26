@@ -45,7 +45,7 @@ void CFallingGlassPane::Update() {
 RwRGBA CFallingGlassPane::CalculateHiLightPolyColor() {
     const auto alpha       = static_cast<float>(CGlass::CalcAlphaWithNormal(Normalized(m_Matrix.GetForward())));
     const auto delta       = static_cast<float>(std::clamp(CTimer::GetTimeInMS() - m_nCreatedTime, 0u, 500u));
-    const auto scaledAlpha = static_cast<uint32>(alpha * delta / 500.f);
+    const auto scaledAlpha = NOTSA_FTOL(uint32, alpha * delta / 500.f);
     const auto color       = static_cast<uint8>(m_f6F ? std::max(64u, scaledAlpha) : scaledAlpha);
     return { color, color, color, color };
 }
@@ -53,7 +53,7 @@ RwRGBA CFallingGlassPane::CalculateHiLightPolyColor() {
 RwRGBA CFallingGlassPane::CalculateShatterPolyColor() {
     const auto camDist = (m_Matrix.GetPosition() - TheCamera.GetPosition()).Magnitude();
     if (camDist > 30.f) {
-        const auto alpha = (uint8)((1.0f - (camDist - 30.f) / 10.f) * 140.f);
+        const auto alpha = NOTSA_FTOL(uint8, (1.0f - (camDist - 30.f) / 10.f) * 140.f);
         return { alpha, alpha, alpha, alpha };
     }
     return { 140u, 140u, 140u, 140u};

@@ -268,7 +268,7 @@ uint64 CCutsceneMgr::GetCutsceneTimeInMilleseconds() {
     if (!(v > -9223372036854775808.0 && v < 9223372036854775808.0)) { // also catches NaN
         return 0x8000000000000000ull;
     }
-    return (uint64)(int64)v;
+    return (uint64)NOTSA_FTOL(int64, v);
 }
 
 // 0x5B0570
@@ -1033,7 +1033,7 @@ void CCutsceneMgr::Update_overlay() {
         }
 
         ms_cutsceneTimerS += CTimer::GetTimeStepNonClippedInSeconds();
-        const auto csTimeMS = (int32)(ms_cutsceneTimerS * 1000.f);
+        const auto csTimeMS = NOTSA_FTOL(int32, ms_cutsceneTimerS * 1000.f);
 
         // Deal with fx [Start and stop them]
         for (auto& csfx : ms_pParticleEffects | rngv::take(ms_iNumParticleEffects)) {

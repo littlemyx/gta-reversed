@@ -315,7 +315,7 @@ RpAtomic* CCustomRoadsignMgr::RenderRoadsignAtomic(RpAtomic* atomic, const CVect
 
     if (fDistSquared >= 1600.0F) { // Fade out above 40 units away
         const auto fFade =  1.0F - invLerp(1600, 250000, fDistSquared);
-        const auto ucAlpha = static_cast<RwUInt8>(lerp(0.0F, 254.0F, fFade));
+        const auto ucAlpha = NOTSA_FTOL(RwUInt8, lerp(0.0F, 254.0F, fFade));
         CCustomRoadsignMgr::SetAtomicAlpha(atomic, ucAlpha);
         RpAtomicRender(atomic);
         return atomic;

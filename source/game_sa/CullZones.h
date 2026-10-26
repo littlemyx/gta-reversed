@@ -83,17 +83,17 @@ struct CZoneDef {
         float vec1X, float vec1Y, float minZ,
         float vec2X, float vec2Y, float maxZ
     ) {
-        m_cornerX = int16(pos.x - vec1X - vec2X);
-        m_cornerY = int16(pos.y - vec1Y - vec2Y);
+        m_cornerX = NOTSA_FTOL(int16, pos.x - vec1X - vec2X);
+        m_cornerY = NOTSA_FTOL(int16, pos.y - vec1Y - vec2Y);
 
-        m_vec1X = int16(vec1X + vec1X);
-        m_vec1Y = int16(vec1Y + vec1Y);
+        m_vec1X = NOTSA_FTOL(int16, vec1X + vec1X);
+        m_vec1Y = NOTSA_FTOL(int16, vec1Y + vec1Y);
 
-        m_vec2X = int16(vec2X + vec2X);
-        m_vec2Y = int16(vec2Y + vec2Y);
+        m_vec2X = NOTSA_FTOL(int16, vec2X + vec2X);
+        m_vec2Y = NOTSA_FTOL(int16, vec2Y + vec2Y);
 
-        m_minZ = int16(minZ);
-        m_maxZ = int16(maxZ);
+        m_minZ = NOTSA_FTOL(int16, minZ);
+        m_maxZ = NOTSA_FTOL(int16, maxZ);
     }
 
     // 0x72D850 (oracle-proven NaN / overflow forms): z must satisfy `minZ < z < maxZ` (NaN fails), the dot products must satisfy `0 <= d <= limit` (NaN fails) where the limit is the

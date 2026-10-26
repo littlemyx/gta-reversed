@@ -98,8 +98,8 @@ void C3dMarker::DeleteMarkerObject() {
 // 0x7226A0
 bool C3dMarker::IsZCoordinateUpToDate() {
     const auto& pos = m_Mat.GetPosition();
-    return m_LastMapReadX == static_cast<uint16>(pos.x)
-        && m_LastMapReadY == static_cast<uint16>(pos.y);
+    return m_LastMapReadX == NOTSA_FTOL(uint16, pos.x)
+        && m_LastMapReadY == NOTSA_FTOL(uint16, pos.y);
 }
 
 // 0x7223D0
@@ -191,8 +191,8 @@ void C3dMarker::UpdateZCoordinate(CVector point, float zDistance) {
         pos.z = height - zDistance * ExeRecip(20.0f);
     }
 
-    m_LastMapReadX = static_cast<uint16>(pos.x);
-    m_LastMapReadY = static_cast<uint16>(pos.y);
+    m_LastMapReadX = NOTSA_FTOL(uint16, pos.x);
+    m_LastMapReadY = NOTSA_FTOL(uint16, pos.y);
 }
 
 void C3dMarker::DeleteIfHasAtomic() {

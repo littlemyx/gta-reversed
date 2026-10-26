@@ -378,3 +378,4 @@
 - 2026-10-26 16:21 orchestrator gate on f39f4a1d (RD-AB-14 IplStore): run_all_tests 74/74, soak OK, gameplay_regress 70/70; C:\gta-play refreshed.
 - 2026-10-26 19:30 orchestrator gate on 8d71943b (RD-AB-15/16): run_all_tests 74/74, soak OK, gameplay_regress FAIL 1 (combat.chase.no_zombie_cops); combat re-run: PASS 14, then FAIL weapon_pickup -> combat flaky in 3 different checks since 10-25: investigate (COMBAT-FLAKY). C:\gta-play not refreshed.
 - 2026-10-26 22:06 orchestrator gate on 4cae2811 (ASM S22/S23/S26, RD-AB-15/16): run_all_tests 74/74, soak OK, gameplay_regress 69 + 1 SKIP; C:\gta-play refreshed.
+- 2026-10-27 01:00 orchestrator gate on 6871af30 (ASM S16/S17/S20/S21/S24/S25/S26b...): run_all_tests 74/74, soak OK, gameplay_regress 69 + 1 SKIP; C:\gta-play refreshed.

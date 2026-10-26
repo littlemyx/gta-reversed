@@ -2665,7 +2665,8 @@ void CAutomobile::Fix() {
     m_damageManager.ResetDamageStatus();
 
     // Reset actual doorIdx's status
-    if (m_pHandlingData->m_bWheelFNarrow2) {
+    // 0x6A3477: `test ch, 1` on handling+0xCC (the MODEL flags, bit 8 = m_bNoDoors), NOT the handling flags (m_bWheelFNarrow2) at +0xD0
+    if (m_pHandlingData->m_bNoDoors) {
         m_damageManager.SetDoorStatus({ DOOR_LEFT_FRONT, DOOR_RIGHT_FRONT, DOOR_LEFT_REAR, DOOR_RIGHT_REAR }, eDoorStatus::DAMSTATE_NOTPRESENT);
     }
 
@@ -2690,6 +2691,11 @@ void CAutomobile::Fix() {
     for (auto&& panel : m_panels) {
         panel.ResetPanel();
     }
+
+    // 0x6A355E: the exe loops 4 times (stride 0x20 from +0x6AC, `mov word [eax], 0xFFFF`), the 4th hit lands on +0x70C = the low half of
+    // m_swingingChassis.m_openAngle (original quirk, replicated)
+    static_assert(offsetof(CAutomobile, m_swingingChassis) == 0x70C);
+    *reinterpret_cast<uint16*>(&m_swingingChassis.m_openAngle) = 0xFFFF;
 }
 
 // 0x6B3E90

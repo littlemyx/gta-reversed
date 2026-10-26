@@ -710,7 +710,7 @@ void CPopulation::ManagePed(CPed* ped, const CVector& playerPosn) {
 
     // If pead is dead, possibly fade them out
     if (ped->IsStateDead()) {
-        const auto delta = CTimer::GetTimeInMS() - ped->m_nDeathTimeMS;
+        const auto delta = (int32)(CTimer::GetTimeInMS() - (uint32)ped->m_nDeathTimeMS); // 0x61201D: signed compare (`jg`)
         if (   delta > 30'000
             || CDarkel::FrenzyOnGoing() && delta > 15'000
             || CGangWars::GangWarFightingGoingOn() && delta > 8'000

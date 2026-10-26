@@ -1507,7 +1507,7 @@ void CAutomobile::DoHoverSuspensionRatios()
                 && waterLevel > colPointZ && end.z - 1.0f < waterLevel)
             {
                 if (waterLevel <= end.z)
-                    m_fWheelsSuspensionCompression[i] = 1.0f;
+                    m_fWheelsSuspensionCompression[i] = 0.99999f; // 0x6A46EB: mov [edi], 0x3F7FFF58 (not 1.0)
                 else if (waterLevel <= start.z)
                     m_fWheelsSuspensionCompression[i] = (start.z - waterLevel) / (start.z - end.z);
                 else
@@ -1518,6 +1518,7 @@ void CAutomobile::DoHoverSuspensionRatios()
                 point.z = waterLevel;
                 m_wheelColPoint[i].m_vecPoint = point;
                 m_wheelColPoint[i].m_vecNormal = CVector(0.0f, 0.0f, 1.0f);
+                m_wheelColPoint[i].m_nSurfaceTypeB = SURFACE_WATER_SHALLOW; // 0x6A4754: mov byte [ebx+0x23], 0x27
             }
         }
     }

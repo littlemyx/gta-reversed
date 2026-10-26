@@ -38,6 +38,7 @@
 | S34 | game_sa/Interior/Interior_c.cpp | 41 | pending | Interior_c.cpp |
 | S22b | game_sa/CarCtrl.cpp (rest of S22) | 34 | partial 16/34 (16 M) -> S22c | CarCtrl.cpp |
 | S23b | rest of S23 | 13 | done 12/13 (9 M, 3 fixed; AddPedAtAttractor left) | Population.cpp |
-| S22c | rest of S22b | 18 | pending | CarCtrl.cpp |
+| S22c | rest of S22b | 18 | partial 3/18 (3 M) -> S22d | CarCtrl.cpp |
 | S26b | rest of S26 | 9 | partial 7/9 (7 fixed) -> S26c | Physical.cpp |
 | S26c | rest of S26b | 2 | pending | Physical.cpp |
+| S22d | rest of S22c | 15 | pending | CarCtrl.cpp |

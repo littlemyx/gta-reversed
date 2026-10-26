@@ -1,0 +1,16 @@
+addr	file	line	cls	fn	oc
+0x426EF0	source/game_sa/CarCtrl.cpp	215	None	PickNextNodeToChaseCar	D
+0x427740	source/game_sa/CarCtrl.cpp	216	None	PickNextNodeToFollowPath	D
+0x428040	source/game_sa/CarCtrl.cpp	217	None	DealWithBend_Racing	B
+0x42C740	source/game_sa/CarCtrl.cpp	218	None	CreateConvoy	D
+0x42C2B0	source/game_sa/CarCtrl.cpp	219	None	CreatePoliceChase	S
+0x430050	source/game_sa/CarCtrl.cpp	247	None	GenerateOneRandomCar	D
+0x423000	source/game_sa/CarCtrl.cpp	254	None	FlyAIPlaneInCertainDirection	D
+0x423940	source/game_sa/CarCtrl.cpp	259	None	FlyAIHeliToTarget_FixedOrientation	D
+0x424F80	source/game_sa/CarCtrl.cpp	264	None	PossiblyRemoveVehicle	C
+0x425440	source/game_sa/CarCtrl.cpp	265	None	SlowCarDownForPedsSectorList	S
+0x429A70	source/game_sa/CarCtrl.cpp	274	None	FlyAIHeliInCertainDirection	D
+0x42DE80	source/game_sa/CarCtrl.cpp	293	None	PickNextNodeRandomly	D
+0x42EC90	source/game_sa/CarCtrl.cpp	295	None	DragCarToPoint	D
+0x432DD0	source/game_sa/CarCtrl.cpp	301	None	SteerAICarWithPhysicsFollowPreRecordedPath	D
+0x436A90	source/game_sa/CarCtrl.cpp	306	None	SteerAICarWithPhysics_OnlyMission	D

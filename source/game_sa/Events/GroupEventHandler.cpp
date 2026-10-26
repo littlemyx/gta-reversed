@@ -863,11 +863,17 @@ CTaskAllocator* CGroupEventHandler::ComputeDoDealResponse(CPedGroup* pg, CPed* d
     if (!leader) {
         return nullptr;
     }
-    const auto [closestToGreeter, closestToGreeterDistSq] = pg->GetMembership().GetMemberClosestTo(dealWith);
-    if (!closestToGreeter || closestToGreeterDistSq < sq(4.f) && closestToGreeterDistSq > sq(10.f)) {
+    if (leader->m_nMoveState != PEDMOVE_STILL) { // exe 0x5FA2EB..0x5FA2F4: [leader+0x534] != 1
         return nullptr;
     }
-    const auto partnerType = CGeneral::GetRandomNumberInRange(0, 6);
+    if (dealWith->m_nPedType == PED_TYPE_PLAYER1 || dealWith->m_nPedType == PED_TYPE_PLAYER2) { // exe 0x5FA2FA..0x5FA30B
+        return nullptr;
+    }
+    const auto [closestToGreeter, closestToGreeterDistSq] = FindClosestFollowerTo(pg, dealWith);
+    if (!closestToGreeter || closestToGreeterDistSq < sq(4.f) || closestToGreeterDistSq > sq(10.f)) { // exe 0x5FA3AF..0x5FA3D3: 16 <= d^2 <= 100
+        return nullptr;
+    }
+    // exe: NO rand() here (the port copied Greet's partnerType roll) and the event type is the constant 0 (0x5FA478 push 0)
     pg->GetIntelligence().SetEventResponseTask(
         closestToGreeter,
         CTaskComplexPartnerDeal{
@@ -879,17 +885,17 @@ CTaskAllocator* CGroupEventHandler::ComputeDoDealResponse(CPedGroup* pg, CPed* d
         }
     );
     dealWith->GetEventGroup().Add(CEventCreatePartnerTask{
-        partnerType + 1,
+        0,
         closestToGreeter,
         false,
-        0.f // Seems odd
+        0.f
     });
     for (auto* const m : pg->GetMembership().GetMembers()) {
         if (m == closestToGreeter) {
             continue;
         }
         g_ikChainMan.LookAt(
-            "CompGreetResp",
+            "CompDoDealResp", // exe 0x5FA4E6: 0x86C828
             m,
             closestToGreeter,
             CGeneral::GetRandomNumberInRange(3000, 6000),

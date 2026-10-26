@@ -579,7 +579,7 @@ void CWorld::CallOffChaseForAreaSectorListVehicles(CPtrListDoubleLink<CVehicle*>
 }
 
 // 0x563D00
-void CWorld::CallOffChaseForAreaSectorListPeds(CPtrListDoubleLink<CPed*>& list, float minX, float minY, float maxX, float maxY, float biggerMinX, float biggerMinY, float biggerMaxX, float biggerMaxY) {
+void CWorld::CallOffChaseForAreaSectorListPeds(CPtrListDoubleLink<CPed*>& list, float minX, float minY, float maxX, float maxY, float /*biggerMinX*/, float /*biggerMinY*/, float /*biggerMaxX*/, float /*biggerMaxY*/) {
     for (auto* const ped : list) {
         if (ped->IsScanCodeCurrent()) {
             continue;
@@ -595,10 +595,11 @@ void CWorld::CallOffChaseForAreaSectorListPeds(CPtrListDoubleLink<CPed*>& list, 
         }
 
         auto& pos = ped->GetPosition();
-        if (pos.x <= biggerMinX || pos.x >= biggerMaxX) {
+        // exe 0x563D8C..0x563DF7: the area test uses the 2nd..5th arguments (the un-grown area), the last four are not read
+        if (pos.x <= minX || pos.x >= maxX) {
             continue;
         }
-        if (pos.y <= biggerMinY || pos.y >= biggerMaxY) {
+        if (pos.y <= minY || pos.y >= maxY) {
             continue;
         }
 
@@ -608,12 +609,12 @@ void CWorld::CallOffChaseForAreaSectorListPeds(CPtrListDoubleLink<CPed*>& list, 
         CTaskComplexDestroyCar* taskDestroy =ped->GetTaskManager().Find<CTaskComplexDestroyCar>(true);
         CVehicle* objectiveVehicle = taskDestroy ? taskDestroy->m_VehicleToDestroy : nullptr;
 
-        if (objectivePed == FindPlayerPed()) {
-            continue;
-        }
-
-        if (objectiveVehicle && objectiveVehicle != FindPlayerVehicle()) {
-            continue;
+        // exe 0x563E43..0x563E5D: only peds that are after the player (kill-ped target is the player) or after the player's vehicle (destroy-car target
+        // is the player's vehicle) are called off; everybody else is left alone
+        if (objectivePed != FindPlayerPed()) {
+            if (!objectiveVehicle || objectiveVehicle != FindPlayerVehicle()) {
+                continue;
+            }
         }
 
         if (!ped->IsAlive()) {
@@ -624,7 +625,7 @@ void CWorld::CallOffChaseForAreaSectorListPeds(CPtrListDoubleLink<CPed*>& list, 
             FindPlayerWanted()->RemovePursuitCop(ped->AsCop());
         }
 
-        ped->GetEventGroup().Add(CEventScriptCommand(3, new CTaskSimpleStandStill()));
+        ped->GetEventGroup().Add(CEventScriptCommand(3, new CTaskSimpleStandStill(0, true, false, 8.0f))); // exe 0x563EA7: looped
     }
 }
 

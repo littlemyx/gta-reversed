@@ -2231,16 +2231,11 @@ bool CPhysical::ProcessShiftSectorList(int32 sectorX, int32 sectorY)
         if (!GetIsTypePed()) {
             vecEntityPosition += vecShift * fMaxColPointDepth * 1.5f;
         } else {
-            float fDepthMultiplied = 1.5f * fMaxColPointDepth;
-            if (fDepthMultiplied >= 0.005f) {
-                if (fDepthMultiplied > 0.3f) {
-                    vecEntityPosition += vecShift * fMaxColPointDepth * 0.3f;
-                }
-            } else {
-                vecEntityPosition += vecShift * fMaxColPointDepth * 0.005f;
-            }
-
-            vecEntityPosition += vecShift * fDepthMultiplied;
+            // 0x546B0D..0x546BC2: the shift of a ped is the (unit-ish) direction scaled by clamp(1.5 * depth, 0.005, 0.3)
+            // (0x858B4C = 0.005, 0x858C24 = 0.3, 0x8CD7D4 = 1.5); the port used to add the unclamped 1.5 * depth shift on top of a depth * 0.3/0.005 one
+            const float fDepthMultiplied = 1.5f * fMaxColPointDepth;
+            const float fShiftScale = fDepthMultiplied < 0.005f ? 0.005f : (fDepthMultiplied > 0.3f ? 0.3f : fDepthMultiplied);
+            vecEntityPosition += vecShift * fShiftScale;
         }
     } else {
         vecEntityPosition += vecShift * fMaxColPointDepth * 0.75f;

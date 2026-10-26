@@ -181,6 +181,25 @@ static LONG CALLBACK bp_veh(EXCEPTION_POINTERS* ep){
   if(c == EXCEPTION_SINGLE_STEP && g_bprearm){ g_bprearm = 0; *(unsigned char*)(size_t)g_bpa = 0xCC; return EXCEPTION_CONTINUE_EXECUTION; }
   return EXCEPTION_CONTINUE_SEARCH;
 }
+/* RD-AB-16: RD_BPS=<hex addr>:<c|s>[,..] RD_PSFC=<fc> RD_PSN=<n> RD_PSSLOT=<ped pool slot> RD_PSN489: several software breakpoints inside a CPed method; the ped is ecx (c) or esi (s) at the address. For traced frames fc..fc+n and the ped in the slot logs
+ * "X fc U <hex addr> pos=<matrix pos bits> raw <489 dwords from ped+0x1C>"; port counterpart: RdPedDump in Ped.cpp (RD_ENTPROBE). Compare with ucmp.py. */
+static u32 g_psa[8], g_psfc, g_psn = 1, g_pslot = 8, g_psrearm = 0xFFFF; static char g_psr[8]; static unsigned char g_psb[8]; static int g_psc;
+static LONG CALLBACK ps_veh(EXCEPTION_POINTERS* ep){
+  DWORD c = ep->ExceptionRecord->ExceptionCode; CONTEXT* x = ep->ContextRecord; int i;
+  if(c == EXCEPTION_BREAKPOINT){
+    for(i = 0; i < g_psc; i++) if((u32)(size_t)ep->ExceptionRecord->ExceptionAddress == g_psa[i]){
+      u32 fc = U32(0xB7CB4C), k, t = g_psr[i] == 's' ? x->Esi : x->Ecx, base = U32(U32(0xB74490)), m = U32(t + 0x14);
+      if(g_f && fc >= g_psfc && fc <= g_psfc + g_psn && t >= base && (t - base) / 0x7C4 == g_pslot){
+        if(getenv("RD_PSLITE")){ fprintf(g_f, "X %u V %x pos=%08x,%08x,%08x spd=%08x,%08x,%08x ra=%08x\n", fc, g_psa[i], U32(m + 0x30), U32(m + 0x34), U32(m + 0x38), U32(t + 0x44), U32(t + 0x48), U32(t + 0x4C), U32(x->Esp)); goto ps_done; }
+        fprintf(g_f, "X %u U %x pos=%08x,%08x,%08x raw", fc, g_psa[i], U32(m + 0x30), U32(m + 0x34), U32(m + 0x38)); for(k = 0; k < 489; k++) fprintf(g_f, " %08x", U32(t + 0x1C + k * 4)); fputc(10, g_f);
+      }
+      ps_done:
+      *(unsigned char*)(size_t)g_psa[i] = g_psb[i]; x->Eip = g_psa[i]; x->EFlags |= 0x100; g_psrearm = i; return EXCEPTION_CONTINUE_EXECUTION;
+    }
+  }
+  if(c == EXCEPTION_SINGLE_STEP && g_psrearm != 0xFFFF){ *(unsigned char*)(size_t)g_psa[g_psrearm] = 0xCC; g_psrearm = 0xFFFF; return EXCEPTION_CONTINUE_EXECUTION; }
+  return EXCEPTION_CONTINUE_SEARCH;
+}
 /* RD-AB-13: RD_WATCH=<hex addr of a 16-bit global> RD_WFC=<fc> RD_WN=<n>: hardware write watchpoint (DR0, len 2) on the main thread, set by a helper thread (cannot wait inside DllMain).
  * Every write in traced frames fc..fc+n logs "V fc newvalue eip <call-site candidates on the stack>" (eip = the instruction after the write; for CWorld::ms_nCurrentScanCode 0xB7CD78 the inlined AdvanceCurrentScanCode). */
 static u32 g_wfc, g_wn = 1; static HANDLE g_wth; static u32 g_wa; static int g_wdyn = -1; static u32 g_wdoff, g_wlen = 2; /* RD-AB-14: RD_WDYN=<building pool slot>:<hex offset> RD_WLEN=1|2|4 - the watch address is resolved from the building pool once the frame counter reaches RD_WFC-3 */
@@ -210,6 +229,8 @@ BOOL WINAPI DllMain(HINSTANCE h, DWORD why, LPVOID r){
     if((e = getenv("RD_OUT"))) g_f = fopen(e, "w");
     if(GetModuleHandleA(0) != (HMODULE)0x400000) return TRUE; /* not the original image */
     if((e = getenv("RD_BP"))){ DWORD o; g_bpa = strtoul(e, 0, 16); if((e = getenv("RD_BPFC"))) g_bpfc = atoi(e); if((e = getenv("RD_BPN"))) g_bpn = atoi(e); g_bpbyte = *(unsigned char*)(size_t)g_bpa; VirtualProtect((void*)(size_t)g_bpa, 1, PAGE_EXECUTE_READWRITE, &o); AddVectoredExceptionHandler(1, bp_veh); *(unsigned char*)(size_t)g_bpa = 0xCC; }
+    if((e = getenv("RD_BPS"))){ char* q = _strdup(e); char* tok = strtok(q, ","); DWORD o; if((e = getenv("RD_PSFC"))) g_psfc = atoi(e); if((e = getenv("RD_PSN"))) g_psn = atoi(e); if((e = getenv("RD_PSSLOT"))) g_pslot = atoi(e);
+      AddVectoredExceptionHandler(1, ps_veh); while(tok && g_psc < 8){ g_psa[g_psc] = strtoul(tok, 0, 16); g_psr[g_psc] = strchr(tok, 58) ? strchr(tok, 58)[1] : 'c'; g_psb[g_psc] = *(unsigned char*)(size_t)g_psa[g_psc]; VirtualProtect((void*)(size_t)g_psa[g_psc], 1, PAGE_EXECUTE_READWRITE, &o); *(unsigned char*)(size_t)g_psa[g_psc] = 0xCC; g_psc++; tok = strtok(0, ","); } }
     if((e = getenv("RD_WATCH"))){ HANDLE h = 0; g_wa = strtoul(e, 0, 16); if((e = getenv("RD_WDYN"))){ g_wdyn = atoi(e); g_wdoff = strtoul(strchr(e, 58) + 1, 0, 16); } if((e = getenv("RD_WLEN"))) g_wlen = atoi(e); if((e = getenv("RD_WFC"))) g_wfc = atoi(e); if((e = getenv("RD_WN"))) g_wn = atoi(e); AddVectoredExceptionHandler(1, w_veh);
       DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &g_wth, THREAD_ALL_ACCESS, FALSE, 0); h = CreateThread(0, 0, w_thread, 0, 0, 0); (void)h; }
     patch(0x821B1E, my_rand); patch(0x821B11, my_srand); patch(0x5617A0, my_timer); patch(0x745270, my_pstimer);

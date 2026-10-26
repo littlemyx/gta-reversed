@@ -1494,21 +1494,14 @@ void CWorld::PrintCarChanges() {
         for (int32 i = count - 1; i >= 0; i--) {
             CVehicle* veh = vehiclePool->GetAt(i);
 
-            if (!veh) {
-                continue;
-            }
-
-            if (veh->IsAutomobile()) {
-                continue;
-            }
-
-            uint32 MINow = veh->GetModelIndex();
+            // exe 0x566450..0x566467: an empty slot or a non-automobile counts as model index 0 (it is NOT skipped)
+            const uint32 MINow = (veh && veh->IsAutomobile()) ? (uint32)veh->GetModelIndex() : 0u;
 
             if (s_aModelIndexes[i] == MINow) {
                 continue;
             }
 
-            NOTSA_LOG_DEBUG("Car ModelIndex (slot: {}) has changed from {} into {}", i, MINow, s_aModelIndexes[i]); // Delete in Mobile, R* log
+            NOTSA_LOG_DEBUG("Car ModelIndex (slot: {}) has changed from {} into {}", i, s_aModelIndexes[i], MINow); // Delete in Mobile, R* log
             s_aModelIndexes[i] = MINow;
         }
     }

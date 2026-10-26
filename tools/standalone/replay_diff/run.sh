@@ -7,6 +7,7 @@
 #            32 R log, 64 D probe, 128 audio RNG partition, 256 CdStream tick barrier, 512 audio off (= RR harness NOTSA_RR_NOAUDIO; rd_orig.c patches CAudioEngine::Service to ret); all = 1023
 #   --rlog N  with pin bit 32 (add 32 to --pin): log every rand() call (R fc site) of the first N traced frames, for noise hunting
 #   --frames  compare the first N traced frames; a run with fewer traced frames than N (focus lost, crash) is repeated (up to 2 more times)
+#   --port-exe  the port exe MUST have its <exe>.map (or <exe>.audio_rva) next to it when the pin has 128 (pin 128; always in 1023): copy the map with the exe - run.sh/rd_port_run.sh refuse otherwise, or a stale map (RD-ENV)
 # What it touches: gpu.lock around EVERY game run (rd_orig_run.sh / rd_port_run.sh acquire it per run; waits while another owner has it, USER-PLAY included); the ORIGINAL leg backs up
 #   Documents\GTA San Andreas User Files and restores it after every run (hostenv.sh docs_backup/docs_restore, as gameplay_regress/orig_run.sh) - this script prints a before/after signature of that
 #   directory and FAILS LOUDLY if it differs; the port leg uses a private NOTSA_STANDALONE_USERDIR (seeded with the same gta_sa.set bytes as the original leg) and the Steam data by links.

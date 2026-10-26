@@ -1409,7 +1409,7 @@ bool CWeapon::FireAreaEffect(CEntity* firingEntity, const CVector& origin, CEnti
                 CVector camPos, camTargetPos;
                 TheCamera.Find3rdPersonCamTargetVector(wi->m_fWeaponRange, origin, camPos, camTargetPos);
                 return {
-                    (camTargetPos - camPos) / wi->m_fWeaponRange, // Scale to a unit vector
+                    ExeDivide(camTargetPos - camPos, wi->m_fWeaponRange), // Scale to a unit vector; 0x73E921: call 0x4119D0
                     camTargetPos
                 }; 
             } else {

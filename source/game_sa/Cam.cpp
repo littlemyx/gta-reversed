@@ -1343,7 +1343,7 @@ void CCam::Process() {
 
                         const CVector delta{ target.x - gCamPlayerLastPos.x, target.y - gCamPlayerLastPos.y, playerPos.z - gCamPlayerLastPos.z };
                         const float   divisor = std::max(1.0f, CTimer::GetTimeStep());
-                        const CVector newVel  = gCamPlayerPosVel * (1.0f - inv2) + (delta * inv2) / divisor;
+                        const CVector newVel  = gCamPlayerPosVel * (1.0f - inv2) + ExeDivide(delta * inv2, divisor); // 0x5275EA: call 0x4119D0
                         gCamPlayerPosVel.x    = newVel.x;
                         gCamPlayerPosVel.y    = newVel.y;
                     }

@@ -124,7 +124,7 @@ bool CTaskSimpleClimb::ProcessPed(CPed* ped) {
         } else if (delta.SquaredMagnitude() >= 0.1F) {
             ped->bIsStanding = false;
             delta *= 0.25f;
-            ped->m_vecMoveSpeed = delta / CTimer::GetTimeStep();
+            ped->m_vecMoveSpeed = ExeDivide(delta, CTimer::GetTimeStep()); // 0x4119D0
 
             if (ped->m_vecMoveSpeed.Magnitude() > 0.2F) {
                 ped->m_vecMoveSpeed *= 0.2f / ped->m_vecMoveSpeed.Magnitude();
@@ -142,7 +142,7 @@ bool CTaskSimpleClimb::ProcessPed(CPed* ped) {
             }
         } else {
             ped->bIsStanding    = false;
-            ped->m_vecMoveSpeed = delta / CTimer::GetTimeStep();
+            ped->m_vecMoveSpeed = ExeDivide(delta, CTimer::GetTimeStep()); // 0x4119D0
 
             /*! NOTSA BUGFIX: CTaskSimpleClimb::ProcessPed() - Settle speed at high frame rates
              * The bound the coarse step above already applies, applied here too.

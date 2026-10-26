@@ -140,7 +140,7 @@ void CCutsceneObject::PreRender() {
     CEntity* entity = nullptr;
     if (CWorld::ProcessVerticalLine(vecPos, fHeight, colPoint, entity, true)) {
         const auto fDayNight = colPoint.m_nLightingB.GetCurrentLighting();
-        m_fContactSurfaceBrightness = lerpBlend(m_fContactSurfaceBrightness, fDayNight, CTimer::GetTimeStep() / 10.0F);
+        m_fContactSurfaceBrightness = lerpBlend(m_fContactSurfaceBrightness, fDayNight, CTimer::GetTimeStep() * 0.1F); // exe 0x5B2021: multiplies by the float 0.1f (0x858B1C), no division by 10
     }
 }
 

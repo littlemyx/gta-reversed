@@ -1,4 +1,4 @@
-# ASM-S13 (Tasks/TaskTypes: GetUp, GiveCPR, GoTo*, HitHead, HoldEntity, HurtPedWithCar, IK*, InAir, JetPack, GunControl; 41 functions) - 2026-10-26 22:57 .. 23:25
+# ASM-S13 (Tasks/TaskTypes: GetUp, GiveCPR, GoTo*, HitHead, HoldEntity, HurtPedWithCar, IK*, InAir, JetPack, GunControl; 41 functions) - 2026-10-26 22:57 .. 23:15
 Result: 29 compared (3 FIXED in 3 commits, 25 MATCH, 1 UNSURE), 12 NOT REACHED (token budget; table in S13.result.tsv). Slice partial.
 Fixes (exe address, one line each):
 - CTaskSimpleIKChain::ProcessPed (0x633D2B, 0x633DB3): only a finite duration expires (`m_Duration != -1`; the port had it inverted, so an infinite-duration chain was dropped on its first update); the blend ratio uses the int-truncated time step (ftol of ts*0.02*1000) and clamps `if (x > 1)`.

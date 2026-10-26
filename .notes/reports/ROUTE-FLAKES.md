@@ -25,5 +25,7 @@ The same exe with the unmodified route: notp-1, notp-2 RESULT OK (and 0 crashes 
 the gameplay_regress scenarios use the same tp early in a game without crashing. Not investigated further (token/time cap): next step = repro route in scratch (C:/gta-scratch/rf_route_tp.txt = soak_route.txt + the 4 tp lines), cdb with the debug heap (a process started under cdb gets tail/free checks) to catch the first bad write.
 Evidence: C:/gta-scratch/rf_out/tp-1..3 (standalone.log, log.log, report.txt).
 
-## Runs (private data dir C:/gta-rf, silent, windowed, NOVSYNC, new build of this worktree)
-See the hand-back / summary.txt in C:/gta-scratch/rf_out (new-sN = soak, new-cN = combat).
+## Runs (private data dir C:/gta-rf, silent, windowed, NOVSYNC; new build of this worktree; C:/gta-scratch/rf_out/summary.txt)
+* Before (gate soaks 10-23..10-26): 6 of 19 with `invehicle TIMEOUT` (1-2 each). Same exe, unmodified route, today: notp-1/2 OK, 0 timeouts.
+* After: soak new-s1..s5 RESULT OK, 0 gate timeouts; s4 had one `MISS(soft)` (first F missed, retry `ok after 5.5 s`) = the artefact, handled; combat new-c1..c5 PASS (14/14 each, 0 FAIL) - c1 even had CJ killed in the chase (hp 1 -> 0) and the scenario still passed after the heal.
+* NOT reached: the brief's 10 soaks + 6 combat (5 + 5 done: 90-minute cap, GPU shared with REPLAY-DIFF). The 1-in-4..5 miss rate of the first attempt is the old ~30% rate; the retries keep every run green.

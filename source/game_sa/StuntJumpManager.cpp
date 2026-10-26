@@ -172,7 +172,7 @@ void CStuntJumpManager::Update() {
         }
 
         const auto time = ended ? 0 : m_iTimer;
-        m_iTimer        = (uint32)CTimer::GetTimeStepInMS() + time;
+        m_iTimer        = NOTSA_FTOL(uint32, CTimer::GetTimeStepInMS()) + time;
         if (m_iTimer <= 1'000 || time > 1'000) {
             if (const auto plyrVeh = FindPlayerVehicle(-1, 0)) {
                 if (const auto psgr = plyrVeh->PickRandomPassenger()) {
@@ -184,7 +184,7 @@ void CStuntJumpManager::Update() {
         break;
     }
     case eJumpState::END_POINT_INTERSECTED: { // 0x49C4ED
-        m_iTimer += (uint32)CTimer::GetTimeStepInMS();
+        m_iTimer += NOTSA_FTOL(uint32, CTimer::GetTimeStepInMS());
         if (m_iTimer < 300) {
             return;
         }

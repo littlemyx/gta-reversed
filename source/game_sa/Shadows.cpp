@@ -205,10 +205,10 @@ void CShadows::UpdatePermanentShadows() {
                 // Fade out during the last quarter of the duration
                 const auto fadeProgress = (float)(elapsed - shdw.m_nTimeDuration * 3 / 4) / (float)(shdw.m_nTimeDuration / 4);
                 const auto fadeFactor   = 1.0f - fadeProgress;
-                blue      = (uint8)(int32)((float)shdw.m_nBlue * fadeFactor);
-                green     = (uint8)(int32)((float)shdw.m_nGreen * fadeFactor);
-                red       = (uint8)(int32)((float)shdw.m_nRed * fadeFactor);
-                intensity = (int16)(int32)((float)(int16)shdw.m_nIntensity * fadeFactor); // BUG: Original sign extends the intensity here, but not in the branch above
+                blue      = (uint8)NOTSA_FTOL(int32, (float)shdw.m_nBlue * fadeFactor);
+                green     = (uint8)NOTSA_FTOL(int32, (float)shdw.m_nGreen * fadeFactor);
+                red       = (uint8)NOTSA_FTOL(int32, (float)shdw.m_nRed * fadeFactor);
+                intensity = (int16)NOTSA_FTOL(int32, (float)(int16)shdw.m_nIntensity * fadeFactor); // BUG: Original sign extends the intensity here, but not in the branch above
             }
             const auto stored = StoreStaticShadow(
                 (uint32)(uintptr_t)&shdw, // The shadow's address is used as its ID
@@ -511,9 +511,9 @@ void CShadows::AffectColourWithLighting(
                 CCustomBuildingDNPipeline::m_fDNBalanceParam
             )
         );
-        outR = (uint8)((float)r * mult);
-        outG = (uint8)((float)g * mult);
-        outB = (uint8)((float)b * mult);
+        outR = NOTSA_FTOL(uint8, (float)r * mult);
+        outG = NOTSA_FTOL(uint8, (float)g * mult);
+        outB = NOTSA_FTOL(uint8, (float)b * mult);
     } else {
         outR = r;
         outG = g;
@@ -527,7 +527,7 @@ uint16 CalculateShadowStrength(float currDist, float maxDist, uint16 maxStrength
 
     const auto halfMaxDist = maxDist / 2.f;
     if (currDist >= halfMaxDist) { // Anything further than half the distance is faded out
-        return (uint16)((1.f - (currDist - halfMaxDist) / halfMaxDist) * maxStrength);
+        return NOTSA_FTOL(uint16, (1.f - (currDist - halfMaxDist) / halfMaxDist) * maxStrength);
     } else { // Anything closer than half the max distance is full strength
         return (uint16)maxStrength;
     }
@@ -606,7 +606,7 @@ void CShadows::StoreRealTimeShadow(CPhysical* physical, float displacementX, flo
     }
 
     const auto strength = (float)CalculateShadowStrength(std::sqrt(shdwToCamDist2DSq), MAX_DISTANCE_PED_SHADOWS, CTimeCycle::m_CurrentColours.m_nShadowStrength);
-    const auto cc       = (uint8)((float)rtshdw->m_nIntensity * ExeRecip(100.f) * strength);
+    const auto cc       = NOTSA_FTOL(uint8, (float)rtshdw->m_nIntensity * ExeRecip(100.f) * strength);
 
     const auto& vecToSun = CTimeCycle::m_VectorToSun[CTimeCycle::m_CurrentStoredValue];
     const auto lightFrame = rtshdw->SetLightProperties(
@@ -792,7 +792,7 @@ void CShadows::RenderStaticShadows() {
                 );
 
                 // 0x70851D: Write vertices (`if` not necessary, it's part of the loop condition)
-                const auto a = (uint8)((float)ishdw.m_nIntensity * (1.f - CWeather::Foggyness * 0.5f));
+                const auto a = NOTSA_FTOL(uint8, (float)ishdw.m_nIntensity * (1.f - CWeather::Foggyness * 0.5f));
                 for (auto i{ 0 }; i < poly->m_wNumVerts; i++, vtxIt++) {
                     const auto& pos = poly->m_avecPosn[i];
                     RwIm3DVertexSetPos(vtxIt, pos.x, pos.y, pos.z + 0.06f);
@@ -1012,8 +1012,8 @@ void CShadows::CastShadowEntityXY(CEntity* entity, float conrerAX, float cornerA
             bunch->m_wNumVerts = (int16)n;
             for (int32 i = 0; i < n; i++) {
                 bunch->m_avecPosn[i] = poly[i].pos;
-                bunch->m_aU[i]       = (uint8)(poly[i].uv.x * 200.f);
-                bunch->m_aV[i]       = (uint8)(poly[i].uv.y * 200.f);
+                bunch->m_aU[i]       = NOTSA_FTOL(uint8, poly[i].uv.x * 200.f);
+                bunch->m_aV[i]       = NOTSA_FTOL(uint8, poly[i].uv.y * 200.f);
             }
         }
     };
@@ -1522,7 +1522,7 @@ void CShadows::RenderStoredShadows() {
                         const auto currPos = CVector2D{ (float)x, (float)y };
 
                         // Set color
-                        RwIm3DVertexSetRGBA(vtxIt, oshdw.m_nRed, oshdw.m_nGreen, oshdw.m_nBlue, (uint8)((float)oshdw.m_nIntensity * 0.6f));
+                        RwIm3DVertexSetRGBA(vtxIt, oshdw.m_nRed, oshdw.m_nGreen, oshdw.m_nBlue, NOTSA_FTOL(uint8, (float)oshdw.m_nIntensity * 0.6f));
 
                         // Set texture coords (UV)
                         const auto CalcTexCoord  = [
@@ -1631,10 +1631,10 @@ bool CShadows::StoreStaticShadow(uint32 id, eShadowType type, RwTexture* texture
             const auto dist = std::sqrt(distSq);
             if (!(dist < drawDistance * 0.75f)) {
                 const auto fadeFactor = 1.0f - (dist - drawDistance * 0.75f) * (4.0f / drawDistance);
-                intensity = (int16)(int32)((float)intensity * fadeFactor);
-                red       = (uint8)(int32)((float)red * fadeFactor);
-                green     = (uint8)(int32)((float)green * fadeFactor);
-                blue      = (uint8)(int32)((float)blue * fadeFactor);
+                intensity = (int16)NOTSA_FTOL(int32, (float)intensity * fadeFactor);
+                red       = (uint8)NOTSA_FTOL(int32, (float)red * fadeFactor);
+                green     = (uint8)NOTSA_FTOL(int32, (float)green * fadeFactor);
+                blue      = (uint8)NOTSA_FTOL(int32, (float)blue * fadeFactor);
             }
         }
     } else if (drawDistance != 0.0f) {
@@ -1767,7 +1767,7 @@ void CShadows::StoreShadowForVehicle(CVehicle* vehicle, VEH_SHD_TYPE vehShadowTy
     // Fade out in the last quarter of the distance
     const auto dist = std::sqrt(distSq);
     if (!(dist < maxDist * 0.75f)) {
-        intensity = (int32)((1.0f - (dist - maxDist * 0.75f) / (maxDist * 0.25f)) * (float)(int16)intensity);
+        intensity = NOTSA_FTOL(int32, (1.0f - (dist - maxDist * 0.75f) / (maxDist * 0.25f)) * (float)(int16)intensity);
     }
 
     // Size of the shadow
@@ -1978,9 +1978,9 @@ void CShadows::StoreCarLightShadow(CVehicle* vehicle, int32 id, RwTexture* textu
         // If far enough from the camera, start fading out
         if (const auto dist = std::sqrt(shdwToCamDist2DSq); dist >= MAX_CAM_TO_LIGHT_DIST * 0.75f) {
             const auto t = 1.f - invLerp(MAX_CAM_TO_LIGHT_DIST * (2.f / 3.f), MAX_CAM_TO_LIGHT_DIST, dist);
-            red   = (uint8)((float)red * t);
-            green = (uint8)((float)green * t);
-            blue  = (uint8)((float)blue * t);
+            red   = NOTSA_FTOL(uint8, (float)red * t);
+            green = NOTSA_FTOL(uint8, (float)green * t);
+            blue  = NOTSA_FTOL(uint8, (float)blue * t);
         }
     }
 
@@ -2047,7 +2047,7 @@ void CShadows::StoreShadowForPole(CEntity* entity, float offsetX, float offsetY,
         },
         front.x, front.y,
         right.x, right.y,
-        2 * (int16)intensity / 3,
+        2 * NOTSA_FTOL(int16, intensity) / 3,
         0, 0, 0,
         9.f,
         1.f,
@@ -2124,7 +2124,7 @@ CVector* ShadowRenderTriangleCB(CVector* normal, CVector* trianglePos, _Projecti
         if (param->fade) {
             const float fadeFactor = 1.0f - uvPts[i].z * uvPts[i].z;
             value = fadeFactor >= 0.0f
-                ? (uint8)(int32)((float)param->shadowValue * fadeFactor)
+                ? (uint8)NOTSA_FTOL(int32, (float)param->shadowValue * fadeFactor)
                 : (uint8)0;
         }
         RwIm3DVertexSetRGBA(&vtx[i], value, value, value, value);

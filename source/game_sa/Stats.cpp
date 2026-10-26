@@ -182,7 +182,7 @@ void CStats::SetStatValue(eStats stat, float value) {
     if (idx < FIRST_UNUSED_STAT) {
         StatTypesFloat[idx] = value;
     } else {
-        IntStatCell(idx) = (int32)(int16)(int32)value; // _ftol + `movsx ecx, ax`: the int stats are 16 bit values
+        IntStatCell(idx) = (int32)(int16)NOTSA_FTOL(int32, value); // _ftol + `movsx ecx, ax`: the int stats are 16 bit values
     }
     CheckForStatsMessage();
 }
@@ -247,10 +247,10 @@ int32 CStats::FindCriminalRatingNumber() {
     v        = X87R(v + I(STAT_TOTAL_FIRES_EXTINGUISHED));
     v        = X87R(v + I(STAT_CRIMINALS_KILLED_ON_VIGILANTE_MISSION));
     v        = X87R(v + I(STAT_PEOPLE_SAVED_IN_AN_AMBULANCE));
-    int32 value = (int32)v;
+    int32 value = NOTSA_FTOL(int32, v);
 
     if (CCheat::m_bHasPlayerCheated || I(STAT_TIMES_CHEATED) > 0.0) {
-        value = (int32)((x87d)value - X87R(I(STAT_TIMES_CHEATED) * 10.0));
+        value = NOTSA_FTOL(int32, (x87d)value - X87R(I(STAT_TIMES_CHEATED) * 10.0));
         if (!(value > -10000)) {
             value = -10000;
         }
@@ -259,7 +259,7 @@ int32 CStats::FindCriminalRatingNumber() {
     }
 
     if (I(STAT_BULLETS_FIRED) > 100.0) { // strictly greater (the port used >=)
-        value = (int32)(X87R(I(STAT_BULLETS_THAT_HIT) / I(STAT_BULLETS_FIRED)) * (x87d)500.0 + (x87d)value);
+        value = NOTSA_FTOL(int32, X87R(I(STAT_BULLETS_THAT_HIT) / I(STAT_BULLETS_FIRED)) * (x87d)500.0 + (x87d)value);
     }
 
     // the progress part is inlined here: progress / total * 1000 (not GetPercentageProgress), skipped when the total is exactly 0
@@ -267,7 +267,7 @@ int32 CStats::FindCriminalRatingNumber() {
     if (total == 0.0 && !std::isnan(total)) {
         return value;
     }
-    return (int32)((x87d)StatTypesFloat[STAT_PROGRESS_MADE] / total * (x87d)1000.0 + (x87d)value);
+    return NOTSA_FTOL(int32, (x87d)StatTypesFloat[STAT_PROGRESS_MADE] / total * (x87d)1000.0 + (x87d)value);
 }
 
 // 0x5591E0
@@ -330,7 +330,7 @@ void CStats::BuildStatLine(char* line, void* pValue1, int32 metrics, void* pValu
             if (CLocalisation::Metric()) {
                 const x87d kgs = (x87d)pounds * (x87d)0.4536f; // x87: FILD * 0.4536f, pushed as double
                 if constexpr (notsa::IsFixBugs()) {
-                    Print("%dkgs", (int32)kgs);
+                    Print("%dkgs", NOTSA_FTOL(int32, kgs));
                 } else {
                     Print("%dkgs", kgs); // BUG: the original passes a double to "%d"
                 }
@@ -700,8 +700,8 @@ void CStats::DecrementStat(eStats stat, float value) {
         StatTypesFloat[idx] = (float)(v > 0.0 ? v : 0.0); // `fcom` + je: only a strictly positive result is kept (NaN => 0)
     } else {
         auto& cell = IntStatCell(idx);
-        cell -= (int32)(int16)(int32)value; // movsx ax
-        cell = (int32)((double)cell > 0.0 ? (double)cell : 0.0);
+        cell -= (int32)(int16)NOTSA_FTOL(int32, value); // movsx ax
+        cell = NOTSA_FTOL(int32, (double)cell > 0.0 ? (double)cell : 0.0);
     }
 
     // inlined ProcessReactionStatsOnDecrement (byte compare, as in 0x559730)
@@ -728,7 +728,7 @@ void CStats::SetNewRecordStat(eStats stat, float value) {
 #line 715
         const x87d current = slot;
         const x87d best    = current > (x87d)value ? current : (x87d)value;
-        slot = (int32)(int16)(int32)best; // _ftol + `movsx eax, ax`: the record is truncated to 16 bits
+        slot = (int32)(int16)NOTSA_FTOL(int32, best); // _ftol + `movsx eax, ax`: the record is truncated to 16 bits
     }
     CheckForStatsMessage();
 }
@@ -748,7 +748,7 @@ static void RegisterRecordLowest(eStats stat, int32 value) {
     if (isFloat) {
         CStats::StatTypesFloat[idx] = (float)best;
     } else {
-        IntStatCell(idx) = (int32)(int16)(int32)best;
+        IntStatCell(idx) = (int32)(int16)NOTSA_FTOL(int32, best);
     }
     CStats::CheckForStatsMessage();
 }
@@ -856,7 +856,7 @@ const GxtChar* CStats::FindCriminalRatingString() {
     }
 
     if (rating < 500000) { // Special case, FLIGHT_TIME; x87: kept in extended precision, then truncated by _ftol
-        const auto flightTime = (int32)((x87d)StatTypesInt[STAT_FLIGHT_TIME - FIRST_INT_STAT] * (x87d)(1.6666667e-05f) * (x87d)0.016666668f);
+        const auto flightTime = NOTSA_FTOL(int32, (x87d)StatTypesInt[STAT_FLIGHT_TIME - FIRST_INT_STAT] * (x87d)(1.6666667e-05f) * (x87d)0.016666668f);
         return TheText.Get(flightTime > 10 ? "RATNG50" : "RATNG49");
     }
 
@@ -1046,7 +1046,7 @@ int32 CStats::ConstructStatLine(int32 arg0, uint8 arg1) {
     };
     // x87: `_ftol(FILD(value) * 1/60000)`, split into minutes and seconds with a signed division by 60
     const auto TimeStat = [&](uint32 id, int32& minutes, int32& seconds) {
-        const int32 total = (int32)((x87d)IntStat(id) * (x87d)1.6666667e-05f);
+        const int32 total = NOTSA_FTOL(int32, (x87d)IntStat(id) * (x87d)1.6666667e-05f);
         minutes = total / 60;
         seconds = total % 60;
     };
@@ -1081,7 +1081,7 @@ int32 CStats::ConstructStatLine(int32 arg0, uint8 arg1) {
                 if (line != arg0) {
                     return R::Count;
                 }
-                return PrintValue("%d", (int32)GetStatValue((eStats)id));
+                return PrintValue("%d", NOTSA_FTOL(int32, GetStatValue((eStats)id)));
             case 1: // 0x55A9EF
                 if (line != arg0) {
                     return R::Count;
@@ -1096,17 +1096,17 @@ int32 CStats::ConstructStatLine(int32 arg0, uint8 arg1) {
                 if (line != arg0) {
                     return R::Count;
                 }
-                return PrintValue("%d|", (int32)GetStatValue((eStats)id));
+                return PrintValue("%d|", NOTSA_FTOL(int32, GetStatValue((eStats)id)));
             case 5: { // 0x55A914
                 if (line != arg0) {
                     return R::Count;
                 }
-                const int32 pounds = (int32)GetStatValue((eStats)id);
+                const int32 pounds = NOTSA_FTOL(int32, GetStatValue((eStats)id));
                 gString2[0] = '\0';
                 if (CLocalisation::Metric()) { // 0x56D220
                     const x87d kgs = (x87d)pounds * (x87d)0.4536f; // x87: FILD * 0.4536f, pushed as a double
                     if constexpr (notsa::IsFixBugs()) {
-                        Print(gString2, "%dkgs", (int32)kgs);
+                        Print(gString2, "%dkgs", NOTSA_FTOL(int32, kgs));
                     } else {
                         Print(gString2, "%dkgs", kgs); // BUG: the original passes a double to "%d"
                     }
@@ -1140,8 +1140,8 @@ int32 CStats::ConstructStatLine(int32 arg0, uint8 arg1) {
                 if (line != arg0) {
                     return R::Count;
                 }
-                int32 minutes = ConvertToMins((int32)GetStatValue((eStats)id));
-                int32 seconds = ConvertToSecs((int32)GetStatValue((eStats)id));
+                int32 minutes = ConvertToMins(NOTSA_FTOL(int32, GetStatValue((eStats)id)));
+                int32 seconds = ConvertToSecs(NOTSA_FTOL(int32, GetStatValue((eStats)id)));
                 BuildStatLine(gString, &minutes, 0, &seconds, 1);
                 return R::Done;
             }
@@ -1149,7 +1149,7 @@ int32 CStats::ConstructStatLine(int32 arg0, uint8 arg1) {
                 if (line != arg0) {
                     return R::Count;
                 }
-                return PrintValue("%d", id16 < 0x52 ? (int32)StatTypesFloat[id16] : RawInt(id16));
+                return PrintValue("%d", id16 < 0x52 ? NOTSA_FTOL(int32, StatTypesFloat[id16]) : RawInt(id16));
             }
         }
 
@@ -1242,7 +1242,7 @@ int32 CStats::ConstructStatLine(int32 arg0, uint8 arg1) {
                 }
                 uint8 weaponStatIdx = (uint8)(weaponType - 0x15);
                 if (line == arg0) {
-                    return PrintValue("%d", (int32)GetStatValue((eStats)(weaponStatIdx + 0x44)));
+                    return PrintValue("%d", NOTSA_FTOL(int32, GetStatValue((eStats)(weaponStatIdx + 0x44))));
                 }
                 line++;
                 ped = FindPlayerPed(-1);
@@ -1427,7 +1427,7 @@ int32 CStats::ConstructStatLine(int32 arg0, uint8 arg1) {
             if (line != arg0) {
                 return R::Count;
             }
-            return PrintValue("%d", (int32)CWorld::Players[0].m_pPed->m_fArmour);
+            return PrintValue("%d", NOTSA_FTOL(int32, CWorld::Players[0].m_pPed->m_fArmour));
         case 0xA9: { // 0x55AD5F
             int32 minutes, seconds;
             TimeStat(169, minutes, seconds);
@@ -1635,7 +1635,7 @@ void CStats::UpdateRespectStat(uint8 arg0) {
         respect = 1000.0f;
     }
 
-    if ((int32)m_RespectLastValue == (int32)respect) {
+    if (NOTSA_FTOL(int32, m_RespectLastValue) == NOTSA_FTOL(int32, respect)) {
         return;
     }
 
@@ -1755,7 +1755,7 @@ void CStats::IncrementStat(eStats stat, float value) {
     auto& info = CWorld::Players[CWorld::PlayerInFocus];
 
     if (idx == STAT_CALORIES) {
-        const int32 healthDiff = (int32)((x87d)info.m_nMaxHealth - (x87d)info.m_pPed->m_fHealth); // _ftol: truncated to an integer, BEFORE the nested increment below
+        const int32 healthDiff = NOTSA_FTOL(int32, (x87d)info.m_nMaxHealth - (x87d)info.m_pPed->m_fHealth); // _ftol: truncated to an integer, BEFORE the nested increment below
 
         IncrementStat(STAT_RIOT_MISSION_ACCOMPLISHED, value);
 
@@ -1777,25 +1777,25 @@ void CStats::IncrementStat(eStats stat, float value) {
         } else {
             hours = (x87d)tmp < (x87d)36.0 ? (x87d)tmp : (x87d)36.0;
         }
-        info.m_nNumHoursDidntEat = (uint16)(int16)(int32)hours;
+        info.m_nNumHoursDidntEat = (uint16)(int16)NOTSA_FTOL(int32, hours);
 
-        const int32 healthDiff = (int32)((x87d)info.m_nMaxHealth - (x87d)info.m_pPed->m_fHealth);
+        const int32 healthDiff = NOTSA_FTOL(int32, (x87d)info.m_nMaxHealth - (x87d)info.m_pPed->m_fHealth);
         if (!((double)value < (double)healthDiff)) { // value >= diff (or NaN): only the missing health is added and the hunger is gone
             value = (float)healthDiff;
             info.m_nNumHoursDidntEat = 0;
         }
 
         info.m_pPed->m_fHealth = (float)((x87d)value + (x87d)info.m_pPed->m_fHealth);
-        UpdateStatsAddToHealth((uint32)(int32)value);
+        UpdateStatsAddToHealth((uint32)NOTSA_FTOL(int32, value));
         ProcessReactionStatsOnIncrement(stat);
         CheckForStatsMessage();
         return;
     }
 
     auto& cell = IntStatCell(idx);
-    cell += (int32)(int16)(int32)value; // movsx ax: the increment is a 16 bit value
+    cell += (int32)(int16)NOTSA_FTOL(int32, value); // movsx ax: the increment is a 16 bit value
     if (IsStatCapped(stat)) {
-        cell = (int32)((double)cell < 1000.0 ? (double)cell : 1000.0);
+        cell = NOTSA_FTOL(int32, (double)cell < 1000.0 ? (double)cell : 1000.0);
     }
     ProcessReactionStatsOnIncrement(stat);
     CheckForStatsMessage();
@@ -1844,7 +1844,7 @@ void CStats::UpdateFatAndMuscleStats(uint32 value) {
 
 // 0x55C660
 void CStats::UpdateStatsWhenSprinting() {
-    UpdateFatAndMuscleStats(static_cast<uint32>(StatReactionValue[STAT_EXERCISE_RATE_SPRINT]));
+    UpdateFatAndMuscleStats(NOTSA_FTOL(uint32, StatReactionValue[STAT_EXERCISE_RATE_SPRINT]));
     if (!((double)(StatReactionValue[STAT_TIMELIMIT_SPRINT_STAMINA] * 1000.0f) < (double)m_SprintStaminaCounter)) { // fcompp + jp: only 'limit < counter' resets (equal and NaN add)
         m_SprintStaminaCounter += TimeStepInMS();
     } else {
@@ -1856,7 +1856,7 @@ void CStats::UpdateStatsWhenSprinting() {
 
 // 0x55C6F0
 void CStats::UpdateStatsWhenRunning() {
-    UpdateFatAndMuscleStats((uint32)StatReactionValue[STAT_EXERCISE_RATE_RUN]);
+    UpdateFatAndMuscleStats(NOTSA_FTOL(uint32, StatReactionValue[STAT_EXERCISE_RATE_RUN]));
     if (!((double)(StatReactionValue[STAT_TIMELIMIT_RUNNING] * 1000.0f) < (double)m_RunningCounter)) { // fcompp + jp: only 'limit < counter' resets (equal and NaN add)
         m_RunningCounter += TimeStepInMS();
     } else {
@@ -1869,7 +1869,7 @@ void CStats::UpdateStatsWhenRunning() {
 // 0x55C780
 void CStats::UpdateStatsWhenCycling(bool arg0, CBmx* bmx) {
     if (std::abs(bmx->m_GasPedal) > 0.0f || arg0) {
-        UpdateFatAndMuscleStats(static_cast<uint32>(StatReactionValue[arg0 ? STAT_EXERCISE_RATE_CYCLE_SPRINT : STAT_EXERCISE_RATE_CYCLE]));
+        UpdateFatAndMuscleStats(NOTSA_FTOL(uint32, StatReactionValue[arg0 ? STAT_EXERCISE_RATE_CYCLE_SPRINT : STAT_EXERCISE_RATE_CYCLE]));
 
         if ((x87d)StatReactionValue[STAT_TIMELIMIT_CYCLE_STAMINA] * (x87d)1000.0 < (double)m_CycleStaminaCounter) {
             m_CycleStaminaCounter = 0;
@@ -1909,7 +1909,7 @@ void CStats::UpdateStatsWhenCycling(bool arg0, CBmx* bmx) {
 
 // 0x55C990
 void CStats::UpdateStatsWhenSwimming(bool arg0, bool arg1) {
-    UpdateFatAndMuscleStats(static_cast<uint32>(StatReactionValue[(arg0 || arg1) ? STAT_EXERCISE_RATE_SWIM_SPRINT : STAT_EXERCISE_RATE_SWIM]));
+    UpdateFatAndMuscleStats(NOTSA_FTOL(uint32, StatReactionValue[(arg0 || arg1) ? STAT_EXERCISE_RATE_SWIM_SPRINT : STAT_EXERCISE_RATE_SWIM]));
 
     if ((x87d)StatReactionValue[STAT_TIMELIMIT_SWIM_STAMINA] * (x87d)1000.0 < (double)m_SwimStaminaCounter) {
         m_SwimStaminaCounter = 0;
@@ -1956,7 +1956,7 @@ void CStats::UpdateStatsWhenDriving(CVehicle* vehicle) {
     } else {
         return;
     }
-    m_DrivingCounter = (int32)((x87d)(uint32)TimeStepInMS() * (x87d)rate + (x87d)counter);
+    m_DrivingCounter = NOTSA_FTOL(int32, (x87d)(uint32)TimeStepInMS() * (x87d)rate + (x87d)counter);
 }
 
 // 0x55CC00
@@ -1991,7 +1991,7 @@ void CStats::UpdateStatsWhenFlying(CVehicle* vehicle) {
     } else {
         return;
     }
-    m_FlyingCounter = (int32)((x87d)(uint32)TimeStepInMS() * (x87d)rate + (x87d)counter);
+    m_FlyingCounter = NOTSA_FTOL(int32, (x87d)(uint32)TimeStepInMS() * (x87d)rate + (x87d)counter);
 }
 
 // 0x55CD60
@@ -2002,9 +2002,9 @@ void CStats::UpdateStatsWhenOnMotorBike(CBike* bike) {
         const auto  fTimeStep = CTimer::GetTimeStepInMS();
 
         if (bikeMoveSpeed > 0.6f || bike->m_nNoOfContactWheels < 3u && bikeMoveSpeed > 0.1f)
-            m_BikeCounter = static_cast<uint32>(fTimeStep * 1.5f + bikeCounter);
+            m_BikeCounter = NOTSA_FTOL(uint32, fTimeStep * 1.5f + bikeCounter);
         else if (bikeMoveSpeed > 0.2f)
-            m_BikeCounter = static_cast<uint32>(fTimeStep * 0.5f + bikeCounter);
+            m_BikeCounter = NOTSA_FTOL(uint32, fTimeStep * 0.5f + bikeCounter);
     } else {
         m_BikeCounter = 0;
         IncrementStat(STAT_BIKE_SKILL, StatReactionValue[STAT_INC_MOTORBIKE_SKILL]);
@@ -2049,7 +2049,7 @@ void CStats::UpdateStatsWhenWeaponHit(eWeaponType weaponType) {
 
 // 0x55CFA0
 void CStats::UpdateStatsWhenFighting() {
-    UpdateFatAndMuscleStats(static_cast<uint32>(StatReactionValue[STAT_EXERCISE_RATE_FIGHT]));
+    UpdateFatAndMuscleStats(NOTSA_FTOL(uint32, StatReactionValue[STAT_EXERCISE_RATE_FIGHT]));
 }
 
 // 0x55CFC0

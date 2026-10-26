@@ -315,7 +315,7 @@ RwCamera* CShadowCamera::MakeGradientRaster() {
             const auto MkVert = [
                 &,
                 rhw = 1.f / RwCameraGetNearClipPlane(m_pRwCamera),
-                cc  = (uint8)(cicurr)
+                cc  = NOTSA_FTOL(uint8, cicurr)
             ] (float x) {
                 RwIm2DVertex vtx;
 

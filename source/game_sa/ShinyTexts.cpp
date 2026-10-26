@@ -134,9 +134,9 @@ void CShinyTexts::RegisterOne(CVector cornerAA, CVector cornerAB, CVector corner
     const float halfMaxDist = maxDistance / 2.0f;
     if (halfMaxDist < distToCam) { // TODO: Fix this mess (add CRGB type)
         const float mult = 1.0f - (distToCam - halfMaxDist) / halfMaxDist;
-        text.m_colorR = (uint8)((float)red * mult);
-        text.m_colorG = (uint8)((float)green * mult);
-        text.m_colorB = (uint8)((float)blue * mult);
+        text.m_colorR = NOTSA_FTOL(uint8, (float)red * mult);
+        text.m_colorG = NOTSA_FTOL(uint8, (float)green * mult);
+        text.m_colorB = NOTSA_FTOL(uint8, (float)blue * mult);
     }
 
     NumShinyTexts++;

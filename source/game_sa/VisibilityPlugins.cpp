@@ -302,7 +302,7 @@ int32 CVisibilityPlugins::CalculateFadingAtomicAlpha(CBaseModelInfo* modelInfo, 
         }
     }
     float fFade = std::min((fDrawDistanceRadius + MAX_FADING_DISTANCE - distance) / fFadingDistance, 1.0f);
-    return static_cast<int32>(modelInfo->m_nAlpha * fFade);
+    return NOTSA_FTOL(int32, modelInfo->m_nAlpha * fFade);
 }
 
 // 0x732310

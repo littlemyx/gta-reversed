@@ -202,7 +202,7 @@ bool CRopes::FindCoorsAlongRope(uint32 ropeId, float fDistAlongRope, CVector* ou
 
     const x87d scaledDist = (x87d)fDistAlongRope * (x87d)31.0;
     const auto   segIdx     = (size_t)NOTSA_FTOL(int32, scaledDist);
-    const x87d frac       = scaledDist - (x87d)(int32)scaledDist;
+    const x87d frac       = scaledDist - (x87d)NOTSA_FTOL(int32, scaledDist);
 
     const auto& s0 = rope.m_aSegments[segIdx];
     const auto& s1 = rope.m_aSegments[segIdx + 1];

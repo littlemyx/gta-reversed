@@ -524,7 +524,7 @@ void CSprite2d::DrawBarChart(float x, float y, uint16 width, uint8 height, float
     // Progress rect
     DrawRect({ x, y, currX, y + fheight }, color);
     // Background (from currX to endX)
-    DrawRect({ currX, y, endX, y + fheight }, { uint8(color.r / 2.0f), uint8(color.g / 2.0f), uint8(color.b / 2.0f), color.a });
+    DrawRect({ currX, y, endX, y + fheight }, { NOTSA_FTOL(uint8, color.r / 2.0f), NOTSA_FTOL(uint8, color.g / 2.0f), NOTSA_FTOL(uint8, color.b / 2.0f), color.a });
 
     if (progressAdd) {
         addColor.a = color.a;
@@ -555,7 +555,7 @@ void CSprite2d::DrawBarChart(float x, float y, uint16 width, uint8 height, float
     // unused
     if (drawPercentage) {
         char text[12];
-        sprintf_s(text, "%d%%", (int)progress);
+        sprintf_s(text, "%d%%", NOTSA_FTOL(int32, progress));
 
         GxtChar gxtText[12];
         AsciiToGxtChar(text, gxtText);
@@ -567,7 +567,7 @@ void CSprite2d::DrawBarChart(float x, float y, uint16 width, uint8 height, float
         CFont::SetFontStyle(eFontStyle::FONT_SUBTITLES);
         CFont::SetScale(fheight * 0.03f, fheight / 0.04f);
 
-        auto textX = (uint16)unclampedCurrX;
+        auto textX = NOTSA_FTOL(uint16, unclampedCurrX);
         if (x + 50.0f <= (float)textX) {
             CFont::SetOrientation(eFontAlignment::ALIGN_RIGHT);
         }

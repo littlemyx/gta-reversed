@@ -97,7 +97,7 @@ void CScriptsForBrains::CheckIfNewEntityNeedsScript(CEntity* entity, int8 attach
             continue;
         }
         // x87: (rand() & 0xFFFF) * (1/32768) * 100.0 kept in extended precision, then _ftol (0x821B40)
-        const auto chance = (int32)((x87d)(CGeneral::GetRandomNumber() & 0xFFFF) * (x87d)(1.f / 32768.f) * (x87d)100.0);
+        const auto chance = NOTSA_FTOL(int32, (x87d)(CGeneral::GetRandomNumber() & 0xFFFF) * (x87d)(1.f / 32768.f) * (x87d)100.0);
         if (chance < (int32)brain.m_PercentageChance) {
             StartOrRequestNewStreamedScriptBrain(i, entity, attachType, true);
             return;

@@ -145,8 +145,8 @@ bool CWaterLevel::LoadDataFile() {
 
         // I'm sorry, but don't blame me I HAD NO OTHER CHOICE!
         #define VertexUnpack(n) \
-            (int32)vertices[n].pos.x, (int32)vertices[n].pos.y, \
-            CRenPar{vertices[n].pos.z, vertices[n].bigWaves, vertices[n].smallWaves, (int8)(vertices[n].flow.x * 64.f), (int8)(vertices[n].flow.y * 64.f)}
+            NOTSA_FTOL(int32, vertices[n].pos.x), NOTSA_FTOL(int32, vertices[n].pos.y), \
+            CRenPar{vertices[n].pos.z, vertices[n].bigWaves, vertices[n].smallWaves, NOTSA_FTOL(int8, vertices[n].flow.x * 64.f), NOTSA_FTOL(int8, vertices[n].flow.y * 64.f)}
 
         // Add quad/triangle
         if (nvertices == 4) {
@@ -413,7 +413,7 @@ void CWaterLevel::RenderWakeSegment(
             RenderBuffer::PushVertex(
                 CVector{ corners[i], z },
                 uvs[i],
-                { (uint8)(rgb.r * 255.f), (uint8)(rgb.g * 255.f), (uint8)(rgb.b * 255.f), (uint8)(alphas[i]) }
+                { NOTSA_FTOL(uint8, rgb.r * 255.f), NOTSA_FTOL(uint8, rgb.g * 255.f), NOTSA_FTOL(uint8, rgb.b * 255.f), NOTSA_FTOL(uint8, alphas[i]) }
             );
         }
     }
@@ -764,9 +764,9 @@ void CWaterLevel::RenderHighDetailWaterRectangle_OneLayer(int32 minX, int32 maxX
                 RwIm3DVertexSetV(vtx, (float)((double)vOff * (double)uvScale + (double)baseV));
 
                 // Truncated to 8 bits (no clamping)
-                const auto r = (uint8)(int32)((x87d)WaterColor.r * (x87d)colorMult);
-                const auto g = (uint8)(int32)((x87d)WaterColor.g * (x87d)colorMult);
-                const auto b = (uint8)(int32)((x87d)WaterColor.b * (x87d)colorMult);
+                const auto r = (uint8)NOTSA_FTOL(int32, (x87d)WaterColor.r * (x87d)colorMult);
+                const auto g = (uint8)NOTSA_FTOL(int32, (x87d)WaterColor.g * (x87d)colorMult);
+                const auto b = (uint8)NOTSA_FTOL(int32, (x87d)WaterColor.b * (x87d)colorMult);
                 RwIm3DVertexSetRGBA(vtx, r, g, b, (uint8)WaterLayerAlpha[0]);
 
                 s_VtxColorCacheG[s_VtxColorCacheIdx] = g;
@@ -912,9 +912,9 @@ void CWaterLevel::RenderHighDetailWaterTriangle_OneLayer(int32 X1, int32 Y1, CRe
                 RwIm3DVertexSetV(vtx, (float)((double)vOff * (double)uvScale + (double)baseV));
 
                 // Truncated to 8 bits (no clamping)
-                const auto r = (uint8)(int32)((x87d)WaterColor.r * (x87d)0.577f); // 0x872004
-                const auto g = (uint8)(int32)((x87d)WaterColor.g * (x87d)0.577f);
-                const auto b = (uint8)(int32)((x87d)WaterColor.b * (x87d)0.577f);
+                const auto r = (uint8)NOTSA_FTOL(int32, (x87d)WaterColor.r * (x87d)0.577f); // 0x872004
+                const auto g = (uint8)NOTSA_FTOL(int32, (x87d)WaterColor.g * (x87d)0.577f);
+                const auto b = (uint8)NOTSA_FTOL(int32, (x87d)WaterColor.b * (x87d)0.577f);
                 RwIm3DVertexSetRGBA(vtx, r, g, b, (uint8)WaterLayerAlpha[0]);
 
                 s_VtxColorCacheR[s_VtxColorCacheIdx] = r;
@@ -939,7 +939,7 @@ void CWaterLevel::RenderHighDetailWaterTriangle_OneLayer(int32 X1, int32 Y1, CRe
                 RwIm3DVertexSetU(vtx, (float)((double)uOff * (double)TextureJitterMult + (double)TextureShiftThirdU));
                 RwIm3DVertexSetV(vtx, (float)((double)vOff * (double)TextureJitterMult + (double)TextureShiftThirdV));
                 RwIm3DVertexSetPos(vtx, fX, fY, (float)((double)z + (double)0.1f)); // 0x858B1C
-                const auto a = (uint8)(int32)((x87d)NOTSA_GLOBAL_EXPR(0x8D3810, (int32), static_cast<int32>(WaterLayerAlpha[2])) * (x87d)glare);
+                const auto a = (uint8)NOTSA_FTOL(int32, (x87d)NOTSA_GLOBAL_EXPR(0x8D3810, (int32), static_cast<int32>(WaterLayerAlpha[2])) * (x87d)glare);
                 RwIm3DVertexSetRGBA(vtx, a, a, a, 0xFF);
                 break;
             }
@@ -1537,7 +1537,7 @@ void CWaterLevel::RenderWaterFog() {
 
     // Full-screen quad when inside of the fog
     if (m_fWaterFogInsideFade > 0.f) {
-        const auto alpha = (int32)((float)(int32)((float)m_WaterFogInsideCol.a * m_fWaterFogInsideFade) * CWeather::WaterFogFXControl);
+        const auto alpha = NOTSA_FTOL(int32, (float)NOTSA_FTOL(int32, (float)m_WaterFogInsideCol.a * m_fWaterFogInsideFade) * CWeather::WaterFogFXControl);
 
         CPostEffects::ImmediateModeRenderStatesStore();
         CPostEffects::ImmediateModeRenderStatesSet();
@@ -2005,13 +2005,13 @@ void CWaterLevel::RenderWater() {
     TextureShiftThirdV = (float)((x87d)(float)rand2 * RAND_NORM * (x87d)TextureRandomShiftMult + (x87d)cosAngle2 * (x87d)TextureJitterMult);
 
     // Water colors
-    WaterColor.r = (uint8)(int32)CTimeCycle::m_CurrentColours.m_fWaterRed;
-    WaterColor.g = (uint8)(int32)CTimeCycle::m_CurrentColours.m_fWaterGreen;
-    WaterColor.b = (uint8)(int32)CTimeCycle::m_CurrentColours.m_fWaterBlue;
+    WaterColor.r = (uint8)NOTSA_FTOL(int32, CTimeCycle::m_CurrentColours.m_fWaterRed);
+    WaterColor.g = (uint8)NOTSA_FTOL(int32, CTimeCycle::m_CurrentColours.m_fWaterGreen);
+    WaterColor.b = (uint8)NOTSA_FTOL(int32, CTimeCycle::m_CurrentColours.m_fWaterBlue);
     // NOTSA: `WaterColor.a` isn't touched here (And not used, see `WaterLayerAlpha`)
     WaterColorTriangle = WaterColor;
 
-    const auto secondLayerAlpha = (int32)(CTimeCycle::m_CurrentColours.m_fWaterAlpha * 0.5f);
+    const auto secondLayerAlpha = NOTSA_FTOL(int32, CTimeCycle::m_CurrentColours.m_fWaterAlpha * 0.5f);
     WaterLayerAlpha[1] = secondLayerAlpha;
 
     // BUG: Division by zero if `secondLayerAlpha == 256`
@@ -2052,12 +2052,12 @@ void CWaterLevel::RenderWater() {
 
         if (bRainbowQuads) {
             const auto CalcChannel = [](int32 n) {
-                return (uint8)(int32)((float)n * 0.0625f * 255.f);
+                return (uint8)NOTSA_FTOL(int32, (float)n * 0.0625f * 255.f);
             };
             WaterColor.r = CalcChannel(i & 0xF);
             WaterColor.g = CalcChannel((i / 16) & 0xF);
             WaterColor.b = CalcChannel((i / 256) & 0xF);
-            WaterColor.a = (uint8)(int32)CTimeCycle::m_CurrentColours.m_fWaterAlpha;
+            WaterColor.a = (uint8)NOTSA_FTOL(int32, CTimeCycle::m_CurrentColours.m_fWaterAlpha);
             WaterColorTriangle = WaterColor;
         }
 

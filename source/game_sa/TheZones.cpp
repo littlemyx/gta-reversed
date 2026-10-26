@@ -327,12 +327,12 @@ void CTheZones::CreateZone(
         CopyLabel(z.m_InfoLabel, infoTmp);
         CopyLabel(z.m_TextLabel, textTmp);
         // _ftol, low word stored
-        z.m_fX1 = (int16)(int32)pos1.x;
-        z.m_fY1 = (int16)(int32)pos1.y;
-        z.m_fZ1 = (int16)(int32)pos1.z;
-        z.m_fX2 = (int16)(int32)pos2.x;
-        z.m_fY2 = (int16)(int32)pos2.y;
-        z.m_fZ2 = (int16)(int32)pos2.z;
+        z.m_fX1 = (int16)NOTSA_FTOL(int32, pos1.x);
+        z.m_fY1 = (int16)NOTSA_FTOL(int32, pos1.y);
+        z.m_fZ1 = (int16)NOTSA_FTOL(int32, pos1.z);
+        z.m_fX2 = (int16)NOTSA_FTOL(int32, pos2.x);
+        z.m_fY2 = (int16)NOTSA_FTOL(int32, pos2.y);
+        z.m_fZ2 = (int16)NOTSA_FTOL(int32, pos2.z);
         z.m_nType  = ztype;
         z.m_nLevel = level;
     };

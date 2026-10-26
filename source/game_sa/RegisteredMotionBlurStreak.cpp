@@ -36,8 +36,8 @@ void CRegisteredMotionBlurStreak::Render()
         if (!m_acRenderHistory[0] || !m_acRenderHistory[iInd + 1])
             continue;
 
-        auto ucAlpha1 = static_cast<RwUInt8>((static_cast<float>(m_color.a) * static_cast<float>(iAlpha) / 3.0F) / 255.0F);
-        auto ucAlpha2 = static_cast<RwUInt8>((static_cast<float>(m_color.a) * static_cast<float>(iAlpha-85) / 3.0F) / 255.0F);
+        auto ucAlpha1 = NOTSA_FTOL(RwUInt8, (static_cast<float>(m_color.a) * static_cast<float>(iAlpha) / 3.0F) / 255.0F);
+        auto ucAlpha2 = NOTSA_FTOL(RwUInt8, (static_cast<float>(m_color.a) * static_cast<float>(iAlpha-85) / 3.0F) / 255.0F);
 
         auto rwColor1 = CRGBA(m_color.r, m_color.g, m_color.b, ucAlpha1).ToRwRGBA();
         auto rwColor2 = CRGBA(m_color.r, m_color.g, m_color.b, ucAlpha2).ToRwRGBA();

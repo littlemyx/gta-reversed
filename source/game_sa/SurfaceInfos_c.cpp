@@ -326,8 +326,8 @@ void SurfaceInfos_c::LoadSurfaceInfos()
         else if (!strcmp(si.AdhesionGroup, "SAND"))   surface.ucAdhesionGroup = ADHESION_GROUP_SAND;
         else if (!strcmp(si.AdhesionGroup, "WET"))    surface.ucAdhesionGroup = ADHESION_GROUP_WET;
 
-        surface.tyreGrip = uint32(si.TyreGrip * 10.0f);
-        surface.wetGrip  = uint32(si.WetGrip  * 100.0f); // BUG:? Data has negative values, with *original* conversion we loose sign
+        surface.tyreGrip = NOTSA_FTOL(uint32, si.TyreGrip * 10.0f);
+        surface.wetGrip  = NOTSA_FTOL(uint32, si.WetGrip  * 100.0f); // BUG:? Data has negative values, with *original* conversion we loose sign
 
         if (!strcmp(si.SkidMark, "DEFAULT")) surface.ucSkidmarkType = static_cast<uint32>(eSkidmarkType::DEFAULT);
         if (!strcmp(si.SkidMark, "SANDY"))   surface.ucSkidmarkType = static_cast<uint32>(eSkidmarkType::SANDY);

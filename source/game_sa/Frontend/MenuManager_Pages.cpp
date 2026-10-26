@@ -355,8 +355,8 @@ void CMenuManager::PrintMap() {
                 const auto midPoint = (CRadar::MapLegendCounter - 1) / 2;
                 for (auto legend = 0; legend < CRadar::MapLegendCounter; ++legend) {
                     CRadar::DrawLegend(
-                        static_cast<int32>(currentX),
-                        static_cast<int32>(currentY),
+                        NOTSA_FTOL(int32, currentX),
+                        NOTSA_FTOL(int32, currentY),
                         static_cast<eRadarSprite>(CRadar::MapLegendList[legend])
                     );
 
@@ -457,7 +457,7 @@ void CMenuManager::PrintStats() {
                     alpha_f = 255.0f;
                 }
             }
-            const uint8 alpha = static_cast<uint8>(std::clamp(alpha_f, 0.0f, 255.0f));
+            const uint8 alpha = NOTSA_FTOL(uint8, std::clamp(alpha_f, 0.0f, 255.0f));
 
             // 0x574D3B
             CFont::SetDropColor(CRGBA(MENU_BG, alpha));
@@ -474,7 +474,7 @@ void CMenuManager::PrintStats() {
 
                 CSprite2d::DrawBarChart(
                     StretchX(400.0f), StretchY(17.0f) + y,
-                    (uint16)StretchX(100.0f), (uint8)StretchY(10.0f),
+                    NOTSA_FTOL(uint16, StretchX(100.0f)), NOTSA_FTOL(uint8, StretchY(10.0f)),
                     clamped, 0, 0, 1, color, CRGBA()
                 );
             } else {

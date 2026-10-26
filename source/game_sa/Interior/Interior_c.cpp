@@ -94,7 +94,7 @@ NOTSA_GLOBAL_ALIAS(s_EnEx, 0xBB3DAC, (CEntryExit*), InteriorManagerMembers::EnEx
 // The original code inlined this everywhere: `(int)(rand() * (1 / 32768.f) * n)`
 // Note: Unlike `CGeneral::GetRandomNumberInRange`, the result is uniformly distributed in [0, n)
 int32 RandBelow(int32 n) {
-    return static_cast<int32>(static_cast<float>(CGeneral::GetRandomNumber()) * (1.f / 32768.f) * static_cast<float>(n));
+    return NOTSA_FTOL(int32, static_cast<float>(CGeneral::GetRandomNumber()) * (1.f / 32768.f) * static_cast<float>(n));
 }
 } // namespace
 
@@ -114,15 +114,15 @@ int32 Interior_c::Init(const CVector& pos) {
         int32 seed;
         if (s_EnEx) {
             // NOTE: The multiplications might overflow (but wrap around in the original code)
-            const auto enexHash = static_cast<uint32>(static_cast<int32>(s_EnEx->m_fEntranceZ))
-                                * static_cast<uint32>(static_cast<int32>(s_EnEx->m_recEntrance.bottom))
-                                * static_cast<uint32>(static_cast<int32>(s_EnEx->m_recEntrance.left));
-            const auto posHash = static_cast<uint32>(static_cast<int32>(entityPos.z))
-                               * static_cast<uint32>(static_cast<int32>(entityPos.y))
-                               * static_cast<uint32>(static_cast<int32>(entityPos.x));
+            const auto enexHash = static_cast<uint32>(NOTSA_FTOL(int32, s_EnEx->m_fEntranceZ))
+                                * static_cast<uint32>(NOTSA_FTOL(int32, s_EnEx->m_recEntrance.bottom))
+                                * static_cast<uint32>(NOTSA_FTOL(int32, s_EnEx->m_recEntrance.left));
+            const auto posHash = static_cast<uint32>(NOTSA_FTOL(int32, entityPos.z))
+                               * static_cast<uint32>(NOTSA_FTOL(int32, entityPos.y))
+                               * static_cast<uint32>(NOTSA_FTOL(int32, entityPos.x));
             seed = static_cast<int32>(posHash + enexHash + m_box->m_seed);
         } else {
-            seed = static_cast<int32>(entityPos.z * entityPos.y * entityPos.x + static_cast<float>(m_box->m_seed));
+            seed = NOTSA_FTOL(int32, entityPos.z * entityPos.y * entityPos.x + static_cast<float>(m_box->m_seed));
         }
         srand(static_cast<uint32>(seed)); // Makes the furniture layout deterministic
     }
@@ -267,8 +267,8 @@ void Interior_c::FurnishBedroom() {
 
     // Rug in the middle
     auto* const rug   = g_furnitureMan.GetFurniture(8, 1, -1, wealth);
-    const auto  tileY = static_cast<int32>(static_cast<float>(depth) * 0.5f - static_cast<float>(rug->m_nWidthY) * 0.5f);
-    const auto  tileX = static_cast<int32>(static_cast<float>(width) * 0.5f - static_cast<float>(rug->m_nWidthX) * 0.5f);
+    const auto  tileY = NOTSA_FTOL(int32, static_cast<float>(depth) * 0.5f - static_cast<float>(rug->m_nWidthY) * 0.5f);
+    const auto  tileX = NOTSA_FTOL(int32, static_cast<float>(width) * 0.5f - static_cast<float>(rug->m_nWidthX) * 0.5f);
     int32 outW, outD;
     PlaceFurniture(rug, tileX, tileY, 0.f, 0, 0, &outW, &outD, 0);
 }
@@ -440,8 +440,8 @@ void Interior_c::FurnishKitchen() {
 
     // Place something in the middle of the room
     auto* const furniture = g_furnitureMan.GetFurniture(8, 1, -1, m_box->m_status);
-    const auto  tileY     = static_cast<int32>(static_cast<float>(m_box->m_depth) * 0.5f - static_cast<float>(furniture->m_nWidthY) * 0.5f);
-    const auto  tileX     = static_cast<int32>(static_cast<float>(m_box->m_width) * 0.5f - static_cast<float>(furniture->m_nWidthX) * 0.5f);
+    const auto  tileY     = NOTSA_FTOL(int32, static_cast<float>(m_box->m_depth) * 0.5f - static_cast<float>(furniture->m_nWidthY) * 0.5f);
+    const auto  tileX     = NOTSA_FTOL(int32, static_cast<float>(m_box->m_width) * 0.5f - static_cast<float>(furniture->m_nWidthX) * 0.5f);
     int32 width, depth;
     PlaceFurniture(furniture, tileX, tileY, 0.f, 0, 0, &width, &depth, 0);
 }
@@ -667,8 +667,8 @@ void Interior_c::FurnishLounge() {
     // Rug in the middle
     {
         auto* const rug   = g_furnitureMan.GetFurniture(8, 1, -1, wealth);
-        const auto  tileY = static_cast<int32>(static_cast<float>(depth) * 0.5f - static_cast<float>(rug->m_nWidthY) * 0.5f);
-        const auto  tileX = static_cast<int32>(static_cast<float>(width) * 0.5f - static_cast<float>(rug->m_nWidthX) * 0.5f);
+        const auto  tileY = NOTSA_FTOL(int32, static_cast<float>(depth) * 0.5f - static_cast<float>(rug->m_nWidthY) * 0.5f);
+        const auto  tileX = NOTSA_FTOL(int32, static_cast<float>(width) * 0.5f - static_cast<float>(rug->m_nWidthX) * 0.5f);
         int32 outW, outD;
         PlaceFurniture(rug, tileX, tileY, 0.f, 0, 0, &outW, &outD, 0);
     }

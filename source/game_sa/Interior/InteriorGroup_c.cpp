@@ -50,7 +50,7 @@ NOTSA_GLOBAL_ALIAS(s_InteriorPedsAliveState, 0xBB3D9C, (std::array<bool, 16>), I
 
 // `(int)(rand() * (1 / 32768.f) * n)` - Same as `RandBelow` in `Interior_c.cpp` (named differently so unity builds don't break)
 int32 GroupRandBelow(int32 n) {
-    return static_cast<int32>(static_cast<float>(CGeneral::GetRandomNumber()) * (1.f / 32768.f) * static_cast<float>(n));
+    return NOTSA_FTOL(int32, static_cast<float>(CGeneral::GetRandomNumber()) * (1.f / 32768.f) * static_cast<float>(n));
 }
 
 // Position of the entity (made by transforming (0,0,0) with its matrix; allocates the matrix if needed)

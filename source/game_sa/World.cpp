@@ -360,16 +360,20 @@ bool CWorld::ProcessVerticalLineSectorList_FillGlobeColPoints(PtrListType& ptrLi
 
     auto localColLine = colLine;
 
-    bool dontGoToNextNode{};
-    for (typename PtrListType::NodeType *node = ptrList.GetNode(), *next{}; node; node = next) {
-        if (!dontGoToNextNode) {
-            next = node->Next;
+    // exe 0x5636F1..0x563827: `next` is the node after the current one; after a stored hit the SAME entity is tested again (its scan code was
+    // set back by one) with the line start moved just behind the hit, until it yields no further hit. Only then the next node is fetched
+    // and the line is reset to the original one.
+    typename PtrListType::NodeType* next = ptrList.GetNode();
+    CEntity* entity{};
+    bool retestEntity{};
+    while (next || retestEntity) {
+        if (!retestEntity) {
+            entity = static_cast<CEntity*>(next->Item);
+            next = next->Next;
             localColLine = colLine;
         }
+        retestEntity = false;
 
-        dontGoToNextNode = false;
-
-        const auto entity = static_cast<CEntity*>(node->Item);
         if (entity->IsScanCodeCurrent() || !entity->GetUsesCollision()) {
             continue;
         }
@@ -384,23 +388,23 @@ bool CWorld::ProcessVerticalLineSectorList_FillGlobeColPoints(PtrListType& ptrLi
 
         if (FilledColPointIndex < std::size(gaTempSphereColPoints)) {
             const float distToEnd = localColLine.m_vecEnd.z - cp.m_vecPoint.z;
-            
+
             if (originalLineGoingUpwards) {
                 if (distToEnd > 0.0f) {
                     entity->SetScanCode(ms_nCurrentScanCode - 1);
-                    dontGoToNextNode = true;
+                    retestEntity = true;
                     gaTempSphereColPoints[FilledColPointIndex++].AssignLikeExe(cp);
                 }
             } else {
                 if (distToEnd < 0.0f) {
                     entity->SetScanCode(ms_nCurrentScanCode - 1);
-                    dontGoToNextNode = true;
+                    retestEntity = true;
                     gaTempSphereColPoints[FilledColPointIndex++].AssignLikeExe(cp);
                 }
             }
 
             // In any case, we shift the starting point
-            if (dontGoToNextNode) {
+            if (retestEntity) {
                 localColLine.m_vecStart = cp.m_vecPoint;
                 localColLine.m_vecStart.z += originalLineGoingUpwards ? 0.1f : -0.1f;
             }

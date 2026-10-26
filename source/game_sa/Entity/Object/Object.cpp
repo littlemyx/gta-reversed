@@ -774,7 +774,7 @@ void CObject::Init() {
     SetIsStatic(true);
 
     m_nObjectFlags &= 0xFC000000 | 0x40000;
-    // objectFlags.bCanBeAttachedToMagnet = true;
+    objectFlags.bCanBeAttachedToMagnet = true; // exe 0x59F882..0x59F887: `and 0xFC040000; or 0x40000`
     if (m_nModelIndex == 0xFFFF) {
         objectFlags.bHasNoModel = false;
     } else {
@@ -783,12 +783,13 @@ void CObject::Init() {
         if (mi->GetColModel()->m_bHasCollisionVolumes) {
             CColStore::AddRef(mi->GetColModel()->m_nColSlot);
             objectFlags.bHasNoModel = true;
+        }
 
-            auto* ami = mi->AsAtomicModelInfoPtr();
-            if (ami && ami->SwaysInWind() && !physicalFlags.bDisableCollisionForce) {
-                auto& bbox = mi->GetColModel()->GetBoundingBox();
-                m_vecCentreOfMass.z = bbox.m_vecMin.z + bbox.GetHeight() * 0.2F;
-            }
+        // exe 0x59F8DC: the sway centre-of-mass test is NOT inside the has-collision-volumes branch (the `je` of that branch lands on it)
+        auto* ami = mi->AsAtomicModelInfoPtr();
+        if (ami && ami->SwaysInWind() && !physicalFlags.bDisableCollisionForce) {
+            auto& bbox = mi->GetColModel()->GetBoundingBox();
+            m_vecCentreOfMass.z = bbox.m_vecMin.z + bbox.GetHeight() * 0.2F;
         }
     }
 

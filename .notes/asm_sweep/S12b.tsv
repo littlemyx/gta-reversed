@@ -1,0 +1,11 @@
+addr	file	line	cls	fn	oc
+0x630600	source/game_sa/Tasks/TaskTypes/TaskSimpleDead.cpp	18	CTaskSimpleDead	ProcessPed	D
+0x5BEDC0	source/game_sa/Tasks/TaskTypes/TaskSimpleFight.cpp	73	CTaskSimpleFight	LoadMeleeData	D
+0x61CBA0	source/game_sa/Tasks/TaskTypes/TaskSimpleFight.cpp	80	CTaskSimpleFight	FightHitPed	D
+0x6240B0	source/game_sa/Tasks/TaskTypes/TaskSimpleFight.cpp	83	CTaskSimpleFight	FightStrike	D
+0x623B10	source/game_sa/Tasks/TaskTypes/TaskSimpleFight.cpp	89	CTaskSimpleFight	StartAnim	D
+0x629920	source/game_sa/Tasks/TaskTypes/TaskSimpleFight.cpp	98	CTaskSimpleFight	ProcessPed	D
+0x627CC0	source/game_sa/Tasks/TaskTypes/TaskSimpleGangDriveBy.cpp	32	CTaskSimpleGangDriveBy	FireGun	S
+0x627600	source/game_sa/Tasks/TaskTypes/TaskSimpleGangDriveBy.cpp	35	CTaskSimpleGangDriveBy	ProcessAIPed	D
+0x628350	source/game_sa/Tasks/TaskTypes/TaskSimpleGangDriveBy.cpp	36	CTaskSimpleGangDriveBy	ProcessAimIK	D
+0x62D3B0	source/game_sa/Tasks/TaskTypes/TaskSimpleGangDriveBy.cpp	41	CTaskSimpleGangDriveBy	ProcessPed	D

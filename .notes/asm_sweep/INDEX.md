@@ -21,7 +21,7 @@
 | S17 | game_sa/Entity/Vehicle | 43 | pending | Bike.cpp, Bmx.cpp, Boat.cpp |
 | S18 | game_sa/Entity/Vehicle | 41 | pending | Heli.cpp, MonsterTruck.cpp, Plane.cpp, QuadBike.cpp |
 | S19 | game_sa/Entity/Vehicle | 108 | pending | Trailer.cpp, Train.cpp, Vehicle.cpp |
-| S20 | game_sa/Entity/Ped | 75 | pending | CivilianPed.cpp, CopPed.cpp, EmergencyPed.cpp, Ped.cpp |
+| S20 | game_sa/Entity/Ped | 75 | partial 54/75 (42 M, 12 fixed) -> S20b | CivilianPed.cpp, CopPed.cpp, EmergencyPed.cpp, Ped.cpp |
 | S21 | game_sa/Entity/Ped | 32 | pending | PedSaveStructure.cpp, PlayerPed.cpp, PlayerSkin.cpp |
 | S22 | game_sa/CarCtrl.cpp | 55 | partial 21/55 (17 M, 4 fixed) -> S22b | CarCtrl.cpp |
 | S23 | game_sa/Population.cpp | 33 | partial 20/33 (11 M, 9 fixed) -> S23b | Population.cpp |
@@ -42,3 +42,4 @@
 | S26b | rest of S26 | 9 | partial 7/9 (7 fixed) -> S26c | Physical.cpp |
 | S26c | rest of S26b | 2 | pending | Physical.cpp |
 | S22d | rest of S22c | 15 | pending | CarCtrl.cpp |
+| S20b | rest of S20 | 21 | pending | Ped.cpp |

@@ -28,7 +28,7 @@
 | S24 | game_sa/PedIntelligence.cpp | 31 | done (28 M, 3 fixed) | PedIntelligence.cpp |
 | S25 | game_sa/Events/GroupEventHandler.cpp | 30 | done (18 M, 12 fixed) | GroupEventHandler.cpp |
 | S26 | game_sa/Entity/Physical.cpp | 28 | partial 19/28 (15 M, 4 fixed) -> S26b | Physical.cpp |
-| S27 | game_sa/World.cpp | 44 | pending | World.cpp |
+| S27 | game_sa/World.cpp | 44 | partial 29/44 (19 M, 10 fixed) -> S27b | World.cpp |
 | S28 | game_sa/Streaming.cpp | 73 | pending | Streaming.cpp |
 | S29 | game_sa/Entity/Object | 39 | pending | CutsceneObject.cpp, HandObject.cpp, Object.cpp |
 | S30 | game_sa/Camera.cpp | 35 | pending | Camera.cpp |
@@ -46,3 +46,4 @@
 | S16b | rest of S16 | 25 | pending | Automobile.cpp |
 | S17b | rest of S17 | 22 | pending | Bike.cpp, Bmx.cpp, Boat.cpp |
 | S21b | rest of S21 | 9 | pending | PlayerPed.cpp |
+| S27b | rest of S27 | 15 | pending | World.cpp |

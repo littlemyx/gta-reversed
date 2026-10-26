@@ -308,11 +308,7 @@ void CVehicleModelInfo::GetWheelPosn(int32 wheel, CVector& outVec, bool local) c
         outVec = *RwMatrixGetPos(RwFrameGetMatrix(frame));
     else {
         auto matrix = RwMatrixCreate();
-#ifdef NOTSA_PORTABLE
-        memcpy(matrix, RwFrameGetMatrix(frame), sizeof(RwMatrix)); // STAB1 (ASan heap-buffer-overflow): RwMatrixCreate() is a 64-byte block; sizeof(CMatrix) is 80 on LP64 (72 on x86: an 8 byte overrun the 32-bit heap hid). Hit by every plane spawned (CPlane -> SetupSuspensionLines), i.e. the heap corruption behind the far-teleport crashes (R-VIS1-1)
-#else
-        memcpy(matrix, RwFrameGetMatrix(frame), sizeof(CMatrix));
-#endif
+        memcpy(matrix, RwFrameGetMatrix(frame), sizeof(RwMatrix));
         auto parent = RwFrameGetParent(frame);
         while (parent) {
             RwMatrixTransform(matrix, RwFrameGetMatrix(parent), RwOpCombineType::rwCOMBINEPOSTCONCAT);
@@ -536,7 +532,7 @@ void CVehicleModelInfo::DisableEnvMap()
 
 void CVehicleModelInfo::SetEnvMapCoeff(float coeff)
 {
-    auto iUsedCoeff = NOTSA_FTOL(int32, floor(coeff * 1000.0F));
+    auto iUsedCoeff = static_cast<int32>(floor(coeff * 1000.0F));
     if (!GetRwObject())
         return;
 

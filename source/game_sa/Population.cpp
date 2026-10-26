@@ -540,11 +540,9 @@ void CPopulation::UpdatePedCount(CPed* ped, bool pedAddedOrRemoved) {
     case PED_TYPE_GANG8:
     case PED_TYPE_GANG9:
     case PED_TYPE_GANG10:
-#ifdef FIX_BUGS
+        // 0x6115C8 / 0x611615: `inc/dec [type*4 + 0xC0EC20]` = ms_nNumGang (0xC0EC3C) indexed by (type - GANG1). The old port indexed the array by the raw ped type here
+        // (a mis-read of the exe's biased base address): bucket 1 (Grove, type 8) was counted in bucket 8 and the types >= 10 ran off the array.
         DoOp(ms_nNumGang[ped->m_nPedType - PED_TYPE_GANG1]);
-#else
-        DoOp(ms_nNumGang[ped->m_nPedType]);
-#endif
         break;
     case PED_TYPE_DEALER:
         DoOp(ms_nNumDealers);

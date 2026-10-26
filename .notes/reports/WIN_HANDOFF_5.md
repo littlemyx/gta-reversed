@@ -20,3 +20,13 @@
    (class-C oracle rows cost ~35k tokens each).
 4. SAVE-LOAD leftover: cars/peds spawned before a save are missing after load (not analysed).
 5. Open from earlier: POSTFX-RASTER screenshots; class S/D by subsystem; playtest offer open.
+
+## Update 2026-10-26 13:40
+- Lockstep A-B loop (RD-AB-3..15): orig-port equal prefix 3 -> 88 frames; ~25 port fixes found by it (RemoveBuildingsNotInArea inverted,
+  ped-group slots/leader, SetupSuspensionLines, gang counters, AffectsPedGroup/AffectsPed, SetMoveAnim walk speed, ...). Loop per agent:
+  brief .notes/briefs/RD-AB-N.md (derived from N-1 by sed + Evidence rewrite), gate after each landing, regress flakes re-run x2 and
+  logged in .notes/regress_flakes.tsv. TP-HEAP fixed an 8-byte heap overflow on plane spawn (GetWheelPosn).
+- Gate script now: rw_* tests under gpu.lock; refresh C:\gta-play only if tests + soak + regress pass. Agents' own token estimate runs ~25% low:
+  briefs say "stop at 150k by your estimate".
+- Scratch: agents leave C:/gta-scratch/rd-ab-N with soakdata junctions; ask the user before deleting (he wants to be asked), remove junctions
+  with cmd rmdir first, then rm -rf; keep rdd/ab4, rd-ab-9/o100 and px_* proxies.

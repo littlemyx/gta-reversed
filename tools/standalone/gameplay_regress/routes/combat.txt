@@ -72,9 +72,14 @@ wait:4000
 cmd:snap:kill_6
 # the busted / wasted flow may have taken over: wait for control again
 until:control:90000
-wait:2000
+# ROUTE-FLAKES: the 70 s chase is random and leaves CJ at 0..67 hp (2026-10-25 23:08 gate: 1 hp -> the 10-damage hitplayer below killed him: 'health+armour 1 -> 0/0', and the hospital respawn took the
+# police car's driver away: 'driver hp=-1'). Clear the wanted level first, kill the cops that arrived after the kill step, then put CJ's health back to the new-game 100 so the steps below start from a known state.
 cmd:wanted:0
-wait:2000
+wait:500
+cmd:shoot:6:200
+wait:1500
+cmd:heal
+wait:1500
 cmd:give:30:500
 wait:500
 # ---- A. an armed cop on foot is shot dead -> it drops a weapon pickup (U6)

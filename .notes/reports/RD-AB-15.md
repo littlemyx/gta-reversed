@@ -1,0 +1,24 @@
+# RD-AB-15 - frame 88 solved: EnsureIplsAreInMemory left loadRequested set (Grove IPLs stayed "required" into the cutscene LoadScene); equal prefix 88 -> 98; next divergence located (ped 8 GoToPoint leaf at fc 674)
+
+Agent RD-AB-15, rules v5, 2026-10-26 13:34 - ~14:35 WEST. Worktree C:/gta-wt/rd-ab-15 (origin 953b49c9). Data C:/gta-scratch/rd-ab-15 (oa/ob/pa..pc/g1..g6/r1..r3 single runs with probes, fin = 3 reps pin 1023 x 300, soak.log). Own proxy RD_PX=C:/gta-scratch/rd-ab-15/px. Documents user-files signature ee0a22fe... identical before/after every orig run.
+
+## Equal prefixes (orig-port, pin 1023, intro, 300 frames, 3 reps)
+before (RD-AB-14): 88 / 88 / 88.  after: 98 / 98 / 98 (orig-orig and port-port 300/300).
+
+## Divergences
+| frame (fc) | layer | cause | fix / exe address |
+|---|---|---|---|
+| 88 (fc 664) | IplStore: loadRequested of slots 69..92 still 1 at the cutscene LoadScene's LoadIpls | SOLVED. Probes (L tables after SetIplsRequired(offset) 0x40521F, after SetIplsRequired(gvec) 0x40523F, before the slot loop 0x405355; port Notes La/Lb/L) showed the port's table already full at La, i.e. the flags were set BEFORE the call: CStreaming::Update (streaming at fc 664) calls LoadIpls(playerPos) and then `CIplStore::EnsureIplsAreInMemory(playerPos)` (0x4053F0), which in the exe clears `loadRequested` of EVERY requested non-dynamic slot (0x4054AD/0x4054B3 -> 0x4054F9: `mov byte [esi+0x2e],0`), also when the slot is outside the 190 unit box or already loaded. The port `continue`d in those cases and left the flag set, so LoadScene's LoadIpls saw 69..92 as required, did not unload them, and the peds kept their ground | IplStore.cpp EnsureIplsAreInMemory (0x4053F0): clear for every requested slot, request/load only when inside and not loaded |
+| - | IplStore.cpp RequestIpls / HaveIplsLoaded | the exe calls `SetIplsRequired(posn, playerNumber)` first (0x405531, 0x405611); the port skipped it (HaveIplsLoaded then never saw a required slot: MissionCleanup.cpp:436 got "all loaded") | IplStore.cpp (same commit) |
+| 98 (fc 674) | task layer, rng: 1 extra rand() in the port | NOT FIXED, narrowed. Port has one more `CTaskComplexGangFollower::ControlSubTask` (0x662A10) call for ped 8 in fc 674 (G probe: exe 8,7 / port 8,8,7). Reason: ped 8's leaf `CTaskSimpleGoToPoint` (type 900) `ProcessPed` returns TRUE in the port (task finished, ManageTasks advances and loops) and FALSE in the exe (BP 0x681D0B after the leaf ProcessPed, "T" probe). Entry dumps of ped 8 at fc 673/674 (CPed::ProcessControl 0x5E8CD0, 489 dwords) are equal except audio-entity init, flag bHasACamera (+0x46c bit 17, port 1 exe 0), m_nMoneyCount (+0x756: exe 10, port 0) and a stale m_apCollidedEntities[5] (+0xd4); the ped POSITION differs from fc 674 on: exe moved (x/y -13 ulp, z 13.4693 -> 13.46...) in fc 673 after ManageTasks, port did not move (T-line pos identical to fc 673). Next: why ped 8 does not move in fc 673 in the port (ProcessControl after ManageTasks: collision / ground z correction / anim shift) - dump pos+m_vecMoveSpeed+m_vecAnimMovingShift at the end of CPed::ProcessControl and after CPhysical::ProcessControl; then CTaskSimpleGoToPoint::ProcessPed (0x66D710) arrival test | - |
+| - | ped init: bHasACamera, m_nMoneyCount, audio entity | not analysed (harmless so far) | - |
+
+## Tooling added (inert without env, rd_orig.c)
+- `RD_BPGF=1` (BP 0x662A10 CTaskComplexGangFollower::ControlSubTask): "X fc G pedslot ld grp sub mis fl cnt".
+- `RD_BPPP=1` (BP 0x681D0B in CTaskManager::ManageTasks, after the leaf ProcessPed): "X fc T pedslot leaftype result" + for type 900 the ped position and 18 dwords of the task.
+- Existing RD_BPIPLS at 0x40521F / 0x40523F / 0x405355 gives the three stage tables; RD_BPMEM + RD_BPMEMN=489 at 0x5E8CD0 is the whole-ped entry dump; RD_RSTACK=407180-4071C0 with --rlog gives the callers of GetRandomNumberInRange (T lines) and NOTSA_LOCKSTEP_RSTACK=5 + resolve_stack.py the port callers.
+- Port probes (Notes behind `#define RD_ENTPROBE` in IplStore.cpp / TaskComplexGangFollower.cpp / TaskManager.cpp / Ped.cpp) were temporary and are reverted.
+- Lesson: when a "required" flag differs, print the table at entry of the call too (Ls) - the flags were left by the previous call, not set inside it.
+
+## Gate (rules v5)
+Release build ok; soak (NOVSYNC, 3 min) RESULT OK, errors 0. No oracle target covers CIplStore::EnsureIplsAreInMemory/RequestIpls/HaveIplsLoaded. Not run: run_all_tests, gameplay_regress (orchestrator). Consumer audit: EnsureIplsAreInMemory is called only by CStreaming::Update (Streaming.cpp 3740/3746); RequestIpls has no callers in the port; HaveIplsLoaded is called by MissionCleanup.cpp:436 (now returns false while a required IPL around the entity is not loaded, as the exe); LoadIpls/HaveIplsLoaded/Ensure all clear the flag the way the exe does.

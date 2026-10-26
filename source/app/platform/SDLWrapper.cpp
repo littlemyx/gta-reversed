@@ -86,7 +86,7 @@ uint64_t InjNowMs() { return notsa::rr::Active() ? notsa::rr::VirtualMs() : (uin
 #else
 #define NOTSA_INJ_NOW_MS() GetTickCount64()
 #endif
-struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; int vmode = -1; int vw = 0, vh = 0; int aa = -1; int mission = -1; std::string mark; std::string probe; std::string cmd; std::string until; uint64_t maxMs = 0; std::string skipIf, label; size_t skipTo = 0; };
+struct InjEv { uint64_t t; bool down; SDL_Keycode key; int mx = -1, my = -1; int vmode = -1; int vw = 0, vh = 0; int aa = -1; int mission = -1; std::string mark; std::string probe; std::string cmd; std::string until; uint64_t maxMs = 0; bool soft = false; std::string skipIf, label; size_t skipTo = 0; };
 std::vector<InjEv> s_InjEvents;
 size_t             s_InjNext = 0;
 bool               s_InjInit = false;
@@ -200,11 +200,12 @@ void InjInit() {
             ev.aa = std::atoi(arg.c_str());
             s_InjEvents.push_back(ev);
         }
-        else if (cmd == "until") { // until:COND[:MAXMS]
+        else if (cmd == "until") { // until:COND[:MAXMS[:soft]]  (soft: a miss logs "MISS", not "TIMEOUT": the next step handles it, e.g. a retry of the car entry; soak.sh counts only TIMEOUT as a failed gate)
             InjEv ev{ t, true, 0 };
             const auto c2 = arg.find(':');
             ev.until = arg.substr(0, c2);
             ev.maxMs = c2 == std::string::npos ? 60000 : (uint64_t)std::atoll(arg.c_str() + c2 + 1);
+            ev.soft = arg.size() >= 5 && arg.compare(arg.size() - 5, 5, ":soft") == 0;
             s_InjEvents.push_back(ev);
         }
         else if (cmd == "label") { // label:NAME  (target of skipif)
@@ -398,6 +399,17 @@ static void InjRunCmd(const std::string& c) {
     NOTSA_INJ_LOG("[cmd] %s", c.c_str());
     if (!pl) return;
     if (!std::strcmp(name, "wanted")) { pl->CheatWantedLevel((eWantedLevel)std::atoi(args.c_str())); }
+    else if (!std::strcmp(name, "heal")) { pl->m_fHealth = 100.f; pl->m_fArmour = 0.f; } // heal: the player's health back to the new-game 100 (hp stays what a scenario step assumes after a random chase / fight)
+    else if (!std::strcmp(name, "carinfo")) { // carinfo[:RANGE=20]  [carinfo] lines: the player's position/state and every vehicle within RANGE (ROUTE-FLAKES: where a cheat car lands relative to CJ)
+        int rg = 20; std::sscanf(args.c_str(), "%d", &rg);
+        const auto pp = pl->GetPosition();
+        NOTSA_INJ_LOG("[carinfo] player pos=(%.1f,%.1f,%.1f) head=%.0f state=%d inVeh=%d", pp.x, pp.y, pp.z, RadiansToDegrees(pl->GetHeading()), (int)pl->m_nPedState, (int)pl->bInVehicle);
+        for (auto& v : GetVehiclePool()->GetAllValid()) {
+            const auto vp = v.GetPosition();
+            if ((vp - pp).Magnitude() > (float)rg) continue;
+            NOTSA_INJ_LOG("[carinfo] veh %p model %d pos=(%.1f,%.1f,%.1f) dist=%.1f z-rel=%.1f status=%d driver=%p moveSpd=%.2f", (void*)&v, (int)v.m_nModelIndex, vp.x, vp.y, vp.z, (vp - pp).Magnitude(), vp.z - pp.z, (int)v.GetStatus(), (void*)v.m_pDriver, v.m_vecMoveSpeed.Magnitude());
+        }
+    }
     else if (!std::strcmp(name, "tp")) {
         std::sscanf(args.c_str(), "%f:%f:%f", &a, &b, &d);
         const CVector p{ a, b, d };
@@ -569,7 +581,7 @@ void InjPump() {
             if (!s_InjHolding) { s_InjHolding = true; s_InjHoldBegin = real; }
             const bool ok = InjCond(ev.until), timeout = !ok && real - s_InjHoldBegin >= ev.maxMs;
             if (!ok && !timeout) break; // keep holding, retry next pump
-            NOTSA_INJ_LOG("[until] %s %s after %u ms (script %u ms)", ev.until.c_str(), ok ? "ok" : "TIMEOUT", (unsigned)(real - s_InjHoldBegin), (unsigned)ev.t);
+            NOTSA_INJ_LOG("[until] %s %s after %u ms (script %u ms)", ev.until.c_str(), ok ? "ok" : ev.soft ? "MISS(soft)" : "TIMEOUT", (unsigned)(real - s_InjHoldBegin), (unsigned)ev.t);
             s_InjShift += (int64_t)(real - s_InjHoldBegin);
             s_InjHolding = false;
             s_InjNext++;

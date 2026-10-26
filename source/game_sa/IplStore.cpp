@@ -175,21 +175,21 @@ void CIplStore::EnsureIplsAreInMemory(const CVector& posn) {
             continue;
         }
 
-        if (!def->bb.IsPointInside(posn, -190.f) || CStreaming::IsModelLoaded(IPLToModelId(slot))) {
-            continue;
+        // 0x4054AD / 0x4054B3 -> 0x4054F9: the exe clears `loadRequested` of EVERY requested slot (also one outside the 190 unit box or already loaded); the port `continue`d and left
+        // the flag set, so the slots stayed "required" into the next CIplStore::LoadIpls call (RD-AB-15: the cutscene LoadScene at fc 664 kept the Grove IPLs, exe unloads them)
+        if (def->bb.IsPointInside(posn, -190.f) && !CStreaming::IsModelLoaded(IPLToModelId(slot))) {
+            // Load IPL
+
+            CStreaming::RequestModel(IPLToModelId(slot), STREAMING_PRIORITY_REQUEST | STREAMING_KEEP_IN_MEMORY);
+
+            if (TheCamera.GetScreenFadeStatus() == 0) {
+                FrontEndMenuManager.MessageScreen("LOADCOL", false, false);
+            }
+
+            CTimer::Suspend();
+            CStreaming::LoadAllRequestedModels(true);
+            CTimer::Resume();
         }
-
-        // Load IPL
-
-        CStreaming::RequestModel(IPLToModelId(slot), STREAMING_PRIORITY_REQUEST | STREAMING_KEEP_IN_MEMORY);
-
-        if (TheCamera.GetScreenFadeStatus() == 0) {
-            FrontEndMenuManager.MessageScreen("LOADCOL", false, false);
-        }
-
-        CTimer::Suspend();
-        CStreaming::LoadAllRequestedModels(true);
-        CTimer::Resume();
 
         def->loadRequested = false;
     }
@@ -245,7 +245,8 @@ int32 CIplStore::GetNewIplEntityIndexArray(int32 entitiesCount) {
  * @addr 0x405600
  * @returns If all IPLs around `coords` in a 190 unit radius have loaded
  */
-bool CIplStore::HaveIplsLoaded(const CVector& coords, int32 /*playerNumber*/) {
+bool CIplStore::HaveIplsLoaded(const CVector& coords, int32 playerNumber) {
+    SetIplsRequired(coords, playerNumber); // 0x405611 (the port skipped it, so nothing was ever "requested" here)
     // Can't use `ms_pPool->GetAllValid()` here, because we must ignore the first slot (whenever it's valid or not).
     bool ret = true;
     for (auto slot = 1; slot < TOTAL_IPL_MODEL_IDS; slot++) {
@@ -522,8 +523,7 @@ void CIplStore::LoadIpls(CVector posn, bool bAvoidLoadInPlayerVehicleMovingDirec
         switch (mce.type) {
         case MISSION_CLEANUP_ENTITY_TYPE_PED: {
             const auto ped = GetPedPool()->GetAtRef(mce.handle);
-            assert(ped);
-            if (ped->IsStateDying()) {
+            if (!ped || ped->IsStateDying()) { // 0x40526B/0x4052D1: stale handle -> skip; 0x4052DF: m_nPedState DIE (0x36) / DEAD (0x37) -> skip
                 continue;
             }
             ProcessEntity(ped);
@@ -531,11 +531,17 @@ void CIplStore::LoadIpls(CVector posn, bool bAvoidLoadInPlayerVehicleMovingDirec
         }
         case MISSION_CLEANUP_ENTITY_TYPE_VEHICLE: {
             const auto veh = GetVehiclePool()->GetAtRef(mce.handle);
-            assert(veh);
+            if (!veh) { // 0x405268: stale handle -> skip
+                continue;
+            }
+            // 0x405291..0x4052AA: the exe PROCESSES a vehicle only while its status is PHYSICS (3) / SIMPLE (2) / ABANDONED (4) and skips every other one; the port had this inverted, so the vehicles of the
+            // mission cleanup list kept IPLs required around themselves that the exe lets go of (RD-AB-14: the Grove IPLs stayed loaded in the port at the intro cutscene's LoadScene)
             switch (veh->GetStatus()) {
             case STATUS_PHYSICS:
             case STATUS_SIMPLE:
             case STATUS_ABANDONED:
+                break;
+            default:
                 continue;
             }
             ProcessEntity(veh);
@@ -544,7 +550,7 @@ void CIplStore::LoadIpls(CVector posn, bool bAvoidLoadInPlayerVehicleMovingDirec
         }
     }
 
-    for (auto slot = ms_pPool->GetSize(); slot-- > 1;) { // skips 1st
+    for (int32 slot = 1; slot < (int32)ms_pPool->GetSize(); slot++) { // skips 1st; ASCENDING (exe 0x405355: edi = 1 .. 255) - the port walked it downwards, so the unload order (pool slot reuse, streaming lists) differed
         const auto def = ms_pPool->GetAt(slot);
         if (!def || def->disableDynamicStreaming) {
             continue;
@@ -677,6 +683,7 @@ void CIplStore::RequestIplAndIgnore(int32 iplSlotIndex) {
  * @addr 0x405520
  */
 void CIplStore::RequestIpls(const CVector& posn, int32 playerNumber) {
+    SetIplsRequired(posn, playerNumber); // 0x405531
     for (auto slot = 1 /*skip first*/; slot < TOTAL_IPL_MODEL_IDS; slot++) {
         const auto def = GetInSlot(slot);
         if (!def) {

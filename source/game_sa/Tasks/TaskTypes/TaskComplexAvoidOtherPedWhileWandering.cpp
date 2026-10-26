@@ -126,7 +126,7 @@ CTask* CTaskComplexAvoidOtherPedWhileWandering::ControlSubTask(CPed* ped) {
     }
     
     if (ComputeDetourTarget(ped)) {
-        notsa::cast<CTaskSimpleGoToPoint>(m_pSubTask)->UpdatePoint(m_TargetPt);
+        notsa::cast<CTaskSimpleGoToPoint>(m_pSubTask)->UpdatePoint(m_DetourTargetPt, 0.5f, false); // 0x67250D: `lea edx,[esi+0x28]` = m_DetourTargetPt, radius [0x86FC78] = 0.5f (the port passed m_TargetPt: the walker aimed at the final target instead of the detour point)
         return m_pSubTask;
     }
     

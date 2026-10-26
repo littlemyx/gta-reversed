@@ -58,10 +58,13 @@ void CCutsceneObject::ProcessControl() {
     CPhysical::ProcessControl(); // exactly CPhysical
     if (m_pAttachToFrame) {
         if (m_pAttachmentObject) {
+            // exe 0x5B1C03..0x5B1C5E: the attachment object's hierarchy is updated first, and the postponed flag is cleared afterwards (only in this branch)
+            m_pAttachmentObject->UpdateRpHAnim();
             auto* hierarchy = GetAnimHierarchyFromClump(m_pAttachmentObject->GetRpClump());
             auto* matArr = RpHAnimHierarchyGetMatrixArray(hierarchy);
             const auto boneMat = CMatrix(&matArr[m_nAttachBone], false);
             *static_cast<CMatrix*>(m_matrix) = boneMat;
+            SetWasPostponed(false);
         } else {
             auto* pLtm = RwFrameGetLTM(m_pAttachToFrame);
             const auto attachMat = CMatrix(pLtm, false);

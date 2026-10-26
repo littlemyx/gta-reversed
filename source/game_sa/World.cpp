@@ -976,10 +976,11 @@ void CWorld::FindObjectsOfTypeInRange(uint32 modelId, const CVector& point, floa
 
 // 0x564ED0
 void CWorld::FindLodOfTypeInRange(uint32 modelId, const CVector& point, float radius, bool b2D, int16* outCount, int16 maxCount, CEntity** outEntities) {
-    const int32 startSectorX = GetLodSectorX(point.x - radius);
-    const int32 startSectorY = GetLodSectorY(point.y - radius);
-    const int32 endSectorX = GetLodSectorX(point.x + radius);
-    const int32 endSectorY = GetLodSectorY(point.y + radius);
+    // exe 0x564EDD..0x564F40: plain _ftol (truncation) of the float sector coordinate, no floor() (differs for coordinates below the world's west/south edge)
+    const int32 startSectorX = static_cast<int32>(GetLodSectorfX(point.x - radius));
+    const int32 startSectorY = static_cast<int32>(GetLodSectorfY(point.y - radius));
+    const int32 endSectorX = static_cast<int32>(GetLodSectorfX(point.x + radius));
+    const int32 endSectorY = static_cast<int32>(GetLodSectorfY(point.y + radius));
 
     AdvanceCurrentScanCode();
 

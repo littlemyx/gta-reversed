@@ -1676,21 +1676,23 @@ CVehicle* CWorld::FindUnsuspectingTargetCar(CVector point, CVector playerPosn) {
 
 // 0x566DA0
 CPed* CWorld::FindUnsuspectingTargetPed(CVector point, CVector playerPosn) {
-    float nearestDist2D = std::numeric_limits<float>::max();
+    float nearestDist2D = std::bit_cast<float>(0x461C3F9Au); // exe 0x566DB6 (9999.9f), not FLT_MAX
     CPed* nearestPed{};
     for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValidReverse(), GetPedPool()->GetAllValid())) {
         if (!ped.IsCreatedBy(ePedCreatedBy::PED_GAME) || !ped.IsAlive()) {
             continue;
         }
 
-        if (ped.m_nPedType <= PED_TYPE_GANG1 || ped.m_nPedType >= PED_TYPE_GANG10) {
+        // exe 0x566E0D..0x566E20: GANG1..GANG10 inclusive, or CIVMALE
+        if (ped.m_nPedType < PED_TYPE_GANG1 || ped.m_nPedType > PED_TYPE_GANG10) {
             if (ped.m_nPedType != PED_TYPE_CIVMALE) {
                 continue;
             }
         }
 
+        // exe 0x566E26..0x566E44: a ped whose active task IS the wander task is skipped
         if (CTask* pActive = ped.GetTaskManager().GetActiveTask()) {
-            if (pActive->GetTaskType() != TASK_COMPLEX_WANDER) {
+            if (pActive->GetTaskType() == TASK_COMPLEX_WANDER) {
                 continue;
             }
         }

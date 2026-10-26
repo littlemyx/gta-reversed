@@ -1794,6 +1794,8 @@ bool CPhysical::ApplyCollisionAlt(CPhysical* entity, CColPoint& colPoint, float&
 }
 
 // 0x5454C0
+static float ExeMagnitude3(float a, float b, float c); // defined below
+
 bool CPhysical::ApplyFriction(float fFriction, CColPoint& colPoint)
 {
     if (physicalFlags.bDisableCollisionForce)
@@ -1803,12 +1805,13 @@ bool CPhysical::ApplyFriction(float fFriction, CColPoint& colPoint)
 
     if (physicalFlags.bDisableTurnForce)
     {
-        float fMoveSpeedDotProduct = DotProduct(&m_vecMoveSpeed, &colPoint.m_vecNormal);
+        // 0x5454DC..0x54555D: dot = (z + y) + x terms, magnitude = sqrt((z*z + y*y) + x*x), direction = difference * (1 / magnitude)
+        float fMoveSpeedDotProduct = (float)(((x87d)m_vecMoveSpeed.z * colPoint.m_vecNormal.z + (x87d)m_vecMoveSpeed.y * colPoint.m_vecNormal.y) + (x87d)m_vecMoveSpeed.x * colPoint.m_vecNormal.x);
         CVector vecSpeedDifference = m_vecMoveSpeed - (fMoveSpeedDotProduct * colPoint.m_vecNormal);
-        float fMoveSpeedMagnitude = vecSpeedDifference.Magnitude();
+        float fMoveSpeedMagnitude = ExeMagnitude3(vecSpeedDifference.z, vecSpeedDifference.y, vecSpeedDifference.x);
         if (fMoveSpeedMagnitude > 0.0f)
         {
-            CVector vecMoveDirection = vecSpeedDifference / fMoveSpeedMagnitude;
+            CVector vecMoveDirection = vecSpeedDifference * (1.0f / fMoveSpeedMagnitude);
 
             float fSpeed = -fMoveSpeedMagnitude;
             float fForce = -(CTimer::GetTimeStep() / m_fMass * fFriction);
@@ -1827,16 +1830,17 @@ bool CPhysical::ApplyFriction(float fFriction, CColPoint& colPoint)
     CVector vecDistanceToPointFromThis = colPoint.m_vecPoint - GetPosition();
     CVector vecSpeed = GetSpeed(vecDistanceToPointFromThis);
 
-    float fMoveSpeedDotProduct = DotProduct(&vecSpeed, &colPoint.m_vecNormal);
+    // 0x54560C..0x545699: dot = (y + z) + x terms, magnitude = sqrt((z*z + y*y) + x*x), direction = difference * (1 / magnitude)
+    float fMoveSpeedDotProduct = (float)(((x87d)vecSpeed.y * colPoint.m_vecNormal.y + (x87d)vecSpeed.z * colPoint.m_vecNormal.z) + (x87d)vecSpeed.x * colPoint.m_vecNormal.x);
     CVector vecSpeedDifference = vecSpeed - (fMoveSpeedDotProduct * colPoint.m_vecNormal);
 
-    float fMoveSpeedMagnitude = vecSpeedDifference.Magnitude();
+    float fMoveSpeedMagnitude = ExeMagnitude3(vecSpeedDifference.z, vecSpeedDifference.y, vecSpeedDifference.x);
     if (fMoveSpeedMagnitude <= 0.0f)
     {
         return false;
     }
 
-    CVector vecMoveDirection = vecSpeedDifference / fMoveSpeedMagnitude;
+    CVector vecMoveDirection = vecSpeedDifference * (1.0f / fMoveSpeedMagnitude);
 
     CVector vecCentreOfMassMultiplied = GetMatrix().TransformVector(m_vecCentreOfMass);
     CVector vecDifference = vecDistanceToPointFromThis - vecCentreOfMassMultiplied;

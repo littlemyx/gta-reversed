@@ -428,6 +428,12 @@ void CPed::SetMoveAnim() {
     };
 
     if (m_nSwimmingMoveState == m_nMoveState) {
+        // 0x5E4A4A..0x5E4A74: the move anim's speed is only refreshed while the ped is on a slope: `pitch > 0.01 || pitch < -0.01` (NaN returns: `test ah,5; jp`).
+        // Without it every walking ped got `pitch + 1.2 - ..` re-applied each frame, so the 1e-6 slope pitch of flat ground changed the walk speed (RD-AB-11: ped positions drifted from the exe).
+        const float pitch = m_pedIK.m_fSlopePitch;
+        if (!(pitch > 0.01f || pitch < -0.01f)) {
+            return;
+        }
         switch (m_nMoveState) {
         case PEDMOVE_WALK:
         case PEDMOVE_JOG:

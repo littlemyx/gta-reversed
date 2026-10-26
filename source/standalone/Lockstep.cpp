@@ -13,6 +13,8 @@
 #include "Radar.h"
 #include "Streaming.h"
 #include "PathFind.h"
+#include "Plugins/RpAnimBlendPlugin/RpAnimBlend.h"
+#include "Animation/AnimBlendAssociation.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -130,6 +132,32 @@ void Tick() {
                      (unsigned)CPopulation::ms_nTotalMissionPeds, (unsigned)CPopulation::ms_nTotalPeds, (unsigned)CPopulation::ms_nTotalGangPeds, (unsigned)CPopulation::ms_nTotalCivPeds, (unsigned)CPopulation::ms_nTotalCarPassengerPeds, (unsigned)CPopulation::ms_nNumDealers,
                      (unsigned)CPopulation::ms_nNumGang[0], (unsigned)CPopulation::ms_nNumGang[1], (unsigned)CPopulation::ms_nNumGang[2], (unsigned)CPopulation::ms_nNumGang[3], (unsigned)CPopulation::ms_nNumGang[4], (unsigned)CPopulation::ms_nNumGang[5], (unsigned)CPopulation::ms_nNumGang[6], (unsigned)CPopulation::ms_nNumGang[7], (unsigned)CPopulation::ms_nNumGang[8], (unsigned)CPopulation::ms_nNumGang[9],
                      (unsigned)CPopulation::ms_nNumEmergency, (unsigned)CPopulation::ms_nNumCop, (unsigned)CPopulation::ms_nNumCivFemale, (unsigned)CPopulation::ms_nNumCivMale);
+    }
+    if (c.pin & 1024) { // RD-AB-11 pin bit 1024: "P fc slot model pos(3) movespeed(3) curRot aimRot" for every used slot of the ped pool (counterpart in rd_orig.c; ignored by rd_diff.py)
+        auto fb = [](float v) { uint32_t u; std::memcpy(&u, &v, 4); return u; };
+        if (auto* pl = GetPedPool()) for (int i = 0; i < pl->GetSize(); i++) if (auto* pd = pl->GetAt(i)) {
+            const auto p = pd->GetPosition();
+            std::fprintf(c.f, "P %u %d %u %08x,%08x,%08x %08x,%08x,%08x %08x,%08x %08x,%08x %08x,%08x\n", (unsigned)CTimer::m_FrameCounter, i, (unsigned)pd->m_nModelIndex, fb(p.x), fb(p.y), fb(p.z),
+                         fb(pd->m_vecMoveSpeed.x), fb(pd->m_vecMoveSpeed.y), fb(pd->m_vecMoveSpeed.z), fb(pd->m_fCurrentRotation), fb(pd->m_fAimingRotation), fb(pd->m_vecAnimMovingShiftLocal.x), fb(pd->m_vecAnimMovingShiftLocal.y), fb(pd->m_vecAnimMovingShift.x), fb(pd->m_vecAnimMovingShift.y));
+            if (c.pin & 8192) std::fprintf(c.f, "K %u %d dmg=%08x ent=%d vel=%08x,%08x,%08x posn=%08x,%08x,%08x ptype=%d\n", (unsigned)CTimer::m_FrameCounter, i, fb(pd->m_fDamageIntensity), pd->m_pDamageEntity != nullptr, fb(pd->m_vecLastCollisionImpactVelocity.x), fb(pd->m_vecLastCollisionImpactVelocity.y), fb(pd->m_vecLastCollisionImpactVelocity.z), fb(pd->m_vecLastCollisionPosn.x), fb(pd->m_vecLastCollisionPosn.y), fb(pd->m_vecLastCollisionPosn.z), (int)pd->m_nPieceType);
+            if (c.pin & 4096) { // pin bit 4096: "C fc slot chain" (counterpart in rd_orig.c)
+                std::fprintf(c.f, "C %u %d", (unsigned)CTimer::m_FrameCounter, i);
+                for (auto pi = 0; pi < 5; pi++) { std::fprintf(c.f, " |"); CTask* t = pd->GetIntelligence()->m_TaskMgr.m_aPrimaryTasks[pi]; for (auto d = 0; t && d < 8; d++) { std::fprintf(c.f, "%d[", (int)t->GetTaskType()); for (int w = 2; w < 8; w++) std::fprintf(c.f, "%s%08x", w > 2 ? "," : "", ((const uint32_t*)t)[w]); std::fprintf(c.f, "]>"); t = t->GetSubTask(); } }
+                std::fprintf(c.f, "\n");
+            }
+            if (c.pin & 2048) std::fprintf(c.f, "Q %u %d %08x,%08x %08x,%08x,%08x %08x,%08x,%08x\n", (unsigned)CTimer::m_FrameCounter, i, fb(pd->m_pedIK.m_fSlopePitch), fb(pd->m_pedIK.m_fSlopeRoll), fb(pd->field_578.x), fb(pd->field_578.y), fb(pd->field_578.z), fb(pd->GetMatrix().GetRight().x), fb(pd->GetMatrix().GetRight().y), fb(pd->GetMatrix().GetRight().z));
+            if ((c.pin & 2048) && pd->GetRpClump()) { // pin bit 2048: "A fc slot animId flags blendAmt,blendDelta,curTime,speed,timeStep nodesHash node0(KFCurr,KFPrev,rem,theta)" per association (counterpart in rd_orig.c)
+                int na = 0;
+                RpAnimBlendClumpForEachAssociation(pd->GetRpClump(), [&](CAnimBlendAssociation* a) {
+                    if (na++ >= 12) return;
+                    uint32_t h = 2166136261u;
+                    for (unsigned k = 0; k < a->m_NumBlendNodes && a->m_BlendNodes; k++) { const auto& nd = a->m_BlendNodes[k]; struct { int16_t c, p; float r; } v{ nd.m_KFCurr, nd.m_KFPrev, nd.m_KFRemainingTime }; h = Fnv(h, &v, 8); }
+                    const auto* n0 = a->m_BlendNodes;
+                    std::fprintf(c.f, "A %u %d %u %04x %08x,%08x,%08x,%08x,%08x %08x %08x,%08x,%08x,%08x\n", (unsigned)CTimer::m_FrameCounter, i, (unsigned)a->m_AnimId, (unsigned)a->m_Flags, fb(a->m_BlendAmount), fb(a->m_BlendDelta), fb(a->m_CurrentTime), fb(a->m_Speed), fb(a->m_TimeStep), h,
+                                 n0 ? (unsigned)(uint16_t)n0->m_KFCurr : 0u, n0 ? (unsigned)(uint16_t)n0->m_KFPrev : 0u, n0 ? fb(n0->m_KFRemainingTime) : 0u, n0 ? fb(n0->m_Theta) : 0u);
+                });
+            }
+        }
     }
     std::fprintf(c.f, "F %u %u %08x %u %08x %08x %08x %u %u %u %08x\n", (unsigned)CTimer::m_FrameCounter, (unsigned)CTimer::m_snTimeInMilliseconds, (unsigned)g_RandSeed, (unsigned)g_RandCalls,
                  px, py, pz, hp, np, nv, sh);

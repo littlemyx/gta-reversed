@@ -500,7 +500,7 @@ void CPhysical::ProcessCollision() {
             || m_vecTurnSpeed != 0.0f
             || physicalFlags.bProcessCollisionEvenIfStationary
             || GetStatus() == STATUS_PLAYER
-            || GetIsTypeVehicle() && vehicle->vehicleFlags.bIsCarParkVehicle
+            || GetIsTypeVehicle() && vehicle->vehicleFlags.bRestingOnPhysical // 0x54E760: test [vehicle+0x42C], 2 = bRestingOnPhysical (not bIsCarParkVehicle)
             || GetIsTypePed() && (ped->IsPlayer() || ped->bTestForBlockedPositions|| !ped->bIsStanding))
         {
             if (GetIsTypeVehicle())

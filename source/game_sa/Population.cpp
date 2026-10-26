@@ -120,8 +120,13 @@ void CPopulation::InjectHooks() {
 }
 
 bool CanCameraSeeAPedHere(CVector pos) {
-    if (TheCamera.IsSphereVisible({ pos, 2.f })) {
-        if (sq(CPopulation::PedCreationDistMultiplier() * 42.5f) >= (FindPlayerPed()->GetPosition() - pos).SquaredMagnitude2D()) {
+    // 0x612CFF..0x612D7B: sphere radius 2, `sqrt`-ed float distance compared with a strict `>`
+    if (TheCamera.IsSphereVisible(pos, 2.f)) {
+        const auto playerPos = FindPlayerPed()->GetPosition();
+        const x87d dx = static_cast<x87d>(pos.x) - static_cast<x87d>(playerPos.x);
+        const x87d dy = static_cast<x87d>(pos.y) - static_cast<x87d>(playerPos.y);
+        const auto dist = static_cast<float>(std::sqrt(dx * dx + dy * dy));
+        if (static_cast<x87d>(CPopulation::PedCreationDistMultiplier()) * (x87d)42.5 > static_cast<double>(dist)) {
             return true;
         }
     }

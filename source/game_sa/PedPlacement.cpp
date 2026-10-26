@@ -72,7 +72,7 @@ bool CPedPlacement::IsPositionClearForPed(
 
     if (!IsPositionClearForPed(pos, radius, (int32)(numHitEntitiesToStore), hitEntities, bCheckVehicles, bCheckPeds, bCheckObjects)) {
         for (const auto hitEntity : hitEntities | rng::views::take(numHitEntitiesToStore)) { // If anything was hit, check if it's in the ignored entities array
-            if (!notsa::contains(ignoreEntities, hitEntity)) {
+            if (hitEntity && !notsa::contains(ignoreEntities, hitEntity)) { // 0x612ED4: unused (null) slots are skipped
                 return false; // Nope, we hit something else, so it's not clear.
             }
         }

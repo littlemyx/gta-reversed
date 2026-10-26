@@ -306,7 +306,7 @@ bool CTaskSimpleDuck::MakeAbortable(CPed* ped, eAbortPriority priority, CEvent c
         return true;
     }
     case ABORT_PRIORITY_URGENT: { // 0x69219B
-        if (m_ShotWhizzingCounter <= 0) {
+        if (m_ShotWhizzingCounter < 0) { // 0x69219D: `cmp word [this+0xE], -1; jle` - a counter of exactly 0 still takes this path
             break;
         }
         if (const auto eShotFired = notsa::dyn_cast_if_present<const CEventGunShotWhizzedBy>(event)) {

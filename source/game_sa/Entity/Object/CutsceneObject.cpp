@@ -58,10 +58,13 @@ void CCutsceneObject::ProcessControl() {
     CPhysical::ProcessControl(); // exactly CPhysical
     if (m_pAttachToFrame) {
         if (m_pAttachmentObject) {
+            // exe 0x5B1C03..0x5B1C5E: the attachment object's hierarchy is updated first, and the postponed flag is cleared afterwards (only in this branch)
+            m_pAttachmentObject->UpdateRpHAnim();
             auto* hierarchy = GetAnimHierarchyFromClump(m_pAttachmentObject->GetRpClump());
             auto* matArr = RpHAnimHierarchyGetMatrixArray(hierarchy);
             const auto boneMat = CMatrix(&matArr[m_nAttachBone], false);
             *static_cast<CMatrix*>(m_matrix) = boneMat;
+            SetWasPostponed(false);
         } else {
             auto* pLtm = RwFrameGetLTM(m_pAttachToFrame);
             const auto attachMat = CMatrix(pLtm, false);
@@ -137,7 +140,7 @@ void CCutsceneObject::PreRender() {
     CEntity* entity = nullptr;
     if (CWorld::ProcessVerticalLine(vecPos, fHeight, colPoint, entity, true)) {
         const auto fDayNight = colPoint.m_nLightingB.GetCurrentLighting();
-        m_fContactSurfaceBrightness = lerpBlend(m_fContactSurfaceBrightness, fDayNight, CTimer::GetTimeStep() / 10.0F);
+        m_fContactSurfaceBrightness = lerpBlend(m_fContactSurfaceBrightness, fDayNight, CTimer::GetTimeStep() * 0.1F); // exe 0x5B2021: multiplies by the float 0.1f (0x858B1C), no division by 10
     }
 }
 

@@ -1,0 +1,13 @@
+# ASM-S25 (Events/GroupEventHandler.cpp, 30 functions) - 2026-10-26 21:41 .. 22:13
+Result: 30 compared (12 FIXED in 12 commits, 18 MATCH), 0 UNSURE, 0 NOT REACHED (table in S25.result.tsv). Slice complete.
+Fixes (exe address, one line each):
+- ComputeResponseLeaderExitedCar (0x5F9106/0x5F92AA): members already in the leader's vehicle were skipped (the exe makes them leave it); non-burning delay is slot*500+250+(int)(rand/32768*500), not rand(-250,250). RD-AB-6's slot delay itself was right.
+- ComputeMemberResponses (0x5FAA84): loops all 8 slots (leader too) and always runs ComputeEventResponseTask after ComputeResponseTaskType (port: followers only, else-if).
+- ComputeGreetResponse / ComputeDoDealResponse (0x5FA5AB.., 0x5FA2EB..): missing "leader standing still" and "greeted ped not a player type" guards, follower-only closest search, and the 16<=d^2<=100 range test (the port's `<16 && >100` never fired). DoDeal also made a rand() and sent CreatePartnerTask type rand+1 (a greet task) where the exe uses type 0 and no rand.
+- GunAimedAt + Damage (0x5FBD3F/0x5FBF80, shared helper): the forced KILL_THREATS_BASIC applies to NON-mission groups (port: mission) and tests friendliness with the source ped (port: originator). Damage (0x5FBF5B) reads the raw m_pSourceEntity, not the virtual (vehicle -> driver).
+- ComputeFleePedResponse (0x5FA1AB/0x5FA1E0): bail-out is squared distance > 64.0 (port: real distance > 64) and rand() per member (commented out in the port). ComputeStareResponse (0x5F9C26): 3D squared > 64 (port 2D >=).
+- ComputeResponsePedFriend (0x5FB339): also ignores the group's own ped and members of this group. ComputeHassleSexyPedResponse (0x5FA065): rolls (int)(rand*100/32768)>75 for all 7 slots incl. empty ones.
+- ComputeHassleThreatResponse (> 144.0 instead of >=) and ComputeResponseNewGangMember (FindPlayerPed(0)) are edge/no-op corrections.
+MATCH: the other 18 (jump tables of VehicleDamage/ShotFired/SeenCop/PedThreat/DraggedOutCar/EventResponseTasks decoded from the exe; LeaderEnteredCar 401 lines incl. inlined SetTask/SetDefaultTask, QuitEnteringCar, EnterExit, Gather, HandSignal, KillThreats/KillPlayerBasic, LeanOnVehicle, SexyPed, Danger, PlayerCommand; WalkAlongside has no callers in the exe).
+Consumer audit: no layout/signature change; CEventHandler::ComputeCreatePartnerTaskResponse already maps type 0 to PartnerDeal; MaybeAdjustTaskOfGroupThreatEvent has only the GunAimedAt/Damage callers.
+Gate: Release build OK (1186/1186); no oracle row covers these functions (wave3 only has IsKillTaskAppropriate/Driveby); soak RESULT: OK (3 min NOVSYNC, 43600 frames, 0 errors; one route gate timeout "until invehicle" after 8 s, the run continued).

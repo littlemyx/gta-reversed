@@ -98,7 +98,9 @@ bool CTaskSimpleCarSlowBeDraggedOut::ProcessPed(CPed* ped) {
         m_LineUpUtility->m_nDoorOpenPosType = 2;
     }
     if (m_IsDraggedBySelf) {
-        DoOpenCarDoor(ped);
+        // 0x64E251..0x64E280: the door is opened by the anim's current time (MakeAbortable uses 1.0)
+        const auto [animGrp, animId] = ComputeAnimID();
+        m_Vehicle->ProcessOpenDoor(ped, m_Door, animGrp, animId, m_Anim->m_CurrentTime);
     }
     return false;
 }

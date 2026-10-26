@@ -135,7 +135,7 @@ bool CTaskSimpleCarJumpOut::ProcessPed(CPed* ped) {
     // Not in vehicle anymore?
     if (!ped->bInVehicle) { // Inverted
         if (m_veh && m_veh->IsAutomobile()) { // 0x64DE0E
-            ped->m_pedIK.bUseArm = true;
+            ped->m_pedIK.bSlopePitch = true; // 0x64DE1F: `or [ped+0x528], 8` is CPedIK flag 0x8 (bSlopePitch); bUseArm is 0x4
             ped->bFallenDown = true;
         }
         return !m_anim;
@@ -185,7 +185,7 @@ bool CTaskSimpleCarJumpOut::ProcessPed(CPed* ped) {
     ped->m_pEntityIgnoredCollision = m_veh;
     ped->bKnockedOffBike = true;
     if (m_veh->IsAutomobile()) {
-        m_veh->AsAutomobile()->m_damageManager.SetDoorOpen((eDoors)m_door);
+        m_veh->AsAutomobile()->m_damageManager.SetDoorOpen_Component((tComponent)m_door); // 0x64DF86..0x64DFD1: GetDoorStatus_Component/SetDoorStatus_Component (m_door is a TARGET_DOOR 8..11, not an eDoors index)
     }
     
     return false;

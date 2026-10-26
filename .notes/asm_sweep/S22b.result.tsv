@@ -1,0 +1,35 @@
+addr	function	verdict	asm_range	note	fix_commit
+0x42F3C0	GetAIHeliToAttackPlayer	MATCH		0x42F3C0-0x42F597; missions 23/56, 15/18 thresholds, +pi, call order	
+0x429890	GetAIPlaneToDoDogFight	MATCH		0x429890-0x429A67; flag byte ==1 branch, 2 rand() order, 600/300 consts	
+0x42B270	FireHeliRocketsAtTarget	MATCH		0x42B270-0x42B469; 250ms gate, 80/7 range tests, side/nose x87 rounding, AddProjectile args	
+0x429300	TriggerDogFightMoves	MATCH		0x429300-0x42950D; jump table 12..15 -> actions 16/17/18/15, dot thresholds 0/0.7	
+0x42AD30	SteerAIHeliToLand	MATCH		0x42AD30-0x42AE89; 10/0.05 thresholds, 4 suspension tests, zeroed fields 0x98C-0x998/0x9A8/0x9B0	
+0x42B470	FindLinksToGoWithTheseNodes	MATCH		0x42B470-0x42B7CD; link search (12 = not found), DistToLine closest, _smthNext/_smthCurr polarity	
+0x42FC40	ReconsiderRoute	MATCH		0x42FC40-0x42FF96; 9 faraway missions, node match chain, 2 DoPathSearch arg lists, counter >4	
+0x42CE40	ScanForPedDanger	MATCH		0x42CE40-0x42D0D0; 44/11 radius, sector clamps, loop order, args of SlowCarDownForPedsSectorList, flag restore	
+0x42DAB0	IsThisAnAppropriateNode	MATCH		0x42DAB0-0x42DE53; behaviour type table 1/2/5/10/8/9, cross/dot signs, FindObjectsKindaColliding args	
+0x42AAD0	SteerAIHeliAsPoliceHeli	MATCH		0x42AAD0-0x42ACA6; alt 6/25 dist 50, health 230 -> mission 42	
+0x42F9C0	GenerateEmergencyServicesCar	MATCH		0x42F9C0-0x42FBB7; counters sum, 30000/35000 ms, fire count low 16 bits	
+0x42B7D0	GenerateOneEmergencyServicesCar	MATCH		0x42B7D0-0x42BC4B; 5 tries (last-try bug kept), z interpolation, vertical lines, model switch 407/416/cops	
+0x421440	GetNewVehicleDependingOnCarModel	MATCH		0x421440-0x4216FA; type table incl. FHELI/FPLANE -> automobile, bike side stand bit; extra ignored cdecl arg not applicable	
+0x431F80	CreateCarForScript	MATCH		0x431F80-0x432297; boat and non-boat paths, flag bits 0x36/0x428/0x42A/0x5B9, speeds 20/13, subtype 3/4/6 check	
+0x428DE0	SteerAIBoatWithPhysicsAttackingPlayer	MATCH		0x428DE0-0x429090; gas thresholds .25/-5, steer wrap, predator fire 40/0.15	
+0x42A750	SteerAIHeliToFollowEntity	MATCH		0x42A750-0x42AAC8; catchup block (status 2/3 -> physics, wander sprint), 50000 ms, health 300; FixedOrientation call passes one extra ignored stack arg (unobservable)	
+0x426EF0	PickNextNodeToChaseCar	NOT_REACHED		token budget	
+0x427740	PickNextNodeToFollowPath	NOT_REACHED		token budget	
+0x428040	DealWithBend_Racing	NOT_REACHED		token budget	
+0x42C740	CreateConvoy	NOT_REACHED		token budget	
+0x42C2B0	CreatePoliceChase	NOT_REACHED		token budget	
+0x424210	GenerateCarCreationCoors2	NOT_REACHED		token budget	
+0x430050	GenerateOneRandomCar	NOT_REACHED		token budget	
+0x423000	FlyAIPlaneInCertainDirection	NOT_REACHED		token budget	
+0x423940	FlyAIHeliToTarget_FixedOrientation	NOT_REACHED		token budget	
+0x424F80	PossiblyRemoveVehicle	NOT_REACHED		token budget	
+0x425440	SlowCarDownForPedsSectorList	NOT_REACHED		token budget	
+0x429A70	FlyAIHeliInCertainDirection	NOT_REACHED		token budget	
+0x42DE80	PickNextNodeRandomly	NOT_REACHED		token budget	
+0x42EC90	DragCarToPoint	NOT_REACHED		token budget	
+0x432DD0	SteerAICarWithPhysicsFollowPreRecordedPath	NOT_REACHED		token budget	
+0x436540	UpdateCarOnRails	NOT_REACHED		token budget	
+0x436A90	SteerAICarWithPhysics_OnlyMission	NOT_REACHED		token budget	
+0x437C20	SteerAICarWithPhysics	NOT_REACHED		token budget	

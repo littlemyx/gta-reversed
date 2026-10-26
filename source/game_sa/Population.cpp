@@ -120,8 +120,13 @@ void CPopulation::InjectHooks() {
 }
 
 bool CanCameraSeeAPedHere(CVector pos) {
-    if (TheCamera.IsSphereVisible({ pos, 2.f })) {
-        if (sq(CPopulation::PedCreationDistMultiplier() * 42.5f) >= (FindPlayerPed()->GetPosition() - pos).SquaredMagnitude2D()) {
+    // 0x612CFF..0x612D7B: sphere radius 2, `sqrt`-ed float distance compared with a strict `>`
+    if (TheCamera.IsSphereVisible(pos, 2.f)) {
+        const auto playerPos = FindPlayerPed()->GetPosition();
+        const x87d dx = static_cast<x87d>(pos.x) - static_cast<x87d>(playerPos.x);
+        const x87d dy = static_cast<x87d>(pos.y) - static_cast<x87d>(playerPos.y);
+        const auto dist = static_cast<float>(std::sqrt(dx * dx + dy * dy));
+        if (static_cast<x87d>(CPopulation::PedCreationDistMultiplier()) * (x87d)42.5 > static_cast<double>(dist)) {
             return true;
         }
     }
@@ -154,6 +159,7 @@ void LoadGroup(const char* fileName, auto& outModelsInGroup, auto& outNumOfModel
     size_t currGrpIdx{}, lineno{1};
     for (;const auto l = CFileLoader::LoadLine(file); lineno++) { // Also replaces `,` with ` ` (space) (Important to know)
         uint16 npeds{};
+        size_t nTokens{}; // 0x5BD0C0..0x5BD122: the original counts every token (resolved or not) towards the group capacity (`ebp`), and a line with tokens whose models all failed to resolve still starts a (zero-sized) group (`dl`)
         for (auto begin = l, end = l; *begin; begin = end) {
             begin = CFileLoader::FindFirstNonNullOrWS(begin);
             if (*begin == '#') {
@@ -175,11 +181,12 @@ void LoadGroup(const char* fileName, auto& outModelsInGroup, auto& outNumOfModel
             // but we want to print a useful error message, so the
             // loop is let to do one more iteration before breaking
             // to see if there are any more models to be added
-            if (npeds >= outModelsInGroup[currGrpIdx].size()) {
+            if (nTokens >= outModelsInGroup[currGrpIdx].size()) {
                 POP_LOG_DEBUG("There are models to be added to the group, but there's no memory! [Group ID: {}; Line: {}]", currGrpIdx, lineno);
                 break;
             }
             
+            nTokens++;
             char modelName[256]{};
             strncpy_s(modelName, begin, end - begin);
             if (int32 pedModelIdx{ MODEL_INVALID }; CModelInfo::GetModelInfo(modelName, &pedModelIdx)) {
@@ -190,7 +197,7 @@ void LoadGroup(const char* fileName, auto& outModelsInGroup, auto& outNumOfModel
             }
         }
         
-        if (npeds == 0) {
+        if (nTokens == 0) {
             continue; // Blank line
         }
 
@@ -708,7 +715,7 @@ void CPopulation::ManagePed(CPed* ped, const CVector& playerPosn) {
 
     // If pead is dead, possibly fade them out
     if (ped->IsStateDead()) {
-        const auto delta = CTimer::GetTimeInMS() - ped->m_nDeathTimeMS;
+        const auto delta = (int32)(CTimer::GetTimeInMS() - (uint32)ped->m_nDeathTimeMS); // 0x61201D: signed compare (`jg`)
         if (   delta > 30'000
             || CDarkel::FrenzyOnGoing() && delta > 15'000
             || CGangWars::GangWarFightingGoingOn() && delta > 8'000
@@ -800,15 +807,34 @@ bool CPopulation::TestRoomForDummyObject(CObject* object) {
 
 // 0x6123A0
 bool CPopulation::TestSafeForRealObject(CDummyObject* obj) {
-    const auto objCM  = obj->GetColModel();
-    const auto objMat = obj->GetMatrix();
-    return CWorld::IterateSectorsOverlappedByRect(
-        CRect{ obj->GetBoundCentre(), objCM->GetBoundRadius()},
-        [&](int32 x, int32 y) {
+    const auto objCM     = obj->GetColModel();
+    const auto objRadius = objCM->GetBoundRadius();
+    const auto& objPos   = obj->GetPosition(); // The sector range is built around the object's POSITION (0x6123C4..0x612590), not its bound centre
+    const auto objCentre = obj->GetBoundCentre();
+
+    // Sector index = floor((pos -+ radius) * 0.02 + 60) clamped to [0, 120] (0x858B38 / 0x858B34)
+    const auto ToSector = [](float v) { return (int32)std::floor((double)(v * 0.02f + 60.f)); };
+    const auto minX = std::max(ToSector(objPos.x - objRadius), 0);
+    const auto minY = std::max(ToSector(objPos.y - objRadius), 0);
+    const auto maxX = std::min(ToSector(objPos.x + objRadius), 120);
+    const auto maxY = std::min(ToSector(objPos.y + objRadius), 120);
+
+    for (auto y = minY; y <= maxY; ++y) {
+        for (auto x = minX; x <= maxX; ++x) {
             for (auto* const entity : CWorld::GetRepeatSector(x, y).Vehicles) {
+                // NOTE: The original neither increments the scan code here, nor does it skip this for entities it has seen
+                if (entity->GetScanCode() == CWorld::ms_nCurrentScanCode) { // 0x612623
+                    continue;
+                }
+                if (!entity->GetIsTouching(objCentre, objRadius)) { // 0x612643
+                    continue;
+                }
+                entity->SetScanCode(CWorld::ms_nCurrentScanCode);
+                auto& entityMat = entity->GetMatrix(); // 0x61264C: allocated on demand, the entity's first, then the object's
+                auto& objMat    = obj->GetMatrix();
                 if (CCollision::ProcessColModels(
                     objMat, *objCM,
-                    entity->GetMatrix(), *entity->GetColModel(),
+                    entityMat, *entity->GetColModel(),
                     CWorld::m_aTempColPts,
                     nullptr,
                     nullptr,
@@ -817,9 +843,9 @@ bool CPopulation::TestSafeForRealObject(CDummyObject* obj) {
                     return false;
                 }
             }
-            return true;
         }
-    );
+    }
+    return true;
 }
 
 // 0x612710
@@ -837,7 +863,8 @@ CPed* CPopulation::AddPed(ePedType pedType, eModelID modelIndex, const CVector& 
             const auto ped = new CCivilianPed(pedType, modelIndex);
 
             if (CCheat::IsAnyActive({ CHEAT_EVERYONE_ARMED, CHEAT_PEDS_ATTACK_OTHER_WITH_GOLFCLUB })) {
-                GiveAndSetPedWeapon(ped, CGeneral::RandomChoiceFromList({ WEAPON_PISTOL, WEAPON_BASEBALLBAT, WEAPON_SHOTGUN, WEAPON_M4, WEAPON_RLAUNCHER }));
+                constexpr eWeaponType CHEAT_WEAPONS[]{ WEAPON_PISTOL, WEAPON_BASEBALLBAT, WEAPON_SHOTGUN, WEAPON_M4, WEAPON_RLAUNCHER };
+                GiveAndSetPedWeapon(ped, CHEAT_WEAPONS[rand() % 5]); // 0x612797: `rand() % 5` (idiv), not the 0..1 scaled GetRandomNumberInRange
             }
 
             return ped;
@@ -856,8 +883,17 @@ CPed* CPopulation::AddPed(ePedType pedType, eModelID modelIndex, const CVector& 
 
             if (CCheat::IsActive(CHEAT_NINJA_THEME) && pedType == PED_TYPE_GANG7) {
                 GiveAndSetPedWeapon(ped, WEAPON_KATANA);
-            } else if (CGeneral::RandomBool(33)) { // Give random weapon
-                if (const auto wtype = CGangs::Gang[GetGangOfPedType(pedType)].GetRandomWeapon(); wtype != WEAPON_UNARMED) {
+            } else if (CGeneral::GetRandomNumberInRange(0, 100) < 33) { // 0x61290C: int version, `>= 33` skips
+                // 0x612921: second int roll, thresholds 33 / 66 (3 weapons) or 50 (2 weapons)
+                const auto& weapons = CGangs::Gang[GetGangOfPedType(pedType)].m_nGangWeapons;
+                const auto  roll    = CGeneral::GetRandomNumberInRange(0, 100);
+                eWeaponType wtype;
+                if (weapons[2] != WEAPON_UNARMED) {
+                    wtype = roll < 33 ? weapons[0] : roll < 66 ? weapons[1] : weapons[2];
+                } else {
+                    wtype = (weapons[1] != WEAPON_UNARMED && roll >= 50) ? weapons[1] : weapons[0];
+                }
+                if (wtype != WEAPON_UNARMED) {
                     GiveAndSetPedWeapon(ped, wtype);
                 }
             }
@@ -919,13 +955,25 @@ CPed* CPopulation::AddPed(ePedType pedType, eModelID modelIndex, const CVector& 
 
     if (CCheat::IsActive(CHEAT_SLUT_MAGNET) && pedType == PED_TYPE_PROSTITUTE) {
         ped->GetEventGroup().Add(CEventSexyPed{ FindPlayerPed(), TASK_COMPLEX_GANG_HASSLE_PED });
-        GiveAndSetPedWeapon(ped, CGeneral::RandomChoiceFromList({ WEAPON_DILDO1, WEAPON_DILDO2, WEAPON_VIBE1, WEAPON_VIBE2 }), 1);
+        GiveAndSetPedWeapon(ped, CGeneral::RandomChoiceFromList({ WEAPON_DILDO1, WEAPON_DILDO2, WEAPON_VIBE1, WEAPON_VIBE2 }), 0); // 0x612B3F: ammo 0
     }
 
     if (CCheat::IsActive(CHEAT_PEDS_ATTACK_OTHER_WITH_GOLFCLUB)) {
-        auto& pedsc = ped->GetIntelligence()->GetPedScanner();
-        pedsc.ScanForPedsInRange(*ped);
-        if (const auto closest = pedsc.GetClosestPedInRange()) { // Not what they did, but better (though possibly hacky)
+        // 0x612B5E: the closest other ped of the whole pool (any distance), pool walked in reverse, strict `<`
+        CPed* closest{};
+        float closestDistSq{};
+        for (auto& other : GetPedPool()->GetAllValidReverse()) {
+            if (&other == ped) {
+                continue;
+            }
+            const auto d = other.GetPosition() - ped->GetPosition();
+            const auto distSq = d.x * d.x + d.y * d.y + d.z * d.z;
+            if (!closest || distSq < closestDistSq) {
+                closest       = &other;
+                closestDistSq = distSq;
+            }
+        }
+        if (closest) {
             ped->GetEventGroup().Add(CEventAcquaintancePedHate{ closest, TASK_COMPLEX_KILL_PED_ON_FOOT });
         }
     }
@@ -1153,7 +1201,9 @@ void CPopulation::CreateWaitingCoppers(CVector createAt, float createaWithHeadin
     createAt.z += 1.f;
 
     // Create cop cars
-    if (auto numOfCars = NUM_CARS_FOR_WANTED_LEVEL[+plyrWantedLvl]) {
+    auto numOfCars = NUM_CARS_FOR_WANTED_LEVEL[+plyrWantedLvl];
+    const auto copCarModel = numOfCars ? CStreaming::GetDefaultCopCarModel() : MODEL_INVALID; // 0x613499
+    if (numOfCars && copCarModel > MODEL_INVALID) { // 0x6134A7: `jle` - no cop car model => no cars at all
         CNodeAddress createPosNodes[3]{};
         createPosNodes[0] = ThePaths.FindNthNodeClosestToCoors(
             createAt,
@@ -1166,8 +1216,6 @@ void CPopulation::CreateWaitingCoppers(CVector createAt, float createaWithHeadin
             true,
             &createPosNodes[1]
         );
-
-        const auto copCarModel = CStreaming::GetDefaultCopCarModel();
 
         for (const auto nodeAddr : createPosNodes) {
             if (!nodeAddr.IsValid()) {
@@ -1195,6 +1243,9 @@ void CPopulation::CreateWaitingCoppers(CVector createAt, float createaWithHeadin
             }
 
             CCarCtrl::JoinCarWithRoadSystem(veh);
+            if (veh->UsesSiren() && (rand() & 1)) { // 0x61369D
+                veh->vehicleFlags.bSirenOrAlarm = true;
+            }
             CWorld::Add(veh);
 
             if (!--numOfCars) {
@@ -1206,8 +1257,9 @@ void CPopulation::CreateWaitingCoppers(CVector createAt, float createaWithHeadin
     // Create cop peds
     if (auto numOfCopPeds = NUM_COPS_FOR_WANTED_LEVEL[+plyrWantedLvl]) {
         for (int32 i{}; i < 20; i++) { // int32 angleOffset = 0; angleOffset > -20; angleOffset--
+            const auto dist      = CGeneral::GetRandomNumberInRange(8.f, 10.f); // 0x6136E0: the distance is rolled BEFORE the heading
             const auto heading   = CGeneral::GetRandomNumberInRange(0.f, (float)(i) * 0.4f) - (float)(i) * 0.2f + createaWithHeading;
-            auto       copPedPos = CVector{ CVector2D{createAt} + CVector2D{(float)x87::sin(heading), (float)x87::cos(heading)} *CGeneral::GetRandomNumberInRange(8.f, 10.f), createAt.z };
+            auto       copPedPos = CVector{ CVector2D{createAt} + CVector2D{(float)x87::sin(heading), (float)x87::cos(heading)} * dist, createAt.z };
 
             if (!CWorld::GetIsLineOfSightClear(createAt, copPedPos, true, true, false, true)) {
                 continue;
@@ -1221,7 +1273,7 @@ void CPopulation::CreateWaitingCoppers(CVector createAt, float createaWithHeadin
             }
 
             bool bGroundHit{};
-            copPedPos.z = CWorld::FindGroundZFor3DCoord(copPedPos, &bGroundHit, nullptr);
+            copPedPos.z = CWorld::FindGroundZFor3DCoord(copPedPos, &bGroundHit, nullptr) + 1.f; // 0x6137F7
             if (!bGroundHit) {
                 continue;
             }
@@ -1229,7 +1281,9 @@ void CPopulation::CreateWaitingCoppers(CVector createAt, float createaWithHeadin
             const auto ped = new CCopPed{ 0 };
 
             ped->SetPosn(copPedPos);
-            ped->m_fAimingRotation = ped->m_fCurrentRotation = CVector2D{ createAt - copPedPos }.Heading();
+            auto toCreateAt = createAt - copPedPos;
+            toCreateAt.Normalise(); // 0x6138A3: 3D normalise first
+            ped->m_fAimingRotation = ped->m_fCurrentRotation = CVector2D{ toCreateAt }.Heading();
             ped->SetHeading(ped->m_fCurrentRotation);
 
             CWorld::Add(ped);
@@ -1263,74 +1317,77 @@ CPed* CPopulation::AddPedInCar(
     bool      mustBeMale,
     bool      isCriminal
 ) {
-    // Pick a model and ped type to use (TODO: Could probably just get the model type, and then resolve the ped type from the model)
-    const auto pedModel = [&]() -> eModelID {
+    // Pick a ped type and model to use (0x613A43..0x613B76). NOTE: Some cases pass a literal ped type (and, for cops, the COP TYPE as the "model") to `AddPed`
+    const auto [pedType, pedModel] = [&]() -> std::pair<ePedType, eModelID> {
+        const auto PedTypeOfModel = [](eModelID model) {
+            return CModelInfo::GetPedModelInfo(model)->GetPedType();
+        };
+
         if (addAsDriver) {
             const auto driverModel = FindSpecificDriverModelForCar_ToUse(veh->GetModelId());
             if (driverModel != MODEL_INVALID && CStreaming::IsModelLoaded(driverModel)) {
-                return driverModel;
+                return { PedTypeOfModel(driverModel), driverModel };
             }
         }
 
-        const auto FixIfInvalid = [&](eModelID model, bool checkRWObj = false) {
-            return model != MODEL_INVALID && (!checkRWObj || CModelInfo::GetPedModelInfo(model)->GetRwObject())
-                ? model
-                : MODEL_MALE01;
+        // 0x613B4D: a negative model => MODEL_MALE01 (the ped type stays as set by the case)
+        const auto FixIfInvalid = [&](ePedType pedType, eModelID model, bool checkRWObj = false) -> std::pair<ePedType, eModelID> {
+            if (model < 0) {
+                model = MODEL_MALE01;
+            }
+            if (checkRWObj && !CModelInfo::GetPedModelInfo(model)->GetRwObject()) { // 0x613B5A
+                return { PedTypeOfModel(MODEL_MALE01), MODEL_MALE01 };
+            }
+            return { pedType, model };
         };
 
-        const auto TranslateCopType = [&](eCopType ctype) {
-            return CCopPed::GetPedModelForCopType(ctype);
+        const auto CopCase = [](eCopType ctype) -> std::pair<ePedType, eModelID> {
+            return { PED_TYPE_COP, (eModelID)ctype }; // 0x613A8A..0x613AC8: `AddPed(PED_TYPE_COP, copType, ...)`
         };
 
         switch (veh->GetModelId()) {
         case MODEL_FIRETRUK:
-            return FixIfInvalid(CStreaming::GetDefaultFiremanModel());
+            return FixIfInvalid(PED_TYPE_FIREMAN, CStreaming::GetDefaultFiremanModel());
         case MODEL_AMBULAN:
-            return FixIfInvalid(CStreaming::GetDefaultMedicModel());
+            return FixIfInvalid(PED_TYPE_MEDIC, CStreaming::GetDefaultMedicModel());
         case MODEL_ENFORCER:
-            return TranslateCopType(COP_TYPE_SWAT1);
+            return CopCase(COP_TYPE_SWAT1);
         case MODEL_PREDATOR:
         case MODEL_POLMAV:
         case MODEL_COPCARLA:
         case MODEL_COPCARSF:
         case MODEL_COPCARVG:
         case MODEL_COPCARRU:
-            return TranslateCopType(COP_TYPE_CITYCOP);
+            return CopCase(COP_TYPE_CITYCOP);
         case MODEL_RHINO:
         case MODEL_BARRACKS:
-            return TranslateCopType(COP_TYPE_ARMY);
+            return CopCase(COP_TYPE_ARMY);
         case MODEL_FBIRANCH:
-            return TranslateCopType(COP_TYPE_FBI);
+            return CopCase(COP_TYPE_FBI);
         case MODEL_COPBIKE:
-            return TranslateCopType(COP_TYPE_LAPDM1);
-        case MODEL_STREAKC:
-            return FixIfInvalid(ChooseCivilianOccupation());
-        default: {
-            const auto gangPedTypeForRating = [carRating] {
-                switch (carRating) {
-                case 14: return PED_TYPE_GANG1;
-                case 15: return PED_TYPE_GANG2;
-                case 16: return PED_TYPE_GANG3;
-                case 17: return PED_TYPE_GANG4;
-                case 18: return PED_TYPE_GANG5;
-                case 19: return PED_TYPE_GANG6;
-                case 20: return PED_TYPE_GANG7;
-                case 21: return PED_TYPE_GANG8;
-                case 22: return PED_TYPE_GANG9;
-                case 23: return PED_TYPE_GANG10;
-                default: return PED_TYPE_NONE;
-                }
-            }();
-            if (gangPedTypeForRating != PED_TYPE_NONE) {
-                return FixIfInvalid(CGangs::ChooseGangPedModel(GetGangOfPedType(gangPedTypeForRating)), true);
+            return CopCase(COP_TYPE_LAPDM1);
+        case MODEL_STREAKC: {
+            auto model = ChooseCivilianOccupation();
+            if (model == MODEL_INVALID) { // 0x613B04
+                model = MODEL_MALE01;
             }
-            return FixIfInvalid(ChooseCivilianOccupationForVehicle(mustBeMale, veh), true);
+            return { PedTypeOfModel(model), model };
+        }
+        default: {
+            if (carRating >= 14 && carRating <= 23) { // 0x613B11
+                return FixIfInvalid((ePedType)(carRating - 7), CGangs::ChooseGangPedModel(GetGangOfPedType((ePedType)(carRating - 7))), true);
+            }
+            auto model = ChooseCivilianOccupationForVehicle(mustBeMale, veh);
+            if (model < 0) { // 0x613B3C
+                model = MODEL_MALE01;
+            }
+            return FixIfInvalid(PedTypeOfModel(model), model, true);
         }
         }
     }();
 
     const auto ped = AddPed(
-        CModelInfo::GetPedModelInfo(pedModel)->GetPedType(),
+        pedType,
         pedModel,
         veh->GetPosition(),
         false
@@ -1344,9 +1401,9 @@ CPed* CPopulation::AddPedInCar(
     );
 
     if (isCriminal) {
-        UpdatePedCount(ped, false);
+        UpdatePedCount(ped, true); // 0x613BB7: removed from the counters of the old ped type first (arg true = "removed")...
         ped->m_nPedType = PED_TYPE_CRIMINAL;
-        UpdatePedCount(ped, true);
+        UpdatePedCount(ped, false); // ...and added back as a criminal
     }
 
     return ped;
@@ -1355,12 +1412,10 @@ CPed* CPopulation::AddPedInCar(
 // 0x613CD0
 void CPopulation::PlaceMallPedsAsStationaryGroup(const CVector& posn) {
     if (CGame::currArea == eAreaCodes::AREA_CODE_4) {
-        CPedGroupPlacer{}.PlaceGroup(
-            CModelInfo::GetPedModelInfo(ChooseCivilianOccupation())->GetPedType(),
-            CGeneral::GetRandomNumberInRange(1, 5),
-            posn,
-            ePedGroupDefaultTaskAllocatorType::STAND_STILL
-        );
+        // Sequenced explicitly: the original picks the occupation (0x613CF2) BEFORE it rolls the group size (0x613D10)
+        const auto pedType = CModelInfo::GetPedModelInfo(ChooseCivilianOccupation())->GetPedType();
+        const auto numPeds = CGeneral::GetRandomNumberInRange(1, 5);
+        CPedGroupPlacer{}.PlaceGroup(pedType, numPeds, posn, ePedGroupDefaultTaskAllocatorType::STAND_STILL);
     }        
 }
 
@@ -2207,15 +2262,14 @@ int32 CPopulation::GeneratePedsAtAttractors(
         return 0;
     }
 
+    // 0x615AC3..0x615B8B: the exe compares the real distance (float, sqrt of z^2 + y^2 + x^2) with the radii: min < dist < max (both strict)
     const auto IsEffectInRadius = [&](CVector effectPos) {
-        const auto EffInRange = [
-            effDistSq = (effectPos - pos).SquaredMagnitude()
-        ](float min, float max) {
-            return effDistSq >= sq(min) && effDistSq <= sq(max);
-        };
-        return TheCamera.IsSphereVisible(effectPos, 2.f)
-            ? EffInRange(minRadius, maxRadius)
-            : EffInRange(minRadiusClose, maxRadiusClose);
+        const CVector d    = pos - effectPos;
+        const float   dist = std::sqrt(d.z * d.z + d.y * d.y + d.x * d.x);
+        const bool    vis  = TheCamera.IsSphereVisible(effectPos, 2.f);
+        const float   min  = vis ? minRadius : minRadiusClose;
+        const float   max  = vis ? maxRadius : maxRadiusClose;
+        return dist > min && dist < max;
     };
 
     // Exe loop shape (0x6159E0..0x615C57): the pass counter `i` (limit 12) is reset to 0 by every created ped, so 12 consecutive passes without a new ped end
@@ -2232,7 +2286,7 @@ int32 CPopulation::GeneratePedsAtAttractors(
             if (!ent->GetRwObject()) {
                 continue;
             }
-            if (!ent->IsInCurrentArea()) {
+            if (static_cast<int32>(CGame::currArea) != static_cast<int32>(static_cast<uint8>(ent->GetAreaCode()))) { // 0x615A17: exact match only (IsInCurrentArea also lets area 13 through)
                 continue;
             }
             auto* const attractor = notsa::cast_if_present<C2dEffectPedAttractor>(ent->GetRandom2dEffect(EFFECT_ATTRACTOR, true));
@@ -2254,7 +2308,7 @@ int32 CPopulation::GeneratePedsAtAttractors(
             }
 
             const auto usePoliceModel = bInPoliceStation
-                && CGeneral::RandomBool(70.f)
+                && CGeneral::GetRandomNumberInRange(0, 100) <= 70 // 0x615B94: the int version of the roll (RandomBool uses the float one)
                 && PedMICanBeCreatedAtThisAttractor(CStreaming::GetDefaultCopModel(), attractor->m_szScriptName);
 
             const auto model = usePoliceModel
@@ -2403,7 +2457,10 @@ void CPopulation::ManageDummy(CDummy* dummy, const CVector& posn) {
     if (!dummy->IsInCurrentArea() || !dummy->GetIsVisible()) {
         return;
     }
-    if ((posn - dummy->GetPosition()).SquaredMagnitude() >= sq(FindDummyDistForModel(dummy->GetModelId()))) {
+    // 0x616000: the exe compares the real distance (sqrt, summed z^2 + y^2 + x^2 at 24 bit precision) with the limit, not the squared ones
+    const CVector d = dummy->GetPosition() - posn;
+    const float dist = std::sqrt(d.z * d.z + d.y * d.y + d.x * d.x);
+    if (!(dist < FindDummyDistForModel(dummy->GetModelId()))) {
         return;
     }
     ConvertToRealObject(static_cast<CDummyObject*>(dummy));
@@ -2483,12 +2540,25 @@ void CPopulation::RemovePedsIfThePoolGetsFull() {
     if (GetPedPool()->GetNoOfFreeSpaces() >= 8) {
         return;
     }
-    const auto closest = rng::min( // It's guaranteed there to be a ped
-        GetPedPool()->GetAllValid<CPed*>(),
-        {},
-        [campos = TheCamera.GetPosition()](CPed* ped) { return (ped->GetPosition() - campos).SquaredMagnitude(); }
-    );
-    RemovePed(closest);
+    // 0x616300: The closest ped (to the camera) that `CanBeDeleted` (so never the player, group members, ...), iterating from the last slot, strict `<`, starting at 1e7.
+    // The distance is a real distance (sqrt) stored as a float; the sum is (z^2 + x^2) + y^2 (FPU precision control = 24 bit => x87d is float)
+    const CVector campos = TheCamera.GetPosition();
+    CPed*         closest = nullptr;
+    float         closestDist = 10'000'000.f;
+    for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValidReverse(), GetPedPool()->GetAllValid())) {
+        if (!ped.CanBeDeleted()) {
+            continue;
+        }
+        const CVector d = campos - ped.GetPosition();
+        const float   dist = std::sqrt(d.z * d.z + d.x * d.x + d.y * d.y);
+        if (dist < closestDist) {
+            closestDist = dist;
+            closest     = &ped;
+        }
+    }
+    if (closest) {
+        RemovePed(closest);
+    }
 }
 
 // 0x616420

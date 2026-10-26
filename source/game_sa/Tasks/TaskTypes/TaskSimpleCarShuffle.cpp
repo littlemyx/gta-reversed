@@ -88,7 +88,7 @@ bool CTaskSimpleCarShuffle::ProcessPed(CPed* ped) {
 
 // 0x646920
 bool CTaskSimpleCarShuffle::SetPedPosition(CPed* ped) {
-    if (!ped->bInVehicle || m_Anim && m_Anim->GetBlendAmount() >= 0.9f) {
+    if (!ped->bInVehicle || m_Anim && m_Anim->GetBlendAmount() > 0.9f) { // 0x646937..0x646945: strict (fcomp + test ah,0x41)
         m_LineUpUtility->ProcessPed(ped, m_Car, m_Anim);
     } else {
         ped->SetPedPositionInCar();

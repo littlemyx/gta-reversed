@@ -1,0 +1,50 @@
+addr	function	verdict	asm_range	note	fix_commit
+0x63D730	CTaskSimpleCarSetTempAction::Destructor	MATCH	0x63D730-0x63D736	vtable store then CTaskSimpleCarDrive dtor	
+0x645370	CTaskSimpleCarSetTempAction::ProcessPed	MATCH	0x645370-0x64540E	vehicle fetch+ref, drive ProcessPed, SetTempAction branches	
+0x645F80	CTaskSimpleCarOpenDoorFromOutside::SetPedPosition	MATCH	0x645F80-0x645F97	lineUp->ProcessPed(ped, veh, anim)	
+0x645FA0	CTaskSimpleCarOpenDoorFromOutside::ComputeAnimID_ToHook	MATCH	0x645FA0-0x645FFE	door 8/9/10/11 -> anim 356/358/355/357 (jump table checked), group from veh anim group	
+0x646020	CTaskSimpleCarOpenDoorFromOutside::FinishAnimCarOpenDoorFromOutsideCB	MATCH	0x646020-0x646061	anim=0, finished=1, ProcessOpenDoor(0,door,grp,id,1.0)	
+0x64AD90	CTaskSimpleCarOpenDoorFromOutside::StartAnim	MATCH	0x64AD90-0x64ADDA	BlendAnimation blend 4.0, finish CB	
+0x64AE00	CTaskSimpleCarOpenLockedDoorFromOutside::StartAnim	FIXED	0x64AE00-0x64AE66	doors 10 AND 11 use DOORLOCKED_LHS (389); port had only door 10	16258a99
+0x64D8E0	CTaskSimpleCarOpenLockedDoorFromOutside::ProcessPed	FIXED	0x64D8E0-0x64D906	returns true at once if vehicle null; port lacked it	16258a99
+0x646180	CTaskSimpleCarOpenLockedDoorFromOutside::SetPedPosition	MATCH	0x646180-0x646197	lineUp->ProcessPed(ped, veh, anim)	
+0x648100	CTaskSimpleCarSlowDragPedOut::ComputeAnimID_Wrapper	MATCH	0x648100-0x64815D	doors 8,9->365; 10,11->364; 18->366 (jump + byte table read from exe)	
+0x64C010	CTaskSimpleCarSlowDragPedOut::StartAnim	MATCH	0x64C010-0x64C05A	blend 1000.0, finish CB	
+0x6480E0	CTaskSimpleCarSlowDragPedOut::SetPedPosition	MATCH	0x6480E0-0x6480F7	lineUp->ProcessPed(ped, veh, anim)	
+0x64B3E0	CTaskSimpleCarShuffle::StartAnim	MATCH	0x64B3E0-0x64B435	anim 372 (SHUFFLE_RHS_1), blend 1000.0, finish CB	
+0x64DC40	CTaskSimpleCarShuffle::ProcessPed	MATCH	0x64DC40-0x64DC66	finished||!car -> true; start anim if none	
+0x646920	CTaskSimpleCarShuffle::SetPedPosition	FIXED	0x646920-0x646965	blend-amount test is strictly > 0.9 (fcomp/test ah,0x41), port had >=; only differs at exactly 0.9f	b0248897
+0x647690	CTaskSimpleCarJumpOut::ComputeAnimID_ToHook	MATCH	0x647690-0x6476DE	doors 8,9->385 (ROLLOUT_RHS); 10,11->384 (LHS) (jump table read from exe)	
+0x64BF00	CTaskSimpleCarJumpOut::StartAnim	MATCH	0x64BF00-0x64BF4A	blend 8.0, finish CB	
+0x647590	CTaskSimpleCarJumpOut::SetPedPosition	MATCH	0x647590-0x64767F	false if !bInVehicle; Z interpolation divisor 0.27 bike/quad else 0.07; strict > on Z. Exe calls FindZCoorForPed before checking the anim id (only the two rollout ids ever occur), port only inside the case - no observable difference	
+0x6472F0	CTaskSimpleCarGetOut::SetPedPosition	MATCH	0x6472F0-0x647329	null anim or blend==0 -> SetPedPositionInCar else lineUp->ProcessPed(ped, veh, anim)	
+0x647330	CTaskSimpleCarGetOut::ComputeAnimID_ToHook	FIXED	0x647330-0x647450	automobile: m_isUpsideDown = IsCarUpsideDown(veh) (assignment, can clear); port only set it true. Rest (right.z thresholds -0.5/0.5, anim tables, crawl-out ids 108/109, GETOUT 374/376/373/375) matches	cd915634
+0x64BDE0	CTaskSimpleCarGetOut::StartAnim	MATCH	0x64BDE0-0x64BE31	RemoveCarSitAnim, blend 1000.0, finish CB	
+0x64DC70	CTaskSimpleCarGetOut::ProcessPed	FIXED	0x64DC70-0x64DD5D	no vehicle -> return true (port false); SMASH_N_BOOM reset only if ped->IsPlayer() (port: any ped); rest (blend==1 -> bRenderPedInCar, ProcessOpenDoor args, StartAnim path) matches	9636dce9
+0x64C190	CTaskSimpleCarSlowBeDraggedOut::StartAnim	MATCH	0x64C190-0x64C1F2	RemoveCarSitAnim, blend 1000.0, finish CB, front-anim flag = flags bit 11	
+0x648230	CTaskSimpleCarSlowBeDraggedOut::Constructor	MATCH	0x648230-0x6482A4	field layout/init order, RegisterReference on vehicle (CVehicle::Ref)	
+0x64C0E0	CTaskSimpleCarSlowBeDraggedOut::SetPedPosition	MATCH	0x64C0E0-0x64C18A	port omits the transient m_Anim = GetAssociation(...) / m_Anim = 0 pair; no observable difference	
+0x64E180	CTaskSimpleCarSlowBeDraggedOut::ProcessPed	FIXED	0x64E180-0x64E290	ProcessOpenDoor time arg for isDraggedBySelf is m_Anim->m_CurrentTime (port 1.0); rest (floor-hit 36/39 blend 1000, time>1.7 -> lineup type 2, bInVehicle) matches	231bb4e9
+0x64E060	CTaskSimpleCarSlowDragPedOut::ProcessPed	FIXED	0x64E060-0x64E179	rand>0x200 branch: SayJacking(ped, jacked) then SayJacked(jacked); port called SayJacked(ped)/SayJacking(jacked, ped) (roles swapped); rest (group 103/112 and bus+door8 early-out, jacked-ped lookup, ProcessOpenDoor w/ anim time) matches	e71a7cd4
+0x64D710	CTaskSimpleCarOpenDoorFromOutside::ProcessPed	FIXED	0x64D710-0x64D8C6	IsAutomobile polarity inverted: exe -> OpenDoor(ratio) iff automobile && time<timing else ProcessOpenDoor; port -> ProcessOpenDoor for automobile, OpenDoor for non-automobile; rest (ratio init, cop/bCanExitCar block (FIX_BUGS off in run build), door comp table 3/5/2/4) matches	b35c1dc9
+0x67A250	CTaskSimpleClimb::Shutdown	MATCH	0x67A250-0x67A273	RemoveCollisionVolumes on climb/standup/vault/findedge col models in that order	
+0x67A320	CTaskSimpleClimb::StartSpeech	MATCH	0x67A320-0x67A378	player only; PULLUP(2)->ctx 354, STANDUP(3)->ctx 355	
+0x680570	CTaskSimpleClimb::TestForStandUp	MATCH	0x680570-0x6805EE	edge offset (-0.4,0) from sin/cos(angle), ScanToGrab(...,0,1,0,&pos) == 0	
+0x6804D0	CTaskSimpleClimb::TestForVault	MATCH	0x6804D0-0x680567	vehicle entity -> false, else ScanToGrab(...,0,0,1,&pos)==0	
+0x6803A0	CTaskSimpleClimb::TestForClimb	MATCH	0x6803A0-0x6804CF	handhold transform for physical entities, edge offset, -9999.9 on blocked; UNSURE-free but the exe keeps the transformed heading unrounded (double) for sin/cos of the offset - port rounds to float first (sub-ulp)	
+0x620660	CTaskSimpleChoking::UpdateChoke	MATCH	0x620660-0x62077C	teargas flag, attacker ref swap, finished=0, restart GAS_CWR anim (speed 0.8+0.3*r, 2 rand calls) only when anim exists and is not GAS_CWR, remaining 1000+[0,1000)	
+0x620490	CTaskSimpleChoking::ProcessPed	MATCH	0x620490-0x620651	facing dot>0 -> atan2(-dx,dy); remaining -= ftol(ts*0.02*1000) clamp 0; GAS_CWR / IDLE_TIRED(10) switching, 8000..12000 rerolls, cough ctx 340	
+0x64B4A0	CTaskSimpleCarGoToPointNearDoorUntilDoorNotInUse::ProcessPed	MATCH	0x64B4A0-0x64B5AA	inlined UpdatePoint (radius 0.5, flags clear circled|set updated), StandStill(-1) when arrived, else WaitForDoor result	
+0x64DD60	CTaskSimpleCarJumpOut::ProcessPed	FIXED	0x64DD60-0x64E05C	(1) bSlopePitch (CPedIK 0x8) instead of bUseArm (0x4) at 0x64DE1F; (2) door opened with *_Component accessors, SetDoorOpen((eDoors)8..11) was a no-op; rest (shift, thresholds 0.35/0.15/0.07, SetPedOut, heading, ignored-collision) matches	a396aa2b
+0x648180	CTaskSimpleCarSlowDragPedOut::FinishAnimCarSlowDragPedOutCB (not in S11.tsv)	FIXED	0x648180-0x648229	same SetDoorOpen((eDoors)TARGET_DOOR) no-op bug -> SetDoorOpen_Component	c84b8820
+0x647D10	CTaskSimpleCarSetPedOut::ProcessPed	MATCH	0x647D10-0x647FDD	full flow incl. driver removal, abandoned status, lock reset, garage lights, side-stand (|vel|<double), player/mission/wander tasks, touching-water copy	
+0x6479B0	CTaskSimpleCarSetPedOut::PositionPedOutOfCollision	MATCH	0x6479B0-0x647D05	boat branch (sit offset 0.5, drowning/forward 0.3 probes, momentum 0.9/-0.1, standing ref) and land branch (2 sphere probes +-0.2 r0.4, line-of-sight args) match	
+0x64C220	CTaskSimpleCarSetPedSlowDraggedOut::ProcessPed	NOT_REACHED		token budget	
+0x64B5D0	CTaskSimpleCarSetPedInAsPassenger::ProcessPed	NOT_REACHED		token budget	
+0x64B950	CTaskSimpleCarSetPedInAsDriver::ProcessPed	NOT_REACHED		token budget	
+0x67DBE0	CTaskSimpleClimb::StartAnim	NOT_REACHED		token budget	
+0x67A5D0	CTaskSimpleClimb::GetCameraStickModifier	NOT_REACHED		token budget	
+0x67FD30	CTaskSimpleClimb::ScanToGrab	NOT_REACHED		token budget	
+0x67A890	CTaskSimpleClimb::CreateColModel	NOT_REACHED		token budget	
+0x67DE10	CTaskSimpleClimb::ScanToGrabSectorList<CPtrListSingleLink<CPhysical*>>	NOT_REACHED		token budget	
+0x680DC0	CTaskSimpleClimb::ProcessPed	NOT_REACHED		token budget	

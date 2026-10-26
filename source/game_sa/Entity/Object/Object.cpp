@@ -152,17 +152,11 @@ CObject::~CObject() {
 
 // 0x5A1EE0
 void* CObject::operator new(size_t size) {
-#ifdef NOTSA_PORTABLE
-    GetObjectPool()->NotsaCheckAllocSize(size, "object");
-#endif
     return GetObjectPool()->New();
 }
 
 // 0x5A1EF0
 void* CObject::operator new(size_t size, int32 poolRef) {
-#ifdef NOTSA_PORTABLE
-    GetObjectPool()->NotsaCheckAllocSize(size, "object");
-#endif
     return GetObjectPool()->NewAt(poolRef);
 }
 
@@ -366,6 +360,8 @@ void CObject::SpecialEntityPreCollisionStuff(CPhysical* colPhysical, bool bIgnor
     else
     {
         if (!physicalFlags.bDisableZ) {
+            const bool bLampPostIgnore = objectFlags.bIsLampPost && (GetUp().z < 0.66F || GetIsStuck())
+                && (colPhysical->GetIsTypeVehicle() || colPhysical->GetIsTypePed());
             if (physicalFlags.bDisableMoveForce || physicalFlags.bInfiniteMass)
             {
                 if (bIgnoreStuckCheck || GetIsStuck())
@@ -376,15 +372,15 @@ void CObject::SpecialEntityPreCollisionStuff(CPhysical* colPhysical, bool bIgnor
                 else
                     bCollidedEntityUnableToMove = true;
             }
-            else if (objectFlags.bIsLampPost && (GetUp().z < 0.66F || GetIsStuck()))
+            else if (bLampPostIgnore)
             {
-                if (colPhysical->GetIsTypeVehicle() || colPhysical->GetIsTypePed()) {
-                    bCollidedEntityCollisionIgnored = true;
-                    if (colPhysical->GetIsTypeVehicle())
-                        return;
+                // exe 0x59FFDD..0x5A0002: a ped returns right here (jne 0x5A02C1), a vehicle is stored as the ignored entity; any other type
+                // (and a lamp post that is neither fallen nor stuck) continues with the general code below (0x5A0007)
+                bCollidedEntityCollisionIgnored = true;
+                if (colPhysical->GetIsTypePed())
+                    return;
 
-                    m_pEntityIgnoredCollision = colPhysical;
-                }
+                m_pEntityIgnoredCollision = colPhysical;
             }
             else if ( colPhysical->GetIsTypeVehicle())
             {
@@ -397,7 +393,10 @@ void CObject::SpecialEntityPreCollisionStuff(CPhysical* colPhysical, bool bIgnor
                         if (GetIsStuck() || colPhysical->GetIsStuck())
                             bThisOrCollidedEntityStuck = true;
                     }
-                    else if (!CanBeSmashed())
+                    else if (!CanBeSmashed() && [&] { // exe 0x5A008A..0x5A00C3: only objects whose bounding box max is below 1.0 on every axis go on
+                        const auto& bbMax = CEntity::GetColModel()->GetBoundingBox().m_vecMax;
+                        return bbMax.x < 1.0F && bbMax.y < 1.0F && bbMax.z < 1.0F;
+                    }())
                     {
                         auto tempMat = CMatrix();
                         auto* cm = CEntity::GetColModel();
@@ -422,9 +421,13 @@ void CObject::SpecialEntityPreCollisionStuff(CPhysical* colPhysical, bool bIgnor
                     }
                 }
             }
-            else if (m_nModelIndex != MODEL_GRENADE
-                || !colPhysical->GetIsTypePed()
-                || m_matrix->GetPosition().z >= colPhysical->m_matrix->GetPosition().z)
+            else if (m_nModelIndex == MODEL_GRENADE
+                && colPhysical->GetIsTypePed()
+                && m_matrix->GetPosition().z < colPhysical->m_matrix->GetPosition().z)
+            {
+                bCollisionDisabled = true; // exe 0x5A01B1..0x5A01CF (jnp 0x5A0292)
+            }
+            else
             {
                 if (colPhysical->GetIsTypeObject() && colPhysical->AsObject()->m_pObjectInfo->m_fUprootLimit > 0.0F && !colPhysical->m_pAttachedTo)
                 {
@@ -456,7 +459,7 @@ uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSett
         auto* cm = GetModelInfo()->GetColModel();
         const auto fMove = m_vecMoveSpeed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
         if (fMove >= sq(cm->GetBoundRadius()))
-            return NOTSA_FTOL(uint8, std::ceil(std::sqrt(fMove) / cm->GetBoundRadius()));
+            return static_cast<uint8>(std::ceil(std::sqrt(fMove) / cm->GetBoundRadius()));
 
         return 1;
     }
@@ -468,7 +471,7 @@ uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSett
             auto vecSpeed = CPhysical::GetSpeed(vecMin);
             const auto fMove = vecSpeed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
             if (fMove >= 0.0225F) // std::pow(0.15F, 2.0F)
-                return NOTSA_FTOL(uint8, std::ceil(std::sqrt(fMove) / 0.15F));
+                return static_cast<uint8>(std::ceil(std::sqrt(fMove) / 0.15F));
 
             return 1;
         }
@@ -490,7 +493,7 @@ uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSett
             auto& vecUsed = vecMin.SquaredMagnitude() >= vecMax.SquaredMagnitude() ? vecMin : vecMax;
             const auto fMove = vecUsed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
             if (fMove >= 0.09F)
-                return NOTSA_FTOL(uint8, std::ceil(std::sqrt(fMove) / 0.3F));
+                return static_cast<uint8>(std::ceil(std::sqrt(fMove) / 0.3F));
 
             return 1;
         }
@@ -502,14 +505,14 @@ uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSett
             const auto fEdge = std::max({ vecSize.x, vecSize.y, vecSize.z }) / 2.0F;
             const auto fMove = m_vecMoveSpeed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
             if (fMove >= sq(fEdge)) {
-                return NOTSA_FTOL(uint8, std::ceil(std::sqrt(fMove) / fEdge));
+                return static_cast<uint8>(std::ceil(std::sqrt(fMove) / fEdge));
             }
             return 1;
         }
 
         const auto fMove = m_vecMoveSpeed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
         if (fMove >= 0.09F)
-            return NOTSA_FTOL(uint8, std::ceil(sqrt(fMove) / 0.3F));
+            return static_cast<uint8>(std::ceil(sqrt(fMove) / 0.3F));
 
         return 1;
     }
@@ -518,7 +521,7 @@ uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSett
     const auto fLongest = std::max({ box.m_vecMax.x, box.m_vecMax.y, -box.m_vecMin.x, -box.m_vecMin.y });
     const auto fMove = std::fabs(fLongest * m_vecTurnSpeed.z);
     if (fMove > 0.1F)
-        return NOTSA_FTOL(uint8, std::ceil(fMove * 10.0F));
+        return static_cast<uint8>(std::ceil(fMove * 10.0F));
 
     return 1;
 }
@@ -643,7 +646,7 @@ void CObject::ProcessGarageDoorBehaviour() {
         else if (garage.m_nType == eGarageType::HANGAR_ABANDONED_AIRPORT)
             m_matrix->GetPosition().x = vecDummyPos.x - garage.m_fDoorPosition * m_matrix->GetRight().x * 14.0F;
         else
-            m_matrix->GetPosition().z = vecDummyPos.z + fHeight * garage.m_fDoorPosition / 1.1F;
+            m_matrix->GetPosition().z = vecDummyPos.z + fHeight * garage.m_fDoorPosition * 0.90909088F; // exe 0x44A5E0: multiplies by the float constant 0x3F68BA2E at 0x8599A0 (not a division by 1.1F)
     }
 
     SetUsesCollision(garage.m_bDoorClosed);
@@ -780,7 +783,7 @@ void CObject::Init() {
     SetIsStatic(true);
 
     m_nObjectFlags &= 0xFC000000 | 0x40000;
-    // objectFlags.bCanBeAttachedToMagnet = true;
+    objectFlags.bCanBeAttachedToMagnet = true; // exe 0x59F882..0x59F887: `and 0xFC040000; or 0x40000`
     if (m_nModelIndex == 0xFFFF) {
         objectFlags.bHasNoModel = false;
     } else {
@@ -789,12 +792,13 @@ void CObject::Init() {
         if (mi->GetColModel()->m_bHasCollisionVolumes) {
             CColStore::AddRef(mi->GetColModel()->m_nColSlot);
             objectFlags.bHasNoModel = true;
+        }
 
-            auto* ami = mi->AsAtomicModelInfoPtr();
-            if (ami && ami->SwaysInWind() && !physicalFlags.bDisableCollisionForce) {
-                auto& bbox = mi->GetColModel()->GetBoundingBox();
-                m_vecCentreOfMass.z = bbox.m_vecMin.z + bbox.GetHeight() * 0.2F;
-            }
+        // exe 0x59F8DC: the sway centre-of-mass test is NOT inside the has-collision-volumes branch (the `je` of that branch lands on it)
+        auto* ami = mi->AsAtomicModelInfoPtr();
+        if (ami && ami->SwaysInWind() && !physicalFlags.bDisableCollisionForce) {
+            auto& bbox = mi->GetColModel()->GetBoundingBox();
+            m_vecCentreOfMass.z = bbox.m_vecMin.z + bbox.GetHeight() * 0.2F;
         }
     }
 
@@ -870,7 +874,7 @@ void CObject::Init() {
 void CObject::DoBurnEffect() const {
     const auto& box = GetModelInfo()->GetColModel()->GetBoundingBox();
     const auto& vecSize = box.GetSize();
-    const auto nUsedSize = NOTSA_FTOL(int32, vecSize.x * vecSize.y * vecSize.z * m_fBurnDamage / 20.0F);
+    const auto nUsedSize = NOTSA_FTOL_SC(int32, vecSize.x * vecSize.y * vecSize.z * m_fBurnDamage * 0.05F); // exe 0x59FBC3: multiplies by the float 0.05f (0x858C28), no division by 20
     if (nUsedSize <= 0)
         return;
 
@@ -998,7 +1002,7 @@ void CObject::ProcessTrainCrossingBehaviour() {
         return;
 
     const float fAngle = x87::acos(m_matrix->GetUp().z);
-    const auto fTimeStep = CTimer::GetTimeStep() / 200.0F;
+    const auto fTimeStep = CTimer::GetTimeStep() * 0.005F; // exe 0x5A0CE7: multiplies by the float 0.005f (0x858B4C), no division by 200
     if (objectFlags.bTrainCrossEnabled)
         SetMatrixForTrainCrossing(m_matrix, std::max(0.0F, fAngle - fTimeStep));
     else
@@ -1179,9 +1183,10 @@ void CObject::Explode() {
         auto vecDir = CVector(0.0F, 0.0F, 1.0F);
         ObjectDamage(10'000.0F, &vecPos, &vecDir, this, eWeaponType::WEAPON_EXPLOSION);
     } else if (!physicalFlags.bDisableCollisionForce) {
-        m_vecMoveSpeed.x += CGeneral::GetRandomNumberInRange(-0.0256F, 0.0256F);
-        m_vecMoveSpeed.y += CGeneral::GetRandomNumberInRange(-0.0256F, 0.0256F);
+        // exe 0x5A13E9..0x5A1431: x and y get `(float)((rand() & 0xFF) - 128) * 0.0002f` (const 0x85A7D0), not a float-range random
         m_vecMoveSpeed.z += 0.5F;
+        m_vecMoveSpeed.x += static_cast<float>(static_cast<int32>(CGeneral::GetRandomNumber() & 0xFF) - 0x80) * 0.0002F;
+        m_vecMoveSpeed.y += static_cast<float>(static_cast<int32>(CGeneral::GetRandomNumber() & 0xFF) - 0x80) * 0.0002F;
 
         if (GetIsStatic()) {
             SetIsStatic(false);
@@ -1211,7 +1216,7 @@ void CObject::ObjectFireDamage(float damage, CEntity* damager) {
 
     if (m_nModelIndex == ModelIndices::MI_GRASSPLANT)
     {
-        m_fBurnDamage = 1.0F - (m_fHealth / 2000.0F);
+        m_fBurnDamage = 1.0F - m_fHealth * 0.0005F; // exe 0x5A1620: multiplies by the float constant 0.0005f (0x859978), no division by 2000
         m_nBurnTime = CTimer::GetTimeInMS() + 3000;
     }
 
@@ -1233,7 +1238,7 @@ void CObject::ObjectFireDamage(float damage, CEntity* damager) {
         if (!CEntity::GetIsStatic())
             CPhysical::RemoveFromMovingList();
 
-        SetIsStatic(true);
+        CEntity::SetIsStatic(true); // exe 0x5A16F0: `or [this+0x1C], 4` - not the virtual CObject::SetIsStatic, which would also clear physicalFlags.bDoorHitEndStop
         physicalFlags.bExplosionProof = true;
         ResetMoveSpeed();
         ResetTurnSpeed();
@@ -1252,6 +1257,8 @@ void CObject::TryToFreeUpTempObjects(int32 numObjects) {
         return;
 
     for (auto& obj : NOTSA_EXE_OR(GetObjectPool()->GetAllValidReverse(), GetObjectPool()->GetAllValid())) {
+        if (numObjects <= 0) // exe 0x5A1868: the loop stops as soon as the requested number has been freed
+            break;
         if (obj.IsTemporary() && !obj.IsVisible()) {
             CWorld::Remove(&obj);
             delete &obj;
@@ -1403,7 +1410,7 @@ void CObject::ProcessControlLogic() {
         auto fRopeLengthChange = 0.0F;
         if (iRopeInd >= 0) {
             auto& rope = CRopes::GetRope(iRopeInd);
-            nSegments = NOTSA_FTOL(uint8, rope.m_fSegmentLength * 32.0F);
+            nSegments = static_cast<uint8>(rope.m_fSegmentLength * 32.0F);
             fRopeLengthChange = rope.m_fMass * rope.m_fSegmentLength - static_cast<float>(nSegments) * rope.m_fTotalLength;
         }
 

@@ -1,0 +1,33 @@
+addr	function	verdict	asm range	note	fix commit
+0x5D44B0	CPedSaveStructure::Extract	MATCH	0x5D44B0-0x5D4617	pos/health/armour/slot/createdBy/style, 13-weapon loop (model1/2 request, GiveWeapon, ammoInClip by loop index), SetCurrentWeapon, area byte, enex pool lookup	-
+0x5D46E0	CPlayerPed::Load	MATCH	0x5D46E0-0x5D4752	chaos+wanted level, clothes desc 0x78, chosen weapon byte; exe reads wanted level / chosen weapon as a byte, port as dword (same for valid saves)	-
+0x5D57E0	CPlayerPed::Save	MATCH	0x5D57E0-0x5D585E	size 0x84 + struct; exe leaves the padding as stack garbage, port writes 0 (byte-compatible)	-
+0x609520	CPlayerPed::DeactivatePlayerPed	MATCH	0x609520-0x609534	Players[id].m_pPed -> CWorld::Remove	-
+0x609540	CPlayerPed::ReactivatePlayerPed	MATCH	0x609540-0x609554	Players[id].m_pPed -> CWorld::Add	-
+0x609590	CPlayerPed::CanPlayerStartMission	MATCH	0x609590-0x60961C	conditions, task slots, event 0x20	-
+0x609650	CPlayerPed::ReApplyMoveAnims	MATCH	0x609650-0x6096ED	anim ids 0,1,2,3,5; hash compare; blend copy; flags |= 4; delta -1000	-
+0x6098F0	CPlayerPed::ProcessAnimGroups	NOT_REACHED	-	token budget	-
+0x60A0A0	CPlayerPed::DisbandPlayerGroup	FIXED	0x60A0BD-0x60A102	RemoveAllFollowers(true) always runs; Say only for >0 members, DISBAND_ONE (0x96) for one member (port: ATTACK_SINGLE, removal only when 0 members)	862aa43d
+0x60A110	CPlayerPed::MakeGroupRespondToPlayerTakingDamage	MATCH	0x60A110-0x60A1CB	source entity, member count, enter-leaders-vehicle flag, Clone, AddEvent	-
+0x60A1D0	CPlayerPed::TellGroupToStartFollowingPlayer	MATCH	0x60A1D0-0x60A43A	flags, allocator type 5, gather event, Say contexts 0x97..0xA0 with 3.0/10.0 thresholds	-
+0x60A9C0	CPlayerPed::SetRealMoveAnim	NOT_REACHED	-	token budget (exedis 400-line cap)	-
+0x60A8D0	CPlayerPed::HandlePlayerBreath	MATCH	0x60A8D0-0x60A98F	infinite-oxygen cheat idx 62, bDrownsInWater bit, DROWNING damage 3.0*dt, flag bit 7 cleared	-
+0x60B460	CPlayerPed::MakeChangesForNewWeapon	FIXED	0x60B4E1-0x60B53D	fire anim flags |= 9 (port ANDed PLAYING & FINISH_AUTO_REMOVE = no-op); ammo in clip = signed min(total, sext16 clip)	827deb05
+0x60B550	CPlayerPed::LOSBlockedBetweenPeds	FIXED	0x60B5B0-0x60B632	target point is entity2 (port used entity1 twice); on a hit returns arg1 != arg2 (cmp [esp+4Ch],esi), not hitEntity != entity2	24538eaa
+0x60B650	CPlayerPed::Compute3rdPersonMouseTarget	NOT_REACHED	-	token budget	-
+0x60C1E0	CPlayerPed::KeepAreaAroundPlayerClear	NOT_REACHED	-	token budget	-
+0x60C520	CPlayerPed::SetPlayerMoveBlendRatio	MATCH	0x60C520-0x60C5ED	move states 4/6/7 -> 1.0/1.8/2.5 else 0; point path min(2, 2*dist2D); NaN edge differs (std::min(2,NaN)=2, exe keeps NaN) - unreachable	-
+0x60DC50	CPlayerPed::FindWeaponLockOnTarget	NOT_REACHED	-	token budget (exedis 400-line cap)	-
+0x60E530	CPlayerPed::FindNextWeaponLockOnTarget	NOT_REACHED	-	token budget (exedis 400-line cap)	-
+0x60C840	CPlayerPed::MakeThisPedJoinOurGroup	NOT_REACHED	-	token budget	-
+0x60CD20	CPlayerPed::SetInitialState	MATCH	0x60CD20-0x60CFF4	flag bits (13,20,26 / 1,6,26 of dwords 0/2), tasks, anim group 0x36, temper 50, group setup	-
+0x60D000	CPlayerPed::MakeChangesForNewWeapon(slot)	MATCH	0x60D000-0x60D01C	-1 check, slot*0x1c weapon type	-
+0x60D020	CPlayerPed::EvaluateTarget	MATCH	0x60D020-0x60D1B6	PC24 x87: float per-op equals the port	-
+0x60D1C0	CPlayerPed::EvaluateNeighbouringTarget	MATCH	0x60D1C0-0x60D341	angle normalise, arg5 side logic, strict > store	-
+0x60D790	CPlayerPed::SetupPlayerPed	MATCH	0x60D790-0x60D840	player2 ped type, orientation, World::Add, accuracy 100, state PLAYING	-
+0x60D850	CPlayerPed::ProcessWeaponSwitch	NOT_REACHED	-	token budget	-
+0x60EA90	CPlayerPed::ProcessControl	NOT_REACHED	-	token budget (exedis 400-line cap)	-
+0x6FF8A0	CPlayerSkin::Initialise	MATCH	0x6FF8A0-0x6FF8C3	slot name "skin"	-
+0x6FF8D0	CPlayerSkin::Shutdown	MATCH	0x6FF8D0-0x6FF8DC	-	-
+0x6FF900	CPlayerSkin::RenderFrontendSkinEdit	MATCH	0x6FF900-0x6FFA03	constants 1.35/0.1/7.725, +2 deg per >7 ms, ambient 0.65	-
+0x6FFA10	CPlayerSkin::GetSkinTexture	MATCH	0x6FFA10-0x6FFB28	path selection (empty or the 4-char placeholder name -> player.bmp), bmp load, linear filter, dictionary add	-

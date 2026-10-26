@@ -607,7 +607,10 @@ bool CPed::PedIsReadyForConversation(bool checkLocalPlayerWantedLevel) {
 * @addr 0x455560
 */
 bool CPed::PedCanPickUpPickUp() {
-    return !FindPlayerPed(0)->GetTaskManager().FindActiveTaskFromList({ TASK_COMPLEX_ENTER_CAR_AS_DRIVER, TASK_COMPLEX_USE_MOBILE_PHONE });
+    // 0x455560: the exe asks CPedIntelligence::FindTaskByType (primary slots DEFAULT/PRIMARY/EVENT_RESPONSE_TEMP/NONTEMP and their subtasks),
+    // not the active-task + secondary-slot search of CTaskManager::FindActiveTaskByType
+    auto* const intel = FindPlayerPed(0)->GetIntelligence();
+    return !intel->FindTaskByType(TASK_COMPLEX_ENTER_CAR_AS_DRIVER) && !intel->FindTaskByType(TASK_COMPLEX_USE_MOBILE_PHONE);
 }
 
 /*!
@@ -633,7 +636,7 @@ void CPed::CreateDeadPedMoney() {
         return;
     }
 
-    if (m_nMoneyCount > 10) {
+    if (m_nMoneyCount >= 10) { // 0x45913C: `cmp cx, 0xA; jb return`
         CPickups::CreateSomeMoney(GetPosition(), m_nMoneyCount);
         m_nMoneyCount = 0;
     }
@@ -714,6 +717,9 @@ void CPed::CreateDeadPedWeaponPickups() {
             );
         }
     }
+
+    // 0x459315: the exe empties the dead ped's inventory once the pickups are dropped (not reached on the early returns above)
+    ClearWeapons();
 }
 
 /*!
@@ -1411,7 +1417,7 @@ void CPed::SetRadioStation()
 
     if (m_pVehicle->m_pDriver == this) {
         const auto& mi = *(CPedModelInfo*)GetModelInfo();
-        m_pVehicle->m_vehicleAudio.m_AuSettings.RadioStation = (CGeneral::GetRandomNumber() <= RAND_MAX / 2) ? mi.m_nRadio1 : mi.m_nRadio2;
+        m_pVehicle->m_vehicleAudio.m_AuSettings.RadioStation = (CGeneral::GetRandomNumber() < RAND_MAX / 2) ? mi.m_nRadio1 : mi.m_nRadio2; // 0x5DFDC5: `cmp eax, 0x3FFF; jge radio2` - strictly less
     }
 }
 
@@ -1645,9 +1651,8 @@ float CPed::GetWalkAnimSpeed() {
     //       It won't work correctly if first frame has no translation, nor if the animation happens on any other axis than Y, etc..
 
     const auto lastFrame = seq->GetUKeyFrame(seq->m_FramesNum - 1);
-    const auto lastFrameY = seq->HasTranslation()
-        ? lastFrame->Trans.y
-        : ((KeyFrame*)lastFrame)->Rot.imag.y;
+    // 0x5E04FB: without translation the exe still reads +0x18 of the (20-byte stride) frame, i.e. `Trans.y` of the GetUKeyFrame pointer - not the rotation's y
+    const auto lastFrameY = lastFrame->Trans.y;
     const auto firstFrameY = seq->GetUKeyFrame(0)->Trans.y;
     return (lastFrameY - firstFrameY) / hier->m_fTotalTime;
 }
@@ -1982,7 +1987,10 @@ bool CPed::OurPedCanSeeThisEntity(CEntity* entity, bool isSpotted) {
     // Seems like they explicitly use this one instead of `IsLineOfSightClear` because of the `shootThru` check.
     CColPoint cp{};
     CEntity* hitEntity{};
-    return !CWorld::ProcessLineOfSight(GetPosition(), target, cp, hitEntity, true, false, false, isSpotted, false, false, false, isSpotted);
+    // 0x5E1719..0x5E1726: the ray starts at OUR position + 1.0 in Z (0x858624), not at the raw position
+    auto source{GetPosition()};
+    source.z += 1.f;
+    return !CWorld::ProcessLineOfSight(source, target, cp, hitEntity, true, false, false, isSpotted, false, false, false, isSpotted);
 }
 
 /*!
@@ -2384,9 +2392,11 @@ void CPed::RemoveWeaponModel(int32 modelIndex) {
 * @brief Creates goggles model for current infrared/night vision. See PutOnGoggles.
 */
 void CPed::AddGogglesModel(int32 modelIndex, bool& inOutGogglesState) {
-    assert(!m_pGogglesObject); // Make sure it's not created already
-
     if (modelIndex != MODEL_INVALID) {
+        // 0x5E3AA4: the exe does not assume there are no goggles yet - it removes the existing ones first
+        if (m_pGogglesObject) {
+            RemoveGogglesModel();
+        }
         m_pGogglesObject = reinterpret_cast<RpClump*>(CModelInfo::GetModelInfo(modelIndex)->CreateInstanceAddRef());
 
         m_pGogglesState = &inOutGogglesState;
@@ -2618,11 +2628,15 @@ void CPed::GiveObjectToPedToHold(int32 modelIndex, uint8 replace) {
 
     // Deal with ped already holding an entity.
     // If `replace` is `true`, just drop the entity, otherwise do nothing.
-    if (GetTaskManager().HasAnyOf<TASK_SIMPLE_HOLD_ENTITY>()) {
-        if (!GetEntityThatThisPedIsHolding() || !replace) {
-            return;
-        }
+    // 0x5E43B3..0x5E43EA: the drop is decided independently of the HOLD task lookup - GetEntityThatThisPedIsHolding also sees the PICKUP/PUTDOWN tasks
+    const bool hadHoldTask = GetTaskManager().HasAnyOf<TASK_SIMPLE_HOLD_ENTITY>();
+    bool       dropped     = false;
+    if (GetEntityThatThisPedIsHolding() && replace) {
         DropEntityThatThisPedIsHolding(true);
+        dropped = true;
+    }
+    if (hadHoldTask && !dropped) {
+        return;
     }
 
     // Create object
@@ -3552,6 +3566,9 @@ void CPed::RemoveWeaponWhenEnteringVehicle(int32 isJetpack) {
     if (const auto& w = GetWeaponInSlot(eWeaponSlot::SMG); w.GetType() == eWeaponType::WEAPON_MP5) {
         return HandleDriveByWeapons(w);
     }
+
+    // 0x5E63E8 -> 0x5E6461: not a drive-by SMG (and not on a jetpack) - the exe still takes the weapon model out of the hand
+    RemoveWeaponModel(CWeaponInfo::GetWeaponInfo(this, eWeaponSkill::STD)->m_nModelId1);
 }
 
 /*!
@@ -3931,6 +3948,7 @@ CEntity* CPed::AttachPedToEntity(CEntity* entity, CVector offset, uint16 turretA
         }
 
         GetPlayerData()->m_nChosenWeapon = weaponType;
+        AsPlayer()->MakeChangesForNewWeapon(weaponType); // 0x5E7D93: missing in the port
 
         if (weaponType == WEAPON_CAMERA) {
             TheCamera.SetNewPlayerWeaponMode(eCamMode::MODE_CAMERA);
@@ -3973,7 +3991,10 @@ void CPed::DettachPedFromEntity(){
     switch (m_nPedState) {
     case PEDSTATE_DIE: {
         m_pEntityIgnoredCollision = wasAttachedTo;
-        ApplyMoveForce(wasAttachedTo->GetMatrix().GetForward() * -4.f);
+        // 0x5E7F0F..0x5E7F51: forward * -4, then z += 4 (0x858B90 = 4.0f) - the exe lifts the dying ped a little
+        auto force = wasAttachedTo->GetMatrix().GetForward() * -4.f;
+        force.z += 4.f;
+        ApplyMoveForce(force);
         bIsStanding = false;
         break;
     }
@@ -4864,13 +4885,17 @@ void CPed::SetModelIndex(uint32 modelIndex) {
 
     // Set random money count
     const auto GetRandomMoneyCount = [this]() -> int16 {
-        if (CGeneral::GetRandomNumberInRange(0.f, 100.f) < 3.f) { // Moved up here
-            return 400;
-        } else if (CPopCycle::IsPedInGroupTheseGroups(m_nModelIndex, { POPCYCLE_GROUP_BUSINESS, POPCYCLE_GROUP_CASUAL_RICH })) {
-            return CGeneral::GetRandomNumber() % 50 + 20;
+        // 0x5E4915..0x5E49A0: the exe ALWAYS rolls the base amount first (1st rand()), and only then the 3% chance of 400 (2nd rand()) - the order and the rand() count matter
+        int16 money;
+        if (CPopCycle::IsPedInGroupTheseGroups(m_nModelIndex, { POPCYCLE_GROUP_BUSINESS, POPCYCLE_GROUP_CASUAL_RICH })) {
+            money = CGeneral::GetRandomNumber() % 50 + 20;
         } else {
-            return CGeneral::GetRandomNumber() % 25;
+            money = CGeneral::GetRandomNumber() % 25;
         }
+        if (CGeneral::GetRandomNumberInRange(0.f, 100.f) < 3.f) {
+            money = 400;
+        }
+        return money;
     };
     m_nMoneyCount = GetRandomMoneyCount();
 

@@ -1,0 +1,3 @@
+addr	file	line	cls	fn	oc
+0x548680	source/game_sa/Entity/Physical.cpp	152	CPhysical	ApplyCollision-2	D
+0x54A2C0	source/game_sa/Entity/Physical.cpp	153	CPhysical	ApplySoftCollision-2	D

@@ -30,3 +30,15 @@
   briefs say "stop at 150k by your estimate".
 - Scratch: agents leave C:/gta-scratch/rd-ab-N with soakdata junctions; ask the user before deleting (he wants to be asked), remove junctions
   with cmd rmdir first, then rm -rf; keep rdd/ab4, rd-ab-9/o100 and px_* proxies.
+
+## Update 2026-10-26 20:20 — strategy switch (user: "simpler than frames")
+- Main loop is now the ASM sweep (.notes/asm_sweep/PLAN.md, INDEX.md, Snn.tsv): agents compare port source vs `tools/standalone/exedis.py`
+  output per function, fix sure deviations, log UNSURE. Rate ~5-12 fixes per agent (vs ~2 per lockstep agent). Continuations via
+  scratchpad cont.py (`py cont.py Snn Snnb "status"` in .notes/asm_sweep: builds the NOT_REACHED list + INDEX row). Small functions first;
+  exedis caps output at 400 lines; huge ones (GenerateOneRandomCar ~2169 lines) need their own agent.
+- Done: S22 (CarCtrl, 40/55 + S22c 3; S22d 15 left), S23 (Population, done 32/33), S26 (Physical, 26/28; S26c 2 left), S20 (Ped, 54/75;
+  S20b 21 big left). Running: S16 (Automobile). Next small-function slices: S01-S15 Tasks, S17-S19 Vehicle, S21, S24, S25, S27-S34.
+- Lockstep (RD-AB-*) paused at prefix 145 (earliest real: driven car slot 7 shifted from fc 612). Combat scenario flaky in 3 checks ->
+  brief COMBAT-FLAKY written, launch after the gate (note: ASM-S20 fixed CreateDeadPedWeaponPickups ClearWeapons — maybe related).
+- Systemic finding to schedule: CVector operator/ divides, the exe multiplies by 1/x (Vector.h:255) — ~15 sites in Physical.cpp + more.
+- Agent token self-estimates run 30-50% low: briefs say "stop at 120k by your estimate".

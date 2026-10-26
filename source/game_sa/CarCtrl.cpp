@@ -3287,7 +3287,10 @@ void CCarCtrl::JoinCarWithRoadAccordingToMission(CVehicle* vehicle) {
     case MISSION_ESCORT_RIGHT_FARAWAY:
     case MISSION_ESCORT_REAR_FARAWAY:
     case MISSION_ESCORT_FRONT_FARAWAY: {
-        JoinCarWithRoadSystemGotoCoors(vehicle, vehicle->m_autoPilot.m_TargetEntity->GetPosition(), true, vehicle->IsSubBoat());
+        // 0x432D31: `mov eax, [esi+0x41C]; test eax, eax; je end` - the exe does nothing when there is no target entity
+        if (vehicle->m_autoPilot.m_TargetEntity) {
+            JoinCarWithRoadSystemGotoCoors(vehicle, vehicle->m_autoPilot.m_TargetEntity->GetPosition(), true, vehicle->IsSubBoat());
+        }
         break;
     }
     }
@@ -4126,9 +4129,9 @@ void CCarCtrl::PossiblyFireHSMissile(CVehicle* entityLauncher, CEntity* targetEn
     const float dist = dir.Magnitude();
     if (dist < 160.0f && dist > 30.0f) {
         CMatrix launcherMat = entityLauncher->GetMatrix();
-        CVector dirNormalized = dir;
-        dir.Normalise();
-        if (DotProduct(launcherMat.GetForward(), dirNormalized) > 0.8f) {
+        dir.Normalise(); // 0x4296B7
+        // 0x4296BC-0x4296DA: the dot product uses the NORMALISED direction (the port used a copy taken before Normalise, so the 0.8 test was against |dir| * cos)
+        if (DotProduct(launcherMat.GetForward(), dir) > 0.8f) {
             CProjectileInfo::AddProjectile(
                 entityLauncher,
                 eWeaponType::WEAPON_ROCKET_HS,
@@ -4433,7 +4436,7 @@ void CCarCtrl::RemoveCarsIfThePoolGetsFull() {
 
     // Find closest deletable vehicle
     const CVector camPos = TheCamera.GetPosition();
-    float fClosestDist = std::numeric_limits<float>::max();
+    float fClosestDist = 10000000.0f; // 0x4322FD: `mov [esp+0x10], 0x4B189680` (1e7), not FLT_MAX
     CVehicle* closestVeh = nullptr;
     for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValidReverse(), GetVehiclePool()->GetAllValid())) {
         if (IsThisVehicleInteresting(&veh)) {
@@ -5037,7 +5040,11 @@ void CCarCtrl::SlowCarOnRailsDownForTrafficAndLights(CVehicle* vehicle) {
     }
 
     if (autoPilot.m_fMaxTrafficSpeed >= autoPilot.m_speed) {
-        autoPilot.ModifySpeed(std::min(autoPilot.m_fMaxTrafficSpeed, CTimer::GetTimeStep() * 0.05f + autoPilot.m_speed));
+        // 0x48A3-0x48AE: when the car is already at the traffic speed (max == speed) the exe returns without calling ModifySpeed
+        // (which would restart the speed interpolation)
+        if (autoPilot.m_fMaxTrafficSpeed > autoPilot.m_speed) {
+            autoPilot.ModifySpeed(std::min(autoPilot.m_fMaxTrafficSpeed, CTimer::GetTimeStep() * 0.05f + autoPilot.m_speed));
+        }
     } else if (autoPilot.m_speed >= 0.1f) {
         autoPilot.ModifySpeed(std::max(autoPilot.m_fMaxTrafficSpeed, autoPilot.m_speed - CTimer::GetTimeStep() * 0.7f));
     } else if (autoPilot.m_speed != 0.0f) {

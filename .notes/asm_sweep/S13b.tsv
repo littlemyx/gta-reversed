@@ -1,0 +1,13 @@
+addr	file	line	cls	fn	oc
+0x67C770	source/game_sa/Tasks/TaskTypes/TaskSimpleGetUp.cpp	10	CTaskSimpleGetUp	StartAnim	D
+0x66D710	source/game_sa/Tasks/TaskTypes/TaskSimpleGoToPoint.cpp	20	CTaskSimpleGoToPoint	ProcessPed	D
+0x65EF80	source/game_sa/Tasks/TaskTypes/TaskSimpleGoToPointFine.cpp	13	CTaskSimpleGoToPointFine	SetBlendedMoveAnim	D
+0x625270	source/game_sa/Tasks/TaskTypes/TaskSimpleGunControl.cpp	17	CTaskSimpleGunControl	ProcessPed	D
+0x693C40	source/game_sa/Tasks/TaskTypes/TaskSimpleHoldEntity.cpp	16	CTaskSimpleHoldEntity	ProcessPed	D
+0x6940A0	source/game_sa/Tasks/TaskTypes/TaskSimpleHoldEntity.cpp	17	CTaskSimpleHoldEntity	SetPedPosition	D
+0x680600	source/game_sa/Tasks/TaskTypes/TaskSimpleInAir.cpp	15	CTaskSimpleInAir	ProcessPed	D
+0x67F6A0	source/game_sa/Tasks/TaskTypes/TaskSimpleJetPack.cpp	34	CTaskSimpleJetPack	RenderJetPack	D
+0x67B660	source/game_sa/Tasks/TaskTypes/TaskSimpleJetPack.cpp	37	CTaskSimpleJetPack	DropJetPack	D
+0x67B7F0	source/game_sa/Tasks/TaskTypes/TaskSimpleJetPack.cpp	39	CTaskSimpleJetPack	DoJetPackEffect	D
+0x67E7B0	source/game_sa/Tasks/TaskTypes/TaskSimpleJetPack.cpp	41	CTaskSimpleJetPack	ProcessControlInput	D
+0x67EF20	source/game_sa/Tasks/TaskTypes/TaskSimpleJetPack.cpp	42	CTaskSimpleJetPack	ProcessThrust	D

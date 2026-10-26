@@ -1,0 +1,49 @@
+addr	function	verdict	asm range	note	fix commit
+0x6B0A90	Constructor	MATCH	0x6B0A90-0x6B1320	every field/door/panel/chassis init, rand order (hydraulics 1, DoorRotation 6), flags; exe does not reset wheelSkidmarkMuddy (port fills false, harmless)	-
+0x6A61E0	Destructor	MATCH	0x6A61E0-0x6A6273	fire fx, 2 nitro fx, audio Terminate	-
+0x6A0770	SetupModelNodes	MATCH	0x6A0770-0x6A0794	zero 25 nodes + FillFrameArray	-
+0x6A6590	SetModelIndex	MATCH	0x6A6590-0x6A65BE	-	-
+0x5D47E0	Save	MATCH	0x5D47E0-0x5D47FC	0x18 bytes at +0x5A0	-
+0x5D2980	Load	MATCH	0x5D2980-0x5D299C	-	-
+0x6A2F00	CustomCarPlate_BeforeRenderingStart	MATCH	0x6A2F00-0x6A2F26	-	-
+0x6A2F30	CustomCarPlate_AfterRenderingStop	MATCH	0x6A2F30-0x6A2F61	-	-
+0x6A3E60	StopNitroEffect	MATCH	0x6A3E60-0x6A3E96	-	-
+0x6A2210	GetComponentWorldPosition	MATCH	0x6A2210-0x6A223F	-	-
+0x6AFA20	CloseBoot	MATCH	0x6AFA20-0x6AFB0A	SetRotate zeroes pos, KeepPos equivalent	-
+0x6AA200	RemoveBonnetInPedCollision	MATCH	0x6AA200-0x6AA28C	const 0.4f ok	-
+0x6A3770	PlayCarHorn	MATCH	0x6A3770-0x6A3818	one rand, timer & 7 branches	-
+0x6A29C0	ProcessControlCollisionCheck	MATCH	0x6A29C0-0x6A2AD3	retry count 5, flag bits	-
+0x6B3E90	SetupDamageAfterLoad	MATCH	0x6B3E90-0x6B3F64	-	-
+0x6A9CA0	Teleport	MATCH	0x6A9CA0-0x6A9D6C	-	-
+0x6A3440	Fix	FIXED	0x6A3440-0x6A357D	NoDoors is model flag +0xCC bit8 (port used handling flag WheelFNarrow2); 4th panel-reset write (stride 0x20 from +0x6AC) clobbers low word of m_swingingChassis.m_openAngle - replicated	74099207
+0x6A27F0	SetTotalDamage	MATCH	0x6A27F0-0x6A297B	rand only when randomness, int(rand*3)==0 -> missing	-
+0x6B4410	SetTowLink	FIXED	0x6B4410-0x6B45D4	status SIMPLE -> SwitchVehicleToRealPhysics+continue, other non-(3,4,10) -> false (port swapped); rest incl. fx order matches	8fe6c8f6
+0x6A45C0	DoHoverSuspensionRatios	FIXED	0x6A45C0-0x6A47E9	compression 0.99999 (0x3F7FFF58) when water <= line end (port 1.0); col point surfaceTypeB = 0x27 was never set	46c60805
+0x6B3F70	RcbanditCheck1CarWheels	FIXED	0x6B3F70-0x6B41F1	RC-bandit/scancode skip logic inverted and scan code never marked; |dx|,|dy| < 10 (port signed); prev compression/status of the other vehicle (port: this)	1fdefb59
+0x6B45E0	RcbanditCheckHitWheels	FIXED	0x6B45E0-0x6B47FC	return true on first hit / false at end (port: inner break, always true)	1fdefb59
+0x6A6AE0	OpenDoor	MATCH	0x6A6AE0-0x6A6DB6	atomic flags, SetDoorClosed 1->0 / 3->2, audio 0x4E/0x54+door, quiet events 60/120, frame matrix	-
+0x6A07A0	HydraulicControl	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6A8C00	ProcessBuoyancy	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6A9680	ProcessHarvester	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6AE850	TankControl	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6A4EC0	ProcessCarWheelPair	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6AF420	PlaceOnRoadProperly	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x729B60	FireTruckControl	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6A6DC0	dmgDrawCarCollidingParticles	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6A8580	SpawnFlyingComponent	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6AA290	UpdateWheelMatrix	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6A9D70	ProcessSwingingDoor	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6A40F0	TowTruckControl	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6A7090	ProcessCarOnFireAndExplode	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6AAB50	PreRender	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6A2B10	Render	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6A47F0	DoBurstAndSoftGroundRatios	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6A7650	VehicleDamage	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6B1880	ProcessControl	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6B4800	ProcessAI	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6AFB10	ProcessSuspension	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6A65D0	SetupSuspensionLines	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6ACE70	ProcessEntityCollision	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6AD690	ProcessControlInputs	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6B3780	BlowUpCar	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6B3BB0	BlowUpCarCutSceneNoExtras	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-

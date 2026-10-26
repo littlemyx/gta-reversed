@@ -1,0 +1,14 @@
+addr	function	verdict	asm range	note	fix commit
+0x614210	AddPedAtAttractor	NOT_REACHED	-	token budget	-
+0x614580	ConvertToRealObject	MATCH	0x614580-0x614669	glass/buoy branches, flags and call order identical	-
+0x614720	AddToPopulation	MATCH	0x614720-0x61596D	checked: cop need, max peds, gang/couple/regular paths, sunbather/towel/toy, loot tasks, all constants and rand order	-
+0x615970	GeneratePedsAtAttractors	FIXED	0x615970-0x615C65	exact currArea compare (no area 13), min<dist<max on sqrt float dist, int rand(0,100)<=70 police roll	c0789270
+0x615C90	GeneratePedsAtStartOfGame	MATCH	0x615C90-0x615DB7	count recompute incl. passenger subtract, 100x AddToPopulation, attractors	-
+0x615DC0	ManageObject	MATCH	0x615DC0-0x615FF0	distance already sqrt in float (PC24); all thresholds/models verified	-
+0x616000	ManageDummy	FIXED	0x616000-0x616098	compared squared distances; exe compares sqrt(z2+y2+x2) < limit (boundary rounding)	a19d2cfa
+0x616190	ManagePopulation	MATCH	0x616190-0x6162F1	batch of 32 over object/dummy pools, ped pool reverse	-
+0x616300	RemovePedsIfThePoolGetsFull	FIXED	0x616300-0x61641D	closest ped must pass CanBeDeleted (player was eligible), reverse scan, strict <, 1e7 start	eda891a2
+0x616420	ConvertAllObjectsToDummyObjects	MATCH	0x616420-0x61646D	reverse pool scan, type==OBJECT_GAME	-
+0x616470	PopulateInterior	MATCH	0x616470-0x616642	0.95 scale via int math equals float trunc for multiples of 20; GeneratePedCreationCoors_Interior gets null addr ptrs (exe passes locals) - UNSURE no effect	-
+0x6117F0	LoadSpecificDriverModelsForCar	MATCH	0x6117F0-0x611886	jump table decoded: 409,420,423,428,438,448,463,481 all map as the port	-
+0x616650	Update	MATCH	0x616650-0x616840	zone table, countdown, counts, dist args, couple of PCDM calls	-

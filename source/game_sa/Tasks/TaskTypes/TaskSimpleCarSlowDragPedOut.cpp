@@ -51,7 +51,7 @@ void CTaskSimpleCarSlowDragPedOut::FinishAnimCarSlowDragPedOutCB(CAnimBlendAssoc
 
         // Mark door as opened (Not sure why it's done here, not in `ProcessOpenDoor`...)
         if (self->m_Vehicle->IsAutomobile()) {
-            self->m_Vehicle->AsAutomobile()->m_damageManager.SetDoorOpen((eDoors)self->m_TargetDoor);
+            self->m_Vehicle->AsAutomobile()->m_damageManager.SetDoorOpen_Component((tComponent)self->m_TargetDoor); // 0x6481CD..0x648222: *_Component accessors, m_TargetDoor is a TARGET_DOOR 8..11 (SetDoorOpen(eDoors) ignored it)
         }
     }
 }
@@ -149,15 +149,15 @@ bool CTaskSimpleCarSlowDragPedOut::ProcessPed(CPed* ped) {
         // Make peds say something
         if (m_Vehicle) { // Redundant check, maybe inlined?
             if (const auto jackedPed = GetJackedPed()) {
-                const auto DoTalk = [this](auto ped1, auto ped2) {
-                    if (!SayJacked(ped1, m_Vehicle)) {
-                        SayJacking(ped2, ped1, m_Vehicle);
-                    }
-                };
+                // 0x64E0EA..0x64E13E: one half the jacked ped speaks first, the other half the jacker (`ped`) does
                 if (CGeneral::GetRandomNumber() % 1024 <= 512) {
-                    DoTalk(jackedPed, ped);
+                    if (!SayJacked(jackedPed, m_Vehicle)) {
+                        SayJacking(ped, jackedPed, m_Vehicle);
+                    }
                 } else {
-                    DoTalk(ped, jackedPed);
+                    if (!SayJacking(ped, jackedPed, m_Vehicle)) {
+                        SayJacked(jackedPed, m_Vehicle);
+                    }
                 }
             }
         }

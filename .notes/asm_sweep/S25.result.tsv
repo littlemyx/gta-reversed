@@ -1,0 +1,31 @@
+addr	function	verdict	asm_range	note	fix_commit
+0x5FA910	ComputeWalkAlongsideResponse	MATCH	0x5FA910-0x5FAA4F	no callers in the exe (dead code); the port stub is unreachable	
+0x5F9BD0	ComputeStareResponse	FIXED	0x5F9C26-0x5F9C57	leader distance: 3D squared > 64.0 bails out (port: 2D squared >= 64); rest (rand per member, timeout+rand(-b,b), task args) matches	a182e7ee
+0x5FC070	ComputeResponseVehicleDamage	MATCH	0x5FC070-0x5FC11C	jump table 0x5DE/0x5DF/0x5E1/0x5E6/0x5EC -> kill(true)/killplayer(true)/flee(true)/member/driveby	
+0x5FBDF0	ComputeResponseShotFired	MATCH	0x5FBDF0-0x5FBE61	m_firedBy ped test; 0x5DE kill(false), 0x5E1 flee(false), 0x5E6 member	
+0x5FB390	ComputeResponseSexyPed	MATCH	0x5FB390-0x5FB46F	7 slots + leader IsMember, player-group checks, stare rand(3000,5000)/bias 1000, hassle	
+0x5FBCB0	ComputeResponseSeenCop	MATCH	0x5FBCB0-0x5FBD0E	0x5DE kill(false), 0x5E1 flee(false), 0x5EB hand signal; no null check	
+0x5FB470	ComputeResponsePlayerCommand	MATCH	0x5FB470-0x5FB530	command 0 attack (group id -1 when none, pedType), 2 gather	
+0x5FBB90	ComputeResponsePedThreat	MATCH	0x5FBB90-0x5FBC70	null/IsMember(8 slots) bail-outs and the 7 cases (stare 99999999/bias 0, hassle true/false, driveby)	
+0x5FB2D0	ComputeResponsePedFriend	FIXED	0x5FB339-0x5FB346	also bails out when the ped is the group's own ped (cmp [pg+0]) or a member of THIS group; port only checked the player's group	d784f163
+0x5F9840	ComputeResponseNewGangMember	FIXED	0x5F991B-0x5F9941	FindPlayerPed(0) instead of the focused player (-1), no behaviour change in single player; sequence LeaveAnyCar(0,false,true)+GangJoinRespond(true)+GoToPoint(RUN,3.0,true) matches	57a82437
+0x5F90A0	ComputeResponseLeaderExitedCar	FIXED	0x5F9106-0x5F9144, 0x5F92AA-0x5F92DC	member in the leader's vehicle was skipped (exe uses that vehicle and makes it leave); non-burning delay is slot*500+250+(int)(rand/32768*500), not rand(-250,250); burning delay (i+1)*500+rand(-250,250) and the 15/16 anim-group branch match	1853ab3c
+0x5F9530	ComputeResponsLeaderQuitEnteringCar	MATCH	0x5F9530-0x5F9701	7 slots, delay i*500 / i*500-rnd+250 (rnd = -(int)(rand/32768*500)), FindTaskByType order 4,3,1,2	
+0x5F8900	ComputeResponseLeaderEnteredCar	MATCH	0x5F8900-0x5F9099	mission-first follower sort, full-vehicle LeaveAnyCar(0,true,false), force-front-seat rules, sequence/no-sequence branches, drive default task	
+0x5F9710	ComputeResponseLeaderEnterExit	MATCH	0x5F9710-0x5F9834	7 follower slots, !bInVehicle, ProcessPed -> collision on else SetTask	
+0x5FBD10	ComputeResponseGunAimedAt	FIXED	0x5FBD3F-0x5FBD87	shared MaybeAdjustTaskOfGroupThreatEvent: applies to NON-mission groups (port: mission only) and IsFriendlyWith(source ped) (port: originator)	6c424f67
+0x5F99F0	ComputeResponseGather	MATCH	0x5F99F0-0x5F9B13	7 follower slots, SeekEntity(originator,50000,1000,7.5,2,2,true,true)	
+0x5FBE70	ComputeResponseDraggedOutCar	MATCH	0x5FBE70-0x5FBF27	jump table 0x5DE (flee if player+respected+non-mission else kill) / 0x5E1 / 0x5E6 / 0x5E7	
+0x5FB540	ComputeResponseDanger	MATCH	0x5FB540-0x5FB580	virtual GetSourceEntity, ped test, only 0x5E1 flee(false)	
+0x5FBF50	ComputeResponseDamage	FIXED	0x5FBF5B, 0x5FBF80-0x5FBFCB	reads raw [e+0x14] (port: virtual GetSourceEntity maps vehicle->driver); plus the shared helper fix (non-mission, friendly vs source)	4ee44bdb,6c424f67
+0x5FAA50	ComputeMemberResponses	FIXED	0x5FAA84-0x5FAAC7	loops 8 slots incl. the leader (port: followers) and runs ComputeEventResponseTask after ComputeResponseTaskType (port: else-if)	939c8992
+0x5F9B20	ComputeLeanOnVehicleResponse	MATCH	0x5F9B20-0x5F9BC9	leader GoToVehicleAndLean(vehicle, duration)	
+0x5FB590	ComputeKillThreatsBasicResponse	MATCH	0x5FB590-0x5FB66E	flee(false) when not appropriate; mission -> Basic, else RandomGroup allocator	
+0x5FB670	ComputeKillPlayerBasicResponse	MATCH	0x5FB670-0x5FB782	null threat, appropriate check, 8 slots KillPedOnFoot(threat,-1,0,0,0,1)	
+0x5F9D50	ComputeHassleThreatResponse	FIXED	0x5F9DCF-0x5F9DE0	bail-out is d^2 > 144.0 (port >=); vehicle/ped branches, 8 slots, task args match	46696258
+0x5FA020	ComputeHassleSexyPedResponse	FIXED	0x5FA065-0x5FA110	7 slots, (int)(rand*100/32768) > 75 rolled for EVERY slot incl. empty (port RandomBool(25) = float rand/32767*100<=25, present followers only)	32b88809
+0x5FA820	ComputeHandSignalResponse	MATCH	0x5FA820-0x5FA907	8 slots, skip players, SignalAtPed(ped,-1,0)	
+0x5FA550	ComputeGreetResponse	FIXED	0x5FA5AB-0x5FA694	missing leader-standing-still and non-player-ped guards; closest search must be followers only; range test 16<=d^2<=100 was an always-false '<16 && >100'	df80a028
+0x5FA130	ComputeFleePedResponse	FIXED	0x5FA18B-0x5FA1E0	squared distance > 64.0 (port: real distance > 64) and rand() per member (was commented out)	ef61a271
+0x5FC200	ComputeEventResponseTasks	MATCH	0x5FC200-0x5FC396	jump table event type -> handler identical for all 21 types	
+0x5FA290	ComputeDoDealResponse	FIXED	0x5FA2EB-0x5FA478	same missing guards as Greet; no partnerType rand and CreatePartnerTask type 0 (port: rand+1 -> greet task on the partner); LookAt purpose CompDoDealResp	1d17e2ed

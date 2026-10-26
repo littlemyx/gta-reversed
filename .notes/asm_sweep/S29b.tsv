@@ -1,0 +1,6 @@
+addr	file	line	cls	fn	oc
+0x59EE80	source/game_sa/Entity/Object/HandObject.cpp	10	CHandObject	Render	C
+0x5A2130	source/game_sa/Entity/Object/Object.cpp	28	CObject	ProcessControl	D
+0x5A02E0	source/game_sa/Entity/Object/Object.cpp	35	CObject	SpecialEntityCalcCollisionSteps	D
+0x5A07D0	source/game_sa/Entity/Object/Object.cpp	55	CObject	ProcessSamSiteBehaviour	D
+0x5A0D90	source/game_sa/Entity/Object/Object.cpp	57	CObject	ObjectDamage	D

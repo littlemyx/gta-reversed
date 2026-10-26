@@ -1,0 +1,16 @@
+addr	file	line	cls	fn	oc
+0x564050	source/game_sa/World.cpp	37	None	ShutDown	D
+0x566140	source/game_sa/World.cpp	47	None	TestSphereAgainstSectorList<CPtrListDoubleLink<CPhysical*>>	D
+0x565E80	source/game_sa/World.cpp	49	None	RemoveFallenCars	C
+0x565CB0	source/game_sa/World.cpp	50	None	RemoveFallenPeds	C
+0x567750	source/game_sa/World.cpp	52	None	TriggerExplosionSectorList<CPtrListDoubleLink<CPhysical*>>	D
+0x5684A0	source/game_sa/World.cpp	53	None	Process	D
+0x56B5E0	source/game_sa/World.cpp	55	None	ProcessLineOfSightSector	S
+0x566EE0	source/game_sa/World.cpp	56	None	ProcessLineOfSightSectorList<CPtrListDoubleLink<CPhysical*>>	S
+0x5647F0	source/game_sa/World.cpp	65	None	ProcessAttachedEntities	D
+0x569E20	source/game_sa/World.cpp	68	None	TestSphereAgainstWorld	D
+0x569850	source/game_sa/World.cpp	69	None	RepositionOneObject	D
+0x569240	source/game_sa/World.cpp	77	None	FindMissionEntitiesIntersectingCube	D
+0x568FF0	source/game_sa/World.cpp	78	None	FindObjectsIntersectingAngledCollisionBox	D
+0x568DD0	source/game_sa/World.cpp	79	None	FindObjectsIntersectingCube	D
+0x568B80	source/game_sa/World.cpp	80	None	FindObjectsKindaColliding	D

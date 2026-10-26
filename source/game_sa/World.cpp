@@ -238,6 +238,7 @@ void CWorld::ProcessForAnimViewer() {
         if (!entity->m_bRemoveFromWorld) {
             entity->UpdateAnim();
             entity->UpdateRwMatrix();
+            entity->UpdateRwFrame(); // exe 0x56341A
         }
     }
 }
@@ -250,11 +251,10 @@ void CWorld::ProcessPedsAfterPreRender() {
         return;
     }
 
+    // exe 0x563444..0x56345A: no m_bRemoveFromWorld test here (peds scheduled for removal still get ProcessAfterPreRender)
     for (auto* const entity : ms_listMovingEntityPtrs) {
-        if (!entity->m_bRemoveFromWorld) {
-            if (entity->GetIsTypePed()) {
-                entity->AsPed()->GetIntelligence()->ProcessAfterPreRender();
-            }
+        if (entity->GetIsTypePed()) {
+            entity->AsPed()->GetIntelligence()->ProcessAfterPreRender();
         }
     }
 }
@@ -360,16 +360,20 @@ bool CWorld::ProcessVerticalLineSectorList_FillGlobeColPoints(PtrListType& ptrLi
 
     auto localColLine = colLine;
 
-    bool dontGoToNextNode{};
-    for (typename PtrListType::NodeType *node = ptrList.GetNode(), *next{}; node; node = next) {
-        if (!dontGoToNextNode) {
-            next = node->Next;
+    // exe 0x5636F1..0x563827: `next` is the node after the current one; after a stored hit the SAME entity is tested again (its scan code was
+    // set back by one) with the line start moved just behind the hit, until it yields no further hit. Only then the next node is fetched
+    // and the line is reset to the original one.
+    typename PtrListType::NodeType* next = ptrList.GetNode();
+    CEntity* entity{};
+    bool retestEntity{};
+    while (next || retestEntity) {
+        if (!retestEntity) {
+            entity = static_cast<CEntity*>(next->Item);
+            next = next->Next;
             localColLine = colLine;
         }
+        retestEntity = false;
 
-        dontGoToNextNode = false;
-
-        const auto entity = static_cast<CEntity*>(node->Item);
         if (entity->IsScanCodeCurrent() || !entity->GetUsesCollision()) {
             continue;
         }
@@ -384,23 +388,23 @@ bool CWorld::ProcessVerticalLineSectorList_FillGlobeColPoints(PtrListType& ptrLi
 
         if (FilledColPointIndex < std::size(gaTempSphereColPoints)) {
             const float distToEnd = localColLine.m_vecEnd.z - cp.m_vecPoint.z;
-            
+
             if (originalLineGoingUpwards) {
                 if (distToEnd > 0.0f) {
                     entity->SetScanCode(ms_nCurrentScanCode - 1);
-                    dontGoToNextNode = true;
+                    retestEntity = true;
                     gaTempSphereColPoints[FilledColPointIndex++].AssignLikeExe(cp);
                 }
             } else {
                 if (distToEnd < 0.0f) {
                     entity->SetScanCode(ms_nCurrentScanCode - 1);
-                    dontGoToNextNode = true;
+                    retestEntity = true;
                     gaTempSphereColPoints[FilledColPointIndex++].AssignLikeExe(cp);
                 }
             }
 
             // In any case, we shift the starting point
-            if (dontGoToNextNode) {
+            if (retestEntity) {
                 localColLine.m_vecStart = cp.m_vecPoint;
                 localColLine.m_vecStart.z += originalLineGoingUpwards ? 0.1f : -0.1f;
             }
@@ -508,7 +512,8 @@ void CWorld::CallOffChaseForAreaSectorListVehicles(CPtrListDoubleLink<CVehicle*>
 
         const auto& pos = veh->GetPosition();
 
-        if (!IsPointWithinBounds2D({ minX, minY }, { maxX, maxY }, pos)) {
+        // exe 0x563AD1..0x563B3E: strictly inside the grown area (args 6..9)
+        if (!(pos.x > minX && pos.x < maxX && pos.y > minY && pos.y < maxY)) {
             continue;
         }
 
@@ -575,7 +580,7 @@ void CWorld::CallOffChaseForAreaSectorListVehicles(CPtrListDoubleLink<CVehicle*>
 }
 
 // 0x563D00
-void CWorld::CallOffChaseForAreaSectorListPeds(CPtrListDoubleLink<CPed*>& list, float minX, float minY, float maxX, float maxY, float biggerMinX, float biggerMinY, float biggerMaxX, float biggerMaxY) {
+void CWorld::CallOffChaseForAreaSectorListPeds(CPtrListDoubleLink<CPed*>& list, float minX, float minY, float maxX, float maxY, float /*biggerMinX*/, float /*biggerMinY*/, float /*biggerMaxX*/, float /*biggerMaxY*/) {
     for (auto* const ped : list) {
         if (ped->IsScanCodeCurrent()) {
             continue;
@@ -591,10 +596,11 @@ void CWorld::CallOffChaseForAreaSectorListPeds(CPtrListDoubleLink<CPed*>& list, 
         }
 
         auto& pos = ped->GetPosition();
-        if (pos.x <= biggerMinX || pos.x >= biggerMaxX) {
+        // exe 0x563D8C..0x563DF7: the area test uses the 2nd..5th arguments (the un-grown area), the last four are not read
+        if (pos.x <= minX || pos.x >= maxX) {
             continue;
         }
-        if (pos.y <= biggerMinY || pos.y >= biggerMaxY) {
+        if (pos.y <= minY || pos.y >= maxY) {
             continue;
         }
 
@@ -604,12 +610,12 @@ void CWorld::CallOffChaseForAreaSectorListPeds(CPtrListDoubleLink<CPed*>& list, 
         CTaskComplexDestroyCar* taskDestroy =ped->GetTaskManager().Find<CTaskComplexDestroyCar>(true);
         CVehicle* objectiveVehicle = taskDestroy ? taskDestroy->m_VehicleToDestroy : nullptr;
 
-        if (objectivePed == FindPlayerPed()) {
-            continue;
-        }
-
-        if (objectiveVehicle && objectiveVehicle != FindPlayerVehicle()) {
-            continue;
+        // exe 0x563E43..0x563E5D: only peds that are after the player (kill-ped target is the player) or after the player's vehicle (destroy-car target
+        // is the player's vehicle) are called off; everybody else is left alone
+        if (objectivePed != FindPlayerPed()) {
+            if (!objectiveVehicle || objectiveVehicle != FindPlayerVehicle()) {
+                continue;
+            }
         }
 
         if (!ped->IsAlive()) {
@@ -620,7 +626,7 @@ void CWorld::CallOffChaseForAreaSectorListPeds(CPtrListDoubleLink<CPed*>& list, 
             FindPlayerWanted()->RemovePursuitCop(ped->AsCop());
         }
 
-        ped->GetEventGroup().Add(CEventScriptCommand(3, new CTaskSimpleStandStill()));
+        ped->GetEventGroup().Add(CEventScriptCommand(3, new CTaskSimpleStandStill(0, true, false, 8.0f))); // exe 0x563EA7: looped
     }
 }
 
@@ -972,10 +978,11 @@ void CWorld::FindObjectsOfTypeInRange(uint32 modelId, const CVector& point, floa
 
 // 0x564ED0
 void CWorld::FindLodOfTypeInRange(uint32 modelId, const CVector& point, float radius, bool b2D, int16* outCount, int16 maxCount, CEntity** outEntities) {
-    const int32 startSectorX = GetLodSectorX(point.x - radius);
-    const int32 startSectorY = GetLodSectorY(point.y - radius);
-    const int32 endSectorX = GetLodSectorX(point.x + radius);
-    const int32 endSectorY = GetLodSectorY(point.y + radius);
+    // exe 0x564EDD..0x564F40: plain _ftol (truncation) of the float sector coordinate, no floor() (differs for coordinates below the world's west/south edge)
+    const int32 startSectorX = static_cast<int32>(GetLodSectorfX(point.x - radius));
+    const int32 startSectorY = static_cast<int32>(GetLodSectorfY(point.y - radius));
+    const int32 endSectorX = static_cast<int32>(GetLodSectorfX(point.x + radius));
+    const int32 endSectorY = static_cast<int32>(GetLodSectorfY(point.y + radius));
 
     AdvanceCurrentScanCode();
 
@@ -1490,21 +1497,14 @@ void CWorld::PrintCarChanges() {
         for (int32 i = count - 1; i >= 0; i--) {
             CVehicle* veh = vehiclePool->GetAt(i);
 
-            if (!veh) {
-                continue;
-            }
-
-            if (veh->IsAutomobile()) {
-                continue;
-            }
-
-            uint32 MINow = veh->GetModelIndex();
+            // exe 0x566450..0x566467: an empty slot or a non-automobile counts as model index 0 (it is NOT skipped)
+            const uint32 MINow = (veh && veh->IsAutomobile()) ? (uint32)veh->GetModelIndex() : 0u;
 
             if (s_aModelIndexes[i] == MINow) {
                 continue;
             }
 
-            NOTSA_LOG_DEBUG("Car ModelIndex (slot: {}) has changed from {} into {}", i, MINow, s_aModelIndexes[i]); // Delete in Mobile, R* log
+            NOTSA_LOG_DEBUG("Car ModelIndex (slot: {}) has changed from {} into {}", i, s_aModelIndexes[i], MINow); // Delete in Mobile, R* log
             s_aModelIndexes[i] = MINow;
         }
     }
@@ -1614,7 +1614,7 @@ void CWorld::SetAllCarsCanBeDamaged(bool enable) {
 // 0x566950
 void CWorld::ExtinguishAllCarFiresInArea(CVector point, float radius) {
     for (auto& veh : GetVehiclePool()->GetAllValid()) {
-        if (DistanceBetweenPointsSquared(point, veh.GetPosition()) <= sq(radius)) {
+        if (DistanceBetweenPointsSquared(point, veh.GetPosition()) < sq(radius)) { // exe 0x566A0A..0x566A11: strictly less (fcompp, test ah,0x41)
             veh.ExtinguishCarFire();
         }
     }
@@ -1628,8 +1628,9 @@ void CWorld::CallOffChaseForArea(float minX, float minY, float maxX, float maxY)
         { minX - 10.f, minY - 10.f, maxX + 10.f, maxY + 10.f },
         [&](int32 x, int32 y) {
             auto& sector = GetRepeatSector(x, y);
-            CallOffChaseForAreaSectorListVehicles(sector.Vehicles, minX, minY, maxX, maxY, minX, minY, maxX, maxY);
-            CallOffChaseForAreaSectorListPeds(sector.Peds, minX, minY, maxX, maxY, minX, minY, maxX, maxY);
+            // exe 0x566B96..0x566BDB: the area and the area grown by 10 on every side (the same 4 grown values the sector range was made of)
+            CallOffChaseForAreaSectorListVehicles(sector.Vehicles, minX, minY, maxX, maxY, minX - 10.f, minY - 10.f, maxX + 10.f, maxY + 10.f);
+            CallOffChaseForAreaSectorListPeds(sector.Peds, minX, minY, maxX, maxY, minX - 10.f, minY - 10.f, maxX + 10.f, maxY + 10.f);
             return true;
         }
     );
@@ -1678,21 +1679,23 @@ CVehicle* CWorld::FindUnsuspectingTargetCar(CVector point, CVector playerPosn) {
 
 // 0x566DA0
 CPed* CWorld::FindUnsuspectingTargetPed(CVector point, CVector playerPosn) {
-    float nearestDist2D = std::numeric_limits<float>::max();
+    float nearestDist2D = std::bit_cast<float>(0x461C3F9Au); // exe 0x566DB6 (9999.9f), not FLT_MAX
     CPed* nearestPed{};
     for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValidReverse(), GetPedPool()->GetAllValid())) {
         if (!ped.IsCreatedBy(ePedCreatedBy::PED_GAME) || !ped.IsAlive()) {
             continue;
         }
 
-        if (ped.m_nPedType <= PED_TYPE_GANG1 || ped.m_nPedType >= PED_TYPE_GANG10) {
+        // exe 0x566E0D..0x566E20: GANG1..GANG10 inclusive, or CIVMALE
+        if (ped.m_nPedType < PED_TYPE_GANG1 || ped.m_nPedType > PED_TYPE_GANG10) {
             if (ped.m_nPedType != PED_TYPE_CIVMALE) {
                 continue;
             }
         }
 
+        // exe 0x566E26..0x566E44: a ped whose active task IS the wander task is skipped
         if (CTask* pActive = ped.GetTaskManager().GetActiveTask()) {
-            if (pActive->GetTaskType() != TASK_COMPLEX_WANDER) {
+            if (pActive->GetTaskType() == TASK_COMPLEX_WANDER) {
                 continue;
             }
         }

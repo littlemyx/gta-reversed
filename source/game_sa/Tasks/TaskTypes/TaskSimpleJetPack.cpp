@@ -120,9 +120,11 @@ bool CTaskSimpleJetPack::ProcessPed(CPed* ped) {
         return true;
     }
 
-    if (!m_bSwitchedWeapons && ped->IsPlayer()) {
-        ped->RemoveWeaponWhenEnteringVehicle(true);
-        m_bSwitchedWeapons = true;
+    if (!m_bSwitchedWeapons) {
+        if (ped->IsPlayer()) {
+            ped->RemoveWeaponWhenEnteringVehicle(true);
+        }
+        m_bSwitchedWeapons = true; // exe 0x68025F: set also for non-players
     }
 
     ped->bCheckColAboveHead = true;
@@ -136,7 +138,8 @@ bool CTaskSimpleJetPack::ProcessPed(CPed* ped) {
             m_ThrustStop   = false;
             m_ThrustFwd    = 0;
             m_ThrustAngle  = 0.f;
-            m_ThrustStrafe = std::clamp(m_ThrustStrafe + CGeneral::DoCoinFlip() ? -1.f : 1.f, -3.f, 3.f);
+            // exe 0x6801FF..0x6802F1: strafe += (rand() & 1) ? +1 : -1, then clamped to [-3, 3] (the port replaced the strafe by +-1 through a precedence slip, and used DoCoinFlip's rand() >= 16383 with the opposite sign)
+            m_ThrustStrafe = std::clamp(m_ThrustStrafe + ((CGeneral::GetRandomNumber() & 1) ? 1.f : -1.f), -3.f, 3.f);
 
             ped->m_fAimingRotation +=
                 X87R(x87::sin((float)CTimer::m_snTimeInMilliseconds * 0.0015707964f) * CTimer::GetTimeStep()) * JETPACK_TURN_RATE * CGeneral::GetRandomNumberInRange(0.f, 1.f); // TODO: Magic number

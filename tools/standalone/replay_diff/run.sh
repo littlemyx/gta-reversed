@@ -7,6 +7,7 @@
 #            32 R log, 64 D probe, 128 audio RNG partition, 256 CdStream tick barrier, 512 audio off (= RR harness NOTSA_RR_NOAUDIO; rd_orig.c patches CAudioEngine::Service to ret); all = 1023
 #   --rlog N  with pin bit 32 (add 32 to --pin): log every rand() call (R fc site) of the first N traced frames, for noise hunting
 #   --frames  compare the first N traced frames; a run with fewer traced frames than N (focus lost, crash) is repeated (up to 2 more times)
+#   --port-exe  the port exe MUST have its <exe>.map (or <exe>.audio_rva) next to it when the pin has 128 (pin 128; always in 1023): copy the map with the exe - run.sh/rd_port_run.sh refuse otherwise, or a stale map (RD-ENV)
 # What it touches: gpu.lock around EVERY game run (rd_orig_run.sh / rd_port_run.sh acquire it per run; waits while another owner has it, USER-PLAY included); the ORIGINAL leg backs up
 #   Documents\GTA San Andreas User Files and restores it after every run (hostenv.sh docs_backup/docs_restore, as gameplay_regress/orig_run.sh) - this script prints a before/after signature of that
 #   directory and FAILS LOUDLY if it differs; the port leg uses a private NOTSA_STANDALONE_USERDIR (seeded with the same gta_sa.set bytes as the original leg) and the Steam data by links.
@@ -25,6 +26,10 @@ RDX="$(hp "${RD_PX:-C:/gta-scratch/rdd/px}")"
 if [ "$BP" = 1 ] || [ ! -f "$RDX/vorbisFile.dll" ]; then   # the original-exe tracer proxy
   ( . "$HERE/../windows/msvcenv.sh" >/dev/null 2>&1; bash "$HERE/build_orig.sh" "$RDX" >/dev/null 2>&1 )
   [ -f "$RDX/vorbisFile.dll" ] || { echo "run.sh: cannot build the tracer proxy"; exit 2; }
+fi
+if [ "$((PIN & 128))" != 0 ] && [ -z "${NOTSA_LOCKSTEP_AUDIO_RVA:-}" ] && case ",$LEGS," in *,p,*) true;; *) false;; esac; then   # RD-ENV: fail before any run, not after 3 short tries
+  if [ -f "${EXE%.exe}.map" ]; then "$PY" -I "$HERE/audio_rva.py" "$(cd "$HERE/../../.." && pwd)" "${EXE%.exe}.map" "$EXE" >/dev/null || { echo "run.sh: ${EXE%.exe}.map is not the map of $EXE"; exit 2; }
+  elif [ ! -f "${EXE%.exe}.audio_rva" ] && [ "${RD_NO_AUDIO_RVA_OK:-0}" != 1 ]; then echo "run.sh: pin 128 needs ${EXE%.exe}.map (or .audio_rva) next to the port exe - copy the .map together with the exe"; exit 2; fi
 fi
 docs_sig() { ( cd "$DOCS_USERFILES" 2>/dev/null && { find . -type f -printf '%p %s %TY%Tm%Td%TH%TM%TS\n' | sort; find . -type f -exec md5sum {} + | sort -k2; } | md5sum ) ; }
 SIG0="$(docs_sig)"; echo "docs signature before: $SIG0"

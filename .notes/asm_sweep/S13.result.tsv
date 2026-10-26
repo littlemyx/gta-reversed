@@ -1,0 +1,42 @@
+addr	function	verdict	asm_range	note	fix_commit
+0x67C770	CTaskSimpleGetUp::StartAnim	NOT_REACHED	-	token budget	
+0x67FA80	CTaskSimpleGetUp::ProcessPed	MATCH	0x67FA80-0x67FAE7	bSlopePitch, StartAnim once, bStuckUnderCar clear, bFallenDown while time < 0.75*total (NaN skips in both)	
+0x658900	CTaskSimpleGiveCPR::ReviveDeadPed	MATCH	0x658900-0x658983	interesting event 11 + CEventRevived to the event group unless bRemoveHead; port adds an accident null check the exe lacks (harmless)	
+0x65A7C0	CTaskSimpleGiveCPR::ProcessPed	MATCH	0x65A7C0-0x65A822	initial health capture, revive on finished anim, BlendAnimation(medic 46, CPR 260, 4.0) + finish cb	
+0x667AD0	CTaskSimpleGoTo::SetUpIK	UNSURE	0x667C02-0x667C76	all conditions/args match (parent types 0x395/0x3AB, dot<threshold, LookAt args); look-at z is (2*dir.z + ped.z) + 0.61 in x87 extended, port adds ped.z+0.61f first: possible 1-ulp difference of a stored float	
+0x667D60	CTaskSimpleGoToPoint::MakeAbortable	MATCH	0x667D60-0x667E15	IK abort, URGENT true, IMMEDIATE StandStill(0,f,f,8) true, else flag 2 + false	
+0x66D710	CTaskSimpleGoToPoint::ProcessPed	NOT_REACHED	-	token budget	
+0x663540	CTaskSimpleGoToPointFine::ProcessPed	MATCH	0x663540-0x66360F	r*r>=d2 or circled -> QuitIK/Finish; else blended anim, aim rotation, SetUpIK	
+0x65EF80	CTaskSimpleGoToPointFine::SetBlendedMoveAnim	NOT_REACHED	-	token budget	
+0x625270	CTaskSimpleGunControl::ProcessPed	NOT_REACHED	-	token budget (400-line cap)	
+0x657A10	CTaskSimpleHitHead::ProcessPed	MATCH	0x657A10-0x657A54	BlendAnimation(default, 38, 8.0) once + finish cb	
+0x691470	CTaskSimpleHoldEntity::Constructor-2	MATCH	0x691470-0x69154D	name-based anim block/hierarchy ctor; m_fRotation left uninitialised in the exe	
+0x691550	CTaskSimpleHoldEntity::Constructor-3	MATCH	0x691550-0x691620	block/hierarchy ctor; rotation 0	
+0x693BD0	CTaskSimpleHoldEntity::MakeAbortable	MATCH	0x693BD0-0x693C2E	URGENT/IMMEDIATE drop, else blend delta -4	
+0x693C40	CTaskSimpleHoldEntity::ProcessPed	NOT_REACHED	-	token budget	
+0x6940A0	CTaskSimpleHoldEntity::SetPedPosition	NOT_REACHED	-	token budget	
+0x692FF0	CTaskSimpleHoldEntity::StartAnim	MATCH	0x692FF0-0x6930E8	flags 0x414 / group lookup + block request (+0x63E7) / task type 0x133 adds 0x400 / 0x134 finish cb else delete cb	
+0x693440	CTaskSimpleHoldEntity::ChoosePutDownHeight	FIXED	0x693552-0x693573	put-down heights are the exe floats 0.43333334 (0x3EDDDDDE) and 0.36666667 (0x3EBBBBBC); port's 0.433333f/0.366667f are different floats	dc92e13a
+0x653F90	CTaskSimpleHurtPedWithCar::ProcessPed	MATCH	0x653F90-0x6541A1	damage calc/event args, event group add on kill, move speed *0.75 with z=0, force min(mass/1400,1)*-60 along ped-car	
+0x6339C0	CTaskSimpleIKChain::Constructor	MATCH	0x6339C0-0x633A81		
+0x633A90	CTaskSimpleIKChain::Destructor	MATCH	0x633A90-0x633AFB		
+0x633B00	CTaskSimpleIKChain::Clone	MATCH	0x633B00-0x633BC1		
+0x633C80	CTaskSimpleIKChain::ProcessPed	FIXED	0x633D2B-0x633D34,0x633DB3-0x633DC7	only a finite duration expires (port had Duration==-1 inverted); blend ratio uses int-truncated step and clamps with x>1 (NaN kept)	0a364b9d
+0x633BD0	CTaskSimpleIKChain::CreateIKChain	MATCH	0x633BD0-0x633C3A	slot 3, priority 3	
+0x633E00	CTaskSimpleIKLookAt::Constructor	MATCH	0x633E00-0x633ED4		
+0x633EF0	CTaskSimpleIKLookAt::Destructor-	MATCH	0x633EF0-0x633EF6		
+0x633FC0	CTaskSimpleIKLookAt::CreateIKChain	MATCH	0x633FC0-0x634048	slot 0, pivot neck, ClampLimits(head,f,t,f,t)	
+0x634150	CTaskSimpleIKPointArm::Constructor	MATCH	0x634150-0x634223		
+0x634240	CTaskSimpleIKPointArm::Destructor	MATCH	0x634240-0x634246		
+0x634250	CTaskSimpleIKPointArm::Clone	MATCH	0x634250-0x6342E0		
+0x6342F0	CTaskSimpleIKPointArm::CreateIKChain	MATCH	0x6342F0-0x634369		
+0x680600	CTaskSimpleInAir::ProcessPed	NOT_REACHED	-	token budget (400-line cap)	
+0x67E600	CTaskSimpleJetPack::Destructor	MATCH	0x67E600-0x67E6D4		
+0x67F6A0	CTaskSimpleJetPack::RenderJetPack	NOT_REACHED	-	token budget	
+0x67B5C0	CTaskSimpleJetPack::ProcessAnims	MATCH	0x67B5C0-0x67B655		
+0x67B660	CTaskSimpleJetPack::DropJetPack	NOT_REACHED	-	token budget	
+0x67B7F0	CTaskSimpleJetPack::DoJetPackEffect	NOT_REACHED	-	token budget	
+0x67E7B0	CTaskSimpleJetPack::ProcessControlInput	NOT_REACHED	-	token budget (400-line cap)	
+0x67EF20	CTaskSimpleJetPack::ProcessThrust	NOT_REACHED	-	token budget (400-line cap)	
+0x67E6E0	CTaskSimpleJetPack::MakeAbortable	MATCH	0x67E6E0-0x67E7A3		
+0x6801F0	CTaskSimpleJetPack::ProcessPed	FIXED	0x6801FF-0x6802F1,0x68025F	dead-ped strafe wobble is strafe += (rand()&1 ? +1 : -1) clamped +-3 (port: precedence slip replaced the strafe by +-1, DoCoinFlip opposite sign); bSwitchedWeapons also set for non-players	238cf71f

@@ -1507,7 +1507,7 @@ void CAutomobile::DoHoverSuspensionRatios()
                 && waterLevel > colPointZ && end.z - 1.0f < waterLevel)
             {
                 if (waterLevel <= end.z)
-                    m_fWheelsSuspensionCompression[i] = 1.0f;
+                    m_fWheelsSuspensionCompression[i] = 0.99999f; // 0x6A46EB: mov [edi], 0x3F7FFF58 (not 1.0)
                 else if (waterLevel <= start.z)
                     m_fWheelsSuspensionCompression[i] = (start.z - waterLevel) / (start.z - end.z);
                 else
@@ -1518,6 +1518,7 @@ void CAutomobile::DoHoverSuspensionRatios()
                 point.z = waterLevel;
                 m_wheelColPoint[i].m_vecPoint = point;
                 m_wheelColPoint[i].m_vecNormal = CVector(0.0f, 0.0f, 1.0f);
+                m_wheelColPoint[i].m_nSurfaceTypeB = SURFACE_WATER_SHALLOW; // 0x6A4754: mov byte [ebx+0x23], 0x27
             }
         }
     }
@@ -2665,7 +2666,8 @@ void CAutomobile::Fix() {
     m_damageManager.ResetDamageStatus();
 
     // Reset actual doorIdx's status
-    if (m_pHandlingData->m_bWheelFNarrow2) {
+    // 0x6A3477: `test ch, 1` on handling+0xCC (the MODEL flags, bit 8 = m_bNoDoors), NOT the handling flags (m_bWheelFNarrow2) at +0xD0
+    if (m_pHandlingData->m_bNoDoors) {
         m_damageManager.SetDoorStatus({ DOOR_LEFT_FRONT, DOOR_RIGHT_FRONT, DOOR_LEFT_REAR, DOOR_RIGHT_REAR }, eDoorStatus::DAMSTATE_NOTPRESENT);
     }
 
@@ -2690,6 +2692,11 @@ void CAutomobile::Fix() {
     for (auto&& panel : m_panels) {
         panel.ResetPanel();
     }
+
+    // 0x6A355E: the exe loops 4 times (stride 0x20 from +0x6AC, `mov word [eax], 0xFFFF`), the 4th hit lands on +0x70C = the low half of
+    // m_swingingChassis.m_openAngle (original quirk, replicated)
+    static_assert(offsetof(CAutomobile, m_swingingChassis) == 0x70C);
+    *reinterpret_cast<uint16*>(&m_swingingChassis.m_openAngle) = 0xFFFF;
 }
 
 // 0x6B3E90
@@ -3330,12 +3337,11 @@ bool CAutomobile::SetTowLink(CVehicle* tractor, bool placeMeOnRoadProperly) {
     case eEntityStatus::STATUS_IS_TOWED:
     case eEntityStatus::STATUS_ABANDONED:
         break;
-    case eEntityStatus::STATUS_SIMPLE:
-        return false;
-    default: {
+    case eEntityStatus::STATUS_SIMPLE: // 0x6B4442: status 2 switches to real physics and continues,
         CCarCtrl::SwitchVehicleToRealPhysics(this);
         break;
-    }
+    default: // any other status (3, 4, 10 handled above) returns false (0x6B4446)
+        return false;
     }
 
     SetStatus(STATUS_IS_TOWED);
@@ -6525,14 +6531,17 @@ bool CAutomobile::RcbanditCheck1CarWheels(CPtrListDoubleLink<CVehicle*>& ptrList
         if (vehicle == this || !vehicle->IsAutomobile())
             continue;
 
-        if (!ModelIndices::IsRCBandit(vehicle->m_nModelIndex) && !vehicle->IsScanCodeCurrent())
+        // 0x6B3FFF: skip the RC Bandit itself (model 0x1B9), skip a vehicle already scanned this scan code, else mark it scanned
+        if (ModelIndices::IsRCBandit(vehicle->m_nModelIndex) || !vehicle->ProcessScan())
             continue;
 
+        // 0x6B4036..0x6B40F7: |dx| < 10 && |dy| < 10 (the exe negates a negative difference)
         CVector distance = GetPosition() - vehicle->GetPosition();
-        if (distance.x < 10.0f && distance.y < 10.0f) {
+        if (std::fabs(distance.x) < 10.0f && std::fabs(distance.y) < 10.0f) {
             auto modelInfo = vehicle->GetVehicleModelInfo();
             for (int32 i = 0; i < 4; i++) {
-                if (m_fWheelsSuspensionCompressionPrev[i] >= 1.0f && GetStatus() != STATUS_SIMPLE)
+                // 0x6B4110: the OTHER vehicle's (ebx) previous suspension compression / status
+                if (!(vehicle->AsAutomobile()->m_fWheelsSuspensionCompressionPrev[i] < 1.0f) && vehicle->GetStatus() != STATUS_SIMPLE)
                     continue;
 
                 static CMatrix wheelMatrix;
@@ -6568,10 +6577,10 @@ bool CAutomobile::RcbanditCheckHitWheels() {
         for (int32 sectorX = startSectorX; sectorX <= endSectorX; ++sectorX) {
             auto& repeatSector = CWorld::GetRepeatSector(sectorX, sectorY);
             if (RcbanditCheck1CarWheels(repeatSector.Vehicles))
-                break;
+                return true; // 0x6B47D2: leaves both loops
         }
     }
-    return true;
+    return false; // 0x6B47E6: xor ax, ax
 }
 
 // 0x729B60

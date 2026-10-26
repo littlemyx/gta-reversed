@@ -520,9 +520,9 @@ void CTaskSimpleHoldEntity::ChoosePutDownHeight(CPed* ped) {
     if (GetTaskType() == TASK_SIMPLE_PUTDOWN_ENTITY) {
         auto taskPutDownEntity = static_cast<CTaskSimplePutDownEntity*>(this);
         if (m_nAnimGroupId == ANIM_GROUP_CARRY105)
-            taskPutDownEntity->m_fPutDownHeightZ = 0.433333f; // todo: math
+            taskPutDownEntity->m_fPutDownHeightZ = 0.43333334f; // exe 0x870A70 = 0x3EDDDDDE (13/30 as float); 0.433333f is a different float
         else if (m_nAnimGroupId == ANIM_GROUP_CARRY05)
-            taskPutDownEntity->m_fPutDownHeightZ = 0.366667f;
+            taskPutDownEntity->m_fPutDownHeightZ = 0.36666667f; // exe 0x870A6C = 0x3EBBBBBC (11/30 as float); 0.366667f is a different float
         else
             taskPutDownEntity->m_fPutDownHeightZ = 0.6f;
     }

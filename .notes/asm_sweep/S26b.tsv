@@ -1,0 +1,10 @@
+addr	file	line	cls	fn	oc
+0x54DFB0	source/game_sa/Entity/Physical.cpp	119	CPhysical	ProcessCollision	D
+0x544D50	source/game_sa/Entity/Physical.cpp	144	CPhysical	ApplyCollisionAlt	C
+0x5454C0	source/game_sa/Entity/Physical.cpp	145	CPhysical	ApplyFriction-self	D
+0x546670	source/game_sa/Entity/Physical.cpp	147	CPhysical	ProcessShiftSectorList	C
+0x548680	source/game_sa/Entity/Physical.cpp	152	CPhysical	ApplyCollision-2	D
+0x54A2C0	source/game_sa/Entity/Physical.cpp	153	CPhysical	ApplySoftCollision-2	D
+0x54BA60	source/game_sa/Entity/Physical.cpp	154	CPhysical	ProcessCollisionSectorList	S
+0x54CFF0	source/game_sa/Entity/Physical.cpp	155	CPhysical	ProcessCollisionSectorList_SimpleCar	S
+0x546FF0	source/game_sa/Entity/Physical.cpp	161	CPhysical	PositionAttachedEntity	D

@@ -1,0 +1,45 @@
+addr	function	verdict	asm_range	note	fix_commit
+0x5631E0	Initialise	MATCH	0x5631E0-0x563214	8 flag bytes, ignore ptr, spread rate zeroed, tail jmp CIplStore::Initialise	
+0x563390	CastShadowSectorList	MATCH	0x563390-0x5633C1	scan-code stamp only (debug)	
+0x563430	ProcessPedsAfterPreRender	FIXED	0x563444-0x56345A	exe does not test m_bRemoveFromWorld (port skipped such peds)	91e6794d
+0x56E400	FindPlayerCentreOfWorldForMap	MATCH	0x56E400-0x56E448	copy + GetPositionRelativeToOutsideWorld	
+0x56B9C0	RepositionCertainDynamicObjects	MATCH	0x56B9C0-0x56B9FA	dummy pool reverse walk -> RepositionOneObject (no callers in exe)	
+0x563F40	CameraToIgnoreThisObject	MATCH	0x563F40-0x563F88	jump table 0..3 decoded: true / camvars>=10 / false / camvars<10	
+0x5697F0	FindLowestZForCoord	MATCH	0x5697F0-0x56984A	args (x,y,-1000) 1000, bldg+dummy, ret 20.0	
+0x5633D0	ProcessForAnimViewer	FIXED	0x5633E0-0x56341F	exe also calls CEntity::UpdateRwFrame after UpdateRwMatrix (unused debug fn)	146d7767
+0x566420	PrintCarChanges	FIXED	0x566440-0x566491	exe tracks modelindex of automobiles only (0 for null/others) and logs (slot, old, new); port skipped automobiles and swapped old/new (unused debug fn)	90b476e4
+0x5664A0	TestForBuildingsOnTopOfEachOther-Void	MATCH	0x5664A0-0x566500	120x120 clamped sectors, buildings then dummies	
+0x563A10	RemoveEntityInsteadOfProcessingIt	MATCH	0x563A10-0x563A77	ped: player->Remove+moving list, else RemovePed; others Remove+moving list+delete	
+0x569750	FindRoofZFor3DCoord	MATCH	0x569750-0x5697ED	same call, outResult handling, 20.0	
+0x564970	GetIsLineOfSightSectorListClear	MATCH	0x564970-0x564A14	scan code, ignore entity, camera check, TestLineOfSight(...,false)	
+0x564360	ClearForRestart	MATCH	0x564360-0x564416	repeat sectors peds then vehicles in storage order (port's 120x120 walk of 16x16 repeat sectors gives the same first-visit order)	
+0x5632B0	ProcessVerticalLineSectorList	MATCH	0x5632B0-0x563381	strict < on maxTouch, numCrossings accumulate	
+0x566950	ExtinguishAllCarFiresInArea	FIXED	0x5669CF-0x566A11	exe extinguishes only when dist^2 < radius^2 (port <=)	0fb233d0
+0x568AD0	GetIsLineOfSightSectorClear	MATCH	0x568AD0-0x568B7E	order bldg,veh,peds,objects(camera check),dummies	
+0x565510	RemoveReferencesToDeletedObject	MATCH	0x565510-0x565606	peds, vehicles, objects reverse walks	
+0x566510	TestForUnusedModels-	MATCH	0x566510-0x566607	counts per model; port additionally logs unused models (debug-only)	
+0x564420	ProcessVerticalLineSector_FillGlobeColPoints	MATCH	0x564420-0x5644F3	order bldg,veh,peds,obj,dummies, OR-ed result	
+0x564ED0	FindLodOfTypeInRange	FIXED	0x564ED0-0x564F40	exe truncates (ftol) (p-r)*0.005+15; port floor()ed, so a range beyond -3000 gave sector -1 (out of bounds) instead of 0	d28af97c
+0x567620	ProcessVerticalLine_FillGlobeColPoints	MATCH	0x567620-0x56774C	floor+ftol sector, FilledColPointIndex=0, no crossings reset	
+0x564500	ProcessVerticalLineSector	MATCH	0x564500-0x5645F1	bldg,veh,peds,obj,dummies; max<1.0 result	
+0x5636A0	ProcessVerticalLineSectorList_FillGlobeColPoints	FIXED	0x5636F1-0x563827	after a stored hit the exe tests the SAME entity again with the line start moved behind the hit (bl flag, also when it was the last node); the port went on to the next node, kept the shifted line and lost the retest	6d1f87ad
+0x566DA0	FindUnsuspectingTargetPed	FIXED	0x566DB6-0x566E44	GANG1..GANG10 inclusive (port excluded both ends), skips peds whose active task IS wander (port: skipped all others), initial nearest 9999.9f (port FLT_MAX)	248a9279
+0x563840	RemoveStaticObjects	MATCH	0x563840-0x563942	sector building/dummy lists then flush, repeat-sector object lists	
+0x566A60	CallOffChaseForArea	FIXED	0x566B96-0x566BDB	last four args are the area grown by 10 (port passed the un-grown area twice)	03d9fa58
+0x563A80	CallOffChaseForAreaSectorListVehicles	FIXED	0x563AD1-0x563B3E	presence test strict on the grown area (port inclusive); sphere test, speed clamp, temp action match	ea49dce4
+0x563D00	CallOffChaseForAreaSectorListPeds	FIXED	0x563D8C-0x563EA7	called off only if kill-ped target is the player or destroy-car target is the player vehicle (port inverse), area test on args 2..5, stand-still task looped=true	8170f2a0
+0x565CB0	RemoveFallenPeds	NOT_REACHED		token budget	
+0x569240	FindMissionEntitiesIntersectingCube	NOT_REACHED		token budget	
+0x5647F0	ProcessAttachedEntities	NOT_REACHED		token budget	
+0x56B5E0	ProcessLineOfSightSector	NOT_REACHED		token budget	
+0x565E80	RemoveFallenCars	NOT_REACHED		token budget	
+0x568DD0	FindObjectsIntersectingCube	NOT_REACHED		token budget	
+0x568FF0	FindObjectsIntersectingAngledCollisionBox	NOT_REACHED		token budget	
+0x568B80	FindObjectsKindaColliding	NOT_REACHED		token budget	
+0x566140	TestSphereAgainstSectorList	NOT_REACHED		token budget	
+0x569E20	TestSphereAgainstWorld	NOT_REACHED		token budget	
+0x564050	ShutDown	NOT_REACHED		token budget	
+0x566EE0	ProcessLineOfSightSectorList	NOT_REACHED		token budget	
+0x567750	TriggerExplosionSectorList	NOT_REACHED		token budget	
+0x5684A0	Process	NOT_REACHED		token budget	
+0x569850	RepositionOneObject	NOT_REACHED		token budget	

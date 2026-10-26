@@ -500,7 +500,7 @@ void CPhysical::ProcessCollision() {
             || m_vecTurnSpeed != 0.0f
             || physicalFlags.bProcessCollisionEvenIfStationary
             || GetStatus() == STATUS_PLAYER
-            || GetIsTypeVehicle() && vehicle->vehicleFlags.bIsCarParkVehicle
+            || GetIsTypeVehicle() && vehicle->vehicleFlags.bRestingOnPhysical // 0x54E760: test [vehicle+0x42C], 2 = bRestingOnPhysical (not bIsCarParkVehicle)
             || GetIsTypePed() && (ped->IsPlayer() || ped->bTestForBlockedPositions|| !ped->bIsStanding))
         {
             if (GetIsTypeVehicle())
@@ -550,16 +550,19 @@ void CPhysical::ProcessShift() {
     {
         if (GetHasHitWall())
         {
-            CPed* ped = AsPed();
-            bool bSomeSpecificFlagsSet = false;
-            if (GetIsTypePed() && ped->m_standingOnEntity)
-            {
-                if (!ped->m_standingOnEntity->m_bIsStatic || ped->m_standingOnEntity->GetHasContacted())
-                {
-                    bSomeSpecificFlagsSet = true;
+            // 0x54DB63..0x54DB92: for a ped the exe damps the speeds when it has no standing entity, or when the DWORD at +0x40 of the standing
+            // entity (physicalFlags - NOT the CEntity flags at +0x1C; for a CBuilding this is the next pool slot's data) does not have bit 2 set or has
+            // bit 3 set; otherwise (and for all non-peds) only CWorld::bSecondShift decides.
+            bool bPedDamp = false;
+            if (GetIsTypePed()) {
+                const auto* standingOn = AsPed()->m_standingOnEntity;
+                bPedDamp = !standingOn;
+                if (standingOn) {
+                    const auto standingFlags = *reinterpret_cast<const uint32*>(reinterpret_cast<const uint8*>(standingOn) + 0x40);
+                    bPedDamp = !(standingFlags & 4) || (standingFlags & 8);
                 }
             }
-            if ((GetIsTypePed() && bSomeSpecificFlagsSet) || CWorld::bSecondShift)
+            if (bPedDamp || CWorld::bSecondShift)
             {
                 float fMoveSpeedShift = pow(CPhysical::PHYSICAL_SHIFT_SPEED_DAMP, CTimer::GetTimeStep());
                 m_vecMoveSpeed *= fMoveSpeedShift;
@@ -661,7 +664,8 @@ int32 CPhysical::ProcessEntityCollision(CEntity* entity, CColPoint* colPoint) {
         if (!entity->GetIsTypeBuilding())
             entity->AsPhysical()->AddCollisionRecord(this);
 
-        if (entity->GetIsTypeBuilding() || entity->GetIsStatic())
+        // 0x546D83..0x546D96: also set when the entity is waiting for collision (flag 0x40000)
+        if (entity->GetIsTypeBuilding() || entity->GetIsStatic() || entity->m_bIsStaticWaitingForCollision)
             SetHasHitWall(true);
     }
     return totalColPointsToProcess;
@@ -1042,13 +1046,15 @@ bool CPhysical::ApplyCollision(CEntity* entity, const CColPoint& colPoint, float
         CVector vecSpeed = GetSpeed(vecDistanceToPoint);
 
         CVector vecMoveDirection = colPoint.m_vecNormal;
-        float fSpeedDotProduct = DotProduct(&vecMoveDirection, &vecSpeed);
+        // 0x5436EC..0x54370D: the exe inlines this dot product in the order (n.y*s.y + n.x*s.x) + s.z*n.z (not DotProduct's z, y, x)
+        float fSpeedDotProduct = (vecMoveDirection.y * vecSpeed.y + vecMoveDirection.x * vecSpeed.x) + vecSpeed.z * vecMoveDirection.z;
         if (fSpeedDotProduct < 0.0f)
         {
             CVector vecCentreOfMassMultiplied = GetMatrix().TransformVector(m_vecCentreOfMass);
             CVector vecDifference = vecDistanceToPoint - vecCentreOfMassMultiplied;
-            CVector vecSpeedCrossProduct = CrossProduct(vecDifference, vecMoveDirection);
-            float fSquaredMagnitude = vecMoveDirection.SquaredMagnitude();
+            CVector vecSpeedCrossProduct = PhysicalCrossProductOriginal(vecDifference, vecMoveDirection); // 0x59C730
+            // 0x543776..0x543793: the exe uses the squared magnitude of the CROSS product (r x n), not of the normal
+            float fSquaredMagnitude = vecSpeedCrossProduct.SquaredMagnitude();
             float fCollisionMass = 1.0f / (fSquaredMagnitude / m_fTurnMass + 1.0f / m_fMass);
 
             damageIntensity = -((m_fElasticity + 1.0f) * fCollisionMass * fSpeedDotProduct);
@@ -1117,8 +1123,9 @@ bool CPhysical::ApplySoftCollision(CEntity* entity, const CColPoint& colPoint, f
     }
 
     CVector vecDifference = vecDistanceToPointFromThis - vecCentreOfMassMultiplied;
-    CVector vecSpeedCrossProduct = CrossProduct(vecDifference, vecMoveDirection);
-    float fSquaredMagnitude = vecMoveDirection.SquaredMagnitude();
+    CVector vecSpeedCrossProduct = PhysicalCrossProductOriginal(vecDifference, vecMoveDirection); // 0x59C730
+    // 0x543A85..0x543AA1: squared magnitude of the CROSS product (r x n), not of the normal
+    float fSquaredMagnitude = vecSpeedCrossProduct.SquaredMagnitude();
     float fCollisionMass = 1.0f / (fSquaredMagnitude / m_fTurnMass + 1.0f / m_fMass);
 
     if (!GetIsTypeVehicle() || vehicle->m_nVehicleSubType // todo: m_nVehicleSubType
@@ -1607,7 +1614,8 @@ bool CPhysical::ApplyCollisionAlt(CPhysical* entity, CColPoint& colPoint, float&
         vecSpeed += vehicle->AddMovingCollisionSpeed(vecDistanceToPointFromThis);
 
     CVector vecMoveDirection = colPoint.m_vecNormal;
-    float fSpeedDotProduct = DotProduct(&vecMoveDirection, &vecSpeed);
+    // 0x544EF9..0x544F2A: (n.x*s.x + n.z*s.z) + n.y*s.y (the 1st block above, 0x544DA5, is z,y,x = DotProduct)
+    float fSpeedDotProduct = (float)(((x87d)vecMoveDirection.x * vecSpeed.x + (x87d)vecMoveDirection.z * vecSpeed.z) + (x87d)vecMoveDirection.y * vecSpeed.y);
     if (fSpeedDotProduct >= 0.0f)
     {
         return false;
@@ -1743,7 +1751,7 @@ bool CPhysical::ApplyCollisionAlt(CPhysical* entity, CColPoint& colPoint, float&
     }
     else
     {
-        CVector vecSpeed = vecMoveSpeed / m_fMass;                                                            // todo: shadow var
+        CVector vecSpeed = vecMoveSpeed * (1.0f / m_fMass);                                                   // todo: shadow var; 0x4119D0: operator/ multiplies by the reciprocal
         if (GetIsTypeVehicle())
         {
             if (!GetHasHitWall() || m_vecMoveSpeed.SquaredMagnitude() <= 0.1f
@@ -1767,7 +1775,7 @@ bool CPhysical::ApplyCollisionAlt(CPhysical* entity, CColPoint& colPoint, float&
         float fTurnMass = m_fTurnMass;
         CVector vecDifference = vecDistanceToPointFromThis - vecCentreOfMassMultiplied; // todo: shadow var
         CVector vecCrossProduct = CrossProduct(vecDifference, vecMoveSpeed);            // todo: shadow var
-        outVecTurnSpeed += vecCrossProduct / fTurnMass;
+        outVecTurnSpeed += vecCrossProduct * (1.0f / fTurnMass); // 0x4119D0
     }
 
     float fCollisionImpact1 = damageIntensity / fCollisionMass;
@@ -1787,6 +1795,8 @@ bool CPhysical::ApplyCollisionAlt(CPhysical* entity, CColPoint& colPoint, float&
 }
 
 // 0x5454C0
+static float ExeMagnitude3(float a, float b, float c); // defined below
+
 bool CPhysical::ApplyFriction(float fFriction, CColPoint& colPoint)
 {
     if (physicalFlags.bDisableCollisionForce)
@@ -1796,12 +1806,13 @@ bool CPhysical::ApplyFriction(float fFriction, CColPoint& colPoint)
 
     if (physicalFlags.bDisableTurnForce)
     {
-        float fMoveSpeedDotProduct = DotProduct(&m_vecMoveSpeed, &colPoint.m_vecNormal);
+        // 0x5454DC..0x54555D: dot = (z + y) + x terms, magnitude = sqrt((z*z + y*y) + x*x), direction = difference * (1 / magnitude)
+        float fMoveSpeedDotProduct = (float)(((x87d)m_vecMoveSpeed.z * colPoint.m_vecNormal.z + (x87d)m_vecMoveSpeed.y * colPoint.m_vecNormal.y) + (x87d)m_vecMoveSpeed.x * colPoint.m_vecNormal.x);
         CVector vecSpeedDifference = m_vecMoveSpeed - (fMoveSpeedDotProduct * colPoint.m_vecNormal);
-        float fMoveSpeedMagnitude = vecSpeedDifference.Magnitude();
+        float fMoveSpeedMagnitude = ExeMagnitude3(vecSpeedDifference.z, vecSpeedDifference.y, vecSpeedDifference.x);
         if (fMoveSpeedMagnitude > 0.0f)
         {
-            CVector vecMoveDirection = vecSpeedDifference / fMoveSpeedMagnitude;
+            CVector vecMoveDirection = vecSpeedDifference * (1.0f / fMoveSpeedMagnitude);
 
             float fSpeed = -fMoveSpeedMagnitude;
             float fForce = -(CTimer::GetTimeStep() / m_fMass * fFriction);
@@ -1820,16 +1831,17 @@ bool CPhysical::ApplyFriction(float fFriction, CColPoint& colPoint)
     CVector vecDistanceToPointFromThis = colPoint.m_vecPoint - GetPosition();
     CVector vecSpeed = GetSpeed(vecDistanceToPointFromThis);
 
-    float fMoveSpeedDotProduct = DotProduct(&vecSpeed, &colPoint.m_vecNormal);
+    // 0x54560C..0x545699: dot = (y + z) + x terms, magnitude = sqrt((z*z + y*y) + x*x), direction = difference * (1 / magnitude)
+    float fMoveSpeedDotProduct = (float)(((x87d)vecSpeed.y * colPoint.m_vecNormal.y + (x87d)vecSpeed.z * colPoint.m_vecNormal.z) + (x87d)vecSpeed.x * colPoint.m_vecNormal.x);
     CVector vecSpeedDifference = vecSpeed - (fMoveSpeedDotProduct * colPoint.m_vecNormal);
 
-    float fMoveSpeedMagnitude = vecSpeedDifference.Magnitude();
+    float fMoveSpeedMagnitude = ExeMagnitude3(vecSpeedDifference.z, vecSpeedDifference.y, vecSpeedDifference.x);
     if (fMoveSpeedMagnitude <= 0.0f)
     {
         return false;
     }
 
-    CVector vecMoveDirection = vecSpeedDifference / fMoveSpeedMagnitude;
+    CVector vecMoveDirection = vecSpeedDifference * (1.0f / fMoveSpeedMagnitude);
 
     CVector vecCentreOfMassMultiplied = GetMatrix().TransformVector(m_vecCentreOfMass);
     CVector vecDifference = vecDistanceToPointFromThis - vecCentreOfMassMultiplied;
@@ -2100,16 +2112,15 @@ bool CPhysical::ProcessShiftSectorList(int32 sectorX, int32 sectorY)
 
     int32 totalAcceptableColPoints = 0;
     const auto ProcessSectorList = [&]<typename PtrListType>(PtrListType& list) {
-        bool bProcessEntityCollision = true;
         for (CEntity* const entity : list) {
-            if (!entity->GetIsTypeBuilding() && (!entity->GetIsTypeObject() || !entity->AsPhysical()->physicalFlags.bDisableCollisionForce))
-            {
-                if (!GetIsTypePed() || !entity->GetIsTypeObject()
-                    || !entity->GetIsStatic()
-                    || entity->AsObject()->objectFlags.bIsExploded)
-                {
-                    bProcessEntityCollision = false;
-                }
+            // 0x5467A2..0x5467E0: recomputed for EVERY entity (the port kept the value across the list);
+            // true for buildings, objects with bDisableCollisionForce, and (for a ped) a static (GetIsStatic = bIsStatic or 0x40000) object that is not exploded (objectFlags bit 0x40)
+            bool bProcessEntityCollision = false;
+            if (entity->GetIsTypeBuilding() || (entity->GetIsTypeObject() && entity->AsPhysical()->physicalFlags.bDisableCollisionForce)) {
+                bProcessEntityCollision = true;
+            } else if (GetIsTypePed() && entity->GetIsTypeObject() && entity->GetIsStatic()
+                       && !entity->AsObject()->objectFlags.bIsExploded) {
+                bProcessEntityCollision = true;
             }
             if (entity != this
                 && !entity->IsScanCodeCurrent()
@@ -2123,19 +2134,18 @@ bool CPhysical::ProcessShiftSectorList(int32 sectorX, int32 sectorY)
                     bool bThisOrCollidedEntityStuck = false;
                     if (entity->GetIsTypeBuilding())
                     {
+                        // 0x54683E..0x5468F6: IsSubTrain is read from THIS (edi+0x594), not from the building; m_pAttachedTo is not an exclusive branch:
+                        // when it does not disable the collision the m_pEntityIgnoredCollision / bDisableZ / flyers checks still run
                         if (physicalFlags.bDisableCollisionForce
-                            && (!GetIsTypeVehicle() || entity->AsVehicle()->IsSubTrain()))
+                            && (!GetIsTypeVehicle() || AsVehicle()->IsSubTrain()))
                         {
                             bCollisionDisabled = true;
                         }
                         else
                         {
-                            if (m_pAttachedTo)
+                            if (m_pAttachedTo && m_pAttachedTo->GetIsTypePhysical() && m_pAttachedTo->physicalFlags.bDisableCollisionForce)
                             {
-                                if (m_pAttachedTo->GetIsTypePhysical() && m_pAttachedTo->physicalFlags.bDisableCollisionForce)
-                                {
-                                    bCollisionDisabled = true;
-                                }
+                                bCollisionDisabled = true;
                             }
                             else if (m_pEntityIgnoredCollision == entity)
                             {
@@ -2211,16 +2221,17 @@ bool CPhysical::ProcessShiftSectorList(int32 sectorX, int32 sectorY)
 
     auto& s = CWorld::GetSector(sectorX, sectorY);
     auto& rs = CWorld::GetRepeatSector(sectorX, sectorY);
-    ProcessSectorList(s.Buildings);
-    ProcessSectorList(rs.Vehicles);
-    ProcessSectorList(rs.Peds);
+    // 0x54674E..0x546A50: the exe walks the lists from the last to the first: objects, peds, vehicles, buildings (jump table 0x546CF0)
     ProcessSectorList(rs.Objects);
+    ProcessSectorList(rs.Peds);
+    ProcessSectorList(rs.Vehicles);
+    ProcessSectorList(s.Buildings);
 
     if (totalAcceptableColPoints == 0) {
         return false;
     }
 
-    float shiftMagnitude = vecShift.Magnitude();
+    const float shiftMagnitude = (float)std::sqrt(((x87d)vecShift.x * vecShift.x + (x87d)vecShift.z * vecShift.z) + (x87d)vecShift.y * vecShift.y); // 0x546A62: (x*x + z*z) + y*y
     if (shiftMagnitude > 1.0f) { // normalize the shift boi
         float shiftMultiplier = 1.0f / shiftMagnitude;
         vecShift *= shiftMultiplier;
@@ -2231,16 +2242,11 @@ bool CPhysical::ProcessShiftSectorList(int32 sectorX, int32 sectorY)
         if (!GetIsTypePed()) {
             vecEntityPosition += vecShift * fMaxColPointDepth * 1.5f;
         } else {
-            float fDepthMultiplied = 1.5f * fMaxColPointDepth;
-            if (fDepthMultiplied >= 0.005f) {
-                if (fDepthMultiplied > 0.3f) {
-                    vecEntityPosition += vecShift * fMaxColPointDepth * 0.3f;
-                }
-            } else {
-                vecEntityPosition += vecShift * fMaxColPointDepth * 0.005f;
-            }
-
-            vecEntityPosition += vecShift * fDepthMultiplied;
+            // 0x546B0D..0x546BC2: the shift of a ped is the (unit-ish) direction scaled by clamp(1.5 * depth, 0.005, 0.3)
+            // (0x858B4C = 0.005, 0x858C24 = 0.3, 0x8CD7D4 = 1.5); the port used to add the unclamped 1.5 * depth shift on top of a depth * 0.3/0.005 one
+            const float fDepthMultiplied = 1.5f * fMaxColPointDepth;
+            const float fShiftScale = fDepthMultiplied < 0.005f ? 0.005f : (fDepthMultiplied > 0.3f ? 0.3f : fDepthMultiplied);
+            vecEntityPosition += vecShift * fShiftScale;
         }
     } else {
         vecEntityPosition += vecShift * fMaxColPointDepth * 0.75f;
@@ -2421,10 +2427,11 @@ void CPhysical::PositionAttachedEntity()
             CMatrix& attachedToEntityMatrix = attachedTo->GetMatrix(); // todo: shadow var
             CVector randomRight = attachedToEntityMatrix.GetRight() * randomNumber;
             CVector randomForward = attachedToEntityMatrix.GetForward() * randomNumber;
-            CVector force = (randomRight + randomForward) * (m_fMass * ExeRecip(50.0f));
+            // 0x547677: the 1st force uses mass * 0.01f (0x858C58); 0x5476E1: the 2nd one up * (mass * 0.02f) (0x858B38), the scalar is computed first
+            CVector force = (randomRight + randomForward) * (m_fMass * ExeRecip(100.0f));
             ApplyMoveForce(force);
             if (attachedToAuto->m_wMiscComponentAngle > attachedToAuto->m_wMiscComponentAnglePrev)
-                ApplyMoveForce(attachedTo->GetMatrix().GetUp() * m_fMass * ExeRecip(50.0f));
+                ApplyMoveForce(attachedTo->GetMatrix().GetUp() * (m_fMass * ExeRecip(50.0f)));
         }
         return;
     }
@@ -2451,13 +2458,13 @@ void CPhysical::PositionAttachedEntity()
                 CVector vecDistance = (vecCenterOfMassMultiplied + GetPosition()) - m_pAttachedTo->GetPosition();
                 m_pAttachedTo->ApplyForce(vecForce * -1.0f, vecDistance, true);
             }
-            float fRotationInRadians = m_pAttachedTo->GetHeading() - GetHeading();
+            float fRotationInRadians = (float)(X87R(m_pAttachedTo->GetHeadingExt() - GetHeadingExt())); // 0x5479D9..0x547A09: FPATAN results stay unrounded, the subtraction rounds
             if (fRotationInRadians > PI)
                 fRotationInRadians -= PI * 2;
             else if (fRotationInRadians < -PI)
                 fRotationInRadians += PI * 2;
             fRotationInRadians = std::clamp(fRotationInRadians, -0.5f, 0.5f);
-            m_vecTurnSpeed.z += fRotationInRadians / 100'000.0f * m_fMass;
+            m_vecTurnSpeed.z += fRotationInRadians * ExeRecip(100'000.0f) * m_fMass; // 0x547A67: fmul 1e-5f (0x8CD7DC), the port divided by 100000
         }
     }
     else {
@@ -4583,10 +4590,11 @@ bool CPhysical::ProcessCollisionSectorList(int32 sectorX, int32 sectorY)
     };
     auto& s = CWorld::GetSector(sectorX, sectorY);
     auto& rs = CWorld::GetRepeatSector(sectorX, sectorY);
+    // 0x54BB50..0x54BB83 (jump table 0x54CFE0): buildings, vehicles, OBJECTS, then peds
     if (   ProcessSectorList(s.Buildings)
         || ProcessSectorList(rs.Vehicles)
-        || ProcessSectorList(rs.Peds)
         || ProcessSectorList(rs.Objects)
+        || ProcessSectorList(rs.Peds)
     ) {
         return true;
     }
@@ -4634,8 +4642,9 @@ bool CPhysical::ProcessCollisionSectorList_SimpleCar(CRepeatSector* repeatSector
 
     // Find entity we're colliding with
     CPhysical* entity;
-    if (!(entity = ProcessSectorList(repeatSector->Vehicles))) {
-        if (!(entity = ProcessSectorList(repeatSector->Objects))) {
+    // 0x54D050..0x54D12B: the exe scans the objects list first (repeatSector + 8), then the vehicles list (repeatSector + 0)
+    if (!(entity = ProcessSectorList(repeatSector->Objects))) {
+        if (!(entity = ProcessSectorList(repeatSector->Vehicles))) {
             return false;
         }
     }

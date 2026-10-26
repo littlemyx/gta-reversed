@@ -1,0 +1,48 @@
+addr	function	verdict	asm_range	note	fix_commit
+0x6398F0	CTaskSimpleDieInCar::ProcessPed	MATCH	0x6398F0	tail jmp to CTaskSimpleDie::ProcessPed	
+0x657AC0	CTaskSimpleEvasiveDive::ProcessPed	MATCH	0x657AC0-0x657ADF	finished -> true; no anim -> StartAnim; false	
+0x692E50	CTaskSimpleFacial::MakeAbortable	MATCH	0x692E50-0x692E77	blend delta -4 on the expression anim if present; true	
+0x692390	CTaskSimpleDuck::RestartTask	FIXED	0x6923B6	m_StartTime = CTimer::GetTimeInMS() was missing	faa85d59
+0x694640	CTaskSimpleDuckWhileShotsWhizzing::ProcessPed	MATCH	0x694640-0x694681	cower anim 0x8d blend 4 + delete cb 0x692550, then Duck::ProcessPed	
+0x639900	CTaskSimpleDrown::ProcessPed	MATCH	0x639900-0x639958	PEDSTATE_DIE, clears bIsInTheAir (0x200), player stat 170, then Die::ProcessPed	
+0x657A60	CTaskSimpleEvasiveStep::ProcessPed	FIXED	0x657A7E-0x657A83	speech condition is entity TYPE == VEHICLE ([+0x36]&7==2), port tested STATUS_SIMPLE	38cd3db8
+0x62FA60	CTaskSimpleDie::Constructor-2	MATCH	0x62FA60-0x62FAE8	name/block ctor; fields and call order identical	
+0x64CEA0	CTaskSimpleCreateCarAndGetIn::Destructor	MATCH	0x64CEA0-0x64CF32	CleanUpThisVehicle + MissionCleanUp.RemoveEntityFromList(handle,vehicle)	
+0x64CF40	CTaskSimpleCreateCarAndGetIn::ProcessPed	FIXED	0x64D16A-0x64D1D9	vehicle cleanup+true when NOT GetIsStatic(); port had it inverted	3483345f
+0x692E80	CTaskSimpleFacial::ProcessPed	MATCH	0x692E80-0x692F80	UNSURE-free; only difference: port uses CTaskTimer::Start which refuses a negative duration (exe stores unconditionally); durations are >=0 in all callers	
+0x637520	CTaskSimpleDie::StartAnim	FIXED	0x63756A	only bit 0x8 (FINISH_AUTO_REMOVE) is cleared; port masked m_Flags to 7 bits and wiped the high-byte user flags	3787a4d9
+0x61C740	CTaskSimpleFight::GetStrikeDamage	MATCH	0x61C740-0x61C7E1	adrenaline 50, fat/muscle mod 4, brass knuckle 1.5, unarmed attack strength; x87 unrounded products like exe	
+0x61D5F0	CTaskSimpleFight::FightSetUpCol	MATCH	0x61D5F0-0x61D6E5	col data/sphere setup, bbox +-r, bound sphere (0,0,0,r)	
+0x62FF70	CTaskSimpleDrownInCar::ProcessPed	MATCH	0x62FF70-0x630032	die state, stat, player veh status forced stop, CEventDeath(drowning) added to group	
+0x621B10	CTaskSimpleGangDriveBy::CheckLineOfSight	MATCH	0x621B10-0x621BD6	LOS recheck every 1750+rand(0..500) ms; origin z+0.5; pIgnoreEntity = target	
+0x692700	CTaskSimpleDuckWhileShotsWhizzing::MakeAbortable	MATCH	0x692700-0x6927A4	whizz-by event (49) drops both anim refs and bIsDucking; else Duck::MakeAbortable	
+0x67FAF0	CTaskSimpleFall::ProcessPed	MATCH	0x67FAF0-0x67FBF7	structure identical. UNSURE (systemic, not fixed): CTimer::GetTimeStepInMS() = float(ts*0.02f)*1000.0f rounds after the first multiply, the exe keeps x87 extended through ftol: at ts==1.0 exe gives 19 ms, port 20. ~25 callers use (uint32)GetTimeStepInMS()	
+0x6397E0	CTaskSimpleDie::ProcessPed	MATCH	0x6397E0-0x6398ED	start anim / death event conditions identical (submerged, !collision, dontApplySpeed, standing && ...)	
+0x660940	CTaskSimpleDoHandSignal::ProcessPed	MATCH	0x660940-0x660A26	secondary partial-anim handling identical (type 0x1aa)	
+0x67CA40	CTaskSimpleFall::StartAnim	MATCH	0x67CA40-0x67CB46	bike fall / existing anim / new blend branches identical (Start(0) = flag+SetCurrentTime, order irrelevant)	
+0x678370	CTaskSimpleFall::MakeAbortable	MATCH	0x678370-0x6784B0	immediate / urgent (damage&&health<1, in water, prio 71, stuck in air) with -2/-8 blend deltas	
+0x6784C0	CTaskSimpleFall::ProcessFall	MATCH	0x6784C0-0x67869E	all compares (NaN polarity checked) and both branches identical; sub-ulp: (cur - step) and total*0.8 are extended in the exe, float in the port	
+0x6239F0	CTaskSimpleFight::MakeAbortable	MATCH	0x6239F0-0x623B09	event priority <=31 or 60 vetoes; anim/idle-anim callbacks; idle blend 1000/16; player move anim reset	
+0x62D290	CTaskSimpleGangDriveBy::MakeAbortable	MATCH	0x62D290-0x62D39E	damage event passes only if health-zero && addToEventGroup; anim blend -8/-1000, free aiming bit, canDoDriveBy	
+0x621960	CTaskSimpleGangDriveBy::ProcessPlayerPed	MATCH	0x621960-0x621AFB	aim-mode check, heading diff / sector / anim table (0xE7..0xEE), weapon mode, free aim, canDoDriveBy=0	
+0x6939F0	CTaskSimpleDuck::SetMoveAnim	MATCH	0x6939F0-0x693B78	x==0 / y>0 / y==0 / y<0 branches and anim ids 56..59 identical; NaN-only: exe takes the y==0 branch and keeps y (not 0.6) for a NaN move command	
+0x627B20	CTaskSimpleGangDriveBy::StartDriveByAnim	MATCH	0x627B20-0x627CBB	block load/ref, start conditions, anim switch, burst shots rand(2,clip), 100ms attack timer for AI, faded-in test (0.9)	
+0x61C7F0	CTaskSimpleFight::GetAvailableComboSet	MATCH	0x61C7F0-0x61C99F	command<0 ref only; combo selection (base combo, style, idle flag 0x400), anim block ref/unref/request, fallback set 4	
+0x61D400	CTaskSimpleFight::FightHitObj	MATCH	0x61D400-0x61D5EB	uproot/static wake-up, force -0.5/-0.1 by bDisableZ, ObjectDamage(strike*10), chainsaw sound, hit sound table, punch impact	
+0x692100	CTaskSimpleDuck::MakeAbortable	FIXED	0x69219D	whizzed-by early exit needs m_ShotWhizzingCounter >= 0 (cmp -1; jle), port required > 0	d2e4b748
+0x692340	CTaskSimpleDuck::AbortBecauseOfOtherDuck	FIXED	0x692375	extra (not in tsv): default finish callback set on m_MoveAnim; port used the nulled m_DuckAnim (null deref)	45b9bcae
+0x61C9B0	CTaskSimpleFight::SetPlayerMoveAnim	MATCH	0x61C9B0-0x61CB93	normalised fight movement -> fight strafe anims 41..44 blend amounts; fade-out -8 when idle; flags written like exe	
+0x624B50	CTaskSimpleFightingControl::CalcMoveCommand	FIXED	0x624C2B,0x624C7E-0x624C8D,0x624D60	(1) ped case draws rand() before the range>0.1 test, (2) 8/10 branch compares distance (not range) with 0.8 -> port never returned 8/10, (3) vehicle hit-side test is > 0.7 not >=. UNSURE (not fixed): exe keeps dx/dy/dz and the sums in extended precision, port rounds the position difference to float first	f13594ab
+0x62A0A0	CTaskSimpleFightingControl::ProcessPed	MATCH	0x62A0A0-0x62A378	shooting rate, attack task create/abort, next-attack timing, someTime logic, wait chain in extended, CalcMoveCommand/ControlFight	
+0x61D0B0	CTaskSimpleFight::FightHitCar	MATCH	0x61D0B0-0x61D3F6	chainsaw sparks + 0.00075 vs 0.01 damage, crime 21, occupant events over m_nMaxPassengers, last-damage entity on health loss, sounds, impact	
+0x694390	CTaskSimpleDuck::ProcessPed	FIXED	0x6944A2-0x6944BE,0x6944F5-0x694589,0x6945DE	6 deviations: timeout abort priority LEISURE and now>end (port URGENT, >=); IDLE_TIRED anim fade -2 missing; DeleteDuckAnimCB registered with SetFinishCallback (exe SetDeleteCallback); wrong "other" crouch anim faded; out-of-control countdown tested the new value (exe old)	5dc1831d
+0x630600	CTaskSimpleDead::ProcessPed	NOT_REACHED		token budget	
+0x5BEDC0	CTaskSimpleFight::LoadMeleeData	NOT_REACHED		token budget	
+0x61CBA0	CTaskSimpleFight::FightHitPed	NOT_REACHED		token budget	
+0x6240B0	CTaskSimpleFight::FightStrike	NOT_REACHED		token budget	
+0x623B10	CTaskSimpleFight::StartAnim	NOT_REACHED		token budget	
+0x629920	CTaskSimpleFight::ProcessPed	NOT_REACHED		token budget	
+0x627CC0	CTaskSimpleGangDriveBy::FireGun	NOT_REACHED		token budget	
+0x627600	CTaskSimpleGangDriveBy::ProcessAIPed	NOT_REACHED		token budget	
+0x628350	CTaskSimpleGangDriveBy::ProcessAimIK	NOT_REACHED		token budget	
+0x62D3B0	CTaskSimpleGangDriveBy::ProcessPed	NOT_REACHED		token budget	

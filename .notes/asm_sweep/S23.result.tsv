@@ -1,0 +1,34 @@
+addr	function	verdict	asm range	note	fix commit
+0x6EABA0	CreateBeachToy	MATCH	0x6EABA0-0x6EAE12	jump tables, models, flags, removal time verified	
+0x5BCFE0	LoadPedGroups	FIXED	0x5BD0C0-0x5BD122	tokens count toward the 21 capacity (resolved or not); all-unresolved line still makes a 0-size group	653cdf89
+0x5BD1A0	LoadCarGroups	FIXED	0x5BD2C9-0x5BD305	same shared LoadGroup (capacity 23)	653cdf89
+0x611FC0	ManagePed	FIXED	0x61201D-0x612055	death-time delta signed (rounding of PCDM*thr vs dist/PCDM in the removal tests = UNSURE, 1 ulp only)	04d2001b
+0x6122C0	RemoveAllRandomPeds	MATCH	0x6122C0-0x61231D		
+0x612320	TestRoomForDummyObject	MATCH	0x612320-0x612390		
+0x6123A0	TestSafeForRealObject	FIXED	0x6123A0-0x612704	sector range around position (not bound centre) clamped [0,120]; skips entities with current scan code / not touching; tags scan code; no scan code increment	7533bafb
+0x612710	AddPed	FIXED	0x612797,0x61290C,0x612921,0x612B3F,0x612B5E	cheat civ weapon rand()%5; gang weapon int rolls (33/66/50 thresholds); slut-magnet dildo ammo 0 (was 1); golf-club cheat: closest ped of whole pool	1472e9be
+0x612CD0	AddDeadPedInFrontOfCar	FIXED	0x612D04-0x612D7B,0x612ED4	CanCameraSeeAPedHere sqrt dist strict >; ignore-list IsPositionClearForPed skipped null slots only by chance (always returned false for <3 hits)	0360cdd2
+0x6133F0	CreateWaitingCoppers	FIXED	0x6134A7,0x61369D,0x6136E0,0x6137F7,0x6138A3	no cars if cop car model<=0; siren flag (UsesSiren+rand&1) was missing; ped distance rolled before heading (RNG order swapped); ped z = ground+1 was missing; heading from 3D-normalised vector	37abf9cb
+0x613A00	AddPedInCar	FIXED	0x613A8A-0x613B76,0x613BB7	AddPed(type,model): literal fireman/medic/gang ped type, cop cars pass the COP TYPE (SWAT/FBI/army setup, was model id); gang fallback keeps gang type; criminal UpdatePedCount order true then false (was reversed)	33578b84
+0x613CD0	PlaceMallPedsAsStationaryGroup	FIXED	0x613CF2-0x613D10	argument evaluation order (occupation pick before group-size roll) made explicit	9c2a3cd3
+0x613D60	PlaceCouple	MATCH	0x613D60-0x614205		
+0x614580	ConvertToRealObject	NOT REACHED			
+0x614670	ConvertToDummyObject	MATCH	0x614670-0x614715		
+0x6119D0	RemoveSpecificDriverModelsForCar	MATCH	0x6119D0-0x611AD0	exe additionally calls SetModelIsDeletable before SetModelAndItsTxdDeletable (idempotent, ignored); model->case table not compared byte for byte	
+0x610E10	Initialise	MATCH	0x610E10-0x610EB0		
+0x610F20	RemovePed	MATCH	0x610F20-0x610F3B		
+0x6114C0	IsSkateable	MATCH	0x6114C0-0x611541		
+0x611550	ChooseGangOccupation	MATCH	0x611550		
+0x6117D0	PlaceGangMembers	MATCH	0x6117D0-0x6117EC		
+0x614210	AddPedAtAttractor	NOT REACHED		token budget	
+0x614720	AddToPopulation	NOT REACHED		token budget	
+0x615970	GeneratePedsAtAttractors	NOT REACHED		token budget	
+0x615C90	GeneratePedsAtStartOfGame	NOT REACHED		token budget	
+0x615DC0	ManageObject	NOT REACHED		token budget	
+0x616000	ManageDummy	NOT REACHED		token budget	
+0x616190	ManagePopulation	NOT REACHED		token budget	
+0x616300	RemovePedsIfThePoolGetsFull	NOT REACHED		token budget	
+0x616420	ConvertAllObjectsToDummyObjects	NOT REACHED		token budget	
+0x616470	PopulateInterior	NOT REACHED		token budget	
+0x6117F0	LoadSpecificDriverModelsForCar	NOT REACHED		token budget	
+0x616650	Update	NOT REACHED		token budget	

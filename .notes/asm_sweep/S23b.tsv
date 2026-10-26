@@ -1,0 +1,14 @@
+addr	file	line	cls	fn	oc
+0x614210	source/game_sa/Population.cpp	70	None	AddPedAtAttractor	D
+0x614580	source/game_sa/Population.cpp	74	None	ConvertToRealObject	D
+0x614720	source/game_sa/Population.cpp	76	None	AddToPopulation	D
+0x615970	source/game_sa/Population.cpp	77	None	GeneratePedsAtAttractors	D
+0x615C90	source/game_sa/Population.cpp	78	None	GeneratePedsAtStartOfGame	D
+0x615DC0	source/game_sa/Population.cpp	79	None	ManageObject	S
+0x616000	source/game_sa/Population.cpp	80	None	ManageDummy	D
+0x616190	source/game_sa/Population.cpp	82	None	ManagePopulation	S
+0x616300	source/game_sa/Population.cpp	83	None	RemovePedsIfThePoolGetsFull	C
+0x616420	source/game_sa/Population.cpp	84	None	ConvertAllObjectsToDummyObjects	S
+0x616470	source/game_sa/Population.cpp	100	None	PopulateInterior	D
+0x6117F0	source/game_sa/Population.cpp	113	None	LoadSpecificDriverModelsForCar	S
+0x616650	source/game_sa/Population.cpp	116	None	Update	D

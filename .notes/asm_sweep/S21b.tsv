@@ -1,0 +1,10 @@
+addr	file	line	cls	fn	oc
+0x6098F0	source/game_sa/Entity/Ped/PlayerPed.cpp	76	CPlayerPed	ProcessAnimGroups	D
+0x60A9C0	source/game_sa/Entity/Ped/PlayerPed.cpp	96	CPlayerPed	SetRealMoveAnim	D
+0x60B650	source/game_sa/Entity/Ped/PlayerPed.cpp	100	CPlayerPed	Compute3rdPersonMouseTarget	D
+0x60C1E0	source/game_sa/Entity/Ped/PlayerPed.cpp	103	CPlayerPed	KeepAreaAroundPlayerClear	D
+0x60DC50	source/game_sa/Entity/Ped/PlayerPed.cpp	107	CPlayerPed	FindWeaponLockOnTarget	D
+0x60E530	source/game_sa/Entity/Ped/PlayerPed.cpp	108	CPlayerPed	FindNextWeaponLockOnTarget	D
+0x60C840	source/game_sa/Entity/Ped/PlayerPed.cpp	111	CPlayerPed	MakeThisPedJoinOurGroup	D
+0x60D850	source/game_sa/Entity/Ped/PlayerPed.cpp	119	CPlayerPed	ProcessWeaponSwitch	S
+0x60EA90	source/game_sa/Entity/Ped/PlayerPed.cpp	121	CPlayerPed	ProcessControl	D

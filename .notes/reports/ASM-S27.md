@@ -1,0 +1,13 @@
+# ASM-S27 (World.cpp, 44 functions) - 2026-10-26 22:14 .. 22:36
+Result: 29 compared (10 FIXED in 10 commits, 19 MATCH), 0 UNSURE, 15 NOT REACHED (token budget; table in S27.result.tsv). Slice partial.
+Fixes (exe address, one line each):
+- ProcessVerticalLineSectorList_FillGlobeColPoints (0x5636F1..0x563827): after a stored hit the exe tests the SAME entity again with the line start behind the hit (also if it was the last node); the port moved to the next node with the shifted line.
+- CallOffChaseForAreaSectorListPeds (0x563D8C..0x563EA7): the exe calls off only peds whose kill-ped target is the player or whose destroy-car target is the player's vehicle (port: the inverse); area test uses args 2..5; stand-still task is looped.
+- CallOffChaseForArea (0x566B96) + ...SectorListVehicles (0x563AD1): last four args are the area grown by 10 (port passed the plain area twice); the vehicle presence test is strict.
+- FindUnsuspectingTargetPed (0x566DB6..0x566E44): GANG1..GANG10 inclusive (port dropped both ends), skips peds whose active task IS wander (port: all others), initial nearest 9999.9f.
+- FindLodOfTypeInRange (0x564EDD): _ftol (truncate) not floor() of the lod sector coordinate (range below -3000 gave sector -1 = out of the array).
+- ProcessPedsAfterPreRender (0x563444): no m_bRemoveFromWorld skip. ExtinguishAllCarFiresInArea (0x566A0A): strict d^2 < r^2. PrintCarChanges / ProcessForAnimViewer: unused debug functions (model 0 for non-automobiles + log order; UpdateRwFrame).
+MATCH (19): Initialise, CastShadowSectorList, FindPlayerCentreOfWorldForMap, RepositionCertainDynamicObjects, CameraToIgnoreThisObject (jump table decoded), FindLowestZ/FindRoofZ, TestForBuildingsOnTopOfEachOther, TestForUnusedModels, RemoveEntityInsteadOfProcessingIt, GetIsLineOfSightSector(List)Clear, ClearForRestart, ProcessVerticalLineSector(+List, +_FillGlobeColPoints, ProcessVerticalLine_FillGlobeColPoints), RemoveReferencesToDeletedObject, RemoveStaticObjects.
+NOT REACHED: RemoveFallenPeds/Cars, FindMissionEntitiesIntersectingCube, ProcessAttachedEntities, ProcessLineOfSightSector(+List), FindObjectsIntersectingCube/AngledCollisionBox/KindaColliding, TestSphereAgainstSectorList/World, ShutDown, TriggerExplosionSectorList, Process, RepositionOneObject.
+Consumer audit: no layout/signature change; FindUnsuspectingTargetPed is read only by Plane.cpp (news heli target), the FillGlobeColPoints list function only via ProcessVerticalLine(Sector)_FillGlobeColPoints.
+Gate: Release build OK (1186/1186 + incremental), no oracle row covers these functions, soak RESULT: OK (NOVSYNC, 0 errors, route 406 s).

@@ -104,9 +104,10 @@ bool IsPedInPlayersGroup(CPedGroup* pg, CPed* p) {
 }
 
 void MaybeAdjustTaskOfGroupThreatEvent(const CEventEditableResponse& e, CPedGroup* pg, CPed* originator, CPed* srcPed) {
-    if (pg->m_bIsMissionGroup && srcPed->IsPlayer()) {
+    // exe 0x5FBD3F..0x5FBD87 (GunAimedAt) / 0x5FBF80..0x5FBFCB (Damage): only for NON-mission groups, and the leader must not be friendly with the SOURCE ped
+    if (!pg->m_bIsMissionGroup && srcPed->IsPlayer()) {
         if (const auto l = pg->GetMembership().GetLeader()) {
-            if (!l->GetActiveWeapon().IsTypeMelee() && !l->GetIntelligence()->IsFriendlyWith(*originator)) {
+            if (!l->GetActiveWeapon().IsTypeMelee() && !l->GetIntelligence()->IsFriendlyWith(*srcPed)) {
                 const_cast<CEventEditableResponse*>(&e)->m_TaskId = TASK_GROUP_KILL_THREATS_BASIC; // nice R*
             }
         }
@@ -139,7 +140,8 @@ CTaskAllocator* CGroupEventHandler::ComputeStareResponse(CPedGroup* pg, CPed* st
     if (!pg->GetMembership().GetLeader()) {
         return nullptr;
     }
-    if ((stareAt->GetPosition() - pg->GetMembership().GetLeader()->GetPosition()).SquaredMagnitude2D() >= sq(8.f)) {
+    // exe 0x5F9C26..0x5F9C57: the full 3D squared distance, bail out when it is > 64.0 (0x859A44; was 2D and >=)
+    if ((stareAt->GetPosition() - pg->GetMembership().GetLeader()->GetPosition()).SquaredMagnitude() > 64.f) {
         return nullptr;
     }
     for (auto* const m : pg->GetMembership().GetMembers()) {
@@ -259,6 +261,10 @@ CTaskAllocator* CGroupEventHandler::ComputeResponsePedFriend(const CEventAcquain
     if (IsPedInPlayersGroup(pg, e.m_AcquaintancePed)) {
         return nullptr;
     }
+    // exe 0x5FB339..0x5FB346: also bails out for the group's own ped and for any member of THIS group
+    if (e.m_AcquaintancePed == pg->m_pPed || pg->GetMembership().IsMember(e.m_AcquaintancePed)) {
+        return nullptr;
+    }
     switch (e.m_TaskId) {
     case TASK_GROUP_PARTNER_DEAL:  return ComputeDoDealResponse(pg, e.m_AcquaintancePed, originator);
     case TASK_GROUP_PARTNER_GREET: return ComputeGreetResponse(pg, e.m_AcquaintancePed, originator);
@@ -275,10 +281,10 @@ CTaskAllocator* CGroupEventHandler::ComputeResponseNewGangMember(const CEventNew
         new CTaskComplexLeaveAnyCar{0, false, true},
         new CTaskComplexGangJoinRespond{true}
     };
-    if (pg->GetMembership().GetLeader() == FindPlayerPed()) {
+    if (pg->GetMembership().GetLeader() == FindPlayerPed(0)) {
         tseq.AddTask(new CTaskSimpleGoToPoint{
             eMoveState::PEDMOVE_RUN,
-            FindPlayerPed()->GetPosition(),
+            FindPlayerPed(0)->GetPosition(),
             3.f,
             true
         });
@@ -296,11 +302,10 @@ CTaskAllocator* CGroupEventHandler::ComputeResponseLeaderExitedCar(const CEventE
         if (!m) {
             continue;
         }
-        if (m->m_pVehicle && m->bInVehicle && m->m_pVehicle == leader->m_pVehicle) { // Already in the leader's vehicle
-            continue; 
-        }
         CVehicle* mveh{};
-        if (const auto t = m->GetTaskManager().Find<CTaskComplexEnterCarAsPassengerWait>(false); !t || !(mveh = t->GetCar())) {
+        if (m->m_pVehicle && m->bInVehicle && m->m_pVehicle == leader->m_pVehicle) { // exe 0x5F90EE..0x5F9106 -> 0x5F9144: in the leader's vehicle => THAT vehicle is the one to leave (the port skipped these members)
+            mveh = m->m_pVehicle;
+        } else if (const auto t = m->GetTaskManager().Find<CTaskComplexEnterCarAsPassengerWait>(false); !t || !(mveh = t->GetCar())) {
             if (const auto t = m->GetTaskManager().Find<CTaskComplexEnterCarAsPassenger>(false); !t || !(mveh = t->GetTargetCar())) {
                 continue;
             }
@@ -338,7 +343,7 @@ CTaskAllocator* CGroupEventHandler::ComputeResponseLeaderExitedCar(const CEventE
                     new CTaskComplexLeaveCar{
                         mveh,
                         eTargetDoor::TARGET_DOOR_FRONT_LEFT,
-                        CGeneral::GetRandomNumberInRange(-250, 250) + (int32)((i + 1) * 500), // SEE NOTE
+                        CGeneral::GetRandomNumberInRange(-250, 250) + (i + 1) * 500, // SEE NOTE
                         false,
                         false
                     },
@@ -351,11 +356,13 @@ CTaskAllocator* CGroupEventHandler::ComputeResponseLeaderExitedCar(const CEventE
                         fEntityPosChangeThreshold
                     }
                 });
-            } else { // 0x5F92E7
+            } else { // 0x5F92AA..0x5F92E7
+                // exe: delay = slot * 500 - (int)(rand() * (1/32768) * -500.0) + 250, i.e. slot * 500 + [250, 749] (NOT rand(-250, 250) as in the burning case)
+                const auto rnd = -(int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.f / 32768.f) * 500.f);
                 SetResponseTask(CTaskComplexLeaveCar{
-                     mveh,
+                    mveh,
                     eTargetDoor::TARGET_DOOR_FRONT_LEFT,
-                    CGeneral::GetRandomNumberInRange(-250, 250) + (int32)(i * 500), // SEE NOTE
+                    (i * 500 - rnd) + 250,
                     false,
                     false
                 });
@@ -570,7 +577,7 @@ CTaskAllocator* CGroupEventHandler::ComputeResponseDanger(const CEventDanger& e,
 
 // 0x5FBF50
 CTaskAllocator* CGroupEventHandler::ComputeResponseDamage(const CEventDamage& e, CPedGroup* pg, CPed* originator) {
-    const auto src = e.GetSourceEntity();
+    const auto src = e.m_pSourceEntity; // exe 0x5FBF5B: the raw field [e+0x14], NOT the virtual GetSourceEntity (which maps a vehicle to its driver)
     if (!src || !src->GetIsTypePed()) {
         return nullptr;
     }
@@ -615,7 +622,7 @@ CTaskAllocator* CGroupEventHandler::ComputeResponsLeaderQuitEnteringCar(const CE
         }
 
         // This is an inlined `rand() * -500.f` => The result is a number in range [0, 499]
-        const auto rnd = -NOTSA_FTOL(int32, (float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.f / 32768.f) * 500.f);
+        const auto rnd = -(int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.f / 32768.f) * 500.f);
         pg->GetIntelligence().SetEventResponseTask(m, CTaskComplexLeaveCar{
             veh,
             TARGET_DOOR_FRONT_LEFT,
@@ -630,14 +637,16 @@ CTaskAllocator* CGroupEventHandler::ComputeResponsLeaderQuitEnteringCar(const CE
 // 0x5FAA50
 CTaskAllocator* CGroupEventHandler::ComputeMemberResponses(const CEventEditableResponse& e, CPedGroup* pg, CPed* originator) {
     const std::unique_ptr<CEventEditableResponse> clone{ static_cast<CEventEditableResponse*>(const_cast<CEventEditableResponse&>(e).Clone()) };
-    for (auto* const m : pg->GetMembership().GetFollowers()) {
+    // exe 0x5FAA84..0x5FAB2F: all 8 slots (the LEADER too), and ComputeEventResponseTask runs after ComputeResponseTaskType (no `else`)
+    for (auto* const m : pg->GetMembership().GetMembers()) {
         if (!m->IsAlive()) {
             continue;
         }
         if (clone->HasEditableResponse()) {
             clone->m_TaskId = TASK_NONE;
             clone->ComputeResponseTaskType(m, true);
-        } else if (const auto rt = std::unique_ptr<CTask>(CEventHandler::ComputeEventResponseTask(*m, *clone))) {
+        }
+        if (const auto rt = std::unique_ptr<CTask>(CEventHandler::ComputeEventResponseTask(*m, *clone))) {
             pg->GetIntelligence().SetEventResponseTask(m, *rt);
         }
     }
@@ -694,7 +703,7 @@ CTaskAllocator* CGroupEventHandler::ComputeHassleThreatResponse(CPedGroup* pg, C
     if (!leader) {
         return nullptr;
     }
-    if ((leader->GetPosition() - threat->GetPosition()).SquaredMagnitude() >= sq(12.f)) {
+    if ((leader->GetPosition() - threat->GetPosition()).SquaredMagnitude() > 144.f) { // exe 0x5F9DCF..0x5F9DE0: fcomp [0x86C824] (144.0), bails out only when STRICTLY greater
         return nullptr;
     }
     for (auto* const m : pg->GetMembership().GetMembers()) {
@@ -730,8 +739,13 @@ CTaskAllocator* CGroupEventHandler::ComputeHassleSexyPedResponse(CPedGroup* pg, 
     if (!sexyPed) {
         return nullptr;
     }
-    for (auto* const m : pg->GetMembership().GetFollowers()) {
-        if (!CGeneral::RandomBool(25.f)) {
+    // exe 0x5FA065..0x5FA110: over the 7 follower SLOTS; the roll `(int)(rand() * (100 / 32768)) > 75` is made for EVERY slot (null ones too, before the null check)
+    for (int32 i = 0; i < TOTAL_PED_GROUP_FOLLOWERS; i++) {
+        if (CGeneral::GetRandomNumberInRange(0, 100) <= 75) {
+            continue;
+        }
+        CPed* const m = pg->GetMembership().GetMember(i);
+        if (!m) {
             continue;
         }
         pg->GetIntelligence().SetEventResponseTask(
@@ -759,6 +773,24 @@ CTaskAllocator* CGroupEventHandler::ComputeHandSignalResponse(CPedGroup* pg, CPe
     return nullptr;
 }
 
+// Greet/DoDeal inline (exe 0x5FA5E5..0x5FA666 / 0x5FA314..0x5FA3A5): the follower slots only (the leader is NOT a candidate, `ped` itself is not skipped),
+// strictly closer than 999999.0 (0x497423F0) wins
+static std::pair<CPed*, float> FindClosestFollowerTo(CPedGroup* pg, CPed* ped) {
+    CPed* closest{};
+    float closestDistSq = 999999.f;
+    for (int32 i = 0; i < TOTAL_PED_GROUP_FOLLOWERS; i++) {
+        CPed* const m = pg->GetMembership().GetMember(i);
+        if (!m) {
+            continue;
+        }
+        if (const auto distSq = (ped->GetPosition() - m->GetPosition()).SquaredMagnitude(); distSq < closestDistSq) {
+            closestDistSq = distSq;
+            closest       = m;
+        }
+    }
+    return { closest, closestDistSq };
+}
+
 // 0x5FA550
 CTaskAllocator* CGroupEventHandler::ComputeGreetResponse(CPedGroup* pg, CPed* toGreet, CPed* originator) {
     if (!toGreet) {
@@ -771,8 +803,14 @@ CTaskAllocator* CGroupEventHandler::ComputeGreetResponse(CPedGroup* pg, CPed* to
     if (!leader) {
         return nullptr;
     }
-    const auto [closestToGreeter, closestToGreeterDistSq] = pg->GetMembership().GetMemberClosestTo(toGreet);
-    if (!closestToGreeter || closestToGreeterDistSq < sq(4.f) && closestToGreeterDistSq > sq(10.f)) {
+    if (leader->m_nMoveState != PEDMOVE_STILL) { // exe 0x5FA5AB..0x5FA5B4: [leader+0x534] != 1
+        return nullptr;
+    }
+    if (toGreet->m_nPedType == PED_TYPE_PLAYER1 || toGreet->m_nPedType == PED_TYPE_PLAYER2) { // exe 0x5FA5BA..0x5FA5CB: [toGreet+0x598] is 0 or 1
+        return nullptr;
+    }
+    const auto [closestToGreeter, closestToGreeterDistSq] = FindClosestFollowerTo(pg, toGreet);
+    if (!closestToGreeter || closestToGreeterDistSq < sq(4.f) || closestToGreeterDistSq > sq(10.f)) { // exe 0x5FA670..0x5FA694: 16.0 (0x8599D0) <= d^2 <= 100.0
         return nullptr;
     }
     const auto partnerType = CGeneral::GetRandomNumberInRange(0, 6);
@@ -826,11 +864,17 @@ CTaskAllocator* CGroupEventHandler::ComputeDoDealResponse(CPedGroup* pg, CPed* d
     if (!leader) {
         return nullptr;
     }
-    const auto [closestToGreeter, closestToGreeterDistSq] = pg->GetMembership().GetMemberClosestTo(dealWith);
-    if (!closestToGreeter || closestToGreeterDistSq < sq(4.f) && closestToGreeterDistSq > sq(10.f)) {
+    if (leader->m_nMoveState != PEDMOVE_STILL) { // exe 0x5FA2EB..0x5FA2F4: [leader+0x534] != 1
         return nullptr;
     }
-    const auto partnerType = CGeneral::GetRandomNumberInRange(0, 6);
+    if (dealWith->m_nPedType == PED_TYPE_PLAYER1 || dealWith->m_nPedType == PED_TYPE_PLAYER2) { // exe 0x5FA2FA..0x5FA30B
+        return nullptr;
+    }
+    const auto [closestToGreeter, closestToGreeterDistSq] = FindClosestFollowerTo(pg, dealWith);
+    if (!closestToGreeter || closestToGreeterDistSq < sq(4.f) || closestToGreeterDistSq > sq(10.f)) { // exe 0x5FA3AF..0x5FA3D3: 16 <= d^2 <= 100
+        return nullptr;
+    }
+    // exe: NO rand() here (the port copied Greet's partnerType roll) and the event type is the constant 0 (0x5FA478 push 0)
     pg->GetIntelligence().SetEventResponseTask(
         closestToGreeter,
         CTaskComplexPartnerDeal{
@@ -842,17 +886,17 @@ CTaskAllocator* CGroupEventHandler::ComputeDoDealResponse(CPedGroup* pg, CPed* d
         }
     );
     dealWith->GetEventGroup().Add(CEventCreatePartnerTask{
-        partnerType + 1,
+        0,
         closestToGreeter,
         false,
-        0.f // Seems odd
+        0.f
     });
     for (auto* const m : pg->GetMembership().GetMembers()) {
         if (m == closestToGreeter) {
             continue;
         }
         g_ikChainMan.LookAt(
-            "CompGreetResp",
+            "CompDoDealResp", // exe 0x5FA4E6: 0x86C828
             m,
             closestToGreeter,
             CGeneral::GetRandomNumberInRange(3000, 6000),
@@ -878,11 +922,12 @@ CTaskAllocator* CGroupEventHandler::ComputeFleePedResponse(CPedGroup* pg, CPed* 
         return nullptr;
     }
 
-    if (DistanceBetweenPoints(leader->GetPosition(), threat->GetPosition()) > 64.f) {
+    // exe 0x5FA18B..0x5FA1BC: the SQUARED 3D distance is compared with 64.0 (0x859A44), i.e. 8 units, not 64
+    if ((threat->GetPosition() - leader->GetPosition()).SquaredMagnitude() > 64.f) {
         return nullptr;
     }
-    /* rand(); */
     for (auto* const m : pg->GetMembership().GetMembers()) {
+        CGeneral::GetRandomNumber(); // exe 0x5FA1E0: rand() per member, result discarded
         pg->GetIntelligence().SetEventResponseTask(
             m,
             CTaskComplexSmartFleeEntity{

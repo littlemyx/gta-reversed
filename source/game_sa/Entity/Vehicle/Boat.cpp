@@ -5,6 +5,7 @@
 #include "ControllerConfigManager.h"
 
 const float SECOND_LOD_DISTANCE = 150.0f; // 0x872188
+const float BOAT_HEADING_NOT_LOCKED = -9999.99f; // 0xC61C3FF6 (not -10000): "no anchor heading yet" / "FlyingControl: use the pad value"
 
 static const constexpr auto uiNumIndices{ 6u };
 NOTSA_GLOBAL(KeepWaterOutIndices, 0xC27988, (RwImVertexIndex[uiNumIndices]), {});
@@ -111,7 +112,7 @@ CBoat::CBoat(int32 modelIndex, eVehicleCreatedBy createdBy) : CVehicle(createdBy
     m_PrevVolume = 7.0F;
     m_TimeOfLastParticle = 0;
 
-    m_LockedHeading = -10000.0f;
+    m_LockedHeading = BOAT_HEADING_NOT_LOCKED;
     m_BlowUpTimer = 0.0f;
     m_EntityThatSetUsOnFire = nullptr;
     m_NumWakeCoords = 0;
@@ -119,9 +120,9 @@ CBoat::CBoat(int32 modelIndex, eVehicleCreatedBy createdBy) : CVehicle(createdBy
 
     m_nAmmoInClip = 20;
     if (m_nModelIndex == MODEL_MARQUIS) {
-        m_BoatDoor.Init(PI / 10.0F, -PI / 10.0F, DOOR_AXIS_NEG_Y, DOOR_AXIS_Y, DOOR_EXTRA_NONE);
+        m_BoatDoor.Init(PI / 10.0F, -PI / 10.0F, DOOR_AXIS_NEG_Y, DOOR_AXIS_Z, DOOR_EXTRA_NONE); // 0x6F2B8B: axis byte (+0x5EA) = 2 (Z) for both branches
     } else {
-        m_BoatDoor.Init(TWO_PI / 10.0F, -TWO_PI / 10.0F, DOOR_AXIS_NEG_X, DOOR_AXIS_Y, DOOR_EXTRA_NONE);
+        m_BoatDoor.Init(TWO_PI / 10.0F, -TWO_PI / 10.0F, DOOR_AXIS_NEG_X, DOOR_AXIS_Z, DOOR_EXTRA_NONE);
     }
 
     m_vehicleAudio.Initialise(this);
@@ -542,7 +543,7 @@ void CBoat::ProcessControl() {
     switch (GetStatus()) {
     case eEntityStatus::STATUS_PLAYER:
         m_nBoatFlags.bLockedToXY = false;
-        m_LockedHeading = -10000.0f;
+        m_LockedHeading = BOAT_HEADING_NOT_LOCKED;
         if (m_pDriver) {
             ProcessControlInputs(m_pDriver->m_nPedType);
         }
@@ -555,7 +556,7 @@ void CBoat::ProcessControl() {
         break;
     case eEntityStatus::STATUS_SIMPLE:
         m_nBoatFlags.bLockedToXY = false;
-        m_LockedHeading = -10000.0f;
+        m_LockedHeading = BOAT_HEADING_NOT_LOCKED;
         CCarAI::UpdateCarAI(this);
         CPhysical::ProcessControl();
         physicalFlags.bSubmergedInWater = true;
@@ -564,7 +565,7 @@ void CBoat::ProcessControl() {
         return;
     case eEntityStatus::STATUS_PHYSICS:
         m_nBoatFlags.bLockedToXY = false;
-        m_LockedHeading = -10000.0f;
+        m_LockedHeading = BOAT_HEADING_NOT_LOCKED;
         CCarAI::UpdateCarAI(this);
         CCarCtrl::SteerAICarWithPhysics(this);
         break;
@@ -675,16 +676,16 @@ void CBoat::ProcessControl() {
 
     if (m_nModelIndex == MODEL_SKIMMER
         && (m_EngineSpeed > CPlane::PLANE_MIN_PROP_SPEED || m_vecMoveSpeed.SquaredMagnitude() > CPlane::PLANE_MIN_PROP_SPEED)) {
-        FlyingControl(FLIGHT_MODEL_PLANE, -10000.0f, -10000.0f, -10000.0f, -10000.0f);
+        FlyingControl(FLIGHT_MODEL_PLANE, BOAT_HEADING_NOT_LOCKED, BOAT_HEADING_NOT_LOCKED, BOAT_HEADING_NOT_LOCKED, BOAT_HEADING_NOT_LOCKED);
     } else if (CCheat::IsActive(CHEAT_BOATS_FLY)) {
-        FlyingControl(FLIGHT_MODEL_BOAT, -10000.0f, -10000.0f, -10000.0f, -10000.0f);
+        FlyingControl(FLIGHT_MODEL_BOAT, BOAT_HEADING_NOT_LOCKED, BOAT_HEADING_NOT_LOCKED, BOAT_HEADING_NOT_LOCKED, BOAT_HEADING_NOT_LOCKED);
     }
 
     if (m_nBoatFlags.bLockedToXY) {
         m_vecMoveSpeed.x = 0.0F;
         m_vecMoveSpeed.y = 0.0F;
 
-        auto bNoAnchorAngle = m_LockedHeading == -10000.0f;
+        auto bNoAnchorAngle = m_LockedHeading == BOAT_HEADING_NOT_LOCKED;
         if (bNoAnchorAngle) {
             m_LockedHeading = GetHeading();
         } else {
@@ -972,29 +973,34 @@ void CBoat::ProcessControlInputs(uint8 padNum) {
 
     const auto steerInput = pad->GetSteeringLeftRight();
 
-    // 0x6F0AE7
-    // if mouse enabled and camera allows 3rd person mouse -> try mouse branch, otherwise keyboard branch
+    // 0x6F0AED..0x6F0C7A
+    const auto lastIsMouse = CVehicle::m_nLastControlInput == eControllerType::MOUSE;
+    enum class SteerMode { KEYBOARD, MOUSE, KEEP } mode = SteerMode::KEYBOARD;
     if (CCamera::m_bUseMouse3rdPerson && CVehicle::m_bEnableMouseSteering) {
-        if (CPad::NewMouseControllerState.m_AmountMoved.x == 0.0f && m_fRawSteerAngle == 0.0f || CVehicle::m_nLastControlInput != eControllerType::MOUSE || steerInput != 0) {
-            // keyboard/controller steering smoothing (как было)
-            m_fRawSteerAngle += (-steerInput / 128.0f - m_fRawSteerAngle) * BOAT_STEER_SMOOTH_RATE * CTimer::GetTimeStep();
-            CVehicle::m_nLastControlInput = eControllerType::KEYBOARD;
-        } else {
-            // mouse branch
-            if (!pad->NewState.m_bVehicleMouseLook) {
-                m_fRawSteerAngle += CPad::NewMouseControllerState.m_AmountMoved.x * BOAT_MOUSE_STEER_SCALE;
-            }
-            CVehicle::m_nLastControlInput = eControllerType::MOUSE;
-
-            // if the angle is small or "mouse look" mode is enabled, apply damping
-            if (std::fabs(m_fRawSteerAngle) < BOAT_STEER_DAMP_THRESHOLD || pad->NewState.m_bVehicleMouseLook) {
-                m_fRawSteerAngle *= std::pow(BOAT_STEER_DAMP_BASE, CTimer::GetTimeStep());
-            }
+        // Mouse moved => mouse branch (even if the last input was not the mouse); otherwise the mouse branch is only kept while the
+        // wheel is still turned, the last input was the mouse and the pad is idle; an idle pad after the mouse leaves the angle untouched.
+        if (CPad::NewMouseControllerState.m_AmountMoved.x != 0.0f) {
+            mode = SteerMode::MOUSE;
+        } else if (m_fRawSteerAngle != 0.0f && lastIsMouse && steerInput == 0) {
+            mode = SteerMode::MOUSE;
+        } else if (steerInput == 0 && lastIsMouse) {
+            mode = SteerMode::KEEP;
         }
-    } else {
-        // keyboard branch (repeated — but retained for clarity)
+    }
+
+    if (mode == SteerMode::KEYBOARD) {
         m_fRawSteerAngle += (-steerInput / 128.0f - m_fRawSteerAngle) * BOAT_STEER_SMOOTH_RATE * CTimer::GetTimeStep();
         CVehicle::m_nLastControlInput = eControllerType::KEYBOARD;
+    } else if (mode == SteerMode::MOUSE) {
+        if (!pad->NewState.m_bVehicleMouseLook) {
+            m_fRawSteerAngle += CPad::NewMouseControllerState.m_AmountMoved.x * BOAT_MOUSE_STEER_SCALE;
+        }
+        CVehicle::m_nLastControlInput = eControllerType::MOUSE;
+
+        // if the angle is small or "mouse look" mode is enabled, apply damping
+        if (std::fabs(m_fRawSteerAngle) < BOAT_STEER_DAMP_THRESHOLD || pad->NewState.m_bVehicleMouseLook) {
+            m_fRawSteerAngle *= std::pow(BOAT_STEER_DAMP_BASE, CTimer::GetTimeStep());
+        }
     }
 
     // limitation and final conversion to the steering angle

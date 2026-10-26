@@ -121,6 +121,10 @@ CPedIntelligence::CPedIntelligence(CPed* ped) :
     m_nEventId                            = 0;
     m_nEventPriority                      = 0;
     field_188                             = 0;
+    // 0x607244..0x607280: the exe starts the anger timer (start = now, interval 0, started, not stopped) and clears the anger level;
+    // without it IsOutOfTime() stays false forever and IncrementAngerAtPlayer never raises the anger
+    m_mentalState.m_AngerAtPlayer         = 0;
+    m_mentalState.m_AngerTimer            = CTaskTimer{ CTimer::GetTimeInMS(), 0u };
     m_collisionScanner.m_bAlreadyHitByCar = false;
     m_AnotherStaticCounter                = 0;
     m_StaticCounter                       = 0;
@@ -355,16 +359,14 @@ bool CPedIntelligence::GetUsingParachute() {
         return false;
     }
 
-    int32 blockID = animAssoc->m_BlendHier->m_nAnimBlockId;
-    if (_stricmp(CAnimManager::GetAnimBlocks()[blockID].Name, "parachute") != 0) {
-        while (true) {
-            animAssoc = RpAnimBlendGetNextAssociation(animAssoc);
-            if (!animAssoc) {
-                return false;
-            }
+    // 0x6011F0: every association of the chain is tested against the block name (the next one is only fetched when the name differs)
+    for (; animAssoc; animAssoc = RpAnimBlendGetNextAssociation(animAssoc)) {
+        const int32 blockID = animAssoc->m_BlendHier->m_nAnimBlockId;
+        if (_stricmp(CAnimManager::GetAnimBlocks()[blockID].Name, "parachute") == 0) {
+            return true;
         }
     }
-    return true;
+    return false;
 }
 
 // 0x601230
@@ -728,22 +730,23 @@ bool CPedIntelligence::TestForStealthKill(CPed* target, bool bFullTest) {
         }
     }
 
-    CEvent* currentEvent = target->GetEventHandlerHistory().GetCurrentEvent();
-    if (currentEvent && currentEvent->GetSourceEntity() == m_pPed)
-    {
-        // todo: IsThreatenedBy ???
-        auto hate = target->GetAcquaintance().GetAcquaintances(ACQUAINTANCE_HATE);
-        auto dislike = target->GetAcquaintance().GetAcquaintances(ACQUAINTANCE_DISLIKE);
-        auto pedFlag = CPedType::GetPedFlag(m_pPed->m_nPedType);
-        bool bAcquaintancesFlagSet = (
-            (hate && (pedFlag & hate)) ||
-            (dislike && (pedFlag & dislike))
-        );
-        if (bAcquaintancesFlagSet && target->GetGroup()) {
-            const auto oe = target->GetGroup()->GetIntelligence().GetCurrentEvent();
-            if (oe && oe->GetSourceEntity() == m_pPed && bAcquaintancesFlagSet) {
-                return false;
-            }
+    // 0x601F5B..0x602036: two independent checks. The target's own current event and the target group's current event each veto the kill
+    // when this ped is their source and the target hates/dislikes this ped's type (the first one needs no group).
+    const auto IsHatedOrDisliked = [&]() {
+        auto& acquaintance = target->GetAcquaintance();
+        const auto pedFlag = CPedType::GetPedFlag(m_pPed->m_nPedType);
+        return (acquaintance.GetAcquaintances(ACQUAINTANCE_HATE) & pedFlag) || (acquaintance.GetAcquaintances(ACQUAINTANCE_DISLIKE) & pedFlag);
+    };
+
+    const CEvent* currentEvent = target->GetEventHandlerHistory().GetCurrentEvent();
+    if (currentEvent && currentEvent->GetSourceEntity() == m_pPed && IsHatedOrDisliked()) {
+        return false;
+    }
+
+    if (const auto grp = target->GetGroup()) {
+        const auto oe = grp->GetIntelligence().GetCurrentEvent();
+        if (oe && oe->GetSourceEntity() == m_pPed && IsHatedOrDisliked()) {
+            return false;
         }
     }
     return true;

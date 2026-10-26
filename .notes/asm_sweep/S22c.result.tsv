@@ -1,0 +1,19 @@
+addr	function	verdict	asm_range	note	fix_commit
+0x424210	GenerateCarCreationCoors2	MATCH	0x424210-0x424CD7	statics init, 10.0/5s refresh, m_bMoreCarsAndFewerPeds (link lanes>=2, 40.0 dist, node flag +0x19&0x30>=0x20), start-node rand order (rand&0xF==4 && !arg13 -> FindNodeClosestToCoors(50,0,0,0,1,1) arg6*1.5), InitSequence, visited[30], both circle crossings (float/extended rounding points), z-slope test (NaN passes), dead-end test, dot vs arg4 polarity, sprintf args, accumDist<230	
+0x436540	UpdateCarOnRails	MATCH	0x436540-0x436A86	temp actions 1/24 -> wait+timers, 12 -> stop; arrival-time signed/unsigned test; STATUS_PHYSICS exit; dir*0.01*sign, lane offsets*5.4, BMX +1.458, seed jitter (start unrounded, end rounded), end/start formulas, CalcCurvePoint arg order, pos.z=15, speed*1/60, same-link early return	
+0x437C20	SteerAICarWithPhysics	MATCH	0x437C20-0x4382D4	mission jump table decoded (15-19,27-32,37,52-55 -> NONE; 39 -> HELI_FLY_AWAY), stopped/parked branches, all 24 temp-action cases (output slots, bl handbrake, timer fields, headon double consts 0.05/+-0.5, boost vector math), pedal/steer/handbrake stores, Vortex 0x988/0x994	
+0x430050	GenerateOneRandomCar	NOT_REACHED		token budget	
+0x42DE80	PickNextNodeRandomly	NOT_REACHED		token budget	
+0x426EF0	PickNextNodeToChaseCar	NOT_REACHED		token budget	
+0x427740	PickNextNodeToFollowPath	NOT_REACHED		token budget	
+0x428040	DealWithBend_Racing	NOT_REACHED		token budget	
+0x42C740	CreateConvoy	NOT_REACHED		token budget	
+0x42C2B0	CreatePoliceChase	NOT_REACHED		token budget	
+0x423000	FlyAIPlaneInCertainDirection	NOT_REACHED		token budget	
+0x423940	FlyAIHeliToTarget_FixedOrientation	NOT_REACHED		token budget	
+0x424F80	PossiblyRemoveVehicle	NOT_REACHED		token budget	
+0x425440	SlowCarDownForPedsSectorList	NOT_REACHED		token budget	
+0x429A70	FlyAIHeliInCertainDirection	NOT_REACHED		token budget	
+0x42EC90	DragCarToPoint	NOT_REACHED		token budget	
+0x432DD0	SteerAICarWithPhysicsFollowPreRecordedPath	NOT_REACHED		token budget	
+0x436A90	SteerAICarWithPhysics_OnlyMission	NOT_REACHED		token budget	

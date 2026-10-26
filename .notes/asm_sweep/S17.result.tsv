@@ -1,0 +1,44 @@
+addr	function	verdict	asm range	note	fix commit
+0x6F01D0	CBoat::GetComponentWorldPosition	MATCH	0x6F01D0-0x6F01FB	LTM pos of node	-
+0x6BF400	CBike::ProcessDrivingAnims	FIXED	0x6BF400-0x6BF42D	skip when offscreen AND status != PLAYER (port: == PLAYER)	479b6ac3
+0x6F01A0	CBoat::SetupModelNodes	MATCH	0x6F01A0-0x6F01C4	zero 12 nodes + FillFrameArray	-
+0x6B8970	CBike::SetModelIndex	MATCH	0x6B8970-0x6B899E	zero 10 nodes (SetupModelNodes 0x6B5960 has no safe-position write)	-
+0x6F1140	CBoat::SetModelIndex	MATCH	0x6F1140-0x6F116E	-	-
+0x6B5F50	CBike::SetRemoveAnimFlags	MATCH	0x6B5F50-0x6B5F8A	secondary-task anims get BLEND_AUTO_REMOVE	-
+0x6B5990	CBike::GetComponentWorldPosition	MATCH	0x6B5990-0x6B59D5	-	-
+0x6F0D90	CBoat::DisplayHandlingData	MATCH	0x6F0D90-0x6F0DDF	unused debug sprintf pair	-
+0x6B57A0	CBike::DestructorBody	MATCH	0x6B57A0-0x6B5814	audio Terminate; member dtors implicit	-
+0x6BDE20	CBike::Render	MATCH	0x6BDE20-0x6BDE99	-	-
+0x6F00F0	CBoat::DestructorBody	MATCH	0x6F00F0-0x6F0183	fire fx, 2 prop fx, audio	-
+0x6B7080	CBike::PlayCarHorn	MATCH	0x6B7080-0x6B7128	-	-
+0x6F20E0	CBoat::Teleport	MATCH	0x6F20E0-0x6F21A2	-	-
+0x6BCFC0	CBike::Teleport	MATCH	0x6BCFC0-0x6BD089	-	-
+0x6BFA30	CBmx::ProcessControl	MATCH	0x6BFA30-0x6BFB49	-	-
+0x6B6620	CBike::ProcessControlCollisionCheck	MATCH	0x6B6620-0x6B6733	-	-
+0x6BEA10	CBike::BlowUpCar	MATCH	0x6BEA10-0x6BEB19	-	-
+0x6BF820	CBmx::Constructor	FIXED	0x6BF820-0x6BF9A1	m_fMidWheelFracY = front.x / (front.y - rear.y) (port divided front.y)	3b24a5b6
+0x6B67E0	CBike::SetUpWheelColModel	MATCH	0x6B67E0-0x6B6943	-	-
+0x6F2940	CBoat::Constructor	FIXED	0x6F2940-0x6F2BFC	door axis byte = Z (port Y); locked heading 0xC61C3FF6=-9999.99 (port -10000) incl. its ProcessControl uses	436d1635
+0x6F0A10	CBoat::ProcessControlInputs	FIXED	0x6F0A10-0x6F0CF6	mouse moved => mouse branch regardless of last input; idle pad + last input mouse keeps the angle	1c4b55d9
+0x6BF430	CBike::Constructor	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6B5A10	CBike::DamageKnockOffRider	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6BC930	CBike::ProcessAI	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6B5FB0	CBike::ProcessBuoyancy	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6B7280	CBike::ProcessRiderAnims	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6BEEB0	CBike::PlaceOnRoadProperly	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6BEB20	CBike::BurstTyre	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6BE310	CBike::ProcessControlInputs	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6BDEA0	CBike::ProcessEntityCollision	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6BD090	CBike::PreRender	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6B9250	CBike::ProcessControl	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6B8EC0	CBike::VehicleDamage	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6B89B0	CBike::SetupSuspensionLines	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6B6950	CBike::DoBurstAndSoftGroundRatios	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6BFB50	CBmx::ProcessDrivingAnims	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6C0810	CBmx::PreRender	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6C1470	CBmx::ProcessAI	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6C0590	CBmx::ProcessBunnyHop	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6F1770	CBoat::ProcessControl	NOT_REACHED	-	NOT_REACHED (only the -9999.99 sentinel sites 0x6F1899/0x6F1921/0x6F1975/0x6F1FA3 were checked and fixed with the Boat ctor)	-
+0x6F1180	CBoat::PreRender	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6F0210	CBoat::Render	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6F21B0	CBoat::BlowUpCar	NOT_REACHED	-	NOT_REACHED (tail after the explosion: debris object not compared)	-

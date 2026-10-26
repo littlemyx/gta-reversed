@@ -1,0 +1,32 @@
+addr	function	verdict	asm_range	note	fix_commit
+0x607140	Constructor	FIXED	0x607140-0x6072FB	m_mentalState: anger level 0 and m_AngerTimer started (now, interval 0) were never set, so IsOutOfTime() stayed false and IncrementAngerAtPlayer never fired; rest (DM -1/-1, ranges 15/40 for gang types 7..16, scanners, counters, interesting entities) matches	2142f041
+0x607300	Destructor	MATCH	0x607300-0x607399	ClearRelationshipWithPlayer; the two entity scanners are cleared by ~CEntityScanner; members destroyed in reverse order	
+0x600DB0	IsRespondingToEvent	MATCH	0x600DB0-0x600DB3	history at +0x38	
+0x600DC0	AddTaskPhysResponse	MATCH	0x600DC0-0x600DD4	SetTask(task, 0, arg)	
+0x600DE0	AddTaskEventResponseTemp	MATCH	0x600DE0-0x600DF4	SetTask(task, 1, arg)	
+0x600E00	AddTaskEventResponseNonTemp	MATCH	0x600E00-0x600E14	SetTask(task, 2, arg)	
+0x600E20	AddTaskPrimaryMaybeInGroup	MATCH	0x600E20-0x600ED7	group branch (SetScriptCommandTask(ped, task) then delete) vs CEventScriptCommand(3, task, flag) + Add(ev, false)	
+0x600EE0	FindTaskByType	MATCH	0x600EE0-0x600F23	slot order 4,3,1,2	
+0x600F30	GetTaskFighting	MATCH	0x600F30-0x600F66	secondary 0, type 0x3F8	
+0x600F70	GetTaskUseGun	MATCH	0x600F70-0x600FA6	secondary 0, type 0x3F9	
+0x600FB0	GetTaskThrow	MATCH	0x600FB0-0x600FE6	secondary 0, type 0x3FA	
+0x6010A0	GetTaskDuck	MATCH	0x6010A0-0x601101	secondary 1 type 0x19F, then simplest-active fallback unless the flag is set	
+0x601150	GetTaskInAir	MATCH	0x601150-0x601174	simplest active, type 0xF1	
+0x601180	GetTaskClimb	MATCH	0x601180-0x6011A4	simplest active, type 0xFE	
+0x6011B0	GetUsingParachute	FIXED	0x6011B0-0x601226	only the first partial association was tested against the parachute block; the exe tests every association of the chain (loop 0x6011F0..0x60121D)	5f694851
+0x601230	SetTaskDuckSecondary	MATCH	0x601230-0x601388	script-controlled duck early out (type byte +0x24 == 4), new duck(2, len, -1) in slot 1, use-gun ClearAnim, ProcessPed	
+0x601390	ClearTaskDuckSecondary	MATCH	0x601390-0x60141B	MakeAbortable(ped,0,0), blend ratio +0x14 / SetMoveState(STILL), use-gun ClearAnim	
+0x601420	ClearTasks	MATCH	0x601420-0x60163A	car-drive(timed)/stand-still script command, HandleEvents, ManageTasks, scripted task record, secondary abort loop (skip facial, MakeAbortable urgent then leisure)	
+0x601640	FlushImmediately	MATCH	0x601640-0x6018C2	be-in-group/hold(object type+visible)/facial clone-restore, flush order, default primary task by player/mission/wander	
+0x6018F0	ProcessAfterProcCol	MATCH	0x6018F0-0x6019A0	SetPedPosition on simplest active then last DEFAULT task, UpdateRwMatrix/Frame, clears bCalledPreRender	
+0x6019B0	ProcessAfterPreRender	MATCH	0x6019B0-0x601BA7	partial-anim + hold SetPedPosition, use-gun SetPedPosition, molotov fx matrix (bone 24, point 0.05/0.05/0.14), bike FixHandsToBars	
+0x601BB0	ProcessEventHandler	MATCH	0x601BB0-0x601BB3		
+0x601CC0	IsInACarOrEnteringOne	MATCH	0x601CC0-0x601D01	active tasks 0x2BD, 0x2BC (car at +0xC), 0x2C5 (vehicle at +8); exe returns the raw pointer in eax, caller uses al	
+0x601D70	GetMoveStateFromGoToTask	MATCH	0x601D70-0x601D97	IsGoToTask ? moveState(+8) : 1	
+0x601DA0	FlushIntelligence	MATCH	0x601DA0-0x601DEC	task mgr flush, response tasks zeroed, history cleared, group flush(false), 3 scanners cleared	
+0x601E00	TestForStealthKill	FIXED	0x601E00-0x602044	the target's own current event vetoes when this ped is its source and the target hates/dislikes this ped's type, independent of any group (0x601F5B..0x601FC7); port required a group and a group event too. Group-event check (0x601FC9..) is separate and a no-op in the exe (CEventGroupEvent::GetSourceEntity returns null)	b419ebcc
+0x6020D0	LookAtInterestingEntities	MATCH	0x6020D0-0x602236	early outs and their order, rand(0,100)==50, FindObjectsInRange args, in-place compaction, rand(0,n) then rand(3000,5000), LookAt args	
+0x602350	IsPedGoingForCarDoor	MATCH	0x602350-0x60239C	simplest active and two parents, type 0x320	
+0x605650	ProcessStaticCounter	MATCH	0x605650-0x6057EC	counter wrap -1 -> 4, walk/run/sprint test, damage-entity branch, 1/16 distance test; exe compares the counter unsigned (port int32: differs only after 2^31 frames)	
+0x6073A0	ProcessFirst	MATCH	0x6073A0-0x607491	static counter, stuck checker / collision scan, wall-hit flag (dot < -0.5), bike hands, clears bMoveAnimSpeedHasBeenSetByTask	
+0x608260	Process	MATCH	0x608260-0x6082DB	vehicle scan, ped scan (alive check inside), event scan, HandleEvents, ManageTasks, relationship record, LookAtInterestingEntities	

@@ -206,3 +206,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-26	RD-AB-15	v5	A-B fixes	253803	116	60	prefix 88 -> 98: EnsureIplsAreInMemory must clear loadRequested on every requested slot (0x4054AD); RequestIpls/HaveIplsLoaded call SetIplsRequired first (HaveIplsLoaded was always true); frame 98 open (GoToPoint arrival)
 2026-10-26	MAC-FTOL2	v4	float->int class B	-	-	-	done: 911 sites
 2026-10-26	MAC-FPTRAP	v4	x64 FP-trap audit	-	-	-	2 bugs fixed, 3 NaNs open
+2026-10-26	MAC-NAN1	v4	3 NaN sources	-	-	-	done: junk IFP + clang speculation

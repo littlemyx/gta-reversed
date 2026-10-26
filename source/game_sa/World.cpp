@@ -250,11 +250,10 @@ void CWorld::ProcessPedsAfterPreRender() {
         return;
     }
 
+    // exe 0x563444..0x56345A: no m_bRemoveFromWorld test here (peds scheduled for removal still get ProcessAfterPreRender)
     for (auto* const entity : ms_listMovingEntityPtrs) {
-        if (!entity->m_bRemoveFromWorld) {
-            if (entity->GetIsTypePed()) {
-                entity->AsPed()->GetIntelligence()->ProcessAfterPreRender();
-            }
+        if (entity->GetIsTypePed()) {
+            entity->AsPed()->GetIntelligence()->ProcessAfterPreRender();
         }
     }
 }

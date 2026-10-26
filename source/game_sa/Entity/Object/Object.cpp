@@ -637,7 +637,7 @@ void CObject::ProcessGarageDoorBehaviour() {
         else if (garage.m_nType == eGarageType::HANGAR_ABANDONED_AIRPORT)
             m_matrix->GetPosition().x = vecDummyPos.x - garage.m_fDoorPosition * m_matrix->GetRight().x * 14.0F;
         else
-            m_matrix->GetPosition().z = vecDummyPos.z + fHeight * garage.m_fDoorPosition / 1.1F;
+            m_matrix->GetPosition().z = vecDummyPos.z + fHeight * garage.m_fDoorPosition * 0.90909088F; // exe 0x44A5E0: multiplies by the float constant 0x3F68BA2E at 0x8599A0 (not a division by 1.1F)
     }
 
     SetUsesCollision(garage.m_bDoorClosed);

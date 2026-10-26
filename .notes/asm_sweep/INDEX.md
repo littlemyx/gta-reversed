@@ -36,5 +36,6 @@
 | S32 | game_sa/Radar.cpp | 28 | pending | Radar.cpp |
 | S33 | game_sa/WaterLevel.cpp | 26 | pending | WaterLevel.cpp |
 | S34 | game_sa/Interior/Interior_c.cpp | 41 | pending | Interior_c.cpp |
-| S22b | game_sa/CarCtrl.cpp (rest of S22) | 34 | pending | CarCtrl.cpp |
+| S22b | game_sa/CarCtrl.cpp (rest of S22) | 34 | partial 16/34 (16 M) -> S22c | CarCtrl.cpp |
 | S23b | rest of S23 | 13 | pending | Population.cpp |
+| S22c | rest of S22b | 18 | pending | CarCtrl.cpp |

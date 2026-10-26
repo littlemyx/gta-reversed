@@ -193,3 +193,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-26	RD-AB-17	v5	A-B narrowing (no fix)	226866	105	96	frame 145 symptom; earliest real: driven car slot 7 shifted 0.0157 m from fc 612 (call order not found); parked cars 1-2 ulp speed; lockstep paused in favour of ASM sweep
 2026-10-26	ASM-S22	v5	asm sweep (partial)	194122	61	23	CarCtrl 21/55: 17 match, 4 fixed (JoinCarWithRoad null target, SlowCarOnRails ModifySpeed restart, HS missile cone, pool-full distance); 34 left -> S22b
 2026-10-26	ASM-S23	v5	asm sweep (partial)	273651	92	31	Population 20/33: 9 fixed (AddPedInCar cop type -> SWAT/FBI/army weapons+armour, CreateWaitingCoppers siren/RNG order/z, AddPed cheat weapons, load groups, TestSafeForRealObject...), 13 left -> S23b
+2026-10-26	ASM-S22b	v5	asm sweep (partial)	?	?	12	CarCtrl 16 more match, 0 fixed; 18 big ones left -> S22c

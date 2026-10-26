@@ -3974,7 +3974,10 @@ void CPed::DettachPedFromEntity(){
     switch (m_nPedState) {
     case PEDSTATE_DIE: {
         m_pEntityIgnoredCollision = wasAttachedTo;
-        ApplyMoveForce(wasAttachedTo->GetMatrix().GetForward() * -4.f);
+        // 0x5E7F0F..0x5E7F51: forward * -4, then z += 4 (0x858B90 = 4.0f) - the exe lifts the dying ped a little
+        auto force = wasAttachedTo->GetMatrix().GetForward() * -4.f;
+        force.z += 4.f;
+        ApplyMoveForce(force);
         bIsStanding = false;
         break;
     }

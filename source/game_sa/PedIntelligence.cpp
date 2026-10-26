@@ -121,6 +121,10 @@ CPedIntelligence::CPedIntelligence(CPed* ped) :
     m_nEventId                            = 0;
     m_nEventPriority                      = 0;
     field_188                             = 0;
+    // 0x607244..0x607280: the exe starts the anger timer (start = now, interval 0, started, not stopped) and clears the anger level;
+    // without it IsOutOfTime() stays false forever and IncrementAngerAtPlayer never raises the anger
+    m_mentalState.m_AngerAtPlayer         = 0;
+    m_mentalState.m_AngerTimer            = CTaskTimer{ CTimer::GetTimeInMS(), 0u };
     m_collisionScanner.m_bAlreadyHitByCar = false;
     m_AnotherStaticCounter                = 0;
     m_StaticCounter                       = 0;

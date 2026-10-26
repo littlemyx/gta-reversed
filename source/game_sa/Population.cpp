@@ -772,7 +772,7 @@ int32 CPopulation::FindNumberOfPedsWeCanPlaceOnBenches() {
     const float maxPeds = (float)(int32)MaxNumberOfPedsInUse;
     const float lim     = (maxPeds < CPopCycle::m_NumOther_Peds) ? maxPeds : CPopCycle::m_NumOther_Peds;
     const int32 base = CGame::CanSeeOutSideFromCurrArea()
-        ? NOTSA_FTOL(int32, (x87d)NOTSA_FTOL(int32, lim) * PedDensityMultiplier * FindPedDensityMultiplierCullZone())
+        ? NOTSA_FTOL(int32, (x87d)NOTSA_FTOL_P(int32, lim) * PedDensityMultiplier * FindPedDensityMultiplierCullZone())
         : (int32)(NumberOfPedsInUseInterior);
     return base - (int32)(ms_nNumCivMale) - (int32)(ms_nNumCivFemale) + 2;
 }
@@ -813,7 +813,7 @@ bool CPopulation::TestSafeForRealObject(CDummyObject* obj) {
     const auto objCentre = obj->GetBoundCentre();
 
     // Sector index = floor((pos -+ radius) * 0.02 + 60) clamped to [0, 120] (0x858B38 / 0x858B34)
-    const auto ToSector = [](float v) { return (int32)std::floor((double)(v * 0.02f + 60.f)); };
+    const auto ToSector = [](float v) { return NOTSA_FTOL_P(int32, std::floor((x87d)(v * 0.02f + 60.f))); };
     const auto minX = std::max(ToSector(objPos.x - objRadius), 0);
     const auto minY = std::max(ToSector(objPos.y - objRadius), 0);
     const auto maxX = std::min(ToSector(objPos.x + objRadius), 120);
@@ -1691,7 +1691,7 @@ static NOTSA_GLOBAL_ALIAS(s_CopsNeededTotalCarsThreshold, 0x8A5B24, (int32), rei
 //! 0x610DB0 (not hooked, it's inlined here) - How many members a gang group has
 int32 GetNumGangMembersToPlace() {
     constexpr int32 MIN = 1, MAX = 5; // 0x86C6C4, 0x86C6C8 (in `.rdata`)
-    return MIN + NOTSA_FTOL(int32, static_cast<x87d>(rand() & 0xFFFF) * (x87d)0x1p-15 * (MAX - MIN));
+    return MIN + NOTSA_FTOL_SC(int32, static_cast<x87d>(rand() & 0xFFFF) * (x87d)0x1p-15 * (MAX - MIN));
 }
 
 //! 0x6EABA0 - `CWaterLevel::CreateBeachToy` (not declared in `WaterLevel.h`). `toyType`: 1 = ball, 2-4 = loungers, 5 = random lounger, 6 = lotion, 7-10 = towels, 11 = random towel

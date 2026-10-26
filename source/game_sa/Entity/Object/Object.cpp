@@ -152,11 +152,17 @@ CObject::~CObject() {
 
 // 0x5A1EE0
 void* CObject::operator new(size_t size) {
+#ifdef NOTSA_PORTABLE
+    GetObjectPool()->NotsaCheckAllocSize(size, "object");
+#endif
     return GetObjectPool()->New();
 }
 
 // 0x5A1EF0
 void* CObject::operator new(size_t size, int32 poolRef) {
+#ifdef NOTSA_PORTABLE
+    GetObjectPool()->NotsaCheckAllocSize(size, "object");
+#endif
     return GetObjectPool()->NewAt(poolRef);
 }
 
@@ -459,7 +465,7 @@ uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSett
         auto* cm = GetModelInfo()->GetColModel();
         const auto fMove = m_vecMoveSpeed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
         if (fMove >= sq(cm->GetBoundRadius()))
-            return static_cast<uint8>(std::ceil(std::sqrt(fMove) / cm->GetBoundRadius()));
+            return NOTSA_FTOL(uint8, std::ceil(std::sqrt(fMove) / cm->GetBoundRadius()));
 
         return 1;
     }
@@ -471,7 +477,7 @@ uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSett
             auto vecSpeed = CPhysical::GetSpeed(vecMin);
             const auto fMove = vecSpeed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
             if (fMove >= 0.0225F) // std::pow(0.15F, 2.0F)
-                return static_cast<uint8>(std::ceil(std::sqrt(fMove) / 0.15F));
+                return NOTSA_FTOL(uint8, std::ceil(std::sqrt(fMove) / 0.15F));
 
             return 1;
         }
@@ -493,7 +499,7 @@ uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSett
             auto& vecUsed = vecMin.SquaredMagnitude() >= vecMax.SquaredMagnitude() ? vecMin : vecMax;
             const auto fMove = vecUsed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
             if (fMove >= 0.09F)
-                return static_cast<uint8>(std::ceil(std::sqrt(fMove) / 0.3F));
+                return NOTSA_FTOL(uint8, std::ceil(std::sqrt(fMove) / 0.3F));
 
             return 1;
         }
@@ -505,14 +511,14 @@ uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSett
             const auto fEdge = std::max({ vecSize.x, vecSize.y, vecSize.z }) / 2.0F;
             const auto fMove = m_vecMoveSpeed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
             if (fMove >= sq(fEdge)) {
-                return static_cast<uint8>(std::ceil(std::sqrt(fMove) / fEdge));
+                return NOTSA_FTOL(uint8, std::ceil(std::sqrt(fMove) / fEdge));
             }
             return 1;
         }
 
         const auto fMove = m_vecMoveSpeed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
         if (fMove >= 0.09F)
-            return static_cast<uint8>(std::ceil(sqrt(fMove) / 0.3F));
+            return NOTSA_FTOL(uint8, std::ceil(sqrt(fMove) / 0.3F));
 
         return 1;
     }
@@ -521,7 +527,7 @@ uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSett
     const auto fLongest = std::max({ box.m_vecMax.x, box.m_vecMax.y, -box.m_vecMin.x, -box.m_vecMin.y });
     const auto fMove = std::fabs(fLongest * m_vecTurnSpeed.z);
     if (fMove > 0.1F)
-        return static_cast<uint8>(std::ceil(fMove * 10.0F));
+        return NOTSA_FTOL(uint8, std::ceil(fMove * 10.0F));
 
     return 1;
 }
@@ -1410,7 +1416,7 @@ void CObject::ProcessControlLogic() {
         auto fRopeLengthChange = 0.0F;
         if (iRopeInd >= 0) {
             auto& rope = CRopes::GetRope(iRopeInd);
-            nSegments = static_cast<uint8>(rope.m_fSegmentLength * 32.0F);
+            nSegments = NOTSA_FTOL(uint8, rope.m_fSegmentLength * 32.0F);
             fRopeLengthChange = rope.m_fMass * rope.m_fSegmentLength - static_cast<float>(nSegments) * rope.m_fTotalLength;
         }
 

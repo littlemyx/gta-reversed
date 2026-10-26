@@ -139,7 +139,7 @@ bool CTaskSimpleIKChain::ProcessPed(CPed* ped) {
     // 0x633D98
     if ((int32)CTimer::GetTimeInMS() <= m_TargetTime) { // BUG: This is literally the how not to guide for lerp. There should be a separate "m_BlendFrom" variable, so we can do a proper `lerp(m_BlendFrom, m_BlendTarget, t)`
         // exe 0x633DB3: the step is truncated to int (ftol of ts*0.02*1000) and the ratio is clamped as `if (x > 1.0) x = 1.0` (NaN stays NaN)
-        const int32 stepMS = (int32)CTimer::GetTimeStepInMS();
+        const int32 stepMS = NOTSA_FTOL_P(int32, CTimer::GetTimeStepInMS());
         float       t      = (float)stepMS / (float)(m_TargetTime - stepMS - (int32)CTimer::GetTimeInMS());
         if (t > 1.0f) {
             t = 1.0f;

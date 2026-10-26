@@ -343,7 +343,7 @@ CTaskAllocator* CGroupEventHandler::ComputeResponseLeaderExitedCar(const CEventE
                     new CTaskComplexLeaveCar{
                         mveh,
                         eTargetDoor::TARGET_DOOR_FRONT_LEFT,
-                        CGeneral::GetRandomNumberInRange(-250, 250) + (i + 1) * 500, // SEE NOTE
+                        CGeneral::GetRandomNumberInRange(-250, 250) + (int32)((i + 1) * 500), // SEE NOTE
                         false,
                         false
                     },
@@ -358,7 +358,7 @@ CTaskAllocator* CGroupEventHandler::ComputeResponseLeaderExitedCar(const CEventE
                 });
             } else { // 0x5F92AA..0x5F92E7
                 // exe: delay = slot * 500 - (int)(rand() * (1/32768) * -500.0) + 250, i.e. slot * 500 + [250, 749] (NOT rand(-250, 250) as in the burning case)
-                const auto rnd = -(int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.f / 32768.f) * 500.f);
+                const auto rnd = -NOTSA_FTOL(int32, (float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.f / 32768.f) * 500.f);
                 SetResponseTask(CTaskComplexLeaveCar{
                     mveh,
                     eTargetDoor::TARGET_DOOR_FRONT_LEFT,
@@ -622,7 +622,7 @@ CTaskAllocator* CGroupEventHandler::ComputeResponsLeaderQuitEnteringCar(const CE
         }
 
         // This is an inlined `rand() * -500.f` => The result is a number in range [0, 499]
-        const auto rnd = -(int32)((float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.f / 32768.f) * 500.f);
+        const auto rnd = -NOTSA_FTOL(int32, (float)(CGeneral::GetRandomNumber() & 0xFFFF) * (1.f / 32768.f) * 500.f);
         pg->GetIntelligence().SetEventResponseTask(m, CTaskComplexLeaveCar{
             veh,
             TARGET_DOOR_FRONT_LEFT,

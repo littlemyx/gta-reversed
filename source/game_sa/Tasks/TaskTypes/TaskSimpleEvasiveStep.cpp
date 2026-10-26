@@ -54,7 +54,7 @@ bool CTaskSimpleEvasiveStep::ProcessPed(CPed* ped) {
         return true;
 
     if (!m_Assoc) {
-        if (m_Entity->GetStatus() == STATUS_SIMPLE) {
+        if (m_Entity->GetIsTypeVehicle()) { // 0x657A7E: ([entity+0x36] & 7) == 2 is the entity TYPE (vehicle), not the status
             ped->Say(CTX_GLOBAL_DODGE);
         }
         StartAnim(ped);

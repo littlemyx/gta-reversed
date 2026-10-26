@@ -1246,6 +1246,8 @@ void CObject::TryToFreeUpTempObjects(int32 numObjects) {
         return;
 
     for (auto& obj : NOTSA_EXE_OR(GetObjectPool()->GetAllValidReverse(), GetObjectPool()->GetAllValid())) {
+        if (numObjects <= 0) // exe 0x5A1868: the loop stops as soon as the requested number has been freed
+            break;
         if (obj.IsTemporary() && !obj.IsVisible()) {
             CWorld::Remove(&obj);
             delete &obj;

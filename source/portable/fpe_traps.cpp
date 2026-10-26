@@ -87,14 +87,33 @@ Sym Resolve(std::uint64_t pc) {
     return s;
 }
 
-// Sites known to be benign by design (classification in .notes/reports/MAC-FPTRAP.md): matched against the mangled symbol of the trapping PC.
-// Entries: { substring of the symbol, reason }.
-constexpr struct { const char* sym; const char* why; } kWhitelist[] = {
-    { "_ZN6CTimer6UpdateEv", "game_FPS = 1000 / (clock delta == 0): inf, same masked x87 result in the exe (frozen clock in menus / pause)" },
+// Sites known to be benign by design (classification: .notes/reports/MAC-FPTRAP.md). Matched against the mangled symbol of the trapping PC and, when `caller` is
+// set, of its caller (lr). A whitelisted site is still counted (summary, marked [WL]) but its first hit is not logged and NOTSA_FPE_MODE=abort does not fire.
+constexpr struct { const char* sym; const char* caller; const char* why; } kWhitelist[] = {
+    { "_ZN6CTimer6UpdateEv", nullptr, "game_FPS = 1000 / (clock delta == 0): inf, same masked x87 result in the exe (frozen clock in menus / pause)" },
+    { "_Z10CameraSizePN2rw6CameraEPNS_4RectEff", nullptr, "start-up only: viewWindow / CDraw::ms_fAspectRatio while the ratio is still 0 (BSS in the exe too), the view window is set again by CCamera::Process" },
+    { "_Z32RpAnimBlendClumpUpdateAnimationsPN2rw5ClumpEfb", nullptr, "clang if-converts `totalTime == 0 ? 1 : totalBlendAmnt / totalTime` into fdiv + fcsel: 0/0 of the discarded arm (variable unused)" },
+    { "_ZN12_GLOBAL__N_111ConvertIm2D", nullptr, "clang if-converts `rhw != 0 ? 1 / rhw : ...` into fdiv + fcsel: 1/0 of the discarded arm" },
+    { "_ZN8CVehicle17DoLightEffectImpl", nullptr, "std::sqrt(dot) with dot < 0 for lights facing away from the camera: NaN is only consumed under `angle > 0` (exe: masked fsqrt, same)" },
+    { "_ZN15CAEAudioUtility20ConvertFromBytesToMS", nullptr, "SampleFrequency == 0 sounds: bytes / 0 = inf (or 0/0) -> NOTSA_FTOL range guard = exe's fistp INT_MIN, low 16 bits 0" },
+    { "_ZN12_GLOBAL__N_120ProcessLineTriangleT", nullptr, "line parallel to the triangle plane: t = num / 0 (inf / NaN), rejected by the `!(t < max)` NaN-aware test, matches the exe (NaN => false)" },
+    { "_ZN13FxEmitterBP_c6RenderEPN2rw6CameraEjfb", nullptr, "particle with totalLife 0: currentLife / totalLife = 0/0, exe x87 yields the same NaN" },
+    { "_ZL23ClampSpriteQuadToScreen", nullptr, "halfSize == 0 sprite: x / 0 = +-inf corner coordinates, same masked x87 division in the exe; the quad is then clipped away" },
+    { "_ZN6CRadar13ClipRadarPoly", nullptr, "slope of a vertical edge (dx == 0) = inf, mirrored 1:1 from the exe's masked x87 division" },
+    { "_ZN10CWorldScan9ScanWorld", nullptr, "scan-line slope of a horizontal / vertical edge = inf or 0/0, same masked x87 division in the exe (water block scan)" },
+    { "_ZN12_GLOBAL__N_117TestLineTriangleT", nullptr, "line parallel to the triangle plane: t = num / 0, rejected by the NaN-aware range test (same as ProcessLineTriangleT)" },
+    { "log10", "_ZN21CAEWeatherAudioEntity7ServiceEv", "log10(0) = -inf (no wind / rain), exe fyl2x gives -inf too; the volume is clamped afterwards" },
+    { "log10f", "_ZN6CEvent13GetSoundLevelEPK7CEntityR7CVector", "log10(0) = -inf for a zero distance, exe fyl2x gives the same (-inf) and the level is only compared / clamped by the callers" },
 };
-const char* WhitelistReason(const Sym& s) {
+const char* WhitelistReason(const Sym& s, std::uint64_t lr) {
     if (!g_whitelist) return nullptr;
-    for (const auto& w : kWhitelist) { if (std::strstr(s.name, w.sym)) return w.why; }
+    Sym c{}; bool haveC = false;
+    for (const auto& w : kWhitelist) {
+        if (!std::strstr(s.name, w.sym)) continue;
+        if (!w.caller) return w.why;
+        if (!haveC) { c = Resolve(lr); haveC = true; }
+        if (std::strstr(c.name, w.caller)) return w.why;
+    }
     return nullptr;
 }
 
@@ -229,7 +248,7 @@ void OnTrap(int sig, siginfo_t* si, void* vuc) {
     const bool log = site && isNew;
     if (log || g_abortMode) {
         char kb[64]; const Sym s = Resolve(pc);
-        const char* wl = WhitelistReason(s);
+        const char* wl = WhitelistReason(s, lr);
         if (site && isNew) { site->caller.store(lr); if (wl) site->whitelisted.store(1); }
         if (!wl || g_abortMode) {
             Outf("[fpe] %s at %s!%s+%llu (rel 0x%llx) pc=0x%llx%s\n", KindName(kind, kb), s.mod, s.name, (unsigned long long)s.off, (unsigned long long)s.rel, (unsigned long long)pc,

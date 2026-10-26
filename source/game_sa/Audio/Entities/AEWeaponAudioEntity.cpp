@@ -435,7 +435,13 @@ void CAEWeaponAudioEntity::PlayGunSounds(
             baseVolume    -= 3.f;
             frontEndVolume = baseVolume + CAEAudioEnvironment::GetDistanceAttenuation(dist);
         } else if (dist < (12.f / baseRollOffFactor)) {
+#ifdef NOTSA_PORTABLE
+            // MAC-FPTRAP: the exe (0x503FE9..0x503FFC: fsubr dist; fsub 5/r; fdivrp) divides by the DIFFERENCE (12/r - 5/r). The line above divides by 12/r and then subtracts 5/r,
+            // which is negative for every rolloff factor: log10f(t * ...) was always NaN (FE_INVALID, 121 hits in a 3 min soak) and frontEndVolume NaN.
+            const auto t   = ((12.f / baseRollOffFactor) - dist) / ((12.f / baseRollOffFactor) - (5.f / baseRollOffFactor));
+#else
             const auto t   = ((12.f / baseRollOffFactor) - dist) / (12.f / baseRollOffFactor) - (5.f / baseRollOffFactor);
+#endif
             frontEndVolume = baseVolume + CAEAudioEnvironment::GetDistanceAttenuation(dist) + std::log10f(t * (SQRT_2 / 2.f)) * 20.f;
             baseVolume    += std::log10f(((1.f - t) * std::bit_cast<float>(0x3E95F6FEu) /* 0x862E14, one ulp above the literal 0.2929f */) + (SQRT_2 / 2.f)) * 20.f;
         }

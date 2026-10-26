@@ -62,6 +62,13 @@ void CPedModelInfo::CreateHitColModelSkinned(RpClump* clump) {
         auto& nodeInfo = m_pColNodeInfos[i];
         memcpy(CGame::m_pWorkingMatrix2, CGame::m_pWorkingMatrix1, sizeof(RwMatrix));
 
+#ifdef NOTSA_PORTABLE
+        // MAC-FPTRAP: the hierarchy's matrix array has not been animated yet when the clump is loaded (uninitialised heap memory: sNaN / inf bit patterns, FE_INVALID in
+        // rwx::Transform under FP traps; reVC 97008905 has the same fix). AnimatePedColModelSkinned(World) recomputes every centre before the model is used, so start from the
+        // bone-local centre instead of garbage.
+        (void)hierarchy;
+        sphere.m_vecCenter = nodeInfo.m_vecCenter;
+#else
         CVector vecCenter = nodeInfo.m_vecCenter;
         auto animId = RpHAnimIDGetIndex(hierarchy, nodeInfo.m_nBoneID);
         auto pAnimMat = &RpHAnimHierarchyGetMatrixArray(hierarchy)[animId];
@@ -69,6 +76,7 @@ void CPedModelInfo::CreateHitColModelSkinned(RpClump* clump) {
         RwV3dTransformPoints(&vecCenter, &vecCenter, 1, CGame::m_pWorkingMatrix2);
 
         sphere.m_vecCenter = vecCenter;
+#endif
         sphere.m_fRadius = nodeInfo.m_fRadius;
         sphere.m_Surface.m_nMaterial = eSurfaceType::SURFACE_PED;
         sphere.m_Surface.m_nPiece = nodeInfo.m_nFlags;

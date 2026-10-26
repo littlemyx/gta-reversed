@@ -1,0 +1,50 @@
+# MAC-FPTRAP: native macOS build under floating-point exception traps (2026-10-26, portable/main)
+
+Item 2 of the re3 digest slice list (reVC 97008905 skinned-ped hit colmodel FPE, 9382e86d, be88a42b). Build dir `build/PortableMacFPE` (Release, `-DGTASA_FPE_TRAPS=ON`), harness = stab_run.sh flow (own NOTSA_LOCK_FILE, null audio, NOVSYNC), `NOTSA_MATRIX_CHECK=1`, caffeinate held. Scratch `/private/tmp/claude-501/fptrap/` (out/*.fpe first-hit log with backtraces, out/*.fpesum per-PC counts). Every run: "Loading the Game" present (139 lines), 0 `[pool] FATAL` / `[matrix] CHECK FAILED` / crashes (the `exit -6` rows are the harness NOTSA_HANG_DUMP_SECS abort at the route timeout).
+
+## Tool (landed, OFF by default)
+`GTASA_FPE_TRAPS=ON` (needs GTASA_PORTABLE; `source/portable/fpe_traps.{h,cpp}`, hooks in app_main / app_platform / oswrapper_portable / dsound_al):
+* Apple silicon DOES trap: FPCR.IOE/DZE(/OFE) = bits 8/9/10 are honoured (M5 Max); a trapped op raises **SIGILL** (not SIGFPE), ESR EC 0x2C with IOF/DZF/OFF in ISS. Armed on main, every `OS_ThreadLaunch` thread and the dsound mixer thread.
+* The handler logs PC + exception kind + frame-pointer backtrace once per distinct PC (`NOTSA_FPE_LOG=<file>`), counts every hit (`NOTSA_FPE_SUMMARY=<file>`, rewritten every 5 s and at exit), `NOTSA_FPE_MODE=log|abort`, `NOTSA_FPE_EXC=<izo>` (default `iz`), built-in whitelist for the benign sites below (still counted, `[WL]`, not logged / not fatal; `NOTSA_FPE_NOWHITELIST=1` to see everything).
+* log mode **emulates** the trapped scalar insn in the handler (FADD/FSUB/FMUL/FDIV/FSQRT/FCVTZS/FCVTZU/FCMP(E), IEEE default result) and steps over it, so the thread stays armed and a 100k-hit site costs one signal per hit; vector forms (NEON) fall back to "run with traps masked, helper thread re-arms via SIGUSR2 within ~2 ms".
+* Harness note (cost me 30 min): the menu cursor follows the REAL mouse pointer; if the pointer is over the game window at start the cursor starts on "Options" and the 4 Returns never start a game (no "Loading the Game"). `run.sh` warps the pointer to (5,5) first (CGWarpMouseCursorPosition via ctypes).
+
+## Routes run (all with traps, INVALID + DIVBYZERO; OVERFLOW on tp1/tp2/tp3)
+car3 (stab3_car, 3 min), combat1 (stab_combat), tp1 (stab_tp, 48 far teleports, +OVERFLOW), rain1 (r11s: weather x hour x car), fx1 (vis1_fx), intro1 (stab_intro2: new-game cutscene + scripted ride, 5 min), soak1 (stab3_soak2, 8.6 min of the 10.2 min script: roadveh, combat, 56 tpg), int3 (int1: interiors, see below). OVERFLOW is quiet: the only OVERFLOW sites are the same garbage-matrix transform as site 5 (7 hits), so `izo` is usable.
+
+## Trap sites (distinct PCs deduped per function; counts = sum over the pre-fix runs, menu loops included)
+Class: (a) genuine / NaN-poisoning, (b) benign by design (exe computes the same, masked x87), (c) compiler speculation artefact (clang if-converts a guarded division into fdiv + fcsel; the discarded arm traps), (d) system library (AppKit, CoreUI, SkyLight, RenderBox, Metal: 8 first-hit sites at window creation, not ours).
+| # | function (PC rel) | exc | count | class | status |
+|---|---|---|---|---|---|
+| 1 | `ConvertIm2D` (0x147a924, 1 PC) | DIV0 | 359k | c | whitelisted: `rhw != 0 ? 1/rhw : ..` speculated |
+| 2 | `RpAnimBlendClumpUpdateAnimations` (0xa7fb2c) | INV | 272k | c | whitelisted: `totalTime == 0 ? 1 : blend/total` speculated 0/0, value unused |
+| 3 | `CTimer::Update` (0x134ae20) | DIV0 | 263k | b | whitelisted: `game_FPS = 1000/(clock delta 0)` = inf in menus / pause, exe x87 same |
+| 4 | `CVehicle::DoLightEffectImpl` (0x514f90) | INV | 52k | b | whitelisted: `sqrt(dot<0)` NaN only consumed under `angle > 0` |
+| 5 | **`rwx::Transform` / `RwV3dTransformPoints` <- `CPedModelInfo::CreateHitColModelSkinned`** (36 + 3 PCs, OVERFLOW too) | INV, OVF | 4.2k | **a** | **FIXED** (portable): the hierarchy matrix array is not animated yet when the clump loads (heap garbage: sNaN / inf patterns), the sphere centres were computed from it. This is exactly reVC 97008905. Now the centre starts at the bone-local `nodeInfo.m_vecCenter`; AnimatePedColModelSkinned(World) recomputes it before use. 0 hits after the fix. |
+| 6 | `CAEAudioUtility::ConvertFromBytesToMS` (0x10b534/0x10b540) | DIV0, INV | 3.8k | b | whitelisted: bank sounds with SampleFrequency 0 -> inf / 0/0 -> NOTSA_FTOL guard = exe's fistp INT_MIN, int16 result 0 |
+| 7 | **`CAEWeaponAudioEntity::PlayGunSounds` -> `log10f` (0x656c)** | INV | 611 (121 in one car3-length run) | **a** | **FIXED** (portable): decomp precedence bug `(12/r - dist) / (12/r) - (5/r)`; the exe (0x503FE9..0x503FFC: `fsubr dist; fsub 5/r; fdivrp`) divides by `(12/r - 5/r)`. The port's t was negative for every rolloff factor, so `frontEndVolume` was always NaN and `baseVolume` got a bogus boost for gun shots at 5..12 m. **Win32 fidelity item** (PORTABLE_SYNC). 0 hits after the fix |
+| 8 | `ClampSpriteQuadToScreen` (4 PCs) | DIV0 | 468 | b | whitelisted: halfSize 0, x/0 = inf, exe same, quad is clipped |
+| 9 | `FxEmitterBP_c::Render` (0x7b5a08) | INV | 268 | b | whitelisted: `currentLife / totalLife` 0/0, exe x87 same NaN (feeds interp tables; guarded downstream by NOTSA_FTOL) |
+| 10 | `CWorldScan::ScanWorld` (6 PCs) | DIV0, INV | 222 | b | whitelisted: scan-line slope of axis-parallel edge, mirrors exe |
+| 11 | `CRadar::ClipRadarPoly` (0xac647c) | DIV0 | 40 | b | whitelisted: vertical edge slope = inf, mirrored x87d code |
+| 12 | `log10` <- `CAEWeatherAudioEntity::Service`; `log10f` <- `CEvent::GetSoundLevel` | DIV0 | 39 + 3..20 | b | whitelisted: log10(0) = -inf, exe fyl2x same |
+| 13 | `TestLineTriangleT` / `ProcessLineTriangleT` | INV | 36 + 5 | b | whitelisted: line parallel to the plane, t = n/0 or 0/0, rejected by the NaN-aware `!(t < max)` test (comment in the code says NaN => false, matches the exe) |
+| 14 | `CameraSize` (0x26b8c) | DIV0 | 8 | b | whitelisted: start-up only, `viewWindow / CDraw::ms_fAspectRatio` while the ratio is still 0 (BSS in the exe as well), view window re-set by the camera each frame |
+| 15 | `CAnimManager::LoadAnimFile_ANPK` lambda `KeyFrameTransCompressed` (0xcd8d4) | INV | 8 | a (minor, OPEN) | `FixedFloat::operator=` does `static_cast<int16>(v * 1024)` (FixedFloat.hpp:52): NaN / |v|>2M in a cutscene IFP translation. x86 `__ftol` gives INT_MIN -> low 16 bits 0; arm64 fcvtzs saturates (INT_MAX -> -1). Not touched: FixedFloat.hpp is in every Win32 TU, wants a wine cl.exe A/B; proposal `NOTSA_FTOL(int32, v*Compress)` for sizeof(T) <= 2. 8 values per full run, no visible effect |
+| 16 | `CCollision::DistToMathematicalLine2D` (0x2f5a84) <- `CCurves::CalcCurvePoint` <- `CCarCtrl::UpdateCarOnRails` | INV | 7 | a? OPEN | a NaN (qNaN, produced earlier without trapping: uninitialised / loaded) reaches the curve code of a car on rails in the intro ride. The port mirrors the exe's NaN-into-sqrt on purpose; origin of the NaN not traced |
+| 17 | `FrameUpdateCallBackT<..>` vector `fcmgt` (0xa81b38) | INV | 4 | a? OPEN | quaternion dot-product sign test (`DotQuatX87(q, nextQ) < 0`) sees a NaN quaternion lane; 4 frames in combat / fx. Origin untraced |
+| 18 | AppKit `_NSGetCGFloatAppConfig`, CoreFoundation `CFNumberCreate` / `CFRunLoopTimerCreate`, CoreUI `GetHashForBounds`, SkyLight `SLSTransaction*`, RenderBox `add_join`, AppKit block helper (OVF), AGX `SamplerStateFields` (OVF) | INV/DIV0/OVF | ~60 | d | OS code under SDL window / GL context creation; not ours, logged only |
+No site produced a NaN that reached a position, matrix or int in the runs (NOTSA_MATRIX_CHECK clean); sites 5 and 7 were the only ones whose NaN/garbage was stored into game state (hit-sphere centres until the first animation; front-end gun volume).
+
+## Interiors / water / rain
+rain1 (weather x hour x car, r11s) and soak1 (weather 0..19 x hour 0..23, `CWaterLevel::PreRenderWater` -> ScanWorld) are covered; interiors: see the int3 line in the "Post-fix verification" below.
+
+## Post-fix verification
+tp2 / combat2 (same routes, binary with fixes 5 and 7): the `rwx::Transform`, `RwV3dTransformPoints` and `PlayGunSounds` sites are gone (0 hits; combat1 had 38 PlayGunSounds log10f hits, tp1 had 7 OVERFLOW + 4.2k INVALID in the hit colmodel). The final binary adds the whitelist for sites 1-4, 6, 8-14 (tp3 below shows only the open sites 15-17 + system code unmarked).
+tp3 (final binary, with whitelist, izo): 0 unwhitelisted game sites except site 15 (1 hit). int3 (int1.txt: 5 interior jumps: Burglary house area 3, ammu-nation, ...; "Loading the Game" 139): only the whitelisted sites + open 15 / 17. No interior-specific trap site.
+
+## lp64_scan.py on the current tree (post-merges, 228 commits since P5)
+`layouts`: 81,312 records, **0 TAIL** hits (tail-padding reuse), 10 UNIONs, all already reviewed in MAC-P5 (Entity m_pLod/m_nLodIndex, ClumpModelInfo anim file, VehicleModelInfo anim block, Cam two-player unions, CutsceneObject attach union (fixed), tRadarTrace m_pEntryExit/m_EntryExitPoolInd, BreakablePlugin, imgui/libc). `offsets`: 32 candidates, **0 new real hits**: the files not in the P5 table are Camera.cpp:239 (memset of everything after CPlaceable = what the exe does), PathFind.cpp:1598 (constant padding), Vehicle.cpp:429/6657, Heli.cpp:1281, Plane.cpp:1350 (`NOTSA_PTR_ID32(this)+N` id hashing, by design), WinPlatform.h:40 (Win32 only), MissionDebugModule.cpp:186 (debug), play_cmd.cpp:216 (portable debug).
+
+## Files
+source/portable/fpe_traps.{h,cpp} (new), CMake option, 4 portable hook lines; fixes: source/game_sa/Models/PedModelInfo.cpp (NOTSA_PORTABLE), source/game_sa/Audio/Entities/AEWeaponAudioEntity.cpp (NOTSA_PORTABLE). Both guardline-checked (Win32 view text-identical, no wine A/B needed). Consumer audit: PedModelInfo: the only readers of `m_pHitColModel->m_pColData->m_pSpheres[i].m_vecCenter` are the collision code, every reader calls AnimatePedColModelSkinned(World) first and recomputes all centres (Camera.cpp:3192, Weapon.cpp:2209, World.cpp:1814, TaskSimpleFight.cpp:1750, Ped.cpp:3790, Vehicle.cpp:4851); AEWeapon: `t` feeds only the two log10f terms of frontEndVolume / baseVolume in that branch.

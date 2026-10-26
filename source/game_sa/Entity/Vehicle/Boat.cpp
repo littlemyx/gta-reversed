@@ -973,29 +973,34 @@ void CBoat::ProcessControlInputs(uint8 padNum) {
 
     const auto steerInput = pad->GetSteeringLeftRight();
 
-    // 0x6F0AE7
-    // if mouse enabled and camera allows 3rd person mouse -> try mouse branch, otherwise keyboard branch
+    // 0x6F0AED..0x6F0C7A
+    const auto lastIsMouse = CVehicle::m_nLastControlInput == eControllerType::MOUSE;
+    enum class SteerMode { KEYBOARD, MOUSE, KEEP } mode = SteerMode::KEYBOARD;
     if (CCamera::m_bUseMouse3rdPerson && CVehicle::m_bEnableMouseSteering) {
-        if (CPad::NewMouseControllerState.m_AmountMoved.x == 0.0f && m_fRawSteerAngle == 0.0f || CVehicle::m_nLastControlInput != eControllerType::MOUSE || steerInput != 0) {
-            // keyboard/controller steering smoothing (как было)
-            m_fRawSteerAngle += (-steerInput / 128.0f - m_fRawSteerAngle) * BOAT_STEER_SMOOTH_RATE * CTimer::GetTimeStep();
-            CVehicle::m_nLastControlInput = eControllerType::KEYBOARD;
-        } else {
-            // mouse branch
-            if (!pad->NewState.m_bVehicleMouseLook) {
-                m_fRawSteerAngle += CPad::NewMouseControllerState.m_AmountMoved.x * BOAT_MOUSE_STEER_SCALE;
-            }
-            CVehicle::m_nLastControlInput = eControllerType::MOUSE;
-
-            // if the angle is small or "mouse look" mode is enabled, apply damping
-            if (std::fabs(m_fRawSteerAngle) < BOAT_STEER_DAMP_THRESHOLD || pad->NewState.m_bVehicleMouseLook) {
-                m_fRawSteerAngle *= std::pow(BOAT_STEER_DAMP_BASE, CTimer::GetTimeStep());
-            }
+        // Mouse moved => mouse branch (even if the last input was not the mouse); otherwise the mouse branch is only kept while the
+        // wheel is still turned, the last input was the mouse and the pad is idle; an idle pad after the mouse leaves the angle untouched.
+        if (CPad::NewMouseControllerState.m_AmountMoved.x != 0.0f) {
+            mode = SteerMode::MOUSE;
+        } else if (m_fRawSteerAngle != 0.0f && lastIsMouse && steerInput == 0) {
+            mode = SteerMode::MOUSE;
+        } else if (steerInput == 0 && lastIsMouse) {
+            mode = SteerMode::KEEP;
         }
-    } else {
-        // keyboard branch (repeated — but retained for clarity)
+    }
+
+    if (mode == SteerMode::KEYBOARD) {
         m_fRawSteerAngle += (-steerInput / 128.0f - m_fRawSteerAngle) * BOAT_STEER_SMOOTH_RATE * CTimer::GetTimeStep();
         CVehicle::m_nLastControlInput = eControllerType::KEYBOARD;
+    } else if (mode == SteerMode::MOUSE) {
+        if (!pad->NewState.m_bVehicleMouseLook) {
+            m_fRawSteerAngle += CPad::NewMouseControllerState.m_AmountMoved.x * BOAT_MOUSE_STEER_SCALE;
+        }
+        CVehicle::m_nLastControlInput = eControllerType::MOUSE;
+
+        // if the angle is small or "mouse look" mode is enabled, apply damping
+        if (std::fabs(m_fRawSteerAngle) < BOAT_STEER_DAMP_THRESHOLD || pad->NewState.m_bVehicleMouseLook) {
+            m_fRawSteerAngle *= std::pow(BOAT_STEER_DAMP_BASE, CTimer::GetTimeStep());
+        }
     }
 
     // limitation and final conversion to the steering angle

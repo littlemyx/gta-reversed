@@ -664,7 +664,8 @@ int32 CPhysical::ProcessEntityCollision(CEntity* entity, CColPoint* colPoint) {
         if (!entity->GetIsTypeBuilding())
             entity->AsPhysical()->AddCollisionRecord(this);
 
-        if (entity->GetIsTypeBuilding() || entity->GetIsStatic())
+        // 0x546D83..0x546D96: also set when the entity is waiting for collision (flag 0x40000)
+        if (entity->GetIsTypeBuilding() || entity->GetIsStatic() || entity->m_bIsStaticWaitingForCollision)
             SetHasHitWall(true);
     }
     return totalColPointsToProcess;

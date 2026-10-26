@@ -205,12 +205,35 @@ up:s
 wait:1500
 mark:car_enter
 key:f
-until:invehicle:8000
+# `soft`: a miss is logged as "MISS(soft)", not as a failed gate. ROUTE-FLAKES: the 3-minute walk ends anywhere (pavement, the hillside above the alley, against a fence), so in ~1 of 3 runs the cheat car
+# spawns half inside the rock / the fence (in front of CJ at radius+2 m, exe 0x43A0E2) and the first F cannot reach it - the sidestep + second car below is the designed answer, it is not a game fault.
+# The LAST attempt keeps the hard gate: a run where CJ never gets into a car still reports TIMEOUT.
+until:invehicle:8000:soft
 skipif:invehicle:got_car
 mark:car_retry
 down:d
 wait:2500
 up:d
+wait:500
+key:j
+key:q
+key:n
+key:t
+key:d
+key:m
+key:h
+wait:3000
+down:s
+wait:1500
+up:s
+wait:1500
+key:f
+until:invehicle:8000:soft
+skipif:invehicle:got_car
+mark:car_retry2
+down:a
+wait:5000
+up:a
 wait:500
 key:j
 key:q

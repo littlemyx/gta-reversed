@@ -575,7 +575,7 @@ CTaskAllocator* CGroupEventHandler::ComputeResponseDanger(const CEventDanger& e,
 
 // 0x5FBF50
 CTaskAllocator* CGroupEventHandler::ComputeResponseDamage(const CEventDamage& e, CPedGroup* pg, CPed* originator) {
-    const auto src = e.GetSourceEntity();
+    const auto src = e.m_pSourceEntity; // exe 0x5FBF5B: the raw field [e+0x14], NOT the virtual GetSourceEntity (which maps a vehicle to its driver)
     if (!src || !src->GetIsTypePed()) {
         return nullptr;
     }

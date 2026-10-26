@@ -16,8 +16,10 @@ using GxtChar = uint16;
 #ifdef NOTSA_PORTABLE
 #include "game_sa/Core/Fp.h"
 #define NOTSA_FTOL(T, ...) (::notsa::fp::FtolCast<T>(__VA_ARGS__))
+#define NOTSA_FTOL_SC(T, ...) (::notsa::fp::FtolCast<T>(__VA_ARGS__))
 #else
 #define NOTSA_FTOL(T, ...) (T)(__VA_ARGS__)
+#define NOTSA_FTOL_SC(T, ...) static_cast<T>(__VA_ARGS__)
 #endif
 #define NOTSA_UNPAREN(...) __VA_ARGS__
 #define NOTSA_GLOBAL_EXTERN(name, type) extern std::type_identity_t<NOTSA_UNPAREN type> name

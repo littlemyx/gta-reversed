@@ -208,10 +208,26 @@ inline void SetSseModeGameCompatible() { _mm_setcsr(_mm_getcsr() & ~(0x8000u | 0
 //! The exe's `_ftol2` (0x821B40, x87 `fistp qword` with truncation, LOW dword returned): NaN, +-inf and |x| >= 2^63 give the integer indefinite 0x8000000000000000
 //! (-> 0), 2^31 <= |x| < 2^63 wraps. A plain C++ cast is UB there and differs per architecture (x86 cvttss2si: 0x80000000, arm64: saturates).
 [[nodiscard]] inline int64_t Ftol64(double x) {
+#ifdef NOTSA_PORTABLE
+    // MAC-NAN1: integer range test + (arm64) inline asm conversion. An ordered float compare (`fcmpe`) of a NaN and a speculated `fcvtzs; csel` of an out-of-range value both raise
+    // FE_INVALID, which the GTASA_FPE_TRAPS audit would report at every guarded junk value that reaches NOTSA_FTOL (PROLOG1.IFP: 8 floats per run). |x| < 2^63 <=> biased
+    // exponent < 1023 + 63; NaN / inf have 0x7FF; x == -2^63 stays excluded as before (INT64_MIN either way).
+    if (((std::bit_cast<uint64_t>(x) >> 52) & 0x7FFu) >= 0x43Eu) {
+        return INT64_MIN;
+    }
+#if defined(__aarch64__) && defined(__GNUC__)
+    int64_t r;
+    __asm__("fcvtzs %0, %d1" : "=r"(r) : "w"(x)); // not hoistable above the branch (clang would otherwise if-convert it)
+    return r;
+#else
+    return (int64_t)x;
+#endif
+#else
     if (!(std::fabs(x) < 9223372036854775808.0)) { // NaN fails
         return INT64_MIN;
     }
     return (int64_t)x;
+#endif
 }
 [[nodiscard]] inline int32_t Ftol(double x) { return (int32_t)(uint32_t)(uint64_t)Ftol64(x); }
 [[nodiscard]] inline uint32_t FtolU(double x) { return (uint32_t)(uint64_t)Ftol64(x); }

@@ -140,7 +140,8 @@ CTaskAllocator* CGroupEventHandler::ComputeStareResponse(CPedGroup* pg, CPed* st
     if (!pg->GetMembership().GetLeader()) {
         return nullptr;
     }
-    if ((stareAt->GetPosition() - pg->GetMembership().GetLeader()->GetPosition()).SquaredMagnitude2D() >= sq(8.f)) {
+    // exe 0x5F9C26..0x5F9C57: the full 3D squared distance, bail out when it is > 64.0 (0x859A44; was 2D and >=)
+    if ((stareAt->GetPosition() - pg->GetMembership().GetLeader()->GetPosition()).SquaredMagnitude() > 64.f) {
         return nullptr;
     }
     for (auto* const m : pg->GetMembership().GetMembers()) {

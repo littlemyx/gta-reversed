@@ -211,7 +211,7 @@ CBike::CBike(int32 modelIndex, eVehicleCreatedBy createdBy) : CVehicle(createdBy
     for (auto i = 0; i < 4; ++i) {
         m_aWheelColPoints[i] = {};
         m_aWheelRatios[i] = 1.0f;
-        m_aRatioHistory[i] = 0.0f;
+        m_aRatioHistory[i] = 1.0f; // 0x6BF6FF..0x6BF70A: [esi+0x720+4i] = 1.0f (edx = 0x3f800000), not 0
         m_WheelCounts[i] = 0.0f;
         m_fSuspensionLength[i] = 0.0f;
         m_fLineLength[i] = 0.0f;

@@ -59,11 +59,60 @@ uint32_t Fnv(uint32_t h, const void* p, size_t n) { auto b = (const uint8_t*)p; 
 uint64_t RealQ() { return GetOSWPerformanceTime(); }
 std::string_view Base(const char* path) { std::string_view p{path}; const auto i = p.find_last_of("/\\"); return i == p.npos ? p : p.substr(i + 1); }
 const struct Install { Install() { C(); } } s_install; // reads the env at static-init time so the srand hook is in place before main
+// RD-AB-13: NOTSA_LOCKSTEP_WATCH=1 NOTSA_LOCKSTEP_WFC=<fc> NOTSA_LOCKSTEP_WN=<n>: hardware write watchpoint (DR0, len 2) on CWorld::ms_nCurrentScanCode, set on the main thread by a helper thread
+// (counterpart RD_WATCH in rd_orig.c). Every write in traced frames fc..fc+n logs "V fc newvalue +eipRVA: +call-site candidates on the stack (image RVAs)". Inert without the env var.
+struct Watch { unsigned fc{}, n{1}; HANDLE th{}; };
+Watch g_w;
+LONG CALLBACK WatchVeh(EXCEPTION_POINTERS* ep) {
+    auto* x = ep->ContextRecord;
+    if (ep->ExceptionRecord->ExceptionCode == EXCEPTION_SINGLE_STEP && (x->Dr6 & 1)) {
+        x->Dr6 = 0;
+        auto& c = C();
+        const unsigned fc = (unsigned)CTimer::m_FrameCounter;
+        if (c.f && fc >= g_w.fc && fc <= g_w.fc + g_w.n) {
+            const auto base = (uintptr_t)GetModuleHandleA(nullptr);
+            const auto* nt = (const IMAGE_NT_HEADERS*)(base + ((const IMAGE_DOS_HEADER*)base)->e_lfanew);
+            const auto size = (uintptr_t)nt->OptionalHeader.SizeOfImage;
+            std::fprintf(c.f, "V %u %u +%x:", fc, (unsigned)CWorld::ms_nCurrentScanCode, (unsigned)(x->Eip - base));
+            int found = 0;
+            for (int i = 0; i < 200 && found < 10; i++) {
+                const auto v = *(const uintptr_t*)(x->Esp + 4 * i);
+                if (v > base + 16 && v < base + size) {
+                    const auto* cp = (const uint8_t*)v;
+                    if (cp[-5] == 0xE8 || cp[-6] == 0xFF || cp[-3] == 0xFF || cp[-2] == 0xFF) { std::fprintf(c.f, " +%x", (unsigned)(v - base)); found++; }
+                }
+            }
+            std::fputc('\n', c.f);
+        }
+        return EXCEPTION_CONTINUE_EXECUTION;
+    }
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+DWORD WINAPI WatchThread(LPVOID) {
+    SuspendThread(g_w.th);
+    CONTEXT cx{}; cx.ContextFlags = CONTEXT_DEBUG_REGISTERS;
+    if (GetThreadContext(g_w.th, &cx)) { cx.Dr0 = (DWORD)(uintptr_t)&CWorld::ms_nCurrentScanCode; cx.Dr6 = 0; cx.Dr7 = 1 | (1 << 16) | (1 << 18); SetThreadContext(g_w.th, &cx); }
+    ResumeThread(g_w.th);
+    return 0;
+}
+void WatchInit() {
+    static bool once;
+    if (once) return;
+    once = true;
+    if (!C().f || !std::getenv("NOTSA_LOCKSTEP_WATCH")) return;
+    if (const char* e = std::getenv("NOTSA_LOCKSTEP_WFC")) g_w.fc = (unsigned)std::atoi(e);
+    if (const char* e = std::getenv("NOTSA_LOCKSTEP_WN")) g_w.n = (unsigned)std::atoi(e);
+    AddVectoredExceptionHandler(1, WatchVeh);
+    DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &g_w.th, THREAD_ALL_ACCESS, FALSE, 0);
+    CreateThread(nullptr, 0, WatchThread, nullptr, 0, nullptr);
+}
+
 } // namespace
 
 void FrameRead() { g_frameRead = true; }
 
 void Tick() {
+    WatchInit();
     auto& c = C();
     g_frameRead = true;
     unsigned& nf = g_nf;

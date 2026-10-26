@@ -1614,7 +1614,8 @@ bool CPhysical::ApplyCollisionAlt(CPhysical* entity, CColPoint& colPoint, float&
         vecSpeed += vehicle->AddMovingCollisionSpeed(vecDistanceToPointFromThis);
 
     CVector vecMoveDirection = colPoint.m_vecNormal;
-    float fSpeedDotProduct = DotProduct(&vecMoveDirection, &vecSpeed);
+    // 0x544EF9..0x544F2A: (n.x*s.x + n.z*s.z) + n.y*s.y (the 1st block above, 0x544DA5, is z,y,x = DotProduct)
+    float fSpeedDotProduct = (float)(((x87d)vecMoveDirection.x * vecSpeed.x + (x87d)vecMoveDirection.z * vecSpeed.z) + (x87d)vecMoveDirection.y * vecSpeed.y);
     if (fSpeedDotProduct >= 0.0f)
     {
         return false;
@@ -1750,7 +1751,7 @@ bool CPhysical::ApplyCollisionAlt(CPhysical* entity, CColPoint& colPoint, float&
     }
     else
     {
-        CVector vecSpeed = vecMoveSpeed / m_fMass;                                                            // todo: shadow var
+        CVector vecSpeed = vecMoveSpeed * (1.0f / m_fMass);                                                   // todo: shadow var; 0x4119D0: operator/ multiplies by the reciprocal
         if (GetIsTypeVehicle())
         {
             if (!GetHasHitWall() || m_vecMoveSpeed.SquaredMagnitude() <= 0.1f
@@ -1774,7 +1775,7 @@ bool CPhysical::ApplyCollisionAlt(CPhysical* entity, CColPoint& colPoint, float&
         float fTurnMass = m_fTurnMass;
         CVector vecDifference = vecDistanceToPointFromThis - vecCentreOfMassMultiplied; // todo: shadow var
         CVector vecCrossProduct = CrossProduct(vecDifference, vecMoveSpeed);            // todo: shadow var
-        outVecTurnSpeed += vecCrossProduct / fTurnMass;
+        outVecTurnSpeed += vecCrossProduct * (1.0f / fTurnMass); // 0x4119D0
     }
 
     float fCollisionImpact1 = damageIntensity / fCollisionMass;

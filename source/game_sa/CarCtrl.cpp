@@ -5034,7 +5034,11 @@ void CCarCtrl::SlowCarOnRailsDownForTrafficAndLights(CVehicle* vehicle) {
     }
 
     if (autoPilot.m_fMaxTrafficSpeed >= autoPilot.m_speed) {
-        autoPilot.ModifySpeed(std::min(autoPilot.m_fMaxTrafficSpeed, CTimer::GetTimeStep() * 0.05f + autoPilot.m_speed));
+        // 0x48A3-0x48AE: when the car is already at the traffic speed (max == speed) the exe returns without calling ModifySpeed
+        // (which would restart the speed interpolation)
+        if (autoPilot.m_fMaxTrafficSpeed > autoPilot.m_speed) {
+            autoPilot.ModifySpeed(std::min(autoPilot.m_fMaxTrafficSpeed, CTimer::GetTimeStep() * 0.05f + autoPilot.m_speed));
+        }
     } else if (autoPilot.m_speed >= 0.1f) {
         autoPilot.ModifySpeed(std::max(autoPilot.m_fMaxTrafficSpeed, autoPilot.m_speed - CTimer::GetTimeStep() * 0.7f));
     } else if (autoPilot.m_speed != 0.0f) {

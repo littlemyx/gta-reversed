@@ -30,7 +30,7 @@
 | S26 | game_sa/Entity/Physical.cpp | 28 | partial 19/28 (15 M, 4 fixed) -> S26b | Physical.cpp |
 | S27 | game_sa/World.cpp | 44 | partial 29/44 (19 M, 10 fixed) -> S27b | World.cpp |
 | S28 | game_sa/Streaming.cpp | 73 | pending | Streaming.cpp |
-| S29 | game_sa/Entity/Object | 39 | pending | CutsceneObject.cpp, HandObject.cpp, Object.cpp |
+| S29 | game_sa/Entity/Object | 39 | partial 34/39 (24 M, 10 fixed) -> S29b | CutsceneObject.cpp, HandObject.cpp, Object.cpp |
 | S30 | game_sa/Camera.cpp | 35 | pending | Camera.cpp |
 | S31 | game_sa/Cam.cpp | 34 | pending | Cam.cpp |
 | S32 | game_sa/Radar.cpp | 28 | pending | Radar.cpp |
@@ -47,3 +47,4 @@
 | S17b | rest of S17 | 22 | pending | Bike.cpp, Bmx.cpp, Boat.cpp |
 | S21b | rest of S21 | 9 | pending | PlayerPed.cpp |
 | S27b | rest of S27 | 15 | pending | World.cpp |
+| S29b | rest of S29 | 5 | pending | HandObject.cpp, Object.cpp |

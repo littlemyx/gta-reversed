@@ -70,7 +70,7 @@ int32 Ftol(double v) {
     if (!(v > -9223372036854775809.0 && v < 9223372036854775808.0)) {
         return 0;
     }
-    return (int32)(uint32)(uint64)(int64)v;
+    return (int32)(uint32)(uint64)NOTSA_FTOL(int64, v);
 }
 } // namespace HeliImpl
 

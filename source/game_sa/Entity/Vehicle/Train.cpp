@@ -368,7 +368,7 @@ void CTrain::ReadAndInterpretTrackFile(const char* filename, CTrainNode** nodes,
             const auto& node = (*nodes)[i];
             const auto& nextNode = (*nodes)[(i + 1) % *lineCount];
 
-            (*nodes)[i].m_nDistanceFromStart = (uint16)(int32)(total * (x87d)3.0);
+            (*nodes)[i].m_nDistanceFromStart = (uint16)NOTSA_FTOL(int32, total * (x87d)3.0);
 
             const x87d dy = (x87d)node.GetY() - (x87d)nextNode.GetY();
             const x87d dx = (x87d)node.GetX() - (x87d)nextNode.GetX();
@@ -538,7 +538,7 @@ void CTrain::SetTrainSpeed(CTrain* train, float speed) {
 
 // 0x6F5E50
 void CTrain::SetTrainCruiseSpeed(CTrain* train, float speed) {
-    train->m_autoPilot.SetCruiseSpeed((uint8)speed);
+    train->m_autoPilot.SetCruiseSpeed(NOTSA_FTOL(uint8, speed));
 }
 
 // 0x6F5E70
@@ -921,7 +921,7 @@ void CTrain::SkipToNextAllowedStation(CTrain* train) {
     // Pass some time, depending on how far the station is
     const auto& enginePos = engine->GetPosition();
     const auto  dist2D = std::sqrt((stationPos.x - enginePos.x) * (stationPos.x - enginePos.x) + (stationPos.y - enginePos.y) * (stationPos.y - enginePos.y));
-    CGameLogic::PassTime((uint32)(dist2D * 0.05f + 23.0f));
+    CGameLogic::PassTime(NOTSA_FTOL(uint32, dist2D * 0.05f + 23.0f));
 }
 
 // 0x6F7550

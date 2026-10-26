@@ -601,7 +601,10 @@ bool CPed::PedIsReadyForConversation(bool checkLocalPlayerWantedLevel) {
 * @addr 0x455560
 */
 bool CPed::PedCanPickUpPickUp() {
-    return !FindPlayerPed(0)->GetTaskManager().FindActiveTaskFromList({ TASK_COMPLEX_ENTER_CAR_AS_DRIVER, TASK_COMPLEX_USE_MOBILE_PHONE });
+    // 0x455560: the exe asks CPedIntelligence::FindTaskByType (primary slots DEFAULT/PRIMARY/EVENT_RESPONSE_TEMP/NONTEMP and their subtasks),
+    // not the active-task + secondary-slot search of CTaskManager::FindActiveTaskByType
+    auto* const intel = FindPlayerPed(0)->GetIntelligence();
+    return !intel->FindTaskByType(TASK_COMPLEX_ENTER_CAR_AS_DRIVER) && !intel->FindTaskByType(TASK_COMPLEX_USE_MOBILE_PHONE);
 }
 
 /*!

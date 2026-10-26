@@ -140,11 +140,11 @@ bool CTaskSimpleCarGetOut::MakeAbortable(CPed* ped, eAbortPriority priority, CEv
 // 0x64DC70
 bool CTaskSimpleCarGetOut::ProcessPed(CPed* ped) {
     if (!m_veh) {
-        return false;
+        return true; // 0x64DC77..0x64DCBA
     }
 
     if (m_finished) {
-        if (CCheat::IsActive(CHEAT_SMASH_N_BOOM)) {
+        if (CCheat::IsActive(CHEAT_SMASH_N_BOOM) && ped->IsPlayer()) { // 0x64DC82..0x64DC96
             m_veh->physicalFlags.bExplosionProof = m_veh->physicalFlags.bBulletProof = false;
             m_veh->vehicleFlags.bCanBeDamaged = true;
         }

@@ -84,7 +84,7 @@ public:
     static void   SetTimeStep(float ts) { ms_fTimeStep = ts; }
     static void   UpdateTimeStep(float ts) { ms_fTimeStep = std::max(ts, 0.00001f); }
     static float  GetTimeStepInSeconds() { return ms_fTimeStep * ExeRecip(TIMESTEP_PER_SECOND); } // exe: ms_fTimeStep * 0.02f (0x858B38; 132 inlined sites, no fdiv)
-    static float  GetTimeStepInMS() { return GetTimeStepInSeconds() * 1000.0f; } // pattern: CTimer::ms_fTimeStep * 0.02f * 1000.0f
+    static float  GetTimeStepInMS() { return GetTimeStepInSeconds() * 1000.0f; } // exe: `fld ts; fmul 0.02f; fmul 1000.f; call _ftol` inlined at every caller. At PC=24 each fmul rounds to a float, so this IS bit-identical (ts==1.0 -> 20 ms in both; 19 only at PC=53, which the game never runs) - physics_oracle row "CTimer::GetTimeStepInMS sweep"
 
     static float  GetTimeStepNonClipped() { return ms_fTimeStepNonClipped; }
     static float  GetTimeStepNonClippedInSeconds() { return ms_fTimeStepNonClipped * ExeRecip(TIMESTEP_PER_SECOND); }

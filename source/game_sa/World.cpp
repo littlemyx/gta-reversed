@@ -512,7 +512,8 @@ void CWorld::CallOffChaseForAreaSectorListVehicles(CPtrListDoubleLink<CVehicle*>
 
         const auto& pos = veh->GetPosition();
 
-        if (!IsPointWithinBounds2D({ minX, minY }, { maxX, maxY }, pos)) {
+        // exe 0x563AD1..0x563B3E: strictly inside the grown area (args 6..9)
+        if (!(pos.x > minX && pos.x < maxX && pos.y > minY && pos.y < maxY)) {
             continue;
         }
 

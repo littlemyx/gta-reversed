@@ -2262,15 +2262,14 @@ int32 CPopulation::GeneratePedsAtAttractors(
         return 0;
     }
 
+    // 0x615AC3..0x615B8B: the exe compares the real distance (float, sqrt of z^2 + y^2 + x^2) with the radii: min < dist < max (both strict)
     const auto IsEffectInRadius = [&](CVector effectPos) {
-        const auto EffInRange = [
-            effDistSq = (effectPos - pos).SquaredMagnitude()
-        ](float min, float max) {
-            return effDistSq >= sq(min) && effDistSq <= sq(max);
-        };
-        return TheCamera.IsSphereVisible(effectPos, 2.f)
-            ? EffInRange(minRadius, maxRadius)
-            : EffInRange(minRadiusClose, maxRadiusClose);
+        const CVector d    = pos - effectPos;
+        const float   dist = std::sqrt(d.z * d.z + d.y * d.y + d.x * d.x);
+        const bool    vis  = TheCamera.IsSphereVisible(effectPos, 2.f);
+        const float   min  = vis ? minRadius : minRadiusClose;
+        const float   max  = vis ? maxRadius : maxRadiusClose;
+        return dist > min && dist < max;
     };
 
     // Exe loop shape (0x6159E0..0x615C57): the pass counter `i` (limit 12) is reset to 0 by every created ped, so 12 consecutive passes without a new ped end
@@ -2287,7 +2286,7 @@ int32 CPopulation::GeneratePedsAtAttractors(
             if (!ent->GetRwObject()) {
                 continue;
             }
-            if (!ent->IsInCurrentArea()) {
+            if (static_cast<int32>(CGame::currArea) != static_cast<int32>(static_cast<uint8>(ent->GetAreaCode()))) { // 0x615A17: exact match only (IsInCurrentArea also lets area 13 through)
                 continue;
             }
             auto* const attractor = notsa::cast_if_present<C2dEffectPedAttractor>(ent->GetRandom2dEffect(EFFECT_ATTRACTOR, true));
@@ -2309,7 +2308,7 @@ int32 CPopulation::GeneratePedsAtAttractors(
             }
 
             const auto usePoliceModel = bInPoliceStation
-                && CGeneral::RandomBool(70.f)
+                && CGeneral::GetRandomNumberInRange(0, 100) <= 70 // 0x615B94: the int version of the roll (RandomBool uses the float one)
                 && PedMICanBeCreatedAtThisAttractor(CStreaming::GetDefaultCopModel(), attractor->m_szScriptName);
 
             const auto model = usePoliceModel

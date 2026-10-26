@@ -5,6 +5,7 @@
 #include "ControllerConfigManager.h"
 
 const float SECOND_LOD_DISTANCE = 150.0f; // 0x872188
+const float BOAT_HEADING_NOT_LOCKED = -9999.99f; // 0xC61C3FF6 (not -10000): "no anchor heading yet" / "FlyingControl: use the pad value"
 
 static const constexpr auto uiNumIndices{ 6u };
 NOTSA_GLOBAL(KeepWaterOutIndices, 0xC27988, (RwImVertexIndex[uiNumIndices]), {});
@@ -111,7 +112,7 @@ CBoat::CBoat(int32 modelIndex, eVehicleCreatedBy createdBy) : CVehicle(createdBy
     m_PrevVolume = 7.0F;
     m_TimeOfLastParticle = 0;
 
-    m_LockedHeading = -10000.0f;
+    m_LockedHeading = BOAT_HEADING_NOT_LOCKED;
     m_BlowUpTimer = 0.0f;
     m_EntityThatSetUsOnFire = nullptr;
     m_NumWakeCoords = 0;
@@ -119,9 +120,9 @@ CBoat::CBoat(int32 modelIndex, eVehicleCreatedBy createdBy) : CVehicle(createdBy
 
     m_nAmmoInClip = 20;
     if (m_nModelIndex == MODEL_MARQUIS) {
-        m_BoatDoor.Init(PI / 10.0F, -PI / 10.0F, DOOR_AXIS_NEG_Y, DOOR_AXIS_Y, DOOR_EXTRA_NONE);
+        m_BoatDoor.Init(PI / 10.0F, -PI / 10.0F, DOOR_AXIS_NEG_Y, DOOR_AXIS_Z, DOOR_EXTRA_NONE); // 0x6F2B8B: axis byte (+0x5EA) = 2 (Z) for both branches
     } else {
-        m_BoatDoor.Init(TWO_PI / 10.0F, -TWO_PI / 10.0F, DOOR_AXIS_NEG_X, DOOR_AXIS_Y, DOOR_EXTRA_NONE);
+        m_BoatDoor.Init(TWO_PI / 10.0F, -TWO_PI / 10.0F, DOOR_AXIS_NEG_X, DOOR_AXIS_Z, DOOR_EXTRA_NONE);
     }
 
     m_vehicleAudio.Initialise(this);
@@ -542,7 +543,7 @@ void CBoat::ProcessControl() {
     switch (GetStatus()) {
     case eEntityStatus::STATUS_PLAYER:
         m_nBoatFlags.bLockedToXY = false;
-        m_LockedHeading = -10000.0f;
+        m_LockedHeading = BOAT_HEADING_NOT_LOCKED;
         if (m_pDriver) {
             ProcessControlInputs(m_pDriver->m_nPedType);
         }
@@ -555,7 +556,7 @@ void CBoat::ProcessControl() {
         break;
     case eEntityStatus::STATUS_SIMPLE:
         m_nBoatFlags.bLockedToXY = false;
-        m_LockedHeading = -10000.0f;
+        m_LockedHeading = BOAT_HEADING_NOT_LOCKED;
         CCarAI::UpdateCarAI(this);
         CPhysical::ProcessControl();
         physicalFlags.bSubmergedInWater = true;
@@ -564,7 +565,7 @@ void CBoat::ProcessControl() {
         return;
     case eEntityStatus::STATUS_PHYSICS:
         m_nBoatFlags.bLockedToXY = false;
-        m_LockedHeading = -10000.0f;
+        m_LockedHeading = BOAT_HEADING_NOT_LOCKED;
         CCarAI::UpdateCarAI(this);
         CCarCtrl::SteerAICarWithPhysics(this);
         break;
@@ -675,16 +676,16 @@ void CBoat::ProcessControl() {
 
     if (m_nModelIndex == MODEL_SKIMMER
         && (m_EngineSpeed > CPlane::PLANE_MIN_PROP_SPEED || m_vecMoveSpeed.SquaredMagnitude() > CPlane::PLANE_MIN_PROP_SPEED)) {
-        FlyingControl(FLIGHT_MODEL_PLANE, -10000.0f, -10000.0f, -10000.0f, -10000.0f);
+        FlyingControl(FLIGHT_MODEL_PLANE, BOAT_HEADING_NOT_LOCKED, BOAT_HEADING_NOT_LOCKED, BOAT_HEADING_NOT_LOCKED, BOAT_HEADING_NOT_LOCKED);
     } else if (CCheat::IsActive(CHEAT_BOATS_FLY)) {
-        FlyingControl(FLIGHT_MODEL_BOAT, -10000.0f, -10000.0f, -10000.0f, -10000.0f);
+        FlyingControl(FLIGHT_MODEL_BOAT, BOAT_HEADING_NOT_LOCKED, BOAT_HEADING_NOT_LOCKED, BOAT_HEADING_NOT_LOCKED, BOAT_HEADING_NOT_LOCKED);
     }
 
     if (m_nBoatFlags.bLockedToXY) {
         m_vecMoveSpeed.x = 0.0F;
         m_vecMoveSpeed.y = 0.0F;
 
-        auto bNoAnchorAngle = m_LockedHeading == -10000.0f;
+        auto bNoAnchorAngle = m_LockedHeading == BOAT_HEADING_NOT_LOCKED;
         if (bNoAnchorAngle) {
             m_LockedHeading = GetHeading();
         } else {

@@ -1628,8 +1628,9 @@ void CWorld::CallOffChaseForArea(float minX, float minY, float maxX, float maxY)
         { minX - 10.f, minY - 10.f, maxX + 10.f, maxY + 10.f },
         [&](int32 x, int32 y) {
             auto& sector = GetRepeatSector(x, y);
-            CallOffChaseForAreaSectorListVehicles(sector.Vehicles, minX, minY, maxX, maxY, minX, minY, maxX, maxY);
-            CallOffChaseForAreaSectorListPeds(sector.Peds, minX, minY, maxX, maxY, minX, minY, maxX, maxY);
+            // exe 0x566B96..0x566BDB: the area and the area grown by 10 on every side (the same 4 grown values the sector range was made of)
+            CallOffChaseForAreaSectorListVehicles(sector.Vehicles, minX, minY, maxX, maxY, minX - 10.f, minY - 10.f, maxX + 10.f, maxY + 10.f);
+            CallOffChaseForAreaSectorListPeds(sector.Peds, minX, minY, maxX, maxY, minX - 10.f, minY - 10.f, maxX + 10.f, maxY + 10.f);
             return true;
         }
     );

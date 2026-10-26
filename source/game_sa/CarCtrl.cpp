@@ -3281,7 +3281,10 @@ void CCarCtrl::JoinCarWithRoadAccordingToMission(CVehicle* vehicle) {
     case MISSION_ESCORT_RIGHT_FARAWAY:
     case MISSION_ESCORT_REAR_FARAWAY:
     case MISSION_ESCORT_FRONT_FARAWAY: {
-        JoinCarWithRoadSystemGotoCoors(vehicle, vehicle->m_autoPilot.m_TargetEntity->GetPosition(), true, vehicle->IsSubBoat());
+        // 0x432D31: `mov eax, [esi+0x41C]; test eax, eax; je end` - the exe does nothing when there is no target entity
+        if (vehicle->m_autoPilot.m_TargetEntity) {
+            JoinCarWithRoadSystemGotoCoors(vehicle, vehicle->m_autoPilot.m_TargetEntity->GetPosition(), true, vehicle->IsSubBoat());
+        }
         break;
     }
     }

@@ -3551,6 +3551,9 @@ void CPed::RemoveWeaponWhenEnteringVehicle(int32 isJetpack) {
     if (const auto& w = GetWeaponInSlot(eWeaponSlot::SMG); w.GetType() == eWeaponType::WEAPON_MP5) {
         return HandleDriveByWeapons(w);
     }
+
+    // 0x5E63E8 -> 0x5E6461: not a drive-by SMG (and not on a jetpack) - the exe still takes the weapon model out of the hand
+    RemoveWeaponModel(CWeaponInfo::GetWeaponInfo(this, eWeaponSkill::STD)->m_nModelId1);
 }
 
 /*!

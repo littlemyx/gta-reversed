@@ -734,8 +734,13 @@ CTaskAllocator* CGroupEventHandler::ComputeHassleSexyPedResponse(CPedGroup* pg, 
     if (!sexyPed) {
         return nullptr;
     }
-    for (auto* const m : pg->GetMembership().GetFollowers()) {
-        if (!CGeneral::RandomBool(25.f)) {
+    // exe 0x5FA065..0x5FA110: over the 7 follower SLOTS; the roll `(int)(rand() * (100 / 32768)) > 75` is made for EVERY slot (null ones too, before the null check)
+    for (int32 i = 0; i < TOTAL_PED_GROUP_FOLLOWERS; i++) {
+        if (CGeneral::GetRandomNumberInRange(0, 100) <= 75) {
+            continue;
+        }
+        CPed* const m = pg->GetMembership().GetMember(i);
+        if (!m) {
             continue;
         }
         pg->GetIntelligence().SetEventResponseTask(

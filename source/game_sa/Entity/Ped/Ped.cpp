@@ -2381,9 +2381,11 @@ void CPed::RemoveWeaponModel(int32 modelIndex) {
 * @brief Creates goggles model for current infrared/night vision. See PutOnGoggles.
 */
 void CPed::AddGogglesModel(int32 modelIndex, bool& inOutGogglesState) {
-    assert(!m_pGogglesObject); // Make sure it's not created already
-
     if (modelIndex != MODEL_INVALID) {
+        // 0x5E3AA4: the exe does not assume there are no goggles yet - it removes the existing ones first
+        if (m_pGogglesObject) {
+            RemoveGogglesModel();
+        }
         m_pGogglesObject = reinterpret_cast<RpClump*>(CModelInfo::GetModelInfo(modelIndex)->CreateInstanceAddRef());
 
         m_pGogglesState = &inOutGogglesState;

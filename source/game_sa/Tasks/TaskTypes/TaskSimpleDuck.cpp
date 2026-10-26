@@ -413,8 +413,8 @@ bool CTaskSimpleDuck::ProcessPed(CPed* ped) {
     if (m_bIsInControl) { // 0x69448C
         m_CountDownFrames = 4;
 
-        if (m_LengthOfDuck && CTimer::GetTimeInMS() >= m_StartTime + m_LengthOfDuck) { // 0x6944A2
-            MakeAbortable(ped);
+        if (m_LengthOfDuck && CTimer::GetTimeInMS() > m_StartTime + m_LengthOfDuck) { // 0x6944A2: `cmp now, end; jbe skip` => strictly after the end
+            MakeAbortable(ped, ABORT_PRIORITY_LEISURE); // 0x6944B7: push 0 (event), push 0 (priority)
         }
 
         if (m_ShotWhizzingCounter > 0) { // 0x6944C1
@@ -430,18 +430,23 @@ bool CTaskSimpleDuck::ProcessPed(CPed* ped) {
                 }
             }
         } else {
-            m_DuckAnim = CAnimManager::BlendAnimation(
-                ped->GetRpClump(),
-                ANIM_GROUP_DEFAULT,
-                m_DuckControlType == DUCK_STANDALONE ? ANIM_ID_DUCK_COWER : ANIM_ID_WEAPON_CROUCH,
-                4.f
-            );
-            m_DuckAnim->SetFinishCallback(DeleteDuckAnimCB, this);
+            // 0x6944F5: an idle-tired anim is blended out first
+            if (const auto tired = RpAnimBlendClumpGetAssociation(ped->GetRpClump(), ANIM_ID_IDLE_TIRED)) {
+                tired->m_BlendDelta = -2.f;
+            }
 
-            if (const auto weaponCruchAnim = RpAnimBlendClumpGetAssociation(ped->GetRpClump(), ANIM_ID_WEAPON_CROUCH)) { // 0x69454F
-                if (weaponCruchAnim->m_BlendAmount > 0 && weaponCruchAnim->m_BlendDelta >= 0.f) {
-                    if (weaponCruchAnim->m_Flags & ANIMATION_IS_PARTIAL) {
-                        weaponCruchAnim->m_BlendDelta = -4.f;
+            // 0x69450E..0x694521: the anim to start and the OTHER crouch anim (which is faded out below)
+            const auto isStandalone = m_DuckControlType == DUCK_STANDALONE;
+            const auto newAnimId    = isStandalone ? ANIM_ID_DUCK_COWER : ANIM_ID_WEAPON_CROUCH;
+            const auto otherAnimId  = isStandalone ? ANIM_ID_WEAPON_CROUCH : ANIM_ID_DUCK_COWER;
+
+            m_DuckAnim = CAnimManager::BlendAnimation(ped->GetRpClump(), ANIM_GROUP_DEFAULT, newAnimId, 4.f);
+            m_DuckAnim->SetDeleteCallback(DeleteDuckAnimCB, this); // 0x694545: 0x4CEBC0 = SetDeleteCallback (not SetFinishCallback)
+
+            if (const auto otherAnim = RpAnimBlendClumpGetAssociation(ped->GetRpClump(), otherAnimId)) { // 0x69454F
+                if (otherAnim->m_BlendAmount > 0 && otherAnim->m_BlendDelta >= 0.f) {
+                    if (otherAnim->m_Flags & ANIMATION_IS_PARTIAL) {
+                        otherAnim->m_BlendDelta = -4.f;
                     } else {
                         CAnimManager::BlendAnimation(ped->GetRpClump(), ANIM_GROUP_DEFAULT, ANIM_ID_IDLE, 4.f);
                     }
@@ -456,8 +461,8 @@ bool CTaskSimpleDuck::ProcessPed(CPed* ped) {
         return false;
     }
 
-    m_CountDownFrames--;
-    if (m_CountDownFrames || !MakeAbortable(ped) ) { // 0x6945EA
+    const auto countDown = m_CountDownFrames--; // 0x6945DE: the OLD value is tested (`test al, al` before the store)
+    if (countDown != 0 || !MakeAbortable(ped)) { // 0x6945EA
         return false;
     }
 

@@ -26,6 +26,7 @@
 #ifdef NOTSA_STATEHASH
 #include "statehash.h"
 #endif
+#include "fpe_traps.h"
 #include <AL/al.h>
 #include <AL/alc.h>
 #include <AL/alext.h>
@@ -673,6 +674,7 @@ struct Engine final : Unk<IDirectSound8> {
         wav.Append(out, n);
     }
     void Run() {
+        NOTSA_FPE_ARM_THREAD("dsound_mixer"); // MAC-FPTRAP
         std::vector<std::int16_t> chunk(kChunkFrames * 2);
         std::uint64_t rendered = 0;
         const auto start = Clock::now();

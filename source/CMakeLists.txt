@@ -20,6 +20,10 @@ option(${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY "Dump hooks only" OFF)
 #   * the exe-oracle / shim unit tests (tests/standalone, EXCLUDE_FROM_ALL, they map gta_sa_compact.exe) are not defined, GTASA_IMAGE_DIAG / GTASA_VERIFY_GLOBALS are rejected.
 #   * the Windows system libraries (d3d9 ddraw dxguid strmiids Winmm dsound), /SUBSYSTEM and the .exe suffix are not applied; warnings are off (-w) and not errors (stream C-3 audits them).
 option(${RE_PROJECT}_PORTABLE "Portable (macOS arm64) build: hook registry / exe-oracle / Win32 startup compiled out, see source/CMakeLists.txt" OFF)
+option(${RE_PROJECT}_FPE_TRAPS "Dev (portable macOS arm64 only): run with floating-point exception traps (INVALID / DIVBYZERO / OVERFLOW) and log every distinct trap site, see source/portable/fpe_traps.h" OFF)
+if (${RE_PROJECT}_FPE_TRAPS AND NOT ${RE_PROJECT}_PORTABLE)
+    message(FATAL_ERROR "${RE_PROJECT}_FPE_TRAPS needs ${RE_PROJECT}_PORTABLE=ON")
+endif()
 if (${RE_PROJECT}_PORTABLE)
     if (NOT ${RE_PROJECT}_STANDALONE OR ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
         message(FATAL_ERROR "${RE_PROJECT}_PORTABLE requires ${RE_PROJECT}_STANDALONE=ON and ${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY=OFF (the detached run configuration)")
@@ -294,6 +298,10 @@ if (${RE_PROJECT}_PORTABLE)
         message(FATAL_ERROR "${RE_PROJECT}_VERIFY_GLOBALS / ${RE_PROJECT}_IMAGE_DIAG are dev configurations of the Windows run exe (original data image); not available with ${RE_PROJECT}_PORTABLE")
     endif()
     target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_PORTABLE=1)
+    # MAC-FPTRAP: FP-exception trap audit (FPCR.IOE / DZE / OFE on the main + worker threads, SIGILL handler logs PC + backtrace, see source/portable/fpe_traps.h). Dev only, never ON in a shipped build.
+    if (${RE_PROJECT}_FPE_TRAPS)
+        target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_FPE_TRAPS=1)
+    endif()
     # P-2k: the 64-bit width guard of the typed save/stream templates (FileRecord.hpp) is an ERROR in the portable build: `layout_diff.py guard` lists 0 offenders after P-2b..j,
     # so a new SaveDataToWorkBuffer/LoadDataFromWorkBuffer/RwStreamRead<T> with a pointer/long/size_t/ptrdiff_t fails to compile instead of writing 8 bytes into a 4-byte slot.
     target_compile_definitions(${RE_PROJECT_LIB_NAME} PRIVATE NOTSA_FILE_SCALAR_STRICT)

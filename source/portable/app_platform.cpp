@@ -1,5 +1,6 @@
 // MAC-W0a: portable replacements of small Win32 facilities used by the app/platform layer (see app_platform.h). Portable-only file.
 #include "StdInc.h"
+#include "fpe_traps.h"
 
 #include <SDL3/SDL.h>
 #include <chrono>
@@ -313,6 +314,7 @@ void InstallCrashHandler() {
     for (const int sig : { SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT, SIGTRAP }) {
         ::sigaction(sig, &sa, nullptr);
     }
+    NOTSA_FPE_INSTALL(); // MAC-FPTRAP: put the FP-trap handler (chains to the crash handler for everything that is not a trapped FP exception) in front of SIGILL / SIGFPE
     // MAC-BOOT1: debuggers cannot attach to this exe on the dev Mac (lldb/sample hang), so a hang is diagnosed in process:
     // NOTSA_HANG_DUMP_SECS=<n> makes the main thread take SIGABRT after n seconds, i.e. its call stack goes through the handler above and the process dies.
     if (const char* secs = std::getenv("NOTSA_HANG_DUMP_SECS"); secs && std::atoi(secs) > 0) {

@@ -8,6 +8,7 @@
 //  * W-B1: thread priorities are accepted and ignored (std::thread has none; pthread priorities on macOS are not comparable with Win32's).
 //  * OS_TimeAccurate/OS_TimeMS keep the formulas of the Win32 version (counter / 1000, counter / frequency) on a 1 GHz steady clock.
 #include "StdInc.h"
+#include "fpe_traps.h"
 #ifdef NOTSA_STATEHASH
 #include "statehash.h"
 #endif
@@ -212,7 +213,9 @@ void* OS_ThreadLaunch(OS_ThreadRoutine pfnStart, void* param, uint32 nFlags, con
             std::unique_lock lock{gate->m};
             gate->cv.wait(lock, [&] { return gate->started; }); // CREATE_SUSPENDED: wait for OS_ThreadResume
         }
+        NOTSA_FPE_ARM_THREAD("os_thread"); // MAC-FPTRAP
         pfnStart(param);
+        NOTSA_FPE_DISARM_THREAD();
         {
             std::lock_guard lock{gate->m};
             gate->finished = true;

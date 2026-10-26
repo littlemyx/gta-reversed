@@ -102,8 +102,14 @@ typedef double x87d;
 #ifdef NOTSA_PORTABLE
 #include "game_sa/Core/Fp.h"
 #define NOTSA_FTOL(T, ...) (::notsa::fp::FtolCast<T>(__VA_ARGS__))
+#define NOTSA_FTOL_SC(T, ...) (::notsa::fp::FtolCast<T>(__VA_ARGS__))
+#define NOTSA_FTOL_FN(T, ...) (::notsa::fp::FtolCast<T>(__VA_ARGS__))
+#define NOTSA_FTOL_P(T, ...) (::notsa::fp::FtolCast<T>(__VA_ARGS__))
 #else
 #define NOTSA_FTOL(T, ...) (T)(__VA_ARGS__)   /* tokens of the usual `(T)(expr)` spelling: MSVC's x87 scheduling reacts to extra parentheses (MAC-FTOL1 A/B: CWeather::AddRain) */
+#define NOTSA_FTOL_SC(T, ...) static_cast<T>(__VA_ARGS__)   /* the same for sites that were spelled static_cast<T>(expr): MAC-FTOL2 A/B found a codegen difference between the two spellings (GangWars FightTimer) */
+#define NOTSA_FTOL_FN(T, ...) T(__VA_ARGS__)                /* ... for functional casts T(expr) */
+#define NOTSA_FTOL_P(T, ...) (T)__VA_ARGS__                 /* ... for casts of a primary operand without parentheses: (T)x, (T)f(a) (MSVC x87/regalloc reacts to `(T)(x)`; Pickup revenue) */
 #endif
 
 #if (defined(__GNUC__) || defined(__GNUG__) || defined(__clang__))

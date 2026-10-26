@@ -72,11 +72,7 @@ void DivInPlace(T& lhs, T rhs) {
 //
 template<typename T, typename Y>
 void AssignTo(T& lhs, Y rhs) {
-    if constexpr (std::is_floating_point_v<Y> && std::is_integral_v<T>) {
-        lhs = NOTSA_FTOL(T, rhs);
-    } else {
-        lhs = (T)(rhs);
-    }
+    if constexpr (std::is_floating_point_v<Y> && std::is_integral_v<T>) { lhs = NOTSA_FTOL(T, rhs); } else { lhs = (T)(rhs); }
 }
 
 //

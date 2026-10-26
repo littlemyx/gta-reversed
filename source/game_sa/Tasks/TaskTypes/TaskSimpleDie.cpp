@@ -53,12 +53,7 @@ void CTaskSimpleDie::StartAnim(CPed* ped) {
         m_animAssociation = CAnimManager::BlendAnimation(ped->GetRpClump(), m_animGroupId, m_animId, m_blendDelta);
 
     m_animAssociation->SetFinishCallback(FinishAnimDieCB, this);
-    m_animAssociation->m_Flags &=   ANIMATION_CAN_EXTRACT_X_VELOCITY | ANIMATION_CAN_EXTRACT_VELOCITY
-                                   | ANIMATION_IS_SYNCRONISED
-                                   | ANIMATION_IS_PARTIAL
-                                   | ANIMATION_IS_BLEND_AUTO_REMOVE
-                                   | ANIMATION_IS_LOOPED
-                                   | ANIMATION_IS_PLAYING;
+    m_animAssociation->SetFlag(ANIMATION_IS_FINISH_AUTO_REMOVE, false); // 0x63756A: `and byte [assoc+0x2e], 0xF7` only clears this one bit, the user flags in the high byte stay
 
     if (m_animSpeed > 0.0f)
         m_animAssociation->m_Speed = m_animSpeed;

@@ -772,6 +772,24 @@ CTaskAllocator* CGroupEventHandler::ComputeHandSignalResponse(CPedGroup* pg, CPe
     return nullptr;
 }
 
+// Greet/DoDeal inline (exe 0x5FA5E5..0x5FA666 / 0x5FA314..0x5FA3A5): the follower slots only (the leader is NOT a candidate, `ped` itself is not skipped),
+// strictly closer than 999999.0 (0x497423F0) wins
+static std::pair<CPed*, float> FindClosestFollowerTo(CPedGroup* pg, CPed* ped) {
+    CPed* closest{};
+    float closestDistSq = 999999.f;
+    for (int32 i = 0; i < TOTAL_PED_GROUP_FOLLOWERS; i++) {
+        CPed* const m = pg->GetMembership().GetMember(i);
+        if (!m) {
+            continue;
+        }
+        if (const auto distSq = (ped->GetPosition() - m->GetPosition()).SquaredMagnitude(); distSq < closestDistSq) {
+            closestDistSq = distSq;
+            closest       = m;
+        }
+    }
+    return { closest, closestDistSq };
+}
+
 // 0x5FA550
 CTaskAllocator* CGroupEventHandler::ComputeGreetResponse(CPedGroup* pg, CPed* toGreet, CPed* originator) {
     if (!toGreet) {
@@ -784,8 +802,14 @@ CTaskAllocator* CGroupEventHandler::ComputeGreetResponse(CPedGroup* pg, CPed* to
     if (!leader) {
         return nullptr;
     }
-    const auto [closestToGreeter, closestToGreeterDistSq] = pg->GetMembership().GetMemberClosestTo(toGreet);
-    if (!closestToGreeter || closestToGreeterDistSq < sq(4.f) && closestToGreeterDistSq > sq(10.f)) {
+    if (leader->m_nMoveState != PEDMOVE_STILL) { // exe 0x5FA5AB..0x5FA5B4: [leader+0x534] != 1
+        return nullptr;
+    }
+    if (toGreet->m_nPedType == PED_TYPE_PLAYER1 || toGreet->m_nPedType == PED_TYPE_PLAYER2) { // exe 0x5FA5BA..0x5FA5CB: [toGreet+0x598] is 0 or 1
+        return nullptr;
+    }
+    const auto [closestToGreeter, closestToGreeterDistSq] = FindClosestFollowerTo(pg, toGreet);
+    if (!closestToGreeter || closestToGreeterDistSq < sq(4.f) || closestToGreeterDistSq > sq(10.f)) { // exe 0x5FA670..0x5FA694: 16.0 (0x8599D0) <= d^2 <= 100.0
         return nullptr;
     }
     const auto partnerType = CGeneral::GetRandomNumberInRange(0, 6);

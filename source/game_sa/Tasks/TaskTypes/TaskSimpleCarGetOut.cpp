@@ -61,8 +61,8 @@ void CTaskSimpleCarGetOut::ComputeAnimID_ToHook(AssocGroupId& animGroup, Animati
 // Signature changed, `ComputeAnimID_Wrapper` is hooked instead.
 // 0x647330
 auto CTaskSimpleCarGetOut::ComputeAnimID() -> std::pair<AssocGroupId, AnimationId> {
-    if (m_veh->IsAutomobile() && CUpsideDownCarCheck{}.IsCarUpsideDown(m_veh)) {
-        m_isUpsideDown = true;
+    if (m_veh->IsAutomobile()) { // 0x647339..0x647352: the flag is ASSIGNED the check's result (it can be cleared), not only raised
+        m_isUpsideDown = CUpsideDownCarCheck{}.IsCarUpsideDown(m_veh);
     }
     
     if (m_isUpsideDown) {

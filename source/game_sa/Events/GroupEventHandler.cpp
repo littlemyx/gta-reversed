@@ -890,11 +890,12 @@ CTaskAllocator* CGroupEventHandler::ComputeFleePedResponse(CPedGroup* pg, CPed* 
         return nullptr;
     }
 
-    if (DistanceBetweenPoints(leader->GetPosition(), threat->GetPosition()) > 64.f) {
+    // exe 0x5FA18B..0x5FA1BC: the SQUARED 3D distance is compared with 64.0 (0x859A44), i.e. 8 units, not 64
+    if ((threat->GetPosition() - leader->GetPosition()).SquaredMagnitude() > 64.f) {
         return nullptr;
     }
-    /* rand(); */
     for (auto* const m : pg->GetMembership().GetMembers()) {
+        CGeneral::GetRandomNumber(); // exe 0x5FA1E0: rand() per member, result discarded
         pg->GetIntelligence().SetEventResponseTask(
             m,
             CTaskComplexSmartFleeEntity{

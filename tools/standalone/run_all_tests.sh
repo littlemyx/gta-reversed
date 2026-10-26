@@ -49,7 +49,7 @@ TOOLCHAIN="${CONAN_TOOLCHAIN:-$REPO/build/Debug/generators/conan_toolchain.cmake
 lock()   { until mkdir "$SCRATCH/build.lock" 2>/dev/null; do sleep 15; done; }
 unlock() { rmdir "$SCRATCH/build.lock" 2>/dev/null; }
 trap 'unlock_if_held' EXIT
-HELD=0; unlock_if_held() { [ "$HELD" = 1 ] && unlock; }
+HELD=0; unlock_if_held() { [ "${gpuheld:-0}" = 1 ] && "$REPO/tools/standalone/gpu_locked.sh" --release $$; [ "$HELD" = 1 ] && unlock; }
 
 if [ "${SKIP_BUILD:-0}" != 1 ]; then
   lock; HELD=1
@@ -123,6 +123,9 @@ for t in $TESTS; do
     for f in $models; do [ -f "$ASSETS/$f.dff" ] && args+=("$(wp "$ASSETS")\\$f.dff"); done; fi
   case "$t" in logic_oracle_test) TMO=${TIMEOUT:-3000};; wave2_oracle_test) TMO=${TIMEOUT:-2400};; *oracle*) TMO=${TIMEOUT:-900};; rw_skin_vs_test) TMO=${TIMEOUT:-900};; *) TMO=${TIMEOUT:-180};; esac   # vs_test: ~2.2M exe-composer keys (> 180 s under Wine); logic_oracle_test: ~224 functions x >=1000 cases, ~20 min under Wine
   tv="TIMEOUT_$t"; [ -n "${!tv:-}" ] && TMO=${!tv}                                                              # per-test override: TIMEOUT_<test>=<seconds>
+  # rw_* tests open a real D3D9/GL device: on the Windows host they share the GPU with game runs (soaks, gameplay_regress, agents) and
+  # fail with NORESULT while a game holds it (2026-10-26 gate: 5 rw_* NORESULT, all ok when re-run alone) -> take gpu.lock around them
+  gpuheld=0; if [ "$HOST" = windows ] && [[ "$t" == rw_* ]]; then "$REPO/tools/standalone/gpu_locked.sh" --acquire "run_all_tests $t" $$ && gpuheld=1; fi
   start=$SECONDS; status=NORESULT; res=""; n=0
   while [ $n -lt "$ATTEMPTS" ]; do
     n=$((n+1)); log="$OUT/$t.$n.log"
@@ -142,6 +145,7 @@ for t in $TESTS; do
     if [ -n "$res" ] && [ "$code" != hang ]; then break; fi
     res=""; [ "$code" != hang ] && echo "  $t attempt $n: crash/no result (exit $code)"
   done
+  [ "$gpuheld" = 1 ] && { "$REPO/tools/standalone/gpu_locked.sh" --release $$; gpuheld=0; }
   if [ "$res" = SKIP ]; then
     if [ "$EXE_PRESENT" = 1 ]; then ROWS+="$t - - - $n $((SECONDS-start)) EXIT77"$'\n'; RC=1     # the exe was given but the test still reports "not available"
     else ROWS+="$t - - - $n $((SECONDS-start)) SKIP(no_exe)"$'\n'; fi

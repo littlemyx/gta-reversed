@@ -735,11 +735,11 @@ void CPlayerPed::ClearAdrenaline() {
 // 0x60A0A0
 void CPlayerPed::DisbandPlayerGroup() {
     auto& ms = GetPlayerGroup().GetMembership();
-    if (const auto numMembers = ms.CountMembersExcludingLeader()) {
-        Say(numMembers > 1 ? CTX_GLOBAL_ORDER_DISBAND_MANY : CTX_GLOBAL_ORDER_ATTACK_SINGLE);
-    } else {
-        ms.RemoveAllFollowers(true);
+    // 0x60A0BD..0x60A102: the Say is conditional (>0 members: 0x95 if >1 else 0x96), RemoveAllFollowers(true) always runs
+    if (const auto numMembers = ms.CountMembersExcludingLeader(); numMembers > 0) {
+        Say(numMembers > 1 ? CTX_GLOBAL_ORDER_DISBAND_MANY : CTX_GLOBAL_ORDER_DISBAND_ONE);
     }
+    ms.RemoveAllFollowers(true);
 }
 
 // 0x60A110

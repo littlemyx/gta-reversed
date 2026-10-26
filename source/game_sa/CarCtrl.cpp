@@ -4123,9 +4123,9 @@ void CCarCtrl::PossiblyFireHSMissile(CVehicle* entityLauncher, CEntity* targetEn
     const float dist = dir.Magnitude();
     if (dist < 160.0f && dist > 30.0f) {
         CMatrix launcherMat = entityLauncher->GetMatrix();
-        CVector dirNormalized = dir;
-        dir.Normalise();
-        if (DotProduct(launcherMat.GetForward(), dirNormalized) > 0.8f) {
+        dir.Normalise(); // 0x4296B7
+        // 0x4296BC-0x4296DA: the dot product uses the NORMALISED direction (the port used a copy taken before Normalise, so the 0.8 test was against |dir| * cos)
+        if (DotProduct(launcherMat.GetForward(), dir) > 0.8f) {
             CProjectileInfo::AddProjectile(
                 entityLauncher,
                 eWeaponType::WEAPON_ROCKET_HS,

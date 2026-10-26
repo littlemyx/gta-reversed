@@ -1046,13 +1046,15 @@ bool CPhysical::ApplyCollision(CEntity* entity, const CColPoint& colPoint, float
         CVector vecSpeed = GetSpeed(vecDistanceToPoint);
 
         CVector vecMoveDirection = colPoint.m_vecNormal;
-        float fSpeedDotProduct = DotProduct(&vecMoveDirection, &vecSpeed);
+        // 0x5436EC..0x54370D: the exe inlines this dot product in the order (n.y*s.y + n.x*s.x) + s.z*n.z (not DotProduct's z, y, x)
+        float fSpeedDotProduct = (vecMoveDirection.y * vecSpeed.y + vecMoveDirection.x * vecSpeed.x) + vecSpeed.z * vecMoveDirection.z;
         if (fSpeedDotProduct < 0.0f)
         {
             CVector vecCentreOfMassMultiplied = GetMatrix().TransformVector(m_vecCentreOfMass);
             CVector vecDifference = vecDistanceToPoint - vecCentreOfMassMultiplied;
-            CVector vecSpeedCrossProduct = CrossProduct(vecDifference, vecMoveDirection);
-            float fSquaredMagnitude = vecMoveDirection.SquaredMagnitude();
+            CVector vecSpeedCrossProduct = PhysicalCrossProductOriginal(vecDifference, vecMoveDirection); // 0x59C730
+            // 0x543776..0x543793: the exe uses the squared magnitude of the CROSS product (r x n), not of the normal
+            float fSquaredMagnitude = vecSpeedCrossProduct.SquaredMagnitude();
             float fCollisionMass = 1.0f / (fSquaredMagnitude / m_fTurnMass + 1.0f / m_fMass);
 
             damageIntensity = -((m_fElasticity + 1.0f) * fCollisionMass * fSpeedDotProduct);

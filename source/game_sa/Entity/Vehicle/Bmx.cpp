@@ -62,7 +62,7 @@ CBmx::CBmx(int32 modelIndex, eVehicleCreatedBy createdBy) :
     m_nFixRightHand    = false;
     m_bIsFreewheeling  = false;
 
-    const auto Calc = [&](eBmxNodes node) -> float {
+    const auto Calc = [&](eBmxNodes node) -> RwV3d {
         RwMatrix matrix;
         RwFrame* wheelFront = m_aBikeNodes[node];
         matrix              = *RwFrameGetMatrix(wheelFront);
@@ -74,13 +74,14 @@ CBmx::CBmx(int32 modelIndex, eVehicleCreatedBy createdBy) :
                 parent = RwFrameGetParent(parent);
             } while (parent != wheelFront && parent);
         }
-        return matrix.pos.y;
+        return matrix.pos;
     };
-    auto wheelFrontPosY = Calc(BMX_WHEEL_FRONT);
-    auto wheelRearPosY  = Calc(BMX_WHEEL_REAR);
+    const auto wheelFrontPos = Calc(BMX_WHEEL_FRONT);
+    const auto wheelRearPos  = Calc(BMX_WHEEL_REAR);
 
-    m_fMidWheelDistY = wheelFrontPosY - wheelRearPosY;
-    m_fMidWheelFracY = wheelFrontPosY / m_fMidWheelDistY;
+    m_fMidWheelDistY = wheelFrontPos.y - wheelRearPos.y;
+    // 0x6BF987: the exe divides the front wheel's X (not Y) by the Y distance (`fld [front.x]; fdiv st(1)`)
+    m_fMidWheelFracY = wheelFrontPos.x / m_fMidWheelDistY;
 }
 
 // 0x6BF9D0

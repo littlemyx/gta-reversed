@@ -51,7 +51,7 @@ void CTaskSimpleCarSlowDragPedOut::FinishAnimCarSlowDragPedOutCB(CAnimBlendAssoc
 
         // Mark door as opened (Not sure why it's done here, not in `ProcessOpenDoor`...)
         if (self->m_Vehicle->IsAutomobile()) {
-            self->m_Vehicle->AsAutomobile()->m_damageManager.SetDoorOpen((eDoors)self->m_TargetDoor);
+            self->m_Vehicle->AsAutomobile()->m_damageManager.SetDoorOpen_Component((tComponent)self->m_TargetDoor); // 0x6481CD..0x648222: *_Component accessors, m_TargetDoor is a TARGET_DOOR 8..11 (SetDoorOpen(eDoors) ignored it)
         }
     }
 }

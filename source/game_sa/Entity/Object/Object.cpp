@@ -360,6 +360,8 @@ void CObject::SpecialEntityPreCollisionStuff(CPhysical* colPhysical, bool bIgnor
     else
     {
         if (!physicalFlags.bDisableZ) {
+            const bool bLampPostIgnore = objectFlags.bIsLampPost && (GetUp().z < 0.66F || GetIsStuck())
+                && (colPhysical->GetIsTypeVehicle() || colPhysical->GetIsTypePed());
             if (physicalFlags.bDisableMoveForce || physicalFlags.bInfiniteMass)
             {
                 if (bIgnoreStuckCheck || GetIsStuck())
@@ -370,15 +372,15 @@ void CObject::SpecialEntityPreCollisionStuff(CPhysical* colPhysical, bool bIgnor
                 else
                     bCollidedEntityUnableToMove = true;
             }
-            else if (objectFlags.bIsLampPost && (GetUp().z < 0.66F || GetIsStuck()))
+            else if (bLampPostIgnore)
             {
-                if (colPhysical->GetIsTypeVehicle() || colPhysical->GetIsTypePed()) {
-                    bCollidedEntityCollisionIgnored = true;
-                    if (colPhysical->GetIsTypeVehicle())
-                        return;
+                // exe 0x59FFDD..0x5A0002: a ped returns right here (jne 0x5A02C1), a vehicle is stored as the ignored entity; any other type
+                // (and a lamp post that is neither fallen nor stuck) continues with the general code below (0x5A0007)
+                bCollidedEntityCollisionIgnored = true;
+                if (colPhysical->GetIsTypePed())
+                    return;
 
-                    m_pEntityIgnoredCollision = colPhysical;
-                }
+                m_pEntityIgnoredCollision = colPhysical;
             }
             else if ( colPhysical->GetIsTypeVehicle())
             {
@@ -391,7 +393,10 @@ void CObject::SpecialEntityPreCollisionStuff(CPhysical* colPhysical, bool bIgnor
                         if (GetIsStuck() || colPhysical->GetIsStuck())
                             bThisOrCollidedEntityStuck = true;
                     }
-                    else if (!CanBeSmashed())
+                    else if (!CanBeSmashed() && [&] { // exe 0x5A008A..0x5A00C3: only objects whose bounding box max is below 1.0 on every axis go on
+                        const auto& bbMax = CEntity::GetColModel()->GetBoundingBox().m_vecMax;
+                        return bbMax.x < 1.0F && bbMax.y < 1.0F && bbMax.z < 1.0F;
+                    }())
                     {
                         auto tempMat = CMatrix();
                         auto* cm = CEntity::GetColModel();
@@ -416,9 +421,13 @@ void CObject::SpecialEntityPreCollisionStuff(CPhysical* colPhysical, bool bIgnor
                     }
                 }
             }
-            else if (m_nModelIndex != MODEL_GRENADE
-                || !colPhysical->GetIsTypePed()
-                || m_matrix->GetPosition().z >= colPhysical->m_matrix->GetPosition().z)
+            else if (m_nModelIndex == MODEL_GRENADE
+                && colPhysical->GetIsTypePed()
+                && m_matrix->GetPosition().z < colPhysical->m_matrix->GetPosition().z)
+            {
+                bCollisionDisabled = true; // exe 0x5A01B1..0x5A01CF (jnp 0x5A0292)
+            }
+            else
             {
                 if (colPhysical->GetIsTypeObject() && colPhysical->AsObject()->m_pObjectInfo->m_fUprootLimit > 0.0F && !colPhysical->m_pAttachedTo)
                 {

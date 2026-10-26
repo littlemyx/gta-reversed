@@ -1317,74 +1317,77 @@ CPed* CPopulation::AddPedInCar(
     bool      mustBeMale,
     bool      isCriminal
 ) {
-    // Pick a model and ped type to use (TODO: Could probably just get the model type, and then resolve the ped type from the model)
-    const auto pedModel = [&]() -> eModelID {
+    // Pick a ped type and model to use (0x613A43..0x613B76). NOTE: Some cases pass a literal ped type (and, for cops, the COP TYPE as the "model") to `AddPed`
+    const auto [pedType, pedModel] = [&]() -> std::pair<ePedType, eModelID> {
+        const auto PedTypeOfModel = [](eModelID model) {
+            return CModelInfo::GetPedModelInfo(model)->GetPedType();
+        };
+
         if (addAsDriver) {
             const auto driverModel = FindSpecificDriverModelForCar_ToUse(veh->GetModelId());
             if (driverModel != MODEL_INVALID && CStreaming::IsModelLoaded(driverModel)) {
-                return driverModel;
+                return { PedTypeOfModel(driverModel), driverModel };
             }
         }
 
-        const auto FixIfInvalid = [&](eModelID model, bool checkRWObj = false) {
-            return model != MODEL_INVALID && (!checkRWObj || CModelInfo::GetPedModelInfo(model)->GetRwObject())
-                ? model
-                : MODEL_MALE01;
+        // 0x613B4D: a negative model => MODEL_MALE01 (the ped type stays as set by the case)
+        const auto FixIfInvalid = [&](ePedType pedType, eModelID model, bool checkRWObj = false) -> std::pair<ePedType, eModelID> {
+            if (model < 0) {
+                model = MODEL_MALE01;
+            }
+            if (checkRWObj && !CModelInfo::GetPedModelInfo(model)->GetRwObject()) { // 0x613B5A
+                return { PedTypeOfModel(MODEL_MALE01), MODEL_MALE01 };
+            }
+            return { pedType, model };
         };
 
-        const auto TranslateCopType = [&](eCopType ctype) {
-            return CCopPed::GetPedModelForCopType(ctype);
+        const auto CopCase = [](eCopType ctype) -> std::pair<ePedType, eModelID> {
+            return { PED_TYPE_COP, (eModelID)ctype }; // 0x613A8A..0x613AC8: `AddPed(PED_TYPE_COP, copType, ...)`
         };
 
         switch (veh->GetModelId()) {
         case MODEL_FIRETRUK:
-            return FixIfInvalid(CStreaming::GetDefaultFiremanModel());
+            return FixIfInvalid(PED_TYPE_FIREMAN, CStreaming::GetDefaultFiremanModel());
         case MODEL_AMBULAN:
-            return FixIfInvalid(CStreaming::GetDefaultMedicModel());
+            return FixIfInvalid(PED_TYPE_MEDIC, CStreaming::GetDefaultMedicModel());
         case MODEL_ENFORCER:
-            return TranslateCopType(COP_TYPE_SWAT1);
+            return CopCase(COP_TYPE_SWAT1);
         case MODEL_PREDATOR:
         case MODEL_POLMAV:
         case MODEL_COPCARLA:
         case MODEL_COPCARSF:
         case MODEL_COPCARVG:
         case MODEL_COPCARRU:
-            return TranslateCopType(COP_TYPE_CITYCOP);
+            return CopCase(COP_TYPE_CITYCOP);
         case MODEL_RHINO:
         case MODEL_BARRACKS:
-            return TranslateCopType(COP_TYPE_ARMY);
+            return CopCase(COP_TYPE_ARMY);
         case MODEL_FBIRANCH:
-            return TranslateCopType(COP_TYPE_FBI);
+            return CopCase(COP_TYPE_FBI);
         case MODEL_COPBIKE:
-            return TranslateCopType(COP_TYPE_LAPDM1);
-        case MODEL_STREAKC:
-            return FixIfInvalid(ChooseCivilianOccupation());
-        default: {
-            const auto gangPedTypeForRating = [carRating] {
-                switch (carRating) {
-                case 14: return PED_TYPE_GANG1;
-                case 15: return PED_TYPE_GANG2;
-                case 16: return PED_TYPE_GANG3;
-                case 17: return PED_TYPE_GANG4;
-                case 18: return PED_TYPE_GANG5;
-                case 19: return PED_TYPE_GANG6;
-                case 20: return PED_TYPE_GANG7;
-                case 21: return PED_TYPE_GANG8;
-                case 22: return PED_TYPE_GANG9;
-                case 23: return PED_TYPE_GANG10;
-                default: return PED_TYPE_NONE;
-                }
-            }();
-            if (gangPedTypeForRating != PED_TYPE_NONE) {
-                return FixIfInvalid(CGangs::ChooseGangPedModel(GetGangOfPedType(gangPedTypeForRating)), true);
+            return CopCase(COP_TYPE_LAPDM1);
+        case MODEL_STREAKC: {
+            auto model = ChooseCivilianOccupation();
+            if (model == MODEL_INVALID) { // 0x613B04
+                model = MODEL_MALE01;
             }
-            return FixIfInvalid(ChooseCivilianOccupationForVehicle(mustBeMale, veh), true);
+            return { PedTypeOfModel(model), model };
+        }
+        default: {
+            if (carRating >= 14 && carRating <= 23) { // 0x613B11
+                return FixIfInvalid((ePedType)(carRating - 7), CGangs::ChooseGangPedModel(GetGangOfPedType((ePedType)(carRating - 7))), true);
+            }
+            auto model = ChooseCivilianOccupationForVehicle(mustBeMale, veh);
+            if (model < 0) { // 0x613B3C
+                model = MODEL_MALE01;
+            }
+            return FixIfInvalid(PedTypeOfModel(model), model, true);
         }
         }
     }();
 
     const auto ped = AddPed(
-        CModelInfo::GetPedModelInfo(pedModel)->GetPedType(),
+        pedType,
         pedModel,
         veh->GetPosition(),
         false
@@ -1398,9 +1401,9 @@ CPed* CPopulation::AddPedInCar(
     );
 
     if (isCriminal) {
-        UpdatePedCount(ped, false);
+        UpdatePedCount(ped, true); // 0x613BB7: removed from the counters of the old ped type first (arg true = "removed")...
         ped->m_nPedType = PED_TYPE_CRIMINAL;
-        UpdatePedCount(ped, true);
+        UpdatePedCount(ped, false); // ...and added back as a criminal
     }
 
     return ped;

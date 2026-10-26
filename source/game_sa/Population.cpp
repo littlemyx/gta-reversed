@@ -1412,12 +1412,10 @@ CPed* CPopulation::AddPedInCar(
 // 0x613CD0
 void CPopulation::PlaceMallPedsAsStationaryGroup(const CVector& posn) {
     if (CGame::currArea == eAreaCodes::AREA_CODE_4) {
-        CPedGroupPlacer{}.PlaceGroup(
-            CModelInfo::GetPedModelInfo(ChooseCivilianOccupation())->GetPedType(),
-            CGeneral::GetRandomNumberInRange(1, 5),
-            posn,
-            ePedGroupDefaultTaskAllocatorType::STAND_STILL
-        );
+        // Sequenced explicitly: the original picks the occupation (0x613CF2) BEFORE it rolls the group size (0x613D10)
+        const auto pedType = CModelInfo::GetPedModelInfo(ChooseCivilianOccupation())->GetPedType();
+        const auto numPeds = CGeneral::GetRandomNumberInRange(1, 5);
+        CPedGroupPlacer{}.PlaceGroup(pedType, numPeds, posn, ePedGroupDefaultTaskAllocatorType::STAND_STILL);
     }        
 }
 

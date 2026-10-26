@@ -355,16 +355,14 @@ bool CPedIntelligence::GetUsingParachute() {
         return false;
     }
 
-    int32 blockID = animAssoc->m_BlendHier->m_nAnimBlockId;
-    if (_stricmp(CAnimManager::GetAnimBlocks()[blockID].Name, "parachute") != 0) {
-        while (true) {
-            animAssoc = RpAnimBlendGetNextAssociation(animAssoc);
-            if (!animAssoc) {
-                return false;
-            }
+    // 0x6011F0: every association of the chain is tested against the block name (the next one is only fetched when the name differs)
+    for (; animAssoc; animAssoc = RpAnimBlendGetNextAssociation(animAssoc)) {
+        const int32 blockID = animAssoc->m_BlendHier->m_nAnimBlockId;
+        if (_stricmp(CAnimManager::GetAnimBlocks()[blockID].Name, "parachute") == 0) {
+            return true;
         }
     }
-    return true;
+    return false;
 }
 
 // 0x601230

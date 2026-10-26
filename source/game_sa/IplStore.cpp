@@ -522,8 +522,7 @@ void CIplStore::LoadIpls(CVector posn, bool bAvoidLoadInPlayerVehicleMovingDirec
         switch (mce.type) {
         case MISSION_CLEANUP_ENTITY_TYPE_PED: {
             const auto ped = GetPedPool()->GetAtRef(mce.handle);
-            assert(ped);
-            if (ped->IsStateDying()) {
+            if (!ped || ped->IsStateDying()) { // 0x40526B/0x4052D1: stale handle -> skip; 0x4052DF: m_nPedState DIE (0x36) / DEAD (0x37) -> skip
                 continue;
             }
             ProcessEntity(ped);
@@ -531,11 +530,17 @@ void CIplStore::LoadIpls(CVector posn, bool bAvoidLoadInPlayerVehicleMovingDirec
         }
         case MISSION_CLEANUP_ENTITY_TYPE_VEHICLE: {
             const auto veh = GetVehiclePool()->GetAtRef(mce.handle);
-            assert(veh);
+            if (!veh) { // 0x405268: stale handle -> skip
+                continue;
+            }
+            // 0x405291..0x4052AA: the exe PROCESSES a vehicle only while its status is PHYSICS (3) / SIMPLE (2) / ABANDONED (4) and skips every other one; the port had this inverted, so the vehicles of the
+            // mission cleanup list kept IPLs required around themselves that the exe lets go of (RD-AB-14: the Grove IPLs stayed loaded in the port at the intro cutscene's LoadScene)
             switch (veh->GetStatus()) {
             case STATUS_PHYSICS:
             case STATUS_SIMPLE:
             case STATUS_ABANDONED:
+                break;
+            default:
                 continue;
             }
             ProcessEntity(veh);
@@ -544,7 +549,7 @@ void CIplStore::LoadIpls(CVector posn, bool bAvoidLoadInPlayerVehicleMovingDirec
         }
     }
 
-    for (auto slot = ms_pPool->GetSize(); slot-- > 1;) { // skips 1st
+    for (int32 slot = 1; slot < (int32)ms_pPool->GetSize(); slot++) { // skips 1st; ASCENDING (exe 0x405355: edi = 1 .. 255) - the port walked it downwards, so the unload order (pool slot reuse, streaming lists) differed
         const auto def = ms_pPool->GetAt(slot);
         if (!def || def->disableDynamicStreaming) {
             continue;

@@ -145,6 +145,18 @@ static LONG CALLBACK bp_veh(EXCEPTION_POINTERS* ep){
           fputc(10, g_f);
         }
         goto bp_done; }
+      if(getenv("RD_BPPEC")){ /* RD-AB-14: BP at CPed::ProcessEntityCollision 0x5E2530 (thiscall ecx = ped, [esp+4] = entity, [esp+8] = colpoint array): "X fc P slot ent model type eflags pos.z ped.flags(+0x40) standing"; port counterpart: RD_PECPROBE in Ped.cpp */
+        u32 ped = x->Ecx, ent = U32(x->Esp + 4), pl = U32(0xB74490), base = U32(pl), m = U32(ped + 0x14);
+        fprintf(g_f, "X %u P %u ent=%u/%u/%08x z=%08x pf=%08x ce=%u e=%08x bi=%d\n", fc, (ped - base) / 0x7C4, (u32)*(unsigned short*)(size_t)(ent + 0x22), (u32)(*(unsigned char*)(size_t)(ent + 0x36) & 7), U32(ent + 0x1C), U32(m + 0x38), U32(ped + 0x40), U32(ped + 0x584) ? 1u : 0u, ent, (*(unsigned char*)(size_t)(ent + 0x36) & 7) == 1 ? (int)((ent - U32(U32(0xB74498))) / 0x38) : -1); goto bp_done; }
+      if(getenv("RD_BPDTOR")){ /* RD-AB-14: BP at CEntity::~CEntity 0x535E90 (thiscall ecx = entity): "X fc D this model type flags ra" */
+        u32 en = x->Ecx; fprintf(g_f, "X %u D e=%08x m=%u t=%u fl=%08x ra=%08x\n", fc, en, (u32)*(unsigned short*)(size_t)(en + 0x22), (u32)(*(unsigned char*)(size_t)(en + 0x36) & 7), U32(en + 0x1C), U32(x->Esp)); goto bp_done; }
+      if(getenv("RD_BPIPL")){ /* RD-AB-14: BP at CIplStore::RemoveIpl 0x404B20 (cdecl, [esp+4] = slot): "X fc I slot name ra1 ra2"; port counterpart: RD_ENTPROBE in IplStore.cpp */
+        typedef const char* (__cdecl *GN)(int); int sl = (int)U32(x->Esp + 4); fprintf(g_f, "X %u I %d %s ra=%08x,%08x\n", fc, sl, ((GN)(size_t)0x404A60)(sl), U32(x->Esp), U32(x->Esp + 0x20)); goto bp_done; }
+      if(getenv("RD_BPREQ")){ /* RD-AB-14: BP at CStreaming::LoadScene 0x40EB70: the requested list walked as the loop at 0x40EBD2..0x40EC4D does (end->prev): "X fc Q id/flags6,..." ; port counterpart: RD_ENTPROBE in Streaming.cpp */
+        u32 ecx = U32(0x8E4C54), end = U32(0x8E4C58), base = U32(0x9654B4), n = 0; int ax = (int)(short)*(unsigned short*)(size_t)(ecx + 2); u32 it = ax == -1 ? 0 : base + ax * 20;
+        fprintf(g_f, "X %u Q from=%08x ", fc, it); while(it != end && n < 4000){ int pv = (int)(short)*(unsigned short*)(size_t)(it + 2); fprintf(g_f, "%u/%02x,", (it - 0x8E4CC0) / 20, (u32)*(unsigned char*)(size_t)(it + 6)); it = pv == -1 ? 0 : base + pv * 20; n++; } fprintf(g_f, " n=%u\n", n); goto bp_done; }
+      if(getenv("RD_BPIPLS")){ /* RD-AB-14: BP at 0x405355 (CIplStore::LoadIpls, start of the slot loop after SetIplsRequired): "X fc L slot:loaded,loadRequested,disableDyn,ignore ..." for slots 1..255 that are valid and (loaded or loadRequested); port counterpart: RD_ENTPROBE in IplStore.cpp */
+        u32 pl = U32(0x8E3FB0), ob = U32(pl), mp = U32(pl + 4), i; fprintf(g_f, "X %u L ", fc); for(i = 1; i < 256; i++){ u32 e = ob + i * 0x34; unsigned char ld = *(unsigned char*)(size_t)(e + 0x2D), rq = *(unsigned char*)(size_t)(e + 0x2E), dd = *(unsigned char*)(size_t)(e + 0x2F), ig = *(unsigned char*)(size_t)(e + 0x30); if((*(signed char*)(size_t)(mp + i)) < 0) continue; if(ld || rq || dd) fprintf(g_f, "%u:%u%u%u%u ", i, ld, rq, dd, ig); } fprintf(g_f, "\n"); goto bp_done; }
       if(getenv("RD_BPAFF")){ /* RD-AB-12: BP at CEventPedCollisionWithPed::AffectsPed 0x4ACB10 (thiscall ecx = event, [esp+4] = ped): "X fc W slot vslot ms vms vsc vel fwd flags(ped+0x468..0x474) vflags health attached"; port counterpart: RD_EVTPROBE in EventPedCollisionWithPed.cpp */
         u32 ev = x->Ecx, ped = U32(x->Esp + 4), vic = U32(ev + 0x14), pl = U32(0xB74490), base = U32(pl), m = U32(ped + 0x14), vi = vic ? U32(vic + 0x47C) : 0, j;
         fprintf(g_f, "X %u W %u %d ms=%d vms=%d vsc=%d vel=%08x,%08x,%08x fwd=%08x,%08x,%08x fl=", fc, (ped - base) / 0x7C4, vic ? (int)((vic - base) / 0x7C4) : -1, (int)*(short*)(size_t)(ev + 0x30), (int)*(short*)(size_t)(ev + 0x32), vi ? (int)U32(vi + 0x274) : -1, U32(ev + 0x18), U32(ev + 0x1C), U32(ev + 0x20), U32(m + 0x10), U32(m + 0x14), U32(m + 0x18));
@@ -164,13 +176,13 @@ static LONG CALLBACK bp_veh(EXCEPTION_POINTERS* ep){
 }
 /* RD-AB-13: RD_WATCH=<hex addr of a 16-bit global> RD_WFC=<fc> RD_WN=<n>: hardware write watchpoint (DR0, len 2) on the main thread, set by a helper thread (cannot wait inside DllMain).
  * Every write in traced frames fc..fc+n logs "V fc newvalue eip <call-site candidates on the stack>" (eip = the instruction after the write; for CWorld::ms_nCurrentScanCode 0xB7CD78 the inlined AdvanceCurrentScanCode). */
-static u32 g_wfc, g_wn = 1; static HANDLE g_wth; static u32 g_wa;
+static u32 g_wfc, g_wn = 1; static HANDLE g_wth; static u32 g_wa; static int g_wdyn = -1; static u32 g_wdoff, g_wlen = 2; /* RD-AB-14: RD_WDYN=<building pool slot>:<hex offset> RD_WLEN=1|2|4 - the watch address is resolved from the building pool once the frame counter reaches RD_WFC-3 */
 static LONG CALLBACK w_veh(EXCEPTION_POINTERS* ep){
   CONTEXT* x = ep->ContextRecord;
   if(ep->ExceptionRecord->ExceptionCode == EXCEPTION_SINGLE_STEP && (x->Dr6 & 1)){
     u32 fc = U32(0xB7CB4C), i, n = 0; x->Dr6 = 0;
     if(g_f && fc >= g_wfc && fc <= g_wfc + g_wn){
-      fprintf(g_f, "V %u %u %08x:", fc, (u32)*(volatile unsigned short*)(size_t)g_wa, (u32)x->Eip);
+      fprintf(g_f, "V %u %u %08x:", fc, g_wlen == 4 ? *(volatile u32*)(size_t)g_wa : (u32)*(volatile unsigned short*)(size_t)g_wa, (u32)x->Eip);
       for(i = 0; i < 200 && n < 10; i++){ u32 v = 0; __try { v = U32(x->Esp + 4 * i); if(v > 0x401006 && v < 0x850000){ unsigned char* c = (unsigned char*)(size_t)v; if(c[-5] == 0xE8 || c[-6] == 0xFF || c[-3] == 0xFF || c[-2] == 0xFF){ fprintf(g_f, " %08x", v); n++; } } } __except(1) { break; } }
       fputc(10, g_f);
     }
@@ -178,7 +190,7 @@ static LONG CALLBACK w_veh(EXCEPTION_POINTERS* ep){
   }
   return EXCEPTION_CONTINUE_SEARCH;
 }
-static DWORD WINAPI w_thread(LPVOID p){ CONTEXT cx; (void)p; SuspendThread(g_wth); cx.ContextFlags = CONTEXT_DEBUG_REGISTERS; if(GetThreadContext(g_wth, &cx)){ cx.Dr0 = g_wa; cx.Dr6 = 0; cx.Dr7 = 1 | (1 << 16) | (1 << 18); SetThreadContext(g_wth, &cx); } ResumeThread(g_wth); return 0; }
+static DWORD WINAPI w_thread(LPVOID p){ CONTEXT cx; (void)p; if(g_wdyn >= 0){ for(;;){ u32 fc = U32(0xB7CB4C), pl = U32(0xB74498); if(pl && U32(pl) && fc + 3 >= g_wfc && fc < 0x7FFFFFFF && fc >= 0x100000){ g_wa = g_wdoff == 0xFFFF ? U32(U32(pl) + 4) + g_wdyn : U32(pl) + g_wdyn * 0x38 + g_wdoff; break; } Sleep(1); } } SuspendThread(g_wth); cx.ContextFlags = CONTEXT_DEBUG_REGISTERS; if(GetThreadContext(g_wth, &cx)){ cx.Dr0 = g_wa; cx.Dr6 = 0; cx.Dr7 = 1 | (1 << 16) | ((g_wlen == 4 ? 3u : g_wlen == 2 ? 1u : 0u) << 18); SetThreadContext(g_wth, &cx); } ResumeThread(g_wth); return 0; }
 BOOL WINAPI DllMain(HINSTANCE h, DWORD why, LPVOID r){
   if(why == DLL_PROCESS_ATTACH){
     const char* e; HMODULE rv = LoadLibraryA("vorbisFile_real.dll"); int i; for(i = 0; i < 7; i++) g_fw[i] = rv ? GetProcAddress(rv, g_fwn[i]) : 0;
@@ -191,7 +203,7 @@ BOOL WINAPI DllMain(HINSTANCE h, DWORD why, LPVOID r){
     if((e = getenv("RD_OUT"))) g_f = fopen(e, "w");
     if(GetModuleHandleA(0) != (HMODULE)0x400000) return TRUE; /* not the original image */
     if((e = getenv("RD_BP"))){ DWORD o; g_bpa = strtoul(e, 0, 16); if((e = getenv("RD_BPFC"))) g_bpfc = atoi(e); if((e = getenv("RD_BPN"))) g_bpn = atoi(e); g_bpbyte = *(unsigned char*)(size_t)g_bpa; VirtualProtect((void*)(size_t)g_bpa, 1, PAGE_EXECUTE_READWRITE, &o); AddVectoredExceptionHandler(1, bp_veh); *(unsigned char*)(size_t)g_bpa = 0xCC; }
-    if((e = getenv("RD_WATCH"))){ HANDLE h = 0; g_wa = strtoul(e, 0, 16); if((e = getenv("RD_WFC"))) g_wfc = atoi(e); if((e = getenv("RD_WN"))) g_wn = atoi(e); AddVectoredExceptionHandler(1, w_veh);
+    if((e = getenv("RD_WATCH"))){ HANDLE h = 0; g_wa = strtoul(e, 0, 16); if((e = getenv("RD_WDYN"))){ g_wdyn = atoi(e); g_wdoff = strtoul(strchr(e, 58) + 1, 0, 16); } if((e = getenv("RD_WLEN"))) g_wlen = atoi(e); if((e = getenv("RD_WFC"))) g_wfc = atoi(e); if((e = getenv("RD_WN"))) g_wn = atoi(e); AddVectoredExceptionHandler(1, w_veh);
       DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &g_wth, THREAD_ALL_ACCESS, FALSE, 0); h = CreateThread(0, 0, w_thread, 0, 0, 0); (void)h; }
     patch(0x821B1E, my_rand); patch(0x821B11, my_srand); patch(0x5617A0, my_timer); patch(0x745270, my_pstimer);
     if(g_pin & 512){ DWORD o; unsigned char* p = (unsigned char*)0x507750; VirtualProtect(p, 1, PAGE_EXECUTE_READWRITE, &o); p[0] = 0xC3; VirtualProtect(p, 1, o, &o); } /* pin bit 512: CAudioEngine::Service() (0x507750, thiscall, no stack args) = ret, as Lockstep.cpp NoAudio() in the port (= NOTSA_RR_NOAUDIO of the RR harness) */

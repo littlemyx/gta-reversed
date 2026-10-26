@@ -135,14 +135,23 @@ void Tick() {
     }
     if (c.pin & 1024) { // RD-AB-11 pin bit 1024: "P fc slot model pos(3) movespeed(3) curRot aimRot" for every used slot of the ped pool (counterpart in rd_orig.c; ignored by rd_diff.py)
         auto fb = [](float v) { uint32_t u; std::memcpy(&u, &v, 4); return u; };
+        if (c.pin & 16384) { // RD-AB-12: "B fc mi col slot flags data refs" of model 17613 (counterpart in rd_orig.c)
+            auto* const mi = CModelInfo::GetModelInfo(17613); auto* const col = mi ? mi->GetColModel() : nullptr;
+            std::fprintf(c.f, "B %u mi=%d col=%d slot=%u flags=%02x data=%d refs=%u\n", (unsigned)CTimer::m_FrameCounter, mi != nullptr, col != nullptr, col ? (unsigned)col->m_nColSlot : 0u, col ? (unsigned)col->m_nFlags : 0u, col ? col->m_pColData != nullptr : 0, mi ? (unsigned)mi->m_nRefCount : 0u);
+        }
         if (auto* pl = GetPedPool()) for (int i = 0; i < pl->GetSize(); i++) if (auto* pd = pl->GetAt(i)) {
             const auto p = pd->GetPosition();
             std::fprintf(c.f, "P %u %d %u %08x,%08x,%08x %08x,%08x,%08x %08x,%08x %08x,%08x %08x,%08x\n", (unsigned)CTimer::m_FrameCounter, i, (unsigned)pd->m_nModelIndex, fb(p.x), fb(p.y), fb(p.z),
                          fb(pd->m_vecMoveSpeed.x), fb(pd->m_vecMoveSpeed.y), fb(pd->m_vecMoveSpeed.z), fb(pd->m_fCurrentRotation), fb(pd->m_fAimingRotation), fb(pd->m_vecAnimMovingShiftLocal.x), fb(pd->m_vecAnimMovingShiftLocal.y), fb(pd->m_vecAnimMovingShift.x), fb(pd->m_vecAnimMovingShift.y));
             if (c.pin & 8192) std::fprintf(c.f, "K %u %d dmg=%08x ent=%d vel=%08x,%08x,%08x posn=%08x,%08x,%08x ptype=%d\n", (unsigned)CTimer::m_FrameCounter, i, fb(pd->m_fDamageIntensity), pd->m_pDamageEntity != nullptr, fb(pd->m_vecLastCollisionImpactVelocity.x), fb(pd->m_vecLastCollisionImpactVelocity.y), fb(pd->m_vecLastCollisionImpactVelocity.z), fb(pd->m_vecLastCollisionPosn.x), fb(pd->m_vecLastCollisionPosn.y), fb(pd->m_vecLastCollisionPosn.z), (int)pd->m_nPieceType);
+            if (c.pin & 16384) { // RD-AB-12 pin bit 16384: "G fc slot standingOn contact flags" (counterpart in rd_orig.c)
+                auto ent = [](const CEntity* e, char* b, size_t n) { if (e) std::snprintf(b, n, "%u:%u:%08x", (unsigned)(*(reinterpret_cast<const uint8_t*>(e) + 0x36) & 7), (unsigned)e->m_nModelIndex, ((const uint32_t*)e)[0x1C / 4]); else std::snprintf(b, n, "-"); };
+                char so[40], ce[40]; ent(pd->m_standingOnEntity, so, sizeof so); ent(pd->m_pContactEntity, ce, sizeof ce);
+                std::fprintf(c.f, "G %u %d so=%s ce=%s sc=%u/%u fl=%08x,%08x,%08x\n", (unsigned)CTimer::m_FrameCounter, i, so, ce, (unsigned)CWorld::ms_nCurrentScanCode, pd->m_pContactEntity ? (unsigned)pd->m_pContactEntity->GetScanCode() : 0u, ((const uint32_t*)pd)[0x40 / 4], ((const uint32_t*)pd)[0x46C / 4], ((const uint32_t*)pd)[0x470 / 4]);
+            }
             if (c.pin & 4096) { // pin bit 4096: "C fc slot chain" (counterpart in rd_orig.c)
                 std::fprintf(c.f, "C %u %d", (unsigned)CTimer::m_FrameCounter, i);
-                for (auto pi = 0; pi < 5; pi++) { std::fprintf(c.f, " |"); CTask* t = pd->GetIntelligence()->m_TaskMgr.m_aPrimaryTasks[pi]; for (auto d = 0; t && d < 8; d++) { std::fprintf(c.f, "%d[", (int)t->GetTaskType()); for (int w = 2; w < 8; w++) std::fprintf(c.f, "%s%08x", w > 2 ? "," : "", ((const uint32_t*)t)[w]); std::fprintf(c.f, "]>"); t = t->GetSubTask(); } }
+                for (auto pi = 0; pi < 5; pi++) { std::fprintf(c.f, " |"); CTask* t = pd->GetIntelligence()->m_TaskMgr.m_aPrimaryTasks[pi]; for (auto d = 0; t && d < 8; d++) { std::fprintf(c.f, "%d[", (int)t->GetTaskType()); for (int w = 2; w < (t->GetTaskType() == TASK_COMPLEX_AVOID_OTHER_PED_WHILE_WANDERING ? 24 : 8); w++) std::fprintf(c.f, "%s%08x", w > 2 ? "," : "", ((const uint32_t*)t)[w]); std::fprintf(c.f, "]>"); t = t->GetSubTask(); } }
                 std::fprintf(c.f, "\n");
             }
             if (c.pin & 2048) std::fprintf(c.f, "Q %u %d %08x,%08x %08x,%08x,%08x %08x,%08x,%08x\n", (unsigned)CTimer::m_FrameCounter, i, fb(pd->m_pedIK.m_fSlopePitch), fb(pd->m_pedIK.m_fSlopeRoll), fb(pd->field_578.x), fb(pd->field_578.y), fb(pd->field_578.z), fb(pd->GetMatrix().GetRight().x), fb(pd->GetMatrix().GetRight().y), fb(pd->GetMatrix().GetRight().z));

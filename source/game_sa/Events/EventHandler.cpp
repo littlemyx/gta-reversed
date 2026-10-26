@@ -1,6 +1,9 @@
 #include "StdInc.h"
 
 #include "EventHandler.h"
+#if defined(RD_EVTPROBE) && defined(NOTSA_STANDALONE_RUN)
+#include "standalone/Lockstep.h"
+#endif
 #include "InterestingEvents.h"
 #include "Ragdoll/IKChainManager.h"
 #include "PedStats.h"
@@ -326,6 +329,21 @@ CEventHandler::CEventHandler(CPed* ped) :
 
 // 0x4C3F10
 void CEventHandler::HandleEvents() {
+#if defined(RD_EVTPROBE) && defined(NOTSA_STANDALONE_RUN) // RD-AB-12: counterpart of the RD_BPEVT probe in tools/standalone/replay_diff/rd_orig.c (BP at 0x4C3F10); inert without the define
+    {
+        auto& eg = m_Ped->GetEventGroup();
+        const auto tp = [](CEvent* e) { return e ? (int)e->GetEventType() : -1; };
+        auto* const hv = reinterpret_cast<CEvent**>(&m_History); // {aborted, nontemp, temp, stored}
+        if (eg.GetNumEventsInQueue() || hv[1] || hv[2] || hv[3]) {
+            char b[900]; int n = 0;
+            n += snprintf(b + n, sizeof(b) - n, "E %d hist=%d,%d,%d n=%u ev=", GetPedPool()->GetIndex(m_Ped), tp(hv[1]), tp(hv[2]), tp(hv[3]), (unsigned)eg.GetNumEventsInQueue());
+            for (auto* e : eg.GetEvents()) { if (e) n += snprintf(b + n, sizeof(b) - n, "%d:%d:%u:%d,", (int)e->GetEventType(), (int)e->GetEventPriority(), (unsigned)e->m_bValid, (int)e->m_nTimeActive); else n += snprintf(b + n, sizeof(b) - n, "0,"); }
+            n += snprintf(b + n, sizeof(b) - n, " pri=");
+            for (auto pi = 0; pi < 5; pi++) { auto* t = m_Ped->GetIntelligence()->m_TaskMgr.m_aPrimaryTasks[pi]; n += snprintf(b + n, sizeof(b) - n, "%s%d", pi ? "," : "", t ? (int)t->GetTaskType() : -1); }
+            notsa::lockstep::Note(b);
+        }
+    }
+#endif
     m_History.TickStoredEvent(m_Ped);
 
     const auto lastAbortedTask  = m_History.GetAbortedTask();

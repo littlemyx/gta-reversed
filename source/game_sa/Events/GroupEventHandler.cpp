@@ -281,10 +281,10 @@ CTaskAllocator* CGroupEventHandler::ComputeResponseNewGangMember(const CEventNew
         new CTaskComplexLeaveAnyCar{0, false, true},
         new CTaskComplexGangJoinRespond{true}
     };
-    if (pg->GetMembership().GetLeader() == FindPlayerPed()) {
+    if (pg->GetMembership().GetLeader() == FindPlayerPed(0)) {
         tseq.AddTask(new CTaskSimpleGoToPoint{
             eMoveState::PEDMOVE_RUN,
-            FindPlayerPed()->GetPosition(),
+            FindPlayerPed(0)->GetPosition(),
             3.f,
             true
         });

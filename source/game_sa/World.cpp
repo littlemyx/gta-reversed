@@ -238,6 +238,7 @@ void CWorld::ProcessForAnimViewer() {
         if (!entity->m_bRemoveFromWorld) {
             entity->UpdateAnim();
             entity->UpdateRwMatrix();
+            entity->UpdateRwFrame(); // exe 0x56341A
         }
     }
 }

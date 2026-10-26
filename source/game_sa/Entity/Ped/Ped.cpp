@@ -1981,7 +1981,10 @@ bool CPed::OurPedCanSeeThisEntity(CEntity* entity, bool isSpotted) {
     // Seems like they explicitly use this one instead of `IsLineOfSightClear` because of the `shootThru` check.
     CColPoint cp{};
     CEntity* hitEntity{};
-    return !CWorld::ProcessLineOfSight(GetPosition(), target, cp, hitEntity, true, false, false, isSpotted, false, false, false, isSpotted);
+    // 0x5E1719..0x5E1726: the ray starts at OUR position + 1.0 in Z (0x858624), not at the raw position
+    auto source{GetPosition()};
+    source.z += 1.f;
+    return !CWorld::ProcessLineOfSight(source, target, cp, hitEntity, true, false, false, isSpotted, false, false, false, isSpotted);
 }
 
 /*!

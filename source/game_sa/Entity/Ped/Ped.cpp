@@ -1408,7 +1408,7 @@ void CPed::SetRadioStation()
 
     if (m_pVehicle->m_pDriver == this) {
         const auto& mi = *(CPedModelInfo*)GetModelInfo();
-        m_pVehicle->m_vehicleAudio.m_AuSettings.RadioStation = (CGeneral::GetRandomNumber() <= RAND_MAX / 2) ? mi.m_nRadio1 : mi.m_nRadio2;
+        m_pVehicle->m_vehicleAudio.m_AuSettings.RadioStation = (CGeneral::GetRandomNumber() < RAND_MAX / 2) ? mi.m_nRadio1 : mi.m_nRadio2; // 0x5DFDC5: `cmp eax, 0x3FFF; jge radio2` - strictly less
     }
 }
 

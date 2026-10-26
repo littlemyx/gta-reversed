@@ -27,7 +27,7 @@
 | S23 | game_sa/Population.cpp | 33 | partial 20/33 (11 M, 9 fixed) -> S23b | Population.cpp |
 | S24 | game_sa/PedIntelligence.cpp | 31 | pending | PedIntelligence.cpp |
 | S25 | game_sa/Events/GroupEventHandler.cpp | 30 | pending | GroupEventHandler.cpp |
-| S26 | game_sa/Entity/Physical.cpp | 28 | pending | Physical.cpp |
+| S26 | game_sa/Entity/Physical.cpp | 28 | partial 19/28 (15 M, 4 fixed) -> S26b | Physical.cpp |
 | S27 | game_sa/World.cpp | 44 | pending | World.cpp |
 | S28 | game_sa/Streaming.cpp | 73 | pending | Streaming.cpp |
 | S29 | game_sa/Entity/Object | 39 | pending | CutsceneObject.cpp, HandObject.cpp, Object.cpp |
@@ -39,3 +39,4 @@
 | S22b | game_sa/CarCtrl.cpp (rest of S22) | 34 | partial 16/34 (16 M) -> S22c | CarCtrl.cpp |
 | S23b | rest of S23 | 13 | pending | Population.cpp |
 | S22c | rest of S22b | 18 | pending | CarCtrl.cpp |
+| S26b | rest of S26 | 9 | pending | Physical.cpp |

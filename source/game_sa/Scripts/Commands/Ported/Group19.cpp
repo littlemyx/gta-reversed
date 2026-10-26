@@ -94,7 +94,7 @@ int32 Ftol(double v) {
     if (!(v > -9223372036854775808.0 && v < 9223372036854775808.0)) { // also catches NaN
         return 0;
     }
-    return (int32)(int64)v;
+    return (int32)NOTSA_FTOL(int64, v);
 }
 
 //! 0xA43C78.. -> not used; 0x8D237C: set by SET_NEXT_DESIRED_MOVE_STATE, consumed (and reset to PEDMOVE_RUN) by TASK_ENTER_CAR_AS_*

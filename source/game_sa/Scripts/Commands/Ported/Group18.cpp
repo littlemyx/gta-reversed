@@ -101,7 +101,7 @@ int32 Ftol(double v) {
     if (!(v > -9223372036854775808.0 && v < 9223372036854775808.0)) { // also catches NaN
         return 0;
     }
-    return (int32)(int64)v;
+    return (int32)NOTSA_FTOL(int64, v);
 }
 
 //! x87-compare idiom `fcom -100.0f; test ah, 0x41; jp skip`: the ground Z is looked up only when `z <= -100.0f` (ordered).

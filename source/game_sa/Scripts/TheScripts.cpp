@@ -1460,7 +1460,7 @@ void CTheScripts::Process() {
         assert(NumberOfIntroRectanglesThisFrame == 0);
     }
 
-    const auto timeStepMS = (int32)CTimer::GetTimeStepInMS();
+    const auto timeStepMS = NOTSA_FTOL(int32, CTimer::GetTimeStepInMS());
     LocalVariablesForCurrentMission[SCRIPT_VAR_TIMERA].iParam += timeStepMS;
     LocalVariablesForCurrentMission[SCRIPT_VAR_TIMERB].iParam += timeStepMS;
 

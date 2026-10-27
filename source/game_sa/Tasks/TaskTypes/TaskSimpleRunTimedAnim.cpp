@@ -58,7 +58,10 @@ bool CTaskSimpleRunTimedAnim::ProcessPed(CPed* ped) {
     }
 
     if (!m_pAnim && !RpAnimBlendClumpGetAssociation(ped->GetRpClump(), (uint32)m_animId)) {
-        m_timer.Start((int32)m_durationMs);
+        // 0x61BC53-0x61BC5E: the exe stores start/interval/started unconditionally (CTaskTimer::Start would refuse a "negative" duration and leave the timer off)
+        m_timer.m_nStartTime = CTimer::GetTimeInMS();
+        m_timer.m_nInterval  = (int32)m_durationMs;
+        m_timer.m_bStarted   = true;
         StartAnim(ped);
     }
 

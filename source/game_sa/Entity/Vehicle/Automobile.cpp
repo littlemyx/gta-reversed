@@ -2344,7 +2344,7 @@ void CAutomobile::BlowUpCar_Impl(CEntity* dmgr, bool bDontShakeCam, bool bDontSp
             auto& plyrinfo = FindPlayerInfo();
             plyrinfo.m_nHavocCaused += 20;
             plyrinfo.m_fCurrentChaseValue += 10.f;
-            CStats::IncrementStat(STAT_COST_OF_PROPERTY_DAMAGED, CGeneral::GetRandomNumberInRange(4000.f, 10'000.f - 1.f));
+            CStats::IncrementStat(STAT_COST_OF_PROPERTY_DAMAGED, (float)(4000 + CGeneral::GetRandomNumber() % 6000)); // 0x6B37DF: 4000 + rand() % 6000 (an integer-valued stat)
         }
     }
 
@@ -2362,7 +2362,7 @@ void CAutomobile::BlowUpCar_Impl(CEntity* dmgr, bool bDontShakeCam, bool bDontSp
     m_nTimeWhenBlowedUp      = CTimer::GetTimeInMS();
 
     CVisibilityPlugins::SetClumpForAllAtomicsFlag(GetRpClump(), eAtomicComponentFlag::ATOMIC_PIPE_NO_EXTRA_PASSES);
-    m_damageManager.FuckCarCompletely(false);
+    m_damageManager.FuckCarCompletely(bIsForCutScene && bNoExplosion); // 0x6B3C5C: the cut-scene variant passes bNoExplosion (no wheel is torn off, no rand); 0x6B3851: BlowUpCar passes false
 
     const auto isRcShit = (bFixBugs || !bIsForCutScene)
         ? notsa::contains({ MODEL_RCTIGER, MODEL_RCBANDIT }, GetModelId()) // I'm 99% sure they forgot to copy paste this too, but let it be.
@@ -2418,9 +2418,13 @@ void CAutomobile::BlowUpCar_Impl(CEntity* dmgr, bool bDontShakeCam, bool bDontSp
     ChangeLawEnforcerState(false);
 
     if (!bNoExplosion) {
-        CDarkel::RegisterCarBlownUpByPlayer(*this, 0); // Um.... Okay
-
-        gFireManager.StartFire(this, dmgr);
+        if (bIsForCutScene) { // 0x6B3DEA: Darkel first, then the fire
+            CDarkel::RegisterCarBlownUpByPlayer(*this, 0); // Um.... Okay
+            gFireManager.StartFire(this, dmgr);
+        } else { // 0x6B39DF: the fire first, then Darkel
+            gFireManager.StartFire(this, dmgr);
+            CDarkel::RegisterCarBlownUpByPlayer(*this, 0);
+        }
 
         if (bIsForCutScene) { //> 0x6B3E0D
             CExplosion::AddExplosion(this, dmgr, EXPLOSION_MOLOTOV, GetPosition(), 0, bMakeSound, -1.f, bHideExplosionFx);
@@ -2433,7 +2437,7 @@ void CAutomobile::BlowUpCar_Impl(CEntity* dmgr, bool bDontShakeCam, bool bDontSp
             const auto explOffset = CVector{
                 RandomOffset(),
                 RandomOffset(),
-                maxOffset + 0.5f
+                CGeneral::GetRandomNumberInRange(0.f, 1.f) + 0.5f // 0x6B3B0A: the 3rd rand() draw, rand() / 32767 + 0.5 (not maxOffset + 0.5)
             } * GetColModel()->GetBoundingBox().m_vecMax;
             const auto explPos = // Do a matrix transform... manually, because that's fun!
                   GetPosition()

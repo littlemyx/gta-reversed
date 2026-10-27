@@ -1,0 +1,16 @@
+addr	function	verdict	asm range	note	fix commit
+0x423940	FlyAIHeliToTarget_FixedOrientation	MATCH	0x423940-0x423DD7	obstacle-check timing, ProcessLineSphere-free LOS flags, altitude clamp, throttle/steer clamps, wrap loops, constants (0.1/0.2, 0.002, -0.02/-0.015 doubles, +-0.75/+-0.5) all match	-
+0x42C2B0	CreatePoliceChase	MATCH	0x42C2B0-0x42C734	gang/rand gate, both ProcessVerticalLine flag sets, ground selection, collision check args, cruise+10, task/event setup, wanted flags (no driver null check as the exe) match	-
+0x42C740	CreateConvoy	MATCH	0x42C740-0x42CBCF	car count (>50), position behind, ground checks, first-car speed, matrix/status copy, speed-i clamp, target ref chain match	-
+0x432DD0	SteerAICarWithPhysicsFollowPreRecordedPath	MATCH	0x432DD0-0x433276	stop/paused paths, advance loop (dist<10 or next closer, end test), start-frame bug kept, weave+wrap+clamp, speed (1/16383.5, x60, min 5 below offset 0x320), gas/brake scales match	-
+0x42EC90	DragCarToPoint	MATCH	0x42EC90-0x42F363	signed char field_51 > 0x10 range, front/rear wheel points, ground search (stored poly, +1.5/-2.0, upper/lower), tunnel bits, atan2/orientation, position, steer clamp match	-
+0x424F80	PossiblyRemoveVehicle	FIXED	0x42510B	removal range when the camera looks straight down is 70.0 (0x428C0000), the port used 75.0; rest matches	5d8be9cb
+0x426EF0	PickNextNodeToChaseCar	NOT_REACHED	-	token budget	-
+0x427740	PickNextNodeToFollowPath	NOT_REACHED	-	token budget	-
+0x428040	DealWithBend_Racing	NOT_REACHED	-	token budget	-
+0x430050	GenerateOneRandomCar	NOT_REACHED	-	token budget	-
+0x423000	FlyAIPlaneInCertainDirection	NOT_REACHED	-	token budget	-
+0x425440	SlowCarDownForPedsSectorList	NOT_REACHED	-	token budget	-
+0x429A70	FlyAIHeliInCertainDirection	NOT_REACHED	-	token budget	-
+0x42DE80	PickNextNodeRandomly	NOT_REACHED	-	token budget	-
+0x436A90	SteerAICarWithPhysics_OnlyMission	NOT_REACHED	-	token budget	-

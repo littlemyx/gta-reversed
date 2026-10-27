@@ -14,7 +14,7 @@ Request: .notes/PORTABLE_GATE.md section 1 (Mac orchestrator). Agent PORTABLE-GA
 - Tested with a throw-away x64 ninja project: skip path, ok path, compile error path (prc=95, error lines printed), missing exe path (prc=96).
 
 ## One-time setup for the main checkout (orchestrator; NOT done by the agent)
-Needs the conan x64 packages below first (see "conan status"). Then, from the main checkout:
+Then, from the main checkout (the conan x64 packages are already in ~/.conan2, so step 2 only regenerates build/PortableWin64/generators in ~2 min):
 ```
 export GTA_MSVC_ARCH=x64; source tools/standalone/windows/msvcenv.sh        # in a NEW shell (do not mix with an x86-loaded one)
 CONAN_EXTRA_ARGS="--no-remote" bash tools/portable/win64/conan_install_win64.sh Release   # builds the 7 x64 packages from the local conan sources, no network
@@ -23,17 +23,14 @@ tools/standalone/build_locked.sh cmd //c start //low //b //wait cmake --build bu
 ```
 After that every gate run builds it incrementally. New .cpp files are globbed at configure time: add `cmake build/PortableWin64 > /dev/null` before the build if a merge adds sources (the Release step does the same).
 
-## Conan status (x64 / windows-x64-msvc.txt + Ninja, Release, static CRT) in ~/.conan2 on this host
-`conan graph info --no-remote` (no network): recipes and sources of everything are cached; the x64 BINARIES of seven packages are missing, they would be built locally from the cached sources:
-
-| package | cached source (~/.conan2/p/*/s) | build output (x86 build dir for scale) |
-|---|---|---|
-| sdl/3.4.14 | 53 MB | ~110 MB |
-| imgui/1.92.9b-docking | 13 MB | ~48 MB |
-| tracy/cci.20220130 | 21 MB | ~27 MB |
-| spdlog/1.17.0 | 1.6 MB | ~22 MB |
-| libjpeg-turbo/3.2.0 | 11 MB | small |
-| vorbis/1.3.7, ogg/1.3.5 | 5.5 MB, 1 MB | small |
-
-Already cached and usable: cmake 4.2.0 (tool), nasm (tool), nlohmann_json, boost (headers), opengl/system. With `--no-remote` nothing is downloaded. Without it conan would first ask
-conan-center (center2.conan.io) for prebuilt x64/msvc-195 binaries of these seven and download any it finds (unlikely for msvc 195). Estimated cost: ~250 MB disk, ~10-20 min CPU.
+## Result of the first run (2026-10-27, worktree, -j4 low priority)
+- conan: the 7 x64 packages were built locally from cached sources with `--no-remote` (zero downloads), ~2 min. ~/.conan2 keeps them; every worktree/checkout reuses them.
+- PortableWin64 full build (1177 steps): ~2.5 min (cl runs fast here), then ~2.5 min for the rebuild after the fixes; link OK, `build/PortableWin64/bin/gta_reversed.exe` 19.6 MB.
+- First build: 3 errors (all fixed, one commit each):
+  | file | error | origin | fix |
+  |---|---|---|---|
+  | game_sa/Entity/Vehicle/Automobile.cpp:2702 | `static_assert(offsetof(CAutomobile, m_swingingChassis) == 0x70C)` (x86 layout) | interior_c 74099207c ASM-S16 | `VALIDATE_OFFSET` (a no-op on portable) |
+  | game_sa/Pools.cpp:524 | task allocator pool slot too small: CTaskAllocatorPlayerCommandAttack is 56 on Win64 (MSVC ABI keeps the base tail padding; LP64 is 48) | portable/main f1ed8739 STAB2 | slot 56 under `_WIN32` in Pools/TaskAllocatorPool.h |
+  | game_sa/Entity/Placeable.cpp:11 | `<execinfo.h>` missing on Windows | portable/main f1ed8739 STAB2 | `_WIN32`: empty `backtrace` stubs |
+  x86 StandaloneRelease: the three touched TUs (+ pch) recompile clean.
+- Gate step verified in the worktree against the real build (same block as orch_gate.sh): no-op incremental prc=0; injected `#error` prc=95 with the error lines printed; restored prc=0.

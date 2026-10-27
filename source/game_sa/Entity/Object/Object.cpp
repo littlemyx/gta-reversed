@@ -1067,7 +1067,7 @@ void CObject::ObjectDamage(float damage, const CVector* fxOrigin, const CVector*
             if (!CEntity::GetIsStatic())
                 CPhysical::RemoveFromMovingList();
 
-            SetIsStatic(true);
+            CEntity::SetIsStatic(true); // exe: `or [this+0x1C], 4`, not the virtual CObject::SetIsStatic (it also clears bDoorHitEndStop)
             physicalFlags.bExplosionProof = true;
             ResetMoveSpeed();
             ResetTurnSpeed();
@@ -1083,7 +1083,7 @@ void CObject::ObjectDamage(float damage, const CVector* fxOrigin, const CVector*
                     CPhysical::RemoveFromMovingList();
                 }
 
-                SetIsStatic(true);
+                CEntity::SetIsStatic(true); // exe: `or [this+0x1C], 4`, not the virtual CObject::SetIsStatic (it also clears bDoorHitEndStop)
                 physicalFlags.bExplosionProof = true;
                 ResetMoveSpeed();
                 ResetTurnSpeed();
@@ -1105,7 +1105,7 @@ void CObject::ObjectDamage(float damage, const CVector* fxOrigin, const CVector*
             if (!CEntity::GetIsStatic())
                 CPhysical::RemoveFromMovingList();
 
-            SetIsStatic(true);
+            CEntity::SetIsStatic(true); // exe: `or [this+0x1C], 4`, not the virtual CObject::SetIsStatic (it also clears bDoorHitEndStop)
             physicalFlags.bExplosionProof = true;
             ResetMoveSpeed();
             ResetTurnSpeed();
@@ -1144,7 +1144,7 @@ void CObject::ObjectDamage(float damage, const CVector* fxOrigin, const CVector*
         }
         return;
     case eObjectFxType::PLAY_ON_HIT:
-        if (damage > 30.0f) {
+        if (!bWasDestroyed && damage > 30.0f) { // 0x5A10FF: a destroyed object only plays types 2 and 3
             break;
         }
         return;

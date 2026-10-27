@@ -105,17 +105,18 @@ bool CTaskSimpleGetUp::StartAnim(CPed* ped) {
             || entity->AsVehicle()->IsBike()
             || entity->AsVehicle()->IsSubQuad()
             || !IsVehiclePointerValid(entity->AsVehicle())
-            || (ped->m_nRandomSeed + CTimer::GetFrameCounter() - 3) % 8 == 0
-            || CCollision::ProcessColModels(
-                ped->GetMatrix(),
-                *CModelInfo::GetModelInfo(ped->m_nModelIndex)->GetColModel(),
-                entity->GetMatrix(),
-                *CModelInfo::GetModelInfo(entity->m_nModelIndex)->GetColModel(),
-                m_aColPoints,
-                nullptr,
-                nullptr,
-                false
-            ) <= 0
+            // 0x67C7DC..0x67C86A: the collision test only runs one frame in 8; on the other frames the ped counts as still stuck
+            || ((ped->m_nRandomSeed + CTimer::GetFrameCounter() - 3) % 8 == 0
+                && CCollision::ProcessColModels(
+                    ped->GetMatrix(),
+                    *CModelInfo::GetModelInfo(ped->m_nModelIndex)->GetColModel(),
+                    entity->GetMatrix(),
+                    *CModelInfo::GetModelInfo(entity->m_nModelIndex)->GetColModel(),
+                    m_aColPoints,
+                    nullptr,
+                    nullptr,
+                    false
+                ) <= 0)
         ) {
             ped->m_pEntityIgnoredCollision = nullptr;
 

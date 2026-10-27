@@ -5,6 +5,7 @@
     Do not delete this comment block. Respect others' work!
 */
 #include "StdInc.h"
+#include "game_sa/DetachedShared.h"
 
 #include "PlayerPed.h"
 #include "TagManager.h"
@@ -1633,7 +1634,7 @@ void CPlayerPed::KeepAreaAroundPlayerClear() {
             }
         }
 
-        auto* const task = new CTaskComplexSmartFleeEntity{ this, false, 1000.f, 100'000, 1'000, 1.f }; // 0x86F678, 0xC18CF0
+        auto* const task = new CTaskComplexSmartFleeEntity{ this, false, 1000.f, 100'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) }; // 0x86F678 (1000), 0xC18CF0 (`push [0xC18CF0]`: read at runtime, scripts can change it)
         task->m_moveState = PEDMOVE_WALK;
         CEventScriptCommand event{ 3, task, false };
         ped->GetEventGroup().Add(&event, false);

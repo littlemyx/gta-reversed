@@ -1,0 +1,23 @@
+addr	function	verdict	asm range	note	fix commit
+0x6BF430	CBike::Constructor	FIXED	0x6BF430-0x6BF818	also clears bIsBus (exe masks the low nibble of flags byte 0x429); other fields match (wheel susp/line arrays zeroed by the port but untouched by the exe: harmless)	09b8ebd3
+0x6BEB20	CBike::BurstTyre	MATCH	0x6BEB20-0x6BEE93	dead 0xD knock-off branch kept; FixBugs bound check is deliberate	-
+0x6BDEA0	CBike::ProcessEntityCollision	FIXED	0x6BDEA0-0x6BE30B	ground physical ptr stored+registered without cleaning the old reference (SetEntityReference, port used ChangeEntityReference)	d3642279
+0x6B8EC0	CBike::VehicleDamage	MATCH	0x6B8EC0-0x6B9246	the arg slot is reused for dmg; the local at [esp+8] is prevHealth at 0x6B91E1	-
+0x6B89B0	CBike::SetupSuspensionLines	MATCH	0x6B89B0-0x6B8EAC	-	-
+0x6C0590	CBmx::ProcessBunnyHop	FIXED	0x6C0590-0x6C0808	control jump <= 0 (or controls disabled): bunny-hop anim gets playing|auto-remove and blend delta -8 (0x6C067A), the port skipped it	ceaeba2a
+0x6B5A10	CBike::DamageKnockOffRider	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6BC930	CBike::ProcessAI	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6B5FB0	CBike::ProcessBuoyancy	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6B7280	CBike::ProcessRiderAnims	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6BEEB0	CBike::PlaceOnRoadProperly	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6BE310	CBike::ProcessControlInputs	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6BD090	CBike::PreRender	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6B9250	CBike::ProcessControl	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6B6950	CBike::DoBurstAndSoftGroundRatios	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6BFB50	CBmx::ProcessDrivingAnims	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6C0810	CBmx::PreRender	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6C1470	CBmx::ProcessAI	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6F1770	CBoat::ProcessControl	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6F1180	CBoat::PreRender	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6F0210	CBoat::Render	NOT_REACHED	-	NOT_REACHED (token budget)	-
+0x6F21B0	CBoat::BlowUpCar	NOT_REACHED	-	NOT_REACHED (token budget)	-

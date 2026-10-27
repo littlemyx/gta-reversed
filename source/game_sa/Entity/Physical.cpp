@@ -3116,7 +3116,7 @@ bool CPhysical::ApplyCollision(CEntity* theEntity, CColPoint& colPoint, float& t
         CVector vecDistanceToPoint = colPoint.m_vecPoint - entity->GetPosition();
         CVector vecEntitySpeed = entity->GetSpeed(vecDistanceToPoint);
 
-        if (!entity->physicalFlags.bAddMovingCollisionSpeed || !GetIsTypeVehicle() || colPoint.m_nSurfaceTypeB != SURFACE_CAR_MOVINGCOMPONENT) {
+        if (!entity->physicalFlags.bAddMovingCollisionSpeed || !entity->GetIsTypeVehicle() || colPoint.m_nSurfaceTypeB != SURFACE_CAR_MOVINGCOMPONENT) { // 0x54934F: the type test is on the entity ([esi+0x36])
             // nothing
         } else {
             vecEntitySpeed += entityVehicle->AddMovingCollisionSpeed(vecDistanceToPoint);
@@ -3209,7 +3209,7 @@ bool CPhysical::ApplyCollision(CEntity* theEntity, CColPoint& colPoint, float& t
         CVector vecDistanceToPointFromThis = colPoint.m_vecPoint - GetPosition();
         CVector vecThisSpeed = GetSpeed(vecDistanceToPointFromThis);
 
-        if (!physicalFlags.bAddMovingCollisionSpeed && GetIsTypeVehicle() && colPoint.m_nSurfaceTypeA == SURFACE_CAR_MOVINGCOMPONENT)
+        if (physicalFlags.bAddMovingCollisionSpeed && GetIsTypeVehicle() && colPoint.m_nSurfaceTypeA == SURFACE_CAR_MOVINGCOMPONENT) // 0x549751: tests the flag set (the port negated it)
             vecThisSpeed += thisVehicle->AddMovingCollisionSpeed(vecDistanceToPointFromThis);
 
         float fThisSpeedDotProduct = DotProduct(vecThisSpeed, colPoint.m_vecNormal);
@@ -3280,7 +3280,7 @@ bool CPhysical::ApplyCollision(CEntity* theEntity, CColPoint& colPoint, float& t
             if (vecEntityMoveForce.z < 0.0f)
             {
                 vecEntityMoveForce.z = 0.0f;
-                if (fabs(fThisSpeedDotProduct) < 0.01f)
+                if (fabs(fThisSpeedDotProduct) < 0.01) // 0x549A48: fcomp qword 0.01 (8-byte constant, not 0.01f)
                 {
                     vecEntityMoveForce.x *= 0.5f;
                     vecEntityMoveForce.y *= 0.5f;
@@ -3682,8 +3682,24 @@ bool CPhysical::ApplySoftCollision(CPhysical* physical, CColPoint& colPoint, flo
 
                 float fCollisionImpact1 = thisDamageIntensity / fThisCollisionMass;
                 AudioEngine.ReportCollision(this, physical, colPoint.m_nSurfaceTypeA, colPoint.m_nSurfaceTypeB, colPoint.m_vecPoint, &colPoint.m_vecNormal, fCollisionImpact1, 1.0f, false, false);
+                return true; // 0x54AAA8: the soft-collision branch returns 1
             }
         }
+    }
+
+    // 0x54A86C: every other path out of the static-entity block ends here: a still-static entity returns false (the port returned true),
+    // an entity made non-static by the non-object branch is added to the moving list and gets the elastic collision below (the port skipped it)
+    if (!bApplyCollisionWithElasticity)
+    {
+        if (physical->GetIsStatic())
+        {
+            return false;
+        }
+        if (!physical->physicalFlags.bDisableCollisionForce)
+        {
+            physical->AddToMovingList();
+        }
+        bApplyCollisionWithElasticity = true;
     }
 
     if (bApplyCollisionWithElasticity)
@@ -3700,7 +3716,7 @@ bool CPhysical::ApplySoftCollision(CPhysical* physical, CColPoint& colPoint, flo
             if (thisPed->m_nPedState == PEDSTATE_FOLLOW_PATH)
             {
                 bPedFollowPath = true;
-                fMoveSpeed = (fEntityMass * fEntitySpeedDotProduct + fThisMass * fThisSpeedDotProduct + fThisMass * fThisSpeedDotProduct)
+                fMoveSpeed = (fEntityMass * fEntitySpeedDotProduct + (fThisMass * fThisSpeedDotProduct + fThisMass * fThisSpeedDotProduct)) // 0x54A901..0x54A924: a + 2b (b doubled by fadd st0,st0)
                     / (fThisMass + fThisMass + fEntityMass);
             }
             else if (fEntitySpeedDotProduct >= 0.0f)
@@ -3925,7 +3941,7 @@ bool CPhysical::ApplySoftCollision(CPhysical* physical, CColPoint& colPoint, flo
                         if (vecEntityMoveForce.z < 0.0f)
                         {
                             vecEntityMoveForce.z = 0.0f;
-                            if (fabs(fThisSpeedDotProduct) < 0.01f)
+                            if (fabs(fThisSpeedDotProduct) < 0.01) // 0x54B30E: fcomp qword 0.01 (8-byte constant, not 0.01f)
                             {
                                 vecEntityMoveForce.z = 0.0f;
                                 vecEntityMoveForce.x = vecEntityMoveForce.x * 0.5f;

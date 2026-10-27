@@ -1,0 +1,13 @@
+addr	function	verdict	asm_range	note	fix_commit
+0x67C770	CTaskSimpleGetUp::StartAnim	FIXED	0x67C7DC-0x67C86A	ignored-collision vehicle test: ProcessColModels only runs when (seed+frame-3)%8==0 and only then can the ped get up; on the other 7 frames it stays stuck (port got up on them: || instead of &&)	9c6e5c5c
+0x66D710	CTaskSimpleGoToPoint::ProcessPed	MATCH	0x66D710-0x66DB5D	circled/b05, just-left-car/cover scans, duck/sprint/hold logic, finish conditions (A, height, b04 dot, predicted-pos dot), aim, IK reset; only NaN edge cases differ	
+0x65EF80	CTaskSimpleGoToPointFine::SetBlendedMoveAnim	MATCH	0x65EF80-0x65F328	duck move, reset walk anims, zero/idle/tired, walk/run/sprint blends and move states 4/6/7	
+0x625270	CTaskSimpleGunControl::ProcessPed	NOT_REACHED	-	token budget (401-line disassembly)	
+0x693C40	CTaskSimpleHoldEntity::ProcessPed	MATCH	0x693C40-0x694092	put-down setup from the partial-anim hold task, collision off + static object handling, rotation, anim start/drop, pickup shift + aim, carry put-down event	
+0x6940A0	CTaskSimpleHoldEntity::SetPedPosition	MATCH	0x6940A0-0x69437E	pickup/putdown gating, visible flag copy, translation-only vs full bone transform, pre-render fallback to ped position, UpdateRwMatrix/Frame	
+0x680600	CTaskSimpleInAir::ProcessPed	NOT_REACHED	-	token budget (401-line disassembly)	
+0x67F6A0	CTaskSimpleJetPack::RenderJetPack	FIXED	0x67F72C-0x67F999	jetball1 rotX = ThrustAngle*57.29578 + headingDeg, jetball2 minus (port used minus for both); headingDeg = (delta*57.29578)*10; wrap compares strict	19e0969d
+0x67B660	CTaskSimpleJetPack::DropJetPack	MATCH	0x67B660-0x67B707	pickup near ped pos (model 0x172, type 5), MakeAbortable URGENT, clear thrust fields	
+0x67B7F0	CTaskSimpleJetPack::DoJetPackEffect	FIXED	0x67B814-0x67B86A,0x67B8AE-0x67B8C7	fx creation resets m_FxKeyTime to 0 and precedes the key-time update	402b4f94
+0x67E7B0	CTaskSimpleJetPack::ProcessControlInput	NOT_REACHED	-	token budget (401-line disassembly)	
+0x67EF20	CTaskSimpleJetPack::ProcessThrust	NOT_REACHED	-	token budget (401-line disassembly)	

@@ -199,9 +199,10 @@ void CObject::ProcessControl() {
         && !physicalFlags.bDisableMoveForce
         && m_pDamageEntity
     ) {
-        const auto bCanCarryItems = m_pDamageEntity->m_nModelIndex == MODEL_DUMPER || m_pDamageEntity->m_nModelIndex == MODEL_FORKLIFT;
-        if (bCanCarryItems && m_pDamageEntity->AsAutomobile()->m_wMiscComponentAngle
-            && !CRopes::IsCarriedByRope(this))
+        // exe 0x5A21C9..0x5A21ED: a dumper always carries, a forklift only with its forks raised (m_wMiscComponentAngle != 0)
+        const auto bCanCarryItems = m_pDamageEntity->m_nModelIndex == MODEL_DUMPER
+            || (m_pDamageEntity->m_nModelIndex == MODEL_FORKLIFT && m_pDamageEntity->AsAutomobile()->m_wMiscComponentAngle);
+        if (bCanCarryItems && !CRopes::IsCarriedByRope(this))
         {
             if (m_nColDamageEffect != COL_DAMAGE_EFFECT_NONE && m_fDamageIntensity > 5.0F)
                 ObjectDamage(m_fDamageIntensity, &m_vecLastCollisionPosn, &m_vecLastCollisionImpactVelocity, m_pDamageEntity, eWeaponType::WEAPON_RAMMEDBYCAR);
@@ -286,8 +287,9 @@ void CObject::ProcessControl() {
     }
 
     if (m_nModelIndex == ModelIndices::MI_RCBOMB) {
-        CPhysical::ApplyTurnForce(m_vecMoveSpeed * -0.05F, -GetForward());
-        m_vecMoveSpeed *= std::pow(CTimer::GetTimeStep(), 1.0F - m_vecMoveSpeed.SquaredMagnitude() * 0.2F);
+        // exe 0x5A2685: the force is (-0.05 * turn mass) * move speed; 0x5A2707..0x5A2719: pow(1 - |v|^2 * 0.2, timestep)
+        CPhysical::ApplyTurnForce(m_vecMoveSpeed * (-0.05F * m_fTurnMass), -GetForward());
+        m_vecMoveSpeed *= std::pow(1.0F - m_vecMoveSpeed.SquaredMagnitude() * 0.2F, CTimer::GetTimeStep());
     }
 
     if (m_bIsBIGBuilding)
@@ -318,7 +320,7 @@ void CObject::ProcessControl() {
             AudioEngine.ReportDoorMovement(this);
         }
 
-        if (!m_bIsBIGBuilding
+        if (!GetIsStuck() // exe 0x5A289D: stuck, static or waiting-for-collision skip it (no bIsBIGBuilding test)
             && !GetIsStatic()
             && std::fabs(fDiff) < 0.01F
             && (objectFlags.bIsDoorMoving || std::fabs(m_vecTurnSpeed.z) < 0.01F)
@@ -457,7 +459,7 @@ void CObject::SpecialEntityPreCollisionStuff(CPhysical* colPhysical, bool bIgnor
 uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSettingTimeStep, bool& unk2) {
     if (physicalFlags.bDisableZ || m_pObjectInfo->m_nSpecialColResponseCase == COL_SPECIAL_RESPONSE_GRENADE) {
         auto* cm = GetModelInfo()->GetColModel();
-        const auto fMove = m_vecMoveSpeed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
+        const auto fMove = m_vecMoveSpeed.SquaredMagnitude() * CTimer::GetTimeStep() * CTimer::GetTimeStep();
         if (fMove >= sq(cm->GetBoundRadius()))
             return static_cast<uint8>(std::ceil(std::sqrt(fMove) / cm->GetBoundRadius()));
 
@@ -469,9 +471,9 @@ uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSett
             auto cm = CEntity::GetColModel();
             auto vecMin = GetMatrix().TransformVector(cm->GetBoundingBox().m_vecMin);
             auto vecSpeed = CPhysical::GetSpeed(vecMin);
-            const auto fMove = vecSpeed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
+            const auto fMove = vecSpeed.SquaredMagnitude() * CTimer::GetTimeStep() * CTimer::GetTimeStep();
             if (fMove >= 0.0225F) // std::pow(0.15F, 2.0F)
-                return static_cast<uint8>(std::ceil(std::sqrt(fMove) / 0.15F));
+                return static_cast<uint8>(std::ceil(std::sqrt(fMove) * 6.6666665F));
 
             return 1;
         }
@@ -491,9 +493,9 @@ uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSett
             vecMax = CPhysical::GetSpeed(vecMax);
 
             auto& vecUsed = vecMin.SquaredMagnitude() >= vecMax.SquaredMagnitude() ? vecMin : vecMax;
-            const auto fMove = vecUsed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
+            const auto fMove = vecUsed.SquaredMagnitude() * CTimer::GetTimeStep() * CTimer::GetTimeStep();
             if (fMove >= 0.09F)
-                return static_cast<uint8>(std::ceil(std::sqrt(fMove) / 0.3F));
+                return static_cast<uint8>(std::ceil(std::sqrt(fMove) * 3.3333333F));
 
             return 1;
         }
@@ -502,17 +504,17 @@ uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSett
             m_pObjectInfo->m_nSpecialColResponseCase == COL_SPECIAL_RESPONSE_FENCEPART) {
             auto* cm = GetModelInfo()->GetColModel();
             const auto vecSize = cm->GetBoundingBox().GetSize();
-            const auto fEdge = std::max({ vecSize.x, vecSize.y, vecSize.z }) / 2.0F;
-            const auto fMove = m_vecMoveSpeed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
+            const auto fEdge = std::min({ vecSize.x, vecSize.y, vecSize.z }) * 0.5F; // the exe takes the smallest extent (0x5A0646-0x5A0695), not the largest
+            const auto fMove = m_vecMoveSpeed.SquaredMagnitude() * CTimer::GetTimeStep() * CTimer::GetTimeStep();
             if (fMove >= sq(fEdge)) {
                 return static_cast<uint8>(std::ceil(std::sqrt(fMove) / fEdge));
             }
             return 1;
         }
 
-        const auto fMove = m_vecMoveSpeed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
+        const auto fMove = m_vecMoveSpeed.SquaredMagnitude() * CTimer::GetTimeStep() * CTimer::GetTimeStep();
         if (fMove >= 0.09F)
-            return static_cast<uint8>(std::ceil(sqrt(fMove) / 0.3F));
+            return static_cast<uint8>(std::ceil(std::sqrt(fMove) * 3.3333333F));
 
         return 1;
     }
@@ -928,7 +930,7 @@ void CObject::ProcessSamSiteBehaviour() {
 
     if (targetEntity) {
         auto& vecTargetPos = targetEntity->GetPosition();
-        if (vecPos.z <= vecTargetPos.z + 2.0F
+        if (vecPos.z - 2.0F <= vecTargetPos.z // 0x5A08C1: `fld this.z; fsub 2.0; fcomp target.z` (the port added 2 to the target instead)
             && vecTargetPos.y <= 2100.0F
         ) {
             const auto vecDir = vecTargetPos - vecPos;
@@ -1067,7 +1069,7 @@ void CObject::ObjectDamage(float damage, const CVector* fxOrigin, const CVector*
             if (!CEntity::GetIsStatic())
                 CPhysical::RemoveFromMovingList();
 
-            SetIsStatic(true);
+            CEntity::SetIsStatic(true); // exe: `or [this+0x1C], 4`, not the virtual CObject::SetIsStatic (it also clears bDoorHitEndStop)
             physicalFlags.bExplosionProof = true;
             ResetMoveSpeed();
             ResetTurnSpeed();
@@ -1083,7 +1085,7 @@ void CObject::ObjectDamage(float damage, const CVector* fxOrigin, const CVector*
                     CPhysical::RemoveFromMovingList();
                 }
 
-                SetIsStatic(true);
+                CEntity::SetIsStatic(true); // exe: `or [this+0x1C], 4`, not the virtual CObject::SetIsStatic (it also clears bDoorHitEndStop)
                 physicalFlags.bExplosionProof = true;
                 ResetMoveSpeed();
                 ResetTurnSpeed();
@@ -1105,7 +1107,7 @@ void CObject::ObjectDamage(float damage, const CVector* fxOrigin, const CVector*
             if (!CEntity::GetIsStatic())
                 CPhysical::RemoveFromMovingList();
 
-            SetIsStatic(true);
+            CEntity::SetIsStatic(true); // exe: `or [this+0x1C], 4`, not the virtual CObject::SetIsStatic (it also clears bDoorHitEndStop)
             physicalFlags.bExplosionProof = true;
             ResetMoveSpeed();
             ResetTurnSpeed();
@@ -1144,7 +1146,7 @@ void CObject::ObjectDamage(float damage, const CVector* fxOrigin, const CVector*
         }
         return;
     case eObjectFxType::PLAY_ON_HIT:
-        if (damage > 30.0f) {
+        if (!bWasDestroyed && damage > 30.0f) { // 0x5A10FF: a destroyed object only plays types 2 and 3
             break;
         }
         return;

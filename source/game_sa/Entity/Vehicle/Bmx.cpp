@@ -424,12 +424,14 @@ void CBmx::ProcessBunnyHop() {
         }
     }
 
+    bool handled = false; // 0x6C0724 path: the LS1 logic below runs instead of the 0x6C067A fade-out
     if (m_fControlJump > 0.0f) {
         if (!pad->DisablePlayerControls) {
             if (!anim) {
                 m_fControlJump = 0.0f;
                 return;
             }
+            handled = true;
 
             if (pad->IsLeftShoulder1()) {
                 if (!anim->IsPlaying()) {
@@ -447,6 +449,15 @@ void CBmx::ProcessBunnyHop() {
         } else {
             m_fControlJump = 0.0f;
         }
+    }
+
+    if (!handled) { // 0x6C067A
+        if (!anim) {
+            return;
+        }
+        anim->SetFlag(ANIMATION_IS_PLAYING, true);
+        anim->SetFlag(ANIMATION_IS_BLEND_AUTO_REMOVE, true);
+        anim->SetBlendDelta(-8.0f);
     }
 
     if (anim) {

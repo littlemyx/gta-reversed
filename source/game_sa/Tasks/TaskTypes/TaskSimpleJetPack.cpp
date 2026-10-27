@@ -171,13 +171,13 @@ void CTaskSimpleJetPack::RenderJetPack(CPed* ped) {
         }
 
         auto currHeading = ped->m_fAimingRotation;
-        if (currHeading >= m_PrevHeading + PI) {
+        if (currHeading > m_PrevHeading + PI) { // 0x67F72C: strict compares
             currHeading -= TWO_PI;
-        } else if (currHeading <= m_PrevHeading - PI) {
+        } else if (currHeading < m_PrevHeading - PI) { // 0x67F748
             currHeading += TWO_PI;
         }
         const auto headingDelta = std::clamp(currHeading - m_PrevHeading, -0.2f, 0.2f);
-        const auto rotX         = std::clamp(RadiansToDegrees(m_ThrustAngle - headingDelta * 10.f), -90.f, 90.f);
+        const float headingDeltaDeg = RadiansToDegrees(headingDelta) * 10.f; // 0x67F78A: (delta * 57.29578) * 10
 
         const auto ProcessJetBall = [&](const char* jbFrameName, bool bLeftSide) {
             const auto jb = CClumpModelInfo::GetFrameFromName(m_JetPackClump, jbFrameName);
@@ -199,8 +199,12 @@ void CTaskSimpleJetPack::RenderJetPack(CPed* ped) {
                 );
             } else {
                 const auto rotY = m_ThrustStrafe * 45.f;
+                // 0x67F921 (jetball1): ThrustAngle * 57.29578 + headingDeltaDeg; 0x67F999 (jetball2): ThrustAngle * 57.29578 - headingDeltaDeg
+                const float rotXRaw = bLeftSide
+                    ? RadiansToDegrees(m_ThrustAngle) + headingDeltaDeg
+                    : RadiansToDegrees(m_ThrustAngle) - headingDeltaDeg;
                 RotateJB(
-                    rotX,
+                    std::clamp(rotXRaw, -90.f, 90.f),
                     bLeftSide ? std::max(0.f, rotY) : std::min(0.f, rotY)
                 );
             }
@@ -460,6 +464,30 @@ void CTaskSimpleJetPack::DropJetPack(CPed* ped) {
 
 // 0x67B7F0
 void CTaskSimpleJetPack::DoJetPackEffect(CPed* ped) {
+    // 0x67B7F0: both fx systems are created first (each creation resets the key time to 0), then the key time is
+    // advanced, then both fx get their matrix/offset/const time
+    const auto CreateFx = [&, this](FxSystem_c*& fx) {
+        if (ped->GetRpClump() && !fx) {
+            if (fx = g_fxMan.CreateFxSystem("jetpack", CVector{}, RwFrameGetMatrix(RpClumpGetFrame(ped->GetRpClump())))) {
+                fx->Play();
+                fx->SetLocalParticles(true);
+                fx->CopyParentMatrix();
+                m_FxKeyTime = 0.f;
+            }
+        }
+    };
+    CreateFx(m_ThrusterFX[0]);
+    CreateFx(m_ThrusterFX[1]);
+
+    const auto SetupFx = [&, this](FxSystem_c* fx, const char* jbFrameName) {
+        if (fx) {
+            fx->SetMatrix(RwFrameGetLTM(CClumpModelInfo::GetFrameFromName(m_JetPackClump, jbFrameName)));
+            fx->SetOffsetPos(JETBALL_OFFSET);
+        }
+    };
+    SetupFx(m_ThrusterFX[0], "jetball1");
+    SetupFx(m_ThrusterFX[1], "jetball2");
+
     // When pressing the brake button (space) you're going down faster.
     // But the flame is blue, even though the audio for the blue flame isn't playing.
     // So, going by the logic "blue == thrust is generated", "orange == no thrust generated"
@@ -467,22 +495,12 @@ void CTaskSimpleJetPack::DoJetPackEffect(CPed* ped) {
     m_FxKeyTime = (notsa::IsFixBugs() ? m_ThrustFwd == 1 : m_ThrustFwd != 0) || m_ThrustStrafe != 0.f // Simplified... TODO: Use frame delta time here
         ? std::min(m_FxKeyTime + 0.1f, 1.f)
         : std::max(m_FxKeyTime - 0.1f, 0.f);
-    const auto ProcessFx = [&, this](FxSystem_c*& fx, const char* jbFrameName) {
-        if (ped->GetRpClump() && !fx) {
-            if (fx = g_fxMan.CreateFxSystem("jetpack", CVector{}, RwFrameGetMatrix(RpClumpGetFrame(ped->GetRpClump())))) {
-                fx->Play();
-                fx->SetLocalParticles(true);
-                fx->CopyParentMatrix();
-            }
-        }
+
+    for (const auto fx : m_ThrusterFX) {
         if (fx) {
-            fx->SetMatrix(RwFrameGetLTM(CClumpModelInfo::GetFrameFromName(m_JetPackClump, jbFrameName)));
-            fx->SetOffsetPos(JETBALL_OFFSET);
             fx->SetConstTime(true, m_FxKeyTime);
         }
-    };
-    ProcessFx(m_ThrusterFX[0], "jetball1");
-    ProcessFx(m_ThrusterFX[1], "jetball2");    
+    }
 }
 
 // 0x67BA10

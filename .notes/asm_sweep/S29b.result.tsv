@@ -1,0 +1,6 @@
+addr	function	verdict	asm range	note	fix commit
+0x59EE80	CHandObject::Render	MATCH	59ee80-59eea7	SetTexture(first atomic's material 0, m_pTexture) then jmp CObject::Render; the earlier '401 lines' was the disassembler running into the next function	
+0x5A02E0	CObject::SpecialEntityCalcCollisionSteps	FIXED	5a02e0-5a0752	liftable/smallbox/fence-part edge = 0.5 * SMALLEST bbox extent (0x5A0646-0x5A0695; port: largest); exe multiplies by 6.6666665f / 3.3333333f (port divided by 0.15f / 0.3f) and computes speed2*ts*ts. Other branches MATCH	1bf19088
+0x5A07D0	CObject::ProcessSamSiteBehaviour	FIXED	5a07d0-5a0b49	altitude gate is this.z - 2 <= target.z (0x5A08C1), port: this.z <= target.z + 2. UNSURE/benign: |angleDiff| vs step compares the unrounded x87 diff in the exe, float in the port	838b33b4
+0x5A0D90	CObject::ObjectDamage	FIXED	5a0d90-5a1259	destroy paths use the non-virtual static bit (or 4), port called virtual SetIsStatic (also clears bDoorHitEndStop); fx type PLAY_ON_HIT does not play when the object was destroyed (0x5A10FF-0x5A1128)	9c183b22
+0x5A2130	CObject::ProcessControl	FIXED	5a2130-5a2993	dumper carries without the fork-angle test (only forklift tests it); RC bomb force = -0.05*turnMass*speed and damping pow(1-|v|^2*0.2, ts) (args swapped); door settle test is not-stuck/not-static (port: bIsBIGBuilding)	a08b8942

@@ -1,0 +1,26 @@
+addr	function	verdict	asm range	note	fix commit
+0x6A40F0	TowTruckControl	MATCH	0x6A40F0-0x6A43F2	status/driver/pad checks, hoist step (signed int16 step, max/min with the limits 10000/20000), FindObjectsInRange args, hitch/lock checks, SetTowLink + angle -100; 2D distance is compared as sqrt < 0.5 in the exe vs squared < 0.25 in the port (boundary ulp only)	-
+0x6A47F0	DoBurstAndSoftGroundRatios	UNSURE	0x6A47F0-0x6A4AE6	all branches/constants/rand match; ulp-only: forward-speed dot sums z,y,x (port x,y,z) and the sand term is (rem*adhesion)*offroad (port (offroad*rem)*adhesion) which can change the stored compression in the last bit	-
+0x6B3780	BlowUpCar	FIXED	0x6B3780-0x6B3BA2	property-damage stat is float(4000 + rand() % 6000) (port: float rand range); explosion offset z is the 3rd rand draw (rand/32767 + 0.5) (port: maxOffset + 0.5, no draw); StartFire before Darkel	6729564a
+0x6B3BB0	BlowUpCarCutSceneNoExtras	FIXED	0x6B3BB0-0x6B3E4E	FuckCarCompletely(bNoExplosion) (port always false: wheel tear-off rand + wheel state); rest (sub-plane crash mission list, RC bandit only, no KillPedsGettingInVehicle, Darkel then StartFire) matches in the non-FIX_BUGS run build	6729564a
+0x6A6DC0	dmgDrawCarCollidingParticles	FIXED	0x6A6DC0-0x6A7088	spark type 1 (port 0), spark count from the full ftol(force) (port int8 cast, % 64 vs & 0x3F), smoke FxPrtMult life 0.1 (port 1.0), debris condition inverted (exe: |v|^2 > 0.0625), debris colour scales RGB only (port also scaled alpha)	e7ca468b
+0x6A2B10	Render	MATCH	0x6A2B10-0x6A2EFC	invisible-car wheel order, Rhino extra wheels (x87 chain incl. the unspilled uz), -1 undo, headlight beams; nothing found	-
+0x6A9D70	ProcessSwingingDoor	FIXED	0x6A9D70-0x6AA1F2	bonnet swing = (sin(angle) + 0.1) * 0.05 (port sin(angle + 0.1)); dot product sums z,y,x; rest (impact/process/close audio 0x54+door, bonnet fly-off, rand parity, speed 0.4/right 0.1/up +-0.5, turn force 10*up) matches	dd96a3e1
+0x6A7090	ProcessCarOnFireAndExplode	FIXED	0x6A7090-0x6A7643	non-plane path never created the fire fx and reset the burn timer every frame (so never exploded); plane bExplodeImmediately skipped BlowUpCar; fire counter == 1 test (port: nonzero); RC smoke alpha/size/life were written into blue/alpha slots; smoke drew 2 extra rands (pos.z) in a different order; explosion roll int rand(0,250)<3 (port RandomBool(1.2)); fire fx position is object space (port world space)	cfc5f7f4
+0x6A07A0	HydraulicControl	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6A8C00	ProcessBuoyancy	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6A9680	ProcessHarvester	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6AE850	TankControl	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6A4EC0	ProcessCarWheelPair	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6AF420	PlaceOnRoadProperly	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x729B60	FireTruckControl	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6A8580	SpawnFlyingComponent	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6AA290	UpdateWheelMatrix	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6AAB50	PreRender	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6A7650	VehicleDamage	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6B1880	ProcessControl	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6B4800	ProcessAI	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6AFB10	ProcessSuspension	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6A65D0	SetupSuspensionLines	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6ACE70	ProcessEntityCollision	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-
+0x6AD690	ProcessControlInputs	NOT_REACHED	-	token budget (stopped at the agent budget; small and medium functions first)	-

@@ -64,4 +64,5 @@
 | S20d | rest of S20c | 10 | partial 6/10 (3 M, 3 fixed) -> S20e | Ped.cpp |
 | S20e | rest of S20d | 4 | partial 2/4 (1 M, 1 fixed) -> S20f | Ped.cpp |
 | S20f | rest of S20e | 2 | done (1 M, 1 fixed, ctor audio subobjects unread) | Ped.cpp |
-| S16d | rest of S16c | 15 | pending | Automobile.cpp |
+| S16d | rest of S16c | 15 | partial 3/15 (3 fixed) -> S16e | Automobile.cpp |
+| S16e | rest of S16d | 12 | pending | Automobile.cpp |

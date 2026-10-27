@@ -250,3 +250,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-27	ASM-S20e	v6	asm sweep (partial)	216632	57	19	Ped S20e 2/4: PreRenderAfterTest fixed (shadow dist sq, wobble bones inverted, quake *0.0025, rain splash extra rand, open-top speed signed); ProcessEntityCollision MATCH; ProcessControl+ctor -> S20f
 2026-10-27	ASM-S20f	v6	asm sweep	159194	50	16	Ped S20f 2/2: ProcessControl MATCH (whole fn); ctor fixed (bHasACamera 25% not 75%); Ped.cpp sweep complete
 2026-10-27	ASM-S16c	v6	asm sweep (partial)	203114	67	18	Automobile S16c 2/17: ProcessControlInputs fixed x8 (mouse steer decay, gas scale order, engine-off test, comedy roll), ProcessAI fixed (NpcAntiRoll drifted shared handling COM) + float orders; 15 left -> S16d
+2026-10-28	ASM-S16d	v6	asm sweep (partial)	?	?	?	Automobile S16d 3/15 all fixed (ProcessSuspension damping gate 0.99999, CarWheelPair burnout/adhesion order, ProcessEntityCollision building colpoints were under FIX_BUGS); 12 left -> S16e

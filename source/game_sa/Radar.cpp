@@ -2321,10 +2321,14 @@ CVector GetAirStripLocation(eAirstripLocation location) {
 // 0x587D20
 void CRadar::SetupAirstripBlips() {
     if (const auto veh = FindPlayerVehicle(); veh && veh->IsSubPlane() && !ModelIndices::IsVortex(veh->m_nModelIndex)) {
+#ifdef FIX_BUGS
         // FIX_BUGS: FPS independent counter. SA: (CTimer::GetFrameCounter() & 4) == 0
         static auto airstripBlipCounter = CTimer::GetTimeInMS() + 200;
         if (CTimer::GetTimeInMS() >= airstripBlipCounter) {
             airstripBlipCounter = CTimer::GetTimeInMS() + 200;
+#else
+        if ((CTimer::GetFrameCounter() & 4) == 0) { // 0x587D72: test [CTimer::m_FrameCounter], 4
+#endif
 
             if (airstrip_blip)
                 return;

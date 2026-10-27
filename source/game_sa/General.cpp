@@ -232,3 +232,20 @@ bool CGeneral::DoCoinFlip() {
 	NOTSA_RD_OUTER();
 	return CGeneral::GetRandomNumber() >= RAND_MAX / 2;
 }
+
+// SYSTEMIC-2: the exe has no coin-flip function; these are the other inlined forms (see General.h)
+bool CGeneral::RandomBit() {
+    NOTSA_RD_OUTER();
+    return CGeneral::GetRandomNumber() & 1;
+}
+
+bool CGeneral::RandomOverHalf() {
+    NOTSA_RD_OUTER();
+    // the float product is never within 1 ulp of 0.5 (16383 -> 0.49998, 16384 -> 0.50002), so this is exactly rand >= 16384
+    return CGeneral::GetRandomNumber() * RAND_MAX_FLOAT_RECIPROCAL > 0.5f;
+}
+
+bool CGeneral::RandomLowBits1024AtMost512() {
+    NOTSA_RD_OUTER();
+    return (CGeneral::GetRandomNumber() & 0x3FF) <= 0x200;
+}

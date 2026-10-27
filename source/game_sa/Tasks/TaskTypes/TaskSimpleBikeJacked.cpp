@@ -100,7 +100,7 @@ bool CTaskSimpleBikeJacked::ProcessPed(CPed* ped) {
                         }
                     }
 
-                    if (CGeneral::DoCoinFlip()) { // Originally: rand() % 1024 <= 512
+                    if (CGeneral::RandomLowBits1024AtMost512()) { // exe 0x64CB27: (rand() & 0x3FF) <= 0x200 (the jle path calls SayJacking first)
                         if (!SayJacking(m_jacker, ped, m_vehicle)) {
                             SayJacked(ped, m_vehicle);
                         }

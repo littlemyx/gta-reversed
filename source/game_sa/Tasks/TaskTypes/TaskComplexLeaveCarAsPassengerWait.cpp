@@ -63,14 +63,19 @@ void CTaskComplexLeaveCarAsPassengerWait::SetPedInZerothPassengerSeat(CPed* ped)
 // 0x640BE0
 CTask* CTaskComplexLeaveCarAsPassengerWait::CreateSubTask(eTaskType taskType, CPed* ped) {
     switch (taskType) {
-    case TASK_SIMPLE_GO_TO_POINT:
+    case TASK_SIMPLE_GO_TO_POINT: {
+        // exe 0x640CE3..0x640D3B draws in this order: forward distance, sign (rand() / 32767.0f > 0.5f gives +1, else -1), right distance
+        const auto fwdDist   = CGeneral::GetRandomNumberInRange(1.f, 2.f);
+        const auto fwdSign   = CGeneral::RandomOverHalf() ? 1.f : -1.f;
+        const auto rightDist = CGeneral::GetRandomNumberInRange(1.f, 2.f);
         return new CTaskSimpleGoToPoint{
             PEDMOVE_WALK,
             ped->GetPosition()
-                + m_veh->GetRight() * CGeneral::GetRandomNumberInRange(1.f, 2.f)
-                + m_veh->GetForward() * (CGeneral::GetRandomNumberInRange(1.f, 2.f) * (CGeneral::DoCoinFlip() ? -1.f : 1.f)),
+                + m_veh->GetRight() * rightDist
+                + m_veh->GetForward() * (fwdDist * fwdSign),
             1.5f
         };
+    }
     case TASK_COMPLEX_LEAVE_CAR: {
         SetPedInZerothPassengerSeat(ped);
         return new CTaskComplexLeaveCar{

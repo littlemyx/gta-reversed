@@ -62,7 +62,7 @@ void CTaskInteriorBeInShop::ScanForStuff(CPed* ped) {
     };
     switch (closestIntInfo->Type) {
     case eInteriorInfoType::UNK_8: {
-        if (CGeneral::DoCoinFlip()) {
+        if (CGeneral::GetRandomNumberInRange(0, 100) <= 50) { // exe 0x675566: rand [0, 100) > 50 adds the event, otherwise LookAt
             g_ikChainMan.LookAt(
                 "TaskBeInShop",
                 ped,
@@ -82,7 +82,7 @@ void CTaskInteriorBeInShop::ScanForStuff(CPed* ped) {
         break;
     }
     case eInteriorInfoType::UNK_9: {
-        if (!CGeneral::DoCoinFlip()) {
+        if (CGeneral::GetRandomNumberInRange(0, 100) > 80) { // exe 0x6755E8: rand [0, 100) > 80 (20 %, not a coin flip)
             m_bScanForStuff = false;
             PedAddUseInfoEvent();
         }

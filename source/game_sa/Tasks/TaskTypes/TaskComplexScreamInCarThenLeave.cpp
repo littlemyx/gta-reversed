@@ -48,7 +48,7 @@ CTask* CTaskComplexScreamInCarThenLeave::CreateSubTask(eTaskType taskType, CPed*
             m_veh->GetPosition(),
             TARGET_DOOR_FRONT_LEFT,
             0,
-            !CTheScripts::IsPlayerOnAMission() && !CGeneral::DoCoinFlip()
+            !CTheScripts::IsPlayerOnAMission() && CGeneral::RandomLowBits1024AtMost512() // exe 0x64261E: (rand() & 0x3FF) <= 0x200 -> last arg true, only drawn when not on a mission
         };
     }
     case TASK_SIMPLE_CAR_DRIVE: {

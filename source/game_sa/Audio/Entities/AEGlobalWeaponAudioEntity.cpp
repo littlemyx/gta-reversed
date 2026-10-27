@@ -291,7 +291,7 @@ void CAEGlobalWeaponAudioEntity::ServiceAmbientGunFire() {
 }
 
 void CAEGlobalWeaponAudioEntity::PickAmbientGunFire(int32& gunShots, eWeaponType& weaponType, uint32& delay) {
-    const auto b = CGeneral::DoCoinFlip();
+    const auto b = CAEAudioUtility::GetRandomNumberInRange(0, 1) != 0; // exe 0x4DEFE0: CAEAudioUtility::GetRandomNumberInRange(0, 1) (1 = pistol), i.e. rand() >= 16384
     gunShots     = b ? CAEAudioUtility::GetRandomNumberInRange(2, 4)       : CAEAudioUtility::GetRandomNumberInRange(4, 14);
     weaponType   = b ? WEAPON_PISTOL                                               : WEAPON_AK47;
     delay        = b ? CAEAudioUtility::GetRandomNumberInRange(500, 1'200) : CAEAudioUtility::GetRandomNumberInRange(90, 350);

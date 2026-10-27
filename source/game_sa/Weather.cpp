@@ -459,7 +459,7 @@ void CWeather::Update() {
                 LightningFlash = false;
             } else if (CTimer::GetTimeInMS() - LightningFlashLastChange > 50) {
                 const auto wasFlashing = LightningFlash;
-                LightningFlash = CGeneral::DoCoinFlip();
+                LightningFlash = CGeneral::RandomBit(); // exe 0x72BA55: rand() & 1 (DoCoinFlip is rand >= 16383)
                 if (LightningFlash != wasFlashing) {
                     LightningFlashLastChange = CTimer::GetTimeInMS();
                 }

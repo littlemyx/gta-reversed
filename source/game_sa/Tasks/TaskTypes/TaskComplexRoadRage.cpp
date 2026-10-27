@@ -144,8 +144,10 @@ CTask* CTaskComplexRoadRage::CreateFirstSubTask(CPed* ped) {
     if (ped->IsGangster()) { // 0x62E1C6 (Inverted)
         ped->GiveDelayedWeapon(WEAPON_PISTOL, 2000u);
         ped->SetCurrentWeapon(WEAPON_PISTOL);
-    } else if (CGeneral::DoCoinFlip()) { // 0x62E1DA
-        const auto wtype = CGeneral::RandomChoice(std::array{ WEAPON_BASEBALLBAT, WEAPON_GOLFCLUB, WEAPON_SHOVEL });
+    } else if (CGeneral::GetRandomNumberInRange(0, 100) < 50) { // 0x62E1DA..0x62E1E2: rand [0, 100) < 50 (not DoCoinFlip)
+        // 0x62E1EC..0x62E20F: second draw [0, 100): <= 33 baseball bat, > 66 shovel, otherwise golf club
+        const auto weaponRoll = CGeneral::GetRandomNumberInRange(0, 100);
+        const auto wtype      = weaponRoll <= 33 ? WEAPON_BASEBALLBAT : weaponRoll > 66 ? WEAPON_SHOVEL : WEAPON_GOLFCLUB;
         ped->GiveDelayedWeapon(wtype, 1);
         ped->SetCurrentWeapon(wtype);     
     }

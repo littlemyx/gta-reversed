@@ -390,8 +390,9 @@ void CAEPedSpeechAudioEntity::SetUpConversation() {
 
         s_ConversationLength = hasInitialState ? 3 : 2;
 
+        // exe 0x4E3AA9 (cases 1 -> 4) / 0x4E3B79 (cases 5 -> 8, result unused): CAEAudioUtility::GetRandomNumberInRange(0, 1) is drawn in both; non-zero = good
+        const auto isGood = CAEAudioUtility::GetRandomNumberInRange(0, 1) != 0;
         if (hasInitialState) { // For cases 1 -> 4 only
-            const auto isGood = CGeneral::DoCoinFlip();
             PushConvo(isGood ?  CTX_GLOBAL_PCONV_STATE_GOOD :  CTX_GLOBAL_PCONV_STATE_BAD);
             PushConvo(isGood ?  CTX_GLOBAL_PCONV_AGREE_GOOD :  CTX_GLOBAL_PCONV_AGREE_BAD);
         }
@@ -411,7 +412,7 @@ void CAEPedSpeechAudioEntity::SetUpConversation() {
     } else if (r <= 10) { // cases 9, 10
         s_ConversationLength = 1;
 
-        PushConvo(CGeneral::DoCoinFlip() ?  CTX_GLOBAL_PCONV_STATE_GOOD :  CTX_GLOBAL_PCONV_STATE_BAD);
+        PushConvo(CAEAudioUtility::GetRandomNumberInRange(0, 1) != 0 ?  CTX_GLOBAL_PCONV_STATE_GOOD :  CTX_GLOBAL_PCONV_STATE_BAD); // exe 0x4E3C1C
         PushConvo(CTX_GLOBAL_PCONV_DISMISS);
     } else {
         NOTSA_UNREACHABLE();

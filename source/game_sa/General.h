@@ -121,9 +121,18 @@ namespace CGeneral { // More like `Math` (Or `Meth`, given how bad the code is, 
     bool RandomBool(float chanceOfTrue);
 
     /*!
-     * @returns True 50% of the time
+     * @returns True 50% of the time: `rand() >= RAND_MAX / 2` (16383). This is the form of the exe sites `call rand; cmp eax, 0x3FFF; jge`
+     *          (ReactToVehicleDamage 0x6D54D8, GangLeader::GetRandomGangAmbientAnim 0x65E74B / 0x65E791, BeInHouse::GetInfoForPedToUse 0x675113).
+     *          There is no exe function: every other exe coin flip has its own inlined form (SYSTEMIC-2), use the matching variant below.
      */
     bool DoCoinFlip();
+
+    /// `rand() & 1` (exe CWeather::Update 0x72BA55, CTaskComplexStuckInAir::CreateSubTask 0x67BBDD)
+    bool RandomBit();
+    /// `rand() * (1.0f / 32767.0f) > 0.5f`, i.e. rand() >= 16384 (exe CTaskComplexLeaveCarAsPassengerWait::CreateSubTask 0x640D00, CTaskSimpleKillPedWithCar::DamageCarBonnet 0x653D17)
+    bool RandomOverHalf();
+    /// `(rand() & 0x3FF) <= 0x200` (exe CTaskSimpleBikeJacked::ProcessPed 0x64CB27, CTaskComplexScreamInCarThenLeave::CreateSubTask 0x64261E)
+    bool RandomLowBits1024AtMost512();
 
     /**
      * @addr 0x41BD90

@@ -45,7 +45,7 @@ void CTaskSimpleKillPedWithCar::DamageCarBonnet(CPed const* ped) {
     const auto& right = m_Car->GetRight();
     const auto& up    = m_Car->GetUp();
     const auto& pv    = ped->m_vecMoveSpeed;
-    if (CGeneral::DoCoinFlip()) {
+    if (CGeneral::RandomOverHalf()) { // exe 0x653D17: rand() / 32767.0f > 0.5f
         flyingObj->m_vecMoveSpeed = CVector{
             (pv.x + right.x * 0.1f) + up.x * 0.5f,
             (pv.y + right.y * 0.1f) + up.y * 0.5f,

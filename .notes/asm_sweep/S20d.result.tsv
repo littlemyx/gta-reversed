@@ -1,0 +1,11 @@
+addr	function	verdict	asm_range	note	fix_commit
+0x5F0360	CPed::KillPedWithCar	MATCH	0x5F04CF..0x5F1306	heavy hit (rand&3, pad shake, side/up/fwd dots, train/side/pushed/hood incl. 3 Z branches, bonnet, crime, anim switch via jump table 0x5F130C, blend/speed), light hit from 0x5F0E0D (ignore-collision condition, train/non-train speed), shared tail force, FALL/DIE early path; all constants read from the exe	
+0x5E0820	CPed::PositionPedOutOfCollision	MATCH	0x5E0820..0x5E13B3	on-side, door and bike-door tries, side/front/back/other-side/top positions (float op order), node fallback (ped/veh node, dist compare), heading, speeds	
+0x5E13C0	CPed::PositionAnyPedOutOfCollision	FIXED	0x5E13C0..0x5E165F	port was another algorithm: grid is 15x15 step +0.5 from pos-3.5 (x reset per row), skips points that HIT buildings/objects, keeps the CLOSEST (int-truncated dist, start 999) per class; the port never found a point (dist < 0 start, step -3.5, inverted skip test)	8e8485df
+0x5E1FA0	CPed::ProcessBuoyancy	FIXED	0x5E1FA0..0x5E2528	rand() at 0x5E2160 was commented out (RNG desync), mass*0.008f not /125 (3 sites), pow(0.9,dt) unrounded x87 result for the speed damping	f8579c74
+0x5E5380	CPed::DoFootLanded	MATCH	0x5E5380..0x5E57E7 (+ helpers 0x5E3630, 0x5E37C0)	foot pos, bloody/ped footprint shadows, rain splash and dust helpers (rand order x,y,vx,vy), wobble, water/shallow splash, audio	
+0x5E57F0	CPed::PlayFootSteps	FIXED	0x5E57F0..0x5E5ECA	skater right-foot test is curTime-dt <= threshold (jp lets equal through; port had <); skate volume log10(adhesion)*20 is the x87 fyl2x value times 20 in one rounding	3911d3f9
+0x5E65A0	CPed::PreRenderAfterTest	NOT_REACHED		budget	
+0x5E2530	CPed::ProcessEntityCollision	NOT_REACHED		budget	
+0x5E8030	CPed::Constructor	NOT_REACHED		budget	
+0x5E8CD0	CPed::ProcessControl	NOT_REACHED		budget	

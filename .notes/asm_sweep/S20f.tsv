@@ -1,0 +1,3 @@
+addr	file	line	cls	fn	oc
+0x5E8030	source/game_sa/Entity/Ped/Ped.cpp	68	CPed	Constructor	D
+0x5E8CD0	source/game_sa/Entity/Ped/Ped.cpp	206	CPed	ProcessControl	D

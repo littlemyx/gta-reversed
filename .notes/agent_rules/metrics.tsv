@@ -247,3 +247,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-27	ASM-S18b	v6	asm sweep (partial)	189035	61	38	Heli/Plane 13/24: 1 fixed (RenderAllHeliSearchLights drew stale lights); 11 left -> S18c
 2026-10-27	ASM-S20c	v6	asm sweep (partial)	154995	45	23	Ped S20c 3/13: 1 fixed (SetPedPositionInCar van check never fired + combine chassis z overwrite); KillPedWithCar half-read; 10 big left -> S20d
 2026-10-27	ASM-S20d	v6	asm sweep (partial)	296856	87	24	Ped S20d 6/10: 3 fixed (PositionAnyPedOutOfCollision wrong algorithm, ProcessBuoyancy discarded rand + mass consts, PlayFootSteps skater test); KillPedWithCar/PositionPedOut/DoFootLanded full MATCH; 4 left -> S20e
+2026-10-27	ASM-S20e	v6	asm sweep (partial)	216632	57	19	Ped S20e 2/4: PreRenderAfterTest fixed (shadow dist sq, wobble bones inverted, quake *0.0025, rain splash extra rand, open-top speed signed); ProcessEntityCollision MATCH; ProcessControl+ctor -> S20f

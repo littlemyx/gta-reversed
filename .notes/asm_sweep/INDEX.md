@@ -62,4 +62,5 @@
 | S18b | rest of S18 | 24 | partial 13/24 (12 M, 1 fixed) -> S18c | Heli.cpp, Plane.cpp |
 | S18c | rest of S18b | 11 | pending | Heli.cpp, Plane.cpp |
 | S20d | rest of S20c | 10 | partial 6/10 (3 M, 3 fixed) -> S20e | Ped.cpp |
-| S20e | rest of S20d | 4 | pending | Ped.cpp |
+| S20e | rest of S20d | 4 | partial 2/4 (1 M, 1 fixed) -> S20f | Ped.cpp |
+| S20f | rest of S20e | 2 | pending | Ped.cpp |

@@ -4896,9 +4896,9 @@ void CAutomobile::dmgDrawCarCollidingParticles(const CVector& position, float fo
             const_cast<CVector&>(position),
             fxDirection,
             speedMag * -10.f,
-            ((int8)force / 10 + 4) % 64,
+            ((int32)force / 10 + 4) & 0x3F, // 0x6A6E53..6A6E66: the full ftol(force) / 10 + 4, masked with 0x3F (the port cast it to int8)
             m_vecMoveSpeed,
-            eSparkType::SPARK_PARTICLE_SPARK2,
+            eSparkType::SPARK_PARTICLE_SPARK, // 0x6A6E26: sparksType 1
             0.3f,
             1.f
         );
@@ -4914,13 +4914,14 @@ void CAutomobile::dmgDrawCarCollidingParticles(const CVector& position, float fo
         // The higher our speedsq the more particles we create
         const auto numSmokes = std::max(1u, (uint32)((m_vecMoveSpeed * CTimer::GetTimeStep()).Magnitude() * 4.f));
         for (auto i = 0u; i < numSmokes; i++) {
-            g_fx.m_SmokeHuge->AddParticle(fxPos, {}, 0.f, FxPrtMult_c{ 0.4f, 0.4f, 0.4f, 0.6f, 0.4f, 1.f, 1.f });
+            g_fx.m_SmokeHuge->AddParticle(fxPos, {}, 0.f, FxPrtMult_c{ 0.4f, 0.4f, 0.4f, 0.6f, 0.4f, 1.f, 0.1f } /* 0x6A6E93: life 0.1 */);
         }
     }
 
     // Add debris
-    if (m_vecMoveSpeed.SquaredMagnitude() <= sq(0.25f)) {
-        auto color = CVehicleModelInfo::ms_vehicleColourTable[m_nPrimaryColor] * m_fContactSurfaceBrightness;
+    if (m_vecMoveSpeed.SquaredMagnitude() > sq(0.25f)) { // 0x6A6FD9: skipped when |v|^2 <= 0.0625 (the port had it inverted)
+        auto color = CVehicleModelInfo::ms_vehicleColourTable[m_nPrimaryColor];
+        color.ScaleRGB(m_fContactSurfaceBrightness); // 0x6A700D: only R, G, B are scaled, the alpha stays
         auto rwcolor = color.ToRwRGBA();
         g_fx.AddDebris(fxPos, rwcolor, 0.06f, (int32)force / 100 + 1);
     }

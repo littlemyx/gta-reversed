@@ -785,7 +785,7 @@ bool CCarCtrl::CreateConvoy(CVehicle* vehicle, int32 carType) {
             };
         }
 
-        *car->m_matrix       = *vehicle->m_matrix; // 0x59BBC0
+        *static_cast<CMatrix*>(car->m_matrix) = *vehicle->m_matrix; // 0x59BBC0 CMatrix::operator= (matrix only; CMatrixLink would also copy the list pointers)
         car->GetPosition()   = pos;
         car->m_vecMoveSpeed  = vehicle->m_vecMoveSpeed;
         car->SetStatus(vehicle->GetStatus());
@@ -904,7 +904,7 @@ bool CCarCtrl::CreatePoliceChase(CVehicle* vehicle, int32 carType, CNodeAddress 
     SetUpDriverAndPassengersForVehicle(vehicle, carType, 2, true, true, 99); // 0x4217C0
 
     // Place the police car right behind it
-    *police->m_matrix      = *vehicle->m_matrix; // 0x59BBC0
+    *static_cast<CMatrix*>(police->m_matrix) = *vehicle->m_matrix; // 0x59BBC0 CMatrix::operator= (matrix only; CMatrixLink would also copy the list pointers)
     police->SetPosn(pos);                        // 0x4241C0
     police->m_vecMoveSpeed = vehicle->m_vecMoveSpeed;
     police->SetStatus(STATUS_PHYSICS);

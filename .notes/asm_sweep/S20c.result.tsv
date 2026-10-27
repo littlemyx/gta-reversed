@@ -1,0 +1,14 @@
+addr	function	verdict	asm_range	note	fix_commit
+0x5E8030	CPed::Constructor	NOT_REACHED		budget	
+0x5DF560	CPed::ShoulderBoneRotation	MATCH	0x5DF560..0x5DF879	both breast/clavicle/upper-arm bone ids (302/32/31, 301/22/21), Invert(clavicle)*breast, X halved (0.5), clavicle*breast, UpdateRW equal	
+0x5E57F0	CPed::PlayFootSteps	NOT_REACHED		budget	
+0x5E5380	CPed::DoFootLanded	NOT_REACHED		budget	
+0x6AE0D0	CPed::MakeTyresMuddySectorList	MATCH	0x6AE0D0..0x6AE82E	car/bike wheel offsets (jump table 0x6AE834), thresholds 10/2/1/0.05/500/100, forces 50/10, StartShake(300,70,0) equal; only diff: NaN speed skips in exe, not in port (no effect)	
+0x5F0360	CPed::KillPedWithCar	NOT_REACHED	0x5F0360..0x5F0B2D read	budget: preamble (task switch, contact/vehicle/boat/plane early-outs, destroy-car speed 0.0225, diff), heavy-hit start (rand&3, pad shake, side/up dots) look equal; the rest (light hit 0x5F0E0D.., train/hood/pushed branches, tail) not compared	
+0x5E65A0	CPed::PreRenderAfterTest	NOT_REACHED		budget	
+0x5E1FA0	CPed::ProcessBuoyancy	NOT_REACHED		budget	
+0x5E0820	CPed::PositionPedOutOfCollision	NOT_REACHED		budget	
+0x5E13C0	CPed::PositionAnyPedOutOfCollision	NOT_REACHED		budget	
+0x5DF910	CPed::SetPedPositionInCar	FIXED	0x5DFB03; 0x5DFB96	van check compared the biased anim group id with the raw 13 (never true; exe: m_nAnimGroup+0x58==0x65, i.e. ANIM_GROUP_VANCARANIMS) so van rear passengers got no side rotation/offset; combine chassis offset overwrote the rotated pos (exe: pos.z += chassisZ); seat table, bike lean, heading, passenger 1/2 cases equal	082f61e3
+0x5E8CD0	CPed::ProcessControl	NOT_REACHED		budget	
+0x5E2530	CPed::ProcessEntityCollision	NOT_REACHED		budget	

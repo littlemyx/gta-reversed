@@ -289,4 +289,13 @@ static void TestMisc() {
             return true;
         }, 2700);
     }
+    // SYSTEMIC-1: CVector operator/(CVector, float) of the exe (0x4119D0) is a multiplication by the float-rounded reciprocal; ExeDivide() is its port twin (the plain operator/ divides per component).
+    Run("ExeDivide(CVector,float) 0x4119D0", [](Rng& r, std::string& d) {
+        const CVector v = GenV(r, PickScale(r)); const float s = r.below(8) ? GenF(r, PickScale(r), S_NAN | S_ZERO | S_TINY | S_HUGE | S_INF) : (float)(1 + r.below(8));   // no denormal divisor: 1/s overflows float, the exe keeps the extended range for z (never reached: divisors are masses / steps / counts)
+        CVector got = ExeDivide(v, s), exe;
+        oracle::Fn<CVector* __cdecl(CVector*, const CVector*, float)>(0x4119D0)(&exe, &v, s);
+        if (SameV(got, exe)) return true;
+        d = "v " + F(v.x) + "," + F(v.y) + "," + F(v.z) + " s " + F(s) + " got " + F(got.x) + "," + F(got.y) + "," + F(got.z) + " exe " + F(exe.x) + "," + F(exe.y) + "," + F(exe.z);
+        return false;
+    });
 }

@@ -85,14 +85,23 @@ void CPopCycle::Initialise() {
                 // In the vanilla game the %'s in this array add up to 100% (The original code rescales the values in order to make sure this is the case...but fails sometimes, see below)
                 // But we take another route and don't normalize to 100%. This way there's no rounding error involved and everything works perfectly. 
 #ifndef FIX_BUGS
-                // The percs should always be >= 100 in total (otherwise `PickARandomGroupOfOtherPeds` will fail)
-                if (const auto percsSum = notsa::accumulate(percs, (size_t)0); percsSum < 100) {
+                // 0x5BC24B-0x5BC47A (exe): ALWAYS rescale the 18 percs by 100/sum (truncating, x87 float), then add the rounding remainder
+                // (100 - the new sum, as a byte) to the LAST maximal element (`>=` keeps the later of equal maxima)
+                {
+                    const auto percsSum = (int32)notsa::accumulate(percs, (size_t)0);
+                    const float percsScale = 100.0f / (float)percsSum;
                     for (auto& p : percs) {
-                        p = (size_t)p * 100u / percsSum; // fp math unnecessary here - Rescale to 102% here to make sure we're at 100%
+                        p = NOTSA_FTOL(uint8, (float)p * percsScale);
                     }
-
-                    // At this point this must hold - If the value is over 100 that's fine, but it may not be less!
-                    // assert(notsa::accumulate(percs, (size_t)0) >= 100u); // In vanilla game this always triggers because of rounding errors... Not much to do.
+                    int32 newSum{}, maxVal{}, maxIdx{};
+                    for (size_t i = 0; i < std::size(percs); i++) {
+                        newSum += percs[i];
+                        if (percs[i] >= maxVal) {
+                            maxVal = percs[i];
+                            maxIdx = (int32)i;
+                        }
+                    }
+                    percs[maxIdx] = (uint8)(percs[maxIdx] + (uint8)(100 - (uint8)newSum));
                 }
 #endif
 

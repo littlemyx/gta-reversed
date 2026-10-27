@@ -1,0 +1,42 @@
+addr	function	verdict	asm range	note	fix commit
+0x6C4650	CHeli::Pre_SearchLightCone	NOT_REACHED		token budget	-
+0x6C46E0	CHeli::Post_SearchLightCone	NOT_REACHED		token budget	-
+0x6C58E0	CHeli::SearchLightCone	NOT_REACHED		token budget	-
+0x6C6520	CHeli::GenerateHeli	NOT_REACHED		token budget	-
+0x6C79A0	CHeli::UpdateHelis	NOT_REACHED		token budget	-
+0x6C69C0	CHeli::SendDownSwat	NOT_REACHED		token budget	-
+0x6C7C50	CHeli::RenderAllHeliSearchLights	NOT_REACHED		token budget	-
+0x6C6890	CHeli::TestSniperCollision	NOT_REACHED		token budget	-
+0x6C4400	CHeli::Render	NOT_REACHED		token budget	-
+0x6C4830	CHeli::ProcessControlInputs	NOT_REACHED		token budget	-
+0x6C5420	CHeli::PreRender	NOT_REACHED		token budget	-
+0x6C6D30	CHeli::BlowUpCar	NOT_REACHED		token budget	-
+0x6C7050	CHeli::ProcessControl	NOT_REACHED		token budget	-
+0x6C8D60	CMonsterTruck::Constructor	MATCH	0x6C8D60-0x6C8DEB	control flow, constants, field offsets, call order equal	-
+0x6C8AE0	CMonsterTruck::ProcessEntityCollision	FIXED	0x6C8AE0-0x6C8D59	wheel collision entity stored + registered without cleaning up the old reference (port used ChangeEntityReference)	75edcb54
+0x6C83A0	CMonsterTruck::ProcessSuspension	MATCH	0x6C83A0-0x6C8ADE	control flow, constants, field offsets, call order equal	-
+0x6C8330	CMonsterTruck::ProcessControlCollisionCheck	MATCH	0x6C8330-0x6C8394	control flow, constants, field offsets, call order equal	-
+0x6C8250	CMonsterTruck::ProcessControl	MATCH	0x6C8250-0x6C832E	control flow, constants, field offsets, call order equal	-
+0x6C7FB0	CMonsterTruck::SetupSuspensionLines	MATCH	0x6C7FB0-0x6C824F	control flow, constants, field offsets, call order equal	-
+0x6C7DE0	CMonsterTruck::PreRender	MATCH	0x6C7DE0-0x6C7F88	control flow, constants, field offsets, call order equal	-
+0x6C8E20	CPlane::Constructor	NOT_REACHED		token budget	-
+0x6C94A0	CPlane::PreRender	NOT_REACHED		token budget	-
+0x6CAB70	CPlane::Render	NOT_REACHED		token budget	-
+0x6CACB0	CPlane::OpenDoor	NOT_REACHED		token budget	-
+0x6C9260	CPlane::ProcessControl	NOT_REACHED		token budget	-
+0x6CADD0	CPlane::ProcessControlInputs	NOT_REACHED		token budget	-
+0x6CB7C0	CPlane::ProcessFlyingCarStuff	NOT_REACHED		token budget	-
+0x6CC4B0	CPlane::VehicleDamage	NOT_REACHED		token budget	-
+0x6CCCF0	CPlane::BlowUpCar	NOT_REACHED		token budget	-
+0x6CD090	CPlane::FindPlaneCreationCoors	NOT_REACHED		token budget	-
+0x6CD2F0	CPlane::DoPlaneGenerationAndRemoval	NOT_REACHED		token budget	-
+0x6CE370	CQuadBike::Constructor	MATCH	0x6CE370-0x6CE433	control flow, constants, field offsets, call order equal	-
+0x6CE2B0	CQuadBike::Fix	FIXED	0x6CE2B0-0x6CE33D	exe calls CDamageManager::ResetDamageStatus first; the port skipped it	b4ce7f18
+0x6CEAD0	CQuadBike::PreRender	MATCH	0x6CEAD0-0x6CED00	control flow, constants, field offsets, call order equal	-
+0x6CE460	CQuadBike::ProcessAI	FIXED	0x6CE460-0x6CECC	in-air assist: all 4 wheels airborne (port: any), limit 0.03 (port 0.029), handbrake yaw force point com+forward (port com+right), no-handbrake roll assist only when NOT accelerating (port inverted) with point com+up (port com+right)	c436b119
+0x6CDCC0	CQuadBike::ProcessControl	MATCH	0x6CDCC0-0x6CE010	control flow, constants, field offsets, call order equal	-
+0x6CE020	CQuadBike::ProcessControlInputs	FIXED	0x6CE020-0x6CE266	mouse lean multiplier is -0.0035 (const 0x871AD8); port used -0.035 (10x)	d171e316
+0x6CE280	CQuadBike::ProcessDrivingAnims	MATCH	0x6CE280-0x6CE2A7	control flow, constants, field offsets, call order equal	-
+0x6CE270	CQuadBike::ProcessSuspension	MATCH	0x6CE270	control flow, constants, field offsets, call order equal	-
+0x6CE340	CQuadBike::SetupDamageAfterLoad	MATCH	0x6CE340-0x6CE36C	control flow, constants, field offsets, call order equal	-
+0x6CDCA0	CQuadBike::SetupSuspensionLines	MATCH	0x6CDCA0-0x6CDCAA	control flow, constants, field offsets, call order equal	-

@@ -216,3 +216,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-27	ASM-S17b	v6	asm sweep (partial)	190613	57	19	Bike/Bmx S17b 5/22: 3 fixed (Bmx bunny-hop fade-out, Bike ground-physical ref, CBike ctor flag mask); 17 left -> S17c
 2026-10-27	ASM-MIX1	v6	asm sweep (partial)	241690	77	31	S26c 2/2 fixed (ApplyCollision 3 deviations, ApplySoftCollision 3+); S29b/S21b not reached; flagged gameplay_oracle_test PC24 1146/1084 in CExplosion::AddExplosion (upstream regression)
 2026-10-27	EXPL-REG	v6	regression check	127301	51	10	false alarm: AddExplosion 0/0 on origin, local merge and merged tree; MIX1 report came from a stale/odd build
+2026-10-27	ASM-MIX2	v6	asm sweep (partial)	?	?	?	S29b 5/5: 4 fixed (Object CalcCollisionSteps extent/consts, SamSite altitude gate, ObjectDamage static bit + fx, ProcessControl dumper/RC bomb/door settle); S21b not reached; SetIsStatic pattern at Object.cpp ~326/759/783 unchecked

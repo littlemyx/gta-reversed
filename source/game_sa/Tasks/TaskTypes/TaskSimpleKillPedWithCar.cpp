@@ -30,7 +30,7 @@ CTaskSimpleKillPedWithCar::CTaskSimpleKillPedWithCar(const CTaskSimpleKillPedWit
 }
 
 // 0x653CF0
-void CTaskSimpleKillPedWithCar::DamageCarBonnet(CPed const*) {
+void CTaskSimpleKillPedWithCar::DamageCarBonnet(CPed const* ped) {
     if (!m_Car->IsSubAutomobile()) {
         return;
     }
@@ -40,8 +40,24 @@ void CTaskSimpleKillPedWithCar::DamageCarBonnet(CPed const*) {
         return;
     }
 
-    const auto dir = m_Car->GetRight() * 0.1f + m_Car->GetUp() * 0.5f;
-    flyingObj->m_vecMoveSpeed += CGeneral::DoCoinFlip() ? dir : -dir;
+    // 0x653D3B-0x653E2A: the bonnet takes the *ped's* move speed (not its own) +/- (right * 0.1) + (up * 0.5);
+    // the coin flip only flips the right-vector term: the up term is added in both cases. Operation order as in the exe.
+    const auto& right = m_Car->GetRight();
+    const auto& up    = m_Car->GetUp();
+    const auto& pv    = ped->m_vecMoveSpeed;
+    if (CGeneral::DoCoinFlip()) {
+        flyingObj->m_vecMoveSpeed = CVector{
+            (pv.x + right.x * 0.1f) + up.x * 0.5f,
+            (pv.y + right.y * 0.1f) + up.y * 0.5f,
+            (pv.z + right.z * 0.1f) + up.z * 0.5f,
+        };
+    } else {
+        flyingObj->m_vecMoveSpeed = CVector{
+            (pv.x - right.x * 0.1f) + up.x * 0.5f,
+            (pv.y - right.y * 0.1f) + up.y * 0.5f,
+            (pv.z - right.z * 0.1f) + up.z * 0.5f,
+        };
+    }
 
     flyingObj->ApplyTurnForce(m_Car->GetUp() * 10.f, m_Car->GetForward());
 }

@@ -5263,7 +5263,7 @@ void CAutomobile::ProcessBuoyancy()
         bool bForceKillRotor = false;
         if (m_nModelIndex != MODEL_SEASPAR && m_nModelIndex != MODEL_LEVIATHN) {
             auto fUsedForce = std::max(1.0F, fBuoyancyForceZ * 8.0F);
-            auto vecMoveForceHeli = (vecBuoyancyForce * -2.0F) / fUsedForce;
+            auto vecMoveForceHeli = ExeDivide(vecBuoyancyForce * -2.0F, fUsedForce); // 0x6A8E5C: call 0x4119D0
             ApplyMoveForce(vecMoveForceHeli);
             m_vecTurnSpeed *= fSpeedMult;
             if (fBuoyancyForceZ <= 0.9F)

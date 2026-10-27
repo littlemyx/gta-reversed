@@ -1424,8 +1424,8 @@ void CBike::ProcessControl() {
             movingSpeedLimit = 0.005f;
         }
 
-        m_vecForce  = (m_vecForce + m_vecMoveSpeed) / 2.0f;
-        m_vecTorque = (m_vecTorque + m_vecTurnSpeed) / 2.0f;
+        m_vecForce  = ExeDivide(m_vecForce + m_vecMoveSpeed, 2.0f); // 0x4119D0
+        m_vecTorque = ExeDivide(m_vecTorque + m_vecTurnSpeed, 2.0f); // 0x4119D0
 
         forceLimit *= CTimer::GetTimeStep();
         bool bIsSettled = m_vecForce.SquaredMagnitude() <= forceLimit * forceLimit;

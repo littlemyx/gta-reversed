@@ -115,7 +115,7 @@ void CTaskSimpleCarCloseDoorFromOutside::StartAnim(CPed const* ped) {
         return false;
     }()) {
         if (m_veh->IsAutomobile()) {
-            m_veh->AsAutomobile()->m_damageManager.SetDoorOpen((eDoors)m_door);
+            m_veh->AsAutomobile()->m_damageManager.SetDoorOpen_Component((tComponent)m_door); // 0x64B203..0x64B25B: *_Component accessors (m_door is a TARGET_DOOR 8..11; SetDoorOpen(eDoors) ignored it)
         }
         m_animHasFinished = true;
     } else {

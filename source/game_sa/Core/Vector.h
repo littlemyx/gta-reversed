@@ -256,6 +256,14 @@ constexpr inline CVector operator/(const CVector& vec, float dividend) {
     return { vec.x / dividend, vec.y / dividend, vec.z / dividend };
 }
 
+//! The exe's `operator/(CVector, float)` (0x4119D0): `fld1; fdiv divisor; fst inv; fmul` per component = a multiplication by the float-rounded reciprocal, NOT a component-wise
+//! division (differs in the last bit for ~1/4 of the inputs). Use it at the sites whose exe code CALLS 0x4119D0 (SYSTEMIC-1 list in .notes/reports/SYSTEMIC-1.md); the plain operator
+//! above stays for sites where the exe divides per component (or where it was not checked).
+constexpr inline CVector ExeDivide(const CVector& vec, float divisor) {
+    const float inv = 1.0f / divisor;
+    return { vec.x * inv, vec.y * inv, vec.z * inv };
+}
+
 constexpr inline CVector operator*(float multiplier, const CVector& vec) {
     return { vec.x * multiplier, vec.y * multiplier, vec.z * multiplier };
 }

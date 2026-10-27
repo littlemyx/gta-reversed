@@ -254,4 +254,48 @@ static void TestMisc() {
         for (size_t i = 0; i < ga.b.size(); i += 4) if (std::memcmp(&ga.b[i], &ge.b[i], 4)) { char t[80]; std::snprintf(t, sizeof t, " [+%zX got %02X%02X%02X%02X exe %02X%02X%02X%02X]", i, ga.b[i+3], ga.b[i+2], ga.b[i+1], ga.b[i], ge.b[i+3], ge.b[i+2], ge.b[i+1], ge.b[i]); d += t; }
         return false;
     });
+    // SYSTEMIC-1: (uint32)CTimer::GetTimeStepInMS(). The exe never calls a function for it: every caller inlines `fld [ms_fTimeStep]; fmul [0.02f 0x858B38]; fmul [1000.f 0x858C4C];
+    // call _ftol (0x821B40)` (CTaskSimpleFall::ProcessPed 0x67FB35 etc.). The stub below is exactly those 18 exe bytes (read from the mapped exe, checked) + the exe's own _ftol, so the row
+    // compares the port's float expression with the real x87 sequence at PC=24: each fmul is rounded to 24 bits, so ts == 1.0 gives 20 ms in BOTH (an extended-precision evaluation would give 19).
+    // Case i sweeps a block of every 4th positive float pattern in [1e-5, 16); the first case also tries the special values.
+    {
+        static uint8* stub = nullptr;
+        if (!stub) {
+            stub = (uint8*)VirtualAlloc(nullptr, 64, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+            std::memcpy(stub, (const void*)0x67FB35, 18);
+            static const uint8 want[18] = { 0xD9,0x05,0x5C,0xCB,0xB7,0x00, 0xD8,0x0D,0x38,0x8B,0x85,0x00, 0xD8,0x0D,0x4C,0x8C,0x85,0x00 };
+            if (std::memcmp(stub, want, 18)) { std::printf("  SYSTEMIC-1: exe bytes at 0x67FB35 are not the expected fld/fmul/fmul\n"); std::exit(2); }
+            stub[18] = 0xB8; *(uint32_t*)(stub + 19) = 0x821B40;   // mov eax, _ftol
+            stub[23] = 0xFF; stub[24] = 0xD0;                      // call eax   (_ftol: eax = (int)st0, pops st0)
+            stub[25] = 0xC3;
+        }
+        Run("CTimer::GetTimeStepInMS sweep 0xB7CB5C", [](Rng&, std::string& d) {
+            static int caseNo = 0; static int lastPc = 0;
+            const int pc = (int)(_controlfp(0, 0) & _MCW_PC) == _PC_24 ? 24 : 53;
+            if (pc != lastPc) { lastPc = pc; caseNo = 0; }
+            const int ci = caseNo++;
+            auto exeMs = [&](float ts) { std::memcpy((void*)0xB7CB5C, &ts, 4); return (int)((int (__cdecl*)())stub)(); };
+            auto portMs = [&](float ts) { CTimer::ms_fTimeStep = ts; return (int)(uint32)CTimer::GetTimeStepInMS(); };
+            std::vector<float> v;
+            if (ci == 0) for (float f : { 1.f, 0.5f, 2.f, 3.f, 0.25f, 0.02f, 0.00001f, 0.99999994f, 1.0000001f, 4.f, 5.f, 8.f, 10.f, 20.f, 50.f, 100.f, 1000.f }) v.push_back(f);
+            const uint32_t lo = 0x3727C5ACu, blk = 1u << 16, st = 4;
+            for (uint32_t b = lo + (uint32_t)ci * blk; b < lo + ((uint32_t)ci + 1) * blk && b < 0x41800000u; b += st) v.push_back(BitsF(b));
+            const float save = CTimer::ms_fTimeStep;
+            for (float ts : v) {
+                const int a = portMs(ts), e = exeMs(ts);
+                if (a != e) { CTimer::ms_fTimeStep = save; d = "ts " + F(ts) + " got " + std::to_string(a) + " exe " + std::to_string(e); return false; }
+            }
+            CTimer::ms_fTimeStep = save;
+            return true;
+        }, 2700);
+    }
+    // SYSTEMIC-1: CVector operator/(CVector, float) of the exe (0x4119D0) is a multiplication by the float-rounded reciprocal; ExeDivide() is its port twin (the plain operator/ divides per component).
+    Run("ExeDivide(CVector,float) 0x4119D0", [](Rng& r, std::string& d) {
+        const CVector v = GenV(r, PickScale(r)); const float s = r.below(8) ? GenF(r, PickScale(r), S_NAN | S_ZERO | S_TINY | S_HUGE | S_INF) : (float)(1 + r.below(8));   // no denormal divisor: 1/s overflows float, the exe keeps the extended range for z (never reached: divisors are masses / steps / counts)
+        CVector got = ExeDivide(v, s), exe;
+        oracle::Fn<CVector* __cdecl(CVector*, const CVector*, float)>(0x4119D0)(&exe, &v, s);
+        if (SameV(got, exe)) return true;
+        d = "v " + F(v.x) + "," + F(v.y) + "," + F(v.z) + " s " + F(s) + " got " + F(got.x) + "," + F(got.y) + "," + F(got.z) + " exe " + F(exe.x) + "," + F(exe.y) + "," + F(exe.z);
+        return false;
+    });
 }

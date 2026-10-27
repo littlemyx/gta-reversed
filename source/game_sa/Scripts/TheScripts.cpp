@@ -719,6 +719,15 @@ void CTheScripts::ClearSpaceForMissionEntity(const CVector& pos, CEntity* ourEnt
         false
     );
 
+    // Exe 0x486B6C..0x486B90: pre-pass nulling every colliding ped that is in a vehicle, before any vehicle is deleted below.
+    // The lazy IsInVehicle() test inside the loop saw already freed peds (RemovePed cleared bInVehicle/m_pVehicle) and ran
+    // GetMatrix()/GetColModel() on dead pool slots (leaked matrix-list links).
+    for (auto& entity : std::span{ colEntities.data(), (size_t)numColliding }) {
+        if (entity != ourEntity && entity->GetIsTypePed() && entity->AsPed()->bInVehicle) {
+            entity = nullptr;
+        }
+    }
+
     auto* ourColData = ourEntity->GetColData();
     if (!ourColData) {
         return;
@@ -726,28 +735,11 @@ void CTheScripts::ClearSpaceForMissionEntity(const CVector& pos, CEntity* ourEnt
 
     // Disable suspension lines of vehicles.
     const auto cdNumLines = std::exchange(ourColData->m_nNumLines, 0);
-#ifdef NOTSA_PORTABLE
-    // 0x486B00: the exe first drops (from the list) every ped that is in a vehicle (CPed::bInVehicle), BEFORE any entity is
-    // processed: those peds are removed together with their vehicle in the loop below. Testing the flag lazily (as the
-    // code below does) looks at a ped that was already removed by RemovePed / ~CPed (pool slot freed, bInVehicle cleared),
-    // so GetMatrix() on it allocated a matrix link (list 1) owned by a dead pool slot that no destructor ever released.
-    for (auto& entity : std::span{ colEntities.data(), (size_t)numColliding }) {
-        if (entity && entity != ourEntity && entity->GetIsTypePed() && entity->AsPed()->bInVehicle) {
-            entity = nullptr;
-        }
-    }
-#endif
 
     for (auto& entity : std::span{ colEntities.data(), (size_t)numColliding }) {
-#ifdef NOTSA_PORTABLE
         if (!entity || entity == ourEntity) {
             continue;
         }
-#else
-        if (!entity || entity == ourEntity || (entity->GetIsTypePed() && entity->AsPed()->IsInVehicle())) {
-            continue;
-        }
-#endif
 
         std::array<CColPoint, 32> colPoints{};
         const auto                numCollisions = CCollision::ProcessColModels(
@@ -787,9 +779,7 @@ void CTheScripts::ClearSpaceForMissionEntity(const CVector& pos, CEntity* ourEnt
             CCarCtrl::RemoveFromInterestingVehicleList(vehicle);
             CWorld::Remove(vehicle);
             delete vehicle;
-#ifdef NOTSA_PORTABLE
-            continue; // exe: `else if` - the freed vehicle is not examined as a ped
-#endif
+            continue; // exe: the ped test is an `else` - never touch the freed vehicle
         }
 
         if (entity->GetIsTypePed() && !entity->AsPed()->IsPlayer() && entity->AsPed()->CanBeDeleted()) {

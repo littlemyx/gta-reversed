@@ -727,7 +727,7 @@ CTask* CTaskComplexEnterCar::CreateSubTask(eTaskType taskType, CPed* ped) {
 
             if (m_Car->IsAutomobile()) {
                 if (!m_Car->IsDoorMissingU32(m_TargetDoor)) {
-                    m_Car->AsAutomobile()->m_damageManager.SetDoorOpen((eDoors)m_TargetDoor);
+                    m_Car->AsAutomobile()->m_damageManager.SetDoorOpen_Component((tComponent)m_TargetDoor); // 0x63E221..0x63E270 (CreateSubTask): *_Component accessors, m_TargetDoor is a TARGET_DOOR 8..11 (SetDoorOpen(eDoors) ignored it)
                 }
             }
         }

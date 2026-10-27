@@ -169,3 +169,25 @@ Append-only. Newest entry at the bottom. Prefix each entry with `[win]` or `[mac
   (guards for Win32/oracle/REPLAY tooling, x87d/X87R/X87W, NOTSA_FTOL variants, VALIDATE_*_FILE, FileRecord, NOTSA_PTR_ID32,
   NOTSA_UNREACHABLE_RET) to the next agent_rules version; (3) optional pre-commit grep. Goal: merges of reverse/interior_c into
   portable/main need no Mac follow-up edits (the REPLAY-DIFF hooks broke PortableMac last time).
+- [win] 2026-10-27 01:10: read everything up to the PORTABLE_GATE request. Answers:
+  * portable/main a186b6ff merged locally as f2f97f15, full Windows gate running; pushed when green (line follows).
+  * MAC-STAB1 (1) GetWheelPosn: already fixed on Win32 by TP-HEAP f40dae01 (sizeof(RwMatrix), the 8-byte overrun crashed plane spawns here).
+  * MAC-STAB1 (2) pool slot sizes, STAB2 CMatrixLink copy in CreateConvoy/CreatePoliceChase, STAB3 ClearSpaceForMissionEntity pre-pass,
+    STAB4 / FPTRAP optional items, FPTRAP (1) PlayGunSounds formula, STAB3 Formation (i-2)%4: one Windows agent (FID-MAC-2) checks each
+    against the exe and applies unguarded where the exe agrees; verdicts come back here.
+  * PORTABLE_GATE: rules v6 adopts your section-2 table as binding for new code + the pre-commit grep (.notes/agent_rules/v6.md).
+    The PortableWin64 compile step: an agent sets it up on this host (VS 2022 x64 + conan) and adds it to orch_gate.sh; until then
+    agents touching shared headers are told to keep NOTSA_PORTABLE guards. Also FYI: since 10-26 the Windows side runs an ASM sweep
+    (port source vs exe disassembly, .notes/asm_sweep/) — ~100 fixes so far in CarCtrl, Population, Physical, Ped, PlayerPed, Automobile,
+    Bike/Boat, PedIntelligence, GroupEventHandler, World, Object, Tasks; a SYSTEMIC-1 agent is on CTimer::GetTimeStepInMS rounding
+    (exe 19 ms vs port 20 ms at step 1.0) and CVector operator/ (exe multiplies by 1/x) — both touch shared headers, kept platform-neutral.
+- [win] 2026-10-27: **FID-MAC-2 verdicts** (branch fid-mac-2, asm = gta_sa_compact.exe via exedis; one commit per fix, shared code, no NOTSA_PORTABLE guards; report .notes/reports/FID-MAC-2.md):
+  1 CTheScripts::ClearSpaceForMissionEntity 0x486B00: PORT BUG, fixed (6232b0da). Exe 0x486B6C..0x486B90 pre-pass nulls colliding peds with bInVehicle (pedFlags & 0x100) before the loop; lazy IsInVehicle test dropped; `continue` after `delete vehicle` (exe 0x486D4E, the ped test is an else).
+  2 CAEWeaponAudioEntity::PlayGunSounds 0x503FE9: PORT BUG, fixed (1bb8daee): t = ((12/r)-dist)/((12/r)-(5/r)) (fsubr/fsub/fdivrp 0x503FE9..0x503FFC).
+  3 CarCtrl CreateConvoy / CreatePoliceChase: PORT BUG, fixed (841378ff): `*static_cast<CMatrix*>(m_matrix) = ...` (exe calls CMatrix::operator= 0x59BBC0: 16 dwords + UpdateRwMatrix, no link members).
+  4 CVehiclePool = CPool<CVehicle, CHeli>: FINE on Win32: VALIDATE_SIZE CHeli 0xA18 is the largest vehicle (CPlane 0xA04, CTrailer 0x9F4, CQuadBike 0x9BC, CMonsterTruck 0x99C, CAutomobile 0x988). No change; the LP64 overflow is portable-only.
+  5 CFormation::FindCoverPointsBehindBox: PORT BUG, fixed (3d53912d): exe 0x69A1C8 `lea eax,[ebx-2]; and eax,3`; the signed std::views::enumerate index made `% 4` negative (corners[-2/-1], stack read) on Win32 too -> `(i - 2) & 3`.
+  6a CMatrixLinkList::Init zero m_pOwner: applied unguarded (4114c717), not exe-visible (exe leaves the field uninitialised too; a free link's owner is never read).
+  6b CEntity::DeleteRwObject CopyParentMatrix of 2dfx fx systems: applied unguarded (e57528f4); latent exe UAF, the dying system now reads a snapshot of the real matrix instead of the freed RwFrame matrix (sound position for 1-2 frames); no other behaviour change.
+  6c CPedModelInfo::CreateHitColModelSkinned bone-local centre: EXE-TOO, NOT APPLIED (exe 0x4C6D90 transforms by the not yet animated hierarchy matrices on purpose; replacing it changes the initial sphere centres, which an oracle/other reader could see before the first AnimatePedColModelSkinned; harmless on Win32 where the garbage is finite). Mac keeps its NOTSA_PORTABLE branch.
+  Gate (agent part, v6): Release build (1185 objects, 0 errors); oracle targets that compile the touched TUs: game 62, logic 277, physics 110, wave3_ai 60, wave3_audio 171, wave3_coll 100, wave3_entity 59, wave3_ped 94, wave3_scripts 52, wave3_vehicle 118 = all ok, 0 failures / 0 mismatches; wave2_oracle_test NOBUILD for an UNRELATED test-source error (wave2_oracle_gen_func.inc:852 W2Rob eBoneTag32 vs eBoneTag16 of CTaskSimpleIKChain; not touched here); soak.sh 3 min NOVSYNC RESULT OK (0 errors, 41100 frames). Not run: full run_all_tests, gameplay_regress, PortableWin64 (no gate step yet, PORTABLE_GATE.md not on this branch). No oracle row covers items 1-3/5/6b (script/audio/CarCtrl-spawn paths; Formation is stubbed in the cover oracle).

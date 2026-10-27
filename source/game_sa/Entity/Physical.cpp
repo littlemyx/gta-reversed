@@ -2927,7 +2927,7 @@ bool CPhysical::ApplyCollision(CEntity* theEntity, CColPoint& colPoint, float& t
                                 {
                                     float fColDamageMultiplier = entityObjectInfo->m_fColDamageMultiplier;
                                     float fCollisionDamage = fColDamageMultiplier + fColDamageMultiplier;
-                                    CVector vecMoveForce = (colPoint.m_vecNormal * thisDamageIntensity) / fCollisionDamage;
+                                    CVector vecMoveForce = ExeDivide(colPoint.m_vecNormal * thisDamageIntensity, fCollisionDamage); // 0x548E07: call 0x4119D0
                                     ApplyForce(vecMoveForce, vecDistanceToPointFromThis, true);
                                 }
 
@@ -4317,7 +4317,7 @@ bool CPhysical::ProcessCollisionSectorList(int32 sectorX, int32 sectorY)
                                     if (!physicalFlags.bSubmergedInWater) {
                                         m_vecFrictionMoveSpeed.x -= vecMoveSpeed.x * 0.3f / (float)totalColPointsToProcess;
                                         m_vecFrictionMoveSpeed.y -= vecMoveSpeed.y * 0.3f / (float)totalColPointsToProcess;
-                                        m_vecFrictionTurnSpeed += (vecTurnSpeed * -0.3f) / (float)totalColPointsToProcess;
+                                        m_vecFrictionTurnSpeed += ExeDivide(vecTurnSpeed * -0.3f, (float)totalColPointsToProcess); // 0x54CE95: call 0x4119D0
                                     }
                                 }
                             }

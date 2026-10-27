@@ -140,7 +140,7 @@ void CCollisionEventScanner::ScanForCollisionEvents(CPed* victim, CEventGroup* e
                     const auto  colModel = veh->GetColModel();
                     const CVector bbMin = colModel->GetBoundingBox().m_vecMin; // 0x6046CF
                     const CVector bbMax = colModel->GetBoundingBox().m_vecMax; // 0x6046EA
-                    const CVector bbCenterOS = CVector{ bbMax.x + bbMin.x, bbMin.y + bbMax.y, bbMax.z + bbMin.z } / 2.f; // 0x4119D0
+                    const CVector bbCenterOS = ExeDivide(CVector{ bbMax.x + bbMin.x, bbMin.y + bbMax.y, bbMax.z + bbMin.z }, 2.f); // 0x604739: call 0x4119D0
                     const CVector bbCenterWS = MultiplyMatrixWithVectorX87(veh->GetMatrix(), bbCenterOS); // 0x59C890
 
                     const CVector pedPos = ped.GetPosition();

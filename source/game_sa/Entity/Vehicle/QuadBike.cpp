@@ -83,6 +83,7 @@ CQuadBike* CQuadBike::Constructor(int32 modelIndex, eVehicleCreatedBy createdBy)
 
 // 0x6CE2B0
 void CQuadBike::Fix() {
+    m_damageManager.ResetDamageStatus(); // 0x6CE2BC
     for (auto i = 2; i < 6; i++) { // from DOOR_LEFT_FRONT to MAX_DOORS
         m_damageManager.SetDoorStatus(static_cast<eDoors>(i), eDoorStatus::DAMSTATE_NOTPRESENT);
     }

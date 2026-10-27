@@ -242,6 +242,7 @@ CBike::CBike(int32 modelIndex, eVehicleCreatedBy createdBy) : CVehicle(createdBy
     vehicleFlags.bLowVehicle = false;
     vehicleFlags.bIsBig = false;
     vehicleFlags.bIsVan = false;
+    vehicleFlags.bIsBus = false; // 0x6BF79A: `and byte [this+0x429], 0xF0` clears all four low bits (Van, Bus, Big, LowVehicle)
 
     m_bLeanMatrixCalculated = false;
     m_mLeanMatrix = *m_matrix;

@@ -63,4 +63,4 @@
 | S18c | rest of S18b | 11 | pending | Heli.cpp, Plane.cpp |
 | S20d | rest of S20c | 10 | partial 6/10 (3 M, 3 fixed) -> S20e | Ped.cpp |
 | S20e | rest of S20d | 4 | partial 2/4 (1 M, 1 fixed) -> S20f | Ped.cpp |
-| S20f | rest of S20e | 2 | pending | Ped.cpp |
+| S20f | rest of S20e | 2 | done (1 M, 1 fixed, ctor audio subobjects unread) | Ped.cpp |

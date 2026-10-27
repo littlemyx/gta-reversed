@@ -34,7 +34,9 @@ CTaskComplexFleePoint::CTaskComplexFleePoint(CVector const& fleeFromPos, bool pe
     m_safeDist{safeDist},
     m_durationMs{durationMs}
 {
-    m_timer.Start(durationMs);
+    if (durationMs != -1) { // exe 0x65B3D8: `cmp eax, -1; je` then the unguarded store
+        m_timer.StartUnguarded(durationMs);
+    }
 }
 
 CTaskComplexFleePoint::CTaskComplexFleePoint(const CTaskComplexFleePoint& o) :
@@ -167,7 +169,7 @@ CTask* CTaskComplexFleePoint::ControlSubTask(CPed* ped) {
 
     if (m_newFleePosWasSet) {
         m_newFleePosWasSet = false;
-        m_timer.Start(m_durationMs);
+        m_timer.StartUnguarded(m_durationMs); // exe 0x65B6E2: no -1 / negative test here
         return CreateFirstSubTask(ped); // Do it all over again :D
     } else if (m_timer.IsOutOfTime()) {
         return CreateSubTask(TASK_COMPLEX_SEQUENCE);

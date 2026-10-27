@@ -96,9 +96,7 @@ bool CTaskComplexUseMobilePhone::MakeAbortable(CPed* ped, eAbortPriority priorit
     }
 
     // Not `m_timer.Start(m_nDuration)`: the original stores unconditionally (also for a negative duration)
-    m_timer.m_nStartTime = CTimer::GetTimeInMS();
-    m_timer.m_nInterval  = m_nDuration;
-    m_timer.m_bStarted   = true;
+    m_timer.StartUnguarded(m_nDuration);
 
     if (m_pSubTask->GetTaskType() == TASK_SIMPLE_PHONE_OUT) {
         m_pSubTask->MakeAbortable(ped, priority, event);

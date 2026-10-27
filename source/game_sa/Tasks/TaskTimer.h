@@ -38,6 +38,14 @@ public:
         return false;
     }
 
+    /// SYSTEMIC-2: the exe sites that inline `start = now; interval = x; started = 1` without the `x >= 0` test (CTaskComplexFleePoint::ProcessPed 0x65B6E2, CTaskComplexUseMobilePhone::MakeAbortable).
+    /// Some exe sites DO test (StandStill 0x62F386, LieInBed 0x677414, EnterCarAs{Driver,Passenger}Timed 0x6405C9 / 0x640697): use `Start` there.
+    void StartUnguarded(int32 interval) {
+        m_nStartTime = CTimer::GetTimeInMS();
+        m_nInterval  = interval;
+        m_bStarted   = true;
+    }
+
     void StartIfNotAlready(int32 interval) { // NOTSA
         if (!m_bStarted) {
             m_nStartTime = CTimer::GetTimeInMS();

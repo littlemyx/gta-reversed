@@ -1,0 +1,12 @@
+addr	file	line	cls	fn	oc
+0x6C58E0	source/game_sa/Entity/Vehicle/Heli.cpp	86	CHeli	SearchLightCone	D
+0x6C6520	source/game_sa/Entity/Vehicle/Heli.cpp	87	CHeli	GenerateHeli	D
+0x6C79A0	source/game_sa/Entity/Vehicle/Heli.cpp	88	CHeli	UpdateHelis	S
+0x6C7050	source/game_sa/Entity/Vehicle/Heli.cpp	101	CHeli	ProcessControl	D
+0x6C94A0	source/game_sa/Entity/Vehicle/Plane.cpp	108	CPlane	PreRender	D
+0x6C9260	source/game_sa/Entity/Vehicle/Plane.cpp	116	CPlane	ProcessControl	D
+0x6CADD0	source/game_sa/Entity/Vehicle/Plane.cpp	117	CPlane	ProcessControlInputs	D
+0x6CB7C0	source/game_sa/Entity/Vehicle/Plane.cpp	118	CPlane	ProcessFlyingCarStuff	D
+0x6CC4B0	source/game_sa/Entity/Vehicle/Plane.cpp	119	CPlane	VehicleDamage	D
+0x6CCCF0	source/game_sa/Entity/Vehicle/Plane.cpp	124	CPlane	BlowUpCar	D
+0x6CD2F0	source/game_sa/Entity/Vehicle/Plane.cpp	126	CPlane	DoPlaneGenerationAndRemoval	D

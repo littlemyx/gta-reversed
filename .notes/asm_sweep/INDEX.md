@@ -59,4 +59,5 @@
 | S22e | rest of S22d | 9 | pending | CarCtrl.cpp |
 | S27c | rest of S27b | 5 | pending | World.cpp |
 | S14b | rest of S14 | 23 | pending | TaskSimpleJump.cpp, TaskSimplePickUpBike.cpp, TaskSimplePlayerOnFire.cpp, TaskSimplePlayerOnFoot.cpp, TaskSimpleSay.cpp, TaskSimpleSetPedAsAutoDriver.cpp, TaskSimpleShakeFist.cpp, TaskSimpleSitDown.cpp, TaskSimpleSitIdle.cpp |
-| S18b | rest of S18 | 24 | pending | Heli.cpp, Plane.cpp |
+| S18b | rest of S18 | 24 | partial 13/24 (12 M, 1 fixed) -> S18c | Heli.cpp, Plane.cpp |
+| S18c | rest of S18b | 11 | pending | Heli.cpp, Plane.cpp |

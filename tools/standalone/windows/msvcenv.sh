@@ -5,6 +5,7 @@
 # and converts the result (PATH, INCLUDE, LIB, LIBPATH, WindowsSDK*, ...) into exports for this bash. It also puts python / cmake / ninja / conan
 # on PATH when winget (or the python.org installer) put them somewhere the inherited PATH does not know yet (the registry User/Machine PATH is merged in,
 # and a real python is placed in front of the Microsoft Store "python" alias).
+# GTA_MSVC_ARCH=x64 source this file -> x64 environment (cl for x64) for the PortableWin64 build; do not mix x86 and x64 in one shell (the "already loaded" shortcut is keyed per arch).
 # Env (same names as gtash.cmd):  GTA_MSVC_VER (default 14.51)   GTA_VSINSTALL (default: newest VS found by vswhere with the VC x86/x64 tools)
 #                                 GTA_MSVCENV_SCRATCH (cache dir, default C:/gta-scratch; the vcvars dump is cached per VS path + toolset)
 #                                 GTA_MSVCENV_FORCE=1 (ignore the cache / the "already loaded" shortcut)
@@ -59,7 +60,8 @@ if [ -z "$_gta_vs" ] || [ ! -f "$(cygpath -u "$_gta_vs")/VC/Auxiliary/Build/vcva
   return 1 2>/dev/null || exit 1
 fi
 _gta_vsu="$(cygpath -u "$_gta_vs")"
-_gta_key="$(printf '%s|%s|x86' "$_gta_vs" "$_gta_ver" | cksum | cut -d' ' -f1)"
+_gta_arch="${GTA_MSVC_ARCH:-x86}"   # x86 (default; the Win32 gate) or x64 (the PortableWin64 gate)
+if [ "$_gta_arch" = x86 ]; then _gta_key="$(printf '%s|%s|x86' "$_gta_vs" "$_gta_ver" | cksum | cut -d' ' -f1)"; else _gta_key="$(printf '%s|%s|%s' "$_gta_vs" "$_gta_ver" "$_gta_arch" | cksum | cut -d' ' -f1)"; fi
 
 # ---- 3. import (or reuse) the vcvarsall environment ------------------------------------------------------------------------------------------
 if [ "${GTA_MSVCENV_LOADED:-}" = "$_gta_key" ] && [ -z "${GTA_MSVCENV_FORCE:-}" ] && command -v cl >/dev/null 2>&1; then
@@ -72,8 +74,13 @@ else
     _gta_bat="$_gta_scratch/msvcenv-$_gta_key.cmd"
     cat > "$_gta_bat" <<EOF
 @echo off
+rem a previously loaded (x86) VS environment must not leak into the dump: vcvars PREPENDS to these
+set INCLUDE=
+set LIB=
+set LIBPATH=
+set EXTERNAL_INCLUDE=
 set > "$(cygpath -w "$_gta_scratch")\\msvcenv-$_gta_key.before"
-call "$_gta_vs\\VC\\Auxiliary\\Build\\vcvarsall.bat" x86 -vcvars_ver=$_gta_ver >nul
+call "$_gta_vs\\VC\\Auxiliary\\Build\\vcvarsall.bat" $_gta_arch -vcvars_ver=$_gta_ver >nul
 if errorlevel 1 exit /b 1
 set > "$(cygpath -w "$_gta_scratch")\\msvcenv-$_gta_key.after"
 EOF
@@ -120,4 +127,4 @@ PY
   . "$_gta_cache"
   export GTA_MSVCENV_LOADED="$_gta_key"
 fi
-unset _gta_need _gta_t _gta_regpath _gta_front _gta_back _gta_oldifs _gta_d _gta_u _gta_p _gta_pf86 _gta_vswhere _gta_vs _gta_vsu _gta_key _gta_ver _gta_scratch _gta_cache _gta_bat _gta_py
+unset _gta_need _gta_t _gta_regpath _gta_front _gta_back _gta_oldifs _gta_d _gta_u _gta_p _gta_pf86 _gta_vswhere _gta_vs _gta_vsu _gta_key _gta_arch _gta_ver _gta_scratch _gta_cache _gta_bat _gta_py

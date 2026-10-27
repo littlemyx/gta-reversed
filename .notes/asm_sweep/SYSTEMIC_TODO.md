@@ -1,0 +1,2 @@
+- GetSectorX/Y: port x/50+60, exe x*0.02f+60 (ASM-S27b); differs at sector borders only; check all sector helpers (World.h) against the exe, like ExeDivide.
+- Object.cpp ~326/759/783: virtual SetIsStatic where the exe may set only the bit (ASM-MIX2).

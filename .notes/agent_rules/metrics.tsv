@@ -239,3 +239,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-27	ASM-S21b	v6	asm sweep (partial)	174938	57	25	PlayerPed S21b 5/9: 1 fixed (KeepAreaAroundPlayerClear flee tolerance global 0xC18CF0); 4 big left -> S21c
 2026-10-27	ASM-S13b	v6	asm sweep (partial)	200680	50	21	Tasks S13b 8/12: 3 fixed (GetUp stuck-under-car test inverted, JetPack fx key time reset, RenderJetPack jetball rotX sign); 4 big left -> S13c
 2026-10-27	ASM-S22d	v6	asm sweep (partial)	190852	51	18	CarCtrl S22d 6/15: 1 fixed (PossiblyRemoveVehicle look-down range 70 not 75); 9 left -> S22e
+2026-10-27	ASM-S27b	v6	asm sweep (partial)	?	?	?	World S27b 10/15: 4 fixed (ShutDown IplStore, RemoveFallenCars car nodes, RemoveFallenPeds limit, RepositionOneObject street lights) + FindGroundZFor3DCoord buildings only; 5 left -> S27c

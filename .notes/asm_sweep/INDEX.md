@@ -46,7 +46,7 @@
 | S16b | rest of S16 | 25 | partial 8/25 (2 M, 5 fixed, 1 U) -> S16c | Automobile.cpp |
 | S17b | rest of S17 | 22 | partial 5/22 (2 M, 3 fixed) -> S17c | Bike.cpp, Bmx.cpp, Boat.cpp |
 | S21b | rest of S21 | 9 | partial 5/9 (4 M, 1 fixed) -> S21c | PlayerPed.cpp |
-| S27b | rest of S27 | 15 | pending | World.cpp |
+| S27b | rest of S27 | 15 | partial 10/15 (6 M, 4 fixed +1 FindGroundZ) -> S27c | World.cpp |
 | S29b | rest of S29 | 5 | done (1 M, 4 fixed) | HandObject.cpp, Object.cpp |
 | S13b | rest of S13 | 12 | partial 8/12 (5 M, 3 fixed) -> S13c | TaskSimpleGetUp.cpp, TaskSimpleGoToPoint.cpp, TaskSimpleGoToPointFine.cpp, TaskSimpleGunControl.cpp, TaskSimpleHoldEntity.cpp, TaskSimpleInAir.cpp, TaskSimpleJetPack.cpp |
 | S11b | rest of S11 | 9 | pending | TaskSimpleCarSetPedInAsDriver.cpp, TaskSimpleCarSetPedInAsPassenger.cpp, TaskSimpleCarSetPedSlowDraggedOut.cpp, TaskSimpleClimb.cpp |
@@ -57,3 +57,4 @@
 | S21c | rest of S21b | 4 | pending | PlayerPed.cpp |
 | S13c | rest of S13b | 4 | pending | TaskSimpleGunControl.cpp, TaskSimpleInAir.cpp, TaskSimpleJetPack.cpp |
 | S22e | rest of S22d | 9 | pending | CarCtrl.cpp |
+| S27c | rest of S27b | 5 | pending | World.cpp |

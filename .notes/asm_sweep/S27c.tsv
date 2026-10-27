@@ -1,0 +1,6 @@
+addr	file	line	cls	fn	oc
+0x566140	source/game_sa/World.cpp	47	None	TestSphereAgainstSectorList<CPtrListDoubleLink<CPhysical*>>	D
+0x567750	source/game_sa/World.cpp	52	None	TriggerExplosionSectorList<CPtrListDoubleLink<CPhysical*>>	D
+0x5684A0	source/game_sa/World.cpp	53	None	Process	D
+0x56B5E0	source/game_sa/World.cpp	55	None	ProcessLineOfSightSector	S
+0x566EE0	source/game_sa/World.cpp	56	None	ProcessLineOfSightSectorList<CPtrListDoubleLink<CPhysical*>>	S

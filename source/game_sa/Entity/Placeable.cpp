@@ -8,7 +8,13 @@
 
 #include "Placeable.h"
 #ifdef NOTSA_PORTABLE
+#ifdef _WIN32
+// no <execinfo.h> on Windows: the diagnostic back traces (env NOTSA_MATRIX_CHECK) are simply empty there
+inline int backtrace(void**, int) { return 0; }
+inline void backtrace_symbols_fd(void* const*, int, int) {}
+#else
 #include <execinfo.h>
+#endif
 static void NotsaMatrixTraceDtor(CPlaceable* self);
 #endif
 

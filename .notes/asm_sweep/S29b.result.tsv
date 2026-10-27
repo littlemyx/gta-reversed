@@ -1,0 +1,6 @@
+addr	function	verdict	asm range	note	fix commit
+0x59EE80	CHandObject::Render	NOT_REACHED		token budget of ASM-MIX1 spent on S26c (two large functions)	
+0x5A2130	CObject::ProcessControl	NOT_REACHED		token budget of ASM-MIX1 spent on S26c (two large functions)	
+0x5A02E0	CObject::SpecialEntityCalcCollisionSteps	NOT_REACHED		token budget of ASM-MIX1 spent on S26c (two large functions)	
+0x5A07D0	CObject::ProcessSamSiteBehaviour	NOT_REACHED		token budget of ASM-MIX1 spent on S26c (two large functions)	
+0x5A0D90	CObject::ObjectDamage	NOT_REACHED		token budget of ASM-MIX1 spent on S26c (two large functions)	

@@ -1,0 +1,6 @@
+# ASM-MIX1 (S26c, S29b, S21b) - budget stop after S26c
+- S26c (Physical.cpp, 2): 0 MATCH, 2 fixed, 0 UNSURE, 0 not reached. Both functions are ~0xB00 bytes each; compared line by line against the exe.
+  - ApplyCollision-2 0x548680: fffc8913 - entity-turn-force branch adds moving-component speed under the flag set (0x549751, port negated it); this-turn-force branch tests the ENTITY type (0x54934F, port tested this); push-back compare against the 8-byte 0.01 (0x549A48).
+  - ApplySoftCollision-2 0x54A2C0: 6f8ff0fd - static-entity block join 0x54A86C (still static -> return false, port true; non-object made non-static -> AddToMovingList + elastic collision, port skipped it); follow-path blend numerator a + 2b (0x54A901); 8-byte 0.01 (0x54B30E). Caller discards the result.
+- S29b (5): 0 / 0 / 0 / 5 not reached. S21b (9): 0 / 0 / 0 / 9 not reached. Reason: the rules' hard token budget was spent on S26c; the functions are marked NOT_REACHED in the result files and need a follow-up slice.
+- Gate (worktree): Release build ok; physics_oracle_test PC24 74 strict / 0 real (as TESTFIX baseline); gameplay_oracle_test PC24 1146 / 1084 (CExplosion::AddExplosion) identical with the unmodified Physical.cpp, i.e. pre-existing, not from this slice; soak RESULT: OK.

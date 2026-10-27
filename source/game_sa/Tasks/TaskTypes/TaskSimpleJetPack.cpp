@@ -171,13 +171,13 @@ void CTaskSimpleJetPack::RenderJetPack(CPed* ped) {
         }
 
         auto currHeading = ped->m_fAimingRotation;
-        if (currHeading >= m_PrevHeading + PI) {
+        if (currHeading > m_PrevHeading + PI) { // 0x67F72C: strict compares
             currHeading -= TWO_PI;
-        } else if (currHeading <= m_PrevHeading - PI) {
+        } else if (currHeading < m_PrevHeading - PI) { // 0x67F748
             currHeading += TWO_PI;
         }
         const auto headingDelta = std::clamp(currHeading - m_PrevHeading, -0.2f, 0.2f);
-        const auto rotX         = std::clamp(RadiansToDegrees(m_ThrustAngle - headingDelta * 10.f), -90.f, 90.f);
+        const float headingDeltaDeg = RadiansToDegrees(headingDelta) * 10.f; // 0x67F78A: (delta * 57.29578) * 10
 
         const auto ProcessJetBall = [&](const char* jbFrameName, bool bLeftSide) {
             const auto jb = CClumpModelInfo::GetFrameFromName(m_JetPackClump, jbFrameName);
@@ -199,8 +199,12 @@ void CTaskSimpleJetPack::RenderJetPack(CPed* ped) {
                 );
             } else {
                 const auto rotY = m_ThrustStrafe * 45.f;
+                // 0x67F921 (jetball1): ThrustAngle * 57.29578 + headingDeltaDeg; 0x67F999 (jetball2): ThrustAngle * 57.29578 - headingDeltaDeg
+                const float rotXRaw = bLeftSide
+                    ? RadiansToDegrees(m_ThrustAngle) + headingDeltaDeg
+                    : RadiansToDegrees(m_ThrustAngle) - headingDeltaDeg;
                 RotateJB(
-                    rotX,
+                    std::clamp(rotXRaw, -90.f, 90.f),
                     bLeftSide ? std::max(0.f, rotY) : std::min(0.f, rotY)
                 );
             }

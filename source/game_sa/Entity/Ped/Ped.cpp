@@ -3657,8 +3657,9 @@ void CPed::PreRenderAfterTest()
         }();
 
         // Low quality circle below feet shadow
+        // 0x5E68B7: the exe tests `m_pShadowData` only after DoShadowThisFrame (0x5E68AD); the low quality path stores the shadow regardless
         const auto DrawDummyShadow = [&] {
-            if (!m_pShadowData && (!bInVehicle || shadowNeeded)) {
+            if (!bInVehicle || shadowNeeded) {
                 CShadows::StoreShadowForPedObject(
                     this,
                     CTimeCycle::m_fShadowDisplacementX[CTimeCycle::m_CurrentStoredValue],
@@ -3674,7 +3675,7 @@ void CPed::PreRenderAfterTest()
         // FIX_BUGS: Original check was only for 1st player in high FX quality.
         if (g_fx.GetFxQuality() != FX_QUALITY_VERY_HIGH && (g_fx.GetFxQuality() != FX_QUALITY_HIGH || !IsPlayer())) {
             DrawDummyShadow();
-        } else if (const auto b = GetBonePosition(eBoneTag::BONE_ROOT); DistanceBetweenPoints2D(b, TheCamera.GetPosition2D()) <= MAX_DISTANCE_PED_SHADOWS_SQR) {
+        } else if (const auto b = GetBonePosition(eBoneTag::BONE_ROOT); DistanceBetweenPointsSquared2D(b, TheCamera.GetPosition2D()) <= MAX_DISTANCE_PED_SHADOWS_SQR) { // 0x5E67BE: squared distance (no sqrt) vs the squared limit
             const auto IsVehicleRTShadable = [](eVehicleType t) {
                 switch (t) {
                 case VEHICLE_TYPE_BMX:
@@ -3688,8 +3689,8 @@ void CPed::PreRenderAfterTest()
 
             auto drawRealTimeShadow = true;
             if (!physicalFlags.bSubmergedInWater) {
-                if (const auto* veh = GetVehicleIfInOne()) {
-                    drawRealTimeShadow = IsVehicleRTShadable(veh->m_nVehicleSubType);
+                if (bInVehicle) { // 0x5E6801: bInVehicle with m_pVehicle == null gives false
+                    drawRealTimeShadow = m_pVehicle && IsVehicleRTShadable(m_pVehicle->m_nVehicleSubType);
                 }
 
                 if (activeTask) {
@@ -3699,13 +3700,16 @@ void CPed::PreRenderAfterTest()
                     }
                 }
 
-                if (const auto bsp = GetBonePosition(eBoneTag::BONE_SPINE1); IsAlive() && GetPosition().z - 0.2f > bsp.z) {
+                // 0x5E6864: a dead ped (IsAlive false, 0x5E686D -> 0x5E6892) also takes bIsDucking
+                if (const auto bsp = GetBonePosition(eBoneTag::BONE_SPINE1); !IsAlive() || GetPosition().z - 0.2f > bsp.z) {
                     drawRealTimeShadow = bIsDucking;
                 }
 
                 if (drawRealTimeShadow) {
                     g_realTimeShadowMan.DoShadowThisFrame(this);
-                    DrawDummyShadow();
+                    if (!m_pShadowData) { // 0x5E68AD
+                        DrawDummyShadow();
+                    }
                 }
             }
         }
@@ -3717,15 +3721,21 @@ void CPed::PreRenderAfterTest()
     }
     float windMod{};
     const auto rainAffectsPlayer = IsPlayer() && CWindModifiers::FindWindModifier(GetPosition(), &windMod, &windMod) && !CCullZones::PlayerNoRain();
-    const auto drivingOpenTopVeh = IsStateDriving() && IsInVehicle() && (m_pVehicle->IsBike() || m_pVehicle->IsAutomobile() && m_pVehicle->IsOpenTopCar());
+    const auto drivingOpenTopVeh = IsStateDriving() && m_pVehicle /* 0x5E69A3: no bInVehicle test */ && (m_pVehicle->IsBike() || m_pVehicle->IsAutomobile() && m_pVehicle->IsOpenTopCar());
 
     const auto GetHierMatrix = [h = GetAnimHierarchyFromSkinClump(GetRpClump())](AnimationId id) {
         return &RpHAnimHierarchyGetMatrixArray(h)[RpHAnimIDGetIndex(h, id)];
     };
 
-    if (!GetPlayerData() || !GetPlayerData()->m_pPedClothesDesc->IsWearingModel("vest") && !GetPlayerData()->m_pPedClothesDesc->IsWearingModel("torso")) {
+    if (!GetPlayerData() || !GetPlayerData()->m_pPedClothesDesc->IsWearingModel("vest", CLOTHES_MODEL_TORSO) && !GetPlayerData()->m_pPedClothesDesc->IsWearingModel("torso", CLOTHES_MODEL_TORSO)) {
         if (rainAffectsPlayer || drivingOpenTopVeh) {
-            float vehSpeed = drivingOpenTopVeh ? m_pVehicle->GetMoveSpeed().Magnitude() : 0.0f;
+            // 0x5E6A2A: signed speed along the vehicle's forward axis (z, y, x summation order), not the magnitude
+            float vehSpeed = 0.0f;
+            if (drivingOpenTopVeh) {
+                const auto& ms  = m_pVehicle->GetMoveSpeed();
+                const auto& fwd = m_pVehicle->GetForward();
+                vehSpeed = ms.z * fwd.z + ms.y * fwd.y + ms.x * fwd.x;
+            }
 
             if (rainAffectsPlayer) {
                 vehSpeed = std::max(vehSpeed, std::abs(windMod - 1.0f));
@@ -3769,7 +3779,7 @@ void CPed::PreRenderAfterTest()
         const auto angle = X87R(x87::sin(m_Wobble) * -WOBBLE_FACTOR);
         m_Wobble -= CTimer::GetTimeStep() * m_WobbleSpeed;
 
-        if (IsPlayer()) {
+        if (!IsPlayer()) { // 0x5E6EE4: pedType != PLAYER1/PLAYER2 (the port had the test inverted)
             RwMatrixRotate(GetHierMatrix(ANIM_ID_SMKCIG_PRTL_F), &CPedIK::ZaxisIK, angle, rwCOMBINEPRECONCAT);
             RwMatrixRotate(GetHierMatrix(ANIM_ID_DRNKBR_PRTL_F), &CPedIK::ZaxisIK, angle, rwCOMBINEPRECONCAT);
         }
@@ -3777,7 +3787,7 @@ void CPed::PreRenderAfterTest()
     }
 
     if (CWeather::Earthquake > 0.0f) {
-        const auto swing = CGeneral::GetRandomNumberInRange(-CWeather::Earthquake, CWeather::Earthquake);
+        const auto swing = CGeneral::GetRandomNumberInRange(-CWeather::Earthquake, CWeather::Earthquake) * 0.0025f; // 0x5E6FE6: * 0x86C340
 
         RwMatrixRotate(GetHierMatrix(ANIM_ID_FIGHTSH_LEFT), &CPedIK::ZaxisIK, swing, rwCOMBINEPOSTCONCAT);
         RwMatrixRotate(GetHierMatrix(ANIM_ID_GUNMOVE_BWD), &CPedIK::ZaxisIK, swing, rwCOMBINEPOSTCONCAT);
@@ -3817,20 +3827,32 @@ void CPed::PreRenderAfterTest()
                 const auto* colData = pedModelInfo->GetColModel()->GetData();
                 for (const auto& sphere : colData->GetSpheres()) {
                     if (notsa::contains(std::initializer_list<uint8>{ 5, 6, 9 }, sphere.m_Surface.m_nPiece)) {
-                        g_fx.m_Splash->AddParticle(sphere.m_vecCenter + CVector::Random({ -0.08f, -0.08f, -0.08f }, { 0.08f, 0.08f, 0.02f }), s * 50.0f, 0.0f, FxPrtMult_c{ 1.0f, 1.0f, 1.0f, 0.35f, 0.01f, 0.0f, 0.03f });
+                        // 0x5E73EE: two randoms (x, y) then z = center.z + radius * 0x858F34 (0.75); the port drew a third random for z
+                        const FxPrtMult_c mult{ 1.0f, 1.0f, 1.0f, 0.35f, 0.01f, 0.0f, 0.03f };
+                        CVector pos = sphere.m_vecCenter;
+                        pos.x = CGeneral::GetRandomNumberInRange(-0.08f, 0.08f) + pos.x;
+                        pos.y = CGeneral::GetRandomNumberInRange(-0.08f, 0.08f) + pos.y;
+                        pos.z = sphere.m_fRadius * 0.75f + pos.z;
+                        g_fx.m_Splash->AddParticle(pos, s * 50.0f, 0.0f, mult);
                     }
                 }
             }
         }
     }
 
-    if (GetPlayerData() && GetPlayerData()->m_nWetness && GetPlayerData()->m_nWaterCoverPerc < 30u) {
+    // 0x5E750F: signed byte wetness > 0
+    if (GetPlayerData() && static_cast<int8>(GetPlayerData()->m_nWetness) > 0 && GetPlayerData()->m_nWaterCoverPerc < 30u) {
         FxPrtMult_c p{1.0f, 1.0f, 1.0f, 0.2f, 0.15f, 0.0f, 0.1f};
         CVector     pos = GetPosition();
-        pos.x += CGeneral::GetRandomNumberInRange(-0.03f, 0.03f);
-        pos.y += CGeneral::GetRandomNumberInRange(-0.03f, 0.03f);
-        pos.z += CGeneral::GetRandomNumberInRange(-0.8f, 0.2f);
-        p.m_Color.alpha *= (float)GetPlayerData()->m_nWetness * ExeRecip(100.0f);
+        // 0x5E756B: ((rand * 1/32767) * K + pos) - C per axis: x,y K=0.6 C=0.3, z K=1.0 C=0.8 (the port used +-0.03 / lerp)
+        const auto Jitter = [](float base, float k, float c) {
+            const x87d t = static_cast<x87d>(CGeneral::GetRandomNumber()) * static_cast<x87d>(RAND_MAX_FLOAT_RECIPROCAL);
+            return static_cast<float>(t * static_cast<x87d>(k) + static_cast<x87d>(base) - static_cast<x87d>(c));
+        };
+        pos.x = Jitter(pos.x, 0.6f, 0.3f);
+        pos.y = Jitter(pos.y, 0.6f, 0.3f);
+        pos.z = Jitter(pos.z, 1.0f, 0.8f);
+        p.m_Color.alpha = (static_cast<float>(static_cast<int8>(GetPlayerData()->m_nWetness)) * p.m_Color.alpha) * ExeRecip(100.0f); // 0x5E7635: (wetness * alpha) * 0.01
         g_fx.m_WaterSplash->AddParticle(pos, {}, 0.0f, p);
     }
 

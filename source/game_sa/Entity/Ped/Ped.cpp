@@ -3672,8 +3672,13 @@ void CPed::PreRenderAfterTest()
             }
         };
 
+#ifdef FIX_BUGS
         // FIX_BUGS: Original check was only for 1st player in high FX quality.
-        if (g_fx.GetFxQuality() != FX_QUALITY_VERY_HIGH && (g_fx.GetFxQuality() != FX_QUALITY_HIGH || !IsPlayer())) {
+        const bool isShadowedPlayer = IsPlayer();
+#else
+        const bool isShadowedPlayer = m_nPedType == PED_TYPE_PLAYER1; // 0x5E6777: cmp [ped + 0x598], 0
+#endif
+        if (g_fx.GetFxQuality() != FX_QUALITY_VERY_HIGH && (g_fx.GetFxQuality() != FX_QUALITY_HIGH || !isShadowedPlayer)) {
             DrawDummyShadow();
         } else if (const auto b = GetBonePosition(eBoneTag::BONE_ROOT); DistanceBetweenPointsSquared2D(b, TheCamera.GetPosition2D()) <= MAX_DISTANCE_PED_SHADOWS_SQR) { // 0x5E67BE: squared distance (no sqrt) vs the squared limit
             const auto IsVehicleRTShadable = [](eVehicleType t) {

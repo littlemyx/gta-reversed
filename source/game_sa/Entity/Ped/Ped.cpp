@@ -2212,7 +2212,8 @@ void CPed::ProcessBuoyancy()
     if (!IsAlive())
         fBuoyancyMult = 1.8F;
 
-    float fBuoyancy = fBuoyancyMult * m_fMass / 125.0F;
+    // 0x5E1FF8: the exe multiplies by 0.008f (0x863984) here and below, it does not divide by 125
+    float fBuoyancy = fBuoyancyMult * m_fMass * 0.008F;
     CVector vecBuoyancyTurnPoint;
     CVector vecBuoyancyForce;
     if (!mod_Buoyancy.ProcessBuoyancy(this, fBuoyancy, &vecBuoyancyTurnPoint, &vecBuoyancyForce)) {
@@ -2259,13 +2260,8 @@ void CPed::ProcessBuoyancy()
         }
     }
 
-    // Those 4 are called for some reason
-    /*
-    CTimeCycle::GetAmbientRed();
-    CTimeCycle::GetAmbientGreen();
-    CTimeCycle::GetAmbientBlue();
-    CGeneral::GetRandomNumber();
-    */
+    // 0x5E214B: the exe calls GetAmbientRed/Green/Blue (no effect) and rand() (result discarded): the call advances the RNG sequence
+    (void)CGeneral::GetRandomNumber();
 
     // Add splash particle if it's the first frame we're touching water, and
     // the movement of ped is downward, preventing particles from being created
@@ -2285,7 +2281,7 @@ void CPed::ProcessBuoyancy()
     physicalFlags.bSubmergedInWater = true;
     ApplyMoveForce(vecBuoyancyForce);
 
-    if (CTimer::GetTimeStep() / 125.0F < vecBuoyancyForce.z / m_fMass
+    if (CTimer::GetTimeStep() * 0.008F < vecBuoyancyForce.z / m_fMass
         || GetPosition().z + 0.6F < mod_Buoyancy.m_fWaterLevel) {
 
         bIsStanding = false;
@@ -2306,7 +2302,7 @@ void CPed::ProcessBuoyancy()
                 bPlayerSwimmingOrClimbing = true;
             }
             else {
-                auto fAcceleration = vecBuoyancyForce.z / (CTimer::GetTimeStep() * m_fMass / 125.0F);
+                auto fAcceleration = vecBuoyancyForce.z / (CTimer::GetTimeStep() * m_fMass * 0.008F);
                 CEventInWater cEvent(fAcceleration);
                 GetEventGroup().Add(&cEvent, false);
             }
@@ -2315,11 +2311,12 @@ void CPed::ProcessBuoyancy()
                 return;
         }
 
-        float fTimeStep = pow(0.9F, CTimer::GetTimeStep());
-        m_vecMoveSpeed.x *= fTimeStep;
-        m_vecMoveSpeed.y *= fTimeStep;
+        // pow() (the exe's _CIpow, 0x822130) returns its result on the x87 stack: each component is rounded once
+        const x87d p = pow((x87d)0.9F, (double)CTimer::GetTimeStep());
+        m_vecMoveSpeed.x = (float)(m_vecMoveSpeed.x * p);
+        m_vecMoveSpeed.y = (float)(m_vecMoveSpeed.y * p);
         if (m_vecMoveSpeed.z < 0.0F)
-            m_vecMoveSpeed.z *= fTimeStep;
+            m_vecMoveSpeed.z = (float)(m_vecMoveSpeed.z * p);
 
         return;
     }

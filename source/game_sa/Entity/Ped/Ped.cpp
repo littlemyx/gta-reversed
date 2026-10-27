@@ -1903,58 +1903,62 @@ bool CPed::PositionPedOutOfCollision(int32 exitDoor, CVehicle* vehicle, bool fin
 
 /*!
 * @addr     0x5E13C0
-* @brief    Teleport ped to the furthest point from here that isn't colliding with a building or ped.
-* @returns  If there was at lest one such point.
+* @brief    Teleport ped to the closest (grid of 15x15, step 0.5, starting at -3.5 from us) point that isn't colliding with a building/object.
+*           A point not colliding with a vehicle is preferred over one that does.
+* @returns  If there was at least one such point.
+* @note     The exe keeps the best squared distance as a truncated int, starting at 999 (a point is only taken if it is closer than the best so far).
 */
 bool CPed::PositionAnyPedOutOfCollision() {
-    struct Point {
-        CVector pos{};
-        bool    found{};
-        float   distSq{};
-    };
-    Point vehiclePoint{}, noCollPoint{};
+    int32    bestNoCollDist = 999, bestVehDist = 999;
+    bool     foundNoColl = false, foundVeh = false;
+    CVector  noCollPos{}, vehPoint{};
+    CEntity* lastVehTest{}; // The exe (ab)uses the result of the last vehicle test below (edi) as `this`
 
-    // Find 2 points furthest away from us:
-    // - One that is colliding with a vehicle, (vehiclePoint)
-    // - One that isn't colliding with one. (noCollPoint)
-    // Neither point should be colliding with a building or ped.
-    auto testPoint{ GetPosition() };
-    for (auto y = 0; y < 15; y++) {
-        testPoint.y -= 3.5f;
-        for (auto x = 0; x < 15; x++) {
-            testPoint.x -= 3.5f;
+    CVector testPoint{ GetPosition().x, GetPosition().y - 3.5f, GetPosition().z };
+    for (int32 y = 0; y < 15; y++) {
+        testPoint.x = GetPosition().x - 3.5f;
+        for (int32 x = 0; x < 15; x++) {
+            // Z is updated in place and carried over to the next point
+            testPoint = CPedPlacement::FindZCoorForPed(testPoint).first;
 
-            // If we collide with a building or ped skip
-            if (!CWorld::TestSphereAgainstWorld(testPoint, 0.6f, this, /*buildings: */true, false, false, true, false, false)) {
-                continue;
-            }
+            // Skip points colliding with buildings or objects
+            if (!CWorld::TestSphereAgainstWorld(testPoint, 0.6f, this, true, false, false, true, false, false)) {
+                const float dx = testPoint.x - GetPosition().x;
+                const float dy = testPoint.y - GetPosition().y;
+                const float dz = testPoint.z - GetPosition().z;
+                const float distSq = (dz * dz + dy * dy) + dx * dx; // Order of the additions is the exe's
 
-            const auto PossiblyUpdatePoint = [&, this](Point& p) {
-                const auto distSq{ (testPoint - GetPosition()).SquaredMagnitude() };
-                if (distSq < p.distSq) {
-                    p.pos = testPoint;
-                    p.distSq = distSq;
-                    p.found = true;
+                lastVehTest = CWorld::TestSphereAgainstWorld(testPoint, 0.6f, this, false, true, false, false, false, false);
+                if (!lastVehTest) { // Not colliding with a vehicle
+                    if ((float)bestNoCollDist > distSq) {
+                        bestNoCollDist = NOTSA_FTOL(int32, distSq);
+                        noCollPos      = testPoint;
+                        foundNoColl    = true;
+                    }
+                } else {
+                    if ((float)bestVehDist > distSq) {
+                        bestVehDist = NOTSA_FTOL(int32, distSq);
+                        vehPoint    = testPoint;
+                        foundVeh    = true;
+                    }
                 }
-            };
-
-            // Check for collision with vehicles
-            if (CWorld::TestSphereAgainstWorld(testPoint, 0.6f, this, false, /*vehicles: */true, false, false, false, false)) {
-                PossiblyUpdatePoint(vehiclePoint);
-            } else { // Not collided with anything
-                PossiblyUpdatePoint(noCollPoint);
             }
+            testPoint.x += 0.5f;
         }
+        testPoint.y += 0.5f;
     }
 
-    // Set our position to one of the point's
-    if (noCollPoint.found) { // If there was a point not colliding with a vehicle use it
-        SetPosn(noCollPoint.pos);
-    } else if (vehiclePoint.found) { // Otherwise use the other one collided with one (if any)
-        SetPosn(vehiclePoint.pos + CVector{ 0.f, 0.f, GetBoundingBox().m_vecMax.z });
+    if (foundNoColl) { // If there was a point not colliding with a vehicle use it
+        SetPosn(noCollPos);
+        return true;
     }
-
-    return noCollPoint.found || vehiclePoint.found;
+    if (foundVeh) { // Otherwise the closest one colliding with one
+        // NOTE: The exe reads the bounding box of the entity returned by the last vehicle test (edi), where it (presumably) meant `this`
+        const auto* const cm = lastVehTest ? lastVehTest->GetColModel() : GetColModel();
+        SetPosn(CVector{ vehPoint.x, vehPoint.y, vehPoint.z + cm->m_boundBox.m_vecMax.z });
+        return true;
+    }
+    return false;
 }
 
 /*!

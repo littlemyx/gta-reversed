@@ -1534,7 +1534,9 @@ void CAutomobile::ProcessSuspension() {
         wheelSpringForceDampingLimits[i] = 0.0f;
     }
 
-    float forwardSpeed = std::fabs(DotProduct(m_vecMoveSpeed, GetForward()));
+    // 0x6AFB10-0x6AFB9B: the dot product is summed z, y, x in the x87 register and rounded once when stored
+    const auto& fwd0 = GetForward();
+    float forwardSpeed = (float)std::fabs((x87d)m_vecMoveSpeed.z * fwd0.z + (x87d)m_vecMoveSpeed.y * fwd0.y + (x87d)m_vecMoveSpeed.x * fwd0.x);
 
     int32 numWheelLoops = 1;
     if (ModelIndices::IsRhino(m_nModelIndex) && CReplay::Mode != MODE_PLAYBACK) {
@@ -1562,16 +1564,16 @@ void CAutomobile::ProcessSuspension() {
                 suspensionBias = 1.0f - suspensionBias;
 
             float fSuspensionForceLevel = m_pHandlingData->m_fSuspensionForceLevel;
-            if (handlingFlags.bHydraulicGeom && handlingFlags.bHydraulicInst) {
-                if (handlingFlags.bNpcNeutralHandl && GetStatus() == STATUS_PHYSICS) {
-                    suspensionBias = 0.5f;
-                }
-                if (std::fabs(forwardSpeed) < 0.15f) {
-                    fSuspensionForceLevel *= 1.5f;
-                }
+            if (handlingFlags.bHydraulicGeom && handlingFlags.bHydraulicInst && handlingFlags.bNpcNeutralHandl && GetStatus() == STATUS_PHYSICS) {
+                suspensionBias = 0.5f; // 0x6AFF7D-0x6AFFA3
             }
 
-            if (ModelIndices::IsVortex(m_nModelIndex)) {
+            // 0x6AFFAB-0x6B000A: the Vortex scale is the `else` of the hydraulic-installed slow branch (that branch multiplies by 1.5 with the geometry flag, by 1.0 without)
+            if (handlingFlags.bHydraulicInst && std::fabs(forwardSpeed) < 0.15f) {
+                if (handlingFlags.bHydraulicGeom) {
+                    fSuspensionForceLevel *= 1.5f;
+                }
+            } else if (ModelIndices::IsVortex(m_nModelIndex)) {
                 fSuspensionForceLevel *= std::fabs(AsPlane()->m_fAccelerationBreakStatus) * 0.25f + 1.0f;
             }
 
@@ -1612,7 +1614,7 @@ void CAutomobile::ProcessSuspension() {
             if (handlingFlags.bHydraulicInst && dampingForce > 0.1f && fabs(forwardSpeed) < 0.15f)
                 dampingForce = 0.1f;
 
-            if (springLength[i] < 1.0f && !autoFlags.bIsMonsterTruck)
+            if (springLength[i] < 0.99999f /* 0x871258 */ && !autoFlags.bIsMonsterTruck)
                 ApplySpringDampening(
                     dampingForce,
                     wheelSpringForceDampingLimits[i],
@@ -1691,10 +1693,13 @@ void CAutomobile::ProcessSuspension() {
             CVector right = CrossProduct(GetForward(), CVector(0.0f, 0.0f, 1.0f));
             if (fabs(DotProduct(right, GetRight())) < 0.6f) {
                 auto colModel = GetVehicleModelInfo()->GetColModel();
-                CVector force = GetUp() * fDir * rollOnToWheelsForce * m_fTurnMass;
+                // 0x6B0573-0x6B0677: the factor stays in the x87 register: (force*turnMass)*dir, and (force*mass)*dir on the cross product of (0,0,1) x forward (= -right)
+                const x87d turnScale = ((x87d)rollOnToWheelsForce * m_fTurnMass) * fDir;
+                CVector force = { (float)(GetUp().x * turnScale), (float)(GetUp().y * turnScale), (float)(GetUp().z * turnScale) };
                 CVector point = GetRight() * colModel->GetBoundingBox().m_vecMax.x;
                 ApplyTurnForce(force, point);
-                ApplyMoveForce(-right * rollOnToWheelsForce * m_fMass * fDir);
+                const x87d moveScale = ((x87d)rollOnToWheelsForce * m_fMass) * fDir;
+                ApplyMoveForce({ (float)(-right.x * moveScale), (float)(-right.y * moveScale), (float)(-right.z * moveScale) });
             }
         }
     }

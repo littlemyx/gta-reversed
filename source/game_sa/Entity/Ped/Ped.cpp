@@ -5393,7 +5393,7 @@ void CPed::Render() {
             const auto IsPedInRangeOfCamera = [this](auto range) {
                 const auto distSq = (TheCamera.GetPosition() - GetPosition()).SquaredMagnitude();
                 const auto finalRange = range * TheCamera.m_fLODDistMultiplier;
-                return distSq < finalRange * finalRange;
+                return !(distSq > finalRange * finalRange); // 0x5E77D6: fcompp + `test ah,0x41; je` => skipped only when strictly greater (ties / NaN render)
             };
             if (!IsPedInRangeOfCamera(m_pVehicle->IsBoat() ? 40.f : 25.f)) { // Boats have bigger range
                 return;
@@ -5419,7 +5419,7 @@ void CPed::Render() {
     // Render weapon (and gun flash) as well. (Done for local player only if flag is set.)
     if (m_pWeaponObject) {
         if (!GetPlayerData() || GetPlayerData()->m_bRenderWeapon) {
-            if ((!bInVehicle || !GetIntelligence()->GetTaskSwim()) && !GetIntelligence()->GetTaskHold(false)) {
+            if ((!physicalFlags.bSubmergedInWater || !GetIntelligence()->GetTaskSwim()) && !GetIntelligence()->GetTaskHold(false)) { // 0x5E7833: `test [ped+0x40], 0x100` is physicalFlags.bSubmergedInWater, not bInVehicle
                 CVisibilityPlugins::AddWeaponPedForPC(this);
                 if (m_nWeaponGunflashAlphaMP1 > 0 || m_nWeaponGunflashAlphaMP2 > 0) {
                     ResetGunFlashAlpha();

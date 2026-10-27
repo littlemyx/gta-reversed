@@ -69,11 +69,19 @@ bool CTaskSimpleKillPedWithCar::ProcessPed(CPed* ped) {
     const auto& carBB         = carCM->GetBoundingBox();
     const auto& carVel        = m_Car->GetMoveSpeed();
     const auto& carFwd        = m_Car->GetForward();
-    const auto  carIsGoingFwd = carFwd.Dot(carVel) >= 0.f;
+    // 0x65651E-0x656520 (fz*vz + fy*vy) + fx*vx; tested `> 0` at 0x65660B (the exe treats a zero dot as "going backwards")
+    const auto  carIsGoingFwd = (carFwd.z * carVel.z + carFwd.y * carVel.y) + carFwd.x * carVel.x > 0.f;
 
     const auto pedPos     = ped->GetPosition();
     const auto pedToCar   = pedPos - carPos;
-    const auto pedPosOS   = m_Car->GetMatrix().TransformPoint(pedToCar); // Ped's position in the Car's object space
+    // Ped's position in the Car's object space: 0x6564FE-0x65655A, dot products with the car's axes (right, forward, up), summed z-term first
+    const auto& carRight = m_Car->GetRight();
+    const auto& carUp    = m_Car->GetUp();
+    const CVector pedPosOS{
+        (pedToCar.z * carRight.z + pedToCar.y * carRight.y) + pedToCar.x * carRight.x,
+        (pedToCar.z * carFwd.z   + pedToCar.y * carFwd.y)   + pedToCar.x * carFwd.x,
+        (pedToCar.z * carUp.z    + pedToCar.y * carUp.y)    + pedToCar.x * carUp.x,
+    };
     auto       pedHitSide = (eDirection)CPedGeometryAnalyser::ComputePedHitSide(*ped, *m_Car);
 
     eWeaponType killWT = WEAPON_RAMMEDBYCAR;
@@ -109,19 +117,19 @@ bool CTaskSimpleKillPedWithCar::ProcessPed(CPed* ped) {
             ped->m_vecMoveSpeed = m_Car->GetMoveSpeed().Normalized() * t;
         };
 
-        if (carFwd.z <= -0.2f) { // (Inverted) - Back is lifted (0x6566FE)
+        if (carFwd.z < -0.2f) { // (Inverted) - Back is lifted (0x6566EC, strict)
             ApplyMoveSpeed(
-                carBB.m_vecMin.y * carFwd.z + carBB.m_vecMax.x * m_Car->GetUp().z + carPos.z,
+                carBB.m_vecMin.y * carFwd.z + carBB.m_vecMax.z * m_Car->GetUp().z + carPos.z, // 0x6566EE-0x6566FE: max.z (was max.x)
                 carIsGoingFwd
                     ? carBB.m_vecMax.y - carBB.m_vecMin.y
                     : -carBB.m_vecMin.y
             );
-        } else if (carFwd.z >= 0.1f) {
+        } else if (carFwd.z > 0.1f) { // 0x65671F (strict)
             ApplyMoveSpeed(
                 carBB.m_vecMax.y * carFwd.z + carBB.m_vecMax.z * m_Car->GetUp().z + carPos.z, // 0x656730
-                carBB.m_vecMax.y <= 0.f
-                    ? carBB.m_vecMax.y - carBB.m_vecMin.y
-                    : carBB.m_vecMax.y
+                carIsGoingFwd // 0x65673F-0x656754: picked by the direction of travel (was `max.y <= 0`)
+                    ? carBB.m_vecMax.y
+                    : carBB.m_vecMax.y - carBB.m_vecMin.y
             );
         } else {
             ApplyMoveSpeed(
@@ -133,8 +141,9 @@ bool CTaskSimpleKillPedWithCar::ProcessPed(CPed* ped) {
         }
 
         DamageCarBonnet(ped);
-    } else { // 0x656824
-        carDir = FROM_BACK;
+    } else { // 0x656824 - the exe sets carDir = 5 (FROM_FRONT) and the RUNOVERBYCAR weapon here (was FROM_BACK + RAMMEDBYCAR)
+        carDir = FROM_FRONT;
+        killWT = WEAPON_RUNOVERBYCAR;
 
         // Copy paste
         ped->m_vecMoveSpeed = CVector{CVector2D{carVel} * 0.9f};
@@ -169,14 +178,16 @@ bool CTaskSimpleKillPedWithCar::ProcessPed(CPed* ped) {
     ped->GetEventGroup().Add(&eventDmg);
 
     if (FindPlayerVehicle() == m_Car) {
-        const auto f = NOTSA_FTOL(uint32, std::min(250.f, m_Car->GetMoveSpeed().Magnitude() / m_Car->GetMass() * 200'000.f + 80.f));
+        // 0x6563F8-0x656424: speed * (1/mass) (not speed / mass) * 200000 + 80
+        const auto invMass = 1.f / m_Car->GetMass();
+        const auto f = NOTSA_FTOL(uint32, std::min(250.f, m_Car->GetMoveSpeed().Magnitude() * invMass * 200'000.f + 80.f));
         CPad::GetPad()->StartShake(40'000 / (f % 256), f, 0);
     }
 
     ped->bIsStanding       = false;
     ped->bKnockedUpIntoAir = carDir == FROM_BACK;
 
-    m_Car->ApplyMoveForce(pedToCar.Normalized() * std::min(1.f, m_Car->GetMass() * ExeRecip(1400.f)) * -100.f);
+    m_Car->ApplyMoveForce(pedToCar.Normalized() * (std::min(1.f, m_Car->GetMass() * ExeRecip(1400.f)) * -100.f)); // 0x656A29: scalar (min * -100) first, then each component
 
     return true;
 }

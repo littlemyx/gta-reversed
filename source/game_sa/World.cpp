@@ -698,6 +698,8 @@ int32 CWorld::FindPlayerSlotWithVehiclePointer(CEntity* vehiclePtr) {
 // 0x564050
 // This code is mostly similar to the original
 void CWorld::ShutDown() {
+    CIplStore::Shutdown(); // 0x564055 (the port skipped it)
+
     const auto IterateLodLists = [](auto&& fn) {
         for (auto y = 0; y < MAX_LOD_PTR_LISTS_Y; y++) {
             for (auto x = 0; x < MAX_LOD_PTR_LISTS_X; x++) {

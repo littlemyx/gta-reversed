@@ -215,3 +215,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-27	ASM-S16b	v6	asm sweep (partial)	271123	88	24	Automobile S16b 8/25: 5 fixed (BlowUpCar stat/rand/order, CollidingParticles x5, SwingingDoor bonnet, ProcessCarOnFireAndExplode never exploded non-planes + 6 more); 17 left -> S16c; INCIDENT: edit script ran with cwd=main checkout (reverted by orchestrator with user OK)
 2026-10-27	ASM-S17b	v6	asm sweep (partial)	190613	57	19	Bike/Bmx S17b 5/22: 3 fixed (Bmx bunny-hop fade-out, Bike ground-physical ref, CBike ctor flag mask); 17 left -> S17c
 2026-10-27	ASM-MIX1	v6	asm sweep (partial)	241690	77	31	S26c 2/2 fixed (ApplyCollision 3 deviations, ApplySoftCollision 3+); S29b/S21b not reached; flagged gameplay_oracle_test PC24 1146/1084 in CExplosion::AddExplosion (upstream regression)
+2026-10-27	EXPL-REG	v6	regression check	?	?	?	false alarm: AddExplosion 0/0 on origin, local merge and merged tree; MIX1 report came from a stale/odd build

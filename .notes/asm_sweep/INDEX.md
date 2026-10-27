@@ -41,7 +41,7 @@
 | S22c | rest of S22b | 18 | partial 3/18 (3 M) -> S22d | CarCtrl.cpp |
 | S26b | rest of S26 | 9 | partial 7/9 (7 fixed) -> S26c | Physical.cpp |
 | S26c | rest of S26b | 2 | done (2 fixed) | Physical.cpp |
-| S22d | rest of S22c | 15 | pending | CarCtrl.cpp |
+| S22d | rest of S22c | 15 | partial 6/15 (5 M, 1 fixed) -> S22e | CarCtrl.cpp |
 | S20b | rest of S20 | 21 | partial 8/21 (6 M, 2 fixed) -> S20c | Ped.cpp |
 | S16b | rest of S16 | 25 | partial 8/25 (2 M, 5 fixed, 1 U) -> S16c | Automobile.cpp |
 | S17b | rest of S17 | 22 | partial 5/22 (2 M, 3 fixed) -> S17c | Bike.cpp, Bmx.cpp, Boat.cpp |
@@ -56,3 +56,4 @@
 | S17c | rest of S17b | 16 | pending | Bike.cpp, Bmx.cpp, Boat.cpp |
 | S21c | rest of S21b | 4 | pending | PlayerPed.cpp |
 | S13c | rest of S13b | 4 | pending | TaskSimpleGunControl.cpp, TaskSimpleInAir.cpp, TaskSimpleJetPack.cpp |
+| S22e | rest of S22d | 9 | pending | CarCtrl.cpp |

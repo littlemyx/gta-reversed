@@ -1,0 +1,42 @@
+addr	function	verdict	asm_range	note	fix_commit
+0x67D590	CTaskSimpleJump::CheckIfJumpBlocked	NOT_REACHED		token budget
+0x679B80	CTaskSimpleJump::Launch	NOT_REACHED		token budget
+0x67D7A0	CTaskSimpleJump::StartLaunchAnim	NOT_REACHED		token budget
+0x680C60	CTaskSimpleJump::ProcessPed	NOT_REACHED		token budget
+0x653CF0	CTaskSimpleKillPedWithCar::DamageCarBonnet	FIXED	0x653CF0-0x653E94	bonnet speed = PED move speed +/- right*0.1 + up*0.5 (up term added on both coin results; port subtracted it on tails and added to the object's own speed). DoCoinFlip differs from the inlined rand()/32767>0.5 only at rand()==16383 (not fixed)	53e0bf4a
+0x6564A0	CTaskSimpleKillPedWithCar::ProcessPed	FIXED	0x6564A0-0x656AC0	ped pos in car space (TransformPoint -> dot products); going-forward is dot>0; back-lifted branch max.z; nose-up divisor by travel direction; strict -0.2/0.1; last branch carDir=FROM_FRONT + RUNOVERBYCAR; shake/force float order	a1135a60
+0x67D380	CTaskSimpleLand::ProcessPed	MATCH	0x67D380-0x67D544	finished anim reset loop, blend 100, turn-speed/up.z reset, sprint speed 2.0, fat/muscle modifier
+0x62F520	CTaskSimpleOnEscalator::ProcessPed	MATCH	0x62F520-0x62F580	step model ids, GetRadianAngleBetweenPoints(vx,vy,0,0) -> LimitRadianAngle -> +0x55C
+0x64AE90	CTaskSimplePickUpBike::StartAnim	NOT_REACHED		token budget
+0x64D910	CTaskSimplePickUpBike::ProcessPed	NOT_REACHED		token budget
+0x6462D0	CTaskSimplePickUpBike::SetPedPosition	NOT_REACHED		token budget
+0x691870	CTaskSimplePickUpEntity::Constructor-1	MATCH	0x691870-0x6918B8	hold-entity ctor args, +0x3c move-until progress, +0x40..0x48 zero
+0x61BDA0	CTaskSimplePlayHandSignalAnim::ProcessPed	MATCH	0x61BDA0-0x61BDEB	left-arm pointing check (arm 1), temp-object cap 150
+0x61AF60	CTaskSimplePlayHandSignalAnim::StartAnim	FIXED	0x61B11C-0x61B134	right hand object played the LHAND group anim; the exe uses ANIM_GROUP_RHAND (0x50). rest (random 320..324, holding/pointing/weapon single-hand path, fat/slim models) matches	7910ea4e
+0x6335C0	CTaskSimplePlayerOnFire::ProcessPed	NOT_REACHED		token budget
+0x687C20	CTaskSimplePlayerOnFoot::PlayerControlZeldaWeapon	NOT_REACHED		token budget
+0x687F30	CTaskSimplePlayerOnFoot::PlayerControlDucked	NOT_REACHED		token budget
+0x6872C0	CTaskSimplePlayerOnFoot::PlayIdleAnimations	NOT_REACHED		token budget
+0x687530	CTaskSimplePlayerOnFoot::PlayerControlFighter	NOT_REACHED		token budget
+0x6883D0	CTaskSimplePlayerOnFoot::PlayerControlZelda	NOT_REACHED		token budget
+0x6857E0	CTaskSimplePlayerOnFoot::MakeAbortable	NOT_REACHED		token budget
+0x688810	CTaskSimplePlayerOnFoot::ProcessPed	NOT_REACHED		token budget
+0x61A950	CTaskSimpleRunAnim::StartAnim	MATCH	0x61A950-0x61A980
+0x61BAC0	CTaskSimpleRunAnim::ProcessPed	MATCH	0x61BAC0-0x61BAFE
+0x61AD10	CTaskSimpleRunAnimLoopedMiddle::Constructor2	MATCH	0x61AD10-0x61ADEB
+0x61ADF0	CTaskSimpleRunAnimLoopedMiddle::StartAnim	MATCH	0x61ADF0-0x61AE3F
+0x61BCB0	CTaskSimpleRunAnimLoopedMiddle::ProcessPed	MATCH	0x61BCB0-0x61BD6E	loop-back compare polarity (cur>end, cur-step<=end) verified
+0x61BB10	CTaskSimpleRunNamedAnim::StartAnim	MATCH	0x61BB10-0x61BBB4
+0x61B770	CTaskSimpleRunNamedAnim::Clone	MATCH	0x61B770-0x61B809
+0x61BF20	CTaskSimpleRunNamedAnim::ProcessPed	MATCH	0x61BF20-0x61C0C3
+0x61AB00	CTaskSimpleRunNamedAnim::OffsetPedPosition	MATCH	0x61AB00-0x61AB64
+0x61AC50	CTaskSimpleRunTimedAnim::StartAnim	MATCH	0x61AC50-0x61AC80
+0x61BBE0	CTaskSimpleRunTimedAnim::ProcessPed	FIXED	0x61BC4C-0x61BC62	timer started unconditionally (the port CTaskTimer::Start refuses a negative int32 duration and left the timer off: the task never timed out, e.g. sunbathe timeLeft()+1000<0)	976739d8
+0x48E440	CTaskSimpleSay::ProcessPed	NOT_REACHED		token budget
+0x649020	CTaskSimpleSetPedAsAutoDriver::ProcessPed	NOT_REACHED		token budget
+0x692DF0	CTaskSimpleShakeFist::StartAnim	NOT_REACHED		token budget
+0x693BA0	CTaskSimpleShakeFist::ProcessPed	NOT_REACHED		token budget
+0x6379F0	CTaskSimpleSitDown::StartAnim	NOT_REACHED		token budget
+0x639960	CTaskSimpleSitDown::ProcessPed	NOT_REACHED		token budget
+0x631260	CTaskSimpleSitIdle::StartAnim	NOT_REACHED		token budget
+0x637A60	CTaskSimpleSitIdle::ProcessPed	NOT_REACHED		token budget

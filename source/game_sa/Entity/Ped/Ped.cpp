@@ -271,7 +271,7 @@ CPed::CPed(ePedType pedType) : CPhysical(), m_pedIK{CPedIK(this)} {
     m_fAirResistance = 1.f / 175.f;
     m_fElasticity = 0.05f;
     m_nBodypartToRemove = -1;
-    bHasACamera = CGeneral::GetRandomNumber() % 4 != 0;
+    bHasACamera = CGeneral::GetRandomNumber() % 4 == 0; // 0x5E82D9: and al,3 / neg al / sbb eax,eax / inc eax (= the low two bits are zero) -> bit 17
 
     m_weaponAudio.Initialise(this);
     m_pedAudio.Initialise(this);

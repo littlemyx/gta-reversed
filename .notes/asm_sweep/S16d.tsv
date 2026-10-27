@@ -1,0 +1,16 @@
+addr	file	line	cls	fn	oc
+0x6A07A0	source/game_sa/Entity/Vehicle/Automobile.cpp	57	CAutomobile	HydraulicControl	D
+0x6A8C00	source/game_sa/Entity/Vehicle/Automobile.cpp	59	CAutomobile	ProcessBuoyancy	D
+0x6A9680	source/game_sa/Entity/Vehicle/Automobile.cpp	60	CAutomobile	ProcessHarvester	S
+0x6AE850	source/game_sa/Entity/Vehicle/Automobile.cpp	61	CAutomobile	TankControl	D
+0x6A4EC0	source/game_sa/Entity/Vehicle/Automobile.cpp	63	CAutomobile	ProcessCarWheelPair	S
+0x6AF420	source/game_sa/Entity/Vehicle/Automobile.cpp	64	CAutomobile	PlaceOnRoadProperly	D
+0x729B60	source/game_sa/Entity/Vehicle/Automobile.cpp	67	CAutomobile	FireTruckControl	D
+0x6A8580	source/game_sa/Entity/Vehicle/Automobile.cpp	96	CAutomobile	SpawnFlyingComponent	D
+0x6AA290	source/game_sa/Entity/Vehicle/Automobile.cpp	97	CAutomobile	UpdateWheelMatrix	D
+0x6AAB50	source/game_sa/Entity/Vehicle/Automobile.cpp	113	CAutomobile	PreRender	D
+0x6A7650	source/game_sa/Entity/Vehicle/Automobile.cpp	118	CAutomobile	VehicleDamage	D
+0x6B1880	source/game_sa/Entity/Vehicle/Automobile.cpp	139	CAutomobile	ProcessControl	D
+0x6AFB10	source/game_sa/Entity/Vehicle/Automobile.cpp	145	CAutomobile	ProcessSuspension	B
+0x6A65D0	source/game_sa/Entity/Vehicle/Automobile.cpp	153	CAutomobile	SetupSuspensionLines	S
+0x6ACE70	source/game_sa/Entity/Vehicle/Automobile.cpp	154	CAutomobile	ProcessEntityCollision	S

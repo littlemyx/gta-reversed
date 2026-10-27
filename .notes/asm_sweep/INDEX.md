@@ -52,7 +52,7 @@
 | S11b | rest of S11 | 9 | pending | TaskSimpleCarSetPedInAsDriver.cpp, TaskSimpleCarSetPedInAsPassenger.cpp, TaskSimpleCarSetPedSlowDraggedOut.cpp, TaskSimpleClimb.cpp |
 | S12b | rest of S12 | 10 | pending | TaskSimpleDead.cpp, TaskSimpleFight.cpp, TaskSimpleGangDriveBy.cpp |
 | S20c | rest of S20b | 13 | partial 3/13 (2 M, 1 fixed) -> S20d | Ped.cpp |
-| S16c | rest of S16b | 17 | pending | Automobile.cpp |
+| S16c | rest of S16b | 17 | partial 2/17 (2 fixed) -> S16d | Automobile.cpp |
 | S17c | rest of S17b | 16 | pending | Bike.cpp, Bmx.cpp, Boat.cpp |
 | S21c | rest of S21b | 4 | pending | PlayerPed.cpp |
 | S13c | rest of S13b | 4 | pending | TaskSimpleGunControl.cpp, TaskSimpleInAir.cpp, TaskSimpleJetPack.cpp |
@@ -64,3 +64,4 @@
 | S20d | rest of S20c | 10 | partial 6/10 (3 M, 3 fixed) -> S20e | Ped.cpp |
 | S20e | rest of S20d | 4 | partial 2/4 (1 M, 1 fixed) -> S20f | Ped.cpp |
 | S20f | rest of S20e | 2 | done (1 M, 1 fixed, ctor audio subobjects unread) | Ped.cpp |
+| S16d | rest of S16c | 15 | pending | Automobile.cpp |

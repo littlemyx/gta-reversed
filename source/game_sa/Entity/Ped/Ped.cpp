@@ -4811,11 +4811,14 @@ void CPed::MakeTyresMuddySectorList(PtrListType& ptrList)
 * @brief Do sector list processing in a range of -/+2 (Calls MakeTyresMuddySectorList)
 */
 void CPed::DeadPedMakesTyresBloody() {
+    // 0x6B4200: the exe uses the regular 120x120 sectors (floor(c * 0.02f + 60.0f) with 0x858B38 / 0x858B34, clamped to 0..0x77), not the 30x30 LOD lists
+    const auto Sector = [](float c) { return static_cast<int32>(std::floor(c * 0.02f + 60.0f)); };
+
     const auto& pos = GetPosition();
-    const auto startSectorX = std::max(CWorld::GetLodSectorX(pos.x - 2.0f), 0);
-    const auto startSectorY = std::max(CWorld::GetLodSectorY(pos.y - 2.0f), 0);
-    const auto endSectorX   = std::min(CWorld::GetLodSectorX(pos.x + 2.0f), MAX_LOD_PTR_LISTS_X - 1);
-    const auto endSectorY   = std::min(CWorld::GetLodSectorY(pos.y + 2.0f), MAX_LOD_PTR_LISTS_Y - 1);
+    const auto startSectorX = std::max(Sector(pos.x - 2.0f), 0);
+    const auto startSectorY = std::max(Sector(pos.y - 2.0f), 0);
+    const auto endSectorX   = std::min(Sector(pos.x + 2.0f), MAX_SECTORS_X - 1);
+    const auto endSectorY   = std::min(Sector(pos.y + 2.0f), MAX_SECTORS_Y - 1);
 
     CWorld::AdvanceCurrentScanCode();
 
@@ -5396,7 +5399,7 @@ void CPed::Render() {
             const auto IsPedInRangeOfCamera = [this](auto range) {
                 const auto distSq = (TheCamera.GetPosition() - GetPosition()).SquaredMagnitude();
                 const auto finalRange = range * TheCamera.m_fLODDistMultiplier;
-                return distSq < finalRange * finalRange;
+                return !(distSq > finalRange * finalRange); // 0x5E77D6: fcompp + `test ah,0x41; je` => skipped only when strictly greater (ties / NaN render)
             };
             if (!IsPedInRangeOfCamera(m_pVehicle->IsBoat() ? 40.f : 25.f)) { // Boats have bigger range
                 return;
@@ -5422,7 +5425,7 @@ void CPed::Render() {
     // Render weapon (and gun flash) as well. (Done for local player only if flag is set.)
     if (m_pWeaponObject) {
         if (!GetPlayerData() || GetPlayerData()->m_bRenderWeapon) {
-            if ((!bInVehicle || !GetIntelligence()->GetTaskSwim()) && !GetIntelligence()->GetTaskHold(false)) {
+            if ((!physicalFlags.bSubmergedInWater || !GetIntelligence()->GetTaskSwim()) && !GetIntelligence()->GetTaskHold(false)) { // 0x5E7833: `test [ped+0x40], 0x100` is physicalFlags.bSubmergedInWater, not bInVehicle
                 CVisibilityPlugins::AddWeaponPedForPC(this);
                 if (m_nWeaponGunflashAlphaMP1 > 0 || m_nWeaponGunflashAlphaMP2 > 0) {
                     ResetGunFlashAlpha();

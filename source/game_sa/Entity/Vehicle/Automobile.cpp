@@ -2344,7 +2344,7 @@ void CAutomobile::BlowUpCar_Impl(CEntity* dmgr, bool bDontShakeCam, bool bDontSp
             auto& plyrinfo = FindPlayerInfo();
             plyrinfo.m_nHavocCaused += 20;
             plyrinfo.m_fCurrentChaseValue += 10.f;
-            CStats::IncrementStat(STAT_COST_OF_PROPERTY_DAMAGED, CGeneral::GetRandomNumberInRange(4000.f, 10'000.f - 1.f));
+            CStats::IncrementStat(STAT_COST_OF_PROPERTY_DAMAGED, (float)(4000 + CGeneral::GetRandomNumber() % 6000)); // 0x6B37DF: 4000 + rand() % 6000 (an integer-valued stat)
         }
     }
 
@@ -2362,7 +2362,7 @@ void CAutomobile::BlowUpCar_Impl(CEntity* dmgr, bool bDontShakeCam, bool bDontSp
     m_nTimeWhenBlowedUp      = CTimer::GetTimeInMS();
 
     CVisibilityPlugins::SetClumpForAllAtomicsFlag(GetRpClump(), eAtomicComponentFlag::ATOMIC_PIPE_NO_EXTRA_PASSES);
-    m_damageManager.FuckCarCompletely(false);
+    m_damageManager.FuckCarCompletely(bIsForCutScene && bNoExplosion); // 0x6B3C5C: the cut-scene variant passes bNoExplosion (no wheel is torn off, no rand); 0x6B3851: BlowUpCar passes false
 
     const auto isRcShit = (bFixBugs || !bIsForCutScene)
         ? notsa::contains({ MODEL_RCTIGER, MODEL_RCBANDIT }, GetModelId()) // I'm 99% sure they forgot to copy paste this too, but let it be.
@@ -2418,9 +2418,13 @@ void CAutomobile::BlowUpCar_Impl(CEntity* dmgr, bool bDontShakeCam, bool bDontSp
     ChangeLawEnforcerState(false);
 
     if (!bNoExplosion) {
-        CDarkel::RegisterCarBlownUpByPlayer(*this, 0); // Um.... Okay
-
-        gFireManager.StartFire(this, dmgr);
+        if (bIsForCutScene) { // 0x6B3DEA: Darkel first, then the fire
+            CDarkel::RegisterCarBlownUpByPlayer(*this, 0); // Um.... Okay
+            gFireManager.StartFire(this, dmgr);
+        } else { // 0x6B39DF: the fire first, then Darkel
+            gFireManager.StartFire(this, dmgr);
+            CDarkel::RegisterCarBlownUpByPlayer(*this, 0);
+        }
 
         if (bIsForCutScene) { //> 0x6B3E0D
             CExplosion::AddExplosion(this, dmgr, EXPLOSION_MOLOTOV, GetPosition(), 0, bMakeSound, -1.f, bHideExplosionFx);
@@ -2433,7 +2437,7 @@ void CAutomobile::BlowUpCar_Impl(CEntity* dmgr, bool bDontShakeCam, bool bDontSp
             const auto explOffset = CVector{
                 RandomOffset(),
                 RandomOffset(),
-                maxOffset + 0.5f
+                CGeneral::GetRandomNumberInRange(0.f, 1.f) + 0.5f // 0x6B3B0A: the 3rd rand() draw, rand() / 32767 + 0.5 (not maxOffset + 0.5)
             } * GetColModel()->GetBoundingBox().m_vecMax;
             const auto explPos = // Do a matrix transform... manually, because that's fun!
                   GetPosition()
@@ -4892,9 +4896,9 @@ void CAutomobile::dmgDrawCarCollidingParticles(const CVector& position, float fo
             const_cast<CVector&>(position),
             fxDirection,
             speedMag * -10.f,
-            (NOTSA_FTOL(int8, force) / 10 + 4) % 64,
+            (NOTSA_FTOL(int32, force) / 10 + 4) & 0x3F, // 0x6A6E53..6A6E66: the full ftol(force) / 10 + 4, masked with 0x3F (the port cast it to int8)
             m_vecMoveSpeed,
-            eSparkType::SPARK_PARTICLE_SPARK2,
+            eSparkType::SPARK_PARTICLE_SPARK, // 0x6A6E26: sparksType 1
             0.3f,
             1.f
         );
@@ -4910,13 +4914,14 @@ void CAutomobile::dmgDrawCarCollidingParticles(const CVector& position, float fo
         // The higher our speedsq the more particles we create
         const auto numSmokes = std::max(1u, NOTSA_FTOL(uint32, (m_vecMoveSpeed * CTimer::GetTimeStep()).Magnitude() * 4.f));
         for (auto i = 0u; i < numSmokes; i++) {
-            g_fx.m_SmokeHuge->AddParticle(fxPos, {}, 0.f, FxPrtMult_c{ 0.4f, 0.4f, 0.4f, 0.6f, 0.4f, 1.f, 1.f });
+            g_fx.m_SmokeHuge->AddParticle(fxPos, {}, 0.f, FxPrtMult_c{ 0.4f, 0.4f, 0.4f, 0.6f, 0.4f, 1.f, 0.1f } /* 0x6A6E93: life 0.1 */);
         }
     }
 
     // Add debris
-    if (m_vecMoveSpeed.SquaredMagnitude() <= sq(0.25f)) {
-        auto color = CVehicleModelInfo::ms_vehicleColourTable[m_nPrimaryColor] * m_fContactSurfaceBrightness;
+    if (m_vecMoveSpeed.SquaredMagnitude() > sq(0.25f)) { // 0x6A6FD9: skipped when |v|^2 <= 0.0625 (the port had it inverted)
+        auto color = CVehicleModelInfo::ms_vehicleColourTable[m_nPrimaryColor];
+        color.ScaleRGB(m_fContactSurfaceBrightness); // 0x6A700D: only R, G, B are scaled, the alpha stays
         auto rwcolor = color.ToRwRGBA();
         g_fx.AddDebris(fxPos, rwcolor, 0.06f, NOTSA_FTOL(int32, force) / 100 + 1);
     }
@@ -4924,8 +4929,7 @@ void CAutomobile::dmgDrawCarCollidingParticles(const CVector& position, float fo
 
 // 0x6A7090
 void CAutomobile::ProcessCarOnFireAndExplode(bool bExplodeImmediately) {
-    // TODO: Re-order the code to get rid of lambdas here (and of the really deep nesting)
-
+    // 0x6A75FF: the common tail
     const auto DecreaseHealthAndProcess = [this, estatus = m_damageManager.GetEngineStatus()] {
         if (estatus > 225 && m_fHealth > 250.f) {
             m_fHealth -= 2.f;
@@ -4933,6 +4937,7 @@ void CAutomobile::ProcessCarOnFireAndExplode(bool bExplodeImmediately) {
         ProcessDelayedExplosion();
     };
 
+    // 0x6A758D
     const auto SetFxVelocity = [&, this] {
         if (m_pFireParticle) {
             auto bullshit = GetMoveSpeed() * 50.f;
@@ -4941,8 +4946,9 @@ void CAutomobile::ProcessCarOnFireAndExplode(bool bExplodeImmediately) {
         DecreaseHealthAndProcess();
     };
 
+    // 0x6A7174: the position is the engine dummy in OBJECT space (the fx is attached to the frame matrix of the clump)
     const auto CreateFx = [&, this](size_t typ) {
-        auto pos = GetDummyPosition(DUMMY_ENGINE);
+        auto pos = GetDummyPosition(DUMMY_ENGINE, false);
         if (const auto mat = GetModellingMatrix()) {
             m_pFireParticle = g_fxMan.CreateFxSystem(
                 typ == 1
@@ -4961,15 +4967,17 @@ void CAutomobile::ProcessCarOnFireAndExplode(bool bExplodeImmediately) {
     if (m_fHealth < 250.f && GetStatus() != STATUS_WRECKED && !vehicleFlags.bIsDrowning) {
         const auto isSubPlaneOrHeli = notsa::contains({ VEHICLE_TYPE_PLANE, VEHICLE_TYPE_HELI }, m_nVehicleSubType);
 
-        auto partFxToUse = !m_pFireParticle && !isSubPlaneOrHeli ? 1 : 0;
+        size_t partFxToUse = !m_pFireParticle && !isSubPlaneOrHeli ? 1 : 0;
 
         const auto floorTsMS = std::floor(CTimer::GetTimeStepInMS());
-        if (isSubPlaneOrHeli) { // 0x6A7117
+        if (isSubPlaneOrHeli) { // 0x6A71CD
             if (!m_fireParticleCounter) {
                 m_fireParticleCounter = IsInAir() ? 2 : 1;
             }
 
-            if (!bExplodeImmediately) { // 0x6A720B
+            if (bExplodeImmediately) { // 0x6A71F3
+                BlowUpCar(m_pExplosionVictim, false);
+            } else { // 0x6A720B
                 const auto isRcShit = notsa::contains({
                     MODEL_RCBARON,
                     MODEL_RCRAIDER,
@@ -4978,65 +4986,70 @@ void CAutomobile::ProcessCarOnFireAndExplode(bool bExplodeImmediately) {
                     MODEL_RCTIGER
                 }, GetModelId());
 
-                m_fBurnTimer += m_fireParticleCounter || isRcShit
+                m_fBurnTimer += m_fireParticleCounter == 1 || isRcShit // 0x6A7231
                     ? floorTsMS
                     : floorTsMS * ExeRecip(5.f);
                 if (m_fBurnTimer > 5000.f) { // 0x6A72A4
                     BlowUpCar(m_pExplosionVictim, false);
-                } else { //> 0x6A72D9 - Create smoke particle fx
-                    auto fxPrtMult = [&, this]() -> FxPrtMult_c {
-                        if (!isRcShit) {
-                            return { 0.f, 0.f, 0.f, 0.4f, 1.f, 1.f, 0.3f };
-                        }
+                } else { //> 0x6A72BB - Create smoke particle fx
+                    // ctor (r, g, b, a, size, rot, life) = (0, 0, 0, 0.4, 1, 1, 0.3); the RC variants override alpha / size / life only
+                    FxPrtMult_c fxPrtMult{ 0.f, 0.f, 0.f, 0.4f, 1.f, 1.f, 0.3f };
+                    if (isRcShit) {
                         if (GetStatus() == STATUS_REMOTE_CONTROLLED) {
-                            return { 0.f, 0.f, 0.5f, 0.4f, 0.1f, 1.f, 0.1f };
+                            fxPrtMult.m_Color.alpha = 0.5f;
+                            fxPrtMult.m_fSize       = 0.1f;
+                            fxPrtMult.m_fLife       = 0.1f;
+                        } else {
+                            fxPrtMult.m_Color.alpha = 0.15f;
+                            fxPrtMult.m_fSize       = 0.3f;
+                            fxPrtMult.m_fLife       = 0.3f;
                         }
-                        return { 0.f, 0.f, 0.15f, 0.4f, 0.3f, 1.f, 0.3f };
-                    }();
+                    }
                     if (CTimer::GetFrameCounter() % 2 == 0) { // TODO: Don't use frame counter
-                        g_fx.m_SmokeHuge->AddParticle(
-                            GetPosition() + (isRcShit
-                                ? CVector::Random({ -0.7f, -0.7f, 0.f }, { 0.7f, 0.7f, 0.f })
-                                : CVector::Random({ -2.0f, -2.0f, 0.f }, { 2.0f, 2.0f, 0.f })
-                            ),
-                            isRcShit
-                                ? CVector::Random({ -0.5f, -0.5f, 0.f }, { 0.5f, 0.5f, 0.4f })
-                                : CVector::Random({ -1.5f, -1.5f, 0.f }, { 1.5f, 1.5f, 1.0f }),
-                            0.f,
-                            fxPrtMult
-                        );
+                        // 0x6A7351: rand order is vel.x, vel.y, vel.z, pos.x, pos.y (no draw for pos.z)
+                        CVector pos = GetPosition();
+                        CVector vel;
+                        if (isRcShit) {
+                            vel.x = CGeneral::GetRandomNumberInRange(-0.5f, 0.5f);
+                            vel.y = CGeneral::GetRandomNumberInRange(-0.5f, 0.5f);
+                            vel.z = CGeneral::GetRandomNumberInRange(0.f, 0.4f);
+                            pos.x += CGeneral::GetRandomNumberInRange(-0.7f, 0.7f);
+                            pos.y += CGeneral::GetRandomNumberInRange(-0.7f, 0.7f);
+                        } else {
+                            vel.x = CGeneral::GetRandomNumberInRange(-1.5f, 1.5f);
+                            vel.y = CGeneral::GetRandomNumberInRange(-1.5f, 1.5f);
+                            vel.z = CGeneral::GetRandomNumberInRange(0.f, 1.f);
+                            pos.x += CGeneral::GetRandomNumberInRange(-2.f, 2.f);
+                            pos.y += CGeneral::GetRandomNumberInRange(-2.f, 2.f);
+                        }
+                        g_fx.m_SmokeHuge->AddParticle(pos, vel, 0.f, fxPrtMult);
                     }
                 }
 
-                if (notsa::contains({ STATUS_PLAYER, STATUS_REMOTE_CONTROLLED }, GetStatus())) { // 0x6A745D
+                if (notsa::contains({ STATUS_PLAYER, STATUS_REMOTE_CONTROLLED }, GetStatus())) { // 0x6A74F7
                     if (!m_pFireParticle && m_fBurnTimer > 2500.f) {
-                        CreateFx(2);
-                        SetFxVelocity();
-                        return;
+                        partFxToUse = 2;
                     }
-                } else if (!isRcShit && CGeneral::RandomBool(1.2f)) {
+                } else if (!isRcShit && CGeneral::GetRandomNumberInRange(0, 250) < 3) { // 0x6A7499: int rand in [0, 250) < 3
                     CExplosion::AddExplosion(this, m_pExplosionVictim, EXPLOSION_ROCKET, GetPosition(), 0, true, -1.f, false);
                 }
-            
-                if (partFxToUse == 0) {
-                    SetFxVelocity();
-                    return;
-                }
-                CreateFx(partFxToUse);
-                SetFxVelocity();
             }
-        } else {
+        } else { // 0x6A7126
             m_fBurnTimer += floorTsMS;
             if (m_fBurnTimer > 5000.f) {
                 BlowUpCar(m_pExplosionVictim, false);
             }
-            if (partFxToUse == 0) {
-                SetFxVelocity();
-                return;
-            }
         }
+
+        // 0x6A716C
+        if (partFxToUse != 0) {
+            CreateFx(partFxToUse);
+        }
+        SetFxVelocity();
+        return;
     }
 
+    // 0x6A75E2
     m_fBurnTimer = 0.f;
     if (m_pFireParticle) {
         m_pFireParticle->Kill();
@@ -5525,7 +5538,10 @@ void CAutomobile::ProcessSwingingDoor(eCarNodes nodeIdx, eDoors doorIdx)
     if (doorIdx == eDoors::DOOR_BONNET) {
         auto& bonnet = m_doors[eDoors::DOOR_BONNET];
         if ((bonnet.m_dirn & DOOR_EXTRA_DIRN_MASK) == DOOR_AXIS_Y) {
-            bonnet.m_angVel += ((X87R(x87::sin(bonnet.m_angle + 0.1f) * BONNET_SWING_RADIUS)) * m_matrix->GetForward() * m_vecMoveSpeed).ComponentwiseSum();
+            // 0x6A9F12: fsin(angle); fadd 0.1; fmul 0.05 - the 0.1 is added AFTER the sin (the port had sin(angle + 0.1)); the dot product sums z, y, x in that order, then + angVel
+            const x87d swing = X87R(X87R(x87::sin(bonnet.m_angle) + 0.1f) * BONNET_SWING_RADIUS);
+            const auto& fwd  = m_matrix->GetForward();
+            bonnet.m_angVel  = (float)(swing * fwd.z * m_vecMoveSpeed.z + swing * fwd.y * m_vecMoveSpeed.y + swing * fwd.x * m_vecMoveSpeed.x + bonnet.m_angVel);
         }
     }
 

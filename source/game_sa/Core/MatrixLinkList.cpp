@@ -29,6 +29,10 @@ CMatrixLinkList::CMatrixLinkList() : m_head(), m_tail(), m_allocatedListHead(), 
 void CMatrixLinkList::Init(int32 count)
 {
     m_pObjects = new CMatrixLink[count];
+    // Not in the exe: CMatrixLink's constructor leaves m_pOwner uninitialised (heap garbage on a free link instead of "no owner"; MAC-STAB2).
+    for (int32 i = 0; i < count; ++i) {
+        m_pObjects[i].m_pOwner = nullptr;
+    }
 
     m_head.m_pNext = &m_tail;
     m_tail.m_pPrev = &m_head;

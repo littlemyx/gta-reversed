@@ -874,7 +874,9 @@ void CHeli::UpdateHelis() {
 void CHeli::RenderAllHeliSearchLights() {
     ZoneScoped;
 
-    for (auto& light : HeliSearchLights) {
+    // 0x6C7C50 - only the lights added this frame (the exe counts with a uint8 up to `NumberOfSearchLights`), not the stale slots after them
+    for (uint8 i = 0; i < NumberOfSearchLights; i++) {
+        auto& light = HeliSearchLights[i];
         SearchLightCone(
             light.m_nCoronaIndex,
             light.m_vecOrigin,

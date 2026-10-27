@@ -51,7 +51,7 @@
 | S13b | rest of S13 | 12 | partial 8/12 (5 M, 3 fixed) -> S13c | TaskSimpleGetUp.cpp, TaskSimpleGoToPoint.cpp, TaskSimpleGoToPointFine.cpp, TaskSimpleGunControl.cpp, TaskSimpleHoldEntity.cpp, TaskSimpleInAir.cpp, TaskSimpleJetPack.cpp |
 | S11b | rest of S11 | 9 | pending | TaskSimpleCarSetPedInAsDriver.cpp, TaskSimpleCarSetPedInAsPassenger.cpp, TaskSimpleCarSetPedSlowDraggedOut.cpp, TaskSimpleClimb.cpp |
 | S12b | rest of S12 | 10 | pending | TaskSimpleDead.cpp, TaskSimpleFight.cpp, TaskSimpleGangDriveBy.cpp |
-| S20c | rest of S20b | 13 | pending | Ped.cpp |
+| S20c | rest of S20b | 13 | partial 3/13 (2 M, 1 fixed) -> S20d | Ped.cpp |
 | S16c | rest of S16b | 17 | pending | Automobile.cpp |
 | S17c | rest of S17b | 16 | pending | Bike.cpp, Bmx.cpp, Boat.cpp |
 | S21c | rest of S21b | 4 | pending | PlayerPed.cpp |
@@ -61,3 +61,4 @@
 | S14b | rest of S14 | 23 | pending | TaskSimpleJump.cpp, TaskSimplePickUpBike.cpp, TaskSimplePlayerOnFire.cpp, TaskSimplePlayerOnFoot.cpp, TaskSimpleSay.cpp, TaskSimpleSetPedAsAutoDriver.cpp, TaskSimpleShakeFist.cpp, TaskSimpleSitDown.cpp, TaskSimpleSitIdle.cpp |
 | S18b | rest of S18 | 24 | partial 13/24 (12 M, 1 fixed) -> S18c | Heli.cpp, Plane.cpp |
 | S18c | rest of S18b | 11 | pending | Heli.cpp, Plane.cpp |
+| S20d | rest of S20c | 10 | pending | Ped.cpp |

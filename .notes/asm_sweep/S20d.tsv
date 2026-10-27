@@ -1,0 +1,11 @@
+addr	file	line	cls	fn	oc
+0x5E8030	source/game_sa/Entity/Ped/Ped.cpp	68	CPed	Constructor	D
+0x5E57F0	source/game_sa/Entity/Ped/Ped.cpp	95	CPed	PlayFootSteps	D
+0x5E5380	source/game_sa/Entity/Ped/Ped.cpp	96	CPed	DoFootLanded	D
+0x5F0360	source/game_sa/Entity/Ped/Ped.cpp	118	CPed	KillPedWithCar	S
+0x5E65A0	source/game_sa/Entity/Ped/Ped.cpp	135	CPed	PreRenderAfterTest	D
+0x5E1FA0	source/game_sa/Entity/Ped/Ped.cpp	143	CPed	ProcessBuoyancy	D
+0x5E0820	source/game_sa/Entity/Ped/Ped.cpp	145	CPed	PositionPedOutOfCollision	D
+0x5E13C0	source/game_sa/Entity/Ped/Ped.cpp	148	CPed	PositionAnyPedOutOfCollision	D
+0x5E8CD0	source/game_sa/Entity/Ped/Ped.cpp	206	CPed	ProcessControl	D
+0x5E2530	source/game_sa/Entity/Ped/Ped.cpp	215	CPed	ProcessEntityCollision	S

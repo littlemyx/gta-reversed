@@ -1891,19 +1891,21 @@ int32 CAutomobile::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoin
             }
             auto& outcp = outColPoints[numColPts];
             outcp.AssignLikeExe(wheelcp); // 0x6AD584: CALLS 0x40FC80 (partial copy)
-            outcp.m_fDepth = (
-                  std::abs(wheelcp.m_vecNormal.Dot(GetUp()))
-                * std::min(std::abs(GetMoveSpeed().Dot(GetForward())), 0.3f) // Forward speedsq
-                * std::min(0.2f, suspComprDelta)
-                * m_pHandlingData->m_fSuspensionHighSpdComDamp
-            ) * ExeRecip(0.3f);
+            // 0x6AD5B8-0x6AD630: the dot products are summed z,y,x (speed . forward) and z,x,y (normal . up); the factors multiply in the order
+            // |n.up| * min(|v.fwd|, 0.3) * min(0.2, delta) * (1/0.3) * highSpdComDamp (the port multiplied the damping before the 1/0.3)
+            const auto& nrm = wheelcp.m_vecNormal;
+            const auto& up  = GetUp();
+            const auto& fwd = GetForward();
+            const auto& ms  = GetMoveSpeed();
+            const float normalDotUp = std::abs(nrm.z * up.z + nrm.x * up.x + nrm.y * up.y);
+            const float forwardSpeedClamped = std::min(std::abs(ms.z * fwd.z + ms.y * fwd.y + ms.x * fwd.x), 0.3f); // Forward speedsq
+            outcp.m_fDepth = ((((normalDotUp * forwardSpeedClamped) * std::min(0.2f, suspComprDelta)) * ExeRecip(0.3f)) * m_pHandlingData->m_fSuspensionHighSpdComDamp);
             outcp.m_nPieceTypeA = CarWheelToCarPiece((eCarWheel)i);
             outcp.m_nSurfaceTypeA = outcp.m_nSurfaceTypeB = SURFACE_WHEELBASE;
-            if (numColPts + 1 < 32) { // TODO/NOTE: `32` is ProcessColModels output array size
-#ifdef FIX_BUGS
+            // 0x6AD657-0x6AD66F: the exe counts the point (while numColPts < 31) and goes on with the next wheel; the port only counted it (and stopped) under FIX_BUGS,
+            // so in the run build (no FIX_BUGS) the wheel contact points added at buildings were never returned
+            if (numColPts < 31) { // `32` is ProcessColModels output array size
                 numColPts++;
-                break;
-#endif
             }
         }
     }

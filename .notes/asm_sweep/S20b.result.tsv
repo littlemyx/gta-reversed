@@ -1,0 +1,22 @@
+addr	function	verdict	asm_range	note	fix_commit
+0x5E8030	CPed::Constructor	NOT_REACHED		342 lines; budget	
+0x5E8620	CPed::Destructor	MATCH	0x5E8620..0x5E8823	script brain/blip/ref/cover/weapons/audio order equal; exe base audio dtors clear m_pEntity ref (port never registers one: no effect)	
+0x5DF560	CPed::ShoulderBoneRotation	NOT_REACHED		budget	
+0x5E57F0	CPed::PlayFootSteps	NOT_REACHED		budget	
+0x5E5380	CPed::DoFootLanded	NOT_REACHED		budget	
+0x6AE0D0	CPed::MakeTyresMuddySectorList<CPtrListSingleLink<CPhysical*>>	NOT_REACHED		budget	
+0x5F0360	CPed::KillPedWithCar	NOT_REACHED		budget	
+0x5E65A0	CPed::PreRenderAfterTest	NOT_REACHED		budget	
+0x5E1FA0	CPed::ProcessBuoyancy	NOT_REACHED		budget	
+0x5E0820	CPed::PositionPedOutOfCollision	NOT_REACHED		budget	
+0x5E13C0	CPed::PositionAnyPedOutOfCollision	NOT_REACHED		budget	
+0x6B4200	CPed::DeadPedMakesTyresBloody	FIXED	0x6B4200..0x6B440A	port used LOD sector helpers (GetLodSectorX, 30x30, /200) with GetRepeatSector; exe uses regular sectors floor(c*0.02+60) clamp 0..119 (0x77)	1a16c938
+0x5DF910	CPed::SetPedPositionInCar	NOT_REACHED		budget	
+0x5E8CD0	CPed::ProcessControl	NOT_REACHED		budget (400+ lines)	
+0x5E3C30	CPed::SpecialEntityPreCollisionStuff	MATCH	0x5E3C30..0x5E3E88	all branches, flag bits (0x470 b4/b31, phys 0x20/0x4/0x40000000/0xC0), thresholds 0.66/0.001, models 342/441/564/594 equal	
+0x5E3E90	CPed::SpecialEntityCalcCollisionSteps	MATCH	0x5E3E90..0x5E3FE3	clamp/ceil double-call detail already mirrored	
+0x5E7680	CPed::Render	FIXED	0x5E7833; 0x5E77D6	weapon skip tested bInVehicle; exe tests physicalFlags 0x100 (bSubmergedInWater) && GetTaskSwim; camera range skip is strictly-greater in exe (port skipped on ties/NaN)	d1a547c1
+0x5E2530	CPed::ProcessEntityCollision	NOT_REACHED		budget (400+ lines)	
+0x5E4A00	CPed::SetMoveAnim	MATCH	0x5E4A00..0x5E4C2F	jump table 0x5E4C30 decoded; groups/anims/blend deltas/flags equal	
+0x5D5730	CPed::Save	MATCH	0x5D5730..0x5D57D6	
+0x5D4640	CPed::Load	MATCH	0x5D4640..0x5D46DE	

@@ -1963,89 +1963,84 @@ void CAutomobile::ProcessControlInputs(uint8 playerNum) {
     }();
     vehicleFlags.bIsHandbrakeOn = automaticallyHandBrake || plyrpad->GetHandBrake() != 0;
 
+    //> 0x6AD6A8 - forward speed, summed z, y, x like the exe
+    const float fwdvel = GetMoveSpeed().z * GetForward().z + GetMoveSpeed().y * GetForward().y + GetMoveSpeed().x * GetForward().x;
+
     //> 0x6AD7BD - Update steer angle (And  possible control input too)
-    std::tie(m_fRawSteerAngle, m_nLastControlInput) = [&, this]() -> std::pair<float, eControllerType> {
-        // Calculates steering delta for this frame
-        const auto GetSteeringDeltaForFrame = [&, this] {
-            return (-(float)plyrpad->GetSteeringLeftRight() / 128.f - m_fRawSteerAngle) * ExeRecip(5.f) * CTimer::GetTimeStep();
+    {
+        const auto ts           = CTimer::GetTimeStep();
+        const auto steerLR      = plyrpad->GetSteeringLeftRight();
+        const auto mouseMovedX  = CPad::NewMouseControllerState.m_AmountMoved.x;
+        const auto KeyboardSteer = [&](bool mouseEnabledPath) { // 0x6AD8F0 (plain) / 0x6AD831 (mouse enabled): the exe multiplies `* 0.2f * ts` in the first and `* ts * 0.2f` in the second
+            const auto diff = (float)(-(int32)steerLR) * (1.f / 128.f) - m_fRawSteerAngle;
+            m_fRawSteerAngle += mouseEnabledPath ? diff * ts * ExeRecip(5.f) : diff * ExeRecip(5.f) * ts;
+            m_nLastControlInput = eControllerType::KEYBOARD;
         };
-    
         if (!CCamera::m_bUseMouse3rdPerson || !m_bEnableMouseSteering) {
-            return { m_fRawSteerAngle + GetSteeringDeltaForFrame(), eControllerType::KEYBOARD };
-        }
-
-        if (CPad::NewMouseControllerState.m_AmountMoved.x == 0.f && (m_nLastControlInput != eControllerType::MOUSE || plyrpad->GetSteeringLeftRight() != 0)) { // Simplified `if` here
-            return { m_fRawSteerAngle + GetSteeringDeltaForFrame(), eControllerType::KEYBOARD };
-        }
-
-        if (CPad::NewMouseControllerState.m_AmountMoved.x != 0.f || m_fRawSteerAngle != 0.f) {
-            if (!plyrpad->NewState.m_bVehicleMouseLook) {
-                return { m_fRawSteerAngle - CPad::NewMouseControllerState.m_AmountMoved.x * 0.0035f, eControllerType::MOUSE };
+            KeyboardSteer(false);
+        } else if (   mouseMovedX != 0.f
+                   || (m_fRawSteerAngle != 0.f && m_nLastControlInput == eControllerType::MOUSE && steerLR == 0)
+        ) { // 0x6AD873
+            const auto mouseLook = plyrpad->NewState.m_bVehicleMouseLook != 0;
+            if (!mouseLook) {
+                m_fRawSteerAngle += mouseMovedX * -0.0035f;
             }
-
-            if (plyrpad->NewState.m_bVehicleMouseLook || std::abs(m_fRawSteerAngle) <= 0.7f) { // Slowly steer back to 0
-                return { m_fRawSteerAngle * std::pow(0.975f, CTimer::GetTimeStep()), eControllerType::MOUSE };
+            m_nLastControlInput = eControllerType::MOUSE;
+            if (std::abs(m_fRawSteerAngle) < 0.7f || mouseLook) { // 0x6AD8B5: also decays while NOT in mouse look when |steer| < 0.7
+                m_fRawSteerAngle *= std::pow(0.975f, ts);
             }
-
-            return { m_fRawSteerAngle, eControllerType::MOUSE };
-        }
-
-        return { m_fRawSteerAngle, m_nLastControlInput }; // No change
-    }();
+        } else if (steerLR != 0 || m_nLastControlInput != eControllerType::MOUSE) { // 0x6AD80F
+            KeyboardSteer(true);
+        } // else: no change (0x6AD941)
+    }
     m_fRawSteerAngle = std::clamp(m_fRawSteerAngle, -1.f, 1.f);
 
     //> Calculate gas/brake pedal values
-    std::tie(m_GasPedal, m_BrakePedal) = [&, this]() -> std::pair<float, float> {
+    {
+        //> 0x6AD98D - gas input: float(accel - brake) * (1/255), the gang drive-by shoulder buttons only when it is exactly 0
+        float gasPedalInput = (float)(plyrpad->GetAccelerate() - plyrpad->GetBrake()) * ExeRecip(255.f);
+        if (   gasPedalInput == 0.f
+            && plyrdriver
+            && notsa::dyn_cast_if_present<CTaskSimpleGangDriveBy>(plyrdriver->GetTaskManager().GetSimplestActiveTask())
+            && TheCamera.m_aCams[0].m_nMode == MODE_AIMWEAPON_FROMCAR
+        ) {
+            gasPedalInput = (float)(plyrpad->NewState.RightShoulder2 - plyrpad->NewState.LeftShoulder2) * ExeRecip(255.f);
+        }
+        if (m_nModelIndex == (uint16)eModelID::UNLOAD_MODEL && gasPedalInput < 0.f) { // 0x6ADA46: scaled AFTER the 1/255 (the port had it before)
+            gasPedalInput *= 0.3f;
+        }
+        if (!vehicleFlags.bEngineOn && vehicleFlags.bIsDrowning) { // 0x6ADA6C: engine OFF and drowning (the port had engine ON)
+            gasPedalInput = 0.f;
+        }
+
         if (automaticallyHandBrake) { // 0x6ADA8D
-            return { 0.f, 1.f };
-        }
-
-        const auto fwdvel = GetMoveSpeed().Dot(GetForward()); // From the beginning
-
-        //> 0x6AD9CC [moved it here]
-        const auto gasPedalInput = [&, this] {
-            if (vehicleFlags.bEngineOn && vehicleFlags.bIsDrowning) { // Moved up as early out
-                return 0.f;
-            }
-            auto value = plyrpad->GetAccelerate() - plyrpad->GetBrake(); // Rescaled later..
-            if (   !value
-                && notsa::dyn_cast_if_present<CTaskSimpleGangDriveBy>(plyrdriver->GetTaskManager().GetSimplestActiveTask())
-                && TheCamera.m_aCams[0].m_nMode == MODE_AIMWEAPON_FROMCAR
-            ) {
-                value = plyrpad->NewState.RightShoulder2 - plyrpad->NewState.LeftShoulder2; // Rescaled later..
-            }
-            return (value < 0 && m_nModelIndex == (uint16)eModelID::UNLOAD_MODEL
-                ? (float)(value * 0.3f)
-                : (float)(value)
-            ) * ExeRecip(255.f);
-        }();
-
-        if (std::abs(fwdvel) < 0.01f) { // 0x6ADAC6
+            m_GasPedal   = 0.f;
+            m_BrakePedal = 1.f;
+        } else if (std::abs(fwdvel) < 0.01f) { // 0x6ADAC6
             if (plyrpad->GetAccelerate() > 150 && plyrpad->GetBrake() > 150) {
+                m_GasPedal      = (float)plyrpad->GetAccelerate() * ExeRecip(255.f);
+                m_BrakePedal    = (float)plyrpad->GetBrake() * ExeRecip(255.f);
                 m_bDoingBurnout = true;
-                return {
-                    (float)plyrpad->GetAccelerate() * ExeRecip(255.f),
-                    (float)plyrpad->GetBrake() * ExeRecip(255.f)
-                };
             } else {
-                return { gasPedalInput, 0.f };
+                m_GasPedal   = gasPedalInput;
+                m_BrakePedal = 0.f;
             }
-        }
-
-        if (fwdvel >= 0.f) { // 0x6ADBA6
-            if (gasPedalInput < 0.f) { 
-                return { 0.f, std::abs(gasPedalInput) }; // Braking by pressing the reverse button
+        } else if (fwdvel >= 0.f) { // 0x6ADB8B
+            if (gasPedalInput < 0.f) { // Braking by pressing the reverse button
+                m_GasPedal   = 0.f;
+                m_BrakePedal = -gasPedalInput;
             } else {
-                return { gasPedalInput, 0.f };
+                m_GasPedal   = gasPedalInput;
+                m_BrakePedal = 0.f;
             }
+        } else if (gasPedalInput >= 0.f && (m_GasPedal <= 0.5f || fwdvel <= -0.15f)) { // 0x6ADBC1 - Apply braking
+            m_GasPedal   = 0.f;
+            m_BrakePedal = gasPedalInput;
+        } else { // Regular go forwards
+            m_GasPedal   = gasPedalInput;
+            m_BrakePedal = 0.f;
         }
-
-        if (gasPedalInput >= 0.f && (m_GasPedal <= 0.5f || fwdvel <= -0.15f)) { // 0x6ADBD9 - Simplified 
-            return { 0.f, gasPedalInput }; // Apply braking
-        }
-
-        return { gasPedalInput, 0.f }; // Regular go forwards
-    }();
+    }
 
     //> 0x6ADC18 and 0x6ADC64 - Check if we can go towards that direction
     if (m_GasPedal != 0.f && plyrdriver) {
@@ -2058,7 +2053,11 @@ void CAutomobile::ProcessControlInputs(uint8 playerNum) {
         }
     }
 
-    m_fSteerAngle = DegreesToRadians(m_pHandlingData->m_fSteeringLock * std::copysignf(std::powf(m_fRawSteerAngle, 2), m_fRawSteerAngle)); // sign preserving pow
+    //> 0x6ADCDB - steer angle: (steeringLock * deg2rad) * signed square of the raw steer (the exe's order of multiplication)
+    {
+        const float rawSq = m_fRawSteerAngle * m_fRawSteerAngle;
+        m_fSteerAngle = m_pHandlingData->m_fSteeringLock * DEG_TO_RAD * (m_fRawSteerAngle < 0.f ? -rawSq : rawSq);
+    }
 
     //> 0x6ADD28 - Rear wheel steer
     if (m_pHandlingData->m_bHbRearwheelSteer) {
@@ -2069,7 +2068,7 @@ void CAutomobile::ProcessControlInputs(uint8 playerNum) {
 
     //> 0x6ADD81 - Comedy controls stuff
     if (vehicleFlags.bComedyControls) {
-        const auto rndnum = CGeneral::GetRandomNumberInRange(0, 10);
+        const auto rndnum = CGeneral::GetRandomNumber() % 10; // 0x6ADD74: rand() % 10 (idiv), not the scaled range helper
 
         using enum eComedyControlState;
         if (m_comedyControlState != INACTIVE) {
@@ -2079,7 +2078,7 @@ void CAutomobile::ProcessControlInputs(uint8 playerNum) {
             }
         } else {
             m_comedyControlState = [&] {
-                switch (rndnum) { // Using this instead of `rand() % 10`
+                switch (rndnum) {
                 case 0:
                 case 1:
                     return STEER_RIGHT;

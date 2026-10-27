@@ -272,26 +272,30 @@ bool CQuadBike::ProcessAI(uint32& extraHandlingFlags) {
                 ApplyTurnForce(m_matrix->GetUp() * fTurnForce, m_vecCentreOfMass + m_matrix->GetForward());
             }
 
-            if (IsAnyWheelNotMakingContactWithGround() && pad) {
+            // 0x6CE7D9: only when ALL four wheels are in the air (the exe compares each wheel ratio with 1.0)
+            if (m_fWheelsSuspensionCompression[0] == 1.0f && m_fWheelsSuspensionCompression[1] == 1.0f &&
+                m_fWheelsSuspensionCompression[2] == 1.0f && m_fWheelsSuspensionCompression[3] == 1.0f && pad) {
                 float steeringLeftRightProgress = (float)pad->GetSteeringLeftRight() / 128.0f;
                 if (CCamera::m_bUseMouse3rdPerson && fabs(steeringLeftRightProgress) < 0.05f) {
                     steeringLeftRightProgress = std::clamp(CPad::NewMouseControllerState.m_AmountMoved.x * ExeRecip(100.0f), -1.5f, 1.5f);
                 }
+                constexpr float AIR_TURN_SPEED_LIMIT = 0.03f; // 0x871AD0
                 if (vehicleFlags.bIsHandbrakeOn) {
+                    // 0x6CE88D: yaw - the force is applied at the front
                     const float fTurnSpeed_Dot_MatUp = DotProduct(m_vecTurnSpeed, m_matrix->GetUp());
-                    if (fTurnSpeed_Dot_MatUp < 0.029 && steeringLeftRightProgress < 0.0f ||
-                        fTurnSpeed_Dot_MatUp > -0.029 && steeringLeftRightProgress > 0.0f)
+                    if (fTurnSpeed_Dot_MatUp < AIR_TURN_SPEED_LIMIT && steeringLeftRightProgress < 0.0f ||
+                        fTurnSpeed_Dot_MatUp > -AIR_TURN_SPEED_LIMIT && steeringLeftRightProgress > 0.0f)
                     {
                         const float fTurnForce = CTimer::GetTimeStep() * m_fTurnMass * 0.0015f * steeringLeftRightProgress;
-                        ApplyTurnForce(m_matrix->GetRight() * fTurnForce, m_vecCentreOfMass + m_matrix->GetRight());
+                        ApplyTurnForce(m_matrix->GetRight() * fTurnForce, m_vecCentreOfMass + m_matrix->GetForward());
                     }
-                } else if (pad->GetAccelerate()) {
+                } else if (!pad->GetAccelerate()) { // 0x6CE95F: `jne skip` - the roll assist works only while NOT accelerating
                     const float fTurnSpeed_Dot_MatFwd = DotProduct(m_vecTurnSpeed, m_matrix->GetForward());
-                    if (fTurnSpeed_Dot_MatFwd < 0.029 && steeringLeftRightProgress < 0.0f ||
-                        fTurnSpeed_Dot_MatFwd > -0.029 && steeringLeftRightProgress > 0.0f)
+                    if (fTurnSpeed_Dot_MatFwd < AIR_TURN_SPEED_LIMIT && steeringLeftRightProgress < 0.0f ||
+                        fTurnSpeed_Dot_MatFwd > -AIR_TURN_SPEED_LIMIT && steeringLeftRightProgress > 0.0f)
                     {
                         const float fTurnForce = CTimer::GetTimeStep() * m_fTurnMass * 0.0015f * steeringLeftRightProgress;
-                        ApplyTurnForce(m_matrix->GetRight() * fTurnForce, m_vecCentreOfMass + m_matrix->GetRight());
+                        ApplyTurnForce(m_matrix->GetRight() * fTurnForce, m_vecCentreOfMass + m_matrix->GetUp());
                     }
                 }
             }

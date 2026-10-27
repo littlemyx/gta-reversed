@@ -351,7 +351,14 @@ void CGameLogic::RestorePedsWeapons(CPed* ped) {
     for (auto& weapon : SavedWeapons) {
         const auto IsModelLoaded = [](int id) { return id == MODEL_INVALID || CStreaming::GetInfo(id).IsLoaded(); };
 
-        if (rng::all_of(weapon.GetWeaponInfo().GetModels(), IsModelLoaded)) { // FIX_BUGS: They checked modelId1 twice
+#ifdef FIX_BUGS // They checked modelId1 twice
+        const bool allLoaded = rng::all_of(weapon.GetWeaponInfo().GetModels(), IsModelLoaded);
+#else
+        // 0x441D67-0x441D87 (exe): `(m1 != -1 && !loaded(m1)) || (m2 != -1 && !loaded(m1))` - the second test reads modelId1's state again (modelId1 == -1 reads before the info array: treated as loaded)
+        const auto& wi = weapon.GetWeaponInfo();
+        const bool allLoaded = IsModelLoaded(wi.m_nModelId1) && (wi.m_nModelId2 == MODEL_INVALID || wi.m_nModelId1 == MODEL_INVALID || IsModelLoaded(wi.m_nModelId1));
+#endif
+        if (allLoaded) {
             ped->GiveWeapon(weapon.m_Type, weapon.m_TotalAmmo, true);
         }
     }

@@ -4651,7 +4651,10 @@ void CAutomobile::ProcessCarWheelPair(eCarWheel leftWheel, eCarWheel rightWheel,
             if (driveWheels && m_bDoingBurnout) {
                 brake = 0.0f;
                 traction = 0.0f;
-                CVector point = std::min(1.0f, 3000.0f / m_fTurnMass) * -0.002f * m_fTurnMass * m_fSteerAngle * GetRight();
+                // 0x6A4FC8-0x6A5036: min(1, 3000/turnMass) * (-0.002*turnMass), then *steerAngle, then * right
+                const float turnMassTerm = -0.002f * m_fTurnMass;
+                const float burnoutScale = std::min(1.0f, 3000.0f / m_fTurnMass) * turnMassTerm;
+                CVector point = GetRight() * (burnoutScale * m_fSteerAngle);
                 ApplyTurnForce(contactPoints[leftWheel], point);
             } else if (!handlingFlags.bNosInst && gHandlingDataMgr.HasRearWheelDrive(m_pHandlingData->m_nVehicleId)) {
                 traction *= m_fTireTemperature;
@@ -4708,7 +4711,7 @@ void CAutomobile::ProcessCarWheelPair(eCarWheel leftWheel, eCarWheel rightWheel,
             if (TreatAsPlayerForCollisions())
             {
                 adhesion *= g_surfaceInfos.GetWetMultiplier(m_wheelColPoint[leftWheel].m_nSurfaceTypeB);
-                adhesion *= std::min(suspensionBias * m_pHandlingData->m_fSuspensionForceLevel * 4.0f * (1.0f - m_fWheelsSuspensionCompression[leftWheel]), 2.0f);
+                adhesion *= std::min((((1.0f - m_fWheelsSuspensionCompression[leftWheel]) * 4.0f) * m_pHandlingData->m_fSuspensionForceLevel) * suspensionBias, 2.0f) /* 0x6A5506 / 0x6A598A: the exe's factor order */;
                 if (handlingFlags.bOffroadAbility2 && g_surfaceInfos.GetAdhesionGroup(m_wheelColPoint[leftWheel].m_nSurfaceTypeB) > ADHESION_GROUP_ROAD)
                 {
                     adhesion *= 1.4f;
@@ -4758,7 +4761,7 @@ void CAutomobile::ProcessCarWheelPair(eCarWheel leftWheel, eCarWheel rightWheel,
             if (TreatAsPlayerForCollisions())
             {
                 adhesion *= g_surfaceInfos.GetWetMultiplier(m_wheelColPoint[rightWheel].m_nSurfaceTypeB);
-                adhesion *= std::min(suspensionBias * m_pHandlingData->m_fSuspensionForceLevel * 4.0f * (1.0f - m_fWheelsSuspensionCompression[rightWheel]), 2.0f);
+                adhesion *= std::min((((1.0f - m_fWheelsSuspensionCompression[rightWheel]) * 4.0f) * m_pHandlingData->m_fSuspensionForceLevel) * suspensionBias, 2.0f) /* 0x6A5506 / 0x6A598A: the exe's factor order */;
                 if (handlingFlags.bOffroadAbility2 && g_surfaceInfos.GetAdhesionGroup(m_wheelColPoint[rightWheel].m_nSurfaceTypeB) > ADHESION_GROUP_ROAD)
                 {
                     adhesion *= 1.4f;

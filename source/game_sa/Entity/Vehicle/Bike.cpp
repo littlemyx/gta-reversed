@@ -1245,7 +1245,7 @@ int32 CBike::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoints) {
             switch (entity->GetType()) {
             case ENTITY_TYPE_VEHICLE:
             case ENTITY_TYPE_OBJECT: {
-                CEntity::ChangeEntityReference(m_aGroundPhysicalPtrs[i], entity->AsPhysical());
+                CEntity::SetEntityReference(m_aGroundPhysicalPtrs[i], entity->AsPhysical()); // 0x6BE1DC: the exe stores + registers, it doesn't clean up the previous reference
 
                 m_aGroundOffsets[i] = cp.m_vecPoint - entity->GetPosition();
                 if (entity->GetIsTypeVehicle()) {

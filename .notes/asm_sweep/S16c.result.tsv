@@ -1,0 +1,18 @@
+addr	function	verdict	asm range	note	fix commit
+0x6A07A0	HydraulicControl	NOT_REACHED	-	token budget (stopped at the agent budget after ProcessAI)	-
+0x6A8C00	ProcessBuoyancy	NOT_REACHED	-	token budget (stopped at the agent budget after ProcessAI)	-
+0x6A9680	ProcessHarvester	NOT_REACHED	-	token budget (stopped at the agent budget after ProcessAI)	-
+0x6AE850	TankControl	NOT_REACHED	-	token budget (stopped at the agent budget after ProcessAI)	-
+0x6A4EC0	ProcessCarWheelPair	NOT_REACHED	-	token budget (stopped at the agent budget after ProcessAI)	-
+0x6AF420	PlaceOnRoadProperly	NOT_REACHED	-	token budget (stopped at the agent budget after ProcessAI)	-
+0x729B60	FireTruckControl	NOT_REACHED	-	token budget (stopped at the agent budget after ProcessAI)	-
+0x6A8580	SpawnFlyingComponent	NOT_REACHED	-	token budget (stopped at the agent budget after ProcessAI)	-
+0x6AA290	UpdateWheelMatrix	NOT_REACHED	-	token budget (stopped at the agent budget after ProcessAI)	-
+0x6AAB50	PreRender	NOT_REACHED	-	token budget (stopped at the agent budget after ProcessAI)	-
+0x6A7650	VehicleDamage	NOT_REACHED	-	token budget (stopped at the agent budget after ProcessAI)	-
+0x6B1880	ProcessControl	NOT_REACHED	-	token budget (stopped at the agent budget after ProcessAI)	-
+0x6B4800	ProcessAI	FIXED	0x6B4800-0x6B5712 (all)	NpcAntiRoll wrote the SHARED handling data COM.z every frame (exe: own m_vecCentreOfMass.z = (min.z-h.z)*0.4+h.z); park target = (pos+fwd*10)+right*3; car-less-3-wheel COM order steer*maxZ*mult*counter; turn-force weight (min*cwm)*turnMass; ApplyTurnForce vector = axis*((ts*steer)*cwm); sand drag wet order ((1-wet)*mass*ts)*0.005; rest (extra flags, COM, ScanForCrimes, SIMPLE/PHYSICS/ABANDONED/WRECKED/REMOTE/FORCED_STOP/TOWED, driver-by, pad/control input dispatch) matches	6dd5506d
+0x6AFB10	ProcessSuspension	NOT_REACHED	-	token budget (stopped at the agent budget after ProcessAI)	-
+0x6A65D0	SetupSuspensionLines	NOT_REACHED	-	token budget (stopped at the agent budget after ProcessAI)	-
+0x6ACE70	ProcessEntityCollision	NOT_REACHED	-	token budget (stopped at the agent budget after ProcessAI)	-
+0x6AD690	ProcessControlInputs	FIXED	0x6AD690-0x6ADEE1	mouse steer: decay when |steer|<0.7 also without mouse look (port never decayed); keyboard delta is *ts*0.2 on the mouse-enabled path and *0.2*ts on the plain path; gas input rescaled by 1/255 BEFORE the x0.3 UNLOAD_MODEL scale; engine-OFF+drowning zeroes it (port: engine ON, and returned before the burnout test); no null-driver deref; forward speed sums z,y,x; steer angle (lock*deg2rad)*signedSq; comedy roll rand()%10 (port scaled range helper); brake/rear steer/handbrake/slow-down/engine-broken/direction-check matched	9a79cb4d

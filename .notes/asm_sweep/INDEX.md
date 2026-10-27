@@ -19,7 +19,7 @@
 | S15 | game_sa/Tasks/TaskTypes | 33 | pending | TaskSimpleSlideToCoord.cpp, TaskSimpleStandStill.cpp, TaskSimpleStandUp.cpp, TaskSimpleStealthKill.cpp, TaskSimpleSwim.cpp, TaskSimpleThrowProjectile.cpp ... |
 | S16 | game_sa/Entity/Vehicle | 48 | partial 23/48 (18 M, 5 fixed) -> S16b | Automobile.cpp |
 | S17 | game_sa/Entity/Vehicle | 43 | partial 21/43 (17 M, 4 fixed) -> S17b | Bike.cpp, Bmx.cpp, Boat.cpp |
-| S18 | game_sa/Entity/Vehicle | 41 | pending | Heli.cpp, MonsterTruck.cpp, Plane.cpp, QuadBike.cpp |
+| S18 | game_sa/Entity/Vehicle | 41 | partial 17/41 (13 M, 4 fixed) -> S18b | Heli.cpp, MonsterTruck.cpp, Plane.cpp, QuadBike.cpp |
 | S19 | game_sa/Entity/Vehicle | 108 | pending | Trailer.cpp, Train.cpp, Vehicle.cpp |
 | S20 | game_sa/Entity/Ped | 75 | partial 54/75 (42 M, 12 fixed) -> S20b | CivilianPed.cpp, CopPed.cpp, EmergencyPed.cpp, Ped.cpp |
 | S21 | game_sa/Entity/Ped | 32 | partial 23/32 (20 M, 3 fixed) -> S21b | PedSaveStructure.cpp, PlayerPed.cpp, PlayerSkin.cpp |
@@ -59,3 +59,4 @@
 | S22e | rest of S22d | 9 | pending | CarCtrl.cpp |
 | S27c | rest of S27b | 5 | pending | World.cpp |
 | S14b | rest of S14 | 23 | pending | TaskSimpleJump.cpp, TaskSimplePickUpBike.cpp, TaskSimplePlayerOnFire.cpp, TaskSimplePlayerOnFoot.cpp, TaskSimpleSay.cpp, TaskSimpleSetPedAsAutoDriver.cpp, TaskSimpleShakeFist.cpp, TaskSimpleSitDown.cpp, TaskSimpleSitIdle.cpp |
+| S18b | rest of S18 | 24 | pending | Heli.cpp, Plane.cpp |

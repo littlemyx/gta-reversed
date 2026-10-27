@@ -719,6 +719,15 @@ void CTheScripts::ClearSpaceForMissionEntity(const CVector& pos, CEntity* ourEnt
         false
     );
 
+    // Exe 0x486B6C..0x486B90: pre-pass nulling every colliding ped that is in a vehicle, before any vehicle is deleted below.
+    // The lazy IsInVehicle() test inside the loop saw already freed peds (RemovePed cleared bInVehicle/m_pVehicle) and ran
+    // GetMatrix()/GetColModel() on dead pool slots (leaked matrix-list links).
+    for (auto& entity : std::span{ colEntities.data(), (size_t)numColliding }) {
+        if (entity != ourEntity && entity->GetIsTypePed() && entity->AsPed()->bInVehicle) {
+            entity = nullptr;
+        }
+    }
+
     auto* ourColData = ourEntity->GetColData();
     if (!ourColData) {
         return;
@@ -728,7 +737,7 @@ void CTheScripts::ClearSpaceForMissionEntity(const CVector& pos, CEntity* ourEnt
     const auto cdNumLines = std::exchange(ourColData->m_nNumLines, 0);
 
     for (auto& entity : std::span{ colEntities.data(), (size_t)numColliding }) {
-        if (!entity || entity == ourEntity || (entity->GetIsTypePed() && entity->AsPed()->IsInVehicle())) {
+        if (!entity || entity == ourEntity) {
             continue;
         }
 
@@ -770,6 +779,7 @@ void CTheScripts::ClearSpaceForMissionEntity(const CVector& pos, CEntity* ourEnt
             CCarCtrl::RemoveFromInterestingVehicleList(vehicle);
             CWorld::Remove(vehicle);
             delete vehicle;
+            continue; // exe: the ped test is an `else` - never touch the freed vehicle
         }
 
         if (entity->GetIsTypePed() && !entity->AsPed()->IsPlayer() && entity->AsPed()->CanBeDeleted()) {

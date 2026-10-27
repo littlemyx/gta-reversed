@@ -327,7 +327,7 @@ void CQuadBike::ProcessControlInputs(uint8 playerNum) {
         } else {
             m_nLastControlInput = eControllerType::MOUSE;
             if (!pad->NewState.m_bVehicleMouseLook) {
-                m_sRideAnimData.LeanFwd += CPad::NewMouseControllerState.m_AmountMoved.y * -0.035f;
+                m_sRideAnimData.LeanFwd += CPad::NewMouseControllerState.m_AmountMoved.y * -0.0035f; // 0x6CE15A: constant at 0x871AD8 is -0.0035
             }
             if (pad->NewState.m_bVehicleMouseLook || std::fabs(m_sRideAnimData.LeanFwd) < 0.35f) {
                 m_sRideAnimData.LeanFwd *= std::pow(0.98f, CTimer::GetTimeStep());

@@ -4929,8 +4929,7 @@ void CAutomobile::dmgDrawCarCollidingParticles(const CVector& position, float fo
 
 // 0x6A7090
 void CAutomobile::ProcessCarOnFireAndExplode(bool bExplodeImmediately) {
-    // TODO: Re-order the code to get rid of lambdas here (and of the really deep nesting)
-
+    // 0x6A75FF: the common tail
     const auto DecreaseHealthAndProcess = [this, estatus = m_damageManager.GetEngineStatus()] {
         if (estatus > 225 && m_fHealth > 250.f) {
             m_fHealth -= 2.f;
@@ -4938,6 +4937,7 @@ void CAutomobile::ProcessCarOnFireAndExplode(bool bExplodeImmediately) {
         ProcessDelayedExplosion();
     };
 
+    // 0x6A758D
     const auto SetFxVelocity = [&, this] {
         if (m_pFireParticle) {
             auto bullshit = GetMoveSpeed() * 50.f;
@@ -4946,8 +4946,9 @@ void CAutomobile::ProcessCarOnFireAndExplode(bool bExplodeImmediately) {
         DecreaseHealthAndProcess();
     };
 
+    // 0x6A7174: the position is the engine dummy in OBJECT space (the fx is attached to the frame matrix of the clump)
     const auto CreateFx = [&, this](size_t typ) {
-        auto pos = GetDummyPosition(DUMMY_ENGINE);
+        auto pos = GetDummyPosition(DUMMY_ENGINE, false);
         if (const auto mat = GetModellingMatrix()) {
             m_pFireParticle = g_fxMan.CreateFxSystem(
                 typ == 1
@@ -4966,15 +4967,17 @@ void CAutomobile::ProcessCarOnFireAndExplode(bool bExplodeImmediately) {
     if (m_fHealth < 250.f && GetStatus() != STATUS_WRECKED && !vehicleFlags.bIsDrowning) {
         const auto isSubPlaneOrHeli = notsa::contains({ VEHICLE_TYPE_PLANE, VEHICLE_TYPE_HELI }, m_nVehicleSubType);
 
-        auto partFxToUse = !m_pFireParticle && !isSubPlaneOrHeli ? 1 : 0;
+        size_t partFxToUse = !m_pFireParticle && !isSubPlaneOrHeli ? 1 : 0;
 
         const auto floorTsMS = std::floor(CTimer::GetTimeStepInMS());
-        if (isSubPlaneOrHeli) { // 0x6A7117
+        if (isSubPlaneOrHeli) { // 0x6A71CD
             if (!m_fireParticleCounter) {
                 m_fireParticleCounter = IsInAir() ? 2 : 1;
             }
 
-            if (!bExplodeImmediately) { // 0x6A720B
+            if (bExplodeImmediately) { // 0x6A71F3
+                BlowUpCar(m_pExplosionVictim, false);
+            } else { // 0x6A720B
                 const auto isRcShit = notsa::contains({
                     MODEL_RCBARON,
                     MODEL_RCRAIDER,
@@ -4983,65 +4986,70 @@ void CAutomobile::ProcessCarOnFireAndExplode(bool bExplodeImmediately) {
                     MODEL_RCTIGER
                 }, GetModelId());
 
-                m_fBurnTimer += m_fireParticleCounter || isRcShit
+                m_fBurnTimer += m_fireParticleCounter == 1 || isRcShit // 0x6A7231
                     ? floorTsMS
                     : floorTsMS * ExeRecip(5.f);
                 if (m_fBurnTimer > 5000.f) { // 0x6A72A4
                     BlowUpCar(m_pExplosionVictim, false);
-                } else { //> 0x6A72D9 - Create smoke particle fx
-                    auto fxPrtMult = [&, this]() -> FxPrtMult_c {
-                        if (!isRcShit) {
-                            return { 0.f, 0.f, 0.f, 0.4f, 1.f, 1.f, 0.3f };
-                        }
+                } else { //> 0x6A72BB - Create smoke particle fx
+                    // ctor (r, g, b, a, size, rot, life) = (0, 0, 0, 0.4, 1, 1, 0.3); the RC variants override alpha / size / life only
+                    FxPrtMult_c fxPrtMult{ 0.f, 0.f, 0.f, 0.4f, 1.f, 1.f, 0.3f };
+                    if (isRcShit) {
                         if (GetStatus() == STATUS_REMOTE_CONTROLLED) {
-                            return { 0.f, 0.f, 0.5f, 0.4f, 0.1f, 1.f, 0.1f };
+                            fxPrtMult.m_Color.alpha = 0.5f;
+                            fxPrtMult.m_fSize       = 0.1f;
+                            fxPrtMult.m_fLife       = 0.1f;
+                        } else {
+                            fxPrtMult.m_Color.alpha = 0.15f;
+                            fxPrtMult.m_fSize       = 0.3f;
+                            fxPrtMult.m_fLife       = 0.3f;
                         }
-                        return { 0.f, 0.f, 0.15f, 0.4f, 0.3f, 1.f, 0.3f };
-                    }();
+                    }
                     if (CTimer::GetFrameCounter() % 2 == 0) { // TODO: Don't use frame counter
-                        g_fx.m_SmokeHuge->AddParticle(
-                            GetPosition() + (isRcShit
-                                ? CVector::Random({ -0.7f, -0.7f, 0.f }, { 0.7f, 0.7f, 0.f })
-                                : CVector::Random({ -2.0f, -2.0f, 0.f }, { 2.0f, 2.0f, 0.f })
-                            ),
-                            isRcShit
-                                ? CVector::Random({ -0.5f, -0.5f, 0.f }, { 0.5f, 0.5f, 0.4f })
-                                : CVector::Random({ -1.5f, -1.5f, 0.f }, { 1.5f, 1.5f, 1.0f }),
-                            0.f,
-                            fxPrtMult
-                        );
+                        // 0x6A7351: rand order is vel.x, vel.y, vel.z, pos.x, pos.y (no draw for pos.z)
+                        CVector pos = GetPosition();
+                        CVector vel;
+                        if (isRcShit) {
+                            vel.x = CGeneral::GetRandomNumberInRange(-0.5f, 0.5f);
+                            vel.y = CGeneral::GetRandomNumberInRange(-0.5f, 0.5f);
+                            vel.z = CGeneral::GetRandomNumberInRange(0.f, 0.4f);
+                            pos.x += CGeneral::GetRandomNumberInRange(-0.7f, 0.7f);
+                            pos.y += CGeneral::GetRandomNumberInRange(-0.7f, 0.7f);
+                        } else {
+                            vel.x = CGeneral::GetRandomNumberInRange(-1.5f, 1.5f);
+                            vel.y = CGeneral::GetRandomNumberInRange(-1.5f, 1.5f);
+                            vel.z = CGeneral::GetRandomNumberInRange(0.f, 1.f);
+                            pos.x += CGeneral::GetRandomNumberInRange(-2.f, 2.f);
+                            pos.y += CGeneral::GetRandomNumberInRange(-2.f, 2.f);
+                        }
+                        g_fx.m_SmokeHuge->AddParticle(pos, vel, 0.f, fxPrtMult);
                     }
                 }
 
-                if (notsa::contains({ STATUS_PLAYER, STATUS_REMOTE_CONTROLLED }, GetStatus())) { // 0x6A745D
+                if (notsa::contains({ STATUS_PLAYER, STATUS_REMOTE_CONTROLLED }, GetStatus())) { // 0x6A74F7
                     if (!m_pFireParticle && m_fBurnTimer > 2500.f) {
-                        CreateFx(2);
-                        SetFxVelocity();
-                        return;
+                        partFxToUse = 2;
                     }
-                } else if (!isRcShit && CGeneral::RandomBool(1.2f)) {
+                } else if (!isRcShit && CGeneral::GetRandomNumberInRange(0, 250) < 3) { // 0x6A7499: int rand in [0, 250) < 3
                     CExplosion::AddExplosion(this, m_pExplosionVictim, EXPLOSION_ROCKET, GetPosition(), 0, true, -1.f, false);
                 }
-            
-                if (partFxToUse == 0) {
-                    SetFxVelocity();
-                    return;
-                }
-                CreateFx(partFxToUse);
-                SetFxVelocity();
             }
-        } else {
+        } else { // 0x6A7126
             m_fBurnTimer += floorTsMS;
             if (m_fBurnTimer > 5000.f) {
                 BlowUpCar(m_pExplosionVictim, false);
             }
-            if (partFxToUse == 0) {
-                SetFxVelocity();
-                return;
-            }
         }
+
+        // 0x6A716C
+        if (partFxToUse != 0) {
+            CreateFx(partFxToUse);
+        }
+        SetFxVelocity();
+        return;
     }
 
+    // 0x6A75E2
     m_fBurnTimer = 0.f;
     if (m_pFireParticle) {
         m_pFireParticle->Kill();

@@ -5530,7 +5530,10 @@ void CAutomobile::ProcessSwingingDoor(eCarNodes nodeIdx, eDoors doorIdx)
     if (doorIdx == eDoors::DOOR_BONNET) {
         auto& bonnet = m_doors[eDoors::DOOR_BONNET];
         if ((bonnet.m_dirn & DOOR_EXTRA_DIRN_MASK) == DOOR_AXIS_Y) {
-            bonnet.m_angVel += ((X87R(x87::sin(bonnet.m_angle + 0.1f) * BONNET_SWING_RADIUS)) * m_matrix->GetForward() * m_vecMoveSpeed).ComponentwiseSum();
+            // 0x6A9F12: fsin(angle); fadd 0.1; fmul 0.05 - the 0.1 is added AFTER the sin (the port had sin(angle + 0.1)); the dot product sums z, y, x in that order, then + angVel
+            const x87d swing = X87R(X87R(x87::sin(bonnet.m_angle) + 0.1f) * BONNET_SWING_RADIUS);
+            const auto& fwd  = m_matrix->GetForward();
+            bonnet.m_angVel  = (float)(swing * fwd.z * m_vecMoveSpeed.z + swing * fwd.y * m_vecMoveSpeed.y + swing * fwd.x * m_vecMoveSpeed.x + bonnet.m_angVel);
         }
     }
 

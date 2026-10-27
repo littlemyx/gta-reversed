@@ -9,4 +9,4 @@ CBike::SetupSuspensionLines (0x6B89B0; jump table, node walk, bound-sphere, grou
 Not reached (17): Bike: DamageKnockOffRider, ProcessAI, ProcessBuoyancy, ProcessRiderAnims, PlaceOnRoadProperly, ProcessControlInputs, PreRender, ProcessControl, DoBurstAndSoftGroundRatios; Bmx: ProcessDrivingAnims, PreRender, ProcessAI;
 Boat: ProcessControl (rest), PreRender, Render, BlowUpCar. Budget reached after the smaller functions (Bmx ProcessBunnyHop, Bike ctor, BurstTyre, VehicleDamage, ProcessEntityCollision, SetupSuspensionLines).
 Consumer audit: no layout/signature change. m_aGroundPhysicalPtrs readers only deref non-null pointers (Bike.cpp 1452/1624/1847/1975/3371). bIsBus on a bike: no reader.
-Gate: Release build OK (3/3 incremental after the base 1186/1186); no oracle target covers Bike/Bmx; soak: see hand-back.
+Gate: Release build OK (3/3 incremental after the base 1186/1186); no oracle target covers Bike/Bmx; soak RESULT: OK (0 errors, 15100 frames).

@@ -48,10 +48,11 @@
 | S21b | rest of S21 | 9 | partial 5/9 (4 M, 1 fixed) -> S21c | PlayerPed.cpp |
 | S27b | rest of S27 | 15 | pending | World.cpp |
 | S29b | rest of S29 | 5 | done (1 M, 4 fixed) | HandObject.cpp, Object.cpp |
-| S13b | rest of S13 | 12 | pending | TaskSimpleGetUp.cpp, TaskSimpleGoToPoint.cpp, TaskSimpleGoToPointFine.cpp, TaskSimpleGunControl.cpp, TaskSimpleHoldEntity.cpp, TaskSimpleInAir.cpp, TaskSimpleJetPack.cpp |
+| S13b | rest of S13 | 12 | partial 8/12 (5 M, 3 fixed) -> S13c | TaskSimpleGetUp.cpp, TaskSimpleGoToPoint.cpp, TaskSimpleGoToPointFine.cpp, TaskSimpleGunControl.cpp, TaskSimpleHoldEntity.cpp, TaskSimpleInAir.cpp, TaskSimpleJetPack.cpp |
 | S11b | rest of S11 | 9 | pending | TaskSimpleCarSetPedInAsDriver.cpp, TaskSimpleCarSetPedInAsPassenger.cpp, TaskSimpleCarSetPedSlowDraggedOut.cpp, TaskSimpleClimb.cpp |
 | S12b | rest of S12 | 10 | pending | TaskSimpleDead.cpp, TaskSimpleFight.cpp, TaskSimpleGangDriveBy.cpp |
 | S20c | rest of S20b | 13 | pending | Ped.cpp |
 | S16c | rest of S16b | 17 | pending | Automobile.cpp |
 | S17c | rest of S17b | 16 | pending | Bike.cpp, Bmx.cpp, Boat.cpp |
 | S21c | rest of S21b | 4 | pending | PlayerPed.cpp |
+| S13c | rest of S13b | 4 | pending | TaskSimpleGunControl.cpp, TaskSimpleInAir.cpp, TaskSimpleJetPack.cpp |

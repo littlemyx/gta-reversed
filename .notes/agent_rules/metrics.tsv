@@ -218,3 +218,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-27	EXPL-REG	v6	regression check	127301	51	10	false alarm: AddExplosion 0/0 on origin, local merge and merged tree; MIX1 report came from a stale/odd build
 2026-10-27	ASM-MIX2	v6	asm sweep (partial)	198035	57	17	S29b 5/5: 4 fixed (Object CalcCollisionSteps extent/consts, SamSite altitude gate, ObjectDamage static bit + fx, ProcessControl dumper/RC bomb/door settle); S21b not reached; SetIsStatic pattern at Object.cpp ~326/759/783 unchecked
 2026-10-27	ASM-S21b	v6	asm sweep (partial)	174938	57	25	PlayerPed S21b 5/9: 1 fixed (KeepAreaAroundPlayerClear flee tolerance global 0xC18CF0); 4 big left -> S21c
+2026-10-27	ASM-S13b	v6	asm sweep (partial)	?	?	?	Tasks S13b 8/12: 3 fixed (GetUp stuck-under-car test inverted, JetPack fx key time reset, RenderJetPack jetball rotX sign); 4 big left -> S13c

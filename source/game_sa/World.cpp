@@ -1371,7 +1371,7 @@ void CWorld::RemoveFallenCars() {
         }
 
         const CVector& vecPos = vehicle->GetPosition();
-        if (vecPos.z > MAP_Z_LOW_LIMIT) {
+        if (!(vecPos.z < MAP_Z_LOW_LIMIT)) { // 0x565ED2: only strictly below the limit
             continue;
         }
 
@@ -1390,7 +1390,7 @@ void CWorld::RemoveFallenCars() {
         };
 
         if (ShouldWeKeepIt()) {
-            CNodeAddress pathNodeAddress = ThePaths.FindNodeClosestToCoors(vecPos, PATH_TYPE_PED, 1000000.0f, 0, 0, 0, 0, 0);
+            CNodeAddress pathNodeAddress = ThePaths.FindNodeClosestToCoors(vecPos, PATH_TYPE_VEH, /*0x565F72: vehicle nodes, the port searched ped nodes*/ 1000000.0f, 0, 0, 0, 0, 0);
             if (pathNodeAddress.IsValid()) {
                 const auto pathNodePos = ThePaths.GetPathNode(pathNodeAddress)->GetPosition();
                 vehicle->Teleport(pathNodePos + CVector(0, 0, 3), true);

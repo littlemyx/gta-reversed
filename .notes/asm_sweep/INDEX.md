@@ -42,7 +42,7 @@
 | S26b | rest of S26 | 9 | partial 7/9 (7 fixed) -> S26c | Physical.cpp |
 | S26c | rest of S26b | 2 | pending | Physical.cpp |
 | S22d | rest of S22c | 15 | pending | CarCtrl.cpp |
-| S20b | rest of S20 | 21 | partial 8/21 (6 M, 2 fixed) -> S20c -> S20c | Ped.cpp |
+| S20b | rest of S20 | 21 | partial 8/21 (6 M, 2 fixed) -> S20c | Ped.cpp |
 | S16b | rest of S16 | 25 | pending | Automobile.cpp |
 | S17b | rest of S17 | 22 | pending | Bike.cpp, Bmx.cpp, Boat.cpp |
 | S21b | rest of S21 | 9 | pending | PlayerPed.cpp |

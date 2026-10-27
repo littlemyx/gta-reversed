@@ -1,4 +1,4 @@
-- GetSectorX/Y: port x/50+60, exe x*0.02f+60 (ASM-S27b); differs at sector borders only; check all sector helpers (World.h) against the exe, like ExeDivide.
-- Object.cpp ~326/759/783: virtual SetIsStatic where the exe may set only the bit (ASM-MIX2).
-- CGeneral::DoCoinFlip: port rand >= 16383, exe inlines rand()/32767 > 0.5 (>= 16384) (ASM-S14); check each exe coin flip site, not only the helper.
-- CTaskTimer::Start refuses a negative duration in the port; check the exe Start (ASM-S14 fixed only RunTimedAnim caller).
+- DONE (SYSTEMIC-2) GetSectorX/Y and the LOD sector helpers: x * 0.02f / x * 0.005f like the exe (247 + 18 inlined sites); oracle row.
+- DONE (SYSTEMIC-2) Object.cpp ~326/759/783: no deviation (exe uses the virtual SetIsStatic at 0x5A28FC / 0x59F4FC / 0x59F875).
+- DONE (SYSTEMIC-2) CGeneral::DoCoinFlip: no exe helper; 10 sites switched to their own exe form (RandomBit / RandomOverHalf / RandomLowBits1024AtMost512, AE (0,1), BeInShop, RoadRage); 5 sites verified exact.
+- PARTIAL (SYSTEMIC-2) CTaskTimer::Start negative duration: exe is mixed. StartUnguarded added; used at FleePoint (2 sites) and UseMobilePhone. LEFT: read the exe of SitAtDesk / SitOnChair, SeekEntity*, FleeEntity, FleeShooting, FollowNodeRoute, GoToPointAndStandStillTimed, SmartFleeEntity, StareAtPed, WalkRoundCar, LeanOnVehicle, Facial, RunNamedAnim, SitIdle (callers with a variable duration) and switch to StartUnguarded where the exe has no `>= 0` test (verified guarded: StandStill, LieInBed, EnterCarAs{Driver,Passenger}Timed).

@@ -4805,11 +4805,14 @@ void CPed::MakeTyresMuddySectorList(PtrListType& ptrList)
 * @brief Do sector list processing in a range of -/+2 (Calls MakeTyresMuddySectorList)
 */
 void CPed::DeadPedMakesTyresBloody() {
+    // 0x6B4200: the exe uses the regular 120x120 sectors (floor(c * 0.02f + 60.0f) with 0x858B38 / 0x858B34, clamped to 0..0x77), not the 30x30 LOD lists
+    const auto Sector = [](float c) { return static_cast<int32>(std::floor(c * 0.02f + 60.0f)); };
+
     const auto& pos = GetPosition();
-    const auto startSectorX = std::max(CWorld::GetLodSectorX(pos.x - 2.0f), 0);
-    const auto startSectorY = std::max(CWorld::GetLodSectorY(pos.y - 2.0f), 0);
-    const auto endSectorX   = std::min(CWorld::GetLodSectorX(pos.x + 2.0f), MAX_LOD_PTR_LISTS_X - 1);
-    const auto endSectorY   = std::min(CWorld::GetLodSectorY(pos.y + 2.0f), MAX_LOD_PTR_LISTS_Y - 1);
+    const auto startSectorX = std::max(Sector(pos.x - 2.0f), 0);
+    const auto startSectorY = std::max(Sector(pos.y - 2.0f), 0);
+    const auto endSectorX   = std::min(Sector(pos.x + 2.0f), MAX_SECTORS_X - 1);
+    const auto endSectorY   = std::min(Sector(pos.y + 2.0f), MAX_SECTORS_Y - 1);
 
     CWorld::AdvanceCurrentScanCode();
 

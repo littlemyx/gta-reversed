@@ -5,7 +5,12 @@
 
 #ifdef NOTSA_PORTABLE
 // STAB2: CTaskAllocatorPlayerCommandAttack / CTaskAllocatorAttack are 48 bytes on LP64 (32 on x86): a 32 byte slot let each of them overwrite 16 bytes of the next slot.
+// Win64 (MSVC ABI) does not reuse the tail padding of the base class: CTaskAllocatorPlayerCommandAttack is 56 there.
+#ifdef _WIN32
+class CTaskAllocatorPool : public CPool<CTaskAllocator, char[sizeof(void*) == 4 ? 32 : 56]> {
+#else
 class CTaskAllocatorPool : public CPool<CTaskAllocator, char[sizeof(void*) == 4 ? 32 : 48]> {
+#endif
 #else
 class CTaskAllocatorPool : public CPool<CTaskAllocator, char[32]> { // char[32] == CTaskAllocatorPlayerCommandAttack
 #endif

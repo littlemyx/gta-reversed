@@ -1,10 +1,10 @@
 addr	function	verdict	asm range	note	fix commit
-0x6098F0	CPlayerPed::ProcessAnimGroups	NOT_REACHED		token budget of ASM-MIX1 spent on S26c (two large functions)	
-0x60A9C0	CPlayerPed::SetRealMoveAnim	NOT_REACHED		token budget of ASM-MIX1 spent on S26c (two large functions)	
-0x60B650	CPlayerPed::Compute3rdPersonMouseTarget	NOT_REACHED		token budget of ASM-MIX1 spent on S26c (two large functions)	
-0x60C1E0	CPlayerPed::KeepAreaAroundPlayerClear	NOT_REACHED		token budget of ASM-MIX1 spent on S26c (two large functions)	
-0x60DC50	CPlayerPed::FindWeaponLockOnTarget	NOT_REACHED		token budget of ASM-MIX1 spent on S26c (two large functions)	
-0x60E530	CPlayerPed::FindNextWeaponLockOnTarget	NOT_REACHED		token budget of ASM-MIX1 spent on S26c (two large functions)	
-0x60C840	CPlayerPed::MakeThisPedJoinOurGroup	NOT_REACHED		token budget of ASM-MIX1 spent on S26c (two large functions)	
-0x60D850	CPlayerPed::ProcessWeaponSwitch	NOT_REACHED		token budget of ASM-MIX1 spent on S26c (two large functions)	
-0x60EA90	CPlayerPed::ProcessControl	NOT_REACHED		token budget of ASM-MIX1 spent on S26c (two large functions)	
+0x6098F0	CPlayerPed::ProcessAnimGroups	NOT_REACHED		ASM-MIX2 hit its token budget after slice S29b (5 large functions); not compared	
+0x60A9C0	CPlayerPed::SetRealMoveAnim	NOT_REACHED		ASM-MIX2 hit its token budget after slice S29b (5 large functions); not compared	
+0x60B650	CPlayerPed::Compute3rdPersonMouseTarget	NOT_REACHED		ASM-MIX2 hit its token budget after slice S29b (5 large functions); not compared	
+0x60C1E0	CPlayerPed::KeepAreaAroundPlayerClear	NOT_REACHED		ASM-MIX2 hit its token budget after slice S29b (5 large functions); not compared	
+0x60DC50	CPlayerPed::FindWeaponLockOnTarget	NOT_REACHED		ASM-MIX2 hit its token budget after slice S29b (5 large functions); not compared	
+0x60E530	CPlayerPed::FindNextWeaponLockOnTarget	NOT_REACHED		ASM-MIX2 hit its token budget after slice S29b (5 large functions); not compared	
+0x60C840	CPlayerPed::MakeThisPedJoinOurGroup	NOT_REACHED		ASM-MIX2 hit its token budget after slice S29b (5 large functions); not compared	
+0x60D850	CPlayerPed::ProcessWeaponSwitch	NOT_REACHED		ASM-MIX2 hit its token budget after slice S29b (5 large functions); not compared	
+0x60EA90	CPlayerPed::ProcessControl	NOT_REACHED		ASM-MIX2 hit its token budget after slice S29b (5 large functions); not compared	

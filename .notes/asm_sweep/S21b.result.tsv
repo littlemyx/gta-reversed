@@ -1,10 +1,10 @@
 addr	function	verdict	asm range	note	fix commit
-0x6098F0	CPlayerPed::ProcessAnimGroups	NOT_REACHED		ASM-MIX2 hit its token budget after slice S29b (5 large functions); not compared	
-0x60A9C0	CPlayerPed::SetRealMoveAnim	NOT_REACHED		ASM-MIX2 hit its token budget after slice S29b (5 large functions); not compared	
-0x60B650	CPlayerPed::Compute3rdPersonMouseTarget	NOT_REACHED		ASM-MIX2 hit its token budget after slice S29b (5 large functions); not compared	
-0x60C1E0	CPlayerPed::KeepAreaAroundPlayerClear	NOT_REACHED		ASM-MIX2 hit its token budget after slice S29b (5 large functions); not compared	
-0x60DC50	CPlayerPed::FindWeaponLockOnTarget	NOT_REACHED		ASM-MIX2 hit its token budget after slice S29b (5 large functions); not compared	
-0x60E530	CPlayerPed::FindNextWeaponLockOnTarget	NOT_REACHED		ASM-MIX2 hit its token budget after slice S29b (5 large functions); not compared	
-0x60C840	CPlayerPed::MakeThisPedJoinOurGroup	NOT_REACHED		ASM-MIX2 hit its token budget after slice S29b (5 large functions); not compared	
-0x60D850	CPlayerPed::ProcessWeaponSwitch	NOT_REACHED		ASM-MIX2 hit its token budget after slice S29b (5 large functions); not compared	
-0x60EA90	CPlayerPed::ProcessControl	NOT_REACHED		ASM-MIX2 hit its token budget after slice S29b (5 large functions); not compared	
+0x6098F0	CPlayerPed::ProcessAnimGroups	NOT_REACHED		not compared: agent token budget (120k) reached after the five smaller functions	
+0x60A9C0	CPlayerPed::SetRealMoveAnim	NOT_REACHED		not compared: agent token budget (120k) reached after the five smaller functions	
+0x60B650	CPlayerPed::Compute3rdPersonMouseTarget	MATCH	0x60B650-0x60BA73	camera-plane projection, LOS args, aim reaction (Say 0xB0, group/solo GunAimedAt), reference handling and stale-pointer clear equal	
+0x60C1E0	CPlayerPed::KeepAreaAroundPlayerClear	FIXED	0x60C1E0-0x60C510	flee task posChangeTolerance is `push [0xC18CF0]` (runtime global), port passed literal 1.0; rest (ped loop, vehicle temp actions 1/3/9, FindObjectsInRange args, x87 order) matches	ebd91f73
+0x60DC50	CPlayerPed::FindWeaponLockOnTarget	NOT_REACHED		not compared: agent token budget (120k) reached after the five smaller functions	
+0x60E530	CPlayerPed::FindNextWeaponLockOnTarget	MATCH	0x60E530-0x60EA75	ped/object/vehicle loops incl. the stale-register rangeTarget bug (kept unless FixBugs), TWRM*range rounding, group event, reference + 0x85 flag equal	
+0x60C840	CPlayerPed::MakeThisPedJoinOurGroup	MATCH	0x60C840-0x60CC42	recruit flow, cheat/stat gates, blip colour bytes (46 C8 00 FF), separation 120.0, Say contexts/args all equal	
+0x60D850	CPlayerPed::ProcessWeaponSwitch	MATCH	0x60D850-0x60DC41	weapon cycling both directions, cam-mode lists (0x22 2A 07 27 08 28 33 34 2E / 22 07 08 33 2E), out-of-ammo fallback, gun-task/RemoveWeaponAnims tail equal	
+0x60EA90	CPlayerPed::ProcessControl	NOT_REACHED		not compared: agent token budget (120k) reached after the five smaller functions	

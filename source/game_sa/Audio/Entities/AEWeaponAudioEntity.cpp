@@ -435,7 +435,7 @@ void CAEWeaponAudioEntity::PlayGunSounds(
             baseVolume    -= 3.f;
             frontEndVolume = baseVolume + CAEAudioEnvironment::GetDistanceAttenuation(dist);
         } else if (dist < (12.f / baseRollOffFactor)) {
-            const auto t   = ((12.f / baseRollOffFactor) - dist) / (12.f / baseRollOffFactor) - (5.f / baseRollOffFactor);
+            const auto t   = ((12.f / baseRollOffFactor) - dist) / ((12.f / baseRollOffFactor) - (5.f / baseRollOffFactor)); // exe 0x503FE9..0x503FFC: fsubr/fsub/fdivrp
             frontEndVolume = baseVolume + CAEAudioEnvironment::GetDistanceAttenuation(dist) + std::log10f(t * (SQRT_2 / 2.f)) * 20.f;
             baseVolume    += std::log10f(((1.f - t) * std::bit_cast<float>(0x3E95F6FEu) /* 0x862E14, one ulp above the literal 0.2929f */) + (SQRT_2 / 2.f)) * 20.f;
         }

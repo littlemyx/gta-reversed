@@ -1,0 +1,5 @@
+addr	function	verdict	asm_range	note	fix_commit
+0x5E65A0	CPed::PreRenderAfterTest	FIXED	0x5E65A0..0x5E7676	shadow dist compared sqrt vs squared limit; low-quality dummy shadow tested m_pShadowData (exe only after the RT shadow); dead ped takes bIsDucking; bInVehicle with null vehicle gives false; wobble bones 0x12E/0x12D are for NON-players (test was inverted); earthquake swing * 0.0025; rain splash pos = 2 randoms + radius*0.75 (port: 3 randoms); wetness drip pos ((r*0.6+p)-0.3, z (r*1+p)-0.8) and alpha (wet*alpha)*0.01; open-top vehicle speed = move . forward (signed, z-y-x order); torso key slot 0 only; wetness signed >0. Left as is: FX quality HIGH test uses IsPlayer() (documented FIX_BUGS; exe pedType==0 only)	645cc4ff
+0x5E2530	CPed::ProcessEntityCollision	MATCH	0x5E2530..0x35F3	line/ground setup, brightness, standing-on, ceiling, extra normal, fall damage, events, re-run, no-ground, piece removal, train fix, saved heading, wall normals, extra point, records; all constants and x87 orders agree; tail 0x35F3..0x3610 (flag + return) not read	
+0x5E8CD0	CPed::ProcessControl	NOT_REACHED		budget	
+0x5E8030	CPed::Constructor	NOT_REACHED		budget	

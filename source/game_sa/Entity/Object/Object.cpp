@@ -457,7 +457,7 @@ void CObject::SpecialEntityPreCollisionStuff(CPhysical* colPhysical, bool bIgnor
 uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSettingTimeStep, bool& unk2) {
     if (physicalFlags.bDisableZ || m_pObjectInfo->m_nSpecialColResponseCase == COL_SPECIAL_RESPONSE_GRENADE) {
         auto* cm = GetModelInfo()->GetColModel();
-        const auto fMove = m_vecMoveSpeed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
+        const auto fMove = m_vecMoveSpeed.SquaredMagnitude() * CTimer::GetTimeStep() * CTimer::GetTimeStep();
         if (fMove >= sq(cm->GetBoundRadius()))
             return static_cast<uint8>(std::ceil(std::sqrt(fMove) / cm->GetBoundRadius()));
 
@@ -469,9 +469,9 @@ uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSett
             auto cm = CEntity::GetColModel();
             auto vecMin = GetMatrix().TransformVector(cm->GetBoundingBox().m_vecMin);
             auto vecSpeed = CPhysical::GetSpeed(vecMin);
-            const auto fMove = vecSpeed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
+            const auto fMove = vecSpeed.SquaredMagnitude() * CTimer::GetTimeStep() * CTimer::GetTimeStep();
             if (fMove >= 0.0225F) // std::pow(0.15F, 2.0F)
-                return static_cast<uint8>(std::ceil(std::sqrt(fMove) / 0.15F));
+                return static_cast<uint8>(std::ceil(std::sqrt(fMove) * 6.6666665F));
 
             return 1;
         }
@@ -491,9 +491,9 @@ uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSett
             vecMax = CPhysical::GetSpeed(vecMax);
 
             auto& vecUsed = vecMin.SquaredMagnitude() >= vecMax.SquaredMagnitude() ? vecMin : vecMax;
-            const auto fMove = vecUsed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
+            const auto fMove = vecUsed.SquaredMagnitude() * CTimer::GetTimeStep() * CTimer::GetTimeStep();
             if (fMove >= 0.09F)
-                return static_cast<uint8>(std::ceil(std::sqrt(fMove) / 0.3F));
+                return static_cast<uint8>(std::ceil(std::sqrt(fMove) * 3.3333333F));
 
             return 1;
         }
@@ -502,17 +502,17 @@ uint8 CObject::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSett
             m_pObjectInfo->m_nSpecialColResponseCase == COL_SPECIAL_RESPONSE_FENCEPART) {
             auto* cm = GetModelInfo()->GetColModel();
             const auto vecSize = cm->GetBoundingBox().GetSize();
-            const auto fEdge = std::max({ vecSize.x, vecSize.y, vecSize.z }) / 2.0F;
-            const auto fMove = m_vecMoveSpeed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
+            const auto fEdge = std::min({ vecSize.x, vecSize.y, vecSize.z }) * 0.5F; // the exe takes the smallest extent (0x5A0646-0x5A0695), not the largest
+            const auto fMove = m_vecMoveSpeed.SquaredMagnitude() * CTimer::GetTimeStep() * CTimer::GetTimeStep();
             if (fMove >= sq(fEdge)) {
                 return static_cast<uint8>(std::ceil(std::sqrt(fMove) / fEdge));
             }
             return 1;
         }
 
-        const auto fMove = m_vecMoveSpeed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
+        const auto fMove = m_vecMoveSpeed.SquaredMagnitude() * CTimer::GetTimeStep() * CTimer::GetTimeStep();
         if (fMove >= 0.09F)
-            return static_cast<uint8>(std::ceil(sqrt(fMove) / 0.3F));
+            return static_cast<uint8>(std::ceil(std::sqrt(fMove) * 3.3333333F));
 
         return 1;
     }

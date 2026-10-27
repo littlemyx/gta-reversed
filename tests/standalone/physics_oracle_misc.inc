@@ -298,4 +298,39 @@ static void TestMisc() {
         d = "v " + F(v.x) + "," + F(v.y) + "," + F(v.z) + " s " + F(s) + " got " + F(got.x) + "," + F(got.y) + "," + F(got.z) + " exe " + F(exe.x) + "," + F(exe.y) + "," + F(exe.z);
         return false;
     });
+    // SYSTEMIC-2: CWorld::GetSectorfX / GetLodSectorfX = x * 0.02f + 60.0f / x * 0.005f + 15.0f (the port used x / 50). The exe inlines `fmul [0x858B38]; fadd [0x858B34]` (CWorld::FindObjectsInRange 0x564A34)
+    // and `fmul [0x858B4C]; fadd [0x858B48]` (CWorld::FindLodOfTypeInRange 0x564EE1) in 247 / 18 sites. The stubs are `fld [esp+4]; <those 12 exe bytes, read from the mapped exe and checked>; ret`: the float result
+    // is compared bit-exact at PC=24 (each op rounds to a float; PC=53 keeps the sum in extended precision, informational only). Inputs: random coordinates plus values within a few ulps of a sector border.
+    {
+        static uint8* stubs[2] = {};
+        static const uint8 want[2][12] = { { 0xD8,0x0D,0x38,0x8B,0x85,0x00, 0xD8,0x05,0x34,0x8B,0x85,0x00 }, { 0xD8,0x0D,0x4C,0x8B,0x85,0x00, 0xD8,0x05,0x48,0x8B,0x85,0x00 } };
+        static const uintptr_t src[2] = { 0x564A34, 0x564EE1 };
+        if (!stubs[0]) {
+            for (int k = 0; k < 2; ++k) {
+                stubs[k] = (uint8*)VirtualAlloc(nullptr, 64, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+                const uint8 pre[4] = { 0xD9, 0x44, 0x24, 0x04 };
+                std::memcpy(stubs[k], pre, 4);
+                std::memcpy(stubs[k] + 4, (const void*)src[k], 12);
+                stubs[k][16] = 0xC3;
+                if (std::memcmp(stubs[k] + 4, want[k], 12)) { std::printf("  SYSTEMIC-2: exe bytes at %#zx are not the expected fmul/fadd\n", (size_t)src[k]); std::exit(2); }
+            }
+        }
+        Run("CWorld::GetSectorfX / GetLodSectorfX vs exe fmul 0.02f fadd 60 (0x564A34) / 0.005f 15 (0x564EE1)", [](Rng& r, std::string& d) {
+            if ((int)(_controlfp(0, 0) & _MCW_PC) != _PC_24) return true;
+            const bool lod = r.below(4) == 0;
+            float x;
+            if (r.below(3) == 0) {
+                const float step = lod ? 200.f : 50.f;
+                x = (float)(r.below(lod ? 31 : 121) - (lod ? 15 : 60)) * step;
+                for (int n = r.below(5); n > 0; --n) x = std::nextafter(x, r.below(2) ? 1e9f : -1e9f);
+            } else {
+                x = (r.f01() * 2.f - 1.f) * 4000.f;
+            }
+            const float got = lod ? CWorld::GetLodSectorfX(x) : CWorld::GetSectorfX(x);
+            const float exe = ((float (__cdecl*)(float))stubs[lod])(x);
+            if (std::memcmp(&got, &exe, 4) == 0) return true;
+            d = std::string(lod ? "lod x " : "x ") + F(x) + " got " + F(got) + " exe " + F(exe);
+            return false;
+        }, 20000);
+    }
 }

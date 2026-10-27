@@ -281,8 +281,11 @@ private: // NOTSA:
 
 public:
     // Returns sector index in range -60 to 60 (Example: -3000 => -60, 3000 => 60)
-    static float GetHalfMapSectorX(float x) { return x / static_cast<float>(MAX_WORLD_UNITS / MAX_SECTORS_X); }
-    static float GetHalfMapSectorY(float y) { return y / static_cast<float>(MAX_WORLD_UNITS / MAX_SECTORS_Y); }
+    // ASM-S27b / SYSTEMIC-2: every exe sector computation (247 sites: `fld x; fmul [0x858B38]; fadd [0x858B34]; floor; _ftol`) multiplies by the float literal 0.02f (= 1/50 rounded) and adds 60.0f;
+    // the port's old `x / 50` differs from `x * 0.02f` at sector borders.
+    static_assert(MAX_WORLD_UNITS / MAX_SECTORS_X == 50 && MAX_WORLD_UNITS / MAX_SECTORS_Y == 50);
+    static float GetHalfMapSectorX(float x) { return x * 0.02f; }
+    static float GetHalfMapSectorY(float y) { return y * 0.02f; }
 
     // Returns sector index in range 0 to 120 (Example: -3000 => 0, 3000 => 120)
     static float GetSectorfX(float x) { return GetHalfMapSectorX(x) + static_cast<float>(MAX_SECTORS_X / 2); }
@@ -315,8 +318,10 @@ public:
     static CVector2D GetSectorPos(int32 sector) { return { GetSectorPosX(sector), GetSectorPosY(sector) }; }
 
     // returns sector index in range 0 to 15 (covers half of the map)
-    static float GetHalfMapLodSectorX(float sector) { return sector / static_cast<float>(MAX_WORLD_UNITS / MAX_LOD_PTR_LISTS_X); }
-    static float GetHalfMapLodSectorY(float sector) { return sector / static_cast<float>(MAX_WORLD_UNITS / MAX_LOD_PTR_LISTS_Y); }
+    // exe: 18 sites `fmul [0x858B4C] (0.005f); fadd [0x858B48] (15.0f)`, see GetHalfMapSectorX
+    static_assert(MAX_WORLD_UNITS / MAX_LOD_PTR_LISTS_X == 200 && MAX_WORLD_UNITS / MAX_LOD_PTR_LISTS_Y == 200);
+    static float GetHalfMapLodSectorX(float sector) { return sector * 0.005f; }
+    static float GetHalfMapLodSectorY(float sector) { return sector * 0.005f; }
     static float GetLodSectorfX(float sector) { return GetHalfMapLodSectorX(sector) + static_cast<float>(MAX_LOD_PTR_LISTS_X / 2); }
     static float GetLodSectorfY(float sector) { return GetHalfMapLodSectorY(sector) + static_cast<float>(MAX_LOD_PTR_LISTS_Y / 2); }
     // returns sector index in range 0 to 30 (covers full map)

@@ -3175,11 +3175,11 @@ void CPed::PlayFootSteps() {
         const float skateSpeed = walkAssoc->m_AnimId == ANIM_ID_WALK ? 0.75f : 1.0f;
         if (curTime > 0.0f && curTime - timeStep <= 0.0f) {
             if (m_pedAudio.m_bCanAddEvent) {
-                m_pedAudio.AddAudioEvent(AE_PED_SKATE_LEFT, std::log10(adhesion) * 20.0f, skateSpeed);
+                m_pedAudio.AddAudioEvent(AE_PED_SKATE_LEFT, (float)X87R(x87::log10((double)adhesion) * (x87d)20.0), skateSpeed); // 0x5E5A8D: fldlg2/fyl2x, x20 on the stack
             }
-        } else if (adhesion > 0.2f && curTime > threshold && curTime - timeStep < threshold) {
+        } else if (adhesion > 0.2f && curTime > threshold && curTime - timeStep <= threshold) { // 0x5E5AEF: `jp` (ah & 5) lets 'equal' through
             if (m_pedAudio.m_bCanAddEvent) {
-                m_pedAudio.AddAudioEvent(AE_PED_SKATE_RIGHT, std::log10(adhesion) * 20.0f, skateSpeed);
+                m_pedAudio.AddAudioEvent(AE_PED_SKATE_RIGHT, (float)X87R(x87::log10((double)adhesion) * (x87d)20.0), skateSpeed);
             }
         }
 

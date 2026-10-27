@@ -4193,7 +4193,7 @@ void CCarCtrl::PossiblyRemoveVehicle(CVehicle* vehicle) {
             removalRange = TheCamera.m_fGenerationDistMultiplier * 170.0f;
         }
         if (TheCamera.m_mCameraMatrix.GetForward().z < -0.9f) { // Looking (almost) straight down
-            removalRange = 75.0f;
+            removalRange = 70.0f; // 0x42510B (0x428C0000); the port had 75
         }
 
         // 0x420800 - `a > b ? a : b`

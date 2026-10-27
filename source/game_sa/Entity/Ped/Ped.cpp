@@ -1358,14 +1358,14 @@ void CPed::SetPedPositionInCar() {
 
         tempMat.SetTranslate({ 0.0f, 0.0f, -chassisPosZ });
         tempMat.RotateY(autoMobile->m_fDoomVerticalRotation); // AKA GunOrientation ?
-        tempMat.SetTranslateOnly({ 0.0f, 0.0f, chassisPosZ });
+        tempMat.GetPosition().z += chassisPosZ; // 0x5DFB03: the exe adds to the rotated position's z (it does not overwrite the position)
         vehMat *= tempMat;
     }
 
     vehMat.GetPosition() += vehMat.TransformVector(seatLocalPos);
     tempMat.SetUnity();
 
-    if (m_pVehicle->m_pHandlingData->GetAnimGroupId() == 13) { // ?
+    if (m_pVehicle->m_pHandlingData->GetAnimGroupId() == ANIM_GROUP_VANCARANIMS) { // 0x5DFB96: `m_nAnimGroup + 0x58 == 0x65` (the port compared the biased id with the raw 13: never true)
         if (this == m_pVehicle->m_apPassengers[1]) {
             m_fCurrentRotation = heading - HALF_PI;
             tempMat.SetTranslate({ 0.0f, 0.0f, 0.0f });

@@ -1193,7 +1193,7 @@ bool CAutomobile::ProcessAI(uint32& extraHandlingFlags) {
         }
 
         if (handlingFlags.bNpcAntiRoll) {
-            m_pHandlingData->m_vecCentreOfMass.z += (colModel->m_boundBox.m_vecMin.z - m_pHandlingData->m_vecCentreOfMass.z) * 0.4f;
+            m_vecCentreOfMass.z = (colModel->m_boundBox.m_vecMin.z - m_pHandlingData->m_vecCentreOfMass.z) * 0.4f + m_pHandlingData->m_vecCentreOfMass.z; // 0x6B4A1B-0x6B4A65: stored into the car's own centre of mass (the port edited the shared handling data every frame)
         }
     }
     else {
@@ -1215,7 +1215,7 @@ bool CAutomobile::ProcessAI(uint32& extraHandlingFlags) {
     {
         if (m_nModelIndex != MODEL_TAXI && m_nModelIndex != MODEL_CABBIE) {
             CVector target = GetPosition();
-            target += GetRight() * 3.0f + GetForward() * 10.0f;
+            target = (target + GetForward() * 10.0f) + GetRight() * 3.0f; // 0x6B4B0B-0x6B4B3C: (pos + forward * 10) + right * 3
             CColPoint cp{};
             CEntity* hit;
             if (!CWorld::ProcessLineOfSight(GetPosition(), target, cp, hit, true, true, true, false, false, false, false, false) || hit == this) {
@@ -1263,9 +1263,10 @@ bool CAutomobile::ProcessAI(uint32& extraHandlingFlags) {
         if (m_nModelIndex == MODEL_RCBANDIT || m_nModelIndex == MODEL_SANDKING || m_nModelIndex == MODEL_BFINJECT)
             return false;
         autoFlags.bIsBoggedDownInSand = true;
-        float force = m_fMass * CTimer::GetTimeStep() * 0.005f;
-        if (CWeather::WetRoads > 0.0f)
-            force *= 1.0f - CWeather::WetRoads;
+        // 0x6B53CC-0x6B5408: wet: ((1 - wet) * mass * ts) * 0.005, dry: (mass * ts) * 0.005
+        const float force = CWeather::WetRoads > 0.0f
+            ? (1.0f - CWeather::WetRoads) * m_fMass * CTimer::GetTimeStep() * 0.005f
+            : m_fMass * CTimer::GetTimeStep() * 0.005f;
         ApplyMoveForce(-force * m_vecMoveSpeed);
         return false;
     }
@@ -1405,7 +1406,7 @@ bool CAutomobile::ProcessAI(uint32& extraHandlingFlags) {
                 fCarLess3WheelCounter *= -1.0f;
 
             float steerLeftRight = (float)pad->GetSteeringLeftRight() / 128.0f;
-            m_vecCentreOfMass.z += steerLeftRight * CAR_BALANCE_MULT * boundMaxZ * fCarLess3WheelCounter;
+            m_vecCentreOfMass.z += steerLeftRight * boundMaxZ * CAR_BALANCE_MULT * fCarLess3WheelCounter; // 0x6B4DC3-0x6B4DD6: steer * maxZ * mult * counter
         }
         else {
             m_vecCentreOfMass.z -= CAR_BALANCE_MULT * boundMaxZ * 0.5f;
@@ -1422,7 +1423,7 @@ bool CAutomobile::ProcessAI(uint32& extraHandlingFlags) {
         carWeightMult = 0.0025f;
     else
         carWeightMult *= CStats::GetFatAndMuscleModifier(STAT_MOD_DRIVING_SKILL);
-    carWeightMult *= std::min(1.0f, 3000.0f / m_fTurnMass) * m_fTurnMass;
+    carWeightMult = std::min(1.0f, 3000.0f / m_fTurnMass) * carWeightMult * m_fTurnMass; // 0x6B4E6E-0x6B4E97: (min * mult) * turnMass
 
     float steerLeftRight = (float)pad->GetSteeringLeftRight() / 128.0f;
     float steerUpDown    = (float)pad->GetSteeringUpDown() / 128.0f;
@@ -1436,7 +1437,7 @@ bool CAutomobile::ProcessAI(uint32& extraHandlingFlags) {
         float dotTurnUp = DotProduct(m_vecTurnSpeed, GetUp());
         if (dotTurnUp < 0.02f && steerLeftRight < 0.0f || dotTurnUp > -0.02f && steerLeftRight > 0.0f) {
             CVector point = m_vecCentreOfMass + GetForward();
-            CVector force = GetRight() * steerLeftRight * carWeightMult * CTimer::GetTimeStep();
+            CVector force = GetRight() * (CTimer::GetTimeStep() * steerLeftRight * carWeightMult); // 0x6B4FED-0x6B50AD: the scalar (ts * steer) * mult is formed first
             ApplyTurnForce(force, point);
         }
     }
@@ -1446,7 +1447,7 @@ bool CAutomobile::ProcessAI(uint32& extraHandlingFlags) {
             || dotTurnForward > -0.02f && steerLeftRight > 0.0f)
         {
             CVector point = m_vecCentreOfMass + GetUp();
-            CVector force = GetRight() * steerLeftRight * carWeightMult * CTimer::GetTimeStep();
+            CVector force = GetRight() * (CTimer::GetTimeStep() * steerLeftRight * carWeightMult); // 0x6B4FED-0x6B50AD: the scalar (ts * steer) * mult is formed first
             ApplyTurnForce(force, point);
         }
     }
@@ -1457,7 +1458,7 @@ bool CAutomobile::ProcessAI(uint32& extraHandlingFlags) {
             || dotTurnRight > -0.02f && steerUpDown > 0.0f)
         {
             CVector point = m_vecCentreOfMass + GetForward();
-            CVector force = GetUp() * steerUpDown * carWeightMult * CTimer::GetTimeStep();
+            CVector force = GetUp() * (CTimer::GetTimeStep() * steerUpDown * carWeightMult); // 0x6B515B-0x6B517B
             ApplyTurnForce(force, point);
         }
     }

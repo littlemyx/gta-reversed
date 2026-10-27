@@ -928,7 +928,7 @@ void CObject::ProcessSamSiteBehaviour() {
 
     if (targetEntity) {
         auto& vecTargetPos = targetEntity->GetPosition();
-        if (vecPos.z <= vecTargetPos.z + 2.0F
+        if (vecPos.z - 2.0F <= vecTargetPos.z // 0x5A08C1: `fld this.z; fsub 2.0; fcomp target.z` (the port added 2 to the target instead)
             && vecTargetPos.y <= 2100.0F
         ) {
             const auto vecDir = vecTargetPos - vecPos;

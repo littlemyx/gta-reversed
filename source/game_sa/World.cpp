@@ -1342,7 +1342,7 @@ void CWorld::RemoveFallenPeds() {
         }
 
         const CVector& vecPedPos = ped->GetPosition();
-        if (vecPedPos.z > MAP_Z_LOW_LIMIT) {
+        if (!(vecPedPos.z < MAP_Z_LOW_LIMIT)) { // 0x565D02: only strictly below the limit
             continue;
         }
         NOTSA_LOG_WARN("&&&&&&Another ped has fallen through the map&&&&&&&&&& {:4f} {:4f} {:4f}", vecPedPos.x, vecPedPos.y, vecPedPos.z); // R* log

@@ -1,0 +1,25 @@
+addr	function	verdict	asm range	note	fix commit
+0x6C4650	CHeli::Pre_SearchLightCone	MATCH	0x6C4650-0x6C46D4	10 render states, order and values equal	-
+0x6C46E0	CHeli::Post_SearchLightCone	MATCH	0x6C46E0-0x6C4748	8 render states equal	-
+0x6C58E0	CHeli::SearchLightCone	NOT_REACHED		token budget	-
+0x6C6520	CHeli::GenerateHeli	NOT_REACHED		token budget	-
+0x6C79A0	CHeli::UpdateHelis	NOT_REACHED		token budget	-
+0x6C69C0	CHeli::SendDownSwat	MATCH	0x6C69C0-0x6C6D24	conditions, rand order, rope/ped/task setup, constants equal	-
+0x6C7C50	CHeli::RenderAllHeliSearchLights	FIXED	0x6C7C50-0x6C7D05	exe loops i < NumberOfSearchLights (uint8); port iterated all 4 array slots, drawing stale lights	465db0dc
+0x6C6890	CHeli::TestSniperCollision	MATCH	0x6C6890-0x6C69B6	equal (exe returns bool 'hit', its only caller CBulletInfo::Update ignores it)	-
+0x6C4400	CHeli::Render	MATCH	0x6C4400-0x6C452B	colour, rotor alpha order 12,14,13,15, CEntity::Render equal	-
+0x6C4830	CHeli::ProcessControlInputs	MATCH	0x6C4830-0x6C4E50	mouse/pad branches, clamps, horn levelling, disable-controls cap, health<250 equal	-
+0x6C5420	CHeli::PreRender	MATCH	0x6C5420-0x6C58D3	search light, wheel pos, rotor angles, shadow equal	-
+0x6C6D30	CHeli::BlowUpCar	MATCH	0x6C6D30-0x6C7048	flow, flag bits, explosion/fire args equal	-
+0x6C7050	CHeli::ProcessControl	NOT_REACHED		token budget	-
+0x6C8E20	CPlane::Constructor	MATCH	0x6C8E20-0x6C9137	field offsets, per-model door init, wheel pos, particles equal	-
+0x6C94A0	CPlane::PreRender	NOT_REACHED		token budget	-
+0x6CAB70	CPlane::Render	MATCH	0x6CAB70-0x6CAB80	equal	-
+0x6CACB0	CPlane::OpenDoor	MATCH	0x6CACB0-0x6CAD85	CAutomobile::OpenDoor + STUNT branch guarded by dead flag byte_C1CAFC, equal	-
+0x6C9260	CPlane::ProcessControl	NOT_REACHED		token budget	-
+0x6CADD0	CPlane::ProcessControlInputs	NOT_REACHED		token budget	-
+0x6CB7C0	CPlane::ProcessFlyingCarStuff	NOT_REACHED		token budget	-
+0x6CC4B0	CPlane::VehicleDamage	NOT_REACHED		token budget	-
+0x6CCCF0	CPlane::BlowUpCar	NOT_REACHED		token budget	-
+0x6CD090	CPlane::FindPlaneCreationCoors	MATCH	0x6CD090-0x6CD2EE	rand order, coords, scan code, LOS/camera-collision test equal	-
+0x6CD2F0	CPlane::DoPlaneGenerationAndRemoval	NOT_REACHED		token budget	-

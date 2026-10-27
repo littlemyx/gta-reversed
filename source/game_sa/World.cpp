@@ -2728,10 +2728,19 @@ void CWorld::RepositionOneObject(CEntity* object) {
         MI_STREETLAMP1,
         MI_STREETLAMP2
     })) {
+        // 0x569A80..0x569B53: no col data => the exe leaves the object where it is
         if (const auto CD = colModel->m_pColData) {
             if (CD->m_nNumBoxes == 1) {
-                RecalcZPosAtPoint(object->GetMatrix().TransformVector(CD->m_pBoxes[0].GetCenter()));
-            } else if (CD->m_nNumSpheres) {
+                // 0x569A95: x/y = centre of the box, z = the box's MIN z (not the centre z)
+                const auto& box = CD->m_pBoxes[0];
+                const CVector point{
+                    (box.m_vecMax.x + box.m_vecMin.x) * 0.5f,
+                    (box.m_vecMax.y + box.m_vecMin.y) * 0.5f,
+                    box.m_vecMin.z
+                };
+                RecalcZPosAtPoint(object->GetMatrix().TransformVector(point));
+            } else {
+                // 0x569AC6: no spheres => reposition at the object's own position (0x569B53)
                 auto point{ object->GetPosition() };
                 point.z = 1000.f;
 
@@ -2748,8 +2757,6 @@ void CWorld::RepositionOneObject(CEntity* object) {
                     RecalcZPosAtPoint(object->GetMatrix().TransformVector(point));
                 }
             }
-        } else {
-            RecalcZPosAtPoint(object->GetPosition());
         }
     }
 

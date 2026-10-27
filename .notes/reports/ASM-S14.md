@@ -9,4 +9,4 @@ MATCH: Land::ProcessPed, OnEscalator::ProcessPed, PickUpEntity ctor-1, PlayHandS
 NOT REACHED: Jump x4, PickUpBike x3, PlayerOnFire, PlayerOnFoot x7, Say, SetPedAsAutoDriver, ShakeFist x2, SitDown x2, SitIdle x2.
 Note: CGeneral::DoCoinFlip (rand >= 16383) vs the exe's inlined rand()/32767 > 0.5 (rand >= 16384) differ only at rand()==16383; not fixed.
 Consumers: fixes are local to the tasks' own update (RunTimedAnim subclasses Chat/HandsUp/LookAbout/Sunbathe only gain a working timer on negative durations).
-Gate: no oracle row covers these functions (only KillPedWithCar Clone/Destructor, skipped); Release build, soak: see below.
+Gate: no oracle row covers these functions (only KillPedWithCar Clone/Destructor, skipped); Release build OK; soak RESULT: OK (3 min NOVSYNC).

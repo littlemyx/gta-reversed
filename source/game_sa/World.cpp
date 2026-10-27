@@ -2612,7 +2612,7 @@ float CWorld::FindGroundZForCoord(float x, float y) {
 float CWorld::FindGroundZFor3DCoord(CVector coord, bool* outResult, CEntity** outEntity) {
     CEntity*  localOutEntity{};
     CColPoint colPoint{};
-    if (ProcessVerticalLine(coord, -1000.0f, colPoint, localOutEntity, true, false, false, false, true, false, nullptr)) {
+    if (ProcessVerticalLine(coord, -1000.0f, colPoint, localOutEntity, true, false, false, false, false, false, nullptr)) { // 0x5696DB: buildings only, no dummies
         if (outResult) {
             *outResult = true;
         }

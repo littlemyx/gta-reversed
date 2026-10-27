@@ -40,14 +40,14 @@
 | S23b | rest of S23 | 13 | done 12/13 (9 M, 3 fixed; AddPedAtAttractor left) | Population.cpp |
 | S22c | rest of S22b | 18 | partial 3/18 (3 M) -> S22d | CarCtrl.cpp |
 | S26b | rest of S26 | 9 | partial 7/9 (7 fixed) -> S26c | Physical.cpp |
-| S26c | rest of S26b | 2 | pending | Physical.cpp |
+| S26c | rest of S26b | 2 | done (2 fixed) | Physical.cpp |
 | S22d | rest of S22c | 15 | pending | CarCtrl.cpp |
 | S20b | rest of S20 | 21 | partial 8/21 (6 M, 2 fixed) -> S20c | Ped.cpp |
 | S16b | rest of S16 | 25 | partial 8/25 (2 M, 5 fixed, 1 U) -> S16c | Automobile.cpp |
 | S17b | rest of S17 | 22 | partial 5/22 (2 M, 3 fixed) -> S17c | Bike.cpp, Bmx.cpp, Boat.cpp |
-| S21b | rest of S21 | 9 | pending | PlayerPed.cpp |
+| S21b | rest of S21 | 9 | not reached (ASM-MIX1) | PlayerPed.cpp |
 | S27b | rest of S27 | 15 | pending | World.cpp |
-| S29b | rest of S29 | 5 | pending | HandObject.cpp, Object.cpp |
+| S29b | rest of S29 | 5 | not reached (ASM-MIX1) | HandObject.cpp, Object.cpp |
 | S13b | rest of S13 | 12 | pending | TaskSimpleGetUp.cpp, TaskSimpleGoToPoint.cpp, TaskSimpleGoToPointFine.cpp, TaskSimpleGunControl.cpp, TaskSimpleHoldEntity.cpp, TaskSimpleInAir.cpp, TaskSimpleJetPack.cpp |
 | S11b | rest of S11 | 9 | pending | TaskSimpleCarSetPedInAsDriver.cpp, TaskSimpleCarSetPedInAsPassenger.cpp, TaskSimpleCarSetPedSlowDraggedOut.cpp, TaskSimpleClimb.cpp |
 | S12b | rest of S12 | 10 | pending | TaskSimpleDead.cpp, TaskSimpleFight.cpp, TaskSimpleGangDriveBy.cpp |

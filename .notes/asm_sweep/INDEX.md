@@ -15,7 +15,7 @@
 | S11 | game_sa/Tasks/TaskTypes | 48 | partial 39/48 (30 M, 9 fixed) -> S11b | TaskSimpleCarGetOut.cpp, TaskSimpleCarGoToPointNearDoorUntilDoorNotInUse.cpp, TaskSimpleCarJumpOut.cpp, TaskSimpleCarOpenDoorFromOutside.cpp, TaskSimpleCarOpenLockedDoorFromOutside.cpp, TaskSimpleCarSetPedInAsDriver.cpp ... |
 | S12 | game_sa/Tasks/TaskTypes | 46 | partial 36/46 (29 M, 8 fixed) -> S12b | TaskSimpleCreateCarAndGetIn.cpp, TaskSimpleDead.cpp, TaskSimpleDie.cpp, TaskSimpleDieInCar.cpp, TaskSimpleDoHandSignal.cpp, TaskSimpleDrown.cpp ... |
 | S13 | game_sa/Tasks/TaskTypes | 41 | partial 29/41 (25 M, 3 fixed, 1 U) -> S13b | TaskSimpleGetUp.cpp, TaskSimpleGiveCPR.cpp, TaskSimpleGoTo.cpp, TaskSimpleGoToPoint.cpp, TaskSimpleGoToPointFine.cpp, TaskSimpleGunControl.cpp ... |
-| S14 | game_sa/Tasks/TaskTypes | 41 | pending | TaskSimpleJump.cpp, TaskSimpleKillPedWithCar.cpp, TaskSimpleLand.cpp, TaskSimpleOnEscalator.cpp, TaskSimplePickUpBike.cpp, TaskSimplePickUpEntity.cpp ... |
+| S14 | game_sa/Tasks/TaskTypes | 41 | partial 18/41 (14 M, 4 fixed) -> S14b | TaskSimpleJump.cpp, TaskSimpleKillPedWithCar.cpp, TaskSimpleLand.cpp, TaskSimpleOnEscalator.cpp, TaskSimplePickUpBike.cpp, TaskSimplePickUpEntity.cpp ... |
 | S15 | game_sa/Tasks/TaskTypes | 33 | pending | TaskSimpleSlideToCoord.cpp, TaskSimpleStandStill.cpp, TaskSimpleStandUp.cpp, TaskSimpleStealthKill.cpp, TaskSimpleSwim.cpp, TaskSimpleThrowProjectile.cpp ... |
 | S16 | game_sa/Entity/Vehicle | 48 | partial 23/48 (18 M, 5 fixed) -> S16b | Automobile.cpp |
 | S17 | game_sa/Entity/Vehicle | 43 | partial 21/43 (17 M, 4 fixed) -> S17b | Bike.cpp, Bmx.cpp, Boat.cpp |
@@ -58,3 +58,4 @@
 | S13c | rest of S13b | 4 | pending | TaskSimpleGunControl.cpp, TaskSimpleInAir.cpp, TaskSimpleJetPack.cpp |
 | S22e | rest of S22d | 9 | pending | CarCtrl.cpp |
 | S27c | rest of S27b | 5 | pending | World.cpp |
+| S14b | rest of S14 | 23 | pending | TaskSimpleJump.cpp, TaskSimplePickUpBike.cpp, TaskSimplePlayerOnFire.cpp, TaskSimplePlayerOnFoot.cpp, TaskSimpleSay.cpp, TaskSimpleSetPedAsAutoDriver.cpp, TaskSimpleShakeFist.cpp, TaskSimpleSitDown.cpp, TaskSimpleSitIdle.cpp |

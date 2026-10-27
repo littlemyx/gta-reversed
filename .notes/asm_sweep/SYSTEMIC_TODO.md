@@ -1,2 +1,4 @@
 - GetSectorX/Y: port x/50+60, exe x*0.02f+60 (ASM-S27b); differs at sector borders only; check all sector helpers (World.h) against the exe, like ExeDivide.
 - Object.cpp ~326/759/783: virtual SetIsStatic where the exe may set only the bit (ASM-MIX2).
+- CGeneral::DoCoinFlip: port rand >= 16383, exe inlines rand()/32767 > 0.5 (>= 16384) (ASM-S14); check each exe coin flip site, not only the helper.
+- CTaskTimer::Start refuses a negative duration in the port; check the exe Start (ASM-S14 fixed only RunTimedAnim caller).

@@ -1,0 +1,17 @@
+addr	function	verdict	asm_range	note	fix_commit
+0x564050	ShutDown	FIXED	0x564050-0x56435B	exe calls CIplStore::Shutdown first (port never did); rest (lod/repeat/sector delete order, flushes, DeAllocateData x2) matches	3a9fdba7
+0x565CB0	RemoveFallenPeds	FIXED	0x565CB0-0x565E7E	only z < limit handled (exe skips z >= -100); rest matches	306e3d81
+0x565E80	RemoveFallenCars	FIXED	0x565E80-0x5660AA	kept car searches nearest VEHICLE node (type 0, port used ped nodes); strict z test	2ee1845e
+0x569850	RepositionOneObject	FIXED	0x569850-0x569E0F	street-light branch: no ColData => leave alone; no box==1 and no spheres => reposition at own pos; single box uses min z (not centre z) for the transform	ce873dd6
+0x5696C0	FindGroundZFor3DCoord	FIXED	0x5696C0-0x569748	(out of slice, found via RepositionOneObject) buildings only, port also tested dummies; FindRoofZ keeps dummies (matches)	9dc80d60
+0x5647F0	ProcessAttachedEntities	MATCH	0x5647F0-0x564963	vehicles + objects (Remove, position, Add = UpdateRw x2 + moving list) match
+0x568B80	FindObjectsKindaColliding	MATCH	0x568B80-0x568DC6	Y outer / X inner, list order, args match (sector coord uses x/50 vs x*0.02f: border-only float noise, UNSURE-minor)
+0x568DD0	FindObjectsIntersectingCube	MATCH	0x568DD0-0x568FEB	loop and list order match
+0x568FF0	FindObjectsIntersectingAngledCollisionBox	MATCH	0x568FF0-0x569234	loop, arg order match
+0x569240	FindMissionEntitiesIntersectingCube	MATCH	0x569240-0x5693E1	repeat sectors only; veh/ped/obj flags match
+0x569E20	TestSphereAgainstWorld	MATCH	0x569E20-0x56A0CA	early return on first hit, camera-ignore only for the objects list
+0x566140	TestSphereAgainstSectorList	NOT_REACHED			
+0x567750	TriggerExplosionSectorList	NOT_REACHED			
+0x5684A0	Process	NOT_REACHED			
+0x56B5E0	ProcessLineOfSightSector	NOT_REACHED			
+0x566EE0	ProcessLineOfSightSectorList	NOT_REACHED			

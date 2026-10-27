@@ -2699,7 +2699,7 @@ void CAutomobile::Fix() {
 
     // 0x6A355E: the exe loops 4 times (stride 0x20 from +0x6AC, `mov word [eax], 0xFFFF`), the 4th hit lands on +0x70C = the low half of
     // m_swingingChassis.m_openAngle (original quirk, replicated)
-    static_assert(offsetof(CAutomobile, m_swingingChassis) == 0x70C);
+    VALIDATE_OFFSET(CAutomobile, m_swingingChassis, 0x70C); // x86 layout only (a plain offsetof static_assert breaks the x64 portable builds)
     *reinterpret_cast<uint16*>(&m_swingingChassis.m_openAngle) = 0xFFFF;
 }
 

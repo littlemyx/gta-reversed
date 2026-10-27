@@ -103,7 +103,7 @@ void CTaskSimplePlayHandSignalAnim::StartAnim(CPed* ped) {
             CWorld::Add(handObj);
             CAnimManager::AddAnimation(
                 handObj->GetRpClump(),
-                CAnimManager::GetAnimAssociation(ANIM_GROUP_LHAND, m_PlayerIdlesAnimBlockId)->GetAnimHierarchy(),
+                CAnimManager::GetAnimAssociation(animGrpId, m_PlayerIdlesAnimBlockId)->GetAnimHierarchy(), // 0x61B11F: the right hand uses ANIM_GROUP_RHAND (0x50), not LHAND
                 0
             );
             CObject::nNoTempObjects++;

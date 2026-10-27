@@ -199,9 +199,10 @@ void CObject::ProcessControl() {
         && !physicalFlags.bDisableMoveForce
         && m_pDamageEntity
     ) {
-        const auto bCanCarryItems = m_pDamageEntity->m_nModelIndex == MODEL_DUMPER || m_pDamageEntity->m_nModelIndex == MODEL_FORKLIFT;
-        if (bCanCarryItems && m_pDamageEntity->AsAutomobile()->m_wMiscComponentAngle
-            && !CRopes::IsCarriedByRope(this))
+        // exe 0x5A21C9..0x5A21ED: a dumper always carries, a forklift only with its forks raised (m_wMiscComponentAngle != 0)
+        const auto bCanCarryItems = m_pDamageEntity->m_nModelIndex == MODEL_DUMPER
+            || (m_pDamageEntity->m_nModelIndex == MODEL_FORKLIFT && m_pDamageEntity->AsAutomobile()->m_wMiscComponentAngle);
+        if (bCanCarryItems && !CRopes::IsCarriedByRope(this))
         {
             if (m_nColDamageEffect != COL_DAMAGE_EFFECT_NONE && m_fDamageIntensity > 5.0F)
                 ObjectDamage(m_fDamageIntensity, &m_vecLastCollisionPosn, &m_vecLastCollisionImpactVelocity, m_pDamageEntity, eWeaponType::WEAPON_RAMMEDBYCAR);
@@ -286,8 +287,9 @@ void CObject::ProcessControl() {
     }
 
     if (m_nModelIndex == ModelIndices::MI_RCBOMB) {
-        CPhysical::ApplyTurnForce(m_vecMoveSpeed * -0.05F, -GetForward());
-        m_vecMoveSpeed *= std::pow(CTimer::GetTimeStep(), 1.0F - m_vecMoveSpeed.SquaredMagnitude() * 0.2F);
+        // exe 0x5A2685: the force is (-0.05 * turn mass) * move speed; 0x5A2707..0x5A2719: pow(1 - |v|^2 * 0.2, timestep)
+        CPhysical::ApplyTurnForce(m_vecMoveSpeed * (-0.05F * m_fTurnMass), -GetForward());
+        m_vecMoveSpeed *= std::pow(1.0F - m_vecMoveSpeed.SquaredMagnitude() * 0.2F, CTimer::GetTimeStep());
     }
 
     if (m_bIsBIGBuilding)
@@ -318,7 +320,7 @@ void CObject::ProcessControl() {
             AudioEngine.ReportDoorMovement(this);
         }
 
-        if (!m_bIsBIGBuilding
+        if (!GetIsStuck() // exe 0x5A289D: stuck, static or waiting-for-collision skip it (no bIsBIGBuilding test)
             && !GetIsStatic()
             && std::fabs(fDiff) < 0.01F
             && (objectFlags.bIsDoorMoving || std::fabs(m_vecTurnSpeed.z) < 0.01F)

@@ -615,12 +615,13 @@ void CAutomobile::ProcessControl()
         bool postCollision = false;
         if (m_fDamageIntensity > 0.0f && m_vecLastCollisionImpactVelocity.z > 0.1f)
             postCollision = true;
+        const bool hasHitWall = GetHasHitWall(); // 0x6B2131-0x6B214B: read before CPhysical::ProcessControl, which clears it (the port read it after, always false)
         CPhysical::ProcessControl();
 
         if (m_nModelIndex == MODEL_SKIMMER) {
             auto skimmerModelInfo = CModelInfo::GetModelInfo(MODEL_SKIMMER)->AsVehicleModelInfoPtr();
             auto skimmerHandling = gHandlingDataMgr.GetBoatPointer(static_cast<uint8>(skimmerModelInfo->m_nHandlingId));
-            ProcessBoatControl(skimmerHandling, &m_fDoomVerticalRotation, GetHasHitWall(), postCollision);
+            ProcessBoatControl(skimmerHandling, &m_fDoomVerticalRotation, hasHitWall, postCollision);
             physicalFlags.bTouchingWater = physicalFlags.bSubmergedInWater;
         }
         else {
@@ -685,7 +686,8 @@ void CAutomobile::ProcessControl()
             }
         }
 
-        float speedForward = DotProduct(m_vecMoveSpeed, GetForward());
+        // 0x6B24A9-0x6B24CC: the forward speed is summed z, y, x
+        float speedForward = m_vecMoveSpeed.z * GetForward().z + m_vecMoveSpeed.y * GetForward().y + m_vecMoveSpeed.x * GetForward().x;
 
         if (vehicleFlags.bAudioChangingGear
             && m_GasPedal > 0.4f
@@ -773,10 +775,15 @@ void CAutomobile::ProcessControl()
             acceleration /= m_fVelocityFrequency;
         }
 
-        float traction = m_pHandlingData->m_fTractionMultiplier / 250.0f; // (0.004f * mult)
+        // 0x6B2803-0x6B2845: K * mult (physics cars: (carTraction * mult) * K), then * 0.25 and / velocity frequency.
+        // K is 0xC1BFEC, set at startup by the static init at 0x853500: float(1/(50*50)) * 10 = 0x3B83126E (not 0.004f = 0x3B83126F)
+        constexpr float TRACTION_K = (1.0f / (50.0f * 50.0f)) * 10.0f;
+        static_assert(std::bit_cast<uint32>(TRACTION_K) == 0x3B83126Eu);
+        float traction = TRACTION_K * m_pHandlingData->m_fTractionMultiplier;
         if (GetStatus() == STATUS_PHYSICS)
-            traction = 250.0f / m_fCarTraction * m_pHandlingData->m_fTractionMultiplier;
-        traction *= 0.25f / m_fVelocityFrequency;
+            traction = m_fCarTraction * m_pHandlingData->m_fTractionMultiplier * TRACTION_K;
+        traction *= 0.25f;
+        traction /= m_fVelocityFrequency;
         CPlane* vortex = AsPlane();
         if (CCheat::IsActive(CHEAT_PERFECT_HANDLING) || m_nModelIndex == MODEL_VORTEX && vortex->m_fAccelerationBreakStatus == 0.0f)
             traction *= 4.0f;
@@ -799,7 +806,7 @@ void CAutomobile::ProcessControl()
             CColPoint colPoint{};
             colPoint.m_nSurfaceTypeA = SURFACE_WHEELBASE;
             colPoint.m_nSurfaceTypeB = SURFACE_TARMAC;
-            float speedRight = DotProduct(m_vecMoveSpeed, GetRight());
+            const float speedRight = m_vecMoveSpeed.z * GetRight().z + m_vecMoveSpeed.y * GetRight().y + m_vecMoveSpeed.x * GetRight().x; // 0x6B2935-0x6B295D: z, y, x
             float adhesive = g_surfaceInfos.GetAdhesiveLimit(&colPoint);
             steerAngle = adhesive * traction * 4.0f * 4.0f / (speedForward * speedForward);
             steerAngle = std::min(steerAngle, 1.0f);
@@ -961,16 +968,20 @@ void CAutomobile::ProcessControl()
         if (speed > 0.01f) {
             speed = sqrt(speed);
             if (suspensionShake > 0.0f) {
-                float frequency = (200.0f * suspensionShake * speed * 2000.0f) / m_fMass + 100.0f;
+                // 0x6B2E94-0x6B2F12: ((speed / mass) * shake) * 400000 + 100; the shake time divides by the truncated byte
+                float frequency = speed / m_fMass * suspensionShake * 400000.0f + 100.0f;
                 frequency = std::min(frequency, 250.0f);
-                auto time = NOTSA_FTOL(int16, CTimer::GetTimeStep() * 20000.0f / frequency);
-                CPad::GetPad()->StartShake(time, NOTSA_FTOL(uint8, frequency), 0);
+                const auto frequencyByte = NOTSA_FTOL(uint8, frequency);
+                auto time = NOTSA_FTOL(int16, CTimer::GetTimeStep() * 20000.0f / static_cast<float>(frequencyByte));
+                CPad::GetPad()->StartShake(time, frequencyByte, 0);
             }
             else {
-                float frequency = (200.0f * roughnessShake * speed * 2000.0f) / m_fMass + 40.0f;
+                // 0x6B2F14-0x6B2F79: same shape with the roughness shake, + 40, cap 150
+                float frequency = speed / m_fMass * roughnessShake * 400000.0f + 40.0f;
                 frequency = std::min(frequency, 150.0f);
-                auto time = NOTSA_FTOL(int16, CTimer::GetTimeStep() * 5000.0f / frequency);
-                CPad::GetPad()->StartShake(time, NOTSA_FTOL(uint8, frequency), 0);
+                const auto frequencyByte = NOTSA_FTOL(uint8, frequency);
+                auto time = NOTSA_FTOL(int16, CTimer::GetTimeStep() * 5000.0f / static_cast<float>(frequencyByte));
+                CPad::GetPad()->StartShake(time, frequencyByte, 0);
             }
         }
     }
@@ -1000,7 +1011,7 @@ void CAutomobile::ProcessControl()
             }
             return false;
         }()) {
-            float       turnSpeedForward = DotProduct(m_vecTurnSpeed, GetForward());
+            float       turnSpeedForward = m_vecTurnSpeed.z * GetForward().z + m_vecTurnSpeed.y * GetForward().y + m_vecTurnSpeed.x * GetForward().x; // 0x6B30C6-0x6B30DC: z, y, x
             const float speedSquared     = turnSpeedForward * turnSpeedForward;
             float       speedTimeStep    = std::pow(0.985f, CTimer::GetTimeStep()) / (speedSquared * 5.0f + 1.0f);
             float       speed            = std::pow(speedTimeStep, CTimer::GetTimeStep());
@@ -1052,9 +1063,9 @@ void CAutomobile::ProcessControl()
     }
     else if (!skipPhysics
         && (m_GasPedal == 0.0f || GetStatus() == STATUS_WRECKED)
-        && std::fabs(m_vecMoveSpeed.x) < 0.0045f
-        && std::fabs(m_vecMoveSpeed.y) < 0.0045f
-        && std::fabs(m_vecMoveSpeed.z) < 0.0045f)
+        && std::fabs(m_vecMoveSpeed.x) < 0.005f // 0x6B33F6-0x6B342D: limit is 0x858B4C = 0.005 (the port had 0.0045)
+        && std::fabs(m_vecMoveSpeed.y) < 0.005f
+        && std::fabs(m_vecMoveSpeed.z) < 0.005f)
     {
         if (m_fDamageIntensity <= 0.0f || m_pDamageEntity != FindPlayerPed()) {
             if ((!IsSubPlane() || AsPlane()->m_fAccelerationBreakStatus == 0.0f) &&
@@ -1081,7 +1092,7 @@ void CAutomobile::ProcessControl()
 
     if (CWeather::Earthquake > 0.0f) {
         CVector& position = GetPosition();
-        position.z = CGeneral::GetRandomNumberInRange(0.0f, CWeather::Earthquake * 0.5f);
+        position.z += CGeneral::GetRandomNumberInRange(0.0f, CWeather::Earthquake * 0.5f); // 0x6B3695: the random shake is added to z (the port replaced z)
     }
 
     if (m_nModelIndex == MODEL_COMBINE)

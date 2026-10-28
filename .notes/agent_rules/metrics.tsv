@@ -261,3 +261,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-28	ASM-S17c	v6	asm sweep (partial)	188715	51	16	Bike/Boat 6/16: 4 fixed (Boat Render speeder/reefer vertices + invisible cheat, Boat BlowUpCar const + uninit, Bike KnockOffRider dot order, Bike ProcessBuoyancy exe multiplies); 10 left -> S17d
 2026-10-28	ASM-S17d	v6	asm sweep (partial)	211859	40	9	Bike/Bmx/Boat 5/10 all MATCH (Bmx/Bike ProcessAI, Bmx anims+PreRender, Boat PreRender); 5 big left -> S17e
 2026-10-28	ASM-S17e	v6	asm sweep (partial)	258615	58	20	Bike inputs/rider anims/PreRender MATCH; Boat ProcessControl fixed x7 (buoyancy consts, damage literals, fire z+1, BlowUpTimer int ms, hit-wall read order, skimmer cheat); Bike ProcessControl -> S17f
+2026-10-28	ASM-S17f	v6	asm sweep	?	?	?	Bike ProcessControl rest MATCH (Bike/Bmx/Boat sweep complete); Automobile PreRender to 0x6AB36C MATCH, tail open

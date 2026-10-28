@@ -6147,19 +6147,16 @@ void CAutomobile::PlaceOnRoadProperly()
         m_pEntityWeAreOn = colEntity;
         bColFoundFront = true;
     }
-    if (CWorld::ProcessVerticalLine(vecFrontCheck, vecFrontCheck.z - 5.0F, colPoint, colEntity, true)) {
-        if (!bColFoundFront || std::fabs(vecFrontCheck.z - colPoint.m_vecPoint.z) < std::fabs(vecFrontCheck.z - fColZ)) {
-            m_bTunnel = colEntity->m_bTunnel;
-            m_bTunnelTransition = colEntity->m_bTunnelTransition;
+    // exe 0x6AF420: the lighting / z assignment is shared by the "second line hit, first one closer" case (z from the first hit, lighting from the second colPoint)
+    const bool bColFoundBelow = CWorld::ProcessVerticalLine(vecFrontCheck, vecFrontCheck.z - 5.0F, colPoint, colEntity, true);
+    if (bColFoundBelow && (!bColFoundFront || std::fabs(vecFrontCheck.z - colPoint.m_vecPoint.z) < std::fabs(vecFrontCheck.z - fColZ))) {
+        m_bTunnel = colEntity->m_bTunnel;
+        m_bTunnelTransition = colEntity->m_bTunnelTransition;
 
-            fColZ = colPoint.m_vecPoint.z;
-            m_pEntityWeAreOn = colEntity;
-
-            m_FrontCollPoly.ligthing = colPoint.m_nLightingB;
-            vecFrontCheck.z = fColZ;
-        }
+        fColZ = colPoint.m_vecPoint.z;
+        m_pEntityWeAreOn = colEntity;
     }
-    else if (bColFoundFront) {
+    if (bColFoundBelow || bColFoundFront) {
         m_FrontCollPoly.ligthing = colPoint.m_nLightingB;
         vecFrontCheck.z = fColZ;
     }
@@ -6174,19 +6171,16 @@ void CAutomobile::PlaceOnRoadProperly()
         m_pEntityWeAreOn = colEntity;
         bColFoundRear = true;
     }
-    if (CWorld::ProcessVerticalLine(vecRearCheck, vecRearCheck.z - 5.0F, colPoint, colEntity, true)) {
-        if (!bColFoundRear || std::fabs(vecRearCheck.z - colPoint.m_vecPoint.z) < std::fabs(vecRearCheck.z - fColZ)) {
-            m_bTunnel = colEntity->m_bTunnel;
-            m_bTunnelTransition = colEntity->m_bTunnelTransition;
+    // exe 0x6AF420: the lighting / z assignment is shared by the "second line hit, first one closer" case (z from the first hit, lighting from the second colPoint)
+    const bool bColFoundBelowRear = CWorld::ProcessVerticalLine(vecRearCheck, vecRearCheck.z - 5.0F, colPoint, colEntity, true);
+    if (bColFoundBelowRear && (!bColFoundRear || std::fabs(vecRearCheck.z - colPoint.m_vecPoint.z) < std::fabs(vecRearCheck.z - fColZ))) {
+        m_bTunnel = colEntity->m_bTunnel;
+        m_bTunnelTransition = colEntity->m_bTunnelTransition;
 
-            fColZ = colPoint.m_vecPoint.z;
-            m_pEntityWeAreOn = colEntity;
-
-            m_RearCollPoly.ligthing = colPoint.m_nLightingB;
-            vecRearCheck.z = fColZ;
-        }
+        fColZ = colPoint.m_vecPoint.z;
+        m_pEntityWeAreOn = colEntity;
     }
-    else if (bColFoundRear) {
+    if (bColFoundBelowRear || bColFoundRear) {
         m_RearCollPoly.ligthing = colPoint.m_nLightingB;
         vecRearCheck.z = fColZ;
     }
@@ -6205,7 +6199,13 @@ void CAutomobile::PlaceOnRoadProperly()
     auto vecCross = CrossProduct(GetRight(), GetForward());
     GetUp() = vecCross;
 
-    CVector vecNewPos = (vecFrontCheck * fEndY + vecRearCheck * fStartY) / fLength;
+    // exe 0x6AF420: 1/length once, then three multiplies (not three divides)
+    const float fInvLength = 1.0F / fLength;
+    CVector vecNewPos{
+        (vecFrontCheck.x * fEndY + vecRearCheck.x * fStartY) * fInvLength,
+        (vecFrontCheck.y * fEndY + vecRearCheck.y * fStartY) * fInvLength,
+        (vecFrontCheck.z * fEndY + vecRearCheck.z * fStartY) * fInvLength,
+    };
     SetPosn(vecNewPos);
 
     if (IsSubPlane())

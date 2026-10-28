@@ -1,0 +1,42 @@
+addr	function	verdict	asm range	note	fix commit
+0x6648C0	CTaskLeanOnVehicle::ProcessPed	MATCH	0x6648C0-0x664A28 (all)	branches, anim ids, blend deltas, timer start/out-of-time all equal	-
+0x61A790	CTaskSimpleAnim::MakeAbortable	FIXED	0x61A790-0x61A893 (all)	script-command named-anim check only runs for IMMEDIATE and dontInterrupt aborts (exe jumps straight to blend-out otherwise); port ran it for plain aborts and skipped it for IMMEDIATE/dontInterrupt	dcd465dc
+0x68B8A0	CTaskSimpleArrestPed::ProcessPed	MATCH	0x68B8A0-0x68B988 (all)		-
+0x68B7E0	CTaskSimpleArrestPed::StartAnim	MATCH	0x68B7E0-0x68B897 (all)		-
+0x620910	CTaskSimpleBeHit::StartAnim	MATCH	0x620910-0x620A1B (all)		-
+0x620A20	CTaskSimpleBeHit::ProcessPed	MATCH	0x620A20-0x620AF8 (all)		-
+0x61FF40	CTaskSimpleBeHitWhileMoving::StartAnim	MATCH	0x61FF40-0x6200F4 (head)	hit-type/direction/rand selection, PlayHitAnim, knock-down anim setup verified; unconscious-timer tail (0x6200F4+) not re-read (already x87d in port)	-
+0x620290	CTaskSimpleBeHitWhileMoving::ProcessPed	MATCH	0x620290-0x6202AF (all)		-
+0x61FD20	CTaskSimpleBeKickedOnGround::StartAnim	MATCH	0x61FD20-0x61FD20-0x61FDF0		-
+0x61FE00	CTaskSimpleBeKickedOnGround::ProcessPed	MATCH	0x61FE00-0x61FE24 (all)		-
+0x648C40	CTaskSimpleBikeJacked::Destructor	MATCH	0x648C40-0x648CB7 (all)		-
+0x64C970	CTaskSimpleBikeJacked::ProcessPed	FIXED	0x64C970-0x64CC23 (all)	second-anim BlendAnimation delta 100.0 (port default 8.0); PlayerAboutToExitVehicleAsDriver on the ped vehicle (null-checked) instead of the task vehicle	094234f8
+0x64AC00	CTaskSimpleCarAlign::StartAnim	NOT_REACHED	-	budget	-
+0x64D6D0	CTaskSimpleCarAlign::ProcessPed	NOT_REACHED	-	budget	-
+0x645C70	CTaskSimpleCarAlign::SetPedPosition	NOT_REACHED	-	budget	-
+0x646410	CTaskSimpleCarCloseDoorFromInside::ComputeAnimID	NOT_REACHED	-	budget	-
+0x64AFB0	CTaskSimpleCarCloseDoorFromInside::StartAnim	NOT_REACHED	-	budget	-
+0x64D9A0	CTaskSimpleCarCloseDoorFromInside::ProcessPed	NOT_REACHED	-	budget	-
+0x6463F0	CTaskSimpleCarCloseDoorFromInside::SetPedPosition	NOT_REACHED	-	budget	-
+0x646600	CTaskSimpleCarCloseDoorFromOutside::ComputeAnimID	NOT_REACHED	-	budget	-
+0x64B080	CTaskSimpleCarCloseDoorFromOutside::StartAnim	NOT_REACHED	-	budget	-
+0x64DA90	CTaskSimpleCarCloseDoorFromOutside::ProcessPed	MATCH	0x64DA90-0x64DB22 (all)		-
+0x6465E0	CTaskSimpleCarCloseDoorFromOutside::SetPedPosition	NOT_REACHED	-	budget	-
+0x63C460	CTaskSimpleCarDrive::Destructor	NOT_REACHED	-	budget	-
+0x63C500	CTaskSimpleCarDrive::TriggerIK	NOT_REACHED	-	budget	-
+0x642760	CTaskSimpleCarDrive::StartBopping	NOT_REACHED	-	budget	-
+0x6428C0	CTaskSimpleCarDrive::ProcessHeadBopping	NOT_REACHED	-	budget	-
+0x642AE0	CTaskSimpleCarDrive::ProcessArmBopping	NOT_REACHED	-	budget	-
+0x642E70	CTaskSimpleCarDrive::ProcessBopping	NOT_REACHED	-	budget	-
+0x642700	CTaskSimpleCarDrive::StartRollDoorAnim	NOT_REACHED	-	budget	-
+0x63C670	CTaskSimpleCarDrive::MakeAbortable	NOT_REACHED	-	budget	-
+0x644470	CTaskSimpleCarDrive::ProcessPed	NOT_REACHED	-	budget	-
+0x63C770	CTaskSimpleCarDrive::SetPedPosition	NOT_REACHED	-	budget	-
+0x46F610	CTaskSimpleCarDriveTimed::ProcessPed	MATCH	0x46F610-0x46F65F (all)		-
+0x64CCE0	CTaskSimpleCarFallOut::StartAnim	NOT_REACHED	-	budget	-
+0x64E2C0	CTaskSimpleCarFallOut::ProcessPed	NOT_REACHED	-	budget	-
+0x648E40	CTaskSimpleCarFallOut::SetPedPosition	NOT_REACHED	-	budget	-
+0x6477F0	CTaskSimpleCarForcePedOut::ProcessPed	MATCH	0x6477F0-0x6478A9 (all)		-
+0x64B2D0	CTaskSimpleCarGetIn::StartAnim	MATCH	0x64B2D0-0x64B39B (all)	door->anim table assumed from enum order (oracle test agrees)	-
+0x64DB30	CTaskSimpleCarGetIn::ProcessPed	NOT_REACHED	-	budget	-
+0x6467A0	CTaskSimpleCarGetIn::SetPedPosition	NOT_REACHED	-	budget	-

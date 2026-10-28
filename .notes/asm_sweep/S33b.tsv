@@ -1,11 +1,4 @@
 addr	file	line	cls	fn	oc
-0x6EB690	source/game_sa/WaterLevel.cpp	55	None	GetWaterLevel (not in any slice before)	B
-0x6E8580	source/game_sa/WaterLevel.cpp	58	None	GetWaterLevelNoWaves (not in any slice before)	B
-0x6E6EF0	source/game_sa/WaterLevel.cpp	60	None	CalculateWavesOnlyForCoordinate (not in any slice before)	B
-0x6E7210	source/game_sa/WaterLevel.cpp	66	None	CalculateWavesOnlyForCoordinate2 (not in any slice before)	B
-0x6E61B0	source/game_sa/WaterLevel.cpp	74	None	TestLineAgainstWater (not in any slice before)	B
-0x6E5BB0	source/game_sa/WaterLevel.cpp	76	None	CWaterQuad::GetWaterLevel (not in any slice before)	B
-0x6E5E90	source/game_sa/WaterLevel.cpp	77	None	CWaterTriangle::GetWaterLevel (not in any slice before)	B
 0x6EE240	source/game_sa/WaterLevel.cpp	25	None	RenderWaterTriangle	D
 0x6E8ED0	source/game_sa/WaterLevel.cpp	26	None	RenderFlatWaterTriangle_OneLayer	D
 0x6EE080	source/game_sa/WaterLevel.cpp	27	None	RenderFlatWaterTriangle	D

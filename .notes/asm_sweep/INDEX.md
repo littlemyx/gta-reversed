@@ -110,4 +110,4 @@
 | S19k | rest of S19j (+ AddSingleWheelParticles 0x6DEC3C-0x6DF3B9) | 48 | partial 19/48 (16 M, 3 fixed) -> S19l | Vehicle.cpp |
 | S19l | rest of S19k | 29 | partial 15/29 (6 M, 8 fixed, 1 U) -> S19m | Vehicle.cpp |
 | S19m | rest of S19l (+ DoHeadLightBeam x87 sub-ulp) | 15 | done 15/15 (12 M, 3 fixed; S19 complete) | Vehicle.cpp |
-| S33b | GetWaterLevel family (7, unlisted before) + rest of S33 | 25 | pending | WaterLevel.cpp |
+| S33b | rest of S33 (GetWaterLevel family is oracle-covered: world_oracle_env) | 18 | pending | WaterLevel.cpp |

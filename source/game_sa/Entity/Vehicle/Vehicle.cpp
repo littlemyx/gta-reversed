@@ -5124,9 +5124,10 @@ void CVehicle::ProcessBoatControl(tBoatHandlingData* boatHandling, float* fLastW
     }
 
     bool bOnWater = false;
-    // FIX_BUGS ? vehicleFlags.bIsDrowning = false;
-    if (!(CTimer::GetTimeStep() * m_fMass * 0.0008F < vecBuoyancyForce.z)) { // 0x6DBD84: `fcomp; test ah,5; jp` - >= and NaN
+    // 0x6DBD84: `fcomp; test ah,5; jp` - >= and NaN; the product ts*mass*0.0008f stays unrounded on the x87 stack
+    if (!((x87d)CTimer::GetTimeStep() * m_fMass * 0.0008F < vecBuoyancyForce.z)) {
         physicalFlags.bSubmergedInWater = false;
+        vehicleFlags.bIsDrowning = false; // 0x6DBF03
     } else {
         physicalFlags.bSubmergedInWater = true;
         bOnWater = true;
@@ -5135,7 +5136,7 @@ void CVehicle::ProcessBoatControl(tBoatHandlingData* boatHandling, float* fLastW
             && std::fabs(m_vecMoveSpeed.x) < 0.05F
             && std::fabs(m_vecMoveSpeed.y) < 0.05F
         ) {
-            vehicleFlags.bIsDrowning = true;
+            vehicleFlags.bIsDrowning = true; // 0x6DBDE2: stays set (the exe jumps over the clear at 0x6DBF03)
             if (m_pDriver) {
                 m_pDriver->physicalFlags.bTouchingWater = true;
                 if (m_pDriver->IsPlayer()) {
@@ -5152,9 +5153,10 @@ void CVehicle::ProcessBoatControl(tBoatHandlingData* boatHandling, float* fLastW
                     m_pDriver->GetEventGroup().Add(&damageEvent, false);
                 }
             }
+        } else {
+            vehicleFlags.bIsDrowning = false; // 0x6DBF03
         }
     }
-    vehicleFlags.bIsDrowning = false; // see above
 
     // 0x6DBF0A
     auto vecUsedBuoyancyForce = vecBuoyancyForce;

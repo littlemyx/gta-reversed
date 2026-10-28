@@ -39,6 +39,13 @@ bool NoPedOrNoHp(CPed* ped) {
     return !ped || ped->m_fHealth <= 0.f;
 }
 
+// 0x68E5F4..0x68E633 / 0x68E7CE..0x68E80D: `(a - b).SquaredMagnitude() <= 25^2` with the exe's CVector::SquaredMagnitude (0x406DA0) order (z^2 + y^2) + x^2;
+// the branch is taken for NaN as well (`fcomp 625; test ah, 0x41; jne`)
+static bool IsWithin25ZYX(const CVector& a, const CVector& b) {
+    const auto d = a - b;
+    return !((d.z * d.z + d.y * d.y) + d.x * d.x > 625.f);
+}
+
 // 0x68BE70
 CTaskComplexKillCriminal::CTaskComplexKillCriminal(CPed* criminal, bool randomize) :
     m_Randomize{randomize},
@@ -295,6 +302,7 @@ CTask* CTaskComplexKillCriminal::CreateNextSubTask(CPed* ped) {
     }
     case TASK_COMPLEX_ENTER_CAR_AS_DRIVER: { // 0x68E533
         if (!ped->bInVehicle) {
+            m_CantGetInCar = true; // 0x68E547: `mov byte [esi+1Ah], 1` before the finished/criminal test (the port only did it for the passenger case)
             return CreateSubTask(
                 m_HasFinished || NoPedOrNoHp(m_Criminal)
                     ? TASK_FINISHED
@@ -303,13 +311,19 @@ CTask* CTaskComplexKillCriminal::CreateNextSubTask(CPed* ped) {
             );
         }
         const auto copPartnerNoneOrInVeh = NoPedOrNoHp(m_Cop->m_pCopPartner) || m_Cop->m_pCopPartner->bInVehicle;
-        if (!m_HasFinished && !NoPedOrNoHp(m_Criminal) && !m_Criminal->IsInVehicle()) {
+        if (!m_HasFinished && !NoPedOrNoHp(m_Criminal)) {
+            // 0x68E5D8..0x68E635: a criminal that is in a vehicle is chased by car unconditionally (the port went on to FindNextCriminalToKill instead);
+            // otherwise kill on foot when we have no vehicle or the criminal is within 25 of it, else chase
+            const auto chase = copPartnerNoneOrInVeh
+                ? TASK_COMPLEX_CAR_DRIVE_MISSION
+                : TASK_SIMPLE_CAR_DRIVE;
+            if (m_Criminal->IsInVehicle()) {
+                return CreateSubTask(chase, ped);
+            }
             return CreateSubTask(
-                !ped->m_pVehicle || m_Criminal->IsEntityInRange(ped->m_pVehicle, 25.f) // 0x68E5D8
+                !ped->m_pVehicle || IsWithin25ZYX(ped->m_pVehicle->GetPosition(), m_Criminal->GetPosition())
                     ? TASK_COMPLEX_KILL_PED_ON_FOOT
-                    : copPartnerNoneOrInVeh // otherwise if criminal is too far chase them with the car
-                        ? TASK_COMPLEX_CAR_DRIVE_MISSION
-                        : TASK_SIMPLE_CAR_DRIVE,
+                    : chase,
                 ped
             );
         }
@@ -339,7 +353,8 @@ CTask* CTaskComplexKillCriminal::CreateNextSubTask(CPed* ped) {
     }
     case TASK_COMPLEX_LEAVE_CAR: // 0x68E77F
         return CreateSubTask(
-            !ped->bInVehicle || m_CantGetInCar || (!m_HasFinished && !NoPedOrNoHp(m_Criminal) && !m_Criminal->IsInVehicle() && m_Criminal->IsEntityInRange(ped, 25.f))
+            !ped->m_pVehicle /* 0x68E77F: tests the ped's vehicle pointer, not bInVehicle (we have just left the car) */ || m_CantGetInCar
+                || (!m_HasFinished && !NoPedOrNoHp(m_Criminal) && !m_Criminal->IsInVehicle() && IsWithin25ZYX(ped->GetPosition(), m_Criminal->GetPosition()))
                 ? TASK_COMPLEX_KILL_PED_ON_FOOT     // Criminal can be killed on foot
                 : TASK_COMPLEX_ENTER_CAR_AS_DRIVER, // We have to chase the criminal with a vehicle
             ped

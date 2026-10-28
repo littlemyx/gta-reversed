@@ -124,16 +124,25 @@ CTask* CTaskComplexUseSwatRope::ControlSubTask(CPed* ped) {
     if (subTaskType == TASK_SIMPLE_PAUSE || subTaskType == TASK_SIMPLE_ABSEIL) {
         CVector groundCoord = ped->GetPosition();
         CPedPlacement::FindZCoorForPed(groundCoord);
-        if (ped->GetPosition().z - 2.0F < groundCoord.z && m_pSubTask->MakeAbortable(ped))
+        // Exe (0x65A55A-0x65A61A): the "close to the ground" and the "no rope found" cases both end in a single abort attempt:
+        // success => TASK_NONE sub-task, failure => keep the current sub-task (no rope movement on this frame)
+        bool tryAbort = false;
+        if (ped->GetPosition().z - 2.0F < groundCoord.z) {
+            tryAbort = true;
+        } else {
+            m_fCoorAlongRope += CTimer::GetTimeStep() * 0.003F;
+            CVector posn;
+            if (CRopes::FindCoorsAlongRope(m_nRopeId, m_fCoorAlongRope, &posn, nullptr)) {
+                ped->SetPosn(posn);
+                ped->m_fAimingRotation = ped->m_fCurrentRotation - CTimer::GetTimeStep() * 0.05F;
+                ped->m_vecMoveSpeed.z = -0.03f;
+                ped->Say(CTX_GLOBAL_ROPE);
+            } else {
+                tryAbort = true;
+            }
+        }
+        if (tryAbort && m_pSubTask->MakeAbortable(ped)) {
             return CreateSubTask(TASK_NONE, ped);
-
-        m_fCoorAlongRope += CTimer::GetTimeStep() * 0.003F;
-        CVector posn;
-        if (CRopes::FindCoorsAlongRope(m_nRopeId, m_fCoorAlongRope, &posn, nullptr)) {
-            ped->SetPosn(posn);
-            ped->m_fAimingRotation = ped->m_fCurrentRotation - CTimer::GetTimeStep() * 0.05F;
-            ped->m_vecMoveSpeed.z = -0.03f;
-            ped->Say(CTX_GLOBAL_ROPE);
         }
     }
 

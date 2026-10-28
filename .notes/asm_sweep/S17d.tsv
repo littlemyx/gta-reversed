@@ -1,0 +1,11 @@
+addr	file	line	cls	fn	oc
+0x6BC930	source/game_sa/Entity/Vehicle/Bike.cpp	100	CBike	ProcessAI	S
+0x6B7280	source/game_sa/Entity/Vehicle/Bike.cpp	108	CBike	ProcessRiderAnims	D
+0x6BE310	source/game_sa/Entity/Vehicle/Bike.cpp	116	CBike	ProcessControlInputs	D
+0x6BD090	source/game_sa/Entity/Vehicle/Bike.cpp	119	CBike	PreRender	D
+0x6B9250	source/game_sa/Entity/Vehicle/Bike.cpp	121	CBike	ProcessControl	D
+0x6BFB50	source/game_sa/Entity/Vehicle/Bmx.cpp	34	CBmx	ProcessDrivingAnims	D
+0x6C0810	source/game_sa/Entity/Vehicle/Bmx.cpp	35	CBmx	PreRender	D
+0x6C1470	source/game_sa/Entity/Vehicle/Bmx.cpp	36	CBmx	ProcessAI	D
+0x6F1770	source/game_sa/Entity/Vehicle/Boat.cpp	37	CBoat	ProcessControl	D
+0x6F1180	source/game_sa/Entity/Vehicle/Boat.cpp	39	CBoat	PreRender	D

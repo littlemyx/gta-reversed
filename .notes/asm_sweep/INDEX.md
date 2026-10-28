@@ -53,7 +53,7 @@
 | S12b | rest of S12 | 10 | pending | TaskSimpleDead.cpp, TaskSimpleFight.cpp, TaskSimpleGangDriveBy.cpp |
 | S20c | rest of S20b | 13 | partial 3/13 (2 M, 1 fixed) -> S20d | Ped.cpp |
 | S16c | rest of S16b | 17 | partial 2/17 (2 fixed) -> S16d | Automobile.cpp |
-| S17c | rest of S17b | 16 | pending | Bike.cpp, Bmx.cpp, Boat.cpp |
+| S17c | rest of S17b | 16 | partial 6/16 (2 M, 4 fixed) -> S17d | Bike.cpp, Bmx.cpp, Boat.cpp |
 | S21c | rest of S21b | 4 | pending | PlayerPed.cpp |
 | S13c | rest of S13b | 4 | pending | TaskSimpleGunControl.cpp, TaskSimpleInAir.cpp, TaskSimpleJetPack.cpp |
 | S22e | rest of S22d | 9 | pending | CarCtrl.cpp |
@@ -70,3 +70,4 @@
 | S16g | rest of S16f | 6 | partial 3/6 (1 M, 2 fixed) -> S16h | Automobile.cpp |
 | S16h | rest of S16g | 3 | partial 2/3 + PreRender to 0x6AB154 (2 fixed) -> S16i | Automobile.cpp |
 | S16i | PreRender from 0x6AB154 to ret (rest of S16h) | 1 | pending |  |
+| S17d | rest of S17c | 10 | pending | Bike.cpp, Bmx.cpp, Boat.cpp |

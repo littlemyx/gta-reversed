@@ -4860,6 +4860,8 @@ void CVehicle::FlyingControl(eFlightModel flightModel, float leftRightSkid, floa
     FlyingControlDrag(c);
 }
 
+static void Normalise2DExt(CVector2D& v); // 0x44E480, defined below
+
 // 0x6DAF00
 // always returns `false`, and `rotorType` is always `-3`
 template<typename PtrListType>
@@ -4927,10 +4929,13 @@ bool CVehicle::BladeColSectorList(PtrListType& ptrList, CColModel& colModel, CMa
         if (entity->GetIsTypePed()) { // 0x6DB207
             auto& ped = *entity->AsPed();
 
-            const auto dirToPed = Normalized(GetPosition() - ped.GetPosition());
+            // ASM-S19l 0x6DB223: the direction is 2D (x, y of this - ped), normalised with CVector2D::Normalise
+            CVector2D dirToPed{ GetPosition().x - ped.GetPosition().x, GetPosition().y - ped.GetPosition().y };
+            Normalise2DExt(dirToPed);
 
             if (!ped.m_pAttachedTo) { // 0x6DB24C
-                ped.ApplyMoveForce(CVector{ CVector2D{dirToPed} * -5.f, 5.f });
+                ped.bIsStanding = false; // 0x6DB266: clears bit 0 of the ped flags at +0x46C
+                ped.ApplyMoveForce(CVector{ dirToPed * -5.f, 5.f });
             }
 
             CEventDamage dmgEvent{ // 0x6DB2CE
@@ -4952,8 +4957,8 @@ bool CVehicle::BladeColSectorList(PtrListType& ptrList, CColModel& colModel, CMa
             if (CLocalisation::Blood()) { // 0x6DB34D
                 if (ped.GetIsOnScreen()) {
                     g_fx.AddBlood(
-                        GetPosition() + CVector{ CVector2D{ dirToPed } * 0.35f, 0.6f}, // TODO: Magic 0.6f
-                        dirToPed * ExeRecip(100.f),
+                        ped.GetPosition() + CVector{ dirToPed * 0.35f, 0.6f}, // TODO: Magic 0.6f; 0x6DB38E: the PED's position
+                        CVector{ dirToPed * 0.01f, 0.01f }, // 0x6DB369: z is the constant 0.01
                         16,
                         ped.m_fContactSurfaceBrightness
                     );
@@ -4967,18 +4972,30 @@ bool CVehicle::BladeColSectorList(PtrListType& ptrList, CColModel& colModel, CMa
             const auto prevElasticity = std::exchange(m_fElasticity, 1.f);
 
             for (const auto& cp : CWorld::m_aTempColPts | rng::views::take(numColls)) { // 0x6DB474
-                const auto colDir = cp.m_vecPoint - colModelCenter;
-                const auto colDirOnRotorUp = DotProduct(colDir, rotorUp);
+                // ASM-S19l 0x6DB488-0x6DB54B: x is stored as a float, y and z stay unrounded in the FPU for the first dot ((x + z) + y),
+                // the second dot uses the stored floats summed z, y, x
+                const CVector colDir{
+                    (float)((x87d)cp.m_vecPoint.x - colModelCenter.x),
+                    (float)((x87d)cp.m_vecPoint.y - colModelCenter.y),
+                    (float)((x87d)cp.m_vecPoint.z - colModelCenter.z)
+                };
+                const auto colDirOnRotorUp = (float)(((x87d)colDir.x * rotorUp.x + ((x87d)cp.m_vecPoint.z - colModelCenter.z) * rotorUp.z) + ((x87d)cp.m_vecPoint.y - colModelCenter.y) * rotorUp.y);
+                const x87d absDotUp        = std::fabs((x87d)colDirOnRotorUp);
 
-                if ( std::abs(colDirOnRotorUp) > ROTOR_SEMI_THICKNESS * 2.f
-                  && std::abs(colDirOnRotorUp) > std::abs(DotProduct(colDir, cp.m_vecNormal)) * 0.3f
+                if ( absDotUp > (x87d)(ROTOR_SEMI_THICKNESS + ROTOR_SEMI_THICKNESS)
+                  && absDotUp > std::fabs(((x87d)colDir.z * cp.m_vecNormal.z + (x87d)colDir.y * cp.m_vecNormal.y) + (x87d)colDir.x * cp.m_vecNormal.x) * 0.3f
                 ) {
                     continue;
                 }
 
                 wasAnyCPValid = true;
 
-                     cpOnRotor   = cp.m_vecPoint - rotorUp * colDirOnRotorUp;
+                // 0x6DB555: x, y keep the unrounded product `rotorUp * dot`, z is stored as a float first
+                cpOnRotor = CVector{
+                    (float)((x87d)cp.m_vecPoint.x - (x87d)rotorUp.x * colDirOnRotorUp),
+                    (float)((x87d)cp.m_vecPoint.y - (x87d)rotorUp.y * colDirOnRotorUp),
+                    cp.m_vecPoint.z - (float)(rotorUp.z * colDirOnRotorUp)
+                };
                 auto colForceDir = rotorSize.Cross(cpOnRotor - colModelCenter) + m_vecMoveSpeed;
 
                 g_fx.AddSparks(
@@ -4994,19 +5011,26 @@ bool CVehicle::BladeColSectorList(PtrListType& ptrList, CColModel& colModel, CMa
 
                 if (IsAutomobile()) {
                     const auto au = AsAutomobile();
-                    if (au->m_fHeliRotorSpeed <= 0.15f) {
+                    if (!(au->m_fHeliRotorSpeed > 0.15f)) { // `fcomp; test ah, 0x41; jne`: NaN takes this branch
                         if (au->m_fHeliRotorSpeed < 0.15f / 2.f && au->m_fHeliRotorSpeed > 0.f) {
                             au->m_fHeliRotorSpeed *= -1.f;
                         }
                     } else {
                         ApplySoftCollision(entity, cp, automobileCollisionDmgIntensity);
-                        ApplyTurnForce(colForceDir * (m_fTurnMass * -0.0005f), cpOnRotor - colModelCenter);
+                        // 0x6DB743: the factor (-0.0005 * turnMass) stays unrounded
+                        const x87d turnK = (x87d)-0.0005f * m_fTurnMass;
+                        ApplyTurnForce(
+                            CVector{ (float)(colForceDir.x * turnK), (float)(colForceDir.y * turnK), (float)(colForceDir.z * turnK) },
+                            cpOnRotor - colModelCenter
+                        );
                         au->m_fHeliRotorSpeed = 0.15f;
                     }
                 }
 
+                // 0x6DB7EA: 100 * mass * (1/3000) stays unrounded, is compared with the float intensity and then scaled by `damageMult`
+                const x87d massTerm = (x87d)100.0f * m_fMass * ExeRecip(3000.f);
                 SetDamagedPieceRecord(
-                    std::max(automobileCollisionDmgIntensity, 100.f * m_fMass * ExeRecip(3000.f)),
+                    (float)((massTerm > (x87d)automobileCollisionDmgIntensity ? massTerm : (x87d)automobileCollisionDmgIntensity) * damageMult),
                     entity,
                     cp,
                     1.f
@@ -5014,7 +5038,9 @@ bool CVehicle::BladeColSectorList(PtrListType& ptrList, CColModel& colModel, CMa
             }
 
             if (wasAnyCPValid) {
-                if (entity->GetIsTypePed() && !CTimer::IsTimeInRange(planeRotorDmgTimeMS - 2000, planeRotorDmgTimeMS)) {
+                // 0x6DB847-0x6DB86C: not a ped, and not (dmgTime - 2000 <= now <= dmgTime)
+                const auto nowMS = CTimer::GetTimeInMS();
+                if (!entity->GetIsTypePed() && (nowMS > planeRotorDmgTimeMS || nowMS < planeRotorDmgTimeMS - 2000)) {
                     const auto ReportCollision = [&](CVector pos) {
                         AudioEngine.ReportCollision(
                             this,

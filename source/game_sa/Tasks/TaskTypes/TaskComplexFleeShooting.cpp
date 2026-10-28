@@ -63,10 +63,11 @@ CTask* CTaskComplexFleeShooting::CreateFirstSubTask(CPed* ped) {
 // 0x65CA90
 CTask* CTaskComplexFleeShooting::ControlSubTask(CPed* ped) {
     if (const auto attack = ped->GetTaskManager().GetTaskSecondary(TASK_SECONDARY_ATTACK)) {
+        m_moveState = PEDMOVE_RUN; // exe 0x65CBD0: stored whenever a secondary attack task exists (before the type check)
         if (const auto useGun = notsa::dyn_cast_if_present<CTaskSimpleUseGun>(attack)) {
             if (m_gunTimer.IsOutOfTime()) {
                 if (useGun->GetLastGunCommand() == eGunCommand::FIREBURST) {
-                    m_gunTimer.Start(m_shootRecoverTime);
+                    m_gunTimer.StartUnguarded(m_shootRecoverTime); // exe 0x65CC1E: inlined, no interval >= 0 test
 
                     useGun->ControlGun(ped, m_fleeFrom, eGunCommand::END_LEISURE);
                 }
@@ -78,7 +79,7 @@ CTask* CTaskComplexFleeShooting::ControlSubTask(CPed* ped) {
         m_moveState = PEDMOVE_SPRINT;
         if (m_gunTimer.IsOutOfTime()) {
             if (ped->GetActiveWeapon().GetWeaponInfo(ped).flags.bAimWithArm) {
-                m_gunTimer.Start(m_shootTime);
+                m_gunTimer.StartUnguarded(m_shootTime); // exe 0x65CB42: inlined, no interval >= 0 test
 
                 ped->GetTaskManager().SetTaskSecondary(
                     new CTaskSimpleUseGun{ m_fleeFrom, {}, eGunCommand::FIREBURST, 3 },

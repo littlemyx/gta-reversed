@@ -1,0 +1,10 @@
+# ASM-S06 (Tasks/TaskTypes: KillPedOnFootMelee/Stealth, LeaveBoat, LeaveCar*, Medic, Partner, ...) - 2026-10-28
+Result: 9 of 43 compared (5 DEVIATION fixed, 4 MATCH), 34 NOT_REACHED (budget). Table in S06.result.tsv. S05e result is in ASM-S05e.md.
+Fixes:
+- 7b5c594e KillPedOnFootMelee (0x626AC0 CreateSubTask, 0x62BC10 CreateNextSubTask, 0x62BE30 CreateFirstSubTask, 0x626D90 ControlSubTask): m_pauseTimer reset to -1 was missing for STAND_STILL/SEEK/SEQUENCE/FINISHED; Pause created with 100 (port 0); CreateNext STAND_STILL/SEQUENCE branch on bSubmergedInWater was inverted (exe: submerged -> StandStill, else CreateFirstSubTask); the port passed m_arriveRange by value BEFORE CalculateSearchPositionAndRanges refreshed it (exe reads it after) - replaced IsTargetInRange by UpdateTargetDistSq; compares are strict (range^2 < distSq; Control PAUSE/SEEK keeps the subtask on range^2 <= distSq or NaN).
+- 3ecc32cf KillPedOnFootStealth::ControlSubTask (0x62B840): LOS direction is target - ped (port ped - target); CanSeeEntityWithLights is always called before the dot test and dot must be strictly > ms_fThresholdDotProduct; the "scratch head" sequence is created only when the subtask is NOT already a sequence (port: ==); NaN z returns.
+- 39525345 LeaveCarAndFlee::CreateNextSubTask (0x642390): boat check and the aft point use ped->m_pVehicle (+0x58C), not the task's target vehicle.
+MATCH: Stealth CreateNextSubTask/CreateFirstSubTask, LeaveCarAndDie::CreateFirstSubTask (ctor from b29ebbac not re-diffed), LeaveCarAndWander::CreateNextSubTask.
+Open range (NOT_REACHED): the other 34 rows of S06.tsv (Melee non-listed none; LeaveBoat dtor, LeaveCar x5, AsPassengerWait x5, Medic x6, MoveBackAndJump x2, ObserveTrafficLights x2, OnFire x2, Partner x5, PartnerDeal x2, PartnerGreet x4, ... all rows marked NOT_REACHED), LeaveCar* (0x641FC0, 0x641530) are the largest.
+Not touched: Dot/Normalised operand order in Stealth (x,y,z vs exe z,y,x) only matters at the last bit.
+Tests: as in ASM-S05e.md (oracle 0 mismatches of 1142, combat regress PASS=14). Pre-commit portable grep: no float->int casts, doubles or pointer ids added (x87d reused).

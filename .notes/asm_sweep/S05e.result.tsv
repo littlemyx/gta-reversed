@@ -1,0 +1,2 @@
+addr	function	verdict	asm range	note	fix commit
+0x62CCE0	CTaskComplexKillPedOnFootArmed::ControlSubTask	DEVIATION	0x62CCE0-0x62D25E (all)	duck test is int rand(0,100) < chance (not float RandomBool); duck-in-range < 400 strictly; gun-ctrl end-leisure compares use the float distance strictly, 2500 ms (was 2000 >=), > shootTimer; strafe branch stay-flag polarity and dist < 4 strict; seek case: range/2 > dist strict, dot test first, time diff > 2000. MATCH: ogSubTask return, duck-time gate, roll timing, strafe-flip table, jump tables	9d89c4db

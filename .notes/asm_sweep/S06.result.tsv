@@ -1,0 +1,44 @@
+addr	function	verdict	asm range	note	fix commit
+0x626AC0	CTaskComplexKillPedOnFootMelee::CreateSubTask	DEVIATION	0x626AC0-0x626D8B (all)	m_pauseTimer=-1 missing for STAND_STILL/SEEK/SEQUENCE/FINISHED; Pause duration 100 (was 0)	7b5c594e
+0x62BE30	CTaskComplexKillPedOnFootMelee::CreateFirstSubTask	DEVIATION	0x62BE30-0x62BEFC (all)	range read after CalculateSearchPositionAndRanges (stale before); strict range^2 < distSq	7b5c594e
+0x626D90	CTaskComplexKillPedOnFootMelee::ControlSubTask	DEVIATION	0x626D90-0x626F94 (all)	range read after refresh; PAUSE/SEEK keeps subtask on range^2 <= distSq or NaN; FIGHT_CTRL strict	7b5c594e
+0x62B790	CTaskComplexKillPedOnFootStealth::CreateNextSubTask	MATCH	0x62B790-0x62B80B (all)	both exe tails are CreateSubTask(FINISHED)	-
+0x62B810	CTaskComplexKillPedOnFootStealth::CreateFirstSubTask	MATCH	0x62B810-0x62B83B (all)	Say(0xCD) then base CreateFirstSubTask	-
+0x62B840	CTaskComplexKillPedOnFootStealth::ControlSubTask	DEVIATION	0x62B840-0x62BC04 (all)	dir = target - ped (was ped - target); CanSeeEntityWithLights always called before the dot test; dot strictly > threshold; sequence created only when subtask != SEQUENCE (was ==); NaN z	3ecc32cf
+0x642250	CTaskComplexLeaveBoat::Destructor	NOT_REACHED	-	out of budget	-
+0x63BAE0	CTaskComplexLeaveCar::CreateLineUpTask	NOT_REACHED	-	out of budget	-
+0x641530	CTaskComplexLeaveCar::CreateSubTask	NOT_REACHED	-	out of budget	-
+0x641100	CTaskComplexLeaveCar::MakeAbortable	NOT_REACHED	-	out of budget	-
+0x6419F0	CTaskComplexLeaveCar::CreateNextSubTask	NOT_REACHED	-	out of budget	-
+0x641FC0	CTaskComplexLeaveCar::CreateFirstSubTask	NOT_REACHED	-	out of budget	-
+0x642280	CTaskComplexLeaveCarAndDie::CreateFirstSubTask	MATCH	0x642280-0x642292 (all)	ped state store + tail jmp to LeaveCar::CreateFirstSubTask; ctor (0x62F1A0 form) as in b29ebbac not re-diffed	-
+0x642390	CTaskComplexLeaveCarAndFlee::CreateNextSubTask	DEVIATION	0x642390-0x6424B3 (all)	boat check/aft point use ped->m_pVehicle (+0x58C), not the task veh	39525345
+0x6422C0	CTaskComplexLeaveCarAndWander::CreateNextSubTask	MATCH	0x6422C0-0x642331 (all)	types 0xC8/0x2C0, default task WANDER check	-
+0x63B540	CTaskComplexLeaveCarAsPassengerWait::SetPedInZerothPassengerSeat	NOT_REACHED	-	out of budget	-
+0x640BE0	CTaskComplexLeaveCarAsPassengerWait::CreateSubTask	NOT_REACHED	-	out of budget	-
+0x643F90	CTaskComplexLeaveCarAsPassengerWait::CreateNextSubTask	NOT_REACHED	-	out of budget	-
+0x644010	CTaskComplexLeaveCarAsPassengerWait::CreateFirstSubTask	NOT_REACHED	-	out of budget	-
+0x644050	CTaskComplexLeaveCarAsPassengerWait::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x658DB0	CTaskComplexMedicTreatInjuredPed::CreateSubTask	NOT_REACHED	-	out of budget	-
+0x65A020	CTaskComplexMedicTreatInjuredPed::CreateDealWithNextAccidentTask	NOT_REACHED	-	out of budget	-
+0x658CC0	CTaskComplexMedicTreatInjuredPed::FindNearestAccident	NOT_REACHED	-	out of budget	-
+0x659FE0	CTaskComplexMedicTreatInjuredPed::CreateFirstSubTask	NOT_REACHED	-	out of budget	-
+0x65A990	CTaskComplexMedicTreatInjuredPed::CreateNextSubTask	NOT_REACHED	-	out of budget	-
+0x65ABF0	CTaskComplexMedicTreatInjuredPed::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x655390	CTaskComplexMoveBackAndJump::CreateSubTask	NOT_REACHED	-	out of budget	-
+0x657770	CTaskComplexMoveBackAndJump::CreateNextSubTask	NOT_REACHED	-	out of budget	-
+0x6317E0	CTaskComplexObserveTrafficLights::CreateNextSubTask	NOT_REACHED	-	out of budget	-
+0x6318E0	CTaskComplexObserveTrafficLights::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x6333D0	CTaskComplexOnFire::ComputeFireDamage	NOT_REACHED	-	out of budget	-
+0x639200	CTaskComplexOnFire::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x683AD0	CTaskComplexPartner::CreateNextSubTask	NOT_REACHED	-	out of budget	-
+0x681F20	CTaskComplexPartner::CreateFirstSubTask	NOT_REACHED	-	out of budget	-
+0x6840D0	CTaskComplexPartner::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x682310	CTaskComplexPartner::StreamRequiredAnims	NOT_REACHED	-	out of budget	-
+0x682370	CTaskComplexPartner::RemoveStreamedAnims	NOT_REACHED	-	out of budget	-
+0x6823B0	CTaskComplexPartnerDeal::CreateFirstSubTask	NOT_REACHED	-	out of budget	-
+0x6823C0	CTaskComplexPartnerDeal::StreamRequiredAnims	NOT_REACHED	-	out of budget	-
+0x684280	CTaskComplexPartnerGreet::Destructor	NOT_REACHED	-	out of budget	-
+0x6825A0	CTaskComplexPartnerGreet::CreateFirstSubTask	NOT_REACHED	-	out of budget	-
+0x6825B0	CTaskComplexPartnerGreet::StreamRequiredAnims	NOT_REACHED	-	out of budget	-
+0x682630	CTaskComplexPartnerGreet::GetPartnerSequence	NOT_REACHED	-	out of budget	-

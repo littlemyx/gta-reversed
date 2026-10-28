@@ -132,7 +132,11 @@ CTask* CTaskGoToVehicleAndLean::ControlSubTask(CPed* ped) {
 
     // Abort if the spot we want to lean on has moved
     const auto newPos = CalcTargetPos(ped);
-    if ((newPos - m_TargetPos).SquaredMagnitude() > 0.010000001f) { // NOTE: 0x3C23D70B, not `0.01f` (0x3C23D70A)
+    // 0x664F7A..0x664FB0: the deltas stay in the FPU registers and are summed z, y, x
+    const x87d dx = (x87d)newPos.x - m_TargetPos.x;
+    const x87d dy = (x87d)newPos.y - m_TargetPos.y;
+    const x87d dz = (x87d)newPos.z - m_TargetPos.z;
+    if (((dz * dz + dy * dy) + dx * dx) > (x87d)0.010000001f) { // NOTE: 0x3C23D70B, not `0.01f` (0x3C23D70A)
         if (m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_URGENT, nullptr)) {
             DoTidyUp(ped);
             return nullptr;

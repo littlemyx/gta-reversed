@@ -2885,18 +2885,12 @@ void CAutomobile::VehicleDamage(float damageIntensity, eVehicleCollisionComponen
             if (autoFlags.bDoesNotGetDamagedUpsideDown) {
                 return;
             }
-            switch (GetStatus()) {
-            case eEntityStatus::STATUS_REMOTE_CONTROLLED: {
-                if (physicalFlags.bSubmergedInWater)
-                    return;
-                break;
+            // 0x6A771E..0x6A7742: a remote controlled vehicle and a submerged vehicle (any status) return, the others lose health unless wrecked
+            if (GetStatus() == STATUS_REMOTE_CONTROLLED || physicalFlags.bSubmergedInWater) {
+                return;
             }
-            case eEntityStatus::STATUS_WRECKED:
-                break;
-            default: {
+            if (GetStatus() != STATUS_WRECKED) {
                 m_fHealth = std::max(0.f, m_fHealth - CTimer::GetTimeStep() * 4.f);
-                break;
-            }
             }
         }
 
@@ -2912,7 +2906,9 @@ void CAutomobile::VehicleDamage(float damageIntensity, eVehicleCollisionComponen
         }
 
         // 0x6A77F0
-        const auto lastImpactVel_Dot_Fwd = DotProduct(m_matrix->GetForward(), m_vecLastCollisionImpactVelocity);
+        // 0x6A77D3..0x6A77F0: the exe sums z, then y, then x
+        const auto lastImpactVel_Dot_Fwd = (m_matrix->GetForward().z * m_vecLastCollisionImpactVelocity.z + m_matrix->GetForward().y * m_vecLastCollisionImpactVelocity.y)
+                                           + m_matrix->GetForward().x * m_vecLastCollisionImpactVelocity.x;
 
         // 0x6A77D6
         if (GetStatus() == STATUS_PHYSICS
@@ -2930,9 +2926,9 @@ void CAutomobile::VehicleDamage(float damageIntensity, eVehicleCollisionComponen
             case eEntityType::ENTITY_TYPE_VEHICLE: {
                 // 0x6A7856
                 if (!CGame::CanSeeOutSideFromCurrArea()
-                    && std::abs(lastImpactVel_Dot_Fwd) > 0.4 // Sideways impact - (142, 66) deg
+                    && std::abs(lastImpactVel_Dot_Fwd) > 0.4f // Sideways impact - (142, 66) deg
                 ) {
-                    calcDmgIntensity /= 3.f;
+                    calcDmgIntensity = calcDmgIntensity * 0.333f; // 0x6A7869: multiply by 0x864E30, not divide by 3
                 }
                 break;
             }
@@ -2954,12 +2950,12 @@ void CAutomobile::VehicleDamage(float damageIntensity, eVehicleCollisionComponen
             return;
         }
 
-        collForceMult = 1.f;
+        // 0x6A7BF7: nothing is stored here - the exe keeps the initial minDmgIntensity (25.0f) and collForceMult (0.333f) of this branch
     }
 
     // 0x6A78F0
     if (   damager && damager->GetIsTypeBuilding()
-        && DotProduct(*vecCollisionDirection, m_matrix->GetUp()) > 0.6f // In front - (-66, 66) deg
+        && (m_matrix->GetUp().z * vecCollisionDirection->z + m_matrix->GetUp().y * vecCollisionDirection->y) + vecCollisionDirection->x * m_matrix->GetUp().x > 0.6f // In front - (-66, 66) deg; 0x6A78FD: z, y, x sum
     ) {
         return;
     }
@@ -2993,10 +2989,11 @@ void CAutomobile::VehicleDamage(float damageIntensity, eVehicleCollisionComponen
         if (vehicleFlags.bIsLawEnforcer) {
             const auto vehicle = FindPlayerVehicle();
             if (vehicle && damager == vehicle && GetStatus() != STATUS_ABANDONED) {
-                // R* used magnitude, but squared magnitude is more suitable.
-                const auto speedMag = vehicle->m_vecMoveSpeed.SquaredMagnitude();
-                if (   speedMag >= m_vecMoveSpeed.SquaredMagnitude()
-                    && speedMag > sq(0.1f)
+                // 0x6A7A09..0x6A7A44: the exe compares the magnitudes (not the squared magnitudes)
+                const auto thisSpeedMag = m_vecMoveSpeed.Magnitude();
+                const auto speedMag     = vehicle->m_vecMoveSpeed.Magnitude();
+                if (   !(speedMag < thisSpeedMag)
+                    && speedMag > 0.1f
                 ) {
                     FindPlayerPed()->SetWantedLevelNoDrop(eWantedLevel::WANTED_LEVEL_1);
                 }
@@ -3067,54 +3064,73 @@ void CAutomobile::VehicleDamage(float damageIntensity, eVehicleCollisionComponen
             case eVehicleCollisionComponent::BUMP_FRONT: {
                 ApplyDamageToComponent(tComponent::COMPONENT_BUMP_FRONT);
 
-                const auto localDir       = GetCollisionPointLocalDirection();
+                // 0x6A7C2F..0x6A7E6C: the exe first collects a mask of the extra components (1 bonnet, 2 windscreen, 4 left wing, 8 right wing),
+                // reading the panel status before any of them is damaged, then damages them in the order bonnet, left wing, right wing, windscreen
                 const auto colDirDotRight = DotProduct(*vecCollisionDirection, m_matrix->GetRight());
+                const auto localDir       = GetCollisionPointLocalDirection();
+                const auto hitMass        = m_fMass * 0.35f;
 
-                // Possibly apply right/left wing damage based on direction
+                uint32 mask = 0;
                 if (   localDir > 0.7f // [0, 45] deg
-                    || localDir > 0.5f && colDirDotRight < -0.5f && m_fMass * 0.35f < calcDmgIntensity
+                    || localDir > 0.5f && colDirDotRight < -0.5f && hitMass < calcDmgIntensity
                 ) {
-                    ApplyDamageToComponent(tComponent::COMPONENT_WING_RF);
+                    mask = 8; // right wing
                 } else if (
-                       localDir > -0.7f // [90, 135] deg
-                    || localDir > -0.5f && colDirDotRight > 0.5f && m_fMass * 0.35f < calcDmgIntensity
+                       localDir < -0.7f
+                    || localDir < -0.5f && colDirDotRight > 0.5f && hitMass < calcDmgIntensity
                 ) {
-                    ApplyDamageToComponent(tComponent::COMPONENT_WING_LF);
+                    mask = 4; // left wing
                 }
 
-                // Possibly apply bonnet damage if front bumper is not `ok`
-                if (   m_damageManager.GetPanelStatus(ePanels::FRONT_BUMPER) != DAMSTATE_OK && m_fMass * 0.2f < calcDmgIntensity
-                    || weapon < WEAPON_LAST_WEAPON && (CGeneral::GetRandomNumber() % 3 == 0) // If it was a weapon, apply damage by randomly
-                ) {
-                    ApplyDamageToComponent(tComponent::COMPONENT_BONNET);
+                // 0x6A7D42: the bonnet part (and its random weapon branch, rand() & 3) only runs when the front bumper is not ok
+                if (m_damageManager.GetPanelStatus(ePanels::FRONT_BUMPER) != DAMSTATE_OK) {
+                    if (m_fMass * 0.2f < calcDmgIntensity
+                        || weapon < WEAPON_LAST_WEAPON && (CGeneral::GetRandomNumber() & 3) == 0
+                    ) {
+                        mask |= 1;
+                    }
                 }
 
-                // Possibly apply windscreen damage if front bumper is `damaged`
+                // 0x6A7D80: windscreen if the front bumper is damaged
                 if (m_damageManager.GetPanelStatus(ePanels::FRONT_BUMPER) >= DAMSTATE_DAMAGED && m_fMass * 0.2f < calcDmgIntensity) {
-                    ApplyDamageToComponent(tComponent::COMPONENT_WINDSCREEN);
+                    mask |= 2;
                 }
+
+                if (mask & 1) ApplyDamageToComponent(tComponent::COMPONENT_BONNET);
+                if (mask & 4) ApplyDamageToComponent(tComponent::COMPONENT_WING_LF);
+                if (mask & 8) ApplyDamageToComponent(tComponent::COMPONENT_WING_RF);
+                if (mask & 2) ApplyDamageToComponent(tComponent::COMPONENT_WINDSCREEN);
                 break;
             }
             case eVehicleCollisionComponent::BUMP_REAR: {
                 ApplyDamageToComponent(tComponent::COMPONENT_BUMP_REAR);
 
+                // 0x6A7E71..0x6A7FC2: mask 0x10 boot, 0x20 left rear door, 0x40 right rear door; the panel status is read before any damage below,
+                // the damage order is boot, left door, right door
                 const auto localDir = GetCollisionPointLocalDirection();
 
-                // If this is a van possibly apply damage to the rear doors
-                if (vehicleFlags.bIsVan && m_fMass * 0.35f < calcDmgIntensity) {
+                uint32 mask = 0;
+                if (vehicleFlags.bIsVan) {
+                    // If this is a van possibly apply damage to the rear doors
                     if (localDir > 0.1f) { // [-90, -85] deg
-                        ApplyDamageToComponent(tComponent::COMPONENT_DOOR_RR);
+                        if (m_fMass * 0.35f < calcDmgIntensity) {
+                            mask = 0x40;
+                        }
                     } else if (localDir < -0.1f) { // [-95, -90]
-                        ApplyDamageToComponent(tComponent::COMPONENT_DOOR_LR);
+                        if (m_fMass * 0.35f < calcDmgIntensity) {
+                            mask = 0x20;
+                        }
                     }
                 }
 
                 // Possibly apply damage to boot if not already damaged
                 if (m_damageManager.GetPanelStatus(ePanels::REAR_BUMPER) < DAMSTATE_DAMAGED) {
-                    ApplyDamageToComponent(tComponent::COMPONENT_BOOT);
+                    mask |= 0x10;
                 }
 
-
+                if (mask & 0x10) ApplyDamageToComponent(tComponent::COMPONENT_BOOT);
+                if (mask & 0x20) ApplyDamageToComponent(tComponent::COMPONENT_DOOR_LR);
+                if (mask & 0x40) ApplyDamageToComponent(tComponent::COMPONENT_DOOR_RR);
                 break;
             }
             case eVehicleCollisionComponent::DOOR_LF:
@@ -3178,25 +3194,28 @@ void CAutomobile::VehicleDamage(float damageIntensity, eVehicleCollisionComponen
                         if (damagedVeh.m_pDriver && m_pDriver) {
                             // Add collision event
                             {
-                                const auto dot = DotProduct(
-                                    m_pDamageEntity->AsPhysical()->m_vecMoveSpeed - m_vecMoveSpeed,
-                                    m_vecLastCollisionImpactVelocity
-                                );
+                                // 0x6A8142..0x6A8164: the exe sums y, z, x
+                                const auto relSpeed = m_pDamageEntity->AsPhysical()->m_vecMoveSpeed - m_vecMoveSpeed;
+                                const auto dot      = (relSpeed.y * m_vecLastCollisionImpactVelocity.y + relSpeed.z * m_vecLastCollisionImpactVelocity.z)
+                                                      + relSpeed.x * m_vecLastCollisionImpactVelocity.x;
                                 if (dot < 0.f) { // Forces are opposite
                                     CEventVehicleDamageCollision event{ this, m_pDamageEntity->AsVehicle(), WEAPON_RAMMEDBYCAR };
                                     m_pDriver->GetEventGroup().Add(&event);
+                                    ReactToVehicleDamage(m_pDriver); // 0x6A81AE
                                 } else {
                                     CEventVehicleDamageCollision event{ m_pDamageEntity->AsVehicle(), this, WEAPON_RAMMEDBYCAR };
                                     m_pDamageEntity->AsVehicle()->m_pDriver->GetEventGroup().Add(&event);
+                                    ReactToVehicleDamage(m_pDamageEntity->AsVehicle()->m_pDriver); // 0x6A81AE
                                 }
                             }
 
                             // Make our driver say something reacting to the collision..
-                            if (&damagedVeh != FindPlayerVehicle() || damagedVeh.IsMissionVehicle()) {
+                            // 0x6A81FE..0x6A8254: skipped when this is the player's vehicle and the other one is a mission vehicle; probability 0.66f (0x3F28F5C3)
+                            if (this != FindPlayerVehicle() || !damagedVeh.IsMissionVehicle()) {
                                 switch (m_vehicleAudio.GetVehicleTypeForAudio()) {
-                                case eAEVehicleAudioType::BIKE:     m_pDriver->Say(CTX_GLOBAL_CRASH_BIKE);    break;
-                                case eAEVehicleAudioType::CAR:      m_pDriver->Say(CTX_GLOBAL_CRASH_CAR);     break;
-                                case eAEVehicleAudioType::GENERIC:  m_pDriver->Say(CTX_GLOBAL_CRASH_GENERIC); break;
+                                case eAEVehicleAudioType::BIKE:     m_pDriver->Say(CTX_GLOBAL_CRASH_BIKE, 0, 0.66f);    break;
+                                case eAEVehicleAudioType::CAR:      m_pDriver->Say(CTX_GLOBAL_CRASH_CAR, 0, 0.66f);     break;
+                                case eAEVehicleAudioType::GENERIC:  m_pDriver->Say(CTX_GLOBAL_CRASH_GENERIC, 0, 0.66f); break;
                                 default:                            NOTSA_UNREACHABLE();
                                 }
                             }
@@ -3234,7 +3253,7 @@ void CAutomobile::VehicleDamage(float damageIntensity, eVehicleCollisionComponen
             if (CCheat::IsActive(CHEAT_SMASH_N_BOOM) && m_pDamageEntity && m_pDamageEntity == FindPlayerVehicle()) {
                 BlowUpCar(m_pDamageEntity, false);
             }
-            else if (m_fHealth <= 0.f && NOTSA_FTOL(uint16, prevHealth) > 0) { // 0x6A8354
+            else if (m_fHealth <= 0.f && (int16)NOTSA_FTOL(int32, prevHealth) > 0) { // 0x6A8354: _ftol, then a 16 bit signed compare (test bx, bx / jle)
                 m_fHealth = 1.f; // 0x6A8374
                 if (m_pDamageEntity && ModelIndices::IsRhino(m_pDamageEntity->m_nModelIndex) && FindPlayerVehicle()->AsAutomobile() != this) {
                     BlowUpCar(m_pDamageEntity, false);
@@ -3263,8 +3282,9 @@ void CAutomobile::VehicleDamage(float damageIntensity, eVehicleCollisionComponen
 
         m_fBurnTimer = 0.f;
 
-        m_pLastDamageEntity = m_pDamageEntity;
-        CEntity::SafeRegisterRef(m_pLastDamageEntity);
+        // 0x6A8424..0x6A8433: the exe stores the damager in CAutomobile +0x928 (m_pExplosionVictim, the entity that BlowUpCar is credited to), not in m_pLastDamageEntity
+        m_pExplosionVictim = reinterpret_cast<CPed*>(m_pDamageEntity);
+        CEntity::SafeRegisterRef(m_pExplosionVictim);
 
         if (const auto passenger = PickRandomPassenger()) {
             passenger->Say(CTX_GLOBAL_CAR_FIRE, 1500);

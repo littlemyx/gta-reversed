@@ -2697,6 +2697,7 @@ void CPlayerPed::ProcessControl() {
             CVehicle* targetVeh = m_pTargetedObject->AsVehicle();
             effectPos = (targetVeh->m_vecMoveSpeed + targetVeh->m_vecTurnSpeed) * CTimer::GetTimeStep();
             effectPos += targetVeh->GetPosition();
+            markColor = targetVeh->m_fHealth * 0.001f; // 0x60EF5D
         } else if (m_pTargetedObject->GetIsTypeObject()) {
             CObject* targetObj = m_pTargetedObject->AsObject();
             effectPos = targetObj->m_vecMoveSpeed * CTimer::GetTimeStep();

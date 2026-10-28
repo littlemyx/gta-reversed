@@ -1,0 +1,4 @@
+addr	function	verdict	asm range	note	fix commit
+0x6A8C00	CAutomobile::ProcessBuoyancy	FIXED	0x6A8C00-0x6A9678	mass*0.008f / 0.0064f / 8e-6f constants and multiply order (ts*mass*0.008f, ((U/buoy)*f)*1.05f, 1-f*0.05f), pow result rounded once; rest MATCH (flags, heli, ped drowning, knock-off, 4-wheel water loop)	71f17118
+0x6A7650	CAutomobile::VehicleDamage	FIXED	0x6A7650-0x6A84B5	see ASM-S16h.md (10 deviations)	65d775e9
+0x6AAB50	CAutomobile::PreRender	PARTIAL	0x6AAB50-0x6AB154	wheel positions, speeds, simple-status col points, main wheel particles loop: MATCH; 0x6AB154 to the ret (middle wheels onward, about 1800 asm lines): NOT_REACHED (token budget)	-

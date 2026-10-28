@@ -1,0 +1,30 @@
+addr	function	verdict	asm range	note	fix commit
+0x6E2B40	CVehicle::Destructor	FIXED	0x6E2B40-0x6E2D4B	winch rope key this+0x1D (port this+1); fx particle members nulled	fe757168
+0x6D6A40	CVehicle::SetModelIndex	FIXED	0x6D6A40-0x6D6AF3	jump tables decoded (RC models, weapons); port also cleared bCreatedAsPoliceVehicle	7bfef0fc
+0x5D4760	CVehicle::Save	MATCH	0x5D4760-0x5D47D4	size word 4 bytes then 0x68 struct; CVehicleSaveStructure::Construct/Extract field offsets equal	-
+0x5D2900	CVehicle::Load	MATCH	0x5D2900-0x5D2970	4-byte size then constant 0x68 read, Extract	-
+0x6E0E20	CVehicle::DoHeadLightBeam	UNSURE	0x6E0E20-0x6E1440	structure, render-state order, indices, colours equal; mixed x87-unrounded/float intermediates (point -= 2x*right, dot z,y,x, lightNormal z, lightPos x/y, right*0.05 y/z) not reproduced: sub-ulp vertex differences, render only	-
+0x6D10E0	CVehicle::CustomCarPlate_TextureCreate	FIXED	0x6D10E0-0x6D114C	SetCustomCarPlateText(0) after CreatePlateTexture (port re-set the text from itself)	f156bfbe
+0x6D30E0	CVehicle::SetVehicleUpgradeFlags	MATCH	0x6D30E0-0x6D3203	hydraulics, nitro (ids, amounts, parent test), stereo bass cycle, result index	-
+0x6D3210	CVehicle::ClearVehicleUpgradeFlags	FIXED	0x6D3210-0x6D32F6	stereo branch needs a CIVILIAN radio (port had !=)	facca05b
+0x6D3510	CVehicle::CreateUpgradeAtomic	MATCH	0x6D3510-0x6D3620	damaged flag, pos/rot, AddAtomic, AddChild, AddRef, id/flags order, alpha callback + 0x40 flag, pipelines	-
+0x6D3700	CVehicle::CreateReplacementAtomic	FIXED	0x6D3700-0x6D3815	wheel matrix: flags ORed before RwMatrixUpdate (cleared again); port left identity flag set	03d818c1
+0x6D3830	CVehicle::AddReplacementUpgrade	NOT_REACHED	-	budget	-
+0x6D39E0	CVehicle::RemoveReplacementUpgrade	NOT_REACHED	-	budget	-
+0x6D3C70	CVehicle::RemoveWinch	NOT_REACHED	-	budget	-
+0x6D82F0	CVehicle::KillPedsGettingInVehicle	MATCH	0x6D82F0-0x6D846A	reverse pool walk, bInVehicle/standing gates, driver/passenger task find, damage calc + event args	-
+0x6DAF00	CVehicle::BladeColSectorList<CPtrListSingleLink<CEntity*>>	FIXED	0x6DAF00-0x6DBA06	ped branch (2D dir, bIsStanding cleared, blood pos/vel), damageMult ignored, audio block gate inverted, time window, heli NaN branch, x87 dots/products	bf4215f8
+0x6DD130	CVehicle::DoBoatSplashes	FIXED	0x6DD130-0x6DD6DA	NaN edges of the clamps; rand order, arguments, x87 sums equal	8c2f41ed
+0x6DD6F0	CVehicle::DoSunGlare	FIXED	0x6DD6F0-0x6DDF5D	corona id via NOTSA_PTR_ID32 (portable); arithmetic equal	a2f7f78f
+0x6DF930	CVehicle::RemoveVehicleUpgrade	NOT_REACHED	-	budget	-
+0x6DFA20	CVehicle::AddUpgrade	NOT_REACHED	-	budget	-
+0x6E3290	CVehicle::AddVehicleUpgrade	NOT_REACHED	-	budget	-
+0x6E3400	CVehicle::SetupUpgradesAfterLoad	NOT_REACHED	-	budget	-
+0x6D3CD0	CVehicle::PickUpEntityWithWinch	MATCH	0x6D3CD0-0x6D3CEA	FindRope(this+0x1D) then CRope::PickUpObject	-
+0x6D26D0	CVehicle::SetVehicleAtomicVisibilityCB-Frame	NOT_REACHED	-	budget	-
+0x6D3300	CVehicle::RemoveUpgradeCB	NOT_REACHED	-	budget	-
+0x6D33B0	CVehicle::RemoveObjectsCB-Object	NOT_REACHED	-	budget	-
+0x6D3420	CVehicle::RemoveObjectsCB-Frame	NOT_REACHED	-	budget	-
+0x6D3450	CVehicle::CopyObjectsCB	NOT_REACHED	-	budget	-
+0x6D34D0	CVehicle::RemoveAllUpgradesCB	NOT_REACHED	-	budget	-
+0x6DBCE0	CVehicle::ProcessBoatControl	NOT_REACHED	-	budget	-

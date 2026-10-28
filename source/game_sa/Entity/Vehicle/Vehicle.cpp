@@ -2428,8 +2428,7 @@ RwObject* RemoveObjectsCB(RwObject* object, void* data) {
 
     const auto atomic = reinterpret_cast<RpAtomic*>(object);
 
-    // NOTSA: The original overwrites (4 bytes of) whatever `data` points to with the atomic's flags
-    // (The only caller passes a pointer to a `RwFrame*` => It's overwritten)
+    // The exe stores the atomic's id into (4 bytes of) whatever `data` points to (callers pass a pointer to a scratch int32)
     const auto flags = CVisibilityPlugins::GetAtomicId(atomic);
     *static_cast<int32*>(data) = flags;
 
@@ -2665,9 +2664,12 @@ void CVehicle::AddReplacementUpgrade(int32 modelIndex, int32 nodeId) {
 
 // 0x6D39E0
 void CVehicle::RemoveReplacementUpgrade(int32 frameId) {
-    auto frameOfUpgrade = CClumpModelInfo::GetFrameFromId(GetRpClump(), frameId);
-    RwFrameForAllObjects(frameOfUpgrade, RemoveObjectsCB, &frameOfUpgrade);
-    RwFrameForAllChildren(frameOfUpgrade, RemoveObjectsCB, &frameOfUpgrade);
+    const auto frameOfUpgrade = CClumpModelInfo::GetFrameFromId(GetRpClump(), frameId);
+    // NOTE: The exe passes the address of its own `frameId` argument slot as the callback's out-parameter (the callback stores the
+    //       atomic id there); the frame pointer (edi) is NOT clobbered and is what `CopyObjectsCB` below attaches to.
+    int32 removedAtomicId = 0;
+    RwFrameForAllObjects(frameOfUpgrade, RemoveObjectsCB, &removedAtomicId);
+    RwFrameForAllChildren(frameOfUpgrade, RemoveObjectsCB, &removedAtomicId);
 
     CopyObjectsCB_TargetClump = GetRpClump();
     RwFrameForAllObjects(

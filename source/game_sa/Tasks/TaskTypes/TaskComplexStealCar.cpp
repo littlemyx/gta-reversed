@@ -111,7 +111,7 @@ CTask* CTaskComplexStealCar::CreateNextSubTask(CPed* ped) {
             NOTSA_UNREACHABLE();
             return TASK_NONE; // 0x644203: returns nullptr without CreateSubTask; CreateSubTask(TASK_NONE) => nullptr
         }
-    }(), ped);
+    }(), nullptr); // 0x6440BA / 0x6441B2 / 0x64411E / 0x6441D1: every CreateSubTask call here pushes ped = 0, so TASK_FINISHED never re-enables the ped's collision
 }
 
 // 0x644210

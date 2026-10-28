@@ -88,9 +88,13 @@ void CTaskComplexFleePoint::ComputeTargetPoint(CPed const* ped) {
     // https://www.desmos.com/calculator/o793zwzy5f
 
     const auto& pedPos   = ped->GetPosition();
+    // Exe 0x65B83A-0x65B859: the 3D CVector::Normalise on (ped - from) with z = 0 (extended-precision normalise, not CVector2D::Normalise)
+    CVector pedToFrom{ pedPos.x - m_fleeFromPos.x, pedPos.y - m_fleeFromPos.y, 0.f };
+    pedToFrom.Normalise();
     const auto  angleRad = CGeneral::GetRandomNumberInRange(-0.33f, 0.33f); // TODO: Seemingly magic numbers?
-    const auto  dir      = Normalized2D(CVector2D{ pedPos - m_fleeFromPos }) * CVector2D{ (float)(x87::cos(angleRad)), (float)(x87::sin(angleRad)) };
-    const auto  spread   = CGeneral::GetRandomNumberInRange(3, 6);
+    const CVector2D dir{ pedToFrom.x * (float)(x87::cos(angleRad)), pedToFrom.y * (float)(x87::sin(angleRad)) };
+    // Exe 0x65B87C-0x65B8D8: the FLOAT overload (3.0 + rand/32767 * 3.0); the port called the int overload (an integer 3..5, rand/32768)
+    const auto  spread   = CGeneral::GetRandomNumberInRange(3.f, 6.f);
 
     m_fleeToPos = pedPos;
 
@@ -166,21 +170,22 @@ CTask* CTaskComplexFleePoint::ControlSubTask(CPed* ped) {
         ped->Say(CTX_GLOBAL_PAIN_PANIC, 0, 0.1f);
     }
 
-    // Moved this here for simplicity, logic unchanged
+    // Exe 0x65B6D4-0x65B73D: the sub task is (re)created first, only then the look-at roll happens (rand order: ComputeTargetPoint's rands come before it)
+    CTask* result = m_pSubTask;
+    if (m_newFleePosWasSet) {
+        m_newFleePosWasSet = false;
+        m_timer.StartUnguarded(m_durationMs); // exe 0x65B6E2: no -1 / negative test here
+        result = CreateFirstSubTask(ped); // Do it all over again :D
+    } else if (m_timer.IsOutOfTime()) {
+        result = CreateSubTask(TASK_COMPLEX_SEQUENCE);
+    }
+
     if (!g_ikChainMan.IsLooking(ped)) {
         if (CGeneral::GetRandomNumberInRange(0, 100) <= 5) { // TODO: CGeneral::DoCoinFlip()
             g_ikChainMan.LookAt("TaskFleePoint", ped, nullptr, 2000, eBoneTag::BONE_UNKNOWN, &m_fleeFromPos, false, 0.25f, 500, 3, false);
         }
     }
 
-    if (m_newFleePosWasSet) {
-        m_newFleePosWasSet = false;
-        m_timer.StartUnguarded(m_durationMs); // exe 0x65B6E2: no -1 / negative test here
-        return CreateFirstSubTask(ped); // Do it all over again :D
-    } else if (m_timer.IsOutOfTime()) {
-        return CreateSubTask(TASK_COMPLEX_SEQUENCE);
-    }
-
-    return m_pSubTask;
+    return result;
 }
 

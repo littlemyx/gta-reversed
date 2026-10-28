@@ -89,6 +89,8 @@ bool CTaskSimpleGunControl::ProcessPed(CPed* ped) {
         return true;
     }
 
+    ped->SetMoveState(PEDMOVE_STILL); // 0x6252BB
+
     switch (m_firingTask) {
     case eGunCommand::END_LEISURE:
     case eGunCommand::END_NOW:
@@ -116,8 +118,8 @@ bool CTaskSimpleGunControl::ProcessPed(CPed* ped) {
             };
             ped->GetTaskManager().SetTaskSecondary(useGun, TASK_SECONDARY_ATTACK);
             m_aimImmidiately = false;
-        m_nextAtkTimeMs = 0;
-        m_isFirstTime = false;
+            m_nextAtkTimeMs = 0;
+            m_isFirstTime = false;
         }
         break;
     }
@@ -125,36 +127,35 @@ bool CTaskSimpleGunControl::ProcessPed(CPed* ped) {
 
     const auto useGunTask = ped->GetIntelligence()->GetTaskUseGun();
 
-    // Moved from 0x6254D3
+    // 0x62542B: only gang types 7..15 (GANG10 is excluded in the exe), or a standing cop (move + swim move state STILL) whose gun aims with an arm
+    if (const auto pt = ped->m_nPedType; (pt >= PED_TYPE_GANG1 && pt <= PED_TYPE_GANG9) || [&]{
+        if (pt != PED_TYPE_COP || ped->m_nMoveState != PEDMOVE_STILL || ped->m_nSwimmingMoveState != PEDMOVE_STILL) {
+            return false;
+        }
+        if (!useGunTask) { // 0x625450
+            return false;
+        }
+        const auto wi = useGunTask->m_WeaponInfo;
+        return wi && wi->flags.bAimWithArm;
+    }()) {
+        // 0x62546E
+        const auto anim = RpAnimBlendClumpGetAssociation(ped->GetRpClump(), ANIM_ID_GANG_GUNSTAND);
+        if (!anim || (anim->m_BlendAmount < 1.f && anim->m_BlendDelta <= 0.f)) {
+            CAnimManager::BlendAnimation(ped->GetRpClump(), ANIM_GROUP_DEFAULT, ANIM_ID_GANG_GUNSTAND, 4.f); // 0x625495: blend 4.0
+        }
+    }
+
+    // 0x6254B3
+    if (useGunTask) {
+        m_isLOSBlocked = useGunTask->m_IsLOSBlocked;
+    }
+
     const auto& winfo = [&, this] {
         if (!useGunTask || !useGunTask->m_WeaponInfo) {
             return ped->GetActiveWeapon().GetWeaponInfo(ped);
         }
         return *useGunTask->m_WeaponInfo;
     }();
-
-    // Play gunstand animation if necessary
-    if ([&, this]{
-        if (ped->IsGangster()) { // 0x625437
-            return true;
-        }
-
-        if (useGunTask) { // 0x625459
-            if (const auto wi = useGunTask->m_WeaponInfo) {
-                if (wi->flags.bAimWithArm) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }()) {
-        // 0x62546E
-        const auto anim = RpAnimBlendClumpGetAssociation(ped->GetRpClump(), ANIM_ID_GANG_GUNSTAND);
-        if (!anim || (anim->m_BlendAmount < 1.f && anim->m_BlendDelta <= 0.f)) {
-            CAnimManager::BlendAnimation(ped->GetRpClump(), ANIM_GROUP_DEFAULT, ANIM_ID_GANG_GUNSTAND);
-        }
-    }
 
     // Calculate next gun command
     auto [nextGunCmd, dontCheckLeisureDur] = [&, this]() -> std::pair<eGunCommand, bool> {
@@ -192,7 +193,12 @@ bool CTaskSimpleGunControl::ProcessPed(CPed* ped) {
             if (m_burstAmmoCnt > 1) {
                 if (ped->m_nWeaponShootingRate < 100u) {
                     m_burstAmmoCnt = std::min((int16)(4 * ped->m_nWeaponShootingRate / 30), m_burstAmmoCnt);
-                    m_burstAmmoCnt = std::max(m_burstAmmoCnt - CGeneral::GetRandomNumberInRange(0, 2), 1);
+                    // 0x6255A8: the exe's max() evaluates the random call twice when the first value is >= 1, and stores the second result
+                    if (m_burstAmmoCnt - CGeneral::GetRandomNumberInRange(0, 2) < 1) {
+                        m_burstAmmoCnt = 1;
+                    } else {
+                        m_burstAmmoCnt = (int16)(m_burstAmmoCnt - CGeneral::GetRandomNumberInRange(0, 2));
+                    }
                 }
             }
 
@@ -213,8 +219,8 @@ bool CTaskSimpleGunControl::ProcessPed(CPed* ped) {
             return { FIREBURST, false };
         case END_LEISURE:
             return { END_LEISURE, true };
-        default:
-            NOTSA_UNREACHABLE_RET({});
+        default: // UNKNOWN, END_NOW: the exe's jump table has no entry, the initial NONE is kept
+            return { NONE, false };
         }
     }();
 
@@ -225,19 +231,20 @@ bool CTaskSimpleGunControl::ProcessPed(CPed* ped) {
     if (dontCheckLeisureDur || !m_leisureDurMs) { // 0x625681
         using enum eGunCommand;
 
-            if (useGunTask && (m_firingTask != END_LEISURE || !useGunTask->m_IsFinished)) {
-                if (useGunTask->m_HasFiredGun) {
-                    switch ((eGunCommand)useGunTask->m_LastCmd) {
-                    case FIRE:
-                    case FIREBURST:
-                        break;
-                default: {
-                    useGunTask->m_CountDownFrames = 2;
-                    useGunTask->m_HasFiredGun = false;
-                    }
-                }
-            }
+        // 0x62568E
+        if (!useGunTask || (m_firingTask == END_LEISURE && useGunTask->m_IsFinished)) {
             m_isFinished = true;
+        } else if (useGunTask->m_HasFiredGun) {
+            switch ((eGunCommand)useGunTask->m_LastCmd) {
+            case FIRE:
+            case FIREBURST:
+                break;
+            default:
+                useGunTask->m_CountDownFrames = 2;
+                useGunTask->m_HasFiredGun     = false;
+                m_isFinished                  = true;
+                break;
+            }
         }
 
         if (m_isFinished) {
@@ -284,30 +291,18 @@ bool CTaskSimpleGunControl::ProcessPed(CPed* ped) {
 
     ped->m_fAimingRotation = pedToTarget.Heading();
 
-    if ([&, this] {
-        if (!useGunTask) {
-            return false;
-        }
+    // 0x6258D2: the squared magnitude is summed z, x, y in the exe
+    const auto distSq = sq(pedToTarget.z) + sq(pedToTarget.x) + sq(pedToTarget.y);
 
-        if (ped->bStayInSamePlace) {
-            return false;
-        }
-
-        if (!isRightArmBlockedForPistolWhip) {
-            if (pedToTarget.SquaredMagnitude() >= 6.f) {
-                if ((eGunCommand)useGunTask->m_LastCmd == eGunCommand::FIREBURST) {
-                    if (winfo.flags.bMoveFire) {
-                        return false;
-                    }
-                }
-            }
-        }
-        return true;
-    }()) {
+    // 0x6258FF: moves when the right arm is blocked, or when near and (not firing a burst or the weapon can move-fire); never while staying in place
+    if (useGunTask
+        && (isRightArmBlockedForPistolWhip || (distSq < 6.f && ((eGunCommand)useGunTask->m_LastCmd != eGunCommand::FIREBURST || winfo.flags.bMoveFire)))
+        && !ped->bStayInSamePlace
+    ) {
         useGunTask->ControlGunMove({ 0.f, 1.f });
     } else if (m_targetEntity) {
         if (!ped->bIgnoreWeaponRange) {
-            if (pedToTarget.SquaredMagnitude() > sq(winfo.m_fWeaponRange)) {
+            if (distSq > sq(winfo.m_fWeaponRange)) {
                 m_leisureDurMs = 0;
             }
         }

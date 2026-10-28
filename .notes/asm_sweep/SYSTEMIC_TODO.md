@@ -6,3 +6,6 @@
 - FIX_BUGS audit: Automobile::ProcessEntityCollision had EXE behaviour under FIX_BUGS (not defined in the run build), so it never ran (ASM-S16d). Grep every FIX_BUGS / !FIX_BUGS block and check against the exe which side the exe does.
 - Unguarded port fixes: FIXBUGS-AUDIT found 4 deviations that were unguarded fixes commented FIX_BUGS. Same risk in comments "bugfix" (~60) and "BUG:" (~250) where the port changed the behaviour; audit them (FIXBUGS-AUDIT-2).
 - Literal division: the port writes x/125, x/20, x/1250 where the exe multiplies by a float constant (0.008f, 0.05f, ...) - ProcessBuoyancy (Ped, Automobile), S20d/S16h. Scan: for every hooked function, port `/ <float literal>` vs exe fdiv/fmul with a constant; switch the verified ones (SYSTEMIC-3).
+
+## X87-POW (from S18e)
+- [ ] Exe calls _CIpow (0x822130) where the port uses std::pow (e.g. CPlane::PreRender Vortex blend pow(0.9f, ts)). No x87::pow helper yet; add one (see .notes/reports/X87-TRIG.md) and grep all std::pow/powf sites.

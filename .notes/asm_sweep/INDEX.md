@@ -102,4 +102,5 @@
 | S19c | rest of S19b | 104 | partial 3/104 (2 M, 1 fixed + Train PC NaN fix) -> S19d | Trailer.cpp, Train.cpp, Vehicle.cpp |
 | S19d | rest of S19c | 101 | partial 10/101 (8 M, 2 fixed; CTrain done) -> S19e | Trailer.cpp, Train.cpp, Vehicle.cpp |
 | S19e | rest of S19d (+ Train MarkSurrounding sub-ulp sector clamp) | 92 | partial 8/92 (4 M, 3 fixed, 1 partial) -> S19f | Trailer.cpp, Vehicle.cpp |
-| S19f | rest of S19e | 85 | pending | Trailer.cpp, Train.cpp, Vehicle.cpp |
+| S19f | rest of S19e | 85 | partial 8/85 (5 M, 3 fixed) -> S19g | Trailer.cpp, Train.cpp, Vehicle.cpp |
+| S19g | rest of S19f | 77 | pending | Trailer.cpp, Vehicle.cpp |

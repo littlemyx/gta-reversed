@@ -68,7 +68,7 @@ C2dEffect* CTaskComplexUseClosestFreeScriptedAttractor::ComputeClosestFreeScript
         const x87d dx = (x87d)pos.x - (x87d)fx.m_Pos.x;
         const x87d dy = (x87d)pos.y - (x87d)fx.m_Pos.y;
         const x87d dz = (x87d)pos.z - (x87d)fx.m_Pos.z;
-        const x87d distSq = dx * dx + dy * dy + dz * dz;
+        const x87d distSq = dz * dz + dy * dy + dx * dx; // 0x6347E9..0x6347F9: (dz^2 + dy^2) + dx^2
         if (distSq < (double)closestDistSq) {
             if (GetPedAttractorManager()->HasEmptySlot(reinterpret_cast<const C2dEffectPedAttractor*>(&fx), nullptr)) {
                 closestDistSq = (float)distSq;

@@ -1462,7 +1462,7 @@ void CTrain::ProcessControl() {
                                     fStopAtStationSpeed = 0.0f;
                                     m_nTimeWhenStoppedAtStation = CTimer::GetTimeInMS();
                                 } else {
-                                    if (fStopAtStationSpeed >= maxTrainSpeed) {
+                                    if (!(fStopAtStationSpeed < maxTrainSpeed)) { // exe 0x6F8984-0x6F8989: jnp keeps the speed only when a < b, NaN takes the replacement
                                         fStopAtStationSpeed = maxTrainSpeed;
                                     }
                                 }
@@ -1502,7 +1502,7 @@ void CTrain::ProcessControl() {
                 fStopAtStationSpeed = fStopAtStationSpeed * ExeRecip(50.0f) - m_fTrainSpeed;
                 if (fStopAtStationSpeed > 0.0f) {
                     m_fTrainGas = fStopAtStationSpeed * 30.0f;
-                    if (m_fTrainGas >= 1.0f) {
+                    if (!(m_fTrainGas < 1.0f)) { // exe 0x6F89B6: NaN takes the clamp
                         m_fTrainGas = 1.0f;
                     }
 
@@ -1511,7 +1511,7 @@ void CTrain::ProcessControl() {
                 } else {
                     float fTrainSpeed = fStopAtStationSpeed * -30.0f;
                     m_fTrainGas = 0.0f;
-                    if (fTrainSpeed >= 1.0f) {
+                    if (!(fTrainSpeed < 1.0f)) { // exe 0x6F89EF: NaN takes the clamp
                         fTrainSpeed = 1.0f;
                     }
                     m_fTrainBrake = fTrainSpeed * 255.0f;
@@ -1540,7 +1540,7 @@ void CTrain::ProcessControl() {
                 const CVector& vecPoint = GetPosition();
                 CVector vecDistance{};
                 if (CGameLogic::CalcDistanceToForbiddenTrainCrossing(vecPoint, m_vecMoveSpeed, true, vecDistance) < 230.0f) {
-                    if (DotProduct(GetForwardVector(), vecDistance) <= 0.0f) {
+                    if (!(DotProduct(GetForwardVector(), vecDistance) > 0.0f)) { // exe 0x6F8AA1-0x6F8AA4: jne (not greater, NaN too) takes the max() branch
                         m_fTrainGas = std::max(0.0f, m_fTrainGas);
                     } else {
                         m_fTrainGas = std::min(0.0f, m_fTrainGas);
@@ -1562,7 +1562,7 @@ void CTrain::ProcessControl() {
                     fTrainSpeed = -fTrainSpeed;
                 }
                 float fBreak = m_fTrainBrake / 256.0f * CTimer::GetTimeStep() * 0.006f / float(numCarriagesPulled);
-                if (fTrainSpeed >= fBreak) {
+                if (!(fTrainSpeed < fBreak)) { // exe 0x6F8BB6-0x6F8BB9: jp (not less, NaN too) takes the adjust branch
                     if (m_fTrainSpeed < 0.0f) {
                         m_fTrainSpeed += fBreak;
                     } else {
@@ -1672,7 +1672,7 @@ void CTrain::ProcessControl() {
         float fCurrentNodeTrackLength = theTrainNode->GetDistanceFromStart();
         while (m_fCurrentRailDistance < fCurrentNodeTrackLength || fNextNodeTrackLength < m_fCurrentRailDistance) {
             int32 newNodeIndex = m_nNodeIndex - 1; // previous node
-            if (fCurrentNodeTrackLength <= m_fCurrentRailDistance) {
+            if (!(fCurrentNodeTrackLength > m_fCurrentRailDistance)) { // exe 0x6F91B5-0x6F91BB: je keeps 'previous' only when greater, NaN takes 'next'
                 newNodeIndex = m_nNodeIndex + 1; // next node
             }
             m_nNodeIndex = newNodeIndex % numTrackNodes;
@@ -1769,12 +1769,11 @@ void CTrain::ProcessControl() {
 
         float fNewTrainHeading = GetHeading();
         float fHeading = fNewTrainHeading - fOldTrainHeading;
-        if (fHeading <= PI) {
-            if (fHeading < -PI) {
-                fHeading += TWO_PI;
-            }
-        } else {
+        // exe 0x6F962A-0x6F964C: > PI subtracts, otherwise < -PI adds (a NaN heading skips both)
+        if (fHeading > PI) {
             fHeading -= TWO_PI;
+        } else if (fHeading < -PI) {
+            fHeading += TWO_PI;
         }
 
         m_vecTurnSpeed = CVector(0.0f, 0.0f, fHeading / CTimer::GetTimeStep());
@@ -1790,13 +1789,19 @@ void CTrain::ProcessControl() {
 
             CPhysical::ProcessControl();
         } else {
-            m_vecMoveSpeed.x = std::clamp(m_vecMoveSpeed.x, -2.0f, 2.0f);
-            m_vecMoveSpeed.y = std::clamp(m_vecMoveSpeed.y, -2.0f, 2.0f);
-            m_vecMoveSpeed.z = std::clamp(m_vecMoveSpeed.z, -2.0f, 2.0f);
+            // exe 0x6F9795-0x6F98B4: not-greater than the minimum (NaN too) takes the minimum, then not-less than the maximum takes the maximum
+            const auto ExeClamp = [](float v, float lo, float hi) {
+                if (!(v > lo)) { v = lo; }
+                if (!(v < hi)) { v = hi; }
+                return v;
+            };
+            m_vecMoveSpeed.x = ExeClamp(m_vecMoveSpeed.x, -2.0f, 2.0f);
+            m_vecMoveSpeed.y = ExeClamp(m_vecMoveSpeed.y, -2.0f, 2.0f);
+            m_vecMoveSpeed.z = ExeClamp(m_vecMoveSpeed.z, -2.0f, 2.0f);
 
-            m_vecTurnSpeed.x = std::clamp(m_vecTurnSpeed.x, -0.1f, 0.1f);
-            m_vecTurnSpeed.y = std::clamp(m_vecTurnSpeed.y, -0.1f, 0.1f);
-            m_vecTurnSpeed.z = std::clamp(m_vecTurnSpeed.z, -0.1f, 0.1f);
+            m_vecTurnSpeed.x = ExeClamp(m_vecTurnSpeed.x, -0.1f, 0.1f);
+            m_vecTurnSpeed.y = ExeClamp(m_vecTurnSpeed.y, -0.1f, 0.1f);
+            m_vecTurnSpeed.z = ExeClamp(m_vecTurnSpeed.z, -0.1f, 0.1f);
         }
 
         UpdateRwMatrix();
@@ -1846,9 +1851,10 @@ void CTrain::ProcessControl() {
             m_vecForce  = (m_vecForce  + m_vecMoveSpeed) / 2.0f;
             m_vecTorque = (m_vecTorque + m_vecTurnSpeed) / 2.0f;
 
-            if (m_vecForce.SquaredMagnitude() > fMaxForceTimeStep ||
-                m_vecTorque.SquaredMagnitude() > fMaxTorqueTimeStep ||
-                m_fMovingSpeed >= fMaxMovingSpeed ||
+            // exe 0x6F9B42-0x6F9BA1: fcompp + test ah,1 / fcomp + test ah,5 jump to 'reset' when NOT (max >= squared) / NOT (moving < max), NaN included
+            if (!(fMaxForceTimeStep >= m_vecForce.SquaredMagnitude()) ||
+                !(fMaxTorqueTimeStep >= m_vecTorque.SquaredMagnitude()) ||
+                !(m_fMovingSpeed < fMaxMovingSpeed) ||
                 m_fDamageIntensity > 0.0f && m_pDamageEntity != nullptr && m_pDamageEntity->GetIsTypePed()
             ) {
                 m_nFakePhysics = 0;
@@ -1874,7 +1880,7 @@ void CTrain::ProcessControl() {
             physicalFlags.bTouchingWater = true;
 
             float fTimeStep = 0.01f;
-            if (CTimer::GetTimeStep() >= 0.01f) {
+            if (!(0.01f > CTimer::GetTimeStep())) { // exe 0x6F9CD5-0x6F9CE0: NaN takes the time step
                 fTimeStep = CTimer::GetTimeStep();
             }
 

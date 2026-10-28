@@ -110,7 +110,7 @@ void CTaskComplexWanderCop::ScanForStuff(CPed* ped) {
         m_nScanForStuffTimer.m_bStarted = true;
     }
 
-    if (GetTaskType() == TASK_COMPLEX_POLICE_PURSUIT || !m_nScanForStuffTimer.m_bStarted)
+    if (m_pSubTask->GetTaskType() == TASK_COMPLEX_POLICE_PURSUIT || !m_nScanForStuffTimer.m_bStarted) // 0x6702CF: the SUB-task type (the port tested this task's own type, never a pursuit)
         return;
 
     if (m_nScanForStuffTimer.m_bStopped) {
@@ -180,12 +180,14 @@ CPed* CTaskComplexWanderCop::FindFirstCriminalInSight(CPed* ped) const {
 
         const auto& candidatePos = candidate.GetPosition();
         const auto& pedPos       = ped->GetPosition();
+        // 0x66B3C8..0x66B41D: the squared distance is summed z, y, x and the dot product z, y, x too (all in the FPU registers); `jne` after `fcompp`/`fcomp` also skips on NaN
         const auto  distance     = candidatePos - pedPos;
-        if (distance.SquaredMagnitude() >= sq(10.0f)) {
+        if (!(((x87d)distance.z * distance.z + (x87d)distance.y * distance.y) + (x87d)distance.x * distance.x < (x87d)sq(10.0f))) {
             continue;
         }
 
-        if (distance.Dot(ped->GetForward()) <= 0.f) {
+        const auto& pedFwd = ped->GetForward();
+        if (!(((x87d)distance.z * pedFwd.z + (x87d)distance.y * pedFwd.y) + (x87d)distance.x * pedFwd.x > 0.0)) {
             continue;
         }
 

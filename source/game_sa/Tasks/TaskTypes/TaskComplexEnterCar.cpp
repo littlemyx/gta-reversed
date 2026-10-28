@@ -669,7 +669,7 @@ CTask* CTaskComplexEnterCar::CreateSubTask(eTaskType taskType, CPed* ped) {
         }
 
         if (m_Car && m_CruiseSpeed >= 0.f) {
-            if (ped->IsPlayer() ? !ped->bInVehicle && m_Car->m_pDriver && m_bQuitAfterOpeningDoor : ped->bInVehicle) {  // 0x63E7A4 - NOTE/BUG: Why is it checking `!bInVehicle` for the player? Typo?
+            if (ped->IsPlayer() ? !ped->bInVehicle && m_Car->m_pDriver && !m_bQuitAfterOpeningDoor : ped->bInVehicle) {  // 0x63E7A4 (exe 0x63E7C9: `test [this+0x10], 2; jne` => the player case needs the flag CLEAR) - NOTE/BUG: Why is it checking `!bInVehicle` for the player? Typo?
                 m_Car->m_autoPilot.SetCruiseSpeed(NOTSA_FTOL(uint32, m_CruiseSpeed));
             }
         }
@@ -705,7 +705,7 @@ CTask* CTaskComplexEnterCar::CreateSubTask(eTaskType taskType, CPed* ped) {
     case TASK_SIMPLE_CAR_DRIVE_TIMED: // 0x63E314
         return new CTaskSimpleCarDriveTimed{ m_Car };
     case TASK_COMPLEX_LEAVE_CAR:
-        return new CTaskComplexLeaveCar{ m_Car, 0, 0, true, false }; // 0x63E2E8
+        return new CTaskComplexLeaveCar{ ped->m_pVehicle, 0, 0, true, false }; // 0x63E2B8..0x63E2E8: leaves the vehicle the PED is in (ped+0x58C), not the target car
     case TASK_COMPLEX_ENTER_BOAT_AS_DRIVER: // 0x63E2AE
         return new CTaskComplexEnterBoatAsDriver{ m_Car };
     case TASK_COMPLEX_FALL_AND_GET_UP: { // 0x63E15E
@@ -734,7 +734,7 @@ CTask* CTaskComplexEnterCar::CreateSubTask(eTaskType taskType, CPed* ped) {
         return new CTaskComplexFallAndGetUp{ IsTargetDoorOnTheLeft() ? ANIM_ID_KO_SPIN_L : ANIM_ID_KO_SPIN_R, ANIM_GROUP_DEFAULT, 2000 };
     }
     case TASK_NONE:
-        return new CTaskSimpleNone{}; // 0x63E0F8 - NOTE/TODO: Weird
+        return new CTaskSimpleLeaveGroup{}; // 0x63E0D8..0x63E0F8: the exe constructs a CTaskSimpleLeaveGroup (0x463540) here - NOTE/TODO: Weird
     case TASK_SIMPLE_STAND_STILL:
         return new CTaskSimpleStandStill{}; // 0x63E0CE
     default:

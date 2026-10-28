@@ -3578,7 +3578,7 @@ void CAutomobile::HydraulicControl() {
     if (m_wMiscComponentAngle >= 20 || m_PrevSpeed <= 0.02f || m_GasPedal == 0.0f) {
         if (m_wMiscComponentAngle && m_wMiscComponentAngle < 61 && m_PrevSpeed < 0.01f) {
             m_wMiscComponentAngle--;
-            if (m_wMiscComponentAngle == 1)
+            if (m_wMiscComponentAngle == 0) // 0x6A0B16-0x6A0B3A: `test ax, ax; jne` after the decrement
                 m_vehicleAudio.AddAudioEvent(AE_SUSPENSION_OFF, 0.0f);
         }
     } else if (m_wMiscComponentAngle) {
@@ -3590,6 +3590,7 @@ void CAutomobile::HydraulicControl() {
     }
 
     bool suspensionTriggered = false;
+    bool hornHandled = false; // 0x6A0D9E / 0x6A0C80: both horn branches skip the per-frame suspension block
     float wheelPositions[4];
     float suspensionChange[4];
 
@@ -3633,10 +3634,11 @@ void CAutomobile::HydraulicControl() {
                 }
             }
             m_vehicleAudio.AddAudioEvent(AE_SUSPENSION_HYDRAULIC, 0.0f);
+            hornHandled = true; // 0x6A0D9E jumps to 0x6A13B8 (event) -> 0x6A13C7, past the block below
         }
     }
 
-    if (!suspensionTriggered) {
+    if (!suspensionTriggered && !hornHandled) {
         std::ranges::fill(suspensionChange, 1.0f);
 
         if (GetStatus() == STATUS_PHYSICS) {
@@ -3687,7 +3689,12 @@ void CAutomobile::HydraulicControl() {
                 pos.z += (extendedUpperLimit - normalUpperLimit) * suspensionChange[i] + normalUpperLimit;
                 line.m_vecStart = pos;
                 pos.z -= lineLength;
-                maxDelta = std::max(fabs(maxDelta), fabs(pos.z - line.m_vecEnd.z));
+                { // 0x6A1007-0x6A1022 / 0x6A1225-0x6A1242: keeps the SIGNED delta when |delta| > |maxDelta|
+                    const float delta = pos.z - line.m_vecEnd.z;
+                    if (std::fabs(delta) > std::fabs(maxDelta)) {
+                        maxDelta = delta;
+                    }
+                }
                 line.m_vecEnd = pos;
                 m_aSuspensionLineLength[i] = lineLength;
                 m_aSuspensionSpringLength[i] = springLength;
@@ -3711,7 +3718,12 @@ void CAutomobile::HydraulicControl() {
                 float lineLength = springLength + wheelRadius;
                 line.m_vecStart = pos;
                 pos.z -= lineLength;
-                maxDelta = std::max(std::fabs(maxDelta), std::fabs(pos.z - line.m_vecEnd.z));
+                {
+                    const float delta = pos.z - line.m_vecEnd.z;
+                    if (std::fabs(delta) > std::fabs(maxDelta)) {
+                        maxDelta = delta;
+                    }
+                }
                 line.m_vecEnd = pos;
                 m_aSuspensionLineLength[i] = lineLength;
                 m_aSuspensionSpringLength[i] = springLength;

@@ -707,7 +707,9 @@ bool CStreaming::DeleteLeastUsedEntityRwObject(bool bNotOnScreen, int32 streamin
             drawDistanceRadius *= CRenderer::ms_lowLodDistScale;
 
         const CVector entityPos = e->GetLod() ? e->GetLod()->GetPosition() : e->GetPosition();
-        const float fEntityToCamDist = DistanceBetweenPoints(TheCamera.GetPosition(), entityPos);
+        // 0x409838: the exe sums the squares z, y, x (not x, y, z); the delta is entity - camera
+        const CVector entityToCam = entityPos - TheCamera.GetPosition();
+        const float fEntityToCamDist = (float)std::sqrt((x87d)entityToCam.z * entityToCam.z + (x87d)entityToCam.y * entityToCam.y + (x87d)entityToCam.x * entityToCam.x);
         CEntity* const pEntityLastLod = e->FindLastLOD();
 
         const float fModelRadius = mi->GetColModel()->GetBoundRadius();

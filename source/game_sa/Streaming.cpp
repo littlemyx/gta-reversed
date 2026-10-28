@@ -3283,7 +3283,8 @@ void CStreaming::StreamPedsForInterior(int32 interiorType) {
         const int32 rndHusband = CGeneral::GetRandomNumber() % CPopulation::GetNumPedsInGroup(POPCYCLE_GROUP_HUSBANDS, 0); // Choose a random husband
 
         const int32 numWives = CPopulation::GetNumPedsInGroup(POPCYCLE_GROUP_WIVES, 0);
-        int32 randomWife = std::max(0, rndHusband - CGeneral::GetRandomNumberInRange(3, 9));
+        // exe 0x40BCF9: `husband - ftol(r*6) + 3` == husband - GetRandomNumberInRange(-3, 3) (port used (3, 9), i.e. 6 lower)
+        int32 randomWife = std::max(0, rndHusband - CGeneral::GetRandomNumberInRange(-3, 3));
         if (numWives - 1 < randomWife)
             randomWife = numWives - 1;
 

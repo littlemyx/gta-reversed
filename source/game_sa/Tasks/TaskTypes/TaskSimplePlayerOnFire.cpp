@@ -35,22 +35,22 @@ bool CTaskSimplePlayerOnFire::ProcessPed(CPed* ped) {
     // TODO: Add stubs
     CPedDamageResponse dmgResp;
     CTaskComplexOnFire::ComputeFireDamage(ped, dmgResp);
-    if (!dmgResp.m_bHealthZero || m_bAddedDamageEvent) {
-        if (CLocalisation::PedsOnFire()) { // Moved code a little to avoid dup
-            ped->Say(CTX_GLOBAL_PAIN_ON_FIRE, 0, 0.1f); // Screaming
-        }
+    // 0x63368C-0x633783: health zero and event already added => finished without screaming
+    if (dmgResp.m_bHealthZero && m_bAddedDamageEvent) {
+        return true;
+    }
+
+    if (CLocalisation::PedsOnFire()) {
+        ped->Say(CTX_GLOBAL_PAIN_ON_FIRE, 0, 0.1f); // Screaming
     }
 
     if (!dmgResp.m_bHealthZero) {
         return false;
     }
 
-    if (m_bAddedDamageEvent) {
-        return true;
-    }
-
     CEventDamage dmgEvent{ nullptr, CTimer::GetTimeInMS(), WEAPON_FLAMETHROWER, PED_PIECE_TORSO, 0u, false, !!ped->bInVehicle };
     ped->GetEventGroup().Add(&dmgEvent);
+    m_bAddedDamageEvent = true; // 0x63371D
 
     return false;
 }

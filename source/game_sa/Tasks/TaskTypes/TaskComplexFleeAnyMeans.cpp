@@ -176,13 +176,25 @@ CTask* CTaskComplexFleeAnyMeans::ControlSubTask(CPed* ped) {
     const auto& pedPos = ped->GetPosition();
 
     // Check if we're far enough from the entity we're fleeing from to enter a car
-    if (sq(m_minDistFromFleeEntityToStealCar) >= (pedPos - m_fleeFrom->GetPosition()).SquaredMagnitude()) {
-        return m_pSubTask;
+    // Exe 0x65D843-0x65D86F: float diff, squared as (dz2+dy2)+dx2 and compared with D*D; D*D must be STRICTLY below it, NaN keeps the subtask
+    {
+        const CVector d = pedPos - m_fleeFrom->GetPosition();
+        const x87d distSq = ((x87d)d.z * d.z + (x87d)d.y * d.y) + (x87d)d.x * d.x;
+        const x87d minSq  = (x87d)m_minDistFromFleeEntityToStealCar * m_minDistFromFleeEntityToStealCar;
+        if (!(minSq < distSq)) {
+            return m_pSubTask;
+        }
     }
 
     // Check if vehicle is in front of the ped ([-90, 90] deg)
-    if (const auto pedToVeh = closestVeh->GetPosition() - pedPos; 0.f >= pedToVeh.Normalized().Dot(ped->GetForward())) {
-        return m_pSubTask;
+    // Exe 0x65D8B5-0x65D8DC: dot summed z, y, x; `<= 0` or NaN keeps the subtask
+    {
+        const auto pedToVeh = (closestVeh->GetPosition() - pedPos).Normalized();
+        const auto& fwd = ped->GetForward();
+        const x87d dot = ((x87d)pedToVeh.z * fwd.z + (x87d)pedToVeh.y * fwd.y) + (x87d)pedToVeh.x * fwd.x;
+        if (!(dot > (x87d)0.0)) {
+            return m_pSubTask;
+        }
     }
 
     // 0x65D8E4: the exe asks CCarEnterExit::IsVehicleStealable before it registers the vehicle (the port skipped the test)

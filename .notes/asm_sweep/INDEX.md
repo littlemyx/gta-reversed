@@ -4,7 +4,7 @@
 |---|---|---|---|---|
 | S01 | game_sa/Tasks/TaskTypes | 40 | partial 22/40 (11 M, 11 fixed) -> S01b | TaskInteriorBeInHouse.cpp, TaskInteriorBeInOffice.cpp, TaskInteriorBeInShop.cpp, TaskInteriorLieInBed.cpp, TaskInteriorShopKeeper.cpp, TaskInteriorSitAtDesk.cpp ... |
 | S02 | game_sa/Tasks/TaskTypes | 40 | partial 30/40 (23 M, 7 fixed) -> S02b | TaskComplexAvoidEntity.cpp, TaskComplexAvoidOtherPedWhileWandering.cpp, TaskComplexBeInCouple.cpp, TaskComplexBeInGroup.cpp, TaskComplexBeStill.cpp, TaskComplexCarDrive.cpp ... |
-| S03 | game_sa/Tasks/TaskTypes | 43 | pending | TaskComplexDragPedFromCar.cpp, TaskComplexDriveFireTruck.cpp, TaskComplexDriveToPoint.cpp, TaskComplexDriveWander.cpp, TaskComplexEnterBoatAsDriver.cpp, TaskComplexEnterCar.cpp ... |
+| S03 | game_sa/Tasks/TaskTypes | 43 | partial 30/43 (21 M, 9 fixed) -> S03b | TaskComplexDragPedFromCar.cpp, TaskComplexDriveFireTruck.cpp, TaskComplexDriveToPoint.cpp, TaskComplexDriveWander.cpp, TaskComplexEnterBoatAsDriver.cpp, TaskComplexEnterCar.cpp ... |
 | S04 | game_sa/Tasks/TaskTypes | 40 | pending | TaskComplexFleeShooting.cpp, TaskComplexFollowLeaderAnyMeans.cpp, TaskComplexFollowLeaderInFormation.cpp, TaskComplexFollowNodeRoute.cpp, TaskComplexFollowPatrolRoute.cpp, TaskComplexFollowPedFootsteps.cpp ... |
 | S05 | game_sa/Tasks/TaskTypes | 42 | pending | TaskComplexGoPickUpEntity.cpp, TaskComplexGoToAttractor.cpp, TaskComplexGoToBoatSteeringWheel.cpp, TaskComplexGoToCarDoorAndStandStill.cpp, TaskComplexGoToPointAiming.cpp, TaskComplexGoToPointAndStandStillTimed.cpp ... |
 | S06 | game_sa/Tasks/TaskTypes | 43 | pending | TaskComplexKillPedOnFootMelee.cpp, TaskComplexKillPedOnFootStealth.cpp, TaskComplexLeaveBoat.cpp, TaskComplexLeaveCar.cpp, TaskComplexLeaveCarAndDie.cpp, TaskComplexLeaveCarAndFlee.cpp ... |
@@ -82,3 +82,4 @@
 | S22h | rest of S22g | 1 | done 1/1 (MATCH; S22 complete) | CarCtrl.cpp |
 | S27d | rest of S27c | 2 | done 2/2 (2 fixed; S27 complete) | World.cpp |
 | S02b | rest of S02 | 11 | done 11/11 (7 M, 4 fixed; S02 complete) | TaskComplexCopInCar.cpp, TaskComplexDestroyCar.cpp, TaskComplexDestroyCarMelee.cpp, TaskComplexDie.cpp, TaskComplexDieInCar.cpp |
+| S03b | rest of S03 | 13 | pending | TaskComplexEnterCar.cpp, TaskComplexFleeAnyMeans.cpp, TaskComplexFleeEntity.cpp, TaskComplexFleePoint.cpp |

@@ -1,0 +1,14 @@
+addr	file	line	cls	fn	oc
+0x63DFA0	source/game_sa/Tasks/TaskTypes/TaskComplexEnterCar.cpp	47	CTaskComplexEnterCar	Destructor	D
+0x63ACC0	source/game_sa/Tasks/TaskTypes/TaskComplexEnterCar.cpp	51	CTaskComplexEnterCar	CreateTaskUtilityLineUpPedWithCar	D
+0x63A380	source/game_sa/Tasks/TaskTypes/TaskComplexEnterCar.cpp	54	CTaskComplexEnterCar	GetCameraStickModifier	C
+0x63E040	source/game_sa/Tasks/TaskTypes/TaskComplexEnterCar.cpp	56	CTaskComplexEnterCar	CreateSubTask	D
+0x63E990	source/game_sa/Tasks/TaskTypes/TaskComplexEnterCar.cpp	59	CTaskComplexEnterCar	CreateNextSubTask	D
+0x643A60	source/game_sa/Tasks/TaskTypes/TaskComplexEnterCar.cpp	60	CTaskComplexEnterCar	CreateFirstSubTask	D
+0x63A890	source/game_sa/Tasks/TaskTypes/TaskComplexEnterCar.cpp	61	CTaskComplexEnterCar	ControlSubTask	D
+0x63F970	source/game_sa/Tasks/TaskTypes/TaskComplexEnterCar.cpp	62	CTaskComplexEnterCar	CreateNextSubTask_AfterSimpleCarAlign	D
+0x65D780	source/game_sa/Tasks/TaskTypes/TaskComplexFleeAnyMeans.cpp	23	CTaskComplexFleeAnyMeans	ControlSubTask	D
+0x65BB00	source/game_sa/Tasks/TaskTypes/TaskComplexFleeEntity.cpp	20	CTaskComplexFleeEntity	CreateFirstSubTask	D
+0x65BBB0	source/game_sa/Tasks/TaskTypes/TaskComplexFleeEntity.cpp	21	CTaskComplexFleeEntity	ControlSubTask	D
+0x65B820	source/game_sa/Tasks/TaskTypes/TaskComplexFleePoint.cpp	20	CTaskComplexFleePoint	ComputeTargetPoint	D
+0x65B660	source/game_sa/Tasks/TaskTypes/TaskComplexFleePoint.cpp	27	CTaskComplexFleePoint	ControlSubTask	D

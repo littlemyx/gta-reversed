@@ -44,7 +44,7 @@ public:
     bool ProcessPed(CPed* ped) override;
 
     auto GetFacialType() const { return m_Type; }
-    void StartTimer(int32 dur) { m_Timer.Start(dur); }
+    void StartTimer(int32 dur) { m_Timer.StartUnguarded(dur); } // Exe 0x69119F (CTaskComplexFacial::ControlSubTask) stores start/interval/started without the `dur >= 0` test
 
     static AnimationId GetAnimId(eFacialExpression expression);
 

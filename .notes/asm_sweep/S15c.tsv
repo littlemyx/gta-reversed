@@ -1,0 +1,7 @@
+addr	file	line	cls	fn	oc
+0x68A1D0	source/game_sa/Tasks/TaskTypes/TaskSimpleSwim.cpp	15	CTaskSimpleSwim	ProcessSwimmingResistance	D
+0x688A90	source/game_sa/Tasks/TaskTypes/TaskSimpleSwim.cpp	18	CTaskSimpleSwim	ProcessControlInput	D
+0x62A380	source/game_sa/Tasks/TaskTypes/TaskSimpleUseGun.cpp	36	CTaskSimpleUseGun	ProcessPed	D
+0x64FC10	source/game_sa/Tasks/TaskTypes/TaskUtilityLineUpPedWithCar.cpp	22	CTaskUtilityLineUpPedWithCar	GetLocalPositionToOpenCarDoor	S
+0x650A80	source/game_sa/Tasks/TaskTypes/TaskUtilityLineUpPedWithCar.cpp	23	CTaskUtilityLineUpPedWithCar	GetPositionToOpenCarDoor	S
+0x6513A0	source/game_sa/Tasks/TaskTypes/TaskUtilityLineUpPedWithCar.cpp	24	CTaskUtilityLineUpPedWithCar	ProcessPed	D

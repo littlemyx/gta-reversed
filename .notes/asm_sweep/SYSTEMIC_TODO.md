@@ -15,3 +15,6 @@
 
 ## Double literals in float compares (from S05c)
 - [ ] Exe compares against float constants (0.119999997f, 0.200000003f) where the port wrote double literals 0.12 / 0.2 (KillCriminal::ControlSubTask). Scan source/game_sa for comparisons of float expressions against unsuffixed literals (like litdiv_scan.py) and check each against the exe constant.
+
+## Runtime globals vs literals (from S07b/S15b)
+- [ ] Exe reads .data globals where the port has literals: flee tolerance 0xC18CF0 (fixed in S07b), gun flash duration 0x8D2E88 (init 250, port literal 250). Check whether any exe code writes these globals; if yes, port them as globals.

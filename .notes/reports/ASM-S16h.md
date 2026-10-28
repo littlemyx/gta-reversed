@@ -1,8 +1,8 @@
 # ASM-S16h (Automobile.cpp, last 3 functions) - 2026-10-28
 Result: 2 FIXED (2 commits), 1 PARTIAL (PreRender: 0x6AAB50-0x6AB154 MATCH, the rest NOT REACHED, token budget); 0 UNSURE. Table: S16h.result.tsv.
 Fixes:
-- ProcessBuoyancy (0x6A8C00-0x6A9678), 71f17118: float constant multiplies as in the exe: force.z/((ts*mass)*0.008f), (U/buoy)*f*1.05f, 1-f*0.05f (port divided by 125 / 20), mass*0.0064f and buoy-mass*8.0000009e-6f (port 8/1250, 0.01/1250), pow result rounded once.
-- VehicleDamage (0x6A7650-0x6A84B5), 65d775e9:
+- ProcessBuoyancy (0x6A8C00-0x6A9678), 6a5101db: float constant multiplies as in the exe: force.z/((ts*mass)*0.008f), (U/buoy)*f*1.05f, 1-f*0.05f (port divided by 125 / 20), mass*0.0064f and buoy-mass*8.0000009e-6f (port 8/1250, 0.01/1250), pow result rounded once.
+- VehicleDamage (0x6A7650-0x6A84B5), d812c1f9:
   - upside down: remote controlled OR submerged returns, otherwise health loss unless wrecked (port: only a remote+submerged return);
   - damageIntensity != 0 branch keeps min 25 and collForceMult 0.333 (port set 1.0); the inside-view vehicle damage is *0.333 (port /3);
   - front bumper: left wing needs localDir < -0.7 / < -0.5 (port had > signs, so nearly always left wing); bonnet part (and its rand() & 3, port % 3) only when the bumper is not ok; component order bonnet, LF, RF, windscreen, rear: boot, LR, RR (statuses read before the damage);

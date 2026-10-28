@@ -49,3 +49,12 @@
 - ASM sweep done/partial since: S20 complete (Ped.cpp); S16 Automobile down to S16i (PreRender tail); S17 down to S17e (running); S13c, S14b, S18c, S21c, S22e, S27c pending; S01-S10, S15, S19, S28, S30-S34 untouched.
 - Systemic: SYSTEMIC-1/2/3 landed (ExeDivide, sector helpers, coin flips, TaskTimer partial, literal division scanner tools/standalone/litdiv_scan.py + LITDIV.tsv). FIXBUGS-AUDIT 1-2: unguarded port fixes moved under FIX_BUGS (FIXBUGS.tsv). Open items: SYSTEMIC_TODO.md.
 - Pending user OK: delete agent scratch C:/gta-soak-s16e, C:/gta-scratch/asm-s16e/f/g/h, systemic-3, asm-s17c/d (keep asm-s17c, asm-s16g/tools until S17e is done).
+
+## 2026-10-28 21:00 checkpoint
+- Gates green today: 74b2b51e, 38b266a1, 8ca88bfe (C:\gta-play refreshed to 8ca88bfe). Gate on e0b8b173 running (tests 74/74, soak OK, regress pending).
+- ASM sweep done today: S13, S16, S18, S21, S22, S27 (all complete); Tasks S02–S10 complete; S15 to S15e (1 row: LineUpPedWithCar::ProcessPed 0x6513A0); S19 at S19d (101 rows: CTrain from AddNearbyPedAsRandomPassenger 0x6F8170, then CVehicle per-frame, then Trailer).
+- Not started: S28 Streaming, S30 Camera, S31 Cam, S32 Radar, S33 WaterLevel, S34 Interior_c.
+- Agent brief template: scratchpad asm_brief_template.md (copy kept in this note's spirit: landing at ~110k, RW_EXE_ORACLE=<exe path>, no bare double, own dis.sh copy, msvcenv before new_worktree, --force --force worktree remove when clean+pushed).
+- SYSTEMIC_TODO new: X87-POW, IsPointInSphere order, double literals in float compares, runtime globals vs literals.
+- Flakes: combat.foot.weapon_pickup / chase.no_zombie_cops fixed by COMBAT-FLAKY (16429ddc); new chase.player_shot_at once (maybe heal-every-2.5s side effect) — watch.
+- Pending user decision: delete C:/gta-wt/asm-s04 (busy dir) and old scratch folders.

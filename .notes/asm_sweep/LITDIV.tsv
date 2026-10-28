@@ -1,0 +1,81 @@
+file	line	function	addr	divisor	verdict	exe_const	note	status
+source/game_sa/Audio/AESmoothFadeThread.cpp	124	CAESmoothFadeThread::Service	0x4EED10	100.0f	EXE-MULTIPLIES	0x3c23d70a	const=f32(1/d) | exe fmul(1/d)=1 fdiv(d)=0 port_sites_same_d=1	FIXED fef351b3
+source/game_sa/Audio/AESmoothFadeThread.cpp	166	CAESmoothFadeThread::RequestFade	0x4EEAA0	100.0f	EXE-MULTIPLIES	0x3c23d70a	const=f32(1/d) | exe fmul(1/d)=1 fdiv(d)=0 port_sites_same_d=1	FIXED fef351b3
+source/game_sa/Entity/Vehicle/Bike.cpp	399	CBike::ProcessBuoyancy	0x6B5FB0	125.0f	EXE-MULTIPLIES	0x3c03126f	const=f32(1/d) | exe fmul(1/d)=2 fdiv(d)=0 port_sites_same_d=1	FIXED 461ee1f5
+source/game_sa/Entity/Vehicle/Bike.cpp	408	CBike::ProcessBuoyancy	0x6B5FB0	20.0f	EXE-MULTIPLIES	0x3d4ccccd	const=f32(1/d) | exe fmul(1/d)=1 fdiv(d)=0 port_sites_same_d=1	FIXED 461ee1f5
+source/game_sa/Entity/Vehicle/Vehicle.cpp	1018	CVehicle::ProcessDrivingAnims	0x6DF4A0	0.61f	EXE-MULTIPLIES	0x3fd1d608	const=f32(1/d) | exe fmul(1/d)=1 fdiv(d)=0 port_sites_same_d=1	FIXED 1d949d25
+source/game_sa/Entity/Vehicle/Vehicle.cpp	1994	CVehicle::ApplyBoatWaterResistance	0x6D2740	1000.0f	EXE-MULTIPLIES	0x3a83126f	const=f32(1/d) | exe fmul(1/d)=1 fdiv(d)=0 port_sites_same_d=1	FIXED 1d949d25
+source/game_sa/Entity/Vehicle/Vehicle.cpp	5101	CVehicle::ProcessBoatControl	0x6DBCE0	125.0f	EXE-MULTIPLIES	0x3c03126f	const=f32(1/d) | exe fmul(1/d)=2 fdiv(d)=0 port_sites_same_d=3	FIXED 1d949d25
+source/game_sa/Entity/Vehicle/Vehicle.cpp	5102	CVehicle::ProcessBoatControl	0x6DBCE0	125.0f	EXE-MULTIPLIES	0x3c03126f	const=f32(1/d) | exe fmul(1/d)=2 fdiv(d)=0 port_sites_same_d=3	FIXED 1d949d25
+source/game_sa/Entity/Vehicle/Vehicle.cpp	5131	CVehicle::ProcessBoatControl	0x6DBCE0	125.0f	EXE-MULTIPLIES	0x3c03126f	const=f32(1/d) | exe fmul(1/d)=2 fdiv(d)=0 port_sites_same_d=3	FIXED 1d949d25
+source/game_sa/Entity/Vehicle/Vehicle.cpp	5326	CVehicle::ProcessBoatControl	0x6DBCE0	1000.0f	EXE-MULTIPLIES	0x3a83126f	const=f32(1/d) | exe fmul(1/d)=1 fdiv(d)=0 port_sites_same_d=1	FIXED 1d949d25
+source/game_sa/ObjectData.cpp	100	CObjectData::Initialise	0x5B5360	125.0f	EXE-MULTIPLIES	0x3c03126f	const=f32(1/d) | exe fmul(1/d)=1 fdiv(d)=0 port_sites_same_d=1	FIXED de5a0b0b
+source/game_sa/RegisteredMotionBlurStreak.cpp	39	CRegisteredMotionBlurStreak::Render	0x721F70	255.0f	EXE-MULTIPLIES	0x3b808081	const=f32(1/d) | exe fmul(1/d)=2 fdiv(d)=0 port_sites_same_d=2	FIXED 5f158b8a
+source/game_sa/RegisteredMotionBlurStreak.cpp	40	CRegisteredMotionBlurStreak::Render	0x721F70	255.0f	EXE-MULTIPLIES	0x3b808081	const=f32(1/d) | exe fmul(1/d)=2 fdiv(d)=0 port_sites_same_d=2	FIXED 5f158b8a
+source/game_sa/Tasks/TaskTypes/TaskSimpleJetPack.cpp	255	CTaskSimpleJetPack::ProcessThrust	0x67EF20	100.0f	EXE-MULTIPLIES	0x3c23d70a	const=f32(1/d) | exe fmul(1/d)=2 fdiv(d)=0 port_sites_same_d=1	FIXED 61abaaf7
+source/game_sa/TrafficLights.cpp	260	CTrafficLights::DisplayActualLight	0x49DAB0	80.0f	EXE-MULTIPLIES	0x3c4ccccd	const=f32(1/d) | exe fmul(1/d)=3 fdiv(d)=0 port_sites_same_d=1	FIXED 0f917c21
+source/game_sa/Audio/Entities/AEPedAudioEntity.cpp	1215	CAEPedAudioEntity::Service	0x4E2EE0	0.7f	EXE-DIVIDES	0x3f333333	 | exe fmul(1/d)=0 fdiv(d)=1 port_sites_same_d=1	ok (exe divides too)
+source/game_sa/Cam.cpp	4112	CCam::Process_DW_CamManCam	0x51B120	0.1f	EXE-DIVIDES	0x3dcccccd	 | exe fmul(1/d)=0 fdiv(d)=1 port_sites_same_d=1	ok (exe divides too)
+source/game_sa/Cam.cpp	4728	CCam::Process_DW_PlaneSpotterCam	0x51C250	100.0f	EXE-DIVIDES	0x42c80000	 | exe fmul(1/d)=0 fdiv(d)=1 port_sites_same_d=1	ok (exe divides too)
+source/game_sa/Cam.cpp	4733	CCam::Process_DW_PlaneSpotterCam	0x51C250	0.1f	EXE-DIVIDES	0x3dcccccd	 | exe fmul(1/d)=0 fdiv(d)=1 port_sites_same_d=1	ok (exe divides too)
+source/game_sa/Entity/Ped/Ped.cpp	1264	CPed::GetBikeRidingSkill	0x5DF510	1000.0f	EXE-DIVIDES	0x447a0000	 | exe fmul(1/d)=0 fdiv(d)=1 port_sites_same_d=1	ok (exe divides too)
+source/game_sa/Entity/Ped/Ped.cpp	4712	CPed::KillPedWithCar	0x5F0360	1600.0f	EXE-DIVIDES	0x44c80000	 | exe fmul(1/d)=0 fdiv(d)=1 port_sites_same_d=1	ok (exe divides too)
+source/game_sa/Entity/Vehicle/Automobile.cpp	2785	CAutomobile::DoBurstAndSoftGroundRatios	0x6A47F0	0.3f	EXE-DIVIDES	0x3e99999a	 | exe fmul(1/d)=0 fdiv(d)=2 port_sites_same_d=2	ok (exe divides too)
+source/game_sa/Entity/Vehicle/Automobile.cpp	2809	CAutomobile::DoBurstAndSoftGroundRatios	0x6A47F0	0.3f	EXE-DIVIDES	0x3e99999a	 | exe fmul(1/d)=0 fdiv(d)=2 port_sites_same_d=2	ok (exe divides too)
+source/game_sa/Entity/Vehicle/Bike.cpp	502	CBike::ProcessAI	0x6BC930	0.1f	EXE-DIVIDES	0x3dcccccd	 | exe fmul(1/d)=0 fdiv(d)=2 port_sites_same_d=2	ok (exe divides too)
+source/game_sa/Entity/Vehicle/Bike.cpp	514	CBike::ProcessAI	0x6BC930	0.1f	EXE-DIVIDES	0x3dcccccd	 | exe fmul(1/d)=0 fdiv(d)=2 port_sites_same_d=2	ok (exe divides too)
+source/game_sa/Entity/Vehicle/Bike.cpp	3289	CBike::DoBurstAndSoftGroundRatios	0x6B6950	0.3f	EXE-DIVIDES	0x3e99999a	 | exe fmul(1/d)=0 fdiv(d)=2 port_sites_same_d=2	ok (exe divides too)
+source/game_sa/Entity/Vehicle/Bike.cpp	3332	CBike::DoBurstAndSoftGroundRatios	0x6B6950	0.3f	EXE-DIVIDES	0x3e99999a	 | exe fmul(1/d)=0 fdiv(d)=2 port_sites_same_d=2	ok (exe divides too)
+source/game_sa/Entity/Vehicle/Bmx.cpp	366	CBmx::LaunchBunnyHopCB	0x6C0390	25.0f	EXE-DIVIDES	0x41c80000	 | exe fmul(1/d)=0 fdiv(d)=1 port_sites_same_d=1	ok (exe divides too)
+source/game_sa/Entity/Vehicle/Bmx.cpp	439	CBmx::ProcessBunnyHop	0x6C0590	25.0f	EXE-DIVIDES	0x41c80000	 | exe fmul(1/d)=0 fdiv(d)=1 port_sites_same_d=1	ok (exe divides too)
+source/game_sa/Entity/Vehicle/Bmx.cpp	443	CBmx::ProcessBunnyHop	0x6C0590	0.2f	EXE-DIVIDES	0x3e4ccccd	 | exe fmul(1/d)=0 fdiv(d)=1 port_sites_same_d=1	ok (exe divides too)
+source/game_sa/Entity/Vehicle/Plane.cpp	533	CPlane::SetGearUp	0x6CAC20	1000.0f	EXE-DIVIDES	0x447a0000	 | exe fmul(1/d)=0 fdiv(d)=1 port_sites_same_d=1	ok (exe divides too)
+source/game_sa/Entity/Vehicle/Plane.cpp	543	CPlane::SetGearDown	0x6CAC70	1000.0f	EXE-DIVIDES	0x447a0000	 | exe fmul(1/d)=0 fdiv(d)=1 port_sites_same_d=1	ok (exe divides too)
+source/game_sa/PedIntelligence.cpp	883	CPedIntelligence::CanSeeEntityWithLights	0x605550	30.0f	EXE-DIVIDES	0x41f00000	 | exe fmul(1/d)=0 fdiv(d)=1 port_sites_same_d=1	ok (exe divides too)
+source/game_sa/PedIntelligence.cpp	886	CPedIntelligence::CanSeeEntityWithLights	0x605550	50.0f	EXE-DIVIDES	0x42480000	 | exe fmul(1/d)=0 fdiv(d)=1 port_sites_same_d=1	ok (exe divides too)
+source/game_sa/Tasks/TaskTypes/TaskSimpleJetPack.cpp	195	CTaskSimpleJetPack::RenderJetPack	0x67F6A0	79.577469f	EXE-DIVIDES	0x429f27aa	 | exe fmul(1/d)=0 fdiv(d)=2 port_sites_same_d=1	ok (exe divides too)
+source/game_sa/cHandlingDataMgr.cpp	353	cHandlingDataMgr::ConvertDataToGameUnits	0x6F5080	1000.0f	EXE-DIVIDES	0x447a0000	 | exe fmul(1/d)=0 fdiv(d)=1 port_sites_same_d=1	ok (exe divides too)
+source/game_sa/cTransmission.cpp	221	cTransmission::CalculateDriveAcceleration	0x6D05E0	0.05f	EXE-DIVIDES	0x3d4ccccd	 | exe fmul(1/d)=0 fdiv(d)=1 port_sites_same_d=1	ok (exe divides too)
+source/game_sa/3dMarkers.cpp	436	C3dMarkers::PlaceMarker	0x725120	20.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=2	open
+source/game_sa/3dMarkers.cpp	541	C3dMarkers::PlaceMarker	0x725120	20.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=2	open
+source/game_sa/3dMarkers.cpp	554	C3dMarkers::PlaceMarker	0x725120	11.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/Birds.cpp	234	CBirds::Update	0x712330	10.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/Buoyancy.cpp	370	cBuoyancy::SimpleCalcBuoyancy	0x6C3B00	9.0f	UNCLEAR	0x41100000	only fld of d const | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/Cam.cpp	785	CCam::Get_TwoPlayer_AimVector	0x513E40	360.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/Cam.cpp	5056	CCam::Process_FlyBy	0x5B25F0	180.0	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/CarEnterExit.cpp	262	CCarEnterExit::GetNearestCarDoor	0x6528F0	6.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/ClothesBuilder.cpp	909	CClothesBuilder::CreateSkinnedClump	0x5A69D0	1000.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/ClothesBuilder.cpp	910	CClothesBuilder::CreateSkinnedClump	0x5A69D0	800.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/Entity/Entity.cpp	921	CEntity::ModifyMatrixForCrane	0x533170	512.26f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/Entity/Object/Object.cpp	306	CObject::ProcessControl	0x5A2130	6.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/Entity/Vehicle/Automobile.cpp	3027	CAutomobile::VehicleDamage	0x6A7650	50.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/Entity/Vehicle/Automobile.cpp	4473	CAutomobile::NitrousControl	0x6A3EA0	100.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/Entity/Vehicle/Bike.cpp	857	CBike::ProcessRiderAnims	0x6B7280	0.56f	UNCLEAR	0x3f0f5c29	only fld of d const | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/Entity/Vehicle/Bike.cpp	1371	CBike::ProcessControl	0x6B9250	1000.0f	UNCLEAR	0x447a0000	only fld of d const | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/Entity/Vehicle/Boat.cpp	520	CBoat::ProcessControl	0x6F1770	125.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/Entity/Vehicle/Vehicle.cpp	1112	CVehicle::CanPedJumpOutCar	0x6D2030	100.0f	UNCLEAR	0x3c23d70a	only fld of 1/d const | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	FIXED 1d949d25
+source/game_sa/Escalator.cpp	51	CEscalator::AddThisOne	0x717970	3.2f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=2	open
+source/game_sa/Escalator.cpp	52	CEscalator::AddThisOne	0x717970	3.2f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=2	open
+source/game_sa/GameLogic.cpp	895	CGameLogic::UpdateSkip	0x442480	2.5f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/LoadingScreen.cpp	360	CLoadingScreen::DoPCScreenChange	0x590AC0	25.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/MenuManager.cpp	914	CMenuManager::SaveStatsToFile	0x57DDE0	10.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/PostEffects.cpp	979	CPostEffects::Fog	0x704150	3.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=8	open
+source/game_sa/PostEffects.cpp	980	CPostEffects::Fog	0x704150	3.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=8	open
+source/game_sa/PostEffects.cpp	981	CPostEffects::Fog	0x704150	3.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=8	open
+source/game_sa/PostEffects.cpp	982	CPostEffects::Fog	0x704150	3.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=8	open
+source/game_sa/PostEffects.cpp	995	CPostEffects::Fog	0x704150	3.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=8	open
+source/game_sa/PostEffects.cpp	996	CPostEffects::Fog	0x704150	3.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=8	open
+source/game_sa/PostEffects.cpp	997	CPostEffects::Fog	0x704150	3.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=8	open
+source/game_sa/PostEffects.cpp	998	CPostEffects::Fog	0x704150	3.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=8	open
+source/game_sa/Radar.cpp	1408	CRadar::DrawRadarMask	0x585700	6.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=2	open
+source/game_sa/Radar.cpp	1409	CRadar::DrawRadarMask	0x585700	6.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=2	open
+source/game_sa/RegisteredMotionBlurStreak.cpp	39	CRegisteredMotionBlurStreak::Render	0x721F70	3.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=2	FIXED 5f158b8a
+source/game_sa/RegisteredMotionBlurStreak.cpp	40	CRegisteredMotionBlurStreak::Render	0x721F70	3.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=2	FIXED 5f158b8a
+source/game_sa/Renderer.cpp	1263	CRenderer::ConstructRenderList	0x5556E0	250.0f	UNCLEAR	0x437a0000	only fld of d const | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/SetPiece.cpp	165	CSetPiece::Update	0x499A80	3.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/Shadows.cpp	1074	CShadows::CastShadowEntityXYZ	0x70A040	0.9f	UNCLEAR	0x3f666666	only fld of d const | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=2	open
+source/game_sa/Shadows.cpp	1075	CShadows::CastShadowEntityXYZ	0x70A040	0.9f	UNCLEAR	0x3f666666	only fld of d const | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=2	open
+source/game_sa/Sprite2d.cpp	568	CSprite2d::DrawBarChart	0x728640	0.04f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/Stats.cpp	275	CStats::GetPercentageProgress	0x5591E0	187.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/Tasks/TaskTypes/TaskSimpleFight.cpp	529	CTaskSimpleFight::IsTargetInRange	0x61D6F0	3.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open
+source/game_sa/cTransmission.cpp	29	cTransmission::DisplayGearRatios	0x6D0590	50.0f	UNCLEAR		no matching exe constant (folded / inlined callee / int-typed / var divisor) | exe fmul(1/d)=0 fdiv(d)=0 port_sites_same_d=1	open

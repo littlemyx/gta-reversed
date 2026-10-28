@@ -1523,7 +1523,10 @@ void CVehicle::SetDriver(CPed* driver) {
             break;
         }
         case MODEL_ENFORCER: {
-            driver->m_fArmour = std::max((float)FindPlayerInfo(0).m_nMaxArmour, driver->m_fArmour);
+            {
+                const auto maxArmour = (float)FindPlayerInfo(0).m_nMaxArmour;
+                driver->m_fArmour = maxArmour > driver->m_fArmour ? maxArmour : driver->m_fArmour; // ASM-S19j 0x6D177E: `fcom; test ah,0x41; je`: NaN keeps the armour
+            }
             break;
         }
         case MODEL_CADDY: {
@@ -1552,7 +1555,17 @@ void CVehicle::SetDriver(CPed* driver) {
         }
     }
 
-    ApplyTurnForceToOccupantOnEntry(driver);
+    // ASM-S19j 0x6D17D5-0x6D1870: SetDriver has its OWN turn force (not AddPassenger's): factor mass * -0.02 for both vehicle types;
+    // a bike only gets a move force of up * (mass * -0.02) (no turn force, no offset); everything else a turn force (0, 0, mass * -0.02)
+    // applied at (driver.x - this.x, driver.y - this.y, 0) read from the raw matrix positions
+    const x87d forceZ = (x87d)driver->m_fMass * -0.02f;
+    if (m_nVehicleType == VEHICLE_TYPE_BIKE) {
+        const auto& up = m_matrix->GetUp();
+        ApplyMoveForce(CVector{ (float)(forceZ * up.x), (float)(forceZ * up.y), (float)(forceZ * up.z) });
+    } else {
+        const CVector point{ driver->m_matrix->GetPosition().x - m_matrix->GetPosition().x, driver->m_matrix->GetPosition().y - m_matrix->GetPosition().y, 0.0f };
+        ApplyTurnForce(CVector{ 0.0f, 0.0f, (float)forceZ }, point);
+    }
 }
 
 // 0x6D1950
@@ -2109,7 +2122,7 @@ void CVehicle::AddDamagedVehicleParticles() {
     if (IsSubPlane())
         return;
 
-    if (m_fHealth >= 650.0f || m_fHealth < 250.0f || physicalFlags.bSubmergedInWater) {
+    if (!(m_fHealth < 650.0f) || /* ASM-S19j 0x6D2A99: jp = kill for >= and NaN */ m_fHealth < 250.0f || physicalFlags.bSubmergedInWater) {
         FxSystem_c::SafeKillAndClear(m_pOverheatParticle);
         return;
     }
@@ -5676,8 +5689,17 @@ void CVehicle::DoSunGlare() {
 
 // 0x6DDF60
 void CVehicle::AddWaterSplashParticles() {
-    if (!IsPointInSphere(GetPosition(), TheCamera.GetPosition(), 10.f)) {
-        return;
+    // ASM-S19j 0x6DDF89-0x6DDFBA: camera - vehicle, squared length summed z, y, x in the FPU (unrounded); `fcomp 100.0; test ah,0x41; je`
+    // returns only for sq > 100 (a NaN distance carries on)
+    {
+        const auto& camPos = TheCamera.GetPosition();
+        const auto& pos    = GetPosition();
+        const x87d dx = (x87d)camPos.x - pos.x;
+        const x87d dy = (x87d)camPos.y - pos.y;
+        const x87d dz = (x87d)camPos.z - pos.z;
+        if ((dz * dz + dy * dy) + dx * dx > 100.0) {
+            return;
+        }
     }
 
     auto fxPrtMult = FxPrtMult_c{ 1.0f, 1.0f, 1.0f, 0.35f, 0.02f, 0.0f, 0.03f };
@@ -5692,14 +5714,28 @@ void CVehicle::AddWaterSplashParticles() {
         const auto v0v1 = vertices[1] - vertices[0];
         const auto v1v2 = vertices[2] - vertices[1];
 
-        for (auto i = 1 - NOTSA_FTOL(size_t, CWeather::Rain * -2.f); i > 0; i--) {
-            g_fx.m_Splash->AddParticle(
-                vertices[0]
-                    + v0v1 * CGeneral::GetRandomNumberInRange(0.f, 1.f)
-                    + v1v2 * CGeneral::GetRandomNumberInRange(0.f, 1.f),
-                {},
-                0.f, fxPrtMult
-            );
+        // ASM-S19j 0x6DE0E6-0x6DE220: count is a signed int (1 - ftol(rain * -2)); each particle uses ONE random pair: u = rand() * (1/32767) rounded to float,
+        // v = rand() * (1/32767) kept unrounded, position = v0 + v0v1 * u + v1v2 * (v * u) (the port drew two independent randoms for the two edges).
+        // Roundings: x = (float)((float)(a*u + v0) + b*t), y = same with the float copy of b*t, z = (float)((float)((float)(a*u) + v0) + (float)(b*t)).
+        const int32 count = 1 - NOTSA_FTOL(int32, CWeather::Rain * -2.f);
+        for (int32 i = count; i > 0; i--) {
+            constexpr float RAND_SCALE = 3.05185094e-05f; // 0x858C7C
+            const auto r1 = rand();
+            const float u = (float)((x87d)r1 * RAND_SCALE);
+            const auto r2 = rand();
+            const x87d t = ((x87d)r2 * RAND_SCALE) * u;
+
+            const float x1 = (float)((x87d)v0v1.x * u + vertices[0].x);
+            const float y1 = (float)((x87d)v0v1.y * u + vertices[0].y);
+            const float z1 = (float)((float)((x87d)v0v1.z * u) + vertices[0].z);
+            const float ty = (float)((x87d)v1v2.y * t);
+            const float tz = (float)((x87d)v1v2.z * t);
+            const CVector pos{
+                (float)(x1 + (x87d)v1v2.x * t),
+                (float)(y1 + ty),
+                (float)(z1 + tz),
+            };
+            g_fx.m_Splash->AddParticle(pos, {}, 0.f, fxPrtMult);
         }
     }
 }
@@ -6928,10 +6964,12 @@ bool CVehicle::DoBladeCollision(CVector pos, CMatrix& matrix, int16 rotorType, f
         CVector bbMin(pos - CVector(radius, radius, radius));
         CVector bbMax(pos + CVector(radius, radius, radius));
 
-        const auto axis = abs(rotorType) - 1;
-        assert(axis >= 0 && axis < 3);
-        bbMin[axis] = pos[axis] - ROTOR_SEMI_THICKNESS;
-        bbMax[axis] = pos[axis] + ROTOR_SEMI_THICKNESS;
+        // ASM-S19j 0x6E2E8A: jump table over rotorType+3 (-3..3): 0 and everything outside leave the cube alone (the port asserted)
+        if (rotorType >= -3 && rotorType <= 3 && rotorType != 0) {
+            const auto axis = abs(rotorType) - 1;
+            bbMin[axis] = pos[axis] - ROTOR_SEMI_THICKNESS;
+            bbMax[axis] = pos[axis] + ROTOR_SEMI_THICKNESS;
+        }
 
         s_TestBladeCol.m_boundBox.Set(bbMin, bbMax);
         s_TestBladeCol.m_boundSphere.Set(radius, pos);
@@ -6945,21 +6983,29 @@ bool CVehicle::DoBladeCollision(CVector pos, CMatrix& matrix, int16 rotorType, f
 
     bool collided = false;
 
+    // ASM-S19j 0x6E2F6B-0x6E3252: the centre is transformed by the `matrix` argument (the port used this vehicle's own matrix), the sector
+    // range is clamped to [0, 120] (min: `v > 0 ? v : 0`, max: `v < 120 ? v : 120`) before the loops (y outer, x inner), and the sector
+    // lists go Buildings, Vehicles, Peds (damage 0), Objects. GetRepeatSector masks the (clamped) indices with & 15.
+    const CVector center = matrix.TransformPoint(pos);
+    const auto minX = std::max(CWorld::GetSectorX(center.x - radius), 0);
+    const auto minY = std::max(CWorld::GetSectorY(center.y - radius), 0);
+    const auto maxX = std::min(CWorld::GetSectorX(center.x + radius), (int32)MAX_SECTORS_X);
+    const auto maxY = std::min(CWorld::GetSectorY(center.y + radius), (int32)MAX_SECTORS_Y);
+
     CWorld::AdvanceCurrentScanCode();
-    CWorld::IterateSectorsOverlappedByRect(CRect{ m_matrix->TransformPoint(pos), radius }, [&](int32 x, int32 y) {
-        const auto ProcessSector = [&]<typename PtrListType>(PtrListType& list, float damage) {
-            return BladeColSectorList(list, s_TestBladeCol, matrix, rotorType, damage);
-        };
-        auto& s = CWorld::GetSector(x, y);
-        auto& rs = CWorld::GetRepeatSector(x, y);
-        collided |= ProcessSector(s.Buildings, damageMult);
-        collided |= ProcessSector(rs.Vehicles, damageMult);
-        collided |= ProcessSector(rs.Peds, 0.0f);
-        collided |= ProcessSector(rs.Objects, damageMult);
-        return 1;
-    });
+    for (int32 y = minY; y <= maxY; y++) {
+        for (int32 x = minX; x <= maxX; x++) {
+            auto& s = CWorld::GetSector(x, y);
+            auto& rs = CWorld::GetRepeatSector(x, y);
+            collided |= BladeColSectorList(s.Buildings, s_TestBladeCol, matrix, rotorType, damageMult);
+            collided |= BladeColSectorList(rs.Vehicles, s_TestBladeCol, matrix, rotorType, damageMult);
+            collided |= BladeColSectorList(rs.Peds, s_TestBladeCol, matrix, rotorType, 0.0f);
+            collided |= BladeColSectorList(rs.Objects, s_TestBladeCol, matrix, rotorType, damageMult);
+        }
+    }
 
     s_TestBladeColData.m_nNumSpheres = 0;
+    s_TestBladeColData.m_pSpheres = nullptr; // 0x6E3257-0x6E3267 zero the sphere pointer, the sphere count and the col-data pointer
     s_TestBladeCol.m_pColData = nullptr;
 
     return collided;

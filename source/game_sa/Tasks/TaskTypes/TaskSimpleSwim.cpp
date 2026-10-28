@@ -482,9 +482,16 @@ void CTaskSimpleSwim::ProcessSwimmingResistance(CPed* ped) {
         break;
     }
     case SWIM_UNDERWATER_SPRINTING: {
-        vecPedMoveSpeed   =  ped->m_vecAnimMovingShiftLocal.x * ped->GetRight();
-        vecPedMoveSpeed   += X87R(x87::cos(m_fRotationX) * ped->m_vecAnimMovingShiftLocal.y) * ped->GetForward();
-        vecPedMoveSpeed.z += X87R(x87::sin(m_fRotationX) * ped->m_vecAnimMovingShiftLocal.y) + 0.01f;
+        // 0x68A43A: exe order: (cos * forward) * shift.y per axis; z = (sin * shift.y + ((cos * forward.z) * shift.y + right.z * shift.x)) + 0.01
+        const auto& fwd    = ped->GetForward();
+        const auto  rotC   = x87::cos(m_fRotationX);
+        const auto  rotS   = x87::sin(m_fRotationX);
+        const float shiftY = ped->m_vecAnimMovingShiftLocal.y;
+        vecPedMoveSpeed    = ped->m_vecAnimMovingShiftLocal.x * ped->GetRight();
+        const float fwdZ   = (float)((float)(rotC * fwd.z) * shiftY);
+        vecPedMoveSpeed.x += (float)((float)(rotC * fwd.x) * shiftY);
+        vecPedMoveSpeed.y += (float)((float)(rotC * fwd.y) * shiftY);
+        vecPedMoveSpeed.z  = (float)((float)(rotS * shiftY) + (float)(fwdZ + vecPedMoveSpeed.z)) + 0.01f;
         break;
     }
     case SWIM_BACK_TO_SURFACE: {
@@ -502,19 +509,22 @@ void CTaskSimpleSwim::ProcessSwimmingResistance(CPed* ped) {
         }
         return;
     }
-    default: {
-        return;
+    default: { // 0x68A202: states above SWIM_BACK_TO_SURFACE fall through to the drag below (not a return)
+        break;
     }
     }
 
-    float fTheTimeStep = std::pow(0.9f, CTimer::GetTimeStep());
-    vecPedMoveSpeed *= 1.0f - fTheTimeStep;
-    ped->m_vecMoveSpeed *= fTheTimeStep;
-    ped->m_vecMoveSpeed += vecPedMoveSpeed;
+    // 0x68A4D8: the exe keeps pow(0.9f, ts) unrounded on the x87 stack: 1 - T is rounded, T * moveSpeed is rounded after the multiply
+    const double fTheTimeStep = std::pow((double)0.9f, (double)CTimer::GetTimeStep());
+    vecPedMoveSpeed *= (float)(1.0 - fTheTimeStep);
+    ped->m_vecMoveSpeed.x = (float)(fTheTimeStep * (double)ped->m_vecMoveSpeed.x) + vecPedMoveSpeed.x;
+    ped->m_vecMoveSpeed.y = (float)(fTheTimeStep * (double)ped->m_vecMoveSpeed.y) + vecPedMoveSpeed.y;
+    ped->m_vecMoveSpeed.z = (float)(fTheTimeStep * (double)ped->m_vecMoveSpeed.z) + vecPedMoveSpeed.z;
 
     auto& pedPos = ped->GetPosition();
     bool bUpdateRotationX = true;
     CVector vecCheckWaterLevelPos = CTimer::GetTimeStep() * ped->m_vecMoveSpeed + pedPos;
+    vecCheckWaterLevelPos.z = pedPos.z; // 0x68A5A3: the exe passes the ped's own z, only x/y are advanced by the move speed
     float fWaterLevel = 0.0f;
     if (!CWaterLevel::GetWaterLevel(vecCheckWaterLevelPos, fWaterLevel, true)) {
         fSubmergeZ = -1.0f;
@@ -523,7 +533,7 @@ void CTaskSimpleSwim::ProcessSwimmingResistance(CPed* ped) {
         if (m_nSwimState != SWIM_UNDERWATER_SPRINTING || m_fStateChanger < 0.0f) {
             bUpdateRotationX = false;
         } else {
-            if (pedPos.z + 0.65f > fWaterLevel && m_fRotationX > 0.7854f) { // todo: magic number
+            if (pedPos.z + 0.65f > fWaterLevel && m_fRotationX > 0.785398185f) { // 0x859AB0 (float pi/4)
                 m_nSwimState = SWIM_TREAD;
                 m_fStateChanger = 0.0f;
                 bUpdateRotationX = false;
@@ -544,11 +554,11 @@ void CTaskSimpleSwim::ProcessSwimmingResistance(CPed* ped) {
                     m_fStateChanger *= 0.95f;
                 }
                 if (m_fStateChanger < fMinimumSpeed) {
-                    m_fStateChanger += CTimer::GetTimeStepInSeconds() * ExeRecip(10.0f);
-                    m_fStateChanger = std::min(fMinimumSpeed, m_fStateChanger);
+                    m_fStateChanger += CTimer::GetTimeStep() * 0.002f; // 0x8708E0
+                    m_fStateChanger = fMinimumSpeed < m_fStateChanger ? fMinimumSpeed : m_fStateChanger; // 0x404330: NaN keeps the sum
                 }
                 m_fRotationX += CTimer::GetTimeStep() * m_fStateChanger;
-                fSubmergeZ = (0.55f - 0.2f) * (m_fRotationX * 4.0f / PI) * 0.75f + 0.2f;
+                fSubmergeZ = (0.55f - 0.2f) * (m_fRotationX * 1.27323949f) * 0.75f + 0.2f; // 0x870950
             }
         } else {
             if (X87R(pedPos.z - x87::sin(m_fRotationX)) + 0.65f <= fWaterLevel) {
@@ -557,7 +567,7 @@ void CTaskSimpleSwim::ProcessSwimmingResistance(CPed* ped) {
                 else
                     m_fStateChanger = 0.0f;
             } else {
-                m_fStateChanger += CTimer::GetTimeStepInSeconds() * ExeRecip(10.0f);
+                m_fStateChanger += CTimer::GetTimeStep() * 0.002f; // 0x8708E0
                 m_fStateChanger = std::min(m_fStateChanger, 0.05f);
             }
             m_fRotationX += CTimer::GetTimeStep() * m_fStateChanger;

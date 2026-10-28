@@ -1,0 +1,41 @@
+addr	function	verdict	asm range	note	fix commit
+0x6973B0	CTaskComplexWaitForBackup::CreateSubTask	MATCH	0x6973B0-0x6975B5 (all)		-
+0x697F10	CTaskComplexWaitForBackup::CreateNextSubTask	FIXED	0x697F10-0x6980B5 (all)	GUN_CTRL: keep aiming (achieve heading) while the backup is NOT closer than the wait distance (distSq >= waitDist^2, NaN too); port had it inverted	96291b85
+0x6980C0	CTaskComplexWaitForBackup::CreateFirstSubTask	MATCH	0x6980C0-0x6980E2 (all)		-
+0x6834E0	CTaskComplexWaitForPed::ControlSubTask	MATCH	0x6834E0-0x6836ED (all)	x87d sums z,y,x, NaN continues, frame counter wrap >10	-
+0x685630	CTaskComplexWalkAlongsidePed::CreateFirstSubTask	MATCH	0x685630-0x68566E (all)		-
+0x656F80	CTaskComplexWalkRoundBuildingAttempt::ComputeCrapRoute	FIXED	0x656F80-0x6571EE (all)	both rand draws unconditional (port skipped them when the route was full), normal scale [1,2) drawn first; target = (normal*r1 + right*r2) + pedPos (port: (pedPos + right) + normal); NaN-taking <0.35 test	f60a8448
+0x657BA0	CTaskComplexWalkRoundBuildingAttempt::ComputeRoute	FIXED	0x657BA0-0x65801D (all)	give-up at attempts>=20 after the increment (port: 1 too early); target = moveDir + m_pos - (0,0,0.5) (port used the ped position); first LOS without the camera-ignore flag; attempt reset to 20 counts only iterations whose first LOS was blocked (port counted all => always); route cleared on entry	d10f80b9
+0x658020	CTaskComplexWalkRoundBuildingAttempt::ControlSubTask	FIXED	0x658020-0x6581A0 (all)	entity-walk give-up: |M*offset - targetPos|^2 > 16 strict, z,y,x (port transformed offset-targetPos and used >=)	20f72e4d
+0x6544F0	CTaskComplexWalkRoundCar::ComputeRouteRoundSmallCar	MATCH	0x6544F0-0x65470F (all)		-
+0x656BB0	CTaskComplexWalkRoundCar::ComputeRouteRoundBigCar	MATCH	0x656BB0-0x656E4A (all)		-
+0x657B80	CTaskComplexWalkRoundCar::ComputeRoute	MATCH	0x657B80-0x657B91 (all)		-
+0x658200	CTaskComplexWalkRoundCar::CreateFirstSubTask	MATCH	0x658200-0x6584D2 (all)		-
+0x6551D0	CTaskComplexWalkRoundObject::ComputeRoute	MATCH	0x6551D0-0x655288 (all)		-
+0x657380	CTaskComplexWalkRoundObject::CreateFirstSubTask	MATCH	0x657380-0x6575E9 (all)		-
+0x674140	CTaskComplexWander::CreateNextSubTask	MATCH	0x674140-0x67455A (all)		-
+0x6740E0	CTaskComplexWander::CreateFirstSubTask	MATCH	0x6740E0-0x67412D (all)		-
+0x674C30	CTaskComplexWander::ControlSubTask	FIXED	0x674C30-0x674D7C (all)	Say(GLOBAL_CHAT) probability 0.1 (port: default 1.0 => chatter every frame)	7739a6f1
+0x671CB0	CTaskComplexWander::CreateSubTask	MATCH	0x671CB0-0x671EEA (all)		-
+0x673D00	CTaskComplexWander::GetWanderTaskByPedType	MATCH	0x673D00-0x673EC0 (all)	single int rand [0,8); jump table cop/medic/criminal/prostitute/default	-
+0x674D80	CTaskComplexWanderCop::ControlSubTask	MATCH	0x674D80-0x674E7A (all)		-
+0x6702B0	CTaskComplexWanderCop::ScanForStuff	FIXED	0x6702B0-0x67034D (all)	pursuit early-out tests the SUB-task type (port tested its own type: never true)	8e02bdac
+0x66B300	CTaskComplexWanderCop::LookForCriminals	FIXED	0x66B300-0x66B4E1 (all)	distance^2 and forward dot summed z,y,x, NaN skips (port x,y,z order, NaN passed)	8e02bdac
+0x66B4F0	CTaskComplexWanderCriminal::LookForCarsToSteal	MATCH	0x66B4F0-0x66B62F (all)		-
+0x670350	CTaskComplexWanderCriminal::ScanForStuff	MATCH	0x670350-0x6703F7 (all)		-
+0x65B380	CTaskComplexWanderFlee::ControlSubTask	MATCH	0x65B380 (jmp 0x674C30)	tail-jump to CTaskComplexWander::ControlSubTask	-
+0x672700	CTaskComplexWanderProstitute::ScanForStuff	MATCH	0x672700-0x672885 (all)		-
+0x66AFD0	CTaskComplexWanderStandard::LookForSexyCars	MATCH	0x66AFD0-0x66B14A (all)		-
+0x66FDA0	CTaskComplexWanderStandard::LookForChatPartners	MATCH	0x66FDA0-0x6700EE (all)		-
+0x670100	CTaskComplexWanderStandard::LookForGangMembers	MATCH	0x670100-0x6702A8 (all)		-
+0x65FF60	CTaskGangHasslePed::Destructor	MATCH	0x65FF60-0x65FFD7 (all)		-
+0x6642C0	CTaskGangHasslePed::CreateNextSubTask	MATCH	0x6642C0-0x66437B (all)	distance rand drawn before the type test	-
+0x664380	CTaskGangHasslePed::CreateFirstSubTask	MATCH	0x664380-0x66447D (all)		-
+0x65FFE0	CTaskGangHasslePed::ControlSubTask	MATCH	0x65FFE0-0x660255 (all)		-
+0x65FB60	CTaskGangHassleVehicle::Destructor	MATCH	0x65FB60-0x65FBFC (all)		-
+0x664BA0	CTaskGangHassleVehicle::CreateFirstSubTask	MATCH	0x664BA0-0x664D39 (all)		-
+0x6637C0	CTaskGangHassleVehicle::ControlSubTask	FIXED	0x6637C0-0x664193 (all)	CCollision::ProcessColModels used the model-info col model, exe uses CEntity::GetColModel (vehicle special col model); NaN-keeping |heading-target|<0.1 test (state 2)	8938a231
+0x660EE0	CTaskGoToVehicleAndLean::Destructor	MATCH	0x660EE0-0x660F50 (all)		-
+0x664770	CTaskGoToVehicleAndLean::CalcTargetPos	MATCH	0x664770-0x664894 (all)		-
+0x664D40	CTaskGoToVehicleAndLean::CreateFirstSubTask	MATCH	0x664D40-0x664E5B (all)		-
+0x664E60	CTaskGoToVehicleAndLean::ControlSubTask	FIXED	0x664E60-0x665055 (all)	moved-spot distance^2 summed z,y,x in registers (port x,y,z float)	7956f40b

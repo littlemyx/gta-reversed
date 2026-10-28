@@ -1,0 +1,9 @@
+addr	function	verdict	asm range	note	fix commit
+0x638D30	CTaskComplexUsePairedAttractor::CreateSubTask	MATCH	0x638D30-0x638EF9 (all)	finished/scripted/partner-wait/use-partner arms, ClearPartnership before the scripted task	-
+0x638AE0	CTaskComplexUsePairedAttractor::SeekPartnership	MATCH	0x638AE0-0x638BC6 (all)	first partner pair wins; port returns after the first hit (later iterations always continue)	-
+0x639E40	CTaskComplexUsePairedAttractor::CreateNextSubTask	MATCH	0x639E40-0x639F65 (all)		-
+0x639F70	CTaskComplexUsePairedAttractor::CreateFirstSubTask	MATCH	0x639F70-0x639F7F (all)		-
+0x638BD0	CTaskComplexUsePairedAttractor::ControlSubTask	FIXED	0x638BD0-0x638D20 (all)	partner-wait: partner without a paired task => clear AND abort (port only cleared); use-partner: abort unless partner has the paired task AND (use-partner|wait) (port: any of the three)	43a60490
+0x65A460	CTaskComplexUseSwatRope::ControlSubTask	FIXED	0x65A460-0x65A61A (all)	FindCoorsAlongRope failure also aborts to TASK_NONE; a failed ground-abort returns the sub-task without moving the rope (port moved it)	7931b42f
+0x6597D0	CTaskComplexUseWaterCannon::CreateFirstSubTask	MATCH	0x6597D0-0x659837 (all)		-
+0x65A640	CTaskComplexUseWaterCannon::ControlSubTask	MATCH	0x65A640-0x65A6F5 (all)		-

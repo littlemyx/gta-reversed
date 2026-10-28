@@ -2140,7 +2140,7 @@ void CWorld::TriggerExplosionSectorList(PtrListType& ptrList, const CVector& poi
                         ped->bIsStanding = false;
                         impactVelocity.z += 4.f;
                     } else {
-                        impactVelocity.z += CTimer::GetTimeStepInMS() * ped->m_fMass * ExeRecip(125.f);
+                        impactVelocity.z += CTimer::GetTimeStep() * ped->m_fMass * ExeRecip(125.f); // exe 0x5681D0: the raw ms_fTimeStep (0xB7CB5C), not GetTimeStepInMS
                     }
 
                     ped->ApplyMoveForce(impactVelocity);
@@ -2190,7 +2190,7 @@ void CWorld::TriggerExplosionSectorList(PtrListType& ptrList, const CVector& poi
 void CWorld::Process() {
     ZoneScoped;
 
-    constexpr float WORLD_PLAYER_SHIFT_DAMPING = SQRT_2 / 2.f; // 0x8CDEEC
+    constexpr float WORLD_PLAYER_SHIFT_DAMPING = 0.707f; // 0x8CDEEC (the float 0.707, not sqrt(2) / 2)
 
     const auto IterateMovingList = [&](auto&& fn) {
         for (auto* const entity : ms_listMovingEntityPtrs) {
@@ -2204,8 +2204,10 @@ void CWorld::Process() {
         }
     });
 
-    for (auto& group : CPedGroups::ms_groups) {
-        GetEventGlobalGroup()->AddEventsToGroup(&group);
+    for (auto&& [i, group] : rngv::enumerate(CPedGroups::ms_groups)) {
+        if (CPedGroups::ms_activeGroups[i]) { // exe 0x5684E0: `cmp byte [0xC098E0 + i], 0`
+            GetEventGlobalGroup()->AddEventsToGroup(&group);
+        }
     }
 
     CInformFriendsEventQueue::Process();
@@ -2372,7 +2374,11 @@ void CWorld::Process() {
                         if (entity->TreatAsPlayerForCollisions()) {
                             NOTSA_LOG_DEBUG("STUCK: Final Step: Player Entity {} Is Stuck", entity->GetModelIndex()); // R* log
                             const auto physical = entity->AsPhysical();
-                            physical->m_vecMoveSpeed *= (float)std::pow(WORLD_PLAYER_SHIFT_DAMPING, CTimer::GetTimeStepInMS());
+                            // exe 0x568952: pow(0.707f, ms_fTimeStep) (the raw time step, NOT GetTimeStepInMS), the pow result stays unrounded for the three multiplies
+                            const double damping = std::pow((double)WORLD_PLAYER_SHIFT_DAMPING, (double)CTimer::GetTimeStep());
+                            physical->m_vecMoveSpeed.x = (float)(X87R(damping * physical->m_vecMoveSpeed.x));
+                            physical->m_vecMoveSpeed.y = (float)(X87R(damping * physical->m_vecMoveSpeed.y));
+                            physical->m_vecMoveSpeed.z = (float)(X87R(damping * physical->m_vecMoveSpeed.z));
                             physical->ApplyMoveSpeed();
                             physical->ApplyTurnSpeed();
                         }

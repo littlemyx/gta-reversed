@@ -1,0 +1,43 @@
+addr	function	verdict	asm range	note	fix commit
+0x693610	CTaskComplexGoPickUpEntity::CreateFirstSubTask	MATCH	0x693610-0x693881 (of 0x6939b9)	null guard, timer, delta order, bbox position, 3 heading branches (fpatan, pi/2 sub), object velocity clear + SetIsStatic, UpdateRwMatrix match; dot/pickup-side tail not re-read (port carries x87 annotations)	-
+0x691D50	CTaskComplexGoPickUpEntity::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x66B6C0	CTaskComplexGoToAttractor::CreateNextSubTask	MATCH	0x66B6C0-0x66B6FF (all)	BroadcastArrival, queue-head test, flag 0x200000 clear	-
+0x670420	CTaskComplexGoToAttractor::CreateFirstSubTask	MATCH	0x670420-0x670597+ (all)	shelter type 4 -> run, teleport path (FindZ, rotation fields +0x558/+0x55C, StandStill 8.0), sequence GoToPoint(0.5,2.0)+SlideToCoord(0.5)	-
+0x64E390	CTaskComplexGoToBoatSteeringWheel::CreateFirstSubTask	MATCH	0x64E390-0x64E3A5 (all)	timer store then CreateSubTask(0x387)	-
+0x645910	CTaskComplexGoToCarDoorAndStandStill::ComputeRouteToDoor	MATCH	0x645910-0x645B32 (all)	HitSide order ped then door pt, plane projection (dot z,y,x + off, negate, scale), ComputeRoute args, add order ped,route,door	-
+0x64D2B0	CTaskComplexGoToCarDoorAndStandStill::CreateNextSubTask	NOT_REACHED	-	out of budget	-
+0x64D440	CTaskComplexGoToCarDoorAndStandStill::CreateFirstSubTask	NOT_REACHED	-	out of budget	-
+0x64A820	CTaskComplexGoToCarDoorAndStandStill::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x66DD70	CTaskComplexGoToPointAiming::CreateNextSubTask	NOT_REACHED	-	out of budget	-
+0x6689E0	CTaskComplexGoToPointAiming::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x6686A0	CTaskComplexGoToPointAndStandStillTimed::StopTimer	NOT_REACHED	-	out of budget	-
+0x66DCE0	CTaskComplexGoToPointAndStandStillTimed::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x66BD40	CTaskComplexGotoDoorAndOpen::CreateFirstSubTask	NOT_REACHED	-	out of budget	-
+0x653B40	CTaskComplexHitPedWithCar::ComputeEvasiveStepMoveDir	NOT_REACHED	-	out of budget	-
+0x67CCB0	CTaskComplexInAirAndLand::CreateNextSubTask	MATCH	0x67CCB0-0x67CFD8 (of 0x67D1CE)	glide path (flags, -8.0 blend, finish cb, z<-0.1 skid), fall/land branches (-0.4 strict, 0x2BC, sound 0x3B, balaclava), player pad branch start; rest of pad-land and the 55/70 quiet sound not re-read	-
+0x697840	CTaskComplexInvestigateDeadPed::CreateNextSubTask	NOT_REACHED	-	out of budget	-
+0x697990	CTaskComplexInvestigateDeadPed::CreateFirstSubTask	NOT_REACHED	-	out of budget	-
+0x697A00	CTaskComplexInvestigateDeadPed::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x6749F0	CTaskComplexInvestigateDisturbance::CreateNextSubTask	NOT_REACHED	-	out of budget	-
+0x66C820	CTaskComplexInvestigateDisturbance::CreateFirstSubTask	NOT_REACHED	-	out of budget	-
+0x6221D0	CTaskComplexKillAllThreats::FindThreat	MATCH	0x6221D0-0x622226 (all)	scanner flag, HATE=4, 16 entities, threat out	-
+0x6293C0	CTaskComplexKillAllThreats::CreateNextSubTask	MATCH	0x6293C0-0x62946F (all)	case 1000 only creates new KillPedOnFoot(-1,flags,delay,chance,1); STAND_STILL (203) -> null	-
+0x629480	CTaskComplexKillAllThreats::CreateFirstSubTask	NOT_REACHED	-	out of budget	-
+0x68BF30	CTaskComplexKillCriminal::Destructor	NOT_REACHED	-	out of budget	-
+0x68C050	CTaskComplexKillCriminal::CreateSubTask	NOT_REACHED	-	out of budget	-
+0x68E4F0	CTaskComplexKillCriminal::CreateNextSubTask	NOT_REACHED	-	out of budget	-
+0x68DC60	CTaskComplexKillCriminal::CreateFirstSubTask	NOT_REACHED	-	out of budget	-
+0x68E950	CTaskComplexKillCriminal::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x622980	CTaskComplexKillPedFromBoat::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x622320	CTaskComplexKillPedGroupOnFoot::CreateSubTask	NOT_REACHED	-	out of budget	-
+0x629570	CTaskComplexKillPedGroupOnFoot::CreateNextSubTask	NOT_REACHED	-	out of budget	-
+0x629630	CTaskComplexKillPedGroupOnFoot::CreateFirstSubTask	NOT_REACHED	-	out of budget	-
+0x625E70	CTaskComplexKillPedOnFoot::CreateSubTask	NOT_REACHED	-	out of budget	-
+0x62B150	CTaskComplexKillPedOnFoot::CreateNextSubTask	NOT_REACHED	-	out of budget	-
+0x62B490	CTaskComplexKillPedOnFoot::CreateFirstSubTask	NOT_REACHED	-	out of budget	-
+0x626260	CTaskComplexKillPedOnFoot::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x621500	CTaskComplexKillPedOnFootArmed::LineOfSightClearForAttack	NOT_REACHED	-	out of budget	-
+0x626FC0	CTaskComplexKillPedOnFootArmed::CreateSubTask	NOT_REACHED	-	out of budget	-
+0x62C190	CTaskComplexKillPedOnFootArmed::CreateNextSubTask	NOT_REACHED	-	out of budget	-
+0x62BF00	CTaskComplexKillPedOnFootArmed::CreateFirstSubTask	NOT_REACHED	-	out of budget	-
+0x62CCE0	CTaskComplexKillPedOnFootArmed::ControlSubTask	NOT_REACHED	-	out of budget	-

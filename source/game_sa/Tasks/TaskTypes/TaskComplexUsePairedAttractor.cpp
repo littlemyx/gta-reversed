@@ -107,24 +107,25 @@ CTask* CTaskComplexUsePairedAttractor::CreateNextSubTask(CPed* ped) {
 // 0x638BD0
 CTask* CTaskComplexUsePairedAttractor::ControlSubTask(CPed* ped) {
     switch (const auto tt = m_pSubTask->GetTaskType()) {
-    case TASK_COMPLEX_USE_ATTRACTOR_PARTNER: { // 0x638BE4
-        if (!m_Partner || !m_Partner->GetTaskManager().Find<CTaskComplexUsePairedAttractor, CTaskComplexUseAttractorPartner, CTaskComplexAttractorPartnerWait>()) {
+    case TASK_COMPLEX_USE_ATTRACTOR_PARTNER: { // 0x638CB8
+        // Exe: abort if there is no partner, or the partner has no paired-attractor task, or it has neither a UseAttractorPartner nor a PartnerWait task
+        if (!m_Partner
+            || !m_Partner->GetTaskManager().Find<CTaskComplexUsePairedAttractor>()
+            || !m_Partner->GetTaskManager().Find<CTaskComplexUseAttractorPartner, CTaskComplexAttractorPartnerWait>()
+        ) {
             m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_LEISURE);
         }
         return m_pSubTask;
     }
     case TASK_COMPLEX_ATTRACTOR_PARTNER_WAIT: { // 0x638C35
-        if (m_Partner) {
-            if (m_Partner->GetTaskManager().Find<CTaskComplexUsePairedAttractor>()) {
-                if (m_IsLeader ? m_Partner->GetTaskManager().Has<CTaskComplexAttractorPartnerWait>() : m_Partner->GetTaskManager().Has<CTaskComplexUseAttractorPartner>()) {
-                    m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_LEISURE);
-                }
-                return m_pSubTask;
-            }
-        } else {
+        if (!m_Partner || !m_Partner->GetTaskManager().Find<CTaskComplexUsePairedAttractor>()) {
+            ClearPartnership(); // Exe clears first and then aborts (in both cases)
+            m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_LEISURE);
+            return m_pSubTask;
+        }
+        if (m_IsLeader ? m_Partner->GetTaskManager().Has<CTaskComplexAttractorPartnerWait>() : m_Partner->GetTaskManager().Has<CTaskComplexUseAttractorPartner>()) {
             m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_LEISURE);
         }
-        ClearPartnership();
         return m_pSubTask;
     }
     case TASK_COMPLEX_USE_SCRIPTED_ATTRACTOR: { // 0x638BF4

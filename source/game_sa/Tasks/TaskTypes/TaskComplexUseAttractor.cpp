@@ -10,6 +10,7 @@
 #include "TaskSimpleStandStill.h"
 #include "TaskComplexUseScriptedAttractor.h"
 #include "TaskComplexSunbathe.h"
+#include "InterestingEvents.h"
 
 void CTaskComplexUseAttractor::InjectHooks() {
     RH_ScopedVirtualClass(CTaskComplexUseAttractor, 0x86e134, 11);
@@ -55,6 +56,8 @@ CTask* CTaskComplexUseAttractor::CreateNextSubTask(CPed* ped) {
 
 // 0x6385D0
 CTask* CTaskComplexUseAttractor::CreateFirstSubTask(CPed* ped) {
+    g_InterestingEvents.Add(CInterestingEvents::INTERESTING_EVENT_3, ped); // 0x6385ED..0x6385F7 (missing in the port)
+
     const auto task = [&, this]() -> CTask* {
         const auto type = m_attractor->GetType();
         switch (type) {
@@ -63,9 +66,9 @@ CTask* CTaskComplexUseAttractor::CreateFirstSubTask(CPed* ped) {
         case PED_ATTRACTOR_SEAT:
         case PED_ATTRACTOR_STEP:
             return new CTaskComplexSitDownThenIdleThenStandUp{
-                CGeneral::RandomBool(40.f) ? CGeneral::GetRandomNumberInRange(15'000, 60'000) : gDefaultTaskTime,
+                CGeneral::GetRandomNumberInRange(0, 100) <= 40 ? CGeneral::GetRandomNumberInRange(15'000, 60'000) : gDefaultTaskTime, // 0x63863F..0x638669: int rand(0,100) `<= 40` (jle), not the float RandomBool
                 type == PED_ATTRACTOR_STEP,
-                !!ped->bStayInSamePlace
+                !!ped->bUseAttractorInstantly // 0x63868B..0x638699: `(flags[0x474] >> 21) & 1` is bUseAttractorInstantly (the port passed bStayInSamePlace, a different bit)
             };
         case PED_ATTRACTOR_STOP:
             return new CTaskComplexWaitForBus{};
@@ -85,9 +88,10 @@ CTask* CTaskComplexUseAttractor::CreateFirstSubTask(CPed* ped) {
             if (CEntity* const entity = m_attractor->m_Entity) {
                 if (!entity->GetIsTypeObject() || entity->AsObject()->objectFlags.bEnableDisabledAttractors) {
                     CTheScripts::ScriptsForBrains.StartAttractorScriptBrainWithThisName(m_attractor->m_ScriptName, ped, ped->bUseAttractorInstantly);
-                    CScriptedBrainTaskStore::Clear(ped);
-                    return new CTaskComplexUseScriptedBrain{ m_attractor->m_ScriptName };
                 }
+                // 0x6387BE: the Clear + new task run even when the brain was not started (object without bEnableDisabledAttractors); the port returned nullptr there
+                CScriptedBrainTaskStore::Clear(ped);
+                return new CTaskComplexUseScriptedBrain{ m_attractor->m_ScriptName };
             }
 
             return nullptr;
@@ -104,12 +108,11 @@ CTask* CTaskComplexUseAttractor::CreateFirstSubTask(CPed* ped) {
         }
     }();
 
-    if (task) {
-        return task;
-    } else {
+    if (!task) {
         GetPedAttractorManager()->BroadcastDeparture(ped, m_attractor);
-        return nullptr;
     }
+    ped->bUseAttractorInstantly = false; // 0x6388A5..0x6388B4: `flags[0x474] &= ~0x200000` on every path (missing in the port)
+    return task;
 }
 
 // 0x6327C0

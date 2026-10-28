@@ -167,10 +167,11 @@ void CTaskComplexWalkRoundBuildingAttempt::ComputeCrapRoute(CPed const& ped) {
 
 // 0x657BA0
 void CTaskComplexWalkRoundBuildingAttempt::ComputeRoute(CPed const& ped) {
+    m_route->Clear(); // 0x657BBC
     ++m_nAttempts;
 
     // If there were too many attempts just use crap route
-    if (m_nAttempts + 1 >= 20) {
+    if (m_nAttempts >= 20) { // 0x657BD7: `cmp al, 0x14; jge` on the already incremented counter
         if (!m_crapRouteHasPoints) {
             ComputeCrapRoute(ped);
         }
@@ -181,24 +182,30 @@ void CTaskComplexWalkRoundBuildingAttempt::ComputeRoute(CPed const& ped) {
 
     const auto normal2x = m_normal * 2.f;
 
-    size_t numPointsGenerated{};
-    for (int32 num{1}; num >= -1; numPointsGenerated++, num -= m_bIsHeadOnCollision ? 2 : 3) {
+    size_t numBlocked{}; // 0x657F96: number of iterations whose ped => target line of sight was blocked
+    for (int32 num{1}; num >= -1; num -= m_bIsHeadOnCollision ? 2 : 3) {
         CVector moveDir{};
         ComputeMoveDir(ped, moveDir);
         moveDir *= CGeneral::GetRandomNumberInRange(-0.2f, 0.2f) + (float)m_nAttempts; // Apply some semi-random spread
         moveDir *= (float)num;
         moveDir += m_normal * 0.35f;
 
-        const auto  pedPos = ped.GetPosition() - CVector{ 0.f, 0.f, 0.5f }; // Ped's position is it's center, so adjust it to be on the ground
-        const auto& target = moveDir + pedPos;
-        const auto  origin = target - Normalized(moveDir) * 0.7f;
+        // 0x657D4A..0x657D76: the target is measured from `m_pos` (NOT from the ped), the ped's position is only used as the line-of-sight origin
+        const CVector target{
+            moveDir.x + m_pos.x,
+            moveDir.y + m_pos.y,
+            (moveDir.z + m_pos.z) - 0.5f // Position is a center, so adjust it to be on the ground
+        };
+        const auto origin = target - Normalized(moveDir) * 0.7f;
+        const auto pedPos = ped.GetPosition() - CVector{ 0.f, 0.f, 0.5f };
 
-        if (!CWorld::GetIsLineOfSightClear(pedPos, target, true, false, false, false, false, false, true)) {
+        if (!CWorld::GetIsLineOfSightClear(pedPos, target, true, false, false, false, false, false, false)) { // 0x657DE6 (the last arg is 0 in the exe)
+            numBlocked++;
             continue;
         }
 
         if (CWorld::GetIsLineOfSightClear(target, m_targetPos, true, false, false, false, false, false, false)) {
-            m_route->Add(target);
+            m_route->AddUnlessFull(target);
             m_routeHasPoints = true;
             return;
         }
@@ -214,6 +221,7 @@ void CTaskComplexWalkRoundBuildingAttempt::ComputeRoute(CPed const& ped) {
         }
 
         if (!m_crapRouteHasPoints) {
+            m_crapRoute->Clear(); // 0x657ECF
             m_crapRoute->AddMultipleUnlessFull(target, targetOffseted);
             m_crapRouteHasPoints = true;
         }
@@ -225,7 +233,7 @@ void CTaskComplexWalkRoundBuildingAttempt::ComputeRoute(CPed const& ped) {
     }
 
     if (m_nAttempts == 1) { // Current is the first attempt
-        if (numPointsGenerated == (m_bIsHeadOnCollision ? 2 : 1)) {
+        if (numBlocked == (m_bIsHeadOnCollision ? 2u : 1u)) {
             m_nAttempts = 20;
         }
     }

@@ -70,9 +70,10 @@ CTask* CTaskComplexLeaveCarAsPassengerWait::CreateSubTask(eTaskType taskType, CP
         const auto rightDist = CGeneral::GetRandomNumberInRange(1.f, 2.f);
         return new CTaskSimpleGoToPoint{
             PEDMOVE_WALK,
+            // 0x640D58-0x640DD9: offset = right * rightDist + forward * fwd FIRST, then ped pos + offset (the add order changes the last bit)
             ped->GetPosition()
-                + m_veh->GetRight() * rightDist
-                + m_veh->GetForward() * (fwdDist * fwdSign),
+                + (m_veh->GetRight() * rightDist
+                + m_veh->GetForward() * (fwdDist * fwdSign)),
             1.5f
         };
     }

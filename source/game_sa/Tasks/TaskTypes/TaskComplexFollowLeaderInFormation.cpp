@@ -152,7 +152,7 @@ CTask* CTaskComplexFollowLeaderInFormation::ControlSubTask(CPed* ped) {
             const auto radius = CModelInfo::GetModelInfo(leaderVeh->m_nModelIndex)->GetColModel()->GetBoundRadius();
             static_cast<CTaskComplexSeekEntity<>*>(m_pSubTask)->SetMaxEntityDist2D(radius); // 0x6955D0
 
-            if (m_Dist <= 0.f) {
+            if (!(m_Dist > 0.f)) { // exe 0x6969E1: FCOMP + test ah,0x41 + jne (NaN returns too)
                 return ret;
             }
 
@@ -211,8 +211,10 @@ CTask* CTaskComplexFollowLeaderInFormation::ControlSubTask(CPed* ped) {
         return ret;
     }
 
-    const auto distSq = (ped->GetPosition() - m_Leader->GetPosition()).SquaredMagnitude();
-    if (sq(m_Dist) <= distSq) {
+    // exe 0x696C56-0x696C8C: inline sum of squares in (dz^2 + dy^2) + dx^2 order, `FCOMPP` + `test ah, 0x41` + `jne`: return unless m_Dist^2 > distSq (NaN => return)
+    const auto d      = ped->GetPosition() - m_Leader->GetPosition();
+    const auto distSq = (d.z * d.z + d.y * d.y) + d.x * d.x;
+    if (!(sq(m_Dist) > distSq)) {
         return ret;
     }
     return CreateSubTask(TASK_COMPLEX_SEEK_ENTITY, ped);

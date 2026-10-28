@@ -1,0 +1,6 @@
+addr	function	verdict	asm range	note	fix commit
+0x6BE310	CBike::ProcessControlInputs	MATCH	0x6BE310-0x6BEA01	whole function: handbrake, mouse/keyboard steering, clamps, gas/brake/burnout, steer angle, comedy, disabled controls, all constants	-
+0x6B7280	CBike::ProcessRiderAnims	MATCH	0x6B7280-0x6B7F83	whole function: anim ids, knock-off events, still/push blends, blend-left, lean + wheelie/stoppie, weights, head wobble; only x87 extended intermediates (UNSURE-free)	-
+0x6F1770	CBoat::ProcessControl	FIXED	0x6F1770-0x6F20BD	folded 0.0064/8e-6, *1/6 *1/12, fire z+1.0, BlowUpTimer ftol ms, HasHitWall read before CPhysical::ProcessControl, skimmer skips cheat branch, double 0.05; UNSURE: ecx at ProcessDelayedExplosion call is left over from PruneWakeTrail in the exe	1084855f
+0x6BD090	CBike::PreRender	MATCH	0x6BD090-0x6BDE18	whole function: suspension heights, wheel particles, siren corona/light, wheel rotation, all node matrices	-
+0x6B9250	CBike::ProcessControl	NOT_REACHED	0x6B9250-0x6B97C9 compared (MATCH)	prologue, replay/alarm/testPed, ProcessAI, side stand, COM, damping (pitch/roll) compared; rest of the 3760 lines not reached (budget)	-

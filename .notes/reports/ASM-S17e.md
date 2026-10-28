@@ -1,0 +1,9 @@
+# ASM-S17e (Bike.cpp / Boat.cpp, last 5 functions) - 2026-10-28
+Result: 3 MATCH (CBike::ProcessControlInputs, ProcessRiderAnims, PreRender), 1 FIXED (CBoat::ProcessControl), 0 UNSURE-only, 1 NOT REACHED (CBike::ProcessControl, partial). Slice is PARTIAL.
+MATCH over the whole exe range: ProcessControlInputs 0x6BE310-0x6BEA01, ProcessRiderAnims 0x6B7280-0x6B7F83, PreRender 0x6BD090-0x6BDE18 (constants via kconst, node offsets 0x5A4-0x5BC, anim ids 0xC3-0xCC, sin/cos/asin arg order, AddLight/RegisterCorona arg order).
+FIXED 1084855f CBoat::ProcessControl 0x6F1770-0x6F20BD: (1) buoyancy uses folded mass*0.0064f and mass*8e-6f (port divided / multiplied twice); (2) damage /6 and /12 are *0x85F0A0 / *0x85F0FC (LITDIV); (3) burning-boat fire position z += 1.0 (0x6F1DF4, port lacked it); (4) BlowUpTimer += ftol(ts*0.02*1000) (integer ms), port added ts*20.0 unrounded; (5) bHasHitWall is read BEFORE CPhysical::ProcessControl and passed to ProcessBoatControl, port read it after; (6) skimmer: when engine/speed test fails the exe skips the BOATS_FLY cheat test (port fell through to it); (7) speed test compares against the DOUBLE 0.05 (0x859068).
+UNSURE (not fixed): exe calls CVehicle::ProcessDelayedExplosion with whatever ecx PruneWakeTrail left (0x6F179F); asm shows no ecx reload, source passes this.
+NOT REACHED: CBike::ProcessControl 0x6B9250: compared 0x6B9250-0x6B97C9 (flags reset, replay return, alarm/bomb/clump alpha, testPed, ProcessAI, side stand, COM, pitch/roll damping + both ApplyTurnForce) = MATCH; the other ~3300 asm lines (fake-physics block onward) not read, token budget.
+No FIX_BUGS issue found: all fixes are unguarded exe behaviour; no port fix removed.
+Gate: Release build OK. No oracle target covers CBoat::ProcessControl (gameplay_oracle_vehicle only covers ModifyHandlingValue, unchanged). Soak: see the final report line (run after the rebase).
+Scratch: C:/gta-scratch/asm-s17e (build.log, soak/).

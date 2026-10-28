@@ -70,13 +70,17 @@ CTaskComplexKillPedOnFootArmed::~CTaskComplexKillPedOnFootArmed() {
 
 // 0x621500
 bool CTaskComplexKillPedOnFootArmed::LineOfSightClearForAttack(CPed* ped) { // ped is the task owner ped
-    /*
-    * TODO:
-    * here's some code to calculate the values to use (based on some variables)
-    * nothing special, but it's messy, and it's late, so I won't bother
-    */
-    const auto reqDistDeltaSq = sq(2.f);
-    const auto reqTimeDelta   = 5000;
+    // ASM-S05d: exe 0x621500-0x62153F: the cache time / squared distance depend on the situation (the port always used the 5000 / 4.0 case)
+    uint32 reqTimeDelta   = 10'000;
+    float  reqDistDeltaSq = 9.f; // 0x41100000
+    if (ped->m_AreaCode != 0
+        || (m_target && m_target->IsPlayer() && (CGame::currArea != 0 || ped->IsCreatedByMission()))
+    ) {
+        reqTimeDelta = 5000;
+        if (g_LoadMonitor.GetProcLevel() < eProcessingLevel::HIGH) { // exe: signed `cmp [0xB7298C], 2; jge`
+            reqDistDeltaSq = 4.f; // 0x40800000
+        }
+    }
 
     //> If the LOS was recently clear, let's consider it still is
     if (CTimer::GetTimeInMS() - m_losClearTime < reqTimeDelta) {
@@ -84,9 +88,16 @@ bool CTaskComplexKillPedOnFootArmed::LineOfSightClearForAttack(CPed* ped) { // p
     }
 
     //> Perhaps check if the entities are still kinda around the same position as the last time the LOS was blocked...
-    if (CTimer::GetTimeInMS() - m_losBlockedTime < reqTimeDelta) {
-        if (reqDistDeltaSq >= (m_target->GetPosition() - m_losBlockedTargetPos).SquaredMagnitude()) {
-            if (reqDistDeltaSq >= (ped->GetPosition() - m_losBlockedOurPos).SquaredMagnitude()) {
+    // exe: `ja` => the blocked-time test is `<=`, and the squared distances are summed z,y,x in extended precision; NaN takes the "close enough" side
+    if (CTimer::GetTimeInMS() - m_losBlockedTime <= reqTimeDelta) {
+        const auto SqDist = [](const CVector& a, const CVector& b) -> x87d {
+            const x87d dx = (x87d)a.x - (x87d)b.x;
+            const x87d dy = (x87d)a.y - (x87d)b.y;
+            const x87d dz = (x87d)a.z - (x87d)b.z;
+            return (dz * dz + dy * dy) + dx * dx;
+        };
+        if (!m_target || !(SqDist(m_target->GetPosition(), m_losBlockedTargetPos) > reqDistDeltaSq)) {
+            if (!(SqDist(ped->GetPosition(), m_losBlockedOurPos) > reqDistDeltaSq)) {
                 return false;
             }
         }
@@ -113,9 +124,10 @@ bool CTaskComplexKillPedOnFootArmed::LineOfSightClearForAttack(CPed* ped) { // p
     };
 
     if (CWorld::GetIsLineOfSightClear(
+        // ASM-S05d: exe 0x62163A-0x6216AF: a DUCKING ped uses its position + 0.25 up, a standing one its head bone (the port had it inverted)
         ped->bIsDucking
-            ? GetPedHeadPos(ped)
-            : ped->GetPosition() + CVector{0.f, 0.f, 0.25f},
+            ? ped->GetPosition() + CVector{0.f, 0.f, 0.25f}
+            : GetPedHeadPos(ped),
         GetPedHeadPos(m_target), // Always use head position
         true,
         true,
@@ -344,7 +356,7 @@ CTask* CTaskComplexKillPedOnFootArmed::CreateNextSubTask(CPed* ped) {
             // x87: kept in extended precision
             const x87d diffSq   = (x87d)diff.x * (x87d)diff.x + (x87d)diff.y * (x87d)diff.y + (x87d)diff.z * (x87d)diff.z;
             const auto   newTask  = CreateSubTask(
-                ((x87d)range * (x87d)range <= diffSq || !LineOfSightClearForAttack(ped)) ? TASK_SIMPLE_PAUSE : TASK_SIMPLE_GUN_CTRL,
+                (!((x87d)range * (x87d)range > diffSq) || !LineOfSightClearForAttack(ped)) ? TASK_SIMPLE_PAUSE : TASK_SIMPLE_GUN_CTRL,
                 ped
             );
             m_needToMoveInCloserTime = 0;
@@ -403,7 +415,7 @@ CTask* CTaskComplexKillPedOnFootArmed::CreateNextSubTask(CPed* ped) {
     {
         // x87: kept in extended precision
         x87d maxDist = (x87d)range * (x87d)0.8f;
-        if (23.0 <= maxDist) {
+        if (!(maxDist < 23.0)) { // exe: `jnp` keeps the scaled range only when it is strictly below 23 (NaN => 23)
             maxDist = (x87d)23.0;
         }
 
@@ -412,7 +424,7 @@ CTask* CTaskComplexKillPedOnFootArmed::CreateNextSubTask(CPed* ped) {
                 goto PauseStep;
             }
             x87d v = (x87d)range * (x87d)0.6f;
-            task = SeekTarget(v >= 20.0 ? 20.f : (float)v);
+            task = SeekTarget(v < 20.0 ? (float)v : 20.f); // NaN => 20 as well
             goto AfterTask;
         }
     }

@@ -80,4 +80,4 @@
 | S22f | rest of S22e + plane obstacle helper | 6 | partial 3/6 (3 M) -> S22g | CarCtrl.cpp |
 | S22g | rest of S22f | 3 | partial 2/3 (1 M, 1 fixed) -> S22h | CarCtrl.cpp |
 | S22h | rest of S22g | 1 | pending | CarCtrl.cpp |
-| S27d | rest of S27c | 2 | pending | World.cpp |
+| S27d | rest of S27c | 2 | done 2/2 (2 fixed; S27 complete) | World.cpp |

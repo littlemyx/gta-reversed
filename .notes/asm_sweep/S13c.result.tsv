@@ -1,0 +1,5 @@
+addr	function	verdict	asm range	note	fix commit
+0x625270	CTaskSimpleGunControl::ProcessPed	FIXED	0x625270-0x62599C (all)	SetMoveState(STILL), gunstand cop/gang cond + blend 4.0, m_isLOSBlocked copy, double rand in burst max(), END_NOW/UNKNOWN keep NONE, finish logic, move condition, distSq z,x,y	6ef00fb3
+0x680600	CTaskSimpleInAir::ProcessPed	MATCH	0x680600-0x680C4F (all)	only NaN / signed-vs-unsigned counter edge cases differ	-
+0x67E7B0	CTaskSimpleJetPack::ProcessControlInput	FIXED	0x67E7B0-0x67EF13 (all)	targeted-object force (max not min, thr, mass, ts), thrust-angle interpolation at lr==0 + turn order/wrap, mouse strafe decay clamp 0, look-left/right stop/fwd	2fbfc490
+0x67EF20	CTaskSimpleJetPack::ProcessThrust	FIXED	0x67EF20-0x67F694 (all)	brake force mass factor, 0.75 cap on sum z, per-component force order (hm then 0.6; strafe). UNSURE (not fixed): pow() result is 80-bit in the exe, float pow in the port (swing damping, velocity damping)	4be6422c

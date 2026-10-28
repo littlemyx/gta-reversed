@@ -82,7 +82,7 @@ void CTaskSimpleCarCloseDoorFromOutside::StartAnim(CPed const* ped) {
     auto pedAdjustedPos{ pedPos };
     CPedPlacement::FindZCoorForPed(pedAdjustedPos);
 
-    if (pedPos.z - 1.f >= pedAdjustedPos.z) {
+    if (pedPos.z - 1.f > pedAdjustedPos.z) { // 0x64B0D3: fcomp + `jne` on C0|C3 => strictly greater
         m_animHasFinished = true;
         return;
     }
@@ -120,7 +120,7 @@ void CTaskSimpleCarCloseDoorFromOutside::StartAnim(CPed const* ped) {
         m_animHasFinished = true;
     } else {
         const auto [grpId, animId] = ComputeAnimID_Helper();
-        m_anim = CAnimManager::BlendAnimation(ped->GetRpClump(), grpId, animId, 1000.f);
+        m_anim = CAnimManager::AddAnimation(ped->GetRpClump(), grpId, animId); // 0x64B28D: AddAnimation, not BlendAnimation(…, 1000.f)
         m_anim->SetFinishCallback(FinishAnimCarCloseDoorFromOutsideCB, this);
     }
 }
@@ -128,8 +128,9 @@ void CTaskSimpleCarCloseDoorFromOutside::StartAnim(CPed const* ped) {
 // NOTSA
 void CTaskSimpleCarCloseDoorFromOutside::ProcessDoorOpen(CPed const* ped) {
     const auto [grpId, animId] = ComputeAnimID_Helper();
+    // 0x64B069 (MakeAbortable) passes the task's ped to ProcessOpenDoor, not null.
     m_veh->ProcessOpenDoor(
-        nullptr,
+        const_cast<CPed*>(ped),
         m_door,
         grpId,
         animId,

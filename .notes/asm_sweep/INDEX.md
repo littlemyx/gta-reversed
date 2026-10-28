@@ -29,7 +29,7 @@
 | S25 | game_sa/Events/GroupEventHandler.cpp | 30 | done (18 M, 12 fixed) | GroupEventHandler.cpp |
 | S26 | game_sa/Entity/Physical.cpp | 28 | partial 19/28 (15 M, 4 fixed) -> S26b | Physical.cpp |
 | S27 | game_sa/World.cpp | 44 | partial 29/44 (19 M, 10 fixed) -> S27b | World.cpp |
-| S28 | game_sa/Streaming.cpp | 73 | pending | Streaming.cpp |
+| S28 | game_sa/Streaming.cpp | 73 | partial 19/73 (15 M, 4 fixed) -> S28b | Streaming.cpp |
 | S29 | game_sa/Entity/Object | 39 | partial 34/39 (24 M, 10 fixed) -> S29b | CutsceneObject.cpp, HandObject.cpp, Object.cpp |
 | S30 | game_sa/Camera.cpp | 35 | pending | Camera.cpp |
 | S31 | game_sa/Cam.cpp | 34 | pending | Cam.cpp |
@@ -111,3 +111,4 @@
 | S19l | rest of S19k | 29 | partial 15/29 (6 M, 8 fixed, 1 U) -> S19m | Vehicle.cpp |
 | S19m | rest of S19l (+ DoHeadLightBeam x87 sub-ulp) | 15 | done 15/15 (12 M, 3 fixed; S19 complete) | Vehicle.cpp |
 | S33b | rest of S33 (GetWaterLevel family is oracle-covered: world_oracle_env) | 18 | pending | WaterLevel.cpp |
+| S28b | rest of S28 | 54 | pending | Streaming.cpp |

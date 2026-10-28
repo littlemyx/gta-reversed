@@ -10,3 +10,4 @@ Fixes (exe address, one line each):
 MATCH: FleeShooting (MakeAbortable, CreateNext/First), FollowLeaderAnyMeans (all 4), FollowLeaderInFormation (CreateSubTask/CreateNext/CreateFirst), FollowPatrolRoute (ctor, Clone, CreateSubTask, CreateNextSubTask).
 UNSURE/open: FollowPointRoute::CreateTask (cases 0xC8/0xCB/0x2C0/0x384 match, 0x39E/0x387 not finished). NOT_REACHED: FollowNodeRoute::ComputePathNodes, FollowPatrolRoute::CreateFirstSubTask, PedFootsteps::ControlSubTask (first 40% read, matches), FollowPointRoute ctor, the Gang* group (11), GetOnBoatSeat.
 Consumer audit: no layout/signature change; the timer/flag fixes are internal to the tasks.
+Gate: Release + RW builds OK; wave2_oracle_test 1142 checks, 0 failures, 0 mismatches; gameplay_regress combat TOTAL PASS=14.

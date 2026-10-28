@@ -121,7 +121,7 @@ void CAESmoothFadeThread::Service() {
         NOTSA_TAP_FADE(8);
         int32 curVolume;
         entry.m_pSoundBuffer->GetVolume((LPLONG)&curVolume);
-        const auto fCurVolume = static_cast<float>(curVolume) / 100.0F;
+        const auto fCurVolume = static_cast<float>(curVolume) * 0.01F; // 0x4EED88 fmul [0x858C58] (not / 100)
         if (entry.m_bStopBufferAfterFade || approxEqual2(fCurVolume, entry.m_fCurVolume, 0.01F)) {
             const auto dwTargetVolume = NOTSA_FTOL(LONG, entry.m_fTargetVolume * 100.0F);
             entry.m_pSoundBuffer->SetVolume(dwTargetVolume);
@@ -163,7 +163,7 @@ bool CAESmoothFadeThread::RequestFade(IDirectSoundBuffer* buffer, float fTargetV
 
     int32 curVolume;
     buffer->GetVolume((LPLONG)&curVolume);
-    const auto fCurVolume = static_cast<float>(curVolume) / 100.0F;
+    const auto fCurVolume = static_cast<float>(curVolume) * 0.01F; // 0x4EEAF3 fmul [0x858C58] (not / 100)
 
     if (approxEqual2(fCurVolume, fTargetVolume, 0.01F)) {
         NOTSA_TAP_FADE(5);

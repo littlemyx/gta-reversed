@@ -51,9 +51,9 @@ void CTaskSimpleCarFallOut::StartAnim(const CPed* ped) {
 }
 
 // notsa
-void CTaskSimpleCarFallOut::DoOpenCarDoor(CPed* ped) {
+void CTaskSimpleCarFallOut::DoOpenCarDoor(CPed* ped, float time) {
     const auto [animGrp, animId] = ComputeAnimID();
-    m_Vehicle->ProcessOpenDoor(ped, m_Door, animGrp, animId, 1.f);
+    m_Vehicle->ProcessOpenDoor(ped, m_Door, animGrp, animId, time);
 }
 
 // 0x64CC60
@@ -81,7 +81,7 @@ bool CTaskSimpleCarFallOut::ProcessPed(CPed* ped) {
         return false;
     }
     if (ped->bInVehicle) {
-        DoOpenCarDoor(ped);
+        DoOpenCarDoor(ped, m_Anim->m_CurrentTime); // 0x64E317: the anim's current time (MakeAbortable passes 1.0)
     }
     return !ped->bInVehicle;
 }

@@ -27,7 +27,7 @@ public:
     bool      SetPedPosition(CPed * ped) override; 
 
 private:
-    void DoOpenCarDoor(CPed* ped);
+    void DoOpenCarDoor(CPed* ped, float time = 1.f);
     static void FinishAnimFallOutCB(CAnimBlendAssociation* anim, void* data);
 
 private:

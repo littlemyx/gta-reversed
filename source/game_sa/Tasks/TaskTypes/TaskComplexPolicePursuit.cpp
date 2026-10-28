@@ -220,9 +220,11 @@ eTaskType CTaskComplexPolicePursuit::GetNextSubTaskType(CCopPed* pursuer) { // p
             return TASK_COMPLEX_ENTER_CAR_AS_DRIVER;
         }
 
-        if ((pursuer->m_pVehicle->GetPosition() - pursuer->GetPosition()).SquaredMagnitude() <= sq(5.f)) {
+        // 0x690A0E: fcomp 25.0 / test ah,5 / jp -> STAND_STILL; so SEEK_ENTITY only if distSq < 25 (strict, NaN fails), otherwise STAND_STILL (not NONE)
+        if ((pursuer->m_pVehicle->GetPosition() - pursuer->GetPosition()).SquaredMagnitude() < sq(5.f)) {
             return TASK_COMPLEX_SEEK_ENTITY;
         }
+        return TASK_SIMPLE_STAND_STILL;
     }
 
     return TASK_NONE;

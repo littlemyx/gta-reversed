@@ -1,0 +1,36 @@
+addr	function	verdict	asm range	note	fix commit
+0x642250	CTaskComplexLeaveBoat::Destructor	MATCH	0x642250-0x64226B (all)	dtor = base 0x63BBD0 (CleanUpOldReference of the vehicle) + optional delete	-
+0x63BAE0	CTaskComplexLeaveCar::CreateLineUpTask	MATCH	0x63BAE0-0x63BB57 (all)	new LineUp(zero offset, 0, 0, door)	-
+0x641530	CTaskComplexLeaveCar::CreateSubTask	MATCH	0x641530-0x6419EB (all)	all 12 task ctors/args incl. WaitToSlowDown 2/0/1 by die/sensible/player	-
+0x641100	CTaskComplexLeaveCar::MakeAbortable	MATCH	0x641100-0x64152A (all)	IMMEDIATE/URGENT paths, JUMP_OUT in-air/water, parachute test, 0.2f and -0.3f compares	-
+0x6419F0	CTaskComplexLeaveCar::CreateNextSubTask	DEVIATION	0x6419F0-0x641F81 (all)	JUMP_OUT with m_bIsInAir also sets m_nDieAnimID = KO_SHOT_FRONT_0 (0x641A9E)	f2c5a626
+0x641FC0	CTaskComplexLeaveCar::CreateFirstSubTask	MATCH	0x641FC0-0x6421AC (all)	arrested/not-in-car pause, group leader event, radio, boat vs DriveTimed	-
+0x63B540	CTaskComplexLeaveCarAsPassengerWait::SetPedInZerothPassengerSeat	MATCH	0x63B540-0x63B5DC (all)	SetPedOut(veh,8,true)+warping flag, SetPedInAsPassenger(veh,8,null)+warping flag	-
+0x640BE0	CTaskComplexLeaveCarAsPassengerWait::CreateSubTask	DEVIATION	0x640D58-0x640DD9	go-to point = ped pos + (right*d1 + fwd*d2); port added (pos + right*d1) + fwd*d2	5c0923f2
+0x643F90	CTaskComplexLeaveCarAsPassengerWait::CreateNextSubTask	MATCH	0x643F90-0x643FFE (all)	LEAVE_CAR -> GOTO if veh else FINISHED; DRIVE/GOTO -> FINISHED	-
+0x644010	CTaskComplexLeaveCarAsPassengerWait::CreateFirstSubTask	MATCH	0x644010-0x64404B (all)	-	-
+0x644050	CTaskComplexLeaveCarAsPassengerWait::ControlSubTask	MATCH	0x644050-0x6440A0 (all)	MakeAbortable(ped, URGENT, null)	-
+0x658DB0	CTaskComplexMedicTreatInjuredPed::CreateSubTask	MATCH	0x658DB0-0x6590E1 (all)	all 10 task ctors and args, WanderMedic int rand(0,8)	-
+0x65A020	CTaskComplexMedicTreatInjuredPed::CreateDealWithNextAccidentTask	MATCH	0x65A020-0x65A0E7 (all)	-	-
+0x658CC0	CTaskComplexMedicTreatInjuredPed::FindNearestAccident	MATCH	0x658CC0-0x658CE1 (all)	-	-
+0x659FE0	CTaskComplexMedicTreatInjuredPed::CreateFirstSubTask	MATCH	0x659FE0-0x65A012 (all)	-	-
+0x65A990	CTaskComplexMedicTreatInjuredPed::CreateNextSubTask	DEVIATION	0x65AAA1-0x65AAC0	GOTO_POINT range test is !(mag2D > 1) && !(|dz| > 2) (NaN in range); rest MATCH	90aae78a
+0x65ABF0	CTaskComplexMedicTreatInjuredPed::ControlSubTask	DEVIATION	0x65ADE9-0x65AE21, 0x65ACDC	CAR_DRIVE: not in vehicle, or driver with partner not a passenger, returns the subtask instead of reaching the partner leave-car test; DRIVE_TO_POINT clears m_pAccident when it or its ped is gone	90aae78a
+0x655390	CTaskComplexMoveBackAndJump::CreateSubTask	MATCH	0x655390-0x65545C (all)	-	-
+0x657770	CTaskComplexMoveBackAndJump::CreateNextSubTask	MATCH	0x657770-0x6577B2 (all)	-	-
+0x6317E0	CTaskComplexObserveTrafficLights::CreateNextSubTask	MATCH	0x6317E0-0x6318C5 (all)	-	-
+0x6318E0	CTaskComplexObserveTrafficLights::ControlSubTask	MATCH	0x6318E0-0x63190B (all)	-	-
+0x6333D0	CTaskComplexOnFire::ComputeFireDamage	MATCH	0x6333D0-0x63346F (all)	dmg = dt*mult*500*0.001f order	-
+0x639200	CTaskComplexOnFire::ControlSubTask	DEVIATION	0x639244-0x639264, 0x6392CF	without a fire the task ends (null) only if the subtask MakeAbortable succeeded, else returns the subtask; DIE task created before RegisterKill	5d878edd
+0x683AD0	CTaskComplexPartner::CreateNextSubTask	NOT_REACHED	-	out of budget	-
+0x681F20	CTaskComplexPartner::CreateFirstSubTask	MATCH	0x681F20-0x681FCE (all)	-	-
+0x6840D0	CTaskComplexPartner::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x682310	CTaskComplexPartner::StreamRequiredAnims	MATCH	0x682310-0x68236C (all)	-	-
+0x682370	CTaskComplexPartner::RemoveStreamedAnims	MATCH	0x682370-0x6823A7 (all)	-	-
+0x6823B0	CTaskComplexPartnerDeal::CreateFirstSubTask	MATCH	0x6823B0 (jmp 0x681F20)	-	-
+0x6823C0	CTaskComplexPartnerDeal::StreamRequiredAnims	MATCH	0x6823C0-0x682430 (all)	-	-
+0x684280	CTaskComplexPartnerGreet::Destructor	MATCH	0x684280-0x684286	vptr + jmp base dtor	-
+0x6825A0	CTaskComplexPartnerGreet::CreateFirstSubTask	MATCH	0x6825A0 (jmp 0x681F20)	-	-
+0x6825B0	CTaskComplexPartnerGreet::StreamRequiredAnims	DEVIATION	0x6825B0-0x682620 (all)	CAnimManager::StreamAnimBlock helper had the loaded/unloaded branches swapped (exe: not streamed + should load -> AddRef or RequestModel; streamed + should not -> RemoveRef)	4bc4e856
+0x682630	CTaskComplexPartnerGreet::GetPartnerSequence	MATCH	0x682630-0x682C49 (all)	handshake anim ids, 4 durations + rand<0x3FFF order; chat = RunTimedAnim 0x1A0 (CTaskSimpleChat vptr not re-checked)	-
+0x62F1A0	CTaskComplexLeaveCarAndDie ctor (new in b29ebbac, never diffed)	MATCH	0x62F1A0-0x62F1CA (all)	base ctor (veh,door,delay,0,1) then AndDie vptr and m_bDie=1 (+0x1A)	-

@@ -1,0 +1,10 @@
+# ASM-S06b (Tasks/TaskTypes: LeaveBoat, LeaveCar, LeaveCarAsPassengerWait, Medic, MoveBackAndJump, ObserveTrafficLights, OnFire, Partner family) - 2026-10-28
+Result: 33 of 35 compared (6 DEVIATION fixed, 27 MATCH), 2 NOT_REACHED (Partner::CreateNextSubTask 0x683AD0 and ControlSubTask 0x6840D0; the port already carries x87-exact code there). Table: S06b.result.tsv. The new LeaveCarAndDie ctor 0x62F1A0 (b29ebbac) was diffed first: MATCH.
+Fixes:
+- f2c5a626 LeaveCar::CreateNextSubTask (0x6419F0): JUMP_OUT with m_bIsInAir also resets m_nDieAnimID to KO_SHOT_FRONT_0 (0x641A9E). MakeAbortable, CreateSubTask, CreateFirstSubTask, CreateLineUpTask are MATCH (switch tables read from the exe).
+- 5c0923f2 LeaveCarAsPassengerWait::CreateSubTask (0x640BE0): the go-to point is ped pos + (right*d + fwd*d); the port added (pos + right*d) + fwd*d (last-bit float difference).
+- 90aae78a Medic::ControlSubTask (0x65ABF0): CAR_DRIVE returned into the partner leave-car test when not in a vehicle, or for the driver; the exe returns the subtask there. DRIVE_TO_POINT now clears m_pAccident (0x65ACDC). CreateNextSubTask (0x65A990): GOTO_POINT range test is NaN-in-range (!(x > c)).
+- 5d878edd OnFire::ControlSubTask (0x639200): without a fire the task ends only if the subtask was abortable (port always returned null); DIE task created before RegisterKill.
+- 4bc4e856 CAnimManager::StreamAnimBlock (used by PartnerGreet::StreamRequiredAnims 0x6825B0): the load/unload branches were swapped (Greet never loaded the gangs block, and ref-dropped it when it should load).
+MATCH: LeaveBoat dtor, Medic CreateSubTask/CreateDeal/FindNearest/CreateFirst, MoveBackAndJump x2, ObserveTrafficLights x2, OnFire::ComputeFireDamage, AsPassengerWait x4, Partner Create/Stream/Remove, PartnerDeal x2, Greet dtor/CreateFirst/GetPartnerSequence (chat task vptr not re-checked).
+Tests: wave2_oracle_test 0 mismatches of 1142 (PC24 and PC53); combat regress PASS=14. Release + StandaloneRW build clean. Portable grep on the diff: no double/int casts/pointer ids added.

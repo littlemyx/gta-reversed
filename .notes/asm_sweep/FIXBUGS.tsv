@@ -60,22 +60,60 @@ Entity/Ped/Ped.cpp	3675	CPed::PreRenderAfterTest	0x5E65A0	WRONG-SIDE	unguarded "
 Cheat.cpp	224	CCheat::AdrenalineCheat	0x439880	OK-NONFIX	unguarded; exe also clears the adrenaline bit when toggled off (asm read)	-
 Cheat.cpp	551	CCheat hate cheat off	0x439B20	OK-NONFIX	already NOTSA_STANDALONE_RUN-guarded to the exe behaviour	-
 Glass.cpp	495	CGlass specular	-	OK-NONFIX	already notsa::IsFixBugs() (0.57f in the run build)	-
-Radar.cpp	2474	CRadar 2-player markers	-	NOT_REACHED	unguarded fix, split screen only	-
-Replay.cpp	813	CReplay restore ms_nNumGang	-	NOT_REACHED	unguarded fix, replay only	-
-Scripts/TheScripts.cpp	1705	debug zone box	-	NOT_REACHED	unguarded fix in a debug-line helper	-
-Sprite2d.cpp	532	CSprite2d bar chart	-	NOT_REACHED	unguarded fix, UI	-
-Streaming.cpp	1150	CStreaming ExtraObjectsDir	-	NOT_REACHED	unguarded fix	-
-Streaming.cpp	3076	CStreaming::Shutdown	-	NOT_REACHED	unguarded fix	-
-FileLoader.cpp	172	CFileLoader	-	NOT_REACHED	unguarded null check	-
-Font.cpp	178	CFont::Shutdown	-	NOT_REACHED	unguarded SafeRemoveTxdSlot	-
-Font.cpp	180	CFont::Shutdown	-	NOT_REACHED	unguarded SafeRemoveTxdSlot	-
-Fx/FxPrimBP.cpp	21	FxPrimBP	-	NOT_REACHED	unguarded texture destroy fix	-
-ModelInfoAccelerator.cpp	81	CModelInfoAccelerator	-	NOT_REACHED	unguarded else fix	-
-Frontend/MenuManager_Process.cpp	143	CMenuManager	-	NOT_REACHED	unguarded SetDir fix	-
-MenuManager.cpp	841	CMenuManager::LoadSettings	-	NOT_REACHED	unguarded CloseFile fix	-
-MenuManager.cpp	857	CMenuManager	-	NOT_REACHED	unguarded UTF-8 fix	-
-MenuManager.cpp	1106	CMenuManager	-	NOT_REACHED	unguarded Ascii/Gxt fix	-
-cHandlingDataMgr.cpp	219	cHandlingDataMgr::LoadHandlingData	-	NOT_REACHED	unguarded sized sscanf	-
-ObjectData.cpp	68	CObjectData::Initialise	-	NOT_REACHED	unguarded sized sscanf	-
-PPTriPlantBuffer.cpp	33	PPTriPlantBuffer	-	NOT_REACHED	unguarded null check	-
-(misc, 17 sites)	-	TaskSimpleSwim 665, Population 1670 (assert), TagManager 242 (#if 0), GxtChar, SurfaceInfo_c.h, GangWars 952, StencilShadows.h, ProcSurfaceInfo 203, TaskComplexUseGoggles 36, AnimBlendHierarchy.h 72, app.cpp 97, user radio/Streaming/TaskCategories todos, Automobile 4393/5323, Vehicle 5046, Shopping 526, utility.hpp/ReversibleBugFix.hpp/StdInc.h (defs)	-	NOT_REACHED	comment/todo/#if 0 mentions or unguarded fixes not reached	-
+Radar.cpp	2474	CRadar::DrawBlips (2 player markers)	-	OK-FAITHFUL	already guarded with notsa::IsFixBugs() (the earlier NOT_REACHED note was wrong); split screen only	-
+Replay.cpp	813	CReplay::RestoreStuffFromMem	0x45ECD0	UNGUARDED-FIX	exe restores only the scalar counters (0xC0EC24..0xC0EC70), never 0x97FA80 -> ms_nNumGang 0xC0EC3C; port restored it unguarded; moved under FIX_BUGS	bb399c11
+Scripts/TheScripts.cpp	1705	debug zone box	-	UNSURE	debug-line helper, no gameplay effect; not asm-read	-
+Streaming.cpp	3076	CStreaming::Shutdown	-	OK-FAITHFUL	nulls the pointer after delete; no behavioural effect	-
+FileLoader.cpp	172	CFileLoader::LoadModelFile	-	DOCUMENTED-DEVIATION	null mi crash guard	-
+Font.cpp	178	CFont::Shutdown	-	DOCUMENTED-DEVIATION	SafeRemoveTxdSlot: existence check on shutdown, no gameplay effect	-
+Font.cpp	180	CFont::Shutdown	-	DOCUMENTED-DEVIATION	same	-
+Fx/FxPrimBP.cpp	21	FxPrimBP_c::~FxPrimBP_c	0x4A9D20	DOCUMENTED-DEVIATION	exe destroys texture 2 twice and leaks 3 (refcount underflow); port destroys each once; resource lifetime only	-
+ModelInfoAccelerator.cpp	81	CModelInfoAccelerator::EndOfLoadPhase	-	DOCUMENTED-DEVIATION	null FILE* guard (crash)	-
+cHandlingDataMgr.cpp	219	cHandlingDataMgr::LoadHandlingData	-	DOCUMENTED-DEVIATION	sized sscanf, identical on valid data (overflow guard)	-
+ObjectData.cpp	68	CObjectData::Initialise	-	DOCUMENTED-DEVIATION	sized sscanf, identical on valid data (overflow guard)	-
+PPTriPlantBuffer.cpp	33	PPTriPlantBuffer	-	DOCUMENTED-DEVIATION	null check (crash guard)	-
+Frontend/MenuManager_Process.cpp	143	CMenuManager::Process (load save)	-	UNSURE	SetDir("") after the My Documents SCR.SCM open; exe behaviour not checked	-
+Tasks/TaskTypes/TaskSimpleSwim.cpp	665	CTaskSimpleSwim::ProcessEffects	0x68AA70	UNGUARDED-FIX	exe emits the bubbles at matrix-array index 3 (add eax,0xF0 at 0x68AC8F = BONE_SPINE1); port used BONE_JAW unguarded; port code now under FIX_BUGS	adda5b4b
+Population.cpp	1670	CPopulation::ConvertToDummyObject	-	OK-FAITHFUL	assert only	-
+GangWars.cpp	952	CGangWars::TellStreamingWhichGangsAreNeeded	-	OK-FAITHFUL	parameter type only	-
+Plant/ProcSurfaceInfo.cpp	203	ProcSurfaceInfo plant placement	-	OK-FAITHFUL	comment only ("candidate")	-
+Tasks/TaskTypes/TaskComplexUseGoggles.cpp	36	CTaskComplexUseGoggles::ControlSubTask	0x635050	DOCUMENTED-DEVIATION	null-check reorder (V595), same behaviour when the data exists	-
+Entity/Vehicle/Automobile.cpp	4393	CAutomobile (nitro off)	-	OK-FAITHFUL	todo comment only	-
+Entity/Vehicle/Automobile.cpp	5323	CAutomobile (drowning)	-	OK-FAITHFUL	todo comment only	-
+Entity/Vehicle/Vehicle.cpp	5046	CVehicle	-	OK-FAITHFUL	commented out	-
+Shopping.cpp	526	CShopping::Load	-	OK-FAITHFUL	comment only	-
+WaterCannon.cpp	71	CWaterCannon::PushPeds	0x7295E0	UNGUARDED-FIX	exe bbox starts (+10000,-10000) per axis (0x729605..0x72962D); port FLT_MAX / FLT_MIN (a positive epsilon as max) clipped the box at 0 on negative coords; port code now under FIX_BUGS	f89524cd
+Buoyancy.cpp	417	cBuoyancy::SimpleCalcBuoyancy	0x6C3B30	OK-FAITHFUL	asm-read: last splash call passes adjacent points (+0x34/+0x40), i.e. [2][i],[2][i+1] as the port does	-
+Cheat.cpp	551	CCheat hate-everyone OFF branch	0x439B20	OK-FAITHFUL	upstream swap code is under !NOTSA_STANDALONE_RUN (earlier NOTSA-AUDIT); the exe does nothing when switched off	-
+Entity/Vehicle/Automobile.cpp	3988	CAutomobile::SetRandomDamage	0x6A2530	OK-FAITHFUL	FIX_BUGS guarded; run build uses the exe exclusive range	-
+Entity/Vehicle/Automobile.cpp	6041	CAutomobile tank turret	-	OK-FAITHFUL	comment says equal to OG code	-
+Population.cpp	217	CPopulation pop group loader	-	DOCUMENTED-DEVIATION	Release-only early break after the last group; identical on stock data	-
+Tasks/TaskTypes/TaskComplexChat.cpp	75	CTaskComplexChat::CreateNextSubTask	-	OK-FAITHFUL	IsFixBugs guarded	-
+Pickups.cpp	146	CPickups	-	OK-FAITHFUL	IsFixBugs guarded	-
+Pickups.cpp	374	CPickups	-	OK-FAITHFUL	IsFixBugs guarded	-
+Scripts/Scripted2dEffects.cpp	45	CScripted2dEffects::Init	-	OK-FAITHFUL	IsFixBugs guarded	-
+Entity/Vehicle/Plane.cpp	488	CPlane damage panels	-	OK-FAITHFUL	IsFixBugs guarded	-
+Glass.cpp	495	CGlass specular	-	OK-FAITHFUL	IsFixBugs guarded	-
+Tasks/TaskTypes/TaskSimpleUseGun.cpp	1001	CTaskSimpleUseGun	-	OK-FAITHFUL	IsFixBugs guarded	-
+CarCtrl.cpp	928	CCarCtrl police occupants	-	OK-FAITHFUL	constexpr IsFixBugs guarded	-
+ControllerConfigManager.cpp	524	CControllerConfigManager defaults	-	OK-FAITHFUL	IsFixBugs guarded	-
+Hud.cpp	1185	CHud counters	-	OK-FAITHFUL	port keeps the OG player-1 max health test	-
+Hud.cpp	1217	CHud counters	-	OK-FAITHFUL	port keeps the OG double Y scale	-
+PlayerInfo.cpp	1015	CPlayerInfo crosshair history	-	OK-FAITHFUL	port keeps the OG copy source	-
+ProjectileInfo.cpp	200	CProjectileInfo	-	OK-FAITHFUL	port keeps OG	-
+Tasks/TaskTypes/TaskComplexKillCriminal.cpp	719	CTaskComplexKillCriminal	-	OK-FAITHFUL	port keeps OG	-
+Interior/Interior_c.cpp	381	Interior_c	-	OK-FAITHFUL	port keeps OG	-
+Interior/Interior_c.cpp	1057	Interior_c shop counter	-	OK-FAITHFUL	port keeps the OG uninitialised-slot value	-
+Scripts/Commands/CharacterCommands.cpp	519	script store-vehicle	-	DOCUMENTED-DEVIATION	index -1 pool lookup guard (invalid memory)	-
+Interior/InteriorManager_c.cpp	283	InteriorManager_c	-	DOCUMENTED-DEVIATION	bound guard (exe overruns the fx info buffer)	-
+Entity/Vehicle/Vehicle.cpp	6845	CVehicle	-	DOCUMENTED-DEVIATION	null m_pDriver guard (crash)	-
+TagManager.cpp	211	CTagManager::GetNearestTag	0x49D160	DOCUMENTED-DEVIATION	asm-read: with no tags the exe returns memory before the array (index -1); the port returns null	-
+Animation/AnimBlendHierarchy.h	72	ICalcTotalTime	-	DOCUMENTED-DEVIATION	0-frame sequence guard (exe reads keyframe -1)	-
+Animation/AnimManager.cpp	718	CAnimManager::LoadAnimFile	-	OK-FAITHFUL	break after the match, same result as the exe loop	-
+FileLoader.cpp	250	CFileLoader::LoadLine (buffer)	0x536FE0	DOCUMENTED-DEVIATION	asm-read: exe maps CR to a space; port skips it, but the only caller is the port-written CutsceneMgr parser (no exe consumer)	-
+Scripts/TheScripts.cpp	1080	CTheScripts::StartNewScript	-	DOCUMENTED-DEVIATION	assert avoidance only	-
+CarCtrl.cpp	2769	CCarCtrl pool-full null guards (2769, 3065, 3075, 4617)	-	DOCUMENTED-DEVIATION	crash guards for a full pool / failed driver	-
+Sprite2d.cpp	532	CSprite2d bar chart	-	NOT_REACHED	UI, not reached	-
+Streaming.cpp	1150	CStreaming ExtraObjectsDir	-	NOT_REACHED	not reached	-
+Frontend/MenuManager.cpp	841	CMenuManager LoadSettings/UTF-8/Gxt (841, 857, 1106)	-	NOT_REACHED	UI, not reached	-
+(many)	-	remaining BUG:/fix comment hits in Camera, Cam, CarCtrl, Tasks, Audio, Renderer, Rope, Train, Weapon	-	NOT_REACHED	listed by wording as original-bug-kept or guarded; not each asm-read	-

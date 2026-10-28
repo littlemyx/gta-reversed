@@ -166,7 +166,7 @@ CTask* CTaskComplexMedicTreatInjuredPed::CreateNextSubTask(CPed* ped) {
 
     if (subTaskId == TASK_COMPLEX_GO_TO_POINT_AND_STAND_STILL) {
         auto relPosn = ped->GetPosition() - m_vecAccidentPosition;
-        if (relPosn.Magnitude2D() <= 1.0F && fabs(relPosn.z) <= 2.0F)
+        if (!(relPosn.Magnitude2D() > 1.0F) && !(fabs(relPosn.z) > 2.0F)) // 0x65AAA1: fcomp/test 0x41 - NaN counts as in range
             return CreateSubTask(TASK_COMPLEX_TREAT_ACCIDENT);
         else
             return CreateDealWithNextAccidentTask(ped, m_pAccident);
@@ -180,8 +180,15 @@ CTask* CTaskComplexMedicTreatInjuredPed::ControlSubTask(CPed* ped) {
     eTaskType subTaskId = m_pSubTask->GetTaskType();
 
     if (subTaskId == TASK_SIMPLE_CAR_DRIVE) {
-        if (ped->bInVehicle && m_bIsDriver && m_pVehicle->IsPassenger(m_pPartnerMedic))
-            return CreateSubTask(TASK_COMPLEX_CAR_DRIVE_WANDER);
+        // 0x65ADE9: not in a vehicle => keep the subtask; the driver only ever tests the partner (it never leaves the car here)
+        if (!ped->bInVehicle)
+            return m_pSubTask;
+
+        if (m_bIsDriver) {
+            if (m_pVehicle->IsPassenger(m_pPartnerMedic))
+                return CreateSubTask(TASK_COMPLEX_CAR_DRIVE_WANDER);
+            return m_pSubTask;
+        }
 
         if (!m_bLeftCarOnce && m_pPartnerMedic) {
             auto partnerTask = m_pPartnerMedic->GetTaskManager().GetActiveTask();
@@ -200,8 +207,10 @@ CTask* CTaskComplexMedicTreatInjuredPed::ControlSubTask(CPed* ped) {
 
     if (subTaskId == TASK_COMPLEX_CAR_DRIVE_TO_POINT) {
         if (ped->bInVehicle) {
-            if (!m_pAccident || !m_pAccident->m_pPed)
+            if (!m_pAccident || !m_pAccident->m_pPed) {
+                m_pAccident = nullptr; // 0x65ACDC
                 return CreateSubTask(TASK_COMPLEX_CAR_DRIVE_WANDER);
+            }
 
             if (DistanceBetweenPointsSquared(m_vecAccidentPosition, m_pVehicle->GetPosition()) < 100.0f) {
                 ped->Say(CTX_GLOBAL_VAN, 0, 1.0F);

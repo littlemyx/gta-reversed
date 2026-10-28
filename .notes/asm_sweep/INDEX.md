@@ -54,7 +54,7 @@
 | S20c | rest of S20b | 13 | partial 3/13 (2 M, 1 fixed) -> S20d | Ped.cpp |
 | S16c | rest of S16b | 17 | partial 2/17 (2 fixed) -> S16d | Automobile.cpp |
 | S17c | rest of S17b | 16 | partial 6/16 (2 M, 4 fixed) -> S17d | Bike.cpp, Bmx.cpp, Boat.cpp |
-| S21c | rest of S21b | 4 | pending | PlayerPed.cpp |
+| S21c | rest of S21b | 4 | done 4/4 (2 M, 2 fixed; S21 complete) | PlayerPed.cpp |
 | S13c | rest of S13b | 4 | done (1 M, 3 fixed) | TaskSimpleGunControl.cpp, TaskSimpleInAir.cpp, TaskSimpleJetPack.cpp |
 | S22e | rest of S22d | 9 | pending | CarCtrl.cpp |
 | S27c | rest of S27b | 5 | pending | World.cpp |

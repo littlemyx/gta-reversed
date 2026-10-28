@@ -6617,7 +6617,7 @@ bool CVehicle::DoLightEffectImpl(bool isFront, eVehicleLightId lightId, CMatrix&
         const auto ang       = isFront ? normAngle : angle;
 
         const auto intensity = ang * 0.5f + baseCorIntensity;
-        const auto size      = (1.0f - distToCam * (1.0f / 150.0f)) * ang * baseCorRotMult;
+        const auto size      = (1.0f - distToCam * (1.0f / 150.0f)) * baseCorRotMult * ang; // ASM-S19e: 0x6E0D32 / 0x6E193F multiply by the constant first, the angle last
 
         if (!isFullsizeTrain) {
             return std::pair{ intensity, size };

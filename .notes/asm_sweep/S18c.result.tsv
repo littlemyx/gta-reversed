@@ -1,0 +1,12 @@
+addr	function	verdict	asm range	note	fix commit
+0x6C58E0	CHeli::SearchLightCone	PARTIAL	open: 0x6C58E0-0x6C6520 (whole function)	not reached (token budget); ~3 KB	-
+0x6C6520	CHeli::GenerateHeli	MATCH	0x6C6520-0x6C6890	model/ctor args, rand angle (float roundtrip kept), out-of-map retry, Chiliad test (y^2+x^2), z clamp, flags, mission/speed/altitudes, matrix, SetUpDriver equal	-
+0x6C79A0	CHeli::UpdateHelis	MATCH	0x6C79A0-0x6C7C50	heli count, weather/zone gating, news-heli model-loaded test, 15 s timer, remove/fly-away, dist z,y,x sum order equal	-
+0x6C7050	CHeli::ProcessControl	MATCH	0x6C7050-0x6C7980 (+jump table 0x6C7980)	search light selection, history shift, blend, intensity, shoot timers, wanted switch table, fire/rand, SWAT rope loop, interesting events equal	-
+0x6C94A0	CPlane::PreRender	PARTIAL	open: 0x6C94A0-0x6CAB70 (whole function)	not reached (token budget); ~5.7 KB	-
+0x6C9260	CPlane::ProcessControl	MATCH	0x6C9260-0x6C94A0	right-shock smoke toggle, skimmer wheels, stall count, vortex wheel states, smoke particle args/timer equal	-
+0x6CADD0	CPlane::ProcessControlInputs	MATCH	0x6CADD0-0x6CB7C0	mouse/pad steering, roll, steer angle, accel, gear up/down, hydra nozzle, brakes, disabled controls equal (intermediates are float in the port vs unrounded x87 in the exe: ULP level, not changed)	-
+0x6CB7C0	CPlane::ProcessFlyingCarStuff	PARTIAL	open: 0x6CB7C0-0x6CC4B0 (whole function)	not reached (token budget); ~3.3 KB	-
+0x6CC4B0	CPlane::VehicleDamage	FIXED	0x6CC4B0-0x6CCCF0	massScale = mass/10000 stays unrounded on the x87 stack; port rounded it to float before the *500 / *5000 products; everything else (node search, panel loop, fire_med smoke, 0.25/0.5/0.667/0.083/0.167 factors) equal	25feddf7
+0x6CCCF0	CPlane::BlowUpCar	MATCH	0x6CCCF0-0x6CD090	can-be-damaged/crash-and-burn early out, havoc/chase/stat, passenger bDontRender, flags, damage parts, explosion type equal	-
+0x6CD2F0	CPlane::DoPlaneGenerationAndRemoval	MATCH	0x6CD2F0-0x6CDC0C (+jump table 0x6CDC0C)	heli/plane/hydra generation, flee events, gating by zone/weather/timers, model tables (AT400/ANDROM rnd&1) equal	-

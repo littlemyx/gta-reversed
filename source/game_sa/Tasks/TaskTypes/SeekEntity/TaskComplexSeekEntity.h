@@ -276,12 +276,11 @@ public:
                 return nullptr;
             }
 
+            // exe 0x46F861..0x46F8BF: the second entity is only looked at when the first one is not a vehicle shared with `ped` (a shared non-boat vehicle ends the search)
             for (const auto entity : { toSeekPed->m_standingOnEntity, toSeekPed->m_pContactEntity }) {
                 if (entity && entity->GetIsTypeVehicle()) {
                     if (ped->m_standingOnEntity == entity || ped->m_pContactEntity == entity) {
-                        if (entity->AsVehicle()->IsBoat()) {
-                            return entity->AsBoat();
-                        }
+                        return entity->AsVehicle()->IsBoat() ? entity->AsBoat() : nullptr;
                     }
                 }
             }
@@ -301,10 +300,14 @@ public:
             || subTaskType == TASK_SIMPLE_STAND_STILL
             || m_pSubTask->MakeAbortable(ped)
         ) {
-            notsa::ScopeGuard makePedTalkOnReturn{ [this, ped] {
+            bool skipTalk = false; // exe 0x46FCD7 / 0x46FD8C: the two `CreateSubTask(<other move task>)` returns leave through 0x46FE41, past the Say code at 0x46FDB2
+            notsa::ScopeGuard makePedTalkOnReturn{ [this, ped, &skipTalk] {
+                if (skipTalk) {
+                    return;
+                }
                 if (m_entityToSeek && m_entityToSeek->GetIsTypePed()) {
                     if (m_entityToSeek->AsPed()->IsPlayer()) { // Entity to seek is a player
-                        if (FindPlayerPed()->GetPlayerGroup().GetMembership().IsFollower(ped)) { // And ped is part of the player's group
+                        if (FindPlayerPed()->GetPlayerGroup().GetMembership().IsMember(ped)) { // And ped is part of the player's group (exe 0x5F6A10 IsMember, not IsFollower)
                             if (ped->IsJoggingOrFaster()) {
                                 if (((uint16)CTimer::GetFrameCounter() + ped->m_nRandomSeed) % 16384 == 0) {
                                     ped->Say(CTX_GLOBAL_FOLLOW_CONSTANT);
@@ -344,7 +347,7 @@ public:
                 return m_pSubTask;
             }
 
-            m_scanTimer.Start(m_scanInterval);
+            m_scanTimer.StartUnguarded(m_scanInterval); // exe 0x46FC25: no `>= 0` test
 
             const auto seekPos = GetSeekPos(ped);
             const auto pedToSeekPosDist2dSq = (ped->GetPosition() - seekPos).SquaredMagnitude2D();
@@ -353,6 +356,7 @@ public:
                 if (m_minEntityDist2D == 0.f || pedToSeekPosDist2dSq >= sq(m_minEntityDist2D - 1.f)) {
                     static_cast<CTaskComplexFollowNodeRoute*>(m_pSubTask)->SetTarget(ped, seekPos, m_maxEntityDist2D, m_moveStateRadius, m_followNodeThresholdHeightChange, false);
                 } else if (m_pSubTask->MakeAbortable(ped)) {
+                    skipTalk = true;
                     return CreateSubTask(TASK_COMPLEX_GO_TO_POINT_AND_STAND_STILL, ped);
                 }
             } else {
@@ -362,6 +366,7 @@ public:
                 } else if (m_minEntityDist2D == 0.f || pedToSeekPosDist2dSq <= sq(m_minEntityDist2D + 1.f)) {
                     subTaskStandStill->GoToPoint(seekPos, m_maxEntityDist2D, m_moveStateRadius, false);
                 } else if (m_pSubTask->MakeAbortable(ped)) {
+                    skipTalk = true;
                     return CreateSubTask(TASK_COMPLEX_FOLLOW_NODE_ROUTE, ped);
                 }
             }
@@ -370,13 +375,16 @@ public:
 
         // Process ped to boat attachment
 
-        auto& boatPos      = commonBoat->GetPosition();
-        auto  pedToBoat    = ped->GetPosition() - boatPos;
-        auto  pedToBoatDir = Normalized(pedToBoat);
+        // exe 0x46F94A..0x46FB17: the direction is boat - ped (the port had it the other way round); the new position lies 0.25 from the ped towards the boat
+        const auto& boatPos      = commonBoat->GetPosition();
+        const auto  pedToBoat    = boatPos - ped->GetPosition();
+        const auto  pedToBoatDir = Normalized(pedToBoat);
 
-        auto newPedPos = boatPos - (pedToBoat - pedToBoatDir * 0.25f);
-        (void)CPedPlacement::FindZCoorForPed(newPedPos); // Omitting `if` check here, it's useless
-    
+        CVector newPedPos = boatPos - (pedToBoat - pedToBoatDir * 0.25f);
+        if (const auto [groundPos, found] = CPedPlacement::FindZCoorForPed(newPedPos); found) { // exe 0x46FA35: the result is taken only when a ground was found
+            newPedPos = groundPos;
+        }
+
         ped->AttachPedToEntity(
             commonBoat,
             Invert(commonBoat->GetMatrix()).TransformVector(newPedPos - boatPos),

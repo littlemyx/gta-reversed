@@ -1,0 +1,7 @@
+addr	file	line	cls	fn	oc
+0x6A07A0	source/game_sa/Entity/Vehicle/Automobile.cpp	57	CAutomobile	HydraulicControl	D
+0x6A8C00	source/game_sa/Entity/Vehicle/Automobile.cpp	59	CAutomobile	ProcessBuoyancy	D
+0x6AE850	source/game_sa/Entity/Vehicle/Automobile.cpp	61	CAutomobile	TankControl	D
+0x6AA290	source/game_sa/Entity/Vehicle/Automobile.cpp	97	CAutomobile	UpdateWheelMatrix	D
+0x6AAB50	source/game_sa/Entity/Vehicle/Automobile.cpp	113	CAutomobile	PreRender	D
+0x6A7650	source/game_sa/Entity/Vehicle/Automobile.cpp	118	CAutomobile	VehicleDamage	D

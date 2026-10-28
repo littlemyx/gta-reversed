@@ -3,17 +3,17 @@ addr	function	verdict	asm range	note	fix commit
 0x493890	CTaskComplexSeekEntityRadiusAngleOffset::Destructor	MATCH	0x493890-0x4938F0	CleanUpOldReference only	-
 0x496270	CTaskComplexSeekEntityRadiusAngleOffset::CreateSubTask	MATCH	0x496270-0x496774	identical to Standard body but field offsets; ctor args, StandStill 2000/100, Tired 1000, tracking bit	-
 0x495FB0	CTaskComplexSeekEntityRadiusAngleOffset::Clone	MATCH	0x495FB0-0x496080	ctor args, copies moveState/tracking/min dist and calculator	-
-0x493810	CTaskComplexSeekEntityRadiusAngleOffset::MakeAbortable	FIXED	0x493810-0x49385F	leisure stored -1 to m_scanInterval instead of m_seekInterval; scan timer interval 0	COMMIT1
-0x496080	CTaskComplexSeekEntityRadiusAngleOffset::CreateNextSubTask	FIXED	0x496080-0x4962FF	null entity => FINISHED; StandStill => CreateFirstSubTask unless attached	COMMIT1
-0x496600	CTaskComplexSeekEntityRadiusAngleOffset::CreateFirstSubTask	FIXED	0x496600-0x49675F	scan timer unguarded, seek timer != -1 test, strict < arrived test	COMMIT1
-0x496760	CTaskComplexSeekEntityRadiusAngleOffset::ControlSubTask	FIXED	0x496760-0x496B59	commonBoat early end, boat attach direction and FindZ, unguarded scan timer, IsMember, Say skipped on 2 returns	COMMIT2
+0x493810	CTaskComplexSeekEntityRadiusAngleOffset::MakeAbortable	FIXED	0x493810-0x49385F	leisure stored -1 to m_scanInterval instead of m_seekInterval; scan timer interval 0	a9b32f8e
+0x496080	CTaskComplexSeekEntityRadiusAngleOffset::CreateNextSubTask	FIXED	0x496080-0x4962FF	null entity => FINISHED; StandStill => CreateFirstSubTask unless attached	a9b32f8e
+0x496600	CTaskComplexSeekEntityRadiusAngleOffset::CreateFirstSubTask	FIXED	0x496600-0x49675F	scan timer unguarded, seek timer != -1 test, strict < arrived test	a9b32f8e
+0x496760	CTaskComplexSeekEntityRadiusAngleOffset::ControlSubTask	FIXED	0x496760-0x496B59	commonBoat early end, boat attach direction and FindZ, unguarded scan timer, IsMember, Say skipped on 2 returns	1f4ab163
 0x46AC10	CTaskComplexSeekEntityStandard::Constructor	MATCH	0x46AC10-0x46ACD5	as RadiusAngleOffset	-
 0x46AD50	CTaskComplexSeekEntityStandard::Destructor	MATCH	0x46AD50-0x46ADD0	as RadiusAngleOffset	-
 0x46F1E0	CTaskComplexSeekEntityStandard::CreateSubTask	MATCH	0x46F1E0-0x46F564	all sub-task constructions	-
 0x46EF50	CTaskComplexSeekEntityStandard::Clone	MATCH	0x46EF50-0x46EFE5	-	-
-0x46ACF0	CTaskComplexSeekEntityStandard::MakeAbortable	FIXED	0x46ACF0-0x46AD3F	see RadiusAngleOffset	COMMIT1
-0x46EFF0	CTaskComplexSeekEntityStandard::CreateNextSubTask	FIXED	0x46EFF0-0x46F1D8	see RadiusAngleOffset	COMMIT1
-0x46F6A0	CTaskComplexSeekEntityStandard::CreateFirstSubTask	FIXED	0x46F6A0-0x46F7F4	see RadiusAngleOffset	COMMIT1
-0x46F800	CTaskComplexSeekEntityStandard::ControlSubTask	FIXED	0x46F800-0x46FE59	see RadiusAngleOffset	COMMIT2
+0x46ACF0	CTaskComplexSeekEntityStandard::MakeAbortable	FIXED	0x46ACF0-0x46AD3F	see RadiusAngleOffset	a9b32f8e
+0x46EFF0	CTaskComplexSeekEntityStandard::CreateNextSubTask	FIXED	0x46EFF0-0x46F1D8	see RadiusAngleOffset	a9b32f8e
+0x46F6A0	CTaskComplexSeekEntityStandard::CreateFirstSubTask	FIXED	0x46F6A0-0x46F7F4	see RadiusAngleOffset	a9b32f8e
+0x46F800	CTaskComplexSeekEntityStandard::ControlSubTask	FIXED	0x46F800-0x46FE59	see RadiusAngleOffset	1f4ab163
 0x6907A0	CTaskComplexArrestPed::CreateFirstSubTask	MATCH	0x6907A0-0x6908BB	vehicle type 9 / subtype 2 drag, subtype 5 weapon+destroy, upside down or side destroy, open driver door	-
 0x68D350	CTaskComplexArrestPed::ControlSubTask	MATCH	0x68D350-0x68D879	all cases, constants 25/2/3, Say 0xC7 when NumCopsInPursuit==1	-

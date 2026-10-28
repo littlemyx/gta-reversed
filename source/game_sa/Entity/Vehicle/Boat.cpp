@@ -830,11 +830,11 @@ inline void CBoat::ProcessBoatNodeRendering(eBoatNodes eNode, float fRotation, R
 // 0x6F0210
 void CBoat::Render() {
     m_nTimeTillWeNeedThisCar = CTimer::GetTimeInMS() + 3'000;
-    if (CCheat::IsActive(CHEAT_INVISIBLE_CAR)) {
-        return;
+    // The exe only skips CVehicle::Render and the two Im3D draws below for the invisible cheat; the vertex set-up and render states still run (0x6F0210-0x6F022D, 0x6F07A0, 0x6F07F5)
+    const bool invisible = CCheat::IsActive(CHEAT_INVISIBLE_CAR);
+    if (!invisible) {
+        CVehicle::Render();
     }
-
-    CVehicle::Render();
 
     if (m_nModelIndex == MODEL_SKIMMER) {
         return;
@@ -881,14 +881,15 @@ void CBoat::Render() {
     case MODEL_SPEEDER:
         RwIm3DVertexSetPos(&KeepWaterOutVertices[0], -1.15F,  3.61F, 1.03F);
         RwIm3DVertexSetPos(&KeepWaterOutVertices[1], +1.15F,  3.61F, 1.03F);
-        RwIm3DVertexSetPos(&KeepWaterOutVertices[2], -1.15F, -0.06F, 1.03F);
-        RwIm3DVertexSetPos(&KeepWaterOutVertices[3], +1.15F, -0.06F, 1.03F);
+        RwIm3DVertexSetPos(&KeepWaterOutVertices[2], -1.15F, +0.06F, 1.03F); // 0x6F02EB: +0.06 (0x3D75C28F)
+        RwIm3DVertexSetPos(&KeepWaterOutVertices[3], +1.15F, +0.06F, 1.03F);
         break;
     case MODEL_REEFER:
-        RwIm3DVertexSetPos(&KeepWaterOutVertices[0], -1.90F,  2.83F, 1.00F);
-        RwIm3DVertexSetPos(&KeepWaterOutVertices[1], +1.90F,  2.83F, 1.00F);
-        RwIm3DVertexSetPos(&KeepWaterOutVertices[2], -1.66F, -4.48F, 0.83F);
-        RwIm3DVertexSetPos(&KeepWaterOutVertices[3], +1.66F, -4.48F, 0.83F);
+        // 0x6F032C: the exe puts the rear pair in vertices 0/1 and the front pair in 2/3 (unlike the other boats)
+        RwIm3DVertexSetPos(&KeepWaterOutVertices[0], -1.66F, -4.48F, 0.83F);
+        RwIm3DVertexSetPos(&KeepWaterOutVertices[1], +1.66F, -4.48F, 0.83F);
+        RwIm3DVertexSetPos(&KeepWaterOutVertices[2], -1.90F,  2.83F, 1.00F);
+        RwIm3DVertexSetPos(&KeepWaterOutVertices[3], +1.90F,  2.83F, 1.00F);
         break;
     case MODEL_TROPIC:
         RwIm3DVertexSetPos(&KeepWaterOutVertices[0], -1.886F, -2.347F, 0.787F);
@@ -931,8 +932,10 @@ void CBoat::Render() {
     RwRenderStateSet(rwRENDERSTATEDESTBLEND,         RWRSTATE(rwBLENDONE));
 
     RwMatrix tempMat;
-    GetMatrix().UpdateRwMatrix(&tempMat);
-    if (RwIm3DTransform(KeepWaterOutVertices, uiNumVertices, &tempMat, rwMATRIXTYPENORMAL)) {
+    if (!invisible) {
+        GetMatrix().UpdateRwMatrix(&tempMat);
+    }
+    if (!invisible && RwIm3DTransform(KeepWaterOutVertices, uiNumVertices, &tempMat, rwMATRIXTYPENORMAL)) {
         RwIm3DRenderIndexedPrimitive(RwPrimitiveType::rwPRIMTYPETRILIST, KeepWaterOutIndices, uiNumIndices);
         RwIm3DEnd();
     }
@@ -944,10 +947,12 @@ void CBoat::Render() {
         RwIm3DVertexSetPos(&KeepWaterOutVertices[2], -1.097F, -2.977F, 0.381F);
         RwIm3DVertexSetPos(&KeepWaterOutVertices[3], +1.097F, -2.977F, 0.381F);
 
-        GetMatrix().UpdateRwMatrix(&tempMat);
-        if (RwIm3DTransform(KeepWaterOutVertices, uiNumVertices, &tempMat, rwMATRIXTYPENORMAL)) {
-            RwIm3DRenderIndexedPrimitive(RwPrimitiveType::rwPRIMTYPETRILIST, KeepWaterOutIndices, uiNumIndices);
-            RwIm3DEnd();
+        if (!invisible) {
+            GetMatrix().UpdateRwMatrix(&tempMat);
+            if (RwIm3DTransform(KeepWaterOutVertices, uiNumVertices, &tempMat, rwMATRIXTYPENORMAL)) {
+                RwIm3DRenderIndexedPrimitive(RwPrimitiveType::rwPRIMTYPETRILIST, KeepWaterOutIndices, uiNumIndices);
+                RwIm3DEnd();
+            }
         }
     }
 

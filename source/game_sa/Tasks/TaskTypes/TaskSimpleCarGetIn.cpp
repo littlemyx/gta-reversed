@@ -136,7 +136,8 @@ bool CTaskSimpleCarGetIn::ProcessPed(CPed* ped) {
             const NOTSA_GLOBAL_LOCAL_NS(flt_8D2ED4, 0x8D2ED4, (float), { 10.0f }); // 10.f (exe image value)
             if (flt_8D2ED4 * ExeRecip(30.f) < m_anim->m_CurrentTime) { 
                 const NOTSA_GLOBAL_LOCAL_NS(flt_8D2ED0, 0x8D2ED0, (float), { 0.01f }); // 0.01f (exe image value)
-                m_veh->ApplyMoveForce(m_veh->GetForward() * CTimer::GetTimeStep() * m_veh->m_fMass * flt_8D2ED0);
+                // 0x64DBF6-0x64DC18: the scalar (timestep * mass * 0.01) is built first, then the forward vector is multiplied by it once
+                m_veh->ApplyMoveForce(m_veh->GetForward() * (CTimer::GetTimeStep() * m_veh->m_fMass * flt_8D2ED0));
             }
             break;
         }

@@ -123,10 +123,16 @@ CTask* CTaskComplexFleePoint::CreateNextSubTask(CPed* ped) {
         return CreateSubTask(TASK_SIMPLE_GO_TO_POINT);
     case TASK_SIMPLE_GO_TO_POINT: {
         ComputeTargetPoint(ped);
+        // Exe 0x65D1BF-0x65D1F9: the sphere test is on (m_fleeToPos - m_fleeFromPos), NOT on the ped's position; extended precision, (dz2+dy2)+dx2 vs r*r, NaN counts as inside
+        const x87d dx = (x87d)m_fleeToPos.x - m_fleeFromPos.x;
+        const x87d dy = (x87d)m_fleeToPos.y - m_fleeFromPos.y;
+        const x87d dz = (x87d)m_fleeToPos.z - m_fleeFromPos.z;
+        const x87d distSq = (dz * dz + dy * dy) + dx * dx;
+        const x87d rSq    = (x87d)m_safeDist * m_safeDist;
         return CreateSubTask(
-            IsPointInSphere(ped->GetPosition(), m_fleeToPos, m_safeDist) // Still in danger zone?
-                ? TASK_SIMPLE_GO_TO_POINT                  // Go to `m_fleeToPos`
-                : TASK_COMPLEX_GO_TO_POINT_AND_STAND_STILL // This will eventually create a `TASK_COMPLEX_SEQUENCE` which then leads to `TASK_FINISHED`
+            rSq < distSq
+                ? TASK_COMPLEX_GO_TO_POINT_AND_STAND_STILL // This will eventually create a `TASK_COMPLEX_SEQUENCE` which then leads to `TASK_FINISHED`
+                : TASK_SIMPLE_GO_TO_POINT                  // Go to `m_fleeToPos`
         );
     }
     default:

@@ -72,7 +72,7 @@ CTask* CTaskComplexAvoidOtherPedWhileWandering::ControlSubTask(CPed* ped) {
     }
 
     if (m_WantsToQuit && m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_URGENT, nullptr)) {
-        return DoQuit(); // did they forget to do `QuitIK` here?
+        return DoQuit(false); // 0x67230E: the exe jumps past the `QuitIK` call here
     }
     
     m_Timer.StartIfNotAlready(200);
@@ -90,7 +90,7 @@ CTask* CTaskComplexAvoidOtherPedWhileWandering::ControlSubTask(CPed* ped) {
     
     const auto &pedPos        = ped->GetPosition(),
                &pedToAvoidPos = m_PedToAvoid->GetPosition();
-    if (std::abs(pedToAvoidPos.z - pedPos.z) >= 3.f) {
+    if (std::abs(pedToAvoidPos.z - pedPos.z) > 3.f) { // 0x6722F9: FCOMP + `test ah,0x41; jne` => only quits when strictly greater
         return DoQuit();
     }
     
@@ -99,14 +99,14 @@ CTask* CTaskComplexAvoidOtherPedWhileWandering::ControlSubTask(CPed* ped) {
     if (   pedSimplestTask
         && CTask::IsGoToTask(pedSimplestTask)
         && m_DontQuitYetTimer.IsOutOfTime()
-        && ped->GetForward().Dot(m_PedToAvoid->GetForward()) >= 0.923 // 22 and change degrees
+        && ped->GetForward().Dot(m_PedToAvoid->GetForward()) >= 0.923f // 22 and change degrees (0x86CD98 is a float)
         && (ped->GetMoveSpeed() * CTimer::TIMESTEP_PER_SECOND).SquaredMagnitude2D() <= (m_PedToAvoid->GetMoveSpeed() * CTimer::TIMESTEP_PER_SECOND).SquaredMagnitude2D() + sq(0.5f)
-        && pedToAvoidDist2DSq >= sq(1.f)
+        && pedToAvoidDist2DSq > sq(1.f) // 0x672406: `je` after FCOMP => strictly greater
     ) {
         return DoQuit();
     }
     
-    if (pedToAvoidDist2DSq >= sq(2.5f) + 1.f) {
+    if (pedToAvoidDist2DSq > sq(2.5f) + 1.f) { // 0x672425: strictly greater
         return DoQuit();
     }
     
@@ -115,16 +115,15 @@ CTask* CTaskComplexAvoidOtherPedWhileWandering::ControlSubTask(CPed* ped) {
     }
     m_Timer.Start(200);
     
-    if (!m_IsMovingTarget) {
-        return DoQuit();
-    }
-    
-    if (const auto tGangFollower = notsa::dyn_cast_if_present<CTaskComplexGangFollower>(ped->GetIntelligence()->FindTaskByType(TASK_COMPLEX_GANG_FOLLOWER))) {
-        if (tGangFollower->m_Leader) {
-            m_TargetPt = tGangFollower->m_Leader->GetPosition() + tGangFollower->CalculateOffsetPosition();
+    // 0x672490: `test [this+0x5C], 4; je 0x6724ED` - only the gang follower target update is skipped when not a moving target (the detour is computed anyway)
+    if (m_IsMovingTarget) {
+        if (const auto tGangFollower = notsa::dyn_cast_if_present<CTaskComplexGangFollower>(ped->GetIntelligence()->FindTaskByType(TASK_COMPLEX_GANG_FOLLOWER))) {
+            if (tGangFollower->m_Leader) {
+                m_TargetPt = tGangFollower->m_Leader->GetPosition() + tGangFollower->CalculateOffsetPosition();
+            }
         }
     }
-    
+
     if (ComputeDetourTarget(ped)) {
         notsa::cast<CTaskSimpleGoToPoint>(m_pSubTask)->UpdatePoint(m_DetourTargetPt, 0.5f, false); // 0x67250D: `lea edx,[esi+0x28]` = m_DetourTargetPt, radius [0x86FC78] = 0.5f (the port passed m_TargetPt: the walker aimed at the final target instead of the detour point)
         return m_pSubTask;

@@ -34,7 +34,7 @@
 | S30 | game_sa/Camera.cpp | 35 | pending | Camera.cpp |
 | S31 | game_sa/Cam.cpp | 34 | pending | Cam.cpp |
 | S32 | game_sa/Radar.cpp | 28 | pending | Radar.cpp |
-| S33 | game_sa/WaterLevel.cpp | 26 | pending | WaterLevel.cpp |
+| S33 | game_sa/WaterLevel.cpp | 26 | partial 8/26 (3 M, 5 fixed) -> S33b | WaterLevel.cpp |
 | S34 | game_sa/Interior/Interior_c.cpp | 41 | pending | Interior_c.cpp |
 | S22b | game_sa/CarCtrl.cpp (rest of S22) | 34 | partial 16/34 (16 M) -> S22c | CarCtrl.cpp |
 | S23b | rest of S23 | 13 | done 12/13 (9 M, 3 fixed; AddPedAtAttractor left) | Population.cpp |
@@ -109,4 +109,5 @@
 | S19j | rest of S19i (+ ProcessBoatControl preamble 0x6DBCE0-0x6DBF0A full arithmetic) | 53 | partial 6/53 (1 M, 4 fixed, 1 U) -> S19k | Vehicle.cpp |
 | S19k | rest of S19j (+ AddSingleWheelParticles 0x6DEC3C-0x6DF3B9) | 48 | partial 19/48 (16 M, 3 fixed) -> S19l | Vehicle.cpp |
 | S19l | rest of S19k | 29 | partial 15/29 (6 M, 8 fixed, 1 U) -> S19m | Vehicle.cpp |
-| S19m | rest of S19l (+ DoHeadLightBeam x87 sub-ulp) | 15 | pending | Vehicle.cpp |
+| S19m | rest of S19l (+ DoHeadLightBeam x87 sub-ulp) | 15 | done 15/15 (12 M, 3 fixed; S19 complete) | Vehicle.cpp |
+| S33b | GetWaterLevel family (7, unlisted before) + rest of S33 | 25 | pending | WaterLevel.cpp |

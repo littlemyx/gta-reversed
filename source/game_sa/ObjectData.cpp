@@ -97,7 +97,7 @@ void CObjectData::Initialise(const char* fileName) {
         if (iFxType > 0)
             curInfo.m_pFxSystemBP = g_fxMan.FindFxSystemBP(effectName);
 
-        const auto fBuoyancy = (100.0F / fPercentSubmerged) * (curInfo.m_fMass / 125.0F);
+        const auto fBuoyancy = (100.0F / fPercentSubmerged) * curInfo.m_fMass * 0.008F; // 0x5B5566/0x5B5568: fmul [esi] (mass), fmul [0x863984] (not mass / 125)
         curInfo.m_nSpecialColResponseCase = iSpecialColResp;
         curInfo.m_nColDamageEffect = iColDamEffect;
         curInfo.m_nCameraAvoidObject = iCameraAvoid;

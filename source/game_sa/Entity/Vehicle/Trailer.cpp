@@ -85,7 +85,9 @@ void CTrailer::SetupSuspensionLines() {
     cl->m_boundBox.m_vecMin.z = std::min(cl->m_boundBox.m_vecMin.z, colData->m_pLines[0].m_vecEnd.z);
 
     // 0x6CF313
-    const float maxDistSq = std::max(cl->m_boundBox.m_vecMin.Magnitude(), cl->m_boundBox.m_vecMax.Magnitude());
+    // 0x6CF33C: `fcompp; test ah,0x41; je` keeps the min magnitude only if strictly greater (NaN -> the max magnitude)
+    const float magMin = cl->m_boundBox.m_vecMin.Magnitude(), magMax = cl->m_boundBox.m_vecMax.Magnitude();
+    const float maxDistSq = magMin > magMax ? magMin : magMax;
     cl->m_boundSphere.m_fRadius = std::max(cl->m_boundSphere.m_fRadius, maxDistSq);
 
     if (m_aCarNodes[TRAILER_MISC_A]) {

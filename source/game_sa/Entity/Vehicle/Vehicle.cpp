@@ -316,6 +316,7 @@ CVehicle::CVehicle(eVehicleCreatedBy createdBy) : CPhysical(), m_vehicleAudio(),
     m_nOverrideLights = eVehicleOverrideLightsState::NO_CAR_LIGHT_OVERRIDE;
     m_ropeType = 0;
     m_nGunsCycleIndex = 0;
+    m_nOrdnanceCycleIndex = 0; // NOTSA: asm sweep S19i (exe 0x6D6083: `and byte [esi+0x4A9], 0xF0` clears both cycle indices)
     physicalFlags.bCanBeCollidedWith = true;
 
     m_nLastWeaponDamageType = -1;
@@ -650,13 +651,13 @@ uint8 CVehicle::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSet
         return 1;
 
     const auto fMoveSquared = m_vecMoveSpeed.SquaredMagnitude() * CTimer::GetTimeStep() * CTimer::GetTimeStep(); // 0x6D0EBE/0x6D0EC4: (|v|^2 * dt) * dt, not |v|^2 * (dt * dt)
-    if (fMoveSquared < 0.16F)
+    if (!(fMoveSquared >= 0.16F)) // 0x6D0ED8: `fcomp; test ah,1; jne` returns for < and for NaN
         return 1;
 
     auto fMove = sqrt(fMoveSquared);
     if (!TreatAsPlayerForCollisions())
     {
-        if (fMoveSquared <= 0.32F)
+        if (!(fMoveSquared > 0.32F)) // 0x6D0F16: `fcomp; test ah,0x41; jne`
             fMove *= (10.0F / 4.0F);
         else
             fMove *= (10.0F / 3.0F);
@@ -668,8 +669,11 @@ uint8 CVehicle::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSet
 
     auto& bbox = CEntity::GetColModel()->GetBoundingBox();
     auto fLongestDir = std::fabs(DotProduct(m_vecMoveSpeed, GetForward()) * CTimer::GetTimeStep() / bbox.GetLength());
-    fLongestDir = std::max(fLongestDir, std::fabs(DotProduct(m_vecMoveSpeed, GetRight()) * CTimer::GetTimeStep() / bbox.GetWidth()));
-    fLongestDir = std::max(fLongestDir, std::fabs(DotProduct(m_vecMoveSpeed, GetUp()) * CTimer::GetTimeStep() / bbox.GetHeight()));
+    // 0x6D0FA1 / 0x6D0FFB: `fcompp; test ah,0x41; je` keeps the left operand only if it is strictly greater (NaN -> the right operand)
+    const auto fRightDir = std::fabs(DotProduct(m_vecMoveSpeed, GetRight()) * CTimer::GetTimeStep() / bbox.GetWidth());
+    fLongestDir = fLongestDir > fRightDir ? fLongestDir : fRightDir;
+    const auto fUpDir = std::fabs(DotProduct(m_vecMoveSpeed, GetUp()) * CTimer::GetTimeStep() / bbox.GetHeight());
+    fLongestDir = fLongestDir > fUpDir ? fLongestDir : fUpDir;
 
     if (IsBike())
         fLongestDir *= 1.5F;
@@ -955,12 +959,14 @@ void CVehicle::ProcessDrivingAnims(CPed* driver, bool blend) {
     else {
         const auto fDrivingSkill = CStats::GetStatValue(eStats::STAT_DRIVING_SKILL);
         const auto fSpeed = m_vecMoveSpeed.Magnitude();
-        if (fDrivingSkill < 50.0F) {
-            usedAnims = fSpeed <= 0.4F ? &aDriveAnimIdsBadSlow : &aDriveAnimIdsBad;
-        } else if (fDrivingSkill < 100.0F) {
-            usedAnims = fSpeed <= 0.4F ? &aDriveAnimIdsStdSlow : &aDriveAnimIdsStd;
+        const bool slow = !(fSpeed > 0.4F); // 0x6DF5BD/0x6DF5F1: `fcomp; test ah,0x41; jne` - <= 0.4 and NaN
+        // 0x6DF5A9: `skill >= 100` is the only way to the pro set, then `skill >= 50` the only way to the std set (a NaN skill takes the bad set)
+        if (fDrivingSkill >= 100.0F) {
+            usedAnims = slow ? &aDriveAnimIdsProSlow : &aDriveAnimIdsPro;
+        } else if (fDrivingSkill >= 50.0F) {
+            usedAnims = slow ? &aDriveAnimIdsStdSlow : &aDriveAnimIdsStd;
         } else {
-            usedAnims = fSpeed <= 0.4F ? &aDriveAnimIdsProSlow : &aDriveAnimIdsPro;
+            usedAnims = slow ? &aDriveAnimIdsBadSlow : &aDriveAnimIdsBad;
         }
     }
 
@@ -1015,10 +1021,13 @@ void CVehicle::ProcessDrivingAnims(CPed* driver, bool blend) {
         return;
     }
 
-    auto fUsedAngle = std::fabs(m_fSteerAngle * std::bit_cast<float>(0x3FD1D608u)); // 0x6DF816 fmul [0x871FD4] = 1/0.61 (not / 0.61F)
+    // 0x6DF803: `fcomp 0; test ah,0x41; jne` - a steer angle that is not > 0 (NaN too) takes the right-look branch with the factor [0x871FD0] = -1/0.61,
+    // otherwise [0x871FD4] = 1/0.61 (not / 0.61F)
+    const bool steerNotPositive = !(m_fSteerAngle > 0.0F);
+    auto fUsedAngle = m_fSteerAngle * std::bit_cast<float>(steerNotPositive ? 0xBFD1D608u : 0x3FD1D608u);
     fUsedAngle = std::clamp(fUsedAngle, 0.0F, 1.0F);
 
-    if (m_fSteerAngle < 0) {
+    if (steerNotPositive) {
         if (lookLeftAnim) {
             lookLeftAnim->m_BlendAmount = 0.0F;
             lookLeftAnim->m_BlendDelta  = 0.0F;
@@ -2000,7 +2009,9 @@ void CVehicle::ApplyBoatWaterResistance(tBoatHandlingData* boatHandling, float f
     auto fMoveDotProduct = DotProduct(m_vecMoveSpeed, GetForward());
     fSpeedMult *= sq(fMoveDotProduct) + 0.05F;
     fSpeedMult += 1.0F;
-    fSpeedMult = std::fabs(fSpeedMult);
+    if (fSpeedMult < 0.0F) { // 0x6D27A6: `fcom 0; test ah,5; jp` -> fchs only for an ordered negative (NaN / -0 keep their sign)
+        fSpeedMult = -fSpeedMult;
+    }
     fSpeedMult = 1.0F / fSpeedMult;
 
     float fUsedTimeStep = CTimer::GetTimeStep() * 0.5F;
@@ -2017,7 +2028,7 @@ void CVehicle::ApplyBoatWaterResistance(tBoatHandlingData* boatHandling, float f
     auto vecTurnForce = GetForward() * fMassMult;
     ApplyTurnForce(vecTurnForce, vecDown);
 
-    if (m_vecMoveSpeed.z <= 0.0F)
+    if (!(m_vecMoveSpeed.z > 0.0F)) // 0x6D2907: `fcomp; test ah,0x41; jne` - <= 0 and NaN take the blended factor
         m_vecMoveSpeed.z *= ((1.0F - vecSpeedMult.z) * 0.5F + vecSpeedMult.z);
     else
         m_vecMoveSpeed.z *= vecSpeedMult.z;
@@ -5753,14 +5764,12 @@ void CVehicle::AddExhaustParticles() {
         }
     }
 
-    if (CGeneral::GetRandomNumberInRange(1.0f, 3.0f) * (m_GasPedal + 1.1f) <= 2.5f)
+    if (!(CGeneral::GetRandomNumberInRange(1.0f, 3.0f) * (m_GasPedal + 1.1f) > 2.5f)) // 0x6DE596: `fcomp; test ah,0x41; jne` returns for <= and for NaN
         return;
 
     float fMoveSpeed = m_vecMoveSpeed.Magnitude() * 0.5f;
-    float particleAlpha = 0.0f;
-    if (0.25f - fMoveSpeed >= 0.0f) {
-        particleAlpha = 0.25f - fMoveSpeed;
-    }
+    const float alphaRaw = 0.25f - fMoveSpeed;
+    const float particleAlpha = alphaRaw < 0.0f ? 0.0f : alphaRaw; // 0x6DE5C4: `fcomp; test ah,0x41; jne` keeps the value for >= 0 and for NaN
     float fLife = std::max(0.2f - fMoveSpeed, 0.0f);
     FxPrtMult_c fxPrt(0.9f, 0.9f, 1.0f, particleAlpha, 0.2f, 1.0f, fLife);
 

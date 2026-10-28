@@ -69,7 +69,7 @@
 | S16f | rest of S16e | 10 | partial 4/10 (4 fixed) -> S16g | Automobile.cpp |
 | S16g | rest of S16f | 6 | partial 3/6 (1 M, 2 fixed) -> S16h | Automobile.cpp |
 | S16h | rest of S16g | 3 | partial 2/3 + PreRender to 0x6AB154 (2 fixed) -> S16i | Automobile.cpp |
-| S16i | PreRender from 0x6AB154 to ret (rest of S16h) | 1 | partial (to 0x6AB36C MATCH; rest 0x6AB36C-0x6ACCBA open) |  |
+| S16i | PreRender from 0x6AB154 to ret (rest of S16h) | 1 | done 1/1 (MATCH; S16 complete) | Automobile.cpp |
 | S17d | rest of S17c | 10 | partial 5/10 (5 M) -> S17e | Bike.cpp, Bmx.cpp, Boat.cpp |
 | S17e | rest of S17d | 5 | partial 4/5 (3 M, 1 fixed; Bike ProcessControl to 0x6B97C9) -> S17f | Bike.cpp, Boat.cpp |
 | S17f | rest of S17e | 1 | done (MATCH, Bike ProcessControl complete) | Bike.cpp |

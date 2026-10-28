@@ -68,8 +68,13 @@ void CWaterCannon::Update_NewInput(const CVector* start, const CVector* end) {
 
 // 0x7295E0
 void CWaterCannon::PushPeds() {
+#ifdef FIX_BUGS
     // FIX_BUGS: R* originally used 10'000.f here, but thats bug prone (if map size gets increased)
     CVector min{ FLT_MAX, FLT_MAX, FLT_MAX }, max{ FLT_MIN, FLT_MIN, FLT_MIN };
+#else
+    // 0x7295E0 (0x729605..0x72962D): the exe starts the box at (+10000, -10000) per axis (0x461C4000 / 0xC61C4000)
+    CVector min{ 10000.0f, 10000.0f, 10000.0f }, max{ -10000.0f, -10000.0f, -10000.0f };
+#endif
     CBoundingBox bbox(min, max);
 
     for (auto i = 0; i < SECTIONS_COUNT; i++) {

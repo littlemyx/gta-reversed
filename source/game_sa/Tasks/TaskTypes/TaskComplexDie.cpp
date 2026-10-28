@@ -106,10 +106,10 @@ CTask* CTaskComplexDie::CreateFirstSubTask(CPed* ped) {
     SayDeathSample(ped);
 
     if (m_nWeaponType == WEAPON_DROWNING && ped->bInVehicle && !ped->bForceDieInCar) {
-        if (ped->m_pVehicle && (ped->m_pVehicle->IsSubPlane() || ped->m_pVehicle->IsSubHeli())) {
-            return nullptr;
+        // 0x63031C-0x630340: planes / helis do NOT bail out here - the exe jumps to the common die path (SetPedState below), it does not return null
+        if (!ped->m_pVehicle || !(ped->m_pVehicle->IsSubPlane() || ped->m_pVehicle->IsSubHeli())) {
+            return new CTaskComplexLeaveCar(ped->m_pVehicle, 0, 0, false, true);
         }
-        return new CTaskComplexLeaveCar(ped->m_pVehicle, 0, 0, false, true);
     }
 
     ped->SetPedState(PEDSTATE_DIE);
@@ -117,7 +117,7 @@ CTask* CTaskComplexDie::CreateFirstSubTask(CPed* ped) {
 
     if (ped->bInVehicle) // repeated branch
     {
-        return new CTaskComplexDieInCar(WEAPON_UNARMED);
+        return new CTaskComplexDieInCar(m_nWeaponType); // 0x6303C0: the exe stores this task's weapon type (the port passed WEAPON_UNARMED)
     }
     else if (m_nWeaponType == WEAPON_DROWNING)
     {

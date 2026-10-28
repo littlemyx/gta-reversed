@@ -1,0 +1,74 @@
+addr	function	verdict	asm range	note	fix commit
+0x409650	AddEntity	NOT_REACHED	-		-
+0x407610	AddImageToList	NOT_REACHED	-		-
+0x40C520	AddLodsToRequestList	NOT_REACHED	-		-
+0x40D3F0	AddModelsToRequestList	NOT_REACHED	-		-
+0x407AD0	AreAnimsUsedByRequestedModels	NOT_REACHED	-		-
+0x40BAA0	ClearSlots	MATCH	0x40BAA0-0x40BBA6 (all)		-
+0x408E20	GetNextFileOnCd	NOT_REACHED	-		-
+0x40C6B0	ConvertBufferToObject	NOT_REACHED	-		-
+0x4090A0	DeleteAllRwObjects	NOT_REACHED	-		-
+0x409760	DeleteLeastUsedEntityRwObject	FIXED	0x409760-0x409932 (all)	distance sums squares z,y,x unrounded then sqrt; rest (flag masks, lod chain, area/frustum conds, player contact check, refcount) match	c692f518
+0x409210	DeleteRwObjectsAfterDeath	NOT_REACHED	-		-
+0x40D7C0	DeleteRwObjectsBehindCamera	NOT_REACHED	-		-
+0x409940	DeleteRwObjectsBehindCameraInSectorList<CPtrListSingleLink<CEntity*>>	NOT_REACHED	-		-
+0x407A70	DeleteRwObjectsInSectorList<CPtrListSingleLink<CEntity*>>	NOT_REACHED	-		-
+0x4099E0	DeleteRwObjectsNotInFrustumInSectorList<CPtrListSingleLink<CEntity*>>	NOT_REACHED	-		-
+0x40D2F0	RemoveReferencedTxds	MATCH	0x40D2F0-0x40D3C1 (all)	signed vs unsigned goal compare only differs above 2GB	-
+0x5D29E0	Load	NOT_REACHED	-		-
+0x5D29A0	Save	NOT_REACHED	-		-
+0x40EA10	LoadAllRequestedModels	NOT_REACHED	-		-
+0x5B6170	LoadCdDirectory-char	NOT_REACHED	-		-
+0x5B82C0	LoadCdDirectory-void	NOT_REACHED	-		-
+0x40D3D0	LoadInitialPeds	NOT_REACHED	-		-
+0x40A120	LoadInitialWeapons	NOT_REACHED	-		-
+0x40EB70	LoadScene	NOT_REACHED	-		-
+0x40ED80	LoadSceneCollision	NOT_REACHED	-		-
+0x40B4B0	LoadZoneVehicle	NOT_REACHED	-		-
+0x40BA70	PossiblyStreamCarOutAfterCreation	NOT_REACHED	-		-
+0x409430	RequestBigBuildings	NOT_REACHED	-		-
+0x40A080	RequestFile	MATCH	0x40A080-0x40A112 (all)		-
+0x409050	RequestFilesInChannel	FIXED	0x409050-0x40909E (all)	model id kept as reference into the channel slot (RemoveModel overwrites it with -1) and flags read after RemoveModel (PRIORITY_REQUEST cleared); exe copies both first	81b3e565
+0x407100	RequestTxdModel	NOT_REACHED	-		-
+0x408C70	RequestVehicleUpgrade	NOT_REACHED	-		-
+0x408CB0	FinishLoadingLargeFile	NOT_REACHED	-		-
+0x40E460	FlushChannels	NOT_REACHED	-		-
+0x40CBA0	RequestModelStream	NOT_REACHED	-		-
+0x40B450	RequestSpecialChar	NOT_REACHED	-		-
+0x409D10	RequestSpecialModel	NOT_REACHED	-		-
+0x40E170	ProcessLoadingChannel	NOT_REACHED	-		-
+0x40C1E0	PurgeRequestList	MATCH	0x40C1E0-0x40C260 (all)	flag mask 0x1e	-
+0x40E560	ReInit	NOT_REACHED	-		-
+0x5BCCD0	ReadIniFile	NOT_REACHED	-		-
+0x40CF80	RemoveAllUnusedModels	MATCH	0x40CF80-0x40CFCA (all)		-
+0x4093B0	RemoveBigBuildings	MATCH	0x4093B0-0x409423 (all)		-
+0x4080F0	RemoveCarModel	NOT_REACHED	-		-
+0x40B080	RemoveCurrentZonesModels	NOT_REACHED	-		-
+0x40BE60	RemoveDodgyPedsFromRandomSlots	MATCH	0x40BE60-0x40BF60 (all)	jump table ids 87,244,246,256,257	-
+0x40B3A0	RemoveInappropriatePedModels	MATCH	0x40B3A0-0x40B447 (all)		-
+0x40CFD0	RemoveLeastUsedModel	MATCH	0x40CFD0-0x40D26E (all)	type ranges, flag test, camera-height gate and the 3-block fallthrough order match	-
+0x40C020	RemoveLoadedVehicle	FIXED	0x40C020-0x40C175 (all)	boats removed only when count > (needed?2:0) (port >=), removed boat returns true (port false)	9ed8dbcf
+0x40B340	RemoveLoadedZoneModel	MATCH	0x40B340-0x40B39C (all)		-
+0x40C180	RemoveTxdModel	NOT_REACHED	-		-
+0x40E120	MakeSpaceFor	MATCH	0x40E120-0x40E164 (all)		-
+0x40C270	ProcessEntitiesInSectorList<CPtrListSingleLink<CEntity*>>-	FIXED	0x40C270-0x40C442 (all)	rect compares strict, circle dist^2 < min(drawDist^2,radius^2) summed y then x (port inclusive, x,y order)	2e8a5179
+0x4076C0	RetryLoadFile	NOT_REACHED	-		-
+0x40E3A0	LoadRequestedModels	NOT_REACHED	-		-
+0x40E4E0	FlushRequestList	NOT_REACHED	-		-
+0x407D50	GetDefaultCabDriverModel	NOT_REACHED	-		-
+0x5B8AD0	Init2	NOT_REACHED	-		-
+0x4083C0	InitImageList	NOT_REACHED	-		-
+0x4084F0	InstanceLoadedModels	NOT_REACHED	-		-
+0x409C10	SetModelIsDeletable	MATCH	0x409C10-0x409C63 (all)	InList vs next-index==-1 equal for any list member	-
+0x4084B0	Shutdown	NOT_REACHED	-		-
+0x40A2A0	StreamAmbulanceAndMedic	NOT_REACHED	-		-
+0x40A150	StreamCopModels	NOT_REACHED	-		-
+0x40A400	StreamFireEngineAndFireman	NOT_REACHED	-		-
+0x40B4F0	StreamOneNewCar	NOT_REACHED	-		-
+0x40BBB0	StreamPedsForInterior	NOT_REACHED	-		-
+0x40BDA0	StreamPedsIntoRandomSlots	NOT_REACHED	-		-
+0x40B700	StreamVehiclesAndPeds	MATCH	0x40B700-0x40BA6D (all)	swat/fbi/army/heli/dealer/harvester blocks, model ids, call order checked	-
+0x40B650	StreamVehiclesAndPeds_Always	MATCH	0x40B650-0x40B6F3 (all)		-
+0x40A560	StreamZoneModels	MATCH	0x40A560-0x40AA10 (control flow + calls)	slot search, zone change, gang member slot logic checked against branch structure; arithmetic of the idiv/mod setup not re-read	-
+0x40AA10	StreamZoneModels_Gangs	NOT_REACHED	-		-
+0x40E670	Update	NOT_REACHED	-		-

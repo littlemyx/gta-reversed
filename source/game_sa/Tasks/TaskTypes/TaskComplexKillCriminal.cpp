@@ -615,7 +615,7 @@ CTask* CTaskComplexKillCriminal::ControlSubTask(CPed* ped) {
             if (ped->bInVehicle && ped->m_pVehicle) { //> 0x68EC1A
                 const auto subTaskType = m_pSubTask->GetTaskType();
                 if (subTaskType == TASK_COMPLEX_CAR_DRIVE_MISSION || subTaskType == TASK_SIMPLE_GANG_DRIVEBY) { //> 0x68EC8C
-                    if (Mag(m_Criminal->m_pVehicle->GetMoveSpeed()) >= 0.12) {
+                    if (Mag(m_Criminal->m_pVehicle->GetMoveSpeed()) >= 0.12f) {
                         m_TimeToGetOutOfCar = 1.f;
                     } else {
                         m_TimeToGetOutOfCar = (float)((x87d)m_TimeToGetOutOfCar - (x87d)CTimer::GetTimeStep() * (x87d)0.02f);
@@ -640,7 +640,7 @@ CTask* CTaskComplexKillCriminal::ControlSubTask(CPed* ped) {
                 }
                 goto CriticalEvent;
             } else { //> 0x68ED83 - We're on foot
-                if (Mag(cveh->GetMoveSpeed()) < 0.2) {
+                if (Mag(cveh->GetMoveSpeed()) < 0.2f) {
                     if (SqMag(m_Criminal->GetPosition() - ped->GetPosition()) < 36.0) {
                         goto CriticalEvent;
                     }
@@ -656,7 +656,7 @@ CTask* CTaskComplexKillCriminal::ControlSubTask(CPed* ped) {
                         && m_pSubTask->GetTaskType() != TASK_COMPLEX_ENTER_CAR_AS_PASSENGER
                     ) {
                         const float vehDistSq = (float)SqMag(m_Criminal->m_pVehicle->GetPosition() - ped->m_pVehicle->GetPosition());
-                        if (Mag(m_Criminal->m_pVehicle->GetMoveSpeed()) >= 0.2 || vehDistSq > 400.f) {
+                        if (Mag(m_Criminal->m_pVehicle->GetMoveSpeed()) >= 0.2f || vehDistSq > 400.f) {
                             taskToCreate = cop->m_isTheDriver ? TASK_COMPLEX_ENTER_CAR_AS_DRIVER : TASK_COMPLEX_ENTER_CAR_AS_PASSENGER;
                         }
                     }

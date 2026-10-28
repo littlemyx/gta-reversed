@@ -2722,8 +2722,9 @@ void CPlayerPed::ProcessControl() {
             g = NOTSA_FTOL(uint8, markColor * 255.0f);
             b = NOTSA_FTOL(uint8, 0.0f);
         }
-        CVector distance = effectPos - GetPosition();
-        float size = 1.0f - distance.Magnitude() * 0.02f;
+        // 0x60F125: the exe sums the squares in the order x, z, y (not CVector::Magnitude's x, y, z)
+        const CVector distance = effectPos - GetPosition();
+        const float size = 1.0f - std::sqrt((distance.x * distance.x + distance.z * distance.z) + distance.y * distance.y) * 0.02f;
         CWeaponEffects::MarkTarget(m_nPedType, effectPos, r, g, b, 255u, size, false);
     }
     if (m_nMoveState != PEDMOVE_NONE) {

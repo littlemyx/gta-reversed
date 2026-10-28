@@ -2531,12 +2531,17 @@ void CStreaming::ProcessEntitiesInSectorList(PtrListType& list, float posX, floa
         if (timeInfo && !timeInfo->IsVisibleNow())
             continue;
 
+        // 0x40C2F8-0x40C405: the exe compares STRICTLY (x > minX, x < maxX, y > minY, y < maxY and dist^2 < limit),
+        // limit = min(drawDist^2, radius^2) (radius^2 is the loser only when it is strictly smaller) and dist^2 is summed y, then x
         const CVector& entityPos = entity->GetPosition();
-        if (!IsPointInRect2D(entityPos, { minX, minY }, { maxX, maxY }))
+        if (!(entityPos.x > minX && entityPos.x < maxX && entityPos.y > minY && entityPos.y < maxY))
             continue;
 
         const float drawDistanceRadius = TheCamera.m_fLODDistMultiplier * modelInfo->m_fDrawDistance;
-        if (!IsPointInCircle2D(entityPos, { posX, posY }, std::min(drawDistanceRadius, radius)))
+        const float drawDistanceRadiusSq = drawDistanceRadius * drawDistanceRadius;
+        const float radiusSq = radius * radius;
+        const float limitSq = radiusSq < drawDistanceRadiusSq ? radiusSq : drawDistanceRadiusSq;
+        if (!((posY - entityPos.y) * (posY - entityPos.y) + (posX - entityPos.x) * (posX - entityPos.x) < limitSq))
             continue;
 
         if (modelInfo->GetRwObject() && !entity->GetRwObject())

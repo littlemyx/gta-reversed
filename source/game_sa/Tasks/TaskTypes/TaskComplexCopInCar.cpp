@@ -89,7 +89,7 @@ CTask* CTaskComplexCopInCar::CreateSubTask(eTaskType taskType, CPed* copPed) {
             };
 
             // FindPoliceCarSpeedForWantedLevel - wanted level 3
-            auto style = m_Vehicle->m_pHandlingData->m_transmissionData.m_MaxFlatVelocity * 60.0f * 0.9f; // TODO: This really doesn't add up.. How does this work?
+            auto style = m_Vehicle->m_pHandlingData->m_transmissionData.m_MaxFlatVelocity * 54.0f; // 0x68CC1C: one multiply by the float 54.0 (0x858C94), not 60 * 0.9 // TODO: This really doesn't add up.. How does this work?
             return new CTaskComplexCarDriveMission(
                 m_Vehicle,
                 targetEntity,
@@ -187,7 +187,7 @@ CTask* CTaskComplexCopInCar::CreateNextSubTask(CPed* ped) {
         return CreateSubTask(TASK_COMPLEX_WANDER, ped);
     }
     case TASK_SIMPLE_CAR_DRIVE: {
-        m_Vehicle->m_autoPilot.SetCarMission(MISSION_NONE);
+        m_Vehicle->m_autoPilot.m_nCarMission = MISSION_NONE; // 0x68FB4D: plain store, `SetCarMission` would also set m_nTimeToStartMission
         return CreateSubTask(TASK_COMPLEX_LEAVE_CAR, ped);
     }
     case TASK_COMPLEX_ENTER_CAR_AS_PASSENGER: // 0x68FA89
@@ -231,7 +231,7 @@ CTask* CTaskComplexCopInCar::ControlSubTask(CPed* ped) {
 
     // 0x68FD7E
     if (m_Vehicle && !m_Vehicle->m_pDriver && m_Vehicle->m_autoPilot.m_nCarMission != MISSION_NONE) {
-        m_Vehicle->m_autoPilot.SetCarMission(MISSION_NONE);
+        m_Vehicle->m_autoPilot.m_nCarMission = MISSION_NONE; // 0x68FD97: plain store (no m_nTimeToStartMission update)
     }
 
     if (!m_IsDriver && (!m_Cop || m_Cop->IsStateDead())) { // 0x68FDA7

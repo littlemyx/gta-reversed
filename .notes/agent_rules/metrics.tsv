@@ -272,3 +272,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-28	ASM-S18c	v6	asm sweep	200494	57	10	Heli/Plane 8/11: Plane VehicleDamage fixed (mass/10000 kept x87-unrounded); 7 MATCH; SearchLightCone, Plane PreRender, ProcessFlyingCarStuff open
 2026-10-28	ASM-S18d	v6	asm sweep	222326	65	11	ProcessFlyingCarStuff fixed (cam dist2 sum order z,y,x); SearchLightCone MATCH; Plane PreRender MATCH to 0x6C9FD9, rest open
 2026-10-28	ASM-S18e	v6	asm sweep	145689	34	8	Plane PreRender tail 0x6C9FD9-ret MATCH; 1 UNSURE (_CIpow vs std::pow) -> SYSTEMIC_TODO X87-POW; S18 complete
+2026-10-28	COMBAT-FLAKY	v6	regress flake	191239	111	207	combat flakes were test artefacts (CJ wasted in chase -> cops gone; weapon drop merges via TryToMerge_WeaponType; driver corpse removed); route heal + 24 s wait, check per-step shots; 8/8 PASS

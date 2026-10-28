@@ -5449,10 +5449,10 @@ void CVehicle::DoBoatSplashes(float fWaterDamping) {
     x87d intensity = std::sqrt((x87d)speedSq) * 0.075f * fWaterDamping;
     if (isSkimmer) {
         intensity *= 3.0f;
-        if (!(intensity <= 0.5f)) {
+        if (intensity > 0.5f) { // `fcom; test ah, 0x41; jne`: NaN is left alone
             intensity = 0.5f;
         }
-    } else if (!(intensity <= 1.0f)) {
+    } else if (intensity > 1.0f) {
         intensity = 1.0f;
     }
     if (!(intensity > 0.15f)) {
@@ -5462,7 +5462,7 @@ void CVehicle::DoBoatSplashes(float fWaterDamping) {
     float scaled = (float)(intensity * 0.75f);
     if (isCruising) {
         const x87d doubled = (x87d)scaled + scaled;
-        scaled = doubled >= 1.0 ? 1.0f : (float)doubled;
+        scaled = doubled < 1.0 ? (float)doubled : 1.0f; // `test ah, 5; jp`: NaN takes the 1.0 path
     }
 
     uint8 alphaByte = (uint8)NOTSA_FTOL(int32, scaled * 128.0f);
@@ -5483,13 +5483,13 @@ void CVehicle::DoBoatSplashes(float fWaterDamping) {
     FxPrtMult_c particleData(1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f);
     {
         const float alpha = (float)((x87d)alphaByte * 0.003921569f); // 1 / 255
-        particleData.m_Color.alpha = alpha >= 1.0f ? 1.0f : alpha;
+        particleData.m_Color.alpha = alpha < 1.0f ? alpha : 1.0f;
 
         const float size = (float)((x87d)sizeBase * 0.1f);
-        particleData.m_fSize = size >= 1.0f ? 1.0f : size;
+        particleData.m_fSize = size < 1.0f ? size : 1.0f;
 
         const float life = (float)((x87d)lifeBase * 0.2f);
-        particleData.m_fLife = life >= 1.0f ? 1.0f : life;
+        particleData.m_fLife = life < 1.0f ? life : 1.0f;
     }
 
     const CBoundingBox& bb = GetColModel()->GetBoundingBox();

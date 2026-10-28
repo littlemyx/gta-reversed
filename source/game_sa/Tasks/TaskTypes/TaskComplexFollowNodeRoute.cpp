@@ -182,7 +182,8 @@ void CTaskComplexFollowNodeRoute::SetTarget(CPed* ped, const CVector& targetPt, 
     if (m_bUseBlending) {
         m_SpeedDecreaseDist = m_SpeedIncreaseDist = 0.0;
         m_SpeedDecreaseAmt  = m_SpeedIncreaseAmt  = 0.f;
-        m_bSlowingDown      = m_bSpeedingUp       = false;
+        m_bSlowingDown      = false;
+        m_bSpeedingUp       = true; // exe 0x6717CD-0x6717D0: `and ~0x20; or 0x40` => speeding-up flag is SET
     }
 
     ComputePathNodes(ped);

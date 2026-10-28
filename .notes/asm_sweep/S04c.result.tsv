@@ -1,0 +1,12 @@
+addr	function	verdict	asm range	note	fix commit
+0x665E00	CTaskComplexGangFollower::CreateNextSubTask	MATCH	0x665E00-0x66615F (all)	signal/leave group, standstill/pause/turn-to-face roll, seek ctor consts (0.5/5/2), flags
+0x666160	CTaskComplexGangFollower::CreateFirstSubTask	MATCH	0x666160-0x666352 (all)	car drive / leave car / seek / stand still
+0x662A10	CTaskComplexGangFollower::ControlSubTask	FIXED	0x662A10-0x66349B (all)	only NaN edges: too-far test is !(sq<=(r+1)^2); slow-down max returns 2nd operand on NaN; rest (offset, plane test, speed adjust, anim ref, signal roll, exhale fx, look-at, partial anims, pass object) matches	6943b280
+0x65DF30	CTaskComplexGangLeader::~CTaskComplexGangLeader	MATCH	0x65DF30-0x65DF97 (all)	anim block unref
+0x65E730	CTaskComplexGangLeader::GetRandomGangAmbientAnim	MATCH	0x65E710-0x65E7E9 (all)	DoCoinFlip == rand()>=0x3FFF; default = 0x117 + rand(0,8) (exe -8.0 const); female models 103/105
+0x65E860	CTaskComplexGangLeader::DoGangAbuseSpeech	MATCH	0x65E860-0x65E991 (all)	type->ctx table (7,8/player,10..14)
+0x65E9A0	CTaskComplexGangLeader::DoGangAttackSpeech	MATCH	0x65E9A0-0x65EA4B (all)	GANG1/3/8 -> 0x11/0x12/0x13
+0x65DFF0	CTaskComplexGangLeader::CreateNextSubTask	MATCH	0x65DFF0-0x65E1EB (all)	member-slot turn roll, standstill 95 roll, wander timer 15000+r*15000, wander ctor
+0x65E1F0	CTaskComplexGangLeader::CreateFirstSubTask	MATCH	0x65E1F0-0x65E1F2 (all)	tail-jump to vtbl+0x20 (CreateNextSubTask)
+0x662370	CTaskComplexGangLeader::ControlSubTask	MATCH	0x662370-0x6629EB (all)	anim ref, wander-out -> RANDOM allocator + standstill 500, exhale fx, look-at, held-entity anims/speech/pass object, partial anims
+0x65E200	CTaskComplexGangLeader::ScanForStuff	MATCH	0x65E200-0x65E6EC (all)	lean-on-vehicle scan (no break without FIX_BUGS), recruit scan (wander lookup on this ped = exe bug kept), closest member 1e9 vs FLT_MAX equivalent behind the 100.0 test

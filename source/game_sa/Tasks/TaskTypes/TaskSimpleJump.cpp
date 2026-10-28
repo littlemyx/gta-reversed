@@ -196,8 +196,16 @@ bool CTaskSimpleJump::StartLaunchAnim(CPed* ped) {
     if (m_pAnim)
         return false;
 
-    if (g_surfaceInfos.IsSteepSlope(ped->m_nContactSurface) && DotProduct(ped->GetForward(), ped->field_578) < 0.0F ||
-        ped->IsPlayer() && !CGameLogic::IsPlayerAllowedToGoInThisDirection(ped, ped->GetForward(), 5.0F)) {
+    // 0x67D7F6-0x67D85D: on a steep slope ONLY the dot test decides (the exe jumps past the IsPlayer test); the player-direction test is for flat ground
+    const auto& fwd = ped->GetForward();
+    const auto  slopeBlocked = [&] {
+        if (g_surfaceInfos.IsSteepSlope(ped->m_nContactSurface)) {
+            const auto& n = ped->field_578;
+            return (fwd.z * n.z + fwd.y * n.y) + fwd.x * n.x < 0.0F; // exe sum order z, y, x
+        }
+        return ped->IsPlayer() && !CGameLogic::IsPlayerAllowedToGoInThisDirection(ped, fwd, 5.0F);
+    }();
+    if (slopeBlocked) {
         ped->m_pedIK.bSlopePitch = true;
         return false;
     }

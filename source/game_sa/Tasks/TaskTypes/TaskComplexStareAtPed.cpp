@@ -52,15 +52,15 @@ CTaskComplexStareAtPed::~CTaskComplexStareAtPed() {
 // 0x660420
 CTask* CTaskComplexStareAtPed::CreateNextSubTask(CPed* ped) {
     if (const auto turnToFace = notsa::dyn_cast_if_present<CTaskComplexTurnToFaceEntityOrCoord>(m_pSubTask)) {
-        return new CTaskSimpleStandStill{ CGeneral::GetRandomNumberInRange(500, 1000) };
+        return new CTaskSimpleStandStill{ CGeneral::GetRandomNumberInRange(500, 1500) }; // 0x66046B / 0x66055D: `500 - (int)(rand * (1/32768) * -1000.0)` = [500, 1500), not [500, 1000)
     }
     return new CTaskComplexTurnToFaceEntityOrCoord{ m_pPed };
 }
 
 // 0x660510
 CTask* CTaskComplexStareAtPed::CreateFirstSubTask(CPed* ped) {
-    m_timer.Start(m_timeout);
-    return new CTaskSimpleStandStill{ CGeneral::GetRandomNumberInRange(500, 1000) };
+    m_timer.StartUnguarded(m_timeout); // 0x660529-0x660536: stored without the `>= 0` test
+    return new CTaskSimpleStandStill{ CGeneral::GetRandomNumberInRange(500, 1500) }; // 0x66046B / 0x66055D: `500 - (int)(rand * (1/32768) * -1000.0)` = [500, 1500), not [500, 1000)
 }
 
 // 0x6605C0
@@ -131,7 +131,8 @@ CTask* CTaskComplexStareAtPed::ControlSubTask(CPed* ped) {
             }
             return false;
         }()) {
-            if (!ped->GetTaskManager().GetTaskSecondary(TASK_SECONDARY_PARTIAL_ANIM) && CGeneral::RandomBool(1.f)) {
+            // 0x6607B6-0x6607D1: int rand in [0,100) compared `== 50.0f` (fcomp + test ah,0x44 + jp skip), not RandomBool(1)
+            if (!ped->GetTaskManager().GetTaskSecondary(TASK_SECONDARY_PARTIAL_ANIM) && CGeneral::GetRandomNumberInRange(0, 100) == 50) {
                 ped->GetTaskManager().SetTaskSecondary(
                     new CTaskSimpleRunAnim{ ANIM_GROUP_GANGS, CAnimManager::GetRandomGangTalkAnim(), 4.f},
                     TASK_SECONDARY_PARTIAL_ANIM

@@ -104,4 +104,5 @@
 | S19e | rest of S19d (+ Train MarkSurrounding sub-ulp sector clamp) | 92 | partial 8/92 (4 M, 3 fixed, 1 partial) -> S19f | Trailer.cpp, Vehicle.cpp |
 | S19f | rest of S19e | 85 | partial 8/85 (5 M, 3 fixed) -> S19g | Trailer.cpp, Train.cpp, Vehicle.cpp |
 | S19g | rest of S19f | 77 | partial 15/77 (8 M, 6 fixed, 1 U) -> S19h | Trailer.cpp, Vehicle.cpp |
-| S19h | rest of S19g (+ AddExhaustParticles 2nd half) | 63 | pending | Trailer.cpp, Vehicle.cpp |
+| S19h | rest of S19g (+ AddExhaustParticles 2nd half) | 63 | partial 10/63 (6 M, 4 fixed) -> S19i | Trailer.cpp, Vehicle.cpp |
+| S19i | rest of S19h | 53 | pending | Vehicle.cpp |

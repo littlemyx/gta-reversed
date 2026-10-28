@@ -5686,7 +5686,7 @@ void CVehicle::DoSunGlare() {
         };
 
         CCoronas::RegisterCorona( // 0x6FC580
-            (uint32)(uintptr_t)this + 0x1B + i, // (sic) the id is derived from the vehicle's address
+            NOTSA_PTR_ID32(this) + 0x1B + i, // (sic) the id is derived from the vehicle's address
             nullptr,
             red, green, blue, 255,
             coronaPos,

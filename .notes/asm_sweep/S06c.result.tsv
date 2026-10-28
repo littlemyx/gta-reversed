@@ -1,0 +1,4 @@
+addr	function	verdict	asm range	note	fix commit
+0x683AD0	CTaskComplexPartner::CreateNextSubTask	MATCH	0x683AD0-0x6840BE (all)	state machine 6..1 (anim sequence, wander reset, meeting points, GoToPoint args, NaN-in-range tests) as exe	-
+0x6840D0	CTaskComplexPartner::ControlSubTask	MATCH	0x6840D0-0x68418D (all)	abort condition, go-to-point frame limit 150, drop entity, stream anims, look-at abort as exe	-
+0x682630	CTaskComplexPartnerGreet::GetPartnerSequence (S06b open item)	MATCH	0x682630 chat sites + 0x5F65A0	the exe builds CTaskSimpleChat (RunTimedAnim ctor args 0,0xC,4,-4,dur,0x1A0,Chat + vptr 0x86C78C; identical to ctor 0x5F65A0), same as the port ctor	-

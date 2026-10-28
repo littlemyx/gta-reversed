@@ -1,0 +1,42 @@
+addr	function	verdict	asm range	note	fix commit
+0x661570	CTaskComplexPassObject::ControlSubTask	MATCH	0x661570-0x6616E2 (all)	timer gate, passer/entity test, hold-entity drop + re-hold args (bone 6, flags 0x10, anim 0xBF) and AbortIK as exe	-
+0x61BDF0	CTaskComplexPlayHandSignalAnim::Destructor	MATCH	0x61BDF0-0x61BEE7 (all)	hand model ref release (fat/slim), anim block ref release or unload test as exe	-
+0x61B2F0	CTaskComplexPlayHandSignalAnim::CreateSubTask	MATCH	0x61B2F0-0x61B44C (all)	stand-still (0,1,0,8) and sequence (rand 0..1500 int overload, hand signal anim with fat bit) as exe	-
+0x61B4F0	CTaskComplexPlayHandSignalAnim::CreateFirstSubTask	MATCH	0x61B4F0-0x61B56B (all)	right arm pointing early-out, anim id from ped type, fat hands for BALLAS2/FAM1/FAM3	-
+0x61B580	CTaskComplexPlayHandSignalAnim::ControlSubTask	MATCH	0x61B580-0x61B6C7 (all)	per-hand loaded/ref/request logic, ghands block, switch to handsignal sub task when block ref held	-
+0x68BAD0	CTaskComplexPolicePursuit::SetWeapon	MATCH	0x68BAD0-0x68BBBE (all)	wanted level >1 unarmed, level 1 nightstick vs shotgun/pistol logic as exe	-
+0x690920	CTaskComplexPolicePursuit::ControlSubTask	FIXED	0x690920-0x690AF9 (all)	arrest subtask with the cop car >=5m away (or NaN) returned NONE; exe goes to STAND_STILL. seek test strict (<25)	27920f56
+0x65AFE0	CTaskComplexPresentIdToCop::CreateNextSubTask	MATCH	0x65AFE0-0x65B03E (all)	hands-up/achieve-heading chain, Say(CRIMINAL_PLEAD)	-
+0x666360	CTaskComplexProstituteSolicit::CreateSubTask	MATCH	0x666360-0x666692 (all)	flags, ctor args (stand still 5000, enter car passenger 8, leave car, turn to face 0.5/0.2, seek entity door pick incl. NaN)	-
+0x666780	CTaskComplexProstituteSolicit::CreateNextSubTask	MATCH	0x666780-0x6669C8 (all)	validity check, per-subtask chain, money check <20, Say/LookAt/message args and ids	-
+0x6669D0	CTaskComplexProstituteSolicit::ControlSubTask	MATCH	0x6669D0-0x6672DF (all)	timer/finish branches, yes/no input, ped scan (strict 56.25/400), cop LOS with collision toggle, secluded place, shake, payment, health	-
+0x697B70	CTaskComplexReactToGunAimedAt::CreateSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x6983C0	CTaskComplexReactToGunAimedAt::CreateNextSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x698530	CTaskComplexReactToGunAimedAt::CreateFirstSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x698550	CTaskComplexReactToGunAimedAt::ControlSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x62E170	CTaskComplexRoadRage::CreateFirstSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x642510	CTaskComplexScreamInCarThenLeave::CreateSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x6442D0	CTaskComplexScreamInCarThenLeave::CreateNextSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x644320	CTaskComplexScreamInCarThenLeave::CreateFirstSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x644360	CTaskComplexScreamInCarThenLeave::ControlSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x62E8B0	CTaskComplexSeekCoverUntilTargetDead::ControlSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x695C20	CTaskComplexSeekEntityAiming::CreateNextSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x695D30	CTaskComplexSeekEntityAiming::CreateFirstSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x694C70	CTaskComplexSeekEntityAiming::ControlSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x63D1A0	CTaskComplexShuffleSeats::Destructor	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x63D240	CTaskComplexShuffleSeats::CreateSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x63D610	CTaskComplexShuffleSeats::CreateTaskUtilityLineUpPedWithCar	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x63D420	CTaskComplexShuffleSeats::CreateNextSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x643700	CTaskComplexShuffleSeats::CreateFirstSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x660AB0	CTaskComplexSignalAtPed::Destructor	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x660B30	CTaskComplexSignalAtPed::CreateNextSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x660D80	CTaskComplexSignalAtPed::ControlSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x6314A0	CTaskComplexSitDownThenIdleThenStandUp::Destructor	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x631730	CTaskComplexSitDownThenIdleThenStandUp::ControlSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x65C680	CTaskComplexSmartFleeEntity::CreateNextSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x65C6F0	CTaskComplexSmartFleeEntity::CreateFirstSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x65C780	CTaskComplexSmartFleeEntity::ControlSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x65BE40	CTaskComplexSmartFleePoint::ComputeFleeDir	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x65C0C0	CTaskComplexSmartFleePoint::CreateNextSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x65C140	CTaskComplexSmartFleePoint::CreateFirstSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-
+0x65C1E0	CTaskComplexSmartFleePoint::ControlSubTask	NOT_COMPARED	-	open (budget); continue from CTaskComplexReactToGunAimedAt	-

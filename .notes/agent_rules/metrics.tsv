@@ -287,4 +287,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-28	ASM-S04	v6	asm sweep	212376	90	19	Task0: 0x63F56D GET_IN alive->LeaveCarAndDie confirmed exe (opposite of CLOSE_DOOR_FROM_INSIDE, both ported right); 21/40: 6 fixed (FleeShooting moveState, FollowLeaderInFormation sums, FollowNodeRoute StopTimer pause/SetTarget flags/CanGoStraightThere, FollowPointRoute new route + blend flags); 14 M, 1 U
 2026-10-28	ASM-S04b	v6	asm sweep	191726	68	18	Tasks 8/20: FollowPointRoute CreateTask target-circled bits, FollowNodeRoute ComputePathNodes 5 dev (clear route, cut tests vs target, start node, NaN, area id); 6 M; Gang* -> S04c
 2026-10-28	ASM-S04c	v6	asm sweep	209932	67	11	Gang tasks 11/11: GangFollower ControlSubTask NaN edges fixed; 10 M; ran out before build/tests -> finisher
-2026-10-28	S04c-FINISH	v6	landing	0	0	0	Release+RW built, oracle 0/0, combat 14, pushed 3677ce40, worktree removed
+2026-10-28	S04c-FINISH	v6	landing	81383	26	11	Release+RW built, oracle 0/0, combat 14, pushed 3677ce40, worktree removed

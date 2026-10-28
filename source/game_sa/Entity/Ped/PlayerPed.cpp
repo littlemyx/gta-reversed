@@ -2769,10 +2769,15 @@ void CPlayerPed::ProcessControl() {
         m_nLookTime = 0;
         float lookDir = CGeneral::LimitRadianAngle(x87::atan2(-activeCam.m_vecFront.x, activeCam.m_vecFront.y));
         float angle = fabs(lookDir - m_fCurrentRotation);
-        if (m_nPedState != PEDSTATE_ATTACK && angle > DegreesToRadians(30.0f) && angle < DegreesToRadians(330.0f)) {
-            if (angle > DegreesToRadians(150.0f) && angle < DegreesToRadians(210.0f)) {
-                float dir1 = CGeneral::LimitRadianAngle(m_fCurrentRotation - DegreesToRadians(150.0f));
-                float dir2 = CGeneral::LimitRadianAngle(m_fCurrentRotation + DegreesToRadians(150.0f));
+        // The exe's float constants (0x858F20, 0x86D1FC, 0x86D1F8, 0x86D200); 210 and 330 degrees are 1 ulp above DegreesToRadians()
+        constexpr float RAD_30  = 0.5235987901687622f;
+        constexpr float RAD_150 = 2.6179938316345215f;
+        constexpr float RAD_210 = 3.665191650390625f;
+        constexpr float RAD_330 = 5.759586811065674f;
+        if (m_nPedState != PEDSTATE_ATTACK && angle > RAD_30 && angle < RAD_330) {
+            if (angle > RAD_150 && angle < RAD_210) {
+                float dir1 = CGeneral::LimitRadianAngle(m_fCurrentRotation - RAD_150);
+                float dir2 = CGeneral::LimitRadianAngle(m_fCurrentRotation + RAD_150);
                 lookDir = dir1;
                 if (m_fLookDirection != 999'999.f && !bIsDucking) {
                     if (fabs(dir2 - m_fLookDirection) <= fabs(dir1 - m_fLookDirection))

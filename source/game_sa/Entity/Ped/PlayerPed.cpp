@@ -2790,7 +2790,7 @@ void CPlayerPed::ProcessControl() {
         ClearLookFlag();
         SetLookTimer(250);
     }
-    if (m_vecMoveSpeed.Magnitude() >= 0.1f) {
+    if (m_vecMoveSpeed.Magnitude2D() >= 0.1f) { // 0x60F4C8: only x and y of the move speed
         GetPlayerData()->m_nStandStillTimer = 0;
         GetPlayerData()->m_bStoppedMoving = false;
     } else if (!GetPlayerData()->m_nStandStillTimer) {

@@ -5289,17 +5289,20 @@ void CAutomobile::ProcessBuoyancy()
 
     physicalFlags.bTouchingWater = true;
     auto fTimeStep = std::max(0.01F, CTimer::GetTimeStep());
-    auto fUsedMass = m_fMass / 125.0F;
-    auto fBuoyancyForceZ = vecBuoyancyForce.z / (fTimeStep * fUsedMass);
+    // 0x6A8C8B..0x6A8CF9: the exe multiplies by the constant 0.008f (the compiler's mass / 125), in this order: (ts * mass) * 0.008f, then force.z / that
+    constexpr auto BUOY_MASS_K = std::bit_cast<float>(0x3C03126Fu); // 0x863984 = 0.008f
+    auto fUsedMass = m_fMass * BUOY_MASS_K;
+    auto fBuoyancyForceZ = vecBuoyancyForce.z / ((fTimeStep * m_fMass) * BUOY_MASS_K);
 
     if (fUsedMass > m_fBuoyancyConstant)
-        fBuoyancyForceZ *= 1.05F * fUsedMass / m_fBuoyancyConstant;
+        fBuoyancyForceZ = ((fUsedMass / m_fBuoyancyConstant) * fBuoyancyForceZ) * 1.05F; // 0x6A8CE5..0x6A8CF5
 
     if (physicalFlags.bMakeMassTwiceAsBig)
         fBuoyancyForceZ *= 1.5F;
 
-    auto fBuoyancyForceMult = std::max(0.5F, 1.0F - fBuoyancyForceZ / 20.0F);
-    auto fSpeedMult = std::pow(fBuoyancyForceMult, CTimer::GetTimeStep()); // todo:: shadow var
+    auto fBuoyancyForceMult = std::max(0.5F, 1.0F - fBuoyancyForceZ * 0.05F); // 0x6A8D14: multiply by 0.05f, not divide by 20
+    // pow() (the exe's _CIpow, 0x822130) returns its result on the x87 stack and 0x6A8D54 stores it as a float
+    auto fSpeedMult = (float)pow((double)fBuoyancyForceMult, (double)CTimer::GetTimeStep()); // todo:: shadow var
 
     if (m_nModelIndex != MODEL_VORTEX
         || GetUp().z <= 0.3F
@@ -5362,10 +5365,11 @@ void CAutomobile::ProcessBuoyancy()
 
         m_vecMoveSpeed.z = std::max(-0.1F, m_vecMoveSpeed.z);
 
-        if (m_fMass * 8.0F / 1250.0F < m_fBuoyancyConstant)
-            m_fBuoyancyConstant -= (m_fMass * 0.01F / 1250.0F);
+        // 0x6A9079..0x6A90C5: float constants 0.0064f (0x871248), 8.0000009e-6f (0x871244), 0.008f (0x863984) multiplied with the mass
+        if (m_fMass * std::bit_cast<float>(0x3BD1B718u) < m_fBuoyancyConstant) // 0x871248 = 0.0064f
+            m_fBuoyancyConstant = m_fBuoyancyConstant - m_fMass * std::bit_cast<float>(0x370637BEu); // 0x871244 = 8.000000889e-06f
 
-        if (m_fBuoyancyConstant < m_fMass / 125.0F)
+        if (m_fBuoyancyConstant < m_fMass * BUOY_MASS_K)
             vehicleFlags.bEngineOn = false;
 
         auto driver = m_pDriver->AsPed();

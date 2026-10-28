@@ -80,10 +80,11 @@ CTask* CTaskComplexLeaveCarAndFlee::CreateNextSubTask(CPed* ped) {
     return CreateSubTask([ped, this] {
         switch (m_pSubTask->GetTaskType()) { // Tasks in same order as they're created
         case TASK_COMPLEX_LEAVE_CAR: {
-            if (!m_veh || !m_veh->IsBoat()) {
+            const auto veh = ped->m_pVehicle; // ASM-S06: exe 0x6423F4 reads the PED's vehicle (+0x58C), not the task's target vehicle
+            if (!veh || !veh->IsBoat()) {
                 return TASK_COMPLEX_SMART_FLEE_POINT;
             }
-            m_fleePoint = m_veh->GetPosition() - m_veh->GetForward() * m_veh->GetModelInfo()->GetColModel()->GetBoundRadius() * 2.f;
+            m_fleePoint = veh->GetPosition() - veh->GetForward() * veh->GetModelInfo()->GetColModel()->GetBoundRadius() * 2.f;
             return TASK_SIMPLE_GO_TO_POINT;
         }
         case TASK_SIMPLE_GO_TO_POINT:

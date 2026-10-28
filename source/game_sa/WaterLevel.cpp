@@ -1777,7 +1777,8 @@ void CWaterLevel::ScanThroughBlocks() {
     const auto frustumPts = TheCamera.GetFrustumPoints();
     CVector2D scanPts[5]{};
     for (auto i = 0; i < 5; i++) {
-        scanPts[i] = CVector2D{ frustumPts[i] } / (float)WATER_BLOCK_SIZE + CVector2D{6.f, 6.f};
+        // 0x6E6DB8: x * 0.002f (0x858F44, not a division by 500) + 6, the product stays unrounded
+        scanPts[i] = CVector2D{ (float)((x87d)frustumPts[i].x * 0.002f + 6.0f), (float)((x87d)frustumPts[i].y * 0.002f + 6.0f) };
     }
     CWorldScan::ScanWorld(scanPts, 5, BlockHit);
 }

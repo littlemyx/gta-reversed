@@ -5412,6 +5412,7 @@ void CAutomobile::ProcessHarvester()
         return;
 
     CStreaming::m_bStreamHarvesterModelsThisFrame = true;
+    const auto dotYZX = [](const CVector& d, const CVector& m) { return d.y * m.y + d.z * m.z + d.x * m.x; };
     if (m_vecMoveSpeed.Magnitude2D() > 0.01f) {
         if ((CTimer::GetFrameCounter() & 1) != 0)
         {
@@ -5423,12 +5424,13 @@ void CAutomobile::ProcessHarvester()
                 if (ped->IsPlayer())
                     continue;
 
+                // 0x6A9680: every dot product here sums y, z, x (in that order)
                 CVector distance = ped->GetPosition() - GetPosition();
-                float distanceForward = DotProduct(distance, GetForward());
+                float distanceForward = dotYZX(distance, GetForward());
                 if (distanceForward > 4.0f && distanceForward < 5.0f) {
-                    float distanceRight = std::abs(DotProduct(distance, GetRight()));
+                    float distanceRight = std::abs(dotYZX(distance, GetRight()));
                     if (distanceRight < 4.0f) {
-                        float distanceUp = std::abs(DotProduct(distance, GetUp()));
+                        float distanceUp = std::abs(dotYZX(distance, GetUp()));
                         if (distanceUp < 4.0f) {
                             ped->FlagToDestroyWhenNextProcessed();
                             m_harvesterParticleCounter = 20;
@@ -5445,15 +5447,18 @@ void CAutomobile::ProcessHarvester()
                 if (!object)
                     continue;
 
-                if (m_nModelIndex != ModelIndices::MI_GRASSHOUSE && m_nModelIndex != ModelIndices::MI_GRASSPLANT)
+                // 0x6A98A0: the OBJECT's model (the port tested this car's), and the object must be visible and not render-damaged
+                if (object->m_nModelIndex != ModelIndices::MI_GRASSHOUSE && object->m_nModelIndex != ModelIndices::MI_GRASSPLANT)
+                    continue;
+                if (!object->m_bIsVisible || object->m_bRenderDamaged)
                     continue;
 
                 CVector distance1 = object->GetPosition() - GetPosition();
-                float distanceForward1 = DotProduct(distance1, GetForward());
+                float distanceForward1 = dotYZX(distance1, GetForward());
                 if (distanceForward1 > 4.0f && distanceForward1 < 5.0f) {
-                    float distanceRight1 = std::abs(DotProduct(distance1, GetRight()));
+                    float distanceRight1 = std::abs(dotYZX(distance1, GetRight()));
                     if (distanceRight1 < 4.0f) {
-                        float distanceUp1 = std::abs(DotProduct(distance1, GetUp()));
+                        float distanceUp1 = std::abs(dotYZX(distance1, GetUp()));
                         if (distanceUp1 < 4.0f)
                             object->ObjectDamage(99999.0f, nullptr, nullptr, this, WEAPON_RUNOVERBYCAR);
                     }
@@ -5467,8 +5472,11 @@ void CAutomobile::ProcessHarvester()
 
     CVector pos = m_matrix->TransformPoint(CVector(-1.2f, -3.8f, 1.5f));
     CVector velocity = GetForward() * -0.1f;
-    velocity.x += CGeneral::GetRandomNumberInRange(0.05f, -0.05f);
-    velocity.y += CGeneral::GetRandomNumberInRange(0.05f, -0.05f);
+    // 0x6A9A2C: ((rand() * (1/32767)) * 0.1 + v) - 0.05 per axis (the port added range(0.05, -0.05) = 0.05 - 0.1t: the mirrored value)
+    for (float* v : { &velocity.x, &velocity.y }) {
+        const float t = static_cast<float>(CGeneral::GetRandomNumber()) * RAND_MAX_FLOAT_RECIPROCAL;
+        *v = t * 0.1f + *v - 0.05f;
+    }
     int32 bodyPartModelId = -1;
     switch (m_harvesterParticleCounter - 1) { // todo: remove -1 and refactor?
     case 0:
@@ -5489,14 +5497,14 @@ void CAutomobile::ProcessHarvester()
 
     if (CLocalisation::ShootLimbs() && bodyPartModelId >= 0) {
         auto* limb = new CObject(bodyPartModelId, true);
-        CPlaceable::SetMatrix(*m_matrix);
+        limb->CPlaceable::SetMatrix(*m_matrix); // 0x6A9AFD: on the limb (the port called it on this car)
         limb->SetPosn(pos);
         limb->m_vecMoveSpeed = velocity;
-        limb->m_vecTurnSpeed = CVector{
-            CGeneral::GetRandomNumberInRange(0.12f, -0.04f),
-            CGeneral::GetRandomNumberInRange(0.12f, -0.04f),
-            CGeneral::GetRandomNumberInRange(0.12f, -0.04f)
-        };
+        // 0x6A9B25-0x6A9B9A: SetTurnSpeed(x, y, z) with the args evaluated right to left (z first), each rand() * (1/32767) * 0.08 - 0.04 (the port used range(0.12, -0.04))
+        const float turnZ = CGeneral::GetRandomNumberInRange(-0.04f, 0.04f);
+        const float turnY = CGeneral::GetRandomNumberInRange(-0.04f, 0.04f);
+        const float turnX = CGeneral::GetRandomNumberInRange(-0.04f, 0.04f);
+        limb->m_vecTurnSpeed = CVector{ turnX, turnY, turnZ };
         limb->m_nObjectType = OBJECT_TEMPORARY;
         limb->UpdateRwMatrix();
         limb->UpdateRwFrame();

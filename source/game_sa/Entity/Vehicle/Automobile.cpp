@@ -5964,7 +5964,8 @@ void CAutomobile::TankControl()
         if (CPad::GetPad()->CarGunJustDown()) {
             if (CTimer::GetTimeInMS() > m_nGunFiringTime + TIGER_GUNFIRE_RATE) {
                 CWeapon minigun(WEAPON_MINIGUN, 5000);
-                CVector point = m_matrix->TransformPoint(TIGER_GUN_POS + CTimer::GetTimeStep() * m_vecMoveSpeed);
+                // 0x6AE8FA-0x6AE950: the exe rotates the gun position only and adds the (world space) timestep * move speed afterwards
+                CVector point = m_matrix->TransformPoint(TIGER_GUN_POS) + CTimer::GetTimeStep() * m_vecMoveSpeed;
                 minigun.FireInstantHit(this, &point, &point, nullptr, nullptr, nullptr, false, true);
                 CVector2D direction(0.0f, 0.1f);
                 minigun.AddGunshell(this, point, direction, 0.025f);
@@ -5999,12 +6000,15 @@ void CAutomobile::TankControl()
         else if (doomVerticalRotation > m_fDoomVerticalRotation + PI)
             doomVerticalRotation = doomVerticalRotation - TWO_PI;
 
-        float doomVerticalRotDiff = doomVerticalRotation - m_fDoomVerticalRotation;
+        // 0x6AEADF-0x6AEB2F: the vertical rotation snaps to the target within one step (like the horizontal one below)
+        const float doomVerticalRotDiff = doomVerticalRotation - m_fDoomVerticalRotation;
         float timeStep = CTimer::GetTimeStep() * 0.015f;
-        if (doomVerticalRotDiff < -timeStep)
-            m_fDoomVerticalRotation -= timeStep;
-        else if (doomVerticalRotDiff > timeStep)
+        if (doomVerticalRotDiff > timeStep)
             m_fDoomVerticalRotation += timeStep;
+        else if (doomVerticalRotDiff > -timeStep)
+            m_fDoomVerticalRotation = (float)doomVerticalRotation;
+        else
+            m_fDoomVerticalRotation -= timeStep;
 
         float doomHorizontalRotDiff = doomHorizontalRotation - m_fDoomHorizontalRotation;
         timeStep = CTimer::GetTimeStep() * 0.005f;
@@ -6028,10 +6032,9 @@ void CAutomobile::TankControl()
         m_fDoomHorizontalRotation = DOOM_HORIZONTAL_ROT_MAX;
     }
     else if (m_fDoomVerticalRotation > DegreesToRadians(90) || m_fDoomVerticalRotation < -DegreesToRadians(90)) {
-        float cosDoomVerticalRot = X87R(x87::cos(m_fDoomVerticalRotation) * 1.3f);
-        float doomHorizontalRot = -DegreesToRadians(3);
-        if (cosDoomVerticalRot >= -1.0f)
-            doomHorizontalRot = DOOM_HORIZONTAL_ROT_MIN - cosDoomVerticalRot * (doomHorizontalRot - DOOM_HORIZONTAL_ROT_MIN);
+        // 0x6AEC95-0x6AECDD: std::max(-1.0f, cos * 1.3f) (0x420800) feeds the formula, there is no separate branch for < -1
+        const float cosDoomVerticalRot = std::max(-1.0f, (float)X87R(x87::cos(m_fDoomVerticalRotation) * 1.3f));
+        const float doomHorizontalRot = (float)(X87R((x87d)DOOM_HORIZONTAL_ROT_MIN - X87R((x87d)cosDoomVerticalRot * (x87d)(-DegreesToRadians(3) - DOOM_HORIZONTAL_ROT_MIN))));
         if (doomHorizontalRot > m_fDoomHorizontalRotation)
             m_fDoomHorizontalRotation = doomHorizontalRot;
     }
@@ -6065,9 +6068,8 @@ void CAutomobile::TankControl()
                 doomOffset.x += cosVerticalDoomRot * TANK_SHOT_DOOM_DISTANCE_TO_DEFAULT_TARGET.x;
                 doomOffset.x -= sinVerticalDoomRot * TANK_SHOT_DOOM_DISTANCE_TO_DEFAULT_TARGET.y;
 
-                doomOffset.y = TANK_SHOT_DOOM_POS.y;
-                doomOffset.y += cosVerticalDoomRot * TANK_SHOT_DOOM_DISTANCE_TO_DEFAULT_TARGET.y;
-                doomOffset.y += sinVerticalDoomRot * TANK_SHOT_DOOM_DISTANCE_TO_DEFAULT_TARGET.x;
+                // 0x6AEE5F-0x6AEE91: POS.y + (cos * dy + sin * dx)
+                doomOffset.y = TANK_SHOT_DOOM_POS.y + (cosVerticalDoomRot * TANK_SHOT_DOOM_DISTANCE_TO_DEFAULT_TARGET.y + sinVerticalDoomRot * TANK_SHOT_DOOM_DISTANCE_TO_DEFAULT_TARGET.x);
 
                 doomOffset.z = TANK_SHOT_DOOM_POS.z;
                 doomOffset.z += TANK_SHOT_DOOM_DISTANCE_TO_DEFAULT_TARGET.z - 1.0f;
@@ -6079,7 +6081,7 @@ void CAutomobile::TankControl()
             }
 
             CVector distance = newTurretPosition - GetPosition();
-            CVector force = point * -0.1f * m_fMass;
+            CVector force = point * (-0.1f * m_fMass); // 0x6AEECC-0x6AEF01: the scalar -0.1 * mass is rounded first
             ApplyForce(force, distance, true);
             CVector endPoint = newTurretPosition + point * 60.0f;
             CWeapon::DoTankDoomAiming(this, m_pDriver, &newTurretPosition, &endPoint);

@@ -1,0 +1,24 @@
+addr	function	verdict	asm_range	note	fix_commit
+0x67D590	CTaskSimpleJump::CheckIfJumpBlocked	FIXED	0x67D590-0x67D78F	probe point z summed (pos.z+fwd.z*.25)+center.z+.25 in the exe, port added center.z+.25 as one term	74ac10e0
+0x679B80	CTaskSimpleJump::Launch	FIXED	0x679B80-0x67A019	slow test is mag2 < hs*hs (port hs); footprint front=fwd*0.26, side=RIGHT*0.14, z=(v.z-0.1)+v1.z; unsigned death-counter compare	cd97d3fd
+0x67D7A0	CTaskSimpleJump::StartLaunchAnim	FIXED	0x67D7A0-0x67D95A	IsPlayerAllowedToGoInThisDirection test only on non-steep ground (port also on steep slope with dot>=0)	d6f20998
+0x680C60	CTaskSimpleJump::ProcessPed	MATCH	0x680C60-0x680DA7	climb test, blocked/launch, SoundQuiet(45,-1), StartLaunchAnim flow
+0x64AE90	CTaskSimplePickUpBike::StartAnim	MATCH	0x64AE90-0x64AF21	door 10/11 vs rest anim choice and 8.0 blend; only a NaN rightZ differs
+0x64D910	CTaskSimplePickUpBike::ProcessPed	FIXED	0x64D910-0x64D99F	null vehicle returns true; only the 4 align anim ids; threshold 0.4667 (port 0.47)	81e486b2
+0x6462D0	CTaskSimplePickUpBike::SetPedPosition	MATCH	0x6462D0-0x6462DA	LineUp::ProcessPed(ped, veh, anim)
+0x6335C0	CTaskSimplePlayerOnFire::ProcessPed	FIXED	0x6335C0-0x633796	scream when health!=0 or (zero and event not yet added); health zero+added returns true silently; m_bAddedDamageEvent=1 after Add (port never set it)	e7aa3233
+0x687C20	CTaskSimplePlayerOnFoot::PlayerControlZeldaWeapon	NOT_REACHED		token budget
+0x687F30	CTaskSimplePlayerOnFoot::PlayerControlDucked	NOT_REACHED		token budget
+0x6872C0	CTaskSimplePlayerOnFoot::PlayIdleAnimations	NOT_REACHED		token budget
+0x687530	CTaskSimplePlayerOnFoot::PlayerControlFighter	NOT_REACHED		token budget
+0x6883D0	CTaskSimplePlayerOnFoot::PlayerControlZelda	NOT_REACHED		token budget
+0x6857E0	CTaskSimplePlayerOnFoot::MakeAbortable	MATCH	0x6857E0-0x6859A2	immediate/urgent paths, secondary-attack abort, camera/crosshair/target clear conditions
+0x688810	CTaskSimplePlayerOnFoot::ProcessPed	NOT_REACHED		token budget
+0x48E440	CTaskSimpleSay::ProcessPed	MATCH	0x48E440-0x48E4B0	unguarded timer start, Say(ctx,0,1.0), unsigned now>=start+interval
+0x649020	CTaskSimpleSetPedAsAutoDriver::ProcessPed	FIXED	0x649020-0x64907E	bEngineOn was set to bEngineBroken; exe sets it to !bEngineBroken	d0d1acd2
+0x692DF0	CTaskSimpleShakeFist::StartAnim	MATCH	0x692DF0-0x692E2C	FUCKU blend 4.0, flags 8|4, delete callback
+0x693BA0	CTaskSimpleShakeFist::ProcessPed	MATCH	0x693BA0-0x693BC0
+0x6379F0	CTaskSimpleSitDown::StartAnim	MATCH	0x6379F0-0x637A39	step: group 0x35 anim 0x134 else 0/0x94, blend 4.0, finish callback
+0x639960	CTaskSimpleSitDown::ProcessPed	MATCH	0x639960-0x639980
+0x631260	CTaskSimpleSitIdle::StartAnim	FIXED	0x631260-0x6312D8	timer started unguarded (SYSTEMIC_TODO Start vs StartUnguarded)	96dace32
+0x637A60	CTaskSimpleSitIdle::ProcessPed	FIXED	0x637A60-0x637D3F	lookTime 3000..8000 (port ..5000); cone dot (z,y,x order) tested before the 25% roll; fwd-rand then right-rand sequenced	010de470

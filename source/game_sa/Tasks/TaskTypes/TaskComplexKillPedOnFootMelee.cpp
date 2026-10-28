@@ -69,6 +69,7 @@ CTask* CTaskComplexKillPedOnFootMelee::CreateSubTask(eTaskType taskType, CPed* p
         };
     }
     case TASK_COMPLEX_SEEK_ENTITY:
+        m_pauseTimer = -1; // ASM-S06: exe 0x626CB8
         return new CTaskComplexSeekEntity<CEntitySeekPosCalculatorStandard>{
             m_target,
             50'000,
@@ -84,16 +85,19 @@ CTask* CTaskComplexKillPedOnFootMelee::CreateSubTask(eTaskType taskType, CPed* p
         if (m_pauseTimer == -1) {
             m_pauseTimer = (int32)CTimer::GetTimeInMS();
         }
-        return new CTaskSimplePause{};
+        return new CTaskSimplePause{100}; // ASM-S06: exe 0x626C9A `push 0x64`
     }
     case TASK_SIMPLE_STAND_STILL:
+        m_pauseTimer = -1; // ASM-S06: exe 0x626BEA
         return new CTaskSimpleStandStill{2000};
     case TASK_COMPLEX_SEQUENCE:
+        m_pauseTimer = -1; // ASM-S06: exe 0x626B12
         return new CTaskComplexSequence{
             new CTaskComplexTurnToFaceEntityOrCoord{m_target},
             new CTaskSimpleShakeFist{}
         };
     case TASK_FINISHED:
+        m_pauseTimer = -1; // ASM-S06: exe 0x626D26
         return nullptr;
     default:
         NOTSA_UNREACHABLE();
@@ -101,9 +105,10 @@ CTask* CTaskComplexKillPedOnFootMelee::CreateSubTask(eTaskType taskType, CPed* p
     }
 }
 
-bool CTaskComplexKillPedOnFootMelee::IsTargetInRange(CPed* ped, float range) {
+// ASM-S06: the exe calls CalculateSearchPositionAndRanges and only then reads the range (the port used to pass the stale range by value)
+float CTaskComplexKillPedOnFootMelee::UpdateTargetDistSq(CPed* ped) {
     CalculateSearchPositionAndRanges(ped);
-    return sq(range) <= (ped->GetPosition() - m_targetPos).SquaredMagnitude();
+    return (ped->GetPosition() - m_targetPos).SquaredMagnitude();
 }
 
 // 0x62BC10
@@ -117,11 +122,12 @@ CTask* CTaskComplexKillPedOnFootMelee::CreateNextSubTask(CPed* ped) {
         return Create(TASK_SIMPLE_FIGHT_CTRL);
     case TASK_SIMPLE_STAND_STILL:
     case TASK_COMPLEX_SEQUENCE: // 0x62BC4A
-        return m_target->physicalFlags.bSubmergedInWater
-            ? CreateFirstSubTask(ped)
-            : Create(TASK_SIMPLE_STAND_STILL);
+        return m_target->physicalFlags.bSubmergedInWater // ASM-S06: exe 0x62BC5E `je` (not submerged) => CreateFirstSubTask; the port had this inverted
+            ? Create(TASK_SIMPLE_STAND_STILL)
+            : CreateFirstSubTask(ped);
     case TASK_SIMPLE_PAUSE: { // 0x62BC98
-        if (!IsTargetInRange(ped, m_arriveRange)) {
+        const auto distSq = UpdateTargetDistSq(ped);
+        if (!(sq(m_arriveRange) < distSq)) { // ASM-S06: exe 0x62BCD8 `fcompp; jp` => in range when range^2 >= dist^2 or NaN
             return Create(TASK_SIMPLE_FIGHT_CTRL);
         }
         if (!ped->bStayInSamePlace) {
@@ -141,7 +147,7 @@ CTask* CTaskComplexKillPedOnFootMelee::CreateNextSubTask(CPed* ped) {
             return Create(TASK_SIMPLE_PAUSE);
         }
         return Create(
-            IsTargetInRange(ped, m_arriveRange)
+            sq(m_arriveRange) < UpdateTargetDistSq(ped) // ASM-S06: exe 0x62BDD9/0x62BDE8 (strict, range read after the update)
                 ? TASK_COMPLEX_SEEK_ENTITY
                 : TASK_SIMPLE_PAUSE
         );
@@ -160,7 +166,8 @@ CTask* CTaskComplexKillPedOnFootMelee::CreateFirstSubTask(CPed* ped) {
         return nullptr;
     }
     return CreateSubTask([this, ped] {
-        if (!IsTargetInRange(ped, m_arriveRange)) {
+        const auto distSq = UpdateTargetDistSq(ped);
+        if (!(sq(m_arriveRange) < distSq)) { // ASM-S06: exe 0x62BEB5-0x62BEC4 (strict; range read after the update)
             return TASK_SIMPLE_FIGHT_CTRL;
         }
         return ped->bStayInSamePlace
@@ -198,7 +205,8 @@ CTask* CTaskComplexKillPedOnFootMelee::ControlSubTask(CPed* ped) {
         if (m_target->physicalFlags.bSubmergedInWater) {
             return TryAbortAndCreate(TASK_COMPLEX_SEQUENCE);
         }
-        if (IsTargetInRange(ped, m_arriveRange)) {
+        const auto distSq = UpdateTargetDistSq(ped);
+        if (!(sq(m_arriveRange) > distSq)) { // ASM-S06: exe 0x626F7E-0x626F85 (`test ah, 0x41; jne` => keep the subtask when range^2 <= dist^2 or NaN)
             return m_pSubTask;
         }
         return TryAbortAndCreate(TASK_SIMPLE_FIGHT_CTRL);
@@ -207,7 +215,8 @@ CTask* CTaskComplexKillPedOnFootMelee::ControlSubTask(CPed* ped) {
         if (m_target->physicalFlags.bSubmergedInWater) {
             return TryAbortAndCreate(TASK_COMPLEX_SEQUENCE);
         }
-        if (!IsTargetInRange(ped, m_attackRange)) {
+        const auto distSq = UpdateTargetDistSq(ped);
+        if (!(sq(m_attackRange) < distSq)) { // ASM-S06: exe 0x626EB0-0x626EB7 (`jp` => keep the subtask when range^2 >= dist^2 or NaN)
             return m_pSubTask;
         }
         return TryAbortAndCreate(

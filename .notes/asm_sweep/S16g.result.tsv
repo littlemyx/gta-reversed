@@ -1,0 +1,7 @@
+addr	function	verdict	asm range	note	fix commit
+0x6AA290	CAutomobile::UpdateWheelMatrix	MATCH	0x6AA290-0x6AAB2F	nodes/steer/scale/solid-axle/hover/ground-angle/particles and all 20 constants compared	-
+0x6AE850	CAutomobile::TankControl	FIXED	0x6AE850-0x6AF102	see ASM-S16g.md	02a7a0d5
+0x6A07A0	CAutomobile::HydraulicControl	FIXED	0x6A07A0-0x6A1459	see ASM-S16g.md	40e8bfd0
+0x6A8C00	CAutomobile::ProcessBuoyancy	NOT_REACHED	-	token budget	-
+0x6A7650	CAutomobile::VehicleDamage	NOT_REACHED	-	token budget	-
+0x6AAB50	CAutomobile::PreRender	NOT_REACHED	-	token budget	-

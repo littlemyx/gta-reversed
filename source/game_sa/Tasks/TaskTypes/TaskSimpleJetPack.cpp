@@ -252,7 +252,7 @@ void CTaskSimpleJetPack::ProcessThrust(CPed* ped) {
             auto thrustFwd = ped->GetForward() * -x87::sin(m_ThrustAngle);
             thrustFwd.z    = std::min(0.75f, thrustFwd.z);
 
-            const auto heightMult = std::clamp(1.f - (ped->GetPosition().z - (TheCamera.CalculateGroundHeight(eGroundHeightType::ENTITY_BB_TOP) + 100.f)) / 100.f, 0.f, 1.f);
+            const auto heightMult = std::clamp(1.f - (ped->GetPosition().z - (TheCamera.CalculateGroundHeight(eGroundHeightType::ENTITY_BB_TOP) + 100.f)) * 0.05f, 0.f, 1.f); // 0x67F28C fmul [0x858C28]=0.05f: the exe fades over 20 units (the port divided by 100)
             ApplyThrust(thrustFwd + thrustUp, THRUST_FULL * heightMult);
         }
 

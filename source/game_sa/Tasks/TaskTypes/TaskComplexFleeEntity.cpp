@@ -83,9 +83,11 @@ CTask* CTaskComplexFleeEntity::CreateNextSubTask(CPed* ped) {
 
 // 0x65BB00
 CTask* CTaskComplexFleeEntity::CreateFirstSubTask(CPed* ped) {
-    if (!m_entity) {
+#ifdef FIX_BUGS
+    if (!m_entity) { // the exe (0x65BB00) does not test this (null deref at 0x65BB24)
         return nullptr;
     }
+#endif
 
     g_InterestingEvents.Add(CInterestingEvents::INTERESTING_EVENT_13, ped);
 
@@ -107,7 +109,10 @@ CTask* CTaskComplexFleeEntity::CreateFirstSubTask(CPed* ped) {
         );
     }
 
-    // Pos update code moved to `CreateSubTask`
+    // Exe 0x65BB60-0x65BB95: unguarded timer start and the position store happen here (not in CreateSubTask)
+    m_posCheckTimer.StartUnguarded(m_posCheckPeriod);
+    m_pos = m_entity->GetPosition();
+
     return CreateSubTask(TASK_COMPLEX_FLEE_POINT);
 }
 
@@ -117,10 +122,16 @@ CTask* CTaskComplexFleeEntity::ControlSubTask(CPed* ped) {
         if (const auto fleePointTask = notsa::dyn_cast_if_present<CTaskComplexFleePoint>(m_pSubTask)) {
             // Check if position update timer is out of time, if so, update position (if outside tolerance)
             if (m_posCheckTimer.IsOutOfTime()) {
-                m_posCheckTimer.Start(m_posCheckPeriod);
-
                 const auto& currPos = m_entity->GetPosition();
-                if ((currPos - m_pos).SquaredMagnitude() >= sq(m_posChangeTolerance)) {
+                // Exe 0x65BC42-0x65BC7C: (dz2+dy2)+dx2 in extended precision, tolerance^2 must be STRICTLY below it (NaN: no update);
+                // the timer is restarted (unguarded) only when the entity really moved
+                const x87d dx = (x87d)m_pos.x - currPos.x;
+                const x87d dy = (x87d)m_pos.y - currPos.y;
+                const x87d dz = (x87d)m_pos.z - currPos.z;
+                const x87d distSq = (dz * dz + dy * dy) + dx * dx;
+                const x87d tolSq  = (x87d)m_posChangeTolerance * m_posChangeTolerance;
+                if (tolSq < distSq) {
+                    m_posCheckTimer.StartUnguarded(m_posCheckPeriod);
                     m_pos = currPos;
                     fleePointTask->SetFleePosition(m_pos, m_safeDistance, m_pedScream);
                     GetEventGlobalGroup()->Add(CEventSeenPanickedPed{ ped });

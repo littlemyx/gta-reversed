@@ -42,19 +42,20 @@ CTaskComplexShuffleSeats::~CTaskComplexShuffleSeats() {
 CTask* CTaskComplexShuffleSeats::CreateSubTask(eTaskType taskType, CPed* ped) {
     switch (taskType) {
     case TASK_SIMPLE_CAR_SET_PED_IN_AS_DRIVER:
+        m_Veh->RemovePassenger(ped); // 0x63D32F: the exe removes the ped from the passenger list before setting it in as the driver
         return new CTaskSimpleCarSetPedInAsDriver{m_Veh, m_TaskUtilityLineUpPedWithCar};
     case TASK_SIMPLE_CAR_SHUFFLE:
         return new CTaskSimpleCarShuffle{ m_Veh, m_OriginDoor, m_TaskUtilityLineUpPedWithCar };
     case TASK_SIMPLE_CAR_SET_PED_IN_AS_PASSENGER: {
         if (m_Veh->m_pDriver == ped) {
-            m_Veh->RemoveDriver(ped);
+            m_Veh->RemoveDriver(true); // 0x63D291: `push 1`
         } else {
             m_Veh->RemovePassenger(ped);
         }
         return new CTaskSimpleCarSetPedInAsPassenger{ m_Veh, (eTargetDoor)m_TargetDoor, false, m_TaskUtilityLineUpPedWithCar };
     }
     case TASK_SIMPLE_CAR_SET_PED_OUT:
-        return new CTaskSimpleCarSetPedOut{ m_Veh, (eTargetDoor)CCarEnterExit::ComputeTargetDoorToExit(m_Veh, ped), true };
+        return new CTaskSimpleCarSetPedOut{ ped->m_pVehicle, (eTargetDoor)CCarEnterExit::ComputeTargetDoorToExit(ped->m_pVehicle, ped), true }; // 0x63D3B5: the ped's own vehicle ([ped + 0x58C]), not the task's
     case TASK_FINISHED: {
         if (!ped->bInVehicle) {
             ped->SetUsesCollision(true);
@@ -116,6 +117,7 @@ CTask* CTaskComplexShuffleSeats::CreateNextSubTask(CPed* ped) {
         switch (m_pSubTask->GetTaskType()) {
         case TASK_SIMPLE_CAR_SET_PED_IN_AS_DRIVER:
         case TASK_SIMPLE_CAR_SET_PED_IN_AS_PASSENGER:
+        case TASK_SIMPLE_CAR_SET_PED_OUT: // 0x63D57F: sub 0x32C / sub 4 => 0x330 also finishes (non-abort mode)
         case TASK_NONE:
             return TASK_FINISHED;
         case TASK_SIMPLE_CAR_SHUFFLE: {

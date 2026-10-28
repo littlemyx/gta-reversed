@@ -224,8 +224,12 @@ void CTaskSimpleJetPack::RenderJetPack(CPed* ped) {
 
 // 0x67EF20
 void CTaskSimpleJetPack::ProcessThrust(CPed* ped) {
-    const auto ApplyThrust = [&](CVector dir, float mult) {
-        ped->ApplyMoveForce(dir * (MAGIC * ped->m_fMass * CTimer::GetTimeStep() * mult));
+    // 0x67EF4F..: every component is ((((dir * MAGIC) * m1) * m2) * mass) * timestep (the exe multiplies the components one by one, not a precomputed scalar)
+    const auto ApplyThrust = [&](const CVector& dir, float m1, float m2 = 1.f) {
+        const auto Comp = [&](float d) {
+            return ((((d * MAGIC) * m1) * m2) * ped->m_fMass) * CTimer::GetTimeStep();
+        };
+        ped->ApplyMoveForce(CVector{ Comp(dir.x), Comp(dir.y), Comp(dir.z) });
     };
 
     const CVector prevPedVel = ped->GetMoveSpeed();
@@ -239,7 +243,11 @@ void CTaskSimpleJetPack::ProcessThrust(CPed* ped) {
             stopForce *= 0.75f;
         }
         if (sq(stopForce) <= pedSpdSq) {
-            ped->ApplyMoveForce(-ped->GetMoveSpeed() / std::sqrt(pedSpdSq) * stopForce);
+            // 0x67F067: (((-v) * (1 / sqrt(|v|^2))) * stopForce) * mass
+            const auto  invSpd = 1.f / std::sqrt(pedSpdSq);
+            const auto& v      = ped->GetMoveSpeed();
+            const auto  Comp   = [&](float d) { return (((-d) * invSpd) * stopForce) * ped->m_fMass; };
+            ped->ApplyMoveForce(CVector{ Comp(v.x), Comp(v.y), Comp(v.z) });
         } else {
             ped->ResetMoveSpeed();
         }
@@ -247,17 +255,18 @@ void CTaskSimpleJetPack::ProcessThrust(CPed* ped) {
         ApplyThrust(ped->GetUp(), m_ThrustFwd >= 0 ? THRUST_NOMINAL : THRUST_NOMINAL * 0.5f);
 
         if (m_ThrustFwd > 0) { // 0x67F1B7
-            const auto thrustUp = ped->GetUp() * x87::cos(m_ThrustAngle);
+            const auto thrustUp  = ped->GetUp() * x87::cos(m_ThrustAngle);
+            const auto thrustFwd = ped->GetForward() * -x87::sin(m_ThrustAngle);
 
-            auto thrustFwd = ped->GetForward() * -x87::sin(m_ThrustAngle);
-            thrustFwd.z    = std::min(0.75f, thrustFwd.z);
+            auto thrust = thrustFwd + thrustUp;
+            thrust.z    = std::min(0.75f, thrust.z); // 0x67F22B: the z of the SUM is capped (not the forward part alone)
 
             const auto heightMult = std::clamp(1.f - (ped->GetPosition().z - (TheCamera.CalculateGroundHeight(eGroundHeightType::ENTITY_BB_TOP) + 100.f)) * 0.05f, 0.f, 1.f); // 0x67F28C fmul [0x858C28]=0.05f: the exe fades over 20 units (the port divided by 100)
-            ApplyThrust(thrustFwd + thrustUp, THRUST_FULL * heightMult);
+            ApplyThrust(thrust, heightMult, THRUST_FULL); // 0x67F2B5: ((v * MAGIC) * heightMult) * 0.6
         }
 
         if (m_ThrustStrafe != 0.f) { // 0x67F36F
-            ApplyThrust(ped->GetRight(), m_ThrustStrafe * THRUST_STRAFE);
+            ApplyThrust(ped->GetRight() * m_ThrustStrafe, THRUST_STRAFE); // 0x67F383: (right * strafe), then * MAGIC * 0.3
         }
     }
 

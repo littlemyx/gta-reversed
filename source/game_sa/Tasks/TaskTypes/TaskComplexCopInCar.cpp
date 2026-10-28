@@ -252,15 +252,19 @@ CTask* CTaskComplexCopInCar::ControlSubTask(CPed* ped) {
             return m_pSubTask;
         }
 
-        if (m_IsDriver) {
+        if (!m_IsDriver) { // 0x6900C1: test [esi+0x30], 1 / je -> return (the port had this inverted)
             return m_pSubTask;
         }
 
-        if (m_Vehicle->m_fHealth <= 0.f) {
+        if (!(m_Vehicle->m_fHealth > 0.f)) { // fcomp 0.0 / test ah, 0x41 / jne: also true for NaN
             return m_pSubTask;
         }
 
         if (m_Vehicle->m_pFire) {
+            return m_pSubTask;
+        }
+
+        if (m_Vehicle->IsUpsideDown()) { // 0x6900E2: the port was missing this check
             return m_pSubTask;
         }
 
@@ -274,7 +278,7 @@ CTask* CTaskComplexCopInCar::ControlSubTask(CPed* ped) {
             }
         }
 
-        if ((m_Vehicle->GetPosition() - ped->GetPosition()).SquaredMagnitude() >= 4.f * 4.f) {
+        if (!((m_Vehicle->GetPosition() - ped->GetPosition()).SquaredMagnitude() < 4.f * 4.f)) { // exe continues only if < 16.0 (NaN returns)
             return m_pSubTask;
         }
 
@@ -322,18 +326,18 @@ CTask* CTaskComplexCopInCar::ControlSubTask(CPed* ped) {
             && (m_Suspect->m_pVehicle->GetPosition() - ped->GetPosition()).SquaredMagnitude() <= 10.f * 10.f) // Same code used above
             || !m_pSubTask->MakeAbortable(ped) // This is really weird.. Here they check if its not abortable, then below check if its abortable..
         ) {
-            if (m_Timer1.IsOutOfTime()) {
-                if (m_pSubTask->MakeAbortable(ped)) {
-                    m_flag0x2 = false;
-                    m_Timer1.m_bStarted = false;
-                    return CreateNextSubTask(ped);
-                }
-                return m_pSubTask;
+            // 0x68FFDE: not out of time (or not abortable) -> keep the sub task; the port fell through to the drive-mission creation below
+            if (m_Timer1.IsOutOfTime() && m_pSubTask->MakeAbortable(ped)) {
+                m_flag0x2 = false;
+                m_Timer1.m_bStarted = false;
+                return CreateNextSubTask(ped);
             }
+            return m_pSubTask;
         }
 
         m_flag0x2 = false;
         m_flag0x4 = false;
+        m_Timer1.m_bStarted = false; // exe: mov byte [esi+0x20], 0 (the port kept the timer running)
         m_bIsSuspectInCar = m_Suspect->bInVehicle;
         return CreateSubTask(TASK_COMPLEX_CAR_DRIVE_MISSION, ped);
     }

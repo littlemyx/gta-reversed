@@ -67,4 +67,5 @@
 | S16d | rest of S16c | 15 | partial 3/15 (3 fixed) -> S16e | Automobile.cpp |
 | S16e | rest of S16d | 12 | partial 2/12 (2 fixed) -> S16f | Automobile.cpp |
 | S16f | rest of S16e | 10 | partial 4/10 (4 fixed) -> S16g | Automobile.cpp |
-| S16g | rest of S16f | 6 | pending | Automobile.cpp |
+| S16g | rest of S16f | 6 | partial 3/6 (1 M, 2 fixed) -> S16h | Automobile.cpp |
+| S16h | rest of S16g | 3 | pending | Automobile.cpp |

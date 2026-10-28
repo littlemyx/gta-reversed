@@ -36,8 +36,11 @@ void CRegisteredMotionBlurStreak::Render()
         if (!m_acRenderHistory[0] || !m_acRenderHistory[iInd + 1])
             continue;
 
-        auto ucAlpha1 = NOTSA_FTOL(RwUInt8, (static_cast<float>(m_color.a) * static_cast<float>(iAlpha) / 3.0F) / 255.0F);
-        auto ucAlpha2 = NOTSA_FTOL(RwUInt8, (static_cast<float>(m_color.a) * static_cast<float>(iAlpha-85) / 3.0F) / 255.0F);
+        // 0x721FA8..0x721FF0: INTEGER (alpha / 3) * color.a (imul 0x55555556), then fild + fmul [0x859A3C] (= 1/255 as float 0x3B808081), _ftol.
+        // The port divided in float (a * alpha / 3.0F) and then by 255.0F.
+        constexpr float kInv255 = std::bit_cast<float>(0x3B808081u);
+        auto ucAlpha1 = NOTSA_FTOL(RwUInt8, static_cast<float>((iAlpha / 3) * (int32)m_color.a) * kInv255);
+        auto ucAlpha2 = NOTSA_FTOL(RwUInt8, static_cast<float>(((iAlpha - 85) / 3) * (int32)m_color.a) * kInv255);
 
         auto rwColor1 = CRGBA(m_color.r, m_color.g, m_color.b, ucAlpha1).ToRwRGBA();
         auto rwColor2 = CRGBA(m_color.r, m_color.g, m_color.b, ucAlpha2).ToRwRGBA();

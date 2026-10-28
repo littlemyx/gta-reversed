@@ -177,13 +177,13 @@ CTask* CTaskComplexUseMobilePhone::ControlSubTask(CPed* ped) {
         const auto phoneIn  = RpAnimBlendClumpGetAssociation(ped->GetRpClump(), (uint32)ANIM_ID_PHONE_IN);
         const auto phoneOut = RpAnimBlendClumpGetAssociation(ped->GetRpClump(), (uint32)ANIM_ID_PHONE_OUT);
         if (phoneIn) {
-            if (!((double)phoneIn->m_CurrentTime < (double)0.85f)) { // fcomp float 0x862E1C = 0.85f; `jne` on C0 => NaN passes
+            if ((double)phoneIn->m_CurrentTime >= (double)0.85f) { // 0x634DD0: fcomp float 0x862E1C = 0.85f; `test ah,1; jne` skips on < AND on NaN (unordered sets C0)
                 ped->AddWeaponModel(PHONE_MODEL_ID);
             }
         } else if (phoneOut) {
             // 0x86E4A0 = 1.566 (double)
-            if (!((double)phoneOut->m_CurrentTime < 1.566)) {
-                if (!(((x87d)phoneOut->m_CurrentTime - (x87d)phoneOut->m_TimeStep) >= 1.566)) { // jp after test ah,5 => taken for ">=" only
+            if ((double)phoneOut->m_CurrentTime >= 1.566) { // 0x634DF9: NaN skips
+                if (((x87d)phoneOut->m_CurrentTime - (x87d)phoneOut->m_TimeStep) < 1.566) { // 0x634E0C: `test ah,5; jp` skips for >=, == and NaN
                     HidePhone(ped);
                 }
             }
@@ -194,7 +194,7 @@ CTask* CTaskComplexUseMobilePhone::ControlSubTask(CPed* ped) {
 
     if (const auto pd = ped->GetPlayerData()) {
         pd->m_bPlayerSprintDisabled = true; // +0x84
-        if (!(pd->m_fMoveBlendRatio >= 0.0f)) { // fcomp 0.0f (0x858B50); jp => skipped for ">=" only (NaN is reset too)
+        if (pd->m_fMoveBlendRatio < 0.0f) { // 0x634E90: fcomp 0.0f (0x858B50) + `test ah,5; jp`: reset for < only (NaN is not reset)
             pd->m_fMoveBlendRatio = 0.0f;
         }
         if (const auto task = static_cast<CTaskSimplePlayerOnFoot*>(ped->GetIntelligence()->FindTaskByType(TASK_SIMPLE_PLAYER_ON_FOOT))) {

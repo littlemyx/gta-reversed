@@ -26,6 +26,7 @@
 #include "TaskSimplePickUpBike.h"
 #include "TaskSimpleCarDriveTimed.h"
 #include "TaskComplexLeaveCar.h"
+#include "TaskComplexLeaveCarAndDie.h"
 #include "TaskComplexEnterBoatAsDriver.h"
 #include "TaskComplexFallAndGetUp.h"
 #include "TaskComplexFallAndGetUp.h"
@@ -118,6 +119,7 @@ CTask* CTaskComplexEnterCar::CreateNextSubTask(CPed* ped) {
         case TASK_SIMPLE_CAR_WAIT_FOR_DOOR_NOT_TO_BE_IN_USE:
         case TASK_COMPLEX_GO_TO_CAR_DOOR_AND_STAND_STILL:
         case TASK_SIMPLE_CAR_SLOW_DRAG_PED_OUT:
+        case TASK_SIMPLE_CAR_QUICK_DRAG_PED_OUT: // exe 0x63F8F4 table: 0x331 => FINISHED
         case TASK_SIMPLE_CAR_CLOSE_DOOR_FROM_OUTSIDE:
         case TASK_SIMPLE_CAR_DRIVE_TIMED:
         case TASK_SIMPLE_STAND_STILL:
@@ -165,7 +167,7 @@ CTask* CTaskComplexEnterCar::CreateNextSubTask(CPed* ped) {
         }
 
         m_TargetDoor               = tGoToDoor->m_TargetDoor;
-        m_TargetSeat               = tGoToDoor->m_TargetSeat;
+        m_TargetDoorPos            = tGoToDoor->GetTargetPt(); // exe 0x63EBFB-0x63EC10: the target point is copied, m_TargetSeat is NOT touched
         m_TargetDoorOppositeToFlag = ComputeTargetDoorOppositeToFlag();
 
         if (CCarEnterExit::IsCarDoorInUse(m_Car, m_TargetDoor, m_TargetDoorOppositeToFlag)) { // 0x63EC24
@@ -192,6 +194,15 @@ CTask* CTaskComplexEnterCar::CreateNextSubTask(CPed* ped) {
             ? CreateNextSubTask_AfterSimpleCarAlign(ped)
             : C(TASK_SIMPLE_CAR_ALIGN);
     }
+    case TASK_COMPLEX_LEAVE_CAR: { // 0x63EB65: (missing in the port, which hit NOTSA_UNREACHABLE)
+        if (ped->bInVehicle) {
+            return C(TASK_FINISHED);
+        }
+        if (m_bAsDriver && m_Car->IsBoat()) {
+            return C(TASK_COMPLEX_ENTER_BOAT_AS_DRIVER);
+        }
+        return C(TASK_COMPLEX_GO_TO_CAR_DOOR_AND_STAND_STILL);
+    }
     case TASK_SIMPLE_CAR_ALIGN: // 0x63F2C1
         return CreateNextSubTask_AfterSimpleCarAlign(ped);
     case TASK_SIMPLE_CAR_OPEN_LOCKED_DOOR_FROM_OUTSIDE: { // 0x63ED58
@@ -203,7 +214,7 @@ CTask* CTaskComplexEnterCar::CreateNextSubTask(CPed* ped) {
     }
     case TASK_SIMPLE_CAR_OPEN_DOOR_FROM_OUTSIDE:
     case TASK_SIMPLE_BIKE_PICK_UP: { // 0x63EE0D
-        if (m_Car->GetMoveSpeed().SquaredMagnitude2D() > sq(ped->IsPlayer() ? 0.2f : 0.1f)) { // 0x63EDAB
+        if (m_Car->GetMoveSpeed().Magnitude2D() > (ped->IsPlayer() ? 0.2f : 0.1f)) { // 0x63EDAB (exe 0x63EDB7-0x63EE0D: sqrt(x2+y2) > limit)
             ped->SetUsesCollision(true);
             return C(ped->IsPlayer() ? TASK_FINISHED : TASK_COMPLEX_FALL_AND_GET_UP);
         }
@@ -213,18 +224,20 @@ CTask* CTaskComplexEnterCar::CreateNextSubTask(CPed* ped) {
             return C(TASK_FINISHED);
         }
 
-        if (m_bQuitAfterDraggingPedOut || CCarEnterExit::IsCarSlowJackRequired(m_Car, m_TargetDoor)) { // 0x63EEBE
+        if (m_bQuitAfterDraggingPedOut || CCarEnterExit::IsCarSlowJackRequired(m_Car, m_TargetDoor)) { // 0x63EE5D
             m_DraggedPed = CCarEnterExit::ComputeSlowJackedPed(m_Car, m_TargetDoor); // 0x63EE97: no cleanup of the old reference in the exe
             CEntity::SafeRegisterRef(m_DraggedPed);
 
-            if (m_bQuitAfterDraggingPedOut || m_DraggedPed && !CPedGroups::AreInSameGroup(ped, m_DraggedPed) && !m_DraggedPed->bDontDragMeOutCar) { // 0x63EEBE
+            if (m_bQuitAfterDraggingPedOut || m_DraggedPed && !CPedGroups::AreInSameGroup(m_DraggedPed, ped) && !m_DraggedPed->bDontDragMeOutCar) { // 0x63EEBE (exe pushes ped, then the dragged ped)
                 if (m_DraggedPed && m_DraggedPed->IsPlayer() && CGameLogic::SkipState == SKIP_IN_PROGRESS) { // 0x63EF63
+                    // exe 0x63EF88: the FINISHED subtask is created first, the group event comes after
+                    const auto finished = C(TASK_FINISHED);
                     if (const auto draggedPedGrp = m_DraggedPed->GetGroup()) {
                         if (draggedPedGrp->GetMembership().IsLeader(m_DraggedPed)) {
                             draggedPedGrp->GetIntelligence().AddEvent(CEventGroupEvent{ m_DraggedPed, new CEventLeaderQuitEnteringCarAsDriver{} });
                         }
                     }
-                    return C(TASK_FINISHED);
+                    return finished;
                 }
 
                 if (m_DraggedPed) { // 0x63F034
@@ -235,12 +248,12 @@ CTask* CTaskComplexEnterCar::CreateNextSubTask(CPed* ped) {
                     OpenCarDoor();
                     return C(TASK_FINISHED);
                 }
+            } else if (m_DraggedPed && (m_bAsDriver ? m_Car->IsDriver(m_DraggedPed) : m_DraggedPed == m_Car->GetPassengers()[CCarEnterExit::ComputePassengerIndexFromCarDoor(m_Car, m_TargetDoor)])) { // 0x63EECE - Check if it's necessary to drag the ped out (exe: only reached when a slow jack was computed above and the drag branch was not taken)
+                if (CCarEnterExit::CarHasDoorToClose(m_Car, (eDoors)m_TargetDoor)) {
+                    return C(TASK_SIMPLE_CAR_CLOSE_DOOR_FROM_OUTSIDE);
+                }
+                return C(TASK_FINISHED);
             }
-        } else if (m_DraggedPed && (m_bAsDriver ? m_Car->IsDriver(m_DraggedPed) : m_DraggedPed == m_Car->GetPassengers()[CCarEnterExit::ComputePassengerIndexFromCarDoor(m_Car, m_TargetDoor)])) { // 0x63EF18 - Check if it's  necessary to drag the ped out
-            if (CCarEnterExit::CarHasDoorToClose(m_Car, (eDoors)m_TargetDoor)) {
-                return C(TASK_SIMPLE_CAR_CLOSE_DOOR_FROM_OUTSIDE);
-            }
-            return C(TASK_FINISHED);
         }
         return C(TASK_SIMPLE_CAR_GET_IN);
     }
@@ -252,11 +265,11 @@ CTask* CTaskComplexEnterCar::CreateNextSubTask(CPed* ped) {
             return C(m_bAsDriver ? TASK_SIMPLE_CAR_SET_PED_IN_AS_DRIVER : TASK_SIMPLE_CAR_SET_PED_IN_AS_PASSENGER);
         }
         if (const auto drvr = m_Car->m_pDriver) {
-            drvr->GetIntelligence()->GetEventGroup().Add(CEventDraggedOutCar{ m_Car, ped, true });
+            drvr->GetIntelligence()->GetEventGroup().Add(CEventDraggedOutCar{ m_Car, ped, true }, true); // exe passes bValid = 1 (0x63F54C / 0x63F6FD)
             drvr->GetIntelligence()->AddTaskPrimaryMaybeInGroup(
                 drvr->IsAlive() && drvr->m_fHealth > 0.f
                     ? new CTaskComplexLeaveCar{ m_Car, CCarEnterExit::ComputeTargetDoorToExit(m_Car, m_Car->m_pDriver), 0, false, true }
-                    : new CTaskComplexLeaveCar{ m_Car, CCarEnterExit::ComputeTargetDoorToExit(m_Car, m_Car->m_pDriver), 0 },
+                    : new CTaskComplexLeaveCarAndDie{ m_Car, CCarEnterExit::ComputeTargetDoorToExit(m_Car, m_Car->m_pDriver), 0 }, // exe 0x63F7B8: ctor 0x62F1A0 = CTaskComplexLeaveCarAndDie
                 true
             );
         }
@@ -296,11 +309,13 @@ CTask* CTaskComplexEnterCar::CreateNextSubTask(CPed* ped) {
         }
 
         if (const auto drvr = m_Car->m_pDriver) {
-            drvr->GetIntelligence()->GetEventGroup().Add(CEventDraggedOutCar{ m_Car, ped, true });
+            drvr->GetIntelligence()->GetEventGroup().Add(CEventDraggedOutCar{ m_Car, ped, true }, true); // exe passes bValid = 1 (0x63F54C / 0x63F6FD)
+            // Exe 0x63F56D-0x63F5F2: only IsAlive() is tested here (no health test) and the variants are the other way round than in CLOSE_DOOR_FROM_INSIDE:
+            // alive => the AndDie ctor 0x62F1A0, not alive => the 5-arg ctor 0x63B8C0 (0, false, true)
             drvr->GetIntelligence()->AddTaskPrimaryMaybeInGroup(
-                drvr->IsAlive() && drvr->m_fHealth > 0.f
-                    ? new CTaskComplexLeaveCar{ m_Car, CCarEnterExit::ComputeTargetDoorToExit(m_Car, m_Car->m_pDriver), 0, false, true }
-                    : new CTaskComplexLeaveCar{ m_Car, CCarEnterExit::ComputeTargetDoorToExit(m_Car, m_Car->m_pDriver), 0 },
+                drvr->IsAlive()
+                    ? new CTaskComplexLeaveCarAndDie{ m_Car, CCarEnterExit::ComputeTargetDoorToExit(m_Car, m_Car->m_pDriver), 0 } // ctor 0x62F1A0 = CTaskComplexLeaveCarAndDie (vtable 0x86DD00)
+                    : new CTaskComplexLeaveCar{ m_Car, CCarEnterExit::ComputeTargetDoorToExit(m_Car, m_Car->m_pDriver), 0, false, true },
                 true
             );
         }
@@ -339,6 +354,7 @@ CTask* CTaskComplexEnterCar::CreateNextSubTask(CPed* ped) {
         }
 
         if (m_bCarryOnAfterFallingOff) {
+            C(TASK_FINISHED); // exe 0x63EB21-0x63EB31: FINISHED (its side effects) runs first, then the first subtask is created
             return CreateFirstSubTask(ped);
         }
         return C(TASK_FINISHED);
@@ -387,18 +403,19 @@ CTask* CTaskComplexEnterCar::CreateNextSubTask_AfterSimpleCarAlign(CPed* ped) {
                     false
                 );
                 };
-            rng::for_each(m_Car->GetPassengers(), ProcessOneOccupant);
+            rng::for_each(m_Car->m_apPassengers, ProcessOneOccupant); // exe 0x640150: all 8 slots (0x464..0x484), not only m_nMaxPassengers
             ProcessOneOccupant(m_Car->m_pDriver);
         }
     };
     const auto C = [&, this](eTaskType tt, bool bDoLookAt = true){
+        const auto subTask = CreateSubTask(tt, ped); // exe: stored in a local, the look-at block (0x64013B) runs after it
         if (bDoLookAt) {
             DoLookAtPassengers();
         }
-        return CreateSubTask(tt, ped);
+        return subTask;
     };
 
-    if (m_Car->GetMoveSpeed().SquaredMagnitude2D() > sq(ped->IsPlayer() ? 0.2f : 0.1f)) {
+    if (m_Car->GetMoveSpeed().Magnitude2D() > (ped->IsPlayer() ? 0.2f : 0.1f)) { // exe 0x63F9AB-0x63FA00: sqrt(x2+y2) > limit
         ped->SetUsesCollision(true);
         return C(ped->IsPlayer() ? TASK_FINISHED : TASK_COMPLEX_FALL_AND_GET_UP);
     }
@@ -449,17 +466,19 @@ CTask* CTaskComplexEnterCar::CreateNextSubTask_AfterSimpleCarAlign(CPed* ped) {
                     return C(CCarEnterExit::CarHasDoorToClose(m_Car, m_TargetDoor) ? TASK_SIMPLE_CAR_CLOSE_DOOR_FROM_OUTSIDE : TASK_FINISHED);
                 }
             }
-            DoLookAtPassengers();
-            return CreateDragPedOutSubTask(ped);
+            const auto dragSubTask = CreateDragPedOutSubTask(ped);
+            DoLookAtPassengers(); // exe: after the drag tasks/events (0x64013B)
+            return dragSubTask;
         }
 
+        const auto finishedSubTask = CreateSubTask(TASK_FINISHED, ped); // exe 0x63FB95: FINISHED is created before the group event
         if (const auto pedGrp = m_DraggedPed->GetGroup()) { // 0x63FB95
             if (pedGrp->GetMembership().IsLeader(m_DraggedPed)) {
                 pedGrp->GetIntelligence().AddEvent(CEventGroupEvent{ m_DraggedPed, new CEventLeaderQuitEnteringCarAsDriver{} });
             }
         }
-
-        return C(TASK_FINISHED);
+        DoLookAtPassengers();
+        return finishedSubTask;
     }
 
     if (!CCarEnterExit::IsCarSlowJackRequired(m_Car, m_TargetDoor)) {
@@ -471,7 +490,9 @@ CTask* CTaskComplexEnterCar::CreateNextSubTask_AfterSimpleCarAlign(CPed* ped) {
             if (const auto& r = m_Car->GetRight(); r.z >= 0.5f || r.z <= -0.5f || m_Car->GetUp().z <= 0.f) { // 0x6400F3 - Check if the bike is on it's side
                 return C(TASK_SIMPLE_BIKE_PICK_UP);
             }
+            const auto getInSubTask = C(TASK_SIMPLE_CAR_GET_IN); // exe 0x64010D..0x640119: the flag is set after the subtask is created
             m_Car->AsBike()->bikeFlags.bGettingPickedUp = true;
+            return getInSubTask;
         }
 
         return C(TASK_SIMPLE_CAR_GET_IN);
@@ -482,29 +503,33 @@ CTask* CTaskComplexEnterCar::CreateNextSubTask_AfterSimpleCarAlign(CPed* ped) {
 
 
     if (m_DraggedPed && m_DraggedPed->IsPlayer() && CGameLogic::SkipState == SKIP_IN_PROGRESS) { // 0x63FE9B - Inverted
+        const auto finishedSubTask = CreateSubTask(TASK_FINISHED, ped); // exe 0x63FE9B: FINISHED is created first, no look-at on this path (jmp 0x6402D0)
         if (const auto draggedPedGrp = m_DraggedPed->GetGroup()) {
             if (draggedPedGrp->GetMembership().IsLeader(m_DraggedPed)) {
                 draggedPedGrp->GetIntelligence().AddEvent(CEventGroupEvent{ m_DraggedPed, new CEventLeaderQuitEnteringCarAsDriver{} });
             }
         }
-        return C(TASK_FINISHED, false);
+        return finishedSubTask;
     }
 
     assert(m_DraggedPed);
 
-    const auto AddJackedTaskToPed = [this, ped](CPed* jacked, int32 door) {
+    const auto AddJackedTaskToPed = [this, ped](CPed* jacked, int32 door, int32 downTime, bool bFlag) {
         jacked->GetIntelligence()->AddTaskPrimaryMaybeInGroup(new CTaskSimpleBikeJacked{
             m_Car,
             (uint32)door,
-            (uint32)m_DraggedPedDownTime,
+            (uint32)downTime,
             ped,
-            true
+            bFlag
         }, true);
     };
 
-    AddJackedTaskToPed(m_DraggedPed, m_TargetDoor != 18 || m_Car->HasPassengerAtSeat(0) ? 10 : 11); // 0x63FF50
+    // Exe 0x63FF3F-0x63FF4C: the SLOW_DRAG_PED_OUT / GET_IN subtask is created BEFORE the jacked tasks are handed out
+    const auto subTask = CreateSubTask(m_bQuitAfterDraggingPedOut || m_TargetDoor != 18 ? TASK_SIMPLE_CAR_SLOW_DRAG_PED_OUT : TASK_SIMPLE_CAR_GET_IN, ped);
+
+    AddJackedTaskToPed(m_DraggedPed, m_TargetDoor != 18 || m_Car->HasPassengerAtSeat(0) ? 10 : 11, m_DraggedPedDownTime, true); // 0x63FF50
     if (m_Car->IsDriver(m_DraggedPed) && m_Car->HasPassengerAtSeat(0)) {
-        AddJackedTaskToPed(m_Car->GetPassengers()[0], 11);
+        AddJackedTaskToPed(m_Car->GetPassengers()[0], 11, m_DraggedPedDownTime + 200, false); // exe 0x63FFF0: down time + 200 (0xC8), last arg 0
 
         if (const auto draggedPedGrp = m_DraggedPed->GetGroup()) {
             if (draggedPedGrp->GetMembership().IsLeader(m_DraggedPed)) {
@@ -513,7 +538,8 @@ CTask* CTaskComplexEnterCar::CreateNextSubTask_AfterSimpleCarAlign(CPed* ped) {
         }
     }
 
-    return C(m_bQuitAfterDraggingPedOut || m_TargetDoor != 18 ? TASK_SIMPLE_CAR_SLOW_DRAG_PED_OUT : TASK_SIMPLE_CAR_GET_IN);
+    DoLookAtPassengers();
+    return subTask;
 }
 
 // 0x643A60
@@ -805,8 +831,9 @@ void CTaskComplexEnterCar::CreateTaskUtilityLineUpPedWithCar(CPed* ped) {
 
 // NOTSA - Copy paste code elimination
 CTask* CTaskComplexEnterCar::CreateDragPedOutSubTask(CPed* ped) {
+    const auto dragSubTask = CreateSubTask(TASK_SIMPLE_CAR_SLOW_DRAG_PED_OUT, ped); // exe 0x63F046: created BEFORE the dragged ped gets its tasks / events
     m_DraggedPed->GetIntelligence()->AddTaskPrimaryMaybeInGroup(new CTaskComplexCarSlowBeDraggedOutAndStandUp{ m_Car, m_TargetDoor }, true);
-    m_DraggedPed->GetIntelligence()->GetEventGroup().Add(CEventDraggedOutCar{ m_Car, ped, m_Car->IsDriver(m_DraggedPed) });
+    m_DraggedPed->GetIntelligence()->GetEventGroup().Add(CEventDraggedOutCar{ m_Car, ped, m_Car->IsDriver(m_DraggedPed) }, true); // exe 0x63F0B9: bValid = 1
     if (m_Car->IsDriver(m_DraggedPed)) {
         if (const auto draggedPedGrp = m_DraggedPed->GetGroup()) {
             if (draggedPedGrp->GetMembership().IsLeader(m_DraggedPed)) {
@@ -814,7 +841,7 @@ CTask* CTaskComplexEnterCar::CreateDragPedOutSubTask(CPed* ped) {
             }
         }
     }
-    return CreateSubTask(TASK_SIMPLE_CAR_SLOW_DRAG_PED_OUT, ped);
+    return dragSubTask;
 }
 
 // 0x63A300

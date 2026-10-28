@@ -3084,11 +3084,11 @@ void CVehicle::FirePlaneGuns() {
             } else {
                 m_nGunsCycleIndex++;
             }
-            return ModelGunInfo{ true, 225u, WEAPON_M4 };
+            return ModelGunInfo{ true, 224u, WEAPON_M4 }; // ASM-S19f: 0x6D4DBE stores 0xE0 (the port had 225)
         }
         case MODEL_HYDRA:
         case MODEL_TORNADO:
-            return ModelGunInfo{ true, 123u, WEAPON_MINIGUN };
+            return ModelGunInfo{ true, 128u, WEAPON_MINIGUN }; // ASM-S19f: 0x6D4DDA stores 0x80 (the port had 123)
         default:
             return std::nullopt;
         }
@@ -3107,23 +3107,26 @@ void CVehicle::FirePlaneGuns() {
     const auto velocityOffset = m_vecMoveSpeed * CTimer::GetTimeStep();
           auto gunShellPos    = velocityOffset +  m_matrix->TransformPoint(planeGunPosMS);
 
+    // ASM-S19f: 0x6D4E85-0x6D4FBA. The exe fires the instant hit first and only then plays the effect (the port did it the other way
+    // round, which swaps the rand() draws of the gunshell and the shot), and the second gun of the twin-gun planes is the first one
+    // mirrored in x and transformed again (the port reused the first position for both shots)
     const auto FireGun = [&](const auto gunId) {
+        weapon.FireInstantHit(this, &gunShellPos, &gunShellPos);
         DoPlaneGunFireFX(
             &weapon,
             planeGunPosMS,
             gunShellPos,
             gunId
         );
-        weapon.FireInstantHit(this, &gunShellPos, &gunShellPos);
     };
 
     if (giIsDoubleGun) {
-        // NOTE: There might be a bug in the original code, being that
-        //       the gun position (`planeGunPosMS`) is not recalculated for the second gun
-        //       although, the gunId in `GetPlaneGunsPosition` is only used for the "rustler"
-        for (auto i = 0u; i < 2; i++) {
-            FireGun(m_nGunsCycleIndex * 2 + i);
-        }
+        FireGun(m_nGunsCycleIndex * 2);
+
+        planeGunPosMS   = GetPlaneGunsPosition(m_nGunsCycleIndex); // 0x6D4EC9
+        planeGunPosMS.x = -planeGunPosMS.x;
+        gunShellPos     = velocityOffset + m_matrix->TransformPoint(planeGunPosMS);
+        FireGun(m_nGunsCycleIndex * 2 + 1);
     } else {
         FireGun(m_nGunsCycleIndex);
     }

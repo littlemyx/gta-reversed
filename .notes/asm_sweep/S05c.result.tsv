@@ -1,0 +1,25 @@
+addr	function	verdict	asm range	note	fix commit
+0x691D50	CTaskComplexGoPickUpEntity::ControlSubTask	MATCH	0x691D50-0x691FB0 (all)	anim block ref, 8000/5000 ms timeouts, stick magnitude/heading/abort logic	-
+0x64D2B0	CTaskComplexGoToCarDoorAndStandStill::CreateNextSubTask	DEVIATION	0x64D2B0-0x64D434 (all)	PAUSE case: exe tests sqrt(x2+y2) < 0.5 strictly in extended precision, port tested float sq <= 0.25	3f135da5
+0x64D440	CTaskComplexGoToCarDoorAndStandStill::CreateFirstSubTask	DEVIATION	0x64D440-0x64D6C0 (all)	exe starts the seek timer (start=now, interval=m_MaxSeekTime, started) after picking the door (not for driver with fixed seat, not for the wait variant); port never started it	3f135da5
+0x64A820	CTaskComplexGoToCarDoorAndStandStill::ControlSubTask	DEVIATION	0x64A820-0x64ABDD (all)	FOLLOW_POINT_ROUTE re-plan test is extended-precision sqmag > 0.0100000007f, port used float sqmag >= ; rest matches	3f135da5
+0x6686A0	CTaskComplexGoToPointAndStandStillTimed::StopTimer	MATCH	0x6686A0-0x6686D2 (all)	non-temporary event -> timer pause	-
+0x66DCE0	CTaskComplexGoToPointAndStandStillTimed::ControlSubTask	MATCH	0x66DCE0-0x66DD4B (all)	timer reset, unsigned out-of-time test, not STAND_STILL -> FindZ + SetPosn	-
+0x653B40	CTaskComplexHitPedWithCar::ComputeEvasiveStepMoveDir	MATCH	0x653B40-0x653BF4 (all)	side 0 fwd, 1 -right, 2 -fwd, 3 right (matches ComputeEntityDir)	-
+0x629480	CTaskComplexKillAllThreats::CreateFirstSubTask	MATCH	0x629480-0x62953F (all)	FindThreat -> KillPedOnFoot(-1, flags, delay, chance, 1) else StandStill(0,0,0,8)	-
+0x68E950	CTaskComplexKillCriminal::ControlSubTask	DEVIATION	0x68E950-0x68F9C9 (all)	decision tree, bike driveby, passenger driveby, event/passenger loop, inlined sub-task creation all match; speed thresholds were doubles 0.12/0.2 instead of the float constants 0.119999997/0.200000003	e527019a
+0x622980	CTaskComplexKillPedFromBoat::ControlSubTask	MATCH	0x622980-0x622B3F (all)	STAND_STILL/KILL cases, cop+player gates, wanted tests, speech 0xAD/0xAF, sub-task ctor args	-
+0x622320	CTaskComplexKillPedGroupOnFoot::CreateSubTask	MATCH	0x622320-0x622447 (all)	FINISHED/NONE/LOOK_ABOUT(rand 3000..4000)/KILL_PED_ON_FOOT(-1,0,0,0,1)	-
+0x629570	CTaskComplexKillPedGroupOnFoot::CreateNextSubTask	MATCH	0x629570-0x62961E (all)	ref cleanup at entry, NONE/LOOK_ABOUT -> finished, KILL -> nearest living group ped or LOOK_ABOUT	-
+0x629630	CTaskComplexKillPedGroupOnFoot::CreateFirstSubTask	MATCH	0x629630-0x6296A0 (all)	target present: same group -> NONE else KILL; no target: compute nearest, NONE if none	-
+0x625E70	CTaskComplexKillPedOnFoot::CreateSubTask	MATCH	0x625E70-0x62623F (all)	stand still / pause 2000|10000 / leave group / leave car / drag / car drive timed / armed (aim flag, timer) / melee / destroy car / signal at ped	-
+0x62B150	CTaskComplexKillPedOnFoot::CreateNextSubTask	NOT_REACHED	-	out of budget	-
+0x62B490	CTaskComplexKillPedOnFoot::CreateFirstSubTask	NOT_REACHED	-	out of budget	-
+0x626260	CTaskComplexKillPedOnFoot::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x621500	CTaskComplexKillPedOnFootArmed::LineOfSightClearForAttack	NOT_REACHED	-	out of budget	-
+0x626FC0	CTaskComplexKillPedOnFootArmed::CreateSubTask	NOT_REACHED	-	out of budget	-
+0x62C190	CTaskComplexKillPedOnFootArmed::CreateNextSubTask	NOT_REACHED	-	out of budget	-
+0x62BF00	CTaskComplexKillPedOnFootArmed::CreateFirstSubTask	NOT_REACHED	-	out of budget	-
+0x62CCE0	CTaskComplexKillPedOnFootArmed::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x693610	CTaskComplexGoPickUpEntity::CreateFirstSubTask	MATCH	0x693860-0x6939CB (tail from 0x693881)	right/forward dots (z,y,x), side pick 0.4 offsets, z = min.z+1, GoToPointAndStandStill(WALK,0.2,0,0,1)	-
+0x67CCB0	CTaskComplexInAirAndLand::CreateNextSubTask	MATCH	0x67CFD8-0x67D1CE (tail)	move blend >1.5 + pad LR/UD != 0 -> JUMP_LAND else FALL_LAND, audio 0x3A, sound-quiet 55/70	-

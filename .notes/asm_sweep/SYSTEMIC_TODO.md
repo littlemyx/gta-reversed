@@ -9,3 +9,6 @@
 
 ## X87-POW (from S18e)
 - [ ] Exe calls _CIpow (0x822130) where the port uses std::pow (e.g. CPlane::PreRender Vortex blend pow(0.9f, ts)). No x87::pow helper yet; add one (see .notes/reports/X87-TRIG.md) and grep all std::pow/powf sites.
+
+## IsPointInSphere sum order (from S02b)
+- [ ] Exe inlines the sphere test as (dz^2+dx^2)+dy^2 with NaN counting as inside (TaskComplexDestroyCarMelee::CreateFirstSubTask 0x62DB20); the port helper IsPointInSphere sums x,y,z. Remaining callers incl. DestroyCarMelee CreateNextSubTask/ControlSubTask (not in any slice list) need an exe check per site.

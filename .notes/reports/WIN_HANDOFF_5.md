@@ -42,3 +42,10 @@
   brief COMBAT-FLAKY written, launch after the gate (note: ASM-S20 fixed CreateDeadPedWeaponPickups ClearWeapons — maybe related).
 - Systemic finding to schedule: CVector operator/ divides, the exe multiplies by 1/x (Vector.h:255) — ~15 sites in Physical.cpp + more.
 - Agent token self-estimates run 30-50% low: briefs say "stop at 120k by your estimate".
+
+## 2026-10-28 04:00 checkpoint
+- portable/main merged and pushed (09267fa2); PortableWin64 configured in the main checkout; orch_gate.sh has the portable step (prc).
+- Gates green: 145493f7, 09267fa2, 0b3d3f12 (incl. portable). Running: gate on 304805a6.
+- ASM sweep done/partial since: S20 complete (Ped.cpp); S16 Automobile down to S16i (PreRender tail); S17 down to S17e (running); S13c, S14b, S18c, S21c, S22e, S27c pending; S01-S10, S15, S19, S28, S30-S34 untouched.
+- Systemic: SYSTEMIC-1/2/3 landed (ExeDivide, sector helpers, coin flips, TaskTimer partial, literal division scanner tools/standalone/litdiv_scan.py + LITDIV.tsv). FIXBUGS-AUDIT 1-2: unguarded port fixes moved under FIX_BUGS (FIXBUGS.tsv). Open items: SYSTEMIC_TODO.md.
+- Pending user OK: delete agent scratch C:/gta-soak-s16e, C:/gta-scratch/asm-s16e/f/g/h, systemic-3, asm-s17c/d (keep asm-s17c, asm-s16g/tools until S17e is done).

@@ -279,3 +279,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-28	ASM-S22g	v6	asm sweep	182023	59	23	CarCtrl 2/3: FlyAIHeli fixed (1-climbFactor x87d), OnlyMission MATCH; GenerateOneRandomCar -> S22h; left a self-deadlocked gpu_locked wrapper (gameplay_regress takes the lock itself)
 2026-10-28	ASM-S27c	v6	asm sweep	203643	81	34	World 3/5 all fixed: TestSphereAgainstSectorList, TriggerExplosionSectorList (~15 dev: flag bits, inverse transform, mass, ApplyForce, signs, sum orders), Process (20x timestep in pow + ped z-force, 0.707 const); LOS x2 open; no oracle/portable grep (grep hit: double in Process)
 2026-10-28	ASM-S27d	v6	asm sweep	138584	41	13	World LOS: ProcessLineOfSightSector doCameraIgnoreCheck to objects list, SectorList tyre dot (y+z)+x; World::Process pow spelled X87W/x87d; oracle 0/0, combat 14; S27 complete
+2026-10-28	ASM-S22h	v6	asm sweep	236964	71	14	GenerateOneRandomCar 2169 asm lines in 8 chunks: MATCH; S22 CarCtrl complete

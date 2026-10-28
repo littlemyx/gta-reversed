@@ -295,7 +295,7 @@ CTask* CTaskGangHassleVehicle::ControlSubTask(CPed* ped) {
 
     const auto targetHeading = GetTargetHeading(ped);
     const auto heading       = ped->GetHeading();
-    if (!(std::abs(heading - targetHeading) < 0.1f)) {
+    if (std::abs(heading - targetHeading) >= 0.1f) { // 0x663C4A: `fcomp` + `test ah, 1` (NaN keeps the state)
         m_State = 1;
     }
 
@@ -398,7 +398,7 @@ CTask* CTaskGangHassleVehicle::ControlSubTask(CPed* ped) {
         hitMat,
         col1,
         m_Vehicle->GetMatrix(),
-        *CModelInfo::GetModelInfo(m_Vehicle->m_nModelIndex)->GetColModel(),
+        *m_Vehicle->GetColModel(), // 0x6640EB: CEntity::GetColModel (honours the vehicle's special col model), not the model info's
         CWorld::m_aTempColPts,
         nullptr,
         nullptr,

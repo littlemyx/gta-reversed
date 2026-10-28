@@ -2598,8 +2598,9 @@ RpAtomic* CVehicle::CreateReplacementAtomic(CBaseModelInfo* mi, RwFrame* parentF
 
     if (bIsWheel) {
         const auto mat = RwFrameGetMatrix(frame);
+        // 0x6D3743-0x6D377B: the exe ORs 0x20003 into the flags BEFORE `RwMatrixUpdate`, which clears them again (`and flags, 0xFFFDFFFC`);
+        // the port ORed them in after the update and left the matrix flagged as identity
         CMatrix::GetIdentity().UpdateRwMatrix(mat);
-        mat->flags |= rwMATRIXINTERNALIDENTITY | rwMATRIXTYPEMASK;
         CVisibilityPlugins::SetFrameHierarchyId(frame, 0);
         RwFrameAddChild(parentFrame, frame);
     } else {

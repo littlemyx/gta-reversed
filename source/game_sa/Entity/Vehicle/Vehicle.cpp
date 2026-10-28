@@ -6870,26 +6870,27 @@ void CVehicle::FillVehicleWithPeds(bool setClothesToAfro) {
         playerPed->GetPlayerData()->m_pPedClothesDesc->SetModel("afro", CLOTHES_MODEL_HEAD);
         CClothes::RebuildPlayer(playerPed, false);
     }
+    // ASM-S19g 0x6E2950..0x6E2A14: seats -1 (driver) .. max-1 in ONE loop; the model check is per seat (request and go on to the next
+    // seat), the previous driver / passenger ped is DELETED (virtual dtor with the delete flag) after the new ped was created, and
+    // passengers are seated with isDriver = false (the port passed true for every seat)
     const eModelID modelId = setClothesToAfro ? MODEL_PLAYER : MODEL_WMOST;
-    if (!CStreaming::IsModelLoaded(modelId)) {
-        CStreaming::RequestModel(modelId, STREAMING_KEEP_IN_MEMORY);
-        return;
-    }
-    const auto AddPedToSeat = [modelId, this](int32 seat) {
-        CCarEnterExit::SetPedInCarDirect(
-            CPopulation::AddPed(PED_TYPE_CIVFEMALE, modelId, GetPosition(), false),
-            this,
-            seat,
-            true
-        );
-    };
-    if (!m_pDriver || !m_pDriver->IsPlayer()) { // BUGFIX: Added `!m_pDriver`
-        m_pDriver = nullptr;
-        AddPedToSeat(0);
-    }
-    for (int32 i = 0; i < m_nMaxPassengers; i++) {
-        m_apPassengers[i] = nullptr;
-        AddPedToSeat(CCarEnterExit::ComputeTargetDoorToEnterAsPassenger(this, i));
+    const auto*    playerPed = FindPlayerPed(PED_TYPE_PLAYER1);
+    for (int32 seat = -1; seat < (int32)m_nMaxPassengers; seat++) {
+        if (seat == -1 && m_pDriver && m_pDriver == playerPed) {
+            continue;
+        }
+        if (!CStreaming::IsModelLoaded(modelId)) {
+            CStreaming::RequestModel(modelId, STREAMING_KEEP_IN_MEMORY);
+            continue;
+        }
+        CPed* const ped = CPopulation::AddPed(PED_TYPE_CIVFEMALE, modelId, GetPosition(), false);
+        if (seat == -1) {
+            delete m_pDriver;
+            CCarEnterExit::SetPedInCarDirect(ped, this, 0, true);
+        } else {
+            delete m_apPassengers[seat];
+            CCarEnterExit::SetPedInCarDirect(ped, this, CCarEnterExit::ComputeTargetDoorToEnterAsPassenger(this, seat), false);
+        }
     }
 }
 

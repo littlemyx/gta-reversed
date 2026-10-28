@@ -100,7 +100,7 @@ eTaskType CTaskComplexFollowNodeRoute::GetSubTaskType(uint32 progress, bool bLas
 // 0x6694E0
 void CTaskComplexFollowNodeRoute::StopTimer(const CEvent* event) {
     if (!CEventHandler::IsTemporaryEvent(*event)) {
-        m_FinishedTimer.Stop();
+        m_FinishedTimer.Pause(); // exe 0x6694F4-0x66950E: if started => m_bStopped = true, interval -= now - start (the port cleared m_bStarted instead)
     }
 }
 

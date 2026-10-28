@@ -1864,8 +1864,13 @@ bool CWorld::ProcessLineOfSightSectorList(PtrListType& ptrList, const CColLine& 
                             const auto lineDir = colLine.m_vecEnd - colLine.m_vecStart;
                             const auto wheelToVehCenter = wheelCP.m_vecPoint - mat.GetPosition();
 
-                            const auto lineDirDotRight = DotProduct(lineDir, mat.GetRight());
-                            const auto wheelDotRight = DotProduct(wheelToVehCenter, mat.GetRight());
+                            // exe 0x567351-0x5673CC: the dot products sum (y + z) + x, not the usual z + y + x order of DotProduct
+                            const auto DotRightExe = [&](const CVector& v) {
+                                const auto& right = mat.GetRight();
+                                return (v.y * right.y + v.z * right.z) + v.x * right.x;
+                            };
+                            const auto lineDirDotRight = DotRightExe(lineDir);
+                            const auto wheelDotRight = DotRightExe(wheelToVehCenter);
 
                             bool crossesVehicleBody = false;
                             // Line begins at the left, col point is on the right or the other way around

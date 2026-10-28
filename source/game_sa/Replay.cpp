@@ -810,8 +810,10 @@ void CReplay::RestoreStuffFromMem() {
     CPopulation::ms_nTotalPeds = ms_nTotalPeds_Stored;
     CPopulation::ms_nTotalMissionPeds = ms_nTotalMissionPeds_Stored;
 
-    // FIX_BUGS: ms_nNumGang not restored
+#ifdef FIX_BUGS
+    // FIX_BUGS: ms_nNumGang not restored (0x45ECD0: the exe copies back only the scalar counters, never 0x97FA80 -> 0xC0EC3C)
     rng::copy(ms_nNumGang_Stored, CPopulation::ms_nNumGang.begin());
+#endif
 }
 
 // 0x45F050

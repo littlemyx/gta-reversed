@@ -1,0 +1,34 @@
+addr	function	verdict	asm range	note	fix commit
+0x66C4E0	CTaskSimpleSlideToCoord::ProcessPed	MATCH	0x66C4E0-0x66C717 (all)	x87 shift/forward sums, timer, NaN compares, StandStill(20000,..,8.0), IK abort all as exe	-
+0x62F370	CTaskSimpleStandStill::ProcessPed	MATCH	0x62F370-0x62F511 (all)	Start() guarded (time>=0), duck/idle blend, 0.99 idle test, timer tail	-
+0x631410	CTaskSimpleStandUp::StartAnim	MATCH	0x631410-0x631458 (all)	group 53/anim 309 or group 0/anim 149, delta 4.0, finish cb	-
+0x637D60	CTaskSimpleStandUp::ProcessPed	MATCH	0x637D60-0x637D7F (all)		-
+0x6296D0	CTaskSimpleStealthKill::ManageAnim	FIXED	0x6296D0-0x629895, 0x629898-0x6298D3 (all)	damage calculator damager is m_target (task+0xC), port passed the ped; anim ids/events/wait timer match	646805fd
+0x62E540	CTaskSimpleStealthKill::ProcessPed	FIXED	0x62E540-0x62E6B2 (all)	|v|^2 summed z,x,y before sqrt (port x,y,z); heading/shift/min polarity match	646805fd
+0x68B1C0	CTaskSimpleSwim::ProcessPed	FIXED	0x68B1C0-0x68B586 (all)	swim-gasp test reads the byte at task+8 (m_bFinishedBlending), port tested m_pPed (+0x20); rest matches	923559dd
+0x68B100	CTaskSimpleSwim::MakeAbortable	MATCH	0x68B100-0x68B1B2 (all)		-
+0x68A8E0	CTaskSimpleSwim::ApplyRollAndPitch	MATCH	0x68A8E0-0x68A9E1 (all)	port skips the matrix work when the ped has no RwObject, exe runs it (harmless no-op)	-
+0x6899F0	CTaskSimpleSwim::ProcessSwimAnims	FIXED	0x6899F0-0x68A1B3 (all)	climb-jump state: exe breaks when no water level or z+0.5>=level, TREAD only below (port returned early / set TREAD on no water); 80deg literal 0x3FB2B8C3 (1 ulp); jump table decoded; other cases match	38e4c36d
+0x68A1D0	CTaskSimpleSwim::ProcessSwimmingResistance	NOT_REACHED	-	budget	-
+0x68AA70	CTaskSimpleSwim::ProcessEffects	FIXED	0x68AA70-0x68AFDB (all)	bubble oxygen is signed int32 (JGE) not uint32; positions, fx, bones order, audio ids match	923559dd
+0x689640	CTaskSimpleSwim::ProcessControlAI	MATCH	0x689640-0x6899E3 (all)	group/leader branches, climb test, shift halving, NaN compares match	-
+0x688A90	CTaskSimpleSwim::ProcessControlInput	NOT_REACHED	-	budget	-
+0x68A9F0	CTaskSimpleSwim::CreateFxSystem	MATCH	0x68A9F0-0x68AA43 (all)		-
+0x6259E0	CTaskSimpleThrowProjectile::StartAnim	NOT_REACHED	-	budget	-
+0x62AF50	CTaskSimpleThrowProjectile::ProcessPed	NOT_REACHED	-	budget	-
+0x630F70	CTaskSimpleTired::StartAnim	NOT_REACHED	-	budget	-
+0x639990	CTaskSimpleTurn180::ProcessPed	NOT_REACHED	-	budget	-
+0x61ED10	CTaskSimpleUseGun::AimGun	NOT_REACHED	-	budget	-
+0x61EB10	CTaskSimpleUseGun::FireGun	NOT_REACHED	-	budget	-
+0x61E8E0	CTaskSimpleUseGun::RemoveStanceAnims	NOT_REACHED	-	budget	-
+0x624F30	CTaskSimpleUseGun::StartAnim	NOT_REACHED	-	budget	-
+0x61E3F0	CTaskSimpleUseGun::SetMoveAnim	NOT_REACHED	-	budget	-
+0x622F20	CTaskSimpleUseGun::Clone	NOT_REACHED	-	budget	-
+0x624E30	CTaskSimpleUseGun::MakeAbortable	NOT_REACHED	-	budget	-
+0x62A380	CTaskSimpleUseGun::ProcessPed	NOT_REACHED	-	budget	-
+0x624ED0	CTaskSimpleUseGun::SetPedPosition	NOT_REACHED	-	budget	-
+0x635640	CTaskSimpleWaitUntilAreaCodesMatch::ProcessPed	NOT_REACHED	-	budget	-
+0x649550	CTaskSimpleWaitUntilPedIsOutCar::ProcessPed	NOT_REACHED	-	budget	-
+0x64FC10	CTaskUtilityLineUpPedWithCar::GetLocalPositionToOpenCarDoor	NOT_REACHED	-	budget	-
+0x650A80	CTaskUtilityLineUpPedWithCar::GetPositionToOpenCarDoor	NOT_REACHED	-	budget	-
+0x6513A0	CTaskUtilityLineUpPedWithCar::ProcessPed	NOT_REACHED	-	budget	-

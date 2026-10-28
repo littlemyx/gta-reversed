@@ -157,7 +157,9 @@ float CTaskComplexFollowNodeRoute::CalcBlendRatio(CPed* ped, bool slowing) const
 
 // 0x66EF20
 bool CTaskComplexFollowNodeRoute::CanGoStraightThere(const CPed* ped, const CVector& from, const CVector& to, float maxDist) const {
-    if ((from - to).SquaredMagnitude() >= sq(maxDist)) {
+    // exe 0x66EF39-0x66EF5A: sqrt((dz^2 + dx^2) + dy^2) compared to maxDist, `test ah, 0x41` + `jne`: false only if dist > maxDist (equal and NaN go on)
+    const auto d = from - to;
+    if (std::sqrt((d.z * d.z + d.x * d.x) + d.y * d.y) > maxDist) {
         return false;
     }
     if (ped->bIgnoreHeightDifferenceFollowingNodes) {

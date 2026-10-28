@@ -2636,18 +2636,17 @@ void CPlayerPed::ProcessControl() {
     PruneReferences();
     if (GetActiveWeapon().m_Type == WEAPON_MINIGUN) {
         auto weaponInfo = CWeaponInfo::GetWeaponInfo(WEAPON_MINIGUN, eWeaponSkill::STD);
-        if (GetIntelligence()->GetTaskUseGun()) {
-            auto animAssoc = GetIntelligence()->GetTaskUseGun()->m_Anim;
-            if (animAssoc && animAssoc->m_CurrentTime - animAssoc->m_TimeStep < weaponInfo->m_fAnimLoopEnd) {
-                if (GetPlayerData()->m_fGunSpinSpeed < 0.45f) {
-                    GetPlayerData()->m_fGunSpinSpeed += CTimer::GetTimeStep() * 0.025f;
-                    GetPlayerData()->m_fGunSpinSpeed = std::min(GetPlayerData()->m_fGunSpinSpeed, 0.45f);
-                }
-                if (pad->GetWeapon(this) && GetActiveWeapon().m_TotalAmmo > 0 && animAssoc->m_CurrentTime >= weaponInfo->m_fAnimLoopStart) 
-                    m_weaponAudio.AddAudioEvent(AE_WEAPON_FIRE_MINIGUN_AMMO);
-                else 
-                    m_weaponAudio.AddAudioEvent(AE_WEAPON_FIRE_MINIGUN_NO_AMMO);
+        // 0x60EC04: no task / no anim / anim past its loop end all go to the spin-down branch (0x60ECD4)
+        auto* const animAssoc = GetIntelligence()->GetTaskUseGun() ? GetIntelligence()->GetTaskUseGun()->m_Anim : nullptr;
+        if (animAssoc && animAssoc->m_CurrentTime - animAssoc->m_TimeStep < weaponInfo->m_fAnimLoopEnd) {
+            if (GetPlayerData()->m_fGunSpinSpeed < 0.45f) {
+                GetPlayerData()->m_fGunSpinSpeed += CTimer::GetTimeStep() * 0.025f;
+                GetPlayerData()->m_fGunSpinSpeed = std::min(GetPlayerData()->m_fGunSpinSpeed, 0.45f);
             }
+            if (pad->GetWeapon(this) && (int32)GetActiveWeapon().m_TotalAmmo > 0 && animAssoc->m_CurrentTime >= weaponInfo->m_fAnimLoopStart)
+                m_weaponAudio.AddAudioEvent(AE_WEAPON_FIRE_MINIGUN_AMMO);
+            else
+                m_weaponAudio.AddAudioEvent(AE_WEAPON_FIRE_MINIGUN_NO_AMMO);
         } else {
             if (GetPlayerData()->m_fGunSpinSpeed > 0.0f) {
                 GetPlayerData()->m_fGunSpinSpeed -= CTimer::GetTimeStep() * 0.003f;

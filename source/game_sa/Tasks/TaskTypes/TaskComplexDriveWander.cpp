@@ -36,8 +36,7 @@ void CTaskComplexCarDriveWander::SetUpCar() {
         m_Veh->m_autoPilot.m_nCarDrivingStyle = static_cast<eCarDrivingStyle>(m_CarDrivingStyle);
     }
     if (m_Veh->vehicleFlags.bEngineBroken) {
-        m_Veh->vehicleFlags.bEngineOn = false;
-        m_Veh->vehicleFlags.bIsLawEnforcer = false;
+        m_Veh->vehicleFlags.bEngineOn = false; // The exe (0x63CC13) clears only the engine flag, not bIsLawEnforcer
     } else {
         m_Veh->vehicleFlags.bEngineOn = true;
     }

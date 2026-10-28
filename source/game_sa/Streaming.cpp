@@ -404,8 +404,9 @@ int32 CStreaming::GetNextFileOnCd(uint32 streamLastPosn, bool bNotPriority) {
         return nextModelId;
     }
 
+    // exe 0x409023: no candidate and a stale priority counter -> clear it and rescan the whole list (bNotPriority = false)
     ms_numPriorityRequests = 0;
-    return MODEL_INVALID;
+    return GetNextFileOnCd(streamLastPosn, false);
 }
 
 // 0x407F00

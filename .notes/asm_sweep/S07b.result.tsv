@@ -1,0 +1,31 @@
+addr	function	verdict	asm range	note	fix commit
+0x697B70	CTaskComplexReactToGunAimedAt::CreateSubTask	FIXED	0x697B70-0x697EEA (all)	flee tolerance is [0xC18CF0] read at runtime (not 1.0); pause rand needs m_pVehicle and bInVehicle; heading/leave-car/hands-up/cower/wander ctor args match	f34264bb
+0x6983C0	CTaskComplexReactToGunAimedAt::CreateNextSubTask	FIXED	0x6983C0-0x698520 (all)	after cower: Say(CTX_GLOBAL_GUN_RUN 0x73) before the flee subtask was missing	f34264bb
+0x698530	CTaskComplexReactToGunAimedAt::CreateFirstSubTask	MATCH	0x698530-0x69853F (all)	-	-
+0x698550	CTaskComplexReactToGunAimedAt::ControlSubTask	FIXED	0x698550-0x6985CB (all)	MakeAbortable priority URGENT(1); port used LEISURE(0)	f34264bb
+0x62E170	CTaskComplexRoadRage::CreateFirstSubTask	MATCH	0x62E170-0x62E264 (all)	weapon rolls, event 0x12, subtask choice	-
+0x642510	CTaskComplexScreamInCarThenLeave::CreateSubTask	MATCH	0x642510-0x6426D5 (all)	rand&0x3FF<=0x200 only off-mission; wander set on FINISHED	-
+0x6442D0	CTaskComplexScreamInCarThenLeave::CreateNextSubTask	MATCH	0x6442D0-0x64431A (all)	-	-
+0x644320	CTaskComplexScreamInCarThenLeave::CreateFirstSubTask	MATCH	0x644320-0x644353 (all)	-	-
+0x644360	CTaskComplexScreamInCarThenLeave::ControlSubTask	MATCH	0x644360-0x644464 (all)	Say ids 0x15B/0xE3; vmt +0xE4/+0xE8 = CanPedStepOutCar/CanPedJumpOutCar	-
+0x62E8B0	CTaskComplexSeekCoverUntilTargetDead::ControlSubTask	MATCH	0x62E8B0-0x62EB62 (all)	non-FIX_BUGS path keeps GetTargetPed for the cover ped like the exe; sequence args match	-
+0x695C20	CTaskComplexSeekEntityAiming::CreateNextSubTask	MATCH	0x695C20-0x695D23 (all)	-	-
+0x695D30	CTaskComplexSeekEntityAiming::CreateFirstSubTask	MATCH	0x695D30-0x695DB8 (all)	-	-
+0x694C70	CTaskComplexSeekEntityAiming::ControlSubTask	FIXED	0x694C70-0x694E16 (all)	dist compares were NaN-wrong (exe: not d2<r2); new UseGun task only when the secondary attack slot is empty (port also replaced a non-gun task)	8458a6f2
+0x63D1A0	CTaskComplexShuffleSeats::Destructor	MATCH	0x63D1A0-0x63D212 (all)	-	-
+0x63D240	CTaskComplexShuffleSeats::CreateSubTask	FIXED	0x63D240-0x63D414 (all)	SET_PED_IN_AS_DRIVER: RemovePassenger(ped) first (was missing); SET_PED_OUT: ped->m_pVehicle (not task veh); RemoveDriver(true)	a30bc8e3
+0x63D610	CTaskComplexShuffleSeats::CreateTaskUtilityLineUpPedWithCar	MATCH	0x63D610-0x63D6ED (all)	door ids 10/8/11/9, ctor (vec,600,0,door)	-
+0x63D420	CTaskComplexShuffleSeats::CreateNextSubTask	FIXED	0x63D420-0x63D5A9 (all)	non-abort mode: SET_PED_OUT now finishes (CreateSubTask(FINISHED)) like the exe (jump table 0x63D5AC verified)	a30bc8e3
+0x643700	CTaskComplexShuffleSeats::CreateFirstSubTask	MATCH	0x643700-0x643752 (all)	-	-
+0x660AB0	CTaskComplexSignalAtPed::Destructor	MATCH	0x660AB0-0x660B27 (all)	-	-
+0x660B30	CTaskComplexSignalAtPed::CreateNextSubTask	MATCH	0x660B30-0x660CB3 (all)	rand&0xFFFF*2^-15*2000 and *8, anim id 0x117+idx, group 0x34	-
+0x660D80	CTaskComplexSignalAtPed::ControlSubTask	MATCH	0x660D80-0x660E5D (all)	-	-
+0x6314A0	CTaskComplexSitDownThenIdleThenStandUp::Destructor	MATCH	0x6314A0-0x631507 (all)	-	-
+0x631730	CTaskComplexSitDownThenIdleThenStandUp::ControlSubTask	MATCH	0x631730-0x631786 (all)	-	-
+0x65C680	CTaskComplexSmartFleeEntity::CreateNextSubTask	MATCH	0x65C680-0x65C6E3 (all)	STAND_STILL branch is dead (never created)	-
+0x65C6F0	CTaskComplexSmartFleeEntity::CreateFirstSubTask	MATCH	0x65C6F0-0x65C776 (all)	-	-
+0x65C780	CTaskComplexSmartFleeEntity::ControlSubTask	FIXED	0x65C780-0x65C8F1 (all)	pos-check timer restarted only when moved (unguarded start, after the test); tolerance compare strict >; z,y,x sum order	db5ec7ad
+0x65BE40	CTaskComplexSmartFleePoint::ComputeFleeDir	MATCH	0x65BE40-0x65BE7B (all)	-	-
+0x65C0C0	CTaskComplexSmartFleePoint::CreateNextSubTask	MATCH	0x65C0C0-0x65C132 (all)	-	-
+0x65C140	CTaskComplexSmartFleePoint::CreateFirstSubTask	MATCH	0x65C140-0x65C1D6 (all)	-	-
+0x65C1E0	CTaskComplexSmartFleePoint::ControlSubTask	FIXED	0x65C1E0-0x65C3B8 (all)	distance sums z,y,x order (float rounding); rest matches	385c3407

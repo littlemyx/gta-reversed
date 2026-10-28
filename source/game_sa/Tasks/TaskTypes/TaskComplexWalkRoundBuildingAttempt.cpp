@@ -303,7 +303,16 @@ CTask* CTaskComplexWalkRoundBuildingAttempt::ControlSubTask(CPed* ped) {
     }
 
     if (m_isWalkingAroundEntity) {
-        if (!m_targetEntity || (m_targetEntity->GetMatrix().TransformPoint(m_offset - m_targetPos)).SquaredMagnitude() >= sq(4.f)) {
+        // 0x658061..0x6580C2: |M * offset - targetPos|^2 (z,y,x sum order, in the FPU registers) compared STRICTLY above 16 (`fcomp` + `jne` on C0|C3: equal and NaN keep going)
+        if (!m_targetEntity) {
+            m_justAbort = true;
+            return CreateSubTask(TASK_SIMPLE_STAND_STILL, ped);
+        }
+        const auto entityPt = m_targetEntity->GetMatrix().TransformPoint(m_offset);
+        const x87d dx = (x87d)entityPt.x - m_targetPos.x;
+        const x87d dy = (x87d)entityPt.y - m_targetPos.y;
+        const x87d dz = (x87d)entityPt.z - m_targetPos.z;
+        if ((dz * dz + dy * dy) + dx * dx > (x87d)sq(4.f)) {
             m_justAbort = true;
             return CreateSubTask(TASK_SIMPLE_STAND_STILL, ped);
         }

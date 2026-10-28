@@ -1,0 +1,49 @@
+addr	function	verdict	asm range	note	fix commit
+0x6E2B40	CVehicle::Destructor	NOT_REACHED	-	budget	-
+0x6D6A40	CVehicle::SetModelIndex	NOT_REACHED	-	budget	-
+0x6D6410	CVehicle::DeleteRwObject	MATCH	0x6D6410-0x6D6460	remap clear, RemoveAllUpgradesCB, 15 x -1 upgrades, CEntity::DeleteRwObject	-
+0x553F20	CVehicle::SetupLighting	MATCH	0x553F20-0x553F2F	ActivateDirectional + SetupLightingForEntity	-
+0x5533D0	CVehicle::RemoveLighting	MATCH	0x5533D0-0x5533E9	scorched flag skips point-light removal	-
+0x6D0E60	CVehicle::Render	MATCH	0x6D0E60-0x6D0E83	dirt level ftol & 0xF, SetDirtTextures, CEntity::Render	-
+0x5D4760	CVehicle::Save	NOT_REACHED	-	budget	-
+0x5D2900	CVehicle::Load	NOT_REACHED	-	budget	-
+0x6D0C00	CVehicle::SetRemap	MATCH	0x6D0C00-0x6D0C8F	inlined SetRemapTexDictionary equal to 0x6D0BC0	-
+0x6D0E20	CVehicle::ResetAfterRender	MATCH	0x6D0E20-0x6D0E5B	cull back, ResetEditableMaterials, automobile plate stop	-
+0x6E0E20	CVehicle::DoHeadLightBeam	NOT_REACHED	-	budget	-
+0x6D10E0	CVehicle::CustomCarPlate_TextureCreate	NOT_REACHED	-	budget	-
+0x6D1950	CVehicle::RemoveDriver	DEVIATION	0x6D1950-0x6D1A4B	cop-car chromegun model released even if bFreebies already cleared	4add6f6b
+0x6D1C80	CVehicle::KillPedsInVehicle	MATCH	0x6D1C80-0x6D1D8F	explosion kill registration, VehicleDied event, driver then passengers	-
+0x6D2960	CVehicle::SetComponentAtomicAlpha	MATCH	0x6D2960-0x6D2980	modulate colour flag, material cb	-
+0x6D2D50	CVehicle::AddWheelDirtAndWater	DEVIATION	0x6D2D50-0x6D2FF0	surface id is CColPoint+0x23 for all checks (IsSand/spray used pieceB); wet-road roll only for dust/sand, >0.5 returns false	3b7e4fea
+0x6D3080	CVehicle::SetWindowOpenFlag	MATCH	0x6D3080-0x6D30AF		-
+0x6D30B0	CVehicle::ClearWindowOpenFlag	MATCH	0x6D30B0-0x6D30DF		-
+0x6D30E0	CVehicle::SetVehicleUpgradeFlags	NOT_REACHED	-	budget	-
+0x6D3210	CVehicle::ClearVehicleUpgradeFlags	NOT_REACHED	-	budget	-
+0x6D3510	CVehicle::CreateUpgradeAtomic	NOT_REACHED	-	budget	-
+0x6D3630	CVehicle::RemoveUpgrade	MATCH	0x6D3630-0x6D3640	id passed by value	-
+0x6D3700	CVehicle::CreateReplacementAtomic	NOT_REACHED	-	budget	-
+0x6D3830	CVehicle::AddReplacementUpgrade	NOT_REACHED	-	budget	-
+0x6D39E0	CVehicle::RemoveReplacementUpgrade	NOT_REACHED	-	budget	-
+0x6D3AB0	CVehicle::RemoveAllUpgrades	MATCH	0x6D3AB0-0x6D3AD0		-
+0x6D3B80	CVehicle::UpdateWinch	DEVIATION	0x6D3B80-0x6D3C6E	rope z summed unrounded (x87); signed segment count	54511287
+0x6D3C70	CVehicle::RemoveWinch	NOT_REACHED	-	budget	-
+0x6D64F0	CVehicle::SetupRender	MATCH	0x6D64F0-0x6D6650	cull none, plate start, remap txd refcounts, colour order, light flags	-
+0x6D82F0	CVehicle::KillPedsGettingInVehicle	NOT_REACHED	-	budget	-
+0x6DAF00	CVehicle::BladeColSectorList<CPtrListSingleLink<CEntity*>>	NOT_REACHED	-	budget	-
+0x6DD130	CVehicle::DoBoatSplashes	NOT_REACHED	-	budget	-
+0x6DD6F0	CVehicle::DoSunGlare	NOT_REACHED	-	budget	-
+0x6DF930	CVehicle::RemoveVehicleUpgrade	NOT_REACHED	-	budget	-
+0x6DFA20	CVehicle::AddUpgrade	NOT_REACHED	-	budget	-
+0x6E3290	CVehicle::AddVehicleUpgrade	NOT_REACHED	-	budget	-
+0x6E3400	CVehicle::SetupUpgradesAfterLoad	NOT_REACHED	-	budget	-
+0x73F400	CVehicle::DoFixedMachineGuns	MATCH	0x73F400-0x73F47C	camera look forward, player2 pad, unsigned 1400 ms compare, clip 20	-
+0x6D3CD0	CVehicle::PickUpEntityWithWinch	NOT_REACHED	-	budget	-
+0x6D26D0	CVehicle::SetVehicleAtomicVisibilityCB-Frame	NOT_REACHED	-	budget	-
+0x6D3300	CVehicle::RemoveUpgradeCB	NOT_REACHED	-	budget	-
+0x6D33B0	CVehicle::RemoveObjectsCB-Object	NOT_REACHED	-	budget	-
+0x6D3420	CVehicle::RemoveObjectsCB-Frame	NOT_REACHED	-	budget	-
+0x6D3450	CVehicle::CopyObjectsCB	NOT_REACHED	-	budget	-
+0x6D34D0	CVehicle::RemoveAllUpgradesCB	NOT_REACHED	-	budget	-
+0x6D2250	CVehicle::DestroyVehicleAndDriverAndPassengers	MATCH	0x6D2250-0x6D2300	weapon 0x37, virtual FlagToDestroy, CWorld::Remove, deleting dtor	-
+0x6DBCE0	CVehicle::ProcessBoatControl	NOT_REACHED	-	budget	-
+0x6DE880	CVehicle::AddSingleWheelParticles	MATCH	0x6DEC3C-0x6DF3B9	spinning/skidding/fixed branches, smoke trail, skidmark tail, quad offset all equal (preamble+default by S19j)	-

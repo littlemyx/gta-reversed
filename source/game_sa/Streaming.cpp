@@ -2616,8 +2616,9 @@ void CStreaming::RetryLoadFile(int32 chIdx) {
 
             // Keep in mind that `CdStreamGetStatus` changes the stream status.
             const eCdStreamStatus status = CdStreamGetStatus(chIdx);
-            if ((status == eCdStreamStatus::READING || status == eCdStreamStatus::WAITING_TO_READ) &&
-                (status != eCdStreamStatus::READING || CdStreamGetStatus(chIdx) != eCdStreamStatus::READING)
+            // exe 0x407721: READING -> asks again and only keeps waiting if it is READING again; WAITING_TO_READ -> keep waiting; else re-read
+            if (status == eCdStreamStatus::WAITING_TO_READ
+                || (status == eCdStreamStatus::READING && CdStreamGetStatus(chIdx) == eCdStreamStatus::READING)
             ) {
                 break; // Otherwise fallthrough, and do stream read
             }

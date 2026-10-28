@@ -1,0 +1,2 @@
+addr	file	line	cls	fn	oc
+0x62CCE0	source/game_sa/Tasks/TaskTypes/TaskComplexKillPedOnFootArmed.cpp	33	CTaskComplexKillPedOnFootArmed	ControlSubTask	D

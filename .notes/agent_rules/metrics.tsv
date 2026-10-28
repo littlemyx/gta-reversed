@@ -291,3 +291,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-28	ASM-S05	v6	asm sweep	127574	30	5	Tasks 8/42 all MATCH (GoToAttractor x2, BoatSteeringWheel, ComputeRouteToDoor, KillAllThreats x2, 2 tail-open); 34 -> S05b
 2026-10-28	ASM-S05b	v6	asm sweep	229385	88	45	Tasks 12/36: 5 fixed (InvestigateDeadPed sum, InvestigateDisturbance radius 0.5 + normalise/0.707f, KillCriminal dtor siren + CreateNextSubTask car chase missing); 7 M; soak OK, no combat run
 2026-10-28	ASM-S05c	v6	asm sweep	230682	70	19	Tasks 16/24: KillCriminal ControlSubTask double->float consts, GoToCarDoorAndStandStill x3 (strict sqrt < 0.5, seek timer never started, > 0.01f); 12 M; KillPedOnFoot(Armed) 8 -> S05d
+2026-10-28	ASM-S05d	v6	asm sweep	222607	70	13	KillPedOnFoot(Armed) 7/8: Armed LineOfSightClearForAttack (hard-coded 5000ms/4.0 vs exe area/proc-level logic, duck/stand inverted), CreateFirstSubTask (RandomBit, strict > 30/6, cover point always found, z+1); 4 M; no oracle

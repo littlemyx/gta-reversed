@@ -120,13 +120,15 @@ CTask* CTaskComplexFallToDeath::CreateNextSubTask(CPed* ped) {
     const auto& z = ped->GetMoveSpeed().z;
     switch (m_pSubTask->GetTaskType()) {
     case TASK_SIMPLE_IN_AIR: {
-        b0x4 = z < 0.0f ? z > -0.1f : z < 0.1f;
+        // Exe 0x6793CE-0x679480: |z| < 0.1 => land without an anim and b0x4 = false; |z| >= 0.1 (or NaN) => land with KO_SKID_FRONT and b0x4 = true (port had it inverted)
+        b0x4 = !(z < 0.0f ? z > -0.1f : z < 0.1f);
         return new CTaskSimpleLand(b0x4 ? ANIM_ID_KO_SKID_FRONT : ANIM_ID_UNDEFINED);
     }
     case TASK_SIMPLE_LAND: {
         if (!b0x1) {
+            // Exe 0x6792B5-0x6792EA: the in-air task is restarted only when the ped is still moving vertically (|z| >= 0.01, NaN included) - port had it inverted
             bool v11 = z < 0.0f ? z > -0.01f : z < 0.01f;
-            if (v11 && (!ped->m_pContactEntity || ped->m_pContactEntity->GetIsTypeBuilding())) {
+            if (!v11 && (!ped->m_pContactEntity || ped->m_pContactEntity->GetIsTypeBuilding())) {
                 b0x1 = true;
                 return new CTaskSimpleInAir(false, true, false);
             }

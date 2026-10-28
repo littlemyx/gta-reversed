@@ -3,3 +3,4 @@ date	gate_sha	scenario.check	detail	reruns
 2026-10-26	d3a8458d	missions.bike.enter_return+reenter_return	BMX not mounted	2 PASS
 2026-10-26	61d2ce08	interior_lspd.cops_present+cops_react	no cops in the interior	2 PASS
 2026-10-26	8d71943b	combat.chase.no_zombie_cops	1 cop shot, not dead afterwards	1 PASS / 1 FAIL(combat.foot.weapon_pickup: no pickup after kill)
+2026-10-28	304805a6	combat.chase.no_zombie_cops	1 cop shot, not dead afterwards	2 PASS (3rd occurrence; COMBAT-FLAKY brief open)

@@ -6660,8 +6660,11 @@ void CAutomobile::FireTruckControl(CFire* fire) {
                 m_fDoomVerticalRotation -= timeStep;
             else
                 m_fDoomVerticalRotation += timeStep;
+        } else {
+            m_fDoomVerticalRotation = doomVerticalRotation; // 0x729F5E: within one step: snap to the target (the port left it unchanged)
         }
-        m_fDoomHorizontalRotation = X87R(x87::sin(float(CTimer::GetTimeInMS() % 4096) * TWO_PI * 1.f / 4096.f) * 0.15f);
+        // 0x729F64-0x729F90: rand-free wobble, the exe scale is 6.28f / 4096 (0x863988 = 0x3AC8F5C3), not 2*PI / 4096
+        m_fDoomHorizontalRotation = X87R(x87::sin(float(CTimer::GetTimeInMS() & 0xFFF) * std::bit_cast<float>(0x3AC8F5C3u)) * 0.15f);
     }
     else {
         CCam& activeCam = CCamera::GetActiveCamera();
@@ -6688,10 +6691,13 @@ void CAutomobile::FireTruckControl(CFire* fire) {
 
             float doomVerticalRotDiff = doomVerticalRotation - m_fDoomVerticalRotation;
             float timeStep = CTimer::GetTimeStep() * ExeRecip(20.0f);
+            // 0x729C7A-0x729CB2: when neither step applies the rotation snaps to the target (the port left it unchanged)
             if (doomVerticalRotDiff > timeStep)
                 m_fDoomVerticalRotation += timeStep;
             else if (doomVerticalRotDiff < -timeStep)
                 m_fDoomVerticalRotation -= timeStep;
+            else
+                m_fDoomVerticalRotation = doomVerticalRotation;
 
             float doomHorizontalRotDiff = doomHorizontalRotation - m_fDoomHorizontalRotation;
             timeStep = CTimer::GetTimeStepInSeconds();
@@ -6699,6 +6705,8 @@ void CAutomobile::FireTruckControl(CFire* fire) {
                 m_fDoomHorizontalRotation += timeStep;
             else if (doomHorizontalRotDiff < -timeStep)
                 m_fDoomHorizontalRotation -= timeStep;
+            else
+                m_fDoomHorizontalRotation = doomHorizontalRotation; // 0x729D05
         }
 
         if (m_fDoomVerticalRotation > PI)
@@ -6706,10 +6714,11 @@ void CAutomobile::FireTruckControl(CFire* fire) {
         else if (m_fDoomVerticalRotation < -PI)
             m_fDoomVerticalRotation += TWO_PI;
 
+        // 0x729DC5: the exe literals for 10 and 20 degrees are 1 ulp above DegreesToRadians(10/20) (0x3E32B8C3, 0x3EB2B8C3)
         if (ModelIndices::IsSwatVan(m_nModelIndex))
-            m_fDoomHorizontalRotation = std::clamp<float>(m_fDoomHorizontalRotation, -DegreesToRadians(10), DegreesToRadians(35));
+            m_fDoomHorizontalRotation = std::clamp<float>(m_fDoomHorizontalRotation, -std::bit_cast<float>(0x3E32B8C3u), DegreesToRadians(35));
         else
-            m_fDoomHorizontalRotation = std::clamp<float>(m_fDoomHorizontalRotation, -DegreesToRadians(20), DegreesToRadians(20));
+            m_fDoomHorizontalRotation = std::clamp<float>(m_fDoomHorizontalRotation, -std::bit_cast<float>(0x3EB2B8C3u), std::bit_cast<float>(0x3EB2B8C3u));
 
         if (!CPad::GetPad()->GetCarGunFired())
             return;

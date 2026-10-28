@@ -1,0 +1,7 @@
+addr	function	verdict	asm range	note	fix commit
+0x62A380	CTaskSimpleUseGun::ProcessPed	MATCH	0x62A380-0x62AF3E (all)	every branch, flag bit, signed/NaN compare and x87 chain checked: IK reset, weapon-info init/change, attack-button decay, arm-blocked/pistol-whip abort, per-command anim handling (reload, pistol whip hit + aim rotation, aim/fire/burst incl. continuous fire, twin pistols, expand, breakout), aim-skip angle test (115/-130 deg + dead-ped bonus, up dot), AimGun/AbortIK choice, SetMoveAnim gate, NextCmd clear	-
+0x68A1D0	CTaskSimpleSwim::ProcessSwimmingResistance	FIXED	0x68A1D0-0x68A8C3 (all)	underwater-sprint move vector association ((cos*fwd)*shift.y, z = sin*y + (fwd term + right.z*x) + 0.01); pow(0.9,ts) kept unrounded in the drag; water level probed at the ped's own z (not z + ts*speed.z); 0.785398185 (not 0.7854); state-changer growth ts*0.002 (not ts*0.02*0.1); 4/pi constant; unknown states fall through to the drag (no return)	9a77e30b
+0x688A90	CTaskSimpleSwim::ProcessControlInput	NOT_REACHED	-	budget	-
+0x64FC10	CTaskUtilityLineUpPedWithCar::GetLocalPositionToOpenCarDoor	NOT_REACHED	-	budget (port already documents the inlined matrix op order and a known exe bug)	-
+0x650A80	CTaskUtilityLineUpPedWithCar::GetPositionToOpenCarDoor	NOT_REACHED	-	budget	-
+0x6513A0	CTaskUtilityLineUpPedWithCar::ProcessPed	NOT_REACHED	-	budget	-

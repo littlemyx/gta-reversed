@@ -267,4 +267,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-28	ASM-S01b	v6	asm sweep	241829	105	21	SeekEntity template x3 instantiations: 8 fixed (abort wrote wrong interval, scan timer unguarded, null entity, boat attach mirrored + FindZ discarded, Say IsMember); ArrestPed MATCH; wave2 0/0 before+after
 2026-10-28	ASM-S14b	v6	asm sweep (partial)	229625	102	20	Tasks 17/23: 8 fixed (AutoDriver engine flag inverted, PlayerOnFire damage event re-added every frame, SitIdle look time/order, PickUpBike null, Jump slope test + launch footprints); PlayerOnFoot x6 -> S14c
 2026-10-28	ASM-S14c	v6	asm sweep	185425	65	37	PlayerOnFoot 6/6: PlayIdleAnimations fixed (wrong flag bit: mobile phone, looking gate either-bit, signed 20 s delta); 5 MATCH
-2026-10-28	ASM-S13c	v6	asm sweep	252291+	78+	?	GunControl ProcessPed 8 deviations (no SetMoveState STILL, LOS flag never copied, gunstand cond), JetPack ControlInput x4 + Thrust x3 fixed; InAir MATCH
+2026-10-28	ASM-S13c	v6	asm sweep	254217	82	22	GunControl ProcessPed 8 deviations (no SetMoveState STILL, LOS flag never copied, gunstand cond), JetPack ControlInput x4 + Thrust x3 fixed; InAir MATCH

@@ -270,3 +270,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-28	ASM-S13c	v6	asm sweep	254217	82	22	GunControl ProcessPed 8 deviations (no SetMoveState STILL, LOS flag never copied, gunstand cond), JetPack ControlInput x4 + Thrust x3 fixed; InAir MATCH
 2026-10-28	ASM-S16i	v6	asm sweep	171388	33	8	PreRender tail 0x6AB36C-0x6ACCBA (~1700 asm lines) full MATCH; S16 Automobile complete
 2026-10-28	ASM-S18c	v6	asm sweep	200494	57	10	Heli/Plane 8/11: Plane VehicleDamage fixed (mass/10000 kept x87-unrounded); 7 MATCH; SearchLightCone, Plane PreRender, ProcessFlyingCarStuff open
+2026-10-28	ASM-S18d	v6	asm sweep	222326	65	11	ProcessFlyingCarStuff fixed (cam dist2 sum order z,y,x); SearchLightCone MATCH; Plane PreRender MATCH to 0x6C9FD9, rest open

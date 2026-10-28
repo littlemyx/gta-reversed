@@ -75,4 +75,5 @@
 | S17f | rest of S17e | 1 | done (MATCH, Bike ProcessControl complete) | Bike.cpp |
 | S01b | rest of S01 | 18 | done (10 M, 8 fixed) | TaskComplexArrestPed.cpp, TaskComplexSeekEntityRadiusAngleOffset.cpp, TaskComplexSeekEntityStandard.cpp |
 | S14c | rest of S14b | 6 | done (5 M, 1 fixed) | TaskSimplePlayerOnFoot.cpp |
-| S18d | rest of S18c | 3 | pending | Heli.cpp, Plane.cpp |
+| S18d | rest of S18c | 3 | partial 2/3 + PreRender to 0x6C9FD9 (1 M, 1 fixed) -> S18e | Heli.cpp, Plane.cpp |
+| S18e | rest of S18d | 1 | pending | Plane.cpp |

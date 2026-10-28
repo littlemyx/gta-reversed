@@ -1,0 +1,27 @@
+addr	function	verdict	asm range	note	fix commit
+0x6EAE80	CWaterLevel::WaterLevelInitialise	FIXED	0x6EAE80-0x6EB681 (all)	m_BlockPolyInfo (0xC21B70, 0x120 bytes) cleared first (port left stale entries on re-init). Inlined loader checked against water.dat: 301 quads (29 tokens) and 6 triangles (22 tokens) all parse the same; exe opens "rb", retries OpenFile, takes quad/tri from the sscanf count (not reproduced, valid data only). Texture setup (particle txd, waterclear256 / seabd32 / waterwake) equal	d99cc025
+0x6E59E0	CWaterLevel::Shutdown	MATCH	0x6E59E0-0x6E5A34 (all)	texture order (waterclear256, seabd32, waterwake) and null stores equal	-
+0x6EE240	CWaterLevel::RenderWaterTriangle	NOT_REACHED	-	budget (GetWaterLevel helpers, init, fog, flow, camera range and block scan done first)	-
+0x6E8ED0	CWaterLevel::RenderFlatWaterTriangle_OneLayer	NOT_REACHED	-	budget (GetWaterLevel helpers, init, fog, flow, camera range and block scan done first)	-
+0x6EE080	CWaterLevel::RenderFlatWaterTriangle	NOT_REACHED	-	budget (GetWaterLevel helpers, init, fog, flow, camera range and block scan done first)	-
+0x6ECF00	CWaterLevel::SplitWaterTriangleAlongXLine	NOT_REACHED	-	budget (GetWaterLevel helpers, init, fog, flow, camera range and block scan done first)	-
+0x6EE5A0	CWaterLevel::SplitWaterTriangleAlongYLine	NOT_REACHED	-	budget (GetWaterLevel helpers, init, fog, flow, camera range and block scan done first)	-
+0x6EC5D0	CWaterLevel::RenderWaterRectangle	NOT_REACHED	-	budget (GetWaterLevel helpers, init, fog, flow, camera range and block scan done first)	-
+0x6E9940	CWaterLevel::RenderFlatWaterRectangle_OneLayer	NOT_REACHED	-	budget (GetWaterLevel helpers, init, fog, flow, camera range and block scan done first)	-
+0x6EBEC0	CWaterLevel::RenderFlatWaterRectangle	NOT_REACHED	-	budget (GetWaterLevel helpers, init, fog, flow, camera range and block scan done first)	-
+0x6E73A0	CWaterLevel::SplitWaterRectangleAlongXLine	NOT_REACHED	-	budget (GetWaterLevel helpers, init, fog, flow, camera range and block scan done first)	-
+0x6ED6D0	CWaterLevel::SplitWaterRectangleAlongYLine	NOT_REACHED	-	budget (GetWaterLevel helpers, init, fog, flow, camera range and block scan done first)	-
+0x6EB710	CWaterLevel::PreRenderWater	FIXED	0x6EB710-0x6EB800 (all)	flow update: step = ts*0.001f (port: ts/1000), delta / sum unrounded, negative delta subtracts and zero / NaN add (port: copysign); frame counter & 31 == 29 equal	ee5be215
+0x6E6D10	CWaterLevel::ScanThroughBlocks	FIXED	0x6E6D10-0x6E6EB0 (partial)	scan points are x*0.002f + 6 with the product unrounded (port: x/500 + 6). Frustum corners (far*viewWindow, signs, RwV3dTransformPoints with the camera frame) match CCamera::GetFrustumPoints by reading; GetCorners3D order, CWorldScan::ScanWorld and BlockHit not compared	d089d6e1
+0x6ED9A0	CWaterLevel::RenderBoatWakes	NOT_REACHED	-	budget (GetWaterLevel helpers, init, fog, flow, camera range and block scan done first)	-
+0x6EA260	CWaterLevel::RenderWakeSegment	NOT_REACHED	-	budget (GetWaterLevel helpers, init, fog, flow, camera range and block scan done first)	-
+0x6EA9F0	CWaterLevel::SetUpWaterFog	FIXED	0x6EA9F0-0x6EAB41 (all)	early return when the water lookup succeeds with big == 0 and small == 0 (port registered the fog with z 0); gbPlayerIsInsideWaterFog only set, never cleared (port assigned); height + z sum unrounded; int16 arrays and z store equal	cbf99007
+0x6E7760	CWaterLevel::RenderWaterFog	NOT_REACHED	-	budget (GetWaterLevel helpers, init, fog, flow, camera range and block scan done first)	-
+0x6EF650	CWaterLevel::RenderWater	NOT_REACHED	-	budget (GetWaterLevel helpers, init, fog, flow, camera range and block scan done first)	-
+0x6E9C80	CWaterLevel::SetCameraRange	FIXED	0x6E9C80-0x6E9D6E (all)	(cam -/+ 48) * 0.5 passed to floor / ceil unrounded (port rounded the difference to float first); min/max X/Y destinations equal	c92aaa2a
+0x6EB810	CWaterLevel::RenderHighDetailWaterRectangle	NOT_REACHED	-	budget (GetWaterLevel helpers, init, fog, flow, camera range and block scan done first)	-
+0x6E91D0	CWaterLevel::RenderHighDetailWaterRectangle_OneLayer	NOT_REACHED	-	budget (GetWaterLevel helpers, init, fog, flow, camera range and block scan done first)	-
+0x6EA960	CWaterLevel::GetWaterDepth	MATCH	0x6EA960-0x6EA9D7 (all)	ground fallback -100, outputs equal	-
+0x6EA8A0	CWaterLevel::GetGroundLevel	MATCH	0x6EA8A0-0x6EA91C (all)	origin z = radius + z (unrounded sum), -radius, ProcessVerticalLine flags, surface B / piece B outputs equal	-
+0x6E8780	CWaterLevel::RenderHighDetailWaterTriangle_OneLayer	NOT_REACHED	-	budget (GetWaterLevel helpers, init, fog, flow, camera range and block scan done first)	-
+0x6EDDC0	CWaterLevel::RenderHighDetailWaterTriangle	NOT_REACHED	-	budget (GetWaterLevel helpers, init, fog, flow, camera range and block scan done first)	-

@@ -1,0 +1,16 @@
+addr	function	verdict	asm range	note	fix commit
+0x6D3830	CVehicle::AddReplacementUpgrade	MATCH	0x6D3830-0x6D39D4 (all)	remove, create instance, atomic id / flag, render callback, double exhaust (-2x), bumper plate, damage atomic; arg order of CreateReplacementAtomic equal	-
+0x6D39E0	CVehicle::RemoveReplacementUpgrade	FIXED	0x6D39E0-0x6D3A4D (all)	RemoveObjectsCB stores the atomic id into the exe argument slot (frameId); the port passed &frameOfUpgrade, so the frame pointer was overwritten and CopyObjectsCB attached the cloned atomics to the id as a frame	ff02874a
+0x6D3C70	CVehicle::RemoveWinch	MATCH	0x6D3C70-0x6D3CA1 (all)	unused; the exe looks the rope up by &this[29] (known exe bug, port keeps NOTSA_UNREACHABLE); clear of the 2 rope-type bits equal	-
+0x6DF930	CVehicle::RemoveVehicleUpgrade	MATCH	0x6DF930-0x6DFA1D (all)	clear-flags early out, linked upgrade looked up first, wheels (scale 1.0, nodes 5/4/7), slot clear	-
+0x6DFA20	CVehicle::AddUpgrade	MATCH	0x6DFA20-0x6DFB6A (all)	damaged-slot switch 0->3,1->4,2->5,6->7,12->13 (struct stride 0x20), plate setup, visibility	-
+0x6E3290	CVehicle::AddVehicleUpgrade	MATCH	0x6E3290-0x6E33FC (all)	replaced-upgrade return, wheel scale / offroad flag, linked upgrade, first-free-slot store	-
+0x6E3400	CVehicle::SetupUpgradesAfterLoad	MATCH	0x6E3400-0x6E3432 (all)	slot cleared before AddVehicleUpgrade	-
+0x6D26D0	SetVehicleAtomicVisibilityCB (Frame; Object 0x6D2690 too)	MATCH	0x6D2690-0x6D26F9 (all)	object: id & 3 test, flags = (id&3 == state) ? 4 : 0; frame: objects then children	-
+0x6D3300	RemoveUpgradeCB	MATCH	0x6D3300-0x6D336B (all)	upgrade bit 0x800, CarMod bits 10..14, bUsesVehDummy test, frame destroyed unconditionally	-
+0x6D33B0	RemoveObjectsCB (Object)	MATCH	0x6D33B0-0x6D3411 (all)	id stored through data, upgrade atomics kept, frame destroyed only without hierarchy id	-
+0x6D3420	RemoveObjectsCB (Frame)	MATCH	0x6D3420-0x6D3449 (all)	-	-
+0x6D3450	CopyObjectsCB	MATCH	0x6D3450-0x6D3481 (all)	clone, add to clump, set frame order equal	-
+0x6D34D0	RemoveAllUpgradesCB	MATCH	0x6D34D0-0x6D3503 (all)	-	-
+0x6DBCE0	CVehicle::ProcessBoatControl (preamble)	FIXED	0x6DBCE0-0x6DBF0A (all)	bIsDrowning cleared only on the not-submerged / not-drowning paths (the drowning branch jumps over the clear at 0x6DBF03; the port cleared it unconditionally); ts*mass*0.0008f unrounded in the compare; buoyancy args, driver breath / damage event order equal	947b6c35
+0x6E0E20	CVehicle::DoHeadLightBeam	FIXED	0x6E0E20-0x6E142F (all)	render only: point is MultiplyMatrixWithVector (0x59C890, translation inside the x87 expression; port added pos to TransformVector), 2x*right.x unrounded, z,y,x camera dot, 1-|dot| and *32 unrounded to _ftol, lightNormal.z / lightPos x,y / right*0.05 y,z / normal*3 (v2.x) / normal*0.2 x,y unrounded, other products float spills. Derived by hand from the stack traffic, no oracle for render code	733118ce

@@ -1,0 +1,41 @@
+addr	function	verdict	asm range	note	fix commit
+0x65CA00	CTaskComplexFleeShooting::MakeAbortable	MATCH	0x65CA00-0x65CA53		-
+0x65CA60	CTaskComplexFleeShooting::CreateNextSubTask	MATCH	0x65CA60	tail jump to SmartFleeEntity::CreateNextSubTask	-
+0x65CA70	CTaskComplexFleeShooting::CreateFirstSubTask	MATCH	0x65CA70-0x65CA88		-
+0x65CA90	CTaskComplexFleeShooting::ControlSubTask	FIXED	0x65CA90-0x65CC5A	m_moveState=RUN missing when secondary task exists; timers use inline unguarded start	c13b0177
+0x696680	CTaskComplexFollowLeaderAnyMeans::CreateSubTask	MATCH	0x696680-0x69681D	(exe heap overflow store +0x50=7 not replicated, as documented)	-
+0x696CC0	CTaskComplexFollowLeaderAnyMeans::CreateNextSubTask	MATCH	0x696CC0-0x696D72		-
+0x696D80	CTaskComplexFollowLeaderAnyMeans::CreateFirstSubTask	MATCH	0x696D80		-
+0x696DA0	CTaskComplexFollowLeaderAnyMeans::ControlSubTask	MATCH	0x696DA0-0x696DE7		-
+0x6962A0	CTaskComplexFollowLeaderInFormation::CreateSubTask	MATCH	0x6962A0-0x69666B		-
+0x696820	CTaskComplexFollowLeaderInFormation::CreateNextSubTask	MATCH	0x696820-0x6968CE		-
+0x6968E0	CTaskComplexFollowLeaderInFormation::CreateFirstSubTask	MATCH	0x6968E0-0x69693B		-
+0x696940	CTaskComplexFollowLeaderInFormation::ControlSubTask	FIXED	0x696940-0x696CB1	foot branch: (dz2+dy2)+dx2 sum, strict D2>distSq (NaN returns); m_Dist<=0 test NaN	b9af7c17
+0x671750	CTaskComplexFollowNodeRoute::SetTarget	FIXED	0x671750-0x6717FC	with blending the speeding-up flag is SET (port cleared it)	dda88e46
+0x66EF20	CTaskComplexFollowNodeRoute::CanGoStraightThere	FIXED	0x66EF20-0x66EF7F	length test sqrt((dz2+dx2)+dy2) > maxDist (port: squared >=)	54917d3c
+0x66EFA0	CTaskComplexFollowNodeRoute::ComputePathNodes	NOT_REACHED	0x66EFA0	long function (~400 insns), budget	-
+0x6694E0	CTaskComplexFollowNodeRoute::StopTimer	FIXED	0x6694E0-0x669512	Pause (stopped flag + remaining) instead of Stop	46c83e53
+0x674930	CTaskComplexFollowPatrolRoute::Constructor	MATCH	0x674930-0x6749E3		-
+0x670B00	CTaskComplexFollowPatrolRoute::CreateSubTask	MATCH	0x670B00-0x670D74		-
+0x674BB0	CTaskComplexFollowPatrolRoute::Clone	MATCH	0x674BB0-0x674C21		-
+0x670D80	CTaskComplexFollowPatrolRoute::CreateNextSubTask	MATCH	0x670D80-0x670E0F		-
+0x670E20	CTaskComplexFollowPatrolRoute::CreateFirstSubTask	NOT_REACHED	0x670E20	long x87 loop; port already x87d-ported	-
+0x695090	CTaskComplexFollowPedFootsteps::ControlSubTask	NOT_REACHED	-	budget (150k) reached	-
+0x671510	CTaskComplexFollowPointRoute::Constructor	NOT_REACHED	-	budget (150k) reached	-
+0x669090	CTaskComplexFollowPointRoute::CreateTask	UNSURE	0x669090-0x669322 (partly read)	cases 0xC8/0xCB/0x2C0/0x384 match; 0x39E (GoToPointFine) and 0x387 not finished	-
+0x66E860	CTaskComplexFollowPointRoute::ControlSubTask	FIXED	0x66E860-0x66EA25	new-route flag restart missing; speeding-up uses CalcBlendRatio(ped,false) and applies ratio>=0; will-slow-down block sets slowing-down + clears speeding-up	2d831779
+0x65EBB0	CTaskComplexGangFollower::Destructor	NOT_REACHED	-	budget (150k) reached	-
+0x665E00	CTaskComplexGangFollower::CreateNextSubTask	NOT_REACHED	-	budget (150k) reached	-
+0x666160	CTaskComplexGangFollower::CreateFirstSubTask	NOT_REACHED	-	budget (150k) reached	-
+0x662A10	CTaskComplexGangFollower::ControlSubTask	NOT_REACHED	-	budget (150k) reached	-
+0x661720	CTaskComplexGangJoinRespond::Destructor	NOT_REACHED	-	budget (150k) reached	-
+0x661950	CTaskComplexGangJoinRespond::ControlSubTask	NOT_REACHED	-	budget (150k) reached	-
+0x65DF30	CTaskComplexGangLeader::Destructor	NOT_REACHED	-	budget (150k) reached	-
+0x65E730	CTaskComplexGangLeader::GetRandomGangAmbientAnim	NOT_REACHED	-	budget (150k) reached	-
+0x65E860	CTaskComplexGangLeader::DoGangAbuseSpeech	NOT_REACHED	-	budget (150k) reached	-
+0x65E9A0	CTaskComplexGangLeader::DoGangAttackSpeech	NOT_REACHED	-	budget (150k) reached	-
+0x65DFF0	CTaskComplexGangLeader::CreateNextSubTask	NOT_REACHED	-	budget (150k) reached	-
+0x65E1F0	CTaskComplexGangLeader::CreateFirstSubTask	NOT_REACHED	-	budget (150k) reached	-
+0x662370	CTaskComplexGangLeader::ControlSubTask	NOT_REACHED	-	budget (150k) reached	-
+0x65E200	CTaskComplexGangLeader::ScanForStuff	NOT_REACHED	-	budget (150k) reached	-
+0x649310	CTaskComplexGetOnBoatSeat::CreateFirstSubTask	NOT_REACHED	-	budget (150k) reached	-

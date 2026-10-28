@@ -257,10 +257,11 @@ void CTrafficLights::DisplayActualLight(CEntity* entity) {
             }
 
             if (CWeather::TrafficLightsBrightness > 0.05F) {
-                auto fColMult = CTimeCycle::m_CurrentColours.m_fLightsOnGroundBrightness * CWeather::TrafficLightsBrightness / 80.0F;
-                auto ucRed   = NOTSA_FTOL(uint8, (float)aTrafficLightColoursR[iLightState] * fColMult);
-                auto ucGreen = NOTSA_FTOL(uint8, (float)aTrafficLightColoursG[iLightState] * fColMult);
-                auto ucBlue  = NOTSA_FTOL(uint8, (float)aTrafficLightColoursB[iLightState] * fColMult);
+                // 0x49DF88..0x49DFE2: ((colour * LightsOnGroundBrightness[0xB7C4F8]) * TrafficLightsBrightness[0xC812A8]) * 0.0125f[0x85A5C4] (the port divided the product by 80 first)
+                const auto fLightsOnGround = CTimeCycle::m_CurrentColours.m_fLightsOnGroundBrightness;
+                auto ucRed   = NOTSA_FTOL(uint8, (float)aTrafficLightColoursR[iLightState] * fLightsOnGround * CWeather::TrafficLightsBrightness * 0.0125F);
+                auto ucGreen = NOTSA_FTOL(uint8, (float)aTrafficLightColoursG[iLightState] * fLightsOnGround * CWeather::TrafficLightsBrightness * 0.0125F);
+                auto ucBlue  = NOTSA_FTOL(uint8, (float)aTrafficLightColoursB[iLightState] * fLightsOnGround * CWeather::TrafficLightsBrightness * 0.0125F);
 
                 CShadows::StoreStaticShadow(
                     NOTSA_PTR_ID32(entity),

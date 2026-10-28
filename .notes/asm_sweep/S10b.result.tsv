@@ -1,0 +1,27 @@
+addr	function	verdict	asm range	note	fix commit
+0x64AC00	CTaskSimpleCarAlign::StartAnim	MATCH	0x64AC00-0x64ACD6 (all)	door 10/11 -> align LHS (0x15f/0x161), else RHS (0x160/0x162); z<=4.4 low; blend 4.0	-
+0x64D6D0	CTaskSimpleCarAlign::ProcessPed	MATCH	0x64D6D0-0x64D707 (all)		-
+0x645C70	CTaskSimpleCarAlign::SetPedPosition	MATCH	0x645C70-0x645CA6 (all)	door-pos call result unused in both	-
+0x646410	CTaskSimpleCarCloseDoorFromInside::ComputeAnimID	MATCH	0x646410-0x64646E (all)	jump table decoded: 8->0x170, 9->0x172, 10->0x16f, 11->0x171	-
+0x64AFB0	CTaskSimpleCarCloseDoorFromInside::StartAnim	MATCH	0x64AFB0-0x64AFFA (all)	BlendAnimation 1000, finish callback	-
+0x64D9A0	CTaskSimpleCarCloseDoorFromInside::ProcessPed	FIXED	0x64D9FF	bDontCloseDoorAfterGettingIn path: ProcessOpenDoor got a null ped (shared ProcessDoorOpen helper); exe passes the task ped (also MakeAbortable 0x64AF99; only the finish CB 0x6464CA passes 0)	5bc63553
+0x6463F0	CTaskSimpleCarCloseDoorFromInside::SetPedPosition	MATCH	0x6463F0-0x646407 (all)		-
+0x646600	CTaskSimpleCarCloseDoorFromOutside::ComputeAnimID	MATCH	0x646600-0x64665E (all)	jump table decoded: 8->0x17d, 9->0x17f, 10->0x17c, 11->0x17e	-
+0x64B080	CTaskSimpleCarCloseDoorFromOutside::StartAnim	FIXED	0x64B0D3, 0x64B28D	ped-in-air check strictly greater (port >=); anim started with CAnimManager::AddAnimation (port: BlendAnimation delta 1000); MakeAbortable ProcessOpenDoor ped arg (0x64B069)	1f67419b
+0x6465E0	CTaskSimpleCarCloseDoorFromOutside::SetPedPosition	MATCH	0x6465E0-0x6465F7 (all)		-
+0x63C460	CTaskSimpleCarDrive::Destructor	MATCH	0x63C460-0x63C4FD (all)	port null-checks the roll-door anim (exe would fault); harmless	-
+0x63C500	CTaskSimpleCarDrive::TriggerIK	MATCH	0x63C500-0x63C635 (all)	mission 2..6 vs 15/16 paths, one rand draw each, same order	-
+0x642760	CTaskSimpleCarDrive::StartBopping	MATCH	0x642760-0x6428B7 (all)		-
+0x6428C0	CTaskSimpleCarDrive::ProcessHeadBopping	MATCH	0x6428C0-0x642ADB (all)	branch polarity, NaN-taking compares, rand order, axes verified	-
+0x642AE0	CTaskSimpleCarDrive::ProcessArmBopping	MATCH	0x642AE0-0x642E6D (all)	dummy offsets, arm-rest height bounds 0.4/0.44 and 0.39/0.46, hand nodes verified	-
+0x642E70	CTaskSimpleCarDrive::ProcessBopping	MATCH	0x642E70-0x642F71 (all)		-
+0x642700	CTaskSimpleCarDrive::StartRollDoorAnim	MATCH	0x642700-0x642755 (all)		-
+0x63C670	CTaskSimpleCarDrive::MakeAbortable	MATCH	0x63C670-0x63C763 (all)		-
+0x644470	CTaskSimpleCarDrive::ProcessPed	MATCH	0x644470-0x644E1B (all)	all branches, speech ids, timers, events, drive-by args checked	-
+0x63C770	CTaskSimpleCarDrive::SetPedPosition	MATCH	0x63C770-0x63C837 (all)	line-up anim table at 0x8D2E9C equal	-
+0x64CCE0	CTaskSimpleCarFallOut::StartAnim	MATCH	0x64CCE0-0x64CD51 (all)		-
+0x64E2C0	CTaskSimpleCarFallOut::ProcessPed	FIXED	0x64E317-0x64E332	ProcessOpenDoor time arg is the anim current time (port: 1.0)	d2fadad7
+0x648E40	CTaskSimpleCarFallOut::SetPedPosition	MATCH	0x648E40-0x648E87 (all)		-
+0x64DB30	CTaskSimpleCarGetIn::ProcessPed	FIXED	0x64DBF6-0x64DC31	BMX move force: scalar timestep*mass*0.01 first, then forward*scalar (port: three vector multiplies, different float rounding)	a96d3729
+0x6467A0	CTaskSimpleCarGetIn::SetPedPosition	MATCH	0x6467A0-0x6467B7 (all)		-
+0x61FF40	CTaskSimpleBeHitWhileMoving::StartAnim (tail 0x6200F4+)	MATCH	0x6200C2-0x620281 (all)	unconscious timer player/non-player, rollout vs other anim, hit-dir anim 0x1c..0x1f verified	-

@@ -1,0 +1,3 @@
+addr	file	line	cls	fn	oc
+0x683AD0	source/game_sa/Tasks/TaskTypes/TaskComplexPartner.cpp	43	CTaskComplexPartner	CreateNextSubTask	D
+0x6840D0	source/game_sa/Tasks/TaskTypes/TaskComplexPartner.cpp	45	CTaskComplexPartner	ControlSubTask	D

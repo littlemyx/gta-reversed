@@ -1,0 +1,13 @@
+addr	function	verdict	asm range	note	fix commit
+0x6B1880	CAutomobile::ProcessControl	FIXED	0x6B1880-0x6B377F	hit-wall flag read before CPhysical::ProcessControl; traction formula (K*mult, physics carTraction*mult*K, *0.25, /velFreq); z,y,x dot sums; shake frequency/time; stopped-car limit 0.005; earthquake adds to z. UNSURE (not fixed): hydraulic PHYSICS branch guards specialColIndex==-1 (exe reads out of bounds); 0.01/0.04 constants are 1ulp above 0.01f/0.04f in the exe; std::pow vs _CIpow rounding	a7a10944
+0x6A65D0	CAutomobile::SetupSuspensionLines	FIXED	0x6A65D0-0x6A6ADB	line end.z operation order; front/rear height above road order and rear uses wheel 3 (not 1); ground-clearance sphere clamp used centre.z-radius instead of centre.z-minBottom (radius and centre)	fd079c1f
+0x6A07A0	CAutomobile::HydraulicControl	NOT_REACHED	-	token budget	-
+0x6A8C00	CAutomobile::ProcessBuoyancy	NOT_REACHED	-	token budget	-
+0x6A9680	CAutomobile::ProcessHarvester	NOT_REACHED	-	token budget	-
+0x6AE850	CAutomobile::TankControl	NOT_REACHED	-	token budget	-
+0x6AF420	CAutomobile::PlaceOnRoadProperly	NOT_REACHED	-	token budget	-
+0x729B60	CAutomobile::FireTruckControl	NOT_REACHED	-	token budget	-
+0x6A8580	CAutomobile::SpawnFlyingComponent	NOT_REACHED	-	token budget	-
+0x6AA290	CAutomobile::UpdateWheelMatrix	NOT_REACHED	-	token budget	-
+0x6AAB50	CAutomobile::PreRender	NOT_REACHED	-	token budget	-
+0x6A7650	CAutomobile::VehicleDamage	NOT_REACHED	-	token budget	-

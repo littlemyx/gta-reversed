@@ -95,4 +95,5 @@
 | S08b | rest of S08 | 8 | done 8/8 (6 M, 2 fixed; S08 complete) | TaskComplexUsePairedAttractor.cpp, TaskComplexUseSwatRope.cpp, TaskComplexUseWaterCannon.cpp |
 | S10b | rest of S10 (+ BeHitWhileMoving StartAnim tail from 0x6200F4) | 26 | done 26/26 (22 M, 4 fixed; S10 complete) | TaskSimpleCarAlign.cpp, TaskSimpleCarCloseDoorFromInside.cpp, TaskSimpleCarCloseDoorFromOutside.cpp, TaskSimpleCarDrive.cpp, TaskSimpleCarFallOut.cpp, TaskSimpleCarGetIn.cpp |
 | S15b | rest of S15 | 20 | partial 14/20 (8 M, 6 fixed) -> S15c | TaskSimpleSwim.cpp, TaskSimpleThrowProjectile.cpp, TaskSimpleTired.cpp, TaskSimpleTurn180.cpp, TaskSimpleUseGun.cpp, TaskSimpleWaitUntilAreaCodesMatch.cpp, TaskSimpleWaitUntilPedIsOutCar.cpp, TaskUtilityLineUpPedWithCar.cpp |
-| S15c | rest of S15b | 6 | pending | TaskSimpleSwim.cpp, TaskSimpleUseGun.cpp, TaskUtilityLineUpPedWithCar.cpp |
+| S15c | rest of S15b | 6 | partial 2/6 (1 M, 1 fixed) -> S15d | TaskSimpleSwim.cpp, TaskSimpleUseGun.cpp, TaskUtilityLineUpPedWithCar.cpp |
+| S15d | rest of S15c | 4 | pending | TaskSimpleSwim.cpp, TaskUtilityLineUpPedWithCar.cpp |

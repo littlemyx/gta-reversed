@@ -14,13 +14,16 @@
 CTask* CTaskComplexStuckInAir::ControlSubTask(CPed* ped) {
     auto* const intel = ped->GetIntelligence();
 
+    // 0x67C0A0: the exe keeps the result in ebp and, at the very end, aborts the (old) sub-task with URGENT if the result is a different task
+    // (i.e. AFTER the new task was created and after the ped flags were touched, not before).
+    CTask* result = m_pSubTask;
+
     switch (m_pSubTask->GetTaskType()) {
     case TASK_COMPLEX_FLEE_POINT: { // 0x67C07A
         if (intel->GetStuckChecker().GetState() != PED_STUCK_STATE_NONE) {
-            m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_URGENT);
-            return CreateSubTask(TASK_SIMPLE_STAND_STILL, ped);
+            result = CreateSubTask(TASK_SIMPLE_STAND_STILL, ped);
         }
-        return m_pSubTask;
+        break;
     }
     case TASK_COMPLEX_FALL_AND_GET_UP: { // 0x67BE80
         if (intel->GetStuckChecker().GetState() != PED_STUCK_STATE_NONE) {
@@ -30,14 +33,27 @@ CTask* CTaskComplexStuckInAir::ControlSubTask(CPed* ped) {
                 }
             }
         }
-        return m_pSubTask;
+        break;
     }
-    case TASK_SIMPLE_STAND_STILL: { // 0x67BEE9
+    case TASK_SIMPLE_STAND_STILL: { // 0x67BEE3
         if (intel->GetStuckChecker().GetState() == PED_STUCK_STATE_NONE) {
-            m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_URGENT);
-            return nullptr; // 0x67BEF3
+            result = nullptr; // 0x67BEF3
+            break;
         }
-        ped->bIsInTheAir = false; // 0x67BFC2
+        if (ped->IsPlayer()) { // 0x67BEFA [exe tests ped->m_pPlayerData]
+            auto* const player = ped->AsPlayer();
+            auto* const pad = player->GetPadFromPlayer();
+            if (std::abs(pad->GetPedWalkLeftRight()) > 0.f || std::abs(pad->GetPedWalkUpDown()) > 0.f) { // 0x67BF3E
+                // 0x67BF77..0x67BF90: LimitRadianAngle(GetRadianAngleBetweenPoints(0, 0, -x, y) - TheCamera.m_fOrientation [0xB6F178])
+                ped->m_fAimingRotation = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(0.f, 0.f, (float)(-pad->GetPedWalkLeftRight()), (float)(pad->GetPedWalkUpDown())) - TheCamera.m_fOrientation);
+            }
+            if (pad->JumpJustDown()) { // 0x67BF9B: does NOT return here, the flag / anim code below still runs
+                result = CreateSubTask(TASK_COMPLEX_JUMP, ped);
+            }
+        }
+        // 0x67BFB3..0x67BFC2: `flags = (flags & ~bIsInTheAir) | bIsStanding`
+        ped->bIsInTheAir = false;
+        ped->bIsStanding = true;
         for (int32 i = ANIM_ID_JUMP_LAUNCH; i <= ANIM_ID_FALL_GLIDE; i++) {
             if (auto* const a = RpAnimBlendClumpGetAssociation(ped->GetRpClump(), static_cast<AnimationId>(i))) {
                 if (a->GetBlendAmount() > 0.f && a->GetBlendDelta() >= 0.f) {
@@ -45,34 +61,26 @@ CTask* CTaskComplexStuckInAir::ControlSubTask(CPed* ped) {
                 }
             }
         }
-        if (ped->IsPlayer()) { // 0x67BEFA [moved down here due to the return]
-            auto* const player = ped->AsPlayer();
-            auto* const pad = player->GetPadFromPlayer();
-            if (std::abs(pad->GetPedWalkLeftRight()) > 0.f || std::abs(pad->GetPedWalkUpDown()) > 0.f) { // 0x67BF3E
-                // 0x67BF77..0x67BF90: LimitRadianAngle(GetRadianAngleBetweenPoints(0, 0, -x, y) - TheCamera.m_fOrientation [0xB6F178])
-                ped->m_fAimingRotation = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(0.f, 0.f, (float)(-pad->GetPedWalkLeftRight()), (float)(pad->GetPedWalkUpDown())) - TheCamera.m_fOrientation);
-            }
-            if (pad->JumpJustDown()) { // 0x67BF9B
-                m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_URGENT);
-                return CreateSubTask(TASK_COMPLEX_JUMP, ped);
-            }
-        }
-        return m_pSubTask;
+        break;
     }
-    case TASK_COMPLEX_JUMP: {
+    case TASK_COMPLEX_JUMP: { // 0x67C016
         if (intel->GetStuckChecker().GetState() != PED_STUCK_STATE_NONE) {
             if (auto* const subSubTask = m_pSubTask->GetSubTask()) {
                 if (notsa::isa<CTaskSimpleInAir>(subSubTask) || notsa::isa_and_present<CTaskSimpleInAir>(subSubTask->GetSubTask())) { // check if 2nd or 3rd sub tasks (1st is `TASK_COMPLEX_JUMP`)
-                    m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_URGENT);
-                    return CreateSubTask(TASK_SIMPLE_STAND_STILL, ped);
+                    result = CreateSubTask(TASK_SIMPLE_STAND_STILL, ped);
                 }
             }
         }
-        return m_pSubTask;
+        break;
     }
+    default: // 0x67C0A0: returns the unchanged sub-task
+        break;
     }
-    NOTSA_UNREACHABLE("sub-task type was {}", m_pSubTask->GetTaskType());
-    return m_pSubTask; // 0x67C0A0: default => returns the unchanged sub-task
+
+    if (result != m_pSubTask) {
+        m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_URGENT);
+    }
+    return result;
 }
 
 // 0x67BE20
@@ -126,6 +134,8 @@ CTask* CTaskComplexStuckInAir::CreateNextSubTask(CPed* ped) {
 CTask* CTaskComplexStuckInAir::CreateSubTask(eTaskType taskType, CPed* ped) {
     switch (taskType) {
     case TASK_COMPLEX_FLEE_POINT: { // 0x67BBDD
+        ped->bIsStanding = true; // 0x67BC06-0x67BC0E: `flags |= 1` (the port did not set it for this type)
+
         const CVector point = ped->GetPosition()
             - ped->GetForward() * 0.5f
             + ped->GetRight() * (CGeneral::RandomBit() ? 0.5f : -0.5f) /* exe 0x67BC5D: rand() & 1 */;

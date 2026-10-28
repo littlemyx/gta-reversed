@@ -1311,7 +1311,7 @@ bool CVehicle::CustomCarPlate_TextureCreate(CVehicleModelInfo* model) {
 
     if (const auto text = model->GetCustomCarPlateText()) {
         m_pCustomCarPlate = CCustomCarPlateMgr::CreatePlateTexture(text, model->m_nPlateType);
-        model->SetCustomCarPlateText(text);
+        model->SetCustomCarPlateText(nullptr); // 0x6D1119: `push 0` - the text is consumed (the port re-set it from itself)
         model->m_nPlateType = -1;
     } else {
         m_pCustomCarPlate = RpMaterialGetTexture(model->m_pPlateMaterial);

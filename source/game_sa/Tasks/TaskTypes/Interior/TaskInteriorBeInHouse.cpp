@@ -70,14 +70,24 @@ void CTaskInteriorBeInHouse::GetInfoForPedToUse(CPed* ped, int32* outDuration) {
         }
 
         FindInterior({ UNK_5 });
+        // 0x6751AE-0x6751DD: the duration is rolled (one rand() draw) whether or not an UNK_5 info was found
+        *outDuration = CGeneral::GetRandomNumberInRange(5'000, 30'000);
         if (m_IntInfo) {
-            *outDuration = CGeneral::GetRandomNumberInRange(5'000, 30'000);
             return;
         }
+        *outDuration = -1; // 0x6751F4 / 0x67520F: the UNK_1 / UNK_2 fallbacks reset it
     }
     if (!m_IntInfo) {
         FindInterior({ UNK_1, UNK_2 });
     }
+}
+
+// 0x676200
+CTask* CTaskInteriorBeInHouse::CreateNextSubTask(CPed* ped) {
+    ped->bHasJustSoughtCover = true; // 0x67621E: or [ped+0x474], 0x80
+    int32 duration{};
+    GetInfoForPedToUse(ped, &duration);
+    return new CTaskInteriorUseInfo{ m_IntInfo, m_Int, duration, false }; // 0x676274: bDoInstantly = 0
 }
 
 // 0x6762B0

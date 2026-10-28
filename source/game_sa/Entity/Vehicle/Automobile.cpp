@@ -5159,10 +5159,11 @@ CObject* CAutomobile::SpawnFlyingComponent(eCarNodes nodeIndex, uint32 collision
     obj->RefModelInfo(m_nModelIndex);
 
     // Create a new frame using the flying object's atomic
+    // 0x6A8759-0x6A8786: create the frame, clone the atomic, copy the LTM into the frame matrix, THEN set the frame on the atomic (the port set it before the copy)
     auto flyingObjFrame = RwFrameCreate();
     auto clonedFlyingObjAtomic = RpAtomicClone(compAtomic);  // Clone this component's atomic
-    RpAtomicSetFrame(clonedFlyingObjAtomic, flyingObjFrame); // Associate the cloned atomic with a the new frame
     *RwFrameGetMatrix(flyingObjFrame) = *frameLTM; // Set this frame's matrix to be the same as the component's - TODO: This most likely isn't the correct way to do this..
+    RpAtomicSetFrame(clonedFlyingObjAtomic, flyingObjFrame); // Associate the cloned atomic with a the new frame
     CVisibilityPlugins::SetAtomicRenderCallback(clonedFlyingObjAtomic, nullptr);
     obj->AttachToRwObject((RwObject*)clonedFlyingObjAtomic, true);
     obj->m_bDontStream = true;
@@ -5170,33 +5171,37 @@ CObject* CAutomobile::SpawnFlyingComponent(eCarNodes nodeIndex, uint32 collision
     obj->m_fTurnMass = 25.f;
     obj->m_fAirResistance = 0.97f;
     obj->m_fElasticity = 0.1f;
-    obj->m_fBuoyancyConstant = 0.106666f; // 8.0f / 75.0f ?
+    obj->m_fBuoyancyConstant = std::bit_cast<float>(0x3DDA740Fu); // 0x6A87E3: the exe literal (0.106666f is a different float, 0x3DDA73B4)
     obj->m_nObjectType = OBJECT_TEMPORARY;
 
     obj->SetIsStatic(false);
 
+    // 0x6A87F7-0x6A8834: the detached part takes the car's colours and remap texture (the port left them unset: parts rendered with colour 0)
+    obj->m_nObjectFlags = (obj->m_nObjectFlags & ~0x1u) | 0x80u; // bIsPickup off, bChangesVehColor on
+    obj->m_nCarColor[0] = m_nPrimaryColor;
+    obj->m_nCarColor[1] = m_nSecondaryColor;
+    obj->SetRemapTexture(m_pRemapTexture, m_nRemapTxd);
+
     CObject::nNoTempObjects++;
+    // 0x6A883F: > 20: time + 4000.0f and > 10: time + 10000.0f are float adds (PC24) converted back; <= 10: integer add
     if (CObject::nNoTempObjects <= 20u) {
         if (CObject::nNoTempObjects <= 10u) {
-            obj->m_nRemovalTime = CTimer::GetTimeInMS() + 20'000; // todo 0x6A88A4 int/float add
+            obj->m_nRemovalTime = CTimer::GetTimeInMS() + 20'000;
         } else {
-            obj->m_nRemovalTime = CTimer::GetTimeInMS() + 10'000;
+            obj->m_nRemovalTime = NOTSA_FTOL(uint32, (x87d)CTimer::GetTimeInMS() + (x87d)10000.0f);
         }
     } else {
-        obj->m_nRemovalTime = CTimer::GetTimeInMS() + 4'000;
+        obj->m_nRemovalTime = NOTSA_FTOL(uint32, (x87d)CTimer::GetTimeInMS() + (x87d)4000.0f);
     }
 
+    // 0x6A88D5-0x6A8931: the third test is the NODE (windscreen), not collision type 18; the car must be upright (up.z > 0.0, a double compare), not flipped
+    const bool isBonnetBootOrWindscreen = collisionType == 3 || collisionType == 4 || nodeIndex == eCarNodes::CAR_WINDSCREEN;
     const auto GetMoveSpeedZ = [&, this] {
         if (m_vecMoveSpeed.z <= 0.f) {
-            if (m_matrix->GetUp().z < 0.f /*flipped*/) {
-                switch (collisionType) {
-                case 3:
-                case 4:
-                case 18:
-                    return 0.04f - m_vecMoveSpeed.z * 1.5f;
-                }
+            if (m_matrix->GetUp().z > 0.0f && isBonnetBootOrWindscreen) {
+                return 0.04f - m_vecMoveSpeed.z * 1.5f;
             }
-            return m_vecMoveSpeed.z / 4.f;
+            return m_vecMoveSpeed.z * 0.25f;
         } else {
             return m_vecMoveSpeed.z * 1.5f;
         }
@@ -5205,16 +5210,11 @@ CObject* CAutomobile::SpawnFlyingComponent(eCarNodes nodeIndex, uint32 collision
     obj->m_vecTurnSpeed = m_vecTurnSpeed * 2.f;
 
     auto objDir = Normalized(obj->GetPosition() - GetPosition());
-    switch (collisionType) {
-    case 3:
-    case 4:
-    case 18: {
+    if (isBonnetBootOrWindscreen) { // 0x6A89BF
         objDir += m_matrix->GetUp();
         if (m_matrix->GetUp().z > 0.f/*not flipped*/) {
             obj->m_matrix->GetPosition() += m_matrix->GetUp() * m_vecMoveSpeed.Magnitude2D();
         }
-        break;
-    }
     }
 
     obj->ApplyMoveForce(objDir);
@@ -5227,7 +5227,8 @@ CObject* CAutomobile::SpawnFlyingComponent(eCarNodes nodeIndex, uint32 collision
 
     if (GetStatus() == STATUS_WRECKED && IsVisible()) {
         const auto camDirUnnorm = TheCamera.GetPosition() - GetPosition();
-        if (DotProduct(objDir, camDirUnnorm) > -0.5f) { // Object's direction is opposite to that of the camera's
+        // 0x6A8AC3: inline dot product summing y, z, x
+        if (objDir.y * camDirUnnorm.y + objDir.z * camDirUnnorm.z + objDir.x * camDirUnnorm.x > -0.5f) { // Object's direction is opposite to that of the camera's
             auto camDir = Normalized(camDirUnnorm);
             camDir.z += 0.3f;
             obj->ApplyMoveForce(camDir * 5.f); // Apply some move force toward the camera's direction

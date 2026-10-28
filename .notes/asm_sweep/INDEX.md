@@ -84,4 +84,4 @@
 | S02b | rest of S02 | 11 | done 11/11 (7 M, 4 fixed; S02 complete) | TaskComplexCopInCar.cpp, TaskComplexDestroyCar.cpp, TaskComplexDestroyCarMelee.cpp, TaskComplexDie.cpp, TaskComplexDieInCar.cpp |
 | S03b | rest of S03 | 13 | done 13/13 (5 M, 8 fixed; S03 complete) | TaskComplexEnterCar.cpp, TaskComplexFleeAnyMeans.cpp, TaskComplexFleeEntity.cpp, TaskComplexFleePoint.cpp |
 | S04b | rest of S04 (+ UNSURE CreateTask 0x669090) | 20 | partial 8/20 (6 M, 2 fixed) -> S04c | TaskComplexFollowNodeRoute.cpp, TaskComplexFollowPatrolRoute.cpp, TaskComplexFollowPedFootsteps.cpp, TaskComplexFollowPointRoute.cpp, TaskComplexGangFollower.cpp, TaskComplexGangJoinRespond.cpp, TaskComplexGangLeader.cpp, TaskComplexGetOnBoatSeat.cpp |
-| S04c | rest of S04b | 11 | pending | TaskComplexGangFollower.cpp, TaskComplexGangLeader.cpp |
+| S04c | rest of S04b | 11 | done 11/11 (10 M, 1 fixed; S04 complete) | TaskComplexGangFollower.cpp, TaskComplexGangLeader.cpp |

@@ -1044,13 +1044,17 @@ void CWaterLevel::UpdateFlow() {
         CWaterLevel::FindNearestWaterAndItsFlow();
     }
 
+    // 0x6EB733: step = ts * 0.001f (not a division), kept unrounded together with the (desired - curr) delta and the sum; a negative delta
+    // subtracts, zero / positive / NaN add (`fcomp; test ah,5; jp`)
     const auto CalculateFlowOnAxis = [
-        step = CTimer::GetTimeStep() / 1000.f
-    ](float desired, float curr) {
-        const auto delta = desired - curr;
-        return std::abs(delta) < step
-            ? desired
-            : curr + std::copysign(step, delta);
+        step = (x87d)CTimer::GetTimeStep() * 0.001f
+    ](float desired, float curr) -> float {
+        const x87d delta    = (x87d)desired - curr;
+        const x87d absDelta = delta < 0.0 ? -delta : delta;
+        if (absDelta < step) { // 0x6EB75C: `fcomp st(2); test ah,5; jp` - NaN / >= go to the stepping branch
+            return desired;
+        }
+        return (float)(delta < 0.0 ? (x87d)curr - step : (x87d)curr + step);
     };
 
     m_CurrentFlow = {

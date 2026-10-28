@@ -60,7 +60,7 @@
 | S27c | rest of S27b | 5 | pending | World.cpp |
 | S14b | rest of S14 | 23 | partial 17/23 (9 M, 8 fixed) -> S14c | TaskSimpleJump.cpp, TaskSimplePickUpBike.cpp, TaskSimplePlayerOnFire.cpp, TaskSimplePlayerOnFoot.cpp, TaskSimpleSay.cpp, TaskSimpleSetPedAsAutoDriver.cpp, TaskSimpleShakeFist.cpp, TaskSimpleSitDown.cpp, TaskSimpleSitIdle.cpp |
 | S18b | rest of S18 | 24 | partial 13/24 (12 M, 1 fixed) -> S18c | Heli.cpp, Plane.cpp |
-| S18c | rest of S18b | 11 | pending | Heli.cpp, Plane.cpp |
+| S18c | rest of S18b | 11 | partial 8/11 (7 M, 1 fixed) -> S18d | Heli.cpp, Plane.cpp |
 | S20d | rest of S20c | 10 | partial 6/10 (3 M, 3 fixed) -> S20e | Ped.cpp |
 | S20e | rest of S20d | 4 | partial 2/4 (1 M, 1 fixed) -> S20f | Ped.cpp |
 | S20f | rest of S20e | 2 | done (1 M, 1 fixed, ctor audio subobjects unread) | Ped.cpp |
@@ -75,3 +75,4 @@
 | S17f | rest of S17e | 1 | done (MATCH, Bike ProcessControl complete) | Bike.cpp |
 | S01b | rest of S01 | 18 | done (10 M, 8 fixed) | TaskComplexArrestPed.cpp, TaskComplexSeekEntityRadiusAngleOffset.cpp, TaskComplexSeekEntityStandard.cpp |
 | S14c | rest of S14b | 6 | done (5 M, 1 fixed) | TaskSimplePlayerOnFoot.cpp |
+| S18d | rest of S18c | 3 | pending | Heli.cpp, Plane.cpp |

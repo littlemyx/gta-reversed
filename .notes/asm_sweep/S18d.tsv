@@ -1,0 +1,4 @@
+addr	file	line	cls	fn	oc
+0x6C58E0	source/game_sa/Entity/Vehicle/Heli.cpp	86	CHeli	SearchLightCone	D
+0x6C94A0	source/game_sa/Entity/Vehicle/Plane.cpp	108	CPlane	PreRender	D
+0x6CB7C0	source/game_sa/Entity/Vehicle/Plane.cpp	118	CPlane	ProcessFlyingCarStuff	D

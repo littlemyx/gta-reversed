@@ -79,7 +79,7 @@ CTaskComplexKillCriminal::~CTaskComplexKillCriminal() {
                 }
                 veh->vehicleFlags.bSirenOrAlarm = false;
             }
-            veh->vehicleFlags.bSirenOrAlarm = false;
+            // 0x68BFCD: `jne 0x68C01F` skips the siren clear for a passenger (the port also cleared it here, for non-drivers)
         }
     }
 }

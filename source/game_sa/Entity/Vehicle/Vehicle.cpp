@@ -3262,22 +3262,26 @@ bool CVehicle::CanBeDriven() const {
 
 // 0x6D5490
 void CVehicle::ReactToVehicleDamage(CPed* dmgCauser) {
-    const auto DoReact = [=](CPed* pedThatLooks, CEntity* pedToLookAt) {
-        g_ikChainMan.LookAt("ReactToVhclDam", pedThatLooks, pedToLookAt, CGeneral::GetRandomNumberInRange(2000, 5000), BONE_HEAD, nullptr, false, 0.25f, 500, 3, false);
+    // ASM-S19e: the exe draws the look duration BEFORE the coin flip (0x6D5496 / 0x6D5539) and draws both durations even when
+    // nobody is in the car => rand() sequence is: dur, [driver&&passenger: flip], dur, [passenger: flip]
+    const auto DoReact = [=](CPed* pedThatLooks, CEntity* pedToLookAt, int32 duration) {
+        g_ikChainMan.LookAt("ReactToVhclDam", pedThatLooks, pedToLookAt, duration, BONE_HEAD, nullptr, false, 0.25f, 500, 3, false);
     };
 
     const auto& passenger = m_apPassengers[0];
 
+    const auto driverDuration = CGeneral::GetRandomNumberInRange(2000, 5000);
     if (m_pDriver) {
         if (passenger) {
-            DoReact(m_pDriver, CGeneral::DoCoinFlip() ? dmgCauser : passenger);
+            DoReact(m_pDriver, CGeneral::DoCoinFlip() ? dmgCauser : passenger, driverDuration);
         } else {
-            DoReact(m_pDriver, dmgCauser);
+            DoReact(m_pDriver, dmgCauser, driverDuration);
         }
     }
 
+    const auto passengerDuration = CGeneral::GetRandomNumberInRange(2000, 5000);
     if (passenger) {
-        DoReact(passenger, CGeneral::DoCoinFlip() ? dmgCauser : m_pDriver);
+        DoReact(passenger, CGeneral::DoCoinFlip() ? dmgCauser : m_pDriver, passengerDuration);
     }
 }
 

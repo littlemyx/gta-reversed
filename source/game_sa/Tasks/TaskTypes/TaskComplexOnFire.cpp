@@ -90,8 +90,11 @@ CTask* CTaskComplexOnFire::ControlSubTask(CPed* ped) {
     switch (m_pSubTask->GetTaskType()) {
     case TASK_COMPLEX_SMART_FLEE_ENTITY: {
         if (!ped->m_pFire) {
-            MakeAbortable(ped);
-            return nullptr;
+            // 0x639244: the task only ends if the subtask could be aborted, otherwise it keeps running
+            if (MakeAbortable(ped)) {
+                return nullptr;
+            }
+            return m_pSubTask;
         }
 
         if (CLocalisation::PedsOnFire()) {
@@ -101,8 +104,9 @@ CTask* CTaskComplexOnFire::ControlSubTask(CPed* ped) {
         CPedDamageResponse resp{};
         ComputeFireDamage(ped, resp);
         if (resp.m_bHealthZero && MakeAbortable(ped)) {
+            const auto dieTask = CreateSubTask(TASK_COMPLEX_DIE); // 0x6392CF: created before the kill is registered
             CEventHandler::RegisterKill(ped, ped->m_pFire->GetEntityStartedFire(), WEAPON_MOLOTOV, false);
-            return CreateSubTask(TASK_COMPLEX_DIE);
+            return dieTask;
         }
         break;
     }

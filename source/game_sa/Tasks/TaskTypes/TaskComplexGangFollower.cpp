@@ -262,7 +262,7 @@ CTask* CTaskComplexGangFollower::ControlSubTask(CPed* ped) {
                     const float planeD    = -(target.y * leaderFwd.y + target.z * leaderFwd.z + target.x * leaderFwd.x);
                     if (DotProduct(ped->GetPosition(), leaderFwd) + planeD < 0.f) { // Ped is behind the leader
                         const float radius = goTo->m_fRadius;
-                        if (toTarget.SquaredMagnitude() > (radius + 1.f) * (1.f + radius)) {
+                        if (!(toTarget.SquaredMagnitude() <= (radius + 1.f) * (1.f + radius))) { // exe: `fcompp` + `jp` => also taken for NaN
                             // Too far => speed up
                             if (walkAssoc) {
                                 const float oldSpeed = walkAssoc->m_Speed;
@@ -281,7 +281,10 @@ CTask* CTaskComplexGangFollower::ControlSubTask(CPed* ped) {
                             // Close enough => aim for a point in front of the leader, and slow down
                             target += leaderFwd * 2.f;
                             if (walkAssoc) {
-                                walkAssoc->m_Speed = std::max(0.85f, walkAssoc->m_Speed - 0.0125f);
+                                {
+                                const float slowed = walkAssoc->m_Speed - 0.0125f;
+                                walkAssoc->m_Speed = 0.85f > slowed ? 0.85f : slowed; // exe 0x420800: returns the 2nd arg for NaN
+                            }
                                 bSpeedAdjusted = true;
                             }
                         }

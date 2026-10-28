@@ -1363,10 +1363,12 @@ void CStreaming::RequestFile(int32 modelId, CdStreamPos pos, uint32 size, Stream
 // 0x4090500
 // Goes thru given channel and removes then re-requests each model
 void CStreaming::RequestFilesInChannel(int32 chIdx) {
-    for (const auto& modelId : ms_channel[chIdx].modelIds) {
+    // 0x409050: the model id and its flags are copied before RemoveModel (it overwrites the channel slot with -1 and clears PRIORITY_REQUEST)
+    for (const auto modelId : ms_channel[chIdx].modelIds) {
         if (modelId != MODEL_INVALID) {
+            const auto flags = GetInfo(modelId).GetFlags();
             RemoveModel(modelId);
-            RequestModel(modelId, GetInfo(modelId).GetFlags());
+            RequestModel(modelId, flags);
         }
     }
 }

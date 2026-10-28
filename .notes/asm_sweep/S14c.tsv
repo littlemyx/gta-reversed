@@ -1,0 +1,7 @@
+addr	file	line	cls	fn	oc
+0x687C20	source/game_sa/Tasks/TaskTypes/TaskSimplePlayerOnFoot.cpp	30	CTaskSimplePlayerOnFoot	PlayerControlZeldaWeapon	D
+0x687F30	source/game_sa/Tasks/TaskTypes/TaskSimplePlayerOnFoot.cpp	31	CTaskSimplePlayerOnFoot	PlayerControlDucked	D
+0x6872C0	source/game_sa/Tasks/TaskTypes/TaskSimplePlayerOnFoot.cpp	34	CTaskSimplePlayerOnFoot	PlayIdleAnimations	D
+0x687530	source/game_sa/Tasks/TaskTypes/TaskSimplePlayerOnFoot.cpp	35	CTaskSimplePlayerOnFoot	PlayerControlFighter	D
+0x6883D0	source/game_sa/Tasks/TaskTypes/TaskSimplePlayerOnFoot.cpp	36	CTaskSimplePlayerOnFoot	PlayerControlZelda	D
+0x688810	source/game_sa/Tasks/TaskTypes/TaskSimplePlayerOnFoot.cpp	41	CTaskSimplePlayerOnFoot	ProcessPed	S

@@ -3,7 +3,7 @@
 | slice | subsystem | functions | status | files |
 |---|---|---|---|---|
 | S01 | game_sa/Tasks/TaskTypes | 40 | partial 22/40 (11 M, 11 fixed) -> S01b | TaskInteriorBeInHouse.cpp, TaskInteriorBeInOffice.cpp, TaskInteriorBeInShop.cpp, TaskInteriorLieInBed.cpp, TaskInteriorShopKeeper.cpp, TaskInteriorSitAtDesk.cpp ... |
-| S02 | game_sa/Tasks/TaskTypes | 40 | pending | TaskComplexAvoidEntity.cpp, TaskComplexAvoidOtherPedWhileWandering.cpp, TaskComplexBeInCouple.cpp, TaskComplexBeInGroup.cpp, TaskComplexBeStill.cpp, TaskComplexCarDrive.cpp ... |
+| S02 | game_sa/Tasks/TaskTypes | 40 | partial 30/40 (23 M, 7 fixed) -> S02b | TaskComplexAvoidEntity.cpp, TaskComplexAvoidOtherPedWhileWandering.cpp, TaskComplexBeInCouple.cpp, TaskComplexBeInGroup.cpp, TaskComplexBeStill.cpp, TaskComplexCarDrive.cpp ... |
 | S03 | game_sa/Tasks/TaskTypes | 43 | pending | TaskComplexDragPedFromCar.cpp, TaskComplexDriveFireTruck.cpp, TaskComplexDriveToPoint.cpp, TaskComplexDriveWander.cpp, TaskComplexEnterBoatAsDriver.cpp, TaskComplexEnterCar.cpp ... |
 | S04 | game_sa/Tasks/TaskTypes | 40 | pending | TaskComplexFleeShooting.cpp, TaskComplexFollowLeaderAnyMeans.cpp, TaskComplexFollowLeaderInFormation.cpp, TaskComplexFollowNodeRoute.cpp, TaskComplexFollowPatrolRoute.cpp, TaskComplexFollowPedFootsteps.cpp ... |
 | S05 | game_sa/Tasks/TaskTypes | 42 | pending | TaskComplexGoPickUpEntity.cpp, TaskComplexGoToAttractor.cpp, TaskComplexGoToBoatSteeringWheel.cpp, TaskComplexGoToCarDoorAndStandStill.cpp, TaskComplexGoToPointAiming.cpp, TaskComplexGoToPointAndStandStillTimed.cpp ... |
@@ -81,3 +81,4 @@
 | S22g | rest of S22f | 3 | partial 2/3 (1 M, 1 fixed) -> S22h | CarCtrl.cpp |
 | S22h | rest of S22g | 1 | done 1/1 (MATCH; S22 complete) | CarCtrl.cpp |
 | S27d | rest of S27c | 2 | done 2/2 (2 fixed; S27 complete) | World.cpp |
+| S02b | rest of S02 | 11 | pending | TaskComplexCopInCar.cpp, TaskComplexDestroyCar.cpp, TaskComplexDestroyCarMelee.cpp, TaskComplexDie.cpp, TaskComplexDieInCar.cpp |

@@ -1,0 +1,12 @@
+addr	file	line	cls	fn	oc
+0x68FD50	source/game_sa/Tasks/TaskTypes/TaskComplexCopInCar.cpp	27	CTaskComplexCopInCar	ControlSubTask	D
+0x6288C0	source/game_sa/Tasks/TaskTypes/TaskComplexDestroyCar.cpp	22	CTaskComplexDestroyCar	ControlSubTask	S
+0x628A70	source/game_sa/Tasks/TaskTypes/TaskComplexDestroyCarMelee.cpp	15	CTaskComplexDestroyCarMelee	CreateSubTask	S
+0x6289F0	source/game_sa/Tasks/TaskTypes/TaskComplexDestroyCarMelee.cpp	16	CTaskComplexDestroyCarMelee	CalculateSearchPositionAndRanges	B
+0x62DB20	source/game_sa/Tasks/TaskTypes/TaskComplexDestroyCarMelee.cpp	22	CTaskComplexDestroyCarMelee	CreateFirstSubTask	C
+0x6302D0	source/game_sa/Tasks/TaskTypes/TaskComplexDie.cpp	20	CTaskComplexDie	CreateFirstSubTask	S
+0x6377B0	source/game_sa/Tasks/TaskTypes/TaskComplexDieInCar.cpp	13	CTaskComplexDieInCar	ControlSubTask	D
+0x62FD50	source/game_sa/Tasks/TaskTypes/TaskComplexDieInCar.cpp	14	CTaskComplexDieInCar	CreateSubTask	D
+0x6375F0	source/game_sa/Tasks/TaskTypes/TaskComplexDieInCar.cpp	15	CTaskComplexDieInCar	CreateFirstSubTask	D
+0x637850	source/game_sa/Tasks/TaskTypes/TaskComplexDieInCar.cpp	16	CTaskComplexDieInCar	CreateNextSubTask	D
+0x62FD00	source/game_sa/Tasks/TaskTypes/TaskComplexDieInCar.cpp	18	CTaskComplexDieInCar	PreparePedVehicleForPedDeath	B

@@ -37,6 +37,6 @@ bool CTaskSimpleSetPedAsAutoDriver::ProcessPed(CPed* ped) {
     m_veh->SetStatus(STATUS_PHYSICS);
     m_veh->m_autoPilot.SetCarMission(MISSION_CRUISE);
     m_veh->m_autoPilot.SetCruiseSpeed(10);
-    m_veh->vehicleFlags.bEngineOn = m_veh->vehicleFlags.bEngineBroken != 0;
+    m_veh->vehicleFlags.bEngineOn = !m_veh->vehicleFlags.bEngineBroken; // 0x649059-0x64907D: engine on unless the engine is broken (port had it inverted)
     return true;
 }

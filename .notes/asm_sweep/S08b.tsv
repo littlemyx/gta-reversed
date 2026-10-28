@@ -1,0 +1,9 @@
+addr	file	line	cls	fn	oc
+0x638D30	source/game_sa/Tasks/TaskTypes/TaskComplexUsePairedAttractor.cpp	16	CTaskComplexUsePairedAttractor	CreateSubTask	D
+0x638AE0	source/game_sa/Tasks/TaskTypes/TaskComplexUsePairedAttractor.cpp	19	CTaskComplexUsePairedAttractor	SeekPartnership	D
+0x639E40	source/game_sa/Tasks/TaskTypes/TaskComplexUsePairedAttractor.cpp	22	CTaskComplexUsePairedAttractor	CreateNextSubTask	D
+0x639F70	source/game_sa/Tasks/TaskTypes/TaskComplexUsePairedAttractor.cpp	23	CTaskComplexUsePairedAttractor	CreateFirstSubTask	D
+0x638BD0	source/game_sa/Tasks/TaskTypes/TaskComplexUsePairedAttractor.cpp	24	CTaskComplexUsePairedAttractor	ControlSubTask	D
+0x65A460	source/game_sa/Tasks/TaskTypes/TaskComplexUseSwatRope.cpp	20	CTaskComplexUseSwatRope	ControlSubTask	D
+0x6597D0	source/game_sa/Tasks/TaskTypes/TaskComplexUseWaterCannon.cpp	15	CTaskComplexUseWaterCannon	CreateFirstSubTask	D
+0x65A640	source/game_sa/Tasks/TaskTypes/TaskComplexUseWaterCannon.cpp	17	CTaskComplexUseWaterCannon	ControlSubTask	D

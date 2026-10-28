@@ -127,7 +127,13 @@ CTask* CTaskComplexDestroyCarMelee::CreateFirstSubTask(CPed* ped) {
     // CWeaponInfo::GetWeaponInfo(ped->GetActiveWeapon().m_nType); // unused
     CalculateSearchPositionAndRanges(ped);
     const auto& pedPos = ped->GetPosition();
-    if (IsPointInSphere(pedPos, m_VehToDestroy->GetPosition(), m_MaxArriveRange)) {
+    // 0x62DB5? inlined sphere test: (dz^2 + dx^2) + dy^2 against r^2 (NaN counts as inside: fcompp / test ah, 5 / jp)
+    const auto IsInArriveRange = [&] {
+        const auto d = m_VehToDestroy->GetPosition() - pedPos;
+        const float distSq = (d.z * d.z + d.x * d.x) + d.y * d.y;
+        return !(distSq > m_MaxArriveRange * m_MaxArriveRange);
+    };
+    if (IsInArriveRange()) {
         ped->m_fAimingRotation = CGeneral::GetRadianAngleBetweenPoints(m_VehPos, pedPos);
         return CreateSubTask(TASK_SIMPLE_FIGHT_CTRL, ped);
     }

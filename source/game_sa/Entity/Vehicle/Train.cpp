@@ -1031,13 +1031,29 @@ void CTrain::CreateMissionTrain(CVector posn, bool clockwiseDirection, uint32 tr
 
 // 0x6F7900
 void CTrain::DoTrainGenerationAndRemoval() {
+    // exe 0x6F7900: every distance is the root of the UNROUNDED x87 sum of two squares, compared without rounding to float.
+    // The sites differ in which differences were stored as floats first: see the three helpers below.
+    const auto ExeDist = [](x87d dx, x87d dy) -> x87d { return std::sqrt(dx * dx + dy * dy); };
+    // both differences unrounded (0x6F7941-0x6F795E, 0x6F7DE0-0x6F7E2B)
+    const auto DistRaw = [&](const CVector& a, const CVector& b) -> x87d { return ExeDist((x87d)a.x - b.x, (x87d)a.y - b.y); };
+    // both differences stored as floats first (0x6F7A70-0x6F7A82)
+    const auto DistRoundedXY = [&](const CVector& a, const CVector& b) -> x87d {
+        const float dx = a.x - b.x;
+        const float dy = a.y - b.y;
+        return ExeDist(dx, dy);
+    };
+    // the x difference is stored as a float, the y difference stays unrounded (0x6F7BB8-0x6F7BD4, 0x6F7F48-0x6F7F62 and the other node distances)
+    const auto DistRoundedX = [&](const CVector& a, const CVector& b) -> x87d {
+        const float dx = a.x - b.x;
+        return ExeDist(dx, (x87d)a.y - b.y);
+    };
+
     // Check if the player is near a station every 3 seconds
     if (CTimer::GetTimeInMS() / 3000 != CTimer::m_snPreviousTimeInMilliseconds / 3000) {
         GenTrain_IsNearStation = false;
         for (const auto& stationPos : aStationCoors) {
             const auto playerPos = FindPlayerCoors();
-            const auto dist = std::sqrt((stationPos.x - playerPos.x) * (stationPos.x - playerPos.x) + (stationPos.y - playerPos.y) * (stationPos.y - playerPos.y));
-            if (dist < 60.0f) {
+            if (DistRaw(stationPos, playerPos) < 60.0f) {
                 GenTrain_IsNearStation = true;
             }
         }
@@ -1057,10 +1073,6 @@ void CTrain::DoTrainGenerationAndRemoval() {
         return;
     }
 
-    const auto Dist2D = [](const CVector& a, const CVector& b) {
-        return std::sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
-    };
-
     // Remove trains that are far away from the camera
     bool anyMainTrainExists = false;
     auto* const vehiclePool = GetVehiclePool();
@@ -1078,7 +1090,7 @@ void CTrain::DoTrainGenerationAndRemoval() {
 
         bool canRemove = true;
         for (auto* c = train; c; c = c->m_pNextCarriage) {
-            if (c == FindPlayerVehicle() || Dist2D(TheCamera.GetPosition(), c->GetPosition()) < 220.0f) {
+            if (c == FindPlayerVehicle() || DistRoundedXY(TheCamera.GetPosition(), c->GetPosition()) < 220.0f) {
                 canRemove = false;
             }
         }
@@ -1107,8 +1119,8 @@ void CTrain::DoTrainGenerationAndRemoval() {
 
         const CVector camPos = TheCamera.GetPosition();
 
-        // Moves `GenTrain_GenerationNode` one node along the track (in the generation direction), and returns the new distance to the camera
-        const auto StepNode = [&]() {
+        // Moves `GenTrain_GenerationNode` one node along the track (in the generation direction), and returns the new (unrounded) distance to the camera
+        const auto StepNode = [&]() -> x87d {
             const auto numNodes = NumTrackNodes[GenTrain_Track];
             auto node = (int32)GenTrain_GenerationNode;
             if (GenTrain_Direction) {
@@ -1119,20 +1131,21 @@ void CTrain::DoTrainGenerationAndRemoval() {
                 node = (node + 1) % numNodes;
             }
             GenTrain_GenerationNode = (uint32)node;
-            return Dist2D(GetTrackNodePos(GenTrain_Track, node), camPos);
+            return DistRoundedX(GetTrackNodePos(GenTrain_Track, node), camPos);
         };
 
         GenTrain_Track = 0;
         GenTrain_GenerationNode = CGeneral::GetRandomNumber() % NumTrackNodes[0];
         const auto nodePos = GetTrackNodePos(GenTrain_Track, GenTrain_GenerationNode);
-        float dist = Dist2D(nodePos, camPos);
+        const x87d distRaw = DistRaw(nodePos, camPos);
+        float dist = (float)distRaw; // exe 0x6F7E2D: stored as a float, the range compare below uses the unrounded value
 
         bool tryOtherTrack = true;
-        if (dist < generationRange) {
+        if (distRaw < generationRange) {
             tryOtherTrack = false;
 
             // Don't generate the train if the node is in a tunnel, but the player is outside of one
-            if (nodePos.z + 6.0f <= FindPlayerCoors().z) {
+            if (!(nodePos.z + 6.0f > FindPlayerCoors().z)) { // exe 0x6F7E59-0x6F7E61: je skips only when greater, NaN takes the check
                 const auto playerAttrs = (uint16)CCullZones::FindTunnelAttributesForCoors(FindPlayerCoors());
                 if ((playerAttrs & (TUNNEL | TUNNEL_TRANSITION)) == 0) {
                     if ((uint16)CCullZones::FindTunnelAttributesForCoors(nodePos) & TUNNEL) {
@@ -1147,9 +1160,13 @@ void CTrain::DoTrainGenerationAndRemoval() {
 
             // The node before the one we ended up at
             auto prevNode = (int32)GenTrain_GenerationNode;
-            while (dist < 170.0f) {
+            // exe 0x6F7EC4-0x6F7F75: the first test reads the float stored above, the later ones the unrounded step distance
+            bool keepGoing = dist < 170.0f;
+            while (keepGoing) {
                 prevNode = (int32)GenTrain_GenerationNode;
-                dist = StepNode();
+                const x87d stepDist = StepNode();
+                dist = (float)stepDist;
+                keepGoing = stepDist < 170.0f;
             }
 
             GenTrain_LastConfig = (GenTrain_LastConfig + 1) & 7;
@@ -1169,14 +1186,18 @@ void CTrain::DoTrainGenerationAndRemoval() {
 
         GenTrain_Track = 1;
         GenTrain_GenerationNode = CGeneral::GetRandomNumber() % NumTrackNodes[1];
-        dist = Dist2D(GetTrackNodePos(GenTrain_Track, GenTrain_GenerationNode), camPos);
-        if (dist >= generationRange) {
+        const x87d dist1Raw = DistRoundedX(GetTrackNodePos(GenTrain_Track, GenTrain_GenerationNode), camPos);
+        dist = (float)dist1Raw;
+        if (!(dist1Raw < generationRange)) { // exe 0x6F805F-0x6F8068: jp returns when not less, NaN included
             return;
         }
 
         GenTrain_Direction = CGeneral::GetRandomNumber() & 1;
-        while (dist < 170.0f) {
-            dist = StepNode();
+        bool keepGoing1 = dist < 170.0f;
+        while (keepGoing1) {
+            const x87d stepDist = StepNode();
+            dist = (float)stepDist;
+            keepGoing1 = stepDist < 170.0f;
         }
         if (dist < 220.0f) {
             GenTrain_Status = 1;
@@ -1197,7 +1218,7 @@ void CTrain::DoTrainGenerationAndRemoval() {
         }
 
         const CVector camPos = TheCamera.GetPosition();
-        if (Dist2D(GetTrackNodePos(GenTrain_Track, GenTrain_GenerationNode), camPos) > 60.0f) {
+        if (DistRoundedX(GetTrackNodePos(GenTrain_Track, GenTrain_GenerationNode), camPos) > 60.0f) {
             CTrain* train{};
             CreateMissionTrain(
                 CVector{ 0.0f, 0.0f, 0.0f },
@@ -1214,7 +1235,7 @@ void CTrain::DoTrainGenerationAndRemoval() {
             if (GenTrain_Track == 0) {
                 speed = CGeneral::GetRandomNumber() % 30 + 15;
                 // Slow down near the Unity station
-                if (Dist2D(GetTrackNodePos(GenTrain_Track, GenTrain_GenerationNode), CVector{ 2222.0f, -1750.0f, 0.0f }) < 300.0f) {
+                if (DistRoundedX(GetTrackNodePos(GenTrain_Track, GenTrain_GenerationNode), CVector{ 2222.0f, -1750.0f, 0.0f }) < 300.0f) {
                     speed /= 2;
                 }
             } else {

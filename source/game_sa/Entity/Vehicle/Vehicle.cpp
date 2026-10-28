@@ -6552,7 +6552,23 @@ void CVehicle::DoHeadLightReflectionImpl(CMatrix& vehicleMatrix, eVehicleLightsF
 
 // 0x6E1720
 void CVehicle::DoHeadLightReflection(CMatrix& vehicleMatrix, eVehicleLightsFlags flags, bool includeLeft, bool includeRight) {
-    DoHeadLightReflectionImpl(vehicleMatrix, flags, includeLeft, includeRight);
+    // ASM-S19f: 0x6E1720. Without TWIN the combine harvester gets the twin shadow and everything else the single right one,
+    // whatever the include flags say (a quad, which is not an automobile, still gets its reflection)
+    if (flags & VEHICLE_LIGHTS_TWIN) {
+        if (includeLeft) {
+            if (includeRight) {
+                DoHeadLightReflectionTwin(vehicleMatrix);
+            } else {
+                DoHeadLightReflectionSingle(vehicleMatrix, false);
+            }
+        } else if (includeRight) {
+            DoHeadLightReflectionSingle(vehicleMatrix, true);
+        }
+    } else if (ModelIndices::IsCombineHarvester(GetModelIndex())) {
+        DoHeadLightReflectionTwin(vehicleMatrix);
+    } else {
+        DoHeadLightReflectionSingle(vehicleMatrix, true);
+    }
 }
 
 // 0x6E1780
@@ -6563,7 +6579,7 @@ bool CVehicle::DoTailLightEffect(eVehicleLightId lightId, CMatrix& vehicleMatrix
 
 // NOTSA
 // headlight/taillight
-bool CVehicle::DoLightEffectImpl(bool isFront, eVehicleLightId lightId, CMatrix& vehicleMatrix, bool isRight, bool disabledOrAlarm, bool staticEmission) {
+bool CVehicle::DoLightEffectImpl(bool isFront, eVehicleLightId lightId, CMatrix& vehicleMatrix, bool isRight, bool disabledOrAlarm, bool staticEmission, bool inlinedSecondary) {
     constexpr auto FRONT_SIZE_ROT_MULT = 0.4f; // 0x8D3684
     constexpr auto REAR_SIZE_ROT_MULT  = 0.2f; // 0x8D3688
 
@@ -6617,7 +6633,11 @@ bool CVehicle::DoLightEffectImpl(bool isFront, eVehicleLightId lightId, CMatrix&
         const auto ang       = isFront ? normAngle : angle;
 
         const auto intensity = ang * 0.5f + baseCorIntensity;
-        const auto size      = (1.0f - distToCam * (1.0f / 150.0f)) * baseCorRotMult * ang; // ASM-S19e: 0x6E0D32 / 0x6E193F multiply by the constant first, the angle last
+        // ASM-S19e: 0x6E0D32 / 0x6E193F multiply by the constant first, the angle last.
+        // ASM-S19f: the copies of the front effect inlined into DoVehicleLights for the secondary lights (0x6E21D0, 0x6E2569) do the angle first, the constant last.
+        const auto size      = inlinedSecondary
+            ? ((1.0f - distToCam * (1.0f / 150.0f)) * ang) * baseCorRotMult
+            : (1.0f - distToCam * (1.0f / 150.0f)) * baseCorRotMult * ang;
 
         if (!isFullsizeTrain) {
             return std::pair{ intensity, size };
@@ -6711,18 +6731,17 @@ void CVehicle::DoVehicleLights(CMatrix& vehicleMatrix, eVehicleLightsFlags flags
 
     if (!CanUpdateHornCounter()) {
         // alarm
+        // ASM-S19f: 0x6E1C13 stores forceOn on both paths, so the dark phase of the alarm also drops an override-ON
         if (CTimer::GetTimeInMS() & 0x100) {
             forceOn = true;
         } else {
+            forceOn  = false;
             forceOff = true;
         }
     }
 
-    if (!vehicleFlags.bEngineOn) {
-        return; // can return earlier; moved from 0x6E1DBE
-    }
-
-    if (GetModelIndex() == MODEL_ZR350 && GetStatus() != STATUS_WRECKED) {
+    // ASM-S19f: the zr350 pop-up (0x6E1C17-0x6E1CC8) only runs with the engine on, before the render-lights flags are cleared
+    if (vehicleFlags.bEngineOn && GetModelIndex() == MODEL_ZR350 && GetStatus() != STATUS_WRECKED) {
         // calculate zr350's pop-up lights rotation
         constexpr auto popUpTarget = 0.69813174f; // aka (2.f / 9.f) * PI rad = 40 deg
         if (vehicleFlags.bLightsOn || forceOn || !CanUpdateHornCounter()) {
@@ -6730,97 +6749,106 @@ void CVehicle::DoVehicleLights(CMatrix& vehicleMatrix, eVehicleLightsFlags flags
             if (asAuto->m_fPropRotate < popUpTarget) {
                 return;
             }
-        } else {
+        } else if (asAuto->m_fPropRotate > 0.0f) {
             asAuto->m_fPropRotate = notsa::step_down_to(asAuto->m_fPropRotate, 0.0f, CTimer::GetTimeStep() * 0.01f);
         }
     }
 
-    const auto IsLightOk = [&](eVehicleLightsFlags disabledFlag, eLights light) {
-        return !(flags & disabledFlag)
-            && (flags & VEHICLE_LIGHTS_IGNORE_DAMAGE)
-            || IsAutomobile() && asAuto->m_damageManager.GetLightStatus(light) == VEHICLE_LIGHT_OK;
+    // ASM-S19f: 0x6E1CCE clears the four render-lights flags every call, also when the engine is off
+    m_renderLights.m_bRightFront = false;
+    m_renderLights.m_bLeftFront  = false;
+    m_renderLights.m_bRightRear  = false;
+    m_renderLights.m_bLeftRear   = false;
+
+    // ASM-S19f: 0x6E1CF1-0x6E1DB6. The DISABLE flags override the damage state and the left lights need the TWIN flag
+    // (the port used `a && b || c && d`, so a disabled side was still lit on an undamaged automobile).
+    const bool twin = (flags & VEHICLE_LIGHTS_TWIN) != 0;
+    const auto IsLightOk = [&](eLights light) {
+        return (flags & VEHICLE_LIGHTS_IGNORE_DAMAGE) || (IsAutomobile() && asAuto->m_damageManager.GetLightStatus(light) == VEHICLE_LIGHT_OK);
     };
+    const bool lightOkFR = !(flags & VEHICLE_LIGHTS_DISABLE_FRONT) && IsLightOk(LIGHT_FRONT_RIGHT);
+    const bool lightOkFL = !(flags & VEHICLE_LIGHTS_DISABLE_FRONT) && twin && IsLightOk(LIGHT_FRONT_LEFT);
+    const bool lightOkRR = !(flags & VEHICLE_LIGHTS_DISABLE_REAR)  && IsLightOk(notsa::bugfixes::CDamageManager_GetLightStatus_IncorrectStatusCheckForLightRR ? LIGHT_REAR_RIGHT : LIGHT_REAR_LEFT);
+    const bool lightOkRL = !(flags & VEHICLE_LIGHTS_DISABLE_REAR)  && twin && IsLightOk(LIGHT_REAR_LEFT);
 
-    const bool lightOkFR    = IsLightOk(VEHICLE_LIGHTS_DISABLE_FRONT, LIGHT_FRONT_RIGHT);
-    const bool lightOkFL    = IsLightOk(VEHICLE_LIGHTS_DISABLE_FRONT, LIGHT_FRONT_LEFT);
-    const bool lightOkRR    = IsLightOk(VEHICLE_LIGHTS_DISABLE_REAR, notsa::bugfixes::CDamageManager_GetLightStatus_IncorrectStatusCheckForLightRR ? LIGHT_REAR_RIGHT : LIGHT_REAR_LEFT);
-    const bool lightOkRL    = IsLightOk(VEHICLE_LIGHTS_DISABLE_REAR, LIGHT_REAR_LEFT);
-
-    const auto RenderLights = [&](bool isFrontLight, bool disabledOrAlarmR, bool disabledOrAlarmL, bool staticEmission) {
-        bool active = CVehicle::DoLightEffectImpl(isFrontLight, eVehicleLightId::MAIN, vehicleMatrix, true, disabledOrAlarmR, staticEmission);
-        if (isFrontLight) {
-            m_renderLights.m_bRightFront = active;
-        } else {
-            m_renderLights.m_bRightRear = active;
-        }
-        if (active) {
-            CVehicle::DoLightEffectImpl(isFrontLight, eVehicleLightId::SECONDARY, vehicleMatrix, true, disabledOrAlarmR, staticEmission);
-        }
-        if (flags & VEHICLE_LIGHTS_TWIN) {
-            active = CVehicle::DoLightEffectImpl(isFrontLight, eVehicleLightId::MAIN, vehicleMatrix, false, disabledOrAlarmL, staticEmission);
-            if (isFrontLight) {
-                m_renderLights.m_bLeftFront = active;
-            } else {
-                m_renderLights.m_bLeftRear = active;
-            }
-            if (active) {
-                CVehicle::DoLightEffectImpl(isFrontLight, eVehicleLightId::SECONDARY, vehicleMatrix, false, disabledOrAlarmL, staticEmission);
-            }
-        }
-    };
-
-    // can return earlier; moved from 0x6E2739/0x6E271C
-    if (forceOff) {
+    if (!vehicleFlags.bEngineOn) {
         return;
     }
 
-    if (!vehicleFlags.bLightsOn && !forceOn) {
+    // rear lights: main, then the secondary of the same side when the main one lit up (0x6E2657-0x6E270C, 0x6E1DE4-0x6E1E8D)
+    const auto RenderRearLights = [&](bool disabledR, bool disabledL, bool staticEmission) {
+        m_renderLights.m_bRightRear = DoLightEffectImpl(false, eVehicleLightId::MAIN, vehicleMatrix, true, disabledR, staticEmission);
+        if (m_renderLights.m_bRightRear) {
+            DoLightEffectImpl(false, eVehicleLightId::SECONDARY, vehicleMatrix, true, disabledR, staticEmission);
+        }
+        if (twin) {
+            m_renderLights.m_bLeftRear = DoLightEffectImpl(false, eVehicleLightId::MAIN, vehicleMatrix, false, disabledL, staticEmission);
+            if (m_renderLights.m_bLeftRear) {
+                DoLightEffectImpl(false, eVehicleLightId::SECONDARY, vehicleMatrix, false, disabledL, staticEmission);
+            }
+        }
+    };
+
+    if (!vehicleFlags.bLightsOn && !forceOn && !forceOff) {
         // lights are off - process only dynamic part of taillight effect
-        RenderLights(false, !lightOkRR, !lightOkRL, false);
-    } else {
-        // lights are on - process front lights
-        const bool alarmOrDisabledFR = forceOff || !lightOkFR;
-        const bool alarmOrDisabledFL = forceOff || !lightOkFL;
-        RenderLights(true, alarmOrDisabledFR, alarmOrDisabledFL, false);
-        // process static part of taillight effect
-        const bool alarmOrDisabledRR = forceOff || !lightOkRR;
-        const bool alarmOrDisabledRL = forceOff || !lightOkRL;
-        RenderLights(false, alarmOrDisabledRR, alarmOrDisabledRL, true);
+        RenderRearLights(!lightOkRR, !lightOkRL, false);
+        return;
+    }
 
-        if (!IsSubTrain()) {
-            // draw light shadows
-            CVehicle::DoHeadLightReflectionImpl(vehicleMatrix, flags, lightOkFL, lightOkFR);
-        }
+    // ASM-S19f: 0x6E1E9C-0x6E229F. With the lights off but the alarm in its dark phase (forceOff) the exe still takes this path with
+    // everything disabled. Front: both mains first, then the secondaries (inlined copies in the exe), unlike the rear.
+    const bool disabledFR = forceOff || !lightOkFR;
+    const bool disabledFL = forceOff || !lightOkFL;
+    m_renderLights.m_bRightFront = DoLightEffectImpl(true, eVehicleLightId::MAIN, vehicleMatrix, true, disabledFR, false);
+    m_renderLights.m_bLeftFront  = DoLightEffectImpl(true, eVehicleLightId::MAIN, vehicleMatrix, false, disabledFL, false);
+    if (m_renderLights.m_bRightFront) {
+        DoLightEffectImpl(true, eVehicleLightId::SECONDARY, vehicleMatrix, true, disabledFR, false, true);
+    }
+    if (m_renderLights.m_bLeftFront) {
+        DoLightEffectImpl(true, eVehicleLightId::SECONDARY, vehicleMatrix, false, disabledFL, false, true);
+    }
 
-        // add directionals
-        if (lightOkFR || lightOkFL) {
-            CPointLights::AddLight(
-                ePointLightType::PLTYPE_DIRECTIONAL,
-                vehicleMatrix.GetPosition(),
-                vehicleMatrix.GetForward(),
-                20.0f,
-                1.0f, 1.0f, 1.0f,
-                m_vecMoveSpeed.SquaredMagnitude2D() < 0.2025f ? 0u : 1u
-            );
-        }
+    // process static part of taillight effect
+    RenderRearLights(forceOff || !lightOkRR, forceOff || !lightOkRL, true);
 
-        if ((lightOkRR || lightOkRL)
-            && m_BrakePedal > 0.0f
-            && !vehicleFlags.bIsHandbrakeOn
-            && m_pDriver) {
-            CPointLights::AddLight(
-                ePointLightType::PLTYPE_DIRECTIONAL,
-                GetPosition() + -4.0f * GetForward(),
-                -vehicleMatrix.GetForward(),
-                10.0f,
-                0.1f,  // 0x8D368C, StaticRefs
-                0.02f, // 0x8D3690
-                0.02f, // 0x8D3694
-                0u,
-                false,
-                this
-            );
+    if (!IsSubTrain()) {
+        if (forceOff) {
+            return; // 0x6E271C
         }
+        // draw light shadows
+        CVehicle::DoHeadLightReflection(vehicleMatrix, flags, lightOkFL, lightOkFR);
+    } else if (forceOff) {
+        return; // 0x6E2739
+    }
+
+    // add directionals
+    if (lightOkFR || lightOkFL) {
+        CPointLights::AddLight(
+            ePointLightType::PLTYPE_DIRECTIONAL,
+            GetPosition(), // ASM-S19f: 0x6E2772 reads the vehicle's own matrix, only the direction comes from `vehicleMatrix`
+            vehicleMatrix.GetForward(),
+            20.0f,
+            1.0f, 1.0f, 1.0f,
+            m_vecMoveSpeed.SquaredMagnitude2D() < 0.2025f ? 1u : 0u // ASM-S19f: 0x6E2769-0x6E2775 push 1 below the threshold, 0 at/above it (and for NaN)
+        );
+    }
+
+    if ((lightOkRR || lightOkRL)
+        && m_BrakePedal > 0.0f
+        && !vehicleFlags.bIsHandbrakeOn
+        && m_pDriver) {
+        CPointLights::AddLight(
+            ePointLightType::PLTYPE_DIRECTIONAL,
+            GetPosition() - 4.0f * vehicleMatrix.GetForward(), // ASM-S19f: 0x6E27EE-0x6E2828 scales the forward of `vehicleMatrix`
+            -vehicleMatrix.GetForward(),
+            10.0f,
+            0.1f,  // 0x8D368C, StaticRefs
+            0.02f, // 0x8D3690
+            0.02f, // 0x8D3694
+            0u,
+            false,
+            this
+        );
     }
 }
 

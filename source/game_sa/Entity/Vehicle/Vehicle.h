@@ -658,7 +658,7 @@ public:
     void DoHeadLightReflectionImpl(CMatrix& vehicleMatrix, eVehicleLightsFlags flags, bool includeLeft, bool includeRight); // NOTSA
     void DoHeadLightReflection(CMatrix& vehicleMatrix, eVehicleLightsFlags flags, bool includeLeft, bool includeRight);
     bool DoTailLightEffect(eVehicleLightId lightId, CMatrix& vehicleMatrix, bool isRight, bool disabledOrAlarm, eVehicleLightsFlags flags_unused, bool staticEmission);
-    bool DoLightEffectImpl(bool isFront, eVehicleLightId lightId, CMatrix& vehicleMatrix, bool isRight, bool disabledOrAlarm, bool staticEmission); // NOTSA
+    bool DoLightEffectImpl(bool isFront, eVehicleLightId lightId, CMatrix& vehicleMatrix, bool isRight, bool disabledOrAlarm, bool staticEmission, bool inlinedSecondary = false); // NOTSA
     void DoVehicleLights(CMatrix& vehicleMatrix, eVehicleLightsFlags flags);
 
     void FillVehicleWithPeds(bool bSetClothesToAfro);

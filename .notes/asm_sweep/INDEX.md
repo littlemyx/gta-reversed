@@ -78,4 +78,5 @@
 | S18d | rest of S18c | 3 | partial 2/3 + PreRender to 0x6C9FD9 (1 M, 1 fixed) -> S18e | Heli.cpp, Plane.cpp |
 | S18e | rest of S18d | 1 | done 1/1 (MATCH, 1 U: _CIpow; S18 complete) | Plane.cpp |
 | S22f | rest of S22e + plane obstacle helper | 6 | partial 3/6 (3 M) -> S22g | CarCtrl.cpp |
-| S22g | rest of S22f | 3 | pending | CarCtrl.cpp |
+| S22g | rest of S22f | 3 | partial 2/3 (1 M, 1 fixed) -> S22h | CarCtrl.cpp |
+| S22h | rest of S22g | 1 | pending | CarCtrl.cpp |

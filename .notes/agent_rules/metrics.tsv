@@ -276,3 +276,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-28	ASM-S21c	v6	asm sweep	279784	108	25	PlayerPed 4/4: ProcessControl 10 deviations (no WasPostponed early-out, phantom bCanPointGunAtTarget gate, minigun spin-down, target bone fallback, mark colour, look timer, pad null) + FindWeaponLockOnTarget x87d; 2 MATCH; S21 complete
 2026-10-28	ASM-S22e	v6	asm sweep	174219	38	7	CarCtrl 4/9 all MATCH (SlowCarDownForPedsSectorList, FlyAIPlaneInCertainDirection, PickNextNodeToFollowPath, PickNextNodeToChaseCar); 5 big ones -> S22f
 2026-10-28	ASM-S22f	v6	asm sweep	184081	36	9	CarCtrl 3/6 MATCH (FindPlaneObstacleAltitude+Probe, PickNextNodeRandomly, DealWithBend_Racing); heli, OnlyMission, GenerateOneRandomCar -> S22g
+2026-10-28	ASM-S22g	v6	asm sweep	182023	59	23	CarCtrl 2/3: FlyAIHeli fixed (1-climbFactor x87d), OnlyMission MATCH; GenerateOneRandomCar -> S22h; left a self-deadlocked gpu_locked wrapper (gameplay_regress takes the lock itself)

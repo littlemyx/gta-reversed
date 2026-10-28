@@ -108,4 +108,5 @@
 | S19i | rest of S19h | 53 | partial 1/53 (ProcessBoatControl fixed, preamble compare-level) + NaN cleanup -> S19j | Vehicle.cpp |
 | S19j | rest of S19i (+ ProcessBoatControl preamble 0x6DBCE0-0x6DBF0A full arithmetic) | 53 | partial 6/53 (1 M, 4 fixed, 1 U) -> S19k | Vehicle.cpp |
 | S19k | rest of S19j (+ AddSingleWheelParticles 0x6DEC3C-0x6DF3B9) | 48 | partial 19/48 (16 M, 3 fixed) -> S19l | Vehicle.cpp |
-| S19l | rest of S19k | 29 | pending | Vehicle.cpp |
+| S19l | rest of S19k | 29 | partial 15/29 (6 M, 8 fixed, 1 U) -> S19m | Vehicle.cpp |
+| S19m | rest of S19l (+ DoHeadLightBeam x87 sub-ulp) | 15 | pending | Vehicle.cpp |

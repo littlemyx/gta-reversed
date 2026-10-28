@@ -120,8 +120,9 @@ CTask* CTaskComplexFollowPointRoute::CreateTask(eTaskType taskType, CPed* ped) {
     switch (taskType) {
     case TASK_SIMPLE_GO_TO_POINT_FINE: {
         const auto task = new CTaskSimpleGoToPointFine{ CTaskSimpleGoToPointFine::BaseRatio(m_moveState), m_route->GetAll()[m_currPointIdx] };
-        if (m_bSlowingDown) {
-            task->gotoFlags.m_targetCircledFlags = 0;
+        // exe 0x669249-0x669289: when slowing down, the new task inherits the low 4 bits (target-circled flags) of the CURRENT SUB task (not zero them), if that is a simple go-to-point
+        if (m_bSlowingDown && m_pSubTask && m_pSubTask->GetTaskType() == TASK_SIMPLE_GO_TO_POINT) {
+            task->gotoFlags.m_targetCircledFlags = static_cast<CTaskSimpleGoTo*>(m_pSubTask)->gotoFlags.m_targetCircledFlags;
         }
         return task;
     }

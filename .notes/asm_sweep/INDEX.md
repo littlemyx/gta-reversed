@@ -106,4 +106,5 @@
 | S19g | rest of S19f | 77 | partial 15/77 (8 M, 6 fixed, 1 U) -> S19h | Trailer.cpp, Vehicle.cpp |
 | S19h | rest of S19g (+ AddExhaustParticles 2nd half) | 63 | partial 10/63 (6 M, 4 fixed) -> S19i | Trailer.cpp, Vehicle.cpp |
 | S19i | rest of S19h | 53 | partial 1/53 (ProcessBoatControl fixed, preamble compare-level) + NaN cleanup -> S19j | Vehicle.cpp |
-| S19j | rest of S19i (+ ProcessBoatControl preamble 0x6DBCE0-0x6DBF0A full arithmetic) | 53 | pending | Vehicle.cpp |
+| S19j | rest of S19i (+ ProcessBoatControl preamble 0x6DBCE0-0x6DBF0A full arithmetic) | 53 | partial 6/53 (1 M, 4 fixed, 1 U) -> S19k | Vehicle.cpp |
+| S19k | rest of S19j (+ AddSingleWheelParticles 0x6DEC3C-0x6DF3B9) | 48 | pending | Vehicle.cpp |

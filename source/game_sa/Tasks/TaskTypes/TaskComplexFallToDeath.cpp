@@ -160,10 +160,10 @@ bool CTaskComplexFallToDeath::CalcFall(CPed* ped, int32& outFallDir, bool& outFa
 
     eDirection rndFallDirs[4]{eDirection::FORWARD, eDirection::LEFT, eDirection::BACKWARD, eDirection::RIGHT};
     for (auto i = 8; i-- > 0;) {
-        const auto GetRandomEntry = [&]() -> eDirection& {
-            return CGeneral::RandomChoice(rndFallDirs);
-        };
-        std::swap(GetRandomEntry(), GetRandomEntry());
+        // Exe 0x679715-0x67973C: `rand() & 3` (low bits, first call = first index), not the float-scaled range
+        const auto idxA = CGeneral::GetRandomNumber() & 3;
+        const auto idxB = CGeneral::GetRandomNumber() & 3;
+        std::swap(rndFallDirs[idxA], rndFallDirs[idxB]);
     }
 
     const CVector pedPos{ped->GetPosition()};
@@ -184,7 +184,8 @@ bool CTaskComplexFallToDeath::CalcFall(CPed* ped, int32& outFallDir, bool& outFa
             }
         }();
         const auto IsLOSClear = [](CVector origin, CVector target) {
-            return !CWorld::GetIsLineOfSightClear(origin, target, true, true, false, true, false, false, false);
+            // Exe 0x6798C2/0x679968/0x679A68: `je`/`jne` on the raw result, i.e. "clear" is the plain GetIsLineOfSightClear (the port had it negated)
+            return CWorld::GetIsLineOfSightClear(origin, target, true, true, false, true, false, false, false);
         };
         constexpr auto FALL_OFFSET_Z = CVector{0.f, 0.f, 0.375f};
         auto fallPos = pedPos + vecFallDir * 1.5f + FALL_OFFSET_Z;

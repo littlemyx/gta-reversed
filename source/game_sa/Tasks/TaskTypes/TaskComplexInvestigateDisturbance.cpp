@@ -97,7 +97,12 @@ CTask* CTaskComplexInvestigateDisturbance::CreateFirstSubTask(CPed* ped) {
         }
     }
 
-    if ((m_pos - ped->GetPosition()).Dot(ped->GetForward()) >= COS_45) {
+    // 0x66C905..0x66C973: the exe NORMALISES the direction to `m_pos`, sums the dot as (z + y) + x, compares against 0.707f (0x863C1C, not COS_45)
+    // and ducks unless `dot < 0.707f` (so also for NaN)
+    auto dir = m_pos - ped->GetPosition();
+    dir.Normalise();
+    const auto& fwd = ped->GetForward();
+    if (!((dir.z * fwd.z + dir.y * fwd.y) + dir.x * fwd.x < 0.707f)) {
         ped->GetIntelligence()->SetTaskDuckSecondary(5000);
     } else {
         g_ikChainMan.LookAt("TaskInvDisturb", ped, nullptr, 5000, BONE_UNKNOWN, &m_pos, false, 0.25f, 500, 3, false);

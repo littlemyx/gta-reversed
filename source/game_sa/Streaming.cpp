@@ -3198,31 +3198,23 @@ void CStreaming::StreamOneNewCar() {
     if (!CPopCycle::m_pCurrZoneInfo)
         return;
 
-    bool bCheatActive = false;
+    // exe 0x40B4F9: the FIRST active cheat in this order wins (port let the last one win)
+    bool bCheatActive = true;
     int32 carGroupId = 0;
     if (CCheat::IsActive(CHEAT_BEACH_PARTY)) {
         carGroupId = POPCYCLE_CARGROUP_BEACHFOLK;
-        bCheatActive = true;
-    }
-    if (CCheat::IsActive(CHEAT_COUNTRY_TRAFFIC)) {
+    } else if (CCheat::IsActive(CHEAT_COUNTRY_TRAFFIC)) {
         carGroupId = POPCYCLE_CARGROUP_FARMERS;
-        bCheatActive = true;
-    }
-    if (CCheat::IsActive(CHEAT_CHEAP_TRAFFIC)) {
+    } else if (CCheat::IsActive(CHEAT_CHEAP_TRAFFIC)) {
         carGroupId = POPCYCLE_CARGROUP_CHEAT1;
-        bCheatActive = true;
-    }
-    if (CCheat::IsActive(CHEAT_FAST_TRAFFIC)) {
+    } else if (CCheat::IsActive(CHEAT_FAST_TRAFFIC)) {
         carGroupId = POPCYCLE_CARGROUP_CHEAT2;
-        bCheatActive = true;
-    }
-    if (CCheat::IsActive(CHEAT_NINJA_THEME)) {
+    } else if (CCheat::IsActive(CHEAT_NINJA_THEME)) {
         carGroupId = POPCYCLE_CARGROUP_CHEAT3;
-        bCheatActive = true;
-    }
-    if (CCheat::IsActive(CHEAT_FUNHOUSE_THEME)) {
+    } else if (CCheat::IsActive(CHEAT_FUNHOUSE_THEME)) {
         carGroupId = POPCYCLE_CARGROUP_CHEAT4;
-        bCheatActive = true;
+    } else {
+        bCheatActive = false;
     }
 
     if (bCheatActive) {
@@ -3255,7 +3247,11 @@ void CStreaming::StreamOneNewCar() {
     ) {
         NOTSA_GLOBAL_LOCAL(lastCarModelStreamedIn, 0x965528, (int32), {}); // 0
         if (lastCarModelStreamedIn == MODEL_TAXI) {
-            if (!IsCarModelNeededInCurrentZone(MODEL_CABBIE) && IsCarModelNeededInCurrentZone(MODEL_TAXI)) {
+            // exe 0x40B5C8: last was a taxi -> prefer the cabbie if the zone needs it, else a taxi
+            if (IsCarModelNeededInCurrentZone(MODEL_CABBIE)) {
+                carModelId = MODEL_CABBIE;
+                lastCarModelStreamedIn = MODEL_CABBIE;
+            } else if (IsCarModelNeededInCurrentZone(MODEL_TAXI)) {
                 carModelId = MODEL_TAXI;
                 lastCarModelStreamedIn = MODEL_TAXI;
             }

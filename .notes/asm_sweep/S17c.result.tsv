@@ -1,0 +1,17 @@
+addr	function	verdict	asm range	note	fix commit
+0x6B6950	CBike::DoBurstAndSoftGroundRatios	MATCH	0x6B6950-0x6B6D3A	all branches, constants, rail wheel rotation, sand loop equal	-
+0x6F0210	CBoat::Render	FIXED	0x6F0210-0x6F0930	Speeder rear y +0.06, Reefer vertex pairs swapped, invisible cheat only skips CVehicle::Render and Im3D draws	0f62ea70
+0x6F21B0	CBoat::BlowUpCar	FIXED	0x6F21B0-0x6F2543	debris buoyancy const 0x3DDA740F (8/75 is 0x3DDA740E), atomic ptr cleared before CB walk	38a620c3
+0x6BEEB0	CBike::PlaceOnRoadProperly	MATCH	0x6BEEB0-0x6BF222	probe order front,rear, args, lighting/tunnel copies, pitch/right/fwd/up, mid and height equal (PC24: no extended-precision gap)	-
+0x6B5A10	CBike::DamageKnockOffRider	FIXED	0x6B5A10-0x6B5F3A	impact dots summed (y+z)+x (port x+y+z); rest equal	045d96c7
+0x6B5FB0	CBike::ProcessBuoyancy	FIXED	0x6B5FB0-0x6B6612	(ts*mass)*0.008f, (U/buoy)*f*1.05f, 1-f*0.05f (port /125, /20); rest equal	a2d48822
+0x6BC930	CBike::ProcessAI	NOT_REACHED	-	token budget	-
+0x6B7280	CBike::ProcessRiderAnims	NOT_REACHED	-	token budget	-
+0x6BE310	CBike::ProcessControlInputs	NOT_REACHED	-	token budget	-
+0x6BD090	CBike::PreRender	NOT_REACHED	-	token budget	-
+0x6B9250	CBike::ProcessControl	NOT_REACHED	-	token budget	-
+0x6BFB50	CBmx::ProcessDrivingAnims	NOT_REACHED	-	token budget	-
+0x6C0810	CBmx::PreRender	NOT_REACHED	-	token budget	-
+0x6C1470	CBmx::ProcessAI	NOT_REACHED	-	token budget	-
+0x6F1770	CBoat::ProcessControl	NOT_REACHED	-	token budget	-
+0x6F1180	CBoat::PreRender	NOT_REACHED	-	token budget	-

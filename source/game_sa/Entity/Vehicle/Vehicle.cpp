@@ -1593,13 +1593,16 @@ void CVehicle::RemoveDriver(bool dontTurnEngineOff) {
         case MODEL_COPCARSF:
         case MODEL_COPCARVG:
         case MODEL_COPCARRU: {
-            if (CStreaming::IsModelLoaded(MODEL_CHROMEGUN) && vehicleFlags.bFreebies) {
-                if (playerPed->DoesPlayerWantNewWeapon(eWeaponType::WEAPON_SHOTGUN, true)) {
-                    playerPed->GiveWeapon(eWeaponType::WEAPON_SHOTGUN, 5, true);
-                } else {
-                    playerPed->GrantAmmo(eWeaponType::WEAPON_SHOTGUN, 5);
+            if (CStreaming::IsModelLoaded(MODEL_CHROMEGUN)) {
+                if (vehicleFlags.bFreebies) {
+                    if (playerPed->DoesPlayerWantNewWeapon(eWeaponType::WEAPON_SHOTGUN, true)) {
+                        playerPed->GiveWeapon(eWeaponType::WEAPON_SHOTGUN, 5, true);
+                    } else {
+                        playerPed->GrantAmmo(eWeaponType::WEAPON_SHOTGUN, 5);
+                    }
+                    vehicleFlags.bFreebies = false;
                 }
-                vehicleFlags.bFreebies = false;
+                // exe 0x6D19FD: the model is released even when the freebies were already taken
                 CStreaming::SetModelIsDeletable(MODEL_CHROMEGUN);
             }
             break;

@@ -2341,8 +2341,9 @@ void CWaterLevel::SetCameraRange() {
 
     const auto& cmpos = TheCamera.GetPosition();
 
-    const auto CalcMin = [](float p) { return 2 * NOTSA_FTOL(int32, std::floor((p - (float)DETAILEDWATERDIST) / 2.f)); };
-    const auto CalcMax = [](float p) { return 2 * NOTSA_FTOL(int32, std::ceil((p + (float)DETAILEDWATERDIST) / 2.f)); };
+    // 0x6E9C93: `fild dist; fsubr [cam]; fmul 0.5` stays unrounded on the x87 stack and is handed to floor / ceil at full width (not rounded to float)
+    const auto CalcMin = [](float p) { return 2 * NOTSA_FTOL(int32, std::floor(((x87d)p - (x87d)DETAILEDWATERDIST) * 0.5f)); };
+    const auto CalcMax = [](float p) { return 2 * NOTSA_FTOL(int32, std::ceil(((x87d)p + (x87d)DETAILEDWATERDIST) * 0.5f)); };
 
     CameraRangeMinX = CalcMin(cmpos.x);
     CameraRangeMaxX = CalcMax(cmpos.x);

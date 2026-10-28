@@ -1,0 +1,11 @@
+addr	function	verdict	asm range	note	fix commit
+0x6C1470	CBmx::ProcessAI	MATCH	0x6C1470-0x6C2007	status switch (jump table 0x6C200C), lean force/COM, air steer, sprint/pedaling, anim gate, sprint push; constants and op orders equal	-
+0x6BC930	CBike::ProcessAI	MATCH	0x6BC930-0x6BCF7A	recording gate, PEDSTATE 0x3D/0x3A skip, lean forces (min/max helpers, fat modifier 11), simple/physics/ghost/abandoned/wrecked/forced-stop cases equal	-
+0x6BFB50	CBmx::ProcessDrivingAnims	MATCH	0x6BFB50-0x6C038C	bunny hop crank blend, anim fetch order, rider-active test, MTB/BMX anim speed, sprint/pedal/coast, new-anim phase sync (normalised phase stored as in exe), lean decay, wheelie/stoppie flag, pedals	-
+0x6C0810	CBmx::PreRender	MATCH	0x6C0810-0x6C146B	suspension height blend, wheel particles (indices, flags, offset), wheel rotation (front uses steer dir, rear fwd and front wheel size), all node matrices incl. UnkFlag paths	-
+0x6F1180	CBoat::PreRender	MATCH	0x6F1180-0x6F176C	rudder/flaps, prop angle wrap, node 8..11 rotations and alphas, Marquis door, Predator/Reefer/Tropic scan, prop splash fx, DoBoatSplashes arg	-
+0x6BE310	CBike::ProcessControlInputs	NOT_REACHED	-	token budget	-
+0x6B7280	CBike::ProcessRiderAnims	NOT_REACHED	-	token budget	-
+0x6F1770	CBoat::ProcessControl	NOT_REACHED	-	token budget	-
+0x6BD090	CBike::PreRender	NOT_REACHED	-	token budget	-
+0x6B9250	CBike::ProcessControl	NOT_REACHED	-	token budget (3760 asm lines)	-

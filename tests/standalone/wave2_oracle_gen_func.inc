@@ -849,7 +849,7 @@ static size_t W2Off_CTaskSimpleIKChain_m_EffectorBone_sz() { return sizeof(W2Mem
 struct W2Off_CTaskSimpleIKChain_m_IKChain_T { using type = IKChain_c* CTaskSimpleIKChain::*; friend type W2Get(W2Off_CTaskSimpleIKChain_m_IKChain_T); }; template struct W2Rob<W2Off_CTaskSimpleIKChain_m_IKChain_T, &CTaskSimpleIKChain::m_IKChain>;
 static size_t W2Off_CTaskSimpleIKChain_m_IKChain() { auto pm = W2Get(W2Off_CTaskSimpleIKChain_m_IKChain_T{}); uint32_t o = 0; std::memcpy(&o, &pm, 4); return o; }
 static size_t W2Off_CTaskSimpleIKChain_m_IKChain_sz() { return sizeof(W2MemberOf<W2Off_CTaskSimpleIKChain_m_IKChain_T::type>::type); }
-struct W2Off_CTaskSimpleIKChain_m_OffsetBone_T { using type = eBoneTag16 CTaskSimpleIKChain::*; friend type W2Get(W2Off_CTaskSimpleIKChain_m_OffsetBone_T); }; template struct W2Rob<W2Off_CTaskSimpleIKChain_m_OffsetBone_T, &CTaskSimpleIKChain::m_OffsetBone>;
+struct W2Off_CTaskSimpleIKChain_m_OffsetBone_T { using type = eBoneTag32 CTaskSimpleIKChain::*; friend type W2Get(W2Off_CTaskSimpleIKChain_m_OffsetBone_T); }; template struct W2Rob<W2Off_CTaskSimpleIKChain_m_OffsetBone_T, &CTaskSimpleIKChain::m_OffsetBone>;
 static size_t W2Off_CTaskSimpleIKChain_m_OffsetBone() { auto pm = W2Get(W2Off_CTaskSimpleIKChain_m_OffsetBone_T{}); uint32_t o = 0; std::memcpy(&o, &pm, 4); return o; }
 static size_t W2Off_CTaskSimpleIKChain_m_OffsetBone_sz() { return sizeof(W2MemberOf<W2Off_CTaskSimpleIKChain_m_OffsetBone_T::type>::type); }
 struct W2Off_CTaskSimpleIKChain_m_PivotBone_T { using type = eBoneTag16 CTaskSimpleIKChain::*; friend type W2Get(W2Off_CTaskSimpleIKChain_m_PivotBone_T); }; template struct W2Rob<W2Off_CTaskSimpleIKChain_m_PivotBone_T, &CTaskSimpleIKChain::m_PivotBone>;

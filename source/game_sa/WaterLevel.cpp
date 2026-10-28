@@ -1086,17 +1086,21 @@ void CWaterLevel::SetUpWaterFog(int32 minX, int32 minY, int32 maxX, int32 maxY) 
         return;
     }
 
-    const auto fogZ = [&] {
-        if (float waterLvl, bigWaves, smallWaves; GetWaterLevelNoWaves({(float)minX, (float)minY, 0.f}, & waterLvl, & bigWaves, & smallWaves)) {
-            if (bigWaves != 0.f || smallWaves != 0.f) {
-                return waterLvl;
-            }
+    // 0x6EAA4C..0x6EAA78: if the water level lookup succeeds and has neither big nor small waves (both ordered-equal to 0; NaN counts as "has waves") the exe returns
+    // without registering the fog; if the lookup fails the fog sits at z = 0
+    float fogZ = 0.f;
+    if (float waterLvl, bigWaves, smallWaves; GetWaterLevelNoWaves({(float)minX, (float)minY, 0.f}, & waterLvl, & bigWaves, & smallWaves)) {
+        if (bigWaves == 0.f && smallWaves == 0.f) {
+            return;
         }
-        return 0.f;
-    }();
+        fogZ = waterLvl;
+    }
 
+    // 0x6EAA82: the sum stays unrounded; the flag is only ever SET here (it is cleared elsewhere)
     const auto plyrPos = FindPlayerCoors();
-    gbPlayerIsInsideWaterFog = m_fWaterFogHeight + fogZ > plyrPos.z && CRect{ (float)minX, (float)minY, (float)maxX, (float)maxY }.IsPointInside(plyrPos);
+    if ((x87d)m_fWaterFogHeight + fogZ > plyrPos.z && CRect{ (float)minX, (float)minY, (float)maxX, (float)maxY }.IsPointInside(plyrPos)) {
+        gbPlayerIsInsideWaterFog = true;
+    }
 
     const auto idx = gWaterFogIndex++;
     ms_WaterFog.minX[idx] = minX;

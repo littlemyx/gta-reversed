@@ -150,7 +150,7 @@ void CTaskSimpleJump::Launch(CPed* ped) {
     if (m_bClimbJump) {
         ped->m_vecMoveSpeed.x = 0.0F;
         ped->m_vecMoveSpeed.y = 0.0F;
-    } else if (!m_pClimbEntity && (ped->m_standingOnEntity || ped->m_vecMoveSpeed.SquaredMagnitude2D() < fHorizontalJumpSpeed)) {
+    } else if (!m_pClimbEntity && (ped->m_standingOnEntity || ped->m_vecMoveSpeed.SquaredMagnitude2D() < fHorizontalJumpSpeed * fHorizontalJumpSpeed)) { // 0x679CB3-0x679CC6: hs*hs, not hs
         ped->m_vecMoveSpeed.x = X87R(-fHorizontalJumpSpeed * x87::sin(ped->m_fCurrentRotation));
         ped->m_vecMoveSpeed.y = X87R(fHorizontalJumpSpeed * x87::cos(ped->m_fCurrentRotation));
 
@@ -173,21 +173,28 @@ void CTaskSimpleJump::Launch(CPed* ped) {
 
     if (ped->bDoBloodyFootprints && CLocalisation::Blood()) {
         auto hier = GetAnimHierarchyFromSkinClump(ped->GetRpClump());
-        CVector v;
+        CVector v{0.0F, 0.0F, 0.0F}; // exe zeroes it (0x679D6F-0x679D80)
         RwV3dTransformPoints(&v, &v, 1, &RpHAnimHierarchyGetMatrixArray(hier)[RpHAnimIDGetIndex(hier, ped->m_apBones[PED_NODE_LEFT_FOOT]->BoneTag)]);
 
-        CVector v1 = ped->GetForward() * 0.2F;
-        v += v1 + CVector(0.0F, 0.0F, -0.1F);
-        CShadows::AddPermanentShadow(SHADOW_DEFAULT, gpBloodPoolTex, &v, v1.x * 0.26F, v1.y * 0.26F, ped->GetForward().x * 0.14F, ped->GetForward().y * 0.14F, 255, 255, 0, 0, 4.0F,
-                                     3000, 1.0F);
+        // 0x679D8B-0x679FF9: both feet. front = forward * 0.26 (xy), side = RIGHT * 0.14 (xy); pos = (v + v1) with z = (v.z - 0.1) + v1.z, v1 = forward * 0.2
+        const CVector v1 = ped->GetForward() * 0.2F;
+        const float   frontX = ped->GetForward().x * 0.26F;
+        const float   frontY = ped->GetForward().y * 0.26F;
+        const float   sideX  = ped->GetRight().x * 0.14F;
+        const float   sideY  = ped->GetRight().y * 0.14F;
+        const auto    AddFootprint = [&](CVector& v) {
+            v.x = v.x + v1.x;
+            v.y = v.y + v1.y;
+            v.z = (v.z - 0.1F) + v1.z;
+            CShadows::AddPermanentShadow(SHADOW_DEFAULT, gpBloodPoolTex, &v, frontX, frontY, sideX, sideY, 255, 255, 0, 0, 4.0F, 3000, 1.0F);
+        };
+        AddFootprint(v);
 
         v.Set(0.0F, 0.0F, 0.0F);
         RwV3dTransformPoints(&v, &v, 1, &RpHAnimHierarchyGetMatrixArray(hier)[RpHAnimIDGetIndex(hier, ped->m_apBones[PED_NODE_RIGHT_FOOT]->BoneTag)]);
-        v += v1 + CVector(0.0F, 0.0F, -0.1F);
-        CShadows::AddPermanentShadow(SHADOW_DEFAULT, gpBloodPoolTex, &v, v1.x * 0.26F, v1.y * 0.26F, ped->GetForward().x * 0.14F, ped->GetForward().y * 0.14F, 255, 255, 0, 0, 4.0F,
-                                     3000, 1.0F);
+        AddFootprint(v);
 
-        if (ped->m_nDeathTimeMS <= 40) {
+        if (static_cast<uint32>(ped->m_nDeathTimeMS) <= 40u) { // exe: unsigned `jbe`
             ped->m_nDeathTimeMS = 0;
             ped->bDoBloodyFootprints = false;
         } else

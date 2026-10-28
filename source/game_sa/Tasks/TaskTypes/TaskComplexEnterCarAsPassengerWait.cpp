@@ -172,7 +172,7 @@ CTask* CTaskComplexEnterCarAsPassengerWait::ControlSubTask(CPed* ped) {
         const x87d dz = (x87d)closest.z - subTask->m_vecTargetPoint.z;
         const x87d distSq = (dz * dz + dy * dy) + dx * dx;
 
-        if (distSq > (double)0.025f) {
+        if (distSq > (x87d)0.025f) {
             if (found) {
                 subTask->GoToPoint(closest, 1.5f, 2.f, false);
             } else {

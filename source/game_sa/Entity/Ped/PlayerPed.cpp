@@ -2292,9 +2292,9 @@ bool CPlayerPed::FindWeaponLockOnTarget() {
     constexpr auto TWO_PI = 2.0f * PI;                 // 0x858CBC
     constexpr auto HALF_PI = std::numbers::pi_v<float> / 2.0f; // 0x858FE4
 
-    // The original does the angle arithmetic in extended precision, hence `double`
+    // The original does the angle arithmetic in extended precision (x87d)
     // Wraps the angle into [-pi, pi] and returns its absolute value
-    // NOTE: x87d, not double: the exe runs this at PC24 (0x60E114..0x60E1E8), the portable build has to round per operation
+    // NOTE: x87d, not a native 53-bit type: the exe runs this at PC24 (0x60E114..0x60E1E8), the portable build has to round per operation
     const auto WrapAngleAbs = [&](x87d a) -> x87d {
         while (a > (x87d)PI) {
             a -= (x87d)TWO_PI;

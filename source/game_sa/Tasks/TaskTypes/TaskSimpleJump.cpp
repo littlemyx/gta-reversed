@@ -93,7 +93,14 @@ bool CTaskSimpleJump::CheckIfJumpBlocked(CPed* ped) {
 
     auto pedColData = CModelInfo::GetModelInfo(ped->m_nModelIndex)->m_pColModel->m_pColData;
 
-    CVector posn = ped->GetPosition() + ped->GetForward() * 0.25F + CVector(0.0F, 0.0F, pedColData->m_pSpheres[2].m_vecCenter.z + 0.25F);
+    // 0x67D5C7-0x67D63E: z = ((pos.z + fwd.z * 0.25) + sphere[2].center.z) + 0.25 (the port added `center.z + 0.25` as one term)
+    const auto& pedPos = ped->GetPosition();
+    const auto& pedFwd = ped->GetForward();
+    const CVector posn{
+        pedPos.x + pedFwd.x * 0.25F,
+        pedPos.y + pedFwd.y * 0.25F,
+        ((pedPos.z + pedFwd.z * 0.25F) + pedColData->m_pSpheres[2].m_vecCenter.z) + 0.25F
+    };
 
     m_bClimbJump = CWorld::TestSphereAgainstWorld(posn, 0.25F, 0, true, true, false, true, false, false) != 0;
 

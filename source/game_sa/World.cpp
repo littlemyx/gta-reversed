@@ -3098,7 +3098,7 @@ bool CWorld::ProcessLineOfSightSector(CSector& sector, CRepeatSector& repeatSect
     }
 
     if (objects) {
-        ProcessSector(repeatSector.Objects);
+        ProcessSector(repeatSector.Objects, doCameraIgnoreCheck); // exe 0x56B6FD: only the objects list gets doCameraIgnoreCheck
     }
 
     if (dummies) {

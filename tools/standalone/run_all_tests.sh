@@ -80,7 +80,18 @@ if [ "${SKIP_BUILD:-0}" != 1 ]; then
     ninja -C "$BDIR" -k 0 $TESTS > "$OUT/ninja.log" 2>&1 || BUILD_FAIL=1
   fi
   unlock; HELD=0
-  [ -n "$BUILD_FAIL" ] && echo "ninja reported errors (see $OUT/ninja.log); tests whose exe is missing are marked NOBUILD"
+  # `cmd /c start /wait` does not hand ninja's exit code back (2026-10-27: a test whose compile FAILED still ran its stale exe and reported ok), so the log is the source of truth:
+  # a FAILED: step, "ninja: build stopped" or "ninja: error" = build failure. Every test whose target is not up to date afterwards (its own FAILED step, or blocked by a failed
+  # dependency: -k 0 prints no FAILED line for those) is NOBUILD and never runs its old exe.
+  if grep -a -q -E '^FAILED:|^ninja: build stopped|^ninja: error' "$OUT/ninja.log"; then BUILD_FAIL=1; fi
+  NOBUILD_SET=" "
+  if [ -n "$BUILD_FAIL" ]; then
+    for t in $TESTS; do
+      if grep -a -E '^FAILED:' "$OUT/ninja.log" | grep -a -q -E "[/\\\\ ]$t\.(dir|exe)"; then NOBUILD_SET+="$t "
+      elif ! ninja -C "$BDIR" -n "$t" 2>&1 | grep -a -q 'no work to do'; then NOBUILD_SET+="$t "; fi
+    done
+    echo "ninja reported errors (see $OUT/ninja.log); NOBUILD (target not up to date, stale exe not run):$NOBUILD_SET"
+  fi
   # BUILD_ONLY=1: stop after the build (so the run stage can be done later under the GPU lock with SKIP_BUILD=1)
   [ "${BUILD_ONLY:-0}" = 1 ] && { echo "run_all_tests: build only, $(echo $TESTS | wc -w) test targets, ninja ${BUILD_FAIL:+FAILED}${BUILD_FAIL:-ok}"; [ -n "$BUILD_FAIL" ] && exit 1; exit 0; }
 fi
@@ -116,7 +127,7 @@ MODEL_TESTS=" rw_custom_pipelines_test rw_matfx_pipeline_test rw_matfx_uvanim_te
 ROWS=""; RC=0
 for t in $TESTS; do
   exe="$BDIR/source/$t.exe"
-  if [ ! -f "$exe" ]; then ROWS+="$t - - - 0 0 NOBUILD"$'\n'; RC=1; continue; fi
+  if [ ! -f "$exe" ] || [[ "${NOBUILD_SET:- }" == *" $t "* ]]; then ROWS+="$t - - - 0 0 NOBUILD"$'\n'; RC=1; continue; fi
   args=()
   if [[ "$MODEL_TESTS" == *" $t "* ]]; then
     case "$t" in rw_skin_hanim_test|rw_skin_pipeline_test|rw_rtanim_rtquat_test) models="male01";; *) models="infernus male01 vgsnbuild07";; esac   # these two need skinned models

@@ -2664,19 +2664,19 @@ void CPlayerPed::ProcessControl() {
             auto weaponInfo = CWeaponInfo::GetWeaponInfo(GetActiveWeapon().m_Type, GetWeaponSkill());
             float targetHeadRange = weaponInfo->GetTargetHeadRange();
             markColor = targetPed->m_fHealth / targetPed->m_fMaxHealth;
-            bool instantFireHit = false;
+            bool headTargeted = false;
             if (targetPed->IsAlive()) {
                 auto stdWeaponInfo = CWeaponInfo::GetWeaponInfo(GetActiveWeapon().m_Type, eWeaponSkill::STD);
                 if (stdWeaponInfo->m_nWeaponFire == WEAPON_FIRE_INSTANT_HIT) {
-                    instantFireHit = true;
                     CVector distance = targetPed->GetPosition() - GetPosition();
                     if (targetHeadRange * targetHeadRange > distance.SquaredMagnitude()) {
+                        headTargeted = true;
                         GetPlayerData()->m_nTargetBone = BONE_HEAD;
                         GetPlayerData()->m_vecTargetBoneOffset.x = 0.05f;
                     }
                 }
             }
-            if (!instantFireHit) {
+            if (!headTargeted) { // 0x60EE83: also reached when an instant-hit weapon's target is outside the head range
                 GetPlayerData()->m_nTargetBone = BONE_SPINE1;
                 GetPlayerData()->m_vecTargetBoneOffset.x = 0.2f;
             }

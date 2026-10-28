@@ -458,6 +458,10 @@ CTask* CTaskComplexFollowPointRoute::ControlSubTask(CPed* ped) {
         return nullptr;
     }
 
+    if (m_bNewRoute) { // exe 0x66E89A-0x66E8B1: (missing in the port) a new route restarts the sub-task chain
+        return CreateFirstSubTask(ped);
+    }
+
     if (m_bUseBlending && subTaskType == TASK_NONE) {
         m_bWillSlowDown = m_bSlowingDown = m_bSpeedingUp = false;
         return m_pSubTask;
@@ -475,17 +479,21 @@ CTask* CTaskComplexFollowPointRoute::ControlSubTask(CPed* ped) {
                     return CTaskSimpleGoToPointFine::BaseRatio(m_moveState);
                 }());
             } else if (m_bSpeedingUp) {
-                if (const auto moveRatio = CalcBlendRatio(ped, true); moveRatio < 0.f) {
+                if (const auto moveRatio = CalcBlendRatio(ped, false); moveRatio < 0.f) { // exe 0x66E9BF: pushes 0 (not 1) for the speeding-up case
                     m_bSpeedingUp = false;
                     gotoPointFine->SetMoveRatio(gotoPointFine->BaseRatio(m_moveState));
                     return CreateTask(TASK_SIMPLE_GO_TO_POINT, ped);
+                } else {
+                    gotoPointFine->SetMoveRatio(moveRatio); // exe 0x66E9DA: ratio >= 0 => it is applied (falls into the shared SetMoveRatio at 0x66E92B)
                 }
             }
         }
 
         if (m_bWillSlowDown && !m_bSlowingDown) {
             if (const auto moveRatio = CalcBlendRatio(ped, true); moveRatio >= 0.f) {
-                m_bWillSlowDown = m_bSlowingDown = false;
+                m_bWillSlowDown = false; // exe 0x66E96B-0x66E971: `and ~0x50; or 0x20` => will-slow-down and speeding-up cleared, slowing-down SET
+                m_bSpeedingUp   = false;
+                m_bSlowingDown  = true;
                 if (subTaskType == TASK_SIMPLE_GO_TO_POINT_FINE) { // Inverted
                     gotoPointFine->SetMoveRatio(moveRatio);
                 } else {

@@ -184,7 +184,7 @@ bool CTaskSimpleSwim::ProcessPed(CPed* ped) {
         }
 
         ped->AsPlayer()->HandlePlayerBreath(bDecreaseAir, fDecreaseAirMult);
-        if (m_pPed && m_nSwimState != SWIM_UNDERWATER_SPRINTING) {
+        if (m_bFinishedBlending && m_nSwimState != SWIM_UNDERWATER_SPRINTING) { // exe 0x68B39D-0x68B3A8: tests the byte at task+8, not m_pPed (+0x20)
             if (CStats::GetFatAndMuscleModifier(STAT_MOD_AIR_IN_LUNG) * 0.5f > ped->GetPlayerData()->m_fBreath) {
                 ped->Say(CTX_GLOBAL_PAIN_CJ_SWIM_GASP);
             }
@@ -655,12 +655,12 @@ void CTaskSimpleSwim::ProcessEffects(CPed* ped) {
         break;
     }
     case SWIM_UNDERWATER_SPRINTING: {
-        uint32 oxygen = 5;
+        int32 oxygen = 5; // exe 0x68AC33-0x68AC7A: signed (ESI), compared with JGE
         if (ped->IsPlayer()) {
             assert(ped->GetPlayerData());
-            oxygen = NOTSA_FTOL(uint32, (100.0f - ped->GetPlayerData()->m_fBreath / CStats::GetFatAndMuscleModifier(STAT_MOD_AIR_IN_LUNG) * 100.0f) * ExeRecip(3.0f));
+            oxygen = NOTSA_FTOL(int32, (100.0f - ped->GetPlayerData()->m_fBreath / CStats::GetFatAndMuscleModifier(STAT_MOD_AIR_IN_LUNG) * 100.0f) * ExeRecip(3.0f));
         }
-        if ((unsigned)CGeneral::GetRandomNumberInRange(0, 100) < oxygen) {
+        if (CGeneral::GetRandomNumberInRange(0, 100) < oxygen) {
             RpHAnimHierarchy* hier = GetAnimHierarchyFromSkinClump(ped->GetRpClump()); // todo: almost CPed::GetBoneMatrix
 #ifdef FIX_BUGS
             CVector* bonePos = static_cast<CVector*>(&RpHAnimHierarchyGetMatrixArray(hier)[BONE_JAW].pos); // FIX_BUGS: Air bubbles from ass :D (BONE_SPINE1)

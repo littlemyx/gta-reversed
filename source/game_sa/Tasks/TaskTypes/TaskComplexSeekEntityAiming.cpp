@@ -84,26 +84,27 @@ CTask* CTaskComplexSeekEntityAiming::CreateFirstSubTask(CPed* ped) {
 // 0x694C70
 CTask* CTaskComplexSeekEntityAiming::ControlSubTask(CPed* ped) {
     const auto pedToSoughtDist2DSq = (ped->GetPosition() - m_ToSeek->GetPosition()).SquaredMagnitude2D();
+    auto&      taskMgr             = ped->GetTaskManager();
     const auto pedUseGun           = ped->GetIntelligence()->GetTaskUseGun();
     switch (m_pSubTask->GetTaskType()) {
     case TASK_SIMPLE_STAND_STILL: {
         if (pedUseGun) {
             pedUseGun->ControlGun(ped, m_ToSeek, eGunCommand::AIM);
         }
-        if (pedToSoughtDist2DSq >= sq(m_SeekRadius)) {
+        if (!(pedToSoughtDist2DSq < sq(m_SeekRadius))) { // 0x694DF0: `test ah,1` after fcompp: C0 clear => >= or NaN
             m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_LEISURE);
         }
         break;
     }
     case TASK_COMPLEX_SEEK_ENTITY: {
-        if (pedToSoughtDist2DSq >= sq(m_AimRadius)) {
+        if (!(pedToSoughtDist2DSq < sq(m_AimRadius))) { // 0x694D0F: `test ah,5 / jp`: jumps for >=, == and NaN
             if (pedUseGun) {
                 pedUseGun->ControlGun(ped, m_ToSeek, eGunCommand::END_LEISURE);
             }
         } else if (pedUseGun) {
             pedUseGun->ControlGun(ped, m_ToSeek, eGunCommand::AIM);
-        } else {
-            ped->GetTaskManager().SetTaskSecondary(
+        } else if (!taskMgr.GetTaskSecondary(TASK_SECONDARY_ATTACK)) { // 0x694D18: only an EMPTY secondary attack slot gets a new gun task (another task type there is left alone)
+            taskMgr.SetTaskSecondary(
                 new CTaskSimpleUseGun{
                     m_ToSeek,
                     {},

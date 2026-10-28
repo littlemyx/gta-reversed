@@ -125,7 +125,9 @@ CTask* CTaskComplexInvestigateDeadPed::ControlSubTask(CPed* ped) {
         // Set new target position if the distance between the last one is greater than 1
         CVector targetPos{};
         ComputeTargetPos(ped, targetPos);
-        if ((targetPos - m_targetPos).SquaredMagnitude() > 1.f) {
+        // 0x697A00..0x697B41: the exe sums the squared deltas as (z^2 + y^2) + x^2 (CVector::SquaredMagnitude is (x^2 + y^2) + z^2)
+        const auto delta = targetPos - m_targetPos;
+        if ((delta.z * delta.z + delta.y * delta.y) + delta.x * delta.x > 1.f) {
             m_targetPos = targetPos;
             static_cast<CTaskComplexGoToPointAndStandStill*>(m_pSubTask)->GoToPoint(m_targetPos, 0.5f, 2.f);
         }

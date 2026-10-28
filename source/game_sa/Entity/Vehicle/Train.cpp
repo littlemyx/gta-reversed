@@ -382,7 +382,7 @@ void CTrain::ReadAndInterpretTrackFile(const char* filename, CTrainNode** nodes,
 
 // 0x6F58D0
 void CTrain::Shutdown() {
-    for (auto node : pTrackNodes) {
+    for (auto& node : pTrackNodes) { // exe 0x6F58D6-0x6F58EB: the global slot is nulled, so InitTrains re-reads the file
         delete node;
         node = nullptr;
     }

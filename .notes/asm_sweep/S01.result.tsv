@@ -1,0 +1,41 @@
+addr	function	verdict	asm range	note	fix commit
+0x6750A0	CTaskInteriorBeInHouse::GetInfoForPedToUse	FIXED	0x6750A0-0x67521D	UNK_5 duration rand drawn even when no UNK_5 info found (RNG count)	78ff50da
+0x676200	CTaskInteriorBeInHouse::CreateNextSubTask	FIXED	0x676200-0x67629E	port = CreateFirstSubTask; exe sets ped flag 0x474|=0x80 and bDoInstantly=false	78ff50da
+0x6762B0	CTaskInteriorBeInHouse::CreateFirstSubTask	MATCH	0x6762B0-0x67632D		-
+0x675300	CTaskInteriorBeInOffice::GetInfoForPedToUse	FIXED	0x675300-0x6753D4	duration rolled per loop iteration; int rand*100<=20 (was float RandomBool)	62064b17
+0x676350	CTaskInteriorBeInOffice::CreateNextSubTask	FIXED	0x676350-0x6763F4	sets ped flag 0x474|=0x80, bDoInstantly=false (port always passed true, no flag)	62064b17
+0x676400	CTaskInteriorBeInOffice::CreateFirstSubTask	MATCH	0x676400-0x676470		-
+0x6754D0	CTaskInteriorBeInShop::ScanForStuff	MATCH	0x6754D0-0x6756BC		-
+0x6772E0	CTaskInteriorLieInBed::ProcessPed	MATCH	0x6772E0-0x677758	timers guarded (>=0) as exe; x87 chain verified	-
+0x676550	CTaskInteriorShopKeeper::CreateFirstSubTask	MATCH	0x676550-0x676613		-
+0x677780	CTaskInteriorSitAtDesk::StartRandomLoopAnim	MATCH	0x677780-0x67787F	anim timer unguarded as exe	-
+0x677880	CTaskInteriorSitAtDesk::StartRandomOneOffAnim	MATCH	0x677880-0x67791F		-
+0x677920	CTaskInteriorSitAtDesk::ProcessPed	MATCH	0x677920-0x677DE4	task timer Start guarded (>=0) as exe (SYSTEMIC_TODO SitAtDesk: resolved)	-
+0x676D30	CTaskInteriorSitOnChair::ProcessPed	MATCH	0x676D30-0x6772BC	task timer Start guarded (>=0) as exe (SYSTEMIC_TODO SitOnChair: resolved)	-
+0x675B30	CTaskInteriorUseInfo::MakeAbortable	MATCH	0x675B30-0x675B5D		-
+0x676880	CTaskInteriorUseInfo::CreateNextSubTask	MATCH	0x676880-0x676CFF	all 10 info types, ctor args, anim ids	-
+0x694830	CEntitySeekPosCalculatorFixedPos::ComputeEntitySeekPos	MATCH	0x694830-0x694846		-
+0x6946F0	CEntitySeekPosCalculatorRadiusAngleOffset::ComputeEntitySeekPos	FIXED	0x6946F0-0x6947C4	cos stored as float before the radius multiply (sin stays extended)	2ca13c71
+0x6946A0	CEntitySeekPosCalculatorXYOffset::ComputeEntitySeekPos	MATCH	0x6946A0-0x6946EA		-
+0x696030	CTaskComplexSeekEntityAnyMeansXYOffset::Clone	FIXED	0x696030-0x6960A3	Clone runs the real ctor 0x695600 that registers the entity reference; port copy ctor did not	2e8f5529
+0x6960B0	CTaskComplexSeekEntityAnyMeansXYOffset::CreateFirstSubTask	FIXED	0x6960B0-0x696155	exe starts the scan timer (unguarded); port never did, so ControlSubTask never re-aimed the drive	2e8f5529
+0x696160	CTaskComplexSeekEntityAnyMeansXYOffset::ControlSubTask	FIXED	0x696160-0x69624A	timer restart without >=0 test (StartUnguarded)	2e8f5529
+0x638F20	CTaskComplexAttractorPartnerWait::CreateFirstSubTask	MATCH	0x638F20-0x638FB5		-
+0x493730	CTaskComplexSeekEntityRadiusAngleOffset::Constructor	NOT_REACHED		token budget	-
+0x493890	CTaskComplexSeekEntityRadiusAngleOffset::Destructor	NOT_REACHED		token budget	-
+0x496270	CTaskComplexSeekEntityRadiusAngleOffset::CreateSubTask	NOT_REACHED		token budget	-
+0x495FB0	CTaskComplexSeekEntityRadiusAngleOffset::Clone	NOT_REACHED		token budget	-
+0x493810	CTaskComplexSeekEntityRadiusAngleOffset::MakeAbortable	NOT_REACHED		token budget	-
+0x496080	CTaskComplexSeekEntityRadiusAngleOffset::CreateNextSubTask	NOT_REACHED		token budget	-
+0x496600	CTaskComplexSeekEntityRadiusAngleOffset::CreateFirstSubTask	NOT_REACHED		token budget	-
+0x496760	CTaskComplexSeekEntityRadiusAngleOffset::ControlSubTask	NOT_REACHED		token budget	-
+0x46AC10	CTaskComplexSeekEntityStandard::Constructor	NOT_REACHED		token budget	-
+0x46AD50	CTaskComplexSeekEntityStandard::Destructor	NOT_REACHED		token budget	-
+0x46F1E0	CTaskComplexSeekEntityStandard::CreateSubTask	NOT_REACHED		token budget	-
+0x46EF50	CTaskComplexSeekEntityStandard::Clone	NOT_REACHED		token budget	-
+0x46ACF0	CTaskComplexSeekEntityStandard::MakeAbortable	NOT_REACHED		token budget	-
+0x46EFF0	CTaskComplexSeekEntityStandard::CreateNextSubTask	NOT_REACHED		token budget	-
+0x46F6A0	CTaskComplexSeekEntityStandard::CreateFirstSubTask	NOT_REACHED		token budget	-
+0x46F800	CTaskComplexSeekEntityStandard::ControlSubTask	NOT_REACHED		token budget	-
+0x6907A0	CTaskComplexArrestPed::CreateFirstSubTask	NOT_REACHED		token budget	-
+0x68D350	CTaskComplexArrestPed::ControlSubTask	NOT_REACHED		token budget	-

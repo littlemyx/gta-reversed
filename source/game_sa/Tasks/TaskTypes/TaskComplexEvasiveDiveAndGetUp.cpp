@@ -80,7 +80,8 @@ CTask* CTaskComplexEvasiveDiveAndGetUp::CreateNextSubTask(CPed* ped) {
     case TASK_SIMPLE_EVASIVE_DIVE:
         return CreateSubTask(TASK_SIMPLE_PAUSE);
     case TASK_SIMPLE_PAUSE: {
-        ped->m_fCurrentRotation = ped->m_fAimingRotation = CGeneral::LimitRadianAngle(ped->m_fCurrentRotation - HALF_PI);
+        // Exe 0x65603E-0x65605A: limit the current rotation first, THEN subtract pi/2 (no re-limit); the subtraction is in extended precision
+        ped->m_fCurrentRotation = ped->m_fAimingRotation = (float)(CGeneral::LimitRadianAngleExt(ped->m_fCurrentRotation) - (double)HALF_PI);
         return CreateSubTask(TASK_SIMPLE_GET_UP);
     }
     case TASK_SIMPLE_GET_UP:

@@ -649,7 +649,7 @@ uint8 CVehicle::SpecialEntityCalcCollisionSteps(bool& bProcessCollisionBeforeSet
     if (physicalFlags.bDisableCollisionForce)
         return 1;
 
-    const auto fMoveSquared = m_vecMoveSpeed.SquaredMagnitude() * sq(CTimer::GetTimeStep());
+    const auto fMoveSquared = m_vecMoveSpeed.SquaredMagnitude() * CTimer::GetTimeStep() * CTimer::GetTimeStep(); // 0x6D0EBE/0x6D0EC4: (|v|^2 * dt) * dt, not |v|^2 * (dt * dt)
     if (fMoveSquared < 0.16F)
         return 1;
 

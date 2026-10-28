@@ -20,7 +20,7 @@
 | S16 | game_sa/Entity/Vehicle | 48 | partial 23/48 (18 M, 5 fixed) -> S16b | Automobile.cpp |
 | S17 | game_sa/Entity/Vehicle | 43 | partial 21/43 (17 M, 4 fixed) -> S17b | Bike.cpp, Bmx.cpp, Boat.cpp |
 | S18 | game_sa/Entity/Vehicle | 41 | partial 17/41 (13 M, 4 fixed) -> S18b | Heli.cpp, MonsterTruck.cpp, Plane.cpp, QuadBike.cpp |
-| S19 | game_sa/Entity/Vehicle | 108 | pending | Trailer.cpp, Train.cpp, Vehicle.cpp |
+| S19 | game_sa/Entity/Vehicle | 108 | partial 3/108 (3 M) -> S19b | Trailer.cpp, Train.cpp, Vehicle.cpp |
 | S20 | game_sa/Entity/Ped | 75 | partial 54/75 (42 M, 12 fixed) -> S20b | CivilianPed.cpp, CopPed.cpp, EmergencyPed.cpp, Ped.cpp |
 | S21 | game_sa/Entity/Ped | 32 | partial 23/32 (20 M, 3 fixed) -> S21b | PedSaveStructure.cpp, PlayerPed.cpp, PlayerSkin.cpp |
 | S22 | game_sa/CarCtrl.cpp | 55 | partial 21/55 (17 M, 4 fixed) -> S22b | CarCtrl.cpp |
@@ -96,4 +96,6 @@
 | S10b | rest of S10 (+ BeHitWhileMoving StartAnim tail from 0x6200F4) | 26 | done 26/26 (22 M, 4 fixed; S10 complete) | TaskSimpleCarAlign.cpp, TaskSimpleCarCloseDoorFromInside.cpp, TaskSimpleCarCloseDoorFromOutside.cpp, TaskSimpleCarDrive.cpp, TaskSimpleCarFallOut.cpp, TaskSimpleCarGetIn.cpp |
 | S15b | rest of S15 | 20 | partial 14/20 (8 M, 6 fixed) -> S15c | TaskSimpleSwim.cpp, TaskSimpleThrowProjectile.cpp, TaskSimpleTired.cpp, TaskSimpleTurn180.cpp, TaskSimpleUseGun.cpp, TaskSimpleWaitUntilAreaCodesMatch.cpp, TaskSimpleWaitUntilPedIsOutCar.cpp, TaskUtilityLineUpPedWithCar.cpp |
 | S15c | rest of S15b | 6 | partial 2/6 (1 M, 1 fixed) -> S15d | TaskSimpleSwim.cpp, TaskSimpleUseGun.cpp, TaskUtilityLineUpPedWithCar.cpp |
-| S15d | rest of S15c | 4 | pending | TaskSimpleSwim.cpp, TaskUtilityLineUpPedWithCar.cpp |
+| S15d | rest of S15c | 4 | partial 3/4 (2 M, 1 fixed) -> S15e | TaskSimpleSwim.cpp, TaskUtilityLineUpPedWithCar.cpp |
+| S15e | rest of S15d | 1 | pending | TaskUtilityLineUpPedWithCar.cpp |
+| S19b | rest of S19 | 105 | pending | Trailer.cpp, Train.cpp, Vehicle.cpp |

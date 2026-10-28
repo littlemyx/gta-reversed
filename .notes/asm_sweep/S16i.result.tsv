@@ -1,0 +1,2 @@
+addr	function	verdict	asm range	note	fix commit
+0x6AAB50	CAutomobile::PreRender	PARTIAL	0x6AB154-0x6AB36C	S16h compared 0x6AAB50-0x6AB154. S17f: middle-wheel particles (wheels 1 and 3, ids 5 and 6, flags, 2*fwd+point, arg order), water splash, exhaust, AddDamagedVehicleParticles = MATCH. Not reached: model-switch lights and rest, 0x6AB36C-0x6ACCBA (jump tables at 0x6ACCBC/0x6ACD94, token budget)	-

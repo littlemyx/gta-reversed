@@ -1,0 +1,78 @@
+addr	function	verdict	asm range	note	fix commit
+0x6D03A0	CTrailer::Constructor	MATCH	0x6D03A0-0x6D0443	ratios 1.0, BAGBOXA/B (606/607) towed ratio -1000, subtype 11, status ABANDONED; port relies on the same member defaults	-
+0x6CF030	CTrailer::ScanForTowLink	MATCH	0x6CF030-0x6CF17A	FindObjectsInRange args, hitch-bar 2D distance < 0.4 and |dz| < 1.0 polarity, FARMTR1 / recording / towed gates	-
+0x6CF1A0	CTrailer::SetupSuspensionLines	NOT_REACHED	-	budget	-
+0x6CFDF0	CTrailer::SetTowLink	NOT_REACHED	-	budget	-
+0x6CF6A0	CTrailer::ProcessSuspension	FIXED	0x6CF6A0-0x6CFAB0	springs for both supports, then both contact speeds, then both dampenings (port interleaved them per support); traction K = 0x3B83126E (static init 0x853C20), not 0.004f	523a2b24
+0x6CED20	CTrailer::ProcessControl	MATCH	0x6CED20-0x6CEE4E	retract/extend rates 0.002/0.002/0.0005, <=0.1 wait branch, min(1.0) only in the fast branch (the missing clamp in the wait branch is unobservable), status 10/11 min ratio 0.9	-
+0x6CF590	CTrailer::ProcessAI	FIXED	0x6CF590-0x6CF697	wheel-turn/brake branch gate is status 10 (IS_TOWED); the port tested 8 (REMOTE_CONTROLLED) so it never ran; headings as x87d	523a2b24
+0x6CFAC0	CTrailer::PreRender	FIXED	0x6CFAC0-0x6CFD56	support animation matches; FARMTR1 propeller wrap is `if (r > 2PI) r -= 2PI` once, port used fmod (also wrapped negative values)	523a2b24
+0x6CEFB0	CTrailer::BreakTowLink	MATCH	0x6CEFB0-0x6CF02A	audio event 0x72, reference clean-up of both links, status 10/11 -> ABANDONED, returns true only then	-
+0x6D5F10	CVehicle::Constructor	NOT_REACHED	-	budget	-
+0x6E2B40	CVehicle::Destructor	NOT_REACHED	-	budget	-
+0x6D6A40	CVehicle::SetModelIndex	NOT_REACHED	-	budget	-
+0x6D6410	CVehicle::DeleteRwObject	NOT_REACHED	-	budget	-
+0x6D0E90	CVehicle::SpecialEntityCalcCollisionSteps	NOT_REACHED	-	budget	-
+0x553F20	CVehicle::SetupLighting	NOT_REACHED	-	budget	-
+0x5533D0	CVehicle::RemoveLighting	NOT_REACHED	-	budget	-
+0x6D0E60	CVehicle::Render	NOT_REACHED	-	budget	-
+0x5D4760	CVehicle::Save	NOT_REACHED	-	budget	-
+0x5D2900	CVehicle::Load	NOT_REACHED	-	budget	-
+0x6DF4A0	CVehicle::ProcessDrivingAnims	NOT_REACHED	-	budget	-
+0x6D0B40	CVehicle::Shutdown	NOT_REACHED	-	budget	-
+0x6D0C00	CVehicle::SetRemap	NOT_REACHED	-	budget	-
+0x6D0E20	CVehicle::ResetAfterRender	NOT_REACHED	-	budget	-
+0x6D2740	CVehicle::ApplyBoatWaterResistance	NOT_REACHED	-	budget	-
+0x6DBCE0	CVehicle::ProcessBoatControl	NOT_REACHED	-	budget	-
+0x6E0E20	CVehicle::DoHeadLightBeam	NOT_REACHED	-	budget	-
+0x6D10E0	CVehicle::CustomCarPlate_TextureCreate	NOT_REACHED	-	budget	-
+0x6D16A0	CVehicle::SetDriver	NOT_REACHED	-	budget	-
+0x6D1950	CVehicle::RemoveDriver	NOT_REACHED	-	budget	-
+0x6D1C80	CVehicle::KillPedsInVehicle	NOT_REACHED	-	budget	-
+0x6D2960	CVehicle::SetComponentAtomicAlpha	NOT_REACHED	-	budget	-
+0x6D2A80	CVehicle::AddDamagedVehicleParticles	NOT_REACHED	-	budget	-
+0x6D2D50	CVehicle::AddWheelDirtAndWater	NOT_REACHED	-	budget	-
+0x6D3080	CVehicle::SetWindowOpenFlag	NOT_REACHED	-	budget	-
+0x6D30B0	CVehicle::ClearWindowOpenFlag	NOT_REACHED	-	budget	-
+0x6D30E0	CVehicle::SetVehicleUpgradeFlags	NOT_REACHED	-	budget	-
+0x6D3210	CVehicle::ClearVehicleUpgradeFlags	NOT_REACHED	-	budget	-
+0x6D3510	CVehicle::CreateUpgradeAtomic	NOT_REACHED	-	budget	-
+0x6D3630	CVehicle::RemoveUpgrade	NOT_REACHED	-	budget	-
+0x6D3700	CVehicle::CreateReplacementAtomic	NOT_REACHED	-	budget	-
+0x6D3830	CVehicle::AddReplacementUpgrade	NOT_REACHED	-	budget	-
+0x6D39E0	CVehicle::RemoveReplacementUpgrade	NOT_REACHED	-	budget	-
+0x6D3AB0	CVehicle::RemoveAllUpgrades	NOT_REACHED	-	budget	-
+0x6D3B80	CVehicle::UpdateWinch	NOT_REACHED	-	budget	-
+0x6D3C70	CVehicle::RemoveWinch	NOT_REACHED	-	budget	-
+0x6D3DB0	CVehicle::PreRenderDriverAndPassengers	NOT_REACHED	-	budget	-
+0x6D5110	CVehicle::FireUnguidedMissile	MATCH	0x6D5110-0x6D53EF	models 425/520/576, RLAUNCHER 5000, twin-position recompute with x negated, x87 speed/step chain, pad shake 240/160/0	-
+0x6D64F0	CVehicle::SetupRender	NOT_REACHED	-	budget	-
+0x6D82F0	CVehicle::KillPedsGettingInVehicle	NOT_REACHED	-	budget	-
+0x6DAF00	CVehicle::BladeColSectorList<CPtrListSingleLink<CEntity*>>	NOT_REACHED	-	budget	-
+0x6DD130	CVehicle::DoBoatSplashes	NOT_REACHED	-	budget	-
+0x6DD6F0	CVehicle::DoSunGlare	NOT_REACHED	-	budget	-
+0x6DDF60	CVehicle::AddWaterSplashParticles	NOT_REACHED	-	budget	-
+0x6DE240	CVehicle::AddExhaustParticles	UNSURE	0x6DE240-0x6DE86F (first half only)	entry gates, 0.05 dot polarity (z,y,x order), the static random factor guard (0xC1CDB8) and first rand() match; particle loop / second rand() not compared	-
+0x6DE880	CVehicle::AddSingleWheelParticles	NOT_REACHED	-	budget	-
+0x6DF3D0	CVehicle::GetSpecialColModel	NOT_REACHED	-	budget	-
+0x6DF930	CVehicle::RemoveVehicleUpgrade	NOT_REACHED	-	budget	-
+0x6DFA20	CVehicle::AddUpgrade	NOT_REACHED	-	budget	-
+0x6E0400	CVehicle::ScanAndMarkTargetForHeatSeekingMissile	MATCH	0x6E0400-0x6E05C0	pick args (1.2f), plane field_9E4 LOS cache (bit31) with 1000 ms re-check, collision flag save/restore, status 0 gate	-
+0x6E05C0	CVehicle::FireHeatSeakingMissile	MATCH	0x6E05C0-0x6E07CE	cycle-index flip, x87 speed*step chain, position add structure, WEAPON_ROCKET_HS (0x14), shake	-
+0x6E1440	CVehicle::DoHeadLightReflectionSingle	FIXED	0x6E1440-0x6E15EE	a combine harvester no longer becomes the twin shadow in Single; position = right*x + (pos + fwd*od) as the x87 code sums it	f7bed935
+0x6E1600	CVehicle::DoHeadLightReflectionTwin	FIXED	0x6E1600-0x6E1717	shared fix with Single (impl: twin only with TWIN flag and both sides); shadow vectors/size/texture/id match	f7bed935
+0x6E2900	CVehicle::FillVehicleWithPeds	FIXED	0x6E2900-0x6E2A1F	single loop over seats -1..max-1; old driver/passenger ped deleted after AddPed; passengers seated with isDriver=false (port: true for all); model request per seat	2d77eb6b
+0x6E2E50	CVehicle::DoBladeCollision	NOT_REACHED	-	budget	-
+0x6E3290	CVehicle::AddVehicleUpgrade	NOT_REACHED	-	budget	-
+0x6E3400	CVehicle::SetupUpgradesAfterLoad	NOT_REACHED	-	budget	-
+0x6E3440	CVehicle::GetPlaneWeaponFiringStatus	MATCH	0x6E3440-0x6E37ED	jump table (425,576 / 447,464,487,497,548 / 476 / 520, default), hydra flares 2000 ms + lock-on 1500 ms, crosshair colour/rotation stores	-
+0x73F400	CVehicle::DoFixedMachineGuns	NOT_REACHED	-	budget	-
+0x73DF00	CVehicle::FireFixedMachineGuns	NOT_REACHED	-	budget	-
+0x6D3CD0	CVehicle::PickUpEntityWithWinch	NOT_REACHED	-	budget	-
+0x6D26D0	CVehicle::SetVehicleAtomicVisibilityCB-Frame	NOT_REACHED	-	budget	-
+0x6D3300	CVehicle::RemoveUpgradeCB	NOT_REACHED	-	budget	-
+0x6D33B0	CVehicle::RemoveObjectsCB-Object	NOT_REACHED	-	budget	-
+0x6D3420	CVehicle::RemoveObjectsCB-Frame	NOT_REACHED	-	budget	-
+0x6D3450	CVehicle::CopyObjectsCB	NOT_REACHED	-	budget	-
+0x6D34D0	CVehicle::RemoveAllUpgradesCB	NOT_REACHED	-	budget	-
+0x6D2250	CVehicle::DestroyVehicleAndDriverAndPassengers	NOT_REACHED	-	budget	-

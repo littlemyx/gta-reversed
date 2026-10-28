@@ -1396,7 +1396,8 @@ void CTrain::ProcessControl() {
                 m_fTrainSpeed = m_pPrevCarriage->m_fTrainSpeed;
                 m_fCurrentRailDistance = m_pPrevCarriage->m_fCurrentRailDistance + m_fLength;
             } else {
-                m_fTrainSpeed *= std::pow(0.9900000095367432f, CTimer::GetTimeStep());
+                // exe 0x6F8E49: the CRT pow result (53 bit) stays on the x87 stack, the multiply rounds once
+                m_fTrainSpeed = (float)(X87R(std::pow(X87W((x87d)0.9900000095367432f), X87W((x87d)CTimer::GetTimeStep())) * (x87d)m_fTrainSpeed));
                 m_fCurrentRailDistance += m_fTrainSpeed * CTimer::GetTimeStep();
             }
 
@@ -1469,7 +1470,7 @@ void CTrain::ProcessControl() {
                         } else if (trainFlags.bStoppedAtStation) {
                             CTrain* trainCarriage = this;
                             do {
-                                trainFlags.bStoppedAtStation = false;
+                                trainCarriage->trainFlags.bStoppedAtStation = false; // exe 0x6F8910-0x6F8940, 0x6F88D0, 0x6F8DF0: the flags of the CARRIAGE being walked (the port wrote this->trainFlags)
                                 trainCarriage->m_nPassengersGenerationState = TRAIN_PASSENGERS_GENERATION_FINISHED;
                                 trainCarriage = trainCarriage->m_pNextCarriage;
                             } while (trainCarriage);
@@ -1479,7 +1480,7 @@ void CTrain::ProcessControl() {
                         if (trainFlags.bStoppedAtStation) {
                             CTrain* trainCarriage = this;
                             do {
-                                trainFlags.bPassengersCanEnterAndLeave = false;
+                                trainCarriage->trainFlags.bPassengersCanEnterAndLeave = false;
                                 trainCarriage->m_nPassengersGenerationState = TRAIN_PASSENGERS_GENERATION_FINISHED;
                                 trainCarriage = trainCarriage->m_pNextCarriage;
                             } while (trainCarriage);
@@ -1490,8 +1491,8 @@ void CTrain::ProcessControl() {
                     if (!trainFlags.bStoppedAtStation) {
                         CTrain* trainCarriage = this;
                         do {
-                            trainFlags.bStoppedAtStation = true;
-                            trainFlags.bPassengersCanEnterAndLeave = true;
+                            trainCarriage->trainFlags.bStoppedAtStation = true;
+                            trainCarriage->trainFlags.bPassengersCanEnterAndLeave = true;
                             trainCarriage->m_nPassengersGenerationState = TRAIN_PASSENGERS_QUERY_NUM_PASSENGERS_TO_LEAVE;
                             trainCarriage = trainCarriage->m_pNextCarriage;
                         } while (trainCarriage);
@@ -1572,7 +1573,8 @@ void CTrain::ProcessControl() {
                 }
             }
 
-            m_fTrainSpeed *= pow(0.999750018119812f, CTimer::GetTimeStep());
+            // exe 0x6F8BF2: unrounded CRT pow result times the speed, rounded once
+            m_fTrainSpeed = (float)(X87R(std::pow(X87W((x87d)0.999750018119812f), X87W((x87d)CTimer::GetTimeStep())) * (x87d)m_fTrainSpeed));
             if (!trainFlags.bClockwiseDirection) {
                 m_fTrainSpeed = -m_fTrainSpeed;
             }
@@ -1616,7 +1618,8 @@ void CTrain::ProcessControl() {
                     vecDifference1.Normalise();
                     vecDifference2.Normalise();
 
-                    if (DotProduct(vecDifference1, vecDifference2) < 0.996f) {
+                    // exe 0x6F8D93-0x6F8DAD: the dot product is summed z, x, y
+                    if (vecDifference2.z * vecDifference1.z + vecDifference2.x * vecDifference1.x + vecDifference2.y * vecDifference1.y < 0.996f) {
                         CTrain* carriage = this;
                         bool bIsInTunnel = false;
                         while (!bIsInTunnel) {
@@ -1626,7 +1629,7 @@ void CTrain::ProcessControl() {
                                 if (!bIsInTunnel) {
                                     CTrain* theTrainCarriage = this;
                                     do {
-                                        trainFlags.bNotOnARailRoad = true;
+                                        theTrainCarriage->trainFlags.bNotOnARailRoad = true;
                                         theTrainCarriage->physicalFlags.bDisableCollisionForce = false;
                                         theTrainCarriage->physicalFlags.bDisableSimpleCollision = false;
                                         theTrainCarriage->SetIsStatic(false);
@@ -1804,7 +1807,14 @@ void CTrain::ProcessControl() {
         SetWasPostponed(false);
         SetIsInSafePosition(true);
 
-        m_fMovingSpeed = DistanceBetweenPoints(GetPosition(), vecOldTrainPosition);
+        {
+            // exe 0x6F990C-0x6F9941: (old - new) squares summed z, y, x in extended precision, one root, rounded to float
+            const CVector& vecNewPos = GetPosition();
+            const float dX = vecOldTrainPosition.x - vecNewPos.x;
+            const float dY = vecOldTrainPosition.y - vecNewPos.y;
+            const float dZ = vecOldTrainPosition.z - vecNewPos.z;
+            m_fMovingSpeed = (float)std::sqrt(((x87d)dZ * dZ + (x87d)dY * dY) + (x87d)dX * dX);
+        }
 
         if (trainFlags.bIsFrontCarriage || trainFlags.bIsLastCarriage) {
             CVector vecPoint = bbox.m_vecMax.y * GetForward();
@@ -1868,12 +1878,18 @@ void CTrain::ProcessControl() {
                 fTimeStep = CTimer::GetTimeStep();
             }
 
-            float fSpeedFactor = 1.0f - vecOldTrainPosition.z / (fTimeStep * m_fMass * 0.008f) * 0.05f;
-            fSpeedFactor = std::pow(fSpeedFactor, CTimer::GetTimeStep());
+            // exe 0x6F9CF5-0x6F9DA2: the buoyancy FORCE (ProcessBuoyancy's 4th out parameter = vecTurnForce here) is used, not the old position
+            // (the port read vecOldTrainPosition); the pow result stays unrounded for the six multiplies
+            float fSpeedFactorBase = 1.0f - vecTurnForce.z / (fTimeStep * m_fMass * 0.008f) * 0.05f;
+            const auto fSpeedFactor = std::pow(X87W((x87d)fSpeedFactorBase), X87W((x87d)CTimer::GetTimeStep()));
 
-            m_vecMoveSpeed *= fSpeedFactor;
-            m_vecTurnSpeed *= fSpeedFactor;
-            ApplyMoveForce(vecOldTrainPosition.x, vecOldTrainPosition.y, vecOldTrainPosition.z);
+            m_vecMoveSpeed.x = (float)(X87R(fSpeedFactor * (x87d)m_vecMoveSpeed.x));
+            m_vecMoveSpeed.y = (float)(X87R(fSpeedFactor * (x87d)m_vecMoveSpeed.y));
+            m_vecMoveSpeed.z = (float)(X87R(fSpeedFactor * (x87d)m_vecMoveSpeed.z));
+            m_vecTurnSpeed.x = (float)(X87R(fSpeedFactor * (x87d)m_vecTurnSpeed.x));
+            m_vecTurnSpeed.y = (float)(X87R(fSpeedFactor * (x87d)m_vecTurnSpeed.y));
+            m_vecTurnSpeed.z = (float)(X87R(fSpeedFactor * (x87d)m_vecTurnSpeed.z));
+            ApplyMoveForce(vecTurnForce);
             ApplyTurnForce(vecTurnForce, vecMoveForce);
         }
     }

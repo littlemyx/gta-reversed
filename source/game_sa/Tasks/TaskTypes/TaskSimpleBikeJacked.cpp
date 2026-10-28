@@ -86,7 +86,9 @@ bool CTaskSimpleBikeJacked::ProcessPed(CPed* ped) {
     if (!m_animWasPlayed) {
         // Inverted + refactored a little
         if (ped->IsPlayer()) {
-            m_vehicle->m_vehicleAudio.PlayerAboutToExitVehicleAsDriver();
+            if (ped->m_pVehicle) { // exe 0x64CA8F: the PED's vehicle (+0x58C), null-checked, not the task's vehicle
+                ped->m_pVehicle->m_vehicleAudio.PlayerAboutToExitVehicleAsDriver();
+            }
         } else if (m_vehicle->IsDriver(ped)) {
             ped->SetRadioStation();
         }
@@ -128,7 +130,7 @@ bool CTaskSimpleBikeJacked::ProcessPed(CPed* ped) {
         return true;
     }
 
-    CAnimManager::BlendAnimation(ped->GetRpClump(), ANIM_GROUP_DEFAULT, m_secondAnimId);
+    CAnimManager::BlendAnimation(ped->GetRpClump(), ANIM_GROUP_DEFAULT, m_secondAnimId, 100.f); // exe 0x64C9C5: blend delta 100.0
 
     // event.m_flags |= 2; => event.m_forceKnockOff = true => Already set by ctor
     ped->GetEventGroup().Add(CEventKnockOffBike{ m_vehicle, m_vehicle->GetMoveSpeed(), m_vehicle->m_vecLastCollisionImpactVelocity, 0.f, 0.f, 55u, 0u, (int32)m_time, m_jacker, m_isVictimDriver, true }, true);

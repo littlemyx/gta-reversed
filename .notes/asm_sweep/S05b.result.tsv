@@ -1,0 +1,37 @@
+addr	function	verdict	asm range	note	fix commit
+0x691D50	CTaskComplexGoPickUpEntity::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x64D2B0	CTaskComplexGoToCarDoorAndStandStill::CreateNextSubTask	NOT_REACHED	-	out of budget	-
+0x64D440	CTaskComplexGoToCarDoorAndStandStill::CreateFirstSubTask	NOT_REACHED	-	out of budget	-
+0x64A820	CTaskComplexGoToCarDoorAndStandStill::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x66DD70	CTaskComplexGoToPointAiming::CreateNextSubTask	MATCH	0x66DD70-0x66DD9F (all)	types 0x387/0x3FC -> CreateSubTask(FINISHED), default null	-
+0x6689E0	CTaskComplexGoToPointAiming::ControlSubTask	MATCH	0x6689E0-0x668C69 (all)	new-target re-run, GoToPoint(0.5,2.0), UseGun create/ControlGun(rand&0x3F), gun-ctrl move vector (z,y,x dots, -1 scale, r^2 test) match	-
+0x6686A0	CTaskComplexGoToPointAndStandStillTimed::StopTimer	NOT_REACHED	-	out of budget	-
+0x66DCE0	CTaskComplexGoToPointAndStandStillTimed::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x66BD40	CTaskComplexGotoDoorAndOpen::CreateFirstSubTask	MATCH	0x66BD40-0x66C0CF (all)	flags, event, side dot z/y/x, 0.75/-0.5/2.0 points, collision flag clear, sprint blend, GoToPoint args	-
+0x653B40	CTaskComplexHitPedWithCar::ComputeEvasiveStepMoveDir	NOT_REACHED	-	out of budget	-
+0x697840	CTaskComplexInvestigateDeadPed::CreateNextSubTask	MATCH	0x697840-0x69798F (all)	state table, LookAt args, heading from GetRadianAngleBetweenPoints(dead, ped)	-
+0x697990	CTaskComplexInvestigateDeadPed::CreateFirstSubTask	MATCH	0x697990-0x6979FF (all)	pos copy, 5000+trunc(rand*2000) look duration (inlined GetRandomNumberInRange)	-
+0x697A00	CTaskComplexInvestigateDeadPed::ControlSubTask	DEVIATION	0x697A00-0x697B41 (all)	squared delta sum is (z2+y2)+x2 in the exe, port used x,y,z order (only the >1.0 compare)	f8d56ba4
+0x6749F0	CTaskComplexInvestigateDisturbance::CreateNextSubTask	DEVIATION	0x6749F0-0x674B64 (all)	no-entity fallback GoToPointAndStandStill radius 0.5 (0x86FC84) / 2.0, port passed 1.5	53af3b25
+0x66C820	CTaskComplexInvestigateDisturbance::CreateFirstSubTask	DEVIATION	0x66C820-0x66CA30 (all)	direction to m_pos is Normalise()d before the dot, threshold 0.707f (not COS_45), dot sum z,y,x, duck unless dot<0.707 (NaN too); port used an un-normalised dot	437093bf
+0x629480	CTaskComplexKillAllThreats::CreateFirstSubTask	NOT_REACHED	-	out of budget	-
+0x68BF30	CTaskComplexKillCriminal::Destructor	DEVIATION	0x68BF30-0x68C04A (all)	bSirenOrAlarm cleared only inside the driver branch; port also cleared it for non-drivers	86e1c57c
+0x68C050	CTaskComplexKillCriminal::CreateSubTask	MATCH	0x68C050-0x68C392 (all)	switch 0x2bc..0x2c5, drive mission variants (bike 0x35 / 0x12 / KILLPED_CLOSE 0x37, speed+10), gang driveby, kill on foot + pistol, finished -> default decision maker	-
+0x68E4F0	CTaskComplexKillCriminal::CreateNextSubTask	DEVIATION	0x68E4F0-0x68E93F (all)	criminal in a vehicle is chased by car (port went to FindNext); LEAVE_CAR tests ped->m_pVehicle not bInVehicle; DRIVER-not-in-car sets m_CantGetInCar; 25m test sum order z,y,x	012d9abd
+0x68DC60	CTaskComplexKillCriminal::CreateFirstSubTask	MATCH	0x68DC60-0x68E4EA (decision logic + tail)	gates, vehicle/player scan, randomize gate, partner logic, inlined CreateSubTask reuse, orig-driving-mode store, arming/rand&1, timers, flags, interesting event; inlined sub-task ctor args not re-read	-
+0x68E950	CTaskComplexKillCriminal::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x622980	CTaskComplexKillPedFromBoat::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x622320	CTaskComplexKillPedGroupOnFoot::CreateSubTask	NOT_REACHED	-	out of budget	-
+0x629570	CTaskComplexKillPedGroupOnFoot::CreateNextSubTask	NOT_REACHED	-	out of budget	-
+0x629630	CTaskComplexKillPedGroupOnFoot::CreateFirstSubTask	NOT_REACHED	-	out of budget	-
+0x625E70	CTaskComplexKillPedOnFoot::CreateSubTask	NOT_REACHED	-	out of budget	-
+0x62B150	CTaskComplexKillPedOnFoot::CreateNextSubTask	NOT_REACHED	-	out of budget	-
+0x62B490	CTaskComplexKillPedOnFoot::CreateFirstSubTask	NOT_REACHED	-	out of budget	-
+0x626260	CTaskComplexKillPedOnFoot::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x621500	CTaskComplexKillPedOnFootArmed::LineOfSightClearForAttack	NOT_REACHED	-	out of budget	-
+0x626FC0	CTaskComplexKillPedOnFootArmed::CreateSubTask	NOT_REACHED	-	out of budget	-
+0x62C190	CTaskComplexKillPedOnFootArmed::CreateNextSubTask	NOT_REACHED	-	out of budget	-
+0x62BF00	CTaskComplexKillPedOnFootArmed::CreateFirstSubTask	NOT_REACHED	-	out of budget	-
+0x62CCE0	CTaskComplexKillPedOnFootArmed::ControlSubTask	NOT_REACHED	-	out of budget	-
+0x693610	CTaskComplexGoPickUpEntity::CreateFirstSubTask	NOT_REACHED	0x693881-0x6939B9 (tail)	tail after 0x693881 still open (dot / pickup side)	-
+0x67CCB0	CTaskComplexInAirAndLand::CreateNextSubTask	NOT_REACHED	0x67CFD8-0x67D1CE (tail)	tail after 0x67CFD8 still open	-

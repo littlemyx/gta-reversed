@@ -31,7 +31,7 @@ CTaskSimpleSitIdle::CTaskSimpleSitIdle(const CTaskSimpleSitIdle& o) :
 
 // 0x631260
 void CTaskSimpleSitIdle::StartAnim(CPed* ped) {
-    m_animStartedTimer.Start(m_durationMs);
+    m_animStartedTimer.StartUnguarded(m_durationMs); // 0x631266-0x631272: the exe stores start/interval/started without the `>= 0` test
 
     const auto StartAnim = [this, ped](auto grpId, auto animId) { m_anim = CAnimManager::BlendAnimation(ped->GetRpClump(), grpId, animId, 256.f); };
     if (m_bSitAfterStep) {

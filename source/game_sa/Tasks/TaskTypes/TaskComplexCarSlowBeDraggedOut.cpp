@@ -102,6 +102,9 @@ void CTaskComplexCarSlowBeDraggedOut::PreparePedForVehicleExit(CPed* ped) {
 
 // 0x64C8B0
 CTask* CTaskComplexCarSlowBeDraggedOut::CreateFirstSubTask(CPed* ped) {
+    if (!ped->IsInVehicle()) { // 0x64C8BB: `test ah, 1` on the ped flags and `[ped+0x58C]` != 0 - otherwise nothing is created
+        return nullptr;
+    }
     PrepareVehicleForPedExit(ped);
     PreparePedForVehicleExit(ped);
 

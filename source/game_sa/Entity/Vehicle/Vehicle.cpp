@@ -2740,12 +2740,13 @@ void CVehicle::UpdateWinch() {
 
     const auto ropeID = GetRopeID();
 
-    const auto GetZAndSegmentCount = [&, this]() -> std::pair<float, uint32> {
+    const auto GetZAndSegmentCount = [&, this]() -> std::pair<float, int32> {
         const auto baseLen = (eRopeType)m_ropeType == eRopeType::MAGNET ? -0.2f : -0.6f;
         if (const auto ropeIdx = CRopes::FindRope(ropeID); ropeIdx >= 0) { // Inverted condition
             const auto& rope = CRopes::GetRope(ropeIdx);
-            const auto segCount = NOTSA_FTOL(uint32, rope.m_fSegmentLength * 32.f);
-            return { (rope.m_fMass * rope.m_fSegmentLength) - ((float)segCount * rope.m_fTotalLength) + baseLen, segCount };
+            const auto segCount = NOTSA_FTOL(int32, rope.m_fSegmentLength * 32.f); // signed `_ftol` + `fild` in the exe
+            // The exe keeps the products and the difference unrounded on the x87 stack; only the final sum is stored as a float
+            return { (float)(((x87d)rope.m_fMass * rope.m_fSegmentLength) - ((x87d)segCount * rope.m_fTotalLength) + baseLen), segCount };
         }
         return { baseLen, 0 };
     };

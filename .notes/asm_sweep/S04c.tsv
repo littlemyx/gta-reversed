@@ -1,0 +1,12 @@
+addr	file	line	cls	fn	oc
+0x665E00	source/game_sa/Tasks/TaskTypes/TaskComplexGangFollower.cpp	33	CTaskComplexGangFollower	CreateNextSubTask	S
+0x666160	source/game_sa/Tasks/TaskTypes/TaskComplexGangFollower.cpp	34	CTaskComplexGangFollower	CreateFirstSubTask	D
+0x662A10	source/game_sa/Tasks/TaskTypes/TaskComplexGangFollower.cpp	35	CTaskComplexGangFollower	ControlSubTask	D
+0x65DF30	source/game_sa/Tasks/TaskTypes/TaskComplexGangLeader.cpp	35	CTaskComplexGangLeader	Destructor	D
+0x65E730	source/game_sa/Tasks/TaskTypes/TaskComplexGangLeader.cpp	37	CTaskComplexGangLeader	GetRandomGangAmbientAnim	D
+0x65E860	source/game_sa/Tasks/TaskTypes/TaskComplexGangLeader.cpp	39	CTaskComplexGangLeader	DoGangAbuseSpeech	S
+0x65E9A0	source/game_sa/Tasks/TaskTypes/TaskComplexGangLeader.cpp	40	CTaskComplexGangLeader	DoGangAttackSpeech	S
+0x65DFF0	source/game_sa/Tasks/TaskTypes/TaskComplexGangLeader.cpp	46	CTaskComplexGangLeader	CreateNextSubTask	D
+0x65E1F0	source/game_sa/Tasks/TaskTypes/TaskComplexGangLeader.cpp	47	CTaskComplexGangLeader	CreateFirstSubTask	C
+0x662370	source/game_sa/Tasks/TaskTypes/TaskComplexGangLeader.cpp	48	CTaskComplexGangLeader	ControlSubTask	D
+0x65E200	source/game_sa/Tasks/TaskTypes/TaskComplexGangLeader.cpp	49	CTaskComplexGangLeader	ScanForStuff	D

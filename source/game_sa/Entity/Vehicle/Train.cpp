@@ -1337,14 +1337,16 @@ void CTrain::AddNearbyPedAsRandomPassenger() {
         CVector diff = pedPos - myPos;
         diff.z = 0.0f;
         const float dist = diff.Magnitude();
-        if (!(dist <= 625.0f)) {
+        // Exe 0x6F8401-0x6F840C: skipped only when dist > 625 (NaN stays in); 0x6F842E-0x6F8448: clockwise
+        // keeps the ped on !(side < 0), counter-clockwise on !(side > 0) (NaN passes both)
+        if (dist > 625.0f) {
             continue;
         }
 
         const float side = DotProduct(pedPos, right) + planeD;
         const bool isOnCorrectSide = isClockwise
-            ? side >= 0.0f
-            : side <= 0.0f;
+            ? !(side < 0.0f)
+            : !(side > 0.0f);
         if (isOnCorrectSide && dist < nearestDist) {
             nearestDist = dist;
             nearestPed = ped;

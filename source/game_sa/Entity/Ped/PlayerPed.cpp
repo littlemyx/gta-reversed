@@ -2819,9 +2819,9 @@ void CPlayerPed::ProcessControl() {
         }
     }
     if (physicalFlags.bSubmergedInWater) {
-        CVector pos = GetPosition();
-        pos.z += 1.5f;
-        if (CWaterLevel::GetWaterLevel(pos.x, pos.y, pos.z, GetPlayerData()->m_fWaterHeight, true, nullptr)) {
+        // 0x60F62B: only the water level query is made 1.5 above the ped; the bounding box below uses the real z ([esp+0x34])
+        const CVector pos = GetPosition();
+        if (CWaterLevel::GetWaterLevel(pos.x, pos.y, pos.z + 1.5f, GetPlayerData()->m_fWaterHeight, true, nullptr)) {
             auto& box = CEntity::GetColModel()->GetBoundingBox();
             float playerMinZ = pos.z + box.m_vecMin.z;
             float playerMaxZ = pos.z + box.m_vecMax.z;

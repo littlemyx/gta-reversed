@@ -185,8 +185,13 @@ CTask* CTaskComplexSmartFleePoint::ControlSubTask(CPed* ped) {
         } else {
             const auto& pedPos = ped->GetPosition();
             const auto  safeDistSq = m_safeDist * m_safeDist;
-            if ((m_fleePoint - pedPos).SquaredMagnitude() > safeDistSq) {
-                if ((m_initalPos - pedPos).SquaredMagnitude() > safeDistSq) {
+            // 0x65C2F9..0x65C374: (dz^2 + dy^2) + dx^2 (z,y,x order), strictly greater (equal / NaN => keep going)
+            const auto distSq = [&](const CVector& from) {
+                const auto d = from - pedPos;
+                return d.z * d.z + d.y * d.y + d.x * d.x;
+            };
+            if (distSq(m_fleePoint) > safeDistSq) {
+                if (distSq(m_initalPos) > safeDistSq) {
                     ret = CreateSubTask(TASK_SIMPLE_STAND_STILL, ped);
                 }
             }

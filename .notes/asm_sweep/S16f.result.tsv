@@ -1,0 +1,11 @@
+addr	function	verdict	asm range	note	fix commit
+0x6A07A0	CAutomobile::HydraulicControl	NOT_REACHED	-	token budget	-
+0x6A8C00	CAutomobile::ProcessBuoyancy	NOT_REACHED	-	token budget	-
+0x6A9680	CAutomobile::ProcessHarvester	FIXED	0x6A9680-0x6A9C76	grass objects tested by the object's own model + visible + not render-damaged (port tested the car's model); y,z,x dot sums; limb gets the car matrix (port called SetMatrix on the car); particle velocity rand = (t*0.1+v)-0.05 (port mirrored); limb turn speed range +-0.04 (port -0.04..0.12), args evaluated z,y,x	8ace0485
+0x6AE850	CAutomobile::TankControl	NOT_REACHED	-	token budget	-
+0x6AF420	CAutomobile::PlaceOnRoadProperly	FIXED	0x6AF420-0x6AF90B	lighting/z assigned also when the first (upward) line hit is the closer one; new position = sum * (1/length) (port divided)	5262aa7f
+0x729B60	CAutomobile::FireTruckControl	FIXED	0x729B60-0x72A26E	doom rotation snaps to the target within one step (AI vertical, camera vertical + horizontal); wobble scale 6.28f/4096 (0x3AC8F5C3) not 2pi/4096; horizontal clamp literals 10/20 deg are 1 ulp above DegreesToRadians	956da853
+0x6A8580	CAutomobile::SpawnFlyingComponent	FIXED	0x6A8580-0x6A8BDA	car colours, remap texture and bChangesVehColor never set; move-speed z branch polarity (up.z > 0) and node==windscreen (not collision type 18) in 2 places; float removal time adds; buoyancy literal 0x3DDA740F; frame matrix copy before SetFrame; camera dot y,z,x	867476a6
+0x6AA290	CAutomobile::UpdateWheelMatrix	NOT_REACHED	-	token budget	-
+0x6AAB50	CAutomobile::PreRender	NOT_REACHED	-	token budget	-
+0x6A7650	CAutomobile::VehicleDamage	NOT_REACHED	-	token budget	-

@@ -144,7 +144,7 @@ CTask* CTaskComplexSmartFleeEntity::CreateSubTask(eTaskType taskType) {
         return new CTaskSimpleStandStill{ CGeneral::GetRandomNumberInRange(0, 50) };
     */
     case TASK_COMPLEX_SMART_FLEE_POINT: {
-        m_posCheckTimer.Start(m_posCheckPeriod);
+        m_posCheckTimer.StartUnguarded(m_posCheckPeriod); // 0x65C588-0x65C58E: stored without the `>= 0` test
         m_pos = m_fleeFrom->GetPosition();
         return new CTaskComplexSmartFleePoint{
             m_pos,

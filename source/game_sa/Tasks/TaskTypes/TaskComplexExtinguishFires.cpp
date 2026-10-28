@@ -93,6 +93,7 @@ CTask* CTaskComplexExtinguishFires::ControlSubTask(CPed* ped) {
             return nullptr;
         }
         if (m_fireToExt != nearestFireNow) {
+            m_fireToExt = nearestFireNow; // 0x69839B: the exe also retargets the fire it is extinguishing
             static_cast<CTaskComplexGoToPointAndStandStill*>(m_pSubTask)->GoToPoint(nearestFireNow->GetPosition());
         }
         break;

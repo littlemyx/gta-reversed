@@ -1762,7 +1762,8 @@ void CPlane::ProcessFlyingCarStuff() {
                 const float dx = pos.x - camPos.x;
                 const float dy = pos.y - camPos.y;
                 const float dz = pos.z - camPos.z;
-                if ((dx * dx + dy * dy + dz * dz < 6400.0f || GetStatus() == STATUS_PLAYER) && m_aCarNodes[node]) {
+                // exe 0x6CBE6C: the x87 sum is (dz^2 + dy^2) + dx^2
+                if ((dz * dz + dy * dy + dx * dx < 6400.0f || GetStatus() == STATUS_PLAYER) && m_aCarNodes[node]) {
                     CVector particlePos = m_matrix->TransformPoint(RwFrameGetMatrix(m_aCarNodes[node])->pos);
 
                     FxPrtMult_c prtMult{ 0.0f, 0.0f, 0.0f, 0.2f, 1.0f, 1.0f, particleSize };

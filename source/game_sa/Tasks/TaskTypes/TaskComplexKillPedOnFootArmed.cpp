@@ -604,6 +604,8 @@ CoverRand:
 
 // 0x62BF00
 CTask* CTaskComplexKillPedOnFootArmed::CreateFirstSubTask(CPed* ped) {
+    m_newTarget = false; // ASM-S05d: exe 0x62BF22 (first instruction)
+
     if (!m_target) {
         return nullptr;
     }
@@ -611,17 +613,28 @@ CTask* CTaskComplexKillPedOnFootArmed::CreateFirstSubTask(CPed* ped) {
     const auto &ourPos    = ped->GetPosition(),
                &targetPos = m_target->GetPosition();
 
-    const auto targetToOurPedDistSq = (ourPos - targetPos).SquaredMagnitude();
+    // ASM-S05d: exe 0x62BF78-0x62BFB5: (dx^2 + dy^2) + dz^2 in extended precision; the squared magnitude is stored as a float, the distance is sqrt of the extended sum, stored as a float
+    const x87d  sumExt                = [&] {
+        const x87d dx = (x87d)targetPos.x - (x87d)ourPos.x;
+        const x87d dy = (x87d)targetPos.y - (x87d)ourPos.y;
+        const x87d dz = (x87d)targetPos.z - (x87d)ourPos.z;
+        return (dx * dx + dy * dy) + dz * dz;
+    }();
+    const float targetToOurPedDistSq = (float)sumExt;
+    const float targetToOurPedDist   = (float)std::sqrt(sumExt);
 
     if (   !ped->bStayInSamePlace
-        && CGeneral::RandomBool(50)
+        && CGeneral::RandomBit() // ASM-S05d: exe 0x62BFD7: `call rand; test al, 1` (the port used RandomBool(50))
         && m_competence > 0
-        && (targetToOurPedDistSq >= sq(30.f) || targetToOurPedDistSq >= sq(6.f) && !m_target->GetActiveWeapon().IsTypeMelee()) 
+        && (targetToOurPedDist > 30.f || targetToOurPedDist > 6.f && !m_target->GetActiveWeapon().IsTypeMelee()) // ASM-S05d: exe compares the distance (strictly), not the squared one
     ) {
         ped->ReleaseCoverPoint();
         if (ped->m_pCoverPoint = CCover::FindAndReserveCoverPoint(ped, targetPos, false)) {
             CVector coverPos{};
-            if (!notsa::IsFixBugs() || CCover::FindCoordinatesCoverPoint(*ped->m_pCoverPoint, ped, targetPos, coverPos)) {
+            // ASM-S05d: the exe always calls this (0x62C06A) and ignores the result; the port only called it under FIX_BUGS
+            const bool coordsFound = CCover::FindCoordinatesCoverPoint(*ped->m_pCoverPoint, ped, targetPos, coverPos);
+            if (!notsa::IsFixBugs() || coordsFound) {
+                coverPos.z += 1.f; // ASM-S05d: exe 0x62C06F-0x62C081 (missing in the port)
                 if (CWorld::GetIsLineOfSightClear(coverPos, ourPos, true, true, false, false, false, false, false)) {
                     ped->GetIntelligence()->SetTaskDuckSecondary(6000);
                     if (const auto task = new CTaskSimpleGoToPoint{
@@ -644,7 +657,7 @@ CTask* CTaskComplexKillPedOnFootArmed::CreateFirstSubTask(CPed* ped) {
     return CreateSubTask([&, this] {
         const auto& ourActiveWep = ped->GetActiveWeapon().GetWeaponInfo(ped);
 
-        if (targetToOurPedDistSq <= sq(ourActiveWep.m_fTargetRange / 4.f) && LineOfSightClearForAttack(ped)) {
+        if (!(targetToOurPedDistSq > sq(ourActiveWep.m_fTargetRange / 4.f)) && LineOfSightClearForAttack(ped)) { // exe: `fcompp; je` => NaN counts as in range
             return TASK_SIMPLE_GUN_CTRL;
         }
 

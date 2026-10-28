@@ -392,11 +392,12 @@ void CPlane::VehicleDamage(float damageIntensity, eVehicleCollisionComponent com
     if (damageIntensity == 0.0f) { // Damage from collision
         damageIntensity = m_fDamageIntensity;
 
-        const auto massScale = m_fMass / PLANE_DAMAGE_SCALE_MASS;
+        // 0x6CC57B: the quotient stays unrounded on the x87 stack; only the products are stored as float
+        const x87d massScale = (x87d)m_fMass / (x87d)PLANE_DAMAGE_SCALE_MASS;
         particleScale        = 1.0f;
-        damageThreshold      = std::max(massScale, 1.0f) * PLANE_DAMAGE_THRESHHOLD;
+        damageThreshold      = (float)((massScale < (x87d)1.0f ? (x87d)1.0f : massScale) * (x87d)PLANE_DAMAGE_THRESHHOLD);
         vecCollisionCoors    = &m_vecLastCollisionPosn;
-        destroyThreshold     = massScale * PLANE_DAMAGE_DESTROY_THRESHHOLD;
+        destroyThreshold     = (float)(massScale * (x87d)PLANE_DAMAGE_DESTROY_THRESHHOLD);
 
         if (damageIntensity <= 0.0f) {
             return;

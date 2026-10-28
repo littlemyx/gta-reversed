@@ -1,0 +1,44 @@
+addr	function	verdict	asm range	note	fix commit
+0x65C530	CTaskComplexSmartFleeEntity::CreateSubTask	FIXED	0x65C530-0x65C675 (all)	pos-check timer stored unguarded (no >=0 test); ctor args and default/null paths match	3b60b060
+0x65BE80	CTaskComplexSmartFleePoint::CreateSubTask	MATCH	0x65BE80-0x65C0B6 (all)	leave-car / stand-still / sequence (run anim 0xA5 + tired 2000) / wander-flee (radius global 0.5) agree	-
+0x660310	CTaskComplexStareAtPed::Destructor	MATCH	0x660310-0x660387 (all)	ref cleanup + anim block unref	-
+0x660420	CTaskComplexStareAtPed::CreateNextSubTask	FIXED	0x660420-0x660505 (all)	stand-still time is 500 - (int)(r*-1000) = [500,1500); port had [500,1000)	4a20e822
+0x660510	CTaskComplexStareAtPed::CreateFirstSubTask	FIXED	0x660510-0x6605B2 (all)	same [500,1500) range; timer started unguarded (negative timeout)	4a20e822
+0x6605C0	CTaskComplexStareAtPed::ControlSubTask	FIXED	0x6605C0-0x66087D (all)	gang-talk anim fires on int rand(0,100)==50 (fcomp + jp skip); port used float RandomBool(1)	4a20e822
+0x6440B0	CTaskComplexStealCar::CreateNextSubTask	FIXED	0x6440B0-0x644208 (all)	every CreateSubTask call pushes ped=0: TASK_FINISHED never re-enables the ped collision (port passed ped)	6143aab7
+0x67BA80	CTaskComplexStuckInAir::CreateSubTask	FIXED	0x67BA80-0x67BD08 (all)	FLEE_POINT sets bIsStanding (flags |= 1); port did not	947f9bdb
+0x67BE20	CTaskComplexStuckInAir::CreateFirstSubTask	MATCH	0x67BE20-0x67BE4C (all)	state==WAS_STUCK(2) -> FALL_AND_GET_UP else STAND_STILL	-
+0x67BD10	CTaskComplexStuckInAir::CreateNextSubTask	MATCH	0x67BD10-0x67BE0F (all)	player test is m_pPlayerData!=null in the exe vs IsPlayer() (equal in practice)	-
+0x67BE50	CTaskComplexStuckInAir::ControlSubTask	FIXED	0x67BE50-0x67C0B7 (all)	jump press no longer returns early (flag clear + anim blend still run); old sub-task aborted AFTER the new task is created; bIsStanding set in STAND_STILL	947f9bdb
+0x632190	CTaskComplexSunbathe::ShouldLoadSunbatheAnims	FIXED	0x632190-0x6321E9 (all)	!(sq>0.04) so a NaN speed is true	2bbd49b4
+0x638290	CTaskComplexSunbathe::CreateSubTask	MATCH	0x638290-0x638562 (all)	anim ids, groups, durations, rand ranges agree	-
+0x6399F0	CTaskComplexSunbathe::CreateNextSubTask	MATCH	0x6399F0-0x639BA4 (all)	jump table mapped (0xCA/0x1A2/0x1AC/0x1AD/0x1AE)	-
+0x639CB0	CTaskComplexSunbathe::CreateFirstSubTask	MATCH	0x639CB0-0x639E18 (all)	type pick, block requests, branch matrix agree	-
+0x663640	CTaskComplexTrackEntity::ControlSubTask	MATCH	0x663640-0x663795 (all)	hook is Locked (exe code runs); source agrees anyway	-
+0x658AF0	CTaskComplexTreatAccident::ComputeHeading	MATCH	0x658AF0-0x658B81 (all)		-
+0x65A8F0	CTaskComplexTreatAccident::CreateFirstSubTask	MATCH	0x65A8F0-0x65A982 (all)		-
+0x632730	CTaskComplexUseAttractor::CreateNextSubTask	MATCH	0x632730-0x6327BA (all)	money add/sub (int16 word) agree	-
+0x6385D0	CTaskComplexUseAttractor::CreateFirstSubTask	FIXED	0x6385D0-0x6388CA (all)	missing InterestingEvent 3; sit duration used float RandomBool(40) instead of int rand(0,100)<=40; sit task 3rd arg is bUseAttractorInstantly (port: bStayInSamePlace); script-brain task is created even when the brain was not started; bUseAttractorInstantly cleared on every path	768c94a0
+0x638FF0	CTaskComplexUseAttractorPartner::CreateFirstSubTask	MATCH	0x638FF0-0x639091 (all)		-
+0x634740	CTaskComplexUseClosestFreeScriptedAttractor::ComputeClosestFreeScriptedEffect	FIXED	0x634740-0x634883 (all)	distance sum order z,y,x	50b3723b
+0x639530	CTaskComplexUseClosestFreeScriptedAttractor::CreateFirstSubTask	MATCH	0x639530-0x639653 (all)		-
+0x632270	CTaskComplexUseEffect::Destructor	MATCH	0x632270-0x6322E5 (all)		-
+0x6322F0	CTaskComplexUseEffect::MakeAbortable	FIXED	0x6322F0-0x632410 (all)	missing unconditional DeRegisterPed(ped, attractor); collision-abort compares strict (<2.25) and tests victim->m_nMoveState (port: the task's)	cf004aed
+0x632420	CTaskComplexUseEffect::CreateNextSubTask	MATCH	0x632420-0x632459 (all)		-
+0x632460	CTaskComplexUseEffect::CreateFirstSubTask	FIXED	0x632460-0x63256B (all)	registers when !abort && (entity || GetIndex>=0); port needed entity AND index	cf004aed
+0x632570	CTaskComplexUseEffect::ControlSubTask	FIXED	0x632570-0x6325EC (all)	DeRegisterPed uses the ped argument (port: m_Ped)	cf004aed
+0x634F40	CTaskComplexUseGoggles::CreateNextSubTask	MATCH	0x634F40-0x634F7F (all)		-
+0x635050	CTaskComplexUseGoggles::ControlSubTask	MATCH	0x635050-0x6350C0 (all)	port null-guards player data (the exe would fault)	-
+0x6348F0	CTaskComplexUseMobilePhone::HidePhone	MATCH	0x6348F0-0x63492B (all)		-
+0x634C10	CTaskComplexUseMobilePhone::CreateFirstSubTask	MATCH	0x634C10-0x634D57 (all)		-
+0x634D60	CTaskComplexUseMobilePhone::ControlSubTask	FIXED	0x634D60-0x634EE0 (all)	NaN handling: phone-in/out time compares skip on NaN, move-blend reset only for <0	e52428ed
+0x638D30	CTaskComplexUsePairedAttractor::CreateSubTask	NOT_REACHED	-	budget	-
+0x638AE0	CTaskComplexUsePairedAttractor::SeekPartnership	NOT_REACHED	-	budget	-
+0x639E40	CTaskComplexUsePairedAttractor::CreateNextSubTask	NOT_REACHED	-	budget	-
+0x639F70	CTaskComplexUsePairedAttractor::CreateFirstSubTask	NOT_REACHED	-	budget	-
+0x638BD0	CTaskComplexUsePairedAttractor::ControlSubTask	NOT_REACHED	-	budget	-
+0x6390C0	CTaskComplexUseScriptedAttractor::CreateFirstSubTask	MATCH	0x6390C0-0x639181 (all)		-
+0x6371F0	CTaskComplexUseScriptedBrain::Clone	MATCH	0x6371F0-0x63724F (all)	uses this task name (documented NOTSA_STANDALONE_RUN fix)	-
+0x65A460	CTaskComplexUseSwatRope::ControlSubTask	NOT_REACHED	-	budget	-
+0x6597D0	CTaskComplexUseWaterCannon::CreateFirstSubTask	NOT_REACHED	-	budget	-
+0x65A640	CTaskComplexUseWaterCannon::ControlSubTask	NOT_REACHED	-	budget	-

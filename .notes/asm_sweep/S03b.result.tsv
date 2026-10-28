@@ -1,0 +1,14 @@
+addr	function	verdict	asm range	note	fix commit
+0x65D780	CTaskComplexFleeAnyMeans::ControlSubTask	DEVIATION (fixed)	0x65D780-0x65DA67 (all)	steal-car distance test strict + (dz2+dy2)+dx2 extended, NaN keeps subtask; facing dot summed z,y,x	0d56aad3
+0x65BB00	CTaskComplexFleeEntity::CreateFirstSubTask	DEVIATION (fixed)	0x65BB00-0x65BBA6 (all)	timer start + m_pos store were missing (lost when CreateSubTask was fixed); null-entity guard FIX_BUGS only	90c0e870
+0x65BBB0	CTaskComplexFleeEntity::ControlSubTask	DEVIATION (fixed)	0x65BBB0-0x65BD0F (all)	timer restarted (unguarded) only inside the moved branch; tolerance^2 < dist^2 strict, extended	90c0e870
+0x65B820	CTaskComplexFleePoint::ComputeTargetPoint	DEVIATION (fixed)	0x65B820-0x65B920 (all)	spread = float rand overload 3.0..6.0 (port: int overload 3..5); 3D CVector::Normalise	e0a72ab6
+0x65B660	CTaskComplexFleePoint::ControlSubTask	DEVIATION (fixed)	0x65B660-0x65B7A8 (all)	look-at roll after the subtask (re)creation (rand order); result returned after it	e0a72ab6
+0x63DFA0	CTaskComplexEnterCar::Destructor	MATCH	0x63DFA0-0x63E030 (all)	-	-
+0x63ACC0	CTaskComplexEnterCar::CreateTaskUtilityLineUpPedWithCar	MATCH	0x63ACC0-0x63AD63 (all)	exe leaks an existing utility, port asserts / FIX_BUGS reuse	-
+0x63A380	CTaskComplexEnterCar::GetCameraStickModifier	MATCH	0x63A380-0x63A67E (all)	limits/factors arrays at 0x86E684/0x86E678 equal in the exe; null-matrix path is UB in both	-
+0x63A890	CTaskComplexEnterCar::ControlSubTask	MATCH	0x63A890-0x63AB6C (all)	-	-
+0x643A60	CTaskComplexEnterCar::CreateFirstSubTask	MATCH	0x643A60-0x643C5B (all)	-	-
+0x63E040	CTaskComplexEnterCar::CreateSubTask	DEVIATION (fixed)	0x63E040-0x63E95F (all)	LEAVE_CAR used m_Car (exe: ped->m_pVehicle); TASK_NONE builds CTaskSimpleLeaveGroup; FINISHED cruise-speed condition for the player inverted	7bbae679
+0x63E990	CTaskComplexEnterCar::CreateNextSubTask	DEVIATION (fixed)	0x63E990-0x63F96F (all)	see ASM-S03b.md	644ca41b
+0x63F970	CTaskComplexEnterCar::CreateNextSubTask_AfterSimpleCarAlign	DEVIATION (fixed)	0x63F970-0x6402E2 (all)	see ASM-S03b.md	644ca41b

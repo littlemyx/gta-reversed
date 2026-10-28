@@ -166,12 +166,13 @@ CTask* CTaskComplexEnterCarAsPassengerWait::ControlSubTask(CPed* ped) {
         // BUG: `closest` is not written to if there's no surface point, the original reads uninitialized stack memory then
         CVector closest{};
         const bool found = CPedGeometryAnalyser::ComputeClosestSurfacePoint(*ped, *m_Car, closest);
-        const float dx = closest.x - subTask->m_vecTargetPoint.x;
-        const float dy = closest.y - subTask->m_vecTargetPoint.y;
-        const float dz = closest.z - subTask->m_vecTargetPoint.z;
-        const float distSq = dx * dx + dy * dy + dz * dz;
+        // Exe 0x64080E-0x64083B: kept in x87 extended precision, summed as (dz*dz + dy*dy) + dx*dx
+        const x87d dx = (x87d)closest.x - subTask->m_vecTargetPoint.x;
+        const x87d dy = (x87d)closest.y - subTask->m_vecTargetPoint.y;
+        const x87d dz = (x87d)closest.z - subTask->m_vecTargetPoint.z;
+        const x87d distSq = (dz * dz + dy * dy) + dx * dx;
 
-        if (distSq > 0.025f) {
+        if (distSq > (double)0.025f) {
             if (found) {
                 subTask->GoToPoint(closest, 1.5f, 2.f, false);
             } else {

@@ -2606,7 +2606,8 @@ void CAutomobile::SetupSuspensionLines() {
         }
 
         colLine.m_vecStart = CVector{ wheelPos.x, wheelPos.y, wheelPos.z + handling.m_fSuspensionUpperLimit };
-        colLine.m_vecEnd   = CVector{ wheelPos.x, wheelPos.y, wheelPos.z + handling.m_fSuspensionLowerLimit - mi.GetSizeOfWheel((eCarWheel)i) / 2.f };
+        // 0x6A66D8-0x6A670B: end.z = ((lower - upper) - size / 2) + start.z
+        colLine.m_vecEnd   = CVector{ wheelPos.x, wheelPos.y, ((handling.m_fSuspensionLowerLimit - handling.m_fSuspensionUpperLimit) - mi.GetSizeOfWheel((eCarWheel)i) / 2.f) + colLine.m_vecStart.z };
 
         m_wheelPosition[i]           = wheelPos.z; // Originally set earlier in the loop, but should be fine.
         m_aSuspensionSpringLength[i] = handling.m_fSuspensionUpperLimit - handling.m_fSuspensionLowerLimit;
@@ -2619,12 +2620,13 @@ void CAutomobile::SetupSuspensionLines() {
     }*/
 
     const auto CalculateHeightAboveRoad = [&](eCarWheel wheel) {
-        return (1.f - 1.f / (handling.m_fSuspensionForceLevel * 4.f)) * m_aSuspensionSpringLength[(size_t)wheel] + mi.GetSizeOfWheel(wheel) / 2.f - cd.m_pLines[(size_t)wheel].m_vecStart.z;
+        // 0x6A6773-0x6A67AC: spring * (1 - 1 / (level * 4)) + (size / 2 - start.z)
+        return (1.f - 1.f / (handling.m_fSuspensionForceLevel * 4.f)) * m_aSuspensionSpringLength[(size_t)wheel] + (mi.GetSizeOfWheel(wheel) / 2.f - cd.m_pLines[(size_t)wheel].m_vecStart.z);
     };
 
     // 0x6A65D0
     m_fFrontHeightAboveRoad = CalculateHeightAboveRoad(eCarWheel::CAR_WHEEL_FRONT_LEFT);
-    m_fRearHeightAboveRoad = CalculateHeightAboveRoad(eCarWheel::CAR_WHEEL_REAR_LEFT);
+    m_fRearHeightAboveRoad = CalculateHeightAboveRoad(eCarWheel::CAR_WHEEL_REAR_RIGHT); // 0x6A67B2-0x6A67E3: spring length [3] and line [3] (not the rear left)
 
     // 0x6A681A
     // Adjust wheel's position based on height above road
@@ -2658,8 +2660,10 @@ void CAutomobile::SetupSuspensionLines() {
             const auto sphBottomZ = sph.m_vecCenter.z - sph.m_fRadius;
             if (sphBottomZ < sphBottomMinZ) {
                 if (sph.m_fRadius > 0.4f) {
-                    sph.m_fRadius = std::max(0.4f, sphBottomZ);
-                    sph.m_vecCenter.z = sphBottomZ + sph.m_fRadius;
+                    // 0x6A6958-0x6A6987: the radius becomes max(0.4, centre.z - minBottom), the centre is minBottom + radius
+                    const auto newRadius = sph.m_vecCenter.z - sphBottomMinZ;
+                    sph.m_fRadius = newRadius >= 0.4f ? newRadius : 0.4f;
+                    sph.m_vecCenter.z = sphBottomMinZ + sph.m_fRadius;
                 }
             }
         }

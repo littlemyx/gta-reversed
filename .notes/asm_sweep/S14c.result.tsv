@@ -1,0 +1,7 @@
+addr	function	verdict	asm_range	note	fix_commit
+0x6872C0	CTaskSimplePlayerOnFoot::PlayIdleAnimations	FIXED	0x6872C0-0x687519	SetTouched test used bCrouchWhenShooting, exe tests ped+0x478 bit1 = bUsingMobilePhone; either look flag (test 0xc) blocks the idle anim (port needed both); delta vs last idle compared signed (jle)	589ad106
+0x687F30	CTaskSimplePlayerOnFoot::PlayerControlDucked	MATCH	0x687F30-0x688487	all branches, constants, dot orders, move-state 4/6, anim ids 0/1/50, 1.5/1.0 ratios compared	
+0x687C20	CTaskSimplePlayerOnFoot::PlayerControlZeldaWeapon	MATCH	0x687C20-0x687F1F	b1stPerson/2P input selection, targeted/untargeted branches, dot orders, normalize via 1/len, duck compared	
+0x687530	CTaskSimplePlayerOnFoot::PlayerControlFighter	MATCH	0x687530-0x687C0E	2P/target/free input, MoveTowards, sprint/armed/16.0 dist, timer 0.02*1000 ftol, commands 3/4/5/6/0xF/0x10/0x11/0x12 compared. UNSURE-only: x87 extended diff/step compares	
+0x6883D0	CTaskSimplePlayerOnFoot::PlayerControlZelda	MATCH	0x6883D0-0x6887F0	UNSURE: step=ts*0.07 stays extended in the exe (not rounded to float) in the blend-ratio ramp; not changed	
+0x688810	CTaskSimplePlayerOnFoot::ProcessPed	MATCH	0x688810-0x688921	chainsaw idle, SetMoveState(1), duck/fighter/zelda dispatch, frame counter	

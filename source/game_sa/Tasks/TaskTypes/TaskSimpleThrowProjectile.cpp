@@ -87,14 +87,20 @@ void CTaskSimpleThrowProjectile::StartAnim(CPed* ped) {
     if (!m_bStartThrowFinished) {
         StartAnim(ANIM_ID_GRENADE_WEAPON_START_THROW, 16.f);
     } else {
-        const auto IsPtCloseToPed = [ped](CVector pos) { return (pos - ped->GetPosition()).SquaredMagnitude() <= sq(10.f); };
-        if (   (!m_TargetEntity || IsPtCloseToPed(m_TargetEntity->GetPosition()))
-            || (m_TargetPos.IsZero() || IsPtCloseToPed(m_TargetPos))
-            || (m_bButtonReleased || ped->GetActiveWeapon().GetType() == WEAPON_REMOTE_SATCHEL_CHARGE)
+        // 0x625A38..0x625B29: squared distance is summed z, y, x and compared strictly (> 100 => far). The throw anim is the "long" one (THROW)
+        // when the target entity or the target pos (if set) is far away, otherwise (both near / unset) it is the short one (THROWU) only if the button
+        // was released or the weapon is a satchel charge, else THROW again. (The port had this whole condition inverted.)
+        const auto IsPtFarFromPed = [ped](const CVector& pos) {
+            const auto d = pos - ped->GetPosition();
+            return d.z * d.z + d.y * d.y + d.x * d.x > 100.f;
+        };
+        if (   (m_TargetEntity && IsPtFarFromPed(m_TargetEntity->GetPosition()))
+            || (m_TargetPos != CVector{} && IsPtFarFromPed(m_TargetPos))
+            || !(m_bButtonReleased || ped->GetActiveWeapon().GetType() == WEAPON_REMOTE_SATCHEL_CHARGE)
         ) {
             StartAnim(ANIM_ID_GRENADE_WEAPON_THROW, 1000.f);
         } else {
-            StartAnim(ANIM_ID_GRENADE_WEAPON_THROWU, 1000.f); // "U" as in "UP?
+            StartAnim(ANIM_ID_GRENADE_WEAPON_THROWU, 1000.f);
         }
     }
 }
@@ -143,12 +149,13 @@ bool CTaskSimpleThrowProjectile::ProcessPed(CPed* ped) {
         const auto animFireTime = m_Anim->m_AnimId == ANIM_ID_GRENADE_WEAPON_THROW
             ? wi->m_fAnimLoop2Fire
             : wi->m_fAnimLoopFire;
-        if (animFireTime < m_Anim->m_CurrentTime && (m_Anim->m_CurrentTime - m_Anim->m_TimeStep) <= animFireTime && m_Anim->IsPlaying()) {
+        // 0x62AFD3..0x62AFEB: the (current - step) result stays on the x87 stack for the compare
+        if (animFireTime < m_Anim->m_CurrentTime && (x87d)m_Anim->m_CurrentTime - (x87d)m_Anim->m_TimeStep <= (x87d)animFireTime && m_Anim->IsPlaying()) {
             if (ped->IsPlayer()) {
                 if (!m_bButtonReleased) {
                     m_ButtonCounter = CTimer::GetTimeInMS() - m_ButtonCounter;
                 }
-                m_ButtonCounter = std::min(m_ButtonCounter, 533u);
+                m_ButtonCounter = (uint32)std::min<int32>((int32)m_ButtonCounter, 533); // 0x62B026: signed compare (JLE)
                 ped->GetPlayerData()->m_fAttackButtonCounter = (float)m_ButtonCounter * ExeRecip(20.f);
             }
 

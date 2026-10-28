@@ -73,7 +73,7 @@ bool CTaskComplexKillPedOnFootArmed::LineOfSightClearForAttack(CPed* ped) { // p
     // ASM-S05d: exe 0x621500-0x62153F: the cache time / squared distance depend on the situation (the port always used the 5000 / 4.0 case)
     uint32 reqTimeDelta   = 10'000;
     float  reqDistDeltaSq = 9.f; // 0x41100000
-    if (ped->m_AreaCode != 0
+    if (ped->GetAreaCode() != AREA_CODE_NORMAL_WORLD
         || (m_target && m_target->IsPlayer() && (CGame::currArea != 0 || ped->IsCreatedByMission()))
     ) {
         reqTimeDelta = 5000;

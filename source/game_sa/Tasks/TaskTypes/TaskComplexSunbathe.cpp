@@ -40,7 +40,7 @@ bool CanSunbathe() {
 static bool ShouldLoadSunbatheAnims() {
     const auto* const plyr = CWorld::Players[CWorld::PlayerInFocus].m_pPed;
     if (const auto* const veh = plyr->GetVehicleIfInOne()) {
-        return veh->m_vecMoveSpeed.SquaredMagnitude() <= 0.04f;
+        return !(veh->m_vecMoveSpeed.SquaredMagnitude() > 0.04f); // 0x6321D1..0x6321E2: fcomp + `test ah,0x41; jne` => true for <=, == and NaN
     }
     return true;
 }

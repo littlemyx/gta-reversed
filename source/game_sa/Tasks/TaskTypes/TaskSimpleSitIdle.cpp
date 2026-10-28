@@ -72,7 +72,7 @@ bool CTaskSimpleSitIdle::ProcessPed(CPed* ped) {
 
     // Do look at somewhere/another ped with random chance
     if (!g_ikChainMan.IsLooking(ped) && CGeneral::RandomBool(5.f)) {
-        const auto lookTime = CGeneral::GetRandomNumberInRange(3000, 5000);
+        const auto lookTime = CGeneral::GetRandomNumberInRange(3000, 8000); // 0x637A9F-0x637AC0: 3000 + (int)(r * 5000)
 
         // First try looking at the closest ped (if any)
         const auto hasLookedAtClosestPed = [this, ped, lookTime] {
@@ -80,10 +80,14 @@ bool CTaskSimpleSitIdle::ProcessPed(CPed* ped) {
             if (!closestPed) {
                 return false;
             }
-            if (!CGeneral::RandomBool(25.f)) { // Moved this early out here to optimize
+            // 0x637B06-0x637B8F: the cone test comes first, the 25% roll (a rand() call) only when it passes
+            const auto toClosest = closestPed->GetPosition() - ped->GetPosition();
+            const auto fwd       = ped->GetForwardVector();
+            const float dot      = (toClosest.z * fwd.z + toClosest.y * fwd.y) + toClosest.x * fwd.x; // exe sum order z, y, x
+            if (dot <= 0.2f) { // Must be in cone of [-78, 78] deg in front of `ped`
                 return false;
             }
-            if (DotProduct(closestPed->GetPosition() - ped->GetPosition(), ped->GetForwardVector()) <= 0.2f) { // Must be in cone of [-78, 78] deg in front of `ped`
+            if (!CGeneral::RandomBool(25.f)) {
                 return false;
             }
 
@@ -106,9 +110,12 @@ bool CTaskSimpleSitIdle::ProcessPed(CPed* ped) {
 
         // If that failed, look at a random point somewhere in front of the ped
         if (!hasLookedAtClosestPed) {
-            CVector pos = ped->GetPosition()
-                        + ped->GetForwardVector() * CGeneral::GetRandomNumberInRange(1.f, 5.f)
-                        + ped->GetRightVector() * CGeneral::GetRandomNumberInRange(-4.f, 4.f);
+            // 0x637BA7-0x637CBB: pos = ped pos; rand -> += forward * r1; rand -> += right * r2 (explicitly sequenced)
+            CVector pos = ped->GetPosition();
+            const float r1 = CGeneral::GetRandomNumberInRange(1.f, 5.f);
+            pos += ped->GetForwardVector() * r1;
+            const float r2 = CGeneral::GetRandomNumberInRange(-4.f, 4.f);
+            pos += ped->GetRightVector() * r2;
             g_ikChainMan.LookAt(
                 "TaskSitIdle",
                 ped,

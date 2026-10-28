@@ -120,7 +120,9 @@ CTask* CTaskComplexGoToCarDoorAndStandStill::CreateNextSubTask(CPed* ped) {
         return CreateSubTask(TASK_FINISHED, ped);
     case TASK_SIMPLE_PAUSE: { // 0x64D314
         if (m_bTryingToEnterInWater) {
-            m_bAchievedTargetDoor |= (ped->GetPosition() - m_TargetPt).SquaredMagnitude2D() <= sq(0.5f);
+            // 0x64D338..0x64D362: CVector::operator- stores floats, then `sqrt(y*y + x*x)` stays in extended precision and `dist < 0.5f` (strict: `fcomp; test ah,5; jp` skips for >=)
+            const CVector d = m_TargetPt - ped->GetPosition();
+            m_bAchievedTargetDoor |= std::sqrt((x87d)d.x * d.x + (x87d)d.y * d.y) < (x87d)0.5f;
         }
         return CreateSubTask(TASK_FINISHED, ped);
     }
@@ -155,6 +157,11 @@ CTask* CTaskComplexGoToCarDoorAndStandStill::CreateFirstSubTask(CPed* ped) {
             if (!bCanWaitForDoorToBeFree) {
                 return TASK_SIMPLE_STAND_STILL;
             }
+        }
+
+        // 0x64D522 / 0x64D587 / 0x64D672: the exe (re)starts the seek timer (unguarded) once the door was picked (but NOT for the driver with a fixed seat, and NOT for the wait-for-door variant)
+        if (!bCanWaitForDoorToBeFree && !(m_TargetSeat != 0 && m_bIsDriver)) {
+            m_SeekTimer.StartUnguarded(m_MaxSeekTime);
         }
 
         // If it's blocked by something we first have to get into a position where it's not blocked
@@ -222,7 +229,8 @@ CTask* CTaskComplexGoToCarDoorAndStandStill::ControlSubTask(CPed* ped) {
             return CreateSubTask(TASK_SIMPLE_GO_TO_POINT, ped); // 0x64A990
         }
 
-        if ((m_TargetPt - doorOpenPos).SquaredMagnitude() >= sq(0.1f)) { // 0x64A9D1
+        // 0x64A9AF..0x64A9CB: `CVector::SquaredMagnitude` (0x406DA0) stays in extended precision; `fcomp 0.0100000007f; test ah, 0x41; jne` skips for `<=` (and NaN)
+        if (const CVector d = m_TargetPt - doorOpenPos; (x87d)d.x * d.x + (x87d)d.y * d.y + (x87d)d.z * d.z > (x87d)sq(0.1f)) { // 0x64A9D1
             m_TargetPt = doorOpenPos;
             return CreateFirstSubTask(ped);
         }

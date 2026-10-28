@@ -73,4 +73,4 @@
 | S17d | rest of S17c | 10 | partial 5/10 (5 M) -> S17e | Bike.cpp, Bmx.cpp, Boat.cpp |
 | S17e | rest of S17d | 5 | partial 4/5 (3 M, 1 fixed; Bike ProcessControl to 0x6B97C9) -> S17f | Bike.cpp, Boat.cpp |
 | S17f | rest of S17e | 1 | done (MATCH, Bike ProcessControl complete) | Bike.cpp |
-| S01b | rest of S01 | 18 | pending | TaskComplexArrestPed.cpp, TaskComplexSeekEntityRadiusAngleOffset.cpp, TaskComplexSeekEntityStandard.cpp |
+| S01b | rest of S01 | 18 | done (10 M, 8 fixed) | TaskComplexArrestPed.cpp, TaskComplexSeekEntityRadiusAngleOffset.cpp, TaskComplexSeekEntityStandard.cpp |

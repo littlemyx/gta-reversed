@@ -140,27 +140,26 @@ CTask* CTaskComplexWalkRoundBuildingAttempt::CreateSubTask(eTaskType taskType, C
 
 // 0x656F80
 void CTaskComplexWalkRoundBuildingAttempt::ComputeCrapRoute(CPed const& ped) {
-    // Added pre-condition to skip all of the calculation, instead of testing it at the very end.
-    if (!m_crapRoute->IsFull()) {
-        const auto& pedPos = ped.GetPosition() - CVector{ 0.f, 0.f, 0.5f }; // Ped's position is it's center, so adjust it to be on the ground
-        const auto  right = CrossProduct(m_normal, CVector::ZAxisVector());
-        const auto  target =
-              pedPos 
-            + right * CGeneral::GetRandomNumberInRange(-1.f, 1.f)  // => right or left
-            + m_normal * CGeneral::GetRandomNumberInRange(1.f, 2.f);
-        // ^^^ Original order of addition was: m_normal, right, pedPos
+    // 0x656F89..0x65705E: both rand() draws happen unconditionally and in THIS order: first the normal's scale [1, 2), then the right vector's [-1, 1)
+    // (no early-out when the route is full: the exe only skips the Add)
+    const auto  nrmScale   = CGeneral::GetRandomNumberInRange(1.f, 2.f);
+    const auto  nrmPart    = m_normal * nrmScale;
+    const auto  right      = CrossProduct(m_normal, CVector::ZAxisVector());
+    const auto  rightScale = CGeneral::GetRandomNumberInRange(-1.f, 1.f); // => right or left
+    const auto  rightPart  = right * rightScale;
+    const auto  pedPos     = ped.GetPosition() - CVector{ 0.f, 0.f, 0.5f }; // Ped's position is it's center, so adjust it to be on the ground
+    const auto  target     = (nrmPart + rightPart) + pedPos; // exe association: (normal + right) + pedPos
 
-        CColPoint cp{};
-        CEntity* hitEntity{};
-        if (CWorld::ProcessLineOfSight(pedPos, target, cp, hitEntity, true, false, false, false, false, false, false, false)) {
-            auto cpToPedDir = cp.m_vecPoint - pedPos;
-            if (cpToPedDir.NormaliseAndMag() < 0.35f) {
-                return;
-            }
-            m_crapRoute->Add(cp.m_vecPoint - cpToPedDir * 0.35f);
-        } else {
-            m_crapRoute->Add(target);
+    CColPoint cp{};
+    CEntity* hitEntity{};
+    if (CWorld::ProcessLineOfSight(pedPos, target, cp, hitEntity, true, false, false, false, false, false, false, false)) {
+        auto cpToPedDir = cp.m_vecPoint - pedPos;
+        if (!(cpToPedDir.NormaliseAndMag() >= 0.35f)) { // 0x65714D: `fcomp` + `test ah, 1` => also taken for NaN
+            return;
         }
+        m_crapRoute->AddUnlessFull(cp.m_vecPoint - cpToPedDir * 0.35f);
+    } else {
+        m_crapRoute->AddUnlessFull(target);
     }
 
     m_crapRouteHasPoints = true;

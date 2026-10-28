@@ -191,12 +191,12 @@ public:
 
     bool MakeAbortable(CPed* ped, eAbortPriority priority = ABORT_PRIORITY_URGENT, const CEvent* event = nullptr) override {
         if (priority == ABORT_PRIORITY_LEISURE) {
-            m_scanInterval = -1;
+            m_seekInterval = -1; // exe 0x46ACF9 (Standard) / 0x493819 (RadiusAngleOffset) / 0x661EB9 (XYOffset): `[this+0x10] = -1` is m_seekInterval, not m_scanInterval
             m_seekTimer.SetAsOutOfTime();
         }
 
         if (m_pSubTask->MakeAbortable(ped, priority, event)) {
-            m_scanTimer.SetAsOutOfTime();
+            m_scanTimer.StartUnguarded(0); // exe 0x46AD2A: start = now, interval = 0 (not -1), started
             return true;
         }
 
@@ -204,6 +204,9 @@ public:
     }
 
     CTask* CreateNextSubTask(CPed* ped) override {
+        if (!m_entityToSeek) { // exe 0x46F011 (Standard): no entity => `CreateSubTask(TASK_FINISHED)` before the sub-task type is even read
+            return CreateSubTask(TASK_FINISHED, ped);
+        }
         switch (m_pSubTask->GetTaskType()) {
         case TASK_COMPLEX_SEQUENCE:
         case TASK_COMPLEX_TURN_TO_FACE_ENTITY:
@@ -220,8 +223,8 @@ public:
             return CreateFirstSubTask(ped);
         case TASK_COMPLEX_LEAVE_CAR:
             return CreateSubTask(ped->bInVehicle ? TASK_FINISHED : TASK_SIMPLE_CAR_DRIVE_TIMED, ped);
-        case TASK_SIMPLE_STAND_STILL:
-            return CreateSubTask(TASK_SIMPLE_STAND_STILL, ped);
+        case TASK_SIMPLE_STAND_STILL: // exe 0x46F085: only keeps standing while the ped is attached to something (boat), else a new first sub-task
+            return ped->m_pAttachedTo ? CreateSubTask(TASK_SIMPLE_STAND_STILL, ped) : CreateFirstSubTask(ped);
         case TASK_SIMPLE_TIRED: {
             CTaskSimpleStandStill task{ -1 };
             task.ProcessPed(ped);
@@ -234,8 +237,10 @@ public:
     }
 
     CTask* CreateFirstSubTask(CPed* ped) override {
-        m_scanTimer.Start(m_scanInterval);
-        m_seekTimer.Start(m_seekInterval);
+        m_scanTimer.StartUnguarded(m_scanInterval); // exe 0x46F6A6: no `>= 0` test
+        if (m_seekInterval != -1) { // exe 0x46F6BC: `cmp eax, -1`, not `>= 0`
+            m_seekTimer.StartUnguarded(m_seekInterval);
+        }
 
         if (!m_entityToSeek) {
             return CreateSubTask(TASK_SIMPLE_TIRED, ped);
@@ -245,7 +250,7 @@ public:
             return CreateSubTask(TASK_COMPLEX_LEAVE_CAR, ped);
         }
  
-        if (const auto dist2DSq = (ped->GetPosition2D() - GetSeekPos2D(ped)).SquaredMagnitude(); dist2DSq > sq(m_maxEntityDist2D)) {
+        if (const auto dist2DSq = (ped->GetPosition2D() - GetSeekPos2D(ped)).SquaredMagnitude(); !(dist2DSq < sq(m_maxEntityDist2D))) { // exe 0x46F767: arrived only when strictly closer (equal => too far)
             return CreateSubTaskWhenPedIsTooFarFromEntity(ped, dist2DSq);
         }
 

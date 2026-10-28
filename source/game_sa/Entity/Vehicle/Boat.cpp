@@ -1052,7 +1052,7 @@ void CBoat::BlowUpCar(CEntity* culprit, bool inACutscene) {
         return;
     }
 
-    RpAtomic* movingCompAtomic;
+    RpAtomic* movingCompAtomic = nullptr; // 0x6F22E5: the exe clears it before the callback walk
     RwFrameForAllObjects(movingComponent, GetBoatAtomicObjectCB, &movingCompAtomic);
     if (!movingCompAtomic) {
         return;
@@ -1076,7 +1076,7 @@ void CBoat::BlowUpCar(CEntity* culprit, bool inACutscene) {
     obj->m_fTurnMass = 25.0F;
     obj->m_fAirResistance = 0.99F;
     obj->m_fElasticity = 0.1F;
-    obj->m_fBuoyancyConstant = 8.0F / 75.0F;
+    obj->m_fBuoyancyConstant = std::bit_cast<float>(0x3DDA740Fu); // 0x6F23D9 (8/75 would be 0x3DDA740E)
     obj->m_nObjectType = eObjectType::OBJECT_TEMPORARY;
     obj->SetIsStatic(false);
     obj->objectFlags.bIsPickup = false;

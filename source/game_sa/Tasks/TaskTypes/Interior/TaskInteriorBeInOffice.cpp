@@ -37,24 +37,28 @@ CTaskInteriorBeInOffice::CTaskInteriorBeInOffice(const CTaskInteriorBeInOffice& 
 void CTaskInteriorBeInOffice::GetInfoForPedToUse(CPed* ped, int32* outDur) {
     using enum eInteriorInfoType;
 
-    // How this isn't an infinite loop is beyond me
+    // 0x675310-0x6753CA: the duration is rolled inside the loop (one draw per iteration)
     eInteriorInfoType type;
     do {
         type = !m_CurrIntInfo || m_CurrIntInfo->Type != UNK_6 ? UNK_6 : UNK_7;
         m_IntGrp->FindInteriorInfo(type, &m_CurrIntInfo, &m_CurrInt);
+        if (type == UNK_6) {
+            // exe: int(rand() * 100) <= 20 (not RandomBool: that one is the float version)
+            *outDur = CGeneral::GetRandomNumberInRange(0, 100) <= 20
+                ? CGeneral::GetRandomNumberInRange(5'000, 30'000)
+                : -1;
+        } else {
+            *outDur = CGeneral::GetRandomNumberInRange(5'000, 10'000);
+        }
     } while (!m_CurrIntInfo);
-
-    // Figure out duration now
-    *outDur = type == UNK_6 // NOTSA: Moved this outside the loop, no need for it to be there
-        ? CGeneral::RandomBool(20.f)
-            ? CGeneral::GetRandomNumberInRange(5'000, 30'000)
-            : -1
-        : CGeneral::GetRandomNumberInRange(5'000, 10'000);
 }
 
 // notsa (code is sa)
 CTask* CTaskInteriorBeInOffice::CreateUseInfoTask(CPed* ped, bool bDoInstantly) {
+    if (!bDoInstantly) {
+        ped->bHasJustSoughtCover = true; // 0x676366: or [ped+0x474], 0x80 (CreateNextSubTask only)
+    }
     int32 dur;
     GetInfoForPedToUse(ped, &dur);
-    return new CTaskInteriorUseInfo{ m_CurrIntInfo, m_CurrInt, dur, true };
+    return new CTaskInteriorUseInfo{ m_CurrIntInfo, m_CurrInt, dur, bDoInstantly };
 }

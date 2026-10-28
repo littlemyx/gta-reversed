@@ -71,7 +71,8 @@ CTask* CTaskComplexInvestigateDisturbance::CreateNextSubTask(CPed* ped) {
             return new CTaskComplexGoToPointAndStandStill{
                 PEDMOVE_WALK,
                 m_pos,
-                1.5f
+                0.5f, // 0x674B15..: radius 0.5 (0x86FC84), move-state radius 2.0 (0x86FC88)
+                2.f
             };
         }
     }

@@ -289,3 +289,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-28	ASM-S04c	v6	asm sweep	209932	67	11	Gang tasks 11/11: GangFollower ControlSubTask NaN edges fixed; 10 M; ran out before build/tests -> finisher
 2026-10-28	S04c-FINISH	v6	landing	81383	26	11	Release+RW built, oracle 0/0, combat 14, pushed 3677ce40, worktree removed
 2026-10-28	ASM-S05	v6	asm sweep	127574	30	5	Tasks 8/42 all MATCH (GoToAttractor x2, BoatSteeringWheel, ComputeRouteToDoor, KillAllThreats x2, 2 tail-open); 34 -> S05b
+2026-10-28	ASM-S05b	v6	asm sweep	229385	88	45	Tasks 12/36: 5 fixed (InvestigateDeadPed sum, InvestigateDisturbance radius 0.5 + normalise/0.707f, KillCriminal dtor siren + CreateNextSubTask car chase missing); 7 M; soak OK, no combat run

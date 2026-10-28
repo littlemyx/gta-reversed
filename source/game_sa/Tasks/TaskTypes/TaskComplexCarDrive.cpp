@@ -100,7 +100,11 @@ CTask* CTaskComplexCarDrive::CreateNextSubTask(CPed* ped) {
     }
     case TASK_SIMPLE_CREATE_CAR_AND_GET_IN: { // 0x644FA3
         if (ped->IsInVehicle()) {
+#ifdef FIX_BUGS
             CEntity::ChangeEntityReference(m_Veh, ped->m_pVehicle);
+#else
+            CEntity::SetEntityReference(m_Veh, ped->m_pVehicle); // 0x644FB6: the exe does NOT clean up the old reference here
+#endif
             return Create(TASK_SIMPLE_CAR_DRIVE);
         }
         return CreateSubTaskCannotGetInCar(ped);
@@ -150,7 +154,11 @@ CTask* CTaskComplexCarDrive::ControlSubTask(CPed* ped) {
             return Drive(ped);
         case TASK_COMPLEX_GO_TO_POINT_ANY_MEANS:
             if (ped->IsInVehicle()) {
+#ifdef FIX_BUGS
                 CEntity::ChangeEntityReference(m_Veh, ped->m_pVehicle);
+#else
+                CEntity::SetEntityReference(m_Veh, ped->m_pVehicle); // 0x645286: the exe does NOT clean up the old reference here
+#endif
                 return CreateSubTask(TASK_SIMPLE_CAR_DRIVE, ped);
             }
         }

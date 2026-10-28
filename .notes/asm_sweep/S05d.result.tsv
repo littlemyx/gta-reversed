@@ -1,0 +1,9 @@
+addr	function	verdict	asm range	note	fix commit
+0x62B490	CTaskComplexKillPedOnFoot::CreateFirstSubTask	MATCH	0x62B490-0x62B782 (all)	flags, extended dist (z,y,x) <5 strict, pistol gift, drag/destroy decision incl. speed>0.1 NaN polarity	-
+0x62B150	CTaskComplexKillPedOnFoot::CreateNextSubTask	MATCH	0x62B150-0x62B48C (all)	task-type dispatch, cop dont-pursuit pause, leave-car pistol gift	-
+0x626260	CTaskComplexKillPedOnFoot::ControlSubTask	MATCH	0x626260-0x626A78 (all)	timeout, new target, kill/signal, wait-for-player pause, melee/drag/armed/destroy transitions, area-code event, gang speech	-
+0x621500	CTaskComplexKillPedOnFootArmed::LineOfSightClearForAttack	DEVIATION	0x621500-0x6217C2 (all)	cache time 10000/5000 and dist^2 9/4 depend on area, player target, mission ped, proc level (port always 5000/4); blocked-time test is <= (ja); sq dist summed z,y,x extended; ducking ped uses pos+0.25 and standing uses head bone (port inverted)	cf2ce548
+0x626FC0	CTaskComplexKillPedOnFootArmed::CreateSubTask	MATCH	0x626FC0-0x6275CF (all)	duck/standstill/pause/seek (3000/8000 thresholds, side points, 0.001f radius)/gunctrl (rand 4000-8000, LOS cmd), cop speech	-
+0x62C190	CTaskComplexKillPedOnFootArmed::CreateNextSubTask	MATCH	0x62C190-0x62CCDA (all)	logic identical; NaN-only polarity of 3 compares aligned (range^2<=sq, maxDist<23, v<20)	cf2ce548
+0x62BF00	CTaskComplexKillPedOnFootArmed::CreateFirstSubTask	DEVIATION	0x62BF00-0x62C186 (all)	m_newTarget not cleared; coin flip RandomBool(50) instead of rand()&1; FindCoordinatesCoverPoint skipped without FIX_BUGS and missing coverPos.z+=1; distance compared (strict >) instead of squared >=	66d27d43
+0x62CCE0	CTaskComplexKillPedOnFootArmed::ControlSubTask	NOT_REACHED	-	out of budget; port reviewed only (duck chance RandomBool vs exe form, strafe, GunControl END_LEISURE) - not compared	-

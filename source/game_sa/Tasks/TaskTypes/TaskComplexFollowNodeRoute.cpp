@@ -238,6 +238,8 @@ CVector CTaskComplexFollowNodeRoute::GetNextWaypoint(CPed* ped) const {
 
 // 0x66EFA0
 void CTaskComplexFollowNodeRoute::ComputePathNodes(CPed const* ped) {
+    m_NodeRoute->Clear(); // exe 0x66EFA8-0x66EFAC: the route starts empty on every call (the port kept the old nodes when the target could be reached straight)
+
     // Make sure TargetPt.z is on the ground
     {
         bool hasTargetPtGroundZ;
@@ -257,14 +259,15 @@ void CTaskComplexFollowNodeRoute::ComputePathNodes(CPed const* ped) {
             m_StartNode,
             m_NodeRoute
         );
-        m_StartNode = {};
+        m_StartNode = CNodeAddress{ (uint16)-1, 0 }; // exe 0x66F04E: copies the global at 0x8A5F44 = {area 0xFFFF, node 0}
     }
 
-    if (std::abs(pedPos.z - m_TargetPt.z) >= m_FollowNodeThresholdHeightChange || m_NodeRoute->IsEmpty() || m_bKeepNodesHeadingAwayFromTarget) { // 0x66F147
+    if (!(std::abs(pedPos.z - m_TargetPt.z) < m_FollowNodeThresholdHeightChange) || m_NodeRoute->IsEmpty() || m_bKeepNodesHeadingAwayFromTarget) { // 0x66F147
         if (!m_NodeRoute->IsEmpty() && !m_bKeepNodesHeadingAwayFromTarget && m_NodeRoute->GetAll()[0]) {
             const auto routeFirstNode = m_NodeRoute->GetAll()[0];
             if (ThePaths.IsAreaNodesAvailable(routeFirstNode)) {
-                if ((m_TargetPt - pedPos).Magnitude2D() + 50.f < (ThePaths.GetPathNode(routeFirstNode)->GetPosition() - pedPos).Magnitude2D()) {
+                // exe 0x66F1A1-0x66F209: |target - ped| + 50 < |target - firstNode| (2D); the port compared against |firstNode - ped|
+                if ((m_TargetPt - pedPos).Magnitude2D() + 50.f < (m_TargetPt - ThePaths.GetPathNode(routeFirstNode)->GetPosition()).Magnitude2D()) {
                     m_NodeRoute->Clear(); // 0x66F209
                 }
             }
@@ -272,7 +275,8 @@ void CTaskComplexFollowNodeRoute::ComputePathNodes(CPed const* ped) {
     } else if (m_NodeRoute->GetAll()[0]) {
         const auto routeFirstNode = m_NodeRoute->GetAll()[0];
         if (ThePaths.IsAreaNodesAvailable(routeFirstNode)) {
-            if ((m_TargetPt - pedPos).Magnitude2D() + 3.f < (ThePaths.GetPathNode(routeFirstNode)->GetPosition() - pedPos).Magnitude2D()) {
+            // exe 0x66F0C5-0x66F133: |target - ped| + 3 < |target - firstNode| (2D)
+            if ((m_TargetPt - pedPos).Magnitude2D() + 3.f < (m_TargetPt - ThePaths.GetPathNode(routeFirstNode)->GetPosition()).Magnitude2D()) {
                 m_NodeRoute->Clear(); // 0x66F139
             }
         }
@@ -336,7 +340,7 @@ void CTaskComplexFollowNodeRoute::ComputePathNodes(CPed const* ped) {
     }
 
     // 0x66F3F2
-    m_CurrPtIdx = m_CurrNode
+    m_CurrPtIdx = m_CurrNode.IsAreaValid() // exe 0x66F3F2: only the area id is tested
         ? notsa::indexof(m_NodeRoute->GetAll(), m_CurrNode, 0)
         : 0;
     if (!m_NodeRoute->IsEmpty()) {

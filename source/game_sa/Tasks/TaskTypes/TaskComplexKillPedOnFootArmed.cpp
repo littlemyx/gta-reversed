@@ -687,7 +687,15 @@ CTask* CTaskComplexKillPedOnFootArmed::ControlSubTask(CPed* ped) {
     const auto &ourPos    = ped->GetPosition(),
                &targetPos = m_target->GetPosition();
 
-    const auto targetToOurPedDistSq = (ourPos - targetPos).SquaredMagnitude();
+    // ASM-S05e: exe 0x62CD9F (squared) / 0x62CEB3 (distance): (dx^2 + dy^2) + dz^2 in extended precision, the distance is sqrt of that sum stored as a float
+    const x87d sumExt = [&] {
+        const x87d dx = (x87d)targetPos.x - (x87d)ourPos.x;
+        const x87d dy = (x87d)targetPos.y - (x87d)ourPos.y;
+        const x87d dz = (x87d)targetPos.z - (x87d)ourPos.z;
+        return (dx * dx + dy * dy) + dz * dz;
+    }();
+    const float targetToOurPedDistSq = (float)sumExt;
+    const float targetToOurPedDist   = (float)std::sqrt(sumExt);
 
     //> 0x62CD55
     if (   (m_duckingConditions & 4) == 0
@@ -696,7 +704,7 @@ CTask* CTaskComplexKillPedOnFootArmed::ControlSubTask(CPed* ped) {
     ) {
         if (   m_duckingConditions & 1
             && m_bShotFiredByPlayer
-            && CGeneral::RandomBool((float)m_duckChancePerc)
+            && (uint32)CGeneral::GetRandomNumberInRange(0, 100) < m_duckChancePerc // ASM-S05e: exe 0x62CDFF: int rand in [0,100) < chance (unsigned), not the float RandomBool
         ) {
             if (const auto quack = ped->GetIntelligence()->GetTaskDuck()) {
                 quack->SetDuckTimer((uint16)m_lengthOfDuck);
@@ -708,8 +716,8 @@ CTask* CTaskComplexKillPedOnFootArmed::ControlSubTask(CPed* ped) {
             }
         }
     } else {
-        if (CGeneral::RandomBool((float)m_duckChancePerc)) {
-            if (targetToOurPedDistSq <= sq(20.f)) {
+        if ((uint32)CGeneral::GetRandomNumberInRange(0, 100) < m_duckChancePerc) { // ASM-S05e: exe 0x62CDC0
+            if (targetToOurPedDistSq < sq(20.f)) { // ASM-S05e: exe 0x62CDB3 `fcomp 400; jp` => strictly less
                 ped->GetIntelligence()->SetTaskDuckSecondary((uint16)m_lengthOfDuck);
             }
         }
@@ -739,8 +747,8 @@ CTask* CTaskComplexKillPedOnFootArmed::ControlSubTask(CPed* ped) {
             }
             if (ped->bStayInSamePlace) {
                 return LineOfSightClearForAttack(ped);
-            } else if (sq(ourwi.m_fTargetRange / 2.f) >= targetToOurPedDistSq) {
-                if (CTimer::GetTimeInMS() - m_lastAttackTime >= 2000 || m_target->GetMoveSpeed().Dot(ped->GetForward()) < 0.f) {
+            } else if (ourwi.m_fTargetRange / 2.f > targetToOurPedDist) { // ASM-S05e: exe 0x62D17A `fcompp; jne` => strictly, on the distance
+                if (m_target->GetMoveSpeed().Dot(ped->GetForward()) < 0.f || CTimer::GetTimeInMS() - m_lastAttackTime > 2000) { // exe 0x62D1AF: `ja`, strictly greater
                     return LineOfSightClearForAttack(ped);
                 }
             }
@@ -755,9 +763,10 @@ CTask* CTaskComplexKillPedOnFootArmed::ControlSubTask(CPed* ped) {
         break;
     }
     case TASK_SIMPLE_GUN_CTRL: { //> 0x62CE87
-        if (   targetToOurPedDistSq >= sq(ourwi.m_fTargetRange)
-            || targetToOurPedDistSq >= sq(ourwi.m_fTargetRange / 2.f) && !ped->bStayInSamePlace && CTimer::GetTimeInMS() - m_lastAttackTime >= 2000
-            || targetToOurPedDistSq >= sq(4.f) && !ped->bStayInSamePlace && CTimer::GetTimeInMS() >= m_shootTimer
+        // ASM-S05e: exe 0x62CEC2-0x62CF30: distances (not squared) compared strictly, `now > m_lastAttackTime + 2500` (0x9C4), `now > m_shootTimer`
+        if (   targetToOurPedDist > ourwi.m_fTargetRange
+            || ourwi.m_fTargetRange / 2.f < targetToOurPedDist && !ped->bStayInSamePlace && CTimer::GetTimeInMS() > m_lastAttackTime + 2500
+            || targetToOurPedDist > 4.f && !ped->bStayInSamePlace && CTimer::GetTimeInMS() > m_shootTimer
             || !LineOfSightClearForAttack(ped)
         ) {
             const auto gctrl = notsa::cast<CTaskSimpleGunControl>(m_pSubTask);
@@ -781,8 +790,8 @@ CTask* CTaskComplexKillPedOnFootArmed::ControlSubTask(CPed* ped) {
             if (m_target->physicalFlags.bSubmergedInWater) {
                 return { 0.f, 0.f };
             }
-            if (CTimer::GetTimeInMS() >= m_lastStrafeTime || !ped->bStayInSamePlace) {
-                if (targetToOurPedDistSq <= sq(4.f) && ped->bStayInSamePlace) {
+            if (CTimer::GetTimeInMS() >= m_lastStrafeTime || ped->bStayInSamePlace) { // ASM-S05e: exe 0x62CFB5 `jae` / 0x62CFBA `test flag; jne`: stay flag SET goes to the strafe-flip branch (was inverted)
+                if (targetToOurPedDist < 4.f && !ped->bStayInSamePlace) { // ASM-S05e: exe 0x62D00F-0x62D026: strictly less, flag clear (was <= with flag set)
                     return { 0.f, 1.f }; // Forwards
                 }
                 if (m_bStrafeBack) {

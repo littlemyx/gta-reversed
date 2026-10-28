@@ -98,4 +98,5 @@
 | S15c | rest of S15b | 6 | partial 2/6 (1 M, 1 fixed) -> S15d | TaskSimpleSwim.cpp, TaskSimpleUseGun.cpp, TaskUtilityLineUpPedWithCar.cpp |
 | S15d | rest of S15c | 4 | partial 3/4 (2 M, 1 fixed) -> S15e | TaskSimpleSwim.cpp, TaskUtilityLineUpPedWithCar.cpp |
 | S15e | rest of S15d | 1 | pending | TaskUtilityLineUpPedWithCar.cpp |
-| S19b | rest of S19 | 105 | pending | Trailer.cpp, Train.cpp, Vehicle.cpp |
+| S19b | rest of S19 | 105 | partial 1/105 (Train ProcessControl fixed; portable double cleanup) -> S19c | Trailer.cpp, Train.cpp, Vehicle.cpp |
+| S19c | rest of S19b | 104 | pending | Trailer.cpp, Train.cpp, Vehicle.cpp |

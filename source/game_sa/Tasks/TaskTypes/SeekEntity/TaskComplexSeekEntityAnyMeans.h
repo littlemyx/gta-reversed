@@ -48,6 +48,7 @@ public:
         m_scanInterval{ 1000 },
         m_posCalculator{ o.m_posCalculator }
     {
+        CEntity::SafeRegisterRef(m_entity); // 0x696063-0x696075: Clone runs the real constructor (0x695600), which registers the reference
     }
 
     ~CTaskComplexSeekEntityAnyMeans() {
@@ -67,13 +68,15 @@ public:
     }
 
     CTask* CreateFirstSubTask(CPed* ped) override {
-        return new CTaskComplexDriveToPoint{ nullptr, GetSeekPos(ped), 30.f, 0, MODEL_INVALID, m_targetRadius, DRIVING_STYLE_STOP_FOR_CARS };
+        const auto seekPos = GetSeekPos(ped); // 0x6960D2-0x6960DF: the position is computed first
+        m_scanTimer.StartUnguarded(m_scanInterval); // 0x6960EE-0x6960F9: starts the scan timer (no >= 0 test); the port never started it, so ControlSubTask never re-aimed the drive
+        return new CTaskComplexDriveToPoint{ nullptr, seekPos, 30.f, 0, MODEL_INVALID, m_targetRadius, DRIVING_STYLE_STOP_FOR_CARS };
     }
 
     CTask* ControlSubTask(CPed* ped) override {
         if (m_entity) {
             if (m_scanTimer.IsOutOfTime()) {
-                m_scanTimer.Start(m_scanInterval);
+                m_scanTimer.StartUnguarded(m_scanInterval); // 0x6961F3-0x696223: no >= 0 test
                 notsa::cast<CTaskComplexDriveToPoint>(m_pSubTask)->GoToPoint(GetSeekPos(ped));
             }
             return m_pSubTask;

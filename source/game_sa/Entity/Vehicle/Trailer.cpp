@@ -168,7 +168,7 @@ bool CTrailer::SetTowLink(CVehicle* vehicle, bool setMyPosToTowBar) {
     vehicle->AddToMovingList();
 
     if (!setMyPosToTowBar) {
-        UpdateTractorLink(true, false);
+        vehicle->UpdateTractorLink(true, false); // NOTSA: asm sweep S19h (exe 0x6CFFA6-0x6CFFAC): `mov ecx, edi` - the TOWING vehicle pulls the trailer (the trailer has no vehicle being towed)
         vehicle->m_vehicleAudio.AddAudioEvent(AE_TRAILER_ATTACH, 0.0f);
         return true;
     }

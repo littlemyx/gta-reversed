@@ -83,16 +83,30 @@ bool CTaskSimplePickUpBike::ProcessPed(CPed* ped) {
         return true;
     }
 
+    if (!m_veh) { // 0x64D91A: the vehicle ref was cleared => finished
+        return true;
+    }
+
     if (!m_anim) {
         StartAnim(ped);
     }
 
     if (const auto bike = m_veh->AsBike(); !bike->bikeFlags.bGettingPickedUp) {
-        if (m_anim) {
-            if (m_anim->m_CurrentTime > 0.47f) { // Simplified...
-                bike->bikeFlags.bGettingPickedUp = true;
-            }        
-        }        
+        // 0x64D935-0x64D99A: only the 4 align anims count, flag is set once the anim passed 0.4667
+        if (const auto anim = m_anim) {
+            switch (anim->m_AnimId) {
+            case ANIM_ID_CAR_ALIGN_LHS:
+            case ANIM_ID_CAR_ALIGN_RHS:
+            case ANIM_ID_CAR_ALIGNHI_LHS:
+            case ANIM_ID_CAR_ALIGNHI_RHS:
+                if (anim->m_CurrentTime > 0.4667f) {
+                    bike->bikeFlags.bGettingPickedUp = true;
+                }
+                break;
+            default:
+                break;
+            }
+        }
     }
 
     return false;

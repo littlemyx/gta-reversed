@@ -477,8 +477,7 @@ void CVehicle::SetModelIndex(uint32 index) {
         vehicleFlags.bIsRCVehicle = true;
         break;
     default:
-        vehicleFlags.bCreatedAsPoliceVehicle = false;
-        vehicleFlags.bIsRCVehicle = false;
+        vehicleFlags.bIsRCVehicle = false; // 0x6D6AAB: `and byte [this+0x42C], 0x7F` - only this flag; bCreatedAsPoliceVehicle is left alone
         break;
     }
 

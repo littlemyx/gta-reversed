@@ -1,0 +1,10 @@
+addr	function	verdict	asm range	note	fix commit
+0x425440	SlowCarDownForPedsSectorList	MATCH	0x425440-0x425B28	frame offsets mapped (slowDownDist vs closeDist), style/vehicle-type gates, scan code, pos/z gates, DistAlongLine2D arg order, bike halfWidth*1.6 persistent, 0.5/13/4/2.5 gaps, clamp+max(1,x) quirk, speedFactor min, honk/run-over (49.0, MagnitudeSquared order), 0.05/0.35 branches, anger match	-
+0x423000	FlyAIPlaneInCertainDirection	MATCH	0x423000-0x423784	1 s timer, temp-action heading (2.0 unrounded x87), 30deg turn gate, two-pass 15deg probe loop (isIn polarity per pass), alt clamp, takeoff vs flight branches, climb clamps +-0.4/0.25, asin pitch prediction, heading wrap, RC 0.7 bank / 0.1 yaw split, roll/aileron (-1.0), elevator 0.23 comp, final clamps, FLY_UP<20 reset match	-
+0x427740	PickNextNodeToFollowPath	MATCH	0x427740-0x427FD0	srand seed, DoPathSearch args (cantGoAgainstTraffic bit6, vortex), double RemoveOnePathNode, node shuffle, link search, -1/+1 lane count nibble, dir *0.01*sign, 256 lane-change gate with rand&0x600, lane clamp, fast/slow lane, start/end curve points, scale*(1000/speed) min 10, parking node (type 2 -> mission 45) match	-
+0x426EF0	PickNextNodeToChaseCar	MATCH	0x426EF0-0x427737	weather region 0/4 -> 50.0 dist, DoPathSearch arg order, 3*dist<pathDist exit, results[0]/[1] != next choice, heading atan2 + best angle search (<= 10.0, dead-end rule), wrap loops, node shuffle, StopCarIfNodesAreInvalid, faraway mission list (8 ids), field_50 countdown, BMX slow lane, discarded 0x44DB00 calls match	-
+0x428040	DealWithBend_Racing	NOT_REACHED	0x428040-0x428981	token budget	-
+0x430050	GenerateOneRandomCar	NOT_REACHED	0x430050-0x431F3A	token budget	-
+0x429A70	FlyAIHeliInCertainDirection	NOT_REACHED	0x429A70-0x42A621	token budget	-
+0x42DE80	PickNextNodeRandomly	NOT_REACHED	0x42DE80-0x42EC86	token budget	-
+0x436A90	SteerAICarWithPhysics_OnlyMission	NOT_REACHED	0x436A90-0x437B22	token budget	-

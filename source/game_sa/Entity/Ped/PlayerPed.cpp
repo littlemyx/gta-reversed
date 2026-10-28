@@ -2779,7 +2779,9 @@ void CPlayerPed::ProcessControl() {
                 }
             }
             SetLookFlag(lookDir, true, false);
-            SetLookTimer(NOTSA_FTOL(uint32, (CTimer::GetTimeStep() * 0.02f * 1000.0f) * 5.0f));
+            // 0x60F45E: the exe truncates ts*0.02*1000 to an integer first (_ftol), then multiplies that by 5 (_ftol again)
+            const int32 stepMs = NOTSA_FTOL(int32, CTimer::GetTimeStep() * 0.02f * 1000.0f);
+            SetLookTimer((uint32)NOTSA_FTOL(int32, (x87d)(uint32)stepMs * (x87d)5.0f));
         } else {
             ClearLookFlag();
         }

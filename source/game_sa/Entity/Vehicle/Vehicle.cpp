@@ -2181,9 +2181,13 @@ void CVehicle::MakeDirty(CColPoint& colPoint) {
     }
 }
 
+static x87d RandomInRangeExt(float min, float max); // defined below (0x41BD90)
+
 // 0x6D2D50
 bool CVehicle::AddWheelDirtAndWater(CColPoint& colPoint, bool isProduceWheelDrops, bool isWheelsSpinning, bool isWheelInWater) {
-    if (!isProduceWheelDrops && !g_surfaceInfos.IsSand(colPoint.m_nPieceTypeB)) {
+    // NOTE: the exe reads the surface id from CColPoint+0x23 (m_nSurfaceTypeB) for every check below (also IsSand / CreatesWheelSpray)
+    const auto surfaceB = colPoint.m_nSurfaceTypeB;
+    if (!isProduceWheelDrops && !g_surfaceInfos.IsSand(surfaceB)) {
         return false;
     }
 
@@ -2193,7 +2197,7 @@ bool CVehicle::AddWheelDirtAndWater(CColPoint& colPoint, bool isProduceWheelDrop
     }
 
     const auto CreateFxForSurface = [&](auto CheckSurface, auto AddFx) {
-        if ((g_surfaceInfos.*CheckSurface)(colPoint.m_nSurfaceTypeB)) {
+        if ((g_surfaceInfos.*CheckSurface)(surfaceB)) {
             (g_fx.*AddFx)(this, colPoint.m_vecPoint, isWheelsSpinning, m_fContactSurfaceBrightness);
             return true;
         }
@@ -2208,19 +2212,32 @@ bool CVehicle::AddWheelDirtAndWater(CColPoint& colPoint, bool isProduceWheelDrop
     if (CreateFxForSurface(&SurfaceInfos_c::CreatesWheelMud, &Fx_c::AddWheelMud)) {
         return false;
     }
-    if (CWeather::WetRoads <= 0.0 || CGeneral::GetRandomNumberInRange(CWeather::WetRoads, 1.01f) <= 0.5f) {
-        if (CreateFxForSurface(&SurfaceInfos_c::CreatesWheelDust, &Fx_c::AddWheelDust)) {
-            return false;
+
+    // Dust and sand: when the roads are wet (WetRoads > 0; NaN does not roll) a random roll in [WetRoads, 1.01] > 0.5 skips the
+    // effect AND returns false right away (the roll is only made for dust / sand surfaces; the exe returns, it does not fall through to the spray)
+    const auto DustOrSand = [&](auto CheckSurface, auto AddFx) -> std::optional<bool> {
+        if (!(g_surfaceInfos.*CheckSurface)(surfaceB)) {
+            return std::nullopt;
         }
-        if (CreateFxForSurface(&SurfaceInfos_c::CreatesWheelSand, &Fx_c::AddWheelSand)) {
-            return false;
+        if (CWeather::WetRoads > 0.0f) {
+            const x87d roll = RandomInRangeExt(CWeather::WetRoads, 1.01f); // 0x41BD90
+            if (roll > 0.5f) {
+                return false;
+            }
         }
+        (g_fx.*AddFx)(this, colPoint.m_vecPoint, isWheelsSpinning, m_fContactSurfaceBrightness);
+        return false;
+    };
+    if (const auto r = DustOrSand(&SurfaceInfos_c::CreatesWheelDust, &Fx_c::AddWheelDust)) {
+        return *r;
     }
-    if (CWeather::WetRoads > 0.4f && !CCullZones::CamNoRain()) {
-        if (g_surfaceInfos.CreatesWheelSpray(colPoint.m_nPieceTypeB)) {
-            g_fx.AddWheelSpray(this, colPoint.m_vecPoint, isWheelsSpinning, false, m_fContactSurfaceBrightness);
-            return false;
-        }
+    if (const auto r = DustOrSand(&SurfaceInfos_c::CreatesWheelSand, &Fx_c::AddWheelSand)) {
+        return *r;
+    }
+
+    if (g_surfaceInfos.CreatesWheelSpray(surfaceB) && CWeather::WetRoads > 0.4f && !CCullZones::CamNoRain()) {
+        g_fx.AddWheelSpray(this, colPoint.m_vecPoint, isWheelsSpinning, false, m_fContactSurfaceBrightness);
+        return false;
     }
     return true;
 }
@@ -5862,12 +5879,12 @@ void CVehicle::AddExhaustParticles() {
 }
 
 // 0x41BD90 - `CGeneral::GetRandomNumberInRange(min, max)` as the original evaluates it (CRT `rand()`; the result is left in the FPU)
-static double RandomInRangeExt(float min, float max) {
+static x87d RandomInRangeExt(float min, float max) {
     return ((x87d)max - (x87d)min) * ((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL) + (x87d)min;
 }
 
 // 0x4082C0 - `CVector::Magnitude` (the result is left in the FPU)
-static double MagnitudeExt(const CVector& v) {
+static x87d MagnitudeExt(const CVector& v) {
     return std::sqrt(((x87d)v.x * v.x + (x87d)v.y * v.y) + (x87d)v.z * v.z);
 }
 
@@ -5991,7 +6008,7 @@ bool CVehicle::AddSingleWheelParticles(tWheelState wheelState, uint32 arg1, floa
         const int32   count = num >= 1 ? num : 1;
         const float   countF = (float)count;
         for (int32 i = 0; i < count; i++) {
-            const double rnd = RandomInRangeExt(0.5f, 1.0f);
+            const x87d rnd = RandomInRangeExt(0.5f, 1.0f);
             mults.m_Color.blue  = (float)rnd;
             mults.m_Color.green = (float)(X87R(rnd * 0.9f));
             mults.m_Color.red   = (float)(X87R(rnd * 0.9f));
@@ -6043,7 +6060,7 @@ bool CVehicle::AddSingleWheelParticles(tWheelState wheelState, uint32 arg1, floa
             vel.y = (float)RandomInRangeExt(0.0f, (float)(((x87d)gas * m_vecMoveSpeed.y) * -30.0f));
             vel.z = (float)((x87d)(rand() % 10000) * 0.0001f * 0.8f);
 
-            const double rnd = RandomInRangeExt(0.5f, 1.0f);
+            const x87d rnd = RandomInRangeExt(0.5f, 1.0f);
             mults.m_Color.blue  = (float)rnd;
             mults.m_Color.green = (float)(X87R(rnd * 0.9f));
             mults.m_Color.red   = (float)(X87R(rnd * 0.9f));

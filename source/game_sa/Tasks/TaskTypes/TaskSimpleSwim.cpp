@@ -377,7 +377,7 @@ void CTaskSimpleSwim::ProcessSwimAnims(CPed* ped) {
                         m_fStateChanger = 0.0f;
                         m_fRotationX = DegreesToRadians(CTaskSimpleSwim::SWIM_DIVE_UNDER_ANGLE);
                     } else {
-                        m_fRotationX = DegreesToRadians(80.0f);
+                        m_fRotationX = 1.39626348f; // exe 0x689E41: the literal 0x3FB2B8C3 (80 * DEG_TO_RAD is 1 ulp lower)
                         m_fStateChanger = 0.0f;
                     }
                 }
@@ -415,11 +415,12 @@ void CTaskSimpleSwim::ProcessSwimAnims(CPed* ped) {
                 break;
             }
             if (RpAnimBlendClumpGetAssociation(player->GetRpClump(), ANIM_ID_CLIMB_JUMP)) { // 0x689C4B
+                // exe 0x689C9B-0x689CCA: no water level -> break (state kept); z + 0.5 >= level (or NaN) -> break; only z + 0.5 < level falls to SWIM_TREAD
                 float waterLevel1 = 0.0f;
-                if (CWaterLevel::GetWaterLevel(pedPos, waterLevel1, true)) {
-                    if (pedPos.z + 0.5f < waterLevel1) {
-                        return; // todo: check this
-                    }
+                if (!CWaterLevel::GetWaterLevel(pedPos, waterLevel1, true)) {
+                    break;
+                }
+                if (!(pedPos.z + 0.5f < waterLevel1)) {
                     break;
                 }
             }

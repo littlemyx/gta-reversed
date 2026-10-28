@@ -1991,7 +1991,8 @@ void CVehicle::SetComponentVisibility(RwFrame* component, uint32 visibilityState
 
 // 0x6D2740
 void CVehicle::ApplyBoatWaterResistance(tBoatHandlingData* boatHandling, float fImmersionDepth) {
-    float fSpeedMult = sq(fImmersionDepth) * m_pHandlingData->m_fSuspensionForceLevel * m_fMass * 0.001F; // 0x6D2769 fmul [0x858CDC] (not / 1000.0F)
+    // 0x6D2752..0x6D2769: ((depth * suspensionForceLevel) * depth) * mass * 0.001 (the depth is multiplied in twice, NOT squared first: a different float rounding)
+    float fSpeedMult = fImmersionDepth * m_pHandlingData->m_fSuspensionForceLevel * fImmersionDepth * m_fMass * 0.001F; // 0x6D2769 fmul [0x858CDC] (not / 1000.0F)
     if (m_nModelIndex == MODEL_SKIMMER) {
         fSpeedMult *= 30.0F;
     }

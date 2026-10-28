@@ -92,8 +92,9 @@ void CTaskSimpleCarCloseDoorFromInside::StartAnim(CPed const* ped) {
 // NOTSA
 void CTaskSimpleCarCloseDoorFromInside::ProcessDoorOpen(CPed const* ped) {
     const auto [grpId, animId] = ComputeAnimID_Helper();
+    // 0x64D9FF (ProcessPed) and 0x64AF99 (MakeAbortable) pass the task's ped; only the anim-finished callback (0x6464CA) passes null.
     m_veh->ProcessOpenDoor(
-        nullptr,
+        const_cast<CPed*>(ped),
         m_door,
         grpId,
         animId,

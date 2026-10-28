@@ -2,7 +2,7 @@
 
 | slice | subsystem | functions | status | files |
 |---|---|---|---|---|
-| S01 | game_sa/Tasks/TaskTypes | 40 | pending | TaskInteriorBeInHouse.cpp, TaskInteriorBeInOffice.cpp, TaskInteriorBeInShop.cpp, TaskInteriorLieInBed.cpp, TaskInteriorShopKeeper.cpp, TaskInteriorSitAtDesk.cpp ... |
+| S01 | game_sa/Tasks/TaskTypes | 40 | partial 22/40 (11 M, 11 fixed) -> S01b | TaskInteriorBeInHouse.cpp, TaskInteriorBeInOffice.cpp, TaskInteriorBeInShop.cpp, TaskInteriorLieInBed.cpp, TaskInteriorShopKeeper.cpp, TaskInteriorSitAtDesk.cpp ... |
 | S02 | game_sa/Tasks/TaskTypes | 40 | pending | TaskComplexAvoidEntity.cpp, TaskComplexAvoidOtherPedWhileWandering.cpp, TaskComplexBeInCouple.cpp, TaskComplexBeInGroup.cpp, TaskComplexBeStill.cpp, TaskComplexCarDrive.cpp ... |
 | S03 | game_sa/Tasks/TaskTypes | 43 | pending | TaskComplexDragPedFromCar.cpp, TaskComplexDriveFireTruck.cpp, TaskComplexDriveToPoint.cpp, TaskComplexDriveWander.cpp, TaskComplexEnterBoatAsDriver.cpp, TaskComplexEnterCar.cpp ... |
 | S04 | game_sa/Tasks/TaskTypes | 40 | pending | TaskComplexFleeShooting.cpp, TaskComplexFollowLeaderAnyMeans.cpp, TaskComplexFollowLeaderInFormation.cpp, TaskComplexFollowNodeRoute.cpp, TaskComplexFollowPatrolRoute.cpp, TaskComplexFollowPedFootsteps.cpp ... |
@@ -73,3 +73,4 @@
 | S17d | rest of S17c | 10 | partial 5/10 (5 M) -> S17e | Bike.cpp, Bmx.cpp, Boat.cpp |
 | S17e | rest of S17d | 5 | partial 4/5 (3 M, 1 fixed; Bike ProcessControl to 0x6B97C9) -> S17f | Bike.cpp, Boat.cpp |
 | S17f | rest of S17e | 1 | done (MATCH, Bike ProcessControl complete) | Bike.cpp |
+| S01b | rest of S01 | 18 | pending | TaskComplexArrestPed.cpp, TaskComplexSeekEntityRadiusAngleOffset.cpp, TaskComplexSeekEntityStandard.cpp |

@@ -415,10 +415,10 @@ CVehicle::~CVehicle() {
         m_vehicleSpecialColIndex = -1;
     }
 
-    for (auto particle : { m_pOverheatParticle, m_pFireParticle, m_pDustParticle }) {
-        if (particle) {
-            g_fxMan.DestroyFxSystem(particle);
-            particle = nullptr;
+    for (auto* particle : { &m_pOverheatParticle, &m_pFireParticle, &m_pDustParticle }) { // 0x6E2C69: the members are cleared
+        if (*particle) {
+            g_fxMan.DestroyFxSystem(*particle);
+            *particle = nullptr;
         }
     }
 
@@ -427,7 +427,7 @@ CVehicle::~CVehicle() {
         m_pCustomCarPlate = nullptr;
     }
 
-    const auto iRopeInd = CRopes::FindRope(NOTSA_PTR_ID32(this) + 1);
+    const auto iRopeInd = CRopes::FindRope(GetRopeID()); // 0x6E2CD3: this + 0x1D (&m_nFlags + 1), the winch key
     if (iRopeInd >= 0) {
         CRopes::GetRope(iRopeInd).Remove();
     }

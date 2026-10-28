@@ -2294,14 +2294,15 @@ bool CPlayerPed::FindWeaponLockOnTarget() {
 
     // The original does the angle arithmetic in extended precision, hence `double`
     // Wraps the angle into [-pi, pi] and returns its absolute value
-    const auto WrapAngleAbs = [&](double a) {
-        while (a > (double)PI) {
-            a -= (double)TWO_PI;
+    // NOTE: x87d, not double: the exe runs this at PC24 (0x60E114..0x60E1E8), the portable build has to round per operation
+    const auto WrapAngleAbs = [&](x87d a) -> x87d {
+        while (a > (x87d)PI) {
+            a -= (x87d)TWO_PI;
         }
-        while (a < (double)-PI) { // 0x858CC0
-            a += (double)TWO_PI;
+        while (a < (x87d)-PI) { // 0x858CC0
+            a += (x87d)TWO_PI;
         }
-        return a < 0.0 ? -a : a;
+        return a < (x87d)0.0 ? -a : a;
     };
 
     const auto  wepType = GetActiveWeapon().m_Type;

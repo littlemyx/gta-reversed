@@ -1973,41 +1973,42 @@ void CWorld::TriggerExplosionSectorList(PtrListType& ptrList, const CVector& poi
 
         if (entity->GetIsStatic()) {
             if (!entity->GetIsTypeObject()) {
+                // exe 0x5679B4: a static non-object only gets woken up (no ATM / ObjectDamage part)
                 if (entity->GetUsesCollision()) {
                     entity->SetIsStatic(false);
                     entity->AddToMovingList();
                 }
-            } else if (!entity->physicalFlags.bDisableTurnForce) {
+            } else {
                 const auto object = entity->AsObject();
 
-                if (visibleDistance > object->m_pObjectInfo->m_fUprootLimit || ModelIndices::IsFence1Or2(object->m_nModelIndex)) {
-                    if (CGlass::IsObjectGlass(object)) {
-                        CGlass::WindowRespondsToExplosion(object, point);
-                    } else {
-                        object->SetIsStatic(false);
-                        object->AddToMovingList();
+                // exe 0x567841: `test al, dl` with al = 4 => physical flags bit 2 (bDisableCollisionForce), not bDisableTurnForce
+                if (!object->physicalFlags.bDisableCollisionForce) {
+                    if (visibleDistance > object->m_pObjectInfo->m_fUprootLimit || ModelIndices::IsFence1Or2(object->m_nModelIndex)) {
+                        if (CGlass::IsObjectGlass(object)) {
+                            CGlass::WindowRespondsToExplosion(object, point);
+                        } else {
+                            object->SetIsStatic(false);
+                            object->AddToMovingList();
 
-                        if (object->m_nModelIndex != ModelIndices::MI_FIRE_HYDRANT
-                            || object->objectFlags.bIsExploded) {
-                            if (object->GetIsTypeObject() && !object->m_pObjectInfo->m_bCausesExplosion) {
+                            if (object->m_nModelIndex != ModelIndices::MI_FIRE_HYDRANT
+                                || object->objectFlags.bIsExploded) {
+                                if (object->GetIsTypeObject() && !object->m_pObjectInfo->m_bCausesExplosion) {
+                                    object->objectFlags.bIsExploded = true;
+                                }
+                            } else {
+                                g_fx.TriggerWaterHydrant(object->GetPosition());
                                 object->objectFlags.bIsExploded = true;
                             }
-                        } else {
-                            g_fx.TriggerWaterHydrant(object->GetPosition());
-                            object->objectFlags.bIsExploded = true;
                         }
                     }
                 }
-            }
 
-            if (entity->m_nModelIndex == ModelIndices::MI_ATM && creator == FindPlayerPed()) {
-                assert(0); // NOTSA
-                // Makes no sense whatsoever, especially because `radiusProgress2x` is only set after later
-                // entity->AsObject()->m_fHealth -= 2 * radiusProgress2x;
-            }
+                // exe 0x567928: `if (model == MI_ATM && creator == FindPlayerPed()) {}` has an empty body in the exe (the ATM health hit is NOT in the exe)
 
-            if (entity->GetIsStatic()) { // Redudant check
-                entity->AsObject()->ObjectDamage(std::min(1.0f, 2.f * (radius - entityToPointDist) / radius), nullptr, nullptr, creator, WEAPON_EXPLOSION);
+                if (object->GetIsStatic()) { // exe 0x567957: static objects that were not woken up take damage
+                    // exe 0x567965..0x5679AD: min(1, 2 * ((radius - dist) / radius)) * 300
+                    object->ObjectDamage(std::min(1.0f, ((radius - entityToPointDist) / radius) * 2.f) * 300.f, nullptr, nullptr, creator, WEAPON_EXPLOSION);
+                }
             }
         }
 
@@ -2015,9 +2016,12 @@ void CWorld::TriggerExplosionSectorList(PtrListType& ptrList, const CVector& poi
             continue;
         }
 
-        const auto entityRelDistToRadiusEnd_Doubled = std::min(1.f, 2.f * (radius - entityToPointDist) / radius);
+        // exe 0x5679E8: (radius - dist) * (1 / radius) * 2, the reciprocal is a float temp (not a division)
+        const float recipRadius = 1.0f / radius;
+        const auto entityRelDistToRadiusEnd_Doubled = std::min(1.f, ((radius - entityToPointDist) * recipRadius) * 2.f);
 
-        auto impactVelocity = entityToPointDir / std::max(0.01f, entityToPointDist);
+        // exe 0x567A42: 1 / max(0.01, dist) and a multiplication per component (not a per-component division)
+        auto impactVelocity = ExeDivide(entityToPointDir, std::max(0.01f, entityToPointDist));
         impactVelocity.z = std::max(impactVelocity.z, 0.f);
 
         float impactVelocityFactor = entity->m_fMass * ExeRecip(1400.f) * entityRelDistToRadiusEnd_Doubled * visibleDistance;
@@ -2034,7 +2038,7 @@ void CWorld::TriggerExplosionSectorList(PtrListType& ptrList, const CVector& poi
                     driver,
                     veh,
                     WEAPON_EXPLOSION,
-                    (uint32)(damage * entityRelDistToRadiusEnd_Doubled * 1100.f),
+                    NOTSA_FTOL(uint32, damage * entityRelDistToRadiusEnd_Doubled * 1100.f),
                     PED_PIECE_TORSO,
                     driver->GetLocalDirection(impactVelocity)
                 );
@@ -2056,13 +2060,14 @@ void CWorld::TriggerExplosionSectorList(PtrListType& ptrList, const CVector& poi
             CColPoint cp{};
             float maxTouchDist{ 100'000.f };
             if (CCollision::ProcessSphereBox(
-                    CColSphere{ veh->GetMatrix().TransformVector(-entityToPointDir), entityToPointDist },
+                    CColSphere{ veh->GetMatrix().InverseTransformVector(-entityToPointDir), entityToPointDist }, // exe 0x567C56: 0x59C810 (inverse / transposed rotation), not 0x59C790
                     veh->GetColModel()->m_boundBox,
                     cp,
                     maxTouchDist
                 )) {
                 auto colNormal = veh->GetMatrix().TransformVector(-cp.m_vecNormal);
-                if (auto& z = colNormal.z; z >= -0.f) { // TODO: Wat is dis?
+                // exe 0x567D71: z < -0.2 => -0.2; 0 < z < 0.2 => z + 0.2 (the port had -0.0 as the lower threshold)
+                if (auto& z = colNormal.z; z >= -0.2f) {
                     if (z < 0.2f && z > 0.f) {
                         z += 0.2f;
                     }
@@ -2071,28 +2076,35 @@ void CWorld::TriggerExplosionSectorList(PtrListType& ptrList, const CVector& poi
                 }
 
                 colPointPos = veh->GetMatrix().TransformVector(cp.m_vecPoint);
-                const auto colPointToExploPointDist = ((colPointPos + veh->GetPosition()) - point).Magnitude();
+                // exe 0x567DCE..0x567E22: the length is summed z, y, x (CVector::Magnitude is x, y, z)
+                const auto colPointToExploPointDist = [&] {
+                    const CVector d = (colPointPos + veh->GetPosition()) - point;
+                    return (float)std::sqrt(((x87d)d.z * d.z + (x87d)d.y * d.y) + (x87d)d.x * d.x);
+                }();
 
                 // TODO: Document this a little better pls
 
-                auto forceFactor = std::min(1.f, (radius - colPointToExploPointDist) / radius * 2.f);
+                auto forceFactor = std::min(1.f, ((radius - colPointToExploPointDist) * recipRadius) * 2.f); // exe 0x567E28: * (1 / radius)
                 if (entity == victim) {
                     forceFactor *= VEHICLE_EXPLOSION_THIS_EXPLODING_MULT;
                 }
 
                 forceFactor *= std::min(1.f, veh->m_fMass / VEHICLE_EXPLOSION_STD_MASS);
                 forceFactor *= visibleDistance;
-                if (float dot = DotProduct(veh->GetSpeed(colPointPos), colNormal); dot > forceFactor * 3.f) {
+                // exe 0x567EB3: (n.y * s.y + n.z * s.z) + n.x * s.x, times the vehicle's mass
+                const CVector colSpeed = veh->GetSpeed(colPointPos);
+                if (float dot = (float)(((x87d)colNormal.y * colSpeed.y + (x87d)colNormal.z * colSpeed.z) + (x87d)colNormal.x * colSpeed.x) * veh->m_fMass; dot > forceFactor * 3.f) {
                     forceFactor = std::max(0.f, forceFactor - dot);
                 }
 
-                if (!veh->physicalFlags.bDisableTurnForce) {
-                    veh->ApplyTurnForce(colNormal * forceFactor, colPointPos);
+                // exe 0x567F0B/0x567F68: `test byte [esi+0x40], 4` = bDisableCollisionForce, and CPhysical::ApplyForce(force, point, true)
+                if (!veh->physicalFlags.bDisableCollisionForce) {
+                    veh->ApplyForce(colNormal * forceFactor, colPointPos, true);
                 }
             }
 
             if (veh->IsSubPlane()) {
-                auto normalBackwards = cp.m_vecNormal;
+                auto normalBackwards = -cp.m_vecNormal; // exe 0x567FC4: fchs of the colpoint normal
                 auto colPos = colPointPos + veh->GetPosition();
                 veh->VehicleDamage(1000.f, eVehicleCollisionComponent::DEFAULT, creator, &colPos, &normalBackwards, WEAPON_EXPLOSION);
             }
@@ -2102,11 +2114,11 @@ void CWorld::TriggerExplosionSectorList(PtrListType& ptrList, const CVector& poi
         case ENTITY_TYPE_PED: {
             const auto ped = entity->AsPed();
 
-            const auto pedLocalDir = ped->GetLocalDirection(impactVelocity);
+            const auto pedLocalDir = ped->GetLocalDirection(CVector2D{ -impactVelocity.x, -impactVelocity.y }); // exe 0x568010: the direction is negated
             if (const auto attachedTo = ped->m_pAttachedTo; attachedTo && attachedTo->GetIsTypeVehicle() && attachedTo->GetStatus() == STATUS_WRECKED) {
                 CPedDamageResponseCalculator pedDamageResponseCalculator{ creator, 1000.f, WEAPON_EXPLOSION, PED_PIECE_TORSO, false };
 
-                CEventDamage eventDamage{ creator, CTimer::GetTimeInMS(), WEAPON_EXPLOSION, PED_PIECE_TORSO, static_cast<uint8>(pedLocalDir), false, !!ped->bIsTalking };
+                CEventDamage eventDamage{ creator, CTimer::GetTimeInMS(), WEAPON_EXPLOSION, PED_PIECE_TORSO, static_cast<uint8>(pedLocalDir), false, !!ped->bInVehicle }; // exe 0x568079: (flags >> 8) & 1 = bInVehicle
                 if (eventDamage.AffectsPed(ped)) {
                     pedDamageResponseCalculator.ComputeDamageResponse(ped, eventDamage.m_damageResponse, true);
                 } else {
@@ -2117,7 +2129,8 @@ void CWorld::TriggerExplosionSectorList(PtrListType& ptrList, const CVector& poi
             } else {
                 if (!attachedTo) {
                     impactVelocityFactor = std::min(impactVelocityFactor, ped->m_fMass / 4.f);
-                    if (const float dot = DotProduct(ped->m_vecMoveSpeed, impactVelocity) * ped->m_fMass; dot > 2.f * impactVelocityFactor) {
+                    // exe 0x568147: (iy * vy + iz * vz) + ix * vx, times the mass
+                    if (const float dot = (float)(((x87d)impactVelocity.y * ped->m_vecMoveSpeed.y + (x87d)impactVelocity.z * ped->m_vecMoveSpeed.z) + (x87d)impactVelocity.x * ped->m_vecMoveSpeed.x) * ped->m_fMass; dot > 2.f * impactVelocityFactor) {
                         impactVelocityFactor = std::max(0.f, impactVelocityFactor - dot);
                     }
 
@@ -2135,7 +2148,7 @@ void CWorld::TriggerExplosionSectorList(PtrListType& ptrList, const CVector& poi
 
                 CPedDamageResponseCalculator pedDamageResponseCalculator{ creator, entityRelDistToRadiusEnd_Doubled * 250.f, WEAPON_EXPLOSION, PED_PIECE_TORSO, false };
 
-                CEventDamage eventDamage{ creator, CTimer::GetTimeInMS(), WEAPON_EXPLOSION, PED_PIECE_TORSO, (uint8)pedLocalDir, false, !!ped->bIsTalking };
+                CEventDamage eventDamage{ creator, CTimer::GetTimeInMS(), WEAPON_EXPLOSION, PED_PIECE_TORSO, (uint8)pedLocalDir, false, !!ped->bInVehicle }; // exe 0x568237: (flags >> 8) & 1 = bInVehicle
                 if (eventDamage.AffectsPed(ped)) {
                     pedDamageResponseCalculator.ComputeDamageResponse(ped, eventDamage.m_damageResponse, true);
                 } else {
@@ -2145,7 +2158,7 @@ void CWorld::TriggerExplosionSectorList(PtrListType& ptrList, const CVector& poi
                 ped->GetIntelligence()->m_eventGroup.Add(&eventDamage, false);
 
                 if (creator && creator->GetIsTypePed()) {
-                    CCrime::ReportCrime(creator->AsPed()->m_nPedType == PED_TYPE_COP ? CRIME_DAMAGE_COP_CAR : CRIME_DAMAGE_CAR, ped, creator->AsPed());
+                    CCrime::ReportCrime(ped->m_nPedType == PED_TYPE_COP ? CRIME_DAMAGE_COP_CAR : CRIME_DAMAGE_CAR, ped, creator->AsPed()); // exe 0x5682F5: the VICTIM's ped type
                 }
             }
             break;

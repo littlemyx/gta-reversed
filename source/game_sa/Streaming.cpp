@@ -2355,9 +2355,10 @@ bool CStreaming::RemoveLoadedVehicle() {
         return true;
     }
 
-    if (CPopulation::m_LoadedBoats.CountMembers() >= (m_bBoatsNeeded ? 2u : 0u)) {
+    // 0x40C083: boats are only removed while MORE than (m_bBoatsNeeded ? 2 : 0) are loaded, and a removed boat returns true (jumps to the shared RemoveModel + ret 1)
+    if ((int32)CPopulation::m_LoadedBoats.CountMembers() > (m_bBoatsNeeded ? 2 : 0)) {
         if (ProcessGroup(CPopulation::m_LoadedBoats)) {
-            return false;
+            return true;
         }
     }
 

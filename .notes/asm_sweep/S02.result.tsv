@@ -1,0 +1,42 @@
+addr	function	verdict	asm range	note	fix commit
+0x66FD30	CTaskComplexAvoidEntity::ComputeRoute	MATCH	0x66FD30-0x66FD97 (all)	arg order (RoutePoint1=+0x38, RoutePoint2=+0x2C) and sphere centre z = ped z match	-
+0x66F6C0	CTaskComplexAvoidEntity::ComputeBoundingSphere	MATCH	0x66F6C0-0x66FCBE (all)	sum/avg in x87, float-rounded max, (dy2+dx2)+r2, sqrt+0.7f, Set(…,0,0,0xFF)	-
+0x672530	CTaskComplexAvoidEntity::CreateFirstSubTask	MATCH	0x672530-0x6725D? (all)	m_PedPos copy, ComputeRoute false -> StopLooking+null, GoToPoint(moveState,RoutePoint2,0.5,0,0)	-
+0x66A2C0	CTaskComplexAvoidOtherPedWhileWandering::CreateNextSubTask	MATCH	0x66A2C0-0x66A31E (all)	type 0xCB=STAND_STILL -> CreateFirstSubTask; else QuitIK(250)+clear flag 0x40	-
+0x674610	CTaskComplexAvoidOtherPedWhileWandering::CreateFirstSubTask	MATCH	0x674610-0x674730 (all; outside list)	ComputeAvoidSphere+RouteRoundSphere, flag, GoToPoint(moveState,detour), DontQuitYet 2000	-
+0x6721B0	CTaskComplexAvoidOtherPedWhileWandering::ControlSubTask	FIXED	0x6721B0-0x672517 (all)	!m_IsMovingTarget quit (exe still computes detour), WantsToQuit path skips QuitIK, strict > for z 3.0/dist 1.0/dist 7.25, dot vs float 0.923f	1031d063
+0x684840	CTaskComplexBeInCouple::CreateNextSubTask	MATCH	0x684840-0x6848F? (all)	leader->WanderStandard(WALK,rand 0..8,true), follower->WalkAlongside(partner,giveUp)	-
+0x684930	CTaskComplexBeInCouple::ControlSubTask	MATCH	0x684930-0x684D0F (all)	partner/leader checks, offset +-1.05, distSq x87 order, giveUp/2.25/4.0 compares incl NaN, PointArm/LookAt args, rand order all match	-
+0x633010	CTaskComplexBeInGroup::MonitorMainGroupTask	MATCH	0x633010-0x6330A5 (all)		-
+0x632EB0	CTaskComplexBeInGroup::MakeAbortable	MATCH	0x632EB0-0x632F3B (all)		-
+0x638AA0	CTaskComplexBeInGroup::ControlSubTask	MATCH	0x638AA0-0x638AB7 (all)		-
+0x62F8D0	CTaskComplexBeStill::CreateNextSubTask	MATCH	0x62F8D0-0x62F90B (all)	STAND_STILL(0xCB)/CAR_DRIVE(0x2C5) -> CreateFirstSubTask	-
+0x62F910	CTaskComplexBeStill::CreateFirstSubTask	MATCH	0x62F910-0x62F9E? (all)	inVehicle->CarDrive(veh,null,false) else StandStill(0,true,false,8.0)	-
+0x642FA0	CTaskComplexCarDrive::CreateSubTask	MATCH	0x642FA0-0x64313E (all)	switch table incl SetUpCar virtual, ctor args, default -> null	-
+0x643200	CTaskComplexCarDrive::CreateSubTaskCannotGetInCar	MATCH	0x643200-0x64320B (all)		-
+0x644E20	CTaskComplexCarDrive::CreateNextSubTask	FIXED	0x644E20-0x645003 (all)	CREATE_CAR_AND_GET_IN case re-registers m_Veh without CleanUpOldReference (SetEntityReference); other cases match	ec755b76
+0x645100	CTaskComplexCarDrive::CreateFirstSubTask	MATCH	0x645100-0x64523D (all)		-
+0x645240	CTaskComplexCarDrive::ControlSubTask	FIXED	0x645240-0x6452C? (all)	GO_TO_POINT_ANY_MEANS case: SetEntityReference (no cleanup of old ref) like the exe	ec755b76
+0x63CD20	CTaskComplexCarDriveMission::SetUpCar	MATCH	0x63CD20-0x63CDF8 (all)	save style/mission/speed+flag, JoinCar, status 3, mission+time, ftol speed to u8, m_speed, style, target+ref, engine flag	-
+0x64C580	CTaskComplexCarSlowBeDraggedOut::Destructor	MATCH	0x64C580-0x64C5F? (all)	cleanup ref [0xC], delete lineup util [0x18]	-
+0x648520	CTaskComplexCarSlowBeDraggedOut::CreateTaskUtilityLineUpPedWithCar	MATCH	0x648520-0x64858F (all)	LineUp(vec 0,0,0, 0, 0, door)	-
+0x64C600	CTaskComplexCarSlowBeDraggedOut::MakeAbortable	FIXED	0x64C600-0x64C69B (all)	condition inverted: exe aborts (subtask abort + SlowDraggedOut::ProcessPed, true) only for IMMEDIATE, returns false otherwise	dc6fc449
+0x64C8B0	CTaskComplexCarSlowBeDraggedOut::CreateFirstSubTask	FIXED	0x64C8B0-0x64C93F (all)	missing guard: exe returns null if ped is not in a vehicle (before PrepareVehicleForPedExit etc)	4a2ed787
+0x6488F0	CTaskComplexCarSlowBeDraggedOutAndStandUp::CreateNextSubTask	MATCH	0x6488F0-0x648A0A (all)	(only NaN health edge differs)	-
+0x648A10	CTaskComplexCarSlowBeDraggedOutAndStandUp::CreateFirstSubTask	MATCH	0x648A10-0x648B3F (all)	player audio, radio, anim-group checks, audio event switch table, subtask types	-
+0x682E20	CTaskComplexChat::CreateFirstSubTask	MATCH	0x682E20-0x683045 (all)	partner null, StandStill(999999), Say, InterestingEvents(1), ctx 0xA4/0xA7/0xA8 random end-chat anims 0xA6-0xA8 (0,3), Chat 4000/999999	-
+0x68C9E0	CTaskComplexCopInCar::CreateSubTask	FIXED	0x68C9E0-0x68CCE4 (all)	non-player drive-mission style: MaxFlatVelocity * 54.0f single multiply (port 60*0.9); decision-maker ids, ctor args, WanderCop, mission constants match	63546ca5
+0x68FA50	CTaskComplexCopInCar::CreateNextSubTask	FIXED	0x68FA50-0x68FD3B (all)	CAR_DRIVE: MISSION_NONE is a plain store of m_nCarMission (port SetCarMission also set m_nTimeToStartMission); pursuit / enter-car / leave-car branches match	63546ca5
+0x68FA10	CTaskComplexCopInCar::CreateFirstSubTask	MATCH	0x68FA10-0x68FA4B (all)		-
+0x68FD50	CTaskComplexCopInCar::ControlSubTask	PARTIAL	0x68FD50-0x68FDC3 compared	same plain-store fix for the driverless-vehicle MISSION_NONE (63546ca5); IsDriver update matches; switch body 0x68FDC3-0x6901E9 NOT compared (NOT_REACHED)	63546ca5
+0x6577F0	CTaskComplexDiveFromAttachedEntityAndGetUp::CreateNextSubTask	MATCH	0x6577F0-0x65781F (all)	ACHIEVE_HEADING(0x386) -> DettachPedFromEntity then base CreateNextSubTask	-
+0x6288C0	CTaskComplexDestroyCar::ControlSubTask	NOT_REACHED	-	budget; continue in S02b	-
+0x628A70	CTaskComplexDestroyCarMelee::CreateSubTask	NOT_REACHED	-	budget; continue in S02b	-
+0x6289F0	CTaskComplexDestroyCarMelee::CalculateSearchPositionAndRanges	NOT_REACHED	-	budget; continue in S02b	-
+0x62DB20	CTaskComplexDestroyCarMelee::CreateFirstSubTask	NOT_REACHED	-	budget; continue in S02b	-
+0x6302D0	CTaskComplexDie::CreateFirstSubTask	NOT_REACHED	-	budget; continue in S02b	-
+0x6377B0	CTaskComplexDieInCar::ControlSubTask	NOT_REACHED	-	budget; continue in S02b	-
+0x62FD50	CTaskComplexDieInCar::CreateSubTask	NOT_REACHED	-	budget; continue in S02b	-
+0x6375F0	CTaskComplexDieInCar::CreateFirstSubTask	NOT_REACHED	-	budget; continue in S02b	-
+0x637850	CTaskComplexDieInCar::CreateNextSubTask	NOT_REACHED	-	budget; continue in S02b	-
+0x62FD00	CTaskComplexDieInCar::PreparePedVehicleForPedDeath	NOT_REACHED	-	budget; continue in S02b	-

@@ -177,12 +177,12 @@ CTask* CTaskComplexUseMobilePhone::ControlSubTask(CPed* ped) {
         const auto phoneIn  = RpAnimBlendClumpGetAssociation(ped->GetRpClump(), (uint32)ANIM_ID_PHONE_IN);
         const auto phoneOut = RpAnimBlendClumpGetAssociation(ped->GetRpClump(), (uint32)ANIM_ID_PHONE_OUT);
         if (phoneIn) {
-            if ((double)phoneIn->m_CurrentTime >= (double)0.85f) { // 0x634DD0: fcomp float 0x862E1C = 0.85f; `test ah,1; jne` skips on < AND on NaN (unordered sets C0)
+            if ((x87d)phoneIn->m_CurrentTime >= (x87d)0.85f) { // 0x634DD0: fcomp float 0x862E1C = 0.85f; `test ah,1; jne` skips on < AND on NaN (unordered sets C0)
                 ped->AddWeaponModel(PHONE_MODEL_ID);
             }
         } else if (phoneOut) {
             // 0x86E4A0 = 1.566 (double)
-            if ((double)phoneOut->m_CurrentTime >= 1.566) { // 0x634DF9: NaN skips
+            if ((x87d)phoneOut->m_CurrentTime >= (x87d)1.566) { // 0x634DF9: NaN skips
                 if (((x87d)phoneOut->m_CurrentTime - (x87d)phoneOut->m_TimeStep) < 1.566) { // 0x634E0C: `test ah,5; jp` skips for >=, == and NaN
                     HidePhone(ped);
                 }

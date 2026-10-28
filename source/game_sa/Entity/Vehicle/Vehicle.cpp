@@ -1015,7 +1015,7 @@ void CVehicle::ProcessDrivingAnims(CPed* driver, bool blend) {
         return;
     }
 
-    auto fUsedAngle = std::fabs(m_fSteerAngle / 0.61F);
+    auto fUsedAngle = std::fabs(m_fSteerAngle * std::bit_cast<float>(0x3FD1D608u)); // 0x6DF816 fmul [0x871FD4] = 1/0.61 (not / 0.61F)
     fUsedAngle = std::clamp(fUsedAngle, 0.0F, 1.0F);
 
     if (m_fSteerAngle < 0) {
@@ -1109,7 +1109,7 @@ bool CVehicle::CanPedJumpOutCar(CPed* ped) {
 
     m_vecTurnSpeed *= 0.9F; // BUG(PRONE): We are modifying vehicle move and turn speeds in function that seems that it should be const
     auto const fMoveSpeedSquared = m_vecMoveSpeed.SquaredMagnitude();
-    if (fMoveSpeedSquared / 100.0F > sq(CTimer::GetTimeStep()) * sq(0.008F))
+    if (fMoveSpeedSquared * 0.01F > sq(CTimer::GetTimeStep()) * sq(0.008F)) // 0x6D2153: fld [0x858C58] (0.01f), fmul st(1) (not / 100.0F)
     {
         m_vecMoveSpeed *= 0.9F;
         return false;
@@ -1991,7 +1991,7 @@ void CVehicle::SetComponentVisibility(RwFrame* component, uint32 visibilityState
 
 // 0x6D2740
 void CVehicle::ApplyBoatWaterResistance(tBoatHandlingData* boatHandling, float fImmersionDepth) {
-    float fSpeedMult = sq(fImmersionDepth) * m_pHandlingData->m_fSuspensionForceLevel * m_fMass / 1000.0F;
+    float fSpeedMult = sq(fImmersionDepth) * m_pHandlingData->m_fSuspensionForceLevel * m_fMass * 0.001F; // 0x6D2769 fmul [0x858CDC] (not / 1000.0F)
     if (m_nModelIndex == MODEL_SKIMMER) {
         fSpeedMult *= 30.0F;
     }
@@ -5098,8 +5098,8 @@ void CVehicle::ProcessBoatControl(tBoatHandlingData* boatHandling, float* fLastW
             || (GetForward().z < -0.5F
             && GetUp().z > -0.5F
             && m_vecMoveSpeed.z < -0.15F
-            && fCheckedMass * 0.01F / 125.0F < vecBuoyancyForce.z
-            && vecBuoyancyForce.z < fCheckedMass * 0.4F / 125.0F)
+            && fCheckedMass * std::bit_cast<float>(0x38A7C5ADu) < vecBuoyancyForce.z // 0x6DC079 fmul [0x871FB8] (folded 0.01F/125, not a divide)
+            && vecBuoyancyForce.z < fCheckedMass * 0.4F * 0.008F) // 0x6DC090..0x6DC098 fmul 0.4f, fmul [0x863984]
         ) {
             bOnWater = false;
 
@@ -5128,7 +5128,7 @@ void CVehicle::ProcessBoatControl(tBoatHandlingData* boatHandling, float* fLastW
         else
             fMoveForce *= m_GasPedal;
 
-        auto fMaxMoveForce = CTimer::GetTimeStep() * boatHandling->m_fAqPlaneLimit * m_fMass / 125.0F;
+        auto fMaxMoveForce = CTimer::GetTimeStep() * boatHandling->m_fAqPlaneLimit * m_fMass * 0.008F; // 0x6DC291 fmul [0x863984] (not / 125.0F)
         fMoveForce = std::min(fMoveForce, fMaxMoveForce);
 
         auto vecUsedMoveForce = GetUp() * fMoveForce;
@@ -5323,7 +5323,7 @@ void CVehicle::ProcessBoatControl(tBoatHandlingData* boatHandling, float* fLastW
             m_vehicleAudio.AddAudioEvent(eAudioEvents::AE_BOAT_HIT_WAVE, fAudioVolume);
 
         if (fWaveMult > 200.0F) {
-            auto fZComp = m_vecMoveSpeed.SquaredMagnitude() * fWaveMult / 1000.0F;
+            auto fZComp = m_vecMoveSpeed.SquaredMagnitude() * fWaveMult * 0.001F; // 0x6DCF7C fmul [0x858CDC] (not / 1000.0F)
             CVector vecWaveMoveForce(0.0F, 0.0F, fZComp);
 
             vecWaveMoveForce.z = std::min(vecWaveMoveForce.z, m_pHandlingData->m_fBrakeDeceleration - m_vecMoveSpeed.z);

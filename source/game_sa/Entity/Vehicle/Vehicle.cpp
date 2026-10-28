@@ -6561,12 +6561,25 @@ void CVehicle::DoHeadLightBeam(eVehicleLightId lightId, CMatrix& vehicleMatrix, 
         return;
     }
 
-    CVector point = vehicleMatrix.GetPosition() + vehicleMatrix.TransformVector(pointModelSpace);
+    // ASM-S19m: the exe keeps several products unrounded on the x87 stack (0x6E0E20): the point is `MultiplyMatrixWithVector` (0x59C890, includes the
+    // translation in the same x87 expression), in `point -= 2x * right` only the x product is unrounded (y/z are stored as floats first)
+    const auto& vFwd   = vehicleMatrix.GetForward();
+    const auto& vUp    = vehicleMatrix.GetUp();
+    const auto& vRight = vehicleMatrix.GetRight();
+
+    CVector point = vehicleMatrix.TransformPoint(pointModelSpace);
     if (!isRight) {
-        point -= 2 * pointModelSpace.x * vehicleMatrix.GetRight();
+        const float twiceX = pointModelSpace.x + pointModelSpace.x;
+        const float subY   = twiceX * vRight.y;
+        const float subZ   = twiceX * vRight.z;
+        point.x = (float)((x87d)point.x - (x87d)twiceX * vRight.x);
+        point.y -= subY;
+        point.z -= subZ;
     }
     const CVector pointToCamDir = Normalized(TheCamera.GetPosition() - point);
-    const auto    alpha         = NOTSA_FTOL(uint8, (1.0f - std::fabs(DotProduct(pointToCamDir, vehicleMatrix.GetForward()))) * 32.0f);
+    // dot (z,y,x order, summed unrounded, one float rounding), then 1 - |dot| and the *32 stay unrounded up to the _ftol
+    const float   camDot        = (float)((((x87d)pointToCamDir.z * vFwd.z) + (x87d)pointToCamDir.y * vFwd.y) + (x87d)pointToCamDir.x * vFwd.x);
+    const auto    alpha         = NOTSA_FTOL(uint8, ((x87d)1.0f - std::fabs(camDot)) * 32.0f);
 
     RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,         RWRSTATE(FALSE));
     RwRenderStateSet(rwRENDERSTATEZTESTENABLE,          RWRSTATE(TRUE));
@@ -6580,16 +6593,45 @@ void CVehicle::DoHeadLightBeam(eVehicleLightId lightId, CMatrix& vehicleMatrix, 
     RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTIONREF, RWRSTATE(FALSE));
 
     const float   angleMult   = ModelIndices::IsForklift(GetModelIndex()) ? 0.5f : 0.15f;
-    const CVector lightNormal = Normalized(vehicleMatrix.GetForward() - vehicleMatrix.GetUp() * angleMult);
+    // x/y products are stored as floats, the z product stays unrounded (0x6E1010..0x6E103E)
+    const CVector lightNormal = Normalized(CVector{
+        vFwd.x - vUp.x * angleMult,
+        vFwd.y - vUp.y * angleMult,
+        (float)((x87d)vFwd.z - (x87d)vUp.z * angleMult)
+    });
     const CVector lightRight  = Normalized(CrossProduct(lightNormal, pointToCamDir));
-    const CVector lightPos    = point - vehicleMatrix.GetForward() * 0.1f;
+    // x/y products unrounded, z product stored as float (0x6E1069..0x6E10A8)
+    const CVector lightPos{
+        (float)((x87d)point.x - (x87d)vFwd.x * 0.1f),
+        (float)((x87d)point.y - (x87d)vFwd.y * 0.1f),
+        point.z - vFwd.z * 0.1f
+    };
 
+    // 0x6E10AC..: v0 = lightPos - right*0.05 (x product stored as float, y/z unrounded), v1 = lightPos + right*0.05 (floats),
+    // v2/v3 = lightPos + normal*3 -/+ right*0.5 (y: unrounded sums; v2.x uses the unrounded nx*3), v4 = lightPos + normal*0.2 (x/y products unrounded, z float)
+    const float   n3x = lightNormal.x * 3.0f, n3y = lightNormal.y * 3.0f, n3z = lightNormal.z * 3.0f;
     const CVector posn[]      = {
-        lightPos - lightRight * 0.05f,
+        CVector{
+            lightPos.x - lightRight.x * 0.05f,
+            (float)((x87d)lightPos.y - (x87d)lightRight.y * 0.05f),
+            (float)((x87d)lightPos.z - (x87d)lightRight.z * 0.05f)
+        },
         lightPos + lightRight * 0.05f,
-        lightPos + lightNormal * 3.0f - lightRight * 0.5f,
-        lightPos + lightNormal * 3.0f + lightRight * 0.5f,
-        lightPos + lightNormal * 0.2f
+        CVector{
+            (float)((float)((x87d)lightNormal.x * 3.0f + lightPos.x) - lightRight.x * 0.5f),
+            (float)(((x87d)n3y + lightPos.y) - (x87d)lightRight.y * 0.5f),
+            (float)((float)(n3z + lightPos.z) - lightRight.z * 0.5f)
+        },
+        CVector{
+            (float)((float)(n3x + lightPos.x) + lightRight.x * 0.5f),
+            (float)(((x87d)n3y + lightPos.y) + (x87d)lightRight.y * 0.5f),
+            (float)((float)(n3z + lightPos.z) + lightRight.z * 0.5f)
+        },
+        CVector{
+            (float)((x87d)lightNormal.x * 0.2f + lightPos.x),
+            (float)((x87d)lightNormal.y * 0.2f + lightPos.y),
+            (float)(lightNormal.z * 0.2f) + lightPos.z
+        }
     };
     const uint8 alphas[] = { alpha, alpha, 0, 0, alpha };
 

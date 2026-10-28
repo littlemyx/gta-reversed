@@ -2631,7 +2631,8 @@ void CPlayerPed::ProcessControl() {
     float markColor = 1.0f;
     bool limitMarkColor = true;
     CVector effectPos;
-    CPad* pad = CPad::GetPad(m_nPedType);
+    // 0x60EB8B: only PED_TYPE_PLAYER1 / PED_TYPE_PLAYER2 own a pad, every other ped type gets none
+    CPad* pad = (m_nPedType == PED_TYPE_PLAYER1 || m_nPedType == PED_TYPE_PLAYER2) ? CPad::GetPad(m_nPedType) : nullptr;
     GetPlayerWanted()->Update();
     PruneReferences();
     if (GetActiveWeapon().m_Type == WEAPON_MINIGUN) {

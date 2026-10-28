@@ -1461,7 +1461,9 @@ CEntity* CWorld::TestSphereAgainstSectorList(PtrListType& ptrList, CVector spher
             continue;
         }
 
-        if (!entity->GetUsesCollision() || ignoreEntity == entity) {
+        entity->SetCurrentScanCode(); // exe 0x56622B: marked before the ignore / usesCollision / camera checks
+
+        if (ignoreEntity == entity || !entity->GetUsesCollision()) {
             continue;
         }
 
@@ -1469,13 +1471,12 @@ CEntity* CWorld::TestSphereAgainstSectorList(PtrListType& ptrList, CVector spher
             continue;
         }
 
-        entity->SetCurrentScanCode();
-
-        CColModel& entityColModel = *entity->GetColModel();
-
-        if ((entity->GetBoundCentre() - sphereCenter).Magnitude() >= sphereRadius + entityColModel.m_boundSphere.m_fRadius) {
+        // exe 0x5662B5..: bound radius comes from the model info's colmodel, not from a vehicle's special colmodel
+        if ((entity->GetBoundCentre() - sphereCenter).Magnitude() >= sphereRadius + entity->GetModelInfo()->GetColModel()->m_boundSphere.m_fRadius) {
             continue; // Bound spheres not colliding
         }
+
+        CColModel& entityColModel = *entity->GetColModel();
 
         if (CCollision::ProcessColModels(sphereMatrix, sphereColModel, entity->GetMatrix(), entityColModel, gaTempSphereColPoints, nullptr, nullptr, false)) {
             sphereColModel.m_pColData = nullptr; // Make sure CColModel destructor doesn't try to delete our local variable

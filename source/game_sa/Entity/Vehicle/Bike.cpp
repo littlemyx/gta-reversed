@@ -292,9 +292,13 @@ bool CBike::DamageKnockOffRider(CVehicle* vehicle, float damageIntensity, uint16
         }
     }
 
-    const auto impactFwdMag   = vehicle->GetForward().Dot(collisionImpactVelocity);
-    const auto impactUpMag    = vehicle->GetUp().Dot(collisionImpactVelocity);
-    const auto impactRightMag = vehicle->GetRight().Dot(collisionImpactVelocity);
+    // The exe sums these as (y + z) + x (0x6B5B1D, 0x6B5C65, 0x6B5CE6)
+    const auto DotYZX = [&](const CVector& a) {
+        return (a.y * collisionImpactVelocity.y + a.z * collisionImpactVelocity.z) + a.x * collisionImpactVelocity.x;
+    };
+    const auto impactFwdMag   = DotYZX(vehicle->GetForward());
+    const auto impactUpMag    = DotYZX(vehicle->GetUp());
+    const auto impactRightMag = DotYZX(vehicle->GetRight());
 
     // Per-axis weighting of the impact
     auto fwdWeight = 0.6f;

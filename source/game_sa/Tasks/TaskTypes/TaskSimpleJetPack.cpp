@@ -360,9 +360,17 @@ void CTaskSimpleJetPack::ProcessControlInput(CPlayerPed* player) {
             } else {
                 player->GetPlayerData()->m_fMoveBlendRatio = 0.f;
             }
-        } else if (walkLeftRight != 0.f) { // 0x67EAA1
-            player->m_fAimingRotation = CGeneral::LimitRadianAngle(player->m_fAimingRotation + JETPACK_TURN_RATE * CTimer::GetTimeStep() * walkLeftRight / 128.f);
-            InterpolateThrustAngle();
+        } else { // 0x67EA9E
+            if (walkLeftRight != 0.f) { // 0x67EAA1: ((lr / 128) * timestep) * rate, then a single +-2pi wrap (NOT CGeneral::LimitRadianAngle)
+                auto rot = player->m_fAimingRotation + (walkLeftRight / 128.f) * CTimer::GetTimeStep() * JETPACK_TURN_RATE;
+                if (rot > PI) {
+                    rot -= TWO_PI;
+                } else if (rot < -PI) {
+                    rot += TWO_PI;
+                }
+                player->m_fAimingRotation = rot;
+            }
+            InterpolateThrustAngle(); // 0x67EAF3: also reached when walkLeftRight == 0
         }
     } else { // 0x67E8D1
         // 0x67E8F5..0x67E932: fpatan(-x', y') of the active cam front, with (x', y') = -(x, y) (fmul by -1.0 [0x858C1C]) unless the camera looks forward
@@ -378,10 +386,10 @@ void CTaskSimpleJetPack::ProcessControlInput(CPlayerPed* player) {
             UpdateStrafe(-0.1f);
         } else if (walkLeftRight > 0) {
             UpdateStrafe(+0.1f);
-        } else if (m_ThrustStrafe > 0.f) {
-            UpdateStrafe(-0.05f);
-        } else if (m_ThrustStrafe < 0.f) {
-            UpdateStrafe(+0.05f);
+        } else if (m_ThrustStrafe > 0.f) { // 0x67E9E3
+            UpdateStrafe(-0.05f, 0.f);
+        } else if (m_ThrustStrafe < 0.f) { // 0x67EA18
+            UpdateStrafe(+0.05f, 0.f);
         }
     }
 
@@ -389,39 +397,45 @@ void CTaskSimpleJetPack::ProcessControlInput(CPlayerPed* player) {
         const auto playerToTargetedObj       = player->GetPosition() - player->m_pTargetedObject->GetPosition();
         const auto playerToTargetedObj2D     = CVector2D{playerToTargetedObj};
         const auto playerToTargetedObjDist2D = playerToTargetedObj2D.Magnitude();
-        if (playerToTargetedObjDist2D < std::abs(playerToTargetedObj.z) * 0.2f + 3.f) {
-            player->ApplyMoveForce(CVector{
-                  playerToTargetedObj2D / std::min(0.1f, playerToTargetedObjDist2D)
-                * (1.f - playerToTargetedObjDist2D / (walkLeftRight / 128.f))
-                * 3.f
-                * MAGIC
-                * THRUST_FULL
-            });
+        const auto threshold = std::abs(playerToTargetedObj.z) * 0.2f + 3.f;
+        if (playerToTargetedObjDist2D < threshold) {
+            // 0x67EC0C..0x67ECFF: (dir2D * (1 / max(0.1, dist))) * ((1 - dist / threshold) * 3) * MAGIC * THRUST_FULL * mass * timestep, z stays 0
+            const auto invDist = 1.f / (0.1f > playerToTargetedObjDist2D ? 0.1f : playerToTargetedObjDist2D);
+            const auto scale   = (1.f - playerToTargetedObjDist2D / threshold) * 3.f;
+            const auto Force   = [&](float dir) {
+                return ((((dir * invDist) * scale) * MAGIC) * THRUST_FULL * player->m_fMass) * CTimer::GetTimeStep();
+            };
+            player->ApplyMoveForce(CVector{ Force(playerToTargetedObj.x), Force(playerToTargetedObj.y), Force(0.f) });
         }
     }
 
-    bool bThrustUpdated = false;
-    if (!CCamera::m_bUseMouse3rdPerson || player->bIsStanding) { // 0x67ED23
-        if (bThrustUpdated |= pad->GetLookBehindForCar()) { // 0x67EDA6
-            m_ThrustStop   = true;
-            m_ThrustFwd    = 0;
-            m_ThrustStrafe = 0.f;
-        } else if (!pad->GetTarget()) {
-            if (bThrustUpdated |= pad->GetLookLeft()) {
-                UpdateStrafe(-0.1f);
-            }else if (bThrustUpdated |= pad->GetLookRight()) {
-                UpdateStrafe(+0.1f);
-            }
-        }
-    }
-    if (!bThrustUpdated) {
-        m_ThrustStop = false;
-        m_ThrustFwd  = pad->GetBrake() ? -1 : pad->GetAccelerate() || pad->GetPedWalkUpDown() != 0;
+    const auto DecayStrafe = [&] {
         if (m_ThrustStrafe > 0.f) {
             UpdateStrafe(-0.05f, 0.f);
         } else if (m_ThrustStrafe < 0.f) {
             UpdateStrafe(+0.05f, 0.f);
         }
+    };
+    if (!CCamera::m_bUseMouse3rdPerson || player->bIsStanding) { // 0x67ED23 -> 0x67EDA4
+        if (pad->GetLookBehindForCar()) { // 0x67EDA6
+            m_ThrustStop   = true;
+            m_ThrustFwd    = 0;
+            m_ThrustStrafe = 0.f;
+        } else { // 0x67EDC2: stop/fwd are set first (fwd ignores the walk axis here), then look left / right, else the decay
+            m_ThrustStop = false;
+            m_ThrustFwd  = pad->GetBrake() ? -1 : pad->GetAccelerate() != 0;
+            if (pad->GetLookLeft() && !pad->GetTarget()) {
+                UpdateStrafe(-0.1f);
+            } else if (pad->GetLookRight() && !pad->GetTarget()) {
+                UpdateStrafe(+0.1f);
+            } else {
+                DecayStrafe();
+            }
+        }
+    } else { // 0x67ED2C
+        m_ThrustStop = false;
+        m_ThrustFwd  = pad->GetBrake() ? -1 : pad->GetAccelerate() || walkUpDown != 0.f;
+        DecayStrafe();
     }
 
     // 0x67EEA9

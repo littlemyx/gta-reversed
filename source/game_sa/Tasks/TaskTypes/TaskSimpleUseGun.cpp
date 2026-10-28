@@ -992,14 +992,20 @@ void CTaskSimpleUseGun::SetMoveAnim(CPed* ped) {
 
     // 0x61E505
     if (moveCmdAbsSum < 0.1f) {
-        const auto moveAnim = m_WeaponInfo->flags.bAimWithArm
-            ? ped->IsGangster() || ped->IsCop()
-                ? DoBlendAnim(ANIM_ID_GANG_GUNSTAND, 4.f) // Why is this used for cops? (0x61E529, inverted)
-                : DoBlendAnim(ANIM_ID_IDLE, 8.f)
-            : DoBlendAnim(ANIM_ID_GUN_STAND, 8.f);
+        const auto moveAnim = [&]() -> CAnimBlendAssociation* {
+            if (!m_WeaponInfo->flags.bAimWithArm) {
+                return DoBlendAnim(ANIM_ID_GUN_STAND, 8.f);
+            }
+            ped->SetMoveState(PEDMOVE_STILL); // 0x61E51A
+            if (ped->IsGangster() || ped->IsCop()) { // Why is this used for cops? (0x61E529, inverted)
+                return DoBlendAnim(ANIM_ID_GANG_GUNSTAND, 4.f);
+            }
+            // 0x61E544: the idle anim is blended from the ped's own anim group, not the default one
+            return CAnimManager::BlendAnimation(ped->GetRpClump(), ped->m_nAnimGroup, ANIM_ID_IDLE, 8.f);
+        }();
 
         const auto resetPlayTime = moveAnim && moveAnim->GetBlendAmount() > 0.95f;
-        for (const auto anim : { animGunMoveBwd, animGunMoveL, animGunMoveR, animGunMoveBwd }) {
+        for (const auto anim : { animGunMoveFwd, animGunMoveL, animGunMoveBwd, animGunMoveR }) { // 0x61E57C..0x61E598: fwd, L, bwd, R (the port had bwd twice and no fwd)
             if (anim) {
                 anim->SetFlag(ANIMATION_IS_PLAYING, false);
                 if (resetPlayTime) {
@@ -1021,9 +1027,9 @@ void CTaskSimpleUseGun::SetMoveAnim(CPed* ped) {
         const auto moveAnim = DoBlendAnim(
             m_MoveCmd.x > 0.75f
                 ? ANIM_ID_GUNMOVE_R
-                : m_MoveCmd.x <= -0.75f
+                : m_MoveCmd.x < -0.75f // 0x61E620: strict
                     ? ANIM_ID_GUNMOVE_L
-                    : m_MoveCmd.y <= 0.f
+                    : !(m_MoveCmd.y > 0.f) // 0x61E63A: NaN takes the forward anim
                         ? ANIM_ID_GUNMOVE_FWD
                         : ANIM_ID_GUNMOVE_BWD,
             8.f
@@ -1161,7 +1167,7 @@ void CTaskSimpleUseGun::StartAnim(CPed* ped) {
             m_BurstShots = m_WeaponInfo->flags.bTwinPistol ? 2 : 1;
         }
 
-        if (m_BurstShots > 0) { // 0x625196 - Inverted
+        if (static_cast<int16>(m_BurstShots) > 0) { // 0x625196 - Inverted (0x625115: signed word compare, JLE)
             m_Anim = CAnimManager::BlendAnimation( // 0x62511C
                 ped->GetRpClump(),
                 m_WeaponInfo->m_eAnimGroup,
@@ -1180,7 +1186,7 @@ void CTaskSimpleUseGun::StartAnim(CPed* ped) {
         break;
     }
     case eGunCommand::PISTOLWHIP: {
-        if (tDuck && tDuck->StopFireGun()) {
+        if (tDuck && tDuck->IsTaskInUseByOtherTasks()) { // 0x6251B1: the exe calls IsTaskInUseByOtherTasks here (0x61C3D0), not StopFireGun (0x61C420)
             return;
         }
         m_Anim = CAnimManager::BlendAnimation( // 0x6251DC

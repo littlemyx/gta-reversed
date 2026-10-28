@@ -1,0 +1,3 @@
+addr	file	line	cls	fn	oc
+0x56B5E0	source/game_sa/World.cpp	55	None	ProcessLineOfSightSector	S
+0x566EE0	source/game_sa/World.cpp	56	None	ProcessLineOfSightSectorList<CPtrListDoubleLink<CPhysical*>>	S

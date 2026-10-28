@@ -57,7 +57,7 @@
 | S21c | rest of S21b | 4 | done 4/4 (2 M, 2 fixed; S21 complete) | PlayerPed.cpp |
 | S13c | rest of S13b | 4 | done (1 M, 3 fixed) | TaskSimpleGunControl.cpp, TaskSimpleInAir.cpp, TaskSimpleJetPack.cpp |
 | S22e | rest of S22d | 9 | partial 4/9 (4 M) -> S22f | CarCtrl.cpp |
-| S27c | rest of S27b | 5 | pending | World.cpp |
+| S27c | rest of S27b | 5 | partial 3/5 (3 fixed) -> S27d | World.cpp |
 | S14b | rest of S14 | 23 | partial 17/23 (9 M, 8 fixed) -> S14c | TaskSimpleJump.cpp, TaskSimplePickUpBike.cpp, TaskSimplePlayerOnFire.cpp, TaskSimplePlayerOnFoot.cpp, TaskSimpleSay.cpp, TaskSimpleSetPedAsAutoDriver.cpp, TaskSimpleShakeFist.cpp, TaskSimpleSitDown.cpp, TaskSimpleSitIdle.cpp |
 | S18b | rest of S18 | 24 | partial 13/24 (12 M, 1 fixed) -> S18c | Heli.cpp, Plane.cpp |
 | S18c | rest of S18b | 11 | partial 8/11 (7 M, 1 fixed) -> S18d | Heli.cpp, Plane.cpp |
@@ -80,3 +80,4 @@
 | S22f | rest of S22e + plane obstacle helper | 6 | partial 3/6 (3 M) -> S22g | CarCtrl.cpp |
 | S22g | rest of S22f | 3 | partial 2/3 (1 M, 1 fixed) -> S22h | CarCtrl.cpp |
 | S22h | rest of S22g | 1 | pending | CarCtrl.cpp |
+| S27d | rest of S27c | 2 | pending | World.cpp |

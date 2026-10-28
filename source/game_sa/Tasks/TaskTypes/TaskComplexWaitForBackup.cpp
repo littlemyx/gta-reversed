@@ -70,7 +70,8 @@ CTask* CTaskComplexWaitForBackup::CreateNextSubTask(CPed* ped) {
     switch (m_pSubTask->GetTaskType()) {
     case TASK_SIMPLE_GUN_CTRL: {
         if (m_backup && m_backup->IsAlive() && !m_timer.IsOutOfTime()) {
-            if (CVector2D{ ped->GetPosition() - m_backup->GetPosition() }.SquaredMagnitude() <= sq(m_waitDistance)) {
+            // 0x698042..0x698071: fcompp(waitDist^2, distSq), `jne` on C0|C3 => keep waiting (aim again) while the backup is NOT closer than the wait distance (distSq >= waitDist^2, also when unordered)
+            if (!(CVector2D{ ped->GetPosition() - m_backup->GetPosition() }.SquaredMagnitude() < sq(m_waitDistance))) {
                 return CreateSubTask(TASK_SIMPLE_ACHIEVE_HEADING, ped);
             }
         }

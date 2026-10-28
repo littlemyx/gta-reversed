@@ -517,9 +517,10 @@ void CBoat::ProcessControl() {
     PruneWakeTrail();
     CVehicle::ProcessDelayedExplosion();
 
-    auto fMassCheck = (m_fMass * 0.008F * 100.0F) / 125.0F;
+    // 0x6F17A4: the exe multiplies by the folded constants 0.0064f (0x871248) and 8e-6f (0x871244), no division / double multiply
+    auto fMassCheck = m_fMass * 0.0064F;
     if (physicalFlags.bRenderScorched && fMassCheck < m_fBuoyancyConstant) {
-        m_fBuoyancyConstant -= ((m_fMass * 0.001F) * 0.008F);
+        m_fBuoyancyConstant -= m_fMass * 8.0e-6F;
     }
 
     auto wanted = FindPlayerWanted();
@@ -621,14 +622,14 @@ void CBoat::ProcessControl() {
         auto fGivenDamage = fDamagePower;
         if (this == FindPlayerVehicle()->AsBoat()) {
             fGivenDamage -= 25.0F;
-            fGivenDamage /= vehicleFlags.bTakeLessDamage ? 6.0f : 2.0f;
+            fGivenDamage *= vehicleFlags.bTakeLessDamage ? ExeRecip(6.0f) : 0.5f; // 0x6F1BDB: *0x85F0A0 (1/6f), not a division
         } else {
             if (fGivenDamage > 60.0F && m_pDriver) {
                 m_pDriver->Say(CTX_GLOBAL_CRASH_GENERIC);
             }
 
             fGivenDamage -= 25.0F;
-            fGivenDamage /= vehicleFlags.bTakeLessDamage ? 12.0f : 4.0f;
+            fGivenDamage *= vehicleFlags.bTakeLessDamage ? ExeRecip(12.0f) : 0.25f; // 0x6F1C26: *0x85F0FC (1/12f), not a division
         }
 
         m_fHealth -= fGivenDamage;
@@ -650,6 +651,7 @@ void CBoat::ProcessControl() {
             } else if (m_nModelIndex == MODEL_REEFER) {
                 vecFirePos.Set(2.0F, -1.0F, 0.5F);
             }
+            vecFirePos.z += 1.0F; // 0x6F1DF4: the exe raises the fire by 1.0 after picking the per-model offset
 
             if (m_fHealth < 250.0F) {
                 auto modellingMat = GetModellingMatrix();
@@ -662,7 +664,7 @@ void CBoat::ProcessControl() {
                     }
                 }
 
-                m_BlowUpTimer += (CTimer::GetTimeStep() * 20.0F);
+                m_BlowUpTimer += std::floor(CTimer::GetTimeStepInMS()); // 0x6F1E88: ftol(ts * 0.02f * 1000.f) added as an integer
                 if (m_BlowUpTimer > 5000.0F) {
                     BlowUpCar(m_EntityThatSetUsOnFire, false);
                 }
@@ -671,12 +673,15 @@ void CBoat::ProcessControl() {
     }
 
     auto bPostCollision = m_fDamageIntensity > 0.0F && m_vecLastCollisionImpactVelocity.z > 0.1F;
+    const auto bHitWall = GetHasHitWall(); // 0x6F1EF9: read BEFORE CPhysical::ProcessControl (which rewrites the flag)
     CPhysical::ProcessControl();
-    ProcessBoatControl(m_BoatHandling, &m_PrevVolume, GetHasHitWall(), bPostCollision);
+    ProcessBoatControl(m_BoatHandling, &m_PrevVolume, bHitWall, bPostCollision);
 
-    if (m_nModelIndex == MODEL_SKIMMER
-        && (m_EngineSpeed > CPlane::PLANE_MIN_PROP_SPEED || m_vecMoveSpeed.SquaredMagnitude() > CPlane::PLANE_MIN_PROP_SPEED)) {
-        FlyingControl(FLIGHT_MODEL_PLANE, BOAT_HEADING_NOT_LOCKED, BOAT_HEADING_NOT_LOCKED, BOAT_HEADING_NOT_LOCKED, BOAT_HEADING_NOT_LOCKED);
+    if (m_nModelIndex == MODEL_SKIMMER) { // 0x6F1F5B: the cheat test is only reached for non-skimmers
+        // 0x6F1F8F: the speed test compares against the DOUBLE 0.05 (0x859068)
+        if (m_EngineSpeed > CPlane::PLANE_MIN_PROP_SPEED || (x87d)m_vecMoveSpeed.SquaredMagnitude() > (x87d)0.05) {
+            FlyingControl(FLIGHT_MODEL_PLANE, BOAT_HEADING_NOT_LOCKED, BOAT_HEADING_NOT_LOCKED, BOAT_HEADING_NOT_LOCKED, BOAT_HEADING_NOT_LOCKED);
+        }
     } else if (CCheat::IsActive(CHEAT_BOATS_FLY)) {
         FlyingControl(FLIGHT_MODEL_BOAT, BOAT_HEADING_NOT_LOCKED, BOAT_HEADING_NOT_LOCKED, BOAT_HEADING_NOT_LOCKED, BOAT_HEADING_NOT_LOCKED);
     }

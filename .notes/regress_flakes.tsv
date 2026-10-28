@@ -5,3 +5,4 @@ date	gate_sha	scenario.check	detail	reruns
 2026-10-26	8d71943b	combat.chase.no_zombie_cops	1 cop shot, not dead afterwards	1 PASS / 1 FAIL(combat.foot.weapon_pickup: no pickup after kill)
 2026-10-28	304805a6	combat.chase.no_zombie_cops	1 cop shot, not dead afterwards	2 PASS (3rd occurrence; COMBAT-FLAKY brief open)
 2026-10-28	0a2307b9	combat.foot.weapon_pickup	no pickup after the kill (561 -> 561)	2 PASS (2nd shape; reported to COMBAT-FLAKY)
+2026-10-28	0a2307b9	combat.foot.weapon_pickup	0 new pickups (merge into corpse drops, COMBAT-FLAKY)	fixed in scenario

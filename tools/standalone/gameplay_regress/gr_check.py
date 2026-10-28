@@ -47,12 +47,15 @@ class Run:
         self.marks = {}       # name -> (script ms, tick)
         self.gates = []       # (cond, ok?, ms)
         self.cmds = []        # [gr-cmd] / [cmd] lines
+        self.cmds_after = []  # (name of the last snapshot taken before the command, line): lets a check look at the commands of ONE route step only (COMBAT-FLAKY)
         self.probes = []      # (name, dict)
         self.hurt = []        # (number of probes logged so far, weapon, died?) per [pc-dmg] event in which an ENTITY lowered the player's armour / killed him (NOTSA_STANDALONE_PROBE=1 runs)
+        last_snap = None
         for ln in self.sl:
             m = re.search(r'\[gr\] (\S+?)#(\d+) ([A-D]) (.*)$', ln)
             if m:
                 nm = m.group(1)
+                last_snap = nm
                 if nm not in self.snaps:
                     self.snaps[nm] = {}
                     self.order.append(nm)
@@ -68,6 +71,7 @@ class Run:
                 continue
             if '[gr-cmd]' in ln or '[cmd]' in ln or '[vmode]' in ln or '[kill]' in ln or '[mission]' in ln:
                 self.cmds.append(ln)
+                self.cmds_after.append((last_snap, ln))
                 continue
             m = re.search(r'\[pc-dmg\] .* player hp (-?\d+) -> (-?\d+) armour (-?\d+) -> (-?\d+) lastDamager=(\w+) weap=(-?\d+)', ln)
             if m:
@@ -198,7 +202,11 @@ def chk_combat(run, R, B, orig):
     cs, c2 = run.snap('car_spawned'), run.snap('car_shot_b')
     if cs and c2:
         R.add('car.driver_spawned', num(cs, 'veh') == 1 and num(cs, 'drv') == 1 and num(cs, 'dhp', 0) > 0, 'veh=%s drv=%s dhp=%s dst=%s tasks=%s' % (cs.get('veh'), cs.get('drv'), cs.get('dhp'), cs.get('dst'), cs.get('dtasks')), 'a police car with a living cop driver', setup=True)
-        R.add('car.driver_dies', num(c2, 'ddead') == 1, 'driver hp=%s state=%s (%s) tasks=%s' % (c2.get('dhp'), c2.get('dst'), 'dying/dead' if num(c2, 'ddead') == 1 else 'ALIVE: events never reach the car occupant', c2.get('dtasks')), 'lethal damage event on a driver -> DIE/DEAD within 4 s (CTaskSimpleCarDrive::MakeAbortable must say yes)')
+        # COMBAT-FLAKY: a dead driver's corpse may already be removed by car_shot_b (the pool slot is gone: dhp=-1, ddead=-1), like the corpses of the kill step: look at both samples (a living driver shows ddead=0 in both)
+        ca = run.snap('car_shot_a') or c2
+        dd = 1 if (num(ca, 'ddead') == 1 or num(c2, 'ddead') == 1) else 0
+        sd = ca if num(ca, 'ddead') == 1 and num(c2, 'ddead') != 1 else c2
+        R.add('car.driver_dies', dd == 1, 'driver hp=%s state=%s (%s) tasks=%s' % (sd.get('dhp'), sd.get('dst'), 'dying/dead' if dd == 1 else 'ALIVE: events never reach the car occupant', sd.get('dtasks')), 'lethal damage event on a driver -> DIE/DEAD within 4 s (CTaskSimpleCarDrive::MakeAbortable must say yes)')
     # ---- D. chase
     c0 = run.snap('chase_0')
     if c0:
@@ -223,7 +231,8 @@ def chk_combat(run, R, B, orig):
         R.add('chase.player_shot_at', hurt or busted, 'health+armour min %d (start %d), busted/cleared: %s, hit/fall reaction tasks started: %d (info: CJ only flinches from bigger hits)' % (min(hpar(run.snaps[n]) for n in names), hpar(pre), busted, hf), 'the police hurt CJ (or arrest him) within 70 s (U7: shots did no damage); at Idlewood the original cops shoot from the first seconds')
         R.add('chase.police_engage', eng_t is not None and eng_t <= lim, 'first sign (cop on foot / pursuit task / player damaged / busted) at %ss' % eng_t, 'within %ss (original: %s; the chase has randomness, so any one sign counts)' % (lim, orig.get('engage_s', B.get('engage_s', {}).get('orig'))))
     kb, k6 = run.snap('kill_before'), run.snap('kill_6')
-    shot = [l for l in run.cmds if 'shot ped' in l]
+    # only the shots of the kill step itself: when CJ was wasted / busted in the chase the cops are gone at that step, and the later 'shoot:6:200' clean-up shot (a cop that arrived afterwards) must not count as "a cop was shot here" (COMBAT-FLAKY: 3 false FAILs)
+    shot = [l for (sn, l) in run.cmds_after if 'shot ped' in l and sn == 'kill_before']
     if kb and k6:
         k2 = run.snap('kill_2') or k6   # (corpses vanish after a few seconds: look at both samples)
         if not shot:

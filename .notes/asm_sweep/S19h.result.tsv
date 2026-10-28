@@ -1,0 +1,64 @@
+addr	function	verdict	asm range	note	fix commit
+0x6CF1A0	CTrailer::SetupSuspensionLines	MATCH	0x6CF1A0-0x6CF583	wheel/support line math, x87 ratio chain (|y0+y1|, 1.5+1.5 support force), bound box/sphere update, frame-matrix height, 4-wheel final loop	-
+0x6CFDF0	CTrailer::SetTowLink	FIXED	0x6CFDF0-0x6CFFC7	without setMyPosToTowBar the exe calls UpdateTractorLink(true,false) on the TOWING vehicle (edi); the port called it on the trailer, where m_pVehicleBeingTowed is null so it returned at once	57acba6c
+0x6D5F10	CVehicle::Constructor	MATCH	0x6D5F10-0x6D6263	all stores compared byte by byte (flag bytes 0xB0/0/0x20/0/canPark/0x50/0x64, door lock 1, health 1000, upgrades -1, dirt rand()%15); only m_nOrdnanceCycleIndex and the unused 0x51C/0x51D bytes are not cleared by either side explicitly	-
+0x6E2B40	CVehicle::Destructor	NOT_REACHED	-	budget	-
+0x6D6A40	CVehicle::SetModelIndex	NOT_REACHED	-	budget	-
+0x6D6410	CVehicle::DeleteRwObject	NOT_REACHED	-	budget	-
+0x6D0E90	CVehicle::SpecialEntityCalcCollisionSteps	FIXED	0x6D0E90-0x6D106E	squared move distance is (|v|^2*dt)*dt (port: |v|^2*(dt*dt)); thresholds 0.16/0.32, 10/{1.5,2,3,4} multipliers, z,y,x dots, bike x1.5 and output flags match	f5f5381b
+0x553F20	CVehicle::SetupLighting	NOT_REACHED	-	budget	-
+0x5533D0	CVehicle::RemoveLighting	NOT_REACHED	-	budget	-
+0x6D0E60	CVehicle::Render	NOT_REACHED	-	budget	-
+0x5D4760	CVehicle::Save	NOT_REACHED	-	budget	-
+0x5D2900	CVehicle::Load	NOT_REACHED	-	budget	-
+0x6DF4A0	CVehicle::ProcessDrivingAnims	MATCH	0x6DF4A0-0x6DF925	radio-tune gate, anim table choice (low/boat/kart/truck/skill x speed 0.4), blend/delta stores, first-person look-back, steer 1/0.61 clamp	-
+0x6D0B40	CVehicle::Shutdown	MATCH	0x6D0B40-0x6D0B60	4 special col models	-
+0x6D0C00	CVehicle::SetRemap	NOT_REACHED	-	budget	-
+0x6D0E20	CVehicle::ResetAfterRender	NOT_REACHED	-	budget	-
+0x6D2740	CVehicle::ApplyBoatWaterResistance	FIXED	0x6D2740-0x6D2945	immersion factor = ((depth*suspForce)*depth)*mass*0.001 (port squared depth first: different float rounding); rest (skimmer x30, fabs, pow chain, down/turn-force args, z factor with the double 0.5) matches	c56833e6
+0x6DBCE0	CVehicle::ProcessBoatControl	NOT_REACHED	-	budget	-
+0x6E0E20	CVehicle::DoHeadLightBeam	NOT_REACHED	-	budget	-
+0x6D10E0	CVehicle::CustomCarPlate_TextureCreate	NOT_REACHED	-	budget	-
+0x6D16A0	CVehicle::SetDriver	NOT_REACHED	-	budget	-
+0x6D1950	CVehicle::RemoveDriver	NOT_REACHED	-	budget	-
+0x6D1C80	CVehicle::KillPedsInVehicle	NOT_REACHED	-	budget	-
+0x6D2960	CVehicle::SetComponentAtomicAlpha	NOT_REACHED	-	budget	-
+0x6D2A80	CVehicle::AddDamagedVehicleParticles	NOT_REACHED	-	budget	-
+0x6D2D50	CVehicle::AddWheelDirtAndWater	NOT_REACHED	-	budget	-
+0x6D3080	CVehicle::SetWindowOpenFlag	NOT_REACHED	-	budget	-
+0x6D30B0	CVehicle::ClearWindowOpenFlag	NOT_REACHED	-	budget	-
+0x6D30E0	CVehicle::SetVehicleUpgradeFlags	NOT_REACHED	-	budget	-
+0x6D3210	CVehicle::ClearVehicleUpgradeFlags	NOT_REACHED	-	budget	-
+0x6D3510	CVehicle::CreateUpgradeAtomic	NOT_REACHED	-	budget	-
+0x6D3630	CVehicle::RemoveUpgrade	NOT_REACHED	-	budget	-
+0x6D3700	CVehicle::CreateReplacementAtomic	NOT_REACHED	-	budget	-
+0x6D3830	CVehicle::AddReplacementUpgrade	NOT_REACHED	-	budget	-
+0x6D39E0	CVehicle::RemoveReplacementUpgrade	NOT_REACHED	-	budget	-
+0x6D3AB0	CVehicle::RemoveAllUpgrades	NOT_REACHED	-	budget	-
+0x6D3B80	CVehicle::UpdateWinch	NOT_REACHED	-	budget	-
+0x6D3C70	CVehicle::RemoveWinch	NOT_REACHED	-	budget	-
+0x6D3DB0	CVehicle::PreRenderDriverAndPassengers	MATCH	0x6D3DB0-0x6D3DF3	driver + all 8 passenger slots with ped state 0x32	-
+0x6D64F0	CVehicle::SetupRender	NOT_REACHED	-	budget	-
+0x6D82F0	CVehicle::KillPedsGettingInVehicle	NOT_REACHED	-	budget	-
+0x6DAF00	CVehicle::BladeColSectorList<CPtrListSingleLink<CEntity*>>	NOT_REACHED	-	budget	-
+0x6DD130	CVehicle::DoBoatSplashes	NOT_REACHED	-	budget	-
+0x6DD6F0	CVehicle::DoSunGlare	NOT_REACHED	-	budget	-
+0x6DDF60	CVehicle::AddWaterSplashParticles	NOT_REACHED	-	budget	-
+0x6DE880	CVehicle::AddSingleWheelParticles	NOT_REACHED	-	budget	-
+0x6DF3D0	CVehicle::GetSpecialColModel	MATCH	0x6DF3D0-0x6DF497	slot search, flag 0x4000000, reference, hydraulic data reset (100.0 + 4 zeros)	-
+0x6DF930	CVehicle::RemoveVehicleUpgrade	NOT_REACHED	-	budget	-
+0x6DFA20	CVehicle::AddUpgrade	NOT_REACHED	-	budget	-
+0x6E2E50	CVehicle::DoBladeCollision	NOT_REACHED	-	budget	-
+0x6E3290	CVehicle::AddVehicleUpgrade	NOT_REACHED	-	budget	-
+0x6E3400	CVehicle::SetupUpgradesAfterLoad	NOT_REACHED	-	budget	-
+0x73F400	CVehicle::DoFixedMachineGuns	NOT_REACHED	-	budget	-
+0x73DF00	CVehicle::FireFixedMachineGuns	NOT_REACHED	-	budget	-
+0x6D3CD0	CVehicle::PickUpEntityWithWinch	NOT_REACHED	-	budget	-
+0x6D26D0	CVehicle::SetVehicleAtomicVisibilityCB-Frame	NOT_REACHED	-	budget	-
+0x6D3300	CVehicle::RemoveUpgradeCB	NOT_REACHED	-	budget	-
+0x6D33B0	CVehicle::RemoveObjectsCB-Object	NOT_REACHED	-	budget	-
+0x6D3420	CVehicle::RemoveObjectsCB-Frame	NOT_REACHED	-	budget	-
+0x6D3450	CVehicle::CopyObjectsCB	NOT_REACHED	-	budget	-
+0x6D34D0	CVehicle::RemoveAllUpgradesCB	NOT_REACHED	-	budget	-
+0x6D2250	CVehicle::DestroyVehicleAndDriverAndPassengers	NOT_REACHED	-	budget	-
+0x6DE240	CVehicle::AddExhaustParticles	FIXED	0x6DE240-0x6DE85D (second half + whole-function velocity)	particle velocity is (x,y,0) only: moveSpeed*30 or randomFactor*forward write x/y, z stays 0 (port filled z); loop/alpha/size/system selection/seat order, secondary-puff rand()&1 branch, FxSystem args (lighting 0.6) and AddParticle positions all match	a5db1243

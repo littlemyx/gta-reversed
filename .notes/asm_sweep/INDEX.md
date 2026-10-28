@@ -56,7 +56,7 @@
 | S17c | rest of S17b | 16 | partial 6/16 (2 M, 4 fixed) -> S17d | Bike.cpp, Bmx.cpp, Boat.cpp |
 | S21c | rest of S21b | 4 | done 4/4 (2 M, 2 fixed; S21 complete) | PlayerPed.cpp |
 | S13c | rest of S13b | 4 | done (1 M, 3 fixed) | TaskSimpleGunControl.cpp, TaskSimpleInAir.cpp, TaskSimpleJetPack.cpp |
-| S22e | rest of S22d | 9 | pending | CarCtrl.cpp |
+| S22e | rest of S22d | 9 | partial 4/9 (4 M) -> S22f | CarCtrl.cpp |
 | S27c | rest of S27b | 5 | pending | World.cpp |
 | S14b | rest of S14 | 23 | partial 17/23 (9 M, 8 fixed) -> S14c | TaskSimpleJump.cpp, TaskSimplePickUpBike.cpp, TaskSimplePlayerOnFire.cpp, TaskSimplePlayerOnFoot.cpp, TaskSimpleSay.cpp, TaskSimpleSetPedAsAutoDriver.cpp, TaskSimpleShakeFist.cpp, TaskSimpleSitDown.cpp, TaskSimpleSitIdle.cpp |
 | S18b | rest of S18 | 24 | partial 13/24 (12 M, 1 fixed) -> S18c | Heli.cpp, Plane.cpp |
@@ -77,3 +77,4 @@
 | S14c | rest of S14b | 6 | done (5 M, 1 fixed) | TaskSimplePlayerOnFoot.cpp |
 | S18d | rest of S18c | 3 | partial 2/3 + PreRender to 0x6C9FD9 (1 M, 1 fixed) -> S18e | Heli.cpp, Plane.cpp |
 | S18e | rest of S18d | 1 | done 1/1 (MATCH, 1 U: _CIpow; S18 complete) | Plane.cpp |
+| S22f | rest of S22e + plane obstacle helper | 6 | pending | CarCtrl.cpp |

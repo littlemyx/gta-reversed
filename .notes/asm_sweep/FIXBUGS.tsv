@@ -1,0 +1,81 @@
+file	line	function	exe addr	verdict	note	commit
+Entity/Vehicle/Automobile.cpp	1717	CAutomobile::ProcessEntityCollision	0x6ACE70	OK-NONFIX	null tcd/ocd guard also on in the run build via NOTSA_STANDALONE_RUN (ASM-S16d)	-
+Entity/Vehicle/Automobile.cpp	2329	CAutomobile::BlowUpCar_Impl	BlowUpCar/CutSceneNoExtras	OK-NONFIX	bFixBugs=false keeps the exe split (cutscene variant lacks the extras); not asm-read	-
+Entity/Vehicle/Automobile.cpp	3033	CAutomobile::VehicleDamage	0x6A7650	OK-NONFIX	exe fdiv [colmodel+0xc] = bbox max.x (0x6A7C89, 0x6A7EDE)	-
+Entity/Vehicle/Automobile.cpp	3994	CAutomobile::SetRandomDamage	0x6A2530	OK-NONFIX	[0,1) int range is the exe (source comment 0x6A260B); not asm-read	-
+Entity/Vehicle/Bike.cpp	1174	CBike::ProcessEntityCollision	0x6BDEA0	OK-NONFIX	exe has no null guard; ocd not dereferenced elsewhere in the port	-
+Entity/Vehicle/Boat.cpp	295	CBoat wake alpha	-	OK-NONFIX	source says the 0th point comes out 0 (exe); render, not asm-read	-
+Entity/Vehicle/Trailer.cpp	309	CTrailer::ProcessEntityCollision	0x6CFFD0	OK-NONFIX	exe has no null guard (asm read)	-
+CarGenerator.cpp	341	CCarGenerator::DoInternalProcessing	-	OK-NONFIX	uint16 < -1 never true: exe skips the decrement (source comment); not asm-read	-
+Collision/Collision.cpp	1306	CCollision plane/line (plLnMag)	-	OK-NONFIX	FIX side only adds a reject not in the exe; not asm-read	-
+Core/OctTree.cpp	89	COctTree::InsertTree	-	OK-NONFIX	FIX only adds a null return	-
+Core/Pool.h	302	CPool::Delete	-	OK-NONFIX	FIX adds a null return; run build has its own NOTSA_STANDALONE_RUN diagnostic	-
+Directory.cpp	52	CDirectory::AddItem	0x532310	OK-NONFIX	exe copies unconditionally (asm read)	-
+EntryExitManager.cpp	195	CEntryExitManager::AddOne	0x43FA00	OK-NONFIX	exe returns 0 when the pool is full (asm read)	-
+EntryExitManager.cpp	226	CEntryExitManager::DeleteOne	0x43FD50	OK-NONFIX	FIX only adds a dtor call (trivial in the exe)	-
+Events/EventCarUpsideDown.cpp	23	CEventCarUpsideDown::~	0x4B1D70	OK-NONFIX	exe dtor calls RegisterReference (asm read)	-
+Events/EventHandler.cpp	2724	CEventHandler::ComputePotentialPedCollideResponse	0x4C2610	OK-NONFIX	exe: distSq - r*r < r*r (asm read 0x4C27B6-0x4C27C6)	-
+Garages.cpp	426	CGarages::SetTargetCarForMissionGarage	-	OK-NONFIX	FIX only adds CleanUpOldReference; not asm-read	-
+PathFind.cpp	2251	CPathFind outNext2 else	-	OK-NONFIX	FIX only adds a null check; not asm-read	-
+PopCycle.cpp	87	CPopCycle::Initialise	0x5BC090	NEITHER	exe ALWAYS rescales the 18 percs by 100/sum (ftol) and adds 100-newSum to the last maximal element; port rescaled only when sum<100, no remainder	7b8879af
+PopCycle.cpp	290	CPopCycle::PickARandomGroupOfOtherPeds	0x610420	OK-NONFIX	exe rolls 0..100 (asm read)	-
+TheZones.cpp	65	CTheZones::GetZoneWasVisited	-	OK-NONFIX	NOTSA helper, flat unchecked index like the exe	-
+WaterLevel.cpp	544	CWaterLevel::RenderFlatWaterRectangle	0x6EBEC0	OK-NONFIX	render; non-fix is the original Y2-Y1 test; not asm-read	-
+Weapon.cpp	524	CWeapon::DoBulletImpact	-	OK-NONFIX	non-fix is `a && b || c` as in the comment 0x73B6D0; not asm-read	-
+Tasks/TaskTypes/Interior/TaskInteriorLieInBed.cpp	36	CTaskInteriorLieInBed ctor	-	OK-NONFIX	FIX only adds a member	-
+Tasks/TaskTypes/TaskComplexBeInGroup.cpp	56	CTaskComplexBeInGroup::MonitorSecondaryGroupTask	0x6330B0	OK-NONFIX	exe calls GetTaskSecondary(slot) without the -1 test (asm read)	-
+Tasks/TaskTypes/TaskComplexFleeAnyMeans.cpp	64	CTaskComplexFleeAnyMeans::~	0x65CD10	OK-NONFIX	exe cleans only m_fleeFrom, then the base dtor; m_stealVeh not cleaned (asm read)	-
+Tasks/TaskTypes/TaskComplexGangLeader.cpp	466	CTaskComplexGangLeader::ScanForStuff	0x65E200	OK-NONFIX	no break after the timer start (0x65E3E8 -> loop increment) (asm read)	-
+Tasks/TaskTypes/TaskComplexGangLeader.cpp	490	CTaskComplexGangLeader::ScanForStuff	0x65E200	OK-NONFIX	exe looks up the wander task on the leader ped (0x65E4A1) (asm read)	-
+Tasks/TaskTypes/TaskComplexKillPedOnFootArmed.cpp	680	CTaskComplexKillPedOnFootArmed::ControlSubTask	0x62CCE0	OK-NONFIX	exe sets no m_lastDuckTime in that branch (0x62CE3C -> 0x62CE4E) (asm read)	-
+Tasks/TaskTypes/TaskComplexPassObject.cpp	41	CTaskComplexPassObject::~	0x661230	OK-NONFIX	exe cleans only m_ped (asm read)	-
+Tasks/TaskTypes/TaskComplexSeekCoverUntilTargetDead.cpp	130	CTaskComplexSeekCoverUntilTargetDead::CreateNextSubTask	0x62E8B0	OK-NONFIX	exe calls GetTargetPed (0x62E99E) (asm read)	-
+Tasks/TaskTypes/TaskSimpleCarOpenDoorFromOutside.cpp	138	CTaskSimpleCarOpenDoorFromOutside::ProcessPed	0x64D710	OK-NONFIX	exe uses the vehicle driver (veh+0x460, 0x64D7D4) (asm read)	-
+SurfaceInfos_c.cpp	305	SurfaceInfos_c::LoadSurfaceInfos	-	OK-NONFIX	FIX only adds a missing-file return	-
+SurfaceInfos_c.cpp	382	SurfaceInfos_c::LoadSurfaceAudioInfos	-	OK-NONFIX	FIX only adds a missing-file return	-
+Models/VehicleModelInfo.cpp	1320	CVehicleModelInfo carcols loader	-	OK-NONFIX	FIX only adds a retry parse for a typo line	-
+CdStreamInfo.cpp	337	CdStream init	-	OK-NONFIX	non-fix keeps FILE_FLAG_NO_BUFFERING; not asm-read	-
+Draw.cpp	69	CDraw fade rect	-	OK-NONFIX	render; original rect order; not asm-read	-
+GrassRenderer.cpp	71	CGrassRenderer	-	OK-NONFIX	render; not asm-read (port uses mt19937 either way)	-
+LoadingScreen.cpp	401	CLoadingScreen::NewChunkLoaded	-	OK-NONFIX	UI; original 5.0/5.5 s delays; not asm-read	-
+LoadingScreen.cpp	494	CLoadingScreen::SkipCopyrightSplash	-	OK-NONFIX	NOTSA function	-
+MenuManager.cpp	638	CMenuManager::CentreMousePointer	0x57C520	OK-NONFIX	UI; FIX only adds a foreground check	-
+Frontend/MenuManager_Input.cpp	918	MENU_ACTION_MOUSE_SENS	-	OK-NONFIX	UI; not asm-read	-
+Frontend/MenuManager_Input.cpp	1057	CMenuManager::ProcessInput	-	OK-NONFIX	UI; not asm-read	-
+Frontend/MenuManager_Process.cpp	507	CMenuManager video mode loop	-	OK-NONFIX	UI; original loop	-
+Frontend/MenuManager_Process.cpp	523	CMenuManager video mode loop	-	OK-NONFIX	UI; original loop	-
+Audio/Hardware/AEAudioHardware.cpp	200	CAEAudioHardware::Initialise	-	OK-NONFIX	FIX only adds a Release	-
+app/platform/win/VideoPlayer/VideoPlayer.cpp	132	VideoPlayer::Play	-	OK-NONFIX	FIX only changes the buffer allocation	-
+app/platform/win/VideoPlayer/VideoPlayer.cpp	220	VideoPlayer::Play	-	OK-NONFIX	FIX only frees the buffer	-
+app/platform/win/WinPs.cpp	337	psGrabScreen	-	OK-NONFIX	platform; original fullscreen path; not asm-read	-
+app/platform/win/WinPs.cpp	344	psGrabScreen	-	OK-NONFIX	as above	-
+app/platform/win/WinPs.cpp	365	psGrabScreen	-	OK-NONFIX	as above	-
+app/platform/win/WndProc.cpp	213	WndProc WM_ACTIVATEAPP	-	OK-NONFIX	non-fix returns 0 as the exe (source comments 0x748054-0x74842A); not asm-read	-
+app/platform/win/WndProc.cpp	224	WndProc WM_SETFOCUS	0x748063	OK-NONFIX	as above	-
+app/platform/win/WndProc.cpp	232	WndProc WM_KILLFOCUS	0x748054	OK-NONFIX	as above	-
+app/platform/win/WndProc.cpp	246	WndProc WM_GRAPHNOTIFY	0x74842A	OK-NONFIX	as above	-
+GameLogic.cpp	354	CGameLogic::RestorePedsWeapons	0x441D30	WRONG-SIDE	unguarded "FIX_BUGS" comment: exe tests modelId1 twice (0x441D7D); the run build tested both models	bc7a4efd
+Radar.cpp	2324	CRadar::SetupAirstripBlips	0x587D20	WRONG-SIDE	unguarded "FIX_BUGS" timer: exe gates on (CTimer::m_FrameCounter & 4) (0x587D72); port used a 200 ms timer	503429e9
+Entity/Ped/Ped.cpp	3675	CPed::PreRenderAfterTest	0x5E65A0	WRONG-SIDE	unguarded "FIX_BUGS" comment: exe tests pedType == PLAYER1 only (0x5E6777); port used IsPlayer() (also PLAYER2)	dfaca2ee
+Cheat.cpp	224	CCheat::AdrenalineCheat	0x439880	OK-NONFIX	unguarded; exe also clears the adrenaline bit when toggled off (asm read)	-
+Cheat.cpp	551	CCheat hate cheat off	0x439B20	OK-NONFIX	already NOTSA_STANDALONE_RUN-guarded to the exe behaviour	-
+Glass.cpp	495	CGlass specular	-	OK-NONFIX	already notsa::IsFixBugs() (0.57f in the run build)	-
+Radar.cpp	2474	CRadar 2-player markers	-	NOT_REACHED	unguarded fix, split screen only	-
+Replay.cpp	813	CReplay restore ms_nNumGang	-	NOT_REACHED	unguarded fix, replay only	-
+Scripts/TheScripts.cpp	1705	debug zone box	-	NOT_REACHED	unguarded fix in a debug-line helper	-
+Sprite2d.cpp	532	CSprite2d bar chart	-	NOT_REACHED	unguarded fix, UI	-
+Streaming.cpp	1150	CStreaming ExtraObjectsDir	-	NOT_REACHED	unguarded fix	-
+Streaming.cpp	3076	CStreaming::Shutdown	-	NOT_REACHED	unguarded fix	-
+FileLoader.cpp	172	CFileLoader	-	NOT_REACHED	unguarded null check	-
+Font.cpp	178	CFont::Shutdown	-	NOT_REACHED	unguarded SafeRemoveTxdSlot	-
+Font.cpp	180	CFont::Shutdown	-	NOT_REACHED	unguarded SafeRemoveTxdSlot	-
+Fx/FxPrimBP.cpp	21	FxPrimBP	-	NOT_REACHED	unguarded texture destroy fix	-
+ModelInfoAccelerator.cpp	81	CModelInfoAccelerator	-	NOT_REACHED	unguarded else fix	-
+Frontend/MenuManager_Process.cpp	143	CMenuManager	-	NOT_REACHED	unguarded SetDir fix	-
+MenuManager.cpp	841	CMenuManager::LoadSettings	-	NOT_REACHED	unguarded CloseFile fix	-
+MenuManager.cpp	857	CMenuManager	-	NOT_REACHED	unguarded UTF-8 fix	-
+MenuManager.cpp	1106	CMenuManager	-	NOT_REACHED	unguarded Ascii/Gxt fix	-
+cHandlingDataMgr.cpp	219	cHandlingDataMgr::LoadHandlingData	-	NOT_REACHED	unguarded sized sscanf	-
+ObjectData.cpp	68	CObjectData::Initialise	-	NOT_REACHED	unguarded sized sscanf	-
+PPTriPlantBuffer.cpp	33	PPTriPlantBuffer	-	NOT_REACHED	unguarded null check	-
+(misc, 17 sites)	-	TaskSimpleSwim 665, Population 1670 (assert), TagManager 242 (#if 0), GxtChar, SurfaceInfo_c.h, GangWars 952, StencilShadows.h, ProcSurfaceInfo 203, TaskComplexUseGoggles 36, AnimBlendHierarchy.h 72, app.cpp 97, user radio/Streaming/TaskCategories todos, Automobile 4393/5323, Vehicle 5046, Shopping 526, utility.hpp/ReversibleBugFix.hpp/StdInc.h (defs)	-	NOT_REACHED	comment/todo/#if 0 mentions or unguarded fixes not reached	-

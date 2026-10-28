@@ -5723,12 +5723,16 @@ void CVehicle::AddExhaustParticles() {
         return;
     }
 
-    CVector vecParticleVelocity;
-    if (DotProduct(GetForward(), m_vecMoveSpeed) >= 0.05f) {
-        vecParticleVelocity = m_vecMoveSpeed * 30.0f;
+    // NOTSA: asm sweep S19h (exe 0x6DE404/0x6DE47E/0x6DE494): the particle velocity is horizontal only - z is always 0
+    // (`z = 0` is stored once, only x/y are written). `dot >= 0.05` is the JP after `FCOMP; TEST AH,5` (NaN takes it too).
+    CVector vecParticleVelocity{ 0.0f, 0.0f, 0.0f };
+    if (!(DotProduct(GetForward(), m_vecMoveSpeed) < 0.05f)) {
+        vecParticleVelocity.x = m_vecMoveSpeed.x * 30.0f;
+        vecParticleVelocity.y = m_vecMoveSpeed.y * 30.0f;
     } else {
         static float randomFactor = CGeneral::GetRandomNumberInRange(-1.8f, -0.9f);
-        vecParticleVelocity = randomFactor * GetForward();
+        vecParticleVelocity.x = randomFactor * GetForward().x;
+        vecParticleVelocity.y = randomFactor * GetForward().y;
     }
 
     firstExhaustPos = entityMatrix.TransformPoint(firstExhaustPos);

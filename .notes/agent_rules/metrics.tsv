@@ -259,4 +259,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-28	ASM-S16h	v6	asm sweep (partial)	230756	58	20	Automobile ProcessBuoyancy fixed (literal divisions vs exe multiplies), VehicleDamage fixed x10 (ReactToVehicleDamage missing, bumper signs/order, explosion victim field); PreRender partial -> S16i
 2026-10-28	SYSTEMIC-3	v6	systemic asm	183433	80	45	litdiv_scan.py: 80 sites (15 exe-multiplies, 22 divides, 43 unclear); 18 fixed in 7 files incl. real bugs (JetPack heightMult /100 vs *0.05, blur streak int alpha, traffic light order); audio oracles 0/0 before+after
 2026-10-28	ASM-S17c	v6	asm sweep (partial)	188715	51	16	Bike/Boat 6/16: 4 fixed (Boat Render speeder/reefer vertices + invisible cheat, Boat BlowUpCar const + uninit, Bike KnockOffRider dot order, Bike ProcessBuoyancy exe multiplies); 10 left -> S17d
-2026-10-28	ASM-S17d	v6	asm sweep (partial)	?	?	?	Bike/Bmx/Boat 5/10 all MATCH (Bmx/Bike ProcessAI, Bmx anims+PreRender, Boat PreRender); 5 big left -> S17e
+2026-10-28	ASM-S17d	v6	asm sweep (partial)	211859	40	9	Bike/Bmx/Boat 5/10 all MATCH (Bmx/Bike ProcessAI, Bmx anims+PreRender, Boat PreRender); 5 big left -> S17e

@@ -67,8 +67,11 @@ CTask* CTaskComplexKillPedOnFootStealth::ControlSubTask(CPed* ped) {
             if (m_targetUnreachableTimeMs == (uint32)-1) { // State is changing (Target is now reachable)
                 return true; // I guess the position check below is done the next frame in this case? No clue why.
             }
-            if ((ped->GetPosition() - m_target->GetPosition()).Normalized().Dot(ped->GetForward()) >= CPedAcquaintanceScanner::ms_fThresholdDotProduct) {
-                if (ped->GetIntelligence()->CanSeeEntityWithLights(m_target, true) > 0.f) {
+            // ASM-S06: exe 0x62B8CD-0x62B95E: direction is target - ped (the port had ped - target), CanSeeEntityWithLights is always called
+            // (before the dot test), and the dot must be strictly greater than the threshold
+            const auto dot = (m_target->GetPosition() - ped->GetPosition()).Normalized().Dot(ped->GetForward());
+            if (ped->GetIntelligence()->CanSeeEntityWithLights(m_target, true) > 0.f) {
+                if (dot > CPedAcquaintanceScanner::ms_fThresholdDotProduct) {
                     return true; // All good, we can still reach the ped
                 }
             }
@@ -111,7 +114,7 @@ CTask* CTaskComplexKillPedOnFootStealth::ControlSubTask(CPed* ped) {
         if (sttype != TASK_COMPLEX_INVESTIGATE_DISTURBANCE && m_pSubTask->MakeAbortable(ped)) {
             return new CTaskComplexInvestigateDisturbance{ m_targetPos, m_target };
         }
-    } else if (sttype == TASK_COMPLEX_SEQUENCE && m_pSubTask->MakeAbortable(ped)) {
+    } else if (m_targetPos.z <= -9999.9004f && sttype != TASK_COMPLEX_SEQUENCE && m_pSubTask->MakeAbortable(ped)) { // ASM-S06: exe 0x62BA6B `cmp eax, 0xF4; je` => only when the subtask is NOT already a sequence (was ==); z test `jp` => NaN returns
         return new CTaskComplexSequence{
             new CTaskSimpleStandStill{1000},
             new CTaskSimpleRunAnim{ped->m_nAnimGroup, ANIM_ID_ROADCROSS},

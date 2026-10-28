@@ -33,7 +33,7 @@ void CEntitySeekPosCalculatorRadiusAngleOffset::ComputeEntitySeekPos(const CPed&
         seeker, 
         target.GetPosition() + CVector{
             (float)(X87R(-x87::sin(angle) * m_radius)),
-            (float)(X87R(x87::cos(angle) * m_radius)),
+            (float)x87::cos(angle) * m_radius, // 0x69477E: cos is stored as a float (fstp) before the radius multiply, unlike sin (kept extended)
             0.0f
         }, 
         outPos

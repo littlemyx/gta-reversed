@@ -5063,7 +5063,7 @@ void CVehicle::ProcessBoatControl(tBoatHandlingData* boatHandling, float* fLastW
 
     bool bOnWater = false;
     // FIX_BUGS ? vehicleFlags.bIsDrowning = false;
-    if (CTimer::GetTimeStep() * m_fMass * 0.0008F >= vecBuoyancyForce.z) {
+    if (!(CTimer::GetTimeStep() * m_fMass * 0.0008F < vecBuoyancyForce.z)) { // 0x6DBD84: `fcomp; test ah,5; jp` - >= and NaN
         physicalFlags.bSubmergedInWater = false;
     } else {
         physicalFlags.bSubmergedInWater = true;
@@ -5129,9 +5129,9 @@ void CVehicle::ProcessBoatControl(tBoatHandlingData* boatHandling, float* fLastW
             CPhysical::ApplyMoveForce(GetForward() * fMoveForceMult);
 
             if (m_f2ndSteerAngle == 0.0F) { // todo: missing checks for CTimer 0x6DC195 ?
-                m_f2ndSteerAngle = (float)CTimer::GetTimeInMS() + 300.0F;
+                m_f2ndSteerAngle = (float)((x87d)CTimer::GetTimeInMS() + 300.0); // 0x6DC1AA: fild + fadd 300 (one rounding to float)
             }
-            else if (m_f2ndSteerAngle <= (float)CTimer::GetTimeInMS()) {
+            else if ((x87d)CTimer::GetTimeInMS() > m_f2ndSteerAngle) { // 0x6DC1C7: `fild time; fcomp angle; jne` - strictly greater (the integer stays exact, NaN keeps the angle)
                 m_f2ndSteerAngle = 0.0F;
             }
         }
@@ -5142,7 +5142,7 @@ void CVehicle::ProcessBoatControl(tBoatHandlingData* boatHandling, float* fLastW
         auto fMoveForce = m_vecMoveSpeed.SquaredMagnitude() * boatHandling->m_fAqPlaneForce * CTimer::GetTimeStep() * vecBuoyancyForce.z * 0.5F;
         if (m_nModelIndex == MODEL_SKIMMER)
             fMoveForce *= (m_GasPedal + 1.0F);
-        else if (m_GasPedal <= 0.05F)
+        else if (!(m_GasPedal > 0.05F)) // 0x6DC265: `fcomp; test ah,0x41; jne` - <= and NaN
             fMoveForce = 0.0F;
         else
             fMoveForce *= m_GasPedal;
@@ -5166,12 +5166,13 @@ void CVehicle::ProcessBoatControl(tBoatHandlingData* boatHandling, float* fLastW
     // 0x6DC3AF
     if (GetUp().z > -0.6F) {
         float fMoveSpeed = 1.0F;
-        if (std::fabs(m_GasPedal) <= 0.05F) {
+        const bool bGasActive = std::fabs(m_GasPedal) > 0.05F; // 0x6DC3BD: `je` skips the speed test only for an ordered |gas| > 0.05 (NaN takes the speed test)
+        if (!bGasActive) {
             fMoveSpeed = m_vecMoveSpeed.Magnitude2D();
         }
 
-        if (std::fabs(m_GasPedal) > 0.05F || fMoveSpeed > 0.01F) {
-            if (IsSubBoat() && bOnWater && fMoveSpeed > 0.05F) {
+        if (bGasActive || fMoveSpeed > 0.01F) {
+            if (IsSubBoat() && bOnWater && (x87d)fMoveSpeed > (x87d)0.05) { // 0x6DC409: compared with the 64-bit constant 0.05 at [0x859068]
                 //GetColModel(); Unused call
                 AsBoat()->AddWakePoint(GetPosition());
             }
@@ -5197,30 +5198,35 @@ void CVehicle::ProcessBoatControl(tBoatHandlingData* boatHandling, float* fLastW
             auto vecWorldThrustPos = GetPosition() + vecTransformedThrustPoint;
             float fWaterLevel;
             CWaterLevel::GetWaterLevel(vecWorldThrustPos, fWaterLevel, true); // warn: result not checked
-            if (vecWorldThrustPos.z - 0.5F >= fWaterLevel) {
+            if (!(vecWorldThrustPos.z - 0.5F < fWaterLevel)) { // 0x6DC5BD: `fcomp; test ah,5; jp` - >= and NaN (the result of GetWaterLevel is unchecked)
                 if (IsSubBoat())
                     AsBoat()->m_nBoatFlags.bBoatEngineInWater = false;
             }
             else {
                 auto fThrustDepth = fWaterLevel - vecWorldThrustPos.z + 0.5F;
-                fThrustDepth = std::min(sq(fThrustDepth), 1.0F);
+                fThrustDepth = fThrustDepth > 1.0F ? 1.0F : sq(fThrustDepth); // 0x6DC5DA: `fcom 1; jne` - only an ordered depth > 1 is clamped, otherwise it is squared
 
                 if (IsSubBoat())
                     AsBoat()->m_nBoatFlags.bBoatEngineInWater = true;
 
                 bool bIsSlowingDown = false;
                 auto fGasState = std::fabs(m_GasPedal);
-                if (fGasState < 0.01F || m_nModelIndex == MODEL_SKIMMER) {
+                if (!(fGasState > 0.01F) || m_nModelIndex == MODEL_SKIMMER) { // 0x6DC610: `fcom; test ah,0x41; jne 0x6DC940` - <= 0.01 and NaN
                     bIsSlowingDown = true;
                 }
                 else {
                     if (fGasState < 0.5F)
                         bIsSlowingDown = true;
 
-                    auto fSteerAngle = std::fabs(m_fSteerAngle);
+                    auto fSteerAngle = m_fSteerAngle < 0.0F ? -m_fSteerAngle : m_fSteerAngle; // 0x6DC642: `fcomp 0; jp` - fchs only for an ordered negative
                     CVector vecSteer(-fSteerAngleSin, fSteerAngleCos, -fSteerAngle);
                     CVector vecSteerMoveForce = GetMatrix().TransformVector(vecSteer);
-                    vecSteerMoveForce *= fThrustDepth * m_GasPedal * 40.0F * m_pHandlingData->m_transmissionData.m_EngineAcceleration * m_fMass;
+                    // 0x6DC6B4..0x6DC6F5: five successive vector * float products (each component is rounded after every factor), not one product with a scalar chain
+                    vecSteerMoveForce *= fThrustDepth;
+                    vecSteerMoveForce *= m_GasPedal;
+                    vecSteerMoveForce *= 40.0F;
+                    vecSteerMoveForce *= m_pHandlingData->m_transmissionData.m_EngineAcceleration;
+                    vecSteerMoveForce *= m_fMass;
 
                     if (vecSteerMoveForce.z > 0.2F)
                         vecSteerMoveForce.z = sq(1.2F - vecSteerMoveForce.z) + 0.2F;
@@ -5229,7 +5235,8 @@ void CVehicle::ProcessBoatControl(tBoatHandlingData* boatHandling, float* fLastW
                         if (m_GasPedal < 0.0F)
                             vecSteerMoveForce *= CVector(5.0F, 5.0F, 1.0F);
 
-                        vecSteerMoveForce.z = std::max(0.0F, vecSteerMoveForce.z);
+                        if (vecSteerMoveForce.z < 0.0F) // 0x6DC8A0: `fcomp 0; jp` keeps z for >= 0 and NaN
+                            vecSteerMoveForce.z = 0.0F;
                         CPhysical::ApplyMoveForce(vecSteerMoveForce * CTimer::GetTimeStep());
                     }
                     else {
@@ -5273,13 +5280,15 @@ void CVehicle::ProcessBoatControl(tBoatHandlingData* boatHandling, float* fLastW
                     CVector vecTractionLoss(-fSteerAngleSin, 0.0F, 0.0F);
                     vecTractionLoss *= fTractionLoss;
                     CVector vecTractionLossTransformed = GetMatrix().TransformVector(vecTractionLoss);
-                    vecTractionLossTransformed *= fThrustDepth * CTimer::GetTimeStep();
+                    vecTractionLossTransformed *= fThrustDepth; // 0x6DCA7C / 0x6DCAA9: two successive vector * float products
+                    vecTractionLossTransformed *= CTimer::GetTimeStep();
 
                     CPhysical::ApplyMoveForce(vecTractionLossTransformed);
                     CPhysical::ApplyTurnForce(vecTractionLossTransformed, vecTransformedThrustPoint);
 
                     auto fUsedTimeStep = std::max(CTimer::GetTimeStep(), 0.01F);
-                    auto vecTurn = GetRight() * fUsedTimeStep / fTraction * fTractionLoss * fSteerAngleSin * -0.75F;
+                    const float fTurnScale = fUsedTimeStep / fTraction * fTractionLoss * fSteerAngleSin * -0.75F; // 0x6DCB33..0x6DCB4D: the scalar first, then right * scalar
+                    auto vecTurn = GetRight() * fTurnScale;
                     CPhysical::ApplyTurnForce(vecTurn, GetUp());
                 }
             }

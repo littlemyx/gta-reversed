@@ -156,7 +156,7 @@ CTask* CTaskComplexWander::ControlSubTask(CPed* ped) {
         if (subTaskId == TASK_SIMPLE_GO_TO_POINT) {
             static_cast<CTaskSimpleGoToPoint*>(m_pSubTask)->m_moveState = m_nMoveState;
             if (m_nMoveState <= PEDMOVE_WALK) {
-                ped->Say(CTX_GLOBAL_CHAT);
+                ped->Say(CTX_GLOBAL_CHAT, 0, 0.1f); // 0x674D1F: probability 0.1 (the default 1.0 made the ped chat every frame)
             }
         }
 

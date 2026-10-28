@@ -1,0 +1,9 @@
+addr	file	line	cls	fn	oc
+0x62B150	source/game_sa/Tasks/TaskTypes/TaskComplexKillPedOnFoot.cpp	30	CTaskComplexKillPedOnFoot	CreateNextSubTask	D
+0x62B490	source/game_sa/Tasks/TaskTypes/TaskComplexKillPedOnFoot.cpp	31	CTaskComplexKillPedOnFoot	CreateFirstSubTask	D
+0x626260	source/game_sa/Tasks/TaskTypes/TaskComplexKillPedOnFoot.cpp	32	CTaskComplexKillPedOnFoot	ControlSubTask	D
+0x621500	source/game_sa/Tasks/TaskTypes/TaskComplexKillPedOnFootArmed.cpp	24	CTaskComplexKillPedOnFootArmed	LineOfSightClearForAttack	D
+0x626FC0	source/game_sa/Tasks/TaskTypes/TaskComplexKillPedOnFootArmed.cpp	26	CTaskComplexKillPedOnFootArmed	CreateSubTask	D
+0x62C190	source/game_sa/Tasks/TaskTypes/TaskComplexKillPedOnFootArmed.cpp	31	CTaskComplexKillPedOnFootArmed	CreateNextSubTask	D
+0x62BF00	source/game_sa/Tasks/TaskTypes/TaskComplexKillPedOnFootArmed.cpp	32	CTaskComplexKillPedOnFootArmed	CreateFirstSubTask	D
+0x62CCE0	source/game_sa/Tasks/TaskTypes/TaskComplexKillPedOnFootArmed.cpp	33	CTaskComplexKillPedOnFootArmed	ControlSubTask	D

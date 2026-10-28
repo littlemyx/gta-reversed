@@ -12,3 +12,6 @@
 
 ## IsPointInSphere sum order (from S02b)
 - [ ] Exe inlines the sphere test as (dz^2+dx^2)+dy^2 with NaN counting as inside (TaskComplexDestroyCarMelee::CreateFirstSubTask 0x62DB20); the port helper IsPointInSphere sums x,y,z. Remaining callers incl. DestroyCarMelee CreateNextSubTask/ControlSubTask (not in any slice list) need an exe check per site.
+
+## Double literals in float compares (from S05c)
+- [ ] Exe compares against float constants (0.119999997f, 0.200000003f) where the port wrote double literals 0.12 / 0.2 (KillCriminal::ControlSubTask). Scan source/game_sa for comparisons of float expressions against unsuffixed literals (like litdiv_scan.py) and check each against the exe constant.

@@ -78,7 +78,8 @@ bool CTaskSimpleStealthKill::ProcessPed(CPed* ped) {
 
     ped->m_fAimingRotation = pedToTarget.Heading();
 
-    if (const auto shift = pedToTarget.Magnitude() - 1.0f; std::abs(shift) > 0.02f) {
+    // exe 0x62E5D7-0x62E5EB: |v|^2 is summed z, x, y
+    if (const auto shift = std::sqrt((pedToTarget.z * pedToTarget.z + pedToTarget.x * pedToTarget.x) + pedToTarget.y * pedToTarget.y) - 1.0f; std::abs(shift) > 0.02f) {
         ped->m_vecAnimMovingShiftLocal.y = std::min(CTimer::GetTimeStep() * 0.05f, shift);
         ped->m_vecAnimMovingShiftLocal.x = 0.0f;
     }
@@ -136,7 +137,7 @@ void CTaskSimpleStealthKill::ManageAnim(CPed* ped) {
         }
 
         CPedDamageResponseCalculator damageCalculator{
-            ped,
+            m_target, // exe 0x6297A0: the damager is the target (task+0xC), not the ped running the task
             CPedDamageResponseCalculator::ms_damageFactor,
             m_target->GetActiveWeapon().m_Type,
             PED_PIECE_TORSO,

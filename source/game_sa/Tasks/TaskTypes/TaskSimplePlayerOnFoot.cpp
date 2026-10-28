@@ -692,7 +692,7 @@ void CTaskSimplePlayerOnFoot::PlayIdleAnimations(CPlayerPed* player) {
 
     CPad* pad = player->GetPadFromPlayer();
     AssocGroupId animGroupID = ANIM_GROUP_DEFAULT;
-    if (TheCamera.m_bWideScreenOn || player->bIsDucking || player->bCrouchWhenShooting || player->GetIntelligence()->GetTaskHold(false) || pad->DisablePlayerControls ||
+    if (TheCamera.m_bWideScreenOn || player->bIsDucking || player->bUsingMobilePhone || player->GetIntelligence()->GetTaskHold(false) || pad->DisablePlayerControls ||
         player->m_nMoveState > PEDMOVE_STILL ||
         (animGroupID = player->m_nAnimGroup, animGroupID != ANIM_GROUP_PLAYER) && animGroupID != ANIM_GROUP_FAT && animGroupID != ANIM_GROUP_MUSCULAR // todo: bad
     ) {
@@ -721,7 +721,8 @@ void CTaskSimplePlayerOnFoot::PlayIdleAnimations(CPlayerPed* player) {
         return;
     }
 
-    if (!(player->bIsLooking && player->bIsRestoringLook) && touchTimeDelta - gLastTouchTimeDelta > 20000) {
+    // exe 0x687497 `test byte [ped+0x46c], 0xc` (either look flag blocks) and 0x6874A5 signed `jle` on the delta
+    if (!(player->bIsLooking || player->bIsRestoringLook) && (int32)(touchTimeDelta - gLastTouchTimeDelta) > 20000) {
         // Check if the player already has any anims from the idle anim block playing already
         bool anyIdleAnims = false;
         RpAnimBlendClumpForEachAssociation(player->GetRpClump(), [&](CAnimBlendAssociation* a) {

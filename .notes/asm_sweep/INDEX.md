@@ -16,7 +16,7 @@
 | S12 | game_sa/Tasks/TaskTypes | 46 | partial 36/46 (29 M, 8 fixed) -> S12b | TaskSimpleCreateCarAndGetIn.cpp, TaskSimpleDead.cpp, TaskSimpleDie.cpp, TaskSimpleDieInCar.cpp, TaskSimpleDoHandSignal.cpp, TaskSimpleDrown.cpp ... |
 | S13 | game_sa/Tasks/TaskTypes | 41 | partial 29/41 (25 M, 3 fixed, 1 U) -> S13b | TaskSimpleGetUp.cpp, TaskSimpleGiveCPR.cpp, TaskSimpleGoTo.cpp, TaskSimpleGoToPoint.cpp, TaskSimpleGoToPointFine.cpp, TaskSimpleGunControl.cpp ... |
 | S14 | game_sa/Tasks/TaskTypes | 41 | partial 18/41 (14 M, 4 fixed) -> S14b | TaskSimpleJump.cpp, TaskSimpleKillPedWithCar.cpp, TaskSimpleLand.cpp, TaskSimpleOnEscalator.cpp, TaskSimplePickUpBike.cpp, TaskSimplePickUpEntity.cpp ... |
-| S15 | game_sa/Tasks/TaskTypes | 33 | pending | TaskSimpleSlideToCoord.cpp, TaskSimpleStandStill.cpp, TaskSimpleStandUp.cpp, TaskSimpleStealthKill.cpp, TaskSimpleSwim.cpp, TaskSimpleThrowProjectile.cpp ... |
+| S15 | game_sa/Tasks/TaskTypes | 33 | partial 13/33 (8 M, 5 fixed) -> S15b | TaskSimpleSlideToCoord.cpp, TaskSimpleStandStill.cpp, TaskSimpleStandUp.cpp, TaskSimpleStealthKill.cpp, TaskSimpleSwim.cpp, TaskSimpleThrowProjectile.cpp ... |
 | S16 | game_sa/Entity/Vehicle | 48 | partial 23/48 (18 M, 5 fixed) -> S16b | Automobile.cpp |
 | S17 | game_sa/Entity/Vehicle | 43 | partial 21/43 (17 M, 4 fixed) -> S17b | Bike.cpp, Bmx.cpp, Boat.cpp |
 | S18 | game_sa/Entity/Vehicle | 41 | partial 17/41 (13 M, 4 fixed) -> S18b | Heli.cpp, MonsterTruck.cpp, Plane.cpp, QuadBike.cpp |
@@ -94,3 +94,4 @@
 | S07b | rest of S07 | 30 | done 30/30 (22 M, 8 fixed; S07 complete) | TaskComplexReactToGunAimedAt.cpp, TaskComplexRoadRage.cpp, TaskComplexScreamInCarThenLeave.cpp, TaskComplexSeekCoverUntilTargetDead.cpp, TaskComplexSeekEntityAiming.cpp, TaskComplexShuffleSeats.cpp, TaskComplexSignalAtPed.cpp, TaskComplexSitDownThenIdleThenStandUp.cpp, TaskComplexSmartFleeEntity.cpp, TaskComplexSmartFleePoint.cpp |
 | S08b | rest of S08 | 8 | done 8/8 (6 M, 2 fixed; S08 complete) | TaskComplexUsePairedAttractor.cpp, TaskComplexUseSwatRope.cpp, TaskComplexUseWaterCannon.cpp |
 | S10b | rest of S10 (+ BeHitWhileMoving StartAnim tail from 0x6200F4) | 26 | done 26/26 (22 M, 4 fixed; S10 complete) | TaskSimpleCarAlign.cpp, TaskSimpleCarCloseDoorFromInside.cpp, TaskSimpleCarCloseDoorFromOutside.cpp, TaskSimpleCarDrive.cpp, TaskSimpleCarFallOut.cpp, TaskSimpleCarGetIn.cpp |
+| S15b | rest of S15 | 20 | pending | TaskSimpleSwim.cpp, TaskSimpleThrowProjectile.cpp, TaskSimpleTired.cpp, TaskSimpleTurn180.cpp, TaskSimpleUseGun.cpp, TaskSimpleWaitUntilAreaCodesMatch.cpp, TaskSimpleWaitUntilPedIsOutCar.cpp, TaskUtilityLineUpPedWithCar.cpp |

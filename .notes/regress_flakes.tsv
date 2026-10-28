@@ -6,3 +6,4 @@ date	gate_sha	scenario.check	detail	reruns
 2026-10-28	304805a6	combat.chase.no_zombie_cops	1 cop shot, not dead afterwards	2 PASS (3rd occurrence; COMBAT-FLAKY brief open)
 2026-10-28	0a2307b9	combat.foot.weapon_pickup	no pickup after the kill (561 -> 561)	2 PASS (2nd shape; reported to COMBAT-FLAKY)
 2026-10-28	0a2307b9	combat.foot.weapon_pickup	0 new pickups (merge into corpse drops, COMBAT-FLAKY)	fixed in scenario
+2026-10-28	S15 worktree (on ~ae0f98f2+S15)	combat.chase.player_shot_at	police did not hurt CJ within 70 s (new shape; may relate to COMBAT-FLAKY heal-every-2.5s hiding damage between samples)	1 rerun PASS

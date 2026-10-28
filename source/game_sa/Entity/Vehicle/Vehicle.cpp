@@ -2348,7 +2348,7 @@ bool CVehicle::ClearVehicleUpgradeFlags(int32 arg0, int32 modId) {
 
     switch (modId) {
     case 17: { // 0x6D3270
-        if (m_vehicleAudio.m_AuSettings.RadioType != AE_RT_CIVILIAN && vehicleFlags.bUpgradedStereo) {
+        if (m_vehicleAudio.m_AuSettings.RadioType == AE_RT_CIVILIAN && vehicleFlags.bUpgradedStereo) { // 0x6D3272: `test al, al; jne` skips non-civilian radios (the port had `!=`)
             auto& bs = m_vehicleAudio.m_AuSettings.BassSetting;
             switch (bs) {
             case eBassSetting::BOOST:  bs = eBassSetting::NORMAL; break;

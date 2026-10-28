@@ -1882,7 +1882,7 @@ bool CStreaming::ProcessLoadingChannel(int32 chIdx) {
     case eCdStreamStatus::WAITING_TO_READ:
         return false; // Not ready yet.
 
-    case eCdStreamStatus::READING_FAILURE: {
+    default: { // READING_FAILURE (the exe sends every status other than 0/250/255 down this path)
         // Retry
 
         ch.m_nCdStreamStatus = streamStatus;
@@ -1932,9 +1932,10 @@ bool CStreaming::ProcessLoadingChannel(int32 chIdx) {
                 ConvertBufferToObject(fileBuffer, modelId);
 
                 if (info.IsLoadingFinishing()) {
+                    // exe 0x40E2D5: the large model is always moved into slot 0 (not slot i)
                     ch.LoadStatus = eChannelState::STARTED;
-                    ch.modelStreamingBufferOffsets[i] = bufferOffsetInSectors;
-                    ch.modelIds[i] = modelId;
+                    ch.modelStreamingBufferOffsets[0] = bufferOffsetInSectors;
+                    ch.modelIds[0] = modelId;
                     if (i == 0)
                         continue;
                 }

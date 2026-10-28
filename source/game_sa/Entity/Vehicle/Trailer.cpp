@@ -251,8 +251,15 @@ void CTrailer::ProcessSuspension() {
     CVector contactSpeeds[NUM_TRAILER_SUPPORTS]{};
     float impulseMagnitudes[NUM_TRAILER_SUPPORTS]{};
 
+    // ASM-S19g 0x6CF750..0x6CF990: three separate passes (springs for both supports, THEN the contact speeds of both,
+    // THEN the dampening of both); the port did spring/speed/dampening per support, so support 0 saw its speed before
+    // support 1's spring impulse was applied
+    const auto IsSupportActive = [&](int32 i) {
+        return m_supportRatios[i] < m_fTrailerTowedRatio2 && m_fTrailerTowedRatio2 > 0.1f;
+    };
+
     for (int32 i = 0; i < NUM_TRAILER_SUPPORTS; ++i) {
-        if (m_supportRatios[i] < m_fTrailerTowedRatio2 && m_fTrailerTowedRatio2 > 0.1f) {
+        if (IsSupportActive(i)) {
             CVector forceDir = m_matrix->GetDown();
 
             contactPoints[i] = m_supportCPs[i].m_vecPoint - GetPosition();
@@ -260,9 +267,17 @@ void CTrailer::ProcessSuspension() {
             const float compression = m_supportRatios[i] / m_fTrailerTowedRatio2;
 
             CPhysical::ApplySpringCollisionAlt(m_fTrailerSuspensionForce, forceDir, contactPoints[i], compression, 1.0f, m_supportCPs[i].m_vecNormal, impulseMagnitudes[i]);
+        }
+    }
 
+    for (int32 i = 0; i < NUM_TRAILER_SUPPORTS; ++i) {
+        if (IsSupportActive(i)) {
             contactSpeeds[i] = GetSpeed(contactPoints[i]);
+        }
+    }
 
+    for (int32 i = 0; i < NUM_TRAILER_SUPPORTS; ++i) {
+        if (IsSupportActive(i)) {
             CVector dampeningDir = m_supportCPs[i].m_vecNormal.z > 0.35f
                 ? -m_supportCPs[i].m_vecNormal
                 : m_matrix->GetDown();
@@ -285,7 +300,9 @@ void CTrailer::ProcessSuspension() {
             }
         }
 
-        const float traction = m_pHandlingData->m_fTractionMultiplier * 0.004f * 0.25f;
+        // 0x6CFA51: K (0xC1CB28, static init 0x853C20) = (1/(50*50))*10 = 0x3B83126E, not 0.004f (0x3B83126F); (K * mult) * 0.25
+        constexpr float TRACTION_K = (1.0f / (50.0f * 50.0f)) * 10.0f;
+        const float traction = (TRACTION_K * m_pHandlingData->m_fTractionMultiplier) * 0.25f;
         CAutomobile::ProcessCarWheelPair(CAR_WHEEL_FRONT_LEFT, CAR_WHEEL_REAR_LEFT, 0.0f, contactSpeeds, contactPoints, traction, 0.0f, 1000.0f, true);
 
         m_damageManager.SetWheelStatus(CAR_WHEEL_FRONT_LEFT, originalWheelStatus[0]);
@@ -453,7 +470,8 @@ bool CTrailer::ProcessAI(uint32& extraHandlingFlags) {
         return returnValue;
     }
 
-    if (GetStatus() != STATUS_REMOTE_CONTROLLED || !m_pTowingVehicle) {
+    // ASM-S19g 0x6CF5D9: the exe tests status 0xA (STATUS_IS_TOWED), not 8 (REMOTE_CONTROLLED): a hitched trailer copies the brake / wheel steer
+    if (GetStatus() != STATUS_IS_TOWED || !m_pTowingVehicle) {
         return returnValue;
     }
 
@@ -464,15 +482,15 @@ bool CTrailer::ProcessAI(uint32& extraHandlingFlags) {
 
     // Wheel turning for luggage trailers
     // 0x6CF5FC..0x6CF67B: both headings stay in the FPU (unrounded); the wrap is decided by `tow > PI + self` / `tow < self - PI` and applied to `tow` BEFORE the subtraction
-    const double headingTow  = m_pTowingVehicle->GetHeadingExt();
-    const double headingSelf = GetHeadingExt();
+    const x87d headingTow  = m_pTowingVehicle->GetHeadingExt();
+    const x87d headingSelf = GetHeadingExt();
 
     // Calculation of the shortest angle difference
     x87d angleDiff;
-    if (headingTow > X87R((double)PI + headingSelf)) {
-        angleDiff = X87R((X87R(headingTow - (double)TWO_PI)) - headingSelf);
-    } else if (headingTow < X87R(headingSelf - (double)PI)) {
-        angleDiff = X87R((X87R(headingTow + (double)TWO_PI)) - headingSelf);
+    if (headingTow > X87R((x87d)PI + headingSelf)) {
+        angleDiff = X87R((X87R(headingTow - (x87d)TWO_PI)) - headingSelf);
+    } else if (headingTow < X87R(headingSelf - (x87d)PI)) {
+        angleDiff = X87R((X87R(headingTow + (x87d)TWO_PI)) - headingSelf);
     } else {
         angleDiff = X87R(headingTow - headingSelf);
     }
@@ -512,7 +530,10 @@ void CTrailer::PreRender() {
 
     // Animation for FARMTR1
     if (m_nModelIndex == MODEL_FARMTR1) {
-        m_fPropRotate = fmod(m_fPropRotate, TWO_PI);
+        // ASM-S19g 0x6CFC4D: `if (rot > 2*PI) rot -= 2*PI` once (the rotation only ever decreases below that); not an fmod
+        if (m_fPropRotate > TWO_PI) {
+            m_fPropRotate -= TWO_PI;
+        }
         const float forwardSpeed = m_vecMoveSpeed.Dot(m_matrix->GetForward());
         const float rotationSpeedFactor = std::clamp(forwardSpeed, 0.0f, 0.1f);
         m_fPropRotate -= rotationSpeedFactor * CTimer::GetTimeStep();

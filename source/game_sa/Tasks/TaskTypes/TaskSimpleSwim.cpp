@@ -662,7 +662,11 @@ void CTaskSimpleSwim::ProcessEffects(CPed* ped) {
         }
         if ((unsigned)CGeneral::GetRandomNumberInRange(0, 100) < oxygen) {
             RpHAnimHierarchy* hier = GetAnimHierarchyFromSkinClump(ped->GetRpClump()); // todo: almost CPed::GetBoneMatrix
+#ifdef FIX_BUGS
             CVector* bonePos = static_cast<CVector*>(&RpHAnimHierarchyGetMatrixArray(hier)[BONE_JAW].pos); // FIX_BUGS: Air bubbles from ass :D (BONE_SPINE1)
+#else
+            CVector* bonePos = static_cast<CVector*>(&RpHAnimHierarchyGetMatrixArray(hier)[BONE_SPINE1].pos); // 0x68AC8A..0x68AC8F: matrix array + 0xF0 = index 3 (the exe emits the bubbles at the spine)
+#endif
 
             static FxPrtMult_c fxPrtMult(1.0f, 1.0f, 1.0f, 0.25f, 0.3f, 0.0f, 0.5f);
             g_fx.m_Bubble->AddParticle(*bonePos, { 0.0f, 0.0f, 2.0f }, 0.0f, fxPrtMult);

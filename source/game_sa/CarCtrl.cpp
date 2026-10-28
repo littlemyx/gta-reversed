@@ -2015,7 +2015,7 @@ void CCarCtrl::FlyAIHeliInCertainDirection(CHeli* heli, float angle, float targe
     // Don't pitch forward as much if we're climbing quickly
     if (climbFactor > 0.0f) {
         const auto factor = climbFactor < 1.0f ? climbFactor : 1.0f;
-        heli->m_fSteeringUpDown = (float)((1.0f - factor) * heli->m_fSteeringUpDown);
+        heli->m_fSteeringUpDown = (float)(((x87d)1.0f - factor) * heli->m_fSteeringUpDown); // x87: 1 - factor is not rounded to float
     }
 
     // Still pitching forward: Limit the pitch by the speed (so the heli can brake)

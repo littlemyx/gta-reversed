@@ -69,4 +69,4 @@
 | S16f | rest of S16e | 10 | partial 4/10 (4 fixed) -> S16g | Automobile.cpp |
 | S16g | rest of S16f | 6 | partial 3/6 (1 M, 2 fixed) -> S16h | Automobile.cpp |
 | S16h | rest of S16g | 3 | partial 2/3 + PreRender to 0x6AB154 (2 fixed) -> S16i | Automobile.cpp |
-| S16i | rest of S16h | 0 | pending |  |
+| S16i | PreRender from 0x6AB154 to ret (rest of S16h) | 1 | pending |  |

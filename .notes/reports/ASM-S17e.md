@@ -5,5 +5,5 @@ FIXED 1084855f CBoat::ProcessControl 0x6F1770-0x6F20BD: (1) buoyancy uses folded
 UNSURE (not fixed): exe calls CVehicle::ProcessDelayedExplosion with whatever ecx PruneWakeTrail left (0x6F179F); asm shows no ecx reload, source passes this.
 NOT REACHED: CBike::ProcessControl 0x6B9250: compared 0x6B9250-0x6B97C9 (flags reset, replay return, alarm/bomb/clump alpha, testPed, ProcessAI, side stand, COM, pitch/roll damping + both ApplyTurnForce) = MATCH; the other ~3300 asm lines (fake-physics block onward) not read, token budget.
 No FIX_BUGS issue found: all fixes are unguarded exe behaviour; no port fix removed.
-Gate: Release build OK. No oracle target covers CBoat::ProcessControl (gameplay_oracle_vehicle only covers ModifyHandlingValue, unchanged). Soak: see the final report line (run after the rebase).
+Gate: Release build OK. No oracle target covers CBoat::ProcessControl (gameplay_oracle_vehicle only covers ModifyHandlingValue, unchanged). Soak (NOVSYNC, 3 min, after the rebase and rebuild): RESULT: OK.
 Scratch: C:/gta-scratch/asm-s17e (build.log, soak/).

@@ -400,16 +400,18 @@ void CBike::ProcessBuoyancy() {
     ApplyTurnForce(vecBuoyancyForce, vecBuoyancyTurnPoint);
 
     auto fTimeStep = std::max(0.01F, CTimer::GetTimeStep());
-    auto fUsedMass = m_fMass * 0.008F; // 0x6B6082 fmul [0x863984] (not / 125.0F)
-    auto fBuoyancyForceZ = vecBuoyancyForce.z / (fTimeStep * fUsedMass);
+    // 0x6B6076..0x6B60B9: the exe multiplies by the constant 0.008f (0x863984), in this order: (ts * mass) * 0.008f, then force.z / that
+    constexpr auto BUOY_MASS_K = std::bit_cast<float>(0x3C03126Fu);
+    auto fUsedMass = m_fMass * BUOY_MASS_K;
+    auto fBuoyancyForceZ = vecBuoyancyForce.z / ((fTimeStep * m_fMass) * BUOY_MASS_K);
 
     if (fUsedMass > m_fBuoyancyConstant)
-        fBuoyancyForceZ = (fUsedMass / m_fBuoyancyConstant * fBuoyancyForceZ) * 1.05F; // 0x6B60A9..0x6B60B3: fdiv, fmul Z, fmul 1.05f
+        fBuoyancyForceZ = ((fUsedMass / m_fBuoyancyConstant) * fBuoyancyForceZ) * 1.05F; // 0x6B60A9..0x6B60B9
 
     if (physicalFlags.bMakeMassTwiceAsBig)
         fBuoyancyForceZ *= 1.5F;
 
-    auto fBuoyancyForceMult = std::max(0.5F, 1.0F - fBuoyancyForceZ * 0.05F); // 0x6B60D9 fmul [0x858C28] (not / 20.0F)
+    auto fBuoyancyForceMult = std::max(0.5F, 1.0F - fBuoyancyForceZ * 0.05F); // 0x6B60D9: multiply by 0.05f, not divide by 20
     auto fSpeedMult = std::pow(fBuoyancyForceMult, CTimer::GetTimeStep());
     m_vecMoveSpeed *= fSpeedMult;
     m_vecTurnSpeed *= fSpeedMult;

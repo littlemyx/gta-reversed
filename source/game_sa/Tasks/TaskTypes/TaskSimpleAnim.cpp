@@ -38,22 +38,26 @@ CTaskSimpleAnim::~CTaskSimpleAnim() {
 bool CTaskSimpleAnim::MakeAbortable(CPed* ped, eAbortPriority priority, const CEvent* event) {
     bool bSkipBlend = false;
     auto fBlend = -4.0F;
+    // exe 0x61A7B4-0x61A7DB: the script-command check is only reached for IMMEDIATE aborts and for dontInterrupt tasks; other aborts go straight to the blend-out
+    bool bCheckScriptEvent = false;
     if (priority == eAbortPriority::ABORT_PRIORITY_IMMEDIATE) {
         fBlend = -1000.0F;
         m_bHoldLastFrame = false;
+        bCheckScriptEvent = true;
     } else if (m_bDontInterrupt) {
         if (event && event->GetEventType() != eEventType::EVENT_SCRIPT_COMMAND)
             return false;
-    } else if (event) {
-        if (event->GetEventType() == eEventType::EVENT_SCRIPT_COMMAND) {
-            const auto* scriptCommand = static_cast<const CEventScriptCommand*>(event);
-            if (scriptCommand->m_task) {
-                if (scriptCommand->m_task->GetTaskType() == TASK_SIMPLE_NAMED_ANIM) {
-                    if (m_pAnim)
-                        m_pAnim->m_Flags |= ANIMATION_IS_BLEND_AUTO_REMOVE;
+        bCheckScriptEvent = true;
+    }
 
-                    bSkipBlend = true;
-                }
+    if (bCheckScriptEvent && event && event->GetEventType() == eEventType::EVENT_SCRIPT_COMMAND) {
+        const auto* scriptCommand = static_cast<const CEventScriptCommand*>(event);
+        if (scriptCommand->m_task) {
+            if (scriptCommand->m_task->GetTaskType() == TASK_SIMPLE_NAMED_ANIM) {
+                if (m_pAnim)
+                    m_pAnim->m_Flags |= ANIMATION_IS_BLEND_AUTO_REMOVE;
+
+                bSkipBlend = true;
             }
         }
     }

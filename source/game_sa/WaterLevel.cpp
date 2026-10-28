@@ -198,6 +198,7 @@ void CWaterLevel::WaterLevelInitialise() {
     NumWaterVertices = 0;
     NumWaterZonePolys = 0;
     
+    m_BlockPolyInfo = {}; // 0x6EAE8E: `rep stosd` over 0xC21B70..+0x120 (the block -> poly table)
     (void)LoadDataFile();
     FillQuadsAndTrianglesList();
 

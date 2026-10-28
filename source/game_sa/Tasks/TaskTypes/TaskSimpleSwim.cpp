@@ -863,7 +863,7 @@ void CTaskSimpleSwim::ProcessControlInput(CPlayerPed* ped) {
 
                 if (bPlayerUse2PlayerControls || bUpdateMoveBlendRatio) {
                     float fTimeStep = CTimer::GetTimeStep() * 0.07f;
-                    if (fWalkMagnitude - playerData->m_fMoveBlendRatio <= fTimeStep) {
+                    if (!(fWalkMagnitude - playerData->m_fMoveBlendRatio > fTimeStep)) { // exe 0x6892FF: JNE on C0|C3, a NaN difference takes the assignment
                         playerData->m_fMoveBlendRatio = fWalkMagnitude;
                     } else {
                         playerData->m_fMoveBlendRatio += fTimeStep;
@@ -941,8 +941,10 @@ void CTaskSimpleSwim::ProcessControlInput(CPlayerPed* ped) {
                 vecActiveCamFront.z = 0.0f;
             }
 
-            ped->m_fAimingRotation = x87::atan2(-vecActiveCamFront.x, vecActiveCamFront.y);
-            float fRotation = -(ped->m_fAimingRotation - ped->m_fCurrentRotation);
+            // exe 0x688BE5-0x688BF3: `fpatan; fst [aiming]; fsub [current]; fchs` - the store rounds, but the subtraction uses the UNROUNDED fpatan result still in st0
+            const double aimExact = x87::atan2(-vecActiveCamFront.x, vecActiveCamFront.y);
+            ped->m_fAimingRotation = (float)aimExact;
+            float fRotation = -(float)X87R(aimExact - ped->m_fCurrentRotation);
             if (fRotation <= DegreesToRadians(180.0f)) {
                 if (fRotation < -DegreesToRadians(180.0f))
                     fRotation += DegreesToRadians(360.0f);
@@ -1000,14 +1002,15 @@ void CTaskSimpleSwim::ProcessControlInput(CPlayerPed* ped) {
     float fRotation = m_nSwimState == SWIM_UNDERWATER_SPRINTING || m_nSwimState == SWIM_SPRINTING ? 0.95f : 0.95f; // same value like in OG
 
     if (m_fTurningRotationY > 0.01f || m_fTurningRotationY < -0.01f) {
-        m_fTurningRotationY *= std::pow(fRotation, CTimer::GetTimeStep());
+        // exe 0x6894F7: the CRT pow result stays unrounded on the x87 stack, the multiply rounds once
+        m_fTurningRotationY = (float)(std::pow((double)fRotation, (double)CTimer::GetTimeStep()) * (double)m_fTurningRotationY);
     } else {
         m_fTurningRotationY = 0.0f;
     }
 
     if (m_nSwimState != SWIM_UNDERWATER_SPRINTING && m_nSwimState != SWIM_SPRINTING) {
         if (m_fRotationX > 0.01f || m_fRotationX < -0.01f) {
-            m_fRotationX *= std::pow(fRotation, CTimer::GetTimeStep());
+            m_fRotationX = (float)(std::pow((double)fRotation, (double)CTimer::GetTimeStep()) * (double)m_fRotationX); // exe 0x68953F
         } else {
             m_fRotationX = 0.0f;
         }
@@ -1016,9 +1019,9 @@ void CTaskSimpleSwim::ProcessControlInput(CPlayerPed* ped) {
     fRotation = m_nSwimState == SWIM_DIVE_UNDERWATER || m_nSwimState == SWIM_BACK_TO_SURFACE ? 0.95f : 0.92f;
 
     if (m_fAimingRotation > 0.01f || m_fAimingRotation < -0.01f || m_fUpperTorsoRotationX > 0.01f || m_fUpperTorsoRotationX < -0.01f) {
-        float fTimeStepRotation = std::pow(fRotation, CTimer::GetTimeStep());
-        m_fAimingRotation      *= fTimeStepRotation;
-        m_fUpperTorsoRotationX *= fTimeStepRotation;
+        const double fTimeStepRotation = std::pow((double)fRotation, (double)CTimer::GetTimeStep()); // exe 0x6895BD: kept unrounded, each multiply rounds
+        m_fAimingRotation      = (float)(fTimeStepRotation * (double)m_fAimingRotation);
+        m_fUpperTorsoRotationX = (float)(fTimeStepRotation * (double)m_fUpperTorsoRotationX);
     } else {
         m_fAimingRotation = 0.0f;
         m_fUpperTorsoRotationX = 0.0f;

@@ -1,0 +1,44 @@
+addr	function	verdict	asm range	note	fix commit
+0x640530	CTaskComplexDragPedFromCar::ControlSubTask	MATCH	0x640530-0x64057F (all)	-	-
+0x643D00	CTaskComplexDragPedFromCar::CreateFirstSubTask	MATCH	0x643D00-0x643E0D (all)	ChangeEntityReference = exe cleanup+register	-
+0x65A240	CTaskComplexDriveFireTruck::CreateSubTask	MATCH	0x65A240-0x65A38E (all)	-	-
+0x65B140	CTaskComplexDriveFireTruck::CreateFirstSubTask	MATCH	0x65B140-0x65B1DF (all)	exe tests ped->m_pVehicle, port tests the task vehicle (differs only when the task vehicle died: exe would crash); not changed	-
+0x65B090	CTaskComplexDriveFireTruck::CreateNextSubTask	MATCH	0x65B090-0x65B136 (all)	-	-
+0x65B1E0	CTaskComplexDriveFireTruck::ControlSubTask	MATCH	0x65B1E0-0x65B2EB (all)	same ped->m_pVehicle vs task vehicle note	-
+0x645420	CTaskComplexDriveToPoint::Drive	MATCH	0x645420-0x645591 (all)	only a NaN distance differs (exe: NaN < radius is true)	-
+0x6432A0	CTaskComplexDriveToPoint::IsTargetBlocked-Entities	MATCH	0x6432A0-0x6433CE (all)	-	-
+0x63CB60	CTaskComplexCarDriveWander::SetUpCar	FIXED	0x63CB60-0x63CC2D (all)	engine-broken branch cleared bEngineOn AND bIsLawEnforcer; exe clears only bEngineOn	1c0a7974
+0x643240	CTaskComplexCarDriveWander::CreateSubTaskCannotGetInCar	MATCH	0x643240-0x64324F (all)	-	-
+0x640E60	CTaskComplexEnterBoatAsDriver::CreateNextSubTask	MATCH	0x640E60-0x640ECD (all)	-	-
+0x63A730	CTaskComplexEnterCar::MakeAbortable	MATCH	0x63A730-0x63A883 (all)	-	-
+0x63AFF0	CTaskComplexEnterCarAsDriverTimed::StopTimer	MATCH	0x63AFF0-0x63B022 (all)	-	-
+0x63B2E0	CTaskComplexEnterCarAsPassengerTimed::StopTimer	MATCH	0x63B2E0-0x63B312 (all)	-	-
+0x6408D0	CTaskComplexEnterCarAsPassengerWait::CreateSubTask	MATCH	0x6408D0-0x640BA0 (all)	-	-
+0x643E10	CTaskComplexEnterCarAsPassengerWait::CreateNextSubTask	MATCH	0x643E10-0x643EFB (all)	-	-
+0x643F00	CTaskComplexEnterCarAsPassengerWait::CreateFirstSubTask	MATCH	0x643F00-0x643F85 (all)	-	-
+0x640730	CTaskComplexEnterCarAsPassengerWait::ControlSubTask	FIXED	0x640730-0x6408C0 (all)	moved-target test: extended precision (dz2+dy2)+dx2 (was float x,y,z)	8800bfdf
+0x656000	CTaskComplexEvasiveDiveAndGetUp::CreateNextSubTask	FIXED	0x656000-0x656097 (all)	LimitRadianAngle(cur) - pi/2 (port limited after subtracting)	07970a61
+0x698110	CTaskComplexExtinguishFires::CreateNextSubTask	MATCH	0x698110-0x69827F (all)	-	-
+0x698330	CTaskComplexExtinguishFires::ControlSubTask	FIXED	0x698330-0x6983BD (all)	m_fireToExt = nearest fire when retargeting was missing	af46349e
+0x690FC0	CTaskComplexFacial::ControlSubTask	FIXED	0x690FC0-0x691222 (all)	StartTimer on the running facial task was guarded (dur >= 0); exe unguarded	d9fa05a5
+0x679120	CTaskComplexFallToDeath::CreateFirstSubTask	MATCH	0x679120-0x67925D (all)	BlendAnimation(nullptr,...) overload is dead code (anim id never in [0,4))	-
+0x679270	CTaskComplexFallToDeath::CreateNextSubTask	FIXED	0x679270-0x6794E0 (all)	two inverted vertical-speed tests (in-air to land anim/b0x4; land to restart in-air)	36cf9929
+0x6796C0	CTaskComplexFallToDeath::CalcFall	FIXED	0x6796C0-0x679A8B (all)	shuffle uses rand()&3; three LOS tests were negated. UNSURE (not changed): fall-pos z = (0.375+pz)+dz*1.5 with unspilled extended intermediates, port adds in another order (last bit)	61ebe2b0
+0x65D2E0	CTaskComplexFleeAnyMeans::CreateSubTask	MATCH	0x65D2E0-0x65D538 (all)	-	-
+0x65D540	CTaskComplexFleeAnyMeans::CreateNextSubTask	MATCH	0x65D540-0x65D62F (all)	-	-
+0x65D730	CTaskComplexFleeAnyMeans::CreateFirstSubTask	MATCH	0x65D730-0x65D776 (all)	-	-
+0x65D150	CTaskComplexFleePoint::CreateNextSubTask	FIXED	0x65D150-0x65D231 (all)	sphere test was on the ped position; exe tests |fleeTo - fleeFrom|^2 vs safeDist^2, extended, NaN = inside	b76ae577
+0x65D100	CTaskComplexFleePoint::CreateFirstSubTask	MATCH	0x65D100-0x65D141 (all)	-	-
+0x63DFA0	CTaskComplexEnterCar::Destructor	NOT_REACHED	-	-	-
+0x63ACC0	CTaskComplexEnterCar::CreateTaskUtilityLineUpPedWithCar	NOT_REACHED	-	-	-
+0x63A380	CTaskComplexEnterCar::GetCameraStickModifier	NOT_REACHED	-	-	-
+0x63E040	CTaskComplexEnterCar::CreateSubTask	NOT_REACHED	-	-	-
+0x63E990	CTaskComplexEnterCar::CreateNextSubTask	NOT_REACHED	-	large (about 650 instr)	-
+0x643A60	CTaskComplexEnterCar::CreateFirstSubTask	NOT_REACHED	-	-	-
+0x63A890	CTaskComplexEnterCar::ControlSubTask	NOT_REACHED	-	-	-
+0x63F970	CTaskComplexEnterCar::CreateNextSubTask_AfterSimpleCarAlign	NOT_REACHED	-	-	-
+0x65D780	CTaskComplexFleeAnyMeans::ControlSubTask	NOT_REACHED	-	-	-
+0x65BB00	CTaskComplexFleeEntity::CreateFirstSubTask	NOT_REACHED	-	-	-
+0x65BBB0	CTaskComplexFleeEntity::ControlSubTask	NOT_REACHED	-	-	-
+0x65B820	CTaskComplexFleePoint::ComputeTargetPoint	NOT_REACHED	-	-	-
+0x65B660	CTaskComplexFleePoint::ControlSubTask	NOT_REACHED	-	-	-

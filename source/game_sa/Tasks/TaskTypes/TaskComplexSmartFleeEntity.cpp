@@ -111,10 +111,11 @@ CTask* CTaskComplexSmartFleeEntity::ControlSubTask(CPed* ped) {
 
             // Check if position update timer is out of time, if so, update position (if still outside tolerance)
             if (m_posCheckTimer.IsOutOfTime()) {
-                m_posCheckTimer.Start(m_posCheckPeriod);
-
                 const auto& currPos = m_fleeFrom->GetPosition();
-                if ((currPos - m_pos).SquaredMagnitude() >= sq(m_posChangeTolerance)) {
+                const auto  d       = m_pos - currPos;
+                // 0x65C82F..0x65C855: (dz^2 + dy^2) + dx^2, strictly greater than tolerance^2 (equal / NaN => skip)
+                if (d.z * d.z + d.y * d.y + d.x * d.x > sq(m_posChangeTolerance)) {
+                    m_posCheckTimer.StartUnguarded(m_posCheckPeriod); // 0x65C85E: the timer is restarted only when the target moved (and without a `>= 0` test)
                     m_pos = currPos;
                     fleePointTask->SetFleePosition(m_pos, m_safeDistance, m_pedScream);
 

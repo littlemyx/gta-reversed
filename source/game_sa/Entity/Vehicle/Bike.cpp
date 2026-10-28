@@ -396,16 +396,16 @@ void CBike::ProcessBuoyancy() {
     ApplyTurnForce(vecBuoyancyForce, vecBuoyancyTurnPoint);
 
     auto fTimeStep = std::max(0.01F, CTimer::GetTimeStep());
-    auto fUsedMass = m_fMass / 125.0F;
+    auto fUsedMass = m_fMass * 0.008F; // 0x6B6082 fmul [0x863984] (not / 125.0F)
     auto fBuoyancyForceZ = vecBuoyancyForce.z / (fTimeStep * fUsedMass);
 
     if (fUsedMass > m_fBuoyancyConstant)
-        fBuoyancyForceZ *= 1.05F * fUsedMass / m_fBuoyancyConstant;
+        fBuoyancyForceZ = (fUsedMass / m_fBuoyancyConstant * fBuoyancyForceZ) * 1.05F; // 0x6B60A9..0x6B60B3: fdiv, fmul Z, fmul 1.05f
 
     if (physicalFlags.bMakeMassTwiceAsBig)
         fBuoyancyForceZ *= 1.5F;
 
-    auto fBuoyancyForceMult = std::max(0.5F, 1.0F - fBuoyancyForceZ / 20.0F);
+    auto fBuoyancyForceMult = std::max(0.5F, 1.0F - fBuoyancyForceZ * 0.05F); // 0x6B60D9 fmul [0x858C28] (not / 20.0F)
     auto fSpeedMult = std::pow(fBuoyancyForceMult, CTimer::GetTimeStep());
     m_vecMoveSpeed *= fSpeedMult;
     m_vecTurnSpeed *= fSpeedMult;

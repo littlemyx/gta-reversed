@@ -6517,7 +6517,9 @@ void CVehicle::DoHeadLightReflectionTwin(CMatrix& vehicleMatrix) {
 
 // NOTSA
 void CVehicle::DoHeadLightReflectionImpl(CMatrix& vehicleMatrix, eVehicleLightsFlags flags, bool includeLeft, bool includeRight) {
-    const bool doTwin   = (flags & VEHICLE_LIGHTS_TWIN) ? (includeLeft && includeRight) : ModelIndices::IsCombineHarvester(GetModelIndex());
+    // ASM-S19g (0x6E1440 / 0x6E1600): the Single/Twin exe functions are separate, only TWIN + both sides draws the twin shadow
+    // (the old "no TWIN => combine harvester is twin" test belongs to DoHeadLightReflection 0x6E1720, which already did it)
+    const bool doTwin   = (flags & VEHICLE_LIGHTS_TWIN) && includeLeft && includeRight;
     const bool doSingle = !doTwin && (includeLeft || includeRight);
 
     if (doTwin || doSingle) {
@@ -6531,20 +6533,24 @@ void CVehicle::DoHeadLightReflectionImpl(CMatrix& vehicleMatrix, eVehicleLightsF
             ? 1.25f
             : (doTwin ? vehOffset.x : std::fabs(vehOffset.x)) * 4.0f;
 
-        const float offsetDistance = lightSize * 2.0f + 1.0f + vehOffset.y;
-        const auto  shdwFront      = lightFwd2D * (lightSize * 2.0f);
+        // x87 evaluation order: od = ((1 + 2*size) + y) stays unrounded, the position is (right*x + (pos + fwd*od)) (single)
+        const x87d  od             = ((x87d)1.0 + (x87d)(lightSize + lightSize)) + (x87d)vehOffset.y;
+        const auto  shdwFront      = lightFwd2D * (lightSize + lightSize);
         const auto  shdwSide       = (lightFwd2D * lightSize).GetPerpRight();
-        auto        lightPos2D     = lightFwd2D * offsetDistance;
+        const auto  pos            = GetPosition();
+        x87d        px             = (x87d)pos.x + (x87d)lightFwd2D.x * od;
+        x87d        py             = (x87d)pos.y + od * (x87d)lightFwd2D.y;
         if (doSingle) {
             const auto lightRight2D = CVector2D(vehicleMatrix.GetRight()).Normalized();
-            lightPos2D += lightRight2D * vehOffset.x;
+            px = (x87d)lightRight2D.x * (x87d)vehOffset.x + px;
+            py = (x87d)lightRight2D.y * (x87d)vehOffset.x + py;
         }
 
         CShadows::StoreCarLightShadow(
             this,
             static_cast<int32>(NOTSA_PTR_ID32(&m_matrix)) + 2,
             doTwin ? gpShadowHeadLightsTex : gpShadowHeadLightsTex2,
-            GetPosition() + CVector(lightPos2D, 2.0f),
+            CVector{ (float)px, (float)py, pos.z + 2.0f },
             shdwFront.x, shdwFront.y,
             shdwSide.x, shdwSide.y,
             45, 45, 45,

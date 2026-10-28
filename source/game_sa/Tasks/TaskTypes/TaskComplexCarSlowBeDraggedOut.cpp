@@ -63,7 +63,7 @@ CTask* CTaskComplexCarSlowBeDraggedOut::CreateSubTask(eTaskType taskType) {
 
 // 0x64C600
 bool CTaskComplexCarSlowBeDraggedOut::MakeAbortable(CPed* ped, eAbortPriority priority, const CEvent* event) {
-    if (priority == ABORT_PRIORITY_IMMEDIATE) {
+    if (priority != ABORT_PRIORITY_IMMEDIATE) { // 0x64C60E: `cmp eax, 2; jne -> return false` (the port had the condition inverted)
         return false;
     }
     m_pSubTask->MakeAbortable(ped, priority, event);

@@ -2,6 +2,7 @@
 
 #include "TaskComplexDieInCar.h"
 #include "TaskComplexLeaveCar.h"
+#include "TaskComplexLeaveCarAndDie.h"
 #include "TaskSimpleCarDrive.h"
 #include "TaskSimpleDieInCar.h"
 #include "CarCtrl.h"
@@ -52,7 +53,7 @@ CTask* CTaskComplexDieInCar::ControlSubTask(CPed* ped) {
 CTask* CTaskComplexDieInCar::CreateSubTask(eTaskType taskType, CPed* ped) {
     switch (taskType) {
     case TASK_COMPLEX_LEAVE_CAR_AND_DIE:
-        return new CTaskComplexLeaveCar(ped->m_pVehicle, 0, 0);
+        return new CTaskComplexLeaveCarAndDie(ped->m_pVehicle, 0, 0); // 0x62FD6B: ctor 0x62F1A0 - the AndDie subclass (task type 0x2C1), not a plain CTaskComplexLeaveCar
     case TASK_SIMPLE_CAR_DRIVE:
         return new CTaskSimpleCarDrive(ped->m_pVehicle, nullptr, false);
     case TASK_SIMPLE_DIE_IN_CAR:

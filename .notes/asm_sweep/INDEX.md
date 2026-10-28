@@ -70,4 +70,5 @@
 | S16g | rest of S16f | 6 | partial 3/6 (1 M, 2 fixed) -> S16h | Automobile.cpp |
 | S16h | rest of S16g | 3 | partial 2/3 + PreRender to 0x6AB154 (2 fixed) -> S16i | Automobile.cpp |
 | S16i | PreRender from 0x6AB154 to ret (rest of S16h) | 1 | pending |  |
-| S17d | rest of S17c | 10 | pending | Bike.cpp, Bmx.cpp, Boat.cpp |
+| S17d | rest of S17c | 10 | partial 5/10 (5 M) -> S17e | Bike.cpp, Bmx.cpp, Boat.cpp |
+| S17e | rest of S17d | 5 | pending | Bike.cpp, Boat.cpp |

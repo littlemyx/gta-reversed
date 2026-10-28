@@ -1,0 +1,21 @@
+addr	function	verdict	asm range	note	fix commit
+0x66EFA0	CTaskComplexFollowNodeRoute::ComputePathNodes	FIXED	0x66EFA0-0x66F442	route not cleared on entry; first-node cut tests used |node-ped| instead of |target-node|; start node reset value; NaN height test	5133e37e
+0x670E20	CTaskComplexFollowPatrolRoute::CreateFirstSubTask	MATCH	0x670E20-0x6711E5	segment search, fallback node search and tail equal (x87 order, FLT_MAX init, strict < on squared compare)	-
+0x695090	CTaskComplexFollowPedFootsteps::ControlSubTask	MATCH	0x695090-0x6955CA	whole function compared incl. constants 0x86C938/0x870C20..38/0x858CA0/0x858EF0	-
+0x671510	CTaskComplexFollowPointRoute::Constructor	MATCH	0x671510-0x6715FF	flag bits, blending init, route copy	-
+0x65EBB0	CTaskComplexGangFollower::Destructor	MATCH	0x65EBB0-0x65EC2A		-
+0x665E00	CTaskComplexGangFollower::CreateNextSubTask	NOT_REACHED		budget	-
+0x666160	CTaskComplexGangFollower::CreateFirstSubTask	NOT_REACHED		budget	-
+0x662A10	CTaskComplexGangFollower::ControlSubTask	NOT_REACHED		budget	-
+0x661720	CTaskComplexGangJoinRespond::Destructor	MATCH	0x661720-0x661787		-
+0x661950	CTaskComplexGangJoinRespond::ControlSubTask	MATCH	0x661950-0x661A5A		-
+0x65DF30	CTaskComplexGangLeader::Destructor	NOT_REACHED		budget	-
+0x65E730	CTaskComplexGangLeader::GetRandomGangAmbientAnim	NOT_REACHED	0x65E730-0x65E7E9 read	started: rand()>=0x3FFF coin flips and helper 0x65E710 still to compare with CGeneral::DoCoinFlip	-
+0x65E860	CTaskComplexGangLeader::DoGangAbuseSpeech	NOT_REACHED		budget	-
+0x65E9A0	CTaskComplexGangLeader::DoGangAttackSpeech	NOT_REACHED		budget	-
+0x65DFF0	CTaskComplexGangLeader::CreateNextSubTask	NOT_REACHED		budget	-
+0x65E1F0	CTaskComplexGangLeader::CreateFirstSubTask	NOT_REACHED		budget	-
+0x662370	CTaskComplexGangLeader::ControlSubTask	NOT_REACHED		budget	-
+0x65E200	CTaskComplexGangLeader::ScanForStuff	NOT_REACHED		budget	-
+0x649310	CTaskComplexGetOnBoatSeat::CreateFirstSubTask	MATCH	0x649310-0x6493C2		-
+0x669090	CTaskComplexFollowPointRoute::CreateTask	FIXED	0x669090-0x669334	all 6 cases compared; GOTO_POINT_FINE slowing-down copied flags from the sub task, port zeroed them	db1a8ff7

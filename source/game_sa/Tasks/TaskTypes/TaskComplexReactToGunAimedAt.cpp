@@ -1,4 +1,5 @@
 #include "StdInc.h"
+#include "game_sa/DetachedShared.h"
 #include "TaskComplexReactToGunAimedAt.h"
 #include "PedStats.h"
 #include "TaskSimpleAchieveHeading.h"
@@ -58,14 +59,14 @@ CTask* CTaskComplexReactToGunAimedAt::CreateSubTask(eTaskType taskType, CPed* pe
         return new CTaskSimpleHandsUp{ (uint32)CGeneral::GetRandomNumberInRange(3000, 5000) };
     case TASK_SIMPLE_PAUSE:
         return new CTaskSimplePause{
-            ped->bInVehicle
+            ped->IsInVehicle() // 0x697C06: `m_pVehicle != null && bInVehicle`
                 ? CGeneral::GetRandomNumberInRange(1000, 2000)
                 : 0
         };
     case TASK_SIMPLE_COWER:
         return new CTaskSimpleCower{};
     case TASK_COMPLEX_SMART_FLEE_ENTITY:
-        return new CTaskComplexSmartFleeEntity{ m_aimedBy, false, 60.f, 1000000, 1000, 1.f };
+        return new CTaskComplexSmartFleeEntity{ m_aimedBy, false, 60.f, 1000000, 1000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) }; // 0x697EB1: `push [0xC18CF0]` (read at runtime, scripts can change it), not a literal 1.0
     case TASK_COMPLEX_WANDER: {
         m_wanderBeginTimer.Start(10'000);
         return new CTaskComplexWanderStandard{
@@ -102,6 +103,7 @@ CTask* CTaskComplexReactToGunAimedAt::CreateNextSubTask(CPed* ped) {
             }
         }
         case TASK_SIMPLE_COWER:
+            ped->Say(CTX_GLOBAL_GUN_RUN); // 0x69840C: Say(0x73) before the flee subtask
             return TASK_COMPLEX_SMART_FLEE_ENTITY;
         case TASK_SIMPLE_HANDS_UP:
             return TASK_COMPLEX_WANDER;
@@ -127,7 +129,7 @@ CTask* CTaskComplexReactToGunAimedAt::ControlSubTask(CPed* ped) {
     }
     if (m_pSubTask->GetTaskType() == TASK_COMPLEX_WANDER) {
         if (m_wanderBeginTimer.IsOutOfTime()) {
-            if (m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_LEISURE, nullptr)) {
+            if (m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_URGENT, nullptr)) {
                 return nullptr;
             }
         }

@@ -1,0 +1,21 @@
+addr	function	verdict	asm range	note	fix commit
+0x61EB10	CTaskSimpleUseGun::FireGun	MATCH	0x61EB10-0x61ECFF (all)	origin z sum, bUseArm gating of bGunReachedTarget, null target pos test, flash 250 = .data global	-
+0x61ED10	CTaskSimpleUseGun::AimGun	FIXED	0x61ED10-0x61F39A (all)	m_IsAimImmediate cleared after read; look-at pos/bone from the aiming ped player data (BONE_UNKNOWN for non-ped target); m_TargetPos look-at does not set look-in-use; no-targetpos branch uses ped itself + R_UPPER_ARM for both arms and !LookIK gate; non-player direction = +0x73C; blocked left arm abort uses LEFT	f54577da
+0x61E8E0	CTaskSimpleUseGun::RemoveStanceAnims	FIXED	0x61E8E0-0x61EB03 (all)	anim end = total > current (not current/total < 1); walking player returns after the walk blend	f54577da
+0x624F30	CTaskSimpleUseGun::StartAnim	FIXED	0x624F30-0x62522B (all)	pistol whip uses IsTaskInUseByOtherTasks (not StopFireGun); burst shots signed word compare	79753613
+0x61E3F0	CTaskSimpleUseGun::SetMoveAnim	FIXED	0x61E3F0-0x61E8D8 (all)	aim-with-arm still: SetMoveState(STILL) + idle from ped anim group; play-time reset loop fwd/L/bwd/R; strict x < -0.75; NaN y -> forward	79753613
+0x622F20	CTaskSimpleUseGun::Clone	MATCH	0x622F20-0x622F9B (all)	ctor args target/pos/lastCmd/burstLength/aimImmediate	-
+0x624E30	CTaskSimpleUseGun::MakeAbortable	MATCH	0x624E30-0x624EC5 (all)		-
+0x62A380	CTaskSimpleUseGun::ProcessPed	NOT_REACHED	-	large (0x62A380-0x62B1xx); port carries detailed exe comments, not compared this slice	-
+0x624ED0	CTaskSimpleUseGun::SetPedPosition	MATCH	0x624ED0-0x624F2B (all)		-
+0x6259E0	CTaskSimpleThrowProjectile::StartAnim	FIXED	0x6259E0-0x625B5A (all)	anim choice was inverted: THROW when entity/target pos far (z,y,x sum, >100) or neither released nor satchel, else THROWU	34466bf1
+0x62AF50	CTaskSimpleThrowProjectile::ProcessPed	FIXED	0x62AF50-0x62B137 (all)	(cur-step)<=fire compare in x87 precision; button counter clamp signed	34466bf1
+0x630F70	CTaskSimpleTired::StartAnim	MATCH	0x630F70-0x630FEA (all)		-
+0x639990	CTaskSimpleTurn180::ProcessPed	MATCH	0x639990-0x6399E9 (all)		-
+0x635640	CTaskSimpleWaitUntilAreaCodesMatch::ProcessPed	MATCH	0x635640-0x635690 (all)		-
+0x649550	CTaskSimpleWaitUntilPedIsOutCar::ProcessPed	MATCH	0x649550-0x649615 (all)	StandStill(0,false,false,8.0), radian angle x,y,0,0	-
+0x68A1D0	CTaskSimpleSwim::ProcessSwimmingResistance	NOT_REACHED	-	budget	-
+0x688A90	CTaskSimpleSwim::ProcessControlInput	NOT_REACHED	-	budget	-
+0x64FC10	CTaskUtilityLineUpPedWithCar::GetLocalPositionToOpenCarDoor	NOT_REACHED	-	budget	-
+0x650A80	CTaskUtilityLineUpPedWithCar::GetPositionToOpenCarDoor	NOT_REACHED	-	budget	-
+0x6513A0	CTaskUtilityLineUpPedWithCar::ProcessPed	NOT_REACHED	-	budget	-

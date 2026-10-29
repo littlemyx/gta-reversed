@@ -1291,7 +1291,7 @@ void CCam::Process() {
             const float vx = fwd2D.x * ent->AsPhysical()->m_vecMoveSpeed.x;
             const float vy = fwd2D.y * ent->AsPhysical()->m_vecMoveSpeed.y;
             speedVar       = std::sqrt(vx * vx + vy * vy);
-            if (vy + vx <= 0.0f) {
+            if (!(vy + vx > 0.0f)) { // exe 0x527244-0x52725F: fcomp + `test ah,0x41; jne`: unordered (NaN) takes this branch too
                 speedVar = speedVar * 0.555555582f;
                 if (0.5f < speedVar) {
                     speedVar = 0.5f;
@@ -1307,7 +1307,8 @@ void CCam::Process() {
 
             if (m_nDirectionWasLooking != 3) {
                 auto* const pad = CPad::GetPad(0);
-                if (pad->GetLookBehindForCar() && (pad->GetLookLeft() || pad->GetLookRight())) {
+                // exe 0x5272DB-0x52730C: the `je 0x527312` after GetLookBehindForCar jumps to the store: !LookBehindForCar || Left || Right
+                if (!pad->GetLookBehindForCar() || pad->GetLookLeft() || pad->GetLookRight()) {
                     TheCamera.m_bCamDirectlyBehind = true;
                 }
             }

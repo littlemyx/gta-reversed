@@ -259,7 +259,7 @@ AssocGroupId CClothes::GetPlayerMotionGroupToLoad() {
     if (fat > 500.0f && fat > muscle)
         return ANIM_GROUP_FAT;
 
-    if (muscle <= 500.0f)
+    if (!(muscle > 500.0f)) // 0x5A7FFC: `je` after test ah, 0x41 - a NaN muscle stat picks PLAYER too
         return ANIM_GROUP_PLAYER;
 
     return ANIM_GROUP_MUSCULAR;

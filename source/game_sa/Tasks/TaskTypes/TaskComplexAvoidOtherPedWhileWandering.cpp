@@ -266,9 +266,9 @@ bool CTaskComplexAvoidOtherPedWhileWandering::NearbyPedsInSphere(CPed* ped, cons
             return anyInSphere; // No space
         }
 
-        // Insert it
+        // Insert it (`pedToCheck` is a reference into `pedsToCheck`: take the ped before nulling the entry, exe 0x672056)
+        *insertAt   = pedToCheck;
         pedToCheck  = nullptr;    // Null out array entry
-        *insertAt   = pedToCheck; 
         anyInSphere = true;
     }
     return anyInSphere;

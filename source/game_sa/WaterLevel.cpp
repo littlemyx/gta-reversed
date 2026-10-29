@@ -271,7 +271,7 @@ void CWaterLevel::RenderWaterTriangle(int32 X1, int32 Y1, CRenPar P1, int32 X2, 
     if (minX >= CameraRangeMaxX || maxX <= CameraRangeMinX || minY >= CameraRangeMaxY || maxY <= CameraRangeMinY) { // Lies outside (of camera) fully
         RenderFlatWaterTriangle(TRIANGLE_ARGS_OUT);
     } else if (minX < CameraRangeMinX || maxX > CameraRangeMaxX) { // Lies inside on X 
-        SplitWaterTriangleAlongXLine(minX < CameraRangeMinX ? CameraRangeMinX : CameraRangeMaxX, TRIANGLE_ARGS_OUT);
+        SplitWaterTriangleAlongXLine(maxX > CameraRangeMaxX ? CameraRangeMaxX : CameraRangeMinX, TRIANGLE_ARGS_OUT); // 0x6EE2A6: the exe tests `maxX > MaxX` first
     } else if (minY < CameraRangeMinY || maxY > CameraRangeMaxY) { // Lies inside of Y
         SplitWaterTriangleAlongYLine(minY < CameraRangeMinY ? CameraRangeMinY : CameraRangeMaxY, TRIANGLE_ARGS_OUT);
     } else { // Lies inside of camera fully

@@ -1369,7 +1369,7 @@ bool CWaterLevel::GetWaterLevelNoWaves(CVector pos, float* pOutWaterLevel, float
         return false;
     }
     default:
-        NOTSA_UNREACHABLE();
+        NOTSA_UNREACHABLE_RET(false);
     }
 }
 

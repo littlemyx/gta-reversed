@@ -180,7 +180,7 @@ bool CTaskComplexFallToDeath::CalcFall(CPed* ped, int32& outFallDir, bool& outFa
             case eDirection::RIGHT:
                 return ped->GetRight();
             default:
-                NOTSA_UNREACHABLE();
+                NOTSA_UNREACHABLE_RET(CVector{});
             }
         }();
         const auto IsLOSClear = [](CVector origin, CVector target) {

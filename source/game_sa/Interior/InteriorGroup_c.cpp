@@ -679,6 +679,6 @@ const char* InteriorGroup_c::GetAnimBlockName() {
     case eInteriorGroupType::HOUSE:  return "int_house";
     case eInteriorGroupType::SHOP:   return "int_shop";
     case eInteriorGroupType::OFFICE: return "int_office";
-    default:                         NOTSA_UNREACHABLE();
+    default:                         NOTSA_UNREACHABLE_RET(nullptr);
     }
 }

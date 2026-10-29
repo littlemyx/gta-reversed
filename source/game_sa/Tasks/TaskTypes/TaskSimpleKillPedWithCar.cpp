@@ -170,7 +170,7 @@ bool CTaskSimpleKillPedWithCar::ProcessPed(CPed* ped) {
         case FROM_RIGHT: return PED_PIECE_RIGHT_ARM;
         case FROM_BACK:  return PED_PIECE_ASS;
         case FROM_FRONT: return PED_PIECE_HEAD;
-        default:         NOTSA_UNREACHABLE();
+        default:         NOTSA_UNREACHABLE_RET(PED_PIECE_ASS);
         }
     }();
     CEventDamage eventDmg{m_Car, CTimer::GetTimeInMS(), killWT, ppiece, (uint8)pedHitSide, false, ped->bInVehicle};

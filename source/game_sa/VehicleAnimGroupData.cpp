@@ -191,7 +191,7 @@ CVector CVehicleAnimGroup::ComputeAnimDoorOffsets(eVehAnimDoorOffset doorId) {
         case EXIT_REAR:        return ANIM_ID_CAR_GETOUT_LHS_1;
         case JACK_PED_LEFT:    return ANIM_ID_CAR_JACKEDLHS;
         case JACK_PED_RIGHT:   return ANIM_ID_CAR_JACKEDRHS;
-        default:               NOTSA_UNREACHABLE();
+        default:               NOTSA_UNREACHABLE_RET(ANIM_ID_CAR_JACKEDLHS);
         }
     }();
 

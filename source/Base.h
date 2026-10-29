@@ -190,11 +190,14 @@ namespace notsa::standalone::Fixups { void UnreachableHit(const char* fn, const 
 #endif
 #define NOTSA_UNUSED_FUNCTION() NOTSA_UNREACHABLE("Unused Function")
 #define NOTSA_UNREACHABLE_CASE(val) NOTSA_UNREACHABLE("Unreachable switch case with value: {}", val)
+#define NOTSA_UNREACHABLE_CASE_RET(RET, val) NOTSA_UNREACHABLE_RET(RET, "Unreachable switch case with value: {}", val)
 // NOTSA_UNREACHABLE at the end of a non-void function / lambda: the Win32 build (MSVC) keeps the exact text of NOTSA_UNREACHABLE (the exe just runs off the end of
 // the function and returns whatever is in EAX / ST0; the site is logged by the run build), while the portable build (clang: falling off the end of a non-void
 // function is UB, it turns the path into `unreachable` and runs into the next function) logs the site and returns RET. RET is the first argument, the others are
 // the (optional) format arguments of NOTSA_UNREACHABLE. MAC-C3, -Werror=return-type of the portable preset.
-#ifdef NOTSA_PORTABLE
+// The standalone run build (NOTSA_STANDALONE_RUN) logs the hit site and returns RET as well: NOTSA_UNREACHABLE does not end the control flow there, so without the
+// `return` MSVC reports C4715 (not all control paths return a value), an error under /WX in a from-scratch build. Only the (never taken, logged) hit path changes.
+#if defined(NOTSA_PORTABLE) || defined(NOTSA_STANDALONE_RUN)
 #define NOTSA_UNREACHABLE_RET(RET, ...) do { NOTSA_UNREACHABLE(__VA_ARGS__); return RET; } while (false)
 #else
 #define NOTSA_UNREACHABLE_RET(RET, ...) NOTSA_UNREACHABLE(__VA_ARGS__)

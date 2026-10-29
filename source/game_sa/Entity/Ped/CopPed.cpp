@@ -32,7 +32,7 @@ eModelID CCopPed::GetPedModelForCopType(eCopType ctype) {
     case COP_TYPE_SWAT2:
         return MODEL_SWAT;
     default:
-        NOTSA_UNREACHABLE();
+        NOTSA_UNREACHABLE_RET(MODEL_INVALID);
     }
 }
 

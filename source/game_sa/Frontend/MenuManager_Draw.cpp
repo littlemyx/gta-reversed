@@ -1385,7 +1385,7 @@ uint32 CMenuManager::GetMaxAction() {
     case eControlMode::VEHICLE:
         return 25;
     default:
-        NOTSA_UNREACHABLE();
+        NOTSA_UNREACHABLE_RET(0u);
     }
 }
 
@@ -1406,6 +1406,6 @@ uint32 CMenuManager::GetVerticalSpacing() {
     case eControlMode::VEHICLE:
         return 13;
     default:
-        NOTSA_UNREACHABLE();
+        NOTSA_UNREACHABLE_RET(0u);
     }
 }

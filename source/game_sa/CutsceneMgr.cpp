@@ -1024,7 +1024,7 @@ void CCutsceneMgr::Update_overlay() {
             case PlayStatus::S2: return PlayStatus::S3;
             case PlayStatus::S3: return PlayStatus::S4;
             case PlayStatus::S4: return PlayStatus::S0;
-            default:             NOTSA_UNREACHABLE();
+            default:             NOTSA_UNREACHABLE_RET(PlayStatus::S0);
             }
         }();
 

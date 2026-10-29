@@ -596,7 +596,7 @@ CVector CPedGeometryAnalyser::ComputeEntityDir(const CEntity& entity, eDirection
     case eDirection::LEFT:     return -entity.GetRight();
     case eDirection::BACKWARD: return -entity.GetForward();
     case eDirection::RIGHT:    return entity.GetRight();
-    default:                   NOTSA_UNREACHABLE();
+    default:                   NOTSA_UNREACHABLE_RET(CVector{});
     }
 }
 

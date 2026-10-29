@@ -30,7 +30,7 @@ public:
         case CHAT:              return ms_ChatAllocator;
         case SIT_IN_LEADER_CAR: return ms_SitInLeaderCarAllocator;
         case RANDOM:            return ms_RandomAllocator;
-        default:                NOTSA_UNREACHABLE();
+        default:                NOTSA_UNREACHABLE_RET(ms_RandomAllocator);
         }
     }
 

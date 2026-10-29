@@ -6165,7 +6165,7 @@ bool SayJacked(CPed* jacked, CVehicle* vehicle, uint32 timeDelay) {
     case eAEVehicleAudioType::GENERIC:
         return jacked->Say(CTX_GLOBAL_JACKED_GENERIC, timeDelay) != -1;
     default:
-        NOTSA_UNREACHABLE();
+        NOTSA_UNREACHABLE_RET(false);
     }
 }
 
@@ -6181,7 +6181,7 @@ bool SayJacking(CPed* jacker, CPed* jacked, CVehicle* vehicle, uint32 timeDelay)
     case eAEVehicleAudioType::GENERIC:
         return jacker->Say(CTX_GLOBAL_JACKING_GENERIC, timeDelay) != -1;
     default:
-        NOTSA_UNREACHABLE();
+        NOTSA_UNREACHABLE_RET(false);
     }
 }
 

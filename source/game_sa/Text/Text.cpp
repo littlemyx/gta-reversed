@@ -132,7 +132,7 @@ const char* GetGxtName() {
         return "JAPANESE.GXT";
 #endif
     default:
-        NOTSA_UNREACHABLE("GXT file for language={:02d} is not defined.", (uint8)FrontEndMenuManager.m_nPrefsLanguage);
+        NOTSA_UNREACHABLE_RET(nullptr, "GXT file for language={:02d} is not defined.", (uint8)FrontEndMenuManager.m_nPrefsLanguage);
     }
 }
 

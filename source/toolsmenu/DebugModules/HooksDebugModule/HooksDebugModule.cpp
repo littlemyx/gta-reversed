@@ -125,7 +125,7 @@ bool HooksDebugModule::HandleSlideSetterForItem(std::optional<HookState> state, 
     case SlideSetter::Mode::TOGGLE: {
         return SetState(next);
     }
-    default: NOTSA_UNREACHABLE_CASE(m_SlideSetter.Mode);
+    default: NOTSA_UNREACHABLE_CASE_RET(false, m_SlideSetter.Mode);
     }
 }
 
@@ -226,7 +226,7 @@ bool HooksDebugModule::StateChanger(
                 case HookState::Unhooked:       return IM_COL32(127, 0, 0, a);  // Red
                 case HookState::RedirectToGTA:  return IM_COL32(69, 69, 69, a); // Dark gray
                 case HookState::RedirectToOurs: return IM_COL32(0, 127, 0, a);  // Green
-                default:                        NOTSA_UNREACHABLE_CASE(state);
+                default:                        NOTSA_UNREACHABLE_CASE_RET(IM_COL32(127, 127, 0, a), state);
                 }
             }).value_or(IM_COL32(127, 127, 0, a)) // yellow for mixed
         );

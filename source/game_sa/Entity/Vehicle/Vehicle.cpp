@@ -6543,7 +6543,7 @@ auto GetDummyFromLightId(eVehicleLightId lightId, bool isFront) -> eVehicleDummy
     switch (lightId) {
     case eVehicleLightId::MAIN:      return isFront ? DUMMY_LIGHT_FRONT_MAIN : DUMMY_LIGHT_REAR_MAIN;
     case eVehicleLightId::SECONDARY: return isFront ? DUMMY_LIGHT_FRONT_SECONDARY : DUMMY_LIGHT_REAR_SECONDARY;
-    default:                         NOTSA_UNREACHABLE_CASE(lightId);
+    default:                         NOTSA_UNREACHABLE_CASE_RET(DUMMY_LIGHT_FRONT_MAIN, lightId);
     }
 }
 

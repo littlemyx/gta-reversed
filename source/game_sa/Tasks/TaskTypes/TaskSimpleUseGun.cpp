@@ -125,7 +125,7 @@ void CTaskSimpleUseGun::FireGun(CPed* ped, bool isLeftHand) {
     }
 
     if (ped->GetActiveWeapon().GetState() == WEAPONSTATE_FIRING) {
-        ped->DoGunFlash(250, isLeftHand);
+        ped->DoGunFlash(250, isLeftHand); // 0x61ECE6 reads the word global 0x8D2E88 (init 250); the exe never writes it (only one code reference, no data pointer to it), so the literal is exact
     }
 }
 

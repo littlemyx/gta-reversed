@@ -2293,6 +2293,7 @@ bool CWeapon::FireProjectile(CEntity* firedBy, const CVector& origin, CEntity* t
         } else {
             projOrigin = origin + firedBy->GetForward();
         }
+        losCheckTarget = projOrigin; // 0x7418C1: the exe line of sight END is the (moved) origin copy, the START is the unmoved origin
         if (firedByPed) {
             if (firedByPed->IsPlayer()) { // 0x7416DC
                 CEntity* hsMissleTarget{};
@@ -2307,11 +2308,14 @@ bool CWeapon::FireProjectile(CEntity* firedBy, const CVector& origin, CEntity* t
                             false,
                             pd->m_LastHSMissileTarget
                         );
-                        if (hsMissleTarget == pd->m_LastHSMissileTarget && CTimer::GetTimeInMS() - pd->m_nFireHSMissilePressedTime > 1500) { // 0x74178B
+                        // 0x741771..0x7417BB: the heat seeking target is only kept when it is non-null, equals the last one AND the button was held > 1500 ms; otherwise a plain rocket without target
+                        if (hsMissleTarget && hsMissleTarget == pd->m_LastHSMissileTarget && CTimer::GetTimeInMS() - pd->m_nFireHSMissilePressedTime > 1500) { // 0x74178B
                             const auto ch = &gCrossHair[0];
                             ch->m_color                 = { 255, 0, 0, 255 };
                             ch->m_fRotation             = 1.f;
                             ch->m_nTimeWhenToDeactivate = 0;
+                        } else {
+                            hsMissleTarget = nullptr;
                         }
                     }
                 }
@@ -2324,9 +2328,10 @@ bool CWeapon::FireProjectile(CEntity* firedBy, const CVector& origin, CEntity* t
             } else { // 0x7418A3
                 if (targetEntity || targetPos) {
                     CWorld::pIgnoreEntity = firedBy;
+                    // 0x7418A3..0x74190E: direction AND both ends are based on the UNMOVED origin (the exe copies it to [esp+0x14] before the forward vector is added)
                     const auto losClear = CWorld::GetIsLineOfSightClear(
-                        projOrigin,
-                        projOrigin + ((targetEntity ? targetEntity->GetPosition() : *targetPos) - projOrigin).Normalized() * 8.f,
+                        origin,
+                        origin + ((targetEntity ? targetEntity->GetPosition() : *targetPos) - origin).Normalized() * 8.f,
                         true,
                         false,
                         false,
@@ -2340,14 +2345,23 @@ bool CWeapon::FireProjectile(CEntity* firedBy, const CVector& origin, CEntity* t
             }
         }
     } else { // 0x74139B
-        if (const auto t = (origin - firedBy->GetPosition()).Dot(firedBy->GetForward()); t < 0.3f) { // 0x7413FC
+        const auto& fwd = firedBy->GetForward();
+        // 0x7413C9..0x7413F2: (dy * fy + dz * fz) + dx * fx, stored as a float
+        const auto dotFwd = [&](const CVector& d) -> float {
+            const float yz = d.y * fwd.y + d.z * fwd.z;
+            return yz + d.x * fwd.x;
+        };
+        if (const auto t = dotFwd(origin - firedBy->GetPosition()); t < 0.3f) { // 0x7413FC
             projOrigin += (0.3f - t) * firedBy->GetForward();
         }
         losCheckTarget = projOrigin;
         if (projOrigin.z - firedBy->GetPosition().z > 0.f) {
             losCheckTarget += firedBy->GetForward() * 0.6f;
         }
-        losCheckOrigin = projOrigin - (projOrigin - firedBy->GetPosition()).ProjectOnToNormal(firedBy->GetForward()); // 0x7415A2
+        { // 0x7415A2: s = (dz * fz + dy * fy) + dx * fx, origin - s * forward per component
+            const auto s = dotFwd(projOrigin - firedBy->GetPosition());
+            losCheckOrigin = projOrigin - CVector{ s * fwd.x, s * fwd.y, s * fwd.z };
+        }
     }
 
     // 0x7418F5
@@ -2360,7 +2374,7 @@ bool CWeapon::FireProjectile(CEntity* firedBy, const CVector& origin, CEntity* t
         false,
         true
     )) {
-        if (projType == WEAPON_ROCKET && targetEntity && targetPos) {
+        if (projType == WEAPON_ROCKET && (targetEntity || targetPos)) { // 0x741A1B: the old port required BOTH
             const auto projTargetPos = targetEntity
                 ? targetEntity->GetPosition()
                 : *targetPos;
@@ -2386,12 +2400,12 @@ bool CWeapon::FireProjectile(CEntity* firedBy, const CVector& origin, CEntity* t
 
     } else if (notsa::contains({ WEAPON_GRENADE, WEAPON_REMOTE_SATCHEL_CHARGE }, GetType()) && firedBy->GetIsTypePed()) { // 0x74193B
         const auto thorwableProjOrigin = firedBy->GetPosition() - firedBy->GetForward() - CVector{0.f, 0.f, 0.4f};
-        if (CWorld::TestSphereAgainstWorld(thorwableProjOrigin, 0.3f, nullptr, false, false, true, false, false, false)) { // 0x7419CE
+        if (!CWorld::TestSphereAgainstWorld(thorwableProjOrigin, 0.3f, nullptr, false, false, true, false, false, false)) { // 0x7419CE: jne -> RemoveNotAdd, the projectile is added only when the sphere is free
             CProjectileInfo::AddProjectile(
                 firedBy,
                 projType,
                 thorwableProjOrigin,
-                force,
+                0.f, // the exe pushes eax == 0 for the force and the direction (0x7419D6)
                 nullptr,
                 targetEntity
             );

@@ -121,4 +121,5 @@
 | S32d | rest of S32c | 8 | done 8/8 (6 M, 2 fixed + CRect recheck 4 fixed; S32 complete) | Radar.cpp |
 | S30b | rest of S30 | 21 | partial 9/21 (7 M, 1 fixed, 1 partial) -> S30c | Camera.cpp |
 | S30c | rest of S30b | 14 | 2/14 partial (CamControl decision logic + Process head MATCH) -> S30d | Camera.cpp |
-| S30d | rest of S30c | 14 | pending | Camera.cpp |
+| S30d | rest of S30c | 14 | partial 8/14 (3 M, 4 fixed, 1 partial) -> S30e | Camera.cpp |
+| S30e | rest of S30d | 7 | pending | Camera.cpp |

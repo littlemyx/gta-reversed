@@ -97,7 +97,7 @@ void DisplayTextWithFloat(CVector2D pos, const char* key, float value, float pre
         pos,
         key,
         NOTSA_FTOL(int32, whole),
-        NOTSA_FTOL(int32, std::pow(10.f, precision) * fract)
+        NOTSA_FTOL(int32, X87R(x87::pow(10.0, X87W((x87d)precision)) * (x87d)fract)) // exe 0x4731A4: pow(10.0 (qword 0x859EA8), precision) x fract, the product rounds, then _ftol
     );
 }
 

@@ -665,7 +665,7 @@ void CProjectileInfo::Update() {
                 float damping = 1.0f;
                 if (isHomingOnPlane) {
                     turnAccel = HOMING_PLANE_ACCEL;
-                    damping   = std::pow(HOMING_PLANE_DAMPING, CTimer::ms_fTimeStep);
+                    damping   = (float)x87::pow(X87W((x87d)HOMING_PLANE_DAMPING), X87W((x87d)CTimer::ms_fTimeStep)); // exe 0x7395DF: fstp dword
                 }
 
                 vel.x = damping * vel.x;

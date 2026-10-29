@@ -270,7 +270,7 @@ void CTaskSimpleJetPack::ProcessThrust(CPed* ped) {
         }
     }
 
-    const auto swingDampingFactor = std::pow(LEG_SWING_DAMP_FRAC, CTimer::GetTimeStep());
+    const auto swingDampingFactor = x87::pow(X87W((x87d)LEG_SWING_DAMP_FRAC), X87W((x87d)CTimer::GetTimeStep())); // exe 0x67F49A: 53-bit CRT pow, kept unrounded, each multiply rounds
     const auto CalculateSwing = [&](CVector dir, float& speed, float& angle) {
         if (!ped->bWasStanding && !ped->bIsStanding) {
             const auto deltaVelocity      = ped->GetMoveSpeed() - m_PrevVelocity;   // Delta since last frame
@@ -278,16 +278,21 @@ void CTaskSimpleJetPack::ProcessThrust(CPed* ped) {
             speed -= (deltaVelocity + sumAppliedVelocity).Dot(dir) * LEG_SWING_DELTA_V_MULT;
         }
         speed -= X87R(x87::sin(angle) * CTimer::GetTimeStep()) * LEG_SWING_GRAVITY_MULT;
-        speed *= swingDampingFactor;
+        speed = (float)(X87R(swingDampingFactor * (x87d)speed));
 
         angle = std::clamp(angle + speed * CTimer::GetTimeStep(), -LEG_SWING_MAX_ANGLE, LEG_SWING_MAX_ANGLE);
     };
     CalculateSwing(ped->GetForward(), m_LegSwingFwdSpeed,  m_LegSwingFwd);
     CalculateSwing(ped->GetRight(),   m_LegSwingSideSpeed, m_LegSwingSide);
 
-    m_LegTwist *= swingDampingFactor;
+    m_LegTwist = (float)(X87R(swingDampingFactor * (x87d)m_LegTwist));
 
-    ped->SetVelocity(ped->GetMoveSpeed() * std::pow(1.f - ped->GetMoveSpeed().Magnitude() * THRUST_MOVE_DAMPING, CTimer::GetTimeStep()));
+    {
+        // exe 0x67F624: the pow result stays unrounded, each component multiply rounds
+        const auto moveDamp = x87::pow(X87W((x87d)(1.f - ped->GetMoveSpeed().Magnitude() * THRUST_MOVE_DAMPING)), X87W((x87d)CTimer::GetTimeStep()));
+        const CVector ms    = ped->GetMoveSpeed();
+        ped->SetVelocity(CVector{(float)(X87R(moveDamp * (x87d)ms.x)), (float)(X87R(moveDamp * (x87d)ms.y)), (float)(X87R(moveDamp * (x87d)ms.z))});
+    }
     m_PrevVelocity = ped->GetMoveSpeed();
 
     if (!m_bIsFinished) {

@@ -32,5 +32,9 @@ void FxInfoFriction_c::GetValue(float currentTime, float mult, float totalTime, 
     m_InterpInfo.GetVal(values, mult);
 
     auto& movement = *static_cast<MovementInfo_t*>(info);
-    movement.m_Vel *= std::pow(values[0], totalTime * 50.0f);
+    // exe 0x4A5620: exponent = totalTime * 50 (24 bit), the pow result stays unrounded and each multiply rounds
+    const auto friction = x87::pow(X87W((x87d)values[0]), X87W(X87R((x87d)totalTime * (x87d)50.0f)));
+    movement.m_Vel.x = (float)(X87R(friction * (x87d)movement.m_Vel.x));
+    movement.m_Vel.y = (float)(X87R(friction * (x87d)movement.m_Vel.y));
+    movement.m_Vel.z = (float)(X87R(friction * (x87d)movement.m_Vel.z));
 }

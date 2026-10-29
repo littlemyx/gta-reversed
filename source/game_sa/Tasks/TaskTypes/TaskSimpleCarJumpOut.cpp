@@ -128,7 +128,7 @@ bool CTaskSimpleCarJumpOut::ProcessPed(CPed* ped) {
 
         return false;    
     }()) {
-        m_initialVehSpeed *= std::pow(0.96f, CTimer::GetTimeStep());
+        m_initialVehSpeed = (float)(X87R(x87::pow(X87W((x87d)0.96f), X87W((x87d)CTimer::GetTimeStep())) * (x87d)m_initialVehSpeed)); // exe 0x64DDE6 (base = qword 0x86F0E0 = 0.96f widened): pow kept unrounded, the multiply rounds
         ped->m_vecAnimMovingShiftLocal.y += m_initialVehSpeed * CTimer::GetTimeStep();
     }
 

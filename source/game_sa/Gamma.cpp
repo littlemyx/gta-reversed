@@ -64,7 +64,7 @@ void CGamma::SetGamma(float gammaLevel, bool fade) {
     const auto power = 1.0f - level + 0.2f;
     // TODO: rngv::zip
     for (auto i = 0; i < 256; i++) {
-        const auto gamma = static_cast<int16>(std::pow(float(i + 1) / 256.0f, power) * 65535.0f);
+        const auto gamma = static_cast<int16>(NOTSA_FTOL(int32, X87R(x87::pow(X87W((x87d)(float(i + 1) / 256.0f)), X87W((x87d)power)) * (x87d)65535.0))); // exe 0x7472AF: CRT pow 0x8220F0 (qword args) (the same kernel), x 65535.0 (qword 0x874B00) rounds, _ftol
         ms_GammaTable.red[i] = ms_GammaTable.green[i] = ms_GammaTable.blue[i] = gamma;
     }
     dev->SetGammaRamp(0, D3DSGR_CALIBRATE, &ms_GammaTable);

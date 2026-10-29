@@ -68,8 +68,9 @@ float CEvent::CalcSoundLevelIncrement(float level1, float level2) {
     if (level1 == 0.0f)
         return level2;
 
-    level1 = std::powf(10.0f, level1 * 0.1f);
-    level2 = std::powf(10.0f, level2 * 0.1f);
-    return std::log10f((level1 + level2) / level1) * 10.0f;
+    // exe 0x4AC08E/0x4AC0A7: pow #1 is stored as a float (fstp dword), pow #2 stays unrounded in the sum; fldlg2/fyl2x on the 24-bit quotient
+    level1 = (float)x87::pow(10.0, X87W((x87d)(level1 * 0.1f)));
+    const auto pow2 = x87::pow(10.0, X87W((x87d)(level2 * 0.1f)));
+    return (float)(X87R(x87::log10(X87W(X87R(X87R(pow2 + (x87d)level1) / (x87d)level1))) * (x87d)10.0));
 }
 

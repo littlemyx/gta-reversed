@@ -503,20 +503,47 @@ void CWaterLevel::SplitWaterTriangleAlongYLine(int32 splitAtY, int32 X1, int32 Y
         return;
     }
 
-    const auto [minY, maxY] = std::minmax(Y1, Y3);
-    const auto height = maxY - minY;
-    const auto width  = X2 - X1;
-    
-    // Calulcate the X position where the Y line intersects the hypot
-    // and using that we split the triangle. 
-    // Same result as original code, but much easier.
+    // 0x6EE5A0: not an X split of the same triangle. The exe has its own four layouts (Y1 < Y3 x X1 == X3), the blend
+    // parameter is `(split - Y1) / (Y3 - Y1)` and the split X comes from the integer `dX * (split - Y1) / (Y3 - Y1)`.
+    // (Checked against the exe with random inputs, incl. the odd rect of the Y1 > Y3, X2 == X3 case: 1 -> 3 blend twice.)
+    const auto t  = (float)(splitAtY - Y1) / (float)(Y3 - Y1);
+    const auto dX = (X2 - X1) * (splitAtY - Y1) / (Y3 - Y1);
+    const auto YS = splitAtY;
 
-    SplitWaterTriangleAlongXLine(
-        X1 + (maxY - splitAtY) * width / height,
-        X1, Y1, P1,
-        X2, Y2, P2,
-        X3, Y3, P3
-    );
+    const auto P13 = lerpBlend(P1, P3, t);
+    const auto P23 = lerpBlend(P2, P3, t);
+
+    if (Y1 < Y3) {
+        if (X1 == X3) {
+            const auto XS  = X2 - dX;
+            const auto P21 = lerpBlend(P2, P1, t);
+
+            RenderWaterTriangle(XS, Y1, P21, X2, Y1, P2, XS, YS, P23);
+            RenderWaterRectangle(X1, XS, Y1, YS, P1, P21, P13, P23);
+            RenderWaterTriangle(X1, YS, P13, XS, YS, P23, X3, Y3, P3);
+        } else {
+            const auto XS  = X1 + dX;
+            const auto P12 = lerpBlend(P1, P2, t);
+
+            RenderWaterTriangle(X1, Y1, P1, XS, Y1, P12, XS, YS, P13);
+            RenderWaterRectangle(XS, X2, Y1, YS, P12, P2, P13, P23);
+            RenderWaterTriangle(XS, YS, P13, X2, YS, P23, X3, Y3, P3);
+        }
+    } else if (X1 == X3) {
+        const auto XS  = X2 - dX;
+        const auto P21 = lerpBlend(P2, P1, t);
+
+        RenderWaterTriangle(XS, Y1, P21, X2, Y1, P2, XS, YS, P23);
+        RenderWaterRectangle(X1, XS, YS, Y1, P13, P23, P1, P21);
+        RenderWaterTriangle(X1, YS, P13, XS, YS, P23, X3, Y3, P3);
+    } else {
+        const auto XS  = X1 + dX;
+        const auto P12 = lerpBlend(P1, P2, t);
+
+        RenderWaterTriangle(X1, Y1, P1, XS, Y1, P12, XS, YS, P13);
+        RenderWaterRectangle(XS, X2, YS, Y1, P13, P13, P12, P2); // The exe passes the 1 -> 3 blend for both top corners here
+        RenderWaterTriangle(XS, YS, P13, X2, YS, P23, X3, Y3, P3);
+    }
 }
 
 // 0x6EC5D0

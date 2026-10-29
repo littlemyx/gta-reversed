@@ -1434,18 +1434,11 @@ bool CWeapon::FireAreaEffect(CEntity* firingEntity, const CVector& origin, CEnti
                     camTargetPos
                 }; 
             } else {
-                // NOTE: Moved here from `0x73E83F`
-                // NOTE: Original code used degs instead of radians
-                //       and then converted back to radians... So we're gonna stick to radians only ;)
-                const auto heading = [&] { // 0x73E83F
-                    if (targetEntity) {
-                        return (targetEntity->GetPosition() - origin).Heading();
-                    }
-                    if (target) {
-                        return (*target - origin).Heading();
-                    }
-                    return firingEntity->GetHeading();
-                }();
+                // NOTE: Moved here from `0x73E83F` (the entity / point arms of the original heading calculation are dead: we are in the `!targetEntity && !target` case)
+                // NOTE: The original goes through DEGREES: the heading is stored as a float in degrees (x 57.2957763671875), and converted back with the
+                //       float constant 0x872C60 (0.017453216, NOT pi / 180)
+                const auto headingDeg = (float)((x87d)firingEntity->GetHeadingExt() * 57.2957763671875f);
+                const auto heading    = (x87d)headingDeg * 0.017453216f;
                 CVector dir{
                     (float)(-x87::sin(heading)),
                     (float)(x87::cos(heading)),
@@ -1454,6 +1447,7 @@ bool CWeapon::FireAreaEffect(CEntity* firingEntity, const CVector& origin, CEnti
                 if (firingEntity->GetIsTypePed()) {
                     if (const auto pd = firingEntity->AsPed()->GetPlayerData()) {
                         dir.z = -x87::tan(pd->m_fLookPitch);
+                        dir.Normalise(); // 0x73E9D8
                     }
                 }
                 return { dir, origin + dir };
@@ -1469,9 +1463,11 @@ bool CWeapon::FireAreaEffect(CEntity* firingEntity, const CVector& origin, CEnti
     }();
     CShotInfo::AddShot(firingEntity, m_Type, origin, shotPt);
     DoWeaponEffect(origin, shotDir);
-    if (m_Type == WEAPON_FLAMETHROWER && CGeneral::RandomBool(1.f / 3.f * 100.f)) {
+    if (m_Type == WEAPON_FLAMETHROWER && (rand() & 3) == 2) { // 0x73EB5C: CRT rand() & 3 == 2 (1 in 4, not RandomBool(33%))
+        // One scalar random for all 3 components (0x73EB6B: rand() * (1 / 32767) * 2.5 + 3.5), not a random vector
+        const auto fireDist = (float)((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * 2.5f + 3.5f);
         if (CCreepingFire::TryToStartFireAtCoors(
-            shotDir * CVector::Random(3.5f, 6.f) + origin + CVector{0.f, 0.f, 0.5f},
+            shotDir * fireDist + origin + CVector{0.f, 0.f, 0.5f},
             0,
             true,
             false,

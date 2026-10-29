@@ -160,7 +160,7 @@
 | S54 | phase2: unlisted non-oracle hooks | 40 | pending | PedGroupIntelligence.cpp, PedGroupMembership.cpp, PedGroupPlacer.cpp, PedGroups.cpp, PedIK.cpp, PedList.cpp ... |
 | S55 | phase2: unlisted non-oracle hooks | 40 | 38/40 (26 M, 12 fixed) -> S55b | PedPlacement.cpp, PedStats.cpp, PedStuckChecker.cpp, PedTaskPair.cpp, PedType.cpp, Pickup.cpp ... |
 | S56 | phase2: unlisted non-oracle hooks | 40 | partial 27/40 (17 M, 10 fixed) -> S56b | Pickups.cpp, PlaneTrail.cpp, PlaneTrails.cpp, PlayerInfo.cpp, PlayerPedData.cpp, PlayerRelationshipRecorder.cpp |
-| S57 | phase2: unlisted non-oracle hooks | 40 | pending | EventPool.h, PedAttractorPool.h, PedIntelligencePool.h, PedPool.h, PlayerRelationshipRecorder.cpp, Remote.cpp ... |
+| S57 | phase2: unlisted non-oracle hooks | 40 | partial 18/40 (15 M, 3 fixed) -> S57b | EventPool.h, PedAttractorPool.h, PedIntelligencePool.h, PedPool.h, PlayerRelationshipRecorder.cpp, Remote.cpp ... |
 | S58 | phase2: unlisted non-oracle hooks | 40 | pending | ScriptsForBrains.cpp, Shopping.cpp, TheScripts.cpp |
 | S59 | phase2: unlisted non-oracle hooks | 40 | pending | Shopping.cpp, Stats.cpp, StreamedScripts.cpp, StuckCarCheck.cpp |
 | S60 | phase2: unlisted non-oracle hooks | 40 | pending | PedGroupDefaultTaskAllocatorChat.h, PedGroupDefaultTaskAllocatorFollowAnyMeans.h, PedGroupDefaultTaskAllocatorFollowLimited.h, PedGroupDefaultTaskAllocatorRandom.h, PedGroupDefaultTaskAllocatorSitInLeaderCar.h, PedGroupDefaultTaskAllocatorStandStill.h ... |
@@ -183,5 +183,7 @@
 | S49b | rest of S49 | 10 | done (8 M, 2 fixed + SetUpSkip; GameLogic::Update only first 640 lines) | Game.cpp, GameLogic.cpp, GangWars.cpp |
 | S48b | rest of S48 | 20 | pending | FireManager.cpp, Game.cpp |
 | S47c | rest of S47b | 5 | pending | EventHandler.cpp |
-| S56b | rest of S56 | 13 | pending | PlayerInfo.cpp, PlayerPedData.cpp |
+| S56b | rest of S56 | 13 | 13/14 (9 M, 4 fixed, 1 U) -> S56c | PlayerInfo.cpp, PlayerPedData.cpp |
 | S50b | rest of S50 | 15 | pending | GangWars.cpp, Garage.cpp, Garages.cpp |
+| S56c | rest of S56b | 1 | pending | PlayerInfo.cpp |
+| S57b | rest of S57 | 25 | pending | PedAttractorPool.h, PedIntelligencePool.h, PedPool.h, Replay.cpp, TheScripts.cpp, VehiclePool.h |

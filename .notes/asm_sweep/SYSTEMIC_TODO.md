@@ -25,3 +25,6 @@
 
 ## X87-POW-FLOAT (from X87-POW)
 - [x] (SYSTEMIC-8 2026-10-29) 37 float-overload std::pow/powf sites switched to x87::pow with the exe consumer per site (immediate (float) = fstp dword; or kept unrounded as x87d with X87R per multiply), commits f41ea73c c547f3ae 0ef93510 d4896e10; 6 rows were comments; CAutomobile::ProcessCarWheelPair calls the powf thunk 0x470000 (= _CIpow), Gamma the CRT pow 0x8220F0 (same kernel). LEFT: Vector.h/Vector2D.h generic pow helpers, POW-SQR squares. See POW.tsv. Original: 60 sites in .notes/asm_sweep/POW.tsv (verdict LEFT: float overload) call std::pow(float, float) / powf where the exe calls _CIpow with the float operands widened (fld dword) and consumes the double result on the x87 stack (fmul at PC24, or fstp dword). Switch to x87::pow((double)a, (double)b) per site with the exe's consumer (X87R / (float)) - read the exe call site first; the result rounding differs from the float overload.
+
+## Attractor pool stride (from S57)
+- [ ] Exe CPedAttractor pool stride 0xC4, port 0x8C (sizeof differs). Check whether anything serialises/indexes attractors by byte offset (save game, script handles) and whether the port struct is missing exe fields.

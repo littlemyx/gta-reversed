@@ -774,11 +774,14 @@ void CTheScripts::ClearSpaceForMissionEntity(const CVector& pos, CEntity* ourEnt
             if (auto& driver = vehicle->m_pDriver) {
                 CPopulation::RemovePed(driver);
                 CEntity::SafeCleanUpRef(driver);
+                driver = nullptr; // exe 0x486CF6: m_pDriver is cleared unconditionally
             }
 
             // Need to use raw pointer here instead of a reference - the m_aPassengers array is modifed in RemovePassenger() and we would crash in RemovePed afterwards
-            for (const auto passenger : vehicle->GetPassengers()) {
-                if (passenger) {
+            // Exe 0x486CFC..0x486D35: the seat index i runs while `i < m_nNumPassengers`, re-read every iteration; RemovePassenger decrements it, so the walk stops early
+            // and passengers in higher seats stay (the port visited every seat)
+            for (int32 i = 0; i < (int32)vehicle->m_nNumPassengers; i++) {
+                if (auto* const passenger = vehicle->m_apPassengers[i]) {
                     vehicle->RemovePassenger(passenger);
                     CPopulation::RemovePed(passenger);
                 }

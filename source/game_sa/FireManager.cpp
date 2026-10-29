@@ -357,7 +357,8 @@ int32 CFireManager::StartScriptFire(const CVector& pos, CEntity* target, float _
     }
 
     if (auto fire = GetNextFreeFire(true)) {
-        fire->Start(pos, (float)nStrength, target, std::min<uint8>((uint8)m_nMaxFireGenerationsAllowed, nGenerations));
+        // 0x53A32E-0x53A342: signed min against the maximum, stored as a byte (port: unsigned byte min, capped at 63 with the default maximum)
+        fire->Start(pos, (float)nStrength, target, (uint8)((int32)nGenerations < (int32)m_nMaxFireGenerationsAllowed ? (int32)nGenerations : (int32)m_nMaxFireGenerationsAllowed));
         return CTheScripts::GetNewUniqueScriptThingIndex(GetIndexOf(fire), SCRIPT_THING_FIRE);
     }
     return -1;

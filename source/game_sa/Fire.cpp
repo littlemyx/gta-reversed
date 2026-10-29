@@ -192,7 +192,13 @@ void CFire::Start(CVector pos, float fStrength, CEntity* target, uint8 nGens) {
         }
     }
 
-    CreateFxSysForStrength(target ? target->GetPosition() : pos, nullptr);
+    // 0x53A3A7-0x53A416: the fx is created only without a target (at pos) or for a ped / vehicle target (at its position), not for other entity types
+    if (!target) {
+        CreateFxSysForStrength(pos, nullptr);
+    } else if (target->GetIsTypePed() || target->GetIsTypeVehicle()) {
+        CVector targetPos = target->GetPosition();
+        CreateFxSysForStrength(targetPos, nullptr);
+    }
 }
 
 void CFire::SetEntityOnFire(CEntity* target) {

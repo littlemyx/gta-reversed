@@ -696,53 +696,47 @@ bool CGangWars::PickStreamedInPedForThisGang(eGangID gangId, int32& outPedId) {
 // 0x443B00
 bool CGangWars::PickZoneToAttack() {
     CCarCtrl::InitSequence(CTheZones::TotalNumberOfNavigationZones);
-    CZone* enemyGangZone = nullptr;
 
-    // choose a territory that is controlled by enemy gangs
-    for (auto i = 0; i < CTheZones::TotalNumberOfNavigationZones; i++) {
-        auto zone = CTheZones::GetNavigationZone(CCarCtrl::FindSequenceElement(i));
-        auto zoneInfo = CTheZones::GetZoneInfo(zone);
-
-        if (!zoneInfo)
+    // exe 0x443B00: NESTED loops - every enemy-gang zone (in sequence order) is tried against ALL navigation zones (in natural order, not the sequence);
+    // the port stopped at the first enemy zone and searched the candidates in sequence order
+    for (uint16 i = 0; i < CTheZones::TotalNumberOfNavigationZones; i++) {
+        // choose a territory that is controlled by enemy gangs
+        auto* const enemyGangZone = CTheZones::GetNavigationZone(CCarCtrl::FindSequenceElement(i));
+        auto* const enemyGangZoneInfo = CTheZones::GetZoneInfo(enemyGangZone);
+        if (!enemyGangZoneInfo)
             continue;
 
-        if (zoneInfo->GangStrength[GANG_BALLAS] + zoneInfo->GangStrength[GANG_VAGOS] >= 20) {
-            enemyGangZone = zone;
-            break;
-        }
-    }
-
-    if (!enemyGangZone) [[unlikely]]
-        return false;
-
-    // find a close territory that is controlled by the gsf
-    for (auto i = 0; i < CTheZones::TotalNumberOfNavigationZones; i++) {
-        auto zone = CTheZones::GetNavigationZone(CCarCtrl::FindSequenceElement(i));
-        auto zoneInfo = CTheZones::GetZoneInfo(zone);
-
-        if (!zoneInfo)
+        if (enemyGangZoneInfo->GangStrength[GANG_BALLAS] + enemyGangZoneInfo->GangStrength[GANG_VAGOS] < 20)
             continue;
 
-        if ((float)zone->m_fX1 <= 2500.0f && (float)zone->m_fX2 >= 2500.0f && (float)zone->m_fY1 <= -1666.0f && (float)zone->m_fY2 >= -1666.0f) // todo:
-            continue;
+        // find a close territory that is controlled by the gsf
+        for (uint16 j = 0; j < CTheZones::TotalNumberOfNavigationZones; j++) {
+            auto* const zone = CTheZones::GetNavigationZone(j);
+            auto* const zoneInfo = CTheZones::GetZoneInfo(zone);
 
-        if (zoneInfo->GangStrength[GANG_GROVE] <= 15)
-            continue;
+            if (!zoneInfo)
+                continue;
 
-        if (CTheZones::Calc2DDistanceBetween2Zones(enemyGangZone, zone) < 10.0f) {
-            pZoneToFightOver = zone;
-            pZoneInfoToFightOver = zoneInfo;
-            PointOfAttack = CVector{
-                (float)(zone->m_fX1 + zone->m_fX2) / 2.0f,
-                (float)(zone->m_fY1 + zone->m_fY2) / 2.0f,
-                10.0f
-            };
+            if ((float)zone->m_fX1 <= 2500.0f && (float)zone->m_fX2 >= 2500.0f && (float)zone->m_fY1 <= -1666.0f && (float)zone->m_fY2 >= -1666.0f) // todo:
+                continue;
 
-            auto enemyGangZoneInfo = CTheZones::GetZoneInfo(enemyGangZone);
-            Gang1 = (enemyGangZoneInfo->GangStrength[GANG_BALLAS] > enemyGangZoneInfo->GangStrength[GANG_VAGOS]) ? GANG_BALLAS : GANG_VAGOS;
+            if (zoneInfo->GangStrength[GANG_GROVE] <= 15)
+                continue;
 
-            if (DistanceBetweenPoints2D(FindPlayerCoors(), PointOfAttack) > 60.0f)
-                return true;
+            if (CTheZones::Calc2DDistanceBetween2Zones(enemyGangZone, zone) < 10.0f) {
+                pZoneToFightOver = zone;
+                pZoneInfoToFightOver = zoneInfo;
+                PointOfAttack = CVector{
+                    (float)(zone->m_fX1 + zone->m_fX2) / 2.0f,
+                    (float)(zone->m_fY1 + zone->m_fY2) / 2.0f,
+                    10.0f
+                };
+
+                Gang1 = (enemyGangZoneInfo->GangStrength[GANG_BALLAS] > enemyGangZoneInfo->GangStrength[GANG_VAGOS]) ? GANG_BALLAS : GANG_VAGOS;
+
+                if (DistanceBetweenPoints2D(FindPlayerCoors(), PointOfAttack) > 60.0f)
+                    return true;
+            }
         }
     }
 

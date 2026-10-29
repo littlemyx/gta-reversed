@@ -176,8 +176,8 @@ void CQuadBike::ProcessControl() {
         const auto pitchDampF = (float)(pitchDamp / ((x87d)turnLocal.x * (x87d)turnLocal.x * (x87d)pitchCoef + (x87d)1.0));
         const auto rollDampF  = (float)((x87d)rollDamp / ((x87d)turnLocal.y * (x87d)turnLocal.y * (x87d)rollCoef + (x87d)1.0));
 
-        const auto pitchFactor = (float)std::pow((double)pitchDampF, (double)CTimer::GetTimeStep());
-        const auto rollFactor  = std::pow((double)rollDampF, (double)CTimer::GetTimeStep());
+        const auto pitchFactor = (float)x87::pow((double)pitchDampF, (double)CTimer::GetTimeStep());
+        const auto rollFactor  = x87::pow((double)rollDampF, (double)CTimer::GetTimeStep());
 
         const auto pitchDelta = (float)((x87d)turnLocal.x * (x87d)pitchFactor - (x87d)turnLocal.x);
         const auto rollDelta  = X87R((double)turnLocal.y * rollFactor) - (x87d)turnLocal.y; // Stays in the FPU

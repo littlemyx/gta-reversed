@@ -230,7 +230,7 @@ void CBmx::ProcessDrivingAnims(CPed* driver, bool blend) {
         } else if (fwdAnim && fwdAnim->m_BlendAmount > 0.1f) {
             newCrankAngle = BlendCrankTowards(fwdAnim, BMX_HALF_PI);
         } else {
-            newCrankAngle = (float)(X87R(std::pow((double)0.97f, (double)CTimer::GetTimeStep()) * (double)m_fCrankAngle)); // NOTE: x87 keeps the `pow` result in extended precision
+            newCrankAngle = (float)(X87R(x87::pow((double)0.97f, (double)CTimer::GetTimeStep()) * (double)m_fCrankAngle)); // NOTE: x87 keeps the `pow` result in extended precision
         }
         m_fCrankAngle = newCrankAngle;
 
@@ -297,7 +297,7 @@ void CBmx::ProcessDrivingAnims(CPed* driver, bool blend) {
         }
 
         if (!mainAnim) {
-            m_fCrankAngle = (float)(X87R(std::pow((double)0.97f, (double)CTimer::GetTimeStep()) * (double)m_fCrankAngle)); // NOTE: x87 keeps the `pow` result in extended precision
+            m_fCrankAngle = (float)(X87R(x87::pow((double)0.97f, (double)CTimer::GetTimeStep()) * (double)m_fCrankAngle)); // NOTE: x87 keeps the `pow` result in extended precision
         } else {
             bool synced = false;
             if (isNewAnim) {

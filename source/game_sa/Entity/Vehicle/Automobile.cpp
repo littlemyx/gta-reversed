@@ -5322,7 +5322,7 @@ void CAutomobile::ProcessBuoyancy()
 
     auto fBuoyancyForceMult = std::max(0.5F, 1.0F - fBuoyancyForceZ * 0.05F); // 0x6A8D14: multiply by 0.05f, not divide by 20
     // pow() (the exe's _CIpow, 0x822130) returns its result on the x87 stack and 0x6A8D54 stores it as a float
-    auto fSpeedMult = (float)pow((double)fBuoyancyForceMult, (double)CTimer::GetTimeStep()); // todo:: shadow var
+    auto fSpeedMult = (float)x87::pow((double)fBuoyancyForceMult, (double)CTimer::GetTimeStep()); // todo:: shadow var
 
     if (m_nModelIndex != MODEL_VORTEX
         || GetUp().z <= 0.3F
@@ -7544,7 +7544,7 @@ void CAutomobile::PreRender() {
                 tilt = -PRERENDER_COMBINE_TILT_MAX;
             }
         }
-        const double lerp = std::pow((double)PRERENDER_COMBINE_TILT_LERP, (double)CTimer::GetTimeStep());
+        const double lerp = x87::pow((double)PRERENDER_COMBINE_TILT_LERP, (double)CTimer::GetTimeStep());
         m_fDoomVerticalRotation = (float)(X87R(lerp * (double)m_fDoomVerticalRotation) + (X87R(1.0 - lerp)) * (x87d)tilt);
         SetComponentRotation(m_aCarNodes[CAR_CHASSIS], AXIS_Y, m_fDoomVerticalRotation, true);
         break;

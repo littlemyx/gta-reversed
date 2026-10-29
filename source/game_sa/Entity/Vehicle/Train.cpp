@@ -1420,7 +1420,7 @@ void CTrain::ProcessControl() {
                 m_fCurrentRailDistance = m_pPrevCarriage->m_fCurrentRailDistance + m_fLength;
             } else {
                 // exe 0x6F8E49: the CRT pow result (53 bit) stays on the x87 stack, the multiply rounds once
-                m_fTrainSpeed = (float)(X87R(std::pow(X87W((x87d)0.9900000095367432f), X87W((x87d)CTimer::GetTimeStep())) * (x87d)m_fTrainSpeed));
+                m_fTrainSpeed = (float)(X87R(x87::pow(X87W((x87d)0.9900000095367432f), X87W((x87d)CTimer::GetTimeStep())) * (x87d)m_fTrainSpeed));
                 m_fCurrentRailDistance += m_fTrainSpeed * CTimer::GetTimeStep();
             }
 
@@ -1597,7 +1597,7 @@ void CTrain::ProcessControl() {
             }
 
             // exe 0x6F8BF2: unrounded CRT pow result times the speed, rounded once
-            m_fTrainSpeed = (float)(X87R(std::pow(X87W((x87d)0.999750018119812f), X87W((x87d)CTimer::GetTimeStep())) * (x87d)m_fTrainSpeed));
+            m_fTrainSpeed = (float)(X87R(x87::pow(X87W((x87d)0.999750018119812f), X87W((x87d)CTimer::GetTimeStep())) * (x87d)m_fTrainSpeed));
             if (!trainFlags.bClockwiseDirection) {
                 m_fTrainSpeed = -m_fTrainSpeed;
             }
@@ -1910,7 +1910,7 @@ void CTrain::ProcessControl() {
             // exe 0x6F9CF5-0x6F9DA2: the buoyancy FORCE (ProcessBuoyancy's 4th out parameter = vecTurnForce here) is used, not the old position
             // (the port read vecOldTrainPosition); the pow result stays unrounded for the six multiplies
             float fSpeedFactorBase = 1.0f - vecTurnForce.z / (fTimeStep * m_fMass * 0.008f) * 0.05f;
-            const auto fSpeedFactor = std::pow(X87W((x87d)fSpeedFactorBase), X87W((x87d)CTimer::GetTimeStep()));
+            const auto fSpeedFactor = x87::pow(X87W((x87d)fSpeedFactorBase), X87W((x87d)CTimer::GetTimeStep()));
 
             m_vecMoveSpeed.x = (float)(X87R(fSpeedFactor * (x87d)m_vecMoveSpeed.x));
             m_vecMoveSpeed.y = (float)(X87R(fSpeedFactor * (x87d)m_vecMoveSpeed.y));

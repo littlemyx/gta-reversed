@@ -1047,10 +1047,10 @@ void CHeli::ProcessControlInputs(uint8 playerNum) {
                 m_fSteeringUpDown    = (float)((x87d)mouseMoved.y * (x87d)0.0025f + (x87d)m_fSteeringUpDown);
             }
             if (std::abs(m_fSteeringLeftRight) < 0.5f) {
-                m_fSteeringLeftRight = (float)(X87R(std::pow((double)0.98f, (double)CTimer::GetTimeStep()) * (double)m_fSteeringLeftRight)); // 0x87167C
+                m_fSteeringLeftRight = (float)(X87R(x87::pow((double)0.98f, (double)CTimer::GetTimeStep()) * (double)m_fSteeringLeftRight)); // 0x87167C
             }
             if (std::abs(m_fSteeringUpDown) < 0.5f) {
-                m_fSteeringUpDown = (float)(X87R(std::pow((double)0.98f, (double)CTimer::GetTimeStep()) * (double)m_fSteeringUpDown));
+                m_fSteeringUpDown = (float)(X87R(x87::pow((double)0.98f, (double)CTimer::GetTimeStep()) * (double)m_fSteeringUpDown));
             }
         } else if (pad->GetSteeringLeftRight() != 0 || pad->GetSteeringUpDown() != 0 || m_nLastControlInput != eControllerType::MOUSE) { // 0x6C492E
             SteerWithPad();

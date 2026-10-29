@@ -1498,7 +1498,7 @@ void CBike::ProcessControl() {
             m_RideAnimData.BarSteerAngle = CTimer::GetTimeStep() * 0.017453292f + m_RideAnimData.BarSteerAngle;
         }
         if (bOnSideStand) {
-            const auto decay = static_cast<float>(std::pow(static_cast<double>(0.97f), static_cast<double>(CTimer::GetTimeStep()))); // 0x866FD0 (double)
+            const auto decay = static_cast<float>(x87::pow(static_cast<double>(0.97f), static_cast<double>(CTimer::GetTimeStep()))); // 0x866FD0 (double)
             const auto rightZ = GetRight().z;
             float rollSin = rightZ;
             if (rightZ > 1.0f) {
@@ -1760,7 +1760,7 @@ void CBike::ProcessControl() {
                 m_RideAnimData.BarSteerAngle = CTimer::GetTimeStep() * 0.02617994f + m_RideAnimData.BarSteerAngle;
             }
         } else if (std::fabs(m_vecMoveSpeed.x) < 0.01f && std::fabs(m_vecMoveSpeed.y) < 0.01f && m_fSteerAngle == 0.0f) {
-            m_RideAnimData.BarSteerAngle = static_cast<float>(X87R(std::pow(static_cast<double>(0.96f), static_cast<double>(CTimer::GetTimeStep())) * m_RideAnimData.BarSteerAngle)); // 0x86F0E0 (double)
+            m_RideAnimData.BarSteerAngle = static_cast<float>(X87R(x87::pow(static_cast<double>(0.96f), static_cast<double>(CTimer::GetTimeStep())) * m_RideAnimData.BarSteerAngle)); // 0x86F0E0 (double)
         } else {
             x87d steerFactor = (x87d)1.0; // NOTE: x87 keeps the whole `steerFactor` chain in extended precision
             if (forwardSpeed > 0.01f && (m_WheelCounts[0] > 0.0f || m_WheelCounts[1] > 0.0f) && GetStatus() == STATUS_PLAYER) {
@@ -2039,10 +2039,10 @@ void CBike::ProcessControl() {
         float lean;
         if (!(extraHandlingFlags & BIKE_EXTRA_PLAYER_CONTROLLED) && !bikeFlags.bGettingPickedUp) {
             if (bikeFlags.bOnSideStand) {
-                const auto decay = static_cast<float>(std::pow(static_cast<double>(0.97f), static_cast<double>(CTimer::GetTimeStep()))); // 0x866FD0 (double)
+                const auto decay = static_cast<float>(x87::pow(static_cast<double>(0.97f), static_cast<double>(CTimer::GetTimeStep()))); // 0x866FD0 (double)
                 lean = decay * m_RideAnimData.DesiredLeanAngle - (1.0f - decay) * ((X87R(x87::asin(GetRight().z) + stillAnimLean)) + 0.2617994f);
             } else {
-                lean = static_cast<float>(X87R(std::pow(static_cast<double>(0.95f), static_cast<double>(CTimer::GetTimeStep())) * m_RideAnimData.DesiredLeanAngle)); // 0x86C3C8 (double)
+                lean = static_cast<float>(X87R(x87::pow(static_cast<double>(0.95f), static_cast<double>(CTimer::GetTimeStep())) * m_RideAnimData.DesiredLeanAngle)); // 0x86C3C8 (double)
             }
         } else {
             m_vecGroundRight = CrossProduct(GetForward(), m_vecAveGroundNormal);

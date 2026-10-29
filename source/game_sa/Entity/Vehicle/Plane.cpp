@@ -1250,7 +1250,7 @@ void CPlane::PreRender() {
         mat.GetUp().y = ClampVortexTilt(SpeedAlong(myMat.GetForward()), VORTEX_HOVER_SPEED_LIMIT);
         mat.GetUp().x = ClampVortexTilt(SpeedAlong(myMat.GetRight()), VORTEX_HOVER_SPEED_LIMIT);
 
-        const double blend = std::pow((double)VORTEX_HOVER_BLEND_BASE, (double)CTimer::GetTimeStep());
+        const double blend = x87::pow((double)VORTEX_HOVER_BLEND_BASE, (double)CTimer::GetTimeStep());
         const float  inv   = (float)(X87R(1.0 - blend));
 
         const auto ClampRatio = [](double v, float limit) {

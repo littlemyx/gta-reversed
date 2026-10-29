@@ -4196,7 +4196,7 @@ static void FlyingControlModel0(const FlyingControlCtx& c) {
     v.ApplyMoveForce(liftForce);
     v.ApplyTurnForce(liftForce, (up * 2.0f) + c.com);
 
-    v.m_vecTurnSpeed.y = (float)(X87R(std::pow((double)0.9f, (double)ts) * v.m_vecTurnSpeed.y));
+    v.m_vecTurnSpeed.y = (float)(X87R(x87::pow((double)0.9f, (double)ts) * v.m_vecTurnSpeed.y));
 }
 
 // 0x6D8B1D - flight models 1 (baron), 3 (plane), 4, 5 (boat)
@@ -4482,7 +4482,7 @@ static void FlyingControlModel268(FlyingControlCtx& c) {
 
     // Move speed drag
     {
-        const double r = std::pow((double)fh->m_fMoveRes, (double)ts);
+        const double r = x87::pow((double)fh->m_fMoveRes, (double)ts);
         ms.x = (float)(X87R(r * ms.x));
         ms.y = (float)(X87R(r * ms.y));
         ms.z = (float)(X87R(r * ms.z));
@@ -4528,7 +4528,7 @@ static void FlyingControlModel268(FlyingControlCtx& c) {
 
             const float spinNew = (float)((x87d)spin - (((x87d)tiltDot * ts) * AUTOGYRO_ROTORSPIN_MULT));
             spin = spinNew;
-            const x87d damped = X87R(std::pow((double)AUTOGYRO_ROTORSPIN_DAMP, (double)ts) * spinNew);
+            const x87d damped = X87R(x87::pow((double)AUTOGYRO_ROTORSPIN_DAMP, (double)ts) * spinNew);
             spin = (float)damped;
             if (damped > 0.4f) {
                 spin = 0.4f;
@@ -4738,9 +4738,9 @@ static void FlyingControlDrag(FlyingControlCtx& c) {
     const float tm  = v.m_fTurnMass;
 
     CVector acc{ 0.0f, 0.0f, 0.0f }; // How much to change the (local) turn speed by (when `speedRes > 0`)
-    const float baseX = (float)std::pow((double)fh->m_vecTurnRes.x, (double)ts);
-    const float baseY = (float)std::pow((double)fh->m_vecTurnRes.y, (double)ts);
-    const float baseZ = (float)std::pow((double)fh->m_vecTurnRes.z, (double)ts);
+    const float baseX = (float)x87::pow((double)fh->m_vecTurnRes.x, (double)ts);
+    const float baseY = (float)x87::pow((double)fh->m_vecTurnRes.y, (double)ts);
+    const float baseZ = (float)x87::pow((double)fh->m_vecTurnRes.z, (double)ts);
 
     CVector local = InverseMultiply3x3Ext(v.m_vecTurnSpeed, mat); // 0x59C810
 
@@ -4765,9 +4765,9 @@ static void FlyingControlDrag(FlyingControlCtx& c) {
     const auto Axis = [&](float speedRes, float base, float& localAxis, float& accAxis) {
         if (speedRes > 0.0f) {
             const x87d q = (x87d)base / (((x87d)localAxis * localAxis) * speedRes + (x87d)1.0);
-            accAxis = (float)(X87R(std::pow(q, (double)ts) * localAxis) - localAxis);
+            accAxis = (float)(X87R(x87::pow(q, (double)ts) * localAxis) - localAxis);
         } else {
-            localAxis = (float)(X87R(std::pow((double)base, (double)exponent) * localAxis));
+            localAxis = (float)(X87R(x87::pow((double)base, (double)exponent) * localAxis));
         }
     };
     Axis(fh->m_vecSpeedRes.x, baseX, local.x, acc.x);

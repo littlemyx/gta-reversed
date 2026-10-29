@@ -1,0 +1,42 @@
+addr	function	verdict	asm range	note	fix commit
+0x593F10	Interior_c::Bedroom_AddTableItem	MATCH	0x593F10-0x593FB5 (all)	tile .5 offsets by rotation, GetFurniture(-1), PlaceObject(1,..,z .5, rot*90)	-
+0x593FC0	Interior_c::FurnishBedroom	NOT_REACHED	-	not compared (budget)	-
+0x596930	Interior_c::Kitchen_FurnishEdges	NOT_REACHED	-	not compared (budget)	-
+0x5970B0	Interior_c::FurnishKitchen	MATCH	0x5970B0-0x59723B (all)	tile status loops, 4 goto pts, centre piece via two _ftol, GetRandomId(4,0)	-
+0x597240	Interior_c::Lounge_AddTV	NOT_REACHED	-	not compared (budget)	-
+0x597430	Interior_c::Lounge_AddHifi	MATCH	0x597430-0x5974D8 (all)	offsets and rot&3*90	-
+0x5974E0	Interior_c::Lounge_AddChairInfo	MATCH	0x5974E0-0x5975BF (all)	dir (rot-2)&3, offsets	-
+0x5975C0	Interior_c::Lounge_AddSofaInfo	MATCH	0x5975C0-0x59773F (all)	two infos, second at +1	-
+0x597740	Interior_c::FurnishLounge	NOT_REACHED	-	not compared (budget)	-
+0x599210	Interior_c::Office_PlaceEdgeFillers	NOT_REACHED	-	not compared (budget)	-
+0x5993E0	Interior_c::Office_PlaceDesk	NOT_REACHED	-	not compared (budget)	-
+0x5995B0	Interior_c::Office_PlaceEdgeDesks	NOT_REACHED	-	not compared (budget)	-
+0x599770	Interior_c::Office_FurnishEdges	NOT_REACHED	-	not compared (budget)	-
+0x599960	Interior_c::Office_PlaceDeskQuad	MATCH	0x599960-0x599A2F (all)	desk args, SetTilesStatus 4x, returns 6	-
+0x599A30	Interior_c::Office_FurnishCenter	MATCH	0x599A30-0x599AEF (all)	signed /6 and %6, loop nesting, int8 furnitureId	-
+0x599AF0	Interior_c::FurnishOffice	NOT_REACHED	-	not compared (budget)	-
+0x599BB0	Interior_c::Shop_Place3PieceUnit	NOT_REACHED	-	not compared (budget)	-
+0x599DC0	Interior_c::Shop_PlaceEdgeUnits	MATCH	0x599DC0-0x599EE2 (all)	one rand: exe _ftol(r*-3) = -k so 2-(-k) = 2+k; length cases; unit chance thresholds	-
+0x599EF0	Interior_c::Shop_PlaceCounter	MATCH	0x599EF0-0x59A02B (all)	one rand (*4 _ftol) after both GetFurniture; left/right tile maths; till a9=1	-
+0x59A030	Interior_c::Shop_PlaceFixedUnits	MATCH	0x59A030-0x59A13F (all)	counter side rand only if both sides >=6; no-space case uses this as the counter X (as port)	-
+0x59A140	Interior_c::Shop_AddShelfInfo	MATCH	0x59A140-0x59A1A9 (all)	counter>1, one rand >60, counter reset to 1	-
+0x59A1B0	Interior_c::Shop_FurnishEdges	NOT_REACHED	-	not compared (budget)	-
+0x593DB0	Interior_c::GetBoundingBox	NOT_REACHED	-	not compared (budget)	-
+0x593BF0	Interior_c::Init	NOT_REACHED	-	not compared (budget)	-
+0x5934E0	Interior_c::PlaceObject	MATCH	0x5934E0-0x59390F (all)	z uses -minZ, pool check before matrices, flags/type/areaCode order, steal-data records	-
+0x5914D0	Interior_c::CalcMatrix	MATCH	0x5914D0-0x59158F (all)	identity, RwMatrixRotate replace, translate postconcat, parent frame matrix (null if no rwobject)	-
+0x591590	Interior_c::Furnish	MATCH	0x591590-0x5915C4 (all)	type dispatch; shop gets furnitureGroup 0	-
+0x5915D0	Interior_c::Unfurnish	MATCH	0x5915D0-0x59167A (all)	held liftable object becomes temporary (+99999999 ms), else Remove+delete	-
+0x591B20	Interior_c::GetRandomTile	MATCH(oracle)	0x591B20 (all)	new wave3 row, 1500 cases, 0 mismatches (incl. rand state)	-
+0x59A590	Interior_c::Shop_FurnishAisles	NOT_REACHED	-	not compared (budget)	-
+0x591BD0	Interior_c::GetTileCentre	MATCH	0x591BD0-0x591D1F (all)	float order -w*.5+off+.5; RwV3dTransformPoints; (not oracle-able: RW fn ptr)	-
+0x591D20	Interior_c::AddGotoPt	MATCH(oracle)	0x591D20 (all)	new wave3 row, 3000 cases (4686 of 6000 runs compared, rest fault identically in RW transform), 0 mismatches	-
+0x591E40	Interior_c::AddInteriorInfo	MATCH	0x591E40-0x591F85 (all)	oracle (382 compared, rest fault in RW transform) + manual: z+0.8, dir vectors, fields	-
+0x591F90	Interior_c::AddPickups	NOT_REACHED	-	not compared (budget)	-
+0x592230	Interior_c::Exit	MATCH	0x592230-0x5922B1 (all)	RemovePickUpsInArea(+-50) then Unfurnish	-
+0x5924A0	Interior_c::CalcExitPts	NOT_REACHED	-	not compared (budget)	-
+0x592AA0	Interior_c::PlaceFurniture	MATCH	0x592AA0-0x5930F9 (all)	size swap, CheckTilesEmpty gate, jitter matrix order, offsets, tile status 5/6, outs	-
+0x593120	Interior_c::PlaceFurnitureOnWall	MATCH	0x593120-0x59333F (all)	rand count/order, tries 100/1, tile maths per rotation, outs	-
+0x593340	Interior_c::PlaceFurnitureInCorner	MATCH	0x593340-0x5934D2 (all)	tries 20/1, corner tile maths, outs	-
+0x591C50	Interior_c::FindEmptyTiles	MATCH(oracle)	0x591C50 (all)	new wave3 row, 2500 cases, 0 mismatches	-
+0x59A790	Interior_c::FurnishShop	NOT_REACHED	-	not compared (budget)	-

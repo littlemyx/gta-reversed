@@ -90,4 +90,50 @@ static void TestW3InteriorC() {
         });
         IC(return B8(Int(i)->IsVisible());, return (uint64_t)ExeT<uint8_t>(0x5929F0, Int(i)););
     } ENDROW;
+
+    // ---- ASM-S34 rows: rand()-driven / pure helpers of Interior_c (outs + the whole exe image incl. the interior struct are compared) ----
+    ROW("Interior_c::GetRandomTile", 0x591B20, 1500) {
+        const int i = r.below(8), st = r.below(12);
+        Tw tw([i, st](Rng& rr) {   // a box with a real grid and at least one tile of the wanted status (else both loop for ever)
+            g_ti = i;
+            auto* b = At<tEffectInterior*>((uintptr_t)Int(i) + 0x14);
+            b->m_width = (uint8_t)(2 + rr.below(14)); b->m_depth = (uint8_t)(2 + rr.below(14));
+            uint8_t* t = reinterpret_cast<uint8_t*>(Int(i)) + 0x68;
+            const int n = 1 + rr.below(4);
+            for (int k = 0; k < n; ++k) t[rr.below(b->m_width) * 30 + rr.below(b->m_depth)] = (uint8_t)st;
+            SAt<int32_t>(oOut) = -7; SAt<int32_t>(oOut + 4) = -7;
+        });
+        IC(Int(i)->GetRandomTile(st, &SAt<int32_t>(oOut), &SAt<int32_t>(oOut + 4)); return (uint64_t)(uint32_t)SAt<int32_t>(oOut) | ((uint64_t)(uint32_t)SAt<int32_t>(oOut + 4) << 32);,
+           ExeT<void>(0x591B20, Int(i), st, (void*)S(oOut), (void*)S(oOut + 4)); return (uint64_t)(uint32_t)SAt<int32_t>(oOut) | ((uint64_t)(uint32_t)SAt<int32_t>(oOut + 4) << 32););
+    } ENDROW;
+    ROW("Interior_c::FindEmptyTiles", 0x591C50, 2500) {
+        const int i = r.below(8), w = r.below(8) == 0 ? (int)r.below(40) - 3 : 1 + r.below(6), dp = r.below(8) == 0 ? (int)r.below(40) - 3 : 1 + r.below(6);
+        Tw tw([i](Rng& rr) {
+            g_ti = i;
+            auto* b = At<tEffectInterior*>((uintptr_t)Int(i) + 0x14);
+            if (rr.below(3)) { b->m_width = (uint8_t)(4 + rr.below(20)); b->m_depth = (uint8_t)(4 + rr.below(20)); }
+            if (rr.below(3)) ClearTileRect(rr, 0, 0, 30, 30);
+            SAt<int32_t>(oOut) = -7; SAt<int32_t>(oOut + 4) = -7;
+        });
+        IC(const bool b = Int(i)->FindEmptyTiles(w, dp, &SAt<int32_t>(oOut), &SAt<int32_t>(oOut + 4)); return (uint64_t)b | ((uint64_t)(uint32_t)SAt<int32_t>(oOut) << 8) | ((uint64_t)(uint32_t)SAt<int32_t>(oOut + 4) << 32);,
+           const bool b = ExeT<uint8_t>(0x591C50, Int(i), w, dp, (void*)S(oOut), (void*)S(oOut + 4)) != 0; return (uint64_t)b | ((uint64_t)(uint32_t)SAt<int32_t>(oOut) << 8) | ((uint64_t)(uint32_t)SAt<int32_t>(oOut + 4) << 32););
+    } ENDROW;
+    ROW("Interior_c::AddGotoPt", 0x591D20, 3000) {
+        const int i = r.below(8), tx = r.below(6) == 0 ? (int)r.below(70) - 20 : r.below(32), ty = r.below(6) == 0 ? (int)r.below(70) - 20 : r.below(32);
+        const float ox = r.below(2) ? 0.f : (r.below(3) ? 0.5f : -0.5f), oy = r.below(2) ? 0.f : (r.below(3) ? 0.5f : -0.5f);
+        Tw tw([i, tx, ty](Rng& rr) {
+            g_ti = i;
+            auto* b = At<tEffectInterior*>((uintptr_t)Int(i) + 0x14);
+            if (rr.below(4)) { if (tx >= 0 && b->m_width < tx + 2) b->m_width = (uint8_t)(tx + 2); if (ty >= 0 && b->m_depth < ty + 2) b->m_depth = (uint8_t)(ty + 2); }
+            if (tx >= 0 && ty >= 0 && tx < 30 && ty < 30) { static const uint8_t sts[] = { 0, 3, 7, 4, 9 }; reinterpret_cast<uint8_t*>(Int(i))[0x68 + tx * 30 + ty] = sts[rr.below(5)]; }
+        });
+        IC(Int(i)->AddGotoPt(tx, ty, ox, oy); return 0;, ExeT<void>(0x591D20, Int(i), tx, ty, ox, oy); return 0;);
+    } ENDROW;
+    ROW("Interior_c::AddInteriorInfo", 0x591E40, 3000) {
+        const int i = r.below(8), act = r.below(8) == 0 ? (int)r.below(300) : 1 + r.below(10), dir = r.below(8) == 0 ? (int)r.below(8) - 2 : r.below(4) - (r.below(5) == 0 ? 1 : 0);
+        const float ox = Fl(r, 30.f, 12), oy = Fl(r, 30.f, 12);
+        const bool ent = r.below(2);
+        Tw tw([i](Rng& rr) { g_ti = i; (void)rr; });
+        IC(return B8(Int(i)->AddInteriorInfo((int32)act, ox, oy, dir, ent ? Ent(1) : nullptr));, return (uint64_t)ExeT<uint8_t>(0x591E40, Int(i), act, ox, oy, dir, (void*)(ent ? Ent(1) : nullptr)););
+    } ENDROW;
 }

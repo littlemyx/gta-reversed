@@ -1185,9 +1185,12 @@ void CRadar::RemoveMapSection(int32 x, int32 y) {
 
 // 0x584BF0
 void CRadar::RemoveRadarSections() {
-    for (auto y = 0u; y < MAX_RADAR_HEIGHT_TILES; y++) {
-        for (auto x = 0u; x < MAX_RADAR_WIDTH_TILES; x++) {
-            CStreaming::RemoveTxdModel(gRadarTextures[y][x]);
+    // exe 0x584BF0-0x584C46: x is the outer loop, y the inner one, and unassigned slots (-1) are skipped
+    for (auto x = 0u; x < MAX_RADAR_WIDTH_TILES; x++) {
+        for (auto y = 0u; y < MAX_RADAR_HEIGHT_TILES; y++) {
+            if (gRadarTextures[y][x] != -1) {
+                CStreaming::RemoveTxdModel(gRadarTextures[y][x]);
+            }
         }
     }
 }

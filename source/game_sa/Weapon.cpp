@@ -2197,7 +2197,7 @@ bool CWeapon::FireInstantHit(CEntity* firingEntity, CVector* origin, CVector* mu
 
     //> 0x740F6A - Do the actual bullet impact(s)
     int32 numIterations = 0;
-    if (CWorld::fWeaponSpreadRate <= 0.f
+    if (!(CWorld::fWeaponSpreadRate > 0.f) // NaN also takes the single-impact path (exe: C0|C3 test)
         || !hitEntity
         || (hitEntity->GetIsTypeVehicle() && colPoint.m_nPieceTypeB > 12 && colPoint.m_nPieceTypeB < 17) // Wheels
     ) {

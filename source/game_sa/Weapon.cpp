@@ -1105,7 +1105,13 @@ void CWeapon::DoDriveByAutoAiming(CEntity* owner, CVehicle* vehicle, CVector* st
         return;
     }
 
-    const auto radius = (*endPoint - *startPoint).Magnitude();
+    // The exe sums the squares z, y, x (CVector::Magnitude sums x, y, z)
+    const auto LengthZYX = [](x87d x, x87d y, x87d z) { return (float)std::sqrt((z * z + y * y) + x * x); };
+    const auto DistZYX   = [&](const CVector& a, const CVector& b) {
+        return LengthZYX((x87d)a.x - b.x, (x87d)a.y - b.y, (x87d)a.z - b.z);
+    };
+
+    const auto radius = DistZYX(*endPoint, *startPoint);
 
     int16                    numPeds{}, numVehicles{};
     std::array<CEntity*, 32> inRange{};
@@ -1132,10 +1138,10 @@ void CWeapon::DoDriveByAutoAiming(CEntity* owner, CVehicle* vehicle, CVector* st
         const auto entPos = entity->GetPosition();
         float      score  = CCollision::DistToLine(*startPoint, *endPoint, entPos);
         if (vehicle->m_nVehicleSubType == VEHICLE_TYPE_PLANE || vehicle->m_nVehicleSubType == VEHICLE_TYPE_HELI) {
-            const auto distToVeh = (entPos - vehicle->GetPosition()).Magnitude();
-            score /= (distToVeh >= 5.f ? distToVeh : 5.f);
+            const auto distToVeh = DistZYX(entPos, vehicle->GetPosition());
+            score /= (distToVeh < 5.f ? 5.f : distToVeh);
         } else {
-            score += (entPos - owner->GetPosition()).Magnitude() * 0.15f;
+            score += DistZYX(entPos, owner->GetPosition()) * 0.15f;
         }
 
         const auto dir = *endPoint - *startPoint;
@@ -1153,7 +1159,7 @@ void CWeapon::DoDriveByAutoAiming(CEntity* owner, CVehicle* vehicle, CVector* st
         : 2.5f;
     if (closestScore < maxScore) {
         const auto target = inRange[closestIdx]->GetPosition();
-        const auto scale  = (*startPoint - *endPoint).Magnitude() / (*startPoint - target).Magnitude();
+        const auto scale  = DistZYX(*startPoint, *endPoint) / DistZYX(*startPoint, target);
         *endPoint = (target - *startPoint) * scale + *startPoint;
     }
 }

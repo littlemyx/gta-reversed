@@ -66,7 +66,10 @@ void CBouncingPanel::ProcessPanel(CVehicle* vehicle, RwFrame* frame, CVector mov
             ? fDampMultiplier
             : m_nAxis == 2 ? BOUNCE_HANGING_DAMP_MULT : BOUNCE_SPRING_DAMP_MULT;
 
-        m_vecPos *= pow(dampMult, CTimer::ms_fTimeStep);
+        const auto damp = x87::pow(X87W((x87d)dampMult), X87W((x87d)CTimer::ms_fTimeStep)); // exe 0x6F4DD9: 53-bit CRT pow, kept unrounded, each multiply rounds
+        m_vecPos.x = (float)(X87R(damp * (x87d)m_vecPos.x));
+        m_vecPos.y = (float)(X87R(damp * (x87d)m_vecPos.y));
+        m_vecPos.z = (float)(X87R(damp * (x87d)m_vecPos.z));
     }
     m_vecRotation += m_vecPos * CTimer::ms_fTimeStep;
 

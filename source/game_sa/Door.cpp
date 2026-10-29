@@ -94,7 +94,8 @@ bool CDoor::Process(CVehicle* vehicle, Const CVector& oldMoveSpeed, Const CVecto
         const float rate = (TheCamera.m_bWideScreenOn || (vehicle->IsAutomobile() && !vehicle->AsAutomobile()->m_nNumContactWheels))
             ? DOOR_DAMP_RATE_CHASSIS_CUTSCENE
             : DOOR_DAMP_RATE_CHASSIS;
-        m_angVel = std::pow(rate, CTimer::GetTimeStep()) * m_angVel
+        const auto damp = x87::pow(X87W((x87d)rate), X87W((x87d)CTimer::GetTimeStep())); // exe 0x6F4328: 53-bit CRT pow, kept unrounded, the multiply rounds
+        m_angVel = (float)(X87R(damp * (x87d)m_angVel))
             - CTimer::GetTimeStep() * m_angle * DOOR_SPRING_RATE_CHASSIS;
     } else if (vehicle->IsBoat()) {
         m_angVel *= DOOR_DAMP_RATE_BOAT;

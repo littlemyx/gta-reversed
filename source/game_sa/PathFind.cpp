@@ -2275,58 +2275,70 @@ void CPathFind::RemoveInterior(uint32 intId) {
         if (m_interiorIDs[intSlot] != intId) {
             continue;
         }
+        m_interiorIDs[intSlot] = (uint32)-1; // 0x44E1D5 - the slot is free again (the port never released it)
 
-        for (auto areaId = 0u; areaId < NUM_TOTAL_PATH_NODE_AREAS; areaId++) {
-            for (auto& node : GetPathNodesInArea(areaId, PATH_TYPE_PED)) {
-                // I assume this checks if the link is an interior link?
+        // The exe walks the 64 map areas only (0x44E3CD); the dynamic link tables are indexed by the AREA, not by the interior slot
+        for (auto areaId = 0u; areaId < NUM_PATH_MAP_AREAS; areaId++) {
+            auto* const nodes = m_pPathNodes[areaId];
+            if (!nodes) {
+                continue;
+            }
+            // Ped nodes only (they follow the vehicle nodes)
+            for (auto nodeIdx = (int32)m_anNumVehicleNodes[areaId]; nodeIdx < (int32)m_anNumNodes[areaId]; nodeIdx++) {
+                auto& node = nodes[nodeIdx];
+
+                // Only nodes whose links live in the dynamic part of the link table (links added for interiors)
                 if ((int32)node.m_wBaseLinkId < (int32)m_anNumAddresses[areaId]) {
                     continue;
                 }
 
-                // Remove all link of this node that point to a node int the current interior
-                bool foundNodeFromOtherInt{}, foundNodeFromThisInt{};
-                (void)rng::remove_if(GetNodeLinkedNodes(node, false), [&](CPathNode& linkedNode) {
-                    if (linkedNode.m_wAreaId == intSlotAreaId) {
+                // Drop the links that lead into this interior. The exe (0x44E25C-0x44E294) shifts the following links down, but indexes the CPathFind object
+                // (`this + 0xA44 + 4 * (base + k)`) instead of `m_pNodeLinks[area]`: the link table is not compacted, only the count is decremented
+                // (and the same index is examined again, so the node loses every link from the first interior link on). The stray writes into the object are not reproduced.
+                const auto links = &m_pNodeLinks[areaId][node.m_wBaseLinkId];
+                bool removedAny{}, foundOtherInterior{};
+                for (int32 i = 0; i < (int32)node.m_nNumLinks; i++) {
+                    const auto linkArea = links[i].m_wAreaId;
+                    if (linkArea == intSlotAreaId) {
                         node.m_nNumLinks--;
-                        foundNodeFromOtherInt = true;
-                        return true;
-                    } else if (linkedNode.m_wAreaId >= NUM_PATH_MAP_AREAS) {
-                        foundNodeFromThisInt = true;
+                        removedAny = true;
+                        i--;
+                    } else if (linkArea >= NUM_PATH_MAP_AREAS) { // 0x44E2B0 - links into another interior
+                        foundOtherInterior = true;
                     }
-                    return false;
-                });
+                }
 
-                // If we found a linked node and there was no other node from another interior
-                if (foundNodeFromOtherInt || !foundNodeFromThisInt) {
+                // 0x44E2CB: only when a link was removed and the node has no links into other interiors left (the port had this inverted)
+                if (!removedAny || foundOtherInterior) {
                     continue;
                 }
 
-                // TODO: Magic number `12` (Search: MAGIC_NUM_12)
-                // Null out all links of this node
-                rng::fill(std::span{ &m_pNodeLinks[node.m_wAreaId][node.m_wBaseLinkId], 12 }, CNodeAddress{});
+                // Reset the area id of all 12 links of this node (the node ids stay)
+                for (auto k = 0u; k < 12; k++) {
+                    links[k].m_wAreaId = (uint16)0xFFFF;
+                }
 
-                // Delete dynamic link of this area
-                // Honestly, this doesn't make much sense... As in, I don't think these are dynamic areas? We'll see.. TODO
-                const auto& dynLinks  = m_aDynamicLinksIds[intSlot];
-                const auto  dynLinkIt = rng::find(dynLinks, (int32)node.m_wBaseLinkId);
+                // Give the dynamic link block of this area back
+                auto& dynLinks = m_aDynamicLinksIds[areaId];
+                const auto dynLinkIt = rng::find(dynLinks, (int32)node.m_wBaseLinkId);
                 if (dynLinkIt != rng::end(dynLinks)) {
                     const auto dynLinkIdx = rng::distance(rng::begin(dynLinks), dynLinkIt);
-                    node.m_wBaseLinkId = m_aDynamicLinksBaseIds[intSlot][dynLinkIdx];
-                    m_aDynamicLinksBaseIds[intSlot][dynLinkIdx] = -1;
-                    m_aDynamicLinksIds[intSlot][dynLinkIdx] = -1;
+                    node.m_wBaseLinkId = (int16)m_aDynamicLinksBaseIds[areaId][dynLinkIdx];
+                    m_aDynamicLinksBaseIds[areaId][dynLinkIdx] = -1;
+                    m_aDynamicLinksIds[areaId][dynLinkIdx]     = -1;
                 }
             }
         }
 
-        // Finally, unload area and related data
+        // Finally, unload area and related data (0x44E3DC: nodes, links, link lengths, intersections - the port freed the link lengths twice and leaked the links)
         const auto FreeAndNull = [](auto& ptr) {
             CMemoryMgr::Free(ptr);
             ptr = nullptr;
         };
-        FreeAndNull(m_pPathIntersections[intSlotAreaId]);
-        FreeAndNull(m_pLinkLengths[intSlotAreaId]);
         FreeAndNull(m_pPathNodes[intSlotAreaId]);
+        FreeAndNull(m_pNodeLinks[intSlotAreaId]);
         FreeAndNull(m_pLinkLengths[intSlotAreaId]);
+        FreeAndNull(m_pPathIntersections[intSlotAreaId]);
 
         m_anNumAddresses[intSlotAreaId] = 0;
         m_anNumCarPathLinks[intSlotAreaId] = 0;

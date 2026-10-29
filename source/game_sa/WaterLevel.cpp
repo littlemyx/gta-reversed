@@ -959,8 +959,8 @@ void CWaterLevel::RenderHighDetailWaterTriangle_OneLayer(int32 X1, int32 Y1, CRe
                 (void)colorMult; // The original overwrites it with 0.577f (0x872004) and doesn't use it
 
                 RwIm3DVertexSetPos(vtx, fX, fY, z);
-                RwIm3DVertexSetU(vtx, (float)((double)uOff * (double)uvScale + (double)baseU));
-                RwIm3DVertexSetV(vtx, (float)((double)vOff * (double)uvScale + (double)baseV));
+                RwIm3DVertexSetU(vtx, (float)((x87d)uOff * (x87d)uvScale + (x87d)baseU));
+                RwIm3DVertexSetV(vtx, (float)((x87d)vOff * (x87d)uvScale + (x87d)baseV));
 
                 // Truncated to 8 bits (no clamping)
                 const auto r = (uint8)NOTSA_FTOL(int32, (x87d)WaterColor.r * (x87d)0.577f); // 0x872004
@@ -975,8 +975,8 @@ void CWaterLevel::RenderHighDetailWaterTriangle_OneLayer(int32 X1, int32 Y1, CRe
                 break;
             }
             case 1:
-                RwIm3DVertexSetU(vtx, (float)((double)uOff * (double)uvScale + (double)baseU));
-                RwIm3DVertexSetV(vtx, (float)((double)vOff * (double)uvScale + (double)baseV));
+                RwIm3DVertexSetU(vtx, (float)((x87d)uOff * (x87d)uvScale + (x87d)baseU));
+                RwIm3DVertexSetV(vtx, (float)((x87d)vOff * (x87d)uvScale + (x87d)baseV));
                 RwIm3DVertexSetRGBA(
                     vtx,
                     s_VtxColorCacheR[s_VtxColorCacheIdx],
@@ -987,9 +987,9 @@ void CWaterLevel::RenderHighDetailWaterTriangle_OneLayer(int32 X1, int32 Y1, CRe
                 s_VtxColorCacheIdx++;
                 break;
             case 2: { // Never used
-                RwIm3DVertexSetU(vtx, (float)((double)uOff * (double)TextureJitterMult + (double)TextureShiftThirdU));
-                RwIm3DVertexSetV(vtx, (float)((double)vOff * (double)TextureJitterMult + (double)TextureShiftThirdV));
-                RwIm3DVertexSetPos(vtx, fX, fY, (float)((double)z + (double)0.1f)); // 0x858B1C
+                RwIm3DVertexSetU(vtx, (float)((x87d)uOff * (x87d)TextureJitterMult + (x87d)TextureShiftThirdU));
+                RwIm3DVertexSetV(vtx, (float)((x87d)vOff * (x87d)TextureJitterMult + (x87d)TextureShiftThirdV));
+                RwIm3DVertexSetPos(vtx, fX, fY, (float)((x87d)z + (x87d)0.1f)); // 0x858B1C
                 const auto a = (uint8)NOTSA_FTOL(int32, (x87d)NOTSA_GLOBAL_EXPR(0x8D3810, (int32), static_cast<int32>(WaterLayerAlpha[2])) * (x87d)glare);
                 RwIm3DVertexSetRGBA(vtx, a, a, a, 0xFF);
                 break;

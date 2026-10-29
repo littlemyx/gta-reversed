@@ -1583,7 +1583,7 @@ void CWaterLevel::RenderWaterFog() {
         m_fWaterFogInsideTimer = 40.f;
     } else {
         m_fWaterFogInsideTimer -= CTimer::GetTimeStep();
-        if (!(m_fWaterFogInsideTimer > 0.f)) {
+        if (m_fWaterFogInsideTimer <= 0.f) { // 0x6E7822: fcomp 0 + `test ah,0x41; jp` skips on > 0 AND on NaN
             m_fWaterFogInsideTimer = 0.f;
             m_fWaterFogInsideFade -= CTimer::GetTimeStep() * m_fWaterFogInsideFadeSpeed;
             if (m_fWaterFogInsideFade < 0.f) {

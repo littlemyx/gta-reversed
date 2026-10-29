@@ -48,20 +48,35 @@ float CGameLogic::CalcDistanceToForbiddenTrainCrossing(CVector point, CVector mo
 
         // In vanilla code both `crossing` and `moveSpeed` were 3D, with the crossing's position `z` being assigned `0` ...
         // But that affects the whole logic, because the dot product will more likely than not be negative (because of `dir` always having negative Z).
+#ifdef FIX_BUGS
         // So, instead of doing a 3D dot-product with a `moveSpeed` that has a `z` component of `0`, we just do a 2D dot product.
-        if (dist2D < closest && (ignoreMoveSpeed || dir2D.Dot(CVector2D{ moveSpeed }) > 0.0f)) {
-            outDistance = CVector{ dir2D, 0.f }; // Original code here used `z = -point.z` but that doesn't make much sense, so we're just going to set it to 0
-            closest     = dist2D;
+        const auto dot = dir2D.Dot(CVector2D{ moveSpeed });
+#else
+        // exe 0x441913: dir.z = -point.z, dot = (ms.z * dir.z + ms.y * dir.y) + dir.x * ms.x
+        const auto dot = (moveSpeed.z * -point.z + moveSpeed.y * dir2D.y) + dir2D.x * moveSpeed.x;
+#endif
+        if (dot > 0.0f || ignoreMoveSpeed) {
+            if (dist2D < closest) {
+#ifdef FIX_BUGS
+                outDistance = CVector{ dir2D, 0.f }; // Original code here used `z = -point.z` but that doesn't make much sense, so we're just going to set it to 0
+#else
+                outDistance = CVector{ dir2D, -point.z };
+#endif
+                closest     = dist2D;
+            }
         }
     };
 
+    // exe 0x4418E0: three independent tests (not an else-if chain): the third one also runs when the stat is 0 or 1
     const auto cityUnlocked = CStats::GetStatValue(STAT_CITY_UNLOCKED);
     if (cityUnlocked == 0.0f) {
         Calculate({ 82.0f, -1021.0f }); // LS-SF; Flint Country
-    } else if (cityUnlocked == 1.0f) {
+    }
+    if (CStats::GetStatValue(STAT_CITY_UNLOCKED) == 1.0f) {
         Calculate({ -1568.0f, 537.0f }); // SF-LV; Downtown
-    } else if (cityUnlocked < 1.0f) {
-        Calculate({ 2270.0f, 277.0f }); // Not a train crossing; top left side of Palomino Creek, LS
+    }
+    if (CStats::GetStatValue(STAT_CITY_UNLOCKED) <= 1.0f) {
+        Calculate({ 2770.0f, 277.0f }); // Not a train crossing; top left side of Palomino Creek, LS
     }
 
     return closest;

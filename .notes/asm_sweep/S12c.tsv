@@ -1,0 +1,5 @@
+addr	file	line	cls	fn	oc
+0x627CC0	source/game_sa/Tasks/TaskTypes/TaskSimpleGangDriveBy.cpp	32	CTaskSimpleGangDriveBy	FireGun	S
+0x627600	source/game_sa/Tasks/TaskTypes/TaskSimpleGangDriveBy.cpp	35	CTaskSimpleGangDriveBy	ProcessAIPed	D
+0x628350	source/game_sa/Tasks/TaskTypes/TaskSimpleGangDriveBy.cpp	36	CTaskSimpleGangDriveBy	ProcessAimIK	D
+0x62D3B0	source/game_sa/Tasks/TaskTypes/TaskSimpleGangDriveBy.cpp	41	CTaskSimpleGangDriveBy	ProcessPed	D

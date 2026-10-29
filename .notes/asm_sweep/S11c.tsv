@@ -1,0 +1,10 @@
+addr	file	line	cls	fn	oc
+0x64B950	source/game_sa/Tasks/TaskTypes/TaskSimpleCarSetPedInAsDriver.cpp	19	CTaskSimpleCarSetPedInAsDriver	ProcessPed	S
+0x64B5D0	source/game_sa/Tasks/TaskTypes/TaskSimpleCarSetPedInAsPassenger.cpp	15	CTaskSimpleCarSetPedInAsPassenger	ProcessPed	S
+0x64C220	source/game_sa/Tasks/TaskTypes/TaskSimpleCarSetPedSlowDraggedOut.cpp	18	CTaskSimpleCarSetPedSlowDraggedOut	ProcessPed	D
+0x67DE10	source/game_sa/Tasks/TaskTypes/TaskSimpleClimb.cpp	35	CTaskSimpleClimb	ScanToGrabSectorList<CPtrListSingleLink<CPhysical*>>	S
+0x67FD30	source/game_sa/Tasks/TaskTypes/TaskSimpleClimb.cpp	36	CTaskSimpleClimb	ScanToGrab	D
+0x67A890	source/game_sa/Tasks/TaskTypes/TaskSimpleClimb.cpp	37	CTaskSimpleClimb	CreateColModel	S
+0x67DBE0	source/game_sa/Tasks/TaskTypes/TaskSimpleClimb.cpp	41	CTaskSimpleClimb	StartAnim	D
+0x67A5D0	source/game_sa/Tasks/TaskTypes/TaskSimpleClimb.cpp	46	CTaskSimpleClimb	GetCameraStickModifier	D
+0x680DC0	source/game_sa/Tasks/TaskTypes/TaskSimpleClimb.cpp	48	CTaskSimpleClimb	ProcessPed	D

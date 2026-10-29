@@ -49,8 +49,8 @@
 | S27b | rest of S27 | 15 | partial 10/15 (6 M, 4 fixed +1 FindGroundZ) -> S27c | World.cpp |
 | S29b | rest of S29 | 5 | done (1 M, 4 fixed) | HandObject.cpp, Object.cpp |
 | S13b | rest of S13 | 12 | partial 8/12 (5 M, 3 fixed) -> S13c | TaskSimpleGetUp.cpp, TaskSimpleGoToPoint.cpp, TaskSimpleGoToPointFine.cpp, TaskSimpleGunControl.cpp, TaskSimpleHoldEntity.cpp, TaskSimpleInAir.cpp, TaskSimpleJetPack.cpp |
-| S11b | rest of S11 | 9 | pending | TaskSimpleCarSetPedInAsDriver.cpp, TaskSimpleCarSetPedInAsPassenger.cpp, TaskSimpleCarSetPedSlowDraggedOut.cpp, TaskSimpleClimb.cpp |
-| S12b | rest of S12 | 10 | pending | TaskSimpleDead.cpp, TaskSimpleFight.cpp, TaskSimpleGangDriveBy.cpp |
+| S11b | rest of S11 | 9 | 0/9 (not reached) -> S11c | TaskSimpleCarSetPedInAsDriver.cpp, TaskSimpleCarSetPedInAsPassenger.cpp, TaskSimpleCarSetPedSlowDraggedOut.cpp, TaskSimpleClimb.cpp |
+| S12b | rest of S12 | 10 | partial 6/10 (5 M, 1 fixed) -> S12c | TaskSimpleDead.cpp, TaskSimpleFight.cpp, TaskSimpleGangDriveBy.cpp |
 | S20c | rest of S20b | 13 | partial 3/13 (2 M, 1 fixed) -> S20d | Ped.cpp |
 | S16c | rest of S16b | 17 | partial 2/17 (2 fixed) -> S16d | Automobile.cpp |
 | S17c | rest of S17b | 16 | partial 6/16 (2 M, 4 fixed) -> S17d | Bike.cpp, Bmx.cpp, Boat.cpp |
@@ -138,4 +138,7 @@
 | S33c | rest of S33b | 15 | partial 3/15 (1 M, 2 fixed; unicorn emulator models) -> S33d | WaterLevel.cpp |
 | S33d | rest of S33c | 12 | partial 5/12 (1 M, 4 fixed) -> S33e | WaterLevel.cpp |
 | S33e | rest of S33d | 7 | 6/7 (2 M, 4 fixed) -> S33f | WaterLevel.cpp |
-| S33f | rest of S33e | 1 | pending | WaterLevel.cpp |
+| S33f | rest of S33e | 1 | 0/1 (not reached) -> S33g | WaterLevel.cpp |
+| S12c | rest of S12b | 4 | pending | TaskSimpleGangDriveBy.cpp |
+| S11c | rest of S11b | 9 | pending | TaskSimpleCarSetPedInAsDriver.cpp, TaskSimpleCarSetPedInAsPassenger.cpp, TaskSimpleCarSetPedSlowDraggedOut.cpp, TaskSimpleClimb.cpp |
+| S33g | rest of S33f | 1 | pending | WaterLevel.cpp |

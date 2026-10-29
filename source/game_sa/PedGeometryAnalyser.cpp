@@ -1138,7 +1138,9 @@ bool CPedGeometryAnalyser::GetIsLineOfSightClear(const CPed& ped, const CVector&
         }
     }
 
-    outDist = (end - start).Magnitude();
+    // 0x5F5D1D..0x5F5D4B: sqrt(dz*dz + dy*dy + dx*dx) rounded to float (CVector::Magnitude would sum x, y, z)
+    const CVector diff = end - start;
+    outDist = std::sqrt(diff.z * diff.z + diff.y * diff.y + diff.x * diff.x);
     return false;
 }
 

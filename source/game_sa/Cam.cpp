@@ -3346,19 +3346,21 @@ void CCam::Process_Cam_TwoPlayer() {
         m_fHorizontalAngle = angle;
     }
 
+    // exe 0x525FA4 / 0x52628D: `a > h + pi` subtracts 2 pi, `a < h - pi` adds it; a NaN falls through both (unchanged)
     const auto WrapNear = [this](float a) {
-        if (a <= m_fHorizontalAngle + PI) {
-            if (a < m_fHorizontalAngle - PI) {
-                return a + 2.0f * PI;
-            }
-            return a;
+        if (a > m_fHorizontalAngle + PI) {
+            return a - 2.0f * PI;
         }
-        return a - 2.0f * PI;
+        if (a < m_fHorizontalAngle - PI) {
+            return a + 2.0f * PI;
+        }
+        return a;
     };
 
+    // exe 0x525FFD-0x52602A: `fcom 0.1; jne` (<= 0.1 or NaN) then `fcom -0.1; jp` (>= -0.1 or NaN): a NaN keeps its value
     float fVar2 = (WrapNear(angle) - m_fHorizontalAngle) * 0.2f;
     float fVar4 = 0.1f;
-    if (fVar2 <= 0.1f) {
+    if (!(fVar2 > 0.1f)) {
         fVar4 = fVar2;
         if (fVar2 < -0.1f) {
             fVar4 = -0.1f;
@@ -3380,9 +3382,9 @@ void CCam::Process_Cam_TwoPlayer() {
 
     if (foundIdx == 0 && CTimer::GetTimeInMS() >= s_lastBlockedTime + 1000) {
         const CVector vel = ped0->m_vecMoveSpeed + ped1->m_vecMoveSpeed;
-        const float   mag2 = vel.y * vel.y + vel.x * vel.x + vel.z * vel.z;
+        const float   mag2 = vel.z * vel.z + vel.x * vel.x + vel.y * vel.y; // exe 0x5260B0: z, x, y
         bool          stepBack = false;
-        if (mag2 <= 0.01f) {
+        if (!(mag2 > 0.01f)) { // exe `fcom 0.01; jne` (<= or NaN)
             stepBack = true;
         } else {
             const float f3 = 0.1f * CTimer::GetTimeStep();
@@ -3390,26 +3392,24 @@ void CCam::Process_Cam_TwoPlayer() {
             const x87d rawAngle = X87R(x87::atan2((double)-vel.x, (double)vel.y) - (double)(PI / 2.0f)); // NOTE: x87 keeps this unrounded for the next subtraction
             local70               = (float)rawAngle;
             const x87d d        = rawAngle - (x87d)fVar4;
-            if (d <= (double)PI) {
-                if (d < (double)-PI) {
-                    local70 += 2.0f * PI;
-                }
-            } else {
+            if (d > (x87d)PI) {
                 local70 -= 2.0f * PI;
+            } else if (d < -(x87d)PI) { // a NaN skips both
+                local70 += 2.0f * PI;
             }
             x87d f14;
-            if (std::sqrt(mag2) * f3 <= 1.0f) {
+            if (!(std::sqrt(mag2) * f3 > 1.0f)) { // exe `fcomp 1.0; jne` (<= or NaN) takes the magnitude
                 f14 = vel.Magnitude() * f3;
             } else {
                 f14 = (x87d)1.0;
             }
             const float f2 = (float)(((x87d)local70 - (x87d)fVar4) * f14);
-            local70        = f5;
-            if (f2 <= f5) {
-                local70 = f2;
-                if (f2 < -f5) {
-                    local70 = -f5;
-                }
+            // exe 0x52614C-0x52618B: `f2 > f5` takes f5, `f2 < -f5` takes -f5, a NaN keeps f2
+            local70        = f2;
+            if (f2 > f5) {
+                local70 = f5;
+            } else if (f2 < -f5) {
+                local70 = -f5;
             }
             if (0.01f < local70) {
                 angle += 0.15f;
@@ -3431,7 +3431,7 @@ void CCam::Process_Cam_TwoPlayer() {
     float step = std::max(CTimer::GetTimeStep(), 1.0f);
     fVar2      = (local70 - m_fHorizontalAngle) / step;
 
-    const float powFactor = (float)std::pow(0.800000012, (double)CTimer::GetTimeStep());
+    const float powFactor = (float)std::pow(X87W((x87d)0.8f), X87W((x87d)CTimer::GetTimeStep()));
     fVar4                 = 0.1f;
 
     if (foundIdx == 0 && s_lastBlockedTime + 1000 <= CTimer::GetTimeInMS()) {
@@ -3457,7 +3457,7 @@ void CCam::Process_Cam_TwoPlayer() {
         fVar2 = local70 + fVar2;
     }
 
-    if (fVar2 <= fVar4) {
+    if (!(fVar2 > fVar4)) { // exe 0x5264D4: `fcom 0.1; jne` (<= or NaN); a NaN keeps its value
         const float lo = -fVar4;
         fVar4          = fVar2;
         if (fVar2 < lo) {
@@ -6600,7 +6600,7 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
 
     if (pad->GetForceCameraBehindPlayer() && pad->AimWeaponLeftRight(nullptr) != 0) {
         x87d d = (x87d)m_fHorizontalAngle - ((x87d)ped->m_fCurrentRotation - (x87d)HALF_PI);
-        if (d > (double)PI) {
+        if (d > (x87d)PI) {
             d -= (x87d)TWO_PI;
         } else if (d < (double)-PI) {
             d += (x87d)TWO_PI;

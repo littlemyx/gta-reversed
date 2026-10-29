@@ -65,7 +65,7 @@ public:
             RH_ScopedNamedInstall(Destructor, "Destructor-NonVirtual", 0x661F30); // not "Destructor": RH_ScopedVMTDestructorInstall below registers that name (duplicate-name assert in HookCategory)
             RH_ScopedVMTDestructorInstall(0x661F10);
 
-            RH_ScopedInstall(CreateSubTask, 0x496DC0);
+            RH_ScopedInstall(CreateSubTask, 0x665270); // was 0x496DC0, which is the RadiusAngleOffset GetSeekPos(out, ped)
 
             RH_ScopedVMTInstall(Clone, 0x664AF0);
             RH_ScopedVMTInstall(GetTaskType, 0x661EA0);

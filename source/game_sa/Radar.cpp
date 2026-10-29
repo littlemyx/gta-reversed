@@ -963,21 +963,22 @@ void CRadar::ShowRadarTrace(float x, float y, uint32 size, CRGBA color) {
     Limit(x, y);
     RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RWRSTATE(NULL));
 
-    // The exe builds both rects as {left, bottom, right, top} = {x - s, y + s, x + s, y - s} (screen y grows downwards),
-    // the border one is 1px bigger on every side (x87 does (x - s) - 1 in float steps) and uses black with the trace alpha.
+    // The exe stores both rects in memory as +0 x - s, +4 y + s, +8 x + s, +0xC y - s (screen y grows downwards); the CRect ctor
+    // (identical to the exe's 0x4041C0) is (left, bottom(+0xC), right, top(+4)), so the literal is {x - s, y - s, x + s, y + s}.
+    // The border one is 1px bigger on every side (x87 does (x - s) - 1 in float steps) and uses black with the trace alpha.
     const auto s = float(size);
     CSprite2d::DrawRect({
         (x - s) - 1.f,
-        (y + s) + 1.f,
+        (y - s) - 1.f,
         (x + s) + 1.f,
-        (y - s) - 1.f
+        (y + s) + 1.f
     }, { 0, 0, 0, color.a });
 
     CSprite2d::DrawRect({
         x - s,
-        y + s,
+        y - s,
         x + s,
-        y - s
+        y + s
     }, color);
 }
 

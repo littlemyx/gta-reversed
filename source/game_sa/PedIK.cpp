@@ -139,7 +139,7 @@ void CPedIK::PointGunAtPosition(const CVector& aimAt, float normalize) {
         + (m_pPed->bIsDucking ? offset.DuckX : offset.AimX) * m_pPed->GetRight()
         + (m_pPed->bIsDucking ? offset.DuckZ : offset.AimZ) * m_pPed->GetUp();
     PointGunInDirection(
-        CGeneral::GetRadianAngleBetweenPoints(aimAt, aimFrom),
+        CGeneral::GetRadianAngleBetweenPoints(aimAt.x, aimAt.y, aimFrom.x, aimFrom.y),
         CGeneral::GetRadianAngleBetweenPoints(
             aimAt.z, CVector2D::Dist(aimFrom, aimAt),
             aimFrom.z, 0.0f

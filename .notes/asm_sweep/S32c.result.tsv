@@ -1,0 +1,24 @@
+addr	function	verdict	asm range	note	fix commit
+0x587FB0	CRadar::Initialise	NOT_REACHED	-	not compared (budget)	-
+0x5827D0	CRadar::LoadTextures	NOT_REACHED	-	not compared (budget)	-
+0x585940	CRadar::Shutdown	NOT_REACHED	-	not compared (budget)	-
+0x584960	CRadar::DrawYouAreHereSprite	DEVIATION	0x584960-0x584A78	blink thresholds: exe hides after 500 ms shown and shows after 200 ms hidden (port 700 ms both); sprite/size/offset (17*sin/cos)/angle/legend entry match	fb336029
+0x584B50	CRadar::RequestMapSection	MATCH	0x584B50-0x584BA3	-	-
+0x584BB0	CRadar::RemoveMapSection	MATCH	0x584BB0-0x584BE3	-	-
+0x584BF0	CRadar::RemoveRadarSections	DEVIATION	0x584BF0-0x584C4A	x-major loop order; slots == -1 skipped (port called RemoveTxdModel(-1) = RemoveModel(19999))	a43b5688
+0x585FF0	CRadar::DrawRadarSprite	MATCH	0x585FF0-0x58610D	map scaling + LimitToMap only when drawing map, _ftol size, DisplayThisBlip(-99), legend; port CRect literal {x-w,y-h,x+w,y+h} is physically the exe {x-w,y+h,x+w,y-h} (see report note on CRect layout)	-
+0x586B00	CRadar::DrawMap	NOT_REACHED	-	not compared (budget)	-
+0x586880	CRadar::DrawRadarMap	NOT_REACHED	-	not compared (budget); open question: plane rect CRect literal physical slot order vs exe	-
+0x5858D0	CRadar::StreamRadarSections-vec	MATCH	0x5858D0-0x585931	floor/ceil of (p+3000)*0.002, disableStreaming gate match	-
+0x584850	CRadar::DrawRotatingRadarSprite	MATCH	0x584850-0x584957	theta = i*pi/2 + (angle - pi/4), (sin*w + x, cos*h + y), Draw arg order v3,v2,v0,v1 match	-
+0x585700	CRadar::DrawRadarMask	DEVIATION	0x585700-0x5858CC	first pass draws the whole radar square (SetMaskVertices at RwIm2DGetFarScreenZ) was missing; corner order (-1,1),(1,1),(1,-1),(-1,-1); render states, arc math (j*pi/12), near-z fans, alpha test restore match	63edd765
+0x5D53C0	CRadar::Load	NOT_REACHED	-	not compared (budget)	-
+0x5D5860	CRadar::Save	NOT_REACHED	-	not compared (budget)	-
+0x5853D0	CRadar::DrawAreaOnRadar	DEVIATION	0x5853D0-0x5856F2	early-out: exe returns when the rect does not overlap m_radarRect (4 separation tests, NaN falls through); port used CRect::IsRectInside whose polarity and top/bottom pairing made it never fire. Corners, ClipRadarPoly, screen transform, drawing-map scaling, fan draw match	5e27328d
+0x584C50	CRadar::StreamRadarSections-xy	DEVIATION	0x584C50-0x584D37	loop order x-major (port y-major); request/remove conditions match	d50c0d23
+0x585BF0	CRadar::Draw3dMarkers	DEVIATION	0x585BF0-0x585FC1	(1) contact-point gate: exe draws iff (enex!=null)==(areaCode!=0), port gate always passed; (2) Nevada cone factor 0.6 (port 5/3); (3) vehicle z = (bbMaxZ*k+pos.z)+2.0 (port pos.z+(bbMaxZ+2)); (4) missing pickup is drawn at (0,0,2+1.8|1.6), port asserted. Type table, cone args, char/object/pickup heights match	fd6433db
+0x586110	CRadar::DrawRadarSection	DEVIATION	0x586110-0x586512	(1) texture lookup first, return on slot -1 / no txd / no texture (port drew stale vertices and treated slot 0 as none); (2) corners via TransformRealWorldPointToRadarSpace (*(1/range)) not /range; (3) tex coords *0.002f / *-0.002f not /500 (TransformRealWorldToTexCoordSpace); (4) return before touching render states when 0 vertices. Sea/blank/textured colours match	33a5199d
+0x586520	CRadar::DrawRadarSectionMap	MATCH	0x586520-0x586643	-	-
+0x586650	CRadar::DrawRadarGangOverlay	DEVIATION	0x586650-0x58687D	mode-2 pulse angle is (t&0x3FF)*(2pi/1024) (0x865034); port multiplied by 1024/2pi. Zone filter (info idx 0, RadarMode, CanPlayerStartAGangWarHere), rect slots, colours, time source match	5ac16a65
+0x587000	CRadar::DrawEntityBlip	DEVIATION	0x587000-0x587BE8	fully compared (type table, entity/enex positions, marker block, short range, zoom branch incl. NaN forms, searchlight circles, airstrip, legend, sprite path). Only difference: airstrip range-update test dist>=0.9 is !(dist<0.9) in the exe (NaN). Left as is: airstrip pos is stack garbage in the exe when the player is >= 500 away (not reproducible)	41d2a008
+0x5828A0	CRadar::DrawLegend	NOT_REACHED	-	LOW/HIGH polygons and sprite path still open (S32b did the NORMAL box + positions)	-

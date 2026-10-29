@@ -254,9 +254,22 @@ void CPickups::DoCollectableEffects(CEntity* entity) {
 void CPickups::DoMineEffects(CEntity* entity) {
     const auto& entityPos = entity->GetPosition();
 
-    if (const auto d = DistanceBetweenPoints(TheCamera.GetPosition(), entityPos); d < 20.0f) {
-        // shade of red
-        const auto t = NOTSA_FTOL(uint8, (X87R(x87::sin((float)(((uint16)std::bit_cast<uintptr_t>(entity) + (uint16)CTimer::GetTimeInMS()) % 512) * 0.012265625f) + 1.0f)) / 2.0f * ((20.0f - d) * ExeRecip(20.0f)) * 64.0f);
+    const float d = [&] { // 0x456121: sqrt((dz^2 + dy^2) + dx^2) of (camera - entity)
+        const auto cam = TheCamera.GetPosition();
+        const float dx = cam.x - entityPos.x;
+        const float dy = cam.y - entityPos.y;
+        const float dz = cam.z - entityPos.z;
+        return std::sqrt((dz * dz + dy * dy) + dx * dx);
+    }();
+    if (d < 20.0f) {
+        // shade of red: ((sin + 1) * 0.5 * (20 - d)) * 0.05 * 64 - every x87 step rounds to float (PC24)
+        const auto t = NOTSA_FTOL(uint8, [&] {
+            float v = (float)(X87R(x87::sin((float)(((uint16)std::bit_cast<uintptr_t>(entity) + (uint16)CTimer::GetTimeInMS()) % 512) * 0.012265625f) + 1.0f));
+            v = v * 0.5f;
+            v = v * (20.0f - d);
+            v = v * 0.05f;
+            return v * 64.0f;
+        }());
 
         CShadows::StoreStaticShadow(
             NOTSA_PTR_ID32(entity),
@@ -286,7 +299,7 @@ void CPickups::DoMineEffects(CEntity* entity) {
             255,
             entityPos,
             0.6f,
-            40.0f,
+            60.0f, // 0x4561D4: 0x42700000 (port had 40.0f)
             CORONATYPE_TORUS,
             FLARETYPE_NONE,
             eCoronaReflType::CORREFL_NONE,

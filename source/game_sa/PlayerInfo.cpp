@@ -1072,7 +1072,7 @@ void CPlayerInfo::FindClosestCarSectorList(CPtrListDoubleLink<CVehicle*>& ptrLis
         }
 
         // Skip vehicles that are not upright (but let bikes through)
-        if (veh->GetMatrix().GetUp().z <= 0.3f && veh->m_nVehicleSubType != VEHICLE_TYPE_BIKE) {
+        if (!(veh->GetMatrix().GetUp().z > 0.3f) && veh->m_nVehicleType != VEHICLE_TYPE_BIKE) { // exe 0x56F58A: `[veh+0x590]` (m_nVehicleType, not the sub type), NaN skips
             continue;
         }
 
@@ -1096,7 +1096,7 @@ void CPlayerInfo::FindClosestCarSectorList(CPtrListDoubleLink<CVehicle*>& ptrLis
             if (std::abs(pedToVehDist) < 2.0f) {
                 return true;
             }
-            if (veh->m_nVehicleSubType != VEHICLE_TYPE_BOAT) {
+            if (veh->m_nVehicleType != VEHICLE_TYPE_BOAT) { // exe 0x56F6C9: `[veh+0x590]`
                 return false;
             }
             const auto pedZ = ped->GetPosition().z;

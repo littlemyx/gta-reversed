@@ -1005,9 +1005,8 @@ void CWaterLevel::SplitWaterRectangleAlongXLine(int32 splitAtX, int32 minX, int3
 
 // 0x6ED6D0 - Though fully inlined into `RenderWaterRectangle`
 void CWaterLevel::SplitWaterRectangleAlongYLine(int32 splitAtY, int32 minX, int32 maxX, int32 Y1, int32 Y2, CRenPar P1, CRenPar P2, CRenPar P3, CRenPar P4) {
-    const auto [minY, maxY] = std::minmax(Y1, Y2);
-
-    const auto t = (float)(splitAtY - minY) / (float)(maxY - minY);
+    // 0x6ED6D0: `(split - Y1) / (Y2 - Y1)` (the original does not order Y1 / Y2)
+    const auto t = (float)(splitAtY - Y1) / (float)(Y2 - Y1);
 
     const auto P13 = lerpBlend(P1, P3, t);
     const auto P24 = lerpBlend(P2, P4, t);

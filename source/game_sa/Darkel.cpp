@@ -152,7 +152,8 @@ bool CDarkel::ThisVehicleShouldBeKilledForFrenzy(const CVehicle& vehicle) {
 // 0x43D3B0
 void CDarkel::StartFrenzy(eWeaponType weaponType, int32 timeLimit, uint16 killsNeeded, int32 modelToKill, const GxtChar* startMessage, int32 modelToKill2, int32 modelToKill3, int32 modelToKill4, bool standardSoundAndMessages, bool needHeadShot) {
     CGameLogic::ClearSkip(false);
-    const eWeaponType weapon = (WeaponType != WEAPON_UZI_DRIVEBY) ? weaponType : WEAPON_MICRO_UZI;
+    // exe 0x43D3C0: `cmp edi, 0x34` tests the ARGUMENT (the port tested the stale global, so a drive-by frenzy was never mapped to the Micro Uzi)
+    const eWeaponType weapon = (weaponType != WEAPON_UZI_DRIVEBY) ? weaponType : WEAPON_MICRO_UZI;
 
     if (CGameLogic::IsCoopGameGoingOn()) {
         Status = eDarkelStatus::FRENZY_ON_GOING_2P;

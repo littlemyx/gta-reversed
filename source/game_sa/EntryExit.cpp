@@ -206,18 +206,21 @@ uint8 CEntryExit::GetMyOrLinkedArea() const {
 
 // 0x43E460
 bool CEntryExit::IsInArea(const CVector& position) {
-
-    const auto CheckPointInEntranceRect = [this](const CVector& point) {
-        if (m_recEntrance.IsPointInside(point)) {
-            if (std::abs(point.z - m_fEntranceZ) < 1.0f) {
-                return true;
-            }
-        }
-        return false;
-    };
-
-    // It's quite common `m_fEntranceAngle` is 0, so I guess this is some kind of an optimization?
-    return CheckPointInEntranceRect(m_fEntranceAngleRad == 0.f ? position : TransformEntrancePoint(position));
+    // exe 0x43E48A: unrotated iff the angle compares equal to 0 (NaN takes the rotated path)
+    CVector2D point{ position };
+    if (m_fEntranceAngleRad != 0.f) {
+        // exe 0x43E4FC-0x43E5A8: centre = (r - l) * 0.5 + l / (top - bottom) * 0.5 + bottom (NOT (r + l) * 0.5), the Z of the vector is NOT offset,
+        // the rotated vector is rounded to float and the centre added afterwards (second rounding)
+        const auto& r = m_recEntrance;
+        const auto  cx = (float)(((x87d)r.right - (x87d)r.left) * (x87d)0.5f + (x87d)r.left);
+        const auto  cy = (float)(((x87d)r.top - (x87d)r.bottom) * (x87d)0.5f + (x87d)r.bottom);
+        CMatrix mat;
+        mat.SetRotateZ(m_fEntranceAngleRad); // position (0, 0, 0)
+        const auto rot = mat.TransformPoint({ position.x - cx, position.y - cy, position.z });
+        point = { rot.x + cx, rot.y + cy };
+    }
+    // the Z test is always on the ORIGINAL position.z (exe 0x43E5E4: fld [edi+8])
+    return m_recEntrance.IsPointInside(point) && std::abs(position.z - m_fEntranceZ) < 1.0f;
 }
 
 // 0x43FFD0

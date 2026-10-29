@@ -1,0 +1,4 @@
+# ASM-S42e (phase 2: CCarEnterExit::GetNearestCarDoor) - 2026-10-29
+Result: 1 row = 1 DEVIATION (fixed). Table: S42e.result.tsv.
+- GetNearestCarDoor (0x6528F0-0x652ECE): (1) towed-vehicle block tests exactly one door - the left when strictly nearer, else the right - against the TOWED vehicle's collision model (port: the towing vehicle, and both doors in sequence); (2) force-door-check handling: with one front door node present that door is used if there is room, with both nodes the generic code runs (port returned false, and used the inverted node test); (3) the right door in the generic tail is tested with the passenger drag-out offset (ebp), port used the driver one.
+- Bike section, bus/low-vehicle flags, group/drag-out tests, nearest-door ordering and the mission/passenger/getting-in test: MATCH.

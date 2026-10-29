@@ -1,0 +1,2 @@
+addr	function	verdict	asm range	note	fix commit
+0x6528F0	CCarEnterExit::GetNearestCarDoor	DEVIATION	0x6528F0-0x652ECE (all)	towed-vehicle block: exactly one door is tested, against the towed vehicle (port: tower, both doors); forced-door check: lone door node used, both nodes -> generic code (port returned false); right door tested with the passenger drag-out offset; bike section, bus/low flags, group/drag-out tests, door ordering MATCH	ec224aabc

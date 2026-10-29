@@ -1,0 +1,38 @@
+addr	function	verdict	asm range	note	fix commit
+0x6F34D0	CCarGenerator::DoInternalProcessing	DEVIATION	0x6F34D0-0x6F3E5A (all)	night = hours > 21 || < 7 (port helper ClockHoursInRange(21,7) was always false: population limit 5 at night instead of 10, tractor drivers at night); random car skipped when vehicle CLASS is BIG (port: boat type); colmodel optional for the length>8 test; tractor/combine path sets removal range 255; angle byte unsigned; NumParkedCars compared signed; spawn/plate/colour/alarm/lock/handle logic MATCH	b0cb39256
+0x6F3E90	CCarGenerator::Process	MATCH	0x6F3E90-0x6F3F35 (all)	spawn gate, handle lookup, status==PLAYER branch (+60000, removal range 0, model reset) equal	-
+0x43A0B0	CCheat::VehicleCheat	MATCH	0x43A0B0-0x43A46E (all)	area/pool(>50)/streaming flags/placement (r+2 along forward)/orientation/status/lock/placement switch equal; port builds a CTrain for train models (exe: CAutomobile), not reachable by any caller	-
+0x5A7B30	Clothes::LoadClothesFile	NOT_REACHED	-	not compared (budget)	-
+0x5A7F30	Clothes::GetDependentTexture	NOT_REACHED	-	not compared (budget)	-
+0x5A7FB0	Clothes::GetPlayerMotionGroupToLoad	NOT_REACHED	-	not compared (budget)	-
+0x5A80D0	Clothes::Init	NOT_REACHED	-	not compared (budget)	-
+0x5A8120	Clothes::RequestMotionGroupAnims	NOT_REACHED	-	not compared (budget)	-
+0x5A81B0	Clothes::GetDefaultPlayerMotionGroup	NOT_REACHED	-	not compared (budget)	-
+0x5A81E0	Clothes::ConstructPedModel	NOT_REACHED	-	not compared (budget)	-
+0x5A8270	Clothes::RebuildCutscenePlayer	NOT_REACHED	-	not compared (budget)	-
+0x5A82C0	Clothes::RebuildPlayer	NOT_REACHED	-	not compared (budget)	-
+0x5A8390	Clothes::RebuildPlayerIfNeeded	NOT_REACHED	-	not compared (budget)	-
+0x604500	CCollisionEventScanner::ScanForCollisionEvents	UNSURE	-	carries per-address exe annotations from the original reversal; not re-diffed here (budget)	-
+0x43AC40	CConversationForPed::IsPlayerInPositionForConversation	MATCH	0x43AC40-0x43ADA4 (all)	distance z,y,x sum > 4, facing dot > 0, speed > 0.01, damaged-by-player 6000 ms, group member count, readiness calls equal	-
+0x43C190	ConversationForPed::Update	NOT_REACHED	-	not compared (budget)	-
+0x43AAE0	PedToPlayerConversations::Clear	NOT_REACHED	-	not compared (budget)	-
+0x43AB10	PedToPlayerConversations::EndConversation	NOT_REACHED	-	not compared (budget)	-
+0x43B0F0	PedToPlayerConversations::Update	NOT_REACHED	-	not compared (budget)	-
+0x698790	Cover::FindVectorFromFirstToMissingVertex	NOT_REACHED	-	not compared (budget)	-
+0x6987F0	Cover::CalculateHorizontalSize	NOT_REACHED	-	not compared (budget)	-
+0x698990	Cover::DoLineCheckWithinObject	NOT_REACHED	-	not compared (budget)	-
+0x699120	Cover::FindCoverPointsForThisBuilding	NOT_REACHED	-	not compared (budget)	-
+0x6997E0	Cover::Update	NOT_REACHED	-	not compared (budget)	-
+0x698EB0	CoverPoint::ReserveCoverPointForPed	NOT_REACHED	-	not compared (budget)	-
+0x698EF0	CoverPoint::ReleaseCoverPointForPed	NOT_REACHED	-	not compared (budget)	-
+0x571EA0	CurrentVehicle::Display	NOT_REACHED	-	not compared (budget)	-
+0x572040	CurrentVehicle::Process	NOT_REACHED	-	not compared (budget)	-
+0x6FD500	CustomCarPlateMgr::Initialise	NOT_REACHED	-	not compared (budget)	-
+0x6FD720	CustomCarPlateMgr::Shutdown	NOT_REACHED	-	not compared (budget)	-
+0x6FD7A0	CustomCarPlateMgr::GetMapRegionPlateDesign	NOT_REACHED	-	not compared (budget)	-
+0x6FD7C0	CustomCarPlateMgr::GetCharacterPositionInCharSet	NOT_REACHED	-	not compared (budget)	-
+0x6FDC00	CustomCarPlateMgr::LoadPlatecharsetDat	NOT_REACHED	-	not compared (budget)	-
+0x6FDD70	CustomCarPlateMgr::RenderLicenseplateTextToRaster	NOT_REACHED	-	not compared (budget)	-
+0x6FDE50	CustomCarPlateMgr::SetupMaterialPlatebackTexture	NOT_REACHED	-	not compared (budget)	-
+0x6FDEA0	CustomCarPlateMgr::CreatePlateTexture	NOT_REACHED	-	not compared (budget)	-
+0x6FDF50	CustomCarPlateMgr::MaterialUpgradeSetCarplateTextureCB	NOT_REACHED	-	not compared (budget)	-

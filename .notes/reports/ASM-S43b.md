@@ -1,0 +1,6 @@
+# ASM-S43b (phase 2: CarGenerator, Cheat, Collision scanner, conversations ...) - 2026-10-29
+Result: 37 rows = 4 compared (1 DEVIATION fixed, 3 MATCH) + 1 UNSURE (ScanForCollisionEvents, annotated per address from its original reversal, not re-diffed) + 32 NOT_REACHED (budget). Table: S43b.result.tsv.
+- CCarGenerator::DoInternalProcessing (0x6F34D0-0x6F3E5A): night was `ClockHoursInRange(21, 7)` = hours > 21 && hours < 7 = always false, so cars were generated with the day limit (5 parked) at night (exe: 10) and tractor drivers spawned at night; the exe is hours > 21 || hours < 7. Random car is skipped for vehicle class BIG (byte mi+0x4D == 5), port tested the boat type. The length > 8 test needs a colmodel only if present (port dereferenced null). The tractor/combine branch sets removal range 255. Angle byte is unsigned (movzx). Parked-car counter compared signed.
+- MATCH: CCarGenerator::Process, CCheat::VehicleCheat (the port builds a CTrain for train models, exe a CAutomobile; no caller passes one), CConversationForPed::IsPlayerInPositionForConversation.
+- Other users of CClock::ClockHoursInRange with start < end are fine; only a wrapped range breaks.
+- Open: Clothes, Conversations Update/Clear/EndConversation, Cover, CoverPoint, CurrentVehicle, CustomCarPlateMgr, ScanForCollisionEvents (re-diff).

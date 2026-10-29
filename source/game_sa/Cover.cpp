@@ -88,16 +88,17 @@ void CCover::Update() {
             if (!veh.IsAutomobile()) {
                 continue;
             }
-            if (veh.GetMoveSpeed().SquaredMagnitude() > sq(0.05f)) {
+            // 0x699909: speed (sqrt of x*x+y*y+z*z) < 0.005 (0x858B4C; the port had `squared > 0.05^2`, a 10x higher limit)
+            if (!(veh.GetMoveSpeed().Magnitude() < 0.005f)) {
                 continue;
             }
             if (!veh.vehicleFlags.bDoesProvideCover) {
                 continue;
             }
-            if ((FindPlayerCoors() - veh.GetPosition()).SquaredMagnitude2D() >= sq(25.f)) {
+            if (!((FindPlayerCoors() - veh.GetPosition()).Magnitude2D() < 25.f)) { // 0x69994D: sqrt(dy*dy + dx*dx) < 25 (NaN skips)
                 continue;
             }
-            AddCoverPoint(CCoverPoint::eType::VEHICLE, &veh, nullptr, CCoverPoint::eUsage::LOWCOVER, TWO_PI);
+            AddCoverPoint(CCoverPoint::eType::VEHICLE, &veh, nullptr, CCoverPoint::eUsage::LOWCOVER, CCoverPoint::Dir{ (uint8)0xFF }); // push 0xFF
         }
 
         return;
@@ -110,10 +111,10 @@ void CCover::Update() {
             if (!obj.CanBeUsedToTakeCoverBehind()) {
                 continue;
             }
-            if ((FindPlayerCoors() - obj.GetPosition()).SquaredMagnitude2D() >= sq(25.f)) {
+            if (!((FindPlayerCoors() - obj.GetPosition()).Magnitude2D() < 25.f)) { // 0x699A1E: sqrt(dy*dy + dx*dx) < 25 (NaN skips)
                 continue;
             }
-            AddCoverPoint(CCoverPoint::eType::OBJECT, &obj, nullptr, CCoverPoint::eUsage::LOWCOVER, TWO_PI);
+            AddCoverPoint(CCoverPoint::eType::OBJECT, &obj, nullptr, CCoverPoint::eUsage::LOWCOVER, CCoverPoint::Dir{ (uint8)0xFF }); // push 0xFF
         }
 
         return;
@@ -151,7 +152,12 @@ void CCover::Update() {
 
         if (!FindPlayerVehicle()) { // 0x699AE1
             CWorld::AdvanceCurrentScanCode();
-            CWorld::IterateSectorsOverlappedByRect(CRect{ FindPlayerCoors(), 30.f }, [&](int32 x, int32 y) {
+            // 0x699AF1: the exe clamps the sector bounds to [0, 119] (min >= 0, max <= 119); the port's unclamped GetSectorX / GetSectorY gave the
+            // sectors 120 / -1 beyond the map edge, which `GetSector` aliases to the neighbouring row's sectors
+            const CRect rect{ FindPlayerCoors(), 30.f };
+            const int32 minX = std::max(0, CWorld::GetSectorX(rect.left)), minY = std::max(0, CWorld::GetSectorY(rect.bottom));
+            const int32 maxX = std::min(MAX_SECTORS_X - 1, CWorld::GetSectorX(rect.right)), maxY = std::min(MAX_SECTORS_Y - 1, CWorld::GetSectorY(rect.top));
+            if (minX <= maxX && minY <= maxY) { CWorld::IterateSectors(minX, minY, maxX, maxY, [&](int32 x, int32 y) {
                 for (auto* const obj : CWorld::GetSector(x, y).Buildings) {
                     if (obj->IsScanCodeCurrent()) {
                         continue;
@@ -170,7 +176,7 @@ void CCover::Update() {
                     }
                 }
                 return true;
-            });
+            }); }
         }
     }
 }

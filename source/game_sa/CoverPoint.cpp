@@ -159,7 +159,8 @@ bool CCoverPoint::CanBeRemoved() const {
         return false;
     }
     case CCoverPoint::eType::VEHICLE: { // 0x699819
-        if (!GetCoverEntity() || GetCoverEntity()->AsVehicle()->GetMoveSpeed().SquaredMagnitude() >= sq(0.01f)) {
+        // 0x699839: sqrt(x*x + y*y + z*z) compared with 0.01: kept when <= 0.01 (the port: squared >= 0.01^2 removed, i.e. the equal case and the NaN case differed)
+        if (!GetCoverEntity() || !(GetCoverEntity()->AsVehicle()->GetMoveSpeed().Magnitude() <= 0.01f)) {
             return true;
         }
         return false;

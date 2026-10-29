@@ -791,7 +791,7 @@ void ProcessChaseValue(CPlayerInfo& s) {
         const auto dx   = static_cast<x87d>(s_LastPlayerPos.x) - static_cast<x87d>(pos.x);
         const auto dy   = static_cast<x87d>(s_LastPlayerPos.y) - static_cast<x87d>(pos.y);
         const auto dz   = static_cast<x87d>(s_LastPlayerPos.z) - static_cast<x87d>(pos.z);
-        if (10.0 <= std::sqrt(dz * dz + dy * dy + dx * dx)) {
+        if (!(std::sqrt(dz * dz + dy * dy + dx * dx) < 10.0)) { // exe: `fcomp 10.0; test ah,5; jnp` - an unordered result also sets the flag
             s_bMovedFarFromLast = true;
         }
 

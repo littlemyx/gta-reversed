@@ -203,7 +203,7 @@ int32 CGarages::AddOne(float x1, float y1, float z1, float frontX, float frontY,
 // 0x44A170
 void CGarages::CloseHideOutGaragesBeforeSave() {
     for (auto& garage : aGarages) {
-        if (garage.IsHideOut() && garage.m_nDoorState == GARAGE_DOOR_OPEN) {
+        if (garage.IsHideOut() && !garage.IsClosed()) { // exe 0x44A1C6: `cmp [state], 0 ; je skip`, every state but CLOSED (port: only OPEN)
             garage.SetClosed();
             garage.StoreAndRemoveCarsForThisHideOut(GetStoredCarsInSafehouse(FindSafeHouseIndexForGarageType(garage.m_nType)), 4); // todo: 4 is NUM_GARAGE_STORED_CARS?
             garage.RemoveCarsBlockingDoorNotInside();

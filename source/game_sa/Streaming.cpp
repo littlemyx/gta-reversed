@@ -3716,7 +3716,7 @@ void CStreaming::Update() {
     const auto& camPos = TheCamera.GetPosition();
     const float fCamDistanceToGroundZ = camPos.z - TheCamera.CalculateGroundHeight(eGroundHeightType::ENTITY_BB_BOTTOM);
     if (!ms_disableStreaming && !CRenderer::m_loadingPriority) {
-        if (fCamDistanceToGroundZ >= 50.0f) {
+        if (!(fCamDistanceToGroundZ < 50.0f) /* exe: jp, also taken on NaN */) {
             if (CGame::CanSeeOutSideFromCurrArea()) {
                 AddLodsToRequestList(camPos, 0);
             }

@@ -129,4 +129,5 @@
 | S31e | rest of S31d | 27 | partial 3/25 (3 fixed) -> S31f | Cam.cpp |
 | S31f | rest of S31e | 27 | partial 8/27 (6 fixed, 2 partial) -> S31g | Cam.cpp |
 | S31g | rest of S31f | 21 | partial 6/21 (3 M, 3 fixed) + Pickup field fix -> S31h | Cam.cpp |
-| S31h | rest of S31g | 15 | pending | Cam.cpp |
+| S31h | rest of S31g | 15 | partial 5/11 (5 M) -> S31i | Cam.cpp |
+| S31i | rest of S31h (CCam::Process done: S31 full + S31e trace) | 6 | pending | Cam.cpp |

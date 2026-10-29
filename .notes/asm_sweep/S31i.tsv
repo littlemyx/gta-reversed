@@ -1,0 +1,7 @@
+addr	file	line	cls	fn	oc
+0x525E50	source/game_sa/Cam.cpp	519	CCam	Process_Cam_TwoPlayer	D
+0x51B850	source/game_sa/Cam.cpp	523	CCam	Process_DW_BirdyCam	D
+0x51B120	source/game_sa/Cam.cpp	524	CCam	Process_DW_CamManCam	D
+0x51A740	source/game_sa/Cam.cpp	525	CCam	Process_DW_HeliChaseCam	D
+0x512110	source/game_sa/Cam.cpp	539	CCam	Process_WheelCam	D
+0x511B50	source/game_sa/Cam.cpp	537	CCam	Process_Rocket	D

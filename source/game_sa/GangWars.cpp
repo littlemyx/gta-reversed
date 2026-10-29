@@ -139,7 +139,9 @@ bool CGangWars::AttackWaveOvercome() {
 
 // 0x443DB0
 uint32 CGangWars::CalculateTimeTillNextAttack() {
-    return NOTSA_FTOL(uint32, CGeneral::GetRandomNumberInRange(648'000.0f, 1'620'000.0f)); // todo: convert to human readable time HH::MM::SS
+    // exe 0x443DB0: ((rand * 1/32767) * 0.9) * 1080000 + 648000 (own multiply chain, not the lerp of GetRandomNumberInRange: 1-ulp differences before the truncation)
+    const x87d t = static_cast<x87d>(CGeneral::GetRandomNumber()) * static_cast<x87d>(RAND_MAX_FLOAT_RECIPROCAL);
+    return NOTSA_FTOL(uint32, t * static_cast<x87d>(0.9f) * static_cast<x87d>(1'080'000.0f) + static_cast<x87d>(648'000.0f)); // todo: convert to human readable time HH::MM::SS
 }
 
 // 0x443F80

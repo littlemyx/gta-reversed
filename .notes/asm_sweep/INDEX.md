@@ -35,7 +35,7 @@
 | S31 | game_sa/Cam.cpp | 34 | pending | Cam.cpp |
 | S32 | game_sa/Radar.cpp | 28 | pending | Radar.cpp |
 | S33 | game_sa/WaterLevel.cpp | 26 | partial 8/26 (3 M, 5 fixed) -> S33b | WaterLevel.cpp |
-| S34 | game_sa/Interior/Interior_c.cpp | 41 | pending | Interior_c.cpp |
+| S34 | game_sa/Interior/Interior_c.cpp | 41 | partial 24/41 (24 M, 3 via new oracle rows) -> S34b | Interior_c.cpp |
 | S22b | game_sa/CarCtrl.cpp (rest of S22) | 34 | partial 16/34 (16 M) -> S22c | CarCtrl.cpp |
 | S23b | rest of S23 | 13 | done 12/13 (9 M, 3 fixed; AddPedAtAttractor left) | Population.cpp |
 | S22c | rest of S22b | 18 | partial 3/18 (3 M) -> S22d | CarCtrl.cpp |
@@ -114,3 +114,4 @@
 | S28b | rest of S28 | 54 | partial 20/54 (15 M, 5 fixed) -> S28c | Streaming.cpp |
 | S28c | rest of S28b | 34 | partial 11/34 (7 M, 4 fixed + task0) -> S28d | Streaming.cpp |
 | S28d | rest of S28c | 23 | done 23/23 (17 M, 6 fixed; S28 complete) | Streaming.cpp |
+| S34b | rest of S34 | 17 | pending | Interior_c.cpp |

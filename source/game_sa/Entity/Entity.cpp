@@ -918,7 +918,7 @@ void CEntity::ModifyMatrixForCrane() {
             }
 
             auto tempMat = CMatrix(parentMatrix, false);
-            auto fRot = (CTimer::GetTimeInMS() & 0x3FF) * (PI / 512.26F);
+            auto fRot = (CTimer::GetTimeInMS() & 0x3FF) * (3.14F / 512.0F); // 0x533170: *0x863980 = 3.14f/512 (0.0061328127f), not PI/512.26
             tempMat.SetRotateZOnly(fRot);
             tempMat.UpdateRW();
             UpdateRwFrame();

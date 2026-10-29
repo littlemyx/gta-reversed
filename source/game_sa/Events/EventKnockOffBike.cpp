@@ -175,7 +175,7 @@ int32 CEventKnockOffBike::CalcForcesAndAnims(CPed* ped)
         case 1:
         case 2:
         {
-            if (m_vehicle->m_vecMoveSpeed.SquaredMagnitude() <= 0.09f) {
+            if (!(m_vehicle->m_vecMoveSpeed.SquaredMagnitude() > 0.09f)) { // fcomp + test ah,0x41 / jne: also taken for NaN
                 ped->m_vecMoveSpeed = m_vehicle->m_vecMoveSpeed;
                 CVector force = m_vehicle->GetUp() * 4.0f + m_vehicle->GetRight() * 8.0f;
                 ped->ApplyMoveForce(force);
@@ -188,7 +188,7 @@ int32 CEventKnockOffBike::CalcForcesAndAnims(CPed* ped)
         }
         case 3:
         {
-            if (m_vehicle->m_vecMoveSpeed.SquaredMagnitude() <= 0.09f) {
+            if (!(m_vehicle->m_vecMoveSpeed.SquaredMagnitude() > 0.09f)) { // fcomp + test ah,0x41 / jne: also taken for NaN
                 ped->m_vecMoveSpeed = m_vehicle->m_vecMoveSpeed;
                 CVector force = m_vehicle->GetUp() * 4.0f + m_vehicle->GetRight() * -8.0f;
                 ped->ApplyMoveForce(force);
@@ -200,7 +200,8 @@ int32 CEventKnockOffBike::CalcForcesAndAnims(CPed* ped)
             return ANIM_ID_KO_SPIN_L;
         }
         default:
-            NOTSA_UNREACHABLE();
+            // 0x4B02C5/0x4B0667: a direction above 3 (unsigned) applies nothing and returns the initial EBP value 0xF
+            return ANIM_ID_KO_SHOT_FRONT_0;
         }
         break;
     case KNOCK_OFF_TYPE_SKIDBACKFRONT:
@@ -217,7 +218,7 @@ int32 CEventKnockOffBike::CalcForcesAndAnims(CPed* ped)
             randomNum = 6.0f;
         ped->m_vecMoveSpeed.z += CGeneral::GetRandomNumberInRange(3.0f, randomNum) * ExeRecip(70.0f);
         ped->m_pEntityIgnoredCollision = m_vehicle;
-        int32 animId = ANIM_ID_KO_SKID_BACK;
+        int32 animId = ANIM_ID_KO_SHOT_FRONT_0; // 0x4B004C: EBP starts at 0xF, only directions 0..3 pick another id
         switch (m_knockOffDirection)
         {
         case 0:
@@ -251,7 +252,7 @@ int32 CEventKnockOffBike::CalcForcesAndAnims(CPed* ped)
         force.z = CGeneral::GetRandomNumberInRange(3.0f, 5.0f);
         ped->ApplyMoveForce(force);
         ped->m_pEntityIgnoredCollision = m_vehicle;
-        int32 animId = ANIM_ID_KO_SKID_BACK;
+        int32 animId = ANIM_ID_KO_SHOT_FRONT_0; // 0x4B004C: EBP starts at 0xF, only directions 0..3 pick another id
         switch (m_knockOffDirection)
         {
         case 0:

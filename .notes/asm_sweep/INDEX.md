@@ -134,5 +134,6 @@
 | S31j | rest of S31i | 1 | done 1/1 (fixed; S31 complete) | Cam.cpp |
 | S30f | rest of S30e | 6 | CamControl tail MATCH; pow bases + aimHeading fixed -> S30g | Camera.cpp |
 | S30g | rest of S30f | 5 | 4/5 (3 M, 1 fixed) -> S30h | Camera.cpp |
-| S30h | rest of S30g | 1 | pending | Camera.cpp |
-| S33c | rest of S33b | 15 | pending | WaterLevel.cpp |
+| S30h | rest of S30g | 1 | done 1/1 (MATCH; S30 complete) | Camera.cpp |
+| S33c | rest of S33b | 15 | partial 3/15 (1 M, 2 fixed; unicorn emulator models) -> S33d | WaterLevel.cpp |
+| S33d | rest of S33c | 12 | pending | WaterLevel.cpp |

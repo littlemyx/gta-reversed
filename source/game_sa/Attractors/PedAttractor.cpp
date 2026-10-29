@@ -90,15 +90,19 @@ void CPedAttractor::Shutdown() {
 // 0x5EECA0
 void CPedAttractor::SetTaskForPed(CPed* ped, CTask* task) {
     if (const auto pair = rng::find(m_PedTaskPairs, ped, &CPedTaskPair::Ped); pair != m_PedTaskPairs.end()) {
-        if (!pair->UsedTask) { // 0x5EED79
-            ms_tasks.erase(rng::find(ms_tasks, pair->Task)); // 0x5EEDA0, 0x5EEDAD
-            delete pair->Task; // 0x5EEDD1
+        if (!pair->UsedTask && pair->Task) { // 0x5EED79
+            // 0x5EED8D: the old, never used task is dropped from `ms_tasks` (only if it is there) and deleted
+            if (const auto it = rng::find(ms_tasks, pair->Task); it != ms_tasks.end()) {
+                ms_tasks.erase(it);
+            }
+            delete pair->Task; // 0x5EEDD9
         }
         pair->Task     = task;
         pair->UsedTask = false;
     } else {
-        m_PedTaskPairs.emplace_back(CPedTaskPair{ .Ped = ped, .Task = task });
+        m_PedTaskPairs.emplace_back(CPedTaskPair{ .Ped = ped, .Task = task }); // 0x5EED19
     }
+    ms_tasks.emplace_back(task); // 0x5EEDF2 / 0x5EED5E: both paths register the new task as "not taken yet" (GetTaskForPed removes it again)
 }
 
 // 0x5EEE30

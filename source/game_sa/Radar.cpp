@@ -1015,19 +1015,19 @@ void CRadar::ShowRadarTraceWithHeight(float x, float y, uint32 size, uint32 R, u
             { r, g, b, a }
         );
         break;
-    case RADAR_TRACE_NORMAL: // exe rects are {left, bottom, right, top} = {x - dx, y + dy, x + dx, y - dy} (screen y grows downwards)
+    case RADAR_TRACE_NORMAL: // exe rects in memory: +0 x - dx, +4 y + dy, +8 x + dx, +0xC y - dy (screen y grows downwards); CRect ctor is (left, bottom(+0xC), right, top(+4))
         CSprite2d::DrawRect( // draw black border
             {
-                x - SCREEN_STRETCH_X(size1), y + SCREEN_STRETCH_Y(size1),
-                x + SCREEN_STRETCH_X(size1), y - SCREEN_STRETCH_Y(size1)
+                x - SCREEN_STRETCH_X(size1), y - SCREEN_STRETCH_Y(size1),
+                x + SCREEN_STRETCH_X(size1), y + SCREEN_STRETCH_Y(size1)
             },
             { 0, 0, 0, a }
         );
 
         CSprite2d::DrawRect( // draw box
             {
-                x - SCREEN_STRETCH_X(size0), y + SCREEN_STRETCH_Y(size0),
-                x + SCREEN_STRETCH_X(size0), y - SCREEN_STRETCH_Y(size0)
+                x - SCREEN_STRETCH_X(size0), y - SCREEN_STRETCH_Y(size0),
+                x + SCREEN_STRETCH_X(size0), y + SCREEN_STRETCH_Y(size0)
             },
             { r, g, b, a }
         );

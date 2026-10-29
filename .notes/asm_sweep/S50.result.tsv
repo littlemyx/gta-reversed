@@ -19,13 +19,13 @@ addr	function	verdict	asm range	note	fix commit
 0x44A830	CGarage::IsStaticPlayerCarEntirelyInside	NOT_REACHED	-	budget	-
 0x44A9C0	CGarage::IsGarageEmpty	MATCH	0x44A9C0-0x44AA4D	corner layout (Left,Front,posn.z / Right,Back,TopZ) and flags verified	-
 0x44AA50	CGarage::Update	NOT_REACHED	-	budget	-
-0x4471B0	CGarages::Shutdown	FIXED	0x4471B0-0x4471D7	NumGarages = 0 first (0x96C024)	4f0400537
+0x4471B0	CGarages::Shutdown	FIXED	0x4471B0-0x4471D7	NumGarages = 0 first (0x96C024)	2e389a2fa
 0x447790	CGarages::PrintMessages	NOT_REACHED	-	budget	-
 0x448890	CGarages::StopCarFromBlowingUp	MATCH	0x448890-0x4488FA	-	-
 0x448AF0	CGarages::IsModelIndexADoor	MATCH	0x448AF0-0x448B2E	special type (flags & 0x7800)==0x3800	-
-0x44A170	CGarages::CloseHideOutGaragesBeforeSave	FIXED	0x44A170-0x44A20F	hideout garages closed/emptied in every door state but CLOSED (port: only OPEN)	f4987f833
+0x44A170	CGarages::CloseHideOutGaragesBeforeSave	FIXED	0x44A170-0x44A20F	hideout garages closed/emptied in every door state but CLOSED (port: only OPEN)	23d630b3c
 0x44C8C0	CGarages::Update	NOT_REACHED	-	budget	-
-0x5D3160	CGarages::Save	FIXED	0x5D3160-0x5D3261	Save starts with CloseHideOutGaragesBeforeSave (port omitted)	035d1db4b
+0x5D3160	CGarages::Save	FIXED	0x5D3160-0x5D3261	Save starts with CloseHideOutGaragesBeforeSave (port omitted)	771847953
 0x5D3270	CGarages::Load	MATCH	0x5D3270-0x5D3381	-	-
 0x4AC1E0	CInformFriendsEventQueue::Add	MATCH	0x4AC1E0-0x4AC2A0	delay 300 + trunc(r*500)	-
 0x4AC2A0	CInformFriendsEventQueue::Flush	MATCH	0x4AC2A0-0x4AC2E0	-	-

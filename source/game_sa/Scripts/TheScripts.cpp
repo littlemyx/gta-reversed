@@ -1013,7 +1013,7 @@ void CTheScripts::RemoveScriptSphere(int32 scriptIndex) {
 void CTheScripts::RemoveScriptTextureDictionary() {
     rng::for_each(ScriptSprites, &CSprite2d::Delete);
     if (const auto slot = CTxdStore::FindTxdSlot("script"); slot != -1) {
-        if (const auto* txd = CTxdStore::ms_pTxdPool->GetAt(slot); txd) {
+        if (const auto* txd = CTxdStore::ms_pTxdPool->GetAt(slot); txd && txd->m_pRwDictionary) { // exe 0x465A8C: `cmp dword [txd], 0` - the slot must also hold a loaded dictionary
             CTxdStore::RemoveTxd(slot);
         }
     }

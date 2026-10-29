@@ -6,6 +6,7 @@
 #include "Formation.h"
 #include "PedList.h"
 #include "TaskSimpleGoToPoint.h"
+#include "TaskComplexEnterCar.h"
 
 //! @addr 0x5FB010
 //! @returns Distance of the furthers member from the leader
@@ -74,12 +75,14 @@ bool CPedGroup::IsAnyoneUsingCar(const CVehicle* vehicle) {
         if (mem->GetVehicleIfInOne() == vehicle) {
             return true;
         }
-        // I did a slight change here.
-        // Game originally checked both EnterAsDriver and EnterAsPassenger tasks
-        // but that makes no sense, as the ped can't have both tasks at the same time (I hope)
-        // So the function below returns the target vehicle of the first task found
-        if (mem->GetIntelligence()->GetEnteringVehicle() == vehicle) {
-            return true;
+        // 0x5F7DE5..0x5F7E0F: both the EnterAsDriver and the EnterAsPassenger task are checked, each against the vehicle
+        // (GetEnteringVehicle() would return the target of the first task found only)
+        for (const auto taskType : { TASK_COMPLEX_ENTER_CAR_AS_DRIVER, TASK_COMPLEX_ENTER_CAR_AS_PASSENGER }) {
+            if (const auto task = mem->GetIntelligence()->FindTaskByType(taskType)) {
+                if (static_cast<CTaskComplexEnterCar*>(task)->GetTargetCar() == vehicle) {
+                    return true;
+                }
+            }
         }
     }
     return false;

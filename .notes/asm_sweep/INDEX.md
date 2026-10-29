@@ -171,4 +171,5 @@
 | S65 | phase2: unlisted non-oracle hooks | 7 | pending | WeaponEffects.cpp, WeaponInfo.cpp, World.cpp |
 | S41b | rest of S41 | 9 | done (2 M, 6 fixed, RunningScript row -> S66) | CarAI.cpp, PedAttractorPedPlacer.cpp, RunningScript.cpp matches |
 | S66 | phase2: RunningScript.cpp hooks (missed by the generator: grep without -a) | 15 | pending | RunningScript.cpp |
-| S42b | rest of S42 | 19 | pending | CarAI.cpp, CarEnterExit.cpp |
+| S42b | rest of S42 | 19 | UpdateCarAI fixed to 0x41FE13 (tail partial); CarEnterExit 18 NR -> S42c | CarAI.cpp, CarEnterExit.cpp |
+| S42c | rest of S42b (+ UpdateCarAI tail 0x41FE13-0x420678) | 19 | pending | CarEnterExit.cpp |

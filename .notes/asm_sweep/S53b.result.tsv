@@ -1,0 +1,26 @@
+addr	function	verdict	asm range	note	fix commit
+0x5A8020	CPedClothesDesc::Constructor	MATCH	0x5A8020-0x5A8041	zeroes 10 model keys, 18 texture keys, 2 floats	-
+0x5A8050	CPedClothesDesc::SetTextureAndModel	MATCH	0x5A8050-0x5A8073	texture key then dependent model key	-
+0x5A8080	CPedClothesDesc::SetTextureAndModel	MATCH	0x5A8080-0x5A80CB	null names give key 0	-
+0x5F1B00	CPedGeometryAnalyser::CanPedJumpObstacle	MATCH	0x5F1B00-0x5F1B67	temp-building flag, pos+up, LOS flags	-
+0x5F1B70	CPedGeometryAnalyser::CanPedTargetPoint	DEVIATION	0x5F1B70-0x5F1C3D	dist^2 sum order z,x,y	01ff91827
+0x5F1C40	CPedGeometryAnalyser::CanPedTargetPed	DEVIATION	0x5F1C40-0x5F1CA9	target z = (z+0.75)-1.0 two roundings	c96b6c270
+0x5F1CB0	CPedGeometryAnalyser::IsInAir	MATCH	0x5F1CB0-0x5F1E25	swim/jetpack/climb 254, jump 211, vertical line + sphere test	-
+0x5F1E30	CPedGeometryAnalyser::ComputeBuildingHitPoints	MATCH	0x5F1E30-0x5F1E64	ProcessLineOfSight flags, crossings global	-
+0x5F2F00	CPedGeometryAnalyser::GetIsLineOfSightClear	MATCH	0x5F2F00-0x5F2F64	col line + entity matrix, TestLineOfSight negated	-
+0x5F2F70	CPedGeometryAnalyser::IsWanderPathClear	DEVIATION	0x5F2F70-0x5F32C3	sample-count magnitude sum order z,y,x; water max-z NaN arm	05f20a5db
+0x5F32D0	CPedGeometryAnalyser::CanPedJumpObstacle	DEVIATION	0x5F32D0-0x5F3585	NaN arms of the two slope tests	65ae0997f
+0x5F3590	CPedGeometryAnalyser::GetNearestPed	DEVIATION	0x5F3590-0x5F3632	dist^2 sum order z,x,y	f589cf7ec
+0x5F3650	CPedGeometryAnalyser::ComputeEntityBoundingBoxCorners	MATCH	0x5F3650	jmp to CornersUncached	-
+0x5F3660	CPedGeometryAnalyser::ComputeEntityBoundingBoxPlanes	MATCH	0x5F3660-0x5F3694	CornersUncached + PlanesUncached; port callers using the UncachedAll variant get the same result	-
+0x5F36A0	CPedGeometryAnalyser::ComputeEntityBoundingBoxSegmentPlanes	MATCH	0x5F36A0-0x5F36E8	Corners + Centre + SegmentPlanes Uncached	-
+0x5F5A30	CPedGeometryAnalyser::GetIsLineOfSightClear	DEVIATION	0x5F5A30-0x5F5D7B	outDist sum order z,y,x; classification and clip arms match	381d39832
+0x5F5D80	CPedGeometryAnalyser::ComputeClearTarget	NOT_REACHED	-	budget	-
+0x5F7AD0	CPedGroup::Teleport	DEVIATION	0x5F7AD0-0x5F7CBA	early-out was no-current-event / wrapper type; exe: only when the wrapped event is LEADER_ENTRY_EXIT	8c058610a
+0x5F7CC0	CPedGroup::PlayerGaveCommand_Attack	DEVIATION	0x5F7CC0-0x5F7DA9	order shout said by the commanding ped, not the target	783bf430b
+0x5F7DB0	CPedGroup::IsAnyoneUsingCar	DEVIATION	0x5F7DB0-0x5F7E29	both enter-car tasks checked, not only the first found	7d43fad8a
+0x5FAB60	CPedGroup::PlayerGaveCommand_Gather	MATCH	0x5FAB60-0x5FACC7	gather list, formation destinations, GoToPoint(7,dest,2,1,0), SetTask secondary -1	-
+0x5FB790	CPedGroup::Flush	MATCH	0x5FB790-0x5FB7C9	members removed 0..7 then intelligence flush, mission flag cleared	-
+0x5FC150	CPedGroup::Constructor	MATCH	0x5FC150-0x5FC18C	members zeroed, separation 60 (0x86C6BC), back pointers	-
+0x5FC190	CPedGroup::Destructor	MATCH	0x5FC190-0x5FC1F7	intelligence flush, then members removed (port member dtors run in the same order)	-
+0x5FC7E0	CPedGroup::Process	MATCH	0x5FC7E0-0x5FC7EF	membership then intelligence Process	-

@@ -911,7 +911,7 @@ void CMenuManager::SaveStatsToFile() {
 
             // todo. xref: CStats::ConstructStatLine, PrintStats
             if (CStats::m_ThisStatIsABarChart) { // stat line formatted in percents?
-                sprintf_s(valFormatted, 5u, "%0.0f%%", std::min(atoi(val) / 10.0f, 100.0f)); // max length: "100%\0"
+                sprintf_s(valFormatted, 5u, "%0.0f%%", std::min((float)atoi(val) * ExeRecip(1000.0f) * 100.0f, 100.0f)); // 0x57E11D: n * 0x858CDC (0.001f) * 100.0f, two roundings, not n / 10; max length: "100%\0"
             }
 
             for (auto v = valFormatted; *v; v++) {

@@ -357,7 +357,7 @@ void CLoadingScreen::DoPCScreenChange(bool isLastOne) {
 
         if (isLastOne || m_bFadeInNextSplashFromBlack) {
             float amp = (isLastOne && m_bFadeOutCurrSplashToBlack)
-                ? ((255.0f - alpha) / 25.0f)
+                ? ((255.0f - (float)m_FadeAlpha) * ExeRecip(255.0f)) // 0x590B96: (255 - (uint8)alpha) * 0x859A3C (1/255f), a 0..1 volume (was / 25)
                 : 1.0f;
             AudioEngine.ServiceLoadingTune(amp);
         }

@@ -565,7 +565,7 @@ void CSprite2d::DrawBarChart(float x, float y, uint16 width, uint8 height, float
         CFont::SetColor({ 0, 0, 0, color.a });
         CFont::SetEdge(0);
         CFont::SetFontStyle(eFontStyle::FONT_SUBTITLES);
-        CFont::SetScale(fheight * 0.03f, fheight / 0.04f);
+        CFont::SetScale(fheight * 0.03f, fheight * 0.04f); // 0x728A04: both scales multiply (0x858B10, 0x858CEC)
 
         auto textX = NOTSA_FTOL(uint16, unclampedCurrX);
         if (x + 50.0f <= (float)textX) {

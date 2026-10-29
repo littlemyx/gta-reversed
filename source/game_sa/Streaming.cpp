@@ -2207,8 +2207,9 @@ void CStreaming::RemoveCurrentZonesModels() {
     for (int32 gangId = 0; gangId < TOTAL_GANGS; gangId++) {
         const auto gangPedGroupId = CPopulation::GetPedGroupId(static_cast<ePopcycleGroup>(gangId + POPCYCLE_GROUP_BALLAS));
 
-        // \/ NOTE: Originally they only processed the first 5 models... I'm not sure why, but this should work too.
-        for (const auto modelId : CPopulation::GetModelsInPedGroup(gangPedGroupId)) {
+        // exe (0x40B080): only the first 5 slots of the group are processed (whatever the group's model count), unused slots (2000) skipped
+        for (size_t slot = 0; slot < 5; slot++) {
+            const auto modelId = (uint16)CPopulation::m_PedGroups[gangPedGroupId][slot];
             if (modelId != CPopulation::m_DefaultModelIDForUnusedSlot) {
                 SetModelAndItsTxdDeletable(modelId);
             }

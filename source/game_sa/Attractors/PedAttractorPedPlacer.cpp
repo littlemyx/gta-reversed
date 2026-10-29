@@ -25,8 +25,9 @@ void CPedAttractorPedPlacer::PlacePedAtEffect(C2dEffectPedAttractor const& fx, C
 
     ped->SetPosn(std::get<CVector>(CPedPlacement::FindZCoorForPed(fxPos + fxFwdDir * forwardOffsetMultiplier)));
 
-    const auto angle = CVector2D{ fxUseDir }.Heading();
-    ped->GetMatrix().SetRotateZOnly(angle);
+    // 0x5EA56B: LimitRadianAngle(GetRadianAngleBetweenPoints(use.x, use.y, 0, 0)) - NOT atan2(-x, y) (differs for y == 0, the atan form and the limiting)
+    const auto angle = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(fxUseDir.x, fxUseDir.y, 0.f, 0.f));
+    ped->SetHeading(angle);
     ped->m_fAimingRotation = angle;
     ped->m_fCurrentRotation = angle;
 }

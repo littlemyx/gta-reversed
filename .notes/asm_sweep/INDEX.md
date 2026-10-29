@@ -110,7 +110,7 @@
 | S19k | rest of S19j (+ AddSingleWheelParticles 0x6DEC3C-0x6DF3B9) | 48 | partial 19/48 (16 M, 3 fixed) -> S19l | Vehicle.cpp |
 | S19l | rest of S19k | 29 | partial 15/29 (6 M, 8 fixed, 1 U) -> S19m | Vehicle.cpp |
 | S19m | rest of S19l (+ DoHeadLightBeam x87 sub-ulp) | 15 | done 15/15 (12 M, 3 fixed; S19 complete) | Vehicle.cpp |
-| S33b | rest of S33 (GetWaterLevel family is oracle-covered: world_oracle_env) | 18 | pending | WaterLevel.cpp |
+| S33b | rest of S33 (GetWaterLevel family is oracle-covered: world_oracle_env) | 18 | partial 4/18 (3 fixed, 1 partial) -> S33c | WaterLevel.cpp |
 | S28b | rest of S28 | 54 | partial 20/54 (15 M, 5 fixed) -> S28c | Streaming.cpp |
 | S28c | rest of S28b | 34 | partial 11/34 (7 M, 4 fixed + task0) -> S28d | Streaming.cpp |
 | S28d | rest of S28c | 23 | done 23/23 (17 M, 6 fixed; S28 complete) | Streaming.cpp |
@@ -133,4 +133,6 @@
 | S31i | rest of S31h (CCam::Process done: S31 full + S31e trace) | 6 | partial 5/6 (5 fixed) -> S31j | Cam.cpp |
 | S31j | rest of S31i | 1 | done 1/1 (fixed; S31 complete) | Cam.cpp |
 | S30f | rest of S30e | 6 | CamControl tail MATCH; pow bases + aimHeading fixed -> S30g | Camera.cpp |
-| S30g | rest of S30f | 5 | pending | Camera.cpp |
+| S30g | rest of S30f | 5 | 4/5 (3 M, 1 fixed) -> S30h | Camera.cpp |
+| S30h | rest of S30g | 1 | pending | Camera.cpp |
+| S33c | rest of S33b | 15 | pending | WaterLevel.cpp |

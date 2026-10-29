@@ -1,0 +1,16 @@
+addr	file	line	cls	fn	oc
+0x6E8ED0	source/game_sa/WaterLevel.cpp	26	None	RenderFlatWaterTriangle_OneLayer	D
+0x6EE080	source/game_sa/WaterLevel.cpp	27	None	RenderFlatWaterTriangle	D
+0x6ECF00	source/game_sa/WaterLevel.cpp	28	None	SplitWaterTriangleAlongXLine	C
+0x6EE5A0	source/game_sa/WaterLevel.cpp	29	None	SplitWaterTriangleAlongYLine	C
+0x6E9940	source/game_sa/WaterLevel.cpp	32	None	RenderFlatWaterRectangle_OneLayer	D
+0x6EBEC0	source/game_sa/WaterLevel.cpp	33	None	RenderFlatWaterRectangle	D
+0x6E73A0	source/game_sa/WaterLevel.cpp	35	None	SplitWaterRectangleAlongXLine	C
+0x6ED9A0	source/game_sa/WaterLevel.cpp	52	None	RenderBoatWakes	D
+0x6EA260	source/game_sa/WaterLevel.cpp	53	None	RenderWakeSegment	D
+0x6E7760	source/game_sa/WaterLevel.cpp	59	None	RenderWaterFog	C
+0x6EF650	source/game_sa/WaterLevel.cpp	61	None	RenderWater	D
+0x6EB810	source/game_sa/WaterLevel.cpp	69	None	RenderHighDetailWaterRectangle	C
+0x6E91D0	source/game_sa/WaterLevel.cpp	70	None	RenderHighDetailWaterRectangle_OneLayer	D
+0x6E8780	source/game_sa/WaterLevel.cpp	73	None	RenderHighDetailWaterTriangle_OneLayer	D
+0x6EDDC0	source/game_sa/WaterLevel.cpp	75	None	RenderHighDetailWaterTriangle	D

@@ -105,7 +105,10 @@ CTask* CTaskComplexDestroyCarMelee::CreateNextSubTask(CPed* ped) {
         }
         case TASK_COMPLEX_GO_TO_POINT_AND_STAND_STILL: { // 0x62DC70
             CalculateSearchPositionAndRanges(ped);
-            return IsPointInSphere(ped->GetPosition(), m_VehToDestroy->GetPosition(), m_MaxAtkRange)
+            // 0x62DC70 inlined: CVector::MagnitudeSquared of (veh - ped) = (dx^2 + dy^2) + dz^2, r*r > that (strict; equal and NaN are outside)
+            const auto d = m_VehToDestroy->GetPosition() - ped->GetPosition();
+            const float distSq = (d.x * d.x + d.y * d.y) + d.z * d.z;
+            return m_MaxAtkRange * m_MaxAtkRange > distSq
                 ? TASK_SIMPLE_FIGHT_CTRL
                 : ped->bStayInSamePlace
                     ? TASK_SIMPLE_PAUSE
@@ -153,13 +156,19 @@ CTask* CTaskComplexDestroyCarMelee::ControlSubTask(CPed* ped) {
     case TASK_COMPLEX_SEEK_ENTITY:
     case TASK_COMPLEX_GO_TO_POINT_AND_STAND_STILL: { // 0x62DEAB
         CalculateSearchPositionAndRanges(ped);
-        return IsPointInSphere(ped->GetPosition(), m_VehToDestroy->GetPosition(), m_MaxAtkRange)
+        // 0x62DEAB inlined: (dz^2 + dy^2) + dx^2 of (veh - ped), r*r > that (strict; equal and NaN are outside)
+        const auto d = m_VehToDestroy->GetPosition() - ped->GetPosition();
+        const float distSq = (d.z * d.z + d.y * d.y) + d.x * d.x;
+        return m_MaxAtkRange * m_MaxAtkRange > distSq
             ? CreateSubTask(TASK_SIMPLE_FIGHT_CTRL, ped)
             : m_pSubTask;
     }
     case TASK_SIMPLE_FIGHT_CTRL: { // 0x62DE1A
         CalculateSearchPositionAndRanges(ped);
-        if (!IsPointInSphere(ped->GetPosition(), m_VehToDestroy->GetPosition(), m_MaxAtkRange + 0.6f)) {
+        // 0x62DE1A inlined: sqrt((dz^2 + dy^2) + dx^2) of (veh - ped) against range + 0.6f; seek only if range + 0.6f < dist (equal and NaN stay: fcompp / test ah, 5 / jp)
+        const auto d = m_VehToDestroy->GetPosition() - ped->GetPosition();
+        const float dist = std::sqrt((d.z * d.z + d.y * d.y) + d.x * d.x);
+        if (m_MaxAtkRange + 0.6f < dist) {
             return CreateSubTask(TASK_COMPLEX_SEEK_ENTITY, ped);
         }
         const auto tFightCtrl = notsa::cast<CTaskSimpleFightingControl>(m_pSubTask);

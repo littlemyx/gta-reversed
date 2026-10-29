@@ -159,6 +159,16 @@ static bool IsPointInSphere(const CVector& point, const CVector& center, float r
     return DistanceBetweenPointsSquared(point, center) <= sq(r);
 }
 
+//! @notsa The sphere test as the exe inlines it in CCover::ShouldThisBuildingHaveItsCoverPointsCreated (0x699230), CPickups::RemoveUnnecessaryPickups (0x4563A0)
+//! and CPickups::TryToMerge_WeaponType (0x4555A0): sqrt((dz^2 + dy^2) + dx^2) < r, strict (equal and NaN are outside). Not IsPointInSphere: that sums x,y,z and uses <= on squares.
+inline bool IsPointInSphereExeSqrt(const CVector& a, const CVector& b, float r) {
+    const float dx = a.x - b.x;
+    const float dy = a.y - b.y;
+    const float dz = a.z - b.z;
+    const float dist = std::sqrt((dz * dz + dy * dy) + dx * dx);
+    return dist < r;
+}
+
 // Converts degrees to radians
 // keywords: 0.017453292 flt_8595EC
 constexpr float DegreesToRadians(float angleInDegrees) {

@@ -888,7 +888,7 @@ void CPickups::RemoveUnnecessaryPickups(const CVector& posn, float radius) {
         switch (pickup.m_nPickupType) {
         case PICKUP_ONCE_TIMEOUT:
         case PICKUP_MONEY: {
-            if (IsPointInSphere(pickup.GetPosn(), posn, radius)) {
+            if (IsPointInSphereExeSqrt(pickup.GetPosn(), posn, radius)) { // 0x4563A0: sqrt((dz^2 + dy^2) + dx^2) < radius
                 pickup.Remove();
             }
             break;
@@ -943,7 +943,7 @@ bool CPickups::TryToMerge_WeaponType(CVector posn, eWeaponType weaponType, ePick
     const auto mi = CWeaponInfo::GetWeaponInfo(weaponType)->m_nModelId1;
 
     for (auto& pickup : aPickUps) {
-        if (mi == pickup.m_nModelIndex && pickup.m_nPickupType == pickupType && IsPointInSphere(pickup.GetPosn(), posn, 5.0f)) {
+        if (mi == pickup.m_nModelIndex && pickup.m_nPickupType == pickupType && IsPointInSphereExeSqrt(pickup.GetPosn(), posn, 5.5f)) { // 0x4555A0: constant 0x859B4C = 5.5f (port had 5.0f), strict <
             pickup.m_nAmmo += ammo;
 
             return true;

@@ -1,0 +1,8 @@
+site	exe_addr	port_before	exe_form	diff	action
+CTaskComplexDestroyCarMelee::CreateFirstSubTask	0x62DB50	own lambda (dz2+dx2)+dy2, !(d>r2)	(dz2+dx2)+dy2 vs r2, NaN inside	none	already exact (S02b)
+CTaskComplexDestroyCarMelee::CreateNextSubTask (GOTO_POINT_AND_STAND_STILL)	0x62DC70	IsPointInSphere: (x2+y2+z2)<=r2	MagnitudeSquared (x2+y2)+z2; in iff r2 > d (strict, NaN outside)	equal case	inline lambda, strict >
+CTaskComplexDestroyCarMelee::ControlSubTask (SEEK/GOTO)	0x62DEAB	IsPointInSphere: (x2+y2+z2)<=r2	(z2+y2)+x2; in iff r2 > d (strict, NaN outside)	sum order, equal case	inline, z,y,x + strict
+CTaskComplexDestroyCarMelee::ControlSubTask (FIGHT_CTRL)	0x62DE1A	!IsPointInSphere(r+0.6f): d2 > (r+0.6f)2	sqrt((z2+y2)+x2) vs r+0.6f; seek iff r+0.6f < dist (equal, NaN stay)	sqrt rounding, sum order, NaN	inline sqrt form
+CCover::ShouldThisBuildingHaveItsCoverPointsCreated	0x699230	IsPointInSphere(r+30)	sqrt((z2+y2)+x2) < r+30 strict (NaN false)	sqrt, order, equal	IsPointInSphereExeSqrt
+CPickups::RemoveUnnecessaryPickups	0x4563A0	IsPointInSphere(radius)	sqrt((dz2+dy2)+dx2) < radius strict	sqrt, order, equal	IsPointInSphereExeSqrt
+CPickups::TryToMerge_WeaponType	0x4555A0	IsPointInSphere(5.0f)	sqrt((dz2+dy2)+dx2) < 5.5f (const 0x859B4C) strict	RADIUS 5.0 vs 5.5, sqrt, order	IsPointInSphereExeSqrt(…, 5.5f)

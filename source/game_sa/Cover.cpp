@@ -63,9 +63,10 @@ void CCover::RemoveCoverPointsForThisEntity(CEntity* entity) {
 bool CCover::ShouldThisBuildingHaveItsCoverPointsCreated(CBuilding* building) {
     CVector pos;
     building->GetBoundCentre(pos);
-    return IsPointInSphere(
-        FindPlayerCoors(),
+    // 0x699230: sqrt((dz^2 + dy^2) + dx^2) < r + 30 (strict; the port's x,y,z squared sum with <= differed in rounding / the equal case / NaN)
+    return IsPointInSphereExeSqrt(
         pos,
+        FindPlayerCoors(),
         building->GetColModel()->GetBoundRadius() + 30.0f
     );
 }

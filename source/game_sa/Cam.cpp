@@ -666,7 +666,9 @@ void CCam::Finalise_DW_CineyCams(const CVector& src, const CVector& dest, float 
     gLastFrameProcessedDWCineyCam = CTimer::GetFrameCounter();
 
     gHandShaker[0].Process(shakeDegree);
-    m_vecFront = gHandShaker[0].m_resultMat.TransformVector(m_vecFront);
+    // exe 0x50DF0C-0x50DF25: the transform is 0x59C810 (the transposed rotation, `InverseTransformVector`), not 0x59C790; the roll of the second pass is overwritten by `m_ang.z * shakeDegree`
+    roll       = gHandShaker[0].m_ang.z * shakeDegree;
+    m_vecFront = gHandShaker[0].m_resultMat.InverseTransformVector(m_vecFront);
     m_vecFront.Normalise();
 
     {

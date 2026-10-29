@@ -99,7 +99,7 @@ void CGameLogic::ClearSkip(bool afterMission) {
 void CGameLogic::DoWeaponStuffAtStartOf2PlayerGame(bool shareWeapons) {
     auto player1 = FindPlayerPed(PED_TYPE_PLAYER1);
     auto player2 = FindPlayerPed(PED_TYPE_PLAYER2);
-    RestorePedsWeapons(player1);
+    StorePedsWeapons(player1); // exe 0x4428B0: copies player 1's weapons into SavedWeapons (port called RestorePedsWeapons)
 
     if (shareWeapons) {
         for (auto& weapon : player1->m_aWeapons) {
@@ -109,7 +109,7 @@ void CGameLogic::DoWeaponStuffAtStartOf2PlayerGame(bool shareWeapons) {
             player2->GiveWeapon(weapon, true);
         }
         player1->PickWeaponAllowedFor2Player();
-        player1->GetPlayerData()->m_nChosenWeapon = player1->GetPlayerData()->m_nChosenWeapon;
+        player2->GetPlayerData()->m_nChosenWeapon = player1->GetPlayerData()->m_nChosenWeapon; // exe 0x442971 (port assigned player 1 to itself)
     }
 }
 

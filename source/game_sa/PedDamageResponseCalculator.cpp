@@ -57,7 +57,9 @@ void CPedDamageResponseCalculator::AccountForPedDamageStats(CPed* ped, CPedDamag
 
     // Reduce damage when the damager is a friend/group member of the damaged ped
     const auto ReduceDamage = [&] {
-        m_fDamageFactor = std::min(12.0f, m_fDamageFactor * 0.1f);
+        // 0x4AD52E: min via 0x404330 (`a < b ? a : b` with a = 12): a NaN damage stays NaN (std::min would give 12)
+        const float reduced = m_fDamageFactor * 0.1f;
+        m_fDamageFactor = 12.0f < reduced ? 12.0f : reduced;
     };
 
     if (IsDamagerPed() && damager->AsPed()->IsPlayer()) {
@@ -283,7 +285,7 @@ void CPedDamageResponseCalculator::ComputeWillKillPed(CPed* ped, CPedDamageRespo
         return;
     }
 
-    if (rsp.m_bForceDeath || ped->m_fHealth - m_fDamageFactor < 1.0f) {
+    if (rsp.m_bForceDeath || !(ped->m_fHealth - m_fDamageFactor >= 1.0f)) { // 0x4B32F1: `fcomp; test ah,1; jne` => NaN kills
         rsp.m_fDamageHealth = ped->m_fHealth;
         rsp.m_bHealthZero   = true;
         ped->m_fHealth      = 0.0f;

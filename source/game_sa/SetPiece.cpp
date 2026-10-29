@@ -162,7 +162,7 @@ void CSetPiece::Update() {
                 car->m_autoPilot.SetTempAction(TEMPACT_GOFORWARD, 100);
             }
             if (addSpeed) {
-                car->GetMoveSpeed() = car->GetForward() * 2.0f / 3.0f;
+                car->GetMoveSpeed() = car->GetForward() * (2.0f / 3.0f); // 0x499EDB/0x49A5AA/0x49A832/0x49A98D: push 0x3F2AAAAB -> operator*(vec, float)
             }
             CCarAI::AddPoliceCarOccupants(car, false);
 

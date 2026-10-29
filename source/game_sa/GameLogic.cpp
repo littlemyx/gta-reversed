@@ -892,7 +892,7 @@ void CGameLogic::UpdateSkip() {
                 vehicle->AsAutomobile()->PlaceOnRoadProperly();
             }
 
-            vehicle->m_vecMoveSpeed = vehicle->GetMatrix().GetForward() / 2.5f; // Make the vehicle appear as it's driving to the point.
+            vehicle->m_vecMoveSpeed = vehicle->GetMatrix().GetForward() * ExeRecip(2.5f); // 0x442705: push 0x3ECCCCCD (0.4f) -> operator*(vec, float), not a division. Make the vehicle appear as it's driving to the point.
             CCamera::GetActiveCamera().m_fHorizontalAngle = vehicle->GetHeading() - FRAC_PI_2;
         } else {
             CTheScripts::ClearSpaceForMissionEntity(SkipPosition, player);

@@ -1450,8 +1450,9 @@ void CRadar::StreamRadarSections(const CVector& worldPosn) {
 
 // 0x584C50
 void CRadar::StreamRadarSections(int32 x, int32 y) {
-    for (auto curY = 0; curY < MAX_RADAR_HEIGHT_TILES; curY++) {
-        for (auto curX = 0; curX < MAX_RADAR_WIDTH_TILES; curX++) {
+    // exe 0x584C50-0x584D37: x is the outer loop and y the inner one, so the request / remove calls reach CStreaming in column order
+    for (auto curX = 0; curX < MAX_RADAR_WIDTH_TILES; curX++) {
+        for (auto curY = 0; curY < MAX_RADAR_HEIGHT_TILES; curY++) {
             if (gRadarTextures[curY][curX] != -1 && curY >= 0 && curY < MAX_RADAR_HEIGHT_TILES && curX >= 0 && curX < MAX_RADAR_WIDTH_TILES) {
                 if (curY >= y - 1 && curY <= y + 1 && curX >= x - 1 && curX <= x + 1) {
                     CStreaming::RequestModel(TXDToModelId(gRadarTextures[curY][curX]), STREAMING_KEEP_IN_MEMORY | STREAMING_GAME_REQUIRED);

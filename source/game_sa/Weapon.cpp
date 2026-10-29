@@ -998,12 +998,14 @@ void CWeapon::FireInstantHitFromCar2(CVector startPoint, CVector endPoint, CVehi
 void CWeapon::DoDoomAiming(CEntity* owner, CVector* start, CVector* end) {
     int16 inRangeCount{};
     std::array<CEntity*, 16> objInRange{};
-    CWorld::FindObjectsInRange(*start, (*start - *end).Magnitude(), true, &inRangeCount, (int16)objInRange.size(), objInRange.data(), false, true, true, false, false);
+    // The exe sums the squares z, y, x, and asks for at most 15 entities (not 16)
+    const auto rangeZYX = [](x87d x, x87d y, x87d z) { return (float)std::sqrt((z * z + y * y) + x * x); };
+    CWorld::FindObjectsInRange(*start, rangeZYX((x87d)end->x - start->x, (x87d)end->y - start->y, (x87d)end->z - start->z), true, &inRangeCount, 15, objInRange.data(), false, true, true, false, false);
 
     CEntity* closestEntity{};
     float    closestDist{ 10'000 };
     for (auto entity : std::span{ objInRange.begin(), (size_t)inRangeCount }) {
-        if (entity == owner || owner->AsPed()->CanSeeEntity(entity, PI / 8.f)) { // todo: add check owner->GetIsTypePed() NOTSA
+        if (entity == owner || !owner->AsPed()->CanSeeEntity(entity, PI / 8.f)) { // Only entities the shooter can see are candidates (exe: je on a false result); todo: add check owner->GetIsTypePed() NOTSA
             continue;
         }
 
@@ -1016,7 +1018,7 @@ void CWeapon::DoDoomAiming(CEntity* owner, CVector* start, CVector* end) {
 
         const auto dir = entity->GetPosition() - owner->GetPosition();
         if (const auto dist2D = dir.Magnitude2D(); std::abs(dir.z) * 1.5f < dist2D) {
-            const auto dist3D = std::hypot(dist2D, dir.z);
+            const auto dist3D = (float)std::sqrt((x87d)dir.z * dir.z + (x87d)dist2D * dist2D); // exe: sqrt(dz^2 + dist2D^2), not hypot
             if (dist3D < closestDist) {
                 closestEntity = entity;
                 closestDist = dist3D;

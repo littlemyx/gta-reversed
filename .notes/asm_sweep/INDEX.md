@@ -146,7 +146,7 @@
 | S33h | rest of S33g | 1 | done 1/1 (fixed; S33 complete) | WaterLevel.cpp |
 | S41 | phase2: unlisted non-oracle hooks | 40 | partial 31/40 (23 M, 8 fixed) -> S41b | AttractorScanner.cpp, CarAI.cpp, PedAtmAttractor.cpp, PedAttractor.cpp, PedAttractorPedPlacer.cpp, PedLookAtAttractor.cpp ... |
 | S42 | phase2: unlisted non-oracle hooks | 40 | partial 21/40 (9 M, 12 fixed) -> S42b | CarAI.cpp, CarEnterExit.cpp, CarGenerator.cpp |
-| S43 | phase2: unlisted non-oracle hooks | 40 | pending | CarGenerator.cpp, Cheat.cpp, Clothes.cpp, CollisionEventScanner.cpp, ConversationForPed.cpp, Cover.cpp ... |
+| S43 | phase2: unlisted non-oracle hooks | 40 | partial 3/40 (2 M, 1 fixed) -> S43b | CarGenerator.cpp, Cheat.cpp, Clothes.cpp, CollisionEventScanner.cpp, ConversationForPed.cpp, Cover.cpp ... |
 | S44 | phase2: unlisted non-oracle hooks | 40 | pending | AnimatedBuilding.cpp, Building.cpp, CustomCarPlateMgr.cpp, Darkel.cpp, DummyObject.cpp, DummyPed.cpp ... |
 | S45 | phase2: unlisted non-oracle hooks | 40 | pending | Bike.cpp, Bmx.cpp, Boat.cpp, EmergencyPed.cpp, Entity.cpp, EntityScanner.cpp ... |
 | S46 | phase2: unlisted non-oracle hooks | 40 | pending | EntryExitManager.cpp, Event.cpp, EventAcquaintancePedDislike.cpp, EventAcquaintancePedLike.cpp, EventAcquaintancePedRespect.cpp, EventAttractor.cpp ... |
@@ -173,4 +173,6 @@
 | S66 | phase2: RunningScript.cpp hooks (missed by the generator: grep without -a) | 15 | pending | RunningScript.cpp |
 | S42b | rest of S42 | 19 | UpdateCarAI fixed to 0x41FE13 (tail partial); CarEnterExit 18 NR -> S42c | CarAI.cpp, CarEnterExit.cpp |
 | S42c | rest of S42b (+ UpdateCarAI tail 0x41FE13-0x420678) | 19 | partial 10/19 (5 M, 5 fixed) -> S42d | CarEnterExit.cpp |
-| S42d | rest of S42c | 9 | pending | CarEnterExit.cpp |
+| S42d | rest of S42c | 9 | 8/9 (4 M, 4 fixed) -> S42e | CarEnterExit.cpp |
+| S42e | rest of S42d | 1 | pending | CarEnterExit.cpp |
+| S43b | rest of S43 | 37 | pending | CarGenerator.cpp, Cheat.cpp, Clothes.cpp, CollisionEventScanner.cpp, ConversationForPed.cpp, Cover.cpp, CoverPoint.cpp, CurrentVehicle.cpp, CustomCarPlateMgr.cpp, PedToPlayerConversations.cpp |

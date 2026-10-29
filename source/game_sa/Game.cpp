@@ -450,17 +450,16 @@ bool CGame::Init2(const char* datFile) {
     LoadingScreen("Loading the Game", "Setup paths");
     CPathFind::PreparePathData();
 
-    rng::for_each(CWorld::Players, [](auto& info) {
-        info.Clear();
-        info.LoadPlayerSkin();
-    });
+    // 0x5BA1D5-0x5BA1FA: all players are cleared, but only player 1's skin is loaded (once, after the loop)
+    rng::for_each(CWorld::Players, [](auto& info) { info.Clear(); });
+    CWorld::Players[0].LoadPlayerSkin();
 
     TestModelIndices();
     LoadingScreen("Loading the Game", "Setup water");
     CClothes::Init();
     CWaterLevel::WaterLevelInitialise();
     CDraw::SetFOV(120.0f);
-    CDraw::ms_fLODDistance = 0.0f;
+    CDraw::ms_fLODDistance = 500.0f; // 0x5BA22C: 0x43FA0000 (port: 0)
 
     if (!CCustomCarPlateMgr::Initialise()) {
         NOTSA_LOG_DEBUG("[CGame::Init2] CCustomCarPlateMgr::Initialise() failed");

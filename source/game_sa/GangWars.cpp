@@ -176,7 +176,7 @@ void CGangWars::CheerVictory() {
         {"CHC",  CTX_GLOBAL_TAKE_TURF_LAS_COLINAS      },
         {"LFL",  CTX_GLOBAL_TAKE_TURF_LOS_FLORES       },
         {"EBE",  CTX_GLOBAL_TAKE_TURF_EAST_BEACH       },
-        {"ELF",  CTX_GLOBAL_TAKE_TURF_EAST_LS          },
+        {"ELS",  CTX_GLOBAL_TAKE_TURF_EAST_LS          }, // exe 0x8598E4 is "ELS" (port had "ELF")
         {"JEF",  CTX_GLOBAL_TAKE_TURF_JEFFERSON        },
         {"GLN",  CTX_GLOBAL_TAKE_TURF_GLEN_PARK        },
         {"IWD",  CTX_GLOBAL_TAKE_TURF_IDLEWOOD         },
@@ -186,7 +186,11 @@ void CGangWars::CheerVictory() {
         {"PLS",  CTX_GLOBAL_TAKE_TURF_PLAYA_DEL_SEVILLE},
         {"SUN",  CTX_GLOBAL_TAKE_TURF_TEMPLE           },
     });
-    nearestMember->Say(notsa::find_value(mapping, pZoneToFightOver->m_TextLabel));
+    // exe 0x444080-0x4442C6: a zone label that is in none of the 12 entries says nothing
+    const auto ctx = notsa::find_value_or(mapping, notsa::ci_string_view{pZoneToFightOver->m_TextLabel}, CTX_GLOBAL_UNK);
+    if (ctx != CTX_GLOBAL_UNK) {
+        nearestMember->Say(ctx);
+    }
 }
 
 // 0x443FF0

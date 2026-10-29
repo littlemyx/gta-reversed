@@ -1,0 +1,12 @@
+site	port caller	exe site	test in exe	verdict
+CClock::GetIsTimeInRange	Clock.cpp:112	0x52CEE0	from>to: h>=from || h<to; else h>=from && h<to	MATCH
+CBirds::Update	Birds.cpp:149 ClockHoursInRange(5,22)	0x71237A-0x712389	h<22 && h>5	MATCH
+CConversationForPed (PedToPlayer Update case 7)	PedToPlayerConversations.cpp:267 ClockHoursInRange(6,20)	0x43B8A3-0x43B8B2	h<20 && h>6	MATCH
+CPlaneTrails::Update (3 trails)	PlaneTrail.cpp:91 ClockHoursInRange(after,before) with (22,7) (21,7) (20,6)	0x71756C, 0x71765D, 0x717754	h>after || h<before (wrapped: port was always false so no corona ever drawn)	DEVIATION fixed (also 4.7936901e-05 multiply instead of /20860, 3rd trail cos on x / sin on y)
+CVehicle::GetVehicleLightsStatus	Vehicle.cpp:3353 GetIsTimeInRange(21,6)	0x6D55C9-0x6D5606	h>20 || h<6, h==20 min>seed&63, h==6 min<seed&63	MATCH hours; DEVIATION threshold seed*1.99999995e-05 (port /50000) fixed
+CHeli search light	Heli.cpp:1276 GetIsTimeInRange(19,6)	0x6C5485 call	(19,6)	MATCH
+InteriorGroup_c::GetRandomInterior	InteriorGroup_c.cpp:481/483	0x594F2B-0x594F5C calls	(9,18) (18,22) (6,9)	MATCH
+CPopulation::IsCorrectTimeOfDayForEffect	Population.cpp:681 GetIsTimeInRange(9,20)	0x611B3A-0x611B4B	h>8 && h<20	MATCH
+CClouds logo	Clouds.cpp:434 GetIsTimeInRange(22,6)	0x713D2A-0x713D38	h>=22 || h<=5	MATCH
+CEntryExit visible by time	EntryExit.cpp:159, EntryExitManager.cpp:110	0x44000A, 0x440ED1 calls ([+0x34],[+0x35])	GetIsTimeInRange(on,off)	MATCH
+Renderer / Streaming TimeInfo	Renderer.cpp:911/985/1209, Streaming.cpp:2590	0x554452,0x5546A8,0x554EF5,0x40C31D,0x40C4DF calls	GetIsTimeInRange(timeOn,timeOff)	MATCH

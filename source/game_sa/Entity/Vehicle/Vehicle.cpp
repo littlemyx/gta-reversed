@@ -3361,7 +3361,7 @@ bool CVehicle::GetVehicleLightsStatus() {
         return true;
     }
 
-    if (const auto treshold = (float)m_nRandomSeed / 50'000.f; CWeather::Foggyness > treshold || CWeather::WetRoads > treshold) {
+    if (const auto treshold = (float)m_nRandomSeed * 1.99999995e-05f /* exe 0x871E78 multiply, not / 50000 */; CWeather::Foggyness > treshold || CWeather::WetRoads > treshold) {
         return true;
     }
 

@@ -28,7 +28,7 @@ public:
     void Init();
     void Render(float intensity);
     void RegisterPoint(CVector point);
-    void Update(CVector pos, const CRGBA& color, uint32 coronaIdx, uint32 timeModifierMs, uint8 afterHour, uint8 beforeHour);
+    void Update(CVector pos, const CRGBA& color, uint32 coronaIdx, uint32 timeModifierMs, uint8 afterHour, uint8 beforeHour, bool cosFirst = false);
 
     /// @notsa
     bool IsPointInUse(size_t pt);

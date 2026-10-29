@@ -82,13 +82,17 @@ void CPlaneTrail::RegisterPoint(CVector pos) {
 }
 
 // From `CPlaneTrails::Update`
-void CPlaneTrail::Update(CVector pos, const CRGBA& color, uint32 coronaIdx, uint32 timeModifierMs, uint8 afterHour, uint8 beforeHour) {
-    const float fTimeProg = (float)(CTimer::GetTimeInMS() % 131072) / 20860.0f; // or * 0.000047936901.. Not sure where this comes from..
-    const CVector currPos = pos * CVector(x87::sin(fTimeProg), x87::cos(fTimeProg), 1.0f);
+void CPlaneTrail::Update(CVector pos, const CRGBA& color, uint32 coronaIdx, uint32 timeModifierMs, uint8 afterHour, uint8 beforeHour, bool cosFirst) {
+    const float fTimeProg = (float)(CTimer::GetTimeInMS() % 131072) * 4.7936901e-05f; // exe constant 0x8631C4 (2*pi/131072), not / 20860.0f
+    // exe 0x7174F0: the 3rd trail puts cos on x and sin on y, the others sin on x and cos on y
+    const CVector currPos = cosFirst
+        ? pos * CVector(x87::cos(fTimeProg), x87::sin(fTimeProg), 1.0f)
+        : pos * CVector(x87::sin(fTimeProg), x87::cos(fTimeProg), 1.0f);
 
     RegisterPoint(currPos);
 
-    if (!CClock::ClockHoursInRange(afterHour, beforeHour)) {
+    // exe: the corona is processed when hours > afterHour || hours < beforeHour (a wrapped night range; ClockHoursInRange is `&&`, always false here)
+    if (!(CClock::ms_nGameClockHours > afterHour || CClock::ms_nGameClockHours < beforeHour)) {
         return;
     }
 

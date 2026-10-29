@@ -44,5 +44,5 @@ void CPlaneTrails::Update() {
 
     aArray[0].Update(CVector{ 2590.0f, +2200.0f, 550.0f }, CRGBA{ 255,   0,   0, 255 }, coronaBaseId + 1,   0, 22, 7);
     aArray[1].Update(CVector{ 2000.0f, -2600.0f, 500.0f }, CRGBA{ 255, 255, 128, 255 }, coronaBaseId + 2, 350, 21, 7);
-    aArray[2].Update(CVector{ 2100.0f, +1300.0f, 600.0f }, CRGBA{ 255, 255, 255, 255 }, coronaBaseId + 3, 200, 20, 6);
+    aArray[2].Update(CVector{ 2100.0f, +1300.0f, 600.0f }, CRGBA{ 255, 255, 255, 255 }, coronaBaseId + 3, 200, 20, 6, true);
 }

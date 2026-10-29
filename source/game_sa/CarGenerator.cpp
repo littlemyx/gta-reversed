@@ -384,7 +384,9 @@ void CCarGenerator::Setup(CVector posn, float angle, int32 modelId, int16 color1
                           uint8 alarmChance, uint8 doorLockChance, uint16 minDelay, uint16 maxDelay,
                           uint8 iplId, bool ignorePopulationLimit)
 {
-    constexpr float magic = 256.0f / 360.0f; // 0x8722E8 original expression 128.0f / 180.0f
+    // 0x8722E8: the exe constant is 0x3F360B60 (0.711111069), one ulp below the correctly rounded 256.0f / 360.0f (0x3F360B61):
+    // 45 * magic is 31.999998 in the exe (-> 31) but 32.000001 with the rounded constant
+    const float magic = std::bit_cast<float>(0x3F360B60u);
 
     m_vecPosn = posn;
     m_nAngle = NOTSA_FTOL(int8, angle * magic);

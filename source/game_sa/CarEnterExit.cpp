@@ -978,7 +978,7 @@ bool CCarEnterExit::IsVehicleStealable(const CVehicle* vehicle, const CPed* ped)
         return false;
     }
 
-    if (vehicle->m_fHealth <= 600.f) {
+    if (!(vehicle->m_fHealth > 600.f)) { // 0x6511C9: fcomp + jne => a NaN health also fails
         return false;
     }
 

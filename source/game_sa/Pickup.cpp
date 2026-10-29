@@ -168,19 +168,35 @@ bool CPickup::IsVisible() {
 
 // 0x454D20
 bool CPickup::PickUpShouldBeInvisible() {
-    const auto isInFrenzy = CLocalisation::KillFrenzy() && m_nModelIndex == MI_PICKUP_KILLFRENZY && CTheScripts::IsPlayerOnAMission() && CDarkel::FrenzyOnGoing();
-
-    if (CCutsceneMgr::IsRunning() && !isInFrenzy)
+    if (CCutsceneMgr::IsRunning()) { // 0xB5F851
         return true;
+    }
 
-    CVector2D lspdPark{+1479.0f, -1658.0f}; // Pershing Square Park
-    if (m_nModelIndex == MI_PICKUP_2P_KILLFRENZY && CLocalisation::GermanGame() && DistanceBetweenPoints2D(GetPosn2D(), lspdPark) < 10.0f)
+    if (m_nModelIndex == MI_PICKUP_KILLFRENZY) {
+        if (CTheScripts::IsPlayerOnAMission() || CDarkel::FrenzyOnGoing() || !CLocalisation::KillFrenzy()) {
+            return true;
+        }
+    }
+
+    if (m_nPickupType == PICKUP_2P && FindPlayerPed(1)) { // 0x454D67: the 2P pickups vanish once the second player exists
         return true;
+    }
 
-    if (TheCamera.m_bWideScreenOn && m_nPickupType != PICKUP_ASSET_REVENUE && m_nModelIndex != MODEL_FIRE_EX)
+    if (m_nModelIndex == MI_PICKUP_2P_KILLFRENZY && CLocalisation::GermanGame()) {
+        const auto pos = GetPosn();
+        if (DistanceBetweenPoints2D(pos, CVector2D{ 1479.0f, -1658.0f }) < 10.0f) { // 0x454DA9 (Pershing Square Park)
+            return true;
+        }
+        if (DistanceBetweenPoints2D(pos, CVector2D{ 2509.0f, 1208.0f }) < 10.0f) { // 0x454DE7
+            return true;
+        }
+    }
+
+    if (TheCamera.m_bWideScreenOn && m_nPickupType != PICKUP_ASSET_REVENUE && m_nModelIndex != MODEL_FIRE_EX) {
         return true;
+    }
 
-    return CGameLogic::IsCoopGameGoingOn() && CWeapon::CanBeUsedFor2Player(CPickups::WeaponForModel(m_nModelIndex));
+    return CGameLogic::IsCoopGameGoingOn() && !CWeapon::CanBeUsedFor2Player(CPickups::WeaponForModel(m_nModelIndex)); // 0x454E4B: jne -> false
 }
 
 // Checks if pickup collides with line (origin;target), removes pickup and creates an explosion. Used in previous GTA games for mine pickup

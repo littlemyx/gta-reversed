@@ -2888,11 +2888,13 @@ void FireOneInstantHitRound(const CVector& startPoint, const CVector& endPoint, 
 
             if (!notsa::contains({ PEDSTATE_DIE, PEDSTATE_DEAD }, hitPed->GetPedState())) {
                 const auto pedHitDir = hitPed->GetLocalDirection(startPoint - hitPed->GetPosition2D());
-                CAnimManager::AddAnimation(
+                const auto assoc = CAnimManager::AddAnimation(
                     hitPed->GetRpClump(),
                     ANIM_GROUP_DEFAULT,
                     std::to_array({ANIM_ID_SHOT_PARTIAL, ANIM_ID_SHOT_LEFTP, ANIM_ID_SHOT_PARTIAL_B, ANIM_ID_SHOT_RIGHTP})[pedHitDir]
                 );
+                assoc->m_BlendAmount = 0.f; // 0x73B042: mov [eax+0x18], 0 / mov [eax+0x1c], 8.0f
+                assoc->m_BlendDelta  = 8.f;
                 CWeapon::GenerateDamageEvent(
                     hitPed,
                     nullptr,
@@ -2917,13 +2919,14 @@ void FireOneInstantHitRound(const CVector& startPoint, const CVector& endPoint, 
         }
         }
 
-        const auto angleOfIncidenceCos = (endPoint - startPoint).Normalized().Dot(hitCP.m_vecNormal); // 0x73B0CC
+        const auto dir = (endPoint - startPoint).Normalized();
+        const float angleOfIncidenceCos = (dir.z * hitCP.m_vecNormal.z + dir.y * hitCP.m_vecNormal.y) + dir.x * hitCP.m_vecNormal.x; // 0x73B0CC: (z, y, x) sum order
         if (angleOfIncidenceCos < 0.f) {
             AudioEngine.ReportBulletHit(
                 hitEntity,
                 hitCP.m_nSurfaceTypeB,
                 hitCP.m_vecPoint,
-                RadiansToDegrees(x87::asin(-angleOfIncidenceCos)) // Really should've used `acos + PI / 2` here to make this cleaner
+                (float)(x87::asin(-angleOfIncidenceCos) * 57.2957763671875f) // 0x73B0F0: multiplied by the float constant 0x859878 (not 180 / PI); really should've used `acos + PI / 2` here to make this cleaner
             );
         }
     } else { // no hit entity

@@ -1823,7 +1823,7 @@ void CTheScripts::DrawScriptSpritesAndRectangles(bool drawBeforeFade) {
             const auto mid = (rt.cornerA + rt.cornerB) / 2.0f;
             const auto vAM = mid - rt.cornerA;
             const auto cos = x87::cos(rt.m_nAngle);
-            const auto sin = x87::sin(rt.m_nAngle);
+            const float sin = (float)x87::sin(rt.m_nAngle); // exe 0x464ACD: fsin is spilled to a float (fstp [esp+0x34]); cos stays unrounded on the x87 stack
 
             // This is 2D rotation, couldn't find a better function aside from
             // using matricies or quaternions.

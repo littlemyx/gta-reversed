@@ -168,6 +168,7 @@ void CCarAI::BackToCruisingIfNoWantedLevel(CVehicle* vehicle) {
     CCarCtrl::JoinCarWithRoadSystem(vehicle);
 
     vehicle->m_autoPilot.m_nCarDrivingStyle = DRIVING_STYLE_STOP_FOR_CARS;
+    vehicle->vehicleFlags.bSirenOrAlarm     = false; // 0x41C019: `and byte [veh+0x42D], 0x7F`
     vehicle->m_autoPilot.m_nCarMission = CCullZones::NoPolice()
         ? MISSION_NONE
         : MISSION_CRUISE;

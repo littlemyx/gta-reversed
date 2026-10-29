@@ -231,7 +231,7 @@ void CBirds::Update() {
             continue;
 
         if (bird.m_bMustDoCurves) {
-            auto fCircleProgress = CTimer::GetTimeStepInSeconds() / 10.0f;
+            auto fCircleProgress = CTimer::GetTimeStep() * 0.002f; // 0x7126CB: ts * 0x858F44 (0.002f, folded 0.02f/10), not (ts * 0.02f) / 10
             auto vecCurTarget = CVector2D(bird.m_vecTargetVelocity);
             auto fSinAngle = x87::sin(fCircleProgress);
             auto fCosAngle = x87::cos(fCircleProgress);

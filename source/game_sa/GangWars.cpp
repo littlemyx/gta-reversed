@@ -758,7 +758,10 @@ void CGangWars::ReleaseCarsInAttackWave() {
 uint32 CGangWars::ReleasePedsInAttackWave(bool isEndOfWar, bool restoreGangPedsAcquaintance) {
     auto numReleasedPeds = 0u;
 
-    for (auto&& [i, ped] : GetPedPool()->GetAllValidWithIndex()) {
+    // exe 0x445C30: walks the pool backwards (the wander task of GetWanderTaskByPedType consumes random numbers) and passes the pool REF (index<<8 | flags byte)
+    // to ClearBlipForEntity; the port walked forwards and passed the bare index, so blips of peds in slots with a non-zero flags byte were never cleared
+    for (auto& ped : GetPedPool()->GetAllValidReverse()) {
+        const auto i = GetPedPool()->GetRef(&ped);
         if (ped.bPartOfAttackWave) {
             ped.bPartOfAttackWave = false;
             ped.SetCharCreatedBy(PED_GAME);

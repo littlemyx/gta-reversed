@@ -190,7 +190,7 @@ bool CWeapon::GenerateDamageEvent(CPed* victim, CEntity* creator, eWeaponType we
     if (   victim->m_fHealth <= 0.f
         && CLocalisation::Blood()
         && CLocalisation::KickingWhenDown()
-        && victim->GetTaskManager().GetSimplestActiveTask()->GetTaskType() == TASK_SIMPLE_DEAD
+        && [&] { const auto t = victim->GetTaskManager().GetSimplestActiveTask(); return t && t->GetTaskType() == TASK_SIMPLE_DEAD; }() // 0x73A5F0: the exe checks for a task
     ) {
         const auto floorHitAnim = CAnimManager::BlendAnimation(
             victim->GetRpClump(),
@@ -246,7 +246,8 @@ bool CWeapon::GenerateDamageEvent(CPed* victim, CEntity* creator, eWeaponType we
             anim->m_BlendAmount = 0.f;
             anim->m_BlendDelta = eventDmg.m_fAnimBlend;
             anim->m_Speed = eventDmg.m_fAnimSpeed;
-            anim->Start();
+            anim->SetCurrentTime(0.f); // 0x73A7A4: NOT Start() (the playing flag is not touched)
+            eventDmg.m_bAnimAdded = true; // 0x73A7A9
             break;
         }
         case ANIM_ID_NO_ANIMATION_SET:
@@ -262,7 +263,7 @@ bool CWeapon::GenerateDamageEvent(CPed* victim, CEntity* creator, eWeaponType we
                 eventDmg.m_fAnimBlend
             );
             a->m_Speed = eventDmg.m_fAnimSpeed;
-            a->SetFlag(ANIMATION_IS_PLAYING);
+            eventDmg.m_bAnimAdded = true; // 0x73A7E2 (the exe does not touch the anim's playing flag here)
             break;
         }
         }
@@ -272,9 +273,12 @@ bool CWeapon::GenerateDamageEvent(CPed* victim, CEntity* creator, eWeaponType we
     eventDmg.m_bStealthMode =
            creator
         && creator->GetIsTypePed()
-        && (weaponType == WEAPON_PISTOL_SILENCED || creator->AsPed()->GetTaskManager().GetActiveTask()->GetTaskType() == TASK_SIMPLE_STEALTH_KILL);
+        && [&] { // 0x73A804: active task of the creator (may be null) is a stealth kill, or silenced pistol
+            const auto t = creator->AsPed()->GetTaskManager().GetActiveTask();
+            return (t && t->GetTaskType() == TASK_SIMPLE_STEALTH_KILL) || weaponType == WEAPON_PISTOL_SILENCED;
+        }();
 
-    if (!victim->bInVehicle || victim->m_fHealth <= 0.f || !victim->GetTaskManager().GetActiveTask() || victim->GetTaskManager().GetActiveTask()->GetTaskType() != TASK_SIMPLE_GANG_DRIVEBY) {
+    if (!victim->bInVehicle || !(victim->m_fHealth > 0.f) || !victim->GetTaskManager().GetActiveTask() || victim->GetTaskManager().GetActiveTask()->GetTaskType() != TASK_SIMPLE_GANG_DRIVEBY) {
         victim->GetEventGroup().Add(eventDmg);
     }
 

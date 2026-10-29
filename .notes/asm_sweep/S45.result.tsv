@@ -1,0 +1,42 @@
+addr	function	verdict	asm range	note	fix commit
+0x535E90	CEntity::~CEntity	MATCH	0x535E90-0x535EF1 (all)	lod child counter decrement, DeleteRwObject, ResolveReferences, CPlaceable dtor	-
+0x535F00	CEntity::UpdateAnim	MATCH	0x535F00-0x535F9D (all)	bit 23 cleared, clump + first association tests, cutscene object uses non-clipped step + onscreen=1, offscreen bit 17 set from GetIsOnScreen once	-
+0x535FA0	CEntity::PreRender	UNSURE	0x535FA0-0x536174 (first part only)	2dfx lights, first-render UV anim / IncreaseAlpha / DN pipeline PreRenderUpdate, tree-in-wind distance min (jnp arm) MATCH; the object/pickup/traffic-light tail (0x536174-0x536BAA) NOT compared	-
+0x6FC7A0	CEntity::ProcessLightsForEntity	NOT_REACHED	-	not reached (budget)	-
+0x5A40F0	CProjectile::~CProjectile (scalar deleting)	MATCH	0x5A40F0-0x5A410B (all)	vtable reset + CObject dtor, delete when bit 0 of the flag argument is set	-
+0x5DE3E0	CEmergencyPed::~CEmergencyPed (scalar deleting)	MATCH	0x5DE3E0-0x5DE3FB (all)	vtable reset + CPed dtor, conditional pool delete	-
+0x5F0060	CPed::SetPedAtomicVisibilityCB	MATCH	0x5F0060-0x5F0070 (all)	data == null clears the object flags byte; returns the object	-
+0x60A9A0	CPlayerPed::~CPlayerPed (scalar deleting)	MATCH	0x60A9A0-0x60A9BB (all)	calls the CPlayerPed dtor (0x6093B0, not in this slice), conditional pool delete	-
+0x54EFD0	CPlaceable::ShutdownMatrixArray	MATCH	0x54EFD0-0x54F002 (all)	array delete of the 900 CMatrixLink objects, global cleared	-
+0x54F3A0	CPlaceable::InitMatrixArray	MATCH	0x54F3A0-0x54F3AF (all)	CMatrixLinkList::Init(900)	-
+0x6B8950	CBike::~CBike (scalar deleting)	MATCH	0x6B8950-0x6B896B (all)	dtor + CVehicle pool delete; CBike dtor body only terminates the audio entity (member dtor frees the ride anim data)	-
+0x6C0570	CBmx::~CBmx (scalar deleting)	MATCH	0x6C0570-0x6C058B (all)	dtor (audio Terminate + CBike dtor) + pool delete	-
+0x6F1120	CBoat::~CBoat (scalar deleting)	MATCH	0x6F1120-0x6F113B (all)	dtor (kill fire particle + 2 wake fx, audio Terminate) + pool delete	-
+0x6C4530	CHeli::Fix	MATCH	0x6C4530-0x6C4546 (all)	ResetDamageStatus + clear the damaged flag (SetupDamageAfterLoad)	-
+0x6CABB0	CPlane::Fix	MATCH	0x6CABB0-0x6CAC07 (all)	ResetDamageStatus, no-doors model flag (bit 8) marks the 4 doors NOTPRESENT, damaged flag cleared	-
+0x6F59C0	CTrain::GetDooorAngleOpenRatio	MATCH	0x6F59C0-0x6F59D3 (all)	m_aDoors[door].GetAngleOpenRatio()	-
+0x6F6300	CTrain::~CTrain (scalar deleting)	MATCH	0x6F6300-0x6F631B (all)	dtor (audio Terminate) + pool delete	-
+0x6D2950	SetCompAlphaCB	MATCH	0x6D2950-0x6D295B (all)	material colour alpha byte store	-
+0x5FF990	CEntityScanner::CEntityScanner	MATCH	0x5FF990-0x5FF9C0 (all)	16 entity slots cleared, closest cleared, tick period 16, count 0	-
+0x603480	CEntityScanner::~CEntityScanner	MATCH	0x603480-0x603486 (all)	vtable + Clear	-
+0x43E460	CEntryExit::IsInArea	DEVIATION	0x43E460-0x43E63E (all)	rotated path: centre is (r-l)*0.5+l / (top-bottom)*0.5+bottom (port (r+l)*0.5), the Z of the local vector is NOT offset by the entrance Z, the rotated vector is rounded to float before the centre is added back, the Z test is on the ORIGINAL position.z; unrotated test (angle == 0, NaN rotates), rect compare chain and strict |dz| < 1 MATCH	3e472ec48
+0x43E650	CEntryExit::GetEntryExitToDisplayNameOf	DEVIATION	0x43E650-0x43E689 (all)	an area-0 enex returns this (port: nullptr); the stack branch returns stack[posn-2] (port: stack[posn], one past the top, out of bounds for posn 4); spawn-point area 0 / empty name -> null MATCH	53f67e2ca
+0x43E690	CEntryExit::RequestObjectsInFrustum	DEVIATION	0x43E690-0x43E6C0 (all)	request flags 0x20 (STREAMING_LOADING_SCENE), port passed 0	1aeeb6420
+0x43E6D0	CEntryExit::RequestAmbientPeds	DEVIATION	0x43E6D0-0x43E8A0 (all)	five independent name == tests, every match streams (bar1 / strip2 / LAstrip / MAFCAS / TRICAS); port streamed the first NON-matching entry (_stricmp without == 0) and returned; model id tables equal	1aeeb6420
+0x43E8B0	CEntryExit::GenerateAmbientPeds	DEVIATION	0x43E8B0-0x43E98C (all)	interior ped count is a signed byte (movsx); police station name tests, CreateWaitingCoppers angle MATCH	53f67e2ca
+0x43E990	CEntryExit::ProcessStealableObjects	MATCH	0x43E990-0x43E9FD (all)	held entity must be a liftable object, mission types 2/6 skip the stolen flag, area 0 -> stolen=true else stolen=false when the id is found; area code copied	-
+0x43EA00	CEntryExit::GetPositionRelativeToOutsideWorld	DEVIATION	0x43EA00-0x43EA8C (all)	(centre + outPos) - exit (port: outPos + (centre - exit)); centre X and the X/Y sums unrounded (x87), centre Y / Z sum float temporaries	4499fd5a4
+0x43EAF0	CEntryExit::FindValidTeleportPoint	DEVIATION	0x43EAF0-0x43ECED (all)	angle i*2pi*0.125 unrounded (port: float i*2pi/8), cos/sin*r + base one float rounding (port: cos*r rounded first); IsTeleportPointValid (sphere 0.35, LOS flags) MATCH	83764a4cb
+0x43F1F0	CEntryExit::WarpGangWithPlayer	DEVIATION	0x43F1F0-0x43F4AB (all)	candidate = PLAYER pos + formation offset (port: the member pos + offset); at most 3 attempts per member (each consumes an offset), a failed attempt with no offsets left or the third failure returns; heading from GetRadianAngleBetweenPoints(normalised 2D delta, 0) + LimitRadianAngle (port: Heading()); Teleport/Flush/rotation/area/enex stores MATCH	8d65c5965
+0x43FFD0	CEntryExit::TransitionStarted	DEVIATION	0x43FFD0-0x440497 (all)	warping tests sqrt Magnitude > 10 (port: squared magnitude > 100, boundary); the NO-DOOR branch falls through into the fixed-camera takeover (SetCamPositionForFixedMode + TakeControlNoEntity along the exit direction), port skipped it; access / vehicle-type gates, door task + ped script commands MATCH	1f00856d9
+0x4404A0	CEntryExit::TransitionFinished	DEVIATION	0x4404A0-0x440B89 (all)	vehicle spawn Z = (z - 1) + heightAboveRoad with a single rounding (port rounded z - 1 first); state machine (0/1/2/3, pairing branch fade 0.5), group events, streaming / camera / population / shop / gang / delete-enex sequence MATCH	52e61747c
+0x43CEC0	CDarkel::DrawMessages (task 0 from S44)	DEVIATION	0x43CEC0-0x43D1CA (second Y)	second Y is 148*s + 20*s (port 168*s, 1 ulp)	0a658d4e2
+0x43ECF0	CEntryExitManager::SetAreaCodeForVisibleObjects	NOT_REACHED	-	not reached (budget)	-
+0x43ED80	CEntryExitManager::ResetAreaCodeForVisibleObjects	NOT_REACHED	-	not reached (budget)	-
+0x43EFD0	CEntryExitManager::GetEntryExitIndex	NOT_REACHED	-	not reached (budget)	-
+0x43F050	CEntryExitManager::LinkEntryExit	NOT_REACHED	-	not reached (budget)	-
+0x43F0A0	CEntryExitManager::PostEntryExitsCreation	NOT_REACHED	-	not reached (budget)	-
+0x43F150	CEntryExitManager::GetPositionRelativeToOutsideWorld	NOT_REACHED	-	not reached (budget)	-
+0x43F630	CEntryExitManager::FindNearestDoor	NOT_REACHED	-	not reached (budget)	-
+0x43F880	CEntryExitManager::Init	NOT_REACHED	-	not reached (budget)	-
+0x43FA00	CEntryExitManager::AddOne	NOT_REACHED	-	not reached (budget)	-

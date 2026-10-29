@@ -1,0 +1,41 @@
+addr	function	verdict	asm range	note	fix commit
+0x41C960	CCarAI::TellCarToFollowOtherCar	MATCH	0x41C960-0x41C9CB (all)	ftol of the follow radius into byte 0x3DE as in the exe	-
+0x41C9D0	CCarAI::FindPoliceCarMissionForWantedLevel	FIXED	0x41C9D0-0x41CA1F (all)	non-block outcome is RAMPLAYER_FARAWAY (2) not BLOCKPLAYER_HANDBRAKESTOP; rolls (rand()&3) < 3/2/1; levels 0,1 and out of range => 4 without rand	b394dda1
+0x41CA50	CCarAI::FindPoliceBoatMissionForWantedLevel	MATCH	0x41CA50-0x41CA93 (all)	vehicle ? (2..6 ? 21 : 4) : 64	-
+0x41CAA0	CCarAI::FindPoliceCarSpeedForWantedLevel	FIXED	0x41CAA0-0x41CB4F (all)	level 0: float range(12,16) truncated (port int range [12,16)); levels 3-6: maxVelocity * exe constants 54/72/75/78 (port 60*0.9f etc.)	50d06c76
+0x41CB70	CCarAI::MellowOutChaseSpeedBoat	FIXED	0x41CB70-0x41CBDC (all)	table 8/10/15/20/25/30/40 matches; out-of-range level hit NOTSA_UNREACHABLE (UB), now stores nothing	d80b0eb6
+0x41CD00	CCarAI::EntitiesGoHeadOn	FIXED	0x41CD00-0x41CE22 (all)	dots summed z,y,x; NaN arms (!(a > -0.8), !(b < 0.8))	cc2d4907
+0x41CE30	CCarAI::GetCarToGoToCoors	FIXED	0x41CE30-0x41CF97 (all)	already-there test compares coors with ap->m_vecDestinationCoors (|d|<=5, NaN passes), port compared the vehicle position; park-mission jump table decoded (45,46,49,50 skip)	93dc931c
+0x41CFB0	CCarAI::GetCarToGoToCoorsStraightLine	FIXED	0x41CFB0-0x41D0DF (all)	destination-update test vs ap->m_vecDestinationCoors (|d|<=2, NaN passes), not the vehicle position	33da88a6
+0x41D0E0	CCarAI::GetCarToGoToCoorsAccurate	FIXED	0x41D0E0-0x41D20F (all)	same destination test	5762be8f
+0x41D210	CCarAI::GetCarToGoToCoorsRacing	FIXED	0x41D210-0x41D34F (all)	same destination test	4f79c7ef
+0x41D350	CCarAI::GetCarToParkAtCoors	FIXED	0x41D350-0x41D3CF (all)	exe first calls GetCarToGoToCoors(veh, coors, STOP_FOR_CARS, true) (port skipped it) and sets bParking (byte 0x42C bit 2), port set bCanPark	4b40efb2
+0x41D3D0	CCarAI::MellowOutChaseSpeed	FIXED	0x41D3D0-0x41D652 (all)	distance squares summed z,y,x; final clamp dist < 30 (port <=) and |moveSpeed| < 0.07 (port squared compare); speed tables match	e37e17cf
+0x41D660	CCarAI::MakeWayForCarWithSiren	FIXED	0x41D660-0x41DA2C (all)	early return when siren 2D speed < 0.1; other car 2D speed > 0.05 (port: squared); heading dot (dy*dirY+dx*dirX)/dist; swerve side from the cross product (port: dot); slow-down branch tests {WAIT,BRAKE} (port: swirve actions); NaN arms	fe562574
+0x41DA30	CCarAI::UpdateCarAI	NOT_REACHED	-	~9 KB state machine; not started (budget)	-
+0x64E740	CCarEnterExit::GetPositionToOpenCarDoor	NOT_REACHED	-	not started (budget); GetNearestCarDoor bike section was already rebuilt from the exe in S09/SYSTEMIC-9, the rest unchecked	-
+0x64ED90	CCarEnterExit::IsCarDoorReady	MATCH	0x64ED90-0x64EDBA	vtable slots 0x7C (ReadyU32) / 0x84 (FullyOpenU32), OR	-
+0x64EDD0	CCarEnterExit::CarHasDoorToOpen	MATCH	0x64EDD0-0x64EE00	!missing(0x94) && !fullyOpen(0x84)	-
+0x64EE10	CCarEnterExit::CarHasDoorToClose	MATCH	0x64EE10-0x64EE40	!missing && !closed(0x8C)	-
+0x64EE50	CCarEnterExit::CarHasOpenableDoor	MATCH	0x64EE50-0x64EE63	CanPedOpenLocks	-
+0x64EE70	CCarEnterExit::CarHasPartiallyOpenDoor	MATCH	0x64EE70-0x64EEAF	!missing && !fullyOpen && !closed	-
+0x64EF00	CCarEnterExit::IsCarQuickJackPossible	NOT_REACHED	-	not started (budget); GetNearestCarDoor bike section was already rebuilt from the exe in S09/SYSTEMIC-9, the rest unchecked	-
+0x64F110	CCarEnterExit::ComputeTargetDoorToExit	NOT_REACHED	-	not started (budget); GetNearestCarDoor bike section was already rebuilt from the exe in S09/SYSTEMIC-9, the rest unchecked	-
+0x64F240	CCarEnterExit::IsPlayerToQuitCarEnter	NOT_REACHED	-	not started (budget); GetNearestCarDoor bike section was already rebuilt from the exe in S09/SYSTEMIC-9, the rest unchecked	-
+0x64F540	CCarEnterExit::MakeUndraggedPassengerPedsLeaveCar	NOT_REACHED	-	not started (budget); GetNearestCarDoor bike section was already rebuilt from the exe in S09/SYSTEMIC-9, the rest unchecked	-
+0x64F600	CCarEnterExit::MakeUndraggedDriverPedLeaveCar	NOT_REACHED	-	not started (budget); GetNearestCarDoor bike section was already rebuilt from the exe in S09/SYSTEMIC-9, the rest unchecked	-
+0x64F680	CCarEnterExit::RemoveCarSitAnim	NOT_REACHED	-	not started (budget); GetNearestCarDoor bike section was already rebuilt from the exe in S09/SYSTEMIC-9, the rest unchecked	-
+0x64F6E0	CCarEnterExit::RemoveGetInAnims	NOT_REACHED	-	not started (budget); GetNearestCarDoor bike section was already rebuilt from the exe in S09/SYSTEMIC-9, the rest unchecked	-
+0x64F720	CCarEnterExit::AddInCarAnim	NOT_REACHED	-	not started (budget); GetNearestCarDoor bike section was already rebuilt from the exe in S09/SYSTEMIC-9, the rest unchecked	-
+0x64F860	CCarEnterExit::SetAnimOffsetForEnterOrExitVehicle	NOT_REACHED	-	not started (budget); GetNearestCarDoor bike section was already rebuilt from the exe in S09/SYSTEMIC-9, the rest unchecked	-
+0x650130	CCarEnterExit::QuitEnteringCar	NOT_REACHED	-	not started (budget); GetNearestCarDoor bike section was already rebuilt from the exe in S09/SYSTEMIC-9, the rest unchecked	-
+0x650280	CCarEnterExit::SetPedInCarDirect	NOT_REACHED	-	not started (budget); GetNearestCarDoor bike section was already rebuilt from the exe in S09/SYSTEMIC-9, the rest unchecked	-
+0x6504C0	CCarEnterExit::IsRoomForPedToLeaveCar	NOT_REACHED	-	not started (budget); GetNearestCarDoor bike section was already rebuilt from the exe in S09/SYSTEMIC-9, the rest unchecked	-
+0x6509B0	CCarEnterExit::IsClearToDriveAway	NOT_REACHED	-	not started (budget); GetNearestCarDoor bike section was already rebuilt from the exe in S09/SYSTEMIC-9, the rest unchecked	-
+0x650BB0	CCarEnterExit::GetNearestCarPassengerDoor	NOT_REACHED	-	not started (budget); GetNearestCarDoor bike section was already rebuilt from the exe in S09/SYSTEMIC-9, the rest unchecked	-
+0x6510D0	CCarEnterExit::IsVehicleStealable	NOT_REACHED	-	not started (budget); GetNearestCarDoor bike section was already rebuilt from the exe in S09/SYSTEMIC-9, the rest unchecked	-
+0x651210	CCarEnterExit::IsPathToDoorBlockedByVehicleCollisionModel	NOT_REACHED	-	not started (budget); GetNearestCarDoor bike section was already rebuilt from the exe in S09/SYSTEMIC-9, the rest unchecked	-
+0x6528F0	CCarEnterExit::GetNearestCarDoor	NOT_REACHED	-	not started (budget); GetNearestCarDoor bike section was already rebuilt from the exe in S09/SYSTEMIC-9, the rest unchecked	-
+0x6F2E30	CCarGenerator::SwitchOff	MATCH	0x6F2E30	m_nGenerateCount = 0	-
+0x6F2E40	CCarGenerator::CalcNextGen	MATCH	0x6F2E40-0x6F2E48	timer + 4	-
+0x6F2E50	CCarGenerator::Setup	FIXED	0x6F2E50-0x6F2F34 (all)	angle scale constant is 0x3F360B60 (0.711111069), the port used the correctly rounded 256/360 = 0x3F360B61 (45 deg: 31 vs 32); all other fields/flags match	63d59ede

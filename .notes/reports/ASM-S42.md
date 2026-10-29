@@ -1,0 +1,23 @@
+# ASM-S42 (+ S41b) (phase 2: CarAI, CarEnterExit, CarGenerator; rest of the S41 slice) - 2026-10-29
+Result: S41b 9 rows (6 FIXED, 2 MATCH, 1 NOT_REACHED = the address-less "?" row); S42 40 rows (12 FIXED, 9 MATCH, 19 NOT_REACHED). Tables in S41b.result.tsv / S42.result.tsv. 18 fix commits, one per function.
+The "?" row of S41b is a generator artifact: `grep` printed "Binary file RunningScript.cpp matches" once for the whole file, so it stands for ~17 uncovered RunningScript hooks (ShutdownThisScript 0x465AA0, ProcessOneCommand 0x469EB0, Process 0x469F00, ScriptTaskPickUpObject 0x46AF50, Locate{Car,Char,Object,CharCar,CharChar,CharObject}Command 0x487A20 0x486D80 0x487D10 0x487420 0x4870F0 0x487720, {Car,Char,Object}InAreaCheckCommand 0x488EC0 0x488B50 0x489150, {Char,Flame,Object}InAngledAreaCheckCommand 0x487F60 0x488780 0x4883F0). It needs its own slice.
+
+Fixes (exe address, one line each):
+- df2adac0 / 6d7c2b67 CCarAI::TellCarToBlockOtherCar 0x41C900 / TellCarToRamOtherCar 0x41C8A0: port was NOTSA_UNREACHABLE; implemented as the exe.
+- 3a633126 CCarAI::TellOccupantsToLeaveCar 0x41C760: passengers were walked to m_nMaxPassengers (exe m_nNumPassengers); the exe also burns one rand() per passenger that gets a new LeaveCar task.
+- ceb2ca21 CCarAI::BackToCruisingIfNoWantedLevel 0x41BFA0: exe clears bSirenOrAlarm after joining the road system.
+- f9c1cd1f CCarAI::AddPoliceCarOccupants 0x41C070: Predator gunner attach offset (0,3,2) (port 0,0,0); shotgun rolls are range(0,1) < 0.25, extra-passenger roll is int range(0,100) < 50.
+- 87e419de CPedAttractorPedPlacer::PlacePedAtEffect 0x5EA390: heading = LimitRadianAngle(GetRadianAngleBetweenPoints(use.x, use.y, 0, 0)), not atan2.
+- b394dda1 CCarAI::FindPoliceCarMissionForWantedLevel 0x41C9D0: the non-block result is RAMPLAYER_FARAWAY (2), not BLOCKPLAYER_HANDBRAKESTOP; rolls are (rand()&3) < 3/2/1.
+- 50d06c76 CCarAI::FindPoliceCarSpeedForWantedLevel 0x41CAA0: wanted 0 is the float range(12,16) truncated; levels 3-6 use the exe constants 54/72/75/78.
+- cc2d4907 CCarAI::EntitiesGoHeadOn 0x41CD00: z,y,x dot sums and NaN-passing compares.
+- d80b0eb6 CCarAI::MellowOutChaseSpeedBoat 0x41CB70: out-of-range level no longer UB.
+- 93dc931c / 5762be8f / 4f79c7ef / 33da88a6 CCarAI::GetCarToGoToCoors / Accurate / Racing / StraightLine: the "already heading there / update destination" test compares the new coors with ap->m_vecDestinationCoors (0x3EC/0x3F0), |d| <= 5 (GoToCoors) or <= 2 (others), NaN passes; the port compared the vehicle position.
+- 4b40efb2 CCarAI::GetCarToParkAtCoors 0x41D350: exe first calls GetCarToGoToCoors(veh, coors, STOP_FOR_CARS, true) and sets bParking (port skipped the call and set bCanPark).
+- e37e17cf CCarAI::MellowOutChaseSpeed 0x41D3D0: z,y,x distance sum; final clamp dist < 30 (port <=) and |moveSpeed| < 0.07 (port squared).
+- fe562574 CCarAI::MakeWayForCarWithSiren 0x41D660: missing early return (siren speed < 0.1); 2D speed instead of its square for the 0.05 test; exe association of the heading dot; swerve side from a cross product (port dot); slow-down branch tests {WAIT, BRAKE}.
+- 63d59ede CCarGenerator::Setup 0x6F2E50: angle scale is the exe float 0x3F360B60, port used the correctly rounded 0x3F360B61 (e.g. 45 deg gives 31 vs 32).
+MATCH: AddAmbulanceOccupants, AddFiretruckOccupants, TellCarToFollowOtherCar, FindPoliceBoatMissionForWantedLevel, IsCarDoorReady, CarHasDoorToOpen / Close / OpenableDoor / PartiallyOpenDoor, CCarGenerator::SwitchOff / CalcNextGen.
+Open (NOT_REACHED, budget): CCarAI::UpdateCarAI 0x41DA30 (~9 KB); CarEnterExit rows except the five door predicates: GetPositionToOpenCarDoor, IsCarQuickJackPossible, ComputeTargetDoorToExit, IsPlayerToQuitCarEnter, MakeUndraggedPassengerPedsLeaveCar / DriverPedLeaveCar, RemoveCarSitAnim, RemoveGetInAnims, AddInCarAnim, SetAnimOffsetForEnterOrExitVehicle, QuitEnteringCar, SetPedInCarDirect, IsRoomForPedToLeaveCar, IsClearToDriveAway, GetNearestCarPassengerDoor, IsVehicleStealable, IsPathToDoorBlockedByVehicleCollisionModel, GetNearestCarDoor (bike section only was rebuilt in S09; the door-choice tail was not compared here).
+Note: the ped-side CPlaceable::GetMatrix/SetHeading/SetPosn used by PlacePedAtEffect match the exe; ComputeEffect* helpers live in the header and were not re-compared (hooks cannot be installed on them).
+Gate: Release build OK; wave2_oracle_test (1142 functions) PC24 0/0, PC53 0/0 (the RW test target does not depend on the touched game_sa files: ninja "no work to do" after the last edit); combat regress PASS=14; PortableWin64 compile of CarAI / CarGenerator / PedAttractorPedPlacer objects: 0 errors; v6 pre-commit grep clean. Trailer uses the brief's Opus 5.5 text.

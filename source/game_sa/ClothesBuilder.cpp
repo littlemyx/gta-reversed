@@ -906,13 +906,29 @@ RpClump* CClothesBuilder::CreateSkinnedClump(RpClump* bones, RwTexDictionary* di
     //> 0x5A42B0 - Calculate blend ratios
     float rNormal, rFatness, rMuscle;
     {
-        rMuscle  = std::clamp(CStats::GetStatValue(STAT_MUSCLE) / 1000.f, 0.f, 1.f);
-        rFatness = std::clamp((dscr.m_fFatStat - 200.f) / 800.f, 0.f, 1.f);
-        rNormal  = 1.f - rMuscle - rFatness;
-        if (rNormal <= 0.f) {
+        // 0x5A42B0: low clamp at 0, then `* 0.001f` (0x858CDC) / `* 0.00125f` (0x865354 = 1/800), high clamp at 1 (no divisions); rNormal = 1 - (fat + muscle);
+        // only a sum > 1 rescales both by 1/sum and zeroes rNormal
+        float muscleStat = CStats::GetStatValue(STAT_MUSCLE);
+        float fatStat    = dscr.m_fFatStat - 200.f;
+        if (muscleStat < 0.f) {
+            muscleStat = 0.f;
+        }
+        if (fatStat < 0.f) {
+            fatStat = 0.f;
+        }
+        rFatness = fatStat * ExeRecip(800.f);
+        rMuscle  = muscleStat * ExeRecip(1000.f);
+        if (rFatness > 1.f) {
+            rFatness = 1.f;
+        }
+        if (rMuscle > 1.f) {
+            rMuscle = 1.f;
+        }
+        rNormal = 1.f - (rFatness + rMuscle);
+        if (rFatness + rMuscle > 1.f) {
             const auto t = 1.f / (rFatness + rMuscle);
-            rMuscle  *= t;
             rFatness *= t;
+            rMuscle  *= t;
             rNormal   = 0.f;
         }
     }

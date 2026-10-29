@@ -237,29 +237,32 @@ void CPedAttractor::ComputeAttractHeading(int32 bQueue, float& heading) {
 
 // 0x5EF160
 bool CPedAttractor::BroadcastDeparture(CPed* ped) {
-    const auto it = rng::find(m_AttractPeds, ped);
-    if (it == m_AttractPeds.end()) {
+    // The queue is the second list (+0x20, `m_ArrivedPeds`): everyone behind the leaving ped shuffles forward by one slot
+    const auto it = rng::find(m_ArrivedPeds, ped);
+    if (it == m_ArrivedPeds.end()) {
         return false;
     }
-    const auto idx = (int32)rng::distance(m_AttractPeds.begin(), it);
-    for (auto i = idx + 1; i < (int32)(m_AttractPeds.size()); ++i) { // 0x5EF1C6
-        SetTaskForPed(m_AttractPeds[i], new CTaskComplexSequence{
+    const auto idx = (int32)rng::distance(m_ArrivedPeds.begin(), it);
+    const auto numArrived = (int32)m_ArrivedPeds.size();
+    for (auto i = idx + 1; i < numArrived; ++i) { // 0x5EF1C6
+        const auto slot = i - 1;
+        CPed* const queuedPed = m_ArrivedPeds[i];
+        const CVector pos     = ComputeAttractPos(slot); // 0x5EF1F5 (vtable +0xC)
+        const float   heading = ComputeAttractHeading(slot); // 0x5EF203 (vtable +0x10)
+        SetTaskForPed(queuedPed, new CTaskComplexSequence{
             new CTaskSimpleStandStill{ 2000 * i },
-            new CTaskComplexGoToAttractor{ this, ComputeAttractPos(i), ComputeAttractHeading(i), m_AchieveQueueShuffleTime, i, PEDMOVE_WALK },
+            new CTaskComplexGoToAttractor{ this, pos, heading, m_AchieveQueueShuffleTime, slot, PEDMOVE_WALK },
         });
     }
-    m_PedTaskPairs.erase(rng::find(m_PedTaskPairs, ped, &CPedTaskPair::Ped)); // 0x5EF2F6
-    m_ArrivedPeds.erase(it); // 0x5EF334
+    if (const auto pair = rng::find(m_PedTaskPairs, ped, &CPedTaskPair::Ped); pair != m_PedTaskPairs.end()) { // 0x5EF2F8
+        m_PedTaskPairs.erase(&*pair);
+    }
+    m_ArrivedPeds.erase(m_ArrivedPeds.begin() + idx); // 0x5EF32A
     for (auto* const attractedPed : m_AttractPeds) { // 0x5EF371
         const auto n = (int32)(m_ArrivedPeds.size());
-        SetTaskForPed(attractedPed, new CTaskComplexGoToAttractor({
-            this,
-            ComputeAttractPos(n),
-            ComputeAttractHeading(n),
-            m_AchieveQueueTime,
-            n,
-            PEDMOVE_WALK
-        }));
+        const CVector pos     = ComputeAttractPos(n);
+        const float   heading = ComputeAttractHeading(n);
+        SetTaskForPed(attractedPed, new CTaskComplexGoToAttractor{ this, pos, heading, m_AchieveQueueTime, n, PEDMOVE_WALK });
     }
     return true;
 }

@@ -26,13 +26,13 @@ void CPlaneTrail::Render(float intensity) {
     }
 
     auto nvert{0u}; // num of vertices stored
-    RxObjSpace3DVertex vertBuff[PLANE_TRAIL_BUF_SIZE];
+    static RxObjSpace3DVertex vertBuff[PLANE_TRAIL_BUF_SIZE]; // 0xC4D958 (a global in the exe)
     for (auto i = 0u; i < PLANE_TRAIL_BUF_SIZE; i++) {
         const uint32 timeDelta = CTimer::GetTimeInMS() - m_Timepoints[i];
         if (IsPointInUse(i) && timeDelta <= POINT_EXPIRATION_TIME) {
-            RxObjSpace3DVertex& vert = vertBuff[i];
+            RxObjSpace3DVertex& vert = vertBuff[nvert]; // 0x717180: the used vertices are packed (the port indexed by the point, leaving holes)
 
-            const float fAlphaMult = std::min(1.0f, ((float)POINT_EXPIRATION_TIME - (float)timeDelta) / 10'000.0f); // Clamped to 1.0f
+            const float fAlphaMult = std::min(1.0f, ((float)POINT_EXPIRATION_TIME - (float)timeDelta) * ExeRecip(10'000.0f)); // Clamped to 1.0f; exe 0x858FC4 = float(1/10000), a multiply
             RwIm3DVertexSetRGBA(&vert, 255, 255, 255, NOTSA_FTOL(uint8, (float)maxAlpha * fAlphaMult));
 
             RwV3dAssign(RwIm3DVertexGetPos(&vert), &m_Positions[i]);
@@ -43,7 +43,7 @@ void CPlaneTrail::Render(float intensity) {
         }
     }
 
-    if (nvert) {
+    if (nvert > 1) { // 0x7171F9: `cmp ebp, 1; jle` - one vertex draws nothing and leaves the render states alone
         RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(TRUE));
         RwRenderStateSet(rwRENDERSTATESRCBLEND,          RWRSTATE(rwBLENDSRCALPHA));
         RwRenderStateSet(rwRENDERSTATEDESTBLEND,         RWRSTATE(rwBLENDINVSRCALPHA));

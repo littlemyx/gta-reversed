@@ -1651,7 +1651,7 @@ bool CCam::ArrestCamLookAtCopHead(CPed* cop, bool checkLineOfSight) {
         t         = 0.0f;
         flipPhase = false;
     } else {
-        flipPhase = !(t < 1.0f);
+        flipPhase = t >= 1.0f; // exe 0x512F9F-0x512FAE: `jne` on C0 skips the flip for t < 1 AND for NaN
     }
     if (flipPhase) {
         gbArrestCamHeadPhase = !gbArrestCamHeadPhase;

@@ -63,6 +63,7 @@ int32 GetClothesModelFromName(const char* name) {
 // 0x5A7B30
 void CClothes::LoadClothesFile() {
     bool isRuleStarted = false;
+    eClothRule ruleTag = eClothRule::TAG_CUTS; // the exe's uninitialised stack local
     auto* file = CFileMgr::OpenFile("DATA\\CLOTHES.DAT", "r");
 
     for (auto line = CFileLoader::LoadLine(file); line; line = CFileLoader::LoadLine(file)) {
@@ -85,24 +86,22 @@ void CClothes::LoadClothesFile() {
             continue;
         }
 
-        const eClothRule ruleTag = [&](){
-            constexpr struct {const char* name; eClothRule rule;} map[]{
-                {"CUTS", eClothRule::TAG_CUTS},
-                {"SETC", eClothRule::TAG_SETC},
-                {"TEX", eClothRule::TAG_TEX},
-                {"HIDE", eClothRule::TAG_HIDE},
-                {"ENDIGNORE", eClothRule::TAG_END_IGNORE},
-                {"IGNORE", eClothRule::TAG_IGNORE},
-                {"ENDEXCLUSIVE", eClothRule::TAG_END_EXCLUSIVE},
-                {"EXCLUSIVE", eClothRule::TAG_EXCLUSIVE}
-            };
-            for (const auto& [name, rule] : map) {
-                if (!strcmp(strTag, name)) {
-                    return rule;
-                }
+        // 0x5A7BE5: the tags are compared with _stricmp (lowercase names in the exe), in this order; an unknown tag keeps the tag of the previous line (stack local `[esp+0x10]`)
+        for (const auto& [name, rule] : {
+            std::pair{"cuts", eClothRule::TAG_CUTS},
+            std::pair{"setc", eClothRule::TAG_SETC},
+            std::pair{"tex", eClothRule::TAG_TEX},
+            std::pair{"hide", eClothRule::TAG_HIDE},
+            std::pair{"ignore", eClothRule::TAG_IGNORE},
+            std::pair{"endignore", eClothRule::TAG_END_IGNORE},
+            std::pair{"exclusive", eClothRule::TAG_EXCLUSIVE},
+            std::pair{"endexclusive", eClothRule::TAG_END_EXCLUSIVE},
+        }) {
+            if (!_stricmp(strTag, name)) {
+                ruleTag = rule;
+                break;
             }
-            NOTSA_UNREACHABLE_RET(eClothRule::TAG_CUTS, "Invalid rule tag: {}", strTag);
-        }();
+        }
         AddRule(static_cast<uint32>(ruleTag));
 
         const auto GetNextArg = [&nextToken]{

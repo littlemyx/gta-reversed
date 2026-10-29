@@ -343,3 +343,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-29	ASM-S31h	v6	asm sweep	186592	49	14	Cam 5 MATCH (ArrestCamOne, GetArrestCamPosBehindTarget, LimitPrecision, AvoidTheGeometry, AttachedCam); no code change
 2026-10-29	ASM-S31i	v6	asm sweep	251873	80	19	Cam 5/6 fixed: WheelCam dot z,y,x, Rocket head GetBonePosition not Transformed, HeliChase/CamMan/Birdy fidiv t + sum orders + NaN shake + birdy height formula; S30e not reached
 2026-10-29	ASM-S30e	v6	asm sweep	220183	76	19	S31j Process_Cam_TwoPlayer fixed (vel sum z,x,y, pow base 0.8f, 7 NaN) S31 complete; S30e Process tail MATCH, CamControl partial; found pow(0.800000012) literal x2 + bare double aimHeading -> S30f task0
+2026-10-29	ASM-S30f	v6	asm sweep	205598	89	19	Cam/Camera: CCam::Process pow bases exact floats 0.9/0.6/0.8 (decimal doubles were 1e-10 off), aimHeading x87d (obj identical); CamControl tail 0x52A9E0-0x52B725 MATCH; veh garage cam structure only

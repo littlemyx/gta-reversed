@@ -132,4 +132,5 @@
 | S31h | rest of S31g | 15 | partial 5/11 (5 M) -> S31i | Cam.cpp |
 | S31i | rest of S31h (CCam::Process done: S31 full + S31e trace) | 6 | partial 5/6 (5 fixed) -> S31j | Cam.cpp |
 | S31j | rest of S31i | 1 | done 1/1 (fixed; S31 complete) | Cam.cpp |
-| S30f | rest of S30e | 6 | pending | Camera.cpp |
+| S30f | rest of S30e | 6 | CamControl tail MATCH; pow bases + aimHeading fixed -> S30g | Camera.cpp |
+| S30g | rest of S30f | 5 | pending | Camera.cpp |

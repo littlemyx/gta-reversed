@@ -6202,13 +6202,13 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
     } else if (auto* const standingOn = ped->m_standingOnEntity) {
         // Moves the previous camera positions along with the train the ped is standing on
         // NOTE: The velocity is the one of the entity the ped is standing on, even if the train is the one it's attached to
-        const auto IsTrain = [](const CEntity* e) { return e->GetIsTypeVehicle() && e->AsVehicle()->m_nVehicleType == VEHICLE_TYPE_TRAIN; };
+        const auto IsTrain = [](const CEntity* e) { return e->GetIsTypeVehicle() && e->AsVehicle()->m_nVehicleSubType == VEHICLE_TYPE_TRAIN; }; // exe 0x522FFF: reads +0x594 (m_nVehicleSubType)
         if (IsTrain(standingOn) || (standingOn->AsPhysical()->m_pAttachedTo && IsTrain(standingOn->AsPhysical()->m_pAttachedTo))) {
             const auto&  vel = standingOn->AsPhysical()->m_vecMoveSpeed;
             const x87d mag = X87R(std::sqrt(SqMagExt(vel)));
 
-            const float a     = std::max(0.0f, (float)(mag - (x87d)0.01f)); // 0x420800
-            const float b     = std::max(0.01f, (float)mag);
+            const float a     = FollowCarMax(0.0f, (float)(mag - (x87d)0.01f)); // 0x420800 (NaN => second argument)
+            const float b     = FollowCarMax(0.01f, (float)mag);
             const float ratio = (float)((x87d)a / (x87d)b);
 
             // NOTE: `ratio * vel * ts`, each product rounded to a float
@@ -6295,12 +6295,10 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
             }
         }
         x87d v = (x87d)diffF * (x87d)sp1;
-        if (v <= (double)sp2) {
-            if (v < -(double)sp2) {
-                v = -(x87d)sp2;
-            }
-        } else {
+        if (v > (double)sp2) { // NOTE: 0x523797-0x5237C5 - NaN keeps NaN (the original's `jne` goes to the lower clamp, which leaves it alone)
             v = (x87d)sp2;
+        } else if (v < -(double)sp2) {
+            v = -(x87d)sp2;
         }
         betaDelta = v;
     }
@@ -6311,7 +6309,7 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
         camBeta = camBeta + TWO_PI;
     }
 
-    const float tsMax          = (1.0f <= ts) ? ts : 1.0f;
+    const float tsMax          = (1.0f > ts) ? 1.0f : ts; // 0x52381D: NaN => ts
     const float betaVelTarget  = (float)(((x87d)camBeta - (x87d)m_fHorizontalAngle) / (x87d)tsMax);
 
     // The alpha (vertical angle) the camera should have
@@ -6365,12 +6363,10 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
         }
 
         x87d v = (X87R(pitchTarget - (double)alphaCur)) * pitchRate;
-        if (v <= (double)sp2) {
-            if (v < -(double)sp2) {
-                v = -(x87d)sp2;
-            }
-        } else {
+        if (v > (double)sp2) { // NOTE: 0x523AFE-0x523B2A - NaN keeps NaN
             v = (x87d)sp2;
+        } else if (v < -(double)sp2) {
+            v = -(x87d)sp2;
         }
         pitchDelta = v;
     }
@@ -6441,12 +6437,10 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
     const float  oneMinusPwB = 1.0f - pwB;
     {
         x87d v = (x87d)stickLR + (x87d)betaVelTarget;
-        if (v <= (double)speedCap) {
-            if (v < -(double)speedCap) {
-                v = -(x87d)speedCap;
-            }
-        } else {
+        if (v > (double)speedCap) { // NOTE: 0x523ECF-0x523EFB - NaN keeps NaN
             v = (x87d)speedCap;
+        } else if (v < -(double)speedCap) {
+            v = -(x87d)speedCap;
         }
         const x87d betaSpeed = (x87d)pwB * (x87d)m_fBetaSpeed + (x87d)oneMinusPwB * v;
         m_fBetaSpeed           = (float)betaSpeed;
@@ -6474,12 +6468,10 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
         const x87d alphaSpeed = (x87d)oneMinusPwB * (x87d)m_fAlphaSpeed + (x87d)stickUD * (x87d)pwB;
         const float  alphaSpeedF = (float)alphaSpeed;
         m_fAlphaSpeed            = alphaSpeedF;
-        if (alphaSpeed <= (double)speedCap) {
-            if (alphaSpeedF < -speedCap) {
-                m_fAlphaSpeed = -speedCap;
-            }
-        } else {
+        if (alphaSpeed > (double)speedCap) { // NOTE: 0x523FBA-0x523FEC - NaN keeps NaN
             m_fAlphaSpeed = speedCap;
+        } else if (alphaSpeedF < -speedCap) {
+            m_fAlphaSpeed = -speedCap;
         }
         if (std::abs(m_fAlphaSpeed) < 0.0001f) {
             m_fAlphaSpeed = 0.0f;

@@ -757,13 +757,13 @@ void CPickups::PickedUpHorseShoe() {
     CStats::IncrementStat(STAT_HORSESHOES_COLLECTED);
     CStats::IncrementStat(STAT_LUCK, 1000.f / CStats::GetStatValue(STAT_TOTAL_HORSESHOES)); // TODO: Is this some inlined stuff? (The division part)
 
-    FindPlayerInfo().m_nMoney += 100; // originally rewarded to the player 1.
+    CWorld::Players[0].m_nMoney += 100; // 0xB7CE50: always player 1 (not the focused one)
 
     const auto collected = CStats::GetStatValue(STAT_HORSESHOES_COLLECTED);
     const auto total = CStats::GetStatValue(STAT_TOTAL_HORSESHOES);
     if (collected == total) {
         CGarages::TriggerMessage("HO_ALL");
-        FindPlayerInfo().m_nMoney += 100'000; // originally rewarded to the player 1.
+        CWorld::Players[0].m_nMoney += 100'000; // 0xB7CE50: always player 1
     } else {
         CGarages::TriggerMessage("HO_ONE", NOTSA_FTOL(int16, collected), 5000u, NOTSA_FTOL(int16, total));
     }

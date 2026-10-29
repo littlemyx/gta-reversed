@@ -110,8 +110,9 @@ void CPlayerPedData::SetInitialState() {
     m_pCurrentProstitutePed = nullptr;
     m_pLastProstituteShagged = nullptr;
 
-    m_bCanBeDamaged = true;
-    m_bRenderWeapon = true;
+    // 0x56F210: flags = (flags & 0xFFFFF7B0 & ~0x80) | 0x1010 - bits 0..3 (stopped moving, adrenaline, target selected, free aiming), 6 (snacking), 7 (handle breath) and 11
+    // (in-vehicle no weapon change) are cleared, bits 4 (can be damaged) and 12 (render weapon) set, the group/melee bits are kept
+    m_nPlayerFlags = ((m_nPlayerFlags & 0xFFFFF7B0u) & ~0x80u) | 0x1010u;
 
     m_nLastHSMissileLOSTime = 0;
     m_bLastHSMissileLOS = true;

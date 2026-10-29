@@ -1117,7 +1117,8 @@ void CRadar::DrawYouAreHereSprite(float x, float y) {
     NOTSA_GLOBAL_LOCAL(mapYouAreHereTimer, 0xBAA358, (uint32), {});
     NOTSA_GLOBAL_LOCAL(mapYouAreHereDisplay, 0x8D0930, (bool), { true });
 
-    if (CTimer::GetTimeInMSPauseMode() - mapYouAreHereTimer > 700) {
+    // exe 0x584960-0x5849AF: the marker is shown for 500 ms and hidden for 200 ms (the port toggled every 700 ms)
+    if (CTimer::GetTimeInMSPauseMode() - mapYouAreHereTimer > (mapYouAreHereDisplay ? 500u : 200u)) {
         mapYouAreHereTimer = CTimer::GetTimeInMSPauseMode();
         mapYouAreHereDisplay = !mapYouAreHereDisplay;
     }

@@ -199,7 +199,14 @@ void CPlayerInfo::DeletePlayerSkin() {
 
 // 0x5717F0
 void CPlayerInfo::SetPlayerSkin(const char* name) {
-    strcpy_s(m_szSkinName, name); // NOTSA: They used `strcpy`, we use `_s` for safety
+    // exe 0x5717FA: `strncpy(m_szSkinName, name, 32)` - copies up to 32 chars and zero-pads the rest (port's strcpy_s left the old tail bytes in place)
+    size_t i = 0;
+    for (; i < sizeof(m_szSkinName) && name[i]; i++) {
+        m_szSkinName[i] = name[i];
+    }
+    for (; i < sizeof(m_szSkinName); i++) {
+        m_szSkinName[i] = 0;
+    }
     LoadPlayerSkin();
 }
 

@@ -1,0 +1,8 @@
+addr	function	verdict	asm range	note	fix commit
+0x50C100	CCamera::SetRwCamera	NOT_REACHED	-	budget	-
+0x51A450	CCamera::Constructor	NOT_REACHED	-	budget	-
+0x50AFA0	CCamera::CopyCameraMatrixToRWCam	NOT_REACHED	-	budget	-
+0x50B510	CCamera::DealWithMirrorBeforeConstructRenderList	NOT_REACHED	-	budget	-
+0x51E560	CCamera::TryToStartNewCamMode	NOT_REACHED	-	budget (shared tail 0x51FFAD-0x520101 and heading-rotation case tails still open)	-
+0x527FA0	CCamera::CamControl	FIXED	0x52A700-0x52B725 (tail) + 0x528351-0x528A64 (vehicle garage cam); open 0x5291EB-0x529B9A	aimHeading -= HALF_PI re-spelled x87d/X87R (portable only; Win32 obj bit-identical). 0x52A9E0-0x52B725 MATCH: switch-now cascade (first-person list + ped type, FIXED/garage lists, FOLLOWPED aim block with PI wrap NaN arms and 30deg test, ARRESTCAM/LIGHTHOUSE/PED_DEAD_BABY tail), bombshop MRWHOOP test, garage dot z-order x,z,y, special-interp / wait-for-interpolation test (mag > 17.5), scripted-cam branch (INTERPOLATION=1 / JUMPCUT=2), copy-fixed-mode block, visibility toggles, RestoreWithJumpCut + GetATanOfXY, mode-change sound conditions. 0x528351-0x528A64 vehicle garage fixed cam: structure and constants (0.5, 15.0, -10.0, 2.0) MATCH. Open: ped garage fixed cam 0x5291EB-0x529B9A	5b0e3f17
+-	CCam::Process (pow bases, task 0)	FIXED	0x52744B-0x5275EA (pow sites only)	pow bases 0.9f/0.6f/0.8f are exe float constants 0x8CC39C/0x8CC394/0x8CC398 (port used rounded decimal literals 0.899999976/0.600000024/0.800000012 as doubles); InCarAndShooting bases already float-exact (0.98f/0.85f/0.96f)	f24fded9

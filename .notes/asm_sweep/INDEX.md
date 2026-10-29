@@ -137,4 +137,5 @@
 | S30h | rest of S30g | 1 | done 1/1 (MATCH; S30 complete) | Camera.cpp |
 | S33c | rest of S33b | 15 | partial 3/15 (1 M, 2 fixed; unicorn emulator models) -> S33d | WaterLevel.cpp |
 | S33d | rest of S33c | 12 | partial 5/12 (1 M, 4 fixed) -> S33e | WaterLevel.cpp |
-| S33e | rest of S33d | 7 | pending | WaterLevel.cpp |
+| S33e | rest of S33d | 7 | 6/7 (2 M, 4 fixed) -> S33f | WaterLevel.cpp |
+| S33f | rest of S33e | 1 | pending | WaterLevel.cpp |

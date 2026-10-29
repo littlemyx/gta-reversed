@@ -585,7 +585,7 @@ bool CGangWars::DontCreateCivilians() {
 void CGangWars::EndGangWar(bool end) {
     State = NOT_IN_WAR;
 
-    if (State2 == WAR_NOTIFIED) {
+    if (State2 != NO_ATTACK) { // exe 0x4464C1: any non-zero state (also PLAYER_CAME_TO_WAR)
         State2 = NO_ATTACK;
         TimeTillNextAttack = (float)CalculateTimeTillNextAttack();
 

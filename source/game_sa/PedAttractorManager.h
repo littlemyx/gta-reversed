@@ -63,6 +63,7 @@ public:
         a->BroadcastDeparture(ped);
         if (!a->GetNoOfRegisteredPeds()) {
             attractors.erase(it);
+            delete a; // 0x5EC6FE/0x5EC72E: the exe frees the attractor (virtual dtor, scalar delete) once its last ped left; it came from the attractor pool
         }
         return true;
     }
@@ -82,6 +83,7 @@ public:
         a->DeRegisterPed(ped);
         if (!a->GetNoOfRegisteredPeds()) {
             attractors.erase(it);
+            delete a; // 0x5EC7DE/0x5EC80A: same as BroadcastDeparture, the emptied attractor is destroyed
         }
         return true;
     }

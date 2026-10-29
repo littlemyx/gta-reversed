@@ -1,0 +1,27 @@
+addr	function	verdict	asm range	note	fix commit
+0x50DD70	CCam::Finalise_DW_CineyCams	NOT_REACHED	-	budget	-
+0x5161A0	CCam::GetLookFromLampPostPos	NOT_REACHED	-	budget	-
+0x513E40	CCam::Get_TwoPlayer_AimVector	NOT_REACHED	-	budget	-
+0x517400	CCam::IsTimeToExitThisDWCineyCamMode	NOT_REACHED	-	budget	-
+0x520690	CCam::LookBehind	NOT_REACHED	-	budget	-
+0x520E40	CCam::LookRight	NOT_REACHED	-	budget	-
+0x518500	CCam::ProcessArrestCamOne	NOT_REACHED	-	budget	-
+0x512EF0	CCam::ArrestCamLookAtCopHead	NOT_REACHED	-	budget	-
+0x519250	CCam::ProcessPedsDeadBaby	NOT_REACHED	-	budget	-
+0x512B10	CCam::Process_AttachedCam	NOT_REACHED	-	budget	-
+0x525E50	CCam::Process_Cam_TwoPlayer	NOT_REACHED	-	budget	-
+0x51B850	CCam::Process_DW_BirdyCam	NOT_REACHED	-	budget	-
+0x51B120	CCam::Process_DW_CamManCam	NOT_REACHED	-	budget	-
+0x51A740	CCam::Process_DW_HeliChaseCam	NOT_REACHED	-	budget	-
+0x51C760	CCam::Process_DW_PlaneCam1	NOT_REACHED	-	budget	-
+0x51CC30	CCam::Process_DW_PlaneCam2	NOT_REACHED	-	budget	-
+0x51D100	CCam::Process_DW_PlaneCam3	NOT_REACHED	-	budget	-
+0x51C250	CCam::Process_DW_PlaneSpotterCam	NOT_REACHED	-	budget	-
+0x50F3F0	CCam::Process_Editor	DEVIATION_FIXED	0x50F3F0-0x50F957	vertical clamp was max(v,85deg) vs exe +-1.5620697 with exe NaN arms; front = (target or own source) - source (port normalised the target position itself); z clamp min vs exe max(z,-450); player teleport (vehicle else direct write); ClampByLoop tested x vs exe x*0.02+60 against 115/5	9866fb91
+0x50F970	CCam::Process_FollowPedWithMouse	DEVIATION_FIXED	0x50F970-0x5105B3 (full)	pad rotV association (F*0.042857*ts*lookUD*0.01); bPlayerSafe toCam.z compare NaN arm; rotV override chain NaN arm; V clamp NaN arms; cos arm NaN; first nearClip and dist3D lengths add z,y,x; sphere-loop dot/length z,y,x, `0.1 > tmp` NaN; `dist3D < m_fDistance` first	6d27d1c4
+0x512110	CCam::Process_WheelCam	NOT_REACHED	-	budget	-
+0x50A0A0	CCam::LimitPrecision-float	NOT_REACHED	-	budget	-
+0x516010	CCam::GetArrestCamPosBehindTarget	NOT_REACHED	-	budget	-
+0x514030	CCamera::AvoidTheGeometry	NOT_REACHED	-	budget	-
+0x511B50	CCam::Process_Rocket	NOT_REACHED	-	budget	-
+0x526FC0	CCam::Process	PARTIAL_FIXED	0x5273EB-0x52762D	non-fighting target branch traced with explicit stack offsets: target.z = playerPos.z (S+0x40 written from edx=[S+0x34]) and delta.z = playerPos.z-last.z: MATCH; divisor 0x420800 max(1.0,ts) = `1.0f > ts ? 1.0f : ts`, port had std::max (NaN)	56372783

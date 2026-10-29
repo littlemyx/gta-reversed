@@ -315,8 +315,11 @@ CFire* CFireManager::StartFire(CEntity* target, CEntity* creator, float size, ui
     }
     }
 
-    if (auto fire = GetNextFreeFire(false))
-        fire->Start(creator, target, lifetime, std::min<uint8>((uint8)m_nMaxFireGenerationsAllowed, numGenerations));
+    if (auto fire = GetNextFreeFire(false)) {
+        // 0x53A23F-0x53A256: signed min against the maximum, and the fire is returned (0x53A267)
+        fire->Start(creator, target, lifetime, (uint8)((int32)numGenerations < (int32)m_nMaxFireGenerationsAllowed ? (int32)numGenerations : (int32)m_nMaxFireGenerationsAllowed));
+        return fire;
+    }
 
     return nullptr;
 }

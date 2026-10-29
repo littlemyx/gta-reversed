@@ -112,21 +112,25 @@ void CFire::Start(CEntity* creator, CEntity* target, uint32 nTimeToBurn, uint8 n
     case ENTITY_TYPE_PED: {
         auto targetPed = target->AsPed();
         targetPed->m_pFire = this;
-        CCrime::ReportCrime(
-            targetPed->m_nPedType == PED_TYPE_COP ? eCrimeType::CRIME_SET_COP_PED_ON_FIRE : eCrimeType::CRIME_SET_PED_ON_FIRE,
-            targetPed,
-            creator->AsPed()
-        );
+        if (creator) { // 0x53A114: no crime without a creator
+            CCrime::ReportCrime(
+                targetPed->m_nPedType == PED_TYPE_COP ? eCrimeType::CRIME_SET_COP_PED_ON_FIRE : eCrimeType::CRIME_SET_PED_ON_FIRE,
+                targetPed,
+                creator->AsPed()
+            );
+        }
         break;
     }
     case ENTITY_TYPE_VEHICLE: {
         auto targetVehicle = target->AsVehicle();
         targetVehicle->m_pFire = this;
-        CCrime::ReportCrime(
-            eCrimeType::CRIME_SET_CAR_ON_FIRE,
-            targetVehicle,
-            creator->AsPed()
-        );
+        if (creator) { // 0x53A149
+            CCrime::ReportCrime(
+                eCrimeType::CRIME_SET_CAR_ON_FIRE,
+                targetVehicle,
+                creator->AsPed()
+            );
+        }
         break;
     }
     case ENTITY_TYPE_OBJECT: {

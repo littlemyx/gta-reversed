@@ -1322,7 +1322,7 @@ void CPlayerInfo::WorkOutEnergyFromHunger() {
 
     NOTSA_GLOBAL_LOCAL(s_lastTimeHungryStateProcessedInitialized, 0xB9B8F4, (bool), {}); // false
     NOTSA_GLOBAL_LOCAL(s_lastTimeHungryStateProcessed, 0xB9B8F2, (uint8), {});
-    NOTSA_GLOBAL_LOCAL(s_LastHungryState, 0xB9B8F1, (int8), {});
+    NOTSA_GLOBAL_LOCAL(s_LastHungryState, 0xB9B8F1, (uint8), {}); // 0x56E610: read with `movzx` (an unsigned byte; the port had int8, which went negative above 127 hours)
     NOTSA_GLOBAL_LOCAL(s_bHungryMessageShown, 0xB9B8F0, (bool), {});
 
     if (CCheat::IsActive(CHEAT_NEVER_GET_HUNGRY)) {

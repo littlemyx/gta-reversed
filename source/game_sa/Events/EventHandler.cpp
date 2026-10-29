@@ -2101,7 +2101,7 @@ void CEventHandler::ComputePedCollisionWithPlayerResponse(CEvent* e, CTask* tact
     const float dotPed = (d.z * pedMat.GetForward().z + d.y * pedMat.GetForward().y) + d.x * pedMat.GetForward().x;
     const float dotVic = (d.z * vicMat.GetForward().z + d.y * vicMat.GetForward().y) + d.x * vicMat.GetForward().x;
 
-    const bool victimIsInFrontOfPed = !(dotPed < 0.f);
+    const bool victimIsInFrontOfPed = dotPed >= 0.f; // 0x4BE851: `test ah,1` => NaN is not in front
     const bool pedIsInFrontOfVic    = dotVic <= 0.f;
 
     const int32 pedMove       = (int32)ev->GetMoveState();
@@ -2141,9 +2141,10 @@ void CEventHandler::ComputePedCollisionWithPlayerResponse(CEvent* e, CTask* tact
         CPedGeometryAnalyser::ComputeRouteRoundEntityBoundingBox(*ped, *victim, static_cast<CTaskSimpleGoTo*>(goTo)->GetTargetPt(), route, 0);
         return new CTaskComplexFollowPointRoute{ PEDMOVE_WALK, route, CTaskComplexFollowPointRoute::Mode::ONE_WAY, 0.5f, 5.0f, false, true, true };
     };
-    // Perpendicular to the victim's forward direction
+    // Perpendicular to the victim's forward direction: (-fy, fx, 0) (0x4BEB6B / 0x4BEDEA / 0x4BEED7 / 0x4BF24B: fld fx, fld fy, fchs, fstp x, fstp y).
+    // The port used (fx, -fy) which is the ped-vs-ped step (that one is built from the PED's forward).
     const auto ComputeEvasiveStep = [&]() -> CTask* {
-        CVector dir{ victim->GetMatrix().GetForward().x, -victim->GetMatrix().GetForward().y, 0.f };
+        CVector dir{ -victim->GetMatrix().GetForward().y, victim->GetMatrix().GetForward().x, 0.f };
         dir.Normalise();
         return new CTaskComplexEvasiveStep{ victim, dir };
     };

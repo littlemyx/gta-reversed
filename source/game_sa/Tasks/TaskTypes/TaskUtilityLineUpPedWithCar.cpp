@@ -214,14 +214,14 @@ LineUpBlends GetLineUpBlends(CVehicle* vehicle, CAnimBlendAssociation* assoc) {
 
     // Used by the anims that open the door (when entering): ramps up around the critical time
     const auto RampUp = [&](double cmp, float edge, float t) -> float {
-        if (cmp <= 0.0) {
+        if (!(cmp > 0.0)) { // NOTE: `jne` after `test ah, 0x41` is also taken for NaN (exe 0x65159B)
             return t < edge ? 0.f : (float)(((x87d)t - edge) / ((x87d)1.0 - edge));
         }
         return t < edge ? t / edge : 1.f;
     };
     // Used by the anims that close the door (when exiting): ramps down around the critical time
     const auto RampDown = [&](float crit, float edge, float t) -> float {
-        if (crit <= 0.f) {
+        if (!(crit > 0.f)) { // NOTE: also taken for NaN (exe 0x651843)
             return t < edge ? 1.f : (float)((x87d)1.0 - ((x87d)t - edge) / ((x87d)1.0 - edge));
         }
         return t < edge ? (float)((x87d)1.0 - (x87d)t / edge) : 0.f;
@@ -241,7 +241,7 @@ LineUpBlends GetLineUpBlends(CVehicle* vehicle, CAnimBlendAssociation* assoc) {
         const auto crit    = critTime();
         const auto critAbs = std::abs(crit);
         float      zBlend  = 0.f;
-        if (critAbs >= 10.f) {
+        if (!(critAbs < 10.f)) { // NOTE: `jp` is also taken for NaN (exe 0x651551)
             const auto edge = critAbs - 11.f;
             zBlend = RampUp((x87d)crit - (x87d)11.0, edge, progress());
         }
@@ -255,7 +255,7 @@ LineUpBlends GetLineUpBlends(CVehicle* vehicle, CAnimBlendAssociation* assoc) {
     case ANIM_ID_CAR_OPEN_RHS:
     case ANIM_ID_CAR_OPEN_LHS_1:
     case ANIM_ID_CAR_OPEN_RHS_1: { // 0x166
-        float zBlend = std::abs(critTime()) >= 10.f ? 1.f : 0.f;
+        float zBlend = !(std::abs(critTime()) < 10.f) ? 1.f : 0.f; // NOTE: NaN gives 1 (exe 0x651627)
         if (IsAT400()) {
             zBlend = 1.f;
         }
@@ -518,7 +518,7 @@ bool CTaskUtilityLineUpPedWithCar::ProcessPed(CPed* ped, CVehicle* vehicle, CAni
             case ANIM_ID_CAR_GETIN_LHS_1:
             case ANIM_ID_CAR_GETIN_RHS_1: {
                 const auto t2 = assoc->GetTimeProgress() * 2.f;
-                k = t2 <= 1.f ? t2 : 1.f;
+                k = !(1.f < t2) ? t2 : 1.f; // NOTE: NaN keeps t2 (exe 0x651B75)
                 break;
             }
             default:

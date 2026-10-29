@@ -990,7 +990,7 @@ bool CStreaming::RemoveReferencedTxds(size_t goalMemoryUsageBytes) {
             continue;
         }
         RemoveModel(modelId);
-        if (ms_memoryUsedBytes < goalMemoryUsageBytes) {
+        if ((int32)ms_memoryUsedBytes < (int32)goalMemoryUsageBytes /* exe: signed (jl) */) {
             return true;
         }
     }

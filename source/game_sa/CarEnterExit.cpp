@@ -256,14 +256,24 @@ bool CCarEnterExit::GetNearestCarDoor(const CPed* ped, const CVehicle* vehicle, 
 
         if (ped->GetTaskManager().GetActiveTask()->GetTaskType() != TASK_COMPLEX_ENTER_CAR_AS_PASSENGER) {
             if (std::abs(vehicle->GetRight().z) < 0.1f) { // Isn't on it's side
-                // Check if ped is 30 degrees to the left of the vehicle
-                // Original code used atan and whatnot, but this achieves the same result
-                if (DotProduct2D(vehicle->GetRight(), ped->GetForward()) > 0 // On the left
-                 && DotProduct2D(vehicle->GetForward(), ped->GetForward()) > x87::cos(PI / 6.f)
-                ) {
-                    if ((ped->IsPlayer() && ped->GetPlayerData()->m_fMoveBlendRatio > 1.5f && doorId == 0) 
-                    || (!ped->IsPlayer() && ped->m_nPedType != PED_TYPE_COP && ped->m_nMoveState == PEDMOVE_RUN && ped->m_pStats->m_nTemper > 65 && doorId == 0)
-                    ) {
+                // 0x652984-0x652A0F: the exe uses the bearing of the ped's POSITION relative to the vehicle (fpatan of (-dx, dy), unrounded) minus the vehicle heading,
+                // wrapped once to [-pi, pi] at PC24, and requires |angle| < pi/6 (0x858F20). It never looks at the ped's forward vector.
+                const auto& pedPos = ped->GetPosition();
+                const auto& vehPos = vehicle->GetPosition();
+                x87d angle = X87R(x87::atan2((x87d)-(pedPos.x - vehPos.x), (x87d)(pedPos.y - vehPos.y)) - vehicle->GetHeadingExt());
+                if (angle > (x87d)PI) {
+                    angle = X87R(angle - (x87d)TWO_PI);
+                } else if (angle < -(x87d)PI) {
+                    angle = X87R(angle + (x87d)TWO_PI);
+                }
+                if (std::abs(angle) < (x87d)(PI / 6.f)) {
+                    // 0x652A15-0x652A7D: player running (blend > 1.5) with doorId 0, or a non-cop ped running with temper > 65 and doorId 0, or the caller already asked for door 18
+                    const bool isPlayer = ped->IsPlayer();
+                    const bool wantsBikeDoor =
+                           (isPlayer && ped->GetPlayerData()->m_fMoveBlendRatio > 1.5f && doorId == 0)
+                        || (!isPlayer && ped->m_nPedType != PED_TYPE_COP && ped->m_nMoveState == PEDMOVE_RUN && ped->m_pStats->m_nTemper > 65 && doorId == 0)
+                        || doorId == 18;
+                    if (wantsBikeDoor) {
                         // 18 here is probably either from eBikeNodes or eQuadNodes, not sure?
                         if (IsRoomForPedToLeaveCar(vehicle, 18)) {
                             doorId = 18;

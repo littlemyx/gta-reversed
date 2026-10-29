@@ -3069,12 +3069,13 @@ float CCamera::CalculateGroundHeight(eGroundHeightType type) {
             bbTopZ = hitEntPos.z + hitBB.m_vecMax.z;
 
             const auto bbsz = hitBB.GetSize();
-            bbBottomZ = std::max(
-                0.f,
-                bbsz.x > 120.f || bbsz.y > 120.f
-                    ? exactGroundHeight
-                    : hitEntPos.z + hitBB.m_vecMin.z
-            );
+            // 0x514CC5-0x514CF1: `if (bottom < 0) bottom = 0` (a NaN stays NaN, unlike std::max)
+            bbBottomZ = (bbsz.x > 120.f || bbsz.y > 120.f)
+                ? exactGroundHeight
+                : hitEntPos.z + hitBB.m_vecMin.z;
+            if (bbBottomZ < 0.f) {
+                bbBottomZ = 0.f;
+            }
         }
         lastCalcCamPos = camPos;
     }

@@ -616,7 +616,7 @@ bool CTaskSimpleGangDriveBy::ProcessPed(CPed* ped) {
         m_pWeaponInfo = CWeaponInfo::GetWeaponInfo(ped->GetActiveWeapon().m_Type, ped->GetWeaponSkill());
     }
 
-    if (!ped->bInVehicle || !ped->m_pVehicle || ped->m_fHealth < 1.f) { // 0x858624 = 1.0f
+    if (!ped->bInVehicle || !ped->m_pVehicle || !(ped->m_fHealth >= 1.f)) { // 0x858624 = 1.0f (exe: fcomp + `test ah, 5` / jnp: health < 1 and NaN abort)
         MakeAbortable(ped, ABORT_PRIORITY_URGENT, nullptr); // vtable +0x18
         return true;
     }
@@ -678,9 +678,10 @@ bool CTaskSimpleGangDriveBy::ProcessPed(CPed* ped) {
     if (StartDriveByAnim(ped)) { // 0x627B20
         auto* a = m_pAnimAssoc;
         if (a->m_Flags & ANIMATION_IS_PLAYING) {
-            const x87d cur = a->m_CurrentTime;
-            if (cur > (double)NOTSA_GLOBAL_EXPR(0x8D2E84, (float), k_8D2E84_0p3) // 0.3f
-                && cur - (x87d)a->m_TimeStep <= (double)NOTSA_GLOBAL_EXPR(0x8D2E84, (float), k_8D2E84_0p3)
+            const float cur = a->m_CurrentTime;
+            const float k03 = NOTSA_GLOBAL_EXPR(0x8D2E84, (float), k_8D2E84_0p3); // 0.3f
+            if (cur > k03
+                && (x87d)cur - (x87d)a->m_TimeStep <= (x87d)k03
                 && (m_nLastCommand == 2 || m_nLastCommand == 3)
             ) {
                 FireGun(ped);
@@ -706,8 +707,8 @@ bool CTaskSimpleGangDriveBy::ProcessPed(CPed* ped) {
                 a->m_Flags |= ANIMATION_IS_PLAYING;
             }
         } else if (m_nLastCommand == 1 && a->m_AnimId == m_nRequiredAnimID
-            && (double)a->m_CurrentTime > (double)t26
-            && (x87d)a->m_CurrentTime - (x87d)a->m_TimeStep <= (double)t26
+            && a->m_CurrentTime > t26
+            && (x87d)a->m_CurrentTime - (x87d)a->m_TimeStep <= (x87d)t26
         ) {
             a->m_Flags &= ~ANIMATION_IS_PLAYING;
             m_pAnimAssoc->SetCurrentTime(t26);
@@ -716,8 +717,8 @@ bool CTaskSimpleGangDriveBy::ProcessPed(CPed* ped) {
         a = m_pAnimAssoc;
         const float t43 = NOTSA_GLOBAL_EXPR(0x8D2E80, (float), k_8D2E80);
         if (a->m_AnimId == m_nRequiredAnimID
-            && (double)a->m_CurrentTime > (double)t43
-            && (x87d)a->m_CurrentTime - (x87d)a->m_TimeStep <= (double)t43
+            && a->m_CurrentTime > t43
+            && (x87d)a->m_CurrentTime - (x87d)a->m_TimeStep <= (x87d)t43
         ) {
             if (ped->GetActiveWeapon().m_State == WEAPONSTATE_RELOADING && m_nNextCommand <= 2) {
                 m_nNextCommand = 2;
@@ -799,11 +800,11 @@ bool CTaskSimpleGangDriveBy::ProcessPed(CPed* ped) {
     // x87: Sum of squares stays in extended precision
     const auto& spd = ped->m_pVehicle->m_vecMoveSpeed; // BUG: Not checked for null (checked above, but `ProcessPlayerPed`/`ProcessAIPed` might have changed it)
     const x87d speedSq = (x87d)spd.x * spd.x + (x87d)spd.y * spd.y;
-    if (speedSq > (double)0.5f) { // 0x858B8C
+    if (speedSq > (x87d)0.5f) { // 0x858B8C
         ped->Say(CTX_GLOBAL_CAR_DRIVEBY_TOO_FAST, 0, 1.f, false, false, false); // 0x1F
         return false;
     }
-    if (speedSq < (double)0.01f) { // 0x858C58
+    if (speedSq < (x87d)0.01f) { // 0x858C58
         ped->Say(CTX_GLOBAL_CAR_DRIVEBY_BURN_RUBBER, 0, 1.f, false, false, false); // 0x1E
     }
     return false;

@@ -145,7 +145,7 @@
 | S11d | rest of S11c | 5 | done 5/5 (2 M, 3 fixed; S11 complete) | TaskSimpleClimb.cpp |
 | S33h | rest of S33g | 1 | done 1/1 (fixed; S33 complete) | WaterLevel.cpp |
 | S41 | phase2: unlisted non-oracle hooks | 40 | partial 31/40 (23 M, 8 fixed) -> S41b | AttractorScanner.cpp, CarAI.cpp, PedAtmAttractor.cpp, PedAttractor.cpp, PedAttractorPedPlacer.cpp, PedLookAtAttractor.cpp ... |
-| S42 | phase2: unlisted non-oracle hooks | 40 | pending | CarAI.cpp, CarEnterExit.cpp, CarGenerator.cpp |
+| S42 | phase2: unlisted non-oracle hooks | 40 | partial 21/40 (9 M, 12 fixed) -> S42b | CarAI.cpp, CarEnterExit.cpp, CarGenerator.cpp |
 | S43 | phase2: unlisted non-oracle hooks | 40 | pending | CarGenerator.cpp, Cheat.cpp, Clothes.cpp, CollisionEventScanner.cpp, ConversationForPed.cpp, Cover.cpp ... |
 | S44 | phase2: unlisted non-oracle hooks | 40 | pending | AnimatedBuilding.cpp, Building.cpp, CustomCarPlateMgr.cpp, Darkel.cpp, DummyObject.cpp, DummyPed.cpp ... |
 | S45 | phase2: unlisted non-oracle hooks | 40 | pending | Bike.cpp, Bmx.cpp, Boat.cpp, EmergencyPed.cpp, Entity.cpp, EntityScanner.cpp ... |
@@ -169,4 +169,6 @@
 | S63 | phase2: unlisted non-oracle hooks | 40 | pending | TaskSimpleNone.cpp, TaskSimpleOnEscalator.cpp, TaskSimpleRunAnim.cpp, TaskSimpleRunAnimLoopedMiddle.cpp, TaskSimpleRunNamedAnim.cpp, TaskSimpleSay.cpp ... |
 | S64 | phase2: unlisted non-oracle hooks | 40 | pending | VehicleAnimGroupData.cpp, VehicleRecording.cpp, VehicleSaveStructure.cpp, Weapon.cpp |
 | S65 | phase2: unlisted non-oracle hooks | 7 | pending | WeaponEffects.cpp, WeaponInfo.cpp, World.cpp |
-| S41b | rest of S41 | 9 | pending | CarAI.cpp, PedAttractorPedPlacer.cpp, RunningScript.cpp matches |
+| S41b | rest of S41 | 9 | done (2 M, 6 fixed, RunningScript row -> S66) | CarAI.cpp, PedAttractorPedPlacer.cpp, RunningScript.cpp matches |
+| S66 | phase2: RunningScript.cpp hooks (missed by the generator: grep without -a) | 15 | pending | RunningScript.cpp |
+| S42b | rest of S42 | 19 | pending | CarAI.cpp, CarEnterExit.cpp |

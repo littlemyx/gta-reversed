@@ -1,0 +1,16 @@
+addr	file	line	cls	fn	oc
+0x465AA0	source/game_sa/Scripts/RunningScript.cpp	90	None	ShutdownThisScript	U
+0x469EB0	source/game_sa/Scripts/RunningScript.cpp	96	None	ProcessOneCommand	U
+0x469F00	source/game_sa/Scripts/RunningScript.cpp	97	None	Process	U
+0x46AF50	source/game_sa/Scripts/RunningScript.cpp	93	None	ScriptTaskPickUpObject	U
+0x486D80	source/game_sa/Scripts/RunningScript.cpp	64	None	LocateCharCommand	U
+0x4870F0	source/game_sa/Scripts/RunningScript.cpp	67	None	LocateCharCharCommand	U
+0x487420	source/game_sa/Scripts/RunningScript.cpp	66	None	LocateCharCarCommand	U
+0x487720	source/game_sa/Scripts/RunningScript.cpp	68	None	LocateCharObjectCommand	U
+0x487A20	source/game_sa/Scripts/RunningScript.cpp	63	None	LocateCarCommand	U
+0x487D10	source/game_sa/Scripts/RunningScript.cpp	65	None	LocateObjectCommand	U
+0x487F60	source/game_sa/Scripts/RunningScript.cpp	72	None	CharInAngledAreaCheckCommand	U
+0x488780	source/game_sa/Scripts/RunningScript.cpp	73	None	FlameInAngledAreaCheckCommand	U
+0x488B50	source/game_sa/Scripts/RunningScript.cpp	70	None	CharInAreaCheckCommand	U
+0x488EC0	source/game_sa/Scripts/RunningScript.cpp	69	None	CarInAreaCheckCommand	U
+0x489150	source/game_sa/Scripts/RunningScript.cpp	71	None	ObjectInAreaCheckCommand	U

@@ -1959,7 +1959,8 @@ void CTheScripts::DrawScriptSpheres() {
 // 0x485E00
 void CTheScripts::HighlightImportantArea(uint32 id, float x1, float y1, float x2, float y2, float z) {
     CVector2D inf, sup;
-    if (x1 < x2) {
+    // Exe 0x485E07/0x485E30: fcomp + `test ah, 0x41; jne` takes the (inf = 1, sup = 2) arm for x1 <= x2 AND for NaN, so the test is !(a > b)
+    if (!(x1 > x2)) {
         inf.x = x1;
         sup.x = x2;
     } else {
@@ -1967,7 +1968,7 @@ void CTheScripts::HighlightImportantArea(uint32 id, float x1, float y1, float x2
         sup.x = x1;
     }
 
-    if (y1 < y2) {
+    if (!(y1 > y2)) {
         inf.y = y1;
         sup.y = y2;
     } else {
@@ -1978,7 +1979,7 @@ void CTheScripts::HighlightImportantArea(uint32 id, float x1, float y1, float x2
     CVector center;
     center.x = (inf.x + sup.x) / 2;
     center.y = (inf.y + sup.y) / 2;
-    center.z = (z <= MAP_Z_LOW_LIMIT) ? CWorld::FindGroundZForCoord(center.x, center.y) : z;
+    center.z = (z <= MAP_Z_LOW_LIMIT) ? CWorld::FindGroundZForCoord(center.x, center.y) + 2.0f : z; // exe 0x485E99: fadd [0x858CA0] = 2.0f (HighlightImportantAngledArea has no such offset)
     CShadows::RenderIndicatorShadow(id, SHADOW_ADDITIVE, nullptr, center, sup.x - center.x, 0.0f, 0.0f, center.y - sup.y, 0);
 }
 

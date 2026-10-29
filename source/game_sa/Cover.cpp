@@ -432,7 +432,7 @@ void CCover::FindCoverPointsForThisBuilding(CBuilding* building) {
                 building,
                 &pos,
                 fx->m_Usage,
-                x87::atan2(-dir.x, dir.y)
+                FindDirFromVector(dir) // 0x6991BB: atan2(-x, y) * 40.7436638 (0x85A778) on the x87 stack, _ftol2 low byte (the product is not rounded to float first)
             );
         }
     }

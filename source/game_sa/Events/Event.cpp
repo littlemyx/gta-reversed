@@ -49,15 +49,29 @@ float CEvent::GetSoundLevel(const CEntity* entity, CVector& position) {
     if ((entity && entity != GetSourceEntity()) || GetLocalSoundLevel() == 0.0f)
         return 0.0f;
 
+    // 0x4B2884-0x4B293A: the distance is raised TO AT LEAST 1.0 (fcomp 1.0, jp keeps it when >= 1; was std::min = at most 1, which cancelled the falloff)
+    // the distance is sqrt((dz^2 + dy^2) + dx^2) (0x4B28E4: the differences are pushed x, y, z, so z is squared first)
+    const auto DistanceZYX = [&](const CVector& to) {
+        const float dx = position.x - to.x, dy = position.y - to.y, dz = position.z - to.z;
+        return (float)std::sqrt(((x87d)dz * dz + (x87d)dy * dy) + (x87d)dx * dx);
+    };
     float level = 1000.0f;
     if (GetEventType() == EVENT_SOUND_QUIET) {
         CVector& sourcePos = static_cast<CEventSoundQuiet*>(this)->m_position;
-        level = std::min((position - sourcePos).Magnitude(), 1.0f);
+        level = DistanceZYX(sourcePos);
+        if (level < 1.0f) {
+            level = 1.0f;
+        }
     } else if (GetSourceEntity()) {
         CVector& sourcePos = GetSourceEntity()->GetPosition();
-        level = std::min((position - sourcePos).Magnitude(), 1.0f);
+        level = DistanceZYX(sourcePos);
+        if (level < 1.0f) {
+            level = 1.0f;
+        }
     }
-    return (GetLocalSoundLevel() - (std::log10f(level * level) * 10.0f)) - (level * ExeRecip(100.0f));
+    // fldlg2; fyl2x on the 24-bit level * level (0x4B2920), the log10 stays unrounded into `* 10.0f`; then (local - that) - level * 0x858C58 (0.01f), each op rounded to 24 bits
+    const auto lg10 = X87R(x87::log10(X87W((x87d)(level * level))) * (x87d)10.0);
+    return (float)X87R(X87R((x87d)GetLocalSoundLevel() - lg10) - (x87d)(level * ExeRecip(100.0f)));
 }
 
 // 0x4AC050

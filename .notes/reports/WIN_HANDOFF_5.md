@@ -58,3 +58,10 @@
 - SYSTEMIC_TODO new: X87-POW, IsPointInSphere order, double literals in float compares, runtime globals vs literals.
 - Flakes: combat.foot.weapon_pickup / chase.no_zombie_cops fixed by COMBAT-FLAKY (16429ddc); new chase.player_shot_at once (maybe heal-every-2.5s side effect) — watch.
 - Pending user decision: delete C:/gta-wt/asm-s04 (busy dir) and old scratch folders.
+
+## 2026-10-29 03:30 checkpoint
+- Gates green: 74b2b51e, 38b266a1, 8ca88bfe, e0b8b173, 877b0375 (C:\gta-play = 877b0375). 20f92a94 failed only PortableWin64 (stale double fwd decl, fixed 5ae8c9b8). Gate on 5ae8c9b8 running.
+- Complete: S02–S10, S13, S16, S18, S19 (trains+vehicles+trailer), S21, S22, S27, S28 (Streaming), S34 (Interior_c). S15 left S15e (1 row LineUpPedWithCar::ProcessPed). S33 left S33b (render). S32 at S32b (agent running).
+- Not started: S30 Camera, S31 Cam. 
+- Brief template (scratchpad asm_brief_template.md) now also: no NaN-only leftovers, no "relies on pool memory", PortableWin64 compile when changing x87d signatures, own dis.sh copy.
+- Pending user decision: delete C:/gta-wt/asm-s04, asm-s19j (busy dirs) and old scratch folders.

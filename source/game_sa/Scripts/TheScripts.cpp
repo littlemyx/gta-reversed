@@ -685,7 +685,7 @@ void CTheScripts::CleanUpThisPed(CPed* ped) {
 
 // 0x486670
 void CTheScripts::CleanUpThisVehicle(CVehicle* vehicle) {
-    if (!vehicle || vehicle->IsCreatedBy(eVehicleCreatedBy::MISSION_VEHICLE)) {
+    if (!vehicle || !vehicle->IsCreatedBy(eVehicleCreatedBy::MISSION_VEHICLE)) { // exe 0x486679: only mission vehicles are released (the port had this inverted)
         return;
     }
 

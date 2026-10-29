@@ -463,13 +463,17 @@ void CReplay::PlayReplayFromHD() {
                 BufferStatus[i] = REPLAYBUFFER_NOT_AVAILABLE;
             }
 
+            CFileMgr::CloseFile(file); // exe 0x460456: the file is closed BEFORE the dir reset / TriggerPlayback / streaming (the port closed it after them)
+            file = nullptr;
             CFileMgr::SetDir(""); // FileMgr dir should be resetted to root before the TriggerPlayback call.
             TriggerPlayback(REPLAY_CAM_MODE_AS_STORED, CVector{}, false);
             bPlayingBackFromFile = true;
             bAllowLookAroundCam = true;
             StreamAllNecessaryCarsAndPeds();
         }
-        CFileMgr::CloseFile(file);
+        if (file) {
+            CFileMgr::CloseFile(file);
+        }
     }
     CFileMgr::SetDir("");
 }

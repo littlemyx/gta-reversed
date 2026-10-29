@@ -1234,6 +1234,15 @@ void CPlayerInfo::StreamParachuteWeapon(bool unk) {
         return;
     }
 
+    if (!unk) { // 0x56EB70: `test al, al; je 0x56EB44` - without the flag the parachute is released right away (same block as the co-op arm)
+        if (m_bParachuteReferenced) {
+            CStreaming::SetModelIsDeletable(MODEL_GUN_PARA);
+            m_bParachuteReferenced = false;
+            m_nRequireParachuteTimer = 0;
+        }
+        return;
+    }
+
     if (m_pPed && m_pPed->IsInVehicle()) {
         if (m_pPed->m_pVehicle->IsSubPlane() || m_pPed->m_pVehicle->IsSubHeli()) {
             if (m_nRequireParachuteTimer <= NOTSA_FTOL(uint32, CTimer::GetTimeStepInMS())) {

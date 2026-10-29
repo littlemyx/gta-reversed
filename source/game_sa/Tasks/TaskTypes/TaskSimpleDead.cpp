@@ -136,7 +136,7 @@ bool CTaskSimpleDead::ProcessPed(CPed* ped) {
         if (timeSinceDeath < 2000) {
             radius = (x87d)0.0;
         } else if (timeSinceDeath > 7000) {
-            radius = (x87d)0.75f;
+            radius = (x87d)0.75000006f; // exe data 0x85B900 = 0x3F400001, not 0.75f
         } else {
             radius = (x87d)(int32)(timeSinceDeath - 2000) * (x87d)0.00015f;
         }
@@ -165,7 +165,8 @@ bool CTaskSimpleDead::ProcessPed(CPed* ped) {
             if (puddleTime <= CTimer::GetTimeInMS() - CTimer::GetPreviousTimeInMS()) {
                 float waterLevel;
                 if (CWaterLevel::GetWaterLevelNoWaves(ped->GetPosition(), &waterLevel, nullptr, nullptr)) {
-                    if (!(ped->GetPosition().z > waterLevel)) { // Also true if equal
+                    if (ped->GetPosition().z <= waterLevel) { // exe: fcomp + `test ah,0x41; jp`: skipped for z > level and for NaN
+
                         m_bBloodPuddleCreated = true;
                     }
                 }

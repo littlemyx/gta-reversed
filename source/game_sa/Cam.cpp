@@ -5907,8 +5907,8 @@ void CCam::Process_FollowPedWithMouse(const CVector& target, float orientation, 
     if (CWorld::ProcessLineOfSight(tgt, m_vecSource, colPoint, hitEntity, true, true, true, true, false, false, true, false)) {
         float nearClip = (tgt - colPoint.m_vecPoint).Magnitude();
         bool  setNearClip = true;
-        if (!hitEntity->GetIsTypePed() || dist - nearClip <= 0.4f) {
-            const bool farEnough = 0.6f <= nearClip;
+        if (!hitEntity->GetIsTypePed() || !(dist - nearClip > 0.4f)) {
+            const bool farEnough = !(nearClip < 0.6f); // NaN => far enough (exe 0x510016: `jp` when !(nearClip < 0.6))
             m_vecSource          = colPoint.m_vecPoint;
             if (farEnough) {
                 setNearClip = false;
@@ -5923,14 +5923,14 @@ void CCam::Process_FollowPedWithMouse(const CVector& target, float orientation, 
             if (!CWorld::ProcessLineOfSight(hitPos, m_vecSource, colPoint, hitEntity, true, true, true, true, false, false, true, false)) {
                 setNearClip = false;
                 const float f = (dist - nearClip) - 0.35f;
-                RwCameraSetNearClipPlane(Scene.m_pRwCamera, f <= 0.9f ? f : 0.9f);
+                RwCameraSetNearClipPlane(Scene.m_pRwCamera, 0.9f < f ? 0.9f : f);
             } else {
                 const auto delta = tgt - colPoint.m_vecPoint;
                 const x87d mag = delta.Magnitude();
                 m_vecSource      = colPoint.m_vecPoint;
-                if (0.6f <= mag) {
+                if (!(mag < 0.6f)) {
                     setNearClip = false;
-                } else if (0.05f <= mag - 0.3f) {
+                } else if (!(0.05f > mag - 0.3f)) {
                     nearClip = (float)(mag - 0.3f);
                 } else {
                     nearClip = 0.05f;

@@ -960,20 +960,21 @@ void CRadar::ShowRadarTrace(float x, float y, uint32 size, CRGBA color) {
     Limit(x, y);
     RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RWRSTATE(NULL));
 
-    // Draw background rect - Since it's 1px bigger on each side when we draw the next rect on top of it will act as a border
+    // The exe builds both rects as {left, bottom, right, top} = {x - s, y + s, x + s, y - s} (screen y grows downwards),
+    // the border one is 1px bigger on every side (x87 does (x - s) - 1 in float steps) and uses black with the trace alpha.
+    const auto s = float(size);
     CSprite2d::DrawRect({
-        x - float(size - 1),
-        y - float(size - 1),
-        x + float(size + 1),
-        y + float(size + 1)
+        (x - s) - 1.f,
+        (y + s) + 1.f,
+        (x + s) + 1.f,
+        (y - s) - 1.f
     }, { 0, 0, 0, color.a });
 
-    // Now draw actual rect on top of it
     CSprite2d::DrawRect({
-        x - float(size),
-        y - float(size),
-        x + float(size),
-        y + float(size)
+        x - s,
+        y + s,
+        x + s,
+        y - s
     }, color);
 }
 

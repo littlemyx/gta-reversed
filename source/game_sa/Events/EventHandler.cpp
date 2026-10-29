@@ -3090,7 +3090,7 @@ void CEventHandler::ComputeSpecialResponse(CEventSpecial* e, CTask* tactive, CTa
 void CEventHandler::ComputeVehicleCollisionResponse(CEventVehicleCollision* e, CTask* tactive, CTask* tsimplest) {
     m_EventResponseTask = [&]() -> CTask* {
         if (!e->m_vehicle) {
-            return nullptr;
+            return m_EventResponseTask; // 0x4BD6C6: left untouched
         }
 
         m_Ped->bPushedAlongByCar = false;
@@ -3107,8 +3107,10 @@ void CEventHandler::ComputeVehicleCollisionResponse(CEventVehicleCollision* e, C
             }
         };
 
-        const auto eVehVelSq = e->m_vehicle->GetMoveSpeed().SquaredMagnitude();
-        if (eVehVelSq >= sq(0.5f)) { // 0x4BD754
+        // 0x4BD6E0..0x4BD711: the speed is (float)sqrt(x*x + y*y + z*z) summed in extended precision, and the tests are strict `> 0.05` / `> 0.001`
+        const auto& vehMoveSpeed = e->m_vehicle->GetMoveSpeed();
+        const float eVehSpeed    = (float)std::sqrt((x87d)vehMoveSpeed.x * vehMoveSpeed.x + (x87d)vehMoveSpeed.y * vehMoveSpeed.y + (x87d)vehMoveSpeed.z * vehMoveSpeed.z);
+        if (eVehSpeed > 0.05f) { // 0x4BD754 (the port compared the squared speed against 0.25)
             if (m_Ped->m_pEntityIgnoredCollision != e->m_vehicle) { // Moved up here from 0x4BD861
                 m_Ped->bPushedAlongByCar = true;
             }
@@ -3128,10 +3130,15 @@ void CEventHandler::ComputeVehicleCollisionResponse(CEventVehicleCollision* e, C
 
         if ((!m_Ped->IsPlayer() || m_Ped->GetTaskManager().GetTaskPrimary(TASK_PRIMARY_PRIMARY)) && tsimplest && CTask::IsGoToTask(tsimplest)) {
             if (e->m_vehicle == m_Ped->m_standingOnEntity) {
-                if (std::abs(m_Ped->m_fCurrentRotation - m_Ped->m_fCurrentRotation) < 0.01f && CPedGeometryAnalyser::CanPedJumpObstacle(*m_Ped, *e->m_vehicle)) {
+                // 0x4BD8D2..0x4BD925: |m_fCurrentRotation - m_fAimingRotation| < 0.01 (the port subtracted the rotation from itself); otherwise nothing at all (no walk-round)
+                if (std::abs(m_Ped->m_fCurrentRotation - m_Ped->m_fAimingRotation) < 0.01f && CPedGeometryAnalyser::CanPedJumpObstacle(*m_Ped, *e->m_vehicle)) {
                     return new CTaskComplexJump{}; // 0x4BD925
                 }
-            }    
+                return m_EventResponseTask;
+            }
+            if (e->m_moveState == PEDMOVE_STILL) { // 0x4BD93A
+                return m_EventResponseTask;
+            }
             return new CTaskComplexWalkRoundCar{ // 0x4BD997
                 m_Ped->GetGroup()
                     ? PEDMOVE_RUN
@@ -3158,7 +3165,7 @@ void CEventHandler::ComputeVehicleCollisionResponse(CEventVehicleCollision* e, C
                     3,
                     false
                 );
-                return nullptr;
+                return m_EventResponseTask;
             }
             m_Ped->AsPlayer()->AnnoyPlayerPed(false);
             g_ikChainMan.LookAt(
@@ -3174,20 +3181,19 @@ void CEventHandler::ComputeVehicleCollisionResponse(CEventVehicleCollision* e, C
                 3,
                 false
             );
-            switch (m_Ped->GetActiveWeapon().GetType()) {
-            case WEAPON_GOLFCLUB:
-            case WEAPON_KNIFE:
-            case WEAPON_BRASSKNUCKLE:
-            case WEAPON_UNARMED:
-                return new CTaskSimpleShakeFist{};
+            // 0x4BDA1E..0x4BDAA1: unarmed, or a weapon in slot 2 / 4 / 1; the fist task goes into the partial-anim slot (+0x30), not the event response
+            const auto wt   = m_Ped->GetActiveWeapon().GetType();
+            const auto slot = wt != WEAPON_UNARMED ? m_Ped->GetWeaponSlot(wt) : -1;
+            if (wt == WEAPON_UNARMED || slot == 2 || slot == 4 || slot == 1) {
+                m_PartialAnimTask = new CTaskSimpleShakeFist{};
             }
         } else {
-            if (eVehVelSq >= sq(0.001f)) {
+            if (eVehSpeed > 0.001f) {
                 IncrementAngerIfPlayerIsDriver();
                 return new CTaskComplexHitPedWithCar{ e->m_vehicle, e->m_fDamageIntensity };
             }
         }
-        return nullptr;
+        return m_EventResponseTask;
     }();
 }
 

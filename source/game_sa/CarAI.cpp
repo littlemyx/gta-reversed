@@ -398,7 +398,10 @@ float CCarAI::GetCarToGoToCoorsStraightLine(CVehicle* veh, const CVector& coors,
 
 // 0x41D350
 float CCarAI::GetCarToParkAtCoors(CVehicle* veh, const CVector& coors) {
-    veh->vehicleFlags.bCanPark = true;
+    // 0x41D35B: the exe first calls GetCarToGoToCoors(veh, coors, DRIVING_STYLE_STOP_FOR_CARS, true) (result dropped); 0x41D368: it sets
+    // byte 0x42C bit 2 (bParking), not bCanPark (bit 3)
+    GetCarToGoToCoors(veh, coors, DRIVING_STYLE_STOP_FOR_CARS, true);
+    veh->vehicleFlags.bParking = true;
     veh->m_autoPilot.SetCruiseSpeed(10);
     return (veh->GetPosition2D() - coors).Magnitude();
 }

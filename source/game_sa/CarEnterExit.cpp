@@ -1189,7 +1189,9 @@ bool CCarEnterExit::SetPedInCarDirect(CPed* ped, CVehicle* vehicle, int32 doorId
 
     const auto psgrIdx = ComputePassengerIndexFromCarDoor(vehicle, doorId);
     assert(psgrIdx != -1); // I really doubt this can happen, if it does, an `if` has to be added
-    rng::for_each(vehicle->GetPassengers() | rng::views::take((size_t)psgrIdx), SetMutalAcquaintanceWith); // Set with all other passengers up to the ped's seat
+    if (psgrIdx > 0) { // exe 0x650436: `test ebx, ebx; jle` - a -1 index (unknown door) sets nobody (the cast to size_t would take every passenger)
+        rng::for_each(vehicle->GetPassengers() | rng::views::take((size_t)psgrIdx), SetMutalAcquaintanceWith); // Set with all other passengers up to the ped's seat
+    }
 
     return true;
 }

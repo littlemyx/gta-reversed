@@ -285,8 +285,10 @@ void CTheScripts::ReadObjectNamesFromScript() {
 
 // 0x486780
 void CTheScripts::UpdateObjectIndices() {
-    // First one is ignored because it's empty.
-    for (auto& obj : UsedObjectArray | std::views::drop(1)) {
+    // First one is ignored because it's empty. (exe 0x486786-0x4867BA: only the NumberOfUsedObjects used entries, the index is reset to -1 first, so a missing model leaves -1)
+    for (uint16 i = 1; i < NumberOfUsedObjects; i++) {
+        auto& obj = UsedObjectArray[i];
+        obj.nModelIndex = -1;
         CModelInfo::GetModelInfo(obj.szModelName, &obj.nModelIndex);
     }
 }

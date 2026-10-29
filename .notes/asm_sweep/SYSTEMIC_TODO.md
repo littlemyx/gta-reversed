@@ -18,3 +18,6 @@
 
 ## Runtime globals vs literals (from S07b/S15b)
 - [ ] Exe reads .data globals where the port has literals: flee tolerance 0xC18CF0 (fixed in S07b), gun flash duration 0x8D2E88 (init 250, port literal 250). Check whether any exe code writes these globals; if yes, port them as globals.
+
+## CRect literals from exe raw stores (from S32d)
+- [ ] Exe often stores rect floats directly at +0/+4/+8/+0xC (no ctor). Port CRect(a,b,c,d) puts (a,d,c,b) in memory (same as exe ctor 0x4041C0). Rule: exe memory (p0,p1,p2,p3) -> port literal {p0,p3,p2,p1}. S32/S32b got this wrong (fixed in S32d). Grep other sweep commits that rewrote CRect literals (Hud, Frontend, Sprite, Font) and re-check.

@@ -1,0 +1,29 @@
+addr	function	verdict	asm range	note	fix commit
+0x587FB0	CRadar::Initialise	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x5827D0	CRadar::LoadTextures	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x5828A0	CRadar::DrawLegend	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x585940	CRadar::Shutdown	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x584960	CRadar::DrawYouAreHereSprite	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x584B50	CRadar::RequestMapSection	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x584BB0	CRadar::RemoveMapSection	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x584BF0	CRadar::RemoveRadarSections	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x585FF0	CRadar::DrawRadarSprite	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x586B00	CRadar::DrawMap	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x586880	CRadar::DrawRadarMap	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x5858D0	CRadar::StreamRadarSections-vec	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x584850	CRadar::DrawRotatingRadarSprite	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x585700	CRadar::DrawRadarMask	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x5D53C0	CRadar::Load	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x5D5860	CRadar::Save	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x583F40	CRadar::ShowRadarTrace	DEVIATION	0x583F40-0x584064 (all)	border rect was {x-(s-1), y-(s-1), x+s+1, y+s+1} (1px border only on two sides, inner rect bottom/top swapped); exe: border {x-s-1, y+s+1, x+s+1, y-s-1} black with trace alpha, inner {x-s, y+s, x+s, y-s}; Limit(x,y) (m_bDrawingMap, W*recip*x) and RwRenderStateSet(TEXTURERASTER,0) match. Not called from port code	f54ae9b5
+0x584070	CRadar::ShowRadarTraceWithHeight	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x586D60	CRadar::DrawCoordBlip	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x587D20	CRadar::SetupAirstripBlips	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x588050	CRadar::DrawBlips	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x5853D0	CRadar::DrawAreaOnRadar	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x584C50	CRadar::StreamRadarSections-xy	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x585BF0	CRadar::Draw3dMarkers	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x586110	CRadar::DrawRadarSection	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x586520	CRadar::DrawRadarSectionMap	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x586650	CRadar::DrawRadarGangOverlay	NOT_REACHED	-	not compared (budget spent on S34c)	-
+0x587000	CRadar::DrawEntityBlip	NOT_REACHED	-	not compared (budget spent on S34c)	-

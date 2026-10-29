@@ -1510,7 +1510,7 @@ void CCamera::CameraGenericModeSpecialCases(CPed* targetPed) {
         return;
     }
 
-    m_pExtraEntity[m_nExtraEntitiesCount++] = targetPed;
+    m_pExtraEntity[m_nExtraEntitiesCount++] = taskHold->m_pEntityToHold; // exe 0x50CD56: the held entity (`[taskHold + 8]`), not the ped
 }
 
 // 0x50CD80

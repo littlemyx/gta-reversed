@@ -110,8 +110,8 @@ bool CPedAttractor::RegisterPed(CPed* ped) {
     if (m_AttractPeds.size() + m_ArrivedPeds.size() >= m_MaxNumPeds) {
         return false;
     }
-    m_ArrivedPeds.emplace_back(ped);
-    const auto idx = (int32)(m_ArrivedPeds.size() - 1);
+    m_AttractPeds.emplace_back(ped); // 0x5EEED1 (ecx = the +0xC array, i.e. `m_AttractPeds`): the ped is on its way, not in the queue yet
+    const auto idx = (int32)(m_ArrivedPeds.size()); // 0x5EEED6: the next free queue slot
     SetTaskForPed(ped, new CTaskComplexGoToAttractor{
         this,
         ComputeAttractPos(idx),

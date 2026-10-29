@@ -1862,7 +1862,7 @@ void CEventHandler::ComputePedCollisionWithPedResponse(CEvent* e, CTask* tactive
     const float dotPed = (d.z * pedMat.GetForward().z + d.y * pedMat.GetForward().y) + d.x * pedMat.GetForward().x;
     const float dotVic = (d.z * vicMat.GetForward().z + d.y * vicMat.GetForward().y) + d.x * vicMat.GetForward().x;
 
-    const bool victimIsBehindPed = dotPed < 0.f;  // Victim is behind the ped
+    const bool victimIsBehindPed = !(dotPed >= 0.f); // Victim is behind the ped (0x4BDC14: `test ah,1` => NaN also counts as behind)
     const bool pedIsInFrontOfVic = dotVic <= 0.f; // Ped is in front of the victim
 
     const int32 pedMove = (int32)ev->GetMoveState();
@@ -1886,10 +1886,14 @@ void CEventHandler::ComputePedCollisionWithPedResponse(CEvent* e, CTask* tactive
     };
     // Should the ped fall (if not just be hit)
     const auto ShouldFall = [&] {
+        // 0x4BE365 / 0x4BE5A5: `fcomp; test ah,0x41; jne` => a NaN weakness counts as "not above"
         const float pedWeak = ped->m_pStats->m_fDefendWeakness;
         const float vicWeak = victim->m_pStats->m_fDefendWeakness;
-        if (pedWeak <= 1.5f || vicWeak <= 1.5f) {
-            return pedWeak > 1.5f;
+        if (!(pedWeak > 1.5f)) {
+            return false;
+        }
+        if (!(vicWeak > 1.5f)) {
+            return true;
         }
         return pedWeak > vicWeak;
     };

@@ -90,7 +90,7 @@ public:
     template<typename... Args>
     void emplace_back(Args&&... args) {
         if (_Last == _End) {
-            reserve(size() * 150 / 100); // Geometric growth with K=1.5
+            reserve(std::max<size_t>(size() * 150 / 100, size() + 1)); // Geometric growth with K=1.5 (at least one slot: 0 and 1 elements would not grow otherwise)
         }
         std::construct_at(_Last++, std::forward<Args>(args)...);
     }

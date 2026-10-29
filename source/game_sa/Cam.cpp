@@ -4105,7 +4105,7 @@ bool CCam::Process_DW_CamManCam(bool) {
     }
 
     const int32 duration = (int32)(gDWCineyCamEndTime - gDWCineyCamStartTime);
-    float       t        = (float)(int32)(now - gDWCineyCamStartTime) / (float)duration;
+    float       t        = (float)((x87d)(int32)(now - gDWCineyCamStartTime) / (x87d)duration); // exe 0x51B3B4: fild/fidiv, one rounding
 
     if (!gbExitCam[CAM_ID]) {
         auto dir = dest - s_lampPos;
@@ -4116,7 +4116,7 @@ bool CCam::Process_DW_CamManCam(bool) {
         src.z = dir.z * 1.0f + src.z;
     }
 
-    auto k = (float)(std::sqrt((x87d)sq(dest.y - src.y) + (x87d)sq(dest.z - src.z) + (x87d)sq(dest.x - src.x)) / (x87d)30.0);
+    auto k = (float)(std::sqrt((x87d)sq(dest.x - src.x) + (x87d)sq(dest.z - src.z) + (x87d)sq(dest.y - src.y)) / (x87d)30.0); // exe 0x51B5C0: the squares add x, z, y
     k      = std::clamp(k, 0.0f, 1.0f);
     float fov = (float)(((x87d)15.0 - (x87d)70.0) * (X87R(x87::sin(((x87d)270.0 - (x87d)k * (x87d)180.0) * (x87d)0.017453292f) + 1.0)) * (x87d)0.5 + (x87d)70.0);
     if (t < 0.1f) {
@@ -4150,8 +4150,10 @@ bool CCam::Process_DW_CamManCam(bool) {
         }
     }
 
-    // `FUN_00420800` is `max(a, b)`; the result is always >= 0.2 so the `< 0` branch of the original is dead
-    const float shake = std::min(std::max(vel.Magnitude() * 8.0f, 0.2f), 1.0f);
+    // exe 0x51B77D-0x51B808: |vel| adds x, z, y; `FUN_00420800` is `a > b ? a : b` (NaN takes 0.2, the `< 0` branch is dead); the result is capped at 1.0 on `m > 1.0`
+    const float speedMag = std::sqrt(vel.x * vel.x + vel.z * vel.z + vel.y * vel.y) * 8.0f;
+    const float shakeMin = speedMag > 0.2f ? speedMag : 0.2f;
+    const float shake    = shakeMin > 1.0f ? 1.0f : shakeMin;
     Finalise_DW_CineyCams(src, dest, 0.0f, fov, 10.0f - fov * 0.0142857144f * 9.69999981f, shake);
     return true;
 }

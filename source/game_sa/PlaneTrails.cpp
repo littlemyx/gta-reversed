@@ -22,7 +22,7 @@ void CPlaneTrails::Init() {
 // 0x7173A0
 void CPlaneTrails::Render() {
     const CColourSet& cc            = CTimeCycle::m_CurrentColours;
-    const float maxColorComponent   = (float)std::max({ cc.m_nSkyBottomBlue, cc.m_nSkyBottomGreen, cc.m_nSkyBottomRed }) * (1.0f / 255.0f); // Originally `/ 256.f`, but that value is impossible for a byte, so `255.f` it is.
+    const float maxColorComponent   = (float)std::max({ cc.m_nSkyBottomBlue, cc.m_nSkyBottomGreen, cc.m_nSkyBottomRed }) * ExeRecip(256.0f); // 0x7173A0: exe constant 0x859AA0 = 1/256 (the sky colour is a uint16 holding 0..255); the port had 1/255
     const float visibilityIntensity = std::min({ 1.0f - CWeather::CloudCoverage, 1.0f - CWeather::Foggyness, 1.0f - CWeather::Rain });
     const float finalIntensity      = std::min(maxColorComponent, visibilityIntensity);
 

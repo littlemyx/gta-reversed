@@ -1,0 +1,41 @@
+addr	function	verdict	asm range	note	fix commit
+?	RunningScript.cpp row (no address)	NOT_REACHED	-	generator row without an address	-
+0x5FFF90	Clear	MATCH	0x5FFF90-0x5FFFCE	25.0f / 15*15 per slot	-
+0x5FFFD0	AddEffect	MATCH	0x5FFFD0-0x60017A	rain/shelter polarity, z,y,x sum, NaN arms, radius test, slot update as exe	-
+0x600180	GetBestEffect	MATCH	0x600180-0x600240	slot-4 shortcut, strict < compare	-
+0x6034B0	ScanForAttractorsInPtrList	MATCH	0x6034B0-0x603562	enableDisabled carried across entities as in exe	-
+0x603570	GetClosestPedToEffect	MATCH	0x603570-0x603715	inlined IsPedTypeInList equals the 0x5FE960 body	-
+0x6060A0	ScanForAttractors	MATCH	0x6060A0-0x606570	sector range/clamps, timer, scripted loop, event construction	-
+0x5EE4D0	GetType	MATCH	0x5EE4D0	ATM = 0	-
+0x5E9600	ComputeDeltaPos	MATCH	0x5E9600-0x5E9637	rand*recip*(hi-lo)+lo	-
+0x5E9640	ComputeDeltaHeading	MATCH	0x5E9640-0x5E9677	same form	-
+0x5EA110	ComputeAttractPos	FIXED	0x5EA110-0x5EA1BC	offset is (n*dir.c)*spacing, was (spacing*n)*dir.c (float rounding)	9aff650d
+0x5EA1C0	ComputeAttractHeading	FIXED	0x5EA1C0-0x5EA214	m_UseDir was overwritten with m_QueueDir (the exe only selects the direction)	896e0149
+0x5EAF60	AbortPedTasks	MATCH	0x5EAF60-0x5EAFC1		-
+0x5EC410	Destructor	MATCH	0x5EC410-0x5EC4A9	entity ref cleanup + free of the 3 arrays	-
+0x5EC5B0	DeRegisterPed	FIXED	0x5EC5B0-0x5EC64F	searched the queue and erased from the attract list (wrong list, UB); exe searches m_AttractPeds, else BroadcastDeparture; pair erase guarded	27548fe2
+0x5EDFB0	Constructor	MATCH	0x5EDFB0-0x5EE184	strcpy_s vs exe strcpy of the 8 byte script name: UNSURE only for an unterminated 8 char name	-
+0x5EECA0	SetTaskForPed	FIXED	0x5EECA0-0x5EEE1E	ms_tasks.push_back(task) missing on both paths; old task erase/delete guarded	b38ec8e5
+0x5EEE30	RegisterPed	FIXED	0x5EEE30-0x5EEF6E	pushed into the queue with slot size-1; exe pushes into m_AttractPeds with slot = queue size	1b263ef6
+0x5EEF80	BroadcastArrival	FIXED	0x5EEF80-0x5EF15F	followers were given m_MoveState, exe passes literal 4 (WALK); attract-list erase guarded	bde48135
+0x5EF160	BroadcastDeparture	FIXED	0x5EF160-0x5EF41D	worked on m_AttractPeds with slot i; exe works on the queue (m_ArrivedPeds) with slot i-1, erases the queue entry, then re-routes the attract list	dfb9f6d8
+0x5EA390	PlacePedAtEffect	NOT_REACHED	-	budget	-
+0x5EE9C0	GetType	MATCH	0x5EE9C0	LOOK_AT = 6	-
+0x5EEB60	GetType	MATCH	0x5EEB60	PARK = 8	-
+0x5EE740	GetType	MATCH	0x5EE740	PIZZA = 3	-
+0x5EE750	GetHeadOfQueueWaitTime	MATCH	0x5EE750	2000.0f	-
+0x5EEA90	GetType	MATCH	0x5EEA90	SCRIPTED = 7	-
+0x5EE5A0	GetType	MATCH	0x5EE5A0	SEAT = 1	-
+0x5EF420	GetDisplacement	FIXED	0x5EF420-0x5EF56B	min-distance test: (dz2+dy2)+dx2 with unrounded dx,dy (port: dx2+dy2+dz2 on floats)	f27b123a
+0x5EF570	BroadcastDeparture	MATCH	0x5EF570-0x5EF709	shelter variant	-
+0x5EFC40	ComputeAttractPos	MATCH	0x5EFC40-0x5EFC93	shelter variant	-
+0x5EEC30	GetType	MATCH	0x5EEC30	STEP = 9	-
+0x5EE670	GetType	MATCH	0x5EE670	STOP = 2	-
+0x5EE8F0	GetType	MATCH	0x5EE8F0	TRIGGER_SCRIPT = 5	-
+0x41BFA0	BackToCruisingIfNoWantedLevel	NOT_REACHED	-	budget	-
+0x41C070	AddPoliceCarOccupants	NOT_REACHED	-	budget	-
+0x41C4A0	AddAmbulanceOccupants	NOT_REACHED	-	budget	-
+0x41C600	AddFiretruckOccupants	NOT_REACHED	-	budget	-
+0x41C760	TellOccupantsToLeaveCar	NOT_REACHED	-	budget	-
+0x41C8A0	TellCarToRamOtherCar	NOT_REACHED	-	budget	-
+0x41C900	TellCarToBlockOtherCar	NOT_REACHED	-	budget	-

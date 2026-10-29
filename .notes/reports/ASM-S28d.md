@@ -1,5 +1,5 @@
 # ASM-S28d (Streaming.cpp, 23 rows + Task 0) - 2026-10-29
-Result: 23 compared (7 DEVIATION fixed + Task 0, 16 MATCH, 0 UNSURE), 0 NOT_REACHED. Table: S28d.result.tsv.
+Result: 23 compared (6 DEVIATION fixed + Task 0, 17 MATCH, 0 UNSURE), 0 NOT_REACHED. Table: S28d.result.tsv.
 Task 0 (29006e97): AddLodsToRequestList (0x40C520) truncates (_ftol of x*0.005+15) the four LOD sector indices; the port floored. Now NOTSA_FTOL of CWorld::GetLodSectorfX/Y (differs for sector floats in (-1,0): end index 0 vs -1).
 Fixes:
 - 1554acf3 RemoveCurrentZonesModels (0x40B080): per gang only the first 5 slots of the ped group are made deletable (2000 skipped); port walked the whole group count.

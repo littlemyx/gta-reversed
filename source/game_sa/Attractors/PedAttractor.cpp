@@ -206,7 +206,11 @@ void CPedAttractor::ComputeAttractTime(int32 unused, bool time1_or_time2, float&
 // 0x5EA110
 void CPedAttractor::ComputeAttractPos(int32 pedId, CVector& outPos) {
     if (m_Fx) {
-        outPos = m_Pos - m_Spacing * (float)pedId * m_QueueDir;
+        // 0x5EA121: `(n * dir.c) * spacing` per component (not `(spacing * n) * dir.c`)
+        const auto n = (float)pedId;
+        outPos.x = m_Pos.x - (n * m_QueueDir.x) * m_Spacing;
+        outPos.y = m_Pos.y - (n * m_QueueDir.y) * m_Spacing;
+        outPos.z = m_Pos.z - (n * m_QueueDir.z) * m_Spacing;
 
         if (pedId) {
             outPos.x += ComputeDeltaPos();

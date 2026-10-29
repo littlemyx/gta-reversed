@@ -1,0 +1,13 @@
+addr	function	verdict	asm range	note	fix commit
+0x518500	CCam::ProcessArrestCamOne	MATCH	0x518500-0x51921C (full)	reset: mode lists (ped lucky {1,2,3,2,8}, ped {1,3,2,8}, veh lucky {2,8,3,2}, veh {8,3,2}), rnd>0.5 / >0.65f via fild*0x858C7C extended, free-cam pick fst-float then 1/2/3/4 jp arms, loop exit on mode!=0, found = call result incl. cop path, nearby-ped search (task 0x44C), ApplyCamPos/SetupVectors cross order; non-reset: mode 1 setne, mode 2 maxZ = ts*0.1f+src.z (fcomp 0x41 arm), modes 4-7 dir/-1/testPos 0.5/TestSphere 9 args/move 0.1f with float-rounded x term/up 0.05f/ground 0.7f, mode 8 front.z=0 + right*10 sums + move; not-apply Avoid only. exe camPos is uninitialised stack (port inits to m_vecSource; no observable effect)	-
+0x512B10	CCam::Process_AttachedCam	MATCH	0x512B10-0x512E90 (full)	fov 70, angle*0x8595EC float, TransformVector 0x59C790 + pos, look-at vs target front, cross order right then up, water test (level-0.3 > z), inlined underwater blur == ApplyUnderwaterMotionBlur, final up = float(up*cos) + right*sin (x unrounded, y/z float-rounded), pIgnoreEntity=0	-
+0x525E50	CCam::Process_Cam_TwoPlayer	NOT_REACHED	-	budget	-
+0x51B850	CCam::Process_DW_BirdyCam	NOT_REACHED	-	budget	-
+0x51B120	CCam::Process_DW_CamManCam	NOT_REACHED	-	budget	-
+0x51A740	CCam::Process_DW_HeliChaseCam	NOT_REACHED	-	budget (init loop / cur / dest / dist tail 0x51A740-0x51B020 still open; 0x51B020-0x51B0F0 done in S31f)	-
+0x512110	CCam::Process_WheelCam	NOT_REACHED	-	budget	-
+0x50A0A0	CCam::LimitPrecision-float	MATCH	0x50A0A0-0x50A11F (full)	pow(10,d+1)*v, v<0 ? -5 : +5 (jp arm: NaN adds), *0.1f, modf via double, /pow(10,d), result left unrounded in st0 but callers store float	-
+0x516010	CCam::GetArrestCamPosBehindTarget	MATCH	0x516010-0x516189 (full)	dir normalise, 5*dir + tgt (extended), side cross(dir,up)*10 added, z = tgt.z+5 float, ground 0.7f+groundZ, returns true; null checks	-
+0x514030	CCamera::AvoidTheGeometry	MATCH	0x514030-0x5147F8 (full)	dx extended, len sums (dz2+dx2)+dy2, jp arms for heading/pitch zero tests, fcos/fsin unspilled pitch, out = dst - dir*len, both LOS arg sets, Dist sums (x2+z2)+y2 with fcomp 5 arm, near clip 0.5/0.15 arms, tan*aspect*1.15 radius, TestSphere 9 args, depth sum (x,z,y) with 0.15/0.9 arms, penetration, flip test, push term order, ped timer branches (NaN arms), cross.z>0 dirn, pow(0.9,ts), WellBufferMe args, final scale	-
+0x511B50	CCam::Process_Rocket	NOT_REACHED	-	budget (head 0x511B50-0x511EC2 not re-compared)	-
+0x526FC0	CCam::Process	NOT_REACHED	-	budget (4 duplicate rows)	-

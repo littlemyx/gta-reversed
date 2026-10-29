@@ -216,10 +216,10 @@ enum class eScriptSearchLightState : uint8 {
 struct tScriptSearchlight {
     bool                    m_bUsed{};
     bool                    m_bClipIfColliding{};
-    bool                    m_bEnableShadow{};
+    bool                    m_bEnableShadow{true}; // exe CTheScripts::Init 0x4692D0: byte +2 = 1
     eScriptSearchLightState m_nCurrentState : 7{};
     bool                    m_SomethingFlag : 1{};
-    int16                   m_nId{};
+    int16                   m_nId{1}; // exe CTheScripts::Init 0x4692DD: 1
     CVector                 m_Origin{};
     CVector                 m_Target{};
     float                   m_fTargetRadius{};

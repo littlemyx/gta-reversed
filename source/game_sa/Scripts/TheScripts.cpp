@@ -376,18 +376,27 @@ uint32 CTheScripts::AddScriptSearchLight(CVector start, CEntity* entity, CVector
     assert(it != ScriptSearchLightArray.end()); // In vanilla game does OOB access.
 
     const auto idx = std::distance(ScriptSearchLightArray.begin(), it);
-    RemoveScriptSearchLight(idx);
 
-    new (&ScriptSearchLightArray[idx]) tScriptSearchlight{
-        .m_bUsed            = true,
-        .m_bEnableShadow    = true,
-        .m_SomethingFlag    = true,
-        .m_Origin           = start,
-        .m_Target           = target,
-        .m_fTargetRadius    = targetRadius,
-        .m_fBaseRadius      = baseRadius,
-        .m_AttachedEntity   = entity,
-    };
+    // Exe 0x493000-0x49315E: field-wise init of the free slot. m_nId and m_TargetSpot / vf64 / vf70 keep their old values
+    // (the port placement-new'ed a default struct: id back to 0, so every handle of a slot was the same number and stale handles stayed valid)
+    auto& sl = ScriptSearchLightArray[idx];
+    sl.m_bClipIfColliding = false;
+    sl.m_nCurrentState    = eScriptSearchLightState::STATE_0;
+    sl.m_SomethingFlag    = true;
+    sl.m_bUsed            = true;
+    sl.m_bEnableShadow    = true;
+    sl.m_Origin           = start;
+    sl.m_Target           = target;
+    sl.m_fTargetRadius    = targetRadius;
+    sl.m_fBaseRadius      = baseRadius;
+    sl.m_PathCoord1       = CVector{};
+    sl.m_PathCoord2       = CVector{};
+    sl.m_fPathSpeed       = 0.f;
+    sl.m_FollowingEntity  = nullptr;
+    sl.m_AttachedEntity   = entity;
+    sl.m_Tower            = nullptr;
+    sl.m_Housing          = nullptr;
+    sl.m_Bulb             = nullptr;
     ++NumberOfScriptSearchLights;
 
     return CTheScripts::GetNewUniqueScriptThingIndex(idx, SCRIPT_THING_SEARCH_LIGHT);
@@ -998,10 +1007,31 @@ void CTheScripts::RemoveScriptEffectSystem(int32 scriptIndex) {
 // 0x493160
 void CTheScripts::RemoveScriptSearchLight(int32 scriptIndex) {
     const auto i = GetActualScriptThingIndex(scriptIndex, eScriptThingType::SCRIPT_THING_SEARCH_LIGHT);
-    if (i != -1) {
-        ScriptSearchLightArray[i] = tScriptSearchlight{};
-        --NumberOfScriptSearchLights;
+    if (i == -1) {
+        return;
     }
+
+    // Exe 0x493160-0x493275: field-wise reset. m_nId (keeps counting up, so stale handles stay invalid) and the trailing m_TargetSpot / vf64 / vf70 are NOT touched,
+    // m_bEnableShadow becomes true (the port wrote a whole default `tScriptSearchlight{}`: id 0, shadow off, spots zeroed)
+    auto& sl = ScriptSearchLightArray[i];
+    sl.m_bUsed            = false;
+    sl.m_bClipIfColliding = false;
+    sl.m_bEnableShadow    = true;
+    sl.m_nCurrentState    = eScriptSearchLightState::STATE_0;
+    sl.m_SomethingFlag    = false;
+    sl.m_Origin           = CVector{};
+    sl.m_Target           = CVector{};
+    sl.m_fTargetRadius    = 0.f;
+    sl.m_fBaseRadius      = 0.f;
+    sl.m_PathCoord1       = CVector{};
+    sl.m_PathCoord2       = CVector{};
+    sl.m_fPathSpeed       = 0.f;
+    sl.m_FollowingEntity  = nullptr;
+    sl.m_AttachedEntity   = nullptr;
+    sl.m_Tower            = nullptr;
+    sl.m_Housing          = nullptr;
+    sl.m_Bulb             = nullptr;
+    --NumberOfScriptSearchLights;
 }
 
 // 0x483BA0

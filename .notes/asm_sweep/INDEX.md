@@ -116,4 +116,5 @@
 | S28d | rest of S28c | 23 | done 23/23 (17 M, 6 fixed; S28 complete) | Streaming.cpp |
 | S34b | rest of S34 | 17 | partial 13/17 (13 M) -> S34c | Interior_c.cpp |
 | S34c | rest of S34b | 4 | done 4/4 (MATCH; S34 complete) | Interior_c.cpp |
-| S32b | rest of S32 | 27 | pending | Radar.cpp |
+| S32b | rest of S32 | 27 | partial 5/27 (5 fixed) -> S32c | Radar.cpp |
+| S32c | rest of S32b (+ DrawLegend LOW/HIGH polygons + sprite path) | 23 | pending | Radar.cpp |

@@ -1342,13 +1342,13 @@ void CCam::Process() {
                     || TheCamera.m_bCamDirectlyInFront;
                 if (!bReset) {
                     if (FindPlayerPed()->GetIntelligence()->GetTaskFighting() && m_nMode == MODE_AIMWEAPON) {
-                        const float f = (float)std::pow(0.899999976, (double)CTimer::GetTimeStep());
+                        const float f = (float)std::pow(X87W((x87d)0.9f), X87W((x87d)CTimer::GetTimeStep()));
                         target        = playerPos * (1.0f - f) + gCamPlayerLastPos * f;
                         bReset        = true;
                     } else {
                         // NOTE: The original computes `1 - pow(..)` first (rounded to float) and derives the other weight from it
-                        const float inv1 = (float)(X87R(1.0 - std::pow(0.600000024, (double)CTimer::GetTimeStep())));
-                        const float inv2 = (float)(X87R(1.0 - std::pow(0.800000012, (double)CTimer::GetTimeStep())));
+                        const float inv1 = (float)(X87R(1.0 - std::pow(X87W((x87d)0.6f), X87W((x87d)CTimer::GetTimeStep()))));
+                        const float inv2 = (float)(X87R(1.0 - std::pow(X87W((x87d)0.8f), X87W((x87d)CTimer::GetTimeStep()))));
                         const CVector predicted = gCamPlayerLastPos + gCamPlayerPosVel * CTimer::GetTimeStep();
                         const CVector blended   = predicted * (1.0f - inv1) + playerPos * inv1;
                         target.x                = blended.x;

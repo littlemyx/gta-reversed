@@ -427,37 +427,30 @@ void CWaterLevel::RenderBoatWakes() {
 
 // 0x6ECF00
 void CWaterLevel::SplitWaterTriangleAlongXLine(int32 splitAtX, int32 X1, int32 Y1, CRenPar P1, int32 X2, int32 Y2, CRenPar P2, int32 X3, int32 Y3, CRenPar P3) {
-    assert(Y1 == Y2); 
-
     // Ease of life
     const auto XS = splitAtX;
 
     const auto splitWidth = XS - X1;
     const auto triWidth   = X2 - X1;
 
-    // Calculate position of split along Y axis
-    const auto CalcSplitPosY = [&](int32 fromY, int32 toY) {
-        return fromY + (toY - fromY) * splitWidth / triWidth;
-    };
-
     // Interpolation value
     const auto t = (float)splitWidth / (float)triWidth;
 
-    // New interpolations of RenPar's along a few segments
-    const auto P12 = lerpBlend(P1, P2, t);
-    const auto P13 = lerpBlend(P1, P3, t);
-    const auto P23 = lerpBlend(P2, P3, t);
-
     // Vertex 1 and 2 are always (top left), (top right)
     // Also the triangles always contain a 90deg corner at either the left or right side.
-
+    // 0x6ECF00 (checked against the exe with random inputs): the exe tests `X1 == X3` only, everything else is the second layout.
+    // The blends are not symmetric: for X1 == X3 the exe blends 3 -> 1 and 3 -> 2 (vertex 3 on the (1-t) side).
     if (X1 == X3) { // Vertex 3 => (bottom left)
-        const auto YS = CalcSplitPosY(Y3, Y1);
+        const auto YS = Y3 + (Y1 - Y3) * splitWidth / triWidth;
+
+        const auto P12 = lerpBlend(P1, P2, t);
+        const auto P31 = lerpBlend(P3, P1, t);
+        const auto P32 = lerpBlend(P3, P2, t);
 
         // Bottom
         RenderWaterTriangle(
-            X1, YS, P12,
-            XS, YS, P13,
+            X1, YS, P31,
+            XS, YS, P32,
             X3, Y3, P3
         );
 
@@ -465,31 +458,21 @@ void CWaterLevel::SplitWaterTriangleAlongXLine(int32 splitAtX, int32 X1, int32 Y
         RenderWaterRectangle(
             X1, XS,
             Y1, YS,
-            P1, P12, P23, P13
+            P1, P12, P31, P32
         );
 
         // Right
         RenderWaterTriangle(
             XS, Y1, P12,
             X2, Y1, P2,
-            XS, YS, P23
+            XS, YS, P32
         );
-    } else if (X2 == X3) { // Vertex 3 => (bottom right)
-        const auto YS = CalcSplitPosY(Y1, Y3);
+    } else { // Vertex 3 => (bottom right)
+        const auto YS = Y1 + (Y3 - Y1) * splitWidth / triWidth;
 
-        // Left
-        RenderWaterTriangle(
-            X1, Y1, P1,
-            XS, Y1, P12,
-            XS, YS, P13
-        );
-
-        // Right
-        RenderWaterRectangle(
-            XS, X2,
-            Y1, YS,
-            P12, P2, P23, P12
-        );
+        const auto P12 = lerpBlend(P1, P2, t);
+        const auto P13 = lerpBlend(P1, P3, t);
+        const auto P23 = lerpBlend(P2, P3, t);
 
         // Bottom
         RenderWaterTriangle(
@@ -497,8 +480,20 @@ void CWaterLevel::SplitWaterTriangleAlongXLine(int32 splitAtX, int32 X1, int32 Y
             X2, YS, P23,
             X3, Y3, P3
         );
-    } else {
-        NOTSA_UNREACHABLE("Triangle has no 90deg corner => Very bad");
+
+        // Right
+        RenderWaterRectangle(
+            XS, X2,
+            Y1, YS,
+            P12, P2, P13, P23
+        );
+
+        // Left
+        RenderWaterTriangle(
+            X1, Y1, P1,
+            XS, Y1, P12,
+            XS, YS, P13
+        );
     }
 }
 

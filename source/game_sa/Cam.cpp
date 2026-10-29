@@ -7131,7 +7131,7 @@ void CCam::Process_Rocket(const CVector& target, float orientation, float speedV
     m_pCamTargetEntity->UpdateRwFrame();
     m_pCamTargetEntity->UpdateRpHAnim(); // exe 0x511C1E
     CVector headPosition{};
-    targetPed->GetTransformedBonePosition(headPosition, eBoneTag::BONE_HEAD, true);
+    targetPed->GetBonePosition(&headPosition, eBoneTag::BONE_HEAD, true); // exe 0x511C28: CPed::GetBonePosition (0x5E4280), not the transform-the-origin GetTransformedBonePosition
     m_vecSource = headPosition;
     m_vecSource.z += 0.1f; // exe 0x511C55: only z is touched
 

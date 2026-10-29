@@ -568,7 +568,9 @@ void CGameLogic::StopPlayerMovingFromDirection(int32 playerId, CVector direction
 
         return nullptr;
     }()) {
-        direction.z = std::max(0.0f, direction.z);
+        if (direction.z < 0.0f) { // exe 0x4412D7: fcomp + jp, a NaN z stays NaN (std::max gave 0)
+            direction.z = 0.0f;
+        }
 
         if (const auto compSum = (direction * obj->m_vecMoveSpeed).ComponentwiseSum(); compSum < 0.0f) {
             obj->m_vecMoveSpeed -= direction * compSum;

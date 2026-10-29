@@ -2969,8 +2969,10 @@ void CCamera::DrawBordersForWideScreen() {
         m_nMotionBlurAddAlpha = 80;
     }
     RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RWRSTATE(NULL));
-    CSprite2d::DrawRect({ -5.f, -5.f,     SCREEN_WIDTH + 5.f, rect.top         }, { 0, 0, 0, 255 });
-    CSprite2d::DrawRect({ -5.f, rect.bottom, SCREEN_WIDTH + 5.f, SCREEN_HEIGHT + 5.f }, { 0, 0, 0, 255 });
+    // NOTE: CRect(left, bottom, right, top) stores (left, top, right, bottom) in memory. The exe's raw stores (exe 0x514860) are (-5, -5, W+5, rect.top) and
+    //       (-5, rect.bottom, W+5, H+5) in memory order, so the literals are written {p0, p3, p2, p1} (SYSTEMIC_TODO "CRect literals")
+    CSprite2d::DrawRect({ -5.f, rect.top,    SCREEN_WIDTH + 5.f, -5.f                }, { 0, 0, 0, 255 });
+    CSprite2d::DrawRect({ -5.f, SCREEN_HEIGHT + 5.f, SCREEN_WIDTH + 5.f, rect.bottom }, { 0, 0, 0, 255 });
 }
 
 // 0x4748A0

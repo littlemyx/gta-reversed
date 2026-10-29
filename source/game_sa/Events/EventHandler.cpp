@@ -647,18 +647,23 @@ void CEventHandler::ComputeBuildingCollisionResponse(CEventBuildingCollision* e,
             return nullptr;
         }
 
-        if (m_Ped->bIsStanding && e->m_impactNormal.z > COS_45) { // 0x4BF3FE
+        // 0x4BF3C3: the exe draws this coin flip ((rand(0, 0x400) & 0xF) == 0xF) right here, once, before anything else is tested
+        const bool randHit = (CGeneral::GetRandomNumberInRange(0, 0x400) & 0xF) == 0xF;
+
+        if (m_Ped->bIsStanding && e->m_impactNormal.z > 0.707f) { // 0x4BF3FE: exe constant 0.707 (0x86C8F4), not cos 45
             return nullptr;
         }
 
         if (!tGoToPoint && (!tKillPedOnFoot || !tKillPedOnFoot->m_target)) { // 0x4BF41E
+            // 0x4BF423: only ever a head hit, otherwise no response (the port went on to the walk-round code below)
             if (isHeadOnCollision && !CPedGeometryAnalyser::CanPedJumpObstacle(*m_Ped, *e->m_building, e->m_impactNormal, e->m_impactPos) && e->m_moveState > eMoveState::PEDMOVE_WALK) {
                 return new CTaskSimpleHitHead{};
             }
+            return nullptr;
         }
 
         if (isHeadOnCollision) { // 0x4BF4D1
-            if (!tSeekEntity && !tKillPedOnFoot && !tEnterCarPsgrWait && !CGeneral::RandomBool(1.f / 15.f * 100.f)) {
+            if (!tSeekEntity && !tKillPedOnFoot && !tEnterCarPsgrWait && !randHit) {
                 return new CTaskComplexWalkRoundBuildingAttempt{
                     (eMoveState)e->m_moveState,
                     tGoToPoint->m_vecTargetPoint,
@@ -783,8 +788,8 @@ void CEventHandler::ComputeBuildingCollisionResponse(CEventBuildingCollision* e,
             } else if (tSeekEntity) { // 0x4BF8C3
                 return DoWalkAroundBuldingTask(tSeekEntity->GetEntityToSeek());
             }
+            return DoWalkAroundBuldingTask(nullptr); // 0x4BF963: neither task: walk round towards the go-to point
         }
-        return nullptr;
     }();
 }
 

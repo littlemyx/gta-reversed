@@ -247,6 +247,8 @@ public:
     void AffectPadFromKeyBoard();
     void AffectPadFromMouse();
     bool GetIsKeyboardKeyDown(KeyCode button);
+    // Checks if the specified keyboard key was just pressed this frame (public: CReplay::Update uses it, exe 0x4605AA)
+    bool GetIsKeyboardKeyJustDown(KeyCode button);
 
     bool GetIsMouseButtonJustUp(KeyCode button);
     bool GetIsMouseButtonDown(KeyCode button);
@@ -268,9 +270,6 @@ protected:
     void DeleteMatching1rstPersonControls(eControllerAction nop, KeyCode button, eControllerType type);
     void DeleteMatching1rst3rdPersonControls(eControllerAction action, KeyCode button, eControllerType type);
     bool GetIsKeyBlank(KeyCode button, eControllerType type);
-
-    // Checks if the specified keyboard key was just pressed this frame
-    bool GetIsKeyboardKeyJustDown(KeyCode button);
 
 private:
     // inline region, original this use define's?

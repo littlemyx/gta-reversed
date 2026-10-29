@@ -1,0 +1,16 @@
+addr	file	line	cls	fn	oc
+0x5D5530	source/game_sa/GangWars.cpp	60	None	Save	U
+0x447E40	source/game_sa/Garage.cpp	48	None	RestoreCar	U
+0x448330	source/game_sa/Garage.cpp	30	None	NeatlyLineUpStoredCars	U
+0x448550	source/game_sa/Garage.cpp	31	None	RestoreCarsForThisHideOut	U
+0x4485C0	source/game_sa/Garage.cpp	32	None	RestoreCarsForThisImpoundingGarage	U
+0x449690	source/game_sa/Garage.cpp	15	None	RemoveCarsBlockingDoorNotInside	U
+0x449760	source/game_sa/Garage.cpp	47	None	StoreCar	U
+0x449900	source/game_sa/Garage.cpp	13	None	StoreAndRemoveCarsForThisHideOut	U
+0x449A50	source/game_sa/Garage.cpp	38	None	StoreAndRemoveCarsForThisImpoundingGarage	U
+0x449C50	source/game_sa/Garage.cpp	12	None	TidyUpGarage	U
+0x449D10	source/game_sa/Garage.cpp	11	None	TidyUpGarageClose	U
+0x44A830	source/game_sa/Garage.cpp	18	None	IsStaticPlayerCarEntirelyInside	U
+0x44AA50	source/game_sa/Garage.cpp	26	None	Update	U
+0x447790	source/game_sa/Garages.cpp	32	None	PrintMessages	U
+0x44C8C0	source/game_sa/Garages.cpp	25	None	Update	U

@@ -153,7 +153,7 @@
 | S47 | phase2: unlisted non-oracle hooks | 40 | partial 21/40 (17 M, 4 fixed) -> S47b | EventHandler.cpp, EventHealthLow.cpp, EventHealthReallyLow.cpp, EventHighAngerAtPlayer.cpp, EventInAir.cpp, EventInWater.cpp ... |
 | S48 | phase2: unlisted non-oracle hooks | 40 | partial 20/40 (18 M, 2 fixed) -> S48b | EventRevived.cpp, EventScanner.cpp, EventSexyPed.cpp, EventSexyVehicle.cpp, EventSpecial.cpp, EventVehicleThreat.cpp ... |
 | S49 | phase2: unlisted non-oracle hooks | 40 | partial 30/40 (11 M, 19 fixed) -> S49b | Game.cpp, GameLogic.cpp, GangWars.cpp |
-| S50 | phase2: unlisted non-oracle hooks | 40 | pending | GangWars.cpp, Gangs.cpp, Garage.cpp, Garages.cpp, InformFriendsEventQueue.cpp, InformGroupEvent.cpp ... |
+| S50 | phase2: unlisted non-oracle hooks | 40 | partial 25/40 (22 M, 3 fixed) -> S50b | GangWars.cpp, Gangs.cpp, Garage.cpp, Garages.cpp, InformFriendsEventQueue.cpp, InformGroupEvent.cpp ... |
 | S51 | phase2: unlisted non-oracle hooks | 40 | pending | FurnitureManager_c.cpp, FurnitureSubGroup_c.cpp, InterestingEvents.cpp, InteriorGroup_c.cpp, InteriorManager_c.cpp, Interior_c.cpp ... |
 | S52 | phase2: unlisted non-oracle hooks | 40 | done (31 M, 6 fixed, 3 no callers) | PathFind.cpp, PedAttractorManager.cpp, PedClothesDesc.cpp |
 | S53 | phase2: unlisted non-oracle hooks | 40 | pending | PedClothesDesc.cpp, PedDamageResponseCalculator.cpp, PedGeometryAnalyser.cpp, PedGroup.cpp, PedGroupIntelligence.cpp |
@@ -180,7 +180,8 @@
 | S43d | rest of S43c (+ ConversationForPed::Update rest) | 27 | done (16 M, 7 fixed, 4 no exe callers; S43 complete) | Clothes.cpp, Cover.cpp, CurrentVehicle.cpp, CustomCarPlateMgr.cpp |
 | S47b | rest of S47 | 19 | partial 14/19 (9 M, 5 fixed) -> S47c | EventHandler.cpp, EventInWater.cpp, EventInteriorUseInfo.cpp, EventKnockOffBike.cpp, EventLeaderEntryExit.cpp, EventNewGangMember.cpp, EventPedEnteredMyVehicle.cpp, EventPedToChase.cpp, EventPotentialGetRunOver.cpp |
 | S55b | rest of S55 | 2 | done 2/2 (1 M, 1 fixed; S55 complete) |  |
-| S49b | rest of S49 | 10 | pending | Game.cpp, GameLogic.cpp, GangWars.cpp |
+| S49b | rest of S49 | 10 | done (8 M, 2 fixed + SetUpSkip; GameLogic::Update only first 640 lines) | Game.cpp, GameLogic.cpp, GangWars.cpp |
 | S48b | rest of S48 | 20 | pending | FireManager.cpp, Game.cpp |
 | S47c | rest of S47b | 5 | pending | EventHandler.cpp |
 | S56b | rest of S56 | 13 | pending | PlayerInfo.cpp, PlayerPedData.cpp |
+| S50b | rest of S50 | 15 | pending | GangWars.cpp, Garage.cpp, Garages.cpp |

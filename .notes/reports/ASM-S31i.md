@@ -10,4 +10,4 @@ Result table: .notes/asm_sweep/S31i.result.tsv. Branch asm-s31i from origin/reve
 - NOT_REACHED (budget): Process_Cam_TwoPlayer (0x525E50). The same fidiv `t` pattern may exist in other DW cam functions (checked here only in the three above).
 - S30e (Camera.cpp, 7 rows) NOT_REACHED, see ASM-S30e.md.
 
-Tests: StandaloneRelease built clean (/WX); v6 pre-commit grep clean; wave2_oracle_test, combat regress and PortableWin64 Cam.cpp.obj compile see ASM-S30e.md / final report lines below.
+Tests: StandaloneRelease and StandaloneRW build clean (/WX); wave2_oracle_test (RW_EXE_ORACLE=GTA_EXE=gta_sa_compact.exe) EXIT 0, 1142 functions, PC24 0/0, PC53 0/0; combat regress (-b worktree StandaloneRelease) TOTAL PASS=14; PortableWin64 Cam.cpp syntax compile (cl /Zs with the PortableWin64 flags, subshell) clean; v6 pre-commit grep clean.

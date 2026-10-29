@@ -2548,42 +2548,57 @@ void CEventHandler::ComputePedToFleeResponse(CEventPedToFlee* e, CTask* tactive,
 
 // 0x4BF9B0
 void CEventHandler::ComputePersonalityResponseToDamage(CEventDamage* e, CPed* src) {
+    // 0x4BFEBC: FLEE_ANY_MEANS / FLEE_ENTITY / SMART_FLEE_ENTITY store the task and THEN say "run from fight" (even if the allocation failed)
+    bool bSayRunFromFight{};
+    const auto MakeFleeAnyMeans = [&] { // 0x4BFC92 etc: ctor(src, true, [0xC18CEC] = 60, [0x86F674], [0x86F684], [0x86F688], [0x86F68C], [0x86F678], [0xC18CF0])
+        return new CTaskComplexFleeAnyMeans{src, true, 60.f, 1'000'000, 4'000, 4'000, 20.f, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold)};
+    };
+    const auto MakeSmartFlee = [&] { // 0x4BFCF0 etc: ctor(src, false, [0xC18CEC] = 60, [0x86F674], [0x86F678], [0xC18CF0])
+        return new CTaskComplexSmartFleeEntity{ src, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
+    };
     m_EventResponseTask = [&]() -> CTask* {
         switch (e->m_TaskId) {
-        case TASK_COMPLEX_KILL_PED_ON_FOOT_STEALTH: // 0x4BFF02
+        case TASK_COMPLEX_KILL_PED_ON_FOOT_STEALTH: // 0x4BFFAB
             return new CTaskComplexKillPedOnFootStealth{src};
-        case TASK_COMPLEX_KILL_CRIMINAL: { // 0x4BFF17
+        case TASK_COMPLEX_KILL_CRIMINAL: { // 0x4BFF11
             if (src->IsPlayer()) {
                 return nullptr;
             }
             if (IsKillTaskAppropriate(m_Ped, src, *e)) {
                 return new CTaskComplexKillCriminal{src, false};
             }
-            return new CTaskComplexSmartFleeEntity{ src, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
+            return MakeSmartFlee();
         }
-        case TASK_COMPLEX_KILL_PED_ON_FOOT: { // 0x4BFFE3
+        case TASK_COMPLEX_KILL_PED_ON_FOOT: { // 0x4BFFDA
             // I've copy pasted this piece of code at least 3 times now
             if (IsKillTaskAppropriate(m_Ped, src, *e)) {
                 return new CTaskComplexKillPedOnFoot{src};
             }
             if (m_Ped->bWantedByPolice && src->IsCop()) {
-                return new CTaskComplexFleeAnyMeans{src, true, 60.f};
+                return MakeFleeAnyMeans();
             }
             if (!m_Ped->IsInVehicle() || !m_Ped->m_pVehicle->IsDriver(m_Ped)) {
-                return new CTaskComplexSmartFleeEntity{ src, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
+                return MakeSmartFlee();
             }
             return new CTaskComplexCarDriveMissionFleeScene{m_Ped->m_pVehicle};
         }
-        case TASK_COMPLEX_FLEE_ANY_MEANS: // 0x4BFC28
-            return new CTaskComplexFleeAnyMeans{src, true, 60.f};
-        case TASK_COMPLEX_SMART_FLEE_ENTITY: // 0x4BFC58
-            m_Ped->Say(CTX_GLOBAL_RUN_FROM_FIGHT);
-            [[fallthrough]];
-        case TASK_COMPLEX_FLEE_ENTITY: { // 0x4BFD1B
+        case TASK_COMPLEX_FLEE_ANY_MEANS: // 0x4BFE5F
+            bSayRunFromFight = true;
+            return MakeFleeAnyMeans();
+        case TASK_COMPLEX_SMART_FLEE_ENTITY: { // 0x4BFC58
+            bSayRunFromFight = true;
             if (m_Ped->bWantedByPolice && src->IsCop()) {
-                return new CTaskComplexFleeAnyMeans{src, true, 60.f};
+                return MakeFleeAnyMeans();
             }
-            return new CTaskComplexSmartFleeEntity{ src, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
+            return MakeSmartFlee();
+        }
+        case TASK_COMPLEX_FLEE_ENTITY: { // 0x4BFD1B: NO IsCop test here, and the non-wanted arm is a plain CTaskComplexFleeEntity
+            bSayRunFromFight = true;
+            if (m_Ped->bWantedByPolice) {
+                return MakeFleeAnyMeans();
+            }
+            // ctor(src, false, [0xC18CE4], [0x86F660], [0x86F664], [0x86F668] = 1.0f): the defaults
+            return new CTaskComplexFleeEntity{src, false};
         }
         case TASK_COMPLEX_CAR_DRIVE_MISSION_KILL_PED: { // 0x4BFDD7
             if (m_Ped->IsInVehicle()) {
@@ -2591,19 +2606,22 @@ void CEventHandler::ComputePersonalityResponseToDamage(CEventDamage* e, CPed* sr
             }
             return new CTaskComplexKillPedOnFoot{src};
         }
-        case TASK_COMPLEX_CAR_DRIVE_MISSION_FLEE_SCENE: { // 0x4BF9DD
-            if (m_Ped->IsInVehicle()) {
-                return new CTaskComplexCarDriveMissionKillPed{m_Ped->m_pVehicle, src};
+        case TASK_COMPLEX_CAR_DRIVE_MISSION_FLEE_SCENE: { // 0x4BFB79: raw [ped+0x58C] (no bInVehicle test), then the KILL_PED_ON_FOOT flee tail
+            if (m_Ped->m_pVehicle && m_Ped->m_pVehicle->IsDriver(m_Ped)) {
+                return new CTaskComplexCarDriveMissionFleeScene{m_Ped->m_pVehicle};
             }
-            return new CTaskComplexFleeAnyMeans{src, true, 60.f};
+            if (m_Ped->bWantedByPolice && src->IsCop()) {
+                return MakeFleeAnyMeans();
+            }
+            return MakeSmartFlee();
         }
-        case TASK_COMPLEX_DIVE_FROM_ATTACHED_ENTITY_AND_GET_UP: // 0x4BFAE2
+        case TASK_COMPLEX_DIVE_FROM_ATTACHED_ENTITY_AND_GET_UP: // 0x4BFAC0
             return new CTaskComplexDiveFromAttachedEntityAndGetUp{};
-        case TASK_SIMPLE_DUCK_FOREVER: // 0x4BFAEE
+        case TASK_SIMPLE_DUCK_FOREVER: // 0x4BFAEC
             return new CTaskSimpleDuck{DUCK_STANDALONE, 0xE0FF};
-        case TASK_SIMPLE_DUCK: { // 0x4BFB29
-            if (const auto t = m_Ped->GetIntelligence()->GetTaskDuck()) {
-                return t;
+        case TASK_SIMPLE_DUCK: { // 0x4BFB1F
+            if (m_Ped->GetIntelligence()->GetTaskDuck()) {
+                return m_EventResponseTask; // 0x4BFB30: jumps to the epilogue, the response is left untouched (the port used to hand out the live duck task)
             }
             return new CTaskSimpleDuck{DUCK_STANDALONE, CGeneral::GetRandomNumberInRange<uint16>(2'000, 5'000)};
         }
@@ -2613,14 +2631,16 @@ void CEventHandler::ComputePersonalityResponseToDamage(CEventDamage* e, CPed* sr
             return new CTaskComplexUseClosestFreeScriptedAttractorRun{};
         case TASK_COMPLEX_USE_CLOSEST_FREE_SCRIPTED_ATTRACTOR_SPRINT:
             return new CTaskComplexUseClosestFreeScriptedAttractorSprint{};
-        case TASK_SIMPLE_BE_DAMAGED: // 0x4BFA09
+        case TASK_SIMPLE_BE_DAMAGED: // 0x4BFA10
         case TASK_NONE:
             return nullptr;
         default:
-            NOTSA_UNREACHABLE();
-            return m_EventResponseTask; // 0x4C0100: default leaves the response task untouched
+            return m_EventResponseTask; // 0x4C0100: unknown ids leave the response task untouched
         }
     }();
+    if (bSayRunFromFight) {
+        m_Ped->Say(CTX_GLOBAL_RUN_FROM_FIGHT); // 0x4BFEDB: Say(0xB2)
+    }
 }
 
 // 0x4B8CE0

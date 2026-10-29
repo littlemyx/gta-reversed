@@ -1335,7 +1335,9 @@ int32 CRadar::ClipRadarPoly(CVector2D* out, const CVector2D* in) {
 
 // 0x5853D0
 void CRadar::DrawAreaOnRadar(const CRect& rect, const CRGBA& color, bool inMenu) {
-    if (!inMenu && m_radarRect.IsRectInside(rect)) {
+    // The exe inlines the separation tests against m_radarRect (slots: left +0, top +4, right +8, bottom +0xc; 0x5853D4-0x58542B) and draws only if the rects overlap
+    // (NaN falls through to drawing, as in the exe). CRect::IsRectInside had the polarity and the top/bottom pairing wrong, so the early-out never fired.
+    if (!inMenu && (rect.left > m_radarRect.right || rect.right < m_radarRect.left || rect.bottom > m_radarRect.top || rect.top < m_radarRect.bottom)) {
         return;
     }
 

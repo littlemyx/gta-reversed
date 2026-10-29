@@ -582,27 +582,28 @@ void CWaterLevel::RenderFlatWaterRectangle(int32 minX, int32 maxX, int32 Y1, int
 void CWaterLevel::RenderFlatWaterRectangle_OneLayer(int32 minX, int32 maxX, int32 Y1, int32 Y2, CRenPar P1, CRenPar P2, CRenPar P3, CRenPar P4, int32 WaterLayer) {
     RenderBuffer::RenderIfDoesntFit(6, 4);
 
-    // First(!) push indices
-    RenderBuffer::PushIndices({ 0, 1, 2, 2, 3, 0 }, true);
+    // First(!) push indices. 0x6E9940: the exe's vertex order is (minX,Y1) (maxX,Y1) (minX,Y2) (maxX,Y2) and the triangles are (0,1,2) (3,1,2)
+    RenderBuffer::PushIndices({ 0, 1, 2, 3, 1, 2 }, true);
 
     // Get texture UV stuff
     const auto texuv = GetTextureUV(minX, Y1, Y2, WaterLayer);
 
-    const auto PushVertex = [
-        &,
-        color = GetWaterColorForRendering(WaterColor, DebugWaterColors[DebugWaterColor::RECT], WaterLayer)
-    ](int32 x, int32 y, const CRenPar& p, CVector2D vtxUVOffset) {
-        RenderBuffer::PushVertex({ (float)x, (float)y, p.z }, texuv.baseShift + vtxUVOffset, color);
+    // Bottom right corner position on texture (In UV coords): `(float)(maxX - minX) * scale + baseShift.x`, `(float)(Y2 - Y1) * scale + baseShift.y`
+    const auto bruv{ CVector2D{
+        (float)(maxX - minX) * texuv.scale + texuv.baseShift.x,
+        (float)(Y2 - Y1)     * texuv.scale + texuv.baseShift.y
+    } };
+
+    const auto color = GetWaterColorForRendering(WaterColor, DebugWaterColors[DebugWaterColor::RECT], WaterLayer);
+    const auto PushVertex = [&](int32 x, int32 y, const CRenPar& p, float u, float v) {
+        RenderBuffer::PushVertex({ (float)x, (float)y, p.z }, { u, v }, color);
     };
 
-    // Bottom right corner position on texture (In UV coords)
-    const auto bruv{ CVector2D{ (float)(maxX - minX), (float)(Y2 - Y1) } * texuv.scale };
-
-    PushVertex(minX, Y1, P1, { 0.f,    0.f }); // Top Left
-    PushVertex(maxX, Y1, P2, { bruv.x, 0.f    }); // Top Right
-    PushVertex(maxX, Y2, P3, { bruv.x, bruv.y }); // Bottom Right
-    PushVertex(minX, Y2, P4, { 0.f,    bruv.y }); // Bottom Left
-} 
+    PushVertex(minX, Y1, P1, texuv.baseShift.x, texuv.baseShift.y); // Top Left
+    PushVertex(maxX, Y1, P2, bruv.x,            texuv.baseShift.y); // Top Right
+    PushVertex(minX, Y2, P3, texuv.baseShift.x, bruv.y);            // Bottom Left (P3 is the bottom LEFT corner in the exe's convention)
+    PushVertex(maxX, Y2, P4, bruv.x,            bruv.y);            // Bottom Right
+}
 
 // 0x6EB810
 void CWaterLevel::RenderHighDetailWaterRectangle(int32 minX, int32 maxX, int32 Y1, int32 Y2, CRenPar P1, CRenPar P2, CRenPar P3, CRenPar P4) {

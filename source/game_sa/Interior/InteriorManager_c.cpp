@@ -116,7 +116,7 @@ bool InteriorManager_c::Update() {
             const auto& fxPos = ifx.Entity->GetPosition();
 
             i->m_box        = ifx.Effects[k];
-            i->m_interiorId = NOTSA_FTOL(uint32, fxPos.x * fxPos.y * fxPos.z) + ifx.FxIds[k];
+            i->m_interiorId = NOTSA_FTOL(uint32, fxPos.z * fxPos.y * fxPos.x) + ifx.FxIds[k]; // exe 0x59914B: (z * y) * x
             i->m_areaCode   = ifx.Entity->GetAreaCode();
             i->m_pGroup     = grp;
 

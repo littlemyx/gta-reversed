@@ -811,8 +811,8 @@ void CWaterLevel::RenderHighDetailWaterRectangle_OneLayer(int32 minX, int32 maxX
 
                 auto* const vtx = &TempBufferVertices.m_3d[uiTempBufferVerticesStored];
                 RwIm3DVertexSetPos(vtx, fX, fY, z);
-                RwIm3DVertexSetU(vtx, (float)((double)uOff * (double)uvScale + (double)baseU));
-                RwIm3DVertexSetV(vtx, (float)((double)vOff * (double)uvScale + (double)baseV));
+                RwIm3DVertexSetU(vtx, (float)((x87d)uOff * (x87d)uvScale + (x87d)baseU));
+                RwIm3DVertexSetV(vtx, (float)((x87d)vOff * (x87d)uvScale + (x87d)baseV));
 
                 // Truncated to 8 bits (no clamping)
                 const auto r = (uint8)NOTSA_FTOL(int32, (x87d)WaterColor.r * (x87d)colorMult);
@@ -828,8 +828,8 @@ void CWaterLevel::RenderHighDetailWaterRectangle_OneLayer(int32 minX, int32 maxX
             }
             case 1: {
                 auto* const vtx = &TempBufferVertices.m_3d[uiTempBufferVerticesStored]; // Position is already set by the previous layer
-                RwIm3DVertexSetU(vtx, (float)((double)uOff * (double)uvScale + (double)baseU));
-                RwIm3DVertexSetV(vtx, (float)((double)vOff * (double)uvScale + (double)baseV));
+                RwIm3DVertexSetU(vtx, (float)((x87d)uOff * (x87d)uvScale + (x87d)baseU));
+                RwIm3DVertexSetV(vtx, (float)((x87d)vOff * (x87d)uvScale + (x87d)baseV));
                 RwIm3DVertexSetRGBA(
                     vtx,
                     s_VtxColorCacheR[s_VtxColorCacheIdx],

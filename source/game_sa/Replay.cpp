@@ -108,17 +108,17 @@ void CReplay::Update() {
         return;
 
     if (Mode == MODE_PLAYBACK) {
-        if (ControlsManager.GetIsKeyboardKeyDown(rsF1) || ControlsManager.GetIsKeyboardKeyDown(rsF3)) {
+        if (ControlsManager.GetIsKeyboardKeyJustDown(rsF1) || ControlsManager.GetIsKeyboardKeyJustDown(rsF3)) {
             FinishPlayback();
         }
     } else {
-        if (ControlsManager.GetIsKeyboardKeyDown(rsF1)) {
+        if (ControlsManager.GetIsKeyboardKeyJustDown(rsF1)) {
             // Play stored replay
             TriggerPlayback(REPLAY_CAM_MODE_AS_STORED, CVector{}, false);
-        } else if (ControlsManager.GetIsKeyboardKeyDown(rsF2)) {
+        } else if (ControlsManager.GetIsKeyboardKeyJustDown(rsF2)) {
             // Save to hard disk
             SaveReplayToHD();
-        } else if (ControlsManager.GetIsKeyboardKeyDown(rsF3)) {
+        } else if (ControlsManager.GetIsKeyboardKeyJustDown(rsF3)) {
             // Play from hard disk
             PlayReplayFromHD();
         }

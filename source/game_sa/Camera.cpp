@@ -4802,14 +4802,13 @@ void CCamera::CamControl() {
                         constexpr x87d HALF_PI = static_cast<x87d>(std::numbers::pi_v<float> / 2.f);
                         constexpr x87d TWO_PI  = static_cast<x87d>(std::numbers::pi_v<float> * 2.f);
 
-                        double aimHeading;
+                        x87d aimHeading;
                         if (auto* const targeted = targetPed->m_pTargetedObject) {
                             const CVector dir = targeted->GetPosition() - targetPed->GetPosition();
-                            aimHeading        = x87::atan2(-static_cast<double>(dir.x), static_cast<double>(dir.y));
+                            aimHeading        = X87R(x87::atan2(-static_cast<double>(dir.x), static_cast<double>(dir.y)) - static_cast<double>(HALF_PI)); // 53-bit fpatan result, the fsub rounds to 24 bits
                         } else {
-                            aimHeading = targetPed->GetHeading();
+                            aimHeading = static_cast<x87d>(targetPed->GetHeading()) - HALF_PI;
                         }
-                        aimHeading -= HALF_PI;
 
                         const x87d camHeading = GetActiveCam().m_fHorizontalAngle;
                         if (aimHeading > camHeading + PI) {

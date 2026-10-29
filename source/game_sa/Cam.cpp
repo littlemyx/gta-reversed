@@ -2768,10 +2768,10 @@ void CCam::Process_AimWeapon(const CVector& target, float orientation, float spe
             d += (x87d)TWO_PI;
         }
         const float e = (float)((x87d)TWO_PI - d);
-        if (d < (double)step || e < step) {
+        if (d < (x87d)step || e < step) {
             m_fHorizontalAngle                                  = wanted;
             CTheScripts::fCameraHeadingStepWhenPlayerIsAttached = 0.0f;
-        } else if (!(d > (double)e)) { // exe 0x521C2B `jne` (d <= e or unordered) -> subtract
+        } else if (!(d > (x87d)e)) { // exe 0x521C2B `jne` (d <= e or unordered) -> subtract
             m_fHorizontalAngle = (float)((x87d)m_fHorizontalAngle - (x87d)step);
         } else {
             m_fHorizontalAngle = (float)((x87d)step + (x87d)m_fHorizontalAngle);

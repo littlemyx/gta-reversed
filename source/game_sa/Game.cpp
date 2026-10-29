@@ -589,12 +589,11 @@ bool CGame::InitialiseCoreDataAfterRW() {
 
 // 0x5BA160
 bool CGame::InitialiseEssentialsAfterRW() {
-    CMemoryMgr::PushMemId(MEM_30);
+    // 0x5BA160: the exe does not touch the memory id stack here (port pushed MEM_30 and leaked it on failure)
     TheText.Load(false);
     if (!CCarFXRenderer::Initialise() || !CGrassRenderer::Initialise() || !CCustomBuildingRenderer::Initialise()) {
         return false;
     }
-    CMemoryMgr::PopMemId();
 
     CTimer::Initialise();
     return true;

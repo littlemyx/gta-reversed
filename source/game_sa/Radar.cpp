@@ -501,10 +501,11 @@ CVector2D CRadar::TransformRadarPointToRealWorldSpace(const CVector2D& in) {
  * @addr 0x583600
  */
 CVector2D CRadar::TransformRealWorldToTexCoordSpace(const CVector2D& in, int32 x, int32 y) {
+    // exe 0x5863DE-0x586401: multiplied by the float constants 0.002 / -0.002 (0x858F44 / 0x866B7C), not divided by 500
     return CVector2D{
-        +(in.x - (float(500 * x) - 3000.0f)),
-        -(in.y - ((500 * float(MAX_RADAR_HEIGHT_TILES - y)) - 3000.0f))
-    } / 500.0f;
+        (in.x - (float(500 * x) - 3000.0f)) * 0.002f,
+        (in.y - ((500 * float(MAX_RADAR_HEIGHT_TILES - y)) - 3000.0f)) * -0.002f
+    };
 }
 
 // 0x583670
@@ -1663,17 +1664,38 @@ void CRadar::DrawRadarSprite(eRadarSprite spriteId, float x, float y, uint8 alph
 
 // 0x586110
 void CRadar::DrawRadarSection(int32 x, int32 y) {
-    CVector2D clipped[8]{};
-    const auto numVerts = [x, y, &clipped] {
-        CVector2D corners[8]{};
-        GetTextureCorners(x, y, corners);
+    CVector2D corners[8]{};
+    GetTextureCorners(x, y, corners);
 
-        CVector2D rotated[8]{};
-        for (auto&& [i, corner] : rngv::enumerate(corners)) {
-            rotated[i] = CachedRotateClockwise((corner - vec2DRadarOrigin) / m_radarRange);
+    // exe 0x586138-0x5861BB: the section's texture is looked up before anything is drawn; a missing slot (-1), txd or texture ends the function
+    // (the port used to fall through and draw stale vertices, and treated index 0 as "no texture")
+    const bool inBounds = IsMapSectionInBounds(x, y);
+    RwTexture* texture{};
+    if (inBounds && !CTheScripts::bPlayerIsOffTheMap) {
+        const auto txdIndex = gRadarTextures[y][x];
+        if (txdIndex == -1) {
+            return;
         }
-        return ClipRadarPoly(clipped, rotated);
-    }();
+        const auto txd = CTxdStore::GetTxd(txdIndex);
+        if (!txd) {
+            return;
+        }
+        texture = GetFirstTexture(txd);
+        if (!texture) {
+            return;
+        }
+    }
+
+    // exe 0x5861C1-0x586325: the inlined CRadar::TransformRealWorldPointToRadarSpace (k = 1/range, not a division by range)
+    CVector2D rotated[4]{};
+    for (auto i = 0; i < 4; i++) {
+        rotated[i] = TransformRealWorldPointToRadarSpace(corners[i]);
+    }
+    CVector2D clipped[8]{};
+    const auto numVerts = ClipRadarPoly(clipped, rotated);
+    if (numVerts == 0) { // exe 0x586331: leaves without touching the render states
+        return;
+    }
 
     CVector2D texCoords[8]{};
     CVector2D verts[8]{};
@@ -1682,19 +1704,15 @@ void CRadar::DrawRadarSection(int32 x, int32 y) {
         verts[i]     = TransformRadarPointToScreenSpace(clipped[i]);
     }
 
-    if (!IsMapSectionInBounds(x, y)) { // there is no land here, draw the sea.
+    if (!inBounds) { // there is no land here, draw the sea.
         RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nullptr);
         CSprite2d::SetVertices(numVerts, verts, texCoords, { 111, 137, 170, 255 });
     } else if (CTheScripts::bPlayerIsOffTheMap) { // Draw blank
         RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nullptr);
         CSprite2d::SetVertices(numVerts, verts, texCoords, { 204, 204, 204, 255 });
-    } else if (const auto txdIndex = gRadarTextures[y][x]) { // Or if it has a txture, draw that
-        if (const auto txd = CTxdStore::GetTxd(txdIndex)) {
-            if (RwTexture* const texture = GetFirstTexture(txd)) {
-                RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(texture));
-                CSprite2d::SetVertices(numVerts, verts, texCoords, { 255, 255, 255, 255 });
-            }
-        }
+    } else { // Or if it has a txture, draw that
+        RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(texture));
+        CSprite2d::SetVertices(numVerts, verts, texCoords, { 255, 255, 255, 255 });
     }
 
     // Now draw what we have

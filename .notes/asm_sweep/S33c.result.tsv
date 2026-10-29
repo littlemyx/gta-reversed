@@ -1,0 +1,16 @@
+addr	function	verdict	asm range	note	fix commit
+0x6ECF00	CWaterLevel::SplitWaterTriangleAlongXLine	FIXED	0x6ECF00-0x6ED4xx (all)	X1==X3 blends 3->1 / 3->2 (port 1->3 / 2->3); X2==X3 rect 4th param P23 (port P12); call order bottom/rect/left; else branch has no X2==X3 test in the exe; emulator-checked, 400 random inputs	924c1524
+0x6EE5A0	CWaterLevel::SplitWaterTriangleAlongYLine	FIXED	0x6EE5A0-0x6EF626 (all)	exe has its own 4 layouts, t=(split-Y1)/(Y3-Y1), integer split X; port did an X split (different pieces); Y1>Y3 and X2==X3 rect passes 1->3 blend twice (exe quirk); emulator-checked, 392 random inputs	e575d97a
+0x6E73A0	CWaterLevel::SplitWaterRectangleAlongXLine	MATCH	0x6E73A0-0x6E7661 (all)	t, (1-t)a+bt blends P12/P34, left (P1,P12,P3,P34) / right (P12,P2,P34,P4) calls; emulator-checked, 300 random inputs	-
+0x6E8ED0	CWaterLevel::RenderFlatWaterTriangle_OneLayer	NOT_REACHED	-	budget (split family took the slice)	-
+0x6EE080	CWaterLevel::RenderFlatWaterTriangle	NOT_REACHED	-	budget (split family took the slice)	-
+0x6E9940	CWaterLevel::RenderFlatWaterRectangle_OneLayer	NOT_REACHED	-	budget (split family took the slice)	-
+0x6EBEC0	CWaterLevel::RenderFlatWaterRectangle	NOT_REACHED	-	budget (split family took the slice)	-
+0x6ED9A0	CWaterLevel::RenderBoatWakes	NOT_REACHED	-	budget (split family took the slice)	-
+0x6EA260	CWaterLevel::RenderWakeSegment	NOT_REACHED	-	budget (split family took the slice)	-
+0x6E7760	CWaterLevel::RenderWaterFog	NOT_REACHED	-	budget (split family took the slice)	-
+0x6EF650	CWaterLevel::RenderWater	NOT_REACHED	-	budget (split family took the slice)	-
+0x6EB810	CWaterLevel::RenderHighDetailWaterRectangle	NOT_REACHED	-	budget (split family took the slice)	-
+0x6E91D0	CWaterLevel::RenderHighDetailWaterRectangle_OneLayer	NOT_REACHED	-	budget (split family took the slice)	-
+0x6E8780	CWaterLevel::RenderHighDetailWaterTriangle_OneLayer	NOT_REACHED	-	budget (split family took the slice)	-
+0x6EDDC0	CWaterLevel::RenderHighDetailWaterTriangle	NOT_REACHED	-	budget (split family took the slice)	-

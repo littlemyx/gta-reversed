@@ -1,0 +1,2 @@
+addr	function	verdict	asm range	note	fix commit
+0x51A450	CCamera::Constructor	MATCH	0x51A450-0x51A559 (all)	CPlaceable ctor, 3x CCam ctor (0x517730 = CCam::Init; port CCam() calls Init), 4x CCamPathSplines ptr=0, 6x CMatrix (+0x40/+0x44=0), +0x14=&m_mCameraMatrix, shake type 1, +0x53=0, duck factors 0, InitialiseScriptableComponents; port member {} inits cover the zero stores	-

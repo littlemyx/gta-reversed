@@ -588,7 +588,9 @@ void CTaskSimpleClimb::StartAnim(CPed* ped) {
             m_Anim          = CAnimManager::BlendAnimation(ped->GetRpClump(), ANIM_GROUP_DEFAULT, ANIM_ID_CLIMB_STAND, 4.0f);
             m_Anim->m_Flags &= ~ANIMATION_IS_PLAYING;
         } else {
-            m_Anim->SetDeleteCallback(CDefaultAnimCallback::DefaultAnimCB, nullptr);
+            if (m_Anim) { // exe 0x67DC85: null-checked (DeleteAnimCB clears m_Anim when the previous animation is removed)
+                m_Anim->SetDeleteCallback(CDefaultAnimCallback::DefaultAnimCB, nullptr);
+            }
             m_Anim         = CAnimManager::BlendAnimation(ped->GetRpClump(), ANIM_GROUP_DEFAULT, ANIM_ID_CLIMB_PULL, 1000.0f);
             m_HeightForPos = CLIMB_PULLUP;
         }

@@ -3296,7 +3296,8 @@ namespace {
 bool IsActiveCamUnderWater() {
     const CVector& src = TheCamera.m_aCams[TheCamera.m_nActiveCam].m_vecSource;
     float level;
-    return CWaterLevel::GetWaterLevel(src.x, src.y, src.z, level, true, nullptr) && level >= src.z;
+    // 0x50B865: `fcomp` + `test ah, 5` + `jp` - true unless `level < src.z`, so a NaN counts as under water
+    return CWaterLevel::GetWaterLevel(src.x, src.y, src.z, level, true, nullptr) && !(level < src.z);
 }
 
 // 0x59C790 - `CMatrix::TransformVector`, but with the add order of the original

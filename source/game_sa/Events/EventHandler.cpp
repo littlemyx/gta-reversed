@@ -881,6 +881,10 @@ void CEventHandler::ComputeCreatePartnerTaskResponse(CEventCreatePartnerTask* e,
 void CEventHandler::ComputeDamageResponse(CEventDamage* e, CTask* tactive, CTask* tsimplest, CTask* abortedTaskEventResponse) {
     UNUSED(abortedTaskEventResponse);
 
+    if (!m_Ped->IsAlive()) { // 0x4C018D: a dead / dying ped gets no response at all
+        return;
+    }
+
     m_EventResponseTask = [&]() -> CTask* {
         const auto DoComputeDamageAndResponseForPersonality = [&] {
             const auto ce = m_History.GetCurrentEvent();
@@ -914,8 +918,10 @@ void CEventHandler::ComputeDamageResponse(CEventDamage* e, CTask* tactive, CTask
         if (const auto v = m_Ped->GetVehicleIfInOne()) {
             if (v->IsBike() || v->IsSubQuad()) {
                 if (!e->m_bFallDown && !e->HasKilledPed()) {
-                    assert(e->m_pSourceEntity->GetIsTypePed());
-                    ComputePersonalityResponseToDamage(e, e->m_pSourceEntity->AsPed());
+                    // 0x4C0236: jumps straight to the personality call (no FindActiveTask / IsPlayer gates), only a non-null ped source is required
+                    if (e->m_pSourceEntity && e->m_pSourceEntity->GetIsTypePed()) {
+                        ComputePersonalityResponseToDamage(e, e->m_pSourceEntity->AsPed());
+                    }
                 } else {
                     ComputeKnockOffBikeResponse(e, tactive, tsimplest); // 0x4C02DE
                 }
@@ -937,6 +943,19 @@ void CEventHandler::ComputeDamageResponse(CEventDamage* e, CTask* tactive, CTask
             const auto DoDie = [&](bool bFallingToDeath = false, eDirection fallToDeathDir = eDirection::FORWARD, bool bFallToDeathOverRailing = false) { // 0x4C0AA2
                 const auto isBeingKilledByStealth = tactive && tactive->GetTaskType() == TASK_SIMPLE_STEALTH_KILL && !static_cast<CTaskSimpleStealthKill*>(tactive)->m_bKeepTargetAlive;
 
+                // 0x4C0ACA: the exe allocates and builds the die task BEFORE the interesting event / physical response release / RegisterKill
+                const auto tDie = new CTaskComplexDie{
+                    e->m_weaponType,
+                    e->m_nAnimGroup,
+                    e->m_nAnimID,
+                    e->m_fAnimBlend,
+                    e->m_fAnimSpeed,
+                    isBeingKilledByStealth,
+                    bFallingToDeath,
+                    fallToDeathDir,
+                    bFallToDeathOverRailing
+                };
+
                 g_InterestingEvents.Add(CInterestingEvents::INTERESTING_EVENT_28, m_Ped);
                 if (const auto tPhyResp = m_Ped->GetTaskManager().GetTaskPrimary(TASK_PRIMARY_PHYSICAL_RESPONSE)) {
                     if (tPhyResp->GetTaskType() != TASK_SIMPLE_CHOKING || !notsa::contains({ WEAPON_SPRAYCAN, WEAPON_EXTINGUISHER, WEAPON_TEARGAS }, e->m_weaponType)) {
@@ -948,17 +967,7 @@ void CEventHandler::ComputeDamageResponse(CEventDamage* e, CTask* tactive, CTask
                     RegisterKill(m_Ped, e->m_pSourceEntity, e->m_weaponType, e->WasHeadShot());
                 }
 
-                return new CTaskComplexDie{
-                    e->m_weaponType,
-                    e->m_nAnimGroup,
-                    e->m_nAnimID,
-                    e->m_fAnimBlend,
-                    e->m_fAnimSpeed,
-                    isBeingKilledByStealth,
-                    bFallingToDeath,
-                    fallToDeathDir,
-                    bFallToDeathOverRailing
-                };
+                return tDie;
             };
 
             const auto DoDieMaybeFall = [&]{ // 0x4C0A1C
@@ -981,9 +990,10 @@ void CEventHandler::ComputeDamageResponse(CEventDamage* e, CTask* tactive, CTask
                         WEAPON_COUNTRYRIFLE,
                         WEAPON_MINIGUN
                     }, e->m_weaponType)) {
-                        if (e->m_pSourceEntity->GetIsTypePed() && e->m_pSourceEntity->AsPed()->IsCreatedByMission()) {
-                            int32 fallToDeathDir;
-                            bool  bFallToDeathOverRailing;
+                        // 0x4C0A77: the source is the player OR a mission ped
+                        if (e->m_pSourceEntity->GetIsTypePed() && (e->m_pSourceEntity->AsPed()->IsPlayer() || e->m_pSourceEntity->AsPed()->IsCreatedByMission())) {
+                            int32 fallToDeathDir{};          // exe locals start at 0 (0x4C0268)
+                            bool  bFallToDeathOverRailing{};
                             bool  bFallToDeath = CTaskComplexFallToDeath::CalcFall(m_Ped, fallToDeathDir, bFallToDeathOverRailing);
                             return DoDie(bFallToDeath, (eDirection)(fallToDeathDir), bFallToDeathOverRailing);
                         }
@@ -1002,10 +1012,14 @@ void CEventHandler::ComputeDamageResponse(CEventDamage* e, CTask* tactive, CTask
 
             switch (tsimplest->GetTaskType()) {
             case TASK_SIMPLE_FALL: {
-                if (const auto dr = &e->m_damageResponse; e->m_weaponType == WEAPON_FALL && dr->m_fDamageArmor + dr->m_fDamageHealth >= 20.f) { // 0x4C083E - Add blood
+                if (const auto dr = &e->m_damageResponse; e->m_weaponType == WEAPON_FALL && dr->m_fDamageHealth + dr->m_fDamageArmor > 20.f) { // 0x4C083E - Add blood (strict: fcomp + test ah,0x41)
                     for (auto i = 10; i-- > 0;) {
+                        // 0x4C0889 / 0x4C08B6: only x then y draw a random number (CVector::Random would draw a third one for z)
+                        CVector pos = m_Ped->GetPosition();
+                        pos.x += CGeneral::GetRandomNumberInRange(-0.5f, 0.5f);
+                        pos.y += CGeneral::GetRandomNumberInRange(-0.5f, 0.5f);
                         g_fx.AddBlood(
-                            m_Ped->GetPosition() + CVector::Random({-0.5f, -0.5f, 0.f}, {0.5f, 0.5f, 0.f}),
+                            pos,
                             {0.f, 0.f, 2.f},
                             10,
                             m_Ped->m_fContactSurfaceBrightness
@@ -1028,23 +1042,23 @@ void CEventHandler::ComputeDamageResponse(CEventDamage* e, CTask* tactive, CTask
                 e->m_fAnimBlend = 4.f;
                 e->m_fAnimSpeed = 1.f;
                 e->m_nAnimGroup = ANIM_GROUP_DEFAULT;
-                if (const auto a = RpAnimBlendClumpGetFirstAssociation(m_Ped->GetRpClump(), ANIMATION_IS_FRONT)) { // 0x4C094E
-                    e->m_nAnimID = ANIM_ID_FLOOR_HIT_F;
-                    return DoDieMaybeFall();
-                }
-                break;
+                // 0x4C094E / 0x4C097B: no front association -> FLOOR_HIT (the port used to `break` out of the switch into the non-kill code)
+                e->m_nAnimID = RpAnimBlendClumpGetFirstAssociation(m_Ped->GetRpClump(), ANIMATION_IS_FRONT)
+                    ? ANIM_ID_FLOOR_HIT_F
+                    : ANIM_ID_FLOOR_HIT;
+                return DoDieMaybeFall();
             }
             case TASK_SIMPLE_GET_UP: { // 0x4C0987
                 const auto tgup = notsa::cast<CTaskSimpleGetUp>(tsimplest);
-                if (!tgup->m_Anim || tgup->m_Anim->GetTimeProgress() >= 0.5f) {
+                // 0x4C09AD: progress < 0.5 (fcomp + jp: NaN takes the other arm)
+                if (!tgup->m_Anim || !(tgup->m_Anim->GetTimeProgress() < 0.5f)) {
                     if (tgup->m_bHasPedGotUp) {
                         return DoDieMaybeFall();
                     }
                     e->m_nAnimID = RpAnimBlendClumpGetFirstAssociation(m_Ped->GetRpClump(), ANIMATION_IS_FRONT)
                         ? ANIM_ID_FLOOR_HIT_F
                         : ANIM_ID_FLOOR_HIT;
-                    
-                } else if (!tgup->m_bHasPedGotUp) {
+                } else { // 0x4C09BC: no m_bHasPedGotUp test here
                     e->m_nAnimID = tgup->m_Anim->m_AnimId == ANIM_ID_GETUP_FRONT
                         ? ANIM_ID_FLOOR_HIT_F
                         : ANIM_ID_FLOOR_HIT;
@@ -1152,7 +1166,7 @@ void CEventHandler::ComputeDamageResponse(CEventDamage* e, CTask* tactive, CTask
                     m_PhysicalResponseTask = new CTaskComplexFallAndGetUp{ // 0x4C0748
                         e->GetAnimId(),
                         e->GetAnimGroup(),
-                        m_Ped->IsPlayer() ? 500 : 1000
+                        m_Ped->GetPlayerData() ? 500 : 1000 // 0x4C0727: reads [ped+0x480] (m_pPlayerData) directly
                     };
                     const auto knockedOverByVeh = e->m_pSourceEntity->GetIsTypeVehicle()
                         ? e->m_pSourceEntity->AsVehicle()

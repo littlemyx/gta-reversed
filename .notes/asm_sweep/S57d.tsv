@@ -1,0 +1,8 @@
+addr	file	line	cls	fn	oc
+0x45B4D0	source/game_sa/Replay.cpp	23	None	RetrievePedAnimation	U
+0x45CA70	source/game_sa/Replay.cpp	38	None	ProcessPedUpdate	U
+0x45CEA0	source/game_sa/Replay.cpp	49	None	DealWithNewPedPacket	U
+0x45D060	source/game_sa/Replay.cpp	24	None	ProcessReplayCamera	U
+0x45D760	source/game_sa/Replay.cpp	35	None	ProcessLookAroundCam	U
+0x45E300	source/game_sa/Replay.cpp	46	None	RecordThisFrame	U
+0x45F380	source/game_sa/Replay.cpp	50	None	PlayBackThisFrameInterpolation	U

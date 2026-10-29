@@ -167,7 +167,7 @@
 | S61 | phase2: unlisted non-oracle hooks | 40 | pending | TaskComplexAvoidEntity.cpp, TaskComplexAvoidOtherPedWhileWandering.cpp, TaskComplexBeCop.cpp, TaskComplexBeStill.cpp, TaskComplexCarDriveMission.cpp, TaskComplexClimb.cpp ... |
 | S62 | phase2: unlisted non-oracle hooks | 40 | pending | TaskComplexFollowPatrolRoute.cpp, TaskComplexGangLeader.cpp, TaskComplexKillAllThreats.cpp, TaskComplexKillPedGroupOnFoot.cpp, TaskComplexLeaveCar.cpp, TaskComplexObserveTrafficLights.cpp ... |
 | S63 | phase2: unlisted non-oracle hooks | 40 | pending | TaskSimpleNone.cpp, TaskSimpleOnEscalator.cpp, TaskSimpleRunAnim.cpp, TaskSimpleRunAnimLoopedMiddle.cpp, TaskSimpleRunNamedAnim.cpp, TaskSimpleSay.cpp ... |
-| S64 | phase2: unlisted non-oracle hooks | 40 | pending | VehicleAnimGroupData.cpp, VehicleRecording.cpp, VehicleSaveStructure.cpp, Weapon.cpp |
+| S64 | phase2: unlisted non-oracle hooks | 40 | partial 9/40 (4 M, 5 fixed) -> S64b | VehicleAnimGroupData.cpp, VehicleRecording.cpp, VehicleSaveStructure.cpp, Weapon.cpp |
 | S65 | phase2: unlisted non-oracle hooks | 7 | pending | WeaponEffects.cpp, WeaponInfo.cpp, World.cpp |
 | S41b | rest of S41 | 9 | done (2 M, 6 fixed, RunningScript row -> S66) | CarAI.cpp, PedAttractorPedPlacer.cpp, RunningScript.cpp matches |
 | S66 | phase2: RunningScript.cpp hooks (missed by the generator: grep without -a) | 15 | pending | RunningScript.cpp |
@@ -190,6 +190,8 @@
 | S51b | rest of S51 | 20 | done (14 M, 5 fixed, 1 n/a; S51 complete) | FurnitureManager_c.cpp, InterestingEvents.cpp, InteriorGroup_c.cpp, InteriorManager_c.cpp, Interior_c.cpp, PathFind.cpp |
 | S53b | rest of S53 | 25 | 24/25 (15 M, 9 fixed) -> S53c | PedClothesDesc.cpp, PedGeometryAnalyser.cpp, PedGroup.cpp |
 | S48c | CGame rows + CGarage::Update handlers + CGameLogic::Update tail | 18 | done (14 M, 4 fixed; S48, S49, S50 complete) | Game.cpp |
-| S57c | rest of S57b | 10 | pending | PedIntelligencePool.h, PedPool.h, Replay.cpp, VehiclePool.h |
+| S57c | rest of S57b | 10 | 3/10 (3 M) -> S57d | PedIntelligencePool.h, PedPool.h, Replay.cpp, VehiclePool.h |
 | S53c | rest of S53b | 1 | pending | PedGeometryAnalyser.cpp |
 | S58b | rest of S58 | 17 | pending | Shopping.cpp, TheScripts.cpp |
+| S64b | rest of S64 | 31 | pending | VehicleAnimGroupData.cpp, VehicleRecording.cpp, VehicleSaveStructure.cpp, Weapon.cpp |
+| S57d | rest of S57c | 7 | pending | Replay.cpp |

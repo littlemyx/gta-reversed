@@ -131,7 +131,17 @@ void CEntryExit::GetPositionRelativeToOutsideWorld(CVector& outPos) {
 
     const auto enex = GetLinkedOrThis(); // this = GetLinkedOrThis();
     if (enex->m_nArea != eAreaCodes::AREA_CODE_NORMAL_WORLD) {
-        outPos += GetPosition() - enex->m_vecExitPos;
+        // exe 0x43EA00-0x43EA84: (centre + outPos) - exit, NOT outPos + (centre - exit). The centre X and the sums X / Y stay unrounded on the x87 stack
+        // (only the final difference is stored); the centre Y / Z and the Z sum are float temporaries.
+        const auto& r   = m_recEntrance;
+        const x87d  cx  = ((x87d)r.right + (x87d)r.left) * (x87d)0.5f;
+        const float cy  = (float)(((x87d)r.bottom + (x87d)r.top) * (x87d)0.5f);
+        const x87d  sx  = cx + (x87d)outPos.x;
+        const x87d  sy  = (x87d)cy + (x87d)outPos.y;
+        const float sz  = (float)((x87d)m_fEntranceZ + (x87d)outPos.z);
+        outPos.x = (float)(sx - (x87d)enex->m_vecExitPos.x);
+        outPos.y = (float)(sy - (x87d)enex->m_vecExitPos.y);
+        outPos.z = (float)((x87d)sz - (x87d)enex->m_vecExitPos.z);
     }
 
 #ifndef NOTSA_PORTABLE

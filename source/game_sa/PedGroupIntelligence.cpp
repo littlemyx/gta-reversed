@@ -310,7 +310,7 @@ void CPedGroupIntelligence::SetTask(CPed* ped, const CTask& task, PedTaskPairs& 
 
 // 0x5F8560
 void CPedGroupIntelligence::SetScriptCommandTask(CPed* ped, const CTask& task) {
-    SetTask(ped, task, m_ScriptCommandPedTaskPairs, TASK_SECONDARY_INVALID, true); // 0x5F8560: `push 1` (force): the script command replaces the stored task even if it has the same type
+    SetTask(ped, task, m_ScriptCommandPedTaskPairs, TASK_SECONDARY_INVALID, true); // 0x5F8560: `push 1` (force) - the script command replaces the stored task even if it is of the same type
 }
 
 // @unk
@@ -327,9 +327,9 @@ bool CPedGroupIntelligence::ShouldSetHighestPriorityEventAsCurrent() {
         return true;
     }
 
-    // Same type, but current can't be interrupted by it?
+    // Same type, but the new event can't interrupt the same event?
     if (m_HighestPriorityEvent->GetEvent().GetEventType() == m_CurrentEvent->GetEvent().GetEventType()) {
-        if (!m_CurrentEvent->GetEvent().CanBeInterruptedBySameEvent()) {
+        if (!m_HighestPriorityEvent->GetEvent().CanBeInterruptedBySameEvent()) { // 0x5FC6D9: vtbl+0x3c is called on the HIGHEST priority event (port asked the current one)
             return false;
         }
     }

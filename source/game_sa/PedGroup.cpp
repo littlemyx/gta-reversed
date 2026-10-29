@@ -138,7 +138,9 @@ void CPedGroup::Teleport(const CVector& pos) {
         leader->Teleport(pos, false);
     }
 
-    if (const auto oe = m_groupIntelligence.GetCurrentEvent(); !oe || oe->GetEventType() == EVENT_LEADER_ENTRY_EXIT) {
+    // 0x5F7B22: no current event => carry on; the current group event wrapping a leader-entry-exit event => nothing more to do
+    // (the port returned for NO event and tested the wrapper's type, which is always EVENT_GROUP_EVENT)
+    if (const auto ge = m_groupIntelligence.GetCurrentEvent(); ge && ge->GetEvent().GetEventType() == EVENT_LEADER_ENTRY_EXIT) {
         return;
     }
 

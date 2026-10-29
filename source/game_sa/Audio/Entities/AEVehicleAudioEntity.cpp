@@ -4191,7 +4191,15 @@ void CAEVehicleAudioEntity::ProcessDummyTrainEngine(tVehicleParams& vp) {
     float frq{}, vol{};
 
     // 0x500876 - Calculate frequency for tilt
-    frq = std::clamp(train->GetForward().Dot(CVector::ZAxisVector()), -0.3f, 0.3f) * cfg->FrqSlopeFactor;
+    {
+        // 0x500879-0x5008BC: the clamp bounds are the 64-bit constants -0.3 / 0.3 (0x862D60 / 0x862D58), x <= lo -> lo (NaN too), x >= hi -> hi, and the 64-bit bound is what
+        // gets multiplied by the slope factor (fmul, PC24-rounded to float by the fstp), not the float 0.3f
+        const x87d tilt = (x87d)train->GetForward().Dot(CVector::ZAxisVector());
+        const x87d lo   = -(x87d)0.3;
+        const x87d hi   = (x87d)0.3;
+        const x87d cl   = !(tilt > lo) ? lo : (tilt >= hi ? hi : tilt);
+        frq             = (float)X87R(cl * (x87d)cfg->FrqSlopeFactor);
+    }
 
     // 0x5008B2 - Calculate linear speed of train to use
     const auto trspeed = GetTrainSpeed(train);

@@ -3517,12 +3517,11 @@ void CCam::Process_Cam_TwoPlayer_InCarAndShooting() {
         const double f = std::pow((double)0.98f, (double)CTimer::GetTimeStep());
         m_fFOV         = (float)(X87R(((x87d)m_fFOV - (x87d)70.0) * f) + (x87d)70.0);
     }
-    if (m_fFOV <= 100.0f) {
-        if (m_fFOV < 70.0f) {
-            m_fFOV = 70.0f;
-        }
-    } else {
+    // exe 0x519988: `jne` on fov <= 100 (or NaN) goes on to the lower clamp
+    if (m_fFOV > 100.0f) {
         m_fFOV = 100.0f;
+    } else if (m_fFOV < 70.0f) {
+        m_fFOV = 70.0f;
     }
 
     // Aiming
@@ -3549,24 +3548,20 @@ void CCam::Process_Cam_TwoPlayer_InCarAndShooting() {
         const double f = std::pow((double)0.85f, (double)CTimer::GetTimeStep());
         x87d       dx = ((x87d)targetScreenX - m_fX_Targetting) * (X87R(1.0 - f));
         float        lim = CTimer::GetTimeStep() * 0.01f;
-        if (dx <= lim) {
-            if (dx < -lim) {
-                dx = -lim;
-            }
-        } else {
+        if (dx > lim) { // exe 0x519B47: `jne` on dx <= lim (or NaN) -> lower clamp
             dx = lim;
+        } else if (dx < -lim) {
+            dx = -lim;
         }
         m_fX_Targetting = (float)(dx + m_fX_Targetting);
 
         const double f2 = std::pow((double)0.85f, (double)CTimer::GetTimeStep());
         x87d       dy = ((x87d)targetScreenY - m_fY_Targetting) * (X87R(1.0 - f2));
         lim = CTimer::GetTimeStep() * 0.01f;
-        if (dy <= lim) {
-            if (dy < -lim) {
-                dy = -lim;
-            }
-        } else {
+        if (dy > lim) {
             dy = lim;
+        } else if (dy < -lim) {
+            dy = -lim;
         }
         m_fY_Targetting = (float)(dy + m_fY_Targetting);
     }
@@ -3597,7 +3592,7 @@ void CCam::Process_Cam_TwoPlayer_InCarAndShooting() {
         const float y   = m_fY_Targetting - -0.4f;
         const float len = std::sqrt(x * x + y * y);
         const float step = CTimer::GetTimeStep() * 0.002f;
-        if (step <= len) {
+        if (!(len < step)) { // exe 0x519D34: `jp` on NOT(len < step), NaN takes this branch
             const float inv = 1.0f / len;
             m_fX_Targetting = m_fX_Targetting - step * inv * x;
             m_fY_Targetting = m_fY_Targetting - inv * step * y;
@@ -3666,12 +3661,10 @@ void CCam::Process_Cam_TwoPlayer_InCarAndShooting() {
         maxAlpha = 0.174532935f;
         minAlpha = -1.04719758f;
     }
-    if (minAlpha <= m_fVerticalAngle) {
-        if (maxAlpha < m_fVerticalAngle) {
-            m_fVerticalAngle = maxAlpha;
-        }
-    } else {
+    if (minAlpha > m_fVerticalAngle) { // exe 0x51A031: `jne` on min <= v (or NaN) -> upper check
         m_fVerticalAngle = minAlpha;
+    } else if (maxAlpha < m_fVerticalAngle) {
+        m_fVerticalAngle = maxAlpha;
     }
     m_vecSource.z = (float)((x87d)vehPos.z - X87R(x87::sin((double)m_fVerticalAngle) * camDist));
 

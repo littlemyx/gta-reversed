@@ -157,7 +157,7 @@
 | S51 | phase2: unlisted non-oracle hooks | 40 | partial 20/40 (20 M) -> S51b | FurnitureManager_c.cpp, FurnitureSubGroup_c.cpp, InterestingEvents.cpp, InteriorGroup_c.cpp, InteriorManager_c.cpp, Interior_c.cpp ... |
 | S52 | phase2: unlisted non-oracle hooks | 40 | done (31 M, 6 fixed, 3 no callers) | PathFind.cpp, PedAttractorManager.cpp, PedClothesDesc.cpp |
 | S53 | phase2: unlisted non-oracle hooks | 40 | partial 15/40 (14 M, 1 fixed) -> S53b | PedClothesDesc.cpp, PedDamageResponseCalculator.cpp, PedGeometryAnalyser.cpp, PedGroup.cpp, PedGroupIntelligence.cpp |
-| S54 | phase2: unlisted non-oracle hooks | 40 | pending | PedGroupIntelligence.cpp, PedGroupMembership.cpp, PedGroupPlacer.cpp, PedGroups.cpp, PedIK.cpp, PedList.cpp ... |
+| S54 | phase2: unlisted non-oracle hooks | 40 | partial 27/40 (20 M, 7 fixed, 1 U) -> S54c | PedGroupIntelligence.cpp, PedGroupMembership.cpp, PedGroupPlacer.cpp, PedGroups.cpp, PedIK.cpp, PedList.cpp ... |
 | S55 | phase2: unlisted non-oracle hooks | 40 | 38/40 (26 M, 12 fixed) -> S55b | PedPlacement.cpp, PedStats.cpp, PedStuckChecker.cpp, PedTaskPair.cpp, PedType.cpp, Pickup.cpp ... |
 | S56 | phase2: unlisted non-oracle hooks | 40 | partial 27/40 (17 M, 10 fixed) -> S56b | Pickups.cpp, PlaneTrail.cpp, PlaneTrails.cpp, PlayerInfo.cpp, PlayerPedData.cpp, PlayerRelationshipRecorder.cpp |
 | S57 | phase2: unlisted non-oracle hooks | 40 | partial 18/40 (15 M, 3 fixed) -> S57b | EventPool.h, PedAttractorPool.h, PedIntelligencePool.h, PedPool.h, PlayerRelationshipRecorder.cpp, Remote.cpp ... |
@@ -191,7 +191,8 @@
 | S53b | rest of S53 | 25 | 24/25 (15 M, 9 fixed) -> S53c | PedClothesDesc.cpp, PedGeometryAnalyser.cpp, PedGroup.cpp |
 | S48c | CGame rows + CGarage::Update handlers + CGameLogic::Update tail | 18 | done (14 M, 4 fixed; S48, S49, S50 complete) | Game.cpp |
 | S57c | rest of S57b | 10 | 3/10 (3 M) -> S57d | PedIntelligencePool.h, PedPool.h, Replay.cpp, VehiclePool.h |
-| S53c | rest of S53b | 1 | pending | PedGeometryAnalyser.cpp |
+| S53c | rest of S53b | 1 | moved to S54c | PedGeometryAnalyser.cpp |
 | S58b | rest of S58 | 17 | pending | Shopping.cpp, TheScripts.cpp |
 | S64b | rest of S64 | 31 | pending | VehicleAnimGroupData.cpp, VehicleRecording.cpp, VehicleSaveStructure.cpp, Weapon.cpp |
 | S57d | rest of S57c | 7 | pending | Replay.cpp |
+| S54c | rest of S54 (+ S53c ComputeClearTarget) | 14 | pending | PedGroupIntelligence.cpp, PedGroupMembership.cpp, PedGroupPlacer.cpp |

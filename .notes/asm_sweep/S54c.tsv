@@ -1,0 +1,15 @@
+addr	file	line	cls	fn	oc
+0x5F77A0	source/game_sa/PedGroupIntelligence.cpp	32	None	IsCurrentEventValid	U
+0x5F7800	source/game_sa/PedGroupIntelligence.cpp	23	None	ComputeScriptCommandTasks	U
+0x5F8510	source/game_sa/PedGroupIntelligence.cpp	34	None	SetEventResponseTask	U
+0x5F8560	source/game_sa/PedGroupIntelligence.cpp	31	None	SetScriptCommandTask	U
+0x5F86F0	source/game_sa/PedGroupIntelligence.cpp	15	None	ReportFinishedTask	U
+0x5F88D0	source/game_sa/PedGroupIntelligence.cpp	22	None	ComputeDefaultTasks	U
+0x5FC440	source/game_sa/PedGroupIntelligence.cpp	38	None	ComputeEventResponseTasks	U
+0x5FC4A0	source/game_sa/PedGroupIntelligence.cpp	39	None	Process	U
+0x5F7FE0	source/game_sa/PedGroupMembership.cpp	330	None	From	U
+0x5FC9B0	source/game_sa/PedGroupPlacer.cpp	17	None	PlaceFormationGroup	U
+0x5FCE80	source/game_sa/PedGroupPlacer.cpp	18	None	PlaceChatGroup	U
+0x5FD330	source/game_sa/PedGroupPlacer.cpp	19	None	PlaceRandomGroup	U
+0x5FD810	source/game_sa/PedGroupPlacer.cpp	20	None	PlaceGroup	U
+0x5F5D80	source/game_sa/PedGeometryAnalyser.cpp	23	None	ComputeClearTarget	U

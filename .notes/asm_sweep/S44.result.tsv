@@ -1,0 +1,41 @@
+addr	function	verdict	asm range	note	fix commit
+0x6FDFC0	CCustomCarPlateMgr::AtomicUpgradeSetCarplateTextureCB	MATCH	0x6FDFC0-0x6FDFDA (all)	ForAllMaterials(geometry, MaterialUpgradeCB, geometry)	-
+0x6FDFE0	CCustomCarPlateMgr::SetupClumpAfterVehicleUpgrade	MATCH	0x6FDFE0-0x6FE010 (all)	null material -> false; type, material stored before ForAllAtomics	-
+0x6FE020	CCustomCarPlateMgr::SetupMaterialPlateTexture	MATCH	0x6FE020-0x6FE05D (all)	CreatePlateTexture(text, type), SetTexture, TextureDestroy	-
+0x6FE060	CCustomCarPlateMgr::MaterialSetCarplateTextureCB	MATCH	0x6FE060-0x6FE0CE (all)	carplate stores the material and builds the plate texture; carpback -> plateback	-
+0x6FE0D0	CCustomCarPlateMgr::AtomicSetCarplateTextureCB	MATCH	0x6FE0D0-0x6FE0EE (all)		-
+0x6FE0F0	CCustomCarPlateMgr::SetupClump	MATCH	0x6FE0F0-0x6FE11F (all)		-
+0x43CEC0	CDarkel::DrawMessages	MATCH	0x43CEC0-0x43D1CA (all)	status jump table, big message windows, unsigned remaining/div, blink test, p2 offset +72*s; only the 168*s Y is exe 148*s + 20*s (1 ulp, UNSURE-ulp, not changed)	-
+0x43D210	CDarkel::RegisterKillNotByPlayer	MATCH	0x43D210-0x43D2D1 (all)	stat ids/order, gang switch (GANG2 -> friendly, others enemy)	-
+0x43D3B0	CDarkel::StartFrenzy	DEVIATION	0x43D3B0-0x43D69F (all)	drive-by (0x34) -> Micro Uzi (0x1c) mapping tests the weaponType ARGUMENT; port tested the stale global WeaponType, so a drive-by frenzy was never mapped (weapon 52 >= 47: no weapon given); field stores, 2P status, PAGE_00 test, PreviousTime, weapon give loop MATCH	1601bff3c
+0x43D7A0	CDarkel::DealWithWeaponChangeAtEndOfFrenzy	DEVIATION	0x43D7A0-0x43D9DB (all)	range test on the mapped weapon (port: raw WeaponType); m_nChosenWeapon = slot of InterruptedWeaponTypeSelected before GiveWeapon (store missing); vehicle part MATCH	ef6eac7a3
+0x43DAC0	CDarkel::Update	MATCH	0x43DAC0-0x43DC0D (all)	timeout/p2-gone failure, PreviousTime beep (<12), KillsNeeded<=0 pass path incl. 2P GameState and rampage-passed stat	-
+0x43DC10	CDarkel::ResetOnPlayerDeath	MATCH	0x43DC10-0x43DC54 (all)		-
+0x43DCD0	CDarkel::RegisterKillByPlayer	DEVIATION	0x43DCD0-0x43DF00 (all)	kill counted once through ONE compare chain (port: equal test + second switch counted WEAPON_EXPLOSION twice, also ANYWEAPON + explosion); respect/gang stat order; recruited-member check without the killed-is-player test; stats 121/130/176, PedsKilledOfThisType, provocation, dealer MATCH	0a70fa96e
+0x43DF20	CDarkel::RegisterCarBlownUpByPlayer	MATCH	0x43DF20-0x43DFFF (all)	appearance jump table (road 122, boat 123, plane/heli 124), rhino 209 / police 208 / civilian 207	-
+0x403F00	CAnimatedBuilding::PreRender	MATCH	0x403F00-0x403F1F (all)		-
+0x403EC0	CBuilding::ReplaceWithNewModel	MATCH	0x403EC0-0x403EFA (all)		-
+0x59EAC0	CDummyObject::CreateObject	MATCH	0x59EAC0-0x59EB14 (all)	bit 13 (ImBeingRendered), clears bits 0 and 7, lod moved	-
+0x59EB70	CDummyObject::UpdateFromObject	MATCH	0x59EB70-0x59EC36 (all)	bits 9/7/0 copied only when the ipl has dynamic streaming disabled	-
+0x5DE310	CDummyPed::~CDummyPed	MATCH	0x5DE310-0x5DE32B (all)	scalar deleting destructor	-
+0x532A90	CEntity::CEntity	MATCH	0x532A90-0x532ADC (all)	flags 0x8000080, type/status byte 0x20, rand seed	-
+0x532AE0	CEntity::SetModelIndex	MATCH	0x532AE0-0x532AF7 (all)	virtual NoCreate + CreateRwObject	-
+0x532B20	CEntity::UpdateRpHAnim	MATCH	0x532B20-0x532B64 (all)		-
+0x532D70	CEntity::MaterialUpdateUVAnimCB	MATCH	0x532D70-0x532DA4 (all)		-
+0x533020	CEntity::Add (void)	MATCH	0x533020-0x533042 (all)	not hooked: GetBoundRect then virtual Add(rect)	-
+0x533050	CEntity::LivesInThisNonOverlapSector	MATCH	0x533050-0x53313E (all)	centre = (r+l)*0.5, (t+b)*0.5; sector floor(c*0.02+60)	-
+0x533170	CEntity::ModifyMatrixForCrane	MATCH	0x533170-0x53323F (all)		-
+0x533290	CEntity::SetAtomicAlpha	MATCH	0x533290-0x5332B2 (all)		-
+0x5332C0	CEntity::SetRwObjectAlpha	MATCH	0x5332C0-0x533300 (all)	exe ignores other object types, port has NOTSA_UNREACHABLE_CASE (never reached)	-
+0x533410	CEntity::GetRandom2dEffect	MATCH	0x533410-0x5334D0 (all)	32 candidates, rand&0xffff * 2^-15 * n	-
+0x533700	CEntity::SetModelIndexNoCreate	MATCH	0x533700-0x533784 (all)	flags bits 21/14/27, tag model test	-
+0x533790	CEntity::CreateEffects	DEVIATION	0x533790-0x533BB7 (all)	timed-enex srand seed: day counter is 32-bit in the exe (port uint8 wrapped 0->255 instead of 0xFFFFFFFF; day 0 only); light/particle/attractor/enex/roadsign/escalator MATCH	dcd455256
+0x533BF0	CEntity::DestroyEffects	MATCH	0x533BF0-0x533D2C (all)		-
+0x533D30	CEntity::CreateRwObject	MATCH	0x533D30-0x533ECB (all)		-
+0x533ED0	CEntity::AttachToRwObject	MATCH	0x533ED0-0x533FA6 (all)		-
+0x533FB0	CEntity::DetachFromRwObject	MATCH	0x533FB0-0x534020 (all)		-
+0x534030	CEntity::DeleteRwObject	MATCH	0x534030-0x534115 (all)	port adds a documented MAC-STAB4 matrix snapshot before the frame is freed (not an exe behaviour difference)	-
+0x534310	CEntity::Render	MATCH	0x534310-0x5343ED (all)		-
+0x5347D0	CEntity::Add (rect)	DEVIATION	0x5347D0-0x534ACB (all)	top (max y) clamp is strictly > 3000 (exe test ah,0x41), port >=; left < -3000, right >= 3000, bottom < -3000, lod 0.005f+15 trunc, sector switch/clamps MATCH	b19be430f
+0x534AE0	CEntity::Remove	DEVIATION	0x534AE0-0x534E66 (all)	same top > 3000 clamp as Add	4033171c1
+0x534E90	CEntity::ModifyMatrixForTreeInWind	DEVIATION	0x534E90-0x53503A (all)	strong wind: ((1-c)*T1 + c*T2) + 1 (port 1 + c*T2 added to term 1); Wind >= 0.2 sway is sin*0.008f once (port sin*0.005f*1.6f); jp arms: Wind >= 0.5/0.2 or NaN	335249894

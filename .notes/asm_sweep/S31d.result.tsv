@@ -1,0 +1,30 @@
+addr	function	verdict	asm range	note	fix commit
+0x50DD70	CCam::Finalise_DW_CineyCams	NOT_REACHED	-	budget	-
+0x5161A0	CCam::GetLookFromLampPostPos	NOT_REACHED	-	budget	-
+0x513E40	CCam::Get_TwoPlayer_AimVector	NOT_REACHED	-	budget	-
+0x517400	CCam::IsTimeToExitThisDWCineyCamMode	NOT_REACHED	-	budget	-
+0x520690	CCam::LookBehind	NOT_REACHED	-	budget	-
+0x520E40	CCam::LookRight	NOT_REACHED	-	budget	-
+0x518500	CCam::ProcessArrestCamOne	NOT_REACHED	-	budget	-
+0x512EF0	CCam::ArrestCamLookAtCopHead	NOT_REACHED	-	budget	-
+0x519250	CCam::ProcessPedsDeadBaby	NOT_REACHED	-	budget	-
+0x521500	CCam::Process_AimWeapon	FIXED	0x521500-0x522C6C	4 NaN-polarity compares: LOS timer >=0 (x2), heading-step d<=e, cos-term v<=0 (exe jne = other arm on unordered); rest MATCH	1c91c1bd
+0x512B10	CCam::Process_AttachedCam	NOT_REACHED	-	budget	-
+0x525E50	CCam::Process_Cam_TwoPlayer	NOT_REACHED	-	budget	-
+0x519810	CCam::Process_Cam_TwoPlayer_InCarAndShooting	FIXED	0x519810-0x51A400 (compare sites)	5 NaN-polarity compares: fov>100 first, dx/dy lim clamp, NOT(len<step), min/max alpha clamp; arithmetic tails not re-traced (PC24 float-per-op)	f615d43c
+0x51B850	CCam::Process_DW_BirdyCam	NOT_REACHED	-	budget	-
+0x51B120	CCam::Process_DW_CamManCam	NOT_REACHED	-	budget	-
+0x51A740	CCam::Process_DW_HeliChaseCam	NOT_REACHED	-	budget	-
+0x51C760	CCam::Process_DW_PlaneCam1	NOT_REACHED	-	budget	-
+0x51CC30	CCam::Process_DW_PlaneCam2	NOT_REACHED	-	budget	-
+0x51D100	CCam::Process_DW_PlaneCam3	NOT_REACHED	-	budget	-
+0x51C250	CCam::Process_DW_PlaneSpotterCam	NOT_REACHED	-	budget	-
+0x50F3F0	CCam::Process_Editor	NOT_REACHED	-	budget	-
+0x50F970	CCam::Process_FollowPedWithMouse	NOT_REACHED	-	rest of function open (near-clip tail 0x50FF40-0x51007E done in S31c)	-
+0x5105C0	CCam::Process_M16_1stPerson	MATCH	0x5105C0-0x511B2D	full flow and arithmetic	-
+0x512110	CCam::Process_WheelCam	NOT_REACHED	-	budget	-
+0x50A0A0	CCam::LimitPrecision-float	NOT_REACHED	-	budget	-
+0x516010	CCam::GetArrestCamPosBehindTarget	NOT_REACHED	-	budget	-
+0x514030	CCamera::AvoidTheGeometry	NOT_REACHED	-	budget	-
+0x511B50	CCam::Process_Rocket	NOT_REACHED	-	budget (heat-seeking tail 0x511EC2-0x5120E7 open)	-
+0x526FC0	CCam::Process	NOT_REACHED	-	budget (non-fighting target branch 0x5273EB-0x52762D still open)	-

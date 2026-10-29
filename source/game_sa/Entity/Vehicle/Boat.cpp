@@ -279,7 +279,8 @@ void CBoat::RenderWakePoints() {
                 : maxWidth;
         }()
     ](auto ptIdx) {
-        const auto t = (CBoat::WAKE_LIFETIME - m_WakePtCounters[ptIdx]) * ((m_WakeBoatSpeed[ptIdx] / 25.f + 0.5f) / CBoat::WAKE_LIFETIME);
+        // exe 0x6EDB9A: speed * 0.04f (0x858CEC), not speed / 25
+        const auto t = (CBoat::WAKE_LIFETIME - m_WakePtCounters[ptIdx]) * (((float)m_WakeBoatSpeed[ptIdx] * 0.04f + 0.5f) / CBoat::WAKE_LIFETIME);
         return maxWidth + maxWidth * t;
     };
 
@@ -292,15 +293,16 @@ void CBoat::RenderWakePoints() {
         if (ptIdx < 3) {
             // Pirulax: Not really noticeable, but I think this is how it was supposed to be.
             //          otherwise they wouldn't be calculating it for the 0th point... (would just use 0 instead)
+            // exe 0x6EDC71: (alpha * idx) * 0.33333334f (0x859040), not alpha * (idx / 3)
 #ifdef FIX_BUGS
-            alpha *= (float)(ptIdx + 1) / 3.f;
+            alpha = alpha * (float)(ptIdx + 1) * 0.33333334f;
 #else
-            alpha *= (float)ptIdx / 3.f;
+            alpha = alpha * (float)ptIdx * 0.33333334f;
 #endif
         }
-        alpha *= (float)m_WakeBoatSpeed[ptIdx] / 100.f + 0.15f;
+        alpha *= (float)m_WakeBoatSpeed[ptIdx] * 0.01f + 0.15f; // exe 0x6EDC7D: * 0.01f, not / 100
         if (boatToCamDist2D > 50.f) { // MAX_WAKE_LENGTH ?
-            alpha *= (80.f - boatToCamDist2D) / 30.f;
+            alpha *= (80.f - boatToCamDist2D) * 0.033333335f; // exe 0x6EDCA6: * 0x858F10 (float 1/30), not / 30
         }
         return alpha;
     };
@@ -314,14 +316,21 @@ void CBoat::RenderWakePoints() {
 
         auto currToPrevDir = prevPos - currPos;
         const auto distToPrevSq = currToPrevDir.SquaredMagnitude();
-        if (distToPrevSq >= sq(3.f)) {
-            currToPrevDir /= std::sqrt(distToPrevSq); // Normalize it
+        // exe 0x6EDB46-0x6EDB84: only for distSq > 9 (strict, NaN skips): 1 / len, then both components multiplied by it
+        // (not divided by len), and the segment is dropped when len > 13 (tested on the sqrt, not on distSq <= 169; NaN still draws)
+        bool drawSegment = true;
+        if (distToPrevSq > sq(3.f)) {
+            const auto len    = std::sqrt(distToPrevSq);
+            const auto invLen = 1.0f / len;
+            currToPrevDir.x *= invLen;
+            currToPrevDir.y *= invLen;
+            drawSegment = !(len > 13.f);
         }
 
         const auto currAlpha = GetAlpha(wakePtIdx);
         const auto currWidth = GetWidth(wakePtIdx);
 
-        if (distToPrevSq <= sq(13.f)) {
+        if (drawSegment) {
             const auto GetCorners = [](auto& posOnDir, auto& dirToLieOn, float width) {
                 const auto offset = dirToLieOn.GetPerpRight() * width;
                 return std::make_pair(posOnDir - offset, posOnDir + offset);
@@ -343,7 +352,7 @@ void CBoat::RenderWakePoints() {
 
 // NOTSA: Moved from 0x6ED9A0, because it just *makes sense*
 void CBoat::RenderAllWakePointBoats() {
-    RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RWRSTATE(RwTextureGetRaster(CWaterLevel::texWaterwake)));
+    RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RWRSTATE(CWaterLevel::waterwakeRaster)); // exe 0x6ED9A9: the raster global (0xC228B8) itself, not texWaterwake->raster
 
     FillBoatList();
 

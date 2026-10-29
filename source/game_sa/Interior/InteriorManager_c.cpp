@@ -261,9 +261,9 @@ size_t InteriorManager_c::GetVisibleEffects(InteriorEffectInfo_t* intFxInfos, ui
                 continue;
             }
 
-            // Check if effect was already stored
+            // Check if effect was already stored (exe 0x598E74-0x598EB4: skip when ANY stored info has the same entity and group id; the port had none_of, i.e. inverted)
             if (numIntFxInfo != 0) {
-                if (rng::none_of(intFxInfos, intFxInfos + numIntFxInfo, [&](const InteriorEffectInfo_t& ifxi) {
+                if (rng::any_of(intFxInfos, intFxInfos + numIntFxInfo, [&](const InteriorEffectInfo_t& ifxi) {
                     return ifxi.Entity == e && ifxi.Effects[0]->m_groupId == ifx->m_groupId;
                 })) {
                     continue;

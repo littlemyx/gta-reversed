@@ -1,0 +1,35 @@
+addr	function	verdict	asm range	note	fix commit
+0x409650	AddEntity	MATCH	0x409650-0x4096BF	ped/vehicle excluded, delete-oldest-then-reinsert	-
+0x407610	AddImageToList	NOT_REACHED	-		-
+0x40C520	AddLodsToRequestList	MATCH	0x40C520-0x40C6A1	exe truncates the LOD sector index (port floors; differs only for sector floats in (-1,0), off-map)	-
+0x40D3F0	AddModelsToRequestList	DEVIATION	0x40D3F0-0x40D7AF	repeat-sector list next to Buildings/Dummies is Objects (+8), port used Peds (+4)	a16a4d03
+0x407AD0	AreAnimsUsedByRequestedModels	MATCH	0x407AD0-0x407BB8	requested list DFF + both channels	-
+0x40C6B0	ConvertBufferToObject	MATCH	0x40C6B0-0x40CB91	3rd arg (channel index) is never read by the exe; all model-type paths, retry/remove sequence, alpha flag and list add match	-
+0x4090A0	DeleteAllRwObjects	MATCH	0x4090A0-0x409209	Buildings/Objects/Dummies, flag mask 0x2400	-
+0x409210	DeleteRwObjectsAfterDeath	MATCH	0x409210-0x4093A0	|d|>3 test and Objects (+8) list match	-
+0x40D7C0	DeleteRwObjectsBehindCamera	DEVIATION	0x40D7C0-0x40E11E	memory-used compares signed (entry + final RemoveLeastUsedModel loop); forward.y NaN takes <=0 path; pass structure/scan codes/RemoveReferencedTxds placement match	edc3592e
+0x5D29E0	Load	NOT_REACHED	-		-
+0x5D29A0	Save	NOT_REACHED	-		-
+0x5B6170	LoadCdDirectory-char	NOT_REACHED	-		-
+0x5B82C0	LoadCdDirectory-void	NOT_REACHED	-		-
+0x40D3D0	LoadInitialPeds	NOT_REACHED	-		-
+0x40A120	LoadInitialWeapons	NOT_REACHED	-		-
+0x40EB70	LoadScene	NOT_REACHED	-		-
+0x40ED80	LoadSceneCollision	NOT_REACHED	-		-
+0x40BA70	PossiblyStreamCarOutAfterCreation	DEVIATION	0x40BA70-0x40BA95	tests CVehicleModelInfo::m_nFlags (+0x4E) bit 0; port tested the base model flags (+0x12)	0aeebc92
+0x409430	RequestBigBuildings	NOT_REACHED	-		-
+0x407100	RequestTxdModel	NOT_REACHED	-		-
+0x408C70	RequestVehicleUpgrade	NOT_REACHED	-		-
+0x40B450	RequestSpecialChar	NOT_REACHED	-		-
+0x409D10	RequestSpecialModel	NOT_REACHED	-		-
+0x5BCCD0	ReadIniFile	NOT_REACHED	-		-
+0x40B080	RemoveCurrentZonesModels	NOT_REACHED	-		-
+0x40C180	RemoveTxdModel	NOT_REACHED	-		-
+0x407D50	GetDefaultCabDriverModel	MATCH	0x407D50-0x407DB3	index = 2*level-2 + {0,1}, same rand split	-
+0x5B8AD0	Init2	NOT_REACHED	-		-
+0x4083C0	InitImageList	NOT_REACHED	-		-
+0x4084B0	Shutdown	NOT_REACHED	-		-
+0x40A2A0	StreamAmbulanceAndMedic	NOT_REACHED	-		-
+0x40A400	StreamFireEngineAndFireman	NOT_REACHED	-		-
+0x40BDA0	StreamPedsIntoRandomSlots	NOT_REACHED	-		-
+0x40E670	Update	DEVIATION	0x40E670-0x40E950	LOD branch taken on NaN camera height (exe jp); rest MATCH	30ad919c

@@ -1,0 +1,41 @@
+addr	function	verdict	asm range	note	fix commit
+0x46CF00	CTheScripts::ProcessWaitingForScriptBrainArray	MATCH	0x46CF00-0x46D039 (all)	150 slots, type table (0,3 ped / 1,4 object / 2 none), flags (default 4), object activation range, StartOrRequest args	-
+0x470A20	CTheScripts::ScriptConnectLodsFunction	NOT_REACHED	-	budget	-
+0x4810E0	CTheScripts::DrawScriptSpheres	NOT_REACHED	-	budget (debug / render)	-
+0x481290	CTheScripts::UndoBuildingSwaps	NOT_REACHED	-	budget	-
+0x485C20	CTheScripts::ScriptDebugCircle2D	NOT_REACHED	-	budget (debug)	-
+0x485E00	CTheScripts::HighlightImportantArea	NOT_REACHED	-	budget (render)	-
+0x485EF0	CTheScripts::HighlightImportantAngledArea	NOT_REACHED	-	budget (render)	-
+0x486240	CTheScripts::RemoveThisPed	MATCH	0x486240-0x4862F3 (all)	driver / passenger removal, door lock 5 -> 1, law enforcer state, mission counter; the extra abandoned-status store is already done inside RemoveDriver	-
+0x486300	CTheScripts::CleanUpThisPed	FIXED	0x486300-0x486664 (all)	cleanup only when created by mission (port inverted); mission ped counter decremented also for bKeepTasksAfterCleanUp (port returned before the guard); heli / plane / car driver blocks, group removal, sequence / wander events match	d3e795f31
+0x486670	CTheScripts::CleanUpThisVehicle	FIXED	0x486670-0x4866B5 (all)	release only when created by mission (port inverted); flag clears and SetVehicleCreatedBy(random) match	60e78065e
+0x486780	CTheScripts::UpdateObjectIndices	FIXED	0x486780-0x4867BD (all)	only NumberOfUsedObjects used entries, index reset to -1 before the lookup (port: all entries, stale index)	4bb2317b1
+0x486840	CTheScripts::DrawDebugSquare	NOT_REACHED	-	budget (debug)	-
+0x486990	CTheScripts::DrawDebugAngledSquare	NOT_REACHED	-	budget (debug)	-
+0x486B00	CTheScripts::ClearSpaceForMissionEntity	NOT_REACHED	-	budget	-
+0x493160	CTheScripts::RemoveScriptSearchLight	NOT_REACHED	-	budget	-
+0x4934F0	CTheScripts::AttachSearchlightToSearchlightObject	NOT_REACHED	-	budget	-
+0x4936C0	CTheScripts::RemoveScriptCheckpoint	NOT_REACHED	-	budget	-
+0x493E30	CTheScripts::RenderAllSearchLights	NOT_REACHED	-	budget (render)	-
+0x5D3390	CTheScripts::DoScriptSetupAfterPoolsHaveLoaded	NOT_REACHED	-	budget	-
+0x5D4C40	CTheScripts::Save	NOT_REACHED	-	budget	-
+0x5D4FD0	CTheScripts::Load	NOT_REACHED	-	budget	-
+0x46AA30	CScriptsForBrains::GetIndexOfScriptBrainWithThisName	MATCH	0x46AA30-0x46AA7C (all)	70 entries, type byte at +2, _stricmp (0x8229B6) on the name at +0xC, -1 if absent	-
+0x46AA80	CScriptsForBrains::RequestAttractorScriptBrainWithThisName	MATCH	0x46AA80-0x46AAD8 (all)	type 5, request (flags 0x10) when not loaded, users byte++	-
+0x46AAE0	CScriptsForBrains::MarkAttractorScriptBrainWithThisNameAsNoLongerNeeded	MATCH	0x46AAE0-0x46AB16 (all)	users byte-- when > 0	-
+0x46AB20	CScriptsForBrains::HasAttractorScriptBrainWithThisNameLoaded	MATCH	0x46AB20-0x46AB52 (all)	load state == loaded	-
+0x46B270	CScriptsForBrains::StartNewStreamedScriptBrain	MATCH	0x46B270-0x46B36B (all)	jump table 0,3,5 ped / 1,4 object / 2 none decoded; ped ref, flags 0x800000 / 0x1000000, local var 1 for type 5, waiting-array removal; object ref, flags 0x300000	-
+0x46B390	CScriptsForBrains::StartAttractorScriptBrainWithThisName	MATCH	0x46B390-0x46B3C6 (all)	either ped flag (0x1800000) skips; type 5 lookup	-
+0x46CD80	CScriptsForBrains::StartOrRequestNewStreamedScriptBrain	MATCH	0x46CD80-0x46CEB3 (all)	active flag, per-type busy checks (table 0,3 / 1,4), object flag arms, request flags 4, ped waiting only for type 0 and 3..4 (type 4 quirk kept)	-
+0x46CED0	CScriptsForBrains::StartOrRequestNewStreamedScriptBrainWithThisName	MATCH	0x46CED0-0x46CEFB (all)	lookup then StartOrRequest(..., true)	-
+0x46FF20	CScriptsForBrains::CheckIfNewEntityNeedsScript	MATCH	0x46FF20-0x46FFE7 (all)	busy flags, 70 entries, type + model match, ftol((rand & 0xFFFF) * 2^-15 * 100) < chance (signed), stops after the first start	-
+0x49AAD0	CShopping::GetPriceSectionFromName	MATCH	0x49AAD0-0x49AB06 (all)	11 names, _stricmp; not found is -1 in the exe (unreachable in the port)	-
+0x49AB30	CShopping::GetKey	MATCH	0x49AB30-0x49AB88 (all)	sections 4,5,6 uppercase key, 9 weapon type, 2 returns 2, else model index (-1 default)	-
+0x49AC90	CShopping::RemoveLoadedPrices	MATCH	0x49AC90-0x49ACC3 (all)	block of the loaded section deletable, section none	-
+0x49AE30	CShopping::RemoveLoadedShop	MATCH	0x49AE30-0x49AE6A (all)	shop name cleared, same as RemoveLoadedPrices	-
+0x49AE70	CShopping::FindSection	MATCH	0x49AE70-0x49AF0C (all)	section counting with strtok, case-insensitive name at depth 1, end tags	-
+0x49AF10	CShopping::GetNextSection	MATCH	0x49AF10-0x49AF88 (all)	next section name token, end / EOF null	-
+0x49AF90	CShopping::FindSectionInSection	MATCH	0x49AF90-0x49AFC1 (all)	two chained FindSection calls	-
+0x49AFD0	CShopping::IncrementStat2	MATCH	0x49AFD0-0x49B002 (all)	stats 0x42 / 0x50 (respect, appearance) x10, ModifyStat(float)	-
+0x49B640	CShopping::ShutdownForRestart	MATCH	0x49B640-0x49B694 (all)	shop + prices removed, has-bought table (560) cleared, modifier count 0	-
+0x49B6A0	CShopping::LoadStats	UNSURE	0x49B6A0-0x49B8CA (all)	file / section loop, token skipping (4..6: 2, 9: 1), two stat / value pairs match; for the CarPaintJobs section (2) the inline key is an uninitialised stack slot in the exe (stale key of an earlier line), the port stores 2	-

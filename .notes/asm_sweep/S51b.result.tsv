@@ -1,0 +1,21 @@
+addr	function	verdict	asm range	note	fix commit
+0x856880	CInterestingEvents::Destructor	N/A	-	atexit cleanup without this; unhookable, not compared	-
+0x5C0280	FurnitureManager_c::LoadFurniture	MATCH	0x5C0280-0x5C049C (all)	tag compares, scanf formats (0x86af34/0x86af50), GROUP/SUBGROUP/ITEM argument order match; the port resolves the sub-group by pointer (equivalent for unique ids)	-
+0x5C04A0	FurnitureManager_c::Init	MATCH	0x5C04A0-0x5C04F4 (all)	counters cleared, 512 items to the list, 9 group inits, LoadFurniture	-
+0x5950D0	InteriorGroup_c::ReferenceAnims	FIXED	0x5950D0-0x595151 (all)	asks the anim block IsLoaded flag (cmp byte [block*32+0xB5D4B0],1), port asked the IFP model load state; unknown group type is garbage in the exe, unreachable in the port	ab9a1aa96
+0x595160	InteriorGroup_c::DereferenceAnims	MATCH	0x595160-0x5951F5 (all)	same block-name switch, RemoveAnimBlockRef, flag cleared	-
+0x595290	InteriorGroup_c::Exit	MATCH	0x595290-0x59531C (all)	interiors exit + pool return, ped removal / alive-state, numPeds 0, RemoveInterior(movsx id), DereferenceAnims	-
+0x595320	InteriorGroup_c::Setup	MATCH	0x595320-0x59537A (all)	type: office-contains-2 -> 0, 0/6 -> 1, 1 -> 2 else -1 (neg/sbb/and/dec), ReferenceAnims	-
+0x597FE0	InteriorGroup_c::Constructor	MATCH	0x597FE0-0x597FEB (all)	list item ctor only (default ctor)	-
+0x597FF0	InteriorGroup_c::Destructor	MATCH	0x597FF0 (all)	jmp to list item dtor	-
+0x598430	InteriorManager_c::AddSameGroupEffectInfos	MATCH	0x598430-0x598490 (all)	skip own id, effect type 5, same group id, NumFx < 8 store; port early outs are equivalent	-
+0x598D80	InteriorManager_c::GetVisibleEffects	FIXED	0x598D80-0x598F44 (all)	the already-stored test skipped when NONE matched in the port (inverted: only the first group stored, sibling effects duplicated); exe skips when a stored info matches entity + group id. FindObjectsInRange args, area test, visibility, store fields match	9c89a5b5b
+0x598F50	InteriorManager_c::Update	FIXED	0x598F50-0x59920D (all)	interior id = ftol(z * y * x) + fxId (port x * y * z, different float rounding); active/area/car-drive gate, group exit/new group/interiors/Setup/time store, group updates match	2129314c6
+0x5C0500	InteriorManager_c::Init	FIXED	0x5C0500-0x5C05E6 (all)	m_TimeLastPickupsGenerated = -180000 (0xFFFD40E0), port UINT32_MAX (no interior pickups for the first 3 minutes); rest (pool, group ids, furniture init, alive states) matches	c0b077584
+0x591360	Interior_c::Destructor	MATCH	0x591360-0x5913AB (all)	list dtors	-
+0x5921D0	Interior_c::Constructor	MATCH	0x5921D0-0x592226 (all)	list ctors, node address area words 0xFFFF at +0x3EC/+0x3F0	-
+0x44D0F0	CPathFind::UnLoadPathFindData	MATCH	0x44D0F0-0x44D1A0 (all)	six tables freed and nulled (free order differs only in the allocator)	-
+0x44DE00	CPathFind::LoadSceneForPathNodes	MATCH	0x44DE00-0x44DE72 (all)	flags cleared, MarkRegionsForCoors(350), request model 0x63A7 + x + 8*y (default flags)	-
+0x44E1A0	CPathFind::RemoveInterior	FIXED	0x44E1A0-0x44E45F (all)	slot id released (-1); 64 map areas only with dynamic link tables indexed by AREA (port: slot, 72 areas); links reset only when a link into this interior was removed and none into another interior remains (port inverted); frees nodes/links/lengths/intersections (port: lengths twice, links leaked); exe link shift writes into the CPathFind object (bug) - not reproduced, count-only truncation kept	41a120aa0
+0x44E790	CPathFind::GeneratePedCreationCoors	MATCH	0x44E790-0x44EC9C (all)	spawn probability, range test, shared dist slot quirk, position blend, visible / non-visible tests, ground z 3.0 tolerance (NaN passes) all match	-
+0x44ECA0	CPathFind::GeneratePedCreationCoors_Interior	MATCH	0x44ECA0-0x44EFB7 (all)	2500 dist, z > 900, 5 tries blend (float temporaries), ground z < 3.0	-

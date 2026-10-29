@@ -77,7 +77,7 @@ bool CCarGenerator::CheckIfWithinRangeOfAnyPlayers()
         }
     }
 
-    if (relPosn.Magnitude2D() >= TheCamera.m_fGenerationDistMultiplier * 160.0f && !bVisible)
+    if (!(relPosn.Magnitude2D() < TheCamera.m_fGenerationDistMultiplier * 160.0f) && !bVisible) // exe 0x6F30C5: `dist < lim` fails for NaN too
     {
         bWaitUntilFarFromPlayer = false;
         return false;
@@ -91,8 +91,8 @@ bool CCarGenerator::CheckIfWithinRangeOfAnyPlayers()
 
     float posnZ = m_vecPosn.z;
     if ((CGame::CanSeeOutSideFromCurrArea() && posnZ < 950.0f || !CGame::CanSeeOutSideFromCurrArea() && posnZ >= 950.0f)
-        && (relPosn.Magnitude2D() >= TheCamera.m_fGenerationDistMultiplier * 160.0f - 20.0f || bHighPriority)
-        && DotProduct2D(FindPlayerSpeed(-1), relPosn) <= 0.0f
+        && (!(relPosn.Magnitude2D() < TheCamera.m_fGenerationDistMultiplier * 160.0f - 20.0f) || bHighPriority) // exe 0x6F3145: NaN arms
+        && !(DotProduct2D(FindPlayerSpeed(-1), relPosn) > 0.0f)
     ) {
         return true;
     }

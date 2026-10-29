@@ -1177,9 +1177,10 @@ void CCamera::UpdateTargetEntity() {
     const auto player = FindPlayerPed();
     assert(player);
 
-    auto something{ true };
+    // 0x50C372 (bl): false unless the camera is controlled by 2 (exe sets it to true only inside that branch)
+    auto something{ false };
     if (m_nWhoIsInControlOfTheCamera == 2) {
-        m_nModeObbeCamIsInForCar = m_nModeObbeCamIsInForCar;
+        something = true;
         switch (m_nModeObbeCamIsInForCar) {
         case 8:
         case 7: {
@@ -1245,7 +1246,8 @@ void CCamera::UpdateTargetEntity() {
 
     if (canEnterCar && player->m_nPedState == PEDSTATE_ENTER_CAR && !playerDoingSomethingWhileDriveBy) {
         if (m_nCarZoom) {
-            CEntity::ChangeEntityReference(m_pTargetEntity, FindPlayerEntity());
+            // 0x50C612: the exe stores player->m_pVehicle itself (FindPlayerEntity would return the ped while bInVehicle is not yet set)
+            CEntity::ChangeEntityReference(m_pTargetEntity, player->m_pVehicle);
         }
     }
 
@@ -1255,11 +1257,11 @@ void CCamera::UpdateTargetEntity() {
         case PEDSTATE_OPEN_DOOR: {
             if (!playerDoingSomethingWhileDriveBy) {
                 if (m_nCarZoom) {
-                    CEntity::ChangeEntityReference(m_pTargetEntity, FindPlayerEntity());
+                    CEntity::ChangeEntityReference(m_pTargetEntity, player->m_pVehicle); // 0x50C618
                 }
             }
 
-            if (!FindPlayerVehicle()) {
+            if (!player->m_pVehicle) { // 0x50C6B5-0x50C6ED: raw m_pVehicle test (+0x58C)
                 CEntity::ChangeEntityReference(m_pTargetEntity, player);
             }
         }

@@ -84,6 +84,7 @@ void CGarages::Init_AfterRestart() {
 
 // 0x4471B0
 void CGarages::Shutdown() {
+    NumGarages = 0; // exe 0x4471B1: `mov [0x96C024], 0` (port: not reset)
     for (auto& garage : aGarages) {
         garage.m_GarageAudio.Reset();
     }

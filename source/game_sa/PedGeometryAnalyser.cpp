@@ -81,7 +81,7 @@ bool CPedGeometryAnalyser::CanPedJumpObstacle(const CPed& ped, const CEntity& en
         return true;
     }
 
-    if (contactNormal.z <= 0.17f) { // 0x86C6AC
+    if (!(contactNormal.z > 0.17f)) { // 0x86C6AC; 0x5F334D: test ah,0x41 => also taken for a NaN
         if (!CPedGroups::IsInPlayersGroup(const_cast<CPed*>(&ped))) {
             pos.z -= 0.15f; // 0x858FCC
         }
@@ -95,7 +95,7 @@ bool CPedGeometryAnalyser::CanPedJumpObstacle(const CPed& ped, const CEntity& en
         pos.z += sphere.m_vecCenter.z - sphere.m_fRadius * contactNormal.z;
 
         const auto horizontalLen = std::sqrt(contactNormal.y * contactNormal.y + contactNormal.x * contactNormal.x);
-        if (contactNormal.z <= 0.5f) { // 0x858B8C
+        if (!(contactNormal.z > 0.5f)) { // 0x858B8C; 0x5F33B3: also taken for a NaN
             dir += (dir * horizontalLen) * sphere.m_fRadius;
         } else {
             dir = CVector{ -contactNormal.x, -contactNormal.y, 0.f };

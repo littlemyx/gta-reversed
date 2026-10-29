@@ -301,12 +301,16 @@ bool CCarEnterExit::GetNearestCarDoor(const CPed* ped, const CVehicle* vehicle, 
     CVector2D pedPos2D = ped->GetPosition();
     CVector2D dir2DToDoorFLeft = posDoorFLeft - pedPos2D, dir2DToDoorFRight = posDoorFRight - pedPos2D;
 
+    // 0x652B34-0x652BAB: exactly one of the two doors is tested, against the TOWED vehicle's collision model:
+    // the left one when it is strictly nearer, else the right one; a blocked door is pushed far away
     if (vehicle->m_pVehicleBeingTowed) {
         if (dir2DToDoorFLeft.SquaredMagnitude() < dir2DToDoorFRight.SquaredMagnitude()) {
-            if (IsPathToDoorBlockedByVehicleCollisionModel(ped, vehicle, posDoorFRight)) {
-                dir2DToDoorFRight = { 999.90002f, 999.90002f };
-            } else if (IsPathToDoorBlockedByVehicleCollisionModel(ped, vehicle, posDoorFLeft)) {
+            if (IsPathToDoorBlockedByVehicleCollisionModel(ped, vehicle->m_pVehicleBeingTowed, posDoorFLeft)) {
                 dir2DToDoorFLeft = { 999.90002f, 999.90002f };
+            }
+        } else {
+            if (IsPathToDoorBlockedByVehicleCollisionModel(ped, vehicle->m_pVehicleBeingTowed, posDoorFRight)) {
+                dir2DToDoorFRight = { 999.90002f, 999.90002f };
             }
         }
     }
@@ -314,23 +318,22 @@ bool CCarEnterExit::GetNearestCarDoor(const CPed* ped, const CVehicle* vehicle, 
     if (vehicle->m_pHandlingData->m_bForceDoorCheck && vehicle->IsAutomobile()) {
         const auto aut = static_cast<const CAutomobile*>(vehicle);
 
-        if (aut->m_aCarNodes[CAR_DOOR_RF]) { // Inverted
-            if (!aut->m_aCarNodes[CAR_DOOR_LF]) {
-                if (IsRoomForPedToLeaveCar(vehicle, CAR_DOOR_RF, driverDraggedOutOffset)) {
-                    doorId = CAR_DOOR_RF;
-                    outPos = posDoorFRight;
-                    return true;
-                }
-            }
-        } else {
-            if (IsRoomForPedToLeaveCar(vehicle, CAR_DOOR_LF, driverDraggedOutOffset)) {
+        // 0x652BB9-0x652C73: with only one of the two front door nodes present that door is used (if there is room),
+        // with both present the generic code below runs (the port returned false)
+        const bool hasLF = aut->m_aCarNodes[CAR_DOOR_LF] != nullptr, hasRF = aut->m_aCarNodes[CAR_DOOR_RF] != nullptr;
+        if (!(hasLF && hasRF)) {
+            if (hasLF && IsRoomForPedToLeaveCar(vehicle, CAR_DOOR_LF, driverDraggedOutOffset)) {
                 doorId = CAR_DOOR_LF;
                 outPos = posDoorFLeft;
                 return true;
             }
+            if (hasRF && IsRoomForPedToLeaveCar(vehicle, CAR_DOOR_RF, driverDraggedOutOffset)) {
+                doorId = CAR_DOOR_RF;
+                outPos = posDoorFRight;
+                return true;
+            }
+            return false;
         }
-
-        return false;
     }
 
     if (doorId != CAR_NODE_NONE && IsRoomForPedToLeaveCar(vehicle, doorId, driverDraggedOutOffset)) {
@@ -361,13 +364,14 @@ bool CCarEnterExit::GetNearestCarDoor(const CPed* ped, const CVehicle* vehicle, 
                 outPos = posDoorFLeft;
                 return true;
             }
-            if (IsRoomForPedToLeaveCar(vehicle, CAR_DOOR_RF, driverDraggedOutOffset)) {
+            // 0x652E89: the right door is tested with the passenger drag-out offset (ebp), not the driver one
+            if (IsRoomForPedToLeaveCar(vehicle, CAR_DOOR_RF, psgrDraggedOutOffset)) {
                 doorId = CAR_DOOR_RF;
                 outPos = posDoorFRight;
                 return true;
             }
         } else {
-            if (IsRoomForPedToLeaveCar(vehicle, CAR_DOOR_RF, driverDraggedOutOffset)) {
+            if (IsRoomForPedToLeaveCar(vehicle, CAR_DOOR_RF, psgrDraggedOutOffset)) { // 0x652D54
                 if ((
                         vehicle->HasPassengerAtSeat(0)
                         && !vehicle->IsBike()

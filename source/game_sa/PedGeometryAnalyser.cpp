@@ -171,7 +171,9 @@ void CPedGeometryAnalyser::ComputeClearTarget(const CPed& ped, const CVector& ta
         if (!entity) {
             return;
         }
-        if (DistanceBetweenPointsSquared(entity->GetPosition(), outTarget) >= 5.f * 5.f) { // 0x86C6A4
+        // 0x5F5DEA..0x5F5E23: the squared distance is summed z, y, x (not x, y, z) and the test is `jne` after `fcompp` (skips on sum >= 25 AND on NaN)
+        const auto d = entity->GetPosition() - outTarget;
+        if (!(d.z * d.z + d.y * d.y + d.x * d.x < 5.f * 5.f)) { // 0x86C6A4
             return;
         }
         if (!LiesInsideBoundingBox(ped, outTarget, *entity)) {
@@ -201,10 +203,11 @@ void CPedGeometryAnalyser::ComputeClearTarget(const CPed& ped, const CVector& ta
         i++;
 
         const CVector toPed = pedPos - outTarget;
-        if (toPed.SquaredMagnitude() >= 5.f * 5.f) {
+        // 0x5F604F..0x5F6072: sum z, y, x; breaks on sum >= 25 and on NaN (`jne` after fcompp)
+        if (!(toPed.z * toPed.z + toPed.y * toPed.y + toPed.x * toPed.x < 5.f * 5.f)) {
             break;
         }
-        if (toPed.Dot(step) < 0.f) {
+        if (!(toPed.Dot(step) >= 0.f)) { // 0x5F608E: `fcomp 0; test ah,1; jne` => breaks when dot < 0 or NaN
             break;
         }
 

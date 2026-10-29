@@ -783,10 +783,19 @@ void CCam::Get_TwoPlayer_AimVector(CVector& out) {
     if (nearestTargetEntityInScreen) {
         out = nearestTargetEntityInScreen->GetPosition() - m_vecSource;
     } else {
+        // exe 0x513F10-0x513FD7: tan(fov * 0x8631D4) (one float product, the fptan result stays unrounded), then
+        // > up scale = (tan / aspect) * Y; right term = (right * X) * (float)tan (stored at esp+0x10); out = (right term + front) - up scale * up
         const auto right  = CrossProduct(m_vecFront, m_vecUp);
-        const auto tanFov = x87::tan(m_fFOV * PI / 360.0f);
+        const auto tanFov = x87::tan(m_fFOV * 0.00872664619f);
+        const float tanF  = (float)tanFov;
+        const float upDiv = (float)(tanFov / CDraw::ms_fAspectRatio);
+        const float upScl = upDiv * m_fY_Targetting;
 
-        out = X87R(m_fX_Targetting * m_fY_Targetting * tanFov) * right + m_vecFront - X87R(tanFov / CDraw::ms_fAspectRatio) * m_vecUp;
+        out = CVector{
+            right.x * m_fX_Targetting * tanF + m_vecFront.x - upScl * m_vecUp.x,
+            right.y * m_fX_Targetting * tanF + m_vecFront.y - upScl * m_vecUp.y,
+            right.z * m_fX_Targetting * tanF + m_vecFront.z - upScl * m_vecUp.z,
+        };
     }
     out.Normalise();
 }

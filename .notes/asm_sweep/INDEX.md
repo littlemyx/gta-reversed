@@ -124,4 +124,5 @@
 | S30d | rest of S30c | 14 | partial 8/14 (3 M, 4 fixed, 1 partial) -> S30e | Camera.cpp |
 | S30e | rest of S30d | 7 | pending | Camera.cpp |
 | S31b | rest of S31 (+ Process playerPos.z vs blended.z, Rocket heat-seek tail 0x511EC2-0x5120E7) | 33 | partial 4/33 (2 fixed, 2 partial, 1 U) -> S31c | Cam.cpp |
-| S31c | rest of S31b (+ CCam::Process target.z stack-slot trace) | 31 | pending | Cam.cpp |
+| S31c | rest of S31b (+ CCam::Process target.z stack-slot trace) | 31 | partial 3/31 (1 M, 2 fixed) -> S31d | Cam.cpp |
+| S31d | rest of S31c (+ CCam::Process target.z trace) | 30 | pending | Cam.cpp |

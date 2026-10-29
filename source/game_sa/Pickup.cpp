@@ -429,10 +429,11 @@ bool CPickup::Update(CPlayerPed* player, CVehicle* vehicle, int32 playerId) {
                                         m_nFlags.bHelpMessageDisplayed = true;
                                     }
 
-                                    if (!CollectPickupBuffer || CTimer::GetTimeInMS() - player->GetPlayerData()->m_nLastHSMissileLOSTime < 1500) {
+                                    // exe 0x457BC5/0x457CA3: CPlayerPedData+0x6C (m_nLastTimeFiring), not the HS-missile LOS field at +0xA0
+                                    if (!CollectPickupBuffer || CTimer::GetTimeInMS() - player->GetPlayerData()->m_nLastTimeFiring < 1500) {
                                         return false;
                                     }
-                                } else if (CTimer::GetTimeInMS() - player->GetPlayerData()->m_nLastHSMissileLOSTime < 1500 ||
+                                } else if (CTimer::GetTimeInMS() - player->GetPlayerData()->m_nLastTimeFiring < 1500 ||
                                            !CPickups::PlayerCanPickUpThisWeaponTypeAtThisMoment(weapon)) {
                                     CPickups::PlayerOnWeaponPickup = 6;
                                     return false;

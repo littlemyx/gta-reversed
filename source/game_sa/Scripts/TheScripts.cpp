@@ -2070,7 +2070,7 @@ void CTheScripts::RenderAllSearchLights() {
         }();
 
         CHeli::SearchLightCone(
-            i,
+            0x216 + (int32)i, // exe 0x493E37: the corona id counts up from 0x216 (534) per slot - the port passed the bare slot index, colliding with the corona ids 0..7
             origin,
             light.m_Target,
             light.m_fTargetRadius,

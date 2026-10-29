@@ -183,8 +183,14 @@ void CCarAI::CarHasReasonToStop(CVehicle* vehicle) {
 // 0x41CD00
 bool CCarAI::EntitiesGoHeadOn(CEntity* eA, CEntity* eB) {
     const auto d = (eA->GetPosition() - eB->GetPosition()).Normalized();
-    return eA->GetForwardVector().Dot(d) <= -0.8f
-        && eB->GetForwardVector().Dot(d) >= 0.8f;
+
+    // 0x41CD8C / 0x41CDF0: both dots are summed z, y, x ((z + y) + x), and the compares use the exe's NaN arms
+    // (fcomp -0.8 + `test ah, 0x41; je` => NaN passes; fcomp 0.8 + `test ah, 5; jp` => NaN passes).
+    const auto DotZYX = [&](const CVector& f) -> float {
+        return (d.z * f.z + f.y * d.y) + f.x * d.x;
+    };
+    return !(DotZYX(eA->GetForwardVector()) > -0.8f)
+        && !(DotZYX(eB->GetForwardVector()) < 0.8f);
 }
 
 // 0x41CA40

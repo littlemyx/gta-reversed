@@ -208,10 +208,11 @@ bool CGameLogic::IsPlayerUse2PlayerControls(CPed* ped) {
     if (!IsCoopGameGoingOn())
         return false;
 
-    if (n2PlayerPedInFocus == eFocusedPlayer::PLAYER2)
+    // exe 0x442032: nobody in focus (== 2) -> true, otherwise `ped != Players[focus].m_pPed` (port tested PLAYER2 and skipped the compare for it)
+    if (n2PlayerPedInFocus == eFocusedPlayer::NONE)
         return true;
 
-    return ped != GetFocusedPlayerPed();
+    return ped != CWorld::Players[(int32)n2PlayerPedInFocus].m_pPed;
 }
 
 // 0x4416E0

@@ -307,10 +307,10 @@ CEntity* CTaskSimpleClimb::TestForClimb(CPed* ped, CVector& outClimbPos, float& 
 // 0x67DE10
 template<typename PtrListType>
 CEntity* CTaskSimpleClimb::ScanToGrabSectorList(PtrListType* sectorList, CPed* ped, CVector& outTargetPos, float& outAngle, eSurfaceType& outSurfaceType, bool isLaunch, bool hasToTestStandup, bool hasToTestDropOtherSide) {
-    const auto cm = hasToTestDropOtherSide
-        ? &ms_VaultColModel
-        : hasToTestStandup
-            ? &ms_StandUpColModel
+    const auto cm = hasToTestStandup // exe 0x67DEA2: the stand-up flag wins over the vault flag
+        ? &ms_StandUpColModel
+        : hasToTestDropOtherSide
+            ? &ms_VaultColModel
             : &ms_ClimbColModel;
     CEntity* collidedEntity = nullptr;
 
@@ -332,9 +332,13 @@ CEntity* CTaskSimpleClimb::ScanToGrabSectorList(PtrListType* sectorList, CPed* p
                 && !entity->AsObject()->physicalFlags.bInfiniteMass
             )
             || (entity->GetIsTypeVehicle()
-                && (hasToTestStandup || hasToTestDropOtherSide || (ped->GetIntelligence()->GetTaskSwim() && entity->AsVehicle()->IsSubBoat()) || (entity->AsVehicle()->IsSubTrain() && entity->AsVehicle()->m_vecMoveSpeed.Magnitude2D() < 0.1F))
+                && (hasToTestStandup || hasToTestDropOtherSide || (ped->GetIntelligence()->GetTaskSwim() && entity->AsVehicle()->IsSubBoat()) || (entity->AsVehicle()->IsSubTrain() && entity->AsVehicle()->m_vecMoveSpeed.Magnitude() < 0.1F) /* exe 0x67DF9E: CVector::Magnitude (3D), not Magnitude2D */)
             )) {
-            if (DistanceBetweenPoints(entity->GetBoundCentre(), ped->GetMatrix().TransformPoint(cm->GetBoundCenter())) >= entity->GetModelInfo()->GetColModel()->GetBoundRadius() + cm->GetBoundRadius()) {
+            // exe 0x67DFC0-0x67E008: the squares are summed (x + z) + y, and the entity is skipped unless dist < sum (NaN skips)
+            const auto pedCmCentre = ped->GetMatrix().TransformPoint(cm->GetBoundCenter());
+            const auto centreDiff  = pedCmCentre - entity->GetBoundCentre();
+            const auto centreDist  = (float)std::sqrt(((x87d)centreDiff.x * centreDiff.x + (x87d)centreDiff.z * centreDiff.z) + (x87d)centreDiff.y * centreDiff.y);
+            if (!(centreDist < entity->GetModelInfo()->GetColModel()->GetBoundRadius() + cm->GetBoundRadius())) {
                 continue;
             }
 
@@ -362,7 +366,7 @@ CEntity* CTaskSimpleClimb::ScanToGrabSectorList(PtrListType* sectorList, CPed* p
                 }
 
                 auto relPosn = CWorld::m_aTempColPts[0].m_vecPoint - outTargetPos;
-                if (nColSphereIndex == 16 || CWorld::m_aTempColPts[0].m_vecPoint.z <= outTargetPos.z && DotProduct(relPosn, ped->GetForward()) >= 0.0f || !g_surfaceInfos.CanClimb(CWorld::m_aTempColPts[0].m_nSurfaceTypeB)) {
+                if (nColSphereIndex == 16 || CWorld::m_aTempColPts[0].m_vecPoint.z <= outTargetPos.z && (relPosn.z * ped->GetForward().z + relPosn.y * ped->GetForward().y) + relPosn.x * ped->GetForward().x >= 0.0f /* exe 0x67E11A: z, y, x order */ || !g_surfaceInfos.CanClimb(CWorld::m_aTempColPts[0].m_nSurfaceTypeB)) {
                     if (entity->GetIsTypeVehicle() && numSpheres > -1) {
                         entity->GetColModel()->m_pColData->m_nNumSpheres = numSpheres;
                     }
@@ -389,7 +393,7 @@ CEntity* CTaskSimpleClimb::ScanToGrabSectorList(PtrListType* sectorList, CPed* p
                     }
                 }
 
-                if (fabsf(CWorld::m_aTempColPts[0].m_vecNormal.x) <= 0.05f && fabsf(CWorld::m_aTempColPts[0].m_vecNormal.y) <= 0.05F) {
+                if (!(fabsf(CWorld::m_aTempColPts[0].m_vecNormal.x) > 0.05f) && !(fabsf(CWorld::m_aTempColPts[0].m_vecNormal.y) > 0.05F)) { // exe 0x67E1F2: NaN takes the flat-normal branch
                     outTargetPos      = CWorld::m_aTempColPts[0].m_vecPoint;
                     outAngle         = ped->m_fCurrentRotation;
                     outSurfaceType   = CWorld::m_aTempColPts[0].m_nSurfaceTypeB;
@@ -401,7 +405,7 @@ CEntity* CTaskSimpleClimb::ScanToGrabSectorList(PtrListType* sectorList, CPed* p
                         vecNormal = -vecNormal;
                     }
 
-                    if (DotProduct(vecNormal, ped->GetForward()) > 0.3F) {
+                    if ((vecNormal.y * ped->GetForward().y + vecNormal.z * ped->GetForward().z) + vecNormal.x * ped->GetForward().x > 0.3F) { // exe 0x67E2F5 / 0x67E4D6: y, z, x order
                         outTargetPos      = CWorld::m_aTempColPts[0].m_vecPoint;
                         outAngle         = x87::atan2(-vecNormal.x, vecNormal.y);
                         outSurfaceType   = CWorld::m_aTempColPts[0].m_nSurfaceTypeB;
@@ -412,7 +416,7 @@ CEntity* CTaskSimpleClimb::ScanToGrabSectorList(PtrListType* sectorList, CPed* p
                 CMatrix matrix{ped->GetMatrix()};
                 matrix.SetTranslateOnly(CWorld::m_aTempColPts[0].m_vecPoint);
                 if (CCollision::ProcessColModels(matrix, ms_FindEdgeColModel, entity->GetMatrix(), *entity->GetColModel(), CWorld::m_aTempColPts, nullptr, nullptr, false) > 0) {
-                    if (std::fabsf(CWorld::m_aTempColPts[0].m_vecNormal.x) <= 0.05f && std::fabsf(CWorld::m_aTempColPts[0].m_vecNormal.y) <= 0.05F) {
+                    if (!(std::fabsf(CWorld::m_aTempColPts[0].m_vecNormal.x) > 0.05f) && !(std::fabsf(CWorld::m_aTempColPts[0].m_vecNormal.y) > 0.05F)) { // exe 0x67E3D8: NaN takes the flat-normal branch
                         outTargetPos    = CWorld::m_aTempColPts[0].m_vecPoint;
                         outSurfaceType = CWorld::m_aTempColPts[0].m_nSurfaceTypeB;
                     } else {
@@ -422,7 +426,7 @@ CEntity* CTaskSimpleClimb::ScanToGrabSectorList(PtrListType* sectorList, CPed* p
                             vecNormal = -vecNormal;
                         }
 
-                        if (DotProduct(vecNormal, ped->GetForward()) > 0.3F) {
+                        if ((vecNormal.y * ped->GetForward().y + vecNormal.z * ped->GetForward().z) + vecNormal.x * ped->GetForward().x > 0.3F) { // exe 0x67E2F5 / 0x67E4D6: y, z, x order
                             outTargetPos      = CWorld::m_aTempColPts[0].m_vecPoint;
                             outAngle         = x87::atan2(-vecNormal.x, vecNormal.y);
                             outSurfaceType   = CWorld::m_aTempColPts[0].m_nSurfaceTypeB;

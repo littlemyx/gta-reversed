@@ -271,7 +271,9 @@ bool CPedAttractor::BroadcastDeparture(CPed* ped) {
 bool CPedAttractor::BroadcastArrival(CPed* ped) {
     if (!rng::contains(m_ArrivedPeds, ped)) {
         m_ArrivedPeds.emplace_back(ped); // 0x5EEFCB
-        m_AttractPeds.erase(rng::find(m_AttractPeds, ped)); // 0x5EF002
+        if (const auto it = rng::find(m_AttractPeds, ped); it != m_AttractPeds.end()) { // 0x5EEFD0 (guarded)
+            m_AttractPeds.erase(it); // 0x5EF002
+        }
         for (auto* const attractedPed : m_AttractPeds) { // 0x5EF098
             const auto idx = (int32)(m_ArrivedPeds.size());
             SetTaskForPed(attractedPed, new CTaskComplexGoToAttractor{ // 0x5EF090
@@ -280,7 +282,7 @@ bool CPedAttractor::BroadcastArrival(CPed* ped) {
                 ComputeAttractHeading(idx),
                 m_AchieveQueueTime,
                 idx,
-                m_MoveState
+                PEDMOVE_WALK // 0x5EF06E: literal 4, not m_MoveState
             });
         }
     }

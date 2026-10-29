@@ -229,19 +229,23 @@ int32 CCarEnterExit::ComputeTargetDoorToExit(const CVehicle* vehicle, const CPed
         return 10;
     }
 
-    // Theoritically the rest here is the same as `ComputeTargetDoorToEnterAsPassenger`
-    // but I'm not quite sure, as in that function they just check `bIsBus`, while here they check the anim groups
-    // So, using the below switch I make sure the theory is right.
-    switch (vehicle->GetAnimGroupId()) {
+    // 0x64F12D: NOT the same as `ComputeTargetDoorToEnterAsPassenger`: the bus/coach test is on the handling anim group (103/104), it applies to any ped
+    // (not only to passengers), and only the passenger slots 0..2 are compared (the port searched all slots through `ComputeTargetDoorToEnterAsPassenger`)
+    switch (vehicle->m_pHandlingData->GetAnimGroupId()) {
     case ANIM_GROUP_COACHCARANIMS:
     case ANIM_GROUP_BUSCARANIMS:
-        assert(vehicle->vehicleFlags.bIsBus);
+        return 8;
     }
 
-    if (const auto optIndex = vehicle->GetPassengerIndex(ped)) {
-        return ComputeTargetDoorToEnterAsPassenger(vehicle, *optIndex);
+    if (vehicle->m_apPassengers[0] == ped) { // 0x64F148
+        return (vehicle->IsBike() || vehicle->m_pHandlingData->m_bTandemSeats) ? 11 : 8;
     }
-
+    if (vehicle->m_apPassengers[1] == ped) { // 0x64F16E
+        return 11;
+    }
+    if (vehicle->m_apPassengers[2] == ped) { // 0x64F176
+        return 9;
+    }
     return -1;
 }
 

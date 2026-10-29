@@ -704,18 +704,21 @@ bool CCarEnterExit::IsPathToDoorBlockedByVehicleCollisionModel(const CPed* ped, 
     }
 
     const auto vehMatInv = Invert(*vehicle->m_matrix);
-    const CColLine line{
+    CColLine line{
         vehMatInv.TransformPoint(ped->GetPosition()),
         vehMatInv.TransformPoint(pos)
     };
+    line.m_vecEnd.z = line.m_vecStart.z; // 0x6512EE: the exe flattens the line to the start's z...
 
     for (const auto& sp : vehicle->GetColModel()->GetData()->GetSpheres()) {
-        if (CCollision::TestLineSphere(line, sp)) {
-            return false;
+        CColSphere sphere{ sp };
+        sphere.m_vecCenter.z = line.m_vecStart.z; // 0x65131D: ...and the sphere centre to the same z (a 2D test)
+        if (CCollision::TestLineSphere(line, sphere)) {
+            return true; // 0x65136A: a hit => true (the port returned false on a hit and true when nothing was hit)
         }
     }
 
-    return true;
+    return false;
 }
 
 // 0x64EEE0

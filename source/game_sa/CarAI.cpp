@@ -906,7 +906,16 @@ void CCarAI::UpdateCarAI(CVehicle* veh) {
             break;
         }
         case MISSION_BLOCKPLAYER_FORWARDANDBACK: { // 0x41ED1C
-            if (!plyrVeh || FindPlayerSpeed().Dot2D((veh->GetPosition() - FindPlayerCoors()).Normalized()) > 0.05f) {
+            // 0x41ED1C..0x41EDEE: d = player - vehicle (2D, floats); len = sqrt(dy*dy + dx*dx) clamped up to 0.001 (a NaN len passes);
+            // inv = 1/len (float); mission 5 if there is no player vehicle or inv*dy*ps.y + inv*dx*ps.x > 0.05 (strict).
+            // The port normalised (vehicle - player) as a 3D vector (wrong sign, z in the length, no guard).
+            const float fbDx  = plyrCoors.x - vehPos.x;
+            const float fbDy  = plyrCoors.y - vehPos.y;
+            const x87d  fbLen = std::sqrt((x87d)fbDy * fbDy + (x87d)fbDx * fbDx);
+            const float fbLenClamped = (float)((x87d)0.001f > fbLen ? (x87d)0.001f : fbLen);
+            const float fbInv = (float)((x87d)1.0 / fbLenClamped);
+            const auto& fbPlyrSpeed = FindPlayerSpeed();
+            if (!plyrVeh || (((x87d)fbInv * fbDy) * fbPlyrSpeed.y + ((x87d)fbInv * fbDx) * fbPlyrSpeed.x) > (x87d)0.05f) {
                 ap->SetCarMission(MISSION_BLOCKPLAYER_CLOSE);
             }
             BackToCruisingIfNoWantedLevel(veh);
@@ -1265,25 +1274,49 @@ void CCarAI::UpdateCarAI(CVehicle* veh) {
           )
         && plyrVeh
     ) { // 0x41FE1B
-        const auto  plyrVehFwdDir2D = CVector2D{ plyrVeh->GetForwardVector() }.Normalized();
-        const auto  thisVehFwdDir2D = CVector2D{ veh->GetForwardVector() }.Normalized();
+        // 0x41FE5A..0x41FEA9: both forward vectors are normalised as 3D vectors with z = 0 (CVector::Normalise, 0x59C910; not CVector2D::Normalise)
+        const auto normFwd2D = [](const CVector& fwd) {
+            CVector v{ fwd.x, fwd.y, 0.f };
+            v.Normalise();
+            return v;
+        };
+        const auto  plyrVehFwdDir   = normFwd2D(plyrVeh->GetForwardVector());
+        const auto  thisVehFwdDir   = normFwd2D(veh->GetForwardVector());
         const auto& plyrVelocity3D  = FindPlayerSpeed();
-        const auto  plyrSpeed3DSq   = plyrVelocity3D.SquaredMagnitude();
-        const auto  plyrCoors       = FindPlayerCoors();
+        const auto  plyrSpeed3D     = plyrVelocity3D.Magnitude();      // 0x41FEBA (the exe compares the lengths, not the squared lengths)
+        const auto  vehSpeed3D      = veh->GetMoveSpeed().Magnitude(); // 0x41FEC8
+        const auto  vehToPlyrDir3D  = plyrCoors - vehPos;              // 0x420020 (a = player, b = vehicle)
 
-        const auto vehiclesFwdDot = plyrVehFwdDir2D.Dot(thisVehFwdDir2D);
-        const auto vehToPlyrDir3D = FindPlayerCoors() - veh->GetPosition();
+        // 0x4200A9: (this fwd . player fwd) evaluated y, x, z on the x87 stack (z is 0 after the normalisation above)
+        const x87d vehiclesFwdDot = ((x87d)thisVehFwdDir.y * plyrVehFwdDir.y + (x87d)thisVehFwdDir.x * plyrVehFwdDir.x) + (x87d)thisVehFwdDir.z * plyrVehFwdDir.z;
 
-        if (plyrSpeed3DSq >= sq(0.1f) && veh->GetMoveSpeed().SquaredMagnitude() <= plyrSpeed3DSq) { // 0x41FEE8
-            if (vehiclesFwdDot > 0.f) { // 0x41FF25 - Same direction
-                if (plyrVelocity3D.Magnitude2D() * 0.5f < vehToPlyrDir3D.Magnitude2D()) { // 0x41FF9F - OG: plyrVelocity3D.Magnitude2D() * vehToPlyrDir.Magnitude2D() * 0.5f < vehToPlyrDir.SquaredMagnitude2D()
-                    const auto vehToPlyrDist3DSq = vehToPlyrDir3D.SquaredMagnitude();
-                    if (vehToPlyrDist3DSq >= sq(12.f)) { // 0x42002A
+        // 0x41FED1: the vehicle must be strictly slower than the player (`jp` skips on >=, equal and NaN); 0x41FEF8: player speed strictly > 0.1
+        if (vehSpeed3D < plyrSpeed3D && plyrSpeed3D > 0.1f) {
+            // 0x41FF1C..0x41FF38: the RAW (not normalised) forward vectors y, x: player.y * veh.y + veh.x * player.x, strictly > 0
+            const auto& plyrFwdRaw = plyrVeh->GetForwardVector();
+            const auto& thisFwdRaw = veh->GetForwardVector();
+            if (((x87d)plyrFwdRaw.y * thisFwdRaw.y + (x87d)thisFwdRaw.x * plyrFwdRaw.x) > (x87d)0.0f) { // Same direction
+                // 0x41FF57..0x41FFEC: v = vehicle - player (floats), D = v.y * ps.y + ps.x * v.x; the player is heading towards the vehicle
+                // within 60 degrees: |ps2D| * |v2D| * 0.5 < D (the port tested `|ps| * 0.5 < |player - veh|`, which is unrelated)
+                const float vx = vehPos.x - plyrCoors.x;
+                const float vy = vehPos.y - plyrCoors.y;
+                const x87d  dirDot  = (x87d)vy * plyrVelocity3D.y + (x87d)plyrVelocity3D.x * vx;
+                const x87d  psMag2D = std::sqrt((x87d)plyrVelocity3D.y * plyrVelocity3D.y + (x87d)plyrVelocity3D.x * plyrVelocity3D.x);
+                const x87d  vMag2D  = std::sqrt((x87d)vy * vy + (x87d)vx * vx);
+                if ((psMag2D * vMag2D) * (x87d)0.5f < dirDot) {
+                    const auto vehToPlyrDist3D = vehToPlyrDir3D.Magnitude();
+                    if (vehToPlyrDist3D > 12.f) { // 0x42002A: strict, sqrt'd (port: squared >=)
                         ap->SetTempAction(TEMPACT_WAIT, 250);
                     }
 
                     // Calculate steer angle to hit the player
-                    if (vehToPlyrDist3DSq <= sq(20.f) && thisVehFwdDir2D.Dot(plyrVehFwdDir2D) > 0.8f && plyrSpeed3DSq >= sq(0.6f)) { // 0x420087 + 0x4200D6
+                    // 0x420087: dist < 20 strict; 0x4200B9: dot > 0.8; 0x4200DB: player speed > 0.6; 0x420108: vehicle speed < player speed - 0.2
+                    // (the last one is missing in the port)
+                    if (   vehToPlyrDist3D < 20.f
+                        && vehiclesFwdDot > (x87d)0.8f
+                        && plyrSpeed3D > 0.6f
+                        && (x87d)plyrSpeed3D - (x87d)0.2f > (x87d)vehSpeed3D
+                    ) {
                         ap->SetTempAction(TEMPACT_BOOST_USE_STEERING_ANGLE, 250);
 
                         // 0x42019F: the 1st atan is spilled to a float, the 2nd (0x4201B3) stays unrounded on the x87 stack for the `fsubr`;
@@ -1307,20 +1340,22 @@ void CCarAI::UpdateCarAI(CVehicle* veh) {
             }
         }
 
-        if (   vehiclesFwdDot < -0.8f // 0x420262
-            && plyrSpeed3DSq >= sq(0.3f) // 0x42029B
-            && vehToPlyrDir3D.SquaredMagnitude() <= sq(45.f) // 0x4202E6
-            && veh->GetMoveSpeed().SquaredMagnitude() >= sq(0.5f) // 0x420344
-            ) {
+        // 0x420262: dot < -0.8; 0x42029B: player speed > 0.3; 0x4202E6: dist < 45; 0x420344: vehicle speed > 0.5 (all strict, sqrt'd; port: squared compares, >=/<=)
+        if (   vehiclesFwdDot < (x87d)-0.8f
+            && plyrSpeed3D > 0.3f
+            && vehToPlyrDir3D.Magnitude() < 45.f
+        ) {
             const auto rdot = vehToPlyrDir3D.Dot(veh->GetRightVector());
-            ap->SetTempAction(
-                std::abs(rdot) < 15.f
-                    ? rdot >= 0.f
-                        ? TEMPACT_HANDBRAKETURNRIGHT
-                        : TEMPACT_HANDBRAKETURNLEFT
-                    : ap->m_nTempAction, // No change
-                2'000
-            );
+            if (veh->GetMoveSpeed().Magnitude() > 0.5f) {
+                ap->SetTempAction(
+                    std::abs(rdot) < 15.f
+                        ? rdot >= 0.f
+                            ? TEMPACT_HANDBRAKETURNRIGHT
+                            : TEMPACT_HANDBRAKETURNLEFT
+                        : ap->m_nTempAction, // No change
+                    2'000
+                );
+            }
         }
     }
 
@@ -1337,7 +1372,7 @@ void CCarAI::UpdateCarAI(CVehicle* veh) {
         const auto delta = std::abs(ap->m_SpeedMult - targetSpeedMult);
         const auto step  = CTimer::GetTimeStep() * 0.01f;
         if (delta < step) {
-            return ap->m_SpeedMult; // No change
+            return targetSpeedMult; // 0x420414: jnp => the x87 stack still holds the target, which is stored (port: kept the old value)
         }
         return targetSpeedMult >= ap->m_SpeedMult
             ? ap->m_SpeedMult + step
@@ -1383,18 +1418,18 @@ void CCarAI::UpdateCarAI(CVehicle* veh) {
     if (CTimer::GetFrameCounter() % 16 == 14 && veh->vehicleFlags.bIsLawEnforcer) {
         if (notsa::contains({ STATUS_SIMPLE, STATUS_PHYSICS }, veh->GetStatus()) && ap->m_nCarMission == MISSION_CRUISE && veh->IsSubAutomobile()) {
             if (CPopCycle::m_bCurrentZoneIsGangArea) {
-                ap->SetCruiseSpeed(10); // Start at 10, go down to min 1
+                // 0x4205A0..0x42065A: count the gang/dealer peds closer than 10 (sqrt'd 3D distance, strictly <; NaN is not counted),
+                // then cruise speed = max(10 - count, 1), stored once at the end
+                int32 nNearGangPeds = 0;
                 for (auto& p : NOTSA_EXE_OR(GetPedPool()->GetAllValidReverse(), GetPedPool()->GetAllValid())) {
                     if (!IsPedTypeGang(p.m_nPedType) && p.m_nPedType != PED_TYPE_DEALER) {
                         continue;
                     }
-                    if ((veh->GetPosition() - p.GetPosition()).SquaredMagnitude() >= sq(10.f)) {
-                        continue;
-                    }
-                    if (--ap->m_nCruiseSpeed == 1) { // Minimum 1
-                        break;
+                    if ((veh->GetPosition() - p.GetPosition()).Magnitude() < 10.f) {
+                        nNearGangPeds++;
                     }
                 }
+                ap->SetCruiseSpeed(std::max(10 - nNearGangPeds, 1));
             }
         }
     }

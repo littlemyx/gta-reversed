@@ -383,10 +383,12 @@ C3dMarker* C3dMarkers::PlaceMarker(
         switch (type) {
         case MARKER3D_CONE:
         case MARKER3D_ARROW: {
-            //> 0x725517
-            if (m->m_LastPosition.SquaredMagnitude() <= sq(0.01) && CTimer::GetTimeInMS() - m->m_OnScreenTestTime >= 2'000) {
+            //> 0x7254EF - `|m_LastPosition|^2 < 1e-4f` (float constant 0x858FC4; `jnp` = taken on "less") OR the 2 s timer: the exe re-tests the roof when the marker has no
+            // remembered position yet (zero) or every 2000 ms; the port had `<= sq(0.01) &&`, i.e. a 64-bit-constant compare AND-ed with the timer
+            if (m->m_LastPosition.SquaredMagnitude() < 0.0001f || CTimer::GetTimeInMS() - m->m_OnScreenTestTime >= 2'000) {
                 m->m_OnScreenTestTime = CTimer::GetTimeInMS();
                 if (m->m_LastPosition != pos) {
+                    m->m_LastPosition = pos; // 0x725556: remember the position the roof test was done for (the port never stored it)
                     CEntity* hitEntity{};
                     CColPoint hitCP{};
                     const auto hasHit = CWorld::ProcessLineOfSight(

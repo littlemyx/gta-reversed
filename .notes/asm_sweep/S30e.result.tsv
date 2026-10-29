@@ -1,8 +1,8 @@
 addr	function	verdict	asm range	note	fix commit
-0x50C100	CCamera::SetRwCamera	NOT_REACHED	-	budget (S31i used the budget on Cam.cpp)	-
-0x51A450	CCamera::Constructor	NOT_REACHED	-	budget (S31i used the budget on Cam.cpp)	-
-0x50AFA0	CCamera::CopyCameraMatrixToRWCam	NOT_REACHED	-	budget (S31i used the budget on Cam.cpp)	-
-0x50B510	CCamera::DealWithMirrorBeforeConstructRenderList	NOT_REACHED	-	budget (S31i used the budget on Cam.cpp)	-
-0x51E560	CCamera::TryToStartNewCamMode	NOT_REACHED	-	budget (S31i used the budget on Cam.cpp)	-
-0x527FA0	CCamera::CamControl	NOT_REACHED	-	budget (S31i used the budget on Cam.cpp)	-
-0x52B730	CCamera::Process	NOT_REACHED	-	budget (S31i used the budget on Cam.cpp)	-
+0x50C100	CCamera::SetRwCamera	NOT_REACHED	-	budget	-
+0x51A450	CCamera::Constructor	NOT_REACHED	-	budget	-
+0x50AFA0	CCamera::CopyCameraMatrixToRWCam	NOT_REACHED	-	budget	-
+0x50B510	CCamera::DealWithMirrorBeforeConstructRenderList	NOT_REACHED	-	budget	-
+0x51E560	CCamera::TryToStartNewCamMode	NOT_REACHED	-	budget (tail 0x51FFAD-0x520101 and heading-rotation case tails not reached)	-
+0x527FA0	CCamera::CamControl	PARTIAL	0x52A700-0x52A9E0 (aim-immediate block, two-player switch checks)	0x52A700-0x52A9E0 MATCH: gNewCamMode lists (TOPDOWN/1STPERSON/TOP_DOWN_PED, CAM_ON_A_STRING/BEHINDBOAT, FIXED), jetpack test, aim heading (atan2(-x,y) - pi/2, +-2pi wraps with NaN arms), 30deg*0.0174532924 compare, (zoom+2)*1.5 vs distance, mouse override, two-player enter/leave checks. Open: 0x52A9E0-0x52B72A; garage fixed-cam geometry 0x528351-0x528A64 and 0x5291EB-0x529B9A not reached	-
+0x52B730	CCamera::Process	MATCH	0x52C340-end (full tail)	Speed tracking (sqrt y,x; GetATanOfXY and KeepTrackOfTheSpeed arg order), non-transition copy, wall LOS args, drunk cam (cos for x, sin for z, unrounded angle), camera matrix store, shake (clamp NaN polarity, rand nibbles, ftol alpha, min 150), upside-down blur (up.z < 0.2), SetFOV/CalculateDerivedValues args, LOD multipliers, far clip ftol*0.01, near/far globals, average speed (z,y,x sum, fild/fdivr), look-behind restore + transition copy, underwater sample point and UnderWaterness formula MATCH	-

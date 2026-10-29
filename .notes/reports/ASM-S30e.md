@@ -1,4 +1,8 @@
-# ASM-S30e (Camera.cpp, 7 rows): all NOT_REACHED
+# ASM-S30e (Camera.cpp, 7 rows)
 
-Result table: .notes/asm_sweep/S30e.result.tsv. The agent budget (~110k) was spent on the Cam.cpp slice S31i (ASM-S31i.md); no Camera.cpp function was compared. Open ranges unchanged from ASM-S30d.md: Process 0x52C340-end, CamControl garage fixed-cam 0x528351-0x528A64 / 0x5291EB-0x529B9A / tail 0x52A700-0x52B72A, TryToStartNewCamMode tail 0x51FFAD-0x520101 + heading-rotation case tails, SetRwCamera, Constructor, CopyCameraMatrixToRWCam, DealWithMirrorBeforeConstructRenderList.
-No Camera.cpp code changed.
+Result table: .notes/asm_sweep/S30e.result.tsv. 0 deviations found, 0 code changes. Process tail MATCH (full), CamControl PARTIAL, 5 NOT_REACHED.
+
+- CCamera::Process tail 0x52C340-end: MATCH. Speed tracking (sqrt(y*y+x*x), GetATanOfXY(x, y) and KeepTrackOfTheSpeed arg order), non-transition copy (clear-geometry sums, front/up normalisation), wall-through LOS + near clip 0.05, drunk cam (angle*0.017453292, cos for x and sin for z on the unrounded values, 5.0 step), camera matrix store, shake (shake >= 2 or NaN gives 2.0, otherwise `> 0` else 0; random nibbles; ftol alpha; min 150), upside-down 1st-person blur (`up.z < 0.2`), CDraw::SetFOV, CalculateDerivedValues(false, true), CopyCameraMatrixToRWCam(false), LOD multipliers (70 / ms_fFOV, 1.2 * lodDistScale), far clip ftol(far*100)*0.01, near/far globals, average speed (z, y, x sum, fild/fdivr), look-behind source restore and transition copy (quirk: the active cam's own value, `m_nActiveCam % 2`), underwater sample point (-sin/cos of the heading without a matrix, 0.4 factor), water level compares and the UnderWaterness formula (0.8333333).
+- CamControl 0x52A700-0x52A9E0 MATCH (aim-immediate block with heading wraps and the 30 deg / (zoom+2)*1.5 tests, mouse override, two-player enter/leave checks). Open: 0x52A9E0-0x52B72A, plus the garage fixed-cam geometry 0x528351-0x528A64 and 0x5291EB-0x529B9A.
+- Note: CamControl `aimHeading -= HALF_PI` is a bare double operation on an x87::atan2 result: identical to the exe on the Windows build, but on PortableWin64 the fsub is not rounded to float (should be `X87R(atan - HALF_PI)` into an x87d). Portable-only, not changed.
+- Not reached (budget): SetRwCamera, Constructor, CopyCameraMatrixToRWCam, DealWithMirrorBeforeConstructRenderList, TryToStartNewCamMode tail.

@@ -16,7 +16,7 @@
 class CPedGroup;
 class CPlayerInfo;
 class CColPoint;
-class CStoredCollPoly;
+struct CStoredCollPoly;
 class CSector;
 class CRepeatSector;
 class CPed;

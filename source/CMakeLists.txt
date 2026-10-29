@@ -89,7 +89,7 @@ endif()
 # notsa::fp (Core/Fp.h): plain float arithmetic, bit-identical to the x87 at PC=24 unless an intermediate leaves the float exponent range, in which case the
 # F24 model takes over. No PCH (the PCH is built with /arch:IA32; /arch must match), no unity build.
 if (MSVC AND CMAKE_SIZEOF_VOID_P EQUAL 4 AND ${RE_PROJECT}_STANDALONE_RUN_BUILD)
-    set_source_files_properties(game_sa/Collision/CollisionPrimitives.cpp PROPERTIES COMPILE_OPTIONS "/arch:SSE2" SKIP_UNITY_BUILD_INCLUSION ON)
+    set_source_files_properties(game_sa/Collision/CollisionPrimitives.cpp PROPERTIES COMPILE_OPTIONS "/arch:SSE2" SKIP_UNITY_BUILD_INCLUSION ON SKIP_PRECOMPILE_HEADERS ON)
 endif()
 
 # RenderWare backend. OFF: the game's own RW headers/wrappers (they forward to the original exe's RW by address).

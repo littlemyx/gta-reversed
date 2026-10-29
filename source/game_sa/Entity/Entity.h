@@ -19,7 +19,7 @@
 #include "eModelID.h"
 #include "eAreaCodes.h"
 
-class C2dEffect;
+struct C2dEffect;
 class CObject;
 class CVehicle;
 class CTrain;

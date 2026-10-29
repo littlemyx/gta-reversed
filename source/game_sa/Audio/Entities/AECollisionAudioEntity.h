@@ -88,7 +88,7 @@ public:
     void Service();
 
     // notsa
-    bool CanAddNewSound() const { return m_NumActiveCollisionSounds <= m_CollisionSoundList.size(); }
+    bool CanAddNewSound() const { return static_cast<size_t>(m_NumActiveCollisionSounds) <= m_CollisionSoundList.size(); }
 
 protected:
     eSoundID ChooseCollisionSoundID(eSurfaceType surface);

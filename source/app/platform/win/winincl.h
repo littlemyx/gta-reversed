@@ -28,7 +28,9 @@
 #define NOOPENFILE
 #define NOSCROLL
 #define NOSERVICE
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #define STRICT
 
 #define INC_OLE2 // for `V_VT` and `V_UNION` macros at some headers of Windows SDK

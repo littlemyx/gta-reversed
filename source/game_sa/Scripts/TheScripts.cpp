@@ -200,6 +200,10 @@ void CTheScripts::Init() {
 
     rng::fill(ScriptSphereArray, tScriptSphere{});
     rng::fill(IntroTextLines, tScriptText{});
+    for (auto& line : IntroTextLines) { // exe 0x4690B7: `fild RsGlobal.maximumWidth; fst WrapX; fstp CentreSize`
+        line.WrapX      = (float)RsGlobal.maximumWidth;
+        line.CentreSize = (float)RsGlobal.maximumWidth;
+    }
 
     NumberOfIntroTextLinesThisFrame = 0;
     UseTextCommands                 = eUseTextCommandState::DISABLED;

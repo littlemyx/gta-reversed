@@ -132,15 +132,15 @@ struct tScriptSequence {
 VALIDATE_SIZE(tScriptSequence, 0x4);
 
 struct tScriptText {
-    // Values from 0x4690A8
+    // Values from 0x4690A8 (the defaults CTheScripts::Process stores; see WrapX/CentreSize for the two that differ in Init)
     CVector2D     Scale{ 0.48f, 1.12f };
     CRGBA         Color{ 225, 225, 225, 255 };
     bool          Justify{ false };
     bool          IsCentered{ false }; //!< `HasRightJustify` takes precedence over it. If true, uses `eFontAlignment::ALIGN_CENTER` otherwise `eFontAlignment::ALIGN_LEFT`.
     bool          HasBg{ false };
     bool          HasBgTextOnly{ false }; //!< Unused
-    float         WrapX{ SCREEN_HEIGHT };
-    float         CentreSize{ SCREEN_WIDTH };
+    float         WrapX{ 182.0f };      //!< exe 0x46A0A0 (CTheScripts::Process refill): immediate 0x43360000. CTheScripts::Init (0x4690B7) stores `RsGlobal.maximumWidth` instead
+    float         CentreSize{ 640.0f }; //!< exe 0x46A0A0: immediate 0x44200000 (Init: `RsGlobal.maximumWidth`)
     CRGBA         BgColor{ 128, 128, 128, 128 };
     bool          IsProportional{ true };
     CRGBA         DropShadowColor{ 0, 0, 0, 255 };

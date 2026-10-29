@@ -158,7 +158,7 @@
 | S52 | phase2: unlisted non-oracle hooks | 40 | done (31 M, 6 fixed, 3 no callers) | PathFind.cpp, PedAttractorManager.cpp, PedClothesDesc.cpp |
 | S53 | phase2: unlisted non-oracle hooks | 40 | pending | PedClothesDesc.cpp, PedDamageResponseCalculator.cpp, PedGeometryAnalyser.cpp, PedGroup.cpp, PedGroupIntelligence.cpp |
 | S54 | phase2: unlisted non-oracle hooks | 40 | pending | PedGroupIntelligence.cpp, PedGroupMembership.cpp, PedGroupPlacer.cpp, PedGroups.cpp, PedIK.cpp, PedList.cpp ... |
-| S55 | phase2: unlisted non-oracle hooks | 40 | pending | PedPlacement.cpp, PedStats.cpp, PedStuckChecker.cpp, PedTaskPair.cpp, PedType.cpp, Pickup.cpp ... |
+| S55 | phase2: unlisted non-oracle hooks | 40 | 38/40 (26 M, 12 fixed) -> S55b | PedPlacement.cpp, PedStats.cpp, PedStuckChecker.cpp, PedTaskPair.cpp, PedType.cpp, Pickup.cpp ... |
 | S56 | phase2: unlisted non-oracle hooks | 40 | pending | Pickups.cpp, PlaneTrail.cpp, PlaneTrails.cpp, PlayerInfo.cpp, PlayerPedData.cpp, PlayerRelationshipRecorder.cpp |
 | S57 | phase2: unlisted non-oracle hooks | 40 | pending | EventPool.h, PedAttractorPool.h, PedIntelligencePool.h, PedPool.h, PlayerRelationshipRecorder.cpp, Remote.cpp ... |
 | S58 | phase2: unlisted non-oracle hooks | 40 | pending | ScriptsForBrains.cpp, Shopping.cpp, TheScripts.cpp |
@@ -179,3 +179,4 @@
 | S43c | rest of S43b | 32 | partial 6/32 (5 M, 1 U) + clock audit (2 fixed) -> S43d | Clothes.cpp, ConversationForPed.cpp, Cover.cpp, CoverPoint.cpp, CurrentVehicle.cpp, CustomCarPlateMgr.cpp, PedToPlayerConversations.cpp |
 | S43d | rest of S43c (+ ConversationForPed::Update rest) | 27 | done (16 M, 7 fixed, 4 no exe callers; S43 complete) | Clothes.cpp, Cover.cpp, CurrentVehicle.cpp, CustomCarPlateMgr.cpp |
 | S47b | rest of S47 | 19 | pending | EventHandler.cpp, EventInWater.cpp, EventInteriorUseInfo.cpp, EventKnockOffBike.cpp, EventLeaderEntryExit.cpp, EventNewGangMember.cpp, EventPedEnteredMyVehicle.cpp, EventPedToChase.cpp, EventPotentialGetRunOver.cpp |
+| S55b | rest of S55 | 0 | pending |  |

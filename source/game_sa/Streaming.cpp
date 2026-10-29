@@ -758,7 +758,7 @@ void CStreaming::DeleteRwObjectsAfterDeath(const CVector& point) {
 // 0x40D7C0
 // TODO: Decode this, no clue whats going on here..
 void CStreaming::DeleteRwObjectsBehindCamera(size_t memoryToCleanInBytes) {
-    if (ms_memoryUsedBytes < memoryToCleanInBytes)
+    if ((int32)ms_memoryUsedBytes < (int32)memoryToCleanInBytes) // exe: signed (jl)
         return;
 
     const auto START_OFFSET_XY = 10;
@@ -843,7 +843,7 @@ void CStreaming::DeleteRwObjectsBehindCamera(size_t memoryToCleanInBytes) {
         int32 sectorStartY = 0;
         int32 sectorEndY = 0;
         int32 factorY = 0;
-        if (camFwd.y <= 0.0f) {
+        if (!(camFwd.y > 0.0f)) { // exe: NaN takes this path too
             sectorEndY = std::min(pointSecY + END_OFFSET_XY, MAX_SECTORS_Y - 1);
             sectorStartY = std::min(pointSecY + START_OFFSET_XY, MAX_SECTORS_Y - 1);
             factorY = -1;
@@ -865,7 +865,7 @@ void CStreaming::DeleteRwObjectsBehindCamera(size_t memoryToCleanInBytes) {
                 }
             }
         }
-        if (camFwd.y <= 0.0f) {
+        if (!(camFwd.y > 0.0f)) { // exe: NaN takes this path too
             sectorEndY = std::min(pointSecY + END_OFFSET_XY, MAX_SECTORS_Y - 1);
             sectorStartY = std::max(pointSecY - START_OFFSET_XY, 0);
             factorY = -1;
@@ -907,7 +907,7 @@ void CStreaming::DeleteRwObjectsBehindCamera(size_t memoryToCleanInBytes) {
         }
     }
 
-    while (ms_memoryUsedBytes >= memoryToCleanInBytes) {
+    while ((int32)ms_memoryUsedBytes >= (int32)memoryToCleanInBytes) { // exe: signed (jge)
         if (!RemoveLeastUsedModel(0)) {
             break;
         }

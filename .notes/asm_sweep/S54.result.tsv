@@ -1,41 +1,41 @@
 addr	function	verdict	asm range	note	fix commit
-0x5F77A0	PedGroupIntelligence::IsCurrentEventValid	NOT_REACHED	-	budget	-
-0x5F7800	PedGroupIntelligence::ComputeScriptCommandTasks	NOT_REACHED	-	budget	-
-0x5F79C0	PedGroupIntelligence::FlushTasks	NOT_REACHED	-	budget	-
-0x5F8510	PedGroupIntelligence::SetEventResponseTask	NOT_REACHED	-	budget	-
-0x5F8560	PedGroupIntelligence::SetScriptCommandTask	NOT_REACHED	-	budget	-
-0x5F86F0	PedGroupIntelligence::ReportFinishedTask	NOT_REACHED	-	budget	-
-0x5F8780	PedGroupIntelligence::ReportAllBarScriptTasksFinished	NOT_REACHED	-	budget	-
-0x5F87A0	PedGroupIntelligence::ProcessIgnorePlayerGroup	NOT_REACHED	-	budget	-
-0x5F88D0	PedGroupIntelligence::ComputeDefaultTasks	NOT_REACHED	-	budget	-
-0x5FB280	PedGroupIntelligence::SetDefaultTaskAllocator	NOT_REACHED	-	budget	-
-0x5FC440	PedGroupIntelligence::ComputeEventResponseTasks	NOT_REACHED	-	budget	-
-0x5FC4A0	PedGroupIntelligence::Process	NOT_REACHED	-	budget	-
-0x5F6950	PedGroupMembership::GetObjectForPedToHold	NOT_REACHED	-	budget	-
-0x5F7FE0	PedGroupMembership::From	NOT_REACHED	-	budget	-
-0x5F8020	PedGroupMembership::AddFollower	NOT_REACHED	-	budget	-
-0x5FB9C0	PedGroupMembership::SetLeader	NOT_REACHED	-	budget	-
-0x5FC9B0	PedGroupPlacer::PlaceFormationGroup	NOT_REACHED	-	budget	-
-0x5FCE80	PedGroupPlacer::PlaceChatGroup	NOT_REACHED	-	budget	-
-0x5FD330	PedGroupPlacer::PlaceRandomGroup	NOT_REACHED	-	budget	-
-0x5FD810	PedGroupPlacer::PlaceGroup	NOT_REACHED	-	budget	-
-0x5FB800	PedGroups::AddGroup	NOT_REACHED	-	budget	-
-0x5FB8C0	PedGroups::Init	NOT_REACHED	-	budget	-
-0x5FB930	PedGroups::CleanUpForShutDown	NOT_REACHED	-	budget	-
-0x5FC800	PedGroups::Process	NOT_REACHED	-	budget	-
-0x5FD8C0	PedIK::Constructor	NOT_REACHED	-	budget	-
-0x5FD8F0	PedIK::GetWorldMatrix	NOT_REACHED	-	budget	-
-0x5FDC00	PedIK::PointGunInDirection	NOT_REACHED	-	budget	-
-0x5FDDB0	PedIK::RotateTorso	NOT_REACHED	-	budget	-
-0x5FDE20	PedIK::PointGunAtPosition	NOT_REACHED	-	budget	-
-0x5FDF90	PedIK::RotateTorsoForArm	NOT_REACHED	-	budget	-
-0x5FE0E0	PedIK::PitchForSlope	NOT_REACHED	-	budget	-
-0x699DB0	PedList::Empty	NOT_REACHED	-	budget	-
-0x699DD0	PedList::BuildListFromGroup_NoLeader	NOT_REACHED	-	budget	-
-0x69A340	PedList::BuildListFromGroup_NotInCar_NoLeader	NOT_REACHED	-	budget	-
-0x69A3B0	PedList::BuildListOfPedsOfPedType	NOT_REACHED	-	budget	-
-0x69A420	PedList::RemovePedsThatDontListenToPlayer	NOT_REACHED	-	budget	-
-0x69A450	PedList::RemovePedsAttackingPedType	NOT_REACHED	-	budget	-
-0x69A4C0	PedList::ExtractPedsWithGuns	NOT_REACHED	-	budget	-
-0x616860	PedPlacement::IsPositionClearForPed	NOT_REACHED	-	budget	-
-0x6168E0	PedPlacement::IsPositionClearOfCars	NOT_REACHED	-	budget	-
+0x5F77A0	PedGroupIntelligence::IsCurrentEventValid	NOT_REACHED	-	budget (S54b)	-
+0x5F7800	PedGroupIntelligence::ComputeScriptCommandTasks	NOT_REACHED	-	budget (S54b)	-
+0x5F79C0	PedGroupIntelligence::FlushTasks	MATCH	0x5F79C0-0x5F79F7	-	-
+0x5F8510	PedGroupIntelligence::SetEventResponseTask	NOT_REACHED	-	budget (S54b)	-
+0x5F8560	PedGroupIntelligence::SetScriptCommandTask	NOT_REACHED	-	budget (S54b)	-
+0x5F86F0	PedGroupIntelligence::ReportFinishedTask	NOT_REACHED	-	budget (S54b)	-
+0x5F8780	PedGroupIntelligence::ReportAllBarScriptTasksFinished	MATCH	0x5F8780-0x5F879B	-	-
+0x5F87A0	PedGroupIntelligence::ProcessIgnorePlayerGroup	MATCH	0x5F87A0-0x5F88C9	event types 0x4d/0x36, leader/player-group gate and both FlushTasks verified	-
+0x5F88D0	PedGroupIntelligence::ComputeDefaultTasks	NOT_REACHED	-	budget (S54b)	-
+0x5FB280	PedGroupIntelligence::SetDefaultTaskAllocator	MATCH	0x5FB280-0x5FB2CA	-	-
+0x5FC440	PedGroupIntelligence::ComputeEventResponseTasks	NOT_REACHED	-	budget (S54b)	-
+0x5FC4A0	PedGroupIntelligence::Process	NOT_REACHED	-	budget (S54b)	-
+0x5F6950	PedGroupMembership::GetObjectForPedToHold	MATCH	0x5F6950-0x5F6994	one rand, 33/33/34 split smoke/drink/nothing, exe constants (already annotated in source)	-
+0x5F7FE0	PedGroupMembership::From	UNSURE	0x5F7FE0-0x5F8013	exe copies via AddMember per slot (RegisterReference + DM type set; crashes on a null slot); port uses the default copy. Not changed: hook-only, no live caller found	-
+0x5F8020	PedGroupMembership::AddFollower	DEVIATION	0x5F8020-0x5F80CC	free-slot search covers follower slots 0..6 only (port also offered an empty leader slot 7)	db8d541e9
+0x5FB9C0	PedGroupMembership::SetLeader	MATCH	0x5FB9C0-0x5FBA53	remove-if-follower, remove old leader, AddMember(7), object-to-hold when unarmed and not a mission group	-
+0x5FC9B0	PedGroupPlacer::PlaceFormationGroup	NOT_REACHED	-	budget (S54b)	-
+0x5FCE80	PedGroupPlacer::PlaceChatGroup	NOT_REACHED	-	budget (S54b)	-
+0x5FD330	PedGroupPlacer::PlaceRandomGroup	NOT_REACHED	-	budget (S54b)	-
+0x5FD810	PedGroupPlacer::PlaceGroup	NOT_REACHED	-	budget (S54b)	-
+0x5FB800	PedGroups::AddGroup	MATCH	0x5FB800-0x5FB862	-	-
+0x5FB8C0	PedGroups::Init	MATCH	0x5FB8C0-0x5FB929	-	-
+0x5FB930	PedGroups::CleanUpForShutDown	MATCH	0x5FB930-0x5FB981	-	-
+0x5FC800	PedGroups::Process	DEVIATION	0x5FC800-0x5FC9A9	mission start/end decision-maker switch skips mission groups (m_bIsMissionGroup)	135ed5db3
+0x5FD8C0	PedIK::Constructor	MATCH	0x5FD8C0-0x5FD8DF	-	-
+0x5FD8F0	PedIK::GetWorldMatrix	MATCH	0x5FD8F0-0x5FD92B	-	-
+0x5FDC00	PedIK::PointGunInDirection	DEVIATION	0x5FDC00-0x5FDDAD	NaN normalize takes the non-normalized MoveLimb; rest (clamp order, atan2, axis, rotations) verified	68e2d8267
+0x5FDDB0	PedIK::RotateTorso	DEVIATION	0x5FDDB0-0x5FDE1B	changeRoll selects PRECONCAT for the yaw rotation (port always REPLACE); final flag is bUpdateMatricesRequired, port set bDontAcceptIKLookAts	8b638a49a
+0x5FDE20	PedIK::PointGunAtPosition	MATCH	0x5FDE20-0x5FDF80	aim-from sum / distance equal under PC24 per-op rounding (a rewrite was tried and dropped as a no-op)	-
+0x5FDF90	PedIK::RotateTorsoForArm	DEVIATION	0x5FDF90-0x5FE0D2	angle over 90deg clamps to 45deg (port returned); unrounded fpatan angle; exe 45/-60/-20deg constants; no-neck path rotates the torso with the full angle	f5ff3df82
+0x5FE0E0	PedIK::PitchForSlope	DEVIATION	0x5FE0E0-0x5FE8B9	limit multiplier (1-0.9)*{1,0.85} (port 0.1/0.085), exe float clamp bounds, 0.75*sin(pitch) scaled before the forward multiply; leg/foot/roll/stealth/corpse branches verified	8e7bcc416
+0x699DB0	PedList::Empty	MATCH	0x699DB0-0x699DC4	-	-
+0x699DD0	PedList::BuildListFromGroup_NoLeader	MATCH	0x699DD0-0x699E1C	-	-
+0x69A340	PedList::BuildListFromGroup_NotInCar_NoLeader	MATCH	0x69A340-0x69A3A0	-	-
+0x69A3B0	PedList::BuildListOfPedsOfPedType	MATCH	0x69A3B0-0x69A41C	-	-
+0x69A420	PedList::RemovePedsThatDontListenToPlayer	MATCH	0x69A420-0x69A44A	-	-
+0x69A450	PedList::RemovePedsAttackingPedType	MATCH	0x69A450-0x69A4AE	-	-
+0x69A4C0	PedList::ExtractPedsWithGuns	DEVIATION	0x69A4C0-0x69A528	destination list full (30) drops the ped instead of overflowing; ped still removed from the source	b8e698237
+0x616860	PedPlacement::IsPositionClearForPed	MATCH	0x616860-0x6168D1	-	-
+0x6168E0	PedPlacement::IsPositionClearOfCars	MATCH	0x6168E0-0x616914	-	-

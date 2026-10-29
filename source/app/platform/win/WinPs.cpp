@@ -182,6 +182,7 @@ RwBool psInitialize() {
                 : WinVer::WIN_95;
         }
         NOTSA_UNREACHABLE(); // If this is reached the game wouldn't run anyways, so might as well just crash it.
+        return WinVer::WIN_98; // run build: NOTSA_UNREACHABLE only logs and returns (C4715); dead code where it is __assume(false)
     }();
 #endif
 
@@ -572,7 +573,7 @@ static BOOL CheckDefaultVideoModeSupported() {
         for (auto i = 0; i < RwEngineGetNumVideoModes(); i++) {
             RwVideoMode vmi;
             RwEngineGetVideoModeInfo(&vmi, i);
-            if (vmi.width >= 800 && vmi.height >= 600 && vmi.depth == 32 && (vmi.flags & rwVIDEOMODEEXCLUSIVE) && vmi.width * vmi.height < bestArea) {
+            if (vmi.width >= 800 && vmi.height >= 600 && vmi.depth == 32 && (vmi.flags & rwVIDEOMODEEXCLUSIVE) && RwUInt32(vmi.width * vmi.height) < bestArea) {
                 best     = i;
                 bestArea = vmi.width * vmi.height;
             }

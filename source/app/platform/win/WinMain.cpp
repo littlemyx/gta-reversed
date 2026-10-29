@@ -254,6 +254,7 @@ bool ProcessGameLogic(INT nCmdShow) {
                 case GAME_STATE_PLAYING_INTRO: return GAME_STATE_FRONTEND_LOADING;
                 default:                       NOTSA_UNREACHABLE_RET(GAME_STATE_TITLE);
                 }
+                return GAME_STATE_TITLE; // run build: NOTSA_UNREACHABLE only logs and returns (C4715); dead code where it is __assume(false)
             }());
         }
         break;

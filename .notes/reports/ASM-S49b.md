@@ -1,0 +1,13 @@
+# ASM-S49b + ASM-S50 (GangWars, GameLogic, Game, Gangs, Garage(s), InformFriends/Group queues) - 2026-10-29
+S49b (10 rows + 2 extra): 8 MATCH, 2 FIXED (+ Task 0 SetUpSkip and the skip pad flag as extra FIXED rows). S50 (40 rows): 22 MATCH, 3 FIXED, 15 NOT_REACHED (Garage.cpp bulk + Garages Update/PrintMessages, GangWars::Save, budget). Tables: S49b.result.tsv, S50.result.tsv.
+Fixes:
+- 9a3ee4d3e CGangWars::CreateDefendingGroup (0x4453D0): ped radius is sin/cos*(rand*3+2) (port added the 2 outside), ped z = ground+1.0, car nodes 1..3 (port 0..2), car forward = perpendicular (car.y-node.y, node.x-car.x), pickup model from rand()&1 (port used the int range helper = high bit).
+- d918a4363 CGameLogic::SetUpSkip (0x4423C0, Task 0): SkipVehicle = vehicle was never assigned (port registered the stale old pointer, null deref); SkipHeading = angle was never stored (UpdateSkip read 0).
+- 0699bab24 ClearSkip/SetUpSkip/UpdateSkip: the pad flag is byte 0x10F bit 0 (bPlayerSkipsToDestination); port used bCamera (byte 0x10E bit 0).
+- 43bbd6e62 CGame::InitialiseRenderWare (0x5BD792): installs the game's device-restore callback 0x5BA120 (previous callback, RT shadow reinit flag, CMirrors::d3dRestored); port re-installed the old one.
+- f4987f833 CGarages::CloseHideOutGaragesBeforeSave (0x44A170): every door state but CLOSED (port: only OPEN).
+- 4f0400537 CGarages::Shutdown (0x4471B0): NumGarages = 0. 035d1db4b CGarages::Save (0x5D3160): calls CloseHideOutGaragesBeforeSave first.
+MATCH: CreateAttackWave (full), Update(GangWars), GameLogic Save/Load, Update (partial, see table), Game Init1/Init3/InitialiseCoreDataAfterRW/CameraDestroy, Gangs Save/Load, Garage IsPlayerOutsideGarage/IsGarageEmpty, Garages Load/IsModelIndexADoor/StopCarFromBlowingUp, InformFriendsEventQueue (4), InformGroupEvent (3), InformGroupEventQueue (4), CInterestingEvents ctor.
+Open: GameLogic::Update mission-copy/tail (lines ~640-1024), Game::Init1 args, Garage.cpp (RestoreCar, StoreCar, Store/RestoreCars*, TidyUp*, Update, IsStaticPlayerCarEntirelyInside, NeatlyLineUp, RemoveCarsBlocking), Garages::Update/PrintMessages, GangWars::Save.
+Notes: GameLogic Save/Load/Gangs/Garages Save return bool in the exe, GameLogic Save/Load port returns void (callers ignore it). InitialiseRenderWare: exe also fails (destroys the camera) if a camera raster has a null parent; not mirrored (librw layout).
+Gate: StandaloneRelease build OK; PortableWin64 compile of Game/GameLogic/GangWars/Garages .cpp clean; v6 pre-commit grep clean; wave2_oracle_test (RW_EXE_ORACLE+GTA_EXE = compact exe): 1142 functions, 0 mismatches (PC24 0/0, PC53 0/0); combat gameplay_regress PASS=14.

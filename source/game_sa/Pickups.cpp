@@ -120,7 +120,7 @@ void CPickups::CreatePickupCoorsCloseToCoors(float inX, float inY, float inZ, fl
 
         const CVector start{ inX, inY, inZ + 0.3f };
         const CVector delta = cand - start;
-        const auto    len   = delta.Magnitude();
+        const auto    len   = std::sqrt((delta.z * delta.z + delta.y * delta.y) + delta.x * delta.x); // 0x458A80: inlined, z,y,x sum in float (CVector::Magnitude sums x,y,z in x87d)
         const auto    scale = (len + 0.4f) / len;
         const CVector end   = start + delta * scale;
 

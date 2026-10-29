@@ -1224,7 +1224,10 @@ void CStreaming::LoadCdDirectory()
     // This is used to load the archives
     auto archiveId{0};
     for (auto& file : ms_files) {
-        if (file.IsInUse() && file.IsNotPlayerImg) {
+        if (!file.IsInUse()) {
+            break; // exe 0x5B82F0..0x5B831F: the walk ends at the first unused entry
+        }
+        if (file.IsNotPlayerImg) {
             LoadCdDirectory(file.Name, archiveId);
         }
         archiveId++;
@@ -2063,31 +2066,31 @@ void CStreaming::ReadIniFile() {
             }
             else if (!_stricmp(attribute, "pe_lightchangerate"))
             {
-                CPostEffects::SCREEN_EXTRA_MULT_CHANGE_RATE = strtof(value, nullptr);
+                CPostEffects::SCREEN_EXTRA_MULT_CHANGE_RATE = static_cast<float>(strtod(value, nullptr)); // exe: atof result (x87 80-bit) rounded to float by fstp
             }
             else if (!_stricmp(attribute, "pe_lightingbasecap"))
             {
-                CPostEffects::SCREEN_EXTRA_MULT_BASE_CAP = strtof(value, nullptr);
+                CPostEffects::SCREEN_EXTRA_MULT_BASE_CAP = static_cast<float>(strtod(value, nullptr)); // exe: atof result (x87 80-bit) rounded to float by fstp
             }
             else if (!_stricmp(attribute, "pe_lightingbasemult"))
             {
-                CPostEffects::SCREEN_EXTRA_MULT_BASE_MULT = strtof(value, nullptr);
+                CPostEffects::SCREEN_EXTRA_MULT_BASE_MULT = static_cast<float>(strtod(value, nullptr)); // exe: atof result (x87 80-bit) rounded to float by fstp
             }
             else if (!_stricmp(attribute, "pe_leftx"))
             {
-                CPostEffects::m_colourLeftUOffset = (float)strtol(value, nullptr, 10);
+                CPostEffects::m_colourLeftUOffset = std::bit_cast<float>((int32)strtol(value, nullptr, 10)); // exe 0x5BCCD0 stores the atoi() integer bits into the float (default is bit pattern 8)
             }
             else if (!_stricmp(attribute, "pe_rightx"))
             {
-                CPostEffects::m_colourRightUOffset = (float)strtol(value, nullptr, 10);
+                CPostEffects::m_colourRightUOffset = std::bit_cast<float>((int32)strtol(value, nullptr, 10)); // exe 0x5BCCD0 stores the atoi() integer bits into the float (default is bit pattern 8)
             }
             else if (!_stricmp(attribute, "pe_topy"))
             {
-                CPostEffects::m_colourTopVOffset = (float)strtol(value, nullptr, 10);
+                CPostEffects::m_colourTopVOffset = std::bit_cast<float>((int32)strtol(value, nullptr, 10)); // exe 0x5BCCD0 stores the atoi() integer bits into the float (default is bit pattern 8)
             }
             else if (!_stricmp(attribute, "pe_bottomy"))
             {
-                CPostEffects::m_colourBottomVOffset = (float)strtol(value, nullptr, 10);
+                CPostEffects::m_colourBottomVOffset = std::bit_cast<float>((int32)strtol(value, nullptr, 10)); // exe 0x5BCCD0 stores the atoi() integer bits into the float (default is bit pattern 8)
             }
             else if (!_stricmp(attribute, "pe_bRadiosity"))
             {

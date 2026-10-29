@@ -178,7 +178,8 @@
 | S43b | rest of S43 | 37 | partial 5/37 (3 M, 1 fixed, 1 U) -> S43c | CarGenerator.cpp, Cheat.cpp, Clothes.cpp, CollisionEventScanner.cpp, ConversationForPed.cpp, Cover.cpp, CoverPoint.cpp, CurrentVehicle.cpp, CustomCarPlateMgr.cpp, PedToPlayerConversations.cpp |
 | S43c | rest of S43b | 32 | partial 6/32 (5 M, 1 U) + clock audit (2 fixed) -> S43d | Clothes.cpp, ConversationForPed.cpp, Cover.cpp, CoverPoint.cpp, CurrentVehicle.cpp, CustomCarPlateMgr.cpp, PedToPlayerConversations.cpp |
 | S43d | rest of S43c (+ ConversationForPed::Update rest) | 27 | done (16 M, 7 fixed, 4 no exe callers; S43 complete) | Clothes.cpp, Cover.cpp, CurrentVehicle.cpp, CustomCarPlateMgr.cpp |
-| S47b | rest of S47 | 19 | pending | EventHandler.cpp, EventInWater.cpp, EventInteriorUseInfo.cpp, EventKnockOffBike.cpp, EventLeaderEntryExit.cpp, EventNewGangMember.cpp, EventPedEnteredMyVehicle.cpp, EventPedToChase.cpp, EventPotentialGetRunOver.cpp |
+| S47b | rest of S47 | 19 | partial 14/19 (9 M, 5 fixed) -> S47c | EventHandler.cpp, EventInWater.cpp, EventInteriorUseInfo.cpp, EventKnockOffBike.cpp, EventLeaderEntryExit.cpp, EventNewGangMember.cpp, EventPedEnteredMyVehicle.cpp, EventPedToChase.cpp, EventPotentialGetRunOver.cpp |
 | S55b | rest of S55 | 2 | pending |  |
 | S49b | rest of S49 | 10 | pending | Game.cpp, GameLogic.cpp, GangWars.cpp |
 | S48b | rest of S48 | 20 | pending | FireManager.cpp, Game.cpp |
+| S47c | rest of S47b | 5 | pending | EventHandler.cpp |

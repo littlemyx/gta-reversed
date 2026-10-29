@@ -1,0 +1,6 @@
+addr	file	line	cls	fn	oc
+0x4BDB80	source/game_sa/Events/EventHandler.cpp	285	None	ComputePedCollisionWithPedResponse	U
+0x4BE7D0	source/game_sa/Events/EventHandler.cpp	286	None	ComputePedCollisionWithPlayerResponse	U
+0x4BF9B0	source/game_sa/Events/EventHandler.cpp	294	None	ComputePersonalityResponseToDamage	U
+0x4C0170	source/game_sa/Events/EventHandler.cpp	265	None	ComputeDamageResponse	U
+0x4C0BD0	source/game_sa/Events/EventHandler.cpp	315	None	ComputeVehiclePotentialCollisionResponse	U

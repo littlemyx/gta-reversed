@@ -315,9 +315,9 @@ bool CEventKnockOffBike::SetPedSafePosition(CPed* ped)
         CWorld::GetIsLineOfSightClear(m_vehicle->GetPosition(), savedPedPos, true, false, false, true, false, false, false)) {
         if (m_knockOffType == KNOCK_OFF_TYPE_SKIDBACKFRONT) {
             ped->GetPosition().z += 0.5f;
-            if (ped->TestCollision(false))
-                ped->SetPosn(savedPedPos);
-            if (!CWorld::GetIsLineOfSightClear(m_vehicle->GetPosition(), ped->GetPosition(), true, false, false, true, false, false, false))
+            // 0x4B4CE9..0x4B4D33: the line of sight is only tested when the raised position is collision free
+            if (ped->TestCollision(false) ||
+                !CWorld::GetIsLineOfSightClear(m_vehicle->GetPosition(), ped->GetPosition(), true, false, false, true, false, false, false))
                 ped->SetPosn(savedPedPos);
         }
         knockPedOffBike = true;

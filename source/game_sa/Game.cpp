@@ -45,6 +45,7 @@
 #include "GridRef.h"
 #include "MenuSystem.h"
 #include "RealTimeShadowManager.h"
+#include "Mirrors.h"
 #include "VehicleRecording.h"
 #include "ColAccel.h"
 #include "app.h"
@@ -602,6 +603,18 @@ void CGame::InitialiseOnceBeforeRW() {
     CPad::Initialise();
 }
 
+// 0x5BA120: the D3D device-restore callback the game installs (calls the previous one, then flags the mirrors / real time shadows for a re-init)
+static rwD3D9DeviceRestoreCallBack s_prevDeviceRestoreCallback{}; // 0xBD0114
+static void GameDeviceRestoreCallback() {
+    if (s_prevDeviceRestoreCallback) {
+        s_prevDeviceRestoreCallback();
+    }
+    if (g_realTimeShadowMan.m_bInitialised) {
+        g_realTimeShadowMan.m_bNeedsReinit = true;
+    }
+    CMirrors::d3dRestored = true;
+}
+
 // 0x5BD600
 bool CGame::InitialiseRenderWare() {
     ValidateVersion();
@@ -656,7 +669,9 @@ bool CGame::InitialiseRenderWare() {
     CGame::m_pWorkingMatrix1 = RwMatrixCreate();
     CGame::m_pWorkingMatrix2 = RwMatrixCreate();
 
-    _rwD3D9DeviceSetRestoreCallback(_rwD3D9DeviceGetRestoreCallback());
+    // exe 0x5BD792-0x5BD7A4: the old callback is saved and the game's own (0x5BA120) installed (the port re-installed the old one: a no-op)
+    s_prevDeviceRestoreCallback = _rwD3D9DeviceGetRestoreCallback();
+    _rwD3D9DeviceSetRestoreCallback(GameDeviceRestoreCallback);
     return true;
 }
 

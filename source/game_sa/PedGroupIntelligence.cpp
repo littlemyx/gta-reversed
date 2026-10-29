@@ -310,7 +310,7 @@ void CPedGroupIntelligence::SetTask(CPed* ped, const CTask& task, PedTaskPairs& 
 
 // 0x5F8560
 void CPedGroupIntelligence::SetScriptCommandTask(CPed* ped, const CTask& task) {
-    SetTask(ped, task, m_ScriptCommandPedTaskPairs);
+    SetTask(ped, task, m_ScriptCommandPedTaskPairs, TASK_SECONDARY_INVALID, true); // 0x5F8560: `push 1` (force): the script command replaces the stored task even if it has the same type
 }
 
 // @unk

@@ -1,0 +1,12 @@
+# ASM-S28d (Streaming.cpp, 23 rows + Task 0) - 2026-10-29
+Result: 23 compared (7 DEVIATION fixed + Task 0, 16 MATCH, 0 UNSURE), 0 NOT_REACHED. Table: S28d.result.tsv.
+Task 0 (29006e97): AddLodsToRequestList (0x40C520) truncates (_ftol of x*0.005+15) the four LOD sector indices; the port floored. Now NOTSA_FTOL of CWorld::GetLodSectorfX/Y (differs for sector floats in (-1,0): end index 0 vs -1).
+Fixes:
+- 1554acf3 RemoveCurrentZonesModels (0x40B080): per gang only the first 5 slots of the ped group are made deletable (2000 skipped); port walked the whole group count.
+- 15c0f8a0 RequestSpecialModel (0x409D10): same-name scan covers models 0..999 (port 0..1000); the "keep TXD alive across RemoveModel" branch needs a non-null RW dictionary (exe 0x409F40). LoadScene (0x40EB70): player position is (0,0,0) unless Players[0].m_pPed, then FindPlayerCoors(-1).
+- f69a6d5e ReadIniFile (0x5BCCD0): pe_leftx/rightx/topy/bottomy store the atoi() integer bits into the float variable (the exe's default is the bit pattern 8; the port converted to 8.0f); pe_light* values go atof(x87) -> fstp. LoadCdDirectory() (0x5B82C0): the image walk ends at the first unused entry.
+- d13c4097 InitImageList (0x4083C0): Name[0]=0 and StreamHandle=0 for every entry (port: default entry, handle -1).
+MATCH: AddImageToList, Load, Save, LoadCdDirectory(char*, id), LoadInitialPeds/Weapons, LoadSceneCollision, RequestBigBuildings, RequestTxdModel, RequestVehicleUpgrade, RequestSpecialChar, RemoveTxdModel, Init2, Shutdown (port nulls ms_pExtraObjectsDir after delete, exe leaves it dangling: unobservable), StreamAmbulanceAndMedic, StreamFireEngineAndFireman, StreamPedsIntoRandomSlots.
+Notes (not changed): CDirectory::AddItem(entry,img) sets the CdStreamPos FileID where the exe ORs img<<24 into the offset (equal for valid IMG entries); the exe stores the first/second image index in two globals (0x8E48A8/0x8E48A4, read only by a one-line getter at 0x408150) that the port does not keep.
+Consumer audit: no signature/layout change; edits only touch init-time (image list, stream.ini colour-filter offsets), LoadScene's zero player position without a ped, ped-group deletion on zone change, special-model replacement, LOD sector bound at the map edge.
+Gate: Release + StandaloneRW (wave2_oracle_test) builds OK; wave2_oracle_test (RW_EXE_ORACLE+GTA_EXE = compact exe) 1142 functions, PC24 0 / PC53 0 mismatches; combat regress PASS=14; soak.sh route 406 s RESULT: OK.

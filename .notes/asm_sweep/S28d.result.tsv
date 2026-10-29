@@ -1,0 +1,24 @@
+addr	function	verdict	asm range	note	fix commit
+0x407610	AddImageToList	MATCH	0x407610-0x40766C	first free slot, name copy then CdStreamOpen, flag, returns 0 when full	-
+0x5D29E0	Load	MATCH	0x5D29E0-0x5D2A16	flags OR-ed only for loaded infos and bytes != 0xFF; one byte read per info	-
+0x5D29A0	Save	MATCH	0x5D29A0-0x5D29DF	flags byte or 0xFF	-
+0x5B6170	LoadCdDirectory-char	MATCH	0x5B6170-0x5B64D6	extension order/checks, id bases, cd pos/size, next-on-cd chain match; CDirectory::AddItem(entry,img) sets FileID (exe ORs img<<24, equal for valid files whose offset high byte is 0)	-
+0x5B82C0	LoadCdDirectory-void	DEVIATION	0x5B82C0-0x5B8339	image walk stops at the first unused entry (port skipped unused and continued)	f69a6d5e
+0x40D3D0	LoadInitialPeds	MATCH	0x40D3D0-0x40D3E3	MALE01 game-required, StreamCopModels(LS)	-
+0x40A120	LoadInitialWeapons	MATCH	0x40A120-0x40A147	colt45, nitestick, missile order	-
+0x40EB70	LoadScene	DEVIATION	0x40EB70-0x40ED71	player position (0,0,0) unless Players[0].m_pPed, then FindPlayerCoors(-1); port used FindPlayerCoors(0) always	15c0f8a0
+0x40ED80	LoadSceneCollision	MATCH	0x40ED80-0x40EDD3	LoadCollision, LoadIpls, LoadAllRequestedModels(false)	-
+0x409430	RequestBigBuildings	MATCH	0x409430-0x4094A3	far plane read once, big-building flag, RequestModel(model, 0)	-
+0x407100	RequestTxdModel	MATCH	0x407100-0x407113	+20000	-
+0x408C70	RequestVehicleUpgrade	MATCH	0x408C70-0x408CA3	other upgrade requested after, int16 -1 test	-
+0x40B450	RequestSpecialChar	MATCH	0x40B450-0x40B463	+290 then RequestSpecialModel	-
+0x409D10	RequestSpecialModel	DEVIATION	0x409D10-0x409FE8	same-name scan covers models 0..999 (port 0..1000); TXD keep-alive branch needs a non-null RW dictionary (port only checked the pool slot)	15c0f8a0
+0x5BCCD0	ReadIniFile	DEVIATION	0x5BCCD0-0x5BCF14	pe_leftx/rightx/topy/bottomy store the atoi integer bits into the float (port converted to float); pe_light* use atof (x87) then fstp (port strtof)	f69a6d5e
+0x40B080	RemoveCurrentZonesModels	DEVIATION	0x40B080-0x40B32B	per gang only the first 5 ped-group slots (unused 2000 skipped) are made deletable; port walked the whole group count	1554acf3
+0x40C180	RemoveTxdModel	MATCH	0x40C180-0x40C190	+20000	-
+0x5B8AD0	Init2	MATCH	0x5B8AD0-0x5B8EF2	info/list init, temp-col states, DFF/TXD loaded loops, channels, buffer sizes, 50 MB, 22 vehicles, 12000 instances	-
+0x4083C0	InitImageList	DEVIATION	0x4083C0-0x4084AE	unused entries get Name[0]=0 and StreamHandle=0 (port: handle -1, flag cleared)	d13c4097
+0x4084B0	Shutdown	MATCH	0x4084B0-0x4084E4	port also nulls ms_pExtraObjectsDir after delete (exe leaves it dangling; unobservable)	-
+0x40A2A0	StreamAmbulanceAndMedic	MATCH	0x40A2A0-0x40A3FA	medic then ambulance order, level 0 / flag early-out, loaded test	-
+0x40A400	StreamFireEngineAndFireman	MATCH	0x40A400-0x40A559	fireman then fire engine	-
+0x40BDA0	StreamPedsIntoRandomSlots	MATCH	0x40BDA0-0x40BE59	load/unload/keep per slot, counters	-

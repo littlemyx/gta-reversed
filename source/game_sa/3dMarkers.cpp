@@ -303,6 +303,18 @@ RpClump* C3dMarkers::LoadMarker(const char* modelName) {
     return clump;
 }
 
+// 0x725660 / 0x725A8D (inlined twice): StdSize shrinks with the 2D distance to the player: >= 25 (or NaN) unchanged; > 5: size - ((25 - dist) * size) * 0.015f (0x8717A8 = 0.3f / 20);
+// otherwise size - size * 0.3f. NOT size * (1 - 0.3 * (25 - clamp(dist)) / 20): the products and the `size -` round differently.
+static float ExeMarkerStdSize(float size, float dist) {
+    if (!(dist < 25.f)) {
+        return size;
+    }
+    if (dist > 5.f) {
+        return size - (25.f - dist) * size * (0.3f / 20.f);
+    }
+    return size - size * 0.3f;
+}
+
 //> 0x725120
 C3dMarker* C3dMarkers::PlaceMarker(
     uint32 id,
@@ -435,7 +447,7 @@ C3dMarker* C3dMarkers::PlaceMarker(
         case MARKER3D_ARROW2:
         case MARKER3D_CONE:
         case MARKER3D_CONE_NO_COLLISION: {
-            m->m_StdSize = size * (1.f - 0.3f * (25.f - std::clamp(markerToPlayerDist2D, 5.f, 25.f)) / 20.f);
+            m->m_StdSize = ExeMarkerStdSize(size, markerToPlayerDist2D);
         }
         }
 
@@ -540,7 +552,7 @@ C3dMarker* C3dMarkers::PlaceMarker(
         case MARKER3D_ARROW2:
         case MARKER3D_CONE:
         case MARKER3D_CONE_NO_COLLISION: {
-            m->m_StdSize = size * (1.f - 0.3f * (25.f - std::clamp(markerToPlayerDist2D, 5.f, 25.f)) / 20.f);
+            m->m_StdSize = ExeMarkerStdSize(size, markerToPlayerDist2D);
         }
         }
     }
@@ -548,12 +560,13 @@ C3dMarker* C3dMarkers::PlaceMarker(
 
     //> 0x725AEC & 0x7256D1
     if (type != MARKER3D_ARROW2) {
-        if (size + 12.f <= markerToPlayerDist2D) {
+        // 0x7256D7-0x725755: NaN distance keeps alpha; the fade is (1 - (size + 12 - dist) * K) * alpha with K = 0x8729E4 = (1 - 0.65f) / 11 (folded), not (x * 0.35f) / 11
+        if (!(markerToPlayerDist2D < size + 12.f)) {
             m->m_Color.a = alpha;
-        } else if (size + 1.f >= markerToPlayerDist2D) {
+        } else if (!(size + 1.f < markerToPlayerDist2D)) {
             m->m_Color.a = NOTSA_FTOL(uint8, (float)alpha * 0.65f);
         } else {
-            m->m_Color.a = NOTSA_FTOL(uint8, (float)alpha * (1.f - ((size + 12.f - markerToPlayerDist2D) * 0.35f) / 11.f));
+            m->m_Color.a = NOTSA_FTOL(uint8, (1.f - (size + 12.f - markerToPlayerDist2D) * ((1.f - 0.65f) / 11.f)) * (float)alpha);
         }
     }
 

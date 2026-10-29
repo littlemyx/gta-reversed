@@ -159,7 +159,7 @@ void CEntity::Add(const CRect& rect) {
     if (usedRect.bottom < -3000.0F) {
         usedRect.bottom = -3000.0F;
     }
-    if (usedRect.top >= 3000.0F) {
+    if (usedRect.top > 3000.0F) { // exe 0x534851: `test ah, 0x41` = strictly greater (left/right/bottom use < / >= / <)
         usedRect.top = 2999.0F;
     }
 

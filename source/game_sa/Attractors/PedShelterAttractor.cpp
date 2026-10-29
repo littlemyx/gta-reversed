@@ -32,10 +32,11 @@ CVector& CPedShelterAttractor::GetDisplacement(int32 pedId) {
 
             bool tooClose = false;
             for (const CVector& other : ms_displacements) {
-                const float dx = other.x - disp.x;
-                const float dy = other.y - disp.y;
-                const float dz = other.z; // NOTE: Not subtracting `disp.z` (always 0)
-                if (dx * dx + dy * dy + dz * dz < 1.f) {
+                // The original keeps this on the x87 stack (0x5EF4F3): dx, dy are not rounded to float and the sum is `(dz^2 + dy^2) + dx^2`
+                const x87d dx = (x87d)other.x - (x87d)disp.x;
+                const x87d dy = (x87d)other.y - (x87d)disp.y;
+                const x87d dz = (x87d)other.z; // NOTE: Not subtracting `disp.z` (always 0)
+                if ((dz * dz + dy * dy) + dx * dx < (x87d)1.f) {
                     tooClose = true;
                     break;
                 }

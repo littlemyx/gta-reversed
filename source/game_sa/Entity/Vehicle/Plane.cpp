@@ -1482,10 +1482,10 @@ void CPlane::ProcessControlInputs(uint8 playerNum) {
             m_fSteeringUpDown    = mouseMoved.y * 0.0015f + m_fSteeringUpDown;
         }
         if (std::abs(m_fSteeringLeftRight) < 0.15f) {
-            m_fSteeringLeftRight = std::pow(0.99f, CTimer::GetTimeStep()) * m_fSteeringLeftRight;
+            m_fSteeringLeftRight = (float)(X87R(x87::pow(X87W((x87d)0.99f), X87W((x87d)CTimer::GetTimeStep())) * (x87d)m_fSteeringLeftRight)); // exe 0x6CB01B: pow kept unrounded, the multiply rounds
         }
         if (std::abs(m_fSteeringUpDown) < 0.15f) {
-            m_fSteeringUpDown = std::pow(0.99f, CTimer::GetTimeStep()) * m_fSteeringUpDown;
+            m_fSteeringUpDown = (float)(X87R(x87::pow(X87W((x87d)0.99f), X87W((x87d)CTimer::GetTimeStep())) * (x87d)m_fSteeringUpDown)); // exe 0x6CAFE5: pow kept unrounded, the multiply rounds
         }
     }
 

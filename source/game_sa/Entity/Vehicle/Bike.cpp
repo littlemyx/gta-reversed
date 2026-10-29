@@ -412,9 +412,13 @@ void CBike::ProcessBuoyancy() {
         fBuoyancyForceZ *= 1.5F;
 
     auto fBuoyancyForceMult = std::max(0.5F, 1.0F - fBuoyancyForceZ * 0.05F); // 0x6B60D9: multiply by 0.05f, not divide by 20
-    auto fSpeedMult = std::pow(fBuoyancyForceMult, CTimer::GetTimeStep());
-    m_vecMoveSpeed *= fSpeedMult;
-    m_vecTurnSpeed *= fSpeedMult;
+    const auto fSpeedMult = x87::pow(X87W((x87d)fBuoyancyForceMult), X87W((x87d)CTimer::GetTimeStep())); // exe 0x6B610E: kept unrounded, each multiply rounds
+    m_vecMoveSpeed.x = (float)(X87R(fSpeedMult * (x87d)m_vecMoveSpeed.x));
+    m_vecMoveSpeed.y = (float)(X87R(fSpeedMult * (x87d)m_vecMoveSpeed.y));
+    m_vecMoveSpeed.z = (float)(X87R(fSpeedMult * (x87d)m_vecMoveSpeed.z));
+    m_vecTurnSpeed.x = (float)(X87R(fSpeedMult * (x87d)m_vecTurnSpeed.x));
+    m_vecTurnSpeed.y = (float)(X87R(fSpeedMult * (x87d)m_vecTurnSpeed.y));
+    m_vecTurnSpeed.z = (float)(X87R(fSpeedMult * (x87d)m_vecTurnSpeed.z));
 
     // 0x6B6443
     if (fBuoyancyForceZ > 0.8F || (fBuoyancyForceZ > 0.4F && IsAnyWheelNotMakingContactWithGround())) {
@@ -791,8 +795,8 @@ void CBike::ProcessRiderAnims(CPed* rider, CVehicle* vehicle, CRideAnimData* rid
         leanRatio = -1.0f;
     }
     {
-        const auto smoothing = std::pow(0.86f, CTimer::GetTimeStep()); // 0x871350
-        rideData->AnimLeanLeft = smoothing * rideData->AnimLeanLeft + (1.0f - smoothing) * leanRatio;
+        const auto smoothing = x87::pow(X87W((x87d)0.86f), X87W((x87d)CTimer::GetTimeStep())); // 0x871350, exe 0x6B793E: kept unrounded; 1 - s, (1 - s) * lean, s * anim and the sum each round
+        rideData->AnimLeanLeft = (float)(X87R(X87R(smoothing * (x87d)rideData->AnimLeanLeft) + X87R(X87R((x87d)1.0 - smoothing) * (x87d)leanRatio)));
     }
 
     //> Lean (forwards/backwards)
@@ -869,8 +873,8 @@ void CBike::ProcessRiderAnims(CPed* rider, CVehicle* vehicle, CRideAnimData* rid
     }
 
     if (isPlayer) {
-        const auto smoothing = std::pow(0.89f, CTimer::GetTimeStep()); // 0x87134C
-        rideData->AnimLeanFwd = smoothing * rideData->AnimLeanFwd + (1.0f - smoothing) * fwdLeanTarget;
+        const auto smoothing = x87::pow(X87W((x87d)0.89f), X87W((x87d)CTimer::GetTimeStep())); // 0x87134C, exe 0x6B7C93: kept unrounded; 1 - s, (1 - s) * lean, s * anim and the sum each round
+        rideData->AnimLeanFwd = (float)(X87R(X87R(smoothing * (x87d)rideData->AnimLeanFwd) + X87R(X87R((x87d)1.0 - smoothing) * (x87d)fwdLeanTarget)));
     } else {
         rideData->AnimLeanFwd = 0.0f;
     }
@@ -1061,10 +1065,10 @@ void CBike::ProcessControlInputs(uint8 playerNum) {
             }
 
             if (std::abs(m_fRawSteerAngle) < 0.35f || CPad::GetPad(playerNum)->NewState.m_bVehicleMouseLook) {
-                m_fRawSteerAngle = std::pow(0.98f, CTimer::GetTimeStep()) * m_fRawSteerAngle;
+                m_fRawSteerAngle = (float)(X87R(x87::pow(X87W((x87d)0.98f), X87W((x87d)CTimer::GetTimeStep())) * (x87d)m_fRawSteerAngle)); // exe 0x6BE56E: pow kept unrounded, the multiply rounds
             }
             if (std::abs(leanFwd) < 0.35f || CPad::GetPad(playerNum)->NewState.m_bVehicleMouseLook) {
-                leanFwd = std::pow(0.98f, CTimer::GetTimeStep()) * leanFwd;
+                leanFwd = (float)(X87R(x87::pow(X87W((x87d)0.98f), X87W((x87d)CTimer::GetTimeStep())) * (x87d)leanFwd)); // exe 0x6BE5B4: pow kept unrounded, the multiply rounds
             }
         };
 
@@ -1376,11 +1380,11 @@ void CBike::ProcessControl() {
         pitchDamp = pitchDamp / (turnLocal.x * turnLocal.x * pitchDampScale + 1.0f);
         float rollDamp = ROLL_DAMP_BASE / (1000.0f * turnLocal.y * turnLocal.y + 1.0f);
 
-        pitchDamp = std::pow(pitchDamp, CTimer::GetTimeStep());
-        rollDamp  = std::pow(rollDamp, CTimer::GetTimeStep());
+        pitchDamp = (float)x87::pow(X87W((x87d)pitchDamp), X87W((x87d)CTimer::GetTimeStep())); // exe 0x6B95ED: fstp dword
+        const auto rollDampPow = x87::pow(X87W((x87d)rollDamp), X87W((x87d)CTimer::GetTimeStep())); // exe 0x6B9600: kept unrounded, the multiply rounds
 
         const auto pitchDelta = turnLocal.x * pitchDamp - turnLocal.x;
-        const auto rollDelta  = turnLocal.y * rollDamp - turnLocal.y;
+        const float rollDelta = (float)(X87R(X87R(rollDampPow * (x87d)turnLocal.y) - (x87d)turnLocal.y));
 
         const auto turnMass = m_fTurnMass;
         const auto up       = GetUp();
@@ -2080,7 +2084,7 @@ void CBike::ProcessControl() {
                 lateral = -maxLean;
             }
 
-            const auto desLeanPow = std::pow(m_BikeHandling->m_fDesLean, CTimer::GetTimeStep());
+            const float desLeanPow = (float)x87::pow(X87W((x87d)m_BikeHandling->m_fDesLean), X87W((x87d)CTimer::GetTimeStep())); // exe 0x6BBB73: fstp dword
             lean = (X87R(x87::asin(static_cast<float>(lateral)) - stillAnimLean)) * (1.0f - desLeanPow) + desLeanPow * m_RideAnimData.DesiredLeanAngle;
         }
         m_RideAnimData.DesiredLeanAngle = lean;

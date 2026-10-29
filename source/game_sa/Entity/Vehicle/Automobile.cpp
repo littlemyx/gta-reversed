@@ -950,9 +950,11 @@ void CAutomobile::ProcessControl()
     if (wheelSpinRate >= m_fWheelSpinForAudio)
         riseFallWheelSpinRate = CVehicle::WHEELSPIN_RISE_RATE;
 
-    riseFallWheelSpinRate = std::pow(riseFallWheelSpinRate, CTimer::GetTimeStep());
-    m_fWheelSpinForAudio *= riseFallWheelSpinRate;
-    m_fWheelSpinForAudio += (1.0f - riseFallWheelSpinRate) * wheelSpinRate;
+    {
+        // exe 0x6B2DD3: the pow result stays on the x87 stack unrounded; 1 - r, (1 - r) * spin, r * audio and the sum each round to 24 bits
+        const auto r = x87::pow(X87W((x87d)riseFallWheelSpinRate), X87W((x87d)CTimer::GetTimeStep()));
+        m_fWheelSpinForAudio = (float)(X87R(X87R(r * (x87d)m_fWheelSpinForAudio) + X87R(X87R((x87d)1.0 - r) * (x87d)wheelSpinRate)));
+    }
 
     if ((CTimer::GetTimeInMS() & 2047) > 800) { // % 2046
         if (roughnessShake >= 0.29f)
@@ -1013,10 +1015,11 @@ void CAutomobile::ProcessControl()
         }()) {
             float       turnSpeedForward = m_vecTurnSpeed.z * GetForward().z + m_vecTurnSpeed.y * GetForward().y + m_vecTurnSpeed.x * GetForward().x; // 0x6B30C6-0x6B30DC: z, y, x
             const float speedSquared     = turnSpeedForward * turnSpeedForward;
-            float       speedTimeStep    = std::pow(0.985f, CTimer::GetTimeStep()) / (speedSquared * 5.0f + 1.0f);
-            float       speed            = std::pow(speedTimeStep, CTimer::GetTimeStep());
-            speed *= turnSpeedForward;
-            speed -= turnSpeedForward;
+            // exe 0x6B30EC/0x6B3111: pow #1 stays unrounded in the division (24-bit result), pow #2 stays unrounded in the multiply, each op rounds
+            const auto  pow1             = x87::pow(X87W((x87d)0.985f), X87W((x87d)CTimer::GetTimeStep()));
+            float       speedTimeStep    = (float)(X87R(pow1 / (x87d)(speedSquared * 5.0f + 1.0f)));
+            const auto  pow2             = x87::pow(X87W((x87d)speedTimeStep), X87W((x87d)CTimer::GetTimeStep()));
+            float       speed            = (float)(X87R(X87R(pow2 * (x87d)turnSpeedForward) - (x87d)turnSpeedForward));
 
             CVector force = speed * GetUp() * -1.0f * m_fTurnMass;
             CVector point = GetRight() + GetMatrix().TransformVector(m_vecCentreOfMass);
@@ -2006,7 +2009,7 @@ void CAutomobile::ProcessControlInputs(uint8 playerNum) {
             }
             m_nLastControlInput = eControllerType::MOUSE;
             if (std::abs(m_fRawSteerAngle) < 0.7f || mouseLook) { // 0x6AD8B5: also decays while NOT in mouse look when |steer| < 0.7
-                m_fRawSteerAngle *= std::pow(0.975f, ts);
+                m_fRawSteerAngle = (float)(X87R(x87::pow(X87W((x87d)0.975f), X87W((x87d)ts)) * (x87d)m_fRawSteerAngle)); // exe 0x6AD8DD: pow kept unrounded, the multiply rounds
             }
         } else if (steerLR != 0 || m_nLastControlInput != eControllerType::MOUSE) { // 0x6AD80F
             KeyboardSteer(true);
@@ -4854,7 +4857,7 @@ void CAutomobile::ProcessCarWheelPair(eCarWheel leftWheel, eCarWheel rightWheel,
             m_fTireTemperature = std::min(m_fTireTemperature, 3.0f);
         }
         else if (m_fTireTemperature > 1.0f) {
-            m_fTireTemperature = std::powf(0.995f, CTimer::GetTimeStep()) * (m_fTireTemperature - 1.0f) + 1.0f;
+            m_fTireTemperature = (float)(X87R(X87R(x87::pow(X87W((x87d)0.995f), X87W((x87d)CTimer::GetTimeStep())) * (x87d)(m_fTireTemperature - 1.0f)) + (x87d)1.0)); // exe 0x6A5CF5 (powf thunk 0x470000 = _CIpow, result unrounded)
         }
     }
 

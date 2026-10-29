@@ -299,8 +299,9 @@ bool CQuadBike::ProcessAI(uint32& extraHandlingFlags) {
                     }
                 }
             }
-            const float fValue = std::pow(m_pHandling->m_fDesLean, CTimer::GetTimeStep()); // TODO: Name this variable properly
-            m_sRideAnimData.LeanAngle = fValue * m_sRideAnimData.LeanAngle - m_pHandling->m_fFullAnimLean * m_fSteerAngle / DegreesToRadians(m_pHandlingData->m_fSteeringLock) * (1.0f - fValue);
+            const auto fValue = x87::pow(X87W((x87d)m_pHandling->m_fDesLean), X87W((x87d)CTimer::GetTimeStep())); // TODO: Name this variable properly; exe 0x6CEA48: kept unrounded, every op below rounds
+            const float fSteerTerm = m_pHandling->m_fFullAnimLean * m_fSteerAngle / DegreesToRadians(m_pHandlingData->m_fSteeringLock);
+            m_sRideAnimData.LeanAngle = (float)(X87R(X87R(fValue * (x87d)m_sRideAnimData.LeanAngle) - X87R((x87d)fSteerTerm * X87R((x87d)1.0 - fValue))));
 
             DoDriveByShootings();
 
@@ -334,7 +335,7 @@ void CQuadBike::ProcessControlInputs(uint8 playerNum) {
                 m_sRideAnimData.LeanFwd += CPad::NewMouseControllerState.m_AmountMoved.y * -0.0035f; // 0x6CE15A: constant at 0x871AD8 is -0.0035
             }
             if (pad->NewState.m_bVehicleMouseLook || std::fabs(m_sRideAnimData.LeanFwd) < 0.35f) {
-                m_sRideAnimData.LeanFwd *= std::pow(0.98f, CTimer::GetTimeStep());
+                m_sRideAnimData.LeanFwd = (float)(X87R(x87::pow(X87W((x87d)0.98f), X87W((x87d)CTimer::GetTimeStep())) * (x87d)m_sRideAnimData.LeanFwd)); // exe 0x6CE197: pow kept unrounded, the multiply rounds
             }
         }
     }

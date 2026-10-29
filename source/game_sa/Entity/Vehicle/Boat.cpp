@@ -1018,7 +1018,7 @@ void CBoat::ProcessControlInputs(uint8 padNum) {
 
         // if the angle is small or "mouse look" mode is enabled, apply damping
         if (std::fabs(m_fRawSteerAngle) < BOAT_STEER_DAMP_THRESHOLD || pad->NewState.m_bVehicleMouseLook) {
-            m_fRawSteerAngle *= std::pow(BOAT_STEER_DAMP_BASE, CTimer::GetTimeStep());
+            m_fRawSteerAngle = (float)(X87R(x87::pow(X87W((x87d)BOAT_STEER_DAMP_BASE), X87W((x87d)CTimer::GetTimeStep())) * (x87d)m_fRawSteerAngle)); // exe 0x6F0C14: pow kept unrounded, the multiply rounds
         }
     }
 

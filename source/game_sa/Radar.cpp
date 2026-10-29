@@ -1543,12 +1543,12 @@ void CRadar::Draw3dMarkers() {
             assert(vehicle); // NOTSA
 
             const auto posn = [vehicle] {
-                auto bbMaxZ = vehicle->GetColModel()->GetBoundingBox().m_vecMax.z;
-                auto vehPos = vehicle->GetPosition();
+                const auto bbMaxZ = vehicle->GetColModel()->GetBoundingBox().m_vecMax.z;
+                const auto vehPos = vehicle->GetPosition();
 
-                bbMaxZ *= ModelIndices::IsNevada(vehicle->m_nModelIndex) ? (5.0f / 3.0f) : (6.0f / 5.0f);
-
-                return vehPos + CVector{0.0f, 0.0f, bbMaxZ + 2.0f};
+                // exe 0x585D5A-0x585D75: z = (bbMaxZ * (Nevada ? 0.6 : 1.2) + pos.z) + 2.0
+                const auto scaledMaxZ = bbMaxZ * (ModelIndices::IsNevada(vehicle->m_nModelIndex) ? 0.6f : 1.2f);
+                return CVector{vehPos.x, vehPos.y, (scaledMaxZ + vehPos.z) + 2.0f};
             }();
 
             PutMarkerCone(coneHandle, posn, 2.0f, color);
@@ -1576,7 +1576,8 @@ void CRadar::Draw3dMarkers() {
                     if (const auto idx = CPickups::GetActualPickupIndex(trace.m_nEntityHandle); idx >= 0) {
                         ret = CPickups::aPickUps[idx].GetPosn() + CVector{0.0f, 0.0f, 2.0f};
                     } else {
-                        NOTSA_UNREACHABLE("Couldn't get the pickup!");
+                        // exe 0x585EFC: a missing pickup is not skipped, the marker is drawn at (0, 0, 2.0 + 1.8|1.6)
+                        ret = CVector{0.0f, 0.0f, 2.0f};
                     }
                 }
                 ret.z += (CGame::currArea != 0 || FindPlayerPed()->GetAreaCode() != AREA_CODE_NORMAL_WORLD) ? 1.6f : 1.8f;
@@ -1591,7 +1592,8 @@ void CRadar::Draw3dMarkers() {
             if (CTheScripts::IsPlayerOnAMission() || !FindPlayerPed())
                 break;
 
-            if (!trace.m_bTrackingBlip && FindPlayerPed()->GetAreaCode() != AREA_CODE_NORMAL_WORLD)
+            // exe 0x585C75-0x585CAF: with an enex link the marker shows only while the player is inside (area != 0), without one only outside
+            if ((trace.m_pEntryExit != nullptr) != (FindPlayerPed()->GetAreaCode() != AREA_CODE_NORMAL_WORLD))
                 break;
 
             C3dMarkers::PlaceMarkerSet(coneHandle, MARKER3D_CYLINDER, trace.m_vPosition, 2.0f, 255, 0, 0, 228, 2048u, 0.2f, 0);

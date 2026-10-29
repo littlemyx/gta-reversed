@@ -1048,6 +1048,7 @@ void CPathFind::LoadPathFindData(int32 areaId) {
     sprintf_s(gString, "data\\paths\\nodes%d.dat", areaId);
     auto* stream = RwStreamOpen(RwStreamType::rwSTREAMFILENAME, RwStreamAccessType::rwSTREAMREAD, gString);
     LoadPathFindData(stream, areaId);
+    RwStreamClose(stream, nullptr); // 0x452F7A..0x452F7D: the exe closes the stream (the port leaked a file handle per area load)
     CTimer::Resume();
 }
 

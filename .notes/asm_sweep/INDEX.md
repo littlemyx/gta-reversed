@@ -177,4 +177,4 @@
 | S42e | rest of S42d | 1 | done 1/1 (fixed; S42 complete) | CarEnterExit.cpp |
 | S43b | rest of S43 | 37 | partial 5/37 (3 M, 1 fixed, 1 U) -> S43c | CarGenerator.cpp, Cheat.cpp, Clothes.cpp, CollisionEventScanner.cpp, ConversationForPed.cpp, Cover.cpp, CoverPoint.cpp, CurrentVehicle.cpp, CustomCarPlateMgr.cpp, PedToPlayerConversations.cpp |
 | S43c | rest of S43b | 32 | partial 6/32 (5 M, 1 U) + clock audit (2 fixed) -> S43d | Clothes.cpp, ConversationForPed.cpp, Cover.cpp, CoverPoint.cpp, CurrentVehicle.cpp, CustomCarPlateMgr.cpp, PedToPlayerConversations.cpp |
-| S43d | rest of S43c (+ ConversationForPed::Update rest) | 27 | pending | Clothes.cpp, Cover.cpp, CurrentVehicle.cpp, CustomCarPlateMgr.cpp |
+| S43d | rest of S43c (+ ConversationForPed::Update rest) | 27 | done (16 M, 7 fixed, 4 no exe callers; S43 complete) | Clothes.cpp, Cover.cpp, CurrentVehicle.cpp, CustomCarPlateMgr.cpp |

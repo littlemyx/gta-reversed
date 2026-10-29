@@ -55,7 +55,7 @@ bool CTaskSimpleCarSetPedSlowDraggedOut::ProcessPed(CPed* ped) {
         CTask* task;
         if (ped->IsPlayer()) {
             task = new CTaskSimplePlayerOnFoot{}; // 0x64C320
-        } else if (ped->m_nPedType == PED_MISSION) {
+        } else if (ped->IsCreatedBy(PED_MISSION)) { // [ped+0x484] (m_nCreatedBy) == 2; the port compared m_nPedType (0x598), a different field
             task = new CTaskSimpleStandStill{999'999, true}; // 0x64C355
         } else {
             task = CTaskComplexWander::GetWanderTaskByPedType(ped); // 0x64C378
@@ -77,7 +77,10 @@ bool CTaskSimpleCarSetPedSlowDraggedOut::ProcessPed(CPed* ped) {
             : JACK_PED_LEFT
     );
     const auto offset = CVector{doorOffset - CCarEnterExit::ms_vecPedGetUpAnimOffset, 0.f};
-    ped->SetPosn(std::get<CVector>(CPedPlacement::FindZCoorForPed(ped->GetMatrix().TransformPoint(offset))));
+    // 0x59C790 (rotation only, each component rounded to float) and then + the ped's position (a second rounding); `TransformPoint` (0x59C890) rounds once
+    const auto rotated = ped->GetMatrix().TransformVector(offset);
+    const auto& pedPos = ped->GetPosition();
+    ped->SetPosn(std::get<CVector>(CPedPlacement::FindZCoorForPed(CVector{rotated.x + pedPos.x, rotated.y + pedPos.y, rotated.z + pedPos.z})));
 
     // 0x64C50B - Reset rotation
     ped->m_fCurrentRotation

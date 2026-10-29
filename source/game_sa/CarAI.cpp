@@ -342,7 +342,7 @@ float CCarAI::GetCarToGoToCoorsRacing(CVehicle* veh, const CVector& coors, eCarD
     switch (ap->m_nCarMission) {
     case MISSION_GOTOCOORDINATES_RACING:
     case MISSION_GOTOCOORDINATES_STRAIGHTLINE: {
-        if (!veh->GetPosition2D().ApproxEqualTo(coors, 2.f)) {
+        if (!IsNearDestination(coors, ap->m_vecDestinationCoors, 2.f)) { // 0x41D298: vs the current destination (|d| <= 2, NaN passes), not the vehicle position
             ap->m_vecDestinationCoors = coors;
         }
         break;

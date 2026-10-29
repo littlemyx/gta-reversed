@@ -65,3 +65,12 @@
 - Not started: S30 Camera, S31 Cam. 
 - Brief template (scratchpad asm_brief_template.md) now also: no NaN-only leftovers, no "relies on pool memory", PortableWin64 compile when changing x87d signatures, own dis.sh copy.
 - Pending user decision: delete C:/gta-wt/asm-s04, asm-s19j (busy dirs) and old scratch folders.
+
+## 2026-10-30 00:15 checkpoint
+- Gates green through 454531de9 (C:\gta-play = 454531de9). Gate bb1pbdkk4 on 1b17f2660 running.
+- Phase 1 sweep complete; systemic items done (dbllit, x87::pow (+float), CRect, sphere, timers, LITDIV, FIXBUGS 2, clock ranges); clean -WX from-scratch build.
+- Phase 2 (PLAN.md "Phase 2", S41-S66): done S41/S41b, S42-S42e, S43-S43d, S44, S47-S47c, S49/S49b, S50/S50b, S52, S55/S55b, S56/S56b/S56c. Open/next: S45 (running), S48c (running: CGame + CGarage::Update handlers + GameLogic::Update tail), S51b+S58 (running), S53c (1 row), S54 (40), S57c+S64 (running), S59, S60-S63 (task allocators/tasks), S65, S66 (RunningScript).
+- User asked (10-29 ~22:00) to burn the remaining weekly quota: run 5 agents in parallel. Weekly resets 10-30 11:00.
+- Briefs: scratchpad phase2_brief.md (+ asm_brief_template.md); cont.py carries NOT/PARTIAL/UNSURE/OPEN rows.
+- Flake to watch: combat.foot.weapon_pickup (after TryToMerge radius 5.0->5.5, SYSTEMIC-6).
+- Pending user decision: delete busy empty dirs C:/gta-wt/asm-s04, asm-s19j, asm-s43c + old scratch.

@@ -938,8 +938,8 @@ void CPickups::RenderPickUpText() {
 // 0x456450
 bool CPickups::TestForPickupsInBubble(const CVector posn, float radius) {
     // NOTE: (Possible bug) - They dont check if the pickup is active (eg: type != NONE)
-    return rng::any_of(aPickUps, [sp = CSphere{ posn, radius }](const CPickup& p) {
-        return sp.IsPointWithin(p.GetPosn()); // They obviously didn't use `CSphere` here, but it's nicer.
+    return rng::any_of(aPickUps, [&](const CPickup& p) {
+        return IsPointInSphereExeSqrt(p.GetPosn(), posn, radius); // 0x456450: sqrt((dz^2 + dy^2) + dx^2) < radius, strict
     });
 }
 

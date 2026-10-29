@@ -204,9 +204,23 @@ bool CPedAttractorManager::IsApproachable(C2dEffectPedAttractor* fx, const CMatr
         return CWorld::GetIsLineOfSightClear(pedPos, ComputeEffectPos(fx, mat), true, false, false, false);
     }
 
-    const auto fxPos = ComputeEffectPos(fx, mat);
     const auto fxFwd = ComputeEffectForwardDir(fx, mat);
-    return (pedPos - fxPos).Dot(fxFwd) > 0.f // note: combined the 2 dot products here
-        && CVector2D::DistSqr(pedPos, fxPos) >= sq(0.5f)
-        && CPedGeometryAnalyser::IsWanderPathClear(pedPos, fxPos, 2.f, 0) == CPedGeometryAnalyser::WanderPathClearness::CLEAR;
+    const auto fxPos = ComputeEffectPos(fx, mat);
+
+    // 0x5EA2BF: ped must be in front of the effect: pedPos.fwd + -(fxPos.fwd) > 0 (z,y,x resp. z,x,y sums on the x87 stack, not (ped - fx).fwd)
+    const x87d fxDotFwd  = ((x87d)fxPos.z * fxFwd.z + (x87d)fxPos.y * fxFwd.y) + (x87d)fxPos.x * fxFwd.x;
+    const x87d pedDotFwd = ((x87d)fxFwd.z * pedPos.z + (x87d)fxFwd.x * pedPos.x) + (x87d)fxFwd.y * pedPos.y;
+    if (!(pedDotFwd + -fxDotFwd > 0.f)) {
+        return false;
+    }
+
+    // 0x5EA318: the flat (z = 0) direction effect->ped, normalised, must point along the effect's forward dir (dot > 0.25; NOT a distance test)
+    CVector toPed{pedPos.x - fxPos.x, pedPos.y - fxPos.y, 0.f};
+    toPed.Normalise();
+    const x87d flatDotFwd = ((x87d)toPed.y * fxFwd.y + (x87d)fxFwd.z * toPed.z) + (x87d)toPed.x * fxFwd.x;
+    if (!(flatDotFwd > 0.25f)) {
+        return false;
+    }
+
+    return CPedGeometryAnalyser::IsWanderPathClear(pedPos, fxPos, 2.f, 0) == CPedGeometryAnalyser::WanderPathClearness::CLEAR;
 }

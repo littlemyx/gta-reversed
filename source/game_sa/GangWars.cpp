@@ -475,11 +475,12 @@ bool CGangWars::CreateDefendingGroup(int32 unused) {
         auto angle = (float)i * TWO_PI / (float)pedCount;
 
         auto pedPos = CVector{
-            (float)(nodePos.x + X87R(x87::sin(angle) * CGeneral::GetRandomNumberInRange(0.0f, 3.0f)) + 2.0f),
-            (float)(nodePos.y + X87R(x87::cos(angle) * CGeneral::GetRandomNumberInRange(0.0f, 3.0f)) + 2.0f),
+            // exe 0x445598-0x4455E8: sin/cos * (rand * 3 + 2), i.e. the 2 is part of the radius (port: added to the sum)
+            (float)(nodePos.x + X87R(x87::sin(angle) * CGeneral::GetRandomNumberInRange(2.0f, 5.0f))),
+            (float)(nodePos.y + X87R(x87::cos(angle) * CGeneral::GetRandomNumberInRange(2.0f, 5.0f))),
             nodePos.z + 2.0f
         };
-        pedPos.z = CWorld::FindGroundZFor3DCoord(pedPos, nullptr, nullptr);
+        pedPos.z = CWorld::FindGroundZFor3DCoord(pedPos, nullptr, nullptr) + 1.0f; // exe 0x445604: fadd 1.0
 
         auto ped = new CCivilianPed(static_cast<ePedType>(Gang1 + 7), outPedId);
         ped->SetPosn(pedPos);
@@ -518,7 +519,7 @@ bool CGangWars::CreateDefendingGroup(int32 unused) {
     }
 
     for (auto i = 0; i < 3; i++) { // todo: magic number
-        auto carNode = ThePaths.FindNthNodeClosestToCoors(PointOfAttack, 0, 100.0f, false, false, i, false, true, nullptr);
+        auto carNode = ThePaths.FindNthNodeClosestToCoors(PointOfAttack, 0, 100.0f, false, false, i + 1, false, true, nullptr); // exe 0x445881: `inc edi` before the call, nodes 1..3
         auto carNodePos = ThePaths.GetPathNode(carNode)->GetPosition();
 
         if (DistanceBetweenPoints2D(carNodePos, playerPos) <= 25.0f)
@@ -526,8 +527,8 @@ bool CGangWars::CreateDefendingGroup(int32 unused) {
 
         auto gangCarModel = CPopulation::PickGangCar(Gang1);
         if (gangCarModel != MODEL_INVALID && CStreaming::GetInfo(gangCarModel).IsLoaded()) {
-            auto fwd = carNodePos - nodePos;
-            fwd.z = 0.0f;
+            // exe 0x44596F-0x445993: (car.y - node.y, node.x - car.x, 0), a perpendicular, not the direction itself
+            CVector fwd{ carNodePos.y - nodePos.y, nodePos.x - carNodePos.x, 0.0f };
             fwd.Normalise();
 
             auto car = CCarCtrl::CreateCarForScript(gangCarModel, carNodePos, false);
@@ -549,7 +550,7 @@ bool CGangWars::CreateDefendingGroup(int32 unused) {
     pickupCoors.z = CWorld::FindGroundZFor3DCoord(pickupCoors, nullptr, nullptr) + 0.75f;
 
     ModelIndex pickupModel = ModelIndices::MI_PICKUP_BODYARMOUR;
-    if (CGeneral::GetRandomNumberInRange(0, 2) == 1) {
+    if (CGeneral::RandomBit()) { // exe 0x445AC9: `call rand; test al, 1` (health on odd), not the integer range helper
         pickupModel = ModelIndices::MI_PICKUP_HEALTH;
     }
 

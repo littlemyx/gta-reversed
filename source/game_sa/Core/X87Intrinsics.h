@@ -230,3 +230,4 @@ inline void   sincos(double x, double& s, double& c) { s = std::sin(x); c = std:
 #endif
 // float overloads would silently pick the double ones (promotion), which is what the exe does as well (fld dword): nothing to add.
 } // namespace x87
+#include "X87Pow.h"   // x87::pow: the CRT pow of the exe (_CIpow 0x822130), bit-exact SSE2 kernel

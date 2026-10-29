@@ -264,7 +264,7 @@ for va, ns in va2names.items():
         name2vas[n].append(va)
 
 KIND_BY_NAME = [
-    (re.compile(r'^\?(sin|cos|tan|atan|atan2|asin|acos|log2|log10|ln|sqrt)@x87@@'), None),
+    (re.compile(r'^\?(sin|cos|tan|atan|atan2|asin|acos|log2|log10|ln|sqrt|pow)@x87@@|^\?(Pow)@powdetail@x87@@'), None),
     (re.compile(r'^_{1,2}(?:CI)?(sin|cos|tan|asin|acos|atan|atan2|pow|fmod|log10|log|exp|sqrt)f?(?:_default)?$|^__libm_sse2_(sin|cos|tan|asin|acos|atan|atan2|pow|fmod|log10|log|exp|sqrt)_precise$'), None),
 ]
 NAME2KIND = {'sin': 'SIN', 'cos': 'COS', 'tan': 'TAN', 'atan': 'ATAN', 'atan2': 'ATAN', 'asin': 'ASIN', 'acos': 'ACOS', 'log2': 'LOG2', 'log10': 'LOG10', 'ln': 'LN',
@@ -275,7 +275,7 @@ def port_call_kind(t):
     for n in va2names.get(t, ()):
         m = KIND_BY_NAME[0][0].match(n)
         if m:
-            return NAME2KIND[m.group(1)]
+            return NAME2KIND[(m.group(1) or m.group(2)).lower()]
         m = KIND_BY_NAME[1][0].match(n)
         if m:
             return NAME2KIND[m.group(1) or m.group(2)] + '*'

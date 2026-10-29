@@ -45,6 +45,46 @@ static void TestPrimitives() {
         const double x = std::fabs(GenD(r)), y = r.below(3) == 0 ? (double)(r.below(9) - 4) : (r.below(2) ? (double)GenF(r, 6.0f) : 0.5);
         const double a = std::pow(x, y), b = ExePowCI(x, y);
         if (SameD(a, b)) return true; d = "x " + D(x) + " y " + D(y) + " std " + D(a) + " exe " + D(b); return false; });
+    // x87::pow = the exe's SSE2 pow kernel (X87Pow.h): exact vs the exe, random + ts-like + special values
+    Run("CRT _CIpow 0x822130 vs x87::pow (random)", [](Rng& r, std::string& d) {
+        const double x = std::fabs(GenD(r)), y = r.below(3) == 0 ? (double)(r.below(9) - 4) : (r.below(2) ? (double)GenF(r, 6.0f) : 0.5);
+        const double a = x87::pow(x, y), b = ExePowCI(x, y);
+        if (SameD(a, b)) return true; d = "x " + D(x) + " y " + D(y) + " x87 " + D(a) + " exe " + D(b); return false; });
+    Run("CRT _CIpow 0x822130 vs x87::pow (ts-like: base 0.8..0.99 or 0.5..2, exponent 0..3 / frame times)", [](Rng& r, std::string& d) {
+        const double x = r.below(2) ? 0.8 + 0.19 * (double)GenF(r, 1.0f) * (double)GenF(r, 1.0f) : 0.5 + 1.5 * std::fabs((double)GenF(r, 1.0f));
+        const double y = r.below(3) == 0 ? (double)(float)(r.below(300) * 0.01) : r.below(2) ? (double)GenF(r, 3.0f) : (double)(r.below(4));
+        const double xf = (double)(float)x, yf = (double)(float)std::fabs(y);
+        const double a = x87::pow(xf, yf), b = ExePowCI(xf, yf);
+        if (SameD(a, b)) return true; d = "x " + D(xf) + " y " + D(yf) + " x87 " + D(a) + " exe " + D(b); return false; });
+    Run("CRT _CIpow 0x822130 vs x87::pow (wide: signs, ints, huge, tiny, denormal)", [](Rng& r, std::string& d) {
+        auto pick = [&r]() -> double {
+            switch (r.below(8)) {
+            case 0: return (double)GenF(r, 1e30f);
+            case 1: return (double)GenF(r, 1e-30f) * (double)GenF(r, 1e-30f);
+            case 2: return (double)((int)r.below(41) - 20);
+            case 3: return (double)((int)r.below(41) - 20) * 0.5;
+            case 4: return DBits(((uint64_t)r.below(1u << 20) << 44) | ((uint64_t)r.below(0xFFFFFFFFu) << 12) | r.below(4096));   // random bit pattern (denormals, huge, nan)
+            case 5: return std::ldexp((double)GenF(r, 1.0f), (int)r.below(2200) - 1100);
+            case 6: return (double)GenF(r, 1e5f);
+            default: return (double)GenF(r, PickScale(r));
+            }
+        };
+        const double x = pick(), y = r.below(3) == 0 ? (double)((int)r.below(2001) - 1000) * 0.25 : pick();
+        const double a = x87::pow(x, y), b = ExePowCI(x, y);
+        if (SameD(a, b)) return true; d = "x " + D(x) + " y " + D(y) + " x87 " + D(a) + " exe " + D(b); return false; });
+    Run("CRT _CIpow 0x822130 vs x87::pow (special value grid)", [](Rng& r, std::string& d) {
+        static const uint64_t sp[] = { 0x0000000000000000ull, 0x8000000000000000ull, 0x3FF0000000000000ull, 0xBFF0000000000000ull, 0x7FF0000000000000ull, 0xFFF0000000000000ull, 0x7FF8000000000000ull, 0xFFF8000000000000ull,
+            0x7FF0000000000001ull, 0x0000000000000001ull, 0x8000000000000001ull, 0x000FFFFFFFFFFFFFull, 0x0010000000000000ull, 0x7FEFFFFFFFFFFFFFull, 0xFFEFFFFFFFFFFFFFull, 0x4000000000000000ull, 0xC000000000000000ull,
+            0x3FE0000000000000ull, 0xBFE0000000000000ull, 0x4008000000000000ull, 0xC008000000000000ull, 0x4059000000000000ull, 0x3FF8000000000000ull, 0x4330000000000000ull, 0x4340000000000000ull, 0xC330000000000000ull,
+            0x43E0000000000000ull, 0x4090000000000000ull, 0x40A0000000000000ull, 0xC090000000000000ull, 0xC0A0000000000000ull, 0x3F50624DD2F1A9FCull, 0x4024000000000000ull };
+        const uint32_t n = (uint32_t)(sizeof sp / sizeof sp[0]);
+        const double x = DBits(sp[r.below(n)]), y = DBits(sp[r.below(n)]);
+        const double a = x87::pow(x, y), b = ExePowCI(x, y);
+        if (SameD(a, b)) return true; d = "x " + D(x) + " y " + D(y) + " x87 " + D(a) + " exe " + D(b); return false; });
+    Run("INFO std::pow vs the exe on ts-like operands (UCRT of this host)", [](Rng& r, std::string& d) {
+        const double xf = (double)(float)(0.8 + 0.19 * (double)GenF(r, 1.0f) * (double)GenF(r, 1.0f)), yf = (double)(float)(r.below(300) * 0.01);
+        const double a = std::pow(xf, yf), b = ExePowCI(xf, yf);
+        if (SameD(a, b)) return true; d = "x " + D(xf) + " y " + D(yf) + " std " + D(a) + " exe " + D(b); return false; });
     Run("CRT pow 0x8220F0 vs std::pow", [](Rng& r, std::string& d) {
         const double x = GenD(r), y = r.below(3) == 0 ? (double)(r.below(9) - 4) : (r.below(2) ? (double)GenF(r, 6.0f) : 2.0);
         const double a = std::pow(x, y), b = oracle::Fn<double __cdecl(double, double)>(0x8220F0)(x, y);

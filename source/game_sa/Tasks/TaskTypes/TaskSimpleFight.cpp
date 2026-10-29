@@ -1216,7 +1216,7 @@ bool CTaskSimpleFight::ProcessPed(CPed* ped) {
             auto* const anim = m_pAnim;
             if (m_nLastCommand == 8 || m_nLastCommand == 10) {
                 // x87: Division is done in extended precision
-                if ((x87d)anim->m_CurrentTime / (x87d)anim->m_BlendHier->m_fTotalTime > (double)NOTSA_GLOBAL_EXPR(0x8D2E94, (float), k_8D2E94_0p4) // 0.4f
+                if ((x87d)anim->m_CurrentTime / (x87d)anim->m_BlendHier->m_fTotalTime > (x87d)NOTSA_GLOBAL_EXPR(0x8D2E94, (float), k_8D2E94_0p4) // 0.4f
                  && anim->m_BlendDelta > -4.f // 0x859C3C
                 ) {
                     anim->m_BlendDelta = -4.f; // 0xC0800000
@@ -1327,7 +1327,8 @@ tail:
 #else
         const NOTSA_GLOBAL_ALIAS(v, 0xB6F32C, (CVector), *reinterpret_cast<CVector*>(reinterpret_cast<uint8*>(&TheCamera) + 772));
 #endif
-        ped->m_fAimingRotation = (float)x87::atan2(-(double)v.x, (double)v.y);
+        ped->m_fAimingRotation = (float)x87::atan2(-(x87d)v.x, (x87d)v.y);
+
     }
 
     m_bIsInControl = false;

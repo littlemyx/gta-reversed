@@ -1,6 +1,7 @@
 #include "StdInc.h"
 
 #include "EventHandler.h"
+#include "DetachedShared.h"
 #if defined(RD_EVTPROBE) && defined(NOTSA_STANDALONE_RUN)
 #include "standalone/Lockstep.h"
 #endif
@@ -1186,7 +1187,7 @@ void CEventHandler::ComputeDangerResponse(CEventDanger* e, CTask* tactive, CTask
             [[fallthrough]];
         }
         case TASK_COMPLEX_SMART_FLEE_ENTITY: {
-            return new CTaskComplexSmartFleeEntity{ e->m_dangerFrom, true, 100'000.f };
+            return new CTaskComplexSmartFleeEntity{ e->m_dangerFrom, true, 100'000.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
         }
         }
         return nullptr;
@@ -1242,7 +1243,7 @@ void CEventHandler::ComputeDeadPedResponse(CEventDeadPed* e, CTask* tactive, CTa
         }
         switch (e->m_TaskId) {
         case TASK_COMPLEX_SMART_FLEE_ENTITY:
-            return new CTaskComplexSmartFleeEntity{e->GetDeadPed(), true, fSafeDistance}; // 0x4B96A3: [0xC18CEC] (60.0f), not 100000
+            return new CTaskComplexSmartFleeEntity{ e->GetDeadPed(), true, fSafeDistance, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) }; // 0x4B96A3: [0xC18CEC] (60.0f), not 100000
         case TASK_COMPLEX_INVESTIGATE_DEAD_PED:
             return new CTaskComplexInvestigateDeadPed{e->GetDeadPed()};
         case TASK_SIMPLE_DUCK_FOREVER:
@@ -1274,7 +1275,7 @@ void CEventHandler::ComputeDraggedOutCarResponse(CEventDraggedOutCar* e, CTask* 
         }
 
         if (e->m_Vehicle->GetAnimGroupId() == ANIM_GROUP_COACHCARANIMS) { // 0x4BCC7E
-            return new CTaskComplexSmartFleeEntity{e->m_CarJacker, false, fSafeDistance};
+            return new CTaskComplexSmartFleeEntity{ e->m_CarJacker, false, fSafeDistance, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
         }
 
         const auto CreateFinalSeq = [&](CTask* response) -> CTask* {
@@ -1350,7 +1351,7 @@ void CEventHandler::ComputeDraggedOutCarResponse(CEventDraggedOutCar* e, CTask* 
             if (IsKillTaskAppropriate(m_Ped, e->m_CarJacker, *e)) {
                 return CreateStealCarBackSeq(true, false);
             }
-            return CreateFinalSeq(new CTaskComplexSmartFleeEntity{e->m_CarJacker, true, 100'000.f});
+            return CreateFinalSeq(new CTaskComplexSmartFleeEntity{ e->m_CarJacker, true, 100'000.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) });
         }
         default:
             return nullptr;
@@ -1380,7 +1381,7 @@ void CEventHandler::ComputeGotKnockedOverByCarResponse(CEventGotKnockedOverByCar
         m_EventResponseTask = nullptr;
         break;
     case TASK_COMPLEX_SMART_FLEE_ENTITY: // 0x4C347B: flee from the driver, from the vehicle itself when it has none (0x4C34D6)
-        m_EventResponseTask = new CTaskComplexSmartFleeEntity{ drvr ? static_cast<CEntity*>(drvr) : static_cast<CEntity*>(e->m_vehicle), false, fSafeDistance };
+        m_EventResponseTask = new CTaskComplexSmartFleeEntity{ drvr ? static_cast<CEntity*>(drvr) : static_cast<CEntity*>(e->m_vehicle), false, fSafeDistance, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
         break;
     case TASK_COMPLEX_KILL_PED_ON_FOOT: // 0x4C346E
         if (!drvr) { // 0x4C34FB
@@ -1388,7 +1389,7 @@ void CEventHandler::ComputeGotKnockedOverByCarResponse(CEventGotKnockedOverByCar
         }
         m_EventResponseTask = IsKillTaskAppropriate(m_Ped, drvr, *e)
             ? static_cast<CTask*>(new CTaskComplexKillPedOnFoot{ drvr })
-            : static_cast<CTask*>(new CTaskComplexSmartFleeEntity{ drvr, false, fSafeDistance });
+            : static_cast<CTask*>(new CTaskComplexSmartFleeEntity{ drvr, false, fSafeDistance, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) });
         break;
     case TASK_COMPLEX_KILL_CRIMINAL: // 0x4C3595: nothing for a missing or player driver (0x4C3599 IsPlayer)
         if (!drvr || drvr->IsPlayer()) {
@@ -1417,7 +1418,7 @@ void CEventHandler::ComputeGunAimedAtResponse(CEventGunAimedAt* e, CTask* tactiv
                 return new CTaskComplexFleeEntity{e->m_AimedBy, false};
             case TASK_COMPLEX_SMART_FLEE_POINT:  // 0x38E
             case TASK_COMPLEX_SMART_FLEE_ENTITY: // 0x38F, 0x4C28B6 -> 0x4C28F5
-                return new CTaskComplexSmartFleeEntity{e->m_AimedBy, false, fSafeDistance};
+                return new CTaskComplexSmartFleeEntity{ e->m_AimedBy, false, fSafeDistance, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
             default:
                 break;
             }
@@ -1476,7 +1477,7 @@ void CEventHandler::ComputeGunAimedAtResponse(CEventGunAimedAt* e, CTask* tactiv
                 }
             }
             if (!m_Ped->bWantedByPolice || !e->m_AimedBy->IsCop()) {
-                return new CTaskComplexSmartFleeEntity{e->m_AimedBy, false, fSafeDistance}; // 0x4C2CB8 / 0x4C2B94 (0x40 bytes): SmartFleeEntity, not FleeEntity
+                return new CTaskComplexSmartFleeEntity{ e->m_AimedBy, false, fSafeDistance, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) }; // 0x4C2CB8 / 0x4C2B94 (0x40 bytes): SmartFleeEntity, not FleeEntity
             }
             return new CTaskComplexFleeAnyMeans{e->m_AimedBy, true, fSafeDistance};
         }
@@ -1484,7 +1485,7 @@ void CEventHandler::ComputeGunAimedAtResponse(CEventGunAimedAt* e, CTask* tactiv
             return new CTaskComplexFleeEntity{e->m_AimedBy, false};
         case TASK_COMPLEX_SMART_FLEE_ENTITY: { // 0x4C2B5C
             if (!m_Ped->bWantedByPolice || !e->m_AimedBy->IsCop()) {
-                return new CTaskComplexSmartFleeEntity{e->m_AimedBy, false, fSafeDistance}; // 0x4C2CB8 / 0x4C2B94 (0x40 bytes): SmartFleeEntity, not FleeEntity
+                return new CTaskComplexSmartFleeEntity{ e->m_AimedBy, false, fSafeDistance, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) }; // 0x4C2CB8 / 0x4C2B94 (0x40 bytes): SmartFleeEntity, not FleeEntity
             }
             return new CTaskComplexFleeAnyMeans{e->m_AimedBy, true, fSafeDistance};
         }
@@ -1501,7 +1502,7 @@ void CEventHandler::ComputeHighAngerAtPlayerResponse(CEventHighAngerAtPlayer* e,
         case TASK_COMPLEX_KILL_PED_ON_FOOT:
             return new CTaskComplexKillPedOnFoot{FindPlayerPed()};
         case TASK_COMPLEX_SMART_FLEE_ENTITY:
-            return new CTaskComplexSmartFleeEntity{FindPlayerPed(), false, 60.f};
+            return new CTaskComplexSmartFleeEntity{ FindPlayerPed(), false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
         case TASK_NONE:
             return nullptr;
         case TASK_SIMPLE_DUCK_FOREVER:
@@ -1731,7 +1732,7 @@ void CEventHandler::ComputeLowAngerAtPlayerResponse(CEventLowAngerAtPlayer* e, C
         case TASK_COMPLEX_KILL_PED_ON_FOOT:
             return new CTaskComplexKillPedOnFoot{FindPlayerPed()};
         case TASK_COMPLEX_SMART_FLEE_ENTITY:
-            return new CTaskComplexSmartFleeEntity{FindPlayerPed(), false, 60.f};
+            return new CTaskComplexSmartFleeEntity{ FindPlayerPed(), false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
         case TASK_NONE:
             return nullptr;
         case TASK_SIMPLE_DUCK_FOREVER:
@@ -2245,7 +2246,7 @@ void CEventHandler::ComputePedEnteredVehicleResponse(CEventPedEnteredMyVehicle* 
         }
         /* m_ped->m_pVehicle->IsDriver(m_ped) */
         if (e->m_Vehicle->m_pHandlingData->GetAnimGroupId() == ANIM_GROUP_COACHCARANIMS) {
-            return new CTaskComplexSmartFleeEntity{ e->m_PedThatEntered, false, 60.f };
+            return new CTaskComplexSmartFleeEntity{ e->m_PedThatEntered, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
         }
         g_InterestingEvents.Add(CInterestingEvents::INTERESTING_EVENT_20, e->m_Vehicle);
         const auto LeaveCarAndFlee = [&]{
@@ -2366,7 +2367,7 @@ void CEventHandler::ComputePedThreatResponse(CEventAcquaintancePedHate* e, CTask
         case TASK_COMPLEX_SEEK_ENTITY_AIMING: // 0x4C215A
             return new CTaskComplexSeekEntityAiming{e->m_AcquaintancePed, 10.f, 5.f};
         case TASK_SMART_FLEE_ENTITY_WALKING:
-            return new CTaskComplexSmartFleeEntity{e->m_AcquaintancePed, false, 60.f};
+            return new CTaskComplexSmartFleeEntity{ e->m_AcquaintancePed, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
         case TASK_COMPLEX_KILL_PED_ON_FOOT_TIMED: // 0x4C1E7A [yeah, this is from down below]
         case TASK_COMPLEX_KILL_PED_ON_FOOT: { // 0x4C1D71
             if (IsKillTaskAppropriate(m_Ped, e->m_AcquaintancePed, *e)) {
@@ -2379,7 +2380,7 @@ void CEventHandler::ComputePedThreatResponse(CEventAcquaintancePedHate* e, CTask
                 return new CTaskComplexFleeAnyMeans{e->m_AcquaintancePed, true, 60.f};
             }
             if (!m_Ped->IsInVehicle() || !m_Ped->m_pVehicle->IsDriver(m_Ped)) {
-                return new CTaskComplexSmartFleeEntity{e->m_AcquaintancePed, false, 60.f};
+                return new CTaskComplexSmartFleeEntity{ e->m_AcquaintancePed, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
             }
             return new CTaskComplexCarDriveMissionFleeScene{m_Ped->m_pVehicle};
         }
@@ -2423,7 +2424,7 @@ void CEventHandler::ComputePedThreatResponse(CEventAcquaintancePedHate* e, CTask
             if (m_Ped->bWantedByPolice && e->m_AcquaintancePed->IsCop()) {
                 return new CTaskComplexFleeAnyMeans{e->m_AcquaintancePed, true, 60.f};
             }
-            return new CTaskComplexSmartFleeEntity{e->m_AcquaintancePed, false, 60.f}; // 0x4C20F0
+            return new CTaskComplexSmartFleeEntity{ e->m_AcquaintancePed, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) }; // 0x4C20F0
         }
         case TASK_COMPLEX_KILL_PED_AND_REENTER_CAR: // 0x4C1D64
             if (m_Ped->m_pVehicle) {
@@ -2463,18 +2464,10 @@ void CEventHandler::ComputePedThreatResponse(CEventAcquaintancePedHate* e, CTask
         case TASK_SIMPLE_HANDS_UP: // 0x4C1B39
             return new CTaskSimpleHandsUp{5'000};
         case TASK_COMPLEX_FLEE_ENTITY:
-            return new CTaskComplexSmartFleeEntity{e->m_AcquaintancePed, false, 60.f};
+            return new CTaskComplexSmartFleeEntity{ e->m_AcquaintancePed, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
         case TASK_COMPLEX_SMART_FLEE_ENTITY: { // 0x4C1C4B
             if (m_Ped->bWantedByPolice && e->m_AcquaintancePed->IsCop()) {
-                return new CTaskComplexSmartFleeEntity{
-                    e->m_AcquaintancePed,
-                    false,
-                    60.f,
-                    1'000'000,
-                    1'000,
-                    1.f,
-                    e->GetEventType() == EVENT_ACQUAINTANCE_PED_DISLIKE ? eMoveState::PEDMOVE_WALK : eMoveState::PEDMOVE_SPRINT
-                };
+                return new CTaskComplexSmartFleeEntity{ e->m_AcquaintancePed, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold), e->GetEventType() == EVENT_ACQUAINTANCE_PED_DISLIKE ? eMoveState::PEDMOVE_WALK : eMoveState::PEDMOVE_SPRINT };
             }
             return new CTaskComplexFleeAnyMeans{e->m_AcquaintancePed, true, 60.f};
         }
@@ -2523,7 +2516,7 @@ void CEventHandler::ComputePedToFleeResponse(CEventPedToFlee* e, CTask* tactive,
             return nullptr;
         }
         m_Ped->Say(CTX_GLOBAL_CRIMINAL_PLEAD);
-        return new CTaskComplexSmartFleeEntity{e->m_ped, true, 100.f, -1};
+        return new CTaskComplexSmartFleeEntity{ e->m_ped, true, 100.f, -1, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
     }();
 }
 
@@ -2540,7 +2533,7 @@ void CEventHandler::ComputePersonalityResponseToDamage(CEventDamage* e, CPed* sr
             if (IsKillTaskAppropriate(m_Ped, src, *e)) {
                 return new CTaskComplexKillCriminal{src, false};
             }
-            return new CTaskComplexSmartFleeEntity{src, false, 60.f};
+            return new CTaskComplexSmartFleeEntity{ src, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
         }
         case TASK_COMPLEX_KILL_PED_ON_FOOT: { // 0x4BFFE3
             // I've copy pasted this piece of code at least 3 times now
@@ -2551,7 +2544,7 @@ void CEventHandler::ComputePersonalityResponseToDamage(CEventDamage* e, CPed* sr
                 return new CTaskComplexFleeAnyMeans{src, true, 60.f};
             }
             if (!m_Ped->IsInVehicle() || !m_Ped->m_pVehicle->IsDriver(m_Ped)) {
-                return new CTaskComplexSmartFleeEntity{src, false, 60.f};
+                return new CTaskComplexSmartFleeEntity{ src, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
             }
             return new CTaskComplexCarDriveMissionFleeScene{m_Ped->m_pVehicle};
         }
@@ -2564,7 +2557,7 @@ void CEventHandler::ComputePersonalityResponseToDamage(CEventDamage* e, CPed* sr
             if (m_Ped->bWantedByPolice && src->IsCop()) {
                 return new CTaskComplexFleeAnyMeans{src, true, 60.f};
             }
-            return new CTaskComplexSmartFleeEntity{src, false, 60.f};
+            return new CTaskComplexSmartFleeEntity{ src, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
         }
         case TASK_COMPLEX_CAR_DRIVE_MISSION_KILL_PED: { // 0x4BFDD7
             if (m_Ped->IsInVehicle()) {
@@ -2858,7 +2851,7 @@ void CEventHandler::ComputeSeenCopResponse(CEventSeenCop* e, CTask* tactive, CTa
         case TASK_FINISHED:
             return nullptr;
         case TASK_COMPLEX_SMART_FLEE_ENTITY:
-            return new CTaskComplexSmartFleeEntity{ e->m_AcquaintancePed, false, 60.f };
+            return new CTaskComplexSmartFleeEntity{ e->m_AcquaintancePed, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
         case TASK_COMPLEX_KILL_PED_ON_FOOT:
             return new CTaskComplexKillPedOnFoot{ e->m_AcquaintancePed };
         default:
@@ -2889,7 +2882,7 @@ void CEventHandler::ComputeSeenPanickedPedResponse(CEventSeenPanickedPed* e, CTa
         case TASK_COMPLEX_FLEE_ENTITY:
             return new CTaskComplexFleeEntity{ currEvntSrc, true, 45.f };
         case TASK_COMPLEX_SMART_FLEE_ENTITY:
-            return new CTaskComplexSmartFleeEntity{ currEvntSrc, false, 45.f };
+            return new CTaskComplexSmartFleeEntity{ currEvntSrc, false, 45.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
         default:
             NOTSA_UNREACHABLE();
             return m_EventResponseTask; // 0x4C3722: default leaves the response task untouched
@@ -2954,7 +2947,7 @@ void CEventHandler::ComputeShotFiredResponse(CEventGunShot* e, CTask* tactive, C
                     return nullptr; // 0x4BC9CC
                 }
             }
-            return new CTaskComplexSmartFleeEntity{e->m_firedBy, false, 60.f};
+            return new CTaskComplexSmartFleeEntity{ e->m_firedBy, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
         }
         case TASK_COMPLEX_KILL_PED_ON_FOOT_STEALTH: // 0x4BCB16
             return new CTaskComplexKillPedOnFootStealth{ firedByPed };
@@ -2965,16 +2958,16 @@ void CEventHandler::ComputeShotFiredResponse(CEventGunShot* e, CTask* tactive, C
             if (IsKillTaskAppropriate(m_Ped, firedByPed, *e)) { // 0x4BCA51 - Inverted
                 return new CTaskComplexKillCriminal{ firedByPed, false }; // 0x4BCA7F
             }
-            return new CTaskComplexSmartFleeEntity{ e->m_firedBy, false, 60.f };
+            return new CTaskComplexSmartFleeEntity{ e->m_firedBy, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
         }
         case TASK_COMPLEX_SMART_FLEE_ENTITY: // 0x4BC8CE
-            return new CTaskComplexSmartFleeEntity{ e->m_firedBy, true, 60.f };
+            return new CTaskComplexSmartFleeEntity{ e->m_firedBy, true, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
         case TASK_COMPLEX_CAR_DRIVE_MISSION_FLEE_SCENE: { // 0x4BC7EB
             const auto v = m_Ped->m_pVehicle;
             if (v && v->IsDriver(m_Ped)) {
                 return new CTaskComplexCarDriveMissionFleeScene{ v }; // 0x4BC835
             }
-            return new CTaskComplexSmartFleeEntity{ v, false, 60.f }; // 0x4BC885
+            return new CTaskComplexSmartFleeEntity{ v, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) }; // 0x4BC885
         }
         case TASK_SIMPLE_DUCK_FOREVER:
             return new CTaskSimpleDuck{ DUCK_STANDALONE, 0x967Fu, -1 };
@@ -3043,7 +3036,7 @@ void CEventHandler::ComputeSpecialResponse(CEventSpecial* e, CTask* tactive, CTa
         case TASK_COMPLEX_KILL_PED_ON_FOOT:
             return new CTaskComplexKillPedOnFoot{ FindPlayerPed() }; // 0x4BBB0F
         case TASK_COMPLEX_SMART_FLEE_ENTITY:
-            return new CTaskComplexSmartFleeEntity{ FindPlayerPed(), false, 60.f }; // 0x4BBA54
+            return new CTaskComplexSmartFleeEntity{ FindPlayerPed(), false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) }; // 0x4BBA54
         case TASK_COMPLEX_SMART_FLEE_POINT:
             return new CTaskComplexSmartFleePoint{ FindPlayerPed()->GetPosition(), false, 1000.f, 100'000 }; // 0x4BBAA6
         case TASK_COMPLEX_CAR_DRIVE_MISSION_FLEE_SCENE:
@@ -3206,7 +3199,7 @@ void CEventHandler::ComputeVehicleDamageResponse(CEventVehicleDamage* e, CTask* 
                     if (m_Ped->m_pVehicle && m_Ped->m_pVehicle->IsDriver(m_Ped)) {
                         return new CTaskComplexCarDriveMissionFleeScene{ m_Ped->m_pVehicle }; // 0x4C332B
                     } else {
-                        return new CTaskComplexSmartFleeEntity{ m_Ped->m_pVehicle, false, 60.f }; // 0x4C33A6
+                        return new CTaskComplexSmartFleeEntity{ m_Ped->m_pVehicle, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) }; // 0x4C33A6
                     }
                 }
                 return nullptr;
@@ -3272,7 +3265,7 @@ void CEventHandler::ComputeVehicleDamageResponse(CEventVehicleDamage* e, CTask* 
             return new CTaskComplexLeaveCarAndFlee{ m_Ped->m_pVehicle, m_Ped->GetPosition() };
         case TASK_COMPLEX_CAR_DRIVE_MISSION_FLEE_SCENE: { // 0x4C3027
             if (!m_Ped->m_pVehicle->IsDriver(m_Ped)) {
-                return new CTaskComplexSmartFleeEntity{ m_Ped->m_pVehicle, false, 60.f }; // 0x4C302E
+                return new CTaskComplexSmartFleeEntity{ m_Ped->m_pVehicle, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) }; // 0x4C302E
             }
             return new CTaskComplexCarDriveMissionFleeScene{ m_Ped->m_pVehicle }; 
         }
@@ -3328,7 +3321,7 @@ void CEventHandler::ComputeVehicleOnFireResponse(CEventVehicleOnFire* e, CTask* 
         case TASK_COMPLEX_LEAVE_CAR_AND_FLEE:
             return new CTaskComplexSequence{
                 new CTaskComplexLeaveAnyCar{ 0, 0, true }, // 0x4BB43D
-                new CTaskComplexSmartFleeEntity{ e->m_vehicle, false, 15.f } // 0x4BB48B
+                new CTaskComplexSmartFleeEntity{ e->m_vehicle, false, 15.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) } // 0x4BB48B
             };
         case TASK_COMPLEX_LEAVE_CAR_AND_WANDER:
             return new CTaskComplexSequence{ // Why use a sequence here?
@@ -3338,12 +3331,12 @@ void CEventHandler::ComputeVehicleOnFireResponse(CEventVehicleOnFire* e, CTask* 
             if (m_Ped->m_pVehicle && m_Ped->m_pVehicle->IsDriver(m_Ped)) {
                 return new CTaskComplexCarDriveMissionFleeScene{ m_Ped->m_pVehicle };
             }
-            return new CTaskComplexSmartFleeEntity{ m_Ped->m_pVehicle, false, 60.f };
+            return new CTaskComplexSmartFleeEntity{ m_Ped->m_pVehicle, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
         }
         case TASK_COMPLEX_FLEE_ENTITY:
             return new CTaskComplexFleeEntity{ e->m_vehicle, false, 15.f };
         case TASK_COMPLEX_SMART_FLEE_ENTITY:
-            return new CTaskComplexSmartFleeEntity{ e->m_vehicle, false, 15.f }; // 0x4BB558: edi = the event vehicle
+            return new CTaskComplexSmartFleeEntity{ e->m_vehicle, false, 15.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) }; // 0x4BB558: edi = the event vehicle
         default:
             return m_EventResponseTask; // 0x4BB63E: any other task id leaves the response task untouched (not an unreachable)
         }

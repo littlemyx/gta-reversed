@@ -1091,7 +1091,7 @@ void CPickups::Save() {
 void ModifyStringLabelForControlSetting(char* stringLabel) {
     const auto len = strlen(stringLabel);
 
-    if (len < 2 || stringLabel[len - 2] != '_')
+    if (len <= 2 || stringLabel[len - 2] != '_') // 0x454B8F: `cmp esi, 2; jle`
         return;
 
     switch (CPad::GetPad(0)->Mode) {

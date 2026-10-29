@@ -2999,29 +2999,27 @@ void CEventHandler::ComputeShotFiredWhizzedByResponse(CEventGunShotWhizzedBy* e,
         case TASK_NONE:
             return nullptr; // 0x4BBE91
         case TASK_SIMPLE_DUCK_WHILE_SHOTS_WHIZZING: { // 0x4BBE68
-            const auto ProcessTaskDuck = [this](CTaskSimpleDuck* tDuck) {
-                if (tDuck->m_ShotWhizzingCounter >= 0) {
+            // 0x4BBE6A: a duck task only counts when its shot-whizzing counter is >= 0, otherwise the next source / a new duck is tried
+            const auto TryRestartDuck = [this](CTaskSimpleDuck* tDuck) {
+                if (tDuck && tDuck->m_ShotWhizzingCounter >= 0) {
                     tDuck->RestartTask(m_Ped);
+                    return true;
                 }
+                return false;
             };
 
-            if (tsimplest) {
-                if (const auto tDuck = notsa::dyn_cast_if_present<CTaskSimpleDuck>(tsimplest)) {
-                    ProcessTaskDuck(tDuck);
-                    return nullptr;
-                }
+            if (TryRestartDuck(notsa::dyn_cast_if_present<CTaskSimpleDuck>(tsimplest))) {
+                return nullptr;
             }
 
-            if (const auto tDuck = m_Ped->GetIntelligence()->GetTaskDuck()) {
-                ProcessTaskDuck(tDuck);
+            if (TryRestartDuck(m_Ped->GetIntelligence()->GetTaskDuck())) {
                 return nullptr;
             }
 
             return new CTaskSimpleDuck{ DUCK_STANDALONE_WEAPON_CROUCH, CGeneral::GetRandomNumberInRange<uint16>(3'000, 5'000), 1'000 };
         }
         default:
-            NOTSA_UNREACHABLE();
-            return m_EventResponseTask; // 0x4BBE94: default leaves the response task untouched
+            return m_EventResponseTask; // 0x4BBE94: any other task id leaves the response task untouched
         }
     }();
 }

@@ -563,7 +563,7 @@ public:
     static void HighlightImportantAngledArea(uint32 markerId, float fromX, float fromY, float toX, float toY, float angledToX, float angledToY, float angledFromX, float angledFromY, float height);
     static void DrawDebugSquare(float, float, float, float);
     static void DrawDebugSquare(const CRect& area) { DrawDebugSquare(area.left, area.top, area.right, area.bottom); }
-    static void DrawDebugAngledSquare(const CVector2D& inf, const CVector2D& sup, const CVector2D& rotSup, const CVector2D& rotInf);
+    static void DrawDebugAngledSquare(CVector2D inf, CVector2D sup, CVector2D rotSup, CVector2D rotInf); // by value: exe 0x486990 takes 8 floats on the stack (the exe callers at 0x4883A5 / 0x48876A / 0x488B2F push x1,y1..x4,y4), const& made the hook read them as pointers
     static void DrawDebugCube(const CVector& inf, const CVector& sup);
     static void DrawDebugAngledCube(const CVector& inf, const CVector& sup, const CVector2D& rotSup, const CVector2D& rotInf);
     static void DrawScriptSpritesAndRectangles(bool drawBeforeFade);

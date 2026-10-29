@@ -1756,7 +1756,7 @@ void CTheScripts::DrawDebugSquare(float x1, float y1, float x2, float y2) {
 
 // float infX, float infY, float sup.x, float supY, float rotSupX, float rotSupY, float rotInfX, float rotInfY
 // 0x486990
-void CTheScripts::DrawDebugAngledSquare(const CVector2D& inf, const CVector2D& sup, const CVector2D& rotSup, const CVector2D& rotInf) {
+void CTheScripts::DrawDebugAngledSquare(CVector2D inf, CVector2D sup, CVector2D rotSup, CVector2D rotInf) {
     CColPoint colPoint{};
     CEntity*  colEntity;
 

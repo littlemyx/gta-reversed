@@ -188,11 +188,12 @@ void CEntryExit::FindValidTeleportPoint(CVector& outTeleportPoint) {
     for (auto r : { 1.25f, 2.f }) { // Test with 2 ranges
         constexpr auto NumTestPoints{ 8 };
         for (auto i = 0; i < NumTestPoints; i++) {
-            const auto rot{ (float)i * TWO_PI / (float)NumTestPoints };
-            const auto point = outTeleportPoint + CVector{
-                (float)(X87R(x87::cos(rot) * r)),
-                (float)(X87R(x87::sin(rot) * r)),
-                0.f
+            // exe 0x43EB60-0x43EBB6: i * 2pi * 0.125 stays unrounded; cos * r + base is ONE float rounding (port rounded cos*r first)
+            const x87d rot = (x87d)i * (x87d)TWO_PI * (x87d)0.125f;
+            const CVector point{
+                (float)(X87R(x87::cos(rot) * (x87d)r) + (x87d)outTeleportPoint.x),
+                (float)(X87R(x87::sin(rot) * (x87d)r) + (x87d)outTeleportPoint.y),
+                outTeleportPoint.z
             };
             if (IsTeleportPointValid(outTeleportPoint, point)) {
                 outTeleportPoint = point;

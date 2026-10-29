@@ -1967,7 +1967,7 @@ void CWaterLevel::RenderWater() {
         const auto  blockCenterY = (float)(((x87d)blockY + (x87d)0.5) * (x87d)WATER_BLOCK_SIZE - (x87d)3000.0); // Rounded to float, but X isn't!
         const auto  distX = (x87d)camPos.x - blockCenterX;
         const auto  distY = (x87d)camPos.y - (x87d)blockCenterY;
-        const bool  isNear = std::sqrt(distX * distX + distY * distY) < (double)DETAILEDSEABEDDIST;
+        const bool  isNear = std::sqrt(distX * distX + distY * distY) < (x87d)DETAILEDSEABEDDIST;
 
         const auto RenderSegment = [&](float minX, float maxX, float minY, float maxY) {
             if (isNear) {
@@ -2148,7 +2148,18 @@ void CWaterLevel::RenderWater() {
         );
     }
 
-    FlushRenderBuffer();
+    // 0x6EFFF0..0x6F00A6: the exe inlines the flush here. With an empty buffer, or when RwIm3DTransform fails, it returns right away
+    // (the counters stay as they are on failure) WITHOUT RenderBoatWakes and DefinedState.
+    if (!uiTempBufferVerticesStored) {
+        return;
+    }
+    LittleTest(); // 0x541330
+    if (!RwIm3DTransform(TempBufferVertices.m_3d, uiTempBufferVerticesStored, nullptr, rwIM3D_VERTEXUV)) {
+        return;
+    }
+    RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, aTempBufferIndices, uiTempBufferIndicesStored);
+    RwIm3DEnd();
+    RenderBuffer::ClearRenderBuffer();
 
     RenderBoatWakes();
     DefinedState();

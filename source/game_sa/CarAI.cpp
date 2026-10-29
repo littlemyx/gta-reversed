@@ -567,21 +567,30 @@ void CCarAI::TellCarToRamOtherCar(CVehicle* vehicle1, CVehicle* vehicle2) {
 
 // 0x41C760
 void CCarAI::TellOccupantsToLeaveCar(CVehicle* vehicle) {
+    // @return true if a new leave-car task was given
     auto TellToLeaveCar = [vehicle](CPed* ped) {
         if (!ped) {
-            return;
+            return false;
         }
 
         CTaskComplexCopInCar* task = ped->GetTaskManager().Find<CTaskComplexCopInCar>(false);
         if (task) {
             task->m_flag0x2 = true;
-        } else {
-            ped->GetTaskManager().SetTask(new CTaskComplexLeaveCar{ vehicle, TARGET_DOOR_FRONT_LEFT, 0, true, false }, TASK_PRIMARY_PRIMARY, false);
+            return false;
         }
+        ped->GetTaskManager().SetTask(new CTaskComplexLeaveCar{ vehicle, TARGET_DOOR_FRONT_LEFT, 0, true, false }, TASK_PRIMARY_PRIMARY, false);
+        return true;
     };
 
     TellToLeaveCar(vehicle->m_pDriver);
-    rng::for_each(vehicle->GetPassengers(), TellToLeaveCar);
+
+    // 0x41C7F2: the exe walks the first m_nNumPassengers slots (not m_nMaxPassengers), and for a passenger that gets a new
+    // leave-car task it calls rand() once after SetTask and drops the result (0x41C874). The driver path has no such call.
+    for (const auto passenger : vehicle->m_apPassengers | rngv::take(vehicle->m_nNumPassengers)) {
+        if (TellToLeaveCar(passenger)) {
+            (void)CGeneral::GetRandomNumber();
+        }
+    }
 }
 
 // 0x41DA30

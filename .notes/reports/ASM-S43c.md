@@ -1,0 +1,7 @@
+# ASM-S43c (phase 2: Clock-range audit, Conversations, CoverPoint ...) - 2026-10-29
+Result: 32 rows = 5 MATCH (P2P Clear/EndConversation/Update, CoverPoint Reserve/Release) + 1 UNSURE (ConversationForPed::Update, head 0x43C190-0x43C22E only) + 26 NOT_REACHED (Clothes 10, Cover 5, CurrentVehicle 2, CustomCarPlateMgr 9). Table: S43c.result.tsv.
+Task 0 (CLOCK.tsv, commit e3fbbad34): exe GetIsTimeInRange (0x52CEE0) MATCH; Birds, PedToPlayerConversations(6,20), Heli, InteriorGroup, Population, Clouds logo, EntryExit, Renderer/Streaming callers MATCH. Deviations fixed:
+- CPlaneTrails::Update (0x7174F0): ClockHoursInRange(22,7)/(21,7)/(20,6) is always false (`&&` on a wrapped range), so the plane-trail coronas were never drawn; exe tests hours > after || hours < before. Also the angle is `ms%131072 * 4.7936901e-05` (port / 20860) and the 3rd trail puts cos on x and sin on y (new defaulted parameter `cosFirst`).
+- CVehicle::GetVehicleLightsStatus (0x6D55C0): fog/wet threshold is seed * 1.99999995e-05 (port: / 50000). Hours part (21,6 + minute ramps at 20 and 6) MATCH.
+Gate: Release build OK; wave2_oracle_test (1142 functions) PC24 0/0, PC53 0/0 (rebuilt after the last edit); combat regress PASS=14; PortableWin64 compile of PlaneTrail.cpp, PlaneTrails.cpp, Vehicle.cpp: 0 errors; v6 pre-commit grep clean.
+Open: Clothes (Rebuild*, LoadClothesFile ...), Cover (FindCoverPointsForThisBuilding, Update ...), CurrentVehicle Display/Process, CustomCarPlateMgr, rest of ConversationForPed::Update.

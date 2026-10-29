@@ -1,0 +1,33 @@
+addr	function	verdict	asm range	note	fix commit
+0x5A7B30	Clothes::LoadClothesFile	NOT_REACHED	-	not compared (budget)	-
+0x5A7F30	Clothes::GetDependentTexture	NOT_REACHED	-	not compared (budget)	-
+0x5A7FB0	Clothes::GetPlayerMotionGroupToLoad	NOT_REACHED	-	not compared (budget)	-
+0x5A80D0	Clothes::Init	NOT_REACHED	-	not compared (budget)	-
+0x5A8120	Clothes::RequestMotionGroupAnims	NOT_REACHED	-	not compared (budget)	-
+0x5A81B0	Clothes::GetDefaultPlayerMotionGroup	NOT_REACHED	-	not compared (budget)	-
+0x5A81E0	Clothes::ConstructPedModel	NOT_REACHED	-	not compared (budget)	-
+0x5A8270	Clothes::RebuildCutscenePlayer	NOT_REACHED	-	not compared (budget)	-
+0x5A82C0	Clothes::RebuildPlayer	NOT_REACHED	-	not compared (budget)	-
+0x5A8390	Clothes::RebuildPlayerIfNeeded	NOT_REACHED	-	not compared (budget)	-
+0x43C190	CConversationForPed::Update	UNSURE	0x43C190-0x43C22E (head only)	entry gate (ped/enabled/InPosition -> status 0), 10 s timeout, status-1 timeout/key abort, 400 ms gate read; remainder (answer handling, subtitles, speech) not compared	-
+0x43AAE0	CPedToPlayerConversations::Clear	MATCH	0x43AAE0-0x43AB04 (all)	state release + pointer/time reset equal	-
+0x43AB10	CPedToPlayerConversations::EndConversation	MATCH	0x43AB10-0x43AB88 (all)	state 0, release, EnablePedSpeech, IsLooking/AbortLookAt(250) of player and ped equal	-
+0x43B0F0	CPedToPlayerConversations::Update	MATCH	0x43B0F0-0x43C108 (all)	INACTIVE gate/ped filters/topic pick, all 10 topics (stat ids, masks, thresholds, vehicle class jump tables, health>800, hours 6..20, wind), Say args, Success sequence + both LookAt names, PEDHASOPENED yes/no tables, attack chances 75/40, GANG2 exception, FINALWORD/TOFINISH timings equal; NaN arms equal	-
+0x698790	Cover::FindVectorFromFirstToMissingVertex	NOT_REACHED	-	not compared (budget)	-
+0x6987F0	Cover::CalculateHorizontalSize	NOT_REACHED	-	not compared (budget)	-
+0x698990	Cover::DoLineCheckWithinObject	NOT_REACHED	-	not compared (budget)	-
+0x699120	Cover::FindCoverPointsForThisBuilding	NOT_REACHED	-	not compared (budget)	-
+0x6997E0	Cover::Update	NOT_REACHED	-	not compared (budget)	-
+0x698EB0	CCoverPoint::ReserveCoverPointForPed	MATCH	0x698EB0-0x698EE4 (all)	first slot == ped returns, first empty slot takes + RegisterReference	-
+0x698EF0	CCoverPoint::ReleaseCoverPointForPed	MATCH	0x698EF0-0x698F1F (all)	only slots holding ped are cleaned up and cleared	-
+0x571EA0	CurrentVehicle::Display	NOT_REACHED	-	not compared (budget)	-
+0x572040	CurrentVehicle::Process	NOT_REACHED	-	not compared (budget)	-
+0x6FD500	CustomCarPlateMgr::Initialise	NOT_REACHED	-	not compared (budget)	-
+0x6FD720	CustomCarPlateMgr::Shutdown	NOT_REACHED	-	not compared (budget)	-
+0x6FD7A0	CustomCarPlateMgr::GetMapRegionPlateDesign	NOT_REACHED	-	not compared (budget)	-
+0x6FD7C0	CustomCarPlateMgr::GetCharacterPositionInCharSet	NOT_REACHED	-	not compared (budget)	-
+0x6FDC00	CustomCarPlateMgr::LoadPlatecharsetDat	NOT_REACHED	-	not compared (budget)	-
+0x6FDD70	CustomCarPlateMgr::RenderLicenseplateTextToRaster	NOT_REACHED	-	not compared (budget)	-
+0x6FDE50	CustomCarPlateMgr::SetupMaterialPlatebackTexture	NOT_REACHED	-	not compared (budget)	-
+0x6FDEA0	CustomCarPlateMgr::CreatePlateTexture	NOT_REACHED	-	not compared (budget)	-
+0x6FDF50	CustomCarPlateMgr::MaterialUpgradeSetCarplateTextureCB	NOT_REACHED	-	not compared (budget)	-

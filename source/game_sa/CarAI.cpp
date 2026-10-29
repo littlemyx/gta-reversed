@@ -23,6 +23,16 @@
 #include "Timer.h"
 #include "eWeaponType.h"
 
+namespace {
+//! The exe's "is the new target (coors) within `tol` of the autopilot's current destination" test (e.g. 0x41CFC3):
+//! |coors.x - dest.x| <= tol && |coors.y - dest.y| <= tol, each as fcom + `test ah, 0x41` => NaN passes. Compares against
+//! `m_vecDestinationCoors` (the port compared against the vehicle's position).
+bool IsNearDestination(const CVector& coors, const CVector& dest, float tol) {
+    return !(std::abs(coors.x - dest.x) > tol)
+        && !(std::abs(coors.y - dest.y) > tol);
+}
+}
+
 void CCarAI::InjectHooks() {
     RH_ScopedClass(CCarAI);
     RH_ScopedCategory("AI");
@@ -265,7 +275,7 @@ float CCarAI::GetCarToGoToCoors(CVehicle* veh, const CVector& coors, eCarDriving
         break;
     case MISSION_GOTOCOORDINATES:
     case MISSION_GOTOCOORDINATES_STRAIGHTLINE: {
-        if (veh->GetPosition2D().ApproxEqualTo(coors, 5.f)) {
+        if (IsNearDestination(coors, ap->m_vecDestinationCoors, 5.f)) { // 0x41CEAD: vs the current destination, not the vehicle position
             break;
         }
         [[fallthrough]];

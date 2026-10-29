@@ -313,8 +313,8 @@ void CTaskManager::ManageTasks() {
             return;
         }
 
-        // The `10` here has no particular meaning, it's just an arbitrary iteration limit
-        for (size_t i = 0; i < 10; i++) {
+        // The exe counts 1..N and flags the pass where the counter exceeds 10, i.e. the 11th (0x681C80: `inc eax; cmp eax, 0xA; jle`), and that pass still runs
+        for (size_t i = 0; i < 11; i++) {
             const auto res = ProcessTaskTree(activePrimaryTask, true);
 
             if (res == TT_FINISHED) {

@@ -1,0 +1,11 @@
+addr	file	line	cls	fn	oc
+0x5BA400	source/game_sa/Game.cpp	72	None	Init3	U
+0x5BD600	source/game_sa/Game.cpp	77	None	InitialiseRenderWare	U
+0x5BF840	source/game_sa/Game.cpp	70	None	Init1	U
+0x5BFA90	source/game_sa/Game.cpp	74	None	InitialiseCoreDataAfterRW	U
+0x72FD90	source/game_sa/Game.cpp	89	None	CameraDestroy	U
+0x442AD0	source/game_sa/GameLogic.cpp	37	None	Update	U
+0x5D33C0	source/game_sa/GameLogic.cpp	24	None	Save	U
+0x5D3440	source/game_sa/GameLogic.cpp	25	None	Load	U
+0x444810	source/game_sa/GangWars.cpp	34	None	CreateAttackWave	U
+0x4453D0	source/game_sa/GangWars.cpp	35	None	CreateDefendingGroup	U

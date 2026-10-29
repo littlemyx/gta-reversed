@@ -169,6 +169,12 @@
 
 constexpr auto fSafeDistance = 60.f;
 
+//! Every exe site builds the flee-any-means task as ctor(src, true, [0xC18CEC] = 60, [0x86F674], [0x86F684], [0x86F688], [0x86F68C], [0x86F678], [0xC18CF0]);
+//! the last one is the global pos-change tolerance (the ctor default 1.0 only matches while no script changes it).
+static CTaskComplexFleeAnyMeans* MakeFleeAnyMeansTask(CEntity* src) {
+    return new CTaskComplexFleeAnyMeans{src, true, fSafeDistance, 1'000'000, 4'000, 4'000, 20.f, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold)};
+}
+
 /*****
  * Refactor idea:
  * `Compute*` functions could just return:
@@ -1495,7 +1501,7 @@ void CEventHandler::ComputeGunAimedAtResponse(CEventGunAimedAt* e, CTask* tactiv
             return new CTaskComplexFleeEntity{e->m_AimedBy, false};
         }
         case TASK_COMPLEX_FLEE_ANY_MEANS: // 0x4C2B36
-            return new CTaskComplexFleeAnyMeans{e->m_AimedBy, true, fSafeDistance};
+            return MakeFleeAnyMeansTask(e->m_AimedBy);
         case TASK_COMPLEX_CAR_DRIVE_MISSION_FLEE_SCENE: {// 0x4C2BF
             if (const auto v = m_Ped->m_pVehicle) {
                 if (v->IsDriver(m_Ped)) {
@@ -1505,7 +1511,7 @@ void CEventHandler::ComputeGunAimedAtResponse(CEventGunAimedAt* e, CTask* tactiv
             if (!m_Ped->bWantedByPolice || !e->m_AimedBy->IsCop()) {
                 return new CTaskComplexSmartFleeEntity{ e->m_AimedBy, false, fSafeDistance, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) }; // 0x4C2CB8 / 0x4C2B94 (0x40 bytes): SmartFleeEntity, not FleeEntity
             }
-            return new CTaskComplexFleeAnyMeans{e->m_AimedBy, true, fSafeDistance};
+            return MakeFleeAnyMeansTask(e->m_AimedBy);
         }
         case TASK_COMPLEX_FLEE_ENTITY: // 0x4C2BEE
             return new CTaskComplexFleeEntity{e->m_AimedBy, false};
@@ -1513,7 +1519,7 @@ void CEventHandler::ComputeGunAimedAtResponse(CEventGunAimedAt* e, CTask* tactiv
             if (!m_Ped->bWantedByPolice || !e->m_AimedBy->IsCop()) {
                 return new CTaskComplexSmartFleeEntity{ e->m_AimedBy, false, fSafeDistance, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) }; // 0x4C2CB8 / 0x4C2B94 (0x40 bytes): SmartFleeEntity, not FleeEntity
             }
-            return new CTaskComplexFleeAnyMeans{e->m_AimedBy, true, fSafeDistance};
+            return MakeFleeAnyMeansTask(e->m_AimedBy);
         }
         }
         NOTSA_UNREACHABLE();
@@ -2408,7 +2414,7 @@ void CEventHandler::ComputePedThreatResponse(CEventAcquaintancePedHate* e, CTask
                 };
             }
             if (m_Ped->bWantedByPolice && e->m_AcquaintancePed->IsCop()) {
-                return new CTaskComplexFleeAnyMeans{e->m_AcquaintancePed, true, 60.f};
+                return MakeFleeAnyMeansTask(e->m_AcquaintancePed);
             }
             if (!m_Ped->IsInVehicle() || !m_Ped->m_pVehicle->IsDriver(m_Ped)) {
                 return new CTaskComplexSmartFleeEntity{ e->m_AcquaintancePed, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
@@ -2453,7 +2459,7 @@ void CEventHandler::ComputePedThreatResponse(CEventAcquaintancePedHate* e, CTask
                 return new CTaskComplexKillPedOnFoot{e->m_AcquaintancePed};
             }
             if (m_Ped->bWantedByPolice && e->m_AcquaintancePed->IsCop()) {
-                return new CTaskComplexFleeAnyMeans{e->m_AcquaintancePed, true, 60.f};
+                return MakeFleeAnyMeansTask(e->m_AcquaintancePed);
             }
             return new CTaskComplexSmartFleeEntity{ e->m_AcquaintancePed, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) }; // 0x4C20F0
         }
@@ -2472,7 +2478,7 @@ void CEventHandler::ComputePedThreatResponse(CEventAcquaintancePedHate* e, CTask
             return new CTaskComplexKillCriminal{e->m_AcquaintancePed, true};
         }
         case TASK_COMPLEX_FLEE_ANY_MEANS: // 0x4C19D3
-            return new CTaskComplexFleeAnyMeans{e->m_AcquaintancePed, true, 60.f};
+            return MakeFleeAnyMeansTask(e->m_AcquaintancePed);
         case TASK_COMPLEX_SEQUENCE: {
             const auto seqIdx = m_Ped->GetIntelligence()->m_NextEventResponseSequence;
             if (seqIdx < 0) {
@@ -2497,10 +2503,14 @@ void CEventHandler::ComputePedThreatResponse(CEventAcquaintancePedHate* e, CTask
         case TASK_COMPLEX_FLEE_ENTITY:
             return new CTaskComplexSmartFleeEntity{ e->m_AcquaintancePed, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
         case TASK_COMPLEX_SMART_FLEE_ENTITY: { // 0x4C1C4B
-            if (m_Ped->bWantedByPolice && e->m_AcquaintancePed->IsCop()) {
-                return new CTaskComplexSmartFleeEntity{ e->m_AcquaintancePed, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold), e->GetEventType() == EVENT_ACQUAINTANCE_PED_DISLIKE ? eMoveState::PEDMOVE_WALK : eMoveState::PEDMOVE_SPRINT };
+            if (m_Ped->bWantedByPolice && e->m_AcquaintancePed->IsCop()) { // 0x4C1C4B..0x4C1C78: wanted + cop => the flee-any-means task (jmp 0x4C206A); the port had the two arms swapped
+                return MakeFleeAnyMeansTask(e->m_AcquaintancePed);
             }
-            return new CTaskComplexFleeAnyMeans{e->m_AcquaintancePed, true, 60.f};
+            const auto task = new CTaskComplexSmartFleeEntity{ e->m_AcquaintancePed, false, fSafeDistance, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) }; // 0x4C1C97
+            if (e->GetEventType() == EVENT_ACQUAINTANCE_PED_DISLIKE) { // 0x4C1CCF: the event's type == 37 => walk (task+0x30 = 4), else the ctor default
+                task->m_moveState = PEDMOVE_WALK;
+            }
+            return task;
         }
         case TASK_SIMPLE_DUCK_FOREVER: // 0x4C1B5E
             return new CTaskSimpleDuck{DUCK_STANDALONE, 0x967Fu};
@@ -2556,7 +2566,7 @@ void CEventHandler::ComputePersonalityResponseToDamage(CEventDamage* e, CPed* sr
     // 0x4BFEBC: FLEE_ANY_MEANS / FLEE_ENTITY / SMART_FLEE_ENTITY store the task and THEN say "run from fight" (even if the allocation failed)
     bool bSayRunFromFight{};
     const auto MakeFleeAnyMeans = [&] { // 0x4BFC92 etc: ctor(src, true, [0xC18CEC] = 60, [0x86F674], [0x86F684], [0x86F688], [0x86F68C], [0x86F678], [0xC18CF0])
-        return new CTaskComplexFleeAnyMeans{src, true, 60.f, 1'000'000, 4'000, 4'000, 20.f, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold)};
+        return MakeFleeAnyMeansTask(src);
     };
     const auto MakeSmartFlee = [&] { // 0x4BFCF0 etc: ctor(src, false, [0xC18CEC] = 60, [0x86F674], [0x86F678], [0xC18CF0])
         return new CTaskComplexSmartFleeEntity{ src, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };

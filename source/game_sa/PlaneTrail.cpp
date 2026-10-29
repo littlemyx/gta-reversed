@@ -85,9 +85,10 @@ void CPlaneTrail::RegisterPoint(CVector pos) {
 void CPlaneTrail::Update(CVector pos, const CRGBA& color, uint32 coronaIdx, uint32 timeModifierMs, uint8 afterHour, uint8 beforeHour, bool cosFirst) {
     const float fTimeProg = (float)(CTimer::GetTimeInMS() % 131072) * 4.7936901e-05f; // exe constant 0x8631C4 (2*pi/131072), not / 20860.0f
     // exe 0x7174F0: the 3rd trail puts cos on x and sin on y, the others sin on x and cos on y
+    // 0x7174F0: `fsin; fmul pos.x; fstp` - the trig result is multiplied unrounded (the port rounded sin/cos to float first)
     const CVector currPos = cosFirst
-        ? pos * CVector(x87::cos(fTimeProg), x87::sin(fTimeProg), 1.0f)
-        : pos * CVector(x87::sin(fTimeProg), x87::cos(fTimeProg), 1.0f);
+        ? CVector{ (float)X87R(x87::cos(fTimeProg) * pos.x), (float)X87R(x87::sin(fTimeProg) * pos.y), pos.z }
+        : CVector{ (float)X87R(x87::sin(fTimeProg) * pos.x), (float)X87R(x87::cos(fTimeProg) * pos.y), pos.z };
 
     RegisterPoint(currPos);
 

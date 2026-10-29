@@ -147,7 +147,14 @@ void ValidateVersion() {
 
     NOTSA_GLOBAL_LOCAL(version_name, 0xB72C28, (char[64]), {});
 
-    strncpy_s(version_name, &buf[15], 64u);
+    // 0x5BA0E3: strncpy(version_name, &buf[15], 64) - copies up to 64 chars and zero pads (strncpy_s asserted when the text filled the buffer)
+    size_t n = 0;
+    for (; n < 64 && buf[15 + n] != '\0'; n++) {
+        version_name[n] = buf[15 + n];
+    }
+    for (; n < 64; n++) {
+        version_name[n] = '\0';
+    }
     CFileMgr::CloseFile(file);
 }
 

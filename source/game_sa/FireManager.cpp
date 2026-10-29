@@ -425,13 +425,20 @@ void CFireManager::Update() {
         // Based on this strength possibly create a shadow (if combined strength > 4), and coronas (combined strength > 6)
 
         // Find the strongest fire, which hasn't yet been visited
+        // 0x53B280-0x53B436: starts from -1.0 with index -1 and takes a fire only when best < strength (strict, NaN never)
         CFire* strongest{};
+        float  fBestStrength = -1.0f;
         for (size_t i = 0; i < MAX_NUM_FIRES; i++) {
             CFire& fire = m_aFires[i];
             if (firesVisited[i] || !fire.IsActive())
                 continue;
-            if (!strongest || strongest->GetStrength() < fire.GetStrength())
+            if (fBestStrength < fire.GetStrength()) {
+                fBestStrength = fire.GetStrength();
                 strongest = &fire;
+            }
+        }
+        if (!strongest) {
+            break; // the exe would read the memory before the fire array here (index -1) and never visit another fire
         }
 
         // Sum up strengths of all fires (that haven't yet been visited) within 6.0 units range
@@ -442,7 +449,10 @@ void CFireManager::Update() {
             if (firesVisited[i] || !fire.IsActive())
                 continue;
 
-            if ((fire.GetPosition() - strongest->GetPosition()).Magnitude2D() < 6.0f) {
+            // 0x53B48D-0x53B4B0: the differences, squares and the square root stay in x87 registers (no float rounding), compared with 6.0f
+            const x87d dx = (x87d)fire.GetPosition().x - (x87d)strongest->GetPosition().x;
+            const x87d dy = (x87d)fire.GetPosition().y - (x87d)strongest->GetPosition().y;
+            if (x87::sqrt(dx * dx + dy * dy) < (x87d)6.0f) {
                 fCombinedStrength += fire.GetStrength();
                 nCombinedCeilStrength += NOTSA_FTOL(int32, std::ceil(fire.GetStrength()));
                 nFires--;
@@ -457,23 +467,34 @@ void CFireManager::Update() {
 
         if (fCombinedStrength > 4.0f && nCombinedCeilStrength) {
             const CRGBA baseColor{ 40, 32, 20 }; // From addresses 0x8CCFF0, 0x8CCFF1, 0x8CCFF2
+            // 0x53B60F-0x53B64E: fild byte * float (extended product) then _ftol, per channel (port CRGBA::operator* multiplies in float)
+            const auto ScaleColor = [&](float m) {
+                return CRGBA{
+                    NOTSA_FTOL(uint8, (x87d)baseColor.r * (x87d)m),
+                    NOTSA_FTOL(uint8, (x87d)baseColor.g * (x87d)m),
+                    NOTSA_FTOL(uint8, (x87d)baseColor.b * (x87d)m),
+                    NOTSA_FTOL(uint8, (x87d)baseColor.a * (x87d)m)
+                };
+            };
 
-            const float fDir = std::min(7.0f, fCombinedStrength - 6.0f + 3.0f);
+            // 0x53B565-0x53B590: combined - 6.0 + 3.0 in x87 (unrounded), the result is 7.0 only when 7.0 < it (NaN keeps it), stored as a float
+            const x87d fDirUnclamped = (x87d)fCombinedStrength - (x87d)6.0f + (x87d)3.0f;
+            const float fDir = (float)((x87d)7.0f < fDirUnclamped ? (x87d)7.0f : fDirUnclamped);
 
             CVector shdwPos = strongest->GetPosition();
             shdwPos.z += 5.0f;
             const float fColorMult = CGeneral::GetRandomNumberInRange(0.6f, 1.0f);
             {
-                const CRGBA shdwColor = baseColor * fColorMult;
+                const CRGBA shdwColor = ScaleColor(fColorMult);
                 CShadows::StoreStaticShadow(
                     NOTSA_PTR_ID32(strongest),
                     SHADOW_ADDITIVE,
                     gpShadowExplosionTex,
                     shdwPos,
+                    fDir * 1.2f,   // 0x53B667-0x53B67B: frontX = +1.2 * fDir, sideY = -1.2 * fDir (port: reversed signs)
+                    0.0f,
+                    0.0f,
                     fDir * -1.2f,
-                    0.0f,
-                    0.0f,
-                    fDir * 1.2f,
                     0,
                     shdwColor.r,
                     shdwColor.g,
@@ -494,12 +515,18 @@ void CFireManager::Update() {
                 // 0x53B6BE..0x53B707: base = fire position + (0, 0, 2.6); direction = Normalise(camera - base); corona point = base + direction * 3.5
                 // (the original port read `point` in its own initialiser, i.e. the direction came from an indeterminate vector)
                 const CVector base = strongest->GetPosition() + CVector{ 0.0f, 0.0f, 2.6f };
-                CVector point = base + (TheCamera.GetPosition() - base).Normalized() * 3.5f;
+                const CVector baseToCam = (TheCamera.GetPosition() - base).Normalized();
+                // 0x53B71D-0x53B778: x and y add the unrounded (x87) dir * 3.5 to the base, z adds the dir.z * 3.5 product that was stored as a float
+                CVector point{
+                    (float)((x87d)baseToCam.x * (x87d)3.5f + (x87d)base.x),
+                    (float)((x87d)baseToCam.y * (x87d)3.5f + (x87d)base.y),
+                    (float)((x87d)(float)((x87d)baseToCam.z * (x87d)3.5f) + (x87d)base.z)
+                };
 
                 auto strongestId = NOTSA_PTR_ID32(strongest);
                 // Wrapper lambda for code readability
                 const auto RegisterCorona = [&](auto idx, CVector pos, eCoronaFlareType flare = eCoronaFlareType::FLARETYPE_NONE) {
-                    const CRGBA crnaColor = baseColor * (fColorMult * 0.8f);
+                    const CRGBA crnaColor = ScaleColor(fColorMult * 0.8f);
                     CCoronas::RegisterCorona(
                         strongestId,
                         nullptr,
@@ -532,7 +559,8 @@ void CFireManager::Update() {
                 RegisterCorona(strongestId + 1, point);
 
                 point.z -= 2.0f;
-                CVector camRightNorm = TheCamera.GetRight();
+                // 0x53B898-0x53B8DE: the right vector of the camera matrix (0xB6F99C = TheCamera.m_mCameraMatrix), not of the placement matrix
+                CVector camRightNorm = TheCamera.m_mCameraMatrix.GetRight();
                 camRightNorm.z = 0.0f;
                 camRightNorm.Normalise();
                 point += camRightNorm * 2.0f;

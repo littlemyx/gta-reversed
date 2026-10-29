@@ -303,20 +303,21 @@ bool CWeapon::FireSniper(CPed* shooter, CEntity* victim, CVector* target) {
     }
 
     // todo: make sense of literals.
-    float vecFrontZ_Y = activeCam.m_vecFront.z * 0.145f - activeCam.m_vecFront.y * 0.98940003f;
+    float vecFrontZ_Y = (activeCam.m_vecFront.z * 0.145f - activeCam.m_vecFront.y * 0.98940003f) + activeCam.m_vecFront.x * 0.f; // 0x73AB5C: the x term (* 0.0) is added too (NaN for a NaN / inf front)
 
     if (vecFrontZ_Y > 0.99699998f)
         CCoronas::MoonSize = (CCoronas::MoonSize + 1) % 8;
 
-    CVector velocity = activeCam.m_vecFront;
-    velocity.Normalise();
-    velocity *= 16.0f;
+    // 0x73ABE1: only a COPY (front * 16) is handed to AddBullet, the local direction stays normalised and is used for the gun shot events (* 40, not * 16 * 40)
+    CVector dir = activeCam.m_vecFront;
+    dir.Normalise();
+    const CVector velocity = dir * 16.0f;
 
     CBulletInfo::AddBullet(shooter, m_Type, activeCam.m_vecSource, velocity);
 
     // recoil effect for players
     if (shooter->IsPlayer()) {
-        CVector creatorPos = FindPlayerCoors();
+        CVector creatorPos = FindPlayerPed()->GetPosition(); // 0x73AC66..0x73ACAD: the player PED position (FindPlayerPed(-1)), not the vehicle one
         CPad* creatorPad = CPad::GetPad(shooter->m_nPedType);
 
         creatorPad->StartShake_Distance(240, 128, creatorPos);
@@ -329,13 +330,15 @@ bool CWeapon::FireSniper(CPed* shooter, CEntity* victim, CVector* target) {
         CCrime::ReportCrime(CRIME_FIRE_WEAPON, shooter, shooter->m_roadRageWith);
     }
 
-    CVector targetPoint = velocity * 40.0f + activeCam.m_vecSource;
+    CVector targetPoint = dir * 40.0f + activeCam.m_vecSource;
     bool hasNoSound = m_Type == eWeaponType::WEAPON_PISTOL_SILENCED || m_Type == eWeaponType::WEAPON_TEARGAS;
     CEventGroup* eventGroup = GetEventGlobalGroup();
 
     CEventGunShot gs(shooter, activeCam.m_vecSource, targetPoint, hasNoSound);
     eventGroup->Add(static_cast<CEvent*>(&gs), false);
 
+    dir.Normalise(); // 0x73AD9C: normalised a second time
+    targetPoint = dir * 40.0f + activeCam.m_vecSource;
     CEventGunShotWhizzedBy gsw(shooter, activeCam.m_vecSource, targetPoint, hasNoSound);
     eventGroup->Add(static_cast<CEvent*>(&gsw), false);
 

@@ -1,0 +1,32 @@
+addr	function	verdict	asm range	note	fix commit
+0x50DD70	CCam::Finalise_DW_CineyCams	NOT_REACHED	-	budget	-
+0x5161A0	CCam::GetLookFromLampPostPos	NOT_REACHED	-	budget	-
+0x513E40	CCam::Get_TwoPlayer_AimVector	NOT_REACHED	-	budget	-
+0x517400	CCam::IsTimeToExitThisDWCineyCamMode	NOT_REACHED	-	budget	-
+0x520690	CCam::LookBehind	NOT_REACHED	-	budget	-
+0x520E40	CCam::LookRight	NOT_REACHED	-	budget	-
+0x518500	CCam::ProcessArrestCamOne	NOT_REACHED	-	budget	-
+0x512EF0	CCam::ArrestCamLookAtCopHead	NOT_REACHED	-	budget	-
+0x519250	CCam::ProcessPedsDeadBaby	NOT_REACHED	-	budget	-
+0x50EB70	CCam::Process_1rstPersonPedOnPC	MATCH	0x50EB70-0x50F3D4	full pass: clamps, turret switch (jump table 0x50F3DC order checked), sniper zoom, front/source math MATCH	-
+0x521500	CCam::Process_AimWeapon	NOT_REACHED	-	budget	-
+0x512B10	CCam::Process_AttachedCam	NOT_REACHED	-	budget	-
+0x525E50	CCam::Process_Cam_TwoPlayer	NOT_REACHED	-	budget	-
+0x519810	CCam::Process_Cam_TwoPlayer_InCarAndShooting	NOT_REACHED	-	budget	-
+0x51B850	CCam::Process_DW_BirdyCam	NOT_REACHED	-	budget	-
+0x51B120	CCam::Process_DW_CamManCam	NOT_REACHED	-	budget	-
+0x51A740	CCam::Process_DW_HeliChaseCam	NOT_REACHED	-	budget	-
+0x51C760	CCam::Process_DW_PlaneCam1	NOT_REACHED	-	budget	-
+0x51CC30	CCam::Process_DW_PlaneCam2	NOT_REACHED	-	budget	-
+0x51D100	CCam::Process_DW_PlaneCam3	NOT_REACHED	-	budget	-
+0x51C250	CCam::Process_DW_PlaneSpotterCam	NOT_REACHED	-	budget	-
+0x50F3F0	CCam::Process_Editor	NOT_REACHED	-	budget	-
+0x5245B0	CCam::Process_FollowCar_SA	DEVIATION	0x5245B0-0x525E48	FIXED: 3 NaN-polarity compares (blend decrement clamp 0<=v, betaVel divisor max(1,ts), wheel-contact nudge 'currDist>=dist'); all arithmetic, clamps, input, trailer/heli/bike blocks, history placement MATCH	c0629708
+0x50F970	CCam::Process_FollowPedWithMouse	PARTIAL	0x50FF40-0x51007E	FIXED: near-clip tail 5 NaN-polarity compares; rest of function (0x50F970-0x50FF3F, 0x51007E-end) not reached	932299e8
+0x5105C0	CCam::Process_M16_1stPerson	NOT_REACHED	-	budget	-
+0x512110	CCam::Process_WheelCam	NOT_REACHED	-	budget	-
+0x50A0A0	CCam::LimitPrecision-float	NOT_REACHED	-	budget	-
+0x516010	CCam::GetArrestCamPosBehindTarget	NOT_REACHED	-	budget	-
+0x514030	CCamera::AvoidTheGeometry	NOT_REACHED	-	budget	-
+0x511B50	CCam::Process_Rocket	NOT_REACHED	-	budget	-
+0x526FC0	CCam::Process	NOT_REACHED	-	budget	-

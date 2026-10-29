@@ -287,44 +287,46 @@ void CRadar::DrawLegend(int32 x, int32 y, eRadarSprite blipType) {
 
     const auto x4px = SCREEN_STRETCH_X(4.0f), y4px = SCREEN_STRETCH_Y(4.0f);
     const auto x5px = SCREEN_STRETCH_X(5.0f), y5px = SCREEN_STRETCH_Y(5.0f);
+    const auto y6px = SCREEN_STRETCH_Y(6.0f);
     const auto x7px = SCREEN_STRETCH_X(7.0f), y7px = SCREEN_STRETCH_Y(7.0f);
 
     const auto& arrowColor   = ArrowBlipColour[-blipType];
     const auto  outlineColor = CRGBA{0, 0, 0, 255};
 
     switch (legendTraceHeight) {
+    // Polygons as the exe passes them (0x5830D9 LOW, 0x582FD8 HIGH): the triangle base sits 6 * Y stretch from the centre (the apex 7 / 5), the apex uses the Y stretch
     case RADAR_TRACE_LOW: {
         CSprite2d::Draw2DPolygon(
-            posX - x7px, posY + y7px,
-            posX + x7px, posY + y7px,
-            posX,        posY - x7px,
-            posX,        posY - x7px,
+            posX + x7px, posY + y6px,
+            posX - x7px, posY + y6px,
+            posX,        posY - y7px,
+            posX,        posY - y7px,
             outlineColor
         );
 
         CSprite2d::Draw2DPolygon(
             posX + x5px, posY + y5px,
             posX - x5px, posY + y5px,
-            posX,        posY - x5px,
-            posX,        posY - x5px,
+            posX,        posY - y5px,
+            posX,        posY - y5px,
             arrowColor
         );
         break;
     }
     case RADAR_TRACE_HIGH: {
         CSprite2d::Draw2DPolygon(
-            posX + x7px, posY - y7px,
-            posX - x7px, posY - y7px,
             posX,        posY + y7px,
             posX,        posY + y7px,
+            posX + x7px, posY - y6px,
+            posX - x7px, posY - y6px,
             outlineColor
         );
 
         CSprite2d::Draw2DPolygon(
+            posX,        posY + y5px,
+            posX,        posY + y5px,
             posX + x5px, posY - y5px,
             posX - x5px, posY - y5px,
-            posX,        posY + y5px,
-            posX,        posY + y5px,
             arrowColor
         );
         break;

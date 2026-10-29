@@ -154,7 +154,7 @@
 | S48 | phase2: unlisted non-oracle hooks | 40 | partial 20/40 (18 M, 2 fixed) -> S48b | EventRevived.cpp, EventScanner.cpp, EventSexyPed.cpp, EventSexyVehicle.cpp, EventSpecial.cpp, EventVehicleThreat.cpp ... |
 | S49 | phase2: unlisted non-oracle hooks | 40 | partial 30/40 (11 M, 19 fixed) -> S49b | Game.cpp, GameLogic.cpp, GangWars.cpp |
 | S50 | phase2: unlisted non-oracle hooks | 40 | partial 25/40 (22 M, 3 fixed) -> S50b | GangWars.cpp, Gangs.cpp, Garage.cpp, Garages.cpp, InformFriendsEventQueue.cpp, InformGroupEvent.cpp ... |
-| S51 | phase2: unlisted non-oracle hooks | 40 | pending | FurnitureManager_c.cpp, FurnitureSubGroup_c.cpp, InterestingEvents.cpp, InteriorGroup_c.cpp, InteriorManager_c.cpp, Interior_c.cpp ... |
+| S51 | phase2: unlisted non-oracle hooks | 40 | partial 20/40 (20 M) -> S51b | FurnitureManager_c.cpp, FurnitureSubGroup_c.cpp, InterestingEvents.cpp, InteriorGroup_c.cpp, InteriorManager_c.cpp, Interior_c.cpp ... |
 | S52 | phase2: unlisted non-oracle hooks | 40 | done (31 M, 6 fixed, 3 no callers) | PathFind.cpp, PedAttractorManager.cpp, PedClothesDesc.cpp |
 | S53 | phase2: unlisted non-oracle hooks | 40 | pending | PedClothesDesc.cpp, PedDamageResponseCalculator.cpp, PedGeometryAnalyser.cpp, PedGroup.cpp, PedGroupIntelligence.cpp |
 | S54 | phase2: unlisted non-oracle hooks | 40 | pending | PedGroupIntelligence.cpp, PedGroupMembership.cpp, PedGroupPlacer.cpp, PedGroups.cpp, PedIK.cpp, PedList.cpp ... |
@@ -187,3 +187,4 @@
 | S50b | rest of S50 | 15 | pending | GangWars.cpp, Garage.cpp, Garages.cpp |
 | S56c | rest of S56b | 1 | pending | PlayerInfo.cpp |
 | S57b | rest of S57 | 25 | pending | PedAttractorPool.h, PedIntelligencePool.h, PedPool.h, Replay.cpp, TheScripts.cpp, VehiclePool.h |
+| S51b | rest of S51 | 20 | pending | FurnitureManager_c.cpp, InterestingEvents.cpp, InteriorGroup_c.cpp, InteriorManager_c.cpp, Interior_c.cpp, PathFind.cpp |

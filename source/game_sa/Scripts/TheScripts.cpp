@@ -1702,7 +1702,9 @@ void CTheScripts::DrawDebugSquare(float x1, float y1, float x2, float y2) {
 
     CVector p4 { x1, y2, -1000.0f };
     CWorld::ProcessVerticalLine(p4, 1000.0f, colPoint, colEntity, true, false, false, false, true, false, nullptr);
+#ifdef FIX_BUGS
     p4.z = colPoint.m_vecPoint.z + 2.0f; // FIX_BUGS: missing in original code 🤷
+#endif
 
     ScriptDebugLine3D(p1, p2, DbgLineColour, DbgLineColour);
     ScriptDebugLine3D(p2, p3, DbgLineColour, DbgLineColour);

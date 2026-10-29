@@ -140,7 +140,9 @@ void CMenuManager::ProcessFileActions() {
                 CFileMgr::SetDirMyDocuments();
                 sprintf_s(gString, "MPACK//MPACK%d//SCR.SCM", CGame::bMissionPackGame);
                 auto file = CFileMgr::OpenFile(gString, "rb");
-                CFileMgr::SetDir(""); // FIX_BUGS
+#ifdef FIX_BUGS
+                CFileMgr::SetDir(""); // FIX_BUGS: the exe (0x578DCA-0x578DCF) does not reset the directory after the open
+#endif
 
                 if (!file) {
                     // Save Game

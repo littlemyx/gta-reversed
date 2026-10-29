@@ -2933,7 +2933,11 @@ void CStreaming::Init2() {
 void CStreaming::InitImageList() {
     ZoneScoped;
 
-    std::ranges::fill(ms_files, tStreamingFileDesc());
+    // exe 0x4083C0: only Name[0] is cleared and the stream handle is set to 0 (the port default-constructed the entries: handle -1, flag cleared)
+    for (auto& file : ms_files) {
+        file.Name[0] = 0;
+        file.StreamHandle = 0;
+    }
     AddImageToList("MODELS\\GTA3.IMG", true);
     AddImageToList("MODELS\\GTA_INT.IMG", true);
 }

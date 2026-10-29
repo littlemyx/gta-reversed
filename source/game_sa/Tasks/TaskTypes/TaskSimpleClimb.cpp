@@ -665,28 +665,34 @@ void CTaskSimpleClimb::GetCameraStickModifier(CEntity* entity, float& outAlpha, 
     }
 
     if (m_Anim->m_AnimId == ANIM_ID_CLIMB_JUMP_B) {
-        auto [pos, angle] = GetHandholdPosAndAngleForEntity(m_ClimbEntity, m_HandholdPos, m_HandholdHeading);
-        pos += GetClimbOffset3D({ ms_fAtEdgeOffsetHorz, ms_fAtEdgeOffsetVert }, angle);
+        // 0x67A5F0: the fall height is only measured once (while m_FallAfterVault is still negative)
+        if (m_FallAfterVault < 0) {
+            auto [pos, angle] = GetHandholdPosAndAngleForEntity(m_ClimbEntity, m_HandholdPos, m_HandholdHeading);
+            // 0x67A640: the VAULT offsets (0x8D2F30 / 0xC18F7C, not the at-edge ones); sin / cos stay unrounded until the multiply by 0.5
+            pos.x = (float)((x87d)pos.x - X87R(x87::sin(angle) * (x87d)ms_fVaultOffsetHorz));
+            pos.y = (float)(X87R(x87::cos(angle) * (x87d)ms_fVaultOffsetHorz) + (x87d)pos.y);
+            pos.z = (float)((x87d)ms_fVaultOffsetVert + (x87d)pos.z);
 
-        CColPoint colPoint{};
-        CEntity*  colEntity{};
-        m_FallAfterVault = CWorld::ProcessVerticalLine(pos, pos.z - 3.0f, colPoint, colEntity, true, true, false, true)
-            ? NOTSA_FTOL(int8, std::max(pos.z - colPoint.m_vecPoint.z - 1.0f, 0.0F) * 10.0f)
-            : 20;
+            CColPoint colPoint{};
+            CEntity*  colEntity{};
+            m_FallAfterVault = CWorld::ProcessVerticalLine(pos, pos.z - 3.0f, colPoint, colEntity, true, true, false, true)
+                ? NOTSA_FTOL(int8, std::max(pos.z - colPoint.m_vecPoint.z - 1.0f, 0.0F) * 10.0f)
+                : 20;
+        }
 
         const float d = m_FallAfterVault > 8 ? -0.6f : -0.1f;
         if (outAlpha > d) {
             outStickAlpha = std::max((outAlpha - d) * -0.05f, -0.05f);
         }
     } else if (m_Anim->m_AnimId == ANIM_ID_CLIMB_IDLE) {
-        float fHeading = (float)(X87R(m_ClimbEntity->GetHeadingExt() - (double)HALF_PI)); // 0x67A792..0x67A799: heading unrounded, - PI/2 [0x858FE4]
+        float fHeading = (float)(X87R(entity->GetHeadingExt() - (x87d)HALF_PI)); // 0x67A792..0x67A799: heading of the `entity` ARGUMENT ([esp+0x4c]), not m_ClimbEntity; unrounded, - PI/2 [0x858FE4]
         if (fHeading > outBeta + PI) {
             fHeading -= TWO_PI;
         } else if (fHeading < outBeta - PI) {
             fHeading += TWO_PI;
         }
 
-        if (fHeading > outBeta + HALF_PI + 0.2F) {
+        if (fHeading > outBeta + std::bit_cast<float>(0x3FE2A975u)) { // 0x8705C0 = 1.7707964f (one add, not HALF_PI + 0.2f)
             outStickBeta = 0.02f;
         } else if (fHeading > outBeta + HALF_PI && outStickBeta < 0.0F) {
             outStickBeta = 0.0f;

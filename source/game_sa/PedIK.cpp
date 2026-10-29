@@ -40,9 +40,11 @@ void CPedIK::InjectHooks() {
 // 0x5FDDB0
 void CPedIK::RotateTorso(AnimBlendFrameData* bone, LimbOrientation& orientation, bool changeRoll) {
     const auto q = &bone->KeyFrame->q;
-    RtQuatRotate(q, &XaxisIK, RadiansToDegrees(orientation.m_fYaw), rwCOMBINEREPLACE);
+    // exe 0x5FDDB0: the yaw rotation replaces the keyframe quaternion unless `changeRoll` (then PRECONCAT, 0x5FDDD0); the final flag is
+    // bUpdateMatricesRequired (dword 0x470 |= 0x4000, 0x5FDE0E), not bDontAcceptIKLookAts
+    RtQuatRotate(q, &XaxisIK, RadiansToDegrees(orientation.m_fYaw), changeRoll ? rwCOMBINEPRECONCAT : rwCOMBINEREPLACE);
     RtQuatRotate(q, &ZaxisIK, RadiansToDegrees(orientation.m_fPitch), rwCOMBINEPRECONCAT);
-    m_pPed->bDontAcceptIKLookAts = true;
+    m_pPed->bUpdateMatricesRequired = true;
 }
 
 // 0x5FDF90

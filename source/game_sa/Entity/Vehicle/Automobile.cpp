@@ -4473,7 +4473,7 @@ void CAutomobile::NitrousControl(int8 boost) {
 
     if (m_fTireTemperature >= 0.f) {
         const auto a = std::max(0.25f, 1.f - m_GasPedal);
-        const auto b = a * (CTimer::GetTimeStep() / 100.f) + m_fTireTemperature;
+        const auto b = a * (CTimer::GetTimeStep() * ExeRecip(1000.f)) + m_fTireTemperature; // 0x6A409E: ts * 0x871088 (0.001f), a * (that) + temp; not ts / 100
         m_fTireTemperature = std::min(1.0f, b);
         const auto power = (1.0f - m_fTireTemperature) / 2.f;
         DoNitroEffect(power);

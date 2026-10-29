@@ -6299,9 +6299,9 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
             }
         }
         x87d v = (x87d)diffF * (x87d)sp1;
-        if (v > (double)sp2) { // NOTE: 0x523797-0x5237C5 - NaN keeps NaN (the original's `jne` goes to the lower clamp, which leaves it alone)
+        if (v > (x87d)sp2) { // NOTE: 0x523797-0x5237C5 - NaN keeps NaN (the original's `jne` goes to the lower clamp, which leaves it alone)
             v = (x87d)sp2;
-        } else if (v < -(double)sp2) {
+        } else if (v < -(x87d)sp2) {
             v = -(x87d)sp2;
         }
         betaDelta = v;
@@ -6367,9 +6367,9 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
         }
 
         x87d v = (X87R(pitchTarget - (double)alphaCur)) * pitchRate;
-        if (v > (double)sp2) { // NOTE: 0x523AFE-0x523B2A - NaN keeps NaN
+        if (v > (x87d)sp2) { // NOTE: 0x523AFE-0x523B2A - NaN keeps NaN
             v = (x87d)sp2;
-        } else if (v < -(double)sp2) {
+        } else if (v < -(x87d)sp2) {
             v = -(x87d)sp2;
         }
         pitchDelta = v;
@@ -6441,9 +6441,9 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
     const float  oneMinusPwB = 1.0f - pwB;
     {
         x87d v = (x87d)stickLR + (x87d)betaVelTarget;
-        if (v > (double)speedCap) { // NOTE: 0x523ECF-0x523EFB - NaN keeps NaN
+        if (v > (x87d)speedCap) { // NOTE: 0x523ECF-0x523EFB - NaN keeps NaN
             v = (x87d)speedCap;
-        } else if (v < -(double)speedCap) {
+        } else if (v < -(x87d)speedCap) {
             v = -(x87d)speedCap;
         }
         const x87d betaSpeed = (x87d)pwB * (x87d)m_fBetaSpeed + (x87d)oneMinusPwB * v;
@@ -6472,7 +6472,7 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
         const x87d alphaSpeed = (x87d)oneMinusPwB * (x87d)m_fAlphaSpeed + (x87d)stickUD * (x87d)pwB;
         const float  alphaSpeedF = (float)alphaSpeed;
         m_fAlphaSpeed            = alphaSpeedF;
-        if (alphaSpeed > (double)speedCap) { // NOTE: 0x523FBA-0x523FEC - NaN keeps NaN
+        if (alphaSpeed > (x87d)speedCap) { // NOTE: 0x523FBA-0x523FEC - NaN keeps NaN
             m_fAlphaSpeed = speedCap;
         } else if (alphaSpeedF < -speedCap) {
             m_fAlphaSpeed = -speedCap;

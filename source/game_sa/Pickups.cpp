@@ -642,7 +642,7 @@ tPickupReference CPickups::GetUniquePickupIndex(int32 pickupIndex) {
 // returns TRUE if player got goodies
 // 0x4564F0
 bool CPickups::GivePlayerGoodiesWithPickUpMI(uint16 modelId, int32 playerId) {
-    auto* ped = FindPlayerPed(playerId);
+    auto* ped = FindPlayerPed(playerId > 0 ? playerId : -1); // 0x4564F0: `jle` - player 0 also takes the focused player's ped
 
     if (modelId == MI_PICKUP_ADRENALINE) {
         ped->GetPlayerData()->m_bAdrenaline = true;

@@ -94,7 +94,7 @@ void CPedGroup::PlayerGaveCommand_Attack(CPed* playerPed, CPed* target) {
         return;
     }
     if (target && target->m_nPedType != PED_TYPE_GANG2) {
-        target->Say(target->IsGangster() ? CTX_GLOBAL_ORDER_ATTACK_MANY : CTX_GLOBAL_ORDER_ATTACK_SINGLE);
+        playerPed->Say(target->IsGangster() ? CTX_GLOBAL_ORDER_ATTACK_MANY : CTX_GLOBAL_ORDER_ATTACK_SINGLE); // 0x5F7D82: `mov ecx, esi` = the commanding ped, not the target
     }
 }
 

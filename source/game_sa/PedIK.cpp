@@ -163,11 +163,13 @@ void CPedIK::PointGunAtPosition(const CVector& aimAt, float normalize) {
 
 // 0x5FE0E0
 void CPedIK::PitchForSlope() {
+    // exe float constants: 0x86C870 (30deg), 0x86C874 (-35deg), 0x86C884 (45deg) - not DegreesToRadians()
+    constexpr float K_30 = std::bit_cast<float>(0x3F060A92u), K_M35 = -std::bit_cast<float>(0x3F1C61AAu), K_45 = std::bit_cast<float>(0x3F490FDBu);
     const auto clumpData = RpAnimBlendClumpGetData(m_pPed->GetRpClump());
     const auto hier = GetAnimHierarchyFromSkinClump(m_pPed->GetRpClump());
 
     if (std::abs(m_fBodyRoll) > 0.01f) {
-        m_fBodyRoll = std::clamp(m_fBodyRoll, DegreesToRadians(-30.0f), DegreesToRadians(30.0f));
+        m_fBodyRoll = ClampMaxFirst(m_fBodyRoll, -K_30, K_30);
     }
 
     // 0x5FE0E0: the pitch / roll clamps depend on the ped state alone (0x5FE122 cmp 0x36 / 0x37), but the branch choice below
@@ -175,16 +177,17 @@ void CPedIK::PitchForSlope() {
     const bool isDying = m_pPed->IsStateDying();
     if (!isDying) {
         if (std::abs(m_fSlopePitch) > 0.01f) {
-            const auto offset = (m_pPed->m_nMoveState != PEDMOVE_WALK) ? 0.1f : 0.085f;
-            m_fSlopePitchLimitMult = (m_fSlopePitchLimitMult * 0.9f) + offset;
+            // 0x5FE166..0x5FE1D9: mult = 0.9 * mult + (1.0 - 0.9) * (walking ? 0.85 : 1.0) (the port had literals 0.1 / 0.085), bounds mult * 0x86C874 / 0x86C870
+            const float offset = X87R(((x87d)1.0f - 0.9f) * (m_pPed->m_nMoveState != PEDMOVE_WALK ? 1.0f : 0.85f));
+            m_fSlopePitchLimitMult = X87R((x87d)m_fSlopePitchLimitMult * 0.9f + offset);
 
-            const auto lowBound  = m_fSlopePitchLimitMult * DegreesToRadians(-35.0f);
-            const auto highBound = m_fSlopePitchLimitMult * DegreesToRadians(+30.0f);
-            m_fSlopePitch = std::clamp(m_fSlopePitch, lowBound, highBound);
+            const float lowBound  = X87R(m_fSlopePitchLimitMult * K_M35);
+            const float highBound = X87R(m_fSlopePitchLimitMult * K_30);
+            m_fSlopePitch = ClampMaxFirst(m_fSlopePitch, lowBound, highBound);
         }
 
         if (std::abs(m_fSlopeRoll) > 0.01f) {
-            m_fSlopeRoll = std::clamp(m_fSlopeRoll, DegreesToRadians(-45.0f), DegreesToRadians(45.0f));
+            m_fSlopeRoll = ClampMaxFirst(m_fSlopeRoll, -K_45, K_45);
         }
     }
 
@@ -232,7 +235,7 @@ void CPedIK::PitchForSlope() {
                 translate.RotateX(-m_fSlopePitch / 2.0f);
                 result *= translate;
 
-                result.GetPosition() += m_pPed->GetForward() * 0.75f * x87::sin(m_fSlopePitch);
+                result.GetPosition() += m_pPed->GetForward() * (float)X87R(x87::sin(m_fSlopePitch) * 0.75f); // 0x5FE6F4: the fsin result is scaled by 0.75 (rounded) BEFORE the forward components are multiplied
                 result.GetPosition().z += X87R(0.3f / x87::cos(m_fSlopeRoll)) - 0.3f;
                 result.UpdateRW();
                 m_pPed->UpdateRwFrame();

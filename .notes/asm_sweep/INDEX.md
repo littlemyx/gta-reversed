@@ -117,4 +117,5 @@
 | S34b | rest of S34 | 17 | partial 13/17 (13 M) -> S34c | Interior_c.cpp |
 | S34c | rest of S34b | 4 | done 4/4 (MATCH; S34 complete) | Interior_c.cpp |
 | S32b | rest of S32 | 27 | partial 5/27 (5 fixed) -> S32c | Radar.cpp |
-| S32c | rest of S32b (+ DrawLegend LOW/HIGH polygons + sprite path) | 23 | pending | Radar.cpp |
+| S32c | rest of S32b (+ DrawLegend LOW/HIGH polygons + sprite path) | 23 | partial 13/23 (5 M, 8 fixed) -> S32d | Radar.cpp |
+| S32d | rest of S32c | 8 | pending | Radar.cpp |

@@ -1,0 +1,9 @@
+addr	file	line	cls	fn	oc
+0x587FB0	source/game_sa/Radar.cpp	105	None	Initialise	D
+0x5827D0	source/game_sa/Radar.cpp	106	None	LoadTextures	D
+0x585940	source/game_sa/Radar.cpp	109	None	Shutdown	S
+0x586B00	source/game_sa/Radar.cpp	127	None	DrawMap	D
+0x586880	source/game_sa/Radar.cpp	128	None	DrawRadarMap	D
+0x5D53C0	source/game_sa/Radar.cpp	142	None	Load	D
+0x5D5860	source/game_sa/Radar.cpp	143	None	Save	S
+0x5828A0	source/game_sa/Radar.cpp	107	None	DrawLegend	D

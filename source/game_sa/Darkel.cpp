@@ -241,7 +241,7 @@ int32 CDarkel::FindTotalPedsKilledByPlayer(int32 playerId) {
 void CDarkel::DealWithWeaponChangeAtEndOfFrenzy() {
     auto playerPed = FindPlayerPed();
     const eWeaponType weapon = (WeaponType != WEAPON_UZI_DRIVEBY) ? WeaponType : WEAPON_MICRO_UZI;
-    if (WeaponType < WEAPON_LAST_WEAPON) {
+    if (weapon < WEAPON_LAST_WEAPON) { // exe 0x43D7B6: tests the mapped weapon (a drive-by frenzy maps to the Micro Uzi), not the raw WeaponType
         if (InterruptedWeaponType != WEAPON_UNARMED) {
             const auto modelId = CWeaponInfo::GetWeaponInfo(InterruptedWeaponType)->m_nModelId1;
             CModelInfo::GetModelInfo(modelId)->RemoveRef();
@@ -259,6 +259,8 @@ void CDarkel::DealWithWeaponChangeAtEndOfFrenzy() {
         if (auto mi = CModelInfo::GetModelInfo(weaponInfo->m_nModelId1); mi->m_nRefCount > 0) {
             mi->RemoveRef();
         }
+        // exe 0x43D8AD: the chosen weapon slot becomes the slot of the weapon that was selected before the frenzy
+        playerPed->GetPlayerData()->m_nChosenWeapon = (uint8)CWeaponInfo::GetWeaponInfo(InterruptedWeaponTypeSelected)->m_nSlot;
         playerPed->GiveWeapon(InterruptedWeaponType, AmmoInterruptedWeapon, true);
     }
 

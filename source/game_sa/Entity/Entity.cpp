@@ -201,7 +201,7 @@ void CEntity::Remove() {
     if (usedRect.bottom < -3000.0F) {
         usedRect.bottom = -3000.0F;
     }
-    if (usedRect.top >= 3000.0F) {
+    if (usedRect.top > 3000.0F) { // exe 0x534B74: `test ah, 0x41` = strictly greater
         usedRect.top = 2999.0F;
     }
 

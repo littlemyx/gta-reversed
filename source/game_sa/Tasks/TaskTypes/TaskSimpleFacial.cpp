@@ -70,7 +70,7 @@ bool CTaskSimpleFacial::ProcessPed(CPed* ped) {
     if (!m_Timer.IsStarted()) {
         if (!anim) {
             CAnimManager::BlendAnimation(ped->GetRpClump(), ANIM_GROUP_DEFAULT, animId, 4.0f);
-            m_Timer.Start(m_Duration);
+            m_Timer.StartUnguarded(m_Duration); // 0x692F47-0x692F57: start/interval/started stored without the `>= 0` test
             return false;
         }
         return true;

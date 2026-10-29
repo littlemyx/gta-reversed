@@ -112,4 +112,5 @@
 | S19m | rest of S19l (+ DoHeadLightBeam x87 sub-ulp) | 15 | done 15/15 (12 M, 3 fixed; S19 complete) | Vehicle.cpp |
 | S33b | rest of S33 (GetWaterLevel family is oracle-covered: world_oracle_env) | 18 | pending | WaterLevel.cpp |
 | S28b | rest of S28 | 54 | partial 20/54 (15 M, 5 fixed) -> S28c | Streaming.cpp |
-| S28c | rest of S28b | 34 | pending | Streaming.cpp |
+| S28c | rest of S28b | 34 | partial 11/34 (7 M, 4 fixed + task0) -> S28d | Streaming.cpp |
+| S28d | rest of S28c | 23 | pending | Streaming.cpp |

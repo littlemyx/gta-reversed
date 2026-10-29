@@ -224,14 +224,15 @@ eCarMission CCarAI::FindPoliceCarMissionForWantedLevel() {
 int32 CCarAI::FindPoliceCarSpeedForWantedLevel(CVehicle* vehicle) {
     const auto& maxVelocity = vehicle->m_pHandlingData->m_transmissionData.m_MaxFlatVelocity;
     switch (FindPlayerWanted()->GetWantedLevel()) {
-    case eWantedLevel::WANTED_CLEAN:    return CGeneral::GetRandomNumberInRange<int32>(12, 16);
+    // 0x41CABD: float range(12, 16) truncated (port: the int range [12, 16)); 0x41CAF0..0x41CB41: maxVelocity * the exe constants 54 / 72 / 75 / 78 (.rdata), not 60 * 0.9f etc.
+    case eWantedLevel::WANTED_CLEAN:    return NOTSA_FTOL(int32, CGeneral::GetRandomNumberInRange(12.f, 16.f));
     case eWantedLevel::WANTED_LEVEL_1:  return 25;
     case eWantedLevel::WANTED_LEVEL_2:  return 34;
-    case eWantedLevel::WANTED_LEVEL_3:  return NOTSA_FTOL(int32, maxVelocity * GAME_SPEED_TO_CAR_AI_SPEED * 0.90f);
-    case eWantedLevel::WANTED_LEVEL_4:  return NOTSA_FTOL(int32, maxVelocity * GAME_SPEED_TO_CAR_AI_SPEED * 1.20f);
-    case eWantedLevel::WANTED_LEVEL_5:  return NOTSA_FTOL(int32, maxVelocity * GAME_SPEED_TO_CAR_AI_SPEED * 1.25f);
-    case eWantedLevel::WANTED_LEVEL_6:  return NOTSA_FTOL(int32, maxVelocity * GAME_SPEED_TO_CAR_AI_SPEED * 1.30f);
-    default: NOTSA_UNREACHABLE(); return 0; // 0x41CB4C: out of range wanted level => 0
+    case eWantedLevel::WANTED_LEVEL_3:  return NOTSA_FTOL(int32, maxVelocity * 54.f);
+    case eWantedLevel::WANTED_LEVEL_4:  return NOTSA_FTOL(int32, maxVelocity * 72.f);
+    case eWantedLevel::WANTED_LEVEL_5:  return NOTSA_FTOL(int32, maxVelocity * 75.f);
+    case eWantedLevel::WANTED_LEVEL_6:  return NOTSA_FTOL(int32, maxVelocity * 78.f);
+    default: return 0; // 0x41CB4C: out of range wanted level => 0
     }
 }
 

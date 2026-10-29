@@ -14,7 +14,8 @@
 - [ ] Exe inlines the sphere test as (dz^2+dx^2)+dy^2 with NaN counting as inside (TaskComplexDestroyCarMelee::CreateFirstSubTask 0x62DB20); the port helper IsPointInSphere sums x,y,z. Remaining callers incl. DestroyCarMelee CreateNextSubTask/ControlSubTask (not in any slice list) need an exe check per site.
 
 ## Double literals in float compares (from S05c)
-- [ ] Exe compares against float constants (0.119999997f, 0.200000003f) where the port wrote double literals 0.12 / 0.2 (KillCriminal::ControlSubTask). Scan source/game_sa for comparisons of float expressions against unsuffixed literals (like litdiv_scan.py) and check each against the exe constant.
+- [x] DONE (SYSTEMIC-4, see .notes/asm_sweep/DBLLIT.tsv, tools/standalone/dbllit_scan.py): scan leaves 14 unsuffixed non-float-exact compare literals in source/game_sa, all triaged (13 correctly double or already x87d; 3dMarkers PlaceMarker fixed: exe uses the float 1e-4f, `||` not `&&`, lastPos stored). The reverse check (`--suffixed`, f literal where the exe has a 64-bit constant) found 2 more fixes (AEVehicleAudio train tilt clamp, FireManager riot smoke dot > 0.2); rest equivalent or float. Untriaged: 68 UNCLEAR + 64 UNHOOKED rows of `--suffixed`, headers (.h) not scanned.
+- (original item) Exe compares against float constants (0.119999997f, 0.200000003f) where the port wrote double literals 0.12 / 0.2 (KillCriminal::ControlSubTask). Scan source/game_sa for comparisons of float expressions against unsuffixed literals (like litdiv_scan.py) and check each against the exe constant.
 
 ## Runtime globals vs literals (from S07b/S15b)
 - [ ] Exe reads .data globals where the port has literals: flee tolerance 0xC18CF0 (fixed in S07b), gun flash duration 0x8D2E88 (init 250, port literal 250). Check whether any exe code writes these globals; if yes, port them as globals.

@@ -1,0 +1,30 @@
+file	line(at a97fefe5)	literal	exe const kind @site (data addr)	verdict	commit	found by
+source/game_sa/Cam.cpp	3647	0.002	DOUBLE 0.002 @0x519EA6 (fcom qword 0x8631F8)	left: (float)0.002 gives the same result for every float x (f32(0.002) rounds up, `<`)	-	scan
+source/game_sa/Entity/Vehicle/Boat.cpp	691	0.05	DOUBLE 0.05 @0x6F1F8F (0x859068)	ok: already (x87d)0.05	-	scan
+source/game_sa/Entity/Vehicle/Plane.cpp	1845	0.05	DOUBLE 0.05 @0x6CC39A (fcomp qword 0x859068)	ok: float vs double literal = the exe compare	-	scan
+source/game_sa/Entity/Vehicle/Vehicle.cpp	5239	0.05	DOUBLE 0.05 @0x6DC409 (0x859068)	ok: already (x87d)0.05	-	scan
+source/game_sa/Audio/Entities/AEVehicleAudioEntity.cpp	1374	0.99	DOUBLE 0.99 @0x4F544C (0x862CD8)	ok	-	scan
+source/game_sa/Audio/Entities/AEVehicleAudioEntity.cpp	1399	0.99	DOUBLE 0.99 @0x4F556C (0x862CD8)	ok	-	scan
+source/game_sa/Entity/Physical.cpp	3283	0.01	DOUBLE 0.01 @0x549A48 (0x85A308)	ok (comment cites the exe site; the 4-arg overload is not hooked)	-	scan
+source/game_sa/Entity/Physical.cpp	3944	0.01	DOUBLE 0.01 @0x54B30E (0x85A308)	ok	-	scan
+source/game_sa/Events/EventHandler.cpp	2142	0.66	DOUBLE 0.66 @0x4BEA6A (0x85BA68)	ok	-	scan
+source/game_sa/Fx/FxInfoManager.cpp	172	0.7	DOUBLE 0.7 @0x5C0D5E.. (0x86B1D0)	ok	-	scan
+source/game_sa/Tasks/TaskTypes/TaskComplexUseMobilePhone.cpp	185	1.566	DOUBLE 1.566 @0x634DF9 (0x86E4A0)	ok: already (x87d)	-	scan
+source/game_sa/Tasks/TaskTypes/TaskComplexUseMobilePhone.cpp	186	1.566	DOUBLE 1.566 @0x634E0C (0x86E4A0)	ok: already (x87d)	-	scan
+source/game_sa/Tasks/TaskTypes/TaskSimpleCarSetPedOut.cpp	189	0.1	DOUBLE 0.1 @0x647EDA/0x647EEC (0x86EEE0)	ok: already (x87d)	-	scan
+source/game_sa/3dMarkers.cpp	387	0.01	FLOAT 1e-4f @0x7254EF (fcomp dword 0x858FC4)	FIXED: float const; exe cond is (<) OR timer, lastPos stored	ceb141eb	scan
+source/game_sa/Audio/Entities/AEVehicleAudioEntity.cpp	3843	0.2f	DOUBLE 0.2 @0x4FF4DF/0x4FF515 (0x862D08)	left: result is stored as float either way; same value for every x	-	scan --suffixed
+source/game_sa/Audio/Entities/AEVehicleAudioEntity.cpp	3943	0.2f	DOUBLE 0.2 @0x501731 (0x862D08) + float 0x858CC4 @0x501725	left: same value for every x	-	scan --suffixed
+source/game_sa/Entity/Vehicle/Automobile.cpp	3599	0.01f	FLOAT 0.01f @0x6A0B11 (fcomp dword 0x870FE0)	ok	-	scan --suffixed
+source/game_sa/Entity/Vehicle/Automobile.cpp	3757	0.01f	DOUBLE 0.01 @0x6A12E5 (0x85A308)	left: `> 0.01` agrees with `> 0.01f` (f32 rounds down, `>`)	-	scan --suffixed
+source/game_sa/Entity/Vehicle/Vehicle.cpp	5136	0.05F	DOUBLE 0.05 @0x6DBDBB (0x859068)	left: `fabs(x) < 0.05` agrees with `< 0.05F` (rounds up, `<`)	-	scan --suffixed
+source/game_sa/Entity/Vehicle/Vehicle.cpp	5137	0.05F	DOUBLE 0.05 @0x6DBDD1 (0x859068)	left: same as 5136	-	scan --suffixed
+source/game_sa/Entity/Vehicle/Vehicle.cpp	5209	0.05F	FLOAT 0.05f @0x6DC265 (0x858C28)	ok	-	scan --suffixed
+source/game_sa/Entity/Vehicle/Vehicle.cpp	5233	0.05F	FLOAT 0.05f @0x6DC3BD (0x858C28)	ok	-	scan --suffixed
+source/game_sa/cHandlingDataMgr.cpp	352	0.01f	FLOAT 0.01f @0x6F510E (0x858C58)	ok	-	scan --suffixed
+source/game_sa/Audio/Entities/AEVehicleAudioEntity.cpp	1162	0.99f	DOUBLE 0.99 @0x4FCAE5 (0x862CD8)	left: `x < 0.99` and `x < 0.99f` agree for every float (f32 rounds up, `<`)	-	scan --suffixed
+source/game_sa/Audio/Entities/AEVehicleAudioEntity.cpp	1231	0.99f	DOUBLE 0.99 @0x4FCD76 (0x862CD8)	left: same as 1162	-	scan --suffixed
+source/game_sa/Audio/Entities/AEVehicleAudioEntity.cpp	1232	0.65f	DOUBLE 0.65 @0x4FCD89 (0x862D30)	left: `0.65 < x` agrees with `0.65f < x` (f32 rounds down, `>`)	-	scan --suffixed
+source/game_sa/Audio/Entities/AEVehicleAudioEntity.cpp	4194	0.3f	DOUBLE +-0.3 @0x500879/0x500886 (0x862D60/0x862D58); the bound itself is multiplied (0x5008AC)	FIXED: x87d clamp, NaN -> lo	d4f89de0	scan --suffixed
+source/game_sa/Audio/Entities/AEVehicleAudioEntity.cpp	4745	0.05f	DOUBLE 0.05 @0x501392 (0x859068)	left: `t >= 0.05` agrees with `t >= 0.05f` (rounds up, `>=`)	-	scan --suffixed
+source/game_sa/FireManager.cpp	397	0.2f	DOUBLE 0.2 @0x53B100 (0x862D08)	FIXED: (x87d)dot > (x87d)0.2 (f32 rounds up, `>` differs at x == 0.2f)	38ae94f8	scan --suffixed

@@ -2074,7 +2074,7 @@ void CRadar::DrawEntityBlip(int32 blipIndex, uint8 arg1) {
 
             const auto frame = CTimer::m_snTimeInMillisecondsPauseMode;
             const x87d dist = std::sqrt((x87d)radarPos.y * (x87d)radarPos.y + (x87d)radarPos.x * (x87d)radarPos.x);
-            if (dist >= (double)0.9f || (uint32)(frame - s_lastTime) > 3) { // 0x858C20
+            if (!(dist < (x87d)0.9f) || (uint32)(frame - s_lastTime) > 3) { // 0x858C20; exe jumps to the time test only if C0 (dist < 0.9) is set, so NaN takes the update branch
                 range       = (int16)(range + 100);
                 s_currRange = range;
                 if ((double)range > (double)strip.radius) {

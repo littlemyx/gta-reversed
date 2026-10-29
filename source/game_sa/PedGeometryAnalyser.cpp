@@ -138,7 +138,7 @@ bool CPedGeometryAnalyser::CanPedTargetPoint(const CPed& ped, const CVector& poi
         }
     }
 
-    if (delta.z * delta.z + delta.y * delta.y + delta.x * delta.x > 40.f * 40.f) { // 0x86C69C
+    if (delta.z * delta.z + delta.x * delta.x + delta.y * delta.y > 40.f * 40.f) { // 0x86C69C; 0x5F1BCE: the exe sums z*z, x*x, then y*y
         return false;
     }
 

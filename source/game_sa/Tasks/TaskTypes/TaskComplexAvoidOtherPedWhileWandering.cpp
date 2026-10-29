@@ -186,23 +186,25 @@ CColSphere CTaskComplexAvoidOtherPedWhileWandering::ComputeSphere(PedsToAvoidArr
         numPeds++;
         center += ped->GetPosition();
     }
-    center /= (float)numPeds;
+    center *= 1.f / (float)numPeds; // exe 0x66A513: multiplies by the float reciprocal (`fdivr 1.0f` + 3x `fmul`), not a divide per component
 
     // Step 2: Find max 2D[!] distance [this is going to be the radius]
-    float maxDist2DSq{FLT_MIN};
+    float maxDist2DSq{0.f}; // exe 0x66A548: starts at 0.0f
     for (CPed* ped : accountedPeds) {
         if (!ped) {
             continue;
         }
         const auto dist2DSq = (center - ped->GetPosition()).SquaredMagnitude2D();
-        if (dist2DSq <= maxDist2DSq) {
+        if (!(dist2DSq > maxDist2DSq)) { // exe `test ah, 0x41; jne` (NaN keeps the old maximum)
             continue;
         }
         maxDist2DSq = dist2DSq;
     }
 
-    // Step 3: Construct sphere from it
-    return CSphere{ center, std::sqrt(maxDist2DSq) };
+    // Step 3: Construct sphere from it - exe 0x66A779: radius = sqrt(max) + 1.05f (the ped sphere radius, [0x86FCC0]), Set(radius, center, 0, 0, 0xFF)
+    CColSphere sphere;
+    sphere.Set(std::sqrt(maxDist2DSq) + 1.05f, center, SURFACE_DEFAULT, 0, tColLighting{0xFF});
+    return sphere;
 }
 
 // 0x66A850

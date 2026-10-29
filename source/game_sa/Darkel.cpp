@@ -78,7 +78,7 @@ void CDarkel::DrawMessages() {
         const auto y1 = CHud::GetYPosBasedOnHealth(CWorld::PlayerInFocus, SCREEN_SCALE_Y(148.0f), 12);
         auto remainingTimerY = CHud::GetYPosBasedOnHealth(PED_TYPE_PLAYER2, y1, 12);
 
-        const auto y2 = CHud::GetYPosBasedOnHealth(CWorld::PlayerInFocus, SCREEN_SCALE_Y(168.0f), 12);
+        const auto y2 = CHud::GetYPosBasedOnHealth(CWorld::PlayerInFocus, SCREEN_SCALE_Y(148.0f) + SCREEN_SCALE_Y(20.0f), 12); // exe: 148*s + 20*s (not 168*s, 1 ulp)
         auto remainingKillsY = CHud::GetYPosBasedOnHealth(PED_TYPE_PLAYER2, y2, 12);
         if (FindPlayerPed(PED_TYPE_PLAYER2)) {
             remainingTimerY += SCREEN_SCALE_Y(72.0f);

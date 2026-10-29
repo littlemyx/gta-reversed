@@ -168,10 +168,11 @@ void CStreaming::AddLodsToRequestList(const CVector& point, int32 streamingFlags
     const float minY = point.y - CRenderer::ms_fFarClipPlane;
     const float maxY = point.y + CRenderer::ms_fFarClipPlane;
 
-    const int32 startSectorX = std::max(CWorld::GetLodSectorX(minX), 0);
-    const int32 startSectorY = std::max(CWorld::GetLodSectorY(minY), 0);
-    const int32 endSectorX = std::min(CWorld::GetLodSectorX(maxX), MAX_LOD_PTR_LISTS_X - 1);
-    const int32 endSectorY = std::min(CWorld::GetLodSectorY(maxY), MAX_LOD_PTR_LISTS_Y - 1);
+    // exe (0x40C520): the LOD sector index is TRUNCATED (_ftol of x*0.005+15), not floored; differs for sector floats in (-1,0)
+    const int32 startSectorX = std::max(NOTSA_FTOL(int32, CWorld::GetLodSectorfX(minX)), 0);
+    const int32 startSectorY = std::max(NOTSA_FTOL(int32, CWorld::GetLodSectorfY(minY)), 0);
+    const int32 endSectorX = std::min(NOTSA_FTOL(int32, CWorld::GetLodSectorfX(maxX)), MAX_LOD_PTR_LISTS_X - 1);
+    const int32 endSectorY = std::min(NOTSA_FTOL(int32, CWorld::GetLodSectorfY(maxY)), MAX_LOD_PTR_LISTS_Y - 1);
 
     CWorld::AdvanceCurrentScanCode();
 

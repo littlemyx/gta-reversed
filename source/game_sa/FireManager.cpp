@@ -274,7 +274,8 @@ CFire* CFireManager::StartFire(CVector pos, float size, uint8 unused, CEntity* c
         return nullptr;
 
     if (CFire* fire = GetNextFreeFire(false)) {
-        fire->Start(creator, pos, nTimeToBurn, std::min<uint8>((uint8)m_nMaxFireGenerationsAllowed, nGenerations));
+        // 0x53A00A-0x53A01D: signed min against the maximum (movsx / cmp / jl), stored as a byte (port: unsigned byte min, capped at 63 with the default maximum)
+        fire->Start(creator, pos, nTimeToBurn, (uint8)((int32)nGenerations < (int32)m_nMaxFireGenerationsAllowed ? (int32)nGenerations : (int32)m_nMaxFireGenerationsAllowed));
         return fire;
     }
     return nullptr;

@@ -94,7 +94,11 @@ void CFire::Start(CEntity* creator, CVector pos, uint32 nTimeToBurn, uint8 nGens
     m_IsBeingExtinguished = false;
     m_IsFirstGeneration = true;
 
-    m_TimeToBurn = CTimer::GetTimeInMS() + NOTSA_FTOL(uint32_t, CGeneral::GetRandomNumberInRange(1.0f, 1.3f) * (float)nTimeToBurn);
+    // 0x539F87-0x539FD2: rand() * (1/32767) * 0.299999952 + 1.0 stays in the x87 register (no float rounding), * nTimeToBurn + the time, then _ftol
+    {
+        const x87d factor = (x87d)CGeneral::GetRandomNumber() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (x87d)0.299999952f + (x87d)1.0f;
+        m_TimeToBurn = NOTSA_FTOL(uint32_t, factor * (x87d)nTimeToBurn + (x87d)CTimer::GetTimeInMS());
+    }
 
     SetEntityOnFire(nullptr);
     SetEntityStartedFire(creator);

@@ -394,7 +394,8 @@ void CFireManager::Update() {
         // Android values used here, and on the PC version the array access isn't
         // a 100% clear to me.
         // TODO: Use the array here
-        if (DotProduct(TheCamera.GetForward(), pointToCamDirNorm) > 0.2f || CGeneral::GetRandomNumber() < RAND_MAX / 2) {
+        if ((x87d)DotProduct(TheCamera.GetForward(), pointToCamDirNorm) > (x87d)0.2 || // 0x53B100: fcomp qword 0.2 (0x862D08), not 0.2f
+                 CGeneral::GetRandomNumber() < RAND_MAX / 2) {
             auto fx = g_fxMan.CreateFxSystem("riot_smoke", point, nullptr, true);
             if (fx)
                 fx->PlayAndKill();

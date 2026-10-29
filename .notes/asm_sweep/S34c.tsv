@@ -1,0 +1,5 @@
+addr	file	line	cls	fn	oc
+0x593FC0	source/game_sa/Interior/Interior_c.cpp	18	Interior_c	FurnishBedroom	D
+0x596930	source/game_sa/Interior/Interior_c.cpp	19	Interior_c	Kitchen_FurnishEdges	D
+0x597740	source/game_sa/Interior/Interior_c.cpp	25	Interior_c	FurnishLounge	D
+0x599AF0	source/game_sa/Interior/Interior_c.cpp	32	Interior_c	FurnishOffice	D

@@ -562,15 +562,15 @@ void CEntryExit::RequestAmbientPeds() {
     };
 
     for (auto&& [name, models] : mapping) {
-        if (_stricmp(name, m_szName)) {
+        // exe 0x43E6E8-0x43E89C: five independent _stricmp == 0 tests, every match streams (port streamed the first NON-matching entry and returned)
+        if (_stricmp(name, m_szName) == 0) {
             CStreaming::StreamPedsIntoRandomSlots(models);
-            return;
         }
     }
 }
 // 0x43E690
 void CEntryExit::RequestObjectsInFrustum() const {
-    CRenderer::RequestObjectsInDirection(ms_spawnPoint->m_vecExitPos, m_fExitAngle, 0);
+    CRenderer::RequestObjectsInDirection(ms_spawnPoint->m_vecExitPos, m_fExitAngle, STREAMING_LOADING_SCENE); // exe 0x43E6A4: push 0x20 (port passed 0)
 }
 
 // 0x43F1F0

@@ -207,10 +207,10 @@ static float LimitPrecision(float v, int32 digits) {
     //       (0x822130 = pow, 0x8232F0 = modf; the 5.0f / 0.1f are float constants from .rdata)
     double ipart{};
     std::modf(
-        (X87R(std::pow(10.0, (double)(digits + 1)) * (double)v) + (v < 0.0f ? -(x87d)5.0 : (x87d)5.0)) * (x87d)0.1f, // !(v < 0) <=> the original's JP after FCOMP (NaN adds)
+        (X87R(x87::pow(10.0, (double)(digits + 1)) * (double)v) + (v < 0.0f ? -(x87d)5.0 : (x87d)5.0)) * (x87d)0.1f, // !(v < 0) <=> the original's JP after FCOMP (NaN adds)
         &ipart
     );
-    return (float)(X87R(ipart / std::pow(10.0, (double)digits)));
+    return (float)(X87R(ipart / x87::pow(10.0, (double)digits)));
 }
 
 // 0x50A120
@@ -436,7 +436,7 @@ void CCamera::AvoidTheGeometry(const CVector* src, const CVector* dst, CVector* 
         }
     }
 
-    m_fAvoidTheGeometryProbsTimer = (float)(X87R(std::pow((double)0.9f, (double)CTimer::ms_fTimeStep) * m_fAvoidTheGeometryProbsTimer)); // 0x8CC81C
+    m_fAvoidTheGeometryProbsTimer = (float)(X87R(x87::pow((double)0.9f, (double)CTimer::ms_fTimeStep) * m_fAvoidTheGeometryProbsTimer)); // 0x8CC81C
     WellBufferMe(strengthTarget, gAvoidGeometryStrength, gAvoidGeometrySpeed, 0.2f, 0.05f, false);
     m_vecClearGeometryVec.x = gAvoidGeometryStrength * m_vecClearGeometryVec.x;
     m_vecClearGeometryVec.y = gAvoidGeometryStrength * m_vecClearGeometryVec.y;
@@ -1342,13 +1342,13 @@ void CCam::Process() {
                     || TheCamera.m_bCamDirectlyInFront;
                 if (!bReset) {
                     if (FindPlayerPed()->GetIntelligence()->GetTaskFighting() && m_nMode == MODE_AIMWEAPON) {
-                        const float f = (float)std::pow(X87W((x87d)0.9f), X87W((x87d)CTimer::GetTimeStep()));
+                        const float f = (float)x87::pow(X87W((x87d)0.9f), X87W((x87d)CTimer::GetTimeStep()));
                         target        = playerPos * (1.0f - f) + gCamPlayerLastPos * f;
                         bReset        = true;
                     } else {
                         // NOTE: The original computes `1 - pow(..)` first (rounded to float) and derives the other weight from it
-                        const float inv1 = (float)(X87R(1.0 - std::pow(X87W((x87d)0.6f), X87W((x87d)CTimer::GetTimeStep()))));
-                        const float inv2 = (float)(X87R(1.0 - std::pow(X87W((x87d)0.8f), X87W((x87d)CTimer::GetTimeStep()))));
+                        const float inv1 = (float)(X87R(1.0 - x87::pow(X87W((x87d)0.6f), X87W((x87d)CTimer::GetTimeStep()))));
+                        const float inv2 = (float)(X87R(1.0 - x87::pow(X87W((x87d)0.8f), X87W((x87d)CTimer::GetTimeStep()))));
                         const CVector predicted = gCamPlayerLastPos + gCamPlayerPosVel * CTimer::GetTimeStep();
                         const CVector blended   = predicted * (1.0f - inv1) + playerPos * inv1;
                         target.x                = blended.x;
@@ -2726,7 +2726,7 @@ void CCam::Process_AimWeapon(const CVector& target, float orientation, float spe
             s_MeleeAimBeta  = wantBeta;
             s_LockOnBlend   = 0.0f;
         } else if (!TheCamera.m_bTransitionState) {
-            const double p = std::pow((double)0.96f, (double)ts);
+            const double p = x87::pow((double)0.96f, (double)ts);
             const x87d q = X87R(1.0 - p);
             s_MeleeAimAlpha = (float)((x87d)wantAlpha * q + X87R((double)s_MeleeAimAlpha * p));
             s_MeleeAimBeta  = (float)((x87d)wantBeta * q + X87R((double)s_MeleeAimBeta * p));
@@ -2852,7 +2852,7 @@ void CCam::Process_AimWeapon(const CVector& target, float orientation, float spe
             lockPos.z = (float)((x87d)zDelta * (x87d)gAimMeleeLockZScale + (x87d)lockPos.z);
         }
         if (!m_bResetStatics && intel->GetTaskFighting()) {
-            const float p = (float)std::pow((double)gAimLockOnBlend, (double)ts);
+            const float p = (float)x87::pow((double)gAimLockOnBlend, (double)ts);
             const float q = (float)((x87d)1.0 - (x87d)p);
             s_LockOnPos   = p * s_LockOnPos + q * lockPos;
         } else {
@@ -2964,7 +2964,7 @@ void CCam::Process_AimWeapon(const CVector& target, float orientation, float spe
             if (std::abs(lr) < 2.0f && std::abs(ud) < 2.0f) {
                 stickRate = gAimStickRateCentered;
             }
-            const float pf = (float)std::pow((double)stickRate, (double)ts);
+            const float pf = (float)x87::pow((double)stickRate, (double)ts);
             const float qf = (float)((x87d)1.0 - (x87d)pf);
             m_fBetaSpeed   = (float)((x87d)pf * (x87d)m_fBetaSpeed + (x87d)qf * (x87d)stickH);
             m_fAlphaSpeed  = (float)((x87d)qf * (x87d)stickV + (x87d)pf * (x87d)m_fAlphaSpeed);
@@ -3431,7 +3431,7 @@ void CCam::Process_Cam_TwoPlayer() {
     float step = std::max(CTimer::GetTimeStep(), 1.0f);
     fVar2      = (local70 - m_fHorizontalAngle) / step;
 
-    const float powFactor = (float)std::pow(X87W((x87d)0.8f), X87W((x87d)CTimer::GetTimeStep()));
+    const float powFactor = (float)x87::pow(X87W((x87d)0.8f), X87W((x87d)CTimer::GetTimeStep()));
     fVar4                 = 0.1f;
 
     if (foundIdx == 0 && s_lastBlockedTime + 1000 <= CTimer::GetTimeInMS()) {
@@ -3527,7 +3527,7 @@ void CCam::Process_Cam_TwoPlayer_InCarAndShooting() {
         }
     }
     if (70.0f < m_fFOV) {
-        const double f = std::pow((double)0.98f, (double)CTimer::GetTimeStep());
+        const double f = x87::pow((double)0.98f, (double)CTimer::GetTimeStep());
         m_fFOV         = (float)(X87R(((x87d)m_fFOV - (x87d)70.0) * f) + (x87d)70.0);
     }
     // exe 0x519988: `jne` on fov <= 100 (or NaN) goes on to the lower clamp
@@ -3558,7 +3558,7 @@ void CCam::Process_Cam_TwoPlayer_InCarAndShooting() {
     );
 
     if (aimTarget && absLR < 120.0f && absUD < 120.0f) {
-        const double f = std::pow((double)0.85f, (double)CTimer::GetTimeStep());
+        const double f = x87::pow((double)0.85f, (double)CTimer::GetTimeStep());
         x87d       dx = ((x87d)targetScreenX - m_fX_Targetting) * (X87R(1.0 - f));
         float        lim = CTimer::GetTimeStep() * 0.01f;
         if (dx > lim) { // exe 0x519B47: `jne` on dx <= lim (or NaN) -> lower clamp
@@ -3568,7 +3568,7 @@ void CCam::Process_Cam_TwoPlayer_InCarAndShooting() {
         }
         m_fX_Targetting = (float)(dx + m_fX_Targetting);
 
-        const double f2 = std::pow((double)0.85f, (double)CTimer::GetTimeStep());
+        const double f2 = x87::pow((double)0.85f, (double)CTimer::GetTimeStep());
         x87d       dy = ((x87d)targetScreenY - m_fY_Targetting) * (X87R(1.0 - f2));
         lim = CTimer::GetTimeStep() * 0.01f;
         if (dy > lim) {
@@ -3664,7 +3664,7 @@ void CCam::Process_Cam_TwoPlayer_InCarAndShooting() {
             k = (x87d)1.0;
         }
         alphaTarget  = (float)(X87R(k * velPitch) + alphaTarget);
-        const double f = std::pow((double)0.96f, (double)CTimer::GetTimeStep());
+        const double f = x87::pow((double)0.96f, (double)CTimer::GetTimeStep());
         m_fVerticalAngle = (float)(X87R(f * m_fVerticalAngle) + (X87R(1.0 - f)) * alphaTarget);
     }
 
@@ -5359,7 +5359,7 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
             }
         }
         if (m_fFOV > 70.0f) {
-            const double p = std::pow((double)0.98f, (double)ts);
+            const double p = x87::pow((double)0.98f, (double)ts);
             m_fFOV         = (float)(X87R(((x87d)m_fFOV - (x87d)70.0) * p) + (x87d)70.0);
         }
         if (m_fFOV > 100.0f) {
@@ -5538,7 +5538,7 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
     float alphaStepLimit = ts * cfg.alphaStepLimitMul;
     float alphaStep; // How much the vertical angle will change
     {
-        const double pw   = std::pow((double)cfg.alphaSmoothBase, (double)ts);
+        const double pw   = x87::pow((double)cfg.alphaSmoothBase, (double)ts);
         const x87d step = ((x87d)alphaTarget - (x87d)m_fVerticalAngle) * (X87R(1.0 - pw));
         alphaStep         = (float)step;
         if (step > (double)alphaStepLimit) {
@@ -5664,7 +5664,7 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
     pitchIn *= cfg.inputMul;
     yawIn   *= cfg.inputMul;
 
-    const float pwBeta = (float)std::pow((double)cfg.betaSmoothBase, (double)ts);
+    const float pwBeta = (float)x87::pow((double)cfg.betaSmoothBase, (double)ts);
     const float speedLimit = cfg.betaSpeedLimit;
     {
         x87d v = (x87d)yawIn + (x87d)betaVel;
@@ -6022,7 +6022,7 @@ void CCam::Process_FollowPedWithMouse(const CVector& target, float orientation, 
     // exe 0x510378-0x5103A5: length adds z, y, x; `dist3D < m_fDistance` is tested first (unordered takes the blend arm)
     const float dist3D = std::sqrt((sq(tgt.z - m_vecSource.z) + sq(tgt.y - m_vecSource.y)) + sq(tgt.x - m_vecSource.x));
     if (!(dist3D < m_fDistance)) {
-        const double f = std::pow((double)0.92f, (double)CTimer::GetTimeStep());
+        const double f = x87::pow((double)0.92f, (double)CTimer::GetTimeStep());
         const x87d newDist = X87R(f * m_fDistance) + (X87R(1.0 - f)) * dist3D;
         m_fDistance = (float)newDist;
         if (0.05f < dist3D) {
@@ -6359,7 +6359,7 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
                 t = (x87d)1.0;
             }
             const float  limit = (float)((x87d)HALF_PI - ((x87d)HALF_PI - (x87d)0.349065870f) * t);
-            const double pw    = std::pow((double)0.9f, (double)ts);
+            const double pw    = x87::pow((double)0.9f, (double)ts);
             if (alphaCur > limit) {
                 alphaCur = (float)(X87R(pw * (double)alphaCur) + (X87R(1.0 - pw)) * (x87d)limit);
             } else if (-limit > alphaCur) {
@@ -6411,7 +6411,7 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
     float alphaStep;
     {
         const float  maxAlphaStep = ts * tuning.alphaMaxStep;
-        const double pw           = std::pow((double)tuning.alphaPowBase, (double)ts);
+        const double pw           = x87::pow((double)tuning.alphaPowBase, (double)ts);
         const x87d stepExt      = ((x87d)alphaCur - (x87d)m_fVerticalAngle) * (X87R(1.0 - pw));
         alphaStep                 = (float)stepExt;
         if (stepExt > (double)maxAlphaStep) {
@@ -6461,7 +6461,7 @@ void CCam::Process_FollowPed_SA(const CVector& target, float orientation, float 
     }
 
     // Beta
-    const float  pwB         = (float)std::pow((double)tuning.betaPowBase, (double)ts);
+    const float  pwB         = (float)x87::pow((double)tuning.betaPowBase, (double)ts);
     const float  speedCap    = tuning.speedCap;
     const float  oneMinusPwB = 1.0f - pwB;
     {
@@ -6850,7 +6850,7 @@ void CCam::Process_M16_1stPerson(const CVector& target, float orientation, float
             if (std::abs(stickH) < 2.0f && std::abs(stickV) < 2.0f) {
                 damp = gM16StickDampSlow;
             }
-            damp = (float)std::pow((double)damp, (double)ts);
+            damp = (float)x87::pow((double)damp, (double)ts);
 
             const float oneMinusDamp = (float)((x87d)1.0 - (x87d)damp);
             const x87d betaSpeed   = ((x87d)1.0 - (x87d)damp) * locH + (x87d)damp * m_fBetaSpeed;
@@ -6887,8 +6887,8 @@ void CCam::Process_M16_1stPerson(const CVector& target, float orientation, float
         const double c        = x87::cos((x87d)(uint32)(CTimer::GetTimeInMS() - bumpTime) / (x87d)gM16CamBumpPeriod * (x87d)kTwoPi);
         m_fHorizontalAngle    = (float)(X87R((double)gM16CamBumpScale * c) * m_fCamBumpedHorz + m_fHorizontalAngle);
         m_fVerticalAngle      = (float)(X87R(c * m_fCamBumpedVert) * (double)gM16CamBumpScale + m_fVerticalAngle);
-        m_fCamBumpedHorz      = (float)(X87R(std::pow((double)gM16CamBumpDecay, (double)CTimer::GetTimeStep()) * m_fCamBumpedHorz));
-        m_fCamBumpedVert      = (float)(X87R(std::pow((double)gM16CamBumpDecay, (double)CTimer::GetTimeStep()) * m_fCamBumpedVert));
+        m_fCamBumpedHorz      = (float)(X87R(x87::pow((double)gM16CamBumpDecay, (double)CTimer::GetTimeStep()) * m_fCamBumpedHorz));
+        m_fCamBumpedVert      = (float)(X87R(x87::pow((double)gM16CamBumpDecay, (double)CTimer::GetTimeStep()) * m_fCamBumpedVert));
         if (CTimer::GetTimeInMS() > bumpTime + (uint32)gM16CamBumpDuration) {
             m_nCamBumpedTime = 0;
         }

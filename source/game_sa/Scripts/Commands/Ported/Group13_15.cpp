@@ -575,7 +575,11 @@ double AcosCrt(double x) {
     const double ad = std::fabs(x);
     const int    mode = ad < 1.0 ? 0 : x == 1.0 ? 1 : x == -1.0 ? 2 : x != x ? 4 : 3;
     static const unsigned char qnan[10] = { 0, 0, 0, 0, 0, 0, 0, 0xC0, 0xFF, 0xFF };
-    double                   out; // the lifted asm stores 8 bytes (qword)
+#ifdef NOTSA_PORTABLE
+    double                   out; // the lifted asm stores 8 bytes (qword); the name the lifted x87 code (x87_lifted/*.inc) refers to
+#else
+    double                   outV; // not `out`: a reserved word inside MSVC inline assembly (C4405)
+#endif
 #ifdef NOTSA_PORTABLE
 #include "x87_lifted/Group13_AcosCrt.inc"
 #else
@@ -609,10 +613,14 @@ double AcosCrt(double x) {
     L_nan:
         fld   tbyte ptr [qnan]
     L_have:
-        fstp  qword ptr [out]
+        fstp  qword ptr [outV]
     }
 #endif
+#ifdef NOTSA_PORTABLE
     return out;
+#else
+    return outV;
+#endif
 }
 
 //! x87 `fsqrt` at the current precision control (std::sqrt may be computed by the SSE2 CRT at full double precision)

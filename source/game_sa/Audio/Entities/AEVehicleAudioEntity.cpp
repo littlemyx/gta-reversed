@@ -2684,7 +2684,7 @@ float CAEVehicleAudioEntity::GetFreqForIdle(float ratio) const noexcept {
 static float BikeLeanTerm(float lean, float factor) {
 #if NOTSA_X87_ASM
     const float zero = 0.0f;
-    float out;
+    float outV;
     __asm {
         fld   dword ptr [lean]
         fsin
@@ -2695,9 +2695,9 @@ static float BikeLeanTerm(float lean, float factor) {
         fchs
     L_abs:
         fmul  dword ptr [factor]
-        fstp  dword ptr [out]
+        fstp  dword ptr [outV]
     }
-    return out;
+    return outV;
 #elif defined(NOTSA_PORTABLE)
     return notsa::fp::sites::BikeLeanTerm(lean, factor);
 #else

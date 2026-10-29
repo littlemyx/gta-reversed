@@ -437,7 +437,7 @@ void SkinGetBonePositions(RpClump* clump) {
     int32  nodeStk[64]{};
     int32* nodeStkPtr = nodeStk;
     int32  currNodeIdx{};
-    for (int32 i = 1; i < nBones; i++) {
+    for (int32 i = 1; static_cast<uint32>(i) < nBones; i++) {
         RwMatrix invBoneMat;
         RwMatrixInvert(&invBoneMat, &RpSkinGetSkinToBoneMatrices(skin)[i]);
         RwV3dTransformPoints(&s_SkinBonePositions[i].pos, RwMatrixGetPos(&invBoneMat), 1, &RpSkinGetSkinToBoneMatrices(skin)[currNodeIdx]);
@@ -464,7 +464,7 @@ void SkinSetBonePositions(RpClump* clump) {
     const auto mats = RpHAnimHierarchyGetMatrixArray(hier);
 
     const auto nBones = RpSkinGetNumBones(skin);
-    for (int32 i = 1; i < nBones; i++) {
+    for (int32 i = 1; static_cast<uint32>(i) < nBones; i++) {
         RwV3dTransformPoints(RwMatrixGetPos(&mats[i]), &s_SkinBonePositions[i].pos, 1, &mats[s_SkinBonePositions[i].parent]);
     }
 }
@@ -488,7 +488,7 @@ void SkinGetBonePositionsToTable(RpClump* clump, RwV3d* table) {
     int32  nodeStk[64]{};
     int32* nodeStkPtr = nodeStk;
     int32  currNodeIdx{};
-    for (int32 i = 1; i < nBones; i++) {
+    for (int32 i = 1; static_cast<uint32>(i) < nBones; i++) {
         RwMatrix invBoneMat;
         RwMatrixInvert(&invBoneMat, &RpSkinGetSkinToBoneMatrices(skin)[i]);
         RwV3dTransformPoints(&table[i], RwMatrixGetPos(&invBoneMat), 1, &RpSkinGetSkinToBoneMatrices(skin)[currNodeIdx]);

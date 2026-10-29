@@ -189,13 +189,13 @@ void Tick() {
             std::fprintf(c.f, "B %u mi=%d col=%d slot=%u flags=%02x data=%d refs=%u\n", (unsigned)CTimer::m_FrameCounter, mi != nullptr, col != nullptr, col ? (unsigned)col->m_nColSlot : 0u, col ? (unsigned)col->m_nFlags : 0u, col ? col->m_pColData != nullptr : 0, mi ? (unsigned)mi->m_nRefCount : 0u);
         }
         if (c.pin & 32768) { // RD-AB-17 pin bit 32768: "Q fc slot model pos(3) movespeed(3) turnspeed(3) fwd(3) status" of every used vehicle pool slot (counterpart in rd_orig.c)
-            if (auto* vl = GetVehiclePool()) for (int i = 0; i < vl->GetSize(); i++) if (auto* v = vl->GetAt(i)) {
+            if (auto* vl = GetVehiclePool()) for (int i = 0; i < static_cast<int>(vl->GetSize()); i++) if (auto* v = vl->GetAt(i)) {
                 const auto p = v->GetPosition(); const auto& f = v->GetMatrix().GetForward();
                 std::fprintf(c.f, "Q %u %d %u %08x,%08x,%08x %08x,%08x,%08x %08x,%08x,%08x %08x,%08x,%08x %u\n", (unsigned)CTimer::m_FrameCounter, i, (unsigned)v->m_nModelIndex, fb(p.x), fb(p.y), fb(p.z),
                              fb(v->m_vecMoveSpeed.x), fb(v->m_vecMoveSpeed.y), fb(v->m_vecMoveSpeed.z), fb(v->m_vecTurnSpeed.x), fb(v->m_vecTurnSpeed.y), fb(v->m_vecTurnSpeed.z), fb(f.x), fb(f.y), fb(f.z), (unsigned)v->GetStatus());
             }
         }
-        if (auto* pl = GetPedPool()) for (int i = 0; i < pl->GetSize(); i++) if (auto* pd = pl->GetAt(i)) {
+        if (auto* pl = GetPedPool()) for (int i = 0; i < static_cast<int>(pl->GetSize()); i++) if (auto* pd = pl->GetAt(i)) {
             const auto p = pd->GetPosition();
             std::fprintf(c.f, "P %u %d %u %08x,%08x,%08x %08x,%08x,%08x %08x,%08x %08x,%08x %08x,%08x\n", (unsigned)CTimer::m_FrameCounter, i, (unsigned)pd->m_nModelIndex, fb(p.x), fb(p.y), fb(p.z),
                          fb(pd->m_vecMoveSpeed.x), fb(pd->m_vecMoveSpeed.y), fb(pd->m_vecMoveSpeed.z), fb(pd->m_fCurrentRotation), fb(pd->m_fAimingRotation), fb(pd->m_vecAnimMovingShiftLocal.x), fb(pd->m_vecAnimMovingShiftLocal.y), fb(pd->m_vecAnimMovingShift.x), fb(pd->m_vecAnimMovingShift.y));

@@ -466,7 +466,11 @@ CCoverPoint::Dir CCover::FindDirFromVector(CVector dir) {
 // 0x698D60
 CVector CCover::FindVectorFromDir(CCoverPoint::Dir direction) {
     // 0x698D60: (-sin(a), cos(a), 0) with a = raw * 0x3CC90FDB (2pi / 256, a float product on the x87 stack), x87 code verbatim.
-    float out[3]{};
+#ifdef NOTSA_PORTABLE
+    float out[3]{}; // the name the lifted x87 code (x87_lifted/*.inc) refers to
+#else
+    float outV[3]{}; // not `out`: a reserved word inside MSVC inline assembly (C4405)
+#endif
     const uint32 raw = std::bit_cast<uint8>(direction);
     static const uint32 K859BBC = 0x3CC90FDBu;
 
@@ -476,7 +480,7 @@ CVector CCover::FindVectorFromDir(CCoverPoint::Dir direction) {
 #else
     __asm {
         push dword ptr [a_raw]
-        lea eax, [out]
+        lea eax, [outV]
         push eax
         call L_BODY
         add esp, 8
@@ -507,7 +511,11 @@ CVector CCover::FindVectorFromDir(CCoverPoint::Dir direction) {
     L_END:
     }
 #endif
+#ifdef NOTSA_PORTABLE
     return CVector{ out[0], out[1], out[2] };
+#else
+    return CVector{ outV[0], outV[1], outV[2] };
+#endif
 }
 
 // unused

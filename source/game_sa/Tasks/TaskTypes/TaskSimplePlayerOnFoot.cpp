@@ -901,7 +901,7 @@ void CTaskSimplePlayerOnFoot::PlayerControlFighter(CPlayerPed* player) {
             }
         }
 
-        pad->GetSprint(); // Result unused in the original
+        (void)pad->GetSprint(); // Result unused in the original
         const int32 cmd = len > 0.5f ? 0x10 : 0xF;
         if (pad->DuckJustDown() && CTaskSimpleDuck::CanPedDuck(player)) {
             player->GetIntelligence()->SetTaskDuckSecondary(0);

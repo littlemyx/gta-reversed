@@ -185,8 +185,9 @@
 | S47c | rest of S47b | 5 | done 5/5 (1 M, 4 fixed; S47 complete) | EventHandler.cpp |
 | S56b | rest of S56 | 13 | 13/14 (9 M, 4 fixed, 1 U) -> S56c | PlayerInfo.cpp, PlayerPedData.cpp |
 | S50b | rest of S50 | 15 | done (12 M, 3 fixed; CGarage::Update handlers -> S48c) | GangWars.cpp, Garage.cpp, Garages.cpp |
-| S56c | rest of S56b | 1 | pending | PlayerInfo.cpp |
-| S57b | rest of S57 | 25 | pending | PedAttractorPool.h, PedIntelligencePool.h, PedPool.h, Replay.cpp, TheScripts.cpp, VehiclePool.h |
+| S56c | rest of S56b | 1 | done (MATCH; S56 complete) | PlayerInfo.cpp |
+| S57b | rest of S57 | 25 | partial 18/25 (14 M, 4 fixed) -> S57c | PedAttractorPool.h, PedIntelligencePool.h, PedPool.h, Replay.cpp, TheScripts.cpp, VehiclePool.h |
 | S51b | rest of S51 | 20 | pending | FurnitureManager_c.cpp, InterestingEvents.cpp, InteriorGroup_c.cpp, InteriorManager_c.cpp, Interior_c.cpp, PathFind.cpp |
 | S53b | rest of S53 | 25 | pending | PedClothesDesc.cpp, PedGeometryAnalyser.cpp, PedGroup.cpp |
 | S48c | CGame rows + CGarage::Update handlers + CGameLogic::Update tail | 18 | pending | Game.cpp |
+| S57c | rest of S57b | 10 | pending | PedIntelligencePool.h, PedPool.h, Replay.cpp, VehiclePool.h |

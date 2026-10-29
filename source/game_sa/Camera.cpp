@@ -3180,10 +3180,10 @@ void CCamera::ImproveNearClip(CVehicle* vehicle, CPed* ped, CVector* source, CVe
                     }
                 } else if (bUsingParachute || ped->GetIntelligence()->GetTaskJetPack()) {
                     if (GetRoughDistanceToGround() > 10.f) {
-                        const float nearClip = std::min(
-                            (*source - *targPosn).Magnitude() * 0.3f, // NOTE: the original passes both values to a `min(a, b)` function
-                            2.f * gCurDistForCam
-                        );
+                        // 0x404330 `min(a, b)` is `a < b ? a : b` (returns b when a is NaN, unlike std::min)
+                        const float a = (*source - *targPosn).Magnitude() * 0.3f;
+                        const float b = 2.f * gCurDistForCam;
+                        const float nearClip = a < b ? a : b;
                         if (nearClip > Scene.m_pRwCamera->nearPlane) {
                             RwCameraSetNearClipPlane(Scene.m_pRwCamera, nearClip);
                         }

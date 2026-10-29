@@ -1257,7 +1257,11 @@ void CStreaming::LoadInitialWeapons() {
 void CStreaming::LoadScene(const CVector& point) {
     ms_bLoadingScene = true;
 
-    CVector playerPosition = FindPlayerCoors(0);
+    // exe 0x40EB70: (0,0,0) unless Players[0] has a ped, then FindPlayerCoors(-1) (the focus player)
+    CVector playerPosition{};
+    if (CWorld::Players[0].m_pPed) {
+        playerPosition = FindPlayerCoors(-1);
+    }
 
     // Can't use a simple `for` loop here, because model is unlinked (thus the iterator is invalidated) when removed.
     {
@@ -1833,7 +1837,7 @@ void CStreaming::RequestSpecialModel(int32 modelId, const char* name, int32 flag
     // Find model si for model, and unload it 0x409E80
     {
         CBaseModelInfo* foundModelInfo = nullptr;
-        for (int32 i = 0; i <= 1000; i++) {
+        for (int32 i = 0; i < 1000; i++) { // exe 0x409E80: models 0..999 (the port also scanned 1000)
             CBaseModelInfo* mi = CModelInfo::GetModelInfo(i);
             if (mi && modelNameKey == mi->GetModelName()) {
                 foundModelInfo = mi;
@@ -1844,6 +1848,7 @@ void CStreaming::RequestSpecialModel(int32 modelId, const char* name, int32 flag
         if (foundModelInfo
             && foundModelInfo->m_nTxdIndex != -1
             && CTxdStore::ms_pTxdPool->GetAt(foundModelInfo->m_nTxdIndex) /*has valid TXD*/
+            && CTxdStore::ms_pTxdPool->GetAt(foundModelInfo->m_nTxdIndex)->m_pRwDictionary /* exe 0x409F40: the slot's RW dictionary must be non-null */
         ) {
             CTxdStore::AddRef(foundModelInfo->m_nTxdIndex); // Makes sure TXD doesn't get unloaded
             RemoveModel(modelId);

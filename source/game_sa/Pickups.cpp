@@ -796,7 +796,13 @@ void CPickups::PictureTaken() {
             continue;
 
         const auto pupPos = pickup.GetPosn();
-        const auto dist = DistanceBetweenPoints(TheCamera.GetPosition(), pupPos);
+        const auto dist = [&] { // 0x456AB6: sqrt((dz^2 + dy^2) + dx^2)
+            const auto cam = TheCamera.GetPosition();
+            const float dx = pupPos.x - cam.x;
+            const float dy = pupPos.y - cam.y;
+            const float dz = pupPos.z - cam.z;
+            return std::sqrt((dz * dz + dy * dy) + dx * dx);
+        }();
 
         if (90.0f / TheCamera.FindCamFOV() * 20.0f > dist && dist < lastFoundDist) {
             CVector origin = pupPos;
@@ -812,7 +818,7 @@ void CPickups::PictureTaken() {
 
     aPickUps[*capturedPickup].Remove();
 
-    FindPlayerInfo().m_nMoney += 100'000; // originally rewarded to the player 1.
+    CWorld::Players[0].m_nMoney += 100; // 0x456C57: 100 (not 100000) per photo, player 1
 
     AudioEngine.ReportFrontendAudioEvent(AE_FRONTEND_PICKUP_COLLECTABLE1);
     CStats::IncrementStat(STAT_SNAPSHOTS_TAKEN, 1.0f);
@@ -821,7 +827,7 @@ void CPickups::PictureTaken() {
     const auto total = CStats::GetStatValue(STAT_TOTAL_SNAPSHOTS);
     if (taken == total) {
         CGarages::TriggerMessage("SN_ALL");
-        FindPlayerInfo().m_nMoney += 100'000;
+        FindPlayerInfo().m_nMoney += 100'000; // 0x456C9F: indexed by PlayerInFocus (0xB7CD74)
     } else {
         CGarages::TriggerMessage("SN_ONE", NOTSA_FTOL(int16, taken), 5000u, NOTSA_FTOL(int16, total));
     }

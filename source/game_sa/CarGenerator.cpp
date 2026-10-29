@@ -111,9 +111,11 @@ void CCarGenerator::DoInternalProcessing()
     tCarGenPlateText plate{};
     int32 tractorDriverPedType;
 
-    bool nightTime = CClock::ClockHoursInRange(21, 7);
+    // exe 0x6F34E8: hours > 21 || hours < 7 (the range helper, with start > end, was always false)
+    const bool nightTime = CClock::GetGameClockHours() > 21 || CClock::GetGameClockHours() < 7;
+    // the exe compares the counter signed (jge)
     if (!bIgnorePopulationLimit
-        && (nightTime && CCarCtrl::NumParkedCars >= 10 || !nightTime && CCarCtrl::NumParkedCars >= 5)
+        && (nightTime && (int32)CCarCtrl::NumParkedCars >= 10 || !nightTime && (int32)CCarCtrl::NumParkedCars >= 5)
     )
         return;
 
@@ -141,11 +143,15 @@ void CCarGenerator::DoInternalProcessing()
                 return;
 
             auto mi = CModelInfo::GetModelInfo(actualModelId)->AsVehicleModelInfoPtr();
-            if (mi->IsBoat())
+            // exe 0x6F359D: byte [mi + 0x4D] == 5, the vehicle class (VEHICLE_CLASS_BIG), not the boat type
+            if (mi->m_nVehicleClass == VEHICLE_CLASS_BIG)
                 return;
 
-            if (mi->GetBoundingBox()->GetLength() > 8.0f)
-                return;
+            // exe 0x6F35A6: the colmodel is optional (no bound check without it); length is max.y - min.y, strictly greater than 8
+            if (auto* const col = mi->GetColModel()) {
+                if (col->GetBoundingBox().GetLength() > 8.0f)
+                    return;
+            }
 
             m_nModelId = -actualModelId;
             m_nPrimaryColor = -1;
@@ -259,7 +265,7 @@ void CCarGenerator::DoInternalProcessing()
     CVector posn = m_vecPosn;
     posn.z = vehicle->GetDistanceFromCentreOfMassToBaseOfModel() + baseZ;
     vehicle->SetPosn(posn);
-    vehicle->SetOrientation(0.0f, 0.0f, m_nAngle * (TWO_PI / 256));
+    vehicle->SetOrientation(0.0f, 0.0f, (uint8)m_nAngle * (TWO_PI / 256));
     vehicle->SetStatus(STATUS_ABANDONED);
     vehicle->m_nDoorLock = eCarLock::CARLOCK_UNLOCKED;
     vehicle->vehicleFlags.bHasBeenOwnedByPlayer = bPlayerHasAlreadyOwnedCar;
@@ -289,6 +295,7 @@ void CCarGenerator::DoInternalProcessing()
                     vehicle->m_autoPilot.m_startingRouteNode = baseLink;
                     vehicle->SetStatus(STATUS_PHYSICS);
                     vehicle->vehicleFlags.bNeverUseSmallerRemovalRange = true;
+                    vehicle->m_nExtendedRemovalRange = 255; // 0x6F3C71
                     bWaitUntilFarFromPlayer = true;
                     tractorDriverPedType = PED_TYPE_CIVMALE;
                 }

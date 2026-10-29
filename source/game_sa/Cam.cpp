@@ -7354,7 +7354,7 @@ bool CCam::Process_WheelCam(const CVector&, float, float, float) {
             m_vecSource += m_vecUp * camZ;
             skipGeneric = true;
         } else if (veh->m_nVehicleType == VEHICLE_TYPE_TRAIN) {
-            if (veh->m_vecMoveSpeed.x * m_vecFront.x + m_vecFront.y * veh->m_vecMoveSpeed.y + m_vecFront.z * veh->m_vecMoveSpeed.z < 0.0f) {
+            if (m_vecFront.z * veh->m_vecMoveSpeed.z + m_vecFront.y * veh->m_vecMoveSpeed.y + veh->m_vecMoveSpeed.x * m_vecFront.x < 0.0f) { // exe 0x5127F0: sums z, y, x
                 m_vecFront = -m_vecFront;
             }
         }

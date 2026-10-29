@@ -205,20 +205,19 @@ eCarMission CCarAI::FindPoliceBoatMissionForWantedLevel() {
 
 // 0x41C9D0
 eCarMission CCarAI::FindPoliceCarMissionForWantedLevel() {
-    float chance = 100.f;
+    // 0x41C9E9..0x41CA1C: (rand() & 3) < limit ? BLOCKPLAYER_FARAWAY (4) : RAMPLAYER_FARAWAY (2) [port: RandomBool(chance) ? 4 : BLOCKPLAYER_HANDBRAKESTOP (6)]
+    int32 limit;
     switch (FindPlayerWanted()->GetWantedLevel()) {
-    case eWantedLevel::WANTED_CLEAN:
-    case eWantedLevel::WANTED_LEVEL_1: return MISSION_BLOCKPLAYER_FARAWAY;
-    case eWantedLevel::WANTED_LEVEL_2: chance = 75.f; break; // rand() % 4 != 3
-    case eWantedLevel::WANTED_LEVEL_3: chance = 50.f; break; // rand() % 4 < 2
+    case eWantedLevel::WANTED_LEVEL_2: limit = 3; break;
+    case eWantedLevel::WANTED_LEVEL_3: limit = 2; break;
     case eWantedLevel::WANTED_LEVEL_4:
     case eWantedLevel::WANTED_LEVEL_5:
-    case eWantedLevel::WANTED_LEVEL_6: chance = 25.f; break; // rand() % 4 == 0
-    default: NOTSA_UNREACHABLE(); return MISSION_BLOCKPLAYER_FARAWAY; // 0x41CA1C: out of range wanted level => mission 4
+    case eWantedLevel::WANTED_LEVEL_6: limit = 1; break;
+    default:                           return MISSION_BLOCKPLAYER_FARAWAY; // 0x41CA1C: levels 0, 1 and out of range => mission 4 (no rand)
     }
-    return CGeneral::RandomBool(chance)
+    return (CGeneral::GetRandomNumber() & 3) < limit
         ? MISSION_BLOCKPLAYER_FARAWAY
-        : MISSION_BLOCKPLAYER_HANDBRAKESTOP;
+        : MISSION_RAMPLAYER_FARAWAY;
 }
 
 // 0x41CAA0

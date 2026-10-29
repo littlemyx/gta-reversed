@@ -533,16 +533,12 @@ void CCarAI::MellowOutChaseSpeedBoat(CVehicle* vehicle) {
 // unused
 // 0x41C900
 void CCarAI::TellCarToBlockOtherCar(CVehicle* vehicle1, CVehicle* vehicle2) {
-    /*
-    vehicle1->m_autoPilot.m_pTargetCar = vehicle2;
-    CEntity::SafeRegisterRef(vehicle1->m_autoPilot.m_pTargetCar);
+    vehicle1->m_autoPilot.m_TargetEntity = vehicle2;
+    CEntity::SafeRegisterRef(vehicle1->m_autoPilot.m_TargetEntity);
     CCarCtrl::JoinCarWithRoadSystem(vehicle1);
-    vehicle1->m_autoPilot.SetCarMission(MISSION_BLOCKCAR_FARAWAY);
-    vehicle1->vehicleFlags.bEngineOn    = !vehicle1->vehicleFlags.bEngineBroken;
-
-    vehicle1->m_autoPilot.SetCruiseSpeed(std::max(vehicle1->m_autoPilot.m_nCruiseSpeed, (uint8)6));
-    */
-    NOTSA_UNREACHABLE("Unused");
+    vehicle1->m_autoPilot.m_nCarMission  = MISSION_BLOCKCAR_FARAWAY;
+    vehicle1->vehicleFlags.bEngineOn     = vehicle1->vehicleFlags.bEngineBroken == 0;
+    vehicle1->m_autoPilot.m_nCruiseSpeed = std::max(vehicle1->m_autoPilot.m_nCruiseSpeed, (uint8)6);
 }
 
 // 0x41C960

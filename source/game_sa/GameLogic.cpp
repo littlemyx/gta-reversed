@@ -890,7 +890,7 @@ void CGameLogic::UpdateSkip() {
         break;
 
     case SKIP_IN_PROGRESS: {
-        if (CTimer::GetTimeInMS() < SkipTimer)
+        if (CTimer::GetTimeInMS() <= SkipTimer) // exe 0x4425CB: cmp + jbe (port: <, ran one tick early)
             return;
 
         CTimer::Suspend();

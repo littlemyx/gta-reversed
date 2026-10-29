@@ -144,6 +144,9 @@ void CPedGroups::Process() {
 
     const auto SetGroupsDecisionMakerType = [](eDecisionMakerType dm) {
         for (auto&& [_, g] : GetActiveGroupsWithIDs()) {
+            if (g.m_bIsMissionGroup) { // 0x5FC8F0 (and 7 more): mission groups keep their decision maker
+                continue;
+            }
             g.GetIntelligence().SetGroupDecisionMakerType(dm);
         }
     };

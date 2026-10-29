@@ -1454,7 +1454,8 @@ void CTheScripts::Process() {
         assert(NumberOfIntroRectanglesThisFrame == 0);
     }
 
-    const auto timeStepMS = NOTSA_FTOL(int32, CTimer::GetTimeStepInMS());
+    // exe 0x46A00B: `fld [0xB7CB58] (ms_fTimeStepNonClipped); fmul 0.02f; fmul 1000.f; _ftol` (port used the clipped ms_fTimeStep)
+    const auto timeStepMS = NOTSA_FTOL(int32, static_cast<x87d>(CTimer::GetTimeStepNonClipped()) * static_cast<x87d>(0.02f) * static_cast<x87d>(1000.0f));
     LocalVariablesForCurrentMission[SCRIPT_VAR_TIMERA].iParam += timeStepMS;
     LocalVariablesForCurrentMission[SCRIPT_VAR_TIMERB].iParam += timeStepMS;
 

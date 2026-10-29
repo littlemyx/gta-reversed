@@ -380,7 +380,8 @@ void CFireManager::Update() {
      && CTimer::GetTimeInMS() / 500u != CTimer::GetPreviousTimeInMS() / 500u
     ) {
         const float fRandomAngleRad = CGeneral::GetRandomNumberInRange(0.0f, TWO_PI);
-        const float fRandomDir = CGeneral::GetRandomNumberInRange(35.0f, 60.0f);
+        // 0x53AF92-0x53AFBA: rand() * (1/32767) * 25.0 + 35.0 stays in the x87 register (it multiplies sin / cos unrounded), not rounded to a float
+        const x87d fRandomDir = (x87d)CGeneral::GetRandomNumber() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (x87d)25.0f + (x87d)35.0f;
         CVector point = TheCamera.GetPosition() + CVector{
             (float)(X87R(x87::sin(fRandomAngleRad) * fRandomDir)),
             (float)(X87R(x87::cos(fRandomAngleRad) * fRandomDir)),
@@ -391,21 +392,28 @@ void CFireManager::Update() {
         bool bHit{};
         point.z = CWorld::FindGroundZFor3DCoord(point, &bHit, &hitEntity);
 
-        CVector pointToCamDirNorm = (TheCamera.GetPosition() - point);
+        // 0x53B040-0x53B089: direction FROM the camera TO the ground point (port: reversed), camera forward = matrix->forward, or (-sin(heading), cos(heading), 0) without a matrix
+        CVector pointToCamDirNorm = point - TheCamera.GetPosition();
         pointToCamDirNorm.Normalise();
+        const CVector camForward = TheCamera.GetForwardVector();
 
-        // In the PC version 0.2f and "riot_smoke" is accessed through an array
-        // On the Android version it's inlined
-        // Android values used here, and on the PC version the array access isn't
-        // a 100% clear to me.
-        // TODO: Use the array here
-        if ((x87d)DotProduct(TheCamera.GetForward(), pointToCamDirNorm) > (x87d)0.2 || // 0x53B100: fcomp qword 0.2 (0x862D08), not 0.2f
-                 CGeneral::GetRandomNumber() < RAND_MAX / 2) {
-            auto fx = g_fxMan.CreateFxSystem("riot_smoke", point, nullptr, true);
-            if (fx)
-                fx->PlayAndKill();
-        } else {
-            StartFire(point, CGeneral::GetRandomNumberInRange(0.5f, 2.5f), true, nullptr, 30000u, 5, 1);
+        // 0x53B0AD-0x53B0DE: nothing is created unless the ground probe hit an entity with flags bit 16 (byte +0x1E bit 0) set, a hit was reported and the ground z > 0.5
+        // (the port created smoke / fire at the probe result regardless)
+        if (hitEntity && hitEntity->m_bDontCastShadowsOn && bHit && point.z > 0.5f) {
+            // In the PC version 0.2f and "riot_smoke" is accessed through an array
+            // On the Android version it's inlined
+            // Android values used here, and on the PC version the array access isn't
+            // a 100% clear to me.
+            // TODO: Use the array here
+            // 0x53B0E4-0x53B100: (z + y) + x of the float products, summed in x87 registers (no float rounding), compared with the double 0.2 (0x862D08)
+            const x87d dot = (x87d)camForward.z * (x87d)pointToCamDirNorm.z + (x87d)camForward.y * (x87d)pointToCamDirNorm.y + (x87d)camForward.x * (x87d)pointToCamDirNorm.x;
+            if (dot > (x87d)0.2 || CGeneral::GetRandomNumber() < RAND_MAX / 2) {
+                auto fx = g_fxMan.CreateFxSystem("riot_smoke", point, nullptr, true);
+                if (fx)
+                    fx->PlayAndKill();
+            } else {
+                StartFire(point, CGeneral::GetRandomNumberInRange(0.5f, 2.5f), true, nullptr, 30000u, 5, 1);
+            }
         }
     }
 

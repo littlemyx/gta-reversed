@@ -1083,7 +1083,7 @@ void CEntity::CreateEffects() {
             const auto vecWorldExit = TransformFromObjectSpace(vecExit);
 
             if (effect->enEx.bTimedEffect) {
-                auto ucDays = CClock::GetGameClockDays();
+                uint32 ucDays = CClock::GetGameClockDays(); // exe 0x5339D5: movzx into a 32-bit register, so `dec` of day 0 gives 0xFFFFFFFF (a uint8 wrapped to 255)
                 if (effect->enEx.m_nTimeOn > effect->enEx.m_nTimeOff && CClock::ms_nGameClockHours < effect->enEx.m_nTimeOff) {
                     ucDays--;
                 }

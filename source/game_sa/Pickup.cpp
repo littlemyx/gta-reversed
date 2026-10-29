@@ -100,6 +100,8 @@ void CPickup::GetRidOfObjects() {
 // Creates an object (CObject) for pickup. slotIndex - object to replace; use -1 (or any negative value) to create a new object
 // 0x4567E0
 void CPickup::GiveUsAPickUpObject(CObject*& obj, int32 slotIndex) {
+    obj = nullptr; // 0x4567E5: the out reference is cleared first (also when the cutscene early-out is taken)
+
     const auto mi = CModelInfo::GetModelInfo(m_nModelIndex);
 
     if (CCutsceneMgr::HasLoaded()) {
@@ -112,6 +114,9 @@ void CPickup::GiveUsAPickUpObject(CObject*& obj, int32 slotIndex) {
 
     if (slotIndex < 0) {
         obj = CObject::Create(m_nModelIndex, false);
+        if (!obj) { // 0x456880: both creation paths bail out on null
+            return;
+        }
     } else {
         CPools::MakeSureSlotInObjectPoolIsEmpty(slotIndex);
         obj = new (slotIndex << 8) CObject(m_nModelIndex, false);
@@ -127,14 +132,14 @@ void CPickup::GiveUsAPickUpObject(CObject*& obj, int32 slotIndex) {
         obj->m_bUnderwater = true;
     }
 
-    obj->SetOrientation(0.0f, 0.0f, -HALF_PI);
-    obj->SetHeading(-HALF_PI);
+    obj->SetOrientation(0.0f, 0.0f, -HALF_PI); // 0x4568E5 (no SetHeading call), then the inlined UpdateRwMatrix + UpdateRwFrame
+    obj->UpdateRwMatrix();
     obj->UpdateRwFrame();
     obj->physicalFlags.bApplyGravity = false;
     obj->physicalFlags.bExplosionProof = true;
     obj->SetUsesCollision(false);
     obj->objectFlags.bIsPickup = true;
-    obj->objectFlags.b0x02 = obj->GetCollisionProcessed();
+    obj->objectFlags.b0x02 = m_nFlags.bEmpty; // 0x45693A: bit 1 of the pickup flags (bEmpty) is copied
     obj->objectFlags.bDoNotRender = PickUpShouldBeInvisible();
     obj->m_bHasPreRenderEffects = true;
     obj->m_bTunnelTransition = true;
@@ -153,7 +158,7 @@ void CPickup::GiveUsAPickUpObject(CObject*& obj, int32 slotIndex) {
         break;
     case PICKUP_PROPERTY_FORSALE:
         obj->objectFlags.bPickupPropertyForSale = true;
-        obj->m_wCostValue = m_nAmmo / 5u;
+        obj->m_wCostValue = (int32)m_nAmmo / 5; // 0x4569F0: signed division
         break;
     default:
         break;

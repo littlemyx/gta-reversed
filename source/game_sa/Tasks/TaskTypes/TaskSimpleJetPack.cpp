@@ -349,7 +349,7 @@ void CTaskSimpleJetPack::ProcessControlInput(CPlayerPed* player) {
     const auto InterpolateThrustAngle = [&, this]{
         // exe (0x67E938): `p = pow(0.9, timestep)` stays on the x87 stack; result = (1 - p) * (walkUpDown * (1/128)) * 75deg + thrustAngle * p
         // (NOT common.h's `lerp`: this is the `from * (1 - t) + to * t` form with the multiplications in this order)
-        const double p = std::pow((double)JETPACK_ANGLE_RATE, (double)CTimer::GetTimeStep());
+        const double p = x87::pow((double)JETPACK_ANGLE_RATE, (double)CTimer::GetTimeStep());
         m_ThrustAngle = (float)(((X87R(1.0 - p)) * (x87d)(walkUpDown / 128.f)) * (x87d)THRUST_MAX_ANGLE + X87R((double)m_ThrustAngle * p));
     };
 

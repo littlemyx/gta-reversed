@@ -509,7 +509,7 @@ bool CTaskSimpleUseGun::ProcessPed(CPed* ped) {
     if (const auto pd = ped->GetPlayerData()) {
         if (pd->m_fAttackButtonCounter > 0.0) {
             // 0x62A4CD - pow(0.96f, timestep)
-            pd->m_fAttackButtonCounter = (float)(X87R(std::pow((double)0.96f, (double)CTimer::GetTimeStep()) * (double)pd->m_fAttackButtonCounter));
+            pd->m_fAttackButtonCounter = (float)(X87R(x87::pow((double)0.96f, (double)CTimer::GetTimeStep()) * (double)pd->m_fAttackButtonCounter));
         }
     }
 

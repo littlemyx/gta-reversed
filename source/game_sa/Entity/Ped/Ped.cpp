@@ -2312,7 +2312,7 @@ void CPed::ProcessBuoyancy()
         }
 
         // pow() (the exe's _CIpow, 0x822130) returns its result on the x87 stack: each component is rounded once
-        const x87d p = pow((x87d)0.9F, (double)CTimer::GetTimeStep());
+        const x87d p = x87::pow((x87d)0.9F, (double)CTimer::GetTimeStep());
         m_vecMoveSpeed.x = (float)(m_vecMoveSpeed.x * p);
         m_vecMoveSpeed.y = (float)(m_vecMoveSpeed.y * p);
         if (m_vecMoveSpeed.z < 0.0F)
@@ -5118,7 +5118,7 @@ void CPed::ProcessControl()
         if (m_pPlayerData) {
             m_vecMoveSpeed.z = 0.25f;
         } else {
-            const auto scale = (float)std::pow(0.949999988079071, (double)CTimer::ms_fTimeStep); // 0x86C3C8 (double), _CIpow
+            const auto scale = (float)x87::pow(0.949999988079071, (double)CTimer::ms_fTimeStep); // 0x86C3C8 (double), _CIpow
             m_vecMoveSpeed = m_vecMoveSpeed * scale;
         }
     }

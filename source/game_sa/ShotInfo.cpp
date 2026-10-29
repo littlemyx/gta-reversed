@@ -99,7 +99,7 @@ void CShotInfo::Update() {
 
         if (weaponInfo.flags.bSlowdown) {
             // 0x739EF8: the double result of pow stays unrounded on the x87 stack while the 3 components are multiplied
-            const double slowdown = pow((double)0.96f, (double)CTimer::GetTimeStep());
+            const double slowdown = x87::pow((double)0.96f, (double)CTimer::GetTimeStep());
             shot.m_vecTargetOffset.x = (float)(X87R(slowdown * shot.m_vecTargetOffset.x));
             shot.m_vecTargetOffset.y = (float)(X87R(slowdown * shot.m_vecTargetOffset.y));
             shot.m_vecTargetOffset.z = (float)(X87R(slowdown * shot.m_vecTargetOffset.z));

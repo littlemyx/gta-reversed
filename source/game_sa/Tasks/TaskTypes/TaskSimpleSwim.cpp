@@ -515,7 +515,7 @@ void CTaskSimpleSwim::ProcessSwimmingResistance(CPed* ped) {
     }
 
     // 0x68A4D8: the exe keeps pow(0.9f, ts) unrounded on the x87 stack: 1 - T is rounded, T * moveSpeed is rounded after the multiply
-    const auto fTheTimeStep = std::pow(X87W((x87d)0.9f), X87W((x87d)CTimer::GetTimeStep())); // 53-bit CRT pow result, kept unrounded
+    const auto fTheTimeStep = x87::pow(X87W((x87d)0.9f), X87W((x87d)CTimer::GetTimeStep())); // 53-bit CRT pow result, kept unrounded
     vecPedMoveSpeed *= (float)(1.0 - fTheTimeStep);
     ped->m_vecMoveSpeed.x = (float)(X87R(fTheTimeStep * (x87d)ped->m_vecMoveSpeed.x)) + vecPedMoveSpeed.x;
     ped->m_vecMoveSpeed.y = (float)(X87R(fTheTimeStep * (x87d)ped->m_vecMoveSpeed.y)) + vecPedMoveSpeed.y;
@@ -1003,14 +1003,14 @@ void CTaskSimpleSwim::ProcessControlInput(CPlayerPed* ped) {
 
     if (m_fTurningRotationY > 0.01f || m_fTurningRotationY < -0.01f) {
         // exe 0x6894F7: the CRT pow result stays unrounded on the x87 stack, the multiply rounds once
-        m_fTurningRotationY = (float)(X87R(std::pow(X87W((x87d)fRotation), X87W((x87d)CTimer::GetTimeStep())) * (x87d)m_fTurningRotationY));
+        m_fTurningRotationY = (float)(X87R(x87::pow(X87W((x87d)fRotation), X87W((x87d)CTimer::GetTimeStep())) * (x87d)m_fTurningRotationY));
     } else {
         m_fTurningRotationY = 0.0f;
     }
 
     if (m_nSwimState != SWIM_UNDERWATER_SPRINTING && m_nSwimState != SWIM_SPRINTING) {
         if (m_fRotationX > 0.01f || m_fRotationX < -0.01f) {
-            m_fRotationX = (float)(X87R(std::pow(X87W((x87d)fRotation), X87W((x87d)CTimer::GetTimeStep())) * (x87d)m_fRotationX)); // exe 0x68953F
+            m_fRotationX = (float)(X87R(x87::pow(X87W((x87d)fRotation), X87W((x87d)CTimer::GetTimeStep())) * (x87d)m_fRotationX)); // exe 0x68953F
         } else {
             m_fRotationX = 0.0f;
         }
@@ -1019,7 +1019,7 @@ void CTaskSimpleSwim::ProcessControlInput(CPlayerPed* ped) {
     fRotation = m_nSwimState == SWIM_DIVE_UNDERWATER || m_nSwimState == SWIM_BACK_TO_SURFACE ? 0.95f : 0.92f;
 
     if (m_fAimingRotation > 0.01f || m_fAimingRotation < -0.01f || m_fUpperTorsoRotationX > 0.01f || m_fUpperTorsoRotationX < -0.01f) {
-        const auto fTimeStepRotation = std::pow(X87W((x87d)fRotation), X87W((x87d)CTimer::GetTimeStep())); // exe 0x6895BD: kept unrounded, each multiply rounds
+        const auto fTimeStepRotation = x87::pow(X87W((x87d)fRotation), X87W((x87d)CTimer::GetTimeStep())); // exe 0x6895BD: kept unrounded, each multiply rounds
         m_fAimingRotation      = (float)(X87R(fTimeStepRotation * (x87d)m_fAimingRotation));
         m_fUpperTorsoRotationX = (float)(X87R(fTimeStepRotation * (x87d)m_fUpperTorsoRotationX));
     } else {

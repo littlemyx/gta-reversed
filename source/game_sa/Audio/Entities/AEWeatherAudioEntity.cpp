@@ -125,7 +125,7 @@ void CAEWeatherAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) 
         if (pos <= reqPlayPos) { // 0x505AED
             sound->SetVolume((float)(X87R(std::log10(X87W((x87d)(int32)pos / (x87d)reqPlayPos)) * (x87d)20.0) + (x87d)reqVolume));
         } else if (pos <= reqPlayPos + 200u && reqVolume > 0.f) { // 0x505B2E
-            const x87d vol = std::pow(10.0, (x87d)reqVolume * (x87d)0.05f);
+            const x87d vol = x87::pow(10.0, (x87d)reqVolume * (x87d)0.05f);
             const x87d t   = (x87d)(pos - reqPlayPos);
             sound->SetVolume((float)(X87R(std::log10(X87W(X87R((t * (X87R((x87d)1.0 - vol))) * (x87d)0.005f + vol))) * 20.0)));
         } else { // 0x505B97

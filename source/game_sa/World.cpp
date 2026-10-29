@@ -2380,7 +2380,7 @@ void CWorld::Process() {
                             NOTSA_LOG_DEBUG("STUCK: Final Step: Player Entity {} Is Stuck", entity->GetModelIndex()); // R* log
                             const auto physical = entity->AsPhysical();
                             // exe 0x568952: pow(0.707f, ms_fTimeStep) (the raw time step, NOT GetTimeStepInMS), the pow result stays unrounded for the three multiplies
-                            const auto damping = std::pow(X87W((x87d)WORLD_PLAYER_SHIFT_DAMPING), X87W((x87d)CTimer::GetTimeStep())); // 53-bit CRT pow result, kept unrounded
+                            const auto damping = x87::pow(X87W((x87d)WORLD_PLAYER_SHIFT_DAMPING), X87W((x87d)CTimer::GetTimeStep())); // 53-bit CRT pow result, kept unrounded
                             physical->m_vecMoveSpeed.x = (float)(X87R(damping * physical->m_vecMoveSpeed.x));
                             physical->m_vecMoveSpeed.y = (float)(X87R(damping * physical->m_vecMoveSpeed.y));
                             physical->m_vecMoveSpeed.z = (float)(X87R(damping * physical->m_vecMoveSpeed.z));

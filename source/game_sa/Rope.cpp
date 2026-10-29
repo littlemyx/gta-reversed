@@ -325,7 +325,7 @@ void CRope::Update() {
     CVector scratch{};
 
     // Fraction of the speed that is kept each frame
-    const float damping = static_cast<float>(std::pow(static_cast<double>(0.8f), static_cast<double>(CTimer::GetTimeStep())));
+    const float damping = static_cast<float>(x87::pow(static_cast<double>(0.8f), static_cast<double>(CTimer::GetTimeStep())));
 
     // Everything below is done only for ropes near the camera (NOTE: `m_nFlags2` isn't cleared if we bail out here)
     {

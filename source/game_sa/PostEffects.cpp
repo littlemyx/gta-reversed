@@ -124,7 +124,7 @@ static int ExeRasterLog2(int w) { return (int)(std::log((double)w) / std::log(2.
 
 // notsa
 int32 CPostEffects::ExeRasterSize(int32 w) {
-    return NOTSA_FTOL(int32, std::pow(2.0, (double)(ExeRasterLog2(w) + 1)));
+    return NOTSA_FTOL(int32, x87::pow(2.0, (double)(ExeRasterLog2(w) + 1)));
 }
 
 // 0x7043D0

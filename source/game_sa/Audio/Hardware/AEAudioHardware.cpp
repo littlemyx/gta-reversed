@@ -518,7 +518,7 @@ void CAEAudioHardware::RescaleChannelVolumes() {
 
         // NOTE: `pow` in double precision on purpose - the original computes it on the
         // x87 FPU in temp-real precision (`FLD qword [10.0]` @ 0x4D8B58).
-        m_ChannelGains[i] = static_cast<float>(std::pow(10.0, vol * 0.05f));
+        m_ChannelGains[i] = static_cast<float>(x87::pow(10.0, vol * 0.05f));
 
         if (flags & FLAG_UNDUCKABLE) {
             fullSum += m_ChannelGains[i];

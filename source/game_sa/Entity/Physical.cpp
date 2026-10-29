@@ -1549,7 +1549,7 @@ void CPhysical::ApplyAirResistance()
         }
 
         // pow() (the exe's _CIpow, 0x822130) returns its result on the x87 stack: each component is rounded once
-        const x87d p = pow((x87d)1.0 - (x87d)fSpeedMagnitude, (double)CTimer::GetTimeStep());
+        const x87d p = x87::pow((x87d)1.0 - (x87d)fSpeedMagnitude, (double)CTimer::GetTimeStep());
         m_vecMoveSpeed.x = (float)(m_vecMoveSpeed.x * p);
         m_vecMoveSpeed.y = (float)(m_vecMoveSpeed.y * p);
         m_vecMoveSpeed.z = (float)(m_vecMoveSpeed.z * p);
@@ -1557,7 +1557,7 @@ void CPhysical::ApplyAirResistance()
     }
     else
     {
-        const double p = pow((double)m_fAirResistance, (double)CTimer::GetTimeStep());
+        const double p = x87::pow((double)m_fAirResistance, (double)CTimer::GetTimeStep());
         m_vecMoveSpeed.x = (float)(X87R(m_vecMoveSpeed.x * p));
         m_vecMoveSpeed.y = (float)(X87R(m_vecMoveSpeed.y * p));
         m_vecMoveSpeed.z = (float)(X87R(m_vecMoveSpeed.z * p));

@@ -1,0 +1,10 @@
+# SYSTEMIC-9 - LITDIV UNCLEAR rows, FIXBUGS leftovers, Event.cpp log10 - 2026-10-29
+- LITDIV: the 40 `UNCLEAR/open` rows resolved (.notes/asm_sweep/LITDIV.tsv): 25 FIXED, 14 ok (12 folded/compile-time constants equal to the exe constant or exe divides by a runtime expression, 2 already fixed by later sweeps), 1 n/a (cTransmission debug log).
+  Line numbers in the TSV are stale (scan of 304805a6); sites were located by value.
+- Real deviations found (commits): NitrousControl recharge ts*0.001f not ts/100 (10x slower than the old port) bfcb111e; GetNearestCarDoor bike pick-up test was a forward-vector dot, exe uses the ped-position bearing vs vehicle heading < pi/6 (+ doorId==18 pass-through) a5063182;
+  ModifyMatrixForCrane constant 3.14f/512 not PI/512.26 8e5af3df; Escalator plane counts 1 - ftol(d*-0.3125f) + z,y,x sum 1bd0140e; UpdateSkip speed *0.4f, SetPiece *0.6666667f 5796a211; Birds ts*0.002f 26ad28ef;
+  3dMarkers StdSize/alpha fade folded constants 31aabe8f; ClothesBuilder ratio multiplies and rNormal = 1-(fat+muscle) 23406b39; PostEffects::Fog quad geometry and speed magnitude c7d67749;
+  LoadingScreen music volume (255-a)/255 (port /25 gave up to 10.2), SaveStatsToFile n*0.001f*100, Sprite2d DrawBarChart scale, CStats::GetPercentageProgress divides by the TOTAL_PROGRESS stat (0 -> 0) fa0754bb.
+- Event.cpp: CEvent::GetSoundLevel used std::min(dist, 1) where the exe raises the distance to at least 1 (fcomp 1.0, jp keeps >= 1), so the sound falloff was cancelled; now max, z,y,x sum, x87::log10 (fyl2x) for log10(level*level)*10, 400d7ef4.
+- FIXBUGS: the two UNSURE rows asm-read: CMenuManager save-done SetDir("") (0x578DCA) and CTheScripts::DrawDebugSquare p4.z (0x486840) are not in the exe -> now under #ifdef FIX_BUGS (738f1057). Rows marked "not asm-read" (render/UI/loaders) left as is.
+- Tests: StandaloneRelease + StandaloneRW (wave2_oracle_test) build clean; wave2_oracle_test 1142 functions 0 mismatches (PC24 0/0, PC53 0/0); gameplay_regress combat PASS=14; soak.sh 3 min RESULT OK errors 0; PortableWin64 compile of the 17 touched .cpp files clean.

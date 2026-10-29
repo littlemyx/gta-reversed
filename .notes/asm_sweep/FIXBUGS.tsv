@@ -62,7 +62,7 @@ Cheat.cpp	551	CCheat hate cheat off	0x439B20	OK-NONFIX	already NOTSA_STANDALONE_
 Glass.cpp	495	CGlass specular	-	OK-NONFIX	already notsa::IsFixBugs() (0.57f in the run build)	-
 Radar.cpp	2474	CRadar::DrawBlips (2 player markers)	-	OK-FAITHFUL	already guarded with notsa::IsFixBugs() (the earlier NOT_REACHED note was wrong); split screen only	-
 Replay.cpp	813	CReplay::RestoreStuffFromMem	0x45ECD0	UNGUARDED-FIX	exe restores only the scalar counters (0xC0EC24..0xC0EC70), never 0x97FA80 -> ms_nNumGang 0xC0EC3C; port restored it unguarded; moved under FIX_BUGS	bb399c11
-Scripts/TheScripts.cpp	1705	debug zone box	-	UNSURE	debug-line helper, no gameplay effect; not asm-read	-
+Scripts/TheScripts.cpp	1705	debug zone box	-	FIXED-GUARDED	DrawDebugSquare p4.z fix is not in the exe (0x486840 leaves it at -1000); now under #ifdef FIX_BUGS	738f1057
 Streaming.cpp	3076	CStreaming::Shutdown	-	OK-FAITHFUL	nulls the pointer after delete; no behavioural effect	-
 FileLoader.cpp	172	CFileLoader::LoadModelFile	-	DOCUMENTED-DEVIATION	null mi crash guard	-
 Font.cpp	178	CFont::Shutdown	-	DOCUMENTED-DEVIATION	SafeRemoveTxdSlot: existence check on shutdown, no gameplay effect	-
@@ -72,7 +72,7 @@ ModelInfoAccelerator.cpp	81	CModelInfoAccelerator::EndOfLoadPhase	-	DOCUMENTED-D
 cHandlingDataMgr.cpp	219	cHandlingDataMgr::LoadHandlingData	-	DOCUMENTED-DEVIATION	sized sscanf, identical on valid data (overflow guard)	-
 ObjectData.cpp	68	CObjectData::Initialise	-	DOCUMENTED-DEVIATION	sized sscanf, identical on valid data (overflow guard)	-
 PPTriPlantBuffer.cpp	33	PPTriPlantBuffer	-	DOCUMENTED-DEVIATION	null check (crash guard)	-
-Frontend/MenuManager_Process.cpp	143	CMenuManager::Process (load save)	-	UNSURE	SetDir("") after the My Documents SCR.SCM open; exe behaviour not checked	-
+Frontend/MenuManager_Process.cpp	143	CMenuManager::Process (load save)	-	FIXED-GUARDED	asm-read 0x578DCA-0x578DCF: the exe does not SetDir("") after the mission-pack SCR.SCM open; now under #ifdef FIX_BUGS	738f1057
 Tasks/TaskTypes/TaskSimpleSwim.cpp	665	CTaskSimpleSwim::ProcessEffects	0x68AA70	UNGUARDED-FIX	exe emits the bubbles at matrix-array index 3 (add eax,0xF0 at 0x68AC8F = BONE_SPINE1); port used BONE_JAW unguarded; port code now under FIX_BUGS	adda5b4b
 Population.cpp	1670	CPopulation::ConvertToDummyObject	-	OK-FAITHFUL	assert only	-
 GangWars.cpp	952	CGangWars::TellStreamingWhichGangsAreNeeded	-	OK-FAITHFUL	parameter type only	-

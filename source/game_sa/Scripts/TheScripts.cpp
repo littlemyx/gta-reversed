@@ -986,8 +986,8 @@ void CTheScripts::RemoveScriptCheckpoint(int32 scriptIndex) {
     if (const auto* cp = scp.m_Checkpoint) {
         CCheckpoints::DeleteCP(cp->m_ID, cp->m_Type.get_underlying());
     }
-    scp.m_bUsed = false;
-    scp.m_nId = 0;
+    scp.m_bUsed      = false;
+    scp.m_Checkpoint = nullptr; // exe 0x493703; m_nId is NOT touched: it keeps counting up so stale handles stay invalid (CTheScripts::Init sets it to 1)
 
     --NumberOfScriptCheckpoints;
 }

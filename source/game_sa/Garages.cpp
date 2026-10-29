@@ -103,23 +103,29 @@ void CGarages::Update() {
     TheCamera.m_pToGarageWeAreInForHackAvoidFirstPerson = nullptr;
 
     for (int32 i = 0; auto& garage : aGarages) {
-        garage.Update(i++);
+        if (garage.m_nType != eGarageType::INVALID) { // 0x44C906: unused slots are skipped
+            garage.Update(i);
+        }
+        i++;
     }
 
     if (CTimer::GetFrameCounter() % 16 != 12) // todo: magic number
         return;
 
-    auto& garageToCheck = GetGarage(LastUpdatedGarageId++);
-    if (LastUpdatedGarageId >= std::size(aGarages))
+    // 0x44C938: the id is advanced (and wrapped) BEFORE the garage is picked
+    if (++LastUpdatedGarageId >= std::size(aGarages))
         LastUpdatedGarageId = 0;
+    auto& garageToCheck = GetGarage(LastUpdatedGarageId);
 
     if (garageToCheck.m_nType == eGarageType::INVALID)
         return;
 
-    // Originally they've clearly used an some kind of `abs` macro (probably to "optimize" it)... And failed miserably lol
+    // 0x44C966: abs(cam - garage corner) per axis, `> 40.0` (strict) sends it to the far-away variant; NaN/equal count as near.
+    // The difference stays in the FPU (extended precision).
     const auto& camPos = TheCamera.GetPosition();
-    if (   std::abs(garageToCheck.m_fLeftCoord - camPos.x) < 40.f
-        && std::abs(garageToCheck.m_fFrontCoord - camPos.y) < 40.f
+    const auto  AbsD   = [](x87d v) { return v < 0.0 ? -v : v; };
+    if (   !(AbsD((x87d)camPos.x - garageToCheck.m_fLeftCoord) > 40.0)
+        && !(AbsD((x87d)camPos.y - garageToCheck.m_fFrontCoord) > 40.0)
     ) {
         garageToCheck.TidyUpGarageClose();
     } else {

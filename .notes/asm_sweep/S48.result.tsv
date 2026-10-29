@@ -1,0 +1,41 @@
+addr	function	verdict	asm range	note	fix commit
+0x4B6080	CEventRevived::~CEventRevived	MATCH	0x4B6080-0x4B60CA (all)	deleting destructor: vtable reset to CEvent, member reference cleanup, pool slot flagged free (imul 0x78787879 index) - same sequence as the port	-
+0x4B6120	CEventSexyPed::~CEventSexyPed	MATCH	0x4B6120-0x4B616A (all)	deleting destructor: vtable reset to CEvent, member reference cleanup, pool slot flagged free (imul 0x78787879 index) - same sequence as the port; m_SexyPed at +0x14	-
+0x4B6170	CEventSexyVehicle::~CEventSexyVehicle	MATCH	0x4B6170-0x4B61BA (all)	deleting destructor: vtable reset to CEvent, member reference cleanup, pool slot flagged free (imul 0x78787879 index) - same sequence as the port; m_vehicle at +0xC	-
+0x4B6750	CEventSpecial::~CEventSpecial	MATCH	0x4B6750-0x4B679B (all)	deleting destructor: vtable reset to CEvent, member reference cleanup, pool slot flagged free (imul 0x78787879 index) - same sequence as the port	-
+0x4B6350	CEventVehicleThreat::~CEventVehicleThreat	MATCH	0x4B6350-0x4B639A (all)	deleting destructor: vtable reset to CEvent, member reference cleanup, pool slot flagged free (imul 0x78787879 index) - same sequence as the port; m_Vehicle at +0x14	-
+0x4B62B0	CEventVehicleToSteal::~CEventVehicleToSteal	MATCH	0x4B62B0-0x4B62FA (all)	deleting destructor: vtable reset to CEvent, member reference cleanup, pool slot flagged free (imul 0x78787879 index) - same sequence as the port; m_vehicle at +0xC	-
+0x603720	CVehiclePotentialCollisionScanner::ScanForVehiclePotentialCollisionEvents	MATCH	0x603720-0x603A29 (all)	timer 500, plane tests on the x87 stack (< 0.5, NaN false), train dist 10, just-left-car bit, dist*dist > sqMag, LOS dist > 0.5 all equal	-
+0x603A30	CPedAcquaintanceScanner::IsScanAllowed	MATCH	0x603A30-0x603AE9 (all)	mission ped / script flags (+0xC/+0xD/+0xE), scripted-task status 0, HATE event inform-friends branch equal	-
+0x603BF0	CSexyPedScanner::ScanForSexyPedEvents	MATCH	0x603BF0-0x603E69 (all)	sexiness signed compare, dz unrounded * rounded float chain (z,y,x), 10000 / bestDist / dot > 0 / LOS args, 3000 ms re-arm equal	-
+0x603E70	CNearbyFireScanner::ScanForNearbyFireEvents	MATCH	0x603E70-0x6040BA (all)	Start(0)/100 ms timer, dist chain (dy*dy+dx*dx)+dz*dz, 400 and 16 limits, |dz| < 2, walk-round-fire task 0x202 equal	-
+0x606580	CEventScanner::ScanForPedPotentialCollisionEvents	MATCH	0x606580-0x606888 (all)	2.5^2 best dist, y,z,x forward dot > 0, 0.7 sphere IntersectEdge, same-direction (>= 0.923) speed*50 test with approxEqual 0.01 all equal	-
+0x606890	CObjectPotentialCollisionScanner::ScanForObjectPotentialCollisionEvents	MATCH	0x606890-0x606B93 (all)	broken/pickup/collision flags, 7.5^2, z window (NaN rules), LOS dist > 0.5, second LOS from pos - 0.75 z equal	-
+0x606BA0	CPedAcquaintanceScanner::CreateAcquaintanceEvent	MATCH	0x606BA0-0x606E56 (all)	jump table 0..4 (respect/like/seen cop/dislike/hate), cheat byte 0x96913F, riot test, group task 1502 / 1000, badly-lit event fields equal	-
+0x607560	CPedAcquaintanceScanner::ScanCandidateForAcquaintance	MATCH	0x607560-0x6076A3 (all)	light-level NaN rules (jnp 0x44, jnp 5), 200/3000 interval, cop shortcut for type 2 equal	-
+0x607A90	CPedAcquaintanceScanner::ScanForPedAcquaintances	MATCH	0x607A90-0x607CF2 (all)	dot threshold, acquaintance loop 4..0, riot tests, event list {0x24,0x25,0x27,0x28} (exe passes count 5 with an uninitialised 5th slot: not reproducible), CanPedTargetPed arg equal	-
+0x607D80	CPedAcquaintanceScanner::ScanForPedAcquaintanceEvents	MATCH	0x607D80-0x607E1E (all)	timer 500, IsScanAllowed, ScanForPedAcquaintances args equal	-
+0x607E30	CEventScanner::ScanForEvents	MATCH	0x607E30-0x608250 (all)	scan order, in-air, on-fire (urgent MakeAbortable else GenerateDamageEvent 0x25/5/3), kill-ped area codes, escalator, boat, dead-ped-walking 2000 ms equal	-
+0x539360	CFire::CreateFxSysForStrength	MATCH	0x539360-0x5393E3 (all)	fx name by strength (fire / fire_med > 1 / fire_large > 2), Kill+Play equal (NaN strength picks fire_large in the exe, fire in the port: ignored)	-
+0x53A570	CFire::ProcessFire	DEVIATION	0x53A570-0x53AEFF (all)	strength update inverted; vehicle fire position (+0.15 in world vs model space); missing burning/fire-truck skip and generations 0 in the vehicle ignite loop; creeping fire rand order / normalise / z+2 / generations-1; merge moved the other fire (0.3/0.7) and took the max generations (exe: this fire, min signed); FX const time used absolute time; removal distance 3D vs XY; player proximity and distance chains in exe z,y,x order	84ef32bd9
+0x53A050	CFireManager::StartFire (entity)	DEVIATION	0x53A050-0x53A26A (all)	returned nullptr instead of the fire; generations unsigned min (exe signed); ReportCrime without creator (exe skips); pre-checks and time-to-burn MATCH	f7e7e76fc
+0x539D10	CFireManager::DestroyAllFxSystems	NOT_REACHED	-	budget	-
+0x539D50	CFireManager::CreateAllFxSystems	NOT_REACHED	-	budget	-
+0x53A270	CFireManager::StartScriptFire	NOT_REACHED	-	budget	-
+0x53AF00	CFireManager::Update	NOT_REACHED	-	budget	-
+0x53BB50	CGame::InitialiseOnceBeforeRW	NOT_REACHED	-	budget	-
+0x53BB80	CGame::ShutdownRenderWare	NOT_REACHED	-	budget	-
+0x53BC30	CGame::FinalShutdown	NOT_REACHED	-	budget	-
+0x53BC80	CGame::Initialise	NOT_REACHED	-	budget	-
+0x53BCF0	CGame::ReInitGameObjectVariables	NOT_REACHED	-	budget	-
+0x53BED0	CGame::ReloadIPLs	NOT_REACHED	-	budget	-
+0x53BEE0	CGame::Process	NOT_REACHED	-	budget	-
+0x53C4B0	CGame::CanSeeWaterFromCurrArea	NOT_REACHED	-	budget	-
+0x53C500	CGame::TidyUpMemory	NOT_REACHED	-	budget	-
+0x53C550	CGame::ShutDownForRestart	NOT_REACHED	-	budget	-
+0x53C680	CGame::InitialiseWhenRestarting	NOT_REACHED	-	budget	-
+0x53C810	CGame::DrasticTidyUpMemory	NOT_REACHED	-	budget	-
+0x53C900	CGame::Shutdown	NOT_REACHED	-	budget	-
+0x5BA060	CGame::ValidateVersion	NOT_REACHED	-	budget	-
+0x5BA160	CGame::InitialiseEssentialsAfterRW	NOT_REACHED	-	budget	-
+0x5BA1A0	CGame::Init2	NOT_REACHED	-	budget	-

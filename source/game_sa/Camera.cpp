@@ -3809,7 +3809,10 @@ bool CCamera::CameraColDetAndReact(CVector* source, CVector* target) {
     CEntity* const ignored = CWorld::pIgnoreEntity;
     const CVector  diff    = *source - *target;
 
-    float radius = diff.Magnitude() * gpCamColVars[0] * 0.2939f;
+    // 0x5201CB-0x5201E7 / 0x52044E-0x52045E: the exe inlines the length with the terms added in `z, y, x` order (CVector::Magnitude adds x, y, z)
+    const auto LengthZYX = [](x87d x, x87d y, x87d z) { return (float)std::sqrt((z * z + y * y) + x * x); };
+
+    float radius = LengthZYX(diff.x, diff.y, diff.z) * gpCamColVars[0] * 0.2939f;
 
     if (gCurCamColVars > 9 && ignored) {
         float limit;
@@ -3845,7 +3848,7 @@ bool CCamera::CameraColDetAndReact(CVector* source, CVector* target) {
             const float hx = (bb.m_vecMax.x - bb.m_vecMin.x) * 0.5f;
             const float hy = (bb.m_vecMax.y - bb.m_vecMin.y) * 0.5f;
             limit = sz * 0.5f;
-            if (hy <= hx) {
+            if (!(hx < hy)) { // 0x520392: an unordered compare takes this side as well
                 if (hy < limit) {
                     limit = hy;
                 }
@@ -3872,7 +3875,7 @@ bool CCamera::CameraColDetAndReact(CVector* source, CVector* target) {
 
     float minDist = gpCamColVars[2];
     if (gCurCamColVars < 10) {
-        minDist = (gCurCamColVars < 4 ? 0.18f : 0.3f) / (*source - *target).Magnitude();
+        minDist = (gCurCamColVars < 4 ? 0.18f : 0.3f) / LengthZYX((x87d)source->x - target->x, (x87d)source->y - target->y, (x87d)source->z - target->z);
     }
 
     bool bIsBike = false;
@@ -3890,12 +3893,13 @@ bool CCamera::CameraColDetAndReact(CVector* source, CVector* target) {
         RwCameraSetNearClipPlane(Scene.m_pRwCamera, gpCamColVars[4]);
     }
 
-    if (gCurDistForCam <= dist) {
+    if (!(dist < gCurDistForCam)) { // 0x520500-0x52050B: `dist >= gCurDistForCam`, an unordered compare takes this side as well
         if (!(gCamColLastSourceInit & 1)) { // MSVC static-init guard
             gCamColLastSourceInit |= 1;
             gCamColLastSource = CVector{ 0.f, 0.f, 0.f };
         }
-        if (0.01f * 0.01f < (*source - gCamColLastSource).SquaredMagnitude()) {
+        const x87d mdx = (x87d)source->x - gCamColLastSource.x, mdy = (x87d)source->y - gCamColLastSource.y, mdz = (x87d)source->z - gCamColLastSource.z;
+        if ((x87d)(0.01f * 0.01f) < (mdz * mdz + mdy * mdy) + mdx * mdx) { // 0x52054A-0x52058C: sum in `z, y, x` order
             float step = (dist - gCurDistForCam) * (CTimer::GetTimeStep() * gpCamColVars[5]);
             if (step > 0.05f) {
                 step = 0.05f;

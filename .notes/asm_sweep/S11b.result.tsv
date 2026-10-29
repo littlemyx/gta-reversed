@@ -1,0 +1,10 @@
+addr	function	verdict	asm range	note	fix commit
+0x64B950	CTaskSimpleCarSetPedInAsDriver::ProcessPed	NOT_REACHED	-	budget	-
+0x64B5D0	CTaskSimpleCarSetPedInAsPassenger::ProcessPed	NOT_REACHED	-	budget	-
+0x64C220	CTaskSimpleCarSetPedSlowDraggedOut::ProcessPed	NOT_REACHED	-	budget	-
+0x67DE10	CTaskSimpleClimb::ScanToGrabSectorList<CPtrListSingleLink<CPhysical*>>	NOT_REACHED	-	budget	-
+0x67FD30	CTaskSimpleClimb::ScanToGrab	NOT_REACHED	-	budget	-
+0x67A890	CTaskSimpleClimb::CreateColModel	NOT_REACHED	-	budget	-
+0x67DBE0	CTaskSimpleClimb::StartAnim	NOT_REACHED	-	budget	-
+0x67A5D0	CTaskSimpleClimb::GetCameraStickModifier	NOT_REACHED	-	budget	-
+0x680DC0	CTaskSimpleClimb::ProcessPed	NOT_REACHED	-	budget	-

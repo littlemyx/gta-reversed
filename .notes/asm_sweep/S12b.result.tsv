@@ -1,0 +1,11 @@
+addr	function	verdict	asm range	note	fix commit
+0x630600	CTaskSimpleDead::ProcessPed	FIXED	0x630600-0x630F0F (all)	footprint radius after 7 s is 0.75000006f (exe data 0x85B900) not 0.75f; blood puddle in-water check: exe skips for z > level and NaN (jp arm), port set the flag for NaN	765d7537
+0x5BEDC0	CTaskSimpleFight::LoadMeleeData	MATCH	0x5BEDC0-0x5BF2ED (all)	defaults, section state machine, scanf formats/arg order, 1/30 scale, groundLoop > 0 guard, flags word	-
+0x61CBA0	CTaskSimpleFight::FightHitPed	MATCH	0x61CBA0-0x61D0A6 (all)	block/audio branches, ftol damage, blood chance + one rand, AddBlood args	-
+0x6240B0	CTaskSimpleFight::FightStrike	MATCH	0x6240B0-0x624707 (all)	scanner order, maxDist, x87 distance sums, sphere test (dx float, dy/dz extended), retry offset, ProcessColModels args, ground-attack anim stop	-
+0x623B10	CTaskSimpleFight::StartAnim	MATCH	0x623B10-0x62407F (all)	jump table 0..18, idle/block/ground/attack/default cases, anim ids and flag bits, NaN arms	-
+0x629920	CTaskSimpleFight::ProcessPed	MATCH	0x629920-0x62A090 (all)	only three bare (double) casts respelled x87d	aadd863c
+0x627CC0	CTaskSimpleGangDriveBy::FireGun	NOT_REACHED	-	budget	-
+0x627600	CTaskSimpleGangDriveBy::ProcessAIPed	NOT_REACHED	-	budget	-
+0x628350	CTaskSimpleGangDriveBy::ProcessAimIK	NOT_REACHED	-	budget	-
+0x62D3B0	CTaskSimpleGangDriveBy::ProcessPed	NOT_REACHED	-	budget	-

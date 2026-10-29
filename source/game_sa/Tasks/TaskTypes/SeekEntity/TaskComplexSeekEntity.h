@@ -298,7 +298,7 @@ public:
                ped->m_pAttachedTo // From 0x496821
             || !commonBoat
             || subTaskType == TASK_SIMPLE_STAND_STILL
-            || m_pSubTask->MakeAbortable(ped)
+            || !m_pSubTask->MakeAbortable(ped) // exe 0x665899 (XYOffset) / 0x49689C (RadiusAngleOffset): `test al, al; je <normal path>` - the boat attachment only runs when the abort SUCCEEDED
         ) {
             bool skipTalk = false; // exe 0x46FCD7 / 0x46FD8C: the two `CreateSubTask(<other move task>)` returns leave through 0x46FE41, past the Say code at 0x46FDB2
             notsa::ScopeGuard makePedTalkOnReturn{ [this, ped, &skipTalk] {
@@ -353,7 +353,7 @@ public:
             const auto pedToSeekPosDist2dSq = (ped->GetPosition() - seekPos).SquaredMagnitude2D();
 
             if (subTaskType == TASK_COMPLEX_FOLLOW_NODE_ROUTE) {
-                if (m_minEntityDist2D == 0.f || pedToSeekPosDist2dSq >= sq(m_minEntityDist2D - 1.f)) {
+                if (m_minEntityDist2D == 0.f || !(pedToSeekPosDist2dSq < sq(m_minEntityDist2D - 1.f))) { // exe 0x665C11: `test ah, 5; jp` => SetTarget also for NaN
                     static_cast<CTaskComplexFollowNodeRoute*>(m_pSubTask)->SetTarget(ped, seekPos, m_maxEntityDist2D, m_moveStateRadius, m_followNodeThresholdHeightChange, false);
                 } else if (m_pSubTask->MakeAbortable(ped)) {
                     skipTalk = true;
@@ -363,7 +363,7 @@ public:
                 const auto subTaskStandStill = notsa::cast<CTaskComplexGoToPointAndStandStill>(m_pSubTask);
                 if (subTaskStandStill->m_bWasSuccessful) {
                     return m_pSubTask;      
-                } else if (m_minEntityDist2D == 0.f || pedToSeekPosDist2dSq <= sq(m_minEntityDist2D + 1.f)) {
+                } else if (m_minEntityDist2D == 0.f || !(pedToSeekPosDist2dSq > sq(m_minEntityDist2D + 1.f))) { // exe 0x665C90: `test ah, 0x41; jne` => GoToPoint also for NaN
                     subTaskStandStill->GoToPoint(seekPos, m_maxEntityDist2D, m_moveStateRadius, false);
                 } else if (m_pSubTask->MakeAbortable(ped)) {
                     skipTalk = true;

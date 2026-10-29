@@ -620,6 +620,7 @@ void CGangWars::MakeEnemyGainInfluenceInZone(int32 gangId, int32 density) {
     if (!pZoneInfoToFightOver)
         return;
 
+    const bool controlledBefore = DoesPlayerControlThisZone(pZoneInfoToFightOver); // exe 0x445FD0: sampled before the change
     auto totalGangDensity = pZoneInfoToFightOver->GangStrength[GANG_BALLAS]
         + pZoneInfoToFightOver->GangStrength[GANG_GROVE]
         + pZoneInfoToFightOver->GangStrength[GANG_VAGOS];
@@ -629,7 +630,7 @@ void CGangWars::MakeEnemyGainInfluenceInZone(int32 gangId, int32 density) {
 
     pZoneInfoToFightOver->GangStrength[gangId] += density;
 
-    if (!DoesPlayerControlThisZone(pZoneInfoToFightOver)) {
+    if (controlledBefore && !DoesPlayerControlThisZone(pZoneInfoToFightOver)) { // port: no `controlledBefore`, counted a loss for every uncontrolled zone
         CStats::IncrementStat(STAT_TERRITORIES_LOST, 1.0f);
     }
 }
@@ -637,7 +638,7 @@ void CGangWars::MakeEnemyGainInfluenceInZone(int32 gangId, int32 density) {
 // 0x445E80
 bool CGangWars::MakePlayerGainInfluenceInZone(float removeMult) {
     bool controlledBefore = DoesPlayerControlThisZone(pZoneInfoToFightOver);
-    uint8 totalEnemyDensity = 0u;
+    uint32 totalEnemyDensity = 0u; // exe: 32-bit sum (ebp); a uint8 sum wrapped at 256
 
     // for all gangs except grove
     static constexpr eGangID gangs[] = {

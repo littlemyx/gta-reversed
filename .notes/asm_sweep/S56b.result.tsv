@@ -1,0 +1,15 @@
+addr	function	verdict	asm range	note	fix commit
+0x56DAD0	CPlayerInfo::EvaluateCarPosition	MATCH	0x56DAD0-0x56DBCF (all)	atan2 chain, wrap loops, 1/(2pi) const 0x3E22F983, >= out compare	-
+0x56DBD0	CPlayerInfo::FindObjectToSteal	MATCH	0x56DBD0-0x56DF50 (all)	centre, liftable/scancode/4.5/dot tests; sector clamp arms read, result equal	-
+0x56EA80	CPlayerInfo::DeletePlayerSkin	MATCH	0x56EA80-0x56EAA1 (all)	destroy + null	-
+0x56EC80	CPlayerInfo::ProcessCarGunCrosshair_Hook	MATCH	0x56EC80-0x56EF8F (camera-vector x87 chain read at operand level)	steer/invert/clamp, GetCarGunFired, M4 5000, FireInstantHit args, doomaim restore; byte flag test	-
+0x56EF90	CPlayerInfo::DrawCrosshair_Hook	UNSURE	0x56EF90 entry only	render states/trail loop not compared (port carries exe-address annotations and a documented history bug)	-
+0x56F4E0	CPlayerInfo::FindClosestCarSectorList	FIXED	0x56F4E0-0x56F7C0 (all)	bike/boat tests read m_nVehicleType ([+0x590]), port used m_nVehicleSubType; NaN up.z skips	94c7e9ce3
+0x56F7D0	CPlayerInfo::LoadPlayerSkin	MATCH	0x56F7D0-0x56F806 (all)	delete + GetSkinTexture(name)	-
+0x56F8D0	CPlayerInfo::Process	FIXED	0x56F8D0-0x5717AF (bike-stunt arm only at threshold/stat-id level)	taxi fare, car stunts, display money, max health, parachute, road density, exit/enter vehicle incl. co-op, remote explosion, upside down, distance stats (jump tables decoded), chase value match; moved-far test is not(dist<10)	4a7f863ce
+0x5717F0	CPlayerInfo::SetPlayerSkin	FIXED	0x5717F0-0x571838 (all)	strncpy(name,32) zero-pads (port strcpy_s kept the stale tail)	5677c50c4
+0x571920	CPlayerInfo::Constructor	MATCH	0x571920-0x57196C (all)	inlined PlayerData ctor (+0x48,+0x4C,+0x60,+0x94,+0x98,+0xA0=0x80000000), skin/parachute fields	-
+0x5D3AC0	CPlayerInfo::Save	MATCH	0x5D3AC0-0x5D3AF2 (all)	size word 0x28 then the 0x28 struct (Construct/Extract bodies 0x5D24B0/0x5D2560 not in this slice)	-
+0x5D3B00	CPlayerInfo::Load	MATCH	0x5D3B00-0x5D3B31 (all)	discard 4, load 0x28, Extract	-
+0x571840	CPlayerPedData::Destructor	MATCH	0x571840-0x571879 (all)	delete wanted (dtor 0x56F200) + clothes desc, null both	-
+0x56F330	CPlayerInfo::Clear (S56 leftover)	FIXED	byte store at 0x56F49F	m_nCrosshairActivated is a byte; field is now uint8 + 3 pad bytes, operator= copies the dword (0x45E191)	87746cdad

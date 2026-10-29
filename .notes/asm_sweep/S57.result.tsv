@@ -1,0 +1,41 @@
+addr	function	verdict	asm range	note	fix commit
+0x61A2E0	GetPlayerRelationshipRecorder	MATCH	0x61A2E0-0x61A31F (all)	lazy nothrow alloc of 16 x {0,0} slots, null on OOM	-
+0x4B5570	CEventPool::New	MATCH	0x4B5570-0x4B55D6 (all)	pre-increment cursor, one wrap, 7-bit ref wrap, stride 0x44	-
+0x5EA9F0	CPedAttractorPool::New	UNSURE	0x5EA9F0-0x5EAA59 (all)	search logic identical; exe slot stride is 0xC4, port CPool<CPedAttractor> uses sizeof=0x8C (derived attractors add no fields): internal index/pointer maths only	-
+0x605EC0	CPedIntelligencePool::New	MATCH	0x605EC0-0x605F29 (all)	same search, stride 0x294	-
+0x5E45E0	CPedPool::New	MATCH	0x5E45E0-0x5E4649 (all)	same search, stride 0x7C4	-
+0x404910	CPedPool::GetAtRef	MATCH	0x404910-0x404936 (all)	flag byte == ref low byte; port adds a bounds check (exe reads out of range)	-
+0x6E2A50	CVehiclePool::New	MATCH	0x6E2A50-0x6E2AB9 (all)	same search, stride 0xA18 (CHeli; portable build uses CPlane by design)	-
+0x45AB10	CRemote::GivePlayerRemoteControlledCar	MATCH	0x45AB10-0x45ACFF (all)	heli/plane/automobile ctors, ground z+2, height+groundZ, status 8, locked, autopilot zeros, speed 9, FORCED_STOP for the player car, camera args	-
+0x45AD40	CRemote::TakeRemoteControlOfCar	MATCH	0x45AD40-0x45AE7B (all)	old remote -> PHYSICS, jump cut only when another car	-
+0x45AE80	CRemote::TakeRemoteControlledCarFromPlayer	MATCH	0x45AE80-0x45AEF2 (all)	mission car -> random, unlock, timer/flags	-
+0x5D3620	CRestart::Save	MATCH	0x5D3620-0x5D3760 (all)	u16 counts, point/heading/when order, widths	-
+0x5D3770	CRestart::Load	MATCH	0x5D3770-0x5D38A8 (all)	Initialise then same order/widths	-
+0x470480	CScriptResourceManager::Initialise	MATCH	0x470480-0x47049F (all)	75 slots {-1,0,0}	-
+0x4704B0	CScriptResourceManager::AddToResourceManager	MATCH	0x4704B0-0x470505 (all)	duplicate check, last free slot wins, word type	-
+0x470620	CScriptResourceManager::HasResourceBeenRequested	MATCH	0x470620-0x470650 (all)	-	-
+0x6F9E80	CScripted2dEffects::ReturnScripted2DEffect	MATCH	0x6F9E80-0x6F9EA0 (all)	clear activated, RemoveEffect(&effects[i*64])	-
+0x465A40	CTheScripts::RemoveScriptTextureDictionary	FIXED	0x465A40-0x465A98 (all)	script txd removed only when its slot holds a loaded dictionary	8f35cdc62
+0x468D50	CTheScripts::Init	FIXED	text-line fill at 0x4690A8 (rest of Init not compared)	intro text lines WrapX=CentreSize=RsGlobal.maximumWidth	de72088e3
+0x46A000	CTheScripts::Process	FIXED	0x46A000-0x46A280 (all)	TIMERA/B step uses ms_fTimeStepNonClipped; refill defaults 182/640; script walk and mission ped event loop match	5a31309e7
+0x464980	CTheScripts::DrawScriptSpritesAndRectangles	NOT_REACHED	-	budget (render path)	-
+0x45B4D0	CReplay::RetrievePedAnimation	NOT_REACHED	-	budget (replay record/playback, large functions)	-
+0x45C210	CReplay::Display	NOT_REACHED	-	budget (replay record/playback, large functions)	-
+0x45C340	CReplay::SaveReplayToHD	NOT_REACHED	-	budget (replay record/playback, large functions)	-
+0x45CA70	CReplay::ProcessPedUpdate	NOT_REACHED	-	budget (replay record/playback, large functions)	-
+0x45CEA0	CReplay::DealWithNewPedPacket	NOT_REACHED	-	budget (replay record/playback, large functions)	-
+0x45D060	CReplay::ProcessReplayCamera	NOT_REACHED	-	budget (replay record/playback, large functions)	-
+0x45D390	CReplay::EmptyPedsAndVehiclePools_NoDestructors	NOT_REACHED	-	budget (replay record/playback, large functions)	-
+0x45D4B0	CReplay::StreamAllNecessaryCarsAndPeds	NOT_REACHED	-	budget (replay record/playback, large functions)	-
+0x45D540	CReplay::CreatePlayerPed	NOT_REACHED	-	budget (replay record/playback, large functions)	-
+0x45D760	CReplay::ProcessLookAroundCam	NOT_REACHED	-	budget (replay record/playback, large functions)	-
+0x45E300	CReplay::RecordThisFrame	NOT_REACHED	-	budget (replay record/playback, large functions)	-
+0x45ECD0	CReplay::RestoreStuffFromMem	NOT_REACHED	-	budget (replay record/playback, large functions)	-
+0x45F050	CReplay::FinishPlayback	NOT_REACHED	-	budget (replay record/playback, large functions)	-
+0x45F180	CReplay::StoreStuffInMem	NOT_REACHED	-	budget (replay record/playback, large functions)	-
+0x45F380	CReplay::PlayBackThisFrameInterpolation	NOT_REACHED	-	budget (replay record/playback, large functions)	-
+0x4600F0	CReplay::TriggerPlayback	NOT_REACHED	-	budget (replay record/playback, large functions)	-
+0x460350	CReplay::FastForwardToTime	NOT_REACHED	-	budget (replay record/playback, large functions)	-
+0x460390	CReplay::PlayReplayFromHD	NOT_REACHED	-	budget (replay record/playback, large functions)	-
+0x4604A0	CReplay::PlayBackThisFrame	NOT_REACHED	-	budget (replay record/playback, large functions)	-
+0x460500	CReplay::Update	NOT_REACHED	-	budget (replay record/playback, large functions)	-

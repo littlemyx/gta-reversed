@@ -1,0 +1,9 @@
+addr	function	verdict	asm range	note	fix commit
+0x587FB0	CRadar::Initialise	MATCH	0x587FB0-0x588049	inlined ClearActualBlip fields (sphere 1.0, size 1, enex 0, sprite 0, flags0 = 1, flags1 &= 0xC0), counter 1, airstrip vars 0, range 350, radar%02d slots 0..143 all match	-
+0x5827D0	CRadar::LoadTextures	MATCH	0x5827D0-0x582819	Push/FindTxdSlot(hud)/SetTexture x64/Pop; name table 0x8D0720 compared entry by entry (exe entries 0 and 1 are a pointer to an empty string, port passes nullptr: texture stays null either way)	-
+0x585940	CRadar::Shutdown	MATCH	0x585940-0x585959	Delete x64 sprites, then RemoveRadarSections	-
+0x586B00	CRadar::DrawMap	DEVIATION	0x586B00-0x586D5B	plane range slope 16.666668 (port 1/60); co-op focus on player 1 uses player 1 centre (port averaged); NaN speed takes max range; Players[PlayerInFocus] for remote mode; area/radar-mode gate evaluated last	058d5303
+0x586880	CRadar::DrawRadarMap	MATCH	0x586880-0x586AFF	floor/ceil tile indices, 10 render states, 9 sections order, gang overlay, plane block (sin/cos(pi) cache, atan2(-fwd.z, up.z)*57.29578*2, colour 20/175/20/200) match; plane rect literal physically equals the exe stores (x-1000, y+2000, x+1000, y-2deg)	-
+0x5D53C0	CRadar::Load	MATCH	0x5D53C0-0x5D5430	Initialise, 175 x 0x28 records, enex pool index+1 resolved (port also bounds-checks the slot; exe reads the flag byte unchecked)	-
+0x5D5860	CRadar::Save	MATCH	0x5D5860-0x5D5910	175 x 0x28 records: enex pointer -> pool index+1 only for a live slot, tracking bit cleared for types other than COORD/CONTACT_POINT during the write and restored; non-portable path identical	-
+0x5828A0	CRadar::DrawLegend	DEVIATION	0x5828A0-0x5831D3	LOW/HIGH polygons: base 6*Y stretch (port 7), LOW apex uses Y stretch (port X), vertex order; NORMAL box rect literals had args 2/4 mirrored (a21dcbaa); sprite path (rect (x, y+16sx, x+16sx, y) physical, white) matches	d910833b,ce4a2e49

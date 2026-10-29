@@ -147,7 +147,7 @@
 | S41 | phase2: unlisted non-oracle hooks | 40 | partial 31/40 (23 M, 8 fixed) -> S41b | AttractorScanner.cpp, CarAI.cpp, PedAtmAttractor.cpp, PedAttractor.cpp, PedAttractorPedPlacer.cpp, PedLookAtAttractor.cpp ... |
 | S42 | phase2: unlisted non-oracle hooks | 40 | partial 21/40 (9 M, 12 fixed) -> S42b | CarAI.cpp, CarEnterExit.cpp, CarGenerator.cpp |
 | S43 | phase2: unlisted non-oracle hooks | 40 | partial 3/40 (2 M, 1 fixed) -> S43b | CarGenerator.cpp, Cheat.cpp, Clothes.cpp, CollisionEventScanner.cpp, ConversationForPed.cpp, Cover.cpp ... |
-| S44 | phase2: unlisted non-oracle hooks | 40 | pending | AnimatedBuilding.cpp, Building.cpp, CustomCarPlateMgr.cpp, Darkel.cpp, DummyObject.cpp, DummyPed.cpp ... |
+| S44 | phase2: unlisted non-oracle hooks | 40 | done 40/40 (33 M, 7 fixed) | AnimatedBuilding.cpp, Building.cpp, CustomCarPlateMgr.cpp, Darkel.cpp, DummyObject.cpp, DummyPed.cpp ... |
 | S45 | phase2: unlisted non-oracle hooks | 40 | pending | Bike.cpp, Bmx.cpp, Boat.cpp, EmergencyPed.cpp, Entity.cpp, EntityScanner.cpp ... |
 | S46 | phase2: unlisted non-oracle hooks | 40 | pending | EntryExitManager.cpp, Event.cpp, EventAcquaintancePedDislike.cpp, EventAcquaintancePedLike.cpp, EventAcquaintancePedRespect.cpp, EventAttractor.cpp ... |
 | S47 | phase2: unlisted non-oracle hooks | 40 | pending | EventHandler.cpp, EventHealthLow.cpp, EventHealthReallyLow.cpp, EventHighAngerAtPlayer.cpp, EventInAir.cpp, EventInWater.cpp ... |

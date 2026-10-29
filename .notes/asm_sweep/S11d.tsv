@@ -1,0 +1,6 @@
+addr	file	line	cls	fn	oc
+0x67DE10	source/game_sa/Tasks/TaskTypes/TaskSimpleClimb.cpp	35	CTaskSimpleClimb	ScanToGrabSectorList<CPtrListSingleLink<CPhysical*>>	S
+0x67FD30	source/game_sa/Tasks/TaskTypes/TaskSimpleClimb.cpp	36	CTaskSimpleClimb	ScanToGrab	D
+0x67A890	source/game_sa/Tasks/TaskTypes/TaskSimpleClimb.cpp	37	CTaskSimpleClimb	CreateColModel	S
+0x67DBE0	source/game_sa/Tasks/TaskTypes/TaskSimpleClimb.cpp	41	CTaskSimpleClimb	StartAnim	D
+0x680DC0	source/game_sa/Tasks/TaskTypes/TaskSimpleClimb.cpp	48	CTaskSimpleClimb	ProcessPed	D

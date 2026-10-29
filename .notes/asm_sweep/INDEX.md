@@ -139,6 +139,8 @@
 | S33d | rest of S33c | 12 | partial 5/12 (1 M, 4 fixed) -> S33e | WaterLevel.cpp |
 | S33e | rest of S33d | 7 | 6/7 (2 M, 4 fixed) -> S33f | WaterLevel.cpp |
 | S33f | rest of S33e | 1 | 0/1 (not reached) -> S33g | WaterLevel.cpp |
-| S12c | rest of S12b | 4 | pending | TaskSimpleGangDriveBy.cpp |
-| S11c | rest of S11b | 9 | pending | TaskSimpleCarSetPedInAsDriver.cpp, TaskSimpleCarSetPedInAsPassenger.cpp, TaskSimpleCarSetPedSlowDraggedOut.cpp, TaskSimpleClimb.cpp |
-| S33g | rest of S33f | 1 | pending | WaterLevel.cpp |
+| S12c | rest of S12b | 4 | done 4/4 (3 M, 1 fixed; S12 complete) | TaskSimpleGangDriveBy.cpp |
+| S11c | rest of S11b | 9 | partial 4/9 (2 M, 2 fixed) -> S11d | TaskSimpleCarSetPedInAsDriver.cpp, TaskSimpleCarSetPedInAsPassenger.cpp, TaskSimpleCarSetPedSlowDraggedOut.cpp, TaskSimpleClimb.cpp |
+| S33g | rest of S33f | 1 | 0/1 (not reached) -> S33h | WaterLevel.cpp |
+| S11d | rest of S11c | 5 | pending | TaskSimpleClimb.cpp |
+| S33h | rest of S33g | 1 | pending | WaterLevel.cpp |

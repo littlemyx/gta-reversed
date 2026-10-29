@@ -174,5 +174,6 @@
 | S42b | rest of S42 | 19 | UpdateCarAI fixed to 0x41FE13 (tail partial); CarEnterExit 18 NR -> S42c | CarAI.cpp, CarEnterExit.cpp |
 | S42c | rest of S42b (+ UpdateCarAI tail 0x41FE13-0x420678) | 19 | partial 10/19 (5 M, 5 fixed) -> S42d | CarEnterExit.cpp |
 | S42d | rest of S42c | 9 | 8/9 (4 M, 4 fixed) -> S42e | CarEnterExit.cpp |
-| S42e | rest of S42d | 1 | pending | CarEnterExit.cpp |
-| S43b | rest of S43 | 37 | pending | CarGenerator.cpp, Cheat.cpp, Clothes.cpp, CollisionEventScanner.cpp, ConversationForPed.cpp, Cover.cpp, CoverPoint.cpp, CurrentVehicle.cpp, CustomCarPlateMgr.cpp, PedToPlayerConversations.cpp |
+| S42e | rest of S42d | 1 | done 1/1 (fixed; S42 complete) | CarEnterExit.cpp |
+| S43b | rest of S43 | 37 | partial 5/37 (3 M, 1 fixed, 1 U) -> S43c | CarGenerator.cpp, Cheat.cpp, Clothes.cpp, CollisionEventScanner.cpp, ConversationForPed.cpp, Cover.cpp, CoverPoint.cpp, CurrentVehicle.cpp, CustomCarPlateMgr.cpp, PedToPlayerConversations.cpp |
+| S43c | rest of S43b | 32 | pending | Clothes.cpp, ConversationForPed.cpp, Cover.cpp, CoverPoint.cpp, CurrentVehicle.cpp, CustomCarPlateMgr.cpp, PedToPlayerConversations.cpp |

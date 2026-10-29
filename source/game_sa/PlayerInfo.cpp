@@ -1277,21 +1277,24 @@ void CPlayerInfo::BlowUpRCBuggy(bool bExplode) const {
 // 0x56E870
 void CPlayerInfo::MakePlayerSafe(bool enable, float radius) {
     // Not quite SA, but this is the way to do it (instead of copy pasting it twice)
-    auto& flags = m_pPed->physicalFlags;
-    flags.bInvulnerable = enable;
-    flags.bBulletProof = enable;
-    flags.bFireProof = enable;
-    flags.bExplosionProof = enable;
-    flags.bCollisionProof = enable;
-    flags.bMeleeProof = enable;
-    m_PlayerData.m_bCanBeDamaged = !enable;
+    // 0x56E870: the exe does the steps in this order (the `enable` arm is 0x56E8A0..0x56E9BB, the `!enable` arm 0x56E9C2..0x56EA29)
+    const auto SetPhysicalFlags = [&] {
+        auto& flags = m_pPed->physicalFlags;
+        flags.bInvulnerable = enable;
+        flags.bBulletProof = enable;
+        flags.bFireProof = enable;
+        flags.bExplosionProof = enable;
+        flags.bCollisionProof = enable;
+        flags.bMeleeProof = enable;
+    };
+    const auto pad = m_pPed->GetPadFromPlayer();
     m_PlayerData.m_pWanted->m_bEverybodyBackOff = enable;
-    m_pPed->GetPadFromPlayer()->bPlayerSafe = enable;
-    CWorld::SetAllCarsCanBeDamaged(!enable);
-
     if (enable) {
         CWorld::StopAllLawEnforcersInTheirTracks();
+        pad->bPlayerSafe = true;
         CPad::StopPadsShaking();
+        SetPhysicalFlags();
+        m_PlayerData.m_bCanBeDamaged = false;
 
         m_pPed->ClearAdrenaline();
         m_PlayerData.m_fTimeCanRun = std::max(m_PlayerData.m_fTimeCanRun, 0.f);
@@ -1300,10 +1303,15 @@ void CPlayerInfo::MakePlayerSafe(bool enable, float radius) {
         gFireManager.ExtinguishPoint(GetPos(), radius);
         CExplosion::RemoveAllExplosionsInArea(GetPos(), 4000.f);
         CProjectileInfo::RemoveAllProjectiles();
+        CWorld::SetAllCarsCanBeDamaged(false);
         CWorld::ExtinguishAllCarFiresInArea(GetPos(), radius);
         CReplay::DisableReplays();
         m_pPed->ClearWeaponTarget();
     } else {
+        pad->bPlayerSafe = false;
+        SetPhysicalFlags();
+        m_PlayerData.m_bCanBeDamaged = true;
+        CWorld::SetAllCarsCanBeDamaged(true);
         CReplay::EnableReplays();
     }
 }

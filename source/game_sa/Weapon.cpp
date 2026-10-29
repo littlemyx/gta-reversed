@@ -1674,7 +1674,8 @@ CEntity* CWeapon::PickTargetForHeatSeekingMissile(CVector origin, CVector direct
 
 // 0x73FA20
 bool CWeapon::FireFromCar(CVehicle* vehicle, bool leftSide, bool rightSide) {
-    if (m_State != WEAPONSTATE_READY || m_AmmoInClip <= 0) {
+    if ((m_State != WEAPONSTATE_READY && m_State != WEAPONSTATE_FIRING) || // exe: FIRING may shoot again
+         m_AmmoInClip <= 0) {
         return false;
     }
     if (!CWeapon::FireInstantHitFromCar(vehicle, leftSide, rightSide)) {

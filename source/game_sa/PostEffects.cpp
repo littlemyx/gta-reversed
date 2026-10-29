@@ -967,19 +967,25 @@ void CPostEffects::Fog() {
     ImmediateModeRenderStatesSet();
     RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, RWRSTATE(rwFILTERLINEAR));
 
-    s_FogRadius = FindPlayerSpeed().SquaredMagnitude() <= sq(0.06f)
+    // 0x7041B1-0x70423A: the exe tests the speed MAGNITUDE (fsqrt) against 0.06f (0x859934), not its square; the step is ts * 0.25f
+    s_FogRadius = !(FindPlayerSpeed().Magnitude() > 0.06f)
         ? std::max(s_FogRadius - CTimer::GetTimeStep() / 4.0f, 0.0f)
         : std::min(s_FogRadius + CTimer::GetTimeStep() / 4.0f, 160.0f);
 
+    // 0x704175-0x7042A1: the quad size is W * 0.6666667f / H * 0.6666667f (0x862D68), the centre is W * 0.5f and the quad is centred with `- size * 0.5f`; W/4 and H/4 are (W * 0.5f) * 0.5f
+    const float quadW = SCREEN_WIDTH * (2.0f / 3.0f);
+    const float quadH = SCREEN_HEIGHT * (2.0f / 3.0f);
+    const float halfW = SCREEN_WIDTH * 0.5f;
+    const float halfH = SCREEN_HEIGHT * 0.5f;
     const auto skyBottom = CTimeCycle::GetCurrentSkyBottomColor();
     for (auto i = 0; i < 10; i++) {
         const auto angle = DegreesToRadians(36.0f * static_cast<float>(i) + s_FogAngle);
 
         DrawQuad(
-            X87R(x87::cos(angle) * (SCREEN_WIDTH / 4.0f + s_FogRadius)) + SCREEN_WIDTH / 2.0f - SCREEN_WIDTH / 3.0f,
-            X87R(x87::sin(angle) * (SCREEN_HEIGHT / 4.0f + s_FogRadius)) + SCREEN_HEIGHT / 2.0f - SCREEN_HEIGHT / 3.0f,
-            2.0f * SCREEN_WIDTH / 3.0f,
-            2.0f * SCREEN_HEIGHT / 3.0f,
+            X87R(x87::cos(angle) * (halfW * 0.5f + s_FogRadius)) + halfW - quadW * 0.5f,
+            X87R(x87::sin(angle) * (halfH * 0.5f + s_FogRadius)) + halfH - quadH * 0.5f,
+            quadW,
+            quadH,
             skyBottom.r,
             skyBottom.g,
             skyBottom.b,
@@ -992,10 +998,10 @@ void CPostEffects::Fog() {
         const auto angle = -DegreesToRadians(36.0f * static_cast<float>(i) + s_FogAngle);
 
         DrawQuad(
-            X87R(x87::cos(angle) * (SCREEN_WIDTH * 0.35f + s_FogRadius)) + SCREEN_WIDTH / 2.0f - SCREEN_WIDTH / 3.0f,
-            X87R(x87::sin(angle) * (SCREEN_HEIGHT * 0.35f + s_FogRadius)) + SCREEN_HEIGHT / 2.0f - SCREEN_HEIGHT / 3.0f,
-            2.0f * SCREEN_WIDTH / 3.0f,
-            2.0f * SCREEN_HEIGHT / 3.0f,
+            X87R(x87::cos(angle) * (halfW * 0.7f + s_FogRadius)) + halfW - quadW * 0.5f,
+            X87R(x87::sin(angle) * (halfH * 0.7f + s_FogRadius)) + halfH - quadH * 0.5f,
+            quadW,
+            quadH,
             skyBottom.r,
             skyBottom.g,
             skyBottom.b,

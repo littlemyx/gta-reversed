@@ -125,8 +125,12 @@ bool CPedAttractor::RegisterPed(CPed* ped) {
 
 // 0x5EC5B0
 bool CPedAttractor::DeRegisterPed(CPed* ped) {
-    m_PedTaskPairs.erase(rng::find(m_PedTaskPairs, ped, &CPedTaskPair::Ped));
-    if (const auto it = rng::find(m_ArrivedPeds, ped); it != m_ArrivedPeds.end()) { // inverted (!)
+    // 0x5EC5C3: the pair is erased only if it exists
+    if (const auto pair = rng::find(m_PedTaskPairs, ped, &CPedTaskPair::Ped); pair != m_PedTaskPairs.end()) {
+        m_PedTaskPairs.erase(&*pair);
+    }
+    // 0x5EC610: a ped that is still on its way (+0x10 = m_AttractPeds) is just dropped from that list, an arrived one goes through BroadcastDeparture (vtable +0x14)
+    if (const auto it = rng::find(m_AttractPeds, ped); it != m_AttractPeds.end()) {
         m_AttractPeds.erase(it);
         return true;
     }

@@ -128,4 +128,5 @@
 | S31d | rest of S31c (+ CCam::Process target.z trace) | 30 | partial 3/29 (1 M, 2 fixed) -> S31e | Cam.cpp |
 | S31e | rest of S31d | 27 | partial 3/25 (3 fixed) -> S31f | Cam.cpp |
 | S31f | rest of S31e | 27 | partial 8/27 (6 fixed, 2 partial) -> S31g | Cam.cpp |
-| S31g | rest of S31f | 21 | pending | Cam.cpp |
+| S31g | rest of S31f | 21 | partial 6/21 (3 M, 3 fixed) + Pickup field fix -> S31h | Cam.cpp |
+| S31h | rest of S31g | 15 | pending | Cam.cpp |

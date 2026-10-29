@@ -30,7 +30,7 @@
 #include "Skidmarks.h"
 
 static CVector TransformPointExt(const CMatrix& m, const CVector& v); // defined below
-static double MagnitudeExt(const CVector& v);  // defined below
+static x87d MagnitudeExt(const CVector& v);  // defined below
 static void NormaliseExt(CVector& v);          // defined below
 
 static NOTSA_GLOBAL(fFlyingLiftLimit, 0x8D3670, (float), { 0.5f }); // (BARON) lift limit tweak, 0.5f

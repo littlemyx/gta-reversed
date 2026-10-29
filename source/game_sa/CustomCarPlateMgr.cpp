@@ -348,7 +348,7 @@ RpMaterial* CCustomCarPlateMgr::MaterialUpgradeSetCarplateTextureCB(RpMaterial* 
 
     if (const auto tex = RpMaterialGetTexture(material)) {
         if (const auto name{ RwTextureGetName(tex) }) { // Can this ever be null?
-            if (_stricmp(name, "careplate") == 0) {
+            if (_stricmp(name, "carplate") == 0) { // 0x6FDF64: "carplate" (the port had a typo, "careplate", so the upgrade never replaced the plate material)
                 RpGeometryReplaceOldMaterialWithNewMaterial((RpGeometry*)geometry, material, CurrentLicensePlateMaterial);
             } else if (_stricmp(name, "carpback") == 0) {
                 SetupMaterialPlatebackTexture(material, CurrentLicensePlateType);

@@ -186,9 +186,22 @@ void CPickups::DetonateMinesHitByGunShot(const CVector& shotOrigin, const CVecto
 void CPickups::DoCollectableEffects(CEntity* entity) {
     const auto& entityPos = entity->GetPosition();
 
-    if (const auto d = DistanceBetweenPoints(TheCamera.GetPosition(), entityPos); d < 14.0f) {
-        // shade of gray
-        const auto t = NOTSA_FTOL(uint8, (X87R(x87::sin((float)(((uint16)std::bit_cast<uintptr_t>(entity) + (uint16)CTimer::GetTimeInMS()) % 2048) * 0.0030664064f) + 1.0f)) / 2.0f * ((14.0f - d) * ExeRecip(14.0f)) * 255.0f);
+    const float d = [&] { // 0x455E61: sqrt((dz^2 + dy^2) + dx^2) of (camera - entity)
+        const auto cam = TheCamera.GetPosition();
+        const float dx = cam.x - entityPos.x;
+        const float dy = cam.y - entityPos.y;
+        const float dz = cam.z - entityPos.z;
+        return std::sqrt((dz * dz + dy * dy) + dx * dx);
+    }();
+    if (d < 14.0f) {
+        // shade of gray: ((sin + 1) * 0.5 * (14 - d)) * (1/14) * 255 - every x87 step rounds to float (PC24)
+        const auto t = NOTSA_FTOL(uint8, [&] {
+            float v = (float)(X87R(x87::sin((float)(((uint16)std::bit_cast<uintptr_t>(entity) + (uint16)CTimer::GetTimeInMS()) % 2048) * 0.0030664064f) + 1.0f));
+            v = v * 0.5f;
+            v = v * (14.0f - d);
+            v = v * ExeRecip(14.0f);
+            return v * 255.0f;
+        }());
 
         CShadows::StoreStaticShadow(
             NOTSA_PTR_ID32(entity),

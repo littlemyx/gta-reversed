@@ -721,10 +721,12 @@ void CHud::DrawCrossHairs() {
     const auto DrawM16Quadrants = [&](float left, float top, float w, float h) {
         const float cx = w * 0.5f + left;
         const float cy = h * 0.5f + top;
-        Sprites[SPRITE_SITE_M16].Draw(CRect{ left,     cy, cx, top     }, white);
-        Sprites[SPRITE_SITE_M16].Draw(CRect{ left + w, cy, cx, top     }, white);
-        Sprites[SPRITE_SITE_M16].Draw(CRect{ left,     cy, cx, top + h }, white);
-        Sprites[SPRITE_SITE_M16].Draw(CRect{ left + w, cy, cx, top + h }, white);
+        // exe 0x58E2E5-0x58E49C: the rects are raw stores in memory order (x0, cy, cx, y0) at +0/+4/+8/+0xC; CRect(l, b, r, t) puts (l, t, r, b) in memory,
+        // so the literals are written {p0, p3, p2, p1} (SYSTEMIC_TODO "CRect literals"; the previous {x0, cy, cx, y0} drew every quadrant vertically flipped)
+        Sprites[SPRITE_SITE_M16].Draw(CRect{ left,     top,     cx, cy }, white);
+        Sprites[SPRITE_SITE_M16].Draw(CRect{ left + w, top,     cx, cy }, white);
+        Sprites[SPRITE_SITE_M16].Draw(CRect{ left,     top + h, cx, cy }, white);
+        Sprites[SPRITE_SITE_M16].Draw(CRect{ left + w, top + h, cx, cy }, white);
     };
 
     const auto mode = GetCamMode();
@@ -734,7 +736,8 @@ void CHud::DrawCrossHairs() {
         const float radius  = player->GetWeaponRadiusOnScreen();
 
         if (radius == 0.2f) {
-            CSprite2d::DrawRect(CRect{ centerX - 1.0f, centerY + 1.0f, centerX + 1.0f, centerY - 1.0f }, white);
+            // exe 0x58E2A4-0x58E2DD: memory (cx - 1, cy + 1, cx + 1, cy - 1) at +0/+4/+8/+0xC -> literal {p0, p3, p2, p1}
+            CSprite2d::DrawRect(CRect{ centerX - 1.0f, centerY - 1.0f, centerX + 1.0f, centerY + 1.0f }, white);
         }
 
         const float w = SCREEN_WIDTH * SCREEN_RECIPROCAL_X * 64.0f * radius;

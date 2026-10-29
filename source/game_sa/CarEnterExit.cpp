@@ -682,10 +682,19 @@ bool CCarEnterExit::IsCarSlowJackRequired(const CVehicle* vehicle, int32 doorId)
 // 0x6509B0
 bool CCarEnterExit::IsClearToDriveAway(const CVehicle* vehicle) {
     const auto& vehPos = vehicle->GetPosition();
-    const auto  bbSizeY = vehicle->GetColModel()->GetBoundingBox().GetSize().y;
+    const auto& bb = vehicle->GetColModel()->GetBoundingBox();
+    // 0x6509B0..0x650A3A: the probe starts (size.y * 0.5 + 1.5) in front of the vehicle (the port used the full size.y); the x component keeps the
+    // unrounded product on the x87 stack for the `fadd`, y and z are spilled to floats first
+    const x87d  dist = ((x87d)bb.m_vecMax.y - bb.m_vecMin.y) * 0.5f + 1.5f;
+    const auto& fwd  = vehicle->GetForward();
+    const CVector probeStart{
+        (float)((x87d)fwd.x * dist + vehPos.x),
+        (float)((float)((x87d)fwd.y * dist) + vehPos.y),
+        (float)((float)((x87d)fwd.z * dist) + vehPos.z)
+    };
     CEntity* hitEntity{};
     CColPoint hitCP{};
-    return !CWorld::ProcessLineOfSight(vehPos + vehicle->GetForward() * bbSizeY, vehPos, hitCP, hitEntity, true, true, false, false, false, true, true, false) || hitEntity == vehicle;
+    return !CWorld::ProcessLineOfSight(probeStart, vehPos, hitCP, hitEntity, true, true, false, false, false, true, true, false) || hitEntity == vehicle;
 }
 
 // 0x651210

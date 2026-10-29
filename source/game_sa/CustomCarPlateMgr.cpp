@@ -86,9 +86,8 @@ int8 CCustomCarPlateMgr::GetMapRegionPlateDesign() {
     case eWeatherRegion::WEATHER_REGION_DEFAULT:
     case eWeatherRegion::WEATHER_REGION_SF:
         return 0;
-    default:
-        assert(false);
-        return -1;
+    default: // 0x6FD7B9: any other region value (also an out of range one) gives design 0 (the port returned -1 = an index before the table)
+        return 0;
     }
 }
 

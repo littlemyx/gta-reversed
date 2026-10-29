@@ -265,9 +265,13 @@ void CObject::ProcessControl() {
 
         CPhysical::ApplyMoveForce(vecBuoyancyForce);
         CPhysical::ApplyTurnForce(vecBuoyancyForce, vecBuoyancyTurnPoint);
-        const auto fTimeStep = std::pow(0.97F, CTimer::GetTimeStep());
-        m_vecMoveSpeed *= fTimeStep;
-        m_vecTurnSpeed *= fTimeStep;
+        const auto fTimeStep = x87::pow(X87W((x87d)0.97F), X87W((x87d)CTimer::GetTimeStep())); // exe 0x5A25A0 (base = qword 0x866FD0 = 0.97f widened): kept unrounded, each multiply rounds
+        m_vecMoveSpeed.x = (float)(X87R(fTimeStep * (x87d)m_vecMoveSpeed.x));
+        m_vecMoveSpeed.y = (float)(X87R(fTimeStep * (x87d)m_vecMoveSpeed.y));
+        m_vecMoveSpeed.z = (float)(X87R(fTimeStep * (x87d)m_vecMoveSpeed.z));
+        m_vecTurnSpeed.x = (float)(X87R(fTimeStep * (x87d)m_vecTurnSpeed.x));
+        m_vecTurnSpeed.y = (float)(X87R(fTimeStep * (x87d)m_vecTurnSpeed.y));
+        m_vecTurnSpeed.z = (float)(X87R(fTimeStep * (x87d)m_vecTurnSpeed.z));
     }
     else if (m_nModelIndex != ModelIndices::MI_BUOY) {
         physicalFlags.bTouchingWater = false; // Not clearing bSubmergedInWater, BUG?
@@ -289,7 +293,10 @@ void CObject::ProcessControl() {
     if (m_nModelIndex == ModelIndices::MI_RCBOMB) {
         // exe 0x5A2685: the force is (-0.05 * turn mass) * move speed; 0x5A2707..0x5A2719: pow(1 - |v|^2 * 0.2, timestep)
         CPhysical::ApplyTurnForce(m_vecMoveSpeed * (-0.05F * m_fTurnMass), -GetForward());
-        m_vecMoveSpeed *= std::pow(1.0F - m_vecMoveSpeed.SquaredMagnitude() * 0.2F, CTimer::GetTimeStep());
+        const auto damp = x87::pow(X87W((x87d)(1.0F - m_vecMoveSpeed.SquaredMagnitude() * 0.2F)), X87W((x87d)CTimer::GetTimeStep())); // exe 0x5A2719: kept unrounded, each multiply rounds
+        m_vecMoveSpeed.x = (float)(X87R(damp * (x87d)m_vecMoveSpeed.x));
+        m_vecMoveSpeed.y = (float)(X87R(damp * (x87d)m_vecMoveSpeed.y));
+        m_vecMoveSpeed.z = (float)(X87R(damp * (x87d)m_vecMoveSpeed.z));
     }
 
     if (m_bIsBIGBuilding)

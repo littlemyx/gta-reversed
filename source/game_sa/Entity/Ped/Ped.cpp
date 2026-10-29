@@ -2782,7 +2782,7 @@ void CPed::CalculateNewVelocity() {
     if (!m_pedIK.bSlopePitch) {
         if (m_nMoveState >= PEDMOVE_WALK && !IsPlayer()) {
             if (std::abs(m_pedIK.m_fSlopeRoll) > 0.02f) {
-                m_pedIK.m_fSlopeRoll = std::pow(0.9f, timeStep) * m_pedIK.m_fSlopeRoll;
+                m_pedIK.m_fSlopeRoll = (float)(X87R(x87::pow(X87W((x87d)0.9f), X87W((x87d)timeStep)) * (x87d)m_pedIK.m_fSlopeRoll)); // exe 0x5E518E: pow kept unrounded, the multiply rounds
             }
             // BUG: The roll is zeroed regardless of the above
             m_pedIK.m_fSlopeRoll = 0.0f;
@@ -2796,7 +2796,7 @@ void CPed::CalculateNewVelocity() {
             && (m_nMoveState < PEDMOVE_WALK || g_surfaceInfos.IsStairs(m_nContactSurface) || bPedHitWallLastFrame)
         ) {
             if (m_pedIK.m_fSlopePitch != 0.0f || m_pedIK.m_fSlopeRoll != 0.0f) {
-                decay = std::pow(0.9f, timeStep);
+                decay = (float)x87::pow(X87W((x87d)0.9f), X87W((x87d)timeStep)); // exe 0x5E501C: fstp dword
             }
 
             if (std::abs(m_pedIK.m_fSlopePitch) <= 0.01f) {

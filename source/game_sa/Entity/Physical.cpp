@@ -564,9 +564,9 @@ void CPhysical::ProcessShift() {
             }
             if (bPedDamp || CWorld::bSecondShift)
             {
-                float fMoveSpeedShift = pow(CPhysical::PHYSICAL_SHIFT_SPEED_DAMP, CTimer::GetTimeStep());
+                float fMoveSpeedShift = (float)x87::pow(X87W((x87d)CPhysical::PHYSICAL_SHIFT_SPEED_DAMP), X87W((x87d)CTimer::GetTimeStep())); // exe 0x54DB9E: fstp dword (argument of CVector::operator*=)
                 m_vecMoveSpeed *= fMoveSpeedShift;
-                float fTurnSpeedShift = pow(CPhysical::PHYSICAL_SHIFT_SPEED_DAMP, CTimer::GetTimeStep());
+                float fTurnSpeedShift = (float)x87::pow(X87W((x87d)CPhysical::PHYSICAL_SHIFT_SPEED_DAMP), X87W((x87d)CTimer::GetTimeStep())); // exe 0x54DBBB: fstp dword
                 m_vecTurnSpeed *= fTurnSpeedShift;
             }
         }
@@ -2703,7 +2703,7 @@ void CPhysical::ApplyFriction()
         colPoint.m_vecNormal = CVector (0.0f, 0.0f, 1.0f);
 
         ApplyFriction(CTimer::GetTimeStep() * 0.001f, colPoint);
-        m_vecTurnSpeed.z = pow(0.98f, CTimer::GetTimeStep()) * m_vecTurnSpeed.z;
+        m_vecTurnSpeed.z = (float)(X87R(x87::pow(X87W((x87d)0.98f), X87W((x87d)CTimer::GetTimeStep())) * (x87d)m_vecTurnSpeed.z)); // exe 0x5484A3: pow kept unrounded, the multiply rounds
     }
 
     m_vecMoveSpeed += m_vecFrictionMoveSpeed;
@@ -2717,7 +2717,7 @@ void CPhysical::ApplyFriction()
         && fabs(GetUp().z) < 0.707f
         && 0.05f * 0.05f > m_vecMoveSpeed.SquaredMagnitude() && 0.01f * 0.01f > m_vecTurnSpeed.SquaredMagnitude())
     {
-        m_vecMoveSpeed *= pow(0.5f, CTimer::GetTimeStep());
+        m_vecMoveSpeed *= (float)x87::pow(X87W((x87d)0.5f), X87W((x87d)CTimer::GetTimeStep())); // exe 0x5485BC: fstp dword (argument of CVector::operator*=)
     }
 }
 

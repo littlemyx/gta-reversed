@@ -5276,7 +5276,7 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
             }
         } else if (blend > 0.0f) {
             const x87d v = (x87d)blend - (x87d)ts * 0.02f;
-            blend          = 0.0f <= v ? (float)v : 0.0f;
+            blend          = 0.0f > v ? 0.0f : (float)v; // NaN => v (exe 0x524999: `jne` when 0 <= v or unordered)
         }
         heightZ = (float)(0.4f * (x87d)blend + (x87d)heightZ);
     } else {
@@ -5450,7 +5450,7 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
         } else {
             wantedBeta -= (x87d)(2.0f * PI);
         }
-        betaVel = (float)((wantedBeta - (x87d)m_fHorizontalAngle) / (x87d)(1.0f <= ts ? ts : 1.0f));
+        betaVel = (float)((wantedBeta - (x87d)m_fHorizontalAngle) / (x87d)(1.0f > ts ? 1.0f : ts));
     }
 
     // Vertical angle at which the camera looks at the vehicle (at the moment)
@@ -5663,7 +5663,7 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
     }
     ClipBeta();
 
-    if (camType <= 1 && alphaTarget < m_fVerticalAngle && !(currDist < dist)) {
+    if (camType <= 1 && alphaTarget < m_fVerticalAngle && currDist >= dist) {
         int32 numContactWheels;
         if (veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE) {
             numContactWheels = veh->AsAutomobile()->m_nNumContactWheels;

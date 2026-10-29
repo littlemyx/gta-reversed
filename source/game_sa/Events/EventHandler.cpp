@@ -1283,20 +1283,23 @@ void CEventHandler::ComputeDraggedOutCarResponse(CEventDraggedOutCar* e, CTask* 
                 ? new CTaskComplexLeaveCar{ e->m_Vehicle, 0, 0, false, true }
                 : nullptr;
 
-            if (leaveCarTask && response) { // 0x4BD63A
-                return new CTaskComplexSequence{ leaveCarTask, response };
+            if (!leaveCarTask) { // 0x4BD636
+                return response; // `response` might be null, that's fine
             }
-
-            return leaveCarTask
-                ? leaveCarTask // NOTE: Slightly changed the code. Originally it boiled down to `new CTaskComplexSequence{ leaveCarTask, nullptr }`. This way we save an allocation.
-                : response;    // `response` might be null, that's fine
+            // 0x4BD63C..0x4BD686: always wrapped in a sequence (AddTask(nullptr) is a no-op slot), even without a response
+            const auto seq = new CTaskComplexSequence{};
+            seq->AddTask(leaveCarTask);
+            if (response) {
+                seq->AddTask(response);
+            }
+            return seq;
         };
 
         const auto CreateStealCarBackSeq = [&](bool dragOutPedIfPassenger, bool killJacker) {
             const auto s = new CTaskComplexSequence{};
 
             // Make important life decisions
-            if (CGeneral::RandomBool(50.f)) {
+            if (CGeneral::RandomLowBits1024AtMost512()) { // 0x4BCDB9: `(rand() & 0x3FF) > 0x200` takes the heading + fist branch
                 s->AddTask(new CTaskSimplePause{CGeneral::GetRandomNumberInRange(500, 1'500)});
             } else {
                 s->AddTasks(
@@ -1328,14 +1331,23 @@ void CEventHandler::ComputeDraggedOutCarResponse(CEventDraggedOutCar* e, CTask* 
         switch (e->m_TaskId) {
         case TASK_NONE: // 0x4BCD68
             return CreateFinalSeq(nullptr); // Nothing to do
-        case TASK_SIMPLE_HIT_HEAD: { // 0x4BCD74
+        case TASK_COMPLEX_ENTER_CAR_AS_PASSENGER: { // 0x4BCFB2 (700; the port tested TASK_SIMPLE_HIT_HEAD = 500)
             if (e->m_IsDriverSeat) {
                 return CreateFinalSeq(new CTaskComplexEnterCarAsDriver{ e->m_Vehicle });
             }
             return CreateFinalSeq(new CTaskComplexEnterCarAsPassenger{ e->m_Vehicle });
         }
-        case TASK_COMPLEX_EVASIVE_STEP: { // 0x4BCD85
-            return CreateStealCarBackSeq(false, true);
+        case TASK_COMPLEX_STEAL_CAR: { // 0x4BCD83 (702; the port tested TASK_COMPLEX_EVASIVE_STEP = 502): no kill task, a passenger drags the jacker out first
+            return CreateStealCarBackSeq(true, false);
+        }
+        case TASK_COMPLEX_SMART_FLEE_ENTITY: { // 0x4BD04A (911): the flee task is the response; no jacker -> steal the car back only when nobody sits in the driver seat
+            if (e->m_CarJacker) {
+                return CreateFinalSeq(new CTaskComplexSmartFleeEntity{ e->m_CarJacker, false, fSafeDistance, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) });
+            }
+            if (!e->m_Vehicle->m_pDriver) {
+                return CreateFinalSeq(new CTaskComplexStealCar{ e->m_Vehicle });
+            }
+            return CreateFinalSeq(nullptr);
         }
         case TASK_COMPLEX_KILL_CRIMINAL: { // 0x4BD111
             if (!e->m_CarJacker || e->m_CarJacker->IsPlayer()) {
@@ -1347,14 +1359,14 @@ void CEventHandler::ComputeDraggedOutCarResponse(CEventDraggedOutCar* e, CTask* 
             return CreateFinalSeq(new CTaskComplexDestroyCar{e->m_Vehicle});
         }
         case TASK_COMPLEX_KILL_PED_ON_FOOT: { // 0x4BD1B4
-            assert(e->m_CarJacker); // There's some code after fleeing, but it makes no sense since `e->m_CarJacker` would be null. Pretty sure they forgot a `break`.
-            if (IsKillTaskAppropriate(m_Ped, e->m_CarJacker, *e)) {
-                return CreateStealCarBackSeq(true, false);
+            assert(e->m_CarJacker); // 0x4BD44D..: the exe dereferences a null jacker's matrix here (reads address 0x14)
+            if (IsKillTaskAppropriate(m_Ped, e->m_CarJacker, *e)) { // 0x4BD230: heading/pause, KillPedOnFoot, Say, then steal back (no drag-out)
+                return CreateStealCarBackSeq(false, true);
             }
-            return CreateFinalSeq(new CTaskComplexSmartFleeEntity{ e->m_CarJacker, true, 100'000.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) });
+            return CreateFinalSeq(new CTaskComplexSmartFleeEntity{ e->m_CarJacker, false, fSafeDistance, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) }); // 0x4BD1D1
         }
-        default:
-            return nullptr;
+        default: // 0x4BD636: unknown ids keep a null response; the leave-car task still applies
+            return CreateFinalSeq(nullptr);
         }
     }();
 }

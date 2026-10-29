@@ -1,0 +1,41 @@
+addr	function	verdict	asm range	note	fix commit
+0x5BA400	CGame::Init3	NOT_REACHED	-	Game init, out of budget	-
+0x5BD600	CGame::InitialiseRenderWare	NOT_REACHED	-	Game init, out of budget	-
+0x5BF840	CGame::Init1	NOT_REACHED	-	Game init, out of budget	-
+0x5BFA90	CGame::InitialiseCoreDataAfterRW	NOT_REACHED	-	Game init, out of budget	-
+0x72FD90	CGame::CameraDestroy	NOT_REACHED	-	Game shutdown, out of budget	-
+0x441290	CGameLogic::StopPlayerMovingFromDirection	FIXED	0x441290-0x441388 (all)	NaN direction.z stays NaN in the exe (std::max gave 0); dot order and subtraction match	6d1d7585d
+0x4413C0	CGameLogic::Remove2ndPlayerIfPresent	MATCH	0x4413C0-0x44141E (all)		-
+0x441440	CGameLogic::SortOutStreamingAndMemory	MATCH	0x441440-0x4414B8 (all)	call order and args identical	-
+0x4414C0	CGameLogic::PassTime	FIXED	0x4414C0-0x44154D (all)	weekday wrap per day, stat +1.0 per day, 32-bit hours	bd121512d
+0x4415C0	CGameLogic::SkipCanBeActivated	MATCH	0x4415C0-0x4416BD (all)		-
+0x4418E0	CGameLogic::CalcDistanceToForbiddenTrainCrossing	FIXED	0x4418E0-0x441B5D (all)	3rd crossing x 2770 not 2270, independent ifs (3rd runs for stat<=1), 3D dot + out.z=-point.z (2D under FIX_BUGS)	2cdc10124
+0x441B70	CGameLogic::FindCityClosestToPoint	FIXED	0x441B70-0x441C0D (all)	order LS,LV,SF; NaN keeps LS	d3f92d79c
+0x441D00	CGameLogic::StorePedsWeapons	MATCH	0x441D00-0x441D2B (all)		-
+0x441D30	CGameLogic::RestorePedsWeapons	MATCH	0x441D30-0x441DA7 (all)	unloaded-model test reading modelId1 twice already modelled	-
+0x441E10	CGameLogic::IsPlayerAllowedToGoInThisDirection	FIXED	0x441E10-0x442011 (all)	final return was (p1&&dot>=0)||dot<=0; exe: p1 dot<0, p2 dot>0; dot summed z,y,x	75212b6d2
+0x442020	CGameLogic::IsPlayerUse2PlayerControls	FIXED	0x442020-0x442055 (all)	NONE(2) -> true else ped != Players[focus]	90aa64386
+0x442060	CGameLogic::RestorePlayerStuffDuringResurrection	FIXED	0x442060-0x4423B8 (all)	CleanUpOldReference on &m_pVehicle (was a local copy), fire ptr cleared after Extinguish, water distance 99999.9	d24f1c706
+0x442480	CGameLogic::UpdateSkip	FIXED	0x442480-0x44289A (all)	in-progress wait is now<=timer	9b492f60c
+0x4428B0	CGameLogic::DoWeaponStuffAtStartOf2PlayerGame	FIXED	0x4428B0-0x44297C (all)	Store (not Restore) player 1 weapons, player 2 chosen weapon := player 1 chosen weapon	cdfb36171
+0x442AD0	CGameLogic::Update	NOT_REACHED	-	265-line function, port already carries many exe address comments; out of budget	-
+0x5D33C0	CGameLogic::Save	NOT_REACHED	-	out of budget	-
+0x5D3440	CGameLogic::Load	NOT_REACHED	-	out of budget	-
+0x443B00	CGangWars::PickZoneToAttack	FIXED	0x443B00-0x443D4B (all)	exe is NESTED: every enemy zone (sequence order) x all nav zones (natural order); port took the first enemy zone only and iterated candidates in sequence order	a7d220cff
+0x443DB0	CGangWars::CalculateTimeTillNextAttack	FIXED	0x443DB0-0x443DDE (all)	own multiply chain ((r/32767)*0.9)*1080000+648000 (1-ulp before ftol)	4ddb4e50c
+0x443FF0	CGangWars::ClearSpecificZonesToTriggerGangWar	MATCH	0x443FF0-0x444002 (all)		-
+0x444010	CGangWars::SetSpecificZoneToTriggerGangWar	MATCH	0x444010-0x444033 (all)		-
+0x444040	CGangWars::CheerVictory	FIXED	0x444040-0x4442C6 (all)	label ELS (port ELF), unknown label says nothing instead of asserting	c9f21a0be
+0x444300	CGangWars::StartDefensiveGangWar	FIXED	0x444300-0x444493 (all)	blip script name CODEGW1; sprite table, colour bytes, flags verified	408242e10
+0x4444B0	CGangWars::ClearTheStreets	MATCH	0x4444B0-0x444524 (all)		-
+0x444530	CGangWars::TellGangMembersTo	MATCH	0x444530-0x44480B (all)	task args, backwards walk, gang range verified	-
+0x444810	CGangWars::CreateAttackWave	NOT_REACHED	-	about 3 KB of asm, out of budget	-
+0x4453D0	CGangWars::CreateDefendingGroup	NOT_REACHED	-	about 2 KB of asm, out of budget	-
+0x445C30	CGangWars::ReleasePedsInAttackWave	FIXED	0x445C30-0x445E1A (all)	backwards pool walk; ClearBlipForEntity gets the pool ref (idx<<8|flags), port passed the bare index	e8963472b
+0x445E80	CGangWars::MakePlayerGainInfluenceInZone	FIXED	0x445E80-0x445F43 (all)	32-bit enemy density sum (uint8 wrapped)	534b99407
+0x445F50	CGangWars::StrengthenPlayerInfluenceInZone	MATCH	0x445F50-0x445FC3 (all)		-
+0x445FD0	CGangWars::MakeEnemyGainInfluenceInZone	FIXED	0x445FD0-0x44604D (all)	territories-lost stat only if the zone was controlled BEFORE	534b99407
+0x446050	CGangWars::StartOffensiveGangWar	FIXED	0x446050-0x4463F3 (all)	Gang1/Gang2/sum exclude Grove (index 1), exe runner-up logic; training flag 0x96AB91 (port: on-a-mission); inverted territory test	7dd171e9a
+0x446400	CGangWars::DoStuffWhenPlayerVictorious	FIXED	0x446400-0x4464B7 (all)	timer floor is max(t-240000,30000) (port min)	1020c28b6
+0x4464C0	CGangWars::EndGangWar	FIXED	0x4464C0-0x44655C (all)	branch for any non-zero State2 (port: ==WAR_NOTIFIED)	e425a0122
+0x446570	CGangWars::SetGangWarsActive	MATCH	0x446570-0x4465E3 (all)		-

@@ -8,7 +8,7 @@
 - Literal division: the port writes x/125, x/20, x/1250 where the exe multiplies by a float constant (0.008f, 0.05f, ...) - ProcessBuoyancy (Ped, Automobile), S20d/S16h. Scan: for every hooked function, port `/ <float literal>` vs exe fdiv/fmul with a constant; switch the verified ones (SYSTEMIC-3).
 
 ## X87-POW (from S18e)
-- [ ] Exe calls _CIpow (0x822130) where the port uses std::pow (e.g. CPlane::PreRender Vortex blend pow(0.9f, ts)). No x87::pow helper yet; add one (see .notes/reports/X87-TRIG.md) and grep all std::pow/powf sites.
+- [x] (partial, SYSTEMIC-5 2026-10-29) x87::pow added (Core/X87Pow.h, bit-exact vs the exe, oracle 0/400000) and 66 double-operand std::pow sites switched (commits 5c3d4377 b8e83492 860c8ce3 5faf0784, .notes/asm_sweep/POW.tsv); OPEN: 60 float-overload std::pow/powf sites need a per-site rounding analysis (X87-POW-FLOAT). Original text: Exe calls _CIpow (0x822130) where the port uses std::pow (e.g. CPlane::PreRender Vortex blend pow(0.9f, ts)). No x87::pow helper yet; add one (see .notes/reports/X87-TRIG.md) and grep all std::pow/powf sites.
 
 ## IsPointInSphere sum order (from S02b)
 - [ ] Exe inlines the sphere test as (dz^2+dx^2)+dy^2 with NaN counting as inside (TaskComplexDestroyCarMelee::CreateFirstSubTask 0x62DB20); the port helper IsPointInSphere sums x,y,z. Remaining callers incl. DestroyCarMelee CreateNextSubTask/ControlSubTask (not in any slice list) need an exe check per site.
@@ -22,3 +22,6 @@
 
 ## CRect literals from exe raw stores (from S32d)
 - [ ] Exe often stores rect floats directly at +0/+4/+8/+0xC (no ctor). Port CRect(a,b,c,d) puts (a,d,c,b) in memory (same as exe ctor 0x4041C0). Rule: exe memory (p0,p1,p2,p3) -> port literal {p0,p3,p2,p1}. S32/S32b got this wrong (fixed in S32d). Grep other sweep commits that rewrote CRect literals (Hud, Frontend, Sprite, Font) and re-check.
+
+## X87-POW-FLOAT (from X87-POW)
+- [ ] 60 sites in .notes/asm_sweep/POW.tsv (verdict LEFT: float overload) call std::pow(float, float) / powf where the exe calls _CIpow with the float operands widened (fld dword) and consumes the double result on the x87 stack (fmul at PC24, or fstp dword). Switch to x87::pow((double)a, (double)b) per site with the exe's consumer (X87R / (float)) - read the exe call site first; the result rounding differs from the float overload.

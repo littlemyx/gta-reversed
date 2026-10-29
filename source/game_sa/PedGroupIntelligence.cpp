@@ -99,9 +99,15 @@ bool CPedGroupIntelligence::AddEvent(CEvent* event) {
             return false;
         }
     }
-    if (!m_HighestPriorityEvent || eGrpEvent->BaseEventTakesPriorityOverBaseEvent(*m_HighestPriorityEvent)) {
-        delete std::exchange(m_HighestPriorityEvent, notsa::cast<CEventGroupEvent>(eGrpEvent->Clone()));
+    if (!m_HighestPriorityEvent) { // 0x5F74F2
+        m_HighestPriorityEvent = notsa::cast<CEventGroupEvent>(eGrpEvent->Clone());
+        return true;
     }
+    if (!eGrpEvent->BaseEventTakesPriorityOverBaseEvent(*m_HighestPriorityEvent)) { // 0x5F750B: `test al,al; je 0x5F7534` => returns false (the port returned true)
+        return false;
+    }
+    delete std::exchange(m_HighestPriorityEvent, nullptr); // 0x5F751C: the old event is deleted BEFORE the clone is made
+    m_HighestPriorityEvent = notsa::cast<CEventGroupEvent>(eGrpEvent->Clone());
     return true;
 }
 

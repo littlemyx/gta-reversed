@@ -6,3 +6,5 @@ Result table: .notes/asm_sweep/S30e.result.tsv. 0 deviations found, 0 code chang
 - CamControl 0x52A700-0x52A9E0 MATCH (aim-immediate block with heading wraps and the 30 deg / (zoom+2)*1.5 tests, mouse override, two-player enter/leave checks). Open: 0x52A9E0-0x52B72A, plus the garage fixed-cam geometry 0x528351-0x528A64 and 0x5291EB-0x529B9A.
 - Note: CamControl `aimHeading -= HALF_PI` is a bare double operation on an x87::atan2 result: identical to the exe on the Windows build, but on PortableWin64 the fsub is not rounded to float (should be `X87R(atan - HALF_PI)` into an x87d). Portable-only, not changed.
 - Not reached (budget): SetRwCamera, Constructor, CopyCameraMatrixToRWCam, DealWithMirrorBeforeConstructRenderList, TryToStartNewCamMode tail.
+
+No code changed in this slice; the S31j commit above carries the test results (same worktree).

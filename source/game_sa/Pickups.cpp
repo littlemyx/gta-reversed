@@ -1047,11 +1047,9 @@ void CPickups::Update() {
             if (pickup.Update(FindPlayerPed(), FindPlayerVehicle(), CWorld::PlayerInFocus)) {
                 AddToCollectedPickupsArray(i);
             }
-        } else if (FindPlayerPed(PED_TYPE_PLAYER2)) {
-            if (pickup.Update(FindPlayerPed(1), FindPlayerVehicle(1), PED_TYPE_PLAYER2)) {
-                AddToCollectedPickupsArray(i);
-            }
         }
+        // 0x458DE0: the exe has a player 2 arm (0x459069) guarded by `player 2 exists && player 1 not busy`, but it is the else of
+        // `player 1 not busy` (both read player 1's intelligence): it never runs, so the port must not update player 2 here either
     }
 }
 

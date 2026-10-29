@@ -223,10 +223,9 @@ void CPedAttractor::ComputeAttractPos(int32 pedId, CVector& outPos) {
 // 0x5EA1C0
 void CPedAttractor::ComputeAttractHeading(int32 bQueue, float& heading) {
     if (m_Fx) {
-        if (bQueue)
-            m_UseDir = m_QueueDir;
-
-        heading = CGeneral::GetRadianAngleBetweenPoints(m_UseDir.x, m_UseDir.y, 0.0f, 0.0f);
+        // 0x5EA1D5: picks the queue (+0x68) or the use (+0x74) direction, `m_UseDir` itself is NOT overwritten
+        const CVector& dir = bQueue ? m_QueueDir : m_UseDir;
+        heading = CGeneral::GetRadianAngleBetweenPoints(dir.x, dir.y, 0.0f, 0.0f);
         if (bQueue)
             heading += CPedAttractor::ComputeDeltaHeading();
     }

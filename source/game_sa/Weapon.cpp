@@ -898,8 +898,10 @@ void CWeapon::SetUpPelletCol(int32 numPellets, CEntity* owner, CEntity* victim, 
     }
     auto* const cd = ms_PelletTestCol.GetData();
 
+    // 0x73C7BB: the length is a plain sqrt of the (not yet normalised) direction, the direction is normalised later (only if the victim isn't a building)
     auto hitDir = (colPoint.m_vecPoint - point);
-    const float depth = hitDir.NormaliseAndMag() * CWorld::fWeaponSpreadRate * 1.3f;
+    const float hitDist = (float)std::sqrt(((x87d)hitDir.y * hitDir.y + (x87d)hitDir.x * hitDir.x) + (x87d)hitDir.z * hitDir.z);
+    const float depth   = hitDist * CWorld::fWeaponSpreadRate * 1.3f;
 
     //> 0x73C806 - Create pellet lines
     cd->m_nNumLines = (uint8)numPellets;
@@ -910,7 +912,7 @@ void CWeapon::SetUpPelletCol(int32 numPellets, CEntity* owner, CEntity* victim, 
     );
     for (int32 i = 1; i < numPellets; i++) {
         const auto angle  = CGeneral::GetRandomNumberInRange(-PI, PI);
-        const auto spread = CGeneral::GetRandomNumberInRange(0.f, depth * 0.8f);
+        const auto spread = CGeneral::GetRandomNumberInRange(depth * 0.2f, depth); // 0x73C8A9: rand * (depth - depth * 0.2) + depth * 0.2
 
         const float oX = X87R(x87::cos(angle) * spread);
         const float oZ = X87R(x87::sin(angle) * spread);
@@ -931,45 +933,46 @@ void CWeapon::SetUpPelletCol(int32 numPellets, CEntity* owner, CEntity* victim, 
         {0.f, 0.f, 0.f}
     );
 
-    const auto CalculateMatrixRotation = [&](CVector fwd, CVector zaxis) {
-        const auto r = zaxis.Cross(fwd).Normalized();
+    // 0x73CAC1..: right = normalise(a x b), forward = fwd, up = right x forward
+    const auto SetMatrixRotation = [&](const CVector& fwd, CVector right) {
+        right.Normalise();
         outMat.GetForward() = fwd;
-        outMat.GetRight()   = r;
-        outMat.GetUp()      = r.Cross(fwd);
+        outMat.GetRight()   = right;
+        outMat.GetUp()      = CrossProduct(right, fwd);
     };
 
-    if (victim->GetIsTypeBuilding()) { // 0x73C98E
+    const auto isBuilding = victim->GetIsTypeBuilding();
+    if (isBuilding) { // 0x73C98E
         const auto& n = colPoint.m_vecNormal;
-        CalculateMatrixRotation(
-            -n,
-            std::abs(n.z) >= 0.9f
-                ? CVector{0.f, 1.f, 0.f}
-                : CVector{1.f, 0.f, 0.f}
-        );
-
-    } else  if (std::abs(hitDir.z) <= 0.9f) { // 0x73CA4C
-        CalculateMatrixRotation(
-            hitDir,
-            {0.f, 0.f, 1.f}
-        );
-    } else if (!owner->GetIsTypePed()) { // 0x73CA59
-        CalculateMatrixRotation(
-            hitDir,
-            {1.f, 0.f, 0.f}
-        );
-    } else { // 0x73CA5B
-        CalculateMatrixRotation(
-            hitDir,
-            owner->GetForward()
-        );
+        // The exe tests |normal.x| (not z) against 0.9: tmp = (1, 0, 0) if it is smaller, else (0, 1, 0); right = normal x tmp
+        const CVector tmp = std::abs(n.x) < 0.9f
+            ? CVector{ 1.f, 0.f, 0.f }
+            : CVector{ 0.f, 1.f, 0.f };
+        SetMatrixRotation(-n, CrossProduct(n, tmp));
+    } else {
+        hitDir.Normalise(); // 0x73CA19
+        if (!(std::abs(hitDir.z) > 0.9f)) { // 0x73CA4C (jne on C0|C3: <= 0.9 or NaN)
+            SetMatrixRotation(hitDir, CrossProduct(hitDir, { 0.f, 0.f, 1.f })); // right = hitDir x tmp
+        } else if (!owner->GetIsTypePed()) { // 0x73CA59
+            SetMatrixRotation(hitDir, CrossProduct(hitDir, { 1.f, 0.f, 0.f }));
+        } else { // 0x73CA5B
+            SetMatrixRotation(hitDir, CrossProduct(owner->GetForward(), hitDir)); // right = ownerFwd x hitDir
+        }
     }
 
     // 0x73CAFF
     outMat.GetPosition() = colPoint.m_vecPoint;
 
-    // 0x73CB1A
-    if (!victim->GetIsTypeBuilding()) {
-        outMat.GetPosition() -= colPoint.m_vecNormal.ProjectOnToNormal(outMat.GetForward()) * depth;
+    // 0x73CB28
+    if (!isBuilding) {
+        const auto& n   = colPoint.m_vecNormal;
+        const auto& fwd = outMat.GetForward();
+        const float dot = (float)(((x87d)n.z * fwd.z + (x87d)n.y * fwd.y) + (x87d)n.x * fwd.x); // z, y, x
+        auto&       pos = outMat.GetPosition();
+        const float nd  = -depth;
+        pos.x = (float)(((x87d)nd * fwd.x) * dot + pos.x);
+        pos.y = (float)((float)((x87d)nd * fwd.y) * dot + pos.y);
+        pos.z = (float)((float)((float)((x87d)nd * fwd.z) * dot) + pos.z);
     }
 }
 

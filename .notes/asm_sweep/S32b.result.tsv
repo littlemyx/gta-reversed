@@ -1,0 +1,30 @@
+addr	function	verdict	asm range	note	fix commit
+0x587FB0	CRadar::Initialise	NOT_REACHED	-	not compared (budget)	-
+0x5827D0	CRadar::LoadTextures	NOT_REACHED	-	not compared (budget)	-
+0x5828A0	CRadar::DrawLegend	DEVIATION	0x582E7D-0x582FD0 (height-2 box + position only)	posX/posY are _ftol (truncate) of stretch(8)+x, port used std::round; NORMAL box rects use Y stretch (5/4) and {l,b,r,t} order, port used X stretch for Y and swapped bottom/top. LOW/HIGH polygons and sprite path not compared	HASH
+0x585940	CRadar::Shutdown	NOT_REACHED	-	not compared (budget)	-
+0x584960	CRadar::DrawYouAreHereSprite	NOT_REACHED	-	not compared (budget)	-
+0x584B50	CRadar::RequestMapSection	NOT_REACHED	-	not compared (budget)	-
+0x584BB0	CRadar::RemoveMapSection	NOT_REACHED	-	not compared (budget)	-
+0x584BF0	CRadar::RemoveRadarSections	NOT_REACHED	-	not compared (budget)	-
+0x585FF0	CRadar::DrawRadarSprite	NOT_REACHED	-	not compared (budget)	-
+0x586B00	CRadar::DrawMap	NOT_REACHED	-	not compared (budget)	-
+0x586880	CRadar::DrawRadarMap	NOT_REACHED	-	not compared (budget)	-
+0x5858D0	CRadar::StreamRadarSections-vec	NOT_REACHED	-	not compared (budget)	-
+0x584850	CRadar::DrawRotatingRadarSprite	NOT_REACHED	-	not compared (budget)	-
+0x585700	CRadar::DrawRadarMask	NOT_REACHED	-	not compared (budget)	-
+0x5D53C0	CRadar::Load	NOT_REACHED	-	not compared (budget)	-
+0x5D5860	CRadar::Save	NOT_REACHED	-	not compared (budget)	-
+0x584070	CRadar::ShowRadarTraceWithHeight	DEVIATION	0x584070-0x58447F	NORMAL box rects were {x-dx,y-dy,x+dx,y+dy}; exe rects are {left,bottom,right,top}={x-dx,y+dy,x+dx,y-dy} (border size+1 and box size); LOW/HIGH triangles (vertices, size+0..3 stretch, order) and Limit match	HASH
+0x586D60	CRadar::DrawCoordBlip	DEVIATION	0x586D60-0x586FF6	(1) alpha polarity: exe uses the colour alpha unless flag 0x20 (fade) is set (port used CalculateBlipAlpha when fade unset, so destination blips were distance-faded); (2) height tests are (z-2)>playerZ / !(z+4<playerZ) not z-pz vs 2/-4 (NaN branches too); (3) DbgFlag ShowRadarMarker + radius decay block was missing; (4) size is movsx int16; colour appearance read from m_nAppearance instead of m_nCoordBlipAppearance (see GetStaticColour/SetCoordBlipAppearance)	HASH
+0x587D20	CRadar::SetupAirstripBlips	DEVIATION	0x587D20-0x587FAF	nearest-airstrip pick was std::min_element; exe is strict < chain d0<{d1,d2,d3}, d1<{..}, d2<{..} else 3 (ties/NaN differ); blip create/clear flow, vehicle/Vortex gate, frame-counter gate, table 0x8D06E0 match	HASH
+0x588050	CRadar::DrawBlips	DEVIATION	0x588050-0x588744	(1) pass order: exe draws isSprite=1 first then 0 (port false,true); (2) waypoint second loop passes the pass flag (port always true, drew the sprite in both passes); (3) map ruler rects {x-1,H,x+1,0} / {0,y+1,W,y-1} (corner order was swapped); (4) mouse-in-map bounds are _ftol-truncated ints; (5) player marker direction = (p-origin)*(1/range) not /range; (6) hidden player colour is 50,50,80,255 (port 50,50,50); (7) FindPlayerHeading(i) not (0); (8) angle = heading-(orientation+pi) not (heading-orientation)-pi; jump tables (waypoint always drawn), priority loop, type table, N sprite, YouAreHere match	HASH
+0x5853D0	CRadar::DrawAreaOnRadar	NOT_REACHED	-	not compared (budget)	-
+0x584C50	CRadar::StreamRadarSections-xy	NOT_REACHED	-	not compared (budget)	-
+0x585BF0	CRadar::Draw3dMarkers	NOT_REACHED	-	not compared (budget)	-
+0x586110	CRadar::DrawRadarSection	NOT_REACHED	-	not compared (budget)	-
+0x586520	CRadar::DrawRadarSectionMap	NOT_REACHED	-	not compared (budget)	-
+0x586650	CRadar::DrawRadarGangOverlay	NOT_REACHED	-	not compared (budget)	-
+0x587000	CRadar::DrawEntityBlip	NOT_REACHED	-	port already carries per-instruction x87 annotations from an earlier pass; not compared this slice (budget)	-
+0x586D60	tRadarTrace::GetStaticColour (inlined in DrawCoordBlip colour pick)	DEVIATION	0x586D8E-0x586DC6	switched on m_nAppearance (flag byte +0x26 bits 6-7); exe reads flag byte +0x25 bits 6-7 (m_nCoordBlipAppearance): 0 trace colour, 1 HUD blue(13), else HUD red(0)	HASH
+0x583E50	CRadar::SetCoordBlipAppearance	DEVIATION	0x583E50-0x583EA8	required type BLIP_CAR and wrote m_nAppearance; exe requires BLIP_COORD(4) and writes flag byte +0x25 bits 6-7 (m_nCoordBlipAppearance)	HASH

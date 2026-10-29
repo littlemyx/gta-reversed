@@ -281,10 +281,11 @@ void CRadar::DrawLegend(int32 x, int32 y, eRadarSprite blipType) {
         }();
     }
 
-    const auto posX = std::round(SCREEN_STRETCH_X(8.0f) + (float)x);
-    const auto posY = std::round(SCREEN_STRETCH_Y(8.0f) + (float)y);
+    // exe 0x582EB0-0x582EEC: `_ftol` (truncation) of stretch(8) + x, then back to float
+    const auto posX = (float)NOTSA_FTOL(int32, SCREEN_STRETCH_X(8.0f) + (float)x);
+    const auto posY = (float)NOTSA_FTOL(int32, SCREEN_STRETCH_Y(8.0f) + (float)y);
 
-    const auto x4px = SCREEN_STRETCH_X(4.0f);
+    const auto x4px = SCREEN_STRETCH_X(4.0f), y4px = SCREEN_STRETCH_Y(4.0f);
     const auto x5px = SCREEN_STRETCH_X(5.0f), y5px = SCREEN_STRETCH_Y(5.0f);
     const auto x7px = SCREEN_STRETCH_X(7.0f), y7px = SCREEN_STRETCH_Y(7.0f);
 
@@ -329,12 +330,13 @@ void CRadar::DrawLegend(int32 x, int32 y, eRadarSprite blipType) {
         break;
     }
     case RADAR_TRACE_NORMAL: {
+        // The exe's rects are {left, bottom, right, top} = {x - dx, y + dy, x + dx, y - dy} with dy from the Y stretch (0x582F0E-0x582FCB)
         CSprite2d::DrawRect(
             {
                 posX - x5px,
-                posY - x5px,
+                posY + y5px,
                 posX + x5px,
-                posY + x5px
+                posY - y5px
             },
             outlineColor
         );
@@ -342,9 +344,9 @@ void CRadar::DrawLegend(int32 x, int32 y, eRadarSprite blipType) {
         CSprite2d::DrawRect(
             {
                 posX - x4px,
-                posY - x4px,
+                posY + y4px,
                 posX + x4px,
-                posY + x4px
+                posY - y4px
             },
             arrowColor
         );
@@ -901,7 +903,7 @@ void CRadar::SetBlipFade(tBlipHandle blip, bool fade) {
 void CRadar::SetCoordBlipAppearance(tBlipHandle blip, eBlipAppearance appearance) {
     if (const auto index = GetActualBlipArrayIndex(blip); index != -1) {
         auto& trace = ms_RadarTrace[index];
-        if (trace.m_nBlipType != eBlipType::BLIP_CAR) {
+        if (trace.m_nBlipType != eBlipType::BLIP_COORD) { // exe: (flags[+0x26] & 0x3C) == 0x10
             return;
         }
 
@@ -909,7 +911,7 @@ void CRadar::SetCoordBlipAppearance(tBlipHandle blip, eBlipAppearance appearance
         case BLIP_FLAG_FRIEND:
         case BLIP_FLAG_THREAT:
         case BLIP_FLAG_UNK:
-            trace.m_nAppearance = appearance;
+            trace.m_nCoordBlipAppearance = appearance; // exe: the top 2 bits of the flag byte +0x25 (read by DrawCoordBlip)
             break;
         }
     }
@@ -1011,19 +1013,19 @@ void CRadar::ShowRadarTraceWithHeight(float x, float y, uint32 size, uint32 R, u
             { r, g, b, a }
         );
         break;
-    case RADAR_TRACE_NORMAL:
+    case RADAR_TRACE_NORMAL: // exe rects are {left, bottom, right, top} = {x - dx, y + dy, x + dx, y - dy} (screen y grows downwards)
         CSprite2d::DrawRect( // draw black border
             {
-                x - SCREEN_STRETCH_X(size1), y - SCREEN_STRETCH_Y(size1),
-                x + SCREEN_STRETCH_X(size1), y + SCREEN_STRETCH_Y(size1)
+                x - SCREEN_STRETCH_X(size1), y + SCREEN_STRETCH_Y(size1),
+                x + SCREEN_STRETCH_X(size1), y - SCREEN_STRETCH_Y(size1)
             },
             { 0, 0, 0, a }
         );
 
         CSprite2d::DrawRect( // draw box
             {
-                x - SCREEN_STRETCH_X(size0), y - SCREEN_STRETCH_Y(size0),
-                x + SCREEN_STRETCH_X(size0), y + SCREEN_STRETCH_Y(size0)
+                x - SCREEN_STRETCH_X(size0), y + SCREEN_STRETCH_Y(size0),
+                x + SCREEN_STRETCH_X(size0), y - SCREEN_STRETCH_Y(size0)
             },
             { r, g, b, a }
         );
@@ -1872,9 +1874,20 @@ void CRadar::DrawMap() {
  * @addr 0x586D60
  */
 void CRadar::DrawCoordBlip(int32 blipIndex, bool isSprite) {
-    const auto& trace = ms_RadarTrace[blipIndex];
+    auto& trace = ms_RadarTrace[blipIndex];
     if (trace.m_nBlipType == BLIP_CONTACT_POINT && CTheScripts::IsPlayerOnAMission())
         return;
+
+    const auto color = trace.GetStaticColour(); // exe 0x586D90-0x586DC4
+
+    // Debug marker (exe 0x586DC8-0x586E23): runs before the sprite/display checks, so it runs on both the sprite and the non-sprite pass
+    if ((trace.m_nBlipDisplayFlag == BLIP_DISPLAY_BOTH || trace.m_nBlipDisplayFlag == BLIP_DISPLAY_MARKERONLY) && CTheScripts::DbgFlag) {
+        ShowRadarMarker(trace.m_vPosition, color.ToInt(), trace.m_fSphereRadius);
+        trace.m_fSphereRadius = (float)((x87d)trace.m_fSphereRadius - (x87d)0.1f); // 0x858B1C
+        if (trace.m_fSphereRadius < 1.f) {                                              // 0x858624
+            trace.m_fSphereRadius = 5.f;
+        }
+    }
 
     if (isSprite == !trace.HasSprite())
         return;
@@ -1899,36 +1912,41 @@ void CRadar::DrawCoordBlip(int32 blipIndex, bool isSprite) {
     if (trace.HasSprite())
         return;
 
-    if (FrontEndMenuManager.m_bDrawingMap && !FrontEndMenuManager.m_ShowMissionBlips) {
-        // drawing the whole map but mission blips are hidden by the player.
-        return;
-    }
-
-    const auto GetHeight = [&] {
-        const auto zDiff = trace.GetWorldPos().z - FindPlayerCentreOfWorldForMap(PED_TYPE_PLAYER1).z;
-
-        if (zDiff > 2.0f) {
+    // The exe compares `z - 2.0` / `z + 4.0` (float steps) against the player's z, not the difference against 2 / -4.
+    // NaN takes the same branches as the exe: not LOW, and NORMAL (the HIGH test is `z + 4 < playerZ`).
+    const float blipZ   = trace.GetWorldPos().z;
+    const float playerZ = FindPlayerCentreOfWorldForMap(PED_TYPE_PLAYER1).z;
+    const float zLow    = blipZ - 2.0f;  // 0x858CA0
+    const float zHigh   = blipZ + 4.0f;  // 0x858B90
+    const auto height = [&] {
+        if (zLow > playerZ) {
             // trace is higher
             return RADAR_TRACE_LOW;
-        } else if (zDiff >= -4.0f) {
+        } else if (!(zHigh < playerZ)) {
             // they are at the around the same elevation.
             return RADAR_TRACE_NORMAL;
         } else {
             // player is higher
             return RADAR_TRACE_HIGH;
         }
-    };
+    }();
 
-    const auto color = trace.GetStaticColour();
+    if (FrontEndMenuManager.m_bDrawingMap && !FrontEndMenuManager.m_ShowMissionBlips) {
+        // drawing the whole map but mission blips are hidden by the player.
+        return;
+    }
+
+    // Blip fade (flag bit 0x20) selects the distance alpha; the exe otherwise uses the alpha of the colour (bl of the packed RGBA).
+    const uint8 alpha = trace.m_bBlipFade ? CalculateBlipAlpha(realDist) : color.a;
     CRadar::ShowRadarTraceWithHeight(
         screenPos.x,
         screenPos.y,
-        trace.m_nBlipSize,
+        (uint32)(int32)(int16)trace.m_nBlipSize, // movsx word [esi+0x1c]
         color.r,
         color.g,
         color.b,
-        trace.m_bBlipFade ? color.a : CalculateBlipAlpha(realDist),
-        GetHeight()
+        alpha,
+        height
     );
 
     AddBlipToLegendList(true, blipIndex);
@@ -2339,14 +2357,23 @@ void CRadar::SetupAirstripBlips() {
             return;
         }
 
-        // NOTSA, effectively the same thing though.
+        // The exe (0x587E3B-0x587ECE) picks the nearest airstrip with strict `<` tests against all the others (not std::min_element):
+        // on a tie (or NaN) the first strip that is not strictly the nearest is skipped, and the last one is the fallback.
         const auto location = [veh] {
-            float distances[NUM_AIRSTRIPS]{};
+            float d[NUM_AIRSTRIPS]{};
             for (auto&& [i, table] : rngv::enumerate(airstrip_table)) {
-                distances[i] = DistanceBetweenPoints2D(table.position, veh->GetPosition());
+                d[i] = DistanceBetweenPoints2D(table.position, veh->GetPosition());
             }
-
-            return (eAirstripLocation)std::distance(distances, rng::min_element(distances));
+            if (d[0] < d[1] && d[0] < d[2] && d[0] < d[3]) {
+                return (eAirstripLocation)0;
+            }
+            if (d[1] < d[0] && d[1] < d[2] && d[1] < d[3]) {
+                return (eAirstripLocation)1;
+            }
+            if (d[2] < d[0] && d[2] < d[1] && d[2] < d[3]) {
+                return (eAirstripLocation)2;
+            }
+            return (eAirstripLocation)3;
         }();
 
         if (airstrip_blip) {
@@ -2388,22 +2415,26 @@ void CRadar::DrawBlips() {
     if (FrontEndMenuManager.m_bDrawingMap) {
         if (FrontEndMenuManager.m_bMapLoaded) {
             // draw the menu map ruler.
+            // The exe truncates the 4 bounds with _ftol (prologue 0x588059-0x5880AF) and compares the int mouse position against the ints.
             const auto mouseX = FrontEndMenuManager.m_nMousePosX, mouseY = FrontEndMenuManager.m_nMousePosY;
+            const auto minX = NOTSA_FTOL(int32, SCREEN_STRETCH_X(60.0f)),           maxX = NOTSA_FTOL(int32, SCREEN_STRETCH_FROM_RIGHT(60.0f));
+            const auto minY = NOTSA_FTOL(int32, SCREEN_STRETCH_Y(60.0f)),           maxY = NOTSA_FTOL(int32, SCREEN_STRETCH_FROM_BOTTOM(60.0f));
 
             if (!CPad::IsMouseLButton() &&
-                mouseX > SCREEN_STRETCH_X(60.0f) && mouseX < SCREEN_STRETCH_FROM_RIGHT(60.0f) &&
-                mouseY > SCREEN_STRETCH_Y(60.0f) && mouseY < SCREEN_STRETCH_FROM_BOTTOM(60.0f) ||
+                mouseX > minX && mouseX < maxX &&
+                mouseY > minY && mouseY < maxY ||
                 !FrontEndMenuManager.m_DisplayTheMouse)
             {
                 auto drawPos = TransformRealWorldPointToBlipSpace(FrontEndMenuManager.m_vMousePos);
                 LimitToMap(drawPos.x, drawPos.y);
 
+                // The exe's rects are {left, bottom, right, top} (screen y grows downwards): vertical {x - 1, H, x + 1, 0}, horizontal {0, y + 1, W, y - 1}
                 CSprite2d::DrawRect(
                     {
                         SCREEN_STRETCH_X(drawPos.x) - 1.0f,
-                        0.0f,
+                        SCREEN_HEIGHT,
                         SCREEN_STRETCH_X(drawPos.x) + 1.0f,
-                        SCREEN_HEIGHT
+                        0.0f
                     },
                     HudColour.GetRGB(HUD_COLOUR_GOLD)
                 );
@@ -2411,9 +2442,9 @@ void CRadar::DrawBlips() {
                 CSprite2d::DrawRect(
                     {
                         0.0f,
-                        SCREEN_STRETCH_Y(drawPos.y) - 1.0f,
-                        SCREEN_WIDTH,
                         SCREEN_STRETCH_Y(drawPos.y) + 1.0f,
+                        SCREEN_WIDTH,
+                        SCREEN_STRETCH_Y(drawPos.y) - 1.0f,
                     },
                     HudColour.GetRGB(HUD_COLOUR_GOLD)
                 );
@@ -2425,8 +2456,8 @@ void CRadar::DrawBlips() {
         DrawRadarSprite(RADAR_SPRITE_NORTH, drawPos.x, drawPos.y, 255);
     }
 
-    // we first do whole thing with isSprite = true, then = false... yeah.
-    for (const auto isSprite : {false, true}) {
+    // we first do whole thing with isSprite = true, then = false (the exe starts the pass flag at 1: 0x5882E3, toggled at 0x588425).
+    for (const auto isSprite : {true, false}) {
         for (auto priority = 1; priority < 4; priority++) {
             for (auto&& [i, trace] : rngv::enumerate(ms_RadarTrace)) { // todo: check if looping all
                 if (!trace.m_bTrackingBlip)
@@ -2467,7 +2498,7 @@ void CRadar::DrawBlips() {
             case BLIP_COORD:
             case BLIP_CONTACT_POINT:
                 if (trace.m_nBlipSprite == RADAR_SPRITE_WAYPOINT) {
-                    DrawCoordBlip(i, true);
+                    DrawCoordBlip(i, isSprite); // the exe passes the pass flag (0x58840F), so the waypoint sprite is drawn in the isSprite pass only
                 }
                 break;
             default:
@@ -2479,7 +2510,10 @@ void CRadar::DrawBlips() {
     // FIX_BUGS: Originally 2 player blips both drawing P1's position.
     // https://github.com/CookiePLMonster/SilentPatch/issues/209
     const auto GetPlayerMarkerPosition = [](int32 playerIndex = 0) {
-        const auto playerDirection = (FindPlayerCentreOfWorldForMap(playerIndex) - vec2DRadarOrigin) / m_radarRange;
+        // The exe multiplies by the float reciprocal (fld1; fdiv range) instead of dividing each component (0x58845C-0x58847F).
+        const auto  centre = FindPlayerCentreOfWorldForMap(playerIndex);
+        const float inv    = 1.0f / m_radarRange;
+        const CVector2D playerDirection{ (centre.x - vec2DRadarOrigin.x) * inv, (centre.y - vec2DRadarOrigin.y) * inv };
 
         CVector2D rotatedPos = {
             cachedSin * playerDirection.y + cachedCos * playerDirection.x,
@@ -2501,13 +2535,14 @@ void CRadar::DrawBlips() {
 
             const auto pos = GetPlayerMarkerPosition(notsa::IsFixBugs() ? i : 0);
 
-            const auto angle = [] {
-                const auto heading = FindPlayerHeading(0);
+            const auto angle = [i] {
+                const auto heading = FindPlayerHeading(i); // the exe passes the player index (push esi at 0x58863D)
 
+                // 0x858CB8 = float pi; the non-topdown form is heading - (orientation + pi)
                 if (CCamera::GetActiveCamera().m_nMode == MODE_TOPDOWN) {
-                    return heading + DegreesToRadians(180.0f);
+                    return heading + std::numbers::pi_v<float>;
                 } else {
-                    return heading - m_fRadarOrientation - DegreesToRadians(180.0f);
+                    return heading - (m_fRadarOrientation + std::numbers::pi_v<float>);
                 }
             }();
 
@@ -2518,7 +2553,7 @@ void CRadar::DrawBlips() {
                 angle,
                 NOTSA_FTOL(uint32, SCREEN_STRETCH_X(8.0f)),
                 (notsa::IsFixBugs() ? NOTSA_FTOL(uint32, SCREEN_STRETCH_Y(8.0f)) : NOTSA_FTOL(uint32, SCREEN_STRETCH_X(8.0f))),
-                player->IsHidden() ? CRGBA{50, 50, 50, 255} : CRGBA{255, 255, 255, 255}
+                player->IsHidden() ? CRGBA{50, 50, 80, 255} : CRGBA{255, 255, 255, 255} // 0x58865A: 0x32, 0x32, 0x50, 0xFF
             );
         }
     } else {
@@ -2719,21 +2754,17 @@ int32 CRadar::FindTraceNotTrackingBlipIndex() {
  * @brief Returns the color of the blip's apperance (Opaque)
  */
 CRGBA tRadarTrace::GetStaticColour() const {
-    switch (m_nAppearance) {
+    // exe 0x586D8E-0x586DC6: the 2 bits at flag byte +0x25 (m_nCoordBlipAppearance): 0 = trace colour, 1 = HUD colour 13 (blue), else HUD colour 0 (red)
+    switch (m_nCoordBlipAppearance) {
     case eBlipAppearance::BLIP_FLAG_FRIEND:
         return CRadar::GetRadarTraceColour(m_nColour, m_bBright, false);
 
     case eBlipAppearance::BLIP_FLAG_THREAT:
         return HudColour.GetIntColour(HUD_COLOUR_BLUE);
 
-    case eBlipAppearance::BLIP_FLAG_UNK:
+    default: // BLIP_FLAG_UNK (the setter stores 0..2 only)
         return HudColour.GetIntColour(HUD_COLOUR_RED);
-
-    default:
-        NOTSA_UNREACHABLE("Invalid blip appearance (={})", (uint8)m_nAppearance);
     }
-
-    return 0;
 }
 
 /*!

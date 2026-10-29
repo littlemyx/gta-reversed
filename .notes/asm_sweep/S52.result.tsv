@@ -4,14 +4,14 @@ addr	function	verdict	asm range	note	fix commit
 0x4512D0	CPathFind::AddDynamicLinkBetween2Nodes	NOT_REACHED	0x4512D0-0x4512F0	no port function (declared in PathFind.h, never defined, no callers); exe = _For1Node(a,b) then (b,a)	-
 0x452000	CPathFind::TestCoorsCloseness	NOT_REACHED	-	not declared or defined in the port, no callers	-
 0x4529F0	CPathFind::LoadPathFindData(RwStream*,int)	MATCH	0x4529F0-0x452C6F	count arrays, alloc sizes (+0xC0 dynamic slack), read order, switched-off original bit copy, node-switch replay, dynamic link tables set to -1	-
-0x452F40	CPathFind::LoadPathFindData(int)	FIXED	0x452F40-0x452F8D	the stream was never closed (exe RwStreamClose(stream, 0) before CTimer::Resume)	fbf0b9c8e
+0x452F40	CPathFind::LoadPathFindData(int)	FIXED	0x452F40-0x452F8D	the stream was never closed (exe RwStreamClose(stream, 0) before CTimer::Resume)	63735c22d
 0x5D34C0	CPathFind::Save	MATCH	0x5D34C0-0x5D34FE	count (4) then 0x1C per switch entry	-
 0x5D3500	CPathFind::Load	MATCH	0x5D3500-0x5D353E	same layout	-
 0x5E96C0	CPedAttractorManager::ComputeEffectPos	MATCH	0x5E96C0-0x5E96D3	FromMultiply x87 order equals Matrix::TransformPoint	-
 0x5E96E0	CPedAttractorManager::ComputeEffectUseDir	MATCH	0x5E96E0-0x5E9729	fx+0x1C, Multiply3x3	-
 0x5E9730	CPedAttractorManager::ComputeEffectQueueDir	MATCH	0x5E9730-0x5E9779	fx+0x10	-
 0x5E9780	CPedAttractorManager::ComputeEffectForwardDir	MATCH	0x5E9780-0x5E97C9	fx+0x28	-
-0x5EA220	CPedAttractorManager::IsApproachable	FIXED	0x5EA220-0x5EA38E	2nd test is dot(normalised flat dir fx->ped, fwd) > 0.25 (port: squared distance >= 0.25); 1st dot = pedPos.fwd + -(fxPos.fwd) (z,y,x / z,x,y sums)	0b90e8042
+0x5EA220	CPedAttractorManager::IsApproachable	FIXED	0x5EA220-0x5EA38E	2nd test is dot(normalised flat dir fx->ped, fwd) > 0.25 (port: squared distance >= 0.25); 1st dot = pedPos.fwd + -(fxPos.fwd) (z,y,x / z,x,y sums)	8f3fe6981
 0x5EB5F0	CPedAttractorManager::RemoveEffect<T>	MATCH	0x5EB5F0-0x5EB630	AbortPedTasks on every attractor of the effect, returns false	-
 0x5EB640	CPedAttractorManager::IsPedRegistered<T>	MATCH	0x5EB640-0x5EB68F	any_of IsRegisteredWithPed	-
 0x5EB690	CPedAttractorManager::IsPedRegisteredWithEffect<T>	MATCH	0x5EB690-0x5EB6EB	fx at +4, entity at +8, ped registered	-
@@ -19,19 +19,19 @@ addr	function	verdict	asm range	note	fix commit
 0x5EB740	CPedAttractorManager::GetPedUsingEffect<T>	MATCH	0x5EB740-0x5EB7A9	returns the head of the first matching attractor's queue (null when empty), does not keep searching	-
 0x5EB7B0	CPedAttractorManager::GetRelevantAttractor<T>	MATCH	0x5EB7B0-0x5EB80C	-	-
 0x5EBA30	CPedAttractorManager::RemoveEffect	MATCH	0x5EBA30-0x5EBAD3	type 0 -> +0x10 (ATM), 1 -> +0 (seat), 2..9 -> +0x20..+0x90; default false	-
-0x5EBBA0	CPedAttractorManager::HasQueueTailArrivedAtSlot	FIXED	0x5EBBA0-0x5EBC83	null / non-attractor effect returns false (port asserted); rest (0xEB single ped, 0xEA slot == size-1) matches	a704779f9
+0x5EBBA0	CPedAttractorManager::HasQueueTailArrivedAtSlot	FIXED	0x5EBBA0-0x5EBC83	null / non-attractor effect returns false (port asserted); rest (0xEB single ped, 0xEA slot == size-1) matches	f9ec2d1e1
 0x5EBCB0	CPedAttractorManager::IsPedRegisteredWithEffect	MATCH	0x5EBCB0-0x5EBD6F	list order seats, ATMs, stops, pizzas, shelters, trigger, lookat, scripted, park, step	-
 0x5EBD70	CPedAttractorManager::IsPedRegisteredWithEffect	MATCH	0x5EBD70-0x5EBE4F	same order	-
 0x5EBE50	CPedAttractorManager::GetPedUsingEffect	MATCH	0x5EBE50-0x5EBF4F	jump table type -> list	-
 0x5EBF50	CPedAttractorManager::GetRelevantAttractor	MATCH	0x5EBF50-0x5EC02A	same order	-
-0x5EC660	CPedAttractorManager::BroadcastDeparture<T>	FIXED	0x5EC660-0x5EC736	attractor is erased AND deleted (scalar deleting dtor) once no ped is registered; the port only erased it (pool entry + entity reference leaked)	c5d34962d
-0x5EC740	CPedAttractorManager::DeRegisterPed<T>	FIXED	0x5EC740-0x5EC81F	same delete after erase	c5d34962d
+0x5EC660	CPedAttractorManager::BroadcastDeparture<T>	FIXED	0x5EC660-0x5EC736	attractor is erased AND deleted (scalar deleting dtor) once no ped is registered; the port only erased it (pool entry + entity reference leaked)	0511159a7
+0x5EC740	CPedAttractorManager::DeRegisterPed<T>	FIXED	0x5EC740-0x5EC81F	same delete after erase	0511159a7
 0x5EC850	CPedAttractorManager::DeRegisterPed	MATCH	0x5EC850-0x5EC957	null attractor / unregistered ped / bad type -> false, type jump table	-
 0x5EC980	CPedAttractorManager::BroadcastDeparture	MATCH	0x5EC980-0x5ECA87	dispatcher	-
 0x5EF710	CPedAttractorManager::RestoreStuffFromMem	NOT_REACHED	0x5EF710	no callers in the exe; port NOTSA_UNREACHABLE (exe frees and zeroes the ten arrays)	-
 0x5EF920	CPedAttractorManager::BroadcastArrival<T>	MATCH	0x5EF920-0x5EF97C	-	-
 0x5EF980	CPedAttractorManager::RegisterPed<T>	MATCH	0x5EF980-0x5EFC13	find (fx +4, entity +8) else pool-new + push_back, then CPedAttractor::RegisterPed; pool exhaustion pushes a null in the exe (not touched)	-
-0x5EFCA0	CPedAttractorManager::RegisterPedWithAttractor	FIXED	0x5EFCA0-0x5EFDEF	non-attractor effect returns nullptr (port asserted); order of checks as exe	fad31f796
+0x5EFCA0	CPedAttractorManager::RegisterPedWithAttractor	FIXED	0x5EFCA0-0x5EFDEF	non-attractor effect returns nullptr (port asserted); order of checks as exe	a3c7a6df1
 0x5EFE20	CPedAttractorManager::BroadcastArrival	MATCH	0x5EFE20-0x5EFF27	dispatcher	-
 0x5A78F0	CPedClothesDesc::Initialise	MATCH	0x5A78F0-0x5A790F	10 + 18 dwords cleared, fat / muscle = 0	-
 0x5A7910	CPedClothesDesc::SetModel	MATCH	0x5A7910-0x5A791B	-	-

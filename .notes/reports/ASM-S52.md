@@ -1,11 +1,11 @@
 # ASM-S52 (phase 2: PathFind, PedAttractorManager, PedClothesDesc) - 2026-10-29
 Result: 40 rows, 37 compared (31 MATCH, 6 FIXED rows in 5 commits), 3 NOT_REACHED (AddDynamicLinkBetween2Nodes and TestCoorsCloseness have no port code or callers; RestoreStuffFromMem has no exe callers). Tables in S52.result.tsv.
 Fixes (exe address, one line each):
-- 0b90e8042 CPedAttractorManager::IsApproachable (0x5EA220-0x5EA38E): second test is dot(normalised flat dir effect->ped, forward dir) > 0.25 (the port compared squared distance >= 0.25); first dot is pedPos.fwd + -(fxPos.fwd) with the exe's z,y,x / z,x,y sums.
-- c5d34962d BroadcastDeparture<T> / DeRegisterPed<T> (0x5EC660, 0x5EC740): when the last ped leaves, the exe erases the attractor from the list and deletes it (pool slot + entity reference freed); the port only erased it, leaking one attractor-pool entry per use.
-- a704779f9 HasQueueTailArrivedAtSlot (0x5EBBA0): null / non-attractor effect returns false (port asserted).
-- fad31f796 RegisterPedWithAttractor (0x5EFCA0): non-attractor effect returns nullptr after the active / registered checks (port asserted first).
-- fbf0b9c8e CPathFind::LoadPathFindData(int) (0x452F40): the nodes%d.dat stream is closed (RwStreamClose); the port leaked the handle.
+- 8f3fe6981 CPedAttractorManager::IsApproachable (0x5EA220-0x5EA38E): second test is dot(normalised flat dir effect->ped, forward dir) > 0.25 (the port compared squared distance >= 0.25); first dot is pedPos.fwd + -(fxPos.fwd) with the exe's z,y,x / z,x,y sums.
+- 0511159a7 BroadcastDeparture<T> / DeRegisterPed<T> (0x5EC660, 0x5EC740): when the last ped leaves, the exe erases the attractor from the list and deletes it (pool slot + entity reference freed); the port only erased it, leaking one attractor-pool entry per use.
+- f9ec2d1e1 HasQueueTailArrivedAtSlot (0x5EBBA0): null / non-attractor effect returns false (port asserted).
+- a3c7a6df1 RegisterPedWithAttractor (0x5EFCA0): non-attractor effect returns nullptr after the active / registered checks (port asserted first).
+- 63735c22d CPathFind::LoadPathFindData(int) (0x452F40): the nodes%d.dat stream is closed (RwStreamClose); the port leaked the handle.
 MATCH: PathFind Shutdown, UpdateStreaming (flag layout [x*8+y], 350/300 radii, mission-vehicle type exclusions, rect clamps), LoadPathFindData(stream) (all array sizes incl. +0xC0 slack, read order, switch replay), Save, Load; all manager list dispatchers (type -> list offset tables decoded from the exe), the template list helpers, ComputeEffect*; all of PedClothesDesc.
 Not touched: RegisterPed<T> pushes a null into the list when the attractor pool is exhausted in the exe (the port would crash on a null new); out-of-range attractor types are NOTSA_UNREACHABLE (exe: false / true).
 Consumer audit: delete after erase - callers (TaskComplexUseAttractor / UseEffect / UsePairedAttractor) do not touch the attractor after BroadcastDeparture / DeRegisterPed except through DeRegisterPed's own IsPedRegistered guard, which only walks live attractors. Matches the exe's ownership.

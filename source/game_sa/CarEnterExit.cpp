@@ -1099,12 +1099,13 @@ void CCarEnterExit::SetAnimOffsetForEnterOrExitVehicle() {
         CAnimManager::GetAnimationBlockIndex("int_office")
     };
 
-    for (const auto idx : animBlockIdxs) {
+    // exe 0x64F88B-0x64F8B5: int_office is requested (and ref'ed) before int_house; the refs are removed house first
+    for (const auto idx : animBlockIdxs | rng::views::reverse) {
         CStreaming::RequestModel(IFPToModelId(idx), STREAMING_KEEP_IN_MEMORY);
     }
     CStreaming::LoadAllRequestedModels(false);
 
-    for (const auto idx : animBlockIdxs) {
+    for (const auto idx : animBlockIdxs | rng::views::reverse) {
         CAnimManager::AddAnimBlockRef(idx);
     }
 

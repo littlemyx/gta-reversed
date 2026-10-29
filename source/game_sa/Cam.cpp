@@ -3948,7 +3948,7 @@ bool CCam::Process_DW_BirdyCam(bool) {
             auto        pt       = lamp->GetMatrix().TransformPoint(colModel->m_boundBox.m_vecMax);
             const float h        = colModel->m_boundBox.m_vecMax.z - colModel->m_boundBox.m_vecMin.z * 0.5f;
             const float r        = (float)CGeneral::GetRandomNumber();
-            pt.z                 = pt.z - ((h - 1.0f) * r * 3.05185094e-05f + 1.0f);
+            pt.z                 = pt.z - ((h - 1.0f) * (r * 3.05185094e-05f) + 1.0f); // exe 0x51BCEC: r * (1/32768) first, then times (h - 1)
             return pt;
         };
 
@@ -3987,7 +3987,7 @@ bool CCam::Process_DW_BirdyCam(bool) {
     }
 
     const int32 duration = (int32)(gDWCineyCamEndTime - gDWCineyCamStartTime);
-    const float t        = (float)(int32)(now - gDWCineyCamStartTime) / (float)duration;
+    const float t        = (float)((x87d)(int32)(now - gDWCineyCamStartTime) / (x87d)duration); // exe 0x51BFAF: fild/fidiv, one rounding
 
     const auto p0   = s_points[0];
     const auto p1   = s_points[1];

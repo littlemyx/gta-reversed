@@ -1030,40 +1030,45 @@ void CCarEnterExit::QuitEnteringCar(CPed* ped, CVehicle* vehicle, int32 doorId, 
         CAnimManager::BlendAnimation(ped->GetRpClump(), ped->m_nAnimGroup, ANIM_ID_IDLE, 1000.0f);
     }
 
+    // 0x650172-0x650263: quitting UNDOES the entering: clears the jacked flag and the getting-in bits, and re-enables the ped's collision
     if (bCarWasBeingJacked) {
-        vehicle->vehicleFlags.bIsBeingCarJacked = true;
+        vehicle->vehicleFlags.bIsBeingCarJacked = false;
     }
-    vehicle->m_nNumGettingIn--;
+    if (vehicle->m_nNumGettingIn > 0) {
+        vehicle->m_nNumGettingIn--;
+    }
 
     if (vehicle->IsBike() || vehicle->m_pHandlingData->m_bTandemSeats) {
         switch (doorId) {
         case 8:
         case 10:
-            vehicle->SetGettingInFlags(5);
+            vehicle->ClearGettingInFlags(5);
             break;
         case 9:
         case 11:
-            vehicle->SetGettingInFlags(10);
+            vehicle->ClearGettingInFlags(10);
             break;
         }
-        vehicle->vehicleFlags.bIsBig = false;
+        if (vehicle->IsBike()) {
+            static_cast<CBike*>(vehicle)->bikeFlags.bGettingPickedUp = false; // exe: and byte [vehicle+0x614], 0xF7
+        }
     } else {
         switch (doorId) {
         case 8:
-            vehicle->SetGettingInFlags(4);
+            vehicle->ClearGettingInFlags(4);
             break;
         case 9:
-            vehicle->SetGettingInFlags(8);
+            vehicle->ClearGettingInFlags(8);
             break;
         case 10:
-            vehicle->SetGettingInFlags(vehicle->m_nMaxPassengers ? 1 : 3);
+            vehicle->ClearGettingInFlags(vehicle->m_nMaxPassengers ? 1 : 3);
             break;
         case 11:
-            vehicle->SetGettingInFlags(vehicle->m_nMaxPassengers ? 2 : 3);
+            vehicle->ClearGettingInFlags(vehicle->m_nMaxPassengers ? 2 : 3);
             break;
         }
     }
-    ped->SetUsesCollision(false);
+    ped->SetUsesCollision(true);
 }
 
 // 0x64F680

@@ -2254,19 +2254,20 @@ L_4BF244:
 void CEventHandler::ComputePedEnteredVehicleResponse(CEventPedEnteredMyVehicle* e, CTask* tactive, CTask* tsimplest) {
     m_EventResponseTask = [&]() -> CTask* {
         if (!e->m_Vehicle || !e->m_PedThatEntered || !m_Ped->bInVehicle) {
-            return nullptr;
+            return m_EventResponseTask; // 0x4C15B8/0x4C15C8/0x4C15DA: the response is left untouched
         }
         /* m_ped->m_pVehicle->IsDriver(m_ped) */
         if (e->m_Vehicle->m_pHandlingData->GetAnimGroupId() == ANIM_GROUP_COACHCARANIMS) {
-            return new CTaskComplexSmartFleeEntity{ e->m_PedThatEntered, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
+            return new CTaskComplexSmartFleeEntity{ e->m_PedThatEntered, false, fSafeDistance, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
         }
         g_InterestingEvents.Add(CInterestingEvents::INTERESTING_EVENT_20, e->m_Vehicle);
+        const auto leaveTime = CGeneral::GetRandomNumberInRange(300, 600); // 0x4C166D: drawn once before the switch, whatever the task id is
         const auto LeaveCarAndFlee = [&]{
             return new CTaskComplexLeaveCarAndFlee{
                 e->m_Vehicle,
                 e->m_Vehicle->GetPosition(),
                 e->m_TargetDoor,
-                CGeneral::GetRandomNumberInRange(300, 600)
+                leaveTime
             };
         };
         switch (e->m_TaskId) {
@@ -2291,15 +2292,14 @@ void CEventHandler::ComputePedEnteredVehicleResponse(CEventPedEnteredMyVehicle* 
             return new CTaskComplexScreamInCarThenLeave{ e->m_Vehicle, e->m_TargetDoor };
         }
         case TASK_COMPLEX_LEAVE_CAR: // 0x4C16CE
-            return new CTaskComplexLeaveCar{ e->m_Vehicle, (int32)e->m_TargetDoor, CGeneral::GetRandomNumberInRange(300, 600), false, true };
+            return new CTaskComplexLeaveCar{ e->m_Vehicle, (int32)e->m_TargetDoor, leaveTime, false, true };
         case TASK_COMPLEX_LEAVE_CAR_AND_FLEE: // 0x4C18C9
             return LeaveCarAndFlee();
         case TASK_COMPLEX_LEAVE_CAR_AND_WANDER: // 0x4C1744
-            return new CTaskComplexLeaveCarAndWander{ e->m_Vehicle, e->m_TargetDoor, CGeneral::GetRandomNumberInRange(300, 600), false };
+            return new CTaskComplexLeaveCarAndWander{ e->m_Vehicle, e->m_TargetDoor, leaveTime, false };
         case TASK_NONE: // 0x4C16F1
             return nullptr;
         default:
-            NOTSA_UNREACHABLE();
             return m_EventResponseTask; // 0x4C18F1: default leaves the response task untouched
         }
     }();

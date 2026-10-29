@@ -1,1 +1,3 @@
 addr	file	line	cls	fn	oc
+0x455000	source/game_sa/Pickups.cpp	61	None	RenderPickUpText	U
+0x455720	source/game_sa/Pickups.cpp	38	None	DoPickUpEffects	U

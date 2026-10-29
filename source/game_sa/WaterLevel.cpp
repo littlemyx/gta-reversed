@@ -563,14 +563,28 @@ void CWaterLevel::RenderWaterRectangle(int32 minX, int32 maxX, int32 Y1, int32 Y
 
 // 0x6EBEC0
 void CWaterLevel::RenderFlatWaterRectangle(int32 minX, int32 maxX, int32 Y1, int32 Y2, CRenPar P1, CRenPar P2, CRenPar P3, CRenPar P4) {
+    // The exe splits inline (not via SplitWaterRectangleAlong*Line): blend at exactly t = 0.5, recurse into itself (left/top first), never back through the camera tests
     if (bSplitBigPolys && maxX - minX > BigPolySize) {
-        SplitWaterRectangleAlongXLine((minX + maxX) / 2,  minX, maxX, Y1, Y2, P1, P2, P3, P4);
+        const auto splitAtX = (minX + maxX) / 2;
+        const auto P12      = lerpBlend(P1, P2, 0.5f);
+        const auto P34      = lerpBlend(P3, P4, 0.5f);
+        RenderFlatWaterRectangle(minX, splitAtX, Y1, Y2, P1, P12, P3, P34);
+        RenderFlatWaterRectangle(splitAtX, maxX, Y1, Y2, P12, P2, P34, P4);
 #ifdef FIX_BUGS
     } else if (const auto [minY, maxY] = std::minmax(Y1, Y2); bSplitBigPolys && (maxY - minY) > BigPolySize) {
+        const auto splitAtY = (Y1 + Y2) / 2;
+        const auto P13      = lerpBlend(P1, P3, 0.5f);
+        const auto P24      = lerpBlend(P2, P4, 0.5f);
+        RenderFlatWaterRectangle(minX, maxX, Y1, splitAtY, P1, P2, P13, P24);
+        RenderFlatWaterRectangle(minX, maxX, splitAtY, Y2, P13, P24, P3, P4);
 #else
     } else if (bSplitBigPolys && Y2 - Y1 > BigPolySize) {
+        const auto splitAtY = (Y1 + Y2) / 2;
+        const auto P13      = lerpBlend(P1, P3, 0.5f);
+        const auto P24      = lerpBlend(P2, P4, 0.5f);
+        RenderFlatWaterRectangle(minX, maxX, Y1, splitAtY, P1, P2, P13, P24);
+        RenderFlatWaterRectangle(minX, maxX, splitAtY, Y2, P13, P24, P2, P4); // exe quirk (0x6EC2xx): the lower half gets P2 where P3 belongs
 #endif
-        SplitWaterRectangleAlongYLine((Y2 + Y1) / 2, minX, maxX, Y1, Y2, P1, P2, P3, P4);
     } else {
         for (int32 lyr = 0; lyr < 2; lyr++) {
             RenderFlatWaterRectangle_OneLayer(minX, maxX, Y1, Y2, P1, P2, P3, P4, lyr);

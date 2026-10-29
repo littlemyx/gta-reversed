@@ -277,8 +277,8 @@ void CGameLogic::Load() {
 
 // 0x4414C0
 void CGameLogic::PassTime(uint32 minutes) {
-    auto weekDay = CClock::GetGameWeekDay();
-    auto hours = CClock::GetGameClockHours();
+    uint32 weekDay = CClock::GetGameWeekDay(); // exe keeps all of these in 32-bit registers
+    uint32 hours = CClock::GetGameClockHours();
     auto mins = minutes + CClock::GetGameClockMinutes();
 
     if (mins >= 60) {
@@ -290,10 +290,13 @@ void CGameLogic::PassTime(uint32 minutes) {
         auto days = hours / 24;
         hours %= 24;
 
-        CStats::IncrementStat(STAT_DAYS_PASSED_IN_GAME, (float)days);
-        weekDay += days;
-        if (weekDay > 7) {
-            weekDay = 1;
+        // exe 0x4414C0: one day at a time (the weekday wraps 7 -> 1 after every day, the stat gets 1.0 per day)
+        for (auto d = days; d != 0; d--) {
+            weekDay++;
+            if (weekDay > 7) {
+                weekDay = 1;
+            }
+            CStats::IncrementStat(STAT_DAYS_PASSED_IN_GAME, 1.0f);
         }
     }
 

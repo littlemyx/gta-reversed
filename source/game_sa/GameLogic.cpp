@@ -403,16 +403,15 @@ void CGameLogic::RestorePlayerStuffDuringResurrection(CPlayerPed* player, CVecto
     playerData->m_nDrugLevel = 0;
     player->ClearAdrenaline();
     player->ResetSprintEnergy();
-    if (auto* const fire = std::exchange(player->m_pFire, nullptr)) {
+    if (auto* const fire = player->m_pFire) {
         fire->SetIsScript(false);
         fire->Extinguish();
+        player->m_pFire = nullptr; // exe 0x442151: cleared after Extinguish
     }
     player->GetAE().TurnOffJetPack();
     player->bInVehicle = false;
-    if (auto vehicle = player->m_pVehicle) {
-        CEntity::CleanUpOldReference(vehicle);
-    }
-    player->m_pVehicle = nullptr;
+    // exe 0x442185: the reference of &m_pVehicle is cleaned up (the port passed the address of a local copy, leaving the vehicle's reference list entry behind)
+    CEntity::ClearReference(player->m_pVehicle);
     player->GetWanted()->Reset();
     player->RestartNonPartialAnims();
     playerInfo->MakePlayerSafe(false, 10'000.0f);
@@ -458,7 +457,7 @@ void CGameLogic::RestorePlayerStuffDuringResurrection(CPlayerPed* player, CVecto
     CAudioZones::Update(true, posn);
     AudioEngine.StopPoliceScanner(true);
     CWaterLevel::FindNearestWaterAndItsFlow();
-    TheCamera.m_fDistanceToWater = 100'000.0f;
+    TheCamera.m_fDistanceToWater = 99999.9f; // exe 0x4423AA: 0x47C34FF3
 }
 
 // @brief Set wanted level to 4 if player is in a forbidden territory.

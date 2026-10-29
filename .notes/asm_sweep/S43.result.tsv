@@ -1,0 +1,41 @@
+addr	function	verdict	asm range	note	fix commit
+0x6F2F40	CCarGenerator::CheckIfWithinRangeOfAnyPlayers	DEVIATION	0x6F2F40-0x6F3187	NaN arms of the three tests (dist<lim fails, dist>=lim-20 passes, dot<=0 passes); boat/occlusion/Z-area logic MATCH	22e2176ce
+0x6F32C0	CCarGenerator::SwitchOn	MATCH	0x6F32C0-0x6F32D1	count=0xFFFF, next=time+4 (CalcNextGen)	-
+0x6F32E0	CCarGenerator::CheckForBlockage	MATCH	0x6F32E0-0x6F34C1	radius, FindObjectsKindaColliding args, z-overlap tests (with/without col model), flag set equal	-
+0x6F34D0	CarGenerator::DoInternalProcessing	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x6F3E90	CarGenerator::Process	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x43A0B0	Cheat::VehicleCheat	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x5A7B30	Clothes::LoadClothesFile	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x5A7F30	Clothes::GetDependentTexture	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x5A7FB0	Clothes::GetPlayerMotionGroupToLoad	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x5A80D0	Clothes::Init	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x5A8120	Clothes::RequestMotionGroupAnims	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x5A81B0	Clothes::GetDefaultPlayerMotionGroup	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x5A81E0	Clothes::ConstructPedModel	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x5A8270	Clothes::RebuildCutscenePlayer	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x5A82C0	Clothes::RebuildPlayer	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x5A8390	Clothes::RebuildPlayerIfNeeded	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x604500	CollisionEventScanner::ScanForCollisionEvents	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x43AC40	ConversationForPed::IsPlayerInPositionForConversation	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x43C190	ConversationForPed::Update	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x43AAE0	PedToPlayerConversations::Clear	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x43AB10	PedToPlayerConversations::EndConversation	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x43B0F0	PedToPlayerConversations::Update	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x698790	Cover::FindVectorFromFirstToMissingVertex	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x6987F0	Cover::CalculateHorizontalSize	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x698990	Cover::DoLineCheckWithinObject	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x699120	Cover::FindCoverPointsForThisBuilding	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x6997E0	Cover::Update	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x698EB0	CoverPoint::ReserveCoverPointForPed	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x698EF0	CoverPoint::ReleaseCoverPointForPed	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x571EA0	CurrentVehicle::Display	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x572040	CurrentVehicle::Process	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x6FD500	CustomCarPlateMgr::Initialise	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x6FD720	CustomCarPlateMgr::Shutdown	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x6FD7A0	CustomCarPlateMgr::GetMapRegionPlateDesign	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x6FD7C0	CustomCarPlateMgr::GetCharacterPositionInCharSet	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x6FDC00	CustomCarPlateMgr::LoadPlatecharsetDat	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x6FDD70	CustomCarPlateMgr::RenderLicenseplateTextToRaster	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x6FDE50	CustomCarPlateMgr::SetupMaterialPlatebackTexture	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x6FDEA0	CustomCarPlateMgr::CreatePlateTexture	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-
+0x6FDF50	CustomCarPlateMgr::MaterialUpgradeSetCarplateTextureCB	NOT_REACHED	-	not compared (budget; spent on S42d + CarGenerator)	-

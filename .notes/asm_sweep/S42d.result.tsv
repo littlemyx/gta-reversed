@@ -1,0 +1,10 @@
+addr	function	verdict	asm range	note	fix commit
+0x64E740	CCarEnterExit::GetPositionToOpenCarDoor	MATCH	0x64E740-0x64EC7A	all three paths (non-tandem, bike, tandem non-bike), jump table, seat offset rule, z override, matrix/pos tail compared	-
+0x64F240	CCarEnterExit::IsPlayerToQuitCarEnter	MATCH	0x64F240-0x64F519	task-type sets (9 angle-only, 6 melee) decoded from the exe tables and equal; angle normalisation, time test, stick tests equal; only x87 extended intermediates differ (not stored)	-
+0x64F720	CCarEnterExit::AddInCarAnim	DEVIATION	0x64F720-0x64F850	boat driver anim: DRIVE_BOAT only when the handling lacks sit-in-boat (port inverted)	640c89946
+0x64F860	CCarEnterExit::SetAnimOffsetForEnterOrExitVehicle	DEVIATION	0x64F860-0x64FBA8	int_office requested/ref-ed before int_house; constants, anim ids and deltas MATCH	9301ac51e
+0x650130	CCarEnterExit::QuitEnteringCar	DEVIATION	0x650130-0x650263	Clear (not Set) of GettingIn flags, jacked flag cleared, NumGettingIn guarded, bike bGettingPickedUp cleared (not bIsBig), ped collision set true	f8ac9654d
+0x650280	CCarEnterExit::SetPedInCarDirect	DEVIATION	0x650280-0x6504BF	passenger acquaintance loop only for index > 0 (-1 took every passenger); driver/passenger/bike tasks MATCH	e492fa546
+0x6504C0	CCarEnterExit::IsRoomForPedToLeaveCar	MATCH	0x6504C0-0x650993	seat table, line/sphere/vertical probes, NaN arms equal; groundZ default 0 vs uninitialised stack in the exe (cannot be matched)	-
+0x650BB0	CCarEnterExit::GetNearestCarPassengerDoor	MATCH	0x650BB0-0x6510C6	bus, bike/tandem, 4-door, node-presence and nearest selection equal; exe leaves dyRR uninitialised when door 9 is not found (port 999)	-
+0x6528F0	CCarEnterExit::GetNearestCarDoor	NOT_REACHED	-	not compared (budget)	-

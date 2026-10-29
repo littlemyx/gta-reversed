@@ -533,7 +533,7 @@ void CCarAI::MellowOutChaseSpeedBoat(CVehicle* vehicle) {
         case eWantedLevel::WANTED_LEVEL_4:  return 25;
         case eWantedLevel::WANTED_LEVEL_5:  return 30;
         case eWantedLevel::WANTED_LEVEL_6:  return 40;
-        default: NOTSA_UNREACHABLE(); return vehicle->m_autoPilot.m_nCruiseSpeed; // 0x41CBDC: out of range wanted level => nothing is stored
+        default: return vehicle->m_autoPilot.m_nCruiseSpeed; // 0x41CBDC: out of range wanted level => nothing is stored
         }
     }();
 }

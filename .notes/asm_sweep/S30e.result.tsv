@@ -1,0 +1,8 @@
+addr	function	verdict	asm range	note	fix commit
+0x50C100	CCamera::SetRwCamera	NOT_REACHED	-	budget (S31i used the budget on Cam.cpp)	-
+0x51A450	CCamera::Constructor	NOT_REACHED	-	budget (S31i used the budget on Cam.cpp)	-
+0x50AFA0	CCamera::CopyCameraMatrixToRWCam	NOT_REACHED	-	budget (S31i used the budget on Cam.cpp)	-
+0x50B510	CCamera::DealWithMirrorBeforeConstructRenderList	NOT_REACHED	-	budget (S31i used the budget on Cam.cpp)	-
+0x51E560	CCamera::TryToStartNewCamMode	NOT_REACHED	-	budget (S31i used the budget on Cam.cpp)	-
+0x527FA0	CCamera::CamControl	NOT_REACHED	-	budget (S31i used the budget on Cam.cpp)	-
+0x52B730	CCamera::Process	NOT_REACHED	-	budget (S31i used the budget on Cam.cpp)	-

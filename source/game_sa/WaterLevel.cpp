@@ -530,7 +530,7 @@ void CWaterLevel::RenderWaterRectangle(int32 minX, int32 maxX, int32 Y1, int32 Y
     if (minX >= CameraRangeMaxX || maxX <= CameraRangeMinX || minY >= CameraRangeMaxY || maxY <= CameraRangeMinY) { // Lies outside (of camera) fully
         RenderFlatWaterRectangle(minX, maxX, Y1, Y2, P1, P2, P3, P4);
     } else if (minX < CameraRangeMinX || maxX > CameraRangeMaxX) { // Lies inside on X
-        SplitWaterRectangleAlongXLine(minX < CameraRangeMinX ? CameraRangeMinX : CameraRangeMaxX, minX, maxX, Y1, Y2, P1, P2, P3, P4);
+        SplitWaterRectangleAlongXLine(maxX > CameraRangeMaxX ? CameraRangeMaxX : CameraRangeMinX, minX, maxX, Y1, Y2, P1, P2, P3, P4); // 0x6EC634: the exe tests `maxX > MaxX` first (splits at MaxX even when `minX < MinX` as well)
     } else if (minY < CameraRangeMinY || maxY > CameraRangeMaxY) { // Lies inside of Y
         SplitWaterRectangleAlongYLine(minY < CameraRangeMinY ? CameraRangeMinY : CameraRangeMaxY, minX, maxX, Y1, Y2, P1, P2, P3, P4);
     } else { // Lies inside of camera fully

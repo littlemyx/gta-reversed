@@ -814,7 +814,13 @@ void CGameLogic::Update() {
         }
 
         if (bLimitPlayerDistance && IsCoopGameGoingOn()) {
-            if (auto diff = FindPlayerPed(PED_TYPE_PLAYER2)->GetPosition() - FindPlayerPed(PED_TYPE_PLAYER1)->GetPosition(); diff.Magnitude2D() > MaxPlayerDistance) {
+            // 0x4437B6-0x4437E9: the exe takes p1 - p2 per axis, squares it (y term first) and sums unrounded on the x87 stack, then fsqrt;
+            // only afterwards the (float) vector p2 - p1 is built for the direction. The port measured the rounded float vector.
+            const CVector p1    = FindPlayerPed(PED_TYPE_PLAYER1)->GetPosition();
+            const CVector p2    = FindPlayerPed(PED_TYPE_PLAYER2)->GetPosition();
+            const x87d    limDy = (x87d)p1.y - (x87d)p2.y;
+            const x87d    limDx = (x87d)p1.x - (x87d)p2.x;
+            if (const CVector diff = p2 - p1; x87::sqrt(limDy * limDy + limDx * limDx) > MaxPlayerDistance) {
                 StopPlayerMovingFromDirection(PED_TYPE_PLAYER1,  diff.Normalized());
                 StopPlayerMovingFromDirection(PED_TYPE_PLAYER2, -diff.Normalized());
             }

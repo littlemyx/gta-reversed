@@ -1,0 +1,23 @@
+addr	function	verdict	asm range	note	fix commit
+0x50C100	CCamera::SetRwCamera	NOT_REACHED	-	budget	-
+0x51A450	CCamera::Constructor	NOT_REACHED	-	budget	-
+0x50AFA0	CCamera::CopyCameraMatrixToRWCam	NOT_REACHED	-	budget	-
+0x50B510	CCamera::DealWithMirrorBeforeConstructRenderList	NOT_REACHED	-	budget	-
+0x50C360	CCamera::UpdateTargetEntity	NOT_REACHED	-	budget	-
+0x50CB90	CCamera::SetNearClipBasedOnPedCollision	MATCH	0x50CB90-0x50CBDF (all)	sqrt/div/0.25 then (0.3-v0) mul + v0; clamp keeps NaN like the exe	-
+0x515BD0	CCamera::UpdateSoundDistances	MATCH	0x515BD0-0x515D7E (all)	13 modes (enum values checked), ped type test, 0.5/5 scale, fz rounded, ProcessVerticalLine args, %12 via uint16, (idx+1)/6 lerp	-
+0x526950	CCamera::ProcessObbeCinemaCameraTrain	MATCH	0x526950-0x526AD4 (all)	idx wrap stores n-1 for a negative remainder (store at 0x526A08), fail tail table[6]	-
+0x526AE0	CCamera::ProcessObbeCinemaCameraHeli	MATCH	0x526AE0-0x526C7B (all)	underwater gate, wrap, fail tail: idx=7, CAM_ON_A_STRING (0x12) test, TryToStart(29), time	-
+0x526E20	CCamera::ProcessObbeCinemaCameraBoat	MATCH	0x526E20-0x526FB0 (all)	failure tail verified: idx=3, mode 0x12 test, TryToStart(29), time stored only on that branch	-
+0x50CD30	CCamera::CameraGenericModeSpecialCases	DEVIATION (fixed)	0x50CD30-0x50CD71 (all)	exe stores the HELD entity (taskHold+8) in m_pExtraEntity[], port stored the target ped	b859a15a
+0x514B80	CCamera::CalculateGroundHeight	NOT_REACHED	-	budget	-
+0x516B20	CCamera::ImproveNearClip	NOT_REACHED	-	budget	-
+0x51E560	CCamera::TryToStartNewCamMode	PARTIAL	0x51E560-0x51EEB7 (cases 0-3,5 line by line); constants + branch skeleton of 7/8 and heading cases up to ~0x51F8xx	open: tails of the heading-rotation cases and the shared tail 0x51FFAD-0x520101; no deviation found so far	-
+0x520190	CCamera::CameraColDetAndReact	NOT_REACHED	-	budget	-
+0x527FA0	CCamera::CamControl	NOT_REACHED	-	budget	-
+0x52B730	CCamera::Process	NOT_REACHED	-	budget	-
+0x5B24A0	CCamera::DeleteCutSceneCamDataMemory	NOT_REACHED	-	budget	-
+0x5B24D0	CCamera::LoadPathSplines	NOT_REACHED	-	budget	-
+0x516560	CCamera::ProcessJiggle	NOT_REACHED	-	long hand-shaker default init (0x516586-0x516970) not compared	-
+0x51D770	CCamera::IsItTimeForNewCamera	MATCH	0x51D770-0x51E4E2 (all)	prologue + all 30 jump-table cases (0x51E4E8; 9-14 -> false, 24/25 share), constants, compare polarity, dot term order (z-first / z-last), boat+Skimmer test, LOS flags	-
+(shared)	StepCineyCamSeq (Car/Plane/Train/Heli/Boat)	MATCH	0x526850-0x526890, 0x5269E2-0x526A0E, 0x526B7B-0x526BA7, 0x526EB2-0x526ED8	S30 UNSURE resolved: for a negative remainder the exe does mov edx,n-1 then jumps to a second store of edx, so the idx global ends as n-1 exactly like the port; no change	-

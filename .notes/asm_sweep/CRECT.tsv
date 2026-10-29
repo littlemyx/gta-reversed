@@ -1,0 +1,24 @@
+file	line	function	exe_addr	port_physical(+0,+4,+8,+0xC)	exe_physical(+0,+4,+8,+0xC)	verdict	commit
+source/game_sa/Camera.cpp	2976	CCamera::DrawBordersForWideScreen top bar	0x5148B4-0x5148EC	(-5, -5, W+5, rect.top) via literal {-5, rect.top, W+5, -5}	(-5, -5, W+5, rect.top)	MATCH (sweep site; S30 already used {p0,p3,p2,p1})	9187c3e6
+source/game_sa/Camera.cpp	2977	CCamera::DrawBordersForWideScreen bottom bar	0x5148FF-0x514947	(-5, rect.bottom, W+5, H+5) via literal {-5, H+5, W+5, rect.bottom}	(-5, rect.bottom, W+5, H+5)	MATCH (sweep site)	9187c3e6
+source/game_sa/WaterLevel.cpp	1150	CWaterLevel::SetUpWaterFog player-in-fog test	0x6EAAB0-0x6EAAE7	CRect{minX,minY,maxX,maxY}.IsPointInside (named fields)	no rect in memory: inlined fild/fcomp compares on the int locals	MATCH (no layout dependency; compare order checked by S33)	cbf99007
+source/game_sa/Entity/Vehicle/Vehicle.cpp	-	CVehicle::DoBladeCollision sector range	0x6E2E50	CRect temp removed by S19j (explicit min/max sector loops)	-	n/a (no CRect left)	1da207b2
+source/game_sa/Population.cpp	-	CPopulation::TestSafeForRealObject sector range	0x6123A0	CRect temp removed by S23 (explicit min/max sector loops)	-	n/a (no CRect left)	e60e5ab2
+(no other ASM-* commit outside Radar.cpp adds or removes a CRect literal / DrawRect / SetVertices / Sprite2d::Draw(CRect) call; Hud, Frontend, Font, Sprite2d, Interior have no ASM-* commit on a rect site yet)
+source/game_sa/Hud.cpp	737	CHud::DrawCrossHairs aim dot (weapon radius 0.2)	0x58E2A4-0x58E2DD	before: (cx-1, cy-1, cx+1, cy+1) from literal {cx-1, cy+1, cx+1, cy-1}	(cx-1, cy+1, cx+1, cy-1)	MIRRORED -> fixed (literal {cx-1, cy-1, cx+1, cy+1})	200a8d84
+source/game_sa/Hud.cpp	724	CHud::DrawCrossHairs M16 quadrant 1 (left, top)	0x58E2E5-0x58E3A5	before: (L, T, cx, cy) from literal {L, cy, cx, T}	(L, cy, cx, T)	MIRRORED (sprite drew vertically flipped) -> fixed (literal {L, T, cx, cy})	200a8d84
+source/game_sa/Hud.cpp	725	CHud::DrawCrossHairs M16 quadrant 2 (left+w, top)	0x58E3AA-0x58E3FA	before: (L+w, T, cx, cy)	(L+w, cy, cx, T)	MIRRORED -> fixed	200a8d84
+source/game_sa/Hud.cpp	726	CHud::DrawCrossHairs M16 quadrant 3 (left, top+h)	0x58E3FF-0x58E44F	before: (L, T+h, cx, cy)	(L, cy, cx, T+h)	MIRRORED -> fixed	200a8d84
+source/game_sa/Hud.cpp	727	CHud::DrawCrossHairs M16 quadrant 4 (left+w, top+h)	0x58E454-0x58E49C	before: (L+w, T+h, cx, cy)	(L+w, cy, cx, T+h)	MIRRORED -> fixed	200a8d84
+source/game_sa/Hud.cpp	1468	CHud::DrawRadar altimeter background (field-wise)	0x58A5E6-0x58A649	left=ws40-20ws, top(+4)=hs*76+by, right=ws40-10ws, bottom(+0xC)=by	same slots	MATCH	-
+source/game_sa/Hud.cpp	1483	CHud::DrawRadar altimeter height line (field-wise)	0x58A73B-0x58A77A	top(+4)=ybt+2, bottom(+0xC)=ybt, right=ws40-5	same slots	MATCH	-
+source/game_sa/Hud.cpp	1498	CHud::DrawRadar radar disc quarter 1 (top left, field-wise)	0x58A799-0x58A823	left=ws40-4ws, bottom(+0xC)=by104-4hs, right=47ws+ws40, top(+4)=38hs+by104	same slots	MATCH (decoded)	-
+source/game_sa/Hud.cpp	1498	CHud::DrawRadar radar disc quarter 2 (top right)	0x58A828-0x58A8CD	left=leftR, same bottom/right/top	same slots (stores +0x14/+0x20/+0x2c/+0x28 as quarter 1)	MATCH (decoded)	-
+source/game_sa/Hud.cpp	1498	CHud::DrawRadar radar disc quarters 3, 4	0x58A8D2-0x58AA25	field-wise like 1/2	same code shape as 1/2 (not decoded store by store)	MATCH (by shape)	-
+source/game_sa/Hud.cpp	1860 1868	CHud::DrawVitalStats window rect (field-wise)	0x58977A-0x589808	left=40, top(+4)=hs*127+b, right=170ws+40, bottom(+0xC)=hs*15+b	same slots (first rect decoded; second same shape)	MATCH	-
+source/game_sa/Hud.cpp	2277	CHud::DrawTripSkip skip icon (field-wise)	0x58A1B1-0x58A1F3	top(+4)=topY+64hs, bottom(+0xC)=topY	same slots	MATCH	-
+source/game_sa/Hud.cpp	2383	CHud::DrawWeaponIcon fist rect {x0,y0,w+x0,h+y0}	0x58D917-0x58D988	(x0, h+y0, w+x0, y0)	(x0, h+y0, w+x0, y0)	MATCH	-
+source/app/app.cpp	61	DoRWStuffStartOfFrame full-screen gradient	0x53D750-0x53D78D	(0, H, W, 0)	(0, H, W, 0)	MATCH (outside Hud, spot check)	-
+source/app/app_game.cpp	260-267	Render2dStuff DrawOuterZoomBox (6 uniform black fills)	0x53E230	natural CRect(l,b,r,t)	not decoded	UNCHECKED (uniform fill: pixel-identical either way)	-
+source/game_sa/Draw.cpp	70-72	CDraw fade fill (FIX_BUGS pair)	-	-	not decoded	UNCHECKED (uniform fill)	-
+source/game_sa/Frontend/*.cpp ~25 sites; Font.cpp:198; LoadingScreen.cpp:107; Scripts/TheScripts.cpp:1802-1823; Sprite2d.cpp:525-551 (DrawBarChart); SpecialFX.cpp:214; StencilShadows.cpp:408	-	textured / gradient / uniform rect draws	-	-	-	UNCHECKED - follow-up (textured Draw(CRect) sites matter: a mirrored literal flips the sprite)	-

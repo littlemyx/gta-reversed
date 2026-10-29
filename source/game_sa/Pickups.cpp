@@ -163,8 +163,9 @@ void CPickups::CreateSomeMoney(CVector coors, int32 amount) {
 
     for (auto i = 0; i < wads; i++) {
         bool result;
-        coors.x += X87R(x87::sin(CGeneral::GetRandomNumberInRange(0.f, TWO_PI)) * 1.5f);
-        coors.y += X87R(x87::cos(CGeneral::GetRandomNumberInRange(0.f, TWO_PI)) * 1.5f);
+        // 0x458970: the angle is (rand() & 0xFF) * (2pi/256) (0x859BBC), not the float range helper
+        coors.x = (float)(X87R(x87::sin((float)(CGeneral::GetRandomNumber() & 0xFF) * (TWO_PI / 256.0f)) * 1.5f) + coors.x);
+        coors.y = (float)(X87R(x87::cos((float)(CGeneral::GetRandomNumber() & 0xFF) * (TWO_PI / 256.0f)) * 1.5f) + coors.y);
         coors.z = CWorld::FindGroundZFor3DCoord(coors, &result, nullptr) + 0.5f;
 
         if (result) {

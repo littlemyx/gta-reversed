@@ -1,27 +1,27 @@
 addr	function	verdict	asm range	note	fix commit
-0x458970	CPickups::CreateSomeMoney	FIXED	0x458970-0x458A7B (all)	wad angle (rand&0xFF)*(2pi/256) (port: float range helper)	bca886f4a
-0x458A80	CPickups::CreatePickupCoorsCloseToCoors	FIXED	0x458A80-0x458DDF (all)	LOS end uses inlined float sqrt((dz2+dy2)+dx2) (port: Magnitude in x87d, x,y,z); all arms/args/bug-compat outZ match	92b68f485
-0x458DE0	CPickups::Update	FIXED	0x458DE0-0x4590BA (all)	port ran a player-2 update when player 1 busy; the exe arm is unreachable	0e5b8ae7f
+0x458970	CPickups::CreateSomeMoney	FIXED	0x458970-0x458A7B (all)	wad angle (rand&0xFF)*(2pi/256) (port: float range helper)	138bef8b2
+0x458A80	CPickups::CreatePickupCoorsCloseToCoors	FIXED	0x458A80-0x458DDF (all)	LOS end uses inlined float sqrt((dz2+dy2)+dx2) (port: Magnitude in x87d, x,y,z); all arms/args/bug-compat outZ match	0fcb5c3c7
+0x458DE0	CPickups::Update	FIXED	0x458DE0-0x4590BA (all)	port ran a player-2 update when player 1 busy; the exe arm is unreachable	8ae37b3fe
 0x4590C0	CPickups::DetonateMinesHitByGunShot	MATCH	0x4590C0-0x4590E8 (all)	type 12 loop, ProcessGunShot(origin,target)	-
 0x5D3540	CPickups::Save	MATCH	0x5D3540-0x5D3598 (all)		-
 0x5D35A0	CPickups::Load	MATCH	0x5D35A0-0x5D3615 (all)		-
 0x717160	CPlaneTrail::Init	MATCH	0x717160-0x71717F (all)		-
-0x717180	CPlaneTrail::Render	FIXED	0x717180-0x7172CB (all)	vertices packed (port indexed by point), alpha factor *1e-4f (port /10000), nvert>1 gate (port >=1)	eb20eff10
+0x717180	CPlaneTrail::Render	FIXED	0x717180-0x7172CB (all)	vertices packed (port indexed by point), alpha factor *1e-4f (port /10000), nvert>1 gate (port >=1)	786e4b5ef
 0x7172D0	CPlaneTrail::RegisterPoint	MATCH	0x7172D0-0x71736F (all)		-
 0x717370	CPlaneTrails::Init	MATCH	0x717370-0x71739F (all)		-
-0x7173A0	CPlaneTrails::Render	FIXED	0x7173A0-0x7174BB (all)	sky brightness scale 1/256 (port 1/255); min/threshold arms match	51663c07e
+0x7173A0	CPlaneTrails::Render	FIXED	0x7173A0-0x7174BB (all)	sky brightness scale 1/256 (port 1/255); min/threshold arms match	e1190cba6
 0x7174C0	CPlaneTrails::RegisterPoint	MATCH	0x7174C0-0x7174EF (all)		-
-0x7174F0	CPlaneTrails::Update	FIXED	0x7174F0-0x7177F0 (all)	S43c fixes verified (centres, colours, hour ranges, time modifiers); sin/cos product now unrounded before the float store	8224ccc81
+0x7174F0	CPlaneTrails::Update	FIXED	0x7174F0-0x7177F0 (all)	S43c fixes verified (centres, colours, hour ranges, time modifiers); sin/cos product now unrounded before the float store	dc5f5ec17
 0x56DAD0	CPlayerInfo::EvaluateCarPosition	NOT_REACHED	-	port already carries exe-address annotations; not re-compared (budget)	-
 0x56DBD0	CPlayerInfo::FindObjectToSteal	NOT_REACHED	-	port already carries exe-address annotations; not re-compared (budget)	-
 0x56E580	CPlayerInfo::KillPlayer	MATCH	0x56E580-0x56E5CC (all)	state 1, DEAD 4000 style 2, stat 135, EndGangWar(false)	-
 0x56E5D0	CPlayerInfo::ArrestPlayer	MATCH	0x56E5D0-0x56E607 (all)	state 2, busted audio 0, stat 133	-
-0x56E610	CPlayerInfo::WorkOutEnergyFromHunger	FIXED	0x56E610-0x56E823 (all)	last-hungry-state byte is unsigned (port int8: muscle/health test flips above 127 hours); rest matches	e5047b117
+0x56E610	CPlayerInfo::WorkOutEnergyFromHunger	FIXED	0x56E610-0x56E823 (all)	last-hungry-state byte is unsigned (port int8: muscle/health test flips above 127 hours); rest matches	0a791d652
 0x56E830	CPlayerInfo::PlayerFailedCriticalMission	MATCH	0x56E830-0x56E856 (all)		-
-0x56E870	CPlayerInfo::MakePlayerSafe	FIXED	0x56E870-0x56EA29 (all)	steps reordered as the exe (SetAllCarsCanBeDamaged after projectile removal); flag sets identical	fcc1d6f04
+0x56E870	CPlayerInfo::MakePlayerSafe	FIXED	0x56E870-0x56EA29 (all)	steps reordered as the exe (SetAllCarsCanBeDamaged after projectile removal); flag sets identical	21534e474
 0x56EA30	CPlayerInfo::BlowUpRCBuggy	MATCH	0x56EA30-0x56EA7F (all)		-
 0x56EA80	CPlayerInfo::DeletePlayerSkin	NOT_REACHED	-	trivial, not compared (budget)	-
-0x56EB30	CPlayerInfo::StreamParachuteWeapon	FIXED	0x56EB30-0x56EC3F (all)	outside co-op a false flag releases the parachute at once (port ignored the flag)	b6947de5b
+0x56EB30	CPlayerInfo::StreamParachuteWeapon	FIXED	0x56EB30-0x56EC3F (all)	outside co-op a false flag releases the parachute at once (port ignored the flag)	60b85b06c
 0x56EC40	CPlayerInfo::GivePlayerParachute	MATCH	0x56EC40-0x56EC6F (all)		-
 0x56EC80	CPlayerInfo::ProcessCarGunCrosshair_Hook	NOT_REACHED	-	not compared (budget)	-
 0x56EF90	CPlayerInfo::DrawCrosshair_Hook	NOT_REACHED	-	not compared (budget)	-
@@ -33,7 +33,7 @@ addr	function	verdict	asm range	note	fix commit
 0x571920	CPlayerInfo::Constructor	NOT_REACHED	-	not compared (budget)	-
 0x5D3AC0	CPlayerInfo::Save	NOT_REACHED	-	not compared (budget)	-
 0x5D3B00	CPlayerInfo::Load	NOT_REACHED	-	not compared (budget)	-
-0x56F210	CPlayerPedData::SetInitialState	FIXED	0x56F210-0x56F2FF (all)	player flags word masked (bits 0-3,6,7,11 cleared, 4 and 12 set); port only set two bits	b2f1161b5
+0x56F210	CPlayerPedData::SetInitialState	FIXED	0x56F210-0x56F2FF (all)	player flags word masked (bits 0-3,6,7,11 cleared, 4 and 12 set); port only set two bits	004d9fff6
 0x56F810	CPlayerPedData::Constructor	MATCH	0x56F810-0x56F83F (all)		-
 0x56F890	CPlayerPedData::DeAllocateData	MATCH	0x56F890-0x56F8C7 (all)		-
 0x571840	CPlayerPedData::Destructor	NOT_REACHED	-	calls DeAllocateData, not compared	-

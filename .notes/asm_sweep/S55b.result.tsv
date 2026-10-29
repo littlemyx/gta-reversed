@@ -1,3 +1,3 @@
 addr	function	verdict	asm range	note	fix commit
-0x455000	CPickups::RenderPickUpText	FIXED	0x455000-0x4551B8 (all)	text without the number flag printed itself (port: empty/stale buffer); scale cap is integer maximumWidth/640 (port float)	32524a0bd
+0x455000	CPickups::RenderPickUpText	FIXED	0x455000-0x4551B8 (all)	text without the number flag printed itself (port: empty/stale buffer); scale cap is integer maximumWidth/640 (port float)	e923f5996
 0x455720	CPickups::DoPickUpEffects	MATCH	0x455720-0x455E14 (all)	camera corona args/alpha, model->weapon table, message fields/colour/alpha, bbox scale, matrix stores all match (stack-slot corona id is a documented NOTSA deviation)	-

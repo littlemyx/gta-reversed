@@ -369,7 +369,7 @@ void CWaterLevel::RenderWakeSegment(
     constexpr float ALPHA_MULTS[]{ 0.4f, 1.f, 0.2f, 1.f, 0.4f }; // 0x8D390C
 
     // 0x6EA260: `(float)(time & 0xFFF) * 0.0015339355f` (exe constant [0x872028] = 2pi / 4096, a multiply, not a division by 4096 / 2pi)
-    static_assert(std::bit_cast<uint32>(0.0015339355f) == 0x3AC90FDBu);
+    static_assert(std::bit_cast<uint32>(0.0015339355f) == 0x3AC90E56u);
     const auto angle      = (float)(CTimer::GetTimeInMS() & 0xFFF) * 0.0015339355f;
     const auto windRadius = CWeather::WindClipped * 0.4f + 0.2f;
 

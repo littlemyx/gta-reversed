@@ -3229,7 +3229,7 @@ void CCamera::ImproveNearClip(CVehicle* vehicle, CPed* ped, CVector* source, CVe
             }
         }
     } else {
-        const auto vehType = vehicle->m_nVehicleType;
+        const auto vehType = vehicle->m_nVehicleSubType; // 0x516BAB: [vehicle + 0x594] (m_nVehicleSubType), not m_nVehicleType (+0x590)
         if (vehType == VEHICLE_TYPE_PLANE || vehType == VEHICLE_TYPE_HELI) {
             if (gCurDistForCam > 0.3f) {
                 if (cam.m_vecSource.z - CalculateGroundHeight(eGroundHeightType::ENTITY_BB_BOTTOM) > 10.f) {

@@ -1317,7 +1317,7 @@ void CStreaming::LoadZoneVehicle(const CVector& point) {
 
 // 0x40BA70
 void CStreaming::PossiblyStreamCarOutAfterCreation(int32 modelId) {
-    if (CModelInfo::GetModelInfo(modelId)->m_nFlags & STREAMING_UNKNOWN_1) {
+    if (CModelInfo::GetModelInfo(modelId)->AsVehicleModelInfoPtr()->m_nFlags & 1) { // exe: CVehicleModelInfo::m_nFlags (+0x4E) bit 0, not the base model flags
         if (CGeneral::GetRandomNumber() % 2)
             SetModelIsDeletable(modelId);
     }

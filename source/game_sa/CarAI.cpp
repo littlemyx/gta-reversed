@@ -408,8 +408,16 @@ float CCarAI::GetCarToParkAtCoors(CVehicle* veh, const CVector& coors) {
 
 // 0x41D660
 void CCarAI::MakeWayForCarWithSiren(CVehicle* carWithSiren) {
-    float      carWithSirenSpeed2D;
-    const auto carWithSirenMoveDir2D = CVector2D{ carWithSiren->GetMoveSpeed() }.Normalized(&carWithSirenSpeed2D);
+    // 0x41D668..0x41D6B8: the siren car's 2D speed; the exe returns when it is < 0.1 (the port had no such early out) and builds the
+    // direction as speed * (1 / |speed|)
+    const auto& sirenMS      = carWithSiren->GetMoveSpeed();
+    const auto  sirenSpeed2D = (float)std::sqrt((x87d)sirenMS.y * sirenMS.y + (x87d)sirenMS.x * sirenMS.x);
+    if (sirenSpeed2D < 0.1f) { // NaN does not return
+        return;
+    }
+    const float     sirenRecip = 1.f / sirenSpeed2D;
+    const CVector2D sirenDir{ sirenMS.x * sirenRecip, sirenMS.y * sirenRecip };
+
     for (auto& v : NOTSA_EXE_OR(GetVehiclePool()->GetAllValidReverse(), GetVehiclePool()->GetAllValid())) {
         if (!v.IsAutomobile() && !v.IsBike()) {
             continue;
@@ -438,32 +446,35 @@ void CCarAI::MakeWayForCarWithSiren(CVehicle* carWithSiren) {
         if (v.GetVehicleModelInfo()->m_nVehicleClass == VEHICLE_CLASS_BIG) {
             continue;
         }
-        CVector dirToCarWithSiren = v.GetPosition() - carWithSiren->GetPosition();
-        if (std::abs(dirToCarWithSiren.z) >= 5.f) { // TODO: Really should use a boundingbox height here instead....
+        if (!(std::abs(carWithSiren->GetPosition().z - v.GetPosition().z) < 5.f)) { // 0x41D7F1: NaN skips. TODO: Really should use a boundingbox height here instead....
             continue;
         }
-        CVector2D dirToCarWithSiren2D{dirToCarWithSiren};
-        const auto distToCarWithSiren = dirToCarWithSiren.Magnitude2D();
-        if (distToCarWithSiren >= carWithSirenSpeed2D * 45.f + 40.f) {
+        const CVector d      = v.GetPosition() - carWithSiren->GetPosition(); // (dx, dy) = [esp+0x10], [esp+0x14]
+        const auto    distToCarWithSiren = d.Magnitude2D();
+        if (!(sirenSpeed2D * 45.f + 40.f > distToCarWithSiren)) { // 0x41D860: skip on <= / NaN
             continue;
         }
-        if (v.GetMoveSpeed().SquaredMagnitude2D() <= 0.05f) {
+        if (!(v.GetMoveSpeed().Magnitude2D() > 0.05f)) { // 0x41D885: the exe compares the 2D speed (port: its square), skip on <= / NaN
             continue;
         }
         const auto vehAP = &v.m_autoPilot;
-        if (carWithSirenMoveDir2D.Dot(dirToCarWithSiren2D / distToCarWithSiren) <= 0.8f) { // 0x41D8A2
-            if (dirToCarWithSiren2D.Dot(CVector2D{ v.GetMoveSpeed() }) < 0.f) { // Going in different directions?
+        // 0x41D896: (dy * dirY + dx * dirX) / dist (port: dir . (d / dist))
+        const float dirDot = (d.y * sirenDir.y + d.x * sirenDir.x) / distToCarWithSiren;
+        if (!(dirDot > 0.8f)) { // 0x41D8B7 (<= or NaN): 0x41D9D5
+            if (d.x * v.GetMoveSpeed().x + d.y * v.GetMoveSpeed().y < 0.f) { // Going in different directions?
                 if (!notsa::contains({ TEMPACT_WAIT, TEMPACT_BRAKE }, vehAP->m_nTempAction)) {
                     vehAP->SetTempAction(TEMPACT_WAIT, 2'000);
                 }
             }
         } else { // 0x41D8BD
-            const auto goingSameDirDot = carWithSirenMoveDir2D.Dot(v.GetForward());
+            const float goingSameDirDot = sirenDir.y * v.GetForward().y + sirenDir.x * v.GetForward().x;
             if (goingSameDirDot > 0.7f || goingSameDirDot < -0.9f) { // 0x41D8DE
                 if (!notsa::contains({ TEMPACT_SWIRVELEFT_STOP, TEMPACT_SWIRVERIGHT_STOP }, vehAP->m_nTempAction)) {
-                    eAutoPilotTempAction a = carWithSirenMoveDir2D.Dot(dirToCarWithSiren2D) <= 0.f // 0x41D954
-                        ? TEMPACT_SWIRVERIGHT_STOP
-                        : TEMPACT_SWIRVELEFT_STOP;
+                    // 0x41D950: the side comes from the CROSS product dx * dirY - dy * dirX (> 0 => 0x14, left); the port used a dot product
+                    const float cross = d.x * sirenDir.y - d.y * sirenDir.x;
+                    eAutoPilotTempAction a = cross > 0.f
+                        ? TEMPACT_SWIRVELEFT_STOP
+                        : TEMPACT_SWIRVERIGHT_STOP;
                     if (goingSameDirDot < 0.f) {
                         a = a == TEMPACT_SWIRVELEFT_STOP
                             ? TEMPACT_SWIRVERIGHT_STOP
@@ -477,8 +488,9 @@ void CCarAI::MakeWayForCarWithSiren(CVehicle* carWithSiren) {
                 if (v.GetStatus() != STATUS_GHOST) {
                     v.SetStatus(STATUS_PHYSICS);
                 }
-            } else if (dirToCarWithSiren2D.Dot(v.GetMoveSpeed()) < 0.f) { // 0x41D910
-                if (!notsa::contains({ TEMPACT_SWIRVELEFT_STOP, TEMPACT_SWIRVERIGHT_STOP }, vehAP->m_nTempAction)) {
+            } else if (d.x * v.GetMoveSpeed().x + d.y * v.GetMoveSpeed().y < 0.f) { // 0x41D8FF
+                // 0x41D910: the already-waiting test is {WAIT (1), BRAKE (0x18)}; the port tested the two swirve actions
+                if (!notsa::contains({ TEMPACT_WAIT, TEMPACT_BRAKE }, vehAP->m_nTempAction)) {
                     vehAP->SetTempAction(TEMPACT_WAIT, 4'000);
                 }
             }

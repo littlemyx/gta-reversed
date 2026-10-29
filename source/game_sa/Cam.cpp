@@ -4254,7 +4254,7 @@ bool CCam::Process_DW_HeliChaseCam(bool) {
     }
 
     const int32 duration = (int32)(gDWCineyCamEndTime - gDWCineyCamStartTime);
-    const float t        = (float)(int32)(now - gDWCineyCamStartTime) / (float)duration;
+    const float t        = (float)((x87d)(int32)(now - gDWCineyCamStartTime) / (x87d)duration); // exe 0x51ABA0: fild/fidiv, one rounding
 
     CVector cur;
     cur.x = (S.endPos.x - S.startPos.x) * t + S.startPos.x;
@@ -4284,11 +4284,11 @@ bool CCam::Process_DW_HeliChaseCam(bool) {
 
     x87d fovBase = S.fovEnd;
     if (t < S.fovBlendInFraction && !S.bFlag81) {
-        const double s = x87::sin(((x87d)270.0 - (x87d)(1.0f / S.fovBlendInFraction) * (x87d)t * (x87d)180.0) * (x87d)0.017453292f);
-        fovBase        = ((double)S.fovEnd - (double)S.fovStart) * (X87R(s + 1.0)) * (x87d)0.5 + (double)S.fovStart;
+        const x87d blendArg = ((x87d)270.0 - (x87d)1.0 / (x87d)S.fovBlendInFraction * (x87d)t * (x87d)180.0) * (x87d)0.017453292f; // exe 0x51AD0B: 1.0 / blend stays unrounded
+        fovBase = ((x87d)S.fovEnd - (x87d)S.fovStart) * X87R(x87::sin(blendArg) + 1.0) * (x87d)0.5 + (x87d)S.fovStart;
     }
     x87d fovZoom = (x87d)0.0;
-    const float dist3D = std::sqrt(sq(src.x - dest.x) + sq(src.y - dest.y) + sq(cur.z - dest.z));
+    const float dist3D = std::sqrt(sq(cur.z - dest.z) + sq(src.y - dest.y) + sq(src.x - dest.x)); // exe 0x51AD4A: z, y, x
     if (S.fovZoomDistMin < dist3D) {
         x87d k = ((x87d)dist3D - S.fovZoomDistMin) / ((x87d)S.fovZoomDistMax - S.fovZoomDistMin);
         k        = std::clamp(k, (x87d)0.0, (x87d)1.0);
@@ -4364,7 +4364,7 @@ bool CCam::Process_DW_HeliChaseCam(bool) {
         doFovLerp = S.bFovLerping;
     }
     if (doFovLerp) {
-        x87d f = ((x87d)(int32)now - (x87d)S.fovLerpStartTime) / ((x87d)S.fovLerpEndTime - (x87d)S.fovLerpStartTime);
+        x87d f = (x87d)((int32)now - S.fovLerpStartTime) / (x87d)(S.fovLerpEndTime - S.fovLerpStartTime); // exe 0x51B050: fild x3, the two subtractions are exact
         f        = std::clamp(f, (x87d)0.0, (x87d)1.0);
         const double s = x87::sin(((x87d)270.0 - f * (x87d)180.0) * (x87d)0.017453292f);
         fov            = (float)(((double)S.fovStart - (double)S.savedFov) * (X87R(s + 1.0)) * (x87d)0.5 + (double)S.savedFov);

@@ -1862,15 +1862,12 @@ void CRadar::DrawRadarMap() {
 
 // 0x586B00
 void CRadar::DrawMap() {
-    const auto player = FindPlayerPed();
-    const auto mapShouldDrawn = !CGame::currArea && player->GetAreaCode() == AREA_CODE_NORMAL_WORLD && FrontEndMenuManager.m_nRadarMode != 1;
-
     CalculateCachedSinCos();
 
     const auto vehicle = FindPlayerVehicle();
-    const auto playerInfo = player->GetPlayerInfoForThisPlayerPed();
 
-    if (!vehicle || playerInfo->IsPlayerInRemoteMode()) {
+    // exe 0x586B13: the player info is Players[PlayerInFocus]; the draw gate (area code, radar mode) is evaluated after the origin is set (0x586D1A)
+    if (!vehicle || CWorld::Players[CWorld::PlayerInFocus].IsPlayerInRemoteMode()) {
         if (CTheScripts::RadarZoomValue)
             m_radarRange = RADAR_MIN_RANGE - (float)CTheScripts::RadarZoomValue;
         else
@@ -1882,7 +1879,7 @@ void CRadar::DrawMap() {
             if (speedZ < RADAR_MIN_SPEED)
                 m_radarRange = RADAR_MAX_RANGE - 10.0f;
             else if (speedZ < RADAR_MAX_SPEED)
-                m_radarRange = (speedZ - RADAR_MIN_SPEED) * (1.0f / 60.0f) + (RADAR_MAX_RANGE - 10.0f);
+                m_radarRange = (speedZ - RADAR_MIN_SPEED) * 16.666668f + (RADAR_MAX_RANGE - 10.0f); // exe 0x858B8C: 16.666668 (0x41855556)
             else
                 m_radarRange = RADAR_MAX_RANGE;
         } else {
@@ -1890,7 +1887,7 @@ void CRadar::DrawMap() {
 
             if (speed < RADAR_MIN_SPEED)
                 m_radarRange = RADAR_MIN_RANGE;
-            else if (speed >= RADAR_MAX_SPEED)
+            else if (!(speed < RADAR_MAX_SPEED)) // exe 0x586C28: NaN also takes the max range
                 m_radarRange = RADAR_MAX_RANGE;
             else
                 m_radarRange = (speed - RADAR_MIN_SPEED) * (850.0f / (RADAR_MIN_SPEED * 10.0f)) + RADAR_MIN_RANGE;
@@ -1900,6 +1897,8 @@ void CRadar::DrawMap() {
     vec2DRadarOrigin = []() -> CVector2D {
         if (!CGameLogic::IsCoopGameGoingOn()) [[likely]] {
             return FindPlayerCentreOfWorldForMap(0);
+        } else if (CGameLogic::n2PlayerPedInFocus == eFocusedPlayer::PLAYER1) { // exe 0x586CB1: 0 -> player 0, 1 -> player 1, anything else -> the average
+            return FindPlayerCentreOfWorldForMap(0);
         } else if (CGameLogic::n2PlayerPedInFocus == eFocusedPlayer::PLAYER2) {
             return FindPlayerCentreOfWorldForMap(1);
         } else {
@@ -1907,7 +1906,7 @@ void CRadar::DrawMap() {
         }
     }();
 
-    if (mapShouldDrawn) {
+    if (!CGame::currArea && FindPlayerPed()->GetAreaCode() == AREA_CODE_NORMAL_WORLD && FrontEndMenuManager.m_nRadarMode != 1) {
         DrawRadarMap();
     }
 }

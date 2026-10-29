@@ -358,7 +358,7 @@ void CEventHandler::HandleEvents() {
 
     pedEG->TickEvents();
 
-    if (!lastAbortedTask) {
+    if (lastAbortedTask) { // 0x4C3F98: the exe skips this when there is no aborted task (port tested the opposite)
         m_History.RecordAbortedTask(primaryTask && lastAbortedTask == primaryTask ? primaryTask : nullptr);
     }
 
@@ -373,12 +373,14 @@ void CEventHandler::HandleEvents() {
         m_History.ClearNonTempEvent();
     }
 
-    if (const auto priorityEvent = pedEG->GetHighestPriorityEvent()) {
+    // 0x4C3F86: the exe keeps the event picked BEFORE TickEvents (edi) for the whole function
+    if (const auto priorityEvent = pedEGHighestPriorityEvent) {
         if (priorityEvent->GetEventType() == EVENT_DAMAGE) { // 0x4C4004
             m_Ped->SetIsStatic(false);
         }
 
-        if (const auto currEvent = m_History.GetCurrentEvent()) { // 0x4C4015
+        // 0x4C4015: only when the current event cannot be interrupted by the same event (vfunc 0x3c)
+        if (const auto currEvent = m_History.GetCurrentEvent(); currEvent && !currEvent->CanBeInterruptedBySameEvent()) {
             if (currEvent->GetEventType() == pedEGHighestPriorityEvent->GetEventType()) {
                 pedEG->Remove(pedEGHighestPriorityEvent);
                 pedEG->RemoveInvalidEvents(false);
@@ -406,7 +408,7 @@ void CEventHandler::HandleEvents() {
                 if (!hasStoppedTimers) { // 0x4C41A9
                     priorityEvent->UnTick();
                     activeTask->MakeAbortable(m_Ped, ABORT_PRIORITY_LEISURE, priorityEvent);
-                    m_History.RecordAbortedTask(activeTask);
+                    m_History.RecordAbortedTask(primaryTask); // 0x4C41FD: [esp+0x14] = the active primary task (port stored the leaf active task)
                     pedEG->RemoveInvalidEvents(false);
                     pedEG->Reorganise();
                     return;

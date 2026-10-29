@@ -5826,7 +5826,7 @@ void CCam::Process_FollowPedWithMouse(const CVector& target, float orientation, 
             const int16 lookUD = pad->LookAroundUpDown();
             const x87d fovScale = (x87d)m_fFOV * 0.0125f; // NOTE: x87 extended precision, same for the expressions below
             rotH = (float)(((0.0714285746f * fovScale) * CTimer::GetTimeStep() * 0.01f) * (float)-(int32)lookLR);
-            rotV = (float)(((((x87d)(float)(int32)lookUD * 0.042857144f) * CTimer::GetTimeStep()) * fovScale) * 0.01f);
+            rotV = (float)((((fovScale * 0.042857144f) * CTimer::GetTimeStep()) * (x87d)(float)(int32)lookUD) * 0.01f); // exe: F * 0.042857 first, lookUD multiplied last
         } else {
             const x87d fovScale = (x87d)m_fFOV * 0.0125f;
             rotH = (float)((CCamera::m_fMouseAccelHorzntl * fovScale) * ((x87d)mouse.x * -2.5f));
@@ -5835,30 +5835,28 @@ void CCam::Process_FollowPedWithMouse(const CVector& target, float orientation, 
     } else {
         auto toCam = m_vecSource - tgt;
         toCam.Normalise();
-        double angle;
-        if (-0.9f <= toCam.z) {
+        x87d angle;
+        if (!(toCam.z < -0.9f)) { // exe 0x50FA5E: `test ah,5; jp` -> atan2 also for NaN
             angle = x87::atan2((double)toCam.y, (double)toCam.x);
         } else {
             angle = (x87d)orientation + (x87d)PI;
         }
         rotV = 0.0f;
-        rotH = (float)(X87R(angle - (double)m_fHorizontalAngle));
+        rotH = (float)(X87R(angle - (x87d)m_fHorizontalAngle));
     }
 
     if ((((TheCamera.m_bFading && TheCamera.m_nFadeInOutFlag == eFadeFlag::FADE_OUT) && 45 < CDraw::FadeValue) || (200 < CDraw::FadeValue || pad->bPlayerSafe))) {
-        rotV = 0.05f;
-        if (-0.22f - 0.05f <= m_fVerticalAngle) {
-            if (-0.22f <= m_fVerticalAngle) {
-                rotV = -0.05f;
-                if (m_fVerticalAngle <= -0.22f + 0.05f) {
-                    rotV = 0.0f;
-                    if (-0.22f < m_fVerticalAngle) {
-                        rotV = -0.22f - m_fVerticalAngle;
-                    }
-                }
-            } else {
-                rotV = -0.22f - m_fVerticalAngle;
-            }
+        // exe 0x50FBF5-0x50FC7B: NaN of m_fVerticalAngle takes the last arm (rotV = 0)
+        if (-0.22f - 0.05f > m_fVerticalAngle) {
+            rotV = 0.05f;
+        } else if (m_fVerticalAngle < -0.22f) {
+            rotV = -0.22f - m_fVerticalAngle;
+        } else if (-0.22f + 0.05f < m_fVerticalAngle) {
+            rotV = -0.05f;
+        } else if (m_fVerticalAngle > -0.22f) {
+            rotV = -0.22f - m_fVerticalAngle;
+        } else {
+            rotV = 0.0f;
         }
     }
 
@@ -5866,16 +5864,14 @@ void CCam::Process_FollowPedWithMouse(const CVector& target, float orientation, 
     m_fVerticalAngle   = rotV + m_fVerticalAngle;
     ClipBeta();
 
-    if (m_fVerticalAngle <= 0.785398185f) {
-        if (m_fVerticalAngle < -1.56206977f) {
-            m_fVerticalAngle = -1.56206977f;
-        }
-    } else {
+    if (m_fVerticalAngle > 0.785398185f) { // exe 0x50FCAD: `test ah,0x41; jne` keeps NaN
         m_fVerticalAngle = 0.785398185f;
+    } else if (m_fVerticalAngle < -1.56206977f) {
+        m_fVerticalAngle = -1.56206977f;
     }
 
     double cosAlpha;
-    if (m_fVerticalAngle <= 0.0f) {
+    if (!(m_fVerticalAngle > 0.0f)) { // exe 0x50FCE9: `jne` also for NaN
         cosAlpha = x87::cos((double)m_fVerticalAngle);
     } else {
         x87d v = (x87d)3.0 * (x87d)m_fVerticalAngle;
@@ -5912,7 +5908,8 @@ void CCam::Process_FollowPedWithMouse(const CVector& target, float orientation, 
     CColPoint colPoint;
     CEntity*  hitEntity{};
     if (CWorld::ProcessLineOfSight(tgt, m_vecSource, colPoint, hitEntity, true, true, true, true, false, false, true, false)) {
-        float nearClip = (tgt - colPoint.m_vecPoint).Magnitude();
+        // exe 0x50FEA1-0x50FED6: inlined length adds z, y, x
+        float nearClip = (float)std::sqrt((sq((x87d)tgt.z - colPoint.m_vecPoint.z) + sq((x87d)tgt.y - colPoint.m_vecPoint.y)) + sq((x87d)tgt.x - colPoint.m_vecPoint.x));
         bool  setNearClip = true;
         if (!hitEntity->GetIsTypePed() || !(dist - nearClip > 0.4f)) {
             const bool farEnough = !(nearClip < 0.6f); // NaN => far enough (exe 0x510016: `jp` when !(nearClip < 0.6))
@@ -5965,16 +5962,17 @@ void CCam::Process_FollowPedWithMouse(const CVector& target, float orientation, 
             bool        hitAgain;
             do {
                 const auto& hit = gaTempSphereColPoints[0].m_vecPoint;
-                float       dy  = hit.y - m_vecSource.y;
-                float       dz  = hit.z - m_vecSource.z;
-                float       along = (hit.x - m_vecSource.x) * m_vecFront.x + dy * m_vecFront.y + dz * m_vecFront.z;
-                const float perpY = along * m_vecFront.y;
-                const float perpZ = along * m_vecFront.z;
-                const float perpX = (hit.x - m_vecSource.x) - along * m_vecFront.x;
-                dy -= perpY;
-                float newNear = std::sqrt(perpX * perpX + dy * dy + (dz - perpZ) * (dz - perpZ)) * invFactor;
+                // exe 0x510160-0x5101E0: dot and length add z, y, x
+                const float dx    = hit.x - m_vecSource.x;
+                const float dy    = hit.y - m_vecSource.y;
+                const float dz    = hit.z - m_vecSource.z;
+                const float along = (dz * m_vecFront.z + dy * m_vecFront.y) + dx * m_vecFront.x;
+                const float perpX = dx - along * m_vecFront.x;
+                const float perpY = dy - along * m_vecFront.y;
+                const float perpZ = dz - along * m_vecFront.z;
+                float newNear = std::sqrt((perpZ * perpZ + perpY * perpY) + perpX * perpX) * invFactor;
                 float tmp     = std::min(newNear, nearClipNow);
-                if (0.1f <= tmp) {
+                if (!(0.1f > tmp)) { // exe 0x5101F5: `test ah,0x41; jne` also for NaN
                     if (nearClipNow < newNear) {
                         newNear = nearClipNow;
                     }
@@ -6002,8 +6000,9 @@ void CCam::Process_FollowPedWithMouse(const CVector& target, float orientation, 
         }
     }
 
-    const float dist3D = std::sqrt(sq(tgt.x - m_vecSource.x) + sq(tgt.y - m_vecSource.y) + sq(tgt.z - m_vecSource.z));
-    if (m_fDistance <= dist3D) {
+    // exe 0x510378-0x5103A5: length adds z, y, x; `dist3D < m_fDistance` is tested first (unordered takes the blend arm)
+    const float dist3D = std::sqrt((sq(tgt.z - m_vecSource.z) + sq(tgt.y - m_vecSource.y)) + sq(tgt.x - m_vecSource.x));
+    if (!(dist3D < m_fDistance)) {
         const double f = std::pow((double)0.92f, (double)CTimer::GetTimeStep());
         const x87d newDist = X87R(f * m_fDistance) + (X87R(1.0 - f)) * dist3D;
         m_fDistance = (float)newDist;

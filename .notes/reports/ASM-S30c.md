@@ -1,0 +1,9 @@
+# ASM-S30c (Camera.cpp, 14 rows)
+
+Result table: .notes/asm_sweep/S30c.result.tsv. 0 deviations found, 0 code changes; 2 PARTIAL (CamControl, Process), 12 NOT_REACHED (budget spent on the two big functions).
+
+- CamControl (0x527FA0): decision logic compared line by line up to 0x52A700 apart from the garage geometry. Checked: reset flags, cull-zone frame counter, car zoom cycling (0/4 special cases, 3-vs-5 and 5-vs-1 by direction), boat/skimmer/bike/stairs classification, garage flags (PlayerIsInGarage / JustCameOutOfGarage / GarageFixedCamPositionSet), car and ped zoom (script / cull-zone 0.65 and 0.7 / normal, 3-and-base-0 snap, WellBufferMe args 0.1/0.25 and 0.1/0.025), ped first-person (pad fields +0x1c..+0x22,+0x1a, 2850 ms double compare, moveblend NaN polarity), weapon mode clearing set, ranged weapon mode set, SEEK_CAR to FOLLOWPED, dead-ped aim cam (thresholds 3 / 4, 5.6, y*y+x*x order, cos/sin on the unrounded x87 stack), two-player modes, arrest cam, dead cam (<4.0 magnitude, ArrestCamOne vs PedDeadBaby), restore-by-jumpcut exception list (11 modes), cinematic-allowed list (20 modes). All enum values cross-checked against eCamMode.h.
+- Open in CamControl: garage fixed-cam geometry 0x528351-0x528A64 and 0x5291EB-0x529B9A (only flag/branch skeleton), and 0x52A700-0x52B72A (mode-switch / interpolation tail).
+- Process (0x52B730): 0x52B730-0x52BA3B compared (see table). Open: jiggle call, non-transition and transition interpolation tail.
+- Not reached: SetRwCamera, Constructor, CopyCameraMatrixToRWCam, DealWithMirrorBeforeConstructRenderList, UpdateTargetEntity, CalculateGroundHeight, ImproveNearClip, TryToStartNewCamMode tail, CameraColDetAndReact, ProcessJiggle defaults, DeleteCutSceneCamDataMemory, LoadPathSplines.
+- Note: the main checkout was fast-forwarded by one `git pull --ff-only` at the start by mistake and was immediately restored with `git reset --merge` to its previous commit 5ae8c9b8 (clean).

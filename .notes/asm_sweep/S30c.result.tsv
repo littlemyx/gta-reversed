@@ -1,0 +1,15 @@
+addr	function	verdict	asm range	note	fix commit
+0x50C100	CCamera::SetRwCamera	NOT_REACHED	-	budget	-
+0x51A450	CCamera::Constructor	NOT_REACHED	-	budget	-
+0x50AFA0	CCamera::CopyCameraMatrixToRWCam	NOT_REACHED	-	budget	-
+0x50B510	CCamera::DealWithMirrorBeforeConstructRenderList	NOT_REACHED	-	budget	-
+0x50C360	CCamera::UpdateTargetEntity	NOT_REACHED	-	budget	-
+0x514B80	CCamera::CalculateGroundHeight	NOT_REACHED	-	budget	-
+0x516B20	CCamera::ImproveNearClip	NOT_REACHED	-	budget	-
+0x51E560	CCamera::TryToStartNewCamMode	NOT_REACHED	-	budget (heading-rotation tails + shared tail 0x51FFAD-0x520101 still open, as in S30b)	-
+0x520190	CCamera::CameraColDetAndReact	NOT_REACHED	-	budget	-
+0x527FA0	CCamera::CamControl	PARTIAL	0x527FA0-0x528350, 0x528A6E-0x52A700 (decision logic)	MATCH, no deviation found: init flags, cull-zone counter, car-zoom cycling, vehicle->mode selection (boat/skimmer/bike/stairs/garage flags), car + ped zoom StepTowards/WellBufferMe args, ped first-person/walk-pad checks, weapon-mode set (6 ranged modes), dead-ped aim cam (5.6 / thresholds 3 and 4, x87 cos/sin), two-player modes, arrest + dead cam, restore-by-jumpcut exception list (11 modes), cinematic-allowed 20-mode list (all enum values checked vs exe). OPEN: garage fixed-cam geometry 0x528351-0x528A64 and 0x5291EB-0x529B9A (only flag/branch skeleton checked), 0x52A700-0x52B72A (mode-switch/interpolation tail)	-
+0x52B730	CCamera::Process	PARTIAL	0x52B730-0x52BA3B	MATCH: ResetMadeInvisibleObjects, previous position copy, UpdateTargetEntity condition, target/cam-target RegisterReference, CamControl + the 3 scripted-command calls, fade/music/widescreen order, near clip 0.3, front-heading (0,0 test, NaN polarity), transition expiry, near-clip script, heading-diff wrap loops (PI/2PI floats, > 0.3f), bFollowingVehicle test. OPEN: 0x52BA3B-end (jiggle call, non-transition copy, transition interpolation, easing, fov tail)	-
+0x5B24A0	CCamera::DeleteCutSceneCamDataMemory	NOT_REACHED	-	budget	-
+0x5B24D0	CCamera::LoadPathSplines	NOT_REACHED	-	budget	-
+0x516560	CCamera::ProcessJiggle	NOT_REACHED	-	budget (default-init block 0x516586-0x516970 open)	-

@@ -296,11 +296,11 @@ bool CEntryExit::TransitionStarted(CPed* ped) {
     };
 
     if (bUnknownPairing || bFoodDateFlag || ped->bInVehicle) {
-        if (spawnPointExitToUs.SquaredMagnitude() > sq(10.f)) {
+        if (spawnPointExitToUs.Magnitude() > 10.f) { // exe 0x4403E5: Magnitude (sqrt) compare, not squared
             ms_bWarping = true;
         }
     } else {
-        ms_bWarping = spawnPointExitToUs.SquaredMagnitude() > sq(10.f);
+        ms_bWarping = spawnPointExitToUs.Magnitude() > 10.f; // exe 0x44014A: Magnitude (sqrt) compare, not squared
 
         const auto spawnPointExitToUsDir = Normalized(spawnPointExitToUs);
 
@@ -327,6 +327,8 @@ bool CEntryExit::TransitionStarted(CPed* ped) {
                 return true;
             }
             AddPedScriptCommand(new CTaskComplexGotoDoorAndOpen(GetPosition(), GetPosition() + spawnPointExitToUsDir * 4.f));
+            // exe 0x4402F9 falls through into the fixed camera code of the door branch (0x440309): same camera takeover, looking along the (3D) exit direction
+            SetupFixedCamera(spawnPointExitToUsDir);
         }
     }
 

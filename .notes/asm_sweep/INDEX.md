@@ -122,7 +122,7 @@
 | S30b | rest of S30 | 21 | partial 9/21 (7 M, 1 fixed, 1 partial) -> S30c | Camera.cpp |
 | S30c | rest of S30b | 14 | 2/14 partial (CamControl decision logic + Process head MATCH) -> S30d | Camera.cpp |
 | S30d | rest of S30c | 14 | partial 8/14 (3 M, 4 fixed, 1 partial) -> S30e | Camera.cpp |
-| S30e | rest of S30d | 7 | pending | Camera.cpp |
+| S30e | rest of S30d | 7 | partial 1/7 (Process tail MATCH, CamControl partial) -> S30f | Camera.cpp |
 | S31b | rest of S31 (+ Process playerPos.z vs blended.z, Rocket heat-seek tail 0x511EC2-0x5120E7) | 33 | partial 4/33 (2 fixed, 2 partial, 1 U) -> S31c | Cam.cpp |
 | S31c | rest of S31b (+ CCam::Process target.z stack-slot trace) | 31 | partial 3/31 (1 M, 2 fixed) -> S31d | Cam.cpp |
 | S31d | rest of S31c (+ CCam::Process target.z trace) | 30 | partial 3/29 (1 M, 2 fixed) -> S31e | Cam.cpp |
@@ -131,4 +131,5 @@
 | S31g | rest of S31f | 21 | partial 6/21 (3 M, 3 fixed) + Pickup field fix -> S31h | Cam.cpp |
 | S31h | rest of S31g | 15 | partial 5/11 (5 M) -> S31i | Cam.cpp |
 | S31i | rest of S31h (CCam::Process done: S31 full + S31e trace) | 6 | partial 5/6 (5 fixed) -> S31j | Cam.cpp |
-| S31j | rest of S31i | 1 | pending | Cam.cpp |
+| S31j | rest of S31i | 1 | done 1/1 (fixed; S31 complete) | Cam.cpp |
+| S30f | rest of S30e | 6 | pending | Camera.cpp |

@@ -172,4 +172,5 @@
 | S41b | rest of S41 | 9 | done (2 M, 6 fixed, RunningScript row -> S66) | CarAI.cpp, PedAttractorPedPlacer.cpp, RunningScript.cpp matches |
 | S66 | phase2: RunningScript.cpp hooks (missed by the generator: grep without -a) | 15 | pending | RunningScript.cpp |
 | S42b | rest of S42 | 19 | UpdateCarAI fixed to 0x41FE13 (tail partial); CarEnterExit 18 NR -> S42c | CarAI.cpp, CarEnterExit.cpp |
-| S42c | rest of S42b (+ UpdateCarAI tail 0x41FE13-0x420678) | 19 | pending | CarEnterExit.cpp |
+| S42c | rest of S42b (+ UpdateCarAI tail 0x41FE13-0x420678) | 19 | partial 10/19 (5 M, 5 fixed) -> S42d | CarEnterExit.cpp |
+| S42d | rest of S42c | 9 | pending | CarEnterExit.cpp |

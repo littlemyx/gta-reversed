@@ -1,0 +1,10 @@
+addr	file	line	cls	fn	oc
+0x64E740	source/game_sa/CarEnterExit.cpp	33	None	GetPositionToOpenCarDoor	U
+0x64F240	source/game_sa/CarEnterExit.cpp	41	None	IsPlayerToQuitCarEnter	U
+0x64F720	source/game_sa/CarEnterExit.cpp	20	None	AddInCarAnim	U
+0x64F860	source/game_sa/CarEnterExit.cpp	50	None	SetAnimOffsetForEnterOrExitVehicle	U
+0x650130	source/game_sa/CarEnterExit.cpp	47	None	QuitEnteringCar	U
+0x650280	source/game_sa/CarEnterExit.cpp	51	None	SetPedInCarDirect	U
+0x6504C0	source/game_sa/CarEnterExit.cpp	42	None	IsRoomForPedToLeaveCar	U
+0x650BB0	source/game_sa/CarEnterExit.cpp	32	None	GetNearestCarPassengerDoor	U
+0x6528F0	source/game_sa/CarEnterExit.cpp	31	None	GetNearestCarDoor	U

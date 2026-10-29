@@ -1741,7 +1741,8 @@ void CRadar::DrawRadarGangOverlay(bool inMenu) {
                 const auto timeInMS = FrontEndMenuManager.m_bDrawingMap ? CTimer::GetTimeInMSPauseMode() : CTimer::GetTimeInMS();
 
                 auto zoneColor = info->ZoneColor;
-                zoneColor.a = NOTSA_FTOL(uint8, (X87R(x87::sin((float)(timeInMS % 1024) * (1024.f / TWO_PI)) + 1.0f)) / 2.0f * (float)zoneColor.a);
+                // exe 0x586791: angle = (t & 0x3FF) * 0.00613592332 (= 2pi/1024); the port multiplied by 1024/2pi
+                zoneColor.a = NOTSA_FTOL(uint8, (X87R(x87::sin((float)(timeInMS % 1024) * (TWO_PI / 1024.f)) + 1.0f)) / 2.0f * (float)zoneColor.a);
 
                 return zoneColor;
             }();

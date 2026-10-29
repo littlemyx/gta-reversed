@@ -83,7 +83,8 @@ public:
     bool           m_bCanDoDriveBy;
     uint8          m_nBustedAudioStatus;
     uint16         m_nLastBustMessageNumber;
-    uint32         m_nCrosshairActivated;
+    uint8          m_nCrosshairActivated; // exe 0x56F49F: Clear() stores a single byte here, 0x56EC80/0x56EF90 test only the byte
+    uint8          m_nCrosshairActivatedPad[3];
     CVector2D      m_vecCrosshairTarget; // -1 ... 1 on screen
     char           m_szSkinName[32];
     RwTexture*     m_pSkinTexture;

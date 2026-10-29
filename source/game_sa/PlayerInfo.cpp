@@ -900,7 +900,7 @@ void CPlayerInfo::Process(uint32 playerIndex) {
 
 // 0x56EC80 - In the original `this` is the address of `m_nCrosshairActivated` (see `ProcessCarGunCrosshair_Hook`)
 void CPlayerInfo::ProcessCarGunCrosshair(uint32 playerIndex, CPad* pad) {
-    if ((uint8)m_nCrosshairActivated == 0) {
+    if (m_nCrosshairActivated == 0) {
         return;
     }
 
@@ -983,7 +983,7 @@ void CPlayerInfo::ProcessCarGunCrosshair_Hook(uint32 playerIndex, CPad* pad) {
 
 // 0x56EF90 - In the original `this` is the address of `m_nCrosshairActivated` (see `DrawCrosshair_Hook`)
 void CPlayerInfo::DrawCrosshair(int32 playerIndex) {
-    if ((uint8)m_nCrosshairActivated == 0) { // The original only tests the lowest byte
+    if (m_nCrosshairActivated == 0) { // The original only tests the lowest byte
         return;
     }
 
@@ -1574,6 +1574,7 @@ CPlayerInfo& CPlayerInfo::operator=(const CPlayerInfo& rhs) {
     m_nBustedAudioStatus               = rhs.m_nBustedAudioStatus;
     m_nLastBustMessageNumber           = rhs.m_nLastBustMessageNumber;
     m_nCrosshairActivated              = rhs.m_nCrosshairActivated;
+    std::memcpy(m_nCrosshairActivatedPad, rhs.m_nCrosshairActivatedPad, sizeof(m_nCrosshairActivatedPad)); // exe 0x45E191 copies the whole dword
     m_vecCrosshairTarget               = rhs.m_vecCrosshairTarget;
     m_pSkinTexture                     = rhs.m_pSkinTexture;
     m_bParachuteReferenced             = rhs.m_bParachuteReferenced;

@@ -185,12 +185,13 @@ const CPedAttractor* CPedAttractorManager::GetRelevantAttractor(const CPed* ped,
 
 // 0x5EFCA0
 CPedAttractor* CPedAttractorManager::RegisterPedWithAttractor(CPed* ped, C2dEffectPedAttractor* fx, CEntity* entity, eMoveState ms) {
-    assert(fx->m_Type == EFFECT_ATTRACTOR); // NOTE: Original function just returned `false`
-
     if (CScripted2dEffects::GetIndex(fx) < 0 && !CEventAttractor::IsEffectActive(entity, fx)) {
         return nullptr;
     }
     if (IsPedRegisteredWithEffect(ped, fx, entity)) {
+        return nullptr;
+    }
+    if (fx->m_Type != EFFECT_ATTRACTOR) { // 0x5EFCE7: not an attractor effect => null (after the checks above)
         return nullptr;
     }
     return VisitAttractorsOfType(fx->m_nAttractorType, [&](auto&& attractors) {

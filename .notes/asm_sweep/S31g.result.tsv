@@ -1,0 +1,20 @@
+addr	function	verdict	asm range	note	fix commit
+0x50DD70	CCam::Finalise_DW_CineyCams	DEVIATION_FIXED	0x50DD70-0x50E03B (full)	hand-shake rotation is 0x59C810 (InverseTransformVector), port used TransformVector (0x59C790); second-pass roll is overwritten by gHandShaker[0].m_ang.z * shakeDegree (exe 0x50DF0C); rest MATCH (zero-test NaN arms, near-clip 0.4, cross order)	d1bf6518
+0x5161A0	CCam::GetLookFromLampPostPos	MATCH	0x5161A0-0x5163F0 (full)	static/up.z>0.9/dist>5/|17-d|<best compares incl. NaN arms, FindObjectsInRange and GetIsLineOfSightClear args, TransformPoint 0x59C890 MATCH	-
+0x513E40	CCam::Get_TwoPlayer_AimVector	DEVIATION_FIXED	0x513E40-0x513FEB (full)	fov scale float product with 0x8631D4 (port fov*PI/360); Y targetting scales the up term (tan/aspect*Y), not the right term; right term (right*X)*(float)tan; return value (entity) not modelled, all callers ignore it	ec9bc939
+0x517400	CCam::IsTimeToExitThisDWCineyCamMode	MATCH	0x517400-0x5174F5 (full)	dist sums z,x,y; min NaN arm (fcom C0) and max (0x41/jp); LOS args; range 20..28; end-time unsigned compare MATCH	-
+0x518500	CCam::ProcessArrestCamOne	NOT_REACHED	-	budget	-
+0x512EF0	CCam::ArrestCamLookAtCopHead	DEVIATION_FIXED	0x512EF0-0x513215 (full)	phase flip only for t>=1: exe jne on C0 skips it for NaN, port !(t<1) flipped on NaN; rest MATCH (rng 0.65 compare, t clamp, head bone +-0.06-0.5t, cross order, 2 LOS arg sets, old-source restore)	bd13df64
+0x519250	CCam::ProcessPedsDeadBaby	MATCH	0x519250-0x5197FB (compares, orbit/cos terms, min(e,1000)/min(e,2000) NaN arms, TestSphere args, reset branch water/front)	no deviation found; reset-branch front/right register trace spot-checked only	-
+0x512B10	CCam::Process_AttachedCam	NOT_REACHED	-	budget	-
+0x525E50	CCam::Process_Cam_TwoPlayer	NOT_REACHED	-	budget	-
+0x51B850	CCam::Process_DW_BirdyCam	NOT_REACHED	-	budget	-
+0x51B120	CCam::Process_DW_CamManCam	NOT_REACHED	-	budget	-
+0x51A740	CCam::Process_DW_HeliChaseCam	NOT_REACHED	-	budget (init loop / cur / dest / dist tail still open; 0x51B020-0x51B0F0 done in S31f)	-
+0x512110	CCam::Process_WheelCam	NOT_REACHED	-	budget	-
+0x50A0A0	CCam::LimitPrecision-float	NOT_REACHED	-	budget	-
+0x516010	CCam::GetArrestCamPosBehindTarget	NOT_REACHED	-	budget	-
+0x514030	CCamera::AvoidTheGeometry	NOT_REACHED	-	budget	-
+0x511B50	CCam::Process_Rocket	NOT_REACHED	-	budget (head 0x511B50-0x511EC2 not re-compared)	-
+0x526FC0	CCam::Process	NOT_REACHED	-	budget	-
+0x457410	CPickup::Update (Task 0 consumer audit)	DEVIATION_FIXED	0x457BC1-0x457BD8, 0x457C99-0x457CB0	the 1500 ms gate reads CPlayerPedData+0x6C (m_nLastTimeFiring); port read m_nLastHSMissileLOSTime (+0xA0, 31-bit field) at 2 sites	9bf3493e

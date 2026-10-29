@@ -126,7 +126,9 @@ CPedAttractor* CPedAttractorManager::FindAssociatedAttractor(const C2dEffectPedA
 
 // 0x5EBBA0
 bool CPedAttractorManager::HasQueueTailArrivedAtSlot(const C2dEffectPedAttractor* fx, const CEntity* entity) {
-    assert(notsa::isa<C2dEffectPedAttractor>(fx)); // NOTE: Original function just returned `false`
+    if (!fx || fx->m_Type != EFFECT_ATTRACTOR) { // 0x5EBBA4..0x5EBBAE: null / not an attractor effect => false
+        return false;
+    }
 
     const auto* const attractor = FindAssociatedAttractor(fx, entity);
     if (!attractor) {

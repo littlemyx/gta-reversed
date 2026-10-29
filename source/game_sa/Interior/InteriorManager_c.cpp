@@ -49,7 +49,7 @@ void InteriorManager_c::Init() {
     m_InteriorCount = 0;
     m_ObjectCount   = 0;
     rng::fill(m_InteriorPedsAliveState, true);
-    m_TimeLastPickupsGenerated = UINT32_MAX;
+    m_TimeLastPickupsGenerated = -180'000; // exe 0x5C05D7: 0xFFFD40E0 (was UINT32_MAX, which delayed the first pickup generation by 3 minutes of game time)
 }
 
 // 0x598F50

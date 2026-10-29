@@ -58,7 +58,8 @@ void CCarEnterExit::AddInCarAnim(const CVehicle* vehicle, CPed* ped, bool bAsDri
             if (const auto data = const_cast<CVehicle*>(vehicle)->GetRideAnimData()) {
                 return { data->AnimGroup, ANIM_ID_BIKE_RIDE };
             } else if (vehicle->IsBoat()) {
-                if (vehicle->m_pHandlingData->m_bSitInBoat) {
+                // 0x64F769-0x64F78B: the standing-driver boat anim is for handlings WITHOUT the sit-in-boat flag; those with it fall through to CAR_SIT
+                if (!vehicle->m_pHandlingData->m_bSitInBoat) {
                     return { ANIM_GROUP_DEFAULT, ANIM_ID_DRIVE_BOAT };
                 }
             } else if (vehicle->vehicleFlags.bLowVehicle) {

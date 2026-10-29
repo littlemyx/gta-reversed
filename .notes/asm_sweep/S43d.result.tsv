@@ -1,0 +1,28 @@
+addr	function	verdict	asm range	note	fix commit
+0x5A7B30	Clothes::LoadClothesFile	DEVIATION	0x5A7B30-0x5A7E7A (all)	rule tags compared with _stricmp against the lowercase names cuts/setc/tex/hide/ignore/endignore/exclusive/endexclusive (port: strcmp, uppercase: lowercase tags in a modded CLOTHES.DAT were unknown); an unknown tag keeps the previous tag (port: assert); tag values, per-tag argument layout, "-" -> 0, rule/end strncmp, # and empty lines MATCH	d1796b49c
+0x5A7F30	Clothes::GetDependentTexture	MATCH	0x5A7F30-0x5A7F7B (all)	jump table 0..9 (HANDS and out of range -> 0x12) equal	-
+0x5A7FB0	Clothes::GetPlayerMotionGroupToLoad	DEVIATION	0x5A7FB0-0x5A8011 (all)	muscular test is !(muscle > 500) (exe je after test ah,0x41): a NaN stat gives PLAYER (port: MUSCULAR); fat test (fat > 500 && fat > muscle) MATCH	f12a5beea
+0x5A80D0	Clothes::Init	DEVIATION	0x5A80D0-0x5A811A (all)	PlayerClothes texture / model keys reset to 0xFFFFFFFF (or edx,-1), port wrote 0 (the first RebuildPlayer then skipped parts whose key is 0); image id / LoadClothesFile tail call MATCH	bc7243bfd
+0x5A8120	Clothes::RequestMotionGroupAnims	MATCH	0x5A8120-0x5A81AA (all)	block indices "fat"/"muscular", request flags 0x12, deletable order per branch equal	-
+0x5A81B0	Clothes::GetDefaultPlayerMotionGroup	MATCH	0x5A81B0-0x5A81D6 (all)	group table first dword = anim block, IsLoaded at +0x10 equal	-
+0x5A81E0	Clothes::ConstructPedModel	MATCH	0x5A81E0-0x5A8267 (all)	Suspend/Resume, txd dictionary, CreateSkinnedClump argument order, DeleteRwObject/SetClump vtable slots, LoadAllRequestedModels(true) equal	-
+0x5A8270	Clothes::RebuildCutscenePlayer	MATCH	0x5A8270-0x5A82BA (all)	fat/muscle stats stored, ConstructPedModel(model, desc, null, true) equal	-
+0x5A82C0	Clothes::RebuildPlayer	MATCH	0x5A82C0-0x5A8381 (all)	associations, IK task abort (slot 5, priority 2), DeleteRwObject, CWorld::Remove, stats, ConstructPedModel with PlayerClothes, Dress, 0x78 byte copy equal	-
+0x5A8390	Clothes::RebuildPlayerIfNeeded	MATCH	0x5A8390-0x5A83EC (all)	fat/muscle != desc (NaN rebuilds) equal	-
+0x698790	Cover::FindVectorFromFirstToMissingVertex	NOT_REACHED	-	unused: no call to 0x698790 anywhere in the exe	-
+0x6987F0	Cover::CalculateHorizontalSize	NOT_REACHED	-	unused: no call to 0x6987F0 anywhere in the exe	-
+0x698990	Cover::DoLineCheckWithinObject	NOT_REACHED	-	unused: no call to 0x698990 anywhere in the exe	-
+0x699120	Cover::FindCoverPointsForThisBuilding	DEVIATION	0x699120-0x69922A (all)	direction byte: atan2(-x, y) * 40.7436638 unrounded then _ftol low byte (now the lifted FindDirFromVector; port rounded atan2 to float first: only visible with PC53); model/2d effect scan, transform, usage byte, AddCoverPoint(3, ...) MATCH	88413a85b
+0x6997E0	Cover::Update	DEVIATION	0x6997E0-0x699D9F (all)	vehicle cover points need speed < 0.005 (port: 0.05); 2D distance tests are sqrt(dy*dy+dx*dx) < 25 (NaN skips); point dir = byte 0xFF (port: TWO_PI); vehicle point removal = !(sqrt(speed) <= 0.01) (port squared >=: equal and NaN differed); building sector bounds clamped to 0..119 (port: unclamped -1/120 aliased neighbouring rows); object and building paths, scan codes, list handling MATCH	33c94f39c
+0x571EA0	CurrentVehicle::Display	MATCH	0x571EA0-0x571ED1 (all)	model info name (+0x32) through TheText, SetVehicleName(null) when no vehicle equal	-
+0x572040	CurrentVehicle::Process	MATCH	0x572040-0x57209C (all)	player ped in-vehicle flag bit 8 + ped vehicle (FindPlayerVehicle), name update equal	-
+0x6FD500	CustomCarPlateMgr::Initialise	MATCH	0x6FD500-0x6FD5A0 (all)	textures read from the vehicle txd: charset nearest, platebacks linear, clamp addressing 0x33, raster lock read equal	-
+0x6FD720	CustomCarPlateMgr::Shutdown	MATCH	0x6FD720-0x6FD79A (all)	unlock/destroy charset, destroy 3 platebacks, remove txd slot equal	-
+0x6FD7A0	CustomCarPlateMgr::GetMapRegionPlateDesign	DEVIATION	0x6FD7A0-0x6FD7BD (all)	region 1 -> 2, 3..4 -> 1, everything else -> 0 (port: assert / -1 = index before the texture table)	9300f4f4f
+0x6FD7C0	CustomCarPlateMgr::GetCharacterPositionInCharSet	MATCH	0x6FD7C0-0x6FDAE9 (all)	all 91 table entries 0x20..0x7A decoded and compared (col, row; default 0,9)	-
+0x6FDC00	CustomCarPlateMgr::LoadPlatecharsetDat	NOT_REACHED	-	unused: no call to 0x6FDC00 anywhere in the exe; not compared	-
+0x6FDD70	CustomCarPlateMgr::RenderLicenseplateTextToRaster	MATCH	0x6FDD70-0x6FDE4F (all)	lock flags 5, early-out order (no unlock), 8 chars x 16 rows x 32 bytes, source (row*64+col)*32, strides equal	-
+0x6FDE50	CustomCarPlateMgr::SetupMaterialPlatebackTexture	MATCH	0x6FDE50-0x6FDE95 (all)	design resolve (0xFF -> region design), RpMaterialSetTexture equal (exe returns the material; no unhooked caller uses it)	-
+0x6FDEA0	CustomCarPlateMgr::CreatePlateTexture	MATCH	0x6FDEA0-0x6FDF4D (all)	raster 64x16x32 flags 0x604, palette index, texture name, filter nearest, leak-on-failure paths equal	-
+0x6FDF50	CustomCarPlateMgr::MaterialUpgradeSetCarplateTextureCB	DEVIATION	0x6FDF50-0x6FDFB5 (all)	texture name "carplate" (port: "careplate", never matched so the upgraded plate material was never replaced); carpback branch MATCH	15f0a4711
+0x43C190	CConversationForPed::Update	MATCH	0x43C190-0x43C58F (all)	whole function (head done in S43c): both timeouts, status gate (2/3/0), N/Y answer paths (node fields, suffix words, subtitle styles/times, Say context word, AwkwardSay), PedSpeaks, status 1/2/3 transitions equal	-

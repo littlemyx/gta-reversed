@@ -145,9 +145,13 @@ void CWeapon::AddGunshell(CEntity* creator, CVector& position, const CVector2D& 
         return;
     }
 
-    // originally squared
-    if ((creator->GetPosition() - TheCamera.GetPosition()).SquaredMagnitude() > sq(10.0f)) {
-        return;
+    // originally squared; 0x73A41D..0x73A44A: (dz * dz + dx * dx) + dy * dy
+    {
+        const auto d = TheCamera.GetPosition() - creator->GetPosition();
+        const float sqDist = (d.z * d.z + d.x * d.x) + d.y * d.y;
+        if (sqDist > sq(10.0f)) {
+            return;
+        }
     }
 
     // Add gunshell fx particle
@@ -157,7 +161,10 @@ void CWeapon::AddGunshell(CEntity* creator, CVector& position, const CVector2D& 
     case eWeaponType::WEAPON_SHOTGUN:
         fxprt.SetColor(0.6f, 0.1f, 0.1f);
     }
-    g_fx.m_GunShell->AddParticle(position, { direction.x, direction.y, CGeneral::GetRandomNumberInRange(0.4f, 1.6f) }, 0.0f, fxprt);
+    // 0x73A460..0x73A49B: z = ((rand() / 32768) * 0.06f * 20.0f) + 0.39999998f (the exe constant 0x862D50), then ANOTHER rand through GetRandomNumberInRange(-20, 20) whose result is discarded
+    const float zVel = (float)X87R(X87R(X87R((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * 0.06f) * 20.0f) + std::bit_cast<float>(0x3ECCCCCCu));
+    (void)CGeneral::GetRandomNumberInRange(-20, 20);
+    g_fx.m_GunShell->AddParticle(position, { direction.x, direction.y, zVel }, 0.0f, fxprt);
 }
 
 // 0x73A530

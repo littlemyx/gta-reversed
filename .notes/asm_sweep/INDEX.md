@@ -32,7 +32,7 @@
 | S28 | game_sa/Streaming.cpp | 73 | partial 19/73 (15 M, 4 fixed) -> S28b | Streaming.cpp |
 | S29 | game_sa/Entity/Object | 39 | partial 34/39 (24 M, 10 fixed) -> S29b | CutsceneObject.cpp, HandObject.cpp, Object.cpp |
 | S30 | game_sa/Camera.cpp | 35 | partial 14/35 (12 M, 2 fixed, 2 partial) -> S30b | Camera.cpp |
-| S31 | game_sa/Cam.cpp | 34 | pending | Cam.cpp |
+| S31 | game_sa/Cam.cpp | 34 | partial 3/34 (1 M, 2 fixed) -> S31b | Cam.cpp |
 | S32 | game_sa/Radar.cpp | 28 | partial 1/28 (1 fixed) -> S32b | Radar.cpp |
 | S33 | game_sa/WaterLevel.cpp | 26 | partial 8/26 (3 M, 5 fixed) -> S33b | WaterLevel.cpp |
 | S34 | game_sa/Interior/Interior_c.cpp | 41 | partial 24/41 (24 M, 3 via new oracle rows) -> S34b | Interior_c.cpp |
@@ -123,3 +123,4 @@
 | S30c | rest of S30b | 14 | 2/14 partial (CamControl decision logic + Process head MATCH) -> S30d | Camera.cpp |
 | S30d | rest of S30c | 14 | partial 8/14 (3 M, 4 fixed, 1 partial) -> S30e | Camera.cpp |
 | S30e | rest of S30d | 7 | pending | Camera.cpp |
+| S31b | rest of S31 (+ Process playerPos.z vs blended.z, Rocket heat-seek tail 0x511EC2-0x5120E7) | 33 | pending | Cam.cpp |

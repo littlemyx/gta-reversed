@@ -1,0 +1,20 @@
+addr	function	verdict	asm range	note	fix commit
+0x41DA30	CCarAI::UpdateCarAI	FIXED	0x41DA30-0x41FE13 (decisions, compares, jump tables); 0x41FE13-0x420678 open (PARTIAL)	done: all switch cases vs exe jump table (indices 0..68) with polarity/strictness of every fcomp; BLOCKPLAYER_FARAWAY case added; BLOCKCAR_CLOSE/KILLPED_FARAWAY/RAMCAR_CLOSE/SLOWLY_1/SLOWLY_2/RAM-BLOCKPLAYER_CLOSE fixed; tail stuck/real-physics/up.z/PoliceAbandonCars. Open: steering-to-hit block 0x41FE46-0x42039C (Magnitude compare forms, dot thresholds), horn/rand 0x4203C1, speed-mult 0x4203F0, water/land 0x420445, gang cruise-speed 0x420559; FORWARDANDBACK normalise form (0x41ED7A, exe has a 0.001 length guard + 1/len multiply) not re-expressed	968e04e1
+0x64E740	CCarEnterExit::GetPositionToOpenCarDoor	NOT_REACHED	-	not started (budget spent on UpdateCarAI)	-
+0x64EF00	CCarEnterExit::IsCarQuickJackPossible	NOT_REACHED	-	not started (budget spent on UpdateCarAI)	-
+0x64F110	CCarEnterExit::ComputeTargetDoorToExit	NOT_REACHED	-	not started (budget spent on UpdateCarAI)	-
+0x64F240	CCarEnterExit::IsPlayerToQuitCarEnter	NOT_REACHED	-	not started (budget spent on UpdateCarAI)	-
+0x64F540	CCarEnterExit::MakeUndraggedPassengerPedsLeaveCar	NOT_REACHED	-	not started (budget spent on UpdateCarAI)	-
+0x64F600	CCarEnterExit::MakeUndraggedDriverPedLeaveCar	NOT_REACHED	-	not started (budget spent on UpdateCarAI)	-
+0x64F680	CCarEnterExit::RemoveCarSitAnim	NOT_REACHED	-	not started (budget spent on UpdateCarAI)	-
+0x64F6E0	CCarEnterExit::RemoveGetInAnims	NOT_REACHED	-	not started (budget spent on UpdateCarAI)	-
+0x64F720	CCarEnterExit::AddInCarAnim	NOT_REACHED	-	not started (budget spent on UpdateCarAI)	-
+0x64F860	CCarEnterExit::SetAnimOffsetForEnterOrExitVehicle	NOT_REACHED	-	not started (budget spent on UpdateCarAI)	-
+0x650130	CCarEnterExit::QuitEnteringCar	NOT_REACHED	-	not started (budget spent on UpdateCarAI)	-
+0x650280	CCarEnterExit::SetPedInCarDirect	NOT_REACHED	-	not started (budget spent on UpdateCarAI)	-
+0x6504C0	CCarEnterExit::IsRoomForPedToLeaveCar	NOT_REACHED	-	not started (budget spent on UpdateCarAI)	-
+0x6509B0	CCarEnterExit::IsClearToDriveAway	NOT_REACHED	-	not started (budget spent on UpdateCarAI)	-
+0x650BB0	CCarEnterExit::GetNearestCarPassengerDoor	NOT_REACHED	-	not started (budget spent on UpdateCarAI)	-
+0x6510D0	CCarEnterExit::IsVehicleStealable	NOT_REACHED	-	not started (budget spent on UpdateCarAI)	-
+0x651210	CCarEnterExit::IsPathToDoorBlockedByVehicleCollisionModel	NOT_REACHED	-	not started (budget spent on UpdateCarAI)	-
+0x6528F0	CCarEnterExit::GetNearestCarDoor	NOT_REACHED	-	not started (budget spent on UpdateCarAI)	-

@@ -49,37 +49,49 @@ void CPedIK::RotateTorso(AnimBlendFrameData* bone, LimbOrientation& orientation,
 
 // 0x5FDF90
 void CPedIK::RotateTorsoForArm(const CVector& direction) {
-    auto destRotation = CVector2D{direction - m_pPed->GetPosition()}.Heading();
+    // exe 0x5FDFB4..0x5FE0CF: the angle is the unrounded fpatan result (only the +-pi / 2pi adjustments, the difference and the 45 / -60 offsets are rounded
+    // to float); constants 0x858CB8 pi, 0x858CBC 2pi, 0x86C860 / 0x86C864 45deg, 0x86C868 -60deg, 0x86C86C -20deg (exe floats, not DegreesToRadians)
+    constexpr float K_PI = std::bit_cast<float>(0x40490FDBu), K_2PI = std::bit_cast<float>(0x40C90FDBu), K_45 = std::bit_cast<float>(0x3F490FDBu),
+                    K_M60 = std::bit_cast<float>(0xBF860A92u), K_M20 = std::bit_cast<float>(0xBEB2B8C3u);
+    const auto& pos = m_pPed->GetPosition();
+    const float cur = m_pPed->m_fCurrentRotation;
 
-    // this might be inlined
-    if (m_pPed->m_fCurrentRotation + DegreesToRadians(180.0f) < destRotation) {
-        destRotation -= DegreesToRadians(360.0f);
-    } else if (m_pPed->m_fCurrentRotation - DegreesToRadians(180.0f) > destRotation) {
-        destRotation += DegreesToRadians(360.0f);
+    auto dest = x87::atan2(-((x87d)direction.x - pos.x), (x87d)direction.y - pos.y);
+    if (dest > X87R((x87d)cur + K_PI)) { // NaN falls through (fcompp + `test ah, 0x41; jne`)
+        dest = X87R(dest - K_2PI);
+    } else if (dest < X87R((x87d)cur - K_PI)) {
+        dest = X87R(dest + K_2PI);
     }
 
-    const auto difAngle = destRotation - m_pPed->m_fCurrentRotation;
-    auto resultAngle = DegreesToRadians(45.0f);
-
-    if (difAngle > DegreesToRadians(45.0f) && difAngle <= DegreesToRadians(90.0f)) {
-        resultAngle = difAngle - DegreesToRadians(45.0f);
+    const x87d difAngle = X87R(dest - cur);
+    x87d       resultAngle;
+    if (difAngle > K_45) {
+        resultAngle = X87R(difAngle - K_45);
+        if (resultAngle > K_45) { // 0x5FE017: beyond 90deg the exe clamps to 45deg (the port returned)
+            resultAngle = K_45;
+        }
     } else {
-        if (difAngle >= DegreesToRadians(-60.0f))
+        if (!(difAngle < K_M60)) { // 0x5FE02E: `jp` also catches NaN
             return;
-
-        resultAngle = difAngle + DegreesToRadians(60.0f);
-
-        if (difAngle < DegreesToRadians(-80.0f)) {
-            resultAngle = DegreesToRadians(-20.0f);
+        }
+        resultAngle = X87R(difAngle - K_M60);
+        if (resultAngle < K_M20) {
+            resultAngle = K_M20;
         }
     }
 
-    if (resultAngle != DegreesToRadians(0.0f)) {
-        const auto degreesHalf = RadiansToDegrees(resultAngle / 2.0f);
-        if (bRotateWithNeck) { // android doesn't have this check
-            RtQuatRotate(&m_pPed->m_apBones[PED_NODE_NECK]->KeyFrame->q, &XaxisIK, degreesHalf, rwCOMBINEPOSTCONCAT);
-        }
-        RtQuatRotate(&m_pPed->m_apBones[PED_NODE_UPPER_TORSO]->KeyFrame->q, &XaxisIK, degreesHalf, rwCOMBINEPOSTCONCAT);
+    if (resultAngle == 0.0f) { // 0x5FE05A: NaN is != 0 and rotates
+        return;
+    }
+    const auto RotateBone = [&](ePedNode node, x87d angle) {
+        RtQuatRotate(&m_pPed->m_apBones[node]->KeyFrame->q, &XaxisIK, (float)X87R(angle * RAD_TO_DEG), rwCOMBINEPOSTCONCAT);
+    };
+    if (bRotateWithNeck) { // android doesn't have this check
+        const float degreesHalf = (float)X87R(resultAngle * 0.5f); // stored as a float ([esp+0x14]) and reused for the torso
+        RotateBone(PED_NODE_NECK, degreesHalf);
+        RotateBone(PED_NODE_UPPER_TORSO, degreesHalf);
+    } else {
+        RotateBone(PED_NODE_UPPER_TORSO, resultAngle); // 0x5FE06E: without the neck branch the torso gets the full (unhalved) angle
     }
 }
 

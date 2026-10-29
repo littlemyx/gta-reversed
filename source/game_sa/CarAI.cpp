@@ -489,7 +489,11 @@ void CCarAI::MakeWayForCarWithSiren(CVehicle* carWithSiren) {
 // 0x41D3D0
 void CCarAI::MellowOutChaseSpeed(CVehicle* vehicle) {
     const auto isPlayerInVeh = !!FindPlayerVehicle();
-    const auto plyrToVehDist3D = (vehicle->GetPosition() - FindPlayerCoors()).Magnitude();
+    // 0x41D40C..0x41D42C / 0x41D5FD..0x41D620: the exe sums the squares z, y, x ((z^2 + y^2) + x^2), not x, y, z
+    const auto plyrToVehDist3D = [&] {
+        const CVector d = vehicle->GetPosition() - FindPlayerCoors();
+        return (float)std::sqrt(((x87d)d.z * d.z + (x87d)d.y * d.y) + (x87d)d.x * d.x);
+    }();
     const auto desiredSpeed    = [&]() -> uint32 {
         switch (FindPlayerWanted()->GetWantedLevel()) {
         case eWantedLevel::WANTED_LEVEL_1: { // 0x41D438
@@ -528,7 +532,8 @@ void CCarAI::MellowOutChaseSpeed(CVehicle* vehicle) {
         return (uint32)vehicle->m_autoPilot.m_nCruiseSpeed;
     }();
     vehicle->m_autoPilot.SetCruiseSpeed(
-        !isPlayerInVeh && desiredSpeed >= 10 && plyrToVehDist3D <= 30.f && FindPlayerPed()->m_vecMoveSpeed.SquaredMagnitude() < sq(0.07f)
+        // 0x41D5D7 / 0x41D628: |moveSpeed| < 0.07 (the exe takes the sqrt) and dist < 30 (strict)
+        !isPlayerInVeh && desiredSpeed >= 10 && plyrToVehDist3D < 30.f && FindPlayerPed()->m_vecMoveSpeed.Magnitude() < 0.07f
             ? 10            // Clamp to 10
             : desiredSpeed
     );

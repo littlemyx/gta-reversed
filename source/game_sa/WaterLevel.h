@@ -254,7 +254,7 @@ public:
     // NOTSA
     struct WaterLayerTexInfo {
         CVector2D shift;
-        float     size;
+        float     scale; // UV units per world unit (the exe MULTIPLIES by 0.08f / 0.04f, it never divides by a texture size)
     };
     /*!
     * @addr notsa
@@ -264,7 +264,7 @@ public:
 
     // NOTSA
     struct TexUV {
-        float     size;      // Texture size
+        float     scale;     // UV units per world unit
         CVector2D pos;       // Pos of the 0th vertex (top left) on the texture 
         CVector2D baseShift; // Shift from the 0th vertex
     };

@@ -281,9 +281,10 @@ void CWaterLevel::RenderWaterTriangle(int32 X1, int32 Y1, CRenPar P1, int32 X2, 
 
 // NOTSA
 auto CWaterLevel::GetWaterLayerTexInfo(int32 layer) -> WaterLayerTexInfo {
+    // 0x6E8ED0 / 0x6E9940: layer 0 = shift {C21184, C21180} (Second) scaled by 0.08f [0x859018], layer 1 = shift {C2117C, C21178} (First) scaled by 0.04f [0x858CEC]
     switch (layer) {
-    case 0: return { { TextureShiftFirstU,  TextureShiftFirstV  }, 25.0f };
-    case 1: return { { TextureShiftSecondU, TextureShiftSecondV }, 12.5f };
+    case 0: return { { TextureShiftSecondU, TextureShiftSecondV }, 0.08f };
+    case 1: return { { TextureShiftFirstU,  TextureShiftFirstV  }, 0.04f };
     default: NOTSA_UNREACHABLE_RET({});
     }
 }
@@ -302,14 +303,15 @@ CRGBA CWaterLevel::GetWaterColorForRendering(CRGBA real, DebugWaterColor debug, 
 // notsa
 auto CWaterLevel::GetTextureUV(int32 X1, int32 Y1, int32 Y3, int32 WaterLayer) -> TexUV {
     const auto txinfo = GetWaterLayerTexInfo(WaterLayer);
-    const auto posUV  = CVector2D{ (float)X1, (float)Y1 } / txinfo.size + txinfo.shift;
+    // 0x6E8ED0: `(float)X1 * scale + shift` (multiply by the exe constant; the PC=24 x87 rounds every operation to float)
+    const auto posUV  = CVector2D{ (float)X1 * txinfo.scale + txinfo.shift.x, (float)Y1 * txinfo.scale + txinfo.shift.y };
 
     const auto CalcShift = [](float p, bool dir) {
         return p - std::floor(p) + (dir ? 7.f : -7.f);
     };
 
     return {
-        .size      = txinfo.size,
+        .scale     = txinfo.scale,
         .pos       = posUV,
         .baseShift = CVector2D{
             CalcShift(posUV.x, false),
@@ -328,14 +330,13 @@ void CWaterLevel::RenderFlatWaterTriangle_OneLayer(int32 X1, int32 Y1, CRenPar P
     // And push vertices into the buffer
     const auto PushVertex = [
         &,
-        tex       = GetTextureUV(X1, Y1, Y3, WaterLayer),
-        pos2DVtx1 = CVector2D{ (float)X1, (float)Y2 },
-        color     = GetWaterColorForRendering(WaterColorTriangle, DebugWaterColors[DebugWaterColor::TRI], WaterLayer)
+        tex   = GetTextureUV(X1, Y1, Y3, WaterLayer),
+        color = GetWaterColorForRendering(WaterColorTriangle, DebugWaterColors[DebugWaterColor::TRI], WaterLayer)
     ](int32 x, int32 y, CRenPar p) {
-        const auto pos2DThis = CVector2D{ (float)x, (float)y };
+        // 0x6E8ED0: UVs are `(float)(x - X1) * scale + baseShift`, relative to vertex 1 (X1, Y1) on both axes
         RenderBuffer::PushVertex(
-            CVector{ pos2DThis, p.z },
-            (pos2DThis - pos2DVtx1) / tex.size + tex.baseShift,
+            CVector{ (float)x, (float)y, p.z },
+            CVector2D{ (float)(x - X1) * tex.scale + tex.baseShift.x, (float)(y - Y1) * tex.scale + tex.baseShift.y },
             color
         );
     };
@@ -595,7 +596,7 @@ void CWaterLevel::RenderFlatWaterRectangle_OneLayer(int32 minX, int32 maxX, int3
     };
 
     // Bottom right corner position on texture (In UV coords)
-    const auto bruv{ CVector2D{ (float)(maxX - minX), (float)(Y2 - Y1) } / texuv.size };
+    const auto bruv{ CVector2D{ (float)(maxX - minX), (float)(Y2 - Y1) } * texuv.scale };
 
     PushVertex(minX, Y1, P1, { 0.f,    0.f }); // Top Left
     PushVertex(maxX, Y1, P2, { bruv.x, 0.f    }); // Top Right

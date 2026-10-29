@@ -291,7 +291,8 @@ int32 CPedGroupMembership::FindNewLeaderToAppoint() const {
 
 // NOTSA
 int32 CPedGroupMembership::FindIdForNewMember() const {
-    for (auto&& [i, mem] : rngv::enumerate(m_members)) {
+    // exe 0x5F8072..0x5F8080: scans the follower slots 0..6 only; the leader slot is never handed to a new follower
+    for (auto&& [i, mem] : rngv::enumerate(std::span{ m_members }.first(LEADER_MEM_ID))) {
         if (!mem) {
             return i;
         }

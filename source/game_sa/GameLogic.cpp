@@ -92,7 +92,7 @@ void CGameLogic::ClearSkip(bool afterMission) {
         TheCamera.Fade(0.5f, eFadeFlag::FADE_OUT);
     }
     SkipState = SKIP_NONE;
-    CPad::GetPad(PED_TYPE_PLAYER1)->bCamera = false;
+    CPad::GetPad(PED_TYPE_PLAYER1)->bPlayerSkipsToDestination = false;
 }
 
 // 0x4428B0
@@ -527,7 +527,7 @@ void CGameLogic::SetUpSkip(CVector coors, float angle, bool afterMission, CEntit
         TheCamera.Fade(0.5f, eFadeFlag::FADE_OUT);
     }
     SkipState = SKIP_NONE;
-    CPad::GetPad(PED_TYPE_PLAYER1)->bCamera = false;
+    CPad::GetPad(PED_TYPE_PLAYER1)->bPlayerSkipsToDestination = false;
     SkipPosition = coors;
     SkipHeading = angle; // exe 0x44241D: the heading was never stored by the port
     SkipState = afterMission ? SKIP_AFTER_MISSION : SKIP_AVAILABLE;
@@ -882,7 +882,7 @@ void CGameLogic::UpdateSkip() {
         // TRIP SKIP
         if (auto pad = CPad::GetPad(PED_TYPE_PLAYER1); pad->IsDPadRightPressed()) {
             SkipState = SKIP_IN_PROGRESS;
-            pad->bCamera = true;
+            pad->bPlayerSkipsToDestination = true;
 
             TheCamera.SetFadeColour(0, 0, 0);
             TheCamera.Fade(2.5f, eFadeFlag::FADE_IN);
@@ -926,7 +926,7 @@ void CGameLogic::UpdateSkip() {
 
         if (SkipToBeFinishedByScript) {
             SkipState = SKIP_WAITING_SCRIPT;
-            CPad::GetPad(PED_TYPE_PLAYER1)->bCamera = false;
+            CPad::GetPad(PED_TYPE_PLAYER1)->bPlayerSkipsToDestination = false;
         } else {
             TheCamera.SetFadeColour(0, 0, 0);
             TheCamera.Fade(1.5f, eFadeFlag::FADE_OUT);
@@ -937,7 +937,7 @@ void CGameLogic::UpdateSkip() {
     case SKIP_FADING_OUT:
         if (CTimer::GetTimeInMS() > SkipTimer) {
             SkipState = SKIP_NONE;
-            CPad::GetPad(PED_TYPE_PLAYER1)->bCamera = false;
+            CPad::GetPad(PED_TYPE_PLAYER1)->bPlayerSkipsToDestination = false;
         }
         break;
 

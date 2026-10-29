@@ -1,0 +1,10 @@
+addr	file	line	cls	fn	oc
+	Binary file source/game_sa/Scripts/RunningScript.cpp matches	0	None	?	U
+0x5EA390	source/game_sa/Attractors/PedAttractorPedPlacer.cpp	12	None	PlacePedAtEffect	U
+0x41BFA0	source/game_sa/CarAI.cpp	33	None	BackToCruisingIfNoWantedLevel	U
+0x41C070	source/game_sa/CarAI.cpp	32	None	AddPoliceCarOccupants	U
+0x41C4A0	source/game_sa/CarAI.cpp	30	None	AddAmbulanceOccupants	U
+0x41C600	source/game_sa/CarAI.cpp	31	None	AddFiretruckOccupants	U
+0x41C760	source/game_sa/CarAI.cpp	53	None	TellOccupantsToLeaveCar	U
+0x41C8A0	source/game_sa/CarAI.cpp	52	None	TellCarToRamOtherCar	U
+0x41C900	source/game_sa/CarAI.cpp	50	None	TellCarToBlockOtherCar	U

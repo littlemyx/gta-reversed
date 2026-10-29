@@ -144,7 +144,7 @@
 | S33g | rest of S33f | 1 | 0/1 (not reached) -> S33h | WaterLevel.cpp |
 | S11d | rest of S11c | 5 | done 5/5 (2 M, 3 fixed; S11 complete) | TaskSimpleClimb.cpp |
 | S33h | rest of S33g | 1 | done 1/1 (fixed; S33 complete) | WaterLevel.cpp |
-| S41 | phase2: unlisted non-oracle hooks | 40 | pending | AttractorScanner.cpp, CarAI.cpp, PedAtmAttractor.cpp, PedAttractor.cpp, PedAttractorPedPlacer.cpp, PedLookAtAttractor.cpp ... |
+| S41 | phase2: unlisted non-oracle hooks | 40 | partial 31/40 (23 M, 8 fixed) -> S41b | AttractorScanner.cpp, CarAI.cpp, PedAtmAttractor.cpp, PedAttractor.cpp, PedAttractorPedPlacer.cpp, PedLookAtAttractor.cpp ... |
 | S42 | phase2: unlisted non-oracle hooks | 40 | pending | CarAI.cpp, CarEnterExit.cpp, CarGenerator.cpp |
 | S43 | phase2: unlisted non-oracle hooks | 40 | pending | CarGenerator.cpp, Cheat.cpp, Clothes.cpp, CollisionEventScanner.cpp, ConversationForPed.cpp, Cover.cpp ... |
 | S44 | phase2: unlisted non-oracle hooks | 40 | pending | AnimatedBuilding.cpp, Building.cpp, CustomCarPlateMgr.cpp, Darkel.cpp, DummyObject.cpp, DummyPed.cpp ... |
@@ -169,3 +169,4 @@
 | S63 | phase2: unlisted non-oracle hooks | 40 | pending | TaskSimpleNone.cpp, TaskSimpleOnEscalator.cpp, TaskSimpleRunAnim.cpp, TaskSimpleRunAnimLoopedMiddle.cpp, TaskSimpleRunNamedAnim.cpp, TaskSimpleSay.cpp ... |
 | S64 | phase2: unlisted non-oracle hooks | 40 | pending | VehicleAnimGroupData.cpp, VehicleRecording.cpp, VehicleSaveStructure.cpp, Weapon.cpp |
 | S65 | phase2: unlisted non-oracle hooks | 7 | pending | WeaponEffects.cpp, WeaponInfo.cpp, World.cpp |
+| S41b | rest of S41 | 9 | pending | CarAI.cpp, PedAttractorPedPlacer.cpp, RunningScript.cpp matches |

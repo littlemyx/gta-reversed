@@ -1,0 +1,11 @@
+addr	function	verdict	asm range	note	fix commit
+0x0605EC	New	MATCH		carried from S57b / S57: identical pool allocation search and stride (see S57b.result.tsv)	-
+0x005E45	New	MATCH		carried from S57b / S57: identical pool allocation search and stride (see S57b.result.tsv)	-
+0x006E2A	New	MATCH		carried from S57b / S57: identical pool allocation search and stride (see S57b.result.tsv)	-
+0x45B4D0	RetrievePedAnimation	NOT_REACHED		budget: large replay packet decode / record function, not compared	-
+0x45CA70	ProcessPedUpdate	NOT_REACHED		budget: large replay packet decode / record function, not compared	-
+0x45CEA0	DealWithNewPedPacket	NOT_REACHED		budget: large replay packet decode / record function, not compared	-
+0x45D060	ProcessReplayCamera	NOT_REACHED		budget: large replay packet decode / record function, not compared	-
+0x45D760	ProcessLookAroundCam	NOT_REACHED		budget: large replay packet decode / record function, not compared	-
+0x45E300	RecordThisFrame	NOT_REACHED		budget: large replay packet decode / record function, not compared	-
+0x45F380	PlayBackThisFrameInterpolation	NOT_REACHED		budget: large replay packet decode / record function, not compared	-

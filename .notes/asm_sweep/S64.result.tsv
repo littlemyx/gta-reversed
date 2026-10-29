@@ -1,0 +1,41 @@
+addr	function	verdict	asm range	note	fix commit
+0x6E3D10	ComputeAnimDoorOffsets	NOT_REACHED		budget: not compared	-
+0x459390	Init	NOT_REACHED		budget: not compared	-
+0x459400	ShutDown	NOT_REACHED		budget: not compared	-
+0x459440	StopPlaybackWithIndex	NOT_REACHED		budget: not compared	-
+0x4595A0	IsPlaybackPausedForCar	NOT_REACHED		budget: not compared	-
+0x459660	SetPlaybackSpeed	NOT_REACHED		budget: not compared	-
+0x459D10	SkipForwardInRecording	NOT_REACHED		budget: not compared	-
+0x459F00	RenderLineSegment	NOT_REACHED		budget: not compared	-
+0x459F70	Render	NOT_REACHED		budget: not compared	-
+0x459F80	RegisterRecordingFile	NOT_REACHED		budget: not compared	-
+0x459FF0	FindIndexWithFileNameNumber	NOT_REACHED		budget: not compared	-
+0x45A0A0	RemoveRecordingFile	NOT_REACHED		budget: not compared	-
+0x45A160	RemoveAllRecordingsThatArentUsed	NOT_REACHED		budget: not compared	-
+0x45A1B0	InitAtStartOfGame	NOT_REACHED		budget: not compared	-
+0x45A4A0	SkipToEndAndStopPlaybackRecordedCar	NOT_REACHED		budget: not compared	-
+0x45A610	SaveOrRetrieveDataForThisFrame	NOT_REACHED		budget: not compared	-
+0x45A8F0	Load	NOT_REACHED		budget: not compared	-
+0x5D23B0	Extract	NOT_REACHED		budget: not compared	-
+0x73A300	InitialiseWeapons	MATCH	0x73A300-0x73A32F (all)	five Initialise calls + two byte stores (0xC8A7C0 / 0xC8A7C1)	-
+0x73A330	ShutdownWeapons	MATCH	0x73A330-0x73A35F (all)	five Shutdown calls + ms_PelletTestCol.RemoveCollisionVolumes (0xC8A7DC)	-
+0x73A360	UpdateWeapons	MATCH	0x73A360-0x73A37F (all)	ShotInfo / Explosion / ProjectileInfo / BulletInfo Update	-
+0x73A3E0	AddGunshell	DEVIATION	0x73A3E0-0x73A528	shell z velocity = rand()/32768*0.06*20+0.39999998 followed by a second discarded GetRandomNumberInRange(-20,20) rand call (port: one float-range call); squared distance summed z,x,y	f3a987406
+0x73A530	GenerateDamageEvent	NOT_REACHED		budget: not compared	-
+0x73A8D0	LaserScopeDot	NOT_REACHED		budget: not compared	-
+0x73AAC0	FireSniper	DEVIATION	0x73AAC0-0x73AE8D	gun shot / whizzed-by events aim at the NORMALISED front * 40 (port used the *16 velocity => 640), second Normalise before the whizzed-by event; recoil position = player ped (not vehicle); moon test adds front.x*0	9cc5076c5
+0x73AF00	FireOneInstantHitRound	DEVIATION	0x73AF00-0x73B1AA	shot-ped animation association gets blend amount 0 / delta 8.0; incidence cos summed z,y,x; impact angle * float 57.2957763671875 not 180/PI	cebe51d03
+0x73B300	ProcessLineOfSight	MATCH	0x73B300-0x73B35F (all)	HandleGunShot, GunShotSetsOilOnFire, CWorld::ProcessLineOfSight with the 12 flags in the same order (shoot-through true, seeThrough false)	-
+0x73C1F0	TakePhotograph	NOT_REACHED		budget: not compared	-
+0x73C710	SetUpPelletCol	NOT_REACHED		budget: not compared	-
+0x73CBA0	FireInstantHitFromCar2	NOT_REACHED		budget: not compared	-
+0x73CDC0	DoDoomAiming	NOT_REACHED		budget: not compared	-
+0x73D1E0	DoTankDoomAiming	NOT_REACHED		budget: not compared	-
+0x73D720	DoDriveByAutoAiming	NOT_REACHED		budget: not compared	-
+0x73E690	DoWeaponEffect	NOT_REACHED		budget: not compared	-
+0x73E800	FireAreaEffect	NOT_REACHED		budget: not compared	-
+0x73EC40	FireInstantHitFromCar	NOT_REACHED		budget: not compared	-
+0x73FA20	FireFromCar	NOT_REACHED		budget: not compared	-
+0x73FB10	FireInstantHit	NOT_REACHED		budget: not compared	-
+0x741360	FireProjectile	DEVIATION	0x741360-0x741BDC	heat seeking target kept only if non-null, == last target and held >1500ms (else rocket, no target); AI launcher line of sight built from the UNMOVED origin (ray start, direction, end); launcher LOS end = moved origin; rocket direction when targetEntity OR targetPos (port required both); thrown grenade / satchel: projectile added only when TestSphereAgainstWorld finds nothing (port inverted) and with force 0; forward projection / dot summed (z,y,x)	b58b481d3
+0x742300	Fire	DEVIATION	0x742300-0x742A0C	no start position: the shot origin stays the LOCAL (0,0,0.6) and only a world copy is the start position (port transformed the shared point); first-person offset heading = atan2 unrounded *57.2957763671875f *0.017453216f (port: plain float heading, no conversion); clip size from the STD weapon info (push 1), not the ped skill info; RLauncher: refuses only when the target ENTITY (else position) is <= 8 away and the ped is not a player (port refused always / checked both); gang drive-by delay inverted; flamethrower / spray / extinguisher have no shot delay (mov [esp+0x13],0). Unreachable: default arm gives hasFired = low byte of the target pointer (not reproduced)	84a605142

@@ -1,0 +1,19 @@
+addr	function	verdict	asm range	note	fix commit
+0x44AA50	CGarage::Update	MATCH	0x44AA50-0x44C7CE (all)	remaining handlers decoded with the jump tables 0x44C83C-0x44C8AC: bomb shop (money -500 clamp, bomb bits type-1, GA_4/5/6/6B/7/7B/8, audio 0x12-0x14/0xE/0x11), only-target, closes-on-touch, open-for-target-freeze (+dropped-car state), script-only-open, script-controlled, hideout (12.25/100/225/16/4900/25 consts, door-distance help message, 18000 timer), stay-open, script-open-freeze, impound (3600/4225, height range), tuning, burglary; with S50b the whole function equals the exe	-
+0x442AD0	CGameLogic::Update	FIXED	0x442AD0-0x4438C3 (mission copy + tail; rest S49b)	mission-passed/failed copy equals the wasted/busted copies with the documented differences; two-player distance limit measured on the unrounded x87 difference + fsqrt (port: float vector Magnitude2D)	b3bf0f4c2
+0x53BB50	CGame::InitialiseOnceBeforeRW	MATCH	0x53BB50-0x53BB70 (all)	MemoryMgr init, localisation, FileMgr, CdStreamInit(5), Pad init	-
+0x53BB80	CGame::ShutdownRenderWare	MATCH	0x53BB80-0x53BC2C (all)	working matrices, loading screen/HUD/font, skins, debug font, lights, visibility plugins, world/camera destroy, D3D cancel buffering, PostEffects::Close tail jump	-
+0x53BC30	CGame::FinalShutdown	MATCH	0x53BC30-0x53BC55 (all)	paths, temp col models, TxdStore, PedStats, Text.Unload(0), CdStreamShutdown	-
+0x53BC80	CGame::Initialise	MATCH	0x53BC80-0x53BCE4 (all)	Init1, col cache, DEFAULT.DAT + datFile, Init2, stencil shadows, strings Loading the Game / Start script, test script, Process, Camera, Init3	-
+0x53BCF0	CGame::ReInitGameObjectVariables	MATCH	0x53BCF0-0x53BECD (all)	order and constants (LOD 500, FOV 120, area 0, 2 players, LARiots flags, pads Clear(1,1))	-
+0x53BED0	CGame::ReloadIPLs	MATCH	0x53BED0	ret	-
+0x53BEE0	CGame::Process	MATCH	0x53BEE0-0x53C23A (all)	call order, pause/cutscene/replay conditions, uint32 ms timing (div), population update by delta >= 4, stencil buffer vector (shadow front y/x * 2, -1.5), 0.02f time steps	-
+0x53C4B0	CGame::CanSeeWaterFromCurrArea	MATCH	0x53C4B0-0x53C4C6 (all)	area 0 or 5	-
+0x53C500	CGame::TidyUpMemory	MATCH	0x53C500-0x53C52A (all)	player 1 ped and clearD3Dmem -> 100 textures / 200 index buffers	-
+0x53C550	CGame::ShutDownForRestart	MATCH	0x53C550-0x53C674 (all)	call order and args	-
+0x53C680	CGame::InitialiseWhenRestarting	MATCH	0x53C680-0x53C809 (all)	message screens FELD_WR/FES_LOC/FED_LFL, 50 loop, failed-load reset, audio volumes from the menu fields	-
+0x53C810	CGame::DrasticTidyUpMemory	MATCH	0x53C810-0x53C826 (all)	tail jump	-
+0x53C900	CGame::Shutdown	MATCH	0x53C900-0x53CAF5 (all)	order of all ~70 shutdown calls, player ped delete, col1 pointers, ped attractor vector freed (port clear(): not observable)	-
+0x5BA060	ValidateVersion	FIXED	0x5BA060-0x5BA109	peds.col version decoding; version_name copy was strncpy_s (aborts on a full buffer); exe failure path = loading screen + endless loop (port: NOTSA_UNREACHABLE)	0fb15b3e3
+0x5BA160	CGame::InitialiseEssentialsAfterRW	FIXED	0x5BA160-0x5BA191 (all)	no memory id push/pop in the exe (port pushed MEM_30, leaked on failure)	8daf01fc7
+0x5BA1A0	CGame::Init2	FIXED	0x5BA1A0-0x5BA3FB (all)	LoadPlayerSkin only for player 1 (port: both players); ms_fLODDistance = 500 (port 0); everything else (strings, order, 0.0 args) equal	fd400c7c4

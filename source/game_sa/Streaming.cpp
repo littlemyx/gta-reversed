@@ -931,7 +931,7 @@ bool CStreaming::DeleteRwObjectsBehindCameraInSectorList(PtrListType& list, size
             entity->DeleteRwObject();
             if (!CModelInfo::GetModelInfo(entity->m_nModelIndex)->m_nRefCount) {
                 RemoveModel(entity->m_nModelIndex);
-                if (ms_memoryUsedBytes < memoryToCleanInBytes) {
+                if ((int32)ms_memoryUsedBytes < (int32)memoryToCleanInBytes) { // exe: signed (jl)
                     return true;
                 }
             }
@@ -968,7 +968,7 @@ bool CStreaming::DeleteRwObjectsNotInFrustumInSectorList(PtrListType& list, size
             entity->DeleteRwObject();
             if (!CModelInfo::GetModelInfo(entity->m_nModelIndex)->m_nRefCount) {
                 RemoveModel(entity->m_nModelIndex);
-                if (ms_memoryUsedBytes < memoryToCleanInBytes) {
+                if ((int32)ms_memoryUsedBytes < (int32)memoryToCleanInBytes) { // exe: signed (jl)
                     return true;
                 }
             }
@@ -3665,16 +3665,21 @@ void CStreaming::StreamZoneModels_Gangs(const CVector& unused) {
                             return false;
                         }
 
-                        if (CPopulation::m_DefaultModelIDForUnusedSlot == gangCarModelId) {
+#ifdef FIX_BUGS
+                        if (CPopulation::m_DefaultModelIDForUnusedSlot == gangCarModelId) { // exe has no such guard
                             return false;
                         }
+#endif
 
                         for (int32 otherGangId = 0; otherGangId < TOTAL_GANGS; otherGangId++) {
                             if (otherGangId == gangId || (ms_loadedGangs & (1 << otherGangId)) == 0) {
                                 continue;
                             }
-                            if (notsa::contains(CPopulation::m_CarGroups[otherGangId + (int32)(POPCYCLE_CARGROUP_BALLAS)], gangCarModelId)) {
-                                return false;
+                            // exe (0x40ADC0): walks all 23 slots, skips the unused-slot marker 2000, compares the rest zero-extended
+                            for (const auto groupModelId : CPopulation::m_CarGroups[otherGangId + (int32)(POPCYCLE_CARGROUP_BALLAS)]) {
+                                if ((uint16)groupModelId != CPopulation::m_DefaultModelIDForUnusedSlot && (uint16)groupModelId == (uint32)gangCarModelId) {
+                                    return false;
+                                }
                             }
                         }
                         

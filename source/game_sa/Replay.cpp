@@ -1549,8 +1549,10 @@ void CReplay::TriggerPlayback(eReplayCamMode mode, CVector fixedCamPos, bool loa
 
     OldRadioStation = [&]() -> eRadioID {
         if (FindPlayerVehicle()) {
+            // exe 0x46015C/0x460171: the station is read BEFORE StopRadio (the port stopped the radio first)
+            const auto station = AERadioTrackManager.GetCurrentRadioStationID();
             AudioEngine.StopRadio(nullptr, false);
-            return AERadioTrackManager.GetCurrentRadioStationID();
+            return station;
         }
 
         return RADIO_EMERGENCY_AA; // Possibly not intended.

@@ -221,12 +221,12 @@ void CStreaming::AddModelsToRequestList(const CVector& point, int32 streamingFla
 
             if (pointSectorDistSq <= radiusInnerSq) {
                 ProcessEntitiesInSectorList(sector.Buildings, streamingFlags);
-                ProcessEntitiesInSectorList(repeatSector.Peds, streamingFlags);
+                ProcessEntitiesInSectorList(repeatSector.Objects, streamingFlags);
                 ProcessEntitiesInSectorList(sector.Dummies, streamingFlags);
             } else {
                 if (pointSectorDistSq <= radiusOuterSq) {
                     ProcessEntitiesInSectorList(sector.Buildings, point.x, point.y, min.x, min.y, max.x, max.y, fRadius, streamingFlags);
-                    ProcessEntitiesInSectorList(repeatSector.Peds, point.x, point.y, min.x, min.y, max.x, max.y, fRadius, streamingFlags);
+                    ProcessEntitiesInSectorList(repeatSector.Objects, point.x, point.y, min.x, min.y, max.x, max.y, fRadius, streamingFlags);
                     ProcessEntitiesInSectorList(sector.Dummies, point.x, point.y, min.x, min.y, max.x, max.y, fRadius, streamingFlags);
                 }
             }

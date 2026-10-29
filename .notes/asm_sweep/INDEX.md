@@ -161,7 +161,7 @@
 | S55 | phase2: unlisted non-oracle hooks | 40 | 38/40 (26 M, 12 fixed) -> S55b | PedPlacement.cpp, PedStats.cpp, PedStuckChecker.cpp, PedTaskPair.cpp, PedType.cpp, Pickup.cpp ... |
 | S56 | phase2: unlisted non-oracle hooks | 40 | partial 27/40 (17 M, 10 fixed) -> S56b | Pickups.cpp, PlaneTrail.cpp, PlaneTrails.cpp, PlayerInfo.cpp, PlayerPedData.cpp, PlayerRelationshipRecorder.cpp |
 | S57 | phase2: unlisted non-oracle hooks | 40 | partial 18/40 (15 M, 3 fixed) -> S57b | EventPool.h, PedAttractorPool.h, PedIntelligencePool.h, PedPool.h, PlayerRelationshipRecorder.cpp, Remote.cpp ... |
-| S58 | phase2: unlisted non-oracle hooks | 40 | pending | ScriptsForBrains.cpp, Shopping.cpp, TheScripts.cpp |
+| S58 | phase2: unlisted non-oracle hooks | 40 | partial 23/40 (20 M, 3 fixed, 1 U) -> S58b | ScriptsForBrains.cpp, Shopping.cpp, TheScripts.cpp |
 | S59 | phase2: unlisted non-oracle hooks | 40 | pending | Shopping.cpp, Stats.cpp, StreamedScripts.cpp, StuckCarCheck.cpp |
 | S60 | phase2: unlisted non-oracle hooks | 40 | pending | PedGroupDefaultTaskAllocatorChat.h, PedGroupDefaultTaskAllocatorFollowAnyMeans.h, PedGroupDefaultTaskAllocatorFollowLimited.h, PedGroupDefaultTaskAllocatorRandom.h, PedGroupDefaultTaskAllocatorSitInLeaderCar.h, PedGroupDefaultTaskAllocatorStandStill.h ... |
 | S61 | phase2: unlisted non-oracle hooks | 40 | pending | TaskComplexAvoidEntity.cpp, TaskComplexAvoidOtherPedWhileWandering.cpp, TaskComplexBeCop.cpp, TaskComplexBeStill.cpp, TaskComplexCarDriveMission.cpp, TaskComplexClimb.cpp ... |
@@ -187,8 +187,9 @@
 | S50b | rest of S50 | 15 | done (12 M, 3 fixed; CGarage::Update handlers -> S48c) | GangWars.cpp, Garage.cpp, Garages.cpp |
 | S56c | rest of S56b | 1 | done (MATCH; S56 complete) | PlayerInfo.cpp |
 | S57b | rest of S57 | 25 | partial 18/25 (14 M, 4 fixed) -> S57c | PedAttractorPool.h, PedIntelligencePool.h, PedPool.h, Replay.cpp, TheScripts.cpp, VehiclePool.h |
-| S51b | rest of S51 | 20 | pending | FurnitureManager_c.cpp, InterestingEvents.cpp, InteriorGroup_c.cpp, InteriorManager_c.cpp, Interior_c.cpp, PathFind.cpp |
+| S51b | rest of S51 | 20 | done (14 M, 5 fixed, 1 n/a; S51 complete) | FurnitureManager_c.cpp, InterestingEvents.cpp, InteriorGroup_c.cpp, InteriorManager_c.cpp, Interior_c.cpp, PathFind.cpp |
 | S53b | rest of S53 | 25 | 24/25 (15 M, 9 fixed) -> S53c | PedClothesDesc.cpp, PedGeometryAnalyser.cpp, PedGroup.cpp |
 | S48c | CGame rows + CGarage::Update handlers + CGameLogic::Update tail | 18 | pending | Game.cpp |
 | S57c | rest of S57b | 10 | pending | PedIntelligencePool.h, PedPool.h, Replay.cpp, VehiclePool.h |
 | S53c | rest of S53b | 1 | pending | PedGeometryAnalyser.cpp |
+| S58b | rest of S58 | 17 | pending | Shopping.cpp, TheScripts.cpp |

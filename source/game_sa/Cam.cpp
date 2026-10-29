@@ -4784,8 +4784,12 @@ void CCam::Process_Editor(const CVector& target, float orientation, float speedV
     m_fHorizontalAngle += pad->GetLeftStickX() * _90DEG_PER_HOUR_IN_RAD_PER_MIN * ExeRecip(19.0f);
     m_fVerticalAngle   += DegreesToRadians(static_cast<float>(pad->GetLeftStickY())) * ExeRecip(50.0f);
 
-    m_fVerticalAngle = std::max(m_fVerticalAngle, DegreesToRadians(85.0f));
-    if (m_fVerticalAngle >= DegreesToRadians(-85.0f)) {
+    // exe 0x50F4E0-0x50F5E6: symmetric clamp of +-1.5620697 (not 85 degrees); `> hi` / `< lo` set the limit, unordered keeps the value
+    static constexpr float VERT_LIMIT = 1.5620697736740112f;
+    if (m_fVerticalAngle > VERT_LIMIT) {
+        m_fVerticalAngle = VERT_LIMIT;
+    }
+    if (!(m_fVerticalAngle < -VERT_LIMIT)) {
         if (pad->IsSquareDown()) {
             s_LookAtAngle += 0.1f;
         } else if (pad->IsCrossDown()) {
@@ -4794,28 +4798,38 @@ void CCam::Process_Editor(const CVector& target, float orientation, float speedV
             s_LookAtAngle = 0.0f;
         }
     } else {
-        m_fVerticalAngle = DegreesToRadians(-85.0f);
+        m_fVerticalAngle = -VERT_LIMIT;
     }
     s_LookAtAngle = std::clamp(s_LookAtAngle, -70.0f, 70.0f);
 
-    m_vecFront = (m_pCamTargetEntity ? m_pCamTargetEntity->GetPosition() : m_vecSource - m_vecSource).Normalized();
+    // exe 0x50F5E6: front = (target position, or our own source when there is no target) - source, normalised
+    const CVector lookAt = m_pCamTargetEntity ? m_pCamTargetEntity->GetPosition() : m_vecSource;
+    m_vecFront           = lookAt - m_vecSource;
+    m_vecFront.Normalise();
     m_vecSource += s_LookAtAngle * m_vecFront;
-    m_vecSource.z = std::min(m_vecSource.z, -450.0f);
-
-    if (pad->IsRightShoulder2Pressed()) {
-        FindPlayerEntity()->Teleport(m_vecSource, false);
+    if (m_vecSource.z < -450.0f) { // exe 0x50F66A: `jp` skips for z >= -450 and unordered: this is max(z, -450)
+        m_vecSource.z = -450.0f;
     }
 
-    const auto ClampByLoop = [](float& value, float min, float max) {
-        while (value > max) {
+    if (pad->IsRightShoulder2Pressed()) {
+        if (auto* const veh = FindPlayerVehicle()) {
+            veh->Teleport(m_vecSource, false);
+        } else {
+            FindPlayerPed()->GetPosition() = m_vecSource; // exe 0x50F6E0: writes the matrix (or placement) position directly
+        }
+    }
+
+    // exe 0x50F730-0x50F847: the loops test `x * 0.02f + 60.0f` against 115 / 5 (the port tested x itself), step 1.0, NaN exits
+    const auto ClampByLoop = [](float& value) {
+        while (value * 0.02f + 60.0f > 115.0f) {
             value -= 1.0f;
         }
-        while (value < min) {
+        while (value * 0.02f + 60.0f < 5.0f) {
             value += 1.0f;
         }
     };
-    ClampByLoop(m_vecSource.x, 5.0f, 115.0f);
-    ClampByLoop(m_vecSource.y, 5.0f, 115.0f);
+    ClampByLoop(m_vecSource.x);
+    ClampByLoop(m_vecSource.y);
 
     GetVectorsReadyForRW();
 

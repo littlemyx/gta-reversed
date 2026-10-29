@@ -1252,7 +1252,9 @@ CPedGeometryAnalyser::WanderPathClearness CPedGeometryAnalyser::IsWanderPathClea
     }
 
     CVector dir = to - from;
-    const auto numSamples = std::min(NOTSA_FTOL(int32, std::floor(dir.Magnitude())), maxSamples);
+    // 0x5F3045..0x5F307A: the exe sums z*z + y*y + x*x (CVector::Magnitude sums x, y, z), rounded to float by fsqrt
+    const float dirLen     = std::sqrt(dir.z * dir.z + dir.y * dir.y + dir.x * dir.x);
+    const auto  numSamples = std::min(NOTSA_FTOL(int32, std::floor(dirLen)), maxSamples);
     if (numSamples == 0) {
         return WanderPathClearness::CLEAR;
     }
@@ -1265,7 +1267,7 @@ CPedGeometryAnalyser::WanderPathClearness CPedGeometryAnalyser::IsWanderPathClea
         float waterZ;
         if (CWaterLevel::GetWaterLevel(p.x, p.y, p.z, waterZ, 0, nullptr)) {
             // If there's no ground above the water, then it's a water
-            const float maxZ = from.z <= to.z ? to.z : from.z;
+            const float maxZ = !(from.z > to.z) ? to.z : from.z; // 0x5F3140: test ah,0x41 / jne => to.z also for a NaN
 
             CColPoint colPoint;
             CEntity*  hitEntity{};

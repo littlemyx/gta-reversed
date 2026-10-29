@@ -1,0 +1,28 @@
+addr	function	verdict	asm range	note	fix commit
+0x50DD70	CCam::Finalise_DW_CineyCams	NOT_REACHED	-	budget	-
+0x5161A0	CCam::GetLookFromLampPostPos	NOT_REACHED	-	budget	-
+0x513E40	CCam::Get_TwoPlayer_AimVector	NOT_REACHED	-	budget	-
+0x517400	CCam::IsTimeToExitThisDWCineyCamMode	NOT_REACHED	-	budget	-
+0x520690	CCam::LookBehind	DEVIATION_FIXED	0x520690-0x520E28 (full)	ped branch dot product sums z,y,x (port x,y,z); rest MATCH (std::max(2+zoom,0.6) is NaN-identical to the exe 0.6>x form)	75ac4401
+0x520E40	CCam::LookRight	DEVIATION_FIXED	0x520E40-0x5214EF (full)	final source.z `result > src.z ? result : src.z` (exe fcom/test 0x41; port std::max kept result on NaN); rest MATCH	75ac4401
+0x518500	CCam::ProcessArrestCamOne	NOT_REACHED	-	budget	-
+0x512EF0	CCam::ArrestCamLookAtCopHead	NOT_REACHED	-	budget	-
+0x519250	CCam::ProcessPedsDeadBaby	NOT_REACHED	-	budget	-
+0x512B10	CCam::Process_AttachedCam	NOT_REACHED	-	budget	-
+0x525E50	CCam::Process_Cam_TwoPlayer	NOT_REACHED	-	budget	-
+0x51B850	CCam::Process_DW_BirdyCam	NOT_REACHED	-	budget	-
+0x51B120	CCam::Process_DW_CamManCam	NOT_REACHED	-	budget	-
+0x51A740	CCam::Process_DW_HeliChaseCam	PARTIAL_FIXED	0x51B020-0x51B0F0	fov lerp start `!(t < fraction)` (exe skips only when t<fraction; port `fraction <= t` skipped on NaN); fov lerp formula MATCH; init loop / cur / dest / dist tail NOT compared	75ac4401
+0x51C760	CCam::Process_DW_PlaneCam1	DEVIATION_FIXED	0x51C760-0x51CBF0 (full)	dest.z `!(z<80)` NaN arm; src.x/y/z sums associate inside-out (v1*10+dest, +v2*30, +up*15, +(-150 term), +sin term) vs port left-to-right; random/clear-counter/Finalise args MATCH	75ac4401
+0x51CC30	CCam::Process_DW_PlaneCam2	DEVIATION_FIXED	0x51CC30-0x51D0F0 (full)	dest.z NaN arm; src sums inside-out ((dirB*30+fwd)+up*5)+sin term; rest MATCH	75ac4401
+0x51D100	CCam::Process_DW_PlaneCam3	DEVIATION_FIXED	0x51D100-0x51D3C0 (full)	dest.z NaN arm; t = fild/fidiv single rounding; rest MATCH	75ac4401
+0x51C250	CCam::Process_DW_PlaneSpotterCam	DEVIATION_FIXED	0x51C250-0x51C710 (full)	`5<=len` exe exits only on len<5 (NaN continues); 3D length for the fov lerp adds z,y,x; t via fild/fidiv; clamp/sin/fov/near MATCH	75ac4401
+0x512110	CCam::Process_WheelCam	NOT_REACHED	-	budget	-
+0x50A0A0	CCam::LimitPrecision-float	NOT_REACHED	-	budget	-
+0x516010	CCam::GetArrestCamPosBehindTarget	NOT_REACHED	-	budget	-
+0x514030	CCamera::AvoidTheGeometry	NOT_REACHED	-	budget	-
+0x511B50	CCam::Process_Rocket	PARTIAL_FIXED	0x511EC2-0x5120E7 (tail)	heat-seek: m_nLastHSMissileLOSTime is used as a bool by the exe (read `now - (field==0) > 1000`, written `now > 1`); without LOS the target is dropped (null for MarkTarget and the stored last target); crosshair/time<=1500/MarkTarget/PickTarget/LOS args MATCH; head 0x511B50-0x511EC2 not re-compared	75ac4401
+0x526FC0	CCam::Process	NOT_REACHED	-	budget	-
+0x526FC0	CCam::Process	NOT_REACHED	-	budget	-
+0x526FC0	CCam::Process	NOT_REACHED	-	budget	-
+0x526FC0	CCam::Process	NOT_REACHED	-	budget	-

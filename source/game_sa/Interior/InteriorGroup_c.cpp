@@ -458,7 +458,7 @@ void InteriorGroup_c::ReferenceAnims() {
         return;
     }
     const auto animBlkIdx = CAnimManager::GetAnimationBlockIndex(GetAnimBlockName());
-    if (CStreaming::IsModelLoaded(IFPToModelId(animBlkIdx))) {
+    if (CAnimManager::GetAnimBlocks()[animBlkIdx].IsLoaded) { // exe 0x595123: the anim block's loaded flag, not the streaming load state
         CAnimManager::AddAnimBlockRef(animBlkIdx);
         m_animBlockReferenced = true;
     } else {

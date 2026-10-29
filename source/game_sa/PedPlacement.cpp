@@ -93,7 +93,8 @@ CVehicle* CPedPlacement::IsPositionClearOfCars(const CPed* ped) {
     if (!vehHit)
         return nullptr;
 
-    if (vehHit->IsAutomobile() || vehHit->vehicleFlags.bIsBig) {
+    // 0x616A8F: sub-type != AUTOMOBILE (+0x594) or bIsBig (+0x429 & 4) -> the exact collision-model test, otherwise the vehicle is returned as hit
+    if (vehHit->m_nVehicleSubType != VEHICLE_TYPE_AUTOMOBILE || vehHit->vehicleFlags.bIsBig) {
         std::array<CColPoint, 32> unused{}; // 0xC102A0 - Originally static, but this is fine too.
         if (CCollision::ProcessColModels(
             *ped->m_matrix,
@@ -106,6 +107,7 @@ CVehicle* CPedPlacement::IsPositionClearOfCars(const CPed* ped) {
         )) {
             return vehHit;
         }
+        return nullptr;
     }
-    return nullptr;
+    return vehHit;
 }

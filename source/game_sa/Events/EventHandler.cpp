@@ -3312,8 +3312,8 @@ void CEventHandler::ComputeVehicleOnFireResponse(CEventVehicleOnFire* e, CTask* 
         if (!e->m_vehicle) {
             return nullptr;
         }
-        if ((e->m_vehicle->GetStatus() == STATUS_WRECKED || e->m_vehicle->m_fHealth <= 0.f) && m_Ped->IsInVehicle()) {
-            if (m_Ped->IsInVehicle() && (m_Ped->m_pVehicle->IsBike() || m_Ped->m_pVehicle->IsSubQuad())) {
+        if ((e->m_vehicle->GetStatus() == STATUS_WRECKED || e->m_vehicle->m_fHealth <= 0.f) && m_Ped->IsInVehicle(e->m_vehicle)) { // 0x4BB336: the ped must be in THE burning vehicle
+            if ((m_Ped->m_pVehicle->IsBike() || m_Ped->m_pVehicle->IsSubQuad())) {
                 ComputeKnockOffBikeResponse(e, tactive, tsimplest);
                 return m_EventResponseTask;
             }
@@ -3321,7 +3321,7 @@ void CEventHandler::ComputeVehicleOnFireResponse(CEventVehicleOnFire* e, CTask* 
         }
         switch (e->m_TaskId) {
         case TASK_COMPLEX_LEAVE_CAR: {
-            return new CTaskComplexLeaveAnyCar{ 0, 0, false };
+            return new CTaskComplexLeaveAnyCar{ 0, 0, true }; // 0x4BB3E1: push 1 (forceGetOut)
         case TASK_COMPLEX_LEAVE_CAR_AND_FLEE:
             return new CTaskComplexSequence{
                 new CTaskComplexLeaveAnyCar{ 0, 0, true }, // 0x4BB43D
@@ -3329,7 +3329,7 @@ void CEventHandler::ComputeVehicleOnFireResponse(CEventVehicleOnFire* e, CTask* 
             };
         case TASK_COMPLEX_LEAVE_CAR_AND_WANDER:
             return new CTaskComplexSequence{ // Why use a sequence here?
-                new CTaskComplexLeaveAnyCar{ 0, 0, false } // 0x4BB506
+                new CTaskComplexLeaveAnyCar{ 0, 0, true } // 0x4BB506: push 1 (forceGetOut)
             };
         case TASK_COMPLEX_CAR_DRIVE_MISSION_FLEE_SCENE: {
             if (m_Ped->m_pVehicle && m_Ped->m_pVehicle->IsDriver(m_Ped)) {
@@ -3340,10 +3340,9 @@ void CEventHandler::ComputeVehicleOnFireResponse(CEventVehicleOnFire* e, CTask* 
         case TASK_COMPLEX_FLEE_ENTITY:
             return new CTaskComplexFleeEntity{ e->m_vehicle, false, 15.f };
         case TASK_COMPLEX_SMART_FLEE_ENTITY:
-            return new CTaskComplexSmartFleeEntity{ m_Ped->m_pVehicle, false, 15.f };
+            return new CTaskComplexSmartFleeEntity{ e->m_vehicle, false, 15.f }; // 0x4BB558: edi = the event vehicle
         default:
-            NOTSA_UNREACHABLE();
-            return m_EventResponseTask; // 0x4BB63E: default leaves the response task untouched
+            return m_EventResponseTask; // 0x4BB63E: any other task id leaves the response task untouched (not an unreachable)
         }
         }
     }();

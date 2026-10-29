@@ -1056,7 +1056,7 @@ void Interior_c::Shop_PlaceFixedUnits() {
 
     // BUG: If there's no space on either side, the original code doesn't place the counter, and
     // uses a stack variable that wasn't initialized (it happens to contain the `this` pointer) as the position.
-    int32 counterEndX = static_cast<int32>(reinterpret_cast<uintptr_t>(this));
+    int32 counterEndX = static_cast<int32>(NOTSA_PTR_ID32(this));
     if (spaceRight < 6) {
         if (spaceLeft >= 6) {
             counterEndX = Shop_PlaceCounter(true);

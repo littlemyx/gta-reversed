@@ -7110,26 +7110,36 @@ void CCam::Process_Rocket(const CVector& target, float orientation, float speedV
     }
     m_pCamTargetEntity->UpdateRwMatrix();
     m_pCamTargetEntity->UpdateRwFrame();
+    m_pCamTargetEntity->UpdateRpHAnim(); // exe 0x511C1E
     CVector headPosition{};
     targetPed->GetTransformedBonePosition(headPosition, eBoneTag::BONE_HEAD, true);
-    m_vecSource = headPosition + CVector{0.0f, 0.0f, 0.1f};
+    m_vecSource = headPosition;
+    m_vecSource.z += 0.1f; // exe 0x511C55: only z is touched
 
     auto*      pad1   = CPad::GetPad(0);
     const auto fov    = m_fFOV * ExeRecip(80.0f);
     const auto amountMouseMoved = pad1->NewMouseControllerState.GetAmountMouseMoved();
     
     if (!amountMouseMoved.IsZero()) {
-        m_fHorizontalAngle += -3.0f * amountMouseMoved.x * fov * CCamera::m_fMouseAccelHorzntl;
-        m_fVerticalAngle += +4.0f * amountMouseMoved.y * fov * CCamera::m_fMouseAccelVertical;
+        // exe 0x511DD4-0x511E12: (-3 * x) * (fov * accelH), (fov * accelV) * (4 * y)
+        m_fHorizontalAngle += (-3.0f * amountMouseMoved.x) * (fov * CCamera::m_fMouseAccelHorzntl);
+        m_fVerticalAngle += (fov * CCamera::m_fMouseAccelVertical) * (4.0f * amountMouseMoved.y);
     } else {
         const auto hv  = (float)-pad1->LookAroundLeftRight(targetPed);
         const auto vv  = (float)pad1->LookAroundUpDown(targetPed);
 
-        m_fHorizontalAngle += sq(hv) * ExeRecip(10000.0f) * fov * ExeRecip(17.5f) * CTimer::GetTimeStep() * (hv < 0.0f ? -1.0f : 1.0f);
-        m_fVerticalAngle   += sq(vv) * ExeRecip(22500.0f) * fov * ExeRecip(14.0f) * CTimer::GetTimeStep() * (vv < 0.0f ? -1.0f : 1.0f);
+        // exe 0x511D0C-0x511D9E: (hv^2 * 1e-4) * (fov * 1/17.5) * ts * sign, the fov factor is multiplied first
+        m_fHorizontalAngle += (sq(hv) * ExeRecip(10000.0f)) * (fov * ExeRecip(17.5f)) * CTimer::GetTimeStep() * (hv < 0.0f ? -1.0f : 1.0f);
+        m_fVerticalAngle   += (sq(vv) * ExeRecip(22500.0f)) * (fov * ExeRecip(14.0f)) * CTimer::GetTimeStep() * (vv < 0.0f ? -1.0f : 1.0f);
     }
     ClipBeta();
-    ClipAlpha();
+    // exe 0x511DB5-0x511E2F: the vertical clamp is +60 / -89.5 degrees here (0x8630F8 / 0x8630F4), not the -85.5 of the inlined ClipAlpha
+    if (m_fVerticalAngle > 1.0471975803375244f) {
+        m_fVerticalAngle = 1.0471975803375244f;
+    }
+    if (m_fVerticalAngle < -1.5620697736740112f) {
+        m_fVerticalAngle = -1.5620697736740112f;
+    }
 
     m_vecFront.Set(
         -(X87R(x87::cos(m_fHorizontalAngle) * x87::cos(m_fVerticalAngle))),

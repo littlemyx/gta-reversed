@@ -497,7 +497,7 @@ bool CEntryExit::TransitionFinished(CPed* ped) {
 
         // Move the vehicle to the spawn point
         const auto heightAboveRoad = veh->GetHeightAboveRoad();
-        veh->Teleport(CVector{ spawnPos.x, spawnPos.y, (spawnPos.z - 1.f) + heightAboveRoad }, false);
+        veh->Teleport(CVector{ spawnPos.x, spawnPos.y, (float)(((x87d)spawnPos.z - (x87d)1.0f) + (x87d)heightAboveRoad) }, false); // exe 0x4408E0-0x4408F7: z - 1 not rounded before the add
         veh->SetHeading(exitAngleRad);
     } else {
         // Move the ped to a valid position near the spawn point

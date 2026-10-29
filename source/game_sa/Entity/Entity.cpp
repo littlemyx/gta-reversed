@@ -1433,13 +1433,15 @@ void CEntity::ModifyMatrixForTreeInWind() {
     auto at = RwMatrixGetAt(parentMatrix);
 
     float fWindOffset;
-    if (CWeather::Wind >= 0.5F) {
+    if (!(CWeather::Wind < 0.5F)) { // exe 0x534EDE: `jp` is taken for >= 0.5 and for NaN
         auto uiOffset1 = (((m_nRandomSeed + CTimer::GetTimeInMS() * 8) & 0xFFFF) / 4'096) % 16;
         auto uiOffset2 = (uiOffset1 + 1) % 16;
         auto fContrib = static_cast<float>(((m_nRandomSeed + CTimer::GetTimeInMS() * 8) % 4'096)) / 4096.0F;
 
+        // exe 0x534F86-0x534FA7: ((1 - c) * T[o1] + c * T[o2]) + 1, then * Wind * 0.015 (the port added 1 + c * T[o2] to the first term)
         fWindOffset = (1.0F - fContrib) * CWeather::saTreeWindOffsets[uiOffset1];
-        fWindOffset += 1.0F + fContrib * CWeather::saTreeWindOffsets[uiOffset2];
+        fWindOffset += fContrib * CWeather::saTreeWindOffsets[uiOffset2];
+        fWindOffset += 1.0F;
         fWindOffset *= CWeather::Wind;
         fWindOffset *= 0.015F;
 
@@ -1447,9 +1449,11 @@ void CEntity::ModifyMatrixForTreeInWind() {
         auto uiTimeOffset = (NOTSA_PTR_ID32(this) + CTimer::GetTimeInMS()) & 0xFFF;
 
         constexpr float scalingFactor = 6.28f / 4096.f;
-        fWindOffset = X87R(x87::sin(uiTimeOffset * scalingFactor) * 0.005F);
-        if (CWeather::Wind >= 0.2F) {
-            fWindOffset *= 1.6F;
+        // exe 0x534EE8-0x534F43: Wind >= 0.2 (or NaN) multiplies the sine by the constant 0.008f (0x863984), once - not 0.005f and then 1.6f
+        if (!(CWeather::Wind < 0.2F)) {
+            fWindOffset = X87R(x87::sin(uiTimeOffset * scalingFactor) * 0.008F);
+        } else {
+            fWindOffset = X87R(x87::sin(uiTimeOffset * scalingFactor) * 0.005F);
         }
     }
 

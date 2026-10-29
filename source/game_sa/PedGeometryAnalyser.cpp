@@ -119,11 +119,13 @@ bool CPedGeometryAnalyser::CanPedJumpObstacle(const CPed& ped, const CEntity& en
 
 // 0x5F1C40
 bool CPedGeometryAnalyser::CanPedTargetPed(CPed& ped, CPed& targetPed, bool checkDirection) {
-    return CanPedTargetPoint(
-        ped,
-        targetPed.GetPosition() + CVector{ 0.f, 0.f, targetPed.GetTaskManager().GetTaskSecondary(TASK_SECONDARY_DUCK) ? -0.25f : 0.75f }, // 0.75f - 1.f = -0.25f
-        checkDirection
-    );
+    // 0x5F1C56: z + 0.75 [0x858F34], and when ducking minus 1.0 [0x858624] - rounded in two steps (not z - 0.25)
+    CVector point = targetPed.GetPosition();
+    point.z += 0.75f;
+    if (targetPed.GetTaskManager().GetTaskSecondary(TASK_SECONDARY_DUCK)) {
+        point.z -= 1.f;
+    }
+    return CanPedTargetPoint(ped, point, checkDirection);
 }
 
 // 0x5F1B70

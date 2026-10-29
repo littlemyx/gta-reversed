@@ -1,0 +1,18 @@
+addr	function	verdict	asm range	note	fix commit
+0x593FC0	Interior_c::FurnishBedroom	NOT_REACHED	-	not compared (budget; ~700 asm lines)	-
+0x596930	Interior_c::Kitchen_FurnishEdges	NOT_REACHED	-	not compared (budget; ~630 asm lines)	-
+0x597240	Interior_c::Lounge_AddTV	MATCH	0x597240-0x597426 (all)	4 rotation cases (tv/second tile offsets, AddInteriorInfo(0,..,-1)), (rot&3)*90+45 / *90, rand()<0x3FFF ? sub 7 : 9	-
+0x597740	Interior_c::FurnishLounge	NOT_REACHED	-	not compared (budget; ~800 asm lines)	-
+0x599210	Interior_c::Office_PlaceEdgeFillers	MATCH	0x599210-0x5993D9 (all)	roll first, numEmpty<1 exit, roll>90 special once, >75 random rotation 0..4 (exe bug kept), >25, info tile per direction, returns width	-
+0x5993E0	Interior_c::Office_PlaceDesk	MATCH	0x5993E0-0x5995A2 (all)	desk/chair tile shifts per direction, used-tile (dir 3 keeps tileY), infoX/Y +-.5 by rotation, AddInteriorInfo(6), return 2/1	-
+0x5995B0	Interior_c::Office_PlaceEdgeDesks	MATCH	0x5995B0-0x599767 (all)	2 rands first (roll1*100, 30-ftol(r*-40)), numEmpty<2 exit before the numDesks rands, 2+r twice, per-side desk coords	-
+0x599770	Interior_c::Office_FurnishEdges	MATCH	0x599770-0x59995A (all)	tile marking loops, 4 GotoPts, door 7-block, 4 desk loops then 4 filler loops (bounds/direction/side args)	-
+0x599AF0	Interior_c::FurnishOffice	NOT_REACHED	-	not compared (budget; ~660 asm lines)	-
+0x599BB0	Interior_c::Shop_Place3PieceUnit	MATCH	0x599BB0-0x599DB6 (all)	first/last/middle GetFurniture order and sub ids per direction, X vs Y axis advance by width/depth, length-2 middles	-
+0x59A1B0	Interior_c::Shop_FurnishEdges	MATCH	0x59A1B0-0x59A584 (all)	3 roll+wall loops, shelf-info counter 0x8D0948 (rand only when >1), door ranges, aisle tile marking	-
+0x593DB0	Interior_c::GetBoundingBox	MATCH	0x593DB0-0x593F0C (all)	type 0/1/6 gate, visited[x*30+y], FindBoundingBox arg order, 4 corners margin .35 add/sub order	-
+0x593BF0	Interior_c::Init	MATCH	0x593BF0-0x593DA7 (all)	srand seed (EnEx z/bottom/left hash via 3 _ftol + entity pos z,y,x; else float chain + seed), type dispatch, steal-id list, AddPickups for lounge/bedroom; x87 chain is PC24 = float	-
+0x59A590	Interior_c::Shop_FurnishAisles	MATCH	0x59A590-0x59A786 (all)	roll/subgroup, i&3 switch (PlaceEdgeUnits dir 3/1, AddShelfInfo, SetTilesStatus+GotoPts), end GotoPts	-
+0x591F90	Interior_c::AddPickups	MATCH	0x591F90-0x5921CF (all)	180000ms gate, 100 tries, tileX/Y rands, status 0/3/4, money 10+r*40 / weapon 5/22/4/25 +0.5 z, ammo 3+r*15, single pickup	-
+0x5924A0	Interior_c::CalcExitPts	MATCH	0x5924A0-0x5929E8 (all)	4 exit points: door gates, goto-pt index search (> compare, stride 2), 0.25 offsets, left/right fcomp polarity (jp), right uses 2nd-last TileX	-
+0x59A790	Interior_c::FurnishShop	MATCH	0x59A790-0x59A832 (all)	door-1>=6 || width-door>=6 gate, 4 corner SetTilesStatus, PlaceFixedUnits/Edges/Aisles order	-

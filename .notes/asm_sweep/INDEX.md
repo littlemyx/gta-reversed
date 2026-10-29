@@ -150,7 +150,7 @@
 | S44 | phase2: unlisted non-oracle hooks | 40 | done 40/40 (33 M, 7 fixed) | AnimatedBuilding.cpp, Building.cpp, CustomCarPlateMgr.cpp, Darkel.cpp, DummyObject.cpp, DummyPed.cpp ... |
 | S45 | phase2: unlisted non-oracle hooks | 40 | pending | Bike.cpp, Bmx.cpp, Boat.cpp, EmergencyPed.cpp, Entity.cpp, EntityScanner.cpp ... |
 | S46 | phase2: unlisted non-oracle hooks | 40 | pending | EntryExitManager.cpp, Event.cpp, EventAcquaintancePedDislike.cpp, EventAcquaintancePedLike.cpp, EventAcquaintancePedRespect.cpp, EventAttractor.cpp ... |
-| S47 | phase2: unlisted non-oracle hooks | 40 | pending | EventHandler.cpp, EventHealthLow.cpp, EventHealthReallyLow.cpp, EventHighAngerAtPlayer.cpp, EventInAir.cpp, EventInWater.cpp ... |
+| S47 | phase2: unlisted non-oracle hooks | 40 | partial 21/40 (17 M, 4 fixed) -> S47b | EventHandler.cpp, EventHealthLow.cpp, EventHealthReallyLow.cpp, EventHighAngerAtPlayer.cpp, EventInAir.cpp, EventInWater.cpp ... |
 | S48 | phase2: unlisted non-oracle hooks | 40 | pending | EventRevived.cpp, EventScanner.cpp, EventSexyPed.cpp, EventSexyVehicle.cpp, EventSpecial.cpp, EventVehicleThreat.cpp ... |
 | S49 | phase2: unlisted non-oracle hooks | 40 | pending | Game.cpp, GameLogic.cpp, GangWars.cpp |
 | S50 | phase2: unlisted non-oracle hooks | 40 | pending | GangWars.cpp, Gangs.cpp, Garage.cpp, Garages.cpp, InformFriendsEventQueue.cpp, InformGroupEvent.cpp ... |
@@ -178,3 +178,4 @@
 | S43b | rest of S43 | 37 | partial 5/37 (3 M, 1 fixed, 1 U) -> S43c | CarGenerator.cpp, Cheat.cpp, Clothes.cpp, CollisionEventScanner.cpp, ConversationForPed.cpp, Cover.cpp, CoverPoint.cpp, CurrentVehicle.cpp, CustomCarPlateMgr.cpp, PedToPlayerConversations.cpp |
 | S43c | rest of S43b | 32 | partial 6/32 (5 M, 1 U) + clock audit (2 fixed) -> S43d | Clothes.cpp, ConversationForPed.cpp, Cover.cpp, CoverPoint.cpp, CurrentVehicle.cpp, CustomCarPlateMgr.cpp, PedToPlayerConversations.cpp |
 | S43d | rest of S43c (+ ConversationForPed::Update rest) | 27 | done (16 M, 7 fixed, 4 no exe callers; S43 complete) | Clothes.cpp, Cover.cpp, CurrentVehicle.cpp, CustomCarPlateMgr.cpp |
+| S47b | rest of S47 | 19 | pending | EventHandler.cpp, EventInWater.cpp, EventInteriorUseInfo.cpp, EventKnockOffBike.cpp, EventLeaderEntryExit.cpp, EventNewGangMember.cpp, EventPedEnteredMyVehicle.cpp, EventPedToChase.cpp, EventPotentialGetRunOver.cpp |

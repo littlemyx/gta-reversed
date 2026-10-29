@@ -33,7 +33,7 @@
 | S29 | game_sa/Entity/Object | 39 | partial 34/39 (24 M, 10 fixed) -> S29b | CutsceneObject.cpp, HandObject.cpp, Object.cpp |
 | S30 | game_sa/Camera.cpp | 35 | pending | Camera.cpp |
 | S31 | game_sa/Cam.cpp | 34 | pending | Cam.cpp |
-| S32 | game_sa/Radar.cpp | 28 | pending | Radar.cpp |
+| S32 | game_sa/Radar.cpp | 28 | partial 1/28 (1 fixed) -> S32b | Radar.cpp |
 | S33 | game_sa/WaterLevel.cpp | 26 | partial 8/26 (3 M, 5 fixed) -> S33b | WaterLevel.cpp |
 | S34 | game_sa/Interior/Interior_c.cpp | 41 | partial 24/41 (24 M, 3 via new oracle rows) -> S34b | Interior_c.cpp |
 | S22b | game_sa/CarCtrl.cpp (rest of S22) | 34 | partial 16/34 (16 M) -> S22c | CarCtrl.cpp |
@@ -115,4 +115,5 @@
 | S28c | rest of S28b | 34 | partial 11/34 (7 M, 4 fixed + task0) -> S28d | Streaming.cpp |
 | S28d | rest of S28c | 23 | done 23/23 (17 M, 6 fixed; S28 complete) | Streaming.cpp |
 | S34b | rest of S34 | 17 | partial 13/17 (13 M) -> S34c | Interior_c.cpp |
-| S34c | rest of S34b | 4 | pending | Interior_c.cpp |
+| S34c | rest of S34b | 4 | done 4/4 (MATCH; S34 complete) | Interior_c.cpp |
+| S32b | rest of S32 | 27 | pending | Radar.cpp |

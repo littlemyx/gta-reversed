@@ -1,0 +1,13 @@
+addr	function	verdict	asm range	note	fix commit
+0x6E8ED0	CWaterLevel::RenderFlatWaterTriangle_OneLayer	FIXED	0x6E8ED0-0x6E91C9 (all)	layer 0 = Second shift x0.08f + alpha[0], layer 1 = First shift x0.04f + alpha[1] (port swapped them); UV multiply by scale (port divided by 25 / 12.5); UVs relative to (X1,Y1) (port (X1,Y2)); colour/index/overflow checks equal; emulator-checked, 400 random inputs	a4d17696
+0x6EE080	CWaterLevel::RenderFlatWaterTriangle	MATCH	0x6EE080-0x6EE23F (all)	bSplitBigPolys && X2-X1>168 -> SplitWaterTriangleAlongXLine((X1+X2)/2) else OneLayer 0 then 1; emulator-checked with hooks, 400 random inputs (split on/off)	-
+0x6E9940	CWaterLevel::RenderFlatWaterRectangle_OneLayer	FIXED	0x6E9940-0x6E9C7E (all)	vertex order (minX,Y1,P1) (maxX,Y1,P2) (minX,Y2,P3) (maxX,Y2,P4), indices 0,1,2,3,1,2 (port: P3/P4 on the wrong corners, indices 0,1,2,2,3,0); same layer / scale fixes as the triangle; emulator-checked, 400 random inputs	1992bf0a
+0x6EBEC0	CWaterLevel::RenderFlatWaterRectangle	FIXED	0x6EBEC0-0x6EC5C7 (all)	inline split at t=0.5 recursing into itself (port: SplitWaterRectangleAlong*Line with exact t and back through the camera tests); Y split lower half passes P2 in the P3 slot (exe quirk, FIX_BUGS keeps the fix); emulator-checked, 150 random inputs	7f298c1f
+0x6ED9A0	CWaterLevel::RenderBoatWakes	NOT_REACHED	-	body lives in CBoat::RenderWakePoints (Boat.cpp) / RenderAllWakePointBoats; only the RenderWakeSegment call argument order was checked (consistent); GetWidth / GetAlpha / corner math not compared	-
+0x6EA260	CWaterLevel::RenderWakeSegment	FIXED	0x6EA260-0x6EA88D (all)	angle = (time&0xFFF)*0.0015339355f (port divided); A->B corners blend from A, D->C from D (port had both reversed: mirrored slices, last-bit differences); UV = pos*0.25f + [0xC228D4/D8] (new named globals, never written); UV min follows the fcomp/jp NaN arms; colour white + alpha, index order, buffer thresholds, sin argument equal; emulator-checked, 300 random inputs	244203c9
+0x6E7760	CWaterLevel::RenderWaterFog	NOT_REACHED	-	budget	-
+0x6EF650	CWaterLevel::RenderWater	NOT_REACHED	-	budget	-
+0x6EB810	CWaterLevel::RenderHighDetailWaterRectangle	NOT_REACHED	-	budget	-
+0x6E91D0	CWaterLevel::RenderHighDetailWaterRectangle_OneLayer	NOT_REACHED	-	budget (does not use GetWaterLayerTexInfo; the exe uses the same layer table as the flat ones)	-
+0x6E8780	CWaterLevel::RenderHighDetailWaterTriangle_OneLayer	NOT_REACHED	-	budget	-
+0x6EDDC0	CWaterLevel::RenderHighDetailWaterTriangle	NOT_REACHED	-	budget	-

@@ -566,7 +566,9 @@ void CGangWars::DoStuffWhenPlayerVictorious() {
     CStats::IncrementStat(STAT_RESPECT, 45.0f);
     CTheZones::FillZonesWithGangColours(false);
 
-    TimeTillNextAttack = std::min(TimeTillNextAttack - 240'000.0f, 30'000.0f);
+    // exe 0x446488: floor of 30000 (`fcom 30000 ; jne -> store 30000`): max(), a NaN also gives 30000 (port: min(.., 30000))
+    const float newTime = TimeTillNextAttack - 240'000.0f;
+    TimeTillNextAttack = newTime > 30'000.0f ? newTime : 30'000.0f;
 }
 
 // 0x443AE0

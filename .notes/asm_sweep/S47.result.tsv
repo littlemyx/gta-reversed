@@ -1,0 +1,41 @@
+addr	function	verdict	asm range	note	fix commit
+0x4B9AA0	CEventHandler::ComputeSexyVehicleResponse	MATCH	0x4B9AA0-0x4B9B4B (all)	InterestingEvents 8, LookAt args (5000, bone -1, 0.25, 500, 3), StandStill(5000, 0, 0, 8.0) equal	-
+0x4B9B50	CEventHandler::ComputePedToFleeResponse	MATCH	0x4B9B50-0x4B9BDA (all)	Say 0x45 args, SmartFleeEntity(ped, 1, 100, -1, 1000, [0xC18CF0]) equal; the exe reads the global 0xC18CF0 at runtime (1.0), the port uses the ctor default 1.0 (systemic across the handler, only differs if memory is modified)	-
+0x4B9BE0	CEventHandler::ComputeAttractorResponse	MATCH	0x4B9BE0-0x4B9C7F (all)	type 0x1b + null entity early-out, TASK_NONE / USE_EFFECT ids, HasEmptySlot gate equal (exe also nulls the response when no slot: already null)	-
+0x4B9FF0	CEventHandler::ComputeKnockOffBikeResponse	UNSURE	-	not compared (budget); ~290 port lines	-
+0x4BA7C0	CEventHandler::ComputeScriptCommandResponse	MATCH	0x4BA7C0-0x4BA8AB (all)	primary / default slot choice, MakeAbortable urgent then leisure, EventGroup::Add(e, false), CloneScriptTask vfunc 0x40, ClearTaskEventResponse, SetTask(.., idx, true), record association equal	-
+0x4BA8B0	CEventHandler::ComputeVehicleDiedResponse	MATCH	0x4BA8B0-0x4BA985 (all)	scorched flag bit 29, health 0, bike (type 9) / quad (subtype 2) -> knock-off, Die(0x33, 0, 0xF, 4.0) equal	-
+0x4BAE30	CEventHandler::ComputeWaterCannonResponse	MATCH	0x4BAE30-0x4BAF76 (all)	Say 0x158, hit side, FallAndGetUp(side, 0), force z = 2*timestep, speed xy = (v*0.6 + ped)*0.5, clamp to 0.2 (exe strict >, equal result at ==) equal	-
+0x4BB2E0	CEventHandler::ComputeVehicleOnFireResponse	DEVIATION	0x4BB2E0-0x4BB650 (all)	death branch needs the ped in THE burning vehicle (port: any vehicle); LEAVE_CAR and LEAVE_CAR_AND_WANDER LeaveAnyCar forceGetOut=1 (port 0); SMART_FLEE_ENTITY flees the event vehicle (port: the ped vehicle); unknown task id leaves the response untouched (port: unreachable); jump table 704/706/707/726/909/911 decoded	6304057c5
+0x4BBC30	CEventHandler::ComputeCarUpsideDownResponse	MATCH	0x4BBC30-0x4BBCC4 (all)	in-vehicle + same vehicle gate, LeaveCar(veh, 0, rand_int(100,400), 1, 0) equal	-
+0x4BBE30	CEventHandler::ComputeShotFiredWhizzedByResponse	DEVIATION	0x4BBE30-0x4BBF4B (all)	a duck task with whizzing counter < 0 is not restarted and does not end the handler (exe falls to the ped duck task, then creates Duck(1, rand(3000,5000), 1000); port returned null); other task ids leave the response untouched (port: unreachable)	9c05375a9
+0x4BCC30	CEventHandler::ComputeDraggedOutCarResponse	UNSURE	-	not compared (budget)	-
+0x4BD6A0	CEventHandler::ComputeVehicleCollisionResponse	UNSURE	-	not compared (budget)	-
+0x4BDB80	CEventHandler::ComputePedCollisionWithPedResponse	UNSURE	-	not compared (budget)	-
+0x4BE7D0	CEventHandler::ComputePedCollisionWithPlayerResponse	UNSURE	-	not compared (budget)	-
+0x4BF2B0	CEventHandler::ComputeBuildingCollisionResponse	DEVIATION	0x4BF2B0-0x4BF9AC (all)	coin flip is (rand_int(0,0x400)&0xF)==0xF drawn once up front (port RandomBool(6.67%) drawn lazily: different outcomes and rand count); no go-to point and no kill target gives only a head hit or no response (port went on to the walk-round code); not-head-on with neither kill nor seek task walks round towards the go-to point (port: no response); standing test normal.z > 0.707 (port cos45 = 0.70710678); climb, look-at, jump / move-back-and-jump, kill-target and seek-target paths MATCH	dabf4e9c3
+0x4BF9B0	CEventHandler::ComputePersonalityResponseToDamage	UNSURE	-	not compared (budget)	-
+0x4C0170	CEventHandler::ComputeDamageResponse	UNSURE	-	not compared (budget); the 0xBF/0xC0 fall-down case was fixed earlier (679fbdc37)	-
+0x4C0BD0	CEventHandler::ComputeVehiclePotentialCollisionResponse	UNSURE	-	not compared (budget)	-
+0x4C1590	CEventHandler::ComputePedEnteredVehicleResponse	UNSURE	-	not compared (budget)	-
+0x4C3F10	CEventHandler::HandleEvents	DEVIATION	0x4C3F10-0x4C4218 (all)	the event picked before TickEvents (edi) is used for the whole function (port re-read it after); aborted task is only re-evaluated when one exists (port tested the opposite); the same-event early-out needs !CanBeInterruptedBySameEvent on the current event (vfunc 0x3c, port omitted it); leisure abort records the active primary task (port: the leaf active task); TickStoredEvent, temp / nontemp clears, UnTick, StopTimers, Compute / Record / Set order equal	097827964
+0x4C4220	CEventHandler::ComputeEventResponseTask(ped,event)	MATCH	0x4C4220-0x4C42E8 (all)	local handler, Compute(event, null), take the response task, Flush equal	-
+0x5FF4E0	CEventHealthLow::~CEventHealthLow (scalar deleting)	MATCH	0x5FF4E0 (all)	base destructor call + pool free on the delete flag equal	-
+0x5FF5A0	CEventHealthReallyLow::~CEventHealthReallyLow (scalar deleting)	MATCH	0x5FF5A0 (all)	base destructor call + pool free on the delete flag equal	-
+0x5FF720	CEventHighAngerAtPlayer::~CEventHighAngerAtPlayer (scalar deleting)	MATCH	0x5FF720 (all)	base destructor call + pool free on the delete flag equal	-
+0x4B0C00	CEventInAir::AffectsPed	MATCH	0x4B0C00-0x4B0C9F (all)	active task ids 108/513/240, simplest task 207, damage entity, uses-collision bit, attached-to, IsInAir, IsAlive equal	-
+0x4B6610	CEventInWater dtor	UNSURE	-	not compared (budget)	-
+0x674F90	CEventInteriorUseInfo dtor	UNSURE	-	not compared (budget)	-
+0x4AFF60	CEventKnockOffBike::SetPedOutCar	UNSURE	-	not compared (budget)	-
+0x4B0020	CEventKnockOffBike::CalcForcesAndAnims	UNSURE	-	not compared (budget)	-
+0x4B4AC0	CEventKnockOffBike::SetPedSafePosition	UNSURE	-	not compared (budget)	-
+0x43E290	CEventLeaderEntryExit dtor	UNSURE	-	not compared (budget)	-
+0x4B0F80	CEventLeaderExitedCarAsDriver::AffectsPedGroup	MATCH	0x4B0F80-0x4B1000 (all)	member slots 0..6 (non-null), vehicle == leader vehicle with the in-vehicle bit, or enter-car-as-passenger (700) / wait (718) task equal	-
+0x4B1010	CEventLeaderQuitEnteringCarAsDriver::AffectsPedGroup	MATCH	0x4B1010-0x4B102F (all)	group intelligence current event type == 54 equal	-
+0x5FF660	CEventLowAngerAtPlayer::~CEventLowAngerAtPlayer (scalar deleting)	MATCH	0x5FF660 (all)	base destructor call + pool free on the delete flag equal	-
+0x609060	CEventNewGangMember dtor	UNSURE	-	not compared (budget)	-
+0x4B59D0	CEventObjectCollision dtor (scalar deleting)	MATCH	0x4B59D0-0x4B5A17 (head)	base destructor call + pool free on the delete flag equal	-
+0x4B6030	CEventPedEnteredMyVehicle dtor	UNSURE	-	not compared (budget)	-
+0x4B61C0	CEventPedToChase dtor	UNSURE	-	not compared (budget)	-
+0x4B6210	CEventPedToFlee dtor (scalar deleting)	MATCH	0x4B6210-0x4B6257 (head)	base destructor call + pool free on the delete flag equal	-
+0x4B5EA0	CEventPotentialGetRunOver dtor	UNSURE	-	not compared (budget)	-

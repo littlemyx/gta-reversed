@@ -1394,12 +1394,23 @@ void CRadar::DrawRadarMask() {
 
     CVector2D out[8]{};
     CVector2D in;
+    // exe 0x585715-0x58573D: the corners are (-1, 1), (1, 1), (1, -1), (-1, -1) in this order
     CVector2D corners[4] = {
-        { 1.0f,  -1.0f },
-        { 1.0f,  1.0f  },
         { -1.0f, 1.0f  },
-        { -1.0,  -1.0f }
+        { 1.0f,  1.0f  },
+        { 1.0f,  -1.0f },
+        { -1.0f, -1.0f }
     };
+
+    // exe 0x5857D0-0x58580E: first the whole radar square is drawn at the FAR screen z (clears the mask area), then the corner segments at the near z
+    {
+        CVector2D square[4];
+        for (auto i = 0; i < 4; i++) {
+            square[i] = TransformRadarPointToScreenSpace(corners[i]);
+        }
+        CSprite2d::SetMaskVertices(std::size(square), square, RwIm2DGetFarScreenZ());
+        RwIm2DRenderPrimitive(rwPRIMTYPETRIFAN, CSprite2d::GetVertices(), std::size(square));
+    }
 
     // Draw the shape we want to mask out from the radar in four segments
     for (auto& corner : corners) {

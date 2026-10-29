@@ -933,20 +933,26 @@ void CPickups::RemoveUnnecessaryPickups(const CVector& posn, float radius) {
 void CPickups::RenderPickUpText() {
     GxtChar msgText[352]{};
     for (const auto& message : std::span{ aMessages.data(), NumMessages }) {
+        // 0x455000: a message with a text and without the "insert number" flag prints the text itself (not the buffer)
+        const GxtChar* text = msgText;
         if (message.price == 0u) {
             if (!message.text)
                 continue;
 
             if (message.flags & 2) {
                 CMessages::InsertNumberInString(message.text, 0, 0, 0, 0, 0, 0, msgText);
+            } else {
+                text = message.text;
             }
         } else {
             AsciiToGxtChar(std::format("${:d}", message.price).c_str(), msgText);
         }
 
+        // 0x455000: the upper limit is the INTEGER division maximumWidth / 640 (idiv by 640 via 0x66666667), not a float scale
         // TODO: scaled wrong in windowed mode, but it's fine in fullscreen.
-        auto scaleX = std::min(SCREEN_STRETCH_X(1.0f), message.width * ExeRecip(30.0f));
-        auto scaleY = std::min(SCREEN_STRETCH_X(1.0f), message.height * ExeRecip(30.0f));
+        const auto maxScale = (float)(RsGlobal.maximumWidth / 640);
+        auto scaleX = std::min(maxScale, message.width * ExeRecip(30.0f));
+        auto scaleY = std::min(maxScale, message.height * ExeRecip(30.0f));
 
         CFont::SetProportional(true);
         CFont::SetBackground(false, false);
@@ -955,7 +961,7 @@ void CPickups::RenderPickUpText() {
         CFont::SetCentreSize(SCREEN_WIDTH);
         CFont::SetColor(message.color);
         CFont::SetFontStyle(eFontStyle::FONT_PRICEDOWN);
-        CFont::PrintString(message.pos.x, message.pos.y, msgText);
+        CFont::PrintString(message.pos.x, message.pos.y, text);
     }
     NumMessages = 0;
 }

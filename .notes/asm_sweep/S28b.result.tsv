@@ -1,0 +1,55 @@
+addr	function	verdict	asm range	note	fix commit
+0x409650	AddEntity	NOT_REACHED	-		-
+0x407610	AddImageToList	NOT_REACHED	-		-
+0x40C520	AddLodsToRequestList	NOT_REACHED	-		-
+0x40D3F0	AddModelsToRequestList	NOT_REACHED	-		-
+0x407AD0	AreAnimsUsedByRequestedModels	NOT_REACHED	-		-
+0x408E20	GetNextFileOnCd	FIXED	0x408E20-0x40904F		2d167667
+0x40C6B0	ConvertBufferToObject	NOT_REACHED	-		-
+0x4090A0	DeleteAllRwObjects	NOT_REACHED	-		-
+0x409210	DeleteRwObjectsAfterDeath	NOT_REACHED	-		-
+0x40D7C0	DeleteRwObjectsBehindCamera	NOT_REACHED	-		-
+0x409940	DeleteRwObjectsBehindCameraInSectorList<CPtrListSingleLink<CEntity*>>	MATCH	0x409940-0x4099D7	memoryUsed < goal is a signed jl in the exe, unsigned in the port: only differs if the counter underflows	-
+0x407A70	DeleteRwObjectsInSectorList<CPtrListSingleLink<CEntity*>>	MATCH	0x407A70-0x407AB3		-
+0x4099E0	DeleteRwObjectsNotInFrustumInSectorList<CPtrListSingleLink<CEntity*>>	MATCH	0x4099E0-0x409A82	same signed/unsigned note	-
+0x5D29E0	Load	NOT_REACHED	-		-
+0x5D29A0	Save	NOT_REACHED	-		-
+0x40EA10	LoadAllRequestedModels	MATCH	0x40EA10-0x40EB61		-
+0x5B6170	LoadCdDirectory-char	NOT_REACHED	-		-
+0x5B82C0	LoadCdDirectory-void	NOT_REACHED	-		-
+0x40D3D0	LoadInitialPeds	NOT_REACHED	-		-
+0x40A120	LoadInitialWeapons	NOT_REACHED	-		-
+0x40EB70	LoadScene	NOT_REACHED	-		-
+0x40ED80	LoadSceneCollision	NOT_REACHED	-		-
+0x40B4B0	LoadZoneVehicle	MATCH	0x40B4B0-0x40B4E2		-
+0x40BA70	PossiblyStreamCarOutAfterCreation	NOT_REACHED	-		-
+0x409430	RequestBigBuildings	NOT_REACHED	-		-
+0x407100	RequestTxdModel	NOT_REACHED	-		-
+0x408C70	RequestVehicleUpgrade	NOT_REACHED	-		-
+0x408CB0	FinishLoadingLargeFile	MATCH	0x408CB0-0x408E13	exe returns bool, port void; unused	-
+0x40E460	FlushChannels	MATCH	0x40E460-0x40E4DF		-
+0x40CBA0	RequestModelStream	MATCH	0x40CBA0-0x40CF7E		-
+0x40B450	RequestSpecialChar	NOT_REACHED	-		-
+0x409D10	RequestSpecialModel	NOT_REACHED	-		-
+0x40E170	ProcessLoadingChannel	FIXED	0x40E170-0x40E390		58dd94d5
+0x40E560	ReInit	MATCH	0x40E560-0x40E669		-
+0x5BCCD0	ReadIniFile	NOT_REACHED	-		-
+0x4080F0	RemoveCarModel	MATCH	0x4080F0-0x408148		-
+0x40B080	RemoveCurrentZonesModels	NOT_REACHED	-		-
+0x40C180	RemoveTxdModel	NOT_REACHED	-		-
+0x4076C0	RetryLoadFile	FIXED	0x4076C0-0x4077B1		47f43e33
+0x40E3A0	LoadRequestedModels	MATCH	0x40E3A0-0x40E452		-
+0x40E4E0	FlushRequestList	MATCH	0x40E4E0-0x40E558		-
+0x407D50	GetDefaultCabDriverModel	NOT_REACHED	-		-
+0x5B8AD0	Init2	NOT_REACHED	-		-
+0x4083C0	InitImageList	NOT_REACHED	-		-
+0x4084F0	InstanceLoadedModels	MATCH	0x4084F0-0x4087D0		-
+0x4084B0	Shutdown	NOT_REACHED	-		-
+0x40A2A0	StreamAmbulanceAndMedic	NOT_REACHED	-		-
+0x40A150	StreamCopModels	MATCH	0x40A150-0x40A29E		-
+0x40A400	StreamFireEngineAndFireman	NOT_REACHED	-		-
+0x40B4F0	StreamOneNewCar	FIXED	0x40B4F0-0x40B64F		862b0269
+0x40BBB0	StreamPedsForInterior	FIXED	0x40BBB0-0x40BD92		101e2b91
+0x40BDA0	StreamPedsIntoRandomSlots	NOT_REACHED	-		-
+0x40AA10	StreamZoneModels_Gangs	MATCH	0x40AA10-0x40AF96	port-only m_DefaultModelIDForUnusedSlot guard in CanDeleteModel kept: only differs for member id 2000	-
+0x40E670	Update	NOT_REACHED	-		-

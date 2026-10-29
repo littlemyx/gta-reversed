@@ -485,12 +485,12 @@ void CGarages::PrintMessages() {
 
     const auto DrawFormattedString = [&](auto... formatArgs) {
         CMessages::InsertNumberInString(TheText.Get(MessageIDString), formatArgs..., gGxtString);
-        CFont::PrintString(SCREEN_WIDTH / 2.f, SCREEN_STRETCH_Y(155.f), gGxtString);
+        CFont::PrintString((float)(RsGlobal.maximumWidth / 2), SCREEN_STRETCH_Y(155.f), gGxtString); // integer halving (cdq/sub/sar) @ 0x4478B5
     };
 
     if (MessageNumberInString < 0) {
         if (MessageNumberInString2 < 0) {
-            CFont::PrintString(SCREEN_WIDTH / 2.f, SCREEN_STRETCH_Y(155.f), TheText.Get(MessageIDString));
+            CFont::PrintString((float)(RsGlobal.maximumWidth / 2), SCREEN_STRETCH_Y(155.f), TheText.Get(MessageIDString)); // integer halving (cdq/sub/sar) @ 0x447961
         } else {
             DrawFormattedString(MessageNumberInString2, -1, -1, -1, -1, -1);
         }

@@ -529,8 +529,10 @@ void CGameLogic::SetUpSkip(CVector coors, float angle, bool afterMission, CEntit
     SkipState = SKIP_NONE;
     CPad::GetPad(PED_TYPE_PLAYER1)->bCamera = false;
     SkipPosition = coors;
+    SkipHeading = angle; // exe 0x44241D: the heading was never stored by the port
     SkipState = afterMission ? SKIP_AFTER_MISSION : SKIP_AVAILABLE;
     SkipTimer = CTimer::GetTimeInMS();
+    SkipVehicle = static_cast<CVehicle*>(vehicle); // exe 0x44244F: always assigned (also null); the port registered the reference of the OLD (stale / null) SkipVehicle
     if (vehicle) {
         CEntity::RegisterReference(SkipVehicle);
     }

@@ -1,0 +1,14 @@
+addr	file	line	cls	fn	oc
+0x56DAD0	source/game_sa/PlayerInfo.cpp	33	None	EvaluateCarPosition	U
+0x56DBD0	source/game_sa/PlayerInfo.cpp	32	None	FindObjectToSteal	U
+0x56EA80	source/game_sa/PlayerInfo.cpp	42	None	DeletePlayerSkin	U
+0x56EC80	source/game_sa/PlayerInfo.cpp	56	None	ProcessCarGunCrosshair_Hook	U
+0x56EF90	source/game_sa/PlayerInfo.cpp	57	None	DrawCrosshair_Hook	U
+0x56F4E0	source/game_sa/PlayerInfo.cpp	35	None	FindClosestCarSectorList	U
+0x56F7D0	source/game_sa/PlayerInfo.cpp	41	None	LoadPlayerSkin	U
+0x56F8D0	source/game_sa/PlayerInfo.cpp	34	None	Process	U
+0x5717F0	source/game_sa/PlayerInfo.cpp	40	None	SetPlayerSkin	U
+0x571920	source/game_sa/PlayerInfo.cpp	30	None	Constructor	U
+0x5D3AC0	source/game_sa/PlayerInfo.cpp	59	None	Save	U
+0x5D3B00	source/game_sa/PlayerInfo.cpp	58	None	Load	U
+0x571840	source/game_sa/PlayerPedData.cpp	10	None	Destructor	U

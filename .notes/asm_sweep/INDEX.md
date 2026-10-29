@@ -159,7 +159,7 @@
 | S53 | phase2: unlisted non-oracle hooks | 40 | pending | PedClothesDesc.cpp, PedDamageResponseCalculator.cpp, PedGeometryAnalyser.cpp, PedGroup.cpp, PedGroupIntelligence.cpp |
 | S54 | phase2: unlisted non-oracle hooks | 40 | pending | PedGroupIntelligence.cpp, PedGroupMembership.cpp, PedGroupPlacer.cpp, PedGroups.cpp, PedIK.cpp, PedList.cpp ... |
 | S55 | phase2: unlisted non-oracle hooks | 40 | 38/40 (26 M, 12 fixed) -> S55b | PedPlacement.cpp, PedStats.cpp, PedStuckChecker.cpp, PedTaskPair.cpp, PedType.cpp, Pickup.cpp ... |
-| S56 | phase2: unlisted non-oracle hooks | 40 | pending | Pickups.cpp, PlaneTrail.cpp, PlaneTrails.cpp, PlayerInfo.cpp, PlayerPedData.cpp, PlayerRelationshipRecorder.cpp |
+| S56 | phase2: unlisted non-oracle hooks | 40 | partial 27/40 (17 M, 10 fixed) -> S56b | Pickups.cpp, PlaneTrail.cpp, PlaneTrails.cpp, PlayerInfo.cpp, PlayerPedData.cpp, PlayerRelationshipRecorder.cpp |
 | S57 | phase2: unlisted non-oracle hooks | 40 | pending | EventPool.h, PedAttractorPool.h, PedIntelligencePool.h, PedPool.h, PlayerRelationshipRecorder.cpp, Remote.cpp ... |
 | S58 | phase2: unlisted non-oracle hooks | 40 | pending | ScriptsForBrains.cpp, Shopping.cpp, TheScripts.cpp |
 | S59 | phase2: unlisted non-oracle hooks | 40 | pending | Shopping.cpp, Stats.cpp, StreamedScripts.cpp, StuckCarCheck.cpp |
@@ -179,7 +179,8 @@
 | S43c | rest of S43b | 32 | partial 6/32 (5 M, 1 U) + clock audit (2 fixed) -> S43d | Clothes.cpp, ConversationForPed.cpp, Cover.cpp, CoverPoint.cpp, CurrentVehicle.cpp, CustomCarPlateMgr.cpp, PedToPlayerConversations.cpp |
 | S43d | rest of S43c (+ ConversationForPed::Update rest) | 27 | done (16 M, 7 fixed, 4 no exe callers; S43 complete) | Clothes.cpp, Cover.cpp, CurrentVehicle.cpp, CustomCarPlateMgr.cpp |
 | S47b | rest of S47 | 19 | partial 14/19 (9 M, 5 fixed) -> S47c | EventHandler.cpp, EventInWater.cpp, EventInteriorUseInfo.cpp, EventKnockOffBike.cpp, EventLeaderEntryExit.cpp, EventNewGangMember.cpp, EventPedEnteredMyVehicle.cpp, EventPedToChase.cpp, EventPotentialGetRunOver.cpp |
-| S55b | rest of S55 | 2 | pending |  |
+| S55b | rest of S55 | 2 | done 2/2 (1 M, 1 fixed; S55 complete) |  |
 | S49b | rest of S49 | 10 | pending | Game.cpp, GameLogic.cpp, GangWars.cpp |
 | S48b | rest of S48 | 20 | pending | FireManager.cpp, Game.cpp |
 | S47c | rest of S47b | 5 | pending | EventHandler.cpp |
+| S56b | rest of S56 | 13 | pending | PlayerInfo.cpp, PlayerPedData.cpp |

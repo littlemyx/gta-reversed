@@ -330,13 +330,14 @@ void CRadar::DrawLegend(int32 x, int32 y, eRadarSprite blipType) {
         break;
     }
     case RADAR_TRACE_NORMAL: {
-        // The exe's rects are {left, bottom, right, top} = {x - dx, y + dy, x + dx, y - dy} with dy from the Y stretch (0x582F0E-0x582FCB)
+        // The exe's rects in memory: +0 x - dx, +4 y + dy, +8 x + dx, +0xC y - dy with dy from the Y stretch (0x582F0E-0x582FCB);
+        // the CRect ctor is (left, bottom(+0xC), right, top(+4)).
         CSprite2d::DrawRect(
             {
                 posX - x5px,
-                posY + y5px,
+                posY - y5px,
                 posX + x5px,
-                posY - y5px
+                posY + y5px
             },
             outlineColor
         );
@@ -344,9 +345,9 @@ void CRadar::DrawLegend(int32 x, int32 y, eRadarSprite blipType) {
         CSprite2d::DrawRect(
             {
                 posX - x4px,
-                posY + y4px,
+                posY - y4px,
                 posX + x4px,
-                posY - y4px
+                posY + y4px
             },
             arrowColor
         );

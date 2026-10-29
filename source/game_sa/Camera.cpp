@@ -1612,7 +1612,7 @@ void CCamera::ResetDuckingSystem(CPed* ped) {
         return;
 
     float factor;
-    if (ped->m_vecMoveSpeed.Magnitude() <= 0.000001f)
+    if (ped->m_vecMoveSpeed.SquaredMagnitude() <= 0.000001f) // NOTE: the exe compares the SQUARED length (no sqrt), as HandleCameraMotionForDucking does (exe 0x50CF56)
         factor = 0.3f - 1.0f;
     else
         factor = 0.3f - 0.5f;

@@ -4,6 +4,14 @@
 #include "FireManager.h"
 #include "CreepingFire.h"
 
+// The exe's distance chain (0x53A941 / 0x53AA58): sqrt((dz*dz + dy*dy) + dx*dx) kept on the x87 stack
+static x87d DistZYX(const CVector& a, const CVector& b) {
+    const x87d dx = (x87d)a.x - (x87d)b.x;
+    const x87d dy = (x87d)a.y - (x87d)b.y;
+    const x87d dz = (x87d)a.z - (x87d)b.z;
+    return std::sqrt((dz * dz + dy * dy) + dx * dx);
+}
+
 void CFire::InjectHooks() {
     RH_ScopedClass(CFire);
     RH_ScopedCategoryGlobal();
@@ -247,9 +255,11 @@ void CFire::Extinguish() {
 // 0x53A570
 void CFire::ProcessFire() {
     {
-        const float newStrength = std::min(3.0f, m_Strength + CTimer::GetTimeStep() * ExeRecip(500.0f));
-        if (NOTSA_FTOL(uint32, m_Strength) != NOTSA_FTOL(uint32, newStrength)) {
-            m_Strength = newStrength; // Not sure why they do this, probably just some hack
+        // 0x53A578-0x53A5BC: the strength only grows while the integer part stays the same (fst new; _ftol(new) == _ftol(old) ? keep new : restore old)
+        const float sum         = m_Strength + CTimer::GetTimeStep() * ExeRecip(500.0f);
+        const float newStrength = (3.0f < sum) ? 3.0f : sum; // fcomp + jp: a NaN sum stays NaN
+        if (NOTSA_FTOL(uint32, m_Strength) == NOTSA_FTOL(uint32, newStrength)) {
+            m_Strength = newStrength;
         }
     }
 
@@ -296,7 +306,8 @@ void CFire::ProcessFire() {
             }
 
             if (targetVehicle->IsAutomobile()) {
-                m_Position = targetVehicle->GetDummyPosition(eVehicleDummy::DUMMY_LIGHT_FRONT_MAIN) + CVector{0.0f, 0.0f, 0.15f};
+                // 0x53A709-0x53A760: the 0.15 is added to the model-space dummy position, the sum is then transformed by the vehicle matrix
+                m_Position = targetVehicle->GetMatrix().TransformPoint(targetVehicle->GetDummyPositionObjSpace(eVehicleDummy::DUMMY_LIGHT_FRONT_MAIN) + CVector{0.0f, 0.0f, 0.15f});
             }
             break;
         }
@@ -316,7 +327,8 @@ void CFire::ProcessFire() {
          && !player->physicalFlags.bFireProof
          && !player->m_pAttachedTo
          ) {
-            if ((player->GetPosition() - m_Position).SquaredMagnitude() < 1.2f) { /* Note: Squared distance */
+            const CVector toPlayer = player->GetPosition() - m_Position;
+            if ((toPlayer.x * toPlayer.x + toPlayer.z * toPlayer.z) + toPlayer.y * toPlayer.y < 1.2f) { /* Note: Squared distance, 0x53A859: (x*x + z*z) + y*y */
                 player->DoStuffToGoOnFire();
                 gFireManager.StartFire(player, m_EntityStartedFire, 0.8f, true, 7000, 100);
             }
@@ -325,7 +337,10 @@ void CFire::ProcessFire() {
 
     if (CGeneral::GetRandomNumber() % 32 == 0) {
         for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValidReverse(), GetVehiclePool()->GetAllValid())) { // NOTSA: Original loop was backwards [not that it matters] (it does: the order decides the fire slots / RNG use; the run build iterates backwards like the exe, 0x53A8D2; NOTSA-AUDIT)
-            if (DistanceBetweenPoints(m_Position, veh.GetPosition()) >= 2.0f)
+            if (veh.m_pFire || ModelIndices::IsFireTruck(veh.m_nModelIndex)) { // 0x53A918, 0x53A926
+                continue;
+            }
+            if (!(DistZYX(veh.GetPosition(), m_Position) < (x87d)2.0)) // 0x53A941: (dz*dz + dy*dy) + dx*dx, NaN skips
                 continue;
 
             if (veh.IsSubBMX()) {
@@ -333,24 +348,30 @@ void CFire::ProcessFire() {
                 gFireManager.StartFire(player, m_EntityStartedFire, 0.8f, true, 7000, 100);
                 veh.BurstTyre(CAR_PIECE_FIRST_WHEEL + +veh.FindTyreNearestPoint(m_Position), false);
             } else {
-                gFireManager.StartFire(&veh, m_EntityStartedFire, 0.8f, true, 7000, 100);
+                gFireManager.StartFire(&veh, m_EntityStartedFire, 0.8f, true, 7000, 0); // 0x53A9E5: no generations
             }
         }
     }
 
     if (CGeneral::GetRandomNumber() % 4 == 0) {
         for (auto& obj : NOTSA_EXE_OR(GetObjectPool()->GetAllValidReverse(), GetObjectPool()->GetAllValid())) { // NOTSA: Original loop was backwards [not that it matters] (run build: backwards like the exe, 0x53AA37; NOTSA-AUDIT)
-            if (DistanceBetweenPoints(m_Position, obj.GetPosition()) >= 3.0f)
+            if (!(DistZYX(obj.GetPosition(), m_Position) < (x87d)3.0)) // 0x53AA58: (dz*dz + dy*dy) + dx*dx, NaN skips
                 continue;
 
             obj.ObjectFireDamage(CTimer::GetTimeStep() * 8.0f, m_EntityStartedFire);
         }
     }
 
-    if (m_NumGenerationsAllowed > 0 && CGeneral::GetRandomNumber() % 128 == 0) {
+    if ((int8)m_NumGenerationsAllowed > 0 && CGeneral::GetRandomNumber() % 128 == 0) { // 0x53AAB0: signed byte test
         if (gFireManager.GetNumOfFires() < 25) {
-            const CVector dir{ CGeneral::GetRandomNumberInRange(-1.0f, 1.0f), CGeneral::GetRandomNumberInRange(-1.0f, 1.0f), 0.0f };
-            CCreepingFire::TryToStartFireAtCoors(m_Position + dir * CGeneral::GetRandomNumberInRange(2.0f, 3.0f), m_NumGenerationsAllowed, false, IsScript(), 10.0f);
+            // 0x53AB39-0x53AC1A: the FIRST random number gives dir.y, the second dir.x; the direction is normalised; z gets +2.0; the child has one generation less
+            const float rndY = CGeneral::GetRandomNumberInRange(-1.0f, 1.0f);
+            const float rndX = CGeneral::GetRandomNumberInRange(-1.0f, 1.0f);
+            CVector dir{ rndX, rndY, 0.0f };
+            dir.Normalise();
+            const float scale = CGeneral::GetRandomNumberInRange(2.0f, 3.0f);
+            const CVector pos{ dir.x * scale + m_Position.x, dir.y * scale + m_Position.y, (dir.z * scale + m_Position.z) + 2.0f };
+            CCreepingFire::TryToStartFireAtCoors(pos, (uint8)(m_NumGenerationsAllowed - 1), false, IsScript(), 10.0f);
         }
     }
 
@@ -358,20 +379,26 @@ void CFire::ProcessFire() {
         CFire& nearby = gFireManager.GetRandomFire();
         if (&nearby != this && nearby.m_IsActive && !nearby.m_IsCreatedByScript && nearby.m_Strength <= 1.0f) {
             if (DistanceBetweenPoints(nearby.m_Position, m_Position) < 3.5f) {
-                nearby.m_Position = nearby.m_Position * 0.3f + m_Position * 0.7f;
+                m_Position = m_Position * 0.7f + nearby.m_Position * 0.3f; // 0x53ACE2-0x53AD2F: moves THIS fire towards the other one
                 m_Strength += 1.0f;
                 m_TimeToBurn = std::max(m_TimeToBurn, CTimer::GetTimeInMS() + 7000);
                 CreateFxSysForStrength(m_Position, nullptr);
-                m_NumGenerationsAllowed = std::max(m_NumGenerationsAllowed, nearby.m_NumGenerationsAllowed);
+                m_NumGenerationsAllowed = (uint8)std::min((int8)m_NumGenerationsAllowed, (int8)nearby.m_NumGenerationsAllowed); // 0x53AD57: signed min
                 nearby.Extinguish();
             }
         }
     }
 
     if (m_FxSystem) {
-        float unused;
-        const float fFractPart = std::modf(m_Strength, &unused); // R* way: m_fStrength - (float)(int)m_fStrength
-        m_FxSystem->SetConstTime(true, std::min((float)CTimer::GetTimeInMS() * ExeRecip(3500.0f), fFractPart));
+        // 0x53AD79-0x53ADD5: min(strength - (int)strength, (float)(uint32)(m_TimeToBurn - now) / 3500) (the remaining burn time, not the absolute time)
+        const x87d  fract = (x87d)m_Strength - (x87d)NOTSA_FTOL(int32, m_Strength);
+        const int32 left  = (int32)(m_TimeToBurn - CTimer::GetTimeInMS());
+        x87d        leftD = (x87d)left;
+        if (left < 0) {
+            leftD += (x87d)4294967296.0;
+        }
+        const float burn = (float)(leftD * ExeRecip(3500.0f));
+        m_FxSystem->SetConstTime(true, (fract < (x87d)burn) ? (float)fract : burn);
     }
 
     if (m_IsCreatedByScript || (HasTimeToBurn() && IsNotInRemovalDistance())) {
@@ -393,5 +420,9 @@ bool CFire::HasTimeToBurn() const {
 }
 
 bool CFire::IsNotInRemovalDistance() const {
-    return m_RemovalDist > (TheCamera.GetPosition() - m_Position).Magnitude();
+    // 0x53ADE5-0x53AE26: the exe measures the distance in the XY plane only: sqrt(dy*dy + dx*dx)
+    const auto& cam = TheCamera.GetPosition();
+    const x87d  dx  = (x87d)cam.x - (x87d)m_Position.x;
+    const x87d  dy  = (x87d)cam.y - (x87d)m_Position.y;
+    return (x87d)m_RemovalDist > std::sqrt(dy * dy + dx * dx);
 }

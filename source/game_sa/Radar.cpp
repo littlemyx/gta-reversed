@@ -2469,13 +2469,14 @@ void CRadar::DrawBlips() {
                 auto drawPos = TransformRealWorldPointToBlipSpace(FrontEndMenuManager.m_vMousePos);
                 LimitToMap(drawPos.x, drawPos.y);
 
-                // The exe's rects are {left, bottom, right, top} (screen y grows downwards): vertical {x - 1, H, x + 1, 0}, horizontal {0, y + 1, W, y - 1}
+                // The exe's rects in memory (+0,+4,+8,+0xC): vertical {x - 1, H, x + 1, 0}, horizontal {0, y + 1, W, y - 1};
+                // the CRect ctor is (left, bottom(+0xC), right, top(+4)), so the literals swap args 2 and 4.
                 CSprite2d::DrawRect(
                     {
                         SCREEN_STRETCH_X(drawPos.x) - 1.0f,
-                        SCREEN_HEIGHT,
+                        0.0f,
                         SCREEN_STRETCH_X(drawPos.x) + 1.0f,
-                        0.0f
+                        SCREEN_HEIGHT
                     },
                     HudColour.GetRGB(HUD_COLOUR_GOLD)
                 );
@@ -2483,9 +2484,9 @@ void CRadar::DrawBlips() {
                 CSprite2d::DrawRect(
                     {
                         0.0f,
-                        SCREEN_STRETCH_Y(drawPos.y) + 1.0f,
-                        SCREEN_WIDTH,
                         SCREEN_STRETCH_Y(drawPos.y) - 1.0f,
+                        SCREEN_WIDTH,
+                        SCREEN_STRETCH_Y(drawPos.y) + 1.0f,
                     },
                     HudColour.GetRGB(HUD_COLOUR_GOLD)
                 );

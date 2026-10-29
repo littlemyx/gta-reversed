@@ -31,7 +31,7 @@ std::pair<CVector, bool> CPedPlacement::FindZCoorForPed(CVector pos) {
         FindZ({ 0.f, 0.f, 0.5f }),
         FindZ({ 0.1f, 0.1f, 0.5f })
     );
-    if (highestZ >= MAP_Z_LOW_LIMIT + 1.0f) {
+    if (highestZ > MAP_Z_LOW_LIMIT + 1.0f) { // 0x616A15: fcom -99.0, jne on C0|C3 (<=)
         return {CVector{pos, highestZ + 1.f}, true};
     }
     return {pos, false};

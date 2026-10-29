@@ -1,0 +1,16 @@
+addr	function	verdict	asm range	note	fix commit
+0x5D5530	CGangWars::Save	MATCH	0x5D5530-0x5D5561	size word 0x58 + Construct + struct, returns true	-
+0x447E40	CStoredCar::RestoreCar	MATCH	0x447E40-end	stream requests/loaded checks, jump table decoded (types 1..11 -> MTRUCK,QUAD,HELI,PLANE,BOAT,default automobile for 6/7/8,BIKE,BMX,TRAILER), bike side-stand bit, fwd/right/up, status, flags, upgrades, colours	-
+0x448330	CGarage::NeatlyLineUpStoredCars	MATCH	0x448330-0x44853B	float spill / extended-precision order and packed forward (ftol of dir*100) equal	-
+0x448550	CGarage::RestoreCarsForThisHideOut	MATCH	0x448550-0x4485B5	impounded bit 0x42D&0x20 cleared, 4 slots	-
+0x4485C0	CGarage::RestoreCarsForThisImpoundingGarage	MATCH	0x4485C0-0x448648	impounded set, 3 slots, sub-type (+0x594) selects PlaceOnRoadProperly	-
+0x449690	CGarage::RemoveCarsBlockingDoorNotInside	MATCH	0x449690-0x44975D		-
+0x449760	CStoredCar::StoreCar	MATCH	0x449760-0x4498FF	flag bit mapping decoded (phys 18..21,23; stereo 0x42E&0x10; handling 17,19), bomb &7 only for type 0/9	-
+0x449900	CGarage::StoreAndRemoveCarsForThisHideOut	FIXED	0x449900-0x449A4F	slot count compare is signed in the exe (port unsigned)	dcc3a2186
+0x449A50	CGarage::StoreAndRemoveCarsForThisImpoundingGarage	MATCH	0x449A50-0x449B9F	instruction stream identical to 0x449900 modulo addresses	-
+0x449C50	CGarage::TidyUpGarage	MATCH	0x449C50-0x449D0F	up.z < 0.5 strict, NaN keeps the car	-
+0x449D10	CGarage::TidyUpGarageClose	MATCH	0x449D10-end		-
+0x44A830	CGarage::IsStaticPlayerCarEntirelyInside	MATCH	0x44A830-0x44A9BF	jnp/jp NaN arms, abs via fchs, sum of squares 0.0001 equal	-
+0x44AA50	CGarage::Update	MATCH	0x44AA50-0x44B3BF (partial)	camera block, door-closed flag, type->handler jump tables decoded (45 types), PaynSpray all five door states (closed/respray/open/closing/opening/waiting) incl. message strings, money, particles, stats equal; bomb shop, hideout, impound, tuning, burglary, onlytarget handlers NOT_REACHED	-
+0x447790	CGarages::PrintMessages	FIXED	0x447790-0x447990	x position is integer half of width (cdq/sub/sar)	143a15003
+0x44C8C0	CGarages::Update	FIXED	0x44C8C0-0x44CA32	type-0 slots not updated; tidy-up id incremented before pick (port picked old id); near test abs<=40 extended	720ad53b3

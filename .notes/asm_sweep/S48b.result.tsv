@@ -4,19 +4,19 @@ addr	function	verdict	asm range	note	fix commit
 0x539F00	CFireManager::StartFire(pos)	FIXED	0x539F00-0x53A042 (all)	generations = signed min against the maximum (port: byte min, 63 cap); burn time = x87 (rand/32767*0.299999952+1)*time+now truncated (port: float factor)	caed93473
 0x53A270	CFireManager::StartScriptFire	FIXED	0x53A270-0x53A442 (all)	generations signed min (port: byte min, 63 cap); fx system created only without a target or for a ped / vehicle target (port: also for objects). Extinguish of the old fire, engine status 215, unique index (/40, type 5) match	1098b7e58
 0x53AF00	CFireManager::Update	FIXED	0x53AF00-0x53BAC3 (all)	riot: direction is point - camera (port reversed), guard hit entity bit16 && bHit && z>0.5 was missing, forward from heading w/o matrix, dir multiplier unrounded; groups: shadow frontX/sideY signs swapped, strongest search from -1.0 (strict), x87 distance/fDir/colours, corona pos adds unrounded dir*3.5, camera right from m_mCameraMatrix. Known: all strengths <= -1 makes the exe read fire[-1] (port stops the loop)	f0ec0816a,0af3c82c5
-0x53BB50	CGame::InitialiseOnceBeforeRW	NOT_REACHED	-	CGame rows are agent S50's (Game.cpp); not touched here	-
-0x53BB80	CGame::ShutdownRenderWare	NOT_REACHED	-	CGame rows are agent S50's (Game.cpp); not touched here	-
-0x53BC30	CGame::FinalShutdown	NOT_REACHED	-	CGame rows are agent S50's (Game.cpp); not touched here	-
-0x53BC80	CGame::Initialise	NOT_REACHED	-	CGame rows are agent S50's (Game.cpp); not touched here	-
-0x53BCF0	CGame::ReInitGameObjectVariables	NOT_REACHED	-	CGame rows are agent S50's (Game.cpp); not touched here	-
-0x53BED0	CGame::ReloadIPLs	NOT_REACHED	-	CGame rows are agent S50's (Game.cpp); not touched here	-
-0x53BEE0	CGame::Process	NOT_REACHED	-	CGame rows are agent S50's (Game.cpp); not touched here	-
-0x53C4B0	CGame::CanSeeWaterFromCurrArea	NOT_REACHED	-	CGame rows are agent S50's (Game.cpp); not touched here	-
-0x53C500	CGame::TidyUpMemory	NOT_REACHED	-	CGame rows are agent S50's (Game.cpp); not touched here	-
-0x53C550	CGame::ShutDownForRestart	NOT_REACHED	-	CGame rows are agent S50's (Game.cpp); not touched here	-
-0x53C680	CGame::InitialiseWhenRestarting	NOT_REACHED	-	CGame rows are agent S50's (Game.cpp); not touched here	-
-0x53C810	CGame::DrasticTidyUpMemory	NOT_REACHED	-	CGame rows are agent S50's (Game.cpp); not touched here	-
-0x53C900	CGame::Shutdown	NOT_REACHED	-	CGame rows are agent S50's (Game.cpp); not touched here	-
-0x5BA060	CGame::ValidateVersion	NOT_REACHED	-	CGame rows are agent S50's (Game.cpp); not touched here	-
-0x5BA160	CGame::InitialiseEssentialsAfterRW	NOT_REACHED	-	CGame rows are agent S50's (Game.cpp); not touched here	-
-0x5BA1A0	CGame::Init2	NOT_REACHED	-	CGame rows are agent S50's (Game.cpp); not touched here	-
+0x53BB50	CGame::InitialiseOnceBeforeRW	NOT_REACHED	-	CGame row: not reached by S50b (budget spent on Garage/Garages)	-
+0x53BB80	CGame::ShutdownRenderWare	NOT_REACHED	-	CGame row: not reached by S50b (budget spent on Garage/Garages)	-
+0x53BC30	CGame::FinalShutdown	NOT_REACHED	-	CGame row: not reached by S50b (budget spent on Garage/Garages)	-
+0x53BC80	CGame::Initialise	NOT_REACHED	-	CGame row: not reached by S50b (budget spent on Garage/Garages)	-
+0x53BCF0	CGame::ReInitGameObjectVariables	NOT_REACHED	-	CGame row: not reached by S50b (budget spent on Garage/Garages)	-
+0x53BED0	CGame::ReloadIPLs	NOT_REACHED	-	CGame row: not reached by S50b (budget spent on Garage/Garages)	-
+0x53BEE0	CGame::Process	NOT_REACHED	-	CGame row: not reached by S50b (budget spent on Garage/Garages)	-
+0x53C4B0	CGame::CanSeeWaterFromCurrArea	NOT_REACHED	-	CGame row: not reached by S50b (budget spent on Garage/Garages)	-
+0x53C500	CGame::TidyUpMemory	NOT_REACHED	-	CGame row: not reached by S50b (budget spent on Garage/Garages)	-
+0x53C550	CGame::ShutDownForRestart	NOT_REACHED	-	CGame row: not reached by S50b (budget spent on Garage/Garages)	-
+0x53C680	CGame::InitialiseWhenRestarting	NOT_REACHED	-	CGame row: not reached by S50b (budget spent on Garage/Garages)	-
+0x53C810	CGame::DrasticTidyUpMemory	NOT_REACHED	-	CGame row: not reached by S50b (budget spent on Garage/Garages)	-
+0x53C900	CGame::Shutdown	NOT_REACHED	-	CGame row: not reached by S50b (budget spent on Garage/Garages)	-
+0x5BA060	CGame::ValidateVersion	NOT_REACHED	-	CGame row: not reached by S50b (budget spent on Garage/Garages)	-
+0x5BA160	CGame::InitialiseEssentialsAfterRW	NOT_REACHED	-	CGame row: not reached by S50b (budget spent on Garage/Garages)	-
+0x5BA1A0	CGame::Init2	NOT_REACHED	-	CGame row: not reached by S50b (budget spent on Garage/Garages)	-

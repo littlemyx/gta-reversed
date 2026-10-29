@@ -845,18 +845,28 @@ void CGangWars::StartOffensiveGangWar() {
         return;
     }
 
-    // NOTSA
-    Gang1 = (eGangID)(std::ranges::max_element(zoneInfo->GangStrength) - zoneInfo->GangStrength);
-    auto gang1Density = zoneInfo->GangStrength[Gang1];
-    zoneInfo->GangStrength[Gang1] = 0; // to find the second biggest
-
-    Gang2 = std::ranges::max_element(zoneInfo->GangStrength) - zoneInfo->GangStrength;
-    auto gang2Density = zoneInfo->GangStrength[Gang2];
-    zoneInfo->GangStrength[Gang1] = gang1Density; // to restore
+    // exe 0x4460B0-0x44626C: one pass over the gangs EXCEPT Grove (index 1): strongest -> Gang1, runner-up -> Gang2 (strict >, a gang that is
+    // displaced from the top becomes the runner-up and Gang2 = the previous Gang1 global); the sum excludes Grove too.
+    // The port took max_element over all 10 entries (Grove included) and summed all of them.
+    int32 gang1Density = 0, gang2Density = 0, densitySum = 0;
+    for (auto g = 0; g < (int32)std::size(zoneInfo->GangStrength); g++) {
+        if (g == GANG_GROVE)
+            continue;
+        const int32 density = zoneInfo->GangStrength[g];
+        densitySum += density;
+        if (density > gang1Density) {
+            Gang2 = Gang1;
+            Gang1 = (eGangID)g;
+            gang2Density = gang1Density;
+            gang1Density = density;
+        } else if (density > gang2Density) {
+            gang2Density = density;
+            Gang2 = g;
+        }
+    }
 
     Provocation = 0.0f;
-    auto densitySum = std::accumulate(std::begin(zoneInfo->GangStrength), std::end(zoneInfo->GangStrength), 0);
-    if (densitySum && (Gang1 == GANG_BALLAS || Gang1 == GANG_VAGOS)) {
+    if (densitySum > 0 && (Gang1 == GANG_BALLAS || Gang1 == GANG_VAGOS)) {
         if (State2 != NO_ATTACK)
             return;
 
@@ -869,14 +879,14 @@ void CGangWars::StartOffensiveGangWar() {
         WarFerocity = std::min(densitySum / 15, 2);
 
         if (CStats::GetStatValue(STAT_CITY_UNLOCKED) < 0.0f) {
-            if (TerritoryUnderControlPercentage > 0.4f) {
-                if (TerritoryUnderControlPercentage > 0.5f)
-                    WarFerocity = 5;
-                else
-                    WarFerocity = 0;
+            // exe 0x446332: <= 0.4 -> 0, >= 0.5 -> 5, in between unchanged (port had it inverted)
+            if (!(TerritoryUnderControlPercentage > 0.4f)) {
+                WarFerocity = 0;
+            } else if (!(TerritoryUnderControlPercentage < 0.5f)) {
+                WarFerocity = 5;
             }
         }
-        if (bIsPlayerOnAMission)
+        if (bTrainingMission) // exe 0x446367 reads 0x96AB91 (port tested bIsPlayerOnAMission)
             WarFerocity = 0;
 
         if (gang1Density > gang2Density / 3)

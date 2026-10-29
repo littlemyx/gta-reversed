@@ -1,0 +1,41 @@
+addr	function	verdict	asm range	note	fix commit
+0x616920	CPedPlacement::FindZCoorForPed	FIXED	0x616920-0x616A3A (all)	ground accepted only when > -99.0 (port >=); probe offsets/flags match (not hooked, port is the refactored form)	488256a45
+0x616A40	CPedPlacement::IsPositionClearOfCars(CPed*)	FIXED	0x616A40-0x616B2F (all)	sub-type != AUTOMOBILE or bIsBig -> colmodel test, normal automobile returned as hit (port: reverse, null)	9d881929d
+0x5BB890	CPedStats::LoadPedStats	MATCH	0x5BB890-0x5BB9E9 (all)	only difference: port copies uninitialised name bytes past the NUL	-
+0x5BF9D0	CPedStats::Initialise	MATCH	0x5BF9D0-0x5BFA84 (all)	port value-initialises the heap block, exe leaves names uninitialised (overwritten by LoadPedStats)	-
+0x608850	CPedStats::Shutdown	MATCH	0x608850-0x60885C (all)	-	-
+0x6088D0	CPedStats::GetPedStatType	MATCH	0x6088D0-0x608935 (all)	strcmp loop, 43 entries, default SENSIBLE_GUY (16)	-
+0x602C00	CPedStuckChecker::TestPedStuck	MATCH	0x602C00-0x603470 (all)	every branch, flag, constant, probe order and x87 compare arm checked (also NormaliseExt 0x59C910)	-
+0x5E95B0	CPedTaskPair::Flush	MATCH	0x5E95B0-0x5E95D5 (all)	-	-
+0x5D3CD0	CPedType::Save	MATCH	0x5D3CD0-0x5D3D0F (all)	exe returns true in al, port void (no consumer)	-
+0x5D3D10	CPedType::Load	MATCH	0x5D3D10-0x5D3D4F (all)	same	-
+0x608B00	CPedType::Shutdown	MATCH	0x608B00-0x608B2F (all)	-	-
+0x608B30	CPedType::LoadPedData	MATCH	0x608B30-0x608D8C (all)	keyword compare is exact (5/8 bytes incl. NUL) vs port prefix; initial pedType 32 vs MISSION8: only differ for a malformed PED.DAT	-
+0x608E40	CPedType::Initialise	MATCH	0x608E40-0x608EC5 (all)	-	-
+0x4549A0	CPickup::GetPosn	MATCH	0x4549A0-0x4549E2 (all)	int16 * 0.125	-
+0x454BE0	CPickup::ExtractAmmoFromPickup	MATCH	0x454BE0-0x454C6F (all)	-	-
+0x454CF0	CPickup::GetRidOfObjects	MATCH	0x454CF0-0x454D1B (all)	-	-
+0x454D20	CPickup::PickUpShouldBeInvisible	FIXED	0x454D20-0x454E72 (all)	cutscene always hides; kill-frenzy model test; PICKUP_2P vs player 2; second German spot (2509,1208); coop result was reversed (hid weapons that CAN be used)	ed079c6ef
+0x455500	CPickup::FindTextIndexForString	MATCH	0x455500-0x455539 (all)	-	-
+0x4556C0	CPickup::Remove	MATCH	0x4556C0-0x455720 (all)	-	-
+0x4567E0	CPickup::GiveUsAPickUpObject	FIXED	0x4567E0-0x456A22 (all)	objectFlags bit1 = pickup bEmpty (was bCollisionProcessed); UpdateRwMatrix + UpdateRwFrame, no SetHeading; out ref cleared first; null Create bails out; signed ammo/5	93fe2bc9a
+0x4588B0	CPickup::ProcessGunShot	MATCH	0x4588B0-0x45895F (all)	-	-
+0x454AE0	CPickups::WeaponForModel	MATCH	0x454AE0-0x454B3B (all)	-	-
+0x454B70	CPickups::ModifyStringLabelForControlSetting	FIXED	0x454B70-0x454BD3 (all)	len <= 2 is skipped (port: < 2)	2dbabfec3
+0x455000	CPickups::RenderPickUpText	OPEN	-	not compared (budget)	-
+0x4552D0	CPickups::PickedUpOyster	FIXED	0x4552D0-0x455390 (all)	money goes to Players[0] (0xB7CE50), not the focused player	6790370dd
+0x455390	CPickups::PickedUpHorseShoe	FIXED	0x455390-0x455470 (all)	same	f19de1130
+0x455470	CPickups::RemovePickupObjects	MATCH	0x455470-0x4554B8 (all)	-	-
+0x4554C0	CPickups::PlayerCanPickUpThisWeaponTypeAtThisMoment	MATCH	0x4554C0-0x4554FE (all)	-	-
+0x455720	CPickups::DoPickUpEffects	OPEN	-	not compared (budget); port text already carries exe addresses from an earlier audit	-
+0x455E20	CPickups::DoCollectableEffects	FIXED	0x455E20-0x4560E0 (all)	distance sum order z,y,x; intensity association	2dcb47250
+0x4560E0	CPickups::DoMineEffects	FIXED	0x4560E0-0x4563A0 (all)	corona far clip 60.0 (port 40.0); distance sum order; intensity association	0209e5eb5
+0x4563A0	CPickups::RemoveUnnecessaryPickups	MATCH	0x4563A0-0x45644F (all)	-	-
+0x456450	CPickups::TestForPickupsInBubble	FIXED	0x456450-0x4564EF (all)	strict sqrt compare with z,y,x sum (port: squared <=)	7a853da4c
+0x4564F0	CPickups::GivePlayerGoodiesWithPickUpMI	FIXED	0x4564F0-0x4567E0 (all)	playerId 0 takes the focused ped (exe jle); rest matches	a08b44f0b
+0x456A70	CPickups::PictureTaken	FIXED	0x456A70-0x456D2E (all)	photo pays 100 to Players[0] (port 100000 to the focused player); distance sum order	920a6c642
+0x456D30	CPickups::RemovePickUpsInArea	MATCH	0x456D30-0x456DDF (all)	-	-
+0x456DE0	CPickups::RemoveMissionPickUps	MATCH	0x456DE0-0x456E5F (all)	-	-
+0x456E60	CPickups::ReInit	MATCH	0x456E60-0x456F1F (all)	-	-
+0x457380	CPickups::GenerateNewOne_WeaponType	MATCH	0x457380-0x4573CF (all)	-	-
+0x4573D0	CPickups::RemovePickUp	MATCH	0x4573D0-0x457409 (all)	-	-

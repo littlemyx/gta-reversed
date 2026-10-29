@@ -608,21 +608,38 @@ void CEntryExit::WarpGangWithPlayer(CPlayerPed* player) {
         if (mem == player) {
             continue;
         }
+        if (offsetIdx >= offsets.size()) { // exe 0x43F25E: no offsets left -> skip the member
+            continue;
+        }
         const auto& memPos = mem->GetPosition();
 
-        // Find position to teleport member to
-        // Original code tried only twice, but we'll try all offsets
-        // (Probably won't make a lot of difference)
+        // exe 0x43F267-0x43F3B6: the candidate is PLAYER pos + the formation offset (port: the member's own pos + offset),
+        // at most 3 attempts per member (each consumes an offset); when an attempt fails and no offset is left, or the third
+        // attempt fails, the whole function returns
         CVector memTeleportTo;
-        do {
+        const auto TryOffset = [&](bool third) {
+            const auto& o = offsets[offsetIdx++];
+            memTeleportTo = CVector{ o.x + plyrPos.x, o.y + plyrPos.y, third ? plyrPos.z + 0.f : plyrPos.z };
+            return IsTeleportPointValid(plyrPos, memTeleportTo);
+        };
+        if (!TryOffset(false)) {
             if (offsetIdx >= offsets.size()) {
-                return; // No more offsets
+                return;
             }
-            memTeleportTo = memPos + CVector{ offsets[offsetIdx++], 0.f };
-        } while (!IsTeleportPointValid(plyrPos, memTeleportTo));
+            if (!TryOffset(false)) {
+                if (offsetIdx >= offsets.size()) {
+                    return;
+                }
+                if (!TryOffset(true)) {
+                    return;
+                }
+            }
+        }
 
-        // Calculate member heading (So that they'll face the player)
-        const auto memHeading = (plyrPos - memPos).Heading();
+        // Member heading: exe normalises (plyr - mem) in 2D and uses GetRadianAngleBetweenPoints(v, 0) + LimitRadianAngle
+        CVector toPlayer{ plyrPos.x - memPos.x, plyrPos.y - memPos.y, 0.f };
+        toPlayer.Normalise();
+        const auto memHeading = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(toPlayer.x, toPlayer.y, 0.f, 0.f));
 
         // Teleport them
         mem->Teleport(memTeleportTo, false);

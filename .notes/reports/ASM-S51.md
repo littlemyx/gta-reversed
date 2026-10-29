@@ -1,0 +1,22 @@
+# ASM-S51 (+ S48b CFireManager part) (phase 2: CFireManager rest, InterestingEvents, Interior group / manager) - 2026-10-29
+Result: S48b CFireManager rows (4 + StartFire(pos)) = 5 FIXED; the 16 CGame rows are agent S50's and stay NOT_REACHED in S48b.result.tsv. S51: 40 rows = 20 MATCH + 20 NOT_REACHED (budget). Tables: S48b.result.tsv, S51.result.tsv.
+
+Note on x87 precision: the game runs with the FPU in 24-bit mode (PC24), so "unrounded x87 intermediates" differ from float arithmetic only in exponent range; the x87d spellings below are exact transcriptions, but most of them are value-neutral in the run build.
+
+## Deviations fixed (CFireManager)
+- DestroyAllFxSystems (0x539D10, c1bca9804): the exe calls FxManager_c::DestroyFxSystem (immediate removal); the port called FxSystem_c::Kill (deferred). CreateAllFxSystems (0x539D50, same commit): the exe creates an fx system only for active fires that have none; the port re-created it for every active fire (leaking / replacing running systems).
+- StartFire(pos) (0x539F00, caed93473): generations = signed min against m_nMaxFireGenerationsAllowed (movsx / cmp / jl), port took an unsigned byte min and so capped at 63 (default maximum 999999 is 0x3F as a byte); burn time = x87 (rand * 1/32767 * 0.299999952 + 1.0) * time + now, truncated (port: float factor rounded first).
+- StartScriptFire (0x53A270, 1098b7e58): same generations signed min; the fx system is created only without a target (at pos) or for a ped / vehicle target (at its position), never for object targets (port created it for every target).
+- Update, riot part (0x53AF42-0x53B17E, f0ec0816a): direction is ground point MINUS camera (port had camera minus point, so smoke vs fire was inverted); the exe creates nothing unless the ground probe hit an entity whose flags bit 16 (byte +0x1E bit 0) is set, bHit is true and the ground z > 0.5 (port always created); camera forward without a matrix is (-sin h, cos h, 0) (port dereferenced the null matrix); the random distance multiplier (rand/32767*25+35) stays unrounded; dot product (z+y)+x in x87.
+- Update, fire groups (0x53B17E-0x53BAB0, 0af3c82c5): shadow frontX = +1.2 * fDir and sideY = -1.2 * fDir (port had them swapped, i.e. the shadow quad was rotated 180 degrees); strongest search starts at -1.0 with a strict compare; distance to the strongest fire, fDir = min(7, sum - 6 + 3) and the colour products (byte * float, then _ftol) in x87; corona 1 position adds the unrounded dir * 3.5 (z uses the float-stored product); camera right vector is TheCamera.m_mCameraMatrix (0xB6F99C), not the placement matrix.
+- Known, not reproducible: if every active fire has strength <= -1 (or NaN) the exe uses fire[-1] and never terminates; the port stops the loop.
+
+## MATCH (S51)
+- InterestingEvents: Add, GetInterestingEvent, InvalidateEvent, InvalidateNonVisibleEvents, ScanForNearbyEntities (scan centre, area / in-front tests, LOS, slot choice, priorities / expiry, sector clamp, ped / vehicle filters). The Destructor (0x856880) is an atexit cleanup without `this`; not compared.
+- Interior ped logic: InteriorGroup_c::SetupHousePeds, SetupShopPeds, SetupOfficePeds, UpdateOfficePeds, RemovePed, UpdatePeds, SetupPeds, Update, GetRandomInterior, FindInteriorInfo; FurnitureSubGroup_c::GetFurniture / GetRandomId (the wealth == 0xFF branch is dead in the exe too); InteriorManager_c::Exit / GetBoundingBox / AreAnimsLoaded.
+
+## Open (NOT_REACHED, budget)
+FurnitureManager_c LoadFurniture / Init, InteriorGroup_c ReferenceAnims / DereferenceAnims / Exit / Setup / Constructor / Destructor, InteriorManager_c AddSameGroupEffectInfos / GetVisibleEffects / Update (head matches) / Init, Interior_c Constructor / Destructor, the five CPathFind rows (UnLoadPathFindData, LoadSceneForPathNodes, RemoveInterior, GeneratePedCreationCoors, GeneratePedCreationCoors_Interior), CInterestingEvents::Destructor.
+
+## Gate
+Release + StandaloneRW (wave2 + wave3_interior oracle) build OK. wave2_oracle_test (1142 functions, rebuilt after the last edit): PC24 0/0, PC53 0/0 (the target does not compile Fire / FireManager / InterestingEvents). wave3_interior_oracle_test: PC24 0 everywhere; PC53 743 pre-existing (PruneVisibleEffects 738, FindClosestInteriorInfo 3, AddFurniture 1+1). Combat regress PASS=14 (Release built after the last edit). PortableWin64 compile of Fire.cpp + FireManager.cpp: 0 errors. v6 pre-commit grep clean on every commit.

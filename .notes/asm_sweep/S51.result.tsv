@@ -1,0 +1,41 @@
+addr	function	verdict	asm range	note	fix commit
+0x602590	CInterestingEvents::Add	MATCH	0x602590-0x60289A (all)	scan-centre update, area test, in-front test, LOS call, priority / expiry / end-time slot choice and event store match; only PC24-equivalent float order differences	-
+0x6028A0	CInterestingEvents::GetInterestingEvent	MATCH	0x6028A0-0x60295D (all)	current-event reuse, priority pick with the (rand & 0xFFFF) < 0x80 tie arm only when priority <= best	-
+0x602960	CInterestingEvents::InvalidateEvent	MATCH	0x602960-0x6029B5 (all)	time = 0, reference cleared, current index reset	-
+0x6029C0	CInterestingEvents::InvalidateNonVisibleEvents	MATCH	0x6029C0-0x602A62 (all)	LOS args (buildings, see-through), clear, current index reset	-
+0x605A30	CInterestingEvents::ScanForNearbyEntities	MATCH	0x605A30-0x605E92 (all)	500 ms gate, sector clamp 0..119, scan codes, ped type -> event 5/6/4/7, dead / in-vehicle entity, vehicle filters (scorched, no driver, driving style 0 / 6) -> event 14	-
+0x856880	CInterestingEvents::Destructor	NOT_REACHED	-	atexit cleanup of the global (no this), not hookable; not compared	-
+0x5C0280	FurnitureManager_c::LoadFurniture	NOT_REACHED	-	budget: not compared	-
+0x5C04A0	FurnitureManager_c::Init	NOT_REACHED	-	budget: not compared	-
+0x590EE0	FurnitureSubGroup_c::GetFurniture	MATCH	0x590EE0-0x590F87 (id and wealth-filter branches; random tail not read)	id >= 0 lookup; the wealth == 0xFF branch is dead (movzx byte vs -1) as the port states	-
+0x590FD0	FurnitureSubGroup_c::GetRandomId	MATCH	0x590FD0-0x59104B (head, filter count loop)	same dead 0xFF branch, filtered count + random pick structure	-
+0x5948C0	InteriorGroup_c::GetRandomInterior	MATCH	0x5948C0-0x59491B (all)	(rand&0xFFFF)*(1/32768)*count (fimul), n-th non-null slot	-
+0x594970	InteriorGroup_c::FindInteriorInfo	MATCH	0x594970-0x594A41 (all)	candidate = type match && !in use; random pick; null outs and false when none	-
+0x594BF0	InteriorGroup_c::SetupOfficePeds	MATCH	0x594BF0-0x594C0F (calls only)	StreamPedsForInterior(2), LoadAllRequestedModels(false), numPeds = 0 (consistent with the group-type switch in SetupPeds)	-
+0x594C10	InteriorGroup_c::SetupShopPeds	MATCH	0x594C10-0x594E1E (all)	ped count (2 - rand*-3) * numInteriors + 1, model slot 0 for the keeper else 1 - rand*-7, tile centre + 1.0 z, keeper vs BeInShop task, rand order	-
+0x594E30	InteriorGroup_c::RemovePed	MATCH	0x594E30-0x594E73 (all)		-
+0x594E90	InteriorGroup_c::UpdateOfficePeds	MATCH	0x594E90-0x5950B1 (all)	desk count /2 (signed), time ranges 9-18 / 18-22 / 6-9, cap 16, model slot rand*8, BeInOffice task; removal when no longer visible	-
+0x5950D0	InteriorGroup_c::ReferenceAnims	NOT_REACHED	-	budget: not compared	-
+0x595160	InteriorGroup_c::DereferenceAnims	NOT_REACHED	-	budget: not compared	-
+0x595290	InteriorGroup_c::Exit	NOT_REACHED	-	budget: not compared	-
+0x595320	InteriorGroup_c::Setup	NOT_REACHED	-	budget: not compared	-
+0x5965E0	InteriorGroup_c::SetupHousePeds	MATCH	0x5965E0-0x596827 (all)	count (rand100 <= 50) + 1, gang chance (rand100 <= 15, 3 + (rand >= 0x3FFF)), model slot, script brain 'house', mission ped, decision maker 7, BeInHouse task, alive-state removal	-
+0x596830	InteriorGroup_c::UpdatePeds	MATCH	0x596830-0x59688B (all)		-
+0x596890	InteriorGroup_c::SetupPeds	MATCH	0x596890-0x5968DF (all)		-
+0x5968E0	InteriorGroup_c::Update	MATCH	0x5968E0-0x596928 (all)		-
+0x597FE0	InteriorGroup_c::Constructor	NOT_REACHED	-	budget: not compared	-
+0x597FF0	InteriorGroup_c::Destructor	NOT_REACHED	-	budget: not compared	-
+0x598010	InteriorManager_c::Exit	MATCH	0x598010-0x598058 (all)		-
+0x598090	InteriorManager_c::GetBoundingBox	MATCH	0x598090-0x5980E3 (all)		-
+0x5980F0	InteriorManager_c::AreAnimsLoaded	MATCH	0x5980F0-0x598170 (all)	int_house / int_shop / int_office block names verified in the exe data	-
+0x598430	InteriorManager_c::AddSameGroupEffectInfos	NOT_REACHED	-	budget: not compared	-
+0x598D80	InteriorManager_c::GetVisibleEffects	NOT_REACHED	-	budget: not compared	-
+0x598F50	InteriorManager_c::Update	NOT_REACHED	0x598F50-0x599069 (head only)	head read: disabled flag, player-in-interior / active-task 0x2C5 gate, GetVisibleEffects(0x20) + PruneVisibleEffects(8, 20.0) as in the port; rest not compared	-
+0x5C0500	InteriorManager_c::Init	NOT_REACHED	-	budget: not compared	-
+0x591360	Interior_c::Destructor	NOT_REACHED	-	budget: not compared	-
+0x5921D0	Interior_c::Constructor	NOT_REACHED	-	budget: not compared	-
+0x44D0F0	CPathFind::UnLoadPathFindData	NOT_REACHED	-	budget: not compared	-
+0x44DE00	CPathFind::LoadSceneForPathNodes	NOT_REACHED	-	budget: not compared	-
+0x44E1A0	CPathFind::RemoveInterior	NOT_REACHED	-	budget: not compared	-
+0x44E790	CPathFind::GeneratePedCreationCoors	NOT_REACHED	-	budget: not compared	-
+0x44ECA0	CPathFind::GeneratePedCreationCoors_Interior	NOT_REACHED	-	budget: not compared	-

@@ -194,12 +194,13 @@ bool CGameLogic::IsPlayerAllowedToGoInThisDirection(CPed* ped, CVector moveDirec
         return true;
     }
 
-    const auto dirDist = ((player1->GetPosition() - player2->GetPosition()) * moveDirection).ComponentwiseSum();
-    if (ped == player1 && dirDist >= 0.0f || dirDist <= 0.0f) {
-        return false;
+    // exe 0x441FAD: dot = (dir.z * md.z + dir.y * md.y) + dir.x * md.x; player 1 may move only towards player 2 (dot < 0), player 2 only away (dot > 0)
+    const auto dir     = player1->GetPosition() - player2->GetPosition();
+    const auto dirDist = (dir.z * moveDirection.z + dir.y * moveDirection.y) + dir.x * moveDirection.x;
+    if (ped == player1) {
+        return dirDist < 0.0f;
     }
-    
-    return true;
+    return dirDist > 0.0f;
 }
 
 // 0x442020

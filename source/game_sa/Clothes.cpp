@@ -34,9 +34,10 @@ void CClothes::InjectHooks() {
 void CClothes::Init() {
     for (int32 part = 0; part < CLOTHES_TEXTURE_TOTAL; part++) {
         eClothesModelPart modelPart = GetTextureDependency(static_cast<eClothesTexturePart>(part));
-        PlayerClothes.m_anTextureKeys[part] = 0;
+        // 0x5A80D0: the keys are set to -1 (`or edx, 0xFFFFFFFF`), not 0 - an impossible key, so the first comparison with a real outfit always differs
+        PlayerClothes.m_anTextureKeys[part] = 0xFFFFFFFFu;
         if (modelPart != CLOTHES_MODEL_UNAVAILABLE)
-            PlayerClothes.m_anModelKeys[modelPart] = 0;
+            PlayerClothes.m_anModelKeys[modelPart] = 0xFFFFFFFFu;
     }
     ms_numRuleTags = 0;
     ms_clothesImageId = CStreaming::AddImageToList("MODELS\\PLAYER.IMG", false);

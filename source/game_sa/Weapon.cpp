@@ -1052,13 +1052,16 @@ void CWeapon::DoTankDoomAiming(CEntity* vehicle, CEntity* owner, CVector* startP
     const CVector start2D{ startPoint->x, startPoint->y, 0.f };
     const CVector end2D{ endPoint->x, endPoint->y, 0.f };
 
+    // The exe sums the squares z, y, x (CVector::Magnitude sums x, y, z)
+    const auto dirLen = (float)std::sqrt(((x87d)dir.z * dir.z + (x87d)dir.y * dir.y) + (x87d)dir.x * dir.x);
+
     int16                    numInRange{};
     std::array<CEntity*, 16> inRange{};
-    CWorld::FindObjectsInRange(*startPoint, dir.Magnitude(), true, &numInRange, 15, inRange.data(), false, true, false, false, false);
+    CWorld::FindObjectsInRange(*startPoint, dirLen, true, &numInRange, 15, inRange.data(), false, true, false, false, false);
 
     float       closestDist = 10'000.f;
     int16       closestIdx{};
-    const float slope = (endPoint->z - startPoint->z) / dir.Magnitude();
+    const float slope = (endPoint->z - startPoint->z) / dirLen;
     for (int16 i = 0; i < numInRange; i++) {
         const auto entity = inRange[i];
         if (vehicle == entity || owner == entity) {

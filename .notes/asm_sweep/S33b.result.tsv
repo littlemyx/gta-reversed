@@ -1,0 +1,19 @@
+addr	function	verdict	asm range	note	fix commit
+0x6EE240	CWaterLevel::RenderWaterTriangle	FIXED	0x6EE240-0x6EE2B0 (compares only)	outside tests and camera range globals equal; the exe tests maxX > MaxX before minX < MinX, so with both it splits at MaxX (port MinX)	cc2886b4
+0x6E8ED0	CWaterLevel::RenderFlatWaterTriangle_OneLayer	NOT_REACHED	-	budget	-
+0x6EE080	CWaterLevel::RenderFlatWaterTriangle	NOT_REACHED	-	budget	-
+0x6ECF00	CWaterLevel::SplitWaterTriangleAlongXLine	NOT_REACHED	-	budget	-
+0x6EE5A0	CWaterLevel::SplitWaterTriangleAlongYLine	NOT_REACHED	-	budget	-
+0x6EC5D0	CWaterLevel::RenderWaterRectangle	FIXED	0x6EC5D0-0x6EC705, 0x6EC9E9-0x6EC9F7 (split decisions)	outside tests, the camera range globals (C1F950 MaxY, C1F954 MinY, C1F958 MaxX, C1F95C MinX), Y split order (minY < MinY first, else maxY > MaxY) and call argument order equal; X split: the exe tests maxX > MaxX first (split at MaxX), the port split at MinX when minX < MinX. Flat copies 0x6ECD79 / 0x6ECE3C and the high detail call 0x6ECCCD not compared	df0714e3
+0x6E9940	CWaterLevel::RenderFlatWaterRectangle_OneLayer	NOT_REACHED	-	budget	-
+0x6EBEC0	CWaterLevel::RenderFlatWaterRectangle	NOT_REACHED	-	budget	-
+0x6E73A0	CWaterLevel::SplitWaterRectangleAlongXLine	PARTIAL	0x6E73A0-0x6E73F0 (t only)	t = (split - minX) / (maxX - minX) via fild / fidiv (single rounding) = port; the (1-t) blends and the two recursive calls not compared	-
+0x6ED6D0	CWaterLevel::SplitWaterRectangleAlongYLine	FIXED	0x6ED6D0-0x6ED720 (t only), inlined 0x6EC713 / 0x6EC9F7	t = (split - Y1) / (Y2 - Y1) without min/max ordering (port used minmax, wrong for Y1 > Y2); rest not compared	6552b3a5
+0x6ED9A0	CWaterLevel::RenderBoatWakes	NOT_REACHED	-	budget	-
+0x6EA260	CWaterLevel::RenderWakeSegment	NOT_REACHED	-	budget	-
+0x6E7760	CWaterLevel::RenderWaterFog	NOT_REACHED	-	budget	-
+0x6EF650	CWaterLevel::RenderWater	NOT_REACHED	-	budget	-
+0x6EB810	CWaterLevel::RenderHighDetailWaterRectangle	NOT_REACHED	-	budget	-
+0x6E91D0	CWaterLevel::RenderHighDetailWaterRectangle_OneLayer	NOT_REACHED	-	budget	-
+0x6E8780	CWaterLevel::RenderHighDetailWaterTriangle_OneLayer	NOT_REACHED	-	budget	-
+0x6EDDC0	CWaterLevel::RenderHighDetailWaterTriangle	NOT_REACHED	-	budget	-

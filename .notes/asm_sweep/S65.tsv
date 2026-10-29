@@ -1,0 +1,8 @@
+addr	file	line	cls	fn	oc
+0x742AB0	source/game_sa/WeaponEffects.cpp	15	None	Init	U
+0x742B80	source/game_sa/WeaponEffects.cpp	16	None	Shutdown	U
+0x742CF0	source/game_sa/WeaponEffects.cpp	23	None	Render	U
+0x5BE670	source/game_sa/WeaponInfo.cpp	16	None	LoadWeaponData	U
+0x5BF750	source/game_sa/WeaponInfo.cpp	17	None	Initialise	U
+0x743D10	source/game_sa/WeaponInfo.cpp	21	None	FindWeaponType	U
+0x563950	source/game_sa/World.cpp	107	None	TestForBuildingsOnTopOfEachOther<CPtrListDoubleLink<CPhysical	U

@@ -144,3 +144,28 @@
 | S33g | rest of S33f | 1 | 0/1 (not reached) -> S33h | WaterLevel.cpp |
 | S11d | rest of S11c | 5 | done 5/5 (2 M, 3 fixed; S11 complete) | TaskSimpleClimb.cpp |
 | S33h | rest of S33g | 1 | done 1/1 (fixed; S33 complete) | WaterLevel.cpp |
+| S41 | phase2: unlisted non-oracle hooks | 40 | pending | AttractorScanner.cpp, CarAI.cpp, PedAtmAttractor.cpp, PedAttractor.cpp, PedAttractorPedPlacer.cpp, PedLookAtAttractor.cpp ... |
+| S42 | phase2: unlisted non-oracle hooks | 40 | pending | CarAI.cpp, CarEnterExit.cpp, CarGenerator.cpp |
+| S43 | phase2: unlisted non-oracle hooks | 40 | pending | CarGenerator.cpp, Cheat.cpp, Clothes.cpp, CollisionEventScanner.cpp, ConversationForPed.cpp, Cover.cpp ... |
+| S44 | phase2: unlisted non-oracle hooks | 40 | pending | AnimatedBuilding.cpp, Building.cpp, CustomCarPlateMgr.cpp, Darkel.cpp, DummyObject.cpp, DummyPed.cpp ... |
+| S45 | phase2: unlisted non-oracle hooks | 40 | pending | Bike.cpp, Bmx.cpp, Boat.cpp, EmergencyPed.cpp, Entity.cpp, EntityScanner.cpp ... |
+| S46 | phase2: unlisted non-oracle hooks | 40 | pending | EntryExitManager.cpp, Event.cpp, EventAcquaintancePedDislike.cpp, EventAcquaintancePedLike.cpp, EventAcquaintancePedRespect.cpp, EventAttractor.cpp ... |
+| S47 | phase2: unlisted non-oracle hooks | 40 | pending | EventHandler.cpp, EventHealthLow.cpp, EventHealthReallyLow.cpp, EventHighAngerAtPlayer.cpp, EventInAir.cpp, EventInWater.cpp ... |
+| S48 | phase2: unlisted non-oracle hooks | 40 | pending | EventRevived.cpp, EventScanner.cpp, EventSexyPed.cpp, EventSexyVehicle.cpp, EventSpecial.cpp, EventVehicleThreat.cpp ... |
+| S49 | phase2: unlisted non-oracle hooks | 40 | pending | Game.cpp, GameLogic.cpp, GangWars.cpp |
+| S50 | phase2: unlisted non-oracle hooks | 40 | pending | GangWars.cpp, Gangs.cpp, Garage.cpp, Garages.cpp, InformFriendsEventQueue.cpp, InformGroupEvent.cpp ... |
+| S51 | phase2: unlisted non-oracle hooks | 40 | pending | FurnitureManager_c.cpp, FurnitureSubGroup_c.cpp, InterestingEvents.cpp, InteriorGroup_c.cpp, InteriorManager_c.cpp, Interior_c.cpp ... |
+| S52 | phase2: unlisted non-oracle hooks | 40 | pending | PathFind.cpp, PedAttractorManager.cpp, PedClothesDesc.cpp |
+| S53 | phase2: unlisted non-oracle hooks | 40 | pending | PedClothesDesc.cpp, PedDamageResponseCalculator.cpp, PedGeometryAnalyser.cpp, PedGroup.cpp, PedGroupIntelligence.cpp |
+| S54 | phase2: unlisted non-oracle hooks | 40 | pending | PedGroupIntelligence.cpp, PedGroupMembership.cpp, PedGroupPlacer.cpp, PedGroups.cpp, PedIK.cpp, PedList.cpp ... |
+| S55 | phase2: unlisted non-oracle hooks | 40 | pending | PedPlacement.cpp, PedStats.cpp, PedStuckChecker.cpp, PedTaskPair.cpp, PedType.cpp, Pickup.cpp ... |
+| S56 | phase2: unlisted non-oracle hooks | 40 | pending | Pickups.cpp, PlaneTrail.cpp, PlaneTrails.cpp, PlayerInfo.cpp, PlayerPedData.cpp, PlayerRelationshipRecorder.cpp |
+| S57 | phase2: unlisted non-oracle hooks | 40 | pending | EventPool.h, PedAttractorPool.h, PedIntelligencePool.h, PedPool.h, PlayerRelationshipRecorder.cpp, Remote.cpp ... |
+| S58 | phase2: unlisted non-oracle hooks | 40 | pending | ScriptsForBrains.cpp, Shopping.cpp, TheScripts.cpp |
+| S59 | phase2: unlisted non-oracle hooks | 40 | pending | Shopping.cpp, Stats.cpp, StreamedScripts.cpp, StuckCarCheck.cpp |
+| S60 | phase2: unlisted non-oracle hooks | 40 | pending | PedGroupDefaultTaskAllocatorChat.h, PedGroupDefaultTaskAllocatorFollowAnyMeans.h, PedGroupDefaultTaskAllocatorFollowLimited.h, PedGroupDefaultTaskAllocatorRandom.h, PedGroupDefaultTaskAllocatorSitInLeaderCar.h, PedGroupDefaultTaskAllocatorStandStill.h ... |
+| S61 | phase2: unlisted non-oracle hooks | 40 | pending | TaskComplexAvoidEntity.cpp, TaskComplexAvoidOtherPedWhileWandering.cpp, TaskComplexBeCop.cpp, TaskComplexBeStill.cpp, TaskComplexCarDriveMission.cpp, TaskComplexClimb.cpp ... |
+| S62 | phase2: unlisted non-oracle hooks | 40 | pending | TaskComplexFollowPatrolRoute.cpp, TaskComplexGangLeader.cpp, TaskComplexKillAllThreats.cpp, TaskComplexKillPedGroupOnFoot.cpp, TaskComplexLeaveCar.cpp, TaskComplexObserveTrafficLights.cpp ... |
+| S63 | phase2: unlisted non-oracle hooks | 40 | pending | TaskSimpleNone.cpp, TaskSimpleOnEscalator.cpp, TaskSimpleRunAnim.cpp, TaskSimpleRunAnimLoopedMiddle.cpp, TaskSimpleRunNamedAnim.cpp, TaskSimpleSay.cpp ... |
+| S64 | phase2: unlisted non-oracle hooks | 40 | pending | VehicleAnimGroupData.cpp, VehicleRecording.cpp, VehicleSaveStructure.cpp, Weapon.cpp |
+| S65 | phase2: unlisted non-oracle hooks | 7 | pending | WeaponEffects.cpp, WeaponInfo.cpp, World.cpp |

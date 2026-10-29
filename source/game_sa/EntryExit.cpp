@@ -97,7 +97,7 @@ void CEntryExit::GenerateAmbientPeds(const CVector& posn) {
     } else {
         constexpr const char* PoliceStationEnExNames[]{ "POLICE1", "POLICE2", "POLICE3", "POLICE4" };
         CPopulation::bInPoliceStation = rng::any_of(PoliceStationEnExNames, [this](auto&& n) { return _stricmp(m_szName, n) == 0; });
-        auto numPedsToSpawn = m_pLink ? m_pLink->m_nNumberOfPeds : m_nNumberOfPeds;
+        const int32 numPedsToSpawn = (int8)(m_pLink ? m_pLink->m_nNumberOfPeds : m_nNumberOfPeds); // exe movsx byte [+0x36]
         CPopulation::NumberOfPedsInUseInterior = numPedsToSpawn;
         CPopulation::PopulateInterior(numPedsToSpawn, posn);
     }
@@ -109,13 +109,14 @@ CEntryExit* CEntryExit::GetEntryExitToDisplayNameOf() {
         return nullptr;
     }
     if (m_nArea == eAreaCodes::AREA_CODE_NORMAL_WORLD) {
-        return nullptr;
+        return this; // exe 0x43E664: area 0 skips the stack lookup and returns this (not nullptr)
     }
     // TODO: Probably inlined from `CEntryExitManager`
+    // exe 0x43E671-0x43E67F: stack[posn - 1] == spawnPoint -> stack[posn - 2] (port returned stack[posn], one past the top / out of bounds)
     if (   CEntryExitManager::ms_entryExitStackPosn > 1
         && CEntryExitManager::ms_entryExitStack[CEntryExitManager::ms_entryExitStackPosn - 1] == ms_spawnPoint
     ) {
-        return CEntryExitManager::ms_entryExitStack[CEntryExitManager::ms_entryExitStackPosn];
+        return CEntryExitManager::ms_entryExitStack[CEntryExitManager::ms_entryExitStackPosn - 2];
     }
     return this;
 }

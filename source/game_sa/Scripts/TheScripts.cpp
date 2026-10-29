@@ -584,18 +584,20 @@ void CTheScripts::CleanUpThisObject(CObject* obj) {
 // 0x486300
 // TODO: test
 void CTheScripts::CleanUpThisPed(CPed* ped) {
-    if (!ped || ped->IsCreatedByMission()) {
+    // exe 0x48632E: only mission peds are cleaned up (the port had this inverted); the mission ped counter is decremented on every path past this point (0x48664E), also for `bKeepTasksAfterCleanUp`
+    if (!ped || !ped->IsCreatedByMission()) {
         return;
     }
 
     ped->SetCharCreatedBy(ePedCreatedBy::PED_GAME);
-    if (ped->bKeepTasksAfterCleanUp) {
-        return;
-    }
 
     notsa::ScopeGuard _([]() {
         --CPopulation::ms_nTotalMissionPeds;
     });
+
+    if (ped->bKeepTasksAfterCleanUp) {
+        return;
+    }
 
     if (auto* veh = ped->GetVehicleIfInOne(); veh && veh->IsDriver(ped)) {
         const auto FixMission = [veh](eCarMission fix) {

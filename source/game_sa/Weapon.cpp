@@ -2528,23 +2528,24 @@ bool CWeapon::Fire(CEntity* firedBy, CVector* startPosn, CVector* barrelPosn, CE
         : nullptr;
     const auto wi = &GetWeaponInfo(firedByPed);
 
+    // 0x742300..0x7423CD: with no start position the exe keeps TWO vectors: the local point (0, 0, 0.6) stays the shot origin (ebx = [esp+0x18]) and only the transformed copy
+    // ([esp+0x24]) becomes the start position (the old port transformed the one `point` that was also the shot origin)
     CVector point{ 0.f, 0.f, 0.6f };
+    CVector worldPoint;
 
-    const auto fxPos = startPosn
-        ? startPosn
-        : &point;
-    const auto shotOrigin = startPosn
-        ? barrelPosn
-        : &point;
+    CVector* shotOrigin = barrelPosn;
     if (!startPosn) {
-        point     = firedBy->GetMatrix().TransformPoint(point);
-        startPosn = &point;
+        worldPoint = firedBy->GetMatrix().TransformPoint(point);
+        startPosn  = &worldPoint;
+        shotOrigin = &point;
     }
+    const auto fxPos = startPosn;
 
     if (m_IsFirstPersonWeaponModeSelected) {
         const auto r = 0.15f;
 
-        const auto h = firedBy->GetHeading();
+        // 0x7423D4..0x7423F0: the FPATAN heading is unrounded and is multiplied by 57.2957763671875f and 0.017453216f (both branches, also the placement heading)
+        const x87d h = X87R(X87R(firedBy->GetHeadingExt() * 57.2957763671875f) * 0.017453216f);
         fxPos->x -= X87R(x87::sin(h) * r);
         fxPos->y += X87R(x87::cos(h) * r);
     }
@@ -2561,7 +2562,7 @@ bool CWeapon::Fire(CEntity* firedBy, CVector* startPosn, CVector* barrelPosn, CE
         if (!m_TotalAmmo) {
             return false;
         }
-        m_AmmoInClip = std::min<uint32>(m_TotalAmmo, wi->m_nAmmoClip);
+        m_AmmoInClip = std::min<uint32>(m_TotalAmmo, GetWeaponInfo(eWeaponSkill::STD).m_nAmmoClip); // 0x742437: GetWeaponInfo(type, STD), not the skill's info
     }
 
     const auto [hasFired, delayNextShot] = [&]() -> std::pair<bool, bool> {
@@ -2625,8 +2626,8 @@ bool CWeapon::Fire(CEntity* firedBy, CVector* startPosn, CVector* barrelPosn, CE
                 if (!firedByPed->bInVehicle) {
                     return { fired, false };
                 }
-                if (const auto t = firedByPed->GetTaskManager().GetActiveTask()) {
-                    return { fired, t->GetTaskType() == TASK_SIMPLE_GANG_DRIVEBY };
+                if (const auto t = firedByPed->GetTaskManager().GetActiveTask()) { // 0x742572..0x742599: delay is cleared for the gang drive-by task (the old port had it inverted)
+                    return { fired, t->GetTaskType() != TASK_SIMPLE_GANG_DRIVEBY };
                 }
             }
             return { fired, true };
@@ -2670,14 +2671,12 @@ bool CWeapon::Fire(CEntity* firedBy, CVector* startPosn, CVector* barrelPosn, CE
         }
         case WEAPON_RLAUNCHER:
         case WEAPON_RLAUNCHER_HS: { // 0x7425B3
-            if (firedByPed) {
-                const auto CanFire = [&](CVector origin, CVector end) {
-                    return (origin - end).SquaredMagnitude() <= sq(8.f) && !firedBy->GetIsTypePed();
-                };
-                if (   targetEnt  && !CanFire(firedBy->GetPosition(), targetEnt->GetPosition())
-                    || targetPosn && !CanFire(firedBy->GetPosition(), *targetPosn)
-                ) {
-                    return { false, true };
+            if (firedByPed) { // 0x7425AC..0x74264A: the target entity wins over the target position; a ped closer than (or at) 8 units refuses to fire unless it is a player
+                if (const auto* const tp = targetEnt ? &targetEnt->GetPosition() : targetPosn) {
+                    const auto dist = (*tp - firedBy->GetPosition()).Magnitude();
+                    if (!(dist > 8.f) && !firedByPed->IsPlayer()) {
+                        return { false, true };
+                    }
                 }
             }
             return {
@@ -2700,7 +2699,7 @@ bool CWeapon::Fire(CEntity* firedBy, CVector* startPosn, CVector* barrelPosn, CE
                     targetEnt,
                     targetPosn
                 ),
-                true
+                false // 0x74276F: mov byte ptr [esp+0x13], 0
             };
         case WEAPON_DETONATOR: {
             assert(firedByPed);

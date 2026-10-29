@@ -2419,11 +2419,15 @@ void CCam::Process_1stPerson(const CVector& target, float orientation, float spe
     }
 
     auto* targetVeh = m_pCamTargetEntity->AsVehicle();
-    if (targetVeh->IsBike() && targetVeh->AsBike()->bikeFlags.bWheelieForCamera || TheCamera.m_fAvoidTheGeometryProbsTimer > 0.0f) {
-        if (wheelieTime - s_LastWheelieTime >= 3000.0f) {
-            s_LastWheelieTime = static_cast<float>(CTimer::GetTimeInMS());
-        }
-
+    // 0x517F87-0x517FE1: within 3000 ms of the last wheelie the bike/flag test is skipped altogether (JNP 0x517FE1 on `diff < 3000`),
+    //                    otherwise it needs a bike with `bWheelieForCamera` set or the geometry timer running. NaN takes the second path.
+    const float wheelieDiff = wheelieTime - s_LastWheelieTime;
+    bool        bWheelCamPath = wheelieDiff < 3000.0f;
+    if (!bWheelCamPath && targetVeh->IsBike() && (targetVeh->AsBike()->bikeFlags.bWheelieForCamera || TheCamera.m_fAvoidTheGeometryProbsTimer > 0.0f)) {
+        s_LastWheelieTime = static_cast<float>(CTimer::GetTimeInMS()); // diff >= 3000 (or NaN) here
+        bWheelCamPath     = true;
+    }
+    if (bWheelCamPath) {
         const auto pad1 = CPad::GetPad();
         if (!pad1->NewState.LeftShoulder2 && !pad1->NewState.RightShoulder2) {
             auto* targetBike = targetVeh->AsBike();
@@ -2475,15 +2479,15 @@ void CCam::Process_1stPerson(const CVector& target, float orientation, float spe
         // right *= flt_8CCD0C; (=1.0f)
 
         if (!CWorld::GetIsLineOfSightClear(
-            CrossProduct(m_vecSource, m_vecSource + right),
-            CrossProduct(m_vecSource, m_vecSource - right),
+            m_vecSource + right,
+            m_vecSource - right,
             true,
             false,
             false,
             false
         )) {
             m_vecSource = targetBike->GetPosition();
-            m_vecSource.z = neckPos.z + BIKE_1ST_PERSON_ZOFFSET + 0.62f;
+            m_vecSource.z = (float)((x87d)neckPos.z + (x87d)BIKE_1ST_PERSON_ZOFFSET + (x87d)0.62f); // 0x5182C2-0x5182E2: both adds stay in the FPU
         }
     } else if (targetVeh->IsBoat()) {
         m_vecSource.z += 0.5f;

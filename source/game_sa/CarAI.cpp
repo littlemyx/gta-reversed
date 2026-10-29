@@ -100,7 +100,7 @@ void CCarAI::AddPoliceCarOccupants(CVehicle* vehicle, bool bAlwaysCreatePassenge
         if (FindPlayerPed()->GetWantedLevel() > eWantedLevel::WANTED_LEVEL_1) {
             const auto drvr = vehicle->SetUpDriver(PED_TYPE_NONE, false, false);
             CTaskSimpleCarSetPedOut{ vehicle, TARGET_DOOR_DRIVER, true }.ProcessPed(drvr);
-            drvr->AttachPedToEntity(vehicle, CVector(0.f, 0.f, 0.f), 0, TWO_PI, WEAPON_PISTOL);
+            drvr->AttachPedToEntity(vehicle, CVector(0.f, 3.f, 2.f), 0, TWO_PI, WEAPON_PISTOL); // 0x41C31F: offset (0, 3, 2)
             drvr->bStayInSamePlace = true;
             drvr->GetTaskManager().SetTask(
                 new CTaskComplexKillPedFromBoat{ FindPlayerPed() },
@@ -128,9 +128,10 @@ void CCarAI::AddPoliceCarOccupants(CVehicle* vehicle, bool bAlwaysCreatePassenge
 
             // Give one of them a weapon
             if (plyrWantedLvl > eWantedLevel::WANTED_LEVEL_2) {
-                if (CGeneral::RandomBool(25.0f)) {
+                // 0x41C124: the exe compares GetRandomNumberInRange(0.f, 1.f) < 0.25f (strict), not RandomBool's `range(0, 100) <= 25`
+                if (CGeneral::GetRandomNumberInRange(0.f, 1.f) < 0.25f) {
                     drvr->GiveDelayedWeapon(WEAPON_SHOTGUN, 1000);
-                } else if (CGeneral::RandomBool(25.0f)) {
+                } else if (CGeneral::GetRandomNumberInRange(0.f, 1.f) < 0.25f) {
                     psgr->GiveDelayedWeapon(WEAPON_SHOTGUN, 1000);
                 }
             }
@@ -146,7 +147,7 @@ void CCarAI::AddPoliceCarOccupants(CVehicle* vehicle, bool bAlwaysCreatePassenge
             };
             SetupPed(drvr, psgr, true);
             SetupPed(psgr, drvr, false);
-        } else if (bAlwaysCreatePassenger || CGeneral::RandomBool(50.0f)) {
+        } else if (bAlwaysCreatePassenger || CGeneral::GetRandomNumberInRange(0, 100) < 50) { // 0x41C243: int range [0, 100) < 50
             vehicle->SetupPassenger(0, PED_TYPE_NONE, false, false);
         }
         break;

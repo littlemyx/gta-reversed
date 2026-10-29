@@ -573,6 +573,7 @@ bool CGarages::Load() {
 // todo: fix Update()
 // 0x5D3160
 bool CGarages::Save() {
+    CloseHideOutGaragesBeforeSave(); // exe 0x5D3165 (as in Load): the port skipped it, open hideouts were saved with their cars still outside
     CGenericGameStorage::SaveDataToWorkBuffer(NumGarages);
     CGenericGameStorage::SaveDataToWorkBuffer(BombsAreFree);
     CGenericGameStorage::SaveDataToWorkBuffer(RespraysAreFree);

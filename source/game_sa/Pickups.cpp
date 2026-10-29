@@ -774,13 +774,13 @@ void CPickups::PickedUpOyster() {
     AudioEngine.ReportFrontendAudioEvent(AE_FRONTEND_PICKUP_COLLECTABLE1);
 
     CStats::IncrementStat(STAT_OYSTERS_COLLECTED);
-    FindPlayerInfo().m_nMoney += 100; // originally rewarded to the player 1.
+    CWorld::Players[0].m_nMoney += 100; // 0xB7CE50: always player 1 (not the focused one)
 
     const auto collected = CStats::GetStatValue(STAT_OYSTERS_COLLECTED);
     const auto total = CStats::GetStatValue(STAT_TOTAL_OYSTERS);
     if (collected == total) {
         CGarages::TriggerMessage("OY_ALL");
-        FindPlayerInfo().m_nMoney += 100'000; // originally rewarded to the player 1.
+        CWorld::Players[0].m_nMoney += 100'000; // 0xB7CE50: always player 1
     } else {
         CGarages::TriggerMessage("OY_ONE", NOTSA_FTOL(int16, collected), 5000u, NOTSA_FTOL(int16, total));
     }

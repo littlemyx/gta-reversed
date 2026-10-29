@@ -1159,9 +1159,9 @@ CPed* CPedGeometryAnalyser::GetNearestPed(const CVector& point) {
             continue;
         }
         const auto& pedPos = ped->GetPosition();
-        const float distSq = (point.y - pedPos.y) * (point.y - pedPos.y)
+        const float distSq = (point.z - pedPos.z) * (point.z - pedPos.z) // 0x5F35F6..0x5F3604: z*z + x*x + y*y
                            + (point.x - pedPos.x) * (point.x - pedPos.x)
-                           + (point.z - pedPos.z) * (point.z - pedPos.z);
+                           + (point.y - pedPos.y) * (point.y - pedPos.y);
         if (distSq < closestDistSq) {
             closestDistSq = distSq;
             nearest       = ped;

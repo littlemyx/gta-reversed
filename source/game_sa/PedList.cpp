@@ -36,7 +36,9 @@ void CPedList::BuildListFromGroup_NoLeader(CPedGroupMembership& groupMembership)
 void CPedList::ExtractPedsWithGuns(CPedList& from) {
     for (auto i = 0u; i < from.m_count; i++) {
         if (!from.Get(i)->GetActiveWeapon().IsTypeMelee()) {
-            AddMember(from.Get(i));
+            if (m_count < m_peds.size()) { // 0x69A4FE: a full list drops the ped (it is still removed from `from`)
+                AddMember(from.Get(i));
+            }
             from.RemoveMemberNoFill(i);
         }
     }

@@ -954,7 +954,8 @@ void CCam::LookBehind() {
         m_vecSource.x = -x87::cos(m_fHorizontalAngle);
         m_vecSource.y = -x87::sin(m_fHorizontalAngle);
         m_vecSource.z = 0.0f;
-        m_vecSource.z = (m_vecSource.z - (ped->field_578.x * m_vecSource.x + ped->field_578.y * m_vecSource.y + ped->field_578.z * m_vecSource.z)) + 0.3f;
+        // exe 0x520BA3-0x520BC6: the dot product sums z,y,x
+        m_vecSource.z = (m_vecSource.z - (ped->field_578.z * m_vecSource.z + ped->field_578.y * m_vecSource.y + ped->field_578.x * m_vecSource.x)) + 0.3f;
         m_vecSource.Normalise();
 
         const float dist = std::max(2.0f + TheCamera.m_fPedZoomSmoothed, 0.6f);
@@ -1123,7 +1124,8 @@ void CCam::LookRight(bool bLookRight) {
     if (!(oldZ < 0.1f + std::max(z, m_vecTargetCoorsForFudgeInter.z))) {
         result = std::max(z, m_vecTargetCoorsForFudgeInter.z) + 0.1f;
     }
-    m_vecSource.z = std::max(result, m_vecSource.z);
+    // exe 0x521149: `fcom src.z; test ah,0x41; je` keeps the result only when result > src.z (NaN keeps src.z; std::max would keep result)
+    m_vecSource.z = result > m_vecSource.z ? result : m_vecSource.z;
 
     m_vecFront = target->GetPosition() - m_vecSource;
     m_vecFront.z += 1.1f;
@@ -4342,7 +4344,7 @@ bool CCam::Process_DW_HeliChaseCam(bool) {
 
     bool doFovLerp = S.bFovLerping;
     if (!doFovLerp) {
-        if (S.fovLerpStartFraction <= t) {
+        if (!(t < S.fovLerpStartFraction)) { // exe 0x51B031: `fcomp; test ah,1; jne` skips only when t < fraction (NaN starts the lerp)
             S.savedFov         = fov;
             S.bFovLerping      = true;
             S.fovLerpStartTime = (int32)now;
@@ -4383,7 +4385,7 @@ bool CCam::Process_DW_PlaneCam1(bool) {
     GetCoreDataForDWCineyCamMode(entity, vehicle, dest, src, up, right, fwd, vel, speed, angVel, angSpeed, colSphere);
 
     const auto now = CTimer::GetTimeInMS();
-    if (dest.z >= 80.0f) {
+    if (!(dest.z < 80.0f)) { // exe 0x51C7B6: `jnp` after fcomp exits only when dest.z < 80 (NaN enters the camera)
         static float s_scale = 1.0f;
         static float s_dirSign = 1.0f;
         if (gLastDWCineyCamMode == 0x3E && CTimer::GetFrameCounter() - 1u <= gLastFrameProcessedDWCineyCam) {
@@ -4431,14 +4433,15 @@ bool CCam::Process_DW_PlaneCam1(bool) {
         const float c4 = t - 0.5f;
         const float a  = up.x * -150.0f * c4;
         const float b  = up.y * -150.0f * c4 * s_scale;
-        const double sinv = x87::sin((x87d)4 * ((x87d)elapsed / (x87d)duration) * (x87d)360.0 * (x87d)0.017453292f);
+        const x87d  sinv = x87::sin((x87d)4 * ((x87d)elapsed / (x87d)duration) * (x87d)360.0 * (x87d)0.017453292f);
         const float c  = up.z * 0.5f;
         const float e  = (float)(X87R((x87d)up.x * (x87d)0.5 * sinv));
-        const float g  = (float)(X87R((double)c * sinv));
+        const float g  = (float)(X87R((x87d)c * sinv));
 
-        src.x = e + a * s_scale + up.x * 15.0f + v2.x * 30.0f + v1.x * 10.0f + dest.x;
-        src.y = (float)(X87R((x87d)up.y * (x87d)0.5 * sinv) + (x87d)(b + up.y * 15.0f + v2.y * 30.0f + cy));
-        src.z = g + up.z * -150.0f * c4 * s_scale + up.z * 15.0f + v1.z * 10.0f + dest.z + v2.z * 30.0f;
+        // exe 0x51C8EA-0x51CB9D: the sums associate from the inside out: ((v1*10 + dest) + v2*30) + up*15, then the -150 term, then the sin term
+        src.x = e + (a * s_scale + (up.x * 15.0f + (v2.x * 30.0f + (v1.x * 10.0f + dest.x))));
+        src.y = (float)(X87R((x87d)up.y * (x87d)0.5 * sinv) + (x87d)(b + (up.y * 15.0f + (v2.y * 30.0f + cy))));
+        src.z = g + (up.z * -150.0f * c4 * s_scale + (up.z * 15.0f + ((v1.z * 10.0f + dest.z) + v2.z * 30.0f)));
 
         CWorld::pIgnoreEntity = entity;
         CColPoint colPoint;
@@ -4490,7 +4493,7 @@ bool CCam::Process_DW_PlaneCam2(bool) {
     GetCoreDataForDWCineyCamMode(entity, vehicle, dest, src, up, right, fwd, vel, speed, angVel, angSpeed, colSphere);
 
     const auto now = CTimer::GetTimeInMS();
-    if (dest.z >= 80.0f) {
+    if (!(dest.z < 80.0f)) { // exe 0x51CC9D: `jnp` after fcomp exits only when dest.z < 80 (NaN enters the camera)
         static float s_unusedFlip{};
         static float s_scale = 1.0f;
         static float s_dirSign = 1.0f;
@@ -4544,14 +4547,15 @@ bool CCam::Process_DW_PlaneCam2(bool) {
         fwd.z = dirA.z * 30.0f + dest.z;
 
         const float upZ5 = up.z * 5.0f;
-        const double sinv = x87::sin((x87d)4 * ((x87d)elapsed / (x87d)duration) * (x87d)360.0 * (x87d)0.017453292f);
+        const x87d  sinv = x87::sin((x87d)4 * ((x87d)elapsed / (x87d)duration) * (x87d)360.0 * (x87d)0.017453292f);
         up.z              = up.z * 0.5f;
         right.x           = (float)(X87R((x87d)up.x * (x87d)0.5 * sinv));
-        const float rz    = (float)(X87R((double)up.z * sinv));
+        const float rz    = (float)(X87R((x87d)up.z * sinv));
 
-        src.x = right.x + up.x * 5.0f + dirB.x * 30.0f + fwd.x;
-        src.y = (float)(X87R((x87d)up.y * (x87d)0.5 * sinv) + (x87d)(up.y * 5.0f + dirB.y * 30.0f + fwd.y));
-        src.z = rz + upZ5 + fwd.z + dirB.z * 30.0f;
+        // exe 0x51CE55-0x51D05C: the sums associate from the inside out: (dirB*30 + fwd) + up*5, then the sin term
+        src.x = right.x + (up.x * 5.0f + (dirB.x * 30.0f + fwd.x));
+        src.y = (float)(X87R((x87d)up.y * (x87d)0.5 * sinv) + (x87d)(up.y * 5.0f + (dirB.y * 30.0f + fwd.y)));
+        src.z = rz + (upZ5 + (fwd.z + dirB.z * 30.0f));
 
         CWorld::pIgnoreEntity = entity;
         CColPoint colPoint;
@@ -4603,7 +4607,7 @@ bool CCam::Process_DW_PlaneCam3(bool) {
     GetCoreDataForDWCineyCamMode(entity, vehicle, dest, src, up, right, fwd, vel, speed, angVel, angSpeed, colSphere);
 
     const auto now = CTimer::GetTimeInMS();
-    if (dest.z >= 80.0f) {
+    if (!(dest.z < 80.0f)) { // exe 0x51D12F: `jnp` after fcomp exits only when dest.z < 80 (NaN enters the camera)
         if (gLastDWCineyCamMode != 0x40 || gLastFrameProcessedDWCineyCam < CTimer::GetFrameCounter() - 1u) {
             gLastDWCineyCamMode  = 0x40;
             gDWCineyCamEndTime   = 5000u + now; // 0x8CCBC8
@@ -4627,7 +4631,7 @@ bool CCam::Process_DW_PlaneCam3(bool) {
         const auto ahead = fwd * length + dest;
         src              = up * 5.0f + ahead;
 
-        const auto t = (float)(int32)(now - gDWCineyCamStartTime) / (float)(int32)(gDWCineyCamEndTime - gDWCineyCamStartTime);
+        const auto t = (float)((x87d)(int32)(now - gDWCineyCamStartTime) / (x87d)(int32)(gDWCineyCamEndTime - gDWCineyCamStartTime)); // fild/fidiv, one rounding
 
         CColPoint colPoint;
         CEntity*  hitEntity{};
@@ -4717,13 +4721,15 @@ bool CCam::Process_DW_PlaneSpotterCam(bool) {
     }
 
     const int32 duration = (int32)(gDWCineyCamEndTime - gDWCineyCamStartTime);
-    const float t        = (float)(int32)(now - gDWCineyCamStartTime) / (float)duration;
+    const float t        = (float)((x87d)(int32)(now - gDWCineyCamStartTime) / (x87d)duration); // fild/fidiv, one rounding
     src                  = s_target;
     float fov            = 70.0f;
 
-    if (5.0f <= (CVector2D{ s_target } - CVector2D{ dest }).Magnitude()) {
+    if (!((CVector2D{ s_target } - CVector2D{ dest }).Magnitude() < 5.0f)) { // exe 0x51C4C9: `jnp` after fcomp exits only when len < 5 (NaN continues)
         if (s_useFovLerp) {
-            auto k = (dest - s_target).Magnitude() / 100.0f;
+            // exe 0x51C4F0-0x51C54F: inlined length adds z,y,x
+            const auto dv = dest - s_target;
+            auto k = (float)(std::sqrt(((x87d)dv.z * (x87d)dv.z + (x87d)dv.y * (x87d)dv.y) + (x87d)dv.x * (x87d)dv.x) / (x87d)100.0f);
             k      = std::clamp(k, 0.0f, 1.0f);
             auto s = x87::sin((270.0f - k * 180.0f) * 0.0174532924f);
             fov    = (12.0f - 70.0f) * (X87R(s + 1.0f)) * 0.5f + 70.0f;
@@ -7162,7 +7168,7 @@ void CCam::Process_Rocket(const CVector& target, float orientation, float speedV
             playerData->m_nFireHSMissilePressedTime = CTimer::GetTimeInMS();
         }
 
-        const auto hsTarget = CWeapon::PickTargetForHeatSeekingMissile(
+        auto hsTarget = CWeapon::PickTargetForHeatSeekingMissile(
             m_vecSource,
             m_vecFront,
             1.2f,
@@ -7171,9 +7177,9 @@ void CCam::Process_Rocket(const CVector& target, float orientation, float speedV
             playerData->m_LastHSMissileTarget
         );
 
-        // NOTE: not sure about the second one
-        if (hsTarget && CTimer::GetTimeInMS() - playerData->m_nLastHSMissileLOSTime > 1'000) {
-            playerData->m_nLastHSMissileLOSTime = CTimer::GetTimeInMS();
+        // exe 0x511F0D-0x511F3C: the 31-bit field is used as a boolean: it is read as `now - (field == 0)` and written as `now > 1`
+        if (hsTarget && CTimer::GetTimeInMS() - (playerData->m_nLastHSMissileLOSTime == 0 ? 1u : 0u) > 1'000u) {
+            playerData->m_nLastHSMissileLOSTime = 1u < CTimer::GetTimeInMS() ? 1u : 0u;
 
             const auto targetUsesCollision = hsTarget->GetUsesCollision();
             const auto playerUsesCollision = player->GetUsesCollision();
@@ -7195,7 +7201,11 @@ void CCam::Process_Rocket(const CVector& target, float orientation, float speedV
             playerData->m_bLastHSMissileLOS = isClear;
         }
 
-        if (!playerData->m_bLastHSMissileLOS || !hsTarget || hsTarget != playerData->m_LastHSMissileTarget) {
+        // exe 0x512021-0x51204A: without line of sight the target is dropped (esi = 0) for the marker and the stored last target as well
+        if (!playerData->m_bLastHSMissileLOS) {
+            hsTarget = nullptr;
+            playerData->m_nFireHSMissilePressedTime = CTimer::GetTimeInMS();
+        } else if (!hsTarget || hsTarget != playerData->m_LastHSMissileTarget) {
             playerData->m_nFireHSMissilePressedTime = CTimer::GetTimeInMS();
         }
 

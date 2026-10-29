@@ -31,7 +31,7 @@
 | S27 | game_sa/World.cpp | 44 | partial 29/44 (19 M, 10 fixed) -> S27b | World.cpp |
 | S28 | game_sa/Streaming.cpp | 73 | partial 19/73 (15 M, 4 fixed) -> S28b | Streaming.cpp |
 | S29 | game_sa/Entity/Object | 39 | partial 34/39 (24 M, 10 fixed) -> S29b | CutsceneObject.cpp, HandObject.cpp, Object.cpp |
-| S30 | game_sa/Camera.cpp | 35 | pending | Camera.cpp |
+| S30 | game_sa/Camera.cpp | 35 | partial 14/35 (12 M, 2 fixed, 2 partial) -> S30b | Camera.cpp |
 | S31 | game_sa/Cam.cpp | 34 | pending | Cam.cpp |
 | S32 | game_sa/Radar.cpp | 28 | partial 1/28 (1 fixed) -> S32b | Radar.cpp |
 | S33 | game_sa/WaterLevel.cpp | 26 | partial 8/26 (3 M, 5 fixed) -> S33b | WaterLevel.cpp |
@@ -97,7 +97,7 @@
 | S15b | rest of S15 | 20 | partial 14/20 (8 M, 6 fixed) -> S15c | TaskSimpleSwim.cpp, TaskSimpleThrowProjectile.cpp, TaskSimpleTired.cpp, TaskSimpleTurn180.cpp, TaskSimpleUseGun.cpp, TaskSimpleWaitUntilAreaCodesMatch.cpp, TaskSimpleWaitUntilPedIsOutCar.cpp, TaskUtilityLineUpPedWithCar.cpp |
 | S15c | rest of S15b | 6 | partial 2/6 (1 M, 1 fixed) -> S15d | TaskSimpleSwim.cpp, TaskSimpleUseGun.cpp, TaskUtilityLineUpPedWithCar.cpp |
 | S15d | rest of S15c | 4 | partial 3/4 (2 M, 1 fixed) -> S15e | TaskSimpleSwim.cpp, TaskUtilityLineUpPedWithCar.cpp |
-| S15e | rest of S15d | 1 | pending | TaskUtilityLineUpPedWithCar.cpp |
+| S15e | rest of S15d | 1 | done 1/1 (fixed NaN branches; slerp/quat arithmetic tails spot-checked; S15 complete) | TaskUtilityLineUpPedWithCar.cpp |
 | S19b | rest of S19 | 105 | partial 1/105 (Train ProcessControl fixed; portable double cleanup) -> S19c | Trailer.cpp, Train.cpp, Vehicle.cpp |
 | S19c | rest of S19b | 104 | partial 3/104 (2 M, 1 fixed + Train PC NaN fix) -> S19d | Trailer.cpp, Train.cpp, Vehicle.cpp |
 | S19d | rest of S19c | 101 | partial 10/101 (8 M, 2 fixed; CTrain done) -> S19e | Trailer.cpp, Train.cpp, Vehicle.cpp |
@@ -119,3 +119,4 @@
 | S32b | rest of S32 | 27 | partial 5/27 (5 fixed) -> S32c | Radar.cpp |
 | S32c | rest of S32b (+ DrawLegend LOW/HIGH polygons + sprite path) | 23 | partial 13/23 (5 M, 8 fixed) -> S32d | Radar.cpp |
 | S32d | rest of S32c | 8 | done 8/8 (6 M, 2 fixed + CRect recheck 4 fixed; S32 complete) | Radar.cpp |
+| S30b | rest of S30 | 21 | pending | Camera.cpp |

@@ -48,6 +48,8 @@ public:
     // NOTSA funcs:
     auto GetFireParticleNameForStrength() const;
     void DestroyFx();
+    bool HasFx() const { return m_FxSystem != nullptr; }
+    void DestroyFxNow(); // 0x539D32: FxManager_c::DestroyFxSystem (not FxSystem_c::Kill)
 
     auto GetEntityOnFire() const { return m_EntityOnFire; }
     void SetEntityOnFire(CEntity* target);

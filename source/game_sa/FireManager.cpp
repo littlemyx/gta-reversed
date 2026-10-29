@@ -231,7 +231,7 @@ uint32 CFireManager::GetNumFiresInArea(float minX, float minY, float minZ, float
 void CFireManager::DestroyAllFxSystems() {
     for (CFire& fire : m_aFires) {
         if (fire.IsActive()) {
-            fire.DestroyFx();
+            fire.DestroyFxNow(); // 0x539D32: FxManager_c::DestroyFxSystem, not FxSystem_c::Kill
         }
     }
 }
@@ -239,7 +239,7 @@ void CFireManager::DestroyAllFxSystems() {
 // 0x539D50
 void CFireManager::CreateAllFxSystems() {
     for (CFire& fire : m_aFires) {
-        if (fire.IsActive()) {
+        if (fire.IsActive() && !fire.HasFx()) { // 0x539D65: only fires without an fx system get one
             fire.CreateFxSysForStrength(fire.GetPosition(), nullptr);
         }
     }

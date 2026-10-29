@@ -205,6 +205,13 @@ void CFire::SetEntityStartedFire(CEntity* creator) {
     CEntity::SafeRegisterRef(m_EntityStartedFire);
 }
 
+void CFire::DestroyFxNow() {
+    if (m_FxSystem) {
+        g_fxMan.DestroyFxSystem(m_FxSystem);
+        m_FxSystem = nullptr;
+    }
+}
+
 void CFire::DestroyFx() {
     if (m_FxSystem) {
         m_FxSystem->Kill();

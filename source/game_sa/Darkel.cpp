@@ -448,20 +448,20 @@ void CDarkel::RegisterKillByPlayer(const CPed& killedPed, eWeaponType damageWeap
         break;
     }
 
+    // exe 0x43DD09: the order of the stat calls is respect first, then the gang stat
     if (const auto friendly = killedPed.m_nPedType == PED_TYPE_GANG2; killedPed.IsGangster()) {
         if (friendly) {
-            CStats::IncrementStat(STAT_FRIENDLY_GANG_MEMBERS_KILLED);
             CStats::DecrementStat(STAT_RESPECT, 5.0f);
+            CStats::IncrementStat(STAT_FRIENDLY_GANG_MEMBERS_KILLED);
 
-            if (auto player = FindPlayerPed(); &killedPed != player->AsPed()) {
-                if (player->GetPlayerGroup().m_groupMembership.IsMember(&killedPed)) {
-                    CStats::IncrementStat(STAT_RECRUITED_GANG_MEMBERS_KILLED);
-                    CStats::DisplayScriptStatUpdateMessage(STAT_UPDATE_DECREASE, STAT_GANG_STRENGTH, 1.0f);
-                }
+            // exe 0x43DD44: no "killed ped is the player" test here (that one is only in RegisterKillNotByPlayer)
+            if (FindPlayerPed()->GetPlayerGroup().m_groupMembership.IsMember(&killedPed)) {
+                CStats::IncrementStat(STAT_RECRUITED_GANG_MEMBERS_KILLED);
+                CStats::DisplayScriptStatUpdateMessage(STAT_UPDATE_DECREASE, STAT_GANG_STRENGTH, 1.0f);
             }
         } else {
-            CStats::IncrementStat(STAT_ENEMY_GANG_MEMBERS_KILLED);
             CStats::IncrementStat(STAT_RESPECT, 0.75f);
+            CStats::IncrementStat(STAT_ENEMY_GANG_MEMBERS_KILLED);
         }
     }
 
@@ -475,36 +475,18 @@ void CDarkel::RegisterKillByPlayer(const CPed& killedPed, eWeaponType damageWeap
             CStats::IncrementStat(killedPed.IsCop() ? STAT_HIGHEST_POLICE_PEDS_KILLED_ON_RAMPAGE : STAT_HIGHEST_CIVILIAN_PEDS_KILLED_ON_RAMPAGE);
         };
 
-        if (damageWeaponId == WeaponType || (WeaponType == WEAPON_ANYMELEE || WeaponType == WEAPON_ANYWEAPON) && CheckDamagedWeaponType(damageWeaponId, WeaponType)) {
+        // exe 0x43DDAC-0x43DE05: ONE compare chain, the kill is counted at most once (the port ran the equal test and a second switch,
+        // so an explosion kill - WEAPON_EXPLOSION also matches the ANYWEAPON check - counted twice)
+        const bool countKill =
+               ((WeaponType == WEAPON_ANYMELEE || WeaponType == WEAPON_ANYWEAPON) && CheckDamagedWeaponType(damageWeaponId, WeaponType))
+            || damageWeaponId == WeaponType
+            || damageWeaponId == WEAPON_EXPLOSION
+            || (damageWeaponId == WEAPON_UZI_DRIVEBY && WeaponType == WEAPON_MICRO_UZI)
+            || (damageWeaponId == WEAPON_RAMMEDBYCAR && WeaponType == WEAPON_RUNOVERBYCAR)
+            || (damageWeaponId == WEAPON_RUNOVERBYCAR && WeaponType == WEAPON_RAMMEDBYCAR)
+            || (damageWeaponId == WEAPON_FLAMETHROWER && WeaponType == WEAPON_MOLOTOV);
+        if (countKill) {
             CountFrenzyKill();
-        }
-
-        switch (damageWeaponId) {
-        case WEAPON_EXPLOSION:
-            CountFrenzyKill();
-            break;
-        case WEAPON_UZI_DRIVEBY:
-            if (WeaponType == WEAPON_MICRO_UZI) {
-                CountFrenzyKill();
-            }
-            break;
-        case WEAPON_RAMMEDBYCAR:
-            if (WeaponType == WEAPON_RUNOVERBYCAR) { // wrong?
-                CountFrenzyKill();
-            }
-            break;
-        case WEAPON_RUNOVERBYCAR:
-            if (WeaponType == WEAPON_RAMMEDBYCAR) { // wrong?
-                CountFrenzyKill();
-            }
-            break;
-        case WEAPON_FLAMETHROWER:
-            if (WeaponType == WEAPON_MOLOTOV) {
-                CountFrenzyKill();
-            }
-            break;
-        default:
-            break;
         }
     }
 

@@ -1,0 +1,20 @@
+addr	function	verdict	asm range	note	fix commit
+0x4B9FF0	CEventHandler::ComputeKnockOffBikeResponse	MATCH	0x4B9FF0-0x4BA7A2 (all)	damage-event gate, 0.75 move speed, impact dir, rand dir, FALL/alive/dead branches, group leader/passenger sequence, dragged-out event, side-stand bit equal	-
+0x4BCC30	CEventHandler::ComputeDraggedOutCarResponse	DEVIATION	0x4BCC30-0x4BD69B (all)	case ids 700/702 (port 500/502), id 911 missing, kill/drag flags swapped, flee args, default dropped leave-car, bare leave-car vs sequence, coin flip	4f8211352
+0x4BD6A0	CEventHandler::ComputeVehicleCollisionResponse	DEVIATION	0x4BD6A0-0x4BDB6E (all)	speed gate 0.05/0.001 vs squared 0.5, self-subtracting rotation test, standing-on / STILL no-response, fist rule + partial-anim slot	ea377461c
+0x4BDB80	CEventHandler::ComputePedCollisionWithPedResponse	UNSURE	not compared	budget	-
+0x4BE7D0	CEventHandler::ComputePedCollisionWithPlayerResponse	UNSURE	not compared	budget	-
+0x4BF9B0	CEventHandler::ComputePersonalityResponseToDamage	UNSURE	not compared	budget	-
+0x4C0170	CEventHandler::ComputeDamageResponse	UNSURE	not compared	budget (~290 port lines)	-
+0x4C0BD0	CEventHandler::ComputeVehiclePotentialCollisionResponse	UNSURE	not compared	budget	-
+0x4C1590	CEventHandler::ComputePedEnteredVehicleResponse	DEVIATION	0x4C1590-0x4C1903 (all)	rand(300,600) drawn up front, coach flee safe distance global, guards/default leave the response untouched	8e94314eb
+0x4B6610	CEventInWater::~CEventInWater (scalar deleting)	MATCH	0x4B6610-0x4B665A (all)	base dtor 0x4B13C0 then pool free	-
+0x674F90	CEventInteriorUseInfo::~CEventInteriorUseInfo (scalar deleting)	MATCH	0x674F90-0x674FAB (all)	base dtor 0x674ED0 (vtable only) then pool free	-
+0x4AFF60	CEventKnockOffBike::SetPedOutCar	MATCH	0x4AFF60-0x4AFFF0 (all)	door choice driver/bike/passenger0-2 and SetPedOut task flags equal	-
+0x4B0020	CEventKnockOffBike::CalcForcesAndAnims	DEVIATION	0x4B0020-0x4B0670 (all)	direction > 3 returns anim 0xF; NaN-taking slow branch	e2ca03a96
+0x4B4AC0	CEventKnockOffBike::SetPedSafePosition	DEVIATION	0x4B4AC0-0x4B4E7A (all)	SKIDBACKFRONT retry line-of-sight only when collision free (no observable difference)	e69819206
+0x43E290	CEventLeaderEntryExit::~CEventLeaderEntryExit (scalar deleting)	MATCH	0x43E290-0x43E2AB (all)	base CEventAreaCodes dtor 0x43E2B0->0x4B2210 cleans the ped ref	-
+0x609060	CEventNewGangMember::~CEventNewGangMember (scalar deleting)	MATCH	0x609060-0x60907B (all)	base dtor 0x609080 cleans m_member ref	-
+0x4B6030	CEventPedEnteredMyVehicle::~CEventPedEnteredMyVehicle (scalar deleting)	MATCH	0x4B6030-0x4B6075 (all)	base dtor 0x4AEB90 cleans +0x14 then +0x18 refs	-
+0x4B61C0	CEventPedToChase::~CEventPedToChase (scalar deleting)	MATCH	0x4B61C0-0x4B6205 (all)	base dtor 0x4AF1C0 cleans the ped ref	-
+0x4B5EA0	CEventPotentialGetRunOver::~CEventPotentialGetRunOver (scalar deleting)	MATCH	0x4B5EA0-0x4B5EE5 (all)	base dtor 0x4AE270 cleans the vehicle ref	-

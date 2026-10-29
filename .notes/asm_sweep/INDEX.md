@@ -155,7 +155,7 @@
 | S49 | phase2: unlisted non-oracle hooks | 40 | pending | Game.cpp, GameLogic.cpp, GangWars.cpp |
 | S50 | phase2: unlisted non-oracle hooks | 40 | pending | GangWars.cpp, Gangs.cpp, Garage.cpp, Garages.cpp, InformFriendsEventQueue.cpp, InformGroupEvent.cpp ... |
 | S51 | phase2: unlisted non-oracle hooks | 40 | pending | FurnitureManager_c.cpp, FurnitureSubGroup_c.cpp, InterestingEvents.cpp, InteriorGroup_c.cpp, InteriorManager_c.cpp, Interior_c.cpp ... |
-| S52 | phase2: unlisted non-oracle hooks | 40 | pending | PathFind.cpp, PedAttractorManager.cpp, PedClothesDesc.cpp |
+| S52 | phase2: unlisted non-oracle hooks | 40 | done (31 M, 6 fixed, 3 no callers) | PathFind.cpp, PedAttractorManager.cpp, PedClothesDesc.cpp |
 | S53 | phase2: unlisted non-oracle hooks | 40 | pending | PedClothesDesc.cpp, PedDamageResponseCalculator.cpp, PedGeometryAnalyser.cpp, PedGroup.cpp, PedGroupIntelligence.cpp |
 | S54 | phase2: unlisted non-oracle hooks | 40 | pending | PedGroupIntelligence.cpp, PedGroupMembership.cpp, PedGroupPlacer.cpp, PedGroups.cpp, PedIK.cpp, PedList.cpp ... |
 | S55 | phase2: unlisted non-oracle hooks | 40 | pending | PedPlacement.cpp, PedStats.cpp, PedStuckChecker.cpp, PedTaskPair.cpp, PedType.cpp, Pickup.cpp ... |

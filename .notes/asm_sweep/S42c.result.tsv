@@ -1,0 +1,20 @@
+addr	function	verdict	asm range	note	fix commit
+0x64E740	CCarEnterExit::GetPositionToOpenCarDoor	NOT_REACHED	-	not compared (budget)	-
+0x64EF00	CCarEnterExit::IsCarQuickJackPossible	MATCH	0x64EF00-0x64EF62	all paths end in xor al,al (always false)	-
+0x64F110	CCarEnterExit::ComputeTargetDoorToExit	FIXED	0x64F110-0x64F18D	bus/coach anim group (103/104 via handling) returns 8 for any ped; only passenger slots 0..2 are compared (port: ComputeTargetDoorToEnterAsPassenger on a searched index with bIsBus)	89a8e42b7
+0x64F240	CCarEnterExit::IsPlayerToQuitCarEnter	NOT_REACHED	-	not compared (budget)	-
+0x64F540	CCarEnterExit::MakeUndraggedPassengerPedsLeaveCar	MATCH	0x64F540-0x64F5F4	slots 0..maxPassengers-1, skip null/dragged/bStayInCarOnJack, event(ped, veh, ComputeTargetDoorToExit), Add(&ev,false)	-
+0x64F600	CCarEnterExit::MakeUndraggedDriverPedLeaveCar	MATCH	0x64F600-0x64F671	CEventDraggedOutCar(veh, ped, true) on the driver	-
+0x64F680	CCarEnterExit::RemoveCarSitAnim	MATCH	0x64F680-0x64F6D8	flags 0x1000, auto-remove, delta -1000, BlendAnimation(idle, 1000)	-
+0x64F6E0	CCarEnterExit::RemoveGetInAnims	MATCH	0x64F6E0-0x64F710	flags 0x10 partial, auto-remove, delta -1000	-
+0x64F720	CCarEnterExit::AddInCarAnim	NOT_REACHED	-	not compared (budget)	-
+0x64F860	CCarEnterExit::SetAnimOffsetForEnterOrExitVehicle	NOT_REACHED	-	not compared (budget)	-
+0x650130	CCarEnterExit::QuitEnteringCar	NOT_REACHED	-	not compared (budget)	-
+0x650280	CCarEnterExit::SetPedInCarDirect	NOT_REACHED	-	not compared (budget)	-
+0x6504C0	CCarEnterExit::IsRoomForPedToLeaveCar	NOT_REACHED	-	not compared (budget)	-
+0x6509B0	CCarEnterExit::IsClearToDriveAway	FIXED	0x6509B0-0x650A74	probe distance is size.y*0.5 + 1.5 (port: full size.y); LOS flags/arg order MATCH	cd0e64d5c
+0x650BB0	CCarEnterExit::GetNearestCarPassengerDoor	NOT_REACHED	-	not compared (budget)	-
+0x6510D0	CCarEnterExit::IsVehicleStealable	FIXED	0x6510D0-0x651201	health > 600 strict ordered (NaN fails); all other checks and order MATCH	d1f1f3347
+0x651210	CCarEnterExit::IsPathToDoorBlockedByVehicleCollisionModel	FIXED	0x651210-0x65139E	return value inverted in the port (exe: true when a sphere is hit); line end.z and sphere centre z are flattened to line start.z (2D test)	236d3aabf
+0x6528F0	CCarEnterExit::GetNearestCarDoor	NOT_REACHED	-	not compared (budget)	-
+0x41DA30	CCarAI::UpdateCarAI	FIXED	0x41FE13-0x420678 + FORWARDANDBACK 0x41ED1C-0x41EDF7	steering block: exe compares Magnitude() with strict ordered tests (vehicle speed < player speed, > 0.1, dist > 12 WAIT, < 20, dot > 0.8, speed > 0.6, > 0.3, dist < 45, vehicle speed > 0.5); raw-forward y,x dot > 0; the 0.5*|ps2D|*|v2D| < ps.v (v = veh - player) heading test (port: unrelated |ps|*0.5 < dist); missing test (player speed - 0.2) > vehicle speed; both forwards normalised as CVector with z=0; speed multiplier snaps to the target when |diff| < step; gang cruise speed = max(10 - count(dist3D < 10 sqrt), 1); FORWARDANDBACK direction is player - vehicle (port had the opposite sign) in 2D with 0.001 length clamp and 1/len. MATCH: horn rand 0x4203C1, water/land 0x420445	c08957acf

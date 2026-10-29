@@ -3,6 +3,7 @@
 #include "PostEffects.h"
 #include <sstream>
 #include <numbers>
+#include <bit>
 NOTSA_GLOBAL_EXTERN(SIN_LUT, (std::array<float, 256>)); // Maths.cpp (owner); only named by the detached alias below, address mode keeps the StaticRef
 #define TRIANGLE_ARGS_OUT X1, Y1, P1, X2, Y2, P2, X3, Y3, P3
 
@@ -367,7 +368,9 @@ void CWaterLevel::RenderWakeSegment(
     constexpr auto  NUM_PARTS = 4;
     constexpr float ALPHA_MULTS[]{ 0.4f, 1.f, 0.2f, 1.f, 0.4f }; // 0x8D390C
 
-    const auto angle      = (float)(CTimer::GetTimeInMS() % 4096) / (4096.f / (2.f * PI));
+    // 0x6EA260: `(float)(time & 0xFFF) * 0.0015339355f` (exe constant [0x872028] = 2pi / 4096, a multiply, not a division by 4096 / 2pi)
+    static_assert(std::bit_cast<uint32>(0.0015339355f) == 0x3AC90FDBu);
+    const auto angle      = (float)(CTimer::GetTimeInMS() & 0xFFF) * 0.0015339355f;
     const auto windRadius = CWeather::WindClipped * 0.4f + 0.2f;
 
     for (auto partIdx = 0; partIdx < NUM_PARTS; partIdx++) {
@@ -375,27 +378,36 @@ void CWaterLevel::RenderWakeSegment(
 
         RenderBuffer::PushIndices({ 0, 2, 1, 0, 3, 2 }, true);
 
+        // 0x6EA38A..0x6EA43F: t = part * 0.25f; A->B blends `(1 - t) * A + t * B` (from = A), the C/D side runs from D to C (`t * C + (1 - t) * D`)
+        const auto t0 = (float)(partIdx + 0) * 0.25f;
+        const auto t1 = (float)(partIdx + 1) * 0.25f;
         const CVector2D corners[]{
-            lerpBlend(vecB, vecA, (float)(partIdx + 0) / (float)(NUM_PARTS)),
-            lerpBlend(vecB, vecA, (float)(partIdx + 1) / (float)(NUM_PARTS)),
-            lerpBlend(vecC, vecD, (float)(partIdx + 1) / (float)(NUM_PARTS)),
-            lerpBlend(vecC, vecD, (float)(partIdx + 0) / (float)(NUM_PARTS)),
+            lerpBlend(vecA, vecB, t0),
+            lerpBlend(vecA, vecB, t1),
+            lerpBlend(vecD, vecC, t1),
+            lerpBlend(vecD, vecC, t0),
         };
 
+        // 0x6EA445..0x6EA4E1: `pos * 0.25f + [0xC228D4 / 0xC228D8]` (the two globals are never written, 0.0f)
         CVector2D uvs[4]{};
         rng::transform(corners, uvs, [](const CVector2D& pos) -> CVector2D {
-            return { pos.x / (float)(NUM_PARTS), pos.y / (float)(NUM_PARTS) };
+            return { pos.x * 0.25f + WakeTextureOffsetU, pos.y * 0.25f + WakeTextureOffsetV };
         });
-        rng::transform(uvs, uvs, // Isn't it beautiful?
-            [
-                minUV = CVector2D{
-                    std::floor(rng::min(uvs, {}, &CVector2D::x).x),
-                    std::floor(rng::min(uvs, {}, &CVector2D::y).y)
-                }
-            ](auto& uv) {
-                return uv - minUV;
-            }
-        );
+
+        // 0x6EA4E5..0x6EA57B: fcomp / jp chains, i.e. `m = a < b ? a : b; m = c < m ? c : m; m = d < m ? d : m` over (2, 3, 1, 0): NaN picks the right-hand value
+        const auto MinOfFour = [](float a, float b, float c, float d) {
+            auto m = a < b ? a : b;
+            m = c < m ? c : m;
+            m = d < m ? d : m;
+            return m;
+        };
+        const CVector2D minUV{
+            std::floor(MinOfFour(uvs[2].x, uvs[3].x, uvs[1].x, uvs[0].x)),
+            std::floor(MinOfFour(uvs[2].y, uvs[3].y, uvs[1].y, uvs[0].y))
+        };
+        for (auto& uv : uvs) {
+            uv = { uv.x - minUV.x, uv.y - minUV.y };
+        }
 
         const float alphas[]{
             alphaA * ALPHA_MULTS[partIdx + 0],

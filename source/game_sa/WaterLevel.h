@@ -146,6 +146,10 @@ class CWaterLevel {
     static inline NOTSA_GLOBAL(WaterTextureAddressing, 0x8D3930, (uint32), { 1 });     // Default: 1 (rwTEXTUREADDRESSWRAP)
     static inline NOTSA_GLOBAL(DETAILEDSEABEDDIST, 0x8D3934, (float), { 600.0f });          // Default: 600. Sea bed blocks closer than this are drawn using `RenderDetailedSeaBedSegment`
 
+    // Read (and added to the wake segment UVs) by `RenderWakeSegment` (0x6EA445), never written by the exe => 0.0f
+    static inline NOTSA_GLOBAL(WakeTextureOffsetU, 0xC228D4, (float), {});
+    static inline NOTSA_GLOBAL(WakeTextureOffsetV, 0xC228D8, (float), {});
+
     static inline NOTSA_GLOBAL(bRainbowQuads, 0xC228DC, (bool), {});                // Debug leftover? If set each water quad is colored based on it's index
 
     struct WaterFog {

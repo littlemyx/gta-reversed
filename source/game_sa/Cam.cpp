@@ -2673,10 +2673,10 @@ void CCam::Process_AimWeapon(const CVector& target, float orientation, float spe
             bool bCheckLos     = false;
             if (s_LockOnLosTimer > ts) {
                 s_LockOnLosTimer -= ts;
-                bLookAtTarget = !(s_LockOnLosTimer < 0.0f);
+                bLookAtTarget = s_LockOnLosTimer >= 0.0f; // exe 0x5217BC `jne` on C0 = skip (NaN: no look-at)
             } else if (-ts > s_LockOnLosTimer) {
                 s_LockOnLosTimer += ts;
-                bLookAtTarget = !(s_LockOnLosTimer < 0.0f);
+                bLookAtTarget = s_LockOnLosTimer >= 0.0f;
             } else {
                 bCheckLos = true;
             }
@@ -2771,7 +2771,7 @@ void CCam::Process_AimWeapon(const CVector& target, float orientation, float spe
         if (d < (double)step || e < step) {
             m_fHorizontalAngle                                  = wanted;
             CTheScripts::fCameraHeadingStepWhenPlayerIsAttached = 0.0f;
-        } else if (d <= (double)e) {
+        } else if (!(d > (double)e)) { // exe 0x521C2B `jne` (d <= e or unordered) -> subtract
             m_fHorizontalAngle = (float)((x87d)m_fHorizontalAngle - (x87d)step);
         } else {
             m_fHorizontalAngle = (float)((x87d)step + (x87d)m_fHorizontalAngle);
@@ -3110,7 +3110,7 @@ void CCam::Process_AimWeapon(const CVector& target, float orientation, float spe
 
     // Camera position
     double cosTerm;
-    if (m_fVerticalAngle <= 0.0f) {
+    if (!(m_fVerticalAngle > 0.0f)) { // exe 0x52291B `jne` (v <= 0 or unordered)
         cosTerm = x87::cos((double)m_fVerticalAngle);
     } else {
         x87d w = (x87d)settings.angleScale * (x87d)m_fVerticalAngle;

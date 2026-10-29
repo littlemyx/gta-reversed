@@ -1,0 +1,36 @@
+addr	function	verdict	asm range	note	fix commit
+0x516B00	CCamera::GetRoughDistanceToGround	MATCH	0x516B00-0x516B1D (all)	CalculateGroundHeight(0 = ENTITY_BB_BOTTOM), source.z - ground	-
+0x50C100	CCamera::SetRwCamera	NOT_REACHED	-	budget	-
+0x51A450	CCamera::Constructor	NOT_REACHED	-	budget	-
+0x50AFA0	CCamera::CopyCameraMatrixToRWCam	NOT_REACHED	-	budget	-
+0x50B510	CCamera::DealWithMirrorBeforeConstructRenderList	NOT_REACHED	-	budget	-
+0x50C360	CCamera::UpdateTargetEntity	NOT_REACHED	-	budget	-
+0x50CB90	CCamera::SetNearClipBasedOnPedCollision	NOT_REACHED	-	budget	-
+0x515BD0	CCamera::UpdateSoundDistances	NOT_REACHED	-	budget	-
+0x51A6F0	CCamera::ProcessShake	MATCH	0x51A6F0-0x51A735 (all)	unsigned-time fild correction, now<=end gate (NaN skips as the exe jp), (now-start)/(end-start) per op	-
+0x5267C0	CCamera::ProcessObbeCinemaCameraCar	MATCH	0x5267C0-0x52692F (all)	help message counter, IsItTimeForNewCamera gate, step/wrap loop (<=11 tries), failure path idx=11 + table[11], time set unconditionally. UNSURE (shared StepCineyCamSeq): the exe stores a NEGATIVE (dir+idx)%n remainder in the idx global (only uses table[n-1]); the port stores n-1. Reachable only with stick direction -1 (first step from idx -1 gives -2); the exe then reads the table before its start. Not changed (out-of-table read)	-
+0x526950	CCamera::ProcessObbeCinemaCameraTrain	NOT_REACHED	-	budget (same shape as Car/Plane/Boat)	-
+0x526AE0	CCamera::ProcessObbeCinemaCameraHeli	NOT_REACHED	-	budget	-
+0x526C80	CCamera::ProcessObbeCinemaCameraPlane	MATCH	0x526C80-0x526E1F (all)	as Car plus IsActiveCamUnderWater gate (0x50B830), n=6, failure: idx=6, TryToStart(0x1D) only when the active cam mode != 0x12, time set on both paths; same negative-remainder UNSURE note	-
+0x526E20	CCamera::ProcessObbeCinemaCameraBoat	PARTIAL	0x526E20-0x526F46	help/gate/step loop (n=3) agree; failure tail not read	-
+0x50CD30	CCamera::CameraGenericModeSpecialCases	NOT_REACHED	-	budget	-
+0x50CEB0	CCamera::ConsiderPedAsDucking	MATCH	0x50CEB0-0x50CEE9 (all)	GetTaskDuck(true), bIsDucking (+0x46C bit 26), !m_bIsAborting (+0x19)	-
+0x50CEF0	CCamera::ResetDuckingSystem	FIXED	0x50CEF0-0x50CF96 (all)	the exe compares the SQUARED ped speed (x*x+y*y+z*z, no sqrt) with 1e-6; the port compared Magnitude() (threshold 1e-3 speed instead of 1e-6 squared) -> factor 0.3-1.0 vs 0.3-0.5 picked differently for slow ducking peds; aim factor -0.35 ok	b23658e0
+0x50CFA0	CCamera::HandleCameraMotionForDucking	MATCH	0x50CFA0-0x50D08F (all)	target (SquaredMagnitude path), += ts*0.1f*(target-f) unless arg5, z added to source/target	-
+0x50D090	CCamera::HandleCameraMotionForDuckingDuringAim	MATCH	0x50D090-0x50D15F (all)	-0.35 aim target, ts*0.13f gain, +0xC58	-
+0x514860	CCamera::DrawBordersForWideScreen	FIXED	0x514860-0x51494F (all)	raw rect stores in the exe are (-5,-5,W+5,rect[+4]) and (-5,rect[+0xC],W+5,H+5) in memory order; the port literals {-5,-5,W+5,top}/{-5,bottom,W+5,H+5} put the y values swapped (CRect ctor stores a,d,c,b). Rewritten with the {p0,p3,p2,p1} rule. Blur type 0/2 -> alpha 0x50 and raster state OK. Solid fill so the visible result is unchanged; memory now faithful	9187c3e6
+0x514B80	CCamera::CalculateGroundHeight	NOT_REACHED	-	budget	-
+0x514D60	CCamera::CalculateFrustumPlanes	MATCH	0x514D60-0x514F40 (non-mirror branch line by line; mirror branch same shape, not compared)	halfFov = FOV*0.00872639f, cos stored as float, 4 normals (c,-s,0),(-c,-s,0),(0,-as,-ac),(0,-as,ac) with aspect = RsGlobal.maxH/maxW, TransformVectors, offsets dot summed y,z,x	-
+0x5150E0	CCamera::CalculateDerivedValues	MATCH	0x5150E0-0x5151F0 (all)	Invert -> m_mMatInverse, frustum, fwd.x==0&&fwd.y==0 (NaN-false) -> x=0.0001f else atan2(x,y) when oriented, normalised front xy (len==0 -> x=1)	-
+0x516B20	CCamera::ImproveNearClip	NOT_REACHED	-	budget	-
+0x51A560	CCamera::SetCameraUpForMirror	MATCH	0x51A560-0x51A59F (all)	pre-mirror copy, matrix = mirror matrix, CopyToRWCam(1), CalculateDerivedValues(1,0)	-
+0x51A5A0	CCamera::RestoreCameraAfterMirror	MATCH	0x51A5A0-0x51A5CF (all)	SetMatrix(pre-mirror), CopyToRWCam(1), CalculateDerivedValues(0,0)	-
+0x51E560	CCamera::TryToStartNewCamMode	NOT_REACHED	-	budget (large jump-table function)	-
+0x520190	CCamera::CameraColDetAndReact	NOT_REACHED	-	budget	-
+0x527FA0	CCamera::CamControl	NOT_REACHED	-	budget	-
+0x52B730	CCamera::Process	NOT_REACHED	-	budget	-
+0x5B24A0	CCamera::DeleteCutSceneCamDataMemory	NOT_REACHED	-	budget	-
+0x5B24D0	CCamera::LoadPathSplines	NOT_REACHED	-	budget	-
+0x516560	CCamera::ProcessJiggle	NOT_REACHED	-	budget	-
+0x51D770	CCamera::IsItTimeForNewCamera	PARTIAL	0x51D770-0x51D7B6	only the prologue read: camSequence<0 -> true, unsigned-time fild with 2^32 fix, (now-start) > 20000 -> true (strict). Jump table 0x51E4E8 (30 cases) not compared	-
+0x420C40	CCamera::IsSphereVisible-3	MATCH	0x420C40-0x420D3B (all)	RwV3dTransformPoints, y+r<near (CDraw 0xC3EFA0) and y-r>far (0xC3EF9C) reject, 4 plane tests x*n.x+y*n.y / z*n.z+y*n.y > r reject, NaN never rejects	-

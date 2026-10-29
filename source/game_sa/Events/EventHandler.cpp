@@ -3439,8 +3439,8 @@ void CEventHandler::ComputeVehiclePotentialCollisionResponse(CEventPotentialGetR
             if (   std::abs(pedToVehBBCenterFwdDot) < 3.f
                 && std::abs(pedToVehBBCenterFwdDot) > std::abs(vehFwdSpeedPerSec)
                 && plyrPed->GetPlayerData()->m_fMoveBlendRatio < 1.f
-                && g_ikChainMan.IsLooking(plyrPed)
-            ) { // 0x4C0E84
+                && !g_ikChainMan.IsLooking(plyrPed) // 0x4C0E84: `call IsLooking; test al,al; jne exit` (the port had this inverted)
+            ) { // 0x4C0E91
                 plyrPed->AnnoyPlayerPed(false);
                 g_ikChainMan.LookAt(
                     "CompVhclPotCollResp",
@@ -3465,19 +3465,21 @@ void CEventHandler::ComputeVehiclePotentialCollisionResponse(CEventPotentialGetR
                 }
                 return {};
             };
-        } else if (std::abs(pedToVehBBCenterFwdDot) <= std::abs(2.f * vehFwdSpeedPerSec)) { // 0x4C0F3D
-            if (std::abs(vehFwdSpeedSq) <= 0.05f) {
+        } else if (std::abs(pedToVehBBCenterFwdDot) < std::abs(2.f * vehFwdSpeedPerSec)) { // 0x4C0F43: strict (`fcomp; test ah,5; jp` = not-less goes to the horn arm)
+            // 0x4C0F59: the random number is drawn BEFORE the "too slow" test (a slow vehicle still consumes one rand)
+            const auto rndChance = CGeneral::GetRandomNumberInRange(0.f, 1.f);
+            if (!(std::abs(vehFwdSpeedSq) > 0.05f)) { // 0x4C1070: `fcomp; jne` also exits on NaN
                 return {}; // Too slow
             }
-            const auto rndChance = CGeneral::GetRandomNumberInRange(0.f, 1.f);
             const auto [chanceToEvadeBack, chanceForHornNeeded, chanceToEvadeFront, minPedDistToBBCenterX] = [&]() -> std::array<float, 4> {
-                if (std::abs(vehFwdSpeedSq) <= 0.3f) {
+                if (!(std::abs(vehFwdSpeedSq) > 0.3f)) { // 0x4C0F6A: `fcom; jne` => NaN takes the slow set
                     return {0.02f, 0.05f, 0.1f, 0.7f};
                 }
                 return {0.05f, 0.1f, 0.2f, 0.175f};
             }();
             const auto vehBBMaxX = e->m_Vehicle->GetColModel()->GetBoundingBox().m_vecMax.x;
-            if ((e->m_Vehicle->GetPosition() - pedPos).Dot(e->m_Vehicle->GetForward()) > 0.f) { // 0x4C0F6D - Is the vehicle going forwards?
+            // 0x4C0C58: `bl` = ((veh - ped) . PED forward) > 0, i.e. the vehicle is in front of the ped (edx = [ped+0x14], the PED's matrix; the port used the vehicle's forward)
+            if ((e->m_Vehicle->GetPosition() - pedPos).Dot(m_Ped->GetForward()) > 0.f) {
                 if (vehBBMaxX - minPedDistToBBCenterX < std::abs(pedToVehBBCenterRightDot)) { // 
                     if (rndChance >= chanceToEvadeFront * 0.5f) { // Inverted
                         return { new CTaskComplexEvasiveStep{ e->m_Vehicle, dirToAvoidVehicle }, nullptr };
@@ -3519,7 +3521,7 @@ void CEventHandler::ComputeVehiclePotentialCollisionResponse(CEventPotentialGetR
                         };
                     } else {
                         g_ikChainMan.LookAt(
-                            "CompVhclPotCollResp",
+                            "CompVehiclePotCollResp", // 0x85BA9C
                             m_Ped,
                             e->m_Vehicle,
                             1300,

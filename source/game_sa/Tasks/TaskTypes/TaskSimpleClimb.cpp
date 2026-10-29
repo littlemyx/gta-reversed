@@ -121,7 +121,7 @@ bool CTaskSimpleClimb::ProcessPed(CPed* ped) {
         if (bNewHeightForPos) {
             ped->SetPosn(targetPt);
             ped->m_vecMoveSpeed = vecClimbEntSpeed;
-        } else if (delta.SquaredMagnitude() >= 0.1F) {
+        } else if (!(delta.SquaredMagnitude() < 0.1F)) { // exe 0x6811D0: fcomp + `test ah,5; jp` takes the coarse step for >= and for NaN
             ped->bIsStanding = false;
             delta *= 0.25f;
             ped->m_vecMoveSpeed = ExeDivide(delta, CTimer::GetTimeStep()); // 0x4119D0

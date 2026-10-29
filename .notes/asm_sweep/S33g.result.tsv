@@ -1,0 +1,2 @@
+addr	function	verdict	asm range	note	fix commit
+0x6ED9A0	CWaterLevel::RenderBoatWakes (CBoat::RenderWakePoints)	NOT_REACHED	-	budget (S33g not started)	-

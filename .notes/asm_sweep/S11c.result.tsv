@@ -1,0 +1,10 @@
+addr	function	verdict	asm range	note	fix commit
+0x64B950	CTaskSimpleCarSetPedInAsDriver::ProcessPed	MATCH	0x64B950-0x64BDB0 (all)	full read incl. status/engine/bus-render/cop-event; ComputeDoorFlag-free	-
+0x64B5D0	CTaskSimpleCarSetPedInAsPassenger::ProcessPed	MATCH	0x64B5D0-0x64B910 (all)	full read incl. seat kick-out, utility ProcessPed, SetTask	-
+0x64C220	CTaskSimpleCarSetPedSlowDraggedOut::ProcessPed	FIXED	0x64C220-0x64C56B (all)	mission-ped StandStill test must read m_nCreatedBy (port compared m_nPedType); door offset = Multiply3x3 (rounded) then + ped pos (port: TransformPoint, one rounding). Exe also calls CCarEnterExit::ComputeDoorFlag and drops the result (pure, not ported)	73aa3516
+0x680DC0	CTaskSimpleClimb::ProcessPed	NOT_REACHED	-	budget	-
+0x67FD30	CTaskSimpleClimb::ScanToGrab	NOT_REACHED	-	budget	-
+0x67DE10	CTaskSimpleClimb::ScanToGrabSectorList	NOT_REACHED	-	budget	-
+0x67A890	CTaskSimpleClimb::CreateColModel	NOT_REACHED	-	budget	-
+0x67DBE0	CTaskSimpleClimb::StartAnim	NOT_REACHED	-	budget	-
+0x67A5D0	CTaskSimpleClimb::GetCameraStickModifier	FIXED	0x67A5D0-0x67A87A (all)	JUMP_B: measured only while m_FallAfterVault<0, VAULT offsets (0x8D2F30/0xC18F7C) with unrounded sin/cos x 0.5; IDLE: heading of the entity argument (not m_ClimbEntity), threshold constant 1.7707964f [0x8705C0]	469b5274

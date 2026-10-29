@@ -1,0 +1,5 @@
+addr	function	verdict	asm range	note	fix commit
+0x62D3B0	CTaskSimpleGangDriveBy::ProcessPed	FIXED	0x62D3B0-0x62D9C0 (all)	health abort test is !(health >= 1.0f) (fcomp + test ah,5 / jnp: NaN aborts); bare (double) compares respelled float/x87d (exact); jump table 0x62D9C0, all branches and the 0.3/0.2667/0.4333 float windows match	315deda9
+0x627CC0	CTaskSimpleGangDriveBy::FireGun	MATCH	0x627CC0-0x628340 (all)	muzzle transform, 4 bounding-box branches (z,y,x dot order, y,z,x rel order, -0.2/+0.2, 0.1 gate, float s for the Y branches), Fire arg order, DoGunFlash all match	-
+0x627600	CTaskSimpleGangDriveBy::ProcessAIPed	MATCH	0x627600-0x627B2C (all)	jump tables 0x627AE8/0x627B0C decoded, all float constants (0x86DAF0..0x86DB10, 0x858F18/1C) match, NaN arms match	-
+0x628350	CTaskSimpleGangDriveBy::ProcessAimIK	MATCH	0x628350-0x62877A (all)	bUseArm bit, range/target selection, bone Z only, bike tilt (sin/cos/asin x87 chain, clamp arms incl. NaN), anim flip table match	-

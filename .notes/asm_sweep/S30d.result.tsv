@@ -1,0 +1,15 @@
+addr	function	verdict	asm range	note	fix commit
+0x50C100	CCamera::SetRwCamera	NOT_REACHED	-	budget	-
+0x51A450	CCamera::Constructor	NOT_REACHED	-	budget	-
+0x50AFA0	CCamera::CopyCameraMatrixToRWCam	NOT_REACHED	-	budget	-
+0x50B510	CCamera::DealWithMirrorBeforeConstructRenderList	NOT_REACHED	-	budget	-
+0x50C360	CCamera::UpdateTargetEntity	DEVIATION	0x50C360-0x50C7BA	fixed: the exe flag bl starts false and is true only when who-is-in-control==2 (port started true, so with who!=2 the early-out was skipped); ENTER_CAR / CARJACK / OPEN_DOOR cases store raw player->m_pVehicle (port used FindPlayerEntity / FindPlayerVehicle, which need bInVehicle, not yet set while entering)	1a6e0538
+0x514B80	CCamera::CalculateGroundHeight	DEVIATION	0x514B80-0x514D53	rest MATCH (globals, ProcessVerticalLine args, bbox sizes, branch polarity); bottom clamp is if (z < 0) z = 0, not std::max (NaN only)	ca274767
+0x516B20	CCamera::ImproveNearClip	DEVIATION	0x516B20-0x517123	MATCH apart from: jetpack/parachute min(a,b) = a < b ? a : b (exe 0x404330; NaN only) and the plane/heli test reads m_nVehicleSubType (+0x594), not m_nVehicleType (+0x590)	b0ee40b7 1b0fc4f8
+0x51E560	CCamera::TryToStartNewCamMode	NOT_REACHED	-	budget (shared tail 0x51FFAD-0x520101 and heading-rotation case tails still open, as in S30b/S30c)	-
+0x520190	CCamera::CameraColDetAndReact	DEVIATION	0x520190-0x52068C	fixed: the 3 inlined lengths add z,y,x (port used CVector::Magnitude / SquaredMagnitude x,y,z); NaN polarity of dist >= gCurDist and hx >= hy; rest MATCH (lowest-sphere cache, up-vector limit, colvar clamps, bike 0.05, step clamp 0.05, near-clip calls)	18265771
+0x527FA0	CCamera::CamControl	NOT_REACHED	-	garage fixed-cam geometry 0x528351-0x528A64, 0x5291EB-0x529B9A and tail 0x52A700-0x52B72A still open (budget)	-
+0x52B730	CCamera::Process	PARTIAL	0x52BA3B-0x52C340	MATCH, no deviation: jiggle call (timeNow<=end, (now-start)/(end-start)), transition elapsed/targetT clamps, moving-with-start-speed target/source/up/fov (rounding points, z,y,x store order), catching-up target/source/up/fov, KeepAwayFromTarget, StoreValuesDuringInterPol args in both branches, up/front rebuild incl. top-down modes (1 and 0x25), fov = m_fFOVWhenInterPol. OPEN: 0x52C340-0x52C3D9 (speed tracking, KeepTrackOfTheSpeed) and 0x52C3D9-end (non-transition copy, fov tail)	-
+0x5B24A0	CCamera::DeleteCutSceneCamDataMemory	MATCH	0x5B24A0-0x5B24CD	4 entries at +0x960, free + null	-
+0x5B24D0	CCamera::LoadPathSplines	MATCH	0x5B24D0-0x5B25EB	section state machine, sizes 16n+4 / 40n+4, count float at [0], strtok delimiters, atof->float, ; re-arm, more than 3 sections returns	-
+0x516560	CCamera::ProcessJiggle	MATCH	0x516560-0x516ACF	default-init of hand shakers 1-5 (lim/motion/slow/min/max/twitchFreq/twitchVel, addresses decoded as 0xB6ED34 + 0x94*i) all equal; jiggle tail (angle = ang.z*intensity, up = sin,0,cos, cross/normalise sequence, front.x==0 and y==0 -> 0.0001) MATCH	-

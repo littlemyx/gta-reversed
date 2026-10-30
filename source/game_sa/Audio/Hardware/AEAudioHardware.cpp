@@ -142,17 +142,16 @@ bool CAEAudioHardware::Initialise() {
 
         // Wait other threads until scanning is done.
         auto& state = AEUserRadioTrackManager.m_nUserTracksScanState;
-        while (state == USER_TRACK_SCAN_IN_PROGRESS) {
-            switch (state) {
-            case USER_TRACK_SCAN_COMPLETE:
-            case USER_TRACK_SCAN_ERROR:
-                // Set off after ended up complete or failed.
-                state = USER_TRACK_SCAN_OFF;
-                break;
-            default:
+        // 0x4D9B90-0x4D9BAE: the state is read once per pass; COMPLETE/ERROR are reset to OFF (also when the scan had already ended before the first read),
+        //                    the loop only sleeps and goes round again while the read value was IN_PROGRESS. The port's `while (state == IN_PROGRESS)` never reached its switch.
+        for (;;) {
+            const auto scanState = state;
+            if (scanState == USER_TRACK_SCAN_COMPLETE || scanState == USER_TRACK_SCAN_ERROR) {
+                state = USER_TRACK_SCAN_OFF; // Set off after ended up complete or failed.
+            }
+            if (scanState != USER_TRACK_SCAN_IN_PROGRESS) {
                 break;
             }
-
             Sleep(100);
         }
     }

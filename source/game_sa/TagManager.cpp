@@ -224,7 +224,9 @@ void CTagManager::SetupAtomic(RpAtomic& atomic) {
 void CTagManager::RenderTagForPC(RpAtomic& atomic) {
     auto geometry                       = RpAtomicGetGeometry(&atomic);
     auto material                       = RpGeometryGetMaterial(geometry, 1);
-    RpMaterialGetColor(material)->alpha = GetAlpha(atomic);
+    // exe 0x49CE5D-0x49CE7F: alpha = (uint8)v * (uint16)v / 255, both from the atomic's user value `v` (`GetUserValue` called twice, `al` * `ax`), i.e. the tag fades in quadratically (the port used `v` as is)
+    const auto v                        = CVisibilityPlugins::GetUserValue(&atomic);
+    RpMaterialGetColor(material)->alpha = static_cast<uint8>((static_cast<int32>(static_cast<uint8>(v)) * static_cast<int32>(v)) / 255);
     RpAtomicRender(&atomic);
 }
 

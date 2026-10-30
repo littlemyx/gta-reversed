@@ -257,7 +257,7 @@ HRESULT CPad::GetMouseState(DIMOUSESTATE2 *dm) {
     // Try to get the device state
     HRESULT hr = PSGLOBAL(diMouse)->GetDeviceState(sizeof(DIMOUSESTATE2), dm);
     if (SUCCEEDED(hr)) {
-        return 0; // Success
+        return hr; // Success (exe 0x746F60 returns the HRESULT as it is, not 0)
     }
 
     // If failed, try to reacquire the device

@@ -158,7 +158,7 @@ CVector CAEAudioEnvironment::GetPositionRelativeToCamera(const CVector& pt) {
     }
 
     const auto camDist = FindPlayerPed()
-        ? CVector::Dist(camMat.GetPosition(), FindPlayerPed()->GetPosition())
+        ? CVector::Dist(TheCamera.GetPosition(), FindPlayerPed()->GetPosition()) // 0x4D81B4: the camera placeable's position, not m_mCameraMatrix's
         : 0.5f;
     return Calculate(camMat.GetBackward() * std::clamp(camDist - 0.5f, 0.f, 0.5f));
 }

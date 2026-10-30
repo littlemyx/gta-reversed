@@ -137,7 +137,8 @@ void CVisibilityPlugins::Shutdown() {
 // inline
 // 0x732DE0
 inline void CVisibilityPlugins::RenderVehicleCB_ControlRenderMultiPassLOD(RpAtomic* atomic, float vehicleDistanceFromCamera) {
-    if (vehicleDistanceFromCamera >= ms_vehicleLod0RenderMultiPassDist) {
+    // exe (inlined in every hi-detail callback, e.g. 0x73325F): fcomp; test ah,5; jp -> set, i.e. everything but an ordered `dist < multiPassDist`
+    if (!(vehicleDistanceFromCamera < ms_vehicleLod0RenderMultiPassDist)) {
         SetAtomicFlag(atomic, ATOMIC_UNIQUE_MATERIALS);
     } else {
         ClearAtomicFlag(atomic, ATOMIC_UNIQUE_MATERIALS);

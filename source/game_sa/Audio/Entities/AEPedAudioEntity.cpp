@@ -566,6 +566,9 @@ void CAEPedAudioEntity::HandleSkateEvent(eAudioEvents event, float volume, float
     if (m_pPed->bIsInTheAir) {
         return;
     }
+    // 0x4E1808..0x4E1839: (default + volume) + rand(-3, 3); the random value is drawn before the bank is checked
+    volume = GetDefaultVolume(event) + volume;
+    volume = (float)CAEAudioUtility::GetRandomNumberInRange(-3, 3) + volume;
     if (!AEAudioHardware.EnsureSoundBankIsLoaded(SND_BANK_FEET_GENERIC, SND_BANK_SLOT_FOOTSTEPS_GENERIC)) {
         return;
     }
@@ -574,8 +577,9 @@ void CAEPedAudioEntity::HandleSkateEvent(eAudioEvents event, float volume, float
         .SoundID            = (eSoundID)(event == AE_PED_SKATE_LEFT ? 7 : 8),
         .AudioEntity        = this,
         .Pos                = m_pPed->GetPosition(),
-        .Volume             = GetDefaultVolume(event) + (float)(CAEAudioUtility::GetRandomNumberInRange(-3, 3)) + volume,
+        .Volume             = volume,
         .Speed              = speed,
+        .FrequencyVariance  = 0.0588f, // 0x3D70D845
         .RegisterWithEntity = m_pPed,
     });
 }

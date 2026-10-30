@@ -48,17 +48,17 @@ void CLines::RenderLineWithClipping(float startX, float startY, float startZ, fl
     const float deltaZ = (float)((x87d)endZ - (x87d)startZ);
 
     for (int32 i = 0; i < numVerts; i++) {
-        const double t[2] = { (x87d)i / (x87d)numVerts, (x87d)(i + 1) / (x87d)numVerts };
+        const x87d t[2] = { (x87d)i / (x87d)numVerts, (x87d)(i + 1) / (x87d)numVerts };
         for (int32 k = 0; k < 2; k++) {
             auto& vert = TempBufferVertices.m_3d[i * 2 + k];
 
-            const auto Channel = [&](int32 c) { return (uint32)(uint8)notsa::detail::Ftol(X87R((double)delta[c] * t[k]) + (x87d)sb[c]); };
+            const auto Channel = [&](int32 c) { return (uint32)(uint8)notsa::detail::Ftol(X87R((x87d)delta[c] * t[k]) + (x87d)sb[c]); };
             const uint32 c0 = Channel(0), c3 = Channel(3), c2 = Channel(2), c1 = Channel(1); // Same order as in the original
             vert.color = c0 << 24 | c3 << 16 | c2 << 8 | c1;
 
-            RwCompatVertexPos(vert).x = (float)(X87R((double)deltaX * t[k]) + (x87d)startX);
-            RwCompatVertexPos(vert).y = (float)(X87R((double)deltaY * t[k]) + (x87d)startY);
-            RwCompatVertexPos(vert).z = (float)(X87R((double)deltaZ * t[k]) + (x87d)startZ);
+            RwCompatVertexPos(vert).x = (float)(X87R((x87d)deltaX * t[k]) + (x87d)startX);
+            RwCompatVertexPos(vert).y = (float)(X87R((x87d)deltaY * t[k]) + (x87d)startY);
+            RwCompatVertexPos(vert).z = (float)(X87R((x87d)deltaZ * t[k]) + (x87d)startZ);
         }
     }
 

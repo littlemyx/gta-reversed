@@ -449,7 +449,9 @@ void CShopping::LoadPrices(const char* sectionName) {
         FindSection(file, sectionName);
     }
 
-    for (auto line = CFileLoader::LoadLine(file); line; line = CFileLoader::LoadLine(file), ms_numPrices++) {
+    // exe 0x49B973-0x49BB61: ms_numPrices is incremented only after a whole entry; comment / empty lines (shopping.dat has '#' lines inside the sections)
+    // must not use up a slot (`continue` in the for-increment form ran the `ms_numPrices++` too)
+    for (auto line = CFileLoader::LoadLine(file); line; line = CFileLoader::LoadLine(file)) {
         if (*line == '\0' || *line == '#')
             continue;
 
@@ -463,7 +465,11 @@ void CShopping::LoadPrices(const char* sectionName) {
         priceInfo.key = GetKey(model, ms_priceSectionLoaded);
 
         const auto nameTag = strtok_s(nullptr, " \t,", &lastToken);
-        strncpy_s(priceInfo.nameTag, nameTag, 8u);
+        { // exe 0x49B9E2: plain strncpy(nameTag, tag, 8): zero padded, no terminator for an 8-char tag (strncpy_s rejects those)
+            const size_t len = strnlen(nameTag, sizeof(priceInfo.nameTag));
+            memcpy(priceInfo.nameTag, nameTag, len);
+            memset(priceInfo.nameTag + len, 0, sizeof(priceInfo.nameTag) - len);
+        }
 
         switch (ms_priceSectionLoaded) {
         case PRICE_SECTION_CLOTHES:
@@ -497,6 +503,7 @@ void CShopping::LoadPrices(const char* sectionName) {
                 break;
             }
         }
+        ms_numPrices++;
     }
     CFileMgr::CloseFile(file);
 

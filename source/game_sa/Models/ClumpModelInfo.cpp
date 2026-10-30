@@ -124,7 +124,7 @@ RwObject* CClumpModelInfo::CreateInstance(RwMatrix* matrix)
 // 0x4C5200
 void CClumpModelInfo::SetAnimFile(const char* filename)
 {
-    if (!strcmp(filename, "null"))
+    if (!_stricmp(filename, "null")) // exe 0x4C5200 calls the CRT _stricmp (0x8229B6): "NULL" / "Null" are skipped too
         return;
 
     const auto size = strlen(filename) + 1;

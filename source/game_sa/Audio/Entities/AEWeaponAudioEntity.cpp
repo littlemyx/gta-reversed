@@ -398,7 +398,7 @@ void CAEWeaponAudioEntity::PlayGunSounds(
             .Volume             = volume,
             .RollOffFactor      = rollOffFactor,
             .Speed              = speed,
-            .Doppler            = 0.f,
+            .Doppler            = 1.f, // every Initialise call of 0x503CE0 pushes 0x3F800000 as the doppler factor
             .FrameDelay         = 0,
             .Flags              = flags,
             .RegisterWithEntity = (flags & SOUND_LIFESPAN_TIED_TO_PHYSICAL_ENTITY) ? entity : nullptr,
@@ -411,7 +411,7 @@ void CAEWeaponAudioEntity::PlayGunSounds(
             dryFireSfxID,
             entity->GetPosition(),
             baseVolume,
-            baseRollOffFactor * (2.f / 3.f),
+            baseRollOffFactor * 0.66f, // 0x85BA50 is the float 0.66, not 2/3
             baseSpeed,
             SOUND_LIFESPAN_TIED_TO_PHYSICAL_ENTITY | SOUND_REQUEST_UPDATES
         );
@@ -427,24 +427,37 @@ void CAEWeaponAudioEntity::PlayGunSounds(
         );
     }
 
-    // 0x503F21
+    // 0x503F21: `entityVolume` is the exe's second copy ([esp+0x44]) of the volume - the main sounds at the entity position use it, the tail sound and the dry / sub sounds use
+    // the unmodified `baseVolume` ([esp+0x54])
     float frontEndVolume = -100.f;
+    float entityVolume   = baseVolume;
     if (!notsa::contains({ AE_WEAPON_FIRE_PLANE, AE_WEAPON_FIRE_MINIGUN_PLANE }, audioEvent)) {
-        const auto dist = CAEAudioEnvironment::GetPositionRelativeToCamera(entity).Magnitude() / (baseRollOffFactor * 1.25f);
-        if (dist < (5.f / baseRollOffFactor)) { // Inverted
-            baseVolume    -= 3.f;
-            frontEndVolume = baseVolume + CAEAudioEnvironment::GetDistanceAttenuation(dist);
-        } else if (dist < (12.f / baseRollOffFactor)) {
-            const auto t   = ((12.f / baseRollOffFactor) - dist) / ((12.f / baseRollOffFactor) - (5.f / baseRollOffFactor)); // exe 0x503FE9..0x503FFC: fsubr/fsub/fdivrp
-            frontEndVolume = baseVolume + CAEAudioEnvironment::GetDistanceAttenuation(dist) + std::log10f(t * (SQRT_2 / 2.f)) * 20.f;
-            baseVolume    += std::log10f(((1.f - t) * std::bit_cast<float>(0x3E95F6FEu) /* 0x862E14, one ulp above the literal 0.2929f */) + (SQRT_2 / 2.f)) * 20.f;
+        // 0x503F3E: sqrt((z*z + y*y) + x*x) / (rolloff * 1.25); the thresholds are 5 * (1 / rolloff) and 12 * (1 / rolloff) (NOT 5 / rolloff)
+        const auto rel      = CAEAudioEnvironment::GetPositionRelativeToCamera(entity);
+        const auto dist     = (float)std::sqrt(((x87d)rel.z * rel.z + (x87d)rel.y * rel.y) + (x87d)rel.x * rel.x) / (baseRollOffFactor * 1.25f);
+        const auto invRoll  = 1.f / baseRollOffFactor;
+        const auto nearDist = 5.f * invRoll;
+        constexpr auto Exe0_7071 = 0.7071f; // 0x85A784 (SQRT_2 / 2 of common.h is 0.707105)
+        if (dist <= nearDist) { // 0x503F8F: `test ah, 0x41; jp` - equal counts as near as well
+            entityVolume   = baseVolume - 3.f;
+            frontEndVolume = CAEAudioEnvironment::GetDistanceAttenuation(dist) + entityVolume;
+        } else {
+            const auto farDist = 12.f * invRoll;
+            if (dist < farDist) { // 0x503FD0
+                const auto t     = (farDist - dist) / (farDist - nearDist); // exe 0x503FE9..0x503FFC: fsubr/fsub/fdivrp
+                const auto atten = CAEAudioEnvironment::GetDistanceAttenuation(dist);
+                // raw fyl2x: the unrounded log10 is multiplied by 20 (no float spill in between); the sums are (atten + 20 log) + volume
+                frontEndVolume = (float)(((x87d)atten + X87R(std::log10(X87W((x87d)t * (x87d)Exe0_7071)) * (x87d)20.0)) + (x87d)baseVolume);
+                entityVolume   = (float)(X87R(std::log10(X87W(((x87d)1.0f - t) * (x87d)std::bit_cast<float>(0x3E95F6FEu) /* 0x862E14, one ulp above the literal 0.2929f */ + (x87d)Exe0_7071)) * (x87d)20.0) + (x87d)baseVolume);
+            }
         }
     }
 
-    const auto PlayMainSound = [
-        &,
-        mainSoundSpeed = (CAEAudioUtility::GetRandomNumberInRange(-0.02f, 0.02f) + 1.f) * baseSpeed
-    ](int16 sfxID, bool isRight) {
+    // 0x504068: one random draw, even when no main sound is played
+    const auto mainSoundSpeed = (CAEAudioUtility::GetRandomNumberInRange(-0.02f, 0.02f) + 1.f) * baseSpeed;
+
+    // The exe plays the front-end sounds of both channels first (0x5040A4 left, 0x504103 right) and then the entity-position ones (0x50417A left, 0x504212 right)
+    const auto PlayMainFrontEnd = [&](int16 sfxID, bool isRight) {
         PlaySound(
             sfxID,
             CVector{isRight ? 1.f : -1.f, 0.f, 0.f},
@@ -453,25 +466,35 @@ void CAEWeaponAudioEntity::PlayGunSounds(
             mainSoundSpeed,
             SOUND_FORCED_FRONT | SOUND_REQUEST_UPDATES | SOUND_FRONT_END
         );
+    };
+    const auto PlayMainEntity = [&](int16 sfxID) {
         PlaySound(
             sfxID,
             entity->GetPosition(),
-            baseVolume,
+            entityVolume,
             baseRollOffFactor * 1.25f,
             mainSoundSpeed,
             SOUND_LIFESPAN_TIED_TO_PHYSICAL_ENTITY | SOUND_REQUEST_UPDATES
         );
     };
-    if (mainLeftSfxID != -1) { // 0x5040DC + 0x5041DF
-        PlayMainSound(mainLeftSfxID, false);
+    if (mainLeftSfxID != -1) { // 0x5040A4
+        PlayMainFrontEnd(mainLeftSfxID, false);
     }
-    if (mainRightSfxID != -1) { // 0x504153 + 0x504218
-        PlayMainSound(mainRightSfxID, true);
+    if (mainRightSfxID != -1) { // 0x504103
+        PlayMainFrontEnd(mainRightSfxID, true);
+    }
+    if (mainLeftSfxID != -1) { // 0x50417A
+        PlayMainEntity(mainLeftSfxID);
+    }
+    if (mainRightSfxID != -1) { // 0x504212
+        PlayMainEntity(mainRightSfxID);
     }
 
     if (tailSfxID != -1 && !notsa::contains({AE_WEAPON_FIRE_PLANE, AE_WEAPON_FIRE_MINIGUN_PLANE}, audioEvent)) {
         const auto tailSoundRollOff    = baseRollOffFactor * 3.5f;
-        const auto tailSoundVolume     = CAEAudioEnvironment::GetDistanceAttenuation(CAEAudioEnvironment::GetPositionRelativeToCamera(entity).Magnitude() / tailSoundRollOff) + baseVolume - 20.f;
+        // 0x504343: attenuation + (UNMODIFIED volume - 20), and never above 0
+        const auto tailVolumeRaw       = CAEAudioEnvironment::GetDistanceAttenuation(CAEAudioEnvironment::GetPositionRelativeToCamera(entity).Magnitude() / tailSoundRollOff) + (baseVolume - 20.f);
+        const auto tailSoundVolume     = tailVolumeRaw < 0.f ? tailVolumeRaw : 0.f;
         const auto tailSoundAudioEvent = audioEvent == AE_WEAPON_FIRE_MINIGUN_AMMO
             ? AE_FRONTEND_PICKUP_MONEY
             : AE_FRONTEND_SELECT;

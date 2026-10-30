@@ -490,7 +490,7 @@ void CAESoundManager::CancelSoundsOwnedByAudioEntity(CAEAudioEntity* audioEntity
 
 // 0x4EF630, unused
 int16 CAESoundManager::GetVirtualChannelForPhysicalChannel(int16 physicalChannel) const {
-    const auto chIdx = physicalChannel - m_AudioHardwareHandle;
+    const auto chIdx = (int16)(physicalChannel - m_AudioHardwareHandle); // 16-bit `sub ax` + `js` (0x4EF635)
     if (chIdx < 0 || chIdx >= m_NumAllocatedPhysicalChannels) {
         return -1;
     }

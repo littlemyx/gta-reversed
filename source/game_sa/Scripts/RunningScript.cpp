@@ -374,6 +374,11 @@ bool IsPointInAngledArea2D(float px, float py, float x1, float y1, float x2, flo
 int32 GetHighlightId(const CRunningScript* s) {
     return static_cast<int32>(NOTSA_PTR_ID32(s) + NOTSA_PTR_ID32(s->m_IP));
 }
+
+//! The exe's range test around a centre (x87 fcomp + fnstsw + test ah: a NaN operand FAILS the test, `!(c - r > p || c + r < p)` would pass it)
+inline bool IsInCentreRange(float c, float r, float p) {
+    return c - r <= p && r + c >= p;
+}
 } // namespace
 
 // 0x470150
@@ -482,11 +487,7 @@ void CRunningScript::LocateCarCommand(int32 commandId) {
     bool result = false;
     if (!notStopped) {
         const auto& pos = veh->GetPosition();
-        if (!(x - rx > pos.x || x + rx < pos.x || y - ry > pos.y || y + ry < pos.y)) {
-            if (!is3D || !(z - rz > pos.z || z + rz < pos.z)) {
-                result = true;
-            }
-        }
+        result = IsInCentreRange(x, rx, pos.x) && IsInCentreRange(y, ry, pos.y) && (!is3D || IsInCentreRange(z, rz, pos.z));
     }
     UpdateCompareFlag(result);
 

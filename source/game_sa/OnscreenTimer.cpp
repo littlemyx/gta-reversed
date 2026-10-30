@@ -44,7 +44,7 @@ void COnscreenTimer::AddClock(uint32 varId, char* gxt, eTimerDirection nTimerDir
     m_Clock.m_nVarId = varId;
     m_Clock.m_nTimerDirection = nTimerDirection;
     if (gxt)
-        strncpy_s(m_Clock.m_szDescriptionTextKey, gxt, sizeof(m_Clock.m_szDescriptionTextKey));
+        strncpy(m_Clock.m_szDescriptionTextKey, gxt, sizeof(m_Clock.m_szDescriptionTextKey)); // exe 0x44CD82: strncpy(..., 10), a full length key is not terminated
     else
         m_Clock.m_szDescriptionTextKey[0] = '\0';
 }
@@ -85,7 +85,7 @@ void COnscreenTimer::AddCounter(uint32 varId, eOnscreenCounter type, char* gxt, 
 
     counter->m_nVarId = varId;
     if (gxt)
-        strncpy_s(counter->m_szDescriptionTextKey, gxt, sizeof(counter->m_szDescriptionTextKey));
+        strncpy(counter->m_szDescriptionTextKey, gxt, sizeof(counter->m_szDescriptionTextKey)); // exe strncpy(..., 10)
     else
         counter->m_szDescriptionTextKey[0] = '\0';
 
@@ -105,7 +105,7 @@ void COnscreenTimer::AddCounterCounter(uint32 varId, uint32 maxValue, char* gxt,
     counter->m_nVarId = varId;
     counter->m_nMaxVarValue = maxValue;
     if (gxt)
-        strncpy_s(counter->m_szDescriptionTextKey, gxt, sizeof(counter->m_szDescriptionTextKey));
+        strncpy(counter->m_szDescriptionTextKey, gxt, sizeof(counter->m_szDescriptionTextKey)); // exe strncpy(..., 10)
     else
         counter->m_szDescriptionTextKey[0] = '\0';
 

@@ -278,4 +278,4 @@
 | S101b | rest of S101 | 3 | pending | StencilShadows.cpp |
 | S84d | rest of S84c | 3 | done (3 fixed) | AEVehicleAudioEntity.cpp |
 | S102d | rest of S102c | 3 | done (2 fixed; RenderBottomFromHeight -> S104b) | Clouds.cpp |
-| S104b | rest of S104 + RenderBottomFromHeight | 25 | pending | GrassRenderer.cpp, PlantMgr.cpp, PlantSurfPropMgr.cpp, ProcSurfaceInfo.cpp, SurfaceInfos_c.cpp |
+| S104b | rest of S104 + RenderBottomFromHeight | 25 | done (14 M, 11 fixed; regress left to gate) | GrassRenderer.cpp, PlantMgr.cpp, PlantSurfPropMgr.cpp, ProcSurfaceInfo.cpp, SurfaceInfos_c.cpp |

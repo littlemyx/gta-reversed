@@ -2266,14 +2266,13 @@ int32 CCollision::ProcessColModels(const CMatrix& transformA, CColModel& cmA,
 
         // 0x419AB6
         // Process all of A's boxes against B's b.sphere
-        static uint32 collBoxA[MAX_BOXES];
+        // NOTE: unlike B's boxes (0x418ADC, `cmp edi, 0x40`) the exe has NO limit here (0x419B5A..0x419B6A): with more than 64 hits it overruns its 64 entry list
+        //       (into the triangle list). The list is sized for any box count (int16) instead of reproducing that overrun.
+        static uint32 collBoxA[0x8000];
         uint32        numCollBoxA{};
         for (auto triIdx = 0; triIdx < cdA.m_nNumBoxes; triIdx++) {
             if (TestSphereBox(colBSphereInASpace, cdA.m_pBoxes[triIdx])) {
                 collBoxA[numCollBoxA++] = triIdx;
-                if (numCollBoxA >= MAX_BOXES) {
-                    break;
-                }
             }
         }
 

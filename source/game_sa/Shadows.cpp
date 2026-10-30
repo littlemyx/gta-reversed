@@ -1925,9 +1925,9 @@ void CShadows::StoreShadowForVehicle(CVehicle* vehicle, VEH_SHD_TYPE vehShadowTy
     const auto  speed   = std::sqrt((vel.x * vel.x + vel.y * vel.y) + vel.z * vel.z);
     const auto  halfWid = widX * 0.5f;
     const auto  halfLen = lenY * 0.5f;
-    const auto  flipSide = mat.GetUp().z <= 0.0f;
+    const auto  flipSide = !(mat.GetUp().z > 0.0f); // exe `test ah, 0x41`: a NaN flips too
 
-    if (speed * CTimer::GetTimeStep() <= 0.1f && !isDynamic) { // Vehicle is standing still => use a static shadow
+    if (!(speed * CTimer::GetTimeStep() > 0.1f) && !isDynamic) { // Vehicle is standing still => use a static shadow
         // BUG: Ignores `zDistance` (always uses 4.5)
         StoreStaticShadow(
             (uint32)(uintptr_t)vehicle + 1, // The ID is the address of the vehicle + 1
@@ -1984,18 +1984,21 @@ void CShadows::StoreCarLightShadow(CVehicle* vehicle, int32 id, RwTexture* textu
         const auto shdwToCam2D       = CVector2D{ TheCamera.GetPosition() - posn };
         const auto shdwToCamDist2DSq = shdwToCam2D.SquaredMagnitude();
 
-        if (shdwToCamDist2DSq >= sq(MAX_CAM_TO_LIGHT_DIST)) {
+        // exe `fcomp` + `test ah, 5` / `jnp`: a NaN distance returns too
+        if (!(shdwToCamDist2DSq < sq(MAX_CAM_TO_LIGHT_DIST))) {
             return;
         }
 
         // Check if the camera is facing the lights closely (in which case the camera can't see the shadow)
-        if (shdwToCam2D.Dot(TheCamera.GetFrontNormal2D()) > maxViewAngleCosine) {
+        // The exe computes the dot of (posn - cam) and returns for `dot <= -cosine` (0x70C5BF, `fcompp` + `jp`), this is the same test with the vector flipped; NaN returns
+        if (!(shdwToCam2D.Dot(TheCamera.GetFrontNormal2D()) < maxViewAngleCosine)) {
             return;
         }
 
         // If far enough from the camera, start fading out
-        if (const auto dist = std::sqrt(shdwToCamDist2DSq); dist >= MAX_CAM_TO_LIGHT_DIST * 0.75f) {
-            const auto t = 1.f - invLerp(MAX_CAM_TO_LIGHT_DIST * (2.f / 3.f), MAX_CAM_TO_LIGHT_DIST, dist);
+        if (const auto dist = std::sqrt(shdwToCamDist2DSq); !(dist < MAX_CAM_TO_LIGHT_DIST * 0.75f)) {
+            // The exe multiplies by the float constant 1/9 (0x872740) instead of dividing by 27 - 18
+            const auto t = 1.f - (dist - MAX_CAM_TO_LIGHT_DIST * (2.f / 3.f)) * (1.f / 9.f);
             red   = NOTSA_FTOL(uint8, (float)red * t);
             green = NOTSA_FTOL(uint8, (float)green * t);
             blue  = NOTSA_FTOL(uint8, (float)blue * t);

@@ -133,7 +133,7 @@ void CWeather::AddRain() {
         const auto rnd  = CGeneral::GetRandomNumber();
         const auto rads = (rnd & 1)
             ? (float)(CGeneral::GetRandomNumber() & 0xFF) * 0.02453125f
-            : (float)((int32)(rnd & 0xFF) - 128) * 0.00625f + TheCamera.m_fOrientation;
+            : (float)((rnd & 0xFF) - 128) * 0.00625f + TheCamera.m_fOrientation;
 
         // 0x72AC11: sin / cos stay unrounded until the multiply by the radius, then `+ camera`
         const auto&  camPos = TheCamera.GetPosition();

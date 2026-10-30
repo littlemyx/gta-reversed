@@ -121,11 +121,21 @@ long CAEWaveDecoder::GetStreamPlayTimeMs() {
 
 // 0x5033c0
 void CAEWaveDecoder::SetCursor(unsigned long pos) {
+#ifdef FIX_BUGS
     if (m_bInitialized) {
         // The calculation is exactly in this order!
-        uint32 posByte = pos * sampleRate / 1000 * blockAlign;
+        uint32 posByte = (uint32)((uint64)pos * sampleRate / 1000 * blockAlign); // (the 32 bit product wrapped for positions beyond ~97 s at 44.1 kHz)
         m_dataStream->Seek(static_cast<long>(posByte + dataPosition), SEEK_SET);
     }
+#else
+    if (m_bInitialized) {
+        // 0x5033C0: (pos * 0.001f) * (sampleRate * 4) + 44.0 in x87 arithmetic (the old integer version `pos * sampleRate / 1000 * blockAlign` wrapped for pos > ~97 s),
+        // truncated, then rounded up to an even offset (eax + eax % 2); the stream is seeked from its start (whence 0)
+        const auto ToFp = [](uint32 v) { x87d f = (x87d)(int32)v; if ((int32)v < 0) f += 4294967296.0f; return f; };
+        const int32 byteOfs = NOTSA_FTOL(int32, X87R(X87R(ToFp((uint32)pos) * ExeRecip(1000.0f)) * ToFp(sampleRate << 2)) + (x87d)44.0);
+        _dataStreamCopy->Seek((long)(byteOfs + byteOfs % 2), SEEK_SET);
+    }
+#endif
 }
 
 // 0x503300

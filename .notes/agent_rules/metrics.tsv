@@ -462,3 +462,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S101	v6	asm sweep	480367	174	48	realtime shadow ped values passed swapped (orientation/offset wrong), stored shadows rect posn..posn+span vs +-span + water pass rewritten, pole shadow id, sector strict rects; 20 M
 2026-10-30	ASM-S84c	v6	asm sweep	277655	111	24	RC car speed/volume tables swapped + junk 5th point + silent reverse, seaplane rotor target dropped, jet bank check order + stall swap >, golf cart table end 1.0001; 5 M
 2026-10-30	GPULOCK-PRIO	v6	tooling	92543	20	3	gpu.prio reservation: orch_gate reserves, other waiters yield; dead/6h-old ignored; USER-PLAY unaffected
+2026-10-30	ASM-S105	v6	asm sweep	0	0	0	renderer distance sum orders, scan list stale distance slot, ScanWorld far points via exe reciprocal, StreamingInfo::Init flags; render list/LOD decisions MATCH; 29 M

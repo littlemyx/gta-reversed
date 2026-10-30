@@ -1,0 +1,13 @@
+addr	file	line	cls	fn	oc	tier
+0x552C00	source/game_sa/Core/QuadTreeNode.h	59	CQuadTreeNode<T>	InitPool	U	B
+0x5525A0	source/game_sa/Core/QuadTreeNode.h	60	CQuadTreeNode<T>	FindSector	U	B
+0x552640	source/game_sa/Core/QuadTreeNode.h	61	CQuadTreeNode<T>	FindSector	U	B
+0x5526A0	source/game_sa/Core/QuadTreeNode.h	62	CQuadTreeNode<T>	InSector	U	B
+0x552A40	source/game_sa/Core/QuadTreeNode.h	63	CQuadTreeNode<T>	DeleteItem	U	B
+0x552A90	source/game_sa/Core/QuadTreeNode.h	64	CQuadTreeNode<T>	DeleteItem	U	B
+0x552CD0	source/game_sa/Core/QuadTreeNode.h	65	CQuadTreeNode<T>	AddItem	U	B
+0x552870	source/game_sa/Core/QuadTreeNode.h	66	CQuadTreeNode<T>	GetAll	U	B
+0x5528C0	source/game_sa/Core/QuadTreeNode.h	67	CQuadTreeNode<T>	GetAllMatching	U	B
+0x552930	source/game_sa/Core/QuadTreeNode.h	68	CQuadTreeNode<T>	GetAllMatching	U	B
+0x552980	source/game_sa/Core/QuadTreeNode.h	69	CQuadTreeNode<T>	ForAllMatching	U	B
+0x5529F0	source/game_sa/Core/QuadTreeNode.h	70	CQuadTreeNode<T>	ForAllMatching	U	B

@@ -1,0 +1,40 @@
+addr	function	verdict	asm range	note	fix commit
+0x5531E0	CRenderer::RenderFadingInEntities	MATCH	0x5531E0-0x553213 (all)	fog/vertex alpha/cull-back states, DeActivateDirectional, SetAmbientColours, RenderFadingEntities	-
+0x553220	CRenderer::RenderFadingInUnderwaterEntities	MATCH	0x553220-0x55322A (all)	-	-
+0x553260	CRenderer::RenderOneNonRoad	MATCH	0x553260-0x553363 (all)	ped driving skip, vehicle setup / alpha atomics, vision FX lights, cull states (flag bits 13 and 27 checked)	-
+0x553A10	CRenderer::RenderRoads	MATCH	0x553A10-0x553A9E (all)	road test = model flag byte+0x13 bit 0	-
+0x553AA0	CRenderer::RenderEverythingBarRoads	FIXED	0x553AA0-0x553CF7 (all)	boat / underwater / sorted-list choice (cam mode 14/16, look direction 3/0), zShift -100 LOD pass MATCH; the alpha-list distance sums z,y,x (sorted) / z,x,y (underwater), the port used Magnitude x,y,z	17bb9a67f
+0x553D00	CRenderer::RenderFirstPersonVehicle	MATCH	0x553D00-0x553DBA (all)	micro uzi (28) alpha ref 80, render state order	-
+0x554230	CRenderer::SetupEntityVisibility	FIXED	0x554230-0x55464E (all)	tunnel tests, first-person vehicle block (dir 3 / rhino 432 / coach 437 / tunnel+big vehicle / dir!=0 / no1fpsLookBehind bit 14 / boat models 453 454 430 460), time-info model swap, dont-stream path, area test MATCH; camera distance was Magnitude x,y,z, the exe sums z,y,x inline	ad61ab6b1
+0x553F60	CRenderer::SetupMapEntityVisibility	FIXED	0x553F60-0x554229 (all)	every compare, constant (300/150/50/20/15 fade 1/15+10, lowLodDistScale on big buildings) and return value MATCH; NaN arms of the two min()s and of the fade / streaming range tests (jp / jnp after fcom) taken like the exe	8527a9848
+0x554650	CRenderer::SetupBigBuildingVisibility	FIXED	0x554650-0x55483E (all)	area, time info, vehicle (type 6) path, lod children rendered counter (signed byte), LOD list push MATCH; camera distance z,y,x inline sum	39288b602
+0x554840	CRenderer::ScanSectorList	FIXED	0x554840-0x554AFE (all)	sector centre (sector-60)*50+25, 10000 squared radius / 0.36 angle test, jump table 0x554B00 (invisible / visible / culled / streamme), glass objects, streaming request logic (loaded / occluded / loading priority / numModelsRequested), invisible-entity list (30 / 200 limits, 149 cap) MATCH; the entity distance slot lives for the whole call (stale value on the paths that do not write it)	90cf4a506
+0x554B10	CRenderer::ScanBigBuildingList	FIXED	0x554B10-0x554C52 (all)	bounds, 80000 / 0.7 (<=) thresholds, +0.01 distance, offscreen clear MATCH; same one-slot distance as ScanSectorList	90cf4a506
+0x5556E0	CRenderer::ConstructRenderList	FIXED	0x5556E0-0x5558EC (all)	tunnel flags (0x880 / 0x80 / 0x800), in-the-sky test (50 / 10), LOD scale (80..250, 2.2), list resets, camera heading, far clip MATCH; ratio clamp keeps NaN	9eab55ee6
+0x554FE0	CRenderer::ScanWorld	FIXED	0x554FE0-0x555676 (all)	frustum points, scan code, sector (0.02, +60) and LOD sector (0.005, +15) conversions MATCH; far points are (p*300)*float(1/far) (the port divided), near copies *0.2f (not /5, unused by the scan), the unused camera-still flag (|d|^2<16 z,x,y; dot>0.98) was Dot(distance, forward)	9950ff787
+0x554C60	CRenderer::GetObjectsInFrustum	MATCH	0x554C60-0x554EA9 (all)	frustum swap on at.z>0, far clip 300, list function by transform matrix, count	-
+0x555960	CRenderer::RequestObjectsInFrustum	FIXED	0x555960-0x555CA6 (all)	camera = matrix pos, far clip 300, flags store, sector conversion MATCH; far points via ExeDivide, NaN at.z takes the at.z>0 arm	b2944c767
+0x555CB0	CRenderer::RequestObjectsInDirection	MATCH	0x555CB0-0x555DAF (all)	rotate 90 about x, angle*57.2957763671875+180 about z, translate; exe always passes flags 0x20 (all 3 callers pass STREAMING_LOADING_SCENE)	-
+0x72CAE0	CWorldScan::ScanWorld	NOT_REACHED	0x72CAE0-0x72CCFF (dedupe, lowest-y pick only)	duplicate removal and lowest-y start MATCH; gift wrapping and the scan-conversion loop (reviewed in f22f575ff) not re-compared	-
+0x72D5E0	CWorldScan::SetExtraRectangleToScan	MATCH	0x72D5E0-0x72D6A7 (all)	floor/ceil via 0x8219F0/0x823820 + _ftol, count re-read per cell, Y array at 0xC81598 / X at 0xC815A8	-
+0x407460	CStreamingInfo::Init	FIXED	0x407460-0x40747C (all)	the flags byte (+6) is not written by the exe	df8d51a0d
+0x407480	CStreamingInfo::AddToList	MATCH	0x407480-0x4074DA (all)	index = (ptr-base)/20; this.next=after.next, this.prev=after, after.next=this, base[this.next].prev=this	-
+0x407570	CStreamingInfo::GetCdPosn	MATCH	0x407570-0x407585 (all)	offset + handle of ms_files[img] (port packs offset / fileID bit-fields; same value for offsets < 2^24)	-
+0x4075E0	CStreamingInfo::SetCdPosnAndSize	MATCH	0x4075E0-0x4075EE (all)	-	-
+0x4075A0	CStreamingInfo::GetCdPosnAndSize	MATCH	0x4075A0-0x4075D0 (all)	size != 0	-
+0x407560	CStreamingInfo::InList	MATCH	0x407560-0x407569 (all)	exe: next != -1; the port tests next >= 0 || prev >= 0 (inline site 0x407F93): equal on consistent lists (tail points at a sentinel)	-
+0x4074E0	CStreamingInfo::RemoveFromList	MATCH	0x4074E0-0x407516 (all)	-	-
+0x731850	CTxdStore::FindTxdSlot	MATCH	0x731850-0x7318DA (all)	descending from lastSlotFound then ascending, cache only updated on a hit	-
+0x731930	CTxdStore::StartLoadTxd	MATCH	0x731930-0x731983 (all)	port guards the null slot (exe would fault)	-
+0x731990	CTxdStore::Create	MATCH	0x731990-0x7319BF (all)	-	-
+0x731A30	CTxdStore::RemoveRef	MATCH	0x731A30-0x731A68 (all)	--refs <= 0 (int16) -> RemoveModel(20000+index)	-
+0x731C80	CTxdStore::AddTxdSlot	MATCH	0x731C80-0x731CCB (all)	dict 0, refs 0, parent -1, uppercase key hash	-
+0x731CD0	CTxdStore::RemoveTxdSlot	MATCH	0x731CD0-0x731D46 (all)	destroy dictionary, free the pool slot	-
+0x731DD0	CTxdStore::LoadTxd(stream)	MATCH	0x731DD0-0x731E2C (all)	-	-
+0x7320B0	CTxdStore::LoadTxd(filename)	MATCH	0x7320B0-0x73210C (all)	retry-open loop	-
+0x731E40	CTxdStore::FinishLoadTxd	MATCH	0x731E40-0x731E8A (all)	-	-
+0x731E90	CTxdStore::RemoveTxd	MATCH	0x731E90-0x731F16 (all)	release textures with refs > 1, destroy, release parent ref	-
+0x731F20	CTxdStore::Initialise	MATCH	0x731F20-0x731FFC (all)	pool 5000 "TexDictionary", 4 default slots "*", find / read callbacks	-
+0x732000	CTxdStore::Shutdown	MATCH	0x732000-0x732057 (all)	pool destructor; the global pointer is not cleared	-
+0x732060	CTxdStore::GameShutdown	MATCH	0x732060-0x7320A6 (all)	slots with 0 refs removed, 5000 entries	-
+0x731680	CTxdStore::RemoveIfRefCountIsGreaterThanOne	MATCH	0x731680-0x73169D (all)	-	-

@@ -830,7 +830,8 @@ bool CIplStore::Save() {
 bool CIplStore::Load() {
     const auto num = CGenericGameStorage::LoadDataFromWorkBuffer<int32>();
     assert(num == ms_pPool->GetSize());
-    for (auto i = 1; i < num; i++) { // skips 1st
+    (void)num;
+    for (auto i = 1; i < (int32)TOTAL_IPL_MODEL_IDS; i++) { // skips 1st; exe 0x5D54BA/0x5D551A: fixed 255 iterations (edi = 0x34 .. 0x33CC), not the count read from the file
         const auto ipl = ms_pPool->GetAt(i);
 
         auto requestIpl = CGenericGameStorage::LoadDataFromWorkBuffer<bool>();

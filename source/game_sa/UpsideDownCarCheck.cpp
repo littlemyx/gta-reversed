@@ -47,9 +47,7 @@ void CUpsideDownCarCheck::UpdateTimers() {
     ZoneScoped;
 
     for (auto& car : m_aUpsideDownCars) {
-        if (!car.m_nHandle)
-            continue;
-
+        // exe 0x465610: no test of the handle for 0, every slot is looked up (a free slot has handle -1)
         if (const auto vehicle = CPools::GetVehicle(car.m_nHandle)) {
             if (IsCarUpsideDown(vehicle)) {
                 car.m_nTime += NOTSA_FTOL(uint32, CTimer::GetTimeStepInMS());
@@ -57,7 +55,8 @@ void CUpsideDownCarCheck::UpdateTimers() {
                 car.m_nTime = 0;
             }
         } else {
-            car.m_nHandle = 0;
+            car.m_nHandle = -1; // exe 0x465662: the slot is freed with -1 (the port stored 0, which AddCarToCheck never treats as free)
+            car.m_nTime   = 0;  // 0x465669
         }
     }
 }

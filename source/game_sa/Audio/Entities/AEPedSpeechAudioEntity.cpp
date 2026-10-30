@@ -1483,9 +1483,7 @@ void CAEPedSpeechAudioEntity::I_UpdateParameters(CAESound* sound, int16 playTime
         m_Sound           = nullptr;
         m_SoundID         = -1;
         m_BankID          = SND_BANK_UNK;
-        m_IsForcedAudible = false;
         m_IsPlayingSpeech = false;
-        m_PedSpeechSlotID = -1;
 
         if constexpr (!IsPedless) {
             if (m_PedAudioType == PED_TYPE_PLAYER) {
@@ -1503,7 +1501,14 @@ void CAEPedSpeechAudioEntity::I_UpdateParameters(CAESound* sound, int16 playTime
                     speech->Status = CAEPedSpeechSlot::eStatus::RESERVED;
                 }
             }
+        }
 
+        // exe 0x4E3635: the slot id is only cleared AFTER the conversation check above (which compares it with the conversation slots;
+        // the port cleared it first, so a conversation slot was never kept reserved after a line)
+        m_PedSpeechSlotID = -1;
+        m_IsForcedAudible = false;
+
+        if constexpr (!IsPedless) {
             if (auto* const tFacial = notsa::cast<CTaskComplexFacial>(m_Entity->AsPed()->GetTaskManager().GetTaskSecondary(TASK_SECONDARY_FACIAL_COMPLEX))) {
                 tFacial->StopAll();
             }
@@ -1511,8 +1516,11 @@ void CAEPedSpeechAudioEntity::I_UpdateParameters(CAESound* sound, int16 playTime
     } else { // Update sound
         speech->Status = CAEPedSpeechSlot::eStatus::PLAYING;
         if constexpr (IsPedless) {
-            if (!m_IsFrontend || sound->m_Event == AE_SPEECH_PED) {
-                sound->SetPosition(m_Entity->GetPosition());
+            // exe 0x4E4DA4: only while not front-end AND the sound is a regular speech event; follows the attached entity (`m_Entity` is null here)
+            if (!m_IsFrontend && sound->m_Event == AE_SPEECH_PED) {
+                if (CEntity* const attached = static_cast<CAEPedlessSpeechAudioEntity*>(this)->m_AttachedTo) {
+                    sound->SetPosition(attached->GetPosition());
+                }
             }
         } else {
             if (ped->bIsTalking && ped->m_nBodypartToRemove == PED_NODE_HEAD) {

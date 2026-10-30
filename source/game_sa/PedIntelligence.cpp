@@ -997,7 +997,9 @@ CTask* CPedIntelligence::GetActivePrimaryTask() const {
 
 // 0x4ABEA0
 float CPedIntelligence::GetPedFOVRange() const {
-    return std::max(m_fHearingRange, m_fSeeingRange);
+    // exe 0x4ABEA0-0x4ABEC0: fcomp + test ah,0x41 => returns the hearing range only when it is strictly greater,
+    // otherwise (equal / NaN) the seeing range; std::max returns the first operand there
+    return m_fHearingRange > m_fSeeingRange ? m_fHearingRange : m_fSeeingRange;
 }
 
 // 0x421050

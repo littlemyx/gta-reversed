@@ -1477,10 +1477,10 @@ void CFileLoader::LoadGarage(const char* line) {
 void CFileLoader::LoadLevel(const char* levelFileName) {
     ZoneScoped;
 
-    auto txd = RwTexDictionaryGetCurrent();
-    if (!txd) {
-        txd = RwTexDictionaryCreate();
-        RwTexDictionarySetCurrent(txd);
+    auto currTxd = RwTexDictionaryGetCurrent();
+    if (!currTxd) {
+        currTxd = RwTexDictionaryCreate();
+        RwTexDictionarySetCurrent(currTxd);
     }
 
     bool hasLoadedAnyIPLs{};
@@ -1522,8 +1522,9 @@ void CFileLoader::LoadLevel(const char* levelFileName) {
 
             LoadingScreenLoadingFile(path);
 
+            // exe 0x5B9110-0x5B9118: the textures move into the CURRENT dictionary (ebp), then the loaded one is destroyed
             const auto txd = LoadTexDictionary(path);
-            RwTexDictionaryForAllTextures(txd, AddTextureCB, txd);
+            RwTexDictionaryForAllTextures(txd, AddTextureCB, currTxd);
             RwTexDictionaryDestroy(txd);
         } else if (LineBeginsWith("IPL")) {
             ZoneScopedN("IPL");
@@ -1590,7 +1591,10 @@ void CFileLoader::LoadLevel(const char* levelFileName) {
                     const auto path = ExtractPathFor(v.id);
                     ZoneText(path, strlen(path));
 
-                    LoadingScreenLoadingFile(path);
+                    // exe 0x5B915B: the IMG branch has no loading-screen call (no "Loading %s" text, no NewChunkLoaded)
+                    if (v.id != "IMG") {
+                        LoadingScreenLoadingFile(path);
+                    }
                     v.fn(path);
 
                     break;
@@ -1600,7 +1604,7 @@ void CFileLoader::LoadLevel(const char* levelFileName) {
     }
     CFileMgr::CloseFile(f);
 
-    RwTexDictionarySetCurrent(txd);
+    RwTexDictionarySetCurrent(currTxd);
 
     if (hasLoadedAnyIPLs) {
         CIplStore::LoadAllRemainingIpls();

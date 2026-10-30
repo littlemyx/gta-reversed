@@ -87,7 +87,7 @@ void CAEFireAudioEntity::PlayWaterSounds(eAudioEvents audioId, CVector& posn) {
          .Doppler           = 0.6f,
          .FrameDelay        = 0,
          .Flags             = SOUND_REQUEST_UPDATES,
-         .FrequencyVariance = 0.06f,
+         .FrequencyVariance = std::bit_cast<float>(0x3D75C290u), // 0x4DD316 / 0x4DD378: the exe stores 0x3D75C290, 0.06f is 0x3D75C28F
          .PlayTime          = 0,
          .EventID           = AE_FRONTEND_HIGHLIGHT,
     });
@@ -102,7 +102,7 @@ void CAEFireAudioEntity::PlayWaterSounds(eAudioEvents audioId, CVector& posn) {
         .Doppler           = 0.6f,
         .FrameDelay        = 0,
         .Flags             = SOUND_REQUEST_UPDATES,
-        .FrequencyVariance = 0.06f,
+        .FrequencyVariance = std::bit_cast<float>(0x3D75C290u), // 0x4DD316 / 0x4DD378: the exe stores 0x3D75C290, 0.06f is 0x3D75C28F
         .PlayTime          = 0,
         .EventID           = AE_FRONTEND_ERROR,
     });

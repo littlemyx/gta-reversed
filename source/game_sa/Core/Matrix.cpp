@@ -1400,9 +1400,12 @@ CMatrix& Invert(CMatrix& in, CMatrix& out)
     return out;
 }
 
+// 0x59BDD0: calls 0x59B920 (above: float store after every step, not the extended precision `Inverted()`) and returns a copy
 CMatrix Invert(const CMatrix& in)
 {
-    return in.Inverted();
+    CMatrix out;
+    Invert(const_cast<CMatrix&>(in), out); // does not modify `in`
+    return out;
 }
 
 CMatrix Lerp(CMatrix from, CMatrix to, float t) {

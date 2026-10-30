@@ -4,9 +4,9 @@ Base 5f3ff606a (origin/reverse/interior_c). Result table: `.notes/asm_sweep/S75.
 
 | row | verdict | commit |
 |---|---|---|
-| tHandlingData::InitFromData / cHandlingDataMgr::LoadHandlingData (0x5BD830-0x5BE47D) | FIXED | c06741525 |
-| IKChainManager_c::CanAccept (0x618800-0x6188A4) | FIXED (NaN arms only) | ce73c4138 |
-| CShotInfo::AddShot (0x739C30-0x739DDE) | FIXED (_ftol of destroy time) | 5da3d8c14 |
+| tHandlingData::InitFromData / cHandlingDataMgr::LoadHandlingData (0x5BD830-0x5BE47D) | FIXED | 5d886f843 |
+| IKChainManager_c::CanAccept (0x618800-0x6188A4) | FIXED (NaN arms only) | 1f62184f5 |
+| CShotInfo::AddShot (0x739C30-0x739DDE) | FIXED (_ftol of destroy time) | 3374a0fd9 |
 | CProjectileInfo::AddProjectile + the 5 small ProjectileInfo rows | MATCH | - |
 | IKChainManager Update / CanAcceptLookAt / PointArm, CAutoPilot ModifySpeed / RemoveOnePathNode, CBulletInfo, CDamageManager::ProgressEngineDamage, ConvertBikeDataToWorldUnits, FindExactWord | MATCH | - |
 

@@ -19,16 +19,16 @@ addr	function	verdict	asm range	note	fix commit
 0x7399B0	CProjectileInfo::RemoveAllProjectiles	MATCH	0x7399B0-0x739A3D	active=0, instant fx destroy, blip clear, CWorld::Remove, virtual delete	
 0x737B80	CProjectileInfo::RemoveFXSystem	MATCH	0x737B80-0x737BB5	DestroyFxSystem vs Kill by flag, pointer cleared	
 0x6186D0	IKChainManager_c::Update	MATCH	0x6186D0-0x61874B	4 slots, scan code advance, parent ped UpdateRpHAnim once per scan code, chain update	
-0x618800	IKChainManager_c::CanAccept	FIXED	0x618800-0x6188A4	the two FCOMP arms accept on NaN (port rejected); sniper test moved first like the exe	ce73c4138
+0x618800	IKChainManager_c::CanAccept	FIXED	0x618800-0x6188A4	the two FCOMP arms accept on NaN (port rejected); sniper test moved first like the exe	1f62184f5
 0x6188B0	IKChainManager_c::CanAcceptLookAt	MATCH	0x6188B0-0x61896D	range 20, bDontAcceptIKLookAts aborts an existing look-at, bEverythingUsed, anim ids 299-302	
 0x618B60	IKChainManager_c::PointArm	MATCH	0x618B60-0x618CE6	CanAccept, create manager task, update or add point-arm task at slot arm+1	
 0x739C20	CShotInfo::Shutdown	MATCH	0x739C20	ret	
-0x739C30	CShotInfo::AddShot	FIXED	0x739C30-0x739DDE	100 slots, stores, spread (!=0 incl NaN), z not scaled by spread, rand%20, speed, normalise agree; destroy time: exe truncates (time+lifespan) via _ftol, port kept float(time)+lifespan	5da3d8c14
+0x739C30	CShotInfo::AddShot	FIXED	0x739C30-0x739DDE	100 slots, stores, spread (!=0 incl NaN), z not scaled by spread, rand%20, speed, normalise agree; destroy time: exe truncates (time+lifespan) via _ftol, port kept float(time)+lifespan	3374a0fd9
 0x7204E0	CSkidmarks::Init	NOT_REACHED		budget	
 0x720570	CSkidmarks::Shutdown	NOT_REACHED		budget	
 0x720640	CSkidmarks::Render	NOT_REACHED		budget	
 0x720EC0	CSkidmarks::RegisterOne	NOT_REACHED		budget	
-0x5BD830	cHandlingDataMgr::LoadHandlingData	FIXED	0x5BD830-0x5BE47D	token tables decoded for all 4 branches (vehicle 0..35, bike, flying, boat): store offsets/order agree with the port formats; vehicle engine acceleration = atof * double 0.4 with one rounding (port float*0.4f: 6 of 35 distinct file values 1 ulp off)	c06741525
+0x5BD830	cHandlingDataMgr::LoadHandlingData	FIXED	0x5BD830-0x5BE47D	token tables decoded for all 4 branches (vehicle 0..35, bike, flying, boat): store offsets/order agree with the port formats; vehicle engine acceleration = atof * double 0.4 with one rounding (port float*0.4f: 6 of 35 distinct file values 1 ulp off)	5d886f843
 0x6F5240	cHandlingDataMgr::ConvertBikeDataToWorldUnits	MATCH	0x6F5240-0x6F5285	asin*57.29578 for +0x14/+0x2c/+0x30, plain multiply for +0x18	
 0x6F4F30	cHandlingDataMgr::FindExactWord	MATCH	0x6F4F30-0x6F4F92	prefix compare agrees; not found: exe returns entryCount (210), port logs and returns -1 (invalid data only, left)	
 0x6D0590	cTransmission::DisplayGearRatios	NOT_REACHED		debug text	

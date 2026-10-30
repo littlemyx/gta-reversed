@@ -61,11 +61,16 @@ void CTheCarGenerators::Load() {
     CGenericGameStorage::LoadDataFromWorkBuffer(NumOfCarGenerators);
     CGenericGameStorage::LoadDataFromWorkBuffer(ProcessCounter);
     CGenericGameStorage::LoadDataFromWorkBuffer(GenerateEvenIfPlayerIsCloseCounter);
-    for (uint32 i = 0; i < NumOfCarGenerators; i++) {
-        auto carGenIndex = CGenericGameStorage::LoadDataFromWorkBuffer<uint16>();
-        if (carGenIndex < NUM_CAR_GENERATORS) {
-            CGenericGameStorage::LoadDataFromWorkBuffer(CarGeneratorArray[carGenIndex]);
-        }
+    // exe 0x5D39E6-0x5D3A2C: signed `count <= 0` skips the loop, the counter is a 16 bit register compared (signed, after movzx) with the count that is re-read every iteration
+    if ((int32)NumOfCarGenerators > 0) {
+        uint16 i = 0;
+        do {
+            auto carGenIndex = CGenericGameStorage::LoadDataFromWorkBuffer<uint16>();
+            if (carGenIndex < NUM_CAR_GENERATORS) {
+                CGenericGameStorage::LoadDataFromWorkBuffer(CarGeneratorArray[carGenIndex]);
+            }
+            i++;
+        } while ((int32)i < (int32)NumOfCarGenerators);
     }
 
     CGenericGameStorage::LoadDataFromWorkBuffer(m_SpecialPlateHandler.m_nCount);

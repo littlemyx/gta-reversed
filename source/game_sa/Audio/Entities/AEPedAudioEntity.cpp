@@ -450,23 +450,21 @@ void CAEPedAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) {
     case AE_PED_SWIM_WAKE: {
         const auto volume = GetDefaultVolume(AE_PED_SWIM_WAKE);
 
-        if (CTimer::GetTimeInMS() <= m_LastSwimWakeTriggerTimeMs + 100) {
-            if (sound->m_Volume >= volume) {
+        if (CTimer::GetTimeInMS() <= m_LastSwimWakeTriggerTimeMs + 100) { // 0x4E130C: fade in by 0.6 dB per call, up to the default volume
+            if (!(sound->m_Volume < volume)) { // `fcom; test ah,5; jp` (NaN returns)
                 return;
             }
-
-            if (sound->m_Volume + 0.6f >= volume) {
-                sound->m_Volume = volume;
-                return;
-            }
-        } else {
-            auto vol = volume - 20.0f;
-            if (sound->m_Volume <= vol) {
+            const float up = sound->m_Volume + 0.6f;
+            sound->m_Volume = up < volume ? up : volume; // 0x4E1320..0x4E12EC
+        } else { // 0x4E12B9: fade out by 0.6 dB per call, stop 20 dB below the default volume
+            const float lo = volume - 20.0f;
+            if (!(sound->m_Volume > lo)) { // `fcom; test ah,0x41; jne` (NaN stops)
                 sound->StopSoundAndForget();
                 m_LastSwimWakeTriggerTimeMs = 0;
                 return;
             }
-            sound->m_Volume = std::max(sound->m_Volume - 0.6f, vol);
+            const float down = sound->m_Volume - 0.6f;
+            sound->m_Volume = down > lo ? down : lo; // 0x4E12DB
         }
 
         return;

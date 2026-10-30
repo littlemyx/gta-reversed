@@ -1232,11 +1232,12 @@ void CClouds::VolumetricClouds_Create(CVector* posn) {
 
     const auto rand1To5 = GetRandomNumberInRange(1.f, 5.f);
 
-    const auto AddVolumetricCloud = [
+    // 0x715F40: the exe draws alpha, size x/y/z and only THEN the position (3 rands) - the port drew the position first
+    const auto SetupCloud = [
         randMinSizeXYZ = rand1To5 * 20.f,
         randMaxSizeXY  = rand1To5 * 100.f,
         randMaxSizeZ   = rand1To5 * 40.f
-    ](int32 vcidx, CVector pos) {
+    ](int32 vcidx) {
         ms_vc.bUsed[vcidx]        = true;
         ms_vc.bJustCreated[vcidx] = true;
         ms_vc.alpha[vcidx]        = GetRandomNumberInRange<int32>(36, 128);
@@ -1246,35 +1247,35 @@ void CClouds::VolumetricClouds_Create(CVector* posn) {
             GetRandomNumberInRange(randMinSizeXYZ, randMaxSizeXY),
             GetRandomNumberInRange(randMinSizeXYZ, randMaxSizeZ),
         };
-
-        ms_vc.pos[vcidx] = pos;
     };
 
     if (posn) {
-        const auto randMinMaxOffsetXYZ = rand1To5 * 3.f;
+        // 0x715F40: the offset is an INTEGER range [-N, N) with N = ftol(rand1To5 * 3) (`rand & 0xFFFF` * 2^-15 * (2N) truncated, plus -N);
+        // each cloud is placed relative to the previous one, the caller's vector is not written back (the exe keeps a local copy)
+        const int32 maxOffset = NOTSA_FTOL(int32, rand1To5 * 3.f);
+        CVector     prevPos   = *posn;
         for (auto i = 0; i < 5; i++) {
             const auto vcidx = VolumetricClouds_GetFirstFreeSlot();
             if (vcidx == -1) {
                 return;
             }
-            const auto pos = *posn = *posn + CVector::Random(-randMinMaxOffsetXYZ, randMinMaxOffsetXYZ);
-            AddVolumetricCloud(
-                vcidx,
-                pos
-            );
+            SetupCloud(vcidx);
+            const int32 offX = GetRandomNumberInRange<int32>(-maxOffset, maxOffset);
+            const int32 offY = GetRandomNumberInRange<int32>(-maxOffset, maxOffset);
+            const int32 offZ = GetRandomNumberInRange<int32>(-maxOffset, maxOffset);
+            prevPos = CVector{ (float)offX + prevPos.x, (float)offY + prevPos.y, (float)offZ + prevPos.z };
+            ms_vc.pos[vcidx] = prevPos;
         }
     } else {
         const auto camPos  = TheCamera.GetPosition();
         const auto maxDist = m_fVolumetricCloudMaxDistance;
         for (auto i = 0; i < MAX_VOLUMETRIC_CLOUDS; i++) {
-            AddVolumetricCloud(
-                i,
-                camPos + CVector{
-                    GetRandomNumberInRange(-maxDist, maxDist),
-                    GetRandomNumberInRange(-maxDist, maxDist),
-                    GetRandomNumberInRange(-maxDist * 0.25f, maxDist * 0.25f),
-                }
-            );
+            SetupCloud(i);
+            ms_vc.pos[i] = camPos + CVector{
+                GetRandomNumberInRange(-maxDist, maxDist),
+                GetRandomNumberInRange(-maxDist, maxDist),
+                GetRandomNumberInRange(-maxDist * 0.25f, maxDist * 0.25f),
+            };
         }
     }
 }

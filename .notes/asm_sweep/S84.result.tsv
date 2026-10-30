@@ -1,0 +1,37 @@
+addr	fn	verdict	commit	note
+0x4F8B00	ProcessVehicleRoadNoise	FIXED	d24873a60	default models also cancel with 0 contact wheels; speed NaN cancels; silence threshold 8e-5 (was 8e-4); association/sum order
+0x4F8DF0	ProcessReverseGear	FIXED	8ef2947b3	NaN gas pedal keeps type 20
+0x4F92C0	ProcessRainOnVehicle	FIXED	5d66bdac3	NaN rain volume returns
+0x4FA7C0	ProcessDummyRCPlane	FIXED	4f9d142ef	rotor freq step 0x862D04 (0x3BAEC33C) instead of 1/187.5f; rest MATCH
+0x4FAA80	ProcessDummyRCHeli	FIXED	508f50f80	FrqSpeedFactor 0x3E4CCCCC, base added last, rotor speed *0x862D1C (107b67afe), step 0x862D04
+0x4FAE20	ProcessEngineDamage	FIXED	6769424be	fucked-engine sfx is VEHICLE_GEN sound 2 (BROKEN_ENGINE), port played 28
+0x4FB070	ProcessNitro	MATCH		sounds, steps, gating compared
+0x4FB260	ProcessMovingParts	FIXED	c474fb458	no time step (GenericFrameRate), CEMENT smoothing, NaN delta
+0x4FCA10	ProcessDummyStateTransition	NOT_REACHED		
+0x4FD290	ProcessPlayerProp	NOT_REACHED		step constant fixed via shared call (4f9d142ef); body not compared
+0x4FD8F0	ProcessDummyProp	NOT_REACHED		step constant fixed via shared call (4f9d142ef); body not compared
+0x4FDFD0	ProcessAIProp	FIXED	4f9d142ef	rotor freq step constant only (rest not compared)
+0x4FE420	ProcessPlayerHeli	FIXED	107b67afe	rotor speed *0x862D1C instead of /0.22f (body not otherwise compared)
+0x4FEE20	ProcessAIHeli	FIXED	107b67afe	rotor speed *0x862D1C instead of /0.22f (body not otherwise compared)
+0x4FE940	ProcessDummyHeli	FIXED	107b67afe	rotor speed *0x862D1C instead of /0.22f (body not otherwise compared)
+0x4FF320	ProcessPlayerSeaPlane	NOT_REACHED		
+0x4FF7C0	ProcessDummySeaPlane	NOT_REACHED		
+0x501650	ProcessPlayerJet	NOT_REACHED		
+0x501960	ProcessDummyJet	NOT_REACHED		
+0x4FF900	ProcessGenericJet	NOT_REACHED		
+0x4F9710	PlayBicycleSound	NOT_REACHED		
+0x4FFDC0	ProcessDummyBicycle	NOT_REACHED		
+0x500040	ProcessPlayerBicycle	NOT_REACHED		
+0x500CE0	ProcessPlayerCombine	NOT_REACHED		
+0x500DC0	ProcessDummyRCCar	NOT_REACHED		
+0x500F50	ProcessDummyHovercraft	MATCH	4f9d142ef	constants all match; step constant switched to the shared exe constant
+0x501270	ProcessDummyGolfCart	NOT_REACHED		
+0x501480	ProcessDummyVehicleEngine	NOT_REACHED		
+0x501AB0	ProcessSpecialVehicle	NOT_REACHED		
+0x4FBB10	ProcessPlayerVehicleEngine	NOT_REACHED		
+0x501E10	ProcessVehicle	NOT_REACHED		
+0x502280	Service	FIXED	a335faa15	call order: JustWrecked before flag store, JustGotIn/Out before radio on/off
+0x4F6420	AddAudioEvent	NOT_REACHED		
+0x4F7580	AddAudioEvent	MATCH		AddAudioEvent(CPhysical*): banks, event, volume, rolloff 0.85, flags 0x84 compared
+0x728A90	Constructor	MATCH		Constructor
+0x5030D0	Service	MATCH		Service: gating, 4 sounds, volumes/speeds compared

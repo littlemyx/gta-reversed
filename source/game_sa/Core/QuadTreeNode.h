@@ -156,18 +156,18 @@ public:
             if (center.x > rect.right) {
                 return 2;
             }
-            if (center.x >= rect.left) {
+            if (!(center.x < rect.left)) { // exe: left <= cx or unordered -> -1
                 return -1;
             }
             return 3;
         }
-        if (center.y >= rect.bottom) {
+        if (!(center.y < rect.bottom)) { // exe: bottom <= cy or unordered -> -1
             return -1;
         }
         if (center.x > rect.right) {
             return 0;
         }
-        if (center.x >= rect.left) {
+        if (!(center.x < rect.left)) {
             return -1;
         }
 
@@ -185,12 +185,12 @@ public:
         // This stuff for sure can be simplified, but my attempts break the logic
         const bool bLeftHalf = center.x > posn.x;
         if (bLeftHalf) {
-            if (center.y <= posn.y) {
+            if (!(center.y > posn.y)) { // exe: cl = !(cy > py), unordered counts as "<="
                 return 0;
             } else {
                 return 2;
             }
-        } else if (center.y <= posn.y) {
+        } else if (!(center.y > posn.y)) {
             return 1;
         } else {
             return 3;
@@ -267,10 +267,11 @@ public:
         }
 
         const CRect sectorRect = GetSectorRect(sector);
-        if (   sectorRect.left <= rect.right // LinesInside???
-            && sectorRect.right >= rect.left
-            && sectorRect.bottom <= rect.top
-            && sectorRect.top >= rect.bottom
+        // exe 0x5526A0 rejects only on a strict, ordered violation (jp/jnp arms): unordered compares pass
+        if (   !(sectorRect.left > rect.right) // LinesInside???
+            && !(sectorRect.right < rect.left)
+            && !(sectorRect.bottom > rect.top)
+            && !(sectorRect.top < rect.bottom)
         ) {
             return true;
         }

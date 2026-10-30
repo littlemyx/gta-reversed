@@ -26,7 +26,7 @@ CAEDataStream* CAETrackLoader::GetDataStream(uint32 trackId) {
 
     char* path = new char[length]; // owned by to be ctor'd CAEDataStream.
     strcpy_s(path, length,
-        std::format("{}\\{}",
+        std::format("{}{}", // 0x4E0DBE: strcpy(dvd path or "") + strcat("AUDIO\STREAMS\") + strcat(name): no separator in between
             !m_bStreamingFromDVD ? "AUDIO\\STREAMS\\" : std::string{m_pszDvdDrivePath} + "AUDIO\\STREAMS\\",
             m_paStreamPacks[packId].m_szName
         ).c_str()

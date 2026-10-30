@@ -229,9 +229,9 @@ bool CPools::LoadVehiclePool() {
     int32 count;
     CGenericGameStorage::LoadDataFromWorkBuffer(&count, 4);
     for (auto i = 0; i < count; i++) {
-        int32 modelId, createdBy;
+        int32 modelId, poolRef;
 
-        CGenericGameStorage::LoadDataFromWorkBuffer(&createdBy, 4);
+        CGenericGameStorage::LoadDataFromWorkBuffer(&poolRef, 4); // exe 0x5D2A60-0x5D2D2F: first value = saved pool handle (SaveVehiclePool writes GetVehicleRef); the exe allocates with CVehicle::operator new(size, poolRef) (0x6E2D60) so the vehicle keeps its handle
         CGenericGameStorage::LoadDataFromWorkBuffer(&modelId, 4);
 
         CStreaming::RequestModel(modelId, STREAMING_KEEP_IN_MEMORY);
@@ -240,36 +240,36 @@ bool CPools::LoadVehiclePool() {
         CVehicle* vehicle = nullptr;
         switch (CModelInfo::GetModelInfo(modelId)->AsVehicleModelInfoPtr()->m_nVehicleType) {
         case VEHICLE_TYPE_MTRUCK:
-            vehicle = new CMonsterTruck(modelId, RANDOM_VEHICLE);
+            vehicle = new(poolRef) CMonsterTruck(modelId, RANDOM_VEHICLE);
             break;
         case VEHICLE_TYPE_QUAD:
-            vehicle = new CQuadBike(modelId, RANDOM_VEHICLE);
+            vehicle = new(poolRef) CQuadBike(modelId, RANDOM_VEHICLE);
             break;
         case VEHICLE_TYPE_HELI:
-            vehicle = new CHeli(modelId, RANDOM_VEHICLE);
+            vehicle = new(poolRef) CHeli(modelId, RANDOM_VEHICLE);
             break;
         case VEHICLE_TYPE_PLANE:
-            vehicle = new CPlane(modelId, RANDOM_VEHICLE);
+            vehicle = new(poolRef) CPlane(modelId, RANDOM_VEHICLE);
             break;
         case VEHICLE_TYPE_BOAT:
-            vehicle = new CBoat(modelId, RANDOM_VEHICLE);
+            vehicle = new(poolRef) CBoat(modelId, RANDOM_VEHICLE);
             break;
         case VEHICLE_TYPE_TRAIN:
-            vehicle = new CTrain(modelId, RANDOM_VEHICLE);
+            vehicle = new(poolRef) CTrain(modelId, RANDOM_VEHICLE);
             break;
         case VEHICLE_TYPE_BIKE:
-            vehicle = new CBike(modelId, RANDOM_VEHICLE);
+            vehicle = new(poolRef) CBike(modelId, RANDOM_VEHICLE);
             vehicle->AsBike()->bikeFlags.bOnSideStand = true;
             break;
         case VEHICLE_TYPE_BMX:
-            vehicle = new CBmx(modelId, RANDOM_VEHICLE);
+            vehicle = new(poolRef) CBmx(modelId, RANDOM_VEHICLE);
             vehicle->AsBike()->bikeFlags.bOnSideStand = true;
             break;
         case VEHICLE_TYPE_TRAILER:
-            vehicle = new CTrailer(modelId, RANDOM_VEHICLE);
+            vehicle = new(poolRef) CTrailer(modelId, RANDOM_VEHICLE);
             break;
         default:
-            vehicle = new CAutomobile(modelId, RANDOM_VEHICLE, true);
+            vehicle = new(poolRef) CAutomobile(modelId, RANDOM_VEHICLE, true);
             break;
         }
         assert(vehicle);

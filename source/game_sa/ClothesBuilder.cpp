@@ -222,6 +222,7 @@ RpAtomic* GetAtomicWithName(RpClump* clump, const char* name) {
         auto& ctx = *static_cast<Context*>(data);
         if (ctx.name == GetFrameNodeName(RpAtomicGetFrame(a))) {
             ctx.atomic = a;
+            return (RpAtomic*)nullptr; // 0x5A4803: the exe returns the (zero) strcmp result here => iteration stops at the FIRST match
         }
         return a;
     }, &c);

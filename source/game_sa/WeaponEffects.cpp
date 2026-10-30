@@ -112,6 +112,10 @@ void CWeaponEffects::Render() {
     constexpr float SHRINK     = 15.0f;        // 0x8D6140
     constexpr float RING_BASE  = 30.0f;        // 0x8D6148
 
+    // 0x404330 / 0x420800 and the inlined copies in this function: `a < b ? a : b` / `a > b ? a : b` (NaN => b), unlike std::min / std::max
+    const auto ExeMin = [](float a, float b) { return a < b ? a : b; };
+    const auto ExeMax = [](float a, float b) { return a > b ? a : b; };
+
     // Angle (in the camera's right/up plane) of the direction from `from` towards `to`
     const auto GetAngleToCamera = [](const CVector& to, const CVector& from) {
         const auto& cam = TheCamera.m_mCameraMatrix;
@@ -165,7 +169,7 @@ void CWeaponEffects::Render() {
                 for (const float scale : scales) {
                     CSprite::RenderOneXLUSprite_Rotate_Aspect(
                         out,
-                        CVector2D{ std::min(28.0f, w) * scale * 1.8f, std::min(20.0f, h) * scale * 1.8f },
+                        CVector2D{ ExeMin(28.0f, w) * scale * 1.8f, ExeMin(20.0f, h) * scale * 1.8f },
                         0, 0, 0,
                         255,
                         0.01f,
@@ -175,7 +179,7 @@ void CWeaponEffects::Render() {
                 }
                 CSprite::RenderOneXLUSprite_Rotate_Aspect(
                     out,
-                    CVector2D{ std::min(28.0f, w) * 1.8f, std::min(20.0f, h) * 1.8f },
+                    CVector2D{ ExeMin(28.0f, w) * 1.8f, ExeMin(20.0f, h) * 1.8f },
                     ch.m_color.r, ch.m_color.g, ch.m_color.b,
                     255,
                     0.01f,
@@ -197,7 +201,7 @@ void CWeaponEffects::Render() {
                 for (const float scale : scales) {
                     CSprite::RenderOneXLUSprite_Rotate_Aspect(
                         CVector{ out.x - gCrossHairLockOffsetSin, out.y - gCrossHairLockOffsetCos, out.z },
-                        CVector2D{ std::min(28.0f, w) * scale * 0.8f, std::min(20.0f, h) * scale * 0.8f },
+                        CVector2D{ ExeMin(28.0f, w) * scale * 0.8f, ExeMin(20.0f, h) * scale * 0.8f },
                         0, 0, 0,
                         255,
                         0.01f,
@@ -207,7 +211,7 @@ void CWeaponEffects::Render() {
                 }
                 CSprite::RenderOneXLUSprite_Rotate_Aspect(
                     CVector{ out.x - gCrossHairLockOffsetSin, out.y - gCrossHairLockOffsetCos, out.z },
-                    CVector2D{ std::min(28.0f, w) * 0.8f, std::min(20.0f, h) * 0.8f },
+                    CVector2D{ ExeMin(28.0f, w) * 0.8f, ExeMin(20.0f, h) * 0.8f },
                     ch.m_color.r, ch.m_color.g, ch.m_color.b,
                     ch.m_color.a,
                     0.01f,
@@ -268,7 +272,7 @@ void CWeaponEffects::Render() {
                 }
             } else {
                 // On-screen: draw 3 rotating triangles around the target
-                ch.m_fSize = std::max(std::min(ch.m_fSize, 1.2f), 0.3f);
+                ch.m_fSize = ExeMax(ExeMin(ch.m_fSize, 1.2f), 0.3f);
 
                 float innerRadius = 5.0f * ch.m_fSize;
                 float outerRadius = ch.m_fSize * 25.0f;

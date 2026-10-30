@@ -9,3 +9,4 @@ date	gate_sha	scenario.check	detail	reruns
 2026-10-28	S15 worktree (on ~ae0f98f2+S15)	combat.chase.player_shot_at	police did not hurt CJ within 70 s (new shape; may relate to COMBAT-FLAKY heal-every-2.5s hiding damage between samples)	1 rerun PASS
 2026-10-30	S57b worktree	combat.foot.weapon_pickup	no pickup after kill (after SYSTEMIC-6 merge radius 5.0->5.5)	1 rerun PASS
 2026-10-30	S48c worktree	missions.bike.exit_return	one fail	1 rerun PASS
+2026-10-30	S71 worktree	combat.chase.player_shot_at	CJ took no damage	1 rerun PASS

@@ -1,0 +1,16 @@
+addr	file	line	cls	fn	oc
+0x556070	source/game_sa/Rope.cpp	15	CRope	CreateHookObjectForRope	U
+0x556780	source/game_sa/Rope.cpp	17	CRope	Remove	U
+0x556800	source/game_sa/Rope.cpp	18	CRope	Render	U
+0x5569C0	source/game_sa/Rope.cpp	19	CRope	PickUpObject	U
+0x557530	source/game_sa/Rope.cpp	20	CRope	Update	U
+0x556B10	source/game_sa/Ropes.cpp	19	CRopes	Shutdown	U
+0x558D70	source/game_sa/Ropes.cpp	20	CRopes	Update	U
+0x556AE0	source/game_sa/Ropes.cpp	21	CRopes	Render	U
+0x556B40	source/game_sa/Ropes.cpp	22	CRopes	RegisterRope	U
+0x558D10	source/game_sa/Ropes.cpp	26	CRopes	CreateRopeForSwatPed	U
+0x7295E0	source/game_sa/WaterCannon.cpp	13	CWaterCannon	PushPeds	U
+0x728DA0	source/game_sa/WaterCannon.cpp	14	CWaterCannon	Render	U
+0x729B30	source/game_sa/WaterCannons.cpp	13	CWaterCannons	Render	U
+0x722230	source/game_sa/3dMarker.cpp	12	C3dMarker	AddMarker	U
+0x722390	source/game_sa/3dMarker.cpp	13	C3dMarker	DeleteMarkerObject	U

@@ -75,7 +75,8 @@ void CAEAmbienceTrackManager::UpdateAmbienceTrackAndVolume() {
         if (CWeather::Sandstorm > 0.f) {
             if (CGame::CanSeeOutSideFromCurrArea() && !CCullZones::PlayerNoRain() && !CCullZones::CamNoRain()) {
                 specialTrackId = 167;
-                volume         = (float)(X87R(std::log10((double)CWeather::Sandstorm) * 20.0) - (x87d)6.0);
+                // 0x4D6ED0: fldlg2/fld/fyl2x (inline x87 log10, result left unrounded on the stack) -> fmul 20.0f -> fsub 6.0f (each rounded to 24 bits) -> fstp
+                volume         = (float)(X87R(x87::log10(X87W((x87d)CWeather::Sandstorm)) * (x87d)20.0) - (x87d)6.0);
             }
             isSandstorm = true;
         }
@@ -244,6 +245,8 @@ void CAEAmbienceTrackManager::UpdateAmbienceTrackAndVolume() {
             break;
         }
     }
+    // fadd / fcom / test ah,5 / jnp: `a` when a < b (ordered), `b` otherwise (also for NaN). std::min would return `a` for NaN.
+    const auto ExeMin = [](float a, float b) { return a < b ? a : b; };
     const auto FadeOutAndStop = [this] {
         if (m_Volume > -40.f) {
             m_Volume -= 0.4f;
@@ -293,7 +296,7 @@ void CAEAmbienceTrackManager::UpdateAmbienceTrackAndVolume() {
             m_Volume                    = -34.f;
             m_FreqFactor                = 1.f;
         } else if (m_RequestedSettings.TrackID == specialTrackId) { // 0x4D72B0
-            m_Volume = std::min(m_Volume + 1.f, volume);
+            m_Volume = ExeMin(m_Volume + 1.f, volume);
         } else {
             FadeOutAndStop();
         }
@@ -314,7 +317,7 @@ void CAEAmbienceTrackManager::UpdateAmbienceTrackAndVolume() {
         volume           = CAEAudioEnvironment::GetDistanceAttenuation((float)dist) - 12.f;
         targetFreqFactor = 1.f;
 
-        if (volume <= -34.f) { // 0x4D7494
+        if (!(volume > -34.f)) { // 0x4D7494 (fcomp / test ah,0x41 / jne: also taken for NaN)
             if (CGameLogic::LaRiotsActiveHere() && CGame::CanSeeOutSideFromCurrArea()) {
                 if (m_AmbienceStatus == AmbienceStatus::STOPPED) { // 0x4D74A9
                     m_AmbienceStatus            = AmbienceStatus::STARTING;
@@ -322,7 +325,7 @@ void CAEAmbienceTrackManager::UpdateAmbienceTrackAndVolume() {
                     m_Volume                    = -34.f;
                     m_FreqFactor                = 1.f;
                 } else if (m_RequestedSettings.TrackID == 166) { // 0x4D7500
-                    m_Volume = std::min(m_Volume + 1.f, -12.f);
+                    m_Volume = ExeMin(m_Volume + 1.f, -12.f);
                 } else {
                     FadeOutAndStop();
                 }
@@ -353,7 +356,7 @@ void CAEAmbienceTrackManager::UpdateAmbienceTrackAndVolume() {
         m_RequestedSettings.TrackID = 174;
         m_AmbienceStatus            = AmbienceStatus::STARTING;
         m_Volume                    = -34.f;
-        m_FreqFactor                = CWeather::UnderWaterness < 0.5f ? 1.f : 0.0625f;
+        m_FreqFactor                = CWeather::UnderWaterness >= 0.5f ? 0.0625f : 1.f; // 0x4D7386: C0 (below 0.5 or unordered) -> 1.0f
     } else if (m_RequestedSettings.TrackID != 174) {
         FadeOutAndStop();
     } else { // 0x4D73DB
@@ -362,7 +365,7 @@ void CAEAmbienceTrackManager::UpdateAmbienceTrackAndVolume() {
 
     // 0x4D742A
     if (targetFreqFactor > m_FreqFactor) {
-        m_FreqFactor = std::min(m_FreqFactor + 0.25f, targetFreqFactor);
+        m_FreqFactor = ExeMin(m_FreqFactor + 0.25f, targetFreqFactor);
     } else if (targetFreqFactor < m_FreqFactor) {
         const auto freq = m_FreqFactor - 0.25f;
         // BUG: The original falls back to the *volume* (instead of the target frequency factor) here

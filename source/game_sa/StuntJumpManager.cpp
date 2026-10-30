@@ -100,7 +100,7 @@ void CStuntJumpManager::Update() {
 
     const auto plyrInfo = plyr->GetPlayerInfoForThisPlayerPed();
     const auto plyrVeh  = plyr->m_pVehicle;
-    if (!plyrVeh || !plyrInfo) {
+    if (!plyrInfo) {
         return;
     }
 
@@ -109,7 +109,7 @@ void CStuntJumpManager::Update() {
         if (!m_bActive) {
             return;
         }
-        if (plyrInfo->m_nPlayerState != PLAYERSTATE_PLAYING || !plyr->IsInVehicle()) {
+        if (plyrInfo->m_nPlayerState != PLAYERSTATE_PLAYING || !plyr->bInVehicle || !plyrVeh) {
             return;
         }
         if (notsa::contains({ VEHICLE_APPEARANCE_BOAT, VEHICLE_APPEARANCE_PLANE, VEHICLE_APPEARANCE_HELI }, plyrVeh->GetVehicleAppearance())) {
@@ -148,13 +148,19 @@ void CStuntJumpManager::Update() {
             TheCamera.SetCamPositionForFixedMode(mp_Active->camera, CVector{ 0.f, 0.f, 0.f });
             TheCamera.TakeControl(plyrVeh, MODE_FIXED, eSwitchType::JUMPCUT, 1);
 
-            break;
+            // NOTE: no `break` here, the exe (0x49C810-0x49C8D0) keeps testing the remaining jumps' start boxes
         }
         break;
     }
     case eJumpState::IN_FLIGHT: { // 0x49C4E6
         if (!mp_Active) {
             m_jumpState = eJumpState::START_POINT_INTERSECTED;
+            break;
+        }
+
+        if (!plyrVeh) { // NOTSA: the exe dereferences the (null) vehicle here, end the jump instead
+            m_jumpState = eJumpState::END_POINT_INTERSECTED;
+            m_iTimer    = 0;
             break;
         }
 
@@ -175,7 +181,8 @@ void CStuntJumpManager::Update() {
 
         const auto time = ended ? 0 : m_iTimer;
         m_iTimer        = NOTSA_FTOL(uint32, CTimer::GetTimeStepInMS()) + time;
-        if (m_iTimer <= 1'000 || time > 1'000) {
+        // exe 0x49C6F8: only on the frame the timer crosses 1000 ms
+        if (m_iTimer > 1'000 && time <= 1'000) {
             if (const auto plyrVeh = FindPlayerVehicle(-1, 0)) {
                 if (const auto psgr = plyrVeh->PickRandomPassenger()) {
                     psgr->Say(CTX_GLOBAL_CAR_JUMP, 0, 1.0, 0, 0, 0);
@@ -207,13 +214,13 @@ void CStuntJumpManager::Update() {
                 ? 10'000
                 : mp_Active->reward;
             plyrInfo->m_nMoney += reward;
+            if (const auto txt = TheText.Get("USJ")) { // UNIQUE STUNT BONUS!
+                CMessages::AddBigMessageQ(txt, 5'000, STYLE_MIDDLE_SMALLER_HIGHER);
+            }
             if (all) {
                 if (const auto txt = TheText.Get("USJ_ALL")) { // ALL UNIQUE STUNTS COMPLETED!
                     CHud::SetHelpMessage(txt, false, false, false);
                 }
-            }
-            if (const auto txt = TheText.Get("USJ")) { // UNIQUE STUNT BONUS!
-                CMessages::AddBigMessageQ(txt, 5'000, STYLE_MIDDLE_SMALLER_HIGHER);
             }
             if (const auto txt = TheText.Get("REWARD")) { // REWARD
                 CMessages::AddBigMessageWithNumber(txt, 6'000, STYLE_WHITE_MIDDLE_SMALLER, reward);

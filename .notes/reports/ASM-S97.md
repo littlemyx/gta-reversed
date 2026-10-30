@@ -8,4 +8,5 @@ Fixes (exe address, one line each):
 Matched: CheckForMenuClosing, DisplaySlider (rect corner order not decoded), CheckRedefineControlInput, ProcessUserInput, CMenuSystem::Input.
 Open (not compared): all other S97 rows (UserInput 0x57FD70 is hand-written in the port and needs a full pass, ProcessMenuOptions/ProcessPCMenuOptions, Print*, MenuSystem Display*/Process/ActivateItems) and all of S96b (CLoadingScreen::Update has no caller; the CMenuManager Draw* functions).
 Notes: CheckForMenuClosing keeps the deliberate FastLoader guard around AudioEngine.Service. CheckCodesForControls with type OPTIONAL_EXTRA_KEY (1) binds like keyboard in the port, the exe binds nothing; no caller passes it.
+Tests: StandaloneRelease builds; combat+render_vmode regress NOT run (waited 30 min behind the gate gpu.lock reservation, killed my queued run: regress left to the gate). wave2_oracle_test and PortableWin64 compile not run (no x87d/signature change; frontend not oracle-covered).
 Tools: C:/gta-scratch/asm-s97/ann.py annotates a disassembly with CMenuManager field names, string and float constants.

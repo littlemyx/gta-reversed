@@ -12,6 +12,8 @@ CAEWaveDecoder::CAEWaveDecoder(CAEDataStream* dataStream) : CAEStreamingDecoder(
 
 // 0x5032b0
 bool CAEWaveDecoder::Initialise() {
+#ifdef FIX_BUGS
+    // Robust variant (not the exe): accepts mono (expanded to stereo in FillBuffer) and skips unknown chunks in front of "data"
     // RIFF<size>WAVEfmt<space><WAVEFORMAT><WORD>
     constexpr size_t HEADER_READ_SIZE = 36;
     size_t           readed = m_dataStream->FillBuffer(fileHeaderArray, HEADER_READ_SIZE);
@@ -43,6 +45,17 @@ bool CAEWaveDecoder::Initialise() {
     }
 
     return m_bInitialized;
+#else
+    // 0x5032B0: the exe reads a fixed 44 byte header and accepts 16 bit STEREO only; the data starts at byte 0x2C (see GetStreamPlayTimeMs / SetCursor)
+    m_bInitialized = false;
+    if (_dataStreamCopy->FillBuffer(fileHeaderArray, sizeof(fileHeaderArray)) == sizeof(fileHeaderArray) && bitsPerSample == 16 && channelCount == 2) {
+        m_bInitialized = true;
+        if (GetStreamLengthMs() < 7000) {
+            m_bInitialized = false;
+        }
+    }
+    return m_bInitialized;
+#endif
 }
 
 // 0x5032a0

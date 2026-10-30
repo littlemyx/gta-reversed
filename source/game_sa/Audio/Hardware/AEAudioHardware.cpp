@@ -581,11 +581,13 @@ void CAEAudioHardware::UpdateReverbEnvironment() {
     int8 reverb;
     int32 depth;
     CAEAudioEnvironment::GetReverbEnvironmentAndDepth(&reverb, &depth);
-    if (reverb == m_nReverbEnvironment && depth == m_nReverbDepth) { // Nothing is changing?
+    if ((uint8)reverb == m_nReverbEnvironment && depth == m_nReverbDepth) { // Nothing is changing? (0x4D8DBF: byte compare)
         return;
     }
 
-    if (!rng::none_of(GetChannels(), [=](CAEAudioChannel* ch) { // Also covers the case of `m_nNumChannels == 0`
+    // 0x4D8DE2: the new environment is only remembered once a channel accepted it (`test al,al / jne 0x4D8E11`); if none did (or there are no channels) it is
+    // retried on the next call.
+    if (rng::none_of(GetChannels(), [=](CAEAudioChannel* ch) {
         return ch && ch->SetReverbAndDepth(reverb, depth); }
     )) {
         return;

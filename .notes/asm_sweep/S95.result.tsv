@@ -1,0 +1,31 @@
+addr	function	verdict	asm range	note	fix commit
+0x5BA850	CHud::Initialise	NOT_REACHED	-	budget (landed at ~110k tokens)	-
+0x588850	CHud::Shutdown	NOT_REACHED	-	budget (landed at ~110k tokens)	-
+0x58FAE0	CHud::Draw	NOT_REACHED	-	budget (landed at ~110k tokens)	-
+0x58D490	CHud::DrawAfterFade	NOT_REACHED	-	budget (landed at ~110k tokens)	-
+0x58AA50	CHud::DrawAreaName	MATCH	0x58AA50-0x58AE76 (state machine, fade/switch timers, jump tables 0x58AE7C/0x58AE90 decoded, draw setup)	zone name fade: SHOW>3000, FADE_IN/OUT 1000, SWITCH, screen-fade==2 arms, NaN arms of BigMessageX test	-
+0x58CA50	CHud::DrawBustedWastedMessage	NOT_REACHED	-	budget (landed at ~110k tokens)	-
+0x58E020	CHud::DrawCrossHairs	NOT_REACHED	-	rect literals fixed earlier by SYSTEMIC-7 200a8d848; remaining logic not compared here	-
+0x58B6E0	CHud::DrawHelpText	NOT_REACHED	-	budget (landed at ~110k tokens)	-
+0x58B180	CHud::DrawMissionTimers	NOT_REACHED	-	budget (landed at ~110k tokens)	-
+0x58D240	CHud::DrawMissionTitle	NOT_REACHED	-	budget (landed at ~110k tokens)	-
+0x58CC80	CHud::DrawOddJobMessage	NOT_REACHED	-	budget (landed at ~110k tokens)	-
+0x58A330	CHud::DrawRadar	NOT_REACHED	-	budget (landed at ~110k tokens)	-
+0x58C080	CHud::DrawScriptText	NOT_REACHED	-	budget (landed at ~110k tokens)	-
+0x58C250	CHud::DrawSubtitles	NOT_REACHED	-	budget (landed at ~110k tokens)	-
+0x58C6A0	CHud::DrawSuccessFailedMessage	NOT_REACHED	-	budget (landed at ~110k tokens)	-
+0x58AEA0	CHud::DrawVehicleName	NOT_REACHED	-	budget (landed at ~110k tokens)	-
+0x589650	CHud::DrawVitalStats	MATCH	0x589650-0x58A155 (all)	window rect both variants, row y steps, skill bar via StatReactionValue indices, stat ids 0x40/0xE1/0x16/0x17/0x15/0x19, day label	-
+0x5893B0	CHud::DrawAmmo	MATCH	0x5893B0-0x589645 (all)	flamethrower /10, clip clamp 9999, weapon exclusion list, >= 9999 compare	-
+0x58EAF0	CHud::DrawPlayerInfo	MATCH	0x58EAF0-0x58F7C1+ (clock, energy-lost fade inline, bars positions, breath bar rules, money sign/colour/format; weapon part not decoded store by store)	inline fade-state machine identical to ProcessInlinedFadeState	-
+0x58A160	CHud::DrawTripSkip	MATCH	0x58A160-0x58A32C (all)	rect, scale, text position order of operations	-
+0x58D9A0	CHud::DrawWanted	MATCH	0x58D9A0-0x58E010 (all)	inline fade state, star flash (frame&4, 2000 ms), parole star 0.8 gold, empty star scale 1.2 and -2*hs	-
+0x58D7D0	CHud::DrawWeaponIcon	MATCH	0x58D7D0-0x58D9A0 (all)	render states, txd null/dict checks, ICON key, RenderOneXLUSprite args	-
+0x5890A0	CHud::RenderArmorBar	MATCH	0x5890A0-0x589188 (all)	flash only when frame&8==0, armour>1 test with NaN arm	-
+0x589190	CHud::RenderBreathBar	MATCH	0x589190-0x58926B (all)	modifier index 8, light blue	-
+0x589270	CHud::RenderHealthBar	MATCH	0x589270-0x5893A8 (all)	int16 health<10 flash, width formula, red	-
+0x58FDA0	CHudColours::Constructor	MATCH	0x58FDA0-0x58FE96 (all)	15 colours + alphas decoded byte by byte (cl=0xE1 then 0, dl=0x96)	-
+0x58FD20	CHudColours::SetRGBAValue	MATCH	0x58FD20-0x58FD4F (all)	arg order idx,r,g,b,a	-
+0x58FD50	CHudColours::GetIntColour	MATCH	0x58FD50-0x58FD7F (all)	(r<<24)+(g<<16)+(b<<8)+0x2FD from the three |0xFF terms	-
+0x58FEA0	CHudColours::GetRGB	MATCH	0x58FEA0-0x58FED5 (all)	full RGBA copy incl. stored alpha	-
+0x58FEE0	CHudColours::GetRGBA	MATCH	0x58FEE0-0x58FF15 (all)	alpha from argument	-

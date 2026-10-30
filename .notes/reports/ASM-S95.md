@@ -1,0 +1,5 @@
+# ASM-S95 (CHud / CHudColours, phase 3 tier B) - 2026-10-30
+Result: 30 rows, 15 compared against the exe and MATCH (0 deviations, 0 code changes), 15 NOT_REACHED (token budget). Table: S95.result.tsv.
+Compared in full: CHudColours (5 rows, all 15 colours decoded byte by byte), DrawVitalStats, DrawAmmo, DrawTripSkip, DrawWanted (inline fade state + star flash), DrawWeaponIcon, RenderArmor/Breath/HealthBar, DrawAreaName (state machine, both jump tables decoded), DrawPlayerInfo (clock, energy-lost fade, bar positions, breath-bar rules, money sign/colour/format; the weapon icon/ammo tail was not decoded store by store).
+Open (NOT_REACHED): Initialise, Shutdown, Draw, DrawAfterFade, DrawBustedWastedMessage, DrawHelpText, DrawMissionTimers, DrawMissionTitle, DrawOddJobMessage, DrawRadar, DrawScriptText, DrawSubtitles, DrawSuccessFailedMessage, DrawVehicleName; DrawCrossHairs only had its rect literals fixed earlier (SYSTEMIC-7 200a8d848).
+Tests: no code changed, so no build / oracle / combat regress was run (they would exercise the unmodified origin).

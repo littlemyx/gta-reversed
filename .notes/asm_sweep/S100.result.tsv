@@ -1,5 +1,5 @@
 addr	function	verdict	asm range	note	fix commit
-0x706410	CRealTimeShadow::Constructor	FIXED	0x706410-0x70643B (all)	field inits match (owner/keepAlive/intensity/cams/type -1/light); m_bDrawMoreBlur (byte +0x20) was left uninitialised	6dbfbf46e
+0x706410	CRealTimeShadow::Constructor	FIXED	0x706410-0x70643B (all)	field inits match (owner/keepAlive/intensity/cams/type -1/light); m_bDrawMoreBlur (byte +0x20) was left uninitialised	bf4b4fe91
 0x706440	CRealTimeShadow::Destructor	MATCH	0x706440-0x706455 (all)	Destroy + both camera Destroy	
 0x705900	CRealTimeShadow::SetLightProperties	MATCH	0x705900-0x70598D (all)	yaxis angle REPLACE, xaxis -90 POSTCONCAT, SetLight if flag, returns frame; null frame -> 0	
 0x7059F0	CRealTimeShadow::GetShadowRwTexture	MATCH	0x7059F0-0x7059FE (all)	blurred ? blurCam tex : cam tex	
@@ -21,16 +21,16 @@ addr	function	verdict	asm range	note	fix commit
 0x7054C0	CShadowCamera::SetFrustum	MATCH	0x7054C0-0x705514 (all)	far 2r, near r*0.001f (0x858CDC), view window (r,r)	
 0x705520	CShadowCamera::SetLight	MATCH	0x705520-0x70558D (all)	right/up/at copied from the light frame matrix, matrix update + frame update objects	
 0x705590	CShadowCamera::SetCenter	MATCH	0x705590-0x705615 (all)	pos = center + (far * -0.5f (0x858F40)) * at, update, update objects, orthonormalize	
-0x705660	CShadowCamera::InvertRaster	FIXED	0x705660-0x70576F (all)	vertices/rhw/states match; the exe first sets ZTESTENABLE=FALSE (push 0 / push 6 at 0x705700), the port never did	340cf11a0
+0x705660	CShadowCamera::InvertRaster	FIXED	0x705660-0x70576F (all)	vertices/rhw/states match; the exe first sets ZTESTENABLE=FALSE (push 0 / push 6 at 0x705700), the port never did	edbf4f810
 0x705770	CShadowCamera::GetRwRenderRaster	MATCH	0x705770 (all)		
 0x705780	CShadowCamera::GetRwRenderTexture	MATCH	0x705780 (all)		
-0x705790	CShadowCamera::DrawOutlineBorder	FIXED	0x705790-0x7058F0 (all)	colour packing ARGB, w=width-1, polyline indices {0,1,2,3,0} match; exe ends with ZTEST=TRUE and VERTEXALPHAENABLE=TRUE (0x7058D5), port set it FALSE	7ce7fc18f
+0x705790	CShadowCamera::DrawOutlineBorder	FIXED	0x705790-0x7058F0 (all)	colour packing ARGB, w=width-1, polyline indices {0,1,2,3,0} match; exe ends with ZTEST=TRUE and VERTEXALPHAENABLE=TRUE (0x7058D5), port set it FALSE	4dac520e0
 0x705B60	CShadowCamera::Create	MATCH	0x705B60-0x705BE5 (all)	raster 1<<n camera texture, tex filter LINEAR addressing clamp (0x33), parallel projection, Destroy on every failure	
 0x705BF0	CShadowCamera::Update	MATCH	0x705BF0-0x705C6E clump (all)	clear 0xFFFFFF00 flags image|z, geometry flags &~0xEC of first atomic, atomicQuickRender for all atomics, restore, InvertRaster	
 0x705C80	CShadowCamera::Update	MATCH	0x705C80-0x705D19 atomic (all)	geometry flags &~0xFC (incl. NORMALS), default render cb swap	
 0x705D20	CShadowCamera::MakeGradientRaster	MATCH	0x705D20-0x705EE0 (all)	gradient 128 -> 64 (exe ints 0x8D5218/0x8D521C), step (64-128)/height, ftol colour on all 4 channels, 2-vertex lines, states restored. Return value (exe returns the raster, port the camera) is unused by callers: left as is	
-0x706070	CShadowCamera::RasterResample	FIXED	0x706070-0x706160 (all)	states, uv offset 0.5/size, quad match; failed BeginUpdate returns the camera raster in the exe (port returned null)	66aa62d79
-0x706170	CShadowCamera::RasterBlur	FIXED	0x706170-0x70632B (all)	ping-pong passes, first/last pass states, uv 1/w then 0 match; with numPasses<=0 the exe returns blurRaster (the port had a NOTSA early return of the camera raster; the only caller guards passes>0 so no behaviour change)	b07306c27
+0x706070	CShadowCamera::RasterResample	FIXED	0x706070-0x706160 (all)	states, uv offset 0.5/size, quad match; failed BeginUpdate returns the camera raster in the exe (port returned null)	0b0dcc02e
+0x706170	CShadowCamera::RasterBlur	FIXED	0x706170-0x70632B (all)	ping-pong passes, first/last pass states, uv 1/w then 0 match; with numPasses<=0 the exe returns blurRaster (the port had a NOTSA early return of the camera raster; the only caller guards passes>0 so no behaviour change)	9ba888001
 0x706330	CShadowCamera::DrawBlurryRaster2	MATCH	0x706330-0x70640D (all)	src*dst blend ZERO/SRCCOLOR, quad uv 0, restore camera raster, returns src	
 0x705620	CShadowCamera::atomicQuickRender	MATCH	0x705620-0x70565B (all)	default render callback swap (RpAtomicSetRenderCallBack(NULL) = default)	
 0x705A20	CShadowCamera::Im2DRenderQuad	MATCH	0x705A20-0x705B2E (all)	4 tristrip vertices (x1,y1,uv,uv)(x1,y2,uv,uv+1)(x2,y1,uv+1,uv)(x2,y2,uv+1,uv+1), colour -1, returns true	

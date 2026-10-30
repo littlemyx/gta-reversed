@@ -166,9 +166,9 @@
 | S60 | phase2: unlisted non-oracle hooks | 40 | partial 23/40 (18 M, 5 fixed + 2 helpers) -> S60b | PedGroupDefaultTaskAllocatorChat.h, PedGroupDefaultTaskAllocatorFollowAnyMeans.h, PedGroupDefaultTaskAllocatorFollowLimited.h, PedGroupDefaultTaskAllocatorRandom.h, PedGroupDefaultTaskAllocatorSitInLeaderCar.h, PedGroupDefaultTaskAllocatorStandStill.h ... |
 | S61 | phase2: unlisted non-oracle hooks | 40 | done (35 M, 5 fixed) | TaskComplexAvoidEntity.cpp, TaskComplexAvoidOtherPedWhileWandering.cpp, TaskComplexBeCop.cpp, TaskComplexBeStill.cpp, TaskComplexCarDriveMission.cpp, TaskComplexClimb.cpp ... |
 | S62 | phase2: unlisted non-oracle hooks | 40 | done (39 M, 1 fixed) | TaskComplexFollowPatrolRoute.cpp, TaskComplexGangLeader.cpp, TaskComplexKillAllThreats.cpp, TaskComplexKillPedGroupOnFoot.cpp, TaskComplexLeaveCar.cpp, TaskComplexObserveTrafficLights.cpp ... |
-| S63 | phase2: unlisted non-oracle hooks | 40 | pending | TaskSimpleNone.cpp, TaskSimpleOnEscalator.cpp, TaskSimpleRunAnim.cpp, TaskSimpleRunAnimLoopedMiddle.cpp, TaskSimpleRunNamedAnim.cpp, TaskSimpleSay.cpp ... |
+| S63 | phase2: unlisted non-oracle hooks | 40 | done (33 M, 8 fixed) | TaskSimpleNone.cpp, TaskSimpleOnEscalator.cpp, TaskSimpleRunAnim.cpp, TaskSimpleRunAnimLoopedMiddle.cpp, TaskSimpleRunNamedAnim.cpp, TaskSimpleSay.cpp ... |
 | S64 | phase2: unlisted non-oracle hooks | 40 | partial 9/40 (4 M, 5 fixed) -> S64b | VehicleAnimGroupData.cpp, VehicleRecording.cpp, VehicleSaveStructure.cpp, Weapon.cpp |
-| S65 | phase2: unlisted non-oracle hooks | 7 | pending | WeaponEffects.cpp, WeaponInfo.cpp, World.cpp |
+| S65 | phase2: unlisted non-oracle hooks | 7 | partial (4 M, 1 fixed) -> S65b | WeaponEffects.cpp, WeaponInfo.cpp, World.cpp |
 | S41b | rest of S41 | 9 | done (2 M, 6 fixed, RunningScript row -> S66) | CarAI.cpp, PedAttractorPedPlacer.cpp, RunningScript.cpp matches |
 | S66 | phase2: RunningScript.cpp hooks (missed by the generator: grep without -a) | 15 | pending | RunningScript.cpp |
 | S42b | rest of S42 | 19 | UpdateCarAI fixed to 0x41FE13 (tail partial); CarEnterExit 18 NR -> S42c | CarAI.cpp, CarEnterExit.cpp |
@@ -201,3 +201,4 @@
 | S59b | rest of S59 | 15 | pending | Stats.cpp |
 | S45b | rest of S45 | 11 | pending | Entity.cpp, EntryExitManager.cpp |
 | S60b | rest of S60 | 17 | pending | Task.cpp, TaskAllocator.cpp, TaskAllocatorAttack.cpp, TaskAllocatorKillOnFoot.cpp, TaskAllocatorKillThreatsBasic.cpp, TaskAllocatorKillThreatsBasicRandomGroup.cpp, TaskAllocatorKillThreatsDriveby.cpp, TaskAllocatorPlayerCommandAttack.cpp, TaskComplex.cpp, TaskManager.cpp |
+| S65b | rest of S65 | 1 | pending | WeaponEffects.cpp |

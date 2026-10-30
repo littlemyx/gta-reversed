@@ -492,7 +492,7 @@ void CSprite2d::Draw2DPolygon(float x1, float y1, float x2, float y2, float x3, 
 {
     SetVertices(x1, y1, x2, y2, x3, y3, x4, y4, color, color, color, color);
     RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RWRSTATE(NULL));
-    RwRenderStateSet(rwRENDERSTATESHADEMODE,     RWRSTATE(rwSHADEMODENASHADEMODE));
+    RwRenderStateSet(rwRENDERSTATESHADEMODE,     RWRSTATE(rwSHADEMODEFLAT)); // 0x7285EE: push 1 (rwSHADEMODEFLAT), push 7
 
     if (color.a == 255)
         RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(FALSE));

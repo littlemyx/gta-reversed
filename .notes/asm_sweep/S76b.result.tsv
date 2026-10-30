@@ -1,0 +1,21 @@
+addr	function	verdict	asm range	note	fix commit
+0x5A4940	CClothesBuilder::BlendGeometry (3 frames)	MATCH	0x5A4940-0x5A4F0C	vertex/normal/uv terms in exe association (r1*v1+r0*v0+r2*v2 etc), normalize, 4+4+4 AddWeightToBoneVertex in order, renorm when weights[4]!=0 with 1/(w3+w2+w1+w0), AddRef	-
+0x5A4F10	CClothesBuilder::BlendGeometry (2 frames)	MATCH	0x5A4F10-0x5A5330	same shape for 2 frames (2-term sums commute)	-
+0x5A5340	CClothesBuilder::CopyGeometry	MATCH	0x5A5340-0x5A5598	dst<-src copy of verts/normals/uv/bone idx/weights; the tail loop is a no-op	-
+0x5A55A0	CClothesBuilder::ConstructGeometryArray	MATCH	0x5A55A0-0x5A56B6	complex-hierarchy flag, request/LoadAll, prefetch next, BlendGeometry(normal,fat,ripped), StoreBoneArray, RemoveModel	-
+0x5A56C0	CClothesBuilder::DestroySkinArrays	MATCH	0x5A56C0-0x5A56D7	two frees (new[]/delete[] in the port)	-
+0x5A56E0	CClothesBuilder::BuildBoneIndexConversionTable	FIXED	0x5A56E0-0x5A5728	RpHAnimIDGetIndex returns int -1 for not found; the exe tests only al==0xFF -> bone 0, the port compared the int and stored 0xFF	8e3c4eeb0
+0x5A5730	CClothesBuilder::CopyTexture	FIXED	0x5A5730-0x5A57A7	raster flags (cFormat&0x6F)<<8|4: palette bits kept (matters only for non-32bit rasters)	f654b5408
+0x5A57B0	CClothesBuilder::PlaceTextureOnTopOfTexture	FIXED	0x5A57B0-0x5A5815	lock/unlock order (src first); the alpha!=0 copy loop is identical	cb353aa8f
+0x5A5820	CClothesBuilder::BlendTextures (dst,src)	FIXED	0x5A5820-0x5A59B7	the port's nested loop (i-- in the inner condition) blended only the first w*h BYTES incl. alpha; exe blends RGB of every pixel as src*r2+dst*r1 (unrounded sum, ftol, low byte), alpha kept	d9feaa49d
+0x5A59C0	CClothesBuilder::BlendTextures (dst,src1,src2)	FIXED	0x5A59C0-0x5A5BB3	same loop bug; sum order (src2*r3+src1*r2)+dst*r1 with one ftol per channel (the port truncated every term); unlock order src1,src2,dst	d9feaa49d
+0x5A5BC0	CClothesBuilder::BlendTextures (dst,src1,src2,tattoos)	FIXED	0x5A5BC0-0x5A5E9E	same + tattoo lerp is int((tat-mix)*alpha)*(float 1/255)+mix (port: alpha*(1/255) first); lock order src1,src2,dst,tattoo	d9feaa49d
+0x5A6530	CClothesBuilder::ConstructGeometryAndSkinArrays	MATCH	0x5A6530-0x5A686A	flags 0x35, vertex/normal/uv/triangle merge with 16-bit index add, bounding sphere, skin merge via the bone conversion table (port zero-inits the table, the exe leaves it uninitialised)	-
+0x5A69D0	CClothesBuilder::CreateSkinnedClump	FIXED	0x5A69D0-0x5A6DA6	change flags: fat/muscle diff -> ratios+geometry, model keys diff -> geometry, texture keys diff -> texture (the port ended with geometry=!equal(models), ratios=!equal(textures), texture=true). Merged geometry |= rpGEOMETRYPOSITIONS (exe or [geo+8],2). Rest (default parts, materials by name, skin/hier/atomic/clump creation, cleanup order) MATCH	6b4074d1b
+0x6FE120	CCustomRoadsignMgr::Initialise	MATCH	0x6FE120-0x6FE172	particle txd, roadsignfont, nearest + clamp (0x33), raster locked READ	-
+0x6FE180	CCustomRoadsignMgr::Shutdown	MATCH	0x6FE180-0x6FE1DD	palette unlock, raster unlock, destroy	-
+0x6FECA0	CCustomRoadsignMgr::CreateRoadsignTexture	MATCH	0x6FECA0-0x6FED58	raster 8n x 16, 32 bit, flags 0x504; name strncpy 10; filter linear	-
+0x6FEDA0	CCustomRoadsignMgr::CreateRoadsignAtomicA	MATCH	0x6FEDA0-0x6FF2A0	palette colours, surface props .3/.3/.7, geometry flags 0x4e, per-line y from the jump tables (1: -.5h; 2: 0,-1h; 3: .5,-.5,-1.5h; 4: 1,0,-1,-2 h), 0.95 used height, uv, prelit, triangle order, error paths	-
+0x6FF2D0	CCustomRoadsignMgr::CreateRoadsignAtomic	MATCH	0x6FF2D0-0x6FF34B	null lines -> single space	-
+0x6FF350	CCustomRoadsignMgr::RenderRoadsignAtomic	FIXED	0x6FF350-0x6FF40E	d2 summed z,y,x; fade alpha=(250000-d2)*(float 1/248400)*254 ftol (port: 1-invLerp, lerp)	7f462dbaa
+0x6FED60	CCustomRoadsignMgr::SetupRoadsignAtomic	MATCH	0x6FED60-0x6FED95	create texture, set on all materials, returns the atomic	-

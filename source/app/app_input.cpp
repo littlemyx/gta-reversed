@@ -178,13 +178,9 @@ RsEventStatus HandlePadButtonDown(RsPadButtonStatus* padButtonStatus) {
 
     CPad* pad = CPad::GetPad(padNumber);
 
-    if (CPad::padNumber != 0) {
-        padNumber = 1;
-    }
-
-    if (padNumber == 1) {
-        bPadTwo = true;
-    }
+    // 0x7448B7-0x74490E / 0x744942-0x7449C5: the pad index passed on is 1 if CPad::padNumber != 0, else 0 - the exe never forwards padID itself
+    padNumber = CPad::padNumber != 0 ? 1 : 0;
+    bPadTwo   = padNumber == 1;
 
     ControlsManager.UpdateJoyButtonState(padNumber);
 
@@ -210,13 +206,9 @@ RsEventStatus HandlePadButtonUp(RsPadButtonStatus* padButtonStatus) {
 
     CPad* pad = CPad::GetPad(padNumber);
 
-    if (CPad::padNumber != 0) {
-        padNumber = 1;
-    }
-
-    if (padNumber == 1) {
-        bPadTwo = true;
-    }
+    // 0x7448B7-0x74490E / 0x744942-0x7449C5: the pad index passed on is 1 if CPad::padNumber != 0, else 0 - the exe never forwards padID itself
+    padNumber = CPad::padNumber != 0 ? 1 : 0;
+    bPadTwo   = padNumber == 1;
 
     bool  bCam = false;
     int16 mode = TheCamera.m_aCams[TheCamera.m_nActiveCam].m_nMode;

@@ -1,0 +1,11 @@
+addr	function	verdict	asm range	note	fix commit
+0x4185C0	CCollision::ProcessColModels	DEVIATION (fixed)	0x4185C0-0x419EFD (all except the bUsesDisks path 0x418F4C-0x419960, dead: bUsesDisks is never set in SA)	sphere/box/tri collection, face-group reverse walk, caps (128 disks, 64 B boxes, 599 tris), CP loops (31 cap, sentinel, bReturnAll piece<=2 advance), line loop, A-tris/boxes vs B spheres, surface swap all match; A boxes vs B bound sphere have NO 64 cap in the exe (port stopped at 64); Invert() used the extended precision Inverted() instead of 0x59B920	7bf630a9d, 815d3d577
+0x41A820	CCollision::CheckCameraCollisionBuildings	MATCH	0x41A820-0x41A98F (all)	sector clamp, flyer flag, scan code, ignore entity, strict x87 r^2 > d^2 test (z,y,x), SphereCastVsEntity arg order	-
+0x41A990	CCollision::CheckCameraCollisionVehicles	MATCH	0x41A990-0x41AB1F (all)	& 0xF repeat sector, scan / ignore / sitting-on-me order and the 30 frame timeout, relative speed z,y,x sum < 0.01 (jp arm = continue if not less), TestSphereSphere arg order	-
+0x41AB20	CCollision::CheckCameraCollisionObjects	MATCH	0x41AB20-0x41AC3F (all)	repeat sector Objects list (base 0xB992C0), CameraToIgnoreThisObject before ignore entity, same strict sphere test as Buildings	-
+0x415320	CCollision::CheckCameraCollisionPeds	NOT_REACHED	-	budget	-
+0x4181B0	CCollision::SphereCastVsCaches	NOT_REACHED	-	budget	-
+0x419F00	CCollision::SphereCastVsEntity	NOT_REACHED	-	budget	-
+0x41A5A0	CCollision::SphereVsEntity	NOT_REACHED	-	budget (no callers in the exe)	-
+0x41AC40	CCollision::BuildCacheOfCameraCollision	NOT_REACHED	-	budget	-
+0x41B000	CCollision::CameraConeCastVsWorldCollision	NOT_REACHED	-	budget	-

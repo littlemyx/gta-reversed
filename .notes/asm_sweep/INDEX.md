@@ -198,7 +198,7 @@
 | S54c | rest of S54 (+ S53c ComputeClearTarget) | 14 | done (10 M, 3 fixed; S53, S54 complete) | PedGroupIntelligence.cpp, PedGroupMembership.cpp, PedGroupPlacer.cpp |
 | S64c | rest of S64b | 20 | done (11 M, 8 fixed, LaserScopeDot no callers; S64 complete) | VehicleAnimGroupData.cpp, VehicleRecording.cpp, VehicleSaveStructure.cpp, Weapon.cpp |
 | S46b | rest of S46 | 3 | done (2 M, 1 fixed) | EventHandler.cpp |
-| S59b | rest of S59 | 15 | pending | Stats.cpp |
+| S59b | rest of S59 | 15 | done (13 M, 2 fixed) | Stats.cpp |
 | S45b | rest of S45 | 11 | pending | Entity.cpp, EntryExitManager.cpp |
 | S60b | rest of S60 | 17 | pending | Task.cpp, TaskAllocator.cpp, TaskAllocatorAttack.cpp, TaskAllocatorKillOnFoot.cpp, TaskAllocatorKillThreatsBasic.cpp, TaskAllocatorKillThreatsBasicRandomGroup.cpp, TaskAllocatorKillThreatsDriveby.cpp, TaskAllocatorPlayerCommandAttack.cpp, TaskComplex.cpp, TaskManager.cpp |
 | S65b | rest of S65 | 2 | pending | WeaponEffects.cpp, WeaponInfo.cpp |

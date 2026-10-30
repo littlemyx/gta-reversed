@@ -128,7 +128,7 @@ CRGBA tBrightLight::GetColorRGBA() const {
     };
 
     // 0x72426A: `ftol((float)(rand() & 0xFF) * 0.2f)` (one rand() call per light, taken BEFORE the colour switch)
-    const auto rnd = NOTSA_FTOL(uint8, (float)(uint8)(CGeneral::GetRandomNumber() & 0xFF) * ExeRecip(5.0f));
+    const auto rnd = NOTSA_FTOL(uint8, (float)(CGeneral::GetRandomNumber() & 0xFF) * ExeRecip(5.0f));
     switch (m_nColor) {
     case BRIGHTLIGHT_GREEN_BIG:
     case BRIGHTLIGHT_GREEN_SMALL:

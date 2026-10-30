@@ -150,14 +150,14 @@ void CBirds::Update() {
         && CClock::ClockHoursInRange(5, 22)
         && (CTimer::GetFrameCounter() % 512) == std::size(aBirds)
     ) {
-        auto iNumBirdsToCreate = CGeneral::GetRandomNumberInRange(std::size(aBirds) - uiNumberOfBirds) + 1;
+        int32 iNumBirdsToCreate = (int32)CGeneral::GetRandomNumberInRange(std::size(aBirds) - uiNumberOfBirds) + 1;
 
         eBirdsBiome biome = eBirdsBiome::BIOME_WATER;
 
-        if (TheCamera.m_fDistanceToWater > 30.0F) {
+        if (!(TheCamera.m_fDistanceToWater < 30.0F)) { // 0x7123C9: `test ah, 5; jp` - water only for distance < 30 (30.0 and NaN are land)
             if (CWeather::WeatherRegion == eWeatherRegion::WEATHER_REGION_DESERT) {
                 biome = eBirdsBiome::BIOME_DESERT;
-                iNumBirdsToCreate = std::min<size_t>(iNumBirdsToCreate, uiNumberOfBirds);
+                iNumBirdsToCreate = std::min<int32>(iNumBirdsToCreate, 3 - (int32)uiNumberOfBirds); // 0x7123DF: at most 3 desert birds in total
             }
             else {
                 biome = eBirdsBiome::BIOME_NORMAL;
@@ -191,8 +191,8 @@ void CBirds::Update() {
                         vecForward.x = 0.01F;
 
                     vecForward.Normalise();
-                    uint8 cRand = (uint8)(CGeneral::GetRandomNumber() % 256) - 128;
-                    fSpawnAngleCamRelative = X87R(((float)cRand) / 256.0F + x87::atan2(vecForward.x, vecForward.y)); // [0 : 1] + atan2(...)
+                    const int32 cRand = (int32)((uint8)(CGeneral::GetRandomNumber() % 256)) - 128; // 0x7124FB: signed [-128 : 127]
+                    fSpawnAngleCamRelative = X87R(((float)cRand) / 256.0F + x87::atan2(vecForward.x, vecForward.y)); // [-0.5 : 0.5) + atan2(...)
                 }
 
                 auto vecBirdSpawnPos = CVector(
@@ -218,7 +218,10 @@ void CBirds::Update() {
 
     auto iBirdIndex = CTimer::GetFrameCounter() % std::size(aBirds);
     auto& checkedBird = aBirds[iBirdIndex];
-    if (checkedBird.m_bCreated && DistanceBetweenPoints2D(camPosn, checkedBird.m_vecPosn) > checkedBird.m_fMaxBirdDistance)
+    // 0x712652: squared 2D distance (dx*dx + dy*dy, no sqrt) against maxDistance^2, strictly greater
+    const float checkedDY = checkedBird.m_vecPosn.y - camPosn.y;
+    const float checkedDX = checkedBird.m_vecPosn.x - camPosn.x;
+    if (checkedBird.m_bCreated && checkedBird.m_fMaxBirdDistance * checkedBird.m_fMaxBirdDistance < checkedDX * checkedDX + checkedDY * checkedDY)
     {
         checkedBird.m_bCreated = false;
         uiNumberOfBirds--;
@@ -228,7 +231,7 @@ void CBirds::Update() {
         if (!bird.m_bCreated)
             continue;
 
-        if (bird.m_eBirdMode != eBirdMode::BIRD_DRAW_UPDATE || bird.m_nUpdateAfterMS > CTimer::GetTimeInMS())
+        if (bird.m_eBirdMode != eBirdMode::BIRD_DRAW_UPDATE || !(CTimer::GetTimeInMS() > bird.m_nUpdateAfterMS))
             continue;
 
         if (bird.m_bMustDoCurves) {

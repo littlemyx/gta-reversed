@@ -36,15 +36,19 @@ bool CAEVorbisDecoder::Initialise() {
 
     m_pVorbisInfo = ov_info(m_pVorbisFileHandle, -1);
 
-    // Not support channels > 2
+#ifdef FIX_BUGS
+    // Not support channels > 2 (the exe 0x5024D0 has no such check)
     if (m_pVorbisInfo->channels > 2)
         return false;
+#endif
 
     m_bInitialized = true;
 
     if (m_bIsUserTrack) {
-        if (GetStreamLengthMs() < 7000)
-            return !m_bInitialized;
+        if (GetStreamLengthMs() < 7000) {
+            m_bInitialized = false; // 0x50253F..0x502541: the exe also clears the flag (the port only returned false)
+            return false;
+        }
     }
 
     return true;

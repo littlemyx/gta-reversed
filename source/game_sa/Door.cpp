@@ -64,17 +64,19 @@ bool CDoor::Process(CVehicle* vehicle, Const CVector& oldMoveSpeed, Const CVecto
     float sin = x87::sin(m_angle);
     float cos = x87::cos(m_angle);
 
-    assert(m_axis != DOOR_AXIS_Y); // Test
+    // exe 0x6F41C0-0x6F4291: only axis 0 (rotates y,z) and axis 2 (rotates x,y); axis 1 leaves vecDirn alone.
+    // The rotated pair is (cos*a - sin*b, cos*b + sin*a) - the port had the first term negated.
+    if (m_axis == 0 || m_axis == 2) {
+        const auto a = (m_axis + 1) % 3;
+        const auto b = (m_axis + 2) % 3;
 
-    const auto a = (m_axis + 1) % 3;
-    const auto b = (m_axis + 2) % 3;
+        const float newA = cos * vecDirn[a] - sin * vecDirn[b];
+        const float newB = cos * vecDirn[b] + sin * vecDirn[a];
+        vecDirn[a] = newA;
+        vecDirn[b] = newB;
+    }
 
-    const float newA = sin * vecDirn[b] - cos * vecDirn[a];
-    const float newB = sin * vecDirn[a] + cos * vecDirn[b];
-    vecDirn[a] = newA;
-    vecDirn[b] = newB;
-
-    float ang = acceleration.Cross(vecDirn)[m_axis];
+    float ang = (m_axis == 0 || m_axis == 2) ? acceleration.Cross(vecDirn)[m_axis] : sin; // exe 0x6F429C: other axes leave sin(angle) on the FPU stack
 
     // 0x6F42A8
     // Angular velocity update

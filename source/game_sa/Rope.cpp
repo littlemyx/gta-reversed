@@ -216,7 +216,11 @@ void CRope::Render() {
     if (!TheCamera.IsSphereVisible(m_aSegments[NUM_ROPE_SEGMENTS / 2], 20.0f))
         return;
 
-    if ((TheCamera.GetPosition() - m_aSegments[0]).Magnitude2D() >= 120.0f)
+    // 0x556860..0x55687A: unrounded x87 deltas and sqrt, `< 120` strictly (NaN leaves)
+    const auto& camPos = TheCamera.GetPosition();
+    const x87d  dx     = (x87d)camPos.x - m_aSegments[0].x;
+    const x87d  dy     = (x87d)camPos.y - m_aSegments[0].y;
+    if (!(x87::sqrt(dx * dx + dy * dy) < 120.0f))
         return;
 
     DefinedState();

@@ -1030,13 +1030,16 @@ int16 CFont::ProcessStringToDisplay(float x, float y, const GxtChar* text) {
 
 // 0x71A620
 void CFont::GetTextRect(CRect* rect, float x, float y, const GxtChar* text) {
+    // 0x71A620: the line count is taken as `movzx eax, al` (8 bit) from the returned int16
+    const auto numLines = (uint8)GetNumberLines(x, y, text);
+
     if (m_bFontCentreAlign) {
-        rect->left = x - (m_fFontCentreSize / 2.0f + 4.0f);
-        rect->right = m_fFontCentreSize / 2.0f + x + 4.0f;
+        rect->left = x - (m_fFontCentreSize * 0.5f + 4.0f);
+        rect->right = (m_fFontCentreSize * 0.5f + 4.0f) + x;
     }
     else if (m_bFontRightAlign) {
         rect->left = m_fRightJustifyWrap - 4.0f;
-        rect->right = x;
+        rect->right = x + 4.0f; // exe: `fld x; fadd 4.0` (the old port stored x)
     }
     else {
         rect->left = x - 4.0f;
@@ -1044,7 +1047,7 @@ void CFont::GetTextRect(CRect* rect, float x, float y, const GxtChar* text) {
     }
 
     rect->top = y - 4.0f;
-    rect->bottom = y + 4.0f + GetHeight() * (float)GetNumberLines(x, y, text);
+    rect->bottom = (GetHeight() * (float)numLines + y) + 4.0f; // exe: ((h * lines) + y) + 4
 }
 
 // 0x71A700
@@ -1113,7 +1116,7 @@ float CFont::GetCharacterSize(uint8 letterId) {
 float CFont::GetHeight(bool a1) {
     assert(a1 == false && "NOT IMPLEMENTED");
     const float y = a1 ? 0.0f : m_Scale.y;
-    return y * 32.0f / 2.0f + y + y;
+    return y * 32.0f * 0.5f + (y + y); // exe inline copies (e.g. 0x71A6C8): (y * 32) * 0.5 + (y + y)
 }
 
 // 0x719670, original name unknown

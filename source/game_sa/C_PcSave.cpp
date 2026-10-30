@@ -111,5 +111,12 @@ bool C_PcSave::DeleteSlot(int32 slot) {
     char path[MAX_PATH]{};
     s_PcSaveHelper.error = eErrorCode::NONE;
     GenerateGameFilename(slot, path);
-    return std::filesystem::remove(path);
+    std::error_code ec;
+    std::filesystem::remove(path, ec); // exe 0x6190fe: DeleteFileA(path)
+    // exe 0x619113-0x61913b: the result is "the file can no longer be opened" (true also when there was no file), not DeleteFile's result
+    if (const auto f = CFileMgr::OpenFile(path, "rb")) {
+        CFileMgr::CloseFile(f);
+        return false;
+    }
+    return true;
 }

@@ -170,6 +170,7 @@ void CAEAudioUtility::StaticInitialise() {
     }
 
     VERIFY(QueryPerformanceFrequency(&Frequency));
+    startTimeMs = 0; // 0x5B987C: cleared before the first reading (GetCurrentTimeInMS subtracts it)
     startTimeMs = GetCurrentTimeInMS();
 }
 

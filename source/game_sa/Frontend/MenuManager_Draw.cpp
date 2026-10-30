@@ -1070,8 +1070,9 @@ void CMenuManager::DrawControllerBound(uint16 verticalOffset, bool isOppositeScr
 
     // Main loop - process each action
     for (auto actionIndex = 0u; actionIndex < maxActions; actionIndex++) {
-        const auto currentY = StretchY(float(verticalOffset + actionIndex * verticalSpacing));
-        auto currentX = StretchX(270.0f);
+        // The exe keeps both text positions in ints (ftol), so they are whole pixels
+        const float currentY = (float)NOTSA_FTOL(int32, StretchY(float(verticalOffset + actionIndex * verticalSpacing)));
+        int32 currentXi = NOTSA_FTOL(int32, StretchX(270.0f));
         eControllerAction action = eControllerAction::CA_NONE;
         CFont::SetColor(MENU_TEXT_WHITE);
 
@@ -1123,9 +1124,9 @@ void CMenuManager::DrawControllerBound(uint16 verticalOffset, bool isOppositeScr
                 if (auto buttonText = ControlsManager.GetControllerSettingTextWithOrderNumber(action, order)) {
                     hasControl = true;
                     if (!isOppositeScreen) {
-                        CFont::PrintString(currentX, currentY, buttonText);
+                        CFont::PrintString((float)currentXi, currentY, buttonText);
                     }
-                    currentX += StretchX(75.0f);
+                    currentXi = NOTSA_FTOL(int32, StretchX(75.0f) + (float)currentXi);
                 }
             }
         }
@@ -1135,7 +1136,7 @@ void CMenuManager::DrawControllerBound(uint16 verticalOffset, bool isOppositeScr
             // 0x57EBEA
             CFont::SetColor(MENU_BG);
             if (!isOppositeScreen) {
-                CFont::PrintString(currentX, currentY, TheText.Get("FEC_CMP")); // COMBO: Uses LOOK LEFT + LOOK RIGHT together
+                CFont::PrintString((float)currentXi, currentY, TheText.Get("FEC_CMP")); // COMBO: Uses LOOK LEFT + LOOK RIGHT together
             }
         }
 
@@ -1146,7 +1147,7 @@ void CMenuManager::DrawControllerBound(uint16 verticalOffset, bool isOppositeScr
             if (m_ListSelection != actionIndex || !m_EditingControlOptions) {
                 CFont::SetColor(MENU_ERROR);
                 if (!isOppositeScreen) {
-                    CFont::PrintString(currentX, currentY, TheText.Get("FEC_UNB")); // UNBOUND
+                    CFont::PrintString((float)currentXi, currentY, TheText.Get("FEC_UNB")); // UNBOUND
                 }
             }
         }
@@ -1166,7 +1167,7 @@ void CMenuManager::DrawControllerBound(uint16 verticalOffset, bool isOppositeScr
                     if (m_InputWaitBlink) {
                         CFont::SetColor(MENU_BG);
                         if (!isOppositeScreen) {
-                            CFont::PrintString(currentX, currentY, TheText.Get("FEC_QUE")); // ???
+                            CFont::PrintString((float)currentXi, currentY, TheText.Get("FEC_QUE")); // ???
                         }
                     }
                     if (m_DeleteAllBoundControls) {

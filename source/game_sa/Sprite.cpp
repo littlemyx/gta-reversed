@@ -300,27 +300,28 @@ void CSprite::RenderOneXLUSprite(CVector pos, CVector2D halfSize, uint8 r, uint8
 
 // 0x70D320
 void CSprite::RenderOneXLUSprite_Triangle(CVector2D screen1, CVector2D screen2, CVector2D screen3, float screenZ, uint8 r, uint8 g, uint8 b, int16 intensity, float recipZ, uint8 alpha) {
-    if (screenZ < 1.3f) {
-        return;
+    // 0x70D320: z >= 2.3 (or NaN) uses r/g/b/intensity as they are (no fade); z in [1.3, 2.3) fades them by ftol(255 * (z - 1.3)); z < 1.3 draws nothing
+    uint32 R = r, G = g, B = b;
+    int32  depthI = intensity;
+    if (screenZ < 2.3f) {
+        if (screenZ < 1.3f) {
+            return;
+        }
+        const int32 factor = NOTSA_FTOL(int32, 255.0f * (screenZ - 1.3f));
+        R      = (uint32)((int32)(r * factor) >> 8);
+        G      = (uint32)((int32)(g * factor) >> 8);
+        B      = (uint32)((int32)(b * factor) >> 8);
+        depthI = (int32)(int16)((intensity * factor) >> 8);
     }
-    const uint32 factor = NOTSA_FTOL(uint32, std::min(255.0f * (screenZ - 1.3f), 255.0f));
-    const uint32 R      = (factor * r) >> 8;
-    const uint32 G      = (factor * g) >> 8;
-    const uint32 B      = (factor * b) >> 8;
-    const uint32 depthI = (factor * intensity) >> 8;
 
     const auto emissiveColor = CRGBA{
-        static_cast<uint8>(((R & 0xff) * depthI) >> 8),
-        static_cast<uint8>(((G & 0xff) * depthI) >> 8),
-        static_cast<uint8>(((B & 0xff) * depthI) >> 8),
+        static_cast<uint8>((int32(R & 0xff) * depthI) >> 8),
+        static_cast<uint8>((int32(G & 0xff) * depthI) >> 8),
+        static_cast<uint8>((int32(B & 0xff) * depthI) >> 8),
         alpha
     }.ToIntARGB();
 
-    const auto z  = (RwIm2DGetFarScreenZ() - RwIm2DGetNearScreenZ())
-        * (screenZ - CDraw::ms_fNearClipZ)
-        * CDraw::ms_fFarClipZ
-        / ((CDraw::ms_fFarClipZ - CDraw::ms_fNearClipZ) * screenZ)
-        + RwIm2DGetNearScreenZ();
+    const auto z = CalcSpriteScreenZ(screenZ, RwIm2DGetNearScreenZ(), RwIm2DGetFarScreenZ());
 
     std::array<RwIm2DVertex, 3> vertices;
     vertices[0] = {

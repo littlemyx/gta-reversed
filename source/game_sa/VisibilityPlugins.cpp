@@ -1224,7 +1224,8 @@ RwBool CVisibilityPlugins::VehicleVisibilityCB(RpClump* clump) {
     RwFrame* frame = RpClumpGetFrame(clump);
 
     const float len = GetDistanceSquaredFromCamera(frame);
-    if (len <= ms_vehicleLod1Dist) {
+    // 0x73372B: fcomp; test ah,0x41; jne -> the frustum test unless an ordered `len > lod1Dist`, so a NaN distance is tested too
+    if (!(len > ms_vehicleLod1Dist)) {
         return FrustumSphereCB(clump);
     }
 

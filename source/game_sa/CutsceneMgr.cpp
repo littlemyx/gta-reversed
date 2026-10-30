@@ -83,7 +83,10 @@ RpAtomic* CalculateBoundingSphereRadiusCB(RpAtomic* atomic, void* data) {
 
     // Not sure? I guess `center` is now just the offset from the object space center?
     // Fuck knows...
-    maxRadius = std::max(RwV3dLength(&center) + sp->radius, maxRadius);
+    // 0x5B01B0: `fcomp; test ah, 0x41; jne` - only a strictly greater (ordered) value is stored
+    if (const auto r = RwV3dLength(&center) + sp->radius; r > maxRadius) {
+        maxRadius = r;
+    }
 
     return atomic;
 }
@@ -279,11 +282,13 @@ bool CCutsceneMgr::HasCutsceneFinished() {
 
 // 0x5AFAD0
 void CCutsceneMgr::HideRequestedObjects() {
-    if (ms_iNumHiddenEntities == 0) {
+    // 0x5AFAD0: the counter holds the number of `remove` lines of the .CUT file here; it is reset to 0 and then counts the entities actually hidden
+    const auto numToHide = std::exchange(ms_iNumHiddenEntities, 0u);
+    if (numToHide == 0) {
         return;
     }
 
-    for (const auto& cr : ms_crToHideItems | rngv::take(ms_iNumHiddenEntities)) {
+    for (const auto& cr : ms_crToHideItems | rngv::take(numToHide)) {
         int32 modelId;
         if (!CModelInfo::GetModelInfo(cr.m_szObjectName, &modelId)) {
             NOTSA_LOG_DEBUG("Invalid model name(\"{}\")", cr.m_szObjectName);

@@ -37,7 +37,7 @@ void ProcSurfaceInfo_c::Init(
         return;
     }
 
-    minDist = std::max(minDist, 80.0f);
+    minDist = std::min(minDist, 80.0f); // 0x5A2EC9: fcomp 80.0, jne (<=, NaN) skips the store: minDist > 80 becomes 80 (procobj.dat 50/60/70/80 keep their value)
 
     m_fMinScale             = minScale;
     m_fMaxScale             = maxScale;
@@ -134,7 +134,7 @@ ProcObjectListItem* ProcSurfaceInfo_c::AddObject(CVector pos, CVector normal, tC
         head->m_bAllocatedMatrix = true;
         ++g_procObjMan.m_numAllocatedMatrices;
     } else {
-        pos.z += zOffset - minBounding.z;
+        pos.z = (pos.z - minBounding.z) + zOffset; // 0x5A36EA: fld pos.z; fsub minBounding.z; fadd zOffset
         head->m_Obj->SetPosn(pos);
         head->m_Obj->SetOrientation(0.f, 0.f, rotation);
         head->m_bAllocatedMatrix = false;
@@ -147,7 +147,9 @@ ProcObjectListItem* ProcSurfaceInfo_c::AddObject(CVector pos, CVector normal, tC
     head->m_Obj->UpdateRwFrame();
     CWorld::Add(head->m_Obj);
     m_Objects.AddItem(head);
-    if (!isBuilding && (xyScale != 1.0f && zScale != 1.0f)) {
+    // 0x5A379E-0x5A37C9: cmp [esp+1F],0 / jne end: the scale block is for BUILDINGS only (the byte is `objectInfoIndex != -1`); xyScale != 1 jumps
+    // into it, else zScale == 1 leaves (so `||`, the port had `!isBuilding && (xy != 1 && z != 1)`)
+    if (isBuilding && (xyScale != 1.0f || zScale != 1.0f)) {
         auto* rwObject = head->m_Obj->GetRwObject();
         if (rwObject && rwObjectGetParent(rwObject) != (void*)-16) { // I don't understand this if, there must be some missing macro
             auto* modellingMatrix = head->m_Obj->GetModellingMatrix();

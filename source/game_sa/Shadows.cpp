@@ -898,7 +898,7 @@ void CShadows::CastShadowEntityXY(CEntity* entity, float conrerAX, float cornerA
         int16 state  = 0; // 0 = Nothing processed yet, 1 = previous was in, 2 = previous was out
         for (int32 i = 0; i < numIn; i++) {
             const float side = Side(in[i]);
-            if (side <= 0.f) {
+            if (!(side > 0.f)) { // exe `test ah, 0x41` / `jne`: a NaN side counts as "out"
                 if (state == 1) {
                     out[numOut++] = Intersect(in[i - 1], in[i], side);
                 }
@@ -964,7 +964,7 @@ void CShadows::CastShadowEntityXY(CEntity* entity, float conrerAX, float cornerA
         auto& poly = bufB; // The clipped polygon
 
         // Calculate the Z coordinates by projecting the polygon onto the triangle's plane
-        const float planeD = normal.x * p0.x + normal.y * p0.y + p0.z * normal.z;
+        const float planeD = p0.z * normal.z + normal.y * p0.y + normal.x * p0.x; // z, y, x order like the exe (0x7096F9)
         const float invNz  = -1.f / normal.z;
         for (int32 i = 0; i < n; i++) {
             poly[i].pos.z = ((normal.x * poly[i].pos.x + normal.y * poly[i].pos.y) - planeD) * invNz;

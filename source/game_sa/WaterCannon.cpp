@@ -171,28 +171,46 @@ void CWaterCannon::Render() {
     RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTION,    RWRSTATE(rwALPHATESTFUNCTIONGREATER));
     RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTIONREF, RWRSTATE(0));
 
+    (void)rand(); // 0x728E28: the exe calls rand() once here and discards the result (it advances the shared RNG)
+
     size_t prevIdx = m_nSectionsCount % SECTIONS_COUNT;
     size_t currIdx = prevIdx == 0 ? SECTIONS_COUNT - 1 : prevIdx - 1;
 
     bool hasCalculatedMatrix = false;
+    bool hasSectionHit       = false; // [esp+0x16]: set after a hit, the loop ends at the NEXT iteration (that iteration's quads are still drawn)
 
     CVector right{}, fwd{}, up{};
 
     m_Audio.ClearSplashInfo();
 
-    for (auto i = 0; i < SECTIONS_COUNT; i++) {
+    // 0x729597: `cmp word [counter], 0x1F; jl` => 31 iterations (the port ran 32)
+    for (auto i = 0; i < SECTIONS_COUNT - 1; i++) {
+        if (hasSectionHit)
+            break;
+
         if (IsSectionActive(prevIdx) && IsSectionActive(currIdx)) {
+            // NOTE: `prevPosn` is the slot of `m_nSectionsCount` (EBP/ESI in the exe), `currPosn` the one before it (EBX/EDI)
             const CVector& prevPosn = GetSectionPosn(prevIdx);
             const CVector& currPosn = GetSectionPosn(currIdx);
 
-            const CVector currToPrevDir = prevPosn - currPosn;
-            if (currToPrevDir.SquaredMagnitude() < 25.0f) {
+            // 0x728EAC..0x728F0F: currPosn - prevPosn, the squared length is summed as x, y, z and must be < 25
+            const CVector currToPrevDir = currPosn - prevPosn;
+            if (const x87d sqLen = ((x87d)currToPrevDir.x * currToPrevDir.x + (x87d)currToPrevDir.y * currToPrevDir.y) + (x87d)currToPrevDir.z * currToPrevDir.z; sqLen < 25.0) {
                 if (!hasCalculatedMatrix) {
                     hasCalculatedMatrix = true;
 
-                    up = Normalized(CrossProduct(prevPosn - currPosn, TheCamera.GetForward())) * ExeRecip(20.0f);
-                    right = Normalized(CVector::Random(0.0f, 1.0f)) * ExeRecip(20.0f);
-                    fwd = Normalized(CVector::Random(0.0f, 1.0f)) * ExeRecip(20.0f);
+                    // 0x728F21..0x728FD0: up = cross(curr - prev, m_mCameraMatrix forward) * (0.05 / |cross|), |cross|^2 summed as x, z, y
+                    const CVector cross = CrossProduct(currPosn - prevPosn, TheCamera.m_mCameraMatrix.GetForward());
+                    const x87d    scale = (x87d)ExeRecip(20.0f) / x87::sqrt(((x87d)cross.x * cross.x + (x87d)cross.z * cross.z) + (x87d)cross.y * cross.y);
+                    up = CVector{ (float)(cross.x * scale), (float)(cross.y * scale), (float)(cross.z * scale) };
+
+                    // 0x728FD2..0x7290BE
+                    right = CVector::Random(0.0f, 1.0f);
+                    right.Normalise();
+                    right *= ExeRecip(20.0f);
+                    fwd = CVector::Random(0.0f, 1.0f);
+                    fwd.Normalise();
+                    fwd *= ExeRecip(20.0f);
                 }
 
                 const float size = (float)(i * i) / (float)SECTIONS_COUNT + 3.0f;
@@ -208,21 +226,22 @@ void CWaterCannon::Render() {
                 }
 
                 const CVector thisUp = up * size, thisRight = right * size, thisFwd = fwd * size;
+                // 0x72911C..0x729314: for every axis (up, right, fwd): prev - axis, prev + axis, curr - axis, curr + axis
                 const CVector pos[std::size(vertices)] = {
-                    currPosn - thisUp,
-                    currPosn + thisUp,
                     prevPosn - thisUp,
                     prevPosn + thisUp,
+                    currPosn - thisUp,
+                    currPosn + thisUp,
 
-                    currPosn - thisRight,
-                    currPosn + thisRight,
                     prevPosn - thisRight,
                     prevPosn + thisRight,
+                    currPosn - thisRight,
+                    currPosn + thisRight,
 
-                    currPosn - thisFwd,
-                    currPosn + thisFwd,
                     prevPosn - thisFwd,
                     prevPosn + thisFwd,
+                    currPosn - thisFwd,
+                    currPosn + thisFwd,
                 };
                 for (size_t v = 0; v < std::size(vertices); v++) {
                     RxObjSpace3DVertexSetPos(&vertices[v], &pos[v]);
@@ -230,23 +249,27 @@ void CWaterCannon::Render() {
 
                 CColPoint colPoint{};
                 CEntity* hitEntity{};
-                const bool hasSectionHit = CWorld::ProcessLineOfSight(prevPosn, currPosn, colPoint, hitEntity, true, true, false, false, false, false, false, false);
-                if (hasSectionHit) {
+                // 0x72931A: the line goes from the older slot (EDI) to the newer one (ESI)
+                if (CWorld::ProcessLineOfSight(currPosn, prevPosn, colPoint, hitEntity, true, true, false, false, false, false, false, false)) {
                     FxPrtMult_c prtInfo{ 1.0f, 1.0f, 1.0f, 0.15f, 0.75f, 1.0f, 0.2f };
                     CVector velocity0 = colPoint.m_vecNormal * 3.0f * CVector::Random(0.2f, 1.8f);
 
+                    // 0x729440: `(float)n / (float)(uint32)_ftol(timeStep * 0.02 * 1000)` (the ms are truncated first)
+                    const auto timeStepMS = NOTSA_FTOL(int32, CTimer::GetTimeStepInMS());
+                    const x87d timeStepMSU = timeStepMS < 0 ? (x87d)timeStepMS + 4294967296.0 : (x87d)timeStepMS;
                     for (auto n = 0; n < 2; n++) {
-                        const auto unk = (float)n / CTimer::GetTimeStepInMS();
+                        const auto unk = (float)((x87d)n / timeStepMSU);
 
                         g_fx.m_WaterSplash->AddParticle(colPoint.m_vecPoint, velocity0, unk, prtInfo);
-                        g_fx.m_WaterSplash->AddParticle(colPoint.m_vecPoint, velocity0 * 0.6f, unk, prtInfo);
+                        // 0x7294C4: the second particle goes to another system ([0xA9AE24])
+                        g_fx.m_SmokeII3expand->AddParticle(colPoint.m_vecPoint, velocity0 * 0.6f, unk, prtInfo);
                     }
 
-                    m_Audio.SetSplashInfo(colPoint.m_vecPoint, velocity0.Magnitude());
+                    // 0x7294EE: |v| summed as z, y, x
+                    m_Audio.SetSplashInfo(colPoint.m_vecPoint, (float)x87::sqrt(((x87d)velocity0.z * velocity0.z + (x87d)velocity0.y * velocity0.y) + (x87d)velocity0.x * velocity0.x));
 
-                    break;
+                    hasSectionHit = true; // 0x729541; the quads of this section are still drawn
                 }
-
 
                 if (RwIm3DTransform(vertices, std::size(vertices), nullptr, rwIM3D_VERTEXRGBA))
                 {

@@ -286,4 +286,4 @@
 | S97d | rest of S97c | 10 | 2/10 (2 M; budget) -> S97e | MenuManager.cpp, MenuSystem.cpp |
 | S97e | rest of S97d | 8 | 3/8 (2 M, 1 fixed; budget) -> S97f | MenuManager.cpp, MenuSystem.cpp |
 | S96d | rest of S96c | 2 | done (DrawStandardMenus fixed, Update NR uncalled) | LoadingScreen.cpp, MenuManager.cpp |
-| S97f | rest of S97e | 5 | pending | MenuManager.cpp, MenuSystem.cpp |
+| S97f | rest of S97e | 5 | done (2 M, 3 fixed: PrintMap ints/legend 555, PrintStats page write-back, DisplayStandardMenu row dimming) | MenuManager.cpp, MenuSystem.cpp |

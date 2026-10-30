@@ -91,3 +91,6 @@ Full list with addresses: `PHASE3_REPLACED.tsv`. These TUs are compiled out or s
 | game_sa/RenderWare/rw/rwcore.cpp | 4 | RW wrappers forward to the exe RenderWare by address; replaced by fakerw/librw |
 
 Not treated as REPLACED (they still run, over the DirectSound API that `portable/dsound_al.cpp` implements on OpenAL): `Audio/Hardware/AE{Audio,Static,Streaming}Channel`, `AEStreamThread`, `AESmoothFadeThread`, `AEDataStream`, Vorbis/Wave decoders; tier C. `app/platform/platform.cpp` (Rs* wrappers), `Securom.cpp` and the AEAudioHardware init/DS rows are also tier C.
+
+## Status 2026-10-30 22:50
+All phase-3 slices done (S81-S117 incl. b/c/d/e/f continuations); INDEX has 0 pending. Remaining UNSURE rows only where noted in the per-slice reports (NaN-only arms, 1-ulp association, export-only paths).

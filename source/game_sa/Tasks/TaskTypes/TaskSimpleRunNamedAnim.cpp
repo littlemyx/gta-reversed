@@ -71,7 +71,12 @@ bool CTaskSimpleRunNamedAnim::ProcessPed(CPed* ped) {
             CVector bonePos{};
             ped->GetBonePosition(&bonePos, BONE_SPINE1, false);
             if (m_fBlendDelta > 100.f && assoc) {
-                if ((ped->GetPosition() - bonePos).Magnitude() > 1.f) {
+                // exe 0x61BF9D-0x61BFD8: the squares are summed z, y, x (CVector::Magnitude sums x, y, z)
+                const auto  pos = ped->GetPosition();
+                const float dx  = pos.x - bonePos.x;
+                const float dy  = pos.y - bonePos.y;
+                const float dz  = pos.z - bonePos.z;
+                if ((float)std::sqrt(((x87d)dz * dz + (x87d)dy * dy) + (x87d)dx * dx) > 1.f) {
                     assoc->m_Flags |= ANIMATION_IS_BLEND_AUTO_REMOVE;
                     assoc->m_BlendDelta = m_fBlendDelta * -1.f;
                 }

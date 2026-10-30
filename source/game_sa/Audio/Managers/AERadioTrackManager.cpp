@@ -880,8 +880,7 @@ void CAERadioTrackManager::DisplayRadioStationName() {
 // 0x4E9E10
 const GxtChar* CAERadioTrackManager::GetRadioStationName(eRadioID id) {
     if (id <= 0) {
-        NOTSA_UNREACHABLE();
-        return nullptr;
+        return nullptr; // 0x4E9E17: `test al, al; jle` -> returns 0 (no assert in the exe)
     }
 
     char key[8];

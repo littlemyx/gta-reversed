@@ -1,0 +1,24 @@
+addr	function	verdict	asm range	note	fix commit
+0x53F090	CKeyboardState::Clear	MATCH	0x53F090-0x53F1D6 (all)	all words zeroed except enter (+0x23C), as the exe	-
+0x5BCA10	InitModelIndices	MATCH	0x5BCA10-0x5BCCCD (all)	116 stores of 0xFFFF are all in the port; the port also resets 48 more MI_* (FENCE, MAGNOCRANE, ...) that the exe leaves at their .data value 0xFFFF; Init1 runs once so no difference	-
+0x5B57C0	MatchAllModelStrings	MATCH	0x5B57C0-0x5B615C (all)	160 (name, destination address) pairs compared by script, order and spelling identical	-
+0x53F250	CMouseControllerState::Clear	MATCH	0x53F250-0x53F266 (all)	7 bool stores	-
+0x53F270	CMouseControllerState::CheckForInput	MATCH	0x53F270-0x53F2C4 (all)	7 flags + move x/y != 0 (NaN counts as input in both)	-
+0x53F3C0	CPad::UpdateMouse	FIXED	0x53F3C0-0x53F526 (all)	SDL/DI input paths never fed m_fWheelMoved (the exe stores the wheel delta there; Cam.cpp sniper/camera zoom reads it); invert logic and state shift match (platform backend kept)	4b88ac8b8
+0x746A10	CPad::ProcessPad	NOT_REACHED	-	Locked (SDL3 replaces the DirectInput joystick poll); platform code, not compared	-
+0x541DD0	CPad::UpdatePads	MATCH	0x541DD0-0x541E3A (all)	call order, Update(0/1), OldKeyState=NewKeyState / NewKeyState=TempKeyState (2x 0x9C dwords) as the exe; the port adds the NOTSA debug-UI guard	-
+0x746F70	CPad::DIReleaseMouse	MATCH	0x746F70-0x746F9E (all)	Unacquire (vtbl+0x20), Release (vtbl+8), null; not compiled with SDL3	-
+0x5BC090	CPopCycle::Initialise	FIXED	0x5BC090-0x5BC4D3 (all)	missing end-of-function resets: CurrTimeIndex=0, CurrTimeOfWeek=0, CurrZoneInfo=null, CurrentZoneType=-1. File parse order, scanf destinations (all 24 mapped by script), rescale 100/sum and last-max remainder match	24239433e
+0x610BF0	CPopCycle::Update	MATCH	0x610BF0-0x610D0B (all)	weekday jump table decoded (0,7 -> 1; 1 Mon h<20; 2-5 -> 0; 6 Sat h>=20), hours/2, z<950 || !zoneinfo, UpdateIsGangArea inlined as sum>20	-
+0x5BBAC0	CTimeCycle::Initialise	MATCH	0x5BBAC0-0x5BC0DB (all)	all 52 scanf destinations and 47 stores mapped by script to the header fields; ftol/scale constants, sun vector sin/cos, tail resets match; NOTSA file-open guard only	-
+0x5601E0	CTimeCycle::Shutdown	MATCH	0x5601E0 (ret)	-	-
+0x561760	CTimeCycle::Update	MATCH	0x561760-0x561795 (all)	CalcColoursForPoint(camera position, &m_CurrentColours)	-
+0x5617E0	CTimer::Initialise	MATCH	0x5617E0-0x5618B4 (all)	only the divider uses the low dword of freq/1000 (same for any real QPC frequency)	-
+0x5619D0	CTimer::Suspend	MATCH	0x5619D0-0x5619FA (all)	-	-
+0x561A00	CTimer::Resume	MATCH	0x561A00-0x561A3D (all)	-	-
+0x561B10	CTimer::Update	FIXED	0x561B10-0x561C6E (all)	m_snTimeInMillisecondsPauseMode = _ftol(pauseMode + delta/divider) with the sum rounded to 24 bits, not pauseMode += (uint32)(delta/divider) (differs once pauseMode > 2^18 ms); rest (fps, history shift, delta scaling, pause zeroing) matches	95ddd3053
+0x72A9A0	CWeather::AddRain	FIXED	0x72A9A0-0x72AF6A (all)	angle constants 0.02453125 (6.28/256) and 0.00625 with the same rand for the camera-relative branch (port used 2pi/256 and a lerp), sin/cos*radius unrounded, splash pos ((rand*k)*30+pos)-15 association + third discarded rand per splash, haze alpha step has NO clamp to the target (oscillates), haze pos (rand*40+pos)-20, NaN arms	2d9742274
+0x72A820	CWeather::AddSandStormParticles	FIXED	0x72A820-0x72A9A0 (all)	position = (rand*k + pos) - c, not pos += (rand*k - c) (float association)	2d9742274
+0x72AF70	CWeather::RenderRainStreaks	FIXED	0x72AF70-0x72B625 (all)	particle strength truncates rain*110 to int first (signed compare); rand order (z lift drawn first); vertex 1 = offset+(pos-wind) with ((dir*wind)*rain)*0.1; the streak z never fell in the port ((int)(0.01..0.1) = 0) but falls by _ftol(z-(r*0.09+0.01)) in the exe; render states and index/vertex buffers match	a3b307a7b
+0x72C8B0	CWindModifiers::RegisterOne	FIXED	0x72C8B0-0x72C948 (all)	camera distance sums z,y,x with the unrounded root, NaN not registered	a4f26b500
+0x72C950	CWindModifiers::FindWindModifier	FIXED	0x72C950-0x72CAB6 (all)	only active==1 modifiers count (port: any non-zero); dist sum z,y,x; multiply by 0.025, 0.0333333, 1/dist (port divided / used invLerp); NaN arms of the 40/50 range tests	a4f26b500

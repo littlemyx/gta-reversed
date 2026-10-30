@@ -1151,10 +1151,11 @@ void CAEPedAudioEntity::HandleSwimSplash(eAudioEvents event) {
 
 // 0x4E2790
 void CAEPedAudioEntity::HandleSwimWake(eAudioEvents event) {
-    if (!AEAudioHardware.EnsureSoundBankIsLoaded(SND_BANK_GENRL_COLLISIONS, SND_BANK_SLOT_COLLISIONS, true)) {
-        return;
-    }
+    // 0x4E27A7: the "is it already playing" test comes first, the bank is only touched when a new sound is needed
     if (!AESoundManager.AreSoundsOfThisEventPlayingForThisEntityAndPhysical(event, this, m_pPed)) {
+        if (!AEAudioHardware.EnsureSoundBankIsLoaded(SND_BANK_GENRL_COLLISIONS, SND_BANK_SLOT_COLLISIONS, true)) {
+            return;
+        }
         AESoundManager.PlaySound({
             .BankSlotID         = SND_BANK_SLOT_COLLISIONS,
             .SoundID            = 3,

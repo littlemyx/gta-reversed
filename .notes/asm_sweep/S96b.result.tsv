@@ -1,0 +1,9 @@
+addr	function	verdict	asm range	note	fix commit
+0x5905E0	CLoadingScreen::Update	UNSURE	-	not compared: sweep budget exhausted	-
+0x57B750	CMenuManager::DrawBackground	UNSURE	-	not compared: sweep budget exhausted	-
+0x5794A0	CMenuManager::DrawStandardMenus	UNSURE	-	not compared: sweep budget exhausted	-
+0x573EE0	CMenuManager::DrawWindow	UNSURE	-	not compared: sweep budget exhausted	-
+0x578F50	CMenuManager::DrawWindowedText	UNSURE	-	not compared: sweep budget exhausted	-
+0x57D8D0	CMenuManager::DrawControllerScreenExtraText	UNSURE	-	not compared: sweep budget exhausted	-
+0x57E6E0	CMenuManager::DrawControllerBound	UNSURE	-	not compared: sweep budget exhausted	-
+0x57F300	CMenuManager::DrawControllerSetupScreen	UNSURE	-	not compared: sweep budget exhausted	-

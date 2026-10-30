@@ -3590,7 +3590,7 @@ void CAEVehicleAudioEntity::ProcessPropOrJetStall(const CPlane* plane, float& ou
                 return CAEAudioUtility::GetRandomNumberInRange(i.Min, i.Max);
             }
         } s_StallTimes[2]{
-            { 0.95f, {{ 400, 420 }, { 75, 175 }} }, // Silent
+            { 0.95f, {{ 400, 410 }, { 75, 175 }} }, // Silent (0x8CBDBC = 400, 0x8CBDC0 = 410)
             { 0.85f, {{ 175, 250 }, { 25, 75  }} }, // Non-Silent
         };
         m_SwapStalledTime = CTimer::GetTimeInMS() + s_StallTimes[m_IsSilentStalled].GetRandomStallTime();

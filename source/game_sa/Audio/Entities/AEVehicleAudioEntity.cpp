@@ -3384,7 +3384,7 @@ void CAEVehicleAudioEntity::PlayAircraftSound(eAircraftSoundType st, eSoundBankS
             .SoundID       = sfx,
             .AudioEntity   = this,
             .Pos           = pos.value_or(m_Entity->GetPosition()),
-            .Volume        = m_EventVolume + volume,
+            .Volume        = volume, // 0x4F9604: the exe stores the argument as is (m_EventVolume is only added with the bugfix above)
             .RollOffFactor = rollOff,
             .Speed         = speed,
             .Doppler       = doppler,

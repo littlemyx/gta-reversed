@@ -72,7 +72,11 @@ void CStuntJumpManager::AddOne(const CBoundingBox& start, const CBoundingBox& en
     if (!mp_poolStuntJumps) {
         return;
     }
-    const auto jump = new (mp_poolStuntJumps->New()) CStuntJump{
+    auto* const mem = mp_poolStuntJumps->New();
+    if (!mem) { // pool full (the exe returns -1)
+        return;
+    }
+    new (mem) CStuntJump{
         .start  = start,
         .end    = end,
         .camera = camPos,
@@ -80,9 +84,7 @@ void CStuntJumpManager::AddOne(const CBoundingBox& start, const CBoundingBox& en
         .done   = false,
         .found  = false,
     };
-    if (jump) {
-        ++m_iNumJumps;
-    }
+    ++m_iNumJumps;
 }
 
 // 0x49C490

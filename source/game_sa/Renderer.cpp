@@ -1028,7 +1028,7 @@ int32 CRenderer::SetupBigBuildingVisibility(CEntity* entity, float& outDistance)
         entityPos = entity->GetLod()->GetPosition();
     }
 
-    outDistance = DistanceBetweenPoints(ms_vecCameraPosition, entityPos);
+    outDistance = ExeDistanceZYX(entityPos, ms_vecCameraPosition); // 0x554787-0x554799: inline z, y, x sum of squares
     if (!entity->HasLodChildrenRendered()) {
         int32 visibility = SetupMapEntityVisibility(entity, baseModelInfo, outDistance, bIsTimeInRange);
         if (visibility != RENDERER_VISIBLE || entity->GetNumLodChildren() <= 1u) {

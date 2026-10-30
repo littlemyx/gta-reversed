@@ -22,7 +22,7 @@ void JPegPlugin::InjectHooks() {
     RH_ScopedGlobalInstall(JPegCompressScreenToFile, 0x5D0820);
     RH_ScopedGlobalInstall(JPegCompressScreenToBuffer, 0x5D0740);
     RH_ScopedGlobalInstall(JPegDecompressToRaster, 0x5D05F0);
-    RH_ScopedGlobalInstall(JPegDecompressToVramFromBuffer, 0x5D0320);
+    RH_ScopedGlobalInstall(JPegDecompressToVramFromBuffer, 0x5D07A0); // 0x5D0320 is its fill_input_buffer callback (the lambda below)
 }
 
 // 0x5D0470
@@ -130,16 +130,19 @@ void JPegCompressScreenToBuffer(RwCamera* cam, uint8** buffer, size_t& bufferSiz
 
     // 0x5D02D0
     dst.term_destination = [](j_compress_ptr c) {
-        if (static_cast<size_t>(c->dest->next_output_byte + TotalProcessed - g_ScreenshotFileBuf.data()) < BufferSize) {
+        // exe: copies only the `used` bytes, but advances TotalProcessed by a whole buffer (0x32000)
+        const size_t used = (size_t)(c->dest->next_output_byte - g_ScreenshotFileBuf.data());
+        if (TotalProcessed + used < BufferSize) {
             std::memcpy(
                 *Buffer + TotalProcessed,
                 g_ScreenshotFileBuf.data(),
-                g_ScreenshotFileBuf.size()
+                used
             );
             TotalProcessed += g_ScreenshotFileBuf.size();
         }
     };
 
+    JPegCompressScreen(cam, dst); // 0x5D0785
     bufferSizeInOut = TotalProcessed;
 }
 
@@ -184,12 +187,12 @@ void JPegDecompressToRaster(RwRaster* raster, jpeg_source_mgr& src) {
     RwRasterUnlock(raster);
 }
 
-// 0x5D0320 -- PS2 leftover
-void JPegDecompressToVramFromBuffer(RwRaster* raster, bool enable) {
+// 0x5D07A0 -- PS2 leftover (no callers in the exe)
+bool JPegDecompressToVramFromBuffer(RwRaster* raster, bool enable) {
     NOTSA_GLOBAL_LOCAL(g_ScreenshotFilePointer, 0xBD0B70, (size_t), {});
 
     if (!enable) {
-        return;
+        return false;
     }
 
     std::memcpy(g_ScreenshotFileBuf.data(), FrontEndMenuManager.m_GalleryImgBuffer, g_ScreenshotFileBuf.size());
@@ -216,4 +219,5 @@ void JPegDecompressToVramFromBuffer(RwRaster* raster, bool enable) {
 
     src.next_input_byte = g_ScreenshotFileBuf.data();
     JPegDecompressToRaster(raster, src);
+    return true;
 }

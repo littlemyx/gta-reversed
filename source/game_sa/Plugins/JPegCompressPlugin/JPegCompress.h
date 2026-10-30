@@ -41,6 +41,6 @@ void JPegDecompressToRaster(RwRaster* raster, struct jpeg_source_mgr& src);
 /**
  * Decompress a JPEG to memory (GS?) for displaying in-game. (PS2 gallery?)
  *
- * @addr  0x5D05F0
+ * @addr  0x5D07A0
  */
-void JPegDecompressToVramFromBuffer(RwRaster* raster, bool enable);
+bool JPegDecompressToVramFromBuffer(RwRaster* raster, bool enable);

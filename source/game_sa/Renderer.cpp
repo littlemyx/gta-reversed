@@ -19,6 +19,21 @@
 NOTSA_GLOBAL(gnRendererModelRequestFlags, 0xB745C4, (uint32), {});
 NOTSA_GLOBAL(gpOutEntitiesForGetObjectsInFrustum, 0xB76854, (CEntity**), {});
 
+// The exe inlines the camera distance of the render list code as `fsub x3; fsqrt` over the three squares in a fixed order (NOT CVector::Magnitude, which sums x, y, z):
+// z, y, x at 0x553C29 / 0x5545C0 / 0x554787 and z, x, y at 0x553BE8 (the underwater list). Every product / sum is rounded to a float at PC24.
+static float ExeDistanceZYX(const CVector& a, const CVector& b) {
+    const x87d dx = a.x - b.x;
+    const x87d dy = a.y - b.y;
+    const x87d dz = a.z - b.z;
+    return (float)std::sqrt(dz * dz + dy * dy + dx * dx);
+}
+static float ExeDistanceZXY(const CVector& a, const CVector& b) {
+    const x87d dx = a.x - b.x;
+    const x87d dy = a.y - b.y;
+    const x87d dz = a.z - b.z;
+    return (float)std::sqrt(dz * dz + dx * dx + dy * dy);
+}
+
 void CRenderer::InjectHooks()
 {
     RH_ScopedClass(CRenderer);
@@ -688,7 +703,10 @@ void CRenderer::RenderEverythingBarRoads() {
                     bInsertIntoSortedList = true;
                 }
             }
-            const float fMagnitude = DistanceBetweenPoints(entity->GetPosition(), ms_vecCameraPosition);
+            // 0x553BE8 (underwater list: z, x, y) / 0x553C29 (sorted list: z, y, x)
+            const float fMagnitude = bInsertIntoSortedList
+                ? ExeDistanceZYX(ms_vecCameraPosition, entity->GetPosition())
+                : ExeDistanceZXY(ms_vecCameraPosition, entity->GetPosition());
             if (bInsertIntoSortedList)
                 bInserted = CVisibilityPlugins::InsertEntityIntoSortedList(entity, fMagnitude);
             else

@@ -474,7 +474,8 @@ void CClothesBuilder::BuildBoneIndexConversionTable(uint8* pTable, RpHAnimHierar
         if (boneId == -1) {
             break;
         }
-        const auto idx = RpHAnimIDGetIndex(hier, boneId);
+        // exe 0x5A5712: `cmp al, 0xff` - only the low byte is tested, so the 'not found' result (-1) also becomes 0
+        const auto idx = (uint8)RpHAnimIDGetIndex(hier, boneId);
         pTable[tableIdx] = idx == 0xFF ? 0 : idx;
     }
 }

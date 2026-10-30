@@ -1,25 +1,25 @@
 addr	function	verdict	asm range	note	fix commit
 0x5DB1D0	CGrassRenderer::AddTriPlant	MATCH	0x5DB1D0-0x5DB245	set change/flush, >32 flush, 23-dword copy, ++idx flush at >=32	-
-0x5DAD00	CGrassRenderer::DrawTriPlants	DEVIATION	0x5DAD00-0x5DB082	port seeded std::mt19937 and used [0,1) floats; exe: srand(ftol(seed)) + CRT rand()*(1/32767) in the same call order (skip path burns 3); distances summed z,y,x	cdf8e1f40
+0x5DAD00	CGrassRenderer::DrawTriPlants	DEVIATION	0x5DAD00-0x5DB082	port seeded std::mt19937 and used [0,1) floats; exe: srand(ftol(seed)) + CRT rand()*(1/32767) in the same call order (skip path burns 3); distances summed z,y,x	d9867e1f7
 0x5DB250	CGrassRenderer::FlushTriPlantBuffer	MATCH	0x5DB250	tail-jumps CPPTriPlantBuffer::Flush (0x5DB0C0 also MATCH: rand()/srand() around DrawTriPlants)	-
-0x5A2EB0	ProcSurfaceInfo_c::Init	DEVIATION	0x5A2EB0-0x5A2F9F	minDist clamp is min(minDist,80) (fcomp 80; jne skips the store when <=), port max(): procobj.dat 50/60/70 became 80	32d4d702f
+0x5A2EB0	ProcSurfaceInfo_c::Init	DEVIATION	0x5A2EB0-0x5A2F9F	minDist clamp is min(minDist,80) (fcomp 80; jne skips the store when <=), port max(): procobj.dat 50/60/70 became 80	63d6b969a
 0x5A3270	ProcSurfaceInfo_c::Exit	MATCH	0x5A3270-0x5A32C7	-	-
-0x5A32D0	ProcSurfaceInfo_c::AddObject	DEVIATION	0x5A32D0-0x5A384A	non-align z is (pos.z - minBounding.z) + zOffset; the post-add scale block runs for BUILDINGS only (byte [esp+1F] = objectInfoIndex != -1, jne end) and when xyScale != 1 OR zScale != 1 (port: objects only, &&)	32d4d702f
+0x5A32D0	ProcSurfaceInfo_c::AddObject	DEVIATION	0x5A32D0-0x5A384A	non-align z is (pos.z - minBounding.z) + zOffset; the post-add scale block runs for BUILDINGS only (byte [esp+1F] = objectInfoIndex != -1, jne end) and when xyScale != 1 OR zScale != 1 (port: objects only, &&)	63d6b969a
 0x5DD910	CPlantMgr::Initialise	MATCH	0x5DD910-0x5DDAB4	texture/model names, addressing/filter bytes, 3.0/60.0 alpha dists	-
 0x5DB940	CPlantMgr::Shutdown	MATCH	0x5DB940-0x5DBAD7	-	-
 0x5DD780	CPlantMgr::ReloadConfig	MATCH	0x5DD780-0x5DD8F0	-	-
-0x5DCFA0	CPlantMgr::Update	DEVIATION	0x5DCFA0-0x5DD03F	the two frame counters are bytes used unsigned (test al,0x1F; movzx;and 7); port int8 % went negative after 128 frames (skip mask -7..-1 matches no triangle)	fe05a86e7
+0x5DCFA0	CPlantMgr::Update	DEVIATION	0x5DCFA0-0x5DD03F	the two frame counters are bytes used unsigned (test al,0x1F; movzx;and 7); port int8 % went negative after 128 frames (skip mask -7..-1 matches no triangle)	b2b50c7e5
 0x5DCF30	CPlantMgr::PreUpdateOnceForNewCameraPos	MATCH	0x5DCF30-0x5DCFA0	-	-
-0x5DB3D0	CPlantMgr::CalculateWindBending	DEVIATION	0x5DB3D0-0x5DB4CC	calm branch is sin*0.008f / sin*0.005f (port: /125, /200); windy branch is ((1-c)*T1 + c*T2) + 1.0 (port summed 1 + c*T2 first)	fe05a86e7
+0x5DB3D0	CPlantMgr::CalculateWindBending	DEVIATION	0x5DB3D0-0x5DB4CC	calm branch is sin*0.008f / sin*0.005f (port: /125, /200); windy branch is ((1-c)*T1 + c*T2) + 1.0 (port summed 1 + c*T2 first)	b2b50c7e5
 0x5DBEB0	CPlantMgr::_ColEntityCache_Add	MATCH	0x5DBEB0-0x5DBEEF	-	-
 0x5DBEF0	CPlantMgr::_ColEntityCache_Remove	MATCH	0x5DBEF0-0x5DBF0F	-	-
-0x5DC510	CPlantMgr::_ColEntityCache_Update	DEVIATION	0x5DC510-0x5DC8AF	AddEntry result is ignored (stops only when the unused list is empty; port aborted the whole scan when AddEntry failed); sector range clamped to [0,119] (port visited sector -1/120); entity scan code marked before the area test	fe05a86e7
-0x5DCD80	CPlantMgr::_ProcessEntryCollisionDataSections	DEVIATION	0x5DCD80-0x5DCEFE	face groups walked in memory-descending order (port ascending)	fe05a86e7
-0x5DC8B0	CPlantMgr::_ProcessEntryCollisionDataSections_AddLocTris	DEVIATION	0x5DC8B0-0x5DCD76	7 range tests as differences d = c - p: centroid (v2+(v1+v0))*0.33333334, midpoints (d_i+d_j)*0.5, squared length z,y,x (port: x,y,z, vector midpoints, ((0+v0)+v1)+v2)/3	fe05a86e7
-0x5DBF20	CPlantMgr::_ProcessEntryCollisionDataSections_RemoveLocTris	DEVIATION	0x5DBF20-0x5DC20A	exe tests 7 points incl. the triangle CENTER (port 6, no center) so far triangles with the center in range were released; difference-space midpoints	fe05a86e7
+0x5DC510	CPlantMgr::_ColEntityCache_Update	DEVIATION	0x5DC510-0x5DC8AF	AddEntry result is ignored (stops only when the unused list is empty; port aborted the whole scan when AddEntry failed); sector range clamped to [0,119] (port visited sector -1/120); entity scan code marked before the area test	b2b50c7e5
+0x5DCD80	CPlantMgr::_ProcessEntryCollisionDataSections	DEVIATION	0x5DCD80-0x5DCEFE	face groups walked in memory-descending order (port ascending)	b2b50c7e5
+0x5DC8B0	CPlantMgr::_ProcessEntryCollisionDataSections_AddLocTris	DEVIATION	0x5DC8B0-0x5DCD76	7 range tests as differences d = c - p: centroid (v2+(v1+v0))*0.33333334, midpoints (d_i+d_j)*0.5, squared length z,y,x (port: x,y,z, vector midpoints, ((0+v0)+v1)+v2)/3	b2b50c7e5
+0x5DBF20	CPlantMgr::_ProcessEntryCollisionDataSections_RemoveLocTris	DEVIATION	0x5DBF20-0x5DC20A	exe tests 7 points incl. the triangle CENTER (port 6, no center) so far triangles with the center in range were released; difference-space midpoints	b2b50c7e5
 0x5DCF00	CPlantMgr::_UpdateLocTris	MATCH	0x5DCF00-0x5DCF29	-	-
-0x5DBAE0	CPlantMgr::Render	DEVIATION	0x5DBAE0-0x5DBE25	colour channel = (ch * (ftol(lighting*255)&0xFF)) >> 8; port ftol(ch*lighting) (up to 1 brighter); render states, plant record fields, set ids MATCH	fe05a86e7
-0x5DD6C0	CPlantSurfPropMgr::Initialise	DEVIATION	0x5DD6C0-0x5DD75F	slot id of every property was not reset to 0 (rest MATCH)	7c445e52f
+0x5DBAE0	CPlantMgr::Render	DEVIATION	0x5DBAE0-0x5DBE25	colour channel = (ch * (ftol(lighting*255)&0xFF)) >> 8; port ftol(ch*lighting) (up to 1 brighter); render states, plant record fields, set ids MATCH	b2b50c7e5
+0x5DD6C0	CPlantSurfPropMgr::Initialise	DEVIATION	0x5DD6C0-0x5DD75F	slot id of every property was not reset to 0 (rest MATCH)	d45455cd9
 0x5DD3B0	CPlantSurfPropMgr::LoadPlantsDat	MATCH	0x5DD3B0-0x5DD660	field jump table order, offsets, pcd clamp, failure paths	-
 0x55D0E0	SurfaceInfos_c::LoadAdhesiveLimits	MATCH	0x55D0E0-0x55D209	-	-
 0x55F420	SurfaceInfos_c::Init	MATCH	0x55F420	-	-

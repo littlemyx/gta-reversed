@@ -48,9 +48,10 @@ bool DoRWStuffStartOfFrame(int16 TopRed, int16 TopGreen, int16 TopBlue, int16 Bo
     RwRGBA BottomColor{ (uint8)BottomRed, (uint8)BottomGreen, (uint8)BottomBlue, (uint8)Alpha };
 
     CDraw::CalculateAspectRatio();
+    CFont::SetAlphaFade(255.0f); // 0x53D69B: the exe resets the font alpha fade at the start of every frame
     CameraSize(Scene.m_pRwCamera, nullptr, SCREEN_VIEW_WINDOW, SCREEN_ASPECT_RATIO);
     CVisibilityPlugins::SetRenderWareCamera(Scene.m_pRwCamera);
-    RwCameraClear(Scene.m_pRwCamera, &TopColor, rwCAMERACLEARZ | rwCAMERACLEARSTENCIL);
+    RwCameraClear(Scene.m_pRwCamera, &TopColor, rwCAMERACLEARZ); // 0x53D71F: flags = 2 (Z only; the stencil is NOT cleared here)
 
     if (!RsCameraBeginUpdate(Scene.m_pRwCamera))
         return false;

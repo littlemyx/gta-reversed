@@ -3606,7 +3606,7 @@ void CAEVehicleAudioEntity::ProcessPropOrJetStall(const CPlane* plane, float& ou
         return;
     }
 
-    if (CTimer::GetTimeInMS() >= m_SwapStalledTime) {
+    if (CTimer::GetTimeInMS() > m_SwapStalledTime) { // 0x4FD788 / 0x4FDE64 / 0x5018C7: `cmp now, [esi+0xB8]; jbe skip` - strictly later (port had >=)
         constexpr static struct {
             float FastStallProbability;
             struct {
@@ -4003,6 +4003,11 @@ void CAEVehicleAudioEntity::ProcessDummyJet(tVehicleParams& vp) {
 
 // 0x501650
 void CAEVehicleAudioEntity::ProcessPlayerJet(tVehicleParams& vp) {
+    // 0x501650: the exe leaves before touching pedals / stall state (timers, rand) when the generic bank is not loaded; the port only checked that inside ProcessGenericJet
+    if (!AEAudioHardware.IsSoundBankLoaded(SND_BANK_GENRL_VEHICLE_GEN, SND_BANK_SLOT_VEHICLE_GEN)) {
+        return;
+    }
+
     auto* const plane = vp.Vehicle->AsPlane();
     const auto isRecordingVehicle = plane->m_autoPilot.m_vehicleRecordingId >= 0;
 

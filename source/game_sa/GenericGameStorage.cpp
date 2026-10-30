@@ -650,10 +650,11 @@ bool CGenericGameStorage::SaveDataToWorkBuffer(void* data, int32 size) {
         return true;
     }
 
-    if (static_cast<uint32>(ms_WorkBufferPos + size) > ms_WorkBufferSize) {
+    // exe 0x5D1290-0x5D12A0: the save path compares against the constant 0xC800, not ms_WorkBufferSize (0x8D2BE0, which a previous load leaves at the size of the last chunk read)
+    if (static_cast<uint32>(ms_WorkBufferPos + size) > BUFFER_SIZE) {
         // Make space for data
 
-        const auto buffSizeRemaining = ms_WorkBufferSize - ms_WorkBufferPos;
+        const auto buffSizeRemaining = (int32)BUFFER_SIZE - ms_WorkBufferPos;
         if (!SaveDataToWorkBuffer(data, buffSizeRemaining)) { // Try writing what we have space for
             return false;
         }

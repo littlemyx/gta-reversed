@@ -3858,6 +3858,12 @@ void CAEVehicleAudioEntity::ProcessDummyHeli(tVehicleParams& vp) {
 
 #pragma region Seaplane
 
+// notsa (0x4FF4B2, 0x4FF830): the propeller speed of a sea plane (a boat's m_EngineSpeed * 1/0.22f); a NaN takes the `<= 0.2` arms of the exe (speed factor and distant-volume base are 0.2)
+static float GetSeaPlanePropSpeed(const CBoat* boat) {
+    const auto s = boat->m_EngineSpeed * ExeRecip(0.22f);
+    return std::isnan(s) ? 0.2f : s;
+}
+
 // 0x4FF320
 void CAEVehicleAudioEntity::ProcessPlayerSeaPlane(tVehicleParams& vp) {
     const auto* const veh = vp.Vehicle->AsBoat(); // Yes,it's actually a boat
@@ -3875,11 +3881,7 @@ void CAEVehicleAudioEntity::ProcessPlayerSeaPlane(tVehicleParams& vp) {
     // 0x4FF5F1-0x4FF65B: the exe steps m_CurrentRotorFrequency towards the tilt frequency by 0x862D04 both ways (the port computed the target and dropped it)
     UpdateRotorFreq(CalculatePlanePropFreq(vp, GetAircraftAcceleration(vp)), ROTOR_FREQ_STEP_EXE, ROTOR_FREQ_STEP_EXE);
 
-    // 0x4FF4B2: a NaN prop speed takes the `<= 0.2` arms (both the speed factor and the distant-volume base become 0.2)
-    auto propSpeed          = veh->m_EngineSpeed * ExeRecip(0.22f);
-    if (std::isnan(propSpeed)) {
-        propSpeed = 0.2f;
-    }
+    const auto propSpeed    = GetSeaPlanePropSpeed(veh);
     const auto camPoVFactor = GetAircraftCameraPoVFactor(veh);
     const auto sf           = GetDummyRCRotorSpeedFactor(propSpeed);
     PlayAircraftSound( // 0x4FF74A
@@ -3925,11 +3927,12 @@ void CAEVehicleAudioEntity::ProcessDummySeaPlane(tVehicleParams& vp) {
         return;
     }
 
+    // 0x4FF830-0x4FF89B: only the "near" sound; its volume is log10(speed factor) * 20 + 8 of the propeller speed (the port used the distant-fade volume with base 0)
     PlayAircraftSound(
         AE_SOUND_AIRCRAFT_NEAR,
         SND_BANK_SLOT_VEHICLE_GEN,
         17,
-        GetAircraftDistantSoundVolume(plane, 0.f),
+        CAEAudioUtility::AudioLog10(GetDummyRCRotorSpeedFactor(GetSeaPlanePropSpeed(plane))) * 20.f + 8.f,
         1.f
     );
 }

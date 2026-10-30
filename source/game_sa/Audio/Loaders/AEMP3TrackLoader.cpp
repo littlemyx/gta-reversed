@@ -57,8 +57,13 @@ bool CAEMP3TrackLoader::Initialise() {
         return true;
     }
 
-    // Try loading from a DVD.    
-    return IsCurrentAudioStreamAvailable();
+    // Try loading from a DVD.
+    // 0x4E0CEE: the exe sets `m_bInitialised` here (IsCurrentAudioStreamAvailable does not)
+    if (IsCurrentAudioStreamAvailable()) {
+        m_bInitialised = true;
+        return true;
+    }
+    return false;
 }
 
 // 0x4E0970
@@ -135,7 +140,11 @@ bool CAEMP3TrackLoader::LoadTrackLookupTable(void) {
 
 // 0x4E0A70
 tTrackInfo* CAEMP3TrackLoader::GetTrackInfo(uint32 trackId) {
+#ifdef FIX_BUGS
     if (trackId >= m_nTrackCount)
+#else
+    if (trackId > m_nTrackCount) // 0x4E0A91: `ja` (GetDataStream at 0x4E0D41 uses `jae`); the id == count entry is one past the table
+#endif
         return nullptr;
 
     const auto packId = m_paTrackLookups[trackId].m_nbPackId;
@@ -176,9 +185,9 @@ tTrackInfo* CAEMP3TrackLoader::GetTrackInfo(uint32 trackId) {
 // 0x4E0BD0
 bool CAEMP3TrackLoader::IsCurrentAudioStreamAvailable() {
     if (m_pszDvdDrivePath = getDvdGamePath()) {
-        const auto dvdPath = std::format("{}\\AUDIO\\STREAMS\\{}", getDvdGamePath(), m_paStreamPacks[0].m_szName);
+        // 0x4E0BE6: the drive string already ends with a path separator (like "D:\"): strcpy(dvd) + strcat("AUDIO\STREAMS\") + strcat(name)
+        const auto dvdPath = std::format("{}AUDIO\\STREAMS\\{}", m_pszDvdDrivePath, m_paStreamPacks[0].m_szName);
         if (auto file = CFileMgr::OpenFile(dvdPath.c_str(), "r")) {
-            m_bInitialised = true;
             m_bStreamingFromDVD = true;
 
             CFileMgr::CloseFile(file);

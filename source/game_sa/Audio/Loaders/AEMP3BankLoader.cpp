@@ -126,25 +126,32 @@ void CAEMP3BankLoader::UpdateVirtualChannels(tVirtualChannelSettings* settings, 
     for (auto i = 0u; i < std::size(settings->BankSlotIDs); i++) {
         const auto sfx    = settings->SoundIDs[i];
         const auto slotID = settings->BankSlotIDs[i];
-        const auto slot   = slotID != SND_BANK_SLOT_NONE
-            ? &GetBankSlot(slotID)
-            : nullptr;
 
-        if (!slot || sfx == -1 || slot->Bank == SND_BANK_UNK || (sfx >= slot->NumSounds && !slot->IsSingleSound())) {
+        // 0x4E0480: both ids are tested `< 0` (not `== -1`), a slot with no bank or a sound past the end of a (multi sound) bank gives -1
+        if (slotID < 0 || sfx < 0) {
             lengths[i]        = -1;
             loopStartTimes[i] = -1;
-        } else {
-            lengths[i] = CAEAudioUtility::ConvertFromBytesToMS(
-                slot->GetSoundSize(sfx),
-                slot->Sounds[sfx].SampleFrequency,
-                1
-            );
-
-            const auto loopOffset = slot->Sounds[sfx].LoopStartOffset;
-            loopStartTimes[i] = loopOffset != -1
-                ? CAEAudioUtility::ConvertFromBytesToMS(2 * loopOffset, slot->Sounds[sfx].SampleFrequency, 1u) // Why `*2`?
-                : -1;
+            continue;
         }
+        const auto& slot = GetBankSlot(slotID);
+        if (slot.Bank == SND_BANK_UNK || (sfx >= slot.NumSounds && slot.NumSounds >= 0)) {
+            lengths[i]        = -1;
+            loopStartTimes[i] = -1;
+            continue;
+        }
+
+        // 0x4E04CA: the end of a sound is the start of the next sound's data, for the last sound of the bank the size of the bank in the lookup table;
+        // for a single sound slot (NumSounds == -1) the next entry too (LoadSound stores the size there), NOT the slot size
+        const auto& snd = slot.Sounds[sfx];
+        const auto  end = sfx == (int32)slot.NumSounds - 1
+            ? GetBankLookup((uint16)slot.Bank).NumBytes
+            : slot.Sounds.data()[sfx + 1].BankOffsetBytes;
+        lengths[i] = (int16)CAEAudioUtility::ConvertFromBytesToMS(end - snd.BankOffsetBytes, snd.SampleFrequency, 1);
+
+        // 0x4E0524
+        loopStartTimes[i] = snd.LoopStartOffset != (uint32)-1
+            ? (int16)CAEAudioUtility::ConvertFromBytesToMS(2 * snd.LoopStartOffset, snd.SampleFrequency, 1u) // Why `*2`?
+            : (int16)-1;
     }
 }
 

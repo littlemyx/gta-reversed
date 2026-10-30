@@ -42,7 +42,7 @@ CTaskSimpleUseGun::CTaskSimpleUseGun(CEntity* targetEntity, CVector vecTarget, e
     m_NextCmd{ firstCmd },
     m_TargetPos{ vecTarget },
     m_TargetEntity{ targetEntity },
-    m_BurstShots{ burstLength },
+    m_BurstLength{ burstLength }, // exe 0x61DEE9: the argument goes to +0x34 (burst length); +0x36 (shots fired) is cleared (the port stored it in m_BurstShots)
     m_IsAimImmediate{ isAimImmediate } {
 }
 

@@ -149,9 +149,15 @@ void BreakObject_c::SetGroupData(const RwMatrix* matrix, const CVector* vecVeloc
         if (vecVelocity) {
             group.m_Velocity = *vecVelocity;
             if (fVelocityRand != 0.0f) {
-                group.m_Velocity.x += CGeneral::GetRandomNumberInRange(-fVelocityRand, fVelocityRand);
-                group.m_Velocity.y += CGeneral::GetRandomNumberInRange(-fVelocityRand, fVelocityRand);
-                group.m_Velocity.z += CGeneral::GetRandomNumberInRange(-fVelocityRand, fVelocityRand);
+                // 0x59D658: the exe keeps the x87 chain `((max - min) * rnd + old) + min` (old added BEFORE min), not `old + lerp(min, max)`
+                const auto AddRand = [&](float& v) {
+                    const x87d t  = static_cast<x87d>(CGeneral::GetRandomNumber()) * static_cast<x87d>(RAND_MAX_FLOAT_RECIPROCAL);
+                    const x87d lo = static_cast<x87d>(-fVelocityRand);
+                    v = static_cast<float>(((static_cast<x87d>(fVelocityRand) - lo) * t + static_cast<x87d>(v)) + lo);
+                };
+                AddRand(group.m_Velocity.x);
+                AddRand(group.m_Velocity.y);
+                AddRand(group.m_Velocity.z);
             }
         } else {
             group.m_Velocity.x = CGeneral::GetRandomNumberInRange(-fVelocityRand, fVelocityRand);
@@ -164,7 +170,7 @@ void BreakObject_c::SetGroupData(const RwMatrix* matrix, const CVector* vecVeloc
         group.m_RotationAxis.x = CGeneral::GetRandomNumberInRange(-1.0f, 1.0f);
         group.m_RotationAxis.y = CGeneral::GetRandomNumberInRange(-1.0f, 1.0f);
         group.m_RotationAxis.z = CGeneral::GetRandomNumberInRange(-1.0f, 1.0f);
-        group.m_RotationAxis.Normalise();
+        RwV3dNormalize(&group.m_RotationAxis, &group.m_RotationAxis); // 0x59D7BD: RW's table-based normalise, not CVector::Normalise
 
         group.m_bStoppedMoving = false;
     }

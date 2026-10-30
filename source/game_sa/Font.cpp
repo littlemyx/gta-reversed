@@ -707,12 +707,14 @@ void CFont::SetOrientation(eFontAlignment alignment) {
 void CFont::InitPerFrame() {
     ZoneScoped;
 
+    // 0x719800: also clears the outline size (0xC71A9B) and sets the render state's font texture to -1 (word 0xFFFF)
+    m_nFontOutlineSize = 0;
     m_nFontOutline = 0;
     m_nFontOutlineOrShadow = 0;
     m_nFontShadow = 0;
     m_bNewLine = false;
     PS2Symbol = EXSYMBOL_NONE;
-    RenderState.m_wFontTexture = 0; // todo: -1
+    RenderState.m_wFontTexture = (uint16)-1;
     pEmptyChar = &FontRenderStateBuf[0]; // FontRenderStatePointer.pRenderState
 
     CSprite::InitSpriteBuffer();

@@ -756,13 +756,19 @@ void CMenuManager::RedefineScreenUserInput(bool* accept, bool* cancel) {
     }
 
     // 0x57F086 - Handle up navigation (keyboard, pad, or mouse wheel up)
-    if (CPad::IsUpDown() || CPad::GetAnaloguePadUp() || pad->IsDPadUpPressed() || CPad::IsMouseWheelUpPressed()) {
-        m_DisplayTheMouse = CPad::IsMouseWheelUpPressed();
+    // Exe 0x57F086-0x57F138: key / analogue / D-pad hide the mouse; the wheel (checked last) shows it
+    const bool upByPad = CPad::IsUpDown() || CPad::GetAnaloguePadUp() || pad->IsDPadUpPressed();
+    if (upByPad || CPad::IsMouseWheelUpPressed()) {
+        m_DisplayTheMouse = !upByPad;
         // Only trigger once per key press, not while held
         if (!m_KeyPressed[2]) {
             m_KeyPressed[2] = true;
             m_LastTransitionTime = CTimer::GetTimeInMSPauseMode();
-            m_ListSelection = m_ListSelection > 0 ? m_ListSelection - 1 : maxAction - 1;
+            if (m_ListSelection == 0) {
+                m_ListSelection = (int32)maxAction - 1;
+            } else if (m_ListSelection > 0) { // exe leaves a negative selection untouched
+                m_ListSelection--;
+            }
         }
     } else {
         // Reset when key released
@@ -770,13 +776,19 @@ void CMenuManager::RedefineScreenUserInput(bool* accept, bool* cancel) {
     }
 
     // 0x57F138 - Handle down navigation (keyboard, pad, or mouse wheel down)
-    if (CPad::IsDownDown() || CPad::GetAnaloguePadDown() || pad->IsDPadDownPressed() || CPad::IsMouseWheelDownPressed()) {
-        m_DisplayTheMouse = CPad::IsMouseWheelDownPressed();
+    const bool downByPad = CPad::IsDownDown() || CPad::GetAnaloguePadDown() || pad->IsDPadDownPressed();
+    if (downByPad || CPad::IsMouseWheelDownPressed()) {
+        m_DisplayTheMouse = !downByPad;
         // Only trigger once per key press, not while held
         if (!m_KeyPressed[3]) {
             m_KeyPressed[3] = true;
             m_LastTransitionTime = CTimer::GetTimeInMSPauseMode();
-            m_ListSelection = (m_ListSelection == maxAction - 1) ? 0 : m_ListSelection + 1;
+            const int32 last = (int32)maxAction - 1;
+            if (m_ListSelection == last) {
+                m_ListSelection = 0;
+            } else if (m_ListSelection < last) { // exe leaves a selection past the end untouched
+                m_ListSelection++;
+            }
         }
     } else {
         // Reset when key released

@@ -78,6 +78,7 @@ void CUpsideDownCarCheck::AddCarToCheck(int32 carHandle) {
         if (car.m_nHandle < 0) {
             car.m_nHandle = carHandle;
             car.m_nTime = 0;
+            return; // exe 0x4638E5: only the first free slot is taken (the port filled all of them)
         }
     }
 }

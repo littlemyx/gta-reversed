@@ -777,10 +777,15 @@ int32 CRenderer::SetupMapEntityVisibility(CEntity* entity, CBaseModelInfo* baseM
     }
 
     const float fFarClipRadius = baseModelInfo->GetColModel()->GetBoundRadius() + ms_fFarClipPlane;
-    float fDrawDistanceRadius = std::min(TheCamera.m_fLODDistMultiplier * baseModelInfo->m_fDrawDistance, fFarClipRadius);
+    // 0x553F92: `fcomp; test ah,5; jp` takes the far clip radius for prod >= radius AND for NaN (std::min keeps the product then)
+    float fDrawDistanceRadius = TheCamera.m_fLODDistMultiplier * baseModelInfo->m_fDrawDistance;
+    if (!(fDrawDistanceRadius < fFarClipRadius)) {
+        fDrawDistanceRadius = fFarClipRadius;
+    }
     float fFadingDistance = MAX_FADING_DISTANCE;
     if (!entity->GetLod()) {
-        float fDrawDistance = std::min(baseModelInfo->m_fDrawDistance, fDrawDistanceRadius);
+        // 0x553FE3: `fcom; test ah,5; jnp` keeps the draw distance only for draw < radius (NaN takes the radius)
+        const float fDrawDistance = baseModelInfo->m_fDrawDistance < fDrawDistanceRadius ? baseModelInfo->m_fDrawDistance : fDrawDistanceRadius;
         if (fDrawDistance > MAX_LOWLOD_DISTANCE)
             fFadingDistance = fDrawDistance * ExeRecip(15.0f) + 10.0f;
         if (entity->m_bIsBIGBuilding)
@@ -796,7 +801,7 @@ int32 CRenderer::SetupMapEntityVisibility(CEntity* entity, CBaseModelInfo* baseM
         }
     }
 
-    if (!baseModelInfo->GetRwObject() || (fFadingDistance + fDistance - MAX_FADING_DISTANCE >= fDrawDistanceRadius)) {
+    if (!baseModelInfo->GetRwObject() || !(fFadingDistance + fDistance - MAX_FADING_DISTANCE < fDrawDistanceRadius)) { // 0x554080: `jp` also for NaN
         if (entity->m_bDontStream)
             return RENDERER_INVISIBLE;
         if (baseModelInfo->GetRwObject() && fDistance - MAX_FADING_DISTANCE < fDrawDistanceRadius) {
@@ -821,7 +826,7 @@ int32 CRenderer::SetupMapEntityVisibility(CEntity* entity, CBaseModelInfo* baseM
                 AddEntityToRenderList(entity, fDistance);
             return RENDERER_INVISIBLE;
         }
-        if (fDistance - MAX_STREAMING_DISTANCE >= fDrawDistanceRadius || !bIsTimeInRange || !entity->GetIsVisible())
+        if (!(fDistance - MAX_STREAMING_DISTANCE < fDrawDistanceRadius) || !bIsTimeInRange || !entity->GetIsVisible()) // 0x5541F9: `jp` also for NaN
             return RENDERER_INVISIBLE;
         if (!entity->GetRwObject())
             entity->CreateRwObject();

@@ -32,11 +32,11 @@ addr	function	verdict	asm range	note	fix commit
 0x618F50	CGenericGameStorage::DoGameSpecificStuffBeforeSave	MATCH	0x618F50-0x618FEB	Ropes shutdown, pickups, health=min(200,max), EndGangWar(false), stat 136 +1, PassTime 360, hours word cleared, sprint energy, wanted 0, TidyUpMemory(1,0)	-
 0x618E90	CGenericGameStorage::DoGameSpecificStuffAfterSucessLoad	MATCH	0x618E90-0x618F43	text, collision, scene at camera pos, fade, scripts, tags, clothes rebuild, popcycle, gang war flags; call order agrees	-
 0x618E70	CGenericGameStorage::InitRadioStationPositionList	MATCH	0x618E70	ret	-
-0x5D17B0	CGenericGameStorage::GenericLoad	FIXED	0x5D17B0-0x5D1B7F (all)	exe has NO save-version check (GetCurrentVersionNumber result discarded); the port refused mismatching saves: now FIX_BUGS only. Block load order (jump table), header strncmp, error/close paths, bLoading handling agree	bacde1b94
+0x5D17B0	CGenericGameStorage::GenericLoad	FIXED	0x5D17B0-0x5D1B7F (all)	exe has NO save-version check (GetCurrentVersionNumber result discarded); the port refused mismatching saves: now FIX_BUGS only. Block load order (jump table), header strncmp, error/close paths, bLoading handling agree	ef1d284b4
 0x5D13E0	CGenericGameStorage::GenericSave	MATCH	0x5D13E0-0x5D1730 (all)	block order (jump table), SIZE 0x317FC padding loop incl. remainder<0xC800, final SaveWorkBuffer(true), JustSaved name, UpdatePads	-
 0x5D1380	CGenericGameStorage::CheckSlotDataValid	MATCH	0x5D1380-0x5D13D1		-
-0x5D1300	CGenericGameStorage::LoadDataFromWorkBuffer	FIXED	0x5D1300-0x5D1379	bytes taken from the current chunk before a refill are 0xC800 - pos (exe), not chunk size - pos	c02510598
-0x5D1270	CGenericGameStorage::SaveDataToWorkBuffer	FIXED	0x5D1270-0x5D12F1	overflow test and remainder use the constant 0xC800 (port used ms_WorkBufferSize, which a previous load leaves at the last chunk size, e.g. 49148: a save after a load was chunked differently)	ee7f2e500
+0x5D1300	CGenericGameStorage::LoadDataFromWorkBuffer	FIXED	0x5D1300-0x5D1379	bytes taken from the current chunk before a refill are 0xC800 - pos (exe), not chunk size - pos	2f5982a9e
+0x5D1270	CGenericGameStorage::SaveDataToWorkBuffer	FIXED	0x5D1270-0x5D12F1	overflow test and remainder use the constant 0xC800 (port used ms_WorkBufferSize, which a previous load leaves at the last chunk size, e.g. 49148: a save after a load was chunked differently)	6adaf5230
 0x5D10B0	CGenericGameStorage::LoadWorkBuffer	MATCH	0x5D10B0-0x5D1163		-
 0x5D0F80	CGenericGameStorage::SaveWorkBuffer	MATCH	0x5D0F80-0x5D10AE	checksum added before the >0xC7FC split (double-counted after the recursive flush, as in the exe)	-
 0x5D0E90	CGenericGameStorage::MakeValidSaveName	MATCH	0x5D0E90-0x5D0F3D		-

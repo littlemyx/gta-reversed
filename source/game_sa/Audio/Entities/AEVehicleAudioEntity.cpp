@@ -4303,16 +4303,26 @@ void CAEVehicleAudioEntity::ProcessTrainTrackSound(tVehicleParams& vp) {
         return;
     }
 
-    const auto sf = std::abs(train->m_fTrainSpeed); // Speed factor
-    if (train->trainFlags.bNotOnARailRoad || sf < 0.00001f) {
-        UpdateTrainSound(AE_SOUND_TRAIN_TRACK, m_DummySlot, 2, 0.f, -100.f); // Stop sound
-        return;
-    }
-
     // Get cfg for this type
     const auto* const cfg = m_DummyEngineBank == SND_BANK_GENRL_TRAM_D
         ? &s_Config.Train.Tram.TrackSound
         : &s_Config.Train.Generic.TrackSound;
+
+    // 0x4FA4D3: speed factor, clamped to [0, 1] (NB: the "silent" cases still compute the frequency from it: off the rails sf = 0, below 0.00001 it is the speed itself)
+    const auto absSpeed = std::abs(train->m_fTrainSpeed);
+    float sf;
+    float vol;
+    if (train->trainFlags.bNotOnARailRoad) {
+        sf  = 0.f;
+        vol = -100.f;
+    } else {
+        sf = 1.f < absSpeed ? 1.f : absSpeed;
+        if (sf < 0.00001f) {
+            vol = -100.f;
+        } else {
+            vol = cfg->VolBase + CAEAudioUtility::AudioLog10(sf) * 20.f;
+        }
+    }
 
     // Count number of carriages
     size_t n{};
@@ -4326,8 +4336,8 @@ void CAEVehicleAudioEntity::ProcessTrainTrackSound(tVehicleParams& vp) {
         m_DummySlot,
         SND_GENRL_TRAIN_D_TRAIN_TRACK,
         lerp(cfg->FrqMin, cfg->FrqMax, sf) * TrainCarriagesNoise[n % std::size(TrainCarriagesNoise)],
-        cfg->VolBase + CAEAudioUtility::AudioLog10(sf) * 20.f
-    ); 
+        vol
+    );
 }
 
 // 0x4FA1C0

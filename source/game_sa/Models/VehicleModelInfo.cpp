@@ -1275,9 +1275,12 @@ void CVehicleModelInfo::LoadVehicleColours()
 
     eCarColLineType iLastMode = eCarColLineType::IGNORED;
     eCarColLineType iCurMode = eCarColLineType::IGNORED;
+    // exe 0x5B6890: the sscanf destinations of the colour table lines are fixed slots of the function's frame that live across lines; a line that parses
+    // only partially ("77.93,96 # 98 malachite poly" reads just the red) keeps green/blue of the previous colour line there.
+    uint32 red{}, green{}, blue{};
     while (CFileMgr::ReadLine(file, buffer, 1024)) {
         auto iStartInd = 0;
-        while (iStartInd < 10 && buffer[iStartInd] && buffer[iStartInd] <= ' ')
+        while (buffer[iStartInd] && buffer[iStartInd] != '\n' && buffer[iStartInd] <= ' ') // exe: no cap on the leading blanks
             ++iStartInd;
 
         auto pLineStart = &buffer[iStartInd];
@@ -1316,7 +1319,6 @@ void CVehicleModelInfo::LoadVehicleColours()
         }
 
         if (iLastMode == eCarColLineType::GLOBAL_RGB) {
-            uint32 red{}, green{}, blue{};
             const auto read = sscanf_s(buffer, "%d %d %d", &red, &green, &blue);
 #ifdef FIX_BUGS
             if (read != 3) {

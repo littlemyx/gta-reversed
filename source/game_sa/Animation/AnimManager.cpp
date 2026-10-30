@@ -910,6 +910,12 @@ inline void CAnimManager::LoadAnimFile_ANP23(RwStream* s, const IFPSectionHeader
             seq->SetName(seqName);
             seq->SetBoneTag(boneTag);
 
+            // 0x4D53E4: the exe derives the hierarchy's compressed flag from the first sequence's frame type
+            // (1/2 = uncompressed, anything else = compressed); this overrides the ANP3 header flag (and sets it for ANP2)
+            if (seqN == 0) {
+                hier->m_bIsCompressed = frameType != 1 && frameType != 2;
+            }
+
             // Read frames
             const auto ReadFrames = [&](size_t kfSize, bool hasTranslation, bool compressed) {
                 seq->SetNumFrames(numFrames, hasTranslation, compressed, frames);

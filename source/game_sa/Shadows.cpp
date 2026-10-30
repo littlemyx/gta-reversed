@@ -2057,15 +2057,19 @@ void CShadows::StoreShadowForPole(CEntity* entity, float offsetX, float offsetY,
     const auto front     = CVector2D{ CTimeCycle::GetVectorToSun() } * (-poleHeight / 2.f);
     const auto right     = CVector2D{ CTimeCycle::GetShadowSide() } * poleWidth;
 
+    // Simplified matrix transform (Ignoring the Z axis), the sums are in the exe's order: (offset + position) + front (0x70C80B..0x70C8A5)
+    const auto& matPos = mat.GetPosition();
+    const CVector shadowPos{
+        (offsetX * mat.GetRight().x + offsetY * mat.GetForward().x + matPos.x) + front.x,
+        (offsetX * mat.GetRight().y + offsetY * mat.GetForward().y + matPos.y) + front.y,
+        matPos.z + offsetZ
+    };
+
     StoreStaticShadow(
-        NOTSA_PTR_ID32(entity->GetLod()) + localId + 3,
+        NOTSA_PTR_ID32(entity) + localId + 0x33, // The exe uses the entity itself and 0x33 (0x70C93E: `lea eax, [esi + edx + 0x33]`)
         SHADOW_DEFAULT,
         gpPostShadowTex,
-        mat.GetPosition() + CVector{ front, 0.f } + CVector{
-            offsetX * mat.GetRight().x + offsetY * mat.GetForward().x, // Simplified matrix transform (Ignoring the Z axis)
-            offsetX * mat.GetRight().y + offsetY * mat.GetForward().y, // >^^^
-            offsetZ
-        },
+        shadowPos,
         front.x, front.y,
         right.x, right.y,
         2 * NOTSA_FTOL(int16, intensity) / 3,

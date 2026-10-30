@@ -106,9 +106,7 @@ void CAEStaticChannel::Play(int16 timeInMs, int8 unused, float scalingFactor) {
         m_bUnkn2 = true;
     }
     m_bNeedsSynch = true;
-    if (scalingFactor == 0.0f) { // 0x4F0C18: the exe only ever SETS the flag here
-        m_bPaused = true;
-    }
+    m_bPaused = (scalingFactor == 0.0f); // 0x4F0C18-0x4F0C2D: factor != 0 (`jp`) stores 0 into +0x38, equal stores 1 - the exe also CLEARS the flag
 }
 
     

@@ -30,7 +30,7 @@ void CAEStreamThread::InjectHooks() {
 
 // 0x4F11E0
 CAEStreamThread::~CAEStreamThread() {
-    OS_MutexRelease(&m_criticalSection);
+    DeleteCriticalSection(&m_criticalSection); // 0x4F11E4: call [DeleteCriticalSection] on +0x38 (the port called ReleaseMutex on the address of a stack argument)
 }
 
 // 0x4F1680

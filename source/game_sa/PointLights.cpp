@@ -222,6 +222,16 @@ void CPointLights::RenderFogEffect() {
         return;
     }
 
+    // 0x7006xx / 0x700Axx: `(float)(ms & mask) * 0.0007666015625` (resp. `* 0.000191650390625`): the exe constants are the DOUBLES 6.28 / 8192 and 6.28 / 32768 (fmul qword),
+    // not 6.28f * x / 8192
+    [[maybe_unused]] const auto FogAngle = [](uint32 maskedMs, double scale) -> float {
+#ifdef NOTSA_PORTABLE
+        return (float)notsa::fp::Round24Mul((double)maskedMs, scale);
+#else
+        return (float)((x87d)maskedMs * scale);
+#endif
+    };
+
     RwRenderStateSet(rwRENDERSTATEFOGENABLE, RWRSTATE(FALSE));
     RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, RWRSTATE(FALSE));
     RwRenderStateSet(rwRENDERSTATEZTESTENABLE, RWRSTATE(TRUE));
@@ -294,35 +304,40 @@ void CPointLights::RenderFogEffect() {
 
                     const CVector2D delta2D = CVector2D{ (float)x, (float)y } - CVector2D{ pos };
                     const float     along2D = DotProduct2D(delta2D, dir);
-                    if (along2D <= 0.0f || along2D >= FOG_LENGTH || delta2D.SquaredMagnitude() - sq(along2D) >= sq(FOG_RADIUS)) {
+                    // 0x70052x..: `<= 0` / `>= 12` / `>= 25` skip, written so that NaN skips too (fcomp + `test ah, 0x41` / `test ah, 5`)
+                    if (!(along2D > 0.0f) || !(along2D < FOG_LENGTH) || !(delta2D.SquaredMagnitude() - sq(along2D) < sq(FOG_RADIUS))) {
                         continue;
                     }
 
                     CColPoint colPoint;
                     CEntity*  entity;
-                    if (!CWorld::ProcessVerticalLine({ (float)x, (float)y, pos.z + 10.0f }, pos.z - 10.0f, colPoint, entity, true, false, false, false, true, false, nullptr)) {
+                    // 0x70058x: the end z is `(pos.z + 10) - 20` (float rounding after each op), not `pos.z - 10`
+                    if (!CWorld::ProcessVerticalLine({ (float)x, (float)y, pos.z + 10.0f }, (pos.z + 10.0f) - 20.0f, colPoint, entity, true, false, false, false, true, false, nullptr)) {
                         continue;
                     }
 
                     const CVector puffPos{ (float)x, (float)y, colPoint.m_vecPoint.z + 1.3f };
                     const CVector delta = puffPos - pos;
-                    const float   along = DotProduct(delta, dir);
-                    if (along <= 0.0f || along >= FOG_LENGTH) {
+                    // 0x7005Dx: the sums are z, then x, then y: (dz * dirZ + dx * dirX) + dy * dirY; the squared length is (dz^2 + dy^2) + dx^2
+                    const float   along = (delta.z * dir.z + delta.x * dir.x) + delta.y * dir.y;
+                    if (!(along > 0.0f) || !(along < FOG_LENGTH)) {
                         continue;
                     }
-                    const float distSq = delta.SquaredMagnitude();
+                    const float distSq = (delta.z * delta.z + delta.y * delta.y) + delta.x * delta.x;
                     const float perpSq = distSq - sq(along);
-                    if (perpSq >= sq(FOG_RADIUS)) {
+                    if (!(perpSq < sq(FOG_RADIUS))) {
                         continue;
                     }
 
+                    // 0x700680..: x / 12 and x / 5 are multiplications by the exe constants (float 1/12, 1/5)
+                    const float alongN = along * ExeRecip(FOG_LENGTH);
+                    const float perpN  = std::sqrt(perpSq) * ExeRecip(FOG_RADIUS);
                     const float intensity = along / std::sqrt(distSq) * fogAmount * 50.0f
-                                          * (1.0f - sq(along / FOG_LENGTH))
-                                          * (1.0f - sq(std::sqrt(perpSq) / FOG_RADIUS));
+                                          * (1.0f - alongN * alongN)
+                                          * (1.0f - perpN * perpN);
                     const auto puffIndex = pattern >> 1;
-                    // 6.28, and not TWO_PI because the binary uses exactly 6.28
                     RenderFogSprite(light, puffPos, intensity, FogSizes[puffIndex], 1.0f,
-                        6.28f * (float)(CTimer::GetTimeInMS() % 8192) / 8192.0f); // angle (0, 2pi)
+                        FogAngle(CTimer::GetTimeInMS() & 0x1FFF, 0.0007666015625)); // angle (0, 2pi): 6.28 / 8192
                 }
             }
         } else if (light.m_nType == PLTYPE_POINTLIGHT || light.m_nType == PLTYPE_ONLYFOGEFFECT_ALWAYS || light.m_nType == PLTYPE_ONLYFOGEFFECT) {
@@ -349,29 +364,31 @@ void CPointLights::RenderFogEffect() {
                     }
 
                     const CVector2D puffPos2D{ (float)x, (float)y };
-                    const float     distSq = (puffPos2D - CVector2D{ pos }).SquaredMagnitude();
-                    if (distSq >= sq(fogSize)) {
+                    // 0x7009A0..: the exe compares the (rounded) distance itself, not its square: `!(sqrt(dx^2 + dy^2) < fogSize)`
+                    const float     dist = (puffPos2D - CVector2D{ pos }).Magnitude();
+                    if (!(dist < fogSize)) {
                         continue;
                     }
 
                     const float camDist = (puffPos2D - CVector2D{ TheCamera.GetPosition() }).Magnitude();
-                    if (camDist >= 15.0f) {
+                    if (!(camDist < 15.0f)) {
                         continue;
                     }
                     const float camFade = camDist < 7.5f ? 1.0f : 1.0f - (camDist - 7.5f) * ExeRecip(7.5f);
 
-                    const float intensity = (1.0f - distSq / sq(fogSize)) * camFade * fogAmount * 37.0f;
+                    // 0x700A3x: q = dist * (1.0f / fogSize) (a real division, then a multiplication), intensity = ((1 - q^2) * camFade) * fogAmount * 37
+                    const float q = dist * (1.0f / fogSize);
+                    const float intensity = (1.0f - q * q) * camFade * fogAmount * 37.0f;
                     const auto puffIndex = hash >> 1;
 
                     constexpr auto PhaseOffsetMs = 2300; // Intentionally non-power of two to appear asymmetric
-                    // 6.28, and not TWO_PI because the binary uses exactly 6.28
                     RenderFogSprite(
                         light,
                         { puffPos2D.x, puffPos2D.y, groundZ + 1.6f },
                         intensity,
                         FogSizes[puffIndex],
                         0.7f,
-                        6.28f * (float)((CTimer::GetTimeInMS() + puffIndex * PhaseOffsetMs) % 32768) / 32768.0f // angle (0,2pi)
+                        FogAngle((CTimer::GetTimeInMS() + puffIndex * PhaseOffsetMs) & 0x7FFF, 0.000191650390625) // angle (0,2pi): 6.28 / 32768
                     );
                 }
             }

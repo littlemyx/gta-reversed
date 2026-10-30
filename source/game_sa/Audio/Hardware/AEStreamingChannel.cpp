@@ -101,17 +101,15 @@ void CAEStreamingChannel::InitialiseSilence() {
 
 // 0x4F1FF0
 void CAEStreamingChannel::SetReady() {
-    switch (m_nState) {
-    case StreamingChannelState::Stopping:
+    if (m_nState == StreamingChannelState::Stopping) {
         AESmoothFadeThread.CancelFade(m_pDirectSoundBuffer);
         m_pDirectSoundBuffer->Stop();
         m_nState = StreamingChannelState::Stopped;
+    }
 
-        break;
-    case StreamingChannelState::Stopped:
-        if (m_pStreamingDecoder)
-            m_nState = StreamingChannelState::UNK_MINUS_2;
-        break;
+    // 0x4F201D: no jump after the store above - the second test sees the freshly stored Stopped (the port's switch/break skipped it)
+    if (m_nState == StreamingChannelState::Stopped && m_pStreamingDecoder) {
+        m_nState = StreamingChannelState::UNK_MINUS_2;
     }
 }
 

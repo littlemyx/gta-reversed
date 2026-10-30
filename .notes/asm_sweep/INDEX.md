@@ -271,5 +271,6 @@
 | S93b | rest of S93 | 7 | done (6 M, 1 fixed) | Fx.cpp |
 | S94b | rest of S94 | 2 | done (1 M, 1 fixed) | FxEmitterBP.cpp |
 | S95b | rest of S95 | 15 | done (15 M) | Hud.cpp |
-| S84b | rest of S84 | 19 | pending | AEVehicleAudioEntity.cpp |
+| S84b | rest of S84 | 19 | partial 8/23 (fixes; jet/seaplane partial) -> S84c | AEVehicleAudioEntity.cpp |
 | S102b | rest of S102 | 24 | pending | BrightLights.cpp, Clouds.cpp, Coronas.cpp, Mirrors.cpp, Occlusion.cpp, PointLights.cpp |
+| S84c | rest of S84b | 15 | pending | AEVehicleAudioEntity.cpp |

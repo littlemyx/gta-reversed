@@ -152,7 +152,7 @@ bool PluginAttach() {
         Attach("Rp UV Anim",               RpUVAnimPluginAttach) &&
         Attach("Custom Building Renderer", CCustomBuildingRenderer::PluginAttach) &&
         Attach("Car FX Renderer",          CCarFXRenderer::RegisterPlugins) &&
-        Attach("Rp Anisot",                RpAnisotPluginAttach) &&
+        (RpAnisotPluginAttach(), true) && // 0x53D8DF: the exe ignores the result of this attach (no test before the next call)
         Attach("Breakable",                BreakablePluginAttach) &&
         Attach("Collision",                CCollisionPlugin::PluginAttach) &&
         Attach("2d Effect",                C2dEffect::PluginAttach) &&

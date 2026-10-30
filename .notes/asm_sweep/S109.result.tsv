@@ -1,0 +1,43 @@
+addr	fn	verdict	commit	note
+0x4D0C30	CAnimBlendSequence::Destructor	MATCH		free unless external-memory bit (flag bit 3)
+0x4D0CD0	CAnimBlendSequence::SetNumFrames	MATCH		sizes 16/32 (trans) 10/20 (no trans); exe only ORs flags and never sets bit 3, the port NOTSA sets external-memory when frameData given - only the ANP3 loader passes frameData and it sets the bit after anyway, so same
+0x4D12A0	CAnimBlendSequence::RemoveUncompressedData	MATCH		tail-jumps to CompressKeyframes when frames != 0
+0x4CDF50	CAnimBlendStaticAssociation::Destructor	MATCH		vector deleting dtor wrapper -> FreeSequenceArray
+0x4CE9A0	CAnimBlendStaticAssociation::FreeSequenceArray	MATCH		
+0x53D690	DoRWStuffStartOfFrame	FIXED	f197564b9	missing CFont::SetAlphaFade(255.0f) after CalculateAspectRatio; RwCameraClear flags 2 (Z), port 6; tan(fov*0.0087266) and DrawRect(rect,bot,bot,top,top) colour order verified
+0x53D7A0	DoRWStuffStartOfFrame_Horizon	MATCH		clear gColourTop flags 6, DefinedState, view matrix Update, RenderSkyPolys
+0x53D840	DoRWStuffEndOfFrame	MATCH		
+0x53D870	PluginAttach	FIXED	dad6e24df	order verified; Anisot result is ignored by the exe, port aborted on failure
+0x53EC10	AppEventHandler	FIXED	4b6582ccb	event jump table decoded (0,4,9,21,22,24,25,26,27,38; default 2); rsCAMERASIZE aspect is fixed 4/3 (0x3FAAAAAB), port used SCREEN_ASPECT_RATIO unguarded
+0x734650	DefinedState	MATCH		16 render states + fog colour ARGB from sky bottom
+0x734750	DefinedState2d	MATCH		
+0x5BF3B0	GameInit	MATCH		
+0x53E580	InitialiseGame	MATCH		
+0x53DF10	TheGame	MATCH		unused; debug printf only
+0x5BF390	RwInitialize	MATCH		
+0x53D910	RwTerminate	MATCH		gamma reset via ResetGammaWhenExiting
+0x53E170	RenderEffects	MATCH		call order, heli/script search-light test, replay mode + DisablePlayerControls gate
+0x53DF40	RenderScene	FIXED	16ee1a2ed	NaN arms only (under-water flag UnderWaterness>0, front.z test); near-plane shadow math (2*2^-24 constants, 0.25, association) MATCH
+0x53E530	RenderMenus	MATCH		
+0x53E230	Render2dStuff	FIXED	6bf5306f9	zoom-box half sizes are integer halves (cdq/sub/sar) of the resolution; render states, camera mode list, weapon types, rect order MATCH; the no-player weapon value is stack garbage in the exe (port 0)
+0x53E160	RenderDebugShit	MATCH		exe is a bare ret; the port body is not called in the run build (NOTSA_STANDALONE_RUN)
+0x53E920	Idle	FIXED	d6adf8470	CCredits::Render inlined twice in the exe; lightning/sky colours, far clip/fog plane, blur gate (NaN) MATCH
+0x53E770	FrontendIdle	MATCH		
+0x744A20	AttachInputDevices	MATCH		
+0x743DF0	HandleKeyDown	MATCH		56-entry jump table + F-key arithmetic + default (code<255) + 24 pad keys (offsets/values/signs) decoded and compared
+0x7443C0	HandleKeyUp	MATCH		same tables as KeyDown with 0
+0x744880	KeyboardHandler	MATCH		
+0x7449F0	PadHandler	FIXED	2fdb488f7	HandlePadButtonDown/Up (live port code behind PadHandler): pad index forwarded is (CPad::padNumber != 0), port forwarded padID when padNumber == 0
+0x5BA520	LightsCreate	MATCH		colours, radius 2.0, frame rotate (1,1,0) 160 deg, 6 extra lights; exe returns world, port void
+0x735730	LightsDestroy	MATCH		
+0x7354E0	SetLightsWithTimeOfDayColour	MATCH		ambient/obj/direct colours, (illum*0.99609375)*mult, light matrix right/up/at = up/right/-dir
+0x59BD10	CMatrix::Attach	MATCH		
+0x59ACF0	CMatrix::Detach	MATCH		
+0x411A80	CMatrix::operator*=	MATCH		
+0x59BDD0	CMatrix::Invert	MATCH		already fixed S69b/S71b; copy of the 0x59B920 result with attach fields zeroed
+0x54F0D0	CMatrixLinkList::Init	MATCH		list wiring offsets, insert loop count-1..0; port zeroes m_pOwner (exe leaves it from the allocator)
+0x54E990	CMatrixLinkList::Shutdown	MATCH		
+0x5A75B0	COctTree::InsertTree	FIXED	8b2a93595	existing child: pool slot m_aChildrens[octant], port passed the octant number
+0x5A70F0	COctTree::FillPalette	FIXED	8191083b9	argument is the palette itself (callers pass 0xC8E0C8), port dereferenced it as RwRGBA**
+0x5A7710	COctTreeBase::InsertTree	MATCH		
+0x5A7280	COctTreeBase::FillPalette	FIXED	8191083b9	same palette-pointer deref

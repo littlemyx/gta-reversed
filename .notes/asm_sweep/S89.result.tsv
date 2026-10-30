@@ -1,0 +1,47 @@
+addr	function	verdict	asm range	note	fix commit
+0x4F35B0	CAEUserRadioTrackManager::Initialise	MATCH	0x4F35B0-0x4F35EF (all)	decoder table + MP3->WMA fallback equal (port keeps its MediaFoundation/WMA libs)	-
+0x4F2FB0	CAEUserRadioTrackManager::Shutdown	NOT_REACHED	-	platform decoder/library teardown, not compared	-
+0x4F2FD0	CAEUserRadioTrackManager::ReadUserTracks	NOT_REACHED	-	platform file layer (sa-utrax.dat), kept	-
+0x4F3050	CAEUserRadioTrackManager::GetTrackPath	MATCH	0x4F3050-0x4F30E2 (all)	signed id < count test, offset/len, NUL terminator equal	-
+0x4F30F0	CAEUserRadioTrackManager::ResolveShortcut	NOT_REACHED	-	COM shell link, platform	-
+0x4F31F0	CAEUserRadioTrackManager::GetAudioFileType	FIXED	0x4F31F0-0x4F3247 (all)	exe extension table has 8 entries: .mov -> QuickTime was missing	1cc9461d4
+0x4F3250	CAEUserRadioTrackManager::SelectUserTrackIndex	FIXED	0x4F3250-0x4F32B1 (all)	single track: exe still draws rand(0,0) and stores index 0 (port stored 1)	1cc9461d4
+0x4F32F0	CAEUserRadioTrackManager::DeleteUserTracksInfo	NOT_REACHED	-	platform file layer	-
+0x4F32C0	CAEUserRadioTrackManager::IsShortcut	MATCH	0x4F32C0-0x4F32EC (all)	-	-
+0x4F35F0	CAEUserRadioTrackManager::LoadUserTrack	MATCH	0x4F35F0-0x4F37DA (all)	type->decoder map, stream init, delete on failure equal	-
+0x4F3330	CAEUserRadioTrackManager::GetUserTrackPlayMode	MATCH	all	-	-
+0x4F3340	CAEUserRadioTrackManager::SetUserTrackIndex	MATCH	all	-	-
+0x4F4690	CAEUserRadioTrackManager::WriteUserTracksFile	NOT_REACHED	-	directory scan on std::filesystem / wide paths (platform layer)	-
+0x4F4A20	CAEUserRadioTrackManager::WriteUserTracksThread	NOT_REACHED	-	platform thread/COM	-
+0x4F4BA0	CAEUserRadioTrackManager::ScanUserTracks	NOT_REACHED	-	platform thread	-
+0x4CE1D0	CAnimBlendAssocGroup::Destructor	MATCH	0x4CE1D0-0x4CE212 (all)	-	-
+0x4CDFF0	CAnimBlendAssocGroup::DestroyAssociations	MATCH	0x4CDFF0-0x4CE032 (all)	-	-
+0x4CE040	CAnimBlendAssocGroup::GetAnimation(name)	MATCH	all	first hash match, null if none	-
+0x4CE0B0	CAnimBlendAssocGroup::CopyAnimation(name)	MATCH	all	-	-
+0x4CE130	CAnimBlendAssocGroup::CopyAnimation(id)	MATCH	all	-	-
+0x4CE1B0	CAnimBlendAssocGroup::GetAnimationId	MATCH	all	-	-
+0x4CE220	CAnimBlendAssocGroup::CreateAssociations(block)	MATCH	0x4CE220-0x4CE3A0 (all)	-	-
+0x4CE6E0	CAnimBlendAssocGroup::CreateAssociations(block,clump,names,cnt)	MATCH	0x4CE6E0-0x4CE7F7 (all)	-	-
+0x4CE3B0	CAnimBlendAssocGroup::CreateAssociations(block,animNames,modelNames,stride)	FIXED	0x4CE3B0-0x4CE5B8 (all)	name table scan has no break: the LAST duplicate wins; not-found log read past the table	9e27de184
+0x5BF6B0	CAnimManager::Initialise	MATCH	all	-	-
+0x5BC910	CAnimManager::ReadAnimAssociationDefinitions	MATCH	all	-	-
+0x4D4130	CAnimManager::Shutdown	MATCH	all	-	-
+0x4D3940	CAnimManager::GetAnimationBlock	MATCH	all	-	-
+0x4D3990	CAnimManager::GetAnimationBlockIndex	MATCH	all	-	-
+0x4D39B0	CAnimManager::GetFirstAssocGroup	MATCH	all	118 entries, returns 118 when none	-
+0x4D42F0	CAnimManager::GetAnimation	MATCH	all	-	-
+0x4D3A40	CAnimManager::CreateAnimAssociation	MATCH	all	-	-
+0x4D3A80	CAnimManager::GetAnimAssociation	MATCH	all	-	-
+0x4D3AA0	CAnimManager::AddAnimation(group,id)	MATCH	all	sync search + prepend equal	-
+0x4D4330	CAnimManager::AddAnimation(hier)	MATCH	all	exe stores the flags (=) but the ctor leaves 0 so |= is equal	-
+0x4D3B30	CAnimManager::AddAnimationAndSync	MATCH	all	-	-
+0x4D3BA0	CAnimManager::AddAnimAssocDefinition	UNSURE	all	exe skips forward over occupied slots and zeroes the next slot name byte; no-op at boot (slots 118+ zero), only differs on a second Initialise; not changed (would overflow the 145-slot table)	-
+0x4D3CC0	CAnimManager::CreateAnimAssocGroups	MATCH	all	-	-
+0x4D3E50	CAnimManager::RegisterAnimBlock	MATCH	all	-	-
+0x4D3ED0	CAnimManager::RemoveLastAnimFile	MATCH	all	-	-
+0x4D3F40	CAnimManager::RemoveAnimBlock	MATCH	all	-	-
+0x4D41C0	CAnimManager::UncompressAnimation	MATCH	all	cache LRU eviction order equal	-
+0x4D4610	CAnimManager::BlendAnimation(group,id)	FIXED	0x4D4610-0x4D47EF (all)	strict bd < delta (port <=), blendAmount NaN arm, -0.05 clamp NaN	36d23183f
+0x4D4410	CAnimManager::BlendAnimation(hier)	FIXED	0x4D4410-0x4D4608 (all)	same three as above	36d23183f
+0x4D5620	CAnimManager::LoadAnimFiles	MATCH	all	-	-
+0x4D47F0	CAnimManager::LoadAnimFile	FIXED	0x4D47F0-0x4D4860, ANP2/ANP3 0x4D5172-0x4D558B	ANP2/ANP3: hierarchy compressed flag comes from the FIRST sequence frame type (1/2 uncompressed, else compressed), overriding the ANP3 header flag; ANPK body (0x4D4863-0x4D5171) NOT_REACHED (no ANPK data in the game)	6206df7af

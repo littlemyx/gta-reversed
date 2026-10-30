@@ -176,8 +176,7 @@ public:
 public:
     static void InjectHooks();
 
-    CAEPedSpeechAudioEntity(eAudioPedType pt = PED_TYPE_UNK) noexcept;
-    CAEPedSpeechAudioEntity(CPed* ped) noexcept;
+    CAEPedSpeechAudioEntity() noexcept; // 0x4E4F10
     ~CAEPedSpeechAudioEntity() = default;
 
     void Initialise(CEntity* ped);

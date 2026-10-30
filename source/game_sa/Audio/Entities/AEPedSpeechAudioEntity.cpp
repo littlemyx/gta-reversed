@@ -73,44 +73,11 @@ void CAEPedSpeechAudioEntity::InjectHooks() {
     RH_ScopedVMTInstall(IsPedFemaleForAudio, 0x4E4150);
 }
 
-CAEPedSpeechAudioEntity::CAEPedSpeechAudioEntity(eAudioPedType pt) noexcept :
-    m_PedAudioType{pt}
+// 0x4E4F10
+CAEPedSpeechAudioEntity::CAEPedSpeechAudioEntity() noexcept :
+    m_PedAudioType{PED_TYPE_GEN} // The exe's ctor stores type 0 (and leaves the voice alone); only `Terminate` resets it to -1
 {
-    if (pt != PED_TYPE_UNK) {
-        m_IsInitialized = true;
-    }
     m_NextTimeCanSayPain.fill(0);
-}
-
-// For 0x4E68D0
-CAEPedSpeechAudioEntity::CAEPedSpeechAudioEntity(CPed* ped) noexcept :
-    CAEPedSpeechAudioEntity{}
-{
-    m_Entity = ped;
-    if (ped->GetModelId() != MODEL_INVALID) {
-        auto* const mi = ped->GetPedModelInfo();
-        m_PedAudioType = mi->m_nPedAudioType;
-        switch (m_PedAudioType) {
-        case PED_TYPE_UNK:
-            return;
-        case PED_TYPE_SPC: {
-            if (!GetVoiceAndTypeForSpecialPed(mi->m_nKey)) {
-                return;
-            }
-            break;
-        }
-        default: {
-            m_VoiceID = mi->m_nVoiceId;
-            if (m_VoiceID == -1) {
-                return;
-            }
-            mi->IncrementVoice();
-            break;
-        }
-        }
-        VERIFY(GetSexFromModel(ped->GetModelId()));
-        m_IsInitialized = true;
-    }
 }
 
 // 0x4E4950
@@ -1002,7 +969,40 @@ int16 CAEPedSpeechAudioEntity::AddSayEvent(eAudioEvents audioEvent, eGlobalSpeec
 
 // 0x4E68D0
 void CAEPedSpeechAudioEntity::Initialise(CEntity* ped) {
-    *this = CAEPedSpeechAudioEntity{ped->AsPed()};
+    // Field by field like the exe: `m_IsInitialized`, `m_VoiceID`, `m_SoundID`, `m_BankID`, `m_PedSpeechSlotID` and the audio type
+    // keep their previous values unless set below (the old whole-object assignment reset them all)
+    m_Entity = ped;
+    m_Sound = nullptr;
+    m_EventVolume = -100.f;
+    m_LastGCtx = CTX_GLOBAL_UNK;
+    m_IsFemale = 0;
+    m_NextTimeCanSayPain.fill(0);
+    m_IsPlayingSpeech = m_IsSpeechDisabled = m_IsSpeechForScriptsDisabled = m_IsFrontend = m_IsForcedAudible = false;
+
+    const auto modelId = (int16)ped->m_nModelIndex;
+    if (modelId < 0) { // 0x4E6934
+        return;
+    }
+    auto* const mi = CModelInfo::GetModelInfo(modelId)->AsPedModelInfoPtr();
+    m_PedAudioType = mi->m_nPedAudioType; // 0x4E6948: stored before the range check
+    if ((int16)m_PedAudioType < 0 || (int16)m_PedAudioType >= PED_TYPE_NUM) {
+        return;
+    }
+    if (m_PedAudioType == PED_TYPE_SPC) { // 0x4E695B
+        if (!GetVoiceAndTypeForSpecialPed(mi->m_nKey)) {
+            return;
+        }
+        // 0x4E697B: the model's own type is checked again, then the speech is initialised without touching `m_IsFemale` (set from the LUT)
+        m_IsInitialized = true;
+        return;
+    }
+    m_VoiceID = mi->m_nVoiceId; // 0x4E69B1: stored before the sign check
+    if ((int16)m_VoiceID < 0) {
+        return;
+    }
+    mi->IncrementVoice();
+    VERIFY(GetSexFromModel((eModelID)modelId)); // 0x4E6991
+    m_IsInitialized = true;
 }
 
 // 0x4E69E0
@@ -1095,7 +1095,13 @@ bool CAEPedSpeechAudioEntity::GetVoiceAndTypeForSpecialPed(uint32 modelNameHash)
     if (idx == -1) {
         return false;
     }
-    std::tie(m_VoiceID, m_PedAudioType, m_IsFemale) = gSpecialPedVoiceLookup[idx];
+    const auto [voice, type, isFemale] = gSpecialPedVoiceLookup[idx];
+    if (voice == VOICE_UNK || type == PED_TYPE_UNK) { // 0x4E41B6 / 0x4E41C9: entries without a voice or type are rejected
+        return false;
+    }
+    m_VoiceID      = voice;
+    m_PedAudioType = type;
+    m_IsFemale     = isFemale; // 0x4E41D6: zero-extended byte
     return true;
 }
 
@@ -1168,7 +1174,19 @@ void CAEPedSpeechAudioEntity::AddScriptSayEvent(eAudioEvents audioEvent, eAudioE
 // 0x4E5670
 void CAEPedSpeechAudioEntity::Terminate() {
     StopCurrentSpeech();
-    *this = CAEPedSpeechAudioEntity{};
+    // exe 0x4E5680: only these fields are reset (`m_IsFemale`, `m_IsFrontend`, `m_IsForcedAudible`, `m_LastGCtx` and the pain timers are kept)
+    m_Entity                     = nullptr;
+    m_IsInitialized              = false;
+    m_PedAudioType               = PED_TYPE_UNK;
+    m_VoiceID                    = VOICE_UNK;
+    m_IsPlayingSpeech            = false;
+    m_IsSpeechDisabled           = false;
+    m_IsSpeechForScriptsDisabled = false;
+    m_Sound                      = nullptr;
+    m_SoundID                    = -1;
+    m_BankID                     = SND_BANK_UNK;
+    m_PedSpeechSlotID            = -1;
+    m_EventVolume                = -100.f;
 }
 
 // 0x4E5CD0

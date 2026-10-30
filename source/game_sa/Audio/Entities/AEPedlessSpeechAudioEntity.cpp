@@ -22,7 +22,21 @@ void CAEPedlessSpeechAudioEntity::InjectHooks() {
 
 // 0x4E4E10
 void CAEPedlessSpeechAudioEntity::Initialise() {
-    *this = CAEPedlessSpeechAudioEntity{PED_TYPE_GFD};
+    // exe 0x4E4E10: field by field, `m_VoiceID` and the slot / sound ids are left alone
+    m_Entity                     = nullptr;
+    m_AttachedTo                 = nullptr;
+    m_Sound                      = nullptr;
+    m_EventVolume                = -100.f;
+    m_LastGCtx                   = CTX_GLOBAL_UNK;
+    m_NextTimeCanSayPain.fill(0);
+    m_IsPlayingSpeech            = false;
+    m_IsSpeechDisabled           = false;
+    m_IsSpeechForScriptsDisabled = false;
+    m_IsFrontend                 = false;
+    m_IsForcedAudible            = false;
+    m_IsFemale                   = 0;
+    m_PedAudioType               = PED_TYPE_GFD;
+    m_IsInitialized              = true;
 }
 
 // 0x4E4E80
@@ -56,7 +70,20 @@ void CAEPedlessSpeechAudioEntity::UpdateParameters(CAESound* sound, int16 playTi
 // 0x4E6300
 void CAEPedlessSpeechAudioEntity::Terminate() {
     StopCurrentSpeech();
-    *this = CAEPedlessSpeechAudioEntity{};
+    // exe 0x4E6310: same field set as CAEPedSpeechAudioEntity::Terminate plus the attached entity reference
+    m_Entity                     = nullptr;
+    m_IsInitialized              = false;
+    m_PedAudioType               = PED_TYPE_UNK;
+    m_VoiceID                    = VOICE_UNK;
+    m_IsPlayingSpeech            = false;
+    m_IsSpeechDisabled           = false;
+    m_IsSpeechForScriptsDisabled = false;
+    m_Sound                      = nullptr;
+    m_SoundID                    = -1;
+    m_BankID                     = SND_BANK_UNK;
+    m_PedSpeechSlotID            = -1;
+    m_EventVolume                = -100.f;
+    m_AttachedTo                 = nullptr;
 }
 
 // 0x4E6380

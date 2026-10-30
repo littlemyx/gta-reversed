@@ -389,7 +389,7 @@ RwRaster* CShadowCamera::RasterResample(RwRaster* sourceRaster) {
     const auto camRaster = GetRwRenderRaster();
 
     if (!RwCameraBeginUpdate(m_pRwCamera)) {
-        return nullptr;
+        return camRaster; // 0x706159: exe returns the camera raster here, not null
     }
 
     RwRenderStateSet(rwRENDERSTATESRCBLEND,      RWRSTATE(rwBLENDONE));

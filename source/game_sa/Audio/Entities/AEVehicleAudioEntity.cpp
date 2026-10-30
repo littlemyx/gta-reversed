@@ -4265,20 +4265,28 @@ void CAEVehicleAudioEntity::ProcessDummyTrainEngine(tVehicleParams& vp) {
 // 0x500AB0
 void CAEVehicleAudioEntity::ProcessPlayerTrainBrakes(tVehicleParams& vp) {
     const auto* const train = vp.Vehicle->AsTrain();
-    const auto* const cfg = m_DummyEngineBank == SND_BANK_GENRL_TRAM_D
-        ? &s_Config.Train.Tram.EngineSound
-        : &s_Config.Train.Generic.EngineSound;
+    // 0x500C38: the brake sound uses its own constants (0x8CBF3C / 0x8CBF44 / 0x8CBF48), for trams and trains alike
+    const auto* const cfg = &s_Config.Train.Generic;
 
     const auto trspeed = GetTrainSpeed(train);
     const auto sf      = GetTrainSpeedFactor(train, trspeed);
 
-    const auto vol = GetTrainPlayerAcFactor(train, trspeed) * CGeneral::GetPiecewiseLinear({
+    // 0x500B83: NOT the same as the dummy engine's pad factor: braking = brake pedal while moving "forward" / accelerate pedal while moving "backward"
+    // (the exe reads an uninitialised stack slot for a train that is not under player control)
+    float ac = 0.f;
+    if (train->GetStatus() == STATUS_PLAYER && !(std::abs(trspeed) < 0.001f)) {
+        const auto* const p = CPad::GetPad();
+        ac = (float)(trspeed > 0.f ? p->GetBrake() : p->GetAccelerate());
+    }
+
+    static const float PwlPoints[4][2] = { // 0x8CC1E8
         { 0.0f, 0.f },
         { 0.001f, 0.f },
         { 0.1f, 1.f },
-        { 1.f, 1.f }
-    }, sf);
-    if (vol >= -100.f && !train->trainFlags.bNotOnARailRoad && train->trainFlags.bIsFrontCarriage) {
+        { 1.0001f, 1.f }
+    };
+    const auto vol = CAEAudioUtility::GetPiecewiseLinearT(sf, PwlPoints) * (ac * std::bit_cast<float>(0x3B808081u));
+    if (!(vol < -100.f) && !train->trainFlags.bNotOnARailRoad && train->trainFlags.bIsFrontCarriage) {
         PlayTrainBrakeSound(
             0,
             lerp(cfg->FrqMin, cfg->FrqMax, sf),

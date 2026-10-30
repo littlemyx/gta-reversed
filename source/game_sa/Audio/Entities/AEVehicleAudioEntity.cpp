@@ -2628,7 +2628,7 @@ void CAEVehicleAudioEntity::ProcessMovingParts(tVehicleParams& vp) {
     case MODEL_PACKER:
     case MODEL_DOZER:
     case MODEL_DUMPER:
-    //case MODEL_CEMENT: // This was originally here, but below there's no data defined for it - Perhaps R* wanted it to have sounds like other vehicles...
+    case MODEL_CEMENT: // 0x4FB27A: the exe advances the smoothed speed for it too, but the jump table at 0x4FB5E8 has no entry for it (returns, no sound change)
     case MODEL_ANDROM:
     case MODEL_FORKLIFT:
         break;
@@ -2641,12 +2641,16 @@ void CAEVehicleAudioEntity::ProcessMovingParts(tVehicleParams& vp) {
         m_MovingPartSmoothedSpeed,
         std::clamp<float>(std::fabs(delta), 0.0f, 1.0f),
         cfg->StepUp, cfg->StepDown,
-        true
+        notsa::bugfixes::GenericFrameRate // 0x4FB2F0: fixed 0.2 steps, no time step
     );
+    if (vp.Vehicle->GetModelIndex() == MODEL_CEMENT) {
+        return;
+    }
+
 
     const auto* const props   = &cfg->PropsByModel.at(vp.Vehicle->GetModelId());
     const auto        slot    = props->Slot.value_or(m_DummySlot);
-    const auto* const params = &props->SoundParamsByPartDir[delta <= 0.f ? 0 : 1];
+    const auto* const params = &props->SoundParamsByPartDir[!(delta > 0.f) ? 0 : 1]; // 0x4FB36F: fcomp + `test ah, 0x41` (NaN -> first set)
 
     const auto volume = params->Vol + CAEAudioUtility::AudioLog10(m_MovingPartSmoothedSpeed) * 20.0f;
     if (volume <= -100.0f) {

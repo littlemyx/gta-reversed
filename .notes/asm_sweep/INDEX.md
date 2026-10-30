@@ -270,4 +270,4 @@
 | S85b | rest of S85 | 3 | done (3 M, 1 fixed; ResolveProbability callers verified) | AEWeaponAudioEntity.cpp, AEWeatherAudioEntity.cpp |
 | S93b | rest of S93 | 7 | done (6 M, 1 fixed) | Fx.cpp |
 | S94b | rest of S94 | 2 | pending | FxEmitterBP.cpp |
-| S95b | rest of S95 | 15 | pending | Hud.cpp |
+| S95b | rest of S95 | 15 | done (15 M) | Hud.cpp |

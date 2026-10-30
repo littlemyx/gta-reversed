@@ -1235,7 +1235,7 @@ void CAEPedAudioEntity::Service() {
         float baseVolume;
         if (!isUsingParachute) {
             baseVolume = -16.0f;
-            if (speed >= 0.5f) {
+            if (!(speed < 0.5f)) { // 0x4E30CB: `fcomp; test ah,5; jp` (NaN takes this arm)
                 speed = std::clamp((speed - 0.5f) / WIND_SPEED_RANGE, 0.0f, 1.0f);
             } else {
                 speed = 0.0f;

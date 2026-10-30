@@ -87,3 +87,5 @@
 - Gate 4ca75523c GREEN (74/74, soak OK, regress 70/70, portable 0); C:\gta-play = 4ca75523c.
 - Gate on 67dedce7a started (S106, S111-S114 not yet gated).
 - Pacing: <=2 sweep agents (quota). Running: S96, S115. Left: S97 (after S96), S117, S101b (3 rows).
+- Gate 67dedce7a GREEN (74/74, soak OK, 70/70, portable 0); C:\gta-play = 67dedce7a. Gate on 09b19a8c6 started (S96, S97, S101b, S115, S117).
+- Phase 3 left: S97b (running), S96c (8 Draw rows, after S97b).

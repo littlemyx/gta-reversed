@@ -282,4 +282,5 @@
 | S96b | rest of S96 | 8 | 0/8 (not read) -> S96c | LoadingScreen.cpp, MenuManager.cpp |
 | S97b | rest of S97 | 24 | 4/24 (1 M, 3 fixed; budget) -> S97c | MenuManager.cpp, MenuSystem.cpp |
 | S96c | rest of S96b | 8 | pending | LoadingScreen.cpp, MenuManager.cpp |
-| S97c | rest of S97b | 20 | pending | MenuManager.cpp, MenuSystem.cpp |
+| S97c | rest of S97b | 20 | logic 10/20 (5 M, 5 fixed) -> S97d | MenuManager.cpp, MenuSystem.cpp |
+| S97d | rest of S97c | 10 | pending | MenuManager.cpp, MenuSystem.cpp |

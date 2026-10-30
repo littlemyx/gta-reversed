@@ -1,0 +1,11 @@
+addr	file	line	cls	fn	oc	tier
+0x57E240	source/game_sa/MenuManager.cpp	76	CMenuManager	DisplayHelperText	U	B
+0x579330	source/game_sa/MenuManager.cpp	79	CMenuManager	MessageScreen	U	B
+0x574010	source/game_sa/MenuManager.cpp	80	CMenuManager	SmallMessageScreen	U	B
+0x575130	source/game_sa/MenuManager.cpp	82	CMenuManager	PrintMap	U	B
+0x574900	source/game_sa/MenuManager.cpp	83	CMenuManager	PrintStats	U	B
+0x576320	source/game_sa/MenuManager.cpp	84	CMenuManager	PrintBriefs	U	B
+0x5746F0	source/game_sa/MenuManager.cpp	85	CMenuManager	PrintRadioStationList	U	B
+0x580E00	source/game_sa/MenuSystem.cpp	22	CMenuSystem	DisplayStandardMenu	U	B
+0x5816E0	source/game_sa/MenuSystem.cpp	23	CMenuSystem	DisplayGridMenu	U	B
+0x5820E0	source/game_sa/MenuSystem.cpp	30	CMenuSystem	FillGridWithCarColours	U	B

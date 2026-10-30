@@ -1165,8 +1165,10 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer& buffer, flo
                 } else {
                     CStreaming::RequestModel(modelId, STREAMING_DEFAULT);
                 }
-            } else {
-                vehiclePacket.ExtractVehicleUpdateData(*GetVehiclePool()->GetAt(poolIdx), interpolation);
+            }
+            // 0x45F5F0 (all six vehicle packets): the slot is looked up AGAIN after the create / request step, so a just created vehicle gets the update (with `interpolation`) in the same call
+            if (auto* const vehicle = GetVehiclePool()->GetAt(poolIdx)) {
+                vehiclePacket.ExtractVehicleUpdateData(*vehicle, interpolation);
             }
             break;
         }
@@ -1181,8 +1183,9 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer& buffer, flo
                 } else {
                     CStreaming::RequestModel(modelId, STREAMING_DEFAULT);
                 }
-            } else {
-                bikePacket.ExtractBikeUpdateData(*GetVehiclePool()->GetAt(poolIdx)->AsBike(), interpolation);
+            }
+            if (auto* const vehicle = GetVehiclePool()->GetAt(poolIdx)) {
+                bikePacket.ExtractBikeUpdateData(*vehicle->AsBike(), interpolation);
             }
             break;
         }
@@ -1289,8 +1292,9 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer& buffer, flo
                 } else {
                     CStreaming::RequestModel(modelId, STREAMING_DEFAULT);
                 }
-            } else {
-                bmxPacket.As<tReplayBmxBlock>()->ExtractBmxUpdateData(*GetVehiclePool()->GetAt(poolIdx)->AsBmx(), interpolation);
+            }
+            if (auto* const vehicle = GetVehiclePool()->GetAt(poolIdx)) {
+                bmxPacket.As<tReplayBmxBlock>()->ExtractBmxUpdateData(*vehicle->AsBmx(), interpolation);
             }
             break;
         }
@@ -1305,9 +1309,8 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer& buffer, flo
                 } else {
                     CStreaming::RequestModel(modelId, STREAMING_DEFAULT);
                 }
-            } else {
-                auto vehicle = GetVehiclePool()->GetAt(poolIdx);
-
+            }
+            if (auto* const vehicle = GetVehiclePool()->GetAt(poolIdx)) {
                 heliPacket.ExtractVehicleUpdateData(*vehicle, interpolation);
                 vehicle->AsHeli()->m_fHeliRotorSpeed = heliPacket.rotorSpeed;
             }
@@ -1324,9 +1327,8 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer& buffer, flo
                 } else {
                     CStreaming::RequestModel(modelId, STREAMING_DEFAULT);
                 }
-            } else {
-                auto vehicle = GetVehiclePool()->GetAt(poolIdx);
-
+            }
+            if (auto* const vehicle = GetVehiclePool()->GetAt(poolIdx)) {
                 planePacket.ExtractVehicleUpdateData(*vehicle, interpolation);
                 vehicle->AsPlane()->field_9C8 = planePacket.field_9C8;
                 vehicle->AsPlane()->m_fPropSpeed = planePacket.propSpeed;
@@ -1344,8 +1346,9 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer& buffer, flo
                 } else {
                     CStreaming::RequestModel(modelId, STREAMING_DEFAULT);
                 }
-            } else {
-                trainPacket.ExtractTrainUpdateData(*GetVehiclePool()->GetAt(poolIdx)->AsTrain(), interpolation);
+            }
+            if (auto* const vehicle = GetVehiclePool()->GetAt(poolIdx)) {
+                trainPacket.ExtractTrainUpdateData(*vehicle->AsTrain(), interpolation);
             }
             break;
         }

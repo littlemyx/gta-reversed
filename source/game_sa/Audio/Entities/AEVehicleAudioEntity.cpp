@@ -2424,34 +2424,40 @@ void CAEVehicleAudioEntity::ProcessVehicleFlatTyre(tVehicleParams& vp) {
 void CAEVehicleAudioEntity::ProcessVehicleRoadNoise(tVehicleParams& vp) {
     const auto* const cfg = &s_Config.RoadNoise;
 
-    // 0x4F8B47
+    // 0x4F8B47: the exe loads the contact wheel count (automobile +0x960 / bike +0x804 / else 4) once, then for the articulated trailers
+    //           only the wheel count is tested; for every other model BOTH the transmission and the wheel count (0x4F8B65..0x4F8B72)
     bool cancel = false;
     switch (vp.Vehicle->GetModelIndex()) {
     case MODEL_ARTICT1:
     case MODEL_ARTICT2:
     case MODEL_PETROTR:
-    case MODEL_ARTICT3: cancel |= !GetNumOfContactWheels(vp).value_or(4); break;
-    default:            cancel |= !vp.Transmission;                       break;
+    case MODEL_ARTICT3: cancel = !GetNumOfContactWheels(vp).value_or(4);                     break;
+    default:            cancel = !vp.Transmission || !GetNumOfContactWheels(vp).value_or(4); break;
     }
 
-    // 0x4F8B88
+    // 0x4F8B88 (fcom + `test ah, 0x41` also cancels on NaN)
     const float absSpeed = std::fabs(vp.Speed);
-    if (cancel || absSpeed <= 0.0f) {
+    if (cancel || !(absSpeed > 0.0f)) {
         PlayRoadNoiseSound(-1);
         return;
     }
 
     // Play sound now
-    const auto PlaySound = [&](eSoundID sfx, float speed, float volume) {
-        // 0x4F8BFA (Notice the multiplication!)
-        speed *= 0.75f + std::max(1.0f, (TheCamera.GetPosition() - m_Entity->GetPosition()).Magnitude() / cfg->FadeOutDistance) / 2.0f;
+    const auto PlaySound = [&](eSoundID sfx, float speed, float volOffset) {
+        // 0x4F8BB5: distance Vehicle <-> camera, the exe sums (z^2 + x^2) + y^2
+        const auto& camPos = TheCamera.GetPosition();
+        const auto& entPos = m_Entity->GetPosition();
+        const float dx = entPos.x - camPos.x, dy = entPos.y - camPos.y, dz = entPos.z - camPos.z;
+        const float dist = std::sqrt((dz * dz + dx * dx) + dy * dy);
 
-        // 0x4F8CF8
-        if (const auto v = std::min(1.0f, 2.0f * absSpeed); v > 0.0008f) {
-            volume += cfg->VolBase + CAEAudioUtility::AudioLog10(v) * 20.f;
-        } else {
-            volume = -100.f;
-        }
+        // 0x4F8BFA (Notice the multiplication!)
+        speed *= 0.75f + std::max(1.0f, dist / cfg->FadeOutDistance) / 2.0f;
+
+        // 0x4F8CF8: threshold is 8.0e-5 (0x862CF4), not 8.0e-4; the exe adds `log10 * 20` to the (surface offset + base) it computed before
+        const auto v = std::min(1.0f, 2.0f * absSpeed);
+        const auto volume = v > 0.00008f
+            ? CAEAudioUtility::AudioLog10(v) * 20.f + (volOffset + cfg->VolBase)
+            : -100.f;
 
         // 0x4F8D35
         PlayRoadNoiseSound(sfx, speed, volume);
@@ -2463,8 +2469,8 @@ void CAEVehicleAudioEntity::ProcessVehicleRoadNoise(tVehicleParams& vp) {
         const auto* const c = &cfg->WetSurface;
         PlaySound(22, c->FrqFactor, c->VolOffset);
     } else {
-        const auto* const c = &cfg->StdSurface;
-        PlaySound(21, c->FrqFactor, c->VolOffset);
+        // 0x4F8CA5: frequency stays the distance factor, volume = VolBase only
+        PlaySound(21, 1.0f, 0.0f);
     }
 }
 

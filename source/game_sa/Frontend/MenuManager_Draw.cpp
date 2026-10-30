@@ -169,9 +169,9 @@ void CMenuManager::DrawBackground() {
             };
         case SCREEN_GAME_SAVE:
             return {
-                SCREEN_WIDTH / 2.0f - StretchX(128.0f),
+                (float)(RsGlobal.maximumWidth / 2) - StretchX(128.0f), // exe 0x57B86B: integer half width
                 0.0f,
-                SCREEN_WIDTH / 2.0f + StretchX(128.0f),
+                (float)(RsGlobal.maximumWidth / 2) + StretchX(128.0f),
                 StretchY(256.0f)
             };
         case SCREEN_SAVE_DONE_2:
@@ -261,6 +261,7 @@ void CMenuManager::DrawBackground() {
             m_ControllerError = eControllerError::NONE;
             m_ErrorPendingReset = true;
         }
+        return; // exe 0x57BC03 / 0x57C223: nothing else (scan bar, mouse cursor) is drawn while a controller error is up
     }
 
     // 0x57BC19
@@ -281,7 +282,7 @@ void CMenuManager::DrawBackground() {
 
         const auto left = DEFAULT_SCREEN_WIDTH / 2 - 50;
         const auto right = DEFAULT_SCREEN_WIDTH / 2 + 50;
-        const auto height = DEFAULT_SCREEN_WIDTH / 2 - DEFAULT_SCREEN_HEIGHT / 6;
+        const float height = 245.0f; // exe 0x57BD0F: bar top 245 (port had 246), bottom 250 (port 251)
 
         if ((CTimer::m_FrameCounter & 4) != 0) {
             progressPos -= progressDir;
@@ -325,9 +326,12 @@ void CMenuManager::DrawBackground() {
                     break;
                 case USER_TRACK_SCAN_ERROR:
                     AEUserRadioTrackManager.m_nUserTracksScanState = USER_TRACK_SCAN_OFF;
+#ifdef FIX_BUGS
+                    // exe 0x57BEC4-0x57BF52: after a failed scan the state is only reset, the failure helper text (and leaving the scan screen) needs the ESC key
                     if (!pad->IsEscJustPressed()) {
                         helperText = FEA_SCF;
                     }
+#endif
                     break;
                 }
                 if (pad->IsEscJustPressed()) {
@@ -365,9 +369,15 @@ void CMenuManager::DrawBackground() {
             m_aFrontEndSprites[spriteId].Draw(rect, CRGBA(255, 255, 255, 255));
         };
 
-        CRect mapRect(StretchX(60.0f), StretchY(60.0f), SCREEN_STRETCH_FROM_RIGHT(60.0f), SCREEN_STRETCH_FROM_BOTTOM(60.0f));
+        // exe 0x57BF6E: the map area is compared as ints (ftol), strictly inside
+        const auto mapTop    = NOTSA_FTOL(int32, StretchY(60.0f));
+        const auto mapBottom = NOTSA_FTOL(int32, SCREEN_HEIGHT - StretchY(60.0f));
+        const auto mapLeft   = NOTSA_FTOL(int32, StretchX(60.0f));
+        const auto mapRight  = NOTSA_FTOL(int32, SCREEN_WIDTH - StretchX(60.0f));
 
-        if (m_nCurrentScreen == SCREEN_MAP && CPad::IsMouseLButton() && mapRect.IsPointInside({ mouseX, mouseY })) {
+        if (m_nCurrentScreen == SCREEN_MAP && CPad::IsMouseLButton()
+            && m_nMousePosY > mapTop && m_nMousePosY < mapBottom
+            && m_nMousePosX > mapLeft && m_nMousePosX < mapRight) {
             DrawCursor(FRONTEND_SPRITE_CROSS_HAIR);
         } else {
             DrawCursor(FRONTEND_SPRITE_MOUSE);

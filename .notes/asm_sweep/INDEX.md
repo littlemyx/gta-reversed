@@ -230,7 +230,7 @@
 | S81 | phase3 tier A (PHASE3.md) | 41 | partial 19/41 (12 M, 7 fixed) -> S81b | AECollisionAudioEntity.cpp, AEDoorAudioEntity.cpp, AEFireAudioEntity.cpp, AEFrontendAudioEntity.cpp, AEGlobalWeaponAudioEntity.cpp, AEPedAudioEntity.cpp |
 | S82 | phase3 tier A (PHASE3.md) | 44 | partial 17/44 (9 M, 8 fixed) -> S82b | AEPedSpeechAudioEntity.cpp, AEPedlessSpeechAudioEntity.cpp, AEPoliceScannerAudioEntity.cpp |
 | S83 | phase3 tier A (PHASE3.md) | 47 | partial 26/47 (22 M, 4 fixed) -> S83b | AEScriptAudioEntity.cpp, AETwinLoopSoundEntity.cpp, AEVehicleAudioEntity.cpp |
-| S84 | phase3 tier A (PHASE3.md) | 36 | pending | AEVehicleAudioEntity.cpp, AEWaterCannonAudioEntity.cpp |
+| S84 | phase3 tier A (PHASE3.md) | 36 | partial 17/36 (5 M, 12 fixed) -> S84b | AEVehicleAudioEntity.cpp, AEWaterCannonAudioEntity.cpp |
 | S85 | phase3 tier A (PHASE3.md) | 33 | 31/33 (12 M, 18 fixed, 1 U) -> S85b | AEAudioEnvironment.cpp, AEAudioUtility.cpp, AESound.cpp, AEWeaponAudioEntity.cpp, AEWeatherAudioEntity.cpp |
 | S86 | phase3 tier A (PHASE3.md) | 38 | done (38 M) | AudioEngine.cpp |
 | S87 | phase3 tier A (PHASE3.md) | 24 | done (19 M, 5 fixed) | AEAmbienceTrackManager.cpp, AEAudioHardware.cpp, AECutsceneTrackManager.cpp |
@@ -271,3 +271,4 @@
 | S93b | rest of S93 | 7 | done (6 M, 1 fixed) | Fx.cpp |
 | S94b | rest of S94 | 2 | pending | FxEmitterBP.cpp |
 | S95b | rest of S95 | 15 | done (15 M) | Hud.cpp |
+| S84b | rest of S84 | 19 | pending | AEVehicleAudioEntity.cpp |

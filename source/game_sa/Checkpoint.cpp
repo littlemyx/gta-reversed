@@ -26,7 +26,7 @@ void CCheckpoint::Render() {
         //> 0x725CB4 - Render flag for finish checkpoint
         if (m_Type == eCheckpointType::ENDTUBE) {
             RwRenderStateSet(rwRENDERSTATETEXTURERASTER,     RWRSTATE(RwTextureGetRaster(gpFinishFlagTex)));
-            RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      RWRSTATE(TRUE));
+            RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      RWRSTATE(FALSE)); // 0x725CBF: (8, 0)
             RwRenderStateSet(rwRENDERSTATEZTESTENABLE,       RWRSTATE(TRUE));
             RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(TRUE));
             RwRenderStateSet(rwRENDERSTATETEXTUREADDRESS,    RWRSTATE(rwTEXTUREADDRESSWRAP));
@@ -51,7 +51,7 @@ void CCheckpoint::Render() {
             RwRenderStateSet(rwRENDERSTATETEXTURERASTER,     RWRSTATE(0));
             RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      RWRSTATE(TRUE));
             RwRenderStateSet(rwRENDERSTATEZTESTENABLE,       RWRSTATE(TRUE));
-            RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(TRUE));
+            RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(FALSE)); // 0x725D9E: (0xC, 0)
         }
 
         //> 0x725DEE - Render the marker (Checkpoints are basically just markers with some extra stuff)
@@ -89,7 +89,13 @@ void CCheckpoint::Render() {
         break;
     }
     case eCheckpointType::TORUS: { // 0x725E6D
-        if (sq(m_Size * 2.f) >= CVector::DistSqr(m_Pos, FindPlayerCoors())) { // Inverted
+        // 0x725E66: dist3D = sqrt((dz^2 + dy^2) + dx^2) (unrounded x87), `break` unless 2*size <= dist (ordered; NaN breaks)
+        const auto pc = FindPlayerCoors();
+        const x87d dx = (x87d)pc.x - m_Pos.x;
+        const x87d dy = (x87d)pc.y - m_Pos.y;
+        const x87d dz = (x87d)pc.z - m_Pos.z;
+        const x87d dist = x87::sqrt((dz * dz + dy * dy) + dx * dx);
+        if (!((x87d)(m_Size + m_Size) <= dist)) {
             break;
         }
         [[fallthrough]];
@@ -124,7 +130,16 @@ void CCheckpoint::Render() {
                     return;
                 }
             }
-            CVector p = m_Pos + m_Fwd * ((float)i * m_MultiSize);
+            // 0x725F10: x = (i*fx)*multi + px unrounded; y/z: i*f is rounded to float first, z's product is rounded again
+            const x87d fi = (x87d)(int32)i;
+            const float fyi = (float)(fi * m_Fwd.y);
+            const float fzi = (float)(fi * m_Fwd.z);
+            const float zoff = (float)((x87d)fzi * m_MultiSize);
+            CVector p{
+                (float)((fi * m_Fwd.x) * m_MultiSize + m_Pos.x),
+                (float)((x87d)fyi * m_MultiSize + m_Pos.y),
+                (float)((x87d)zoff + m_Pos.z)
+            };
             C3dMarkers::PlaceMarker(
                 m_ID,
                 MARKER3D_TORUS,
@@ -156,12 +171,21 @@ void CCheckpoint::Render() {
 
 // Based on 0x7229C0
 void CCheckpoint::Update() {
+    // exe tests both bounds independently (no else)
     const auto UpdateRotFlag = [this](float maxSz, float minSz) {
         if (m_MultiSize > maxSz) {
             m_RotFlag = false;
-        } else if (m_MultiSize < minSz) {
+        }
+        if (m_MultiSize < minSz) {
             m_RotFlag = true;
         }
+    };
+
+    // exe 0x722AC7: (dy*dy + dx*dx) summed unrounded (x87)
+    const auto SumSq2D = [this](const CVector& pc) -> x87d {
+        const x87d dx = (x87d)pc.x - m_Pos.x;
+        const x87d dy = (x87d)pc.y - m_Pos.y;
+        return dy * dy + dx * dx;
     };
 
     if (m_Type == eCheckpointType::TORUSROT) { // 0x7229E7
@@ -175,15 +199,16 @@ void CCheckpoint::Update() {
     if (m_Type == eCheckpointType::TORUSTHROUGH) { // 0x722A53
         UpdateRotFlag(0.75f, 0.f);
         m_MultiSize += m_RotFlag // TODO/BUG: Use timestep here!
-            ? 0.1f
-            : -0.1f;
+            ? 0.01f // exe 0x858C58 = 0.01f
+            : -0.01f;
         if (m_MultiSize < 0.f) { // 0x722AA7
             m_Type = eCheckpointType::NA; // Weird?
         }
     }
 
     if (m_Type == eCheckpointType::TORUS_UPDOWN) { // 0x722ABD
-        if (CVector2D::DistSqr(m_Pos, FindPlayerCoors()) < sq(m_Size)) { // 0x722B21
+        // 0x722B12: `fcompp` size^2 vs sum, the else arm is taken on C0 (size^2 < sum) or unordered => inside is `sum <= size^2`
+        if (SumSq2D(FindPlayerCoors()) <= (x87d)m_Size * m_Size) { // 0x722B21
             m_Type      = eCheckpointType::TORUS_DOWN;
             m_MultiSize = -0.1f;
         } else { // 0x722B2E
@@ -196,19 +221,20 @@ void CCheckpoint::Update() {
     }
 
     if (m_Type == eCheckpointType::TORUS_DOWN) { // 0x722B84
-        if (CVector2D::DistSqr(m_Pos, FindPlayerCoors()) > sq(m_Size)) { // 0x722BE1
+        const auto pc = FindPlayerCoors();
+        if (SumSq2D(pc) > (x87d)m_Size * m_Size) { // 0x722BE1
             m_Type      = eCheckpointType::TORUS_UPDOWN;
             m_RotFlag   = true;
             m_MultiSize = 0.02f;
         }
 
-        if (FindPlayerCoors().z - 0.75f >= m_Pos.z) {
-            NOTSA_LOG_DEBUG("Done"); // OG
-        } else {
+        // 0x722BF7: pz - 0.75 < pos.z (ordered) => advance; otherwise (also NaN) the exe prints a debug string
+        if ((x87d)pc.z - 0.75f < m_Pos.z) {
             m_Pos.z += m_MultiSize;
+        } else {
+            NOTSA_LOG_DEBUG("Done"); // OG
         }
     }
-
 }
 
 // Based on 0x722900

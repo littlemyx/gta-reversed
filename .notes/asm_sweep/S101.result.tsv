@@ -3,21 +3,21 @@ addr	function	verdict	asm range	note	fix commit
 0x706ED0	CShadows::Shutdown	MATCH	0x706ED0-0x706F5F (all)	-	-
 0x70C950	CShadows::UpdatePermanentShadows	MATCH	0x70C950-0x70CCAE (all)	fade, store, oil spread (strict < compares, z,y,x distance sums)	-
 0x707460	CShadows::SetRenderModeForShadowType	MATCH	0x707460-0x7074C9 (all)	jump table decoded (types 1,4,5,6,8 alpha; 2 additive; 3 inv colour; 7 none)	-
-0x707B40	CShadows::StoreShadowForPedObject	FIXED	0x707B40-0x707C8C (all)	NaN distance returns (jp) - the rest matches	045c67218
-0x707CA0	CShadows::StoreRealTimeShadow	FIXED	0x707CA0-0x707F34 (all)	CalcPedShadowValues got (disp,front,side) refs instead of (front,side,disp); light dir not normalised; DrawBorderAroundTexture(0,0,0,255) missing; distance test >= 225	045c67218
-0x708300	CShadows::RenderStaticShadows	FIXED	0x708300-0x70866E (all)	intensity movsx before the fog scale; batching/render states match	32666faf6
-0x7086B0	CShadows::CastShadowEntityXY	FIXED	0x7086B0-0x709CEA (all)	plane distance z,y,x sum order; NaN clip side is "out"; corners/clip/uv/world transform/poly bunch/direct render match	ab9f949e9
+0x707B40	CShadows::StoreShadowForPedObject	FIXED	0x707B40-0x707C8C (all)	NaN distance returns (jp) - the rest matches	8b7fb009b
+0x707CA0	CShadows::StoreRealTimeShadow	FIXED	0x707CA0-0x707F34 (all)	CalcPedShadowValues got (disp,front,side) refs instead of (front,side,disp); light dir not normalised; DrawBorderAroundTexture(0,0,0,255) missing; distance test >= 225	8b7fb009b
+0x708300	CShadows::RenderStaticShadows	FIXED	0x708300-0x70866E (all)	intensity movsx before the fog scale; batching/render states match	152d49eec
+0x7086B0	CShadows::CastShadowEntityXY	FIXED	0x7086B0-0x709CEA (all)	plane distance z,y,x sum order; NaN clip side is "out"; corners/clip/uv/world transform/poly bunch/direct render match	6ab758dbc
 0x70A040	CShadows::CastShadowEntityXYZ	MATCH	0x70A040-0x70A45C (all)	camera tilt, inv matrix scale, sphere centre, 0.028 offset all match	-
-0x70A470	CShadows::CastPlayerShadowSectorList<>	FIXED	0x70A470-0x70A627 (all)	4 rect edges are strict (OverlapsWith was non-strict), colmodel via CModelInfo, NaN tilt/z-extent skips	d9eece348
-0x70A630	CShadows::CastShadowSectorList<>	FIXED	0x70A630-0x70A7DD (all)	NaN tilt / z-extent skips	d9eece348
-0x70A7E0	CShadows::CastRealTimeShadowSectorList<>	FIXED	0x70A7E0-0x70A95F (all)	NaN z-extent skips	d9eece348
-0x70A960	CShadows::RenderStoredShadows	FIXED	0x70A960-0x70B6E9 (all)	rect was posn..posn+span (exe: posn +- span); sector range multiply+clamp; no early-out; states only for non-batched; water pass cell range/loop order/vertex ptr/UV formula/sign	39b05a098
+0x70A470	CShadows::CastPlayerShadowSectorList<>	FIXED	0x70A470-0x70A627 (all)	4 rect edges are strict (OverlapsWith was non-strict), colmodel via CModelInfo, NaN tilt/z-extent skips	1cbeaa027
+0x70A630	CShadows::CastShadowSectorList<>	FIXED	0x70A630-0x70A7DD (all)	NaN tilt / z-extent skips	1cbeaa027
+0x70A7E0	CShadows::CastRealTimeShadowSectorList<>	FIXED	0x70A7E0-0x70A95F (all)	NaN z-extent skips	1cbeaa027
+0x70A960	CShadows::RenderStoredShadows	FIXED	0x70A960-0x70B6E9 (all)	rect was posn..posn+span (exe: posn +- span); sector range multiply+clamp; no early-out; states only for non-batched; water pass cell range/loop order/vertex ptr/UV formula/sign	20aa11b82
 0x70B730	CShadows::GeneratePolysForStaticShadow	MATCH	0x70B730-0x70B9FA (all)	-	-
 0x70BA00	CShadows::StoreStaticShadow	MATCH	0x70BA00-0x70BD90 (all)	-	-
-0x70BDA0	CShadows::StoreShadowForVehicle	FIXED	0x70BDA0-0x70C4B7 (all)	NaN speed test and flip test; model jump tables, offsets and fade match	9ee79a07b
-0x70C500	CShadows::StoreCarLightShadow	FIXED	0x70C500-0x70C74A (all)	facing test is dot >= cosine and NaN returns; distance NaN; fade scale is multiply by float(1/9)	9ee79a07b
-0x70C750	CShadows::StoreShadowForPole	FIXED	0x70C750-0x70C949 (all)	id is entity + localId + 0x33 (port used LOD + 3); position sum order	c0d156b6a
-0x70CCB0	CShadows::RenderIndicatorShadow	FIXED	0x70CCB0-0x70CDB9 (all)	NaN compare picks -sideX	9bb71a72d
+0x70BDA0	CShadows::StoreShadowForVehicle	FIXED	0x70BDA0-0x70C4B7 (all)	NaN speed test and flip test; model jump tables, offsets and fade match	263258739
+0x70C500	CShadows::StoreCarLightShadow	FIXED	0x70C500-0x70C74A (all)	facing test is dot >= cosine and NaN returns; distance NaN; fade scale is multiply by float(1/9)	263258739
+0x70C750	CShadows::StoreShadowForPole	FIXED	0x70C750-0x70C949 (all)	id is entity + localId + 0x33 (port used LOD + 3); position sum order	17eb6e0d2
+0x70CCB0	CShadows::RenderIndicatorShadow	FIXED	0x70CCB0-0x70CDB9 (all)	NaN compare picks -sideX	7a6c647e9
 0x70F8D0	CStencilShadowObject::Constructor	MATCH	0x70F8D0 (all)	-	-
 0x70F8E0	CStencilShadowObject::Destructor	MATCH	0x70F8E0 (all)	-	-
 0x711310	CStencilShadowObject::Destroy	MATCH	0x711310-0x711385 (all)	-	-

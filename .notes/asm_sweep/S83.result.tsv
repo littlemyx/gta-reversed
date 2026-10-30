@@ -36,12 +36,12 @@ addr	function	verdict	asm range	note	fix commit
 0x4F84D0	CAEVehicleAudioEntity::PlayRoadNoiseSound	MATCH	0x4F84D0-0x4F8650 (all)	road noise: rolloff 3.0, flags 4	
 0x4FA0C0	CAEVehicleAudioEntity::ProcessBoatMovingOverWater	NOT_REACHED		budget used up (script entity emulator build-up, horn/skid/flat-tyre fixes)	
 0x5003A0	CAEVehicleAudioEntity::ProcessBoatEngine	NOT_REACHED		budget used up (script entity emulator build-up, horn/skid/flat-tyre fixes)	
-0x4F9E90	CAEVehicleAudioEntity::UpdateBoatSound	NOT_REACHED		budget used up (script entity emulator build-up, horn/skid/flat-tyre fixes)	
-0x4FA1C0	CAEVehicleAudioEntity::UpdateTrainSound	NOT_REACHED		budget used up (script entity emulator build-up, horn/skid/flat-tyre fixes)	
+0x4F9E90	CAEVehicleAudioEntity::UpdateBoatSound	MATCH	0x4F9E90-0x4FA0BF (all)	exe emulated for sound types 2/3/6 x boat/seaplane: bank+slot checks, roll-offs 3.5 / 5.0 / 2.5, volume + event volume, flags 4	
+0x4FA1C0	CAEVehicleAudioEntity::UpdateTrainSound	MATCH	0x4FA1C0-0x4FA3E1 (all)	exe emulated for train sound types 1/2/3 x tram/generic bank: roll-offs (tram 4.0/5.0/4.5, generic 4.5/4.5/4.5), bank check only for engine/track	
 0x4FA3F0	CAEVehicleAudioEntity::ProcessTrainTrackSound	NOT_REACHED		budget used up (script entity emulator build-up, horn/skid/flat-tyre fixes)	
 0x500710	CAEVehicleAudioEntity::ProcessDummyTrainEngine	NOT_REACHED		budget used up (script entity emulator build-up, horn/skid/flat-tyre fixes)	
 0x500AB0	CAEVehicleAudioEntity::ProcessPlayerTrainBrakes	NOT_REACHED		budget used up (script entity emulator build-up, horn/skid/flat-tyre fixes)	
-0x4FA630	CAEVehicleAudioEntity::PlayTrainBrakeSound	NOT_REACHED		budget used up (script entity emulator build-up, horn/skid/flat-tyre fixes)	
+0x4FA630	CAEVehicleAudioEntity::PlayTrainBrakeSound	MATCH	0x4FA630-0x4FA7B7 (all)	train brake: bank 0x28 check, TwinLoop Initialise(0x28, sfx, sfx+1, 200, 1000, -1, -1), roll-off 3.5	
 0x4F93C0	CAEVehicleAudioEntity::PlayAircraftSound	NOT_REACHED		budget used up (script entity emulator build-up, horn/skid/flat-tyre fixes)	
 0x4F96A0	CAEVehicleAudioEntity::GetAircraftNearPosition	NOT_REACHED		budget used up (script entity emulator build-up, horn/skid/flat-tyre fixes)	
 0x501C50	CAEVehicleAudioEntity::ProcessAircraft	NOT_REACHED		budget used up (script entity emulator build-up, horn/skid/flat-tyre fixes)	

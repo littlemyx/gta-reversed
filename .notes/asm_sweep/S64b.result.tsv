@@ -1,0 +1,32 @@
+addr	function	verdict	asm range	note	fix commit
+0x6E3D10	ComputeAnimDoorOffsets	NOT_REACHED		budget: not compared (S64b order: weapon path first)	-
+0x459390	Init	NOT_REACHED		budget: not compared (S64b order: weapon path first)	-
+0x459400	ShutDown	NOT_REACHED		budget: not compared (S64b order: weapon path first)	-
+0x459440	StopPlaybackWithIndex	NOT_REACHED		budget: not compared (S64b order: weapon path first)	-
+0x4595A0	IsPlaybackPausedForCar	NOT_REACHED		budget: not compared (S64b order: weapon path first)	-
+0x459660	SetPlaybackSpeed	NOT_REACHED		budget: not compared (S64b order: weapon path first)	-
+0x459D10	SkipForwardInRecording	NOT_REACHED		budget: not compared (S64b order: weapon path first)	-
+0x459F00	RenderLineSegment	NOT_REACHED		budget: not compared (S64b order: weapon path first)	-
+0x459F70	Render	NOT_REACHED		budget: not compared (S64b order: weapon path first)	-
+0x459F80	RegisterRecordingFile	NOT_REACHED		budget: not compared (S64b order: weapon path first)	-
+0x459FF0	FindIndexWithFileNameNumber	NOT_REACHED		budget: not compared (S64b order: weapon path first)	-
+0x45A0A0	RemoveRecordingFile	NOT_REACHED		budget: not compared (S64b order: weapon path first)	-
+0x45A160	RemoveAllRecordingsThatArentUsed	NOT_REACHED		budget: not compared (S64b order: weapon path first)	-
+0x45A1B0	InitAtStartOfGame	NOT_REACHED		budget: not compared (S64b order: weapon path first)	-
+0x45A4A0	SkipToEndAndStopPlaybackRecordedCar	NOT_REACHED		budget: not compared (S64b order: weapon path first)	-
+0x45A610	SaveOrRetrieveDataForThisFrame	NOT_REACHED		budget: not compared (S64b order: weapon path first)	-
+0x45A8F0	Load	NOT_REACHED		budget: not compared (S64b order: weapon path first)	-
+0x5D23B0	Extract	NOT_REACHED		budget: not compared (S64b order: weapon path first)	-
+0x73A530	GenerateDamageEvent	DEVIATION	0x73A530-0x73A8CF (all)	m_bAnimAdded, SetCurrentTime vs Start, playing flag, null checks	587798e6c
+0x73A8D0	LaserScopeDot	NOT_REACHED		exe function exists (0x73A8D0-0x73AAB9) but has no callers in the exe; port stubs it NOTSA_UNREACHABLE; not ported	-
+0x73C1F0	TakePhotograph	NOT_REACHED		port already carries a NOTSA-AUDIT of the range/frame tests; not re-compared (budget)	-
+0x73C710	SetUpPelletCol	DEVIATION	0x73C710-0x73CB90 (all)	spread range, tmp axis, cross order, position offset	ed5e1017e
+0x73CBA0	FireInstantHitFromCar2	MATCH	0x73CBA0-0x73CDBC (all)	full compare	-
+0x73CDC0	DoDoomAiming	DEVIATION	0x73CDC0-0x73D1D1 (all)	inverted CanSeeEntity test; max 15; sqrt not hypot; zyx radius	864f8fefa
+0x73D1E0	DoTankDoomAiming	DEVIATION	0x73D1E0-0x73D71C (all)	radius/slope zyx sum	047e4de84
+0x73D720	DoDriveByAutoAiming	DEVIATION	0x73D720-0x73DB38 (all)	z,y,x distance sums; NaN clamp	f45c4c8a0
+0x73E690	DoWeaponEffect	MATCH	0x73E690-0x73E7F0 (all)	full compare	-
+0x73E800	FireAreaEffect	DEVIATION	0x73E800-0x73EC36 (all)	rand&3==2, scalar random, degrees constant, normalise	fdde0f629
+0x73EC40	FireInstantHitFromCar	MATCH	0x73EC40-0x73F3F4 (all)	full compare; unrounded x87 intermediates are irrelevant at PC=24	-
+0x73FA20	FireFromCar	DEVIATION	0x73FA20-0x73FB05 (all)	state FIRING may also shoot	c4732cb0d
+0x73FB10	FireInstantHit	DEVIATION	0x73FB10-0x74132E (all)	full compare incl. every branch/compare/jump table; only a NaN-only compare differed	9ec1c5837

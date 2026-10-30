@@ -83,7 +83,7 @@ void CWeather::AddRain() {
         return;
     }
 
-    if (TheCamera.GetPosition().z > 900.0f) {
+    if (!(TheCamera.GetPosition().z <= 900.0f)) { // 0x72AA2D: `je` leaves for > 900 and for NaN
         return;
     }
 
@@ -116,7 +116,7 @@ void CWeather::AddRain() {
         AddSandStormParticles();
     }
 
-    if (Rain <= 0.1f && s_RainHazeAlpha == 0.0f) {
+    if (!(Rain > 0.1f) && s_RainHazeAlpha == 0.0f) { // 0x72AAF8: NaN rain counts as "not rainy"
         return;
     }
 
@@ -129,42 +129,65 @@ void CWeather::AddRain() {
         const CVector     splashVelocity{};
         const auto        radius = CGeneral::GetRandomNumberInRange(0.0f, maxRadius);
 
+        // 0x72ABC2-0x72AC11: the angle is `(rand & 0xFF) * 0.02453125` (the exe's 2pi/256 constant is 6.28/256) or `((rnd & 0xFF) - 128) * 0.00625 + camera heading` (the SAME rand)
         const auto rnd  = CGeneral::GetRandomNumber();
         const auto rads = (rnd & 1)
-            ? (float)(CGeneral::GetRandomNumber() % 256) / 256.f * TWO_PI               // [0, TWO_PI) rad
-            : lerp(-0.8f, 0.8f, (float)(rnd % 256) / 256.f) + TheCamera.m_fOrientation; // <Camera Rotation> + [-0.8, 0.8) rad (0.8 rad ~ 45.8 deg)
+            ? (float)(CGeneral::GetRandomNumber() & 0xFF) * 0.02453125f
+            : (float)((int32)(rnd & 0xFF) - 128) * 0.00625f + TheCamera.m_fOrientation;
 
-        // 0x72AC11
-        const CVector2D spot = CVector2D{ TheCamera.GetPosition() } + CVector2D{ (float)(x87::sin(rads)), (float)(x87::cos(rads)) } * radius;
+        // 0x72AC11: sin / cos stay unrounded until the multiply by the radius, then `+ camera`
+        const auto&  camPos = TheCamera.GetPosition();
+        const CVector2D spot{
+            (float)X87R(x87::sin(rads) * radius) + camPos.x,
+            (float)X87R(x87::cos(rads) * radius) + camPos.y
+        };
         CColPoint colPoint{};
         CEntity*  colEntity{};
         if (!CWorld::ProcessVerticalLine(CVector{ spot, 40.0f }, -40.0f, colPoint, colEntity, true, false, false, false, true)) {
             continue;
         }
 
-        // 0x72ACC0
+        // 0x72ACC0: per splash `((rand * (1/32767)) * 30 + spot) - 15` for x and y, then a THIRD rand() that is consumed and discarded (the exe's z is unchanged)
+        const float spotZ = colPoint.m_vecPoint.z + 0.1f;
         for (auto s = 0; s < numSplashesPerSpot; s++) {
-            g_fx.m_Splash->AddParticle(
-                CVector{ spot, colPoint.m_vecPoint.z + 0.1f } + CVector::Random({ -15.f, -15.f, 0.f }, { 15.f, 15.f, 0.f }),
-                splashVelocity,
-                0.0f,
-                splashMults
-            );
+            CVector pos{ spot, spotZ };
+            pos.x = ((float)CGeneral::GetRandomNumber() * RAND_MAX_FLOAT_RECIPROCAL * 30.0f + pos.x) - 15.0f;
+            pos.y = ((float)CGeneral::GetRandomNumber() * RAND_MAX_FLOAT_RECIPROCAL * 30.0f + pos.y) - 15.0f;
+            (void)CGeneral::GetRandomNumber();
+            g_fx.m_Splash->AddParticle(pos, splashVelocity, 0.0f, splashMults);
         }
     }
 
-    // 0x72AD6E
-    s_RainHazeAlpha = std::clamp(
-        notsa::step_to(s_RainHazeAlpha, Rain * 0.2f, 0.0025f) * RAIN_HAZE_ALPHA_MULT,
-        0.f,
-        1.f
-    );
+    // 0x72AD6E: `if (a < target) a += 0.0025; if (a > target) a -= 0.0025;` (NO clamp to the target: the alpha oscillates within one step of it),
+    // then `max(a, 0)`, `* 1.0`, `min(a, 1)`
+    {
+        const float target = Rain * 0.2f;
+        float       a      = s_RainHazeAlpha;
+        if (a < target) {
+            a += 0.0025f;
+        }
+        if (a > target) {
+            a -= 0.0025f;
+        }
+        if (0.0f > a) {
+            a = 0.0f;
+        }
+        a = a * RAIN_HAZE_ALPHA_MULT;
+        if (1.0f < a) {
+            a = 1.0f;
+        }
+        s_RainHazeAlpha = a;
+    }
 
-    // 0x72ADEA
+    // 0x72ADEA: the same position formula as AddSandStormParticles
+    CVector hazePos = TheCamera.GetPosition();
+    hazePos.x += TheCamera.m_mCameraMatrix.GetForward().x * 10.0f;
+    hazePos.y += TheCamera.m_mCameraMatrix.GetForward().y * 10.0f;
+    hazePos.x = (CGeneral::GetRandomNumberInRange(0.0f, 40.0f) + hazePos.x) - 20.0f;
+    hazePos.y = (CGeneral::GetRandomNumberInRange(0.0f, 40.0f) + hazePos.y) - 20.0f;
+    hazePos.z = (CGeneral::GetRandomNumberInRange(0.0f, 7.00f) + hazePos.z) - 2.00f;
     g_fx.m_Sand2->AddParticle(
-        TheCamera.GetPosition()
-            + CVector{ CVector2D{ TheCamera.m_mCameraMatrix.GetForward() } * 10.0f }
-            + CVector::Random({ -20.f, -20.f, -2.f }, { 20.f, 20.f, 5.f }),
+        hazePos,
         WindDir * 15.0f,
         0.0f,
         FxPrtMult_c(0.9f, 0.9f, 1.0f, s_RainHazeAlpha, 1.0f, 0.0f, 0.2f)
@@ -177,9 +200,10 @@ void CWeather::AddSandStormParticles() {
     position.x += TheCamera.m_mCameraMatrix.GetForward().x * 10.0f;
     position.y += TheCamera.m_mCameraMatrix.GetForward().y * 10.0f;
 
-    position.x += CGeneral::GetRandomNumberInRange(0.0f, 40.0f) - 20.0f;
-    position.y += CGeneral::GetRandomNumberInRange(0.0f, 40.0f) - 20.0f;
-    position.z += CGeneral::GetRandomNumberInRange(0.0f, 7.00f) - 2.00f;
+    // exe 0x72A87B-0x72A8F1: `(rand * 40 + pos) - 20` (the offset is added to the position BEFORE the constant is subtracted), rand order x, y, z
+    position.x = (CGeneral::GetRandomNumberInRange(0.0f, 40.0f) + position.x) - 20.0f;
+    position.y = (CGeneral::GetRandomNumberInRange(0.0f, 40.0f) + position.y) - 20.0f;
+    position.z = (CGeneral::GetRandomNumberInRange(0.0f, 7.00f) + position.z) - 2.00f;
 
     g_fx.m_Sand2->AddParticle(position, CWeather::WindDir * 25.0f, 0.0f, FxPrtMult_c(0.67f, 0.65f, 0.55f, 0.25f, 1.0f, 0.0f, 0.2f));
 }

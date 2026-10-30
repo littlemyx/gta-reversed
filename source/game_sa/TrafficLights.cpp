@@ -174,7 +174,10 @@ void CTrafficLights::DisplayActualLight(CEntity* entity) {
         iLightState = LightForCars2_Visual();
 
     auto mi = CModelInfo::GetModelInfo(entity->m_nModelIndex);
-    bool bSameDir = DotProduct(TheCamera.m_mCameraMatrix.GetForward(), entMat.GetForward()) > 0.0F;
+    // 0x49DBA2..0x49DBCB: (cam.y*ent.y + cam.z*ent.z) + cam.x*ent.x (the generic DotProduct sums z,y,x)
+    const auto& camFwd = TheCamera.m_mCameraMatrix.GetForward();
+    const auto& entFwd = entMat.GetForward();
+    bool bSameDir = camFwd.y * entFwd.y + camFwd.z * entFwd.z + camFwd.x * entFwd.x > 0.0F;
 
     CVector vecCenter(0.0F, 0.0F, 0.0F);
     for (int32 iFxInd = 0; iFxInd < mi->m_n2dfxCount; ++iFxInd) {

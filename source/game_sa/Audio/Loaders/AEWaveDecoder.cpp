@@ -99,6 +99,7 @@ long CAEWaveDecoder::GetStreamLengthMs() {
 
 // 0x503360
 long CAEWaveDecoder::GetStreamPlayTimeMs() {
+#ifdef FIX_BUGS
     if (m_bInitialized) {
         uint32 posByte = m_dataStream->GetCurrentPosition() - dataPosition;
         uint32 posSamples = posByte / blockAlign;
@@ -107,6 +108,15 @@ long CAEWaveDecoder::GetStreamPlayTimeMs() {
     }
 
     return -1;
+#else
+    if (m_bInitialized) {
+        // 0x503360: (position - 0x2C) / (sampleRate * 4) * 1000 in x87 arithmetic (both operands via fild + 2^32 for "negative" values), no integer division
+        const auto ToFp = [](uint32 v) { x87d f = (x87d)(int32)v; if ((int32)v < 0) f += 4294967296.0f; return f; };
+        const uint32 posByte = (uint32)_dataStreamCopy->GetCurrentPosition() - 0x2Cu;
+        return NOTSA_FTOL(int32, (float)(X87R(ToFp(posByte) / ToFp(sampleRate << 2))) * 1000.0f);
+    }
+    return -1;
+#endif
 }
 
 // 0x5033c0

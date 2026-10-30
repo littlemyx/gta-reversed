@@ -242,7 +242,7 @@
 | S93 | phase3 tier A (PHASE3.md) | 43 | partial 36/43 (31 M, 5 fixed) -> S93b | Fx.cpp, FxEmitter.cpp, IplStore.cpp |
 | S94 | phase3 tier A (PHASE3.md) | 45 | 43/45 (39 M, 4 fixed) -> S94b | FxEmitterBP.cpp, FxInfoManager.cpp, FxManager.cpp, FxPrimBP.cpp, FxSphere.cpp, FxSystem.cpp |
 | S95 | phase3 tier B (PHASE3.md) | 30 | partial 15/30 (15 M) -> S95b | Hud.cpp, HudColours.cpp |
-| S96 | phase3 tier B (PHASE3.md) | 45 | pending | LoadingScreen.cpp, MenuManager.cpp |
+| S96 | phase3 tier B (PHASE3.md) | 45 | done (27 M, 8 fixed, 1 NR, 8 U Draw*) -> S96b | LoadingScreen.cpp, MenuManager.cpp |
 | S97 | phase3 tier B (PHASE3.md) | 34 | pending | MenuManager.cpp, MenuSystem.cpp |
 | S98 | phase3 tier B (PHASE3.md) | 37 | done (31 M, 6 fixed) | AtomicModelInfo.cpp, BaseModelInfo.cpp, ClumpModelInfo.cpp, DamageAtomicModelInfo.cpp, ModelInfo.cpp, PedModelInfo.cpp |
 | S99 | phase3 tier B (PHASE3.md) | 39 | done (35 M, 4 fixed) | VehicleModelInfo.cpp, WeaponModelInfo.cpp |
@@ -279,3 +279,4 @@
 | S84d | rest of S84c | 3 | done (3 fixed) | AEVehicleAudioEntity.cpp |
 | S102d | rest of S102c | 3 | done (2 fixed; RenderBottomFromHeight -> S104b) | Clouds.cpp |
 | S104b | rest of S104 + RenderBottomFromHeight | 25 | done (14 M, 11 fixed; regress left to gate) | GrassRenderer.cpp, PlantMgr.cpp, PlantSurfPropMgr.cpp, ProcSurfaceInfo.cpp, SurfaceInfos_c.cpp |
+| S96b | rest of S96 | 8 | pending | LoadingScreen.cpp, MenuManager.cpp |

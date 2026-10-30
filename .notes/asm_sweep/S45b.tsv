@@ -1,0 +1,12 @@
+addr	file	line	cls	fn	oc
+0x535FA0	source/game_sa/Entity/Entity.cpp	50	None	PreRender	U
+0x6FC7A0	source/game_sa/Entity/Entity.cpp	91	None	ProcessLightsForEntity	U
+0x43ECF0	source/game_sa/EntryExitManager.cpp	30	None	SetAreaCodeForVisibleObjects	U
+0x43ED80	source/game_sa/EntryExitManager.cpp	29	None	ResetAreaCodeForVisibleObjects	U
+0x43EFD0	source/game_sa/EntryExitManager.cpp	27	None	GetEntryExitIndex	U
+0x43F050	source/game_sa/EntryExitManager.cpp	26	None	LinkEntryExit	U
+0x43F0A0	source/game_sa/EntryExitManager.cpp	25	None	PostEntryExitsCreation	U
+0x43F150	source/game_sa/EntryExitManager.cpp	24	None	GetPositionRelativeToOutsideWorld	U
+0x43F630	source/game_sa/EntryExitManager.cpp	21	None	FindNearestDoor	U
+0x43F880	source/game_sa/EntryExitManager.cpp	14	None	Init	U
+0x43FA00	source/game_sa/EntryExitManager.cpp	20	None	AddOne	U

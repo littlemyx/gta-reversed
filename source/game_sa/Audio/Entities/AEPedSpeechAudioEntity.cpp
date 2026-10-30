@@ -487,9 +487,19 @@ eCJMood CAEPedSpeechAudioEntity::GetCurrentCJMood() {
         return MOOD_CR;
     }
 
-    const auto isMoodOverrideActive = s_nCJMoodOverrideTime >= CTimer::GetTimeInMS();
+    // exe 0x4E5579: the script override (`SetCJMood`) is only looked at in the fall-through path (wanted level <= 1 and no
+    // recent mission passed); the early-out paths (0x4E5537 / 0x4E554B / 0x4E555C) use the computed flags directly.
+    // It is active while `override_time > now` (unsigned, `jbe` skips it).
+    bool isMoodOverrideActive = false;
     
+    bool useStaleWellDressedFlag = false;
     const auto CheckCJIsWellDressed = [&] { // 0x4E53DF
+        if (useStaleWellDressedFlag) {
+            // exe 0x4E5579-0x4E55CC: only the override block loads the "well dressed" byte (`cl`) before the mood switch; the
+            // time >= LastMissionPassedTime + 3 min path jumps straight to the switch with `cl` = low byte of the CWanted* left in
+            // ecx (non-zero in practice), so the result is CD instead of CR whenever the CJ is neither gang banging nor fat
+            return true;
+        }
         if (isMoodOverrideActive && s_nCJWellDressed != -1) {
             return s_nCJWellDressed != 0;
         }
@@ -527,7 +537,7 @@ eCJMood CAEPedSpeechAudioEntity::GetCurrentCJMood() {
             return s_nCJFat != 0;
         }
         return CStats::GetStatValue(STAT_FAT) >= 600.f
-            && CStats::GetStatValue(STAT_FAT) - 200.f > CStats::GetStatValue(STAT_MUSCLE);
+            && (x87d)CStats::GetStatValue(STAT_FAT) - (x87d)200.f > (x87d)CStats::GetStatValue(STAT_MUSCLE); // exe 0x4E54E0: fsub keeps the x87 precision
     };
 
     const auto DeriveMood = [&](eCJMood basicMood) { // 0x4E55CC
@@ -573,14 +583,17 @@ eCJMood CAEPedSpeechAudioEntity::GetCurrentCJMood() {
 
     if (CTheScripts::LastMissionPassedTime != -1) { // 0x4E555C
         if (CTimer::GetTimeInMS() >= CTheScripts::LastMissionPassedTime) {
-            return CTimer::GetTimeInMS() < CTheScripts::LastMissionPassedTime + 180'000
-                ? DeriveMood(MOOD_WR)
-                : DeriveMood(MOOD_CR);
+            if (CTimer::GetTimeInMS() < CTheScripts::LastMissionPassedTime + 180'000) {
+                return DeriveMood(MOOD_WR);
+            }
+            useStaleWellDressedFlag = true;
+            return DeriveMood(MOOD_CR);
         } else {
             CTheScripts::LastMissionPassedTime = CTimer::GetTimeInMS();
         }
     }
 
+    isMoodOverrideActive = s_nCJMoodOverrideTime > CTimer::GetTimeInMS();
     return DeriveMood(MOOD_CR); // 0x4E5579
 }
 

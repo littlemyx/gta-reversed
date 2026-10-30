@@ -399,6 +399,8 @@ void CCoronas::RenderReflections() {
         }
     }
 
+    CSprite::InitSpriteBuffer(); // 0x6FB66A
+
     RwRenderStateSet(rwRENDERSTATEFOGENABLE,         RWRSTATE(FALSE));
     RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      RWRSTATE(FALSE));
     RwRenderStateSet(rwRENDERSTATEZTESTENABLE,       RWRSTATE(FALSE));
@@ -409,7 +411,18 @@ void CCoronas::RenderReflections() {
 
     const auto camPos = TheCamera.GetPosition();
     for (auto&& [i, c] : rngv::enumerate(aCoronas)) {
-        const auto covidPos = c.GetPosition();
+        if (!c.m_dwId) {
+            continue;
+        }
+        if (!c.m_FadedIntensity && !c.m_Color.a) {
+            continue;
+        }
+        if (!c.m_bUsesReflection) { // 0x6FB6E0: `cmp byte [corona + 0x27], 0 / je`
+            continue;
+        }
+
+        // 0x6FB6E8: attached coronas use the entity matrix, also for bikes (no lean matrix here, unlike Render)
+        const auto covidPos = c.m_pAttachedTo ? c.m_pAttachedTo->GetMatrix().TransformPoint(c.m_vPosn) : c.m_vPosn;
         if (!c.m_bHasValidHeightAboveGround || NOTSA_EXE_OR((((uint32)i + CTimer::GetFrameCounter()) & 0xF) == 0 /* 0x6FB763: `(frame + i) & 0xF` - upstream's "simplified" form was `(i & 0xFF) + (frame & 0xFF) % 16 == 0`, i.e. only coronas 0, 256.. every 16th frame */, ((i & 0xFF) + (CTimer::GetFrameCounter() & 0xFF) % 16) == 0)) { //< Simplified code
             bool bGroundFound;
             const auto groundZ = CWorld::FindGroundZFor3DCoord(covidPos, &bGroundFound);
@@ -421,30 +434,36 @@ void CCoronas::RenderReflections() {
         if (!c.m_bHasValidHeightAboveGround) {
             continue;
         }
-        if (c.m_bHasValidHeightAboveGround >= 20.f) {
+        // 0x6FB7F0: `height < 20` is required (the port compared the FLAG with 20, which never skipped)
+        const float height = c.m_fHeightAboveGround;
+        if (!(height < 20.f)) {
             continue;
         }
-        if (covidPos.z - c.m_fHeightAboveGround >= camPos.z) {
+        // 0x6FB81A: skip when `pos.z - height > cam.z` or NaN (equal does NOT skip)
+        if (!(covidPos.z - height <= camPos.z)) {
             continue;
         }
         CVector   onScrPos;
         CVector2D onScrSize;
-        if (!CSprite::CalcScreenCoors(covidPos - CVector{ 0.f, 0.f, 2 * c.m_fHeightAboveGround }, &onScrPos, &onScrSize.x, &onScrSize.y, true, true)) {
+        if (!CSprite::CalcScreenCoors(covidPos - CVector{ 0.f, 0.f, 2 * height }, &onScrPos, &onScrSize.x, &onScrSize.y, true, true)) {
             continue;
         }
-        const auto clampedFarClip = std::min(55.f, c.m_fFarClip * 0.75f);
-        if (onScrPos.z >= clampedFarClip) {
+        // 0x6FB87x: `55 < v ? 55 : v` (a NaN stays NaN; std::min would give 55)
+        const float farClip75     = c.m_fFarClip * 0.75f;
+        const float clampedFarClip = 55.f < farClip75 ? 55.f : farClip75;
+        if (!(onScrPos.z < clampedFarClip)) { // 0x6FB8A4
             continue;
         }
-        const auto LerpColorC = [t = (s_DebugSettings.AlwaysRenderWetRoadReflections ? 1.f : CWeather::WetRoads)
-                                     * c.CalculateIntensity(onScrPos.z, clampedFarClip)
-                                     * invLerp(20.f, 0.f, c.m_fHeightAboveGround)
-                                     * 230.f](uint8 cc) {
-            return (uint8)(NOTSA_FTOL(uint16, (float)cc * t) >> 8 & 0xFF); // divide by 256
+        // 0x6FB904..0x6FB92x: ONE integer multiplier `(int16)ftol(((WetRoads * fade) * (20 - height)) * 230 * 0.05)`, then (colour * mult) >> 8 in integers
+        const float wet = s_DebugSettings.AlwaysRenderWetRoadReflections ? 1.f : CWeather::WetRoads;
+        const int16 mult = NOTSA_FTOL(int16, ((wet * ExeCoronaFade(onScrPos.z, clampedFarClip, true)) * (20.f - height)) * 230.f * 0.05f);
+        const auto LerpColorC = [mult](uint8 cc) {
+            return (uint8)(((int32)cc * (int32)mult) >> 8);
         };
+        // 0x6FB93x: width = (sizeX * size) * 0.75, height = (sizeY * size) * 2
         CSprite::RenderBufferedOneXLUSprite(
             { onScrPos.x, onScrPos.y, notsa::bugfixes::PS2CoronaRendering ? onScrPos.z : RwIm2DGetNearScreenZMacro() },
-            onScrSize * CVector2D{ 0.75f, 2.f } * c.m_fSize,
+            { onScrSize.x * c.m_fSize * 0.75f, onScrSize.y * c.m_fSize * 2.f },
             LerpColorC(c.m_Color.r),
             LerpColorC(c.m_Color.g),
             LerpColorC(c.m_Color.b),

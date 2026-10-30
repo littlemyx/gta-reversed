@@ -1104,6 +1104,9 @@ void CRenderer::ScanSectorList(int32 sectorX, int32 sectorY) {
     }
 
     CRenderer::SetupScanLists(sectorX, sectorY);
+    // exe [esp+0x18]: one stack slot for the whole call. SetupEntityVisibility does not write it on every path that returns RENDERER_VISIBLE (vehicles, peds, clumps, don't-stream
+    // objects), AddEntityToRenderList then uses the distance of the previous entity (0x5549CD)
+    float fDistance = 0.0f;
     reinterpret_cast<tScanLists*>(&PC_Scratch)->VisitLists([&]<typename PtrListType>(PtrListType& list) {
         for (auto* const entity : list) {
             if (entity->IsScanCodeCurrent())
@@ -1112,7 +1115,6 @@ void CRenderer::ScanSectorList(int32 sectorX, int32 sectorY) {
             entity->SetCurrentScanCode() ;
             entity->m_bOffscreen = false;
             bool bInvisibleEntity = false;
-            float fDistance = 0.0f;
             switch (SetupEntityVisibility(entity, fDistance)) {
             case RENDERER_INVISIBLE: {
                 if (entity->GetIsTypeObject()) {
@@ -1195,13 +1197,13 @@ void CRenderer::ScanBigBuildingList(int32 sectorX, int32 sectorY) {
         bRequestModel = true;
     }
 
+    float fDistance = 0.0f; // exe [esp+0x10]: one stack slot for the whole call (SetupBigBuildingVisibility returns RENDERER_VISIBLE for vehicles without writing it)
     for (auto* const entity : CWorld::GetLodPtrList(sectorX, sectorY)) {
         if (entity->IsScanCodeCurrent())
             continue;
 
         entity->SetCurrentScanCode();
 
-        float fDistance = 0.0f;
         switch (SetupBigBuildingVisibility(entity, fDistance)) {
         case RENDERER_CULLED:
         case RENDERER_INVISIBLE:

@@ -1,0 +1,41 @@
+addr	function	verdict	asm range	note	fix commit
+0x681740	CTaskManager::FindActiveTaskByType	MATCH	0x681740-0x6817C4	first match over primary then secondary slots	-
+0x681810	CTaskManager::GetTaskSecondary	MATCH	0x681810-0x681818 (all)	[-1] reads primary[4] like the port	-
+0x681850	CTaskManager::Flush	MATCH	0x681850-0x681892 (all)		-
+0x6818A0	CTaskManager::FlushImmediately	MATCH	0x6818A0-0x681913 (all)	MakeAbortable(ped, IMMEDIATE, 0) then delete+null	-
+0x681970	CTaskManager::GetLastTaskOf(task)	MATCH	0x681970-0x681990 (all)	unhooked overload	-
+0x6819A0	CTaskManager::StopTimers	MATCH	0x6819A0-0x6819C6 (all)		-
+0x6819D0	CTaskManager::GetSimplestActiveTask	MATCH	0x6819D0-0x6819F7 (all)		-
+0x681A00	CTaskManager::GetLastTaskOf(index)	MATCH	0x681A00-0x681A20 (all)	unhooked overload	-
+0x681AF0	CTaskManager::SetTask	MATCH	0x681AF0-0x681B56 (all)	null task on empty slot and equal task are no-ops like ChangeTaskInSlot	-
+0x681B60	CTaskManager::SetTaskSecondary	MATCH	0x681B60-0x681BC4 (all)		-
+0x681C10	CTaskManager::ManageTasks	FIXED	0x681C10-0x681DEB (all)	primary tree advanced up to 11 passes (exe flags the 11th), port 10; secondaries and finish logic match	82e6c1851
+0x61A5E0	CTaskSimple VMT dtor	MATCH	0x61A5E0 (head)	scalar deleting dtor of the base	-
+0x675FC0	CTaskInteriorLieInBed::FinishAnimCB	MATCH	0x675FC0-0x676003 (all)	GET_OUT = base+2, -1000 blend, aborting flag	-
+0x496DC0	CTaskComplexSeekEntity<XYOffset>::CreateSubTask (hook address)	FIXED	0x496DC0-0x496DFA	0x496DC0 is RadiusAngleOffset GetSeekPos(out, ped); the real XYOffset CreateSubTask is 0x665270 (body compared in full: MATCH); hook moved	dc7d151df
+0x661DC0	CTaskComplexSeekEntity<XYOffset>::Constructor	MATCH	0x661DC0-0x661E8E (all)	field offsets, flags, RegisterReference	-
+0x661EA0	CTaskComplexSeekEntity::GetTaskType	MATCH	0x661EA0 (all)	0x38B	-
+0x661EB0	CTaskComplexSeekEntity<XYOffset>::MakeAbortable	MATCH	0x661EB0-0x661EFF (all)		-
+0x661F10	CTaskComplexSeekEntity<XYOffset> VMT dtor	MATCH	0x661F10-0x661F2B (all)		-
+0x661F30	CTaskComplexSeekEntity<XYOffset>::Destructor	MATCH	0x661F30-0x661F90 (all)	CleanUpOldReference	-
+0x664AF0	CTaskComplexSeekEntity<XYOffset>::Clone	MATCH	0x664AF0-0x664B9D (all)	face=true, tracking bit + calculator + min dist copied	-
+0x665080	CTaskComplexSeekEntity<XYOffset>::CreateNextSubTask	MATCH	0x665080-0x66526B (all)	incl. d2 <= max2 / NaN arm	-
+0x665600	CTaskComplexSeekEntity<XYOffset>::CreateFirstSubTask	MATCH	0x665600-0x66573E (all)	arrived only when d2 < max2 (strict)	-
+0x665760	CTaskComplexSeekEntity<XYOffset>::ControlSubTask	FIXED	0x665760-0x665DB9 (all)	boat attach ran when the abort FAILED (inverted); NaN arms of the min-dist tests (jp / jne) differed; rest matches	06f7e2de1
+0x66F6A0	CTaskComplexAvoidEntity VMT dtor	MATCH	0x66F6A0-0x66F6BB, body 0x66AAE0	EntityRef cleanup	-
+0x66A320	CTaskComplexAvoidOtherPedWhileWandering::ComputeSphere	FIXED	0x66A320-0x66A7A2 (all)	radius sqrt(max)+1.05f (port omitted +1.05), centre *= 1/n, max starts 0.0f, NaN keeps max	e678b29ff
+0x66A7B0	CTaskComplexAvoidOtherPedWhileWandering::ComputeRouteRoundSphere	MATCH	0x66A7B0-0x66A841 (all)	z of start/target/sphere centre = ped z, outputs +0x34 / +0x28	-
+0x671FE0	CTaskComplexAvoidOtherPedWhileWandering::NearbyPedsInSphere	FIXED	0x671FE0-0x672070 (all)	port stored nullptr into pedsInSphere (reference nulled first); exe continues rather than returns when full (equivalent)	df71ed8bc
+0x672080	CTaskComplexAvoidOtherPedWhileWandering::ComputeAvoidSphere	MATCH	0x672080-0x672174 (all)		-
+0x672180	CTaskComplexAvoidOtherPedWhileWandering::ComputeDetourTarget	MATCH	0x672180-0x6721A8 (all)		-
+0x4994C0	CTaskComplexBeCop VMT dtor	MATCH	0x4994C0 + body 0x4994E0	vtable store + base dtor	-
+0x5F66E0	CTaskComplexBeStill VMT dtor	MATCH	0x5F66E0 + body 0x5F6700		-
+0x4B89D0	CTaskComplexCarDriveMissionFleeScene VMT dtor	MATCH	0x4B89D0 + body 0x4B89F0		-
+0x4B8AB0	CTaskComplexCarDriveMissionKillPed VMT dtor	MATCH	0x4B8AB0 + body 0x4B8AD0		-
+0x46A6C0	CTaskComplexClimb VMT dtor	MATCH	0x46A6C0 + body 0x46A6E0		-
+0x643220	CTaskComplexCarDriveWander VMT dtor	MATCH	0x643220 + body 0x63CB50		-
+0x63AB90	CTaskComplexEnterCar::SetVehicleFlags	MATCH	0x63AB90-0x63ABFF (all)	door flags / numGettingIn / opposite door	-
+0x643C60	CTaskComplexEnterCarAsDriver VMT dtor	MATCH	0x643C60 + body 0x640330		-
+0x643C80	CTaskComplexEnterCarAsPassenger VMT dtor	MATCH	0x643C80 + body 0x640380		-
+0x65A700	CTaskComplexExtinguishFireOnFoot VMT dtor	MATCH	0x65A700 + body 0x6598B0		-
+0x67CBC0	CTaskComplexFallAndStayDown VMT dtor	MATCH	0x67CBC0 + body 0x678A90		-

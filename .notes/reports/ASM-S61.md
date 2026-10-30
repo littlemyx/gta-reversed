@@ -1,0 +1,11 @@
+# ASM-S61 (TaskManager, SeekEntity<XYOffset>, AvoidOtherPedWhileWandering, task dtors) - 2026-10-30
+Result: 40 rows, 35 MATCH, 5 FIXED (5 commits), 0 UNSURE, 0 NOT_REACHED. Table in S61.result.tsv.
+Fixes:
+- 82e6c1851 CTaskManager::ManageTasks (0x681C10): the primary tree is advanced up to 11 times (the exe flags the pass where the counter exceeds 10, that pass still runs); the port stopped at 10.
+- 06f7e2de1 CTaskComplexSeekEntity::ControlSubTask (0x665760, same shape as 0x496760): the ped-to-boat attachment runs when the sub-task abort SUCCEEDED; the port had it inverted (attach on a failed abort, never on a successful one). NaN arms of the min-distance tests (jp / jne) now match (>= / <= became !(<) / !(>)).
+- dc7d151df the XYOffset CreateSubTask hook sat on 0x496DC0, which is RadiusAngleOffset's GetSeekPos(out, ped) (only called from the already hooked RadiusAngleOffset::ControlSubTask); the real function is 0x665270 (compared in full: all task types match).
+- e678b29ff AvoidOtherPedWhileWandering::ComputeSphere (0x66A320): radius is sqrt(max) + 1.05f (port omitted the 1.05), centre is multiplied by 1/n (not divided), max starts at 0.0f (not FLT_MIN), NaN keeps the old max.
+- df71ed8bc NearbyPedsInSphere (0x671FE0): the port nulled the (reference) array entry before storing it, so nullptr went into pedsInSphere and the avoid sphere never grew past the first ped.
+MATCH: remaining TaskManager functions, SeekEntity ctor/dtor/Clone/MakeAbortable/CreateNext/CreateFirst, ComputeRouteRoundSphere, ComputeAvoidSphere/DetourTarget, LieInBed FinishAnimCB, SetVehicleFlags, the 10 scalar-deleting dtors (vtable store + base dtor; the ports own nothing extra).
+Open: none. SeekEntity Standard/RadiusAngleOffset share the template code, so the ControlSubTask fixes apply to them too.
+Gate: StandaloneRelease build OK; wave2_oracle_test (RW_EXE_ORACLE = GTA_EXE = gta_sa_compact.exe, rebuilt after the last edit): 1142 functions, mismatches PC24 0 / 0, PC53 0 / 0; gameplay_regress combat PASS=14; v6 grep clean; PortableWin64 compile (x64 subshell, main's compile_commands rewritten to the worktree, no PCH) of TaskManager.cpp, TaskComplexAvoidOtherPedWhileWandering.cpp, TaskComplexSeekEntityAnyMeansXYOffset.cpp: 0 errors.

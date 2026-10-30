@@ -1286,7 +1286,9 @@ void CRenderer::ConstructRenderList() {
 
         if (camPos.z > LOWLOD_CAMERA_HEIGHT_THRESHOLD) {
             float fScale = (camPos.z - LOWLOD_CAMERA_HEIGHT_THRESHOLD) / (250.0f - LOWLOD_CAMERA_HEIGHT_THRESHOLD);
-            fScale = std::min(1.0f, fScale);
+            if (fScale > 1.0f) { // 0x555811: `fcom 1.0; test ah,0x41; jne` keeps the ratio for <= 1 and NaN (std::min(1, NaN) gave 1)
+                fScale = 1.0f;
+            }
             ms_lowLodDistScale = fScale * (2.2f - 1.0f) + 1.0f;
         }
     }

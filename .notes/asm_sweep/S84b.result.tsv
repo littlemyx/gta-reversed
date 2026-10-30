@@ -1,0 +1,24 @@
+addr	fn	verdict	commit	note
+0x4FD290	ProcessPlayerProp	FIXED	03b5ec43a,5bd50ecb4	engine-off cancel (player: always), prop speed x0x862D18, forced 0.8/-12 stall with 0 contact wheels, stall+(log10*20+8) association, distant vol = stall + fade(prop speed factor); uninitialised accel term (accel<=0, brake>0) not reproducible
+0x4FD8F0	ProcessDummyProp	FIXED	03b5ec43a,5bd50ecb4	cancel only without recording (roles were swapped with player), rec>=0 prop speed, same volume fixes
+0x4FDFD0	ProcessAIProp	FIXED	5bd50ecb4,03b5ec43a	distant fade (shared helper), prop speed x0x862D18; rest MATCH
+0x501650	ProcessPlayerJet	FIXED	03b5ec43a	stall volume zero polarity (shared helper), prop speed constant; rest NOT_REACHED
+0x4FE420	ProcessPlayerHeli	FIXED	91fa5cc58,5bd50ecb4	rotor step 0x862D04 both ways (no 0.03/0.005), distant fade; sound ids/volumes MATCH
+0x4FEE20	ProcessAIHeli	FIXED	91fa5cc58,5bd50ecb4	same
+0x4FE940	ProcessDummyHeli	FIXED	91fa5cc58,5bd50ecb4	same
+0x4FF320	ProcessPlayerSeaPlane	FIXED	5bd50ecb4	distant fade only (shared helper; exe base argument not verified); rest NOT_REACHED
+0x4FCA10	ProcessDummyStateTransition	NOT_REACHED		budget
+0x4FF7C0	ProcessDummySeaPlane	NOT_REACHED		budget
+0x501960	ProcessDummyJet	NOT_REACHED		budget (prop speed constant fixed via shared CalculatePropSpeed)
+0x4FF900	ProcessGenericJet	NOT_REACHED		budget
+0x4F9710	PlayBicycleSound	NOT_REACHED		budget
+0x4FFDC0	ProcessDummyBicycle	NOT_REACHED		budget
+0x500040	ProcessPlayerBicycle	NOT_REACHED		budget
+0x500CE0	ProcessPlayerCombine	NOT_REACHED		budget
+0x500DC0	ProcessDummyRCCar	NOT_REACHED		budget
+0x501270	ProcessDummyGolfCart	NOT_REACHED		budget
+0x501480	ProcessDummyVehicleEngine	NOT_REACHED		budget
+0x501AB0	ProcessSpecialVehicle	NOT_REACHED		budget
+0x4FBB10	ProcessPlayerVehicleEngine	NOT_REACHED		budget
+0x501E10	ProcessVehicle	NOT_REACHED		budget
+0x4F6420	AddAudioEvent	NOT_REACHED		budget

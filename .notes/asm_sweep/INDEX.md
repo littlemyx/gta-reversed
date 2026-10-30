@@ -239,7 +239,7 @@
 | S90 | phase3 tier A (PHASE3.md) | 40 | pending | AEBankLoader.cpp, AEMP3BankLoader.cpp, AEMP3TrackLoader.cpp, AETrackLoader.cpp, ColStore.cpp, Directory.cpp |
 | S91 | phase3 tier A (PHASE3.md) | 24 | done (21 M, 3 fixed) | FileLoader.cpp |
 | S92 | phase3 tier A (PHASE3.md) | 42 | done (34 M, 6 fixed, 2 NR: COL1/COL4 loaders unused) | FileLoader.cpp, FileMgr.cpp, IniFile.cpp |
-| S93 | phase3 tier A (PHASE3.md) | 43 | pending | Fx.cpp, FxEmitter.cpp, IplStore.cpp |
+| S93 | phase3 tier A (PHASE3.md) | 43 | partial 36/43 (31 M, 5 fixed) -> S93b | Fx.cpp, FxEmitter.cpp, IplStore.cpp |
 | S94 | phase3 tier A (PHASE3.md) | 45 | pending | FxEmitterBP.cpp, FxInfoManager.cpp, FxManager.cpp, FxPrimBP.cpp, FxSphere.cpp, FxSystem.cpp |
 | S95 | phase3 tier B (PHASE3.md) | 30 | pending | Hud.cpp, HudColours.cpp |
 | S96 | phase3 tier B (PHASE3.md) | 45 | pending | LoadingScreen.cpp, MenuManager.cpp |
@@ -268,3 +268,4 @@
 | S81b | rest of S81 | 21 | done (11 M, 10 fixed) | AEFrontendAudioEntity.cpp, AEGlobalWeaponAudioEntity.cpp, AEPedAudioEntity.cpp |
 | S83b | rest of S83 | 21 | pending | AEVehicleAudioEntity.cpp |
 | S85b | rest of S85 | 3 | pending | AEWeaponAudioEntity.cpp, AEWeatherAudioEntity.cpp |
+| S93b | rest of S93 | 7 | pending | Fx.cpp |

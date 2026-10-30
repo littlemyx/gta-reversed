@@ -1,0 +1,8 @@
+addr	file	line	cls	fn	oc	tier
+0x49FB30	source/game_sa/Fx/Fx.cpp	244	Fx_c	AddWheelSpray	U	A
+0x4A0610	source/game_sa/Fx/Fx.cpp	248	Fx_c	AddWheelSand	U	A
+0x4A09C0	source/game_sa/Fx/Fx.cpp	249	Fx_c	AddWheelDust	U	A
+0x4A1410	source/game_sa/Fx/Fx.cpp	257	Fx_c	RenderAddTri_	U	A
+0x4A1600	source/game_sa/Fx/Fx.cpp	258	Fx_c	RenderEnd	U	A
+0x4A13B0	source/game_sa/Fx/Fx.cpp	259	Fx_c	RenderBegin	U	A
+0x4A1660	source/game_sa/Fx/Fx.cpp	260	Fx_c	RotateVecIntoVec	U	A

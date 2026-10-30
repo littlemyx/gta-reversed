@@ -329,32 +329,45 @@ void CVehicleRecording::SaveOrRetrieveDataForThisFrame() {
         if (bUseCarAI[i])
             continue;
 
-        const auto delta = static_cast<float>(CTimer::GetTimeInMS() - CTimer::m_snPPPPreviousTimeInMilliseconds);
-        const auto step = delta * PlaybackSpeed[i] / 4.0f;
-        if (step > 500.0f) {
-            NOTSA_LOG_DEBUG("That's a really big step (={:2f})\n", step);
+        // 0x45A668: a PAUSED playback does not advance its clock (the port advanced it regardless)
+        if (!bPlaybackPaused[i]) {
+            // 0x45A672: (uint32)(now - previous) * speed * 0.25f (0x858C84) + clock, all in extended precision, rounded to float once at the store
+            const x87d step = (x87d)(uint32)(CTimer::GetTimeInMS() - CTimer::m_snPPPPreviousTimeInMilliseconds) * PlaybackSpeed[i] * (x87d)0.25f;
+            if (step > (x87d)500.0f) {
+                NOTSA_LOG_DEBUG("That's a really big step (={:2f})\n", (float)step);
+            }
+            PlaybackRunningTime[i] = (float)(step + PlaybackRunningTime[i]);
         }
-        PlaybackRunningTime[i] += step;
 
-        const auto frames = GetFramesFromPlaybackBuffer(i);
-        auto current = GetCurrentFrameIndex(i);
+        // 0x45A6EF: byte offsets into the playback buffer (frame = 0x20 bytes)
+        constexpr uint32 FRAME = sizeof(CVehicleStateEachFrame);
+        const auto* const base = reinterpret_cast<const uint8*>(pPlaybackBuffer[i]);
+        const uint32      size = (uint32)PlaybackBufferSize[i];
+        const auto        Frame = [&](uint32 off) { return reinterpret_cast<const CVehicleStateEachFrame*>(base + off); };
+        const auto        Time  = [&](uint32 off) { return (x87d)Frame(off)->m_nTime; }; // fild + 2^32 for "negative"
+        const x87d        clock = PlaybackRunningTime[i];
 
-        // find the exact frame that matches the playback time.
-        for (auto& next = frames[current + 1]; current + 1 < frames.size() && next.m_nTime < PlaybackRunningTime[i]; current++)
-            ;
-        // current can not be back from the current frame index.
-        for (; current > GetCurrentFrameIndex(i) && frames[current].m_nTime > PlaybackRunningTime[i]; current--)
-            ;
-        PlaybackIndex[i] = current * sizeof(CVehicleStateEachFrame);
+        uint32 cur = (uint32)PlaybackIndex[i];
+        // find the exact frame that matches the playback time: advance while the NEXT frame's time is before the clock and it still exists
+        // (the port bound `next` once, so it never advanced beyond the first comparison)
+        while (cur + FRAME < size && Time(cur + FRAME) < clock) {
+            cur += FRAME;
+        }
+        // 0x45A767: and step back while the current frame is after the clock (down to frame 0; the port stopped at the old index)
+        while (Time(cur) > clock && cur > 0) {
+            cur -= FRAME;
+        }
+        PlaybackIndex[i] = (int32)cur;
 
-        if (current + 1 < frames.size()) {
+        if (cur + FRAME < size) {
             // current is not the last frame, so we interpolate with the next.
-            const auto& frameCurrent = frames[current];
-            const auto& frameNext = frames[current + 1];
+            const auto& frameCurrent = *Frame(cur);
+            const auto& frameNext = *Frame(cur + FRAME);
 
             RestoreInfoForCar(vehicle, frameCurrent, false);
 
-            const auto interp = (PlaybackRunningTime[i] - (float)frameCurrent.m_nTime) / (float)(frameNext.m_nTime - frameCurrent.m_nTime);
+            // 0x45A80D: (clock - curTime) / (uint32)(nextTime - curTime) in extended precision, rounded to float at the argument
+            const auto interp = (float)((clock - (x87d)frameCurrent.m_nTime) / (x87d)(uint32)(frameNext.m_nTime - frameCurrent.m_nTime));
             InterpolateInfoForCar(vehicle, frameNext, interp);
 
             if (vehicle->IsSubTrain()) {

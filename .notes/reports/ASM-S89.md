@@ -12,4 +12,4 @@ Details per row: `.notes/asm_sweep/S89.result.tsv`.
 
 Open: CAnimManager::AddAnimAssocDefinition skip-over-occupied-slots (only matters on a second Initialise, overflows the 145-slot table in the exe); LoadAnimFile ANPK body not compared (vanilla data has no ANPK; ANP unknown header falls to ANPK in the exe, port asserts).
 
-Tests: see the commit/landing notes in the sweep INDEX.
+Tests: wave2_oracle_test (RW_EXE_ORACLE=compact exe) 1142 functions, 0 mismatches PC24/PC53; gameplay_regress combat+missions 25/25 PASS; v6 pre-commit grep clean; PortableWin64 cl.exe x64 syntax compile of the 3 touched files (PCH off, objects to scratch) rc 0.

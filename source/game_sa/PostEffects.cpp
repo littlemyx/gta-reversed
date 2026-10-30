@@ -805,7 +805,7 @@ bool CPostEffects::IsVisionFXActive() {
 // 0x7011C0
 void CPostEffects::NightVision() {
     if (m_fNightVisionSwitchOnFXCount > 0.0f) {
-        m_fNightVisionSwitchOnFXCount = std::min(m_fNightVisionSwitchOnFXCount - CTimer::GetTimeStep(), 0.0f);
+        m_fNightVisionSwitchOnFXCount = std::max(m_fNightVisionSwitchOnFXCount - CTimer::GetTimeStep(), 0.0f); // exe 0x7011D6-0x7011FB: zeroed only when <= 0
 
         ImmediateModeRenderStatesStore();
         ImmediateModeRenderStatesSet();

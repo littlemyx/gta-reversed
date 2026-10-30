@@ -1,0 +1,26 @@
+addr	file	line	cls	fn	oc	tier
+0x5DB1D0	source/game_sa/GrassRenderer.cpp	15	CGrassRenderer	AddTriPlant	U	B
+0x5DAD00	source/game_sa/GrassRenderer.cpp	16	CGrassRenderer	DrawTriPlants	U	B
+0x5DB250	source/game_sa/GrassRenderer.cpp	17	CGrassRenderer	FlushTriPlantBuffer	U	B
+0x5A2EB0	source/game_sa/Plant/ProcSurfaceInfo.cpp	11	ProcSurfaceInfo_c	Init	U	B
+0x5A3270	source/game_sa/Plant/ProcSurfaceInfo.cpp	12	ProcSurfaceInfo_c	Exit	U	B
+0x5A32D0	source/game_sa/Plant/ProcSurfaceInfo.cpp	13	ProcSurfaceInfo_c	AddObject	U	B
+0x5DD910	source/game_sa/PlantMgr.cpp	123	CPlantMgr	Initialise	U	B
+0x5DB940	source/game_sa/PlantMgr.cpp	124	CPlantMgr	Shutdown	U	B
+0x5DD780	source/game_sa/PlantMgr.cpp	125	CPlantMgr	ReloadConfig	U	B
+0x5DCFA0	source/game_sa/PlantMgr.cpp	129	CPlantMgr	Update	U	B
+0x5DCF30	source/game_sa/PlantMgr.cpp	130	CPlantMgr	PreUpdateOnceForNewCameraPos	U	B
+0x5DB3D0	source/game_sa/PlantMgr.cpp	132	CPlantMgr	CalculateWindBending	U	B
+0x5DBEB0	source/game_sa/PlantMgr.cpp	133	CPlantMgr	_ColEntityCache_Add	U	B
+0x5DBEF0	source/game_sa/PlantMgr.cpp	135	CPlantMgr	_ColEntityCache_Remove	U	B
+0x5DC510	source/game_sa/PlantMgr.cpp	136	CPlantMgr	_ColEntityCache_Update	U	B
+0x5DCD80	source/game_sa/PlantMgr.cpp	137	CPlantMgr	_ProcessEntryCollisionDataSections	U	B
+0x5DC8B0	source/game_sa/PlantMgr.cpp	138	CPlantMgr	_ProcessEntryCollisionDataSections_AddLocTris	U	B
+0x5DBF20	source/game_sa/PlantMgr.cpp	139	CPlantMgr	_ProcessEntryCollisionDataSections_RemoveLocTris	U	B
+0x5DCF00	source/game_sa/PlantMgr.cpp	140	CPlantMgr	_UpdateLocTris	U	B
+0x5DBAE0	source/game_sa/PlantMgr.cpp	141	CPlantMgr	Render	U	B
+0x5DD6C0	source/game_sa/PlantSurfPropMgr.cpp	9	CPlantSurfPropMgr	Initialise	U	B
+0x5DD3B0	source/game_sa/PlantSurfPropMgr.cpp	12	CPlantSurfPropMgr	LoadPlantsDat	U	B
+0x55D0E0	source/game_sa/SurfaceInfos_c.cpp	12	SurfaceInfos_c	LoadAdhesiveLimits	U	B
+0x55F420	source/game_sa/SurfaceInfos_c.cpp	13	SurfaceInfos_c	Init	U	B
+0x7154B0	CClouds::RenderBottomFromHeight	UNSURE

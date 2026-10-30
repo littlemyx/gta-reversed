@@ -250,7 +250,7 @@
 | S101 | phase3 tier B (PHASE3.md) | 35 | 32/35 (20 M, 12 fixed, 2 U) -> S101b | Shadows.cpp, StencilShadowObject.cpp, StencilShadows.cpp |
 | S102 | phase3 tier B (PHASE3.md) | 40 | partial 16/40 (12 M, 4 fixed) -> S102b | BrightLights.cpp, Clouds.cpp, Coronas.cpp, Mirrors.cpp, MotionBlurStreaks.cpp, Occlusion.cpp |
 | S103 | phase3 tier B (PHASE3.md) | 36 | done (26 M, 10 fixed; regress left to the gate) | PostEffects.cpp, RegisteredMotionBlurStreak.cpp, ShinyTexts.cpp, SpecialFX.cpp |
-| S104 | phase3 tier B (PHASE3.md) | 43 | pending | GrassRenderer.cpp, PPTriPlantBuffer.cpp, PlantColEntEntry.cpp, PlantLocTri.cpp, PlantMgr.cpp, PlantSurfPropMgr.cpp |
+| S104 | phase3 tier B (PHASE3.md) | 43 | partial 19/43 (16 M, 3 fixed) -> S104b | GrassRenderer.cpp, PPTriPlantBuffer.cpp, PlantColEntEntry.cpp, PlantLocTri.cpp, PlantMgr.cpp, PlantSurfPropMgr.cpp |
 | S105 | phase3 tier B (PHASE3.md) | 39 | done (29 M, 9 fixed, 1 NR covered by f22f575ff) | Renderer.cpp, StreamingInfo.cpp, TxdStore.cpp |
 | S106 | phase3 tier B (PHASE3.md) | 41 | pending | VisibilityPlugins.cpp |
 | S107 | phase3 tier B (PHASE3.md) | 46 | done (45 M, 1 fixed + FxInfoDir) | FxInfoAnimTexture.cpp, FxInfoAttractLine.cpp, FxInfoAttractPt.cpp, FxInfoColour.cpp, FxInfoColourBright.cpp, FxInfoColourRange.cpp |
@@ -277,4 +277,5 @@
 | S102c | rest of S102b | 12 | 9/12 (3 M, 6 fixed) -> S102d | Clouds.cpp, Mirrors.cpp |
 | S101b | rest of S101 | 3 | pending | StencilShadows.cpp |
 | S84d | rest of S84c | 3 | done (3 fixed) | AEVehicleAudioEntity.cpp |
-| S102d | rest of S102c | 3 | pending | Clouds.cpp |
+| S102d | rest of S102c | 3 | done (2 fixed; RenderBottomFromHeight -> S104b) | Clouds.cpp |
+| S104b | rest of S104 + RenderBottomFromHeight | 25 | pending | GrassRenderer.cpp, PlantMgr.cpp, PlantSurfPropMgr.cpp, ProcSurfaceInfo.cpp, SurfaceInfos_c.cpp |

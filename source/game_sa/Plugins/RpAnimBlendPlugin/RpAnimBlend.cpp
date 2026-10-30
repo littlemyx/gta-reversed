@@ -984,7 +984,7 @@ void RpAnimBlendClumpUpdateAnimations(RpClump* clump, float timeStep, bool isOnS
             return;
         }
         const auto ah = a->GetHier();
-        if (ah->GetSequences().empty()) {
+        if (!ah->m_pSequences) { // exe 0x4D3548 tests the pointer (hierarchy +4), not the sequence count
             return;
         }
         CAnimManager::UncompressAnimation(a->GetHier());

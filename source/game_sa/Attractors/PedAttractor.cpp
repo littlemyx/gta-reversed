@@ -80,7 +80,9 @@ CPedAttractor::CPedAttractor(
     m_QueueDir = CPedAttractorManager::ComputeEffectQueueDir(fx, mat);
     m_UseDir   = CPedAttractorManager::ComputeEffectUseDir(fx, mat);
 
-    strcpy_s(m_ScriptName, fx->m_szScriptName);
+    // exe 0x5EE15A calls 0x821BB5 = sprintf(dst, fx->m_szScriptName) (the name as format, i.e. an unbounded copy for names without %); the script name may fill all 8 bytes of C2dEffectPedAttractor::m_szScriptName (FileLoader's strcpy
+    // of the IDE/IPL word spills its NUL into the next byte), where strcpy_s rejects it. Copy the 8 bytes like the exe does (no NUL past the buffer).
+    strncpy(m_ScriptName, fx->m_szScriptName, sizeof(m_ScriptName));
 }
 
 void CPedAttractor::Shutdown() {

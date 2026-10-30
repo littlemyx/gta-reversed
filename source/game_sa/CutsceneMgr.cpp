@@ -913,8 +913,10 @@ void CCutsceneMgr::SetCutsceneAnim(const char* animName, CObject* object) {
     const auto cpyOfTheAnim = ms_cutsceneAssociations.CopyAnimation(animName);
     CStreaming::IHaveUsedStreamingMemory();
 
+    // 0x5B03D1..0x5B03E9: `SetCurrentTime(0); flags = (flags & 0xFFFE) | 0x40` - the exe CLEARS IS_PLAYING here (Start() would set it)
+    cpyOfTheAnim->SetCurrentTime(0.f);
+    cpyOfTheAnim->SetFlag(ANIMATION_IS_PLAYING, false);
     cpyOfTheAnim->SetFlag(ANIMATION_CAN_EXTRACT_VELOCITY, true);
-    cpyOfTheAnim->Start(0.f);
 
     const auto blendData = RpAnimBlendClumpGetData(object->GetRpClump());
     blendData->m_AnimList.Prepend(&cpyOfTheAnim->m_Link);

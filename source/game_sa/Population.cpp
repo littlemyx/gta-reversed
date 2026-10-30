@@ -1538,7 +1538,8 @@ bool CPopulation::AddPedAtAttractor(eModelID modelIndex, C2dEffectPedAttractor* 
     CPedAttractorPedPlacer::PlacePedAtEffect(*attractor, entity, ped, 0.02f);
     ped->bUseAttractorInstantly = true;
 
-    ped->GetEventGroup().Add(CEventAttractor{ attractor, ped, true, TASK_COMPLEX_USE_ATTRACTOR });
+    // exe 0x614368-0x614396: the event gets the `entity` ARGUMENT (the attractor's owner) and its task id is set to 0xE9 = TASK_COMPLEX_USE_EFFECT (port: the new ped / USE_ATTRACTOR)
+    ped->GetEventGroup().Add(CEventAttractor{ attractor, entity, true, TASK_COMPLEX_USE_EFFECT });
 
     ped->GetIntelligence()->ProcessEventHandler();
     ped->GetIntelligence()->Process();

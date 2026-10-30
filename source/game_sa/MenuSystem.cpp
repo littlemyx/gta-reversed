@@ -148,7 +148,7 @@ void CMenuSystem::InputStandardMenu(MenuId id) {
         AudioEngine.ReportFrontendAudioEvent(AE_FRONTEND_BACK);
     }
 
-    if (pad->IsCrossPressed() || CTimer::GetIsPaused() && pad->IsEnterJustPressed()) {
+    if (pad->IsCrossPressed() || CTimer::GetIsPaused() && CPad::IsReturnJustPressed()) { // exe: only 0xB733EA/0xB7317A (not the pad-enter key)
         if (!CTimer::GetIsPaused())
             AudioEngine.ReportFrontendAudioEvent(AE_FRONTEND_SELECT);
 
@@ -215,7 +215,7 @@ void CMenuSystem::InputGridMenu(MenuId id) {
     auto menu = MenuNumber[id];
     auto pad = CPad::GetPad();
 
-    if (pad->IsCrossPressed() || CTimer::GetIsPaused() && pad->IsEnterJustPressed()) {
+    if (pad->IsCrossPressed() || CTimer::GetIsPaused() && CPad::IsReturnJustPressed()) { // exe: only 0xB733EA/0xB7317A (not the pad-enter key)
         if (menu->m_abRowSelectable[menu->m_nSelectedRow])
             menu->m_nAcceptedRow = menu->m_nSelectedRow;
     }

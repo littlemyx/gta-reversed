@@ -379,6 +379,11 @@ int32 GetHighlightId(const CRunningScript* s) {
 inline bool IsInCentreRange(float c, float r, float p) {
     return c - r <= p && r + c >= p;
 }
+
+//! The exe's `lo <= p <= hi` area test (fcomp + test ah: a NaN operand FAILS the test, `!(p < lo || p > hi)` would pass it)
+inline bool IsInRange(float p, float lo, float hi) {
+    return p >= lo && p <= hi;
+}
 } // namespace
 
 // 0x470150
@@ -825,10 +830,7 @@ void CRunningScript::CarInAreaCheckCommand(int32 commandId) {
     bool result = false;
     if (!notStopped) {
         const auto& pos = veh->GetPosition();
-        if (!(pos.x < minX || pos.x > maxX || pos.y < minY || pos.y > maxY)
-            && (!is3D || !(pos.z < minZ || pos.z > maxZ))) {
-            result = true;
-        }
+        result = IsInRange(pos.x, minX, maxX) && IsInRange(pos.y, minY, maxY) && (!is3D || IsInRange(pos.z, minZ, maxZ));
     }
     UpdateCompareFlag(result);
 

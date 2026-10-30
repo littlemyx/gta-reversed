@@ -4654,7 +4654,7 @@ static void ProcessBicycleSounds(CAEVehicleAudioEntity& ae, CAEVehicleAudioEntit
     if (speedRatio < 0.f) {
         speedRatio = -speedRatio;
     }
-    speedRatio = std::min(speedRatio, 1.f);
+    speedRatio = speedRatio < 1.f ? speedRatio : 1.f; // 0x4FFE9A / 0x50010A: `fcomp 1.0; jp` also takes the 1.0 arm for NaN (0 / 0 when the max velocity is 0); std::min would keep the NaN
     if (!(speedRatio > 0.f)) {
         speedRatio = 0.f;
     }

@@ -289,7 +289,8 @@ bool FxEmitterBP_c::UpdateParticle(float deltaTime, FxEmitterPrt_c* emitter) {
     const auto dt = (float)sys->m_nTimeMult * 0.001f * deltaTime;
 
     prt->m_fCurrentLife = dt + prt->m_fCurrentLife;
-    if (!(prt->m_fCurrentLife < prt->m_fTotalLife)) {
+    // 0x4A21F8: dead iff `life >= total` (ordered): `fcom` + `test ah, 1` takes the "alive" arm for NaN
+    if (prt->m_fCurrentLife >= prt->m_fTotalLife) {
         return true; // Dead
     }
 
@@ -321,7 +322,7 @@ bool FxEmitterBP_c::UpdateParticle(float deltaTime, FxEmitterPrt_c* emitter) {
             if (!hasWater) {
                 return true;
             }
-            if (!(prt->m_Pos.z <= waterZ)) {
+            if (prt->m_Pos.z > waterZ) { // 0x4A2311: `test ah, 0x41` => dead only for an ordered `>` (NaN stays alive)
                 return true; // Went out of water
             }
         }
@@ -333,8 +334,9 @@ bool FxEmitterBP_c::UpdateParticle(float deltaTime, FxEmitterPrt_c* emitter) {
         return ((hi - lo) * factor + lo) * (float)prt->m_MultRot;
     };
 
-    const auto firstPairNonPositive  = rot[0] <= 0.0f && rot[1] <= 0.0f;
-    const auto secondPairNonPositive = rot[2] <= 0.0f && rot[3] <= 0.0f;
+    // 0x4A2328..0x4A2374: every test is `fcomp 0; test ah, 0x41; je` = "ordered > 0", so "non positive" is `!(x > 0)` (true for NaN)
+    const auto firstPairNonPositive  = !(rot[0] > 0.0f) && !(rot[1] > 0.0f);
+    const auto secondPairNonPositive = !(rot[2] > 0.0f) && !(rot[3] > 0.0f);
     if (firstPairNonPositive || secondPairNonPositive) {
         if (!firstPairNonPositive) { // First pair is positive => increase rotation
             const auto v = SignedRot(rot[0], rot[1], (float)prt->m_RandR * kInv255);

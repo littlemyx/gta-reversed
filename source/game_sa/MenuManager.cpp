@@ -665,13 +665,17 @@ void CMenuManager::LoadSettings() {
         return;
     }
 
+    const auto previousLang = m_nPrefsLanguage;
+    bInvertMouseY = true; // exe 0x57C933 (right after the file opened; the defaults / the file overwrite it)
+
     const auto SetToDefaultSettings = [&]() {
         SetDefaultPreferences(SCREEN_AUDIO_SETTINGS);
         SetDefaultPreferences(SCREEN_DISPLAY_SETTINGS);
         SetDefaultPreferences(SCREEN_DISPLAY_ADVANCED);
         SetDefaultPreferences(SCREEN_CONTROLLER_SETUP);
-        m_nPrefsVideoMode = 0;
-        m_nPrefsLanguage = eLanguage::AMERICAN;
+        // exe 0x57CCD8-0x57CCE9: the render subsystem index is cleared, the language that was set before the load is put back (it is not reset to American)
+        m_nCurrentRwSubsystem = 0;
+        m_nPrefsLanguage = previousLang;
         m_nRadioStation = RADIO_CLASSIC_HIP_HOP;
 
         CFileMgr::CloseFile(file);
@@ -695,7 +699,6 @@ void CMenuManager::LoadSettings() {
     uint32 version = 0u;
     struct { uint8 m_unk; uint8 m_separator; uint8 m_underscore; uint8 _align; } constants;
     FxQuality_e fxQuality = FX_QUALITY_HIGH;
-    auto previousLang = m_nPrefsLanguage;
 
     ReadFromFile(version);
     if (version < SETTINGS_FILE_VERSION || !ControlsManager.LoadSettings(file)) {

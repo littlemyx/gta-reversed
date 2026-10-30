@@ -76,3 +76,7 @@
 - Pending user decision: delete busy empty dirs C:/gta-wt/asm-s04, asm-s19j, asm-s43c + old scratch.
 
 - [win] 2026-10-30 02:15: S46 was skipped by mistake in the phase-2 launch order — still pending.
+
+## Checkpoint 2026-10-30 (day)
+- Gate 1b17f2660 GREEN (74/74, soak OK, regress 70 PASS, portable 0 errors); C:\gta-play = 1b17f2660. Next gate on df4d307ec (205 commits: S45-S66 + continuations).
+- Phase 2 queue done except S45c/S57e; coverage audit (COVERAGE.md): 487 gameplay hooks uncovered -> S67-S80; 1521 audio/fx/UI hooks left for a phase 3.

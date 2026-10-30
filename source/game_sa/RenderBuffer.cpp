@@ -51,7 +51,7 @@ void StopStoring() {
         uiTempBufferVerticesStored += s_VerticesToBeStored;
         uiTempBufferIndicesStored  += s_IndicesToBeStored;
     } else {
-        for (auto n = uiTempBufferIndicesStored; n <= totalNumIdx; n++) {
+        for (auto n = uiTempBufferIndicesStored; n < totalNumIdx; n++) { // exe 0x7077C0..0x7077CB: `jl` (exclusive); the port used `<=` and also biased the next, unused slot
             aTempBufferIndices[n] += uiTempBufferVerticesStored;
         }
         uiTempBufferVerticesStored += s_VerticesToBeStored;

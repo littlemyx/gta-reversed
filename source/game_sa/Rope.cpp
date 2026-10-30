@@ -279,13 +279,12 @@ void CRope::PickUpObject(CEntity* obj) {
     if (m_pRopeAttachObject)
         ReleasePickedUpObject();
 
-    obj->RegisterReference(&m_pAttachedEntity);
+    obj->RegisterReference(reinterpret_cast<CEntity**>(&m_pRopeAttachObject)); // 0x5569E9: the exe registers the attach-object slot (0x318), not the hook object
     m_pRopeAttachObject = obj;
 
-    // TODO: Move model => world space translation into CEntity
-    // MultiplyMatrixWithVector should be used here
+    // 0x556A28: MultiplyMatrixWithVector(matrix, (0, 0, height)) - the position is added in extended precision inside the multiply
     CVector height = { {}, {}, CRopes::FindPickupHeight(obj) };
-    m_pAttachedEntity->SetPosn(obj->GetPosition() + obj->GetMatrix().TransformVector(height));
+    m_pAttachedEntity->SetPosn(obj->GetMatrix().TransformPoint(height));
     m_pAttachedEntity->SetUsesCollision(false);
 
     obj->AsPhysical()->physicalFlags.bAttachedToEntity = true;

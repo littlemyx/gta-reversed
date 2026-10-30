@@ -925,39 +925,40 @@ void CMenuManager::DrawQuitGameScreen() {
 void CMenuManager::DrawControllerScreenExtraText(int32 startingYPos) {
     const auto maxActions      = GetMaxAction();
     const auto verticalSpacing = GetVerticalSpacing();
-    if (maxActions > 0) {
-        for (auto actionIndex = 0u; actionIndex < maxActions; actionIndex++) {
-            float textX = StretchX(240.0f);
-            const float textY = StretchY(float(startingYPos));
 
-            for (const auto& order : CONTROLLER_ORDERS_SET) {
-                if (const auto buttonText = ControlsManager.GetControllerSettingTextWithOrderNumber(eControllerAction(actionIndex), order)) {
-                    CFont::PrintString(textX, textY, buttonText);
-                    textX += StretchX(75.0f);
-                }
+    // The exe keeps the x position in an int (ftol after every step), so it is truncated to whole pixels
+    int32 textXi = 0;
+    for (auto actionIndex = 0u; actionIndex < maxActions; actionIndex++) {
+        textXi = NOTSA_FTOL(int32, StretchX(240.0f));
+
+        for (const auto& order : CONTROLLER_ORDERS_SET) {
+            if (const auto buttonText = ControlsManager.GetControllerSettingTextWithOrderNumber(eControllerAction(actionIndex), order)) {
+                const float textX = (float)textXi;
+                CFont::PrintString(textX, StretchY(float(startingYPos)), buttonText);
+                textXi = NOTSA_FTOL(int32, textX + StretchX(75.0f));
             }
+        }
 
-            if (actionIndex == m_ListSelection && m_EditingControlOptions) {
-                if (CTimer::GetTimeInMSPauseMode() - m_LastHighlightToggleTime > 150) {
-                    m_OptionFlashColorState ^= true;
-                    m_LastHighlightToggleTime = CTimer::GetTimeInMSPauseMode();
-                }
-                if (m_OptionFlashColorState) {
-                    CFont::SetColor(MENU_BG);
-                    CFont::PrintString(textX, textY, TheText.Get("FEC_QUE")); // ???
-                    CFont::SetColor(MENU_TEXT_NORMAL);
-                }
+        if (actionIndex == m_ListSelection && m_EditingControlOptions) {
+            if (CTimer::GetTimeInMSPauseMode() - m_LastHighlightToggleTime > 150) {
+                m_OptionFlashColorState ^= true;
+                m_LastHighlightToggleTime = CTimer::GetTimeInMSPauseMode();
             }
-
-            // 0x57DA95
-            if (m_MenuIsAbleToQuit) {
-                if (const auto comboText = ControlsManager.GetButtonComboText(eControllerAction(m_ListSelection))) {
-                    CFont::SetColor(MENU_ERROR);
-                    CFont::PrintString(textX, StretchY(textY + 10.0f), comboText);
-                }
+            if (m_OptionFlashColorState) {
+                CFont::SetColor(MENU_BG);
+                CFont::PrintString((float)textXi, (float)startingYPos, TheText.Get("FEC_QUE")); // the exe does not stretch this Y
+                CFont::SetColor(MENU_TEXT_NORMAL);
             }
+        }
 
-            startingYPos += verticalSpacing;
+        startingYPos += verticalSpacing;
+    }
+
+    // 0x57DA95: once after the loop (x of the last action, y below the last row)
+    if (m_MenuIsAbleToQuit) {
+        if (const auto comboText = ControlsManager.GetButtonComboText(eControllerAction(m_ListSelection))) {
+            CFont::SetColor(MENU_ERROR);
+            CFont::PrintString((float)textXi, StretchY(float(startingYPos + 10)), comboText);
         }
     }
 }

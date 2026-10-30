@@ -8,7 +8,10 @@
 // 0x5DC210
 float GetPlantDensity(CPlantLocTri* plant) {
     // The magnitude of the cross product of 2 vectors give the area of a paralellogram they span.
-    return (plant->m_V2 - plant->m_V1).Cross(plant->m_V3 - plant->m_V1).Magnitude() / 2.f;
+    // 0x5DC210: |cross| is sqrt((z^2 + y^2) + x^2) (z,y,x order, Magnitude() sums x,y,z), times 0.5
+    const CVector c = (plant->m_V2 - plant->m_V1).Cross(plant->m_V3 - plant->m_V1);
+    const float   magnitude = std::sqrt((c.z * c.z + c.y * c.y) + c.x * c.x);
+    return magnitude * 0.5f;
 }
 
 void CPlantLocTri::InjectHooks() {

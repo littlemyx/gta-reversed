@@ -529,7 +529,7 @@ void CRoadBlocks::GenerateRoadBlocks() {
         }
 
         const auto counter1      = MAX_ROADBLOCKS * (CTimer::GetFrameCounter() % 16 + 1);
-        const auto rbsToGenerate = std::min<size_t>((uint32)NumRoadBlocks, ((counter1 % 16) + counter1) / 16);
+        const auto rbsToGenerate = std::min<size_t>((uint32)NumRoadBlocks, counter1 / 16); // exe 0x462A3D-0x462A5E: plain signed `x / 16` (cdq/and 0xF/add/sar 4), not `(x + x % 16) / 16`
         auto       counter2      = MAX_ROADBLOCKS * (CTimer::GetFrameCounter() % 16) / 16;
 
         for (; counter2 < rbsToGenerate; counter2++) {
@@ -552,7 +552,7 @@ void CRoadBlocks::GenerateRoadBlocks() {
             }
             InOrOut[counter2] = true;
 
-            if (CGeneral::GetRandomNumberInRange(128u) >= FindPlayerWanted()->m_ChanceOnRoadBlock) {
+            if ((CGeneral::GetRandomNumber() & 0x7F) >= FindPlayerWanted()->m_ChanceOnRoadBlock) { // exe 0x462D2A: `call rand; and eax, 0x7F`
                 continue;
             }
 
@@ -577,8 +577,12 @@ void CRoadBlocks::GenerateRoadBlocks() {
                 continue;
             }
 
-            for (auto&& [i, nodeAddr] : rngv::enumerate(RoadBlockNodes)) {
-                if (counter2 == i || InOrOut[i] || !ThePaths.IsAreaLoaded(nodeAddr.m_wAreaId)) {
+            // exe 0x462EC0-0x4632D6: looks at the first NumRoadBlocks nodes only and stops at the first partner node it makes a road block
+            // with; when there is none the node gets a single road block of its own width (exe 0x4631F7)
+            bool madeRoadBlock{};
+            for (int32 i = 0; i < NumRoadBlocks; i++) {
+                const auto& nodeAddr = RoadBlockNodes[i];
+                if (counter2 == (size_t)i || InOrOut[i] || !ThePaths.IsAreaLoaded(nodeAddr.m_wAreaId)) {
                     continue;
                 }
                 const auto& node = ThePaths.GetPathNode(nodeAddr);
@@ -590,12 +594,17 @@ void CRoadBlocks::GenerateRoadBlocks() {
                 }
 
                 float   width{};
-                CVector dir{}; 
+                CVector dir{};
                 if (!GetRoadBlockNodeInfo(nodeAddr, width, dir)) {
                     continue;
                 }
 
-                if (mrbWidth != width || dir.Dot(mrbDir) <= 0.7f) {
+                if (mrbWidth != width) {
+                    continue;
+                }
+
+                // exe 0x462F54: fabs(dir.x * mrbDir.x + dir.z * mrbDir.z + dir.y * mrbDir.y) <= 0.7 => skip (opposite directions are fine too)
+                if (std::abs((dir.x * mrbDir.x + dir.z * mrbDir.z) + dir.y * mrbDir.y) <= 0.7f) {
                     continue;
                 }
 
@@ -624,16 +633,16 @@ void CRoadBlocks::GenerateRoadBlocks() {
                     mainNode->GetPosition() - dirFromMain * (mrbWidth / 2.0f),
                     false
                 );
-                InOrOut[i] = true;
-
-                if (i == NumRoadBlocks) {
-                    CreateRoadBlockBetween2Points(
-                        mainNode->GetPosition() - dirFromMain * (mrbWidth / 2.0f),
-                        mainNode->GetPosition() + dirFromMain * (mrbWidth / 2.0f),
-                        false
-                    );
-                    break;
-                }
+                InOrOut[i]    = true;
+                madeRoadBlock = true;
+                break;
+            }
+            if (!madeRoadBlock) {
+                CreateRoadBlockBetween2Points(
+                    mainNode->GetPosition() + mrbDir * (mrbWidth / 2.0f),
+                    mainNode->GetPosition() - mrbDir * (mrbWidth / 2.0f),
+                    false
+                );
             }
         }
     } else {

@@ -25,6 +25,8 @@ void CStreamedScripts::InjectHooks() {
 // 0x470660
 void CStreamedScripts::Initialise() {
     rng::fill(m_aScripts, CStreamedScriptInfo{});
+    m_nLargestExternalSize = 0; // exe 0x470687 / 0x47068D: the largest size and the registered count are reset too
+    m_nCountOfScripts      = 0;
 }
 
 // 0x470840

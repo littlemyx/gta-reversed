@@ -500,9 +500,14 @@ void CIplStore::LoadIpls(CVector posn, bool bAvoidLoadInPlayerVehicleMovingDirec
 
     if (FindPlayerPed() && !bAvoidLoadInPlayerVehicleMovingDirection) {
         if (const auto veh = FindPlayerVehicle()) {
+            // exe 0x4051B9..0x40520F: inline `fcomp st(1); test ah,5; jp` = (40 < v) ? 40 : v, so a NaN speed stays NaN (std::min(40.f, NaN) gave 40)
             const auto& velocity = veh->m_vecMoveSpeed;
-            posn.x += std::min(40.f, velocity.x * 80.f);
-            posn.y += std::min(40.f, velocity.y * 80.f);
+            const auto ahead = [](float speed) {
+                const float v = speed * 80.f;
+                return 40.f < v ? 40.f : v;
+            };
+            posn.x += ahead(velocity.x);
+            posn.y += ahead(velocity.y);
         }
     }
 

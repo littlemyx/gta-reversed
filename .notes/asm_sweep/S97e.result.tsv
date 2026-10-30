@@ -1,5 +1,5 @@
 addr	function	verdict	asm range	note	fix commit
-0x574010	CMenuManager::SmallMessageScreen	FIXED	0x574010-0x57430F (all)	text y is an int (ftol of 200-lines*9 / 190 or the H*(200/448) forms; port kept a float); GetNumberLines y is Y-stretched 135 (port X). Matched: style/colour/shadow/scale, DrawWindow call, CD-error key list (port deliberate UTF-8 path)	8a14486a8
+0x574010	CMenuManager::SmallMessageScreen	FIXED	0x574010-0x57430F (all)	text y is an int (ftol of 200-lines*9 / 190 or the H*(200/448) forms; port kept a float); GetNumberLines y is Y-stretched 135 (port X). Matched: style/colour/shadow/scale, DrawWindow call, CD-error key list (port deliberate UTF-8 path)	2fb6e6c3e
 0x575130	CMenuManager::PrintMap	NOT_REACHED	-	budget	-
 0x574900	CMenuManager::PrintStats	NOT_REACHED	-	budget	-
 0x576320	CMenuManager::PrintBriefs	NOT_REACHED	-	budget	-

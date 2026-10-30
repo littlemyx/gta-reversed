@@ -1,0 +1,41 @@
+addr	function	verdict	asm range	note	fix commit
+0x43FD50	CEntryExitManager::DeleteOne	MATCH	0x43FD50-0x43FDAB (all)	GetAt + DeleteItem + pool free (flag |= 0x80, first-free update) equal	-
+0x440B90	CEntryExitManager::Shutdown	MATCH	0x440B90-0x440C3B (all)	reverse DeleteItem over valid slots, pool + quadtree freed, stack pos 0	-
+0x440C40	CEntryExitManager::ShutdownForRestart	MATCH	0x440C40-0x440D0C (all)	bEnableAccess=1, bDeleteEnex -> DeleteOne, burglary off, mp_Active/state/stack/disabled reset	-
+0x440D10	CEntryExitManager::Update	FIXED	0x440D10-0x44109A (all)	marker distance is 2D (dx*dx+dy*dy < 1600, NaN rejected); rest (rect, link/area test, IsSphereVisible, state machine) equal	290877ae6
+0x5D55C0	CEntryExitManager::Load	MATCH	0x5D55C0-0x5D56E3 (all)	stack + enex flags/link loading, missing slots skipped equal	-
+0x5D5970	CEntryExitManager::Save	FIXED	0x5D5970-0x5D5A8B (all)	link to a freed slot saved as -1	fcd4702ec
+0x4AC050	CEvent::CalcSoundLevelIncrement	MATCH	0x4AC050-0x4AC0C0 (all)	pow stored as float for #1, unrounded #2, fldlg2/fyl2x, *10.0 equal	-
+0x5FF230	CEventAcquaintancePedDislike::~	MATCH	0x5FF230-0x5FF24B + 0x5FF1B0	scalar deleting dtor -> CEventAcquaintancePed dtor (ref cleanup)	-
+0x5FF170	CEventAcquaintancePedLike::~	MATCH	0x5FF170-0x5FF18B	scalar deleting dtor	-
+0x5FF0B0	CEventAcquaintancePedRespect::~	MATCH	0x5FF0B0-0x5FF0CB	scalar deleting dtor	-
+0x4AF460	CEventAttractor::IsEffectActive	MATCH	0x4AF460-0x4AF4A7 (all)	loop over the model 2dfx, pointer compare equal	-
+0x4AF4B0	CEventAttractor::AffectsPed	FIXED	0x4AF4B0-0x4AF665 (all)	SHELTER-while-not-raining reject applies always (not only with an active task / not avoid-looking)	fbd141ca0
+0x4B5A20	CEventBuildingCollision::~	MATCH	0x4B5A20-0x4B5A68	dtor body 0x4ACFF0 (+0x14 ref cleanup) + pool delete	-
+0x4B60D0	CEventChatPartner::~	MATCH	0x4B60D0-0x4B6118	dtor body 0x4AED60 (+0x10 ref cleanup)	-
+0x5F6300	CEventCreatePartnerTask::~	MATCH	0x5F6300-0x5F6318	dtor body 0x5F6200 (+0x10 cleanup)	-
+0x4ADC10	CEventDamage::ComputeBodyPartToRemove	MATCH	0x4ADC10-0x4ADCF7 (all)	weapon class table + piece jump table decoded from the exe, random bone list {3,8,2,4,7}	-
+0x4B3A20	CEventDamage::ProcessDamage	MATCH	0x4B3A20-0x4B3A50 (all)	ComputeBodyPartToRemove + RemoveBodyPart(node, direction)	-
+0x4B3FC0	CEventDamage::ComputeDamageAnim	FIXED	0x4B3FC0-0x4B4826 (all)	knock-back push direction is the normalised 2D difference; NaN arms; delay timers add in the FPU	e9e0e1220
+0x4B5E00	CEventDeadPed::~	MATCH	0x4B5E00-0x4B5E48	dtor body 0x4ADF70 (+0x14 cleanup)	-
+0x4B5DB0	CEventDeath::~	MATCH	0x4B5DB0-0x4B5DFA	dtor body 0x4ADE90 (vtable only)	-
+0x609230	CEventDontJoinPlayerGroup::~	MATCH	0x609230-0x609248	dtor body 0x609140 (+0xC cleanup)	-
+0x4B5A70	CEventDraggedOutCar::~	MATCH	0x4B5A70-0x4B5AB7	dtor body 0x4AD330 (+0x18 then +0x14 cleanup)	-
+0x4AC4A0	CEventEditableResponse::InformVehicleOccupants	MATCH	0x4AC4A0-0x4AC59B (all)	driver + max-passenger loop, clone task NONE(200), add=false, Add(clone,false), delete	-
+0x4B2B00	CEventEditableResponse::InformRespectedFriends	FIXED	0x4B2B00-0x4B2CCD (all)	DmNumPedsToScan caps informed friends (16 entries walked); IsPlayer test on ped; distance z,x,y	937e6209c
+0x4B56C0	CEventEditableResponse::ComputeResponseTaskType(ped)	MATCH	0x4B56C0-0x4B5729 (all)	MakeDecision args (1700,1200,300,-1,bool,&task,&facial) equal	-
+0x4B5730	CEventEditableResponse::ComputeResponseTaskOfType	MATCH	0x4B5730-0x4B579C (all)	-1,-1,-1,taskId,false equal	-
+0x4B57A0	CEventEditableResponse::ComputeResponseTaskType(group)	MATCH	0x4B57A0-0x4B58D2 (all)	member scan 0..6, leader-is-player fallback equal	-
+0x4B7DF0	CEventEditableResponse::InformGroup	MATCH	0x4B7DF0-0x4B7E3F (all)	GetPedsGroup, clone NONE/add=false, queue add else delete	-
+0x4B6940	CEventFireNearby::~	MATCH	0x4B6940-0x4B698A	dtor body 0x4B1F80 (vtable only)	-
+0x4AB8A0	CEventGlobalGroup::AddEventsToGroup	MATCH	0x4AB8A0-0x4AB8F2 (all)	clone + AddEvent + delete	-
+0x4AB9C0	CEventGlobalGroup::AddEventsToPed	MATCH	0x4AB9C0-0x4ABA13 (all)	clone + CEventGroup::Add(clone,false) + delete	-
+0x4B67A0	CEventGotKnockedOverByCar::~	MATCH	0x4B67A0-0x4B67E8	dtor body 0x4B1C10 (+0x14 cleanup)	-
+0x4AB420	CEventGroup::Add	FIXED	0x4AB420-0x4AB58F (all)	RecordEventForScript before the not-added bail-out	518e7448c
+0x4B5E50	CEventGroupEvent::~	MATCH	0x4B5E50-0x4B5E98	dtor body 0x4AE070 (+0xC cleanup, delete +0x10)	-
+0x4B6EE0	CEventGroupEvent::Clone	MATCH	0x4B6EE0-0x4B6F39 (all)	pool New + ctor(ped, event->Clone())	-
+0x4B63F0	CEventGunAimedAt::~	MATCH	0x4B63F0-0x4B6438	dtor body 0x4B07B0 (+0x14 cleanup)	-
+0x4B2CD0	CEventGunShot::AffectsPed	FIXED	0x4B2CD0-0x4B2EDD (all)	distance z,y,x + NaN arms, dot order (y,z,x)	d6cc49d94
+0x4B9340	CEventHandler::RegisterKill	NOT_REACHED	-	EventHandler.cpp excluded from S46 (another agent)	-
+0x4B97B0	CEventHandler::ComputeReviveResponse	NOT_REACHED	-	EventHandler.cpp excluded from S46 (another agent)	-
+0x4B98E0	CEventHandler::ComputeChatPartnerResponse	NOT_REACHED	-	EventHandler.cpp excluded from S46 (another agent)	-

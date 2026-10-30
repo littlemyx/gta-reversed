@@ -471,4 +471,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S116	v6	asm sweep	282988	104	17	S110 QuadTree DeleteItem flushed whole subtree; S116 RpAnimBlendClumpUpdateAnimations null-seq test, JPeg hook at wrong addr, AddAssociation unstubbed, env map pipe unlock; not landed -> S116c
 2026-10-30	ASM-S109	v6	asm sweep	298990	150	129	frame start missing SetAlphaFade(255) + clear Z only, rsCAMERASIZE fixed 4:3 aspect (widescreen fix -> FIX_BUGS), credits rendered twice, pad index, OctTree child slot + FillPalette deref; 32 M
 2026-10-30	ASM-S116c	v6	continuer	124934	75	35	reviewed + landed S110/S116 (7 commits); regress left to gate
-2026-10-30	ASM-S104b	v6	asm sweep	0	0	0	grass used mt19937 instead of srand/rand, procobj minDist max vs min (82/95 rows became 80), PlantMgr int8 frame counter (7/8 frames idle half the cycle), wind bending, face group order, plant colour; 14 M
+2026-10-30	ASM-S104b	v6	asm sweep	339902	138	54	grass used mt19937 instead of srand/rand, procobj minDist max vs min (82/95 rows became 80), PlantMgr int8 frame counter (7/8 frames idle half the cycle), wind bending, face group order, plant colour; 14 M

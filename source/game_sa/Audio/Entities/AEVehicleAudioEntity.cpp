@@ -2372,7 +2372,8 @@ void CAEVehicleAudioEntity::ProcessVehicleFlatTyre(tVehicleParams& vp) {
         }
     }();
     if (spinning) {
-        const auto vf = std::min(1.f, std::abs(vp.Speed) / (vp.Transmission->m_MaxVelocity * 0.3f)); // velocity factor
+        const auto vfRaw = std::abs(vp.Speed) / (vp.Transmission->m_MaxVelocity * 0.3f);
+        const auto vf    = 1.f < vfRaw ? 1.f : vfRaw; // velocity factor; 0x4F8A7A: `fcomp; test ah,5; jp` keeps the value for NaN (std::min(1.f, NaN) gave 1)
         PlayFlatTyreSound(
             4,
             1.f + cfg->FrqGearVelocityFactor * vf,

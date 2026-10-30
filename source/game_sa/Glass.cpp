@@ -621,8 +621,9 @@ void CGlass::WindowRespondsToExplosion(CEntity* entity, CVector pos) {
 
     const auto& entityPos = entity->GetPosition();
     const auto entityToPosDir = entityPos - pos;
-    const auto dist = entityToPosDir.Magnitude();
-    if (dist >= 10.f) {
+    // exe 0x71C1D0-0x71C20E: the length is sqrt((z^2 + y^2) + x^2), and `dist < 10` is the strict ordered test (NaN takes the `>= 10` arm via jp)
+    const float dist = (float)std::sqrt(((x87d)entityToPosDir.z * entityToPosDir.z + (x87d)entityToPosDir.y * entityToPosDir.y) + (x87d)entityToPosDir.x * entityToPosDir.x);
+    if (!(dist < 10.f)) {
         if (dist < 30.f) {
             entity->AsObject()->objectFlags.bHasBrokenGlass = true;
         }

@@ -244,7 +244,7 @@
 | S95 | phase3 tier B (PHASE3.md) | 30 | partial 15/30 (15 M) -> S95b | Hud.cpp, HudColours.cpp |
 | S96 | phase3 tier B (PHASE3.md) | 45 | pending | LoadingScreen.cpp, MenuManager.cpp |
 | S97 | phase3 tier B (PHASE3.md) | 34 | pending | MenuManager.cpp, MenuSystem.cpp |
-| S98 | phase3 tier B (PHASE3.md) | 37 | pending | AtomicModelInfo.cpp, BaseModelInfo.cpp, ClumpModelInfo.cpp, DamageAtomicModelInfo.cpp, ModelInfo.cpp, PedModelInfo.cpp |
+| S98 | phase3 tier B (PHASE3.md) | 37 | done (31 M, 6 fixed) | AtomicModelInfo.cpp, BaseModelInfo.cpp, ClumpModelInfo.cpp, DamageAtomicModelInfo.cpp, ModelInfo.cpp, PedModelInfo.cpp |
 | S99 | phase3 tier B (PHASE3.md) | 39 | pending | VehicleModelInfo.cpp, WeaponModelInfo.cpp |
 | S100 | phase3 tier B (PHASE3.md) | 35 | pending | RealTimeShadow.cpp, RealTimeShadowManager.cpp, ShadowCamera.cpp |
 | S101 | phase3 tier B (PHASE3.md) | 35 | pending | Shadows.cpp, StencilShadowObject.cpp, StencilShadows.cpp |

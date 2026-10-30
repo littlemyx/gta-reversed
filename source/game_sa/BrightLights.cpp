@@ -73,8 +73,12 @@ void CBrightLights::RegisterOne(CVector posn, CVector top, CVector right, CVecto
     if (NumBrightLights >= MAX_NUM_BRIGHTLIGHTS)
         return;
 
-    const float distToCam = (TheCamera.GetPosition() - posn).Magnitude() / TheCamera.m_fLODDistMultiplier;
-    if (distToCam > 60.0f)
+    // 0x7247A8..: the squared length is summed z, y, x: sqrt((dz^2 + dy^2) + dx^2) (the port's Magnitude() is (x^2 + y^2) + z^2), then / LODDistMultiplier;
+    // `dist <= 60` is required (jp after `test ah, 0x41`: NaN returns)
+    const auto  camPos = TheCamera.GetPosition();
+    const float dx = posn.x - camPos.x, dy = posn.y - camPos.y, dz = posn.z - camPos.z;
+    const float distToCam = std::sqrt((dz * dz + dy * dy) + dx * dx) / TheCamera.m_fLODDistMultiplier;
+    if (!(distToCam <= 60.0f))
         return;
 
     auto& light = aBrightLights[NumBrightLights];
@@ -99,8 +103,9 @@ CRGBA tBrightLight::GetColorRGBA() const {
     const auto GetAlpha = [this]() -> uint8 {
 
         const auto UnadjAlpha = [this] {
-            if (m_fDistanceToCamera >= 45.0f)
-                return NOTSA_FTOL(uint8, (1.0f - invLerp(45.0f, 60.0f, m_fDistanceToCamera)) * 255.0f);
+            // 0x7242E0: `!(dist < 45)`: (1 - (dist - 45) * 0.06666667f) * 255, a multiplication by the exe constant (1/15), not a division by 15
+            if (!(m_fDistanceToCamera < 45.0f))
+                return NOTSA_FTOL(uint8, (1.0f - (m_fDistanceToCamera - 45.0f) * ExeRecip(15.0f)) * 255.0f);
             return (uint8)255;
         };
 
@@ -122,9 +127,8 @@ CRGBA tBrightLight::GetColorRGBA() const {
         }
     };
 
-    // Originally R* used:
-    //const auto rnd = (uint8)((float)(uint8)CGeneral::GetRandomNumber() / 5.0f);
-    const auto rnd = (uint8)CGeneral::GetRandomNumberInRange(0, 255 / 5);
+    // 0x72426A: `ftol((float)(rand() & 0xFF) * 0.2f)` (one rand() call per light, taken BEFORE the colour switch)
+    const auto rnd = NOTSA_FTOL(uint8, (float)(uint8)(CGeneral::GetRandomNumber() & 0xFF) * ExeRecip(5.0f));
     switch (m_nColor) {
     case BRIGHTLIGHT_GREEN_BIG:
     case BRIGHTLIGHT_GREEN_SMALL:
@@ -178,11 +182,10 @@ void tBrightLight::Render() const {
         for (unsigned i = 0; i < 6; i++) {
             RxObjSpace3DVertexSetPreLitColor(GetVertex(i), &color);
 
-            SetVertexPosition(i,
-                  m_vecPosition
-                + m_vecRight * TrafficLightsUp[i]
-                + m_vecTop * TrafficLightsSide[i]
-            );
+            // 0x72432x..: the sums are (right * up + top * side) + position (the exe's association), not (position + right * up) + top * side
+            const CVector rightPart = m_vecRight * TrafficLightsUp[i];
+            const CVector topPart   = m_vecTop * TrafficLightsSide[i];
+            SetVertexPosition(i, (rightPart + topPart) + m_vecPosition);
         }
 
         // 0x8D5DBC
@@ -205,11 +208,10 @@ void tBrightLight::Render() const {
             RxObjSpace3DVertexSetPreLitColor(GetVertex(i), &color);
 
             const float angle = segAngleStep * (float)(i);
-            SetVertexPosition(i,
-                  m_vecPosition
-                + m_vecRight * x87::cos(angle) * segSize
-                + m_vecTop * x87::sin(angle) * segSize
-            );
+            // 0x72461x..: c = cos * 0.1, s = sin * 0.1 (rounded), then (right * c + top * s) + position
+            const float c = (float)X87R(x87::cos(angle) * segSize);
+            const float s = (float)X87R(x87::sin(angle) * segSize);
+            SetVertexPosition(i, (m_vecRight * c + m_vecTop * s) + m_vecPosition);
         }
 
         for (unsigned i = 1; i <= 6; i++) {

@@ -1355,11 +1355,7 @@ void CShadows::CastRealTimeShadowSectorList(PtrListType& ptrList, float conrerAX
 
 // 0x70A960
 void CShadows::RenderStoredShadows() {
-    // Originally renderstates are still set even though there are no shadows to be rendered
-    // I don't think this is necessary, so we early-out here
-    if (!CShadows::ShadowsStoredToBeRendered) {
-        return;
-    }
+    // NOTE: The exe sets these render states (and leaves fog / alpha-test / filter changed) even when there are no shadows, so there is no early-out here
 
     RenderBuffer::ClearRenderBuffer();
 
@@ -1376,24 +1372,35 @@ void CShadows::RenderStoredShadows() {
     RwRenderStateSet(rwRENDERSTATEALPHATESTFUNCTIONREF, RWRSTATE(NULL));
     RwRenderStateSet(rwRENDERSTATETEXTUREFILTER,        RWRSTATE(rwFILTERLINEAR));
 
-    const auto GetShadowRect = [](CRegisteredShadow& shdw) {
-        return CRect{
-            shdw.m_vecPosn,
-            shdw.m_vecPosn + abs(shdw.m_Side) + abs(shdw.m_Front)
+    // The exe's bounding rect of a shadow is the position +- (|side| + |front|) per axis (0x70AA7F..)
+    struct ShadowRect {
+        float minX, minY, maxX, maxY;
+    };
+    const auto GetShadowRect = [](const CRegisteredShadow& shdw) {
+        const float spanX = std::abs(shdw.m_Side.x) + std::abs(shdw.m_Front.x);
+        const float spanY = std::abs(shdw.m_Side.y) + std::abs(shdw.m_Front.y);
+        return ShadowRect{
+            shdw.m_vecPosn.x - spanX, shdw.m_vecPosn.y - spanY,
+            shdw.m_vecPosn.x + spanX, shdw.m_vecPosn.y + spanY
         };
+    };
+    // NOTSA: Using `CWorld::GetSectorX` isn't exact here, as the original multiplies (instead of dividing) by 1/50
+    const auto GetSectorCoord = [](float v) {
+        return NOTSA_FTOL(int32, std::floor(v * 0.02f + 60.0f));
     };
 
     for (auto o = 0; o < ShadowsStoredToBeRendered; o++) {
         auto& oshdw = asShadowsStored[o];
 
-        // Setup additional render states for this shadow (and others in the batch below)
-        SetRenderModeForShadowType(oshdw.m_nType);
-        RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RWRSTATE(RwTextureGetRaster(oshdw.m_pTexture)));
-
         //
         // Render onto ground (If not already)
         //
         if (!oshdw.m_bAlreadyRenderedInBatch) {
+            // Setup additional render states for this shadow (and others in the batch below)
+            // NOTE: The exe skips this for shadows that were batched earlier, so their water pass below uses the states of the last batch
+            SetRenderModeForShadowType(oshdw.m_nType);
+            RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RWRSTATE(RwTextureGetRaster(oshdw.m_pTexture)));
+
             // We do a batched rendering here:
             // All shadows of the same type and texture are rendered together to save on drawcalls
 
@@ -1413,17 +1420,21 @@ void CShadows::RenderStoredShadows() {
 
                 const auto ishdwRect = GetShadowRect(ishdw);
 
+                // The sector range is clamped to the map (0x70AAA0..), y is the outer loop
+                const auto sectorMinX = std::max(GetSectorCoord(ishdwRect.minX), 0);
+                const auto sectorMinY = std::max(GetSectorCoord(ishdwRect.minY), 0);
+                const auto sectorMaxX = std::min(GetSectorCoord(ishdwRect.maxX), (int32)MAX_SECTORS_X - 1);
+                const auto sectorMaxY = std::min(GetSectorCoord(ishdwRect.maxY), (int32)MAX_SECTORS_Y - 1);
+
                 // Do shadow casting
-                CWorld::IterateSectorsOverlappedByRect(
-                    ishdwRect,
-                    [&] (int32 x, int32 y) -> bool {
+                const auto CastIntoSector = [&](int32 x, int32 y) {
                         auto& sector = CWorld::GetSector(x, y);
 
                         if (const auto rtshdw = ishdw.m_pRTShadow) {
                             CastRealTimeShadowSectorList(
                                 sector.Buildings,
-                                ishdwRect.left, ishdwRect.bottom,
-                                ishdwRect.right, ishdwRect.top,
+                                ishdwRect.minX, ishdwRect.minY,
+                                ishdwRect.maxX, ishdwRect.maxY,
                                 &ishdw.m_vecPosn,
                                 ishdw.m_Front.x, ishdw.m_Front.y,
                                 ishdw.m_Side.x, ishdw.m_Side.y,
@@ -1440,8 +1451,8 @@ void CShadows::RenderStoredShadows() {
                             if (ishdw.m_bDrawOnBuildings) {
                                 CastShadowSectorList(
                                     sector.Buildings,
-                                    ishdwRect.left, ishdwRect.bottom,
-                                    ishdwRect.right, ishdwRect.top,
+                                    ishdwRect.minX, ishdwRect.minY,
+                                    ishdwRect.maxX, ishdwRect.maxY,
                                     &ishdw.m_vecPosn,
                                     ishdw.m_Front.x, ishdw.m_Front.y,
                                     ishdw.m_Side.x, ishdw.m_Side.y,
@@ -1456,8 +1467,8 @@ void CShadows::RenderStoredShadows() {
                             } else {
                                 CastPlayerShadowSectorList(
                                     sector.Buildings,
-                                    ishdwRect.left, ishdwRect.bottom,
-                                    ishdwRect.right, ishdwRect.top,
+                                    ishdwRect.minX, ishdwRect.minY,
+                                    ishdwRect.maxX, ishdwRect.maxY,
                                     &ishdw.m_vecPosn,
                                     ishdw.m_Front.x, ishdw.m_Front.y,
                                     ishdw.m_Side.x, ishdw.m_Side.y,
@@ -1471,9 +1482,12 @@ void CShadows::RenderStoredShadows() {
                                 );
                             }
                         }
-                        return true; // Inisde lambda -> Continue sector loop
+                };
+                for (auto y = sectorMinY; y <= sectorMaxY; y++) {
+                    for (auto x = sectorMinX; x <= sectorMaxX; x++) {
+                        CastIntoSector(x, y);
                     }
-                );
+                }
 
                 // Mark this as rendered
                 ishdw.m_bAlreadyRenderedInBatch = true;
@@ -1484,14 +1498,14 @@ void CShadows::RenderStoredShadows() {
         }
         
         // Render onto water (If needed)
-        if (oshdw.m_bDrawOnWater) {  
+        if (oshdw.m_bDrawOnWater) {
             float waterLevelZ{}, bigWavesZ{}, smallWavesZ{};
             if (!CWaterLevel::GetWaterLevelNoWaves(oshdw.m_vecPosn, &waterLevelZ, &bigWavesZ, &smallWavesZ)) {
                 continue;
             }
 
-            // Shadow under water?
-            if (waterLevelZ >= oshdw.m_vecPosn.z) {
+            // Shadow under water? (exe `fcomp` + `test ah, 5` / `jp`: a NaN level skips too)
+            if (!(waterLevelZ < oshdw.m_vecPosn.z)) {
                 continue;
             }
 
@@ -1499,71 +1513,69 @@ void CShadows::RenderStoredShadows() {
             RenderBuffer::ClearRenderBuffer();
 
             // The smaller this value the detailed the shadows, but also (exponentially?) slower
-            // This value basically represents the side of a square that is projected onto the 
-            const auto STEP_SIZE = 2;
+            // This value basically represents the side of a square that is projected onto the water
+            constexpr auto STEP_SIZE = 2;
 
-            const auto shdwSideMagSq = oshdw.m_Side.SquaredMagnitude();
-            const auto shdwFrontMagSq = oshdw.m_Front.SquaredMagnitude();
+            const auto& side  = oshdw.m_Side;
+            const auto& front = oshdw.m_Front;
 
+            // Exe: 1.0f / (y*y + x*x), the texture coordinates are multiplied by it (not divided)
+            const float sideRecip  = 1.0f / (side.y * side.y + side.x * side.x);
+            const float frontRecip = 1.0f / (front.y * front.y + front.x * front.x);
+
+            // The cell range (in world units, always even): floor/ceil of (posn +- (|side| + |front|)) / 2, times 2. NOT the sector coords
             const auto oshdwRect = GetShadowRect(oshdw);
+            const auto cellMinX  = NOTSA_FTOL(int32, std::floor(oshdwRect.minX * 0.5f)) * STEP_SIZE;
+            const auto cellMinY  = NOTSA_FTOL(int32, std::floor(oshdwRect.minY * 0.5f)) * STEP_SIZE;
+            const auto cellMaxX  = NOTSA_FTOL(int32, std::ceil(oshdwRect.maxX * 0.5f)) * STEP_SIZE;
+            const auto cellMaxY  = NOTSA_FTOL(int32, std::ceil(oshdwRect.maxY * 0.5f)) * STEP_SIZE;
 
-            // Iterate shadow sectors (Using `CWorld::IterateSectors` for convenience)
-            CWorld::IterateSectors(
-                NOTSA_FTOL(int32, std::floor(oshdwRect.left / (float)STEP_SIZE)),
-                NOTSA_FTOL(int32, std::floor(oshdwRect.top / (float)STEP_SIZE)),
-                NOTSA_FTOL(int32, std::ceil(oshdwRect.right / (float)STEP_SIZE)),
-                NOTSA_FTOL(int32, std::ceil(oshdwRect.bottom / (float)STEP_SIZE)),
-                [&](int32 ox, int32 oy) {
-                    // 0x70B000 - 0x70B0DA: Start storing 
-                    RwIm3DVertex* vtxIt{};
+            // Note the loop order: x is the outer one
+            for (auto cx = cellMinX; cx <= cellMaxX; cx += STEP_SIZE) {
+                for (auto cy = cellMinY; cy <= cellMaxY; cy += STEP_SIZE) {
+                    // 0x70B000 - 0x70B0DA: Start storing
+                    RwIm3DVertex*    vtxIt{};
                     RwImVertexIndex* vtxIdxIt{};
                     RenderBuffer::StartStoring(6, 4, vtxIdxIt, vtxIt);
 
                     // Function to process 1 vertex (out of the 4)
-                    const auto ProcessOneVertex = [&] (int32 x, int32 y) {
-                        // The x, y passed in are sector coords, so make them into world coords
-                        x *= STEP_SIZE;
-                        y *= STEP_SIZE;
-
-                        const auto currPos = CVector2D{ (float)x, (float)y };
-
+                    const auto ProcessOneVertex = [&](int32 x, int32 y) {
                         // Set color
-                        RwIm3DVertexSetRGBA(vtxIt, oshdw.m_nRed, oshdw.m_nGreen, oshdw.m_nBlue, NOTSA_FTOL(uint8, (float)oshdw.m_nIntensity * 0.6f));
+                        RwIm3DVertexSetRGBA(vtxIt, oshdw.m_nRed, oshdw.m_nGreen, oshdw.m_nBlue, NOTSA_FTOL(uint8, (float)(int16)oshdw.m_nIntensity * 0.6f));
 
                         // Set texture coords (UV)
-                        const auto CalcTexCoord  = [
-                            currPosToShdw = CVector2D{ currPos - oshdw.m_vecPosn }
-                        ](CVector2D v, float vmagsq) {
-                            return (currPosToShdw.Dot(v) / vmagsq + 1.f) * 0.5f;
-                        };
-                        RwIm3DVertexSetU(vtxIt, CalcTexCoord(oshdw.m_Side, shdwSideMagSq));
-                        RwIm3DVertexSetV(vtxIt, CalcTexCoord(oshdw.m_Front, shdwFrontMagSq));
+                        // NOTE: The exe dots the 3D vector (x - posn.x, y - posn.y, -posn.z) with (side|front, 0), so the (-z * 0) term is part of the sum
+                        const float dx = (float)x - oshdw.m_vecPosn.x;
+                        const float dy = (float)y - oshdw.m_vecPosn.y;
+                        const float dz = -oshdw.m_vecPosn.z;
+                        const float dotSide  = (dx * side.x + dy * side.y) + dz * 0.0f;
+                        const float dotFront = (dy * front.y + dx * front.x) + dz * 0.0f;
+                        RwIm3DVertexSetU(vtxIt, (dotSide * sideRecip + 1.0f) * 0.5f);
+                        RwIm3DVertexSetV(vtxIt, 0.5f - (dotFront * frontRecip) * 0.5f);
 
                         // Set position
                         RwIm3DVertexSetPos(
                             vtxIt,
-                            currPos.x,
-                            currPos.y,
+                            (float)x,
+                            (float)y,
                             CWaterLevel::CalculateWavesOnlyForCoordinate2_Direct(x, y, waterLevelZ, bigWavesZ, smallWavesZ) + 0.06f // Z pos of the wave at the given coord
                         );
+                        vtxIt++;
                     };
 
                     // Process 4 vertices of this square
-                    ProcessOneVertex(ox,     oy    ); // top left
-                    ProcessOneVertex(ox + 1, oy    ); // top right
-                    ProcessOneVertex(ox,     oy + 1); // bottom left
-                    ProcessOneVertex(ox + 1, oy + 1); // bottom right
+                    ProcessOneVertex(cx,             cy            ); // top left
+                    ProcessOneVertex(cx + STEP_SIZE, cy            ); // top right
+                    ProcessOneVertex(cx,             cy + STEP_SIZE); // bottom left
+                    ProcessOneVertex(cx + STEP_SIZE, cy + STEP_SIZE); // bottom right
 
                     // Copy vertices into index buffer
-                    rng::copy(std::to_array({ 0, 1, 2, 1, 3, 2 }), vtxIdxIt);
+                    rng::copy(std::to_array<RwImVertexIndex>({ 0, 1, 2, 1, 3, 2 }), vtxIdxIt);
 
                     // And we're done with this one... onto the next!
                     RenderBuffer::StopStoring();
-
-                    // Continue iteration...
-                    return true;
                 }
-            );
+            }
 
             // Render it all
             RenderBuffer::RenderStuffInBuffer();

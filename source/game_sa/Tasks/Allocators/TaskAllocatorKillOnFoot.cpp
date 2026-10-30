@@ -33,6 +33,7 @@ void CTaskAllocatorKillOnFoot::AllocateTasks(CPedGroupIntelligence* intel) {
                 case TASK_SIMPLE_GANG_DRIVEBY:
                 case TASK_COMPLEX_KILL_PED_ON_FOOT_TIMED:
                 case TASK_COMPLEX_KILL_PED_ON_FOOT_STAND_STILL:
+                case TASK_COMPLEX_KILL_PED_ON_FOOT_STEALTH: // 0x69BE24 / 0x69C0A7: the exe skips 0x404 and 0x405
                 case TASK_COMPLEX_KILL_PED_ON_FOOT_KINDA_STAND_STILL:
                 case TASK_KILL_PED_ON_FOOT_WHILE_DUCKING:
                 case TASK_COMPLEX_ARREST_PED:
@@ -50,7 +51,7 @@ void CTaskAllocatorKillOnFoot::AllocateTasks(CPedGroupIntelligence* intel) {
             if (m_GroupTargetID == -1) { // 0x69BEC9 and 0x69C185
                 tseq.AddTask(new CTaskComplexKillPedOnFoot{ m_Target, -1, 0, 0, 0, static_cast<uint8>(withGuns ? 2u : 1u) });
                 if (withGuns) {
-                    tseq.AddTask(new CTaskSimpleLookAbout{ CGeneral::GetRandomNumberInRange(0u, 1000u) });
+                    tseq.AddTask(new CTaskSimpleLookAbout{ CGeneral::GetRandomNumberInRange(1'000u, 2'000u) }); // 0x69BF86: 1000 - (int)(rand * -1000) = [1000, 2000), not [0, 1000)
                 }
             } else { // 0x69BED5 and 0x69C17C
                 tseq.AddTasks(

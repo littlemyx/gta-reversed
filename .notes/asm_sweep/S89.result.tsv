@@ -4,8 +4,8 @@ addr	function	verdict	asm range	note	fix commit
 0x4F2FD0	CAEUserRadioTrackManager::ReadUserTracks	NOT_REACHED	-	platform file layer (sa-utrax.dat), kept	-
 0x4F3050	CAEUserRadioTrackManager::GetTrackPath	MATCH	0x4F3050-0x4F30E2 (all)	signed id < count test, offset/len, NUL terminator equal	-
 0x4F30F0	CAEUserRadioTrackManager::ResolveShortcut	NOT_REACHED	-	COM shell link, platform	-
-0x4F31F0	CAEUserRadioTrackManager::GetAudioFileType	FIXED	0x4F31F0-0x4F3247 (all)	exe extension table has 8 entries: .mov -> QuickTime was missing	1cc9461d4
-0x4F3250	CAEUserRadioTrackManager::SelectUserTrackIndex	FIXED	0x4F3250-0x4F32B1 (all)	single track: exe still draws rand(0,0) and stores index 0 (port stored 1)	1cc9461d4
+0x4F31F0	CAEUserRadioTrackManager::GetAudioFileType	FIXED	0x4F31F0-0x4F3247 (all)	exe extension table has 8 entries: .mov -> QuickTime was missing	e327cd70b
+0x4F3250	CAEUserRadioTrackManager::SelectUserTrackIndex	FIXED	0x4F3250-0x4F32B1 (all)	single track: exe still draws rand(0,0) and stores index 0 (port stored 1)	e327cd70b
 0x4F32F0	CAEUserRadioTrackManager::DeleteUserTracksInfo	NOT_REACHED	-	platform file layer	-
 0x4F32C0	CAEUserRadioTrackManager::IsShortcut	MATCH	0x4F32C0-0x4F32EC (all)	-	-
 0x4F35F0	CAEUserRadioTrackManager::LoadUserTrack	MATCH	0x4F35F0-0x4F37DA (all)	type->decoder map, stream init, delete on failure equal	-
@@ -22,7 +22,7 @@ addr	function	verdict	asm range	note	fix commit
 0x4CE1B0	CAnimBlendAssocGroup::GetAnimationId	MATCH	all	-	-
 0x4CE220	CAnimBlendAssocGroup::CreateAssociations(block)	MATCH	0x4CE220-0x4CE3A0 (all)	-	-
 0x4CE6E0	CAnimBlendAssocGroup::CreateAssociations(block,clump,names,cnt)	MATCH	0x4CE6E0-0x4CE7F7 (all)	-	-
-0x4CE3B0	CAnimBlendAssocGroup::CreateAssociations(block,animNames,modelNames,stride)	FIXED	0x4CE3B0-0x4CE5B8 (all)	name table scan has no break: the LAST duplicate wins; not-found log read past the table	9e27de184
+0x4CE3B0	CAnimBlendAssocGroup::CreateAssociations(block,animNames,modelNames,stride)	FIXED	0x4CE3B0-0x4CE5B8 (all)	name table scan has no break: the LAST duplicate wins; not-found log read past the table	f1808dd9a
 0x5BF6B0	CAnimManager::Initialise	MATCH	all	-	-
 0x5BC910	CAnimManager::ReadAnimAssociationDefinitions	MATCH	all	-	-
 0x4D4130	CAnimManager::Shutdown	MATCH	all	-	-
@@ -41,7 +41,7 @@ addr	function	verdict	asm range	note	fix commit
 0x4D3ED0	CAnimManager::RemoveLastAnimFile	MATCH	all	-	-
 0x4D3F40	CAnimManager::RemoveAnimBlock	MATCH	all	-	-
 0x4D41C0	CAnimManager::UncompressAnimation	MATCH	all	cache LRU eviction order equal	-
-0x4D4610	CAnimManager::BlendAnimation(group,id)	FIXED	0x4D4610-0x4D47EF (all)	strict bd < delta (port <=), blendAmount NaN arm, -0.05 clamp NaN	36d23183f
-0x4D4410	CAnimManager::BlendAnimation(hier)	FIXED	0x4D4410-0x4D4608 (all)	same three as above	36d23183f
+0x4D4610	CAnimManager::BlendAnimation(group,id)	FIXED	0x4D4610-0x4D47EF (all)	strict bd < delta (port <=), blendAmount NaN arm, -0.05 clamp NaN	3b12b6a96
+0x4D4410	CAnimManager::BlendAnimation(hier)	FIXED	0x4D4410-0x4D4608 (all)	same three as above	3b12b6a96
 0x4D5620	CAnimManager::LoadAnimFiles	MATCH	all	-	-
-0x4D47F0	CAnimManager::LoadAnimFile	FIXED	0x4D47F0-0x4D4860, ANP2/ANP3 0x4D5172-0x4D558B	ANP2/ANP3: hierarchy compressed flag comes from the FIRST sequence frame type (1/2 uncompressed, else compressed), overriding the ANP3 header flag; ANPK body (0x4D4863-0x4D5171) NOT_REACHED (no ANPK data in the game)	6206df7af
+0x4D47F0	CAnimManager::LoadAnimFile	FIXED	0x4D47F0-0x4D4860, ANP2/ANP3 0x4D5172-0x4D558B	ANP2/ANP3: hierarchy compressed flag comes from the FIRST sequence frame type (1/2 uncompressed, else compressed), overriding the ANP3 header flag; ANPK body (0x4D4863-0x4D5171) NOT_REACHED (no ANPK data in the game)	2f4a8e283

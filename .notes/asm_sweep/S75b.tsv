@@ -1,0 +1,18 @@
+addr	file	line	cls	fn	oc
+0x56CE80	source/game_sa/AccidentManager.cpp	11	CAccidentManager	ReportAccident	U
+0x721D50	source/game_sa/BulletTraces.cpp	9	CBulletTraces	Init	U
+0x723750	source/game_sa/BulletTraces.cpp	10	CBulletTraces	AddTrace	U
+0x726AF0	source/game_sa/BulletTraces.cpp	11	CBulletTraces	AddTrace	U
+0x723C10	source/game_sa/BulletTraces.cpp	12	CBulletTraces	Render	U
+0x723FB0	source/game_sa/BulletTraces.cpp	13	CBulletTraces	Update	U
+0x41B860	source/game_sa/NodeRoute.cpp	8	CNodeRoute	operator new	U
+0x41B870	source/game_sa/NodeRoute.cpp	9	CNodeRoute	operator delete	U
+0x7204E0	source/game_sa/Skidmarks.cpp	10	CSkidmarks	Init	U
+0x720570	source/game_sa/Skidmarks.cpp	11	CSkidmarks	Shutdown	U
+0x720640	source/game_sa/Skidmarks.cpp	14	CSkidmarks	Render	U
+0x720EC0	source/game_sa/Skidmarks.cpp	15	CSkidmarks	RegisterOne	U
+0x6D0590	source/game_sa/cTransmission.cpp	11	cTransmission	DisplayGearRatios	U
+0x6190A0	source/game_sa/C_PcSave.cpp	18	C_PcSave	GenerateGameFilename	U
+0x619140	source/game_sa/C_PcSave.cpp	19	C_PcSave	PopulateSlotInfo	U
+0x619060	source/game_sa/C_PcSave.cpp	20	C_PcSave	SaveSlot	U
+0x6190D0	source/game_sa/C_PcSave.cpp	21	C_PcSave	DeleteSlot	U

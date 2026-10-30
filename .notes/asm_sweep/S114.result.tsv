@@ -1,0 +1,37 @@
+addr	function	verdict	asm range	note	fix commit
+0x4ABA50	GetEventGlobalGroup	MATCH	0x4ABA50-0x4ABA9C	lazy new CEventGlobalGroup(nullptr): ped/count/events zeroed, vtable	-
+0x5370A0	GetNameAndDamage	MATCH	0x5370A0-0x53714E	_dam / _l0 / _L0 suffix tests, copies, flag set/clear	-
+0x734810	GetFirstAtomicCallback	MATCH	0x734810-0x73481C		-
+0x734850	Get2DEffectAtomicCallback	MATCH	0x734850-0x734871	plugin count > 0 (unsigned, null plugin -> continue) == RpGeometryGet2dFxCount (0x4C4340)	-
+0x734880	Get2DEffectAtomic	MATCH	0x734880-0x7348A4		-
+0x7348B0	GetFirstObjectCallback	MATCH	0x7348B0-0x7348BC		-
+0x7348C0	GetFirstObject	MATCH	0x7348C0-0x7348E4		-
+0x7348F0	GetFirstFrameCallback	MATCH	0x7348F0-0x7348FC		-
+0x734900	GetFirstChild	MATCH	0x734900-0x734924		-
+0x734A20	SkinAtomicGetHAnimHierarchCB	MATCH	0x734A20-0x734A35		-
+0x734AB0	GetAnimHierarchyFromFrame	MATCH	0x734AB0-0x734B05	frame hier, else children search, repeated once more when still null (callback 0x734A70 too)	-
+0x734B90	AtomicRemoveAnimFromSkinCB	MATCH	0x734B90-0x734BD4		-
+0x734BE0	RpAtomicConvertGeometryToTL	MATCH	0x734BE0-0x734C19	native 0x1000000 / tristrip 1 tests, lock 0xFFF, flags stored from before the lock	-
+0x734C20	RpAtomicConvertGeometryToTS	MATCH	0x734C20-0x734C59		-
+0x734C60	atomicConvertGeometryToTL	MATCH	0x734C60-0x734CA3		-
+0x734CB0	RpClumpConvertGeometryToTL	MATCH	0x734CB0-0x734CD1		-
+0x734CE0	atomicConvertGeometryToTS	MATCH	0x734CE0-0x734D23		-
+0x734D30	RpClumpConvertGeometryToTS	MATCH	0x734D30-0x734D51		-
+0x734DA0	forceLinearFilteringAtomicsCB	MATCH	0x734DA0-0x734DBE		-
+0x734DC0	SetFilterModeOnClumpsTextures	MATCH	0x734DC0-0x734DD9		-
+0x734D60	forceLinearFilteringMatTexturesCB	MATCH	0x734D60-0x734D71	exe writes the low filter byte (+0x50); RwTextureSetFilterMode is the same for modes <= 0xFF	-
+0x734D80	SetFilterModeOnAtomicsTextures	MATCH	0x734D80-0x734D9C		-
+0x734DE0	RpGeometryReplaceOldMaterialWithNewMaterial	MATCH	0x734DE0-0x734E44	mesh walk from header+0x10 step 0xC, matList index, destroy old, ++refCount new	-
+0x734E50	RwTexDictionaryFindHashNamedTexture	MATCH	0x734E50-0x734E8F		-
+0x734FC0	RpClumpGetBoundingSphere	MATCH	0x734FC0-0x73513F	incl. callbacks 0x734970/0x734ED0: n<1 test, recip=1/n multiply, sqrt(dz2+dy2+dx2)+r, strict > update, invert + transform, store order	-
+0x735140	SkinGetBonePositions	MATCH	0x735140-0x7352CD	node stack push(2)/pop(1), parent index, pos = inverse bone matrix pos transformed by the parent skin-to-bone matrix	-
+0x7352D0	SkinSetBonePositions	MATCH	0x7352D0-0x73535A		-
+0x735360	SkinGetBonePositionsToTable	MATCH	0x735360-0x7354DC		-
+0x7226D0	RemoveRefsCB	MATCH	0x7226D0-0x7226E8		-
+0x70CE10	CSprite::Initialise	MATCH	0x70CE10	ret	-
+0x70CFB0	CSprite::InitSpriteBuffer	MATCH	0x70CFB0-0x70CFC7		-
+0x70CF20	CSprite::FlushSpriteBuffer	MATCH	0x70CF20-0x70CFAD	Z-test off/on around RwIm2DRenderIndexedPrimitive(TRILIST, 4n, 6n) only when the switch flag is set	-
+0x70D000	CSprite::RenderOneXLUSprite	MATCH	0x70D000-0x70D31B	corner clamp order x<0, x>w, y<0, y>h incl. uv remap, z / colour / rhw, TRIFAN	-
+0x70D320	CSprite::RenderOneXLUSprite_Triangle	DEVIATION	0x70D320-0x70D482	no fade for z >= 2.3 (or NaN): raw r/g/b/intensity; port always applied factor 255 (colour x255/256 twice). Fade ftol(255*(z-1.3)) only for 1.3 <= z < 2.3	3b81f4854
+0x70D490	CSprite::RenderOneXLUSprite_Rotate_Aspect	MATCH	0x70D490-0x70D824	fade, unrounded sin/cos corner coefficients, off-screen tests (x<0,y<0,x>w,y>h), UVs, colour	-
+0x70F540	CSprite::RenderOneXLUSprite2D	DEVIATION	0x70F540-0x70F5FA	4th colour byte is the alpha argument; port used (intensity*color.a)>>8 and ignored alpha	480e84424

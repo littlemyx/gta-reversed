@@ -1829,7 +1829,7 @@ void CEntity::RegisterReference(CEntity** entity) {
 // 0x6FC7A0
 void CEntity::ProcessLightsForEntity() {
     constexpr static const uint16 randomSeedRandomiser[8] = { 0, 27'034, 43'861, 52'326, 64'495, 38'437, 21'930, 39'117 }; // 0x8D5028
-    constexpr static const float FADE_RATE = 0.0009f; // 0x872538
+    constexpr static const float FADE_RATE = 0.00090009003f; // 0x872538 (bits 0x3A6BF405 = 1/1111, not 0.0009f = 0x3A6BF404)
 
     const auto dayNightBalance = GetDayNightBalance();
     if (m_bRenderDamaged || !GetIsVisible()) {
@@ -1862,7 +1862,8 @@ void CEntity::ProcessLightsForEntity() {
 
             const auto cameraPos = TheCamera.GetPosition();
             auto cameraDir = cameraPos - effectPos;
-            const auto cameraDist = cameraDir.Magnitude();
+            // 0x6FC8E0..0x6FC91B: the length is sqrt((y*y + z*z) + x*x) (CVector::Magnitude adds x*x + y*y first)
+            const float cameraDist = (float)std::sqrt(((x87d)cameraDir.y * cameraDir.y + (x87d)cameraDir.z * cameraDir.z) + (x87d)cameraDir.x * cameraDir.x);
             const auto scale = 2.0f / cameraDist;
             auto scaledCameraDir = cameraDir * scale;
 
@@ -1871,12 +1872,12 @@ void CEntity::ProcessLightsForEntity() {
 
             const auto dotProduct = -direction.Dot(CTimeCycle::m_VectorToSun[CTimeCycle::m_CurrentStoredValue]);
             if (dotProduct > 0.0f) {
-                const auto glare = sqrt(dotProduct) * CWeather::SunGlare;
-                const auto radius = sqrt(cameraDist) * CWeather::SunGlare * 0.5f;
+                const auto glare = std::sqrt(dotProduct) * CWeather::SunGlare;
+                const auto radius = std::sqrt(cameraDist) * CWeather::SunGlare * 0.5f;
                 effectPos += scaledCameraDir;
 
                 CCoronas::RegisterCorona(
-                    m_nRandomSeed + C + 1,
+                    NOTSA_PTR_ID32(this) + C + 0x21, // 0x6FC9E8: lea edx, [edi + ebp + 0x21] (this + C + 33, not the random seed)
                     nullptr,
                     NOTSA_FTOL(uint8, (CTimeCycle::m_CurrentColours.m_nSunCoreRed + 510) * glare * ExeRecip(3.0f)),
                     NOTSA_FTOL(uint8, (CTimeCycle::m_CurrentColours.m_nSunCoreGreen + 510) * glare * ExeRecip(3.0f)),
@@ -1938,7 +1939,7 @@ void CEntity::ProcessLightsForEntity() {
                 } else {
                     ApplyOnVersion = true;
                 }
-                if ((randomSeed ^ (CTimer::GetTimeInMS() / 4'096)) & 0x3) {
+                if ((randomSeed ^ (CTimer::GetTimeInMS() / 2'048)) & 0x3) { // 0x6FCBD2: shr ecx, 0xB
                     ApplyLight = true;
                 }
                 break;
@@ -1973,7 +1974,7 @@ void CEntity::ProcessLightsForEntity() {
                 } else {
                     ApplyOnVersion = true;
                 }
-                if ((randomSeed ^ (CTimer::GetTimeInMS() / 4'096)) & 0x3) {
+                if ((randomSeed ^ (CTimer::GetTimeInMS() / 2'048)) & 0x3) { // 0x6FCBD2: shr ecx, 0xB
                     ApplyLight = true;
                 }
                 break;
@@ -2005,14 +2006,16 @@ void CEntity::ProcessLightsForEntity() {
             case e2dCoronaFlashType::FLASH_6ON_4OFF:
             case e2dCoronaFlashType::FLASH_4ON_6OFF: {
                 ApplyLight = true;
-                uint32 offset = CTimer::GetTimeInMS() + 3'333 * (flashType - 11);
-                offset += NOTSA_FTOL(uint32, entityPos.x * 20.0f);
-                offset += NOTSA_FTOL(uint32, entityPos.y * 10.0f);
+                // 0x6FCCB8..0x6FCD46: all signed; the x/y terms are added to the integer in the x87 (fiadd) BEFORE the truncation, mode = (rem * 9) / 10000 (magic multiply)
+                int32 offset = (int32)(CTimer::GetTimeInMS() + 3'333u * (uint32)(flashType - 11));
+                offset = NOTSA_FTOL(int32, entityPos.x * 20.0f + (x87d)offset);
+                offset = NOTSA_FTOL(int32, entityPos.y * 10.0f + (x87d)offset);
 
-                const auto mode = 9 * (offset % 10'000 / 10'000);
-                const auto fade = (offset % 10'000 - (1'111 * mode)) * FADE_RATE;
+                const int32 rem  = offset % 10'000;
+                const int32 mode = (rem * 9) / 10'000;
+                const float fade = (float)(rem - 1'111 * mode) * FADE_RATE;
 
-                switch (mode) {
+                switch ((uint32)mode) { // 0x6FCD4A: cmp edx, 3 / ja (unsigned)
                 case 0:  TimeFade = fade; break;
                 case 1:
                 case 2:  TimeFade = 1.0f; break;
@@ -2075,7 +2078,7 @@ void CEntity::ProcessLightsForEntity() {
                 };
                 const auto lightPos = GetMatrix().TransformVector(lightOffset);
                 const auto dot = lightPos.Dot(camPos - effectPos);
-                canCreateLight = dot >= 0.0f;
+                canCreateLight = !(dot < 0.0f); // 0x6FCE4D: fcomp / test ah, 5 / jp - a NaN dot counts as visible
             }
 
             if (canCreateLight) {
@@ -2240,15 +2243,16 @@ void CEntity::ProcessLightsForEntity() {
         if (effect->light.m_fShadowSize != 0.0f) {
             float shadowZ = 15.0f;
             if (effect->light.m_nShadowZDistance) {
-                shadowZ = static_cast<float>(effect->light.m_nShadowZDistance);
+                shadowZ = static_cast<float>(static_cast<uint8>(effect->light.m_nShadowZDistance)); // 0x6FD372: movzx
             }
 
             if (ApplyLight) {
                 auto color = effect->light.m_color;
-                const float colorMult = effect->light.m_nShadowColorMultiplier * TimeFade / 256.0f;
-                color.red = NOTSA_FTOL(uint8, static_cast<float>(color.red) * colorMult);
-                color.green = NOTSA_FTOL(uint8, static_cast<float>(color.green) * colorMult);
-                color.blue = NOTSA_FTOL(uint8, static_cast<float>(color.blue) * colorMult);
+                // 0x6FD3B4..0x6FD3FC: ((channel * multiplier) * TimeFade) * (1/256), left to right
+                const float shadowMult = static_cast<float>(effect->light.m_nShadowColorMultiplier);
+                color.red = NOTSA_FTOL(uint8, static_cast<float>(color.red) * shadowMult * TimeFade * 0.00390625f);
+                color.green = NOTSA_FTOL(uint8, static_cast<float>(color.green) * shadowMult * TimeFade * 0.00390625f);
+                color.blue = NOTSA_FTOL(uint8, static_cast<float>(color.blue) * shadowMult * TimeFade * 0.00390625f);
 
                 CShadows::StoreStaticShadow(
                     NOTSA_PTR_ID32(this) + C,

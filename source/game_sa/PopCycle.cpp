@@ -108,6 +108,11 @@ void CPopCycle::Initialise() {
             }
         }
     }
+    // exe 0x5BC4B8-0x5BC4CB: the current-zone state is reset after the file is read
+    m_nCurrentTimeIndex = 0;
+    m_nCurrentTimeOfWeek = 0;
+    m_pCurrZoneInfo = nullptr;
+    m_nCurrentZoneType = -1;
     NOTSA_LOG_DEBUG("POPCYCLE.DAT has been loaded successfully!");
 }
 

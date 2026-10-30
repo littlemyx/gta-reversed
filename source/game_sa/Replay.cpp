@@ -572,21 +572,28 @@ void CReplay::ProcessReplayCamera() {
         TheCamera.GetForward()  = CVector{0.0f, 0.0f, -1.0f};
         TheCamera.GetPosition() = CVector{CameraFocus.x, CameraFocus.y, CameraFocus.z + 15.0f};
 
-        modelling->pos   = CameraFocus;
+        // 0x45D1ED / 0x45D2D9: the RW frame gets the camera matrix (position included), not the focus point
+        modelling->pos   = TheCamera.GetPosition();
         modelling->at    = TheCamera.GetForward();
         modelling->up    = TheCamera.GetUp();
         modelling->right = TheCamera.GetRight();
         break;
     case REPLAY_CAM_MODE_FIXED: {
-        const auto direction = (CameraFocus - CameraFixed).Normalized();
-        const auto right = direction.Cross({0.0f, 0.0f, 1.0f}).Normalized();
+        // 0x45D085-0x45D1B5: forward = normalise(focus - fixed); right = normalise(Z x forward) (note the operand order: Z x forward, 0x59C730 is out = 2nd x 3rd);
+        // up = normalise(forward x right). All three go through CVector::Normalise (0x59C910), not NormaliseAndMag
+        CVector direction = CameraFocus - CameraFixed;
+        direction.Normalise();
+        CVector right = CrossProduct(CVector{0.0f, 0.0f, 1.0f}, direction);
+        right.Normalise();
+        CVector up = CrossProduct(direction, right);
+        up.Normalise();
 
         TheCamera.GetPosition() = CameraFixed;
         TheCamera.GetForward()  = direction;
-        TheCamera.GetUp()       = direction.Cross(right);
+        TheCamera.GetUp()       = up;
         TheCamera.GetRight()    = right;
 
-        modelling->pos   = CameraFocus;
+        modelling->pos   = TheCamera.GetPosition();
         modelling->at    = TheCamera.GetForward();
         modelling->up    = TheCamera.GetUp();
         modelling->right = TheCamera.GetRight();

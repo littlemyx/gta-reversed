@@ -256,13 +256,13 @@
 | S107 | phase3 tier B (PHASE3.md) | 46 | done (45 M, 1 fixed + FxInfoDir) | FxInfoAnimTexture.cpp, FxInfoAttractLine.cpp, FxInfoAttractPt.cpp, FxInfoColour.cpp, FxInfoColourBright.cpp, FxInfoColourRange.cpp |
 | S108 | phase3 tier B (PHASE3.md) | 45 | done (43 M, 2 fixed) | AnimBlendAssociation.cpp, AnimBlendClumpData.cpp, AnimBlendHierarchy.cpp, FxInfoJitter.cpp, FxInfoNoise.cpp, FxInfoRotSpeed.cpp |
 | S109 | phase3 tier B (PHASE3.md) | 42 | done (32 M, 10 fixed; regress left to gate) | AnimBlendSequence.cpp, AnimBlendStaticAssociation.cpp, Matrix.cpp, MatrixLinkList.cpp, OctTree.cpp, OctTreeBase.cpp |
-| S110 | phase3 tier B (PHASE3.md) | 12 | pending | QuadTreeNode.h |
+| S110 | phase3 tier B (PHASE3.md) | 12 | done (7 M, 5 fixed) | QuadTreeNode.h |
 | S111 | phase3 tier C (PHASE3.md) | 44 | pending | AEAudioChannel.cpp, AEAudioHardware.cpp, AESmoothFadeThread.cpp, AEStaticChannel.cpp, AEStreamThread.cpp |
 | S112 | phase3 tier C (PHASE3.md) | 37 | pending | AEDataStream.cpp, AEStreamingChannel.cpp, AEStreamingDecoder.cpp |
 | S113 | phase3 tier C (PHASE3.md) | 37 | pending | AEVorbisDecoder.cpp, AEWaveDecoder.cpp, Debug.cpp, Font.cpp, Lines.cpp, RenderBuffer.cpp |
 | S114 | phase3 tier C (PHASE3.md) | 36 | pending | RwHelper.cpp, Sprite.cpp |
 | S115 | phase3 tier C (PHASE3.md) | 42 | pending | CarFXRenderer.cpp, CustomBuildingDNPipeline.cpp, Sprite2d.cpp |
-| S116 | phase3 tier C (PHASE3.md) | 45 | pending | BreakablePlugin.cpp, CollisionPlugin.cpp, CustomBuildingPipeline.cpp, CustomBuildingRenderer.cpp, CustomCarEnvMapPipeline.cpp, JPegCompress.cpp |
+| S116 | phase3 tier C (PHASE3.md) | 45 | done (36 M, 8 fixed, 1 U dead JPeg) | BreakablePlugin.cpp, CollisionPlugin.cpp, CustomBuildingPipeline.cpp, CustomBuildingRenderer.cpp, CustomCarEnvMapPipeline.cpp, JPegCompress.cpp |
 | S117 | phase3 tier C (PHASE3.md) | 41 | pending | 2dEffect.cpp, LoadMonitor.cpp, MemoryMgr.cpp, Securom.cpp, common.cpp, platform.cpp |
 | S82b | rest of S82 | 27 | done (17 M, 15 fixed; S82 mood fix was wrong, redone) | AEPedSpeechAudioEntity.cpp, AEPedlessSpeechAudioEntity.cpp, AEPoliceScannerAudioEntity.cpp |
 | S81b | rest of S81 | 21 | done (11 M, 10 fixed) | AEFrontendAudioEntity.cpp, AEGlobalWeaponAudioEntity.cpp, AEPedAudioEntity.cpp |

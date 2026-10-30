@@ -470,3 +470,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S104	v6	asm sweep	328761	131	87	procobj grid mode only first x column got objects + per-tri seed sum order, moon mask pos/axes, star brightness 1-x, streak indices, sky grey truncation; 16 M; regress left to gate
 2026-10-30	ASM-S116	v6	asm sweep	282988	104	17	S110 QuadTree DeleteItem flushed whole subtree; S116 RpAnimBlendClumpUpdateAnimations null-seq test, JPeg hook at wrong addr, AddAssociation unstubbed, env map pipe unlock; not landed -> S116c
 2026-10-30	ASM-S109	v6	asm sweep	298990	150	129	frame start missing SetAlphaFade(255) + clear Z only, rsCAMERASIZE fixed 4:3 aspect (widescreen fix -> FIX_BUGS), credits rendered twice, pad index, OctTree child slot + FillPalette deref; 32 M
+2026-10-30	ASM-S116c	v6	continuer	109158	53	25	reviewed + landed S110/S116 (7 commits); regress left to gate

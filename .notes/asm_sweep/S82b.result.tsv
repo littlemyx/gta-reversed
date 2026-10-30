@@ -1,23 +1,23 @@
 addr	function	verdict	asm range	note	fix commit
-0x4E4F10	CAEPedSpeechAudioEntity::Constructor	FIXED	0x4E4F10-0x4E4F6E (all)	exe stores m_PedAudioType=0 (GEN), voice untouched, no m_IsInitialized; port default was PED_TYPE_UNK. Default ctor now GEN; the pt/CPed* ctors are gone	c7315bb52
+0x4E4F10	CAEPedSpeechAudioEntity::Constructor	FIXED	0x4E4F10-0x4E4F6E (all)	exe stores m_PedAudioType=0 (GEN), voice untouched, no m_IsInitialized; port default was PED_TYPE_UNK. Default ctor now GEN; the pt/CPed* ctors are gone	c18bcb0c9
 0x4E50E0	CAEPedSpeechAudioEntity::RequestPedConversation	MATCH	0x4E50E0-0x4E5288 (all)	checks (all pure) incl. 1600.0 squared camera distance, slots then SetUpConversation	-
-0x4E52A0	CAEPedSpeechAudioEntity::ReleasePedConversation	FIXED	0x4E52A0-0x4E53AE (all)	slot < 0 early-out must still clear s_bPedConversationHappening (port returned with the flag set)	1a471a58e
-0x5B98C0	CAEPedSpeechAudioEntity::StaticInitialise	FIXED	0x5B98C0-0x5B99ED (all)	conversation slot ids start at -1 (port 0); the next-play-time table is filled a second time after Reset (360 extra rand())	1a471a58e
+0x4E52A0	CAEPedSpeechAudioEntity::ReleasePedConversation	FIXED	0x4E52A0-0x4E53AE (all)	slot < 0 early-out must still clear s_bPedConversationHappening (port returned with the flag set)	727e8a871
+0x5B98C0	CAEPedSpeechAudioEntity::StaticInitialise	FIXED	0x5B98C0-0x5B99ED (all)	conversation slot ids start at -1 (port 0); the next-play-time table is filled a second time after Reset (360 extra rand())	727e8a871
 0x4E37B0	CAEPedSpeechAudioEntity::Reset	MATCH	0x4E37B0-0x4E37EF (all)	360x now+rand(3000,7000), override time 0	-
 0x4E38C0	CAEPedSpeechAudioEntity::RequestPlayerConversation	MATCH	0x4E38C0-0x4E395D (all)	-	-
-0x4E3960	CAEPedSpeechAudioEntity::ReleasePlayerConversation	FIXED	0x4E3960-0x4E39F5 (all)	a slot that is LOADING/PLAYING/... keeps its contents: only IsReservedForPlayerConversation is cleared (port reset the slot whole)	1a471a58e
+0x4E3960	CAEPedSpeechAudioEntity::ReleasePlayerConversation	FIXED	0x4E3960-0x4E39F5 (all)	a slot that is LOADING/PLAYING/... keeps its contents: only IsReservedForPlayerConversation is cleared (port reset the slot whole)	727e8a871
 0x4E3A00	CAEPedSpeechAudioEntity::SetUpConversation	MATCH	0x4E3A00-0x4E3C3F (all)	rand(1,10) jump table, greeting/part by ped type 5/22, rand order (0,1) then (0,2), all ctx ids	-
 0x4E56D0	CAEPedSpeechAudioEntity::DisablePedSpeech	MATCH	0x4E56D0-0x4E56EE (all)	-	-
 0x4E5700	CAEPedSpeechAudioEntity::DisablePedSpeechForScriptSpeech	MATCH	0x4E5700-0x4E571E (all)	-	-
-0x4E58C0	CAEPedSpeechAudioEntity::GetVoiceAndTypeFromModel	FIXED	0x4E58C0-0x4E5911 (all)	model's audio type was never stored into m_PedAudioType and not range checked (<0 / >=6); voice test is signed <0	1a471a58e
+0x4E58C0	CAEPedSpeechAudioEntity::GetVoiceAndTypeFromModel	FIXED	0x4E58C0-0x4E5911 (all)	model's audio type was never stored into m_PedAudioType and not range checked (<0 / >=6); voice test is signed <0	727e8a871
 0x4E4400	CAEPedSpeechAudioEntity::GetSoundAndBankIDsForScriptedSpeech	MATCH	0x4E4400-0x4E4464 (all)	ids preset to -1 now explicit	-
-0x4E3520	CAEPedSpeechAudioEntity::UpdateParameters	FIXED	0x4E3520-0x4E3709 (all)	on finish m_PedSpeechSlotID was cleared before the conversation test (slot == conversation slot never true: a conversation slot was freed after every line); pedless variant 0x4E4D10: SetPosition only while !front-end AND event==0x34, at m_AttachedTo (port: ||, at null m_Entity)	6f530db4a
-0x4E4F70	CAEPedSpeechAudioEntity::AddScriptSayEvent	FIXED	0x4E4F70-0x4E50D9 (all)	vehicle-of-player test (CAEAudioUtility::FindVehicleOfPlayer) sets front-end, not forced-audible; volume is event 0x35 (port 0x34); non-player slot must be in [0,5)	772c57bc2
-0x4E5670	CAEPedSpeechAudioEntity::Terminate	FIXED	0x4E5670-0x4E56CC (all)	field-wise reset like the exe (keeps IsFemale/IsFrontend/ForcedAudible/LastGCtx/pain timers) instead of whole-object assignment	c7315bb52
+0x4E3520	CAEPedSpeechAudioEntity::UpdateParameters	FIXED	0x4E3520-0x4E3709 (all)	on finish m_PedSpeechSlotID was cleared before the conversation test (slot == conversation slot never true: a conversation slot was freed after every line); pedless variant 0x4E4D10: SetPosition only while !front-end AND event==0x34, at m_AttachedTo (port: ||, at null m_Entity)	bf67d9655
+0x4E4F70	CAEPedSpeechAudioEntity::AddScriptSayEvent	FIXED	0x4E4F70-0x4E50D9 (all)	vehicle-of-player test (CAEAudioUtility::FindVehicleOfPlayer) sets front-end, not forced-audible; volume is event 0x35 (port 0x34); non-player slot must be in [0,5)	6ac5a2c8e
+0x4E5670	CAEPedSpeechAudioEntity::Terminate	FIXED	0x4E5670-0x4E56CC (all)	field-wise reset like the exe (keeps IsFemale/IsFrontend/ForcedAudible/LastGCtx/pain timers) instead of whole-object assignment	c18bcb0c9
 0x4E6070	CAEPedlessSpeechAudioEntity::Constructor	MATCH	0x4E6070-0x4E607F (all)	base ctor + vptr	-
-0x4E4E10	CAEPedlessSpeechAudioEntity::Initialise	FIXED	0x4E4E10-0x4E4E7E (all)	field-wise (voice and slot/sound ids untouched, type GFD, initialised) instead of whole-object assignment	c7315bb52
-0x4E4D10	CAEPedlessSpeechAudioEntity::UpdateParameters	FIXED	0x4E4D10-0x4E4E08 (all)	see 0x4E3520	6f530db4a
-0x4E6300	CAEPedlessSpeechAudioEntity::Terminate	FIXED	0x4E6300-0x4E6376 (all)	field-wise like the ped Terminate, attached entity reference cleared	c7315bb52
+0x4E4E10	CAEPedlessSpeechAudioEntity::Initialise	FIXED	0x4E4E10-0x4E4E7E (all)	field-wise (voice and slot/sound ids untouched, type GFD, initialised) instead of whole-object assignment	c18bcb0c9
+0x4E4D10	CAEPedlessSpeechAudioEntity::UpdateParameters	FIXED	0x4E4D10-0x4E4E08 (all)	see 0x4E3520	bf67d9655
+0x4E6300	CAEPedlessSpeechAudioEntity::Terminate	FIXED	0x4E6300-0x4E6376 (all)	field-wise like the ped Terminate, attached entity reference cleared	c18bcb0c9
 0x56DA00	CAEPoliceScannerAudioEntity::Constructor	MATCH	0x56DA00-0x56DA0F (all)	-	-
 0x4E6E00	CAEPoliceScannerAudioEntity::Destructor	MATCH	0x4E6E00-0x4E6E87 (all)	-	-
 0x4E6E90	CAEPoliceScannerAudioEntity::Reset	MATCH	0x4E6E90-0x4E6EBF (all)	-	-
@@ -27,7 +27,7 @@ addr	function	verdict	asm range	note	fix commit
 0x4E7590	CAEPoliceScannerAudioEntity::UpdateParameters	MATCH	0x4E7590-0x4E7626 (all)	-6/-8 dB offsets, -40 ms, slot 0x25 exception	-
 0x4E7630	CAEPoliceScannerAudioEntity::Service	MATCH	0x4E7630-0x4E7768 (all)	jump table, 300 ms start delay, -6 dB noise, -8 dB offset without radio driver	-
 0x4E71E0	CAEPoliceScannerAudioEntity::AddAudioEvent (extra, not in slice; oracle patches it out)	MATCH	0x4E71E0-0x4E7585 (all)	all 6 data tables (194 zones, crime/instruction/vehicle/colour sounds) dumped from the exe and compared, rand(0,3) before zone lookup, direction thresholds, two-wheeler test, colour/remap, swim/jetpack	-
-0x4E53B0	CAEPedSpeechAudioEntity::GetCurrentCJMood (task 0)	FIXED	0x4E53B0-0x4E563F (all)	ASM-S82 commit fc299d043 was wrong: every path (wanted>3, >1, mission window, fall-through) joins at 0x4E557E where the override is applied (while override_time > now) and cl is loaded from the stat-based well-dressed byte [esp+0xF] (set at 0x4E5404/0x4E5410), never stale/CWanted*. Constant-true removed; override applies in all paths; override flags use their low byte; gang-banging loops over all members	496489ea7
-0x4E4170	CAEPedSpeechAudioEntity::GetVoiceAndTypeForSpecialPed (extra, S82 said MATCH)	FIXED	0x4E4170-0x4E41F0	entries with voice -1 or type -1 (maddogg janitor paul claude sindaco tenpen rose hern jethro) are rejected (return false); port accepted them and initialised the ped with voice -1	c7315bb52
-0x4E4200	CAEPedSpeechAudioEntity::GetSexFromModel (extra)	FIXED	0x4E4200-0x4E424F	type <0 / >=6 returns false (port asserted)	6f530db4a
-0x4E68D0	CAEPedSpeechAudioEntity::Initialise (extra, S82 MATCH)	FIXED	0x4E68D0-0x4E69D8 (all)	field-wise like the exe (keeps m_IsInitialized/voice/slot/ids unless set), range checks, SPC path leaves m_IsFemale to the LUT	c7315bb52
+0x4E53B0	CAEPedSpeechAudioEntity::GetCurrentCJMood (task 0)	FIXED	0x4E53B0-0x4E563F (all)	ASM-S82 commit fc299d043 was wrong: every path (wanted>3, >1, mission window, fall-through) joins at 0x4E557E where the override is applied (while override_time > now) and cl is loaded from the stat-based well-dressed byte [esp+0xF] (set at 0x4E5404/0x4E5410), never stale/CWanted*. Constant-true removed; override applies in all paths; override flags use their low byte; gang-banging loops over all members	43a872487
+0x4E4170	CAEPedSpeechAudioEntity::GetVoiceAndTypeForSpecialPed (extra, S82 said MATCH)	FIXED	0x4E4170-0x4E41F0	entries with voice -1 or type -1 (maddogg janitor paul claude sindaco tenpen rose hern jethro) are rejected (return false); port accepted them and initialised the ped with voice -1	c18bcb0c9
+0x4E4200	CAEPedSpeechAudioEntity::GetSexFromModel (extra)	FIXED	0x4E4200-0x4E424F	type <0 / >=6 returns false (port asserted)	bf67d9655
+0x4E68D0	CAEPedSpeechAudioEntity::Initialise (extra, S82 MATCH)	FIXED	0x4E68D0-0x4E69D8 (all)	field-wise like the exe (keeps m_IsInitialized/voice/slot/ids unless set), range checks, SPC path leaves m_IsFemale to the LUT	c18bcb0c9

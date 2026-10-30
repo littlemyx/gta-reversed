@@ -216,7 +216,7 @@
 | S76 | phase2b: coverage audit (COVERAGE.md) | 46 | partial 26/46 (23 M, 3 fixed) -> S76b | ClothesBuilder.cpp, CustomRoadsignMgr.cpp, GenericGameStorage.cpp |
 | S77 | phase2b: coverage audit (COVERAGE.md) | 46 | done (41 M, 5 fixed) | BuildingPool.h, Clock.cpp, ColModelPool.h, ControllerConfigManager.cpp, ControllerState.cpp, Curves.cpp |
 | S78 | phase2b: coverage audit (COVERAGE.md) | 23 | done (13 M, 9 fixed, 1 NR: DirectInput ProcessPad replaced by SDL) | KeyboardState.cpp, ModelIndices.cpp, MouseControllerState.cpp, Pad.cpp, PopCycle.cpp, TimeCycle.cpp |
-| S79 | phase2b: coverage audit (COVERAGE.md) | 50 | pending | 3dMarker.cpp, AccidentManager.cpp, BouncingPanel.cpp, BreakObject_c.cpp, C_PcSave.cpp, ClothesBuilder.cpp |
+| S79 | phase2b: coverage audit (COVERAGE.md) | 50 | done (43 M, 7 fixed) | 3dMarker.cpp, AccidentManager.cpp, BouncingPanel.cpp, BreakObject_c.cpp, C_PcSave.cpp, ClothesBuilder.cpp |
 | S80 | phase2b: coverage audit (COVERAGE.md) | 15 | done (12 M, 3 fixed) | ControllerConfigManager.cpp, DecisionMaker.cpp, Gamma.cpp, GridRef.cpp, MouseControllerState.cpp, Pad.cpp |
 | S74b | rest of S74 | 19 | done (16 M, 3 fixed) | MissionCleanup.cpp, OnscreenCounterEntry.cpp, OnscreenTimer.cpp, PatrolRoute.cpp, PlaceName.cpp, TagManager.cpp, UserDisplay.cpp |
 | S69b | rest of S69 | 10 | partial 4/10 (3 M, 1 fixed + Invert(CMatrix)) -> S69c | Collision.cpp |

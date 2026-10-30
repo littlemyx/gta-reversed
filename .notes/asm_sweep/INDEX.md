@@ -195,5 +195,5 @@
 | S58b | rest of S58 | 17 | done (11 M, 6 fixed; S58 complete; CleanUpThisPed/Vehicle re-verified MATCH) | Shopping.cpp, TheScripts.cpp |
 | S64b | rest of S64 | 31 | partial 11/31 (3 M, 8 fixed) -> S64c | VehicleAnimGroupData.cpp, VehicleRecording.cpp, VehicleSaveStructure.cpp, Weapon.cpp |
 | S57d | rest of S57c | 7 | pending | Replay.cpp |
-| S54c | rest of S54 (+ S53c ComputeClearTarget) | 14 | pending | PedGroupIntelligence.cpp, PedGroupMembership.cpp, PedGroupPlacer.cpp |
+| S54c | rest of S54 (+ S53c ComputeClearTarget) | 14 | done (10 M, 3 fixed; S53, S54 complete) | PedGroupIntelligence.cpp, PedGroupMembership.cpp, PedGroupPlacer.cpp |
 | S64c | rest of S64b | 20 | pending | VehicleAnimGroupData.cpp, VehicleRecording.cpp, VehicleSaveStructure.cpp, Weapon.cpp |

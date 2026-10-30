@@ -4,14 +4,14 @@ Base e8b05a4c4 (origin/reverse/interior_c). Result table: `.notes/asm_sweep/S71.
 
 | row | verdict | commit |
 |---|---|---|
-| CTrafficLights::DisplayActualLight (0x49DAB0-0x49E5CC) | FIXED (camera dot y,z,x) | 60f6af4fe |
-| WaterCreature_c::Init | FIXED (mirrored group offset, clamp NaN arm) | 84d8df5a6 |
-| WaterCreature_c::Update | FIXED (int rolls, wrap tests, strictness, associations) | f027e9e94 |
-| WaterCreatureManager_c::CanAddWaterCreatureAtPos | FIXED (2D, squared min dist) | 013d7aca2 |
-| WaterCreatureManager_c::Update | FIXED (signed timer, stop on failed Init) | 5bf418364 |
-| WaterCreatureManager_c::TryToFreeUp / TryToExitGroup | FIXED | ac44eb337 |
-| C3dMarker::UpdateZCoordinate | FIXED (NaN arm) | d7c0e586f |
-| C3dMarker::Render | FIXED (normalised tilt basis, tube scale) | 89048d86d |
+| CTrafficLights::DisplayActualLight (0x49DAB0-0x49E5CC) | FIXED (camera dot y,z,x) | 1520ec565 |
+| WaterCreature_c::Init | FIXED (mirrored group offset, clamp NaN arm) | 273d3dd76 |
+| WaterCreature_c::Update | FIXED (int rolls, wrap tests, strictness, associations) | b212e8e4a |
+| WaterCreatureManager_c::CanAddWaterCreatureAtPos | FIXED (2D, squared min dist) | c049f3dd4 |
+| WaterCreatureManager_c::Update | FIXED (signed timer, stop on failed Init) | 347737fa6 |
+| WaterCreatureManager_c::TryToFreeUp / TryToExitGroup | FIXED | ee4dcbce1 |
+| C3dMarker::UpdateZCoordinate | FIXED (NaN arm) | 45cc5e7f7 |
+| C3dMarker::Render | FIXED (normalised tilt basis, tube scale) | 2991130a2 |
 | CMovingThings (5), CWaterCannon::Update_OncePerFrame, CWaterCannons::Update, WaterCreatureManager Init/Exit, WaterCreature_c::Exit | MATCH | - |
 | CRope / CRopes (10), CWaterCannon::PushPeds/Render, CWaterCannons::Render, C3dMarker::AddMarker/DeleteMarkerObject | NOT_REACHED | - |
 

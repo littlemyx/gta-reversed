@@ -14,7 +14,7 @@ addr	function	verdict	asm range	note	fix commit
 0x556AE0	CRopes::Render	NOT_REACHED	-	out of budget	-
 0x556B40	CRopes::RegisterRope	NOT_REACHED	-	out of budget (port body read: init values are bit_cast exe constants, looks traced before)	-
 0x558D10	CRopes::CreateRopeForSwatPed	NOT_REACHED	-	out of budget	-
-0x49DAB0	CTrafficLights::DisplayActualLight	FIXED	0x49DAB0-0x49E5CC	whole function traced: model/colour classification, light state per direction, corona/bright-light/point-light/shadow args, ped-light corner statics and the 4 transformed quad points + RegisterOne args all MATCH; only the camera-facing dot was summed z,y,x instead of y,z,x	60f6af4fe
+0x49DAB0	CTrafficLights::DisplayActualLight	FIXED	0x49DAB0-0x49E5CC	whole function traced: model/colour classification, light state per direction, corona/bright-light/point-light/shadow args, ped-light corner statics and the 4 transformed quad points + RegisterOne args all MATCH; only the camera-facing dot was summed z,y,x instead of y,z,x	1520ec565
 0x72A280	CWaterCannon::Update_OncePerFrame	MATCH	0x72A280-0x72A3B8	unsigned lifetime test, signed %32 section advance, z drag 1/250, point integrate, Extinguish(2.0, 0.5), PushPeds every 4th (uint8)(frame+index), free when unused	-
 0x7295E0	CWaterCannon::PushPeds	NOT_REACHED	-	already carries exe-annotated bounding box init (earlier sweep); not re-traced	-
 0x728DA0	CWaterCannon::Render	NOT_REACHED	-	render geometry, out of budget	-
@@ -22,14 +22,14 @@ addr	function	verdict	asm range	note	fix commit
 0x729B30	CWaterCannons::Render	NOT_REACHED	-	not traced	-
 0x6E3F90	WaterCreatureManager_c::Init	MATCH	0x6E3F90-0x6E3FC1	128 items added to the pool in descending order, lastUpdate=0	-
 0x6E3FD0	WaterCreatureManager_c::Exit	MATCH	0x6E3FD0 (shape only)	list creatures Exit, pool cleared; same inlined Exit as WaterCreature_c::Exit (list RemoveItem, pool AddItem, World::Remove, delete, --nNoTempObjects)	-
-0x6E4F10	WaterCreatureManager_c::Update	FIXED	0x6E4F10-0x6E51E0	spawn timer difference is a signed compare (jle); group creation loop stops after the first failed Init (mov ebx,ebp). Direction/dist/camera/IsSphereVisible/GetWaterDepth(>4.5)/count rand MATCH	5bf418364
-0x6E4510	WaterCreatureManager_c::CanAddWaterCreatureAtPos	FIXED	0x6E4510-0x6E45AB	exe: 2D (x,y) squared distance (y*y+x*x), returns false when minDist^2 > d^2; port used the 3D squared distance <= minDist (not squared)	013d7aca2
-0x6E40E0	WaterCreatureManager_c::TryToFreeUpWaterCreatures	FIXED	0x6E40E0-0x6E4152	numFreed >= numToFree is tested only after a free	ac44eb337
-0x6E45B0	WaterCreatureManager_c::TryToExitGroup	FIXED	0x6E45B0-0x6E466B	group stays when dist^2 <= 3600 (port <), sum order x,z,y	ac44eb337
-0x6E4160	WaterCreature_c::Init	FIXED	0x6E4160-0x6E44F5	group offset = pos - (pos + dir*dist), i.e. mirrored (port stored +dir*dist); fMinZ clamp is a>b?a:b; rest (object flags, jellyfish drawlast, rand order, heading/speed) MATCH	84d8df5a6
+0x6E4F10	WaterCreatureManager_c::Update	FIXED	0x6E4F10-0x6E51E0	spawn timer difference is a signed compare (jle); group creation loop stops after the first failed Init (mov ebx,ebp). Direction/dist/camera/IsSphereVisible/GetWaterDepth(>4.5)/count rand MATCH	347737fa6
+0x6E4510	WaterCreatureManager_c::CanAddWaterCreatureAtPos	FIXED	0x6E4510-0x6E45AB	exe: 2D (x,y) squared distance (y*y+x*x), returns false when minDist^2 > d^2; port used the 3D squared distance <= minDist (not squared)	c049f3dd4
+0x6E40E0	WaterCreatureManager_c::TryToFreeUpWaterCreatures	FIXED	0x6E40E0-0x6E4152	numFreed >= numToFree is tested only after a free	ee4dcbce1
+0x6E45B0	WaterCreatureManager_c::TryToExitGroup	FIXED	0x6E45B0-0x6E466B	group stays when dist^2 <= 3600 (port <), sum order x,z,y	ee4dcbce1
+0x6E4160	WaterCreature_c::Init	FIXED	0x6E4160-0x6E44F5	group offset = pos - (pos + dir*dist), i.e. mirrored (port stored +dir*dist); fMinZ clamp is a>b?a:b; rest (object flags, jellyfish drawlast, rand order, heading/speed) MATCH	273d3dd76
 0x6E3E60	WaterCreature_c::Exit	MATCH	0x6E3E60-0x6E3EA1	list.RemoveItem(0xC1F93C), pool.AddItem(0xC1F930), World::Remove, delete, --count	-
-0x6E4670	WaterCreature_c::Update	FIXED	0x6E4670-0x6E4F10	5%/10% rolls use the int rand overload; (speed*(d-2))*1.1; min/max NaN arms; break-out strictly > 5*maxDist; heading wrap tests are heading+PI < target / heading-PI > target (port had target+PI < heading first); unsigned swim timers; draw-distance exit strictly > 60^2 with z,y,x sum	f027e9e94
+0x6E4670	WaterCreature_c::Update	FIXED	0x6E4670-0x6E4F10	5%/10% rolls use the int rand overload; (speed*(d-2))*1.1; min/max NaN arms; break-out strictly > 5*maxDist; heading wrap tests are heading+PI < target / heading-PI > target (port had target+PI < heading first); unsigned swim timers; draw-distance exit strictly > 60^2 with z,y,x sum	b212e8e4a
 0x722230	C3dMarker::AddMarker	NOT_REACHED	-	not traced	-
 0x722390	C3dMarker::DeleteMarkerObject	NOT_REACHED	-	Locked hook (port-only fix #1514)	-
-0x7223D0	C3dMarker::Render	FIXED	0x7223D0-0x722684	cull mode, normal test, alpha toggle (0x8D5E44), colour, zwrite/cull order MATCH; tilt matrix is normalise(Z x n), normalise(n x right) (CMatrix::WithUp does not normalise); Scale(size) then z*20 per row for the tube (exe 0x5A2E60 scales components, not axes)	89048d86d
-0x724D40	C3dMarker::UpdateZCoordinate	FIXED	0x724D40-0x724DFD	NaN distance returns (fcomp + jp); FindGroundZFor3DCoord(z+1), height - zDist*0.05, last-map-read stores MATCH	d7c0e586f
+0x7223D0	C3dMarker::Render	FIXED	0x7223D0-0x722684	cull mode, normal test, alpha toggle (0x8D5E44), colour, zwrite/cull order MATCH; tilt matrix is normalise(Z x n), normalise(n x right) (CMatrix::WithUp does not normalise); Scale(size) then z*20 per row for the tube (exe 0x5A2E60 scales components, not axes)	2991130a2
+0x724D40	C3dMarker::UpdateZCoordinate	FIXED	0x724D40-0x724DFD	NaN distance returns (fcomp + jp); FindGroundZFor3DCoord(z+1), height - zDist*0.05, last-map-read stores MATCH	45cc5e7f7

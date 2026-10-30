@@ -702,7 +702,7 @@ void CEventDamage::ComputeDamageAnim(CPed* ped, bool bMakeActiveTaskAbortable) {
                 bMultiplyForceWithPedStrength = true;
         }
         if (ped->bUpperBodyDamageAnimsOnly || ped->bIsDucking || ped->m_pAttachedTo || !bMultiplyForceWithPedStrength || !m_pSourceEntity) {
-            if (m_weaponType >= WEAPON_CHAINSAW || ped->m_fHealth >= fHealthThreshold) {
+            if (m_weaponType >= WEAPON_CHAINSAW || !(ped->m_fHealth < fHealthThreshold)) { // exe 0x4B4239-0x4B4248: fcomp + jp, a NaN health is NOT 'below the threshold'
                 if (m_weaponType != WEAPON_FALL ||  !m_pSourceEntity  || !m_pSourceEntity->GetIsTypeObject()) {
                     if (sourceEntityTaskFight && sourceEntityTaskFight->m_nCurrentMove == FIGHT_ATTACK_FIGHTIDLE && !ped->IsPlayer() && ped->m_nMoveState > PEDMOVE_WALK)
                         m_bFallDown = true;
@@ -761,13 +761,13 @@ void CEventDamage::ComputeDamageAnim(CPed* ped, bool bMakeActiveTaskAbortable) {
                     bPlayBodyPartHitAnim = false;
                 }
                 else {
-                    playerData->m_nHitAnimDelayTimer = CTimer::GetTimeInMS() + 2500; // originally 2500.0f
+                    playerData->m_nHitAnimDelayTimer = NOTSA_FTOL(uint32, (float)((x87d)CTimer::GetTimeInMS() + (x87d)2500.0f)); // exe 0x4B4491-0x4B44AC: fild + fadd 2500.0 (rounded to float) + ftol
                 }
             }
             if (bPlayBodyPartHitAnim) {
                 if (m_weaponType < WEAPON_PISTOL || m_weaponType > WEAPON_LAST_WEAPON) {
                     m_nAnimID = (AnimationId)(m_ucDirection + ANIM_ID_HIT_FRONT);
-                    if (m_ucDirection || m_damageResponse.m_fDamageArmor + m_damageResponse.m_fDamageHealth <= 20.0f) {
+                    if (m_ucDirection || !(m_damageResponse.m_fDamageArmor + m_damageResponse.m_fDamageHealth > 20.0f)) { // exe 0x4B46D0-0x4B46DB: NaN is not 'above 20'
                         if (m_ucDirection == 2 && m_weaponType <= WEAPON_CANE)
                             m_nAnimID = ANIM_ID_HIT_BEHIND;
                     }
@@ -874,9 +874,9 @@ void CEventDamage::ComputeDamageAnim(CPed* ped, bool bMakeActiveTaskAbortable) {
             if (ped->IsPlayer()) {
                 if (CTimer::GetTimeInMS() > ped->GetPlayerData()->m_nHitAnimDelayTimer && ped->m_nPedState != PEDSTATE_DRIVING) {
                     if (m_weaponType == WEAPON_M4)
-                        ped->GetPlayerData()->m_nHitAnimDelayTimer = NOTSA_FTOL(uint32, float(CTimer::GetTimeInMS()) + 2500.0f);
+                        ped->GetPlayerData()->m_nHitAnimDelayTimer = NOTSA_FTOL(uint32, (float)((x87d)CTimer::GetTimeInMS() + (x87d)2500.0f)); // exe: the integer is added in the FPU (one rounding), not converted to float first
                     else
-                        ped->GetPlayerData()->m_nHitAnimDelayTimer = NOTSA_FTOL(uint32, float(CTimer::GetTimeInMS()) + 1500.0f);
+                        ped->GetPlayerData()->m_nHitAnimDelayTimer = NOTSA_FTOL(uint32, (float)((x87d)CTimer::GetTimeInMS() + (x87d)1500.0f));
                 }
                 else {
                     m_nAnimID = ANIM_ID_NO_ANIMATION_SET;
@@ -898,11 +898,12 @@ void CEventDamage::ComputeDamageAnim(CPed* ped, bool bMakeActiveTaskAbortable) {
         if (fForceFactor > 0.0f) {
             ped->bWasStanding = false;
             ped->bIsStanding = false;
-            CVector force = m_pSourceEntity->GetPosition() - ped->GetPosition();
-            force.Normalise();
-            force *= -fForceFactor;
-            force.z = 5.0f;
-            ped->ApplyMoveForce(force);
+            // exe 0x4B47B1-0x4B481A: the push direction is the NORMALISED 2D (x, y) difference source - ped (CVector2D::Normalise 0x44E480), the port normalised the 3D vector
+            const auto& srcPos = m_pSourceEntity->GetPosition();
+            const auto& pedPos = ped->GetPosition();
+            CVector2D   dir2D{ srcPos.x - pedPos.x, srcPos.y - pedPos.y };
+            dir2D.Normalise();
+            ped->ApplyMoveForce(CVector{ -(dir2D.x * fForceFactor), -(dir2D.y * fForceFactor), 5.0f });
         }
     }
 }

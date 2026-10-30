@@ -68,36 +68,55 @@ CTask* CTaskComplexKillPedGroupOnFoot::CreateSubTask(eTaskType taskType, CPed* p
 
 // 0x622450
 CPed* CTaskComplexKillPedGroupOnFoot::ComputeNearestLivingGroupPed(CPed& ped, bool flag) {
-    const auto pedToIgnore = [&]() -> CPed* {
-        if (!flag) {
-            if (const auto grp = ped.GetGroup()) {
-                if (const auto leader = grp->GetMembership().GetLeader()) {
-                    return leader->m_pTargetedObject && leader->m_pTargetedObject->GetIsTypePed()
-                        ? leader->m_pTargetedObject->AsPed()
-                        : ComputeNearestLivingGroupPed(ped, true);
-                }
+    // 0x622467..0x6224BE - the ped to ignore is the one the group's leader targets (only when `ped` is not the leader itself);
+    // the same ped is also the fallback result (0x6225D7) if nobody else qualified.
+    CPed* pedToIgnore{};
+    if (!flag) {
+        if (const auto grp = ped.GetGroup()) {
+            if (const auto leader = grp->GetMembership().GetLeader(); leader && leader != &ped) {
+                const auto target = leader->m_pTargetedObject;
+                pedToIgnore = target && target->GetIsTypePed()
+                    ? target->AsPed()
+                    : ComputeNearestLivingGroupPed(*leader, true); // 0x6224B0: the exe passes the LEADER (eax), not `ped`
             }
         }
-        return nullptr;
-    }();
-    const auto [closest, distSq] = CPedGroups::GetGroup(m_grpId).GetMembership().GetMemberClosestToIf(&ped, [&, this](CPed& mem) -> bool {
-        if (   &mem == pedToIgnore
-            || !mem.IsAlive()
-            || mem.m_fHealth <= 0.f
-            || CPedGroups::AreInSameGroup(&mem, &ped)
-        ) {
-            return false;
+    }
+
+    auto&        members = CPedGroups::GetGroup(m_grpId).GetMembership();
+    const auto   pedPos  = ped.GetPosition();
+    CPed*        closest{};
+    float        closestDistSq = std::numeric_limits<float>::max(); // 0x7F7FFFFF
+    for (int32 i = 0; i < 8; i++) {
+        const auto mem = members.GetMember(i);
+        if (!mem || mem == pedToIgnore || !mem->IsAlive()) {
+            continue;
         }
-        if (mem.IsPlayer()) {
-            if (const auto wanted = mem.AsPlayer()->GetWanted()) {
+        if (!(mem->m_fHealth > 0.f)) { // FCOMP + `test ah, 0x41` (<= 0 or NaN => skip)
+            continue;
+        }
+        if (mem == &ped || CPedGroups::AreInSameGroup(mem, &ped)) {
+            continue;
+        }
+        // z, y, x sum in extended precision, stored as float
+        const auto& memPos = mem->GetPosition();
+        const x87d  dx     = (x87d)memPos.x - (x87d)pedPos.x;
+        const x87d  dy     = (x87d)memPos.y - (x87d)pedPos.y;
+        const x87d  dz     = (x87d)memPos.z - (x87d)pedPos.z;
+        const float distSq = (float)((dz * dz + dy * dy) + dx * dx);
+        if (!(distSq < closestDistSq)) { // FCOMP + `test ah, 5` + JP (NaN => skip)
+            continue;
+        }
+        if (mem->IsPlayer()) {
+            if (const auto wanted = mem->AsPlayer()->GetWanted()) {
                 if (wanted->m_NumCopsInPursuit && ped.m_nPedType != PED_TYPE_COP && ped.IsCreatedBy(PED_GAME)) {
-                    return false;
+                    continue;
                 }
             }
         }
-        return true;
-    });
-    return closest;
+        closestDistSq = distSq;
+        closest       = mem;
+    }
+    return closest ? closest : pedToIgnore;
 }
 
 // 0x629570..0x6295D8 / 0x62963F..0x629666: the exe stores the new target raw and registers it only when there is one (the old reference is cleaned up by the caller)

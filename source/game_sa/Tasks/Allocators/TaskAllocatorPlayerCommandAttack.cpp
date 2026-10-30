@@ -15,7 +15,7 @@ CTaskAllocatorPlayerCommandAttack::CTaskAllocatorPlayerCommandAttack(CPed* targe
 
 // 0x69C4D0
 void CTaskAllocatorPlayerCommandAttack::AllocateTasks(CPedGroupIntelligence* intel) {
-    if (IsPedTypePlayer(m_PedTypeToAttack)) {
+    if ((int32)m_PedTypeToAttack < 0) { // 0x69C4FF: `cmp [this+0x1C], 0; jl` = PED_TYPE_NONE (the player ped types take the ped type path below)
         if (m_Target) {
             CTaskAllocatorAttack::AllocateTasks(intel);
         }
@@ -47,7 +47,7 @@ void CTaskAllocatorPlayerCommandAttack::AllocateTasks(CPedGroupIntelligence* int
         }
 
         // 0x69C60F
-        CPed* target;
+        CPed* target{}; // the exe leaves it as stack garbage when the formation has no target for `p`
         CFormation::ReturnTargetPedForPed(p, &target);
         tseq.AddTask(new CTaskComplexKillPedOnFoot{ target, -1, 0, 0, 0, 2 });
 

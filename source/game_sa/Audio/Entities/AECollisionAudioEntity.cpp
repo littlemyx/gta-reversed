@@ -169,114 +169,141 @@ eCollisionSoundStatus CAECollisionAudioEntity::GetCollisionSoundStatus(CEntity* 
 
 // 0x4DB150
 void CAECollisionAudioEntity::PlayOneShotCollisionSound(CEntity* entityA, CEntity* entityB, eSurfaceType surfaceA, eSurfaceType surfaceB, float impulseMagnitude, const CVector& posn) {
-    const auto ProcessSound = [&](CEntity* eA, CEntity* eB, eSurfaceType sA, eSurfaceType sB) {
-        if (sB >= TOTAL_NUM_COLLISION_SURFACE_TYPES) {
-            return false;
+    // The exe loops twice (0x4DB190): pass 0 plays the sound of `surfaceA` (the other surface being `surfaceB`), pass 1 the sound of `surfaceB`. Every pass registers
+    // (surfaceA, surfaceB) in the list; the entities are swapped in pass 1. `impulseMagnitude` is modified in place (pool ball x5, 0x4DB224) and carried over to pass 1.
+    for (int32 pass = 0; pass < 2; pass++) {
+        const auto  sound      = pass == 0 ? surfaceA : surfaceB; // 0x4DB1A7 / 0x4DB1D1: `bl`
+        const auto  other      = pass == 0 ? surfaceB : surfaceA; // 0x4DB1B2 / 0x4DB1CA: `[esp+0x13]`
+        CEntity* const entity1 = pass == 0 ? entityA : entityB;   // 0x4DB1AE / 0x4DB1DC..: `[esp+0x20]`
+        CEntity* const entity2 = pass == 0 ? entityB : entityA;   // `[esp+0x1c]`
+
+        if (sound >= TOTAL_NUM_COLLISION_SURFACE_TYPES) { // 0x4DB1E6: `jae` -> next pass
+            continue;
         }
-        if (sB == AE_SURFACE_TYPE_POOL_BALL && sA != AE_SURFACE_TYPE_POOL_BALL) {
-            return false;
-        }
-        const auto isMissionScriptSurface = notsa::contains({ AE_SURFACE_TYPE_POOL_BALL, AE_SURFACE_TYPE_BASKETBALL, AE_SURFACE_TYPE_PUNCHBAG }, sB); // 0x4DB23E
-        const auto slot = isMissionScriptSurface
-            ? SND_BANK_SLOT_MISSION4
-            : SND_BANK_SLOT_COLLISIONS;
-        if (isMissionScriptSurface) {
-            const auto bank = notsa::find_value(notsa::make_mapping<eSurfaceType, eSoundBank>({
-                { AE_SURFACE_TYPE_POOL_BALL, SND_BANK_SCRIPT_POOL_MINIGAME },
-                { AE_SURFACE_TYPE_BASKETBALL, SND_BANK_SCRIPT_BASKETBALL },
-                { AE_SURFACE_TYPE_PUNCHBAG, SND_BANK_SCRIPT_GYM },
-            }), sB);
-            if (!AEAudioHardware.IsSoundBankLoaded(bank, slot)) {
-                return false;
+        auto slot = SND_BANK_SLOT_COLLISIONS;
+        if (sound == AE_SURFACE_TYPE_POOL_BALL) { // 0x4DB1F3
+            if (other != sound) { // 0x4DB1F8: leaves the loop
+                return;
+            }
+            slot = SND_BANK_SLOT_MISSION4;
+            if (!AEAudioHardware.IsSoundBankLoaded(SND_BANK_SCRIPT_POOL_MINIGAME, slot)) { // 0x4DB210
+                return;
+            }
+            impulseMagnitude *= 5.f; // 0x858C80
+        } else {
+            if (other == AE_SURFACE_TYPE_POOL_BALL) { // 0x4DB233: leaves the loop
+                return;
+            }
+            if (sound == AE_SURFACE_TYPE_BASKETBALL || sound == AE_SURFACE_TYPE_PUNCHBAG) { // 0x4DB23B / 0x4DB249
+                slot = SND_BANK_SLOT_MISSION4;
+                if (!AEAudioHardware.IsSoundBankLoaded(sound == AE_SURFACE_TYPE_BASKETBALL ? SND_BANK_SCRIPT_BASKETBALL : SND_BANK_SCRIPT_GYM, slot)) {
+                    return;
+                }
             }
         }
-        const auto soundID = ChooseCollisionSoundID(sB); // 0x4DB280
-        if (soundID == -1) {
-            return true;
+
+        const auto soundID = ChooseCollisionSoundID(sound); // 0x4DB275
+        if ((int16)soundID == -1) {
+            continue;
         }
-        auto offset = ((float)(gCollisionLookup[sA].ParamD) * impulseMagnitude) * ExeRecip(100.f);
-        if (sB == AE_SURFACE_TYPE_BMX && sA == SURFACE_PED) { // 0x4DB2A6
+
+        // 0x4DB28A: `ParamD` of the OTHER surface; x 0.01f (0x858C58, no division), x10 for a BMX hitting a ped, x500 (0x858B58)
+        auto offset = (float)(gCollisionLookup[other].ParamD) * impulseMagnitude * ExeRecip(100.f);
+        if (sound == AE_SURFACE_TYPE_BMX && other == SURFACE_PED) {
             offset *= 10.f;
         }
         offset *= 500.f;
-        const auto startAt = 100 - std::min(100, NOTSA_FTOL(int32, std::floor(offset))); // 0x4DB2FB
+        // 0x4DB2C2: the exe keeps the converted value in 16 bits (`cmp ax, 100` / `movsx eax, ax` / `cmp cx, 100`): an impulse above 65 wraps (a big crash is silent, like in the exe)
+        int16 progress = (int16)NOTSA_FTOL(int32, std::floor(offset));
+        if (progress > 100) {
+            progress = 100;
+        }
+        const auto startAt = (int16)(100 - progress); // 0x4DB2F6
         if (startAt >= 100) {
-            return true;
+            continue;
         }
-        const auto PlaySound = [&](float volume, int32 startAt) {
-            volume += GetDefaultVolume(AE_GENERAL_COLLISION) - 3.f;
-            if (volume <= -100.f) { // 0x4DB37E
-                return;
-            }
-            auto* const sound = AESoundManager.PlaySound({
-                .BankSlotID        = slot,
-                .SoundID           = soundID,
-                .AudioEntity       = this,
-                .Pos               = posn,
-                .Volume            = volume,
-                .RollOffFactor     = 2.f,
-                .Flags             = SOUND_ROLLED_OFF | SOUND_START_PERCENTAGE | SOUND_REQUEST_UPDATES,
-                .FrequencyVariance = 0.02f
-            });
-            m_CollisionSoundIDHistory[sB] = soundID;
-            if (sound) { // 0x4DB3E7
-                AddCollisionSoundToList(entityA, entityB, sA, sB, sound, COLLISION_SOUND_ONE_SHOT);
-            }
-        };
-        const auto maxStartAt = gCollisionLookup[sB].MaxStartAtPercentage;
-        if (startAt > maxStartAt) { // 0x4DB32D
-            PlaySound(CAEAudioUtility::AudioLog10((float)(100 - startAt) / (float)(100 - maxStartAt)) * 20.f, maxStartAt);
-        } else {
-            PlaySound(0.f, startAt);
-        }
-        return true;
-    };
 
-    if (!ProcessSound(entityA, entityB, surfaceA, surfaceB)) {
-        return;
-    }
-    if (!ProcessSound(entityB, entityA, surfaceB, surfaceA)) {
-        return;
+        auto volume = GetDefaultVolume(AE_GENERAL_COLLISION) - 3.f; // 0x4DB30D: `fild; fsub 3.0`
+        const auto maxStartAt = gCollisionLookup[sound].MaxStartAtPercentage;
+        auto playTime = startAt;
+        if ((int32)startAt > maxStartAt) { // 0x4DB336
+            // 0x4DB349: `fild (100 - startAt); fidiv (100 - max)`, raw `fyl2x` (no floor), x20 (0x858BA4), added to the volume
+            volume += CAEAudioUtility::AudioLog10((float)(100 - (int32)startAt) / (float)(100 - maxStartAt)) * 20.f;
+            playTime = (int16)(uint16)maxStartAt;
+        }
+        if (volume <= -100.f) { // 0x4DB373: `fcomp -100.0; jnp` (unordered plays)
+            continue;
+        }
+        auto* const snd = AESoundManager.PlaySound({
+            .BankSlotID        = slot,
+            .SoundID           = soundID,
+            .AudioEntity       = this,
+            .Pos               = posn,
+            .Volume            = volume,
+            .RollOffFactor     = 2.f,
+            .Flags             = SOUND_ROLLED_OFF | SOUND_START_PERCENTAGE | SOUND_REQUEST_UPDATES, // 0x424
+            .FrequencyVariance = 0.02f,
+            .PlayTime          = playTime, // 0x4DB388: `push ecx`
+        });
+        m_CollisionSoundIDHistory[sound] = soundID; // 0x4DB3E2
+        if (snd) {
+            AddCollisionSoundToList(entity1, entity2, surfaceA, surfaceB, snd, COLLISION_SOUND_ONE_SHOT);
+        }
     }
 }
 
-// based on `PlayLoopingCollisionSound` and `UpdateLoopingCollisionSound`
-std::pair<float, float> CAECollisionAudioEntity::GetLoopingCollisionSoundVolumeAndSpeed(CEntity* entityA, CEntity* entityB, eSurfaceType surfaceA, eSurfaceType surfaceB, bool isForceLooping) {
-    const auto CalculateVolumeAtSpeed = [&](float speed) {
-        return GetDefaultVolume(AE_GENERAL_COLLISION) + CAEAudioUtility::AudioLog10(std::min(speed / 0.75f, 1.f) * 20.f);
+// based on `PlayLoopingCollisionSound` (0x4DB450) and `UpdateLoopingCollisionSound` (0x4DA540). The two exe functions share the "which velocity" part but NOT the speed formula:
+//   Play  (0x4DB5D7-0x4DB68A): mag == 0 -> volume -100, speed 0.75 * 0.8; else s = min(sqrt(mag * (A.ParamD * B.ParamD) * 1e-4f) * 3, 0.3)
+//   Update(0x4DA6A5-0x4DA747): no mag == 0 test, no sqrt:      s = min(mag * (A.ParamD * B.ParamD) * 1e-4f * 3, 1.0)
+// both: force-looping s *= 1/6; volume = default + 20 * log10(min(4/3 * s, 1)) (raw `fyl2x`, no `AudioLog10` floor); speed = max(s, 0.75) * 0.8.
+std::pair<float, float> CAECollisionAudioEntity::GetLoopingCollisionSoundVolumeAndSpeed(CEntity* entityA, CEntity* entityB, eSurfaceType surfaceA, eSurfaceType surfaceB, bool isForceLooping, bool isPlay) {
+    // The exe sums the squares z, y, x (0x4DA58F..: z*z + y*y + x*x)
+    const auto SqZYX = [](const CVector& v) { return v.z * v.z + v.y * v.y + v.x * v.x; };
+    const auto MagnitudeOfBigger = [&](const CVector& velocity, const CVector& turn) { // 0x4DA5BF: `jp` = turn when turn >= velocity or unordered
+        return std::sqrt(!(SqZYX(turn) < SqZYX(velocity)) ? SqZYX(turn) : SqZYX(velocity));
     };
-    const auto GetVolumeAndSpeedForPhysical = [&](CVector velocity, CVector turn) -> std::pair<float, float> {
-        const auto mag = std::sqrt(std::max(turn.SquaredMagnitude(), velocity.SquaredMagnitude()));
-        if (mag == 0.f) {
-            return { -100.f, 0.f };
-        } else {
-            auto speed = std::min(std::sqrt(mag * ((gCollisionLookup[surfaceA].ParamD * gCollisionLookup[surfaceB].ParamD) / 10000.f)) * 3.f, 0.3f);
-            if (isForceLooping) {
-                speed /= 6.f;
-            }
-            return { CalculateVolumeAtSpeed(speed), speed };
-        }
-    };
-    
+
+    float mag; // 0x4DA69F: `fld 0.0` for anything but a car colliding with a non-ped
     if (surfaceA == SURFACE_CAR && surfaceB == SURFACE_CAR) {
-        const auto vehA = entityA->AsVehicle(),
-                   vehB = entityB->AsVehicle();
-        return GetVolumeAndSpeedForPhysical(vehA->GetMoveSpeed() - vehB->GetMoveSpeed(), vehA->GetTurnSpeed() - vehB->GetTurnSpeed());
-    }
-
-    if ((surfaceB != SURFACE_PED && surfaceA == SURFACE_CAR) || (surfaceA != SURFACE_PED && surfaceB == SURFACE_CAR)) {
-        assert(entityA->GetIsTypePhysical());
-
+        const auto* const vehA = entityA->AsVehicle();
+        const auto* const vehB = entityB->AsVehicle();
+        mag = MagnitudeOfBigger(vehA->GetMoveSpeed() - vehB->GetMoveSpeed(), vehA->GetTurnSpeed() - vehB->GetTurnSpeed());
+    } else if ((surfaceB != SURFACE_PED && surfaceA == SURFACE_CAR) || (surfaceA != SURFACE_PED && surfaceB == SURFACE_CAR)) { // 0x4DA620
         const auto* const physicalA = entityA->AsPhysical();
-        return GetVolumeAndSpeedForPhysical(physicalA->GetMoveSpeed(), physicalA->GetTurnSpeed());
+        mag = MagnitudeOfBigger(physicalA->GetMoveSpeed(), physicalA->GetTurnSpeed());
+    } else {
+        mag = 0.f;
     }
 
-    return { -100.f, 0.f };
+    float s;
+    if (isPlay) {
+        if (mag == 0.f) { // 0x4DB5D7
+            return { -100.f, 0.75f * 0.8f };
+        }
+        s = std::sqrt(mag * (float)(gCollisionLookup[surfaceA].ParamD * gCollisionLookup[surfaceB].ParamD) * 1e-4f) * 3.f; // 0x4DB5F1: 0x858FC4 = 1e-4f, no division
+        if (!(s < 0.3f)) { // 0x4DB610: 0x858C24
+            s = 0.3f;
+        }
+    } else {
+        s = mag * (float)(gCollisionLookup[surfaceA].ParamD * gCollisionLookup[surfaceB].ParamD) * 1e-4f * 3.f; // 0x4DA6B7
+        if (!(s < 1.f)) { // 0x4DA6CB
+            s = 1.f;
+        }
+    }
+    if (isForceLooping) {
+        s *= 0.16666667f; // 0x85F0A0
+    }
+    auto w = 1.3333334f * s; // 0x85F09C
+    if (!(w < 1.f)) {
+        w = 1.f;
+    }
+    const auto volume = (float)(X87R(std::log10(X87W((x87d)w)) * (x87d)20.0) + (x87d)GetDefaultVolume(AE_GENERAL_COLLISION)); // raw fyl2x: log10(0) = -inf
+    return { volume, (s > 0.75f ? s : 0.75f) * 0.8f }; // 0x4DA741: `fcom 0.75; je` keeps s only when s > 0.75
 }
 
 // 0x4DB450
 void CAECollisionAudioEntity::PlayLoopingCollisionSound(CEntity* entityA, CEntity* entityB, eSurfaceType surfaceA, eSurfaceType surfaceB, float force, const CVector& pos, bool isForceLooping) {
-    const auto [volume, speed] = GetLoopingCollisionSoundVolumeAndSpeed(entityA, entityB, surfaceA, surfaceB, isForceLooping);
+    const auto [volume, speed] = GetLoopingCollisionSoundVolumeAndSpeed(entityA, entityB, surfaceA, surfaceB, isForceLooping, true);
 
     const auto PlaySound = [&](eSoundID soundID) {
         if (auto* const sound = AESoundManager.PlaySound({
@@ -286,7 +313,7 @@ void CAECollisionAudioEntity::PlayLoopingCollisionSound(CEntity* entityA, CEntit
             .Pos           = pos,
             .Volume        = volume,
             .RollOffFactor = 2.f,
-            .Speed         = std::max(speed, 0.75f) * 0.8f,
+            .Speed         = speed,
             .Flags         = SOUND_REQUEST_UPDATES,
             })
         ) {
@@ -345,9 +372,21 @@ void CAECollisionAudioEntity::UpdateLoopingCollisionSound(
     const CVector& pos,
     bool           isForceLooping
 ) {
-    const auto [volume, speed] = GetLoopingCollisionSoundVolumeAndSpeed(entityA, entityB, surfaceA, surfaceB, isForceLooping);
-    sound->SetSpeed(notsa::step_to(std::max(0.75f, speed), sound->GetSpeed(), 0.1f));
-    sound->SetVolume(notsa::step_to(volume, sound->GetVolume(), 1.0f));
+    const auto [volume, speed] = GetLoopingCollisionSoundVolumeAndSpeed(entityA, entityB, surfaceA, surfaceB, isForceLooping, false);
+    // 0x4DA74F: the CURRENT volume (+0x14) steps towards the target by 1.0, then the current speed (+0x1C) by 0.1 (0x858B1C). `StepTowards` = the exe's fcom ladders (unordered: unchanged)
+    const auto StepTowards = [](float cur, float target, float step) {
+        if (target > cur) {
+            const auto up = cur + step;
+            return up < target ? up : target;
+        }
+        if (target < cur) {
+            const auto down = cur - step;
+            return down > target ? down : target;
+        }
+        return cur;
+    };
+    sound->SetVolume(StepTowards(sound->GetVolume(), volume, 1.0f));
+    sound->SetSpeed(StepTowards(sound->GetSpeed(), speed, 0.1f));
     sound->SetPosition(pos);
 }
 
@@ -430,7 +469,7 @@ void CAECollisionAudioEntity::ReportGlassCollisionEvent(eAudioEvents event, cons
     case AE_GLASS_BREAK_FAST:      PlayCollisionSound(56, 1.f);                                                break;
     case AE_GLASS_HIT_GROUND:      PlayCollisionSound(CAEAudioUtility::GetRandomNumberInRange(15, 18), 1.f);   break;
     case AE_GLASS_HIT_GROUND_SLOW: PlayCollisionSound(CAEAudioUtility::GetRandomNumberInRange(15, 18), 0.56f); break;
-    default:                       NOTSA_UNREACHABLE();
+    default:                       break; // 0x4DA089: `ja` to the epilogue for anything outside 123..128
     }
 }
 
@@ -482,8 +521,11 @@ void CAECollisionAudioEntity::ReportWaterSplash(CPhysical* physical, float volum
         return;
     }
     const auto PlaySound = [&](int32 eventID, float speed, float volumeOffset, uint32 interval) {
-        if (volume <= -100.f) { // 0x4DAF90
-            volume = std::max(CAEAudioUtility::AudioLog10(std::min(0.6f, physical->GetMoveSpeed().Magnitude())) * 20.f, -18.f);
+        if (!(volume > -100.f)) { // 0x4DAF98: `fcomp -100.0; jne` (<= or unordered)
+            // 0x4DAFB2..0x4DB04D: log10(min(|move speed|, 0.6) * 1/0.6 (0x85F0A8)) * 20 with a raw `fyl2x`, at least -18 (0x85F0A4)
+            const auto mag = physical->GetMoveSpeed().Magnitude();
+            const auto lg  = (float)X87R(std::log10(X87W((x87d)((mag < 0.6f ? mag : 0.6f) * 1.6666666f))) * (x87d)20.0);
+            volume = lg > -18.f ? lg : -18.f;
         }
         volume += GetDefaultVolume(AE_WATER_SPLASH) + volumeOffset;
 
@@ -495,7 +537,8 @@ void CAECollisionAudioEntity::ReportWaterSplash(CPhysical* physical, float volum
             .Volume             = volume,
             .RollOffFactor      = 2.5f,
             .Speed              = speed,
-            .Flags              = SOUND_REQUEST_UPDATES,
+            .Flags              = SOUND_REQUEST_UPDATES | SOUND_LIFESPAN_TIED_TO_PHYSICAL_ENTITY, // 0x4DB070: 0x84 + `RegisterWithPhysicalEntity` (0x4DB0AA) on this one too
+            .RegisterWithEntity = physical,
             .EventID            = 1,
         });
         AESoundManager.PlaySound({
@@ -505,7 +548,7 @@ void CAECollisionAudioEntity::ReportWaterSplash(CPhysical* physical, float volum
             .Pos                = physical->GetPosition(),
             .Volume             = volume,
             .RollOffFactor      = 2.5f,
-            .Speed              = speed,
+            .Speed              = 0.f, // 0x4DB0E2: `push 0` (the delayed sound is retargeted to `speed` by `UpdateParameters` once the delay is over)
             .Flags              = SOUND_REQUEST_UPDATES | SOUND_LIFESPAN_TIED_TO_PHYSICAL_ENTITY,
             .RegisterWithEntity = physical,
             .EventID            = eventID,
@@ -578,7 +621,7 @@ void CAECollisionAudioEntity::ReportObjectDestruction(CEntity* entity) {
     };
     if (entity->GetModelId() == MODEL_MOLOTOV) { // 0x4DAB7B
         PlaySoundForSurface(SURFACE_GLASS);
-    } else if (const auto cd = entity->GetColData()) { // 0x4DAB89
+    } else if (const auto cd = entity->GetModelInfo()->GetColModel()->m_pColData) { // 0x4DACAE: the MODEL's collision (`[model + 0x14]`), not `GetColModel()` (vehicle special collisions) // 0x4DAB89
         if (const auto spheres = cd->GetSpheres(); !spheres.empty()) {
             PlaySoundForSurface(spheres.front().GetSurfaceType());
         } else if (const auto boxes = cd->GetBoxes(); !boxes.empty()) {
@@ -616,7 +659,7 @@ void CAECollisionAudioEntity::ReportCollision(
         CEntity* eA, eSurfaceType& sA,
         CEntity* eB, eSurfaceType& sB
     ) {
-        if (!eA->GetIsTypeVehicle()) {      
+        if (!eA->GetIsTypeVehicle()) {
             switch (eA->GetModelId()) {
             case MODEL_MOLOTOV:
                 return SURFACE_GLASS;
@@ -640,12 +683,12 @@ void CAECollisionAudioEntity::ReportCollision(
             if (eAModelId == ModelIndices::MI_IMY_GRAY_CRATE) {
                 return SURFACE_WOOD_SOLID;
             }
-            if (eA->GetIsTypePhysical() && eA->AsPhysical()->physicalFlags.bMakeMassTwiceAsBig) {
+            if (eA->GetIsTypePhysical() && eA->AsPhysical()->physicalFlags.bDisableZ) { // 0x4DBC11: `test byte [esi+0x40], 0x80` (bit 7, not bit 0)
                 return AE_SURFACE_TYPE_POOL_BALL;
             }
             return sA;        
         }
-        if (eB && eB->GetIsTypeBuilding() && normal && eA->GetUp().Dot(*normal) > 0.6f) {
+        if (eB && eB->GetIsTypeBuilding() && normal && (eA->GetUp().z * normal->z + eA->GetUp().y * normal->y + eA->GetUp().x * normal->x) > 0.6f) { // 0x4DBA9F: z, y, x
             if (eA->AsVehicle()->IsSubBMX()) {
                 return AE_SURFACE_TYPE_BMX;
             }

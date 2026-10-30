@@ -63,7 +63,7 @@ public:
         bool           isForceLooping
     );
 
-    std::pair<float, float> GetLoopingCollisionSoundVolumeAndSpeed(CEntity* entityA, CEntity* entityB, eSurfaceType surfA, eSurfaceType surfB, bool isForceLooping); // notsa
+    std::pair<float, float> GetLoopingCollisionSoundVolumeAndSpeed(CEntity* entityA, CEntity* entityB, eSurfaceType surfA, eSurfaceType surfB, bool isForceLooping, bool isPlay); // notsa
     void PlayOneShotCollisionSound(CEntity* entity1, CEntity* entity2, eSurfaceType surf1, eSurfaceType surf2, float a5, const CVector& posn);
     void PlayBulletHitCollisionSound(eSurfaceType surface, const CVector& posn, float angleWithColPointNorm);
 
@@ -88,7 +88,7 @@ public:
     void Service();
 
     // notsa
-    bool CanAddNewSound() const { return static_cast<size_t>(m_NumActiveCollisionSounds) <= m_CollisionSoundList.size(); }
+    bool CanAddNewSound() const { return static_cast<size_t>(m_NumActiveCollisionSounds) != m_CollisionSoundList.size(); } // 0x4DBA2E: `cmp [this+0x204], 300; je` returns only when the list is exactly full
 
 protected:
     eSoundID ChooseCollisionSoundID(eSurfaceType surface);

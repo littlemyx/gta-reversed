@@ -80,7 +80,7 @@ bool CAEBankLoader::LoadBankSlotFile() {
 bool CAEBankLoader::LoadSFXPakLookupFile() {
     const auto file = CFileMgr::OpenFile("AUDIO\\CONFIG\\PAKFILES.DAT", "rb");
     if (!file) {
-        return true;
+        return false; // 0x4DFC90: the exe fails when PAKFILES.DAT is missing (Initialise fails then)
     }
 
     bool loaded = false;

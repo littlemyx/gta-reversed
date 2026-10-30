@@ -224,10 +224,15 @@ void CMenuManager::ProcessMenuOptions(int8 pressedLR, bool& cancelPressed, bool 
             auto slotState = CGenericGameStorage::ms_Slots[m_nCurrentScreenItem - 1];
             m_SelectedSlot = m_nCurrentScreenItem - 1;
 
-            if (m_nCurrentScreen == SCREEN_DELETE_GAME && slotState != eSlotState::SLOT_FREE) {
-                SwitchToNewScreen(SCREEN_DELETE_GAME_ASK);
-            } else if (slotState == eSlotState::SLOT_FILLED) {
-                SwitchToNewScreen(SCREEN_LOAD_GAME_ASK);
+            // exe 0x57729B..0x5772E5: only on the load/delete screens; load: any state but FREE/CORRUPTED, delete: any but FREE
+            if (m_nCurrentScreen == SCREEN_LOAD_GAME) {
+                if (slotState != eSlotState::SLOT_FREE && slotState != eSlotState::SLOT_CORRUPTED) {
+                    SwitchToNewScreen(SCREEN_LOAD_GAME_ASK);
+                }
+            } else if (m_nCurrentScreen == SCREEN_DELETE_GAME) {
+                if (slotState != eSlotState::SLOT_FREE) {
+                    SwitchToNewScreen(SCREEN_DELETE_GAME_ASK);
+                }
             }
         }
         return;
@@ -251,10 +256,9 @@ void CMenuManager::ProcessMenuOptions(int8 pressedLR, bool& cancelPressed, bool 
         // todo: refactor
         if (pressedLR != 1) {
             if (m_nStatsScrollDirection) {
-                if (m_fStatsScrollSpeed != 0.0f) {
-                    m_fStatsScrollSpeed = 0.0f;
-                    m_nStatsScrollDirection = 0;
-                }
+                // exe 0x577161..: speed != 0 -> stop; speed == 0 -> start downwards at full speed
+                m_fStatsScrollSpeed = m_fStatsScrollSpeed != 0.0f ? 0.0f : 150.0f;
+                m_nStatsScrollDirection = 0;
             } else if (m_fStatsScrollSpeed != 0.0f) {
                 if (m_fStatsScrollSpeed == 150.0f) {
                     m_fStatsScrollSpeed = 20.0f;
@@ -324,12 +328,12 @@ void CMenuManager::ProcessMenuOptions(int8 pressedLR, bool& cancelPressed, bool 
         SaveSettings();
         return;
     case MENU_ACTION_LANGUAGE: {
-        // todo: MORE_LANGUAGES; does this ever execute?
-        auto prevLanguage = m_nPrefsLanguage;
-        if (pressedLR <= 0 && prevLanguage == eLanguage::AMERICAN) {
-            m_nPrefsLanguage = eLanguage::SPANISH;
-        } else if (prevLanguage == eLanguage::SPANISH) {
-            m_nPrefsLanguage = eLanguage::AMERICAN;
+        // exe 0x5771B8: step through the 5 base languages, wrapping
+        const auto prevLanguage = m_nPrefsLanguage;
+        if (pressedLR > 0) {
+            m_nPrefsLanguage = prevLanguage == eLanguage::SPANISH ? eLanguage::AMERICAN : eLanguage(prevLanguage + 1);
+        } else {
+            m_nPrefsLanguage = prevLanguage == eLanguage::AMERICAN ? eLanguage::SPANISH : eLanguage(prevLanguage - 1);
         }
 
         m_nPreviousLanguage = (eLanguage)-99; // what the fuck

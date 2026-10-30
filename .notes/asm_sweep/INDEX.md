@@ -257,7 +257,7 @@
 | S108 | phase3 tier B (PHASE3.md) | 45 | done (43 M, 2 fixed) | AnimBlendAssociation.cpp, AnimBlendClumpData.cpp, AnimBlendHierarchy.cpp, FxInfoJitter.cpp, FxInfoNoise.cpp, FxInfoRotSpeed.cpp |
 | S109 | phase3 tier B (PHASE3.md) | 42 | done (32 M, 10 fixed; regress left to gate) | AnimBlendSequence.cpp, AnimBlendStaticAssociation.cpp, Matrix.cpp, MatrixLinkList.cpp, OctTree.cpp, OctTreeBase.cpp |
 | S110 | phase3 tier B (PHASE3.md) | 12 | done (7 M, 5 fixed) | QuadTreeNode.h |
-| S111 | phase3 tier C (PHASE3.md) | 44 | pending | AEAudioChannel.cpp, AEAudioHardware.cpp, AESmoothFadeThread.cpp, AEStaticChannel.cpp, AEStreamThread.cpp |
+| S111 | phase3 tier C (PHASE3.md) | 44 | done (34 M, 10 fixed; regress left to gate) | AEAudioChannel.cpp, AEAudioHardware.cpp, AESmoothFadeThread.cpp, AEStaticChannel.cpp, AEStreamThread.cpp |
 | S112 | phase3 tier C (PHASE3.md) | 37 | done (33 M, 4 fixed; regress left to gate) | AEDataStream.cpp, AEStreamingChannel.cpp, AEStreamingDecoder.cpp |
 | S113 | phase3 tier C (PHASE3.md) | 37 | done (26 M, 11 fixed; regress left to gate) | AEVorbisDecoder.cpp, AEWaveDecoder.cpp, Debug.cpp, Font.cpp, Lines.cpp, RenderBuffer.cpp |
 | S114 | phase3 tier C (PHASE3.md) | 36 | pending | RwHelper.cpp, Sprite.cpp |

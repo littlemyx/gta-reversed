@@ -12,3 +12,4 @@ date	gate_sha	scenario.check	detail	reruns
 2026-10-30	S71 worktree	combat.chase.player_shot_at	CJ took no damage	1 rerun PASS
 2026-10-30	3644d26d8 (S93 worktree)	missions	unhandled strcpy_s in CPedAttractor ctor via GeneratePedsAtAttractors (2 repros in S93, 0 in MISSIONS-CRASH)	fixed b8a2ea2bb (strncpy like exe sprintf 0x821BB5)
 2026-10-30	71979d2d1 gate	render_vmode.no_crash	access violation in CWorld::Remove from CTaskSimplePlayHandSignalAnim dtor during CWorld::ShutDown (freed hand object)	fixed 4ca75523c (portable guard extended to the run build)
+2026-10-30	S111 worktree	combat.car.driver_dies	one fail (documented COMBAT-FLAKY shape)	not rerun (GPU reserved for gate)

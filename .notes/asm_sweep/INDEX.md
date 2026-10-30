@@ -224,4 +224,5 @@
 | S75b | rest of S75 | 17 | done (9 M, 8 fixed; report in metrics, Write was refused) | AccidentManager.cpp, BulletTraces.cpp, C_PcSave.cpp, NodeRoute.cpp, Skidmarks.cpp, cTransmission.cpp |
 | S69c | rest of S69b | 6 | done (5 M, 1 fixed) | Collision.cpp |
 | S70c | rest of S70b | 16 | pending | Birds.cpp, BreakManager_c.cpp, BreakObject_c.cpp, Escalator.cpp, Glass.cpp |
-| S71b | rest of S71 | 15 | pending | 3dMarker.cpp, Rope.cpp, Ropes.cpp, WaterCannon.cpp, WaterCannons.cpp |
+| S71b | rest of S71 | 15 | 14/15 (8 M, 6 fixed + WithUp) -> S71c | 3dMarker.cpp, Rope.cpp, Ropes.cpp, WaterCannon.cpp, WaterCannons.cpp |
+| S71c | rest of S71b | 1 | pending | Rope.cpp |

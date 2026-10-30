@@ -418,3 +418,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S72	v6	asm sweep	285647	114	23	Checkpoints torus-through fade 10x fast, reused torus marker never moved in Z, cone bob sin(a*0.3) vs sin(a)*0.3, endtube render states, arrow matrix normalise; credits 707 events MATCH; 28 M
 2026-10-30	ASM-S69c	v6	asm sweep	201006	79	29	camera near-clip ped sphere dot order per unrolled sphere; sphere casts + camera cone MATCH
 2026-10-30	ASM-S77	v6	asm sweep	317457	146	29	ObjectData camera-avoid default slot inverted, HandShaker rand order, LoadVehiclePool handle, MakeSureSlotInObjectPoolIsEmpty unstubbed, simple-vars german/french bytes; Clock + pool save MATCH; 41 M
+2026-10-30	ASM-S71b	v6	asm sweep	264556	110	31	WaterCannon PushPeds wrong filter flag + speed source, cannon render 31 iters/roles/particle, rope PickUpObject ref slot, SWAT rope id, WithUp normalise (shared); 8 M

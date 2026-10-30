@@ -67,8 +67,7 @@ void CRope::CreateHookObjectForRope() {
         case eRopeType::SWAT:
             return MODEL_INVALID; // Just so the assert below wont be hit.
         default:
-            NOTSA_UNREACHABLE(); //assert(0);
-            return MODEL_INVALID; // 0x556183: other rope types leave without creating a hook object
+            return MODEL_INVALID; // 0x5560A5-0x5560A9: type NONE / > SWAT leave without creating a hook object (the exe has no assert)
         }
     }();
     if (modelIndex == ModelIndex{ MODEL_INVALID }) { // Must do it like this because `ModelIndex` is u16, `MODEL_ID` is i32, and u16 -1 casted to int32 is 0xffff...

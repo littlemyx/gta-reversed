@@ -1,0 +1,39 @@
+addr	function	verdict	asm range	note	fix commit
+0x5B2AD0	CColAccel::endCache	FIXED	0x5B2AD0-0x5B2C12 (all)	write order/sizes/frees match; section-size write used sizeof(int32*) (8 on x64) -> sizeof(int32)	f35833615
+0x5B2CC0	CColAccel::cacheLoadCol	MATCH	0x5B2CC0-0x5B2DC3 (all)	model id read as dword (start|end<<16) in the exe, end is 0 for every cached entry	-
+0x5B2F10	CColAccel::cacheIPLSection	FIXED	0x5B2F10-0x5B303A (all)	bit tests (1 underwater, 8 owns col, 4 far dist, 2 has col) match; entry +4 (= LOD index) marks the entity underwater: struct fields were swapped	f35833615
+0x5B3040	CColAccel::addIPLEntity	FIXED	0x5B3040-0x5B314C (all)	entry {entityIndex,lodIndex} order; hasColModel = lodCol != entCol && entCol (port: || !entCol); far/lod-children writes value 8, owns-col writes 4 (exe writer/reader disagree, kept); mult*dist > 300 as unrounded x87	f35833615
+0x5B31A0	CColAccel::startCache	MATCH	0x5B31A0-0x5B322D (all)	three allocations 0x100 / 0x3400 / 0x1800; CRect defaults 1e6/-1e6 come from the NSDMIs	-
+0x40F740	CColModel::MakeMultipleAlloc	MATCH	0x40F740-0x40F7B9 (all)		-
+0x40F810	CColModel::AllocateData	MATCH	0x40F810-0x40F869 (all)		-
+0x40F870	CColModel::AllocateData	MATCH	0x40F870-0x40F9A6 (all)	array offsets/sizes/flags identical; port zeroes the unwritten CCollisionData tail (documented)	-
+0x40F9E0	CColModel::RemoveCollisionVolumes	MATCH	0x40F9E0-0x40FA24 (all)		-
+0x40FA30	CColModel::CalculateTrianglePlanes	MATCH	0x40FA30-0x40FA3C (all)		-
+0x40FA40	CColModel::RemoveTrianglePlanes	MATCH	0x40FA40-0x40FA60 (all)		-
+0x4185C0	CCollision::ProcessColModels	NOT_REACHED	-	large (sphere/box/line/triangle pair matrix); oracle trailer test counts ulp-only diffs already	-
+0x417730	CCollision::TestLineOfSight	MATCH	0x417730-0x41794D (all)		-
+0x417950	CCollision::ProcessLineOfSight	MATCH	0x417950-0x417BE0 (all)	strict < via fcomp/jp; crossing counter 0x9655D0	-
+0x417BF0	CCollision::ProcessVerticalLine	MATCH	0x417BF0-0x417EE9 (structure, calls, compares)	x87 inverse-transform arithmetic (0x417C1A-0x417CD0) not re-derived	-
+0x416260	CCollision::Init	MATCH	0x416260-0x4162D2 (all)	50 links inserted at the free head from the last	-
+0x4162E0	CCollision::Shutdown	MATCH	0x4162E0-0x41631F (all)		-
+0x411E30	CCollision::SortOutCollisionAfterLoad	MATCH	0x411E30-0x411E60 (all)		-
+0x415320	CCollision::CheckCameraCollisionPeds	NOT_REACHED	-		-
+0x4154A0	CCollision::CheckPeds	MATCH	0x4154A0-0x41552D (all)	loop bounds gnBottom..gnTop / gnLeft..gnRight	-
+0x4181B0	CCollision::SphereCastVsCaches	NOT_REACHED	-		-
+0x419F00	CCollision::SphereCastVsEntity	NOT_REACHED	-		-
+0x41A5A0	CCollision::SphereVsEntity	NOT_REACHED	-		-
+0x41A820	CCollision::CheckCameraCollisionBuildings	NOT_REACHED	-		-
+0x41A990	CCollision::CheckCameraCollisionVehicles	NOT_REACHED	-		-
+0x41AB20	CCollision::CheckCameraCollisionObjects	NOT_REACHED	-		-
+0x41AC40	CCollision::BuildCacheOfCameraCollision	NOT_REACHED	-		-
+0x41B000	CCollision::CameraConeCastVsWorldCollision	NOT_REACHED	-		-
+0x416330	CCollision::CalculateTrianglePlanes(CCollisionData*)	MATCH	0x416330-0x4163F5 (all)	link-list ops equal CLinkList::Insert/Remove	-
+0x416400	CCollision::RemoveTrianglePlanes(CCollisionData*)	MATCH	0x416400-0x41644C (all)		-
+0x418580	CCollision::CalculateTrianglePlanes(CColModel*)	MATCH	0x418580-0x418594 (all)		-
+0x4185A0	CCollision::RemoveTrianglePlanes(CColModel*)	MATCH	0x4185A0-0x4185B4 (all)		-
+0x40F070	CCollisionData::RemoveCollisionVolumes	MATCH	0x40F070-0x40F114 (all)		-
+0x40F6A0	CCollisionData::RemoveTrianglePlanes	MATCH	0x40F6A0-0x40F6BB (all)		-
+0x40F120	CCollisionData::Copy	FIXED	0x40F120-0x40F575 (all)	vertices always re-copied when src has triangles (port kept old ones for equal counts); flag bits 0/2 copied unconditionally; shadow data wiped unless src has shadow tris AND bHasShadowInfo	a792b3898
+0x40F590	CCollisionData::CalculateTrianglePlanes	MATCH	0x40F590-0x40F5DB (all)		-
+0x41B360	CTempColModels::Shutdown	MATCH	0x41B360-0x41B3F3 (all)	12 models then 20 cutscene models	-
+0x5BA8C0	CTempColModels::Initialise	FIXED	0x5BA8C0-0x5BB887 (all)	ped colmodel sphere z immediates -0.19999999 / 0.20000005 / 0.45000005 (exe) vs -0.2f / 0.2f / 0.45f; all other args decoded by an emulator and equal	e85fce0df

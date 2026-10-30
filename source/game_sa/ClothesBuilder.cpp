@@ -547,6 +547,13 @@ void CClothesBuilder::PlaceTextureOnTopOfTexture(RwTexture* dstTex, RwTexture* s
     RwRasterUnlock(dstRaster);
 }
 
+// The exe's blended channel: the weighted sum is built in one x87 expression (the weights are applied to the *integer* channel values and
+// the products are added unrounded), converted by _ftol and only its low byte is kept: the "clamp" after the conversion tests an 8-bit
+// register, so it never clamps.
+static uint8 BlendedChannel(float sum) {
+    return (uint8)NOTSA_FTOL(int32, sum);
+}
+
 // 0x5A5820
 void CClothesBuilder::BlendTextures(RwTexture* dst, RwTexture* src, float r1, float r2, int32 numColors) {
     ZoneScoped;
@@ -561,14 +568,15 @@ void CClothesBuilder::BlendTextures(RwTexture* dst, RwTexture* src, float r1, fl
     auto srcIt = RwRasterLock(srcRaster, 0, rwRASTERLOCKREAD);
     auto dstIt = RwRasterLock(dstRaster, 0, rwRASTERLOCKREADWRITE);
 
-    for (auto i = RwRasterGetHeight(dstRaster) * RwRasterGetWidth(dstRaster); i-- > 0; dstIt++, srcIt++) {
-        for (auto c = 3; i-- > 0; dstIt++, srcIt++) { // Copy RGB, alpha stays the same
-            *dstIt = multiply_weighted<RwUInt8>({ { *dstIt, r1 }, { *srcIt, r2 } });
+    // exe: the channels 0..2 are blended `src * r2 + dst * r1`, channel 3 (alpha) of dst stays
+    for (auto i = RwRasterGetHeight(srcRaster) * RwRasterGetWidth(srcRaster); i-- > 0; dstIt += 4, srcIt += 4) {
+        for (auto c = 0; c < 3; c++) {
+            dstIt[c] = BlendedChannel((float)srcIt[c] * r2 + (float)dstIt[c] * r1);
         }
     }
 
-    RwRasterUnlock(dstRaster);
     RwRasterUnlock(srcRaster);
+    RwRasterUnlock(dstRaster);
 
     CTimer::Resume();
 }
@@ -589,15 +597,16 @@ void CClothesBuilder::BlendTextures(RwTexture* dst, RwTexture* src1, RwTexture* 
     auto src2It = RwRasterLock(src2Raster, 0, rwRASTERLOCKREAD);
     auto dstIt  = RwRasterLock(dstRaster, 0, rwRASTERLOCKREADWRITE);
 
-    for (auto i = RwRasterGetHeight(dstRaster) * RwRasterGetWidth(dstRaster); i-- > 0; dstIt++, src1It++, src2It++) {
-        for (auto c = 3; i-- > 0; dstIt++, src1It++, src2It++) { // Copy RGB, alpha doesn't change
-            *dstIt = multiply_weighted<RwUInt8>({ { *dstIt, r1 }, { *src1It, r2 }, { *src2It, r3 } });
+    // exe: `(src2 * r3 + src1 * r2) + dst * r1`, the alpha of dst stays
+    for (auto i = RwRasterGetHeight(src1Raster) * RwRasterGetWidth(src1Raster); i-- > 0; dstIt += 4, src1It += 4, src2It += 4) {
+        for (auto c = 0; c < 3; c++) {
+            dstIt[c] = BlendedChannel((float)src2It[c] * r3 + (float)src1It[c] * r2 + (float)dstIt[c] * r1);
         }
     }
 
-    RwRasterUnlock(dstRaster);
     RwRasterUnlock(src1Raster);
     RwRasterUnlock(src2Raster);
+    RwRasterUnlock(dstRaster);
 
     CTimer::Resume();
 }
@@ -617,19 +626,26 @@ void CClothesBuilder::BlendTextures(RwTexture* dst, RwTexture* src1, RwTexture* 
 
     auto src1It = RwRasterLock(src1Raster, 0, rwRASTERLOCKREAD);
     auto src2It = RwRasterLock(src2Raster, 0, rwRASTERLOCKREAD);
-    auto tatIt  = RwRasterLock(tatRaster, 0, rwRASTERLOCKREAD);
     auto dstIt  = RwRasterLock(dstRaster, 0, rwRASTERLOCKREADWRITE);
+    auto tatIt  = RwRasterLock(tatRaster, 0, rwRASTERLOCKREAD);
 
-    for (auto i = RwRasterGetHeight(dstRaster) * RwRasterGetWidth(dstRaster); i-- > 0; dstIt++, src1It++, src2It++, tatIt++) {
-        const auto tatAlphaT = (float)tatIt[3] * ExeRecip(255.f);
-        for (auto c = 3; i-- > 0; dstIt++, src1It++, src2It++, tatIt++) { // Copy RGB, alpha doesn't change
-            *dstIt = (RwUInt8)lerp(multiply_weighted<RwUInt8>({ { *dstIt, r1 }, { *src1It, r2 }, { *src2It, r3 } }), *tatIt, tatAlphaT);
+    for (auto i = RwRasterGetHeight(src1Raster) * RwRasterGetWidth(src1Raster); i-- > 0; dstIt += 4, src1It += 4, src2It += 4, tatIt += 4) {
+        const int32 tatAlpha = tatIt[3];
+        // exe: the three channels are blended as above and the tattoo is then lerped over them by its alpha:
+        // `(tat - mix) * alpha` (integer) `* (float 1/255) + mix` - the integer product is scaled once, NOT `alpha * (1/255)` first
+        uint8 mix[3];
+        for (auto c = 0; c < 3; c++) {
+            mix[c] = BlendedChannel((float)src2It[c] * r3 + (float)src1It[c] * r2 + (float)dstIt[c] * r1);
+        }
+        for (auto c = 0; c < 3; c++) {
+            const int32 diff = ((int32)tatIt[c] - (int32)mix[c]) * tatAlpha;
+            dstIt[c] = BlendedChannel((float)diff * ExeRecip(255.f) + (float)mix[c]);
         }
     }
 
-    RwRasterUnlock(dstRaster);
     RwRasterUnlock(src1Raster);
     RwRasterUnlock(src2Raster);
+    RwRasterUnlock(dstRaster);
     RwRasterUnlock(tatRaster);
 
     CTimer::Resume();

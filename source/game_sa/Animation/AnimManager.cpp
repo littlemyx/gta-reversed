@@ -460,12 +460,14 @@ CAnimBlendAssociation* CAnimManager::BlendAnimation(RpClump* clump, CAnimBlendHi
         if (a->m_BlendHier && a->m_BlendHier == toBlendHier) { // Found an instance of this anim running
             running = a;
         } else if (((toBlendFlags & ANIMATION_IS_PARTIAL) != 0) == a->IsPartial()) {
-            if (a->m_BlendAmount <= 0.f) {
+            // 0x4D4491: `fcomp 0; test ah,0x41; jne` => taken for <= 0 and for NaN
+            if (!(a->m_BlendAmount > 0.f)) {
                 a->m_BlendDelta = -1.f;
             } else {
                 const auto bd = a->GetBlendAmount() * -blendDelta;
-                if ((toBlendFlags & ANIMATION_IS_PARTIAL) == 0 || bd <= a->GetBlendDelta() || (a->m_BlendHier->m_nAnimBlockId && a->m_BlendHier->m_nAnimBlockId == toBlendHier->m_nAnimBlockId)) {
-                    a->m_BlendDelta = std::min(-0.05f, bd);
+                // 0x4D44A8: strict `bd < delta` (not <=), 0x4D44D4: stores `-0.05 < bd ? -0.05 : bd` (NaN bd is stored as NaN)
+                if ((toBlendFlags & ANIMATION_IS_PARTIAL) == 0 || bd < a->GetBlendDelta() || (a->m_BlendHier->m_nAnimBlockId && a->m_BlendHier->m_nAnimBlockId == toBlendHier->m_nAnimBlockId)) {
+                    a->m_BlendDelta = (-0.05f < bd) ? -0.05f : bd;
                 }
             }
             
@@ -521,10 +523,11 @@ CAnimBlendAssociation* CAnimManager::BlendAnimation(RpClump* clump, AssocGroupId
         if (a->m_AnimId == animId && a->m_AnimGroupId == groupId) {
             running = a;
         } else if (toBlendIsPartial == a->IsPartial() && toBlendIsIndestructible == a->IsFacial()) {
-            if (a->m_BlendAmount <= 0.f) {
+            // 0x4D46F1: `fcomp 0; test ah,0x41; jne` => taken for <= 0 and for NaN
+            if (!(a->m_BlendAmount > 0.f)) {
                 a->m_BlendDelta = -1.f;
-            } else if (const auto bd = a->GetBlendAmount() * -blendDelta; bd <= a->GetBlendDelta() || !toBlendIsPartial) {
-                a->m_BlendDelta = std::min(-0.05f, bd);
+            } else if (const auto bd = a->GetBlendAmount() * -blendDelta; bd < a->GetBlendDelta() || !toBlendIsPartial) { // 0x4D470A: strict `<`
+                a->m_BlendDelta = (-0.05f < bd) ? -0.05f : bd; // 0x4D4718: not std::min for a NaN bd
             }
             a->SetFlag(ANIMATION_IS_BLEND_AUTO_REMOVE);
             bFadeThisOut = true;

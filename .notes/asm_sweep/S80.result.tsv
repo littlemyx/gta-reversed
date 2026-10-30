@@ -1,0 +1,16 @@
+addr	function	verdict	asm range	note	fix commit
+0x52F390	CControllerConfigManager::GetControllerSettingTextMouse	MATCH	0x52F390-0x52F430	Keys[MOUSE] (this+0xB80+32*a) 1..7 -> FEC_MSL/MSM/MSR/MWF/MWB/MXO/MXT via sequential jump table 0x52F434, else null	-
+0x52F450	CControllerConfigManager::GetControllerSettingTextJoystick	MATCH	0x52F450-0x52F492	Keys[JOY] (+0xB88) 0 -> null; else CText::Get(FEC_JBO) then InsertNumberInString(text,key,-1x5,0xB7147C), returns 0xB7147C	-
+0x52F560	CControllerConfigManager::GetButtonComboText	MATCH	0x52F560-0x52F569	action==0x24 (VEHICLE_LOOKBEHIND) -> FEC_LBC else null	-
+0x52FE10	CControllerConfigManager::GetControllerSettingTextKeyBoard	DEVIATION (fixed)	0x52FE10-0x5302EA (+table 0x5302F0)	jump table 1001..1055 (F1-F12 via FEC_FNC, nav/numpad/modifier names, NUM keys FEC_NMN 1..9,0) matched; '^' (non-German) and 178 (non-French) fell to null in the port but take the generic path in the exe; generic path maps through 0x719360 (<0x80 as is, else byte table 0x8D5AD8, 0 -> glyph of '#') - the port stored the raw key; F/NUM texts use their own 32 byte buffer 0xB7149C (port reused 0xB714BC)	f9946520d
+0x531E20	CControllerConfigManager::GetControllerSettingTextWithOrderNumber	MATCH	0x531E20-0x531E7E	scans Keys[0..3].m_uiSetOrder (+0xB74) for order; 0/1 keyboard(action,type), 2 mouse, 3 joystick, none -> null	-
+0x531E90	CControllerConfigManager::GetFirstKeyboardControllerText	MATCH	0x531E90-0x531ED2	ResetSettingOrder, then first of Keys[0..1] with set order != 0 -> keyboard text, else null	-
+0x5303D0	CControllerConfigManager::GetGxtStringOfCommandKeys	MATCH	0x5303D0-0x530488	joypad (byte 0xBA6818 != 0): joystick text first; then mouse, keyboard 0, keyboard 1, joystick, final mouse (may be null); StringCopy(dst, src, max - len)	-
+0x4650A0	CDecisionMaker::Constructor	MATCH	0x4650A0-0x4650D5	41 decisions (0x3C each): CDecision ctor (SetDefault) then SetDefault again; idempotent	-
+0x747200	CGamma::SetGamma	DEVIATION (fixed)	0x747200-0x7472F9	level = g*0.7f; port omitted the unconditional store of level into this+0xC (m_PrevLevel, write-only); target compare/NaN, fade test, device null check, ramp loop (pow, 65535.0, _ftol, 16 bit) and SetGammaRamp(CALIBRATE) matched	50a1a73f8
+0x71D670	CGridRef::GetAreaName	MATCH	0x71D670-0x71D6A2	x,y >= 10 -> 0; else atoi(GridRefList[x][y]) at 0xC72FB0 + (x*10+y)*32	-
+0x53F220	CMouseControllerState::Constructor	MATCH	0x53F220-0x53F241	7 bools + 3 floats zeroed	-
+0x746ED0	CPad::GetMouseState	DEVIATION (fixed)	0x746ED0-0x746F63	success path returns the HRESULT of GetDeviceState as it is (exe 0x746F60), port returned 0; no-device 1, zeroing of 20 bytes, Acquire loop on DIERR_INPUTLOST (0x8007001E) and the retry matched	95f3a236e
+0x560210	CTimeCycle::SetConstantParametersForPostFX	MATCH	0x560210-0x560323	night vision (0xC402B8): shadows 0, ambient (0,0.4,0) + obj, sky top/bottom (0,128,0); infrared (0xC402B9): shadows 0, lights-on-ground 0, highlight 0, water fog alpha 0, ambient (0,0,1) + obj, sky (0,0,128); field offsets checked against CColourSet	-
+0x561A80	CTimer::GetCurrentTimeInCycles	MATCH	0x561A80-0x561A9B	low dword of QueryPerformanceCounter minus low dword of m_snRenderStartTime	-
+0x5617C0	CTimer::GetMillisecondTime	MATCH	0x5617C0-0x5617C7	RsTimer() zero-extended to 64 bits	-

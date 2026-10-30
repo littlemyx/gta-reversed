@@ -430,3 +430,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S82	v6	asm sweep	241958	94	23	speech: pedless voice -1 (police radio speech never played), sound 0 twice as likely, slot rebuilt dropping sound ptr, CJ mood override path, strain volume scale; 9 M
 2026-10-30	ASM-S86	v6	asm sweep	151943	37	6	CAudioEngine facade all 38 MATCH, no code change
 2026-10-30	ASM-S91	v6	asm sweep	277003	115	28	FileLoader: txd stream closed twice, audio zone active flag ==1 vs !=0, occlusion interior suffix; all sscanf maps MATCH; 21 M
+2026-10-30	ASM-S81	v6	asm sweep	0	0	0	collision audio: pass order reversed, start pct dropped, looping speed/volume formulas wrong (log10(20x)), update stepped wrong way, pool-ball flag bit; fire freq var 1-ulp; 12 M

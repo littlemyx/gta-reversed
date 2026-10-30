@@ -70,42 +70,53 @@ void CWaterCannon::Update_NewInput(const CVector* start, const CVector* end) {
 void CWaterCannon::PushPeds() {
 #ifdef FIX_BUGS
     // FIX_BUGS: R* originally used 10'000.f here, but thats bug prone (if map size gets increased)
-    CVector min{ FLT_MAX, FLT_MAX, FLT_MAX }, max{ FLT_MIN, FLT_MIN, FLT_MIN };
+    CVector min{ FLT_MAX, FLT_MAX, FLT_MAX }, max{ -FLT_MAX, -FLT_MAX, -FLT_MAX };
 #else
     // 0x7295E0 (0x729605..0x72962D): the exe starts the box at (+10000, -10000) per axis (0x461C4000 / 0xC61C4000)
     CVector min{ 10000.0f, 10000.0f, 10000.0f }, max{ -10000.0f, -10000.0f, -10000.0f };
 #endif
-    CBoundingBox bbox(min, max);
-
+    // 0x729640..0x7296CC: bounding box of the active sections. The exe replaces the stored value when `!(stored < v)` (min) / `!(stored > v)` (max), so NaN and equal values are taken
     for (auto i = 0; i < SECTIONS_COUNT; i++) {
         if (!IsSectionActive(i))
             continue;
 
-        auto& secPos = GetSectionPosn(i);
+        const auto& secPos = GetSectionPosn(i);
 
-        bbox.m_vecMin.x = std::min(bbox.m_vecMin.x, secPos.x);
-        bbox.m_vecMax.x = std::max(bbox.m_vecMax.x, secPos.x);
-
-        bbox.m_vecMin.y = std::min(bbox.m_vecMin.y, secPos.y);
-        bbox.m_vecMax.y = std::max(bbox.m_vecMax.y, secPos.y);
-
-        bbox.m_vecMin.z = std::min(bbox.m_vecMin.z, secPos.z);
-        bbox.m_vecMax.z = std::max(bbox.m_vecMax.z, secPos.z);
+        if (!(min.x < secPos.x)) min.x = secPos.x;
+        if (!(max.x > secPos.x)) max.x = secPos.x;
+        if (!(min.y < secPos.y)) min.y = secPos.y;
+        if (!(max.y > secPos.y)) max.y = secPos.y;
+        if (!(min.z < secPos.z)) min.z = secPos.z;
+        if (!(max.z > secPos.z)) max.z = secPos.z;
     }
 
     for (auto& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValidReverse(), GetPedPool()->GetAllValid())) {
-        CVector pedPosn = ped.GetPosition();
-        if (!bbox.IsPointWithin(pedPosn))
+        // 0x729719: `test byte [ped + 0x1C], 1` = CEntity::m_bUsesCollision (the port tested bMakeMassTwiceAsBig)
+        if (!ped.m_bUsesCollision)
             continue;
 
-        if (ped.physicalFlags.bMakeMassTwiceAsBig)
+        CVector pedPosn = ped.GetPosition();
+
+        // 0x729730..0x7297C8: strictly inside the box on every axis (NaN leaves)
+        if (!(pedPosn.x > min.x && pedPosn.x < max.x
+           && pedPosn.y > min.y && pedPosn.y < max.y
+           && pedPosn.z > min.z && pedPosn.z < max.z))
             continue;
 
         for (auto i = 0; i < SECTIONS_COUNT; i++) {
+            if (!IsSectionActive(i)) // 0x7297D0
+                continue;
+
             const CVector& secPosn = GetSectionPosn(i);
 
-            if ((pedPosn - secPosn).SquaredMagnitude() >= 5.0f)
-                continue;
+            // 0x729840..0x72987D: unrounded x87, (dz^2 + dy^2) + dx^2, strictly below 5
+            {
+                const x87d dz = (x87d)secPosn.z - pedPosn.z;
+                const x87d dy = (x87d)secPosn.y - pedPosn.y;
+                const x87d dx = (x87d)secPosn.x - pedPosn.x;
+                if (!((dz * dz + dy * dy) + dx * dx < 5.0))
+                    continue;
+            }
 
             const CVector secMoveSpeed = GetSectionMoveSpeed(i);
 
@@ -120,25 +131,27 @@ void CWaterCannon::PushPeds() {
             ped.ApplyMoveForce({ 0.0f, 0.0f, CTimer::GetTimeStep() });
 
             {
-                // TODO: Refactor... Ugly code
-                const CVector2D applyableMoveSpeed = (secMoveSpeed * ExeRecip(10.0f) - ped.m_vecMoveSpeed) * ExeRecip(10.0f);
+                // 0x72990B..0x729969: the value stays in extended precision, a component is applied only if it points the same way as the section speed.
+                // The exe ADDS THE PED'S OWN current speed (esi+0x44 / 0x48), not the section's (the port added secMoveSpeed)
+                const x87d applyX = ((x87d)ExeRecip(10.0f) * secMoveSpeed.x - ped.m_vecMoveSpeed.x) * ExeRecip(10.0f);
+                if (applyX * secMoveSpeed.x > 0.0)
+                    ped.m_vecMoveSpeed.x = (float)(applyX + ped.m_vecMoveSpeed.x);
 
-                // Check if directions are the same (eg, + / +, - / -),
-                // differing sign bits will always yield a negative result
-                /// (unless 0, but that is handled by > (instead of >=))
-                if (secMoveSpeed.x * applyableMoveSpeed.x > 0.0f)
-                    ped.m_vecMoveSpeed.x = applyableMoveSpeed.x + secMoveSpeed.x;
-
-                if (secMoveSpeed.y * applyableMoveSpeed.y > 0.0f)
-                    ped.m_vecMoveSpeed.y = applyableMoveSpeed.y + secMoveSpeed.y;
+                const x87d applyY = ((x87d)ExeRecip(10.0f) * secMoveSpeed.y - ped.m_vecMoveSpeed.y) * ExeRecip(10.0f);
+                if (applyY * secMoveSpeed.y > 0.0)
+                    ped.m_vecMoveSpeed.y = (float)(applyY + ped.m_vecMoveSpeed.y);
             }
 
             FxPrtMult_c prtInfo{ 1.0f, 1.0f, 1.0f, 0.6f, 0.75f, 0.0f, 0.2f };
 
             g_fx.m_SmokeII3expand->AddParticle(pedPosn, ped.m_vecMoveSpeed * 0.3f, 0.0f, prtInfo);
 
-            CVector particleVelocity2 = ped.m_vecMoveSpeed * -0.3f;
-            particleVelocity2.z += 0.5f;
+            // 0x729A18: z = speed.z * -0.3 + 0.5 with a single rounding
+            const CVector particleVelocity2{
+                ped.m_vecMoveSpeed.x * -0.3f,
+                ped.m_vecMoveSpeed.y * -0.3f,
+                (float)((x87d)ped.m_vecMoveSpeed.z * -0.3f + 0.5f)
+            };
             g_fx.m_SmokeII3expand->AddParticle(pedPosn, particleVelocity2, 0.0f, prtInfo);
 
             break;

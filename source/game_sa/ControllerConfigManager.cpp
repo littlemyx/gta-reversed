@@ -1243,12 +1243,34 @@ void CControllerConfigManager::DeleteMatchingActionInitiators(eControllerAction 
     }
 }
 
+namespace {
+// The exe's 0x719360 (not hooked): ANSI character -> GXT font character. Below 0x80 the character is returned as is, the rest goes through the
+// word table at 0x8D5AD8 (only the low byte of each entry is read): 0 = no such glyph.
+constexpr GxtChar ANSI_HIGH_TO_GXT[128]{
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0xB0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0xB1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5F, 0x00, 0x00, 0x00, 0x00, 0xAF,
+    0x80, 0x81, 0x82, 0x00, 0x83, 0x00, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D,
+    0x00, 0xAD, 0x8E, 0x8F, 0x90, 0x00, 0x91, 0x00, 0x00, 0x92, 0x93, 0x94, 0x95, 0x00, 0x00, 0x96,
+    0x97, 0x98, 0x99, 0x00, 0x9A, 0x00, 0x9B, 0x9C, 0x9D, 0x9E, 0x9F, 0xA0, 0xA1, 0xA2, 0xA3, 0xA4,
+    0x00, 0xAE, 0xA5, 0xA6, 0xA7, 0x00, 0xA8, 0x00, 0x00, 0xA9, 0xAA, 0xAB, 0xAC, 0x00, 0x00, 0x00,
+};
+
+// 0x719360
+GxtChar AnsiToGxtCharExe(uint8 c) {
+    return c < 0x80 ? c : ANSI_HIGH_TO_GXT[c - 0x80];
+}
+} // namespace
+
 // 0x52FE10
 const GxtChar* CControllerConfigManager::GetControllerSettingTextKeyBoard(eControllerAction action, eControllerType type) {
 #ifdef NOTSA_GLOBALS_DETACHED
     static GxtChar s_KeyName[50]{}; // temp value
+    static GxtChar s_KeyNumName[32]{}; // F~1~ / NUM~1~
 #else
     NOTSA_GLOBAL_LOCAL_NS(s_KeyName, 0xB714BC, (GxtChar[50]), {}); // temp value
+    NOTSA_GLOBAL_LOCAL_NS(s_KeyNumName, 0xB7149C, (GxtChar[32]), {}); // F~1~ / NUM~1~ (own buffer in the exe; 0xB714BC is only cleared + used for the single character keys)
 #endif
 #line 1233
     rng::fill(s_KeyName, 0);
@@ -1259,8 +1281,8 @@ const GxtChar* CControllerConfigManager::GetControllerSettingTextKeyBoard(eContr
     }
 
     const auto KeyNameWithNumber = [&](const GxtChar* text, int32 key) {
-        CMessages::InsertNumberInString(text, key, -1, -1, -1, -1, -1, s_KeyName);
-        return s_KeyName;
+        CMessages::InsertNumberInString(text, key, -1, -1, -1, -1, -1, s_KeyNumName);
+        return s_KeyNumName;
     };
 
     if (key >= rsF1 && key <= rsF12) {
@@ -1315,27 +1337,35 @@ const GxtChar* CControllerConfigManager::GetControllerSettingTextKeyBoard(eContr
         default:         return nullptr; // Please not add 'NOTSA_UNREACHABLE' !!!
         }
     } else { /* ASCII keys */
-        switch (key) {
-        case '*': return TheText.Get("FEC_AST"); // Asterisk
-        case ' ': return TheText.Get("FEC_SPC"); // SPACE
-        case '^':
-            if (FrontEndMenuManager.m_nTextLanguage == GERMAN) {
-                return "|"_gxt;
-            }
-            break;
-        case 178:
-            if (FrontEndMenuManager.m_nTextLanguage == FRENCH) {
-                return "2"_gxt;
-            }
-            break;
-        default:
-            s_KeyName[0] = (GxtChar)key ? key : '#';
+        // NOTE: '^' (everywhere but German) and 178 (everywhere but French) take the generic path below, they are not blank
+        if (key == '*') {
+            return TheText.Get("FEC_AST"); // Asterisk
+        }
+        if (key == ' ') {
+            return TheText.Get("FEC_SPC"); // SPACE
+        }
+        if (key == '^' && FrontEndMenuManager.m_nTextLanguage == GERMAN) {
+            s_KeyName[0] = '|';
             s_KeyName[1] = '\0';
             return s_KeyName;
         }
+        if (key == 178 && FrontEndMenuManager.m_nTextLanguage == FRENCH) {
+            s_KeyName[0] = '2';
+            s_KeyName[1] = '\0';
+            return s_KeyName;
+        }
+
+        // Generic: the GXT glyph of the character (the glyph of '#' if it has none)
+        s_KeyName[0] = AnsiToGxtCharExe((uint8)key);
+        if (!s_KeyName[0]) {
+            s_KeyName[0] = AnsiToGxtCharExe('#');
+        }
+        s_KeyName[1] = '\0';
+        return s_KeyName;
     }
     return nullptr; // Please not add 'NOTSA_UNREACHABLE' !!!
 }
+#line 1318
 
 // 0x52F560
 const GxtChar* CControllerConfigManager::GetButtonComboText(eControllerAction action) {

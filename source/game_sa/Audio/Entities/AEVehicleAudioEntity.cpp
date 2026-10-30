@@ -2861,8 +2861,9 @@ void CAEVehicleAudioEntity::ProcessPlayerVehicleEngine(tVehicleParams& vp) {
     vp.IsHandbrakeOn = vp.Vehicle->vehicleFlags.bIsHandbrakeOn;
 
     auto* const gear = &vp.Transmission->m_aGears[vp.RealGear];
+    // 0x4FBB59-0x4FBC1F: the ratio is clamped to [0, 1] (NaN stays NaN) before it is stored
     vp.RealRevsRatio = vp.RealGear
-        ? invLerp(gear->ChangeDownVelocity, gear->MaxVelocity, vp.AbsSpeed)
+        ? std::clamp(invLerp(gear->ChangeDownVelocity, gear->MaxVelocity, vp.AbsSpeed), 0.f, 1.f)
         : 0.f;
 
     vp.WheelSpin     = vp.Vehicle->m_fWheelSpinForAudio;
@@ -2917,9 +2918,12 @@ void CAEVehicleAudioEntity::ProcessPlayerVehicleEngine(tVehicleParams& vp) {
         if (m_IsSingleGear) {
             m_AuGear = 1;
         } else {
-            assert(vp.NumGears == vp.Transmission->m_nNumberOfGears);
-            assert(vp.NumGears > 0);
-            m_AuGear = std::clamp<uint8>(std::min(vp.RealGear, m_AuGear), 1, vp.NumGears - 1);
+            // 0x4FC3AD-0x4FC8FE: min(min(max(RealGear, 1), AuGear), NumGears - 1) - NOT clamp(min(RealGear, AuGear), 1, NumGears - 1):
+            // with m_AuGear == 0 (set on every driver change) the exe keeps 0, a clamp would give 1
+            const int32 t = std::max<int32>(vp.RealGear, 1);
+            const int32 e = t >= (int32)m_AuGear ? (int32)m_AuGear : t;
+            const int32 n = (int32)vp.Transmission->m_nNumberOfGears - 1;
+            m_AuGear = (uint8)(e >= n ? n : e);
         }
         RequestEngineSound(AE_SOUND_PLAYER_AC);
         m_State = eAEState::PLAYER_AC_FULL;
@@ -3041,7 +3045,7 @@ void CAEVehicleAudioEntity::ProcessPlayerVehicleEngine(tVehicleParams& vp) {
             vp.Vehicle->vehicleFlags.bAudioChangingGear = true;
             CancelVehicleEngineSound(AE_SOUND_PLAYER_AC);
             RequestEngineSound(AE_SOUND_PLAYER_CRZ);
-            InhibitCrzForTime(2'000);
+            InhibitAccForTime(2'000); // 0x4FC61F stores [this+0xD0] = InhibitAccForTime (CRZ -> AC checks it); the port had the two swapped
             m_State = eAEState::PLAYER_CRZ;
 
             break;
@@ -3179,12 +3183,17 @@ void CAEVehicleAudioEntity::ProcessPlayerVehicleEngine(tVehicleParams& vp) {
                 && !CCullZones::DoExtraAirResistanceForPlayer()
             ) { // 0x4FBFC7 (Inverted!)
                 EndCrz();
-                InhibitAccForTime(2'000);
+                InhibitCrzForTime(2'000); // 0x4FC099 stores [this+0xD4] = InhibitCrzForTime (AC -> CRZ checks it)
                 DoFullAcceleration(); // 0x4FC8C2
             } else { // 0x4FC0B7 - Still doing crz, update sound
-                m_CrzCount = vp.Speed <= vp.PrevSpeed - 0.05f
-                    ? std::max(0.f, m_CrzCount - 0.25f)
-                    : std::min(m_CrzCount + 1.f, (float)(cfg->CrzMaxCnt));
+                // 0x4FC0AB-0x4FC10B: `(Prev - 0.05) < Speed` (C0 only) takes the increment, anything else (incl. NaN) the decrement
+                if (vp.PrevSpeed - 0.05f < vp.Speed) {
+                    const float up = m_CrzCount + 1.f, mx = (float)(int16)cfg->CrzMaxCnt;
+                    m_CrzCount = up < mx ? up : mx;
+                } else {
+                    const float dn = m_CrzCount - 0.25f;
+                    m_CrzCount = dn > 0.f ? dn : 0.f;
+                }
                 UpdateEngineSound(AE_SOUND_PLAYER_CRZ);
                 m_State = eAEState::PLAYER_CRZ;
             }
@@ -3239,7 +3248,7 @@ void CAEVehicleAudioEntity::ProcessPlayerVehicleEngine(tVehicleParams& vp) {
                 && vp.ZOverSpeed > cfg->ZMoveSpeedThreshold
             ) {
                 vp.Vehicle->vehicleFlags.bAudioChangingGear = true;
-                RequestEngineSound(AE_SOUND_CAR_REV);
+                RequestEngineSound(AE_SOUND_PLAYER_CRZ); // 0x4FBE4C: sound 3 (the port requested CAR_REV)
                 m_State = eAEState::PLAYER_CRZ;
             } else {
                 DoFullAcceleration();

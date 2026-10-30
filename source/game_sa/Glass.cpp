@@ -193,6 +193,25 @@ std::pair<float, float> FindMinMaxZOfVertices(CVector (&vertices)[N]) {
     return { min, max };
 }
 
+// Index of the vertex furthest (2D) from vertex 0, exe 0x71BD69-0x71BDEC (and the copy at 0x71D23D-0x71D2B0 in BreakGlassPhysically): the search starts at vertex 1
+// (vertex 0 is never a candidate), the distance is sqrt(dy^2 + dx^2) (unrounded), the best one is kept as a float, and only a strictly greater distance replaces it.
+static size_t FindFurthestVertexIdx2D(const CVector (&verts)[4]) {
+    const auto Dist2D = [&](size_t i) {
+        const x87d dx = (x87d)verts[i].x - verts[0].x, dy = (x87d)verts[i].y - verts[0].y;
+        return (x87d)std::sqrt(dy * dy + dx * dx);
+    };
+    size_t idx  = 1;
+    float  best = (float)Dist2D(1);
+    for (size_t i = 2; i < 4; i++) {
+        const x87d d = Dist2D(i);
+        if (d > best) {
+            best = (float)d;
+            idx  = i;
+        }
+    }
+    return idx;
+}
+
 // 0x71BC40
 void CGlass::WindowRespondsToCollision(CEntity* entity, float fDamageIntensity, CVector vecMoveSpeed, CVector vecPoint, bool max1PaneSection) {
     auto object = entity->AsObject();
@@ -208,8 +227,7 @@ void CGlass::WindowRespondsToCollision(CEntity* entity, float fDamageIntensity, 
 
         const auto [minZ, maxZ] = FindMinMaxZOfVertices(verticesOS);
 
-        // R* used `Mag2D`, but `SqMag2D` is a better choice
-        const auto vertFurthestFromV0 = rng::max_element(verticesOS, {}, [v0 = verticesOS[0]](auto&& v) { return (v0 - v).SquaredMagnitude2D(); });
+        const auto vertFurthestFromV0 = &verticesOS[FindFurthestVertexIdx2D(verticesOS)];
 
         // Transform vertices to world space
         const auto vert0Pos          = object->GetMatrix().TransformPoint({ verticesOS[0].x, verticesOS[0].y, minZ });
@@ -217,7 +235,7 @@ void CGlass::WindowRespondsToCollision(CEntity* entity, float fDamageIntensity, 
 
         AudioEngine.ReportGlassCollisionEvent(AE_GLASS_BREAK_FAST, object->GetPosition());
         GeneratePanesForWindow(
-            fDamageIntensity <= 300.f ? ePaneType::DELAYED : ePaneType::DEFAULT,
+            !(fDamageIntensity > 300.f) ? ePaneType::DELAYED : ePaneType::DEFAULT, // exe 0x71BE79: `jne` on (C0|C3) -> NaN takes the DELAYED arm
             vert0Pos,
             { 0.f, 0.f, maxZ - minZ },
             furthestFromV0Pos - vert0Pos,

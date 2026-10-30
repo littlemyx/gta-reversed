@@ -81,7 +81,7 @@ void I_DisplayText(CVector2D pos, const char* key, int32 n1, int32 n2) {
     line->Pos             = pos;
     line->NumberToInsert1 = n1;
     line->NumberToInsert2 = n2;
-    strcpy_s(line->GXTKey, key);
+    strncpy(line->GXTKey, key, sizeof(line->GXTKey)); // an 8 char key is not terminated (strcpy_s rejected it)
 }
 
 // COMMAND_DISPLAY_TEXT - 0x481A0C

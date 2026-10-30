@@ -35,6 +35,7 @@ CEventGroup::~CEventGroup() {
 // 0x4AB420
 CEvent* CEventGroup::Add(CEvent* event, bool bValid) {
     if (m_pPed) {
+        bool bAddToEventGroup = true; // exe [esp+0xf]: only an editable response event that will not respond (and is not a damage event that wants to be added) clears it
         if (event->HasEditableResponse()) {
             const auto eventResp = static_cast<CEventEditableResponse*>(event);
 
@@ -45,7 +46,7 @@ CEvent* CEventGroup::Add(CEvent* event, bool bValid) {
 
             eventResp->ComputeResponseTaskType(m_pPed, false);
 
-            const auto bAddToEventGroup        = eventResp->WillRespond() || (bIsEventDamage && eventResp->m_bAddToEventGroup);
+            bAddToEventGroup                   = eventResp->WillRespond() || (bIsEventDamage && eventResp->m_bAddToEventGroup);
 
             if (!event->AffectsPed(m_pPed)) {
                 return nullptr;
@@ -60,15 +61,16 @@ CEvent* CEventGroup::Add(CEvent* event, bool bValid) {
                 eventResp->TriggerLookAt(m_pPed);
             }
             eventResp->InformVehicleOccupants(m_pPed);
-            if (!bAddToEventGroup) {
-                return nullptr;
-            }
         } else {
             if (!event->AffectsPed(m_pPed)) {
                 return nullptr;
             }
         }
         m_pPed->GetIntelligence()->RecordEventForScript(event->GetEventType(), event->GetEventPriority());
+        // exe 0x4AB549-0x4AB54F: the script record is made BEFORE the "will not be added" bail-out (the port returned first and never recorded such events)
+        if (!bAddToEventGroup) {
+            return nullptr;
+        }
     }
 
     if (m_count >= TOTAL_EVENTS_PER_EVENTGROUP) {

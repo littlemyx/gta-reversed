@@ -276,4 +276,4 @@
 | S84c | rest of S84b | 15 | 13/16 (5 M, 8 fixed) -> S84d | AEVehicleAudioEntity.cpp |
 | S102c | rest of S102b | 12 | pending | Clouds.cpp, Mirrors.cpp |
 | S101b | rest of S101 | 3 | pending | StencilShadows.cpp |
-| S84d | rest of S84c | 3 | pending | AEVehicleAudioEntity.cpp |
+| S84d | rest of S84c | 3 | done (3 fixed) | AEVehicleAudioEntity.cpp |

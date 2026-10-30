@@ -1,0 +1,4 @@
+addr	function	verdict	asm range	note	fix commit
+0x70FAE0	CStencilShadows::RenderForVehicle	DEVIATION	0x70FAE0-0x710309 (all)	fixed: lit-face test also taken for NaN dot (fcomp / test ah,1 / jne); everything else matches: extrude 40 for plane/heli subtype else 5, bike lean matrix, light dir = inv*sun - inv*0 (z,y,x matrix sum order), normal/dot order, cap/side vertex order, capacity checks (>= signed), edge add/remove helper 0x70FA70	5a066293b
+0x710310	CStencilShadows::RenderForObject	DEVIATION	0x710310-0x710AE3 (all)	same shared body, same fix; extrude 60.0 (0x858B34), entity matrix with AllocateMatrix; instruction stream identical to the vehicle one apart from scheduling	5a066293b
+0x710AF0	CStencilShadows::SunSetPositionFromEntity	NOT_REACHED	0x710AF0-0x710B47 (all)	no caller and no pointer to it anywhere in the exe; exe arg is not a CEntity (reads [arg+4]+0x30, normalises, stores to 0x8D5244..), port takes the entity position; left as is	-

@@ -284,8 +284,8 @@ void CAEWeaponAudioEntity::WeaponFire(eWeaponType weaponType, CPhysical* parent,
     case WEAPON_REMOTE_SATCHEL_CHARGE:
     case WEAPON_PARACHUTE:
         return;
-    default:
-        NOTSA_UNREACHABLE();
+    default: // 0x504F96: weapon types outside 22..45 (unarmed, parachute+, ...) fall through to the return
+        return;
     }
 }
 

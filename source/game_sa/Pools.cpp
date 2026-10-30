@@ -283,29 +283,29 @@ bool CPools::LoadVehiclePool() {
 
 // 0x550080
 void CPools::MakeSureSlotInObjectPoolIsEmpty(int32 slot) {
-    // All code paths to this function are unreachable
-    // The only caller is `CPickup::GiveUsAPickUpObject`, 
-    // but all calls of it pass `-1` as the slot, so this function is never actually used.
-    // The implementation is messy, as it acceses `m_pRwObject` of the Entity, which is no good.
-    NOTSA_UNREACHABLE();
-    //if (GetObjectPool()->IsFreeSlotAtIndex(slot))
-    //    return;
-    //
-    //auto* obj = GetObjectPool()->GetAt(slot);
-    //if (obj->IsTemporary()) {
-    //    CWorld::Remove(obj);
-    //    delete obj;
-    //} else if (CProjectileInfo::RemoveIfThisIsAProjectile(obj)) {
-    //    auto newObj = new CObject(obj->m_nModelIndex, false);
-    //    CWorld::Remove(obj);
-    //    *newObj = *obj;
-    //    CWorld::Add(newObj);
-    //
-    //    obj->m_pRwObject = nullptr;
-    //    delete obj;
-    //
-    //    newObj->m_pReferences = nullptr;
-    //}
+    // exe 0x550080-0x550162. The only caller (`CPickup::GiveUsAPickUpObject`, guarded by slot >= 0) is passed -1 everywhere, so this never runs in practice; kept as the exe has it.
+    if (GetObjectPool()->IsFreeSlotAtIndex(slot)) {
+        return;
+    }
+
+    auto* const obj = GetObjectPool()->GetAt(slot);
+    if (obj->IsTemporary()) {
+        CWorld::Remove(obj);
+        delete obj;
+        return;
+    }
+    if (CProjectileInfo::RemoveIfThisIsAProjectile(obj)) {
+        return;
+    }
+
+    auto* const newObj = new CObject(obj->m_nModelIndex, false);
+    CWorld::Remove(obj);
+    std::memcpy((void*)newObj, (const void*)obj, sizeof(CObject)); // `rep movsd` of 0x67 dwords (the whole object)
+    CWorld::Add(newObj);
+
+    obj->m_pRwObject = nullptr; // [ebx+0x18]: the copy owns the RW object now
+    delete obj;
+    newObj->m_pReferences = nullptr; // [ebp+0x24]
 }
 
 // 0x5D0880

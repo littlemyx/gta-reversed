@@ -447,7 +447,7 @@ void CMenuSystem::Process(int8 id) {
     // 0x58263F :thinking
     for (auto i = 0; i < MENU_COUNT; i++) {
         if (i != CurrentMenuInUse && MenuInUse[i]) {
-            Display(id, false);
+            Display(i, false);
         }
     }
 

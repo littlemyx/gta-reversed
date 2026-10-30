@@ -198,3 +198,5 @@ Append-only. Newest entry at the bottom. Prefix each entry with `[win]` or `[mac
 - New since: ASM sweep fixes in Ped, Automobile, Bike/Bmx, Physical (ApplyCollision/ApplySoftCollision), Object, PlayerPed, TaskSimple GetUp/JetPack, CarCtrl; SYSTEMIC-1 ExeDivide (Vector.h). Please merge back.
 
 - [win] 2026-10-29 14:30 new exe-exact helper x87::pow (source/game_sa/Core/X87Pow.h, tables X87PowTables.inc generated from the exe): port of the exe CRT _CIpow SSE2 kernel; 66 std::pow sites switched (.notes/asm_sweep/POW.tsv). Its portable plain-double branch is compile-checked only — Mac: please run x87_oracle_test pow rows on arm64 (vs the recorded exe results) and report. Also new on interior_c since the last sync: clean -WX from-scratch build fixes (601ea48c..), NOTSA_UNREACHABLE_RET now returns RET in the run build.
+
+## 2026-10-30 (Win, ASM-S78 4b88ac8b8): CPad::UpdateMouse now stores the wheel delta in m_fWheelMoved every poll (exe 0x53F3C0) - also added in Pad_SDL.cpp. Mac: check the SDL wheel path on macOS (trackpad scroll gives fractional deltas; sniper/camera zoom in Cam.cpp reads m_fWheelMoved).

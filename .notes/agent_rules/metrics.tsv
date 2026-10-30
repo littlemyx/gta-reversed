@@ -421,3 +421,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S71b	v6	asm sweep	264556	110	31	WaterCannon PushPeds wrong filter flag + speed source, cannon render 31 iters/roles/particle, rope PickUpObject ref slot, SWAT rope id, WithUp normalise (shared); 8 M
 2026-10-30	ASM-S68	v6	asm sweep	193843	74	19	WeaponCheat1-3: FindPlayerPed(-1), 9 of 10 models deletable (Colt45 stays); cheat tables + spawns MATCH; 33 M
 2026-10-30	ASM-S71c	v6	asm sweep	302907	132	34	CRope::Update MATCH; S80: keyboard key names generic path + exe char map, SetGamma prev level, GetMouseState HRESULT; 13 M
+2026-10-30	ASM-S78	v6	asm sweep	0	0	0	mouse wheel delta never stored (sniper/camera wheel zoom dead), rain streaks never moved, rain/sand rand order + constants, Timer pause clock, PopCycle init resets, WindModifiers active==1; 13 M

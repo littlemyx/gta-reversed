@@ -1,0 +1,41 @@
+addr	function	verdict	asm range	note	fix commit
+0x49B8D0	CShopping::LoadPrices	DEVIATION	0x49B8D0-0x49BBB9 (all)	ms_numPrices incremented only after a full entry (for-increment ran on every skipped # / empty line); nameTag plain zero-padded strncpy(,8)	a6a55d4be
+0x49BBE0	CShopping::LoadShop	MATCH	0x49BBE0-0x49BDCB (all)	stricmp early-out, bought list over ms_prices x ms_keys, shops section: type -> LoadPrices, item -> GetKey + IsValidModForVehicle (car mods only)	-
+0x49BE70	CShopping::IncrementStat	MATCH	0x49BE70-0x49BEE4 (all)	6 stat ids (0x15,0x42,0x50,0x14F,0x16,0xF5), respect / appearance x10, ModifyStat(float)	-
+0x49C290	CShopping::Init	MATCH	0x49C290-0x49C2C5 (all)	clears keys (560), bought (560), numPrices, numPriceModifiers, numBuyable, stored flag; tail LoadStats	-
+0x5D3DE0	CShopping::Save	MATCH	0x5D3DE0-0x5D3E3C (all)	count, modifiers (8 bytes each), numBuyable, bought bytes	-
+0x5D3E40	CShopping::Load	MATCH	0x5D3E40-0x5D3E9C (all)	mirror of Save	-
+0x558DE0	CStats::GetStatID	NOT_REACHED	-	not compared (budget reached)	-
+0x558EC0	CStats::PopulateFavoriteRadioStationList	NOT_REACHED	-	not compared (budget reached)	-
+0x558F90	CStats::GetFullFavoriteRadioStationList	NOT_REACHED	-	not compared (budget reached)	-
+0x559230	CStats::BuildStatLine	NOT_REACHED	-	not compared (budget reached)	-
+0x559760	CStats::CheckForStatsMessage	NOT_REACHED	-	not compared (budget reached)	-
+0x559860	CStats::LoadStatUpdateConditions	NOT_REACHED	-	not compared (budget reached)	-
+0x5599B0	CStats::LoadActionReactionStats	NOT_REACHED	-	not compared (budget reached)	-
+0x55A210	CStats::FindCriminalRatingString	NOT_REACHED	-	not compared (budget reached)	-
+0x55A780	CStats::ConstructStatLine	NOT_REACHED	-	not compared (budget reached)	-
+0x55B980	CStats::DisplayScriptStatUpdateMessage	NOT_REACHED	-	not compared (budget reached)	-
+0x55BC50	CStats::UpdateRespectStat	DEVIATION	0x55BC50-0x55BF1B (all)	territory clamp !(t >= 0) (NaN takes 0); rest (increase / decrease arms, thresholds, -99 handling, x87 sums) matches	b5a99235a
+0x55BF20	CStats::UpdateSexAppealStat	NOT_REACHED	-	not compared (budget reached)	-
+0x55C0C0	CStats::Init	NOT_REACHED	-	not compared (budget reached)	-
+0x55C410	CStats::SetNewRecordStat	NOT_REACHED	-	not compared (budget reached)	-
+0x55C780	CStats::UpdateStatsWhenCycling	MATCH	0x55C780-0x55C987 (all)	pedal / sprint rate index, stamina and skill counters, x87 speed^2 vs 0.05^2 / 0.2^2, ceil via 0x823820	-
+0x55CAC0	CStats::UpdateStatsWhenDriving	MATCH	0x55CAC0-0x55CBFE (all)	automobile test, x87 sqrt, 0.8 / 0.2 thresholds, 1.5 / 0.5 rates, float-spilled counter	-
+0x55CC00	CStats::UpdateStatsWhenFlying	MATCH	0x55CC00-0x55CD51 (all)	type 0 only, contact wheels, speed > 1.3 / up.z < 0 -> 1.5, speed > 0.5 -> 0.5	-
+0x55CD60	CStats::UpdateStatsWhenOnMotorBike	DEVIATION	0x55CD60-0x55CEA4 (all)	time step is the _ftol-truncated ms int (port used the float step); skill check strict limit*1000 < counter (NaN goes on); x87 extended speed	49f673927
+0x55CEB0	CStats::UpdateStatsWhenWeaponHit	MATCH	0x55CEB0-0x55CF93 (all)	skill from float / int stat, coop + >= 1000 early-outs, last-weapon counter, message value counter * increment	-
+0x5D3B40	CStats::Save	NOT_REACHED	-	not compared (budget reached)	-
+0x5D3BF0	CStats::Load	NOT_REACHED	-	not compared (budget reached)	-
+0x470660	CStreamedScripts::Initialise	DEVIATION	0x470660-0x470695 (all)	also zeroes m_nLargestExternalSize and the script count	51c35d0a6
+0x4706A0	CStreamedScripts::ReInitialise	MATCH	0x4706A0-0x4706B1 (all)	user counts cleared	-
+0x4706C0	CStreamedScripts::RegisterScript	MATCH	0x4706C0-0x4706ED (all)	name copied to slot count, returns count++	-
+0x4706F0	CStreamedScripts::FindStreamedScriptQuiet	MATCH	0x4706F0-0x470735 (all)	_stricmp over the registered scripts, -1 if none	-
+0x470740	CStreamedScripts::FindStreamedScript	MATCH	0x470740 (all)	jmp FindStreamedScriptQuiet	-
+0x470750	CStreamedScripts::ReadStreamedScriptData	MATCH	0x470750-0x470804 (all)	chunk entries of 28 bytes (name[20], offset, size), stricmp lookup, size and index stored	-
+0x470840	CStreamedScripts::LoadStreamedScript	MATCH	0x470840-0x470886 (all)	version check, new[size] + RwStreamRead; exe returns bool, the only caller ignores it	-
+0x470890	CStreamedScripts::StartNewStreamedScript	MATCH	0x470890-0x4708D7 (all)	StartNewScript, base ip, external flag, users++, SetMissionDoesntRequireModel(idx + 0x6676)	-
+0x4708E0	CStreamedScripts::RemoveStreamedScriptFromMemory	MATCH	0x4708E0-0x4708FD (all)	delete[] + null	-
+0x470900	CStreamedScripts::GetStreamedScriptFilename	MATCH	0x470900-0x47090C (all)	slot name	-
+0x470910	CStreamedScripts::GetStreamedScriptWithThisStartAddress	MATCH	0x470910-0x47092F (all)	82 slots, returns 82 when nothing matches	-
+0x463A60	CStuckCarCheck::AttemptToWarpVehicle	MATCH	0x463A60-0x463B7A (all)	IsSphereVisible(2-arg) 4.0, FindMissionEntitiesIntersectingCube (+-4.0, max 2, v/p/o), SetCoordsOfScriptCar(1,1), SetRotateZOnly(deg * 0.017453292)	-
+0x465680	CStuckCarCheck::Process	DEVIATION	0x465680-0x465965 (all)	stuck distance dx*dx + (dy*dy + dz*dz); warp-node search uses the vehicle position, not LastPos	2426d51b4

@@ -177,36 +177,46 @@ void COcclusion::ProcessBeforeRendering() {
             }
         };
 
+        // 0x7201DA..0x72020B: the far-away list is always walked BEFORE the nearby list (also when a walk is already in progress)
         if (ListWalkThroughFA == -1) {
             PreviousListWalkThroughFA = -1;
             ListWalkThroughFA         = FarAwayList;
-            if (FarAwayList == -1) {
-                UpdateNearbyList();
-            } else {
+            if (FarAwayList != -1) {
                 UpdateFarAwayList();
-                UpdateNearbyList();
             }
         } else {
-            UpdateNearbyList();
             UpdateFarAwayList();
         }
+        UpdateNearbyList();
+    } else {
+        // 0x7203F3 - Process interior occluders (ONLY when the outside can't be seen; the outdoor branch jumps over this to 0x72043A)
+        for (size_t i{}; i < NumInteriorOccludersOnMap; i++) {
+            if (NumActiveOccluders < ActiveOccluders.size()) { // 0x720403: `cmp edi, 0x1c / jge` skips, it does not stop the loop
+                if (InteriorOccluders[i].ProcessOneOccluder(&ActiveOccluders[NumActiveOccluders])) {
+                    NumActiveOccluders++;
+                }
+            }
+        }
     }
 
-    // 0x7203FC - Process interior occluders
-    for (size_t i{}; i < NumInteriorOccludersOnMap; i++) {
-        if (NumActiveOccluders > ActiveOccluders.size()) {
+    // 0x72043A - Remove occluded occluders: for each occluder (in order) look for a CLOSER one (signed int16 compare) that it hides behind;
+    // if found it is erased by shifting the rest down (`rep movsd`) and the same index is examined again
+    for (int32 o = 0; o < (int32)NumActiveOccluders; o++) {
+        for (int32 i = 0; i < (int32)NumActiveOccluders; i++) {
+            if (o == i) {
+                continue;
+            }
+            if ((int16)ActiveOccluders[i].m_DistToCam >= (int16)ActiveOccluders[o].m_DistToCam) {
+                continue;
+            }
+            if (!OccluderHidesBehind(&ActiveOccluders[o], &ActiveOccluders[i])) {
+                continue;
+            }
+            const auto last = (int32)NumActiveOccluders - 1;
+            std::memmove(&ActiveOccluders[o], &ActiveOccluders[o + 1], (size_t)(last - o) * sizeof(CActiveOccluder));
+            NumActiveOccluders = last;
+            o--;
             break;
         }
-        if (InteriorOccluders[i].ProcessOneOccluder(&ActiveOccluders[NumActiveOccluders])) {
-            NumActiveOccluders++;
-        }
     }
-
-    // 0x72043A - Remove occluded occluders
-    const auto [b, e] = rng::remove_if(GetActiveOccluders(), [](CActiveOccluder& o) {
-        return rng::any_of(GetActiveOccluders(), [&](CActiveOccluder& i) {
-            return &o != &i && i.m_DistToCam < o.m_DistToCam && OccluderHidesBehind(&o, &i);
-        });
-    });
-    NumActiveOccluders -= (size_t)(std::distance(b, e));
 }

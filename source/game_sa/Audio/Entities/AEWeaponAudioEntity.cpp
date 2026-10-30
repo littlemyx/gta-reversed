@@ -580,7 +580,7 @@ void CAEWeaponAudioEntity::ReportChainsawEvent(CPhysical* entity, eAudioEvents a
         switch (m_ChainsawState) {
         case eChainsawState::STOPPED:
         case eChainsawState::IDLE: {
-            PlaySoundIfNotPlaying(1, 2.f / 3.f, AE_WEAPON_SOUND_CAT_CHAINSAW_IDLE);
+            PlaySoundIfNotPlaying(1, 0.66f /* 0x3F28F5C3 */, AE_WEAPON_SOUND_CAT_CHAINSAW_IDLE);
 
             m_ChainsawState           = eChainsawState::IDLE;
             m_LastChainsawEventTimeMs = CTimer::GetTimeInMS();

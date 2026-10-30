@@ -46,7 +46,7 @@ void CPlaceName::Process() {
         Init();
     }
 
-    if ((smallestZone == m_pZone || CGame::currArea == AREA_CODE_1) 
+    if ((smallestZone == m_pZone || CGame::currArea != AREA_CODE_NORMAL_WORLD) // exe 0x571FBE: `test edx, edx` on the area code, any interior (port tested only area 1)
             && m_pZone
             || smallestZone
             && m_pZone // yep, checked twice (Pirulax: gotta account for those cosmis bit flipping rays?)

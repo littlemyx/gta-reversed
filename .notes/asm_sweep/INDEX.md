@@ -217,7 +217,7 @@
 | S77 | phase2b: coverage audit (COVERAGE.md) | 46 | done (41 M, 5 fixed) | BuildingPool.h, Clock.cpp, ColModelPool.h, ControllerConfigManager.cpp, ControllerState.cpp, Curves.cpp |
 | S78 | phase2b: coverage audit (COVERAGE.md) | 23 | pending | KeyboardState.cpp, ModelIndices.cpp, MouseControllerState.cpp, Pad.cpp, PopCycle.cpp, TimeCycle.cpp |
 | S79 | phase2b: coverage audit (COVERAGE.md) | 50 | pending | 3dMarker.cpp, AccidentManager.cpp, BouncingPanel.cpp, BreakObject_c.cpp, C_PcSave.cpp, ClothesBuilder.cpp |
-| S80 | phase2b: coverage audit (COVERAGE.md) | 15 | pending | ControllerConfigManager.cpp, DecisionMaker.cpp, Gamma.cpp, GridRef.cpp, MouseControllerState.cpp, Pad.cpp |
+| S80 | phase2b: coverage audit (COVERAGE.md) | 15 | done (12 M, 3 fixed) | ControllerConfigManager.cpp, DecisionMaker.cpp, Gamma.cpp, GridRef.cpp, MouseControllerState.cpp, Pad.cpp |
 | S74b | rest of S74 | 19 | done (16 M, 3 fixed) | MissionCleanup.cpp, OnscreenCounterEntry.cpp, OnscreenTimer.cpp, PatrolRoute.cpp, PlaceName.cpp, TagManager.cpp, UserDisplay.cpp |
 | S69b | rest of S69 | 10 | partial 4/10 (3 M, 1 fixed + Invert(CMatrix)) -> S69c | Collision.cpp |
 | S70b | rest of S70 | 31 | partial 15/31 (7 M, 8 fixed) -> S70c | Birds.cpp, BreakManager_c.cpp, BreakObject_c.cpp, Escalator.cpp, FallingGlassPane.cpp, Glass.cpp |
@@ -225,4 +225,4 @@
 | S69c | rest of S69b | 6 | done (5 M, 1 fixed) | Collision.cpp |
 | S70c | rest of S70b | 16 | pending | Birds.cpp, BreakManager_c.cpp, BreakObject_c.cpp, Escalator.cpp, Glass.cpp |
 | S71b | rest of S71 | 15 | 14/15 (8 M, 6 fixed + WithUp) -> S71c | 3dMarker.cpp, Rope.cpp, Ropes.cpp, WaterCannon.cpp, WaterCannons.cpp |
-| S71c | rest of S71b | 1 | pending | Rope.cpp |
+| S71c | rest of S71b | 1 | done (1 M) | Rope.cpp |

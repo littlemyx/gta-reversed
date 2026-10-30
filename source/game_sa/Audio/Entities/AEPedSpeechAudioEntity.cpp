@@ -145,7 +145,8 @@ void CAEPedSpeechAudioEntity::ReleasePedConversation() {
     if (!s_bPedConversationHappening) {
         return;
     }
-    if (s_pConversationPedSlot1 == -1 || s_pConversationPedSlot2 == -1) {
+    if (s_pConversationPedSlot1 < 0 || s_pConversationPedSlot2 < 0) { // 0x4E52B7: jumps to the flag clear
+        s_bPedConversationHappening = false;
         return;
     }
 
@@ -174,11 +175,15 @@ void CAEPedSpeechAudioEntity::StaticInitialise() {
     rng::fill(s_PhraseMemory, tPhraseMemory{});
 
     Reset();
+    // exe 0x5B992B: the table is filled a second time right after `Reset` (the first fill is dead, but its 360 rand() calls are not)
+    rng::generate(gGlobalSpeechContextNextPlayTime, []{
+        return CTimer::GetTimeInMS() + CAEAudioUtility::GetRandomNumberInRange(3000, 7000);
+    });
 
     s_pConversationPed1            = nullptr;
     s_pConversationPed2            = nullptr;
-    s_pConversationPedSlot1        = 0;
-    s_pConversationPedSlot2        = 0;
+    s_pConversationPedSlot1        = -1; // exe 0x5B9977 / 0x5B997E: -1, not 0
+    s_pConversationPedSlot2        = -1;
     s_pPlayerConversationPed       = nullptr;
     s_bPedConversationHappening    = false;
     s_bPlayerConversationHappening = false;
@@ -331,9 +336,10 @@ void CAEPedSpeechAudioEntity::ReleasePlayerConversation() {
         *ss = {};
     }
     }
-    s_PedSpeechSlots[s_pConversationPedSlot1] = {};
-    s_pConversationPedSlot1                   = -1;
-    s_pPlayerConversationPed                  = nullptr;
+    // exe 0x4E39DB: a slot that is playing / loading keeps everything but its player-conversation reservation (the port reset it whole)
+    ss->IsReservedForPlayerConversation = false;
+    s_pConversationPedSlot1             = -1;
+    s_pPlayerConversationPed            = nullptr;
 }
 
 // 0x4E3A00
@@ -830,13 +836,16 @@ bool CAEPedSpeechAudioEntity::CanPedSayGlobalContext(eGlobalSpeechContext gCtx) 
 bool CAEPedSpeechAudioEntity::GetVoiceAndTypeFromModel(eModelID modelId) {
     auto* const mi = CModelInfo::GetModelInfo(modelId)->AsPedModelInfoPtr();
 
-    switch (mi->m_nPedAudioType) {
-    case PED_TYPE_UNK: return false;
-    case PED_TYPE_SPC: return GetVoiceAndTypeForSpecialPed(mi->m_nKey);
+    m_PedAudioType = mi->m_nPedAudioType; // 0x4E58D2: stored before the range check (the port never stored it)
+    if ((int16)m_PedAudioType < 0 || (int16)m_PedAudioType >= PED_TYPE_NUM) {
+        return false;
+    }
+    if (m_PedAudioType == PED_TYPE_SPC) {
+        return GetVoiceAndTypeForSpecialPed(mi->m_nKey);
     }
 
-    m_VoiceID = mi->m_nVoiceId;
-    if (m_VoiceID == -1) {
+    m_VoiceID = mi->m_nVoiceId; // 0x4E58FA: stored before the sign check
+    if ((int16)m_VoiceID < 0) {
         return false;
     }
 

@@ -645,8 +645,7 @@ void CRunningScript::LocateCharCarCommand(int32 commandId) {
 
     const float minX = vehPos.x - rx;
     bool        result = false;
-    if (!(pedPos.x < minX || vehPos.x + rx < pedPos.x || vehPos.y - ry > pedPos.y || vehPos.y + ry < pedPos.y)
-        && (!is3D || !(vehPos.z - rz > pedPos.z || vehPos.z + rz < pedPos.z))) {
+    if (IsInCentreRange(vehPos.x, rx, pedPos.x) && IsInCentreRange(vehPos.y, ry, pedPos.y) && (!is3D || IsInCentreRange(vehPos.z, rz, pedPos.z))) {
         switch (commandId) {
         case 0x202:
         case 0x205: // Any means

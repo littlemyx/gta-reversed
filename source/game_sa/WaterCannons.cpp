@@ -61,6 +61,8 @@ void CWaterCannons::Render() {
     ZoneScoped;
 
     for (auto& cannon : aCannons) {
-        cannon.Render();
+        if (cannon.m_nId != 0) { // 0x729B40: `cmp dword ptr [esi], 0; je` - idle cannons are skipped (CWaterCannon::Render draws nothing for them but burns an rand())
+            cannon.Render();
+        }
     }
 }

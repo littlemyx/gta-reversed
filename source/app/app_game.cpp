@@ -257,15 +257,18 @@ void Render2dStuff() {
 
         if ((weaponType == WEAPON_SNIPERRIFLE || weaponType == WEAPON_ROCKET) && firstPersonWeapon) {
             CRGBA black(0, 0, 0, 255);
+            // 0x53E34B/0x53E3A3/0x53E453: the exe halves the integer resolution (cdq/sub/sar = truncating `/ 2`), then converts; `SCREEN_xxx / 2` on the float differs for odd sizes
+            const float halfW = (float)(RsGlobal.maximumWidth / 2);
+            const float halfH = (float)(RsGlobal.maximumHeight / 2);
             if (weaponType == WEAPON_ROCKET) {
-                CSprite2d::DrawRect(CRect(0.0f, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT / 2 - SCREEN_SCALE_Y(180.0f)), black);
-                CSprite2d::DrawRect(CRect(0.0f, SCREEN_HEIGHT / 2 + SCREEN_SCALE_Y(170.0f), SCREEN_WIDTH, SCREEN_HEIGHT), black);
+                CSprite2d::DrawRect(CRect(0.0f, 0.0f, SCREEN_WIDTH, halfH - SCREEN_SCALE_Y(180.0f)), black);
+                CSprite2d::DrawRect(CRect(0.0f, halfH + SCREEN_SCALE_Y(170.0f), SCREEN_WIDTH, SCREEN_HEIGHT), black);
             } else {
-                CSprite2d::DrawRect(CRect(0.0f, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT / 2 - SCREEN_SCALE_Y(210.0f)), black);
-                CSprite2d::DrawRect(CRect(0.0f, SCREEN_HEIGHT / 2 + SCREEN_SCALE_Y(210.0f), SCREEN_WIDTH, SCREEN_HEIGHT), black);
+                CSprite2d::DrawRect(CRect(0.0f, 0.0f, SCREEN_WIDTH, halfH - SCREEN_SCALE_Y(210.0f)), black);
+                CSprite2d::DrawRect(CRect(0.0f, halfH + SCREEN_SCALE_Y(210.0f), SCREEN_WIDTH, SCREEN_HEIGHT), black);
             }
-            CSprite2d::DrawRect(CRect(0.0f, 0.0f, SCREEN_WIDTH / 2 - SCREEN_SCALE_X(210.0f), SCREEN_HEIGHT), black);
-            CSprite2d::DrawRect(CRect(SCREEN_WIDTH / 2 + SCREEN_SCALE_X(210.0f), 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT), black);
+            CSprite2d::DrawRect(CRect(0.0f, 0.0f, halfW - SCREEN_SCALE_X(210.0f), SCREEN_HEIGHT), black);
+            CSprite2d::DrawRect(CRect(halfW + SCREEN_SCALE_X(210.0f), 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT), black);
         }
     };
 

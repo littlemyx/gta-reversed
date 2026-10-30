@@ -1,5 +1,5 @@
 # ASM-S74 (RoadBlocks, StuntJumpManager, SetPiece/SetPieces; phase 2) - 2026-10-30
-Result: 41 rows: 14 MATCH, 7 FIXED (7 commits + 1 info), 20 NOT_REACHED (budget). Table in S74.result.tsv.
+Result: 41 rows: 15 MATCH, 7 FIXED (7 commits), 19 NOT_REACHED (budget). Table in S74.result.tsv.
 Fixes (exe range, one line each):
 - CRoadBlocks::GenerateRoadBlocks (0x4629E0-0x4632E7): batch end was `(c + c%16)/16` (exe: plain c/16); chance roll `GetRandomNumberInRange(128)` vs exe `rand()&0x7F`; partner search walked all 325 nodes (exe: NumRoadBlocks), `dot <= 0.7` lacked the exe fabs, kept going after the first partner (exe stops) and the fallback own-width block used the partner direction instead of the node's own.
 - CRoadBlocks::GenerateRoadBlockPedsForCar (0x461170-0x461920): cop road block peds never got `m_bDontPursuit = true`; non-cop peds and the city-cop fallback skipped the `SetCurrentWeapon(PISTOL)`; gang weapon used a uniform pick (exe inline: <33 / <66 / rest with 3 weapons, 50 split with 2); zones with no gang strength skipped the block (exe continues with model 0).

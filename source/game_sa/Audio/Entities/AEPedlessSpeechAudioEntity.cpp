@@ -44,7 +44,7 @@ int16 CAEPedlessSpeechAudioEntity::AddSayEvent(eAudioEvents audioEvent, eGlobalS
     if (!attachTo) {
         return -1;
     }
-    m_AttachedTo = attachTo;
+    // exe 0x4E6263: m_AttachedTo is only set once every check passed (done inside I_AddSayEvent)
     return I_AddSayEvent<true>(attachTo, audioEvent, gCtx, startTimeDelayMs, probability, overrideSilence, isForceAudible, isFrontEnd);
 }
 

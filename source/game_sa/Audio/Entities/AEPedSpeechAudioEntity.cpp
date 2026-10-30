@@ -1336,6 +1336,9 @@ int16 CAEPedSpeechAudioEntity::I_AddSayEvent(const CEntity* posEntity, eAudioEve
         if (gCtx < CTX_GLOBAL_POLICE_BOAT || gCtx > CTX_GLOBAL_POLICE_OVERBOARD) { // 0x4E6176
             return -1;
         }
+        // exe 0x4E6188: set after the context range test and before every other check
+        m_PedAudioType = PED_TYPE_GFD;
+        m_VoiceID      = (ePedSpeechVoiceS16)10;
     } else { // 0x4E6638
         const auto IsContextImportant = [](eGlobalSpeechContext c) {
             return IsGlobalContextPain(c) || IsGlobalContextImportantForInterupting(c);
@@ -1373,23 +1376,35 @@ int16 CAEPedSpeechAudioEntity::I_AddSayEvent(const CEntity* posEntity, eAudioEve
     }
 
     // 0x4E6750: the exe reads the position of the entity here only (after every early out); the port read it on entry (a ped without a matrix faulted)
-    if (CVector::DistSqr(TheCamera.GetPosition(), posEntity->GetPosition()) >= sq(IsPedless ? 60.f : 40.f)) {
+    // exe 0x4E6786 / 0x4E6225: fcomp 1600.0 / 3600.0 + je => rejected only when the squared distance is strictly greater
+    if (CVector::DistSqr(TheCamera.GetPosition(), posEntity->GetPosition()) > sq(IsPedless ? 60.f : 40.f)) {
         return -1;
+    }
+
+    // exe 0x4E67AB..0x4E67EA: the speech slot is chosen BEFORE the sound is picked (GetSoundAndBankIDs consumes rand and shifts the phrase memory); non-player slots must be in [0, 5)
+    const bool isPlayer = !IsPedless && m_PedAudioType == PED_TYPE_PLAYER;
+    tPedSpeechSlotID speechSlotID;
+    if (isPlayer) {
+        if (CTimer::GetTimeInMS() < GetNextPlayTime(gCtx)) {
+            return -1;
+        }
+        speechSlotID = PLAYER_SPEECH_SLOT;
+    } else {
+        speechSlotID = CanWePlayGlobalSpeechContext(gCtx);
+        if (speechSlotID < 0 || speechSlotID >= PLAYER_SPEECH_SLOT) {
+            return -1;
+        }
     }
 
     eSpecificSpeechContext sCtx;
     const auto soundID = CAEPedSpeechAudioEntity::GetSoundAndBankIDs(gCtx, sCtx);
-    if (soundID == -1) {
+    if (soundID < 0) {
         return -1;
     }
 
-    const auto speechSlotID = !IsPedless && m_PedAudioType == PED_TYPE_PLAYER
-        ? CTimer::GetTimeInMS() >= GetNextPlayTime(gCtx)
-        ? PLAYER_SPEECH_SLOT
-        : -1
-        : CanWePlayGlobalSpeechContext(gCtx);
-    if (speechSlotID == -1) {
-        return -1;
+    if constexpr (IsPedless) {
+        // exe 0x4E6263: the attached entity is registered (CleanUpOldReference + RegisterReference) only once everything else passed
+        static_cast<CAEPedlessSpeechAudioEntity*>(this)->m_AttachedTo = const_cast<CEntity*>(posEntity);
     }
 
     SetNextPlayTime(gCtx);
@@ -1398,7 +1413,7 @@ int16 CAEPedSpeechAudioEntity::I_AddSayEvent(const CEntity* posEntity, eAudioEve
     m_IsFrontend = isFrontEnd;
     if constexpr (!IsPedless) {
         if (const auto veh = m_Entity->AsPed()->GetVehicleIfInOne()) {
-            if (veh == FindPlayerVehicle() && gCtx != CTX_GLOBAL_STOMACH_RUMBLE) {
+            if (veh == CAEAudioUtility::FindVehicleOfPlayer() && gCtx != CTX_GLOBAL_STOMACH_RUMBLE) { // exe 0x4E683B: CAEAudioUtility::FindVehicleOfPlayer (0x4D9E10)
                 m_IsFrontend = true;
             }
         }
@@ -1508,7 +1523,7 @@ void CAEPedSpeechAudioEntity::I_PlayLoadedSound(CEntity* attachTo) {
             .Speed              = 1.f,
             .Doppler            = 1.f,
             .FrameDelay         = 0,
-            .Flags              = flags,
+            .Flags              = flags | (IsPedless ? SOUND_LIFESPAN_TIED_TO_PHYSICAL_ENTITY : 0), // exe 0x4E63FA / 0x4E642B: pedless flags are 0x387 / 0x86
             .RegisterWithEntity = IsPedless ? attachTo : nullptr
         });
     };
@@ -1541,7 +1556,9 @@ void CAEPedSpeechAudioEntity::I_PlayLoadedSound(CEntity* attachTo) {
             default: {
                 notsa::cast<CTaskComplexFacial>(m_Entity->AsPed()->GetTaskManager().GetTaskSecondary(TASK_SECONDARY_FACIAL_COMPLEX))->SetRequest(
                     eFacialExpression::TALKING,
-                    2800
+                    2800,
+                    eFacialExpression::NONE,
+                    0 // exe 0x4E5E5F pushes (7, 0xAF0, -1, 0)
                 );
             }
             }

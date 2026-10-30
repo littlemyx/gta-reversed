@@ -10,12 +10,12 @@ Disassembled both from the exe before reading the S58 report.
 No change needed, so the missions / arrest0 / combat regress for Task 0 was not required on its own; it was run for the S58b edits (see Gate).
 
 ## Fixes (exe address, port deviation)
-- ClearSpaceForMissionEntity (0x486B00, 77e6ae100): the passenger removal walk is `i < m_nNumPassengers` re-read every iteration (0x486D2F); RemovePassenger decrements it, so the exe stops early and passengers in higher seats stay in the (then deleted) vehicle. The port visited every seat. m_pDriver is also set to null unconditionally (0x486CF6; SafeCleanUpRef alone leaves the pointer).
-- RemoveScriptSearchLight / AddScriptSearchLight (0x493160 / 0x493000, 7e95e9e95): the exe resets / initialises the slot field by field and never touches m_nId (+4) or the trailing m_TargetSpot / vf64 / vf70; m_bEnableShadow becomes true on remove. The port wrote a whole default struct (id 0 -> every handle of a slot was the same number, so a stale handle matched a new light). CTheScripts::Init (0x4692D0) sets id = 1 and shadow = true, header defaults changed accordingly.
-- RemoveScriptCheckpoint (0x4936C0, d2666ce0a): same id reset (m_nId = 0) removed, m_Checkpoint cleared (0x493703).
-- HighlightImportantArea (0x485E00, c84a346e5): ground z gets +2.0f (`fadd [0x858CA0]`, not present in the angled version); the min / max tests are `!(a > b)` (fcomp + test ah,0x41 + jne: NaN takes the first arm).
-- DrawDebugAngledSquare (0x486990, 319b10f64): the exe takes 8 floats by value (callers 0x4883A5, 0x48876A, 0x488B2F), the port declared const CVector2D& (latent ABI crash for the exe's own callers). Now by value.
-- RenderAllSearchLights (0x493E30, 502f5ca71): SearchLightCone's corona id is 0x216 + slot (`mov ebx, 0x216`, inc per slot); the port passed the bare slot index (collides with corona ids 0..7).
+- ClearSpaceForMissionEntity (0x486B00, 87e125449): the passenger removal walk is `i < m_nNumPassengers` re-read every iteration (0x486D2F); RemovePassenger decrements it, so the exe stops early and passengers in higher seats stay in the (then deleted) vehicle. The port visited every seat. m_pDriver is also set to null unconditionally (0x486CF6; SafeCleanUpRef alone leaves the pointer).
+- RemoveScriptSearchLight / AddScriptSearchLight (0x493160 / 0x493000, 3529c796f): the exe resets / initialises the slot field by field and never touches m_nId (+4) or the trailing m_TargetSpot / vf64 / vf70; m_bEnableShadow becomes true on remove. The port wrote a whole default struct (id 0 -> every handle of a slot was the same number, so a stale handle matched a new light). CTheScripts::Init (0x4692D0) sets id = 1 and shadow = true, header defaults changed accordingly.
+- RemoveScriptCheckpoint (0x4936C0, a98aa47b8): same id reset (m_nId = 0) removed, m_Checkpoint cleared (0x493703).
+- HighlightImportantArea (0x485E00, be138cfb6): ground z gets +2.0f (`fadd [0x858CA0]`, not present in the angled version); the min / max tests are `!(a > b)` (fcomp + test ah,0x41 + jne: NaN takes the first arm).
+- DrawDebugAngledSquare (0x486990, 5dc0307a3): the exe takes 8 floats by value (callers 0x4883A5, 0x48876A, 0x488B2F), the port declared const CVector2D& (latent ABI crash for the exe's own callers). Now by value.
+- RenderAllSearchLights (0x493E30, 585ae319f): SearchLightCone's corona id is 0x216 + slot (`mov ebx, 0x216`, inc per slot); the port passed the bare slot index (collides with corona ids 0..7).
 
 ## Notes
 - Save / Load: byte layout verified field by field against both exe functions (see table). Not reproducible: for an invisibility entry whose entity type is nothing / vehicle / ped the exe writes two stale stack words; the port writes zeros (scripts only register buildings, objects, dummies).

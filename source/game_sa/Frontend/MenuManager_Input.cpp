@@ -1197,6 +1197,9 @@ bool CMenuManager::CheckMissionPackValidMenu() {
     }
 
     CFileMgr::CloseFile(scr);
+    if (gxt) { // exe 0x57D791: the TEXT.GXT handle is closed as well
+        CFileMgr::CloseFile(gxt);
+    }
     return true;
 }
 

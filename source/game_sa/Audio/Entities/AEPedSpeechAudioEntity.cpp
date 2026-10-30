@@ -938,7 +938,7 @@ int16 CAEPedSpeechAudioEntity::GetSoundAndBankIDs(eGlobalSpeechContext gCtx, eSp
     };
 
     int16      maxPhraseIMemdx = -1;
-    const auto rndOffset    = CAEAudioUtility::GetRandomNumberInRange<size_t>(0u, numSounds);
+    const auto rndOffset    = CAEAudioUtility::GetRandomNumberInRange<size_t>(0u, numSounds - 1); // exe 0x4E5B6F: GetRandomNumberInRange(0, last - first) is inclusive => [0, numSounds - 1]
     for (size_t i = 0; i < std::min<size_t>(20u, numSounds); i++) { // NOTE: Here you can tune the maximum tries (Default: 20)
         const auto soundIDCurr  = ctx->FirstSoundID + (int16)((rndOffset + i) % numSounds);
         const auto phraseMemIdx = GetPhraseIndexInMemory(soundIDCurr);

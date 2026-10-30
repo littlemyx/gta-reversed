@@ -223,7 +223,7 @@ void CIdleCam::ProcessFOVZoom(float time) {
 
     switch (m_ZoomState) {
     case eIdleCamZoomState::ZOOMING_IN:
-        if (std::fabs(m_CurFOV - zoomNearest) >= 1.0f) {
+        if (!(std::fabs(m_CurFOV - zoomNearest) < 1.0f)) { // 0x517E06: `fcomp; jp` interpolates on the unordered arm too
             InterpolateFOV();
         } else {
             m_ZoomState      = eIdleCamZoomState::ZOOMED_IN;
@@ -232,7 +232,7 @@ void CIdleCam::ProcessFOVZoom(float time) {
         }
         break;
     case eIdleCamZoomState::ZOOMING_OUT:
-        if (std::fabs(m_CurFOV - m_ZoomFarthest) >= 1.0f) {
+        if (!(std::fabs(m_CurFOV - m_ZoomFarthest) < 1.0f)) {
             InterpolateFOV();
         } else {
             m_ZoomState = eIdleCamZoomState::ZOOMED_OUT;

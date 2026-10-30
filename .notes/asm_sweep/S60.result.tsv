@@ -1,0 +1,41 @@
+addr	function	verdict	asm range	note	fix commit
+0x465970	CStuckCarCheck::AddCarToCheck	FIXED	0x465970-0x465A2E (all)	free-slot test is signed < 0 (jl), the port tested == -1; stored fields and args mapped equal	23263dacd
+0x5F6500	Chat::GetType	MATCH	all	3	-
+0x5F8180	Chat::AllocateDefaultTasks	FIXED	0x5F8180-0x5F84EE (all)	one sequence per member slot (go-to radius 2.0, repeat), n rounds each with ONE random chatter (picked before the time) and the same time 3000..6000 for all members; clone into the pair only if no ped or pair.Ped == ped. The port did one round with per-member partner/time	d3eed3109
+0x5F6470	FollowAnyMeans::GetType	MATCH	all	0	-
+0x5F6B40	FollowAnyMeans::AllocateDefaultTasks	FIXED	0x5F6B40-0x5F6C65 (all)	slots 0..6 FollowLeaderAnyMeans, leader slot 7 WanderGang(walk, node heading, 5000, true, 0.5); the port tested ped == leader	35fd3a714
+0x5F64A0	FollowLimited::GetType	MATCH	all	1	-
+0x5F6C70	FollowLimited::AllocateDefaultTasks	FIXED	0x5F6C70-0x5F6D9B (all)	slots 0..6 FollowLeaderInFormation(10.0), leader slot 7 WanderGang; the port tested ped == leader	839cb9452
+0x5F6530	Random::GetType	MATCH	all	5	-
+0x5F6E90	Random::AllocateDefaultTasks	MATCH	all	GangFollower(group, leader, i, (x,y,0), 10.0) + enter-vehicle flag, leader GangLeader: equal	-
+0x5F6560	SitInLeaderCar::GetType	MATCH	all	4	-
+0x5F6FC0	SitInLeaderCar::AllocateDefaultTasks	MATCH	all	leader driver sequence; passenger seat counter advances only for present members below m_nMaxPassengers; task deleted when the pair does not match: equal	-
+0x5F64D0	StandStill::GetType	MATCH	all	2	-
+0x5F6DA0	StandStill::AllocateDefaultTasks	MATCH	all	BeStill for all 8 pairs whose ped matches	-
+0x5F7200	CPedGroupDefaultTaskAllocators::Get	MATCH	all	jump table decoded, type->global map equal (unknown type: exe returns null, port unreachable)	-
+0x41BF10	CTaskComplexSequence::Contains	FIXED	0x41BF10-0x41BF46 (all)	null slots are skipped; the port dereferenced them	63c17f8dc
+0x5F6710	CTaskComplexSequence::Clone	MATCH	all	clones 8 slots, copies repeat mode and current index	-
+0x632C70	CTaskComplexSequence::CreateNextSubTask (internal)	MATCH	all		-
+0x632D50	CTaskComplexSequence::AddTask(idx)	MATCH	all		-
+0x638A40	CTaskComplexSequence::CreateNextSubTask	MATCH	all		-
+0x638A60	CTaskComplexSequence::CreateFirstSubTask	MATCH	all		-
+0x6354A0	CTaskComplexUseSequence::CreateNextSubTask	MATCH	all		-
+0x6354D0	CTaskComplexUseSequence::CreateFirstSubTask	MATCH	all	type 0x113 retarget equal	-
+0x637100	CTaskComplexUseSequence::Clone	MATCH	all		-
+0x69C3C0	TaskAllocator::IsFinished	NOT_REACHED	-	budget	-
+0x69C2D0	TaskAllocatorAttack::Destructor	NOT_REACHED	-	budget	-
+0x69C3F0	TaskAllocatorAttack::AllocateTasks	NOT_REACHED	-	budget	-
+0x69D0C0	TaskAllocatorAttack::ProcessGroup	NOT_REACHED	-	budget	-
+0x69BBF0	TaskAllocatorKillOnFoot::Destructor	NOT_REACHED	-	budget	-
+0x69BCA0	TaskAllocatorKillOnFoot::AllocateTasks	NOT_REACHED	-	budget	-
+0x69C780	TaskAllocatorKillThreatsBasic::Destructor	NOT_REACHED	-	budget	-
+0x69C850	TaskAllocatorKillThreatsBasic::ComputeClosestPeds	NOT_REACHED	-	budget	-
+0x69D170	TaskAllocatorKillThreatsBasic::AllocateTasks	NOT_REACHED	-	budget	-
+0x69D460	TaskAllocatorKillThreatsBasicRandomGroup::AllocateTasks	NOT_REACHED	-	budget	-
+0x69CB60	TaskAllocatorKillThreatsDriveby::Destructor	NOT_REACHED	-	budget	-
+0x69CC30	TaskAllocatorKillThreatsDriveby::AllocateTasks	NOT_REACHED	-	budget	-
+0x69C4D0	TaskAllocatorPlayerCommandAttack::AllocateTasks	NOT_REACHED	-	budget	-
+0x69D110	TaskAllocatorPlayerCommandAttack::ProcessGroup	NOT_REACHED	-	budget	-
+0x61A5B0	CTask::operator new	NOT_REACHED	-	budget	-
+0x61A620	CTaskComplex (?)	NOT_REACHED	-	budget	-
+0x6816D0	CTaskManager::Destructor	NOT_REACHED	-	budget	-

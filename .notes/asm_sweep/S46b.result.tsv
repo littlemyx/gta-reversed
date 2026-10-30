@@ -1,0 +1,6 @@
+addr	function	verdict	asm range	note	fix commit
+0x4B9340	CEventHandler::RegisterKill	MATCH	0x4B9340-0x4B93F6 (all)	player-kill branch (havoc +10, chase +5.0, RegisterKillByPlayer(victim, weapon, headshot, killer ped type), CPedGroups::RegisterKillByPlayer), vehicle branch (stat 0x79), else RegisterKillNotByPlayer: equal	-
+0x4B97B0	CEventHandler::ComputeReviveResponse	FIXED	0x4B97B0-0x4B98D2 (all)	default wander task goes to slot 4 (DEFAULT), the port stored PRIMARY; get-up and say tasks are allocated before the wander task; flag bits decoded equal	d0f0d2582
+0x4B98E0	CEventHandler::ComputeChatPartnerResponse	MATCH	0x4B98E0-0x4B99DA (all)	FindTaskByType order (4,3,1,2) = Find<>(false), rand(3,7) result discarded, ctor args decoded equal	-
+0x4ABEA0	CPedIntelligence::GetPedFOVRange (shared helper)	FIXED	0x4ABEA0-0x4ABEC0 (all)	hearing range only when strictly greater, else seeing range (equal/NaN differ from std::max)	a02f56d87
+0x44E480	CVector2D::Normalise (shared helper)	FIXED	0x44E480-0x44E4BD (all)	NaN squared length goes to the sqrt path (NaN components); unrounded reciprocal like CVector::Normalise; hook not installed, no oracle row	a1c5d250b

@@ -794,8 +794,9 @@ bool CWeapon::TakePhotograph(CEntity* owner, const CVector* point) {
     // NOTSA-AUDIT (0x73C2B5 / 0x73C521): the exe skips a ped / object when `!(sqrt((z*z + y*y) + x*x) < 125)` (fsqrt + fcomp + `jp`), not on the squared distance. Despite the name this is TRUE when
     // the position is OUT of range (upstream's object loop below used it inverted: objects were only photographed when farther than 125 m).
     const auto IsPosInRange = [&](const CVector& worldPos) {
-        const float dx = worldPos.x - camPos.x, dy = worldPos.y - camPos.y, dz = worldPos.z - camPos.z;
-        return !(x87::sqrt((x87d)((dz * dz + dy * dy) + dx * dx)) < 125.0);
+        // 0x73C2C4: the differences (fsub of a float memory operand), the squares and the root all stay in extended precision
+        const x87d dx = (x87d)worldPos.x - camPos.x, dy = (x87d)worldPos.y - camPos.y, dz = (x87d)worldPos.z - camPos.z;
+        return !(x87::sqrt((dz * dz + dy * dy) + dx * dx) < (x87d)125.0f);
     };
 #else
 #line 779
@@ -813,16 +814,30 @@ bool CWeapon::TakePhotograph(CEntity* owner, const CVector* point) {
         }
 
         // TODO/BUG: Possibly buggy on bigger screens, because the border becomes too big (because of the relative multiplier) maybe?
+#ifdef NOTSA_STANDALONE_RUN
+        // 0x73C335: fild(width/height) * 0.1f / 0.9f in extended precision; the test is "0.1 * w < x && x < 0.9 * w" (and the same for y), so NaN is rejected
+        const x87d w = RsGlobal.maximumWidth, h = RsGlobal.maximumHeight;
+        if (!((w * (x87d)0.1f < pedHeadPos_Screen.x) && (pedHeadPos_Screen.x < w * (x87d)0.9f) && (h * (x87d)0.1f < pedHeadPos_Screen.y) && (pedHeadPos_Screen.y < h * (x87d)0.9f))) {
+            return false;
+        }
+#else
         if (   (SCREEN_WIDTH * 0.1f >= pedHeadPos_Screen.x || pedHeadPos_Screen.x >= SCREEN_WIDTH * 0.9f)
             || (SCREEN_HEIGHT * 0.1f >= pedHeadPos_Screen.y || pedHeadPos_Screen.y >= SCREEN_HEIGHT * 0.9f)
         ) {
             return false;
         }
+#endif
 
         return true;
     };
 
+#ifdef NOTSA_STANDALONE_RUN
+    // 0x73C642 / 0x73C45A: the ray starts 2 m along TheCamera.m_mCameraMatrix's forward vector (exe 0xB6F9AC; NOT the placeable matrix) from the placeable matrix position
+    VALIDATE_OFFSET(CCamera, m_mCameraMatrix, 0x974);
+    const auto CheckIsLOSBlocked = [&, camFwd = TheCamera.m_mCameraMatrix.GetForward()](const CVector& target, CEntity* ignore) {
+#else
     const auto CheckIsLOSBlocked = [&, camFwd = camMat.GetForward()](const CVector& target, CEntity* ignore) {
+#endif
         CColPoint _cp; // Unused
         CEntity* hitEntity{};
         if (!CWorld::ProcessLineOfSight(

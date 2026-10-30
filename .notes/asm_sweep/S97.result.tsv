@@ -1,10 +1,10 @@
 addr	function	verdict	asm range	note	fix commit
 0x57DDE0	CMenuManager::SaveStatsToFile	NOT_REACHED	-	not compared: sweep budget exhausted	-
 0x57C490	CMenuManager::SaveLoadFileError_SetUpErrorScreen	NOT_REACHED	-	not compared: sweep budget exhausted	-
-0x573440	CMenuManager::CheckSliderMovement	FIXED	0x573440-0x57363C (all)	brightness step was a constant 24 each way; exe is ftol(LR*24.19f+b) (b-25 down, b+24 up); draw-distance step is the float 0x3D5FFFFF (1 ulp under 7/128); volume and mouse-sens arms match	ab4e525b0
+0x573440	CMenuManager::CheckSliderMovement	FIXED	0x573440-0x57363C (all)	brightness step was a constant 24 each way; exe is ftol(LR*24.19f+b) (b-25 down, b+24 up); draw-distance step is the float 0x3D5FFFFF (1 ulp under 7/128); volume and mouse-sens arms match	7215374ad
 0x576B70	CMenuManager::CheckForMenuClosing	MATCH	0x576B70-0x576FD2 (all)	activation condition, leave/enter/save-done branches, fade and pad stores identical (FastLoader guard around Service is a deliberate port deviation)	-
-0x57D720	CMenuManager::CheckMissionPackValidMenu	FIXED	0x57D720-0x57D85E (all)	TEXT.GXT handle was leaked on the success path; exe closes both handles	5ae3fbc19
-0x57DB20	CMenuManager::CheckCodesForControls	FIXED	0x57DB20-0x57DDD8 (all)	invalid key list lacked F9,PAD5,RALT; an invalid key reset the redefine state (exe returns untouched); m_MenuIsAbleToQuit (joystick combo) returns early without binding	548bb76e9
+0x57D720	CMenuManager::CheckMissionPackValidMenu	FIXED	0x57D720-0x57D85E (all)	TEXT.GXT handle was leaked on the success path; exe closes both handles	8a23886aa
+0x57DB20	CMenuManager::CheckCodesForControls	FIXED	0x57DB20-0x57DDD8 (all)	invalid key list lacked F9,PAD5,RALT; an invalid key reset the redefine state (exe returns untouched); m_MenuIsAbleToQuit (joystick combo) returns early without binding	16424838d
 0x576860	CMenuManager::DisplaySlider	MATCH	0x576860-0x576AD4 (colour, threshold, free space, last bar; rect corner order not decoded)	selected when i/16+1/32 < value, bar free space (h1*(16-i)+h2*i)/16, stretch constants 2/448 and 2/640, colours match	-
 0x57E240	CMenuManager::DisplayHelperText	NOT_REACHED	-	not compared: sweep budget exhausted	-
 0x579330	CMenuManager::MessageScreen	NOT_REACHED	-	not compared: sweep budget exhausted	-
@@ -26,8 +26,8 @@ addr	function	verdict	asm range	note	fix commit
 0x57D520	CMenuManager::ProcessMissionPackNewGame	NOT_REACHED	-	not compared: sweep budget exhausted	-
 0x5822D0	CMenuSystem::Initialise	NOT_REACHED	-	not compared: sweep budget exhausted	-
 0x5825D0	CMenuSystem::Input	MATCH	0x5825D0-0x5825FC (all)	dispatch by menu type	-
-0x580800	CMenuSystem::InputStandardMenu	FIXED	0x580800-0x580A54 (accept, up arm; down arm not read)	paused accept used CPad::IsEnterJustPressed (pad-enter OR return); exe tests only the Return key state 0xB733EA/0xB7317A	b83344690
-0x580BD0	CMenuSystem::InputGridMenu	FIXED	0x580BD0-0x580D8B (accept, up/down/left; right arm not read)	same paused accept key fix as InputStandardMenu	b83344690
+0x580800	CMenuSystem::InputStandardMenu	FIXED	0x580800-0x580A54 (accept, up arm; down arm not read)	paused accept used CPad::IsEnterJustPressed (pad-enter OR return); exe tests only the Return key state 0xB733EA/0xB7317A	b8360c953
+0x580BD0	CMenuSystem::InputGridMenu	FIXED	0x580BD0-0x580D8B (accept, up/down/left; right arm not read)	same paused accept key fix as InputStandardMenu	b8360c953
 0x580E00	CMenuSystem::DisplayStandardMenu	NOT_REACHED	-	not compared: sweep budget exhausted	-
 0x5816E0	CMenuSystem::DisplayGridMenu	NOT_REACHED	-	not compared: sweep budget exhausted	-
 0x582630	CMenuSystem::Process	NOT_REACHED	-	not compared: sweep budget exhausted	-

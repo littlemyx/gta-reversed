@@ -38,7 +38,11 @@ CPlantLocTri* CPlantLocTri::Add(const CVector& p1, const CVector& p2, const CVec
 
     m_Center = (p1 + p2 + p3) * ExeRecip(3.0f);
 
-    m_SphereRadius = DistanceBetweenPoints(m_Center, m_V1) * 1.75f;
+    // 0x5DC38F-0x5DC3E6: sqrt((dz^2 + dy^2) + dx^2) of (center - V1) (DistanceBetweenPoints sums x,y,z)
+    const float dx = m_Center.x - m_V1.x;
+    const float dy = m_Center.y - m_V1.y;
+    const float dz = m_Center.z - m_V1.z;
+    m_SphereRadius = std::sqrt((dz * dz + dy * dy) + dx * dx) * 1.75f;
     if (m_createsObjects && !m_createsPlants) {
         CPlantMgr::MoveLocTriToList(CPlantMgr::m_UnusedLocTriListHead, CPlantMgr::m_CloseLocTriListHead[3], this);
         return this;

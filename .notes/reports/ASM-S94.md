@@ -1,0 +1,11 @@
+# ASM-S94 (Fx: FxEmitterBP, FxInfoManager, FxManager, FxPrimBP, FxSphere, FxSystem, FxSystemBP; 45 rows) - 2026-10-30
+Result: 43 of 45 compared (39 MATCH, 4 FIXED), 2 UNSURE (not compared, budget): FxEmitterBP_c::Render 0x4A2C40 and ::RenderHeatHaze 0x4A1940. Table in S94.result.tsv.
+Fixes:
+- 39f79ff48 FxEmitterBP_c::UpdateParticle (0x4A21D0-0x4A24CD): NaN arms of the life test (`fcom; test ah,1`), the underwater z test (`test ah,0x41`) and the four "rotation pair non positive" tests (`!(x > 0)`) now follow the exe.
+- ff2dd73e7 FxSystem_c::SetBoundingSphere (0x4AAB80): the exe copies the 0x14 bytes of the argument into its own sphere (allocating when missing); the port stored the pointer, or left a freshly allocated sphere uninitialised.
+- 2848ffa9e FxSystem_c::ResetBoundingSphere (0x4AABF0): copy of the blueprint sphere into the own sphere; the port aliased the blueprint's pointer (the destructor then frees the blueprint's sphere).
+- eed0fbc53 FxSystem_c::ForAllParticles (0x4AA930): callback runs for prims of type 0 (emitters); the port tested `m_Type != 0` so it visited nothing (GetBoundingBox always fell back to the matrix position).
+Verified by decoding stack slots of every sscanf in the three loaders: FxInfoManager::Load (all 32 names/ids, 0.7 version gate, int8 offsets), FxPrimBP::Load (matrix test order, *32767 _ftol int16, texture lines for version > 101, alpha/src/dst slots +7/+5/+6), FxSystemBP::Load (version gates 100/103/106/108/109, bounding sphere, prim loop, LoadTextures vslot), FxManager::LoadFxProject / LoadFxSystemBP / CreateFxSystem / ShouldCreate / FreeUpParticle, FxSystem::Init/Exit/Update/DoFxAudio/IsVisible (cull, play modes, loop interval, prevCulled).
+Not changed: FindFxSystemBP prints nothing in the exe (formats into a local buffer), the port logs; FxEmitterBP_c::Load / FxInfoManager::Load unknown-name paths are NOTSA_UNREACHABLE (exe uses uninitialised memory).
+Open: Render (0x4A2C40-0x4A3E9F) and RenderHeatHaze (0x4A1940-0x4A21CF) not compared.
+Gate: Release + StandaloneRW build OK; wave2_oracle_test PC24 0/0, PC53 0/0 (1142 fns); combat PASS=14, missions PASS=11; PortableWin64 compile of FxSystem.cpp + FxEmitterBP.cpp 0 errors; pre-commit grep clean.

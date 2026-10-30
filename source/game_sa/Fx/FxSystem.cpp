@@ -380,11 +380,11 @@ bool FxSystem_c::GetBoundingSphereLcl(FxSphere_c* out) const {
 // 0x4AAB80
 void FxSystem_c::SetBoundingSphere(FxSphere_c* sphere) {
     if (sphere) {
+        // 0x4AAB8C: the exe copies the 0x14 bytes of `*sphere` into the own sphere (allocating it first when missing); it never stores the pointer
         if (!m_BoundingSphere) {
             m_BoundingSphere = new (true) FxSphere_c();
-            return;
         }
-        m_BoundingSphere = sphere;
+        *m_BoundingSphere = *sphere;
     } else if (m_BoundingSphere) {
         CMemoryMgr::Free(m_BoundingSphere);
         m_BoundingSphere = nullptr;

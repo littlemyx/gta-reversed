@@ -1,0 +1,17 @@
+addr	function	verdict	asm range	note	fix commit
+0x712330	CBirds::Update	FIXED	0x712330-0x712809	desert cap 3 - birds (was min with bird count); water only for dist < 30 (30.0/NaN are land); camera-relative angle offset signed [-128:127]; far-bird test squared 2D distance vs max^2; update needs time > updateAfter	2b612de17
+0x711EF0	CBirds::CreateNumberOfBirds	FIXED	0x711EF0-0x7122FF	normal-biome colours (rand & 0x7F) + 0x80 (was int range 128..255 from the high bits); check position overwrites the by-value target for the next bird	ae141b9ab
+0x712810	CBirds::Render	FIXED	0x712810-0x712E17	far-bird fade 1 - (dist - 0.7 max) / (0.3 max) (was invLerp); second wing phase is time % period	ef85e0318
+0x59E9B0	BreakManager_c::Add	MATCH	0x59E9B0-0x59E9F4	first free of 64 slots (stride 0x20, active byte +1), Init with the 4 args	-
+0x59D190	BreakObject_c::CalcGroupCenter	MATCH	0x59D190-0x59D561	strict min/max, centre (min+max)*0.5, size selection incl. ties	-
+0x59DDD0	BreakObject_c::Exit	MATCH	0x59DDD0-0x59DE3D	texture destroy, delete render infos, delete groups, inactive	-
+0x59DE40	BreakObject_c::DoCollisionResponse	FIXED	0x59DE40-0x59E1E7	RwV3dNormalize/RwV3dLength (RW table sqrt) instead of CVector::Normalise/Magnitude (x3 + sparks amount); particle pos (rand*K+pos)-0.5; NaN speed does not stop the group	c13765223
+0x59E1F0	BreakObject_c::DoCollision	MATCH	0x59E1F0-0x59E219	(z - size) < groundZ strict	-
+0x59E220	BreakObject_c::Update	FIXED	0x59E220-0x59E477	settling axis normalised with RwV3dNormalize	a76d99179
+0x59E480	BreakObject_c::Render	FIXED	0x59E480-0x59E614	no RenderEnd when there are no groups	9099fe6ce
+0x59E750	BreakObject_c::Init	FIXED	0x59E750-0x59E9A0	centre of the collision box (max-min)*0.5+min (was (max+min)/2); origin z (pos.z + min.z) + 0.25 (was pos.z + (min.z + 0.25))	4339a806c
+0x717970	CEscalator::AddThisOne	FIXED	0x717970-0x717C1A	bounding radius sqrt((dz^2+dy^2)+dx^2); plane count ftol(len*2.5 + 1.0)	345f173f9
+0x71CE20	CGlass::Render	MATCH	0x71CE20-0x71CF4C	states, resets, 45 panes, helper order	-
+0x71AED0	CGlass::RenderReflectionPolys	MATCH	0x71AED0-0x71AF61	-	-
+0x71AE30	CGlass::RenderShatteredPolys	MATCH	0x71AE30-0x71AEC1	-	-
+0x71ADA0	CGlass::RenderHiLightPolys	MATCH	0x71ADA0-0x71AE20	-	-

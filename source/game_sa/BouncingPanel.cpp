@@ -33,7 +33,7 @@ void CBouncingPanel::ProcessPanel(CVehicle* vehicle, RwFrame* frame, CVector mov
     CMatrix  frameMat{RwFrameGetMatrix(frame)};
     CMatrix& vehMat = vehicle->GetMatrix();
     CVector  compPos = vehMat.TransformVector(frameMat.GetPosition());
-    CVector  angularVelocity = vehMat.InverseTransformVector(vehicle->GetSpeed(compPos) - moveForce + CrossProduct(compPos, turnForce));
+    CVector  angularVelocity = vehMat.InverseTransformVector(vehicle->GetSpeed(compPos) - (moveForce + CrossProduct(turnForce, compPos))); // exe 0x6F4A06-0x6F4A6D: speed - (move + turn x comp); cross operands are (turnForce, compPos)
 
     switch (m_nAxis) {
     case 0: {

@@ -405,4 +405,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S57e	v6	asm sweep	304007	131	43	Replay ped packet flags wrong bits + heading constant, replay camera mirrored right/unnormalised up, look-around arm/clamp, playback skipped new vehicles; IsVehicleStopped x87d; 2 M
 2026-10-30	ASM-S67	v6	asm sweep	198987	66	21	AddPedAtAttractor event entity+task id wrong, SetUpIK look-at z order, DoBurstAndSoftGroundRatios sums/NaN/16-bit; ScanForCollisionEvents MATCH; 7 rows dead in exe
 2026-10-30	ASM-S45c	v6	asm sweep	195190	75	34	ProcessLightsForEntity: 5on5off flash mode always 0 (off phases never), sun glare corona id, fade const 1-ulp, NaN corona, shadow colour order
-2026-10-30	ASM-S74	v6	asm sweep	0	0	0	RoadBlocks batch/abs dot/cop peds, SetPiece cop spawn inverted + cooldown 4s vs 40s + AddOne fields swapped, StuntJump voice inverted + slowmo stuck; 15 M
+2026-10-30	ASM-S74	v6	asm sweep	334948	132	39	RoadBlocks batch/abs dot/cop peds, SetPiece cop spawn inverted + cooldown 4s vs 40s + AddOne fields swapped, StuntJump voice inverted + slowmo stuck; 15 M

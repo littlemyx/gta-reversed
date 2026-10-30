@@ -264,5 +264,5 @@
 | S115 | phase3 tier C (PHASE3.md) | 42 | pending | CarFXRenderer.cpp, CustomBuildingDNPipeline.cpp, Sprite2d.cpp |
 | S116 | phase3 tier C (PHASE3.md) | 45 | pending | BreakablePlugin.cpp, CollisionPlugin.cpp, CustomBuildingPipeline.cpp, CustomBuildingRenderer.cpp, CustomCarEnvMapPipeline.cpp, JPegCompress.cpp |
 | S117 | phase3 tier C (PHASE3.md) | 41 | pending | 2dEffect.cpp, LoadMonitor.cpp, MemoryMgr.cpp, Securom.cpp, common.cpp, platform.cpp |
-| S82b | rest of S82 | 27 | pending | AEPedSpeechAudioEntity.cpp, AEPedlessSpeechAudioEntity.cpp, AEPoliceScannerAudioEntity.cpp |
+| S82b | rest of S82 | 27 | done (17 M, 15 fixed; S82 mood fix was wrong, redone) | AEPedSpeechAudioEntity.cpp, AEPedlessSpeechAudioEntity.cpp, AEPoliceScannerAudioEntity.cpp |
 | S81b | rest of S81 | 21 | pending | AEFrontendAudioEntity.cpp, AEGlobalWeaponAudioEntity.cpp, AEPedAudioEntity.cpp |

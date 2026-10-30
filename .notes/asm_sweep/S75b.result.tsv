@@ -1,0 +1,18 @@
+addr	function	verdict	asm range	note	fix commit
+0x56CE80	CAccidentManager::ReportAccident	MATCH	0x56CE80-0x56CED7	created-by != PED_MISSION (+0x484 == 2), flag bit 31 of +0x46C, first-free slot scan, already-reported early return, RegisterReference(&slot)	-
+0x721D50	CBulletTraces::Init	MATCH	0x721D50-0x721D62	16 x clear m_bExists	-
+0x723750	CBulletTraces::AddTrace	FIXED	0x723750-0x723BFE (all)	lifetime tier from the NUMBER of live traces (>=10 x0.25, >=5 x0.5), not the free slot index; whoosh: m_mCameraMatrix axes + exact term orders, volume = 20*log10 (dB), product<0 sign test, dist<2 NaN arm, event 0x1B/0x1C for x>=0 and 0x1D/0x1E for x<0 (port had them swapped and no x20)	6d5080241
+0x726AF0	CBulletTraces::AddTrace (wrapper)	FIXED	0x726AF0-0x726D37 (all)	min() macro re-evaluates GetRandomNumberInRange(2,5) (second rand() call) when it is the smaller operand; z,y,x length and speed sums; camera mode set / 0.05 speed gate / args 0.01,300,70 agree	a8db6ac31
+0x723C10	CBulletTraces::Render	FIXED	0x723C10-0x723FA2 (all)	current trace position = end - (normalised dir x length(z,y,x)) x t (was raw end-start); states, indices, colours 0xAAFFFF80 (alpha only on vertex 3), cross-product up vector agree	8a7111b3b
+0x723FB0	CBulletTraces::Update	MATCH	0x723FB0-0x7240B8	unsigned now - creation >= lifetime clears m_bExists	-
+0x41B860	CNodeRoute::operator new	MATCH	0x41B860	pool New (0x41B710)	-
+0x41B870	CNodeRoute::operator delete	MATCH	0x41B870-0x41B8A0	pool Delete (index /36, flag bit 0x80 set, first-free update); port adds a null guard the exe call sites make unnecessary	-
+0x7204E0	CSkidmarks::Init	MATCH	0x7204E0-0x720560	particle txd, particleskid texture, 32 slots cleared, 16 x {0,2,1,1,2,3}+2p indices	-
+0x720570	CSkidmarks::Shutdown	MATCH	0x720570-0x720588	destroy texture, null	-
+0x720640	CSkidmarks::Render	MATCH	0x720640-0x72091C (all)	render states, per-type colours (0,0,0 / 45,31,4 / 69,69,61 / 32,0,0) x balance, alpha tiers (first and last-if-disappearing 0, else 128*a>>8), pos +-dir z+0.1, u 0/1 v part*5.01, 6n indices; only the 16 bit alpha wrap of an expired mark differs (Update retires them first)	-
+0x720EC0	CSkidmarks::RegisterOne	FIXED	0x720EC0-0x720EF4	tests *bloodState and *isSandy (port tested the pointers; unused overload)	9e76a9236
+0x6D0590	cTransmission::DisplayGearRatios	FIXED	0x6D0590-0x6D05DF	debug printf of all 6 gear slots (port printed numberOfGears+1); velocity scale constant left	a3e8b4daf
+0x6190A0	C_PcSave::GenerateGameFilename	MATCH	0x6190A0-0x6190C2	%s%i%s DefaultPCSaveFileName, slot+1, .b	-
+0x619140	C_PcSave::PopulateSlotInfo	FIXED	0x619140-0x6193A1 (all)	corrupted slot text gets slot+1 (not slot); empty-file test is strncmp(name,THIS FILE IS NOT VALID YET,26); header seek 5 / read 0x138, 48 byte name copy + NUL at 24, MONTH1..12 table, date format agree	c7b0a3300
+0x619060	C_PcSave::SaveSlot	FIXED	0x619060-0x619093	calls InitUserDirectories (0x744FB0) only; the port's SetDirMyDocuments also chdir'd into the user dir	3d0e7ee03
+0x6190D0	C_PcSave::DeleteSlot	FIXED	0x6190D0-0x61913B	DeleteFile then reopen: returns true when the file cannot be opened any more (also when it never existed)	787f81b03

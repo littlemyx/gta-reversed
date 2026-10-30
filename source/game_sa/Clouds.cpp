@@ -166,13 +166,14 @@ void CClouds::MovingFog_Update() {
         }
 
         CVector& fogPosn = ms_mf.m_vecPosn[i];
-        CVector  offset  = fogPosn - camPos;
+        // 0x716B10: the differences stay on the FPU stack (not rounded to float) and are taken before the wind step
+        const x87d offX = (x87d)fogPosn.x - camPos.x, offY = (x87d)fogPosn.y - camPos.y, offZ = (x87d)fogPosn.z - camPos.z;
 
-        fogPosn.x += MovingFog_GetWind().x * ms_mf.m_Speed[i];
-        fogPosn.y += MovingFog_GetWind().y * ms_mf.m_Speed[i];
+        fogPosn.x = (float)((x87d)MovingFog_GetWind().x * ms_mf.m_Speed[i] + fogPosn.x); // fld wind; fmul speed; fadd pos; fstp (product unrounded)
+        fogPosn.y = (float)((x87d)MovingFog_GetWind().y * ms_mf.m_Speed[i] + fogPosn.y);
 
         // 0x716B10: distance squared is summed z,y,x; `dist > 60` takes the fade-out arm, so NaN (and <= 60) fades in
-        if (!(std::sqrt(offset.z * offset.z + offset.y * offset.y + offset.x * offset.x) > 60.f))
+        if (!(x87::sqrt(offZ * offZ + offY * offY + offX * offX) > (x87d)60.0f))
         {
             ms_mf.m_fIntensity[i] = std::min(ms_mf.m_fIntensity[i] + CTimer::GetTimeStep(), ms_mf.m_fMaxIntensity[i]);
         }

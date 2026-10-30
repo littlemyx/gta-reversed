@@ -177,8 +177,8 @@ void CMirrors::RenderMirrorBuffer() {
     // 0x726090..: centre (216, -42, 1003) (the consts at 0x8729EC are stored z,y,x), squared sum added z,y,x, fsqrt, strict `< 50` (NaN skips)
     const auto exeDistLt50 = [] {
         const CVector& cam = TheCamera.GetPosition();
-        const float dx = cam.x - 216.0f, dy = cam.y - (-42.0f), dz = cam.z - 1003.0f;
-        return std::sqrt(dz * dz + dy * dy + dx * dx) < 50.0f;
+        const x87d dx = (x87d)cam.x - 216.0f, dy = (x87d)cam.y - (-42.0f), dz = (x87d)cam.z - 1003.0f; // all on the FPU stack, never spilled
+        return x87::sqrt(dz * dz + dy * dy + dx * dx) < (x87d)50.0f;
     };
     if (exeDistLt50()) {
         // 0x726090: the exe sets these four states before the Z-only quad (write Z, no vertex alpha, src ZERO / dst ONE: colour untouched)
@@ -318,9 +318,9 @@ void CMirrors::BeforeConstructRenderList() {
             TheCamera.m_bMirrorActive = false;
             // 0x726EA0..: the exe sums z as z0+z1+z3+z2, y as y0+y1+y3+y2 and x as x0+x1+x2+x3 (each *0.25); CVector::Centroid adds v0..v3 in order
             const CVector centre{
-                (track[0].x + track[1].x + track[2].x + track[3].x) * 0.25f,
-                (track[0].y + track[1].y + track[3].y + track[2].y) * 0.25f,
-                (track[0].z + track[1].z + track[3].z + track[2].z) * 0.25f,
+                (float)(((x87d)track[0].x + track[1].x + track[2].x + track[3].x) * 0.25f),
+                (float)(((x87d)track[0].y + track[1].y + track[3].y + track[2].y) * 0.25f),
+                (float)(((x87d)track[0].z + track[1].z + track[3].z + track[2].z) * 0.25f),
             };
             return TheCamera.IsSphereVisible(centre, 8.0f);
         });

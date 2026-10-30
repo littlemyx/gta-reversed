@@ -227,3 +227,40 @@
 | S71b | rest of S71 | 15 | 14/15 (8 M, 6 fixed + WithUp) -> S71c | 3dMarker.cpp, Rope.cpp, Ropes.cpp, WaterCannon.cpp, WaterCannons.cpp |
 | S71c | rest of S71b | 1 | done (1 M) | Rope.cpp |
 | S76b | rest of S76 | 20 | pending | ClothesBuilder.cpp, CustomRoadsignMgr.cpp |
+| S81 | phase3 tier A (PHASE3.md) | 41 | pending | AECollisionAudioEntity.cpp, AEDoorAudioEntity.cpp, AEFireAudioEntity.cpp, AEFrontendAudioEntity.cpp, AEGlobalWeaponAudioEntity.cpp, AEPedAudioEntity.cpp |
+| S82 | phase3 tier A (PHASE3.md) | 44 | pending | AEPedSpeechAudioEntity.cpp, AEPedlessSpeechAudioEntity.cpp, AEPoliceScannerAudioEntity.cpp |
+| S83 | phase3 tier A (PHASE3.md) | 47 | pending | AEScriptAudioEntity.cpp, AETwinLoopSoundEntity.cpp, AEVehicleAudioEntity.cpp |
+| S84 | phase3 tier A (PHASE3.md) | 36 | pending | AEVehicleAudioEntity.cpp, AEWaterCannonAudioEntity.cpp |
+| S85 | phase3 tier A (PHASE3.md) | 33 | pending | AEAudioEnvironment.cpp, AEAudioUtility.cpp, AESound.cpp, AEWeaponAudioEntity.cpp, AEWeatherAudioEntity.cpp |
+| S86 | phase3 tier A (PHASE3.md) | 38 | pending | AudioEngine.cpp |
+| S87 | phase3 tier A (PHASE3.md) | 24 | pending | AEAmbienceTrackManager.cpp, AEAudioHardware.cpp, AECutsceneTrackManager.cpp |
+| S88 | phase3 tier A (PHASE3.md) | 43 | pending | AERadioTrackManager.cpp, AESoundManager.cpp |
+| S89 | phase3 tier A (PHASE3.md) | 46 | pending | AEUserRadioTrackManager.cpp, AnimBlendAssocGroup.cpp, AnimManager.cpp |
+| S90 | phase3 tier A (PHASE3.md) | 40 | pending | AEBankLoader.cpp, AEMP3BankLoader.cpp, AEMP3TrackLoader.cpp, AETrackLoader.cpp, ColStore.cpp, Directory.cpp |
+| S91 | phase3 tier A (PHASE3.md) | 24 | pending | FileLoader.cpp |
+| S92 | phase3 tier A (PHASE3.md) | 42 | pending | FileLoader.cpp, FileMgr.cpp, IniFile.cpp |
+| S93 | phase3 tier A (PHASE3.md) | 43 | pending | Fx.cpp, FxEmitter.cpp, IplStore.cpp |
+| S94 | phase3 tier A (PHASE3.md) | 45 | pending | FxEmitterBP.cpp, FxInfoManager.cpp, FxManager.cpp, FxPrimBP.cpp, FxSphere.cpp, FxSystem.cpp |
+| S95 | phase3 tier B (PHASE3.md) | 30 | pending | Hud.cpp, HudColours.cpp |
+| S96 | phase3 tier B (PHASE3.md) | 45 | pending | LoadingScreen.cpp, MenuManager.cpp |
+| S97 | phase3 tier B (PHASE3.md) | 34 | pending | MenuManager.cpp, MenuSystem.cpp |
+| S98 | phase3 tier B (PHASE3.md) | 37 | pending | AtomicModelInfo.cpp, BaseModelInfo.cpp, ClumpModelInfo.cpp, DamageAtomicModelInfo.cpp, ModelInfo.cpp, PedModelInfo.cpp |
+| S99 | phase3 tier B (PHASE3.md) | 39 | pending | VehicleModelInfo.cpp, WeaponModelInfo.cpp |
+| S100 | phase3 tier B (PHASE3.md) | 35 | pending | RealTimeShadow.cpp, RealTimeShadowManager.cpp, ShadowCamera.cpp |
+| S101 | phase3 tier B (PHASE3.md) | 35 | pending | Shadows.cpp, StencilShadowObject.cpp, StencilShadows.cpp |
+| S102 | phase3 tier B (PHASE3.md) | 40 | pending | BrightLights.cpp, Clouds.cpp, Coronas.cpp, Mirrors.cpp, MotionBlurStreaks.cpp, Occlusion.cpp |
+| S103 | phase3 tier B (PHASE3.md) | 36 | pending | PostEffects.cpp, RegisteredMotionBlurStreak.cpp, ShinyTexts.cpp, SpecialFX.cpp |
+| S104 | phase3 tier B (PHASE3.md) | 43 | pending | GrassRenderer.cpp, PPTriPlantBuffer.cpp, PlantColEntEntry.cpp, PlantLocTri.cpp, PlantMgr.cpp, PlantSurfPropMgr.cpp |
+| S105 | phase3 tier B (PHASE3.md) | 39 | pending | Renderer.cpp, StreamingInfo.cpp, TxdStore.cpp |
+| S106 | phase3 tier B (PHASE3.md) | 41 | pending | VisibilityPlugins.cpp |
+| S107 | phase3 tier B (PHASE3.md) | 46 | pending | FxInfoAnimTexture.cpp, FxInfoAttractLine.cpp, FxInfoAttractPt.cpp, FxInfoColour.cpp, FxInfoColourBright.cpp, FxInfoColourRange.cpp |
+| S108 | phase3 tier B (PHASE3.md) | 45 | pending | AnimBlendAssociation.cpp, AnimBlendClumpData.cpp, AnimBlendHierarchy.cpp, FxInfoJitter.cpp, FxInfoNoise.cpp, FxInfoRotSpeed.cpp |
+| S109 | phase3 tier B (PHASE3.md) | 42 | pending | AnimBlendSequence.cpp, AnimBlendStaticAssociation.cpp, Matrix.cpp, MatrixLinkList.cpp, OctTree.cpp, OctTreeBase.cpp |
+| S110 | phase3 tier B (PHASE3.md) | 12 | pending | QuadTreeNode.h |
+| S111 | phase3 tier C (PHASE3.md) | 44 | pending | AEAudioChannel.cpp, AEAudioHardware.cpp, AESmoothFadeThread.cpp, AEStaticChannel.cpp, AEStreamThread.cpp |
+| S112 | phase3 tier C (PHASE3.md) | 37 | pending | AEDataStream.cpp, AEStreamingChannel.cpp, AEStreamingDecoder.cpp |
+| S113 | phase3 tier C (PHASE3.md) | 37 | pending | AEVorbisDecoder.cpp, AEWaveDecoder.cpp, Debug.cpp, Font.cpp, Lines.cpp, RenderBuffer.cpp |
+| S114 | phase3 tier C (PHASE3.md) | 36 | pending | RwHelper.cpp, Sprite.cpp |
+| S115 | phase3 tier C (PHASE3.md) | 42 | pending | CarFXRenderer.cpp, CustomBuildingDNPipeline.cpp, Sprite2d.cpp |
+| S116 | phase3 tier C (PHASE3.md) | 45 | pending | BreakablePlugin.cpp, CollisionPlugin.cpp, CustomBuildingPipeline.cpp, CustomBuildingRenderer.cpp, CustomCarEnvMapPipeline.cpp, JPegCompress.cpp |
+| S117 | phase3 tier C (PHASE3.md) | 41 | pending | 2dEffect.cpp, LoadMonitor.cpp, MemoryMgr.cpp, Securom.cpp, common.cpp, platform.cpp |

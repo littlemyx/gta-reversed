@@ -773,7 +773,7 @@ void CAEWeaponAudioEntity::PlayFlameThrowerSounds(CPhysical* entity, eSoundID dr
         SND_BANK_SLOT_WEAPON_GEN,
         dryFireSfxID,
         -6.f,
-        2.f / 3.f,
+        0.66f, // 0x3F28F5C3
         speed,
         0.02f,
         AE_UNDEFINED

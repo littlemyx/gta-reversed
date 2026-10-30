@@ -280,5 +280,6 @@
 | S102d | rest of S102c | 3 | done (2 fixed; RenderBottomFromHeight -> S104b) | Clouds.cpp |
 | S104b | rest of S104 + RenderBottomFromHeight | 25 | done (14 M, 11 fixed; regress left to gate) | GrassRenderer.cpp, PlantMgr.cpp, PlantSurfPropMgr.cpp, ProcSurfaceInfo.cpp, SurfaceInfos_c.cpp |
 | S96b | rest of S96 | 8 | 0/8 (not read) -> S96c | LoadingScreen.cpp, MenuManager.cpp |
-| S97b | rest of S97 | 24 | pending | MenuManager.cpp, MenuSystem.cpp |
+| S97b | rest of S97 | 24 | 4/24 (1 M, 3 fixed; budget) -> S97c | MenuManager.cpp, MenuSystem.cpp |
 | S96c | rest of S96b | 8 | pending | LoadingScreen.cpp, MenuManager.cpp |
+| S97c | rest of S97b | 20 | pending | MenuManager.cpp, MenuSystem.cpp |

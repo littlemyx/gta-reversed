@@ -416,4 +416,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S75b	v6	asm sweep	259371	121	28	PcSave chdir after save + DeleteSlot result + corrupted slot number, BulletTraces lifetime by live count + extra rand in min() + render dir, Skidmarks ptr vs value; 9 M (ASM-S75b.md not written: Write refused)
 2026-10-30	ASM-S71	v6	asm sweep	259112	108	26	WaterCreature follower offset mirrored + spawn distance 3D vs 2D sq, marker tilt unnormalised, traffic light dot order; 13 M
 2026-10-30	ASM-S72	v6	asm sweep	285647	114	23	Checkpoints torus-through fade 10x fast, reused torus marker never moved in Z, cone bob sin(a*0.3) vs sin(a)*0.3, endtube render states, arrow matrix normalise; credits 707 events MATCH; 28 M
-2026-10-30	ASM-S69c	v6	asm sweep	0	0	0	camera near-clip ped sphere dot order per unrolled sphere; sphere casts + camera cone MATCH
+2026-10-30	ASM-S69c	v6	asm sweep	201006	79	29	camera near-clip ped sphere dot order per unrolled sphere; sphere casts + camera cone MATCH

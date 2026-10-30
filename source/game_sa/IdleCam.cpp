@@ -273,7 +273,7 @@ bool CIdleCam::IsTargetValid(CEntity* target) {
         return false;
     }
 
-    if (m_SlerpTime < 1.0f) {
+    if (!(m_SlerpTime >= 1.0f)) { // 0x517804: `fcomp 1.0; test ah,1; jne` - taken for < and for NaN
         return true;
     }
 

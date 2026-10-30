@@ -34,7 +34,8 @@ void FxInfoDir_c::GetValue(float currentTime, float mult, float totalTime, float
     auto& render = *static_cast<RenderInfo_t*>(info);
     render.m_bHasDir = true;
     render.m_Direction = *(CVector*)&values[0];
-    if (render.m_Direction.Magnitude() < 0.001f) {
+    // 0x4A6529: RW's RwV3dLength (0x7EDAC0), not CVector::Magnitude; `< 0.001f` (NaN: no)
+    if (RwV3dLength(&render.m_Direction) < 0.001f) {
         render.m_bUseVel = true;
     }
 }

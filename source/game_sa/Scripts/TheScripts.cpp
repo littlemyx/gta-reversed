@@ -1167,8 +1167,10 @@ bool CTheScripts::IsPlayerOnAMission() {
 // 0x4861F0
 bool CTheScripts::IsVehicleStopped(CVehicle* veh) {
     // 0x4861F0: `ts < old ? ts : old` (std::min(ts, old) picks ts for a NaN old step, the exe picks old; and ts for a NaN ts: the exe's compare is unordered -> old)
+    // 0x486227: fcompp against the x87 product 0.01 * min (not stored to a float first)
     const auto ts = CTimer::GetTimeStep(), old = CTimer::ms_fOldTimeStep;
-    return veh->m_fMovingSpeed <= (ts < old ? ts : old) * 0.01f;
+    const x87d minStep = ts < old ? ts : old;
+    return (x87d)veh->m_fMovingSpeed <= minStep * (x87d)0.01f;
 }
 
 // 0x5D4FD0

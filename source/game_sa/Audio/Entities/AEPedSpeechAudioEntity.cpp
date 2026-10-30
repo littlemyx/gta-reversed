@@ -790,16 +790,16 @@ void CAEPedSpeechAudioEntity::LoadAndPlaySpeech(uint32 playbackTimeOffsetMS) {
     }
 
     AEAudioHardware.LoadSound(m_BankID, m_SoundID, (eSoundBankSlot)(SND_BANK_SLOT_SPEECH1 + m_PedSpeechSlotID));
-    *speech = CAEPedSpeechSlot{
-        .Status            = CAEPedSpeechSlot::eStatus::LOADING,
-        .AudioEntity       = this,
-        .SoundID           = m_SoundID,
-        .SoundBankID       = m_BankID,
-        .StartPlaybackTime = CTimer::GetTimeInMS() + playbackTimeOffsetMS,
-        .GCtx              = m_LastGCtx,
-        .PedAudioType      = m_PedAudioType,
-        .ForceAudible      = m_IsForcedAudible,
-    };
+    // exe 0x4E4840: only these fields are written - `Sound` and the two conversation-reservation flags are kept
+    // (a reserved conversation slot must go back to RESERVED, not FREE, when its speech stops)
+    speech->Status            = CAEPedSpeechSlot::eStatus::LOADING;
+    speech->SoundBankID       = m_BankID;
+    speech->SoundID           = m_SoundID;
+    speech->AudioEntity       = this;
+    speech->StartPlaybackTime = CTimer::GetTimeInMS() + playbackTimeOffsetMS;
+    speech->PedAudioType      = m_PedAudioType;
+    speech->GCtx              = m_LastGCtx;
+    speech->ForceAudible      = m_IsForcedAudible;
 }
 
 // 0x4E49B0

@@ -17,6 +17,7 @@ bool CPlantSurfPropMgr::Initialise() {
     m_countSurfPropsAllocated = 0;
     rng::fill(m_SurfPropPtrTab, nullptr);
     for (auto& props : m_SurfPropTab) {
+        props.m_SlotId = 0; // 0x5DD6E8: mov word [esi], bx
         rng::fill(props.m_Plants, CPlantSurfPropPlantData{});
     }
 

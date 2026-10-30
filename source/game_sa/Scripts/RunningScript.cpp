@@ -1670,14 +1670,14 @@ void CRunningScript::ReadTextLabelFromScript(char* buffer, uint8 nBufferLength) 
     case SCRIPT_PARAM_GLOBAL_SHORT_STRING_VARIABLE:
     {
         uint16 index = CTheScripts::Read2BytesFromScript(m_IP);
-        strncpy_s(buffer, SHORT_STRING_SIZE, (char*)&CTheScripts::ScriptSpace[index], SHORT_STRING_SIZE);
+        strncpy(buffer, (char*)&CTheScripts::ScriptSpace[index], SHORT_STRING_SIZE); // exe 0x463DA8: strncpy(buffer, src, 8) - an 8 char label is not terminated (strncpy_s rejected it)
         break;
     }
 
     case SCRIPT_PARAM_LOCAL_SHORT_STRING_VARIABLE:
     {
         uint16 index = CTheScripts::Read2BytesFromScript(m_IP);
-        strncpy_s(buffer, SHORT_STRING_SIZE, (char*) GetPointerToLocalVariable(index), SHORT_STRING_SIZE);
+        strncpy(buffer, (char*)GetPointerToLocalVariable(index), SHORT_STRING_SIZE);
         break;
     }
 
@@ -1685,19 +1685,19 @@ void CRunningScript::ReadTextLabelFromScript(char* buffer, uint8 nBufferLength) 
     case SCRIPT_PARAM_GLOBAL_LONG_STRING_ARRAY:
         ReadArrayInformation(true, &arrVarOffset, &arrElemIdx);
         if (type == SCRIPT_PARAM_GLOBAL_SHORT_STRING_ARRAY)
-            strncpy_s(buffer, SHORT_STRING_SIZE, (char*) & CTheScripts::ScriptSpace[SHORT_STRING_SIZE * arrElemIdx + arrVarOffset], SHORT_STRING_SIZE);
+            strncpy(buffer, (char*)&CTheScripts::ScriptSpace[SHORT_STRING_SIZE * arrElemIdx + arrVarOffset], SHORT_STRING_SIZE);
         else
-            strncpy_s(buffer, SHORT_STRING_SIZE, (char*) & CTheScripts::ScriptSpace[LONG_STRING_SIZE * arrElemIdx + arrVarOffset], std::min<uint8>(nBufferLength, LONG_STRING_SIZE));
+            strncpy(buffer, (char*)&CTheScripts::ScriptSpace[LONG_STRING_SIZE * arrElemIdx + arrVarOffset], std::min<uint8>(nBufferLength, LONG_STRING_SIZE));
         break;
 
     case SCRIPT_PARAM_LOCAL_SHORT_STRING_ARRAY:
     case SCRIPT_PARAM_LOCAL_LONG_STRING_ARRAY:
         ReadArrayInformation(true, &arrVarOffset, &arrElemIdx);
         if (type == SCRIPT_PARAM_LOCAL_SHORT_STRING_ARRAY)
-            strncpy_s(buffer, SHORT_STRING_SIZE, (char*) GetPointerToLocalArrayElement(arrVarOffset, arrElemIdx, 2), SHORT_STRING_SIZE);
+            strncpy(buffer, (char*)GetPointerToLocalArrayElement(arrVarOffset, arrElemIdx, 2), SHORT_STRING_SIZE);
         else {
             const auto bufferLength = std::min<uint8>(nBufferLength, LONG_STRING_SIZE);
-            strncpy_s(buffer, bufferLength, (char*)GetPointerToLocalArrayElement(arrVarOffset, arrElemIdx, 4), bufferLength);
+            strncpy(buffer, (char*)GetPointerToLocalArrayElement(arrVarOffset, arrElemIdx, 4), bufferLength);
         }
         break;
 
@@ -1715,21 +1715,22 @@ void CRunningScript::ReadTextLabelFromScript(char* buffer, uint8 nBufferLength) 
     case SCRIPT_PARAM_STATIC_LONG_STRING:
         // slightly changed code: original code is a bit messy and calls Read1ByteFromScript
         // in a loop and does some additional checks to ensure that buffer can hold the data
-        strncpy_s(buffer, LONG_STRING_SIZE, (char*)m_IP, std::min<uint8>(nBufferLength, LONG_STRING_SIZE));
+        // exe 0x463F30: copies min(nBufferLength, 16) bytes verbatim (no NUL handling, so a full length label is fine), then skips the 16 byte field
+        std::memcpy(buffer, m_IP, std::min<uint8>(nBufferLength, LONG_STRING_SIZE));
         m_IP += LONG_STRING_SIZE;
         break;
 
     case SCRIPT_PARAM_GLOBAL_LONG_STRING_VARIABLE:
     {
         uint16 index = CTheScripts::Read2BytesFromScript(m_IP);
-        strncpy_s(buffer, LONG_STRING_SIZE, (char*) & CTheScripts::ScriptSpace[index], std::min<uint8>(nBufferLength, LONG_STRING_SIZE));
+        strncpy(buffer, (char*)&CTheScripts::ScriptSpace[index], std::min<uint8>(nBufferLength, LONG_STRING_SIZE)); // exe 0x463FA8: strncpy(buffer, src, min(n, 16))
         break;
     }
 
     case SCRIPT_PARAM_LOCAL_LONG_STRING_VARIABLE:
     {
         uint16 index = CTheScripts::Read2BytesFromScript(m_IP);
-        strncpy_s(buffer, LONG_STRING_SIZE, (char*) GetPointerToLocalVariable(index), std::min<uint8>(nBufferLength, LONG_STRING_SIZE));
+        strncpy(buffer, (char*)GetPointerToLocalVariable(index), std::min<uint8>(nBufferLength, LONG_STRING_SIZE));
         break;
     }
 

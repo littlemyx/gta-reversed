@@ -82,6 +82,7 @@ void CMotionBlurStreaks::RegisterStreak(uint32 id, uint8 red, uint8 green, uint8
         streak.m_avecRightPoints[0] = rightPoint;
         streak.m_acRenderHistory[0] = true;
         streak.m_acRenderHistory[1] = false;
+        streak.m_acRenderHistory[2] = false; // 0x721E61: `mov word ptr [slot + 0x51], 0` clears the second AND the third history byte
         return;
     }
 }

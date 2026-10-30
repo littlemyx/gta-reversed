@@ -30,15 +30,19 @@ void FxInfoNoise_c::GetValue(float currentTime, float mult, float totalTime, flo
     float value;
     m_InterpInfo.GetVal(&value, mult);
 
-    CVector in((float)(CGeneral::GetRandomNumber() % 10'000) * ExeRecip(5000.0f) - 1.0f);
-    in.Normalise();
+    // 0x4A5334/0x4A535E/0x4A5383: three rand() calls (x, y, z in this order); RW's table-based RwV3dNormalize (0x7ED9B0) / RwV3dLength (0x7EDAC0), not CVector::Normalise / Magnitude
+    CVector in;
+    in.x = (float)(CGeneral::GetRandomNumber() % 10'000) * ExeRecip(5000.0f) - 1.0f;
+    in.y = (float)(CGeneral::GetRandomNumber() % 10'000) * ExeRecip(5000.0f) - 1.0f;
+    in.z = (float)(CGeneral::GetRandomNumber() % 10'000) * ExeRecip(5000.0f) - 1.0f;
+    RwV3dNormalize(&in, &in);
     in *= value * totalTime;
 
-    auto length = movement.m_Vel.Magnitude();
+    const float length = RwV3dLength(&movement.m_Vel);
     movement.m_Vel += in;
 
-    if (movement.m_Vel.Magnitude() > 0.0f) {
-        movement.m_Vel.Normalise();
+    if (RwV3dLength(&movement.m_Vel) > 0.0f) { // fcomp + test ah,0x41 / jne: NaN skips too
+        RwV3dNormalize(&movement.m_Vel, &movement.m_Vel);
     }
 
     movement.m_Vel *= length;

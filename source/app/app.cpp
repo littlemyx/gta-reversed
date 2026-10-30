@@ -95,8 +95,11 @@ void DoRWStuffEndOfFrame() {
 RsEventStatus AppEventHandler(RsEvent event, void* param) {
     switch (event) {
     case rsCAMERASIZE:
-        // FIX_BUGS 4:3 -> SCREEN_ASPECT_RATIO.
+#ifdef FIX_BUGS
         CameraSize(Scene.m_pRwCamera, (RwRect*)param, SCREEN_VIEW_WINDOW, SCREEN_ASPECT_RATIO);
+#else
+        CameraSize(Scene.m_pRwCamera, (RwRect*)param, SCREEN_VIEW_WINDOW, std::bit_cast<float>(0x3FAAAAABu)); // 0x53EC4E: fixed 4:3 (4.0f / 3.0f)
+#endif
         break;
     case rsINPUTDEVICEATTACH:
         AttachInputDevices();

@@ -183,7 +183,7 @@ bool CAEAudioUtility::GetBankAndSoundFromScriptSlotAudioEvent(const eAudioEvents
         outSoundID = -1;
     } else if (scriptID == AE_SCRIPT_SLOT_USE_CUSTOM) {
         outBankID  = SND_BANK_SCRIPT_NULL;
-        outSoundID = slot > 3
+        outSoundID = (slot < 0 || slot > 3) // 0x4D9D09: a negative slot gives 0 as well (not 2 * (slot % 2) = -2)
             ? 0
             : 2 * (slot % 2);
     } else {

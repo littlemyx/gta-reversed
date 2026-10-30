@@ -28,7 +28,7 @@ public:
     void   Service() override;
     bool   IsSoundPlaying() override;
     int16  GetPlayTime() override;
-    uint16 GetLength() override;
+    int32  GetLength() override;
     void   Play(int16 timeInMs, int8 unused, float scalingFactor) override;
     void   SynchPlayback() override;
     void   Stop() override;

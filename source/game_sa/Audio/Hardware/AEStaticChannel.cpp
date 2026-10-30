@@ -93,8 +93,9 @@ int16 CAEStaticChannel::GetPlayTime() {
 }
 
 // 0x4F0FA0
-uint16 CAEStaticChannel::GetLength() {
-    return CAEAudioChannel::ConvertFromBytesToMS(m_nLengthInBytes);
+int32 CAEStaticChannel::GetLength() {
+    // 0x4F0FA9: `movsx eax, ax` - the caller (PlaySound) reads the full eax, so a bank sound longer than 32.767 s comes back negative
+    return (int16)CAEAudioChannel::ConvertFromBytesToMS(m_nLengthInBytes);
 }
 
 // 0x4F0BD0

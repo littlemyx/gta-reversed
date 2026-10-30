@@ -444,8 +444,9 @@ int16 CAEStreamingChannel::GetPlayTime() {
 }
 
 // 0x4F1880
-uint16 CAEStreamingChannel::GetLength() {
-    return static_cast<uint16>(m_pStreamingDecoder ? m_pStreamingDecoder->GetStreamLengthMs() : -1);
+int32 CAEStreamingChannel::GetLength() {
+    // 0x4F1880: `or eax,-1` / tail-jmp to the decoder's GetStreamLengthMs - the full 32-bit length (the port truncated it to uint16: every radio track > 65.5 s wrapped)
+    return m_pStreamingDecoder ? (int32)m_pStreamingDecoder->GetStreamLengthMs() : -1;
 }
 
 // 0x4F1D40

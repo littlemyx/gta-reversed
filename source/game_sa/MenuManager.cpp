@@ -235,10 +235,14 @@ void CMenuManager::LoadAllTextures() {
 
     CTimer::Stop();
 
-    const auto LoadTexture = [=](unsigned memorySize, const char* slotName, const char* txdName, unsigned start, unsigned end) {
+    // exe 0x572EC0-0x573099: three TXDs in this order, with these streaming reservations; only the first two run CGame::TidyUpMemory.
+    // (The repo used to add a fourth "frontend3" TXD here for SwapTexturesRound(true), which nothing in the exe ever calls, and had the 0x3000 / 0x4C000 sizes swapped between FRONTEN2 and FRONTEN_pc.)
+    const auto LoadTexture = [=](unsigned memorySize, bool tidyUp, const char* slotName, const char* txdName, unsigned start, unsigned end) {
         CStreaming::MakeSpaceFor(memorySize);
         CStreaming::ImGonnaUseStreamingMemory();
-        CGame::TidyUpMemory(false, true);
+        if (tidyUp) {
+            CGame::TidyUpMemory(false, true);
+        }
         CTxdStore::PushCurrentTxd();
         auto slot = CTxdStore::FindOrAddTxdSlot(slotName);
         CTxdStore::LoadTxd(slot, txdName);
@@ -255,10 +259,9 @@ void CMenuManager::LoadAllTextures() {
         CStreaming::IHaveUsedStreamingMemory();
     };
 
-    LoadTexture(0x21000, "frontend1",   "MODELS\\FRONTEN1.TXD",   FRONTEND1_START, FRONTEND2_START);
-    LoadTexture(0x3000,  "frontend2",   "MODELS\\FRONTEN2.TXD",   FRONTEND2_START, FRONTEND3_START);
-    LoadTexture(0x6800,  "frontend3",   "MODELS\\FRONTEN3.TXD",   FRONTEND3_START, FRONTEND4_START);       // NOTSA (for SwapTexturesRound)
-    LoadTexture(0x4C000, "frontend_pc", "MODELS\\FRONTEN_pc.TXD", FRONTEND4_START, FRONTEND_SPRITE_COUNT); // OG: "MODELS/FRONTEN_pc.TXD"
+    LoadTexture(0x21000, true,  "frontend1",   "MODELS\\FRONTEN1.TXD",   FRONTEND1_START, FRONTEND2_START);
+    LoadTexture(0x3000,  true,  "frontend_pc", "MODELS/FRONTEN_pc.TXD",   FRONTEND4_START, FRONTEND_SPRITE_COUNT);
+    LoadTexture(0x4C000, false, "frontend2",   "MODELS\\FRONTEN2.TXD",   FRONTEND2_START, FRONTEND3_START);
 
     m_bTexturesLoaded = true;
     CTimer::Update();
@@ -319,10 +322,10 @@ void CMenuManager::UnloadTextures() {
             CTxdStore::RemoveTxd(CTxdStore::FindTxdSlot(slot));
         };
 
+        // exe 0x574641-0x5746D6: frontend1, frontend_pc, frontend2 (there is no frontend3 TXD unless SwapTexturesRound(true) ran, which nothing calls)
         Unload("frontend1",   m_apRadioSprites);
-        Unload("frontend2",   m_apBackgroundTextures);
-        Unload("frontend3",   m_apAdditionalBackgroundTextures); // NOTSA
         Unload("frontend_pc", m_apMouseTextures);
+        Unload("frontend2",   m_apBackgroundTextures);
 
         m_bTexturesLoaded = false;
     }

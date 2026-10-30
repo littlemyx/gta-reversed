@@ -65,7 +65,11 @@ bool& CTheZones::GetZoneWasVisited(CVector2D pos) {
 #ifdef FIX_BUGS
     return ZonesVisited[(size_t)((std::clamp(pos.x, -2999.f, 2999.f) + 3000.f) / 600.f)][9LL - (size_t)((std::clamp(pos.y, -2999.f, 2999.f) + 3000.f) / 600.f)];
 #else
-    return reinterpret_cast<bool*>(&ZonesVisited)[10 * NOTSA_FTOL(size_t, (pos.x + 3000.f) / 600.f) - NOTSA_FTOL(size_t, (pos.y + 3000.f) / 600.f) + 9]; // flat index, unchecked, as the original
+    // exe 0x572130-0x572174: (pos + 3000) * (1/600) in x87 registers, _ftol2 (64 bit) and only the lowest byte is kept (movzx al); flat index, unchecked
+    constexpr float ZONE_SIZE_RECIP = 0.0016666667f; // 1 / 600 (0x865060)
+    const auto      x               = (uint8)NOTSA_FTOL(int64, ((x87d)pos.x + (x87d)3000.0) * (x87d)ZONE_SIZE_RECIP);
+    const auto      y               = (uint8)NOTSA_FTOL(int64, ((x87d)pos.y + (x87d)3000.0) * (x87d)ZONE_SIZE_RECIP);
+    return reinterpret_cast<bool*>(&ZonesVisited)[(ptrdiff_t)10 * x - (ptrdiff_t)y + 9];
 #endif
 }
 

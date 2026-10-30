@@ -399,3 +399,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S66	v6	asm sweep	281151	108	27	S66 script Locate*/InArea NaN pass (9 rows), angled-area zero-length normalise; S57d RetrievePedAnimation exe-constant multiply, NumAnims check; 4 M
 2026-10-30	ASM-S59b	v6	asm sweep	226173	88	25	Stats::Save stale favourite-radio list, DisplayScriptStatUpdateMessage NaN; 13 M
 2026-10-30	ASM-S60b	v6	asm sweep	217613	92	20	KillOnFoot look-about 1000+rand ms + stealth skip, Attack::ProcessGroup virtual vs direct re-alloc, PlayerCommandAttack ped type <0 path; 14 M
+2026-10-30	ASM-S45b	v6	asm sweep	230883	88	32	LinkEntryExit back-link inverted (paired exits never linked), FindNearestDoor radius start, AddOne quad-tree box degrees quirk + burglary rand + strncpy, PreRender crane shadow 110; 4 M

@@ -88,8 +88,11 @@ bool WaterCreatureManager_c::CanAddWaterCreatureAtPos(int32 id, CVector pos) {
     const auto& creatureInfo = GetCreatureInfo(id); // Originally not assigned by reference, but copied to stack
     while (creature) {
         if (creature->m_nCreatureType == id && !creature->m_pFollowedCreature) {
+            // 0x6E4561..0x6E458A: 2D (z ignored) squared distance, y*y + x*x, against the SQUARED min distance; too close only when minDist^2 > dist^2
             const auto& objPos = creature->GetObject()->GetPosition();
-            if (DistanceBetweenPointsSquared(objPos, pos) <= creatureInfo.m_fMinDistFromSameCreature) {
+            const auto dx = pos.x - objPos.x;
+            const auto dy = pos.y - objPos.y;
+            if (creatureInfo.m_fMinDistFromSameCreature * creatureInfo.m_fMinDistFromSameCreature > dy * dy + dx * dx) {
                 return false;
             }
         }

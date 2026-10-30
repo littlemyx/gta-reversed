@@ -1,0 +1,3 @@
+addr	file	line	cls	fn	oc	tier
+0x4A1940	source/game_sa/Fx/FxEmitterBP.cpp	193	None	RenderHeatHaze	U	A
+0x4A2C40	source/game_sa/Fx/FxEmitterBP.cpp	199	None	Render	U	A

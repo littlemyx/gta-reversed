@@ -194,20 +194,23 @@ void CMenuManager::Initialise() {
 
     m_fMapZoom = FRONTEND_MAP_RANGE_MAX;
 
-    if (m_vMapOrigin.x - FRONTEND_MAP_RANGE_MAX > 0.0f) {
-        m_vMapOrigin.x = m_vMapOrigin.x - m_vMapOrigin.x - FRONTEND_MAP_RANGE_MAX;
-    }
+    // exe 0x57451E-0x5745C8: all four bounds come from the origin as it was on entry; a bound that left the 640x448 frame pulls the origin back by the overshoot
+    const float xLo = m_vMapOrigin.x - FRONTEND_MAP_RANGE_MAX;
+    const float yLo = m_vMapOrigin.y - FRONTEND_MAP_RANGE_MAX;
+    const float yHi = m_vMapOrigin.y + FRONTEND_MAP_RANGE_MAX;
+    const float xHi = m_vMapOrigin.x + FRONTEND_MAP_RANGE_MAX;
 
-    if (m_vMapOrigin.x + FRONTEND_MAP_RANGE_MAX < DEFAULT_SCREEN_WIDTH) {
-        m_vMapOrigin.x = DEFAULT_SCREEN_WIDTH - m_vMapOrigin.x + FRONTEND_MAP_RANGE_MAX + m_vMapOrigin.x;
+    if (xLo > 0.0f) {
+        m_vMapOrigin.x = m_vMapOrigin.x - xLo;
     }
-
-    if (m_vMapOrigin.y - FRONTEND_MAP_RANGE_MAX > 0.0f) {
-        m_vMapOrigin.y = m_vMapOrigin.y - m_vMapOrigin.y - FRONTEND_MAP_RANGE_MAX;
+    if (xHi < (float)DEFAULT_SCREEN_WIDTH) {
+        m_vMapOrigin.x = ((float)DEFAULT_SCREEN_WIDTH - xHi) + m_vMapOrigin.x;
     }
-
-    if (m_vMapOrigin.y + FRONTEND_MAP_RANGE_MAX < DEFAULT_SCREEN_HEIGHT) {
-        m_vMapOrigin.y = DEFAULT_SCREEN_HEIGHT - m_vMapOrigin.y + FRONTEND_MAP_RANGE_MAX + m_vMapOrigin.y;
+    if (yLo > 0.0f) {
+        m_vMapOrigin.y = m_vMapOrigin.y - yLo;
+    }
+    if (yHi < (float)DEFAULT_SCREEN_HEIGHT) {
+        m_vMapOrigin.y = ((float)DEFAULT_SCREEN_HEIGHT - yHi) + m_vMapOrigin.y;
     }
 
     CRadar::SetMapCentreToPlayerCoords();

@@ -413,6 +413,7 @@ void Idle(void* param) {
     CMessages::Display(false);
     CFont::DrawFonts();
     CCredits::Render();
+    CCredits::Render(); // 0x53EBB6-0x53EBE2: the exe's Idle inlines CCredits::Render twice in a row (the credits are drawn twice per frame)
     CDebug::DebugDisplayTextBuffer();
     FlushObrsPrintfs();
 

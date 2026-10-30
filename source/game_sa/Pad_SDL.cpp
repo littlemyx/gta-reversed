@@ -22,6 +22,7 @@ bool CPad::ProcessMouseEvent(const SDL_Event& e, CMouseControllerState& ms) {
     case SDL_EVENT_MOUSE_WHEEL: {
         ms.isMouseWheelMovedUp   = e.wheel.y > 0.f;
         ms.isMouseWheelMovedDown = e.wheel.y < 0.f;
+        ms.m_fWheelMoved        += e.wheel.y * 120.0f; // exe 0x53F3C0 (DirectInput path): `m_fWheelMoved = (float)lZ` (WHEEL_DELTA 120 per notch); read by the sniper / camera wheel zoom
         return true;
     }
     case SDL_EVENT_MOUSE_MOTION: {

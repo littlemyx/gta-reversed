@@ -291,6 +291,7 @@ void CPad::UpdateMouse() {
         if (PSGLOBAL(diMouse) && SUCCEEDED(CPad::GetMouseState(&mouseState))) {
             TempMouseControllerState.m_AmountMoved.x = static_cast<float>(invertX * mouseState.lX);
             TempMouseControllerState.m_AmountMoved.y = static_cast<float>(invertY * mouseState.lY);
+            TempMouseControllerState.m_fWheelMoved = static_cast<float>(mouseState.lZ); // exe 0x53F44C
             TempMouseControllerState.isMouseWheelMovedUp = (mouseState.lZ > 0);
             TempMouseControllerState.isMouseWheelMovedDown = (mouseState.lZ < 0);
             TempMouseControllerState.isMouseLeftButtonPressed = (mouseState.rgbButtons[0] & 0x80) != 0;
@@ -324,6 +325,7 @@ void CPad::UpdateMouse() {
     TempMouseControllerState.m_AmountMoved.Reset();
     TempMouseControllerState.isMouseWheelMovedDown = false;
     TempMouseControllerState.isMouseWheelMovedUp = false;
+    TempMouseControllerState.m_fWheelMoved = 0.0f; // the exe re-reads the wheel delta every poll
 #endif
 }
 

@@ -546,12 +546,16 @@ void CVisibilityPlugins::RenderAtomicWithAlpha(RpAtomic* atomic, int32 alpha) {
         RpMaterial* material = RpGeometryGetMaterial(geometry, i);
         RwRGBA* color = RpMaterialGetColor(material);
         alphas[i] = color->alpha;
-        color->alpha = std::min(color->alpha, (uint8)alpha);
+        // 0x7324C3: signed compare of the byte against the whole int argument, then its low byte is stored (an argument above 255 changes nothing)
+        if (static_cast<int32>(color->alpha) > alpha) {
+            color->alpha = static_cast<uint8>(alpha);
+        }
     }
 
     AtomicDefaultRenderCallBack(atomic);
 
-    for (int32 i = 0; i < numMaterials; i++) {
+    // the exe restores from the last material down to the first (0x7324E0): a material listed twice ends with its first-saved (original) alpha
+    for (int32 i = numMaterials - 1; i >= 0; i--) {
         RpMaterial* material = RpGeometryGetMaterial(geometry, i);
         RpMaterialGetColor(material)->alpha = alphas[i];
     }

@@ -3679,10 +3679,9 @@ void CAEVehicleAudioEntity::UpdateHeliRotorFrequency(const CHeli* heli, float ro
         const auto* const var = &cfg->RotorFreqVariance;
         rotorFreq *= CAEAudioUtility::GetRandomNumberInRange(var->Min, var->Max) + var->Offset;
     }
-    const auto* const stepping = rotorSpeed <= 0.63f
-        ? &cfg->RotorFreqStepLoSpeed
-        : &cfg->RotorFreqStepHiSpeed;
-    UpdateRotorFreq(rotorFreq, stepping->StepUp, stepping->StepDown);
+    // 0x4FE6CA..0x4FE7xx (player), 0x4FF067.. (AI), 0x4FEA.. (dummy): every heli copy steps by the exe constant 0x862D04 (0x3BAEC33C) both up and down;
+    // there is no low/high rotor speed step (0.03 / 0.005 in the port) in the exe
+    UpdateRotorFreq(rotorFreq, cfg->RotorFreqStepUp, cfg->RotorFreqStepDown);
 }
 
 // 0x4FEE20

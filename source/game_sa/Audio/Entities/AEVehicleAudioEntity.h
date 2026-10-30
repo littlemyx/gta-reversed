@@ -336,15 +336,7 @@ protected: // Config:
                 float Min{ -0.1f }, Max{ 0.1f }; // 0x8CBDFC (Originally 1 variable)
                 float Offset{ 0.75f };           // 0x8CBDF8
             } RotorFreqVariance;
-            struct Stepping {
-                float StepUp, StepDown;
-            };
-            Stepping RotorFreqStepLoSpeed{
-                .StepUp = 0.03f, .StepDown = 0.03f
-            };
-            Stepping RotorFreqStepHiSpeed {
-                .StepUp = 0.005f, .StepDown = 0.005f
-            };
+            float RotorFreqStepUp{0.00533333234f}, RotorFreqStepDown{0.00533333234f}; // 0x862D04 (0x3BAEC33C, not exactly `1.f / 187.5f` = 0x3BAEC33E)
 
             float CopHeliVolOffset{ 6.f }; // 0x8CBDA0 
         } Heli;

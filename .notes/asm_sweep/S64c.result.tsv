@@ -2,20 +2,20 @@ addr	function	verdict	asm range	note	fix commit
 0x6E3D10	ComputeAnimDoorOffsets	MATCH	0x6E3D10-0x6E3E02	zero test (x,y,z sum == 0 computes, NaN keeps the cached value), jump table 0x6E3E08 decoded (359/361/363/373/375/378/379 = port mapping), last key frame +0x14 translation, 12-byte copy	-
 0x459390	Init	MATCH	0x459390-0x4593F0	going-on/paused/buffer/vehicle arrays zeroed, 475 slots: data = 0, refcount = 0	-
 0x459400	ShutDown	MATCH	0x459400-0x45943B	Free + RemoveModel(0x649B + slot) for every slot with data	-
-0x459440	StopPlaybackWithIndex	DEVIATION	0x459440-0x4594B9	body matches; CPath::RemoveRef freed/RemoveModel'd only when m_pData != 0 (exe: unconditional)	7ac38e94e
+0x459440	StopPlaybackWithIndex	DEVIATION	0x459440-0x4594B9	body matches; CPath::RemoveRef freed/RemoveModel'd only when m_pData != 0 (exe: unconditional)	c22a29865
 0x4595A0	IsPlaybackPausedForCar	MATCH	0x4595A0-0x459650	scans the going-on playbacks but always returns false	-
 0x459660	SetPlaybackSpeed	MATCH	0x459660-0x45973E	first going-on playback of the vehicle gets the speed; none -> nothing	-
-0x459D10	SkipForwardInRecording	DEVIATION	0x459D10-0x459EF0	port walked back after an overshoot (exe never) and never stored PlaybackIndex; remainder kept unrounded (x87); clock = (float)(uint32)time	20e0333af
+0x459D10	SkipForwardInRecording	DEVIATION	0x459D10-0x459EF0	port walked back after an overshoot (exe never) and never stored PlaybackIndex; remainder kept unrounded (x87); clock = (float)(uint32)time	45d587d99
 0x459F00	RenderLineSegment	MATCH	0x459F00-0x459F68	index buffer, RwIm3DTransform(verts, n, 0, 0), line-list primitive with 2n-2 indices	-
 0x459F70	Render	MATCH	0x459F70	ret	-
 0x459F80	RegisterRecordingFile	MATCH	0x459F80-0x459FE3	"carrec%d" then "CARREC%d" only when the first scan returns 0, default 850, data = 0, count++	-
 0x459FF0	FindIndexWithFileNameNumber	MATCH	0x459FF0-0x45A015	first registered match, 0 if none	-
-0x45A0A0	RemoveRecordingFile	DEVIATION	0x45A0A0-0x45A0EC	exe walks all 475 slots and removes EVERY slot with the number; port: first registered match	2c9950970
-0x45A160	RemoveAllRecordingsThatArentUsed	DEVIATION	0x45A160-0x45A1A2	exe has no number == index test and walks all slots; port required number == slot index	32041d31f
+0x45A0A0	RemoveRecordingFile	DEVIATION	0x45A0A0-0x45A0EC	exe walks all 475 slots and removes EVERY slot with the number; port: first registered match	cae46518b
+0x45A160	RemoveAllRecordingsThatArentUsed	DEVIATION	0x45A160-0x45A1A2	exe has no number == index test and walks all slots; port required number == slot index	affa8d0db
 0x45A1B0	InitAtStartOfGame	MATCH	0x45A1B0-0x45A1D5	data = 0 for every slot, then Init	-
-0x45A4A0	SkipToEndAndStopPlaybackRecordedCar	DEVIATION	0x45A4A0-0x45A60A	clears physicalFlags bit 2 (bDisableCollisionForce); port cleared bCollidable (bit 3)	18bad6cc7
-0x45A610	SaveOrRetrieveDataForThisFrame	DEVIATION	0x45A610-0x45A8EC	paused playbacks did not hold their clock; frame search bound next once (ran to the last frame); back-step stopped at the old index (exe runs to frame 0); step and interpolation factor now unrounded (x87)	5ffd4c7c8
-0x45A8F0	Load	DEVIATION	0x45A8F0-0x45A972	zero-time prune walks byte offsets (partial trailing frame included, non-positive size skipped)	e89a26b11
+0x45A4A0	SkipToEndAndStopPlaybackRecordedCar	DEVIATION	0x45A4A0-0x45A60A	clears physicalFlags bit 2 (bDisableCollisionForce); port cleared bCollidable (bit 3)	8ef785b73
+0x45A610	SaveOrRetrieveDataForThisFrame	DEVIATION	0x45A610-0x45A8EC	paused playbacks did not hold their clock; frame search bound next once (ran to the last frame); back-step stopped at the old index (exe runs to frame 0); step and interpolation factor now unrounded (x87)	a1d1534a5
+0x45A8F0	Load	DEVIATION	0x45A8F0-0x45A972	zero-time prune walks byte offsets (partial trailing frame included, non-positive size skipped)	6397fb1cb
 0x5D23B0	Extract	MATCH	0x5D23B0-0x5D2427	SetMatrix(this), 4 colours, alarm word, max passengers byte, steer/gas/brake, upper/lower flag words: all offsets agree with Construct	-
 0x73A8D0	LaserScopeDot	NOT_REACHED	0x73A8D0-0x73AAB9	no exe callers (S64b); the port body is an unreachable stub of ~140 exe instructions (ray from the weapon fire point, corona 7); not ported	-
-0x73C1F0	TakePhotograph	DEVIATION	0x73C1F0-0x73C704	NOTSA-AUDIT resolved from the exe: range test is !(sqrt(z,y,x unrounded) < 125) for peds AND objects, screen border tests unrounded and NaN-rejecting, ray start uses TheCamera.m_mCameraMatrix forward (0xB6F9AC)	e2770a5e2
+0x73C1F0	TakePhotograph	DEVIATION	0x73C1F0-0x73C704	NOTSA-AUDIT resolved from the exe: range test is !(sqrt(z,y,x unrounded) < 125) for peds AND objects, screen border tests unrounded and NaN-rejecting, ray start uses TheCamera.m_mCameraMatrix forward (0xB6F9AC)	7b7207f43

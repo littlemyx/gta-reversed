@@ -2114,35 +2114,44 @@ void CAEVehicleAudioEntity::PlayHornOrSiren(bool isHornOn, bool isSirenOn, bool 
         });
     };
 
-    const auto areHornSoundsLoaded = AEAudioHardware.IsSoundBankLoaded(SND_BANK_GENRL_HORN, SND_BANK_SLOT_HORN_AND_SIREN);
-
-    // Check if fast siren needs playing now
-    if (isFastSirenOn) {
-        if (!m_IsFastSirenOn && !m_FastSirenSound) {
-            if (areHornSoundsLoaded) {
-                m_FastSirenSound = PlaySirenSound(SND_BANK_SLOT_HORN_AND_SIREN, SND_GENRL_HORN_SIREN_SHORT); // 0x4F9E2E
+    // 0x4F9C57: the exe handles the standard siren FIRST, then the fast siren; every `return` below is an early exit of the whole function (the fast siren is then skipped)
+    const auto wantsSiren = isSirenOn && !isFastSirenOn;      // standard siren requested now (fast siren has precedence)
+    const auto hadSiren   = m_IsSirenOn && !m_IsFastSirenOn;  // standard siren was requested last time
+    if (wantsSiren) {
+        if (!hadSiren) { // 0x4F9C8B
+            if (!AEAudioHardware.IsSoundBankLoaded(SND_BANK_GENRL_HORN, SND_BANK_SLOT_HORN_AND_SIREN)) {
+                return;
             }
+            if (m_SirenSound) {
+                return;
+            }
+            const auto isMrWhoop = vp.Vehicle->GetModelId() == MODEL_MRWHOOP;
+            if (isMrWhoop && !AEAudioHardware.IsSoundBankLoaded(SND_BANK_GENRL_ICEVAN_P, SND_BANK_SLOT_PLAYER_ENGINE_P)) { // 0x4F9CCD
+                return;
+            }
+            m_SirenSound = PlaySirenSound(
+                isMrWhoop ? SND_BANK_SLOT_PLAYER_ENGINE_P : SND_BANK_SLOT_HORN_AND_SIREN,
+                isMrWhoop ? SND_GENRL_HORN_HORNBMW328 : SND_GENRL_HORN_SIREN_LONG
+            );
         }
-    } else {
-        StopAndForgetSound(m_FastSirenSound);
+    } else if (hadSiren) { // 0x4F9D96
+        StopAndForgetSound(m_SirenSound);
     }
 
-    // Check if standard siren needs to be played - Fast siren has precedence!
-    if (isSirenOn && !isFastSirenOn) {
-        if ((!m_IsSirenOn || m_IsFastSirenOn) && !m_SirenSound) {
-            if (areHornSoundsLoaded) {
-                const auto isMrWhoop = vp.Vehicle->GetModelId() == MODEL_MRWHOOP;
-                if (isMrWhoop && !AEAudioHardware.IsSoundBankLoaded(SND_BANK_GENRL_ICEVAN_P, SND_BANK_SLOT_PLAYER_ENGINE_P)) { // 0x4F9CCD
-                    return;
-                }
-                m_SirenSound = PlaySirenSound(
-                    isMrWhoop ? SND_BANK_SLOT_PLAYER_ENGINE_P : SND_BANK_SLOT_HORN_AND_SIREN,
-                    isMrWhoop ? SND_GENRL_HORN_HORNBMW328 : SND_GENRL_HORN_SIREN_LONG
-                );
-            }
+    // 0x4F9DAF: fast siren
+    if (isFastSirenOn) {
+        if (m_IsFastSirenOn) {
+            return;
         }
-    } else {
-        StopAndForgetSound(m_SirenSound);
+        if (!AEAudioHardware.IsSoundBankLoaded(SND_BANK_GENRL_HORN, SND_BANK_SLOT_HORN_AND_SIREN)) {
+            return;
+        }
+        if (m_FastSirenSound) {
+            return;
+        }
+        m_FastSirenSound = PlaySirenSound(SND_BANK_SLOT_HORN_AND_SIREN, SND_GENRL_HORN_SIREN_SHORT); // 0x4F9E2E
+    } else if (m_IsFastSirenOn) { // 0x4F9E6B
+        StopAndForgetSound(m_FastSirenSound);
     }
 }
 

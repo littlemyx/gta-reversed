@@ -403,26 +403,50 @@ bool CVehicleRecording::IsPlaybackPausedForCar(CVehicle* vehicle) {
 // unused
 // 0x459D10
 void CVehicleRecording::SkipForwardInRecording(CVehicle* vehicle, float distance) {
-    // Not tested as it's unused.
-
     // NOTSA: Original code does OOB-access if no index found.
     if (const auto i = FindVehicleRecordingIndex(vehicle); i != -1) {
-        const auto frames = GetFramesFromPlaybackBuffer(i);
-        auto index = GetCurrentFrameIndex(i);
-        auto pace = 0.0f;
+        // 0x459D10: the remaining distance lives on the x87 stack (unrounded). A positive remainder walks FORWARD frame by frame until it is
+        // used up (the last step may overshoot - the port walked back to undo it, which the exe never does); a remainder <= 0 (or NaN) walks
+        // BACKWARD until it is >= 0 again. PlaybackIndex is updated on every step (the port never stored it).
+        constexpr uint32 FRAME = sizeof(CVehicleStateEachFrame);
+        const auto* const base = reinterpret_cast<const uint8*>(pPlaybackBuffer[i]);
+        const auto        Frame = [&](uint32 off) { return reinterpret_cast<const CVehicleStateEachFrame*>(base + off); };
+        const auto        Dist2D = [&](uint32 a, uint32 b) -> x87d {
+            const x87d dy = (x87d)Frame(a)->m_vecPosn.y - Frame(b)->m_vecPosn.y;
+            const x87d dx = (x87d)Frame(a)->m_vecPosn.x - Frame(b)->m_vecPosn.x;
+            return std::sqrt(dx * dx + dy * dy);
+        };
 
-        for (; pace < distance && index + 1 < frames.size(); index++) {
-            pace += DistanceBetweenPoints2D(frames[index].m_vecPosn, frames[index + 1].m_vecPosn);
+        uint32 off = (uint32)PlaybackIndex[i];
+        x87d   rem = distance;
+        for (;;) {
+            if (rem > (x87d)0.0f) {
+                if (off >= (uint32)PlaybackBufferSize[i] - FRAME) { // jae
+                    break;
+                }
+                off += FRAME;
+                PlaybackIndex[i] = (int32)off;
+                rem -= Dist2D(off - FRAME, off);
+                if (rem <= (x87d)0.0f) { // the loop goes on for rem > 0 and for NaN
+                    break;
+                }
+            } else {
+                if (off <= FRAME) { // jbe
+                    break;
+                }
+                off -= FRAME;
+                PlaybackIndex[i] = (int32)off;
+                rem += Dist2D(off + FRAME, off);
+                if (!(rem < (x87d)0.0f || std::isnan(rem))) { // goes on while rem < 0 (or NaN)
+                    break;
+                }
+            }
         }
 
-        // if we overshoot, we try to get the closest but smaller than or equal the `distance` pace.
-        for (; pace > distance && index > 1; index--) {
-            pace -= DistanceBetweenPoints2D(frames[index].m_vecPosn, frames[index - 1].m_vecPosn);
-        }
-
-        PlaybackRunningTime[i] = static_cast<float>(frames[index].m_nTime);
-        if (const auto usesAI = bUseCarAI[i]) {
-            RestoreInfoForCar(vehicle, frames[index], false);
+        const auto& frame = *Frame(off);
+        PlaybackRunningTime[i] = (float)(x87d)frame.m_nTime;
+        if (bUseCarAI[i]) {
+            RestoreInfoForCar(vehicle, *Frame((uint32)PlaybackIndex[i]), false);
             vehicle->ProcessControlCollisionCheck(false);
         }
     }

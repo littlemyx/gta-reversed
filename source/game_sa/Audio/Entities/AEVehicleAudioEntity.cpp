@@ -2487,7 +2487,7 @@ void CAEVehicleAudioEntity::ProcessReverseGear(tVehicleParams& vp) {
             ? vp.Speed / vp.Transmission->m_MaxReverseVelocity
             : a->m_GasPedalAudioRevs;
         PlayReverseSound(
-            a->m_GasPedal >= 0.0f ? 20 : 19,
+            a->m_GasPedal < 0.0f ? 19 : 20, // 0x4F8E9F: jnp keeps NaN on 20
             cfg->FrqBase + std::abs(revs) * cfg->FrqRevsFactor,
             std::abs(revs) > 0.0f
                 ? cfg->VolBase + CAEAudioUtility::AudioLog10(std::abs(revs)) * 20.0f

@@ -31,8 +31,12 @@ void FxInfoJitter_c::GetValue(float currentTime, float mult, float totalTime, fl
     float value;
     m_InterpInfo.GetVal(&value, mult);
 
-    CVector in((float)(CGeneral::GetRandomNumber() % 10'000) * ExeRecip(5000.0f) - 1.0f);
-    in.Normalise();
+    // 0x4A5BE2/0x4A5C07/0x4A5C2C: three rand() calls (x, y, z in this order), then RW's table-based RwV3dNormalize (0x7ED9B0), not CVector::Normalise
+    CVector in;
+    in.x = (float)(CGeneral::GetRandomNumber() % 10'000) * ExeRecip(5000.0f) - 1.0f;
+    in.y = (float)(CGeneral::GetRandomNumber() % 10'000) * ExeRecip(5000.0f) - 1.0f;
+    in.z = (float)(CGeneral::GetRandomNumber() % 10'000) * ExeRecip(5000.0f) - 1.0f;
+    RwV3dNormalize(&in, &in);
     in *= value * totalTime;
 
     auto& movement = *static_cast<MovementInfo_t*>(info);

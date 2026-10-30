@@ -1281,12 +1281,15 @@ void CMenuManager::DrawControllerSetupScreen() {
                 if (m_nOldMousePosX != m_nMousePosX || m_nOldMousePosY != m_nMousePosY) {
                     m_ListSelection = i;
                 }
-                if (m_MouseInBounds == eMouseInBounds::SELECT && i == m_ListSelection) {
-                    m_EditingControlOptions = true;
-                    m_bJustOpenedControlRedefWindow = true;
-                    m_pPressedKey = &m_KeyPressedCode;
+                // exe 0x57F9AF: a pending SELECT click on a row that is not the list selection stays pending (the flag is not reset)
+                if (m_MouseInBounds != eMouseInBounds::SELECT || i == m_ListSelection) {
+                    if (m_MouseInBounds == eMouseInBounds::SELECT) {
+                        m_EditingControlOptions = true;
+                        m_bJustOpenedControlRedefWindow = true;
+                        m_pPressedKey = &m_KeyPressedCode;
+                    }
+                    m_MouseInBounds = eMouseInBounds::NONE;
                 }
-                m_MouseInBounds = eMouseInBounds::NONE;
             }
         }
 

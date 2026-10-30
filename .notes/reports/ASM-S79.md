@@ -6,13 +6,13 @@ Verdicts: 43 MATCH, 7 FIXED, 0 UNSURE, 0 NOT_REACHED. Several "trivial" rows wer
 
 | row | verdict | commit |
 |---|---|---|
-| BreakObject_c::SetGroupData | FIXED (rand-add association, RwV3dNormalize) | cddd2db86 |
-| CCutsceneMgr::SetCutsceneAnim | FIXED (clears IS_PLAYING; Start() set it) | ab5e06209 |
-| CIdleCam::IsTargetValid | FIXED (NaN slerp-time arm) | 035b782ba |
-| COnscreenTimer::SetClockBeepCountdownSecs | FIXED (4 x 0x40-byte stride walk) | e47e777b0 |
-| CAccidentManager::GetNearestFreeAccidentExceptThisOne | FIXED (squared distance compare) | 97050b5a9 |
-| GetAtomicWithName (ClothesBuilder) | FIXED (first match wins) | 19d247eb0 |
-| CEntryInfoNodePool 0x536D10 | FIXED (hook label GetAt -> New) | e6854d552 |
+| BreakObject_c::SetGroupData | FIXED (rand-add association, RwV3dNormalize) | 0c49e4ec1 |
+| CCutsceneMgr::SetCutsceneAnim | FIXED (clears IS_PLAYING; Start() set it) | 1723602d0 |
+| CIdleCam::IsTargetValid | FIXED (NaN slerp-time arm) | 376a3bdbd |
+| COnscreenTimer::SetClockBeepCountdownSecs | FIXED (4 x 0x40-byte stride walk) | 2e119cc46 |
+| CAccidentManager::GetNearestFreeAccidentExceptThisOne | FIXED (squared distance compare) | f571c9f6c |
+| GetAtomicWithName (ClothesBuilder) | FIXED (first match wins) | 0451bc813 |
+| CEntryInfoNodePool 0x536D10 | FIXED (hook label GetAt -> New) | 604e9a300 |
 
 ## Notes
 

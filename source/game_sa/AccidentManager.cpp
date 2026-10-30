@@ -73,7 +73,9 @@ CAccident* CAccidentManager::GetNearestFreeAccidentExceptThisOne(CVector& posn, 
             && !(thisOne && thisOne == &acc)
             )
         {
-            float distance = DistanceBetweenPoints(acc.m_pPed->GetPosition(), posn);
+            // 0x56CFFD..0x56D02C: the exe compares SQUARED distances (no fsqrt), summed (x*x + z*z) + y*y, against FLT_MAX at the start
+            const CVector diff = posn - acc.m_pPed->GetPosition();
+            const float distance = (diff.x * diff.x + diff.z * diff.z) + diff.y * diff.y;
             if (distance < minDistance)
             {
                 minDistance = distance;

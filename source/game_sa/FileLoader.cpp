@@ -2017,6 +2017,9 @@ int32 CFileLoader::LoadVehicleObject(const char* line) {
     float              wheelSizeFront{ 0.7f }, wheelSizeRear{ 0.7f }; // NOTSA/BUG: Properly default initialize this value (See https://cookieplmonster.github.io/2025/04/23/gta-san-andreas-win11-24h2-bug/)
     int32              wheelUpgradeCls{ -1 };
 
+    // exe 0x5B6F3C-0x5B6F64: the "vehicle" txd slot is found/created first, before the line is parsed and before the model's own txd slot exists
+    const auto vehicleTxdSlot = CTxdStore::FindOrAddTxdSlot("vehicle");
+
     const auto N = sscanf_s(line, "%d %s %s %s %s %s %s %s %d %d %x %d %f %f %d",
         &modelId,                  // 1
         SCANF_S_STR(modelName),    // 2
@@ -2038,11 +2041,11 @@ int32 CFileLoader::LoadVehicleObject(const char* line) {
     auto mi = CModelInfo::AddVehicleModel(modelId);
     mi->SetModelName(modelName);
     mi->SetTexDictionary(texName);
-    CTxdStore::ms_pTxdPool->GetAt(mi->m_nTxdIndex)->m_wParentIndex = CTxdStore::FindOrAddTxdSlot("vehicle");
+    CTxdStore::ms_pTxdPool->GetAt(mi->m_nTxdIndex)->m_wParentIndex = vehicleTxdSlot;
     mi->SetAnimFile(anims);
 
-    // Replace `_` with ` ` (space)
-    std::replace(gameName, gameName + strlen(gameName), '_', ' ');
+    // Replace `_` with ` ` (space) - exe 0x5B7040: the scan starts at the second character, a leading `_` stays
+    std::replace(gameName + (gameName[0] ? 1 : 0), gameName + strlen(gameName), '_', ' ');
     mi->SetGameName(gameName);
 
     mi->m_nFlags = flags;
@@ -2057,7 +2060,11 @@ int32 CFileLoader::LoadVehicleObject(const char* line) {
             { "plane",   VEHICLE_TYPE_PLANE      },
             { "boat",    VEHICLE_TYPE_BOAT       },
             { "train",   VEHICLE_TYPE_TRAIN      },
-            { "f_heli",  VEHICLE_TYPE_FHELI      }, // NOTE: Originally this mapped to HELI, but since f_heli isn't used anywhere in the data files we've corrected the typo.
+#ifdef FIX_BUGS
+            { "f_heli",  VEHICLE_TYPE_FHELI      }, // NOTE: Originally this mapped to HELI (exe 0x5B71A3), but since f_heli isn't used anywhere in the data files we've corrected the typo.
+#else
+            { "f_heli",  VEHICLE_TYPE_HELI       },
+#endif
             { "f_plane", VEHICLE_TYPE_FPLANE     },
             { "bike",    VEHICLE_TYPE_BIKE       },
             { "bmx",     VEHICLE_TYPE_BMX        },

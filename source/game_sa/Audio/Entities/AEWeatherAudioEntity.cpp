@@ -56,9 +56,12 @@ void CAEWeatherAudioEntity::AddAudioEvent(eAudioEvents event) {
         return;
     }
 
-    const auto volume = CAEAudioUtility::AudioLog10(CWeather::LightningDuration * 0.0375f + 0.25f) * 20.f + GetDefaultVolume(AE_THUNDER);
+    // 0x5068BA: the log10 of `duration * 0.0375f + 0.25` (extended precision), * 20, + the default volume (int) and ONE rounding to float (same expression as `UpdateParameters` 0x505A85)
+    const auto volume = (float)(X87R(std::log10(X87W((x87d)CWeather::LightningDuration * (x87d)0.0375f + (x87d)0.25)) * (x87d)20.0) + (x87d)GetDefaultVolume(AE_THUNDER));
     m_nThunderFrequencyVariationCounter = (uint8)((m_nThunderFrequencyVariationCounter + 1) % std::size(THUNDER_FREQUENCIES));
     const auto freq = THUNDER_FREQUENCIES[m_nThunderFrequencyVariationCounter];
+
+    const float clampedVolume = volume < 0.f ? volume : 0.f; // 0x5069E0: `fcomp 0.0; test ah, 5; jp` - NaN and >= 0 give 0 (std::min(NaN, 0) is NaN)
 
     const auto PlayThunderSound = [&](eSoundID sfx, float posX, float soundVolume, float speed, uint32 flags, eWeatherEvent soundEvent) {
         AESoundManager.PlaySound({
@@ -74,8 +77,8 @@ void CAEWeatherAudioEntity::AddAudioEvent(eAudioEvents event) {
     };
     PlayThunderSound(SND_GENRL_EXPLOSIONS_NEAR_L, -0.906f, -100.f, freq * 0.35636002f, SOUND_FRONT_END | SOUND_IS_CANCELLABLE | SOUND_REQUEST_UPDATES, eWeatherEvent::THUNDER);
     PlayThunderSound(SND_GENRL_EXPLOSIONS_NEAR_L, 0.906f, -100.f, freq * 0.4f, SOUND_FRONT_END | SOUND_IS_CANCELLABLE | SOUND_REQUEST_UPDATES, eWeatherEvent::THUNDER);
-    PlayThunderSound(SND_GENRL_EXPLOSIONS_DISTANT_L, -0.906f, std::min(volume, 0.f), freq * 0.35636002f, SOUND_FRONT_END | SOUND_IS_CANCELLABLE | SOUND_REQUEST_UPDATES | SOUND_ROLLED_OFF, eWeatherEvent::THUNDER_DIRECT);
-    PlayThunderSound(SND_GENRL_EXPLOSIONS_DISTANT_L, 0.906f, std::min(volume, 0.f), freq * 0.4f, SOUND_FRONT_END | SOUND_IS_CANCELLABLE | SOUND_REQUEST_UPDATES | SOUND_ROLLED_OFF, eWeatherEvent::THUNDER_DIRECT);
+    PlayThunderSound(SND_GENRL_EXPLOSIONS_DISTANT_L, -0.906f, clampedVolume, freq * 0.35636002f, SOUND_FRONT_END | SOUND_IS_CANCELLABLE | SOUND_REQUEST_UPDATES | SOUND_ROLLED_OFF, eWeatherEvent::THUNDER_DIRECT);
+    PlayThunderSound(SND_GENRL_EXPLOSIONS_DISTANT_L, 0.906f, clampedVolume, freq * 0.4f, SOUND_FRONT_END | SOUND_IS_CANCELLABLE | SOUND_REQUEST_UPDATES | SOUND_ROLLED_OFF, eWeatherEvent::THUNDER_DIRECT);
 }
 
 namespace {

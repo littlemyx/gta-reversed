@@ -203,9 +203,10 @@ CVehicle* CAEAudioUtility::FindVehicleOfPlayer() {
     if (!player)
         return vehicle;
 
-    auto* attach = player->m_pAttachedTo->AsAutomobile();
+    // 0x4D9E34: any attached entity of vehicle type; no member call through a possibly null m_pAttachedTo
+    auto* attach = player->m_pAttachedTo;
     if (attach && attach->GetIsTypeVehicle())
-        return attach;
+        return attach->AsVehicle();
 
     return vehicle;
 }

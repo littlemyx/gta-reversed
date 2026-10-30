@@ -1,0 +1,22 @@
+addr	function	verdict	asm range	note	fix commit
+0x4F63E0	CAEVehicleAudioEntity::Constructor	MATCH	0x4F63E0-0x4F63EC (all)	inline CAEAudioEntity/CAETwinLoop init: m_Entity, m_IsInitialized, skid fields cleared (port zero-inits a superset)	
+0x6D0A10	CAEVehicleAudioEntity::Destructor	MATCH	0x6D0A10-0x6D0A6D (all)	Terminate if initialised, then base dtors	
+0x4FB6C0	CAEVehicleAudioEntity::UpdateParameters	MATCH	0x4FB6C0-0x4FB8AC (all)	flubber volume, boat wave position + underwater stop, forget of 7 sound pointers + 12 engine sounds, aircraft near position, AC play position shift	
+0x4F7670	CAEVehicleAudioEntity::Initialise	FIXED	0x4F7670-0x4F7A3F (all)	exe emulated for all 212 models and a synthetic type x bank x init sweep (220 cases): m_DummyEngineBank is stored before the m_IsInitialized test for bike/BMX/special	441d9e004
+0x4FB8C0	CAEVehicleAudioEntity::Terminate	FIXED	0x4FB8C0-0x4FBB06 (all)	dummy-slot refcount only dropped if the slot still holds our bank; passenger branch also clears the two radio globals	aef548f98
+0x4F5700	CAEVehicleAudioEntity::JustGotInVehicleAsDriver	FIXED	0x4F5700-0x4F5B0C (all)	special: bank-load check always runs; ONE_GEAR/NO_VEHICLE no-ops (UNREACHABLE before); CancelAllVehicleEngineSounds(except) cancelled only the excepted sound	7f0de76ea 5462ab4d3
+0x4FCF40	CAEVehicleAudioEntity::JustGotOutOfVehicleAsDriver	FIXED	0x4FCF40-0x4FD0AB (all)	AE_NO_VEHICLE no-op (UNREACHABLE before); the CancelAllVehicleEngineSounds(except) fix applies to the PLAYER_ID path	7f0de76ea b2111be71
+0x4FD0B0	CAEVehicleAudioEntity::JustWreckedVehicle	FIXED	0x4FD0B0-0x4FD278 (all)	horn/siren stopped with SetFlags+StopSound, not StopSoundAndForget (they stay owned by the entity)	e7dd96719
+0x4F8F10	CAEVehicleAudioEntity::ProcessVehicleSkidding	FIXED	0x4F8F10-0x4F92B2 (all)	BMX speed/volume swapped; bike x1.2 factor on speed not volume; (VolBase+vol)+log10*20 association; NaN volume plays	7ef07269b
+0x4F99D0	CAEVehicleAudioEntity::PlayHornOrSiren	FIXED	0x4F99D0-0x4F9E91 (all)	horn part MATCH; siren part reordered (standard siren first, then fast), exe early returns, stops only if previous request state set	a003de3de
+0x4FAD40	CAEVehicleAudioEntity::UpdateGenericVehicleSound	MATCH	0x4FAD40-0x4FAE2B (all)		
+0x4F7F20	CAEVehicleAudioEntity::StartVehicleEngineSound	MATCH	0x4F7F20-0x4F8070 (all)	REV sfx 0 / ID sfx 1, dummy slot, rolloffs 0x8CBC30/0x8CBC2C	
+0x4F7A50	CAEVehicleAudioEntity::RequestNewPlayerCarEngineSound	FIXED	0x4F7A50-0x4F7EF2 (all)	exe emulated (x87 PC24) for st 1-5 and 1288 AC inputs: existing sound of that type cancelled first (leaked before); AC start position percent*(1-t), not lerp (differed at pct=100)	3387da996
+0x4FA0C0	CAEVehicleAudioEntity::ProcessBoatMovingOverWater	FIXED	0x4FA0C0-0x4FA1B5 (all)	FrqSpeedFactor is the exe float 0x3E4CCCCC (0.19999998807907104), was 0.2f	caf1687f1
+0x5003A0	CAEVehicleAudioEntity::ProcessBoatEngine	FIXED	0x5003A0-0x500705 (all)	tests bBoatEngineInWater (bit 1) not bBoatInWater; on-water factor exe float 0x3ECCCCCC; sum association roll*k+(es*f+base); no m_State write	e0b19cf98
+0x4FA3F0	CAEVehicleAudioEntity::ProcessTrainTrackSound	FIXED	0x4FA3F0-0x4FA628 (all)	speed factor clamped to 1.0 (volume log10 and frequency); silent cases still pass the frequency (sf=0 / sf=speed) instead of 0.0	75c9486fc
+0x500710	CAEVehicleAudioEntity::ProcessDummyTrainEngine	FIXED	0x500710-0x500AA3 (all)	GetTrainSpeed sign inverted (exe negates when NOT clockwise); pad factor x(1/255 float) not /255; rest (tilt, config constants, slot logic, final formula) MATCH	e626eeec6
+0x500AB0	CAEVehicleAudioEntity::ProcessPlayerTrainBrakes	FIXED	0x500AB0-0x500CCF (all)	brake constants 9.0 / 0.68..1.0 (port used the engine config); pedal: brake if moving forward, accelerate if backward, none if slow; x(1/255); piecewise table 4th x=1.0001	45ab4d662
+0x4F93C0	CAEVehicleAudioEntity::PlayAircraftSound	FIXED	0x4F93C0-0x4F9672 (all)	new sound volume was m_EventVolume + volume; exe uses the argument as is; per-type rolloff/doppler/jet position MATCH	0a7b65660
+0x4F96A0	CAEVehicleAudioEntity::GetAircraftNearPosition	MATCH	0x4F96A0-0x4F96FF (all)	heli component 14 (WING_RR) world position, else entity position	
+0x501C50	CAEVehicleAudioEntity::ProcessAircraft	MATCH	0x501C50-0x501DAC (all)	jet model table (519, 520, 577, 592), wrecked/heli-disabled handling, status==PHYSICS or recording id >= 0	

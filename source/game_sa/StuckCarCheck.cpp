@@ -33,7 +33,7 @@ void CStuckCarCheck::AddCarToCheck(int32 carHandle, float stuckRadius, uint32 ti
 
     for (auto& car : m_aStuckCars) {
         // NOTSA optimization
-        if (car.CarHandle == -1) {
+        if (car.CarHandle < 0) { // 0x4659A9: jl (signed < 0), the port tested == -1
             car.CarHandle            = carHandle;
             car.LastPos              = vehicle->GetPosition();
             car.LastChecked          = CTimer::m_snTimeInMilliseconds;

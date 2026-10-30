@@ -474,7 +474,7 @@ void CPostEffects::UnderWaterRipple(CRGBA color, float xoffset, float yoffset, f
         TempBufferVertices.m_2d[i].rhw           = recipNearClip;
         TempBufferVertices.m_2d[i].u             = (wave + xoffset) / fRasterWidth;
         TempBufferVertices.m_2d[i].v             = float(y) / fRasterHeight;
-        TempBufferVertices.m_2d[i].emissiveColor = color.ToIntABGR();
+        TempBufferVertices.m_2d[i].emissiveColor = color.ToIntARGB(); // exe 0x7039F0-0x703A6E: 0xFF << 24 | r << 16 | g << 8 | b (alpha forced to 255)
 
         TempBufferVertices.m_2d[i + 1].x             = float(NOTSA_FTOL(int32, 2.0f * xoffset) + rasterWidth);
         TempBufferVertices.m_2d[i + 1].y             = float(y);
@@ -482,7 +482,7 @@ void CPostEffects::UnderWaterRipple(CRGBA color, float xoffset, float yoffset, f
         TempBufferVertices.m_2d[i + 1].rhw           = recipNearClip;
         TempBufferVertices.m_2d[i + 1].u             = (fRasterWidth + wave - xoffset) / fRasterWidth;
         TempBufferVertices.m_2d[i + 1].v             = float(y) / fRasterHeight;
-        TempBufferVertices.m_2d[i + 1].emissiveColor = color.ToIntABGR();
+        TempBufferVertices.m_2d[i + 1].emissiveColor = color.ToIntARGB(); // exe 0x7039F0-0x703A6E: 0xFF << 24 | r << 16 | g << 8 | b (alpha forced to 255)
 
         uiTempBufferVerticesStored += 2;
     };

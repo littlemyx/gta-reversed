@@ -695,7 +695,7 @@ void CAEWeaponAudioEntity::PlayMiniGunFireSounds(CPhysical* entity, eAudioEvents
                 if (!AudioEngine.IsLoadingTuneActive()) {
                     AEAudioHardware.LoadSoundBank(SND_BANK_GENRL_WEAPONS, SND_BANK_SLOT_WEAPON_GEN);
                 }
-                break;
+                return; // 0x50484F / 0x50486D: leaves without touching m_LastMiniGunFireTimeMs
             }
             AESoundManager.PlaySound({
                 .BankSlotID           = SND_BANK_SLOT_WEAPON_GEN,
@@ -703,7 +703,7 @@ void CAEWeaponAudioEntity::PlayMiniGunFireSounds(CPhysical* entity, eAudioEvents
                 .AudioEntity        = this,
                 .Pos                = entity->GetPosition(),
                 .Volume             = GetDefaultVolume(AE_WEAPON_FIRE_MINIGUN_NO_AMMO),
-                .RollOffFactor      = 2.f / 3.f,
+                .RollOffFactor      = 0.66f, // 0x3F28F5C3
                 .Speed              = 1.f,
                 .Doppler            = 0.f,
                 .Flags              = SOUND_LIFESPAN_TIED_TO_PHYSICAL_ENTITY | SOUND_REQUEST_UPDATES,

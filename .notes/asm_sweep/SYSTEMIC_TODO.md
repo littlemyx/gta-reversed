@@ -30,4 +30,4 @@
 - [x] Exe CPedAttractor pool stride 0xC4 (pool ctor 0x550E40), port 0x8C (S57b): the base ctor 0x5EDFB0 and all 10 derived ctors write only up to 0x8C and no derived class has a field, so 0x38 bytes per exe slot are unused padding; nothing indexes attractors by byte offset (no save/script handle), so the port pool is equivalent. No change needed.
 
 ## Shared helpers NaN (from S46)
-- [ ] CPedIntelligence::GetPedFOVRange uses std::max (differs on equal/NaN); CVector2D::Normalise treats NaN sum as zero length while the exe takes the sqrt path. Check exe forms; CVector2D is shared — check all callers / oracle rows before changing.
+- [x] DONE (S60: 2c5b5e326 GetPedFOVRange strict >, 84d4c3bf6 CVector2D::Normalise NaN sqrt path). Original: CPedIntelligence::GetPedFOVRange uses std::max (differs on equal/NaN); CVector2D::Normalise treats NaN sum as zero length while the exe takes the sqrt path. Check exe forms; CVector2D is shared — check all callers / oracle rows before changing.

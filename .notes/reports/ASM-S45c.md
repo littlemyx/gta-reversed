@@ -1,5 +1,5 @@
 # ASM-S45c (phase 2: CEntity::ProcessLightsForEntity, exe 0x6FC7A0-0x6FD4AB, all 951 lines) - 2026-10-30
-Result: 1 row = 1 DEVIATION (fixed, c89a34944). Table: S45c.result.tsv. Compared in sections (all of the function, nothing open).
+Result: 1 row = 1 DEVIATION (fixed, 0e5bc0b08). Table: S45c.result.tsv. Compared in sections (all of the function, nothing open).
 Deviations fixed (all in source/game_sa/Entity/Entity.cpp):
 - Sun glare corona id: exe `lea edx,[edi+ebp+0x21]` = this + C + 0x21 (port used m_nRandomSeed + C + 1). Camera distance is sqrt((y*y+z*z)+x*x) (CVector::Magnitude sums x*x+y*y first); sqrt spelled std::sqrt(float).
 - FLASH_RANDOM / RANDOM_WHEN_WET / UNKN second test: `shr ecx,0xB` = time/2048 (port /4096).

@@ -306,7 +306,7 @@ void CAEWeaponAudioEntity::WeaponReload(eWeaponType type, CPhysical* entity, eAu
             .AudioEntity        = this,
             .Pos                = entity->GetPosition(),
             .Volume             = GetDefaultVolume(event) + volumeOffsetdB,
-            .RollOffFactor      = 2.f / 3.f,
+            .RollOffFactor      = 0.66f, // 0x3F28F5C3
             .Speed              = 1.0f,
             .Doppler            = 1.0f,
             .FrameDelay         = 0,
@@ -323,16 +323,16 @@ void CAEWeaponAudioEntity::WeaponReload(eWeaponType type, CPhysical* entity, eAu
         return PlaySound(event == AE_WEAPON_RELOAD_A ? 55 : 51);
     case WEAPON_SHOTGUN:
     case WEAPON_SPAS12_SHOTGUN:
-        return PlaySound(event == AE_WEAPON_RELOAD_A ? 72 : 71);
+        return PlaySound(event == AE_WEAPON_RELOAD_A ? 71 : 72); // 0x50378E: setne + 0x47
     case WEAPON_SAWNOFF_SHOTGUN:
-        return PlaySound(event == AE_WEAPON_RELOAD_A ? 70 : 69);
+        return PlaySound(event == AE_WEAPON_RELOAD_A ? 69 : 70); // 0x5037A1: setne + 0x45
     case WEAPON_MICRO_UZI:
     case WEAPON_MP5:
     case WEAPON_TEC9:
-        return PlaySound(event == AE_WEAPON_RELOAD_A ? 85 : 84);
+        return PlaySound(event == AE_WEAPON_RELOAD_A ? 84 : 85); // 0x503746: setne + 0x54
     case WEAPON_AK47:
     case WEAPON_M4:
-        return PlaySound(event == AE_WEAPON_RELOAD_A ? 32 : 31);
+        return PlaySound(event == AE_WEAPON_RELOAD_A ? 31 : 32); // 0x503733: setne + 0x1F
     case WEAPON_COUNTRYRIFLE:
         if (event == AE_WEAPON_RELOAD_A) {
             return PlaySound(32, -6.f);

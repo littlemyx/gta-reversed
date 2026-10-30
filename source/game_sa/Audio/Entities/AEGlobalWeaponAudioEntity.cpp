@@ -87,7 +87,7 @@ void CAEGlobalWeaponAudioEntity::ProjectileFire(eWeaponType weaponType, CPhysica
     }
     PlayRocketSound(SND_BANK_SLOT_WEAPON_GEN, SND_GENRL_WEAPONS_ROCKET_LAUNCH, 1.f, -8.f);
 
-    if (!AEAudioHardware.EnsureSoundBankIsLoaded(SND_BANK_GENRL_WEAPONS, SND_BANK_SLOT_WEAPON_GEN)) {
+    if (!AEAudioHardware.EnsureSoundBankIsLoaded(SND_BANK_GENRL_VEHICLE_GEN, SND_BANK_SLOT_VEHICLE_GEN)) { // 0x4DF174: bank 0x8A / slot 0x13 (the sniper shot sound lives there), not the weapon bank
         return;
     }
     PlayRocketSound(SND_BANK_SLOT_VEHICLE_GEN, SND_GENRL_WEAPONS_SNIPER_SHOT_L, 1.25f, 0.f);

@@ -4585,12 +4585,7 @@ void CAEVehicleAudioEntity::PlayBicycleSound(eBicycleSoundType st, eSoundBankSlo
         });
     };
 
-    if (st != AE_SOUND_BICYCLE_CHAIN_CLANG) {
-        if (UpdateVehicleEngineSoundRawVolume(st, speed, volume)) {
-            return;
-        }
-    }
-
+    // 0x4F9779-0x4F97A9: the exe checks the bank first (and leaves when it is not loaded), only then updates an already playing tyre / sprocket sound
     switch (st) {
     case AE_SOUND_BICYCLE_CHAIN_CLANG: {
         if (!AEAudioHardware.IsSoundBankLoaded(SND_BANK_GENRL_COLLISIONS, SND_BANK_SLOT_COLLISIONS)) {
@@ -4613,13 +4608,13 @@ void CAEVehicleAudioEntity::PlayBicycleSound(eBicycleSoundType st, eSoundBankSlo
         break;
     }
     case AE_SOUND_BICYCLE_TYRE: {
-        if (AEAudioHardware.IsSoundBankLoaded(m_DummyEngineBank, m_DummySlot)) {
+        if (AEAudioHardware.IsSoundBankLoaded(m_DummyEngineBank, m_DummySlot) && !UpdateVehicleEngineSoundRawVolume(st, speed, volume)) {
             DoPlaySound(sfx, 2.5f);
         }
         break;
     }
     case AE_SOUND_BICYCLE_SPROCKET_1: {
-        if (AEAudioHardware.IsSoundBankLoaded(m_PlayerEngineBank, SND_BANK_SLOT_PLAYER_ENGINE_P)) {
+        if (AEAudioHardware.IsSoundBankLoaded(m_PlayerEngineBank, SND_BANK_SLOT_PLAYER_ENGINE_P) && !UpdateVehicleEngineSoundRawVolume(st, speed, volume)) {
             DoPlaySound(sfx, 1.5f);
         }
         break;

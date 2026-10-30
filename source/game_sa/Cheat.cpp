@@ -919,7 +919,7 @@ void CCheat::WeaponCheat1() {
     std::ranges::for_each(weapons, [](auto model) { CStreaming::RequestModel(model, STREAMING_GAME_REQUIRED); });
     CStreaming::LoadAllRequestedModels(false);
 
-    CPlayerPed* player = FindPlayerPed(0);
+    CPlayerPed* player = FindPlayerPed(-1); // 0x43863D: playerId -1 (the player in focus), not 0
     player->GiveWeaponSet1();
 
     CPlayerPed* player1 = FindPlayerPed(1);
@@ -927,7 +927,13 @@ void CCheat::WeaponCheat1() {
         player1->GiveWeaponSet1(); // 0x43864D: the second player (the port gave player 0 the set twice)
     }
 
-    std::ranges::for_each(weapons, [](auto model) { CStreaming::SetModelIsDeletable(model); });
+    // 0x43882A-0x43887A: the exe makes only 9 of the 10 models deletable, in this order; the Colt45 model (0x15A) stays GAME_REQUIRED
+    static constexpr eModelID deletable[] = {
+        MODEL_BRASSKNUCKLE, MODEL_MICRO_UZI, MODEL_BAT,      MODEL_MOLOTOV,
+        MODEL_CHROMEGUN,    MODEL_AK47,      MODEL_CUNTGUN,  MODEL_ROCKETLA,
+        MODEL_SPRAYCAN
+    };
+    std::ranges::for_each(deletable, [](auto model) { CStreaming::SetModelIsDeletable(model); });
 }
 
 // refactored
@@ -941,7 +947,7 @@ void CCheat::WeaponCheat2() {
     std::ranges::for_each(weapons, [](auto model) { CStreaming::RequestModel(model, STREAMING_GAME_REQUIRED); });
     CStreaming::LoadAllRequestedModels(false);
 
-    CPlayerPed* player = FindPlayerPed(0);
+    CPlayerPed* player = FindPlayerPed(-1); // 0x43890F: playerId -1
     player->GiveWeaponSet2();
 
     CPlayerPed* player1 = FindPlayerPed(1);
@@ -962,7 +968,7 @@ void CCheat::WeaponCheat3() {
     std::ranges::for_each(weapons, [](auto model) { CStreaming::RequestModel(model, STREAMING_GAME_REQUIRED); });
     CStreaming::LoadAllRequestedModels(false);
 
-    CPlayerPed* player = FindPlayerPed(0);
+    CPlayerPed* player = FindPlayerPed(-1); // 0x438BA5: playerId -1
     player->GiveWeaponSet3();
 
     CPlayerPed* player1 = FindPlayerPed(1);

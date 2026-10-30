@@ -232,10 +232,11 @@ void CPostEffects::DrawQuadSetUVs(float u1, float v1, float u2, float v2, float 
     ms_imf.quad[0].v = v1;
     ms_imf.quad[1].u = u2;
     ms_imf.quad[1].v = v2;
-    ms_imf.quad[2].u = u3;
-    ms_imf.quad[2].v = v3;
-    ms_imf.quad[3].u = u4;
-    ms_imf.quad[3].v = v4;
+    // exe 0x700F90-0x700FD6: the 3rd pair goes to the 4th vertex of the strip and the 4th pair to the 3rd (same as DrawQuadSetPixelUVs)
+    ms_imf.quad[3].u = u3;
+    ms_imf.quad[3].v = v3;
+    ms_imf.quad[2].u = u4;
+    ms_imf.quad[2].v = v4;
 }
 
 // 0x700FE0
@@ -885,8 +886,8 @@ void CPostEffects::InfraredVision(RwRGBA color, RwRGBA colorMain) {
         DrawQuad(
             -xy,
             -xy,
-            SCREEN_WIDTH + xy + xy,
-            SCREEN_HEIGHT + xy + xy,
+            SCREEN_WIDTH + (xy + xy),   // exe 0x703FE0-0x704055: W + (xy + xy)
+            SCREEN_HEIGHT + (xy + xy),
             color.red,
             color.green,
             color.blue,

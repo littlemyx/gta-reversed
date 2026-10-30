@@ -1,0 +1,47 @@
+addr	function	verdict	asm range	note	fix commit
+0x50D860	CHandShaker::Reset	FIXED	0x50D860-0x50D925 (all)	rand draws z,y,x (port drew x,y,z); z/y draws spilled to float, x kept extended	133a2d735
+0x5B5360	CObjectData::Initialise	FIXED	0x5B5360-0x5B57BD (all)	camera-avoid slot selection swapped (exe: camera==0 -> slot 1/3, port 0/2); buoyancy as one extended chain	108c37c2e
+0x5D2160	CObjectSaveStructure::Construct	MATCH	0x5D2160-0x5D221B (all)	offsets and physical-flag bit map (0x4,0x2000,0x40000,0x80000,0x100000,0x200000,0x800000) match	-
+0x5D2220	CObjectSaveStructure::Extract	MATCH	0x5D2220-0x5D2329 (all)	-	-
+0x550F10	CPools::Initialise	MATCH	0x550F10-0x5512C4 (all)	17 pools, sizes and creation order match (pool name strings not compared)	-
+0x550170	CPools::CheckBuildingAtomics	MATCH	0x550170-0x550173	returns -1	-
+0x551950	CPools::CheckPoolsEmpty	MATCH	0x551950-0x5519EF	debug printf only (port logs)	-
+0x5D0890	CPools::Load	MATCH	0x5D0890-0x5D089F	ped pool then object pool (no vehicles)	-
+0x5D4A40	CPools::LoadObjectPool	MATCH	0x5D4A40-0x5D4B3A (all)	handle slot, ConvertToDummyObject if used, NewAt(ref), size word + 0x30 struct, Extract, World::Add	-
+0x5D2D70	CPools::LoadPedPool	MATCH	0x5D2D70-0x5D2E55 (all)	only PED_TYPE_PLAYER1 creates a ped (the exe reuses the previous ped for other types; saves never contain them)	-
+0x5D2A20	CPools::LoadVehiclePool	FIXED	0x5D2A20-0x5D2D3F (all)	first value is the pool handle and the vehicle is allocated at it (port read it as createdBy and took a free slot); type jump table decoded, matches	3fe939bef
+0x550080	CPools::MakeSureSlotInObjectPoolIsEmpty	FIXED	0x550080-0x550162 (all)	port was NOTSA_UNREACHABLE; exe body implemented (dead in practice: only caller passes -1)	b5f2ed7e9 (+02ff394ce friend CPools in Entity.h)
+0x5D0880	CPools::Save	MATCH	0x5D0880-0x5D088A	-	-
+0x5D4940	CPools::SaveObjectPool	MATCH	0x5D4940-0x5D4A34 (all)	objectType==2 only; ref, model (int16 sign-extended), size 0x30 + struct	-
+0x5D4B40	CPools::SavePedPool	MATCH	0x5D4B40-0x5D4C37 (all)	not in vehicle and ped type 0; ref, model, type, virtual Save	-
+0x5D4800	CPools::SaveVehiclePool	MATCH	0x5D4800-0x5D493E (all)	createdBy==2, no driver, none of the 8 passengers; ref, model, virtual Save	-
+0x403FA0	CBuildingPool::New	MATCH	0x403FA0 (all, ~0x70 bytes)	same free-slot scan and ref update as CPool::New; element size matches (0x38/0x30/0x38/0x24/0x19C/0x1A4/0x64/0xC/8/0x20/0x80)	-
+0x40FB80	CColModelPool::New	MATCH	0x40FB80 (all, ~0x70 bytes)	same free-slot scan and ref update as CPool::New; element size matches (0x38/0x30/0x38/0x24/0x19C/0x1A4/0x64/0xC/8/0x20/0x80)	-
+0x532630	CDummyPool::New	MATCH	0x532630 (all, ~0x70 bytes)	same free-slot scan and ref update as CPool::New; element size matches (0x38/0x30/0x38/0x24/0x19C/0x1A4/0x64/0xC/8/0x20/0x80)	-
+0x41B710	CNodeRoutePool::New	MATCH	0x41B710 (all, ~0x70 bytes)	same free-slot scan and ref update as CPool::New; element size matches (0x38/0x30/0x38/0x24/0x19C/0x1A4/0x64/0xC/8/0x20/0x80)	-
+0x5A1C20	CObjectPool::New	MATCH	0x5A1C20 (all, ~0x70 bytes)	same free-slot scan and ref update as CPool::New; element size matches (0x38/0x30/0x38/0x24/0x19C/0x1A4/0x64/0xC/8/0x20/0x80)	-
+0x41B660	CPatrolRoutePool::New	MATCH	0x41B660 (all, ~0x70 bytes)	same free-slot scan and ref update as CPool::New; element size matches (0x38/0x30/0x38/0x24/0x19C/0x1A4/0x64/0xC/8/0x20/0x80)	-
+0x41B5B0	CPointRoutePool::New	MATCH	0x41B5B0 (all, ~0x70 bytes)	same free-slot scan and ref update as CPool::New; element size matches (0x38/0x30/0x38/0x24/0x19C/0x1A4/0x64/0xC/8/0x20/0x80)	-
+0x5522E0	CPtrNodeDoubleLinkPool::New	MATCH	0x5522E0 (all, ~0x70 bytes)	same free-slot scan and ref update as CPool::New; element size matches (0x38/0x30/0x38/0x24/0x19C/0x1A4/0x64/0xC/8/0x20/0x80)	-
+0x552240	CPtrNodeSingleLinkPool::New	MATCH	0x552240 (all, ~0x70 bytes)	same free-slot scan and ref update as CPool::New; element size matches (0x38/0x30/0x38/0x24/0x19C/0x1A4/0x64/0xC/8/0x20/0x80)	-
+0x69D8E0	CTaskAllocatorPool::New	MATCH	0x69D8E0 (all, ~0x70 bytes)	same free-slot scan and ref update as CPool::New; element size matches (0x38/0x30/0x38/0x24/0x19C/0x1A4/0x64/0xC/8/0x20/0x80)	-
+0x61A500	CTaskPool::New	MATCH	0x61A500 (all, ~0x70 bytes)	same free-slot scan and ref update as CPool::New; element size matches (0x38/0x30/0x38/0x24/0x19C/0x1A4/0x64/0xC/8/0x20/0x80)	-
+0x571AD0	CReferences::RemoveReferencesToPlayer	MATCH	0x571AD0-0x571B66 (all)	-	-
+0x5D1B80	CSimpleVariablesSaveStructure::Construct	FIXED	0x5D1B80-0x5D1E98 (all)	+0xEC/+0xED: exe stores german/french swapped relative to Extract (reproduced); every other offset/source matches	8a6f31758
+0x5D1EA0	CSimpleVariablesSaveStructure::Extract	MATCH	0x5D1EA0-0x5D2154 (all)	-	-
+0x6F2D10	CSpecialPlateHandler::Init	MATCH	0x6F2D10-0x6F2D2F	-	-
+0x6F2D30	CSpecialPlateHandler::Find	MATCH	0x6F2D30-0x6F2D7E	exe returns the index; the single caller ignores it	-
+0x6F2DD0	CSpecialPlateHandler::Remove	MATCH	0x6F2DD0-0x6F2E27	unused	-
+0x665270	CTaskComplexSeekEntity<XYOffset>::CreateSubTask	MATCH	0x665270-0x6655F4 (all)	all cases incl. tracking bit and ctor defaults match	-
+0x52CF10	CClock::Update	MATCH	0x52CF10-0x52D01F (all)	signed ms compare, cheat indices 11/55/56, month/day rollover, seconds = elapsed*60/msPerMin	-
+0x530530	CControllerConfigManager::LoadSettings	MATCH	0x530530-0x530633 (all)	version 6, 4 types x 59 actions, stride 0x20	-
+0x52D200	CControllerConfigManager::SaveSettings	MATCH	0x52D200-0x52D255 (all)	exe return value for a null file is garbage, port false	-
+0x53EF80	CControllerState::Clear	MATCH	0x53EF80-0x53EFE1	-	-
+0x53EFF0	CControllerState::CheckForInput	MATCH	0x53EFF0-0x53F088	-	-
+0x43C600	CCurves::TestCurves	MATCH	0x43C600	ret	-
+0x600840	CDecisionMakerTypes::LoadEventIndices	MATCH	0x600840-0x600851	PedEvent.txt	-
+0x5BB9F0	CDecisionMakerTypes::LoadEventIndicesFromFile	MATCH	0x5BB9F0-0x5BBAB2 (all)	-	-
+0x5BF400	CDecisionMakerTypesFileLoader::LoadDefaultDecisionMaker	MATCH	0x5BF400-0x5BF6A3 (all)	file order, default targets, slot types and mission flags match	-
+0x6076B0	CDecisionMakerTypesFileLoader::LoadDecisionMaker	MATCH	0x6076B0-0x607A61 (all)	sscanf arg map decoded: probs[2,3,1,0], bools[1,0], facial 0..5 match; exe parses the raw line, port the LoadLine-normalised one (same for well-formed files)	-
+0x747180	CGamma::Init	MATCH	0x747180-0x7471F8 (all)	-	-
+0x71D4E0	CGridRef::Init	MATCH	0x71D4E0-0x71D594 (all)	-	-

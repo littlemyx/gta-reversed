@@ -63,11 +63,15 @@ public:
             return Unity();
         }
 
-        const auto right = zaxis.Cross(up);
+        // Both exe users (C3dMarker::Render 0x72247E, DirectionArrowsDraw 0x7213BC) normalise right and forward; `up` is used as given
+        CVector right = zaxis.Cross(up);
+        right.Normalise();
+        CVector forward = up.Cross(right);
+        forward.Normalise();
         return {
             pos,
             right,
-            up.Cross(right),
+            forward,
             up
         };
     }

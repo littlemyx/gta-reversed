@@ -413,3 +413,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S73	v6	asm sweep	324885	126	34	Cutscene: attached ped to itself, hidden-entity counter overrun, unload loop range, append slot index, delete order; Formation slot angle/centroid/nearest search; IdleCam NaN; 28 M
 2026-10-30	ASM-S69b	v6	asm sweep	228876	93	24	ProcessColModels box-vs-sphere 64 cap the exe lacks; Invert(CMatrix) per-step float stores (~50 callers); camera collision 3 MATCH
 2026-10-30	ASM-S70b	v6	asm sweep	298489	81	30	Glass: shattered test wrong bit, cracked polys never drawn, delayed panes full alpha, windscreen panes mirrored + wrong triangles, thin windows 0 panes, BreakGlassPhysically sphere centre; 7 M
+2026-10-30	ASM-S75b	v6	asm sweep	259371	121	28	PcSave chdir after save + DeleteSlot result + corrupted slot number, BulletTraces lifetime by live count + extra rand in min() + render dir, Skidmarks ptr vs value; 9 M (ASM-S75b.md not written: Write refused)

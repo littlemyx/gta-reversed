@@ -298,7 +298,7 @@ void CBirds::Render() {
                 auto uiTime = CTimer::GetTimeInMS() + uiWingMoveTimeOffset;
                 // 0x872828: the exe divides 6.28f (NOT 2PI) by the wing period first, then multiplies by the phase
                 auto fSin1 = -x87::sin((float)((uiTime + bird.m_nWingStillness / 6) % bird.m_nWingStillness) * (6.28f / (float)bird.m_nWingStillness));
-                auto fSin2 = -x87::sin((float)((uiTime + bird.m_nWingStillness) % bird.m_nWingStillness) * (6.28f / (float)bird.m_nWingStillness));
+                auto fSin2 = -x87::sin((float)(uiTime % bird.m_nWingStillness) * (6.28f / (float)bird.m_nWingStillness));
 
                 auto fSizeUsed = std::max(1.0F, bird.m_fSize);
                 auto fSin1Factor = X87R(fSin1 / fSizeUsed);
@@ -314,7 +314,8 @@ void CBirds::Render() {
                 auto fCameraDist = DistanceBetweenPoints(vecCameraPos, bird.m_vecPosn);
                 auto fAlphaCutoffDist = bird.m_fMaxBirdDistance * 0.7F;
                 if (fCameraDist > fAlphaCutoffDist) { // 0x712AF3 todo: review
-                    auto fTransparency = 1.0F - invLerp(fAlphaCutoffDist, bird.m_fMaxBirdDistance, fCameraDist);
+                    // 0x712B00: 1 - (dist - cutoff) / (maxDist * 0.3), NOT invLerp (which divides by maxDist - cutoff)
+                auto fTransparency = 1.0F - (fCameraDist - fAlphaCutoffDist) / (bird.m_fMaxBirdDistance * 0.3F);
                     fTransparency = std::max(fTransparency, 0.0f);
                     cAlpha = NOTSA_FTOL(RwUInt8, fTransparency * 255.0F);
                 }

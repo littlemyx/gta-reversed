@@ -19,7 +19,7 @@ void CTaskAllocatorAttack::AllocateTasks(CPedGroupIntelligence* intel) {
 // 0x69D0C0
 CTaskAllocator* CTaskAllocatorAttack::ProcessGroup(CPedGroupIntelligence* intel) {
     if (!m_NextUpdateTimer.IsStarted() || m_NextUpdateTimer.IsOutOfTime()) {
-        AllocateTasks(intel);
+        CTaskAllocatorAttack::AllocateTasks(intel); // 0x69D0FF / 0x69D150: direct call, a CTaskAllocatorPlayerCommandAttack must not dispatch to its own AllocateTasks here
     }
     return this;
 }

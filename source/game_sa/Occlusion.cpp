@@ -114,11 +114,13 @@ bool COcclusion::IsPositionOccluded(CVector pos, float radius) {
         return false;
     }
 
-    const auto longEdge     = std::max(scaleX, scaleY);
+    // 0x720100..0x720119: `scaleX > scaleY ? scaleX : scaleY` (fcomp + `test ah, 0x41` / jne: equal and NaN take scaleY; std::max takes scaleX for NaN)
+    const auto longEdge     = scaleX > scaleY ? scaleX : scaleY;
     const auto screenRadius = radius * longEdge;
     const auto screenDepth  = scrPos.z - radius;
     return rng::any_of(GetActiveOccluders(), [=](auto&& o) {
-        return o.GetDistToCam() <= screenDepth
+        // 0x72014D: `(float)(int16)m_DistToCam < screenDepth`, strict (fcomp + `test ah, 5` / jp: equal and NaN skip)
+        return (float)(int16)o.m_DistToCam < screenDepth
             && o.IsPointWithinOcclusionArea(scrPos, screenRadius)
             && o.IsPointBehindOccluder(pos, radius);
     });

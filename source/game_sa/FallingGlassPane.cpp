@@ -18,12 +18,18 @@ void CFallingGlassPane::Update() {
 
     auto& pos = m_Matrix.GetPosition();
 
+    // exe 0x71AA20-0x71AAA8: pos += (timeStep * velocity) [* 0.35f]; velocity.z -= timeStep * 0.01f (0.02f); the products stay unrounded, one float rounding per store
+    const x87d ts = CTimer::GetTimeStep();
     if (m_f6F) {
-        pos += CTimer::GetTimeStep() * 0.35f * m_Velocity;
-        m_Velocity.z -= CTimer::GetTimeStep() * ExeRecip(100.f);
+        pos.x = (float)(((ts * m_Velocity.x) * 0.35f) + pos.x);
+        pos.y = (float)(((ts * m_Velocity.y) * 0.35f) + pos.y);
+        pos.z = (float)(((ts * m_Velocity.z) * 0.35f) + pos.z);
+        m_Velocity.z = (float)((x87d)m_Velocity.z - ts * 0.01f);
     } else {
-        pos += CTimer::GetTimeStep() * m_Velocity;
-        m_Velocity.z -= CTimer::GetTimeStep() * ExeRecip(50.f);
+        pos.x = (float)(ts * m_Velocity.x + pos.x);
+        pos.y = (float)(ts * m_Velocity.y + pos.y);
+        pos.z = (float)(ts * m_Velocity.z + pos.z);
+        m_Velocity.z = (float)((x87d)m_Velocity.z - ts * 0.02f);
     }
 
     m_Matrix.GetRight()   += CrossProduct(m_RandomNumbers, m_Matrix.GetRight());
@@ -32,11 +38,13 @@ void CFallingGlassPane::Update() {
 
     if (pos.z < m_fGroundZ) {
         m_bExist = false;
-        AudioEngine.ReportGlassCollisionEvent(AE_GLASS_HIT_GROUND, { pos.x, pos.y, m_fGroundZ });
+        // exe 0x71AB4B: both the sound and the glass particles use (x, y, groundZ), not the position of the pane
+        const CVector groundPos{ pos.x, pos.y, m_fGroundZ };
+        AudioEngine.ReportGlassCollisionEvent(AE_GLASS_HIT_GROUND, groundPos);
         if (!m_f6F) {
             RwRGBA color{ 255, 255, 255, 32 };
             for (auto i = 0; i < 4; i++) {
-                g_fx.AddGlass(pos, color, CGeneral::GetRandomNumberInRange(0.02f, 0.06f), 1);
+                g_fx.AddGlass(groundPos, color, CGeneral::GetRandomNumberInRange(0.02f, 0.06f), 1);
             }
         }
     }

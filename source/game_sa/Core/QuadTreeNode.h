@@ -136,8 +136,9 @@ public:
         m_ItemList.DeleteItem(item);
 
         for (auto sector = 0; sector < 4; ++sector) {
+            // exe 0x552A90 recurses with the rect (the 2-arg overload), it does not flush the whole subtree
             if (m_apChildren[sector] && InSector(rect, sector)) {
-                m_apChildren[sector]->DeleteItem(item);
+                m_apChildren[sector]->DeleteItem(item, rect);
             }
         }
     }

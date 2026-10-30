@@ -36,9 +36,13 @@ void COnscreenCounterEntry::ProcessForDisplayCounter(eOnscreenCounter type) {
     case eOnscreenCounter::LINE:
         sprintf_s(m_szDisplayedText, "%d", t1);
         break;
-    case eOnscreenCounter::DOUBLE:
-        sprintf_s(m_szDisplayedText, "%d / %d", t1, t2);
+    case eOnscreenCounter::DOUBLE: {
+        // exe 0x44CAAE: the 2nd number is the (unclamped) script variable at offset `m_nMaxVarValue` (a var id, set by `AddCounterCounter`), not a copy of the 1st
+        // Raw read: the exe does not assert that the offset is >= 8 (0 when set by `AddCounter`)
+        const auto maxVal = *reinterpret_cast<const int32*>(&CTheScripts::ScriptSpace[m_nMaxVarValue]);
+        sprintf_s(m_szDisplayedText, "%d / %d", t1, maxVal);
         break;
+    }
     }
 }
 

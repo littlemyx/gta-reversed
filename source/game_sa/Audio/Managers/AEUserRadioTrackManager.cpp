@@ -29,6 +29,7 @@ static auto audioExtensionTypes = std::to_array<tAudioExtensionType>({
     {".wmv", AUDIO_FILE_TYPE_WMA},
     {".aac", AUDIO_FILE_TYPE_QUICKTIME},
     {".m4a", AUDIO_FILE_TYPE_QUICKTIME},
+    {".mov", AUDIO_FILE_TYPE_QUICKTIME}, // exe 0x8CBB7C
 #ifdef USERTRACK_FLAC_SUPPORT
     {".flac", AUDIO_FILE_TYPE_FLAC},
 #endif
@@ -218,17 +219,13 @@ int32 CAEUserRadioTrackManager::SelectUserTrackIndex() const {
         switch (FrontEndMenuManager.m_RadioMode) {
         case USER_TRACK_PLAY_RADIO:
         case USER_TRACK_PLAY_RANDOM: {
-            if (m_nUserTracksCount == 1)
-                return FrontEndMenuManager.m_UserTrackIndex = 1;
-            else {
-                int32 index;
+            // 0x4F3283: with a single track the exe still draws one random number (range 0..0) and stores index 0
+            int32 index;
+            do {
+                index = static_cast<int32>(CAEAudioUtility::GetRandomNumberInRange(0, m_nUserTracksCount - 1));
+            } while (m_nUserTracksCount > 1 && index == FrontEndMenuManager.m_UserTrackIndex);
 
-                do
-                    index = static_cast<int32>(CAEAudioUtility::GetRandomNumberInRange(0, m_nUserTracksCount - 1));
-                while (index == FrontEndMenuManager.m_UserTrackIndex);
-
-                return FrontEndMenuManager.m_UserTrackIndex = index;
-            }
+            return FrontEndMenuManager.m_UserTrackIndex = index;
         }
         case USER_TRACK_PLAY_SEQUENTAL: {
             return FrontEndMenuManager.m_UserTrackIndex = (FrontEndMenuManager.m_UserTrackIndex + 1) % m_nUserTracksCount;

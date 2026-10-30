@@ -34,8 +34,14 @@ void CDebug::DebugAddText(const char* str, float x, float y)
     m_debugStrings.push_back({ str, x, y });
 }
 
+// 0x532260: the exe's function is a bare `ret`. Nothing in the game adds debug strings, so with an empty buffer the port must not touch the CFont state / flush the font buffer either
+// (the old body always set ~10 CFont globals and called DrawFonts, which the exe never does at its 3 call sites).
 void CDebug::DebugDisplayTextBuffer() {
     ZoneScoped;
+
+    if (m_debugStrings.empty()) {
+        return;
+    }
 
     CFont::SetBackground(0, 0);
     CFont::SetBackgroundColor(CRGBA(0, 0, 0, 128));

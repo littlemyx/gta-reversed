@@ -148,7 +148,7 @@ RwRaster* CShadowCamera::DrawOutlineBorder(const CRGBA& color) {
         VERIFY(RwIm2DRenderIndexedPrimitive(rwPRIMTYPEPOLYLINE, vertices, std::size(vertices), indices, std::size(indices)));
 
         RwRenderStateSet(rwRENDERSTATEZTESTENABLE,       RWRSTATE(TRUE));
-        RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(FALSE));
+        RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(TRUE)); // 0x7058D5: exe re-enables vertex alpha (push 1 / push 0xC)
 
         RwCameraEndUpdate(m_pRwCamera);
     }

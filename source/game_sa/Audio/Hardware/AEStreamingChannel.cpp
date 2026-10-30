@@ -158,17 +158,16 @@ void CAEStreamingChannel::SetFrequencyScalingFactor(float factor) {
         if (m_nState != StreamingChannelState::Paused)
             return;
 
-        if (!m_pDirectSoundBuffer)
-            return;
+        if (m_pDirectSoundBuffer) {
+            m_pDirectSoundBuffer->SetVolume(-10'000);
+            m_pDirectSoundBuffer->Play(0, 0, m_bLooped ? DSBPLAY_LOOPING : 0);
 
-        m_pDirectSoundBuffer->SetVolume(-10'000);
-        m_pDirectSoundBuffer->Play(0, 0, m_bLooped ? DSBPLAY_LOOPING : 0);
+            // 0x4F2132: the exe passes bStopBufferAfterFade = 0 here (the port passed true: the fade-in ended with Stop() on the radio buffer)
+            if (!AESmoothFadeThread.RequestFade(m_pDirectSoundBuffer, m_Volume, 35, false))
+                m_pDirectSoundBuffer->SetVolume(NOTSA_FTOL(int32, m_Volume * 100.0f));
+        }
 
-        // 0x4F2132: the exe passes bStopBufferAfterFade = 0 here (the port passed true: the fade-in ended with Stop() on the radio buffer)
-        if (!AESmoothFadeThread.RequestFade(m_pDirectSoundBuffer, m_Volume, 35, false))
-            m_pDirectSoundBuffer->SetVolume(NOTSA_FTOL(int32, m_Volume * 100.0f));
-
-        m_nState = StreamingChannelState::Started;
+        m_nState = StreamingChannelState::Started; // 0x4F2159: also reached with a null buffer
     }
 }
 

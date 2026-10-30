@@ -350,6 +350,18 @@ void CalculateAngledAreaCorners(float x1, float y1, float x2, float y2, float wi
     d = CVector2D{ (float)(X87R(s * width) + x1), (float)(-(X87R(co * width)) + y1) };
 }
 
+//! CVector2D::Normalise (exe 0x44E480) as written in the exe: only a zero length sets x = 1, a NaN length takes the normalising arm (CVector2D::Normalise tests `mag > 0` and sends a NaN to the x = 1 arm)
+void ExeNormalise2D(CVector2D& v) {
+    const float sq = v.x * v.x + v.y * v.y;
+    if (sq <= 0.f) {
+        v.x = 1.f;
+    } else {
+        const float inv = 1.f / std::sqrt(sq);
+        v.x *= inv;
+        v.y *= inv;
+    }
+}
+
 //! Checks if the point is within the angled area (ignoring Z)
 //! NOTE: Doesn't use `notsa::shapes::AngledRect` on purpose, as the original has a few quirks.
 bool IsPointInAngledArea2D(float px, float py, float x1, float y1, float x2, float y2, CVector2D d) {
@@ -359,13 +371,15 @@ bool IsPointInAngledArea2D(float px, float py, float x1, float y1, float x2, flo
     const float adLen = std::sqrt(ad.y * ad.y + ad.x * ad.x);
     const CVector2D rel{ px - x1, py - y1 };
 
-    ab.Normalise(); // NOTE: In the original this is done on a copy
-    const float dotAB = rel.y * ab.y + rel.x * ab.x;
-    if (dotAB < 0.f || dotAB > abLen) {
+    // NOTE: In the original the normalisation of AB is done inline on a copy: a zero length gives the factor 1 (AB stays (0, 0)), CVector2D::Normalise would make it (1, 0)
+    const float abSq  = ab.y * ab.y + ab.x * ab.x;
+    const float abInv = abSq <= 0.f ? 1.f : 1.f / std::sqrt(abSq);
+    const float dotAB = rel.y * (ab.y * abInv) + rel.x * (ab.x * abInv);
+    if (!(dotAB >= 0.f && dotAB <= abLen)) { // a NaN fails (fcom + jne/jp)
         return false;
     }
 
-    ad.Normalise();
+    ExeNormalise2D(ad);
     const float dotAD = rel.y * ad.y + rel.x * ad.x;
     return dotAD >= 0.f && dotAD <= adLen;
 }

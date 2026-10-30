@@ -606,8 +606,7 @@ void CRunningScript::LocateObjectCommand(int32 commandId) {
 
     const auto& pos = obj->GetPosition();
     bool result = false;
-    if (!(pos.x < x - rx || x + rx < pos.x || y - ry > pos.y || y + ry < pos.y)
-        && (!is3D || !(z - rz > pos.z || z + rz < pos.z))) {
+    if (IsInCentreRange(x, rx, pos.x) && IsInCentreRange(y, ry, pos.y) && (!is3D || IsInCentreRange(z, rz, pos.z))) {
         result = true;
     }
     UpdateCompareFlag(result);

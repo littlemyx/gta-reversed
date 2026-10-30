@@ -46,7 +46,7 @@ CCopPed* CSetPiece::TryToGenerateCopPed(CVector2D posn) {
         false
     );
 
-    if (!numCollidingObjects) {
+    if (numCollidingObjects) { // exe 0x499731: something is in the way
         return nullptr;
     }
 

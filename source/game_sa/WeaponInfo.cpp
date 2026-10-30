@@ -245,7 +245,7 @@ void CWeaponInfo::LoadWeaponData() {
                 end = (float)info.end * ExeRecip(30.f);
                 fire = (float)info.fire * ExeRecip(30.f);
 
-                end = start + std::floor(0.1f + (end - start) * 50.f) * ExeRecip(50.f) - 0.006f;
+                end = (std::floor(0.1f + (end - start) * 50.f) * ExeRecip(50.f) - 0.006f) + start; // exe 0x5BEBC9-0x5BEBEF: fmul 0.02, fsub 0.006, THEN fadd start (the port added start first)
             };
             SetAnimLoopInfos(wi.m_fAnimLoopStart, wi.m_fAnimLoopEnd, wi.m_fAnimLoopFire, 0);
             SetAnimLoopInfos(wi.m_fAnimLoop2Start, wi.m_fAnimLoop2End, wi.m_fAnimLoop2Fire, 1);

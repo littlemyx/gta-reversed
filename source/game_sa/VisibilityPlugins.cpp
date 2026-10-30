@@ -757,7 +757,7 @@ RpAtomic* CVisibilityPlugins::RenderObjNormalAtomic(RpAtomic* atomic) {
     RwMatrix* atomicMatrix = RwFrameGetLTM(RpAtomicGetFrame(atomic));
     CVector distance = atomicMatrix->pos - *ms_pCameraPosn;
     const float length = RwV3dLength(&distance);
-    if (distance.Dot(atomicMatrix->up) < length * -0.3f && length > 8.0f) {
+    if (DotYXZ(distance, atomicMatrix->up) < length * -0.3f && length > 8.0f) { // (y*y + x*x) + z*z, 0x732420-0x73243A
         return atomic;
     }
     AtomicDefaultRenderCallBack(atomic);

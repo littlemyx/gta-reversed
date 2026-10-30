@@ -74,6 +74,7 @@ void CBirds::CreateNumberOfBirds(CVector vecStartPos, CVector vecTargetPos, int3
         auto vecBirdDirection = vecTargetPos - bird.m_vecPosn;
         vecBirdDirection.Normalise();
         auto vecCheckPos = bird.m_vecPosn + (vecBirdDirection * fMaxDistance * 2.4F);
+        vecTargetPos = vecCheckPos; // 0x711FEB: the exe stores the check position over its by-value `vecTargetPos` argument, so the next bird aims at it
         if (bCheckObstacles && !CWorld::GetIsLineOfSightClear(bird.m_vecPosn, vecCheckPos, true, false, false, false, false, false, false))
             continue;
 
@@ -116,8 +117,8 @@ void CBirds::CreateNumberOfBirds(CVector vecStartPos, CVector vecTargetPos, int3
         case eBirdsBiome::BIOME_NORMAL:
         default:
             fSpeedMult = (float)(iSpeedRandFactor) * ExeRecip(50.0f) + 5.0F; // [5.0 : 5.6]
-            bird.m_BodyColor.Set(CGeneral::GetRandomNumberInRange(128, 256));
-            bird.m_WingsColor.Set(CGeneral::GetRandomNumberInRange(128, 256));
+            bird.m_BodyColor.Set(128 + (CGeneral::GetRandomNumber() & 0x7F));  // 0x71212D: (rand & 0x7F) + 0x80 [128 : 255]
+            bird.m_WingsColor.Set(128 + (CGeneral::GetRandomNumber() & 0x7F));
             bird.m_fSize = CGeneral::GetRandomNumberInRange(0.5F, 0.6F);
             bird.m_nWingStillness = 500 - 6 * iSpeedRandFactor;    // [320 : 500]
             break;

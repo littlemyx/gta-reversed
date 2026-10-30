@@ -3,7 +3,7 @@ addr	function	verdict	asm range	note	fix commit
 0x672BB0	CTaskComplexFollowPatrolRoute scalar deleting dtor	MATCH	0x672BB0-+0x1B (all); body 0x6709F0	calls the dtor body, deletes when flag&1 (operator delete 0x61A5B0); body owns what the port owns	-
 0x65EA50	CTaskComplexGangLeader::TryToPassObject	MATCH	0x65EA50-0x65EA93 (all)	closest group ped, dist^2 < 4.0 strict (jp arm), the passing ped must not be the player	-
 0x6293A0	CTaskComplexKillAllThreats scalar deleting dtor	MATCH	0x6293A0-+0x1B (all); body 0x6221C0	calls the dtor body, deletes when flag&1 (operator delete 0x61A5B0); body owns what the port owns	-
-0x622450	CTaskComplexKillPedGroupOnFoot::ComputeNearestLivingGroupPed	FIXED	0x622450-0x6225DE (all)	no ignore ped when ped is the leader; recursion runs on the leader; fallback result = ignored ped; !(health>0); x87 z,y,x distance	641177815
+0x622450	CTaskComplexKillPedGroupOnFoot::ComputeNearestLivingGroupPed	FIXED	0x622450-0x6225DE (all)	no ignore ped when ped is the leader; recursion runs on the leader; fallback result = ignored ped; !(health>0); x87 z,y,x distance	ff4ff8e2d
 0x63BA00	CTaskComplexLeaveCar::SetupGettingOut	MATCH	0x63BA00-0x63BA9A (all)	door flag, getting-in counters, driver autopilot reset (cruise speed 0x3D0, mission 0x3BA), player driver -> status 0x48 (FORCED_STOP)	-
 0x637F60	CTaskComplexObserveTrafficLights scalar deleting dtor	MATCH	0x637F60-+0x1B (all); body 0x6317C0	calls the dtor body, deletes when flag&1 (operator delete 0x61A5B0); body owns what the port owns	-
 0x631950	CTaskComplexObserveTrafficLightsAndAchieveHeading::MakeAbortable	MATCH	0x631950-0x631979 (all)	URGENT / IMMEDIATE only, forwards to the sub task	-

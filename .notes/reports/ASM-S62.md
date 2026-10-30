@@ -1,7 +1,7 @@
 # ASM-S62 (task functions phase 1 did not list: FollowPatrolRoute, GangLeader, KillAllThreats, KillPedGroupOnFoot, LeaveCar, ObserveTrafficLights*, UseAttractor*, WalkRoundFire, GangHassleVehicle, simple tasks) - 2026-10-30
 Result: 40 rows, 39 MATCH, 1 FIXED (1 commit), 0 UNSURE, 0 NOT_REACHED. Table in S62.result.tsv.
 Fix:
-- 641177815 CTaskComplexKillPedGroupOnFoot::ComputeNearestLivingGroupPed (0x622450-0x6225DE):
+- ff4ff8e2d CTaskComplexKillPedGroupOnFoot::ComputeNearestLivingGroupPed (0x622450-0x6225DE):
   * the "ped to ignore" (the leader's targeted ped) is only looked up when the leader is not `ped` itself (exe `cmp eax, edi` skip; port used the leader's target even when ped was the leader);
   * when the leader has no ped target the exe recurses with the LEADER as the ped (`push eax` = leader at 0x6224B0); the port passed `ped`;
   * the ignored ped is also the fallback result when no member qualifies (0x6225D7 returns the saved local); the port returned nullptr;

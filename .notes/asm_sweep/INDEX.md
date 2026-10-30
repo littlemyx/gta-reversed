@@ -149,7 +149,7 @@
 | S43 | phase2: unlisted non-oracle hooks | 40 | partial 3/40 (2 M, 1 fixed) -> S43b | CarGenerator.cpp, Cheat.cpp, Clothes.cpp, CollisionEventScanner.cpp, ConversationForPed.cpp, Cover.cpp ... |
 | S44 | phase2: unlisted non-oracle hooks | 40 | done 40/40 (33 M, 7 fixed) | AnimatedBuilding.cpp, Building.cpp, CustomCarPlateMgr.cpp, Darkel.cpp, DummyObject.cpp, DummyPed.cpp ... |
 | S45 | phase2: unlisted non-oracle hooks | 40 | pending | Bike.cpp, Bmx.cpp, Boat.cpp, EmergencyPed.cpp, Entity.cpp, EntityScanner.cpp ... |
-| S46 | phase2: unlisted non-oracle hooks | 40 | pending | EntryExitManager.cpp, Event.cpp, EventAcquaintancePedDislike.cpp, EventAcquaintancePedLike.cpp, EventAcquaintancePedRespect.cpp, EventAttractor.cpp ... |
+| S46 | phase2: unlisted non-oracle hooks | 40 | 37/40 (30 M, 7 fixed) -> S46b | EntryExitManager.cpp, Event.cpp, EventAcquaintancePedDislike.cpp, EventAcquaintancePedLike.cpp, EventAcquaintancePedRespect.cpp, EventAttractor.cpp ... |
 | S47 | phase2: unlisted non-oracle hooks | 40 | partial 21/40 (17 M, 4 fixed) -> S47b | EventHandler.cpp, EventHealthLow.cpp, EventHealthReallyLow.cpp, EventHighAngerAtPlayer.cpp, EventInAir.cpp, EventInWater.cpp ... |
 | S48 | phase2: unlisted non-oracle hooks | 40 | partial 20/40 (18 M, 2 fixed) -> S48b | EventRevived.cpp, EventScanner.cpp, EventSexyPed.cpp, EventSexyVehicle.cpp, EventSpecial.cpp, EventVehicleThreat.cpp ... |
 | S49 | phase2: unlisted non-oracle hooks | 40 | partial 30/40 (11 M, 19 fixed) -> S49b | Game.cpp, GameLogic.cpp, GangWars.cpp |
@@ -197,3 +197,4 @@
 | S57d | rest of S57c | 7 | pending | Replay.cpp |
 | S54c | rest of S54 (+ S53c ComputeClearTarget) | 14 | done (10 M, 3 fixed; S53, S54 complete) | PedGroupIntelligence.cpp, PedGroupMembership.cpp, PedGroupPlacer.cpp |
 | S64c | rest of S64b | 20 | pending | VehicleAnimGroupData.cpp, VehicleRecording.cpp, VehicleSaveStructure.cpp, Weapon.cpp |
+| S46b | rest of S46 | 3 | pending | EventHandler.cpp |

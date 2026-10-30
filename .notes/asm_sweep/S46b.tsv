@@ -1,0 +1,4 @@
+addr	file	line	cls	fn	oc
+0x4B9340	source/game_sa/Events/EventHandler.cpp	255	None	RegisterKill	U
+0x4B97B0	source/game_sa/Events/EventHandler.cpp	300	None	ComputeReviveResponse	U
+0x4B98E0	source/game_sa/Events/EventHandler.cpp	262	None	ComputeChatPartnerResponse	U

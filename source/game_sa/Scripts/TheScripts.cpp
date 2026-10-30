@@ -414,7 +414,7 @@ uint32 CTheScripts::AddScriptSphere(uint32 id, CVector posn, float radius) {
     sphere->m_vCoords = posn;
     sphere->m_bUsed   = true;
     sphere->m_fRadius = radius;
-    return GetNewUniqueScriptThingIndex(idx, SCRIPT_THING_EFFECT_SYSTEM);
+    return GetNewUniqueScriptThingIndex(idx, SCRIPT_THING_SPHERE); // exe 0x483B85 pushes 0: the port used the effect-system type, bumping the id of effect slot `idx` instead of the sphere own id
 }
 
 // 0x481140

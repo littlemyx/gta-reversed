@@ -1219,9 +1219,10 @@ void CAERadioTrackManager::UpdateRadioVolumes() {
 
             if (isMissionAudioAudible) {
                 // Duck the radio so that the mission audio can be heard
-                // NOTE: The original code uses the x87 `fyl2x`, so the result might differ slightly
-                float duck = std::log10(AEAudioHardware.GetEffectsMasterScalingFactor() / AEAudioHardware.GetMusicMasterScalingFactor()) * 20.0f - 9.0f;
-                if (duck >= 0.0f) {
+                // 0x4EA1C3: fdivr (PC24) -> fldlg2/fyl2x (inline x87 log10, result stays unrounded on the stack) -> fmul 20.0 -> fsub 9.0 (each rounded to 24 bits); `jp` replaces a non-negative value by 0.0
+                const x87d duckX87 = X87R(x87::log10(X87W((x87d)AEAudioHardware.GetEffectsMasterScalingFactor() / (x87d)AEAudioHardware.GetMusicMasterScalingFactor())) * (x87d)20.0) - (x87d)9.0;
+                float duck = (float)duckX87;
+                if (!(duck < 0.0f)) {
                     duck = 0.0f;
                 }
                 m_f80 = duck;

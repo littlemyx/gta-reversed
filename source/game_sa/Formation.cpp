@@ -276,7 +276,7 @@ void CFormation::DistributeDestinations_PedsToAttack(const CPedList& pedList) {
 
     size_t bestTargetIdx = 0, bestPedIdx = 0; // Not reset per iteration, same as the original
     for (uint32 assigned = 0; assigned < numPeds; assigned++) {
-        float bestDistSq = FLT_MAX;
+        float bestDist = std::bit_cast<float>(0x497423FEu); // 0x69B787: 999999.875f (not FLT_MAX)
         for (auto&& [pedIdx, ped] : rngv::enumerate(m_Peds.m_peds | rngv::take(numPeds))) {
             if ((size_t)pedIdx >= m_aFinalPedLinkToDestinations.size()) {
                 return;
@@ -288,10 +288,13 @@ void CFormation::DistributeDestinations_PedsToAttack(const CPedList& pedList) {
                 if (remainingForTarget[targetIdx] <= 0) {
                     continue;
                 }
-                if (const auto distSq = CVector2D::DistSqr(ped->GetPosition(), target->GetPosition()); distSq < bestDistSq) {
+                // 0x69B7D0: the exe compares the (sqrt'd, float rounded) 2D distance strictly, not the squared distance
+                const auto dx = (x87d)target->GetPosition().x - ped->GetPosition().x;
+                const auto dy = (x87d)target->GetPosition().y - ped->GetPosition().y;
+                if (const auto dist = (float)std::sqrt(dx * dx + dy * dy); dist < bestDist) {
                     bestTargetIdx = (size_t)targetIdx;
                     bestPedIdx    = (size_t)pedIdx;
-                    bestDistSq    = distSq;
+                    bestDist      = dist;
                 }
             }
         }

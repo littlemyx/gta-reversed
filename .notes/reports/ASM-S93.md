@@ -1,9 +1,9 @@
 # ASM-S93 (CIplStore 18, Fx_c 22, FxEmitter_c 3; 43 rows) - 2026-10-30
 Result: 31 MATCH, 5 DEVIATION (fixed, 3 commits), 2 UNSURE, 5 NOT_COMPARED (budget). Table in S93.result.tsv.
 Fixes:
-- 70bab6d09 CIplStore::LoadIpls (0x405170-0x4053E2): the vehicle look-ahead is the exe's inline `(40 < v*80) ? 40 : v` (jp arm: NaN speed stays NaN); port used std::min(40, v*80).
-- 0ee5c77c8 CIplStore::Load (0x5D54A0-0x5D5524): fixed 255 slot iterations like the exe, not the count read from the save.
-- a37dc00ac Fx_c::TriggerWaterSplash/BulletSplash/FootSplash (0x4A1070-0x4A11B9): the shared helper summed x,y,z with `<=` (NaN skipped); exe sums (dx^2+dz^2)+dy^2 at PC24 and returns only when > 625 (NaN creates the fx).
+- 0b0d5f1dd CIplStore::LoadIpls (0x405170-0x4053E2): the vehicle look-ahead is the exe's inline `(40 < v*80) ? 40 : v` (jp arm: NaN speed stays NaN); port used std::min(40, v*80).
+- a09a97046 CIplStore::Load (0x5D54A0-0x5D5524): fixed 255 slot iterations like the exe, not the count read from the save.
+- 13599c179 Fx_c::TriggerWaterSplash/BulletSplash/FootSplash (0x4A1070-0x4A11B9): the shared helper summed x,y,z with `<=` (NaN skipped); exe sums (dx^2+dz^2)+dy^2 at PC24 and returns only when > 625 (NaN creates the fx).
 Verified without change: all of IplStore.cpp (LoadIpl, LoadIplBoundingBox, SetupRelatedIpls with the 13 interior names decoded from exe data, RemoveIpl inclusive ranges, HaveIplsLoaded / RequestIpls / EnsureIplsAreInMemory, quad-tree callbacks 0x4045F0 / 0x404660 / 0x404690 with -140/-160/190 boxes and 900 z threshold, mission-cleanup loop in LoadIpls: type 1 = vehicle, 2 = ped, status 2/3/4, ped state 0x36/0x37, physicalFlags bits 13/14). Fx: AddWood (colour constants bit-exact), AddTyreBurst, AddBulletImpact, AddDebris, AddGlass, TriggerWaterHydrant/Gunshot/TankFire (string names, distance term order, matrix handling), AddWheelGrass (full) and Gravel/Mud (colours), FxEmitter_c::CreateParticles (lod visibility NaN arms, wind/rain gates at EmissionInfo +0x58..0x64, createLocal = bit 1 of +0x62) and both AddParticle overloads.
 Open (continuation): AddWheelSand / AddWheelDust (head, FxQuality gates and colours matched; speed/size/step/particle-count arithmetic not compared), AddWheelSpray, RenderAddTri_, RenderEnd, RenderBegin, RotateVecIntoVec.
 Notes: AddWheelSpray carries an outdated comment about `(int32)` vs ftol; check it when that row is compared.

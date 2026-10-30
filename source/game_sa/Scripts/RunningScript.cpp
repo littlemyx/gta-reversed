@@ -699,8 +699,7 @@ void CRunningScript::LocateCharCharCommand(int32 commandId) {
 
     const float minX = pos2.x - rx;
     bool        result = false;
-    if (!(pos1.x < minX || pos2.x + rx < pos1.x || pos2.y - ry > pos1.y || pos2.y + ry < pos1.y)
-        && (!is3D || !(pos2.z - rz > pos1.z || pos2.z + rz < pos1.z))) {
+    if (IsInCentreRange(pos2.x, rx, pos1.x) && IsInCentreRange(pos2.y, ry, pos1.y) && (!is3D || IsInCentreRange(pos2.z, rz, pos1.z))) {
         switch (commandId) {
         case 0xF2:
         case 0x104: // Any means

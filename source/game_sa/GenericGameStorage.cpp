@@ -276,6 +276,7 @@ bool CGenericGameStorage::GenericLoad(bool& out_bVariablesLoaded) {
 
             uint32 varsVer{};
             vars.Extract(varsVer);
+#ifdef FIX_BUGS // exe 0x5D18E1-0x5D18E6: calls GetCurrentVersionNumber() but discards the result; no version check, every save loads
             if (GetCurrentVersionNumber() != varsVer) {
                 NOTSA_LOG_ERR("Tried loading a save file with mismatching version!");
                 NOTSA_LOG_ERR("Got {}, expected {}", SaveVersionName(varsVer), SaveVersionName(GetCurrentVersionNumber()));
@@ -290,6 +291,9 @@ bool CGenericGameStorage::GenericLoad(bool& out_bVariablesLoaded) {
                     NOTSA_LOG_WARN("Forcefully loading a mismatching save. You are on your own! If the save mismatches with the script, the game will crash.");
                 }
             }
+#else
+            (void)GetCurrentVersionNumber();
+#endif
             break;
         }
         case eBlocks::SCRIPTS:

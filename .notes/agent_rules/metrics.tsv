@@ -410,4 +410,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S70	v6	asm sweep	184989	79	26	Door::Process rotation component negated, BouncingPanel assoc, Glass explosion dist NaN, Escalator SwitchOff dangling step ptrs; 7 M
 2026-10-30	ASM-S75	v6	asm sweep	246595	128	23	handling.cfg acceleration atof double *0.4 (1 ulp on 6 values), IK CanAccept NaN, ShotInfo ftol; AddProjectile full MATCH; 17 M
 2026-10-30	ASM-S74b	v6	asm sweep	208474	77	20	DOUBLE onscreen counter printed var1 twice, PlaceName banner restarted in interiors 2..18, tag alpha quadratic fade; MissionCleanup MATCH; 16 M
-2026-10-30	ASM-S73	v6	asm sweep	0	0	0	Cutscene: attached ped to itself, hidden-entity counter overrun, unload loop range, append slot index, delete order; Formation slot angle/centroid/nearest search; IdleCam NaN; 28 M
+2026-10-30	ASM-S73	v6	asm sweep	324885	126	34	Cutscene: attached ped to itself, hidden-entity counter overrun, unload loop range, append slot index, delete order; Formation slot angle/centroid/nearest search; IdleCam NaN; 28 M

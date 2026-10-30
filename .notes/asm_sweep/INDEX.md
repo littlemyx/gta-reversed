@@ -235,7 +235,7 @@
 | S86 | phase3 tier A (PHASE3.md) | 38 | done (38 M) | AudioEngine.cpp |
 | S87 | phase3 tier A (PHASE3.md) | 24 | done (19 M, 5 fixed) | AEAmbienceTrackManager.cpp, AEAudioHardware.cpp, AECutsceneTrackManager.cpp |
 | S88 | phase3 tier A (PHASE3.md) | 43 | done (31 M, 12 fixed) | AERadioTrackManager.cpp, AESoundManager.cpp |
-| S89 | phase3 tier A (PHASE3.md) | 46 | pending | AEUserRadioTrackManager.cpp, AnimBlendAssocGroup.cpp, AnimManager.cpp |
+| S89 | phase3 tier A (PHASE3.md) | 46 | done (28 M, 6 fixed, 1 U; 11 NR = user-track platform layer + ANPK) | AEUserRadioTrackManager.cpp, AnimBlendAssocGroup.cpp, AnimManager.cpp |
 | S90 | phase3 tier A (PHASE3.md) | 40 | pending | AEBankLoader.cpp, AEMP3BankLoader.cpp, AEMP3TrackLoader.cpp, AETrackLoader.cpp, ColStore.cpp, Directory.cpp |
 | S91 | phase3 tier A (PHASE3.md) | 24 | done (21 M, 3 fixed) | FileLoader.cpp |
 | S92 | phase3 tier A (PHASE3.md) | 42 | done (34 M, 6 fixed, 2 NR: COL1/COL4 loaders unused) | FileLoader.cpp, FileMgr.cpp, IniFile.cpp |

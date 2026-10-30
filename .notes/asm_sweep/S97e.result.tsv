@@ -1,0 +1,9 @@
+addr	function	verdict	asm range	note	fix commit
+0x574010	CMenuManager::SmallMessageScreen	FIXED	0x574010-0x57430F (all)	text y is an int (ftol of 200-lines*9 / 190 or the H*(200/448) forms; port kept a float); GetNumberLines y is Y-stretched 135 (port X). Matched: style/colour/shadow/scale, DrawWindow call, CD-error key list (port deliberate UTF-8 path)	8a14486a8
+0x575130	CMenuManager::PrintMap	NOT_REACHED	-	budget	-
+0x574900	CMenuManager::PrintStats	NOT_REACHED	-	budget	-
+0x576320	CMenuManager::PrintBriefs	NOT_REACHED	-	budget	-
+0x5746F0	CMenuManager::PrintRadioStationList	MATCH	0x5746F0-0x5748F7 (all)	12 icons x=47*(i-1)+44 y=300 35x35 alpha 30 skipping the current, current x=47*n-15 y=290 60x60 opaque for 1..12; constants equal (up to the ulp of W*c)	-
+0x580E00	CMenuSystem::DisplayStandardMenu	NOT_REACHED	-	budget	-
+0x5816E0	CMenuSystem::DisplayGridMenu	NOT_REACHED	-	budget	-
+0x5820E0	CMenuSystem::FillGridWithCarColours	MATCH	0x5820E0-0x5822CF (all)	64 picks, +-15 per-channel similarity test over loopCount entries (unpicked black included), index reset to 0 after a pick, last index 127 forced, colour (r,g,b) of the vehicle colour table with alpha 255	-

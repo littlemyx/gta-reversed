@@ -467,8 +467,9 @@ void FxEmitterBP_c::Render(RwCamera* camera, uint32 txdHashKey, float brightness
     RwRaster* raster    = raster0; // NOTSA: Original leaves this uninitialized (only matters for invalid animated texture ids)
     RenderBegin(curRaster, nullptr, rwIM3D_VERTEXUV);
 
-    // BUG: Original reuses the (dead) `doHeatHaze` argument slot for this, so it's not initialized properly, only matters if `m_Brightness > 100`
-    float brightnessMult = 0.0f;
+    // 0x4A3A33: the exe stores `m_Brightness * 0.01f` back into the `brightness` argument slot ([esp+0x204] with the pushed ebp; `doHeatHaze` is at +0x208),
+    // so particles with `m_Brightness > 100` use the previous particle's multiplier, or the `brightness` argument for the first one
+    float brightnessMult = brightness;
 
     const auto& camMat = *RwFrameGetMatrix(RwCameraGetFrame(camera));
 

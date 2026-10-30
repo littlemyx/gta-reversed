@@ -407,3 +407,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S45c	v6	asm sweep	195190	75	34	ProcessLightsForEntity: 5on5off flash mode always 0 (off phases never), sun glare corona id, fade const 1-ulp, NaN corona, shadow colour order
 2026-10-30	ASM-S74	v6	asm sweep	334948	132	39	RoadBlocks batch/abs dot/cop peds, SetPiece cop spawn inverted + cooldown 4s vs 40s + AddOne fields swapped, StuntJump voice inverted + slowmo stuck; 15 M
 2026-10-30	ASM-S69	v6	asm sweep	265688	114	42	CollisionData::Copy kept stale verts + shadow flags, TempColModels 3 ped sphere z 1-ulp immediates, ColAccel entry order/flags; 23 M
+2026-10-30	ASM-S70	v6	asm sweep	0	0	0	Door::Process rotation component negated, BouncingPanel assoc, Glass explosion dist NaN, Escalator SwitchOff dangling step ptrs; 7 M

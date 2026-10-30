@@ -207,7 +207,7 @@
 | S67 | phase2b: coverage audit (COVERAGE.md) | 13 | done (2 M, 3 fixed, 2 covered, 7 dead in exe) | Automobile.cpp, Cam.cpp, CollisionEventScanner.cpp, Cover.cpp, CustomCarPlateMgr.cpp, Entity.cpp |
 | S68 | phase2b: coverage audit (COVERAGE.md) | 36 | pending | Cheat.cpp |
 | S69 | phase2b: coverage audit (COVERAGE.md) | 38 | partial 28/38 (23 M, 5 fixed) -> S69b | ColAccel.cpp, ColModel.cpp, Collision.cpp, CollisionData.cpp, TempColModels.cpp |
-| S70 | phase2b: coverage audit (COVERAGE.md) | 42 | pending | Birds.cpp, BouncingPanel.cpp, BreakManager_c.cpp, BreakObject_c.cpp, Door.cpp, Escalator.cpp |
+| S70 | phase2b: coverage audit (COVERAGE.md) | 42 | partial 11/42 (7 M, 4 fixed) -> S70b | Birds.cpp, BouncingPanel.cpp, BreakManager_c.cpp, BreakObject_c.cpp, Door.cpp, Escalator.cpp |
 | S71 | phase2b: coverage audit (COVERAGE.md) | 34 | pending | 3dMarker.cpp, MovingThings.cpp, Rope.cpp, Ropes.cpp, TrafficLights.cpp, WaterCannon.cpp |
 | S72 | phase2b: coverage audit (COVERAGE.md) | 35 | pending | 3dMarkers.cpp, Checkpoint.cpp, Checkpoints.cpp, ConversationNode.cpp, Conversations.cpp, Credits.cpp |
 | S73 | phase2b: coverage audit (COVERAGE.md) | 44 | pending | CutsceneMgr.cpp, Formation.cpp, IdleCam.cpp, MentalHealth.cpp, Messages.cpp |
@@ -220,3 +220,4 @@
 | S80 | phase2b: coverage audit (COVERAGE.md) | 15 | pending | ControllerConfigManager.cpp, DecisionMaker.cpp, Gamma.cpp, GridRef.cpp, MouseControllerState.cpp, Pad.cpp |
 | S74b | rest of S74 | 19 | pending | MissionCleanup.cpp, OnscreenCounterEntry.cpp, OnscreenTimer.cpp, PatrolRoute.cpp, PlaceName.cpp, TagManager.cpp, UserDisplay.cpp |
 | S69b | rest of S69 | 10 | pending | Collision.cpp |
+| S70b | rest of S70 | 31 | pending | Birds.cpp, BreakManager_c.cpp, BreakObject_c.cpp, Escalator.cpp, FallingGlassPane.cpp, Glass.cpp |

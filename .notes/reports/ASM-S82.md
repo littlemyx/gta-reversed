@@ -1,0 +1,12 @@
+# ASM-S82 (ped / pedless speech, police scanner) - 2026-10-30
+Result: 44 rows: 18 compared (8 FIXED in 5 commits, 9 MATCH, 1 UNSURE), 26 NOT_REACHED (budget; the whole police scanner, conversations, UpdateParameters/Terminate, script speech). Tables in S82.result.tsv.
+Fixes:
+- 51afecef7 GetSpeechContextVolumeOffset (0x4E4AE0): strain/exhale offset used clamp(fat-muscle) without the 0.001 scale and base instead of (0-base): exe = (t+1)*0.5*(0-base)+base (the float at 0xB61C14/18 is never written).
+- 46d59dbc5 GetCurrentCJMood (0x4E53B0): script mood override only applies in the fall-through path and only while override_time > now (port: >= and in every path); the post-3-minute mission-passed path reads a stale well-dressed byte (non-zero) so CJ is CD, not CR.
+- e2babe938 GetSoundAndBankIDs (0x4E5920): first candidate rand was (0, numSounds) inclusive, exe (0, numSounds-1); sound 0 was twice as likely.
+- ef0a748fa LoadAndPlaySpeech (0x4E4840): port rebuilt the whole slot, dropping Sound and the ped/player-conversation reservation flags (a reserved conversation slot became FREE after a line).
+- 431ac3791 AddSayEvent (ped + pedless) / PlayLoadedSound: slot chosen before GetSoundAndBankIDs (port consumed rand + phrase memory first; non-player slot must be in [0,5)); distance rejected only when strictly greater; pedless sets type GFD/voice 10 (port kept voice -1, so police-radio speech never found a sound), registers the attached entity only after all checks, plays with flags 0x387/0x86 (LIFESPAN_TIED_TO_PHYSICAL_ENTITY); front-end vehicle test via CAEAudioUtility::FindVehicleOfPlayer; facial request durB 0.
+MATCH: GetVoiceForMood, Service, IsCJDressedInForGangSpeech, SetNextPlayTime, Initialise, StopCurrentSpeech, GetSexFromModel, GetVoiceAndTypeForSpecialPed, Pedless::StopCurrentSpeech.
+UNSURE: Constructor stores m_PedAudioType=0 (GEN) in the exe, the port default is UNK (-1); not changed (default ctor is shared with the pedless/Terminate paths).
+Open: CAEPoliceScannerAudioEntity (all 8 rows), RequestPedConversation/Release*, SetUpConversation checked only by reading, UpdateParameters, AddScriptSayEvent, Terminate.
+Gate: Release build OK; wave2_oracle_test 1142 functions, PC24 0/0 PC53 0/0; combat regress PASS=14; PortableWin64 compile of AEPedSpeechAudioEntity.cpp + AEPedlessSpeechAudioEntity.cpp OK (0 errors); v6 grep clean. Missions/soak not run (no loader change).

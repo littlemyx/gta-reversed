@@ -64,7 +64,8 @@ void CPostEffects::Initialise() {
     SetupBackBufferVertex();
     if (m_pGrainRaster = RwRasterCreate(GRAIN_TEXTURE_DIM, GRAIN_TEXTURE_DIM, 32, rwRASTERFORMAT8888 | rwRASTERTYPETEXTURE)) {
         auto* pixels = RwRasterLock(m_pGrainRaster, 0, rwRASTERLOCKWRITE);
-        for (auto i = 0u; i < sq(GRAIN_TEXTURE_DIM); i += 4) {
+        // exe 0x704669-0x704684: 0x10000 iterations, one rand() per 32-bit pixel (written to all 4 bytes) = the whole 256x256x4 raster
+        for (auto i = 0u; i < sq(GRAIN_TEXTURE_DIM) * 4; i += 4) {
             pixels[i + 0] = pixels[i + 1] = pixels[i + 2] = pixels[i + 3] = static_cast<uint8>(CGeneral::GetRandomNumber());
         }
 

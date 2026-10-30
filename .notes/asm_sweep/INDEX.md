@@ -204,7 +204,7 @@
 | S65b | rest of S65 | 2 | done (1 M, 4 fixed incl. 3 Zones extras) | WeaponEffects.cpp, WeaponInfo.cpp |
 | S57e | rest of S57d | 6 | done (2 M, 4 fixed + IsVehicleStopped) | Replay.cpp |
 | S45c | rest of S45b (ProcessLightsForEntity) | 1 | pending | Entity.cpp |
-| S67 | phase2b: coverage audit (COVERAGE.md) | 13 | pending | Automobile.cpp, Cam.cpp, CollisionEventScanner.cpp, Cover.cpp, CustomCarPlateMgr.cpp, Entity.cpp |
+| S67 | phase2b: coverage audit (COVERAGE.md) | 13 | done (2 M, 3 fixed, 2 covered, 7 dead in exe) | Automobile.cpp, Cam.cpp, CollisionEventScanner.cpp, Cover.cpp, CustomCarPlateMgr.cpp, Entity.cpp |
 | S68 | phase2b: coverage audit (COVERAGE.md) | 36 | pending | Cheat.cpp |
 | S69 | phase2b: coverage audit (COVERAGE.md) | 38 | pending | ColAccel.cpp, ColModel.cpp, Collision.cpp, CollisionData.cpp, TempColModels.cpp |
 | S70 | phase2b: coverage audit (COVERAGE.md) | 42 | pending | Birds.cpp, BouncingPanel.cpp, BreakManager_c.cpp, BreakObject_c.cpp, Door.cpp, Escalator.cpp |

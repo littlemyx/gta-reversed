@@ -196,7 +196,7 @@ RwObject* CVehicleModelInfo::CreateInstance()
 // 0x4C7670
 void CVehicleModelInfo::SetAnimFile(const char* filename)
 {
-    if (!strcmp(filename, "null")) {
+    if (!_stricmp(filename, "null")) { // exe 0x4C7670 calls the CRT _stricmp (0x8229B6), not strcmp: "NULL" also means "no anim file"
         m_nAnimBlockIndex = -1;
         return;
     }

@@ -1,0 +1,20 @@
+addr	file	line	cls	fn	oc
+0x468560	source/game_sa/MissionCleanup.cpp	41	CMissionCleanup	Process	U
+0x4637C0	source/game_sa/MissionCleanup.cpp	42	CMissionCleanup	FindFree	U
+0x4652D0	source/game_sa/MissionCleanup.cpp	43	CMissionCleanup	CheckIfCollisionHasLoadedForMissionObjects	U
+0x44CA90	source/game_sa/OnscreenCounterEntry.cpp	9	COnscreenCounterEntry	ProcessForDisplayCounter	U
+0x44CD50	source/game_sa/OnscreenTimer.cpp	11	COnscreenTimer	AddClock	U
+0x44CE60	source/game_sa/OnscreenTimer.cpp	12	COnscreenTimer	ClearClock	U
+0x44CDA0	source/game_sa/OnscreenTimer.cpp	14	COnscreenTimer	AddCounter	U
+0x44CE80	source/game_sa/OnscreenTimer.cpp	15	COnscreenTimer	ClearCounter	U
+0x41B810	source/game_sa/PatrolRoute.cpp	9	CPatrolRoute	operator new	U
+0x41B820	source/game_sa/PatrolRoute.cpp	10	CPatrolRoute	operator delete	U
+0x66D4B0	source/game_sa/PatrolRoute.cpp	12	CPatrolRoute	Set	U
+0x66D550	source/game_sa/PatrolRoute.cpp	13	CPatrolRoute	Reverse	U
+0x571F20	source/game_sa/PlaceName.cpp	13	CPlaceName	Process	U
+0x49CE10	source/game_sa/TagManager.cpp	27	CTagManager	SetupAtomic	U
+0x49CE40	source/game_sa/TagManager.cpp	28	CTagManager	RenderTagForPC	U
+0x5D3D60	source/game_sa/TagManager.cpp	29	CTagManager	Save	U
+0x5D3DA0	source/game_sa/TagManager.cpp	30	CTagManager	Load	U
+0x571EE0	source/game_sa/UserDisplay.cpp	11	CUserDisplay	Init	U
+0x5720A0	source/game_sa/UserDisplay.cpp	12	CUserDisplay	Process	U

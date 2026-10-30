@@ -460,4 +460,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S108	v6	asm sweep	197733	80	20	FxInfoJitter/Noise one rand for xyz (diagonal jitter + rand sequence shift) + RW table normalise; anim hierarchy/clump data MATCH; 43 M
 2026-10-30	ASM-S102b	v6	asm sweep	312283	113	30	occlusion: interior occluders ran always (mixed with map), list order, overrun; corona reflections height test never skipped, sun reflection scale/radius, fog effect, bright lights; 4 M
 2026-10-30	ASM-S101	v6	asm sweep	480367	174	48	realtime shadow ped values passed swapped (orientation/offset wrong), stored shadows rect posn..posn+span vs +-span + water pass rewritten, pole shadow id, sector strict rects; 20 M
-2026-10-30	ASM-S84c	v6	asm sweep	0	0	0	RC car speed/volume tables swapped + junk 5th point + silent reverse, seaplane rotor target dropped, jet bank check order + stall swap >, golf cart table end 1.0001; 5 M
+2026-10-30	ASM-S84c	v6	asm sweep	277655	111	24	RC car speed/volume tables swapped + junk 5th point + silent reverse, seaplane rotor target dropped, jet bank check order + stall swap >, golf cart table end 1.0001; 5 M

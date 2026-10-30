@@ -1046,20 +1046,20 @@ void CCutsceneMgr::Update_overlay() {
             }
             if (csfx.m_bPlaying) {
                 if (csfx.m_nEndTime != -1) { // Time to end?
-                    if (csTimeMS >= csfx.m_nEndTime + csfx.m_nStartTime) {
+                    if ((uint32)csTimeMS > (uint32)(csfx.m_nEndTime + csfx.m_nStartTime)) { // 0x5B17D0: `cmp ebp, edx; jbe` => strict, unsigned
                         fxsys->Stop();
                         csfx.m_bPlaying = false;
                         csfx.m_bStopped = true;
                     }
                 }
-            } else if (!csfx.m_bStopped && csTimeMS >= csfx.m_nStartTime) { // Time to start? (Only if not stopped once already)
+            } else if (!csfx.m_bStopped && (uint32)csTimeMS >= (uint32)csfx.m_nStartTime) { // Time to start? (Only if not stopped once already)
                 fxsys->Play();
                 csfx.m_bPlaying = true;
             }
         }
 
         // Deal with text upcoming texts
-        if (ms_currTextOutput < ms_numTextOutput && csTimeMS >= ms_iTextStartTime[ms_currTextOutput]) {
+        if (ms_currTextOutput < ms_numTextOutput && (uint32)csTimeMS > (uint32)ms_iTextStartTime[ms_currTextOutput]) { // 0x5B1855: `cmp ebp, [start]; jbe` => strict, unsigned
             CMessages::AddMessageJump(
                 TheText.Get(ms_cTextOutput[ms_currTextOutput]),
                 ms_iTextDuration[ms_currTextOutput],

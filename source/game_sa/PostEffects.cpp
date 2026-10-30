@@ -1574,7 +1574,7 @@ void CPostEffects::Render() {
             } else if (g_fxMan.m_bHeatHazeEnabled) {
                 HeatHazeFX(1.0f, true);
             }
-        } else if (CWeather::UnderWaterness >= m_fWaterFXStartUnderWaterness) {
+        } else {
             HeatHazeFX(1.0f, false);
         }
     } else if (CWeather::UnderWaterness >= m_fWaterFXStartUnderWaterness) {

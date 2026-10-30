@@ -509,7 +509,7 @@ void CAEAudioHardware::RescaleChannelVolumes() {
         auto&      vol   = m_afChannelVolumes[i];
 
         if (flags & FLAG_CLAMP_VOL_TO_NEG) {
-            vol = std::min(vol, 0.0f);
+            vol = vol < 0.0f ? vol : 0.0f; // 0x4D8B2E: fcomp 0.0 / test ah,5 / jp -> `fld 0.0`: also for NaN (std::min keeps it)
         } else if (flags & FLAG_SECONDARY_GROUP) {
             vol -= maxVolumeSecondary;
         } else {
@@ -518,10 +518,12 @@ void CAEAudioHardware::RescaleChannelVolumes() {
 
         // NOTE: `pow` in double precision on purpose - the original computes it on the
         // x87 FPU in temp-real precision (`FLD qword [10.0]` @ 0x4D8B58).
-        m_ChannelGains[i] = static_cast<float>(x87::pow(10.0, vol * 0.05f));
+        const auto   gainPow = x87::pow(10.0, vol * 0.05f);
+        m_ChannelGains[i]    = static_cast<float>(gainPow); // 0x4D8B6B: `fst dword` - st0 keeps the unrounded pow result
 
         if (flags & FLAG_UNDUCKABLE) {
-            fullSum += m_ChannelGains[i];
+            // 0x4D8B76: `fadd dword [fullSum]` adds the UNROUNDED pow result still on the x87 stack (one rounding to 24 bits), not the float stored above
+            fullSum = (float)X87R((x87d)gainPow + (x87d)fullSum);
         } else if ((flags & FLAG_FADE_NEAR_END) && ch && ch->GetPlayTime() >= 0) {
             // NOTE: `GetPlayTime()` is called twice on purpose (0x4D8B9A / 0x4D8BBB) -
             // it reads live playback state, so caching it would deviate from the original.

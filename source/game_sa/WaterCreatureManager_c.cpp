@@ -136,7 +136,8 @@ void WaterCreatureManager_c::Update(float deltaTime) {
     if (FindPlayerPed(0)->GetPlayerData()->m_nWaterCoverPerc > 50) {
         const auto currTime = CTimer::GetTimeInMS();
 
-        if (currTime - m_lastUpdateTime > 1'000 && m_waterCreaturePool.GetNumItems() > 0) {
+        // 0x6E4F4A: `sub; cmp 0x3E8; jle` - signed difference (a game time that went backwards does not spawn)
+        if (static_cast<int32>(currTime) - m_lastUpdateTime > 1'000 && m_waterCreaturePool.GetNumItems() > 0) {
             m_lastUpdateTime = currTime;
 
             CVector direction;
@@ -166,14 +167,19 @@ void WaterCreatureManager_c::Update(float deltaTime) {
                     for (uint32 i = 0; i < numToCreate; ++i) {
                         auto* creature = m_waterCreaturePool.RemoveHead();
 
+                        bool failed = false;
                         if (creature->Init(id, &creaturePos, leader, waterZ, waterDepth)) {
                             m_waterCreatureList.AddItem(creature);
                         } else {
                             m_waterCreaturePool.AddItem(creature);
+                            failed = true; // 0x6E513E: `mov ebx, ebp` - the remaining group members are not created
                         }
 
                         if (!leader) {
                             leader = creature;
+                        }
+                        if (failed) {
+                            break;
                         }
                     }
                 }

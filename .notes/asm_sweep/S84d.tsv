@@ -1,0 +1,4 @@
+addr	file	line	cls	fn	oc	tier
+0x4FCA10	source/game_sa/Audio/Entities/AEVehicleAudioEntity.cpp	5118	None	ProcessDummyStateTransition	U	A
+0x4FBB10	source/game_sa/Audio/Entities/AEVehicleAudioEntity.cpp	5150	None	ProcessPlayerVehicleEngine	U	A
+0x4F6420	source/game_sa/Audio/Entities/AEVehicleAudioEntity.cpp	5154	None	AddAudioEvent	U	A

@@ -20,7 +20,7 @@ void CTaskComplexUseScriptedBrain::InjectHooks() {
 
 // 0x6358B0
 CTaskComplexUseScriptedBrain::CTaskComplexUseScriptedBrain(char const* name) {
-    strcpy_s(m_Name, name);
+    strncpy(m_Name, name, sizeof(m_Name)); // exe 0x6358D2: unbounded strcpy into an 11 byte field; an 8 char name aborted strcpy_s
 }
 
 // NOTSA

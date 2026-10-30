@@ -33,7 +33,7 @@ VALIDATE_OFFSET(CPhysical, m_vecLastCollisionImpactVelocity, 0xE0); VALIDATE_OFF
 
 namespace {
 //! 0x40FDB0 - `a.z * b.z + a.y * b.y + a.x * b.x` (the result is left in an x87 register => extended precision)
-double DotProductX87(const CVector& a, const CVector& b) {
+x87d DotProductX87(const CVector& a, const CVector& b) {
     return (x87d)a.z * b.z + (x87d)a.y * b.y + (x87d)a.x * b.x;
 }
 
@@ -154,8 +154,8 @@ void CCollisionEventScanner::ScanForCollisionEvents(CPed* victim, CEventGroup* e
                     dir.Normalise(); // 0x60481D
 
                     const float absAngle = std::abs(angleDiff);
-                    double      result;
-                    if (absAngle < halfAngle || ((x87d)std::numbers::pi_v<float> - (x87d)halfAngle < (double)absAngle)) { // 0x604828, pi = 0x858CB8
+                    x87d        result;
+                    if (absAngle < halfAngle || ((x87d)std::numbers::pi_v<float> - (x87d)halfAngle < (x87d)absAngle)) { // 0x604828, pi = 0x858CB8
                         result = (x87d)dir.y * vehSpeed.y + (x87d)dir.z * vehSpeed.z + (x87d)dir.x * vehSpeed.x; // 0x6048DF
                     } else if (angleDiff > 0.f) { // 0x604850
                         const CVector negRight = -1.f * veh->GetMatrix().GetRight(); // 0x40FE90
@@ -163,12 +163,12 @@ void CCollisionEventScanner::ScanForCollisionEvents(CPed* victim, CEventGroup* e
                     } else { // 0x604886
                         const x87d r1 = DotProductX87(veh->GetMatrix().GetRight(), vehSpeed);
                         result = r1;
-                        if (speedSq > std::bit_cast<float>(0x3C23D70Bu) && r1 < (double)0.1f) { // 0x86CD7C (0x3C23D70B, not 0.01f), 0x858B1C
+                        if (speedSq > std::bit_cast<float>(0x3C23D70Bu) && r1 < (x87d)0.1f) { // 0x86CD7C (0x3C23D70B, not 0.01f), 0x858B1C
                             // The original calculates `Dot(vehRight, pedForward)` here, but its only effect is a dead store.
-                            result = (double)(float)r1; // It reloads the (float) copy of `r1` on the x87 stack
+                            result = (x87d)(float)r1; // It reloads the (float) copy of `r1` on the x87 stack
                         }
                     }
-                    if (result > (double)0.1f) { // 0x858B1C
+                    if (result > (x87d)0.1f) { // 0x858B1C
                         ped.KillPedWithCar(veh, damage, false); // 0x60491B
                     }
                 } else { // 0x604925

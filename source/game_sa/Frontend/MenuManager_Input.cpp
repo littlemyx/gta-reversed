@@ -891,7 +891,8 @@ void CMenuManager::CheckSliderMovement(int32 LeftRight) {
 
     switch (item.m_nActionType) {
     case MENU_ACTION_BRIGHTNESS:
-        m_PrefsBrightness = std::clamp<int32>(LeftRight * NOTSA_FTOL(int32, 363.0f * ExeRecip(15.0f)) + m_PrefsBrightness, 0, 384);
+        // exe 0x573440: ftol(LeftRight * 24.19f + brightness) (0x865258), so -1 steps by 25 (trunc(b - 24.19)), +1 by 24
+        m_PrefsBrightness = std::clamp<int32>(NOTSA_FTOL(int32, (float)LeftRight * 24.19f + (float)m_PrefsBrightness), 0, 384);
         SetBrightness((float)m_PrefsBrightness, false);
         break;
     case MENU_ACTION_RADIO_VOL: {
@@ -905,7 +906,7 @@ void CMenuManager::CheckSliderMovement(int32 LeftRight) {
         break;
     }
     case MENU_ACTION_DRAW_DIST: {
-        constexpr auto step        = 7.0f / 128.0f;
+        constexpr auto step        = std::bit_cast<float>(0x3D5FFFFFu); // exe 0x865250 (one ulp below 7/128)
         float          newDist     = LeftRight <= 0 ? m_fDrawDistance - step : m_fDrawDistance + step;
         m_fDrawDistance            = std::clamp<float>(newDist, 0.925f, 1.8f);
         CRenderer::ms_lodDistScale = m_fDrawDistance;

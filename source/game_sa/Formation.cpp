@@ -106,7 +106,7 @@ void CFormation::GenerateGatherDestinations(CPedList& pedList, CPed* ped) {
     for (int32 i = 0; i < count; i++) {
         const float angle = count < 2
             ? ped->m_fCurrentRotation + HALF_PI
-            : PI / (float)count + (float)i / (float)count * TWO_PI - ped->m_fCurrentRotation;
+            : ((float)i / (float)count * TWO_PI - ped->m_fCurrentRotation) + PI / (float)count; // 0x69A6B1: (i/n*2pi - rot) + pi/n, the port summed pi/n first
         m_Destinations.AddPoint({
             (float)(X87R(x87::sin(angle) * radius) + pos.x),
             (float)(X87R(x87::cos(angle) * radius) + pos.y),

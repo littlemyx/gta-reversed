@@ -1,0 +1,16 @@
+addr	file	line	cls	fn	oc
+0x558DE0	source/game_sa/Stats.cpp	129	None	GetStatID	U
+0x558EC0	source/game_sa/Stats.cpp	82	None	PopulateFavoriteRadioStationList	U
+0x558F90	source/game_sa/Stats.cpp	91	None	GetFullFavoriteRadioStationList	U
+0x559230	source/game_sa/Stats.cpp	114	None	BuildStatLine	U
+0x559760	source/game_sa/Stats.cpp	115	None	CheckForStatsMessage	U
+0x559860	source/game_sa/Stats.cpp	116	None	LoadStatUpdateConditions	U
+0x5599B0	source/game_sa/Stats.cpp	99	None	LoadActionReactionStats	U
+0x55A210	source/game_sa/Stats.cpp	86	None	FindCriminalRatingString	U
+0x55A780	source/game_sa/Stats.cpp	87	None	ConstructStatLine	U
+0x55B980	source/game_sa/Stats.cpp	107	None	DisplayScriptStatUpdateMessage	U
+0x55BF20	source/game_sa/Stats.cpp	118	None	UpdateSexAppealStat	U
+0x55C0C0	source/game_sa/Stats.cpp	81	None	Init	U
+0x55C410	source/game_sa/Stats.cpp	103	None	SetNewRecordStat	U
+0x5D3B40	source/game_sa/Stats.cpp	135	None	Save	U
+0x5D3BF0	source/game_sa/Stats.cpp	134	None	Load	U

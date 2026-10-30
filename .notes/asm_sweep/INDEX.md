@@ -162,7 +162,7 @@
 | S56 | phase2: unlisted non-oracle hooks | 40 | partial 27/40 (17 M, 10 fixed) -> S56b | Pickups.cpp, PlaneTrail.cpp, PlaneTrails.cpp, PlayerInfo.cpp, PlayerPedData.cpp, PlayerRelationshipRecorder.cpp |
 | S57 | phase2: unlisted non-oracle hooks | 40 | partial 18/40 (15 M, 3 fixed) -> S57b | EventPool.h, PedAttractorPool.h, PedIntelligencePool.h, PedPool.h, PlayerRelationshipRecorder.cpp, Remote.cpp ... |
 | S58 | phase2: unlisted non-oracle hooks | 40 | partial 23/40 (20 M, 3 fixed, 1 U) -> S58b | ScriptsForBrains.cpp, Shopping.cpp, TheScripts.cpp |
-| S59 | phase2: unlisted non-oracle hooks | 40 | pending | Shopping.cpp, Stats.cpp, StreamedScripts.cpp, StuckCarCheck.cpp |
+| S59 | phase2: unlisted non-oracle hooks | 40 | partial 25/40 (20 M, 5 fixed) -> S59b | Shopping.cpp, Stats.cpp, StreamedScripts.cpp, StuckCarCheck.cpp |
 | S60 | phase2: unlisted non-oracle hooks | 40 | pending | PedGroupDefaultTaskAllocatorChat.h, PedGroupDefaultTaskAllocatorFollowAnyMeans.h, PedGroupDefaultTaskAllocatorFollowLimited.h, PedGroupDefaultTaskAllocatorRandom.h, PedGroupDefaultTaskAllocatorSitInLeaderCar.h, PedGroupDefaultTaskAllocatorStandStill.h ... |
 | S61 | phase2: unlisted non-oracle hooks | 40 | done (35 M, 5 fixed) | TaskComplexAvoidEntity.cpp, TaskComplexAvoidOtherPedWhileWandering.cpp, TaskComplexBeCop.cpp, TaskComplexBeStill.cpp, TaskComplexCarDriveMission.cpp, TaskComplexClimb.cpp ... |
 | S62 | phase2: unlisted non-oracle hooks | 40 | done (39 M, 1 fixed) | TaskComplexFollowPatrolRoute.cpp, TaskComplexGangLeader.cpp, TaskComplexKillAllThreats.cpp, TaskComplexKillPedGroupOnFoot.cpp, TaskComplexLeaveCar.cpp, TaskComplexObserveTrafficLights.cpp ... |
@@ -198,3 +198,4 @@
 | S54c | rest of S54 (+ S53c ComputeClearTarget) | 14 | done (10 M, 3 fixed; S53, S54 complete) | PedGroupIntelligence.cpp, PedGroupMembership.cpp, PedGroupPlacer.cpp |
 | S64c | rest of S64b | 20 | done (11 M, 8 fixed, LaserScopeDot no callers; S64 complete) | VehicleAnimGroupData.cpp, VehicleRecording.cpp, VehicleSaveStructure.cpp, Weapon.cpp |
 | S46b | rest of S46 | 3 | pending | EventHandler.cpp |
+| S59b | rest of S59 | 15 | pending | Stats.cpp |

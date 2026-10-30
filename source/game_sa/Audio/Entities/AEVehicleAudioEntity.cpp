@@ -3986,12 +3986,16 @@ void CAEVehicleAudioEntity::ProcessGenericJet(bool bEngineOn, tVehicleParams& pa
 // 0x501960
 void CAEVehicleAudioEntity::ProcessDummyJet(tVehicleParams& vp) {
     auto* const plane = vp.Vehicle->AsPlane();
+
+    // 0x501960-0x5019A8: the pedals are cut to int16 (ftol(x * 255)) and used as `raw * (1/255)` for the prop speed AND for the accel / brake arguments
+    // (the port passed `pedal * (1/255)` of the float pedal, i.e. a value 255x too small that was positive for any pedal > 0 instead of > 1/255)
+    const FixedFloat<int16, 255.f> gas{ plane->m_GasPedal }, brake{ plane->m_BrakePedal };
     ProcessGenericJet(
         plane->vehicleFlags.bEngineOn || plane->m_autoPilot.m_vehicleRecordingId >= 0,
         vp,
-        (std::clamp(CalculatePropSpeed(plane, plane->m_GasPedal, plane->m_BrakePedal), 0.2f, 1.f) - 0.2f) * 1.25f,
-        plane->m_GasPedal * ExeRecip(255.f),
-        plane->m_BrakePedal * ExeRecip(255.f),
+        (std::clamp(CalculatePropSpeed(plane, gas, brake), 0.2f, 1.f) - 0.2f) * 1.25f,
+        gas,
+        brake,
         0.f,
         1.f
     );

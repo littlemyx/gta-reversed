@@ -249,7 +249,7 @@
 | S100 | phase3 tier B (PHASE3.md) | 35 | done (30 M, 5 fixed) | RealTimeShadow.cpp, RealTimeShadowManager.cpp, ShadowCamera.cpp |
 | S101 | phase3 tier B (PHASE3.md) | 35 | 32/35 (20 M, 12 fixed, 2 U) -> S101b | Shadows.cpp, StencilShadowObject.cpp, StencilShadows.cpp |
 | S102 | phase3 tier B (PHASE3.md) | 40 | partial 16/40 (12 M, 4 fixed) -> S102b | BrightLights.cpp, Clouds.cpp, Coronas.cpp, Mirrors.cpp, MotionBlurStreaks.cpp, Occlusion.cpp |
-| S103 | phase3 tier B (PHASE3.md) | 36 | pending | PostEffects.cpp, RegisteredMotionBlurStreak.cpp, ShinyTexts.cpp, SpecialFX.cpp |
+| S103 | phase3 tier B (PHASE3.md) | 36 | done (26 M, 10 fixed; regress left to the gate) | PostEffects.cpp, RegisteredMotionBlurStreak.cpp, ShinyTexts.cpp, SpecialFX.cpp |
 | S104 | phase3 tier B (PHASE3.md) | 43 | pending | GrassRenderer.cpp, PPTriPlantBuffer.cpp, PlantColEntEntry.cpp, PlantLocTri.cpp, PlantMgr.cpp, PlantSurfPropMgr.cpp |
 | S105 | phase3 tier B (PHASE3.md) | 39 | done (29 M, 9 fixed, 1 NR covered by f22f575ff) | Renderer.cpp, StreamingInfo.cpp, TxdStore.cpp |
 | S106 | phase3 tier B (PHASE3.md) | 41 | pending | VisibilityPlugins.cpp |

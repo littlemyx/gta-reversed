@@ -1,0 +1,48 @@
+addr	function	verdict	asm range	note	fix commit
+0x4A78D0	FxInfoAnimTexture_c::scalar-deleting dtor (vtable)	MATCH	0x4A78D0-(all)	member dtor + vftable restore, delete if flag&1 (pool op delete is a no-op in the port)	
+0x4A65C0	FxInfoAnimTexture_c::Load	MATCH	0x4A65C0-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A7020	FxInfoAttractLine_c::scalar-deleting dtor (vtable)	MATCH	0x4A7020-(all)	member dtor + vftable restore, delete if flag&1 (pool op delete is a no-op in the port)	
+0x4A5830	FxInfoAttractLine_c::Load	MATCH	0x4A5830-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A6FB0	FxInfoAttractPt_c::scalar-deleting dtor (vtable)	MATCH	0x4A6FB0-(all)	member dtor + vftable restore, delete if flag&1 (pool op delete is a no-op in the port)	
+0x4A56C0	FxInfoAttractPt_c::Load	MATCH	0x4A56C0-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A75C0	FxInfoColour_c::scalar-deleting dtor (vtable)	MATCH	0x4A75C0-(all)	member dtor + vftable restore, delete if flag&1 (pool op delete is a no-op in the port)	
+0x4A5F10	FxInfoColour_c::Load	MATCH	0x4A5F10-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A7A20	FxInfoColourBright_c::scalar-deleting dtor (vtable)	MATCH	0x4A7A20-(all)	member dtor + vftable restore, delete if flag&1 (pool op delete is a no-op in the port)	
+0x4A6840	FxInfoColourBright_c::Load	MATCH	0x4A6840-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A7940	FxInfoColourRange_c::scalar-deleting dtor (vtable)	MATCH	0x4A7940-(all)	member dtor + vftable restore, delete if flag&1 (pool op delete is a no-op in the port)	
+0x4A66A0	FxInfoColourRange_c::Load	MATCH	0x4A66A0-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A7860	FxInfoDir_c::scalar-deleting dtor (vtable)	MATCH	0x4A7860-(all)	member dtor + vftable restore, delete if flag&1 (pool op delete is a no-op in the port)	
+0x4A64B0	FxInfoDir_c::Load	MATCH	0x4A64B0-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A6C30	FxInfoEmAngle_c::scalar-deleting dtor (vtable)	MATCH	0x4A6C30-(all)	member dtor + vftable restore, delete if flag&1 (pool op delete is a no-op in the port)	
+0x4A4F00	FxInfoEmAngle_c::Load	MATCH	0x4A4F00-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A6BC0	FxInfoEmDir_c::scalar-deleting dtor (vtable)	MATCH	0x4A6BC0-(all)	member dtor + vftable restore, delete if flag&1 (pool op delete is a no-op in the port)	
+0x4A4E30	FxInfoEmDir_c::Load	MATCH	0x4A4E30-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A6CA0	FxInfoEmLife_c::scalar-deleting dtor (vtable)	MATCH	0x4A6CA0-(all)	member dtor + vftable restore, delete if flag&1 (pool op delete is a no-op in the port)	
+0x4A4FC0	FxInfoEmLife_c::Load	MATCH	0x4A4FC0-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A6D10	FxInfoEmPos_c::scalar-deleting dtor (vtable)	MATCH	0x4A6D10-(all)	member dtor + vftable restore, delete if flag&1 (pool op delete is a no-op in the port)	
+0x4A5080	FxInfoEmPos_c::Load	MATCH	0x4A5080-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A6A70	FxInfoEmRate_c::scalar-deleting dtor (vtable)	MATCH	0x4A6A70-(all)	member dtor + vftable restore, delete if flag&1 (pool op delete is a no-op in the port)	
+0x4A4B40	FxInfoEmRate_c::Load	MATCH	0x4A4B40-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A6DF0	FxInfoEmRotation_c::scalar-deleting dtor (vtable)	MATCH	0x4A6DF0-(all)	member dtor + vftable restore, delete if flag&1 (pool op delete is a no-op in the port)	
+0x4A5220	FxInfoEmRotation_c::Load	MATCH	0x4A5220-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A6AE0	FxInfoEmSize_c::scalar-deleting dtor (vtable)	MATCH	0x4A6AE0-(all)	member dtor + vftable restore, delete if flag&1 (pool op delete is a no-op in the port)	
+0x4A4C90	FxInfoEmSize_c::Load	MATCH	0x4A4C90-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A6B50	FxInfoEmSpeed_c::scalar-deleting dtor (vtable)	MATCH	0x4A6B50-(all)	member dtor + vftable restore, delete if flag&1 (pool op delete is a no-op in the port)	
+0x4A4D70	FxInfoEmSpeed_c::Load	MATCH	0x4A4D70-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A6D80	FxInfoEmWeather_c::scalar-deleting dtor (vtable)	MATCH	0x4A6D80-(all)	member dtor + vftable restore, delete if flag&1 (pool op delete is a no-op in the port)	
+0x4A5150	FxInfoEmWeather_c::Load	MATCH	0x4A5150-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A77F0	FxInfoFlat_c::scalar-deleting dtor (vtable)	MATCH	0x4A77F0-(all)	member dtor + vftable restore, delete if flag&1 (pool op delete is a no-op in the port)	
+0x4A6390	FxInfoFlat_c::Load	MATCH	0x4A6390-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A74E0	FxInfoFloat_c::scalar-deleting dtor (vtable)	MATCH	0x4A74E0-(all)	member dtor + vftable restore, delete if flag&1 (pool op delete is a no-op in the port)	
+0x4A5DF0	FxInfoFloat_c::Load	MATCH	0x4A5DF0-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A6ED0	FxInfoForce_c::scalar-deleting dtor (vtable)	MATCH	0x4A6ED0-(all)	member dtor + vftable restore, delete if flag&1 (pool op delete is a no-op in the port)	
+0x4A54C0	FxInfoForce_c::Load	MATCH	0x4A54C0-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A6F40	FxInfoFriction_c::scalar-deleting dtor (vtable)	MATCH	0x4A6F40-(all)	member dtor + vftable restore, delete if flag&1 (pool op delete is a no-op in the port)	
+0x4A55C0	FxInfoFriction_c::Load	MATCH	0x4A55C0-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A55E0	FxInfoFriction_c::GetValue	MATCH	0x4A55E0-0x4A5642	mult select; vel *= pow(values[0], totalTime*50) (exponent unrounded 24-bit, CRT pow 0x822130)	
+0x4A7090	FxInfoGroundCollide_c::scalar-deleting dtor (vtable)	MATCH	0x4A7090-(all)	member dtor + vftable restore, delete if flag&1 (pool op delete is a no-op in the port)	
+0x4A59F0	FxInfoGroundCollide_c::Load	MATCH	0x4A59F0-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A7100	FxInfoGroundCollide_c::GetValue	FIXED	0x4A7100-0x4A7383	dot(normal,vel) (ny,nx,nz order) instead of |normal|^2; 3 rand() calls x,y,z (was 1); RwV3dNormalize; speed = RwV3dLength of reflected vel BEFORE scatter (was Magnitude of the normalised result); vel = values[1]*(speed*dir); pos.z>=hit.z jp NaN arm	1faea55f5
+0x4A7710	FxInfoHeatHaze_c::scalar-deleting dtor (vtable)	MATCH	0x4A7710-(all)	member dtor + vftable restore, delete if flag&1 (pool op delete is a no-op in the port)	
+0x4A61F0	FxInfoHeatHaze_c::Load	MATCH	0x4A61F0-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A64D0	FxInfoDir_c::GetValue	FIXED	0x4A64D0-0x4A6546	(extra, not a slice row; oracle-covered) RwV3dLength 0x7EDAC0 instead of CVector::Magnitude for the < 0.001f test; jp arm == plain <	9b8c68fca

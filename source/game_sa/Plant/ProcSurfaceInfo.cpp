@@ -167,8 +167,14 @@ ProcObjectListItem* ProcSurfaceInfo_c::AddObject(CVector pos, CVector normal, tC
 int32 ProcSurfaceInfo_c::AddObjects(CPlantLocTri* plant) {
     auto centerPos = (plant->m_V1 + plant->m_V2 + plant->m_V3) * 0.3333f; // 0x867028 (NOT 1/3: 0x3EAAA64C)
     auto camPos    = TheCamera.GetPosition();
-    if (DistanceBetweenPointsSquared(centerPos, camPos) < m_fSquaredMinDistance) {
-        return 0;
+    {
+        // 0x5A38C9-0x5A38F6: squared distance summed z,y,x (DistanceBetweenPointsSquared sums x,y,z)
+        const float dx = camPos.x - centerPos.x;
+        const float dy = camPos.y - centerPos.y;
+        const float dz = camPos.z - centerPos.z;
+        if ((dz * dz + dy * dy) + dx * dx < m_fSquaredMinDistance) {
+            return 0;
+        }
     }
 
     auto vec1   = plant->m_V2 - plant->m_V1;
@@ -178,14 +184,18 @@ int32 ProcSurfaceInfo_c::AddObjects(CPlantLocTri* plant) {
 
     auto numAdded = 0;
     if (m_fUseGrid == 0.f) {
-        auto density = normal.Magnitude() * 0.5f * m_fSquaredSpacingRadius;
-        normal.Normalise(); //Originally placed inside the below loop, no need to do this repeatedly
+        // 0x5A3C23: |normal| summed z,y,x; then x 0.5 x spacing factor
+        auto density = std::sqrt((normal.z * normal.z + normal.y * normal.y) + normal.x * normal.x) * 0.5f * m_fSquaredSpacingRadius;
 
-        auto randSeed    = (plant->m_V1 + plant->m_V2 + plant->m_V3).ComponentwiseSum() + m_ModelIndex;
+        // 0x5A3C6B-0x5A3C9A: per vertex (z + y) + x, then (V3 + V2) + V1, + model index (the port summed the vector V1+V2+V3 first, then x,y,z)
+        const float sumV3 = (plant->m_V3.z + plant->m_V3.y) + plant->m_V3.x;
+        const float sumV2 = (plant->m_V2.z + plant->m_V2.y) + plant->m_V2.x;
+        const float sumV1 = (plant->m_V1.z + plant->m_V1.y) + plant->m_V1.x;
+        auto randSeed    = ((sumV3 + sumV2) + sumV1) + (float)m_ModelIndex;
         auto oldRandSeed = rand(); // R* usage of srand and rand seems rather weird.
         srand(NOTSA_FTOL(uint32, randSeed));
 
-        if (density <= 0.0f) {
+        if (!(density > 0.0f)) { // `fcomp 0; test ah,0x41; jne`: <= 0 and NaN leave
             srand(oldRandSeed);
             return 0;
         }
@@ -202,6 +212,7 @@ int32 ProcSurfaceInfo_c::AddObjects(CPlantLocTri* plant) {
 
                 //FIX_BUGS candidate probably, seems like the result of this calculation can fall outside of the triangle that it's based on
                 auto objPos   = plant->m_V1 + (vec1 * offset1) + (vec2 * offset2);
+                normal.Normalise(); // 0x5A3D4B: inside the loop, after the position: every accepted candidate renormalises the (already unit) normal
                 auto addedObj = AddObject(objPos, normal, plant->m_nLighting);
                 if (addedObj) {
                     numAdded++;
@@ -225,13 +236,14 @@ int32 ProcSurfaceInfo_c::AddObjects(CPlantLocTri* plant) {
     normal.Normalise();
 
     for (xCur; xCur < xEnd; xCur += m_fSpacing) {
-        for (yCur; yCur < yEnd; yCur += m_fSpacing) {
+        // 0x5A3AF0: the exe reloads the start y for every x column (the port kept the exhausted yCur: only the first column got objects)
+        for (float y = yCur; y < yEnd; y += m_fSpacing) {
             float zPos;
-            if (!IsPtInTriangle2D(xCur, yCur, plant->m_V1, plant->m_V2, plant->m_V3, normal, &zPos)) {
+            if (!IsPtInTriangle2D(xCur, y, plant->m_V1, plant->m_V2, plant->m_V3, normal, &zPos)) {
                 continue;
             }
 
-            auto addedObj = AddObject({ xCur, yCur, zPos }, normal, plant->m_nLighting);
+            auto addedObj = AddObject({ xCur, y, zPos }, normal, plant->m_nLighting);
             if (addedObj) {
                 numAdded++;
                 addedObj->m_LocTri = plant;

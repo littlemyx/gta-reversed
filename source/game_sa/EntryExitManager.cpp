@@ -471,9 +471,9 @@ bool CEntryExitManager::Save() {
     for (auto&& [i, enex] : mp_poolEntryExits->GetAllValidWithIndex()) {
         int16 data = -1;
         if (enex.m_pLink) {
-            // Make sure the link reference is valid
+            // Make sure the link reference is valid (exe 0x5D5A11-0x5D5A25: index in range AND the slot is in use, a link to a freed slot is saved as -1)
             auto linkIndex = mp_poolEntryExits->GetIndex(enex.m_pLink);
-            if (mp_poolEntryExits->IsIndexInBounds(linkIndex)) {
+            if (mp_poolEntryExits->IsIndexInBounds(linkIndex) && !mp_poolEntryExits->IsFreeSlotAtIndex(linkIndex)) {
                 data = linkIndex;
             }
         }

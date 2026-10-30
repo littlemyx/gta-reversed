@@ -659,6 +659,7 @@ void CVehicleModelInfo::PreprocessHierarchy()
                     auto pClone = RpAtomicClone(mainWheelAtomic);
                     RpAtomicSetFrame(pClone, frame);
                     RpClumpAddAtomic(GetRpClump(), pClone);
+                    CVisibilityPlugins::SetAtomicRenderCallback(pClone, CVisibilityPlugins::RenderWheelAtomicCB); // exe 0x4C9215
                     if (nameIdAssoc->m_dwHierarchyId != CAR_WHEEL_RF
                         && nameIdAssoc->m_dwHierarchyId != CAR_WHEEL_LF
                         && handling.m_bDoubleRwheels) {

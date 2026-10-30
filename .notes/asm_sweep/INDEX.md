@@ -274,6 +274,7 @@
 | S84b | rest of S84 | 19 | partial 8/23 (fixes; jet/seaplane partial) -> S84c | AEVehicleAudioEntity.cpp |
 | S102b | rest of S102 | 24 | partial 12/24 (4 M, 8 fixed) -> S102c | BrightLights.cpp, Clouds.cpp, Coronas.cpp, Mirrors.cpp, Occlusion.cpp, PointLights.cpp |
 | S84c | rest of S84b | 15 | 13/16 (5 M, 8 fixed) -> S84d | AEVehicleAudioEntity.cpp |
-| S102c | rest of S102b | 12 | pending | Clouds.cpp, Mirrors.cpp |
+| S102c | rest of S102b | 12 | 9/12 (3 M, 6 fixed) -> S102d | Clouds.cpp, Mirrors.cpp |
 | S101b | rest of S101 | 3 | pending | StencilShadows.cpp |
 | S84d | rest of S84c | 3 | done (3 fixed) | AEVehicleAudioEntity.cpp |
+| S102d | rest of S102c | 3 | pending | Clouds.cpp |

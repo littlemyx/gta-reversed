@@ -1,0 +1,4 @@
+addr	file	line	cls	fn	oc	tier
+0x713950	source/game_sa/Clouds.cpp	22	CClouds	Render	U	B
+0x714650	source/game_sa/Clouds.cpp	23	CClouds	RenderSkyPolys	U	B
+0x7154B0	source/game_sa/Clouds.cpp	24	CClouds	RenderBottomFromHeight	U	B

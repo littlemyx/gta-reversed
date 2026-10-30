@@ -457,4 +457,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S100	v6	asm sweep	196234	62	20	shadow camera render states (ztest off, vertex alpha on), resample/blur returns, RealTimeShadow uninit flag; shadow selection/fade MATCH; 30 M
 2026-10-30	ASM-S99c	v6	continuer	84786	30	17	tested + landed S99 (4 fixes), combat+missions 25 PASS
 2026-10-30	ASM-S84b	v6	asm sweep	230435	96	26	aircraft distant volume 48-128m fade never ran (squared vs sqrt), stall zeroing inverted, player/dummy engine-off swapped, prop speed exe const, heli rotor step const; 0 M
-2026-10-30	ASM-S108	v6	asm sweep	0	0	0	FxInfoJitter/Noise one rand for xyz (diagonal jitter + rand sequence shift) + RW table normalise; anim hierarchy/clump data MATCH; 43 M
+2026-10-30	ASM-S108	v6	asm sweep	197733	80	20	FxInfoJitter/Noise one rand for xyz (diagonal jitter + rand sequence shift) + RW table normalise; anim hierarchy/clump data MATCH; 43 M

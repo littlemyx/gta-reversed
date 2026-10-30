@@ -159,8 +159,9 @@ auto GetBaseComboByName(const char* name) {
 void CWeaponInfo::LoadWeaponData() {
     auto f = CFileMgr::OpenFile("DATA\\WEAPON.DAT", "rb");
     for (auto line = CFileLoader::LoadLine(f); line; line = CFileLoader::LoadLine(f)) {
-        if (std::string_view{line}.find("ENDWEAPONDATA") != std::string_view::npos) // Not quite the way they did it, but it's fine.
-            break;
+        if (line[0] == '\0' || line[0] == '#') { // exe 0x5BE6B0-0x5BE6BD: empty and comment lines are skipped before the dispatch
+            continue;
+        }
 
         switch ((uint8)line[0]) { // Gotta cast it because of `case 163`
         case '$': { // Gun data
@@ -335,6 +336,15 @@ void CWeaponInfo::LoadWeaponData() {
             if (modelId1 > 0)
                 CModelInfo::GetModelInfo(modelId1)->AsWeaponModelInfoPtr()->SetWeaponInfo(wType);
 
+            break;
+        }
+        default: { // exe 0x5BED83-0x5BEDB5: the first word of any other line is compared with "ENDWEAPONDATA" (13 chars, prefix)
+            char word[32]{};
+            (void)sscanf_s(line, "%s", SCANF_S_STR(word));
+            if (strncmp(word, "ENDWEAPONDATA", 13) == 0) {
+                CFileMgr::CloseFile(f);
+                return;
+            }
             break;
         }
         }

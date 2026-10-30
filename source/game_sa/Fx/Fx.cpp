@@ -984,7 +984,8 @@ void RenderEnd() {
 // 0x4A1660
 void RotateVecIntoVec(RwV3d& vecRes, const RwV3d& vec, const RwV3d& vecAlign) {
     const CVector up = vecAlign;
-    const auto ref = CVector{ 3.f, 4.f, 5.f }.Normalized();
+    // The exe's reference axis is three float constants (exe 0x85A77C / 0x85A780 / 0x85A784), NOT a normalised (3, 4, 5)
+    const CVector ref{ 0.4243f, 0.5657f, 0.7071f };
 
     RwV3d right;
     RwV3dCrossProduct(&right, &up, &ref);

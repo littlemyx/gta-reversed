@@ -1,0 +1,51 @@
+addr	function	verdict	asm range	note	fix commit
+0x40F7C0	CColModel::operator=	MATCH	0x40F7C0-0x40F805	bound box 24 B + sphere 16 B copy, CCollisionData::Copy only when this has data (src deref unchecked) agree	-
+0x6F4920	CBouncingPanel::SetPanel	MATCH	0x6F4920-0x6F499C	frame/axis/limit stored, rotation and pos zeroed	-
+0x59D570	BreakObject_c::SetGroupData	FIXED	0x59D570-0x59D7ED	velocity-rand add branch: exe is ((max-min)*rnd + old) + min (old added before min), port added the whole lerp to old; rotation axis normalised with RwV3dNormalize (0x7ED9B0 table sqrt), port used CVector::Normalise	cddd2db86
+0x59D7F0	BreakObject_c::SetBreakInfo	MATCH	0x59D7F0-0x59DDBC	group count/alloc 0x74/0x48, FramesToLive 256+(int)(rnd*32) (exe: 256-ftol(rnd*-32)), render info slots, colours min(255,v*mat+ambient) via ftol, texcoords, AddRef loop all agree	-
+0x6F4800	CDoor::IsClosed	MATCH	0x6F4800-0x6F4814	float == (NaN false)	-
+0x6F4820	CDoor::IsFullyOpen	MATCH	0x6F4820-0x6F4841	|open|-0.5 <= |angle|	-
+0x717110	CEscalator::Constructor	MATCH	0x717110-0x71712E	attach matrix fields, step-object flag and 42 step pointers zeroed; port additionally zero-inits the rest of the matrix and the entity ref (statics are zero anyway)	-
+0x717130	CEscalator::Destructor	MATCH	0x717130-0x717133	only ~CMatrix; port ~EntityRef also runs CleanUpOldReference at exit (harmless)	-
+0x46A760	CGlass::IsObjectGlass	MATCH	0x46A760-0x46A7A2	type==object, AsAtomicModelInfoPtr, special type 0x2000/0x2800	-
+0x493900	CSearchLight::IsSpottedEntity	MATCH	0x493900-0x493959	script index, entity pos (matrix or placement), IsPointInsideLitEllipse	-
+0x493360	CSearchLight::SetPathBetween	MATCH	0x493360-0x493418	dist (y2+x2) of target to both points, state 0x81 if d1<=d2 else 0x82 (also NaN), speed, entity ref cleared	-
+0x493420	CSearchLight::SetFollowEntity	MATCH	0x493420-0x493477	state 0x83, path points zeroed, speed, entity ref set	-
+0x493480	CSearchLight::SetTravelToPoint	MATCH	0x493480-0x4934E8	state 0x84, point stored, second zeroed, ref cleared	-
+0x6E4040	WaterCreatureManager_c::GetRandomWaterCreatureId	MATCH	0x6E4040-0x6E40D0	thresholds 80/90/97, ranges 0..2 / 3..4 (3-ftol(rnd*-2)), turtle/dolphin	-
+0x7226A0	C3dMarker::IsZCoordinateUpToDate	MATCH	0x7226A0-0x7226CC	ftol(x),ftol(y) compared as 16 bit	-
+0x724E10	C3dMarker::SetZCoordinateIfNotUpToDate	MATCH	0x724E10-0x724E3D	z stored when not up to date	-
+0x43A870	CConversations::SetUpConversationNode	MATCH	0x43A870-0x43A951	strncpy 6 + upper-case; yes key not upper-cased (port: only under FIX_BUGS), no key cleared when null	-
+0x43B0B0	CConversations::IsPlayerInPositionForConversation	MATCH	0x43B0B0-0x43B0F0	conversation lookup (exe falls to a NULL this when no ped matches, port null too)	-
+0x43B000	CConversations::IsConversationAtNode	MATCH	0x43B000-0x43B090	node >=0 and status != player speaking, name compare (exe upper-cases the argument in place, port uses stricmp)	-
+0x5B0390	CCutsceneMgr::SetCutsceneAnim	FIXED	0x5B0390-0x5B041D	exe does SetCurrentTime(0) then flags=(flags&~IS_PLAYING)|CAN_EXTRACT_VELOCITY; port used Start(0) which SET IS_PLAYING	ab5e06209
+0x5B0420	CCutsceneMgr::SetCutsceneAnimToLoop	MATCH	0x5B0420-0x5B0433	looped flag	-
+0x5B0440	CCutsceneMgr::SetHeadAnim	MATCH	0x5B0440	nop	-
+0x5B0550	CCutsceneMgr::GetCutsceneTimeInMilleseconds	MATCH	0x5B0550-0x5B055C	timer*1000 then ftol2	-
+0x517770	CIdleCam::IsTargetValid	FIXED	0x517770-0x51785E	sum order z,y,x, close/far compares, LOS args, counter all agree; slerp-time test `< 1.0` is taken for NaN in the exe (jne on C0), port was false for NaN	035b782ba
+0x44CB00	COnscreenCounterEntry::SetColourID	MATCH	0x44CB00-0x44CB07	byte store	-
+0x44CEE0	COnscreenTimer::SetClockBeepCountdownSecs	FIXED	0x44CEE0-0x44CEFE	exe walks 4 blocks of 0x40 bytes from this (clock, then misaligned steps into the 0x44-byte counters, original bug) comparing at +0 and storing at +0x3C; port only tested the clock	e47e777b0
+0x44CEB0	COnscreenTimer::SetCounterFlashWhenFirstDisplayed	MATCH	0x44CEB0-0x44CECF	4 counters stride 0x44, flash flag	-
+0x66D440	CPatrolRoute::Constructor	MATCH	0x66D440-0x66D4AF	count 0 and first byte of both strings of each of 8 nodes cleared; port zero-inits more (points, rest of strings), not observable	-
+0x571D90	CPlaceName::GetForMap	MATCH	0x571D90-0x571E3D	vehicle pos without outside-world fix, ped pos with, x/y from args, z from player	-
+0x460EE0	CRoadBlocks::GetRoadBlockNodeInfo	MATCH	0x460EE0-0x461011	lanes max (opp+same) +1 *5, dir = perp-right of (B-A) z=0 normalised; both link areas must be loaded	-
+0x56CF20	CAccidentManager::GetInstance	MATCH	0x56CF20-0x56CF8C	lazy new, ctor clears 16 slots	-
+0x56CEE0	CAccidentManager::GetNumberOfFreeAccidents	MATCH	0x56CEE0-0x56CF15	ped && !treated && !revived && !submerged	-
+0x56CF90	CAccidentManager::GetNearestFreeAccidentExceptThisOne	FIXED	0x56CF90-0x56D04B	exe compares SQUARED distances ((x2+z2)+y2, no sqrt) against FLT_MAX; port compared sqrt distances (ties/rounding)	97050b5a9
+0x56D050	CAccidentManager::GetNearestFreeAccident	MATCH	0x56D050-0x56D061	forwards with thisOne=null	-
+0x619040	C_PcSave::SetSaveDirectory	MATCH	0x619040-0x61905C	sprintf path "\" GTASAsf	-
+0x5A4810	CClothesBuilder::GetAtomicWithName	FIXED	0x5A4810-0x5A483E (cb 0x5A47E0)	callback returns NULL on the first name match (stops the walk), port kept walking and returned the last match	19d247eb0
+0x5A5F70	CClothesBuilder::GetTextureFromTxdAndLoadNextTxd	MATCH	0x5A5F70-0x5A602A	LoadAll, request next txd, first texture, place-on-top or copy, remove model txd+20000	-
+0x6FE240	CCustomRoadsignMgr::SetAtomicAlpha	MATCH	0x6FE240-0x6FE25F	callback 0x6FE220 sets material alpha	-
+0x618D00	CGenericGameStorage::GetSavedGameDateAndTime	MATCH	0x618D00-0x618D0C	slot*70 + 0xC16138	-
+0x5D0F50	CGenericGameStorage::GetCurrentVersionNumber	MATCH	0x5D0F50-0x5D0F79	GetKey of the two build strings	-
+0x517330	CHandShaker::SetDefaults	MATCH	0x517330-0x5173EB	limits .02/.02/.01, motion 2e-4/2e-4/1e-4, slow 1.3/1.3/1.4, reaction .3/1, twitch 20, vel .001, then Reset	-
+0x5A2D00	CObjectData::SetObjectData	MATCH	0x5A2D00-0x5A2E53	default entry (index -1) and per-entry stores, mass>=99998 flags, special cases 6/7/8/9 and the 0x140 door bits agree	-
+0x550050	CPools::GetObject	MATCH	0x550050-0x55007A	full flag byte compared with handle low byte	-
+0x550020	CPools::GetObjectRef	MATCH	0x550020-0x55004B	idx<<8 | flag byte	-
+0x54FF90	CPools::GetPed	MATCH	0x54FF90-0x54FFBA	as GetObject, 0x7C4	-
+0x54FF60	CPools::GetPedRef	MATCH	0x54FF60-0x54FF8B	as GetObjectRef	-
+0x54FFF0	CPools::GetVehicle	MATCH	0x54FFF0-0x55001A	as GetObject, 0xA18	-
+0x54FFC0	CPools::GetVehicleRef	MATCH	0x54FFC0-0x54FFEB	as GetObjectRef	-
+0x536D10	CEntryInfoNodePool::GetAt	FIXED	0x536D10-0x536D77	the exe function is the pool allocator New() (tail-called from CEntryInfoNode::operator new 0x536DC0), not GetAt(idx): hook label corrected; port New() agrees (scan from last+1 with one wrap, clear free bit, 7-bit ref++)	e6854d552
+0x404870	CObjectPool::GetAt	MATCH	0x404870-0x40488C	GetAt(idx): free -> null	-

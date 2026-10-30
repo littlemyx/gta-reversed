@@ -1,0 +1,41 @@
+addr	function	verdict	asm range	note	fix commit
+0x722140	Init	MATCH	(all)	NumBrightLights = 0	-
+0x722150	RenderOutGeometryBuffer	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x7241C0	Render	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x724770	RegisterOne	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x7138D0	Init	MATCH	(all)	particle txd; cloud1/cloudmasked/lunar+lunarm/cloudhigh+cloudhighm into the 4 globals; CloudRotation = 0; VolumetricCloudsInit; MovingFogInit	-
+0x712FA0	Shutdown	MATCH	(all)	destroys cloud1, cloudmasked, cloudhigh textures (not the moon mask) and nulls them	-
+0x713950	Render	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x714650	RenderSkyPolys	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x7154B0	RenderBottomFromHeight	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x713760	MovingFog_Create	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x716B10	MovingFog_Update	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x716C90	MovingFogRender	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x715F40	VolumetricClouds_Create	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x716380	VolumetricCloudsRender	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x6FAA10	RenderOutGeometryBufferForReflections	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x6FAA70	Init	FIXED	(all)	empty sprite names skipped (exe tests name[0]); NumCoronas (0xC3E038) reset; exe clears only the corona ids (port clears the whole struct, harmless)	2c03aac37
+0x6FAB00	Shutdown	MATCH	(all)	destroy + null of the 10 corona textures	-
+0x6FADF0	Update	MATCH	(all)	LightsMult min 1, cam look flags (1/2/4/8 from +0x1A4/+0x1A5/+0x1A3, GetLookDirection), bChangeBrightnessImmediately 3 / max(n-1,0), 64 coronas	-
+0x6FAEC0	Render	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x6FB630	RenderReflections	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x6FBAA0	RenderSunReflection	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x723000	Init	MATCH	(all)	same body as ShutDown	-
+0x723050	ShutDown	MATCH	(all)	destroy pBuffer/pZBuffer, TypeOfMirror = 0, MirrorFlags = 0	-
+0x7230A0	CreateBuffer	FIXED	(all)	quality >= 1 tries 1024x512; when the colour or Z raster fails the exe falls through to the unchecked 512x256 pair, the port left pBuffer null	809583e7c
+0x723150	BuildCamMatrix	FIXED	(all)	exe normalises the right vector (CVector::Normalise after the cross product); port did not	809583e7c
+0x726090	RenderMirrorBuffer	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x7266B0	BuildCameraMatrixForScreens	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x726DF0	BeforeConstructRenderList	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x727140	BeforeMainRender	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x721D90	Init	MATCH	(all)	ids = 0	-
+0x7240C0	Update	MATCH	(all)	Update for non-zero ids	-
+0x7240E0	Render	MATCH	(all)	render states 8/0xC/0xE/0xF(sky bottom ARGB)/0xA=5/0xB=6/raster 0, restored 8=1, 0xC=0	-
+0x721DC0	RegisterStreak	FIXED	(all)	new slot clears history [1] and [2] (word store at +0x51); port cleared [1] only	be19f803d
+0x71DCA0	Init	MATCH	(all)	counts = 0, four int16 list heads = -1	-
+0x7200B0	IsPositionOccluded	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x71E080	OccluderHidesBehind	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x7201C0	ProcessBeforeRendering	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x6FFB40	Init	MATCH	(all)	cache results/reads/index cleared	-
+0x6FFFF0	ProcessVerticalLineUsingCache	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-
+0x7002D0	RenderFogEffect	UNSURE	not compared	budget (hard cap reached after the Init/Update/Register/small-renderer pass)	-

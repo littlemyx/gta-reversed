@@ -261,16 +261,17 @@ void CWeather::RenderRainStreaks() {
         return;
 
     {
-        const auto strength = NOTSA_FTOL(uint32, (64.0f - (float)CTimeCycle::m_FogReduction) * (Rain * 110.0f) / 64.0f);
-        if (CurrentRainParticleStrength < strength) {
-            if (CurrentRainParticleStrength + 1 <= strength) {
-                CurrentRainParticleStrength++;
-            }
+        // 0x72AF79-0x72AFAB: `_ftol((64 - fogReduction) * (int)_ftol(rain * 110) * (1/64))` - the rain term is truncated to an int first
+        const int32 rainTerm = NOTSA_FTOL(int32, Rain * 110.0f);
+        const auto strength = NOTSA_FTOL(int32, (64.0f - (float)CTimeCycle::m_FogReduction) * (float)rainTerm * 0.015625f);
+        // 0x72AFA0-0x72AFD0: signed compare; the result is clamped at 0 after the decrement
+        int32 cur = (int32)CurrentRainParticleStrength;
+        if (cur < strength) {
+            cur++;
         } else {
-            if (CurrentRainParticleStrength > 0) {
-                CurrentRainParticleStrength--;
-            }
+            cur--;
         }
+        CurrentRainParticleStrength = (uint32)(cur < 0 ? 0 : cur);
     }
 
     if (!CurrentRainParticleStrength)
@@ -339,15 +340,24 @@ void CWeather::RenderRainStreaks() {
     for (unsigned s = 0; s < RAIN_STREAK_COUNT; s++) {
         UpdateStreak(s);
 
-        CVector offsets[2]{};
-        offsets[0] = CVector{
-            CGeneral::GetRandomNumberInRange(-0.2f, 0.2f),
-            CGeneral::GetRandomNumberInRange(-0.2f, 0.2f),
-            CGeneral::GetRandomNumberInRange(-0.1f, 0.1f),
-        };
+        // 0x72B2F3-0x72B4E4: rand order: the extra z lift (t1), then the x / y / z offsets of vertex 0
+        const float t1 = (float)CGeneral::GetRandomNumber() * RAND_MAX_FLOAT_RECIPROCAL;
+        const float xo = CGeneral::GetRandomNumberInRange(-0.2f, 0.2f);
+        const float yo = CGeneral::GetRandomNumberInRange(-0.2f, 0.2f);
+        const float zo = CGeneral::GetRandomNumberInRange(-0.1f, 0.1f);
 
-        const float posMul = (s % 2) ? Wind * 0.1f : Wind * Rain * 0.1f;
-        offsets[1] = offsets[0] - WindDir * posMul + CVector{ 0.0f, 0.0f, CGeneral::GetRandomNumberInRange(0.1f, 0.5f) };
+        // `((WindDir * Wind) [* Rain]) * 0.1` (even streaks include the rain), subtracted from the streak position
+        const bool  odd = (s % 2) != 0;
+        const float wx  = odd ? WindDir.x * Wind * 0.1f : WindDir.x * Wind * Rain * 0.1f;
+        const float wy  = odd ? WindDir.y * Wind * 0.1f : WindDir.y * Wind * Rain * 0.1f;
+        const float wz  = odd ? WindDir.z * Wind * 0.1f : WindDir.z * Wind * Rain * 0.1f;
+        const CVector base1{ (float)streakPosX[s] - wx, (float)streakPosY[s] - wy, (float)streakPosZ[s] - wz };
+
+        // vertex 1 is `offset + (pos - wind)` (not `pos + (offset - wind)`), z gets the extra `t1 * 0.4 + 0.1` lift
+        const CVector vertPosns[2]{
+            CVector{ (float)streakPosX[s] + xo, (float)streakPosY[s] + yo, (float)streakPosZ[s] + zo },
+            CVector{ xo + base1.x, yo + base1.y, ((t1 * 0.4f + 0.1f) + zo) + base1.z }
+        };
 
         const uint8 alphas[]{ streakStrength[s], static_cast<uint8>(streakStrength[s] / 2u) };
         for (auto v = 0u; v < std::size(alphas); v++) {
@@ -357,13 +367,13 @@ void CWeather::RenderRainStreaks() {
             // const RwRGBA color{ 255, 0, 0, 255 }; // For debug (makes it more visible)
             RxObjSpace3DVertexSetPreLitColor(vertex, &color);
 
-            const CVector vertPosn = GetStreakPosition(s) + offsets[v];
-            RxObjSpace3DVertexSetPos(vertex, &vertPosn);
+            RxObjSpace3DVertexSetPos(vertex, &vertPosns[v]);
 
             aTempBufferIndices[uiTempBufferIndicesStored + v] = GetRealVertexIndex(v);
         }
 
-        streakPosZ[s] -= NOTSA_FTOL(int32, CGeneral::GetRandomNumberInRange(0.01f, 0.1f));
+        // 0x72B4E4: the new z is `_ftol(z - (rand * 0.09 + 0.01))` (the int z falls by one per frame), NOT `z -= (int)(0.01..0.1)` (always 0)
+        streakPosZ[s] = NOTSA_FTOL(int32, (float)streakPosZ[s] - ((float)CGeneral::GetRandomNumber() * RAND_MAX_FLOAT_RECIPROCAL * 0.09f + 0.01f));
         streakStrength[s] = (uint8)std::max(0, (int32)streakStrength[s] - CGeneral::GetRandomNumberInRange(2, 5));
 
         uiTempBufferVerticesStored += 2;

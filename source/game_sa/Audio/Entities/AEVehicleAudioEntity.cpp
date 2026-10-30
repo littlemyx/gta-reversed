@@ -4182,7 +4182,7 @@ auto GetTrainSpeed(const CTrain* train) {
     auto trspeed = train->trainFlags.bNotOnARailRoad
         ? 0.f
         : train->m_fTrainSpeed;
-    if (train->trainFlags.bClockwiseDirection) {
+    if (!train->trainFlags.bClockwiseDirection) { // 0x500AE3 / 0x5008DC: `test byte [train + 0x5B8], 0x40; jne skip; fchs` - negated when NOT clockwise
         trspeed = -trspeed;
     }
     return trspeed;
@@ -4203,7 +4203,7 @@ auto GetTrainPlayerAcFactor(const CTrain* train, float trspeed) {
             ? -p->GetBrake()
             : +p->GetAccelerate()
         : p->GetAccelerate() - p->GetBrake();
-    return (float)(ac) / 255.f;
+    return (float)(ac) * std::bit_cast<float>(0x3B808081u); // 0x859A3C: the exe multiplies by the float 1/255 (0.003921568859...), it does not divide
 }
 
 // 0x500710

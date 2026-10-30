@@ -105,7 +105,7 @@ bool COctTree::InsertTree(uint8 red, uint8 green, uint8 blue) {
 // 0x5A70F0
 void COctTree::FillPalette(uint8* data) {
     if (m_bLastStep) {
-        auto* colors = *reinterpret_cast<RwRGBA**>(data);
+        auto* colors = reinterpret_cast<RwRGBA*>(data); // 0x5A7121: `data` IS the palette (the callers pass the buffer address, e.g. 0xC8E0C8), not a pointer to it
         colors[ms_level].red   = m_nRedComponent   / m_nLevel;
         colors[ms_level].green = m_nGreenComponent / m_nLevel;
         colors[ms_level].blue  = m_nBlueComponent  / m_nLevel;

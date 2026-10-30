@@ -29,7 +29,7 @@ void COctTreeBase::FillPalette(uint8* data) {
     ms_level = 0;
 
     if (m_bHasTransparentPixels) {
-        auto* colors = *reinterpret_cast<RwRGBA**>(data);
+        auto* colors = reinterpret_cast<RwRGBA*>(data); // 0x5A7291: `data` IS the palette, not a pointer to it
         colors->red   = 0;
         colors->green = 0;
         colors->blue  = 0;

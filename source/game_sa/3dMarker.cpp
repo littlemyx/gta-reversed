@@ -177,7 +177,8 @@ void C3dMarker::UpdateZCoordinate(CVector point, float zDistance) {
 
     auto& pos = m_Mat.GetPosition();
 
-    if (DistanceBetweenPointsSquared2D(pos, point) >= sq(100.0f)) {
+    // 0x724D75: `fcomp 10000; test ah, 5; jp` - proceeds only for dist^2 < 10000 (a NaN distance returns)
+    if (!(DistanceBetweenPointsSquared2D(pos, point) < sq(100.0f))) {
         return;
     }
 

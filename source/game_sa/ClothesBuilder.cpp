@@ -532,8 +532,9 @@ void CClothesBuilder::PlaceTextureOnTopOfTexture(RwTexture* dstTex, RwTexture* s
     const auto dstRaster = RwTextureGetRaster(dstTex);
     const auto srcRaster = RwTextureGetRaster(srcTex);
 
-    auto dstIt = (RwUInt32*)RwRasterLock(dstRaster, 0, rwRASTERLOCKREADWRITE);
+    // exe: src is locked (and unlocked) first
     auto srcIt = (RwUInt32*)RwRasterLock(srcRaster, 0, rwRASTERLOCKREADWRITE);
+    auto dstIt = (RwUInt32*)RwRasterLock(dstRaster, 0, rwRASTERLOCKREADWRITE);
 
     // NOTE: They don't skip the stride, but it's fine [This way vectorization should be easier for the compiler]
     for (auto i = RwRasterGetHeight(dstRaster) * RwRasterGetWidth(dstRaster); i-- > 0; dstIt++, srcIt++) {
@@ -542,8 +543,8 @@ void CClothesBuilder::PlaceTextureOnTopOfTexture(RwTexture* dstTex, RwTexture* s
         }
     }
 
-    RwRasterUnlock(dstRaster);
     RwRasterUnlock(srcRaster);
+    RwRasterUnlock(dstRaster);
 }
 
 // 0x5A5820

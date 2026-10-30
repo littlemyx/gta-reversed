@@ -1553,9 +1553,9 @@ void CPostEffects::Render() {
         if (static_cast<float>(s_CurrentStrength) > rain) {
             strength--;
         }
-        s_CurrentStrength = std::max(s_CurrentStrength, 0);
+        s_CurrentStrength = std::max(strength, 0);
 
-        if (!CCullZones::CamNoRain() && !CCullZones::PlayerNoRain() && !CWeather::IsUnderWater() && CGame::CanSeeOutSideFromCurrArea() && TheCamera.GetPosition().z <= 900.0f) {
+        if (!CCullZones::CamNoRain() && !CCullZones::PlayerNoRain() && CWeather::UnderWaterness <= 0.0f && CGame::CanSeeOutSideFromCurrArea() && TheCamera.GetPosition().z <= 900.0f) {
             Grain(s_CurrentStrength / 4, true);
         }
     }
@@ -1577,6 +1577,8 @@ void CPostEffects::Render() {
         } else if (CWeather::UnderWaterness >= m_fWaterFXStartUnderWaterness) {
             HeatHazeFX(1.0f, false);
         }
+    } else if (CWeather::UnderWaterness >= m_fWaterFXStartUnderWaterness) {
+        HeatHazeFX(1.0f, false);
     }
 
     if (m_waterEnable || CWeather::UnderWaterness >= m_fWaterFXStartUnderWaterness) {

@@ -689,7 +689,7 @@ void Fx_c::AddGlass(const CVector& pos, const RwRGBA& color, float scale, int32 
 }
 
 // 0x49FB30
-// NOTE: the original calls `ftol` (truncation) on a possibly-NaN double; `(int32)` matches (x86 `cvttsd2si`)
+// NOTE: the particle count goes through the exe's `ftol` (0x821B40, truncation): NOTSA_FTOL
 void Fx_c::AddWheelSpray(CVehicle* vehicle, CVector pos, bool bWheelsSpinning, bool bInWater, float lightMult) {
     auto* const playerVeh = FindPlayerVehicle(-1, false); // 0x56E0D0
 

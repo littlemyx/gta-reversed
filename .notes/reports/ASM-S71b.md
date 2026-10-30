@@ -4,14 +4,14 @@ Base 599510ff7 (origin/reverse/interior_c), rebased onto afb629303. Result table
 
 | row | verdict | commit |
 |---|---|---|
-| CMatrix::WithUp (extra task) | FIXED: normalises right and forward (both exe users do) | 6709488f0 (header), c3446b6f1 (callers) |
-| CRopes::CreateRopeForSwatPed (0x558D10) | FIXED: id always returned, counter always advanced + wrapped to a byte (port inverted the RegisterRope bool) | daee39645 |
-| CRope::CreateHookObjectForRope | FIXED: unknown types return silently | 6ec5e682f |
-| CRope::Render | FIXED: x87 sqrt strict `< 120` | dd8d9c642 |
-| CRope::PickUpObject | FIXED: reference registered on the attach-object slot, hook pos via TransformPoint | 9b31d499d |
-| CWaterCannon::PushPeds | FIXED: m_bUsesCollision filter, active-section check, 5.0 test, ped-speed add, strict bbox | f9cdbc20a |
-| CWaterCannon::Render | FIXED: 31 iterations, curr-prev basis, vertex/LOS order, SmokeII3expand particle, draw on hit, ftol'd ms, extra rand() | 534868192 |
-| CWaterCannons::Render | FIXED: skip idle cannons | 7ad3a6f29 |
+| CMatrix::WithUp (extra task) | FIXED: normalises right and forward (both exe users do) | 97c6f564e (header), bfd0d24f9 (callers) |
+| CRopes::CreateRopeForSwatPed (0x558D10) | FIXED: id always returned, counter always advanced + wrapped to a byte (port inverted the RegisterRope bool) | 9860217da |
+| CRope::CreateHookObjectForRope | FIXED: unknown types return silently | 2db356c01 |
+| CRope::Render | FIXED: x87 sqrt strict `< 120` | 2bbe94d85 |
+| CRope::PickUpObject | FIXED: reference registered on the attach-object slot, hook pos via TransformPoint | de967037a |
+| CWaterCannon::PushPeds | FIXED: m_bUsesCollision filter, active-section check, 5.0 test, ped-speed add, strict bbox | 309ee73ad |
+| CWaterCannon::Render | FIXED: 31 iterations, curr-prev basis, vertex/LOS order, SmokeII3expand particle, draw on hit, ftol'd ms, extra rand() | 146a79e5b |
+| CWaterCannons::Render | FIXED: skip idle cannons | 78cff99d4 |
 | CRope::Remove, CRopes Shutdown/Update/Render/RegisterRope, C3dMarker AddMarker/DeleteMarkerObject | MATCH | - |
 | CRope::Update (0x557530) | UNSURE: not traced (out of budget) | - |
 

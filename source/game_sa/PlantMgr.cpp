@@ -9,6 +9,18 @@
 #include "ProcObjectMan.h"
 #include "Fx/FxFtol.h"
 
+//! @notsa The plant-triangle proximity tests of 0x5DC8B0 / 0x5DBF20: points are handled as differences d = center - point, the squared length is (z*z + y*y) + x*x (all rounded per operation, PC24)
+static bool PlantDiffIsNear(const CVector& d) {
+    const x87d z2 = (x87d)d.z * d.z;
+    const x87d y2 = (x87d)d.y * d.y;
+    const x87d x2 = (x87d)d.x * d.x;
+    return (z2 + y2) + x2 < (x87d)PLANTS_MAX_DISTANCE_SQUARED;
+}
+//! @notsa (d_a + d_b) * 0.5 (exe: `fadd`, `fmul [0x858B8C]`, stored as float)
+static CVector PlantDiffMid(const CVector& a, const CVector& b) {
+    return { (float)(((x87d)a.x + b.x) * (x87d)0.5f), (float)(((x87d)a.y + b.y) * (x87d)0.5f), (float)(((x87d)a.z + b.z) * (x87d)0.5f) };
+}
+
 // 0x5DD100 (todo: move)
 // Replaces the atomic's geometry with a pre-lit copy of it (if it's not already pre-lit)
 static RpAtomic* AtomicCreatePrelitIfNeeded(RpAtomic* atomic) {
@@ -368,8 +380,9 @@ void CPlantMgr::SetPlantFriendlyFlagInAtomicMI(CAtomicModelInfo* ami) {
 void CPlantMgr::Update(const CVector& cameraPosition) {
     ZoneScoped;
 
-    NOTSA_GLOBAL_LOCAL(nUpdateEntCache, 0xC09171, (int8), {});
-    NOTSA_GLOBAL_LOCAL(nLocTriSkipCounter, 0xC09170, (int8), {});
+    // exe: byte counters (0x5DCFB8: `test al, 0x1F`; 0x5DD01B: `movzx ecx, al; and ecx, 7`): unsigned, an int8 `%` goes negative after 128 frames
+    NOTSA_GLOBAL_LOCAL(nUpdateEntCache, 0xC09171, (uint8), {});
+    NOTSA_GLOBAL_LOCAL(nLocTriSkipCounter, 0xC09170, (uint8), {});
 
     IncrementScanCode();
     CGrassRenderer::SetCurrentScanCode(m_scanCode);
@@ -432,13 +445,16 @@ float CPlantMgr::CalculateWindBending() {
         auto uiOffset2 = (uiOffset1 + 1) % 16;
         auto fContrib  = static_cast<float>(((RandomSeed + CTimer::GetTimeInMS() * 8) % 4'096)) / 4096.0F;
 
+        // 0x5DB496-0x5DB4B8: ((1 - c) * T[o1] + c * T[o2]) + 1.0 (the port summed `1 + c * T[o2]` first)
         auto fWindOffset = (1.0F - fContrib) * CWeather::saTreeWindOffsets[uiOffset1];
-        fWindOffset += 1.0F + fContrib * CWeather::saTreeWindOffsets[uiOffset2];
+        fWindOffset += fContrib * CWeather::saTreeWindOffsets[uiOffset2];
+        fWindOffset += 1.0F;
         fWindOffset *= CWeather::Wind;
         fWindOffset *= 0.015F;
         return fWindOffset;
     } else {
-        return X87R(x87::sin(scalingFactor * (float)(CTimer::GetTimeInMS() % 4'096)) / (CWeather::Wind >= 0.2f ? 125.0f : 200.0f));
+        // 0x5DB409 / 0x5DB42A: sin(...) * 0.008f / * 0.005f (exe float constants 0x863984 / 0x858B4C), not a division by 125 / 200
+        return X87R(x87::sin(scalingFactor * (float)(CTimer::GetTimeInMS() % 4'096)) * (CWeather::Wind >= 0.2f ? 0.008f : 0.005f));
     }
 }
 
@@ -491,12 +507,14 @@ void CPlantMgr::Render() {
                 triPlant.scale.y  = plantSurf.scale_z;
                 triPlant.texture    = grassTextures[plantSurf.uv_offset];
 
-                auto colorMix = plantTri->m_nLighting.GetCurrentLighting();
-                // Not sure if applicable: colorMix *= 255.f;
-                triPlant.color = plantSurf.color;
-                auto alpha     = triPlant.color.a;
-                triPlant.color *= colorMix;
-                triPlant.color.a = alpha;
+                // 0x5DBC83-0x5DBCEB: v = ftol(mix * 255) & 0xFF, then every colour channel is (channel * v) >> 8 (alpha is copied unchanged);
+                // the port multiplied the channels by the float mix (ftol(r * mix): up to 1 brighter)
+                const auto colorMix = plantTri->m_nLighting.GetCurrentLighting();
+                const auto mixByte  = (uint32)NOTSA_FTOL(int32, colorMix * 255.0f) & 0xFFu;
+                triPlant.color   = plantSurf.color;
+                triPlant.color.r = (uint8)((plantSurf.color.r * mixByte) >> 8);
+                triPlant.color.g = (uint8)((plantSurf.color.g * mixByte) >> 8);
+                triPlant.color.b = (uint8)((plantSurf.color.b * mixByte) >> 8);
 
                 triPlant.intensity = plantSurf.intensity;
                 triPlant.intensity_var = plantSurf.intensity_variation;
@@ -578,32 +596,48 @@ void CPlantMgr::_ColEntityCache_Update(const CVector& cameraPos, bool fast) {
     if (!CPlantMgr::m_UnusedColEntListHead)
         return;
 
-    CWorld::AdvanceCurrentScanCode();
-    CWorld::IterateSectorsOverlappedByRect({ cameraPos, PROC_OBJECTS_MAX_DISTANCE }, [cameraPos](int32 x, int32 y) {
-        for (auto* const item : CWorld::GetSector(x, y).Buildings) {
-            if (item->m_bIsProcObject || item->IsScanCodeCurrent() || !item->IsInCurrentArea())
-                continue;
+    // 0x5DC5D9-0x5DC728: the sector range is clamped to [0, 119] (CWorld::IterateSectorsOverlappedByRect visits sector -1 / 120 at the map edge)
+    const auto minX = std::max(0, CWorld::GetSectorX(cameraPos.x - PROC_OBJECTS_MAX_DISTANCE));
+    const auto minY = std::max(0, CWorld::GetSectorY(cameraPos.y - PROC_OBJECTS_MAX_DISTANCE));
+    const auto maxX = std::min((int32)MAX_SECTORS_X - 1, CWorld::GetSectorX(cameraPos.x + PROC_OBJECTS_MAX_DISTANCE));
+    const auto maxY = std::min((int32)MAX_SECTORS_Y - 1, CWorld::GetSectorY(cameraPos.y + PROC_OBJECTS_MAX_DISTANCE));
 
-            if (auto mi = item->GetModelInfo(); mi->GetModelType() == MODEL_INFO_ATOMIC && mi->bAtomicFlag0x200) {
-                bool foundEntity = false;
-                for (auto j = m_CloseColEntListHead; j; j = j->m_NextEntry) {
-                    if (j->m_Entity == item) {
-                        foundEntity = true;
-                        break;
-                    }
+    CWorld::AdvanceCurrentScanCode();
+    for (auto y = minY; y <= maxY; y++) {
+        for (auto x = minX; x <= maxX; x++) {
+            for (auto* const item : CWorld::GetSector(x, y).Buildings) {
+                if (item->m_bIsProcObject || item->IsScanCodeCurrent()) {
+                    continue;
                 }
-                if (!m_CloseColEntListHead || !foundEntity) {
-                    if (_CalcDistanceSqrToEntity(item, cameraPos) <= PROC_OBJECTS_MAX_DISTANCE_SQUARED) {
-                        if (!m_UnusedColEntListHead || !m_UnusedColEntListHead->AddEntry(item)) {
-                            return false;
+                item->SetCurrentScanCode(); // 0x5DC7D3: marked before the area test
+                if (!item->IsInCurrentArea()) {
+                    continue;
+                }
+
+                if (auto mi = item->GetModelInfo(); mi->GetModelType() == MODEL_INFO_ATOMIC && mi->bAtomicFlag0x200) {
+                    bool foundEntity = false;
+                    for (auto j = m_CloseColEntListHead; j; j = j->m_NextEntry) {
+                        if (j->m_Entity == item) {
+                            foundEntity = true;
+                            break;
+                        }
+                    }
+                    if (!foundEntity) {
+                        if (_CalcDistanceSqrToEntity(item, cameraPos) <= PROC_OBJECTS_MAX_DISTANCE_SQUARED) {
+                            if (!m_UnusedColEntListHead) {
+                                return;
+                            }
+                            // 0x5DC83D: the AddEntry result is not tested (it fails for an entity without collision triangles); the update stops once the unused list is empty
+                            m_UnusedColEntListHead->AddEntry(item);
+                            if (!m_UnusedColEntListHead) {
+                                return;
+                            }
                         }
                     }
                 }
             }
         }
-
-        return true;
-    });
+    }
 }
 
 // 0x5DCD80
@@ -620,7 +654,8 @@ void CPlantMgr::_ProcessEntryCollisionDataSections(const CPlantColEntEntry& entr
         return _ProcessEntryCollisionDataSections_AddLocTris(entry, center, iTriProcessSkipMask, 0, numTriangles - 1);
     }
 
-    for (const auto& faceGroup : cd->GetFaceGroups()) {
+    // 0x5DCDE0: the exe walks the groups at [faceGroups - 0x20 - 0x1C * i], i.e. in memory-DESCENDING order (GetFaceGroups() is ascending)
+    for (const auto& faceGroup : rngv::reverse(cd->GetFaceGroups())) {
 
         CVector out[2]{};
         TransformPoints(out, 2, entry.m_Entity->GetMatrix(), (CVector*)&faceGroup.bb);
@@ -657,17 +692,19 @@ void CPlantMgr::_ProcessEntryCollisionDataSections_AddLocTris(const CPlantColEnt
 
         TransformPoints (vertices, 3, entity->GetMatrix(), vertices);
 
-        CVector cmp[] = {
-            vertices[0],
-            vertices[1],
-            vertices[2],
-            CVector::Centroid(vertices),
-            (vertices[0] + vertices[1]) / 2.0f,
-            (vertices[0] + vertices[2]) / 2.0f,
-            (vertices[1] + vertices[2]) / 2.0f
+        // 0x5DC9C1-0x5DCCA3: the 7 test points are handled as differences d = center - point (v0, v1, v2, the centroid and the midpoints (d_i + d_j) * 0.5);
+        // centroid = (v2 + (v1 + v0)) * 0.33333334f (the port: ((0 + v0) + v1) + v2, divided by 3); squared length (z*z + y*y) + x*x
+        const auto Cent = [](x87d v0, x87d v1, x87d v2) -> float { return (float)((v2 + (v1 + v0)) * (x87d)(1.0f / 3.0f)); };
+        const CVector centroid{
+            Cent(vertices[0].x, vertices[1].x, vertices[2].x),
+            Cent(vertices[0].y, vertices[1].y, vertices[2].y),
+            Cent(vertices[0].z, vertices[1].z, vertices[2].z),
         };
-
-        if (rng::none_of(cmp, [center](auto v) { return DistanceBetweenPointsSquared(v, center) < PLANTS_MAX_DISTANCE_SQUARED; })) {
+        const CVector d0 = center - vertices[0];
+        const CVector d1 = center - vertices[1];
+        const CVector d2 = center - vertices[2];
+        if (!PlantDiffIsNear(d0) && !PlantDiffIsNear(d1) && !PlantDiffIsNear(d2) && !PlantDiffIsNear(center - centroid)
+            && !PlantDiffIsNear(PlantDiffMid(d1, d0)) && !PlantDiffIsNear(PlantDiffMid(d2, d1)) && !PlantDiffIsNear(PlantDiffMid(d2, d0))) {
             continue;
         }
 
@@ -723,16 +760,14 @@ void CPlantMgr::_ProcessEntryCollisionDataSections_RemoveLocTris(const CPlantCol
             continue;
 
         if (auto& object = entry.m_Objects[i]; object) {
-            CVector cmp[] = {
-                object->m_V1,
-                object->m_V2,
-                object->m_V3,
-                (object->m_V1 + object->m_V2) / 2.0f,
-                (object->m_V2 + object->m_V3) / 2.0f,
-                (object->m_V1 + object->m_V3) / 2.0f
-            };
-
-            if (rng::all_of(cmp, [center](auto v) { return DistanceBetweenPointsSquared(v, center) >= PLANTS_MAX_DISTANCE_SQUARED; })) {
+            // 0x5DBF9C-0x5DC1E5: 7 points (V1, V2, V3, the CENTER, 3 midpoints), the triangle is released only when none is within range
+            // (the port tested 6 points and left the center out)
+            const CVector d1 = center - object->m_V1;
+            const CVector d2 = center - object->m_V2;
+            const CVector d3 = center - object->m_V3;
+            const CVector dc = center - object->m_Center;
+            if (!PlantDiffIsNear(d1) && !PlantDiffIsNear(d2) && !PlantDiffIsNear(d3) && !PlantDiffIsNear(dc)
+                && !PlantDiffIsNear(PlantDiffMid(d2, d1)) && !PlantDiffIsNear(PlantDiffMid(d3, d2)) && !PlantDiffIsNear(PlantDiffMid(d3, d1))) {
                 object->Release();
                 object = nullptr;
             }

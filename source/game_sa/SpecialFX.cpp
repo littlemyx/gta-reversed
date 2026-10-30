@@ -132,7 +132,7 @@ void CSpecialFX::Render2DFXs() {
         CFont::SetFontStyle(FONT_SUBTITLES);
         notsa::format_to_sz(gString, "{}", CTimer::GetFrameCounter() % 64);
         AsciiToGxtChar(gString, gGxtString);
-        CFont::PrintString(0.8f * SCREEN_WIDTH, 0.8f * SCREEN_HEIGHT, gGxtString);
+        CFont::PrintString((float)((RsGlobal.maximumWidth * 8) / 10), (float)((RsGlobal.maximumHeight * 8) / 10), gGxtString); // exe 0x7216F5-0x72175C: integer (W * 8) / 10 (imul 0x66666667), not 0.8f * W
 
         for (auto y = 3.0f; y - 3.0f < SCREEN_HEIGHT; y += 4.0f) {
             RwRenderStateSet(rwRENDERSTATESRCBLEND, RWRSTATE(rwBLENDONE));
@@ -157,7 +157,8 @@ void CSpecialFX::Render2DFXs() {
         RwRenderStateSet(rwRENDERSTATESRCBLEND, RWRSTATE(rwBLENDSRCALPHA));
         RwRenderStateSet(rwRENDERSTATEDESTBLEND, RWRSTATE(rwBLENDINVSRCALPHA));
 
-        const auto yt = std::trunc((SCREEN_HEIGHT + 70.0f) / 2048.0f * float(CTimer::GetTimeInMS() % 2'048) - 70.0f);
+        // exe 0x72188C-0x7218C4: ftol((H + 70) * (1 / 2048) * t) - 70, truncated BEFORE the subtraction
+        const auto yt = float(NOTSA_FTOL(int32, (SCREEN_HEIGHT + 70.0f) * (1.0f / 2048.0f) * float(CTimer::GetTimeInMS() % 2'048)) - 70);
         CSprite2d::Draw2DPolygon(
             0.0f,         yt,
             SCREEN_WIDTH, yt,
@@ -197,7 +198,8 @@ void CSpecialFX::Render2DFXs() {
             );
         }
 
-        const auto yt = std::trunc((SCREEN_HEIGHT + 70.0f) / 2048.0f * float(CTimer::GetTimeInMS() % 2'048) - 70.0f);
+        // exe 0x72188C-0x7218C4: ftol((H + 70) * (1 / 2048) * t) - 70, truncated BEFORE the subtraction
+        const auto yt = float(NOTSA_FTOL(int32, (SCREEN_HEIGHT + 70.0f) * (1.0f / 2048.0f) * float(CTimer::GetTimeInMS() % 2'048)) - 70);
         CSprite2d::Draw2DPolygon(
             0.0f,         yt,
             SCREEN_WIDTH, yt,
@@ -207,8 +209,9 @@ void CSpecialFX::Render2DFXs() {
         );
 
         for (auto i = 0; i < 200; i++) {
-            const auto x = CGeneral::GetRandomNumberInRange<uint32>(RsGlobal.maximumWidth);
-            const auto y = CGeneral::GetRandomNumberInRange<uint32>(RsGlobal.maximumHeight);
+            // exe 0x721B80-0x721BCB: x = rand() % W, y = rand() % H (idiv), rect = { x, y + 2, x + 20, y } (left, bottom, right, top)
+            const int32 x = rand() % RsGlobal.maximumWidth;
+            const int32 y = rand() % RsGlobal.maximumHeight;
             CSprite2d::DrawRect(
                 CRect{
                     float(x),
@@ -231,7 +234,9 @@ void CSpecialFX::Render2DFXs() {
                 RwRenderStateSet(rwRENDERSTATESRCBLEND, RWRSTATE(rwBLENDONE));
                 RwRenderStateSet(rwRENDERSTATEDESTBLEND, RWRSTATE(rwBLENDONE));
 
-                const uint8 shade = 255 - 255 * SnapShotFrames / 10;
+                // exe 0x721C60-0x721CA6: ftol((255 - 255 * frames / 10) * 0.65f)
+                const uint32 fade  = 255u - 255u * SnapShotFrames / 10u;
+                const uint8  shade = NOTSA_FTOL(uint8, (float)fade * 0.65f);
                 CSprite2d::Draw2DPolygon(
                     0.0f,         0.0f,
                     SCREEN_WIDTH, 0.0f,

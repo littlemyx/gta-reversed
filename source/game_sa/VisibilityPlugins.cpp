@@ -522,8 +522,8 @@ bool CVisibilityPlugins::IsAtomicVisible(RpAtomic* atomic) {
     }
     RwSphere sphere = atomic->boundingSphere;
     RwMatrix* transformMatrix = RwFrameGetMatrix(RpAtomicGetFrame(atomic));
-    RwV3d point;
-    RwV3dTransformPoints(&point, &sphere.center, 1, transformMatrix);
+    // the exe transforms the centre of the local sphere in place (0x7329D8: dst == src == the sphere) and tests that sphere
+    RwV3dTransformPoints(&sphere.center, &sphere.center, 1, transformMatrix);
     return RwCameraFrustumTestSphere(ms_pCamera, &sphere) != rwSPHEREOUTSIDE;
 }
 

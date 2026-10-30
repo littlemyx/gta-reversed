@@ -499,11 +499,11 @@ void CCoronas::RenderSunReflection() {
     constexpr auto REFLECTION_SIZE   = 60.f;
     constexpr auto REFLECTION_PERIOD = 2'048; // Code is faster if this is a power-of-2
     constexpr auto ANGLE_STEP = TWO_PI / REFLECTION_PERIOD; // 0x87252C
-    constexpr auto SUN_INTENSITY_SCALE = 1.0f / 0.3f; // 0x872530
+    constexpr auto SUN_INTENSITY_SCALE = 3.333f; // 0x872530: the literal 3.333f (0x40554FDF), NOT 1.0f / 0.3f
 
     const auto vecToSun3D = CTimeCycle::m_VectorToSun[CTimeCycle::m_CurrentStoredValue];
 
-    if (vecToSun3D.z <= -0.05f) {
+    if (!(vecToSun3D.z > -0.05f)) { // 0x6FBAC3: fcomp + `test ah, 0x41` / jne (NaN returns too)
         return;
     }
 
@@ -514,19 +514,27 @@ void CCoronas::RenderSunReflection() {
         * (1.f - CWeather::CloudCoverage)
         * (1.f - CWeather::Foggyness)
         * (1.f - CWeather::Wind);
-    if (t <= 0.f) {
+    if (!(t > 0.f)) { // 0x6FBB5x: fcomp + `test ah, 0x41` / jne
         return;
     }
-    for (const auto& v : std::initializer_list<CVector>{
-  // TODO: Magic numberz
-             { 611.0f,  875.0f,  0.f },
-             { -929.0f, 2364.f,  0.f },
-             { -1034.f, 2640.f,  0.f },
-             { 2372.f,  -1854.f, 0.f },
-             { -1633.f, 106.0f,  0.f }
-    }) {
-        t *= std::clamp(invLerp(0.f, 100.f, (camPos - v).Magnitude2D() - 250.f), 0.f, 1.f);
-    }
+    // 0x6FA... helper 0x6FBA20(pos, radius): d = 2D distance to the camera; `radius + 100 <= d (or NaN) ? 1 : d <= radius ? 0 : (d - radius) * 0.01f`
+    // (the 4th spot has the radius 350, the others 250; the ramp is a multiplication by 0.01f, not a division by 100)
+    const auto SpotFade = [&](float x, float y, float radius) -> float {
+        const float dx = camPos.x - x, dy = camPos.y - y;
+        const float d  = std::sqrt(dy * dy + dx * dx);
+        if (!(d < radius + 100.f)) {
+            return 1.f;
+        }
+        if (d <= radius) {
+            return 0.f;
+        }
+        return (d - radius) * 0.01f;
+    };
+    t = SpotFade(611.0f,  875.0f,  250.f) * t;
+    t = SpotFade(-929.0f, 2364.f,  250.f) * t;
+    t = SpotFade(-1034.f, 2640.f,  250.f) * t;
+    t = SpotFade(2372.f,  -1854.f, 350.f) * t;
+    t = SpotFade(-1633.f, 106.0f,  250.f) * t;
     t *= 0.25f;
 
     const auto center2D         = CVector2D{ vecToSun3D } * 40.f + CVector2D{ camPos };
@@ -540,10 +548,13 @@ void CCoronas::RenderSunReflection() {
         &,
         color = CRGBA{ CalcColorC(Red), CalcColorC(Green), CalcColorC(Blue), 255 },
         posZ = CWeather::Wind * 0.5f + 0.1f
-    ](CVector2D offsetToCenter, CVector2D uv) {
-        RenderBuffer::PushVertex(CVector{ center2D + offsetToCenter, posZ }, uv, color);
+    ](CVector2D pos, CVector2D uv) {
+        RenderBuffer::PushVertex(CVector{ pos, posZ }, uv, color);
     };
 #undef CalcColorC
+    // 0x6FBD9x..0x6FBFxx: the exe's association of the vertex sums: right = ((perp.y + off.x) + c.x, (off.y + c.y) - perp.x), left = ((off.x + c.x) - perp.y, (perp.x + off.y) + c.y)
+    const auto Right = [&](CVector2D off, CVector2D perp) { return CVector2D{ (perp.y + off.x) + center2D.x, (off.y + center2D.y) - perp.x }; };
+    const auto Left  = [&](CVector2D off, CVector2D perp) { return CVector2D{ (off.x + center2D.x) - perp.y, (perp.x + off.y) + center2D.y }; };
 
     RenderBuffer::ClearRenderBuffer();
 
@@ -551,10 +562,10 @@ void CCoronas::RenderSunReflection() {
     {
         RenderBuffer::PushIndices({ 2, 1, 0, 2, 3, 1 }, false);
 
-        PushVertex(vecToSunCore2D.GetPerpRight(),                    { 0.0f, 1.0f });
-        PushVertex(vecToSunCore2D.GetPerpLeft(),                     { 1.0f, 1.0f });
-        PushVertex(vecToSunCorona2D + vecToSunCore2D.GetPerpRight(), { 0.0f, 0.5f });
-        PushVertex(vecToSunCorona2D + vecToSunCore2D.GetPerpLeft(),  { 1.0f, 0.5f });
+        PushVertex(Right({ 0.f, 0.f }, vecToSunCore2D),   { 0.0f, 1.0f });
+        PushVertex(Left({ 0.f, 0.f }, vecToSunCore2D),    { 1.0f, 1.0f });
+        PushVertex(Right(vecToSunCorona2D, vecToSunCore2D), { 0.0f, 0.5f });
+        PushVertex(Left(vecToSunCorona2D, vecToSunCore2D),  { 1.0f, 0.5f });
     }
 
     //< 0x6FBF36 - The part that is changing position [To imitate how the water is flowing]
@@ -568,8 +579,8 @@ void CCoronas::RenderSunReflection() {
         );
         const auto offset = vecToSun2D * (float)(i * 1'440 / 20 + 60);
 
-        PushVertex(offset + forward.GetPerpRight(), { 0.0f, 0.5f });
-        PushVertex(offset + forward.GetPerpLeft(),  { 1.0f, 0.5f });
+        PushVertex(Right(offset, forward), { 0.0f, 0.5f });
+        PushVertex(Left(offset, forward),  { 1.0f, 0.5f });
     }
 
     RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      RWRSTATE(FALSE));

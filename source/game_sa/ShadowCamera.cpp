@@ -87,6 +87,7 @@ void CShadowCamera::InvertRaster() {
         MkVert(width, height), // Bottom right
     };
 
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE, RWRSTATE(FALSE)); // 0x705700: exe disables the z-test before the quad
     RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RWRSTATE(NULL));
     RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(TRUE));
     RwRenderStateSet(rwRENDERSTATESRCBLEND, RWRSTATE(rwBLENDINVDESTCOLOR));

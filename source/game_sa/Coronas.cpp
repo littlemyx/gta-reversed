@@ -189,6 +189,21 @@ void CCoronas::Update() {
     }
 }
 
+// The exe's inlined corona fade (0x6FB07x in Render, 0x6FB8xx in RenderReflections): `z < farClip/2 ? 1 : 1 - (z - half) / half` (half = farClip * 0.5),
+// optionally clamped to [0, 1] with the exe's NaN arms. NOT `invLerp(farClip, farClip / 2, z)` (a different rounding).
+static float ExeCoronaFade(float z, float farClip, bool clamp01) {
+    const float half = farClip * 0.5f;
+    float f = z < half ? 1.0f : 1.0f - (z - half) / half;
+    if (clamp01) {
+        if (1.0f < f) {
+            f = 1.0f;
+        } else if (0.0f > f) { // 0x6FB8ED: `0 > f` -> 0 (NaN keeps itself)
+            f = 0.0f;
+        }
+    }
+    return f;
+}
+
 // 0x6FAEC0
 void CCoronas::Render() {
     ZoneScoped;
@@ -200,8 +215,9 @@ void CCoronas::Render() {
     RwRenderStateSet(rwRENDERSTATEZTESTENABLE,       RWRSTATE(TRUE));
 
     const auto raster     = RwCameraGetRaster(Scene.m_pRwCamera);
-    const auto rasterSize = CVector2D{ (float)RwRasterGetWidth(raster), (float)RwRasterGetHeight(raster) };
-    const auto rasterRect = CRect{ 0.f, 0.f, rasterSize.x, rasterSize.y };
+    const int32 rasterW   = RwRasterGetWidth(raster), rasterH = RwRasterGetHeight(raster);
+    // 0x6FAEC9..: the half sizes are INTEGER divisions (`cdq / sub / sar 1`), the odd pixel is dropped
+    const auto rasterHalf = CVector2D{ (float)(rasterW / 2), (float)(rasterH / 2) };
 
     bool zTestEnable = true;
     for (auto& c : aCoronas) {
@@ -222,7 +238,8 @@ void CCoronas::Render() {
             continue;
         }
 
-        c.m_bOffScreen = !rasterRect.IsPointInside(CVector2D{ onScrPos }); // Seems like a useless check
+        // 0x6FB02x: set when x < 0 || y < 0 || width < x || height < y (all strict, NaN never sets it)
+        c.m_bOffScreen = onScrPos.x < 0.f || onScrPos.y < 0.f || (float)rasterW < onScrPos.x || (float)rasterH < onScrPos.y;
 
         // Already faded out
         if (c.m_FadedIntensity == 0) {
@@ -230,14 +247,14 @@ void CCoronas::Render() {
         }
 
         // If outside farclip range, just ignore
-        if (onScrPos.z >= c.m_fFarClip) {
+        if (!(onScrPos.z < c.m_fFarClip)) { // 0x6FB074: fcomp + `test ah, 5` / jp (NaN skips too)
             continue;
         }
 
         const auto rz = 1.f / onScrPos.z;
 
         //< 0x6FB0A7 - Start fading out at half the far clip distance
-        const auto intensity = NOTSA_FTOL(int16, (float)c.m_FadedIntensity * c.CalculateIntensity(onScrPos.z, c.m_fFarClip));
+        const auto intensity = NOTSA_FTOL(int16, (float)c.m_FadedIntensity * ExeCoronaFade(onScrPos.z, c.m_fFarClip, false));
 
         //< 0x6FB0D9 - Enable/disable Z test if necessary
         if (c.m_bCheckObstacles == zTestEnable) {
@@ -329,7 +346,7 @@ void CCoronas::Render() {
                         255
                     };
                     CSprite::RenderBufferedOneXLUSprite2D(
-                        lerp(rasterSize / 2.f, CVector2D{ onScrPos }, it->Position),
+                        lerp(rasterHalf, CVector2D{ onScrPos }, it->Position),
                         CVector2D{ it->Size, it->Size } * 4.f,
                         color,
                         255,
@@ -346,7 +363,7 @@ void CCoronas::Render() {
                     const auto RenderFlareSprite = [&,
                                                     spriteIntensity = (int16)(((int32)it->IntensityMult * (int32)intensity) >> 8)](RwRGBA clr, float posOffset) { // 0x6FB510: imul; sar 8
                         CSprite::RenderBufferedOneXLUSprite2D(
-                            lerp(rasterSize / 2.f, CVector2D{ onScrPos }, it->Position + posOffset),
+                            lerp(rasterHalf, CVector2D{ onScrPos }, it->Position + posOffset),
                             CVector2D{ it->Size, it->Size },
                             clr,
                             spriteIntensity,

@@ -2002,20 +2002,30 @@ void CStats::UpdateStatsWhenFlying(CVehicle* vehicle) {
 
 // 0x55CD60
 void CStats::UpdateStatsWhenOnMotorBike(CBike* bike) {
-    auto bikeCounter = static_cast<float>(m_BikeCounter);
-    if (StatReactionValue[STAT_TIMELIMIT_MOTORBIKE_SKILL] * 1000.0f >= bikeCounter) {
-        const float bikeMoveSpeed = bike->m_vecMoveSpeed.Magnitude();
-        const auto  fTimeStep = CTimer::GetTimeStepInMS();
-
-        if (bikeMoveSpeed > 0.6f || bike->m_nNoOfContactWheels < 3u && bikeMoveSpeed > 0.1f)
-            m_BikeCounter = NOTSA_FTOL(uint32, fTimeStep * 1.5f + bikeCounter);
-        else if (bikeMoveSpeed > 0.2f)
-            m_BikeCounter = NOTSA_FTOL(uint32, fTimeStep * 0.5f + bikeCounter);
-    } else {
+    const float bikeCounter = (float)m_BikeCounter; // x87: FILD (+2^32 when negative), spilled to a float temp
+    if ((x87d)StatReactionValue[STAT_TIMELIMIT_MOTORBIKE_SKILL] * (x87d)1000.0 < (double)bikeCounter) { // fcomp + jp: only 'limit < counter' levels up (equal and NaN go on)
         m_BikeCounter = 0;
         IncrementStat(STAT_BIKE_SKILL, StatReactionValue[STAT_INC_MOTORBIKE_SKILL]);
         DisplayScriptStatUpdateMessage(STAT_UPDATE_INCREASE, STAT_BIKE_SKILL, StatReactionValue[STAT_INC_MOTORBIKE_SKILL]);
+        return;
     }
+
+    // exe 0x55CDC8-0x55CEA4: x87 extended sqrt((x*x + y*y) + z*z), the compares are strict `>` (NaN fails them)
+    const x87d speed = std::sqrt(
+          (x87d)bike->m_vecMoveSpeed.x * bike->m_vecMoveSpeed.x
+        + (x87d)bike->m_vecMoveSpeed.y * bike->m_vecMoveSpeed.y
+        + (x87d)bike->m_vecMoveSpeed.z * bike->m_vecMoveSpeed.z
+    );
+
+    float rate;
+    if (speed > (double)0.6f || (bike->m_nNoOfContactWheels < 3u && speed > (double)0.1f)) {
+        rate = 1.5f;
+    } else if (speed > (double)0.2f) {
+        rate = 0.5f;
+    } else {
+        return;
+    }
+    m_BikeCounter = NOTSA_FTOL(int32, (x87d)(uint32)TimeStepInMS() * (x87d)rate + (x87d)bikeCounter);
 }
 
 // 0x55CEB0

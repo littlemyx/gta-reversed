@@ -3872,10 +3872,14 @@ void CAEVehicleAudioEntity::ProcessPlayerSeaPlane(tVehicleParams& vp) {
     // 0x4FF3CA
     GetAccelAndBrake(vp);
 
-    // 0x4FF5F1
-    CalculatePlanePropFreq(vp, GetAircraftAcceleration(vp));
-    
-    const auto propSpeed    = veh->m_EngineSpeed * ExeRecip(0.22f);
+    // 0x4FF5F1-0x4FF65B: the exe steps m_CurrentRotorFrequency towards the tilt frequency by 0x862D04 both ways (the port computed the target and dropped it)
+    UpdateRotorFreq(CalculatePlanePropFreq(vp, GetAircraftAcceleration(vp)), ROTOR_FREQ_STEP_EXE, ROTOR_FREQ_STEP_EXE);
+
+    // 0x4FF4B2: a NaN prop speed takes the `<= 0.2` arms (both the speed factor and the distant-volume base become 0.2)
+    auto propSpeed          = veh->m_EngineSpeed * ExeRecip(0.22f);
+    if (std::isnan(propSpeed)) {
+        propSpeed = 0.2f;
+    }
     const auto camPoVFactor = GetAircraftCameraPoVFactor(veh);
     const auto sf           = GetDummyRCRotorSpeedFactor(propSpeed);
     PlayAircraftSound( // 0x4FF74A

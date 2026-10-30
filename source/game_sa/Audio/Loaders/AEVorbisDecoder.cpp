@@ -59,9 +59,11 @@ size_t CAEVorbisDecoder::FillBuffer(void* dest, size_t size) {
     size_t readedTotal = 0;
     char*  buffer = reinterpret_cast<char*>(dest);
 
-    // In case of mono stream, only read half of it
+#ifdef FIX_BUGS
+    // In case of mono stream, only read half of it (the exe 0x502470 hands the mono data out as is)
     if (m_pVorbisInfo->channels == 1)
         size /= 2;
+#endif
 
     if (size > 0) {
         int32 dummy;
@@ -75,6 +77,7 @@ size_t CAEVorbisDecoder::FillBuffer(void* dest, size_t size) {
         }
     }
 
+#ifdef FIX_BUGS
     if (m_pVorbisInfo->channels == 1) {
         // Duplicate channel data
         int16* bufShort = reinterpret_cast<int16*>(buffer);
@@ -84,6 +87,7 @@ size_t CAEVorbisDecoder::FillBuffer(void* dest, size_t size) {
 
         readedTotal *= 2;
     }
+#endif
 
     return readedTotal;
 }

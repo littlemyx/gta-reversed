@@ -67,7 +67,7 @@ void CShinyTexts::Render() {
 
         const auto GetRealVertexIndex = [](unsigned i) { return (unsigned)uiTempBufferVerticesStored + i; };
 
-        const RwRGBA       color  = { text.m_colorR, text.m_colorG, text.m_colorB, 12 };
+        const RwRGBA       color  = { text.m_colorR, text.m_colorG, text.m_colorB, 255 }; // exe 0x7249A0-0x7249B8: (0xFF << 24) | r << 16 | g << 8 | b
         const CVector*     posn[] = { &text.m_vecCornerAA, &text.m_vecCornerAB, &text.m_vecCornerBA, &text.m_vecCornerBB };
         const RwTexCoords* uvs[]  = { &text.m_texCoorsAA, &text.m_texCoorsAB, &text.m_texCoorsBA, &text.m_texCoorsBB };
         for (unsigned i = 0u; i < 4u; i++) {

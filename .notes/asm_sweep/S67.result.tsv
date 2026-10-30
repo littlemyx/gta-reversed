@@ -1,0 +1,14 @@
+addr	function	verdict	asm range	note	fix commit
+0x526FC0	CCam::Process	MATCH	0x526FC0-0x527ED1 (all)	nothing left open: S31 compared the whole function (FIXED), S31b/S31e resolved the carried 0x5273EB-0x52762D branch (target.z / delta.z MATCH, 0x420800 divisor fixed in 56372783); the NOT_REACHED duplicates in S31c/d/f/g/h were budget stubs of already-covered ranges	-
+0x535FA0	CEntity::PreRender	MATCH	0x535FA0-0x536BAA (all)	head 0x535FA0-0x536174 MATCH in S45, tail 0x536174-0x536BAA compared + fixed in S45b (17847559a); nothing open	-
+0x5EF710	CPedAttractorManager::RestoreStuffFromMem	NOT_REACHED	0x5EF710	no callers in the exe (S52); exe frees and zeroes the ten arrays, port NOTSA_UNREACHABLE; unreachable in the run build, left	-
+0x5F7FE0	PedGroupMembership::From	NOT_REACHED	0x5F7FE0-0x5F8013	only caller is the copy ctor 0x5FB140 which has no call/pointer reference in the exe (S54c); left	-
+0x604500	CCollisionEventScanner::ScanForCollisionEvents	MATCH	0x604500-0x6052E0 (all)	full diff: building/vehicle(train kill, damage, player kill geometry, event damage, vehicle collision)/ped(6 event arms + mirrored event for the other ped)/object(damage, GenerateDamageEvent, event)/balaclava noise: conditions, NaN arms, constants, argument and summation orders MATCH. Only the spelling of 6 bare doubles changed to x87d	bc5f9d177
+0x614210	CPopulation::AddPedAtAttractor	DEVIATION	0x614210-0x6143D6 (all)	the CEventAttractor got the new ped as entity and task id TASK_COMPLEX_USE_ATTRACTOR (0xEB); exe passes the entity argument and sets 0xE9 = TASK_COMPLEX_USE_EFFECT after the ctor. 2D min scan (a7b39d64b), queue-tail check, AddPed, wander task, placer 0.02, flag 0x200000, ProcessEventHandler/Process MATCH	975c367ef
+0x667AD0	CTaskSimpleGoTo::SetUpIK	DEVIATION	0x667AD0-0x667C93 (all)	look-at z = (2*dir.z + ped.z) + 0.61f in the FPU (port 2*dir.z + (ped.z + 0.61f), UNSURE 1-ulp from S13 resolved); forward dot summed z,y,x unrounded; conditions/args MATCH	b271cf583
+0x698790	CCover::FindVectorFromFirstToMissingVertex	NOT_REACHED	0x698790	no call to the function anywhere in the exe (S43d)	-
+0x6987F0	CCover::CalculateHorizontalSize	NOT_REACHED	0x6987F0	no call anywhere in the exe (S43d)	-
+0x698990	CCover::DoLineCheckWithinObject	NOT_REACHED	0x698990	no call anywhere in the exe (S43d)	-
+0x6A47F0	CAutomobile::DoBurstAndSoftGroundRatios	DEVIATION	0x6A47F0-0x6A4AE6 (all)	forward speed dot summed z,y,x (S16b UNSURE); sand term offroad*(remaining*adhesion); NaN arms: burst min and sand min keep NaN, 'compression < 1' strict else the rail branch, adhesion 0.4 floor keeps NaN; ftol result truncated to 16 bits (movzx ax). Burst rand, rail wheel phase test, constants MATCH	0ffc4a292
+0x6FDC00	CCustomCarPlateMgr::LoadPlatecharsetDat	NOT_REACHED	0x6FDC00	no call anywhere in the exe (S43d)	-
+0x73A8D0	CWeapon::LaserScopeDot	NOT_REACHED	0x73A8D0-0x73AAB9	exe function has no callers (S64b/c); port stub is NOTSA_UNREACHABLE; not ported	-

@@ -1560,7 +1560,7 @@ void CStats::DisplayScriptStatUpdateMessage(eStatUpdateState state, eStats stat,
     case STAT_DRIVING_SKILL:
     case STAT_ARMOR:
     case STAT_ENERGY:
-        if (value > 1.0f)
+        if (!(value <= 1.0f)) // 0x55BB06: `test ah, 0x41` + jnp - only value <= 1 skips, NaN shows the message
             CHud::SetHelpMessageStatUpdate(state, stat, value, 1000.0f);
         break;
 
@@ -1573,7 +1573,7 @@ void CStats::DisplayScriptStatUpdateMessage(eStatUpdateState state, eStats stat,
     case STAT_BIKE_SKILL:
     case STAT_CYCLING_SKILL:
     case STAT_LUCK:
-        if (value > 1.0f)
+        if (!(value <= 1.0f)) // 0x55BB06: `test ah, 0x41` + jnp - only value <= 1 skips, NaN shows the message
             CHud::SetHelpMessageStatUpdate(state, stat, value, 1000.0f);
         break;
 

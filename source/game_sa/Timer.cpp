@@ -243,7 +243,11 @@ void CTimer::Update() {
     if (!GetIsPaused())
         fTimeDelta *= ms_fTimeScale;
 
-    m_snTimeInMillisecondsPauseMode += NOTSA_FTOL(uint32, fTimeDelta / float(m_snTimerDivider));
+    // exe 0x561BF6-0x561C3A: `_ftol(pauseMode + delta / divider)` - the sum is rounded to 24 bits (PC24) and truncated as a whole (NOT pauseMode += (uint32)(delta / divider))
+    {
+        const auto u32ToX87 = [](uint32 v) { x87d d = (x87d)(int32)v; if ((int32)v < 0) d += 4294967296.0f; return d; };
+        m_snTimeInMillisecondsPauseMode = (uint32)NOTSA_FTOL(int32, X87R(u32ToX87(m_snTimeInMillisecondsPauseMode) + X87R((x87d)fTimeDelta / u32ToX87(m_snTimerDivider))));
+    }
     if (GetIsPaused())
         fTimeDelta = 0.0f;
 

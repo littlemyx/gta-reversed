@@ -263,7 +263,7 @@
 | S114 | phase3 tier C (PHASE3.md) | 36 | done (34 M, 2 fixed: XLU triangle fade, 2D sprite alpha) | RwHelper.cpp, Sprite.cpp |
 | S115 | phase3 tier C (PHASE3.md) | 42 | done (38 M, 3 fixed: 2D polygon shade mode, HUD bar chart add-bar, circle step; 1 NR export-only) | CarFXRenderer.cpp, CustomBuildingDNPipeline.cpp, Sprite2d.cpp |
 | S116 | phase3 tier C (PHASE3.md) | 45 | done (36 M, 8 fixed, 1 U dead JPeg) | BreakablePlugin.cpp, CollisionPlugin.cpp, CustomBuildingPipeline.cpp, CustomBuildingRenderer.cpp, CustomCarEnvMapPipeline.cpp, JPegCompress.cpp |
-| S117 | phase3 tier C (PHASE3.md) | 41 | pending | 2dEffect.cpp, LoadMonitor.cpp, MemoryMgr.cpp, Securom.cpp, common.cpp, platform.cpp |
+| S117 | phase3 tier C (PHASE3.md) | 41 | done (35 M, 6 fixed: 2dfx ped attractor fields + ENEX TimeOff, LoadMonitor, RsInitialize 480, Rs*Message key, Securom labels) | 2dEffect.cpp, LoadMonitor.cpp, MemoryMgr.cpp, Securom.cpp, common.cpp, platform.cpp |
 | S82b | rest of S82 | 27 | done (17 M, 15 fixed; S82 mood fix was wrong, redone) | AEPedSpeechAudioEntity.cpp, AEPedlessSpeechAudioEntity.cpp, AEPoliceScannerAudioEntity.cpp |
 | S81b | rest of S81 | 21 | done (11 M, 10 fixed) | AEFrontendAudioEntity.cpp, AEGlobalWeaponAudioEntity.cpp, AEPedAudioEntity.cpp |
 | S83b | rest of S83 | 21 | done (7 M, 14 fixed + stall table) | AEVehicleAudioEntity.cpp |

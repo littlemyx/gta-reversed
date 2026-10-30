@@ -23,7 +23,7 @@ void CEscalator::SwitchOff() {
         return;
     }
 
-    for (auto* object : m_StepObjects | rngv::take(m_NumTopPlanes + m_NumBottomPlanes + m_NumIntermediatePlanes)) {
+    for (auto*& object : m_StepObjects | rngv::take(m_NumTopPlanes + m_NumBottomPlanes + m_NumIntermediatePlanes)) {
         if (!object) {
             continue;
         }

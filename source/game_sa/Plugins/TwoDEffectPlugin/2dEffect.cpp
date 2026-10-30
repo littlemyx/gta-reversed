@@ -275,7 +275,7 @@ RwStream* Rwt2dEffectPluginDataChunkReadCallBack(RwStream* stream, RwInt32 binar
             std::memcpy(enex->m_szInteriorName, d.InteriorName, sizeof(d.InteriorName));
 
             enex->m_nTimeOn  = sectionSize == sizeof(t2dEffectEnExStreamData) ? d.TimeOn : 0;
-            enex->m_nTimeOff = sectionSize == sizeof(t2dEffectEnExStreamData) ? d.TimeOn : 24;
+            enex->m_nTimeOff = sectionSize == sizeof(t2dEffectEnExStreamData) ? d.TimeOff : 24; // 0x6FA3A7: stream byte +0x29 -> effect +0x39
             enex->m_nFlags2  = d.Flags2; // TODO: ???
             continue;
         }
@@ -294,8 +294,7 @@ RwStream* Rwt2dEffectPluginDataChunkReadCallBack(RwStream* stream, RwInt32 binar
             continue;
         }
         case e2dEffectType::EFFECT_SUN_GLARE:
-            NOTSA_UNREACHABLE("sunglare 2dfx unused");
-            break;
+            continue; // 0x6FA412: the exe reads nothing for this type (and skips nothing) and moves on
         case e2dEffectType::EFFECT_TRIGGER_POINT: {
             auto* wheel = C2dEffect::Cast<C2dEffectSlotMachineWheel>(&fx);
 
@@ -339,8 +338,11 @@ RwStream* Rwt2dEffectPluginDataChunkReadCallBack(RwStream* stream, RwInt32 binar
             pa->m_vecUseDir      = d.UseDir;
             pa->m_vecForwardDir  = d.ForwardDir;
             pa->m_nAttractorType = d.Type;
-
-            // TODO: unk/not_used fields assign to higher portion of m_nAttractorType, check.
+            // 0x6FA4F9-0x6FA585: the exe also stores the low byte of PedExistingProbability (+0x35), unk1 (+0x36), unk2 (+0x37) and copies the 8 byte script name (+0x38)
+            pa->m_nPedExistingProbability = (uint8)d.PedExistingProbability;
+            pa->field_36                  = d.unk1;
+            pa->m_nFlags                  = d.unk2;
+            std::memcpy(pa->m_szScriptName, d.ExternalScriptName, sizeof(pa->m_szScriptName));
             continue;
         }
         case e2dEffectType::EFFECT_PARTICLE: {

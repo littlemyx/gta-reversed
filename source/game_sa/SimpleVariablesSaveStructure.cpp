@@ -84,8 +84,10 @@ void CSimpleVariablesSaveStructure::Construct() {
     m_nMaximumWantedLevel = CWanted::MaximumWantedLevel;
     m_nMaxChaos = CWanted::MaximumChaosLevel;
 
-    m_bGermanGame = CLocalisation::germanGame;
-    m_bFrenchGame = CLocalisation::frenchGame;
+    // 0x5D1E00-0x5D1E4E: the exe stores germanGame (0xB9B7ED) at +0xEC and frenchGame (0xB9B7EE) at +0xED, while Extract (0x5D20CA-0x5D20DC) reads +0xEC as french
+    // and +0xED as german: a save/load round trip swaps the two flags. Reproduced (the field names follow Extract).
+    m_bFrenchGame = CLocalisation::germanGame;
+    m_bGermanGame = CLocalisation::frenchGame;
     m_bNastyGame = CLocalisation::nastyGame;
 
     GetLocalTime(&m_systemTime);

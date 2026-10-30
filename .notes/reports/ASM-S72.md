@@ -4,13 +4,13 @@ Base 1524905b0 (origin/reverse/interior_c). Result table: `.notes/asm_sweep/S72.
 
 | row | verdict | commit |
 |---|---|---|
-| CCheckpoints::PlaceMarker 0x722C40 | FIXED (IsUsed in lookup, strict sqrt<2) | fe1b307a1 |
-| CCheckpoints::Update 0x7229C0 | FIXED (TORUSTHROUGH step 0.01 not 0.1, UPDOWN/DOWN tests) | b79a04c81 |
-| CCheckpoint::Render 0x725C00 | FIXED (ENDTUBE zwrite/valpha, torus fade test, ring offsets) | b79a04c81 |
-| C3dMarkers::PlaceMarker 0x725120 | FIXED (4 deviations) | 4ddfc9ba6 |
-| C3dMarkers::PlaceMarkerCone 0x726D40 | FIXED (sqrt < 1.6, NaN) | 4ddfc9ba6 |
-| C3dMarkers::DirectionArrowsDraw 0x7211F0 | FIXED (normalised orientation matrix) | 4ddfc9ba6 |
-| C3dMarkers::Update 0x7227B0 | FIXED (single rounding) | 4ddfc9ba6 |
+| CCheckpoints::PlaceMarker 0x722C40 | FIXED (IsUsed in lookup, strict sqrt<2) | d089d2639 |
+| CCheckpoints::Update 0x7229C0 | FIXED (TORUSTHROUGH step 0.01 not 0.1, UPDOWN/DOWN tests) | 12333f62d |
+| CCheckpoint::Render 0x725C00 | FIXED (ENDTUBE zwrite/valpha, torus fade test, ring offsets) | 12333f62d |
+| C3dMarkers::PlaceMarker 0x725120 | FIXED (4 deviations) | 8601b6fcc |
+| C3dMarkers::PlaceMarkerCone 0x726D40 | FIXED (sqrt < 1.6, NaN) | 8601b6fcc |
+| C3dMarkers::DirectionArrowsDraw 0x7211F0 | FIXED (normalised orientation matrix) | 8601b6fcc |
+| C3dMarkers::Update 0x7227B0 | FIXED (single rounding) | 8601b6fcc |
 | everything else (Conversations, Credits, remaining 3dMarkers, Checkpoints Init/Shutdown/Render/DeleteCP/UpdatePos) | MATCH | - |
 
 ## Notes

@@ -1,0 +1,11 @@
+addr	function	verdict	asm range	note	fix commit
+0x57E240	CMenuManager::DisplayHelperText	MATCH	0x57E240-0x57E46B (all)	scale/style/orientation, key vs fading helper text (10 ms step, -2 alpha, 255 cap, reset at <1), helper jump table (1 APP,2 HRD,3 RSO,4 SCF,5 SCS,6 STS) and action-type table (BACK, MENU/JOYPAD/FOOT/CAR, USER_TRACKS_SCAN, RESOLUTION, default FET_MIG/FEH_SSA with map Y 2.0) all equal	-
+0x579330	CMenuManager::MessageScreen	MATCH	0x579330-0x57942F (all)	camera begin / black rect (twice when !cameraUpdateStarted) / SmallMessageScreen / DrawFonts equal (CFont::DrawFonts is RenderFontBuffer in the port)	-
+0x574010	CMenuManager::SmallMessageScreen	NOT_REACHED	-	budget; only its DrawWindow call shape was seen (DrawWindow itself fixed under S96c)	-
+0x575130	CMenuManager::PrintMap	NOT_REACHED	-	budget	-
+0x574900	CMenuManager::PrintStats	NOT_REACHED	-	budget	-
+0x576320	CMenuManager::PrintBriefs	NOT_REACHED	-	budget	-
+0x5746F0	CMenuManager::PrintRadioStationList	NOT_REACHED	-	budget	-
+0x580E00	CMenuSystem::DisplayStandardMenu	NOT_REACHED	-	budget	-
+0x5816E0	CMenuSystem::DisplayGridMenu	NOT_REACHED	-	budget	-
+0x5820E0	CMenuSystem::FillGridWithCarColours	NOT_REACHED	-	budget	-

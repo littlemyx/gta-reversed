@@ -1,0 +1,10 @@
+addr	function	verdict	asm range	note	fix commit
+0x5905E0	CLoadingScreen::Update	NOT_REACHED	-	no caller (see ASM-S96); not compared	-
+0x57B750	CMenuManager::DrawBackground	FIXED	0x57B750-0x57C22A (all but the DrawBuildInfo NOTSA block)	sprite jump table (screen->sprite) and the rect jump table equal; fixed: controller error branch returns (no scan bar/mouse cursor drawn), scan bar y 245..250 not 246..251, ERROR scan state only reset (port forced FEA_SCF; kept under FIX_BUGS), map crosshair test ftol-int strict, odd-width save background int half width; error text via SmallMessageScreen == MessageScreen(false,false) + DrawFonts	8dd83653c
+0x5794A0	CMenuManager::DrawStandardMenus	NOT_REACHED	-	budget (large function, not read)	-
+0x573EE0	CMenuManager::DrawWindow	FIXED	0x573EE0-0x574009 (all)	title scale via SetScaleForCurrentLanguage (port SetScale); rect/colour/edge/style/min(top,bottom) equal	9ad43d6bf
+0x578F50	CMenuManager::DrawWindowedText	FIXED	0x578F50-0x579319 (all)	right-justify wrap x-wrap, box alpha 190, message colour HUD light blue, exe scale/padding constants; wrap/centre/rect/title position equal	947c8a0fd
+0x57D8D0	CMenuManager::DrawControllerScreenExtraText	FIXED	0x57D8D0-0x57DB0E (all)	int x, unstretched Y for the "?" flash, combo text once after the loop at last x / below the last row	987412527
+0x57E6E0	CMenuManager::DrawControllerBound	FIXED	0x57E6E0-0x57EDF4 (all)	car/foot action jump tables decoded and equal to the port tables (foot idx 22/23 depend on method != 0); only the int truncation of x/y differed; unbound/combo/blink/helper logic equal	5b1b74289
+0x57F300	CMenuManager::DrawControllerSetupScreen	FIXED	0x57F300-0x57FD6E (all)	key slot table (44 entries) equal; SELECT click on a non-selected row stays pending (port consumed it); other hover/back-button/colour/position code equal	f88e92eab
+0x57D8EF	CMenuManager::GetMaxAction/GetVerticalSpacing (NOTSA helpers, extra)	FIXED	0x57D8EF-0x57D933	method byte only tested against 0: non-zero is joypad (28 actions, spacing 11); port hit NOTSA_UNREACHABLE	f03f16465

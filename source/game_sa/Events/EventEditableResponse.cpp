@@ -75,13 +75,18 @@ void CEventEditableResponse::InformRespectedFriends(CPed* ped) {
         return;
     }
 
-    uint32 numPedsToScan = ped->GetIntelligence()->m_nDmNumPedsToScan;
+    // exe 0x4B2B26-0x4B2B49: m_nDmNumPedsToScan is the MAXIMUM NUMBER OF FRIENDS TO INFORM (the loop below counts successful CInformFriendsEventQueue::Add calls and stops once the
+    // count reaches it), NOT the number of scanner entries to look at: all 16 entries (0x4B2CB1 `cmp ecx, 0x10`) are walked until enough friends were informed
+    const uint32 numPedsToScan = ped->GetIntelligence()->m_nDmNumPedsToScan;
     if (!numPedsToScan) {
         return;
     }
+    const float   dmRadius        = ped->GetIntelligence()->m_fDmRadius;
+    const uint32  pedRespect      = ped->GetAcquaintance().GetAcquaintances(ACQUAINTANCE_RESPECT); // exe 0x4B2B59: read once, before the loop
 
+    uint32 numInformed = 0;
     CEntity** entities = ped->GetIntelligence()->GetPedEntities();
-    for (size_t i = 0; i < numPedsToScan; i++) {
+    for (size_t i = 0; i < MAX_NUM_ENTITIES && numInformed < numPedsToScan; i++) {
         CEntity* entity = entities[i];
         if (!entity) {
             continue;
@@ -98,23 +103,31 @@ void CEventEditableResponse::InformRespectedFriends(CPed* ped) {
                 continue;
             }
         } else {
-            uint32 respect  = ped->GetAcquaintance().GetAcquaintances(ACQUAINTANCE_RESPECT);
-            bool   bFlagSet = respect & CPedType::GetPedFlag(entityPed->m_nPedType);
-            if (entityPed->IsPlayer()) {
-                uint32 entityAcquaintances = entityPed->GetAcquaintance().GetAcquaintances(ACQUAINTANCE_RESPECT);
-                bFlagSet                   = entityAcquaintances & CPedType::GetPedFlag(ped->m_nPedType);
+            // exe 0x4B2BDC-0x4B2C20: the test is on `ped` (not on the scanned entity): a player ped uses the ENTITY's respect mask against the player's own type flag,
+            // anyone else uses its own respect mask against the entity's type flag
+            uint32 mask;
+            if (ped->IsPlayer()) {
+                mask = entityPed->GetAcquaintance().GetAcquaintances(ACQUAINTANCE_RESPECT) & CPedType::GetPedFlag(ped->m_nPedType);
+            } else {
+                mask = CPedType::GetPedFlag(entityPed->m_nPedType) & pedRespect;
             }
-            if (!bFlagSet) {
+            if (!mask) {
                 continue;
             }
         }
 
-        float fDmRadius = ped->GetIntelligence()->m_fDmRadius;
-        if (sq(fDmRadius) > DistanceBetweenPointsSquared(entity->GetPosition(), ped->GetPosition())) {
+        // exe 0x4B2C46-0x4B2C7B: d = ped - entity, |d|^2 = (dz^2 + dx^2) + dy^2, needs radius^2 > |d|^2 (NaN is rejected)
+        const auto& entityPos = entity->GetPosition();
+        const auto& pedPos    = ped->GetPosition();
+        const float dx = pedPos.x - entityPos.x, dy = pedPos.y - entityPos.y, dz = pedPos.z - entityPos.z;
+        const float distSq = (dz * dz + dx * dx) + dy * dy;
+        if (sq(dmRadius) > distSq) {
             auto clonedEvent                = static_cast<CEventEditableResponse*>(Clone());
             clonedEvent->m_TaskId           = TASK_NONE;
             clonedEvent->m_bAddToEventGroup = false;
-            if (!CInformFriendsEventQueue::Add(entityPed, clonedEvent)) {
+            if (CInformFriendsEventQueue::Add(entityPed, clonedEvent)) {
+                numInformed++;
+            } else {
                 delete clonedEvent;
             }
         }

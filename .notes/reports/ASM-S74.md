@@ -1,0 +1,14 @@
+# ASM-S74 (RoadBlocks, StuntJumpManager, SetPiece/SetPieces; phase 2) - 2026-10-30
+Result: 41 rows: 14 MATCH, 7 FIXED (7 commits + 1 info), 20 NOT_REACHED (budget). Table in S74.result.tsv.
+Fixes (exe range, one line each):
+- CRoadBlocks::GenerateRoadBlocks (0x4629E0-0x4632E7): batch end was `(c + c%16)/16` (exe: plain c/16); chance roll `GetRandomNumberInRange(128)` vs exe `rand()&0x7F`; partner search walked all 325 nodes (exe: NumRoadBlocks), `dot <= 0.7` lacked the exe fabs, kept going after the first partner (exe stops) and the fallback own-width block used the partner direction instead of the node's own.
+- CRoadBlocks::GenerateRoadBlockPedsForCar (0x461170-0x461920): cop road block peds never got `m_bDontPursuit = true`; non-cop peds and the city-cop fallback skipped the `SetCurrentWeapon(PISTOL)`; gang weapon used a uniform pick (exe inline: <33 / <66 / rest with 3 weapons, 50 split with 2); zones with no gang strength skipped the block (exe continues with model 0).
+- CSetPiece::TryToGenerateCopPed (0x499690): inverted collision test (cop only appeared when something blocked the spot).
+- CSetPiece::Update (0x499A80-0x49A9D4): cool-down 4000 vs exe 40000 ms; ped (1/2) set pieces need wanted>=1 AND on foot, quick-car set pieces wanted>=2 AND in a vehicle (port `&&`: almost always spawned); quick cars got an initial speed + destination the exe never sets and a >= vs strict 2D dot; slow 2-car piece generated+furnished car 1 (with occupants) before knowing car 2 exists; the cool-down was started on partial failure.
+- CSetPieces::AddOne (0x499500): the 2nd/3rd coordinate pairs were stored swapped (exe order spawn1, spawn2, target1, target2; script command binds positionally).
+- CStuntJumpManager::Update (0x49C490): car-jump voice line test inverted (played every frame except the 1000 ms crossing); END state returned early when the player had no vehicle (stuck slow motion); loop `break` after the first start box; big message order.
+- CStuntJumpManager::AddOne (0x49CB40): placement-new on a null pool slot.
+MATCH: RoadBlocks Init/ClearScriptRoadBlocks/ClearSpaceForRoadBlockObject/CreateRoadBlockBetween2Points/RegisterScriptRoadBlock, SetPiece::TryToGenerateCopCar, SetPieces Init/Load/Save/Update, StuntJump Init/Shutdown/ShutdownForRestart/Save/Load.
+Open (NOT_REACHED, nothing compared): MissionCleanup x3, OnscreenCounterEntry/OnscreenTimer x5, PatrolRoute x4, PlaceName, TagManager x4, UserDisplay x2.
+Not verified at runtime: set pieces / road blocks only trigger with a wanted level (not covered by the combat regress); see gate section of the result.
+Gate: StandaloneRelease build OK; PortableWin64 compile of RoadBlocks/SetPiece/SetPieces/StuntJumpManager 0 errors; wave2_oracle_test (RW_EXE_ORACLE=GTA_EXE=compact exe, rebuilt after the last source edit): 1142 functions, 0 mismatches at PC24/PC53; combat regress PASS=14 (set pieces / road blocks need a wanted level on a specific spot, not exercised there).

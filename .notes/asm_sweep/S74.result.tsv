@@ -1,0 +1,42 @@
+addr	function	verdict	asm range	note	fix commit
+0x468560	CMissionCleanup::Process	NOT_REACHED	-	budget	-
+0x4637C0	CMissionCleanup::FindFree	NOT_REACHED	-	budget	-
+0x4652D0	CMissionCleanup::CheckIfCollisionHasLoadedForMissionObjects	NOT_REACHED	-	budget	-
+0x44CA90	COnscreenCounterEntry::ProcessForDisplayCounter	NOT_REACHED	-	budget	-
+0x44CD50	COnscreenTimer::AddClock	NOT_REACHED	-	budget	-
+0x44CE60	COnscreenTimer::ClearClock	NOT_REACHED	-	budget	-
+0x44CDA0	COnscreenTimer::AddCounter	NOT_REACHED	-	budget	-
+0x44CE80	COnscreenTimer::ClearCounter	NOT_REACHED	-	budget	-
+0x41B810	CPatrolRoute::operator new	NOT_REACHED	-	budget	-
+0x41B820	CPatrolRoute::operator delete	NOT_REACHED	-	budget	-
+0x66D4B0	CPatrolRoute::Set	NOT_REACHED	-	budget	-
+0x66D550	CPatrolRoute::Reverse	NOT_REACHED	-	budget	-
+0x571F20	CPlaceName::Process	NOT_REACHED	-	budget	-
+0x461100	CRoadBlocks::Init	MATCH	0x461100-0x461180 (all)	-	-
+0x460EC0	CRoadBlocks::ClearScriptRoadBlocks	MATCH	0x460EC0-0x460EDF (all)	-	-
+0x461020	CRoadBlocks::ClearSpaceForRoadBlockObject	MATCH	0x461020-0x4610F5 (all)	-	-
+0x4619C0	CRoadBlocks::CreateRoadBlockBetween2Points	MATCH	0x4619C0-0x462A1B (all)	only NaN-only differences; car/barrier/wreck creation, rand order and constants equal	-
+0x461170	CRoadBlocks::GenerateRoadBlockPedsForCar	FIXED	0x461170-0x461920 (all)	cops: m_bDontPursuit missing; pistol set for non-cop peds and the city-cop fallback; gang weapon = exe inline 33/66 (50) roll (port: uniform pick); no-strength zone keeps model 0	035e6f321
+0x4629E0	CRoadBlocks::GenerateRoadBlocks	FIXED	0x4629E0-0x4632E7 (all)	batch end counter/16 (port counter+counter%16 over 16), chance roll rand()&0x7F, partner loop bound NumRoadBlocks, |dot|>0.7, break after first partner, fallback own-width block	d92336719
+0x460DF0	CRoadBlocks::RegisterScriptRoadBlock	MATCH	0x460DF0-0x460EBC (all)	-	-
+0x499690	CSetPiece::TryToGenerateCopPed	FIXED	0x499690-0x499789 (all)	collision test inverted (cop only generated when something collides)	8d4fc88c5
+0x4998A0	CSetPiece::TryToGenerateCopCar	MATCH	0x4998A0-0x499A7F (all)	-	-
+0x499A80	CSetPiece::Update	FIXED	0x499A80-0x49A9D4 (all)	cool-down 40000 not 4000; wanted/vehicle gates (&& instead of ||) for ped and quick-car types; quick cars: no m_speed/destination, strict 2D dot; slow cars: both generated before setup; lastGen only on full success	5ed8ea00b
+0x499500	CSetPieces::AddOne	FIXED	0x499500-0x499687 (all)	pairs stored spawn1, spawn2, target1, target2 (port swapped 2nd/3rd)	4caaf7890
+0x4994F0	CSetPieces::Init	MATCH	0x4994F0-0x4994FA (all)	-	-
+0x5D3CA0	CSetPieces::Load	MATCH	0x5D3CA0-0x5D3CBF (all)	-	-
+0x5D3C70	CSetPieces::Save	MATCH	0x5D3C70-0x5D3C9B (all)	-	-
+0x49AA00	CSetPieces::Update	MATCH	0x49AA00-0x49AA63 (all)	-	-
+0x49CA50	CStuntJumpManager::Init	MATCH	0x49CA50-0x49CA9F (all)	-	-
+0x49CBC0	CStuntJumpManager::Shutdown	MATCH	0x49CBC0-0x49CBFC (first part)	pool flush + null; tail not re-read	-
+0x49CB10	CStuntJumpManager::ShutdownForRestart	MATCH	0x49CB10-0x49CB3F (all)	-	-
+0x5D5570	CStuntJumpManager::Save	MATCH	0x5D5570-0x5D55BF (all)	-	-
+0x5D5920	CStuntJumpManager::Load	MATCH	0x5D5920-0x5D5965 (all)	-	-
+0x49CB40	CStuntJumpManager::AddOne	FIXED	0x49CB40-0x49CBB2 (all)	placement-new on null when the pool is full	532806047
+0x49C490	CStuntJumpManager::Update	FIXED	0x49C490-0x49C8E0 (all)	car-jump voice line test inverted; END state needed a vehicle; no break after first matching jump; message order	242a11dcc
+0x49CE10	CTagManager::SetupAtomic	NOT_REACHED	-	budget	-
+0x49CE40	CTagManager::RenderTagForPC	NOT_REACHED	-	budget	-
+0x5D3D60	CTagManager::Save	NOT_REACHED	-	budget	-
+0x5D3DA0	CTagManager::Load	NOT_REACHED	-	budget	-
+0x571EE0	CUserDisplay::Init	NOT_REACHED	-	budget	-
+0x5720A0	CUserDisplay::Process	NOT_REACHED	-	budget	-

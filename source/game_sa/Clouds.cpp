@@ -265,14 +265,18 @@ void CClouds::MovingFogRender() {
         const CVector fogRight = camRight * halfSize;
 
         // Original code used a switch case, we're going to use a lookup table to make it nicer. (And faster)
+        // 0x716EE0..: each corner is one unspilled FPU chain over the (float) right/up/pos: (right + up) + pos, (right + pos) - up, (pos - right) - up, (pos - right) + up
+        const auto Chain = [&](auto&& f) {
+            return CVector{ (float)f(fogRight.x, fogUp.x, pos.x), (float)f(fogRight.y, fogUp.y, pos.y), (float)f(fogRight.z, fogUp.z, pos.z) };
+        };
         const struct { CVector pos; RwTexCoords uv; } corners[]{
-            { fogRight + fogUp + pos,  {0.f, 0.f} }, // Top right (0x716F00: (right + up) + pos, the others are (pos +- right) +- up)
-            { pos + fogRight - fogUp,  {1.f, 0.f} }, // Bottom right
-            { pos - fogRight - fogUp,  {1.f, 1.f} }, // Bottom left
-            { pos - fogRight + fogUp,  {0.f, 1.f} }, // Top left
+            { Chain([](float r, float u, float p) { return ((x87d)r + u) + p; }), {0.f, 0.f} }, // Top right
+            { Chain([](float r, float u, float p) { return ((x87d)r + p) - u; }), {1.f, 0.f} }, // Bottom right
+            { Chain([](float r, float u, float p) { return ((x87d)p - r) - u; }), {1.f, 1.f} }, // Bottom left
+            { Chain([](float r, float u, float p) { return ((x87d)p - r) + u; }), {0.f, 1.f} }, // Top left
         };
 
-        const auto alpha = NOTSA_FTOL(int32, MovingFog_GetFXIntensity() * ms_mf.m_fIntensity[fogIdx] * CurrentFogIntensity);
+        const auto alpha = notsa::detail::Ftol((x87d)MovingFog_GetFXIntensity() * ms_mf.m_fIntensity[fogIdx] * CurrentFogIntensity); // 0x716E?? fld; fmul; fmul; _ftol (no spill)
         for (const auto& vertIdx : ms_mf.m_nPrimIndices) {
             const auto& corner = corners[vertIdx];
 

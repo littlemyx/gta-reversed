@@ -200,6 +200,6 @@
 | S46b | rest of S46 | 3 | done (2 M, 1 fixed) | EventHandler.cpp |
 | S59b | rest of S59 | 15 | done (13 M, 2 fixed) | Stats.cpp |
 | S45b | rest of S45 | 11 | pending | Entity.cpp, EntryExitManager.cpp |
-| S60b | rest of S60 | 17 | pending | Task.cpp, TaskAllocator.cpp, TaskAllocatorAttack.cpp, TaskAllocatorKillOnFoot.cpp, TaskAllocatorKillThreatsBasic.cpp, TaskAllocatorKillThreatsBasicRandomGroup.cpp, TaskAllocatorKillThreatsDriveby.cpp, TaskAllocatorPlayerCommandAttack.cpp, TaskComplex.cpp, TaskManager.cpp |
+| S60b | rest of S60 | 17 | done (14 M, 3 fixed) | Task.cpp, TaskAllocator.cpp, TaskAllocatorAttack.cpp, TaskAllocatorKillOnFoot.cpp, TaskAllocatorKillThreatsBasic.cpp, TaskAllocatorKillThreatsBasicRandomGroup.cpp, TaskAllocatorKillThreatsDriveby.cpp, TaskAllocatorPlayerCommandAttack.cpp, TaskComplex.cpp, TaskManager.cpp |
 | S65b | rest of S65 | 2 | pending | WeaponEffects.cpp, WeaponInfo.cpp |
 | S57e | rest of S57d | 6 | pending | Replay.cpp |

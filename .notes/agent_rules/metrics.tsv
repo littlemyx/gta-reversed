@@ -398,3 +398,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S63	v6	asm sweep	327385	162	23	UseGun burst length wrong field, UpsideDownCarCheck inverted step-out test + lost slots, Zones::Update every frame after 5s, CarGenerators Load counter, VehicleAnimGroup UNREACHABLE; S65 weapon anim loop sum order; 37 M
 2026-10-30	ASM-S66	v6	asm sweep	281151	108	27	S66 script Locate*/InArea NaN pass (9 rows), angled-area zero-length normalise; S57d RetrievePedAnimation exe-constant multiply, NumAnims check; 4 M
 2026-10-30	ASM-S59b	v6	asm sweep	226173	88	25	Stats::Save stale favourite-radio list, DisplayScriptStatUpdateMessage NaN; 13 M
+2026-10-30	ASM-S60b	v6	asm sweep	0	0	0	KillOnFoot look-about 1000+rand ms + stealth skip, Attack::ProcessGroup virtual vs direct re-alloc, PlayerCommandAttack ped type <0 path; 14 M

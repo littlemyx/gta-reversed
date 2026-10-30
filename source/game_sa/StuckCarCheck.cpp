@@ -124,7 +124,9 @@ void CStuckCarCheck::Process() {
             CVector curPos    = vehicle->GetPosition();
             CVector distMoved = curPos - car.LastPos;
 
-            car.CarStuck    = distMoved.Magnitude() < car.StuckRadius;
+            // exe 0x465712-0x465722: dx*dx + (dy*dy + dz*dz), the CVector::Magnitude sum order is (dx*dx + dy*dy) + dz*dz
+            const float distSq = distMoved.x * distMoved.x + (distMoved.y * distMoved.y + distMoved.z * distMoved.z);
+            car.CarStuck    = std::sqrt(distSq) < car.StuckRadius;
             car.LastPos     = curPos;
             car.LastChecked = CTimer::m_snTimeInMilliseconds;
         }
@@ -162,9 +164,9 @@ void CStuckCarCheck::Process() {
             continue;
         }
 
-        for (int32 i = 0; i < car.NumberOfNodesToCheck; i++) { // m_nNumberOfNodesToCheck 0 is ignored
+        for (int32 i = 0; i < car.NumberOfNodesToCheck; i++) { // m_nNumberOfNodesToCheck 0 is ignored; exe 0x46585c-0x46586b searches around the CURRENT vehicle position (not LastPos)
             CVector newCoords{};
-            auto    node = ThePaths.FindNthNodeClosestToCoors(car.LastPos, PATH_TYPE_VEH, 999999.88f, false, true, i, false, false, nullptr);
+            auto    node = ThePaths.FindNthNodeClosestToCoors(vehicle->GetPosition(), PATH_TYPE_VEH, 999999.88f, false, true, i, false, false, nullptr);
             if (ThePaths.FindNodeCoorsForScript(newCoords, node)) {
                 auto newHeading = ThePaths.FindNodeOrientationForCarPlacement(node);
                 if (CStuckCarCheck::AttemptToWarpVehicle(vehicle, &newCoords, newHeading)) {

@@ -89,3 +89,4 @@
 - Pacing: <=2 sweep agents (quota). Running: S96, S115. Left: S97 (after S96), S117, S101b (3 rows).
 - Gate 67dedce7a GREEN (74/74, soak OK, 70/70, portable 0); C:\gta-play = 67dedce7a. Gate on 09b19a8c6 started (S96, S97, S101b, S115, S117).
 - Phase 3 left: S97b (running), S96c (8 Draw rows, after S97b).
+- Gate 09b19a8c6 GREEN (74/74, soak OK, 70/70, portable 0); C:\gta-play = 09b19a8c6. Gate on ea87a5842 started (S97b, S97c, S97d/S96c). S97e+S96d (last menu rows) running.

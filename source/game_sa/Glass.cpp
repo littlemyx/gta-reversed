@@ -62,7 +62,8 @@ bool CGlass::HasGlassBeenShatteredAtCoors(CVector point) {
             FindWindowSectorList(CWorld::GetSector(sectorX, sectorY).Dummies, maxDist, entity, point);
         }
     }
-    return entity && !entity->GetIsTypeDummy() && entity->AsObject()->objectFlags.bHasBrokenGlass;
+    // exe 0x71CD8A-0x71CDF0: `(m_nObjectFlags >> 5) & 1` = bGlassBrokenAltogether (the port tested bHasBrokenGlass, bit 4)
+    return entity && !entity->GetIsTypeDummy() && entity->AsObject()->objectFlags.bGlassBrokenAltogether;
 }
 
 // 0x71C2B0

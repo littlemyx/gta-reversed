@@ -1,6 +1,6 @@
 addr	function	verdict	asm range	note	fix commit
 0x4A1940	RenderHeatHaze	UNSURE	not compared	budget: asm not read; port annotated with exe constants	-
-0x4A21D0	UpdateParticle	FIXED	0x4A21D0-0x4A24CD (all)	dt/pos/ProcessMovementInfo arg order and rotation pairs verified; NaN arms of the life test, underwater z test and non-positive pair tests now follow fcom/test ah	39f79ff48
+0x4A21D0	UpdateParticle	FIXED	0x4A21D0-0x4A24CD (all)	dt/pos/ProcessMovementInfo arg order and rotation pairs verified; NaN arms of the life test, underwater z test and non-positive pair tests now follow fcom/test ah	c3229ea12
 0x4A2B40	CreateInstance	MATCH	(all)	new FxEmitter_c (0x14)	-
 0x4A2BC0	Update	MATCH	(all)	kill FX_3->KILLED, skip when play status 2, next saved before removal	-
 0x5C25F0	Load	MATCH	(all)	FxPrimBP::Load, LODSTART/LODEND *64 -> +0x38/+0x3A	-
@@ -33,10 +33,10 @@ addr	function	verdict	asm range	note	fix commit
 0x4AA540	FxSystem_c::AddParticle	MATCH	(all)	rand roll vs quality, brightness, prim vslot 4 (Mat), no enabled test	-
 0x4AA890	FxSystem_c::CopyParentMatrix	MATCH	(all)		-
 0x4AA8C0	FxSystem_c::GetCompositeMatrix	MATCH	(all)		-
-0x4AA930	FxSystem_c::ForAllParticles	FIXED	0x4AA930-0x4AA99F (all)	callback runs for prim type 0; port tested m_Type != 0 so it never ran	eed0fbc53
+0x4AA930	FxSystem_c::ForAllParticles	FIXED	0x4AA930-0x4AA99F (all)	callback runs for prim type 0; port tested m_Type != 0 so it never ran	eb06d3896
 0x4AAAD0	FxSystem_c::GetBoundingSphereWld	MATCH	(all)		-
-0x4AAB80	FxSystem_c::SetBoundingSphere	FIXED	0x4AAB80-0x4AABE7 (all)	copy 5 dwords into own sphere (allocate if none); port stored the pointer / left a new sphere uninitialised	ff2dd73e7
-0x4AABF0	FxSystem_c::ResetBoundingSphere	FIXED	0x4AABF0-0x4AAC46 (all)	copy BP sphere into own sphere; port aliased the BP pointer	2848ffa9e
+0x4AAB80	FxSystem_c::SetBoundingSphere	FIXED	0x4AAB80-0x4AABE7 (all)	copy 5 dwords into own sphere (allocate if none); port stored the pointer / left a new sphere uninitialised	0e524a954
+0x4AABF0	FxSystem_c::ResetBoundingSphere	FIXED	0x4AABF0-0x4AAC46 (all)	copy BP sphere into own sphere; port aliased the BP pointer	e5967d384
 0x4AAC90	FxSystem_c::DoFxAudio	MATCH	(all)	13 name keys in order, events 0x82..0x8C	-
 0x4AAF30	FxSystem_c::IsVisible	MATCH	(all)		-
 0x4AAF70	FxSystem_c::Update	MATCH	(all)	kill states, cam distance, cull, play modes 0-3, loop interval, prevCulled +0.25, prim Update(time,dt), audio; NaN arms checked	-

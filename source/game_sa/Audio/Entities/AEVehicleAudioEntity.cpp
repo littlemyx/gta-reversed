@@ -3278,17 +3278,18 @@ void CAEVehicleAudioEntity::UpdateRotorFreq(float freq, float stepUp, float step
         : notsa::step_to(m_CurrentRotorFrequency, freq, stepUp, stepDown, notsa::bugfixes::GenericFrameRate);
 }
 
-// notsa
+// notsa - Volume (dB) of the "distant" aircraft sound. Exe copy: 0x4FD577-0x4FD5F1 (prop), 0x4FF12E-0x4FF1E0 (heli): distance d = sqrt((dx^2+dy^2)+dz^2),
+// d >= 128: log10(base)*20 + 8; 48 <= d < 128: (log10(base)*20 + log10((d - 48) * 0.0125)*20) + 8 (fade-in); d < 48: -100 (silent)
 auto GetAircraftDistantSoundVolume(const CPhysical* v, float baseVol) {
-    const auto distSq = CVector::DistSqr(TheCamera.GetPosition(), v->GetPosition());
-    if (distSq <= sq(48.f)) {
+    const auto dist = std::sqrtf(CVector::DistSqr(TheCamera.GetPosition(), v->GetPosition()));
+    if (!(dist < 128.f)) { // `fcomp 128; test ah, 5; jp` also skips for NaN
+        return CAEAudioUtility::AudioLog10(baseVol) * 20.f + 8.f;
+    }
+    if (dist < 48.f) { // 0x862D38
         return -100.f;
     }
-    auto vol = baseVol;
-    if (distSq <= 128.f) {
-        vol += invLerp(48.f, 128.f, std::sqrtf(distSq)); // NB: I think this should be substracted (The closer the plane is, the less volume the distant sound should have)
-    }
-    return CAEAudioUtility::AudioLog10(vol) * 20.f + 8.f;
+    const auto fade = (dist - 48.f) * 0.0125f; // 0x85A5C4 (0x3C4CCCCD): multiplied, not `invLerp(48, 128, d)` (divide by 80)
+    return (CAEAudioUtility::AudioLog10(baseVol) * 20.f + CAEAudioUtility::AudioLog10(fade) * 20.f) + 8.f;
 }
 
 // notsa - See 0x4FE5E5
@@ -3547,7 +3548,7 @@ void CAEVehicleAudioEntity::ProcessDummyOrPlayerProp(tVehicleParams& vp, bool is
         AE_SOUND_AIRCRAFT_DISTANT,
         SND_BANK_SLOT_VEHICLE_GEN,
         16,
-        GetAircraftDistantSoundVolume(plane, propStalledVol), // <- 0x4FDC90
+        propStalledVol + GetAircraftDistantSoundVolume(plane, propSpeedFactor), // <- 0x4FDC90: stall volume + distant volume (base = prop speed factor)
         1.f
     );
 }

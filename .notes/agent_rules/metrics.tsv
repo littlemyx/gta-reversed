@@ -445,3 +445,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	SYSTEMIC-9	v6	systemic	177804	79	11	175 *_s sites, 26 fixed (11 commits) incl. ReadTextLabelFromScript full-length labels, LoadMissionText 8-char names; not tested/landed -> SYSTEMIC-9b
 2026-10-30	ASM-S83b	v6	asm sweep	398573	154	44	CancelAllVehicleEngineSounds(except) cancelled only the excepted sound, new player engine sound leaked old one, BMX skid speed/volume swapped, boat in-water bit, train speed sign, stall 410; 7 M
 2026-10-30	SYSTEMIC-9b	v6	systemic	115894	44	14	reviewed + tested + landed SYSTEMIC-9 (11 fixes); residual: ms_cutsceneName char[8] formatted with {} (8-char name over-reads)
+2026-10-30	ASM-S90	v6	asm sweep	0	0	0	MP3 bank sound length end offset, finished requests not reset (later same-bank requests ignored), missing PAKFILES returned true, ColDef refcount int16 signed; ColStore/CDirectory MATCH; 32 M

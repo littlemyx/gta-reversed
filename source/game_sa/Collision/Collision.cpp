@@ -2522,9 +2522,15 @@ float GetNearestDistanceOfPedSphereToCameraNearClip(CPed* ped) {
 
     // Now find the closest sphere's distance sq
     float ret = 1000000.f; // 0x50D5AA: 0x497423F0, NOT FLT_MAX
+    size_t idx = 0;
     for (auto& sp : hitCM->GetData()->GetSpheres()) {
-        // 0x50D620: `center . front` (terms z, x, y) unrounded, then `- offset - radius - nearClip`, rounded to a float when spilled
-        const x87d dot = (x87d)sp.m_vecCenter.z * cam.m_vecFront.z + (x87d)sp.m_vecCenter.x * cam.m_vecFront.x + (x87d)cam.m_vecFront.y * sp.m_vecCenter.y;
+        // 0x50D620: `center . front` unrounded, then `- offset - radius - nearClip`, rounded to a float when spilled.
+        // The exe loop is unrolled 6x (2 passes over 12 spheres) and the term order differs inside the body: the first two spheres
+        // of a pass sum z, x, y (0x50D620, 0x50D65C), the other four z, y, x (0x50D698..0x50D74F)
+        const x87d zt = (x87d)sp.m_vecCenter.z * cam.m_vecFront.z;
+        const x87d xt = (x87d)sp.m_vecCenter.x * cam.m_vecFront.x;
+        const x87d yt = (x87d)sp.m_vecCenter.y * cam.m_vecFront.y;
+        const x87d dot = (idx++ % 6) < 2 ? (zt + xt) + yt : (zt + yt) + xt;
         const float  v   = (float)(((dot - offset) - sp.m_fRadius) - nearClp);
         if (v < ret) { // NaN keeps the old value
             ret = v;

@@ -99,7 +99,7 @@ void C_PcSave::PopulateSlotInfo() {
 uint32 C_PcSave::SaveSlot(int32 slot) {
     CGenericGameStorage::MakeValidSaveName(slot);
     s_PcSaveHelper.error = eErrorCode::NONE;
-    CFileMgr::SetDirMyDocuments();
+    InitUserDirectories(); // exe 0x619075: creates the user dirs only, it does NOT chdir (SetDirMyDocuments would)
     CGenericGameStorage::DoGameSpecificStuffBeforeSave();
     return CGenericGameStorage::GenericSave() ? 0 : 2;
 }

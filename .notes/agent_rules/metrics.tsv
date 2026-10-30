@@ -449,4 +449,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S94	v6	asm sweep	273746	95	31	FxSystem ForAllParticles test inverted (bbox fallback always), bounding sphere aliased blueprint ptr (double free) / uninit, emitter NaN arms; fxp loaders MATCH; 39 M
 2026-10-30	ASM-S95	v6	asm sweep	187029	56	8	HUD bars/stars/area name/colours all MATCH, no code change; 15 M
 2026-10-30	ASM-S93b	v6	asm sweep	174747	71	19	RotateVecIntoVec reference axis exe constants vs normalised (3,4,5); wheel fx + render batch MATCH; 6 M
-2026-10-30	ASM-S98	v6	asm sweep	0	0	0	TimeInfo FindOtherTimeModel picked non-time model (day/night pair hidden), mission-pack text chunk loop stopped after 1st + relocated wrong keys, SetAnimFile stricmp; 31 M
+2026-10-30	ASM-S98	v6	asm sweep	256274	85	24	TimeInfo FindOtherTimeModel picked non-time model (day/night pair hidden), mission-pack text chunk loop stopped after 1st + relocated wrong keys, SetAnimFile stricmp; 31 M

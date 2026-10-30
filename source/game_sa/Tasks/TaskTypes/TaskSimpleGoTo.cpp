@@ -54,11 +54,15 @@ void CTaskSimpleGoTo::SetUpIK(CPed* ped)
             if (vecDistance.SquaredMagnitude() > 9.0f) {
                 CVector direction(vecDistance);
                 direction.Normalise();
-                if (DotProduct(&direction, &ped->GetForward()) < ms_fLookAtThresholdDotProduct) {
+                // exe 0x667BB6-0x667BD2: dot summed z, y, x in the FPU, compared strict-less unrounded
+                const auto& fwd = ped->GetForward();
+                const x87d dot = ((x87d)direction.z * fwd.z + (x87d)direction.y * fwd.y) + (x87d)direction.x * fwd.x;
+                if (dot < (x87d)ms_fLookAtThresholdDotProduct) {
                     CVector position = direction + direction;
                     position.x += m_vecTargetPoint.x;
                     position.y += m_vecTargetPoint.y;
-                    position.z += ped->GetPosition().z + 0.61f;
+                    // exe 0x667C02-0x667C7A: z = (2*dir.z + ped.z) + 0.61f (0x86FD40), summed in the FPU before the store (port: 2*dir.z + (ped.z + 0.61f))
+                    position.z = (float)(((x87d)position.z + ped->GetPosition().z) + 0.61f);
                     g_ikChainMan.LookAt("TaskGoTo", ped, nullptr, 5000, BONE_UNKNOWN, &position, false, 0.25f, 500, 3, false);
                     gotoFlags.m_bIsIKChainSet = true;
                 }

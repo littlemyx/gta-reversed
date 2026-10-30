@@ -1,0 +1,8 @@
+addr	function	verdict	asm range	note	fix commit
+0x45B4D0	CReplay::RetrievePedAnimation	FIXED	0x45B4D0-0x45B71E (all)	time/speed/blend multiplied by exe reciprocals 0x859C2C/28/24 (port divided by 63.75/85/127.5); second-anim NumAnims check only for ids > 3; third anim: no callback-type store	78f5b8f52
+0x45CA70	CReplay::ProcessPedUpdate	NOT_REACHED	-	out of token budget after S66 and RetrievePedAnimation	-
+0x45CEA0	CReplay::DealWithNewPedPacket	NOT_REACHED	-	out of token budget after S66 and RetrievePedAnimation	-
+0x45D060	CReplay::ProcessReplayCamera	NOT_REACHED	-	out of token budget after S66 and RetrievePedAnimation	-
+0x45D760	CReplay::ProcessLookAroundCam	NOT_REACHED	-	out of token budget after S66 and RetrievePedAnimation	-
+0x45E300	CReplay::RecordThisFrame	NOT_REACHED	-	out of token budget after S66 and RetrievePedAnimation	-
+0x45F380	CReplay::PlayBackThisFrameInterpolation	NOT_REACHED	-	out of token budget after S66 and RetrievePedAnimation	-

@@ -1,0 +1,17 @@
+addr	function	verdict	asm range	note	fix commit
+0x465AA0	CRunningScript::ShutdownThisScript	MATCH	0x465AA0-0x465BFA (all)	jump table 0x465BFC decoded (types 0/2/3/5 ped, 1/4 object), flag bits 0x800000 / 0x100000	-
+0x469EB0	CRunningScript::ProcessOneCommand	MATCH	0x469EB0-0x469EF8 (all)	opcode/100 dispatch, NotFlag, CommandsExecuted word counter	-
+0x469F00	CRunningScript::Process	MATCH	0x469F00-0x469FFF (all)	scene skip (UpdatePC), DoDeathArrestCheck, mission-fail ResetIP, wake-time unsigned compare, loop until non-continue	-
+0x46AF50	CRunningScript::ScriptTaskPickUpObject	MATCH	0x46AF50-0x46B1A0 (all)	arg order of both CTaskSimpleHoldEntity ctors (frame id, flags), NULL anim test, 0x70A only for the secondary wrap, SetTaskSecondary then GetVacantSlot	-
+0x487A20	CRunningScript::LocateCarCommand	FIXED	0x487A20-0x487D02 (all)	params/stopped/highlight/debug-square match; box test: a NaN operand fails (exe jp/jne arms)	614caae17
+0x486D80	CRunningScript::LocateCharCommand	FIXED	0x486D80-0x4870A5 (all)	two jump tables decoded (stopped 0xEF-F1/101-103; any/foot/car); NaN operand fails	49ec0d55a
+0x487D10	CRunningScript::LocateObjectCommand	FIXED	0x487D10-0x487F5D (all)	NaN operand fails	8ea7c238c
+0x487420	CRunningScript::LocateCharCarCommand	FIXED	0x487420-0x487700 (all)	table 0x487704 any/foot/car x2; NaN operand fails	668c9f1a7
+0x4870F0	CRunningScript::LocateCharCharCommand	FIXED	0x4870F0-0x4873F5 (all)	tables 0x487408/0x4873F8; NaN operand fails	ee403646b
+0x487720	CRunningScript::LocateCharObjectCommand	FIXED	0x487720-0x487A00 (all)	table 0x487A04; NaN operand fails	232ad23a9
+0x488EC0	CRunningScript::CarInAreaCheckCommand	FIXED	0x488EC0-0x489147 (all)	corner swap order z,x,y (swap iff min>max) matches; NaN operand fails	ac1894e1b
+0x488B50	CRunningScript::CharInAreaCheckCommand	FIXED	0x488B50-0x488EA0 (all)	stopped table 0x488EA4, cmd decision tree + table 0x488EAC decoded; NaN operand fails	2e0ccf46b
+0x489150	CRunningScript::ObjectInAreaCheckCommand	FIXED	0x489150-0x4893A3 (all)	NaN operand fails	ccdb5d9cf
+0x487F60	CRunningScript::CharInAngledAreaCheckCommand	FIXED	0x487F60-0x4883B5 (all)	corner calc (angle loops, sin/cos, C/D order) matches; AB direction normalised inline on a copy: zero length keeps (0,0) (port: (1,0)); AB/AD dots fail on NaN	2325ac8cb
+0x4883F0	CRunningScript::ObjectInAngledAreaCheckCommand	FIXED	0x4883F0-0x48877D (all)	same helper as CharInAngledArea (shared IsPointInAngledArea2D). UNSURE (not replicated): for a zero-length AB the exe pops its x87 stack once too often (fmulp st(1) underflow) -> NaN -> false	2325ac8cb
+0x488780	CRunningScript::FlameInAngledAreaCheckCommand	FIXED	0x488780-0x488B49 (all)	in-place AB/AD normalisation: NaN length takes the normalising arm (port: x=1); dot and Z tests fail on NaN	75f02e0f7

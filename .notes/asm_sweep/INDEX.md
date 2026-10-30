@@ -253,7 +253,7 @@
 | S104 | phase3 tier B (PHASE3.md) | 43 | pending | GrassRenderer.cpp, PPTriPlantBuffer.cpp, PlantColEntEntry.cpp, PlantLocTri.cpp, PlantMgr.cpp, PlantSurfPropMgr.cpp |
 | S105 | phase3 tier B (PHASE3.md) | 39 | done (29 M, 9 fixed, 1 NR covered by f22f575ff) | Renderer.cpp, StreamingInfo.cpp, TxdStore.cpp |
 | S106 | phase3 tier B (PHASE3.md) | 41 | pending | VisibilityPlugins.cpp |
-| S107 | phase3 tier B (PHASE3.md) | 46 | pending | FxInfoAnimTexture.cpp, FxInfoAttractLine.cpp, FxInfoAttractPt.cpp, FxInfoColour.cpp, FxInfoColourBright.cpp, FxInfoColourRange.cpp |
+| S107 | phase3 tier B (PHASE3.md) | 46 | done (45 M, 1 fixed + FxInfoDir) | FxInfoAnimTexture.cpp, FxInfoAttractLine.cpp, FxInfoAttractPt.cpp, FxInfoColour.cpp, FxInfoColourBright.cpp, FxInfoColourRange.cpp |
 | S108 | phase3 tier B (PHASE3.md) | 45 | done (43 M, 2 fixed) | AnimBlendAssociation.cpp, AnimBlendClumpData.cpp, AnimBlendHierarchy.cpp, FxInfoJitter.cpp, FxInfoNoise.cpp, FxInfoRotSpeed.cpp |
 | S109 | phase3 tier B (PHASE3.md) | 42 | pending | AnimBlendSequence.cpp, AnimBlendStaticAssociation.cpp, Matrix.cpp, MatrixLinkList.cpp, OctTree.cpp, OctTreeBase.cpp |
 | S110 | phase3 tier B (PHASE3.md) | 12 | pending | QuadTreeNode.h |

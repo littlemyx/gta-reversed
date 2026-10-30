@@ -425,3 +425,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S76	v6	asm sweep	232282	106	76	save work buffer chunking used stale size (checksum could differ after a load), load refill bytes, no save-version check in exe (port refusal -> FIX_BUGS); save format MATCH; 23 M
 2026-10-30	ASM-S79	v6	asm sweep	298881	141	25	SetCutsceneAnim started anim playing, GetAtomicWithName returned last match, accident search sqrt vs squared, BreakObject group velocity, clock beep stride walk, IdleCam NaN, EntryInfoNodePool hook label; 43 M
 2026-10-30	ASM-S70c	v6	asm sweep	300757	110	83	Birds desert cap/water dist/signed angle/grey colour, BreakObject RW table-sqrt normalise + box centre, escalator plane count; glass render MATCH; 8 M
+2026-10-30	ASM-PHASE3-PLAN	v6	phase-3 slicing	135114	28	4	1521 uncovered: 94 REPLACED, 1427 sliced S81-S117 (A 546, B 599, C 282)

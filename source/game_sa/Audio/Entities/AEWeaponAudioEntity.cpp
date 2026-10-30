@@ -859,11 +859,13 @@ void CAEWeaponAudioEntity::PlayCameraSound(CPhysical* entity, eAudioEvents event
 
 // 0x504B70
 void CAEWeaponAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) {
-    if (curPlayPos == -1) {
-        if (sound == m_FlameThrowerIdleGasLoopSound) {
-            m_FlameThrowerIdleGasLoopSound = nullptr;
-        } else if (sound->m_Event == AE_WEAPON_SOUND_CAT_MINIGUN_STOP && m_MiniGunState == eMiniGunState::STOPPING) {
-            m_MiniGunState = eMiniGunState::STOPPED;
+    if (curPlayPos < 0) { // 0x504B85: `cmp cx, 0; jl` - every negative position leaves here, only -1 does something (0x504F02)
+        if (curPlayPos == -1) {
+            if (sound == m_FlameThrowerIdleGasLoopSound) {
+                m_FlameThrowerIdleGasLoopSound = nullptr;
+            } else if (sound->m_Event == AE_WEAPON_SOUND_CAT_MINIGUN_STOP && m_MiniGunState == eMiniGunState::STOPPING) {
+                m_MiniGunState = eMiniGunState::STOPPED;
+            }
         }
         return;
     }
@@ -877,7 +879,11 @@ void CAEWeaponAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) {
     }
     case AE_WEAPON_SOUND_CAT_FLAME: { // 0x504BC3
         if (m_LastFlameThrowerFireTimeMs + 300 >= CTimer::GetTimeInMS()) {
-            sound->m_Volume = std::min(GetDefaultVolume(AE_WEAPON_FIRE) - 14.f, sound->GetVolume() + 2.f); // TODO: Use TimeStep
+            // 0x504BFA: only a volume BELOW the limit is raised (by 2, capped at the limit); at or above it nothing happens (not a min())
+            const auto limit = GetDefaultVolume(AE_WEAPON_FIRE) - 14.f;
+            if (sound->m_Volume < limit) {
+                sound->m_Volume = std::min(limit, sound->m_Volume + 2.f); // TODO: Use TimeStep
+            }
         } else {
             sound->StopSoundAndForget();
             m_LastFlameThrowerFireTimeMs = 0;
@@ -893,7 +899,9 @@ void CAEWeaponAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) {
     }
     case AE_WEAPON_SOUND_CAT_EXT: { // 0x504C5F
         if (m_LastFireExtFireTimeMs + 300 >= CTimer::GetTimeInMS()) {
-            sound->m_Speed = std::min(0.85f, sound->GetSpeed() + 0.01f); // TODO: Use TimeStep
+            if (sound->m_Speed < 0.85f) { // 0x504C83: only a speed below the limit is raised
+                sound->m_Speed = std::min(0.85f, sound->m_Speed + 0.01f); // TODO: Use TimeStep
+            }
         } else {
             sound->StopSoundAndForget();
             m_LastFireExtFireTimeMs = 0;
@@ -946,7 +954,9 @@ void CAEWeaponAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) {
         switch (m_ChainsawState) {
         case eChainsawState::CUTTING: { // 0x504DA5
             if (m_LastChainsawEventTimeMs + 400 >= CTimer::m_snTimeInMilliseconds) {
-                sound->m_Speed = std::max(0.85f, sound->m_Speed - 0.15f); // TODO: Use TimeStep
+                if (sound->m_Speed > 0.85f) { // 0x504DC9: only a speed above the limit is lowered
+                    sound->m_Speed = std::max(0.85f, sound->m_Speed - 0.15f); // TODO: Use TimeStep
+                }
             } else {
                 m_LastChainsawEventTimeMs = CTimer::m_snTimeInMilliseconds;
                 m_ChainsawState           = eChainsawState::ACTIVE;
@@ -954,7 +964,9 @@ void CAEWeaponAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) {
             break;
         }
         case eChainsawState::ACTIVE: { // 0x504E0E
-            sound->m_Speed = std::min(1.f, sound->m_Speed + 0.03f); // TODO: Use TimeStep
+            if (sound->m_Speed < 1.f) { // 0x504E0E: only a speed below 1 is raised
+                sound->m_Speed = std::min(1.f, sound->m_Speed + 0.03f); // TODO: Use TimeStep
+            }
             if (m_LastChainsawEventTimeMs + 300 < CTimer::GetTimeInMS()) {
                 PlayChainsawStopSound(sound->m_PhysicalEntity->AsPhysical());
             }

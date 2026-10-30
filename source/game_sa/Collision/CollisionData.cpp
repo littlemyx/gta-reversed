@@ -107,6 +107,10 @@ void CCollisionData::Copy(const CCollisionData& src) {
             m_pLines[i] = src.m_pLines[i];
     }
 
+    // The exe copies the flag bits 0 (bUsesDisks) and 2 (bHasShadowInfo) unconditionally here (0x40F297..0x40F2B1), between the lines and the boxes
+    bUsesDisks     = src.bUsesDisks;
+    bHasShadowInfo = src.bHasShadowInfo;
+
     // ----- BOXES -----
     if (m_nNumBoxes != src.m_nNumBoxes || !src.m_nNumBoxes) {
         m_nNumBoxes = src.m_nNumBoxes;
@@ -122,61 +126,74 @@ void CCollisionData::Copy(const CCollisionData& src) {
     }
 
     // ----- TRIANGLES & VERTICES -----
-    if (m_nNumTriangles != src.m_nNumTriangles || !src.m_nNumTriangles) {
-        m_nNumTriangles = src.m_nNumTriangles;
+    // exe 0x40F32C..0x40F442: the vertex array is ALWAYS re-allocated + copied when the source has triangles (also when the triangle count is
+    // equal; the port kept the old vertices then), sized by the highest vertex index + 1 (an all-zero index list still gets 1 vertex).
+    if (!src.m_nNumTriangles) {
+        m_nNumTriangles = 0;
         CMemoryMgr::Free(m_pTriangles);
-        CMemoryMgr::Free(m_pVertices);
         m_pTriangles = nullptr;
+        CMemoryMgr::Free(m_pVertices);
         m_pVertices = nullptr;
-
-        if (src.m_nNumTriangles) {
-            // Get number of vertices
-            uint16 iHighestVertInd = 0;
-            for (auto i = 0; i < src.m_nNumTriangles; ++i)
-                iHighestVertInd = std::max({iHighestVertInd, src.m_pTriangles[i].vA, src.m_pTriangles[i].vB, src.m_pTriangles[i].vC});
-
-            if (iHighestVertInd) {
-                iHighestVertInd++; // allocated space needs to be 1 bigger to compensate for index 0
-                m_pVertices = static_cast<decltype(m_pVertices)>(CMemoryMgr::Malloc(iHighestVertInd * sizeof(*m_pVertices)));
-                for (auto i = 0; i < iHighestVertInd; ++i) {
-                    m_pVertices[i] = src.m_pVertices[i];
-                }
+    } else {
+        uint32 highest = 0;
+        for (auto i = 0; i < (int16)src.m_nNumTriangles; ++i) {
+            highest = std::max<uint32>(highest, src.m_pTriangles[i].vA);
+            highest = std::max<uint32>(highest, src.m_pTriangles[i].vB);
+            highest = std::max<uint32>(highest, src.m_pTriangles[i].vC);
+        }
+        const auto numVerts = (uint16)(highest + 1);
+        CMemoryMgr::Free(m_pVertices);
+        m_pVertices = nullptr;
+        if (numVerts) {
+            m_pVertices = static_cast<decltype(m_pVertices)>(CMemoryMgr::Malloc(numVerts * sizeof(*m_pVertices)));
+            for (auto i = 0; i < numVerts; ++i) {
+                m_pVertices[i] = src.m_pVertices[i];
             }
-
+        }
+        if (m_nNumTriangles != src.m_nNumTriangles) {
+            m_nNumTriangles = src.m_nNumTriangles;
+            CMemoryMgr::Free(m_pTriangles);
             m_pTriangles = static_cast<CColTriangle*>(CMemoryMgr::Malloc(m_nNumTriangles * sizeof(CColTriangle)));
         }
-    }
-    for (auto i = 0; i < m_nNumTriangles; ++i)
-        m_pTriangles[i] = src.m_pTriangles[i];
-
-    // ----- SHADOW TRIANGLES & SHADOW VERTICES -----
-    if (m_nNumShadowTriangles != src.m_nNumShadowTriangles || !src.m_nNumShadowTriangles || bHasShadowInfo != src.bHasShadowInfo) {
-        bHasShadowInfo = src.bHasShadowInfo;
-        m_nNumShadowTriangles = src.m_nNumShadowTriangles;
-        m_nNumShadowVertices = src.m_nNumShadowVertices;
-        CMemoryMgr::Free(m_pShadowTriangles);
-        CMemoryMgr::Free(m_pShadowVertices);
-        m_pShadowTriangles = nullptr;
-        m_pShadowVertices = nullptr;
-
-        if (src.m_nNumShadowTriangles) {
-            // Get number of vertices
-            uint16 iHighestVertInd = 0;
-            for (uint32 i = 0; i < src.m_nNumShadowTriangles; ++i)
-                iHighestVertInd = std::max({iHighestVertInd, src.m_pShadowTriangles[i].vA, src.m_pShadowTriangles[i].vB, src.m_pShadowTriangles[i].vC});
-
-            if (iHighestVertInd) {
-                iHighestVertInd++; // allocated space needs to be 1 bigger to compensate for index 0
-                m_pShadowVertices = static_cast<decltype(m_pShadowVertices)>(CMemoryMgr::Malloc(iHighestVertInd * sizeof(*m_pShadowVertices)));
-                for (auto i = 0; i < iHighestVertInd; ++i)
-                    m_pShadowVertices[i] = src.m_pShadowVertices[i];
-            }
-
-            m_pShadowTriangles = static_cast<CColTriangle*>(CMemoryMgr::Malloc(m_nNumShadowTriangles * sizeof(CColTriangle)));
+        for (auto i = 0; i < m_nNumTriangles; ++i) {
+            m_pTriangles[i] = src.m_pTriangles[i];
         }
     }
-    for (uint32 i = 0; i < m_nNumShadowTriangles; ++i) {
-        m_pShadowTriangles[i] = src.m_pShadowTriangles[i];
+
+    // ----- SHADOW TRIANGLES & SHADOW VERTICES -----
+    // exe 0x40F444..0x40F575: only when the source has shadow triangles AND bHasShadowInfo; otherwise everything shadow-related is wiped (counts and pointers).
+    if (src.m_nNumShadowTriangles && src.bHasShadowInfo) {
+        uint32 highest = 0;
+        for (uint32 i = 0; i < src.m_nNumShadowTriangles; ++i) {
+            highest = std::max<uint32>(highest, src.m_pShadowTriangles[i].vA);
+            highest = std::max<uint32>(highest, src.m_pShadowTriangles[i].vB);
+            highest = std::max<uint32>(highest, src.m_pShadowTriangles[i].vC);
+        }
+        const auto numVerts = (uint16)(highest + 1);
+        CMemoryMgr::Free(m_pShadowVertices);
+        m_pShadowVertices = nullptr;
+        if (numVerts) {
+            m_pShadowVertices = static_cast<decltype(m_pShadowVertices)>(CMemoryMgr::Malloc(numVerts * sizeof(*m_pShadowVertices)));
+            for (auto i = 0; i < numVerts; ++i) {
+                m_pShadowVertices[i] = src.m_pShadowVertices[i];
+            }
+        }
+        if (m_nNumShadowTriangles != src.m_nNumShadowTriangles) {
+            m_nNumShadowTriangles = src.m_nNumShadowTriangles;
+            CMemoryMgr::Free(m_pShadowTriangles);
+            m_pShadowTriangles = static_cast<CColTriangle*>(CMemoryMgr::Malloc(m_nNumShadowTriangles * sizeof(CColTriangle)));
+        }
+        for (uint32 i = 0; i < m_nNumShadowTriangles; ++i) {
+            m_pShadowTriangles[i] = src.m_pShadowTriangles[i];
+        }
+        m_nNumShadowVertices = src.m_nNumShadowVertices;
+    } else {
+        m_nNumShadowTriangles = 0;
+        m_nNumShadowVertices = 0;
+        CMemoryMgr::Free(m_pShadowTriangles);
+        m_pShadowTriangles = nullptr;
+        CMemoryMgr::Free(m_pShadowVertices);
+        m_pShadowVertices = nullptr;
     }
 }
 

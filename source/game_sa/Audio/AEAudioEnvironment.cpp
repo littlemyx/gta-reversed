@@ -77,7 +77,7 @@ float CAEAudioEnvironment::GetDopplerRelativeFrequency(float prevDist, float cur
 float CAEAudioEnvironment::GetDistanceAttenuation(float dist) {
     assert(dist >= 0.f);
     return dist < ATTENUATION_TABLE_MAX_DIST
-        ? gSoundDistAttenuationTable[NOTSA_FTOL(uint32, std::floor(dist / ATTENUATION_TABLE_RESOLUTION))]
+        ? gSoundDistAttenuationTable[NOTSA_FTOL(uint32, std::floor(dist * 10.0F))] // 0x4D7F3F: the exe multiplies by the constant 10.0f (0x85862C), not dist / 0.1f
         : -100.f;
 }
 

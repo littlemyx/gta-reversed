@@ -234,7 +234,9 @@ void CAEAudioHardware::Terminate() {
     m_pStreamThread.Stop();
     AESmoothFadeThread.Stop();
     m_pStreamThread.WaitForExit();
-    AESmoothFadeThread.WaitForExit(); // 0x4D97C8: the port never waited for the fade thread, which kept calling Service() on buffers while the channels / device below were released
+    if (AESmoothFadeThread.m_bInitialized) { // NOTSA: without a created thread the handle is INVALID_HANDLE_VALUE == the current-process pseudo handle, the wait would never return (failed audio init)
+        AESmoothFadeThread.WaitForExit(); // 0x4D97C8: the port never waited for the fade thread, which kept calling Service() on buffers while the channels / device below were released
+    }
     for (auto& ch : m_aChannels) { // 0x4D97D2-0x4D97F2: all 64 slots, each deleted through its virtual destructor and set to null (the port left the pointers dangling)
         delete std::exchange(ch, nullptr);
     }

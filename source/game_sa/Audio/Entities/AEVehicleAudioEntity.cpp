@@ -164,11 +164,11 @@ void CAEVehicleAudioEntity::Initialise(CEntity* entity) {
             m_EventVolume = m_EventVolume - s_Config.VolOffsetOnGround;
         }
 
+        m_DummyEngineBank = m_AuSettings.DummyBank; // 0x4F7670: the exe stores this before the m_IsInitialized test
         if (m_IsInitialized) {
             return;
         }
 
-        m_DummyEngineBank = m_AuSettings.DummyBank;
         if (m_DummyEngineBank != SND_BANK_UNK) {
             m_DummySlot = RequestBankSlot(m_AuSettings.DummyBank);
         }
@@ -216,11 +216,11 @@ void CAEVehicleAudioEntity::Initialise(CEntity* entity) {
     case AE_SPECIAL: {
         m_PlayerEngineBank = m_AuSettings.PlayerBank;
         m_EventVolume      = m_EventVolume - 1.5F;
+        m_DummyEngineBank  = m_AuSettings.DummyBank; // 0x4F7670: stored before the m_IsInitialized test
         if (m_IsInitialized) {
             return;
         }
 
-        m_DummyEngineBank = m_AuSettings.DummyBank;
         if (m_DummyEngineBank != SND_BANK_UNK) {
             m_DummySlot = RequestBankSlot(m_AuSettings.DummyBank);
         }

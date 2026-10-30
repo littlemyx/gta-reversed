@@ -1,0 +1,45 @@
+addr	function	verdict	asm range	note	fix commit
+0x5B0450	CCutsceneMgr::AttachObjectToBone	MATCH	0x5B0450-0x5B047D	RpHAnimIDGetIndex(GetAnimHierarchyFromSkinClump(obj clump), bone) into +0x17c, object into +0x180	-
+0x5B0480	CCutsceneMgr::AttachObjectToFrame	MATCH	0x5B0480-0x5B04AC	RpAnimBlendClumpFindFrame(...)->Frame, attachment object cleared	-
+0x5B04B0	CCutsceneMgr::AttachObjectToParent	MATCH	0x5B04B0-0x5B04CE	clump frame stored, attachment object cleared	-
+0x5B0380	CCutsceneMgr::AddCutsceneHead	MATCH	0x5B0380-0x5B0382	returns 0	-
+0x5B04D0	CCutsceneMgr::FinishCutscene	MATCH	0x5B04D0-0x5B0542	finish time (u32) * 0.001f stored, TheCamera.FinishCutscene, player visible, MakePlayerSafe(0,10000)	-
+0x5B0570	CCutsceneMgr::HasCutsceneFinished	MATCH	0x5B0570-0x5B0599	!dataFileLoaded || spline pos == 1.0 (NaN arm false)	-
+0x5B05A0	CCutsceneMgr::LoadCutsceneData_preload	FIXED	0x5B05A0-0x5B11BF	Whole function incl. the inlined .CUT parser (section dispatch, offset/model/text/uncompress/attach/remove/peffect/extracol field order and offsets) and the model request loop traced. Deviations: unload loop ran 19 models (CUTOBJ01..19) instead of 20 (..CUTOBJ20) with a signed refcount test; script-appended names were copied from the destination index instead of the i-th append slot	1d9f35b64
+0x5B11C0	CCutsceneMgr::LoadCutsceneData_loading	FIXED	0x5B11C0-0x5B13DD	Waited for every model instead of only the 300..319 cutscene models; bone attachment used the ped object for both sides (self attach) instead of m_nCutsceneAttachmentObjectId. FX matrix/bone setup and CreateFxSystem args MATCH	dfb2b68b8
+0x5B13F0	CCutsceneMgr::LoadCutsceneData_overlay	MATCH	0x5B13F0-0x5B1456	Suspend, flags, RemoveCurrentZonesModels, Clear + ReadDirFile, tidy, name copy, preload, Resume	-
+0x5B1460	CCutsceneMgr::StartCutscene	MATCH	0x5B1460-0x5B14CA	status STARTING; spline offset, JUMPCUT(2), widescreen, help message (nullptr,true,false,false), plant mgr update at camera position	-
+0x5B14D0	CCutsceneMgr::SetupCutsceneToStart	MATCH	0x5B14D0-0x5B16D3	offset.z+1, reverse object loop, attach branch flags, compressed (1/1024) / uncompressed key 0 translation + offset, no-anim branch, World::Add, UpdateRpHAnim, 2x Timer::Update, timer 0, running	-
+0x5B02A0	CCutsceneMgr::CreateCutsceneObject	FIXED	0x5B02A0-0x5B0366	sphere radius of the temp col model is zeroed before UpdateCutsceneObjectBoundingBox (see that row)	4d7d0d821
+0x5AFD60	CCutsceneMgr::DeleteCutsceneData_overlay	FIXED	0x5AFD60-0x5B011F	Objects are freed last to first; ms_useCutsceneShadows (0x8AC158) reset to 1; CPad::Clear(0,0) runs after DrasticTidyUpMemory, not before MakePlayerSafe. The m_bDontClearZone weapon-restore block is dead (flag never set)	2d229fb5d
+0x5AFBC0	CCutsceneMgr::LoadCutsceneData_postload	MATCH	0x5AFBC0-0x5AFD5D	density 0, streaming on, IFP load (size<<10 MakeSpaceFor), CreateAssociations(name, anims, objects, 32), spline DAT load, status LOADED, timer 0, ClearQdCrimes	-
+0x4D5A20	CCutsceneMgr::Initialise	MATCH	0x4D5A20-0x4D5AAF	7 stores and CDirectory(512)	-
+0x4D5AB0	CCutsceneMgr::LoadAnimationUncompressed	MATCH	0x4D5AB0-0x4D5AE3	append name, count++, terminate next	-
+0x4D5AF0	CCutsceneMgr::RemoveEverythingBecauseCutsceneDoesntFitInMemory	NOT_REACHED	0x4D5AF0-0x4D5C0F	no caller in the exe, flag 0xB5F85C never set	-
+0x4D5C10	CCutsceneMgr::LoadEverythingBecauseCutsceneDeletedAllOfIt	MATCH	0x4D5C10-0x4D5CFF	weapon restore list is empty (count never set)	-
+0x4D5D00	CCutsceneMgr::Update	MATCH	0x4D5D00-0x4D5D0E	Update_overlay when status != NOT_LOADED	-
+0x4D5E20	CCutsceneMgr::BuildCutscenePlayer	MATCH	0x4D5E20-0x4D5E4C		-
+0x4D5E50	CCutsceneMgr::RemoveCutscenePlayer	MATCH	0x4D5E50-0x4D5E58		-
+0x4D5E60	CCutsceneMgr::Shutdown	MATCH	0x4D5E60-0x4D5E7C		-
+0x4D5E80	CCutsceneMgr::LoadCutsceneData	MATCH	0x4D5E80-0x4D5EC3	dir read only if empty	-
+0x4D5ED0	CCutsceneMgr::DeleteCutsceneData	MATCH	0x4D5ED0-0x4D5EED		-
+0x5AFAD0	CCutsceneMgr::HideRequestedObjects	FIXED	0x5AFAD0-0x5AFBB5	The hidden-entity counter doubles as the number of remove lines: exe takes it, resets it to 0 and then counts the hidden entities; port never reset it (entries stored after the remove count, array overrun)	6193fa214
+0x5B01E0	CCutsceneMgr::UpdateCutsceneObjectBoundingBox	FIXED	0x5B01E0-0x5B0290	Radius starts at the col model current radius (CB only grows it) and the result is capped at max(20, current); port started at 0 and never capped	4d7d0d821
+0x5B0130	CCutsceneMgr::CalculateBoundingSphereRadiusCB	FIXED	0x5B0130-0x5B01D5	stores only a strictly greater value (std::max had a NaN arm)	6193fa214
+0x5B1700	CCutsceneMgr::SkipCutscene	MATCH	0x5B1700-0x5B1713		-
+0x5B1720	CCutsceneMgr::Update_overlay	FIXED	0x5B1720-0x5B1966	Particle effect stop test and subtitle start test are strict unsigned > (jbe); port used >=. Status machine 1->2->3->4->0, finale audio guard, cam mode 17 check, finish fade (u32 compare) MATCH	edf1130de
+0x699F50	CFormation::ReturnTargetPedForPed	MATCH	0x699F50-0x699F91		-
+0x699FA0	CFormation::ReturnDestinationForPed	MATCH	0x699FA0-0x699FEA	24-entry loop (port bounds it only under GenericOOB)	-
+0x69A620	CFormation::GenerateGatherDestinations	FIXED	0x69A620-0x69A753	angle for count>=2 is (i/n*2pi - rot) + pi/n; port summed pi/n first	09c0236ec
+0x69A770	CFormation::GenerateGatherDestinations_AroundCar	MATCH	0x69A770-0x69B1AF	unrolled loops: side offset = right.norm * (max.x+1.5), length = max.y-min.y, (fwd*len)*(0.5 - i/n), left = centre - side, right = centre + side	-
+0x69B240	CFormation::DistributeDestinations	FIXED	0x69B240-0x69B5A9	Centroids are sum*(1/n) (port: sum/n); distances are sqrt((dz2+dy2)+dx2) and the nearest-destination search (0x69B1B0) compares the strict float distance from 1e7 (port: squared from FLT_MAX); best total cost starts at 999999.875	ebcb9208a
+0x69B5B0	CFormation::DistributeDestinations_CoverPoints	FIXED	0x69B5B0-0x69B6FA	distance prefilter skips on NaN too (only deviation)	9f87a1eb7
+0x69B700	CFormation::DistributeDestinations_PedsToAttack	FIXED	0x69B700-0x69B85A	nearest ped/target pair uses the sqrt 2D distance strictly from 999999.875 (port: squared from FLT_MAX); ceil/ftol, min 2 MATCH	117aa1a58
+0x69B860	CFormation::FindCoverPoints	FIXED	0x69B860-0x69BB16	speed < 0.005, box max.z < 1.5, up.z > 0.95 prefilters skip on NaN like the exe (reverse pool order, 24 limit MATCH)	89a82d8e1
+0x517870	CIdleCam::ProcessTargetSelection	MATCH	0x517870-0x5179D7	all branches incl. the double SetTarget collapse (SetTarget resets the LOS counter)	-
+0x517BF0	CIdleCam::ProcessFOVZoom	FIXED	0x517BF0-0x517E8F	FOV settle tests (ZOOMING_IN/OUT) take the interpolation arm on NaN (jp); zoom state machine, ZYX distance, LOS flags, interpolation MATCH	4c90961a0
+0x51D3E0	CIdleCam::Run	MATCH	0x51D3E0-0x51D46F		-
+0x522C80	CIdleCam::Process	MATCH	0x522C80-0x522D3C		-
+0x6008A0	CMentalState::Process	MATCH	0x6008A0-0x600B2E	health/anger event thresholds and vtables; byte vehicle health (no vehicle event can fire) is a faithful port	-
+0x69DC50	CMessages::CutString	NOT_REACHED	0x69DC50-?	no caller in the exe	-
+0x69EFC0	CMessages::Display	MATCH	0x69EFC0-0x69F0A9	7 big message styles (stride 0xC0), brief message gated on bDrawSubtitlesBeforeFade	-

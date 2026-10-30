@@ -13,7 +13,7 @@ public:
 public:
     static void InjectHooks();
 
-    static void AddOne(eSetPieceType type, CVector2D cornerA, CVector2D cornerB, CVector2D spawnCoord1, CVector2D targetCoord1, CVector2D spawnCoord2, CVector2D targetCoord2);
+    static void AddOne(eSetPieceType type, CVector2D cornerA, CVector2D cornerB, CVector2D spawnCoord1, CVector2D spawnCoord2, CVector2D targetCoord1, CVector2D targetCoord2);
     static void Init();
     static bool Load();
     static bool Save();

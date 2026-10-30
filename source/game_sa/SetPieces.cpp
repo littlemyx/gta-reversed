@@ -14,7 +14,7 @@ void CSetPieces::InjectHooks() {
 }
 
 // 0x499500
-void CSetPieces::AddOne(eSetPieceType type, CVector2D cornerA, CVector2D cornerB, CVector2D spawnCoord1, CVector2D targetCoord1, CVector2D spawnCoord2, CVector2D targetCoord2) {
+void CSetPieces::AddOne(eSetPieceType type, CVector2D cornerA, CVector2D cornerB, CVector2D spawnCoord1, CVector2D spawnCoord2, CVector2D targetCoord1, CVector2D targetCoord2) { // exe 0x499500: the pairs are stored in this order at +0xC/+0x10/+0x14/+0x18
     if (NumSetPieces >= MAX_SET_PIECES) {
         return;
     }

@@ -25,6 +25,17 @@ void NodeNamePlugin::InjectHooks() {
     RH_ScopedGlobalInstall(SetFrameNodeName, 0x72FB00);
 }
 
+// exe 0x821F40 (CRT strncpy): copies up to `n` chars, zero-pads the rest of the first `n` bytes, never writes dst[n] (strncpy_s would also write a terminator there)
+static void NodeNameStrncpy(char* dst, const char* src, size_t n) {
+    size_t i = 0;
+    for (; i < n && src[i]; ++i) {
+        dst[i] = src[i];
+    }
+    for (; i < n; ++i) {
+        dst[i] = '\0';
+    }
+}
+
 // internal
 // 0x72F9C0
 static void* NodeNameConstructor(void* object, RwInt32 offsetInObject, RwInt32 sizeInObject) {
@@ -43,7 +54,7 @@ static void* NodeNameDestructor(void* object, RwInt32 offsetInObject, RwInt32 si
 // internal
 // 0x72F9F0
 static void* NodeNameCopy(void* dstObject, const void* srcObject, RwInt32 offsetInObject, RwInt32 sizeInObject) {
-    strncpy_s(RWPLUGINOFFSET(NodeNamePluginInstance, dstObject, gNodeNamePluginOffset)->name, RWPLUGINOFFSET(NodeNamePluginInstance, srcObject, gNodeNamePluginOffset)->name, NAME_LENGTH);
+    NodeNameStrncpy(RWPLUGINOFFSET(NodeNamePluginInstance, dstObject, gNodeNamePluginOffset)->name, RWPLUGINOFFSET(NodeNamePluginInstance, srcObject, gNodeNamePluginOffset)->name, NAME_LENGTH);
     return dstObject;
 }
 
@@ -90,14 +101,9 @@ const RwChar* GetFrameNodeName(RwFrame* frame) {
 
 void SetFrameNodeName(RwFrame* frame, const RwChar* name) {
     if (gNodeNamePluginOffset > 0) {
-        // 0x72FB00: strncpy(dst, name, NAME_LENGTH) semantics - copies up to NAME_LENGTH chars and zero-pads the rest (strncpy_s leaves the old tail behind)
+        // 0x72FB00: strncpy(dst, name, NAME_LENGTH); dst[NAME_LENGTH] = 0
         auto* const dst = RWPLUGINOFFSET(NodeNamePluginInstance, frame, gNodeNamePluginOffset)->name;
-        size_t i = 0;
-        for (; i < NAME_LENGTH && name[i]; ++i) {
-            dst[i] = name[i];
-        }
-        for (; i <= NAME_LENGTH; ++i) {
-            dst[i] = '\0';
-        }
+        NodeNameStrncpy(dst, name, NAME_LENGTH);
+        dst[NAME_LENGTH] = '\0';
     }
 }

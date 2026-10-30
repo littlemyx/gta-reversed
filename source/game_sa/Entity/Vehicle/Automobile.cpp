@@ -2750,7 +2750,9 @@ void CAutomobile::SetupDamageAfterLoad() {
 void CAutomobile::DoBurstAndSoftGroundRatios()
 {
     const auto& mi = *GetVehicleModelInfo();
-    const auto speedToFwdRatio = std::fabs(DotProduct(m_vecMoveSpeed, m_matrix->GetForward())); // Remember: Dot product is 0 when the two vectors are perpendicular - TODO: Rename var to fwdvel (forward velocity)
+    // exe 0x6A4817-0x6A4839: dot summed z, y, x in the FPU, |.| stored as a float
+    const auto& fwdDir = m_matrix->GetForward();
+    const float speedToFwdRatio = std::fabs((float)(((x87d)m_vecMoveSpeed.z * fwdDir.z + (x87d)m_vecMoveSpeed.y * fwdDir.y) + (x87d)m_vecMoveSpeed.x * fwdDir.x)); // Remember: Dot product is 0 when the two vectors are perpendicular - TODO: Rename var to fwdvel (forward velocity)
 
     for (auto i = 0u; i < 4; i++) {
         const auto& wheelCP = m_wheelColPoint[i];
@@ -2770,15 +2772,15 @@ void CAutomobile::DoBurstAndSoftGroundRatios()
         case eCarWheelStatus::WHEEL_STATUS_BURST: {
             // The more opposite the speedsq is to the forward vector the bigger chance
             // The highest chance is when the speedsq is opposite to forward (ie.: It's backwards)
-            const auto val = CGeneral::GetRandomNumberInRange(0, NOTSA_FTOL(int32, speedToFwdRatio * 40.0f) + 98);
+            const auto val = CGeneral::GetRandomNumberInRange(0, (int32)(uint16)NOTSA_FTOL(int32, speedToFwdRatio * 40.0f) + 98); // exe 0x6A4897: movzx eax, ax after the ftol
             if (val < 100) {
                 compression += GetRemainingSuspensionCompression() / 4.f;
-                compression = std::min(1.0f, compression);
+                compression = std::min(compression, 1.0f); // exe 0x6A48C8: stores 1.0 only when the sum is > 1.0 (NaN is kept)
             }
             break;
         }
         default: {
-            if (   compression >= 1.0f
+            if (   !(compression < 1.0f) // exe 0x6A48E7: strict-less else (incl. NaN) -> the rail branch
                 || g_surfaceInfos.GetAdhesionGroup(wheelCP.m_nSurfaceTypeB) != ADHESION_GROUP_SAND
                 || ModelIndices::IsRhino(m_nModelIndex)
             ) {
@@ -2810,9 +2812,12 @@ void CAutomobile::DoBurstAndSoftGroundRatios()
                 }
 
                 auto adhesionFactor = 1.0f - speedToFwdRatio / 0.3f * 0.7f - CWeather::WetRoads * 0.7f;
-                adhesionFactor = std::max(0.4f, adhesionFactor);
+                if (adhesionFactor < 0.4f) { // exe 0x6A4975: 0.4 replaces it only when it is below 0.4 (NaN is kept)
+                    adhesionFactor = 0.4f;
+                }
 
-                compression += offroadFactor * GetRemainingSuspensionCompression() * adhesionFactor;
+                // exe 0x6A498F-0x6A4995: offroad * (remaining * adhesion)
+                compression += offroadFactor * (GetRemainingSuspensionCompression() * adhesionFactor);
                 compression = std::min(compression, 1.0f);
             }
             break;

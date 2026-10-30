@@ -4,6 +4,9 @@
 cd /c/Users/littl/github/gta-reversed || exit 2
 source tools/standalone/windows/msvcenv.sh >/dev/null 2>&1
 echo "HEAD $(git log --oneline -1)"
+# GPULOCK-PRIO: reserve the GPU lock queue (C:/gta-scratch/gpu.prio) so sweep agents' gameplay_regress/soak runs stop queueing in front of the gate's run_all_tests/soak/regress.
+# Children inherit GPU_PRIO_OWNER and acquire normally; the reservation is dropped on exit (stale = dead pid or > 6 h is ignored by the waiters). See the gpu_locked.sh header.
+if tools/standalone/gpu_locked.sh --prio-reserve "orch_gate" $$; then export GPU_PRIO_OWNER=$$; trap 'tools/standalone/gpu_locked.sh --prio-release $$' EXIT; fi
 GTA_JOBS=4 tools/standalone/run_all_tests.sh > /c/gta-scratch/gate_soak/last_run_all_tests.txt 2>&1; trc=$?
 # Statuses are upper case (FAIL, EXITn, NORESULT, NOBUILD, TIMEOUT): print every non-ok row, not only the summary
 grep -a -E "^summary|^[a-z0-9_]+ .* (FAIL|EXIT[0-9]+|NORESULT|NOBUILD|TIMEOUT)$|hang" /c/gta-scratch/gate_soak/last_run_all_tests.txt

@@ -804,7 +804,7 @@ void CAEWeaponAudioEntity::PlayFlameThrowerIdleGasLoop(CPhysical* entity) {
         .AudioEntity        = this,
         .Pos                = entity->GetPosition(),
         .Volume             = GetDefaultVolume(AE_FLAMETHROWER_IDLE),
-        .RollOffFactor      = 2.f / 3.f,
+        .RollOffFactor      = 0.66f, // 0x3F28F5C3
         .Flags              = SOUND_LIFESPAN_TIED_TO_PHYSICAL_ENTITY | SOUND_REQUEST_UPDATES,
         .RegisterWithEntity = entity
     });

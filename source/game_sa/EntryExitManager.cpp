@@ -244,22 +244,25 @@ CObject* CEntryExitManager::FindNearestDoor(CEntryExit const& exit, float radius
     int16 numObjsInRange{};
     CWorld::FindObjectsInRange(entranceCenter, radius, false, &numObjsInRange, (int16)std::size(objsInRange), objsInRange, false, false, false, true, false);
 
-    if (!numObjsInRange) {
-        return nullptr;
-    }
-    
-    float closestDistSq{ FLT_MAX };
+    // exe 0x43F69E-0x43F70A: the candidates are walked from the LAST to the first, the best distance starts at `radius` (not FLT_MAX) and is a sqrt (x87, rounded to float
+    // when it is stored): the sum is (dz*dz + dx*dx) + dy*dy; an object is taken when dist < best (strict, a NaN distance is rejected).
     CObject* closest{};
-    for (auto&& entity : std::span{ objsInRange, (size_t)numObjsInRange }) {
-        const auto obj = entity->AsObject();
+    float    bestDist = radius;
+    for (int16 n = numObjsInRange; n; ) {
+        n--;
+        const auto obj = objsInRange[n]->AsObject();
         if (!obj->physicalFlags.bDisableMoveForce) {
             continue;
         }
 
-        const auto distSq = (obj->GetPosition() - entranceCenter).SquaredMagnitude(); // Using `SqMag` instead of `Mag`
-        if (distSq < closestDistSq) {
-            closest       = obj;
-            closestDistSq = distSq;
+        const auto& pos = obj->GetPosition();
+        const x87d  dx  = entranceCenter.x - pos.x;
+        const x87d  dy  = entranceCenter.y - pos.y;
+        const x87d  dz  = entranceCenter.z - pos.z;
+        const float dist = (float)x87::sqrt(dz * dz + dx * dx + dy * dy);
+        if (dist < bestDist) {
+            bestDist = dist;
+            closest  = obj;
         }
     }
     return closest;

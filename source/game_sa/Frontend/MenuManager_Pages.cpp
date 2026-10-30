@@ -416,14 +416,15 @@ void CMenuManager::PrintStats() {
     NOTSA_GLOBAL_LOCAL(scrollPos, 0x8CDFF4, (float), { -120.0f }); // -120.0f
     NOTSA_GLOBAL_LOCAL(prevScreenItem, 0x8CDFF8, (int8), { 15 });  // 15
 
-    m_nCurrentScreenItem = std::min(m_nCurrentScreenItem, 8);
+    // exe 0x574900: the clamped page is only kept in a local (al), m_nCurrentScreenItem itself is never written back
+    const int8 screenItem = (int8)std::min<int32>(m_nCurrentScreenItem, 8);
     // 0x574933
-    if (prevScreenItem != m_nCurrentScreenItem) {
+    if (prevScreenItem != screenItem) {
         scrollPos = -120.0f;
-        prevScreenItem = m_nCurrentScreenItem;
+        prevScreenItem = screenItem;
     }
 
-    const auto numStats = CStats::ConstructStatLine(99'999, m_nCurrentScreenItem);
+    const auto numStats = CStats::ConstructStatLine(99'999, screenItem);
     CFont::SetFontStyle(eFontStyle::FONT_MENU);
     CFont::SetScale(StretchX(0.3f), StretchY(0.75f));
 
@@ -455,7 +456,7 @@ void CMenuManager::PrintStats() {
         }
 
         if (y > visibleTop && y < visibleBottom) {
-            CStats::ConstructStatLine(i, m_nCurrentScreenItem);
+            CStats::ConstructStatLine(i, screenItem);
 
             if (!gGxtString[0]) {
                 y -= StretchY(37.0f);

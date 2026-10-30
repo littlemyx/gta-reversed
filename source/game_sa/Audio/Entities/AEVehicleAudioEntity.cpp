@@ -3620,7 +3620,7 @@ void CAEVehicleAudioEntity::ProcessPropOrJetStall(const CPlane* plane, float& ou
 
 #pragma region Heli
 auto GetHeliRotorSpeed(const CHeli* h) {
-    return h->m_fHeliRotorSpeed / 0.22f;
+    return h->m_fHeliRotorSpeed * ExeRecip(0.22f); // 0x862D1C (0x4091745D): the exe multiplies by the reciprocal, it does not divide
 }
 
 // notsa

@@ -97,7 +97,8 @@ void CObjectData::Initialise(const char* fileName) {
         if (iFxType > 0)
             curInfo.m_pFxSystemBP = g_fxMan.FindFxSystemBP(effectName);
 
-        const auto fBuoyancy = (100.0F / fPercentSubmerged) * curInfo.m_fMass * 0.008F; // 0x5B5566/0x5B5568: fmul [esi] (mass), fmul [0x863984] (not mass / 125)
+        // 0x5B5536-0x5B556E: fld 100.0; fdiv pct; fmul mass; fmul 0.008f (not mass / 125); fstp - the chain stays in extended precision, rounded once
+        const auto fBuoyancy = (float)((x87d)100.0f / (x87d)fPercentSubmerged * (x87d)curInfo.m_fMass * (x87d)0.008F);
         curInfo.m_nSpecialColResponseCase = iSpecialColResp;
         curInfo.m_nColDamageEffect = iColDamEffect;
         curInfo.m_nCameraAvoidObject = iCameraAvoid;
@@ -114,13 +115,13 @@ void CObjectData::Initialise(const char* fileName) {
         {
             if (curInfo.m_nSpecialColResponseCase == default0.m_nSpecialColResponseCase)
             {
-                mi->m_nObjectInfoIndex = curInfo.m_nCameraAvoidObject == 0 ? 0 : 1;
+                mi->m_nObjectInfoIndex = curInfo.m_nCameraAvoidObject == 0 ? 1 : 0; // 0x5B55C7: `test cl, cl; sete al` => camera == 0 selects slot 1 (the CAMERA_IGNORE copy)
                 continue;
             }
 
             if (curInfo.m_nSpecialColResponseCase == default2.m_nSpecialColResponseCase)
             {
-                mi->m_nObjectInfoIndex = curInfo.m_nCameraAvoidObject == 0 ? 2 : 3;
+                mi->m_nObjectInfoIndex = curInfo.m_nCameraAvoidObject == 0 ? 3 : 2; // 0x5B55DE: `neg dl; sbb edx, edx; add edx, 3` => camera != 0 gives 2, camera == 0 gives 3
                 continue;
             }
         }

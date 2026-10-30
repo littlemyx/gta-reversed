@@ -149,13 +149,23 @@ void CMenuManager::PrintMap() {
         }
         m_fMapZoom = std::max(m_fMapZoom, 70.0f);
     }
-    const auto zoomFactorForStretchX = m_fMapZoom / 6;
-    const auto zoomFactorForStretchY = m_fMapZoom / 5;
-    const CRect mapArea{
-        StretchX(60.0f),
-        StretchY(60.0f),
-        StretchX(580.0f),
-        StretchY(388.0f)
+    // exe 0x5752xx: multiplies by the float constants 0x85F0A0 (1/6) and 0x858CC4 (0.2), no division
+    const float zoomFactorForStretchX = m_fMapZoom * 0.1666666716337204f;
+    const float zoomFactorForStretchY = m_fMapZoom * 0.20000000298023224f;
+    // exe: the map window edges are ints: ftol of W * (60/640), H * (60/448), ... (one pre-folded float constant each, x87 product)
+    const auto StretchRefInt = [](int32 size, int32 ref, float literal, float folded) {
+        return size == ref ? NOTSA_FTOL(int32, literal) : NOTSA_FTOL(int32, (x87d)size * (x87d)folded);
+    };
+    const auto mapLeftI   = StretchRefInt(RsGlobal.maximumWidth,  DEFAULT_SCREEN_WIDTH,  60.0f,  0.09375f);                // X(60)
+    const auto mapRightI  = StretchRefInt(RsGlobal.maximumWidth,  DEFAULT_SCREEN_WIDTH,  580.0f, 0.90625f);               // X(580)
+    const auto mapTopI    = StretchRefInt(RsGlobal.maximumHeight, DEFAULT_SCREEN_HEIGHT, 60.0f,  0.1339285671710968f);    // Y(60)
+    const auto mapBottomI = StretchRefInt(RsGlobal.maximumHeight, DEFAULT_SCREEN_HEIGHT, 388.0f, 0.8660714030265808f);    // Y(388)
+    const CRect mapArea{ (float)mapLeftI, (float)mapTopI, (float)mapRightI, (float)mapBottomI };
+    // legend rows: ftol(19 * H/448 + y)
+    const auto LegendStepY = [](int32 y) {
+        return RsGlobal.maximumHeight == DEFAULT_SCREEN_HEIGHT
+            ? NOTSA_FTOL(int32, 19.0f + (float)y)
+            : NOTSA_FTOL(int32, (x87d)RsGlobal.maximumHeight * (x87d)0.0424107126891613f + (x87d)(float)y);
     };
     const CVector2D mapOriginOffset{
         StretchX(m_vMapOrigin.x - m_fMapZoom),
@@ -264,6 +274,10 @@ void CMenuManager::PrintMap() {
     }
 
     if ((m_bViewRadar || m_bMapLoaded) && m_bMapLoaded) {
+        // exe: the border widths are ints (ftol of W * (4/640), H * (4/448), kept as bytes) and the background edges are int sums
+        const auto borderX = static_cast<uint8>(StretchRefInt(RsGlobal.maximumWidth,  DEFAULT_SCREEN_WIDTH,  4.0f, 0.0062500000931322575f));
+        const auto borderY = static_cast<uint8>(StretchRefInt(RsGlobal.maximumHeight, DEFAULT_SCREEN_HEIGHT, 4.0f, 0.008928571827709675f));
+
         // border between map and background
         CSprite2d::DrawRect(
             { 0.0f, 0.0f, SCREEN_WIDTH, mapArea.bottom },
@@ -287,22 +301,22 @@ void CMenuManager::PrintMap() {
 
         // background
         CSprite2d::DrawRect(
-            { 0.0f, 0.0f, SCREEN_WIDTH, mapArea.bottom - StretchY(4.0f) },
+            { 0.0f, 0.0f, SCREEN_WIDTH, (float)(mapTopI - borderY) },
             MENU_BG
         );
 
         CSprite2d::DrawRect(
-            { 0.0f, mapArea.top + StretchY(4.0f), SCREEN_WIDTH, SCREEN_HEIGHT },
+            { 0.0f, (float)(mapBottomI + borderY), SCREEN_WIDTH, SCREEN_HEIGHT },
             MENU_BG
         );
 
         CSprite2d::DrawRect(
-            { 0.0f, 0.0f, mapArea.left - StretchX(4.0f), SCREEN_HEIGHT },
+            { 0.0f, 0.0f, (float)(mapLeftI - borderX), SCREEN_HEIGHT },
             MENU_BG
         );
 
         CSprite2d::DrawRect(
-            { mapArea.right + StretchX(4.0f), 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT },
+            { (float)(mapRightI + borderX), 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT },
             MENU_BG
         );
     }
@@ -328,17 +342,19 @@ void CMenuManager::PrintMap() {
         }
 
         if (m_bMapLegend) {
-            const auto iterations = (CRadar::MapLegendCounter - 1) / 2 + 3;
-            auto y = StretchY(100.0f);
-            if (iterations > 0) {
-                y += StretchY(19.0f) * iterations;
+            // exe 0x575F98-0x576091: the window bottom is an int, ftol(H * (100/448)) then ftol(19 * H/448 + y) once per row (truncated every step);
+            // the right edge is 555 (port: 550), the left 95 and the top 100 are the unrounded stretched values
+            const auto midPoint = (CRadar::MapLegendCounter - 1) / 2;
+            int32 y = StretchRefInt(RsGlobal.maximumHeight, DEFAULT_SCREEN_HEIGHT, 100.0f, 0.2232142835855484f);
+            for (int32 i = midPoint + 3; i > 0; i--) {
+                y = LegendStepY(y);
             }
 
             DrawWindow({
-                    StretchX(95.0f),
-                    StretchY(100.0f),
-                    StretchX(550.0f),
-                    y
+                    RsGlobal.maximumWidth == DEFAULT_SCREEN_WIDTH ? 95.0f : (float)((x87d)RsGlobal.maximumWidth * (x87d)0.1484375f),
+                    RsGlobal.maximumHeight == DEFAULT_SCREEN_HEIGHT ? 100.0f : (float)((x87d)RsGlobal.maximumHeight * (x87d)0.2232142835855484f),
+                    RsGlobal.maximumWidth == DEFAULT_SCREEN_WIDTH ? 555.0f : (float)((x87d)RsGlobal.maximumWidth * (x87d)0.8671875f),
+                    (float)y
                 }, "FE_MLG", 0, {0, 0, 0, 190}, true, true
             ); // Map Legend
             CFont::SetWrapx(SCREEN_WIDTH - 40.f);
@@ -350,21 +366,22 @@ void CMenuManager::PrintMap() {
             CFont::SetScale(StretchX(0.3f), StretchY(0.55f));
             CFont::SetColor(MENU_TEXT_SELECTED);
             if (CRadar::MapLegendCounter) {
-                auto currentY = StretchY(127.0f);
-                auto currentX = StretchX(160.0f);
-                const auto midPoint = (CRadar::MapLegendCounter - 1) / 2;
+                // exe 0x576190-0x57627B: x/y are ints (ftol of the exe-folded constants), the next row is ftol(19*H/448 + y)
+                const auto row0Y = StretchRefInt(RsGlobal.maximumHeight, DEFAULT_SCREEN_HEIGHT, 127.0f, 0.2834821343421936f);
+                auto currentY = row0Y;
+                auto currentX = StretchRefInt(RsGlobal.maximumWidth, DEFAULT_SCREEN_WIDTH, 160.0f, 0.25f);
                 for (auto legend = 0; legend < CRadar::MapLegendCounter; ++legend) {
                     CRadar::DrawLegend(
-                        NOTSA_FTOL(int32, currentX),
-                        NOTSA_FTOL(int32, currentY),
+                        currentX,
+                        currentY,
                         static_cast<eRadarSprite>(CRadar::MapLegendList[legend])
                     );
 
                     if (legend == midPoint) {
-                        currentX = StretchX(350.0f);
-                        currentY = StretchY(127.0f);
+                        currentX = StretchRefInt(RsGlobal.maximumWidth, DEFAULT_SCREEN_WIDTH, 350.0f, 0.546875f);
+                        currentY = row0Y;
                     } else {
-                        currentY += StretchY(19.0f);
+                        currentY = LegendStepY(currentY);
                     }
                 }
             }

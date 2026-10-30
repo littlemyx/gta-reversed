@@ -280,30 +280,38 @@ void CGlass::WindowRespondsToCollision(CEntity* entity, float fDamageIntensity, 
 **/
 void CGlass::GeneratePanesForWindow(ePaneType type, CVector point, CVector fwd, CVector right, CVector velocity, CVector center, float velocityCenterDragCoeff,
                                     bool bShatter, bool numSectionsMax1, int32 numSections, bool unk) {
+    // exe 0x71B620-0x71BC3C. The lengths are sqrt((z^2 + y^2) + x^2) (inlined, NOT CVector::Magnitude's x,y,z order)
+    const auto LengthZYX = [](const CVector& v) { return (float)std::sqrt(((x87d)v.z * v.z + (x87d)v.y * v.y) + (x87d)v.x * v.x); };
+    const float totalSizeY = LengthZYX(fwd), totalSizeX = LengthZYX(right);
 
-    const float totalSizeY = fwd.Magnitude(), totalSizeX = right.Magnitude();
-
-    // Calculate no. of sections, and section size
-    const auto CalculateCountOfSectionsAndSizeAxis = [&](auto axisSize) {
-        const auto count = numSectionsMax1 ? 1 : std::min(numSections * NOTSA_FTOL(uint32, (axisSize + 0.75f/*make it round upwards*/)), 3u);
-        return std::make_pair(count, axisSize / (float)count);
+    // Calculate no. of sections: _ftol2(max(1.0, size + 0.75)) * numSections (a window thinner than 0.25 still has one section), at most 3, at most 1 for `numSectionsMax1`
+    const auto CalculateCountOfSections = [&](float axisSize) {
+        const x87d size = (x87d)axisSize + 0.75f;
+        uint32 count = NOTSA_FTOL(uint32, ((x87d)1.0 > size) ? (x87d)1.0 : size) * (uint32)numSections;
+        count = std::min(count, 3u);
+        if (numSectionsMax1) {
+            count = std::min(count, 1u);
+        }
+        return count;
     };
+    const uint32 countY = CalculateCountOfSections(totalSizeY); // fwd is evaluated first in the exe, no side effects
+    const uint32 countX = CalculateCountOfSections(totalSizeX);
 
-    const auto [countX, sizeX] = CalculateCountOfSectionsAndSizeAxis(totalSizeX);
-    const auto [countY, sizeY] = CalculateCountOfSectionsAndSizeAxis(totalSizeY);
-
-    // NOTSA_LOG_DEBUG("Panes: {} x {} ({.3f} x {.3f})", countX, countY, sizeX, sizeY);
+    const float sizeY = totalSizeY / (float)countY;
+    const float sizeX = totalSizeX / (float)countX;
 
     bool hitGround{};
     float groundZ = CWorld::FindGroundZFor3DCoord(point, &hitGround, nullptr);
     if (!hitGround)
         groundZ = point.z - 2.f;
 
-    if (!countY)
-        return;
-
     for (auto posY = 0u; posY < countY; posY++) {
+        // exe 0x71B7D7: posY * totalSizeY / count, stored as a float
+        const float offsetY = (float)((x87d)posY * totalSizeY / (x87d)(float)countY);
+
         for (auto posX = 0u; posX < countX; posX++) {
+            const float offsetX = (float)((x87d)posX * totalSizeX / (x87d)(float)countX);
+
             for (auto piece = 0u; piece < std::size(PanePolyPositions); piece++) {
                 CFallingGlassPane* pane = FindFreePane();
                 if (!pane)
@@ -311,35 +319,62 @@ void CGlass::GeneratePanesForWindow(ePaneType type, CVector point, CVector fwd, 
 
                 pane->m_nPieceIndex = piece;
 
-                // Calculate matrix
+                // Calculate matrix: `right` = (1 / |right|) * right * sizeX, `up` = (1 / |fwd|) * fwd * sizeY. The reciprocal of the right axis is kept unrounded for
+                // x and re-read as a float for y/z (`fst` + `fld`), the one of the up axis is a float (`fstp` + `fld`) for all three components.
                 auto& mat = pane->m_Matrix;
-                mat.GetRight() = Normalized(right) * sizeX;
-                mat.GetUp() = Normalized(fwd) * sizeY;
+                const x87d invRightE = (x87d)1.0 / totalSizeX;
+                const float invRight = (float)invRightE;
+                const float invFwd   = (float)((x87d)1.0 / totalSizeY);
+                mat.GetRight() = CVector{
+                    (float)((invRightE * right.x) * sizeX),
+                    (float)(((x87d)invRight * right.y) * sizeX),
+                    (float)(((x87d)invRight * right.z) * sizeX)
+                };
+                mat.GetUp() = CVector{
+                    (float)(((x87d)invFwd * fwd.x) * sizeY),
+                    (float)(((x87d)invFwd * fwd.y) * sizeY),
+                    (float)(((x87d)invFwd * fwd.z) * sizeY)
+                };
                 mat.GetForward() = Normalized(CrossProduct(mat.GetRight(), mat.GetUp()));
 
-                // Matrix's position is the center of the glass pane
-                const auto paneCenterPos = (PanePolyCenterPositions[piece] + CVector2D{ (float)posX, (float)posY } )* CVector2D{ sizeX, sizeY };
-                mat.GetPosition() = point
-                    + Normalized(fwd) * paneCenterPos.y
-                    + Normalized(right) * paneCenterPos.x;
+                // Matrix's position is the center of the glass pane: exe 0x71B8A5-0x71B9E0 (sums unrounded, one float rounding per component)
+                const x87d paneX = (x87d)sizeX * PanePolyCenterPositions[piece].x + offsetX;
+                const x87d paneY = (x87d)sizeY * PanePolyCenterPositions[piece].y + offsetY;
+                mat.GetPosition() = CVector{
+                    (float)((((x87d)invFwd * fwd.x) * paneY + ((x87d)invRight * right.x) * paneX) + point.x),
+                    (float)((((x87d)invFwd * fwd.y) * paneY + ((x87d)invRight * right.y) * paneX) + point.y),
+                    (float)((((x87d)invFwd * fwd.z) * paneY + ((x87d)invRight * right.z) * paneX) + point.z)
+                };
 
                 {
-                    constexpr auto RandomFactor = [] {return (float)((CGeneral::GetRandomNumber() % 128) - 64) * 0.0015f; };
-                    pane->m_Velocity = velocity + CVector{ RandomFactor(), RandomFactor(), 0.f };
+                    // exe 0x71B9E0-0x71BA6C: velocity.x + r1 * 0.0015f (r1 stored as a float), velocity.y + r2 * 0.0015f (the product stays unrounded)
+                    const float r1 = (float)((CGeneral::GetRandomNumber() % 128) - 64) * 0.0015f;
+                    const int32 r2 = (CGeneral::GetRandomNumber() % 128) - 64;
+                    pane->m_Velocity = CVector{ velocity.x + r1, (float)((x87d)velocity.y + (x87d)r2 * 0.0015f), velocity.z };
                 }
 
                 if (velocityCenterDragCoeff != 0.0f) {
-                    pane->m_Velocity += Normalized(mat.GetPosition() - center) * velocityCenterDragCoeff;
+                    // exe 0x71BAB0-0x71BB10: x/y use the unrounded product, z the float-rounded one
+                    const auto dir = Normalized(mat.GetPosition() - center);
+                    pane->m_Velocity.x = (float)((x87d)dir.x * velocityCenterDragCoeff + pane->m_Velocity.x);
+                    pane->m_Velocity.y = (float)((x87d)dir.y * velocityCenterDragCoeff + pane->m_Velocity.y);
+                    pane->m_Velocity.z = (float)(dir.z * velocityCenterDragCoeff) + pane->m_Velocity.z;
                 }
 
                 {
-                    constexpr auto RandomFactor = [] { return (float)((CGeneral::GetRandomNumber() % 128) - 64) * ExeRecip(500.f); }; // Random number in range (-0.128, 0.128)
-                    pane->m_RandomNumbers = CVector{ RandomFactor(), RandomFactor(), RandomFactor() };
+                    // exe 0x71BB10-0x71BB6A: the FIRST rand() goes to y, the second to x, the third to z ((rand % 128 - 64) * 0.002f)
+                    const float ry = (float)((CGeneral::GetRandomNumber() % 128) - 64) * 0.002f;
+                    const float rx = (float)((CGeneral::GetRandomNumber() % 128) - 64) * 0.002f;
+                    const float rz = (float)((CGeneral::GetRandomNumber() % 128) - 64) * 0.002f;
+                    pane->m_RandomNumbers = CVector{ rx, ry, rz };
                 }
 
                 switch (type) {
                 case ePaneType::DELAYED: {
-                    pane->m_nCreatedTime = CTimer::GetTimeInMS() + NOTSA_FTOL(uint32, (mat.GetPosition() - center).Magnitude() * 100.f);
+                    // exe 0x71BBDB: _ftol2(sqrt((dz^2 + dy^2) + dx^2) * 100.0 + time as x87 integer), the length unrounded
+                    const auto d = mat.GetPosition() - center;
+                    const x87d len = std::sqrt(((x87d)d.z * d.z + (x87d)d.y * d.y) + (x87d)d.x * d.x);
+                    pane->m_nCreatedTime = NOTSA_FTOL(uint32, len * (x87d)100.0f + (x87d)CTimer::GetTimeInMS());
                     break;
                 }
                 case ePaneType::CAR:

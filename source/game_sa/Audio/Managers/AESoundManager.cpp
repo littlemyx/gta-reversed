@@ -170,7 +170,8 @@ void CAESoundManager::Service() {
 
     // 0x4F0329 - Mark sounds that ended as finished
     for (CAESound& sound : m_VirtuallyPlayingSoundList) {
-        if (!sound.IsActive() || !sound.IsAudioHardwareAware() || sound.m_PlayTime != -1) {
+        // 0x4F0330: InUse, FrameDelay == 0 (NOT the hardware-aware flag), PlayTime == -1; SoundHasFinished is inlined by the exe
+        if (!sound.IsActive() || sound.m_FrameDelay != 0 || sound.m_PlayTime != -1) {
             continue;
         }
         sound.SoundHasFinished();
@@ -212,7 +213,7 @@ void CAESoundManager::Service() {
         int16 chN = m_NumAllocatedPhysicalChannels - 1;
 
         // 0x4F04CE - Find last slot in use
-        for (; chN > numPrioritisedSounds; chN--) {
+        for (; chN >= numPrioritisedSounds; chN--) { // exe: do-while down to and INCLUDING index numPrioritisedSounds (0x4F04D6)
             if (GetPrioritisedSoundList()[chN] != -1) {
                 break;
             }
@@ -224,7 +225,8 @@ void CAESoundManager::Service() {
             if (sound.m_ListenerVolume >= soundB.m_ListenerVolume) {
                 continue;
             }
-            if (sound.GetPlayPhysically() <= soundB.GetPlayPhysically()) {
+            // 0x4F051D: `cmp bl, cl; jbe` - the insert point is found when the new sound is quieter and NOT more physical than B
+            if (sound.GetPlayPhysically() > soundB.GetPlayPhysically()) {
                 continue;
             }
             break;
@@ -329,7 +331,7 @@ void CAESoundManager::Service() {
         }
 
         sound.m_IsAudioHardwareAware = true;
-        if (sound.m_FrameDelay > 0 && !CAESoundManager::IsSoundPaused(sound)) {
+        if ((int8)sound.m_FrameDelay > 0 && !CAESoundManager::IsSoundPaused(sound)) { // exe: signed byte `jle` (0x4F0AD6)
             --sound.m_FrameDelay;
         }
     }

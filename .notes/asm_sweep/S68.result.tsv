@@ -1,7 +1,7 @@
 addr	function	verdict	asm range	note	fix commit
-0x4385B0	CCheat::WeaponCheat1	FIXED	0x4385B0-0x438882 (all)	models/weapons/ammo equal; player 0 via FindPlayerPed(-1) (port: 0); SetModelIsDeletable only for 9 of the 10 models in exe order (Colt45 0x15A skipped)	d6f9c51f
-0x438890	CCheat::WeaponCheat2	FIXED	0x438890-0x438B2E (all)	models/weapons/ammo/deletable equal; player 0 via FindPlayerPed(-1) (port: 0)	d6f9c51f
-0x438B30	CCheat::WeaponCheat3	FIXED	0x438B30-0x438D50 (all)	models/weapons/ammo/deletable equal; player 0 via FindPlayerPed(-1) (port: 0)	d6f9c51f
+0x4385B0	CCheat::WeaponCheat1	FIXED	0x4385B0-0x438882 (all)	models/weapons/ammo equal; player 0 via FindPlayerPed(-1) (port: 0); SetModelIsDeletable only for 9 of the 10 models in exe order (Colt45 0x15A skipped)	8795876c
+0x438890	CCheat::WeaponCheat2	FIXED	0x438890-0x438B2E (all)	models/weapons/ammo/deletable equal; player 0 via FindPlayerPed(-1) (port: 0)	8795876c
+0x438B30	CCheat::WeaponCheat3	FIXED	0x438B30-0x438D50 (all)	models/weapons/ammo/deletable equal; player 0 via FindPlayerPed(-1) (port: 0)	8795876c
 0x439B20	CCheat::MayhemCheat	MATCH	0x439B20-0x439C6C (all)	run build: toggle 14, hate bits 0xFFFFF for ped types 4..22, pool reverse walk, non-player peds, closest-ped hate event (task 1000); NOTSA_STANDALONE_RUN already drops the port-only OFF branch and table swap	-
 0x43A4A0	CCheat::TankCheat	MATCH	0x43A4A0-0x43A4AB (all)	VehicleCheat(0x1B0 RHINO)	-
 0x43A4B0	CCheat::StockCarCheat	MATCH	0x43A4B0-0x43A4BB (all)	VehicleCheat(0x1F8 BLOODRA)	-

@@ -33,14 +33,17 @@ CTimeInfo* CTimeInfo::FindOtherTimeModel(const char* modelName) {
         strncpy_s(daySuffix, 4, "_nt", 4);
     }
 
-    int32 index = 0;
-    CBaseModelInfo* modelInfo = CModelInfo::GetModelInfoFromHashKey(CKeyGen::GetUppercaseKey(timeSwitchModelName), &index);
-    CTimeInfo* timeInfo = modelInfo ? modelInfo->GetTimeInfo() : nullptr;
-
-    if (timeInfo) {
-        m_nOtherTimeModel = index;
-        return timeInfo;
+    // 0x4C47E0: the exe walks all model infos and takes the first one that HAS a CTimeInfo (GetTimeInfo() != null) and the key; a non-time model with the same key does not stop the search
+    const auto key = CKeyGen::GetUppercaseKey(timeSwitchModelName);
+    for (int32 i = 0; i < CModelInfo::NUM_MODEL_INFOS; i++) {
+        auto* const mi = CModelInfo::GetModelInfo(i);
+        if (!mi) {
+            continue;
+        }
+        if (auto* const timeInfo = mi->GetTimeInfo(); timeInfo && mi->m_nKey == key) {
+            m_nOtherTimeModel = (int16)i;
+            return timeInfo;
+        }
     }
-
     return nullptr;
 }

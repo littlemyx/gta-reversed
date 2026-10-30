@@ -52,7 +52,7 @@ void CEscalator::AddThisOne(const CVector& vecStart, const CVector& vecBottom, c
         const float dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z;
         return (float)std::sqrt(((x87d)dz * dz + (x87d)dy * dy) + (x87d)dx * dx);
     };
-    m_NumIntermediatePlanes = 1 + NOTSA_FTOL(int32, LengthZYX(m_Bottom, m_Top) * 2.5f);
+    m_NumIntermediatePlanes = NOTSA_FTOL(int32, LengthZYX(m_Bottom, m_Top) * 2.5f + 1.0f); // 0x717A6B: the +1.0 is added before the truncation
     m_NumBottomPlanes       = 1 - NOTSA_FTOL(int32, LengthZYX(m_Bottom, m_Start) * -0.3125f);
     m_NumTopPlanes          = 1 - NOTSA_FTOL(int32, LengthZYX(m_End, m_Top) * -0.3125f);
 
@@ -65,7 +65,7 @@ void CEscalator::AddThisOne(const CVector& vecStart, const CVector& vecBottom, c
     m_Entity   = entity;
 
     m_Bounding.m_vecCenter = CVector::Centroid({ m_Start, m_End });
-    m_Bounding.m_fRadius   = DistanceBetweenPoints(m_Bounding.m_vecCenter, m_Start);
+    m_Bounding.m_fRadius   = LengthZYX(m_Start, m_Bounding.m_vecCenter); // 0x717BD0: sqrt((dz^2 + dy^2) + dx^2), not x,y,z
 }
 
 // 0x717D30

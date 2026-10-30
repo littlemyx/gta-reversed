@@ -442,3 +442,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	MISSIONS-CRASH	v6	debug	106865	47	12	CPedAttractor ctor strcpy_s -> strncpy (exe sprintf unbounded); S67 AddPedAtAttractor correct (now reaches RegisterPed); not reproduced on tip
 2026-10-30	ASM-S89	v6	asm sweep	258715	112	25	IFP hierarchy compressed flag from first sequence frame type, BlendAnimation strict fade-out + NaN, assoc group last duplicate name wins, single user track index; 28 M
 2026-10-30	ASM-S85b	v6	asm sweep	259723	102	23	ResolveProbability 39 exe call sites all 0..1 (S85 change confirmed), thunder volume x87 + NaN clamp; weather UpdateParameters 988 lines MATCH; stall table 420->410 forwarded to S83b; 3 M
+2026-10-30	SYSTEMIC-9	v6	systemic	177804	79	11	175 *_s sites, 26 fixed (11 commits) incl. ReadTextLabelFromScript full-length labels, LoadMissionText 8-char names; not tested/landed -> SYSTEMIC-9b

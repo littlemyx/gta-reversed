@@ -497,7 +497,7 @@ bool CFileLoader::LoadCollisionFile(uint8* buff, uint32 buffSize, uint8 colId) {
         const auto buffRemainingSize = buffSize - buffPos;
         const auto buffIt            = &buff[buffPos];
 
-        if (buffRemainingSize < sizeof(FileHeader::FileInfo)) {
+        if (buffRemainingSize <= sizeof(FileHeader::FileInfo)) { // exe 0x538461/0x538650: `jbe` / `ja` against 8 - exactly 8 bytes left is "no more data" too
             return true; // No more data
         }
 
@@ -581,12 +581,16 @@ bool CFileLoader::LoadCollisionFileFirstTime(uint8* buff, uint32 buffSize, uint8
         const auto buffRemainingSize = buffSize - buffPos;
         const auto buffIt            = &buff[buffPos];
 
-        if (buffRemainingSize < sizeof(FileHeader::FileInfo)) {
+        if (buffRemainingSize <= sizeof(FileHeader::FileInfo)) { // exe 0x5B501D/0x5B51B5: `jbe` / `ja` against 8
             return true; // No more data
         }
 
         if (!reinterpret_cast<FileHeader::FileInfo*>(buffIt)->IsValid()) {
             return true; // Finished reading all data, but there's some padding left.
+        }
+        // exe 0x5B5041-0x5B5058: this loader only knows COLL/COL2/COL3; any other fourcc (COL4 too) ends the loop
+        if (reinterpret_cast<FileHeader::FileInfo*>(buffIt)->GetVersion() == ColModelVersion::COL4) {
+            return true;
         }
 
         auto& header = *reinterpret_cast<FileHeader*>(buffIt);

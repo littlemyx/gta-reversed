@@ -50,7 +50,7 @@ protected: // Config:
         float IdRollOffFactor               = 2.f; // 0x8CBC2C
         float RevRollOffFactor              = 2.f; // 0x8CBC30
         float RoadNoiseSoundRollOffFactor   = 3.f; // 0x8CBD14
-        float FlatTireSoundRollOffFactor    = 3.f; // 0x8CBD20
+        float FlatTireSoundRollOffFactor    = 2.f; // 0x8CBD20 (exe constant: 2.0)
         float ReverseGearSoundRollOffFactor = 1.f; // 0xNONE
 
         float VolOffsetOnGround             = 1.5f; // 0x8CBD50

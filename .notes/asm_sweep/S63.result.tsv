@@ -1,0 +1,42 @@
+addr	function	verdict	asm range	note	fix commit
+0x4635F0	CTaskSimpleNone::~CTaskSimpleNone (deleting)	MATCH	0x4635F0-0x46360B	scalar deleting dtor of CTaskSimpleNone (vtable 0x859CFC); Clone/GetTaskType(0xC8)/MakeAbortable/ProcessPed also match	-
+0x4B8730	CTaskSimpleOnEscalator::~ (deleting)	MATCH	0x4B8730-0x4B874B	scalar deleting dtor; also checked Clone (StandStill 0,1,0,8.0), GetTaskType, ProcessPed 0x62F520 (escalator heading, MI_ESCALATORSTEP/8 test)	-
+0x61A900	CTaskSimpleRunAnim::Constructor2	MATCH	0x61A900-0x61A94A	ctor 2 (flag byte rewrite, group/id/blend/type); also ctor 1, Clone, StartAnim 0x61A950, ProcessPed 0x61BAC0, finish cb 0x61A8A0	-
+0x61BC80	CTaskSimpleRunAnimLoopedMiddle::~ (deleting)	MATCH	0x61BC80-0x61BC9B	scalar deleting dtor; also both ctors, Clone, StartAnim, ProcessPed 0x61BCB0 (loop re-seek, (cur-step)<=end, NaN arms, timer)	-
+0x61AAA0	CTaskSimpleRunNamedAnim::FinishRunAnimMovePedCB	MATCH	0x61AAA0-0x61AAFA	FinishRunAnimMovePedCB (translation store, IGNORE_ROOT_TRANSLATION, FINISH_AUTO_REMOVE/DELETE cb test); also ctor 0x61A990, StartAnim, OffsetPedPosition, Clone, default ctor	-
+0x48E360	CTaskSimpleSay::Constructor	MATCH	0x48E360-0x48E38D	CTaskSimpleSay ctor, Clone, ProcessPed 0x48E440 (unguarded timer start, IsOutOfTime inline), dtor	-
+0x48E910	CTaskSimpleScratchHead::~ (deleting)	MATCH	0x48E910-0x48E92B	scalar deleting dtor of ScratchHead; Clone 0x48DF60 (group 0, id 135, 4.0, type 0x1A5, hold 0), IsInterruptable	-
+0x6374A0	CTaskSimpleSetStayInSamePlace::~ (deleting)	MATCH	0x6374A0-0x6374BA	scalar deleting dtor of SetStayInSamePlace; ctor, Clone, ProcessPed (bit 21 of +0x46C)	-
+0x66C450	CTaskSimpleSlideToCoord::Constructor	MATCH	0x66C450-0x66C4B7	SlideToCoord ctor with anim (RunNamedAnim base args, flags |= 3, timer -1). RH install lines are commented out (not hooked); function itself equal	-
+0x66C4D0	CTaskSimpleSlideToCoord::MakeAbortable	MATCH	0x66C4D0-0x66C4DD	MakeAbortable: running anim -> CTaskSimpleAnim::MakeAbortable else true (not hooked, commented out)	-
+0x6296B0	CTaskSimpleStealthKill::~ (deleting)	MATCH	0x6296B0-0x6296CF	scalar deleting dtor address correct (inner dtor 0x622680 sets vtable 0x86DA74)	-
+0x492DF0	CTaskSimpleTogglePedThreatScanner::~ (deleting)	MATCH	0x492DF0-0x492E0B	scalar deleting dtor; ctor 0x492D10, Clone, GetTaskType, ProcessPed 0x6337A0 (+0xC/+0xD/+0xE order) match	-
+0x6394D0	CTaskSimpleTriggerLookAt::~ (deleting)	MATCH	0x6394D0-0x6394EB	scalar deleting dtor (inner 0x634500: CleanUpOldReference of +8); ctor, Clone (bone/time reset), ProcessPed (LookAt arg order) match	-
+0x61DE60	CTaskSimpleUseGun::Constructor	FIXED	0x61DE60-0x61DF16	ctor stored the burst length argument in m_BurstShots (+0x36) instead of m_BurstLength (+0x34); other fields match	7695ad6f6
+0x61DF30	CTaskSimpleUseGun::Destructor	MATCH	0x61DF30-0x61DF9D	dtor: target ref cleanup then default delete cb on the anim	-
+0x6389D0	CTaskSimpleWaitForPizza::~ (deleting)	MATCH	0x6389D0-0x6389EB	scalar deleting dtor; ctor 0x632B30, Clone, MakeAbortable, ProcessPed 0x632B80 match	-
+0x479D60	CTheCarGenerators::Get	MATCH	0x479D60-0x479D6D	Get(index): array base 0xC27AD0 + 32 * index	-
+0x5D38C0	CTheCarGenerators::Save	MATCH	0x5D38C0-0x5D39AE	Save: count of used+ipl0 generators, counters (u8), index (u16) + 32 byte record, plate count + 15 x 16 byte entries	-
+0x5D39B0	CTheCarGenerators::Load	FIXED	0x5D39B0-0x5D3A5D	per-generator load loop: exe uses a 16 bit counter compared signed with the re-read count and skips count <= 0; port used a uint32 loop	1ff2015be
+0x6F3240	CTheCarGenerators::RemoveCarGenerators	MATCH	0x6F3240-0x6F3265	RemoveCarGenerators	-
+0x6F3270	CTheCarGenerators::Init	MATCH	0x6F3270-0x6F32B2	Init: counters, plate handler (15 entries id -1, text[0]=0), isUsed=0 for 500 generators	-
+0x6F3F40	CTheCarGenerators::Process	MATCH	0x6F3F40-0x6F3FBD	Process: train/cutscene/replay-playback guard, counter 0..3, stride 4, GenerateEvenIfPlayerIsClose decrement	-
+0x572B70	CTheZones::PostZoneCreation	MATCH	0x572B70	ret (no-op)	-
+0x572D10	CTheZones::Update	FIXED	0x572D10-0x572D6B	the 5 second delay restarts (CountSeconds = now) after every zone update; port updated every frame once 5 s had passed	f78bfc033
+0x5D2E60	CTheZones::Save	MATCH	0x5D2E60-0x5D2F3F	Save: level, 3 counts (u16 loops; signed vs unsigned differs only for corrupt negative counts), arrays, visited, revealed	-
+0x5D2F40	CTheZones::Load	MATCH	0x5D2F40-0x5D301F	Load: mirrors Save (same corrupt-count note)	-
+0x463830	CUpsideDownCarCheck::IsCarUpsideDown	FIXED	0x463830-0x463895	upside-down needs CanPedStepOutCar(false) == TRUE after the shape test (port had it negated)	68cf68bc2
+0x4638D0	CUpsideDownCarCheck::AddCarToCheck	FIXED	0x4638D0-0x4638FE	only the first free slot is taken (port filled every free slot)	4fae45ca0
+0x463910	CUpsideDownCarCheck::RemoveCarFromCheck	MATCH	0x463910-0x463933	RemoveCarFromCheck: all matching slots -> handle -1, time 0	-
+0x463940	CUpsideDownCarCheck::HasCarBeenUpsideDownForAWhile	MATCH	0x463940-0x46396B	HasCarBeenUpsideDownForAWhile: time > 2000 (unsigned)	-
+0x4655E0	CUpsideDownCarCheck::UpdateTimers	FIXED	0x4655E0-0x465675	dead/free slot becomes handle -1 + time 0 (port wrote handle 0, which AddCarToCheck never reuses) and handle 0 is not skipped. Also AreAnyCarsUpsideDown (0x4638A0, unhooked) strict time test (c74729d43)	4f62f52db
+0x5B9E40	CVehicleAnimGroup::CopyAnimGroup	MATCH	0x5B9E40-0x5B9EA8	CopyAnimGroup: copies +0..+0x3C only (door offsets untouched)	-
+0x5B9EB0	CVehicleAnimGroup::InitAnimGroup	MATCH	0x5B9EB0-0x5B9F24	InitAnimGroup	-
+0x639FC0	CVehicleAnimGroupData::GetGroupForAnim	MATCH	0x639FC0-0x639FDB	GetGroupForAnim -> GetGroup	-
+0x639FE0	CVehicleAnimGroupData::UsesTruckDrivingAnims	MATCH	0x639FE0-0x639FF5	UsesTruckDrivingAnims = special flag bit 3	-
+0x645600	CVehicleAnimGroupData::GetAnimDoorOffset	MATCH	0x645600-0x645623	GetAnimDoorOffset -> ComputeAnimDoorOffsets (sret)	-
+0x645630	CVehicleAnimGroupData::GetInOutTimings	MATCH	0x645630-0x645659	GetInOutTimings	-
+0x6D09E0	CVehicleAnimGroupData::UsesKartDrivingAnims	MATCH	0x6D09E0-0x6D09F5	UsesKartDrivingAnims = special flag bit 2	-
+0x6E3B00	CVehicleAnimGroup::GetGroup	FIXED	0x6E3B00-0x6E3C09	jump table (351..390 -> flag bit) decoded and equal; ids outside it and ANIM_ID_UNKNOWN_26 test 2^animId in the exe: removed NOTSA_UNREACHABLE (log/UB) in front of that expression	9669674cf
+0x6E3C80	CVehicleAnimGroup::ComputeCriticalBlendTime	MATCH	0x6E3C80-0x6E3CC0	tables decoded: GetIn 351-363, GetOut 373-376, Jack 378-379, JumpOut 384-385, FallOut 387-388, else 0	-
+0x61BF20	CTaskSimpleRunNamedAnim::ProcessPed	FIXED	0x61BF20-0x61C0C3	extra (not a TSV row; found while checking FinishRunAnimMovePedCB): blend-out distance sums the squares z, y, x	c27340a8b

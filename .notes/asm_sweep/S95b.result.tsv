@@ -1,0 +1,16 @@
+addr	function	verdict	asm range	note	fix commit
+0x5BA850	CHud::Initialise	MATCH	0x5BA850-0x5BA8AF	txd slot/load/addref, 6 sprite textures from table 0x8D128C, tail-calls ReInitialise	-
+0x588850	CHud::Shutdown	MATCH	0x588850-0x58887C	6 sprite deletes, RemoveTxdSlot(FindTxdSlot("hud"))	-
+0x58FAE0	CHud::Draw	MATCH	0x58FAE0-0x58FD13	early-outs (replay, photo, menu next frame, cineycam frame), 12 render states, widescreen gating, vital-stats/radar/trip-skip, paused gating, subtitle-before-fade	-
+0x58D490	CHud::DrawAfterFade	MATCH	0x58D490-0x58D575	plane(4)/heli(3) test, area name gating, script text, subtitles-after-fade, mission title, odd-job(false)	-
+0x58CA50	CHud::DrawBustedWastedMessage	MATCH	0x58CA50-0x58CC7F	posY static+guard, start state resets vehicle/zone state, alpha += ms*0.4 clamp 255	-
+0x58E020	CHud::DrawCrossHairs	MATCH	0x58E020-0x58EAE7	cam-mode sets (7,0x10,8,0x33,0x22,0x2D,0x2E / 0x2A,0x28,0x34,0x27), freeaim/weapon-range/ped-state/transition gating, texture branch sizes and quadrant order+uv dirs, rocket mode set; M16 quadrant rect literals not re-read (SYSTEMIC-7)	-
+0x58B6E0	CHud::DrawHelpText	MATCH	0x58B6E0-0x58C047	state tables (0x58C050/0x58C064) decoded, 600ms fade timer, 3000ms quick timeout, alpha 200*0.001, StringCompare/Copy, line-count time, DISPLAY_INFO sound, stat-bar branch (invMax, max 2/3, colours, widths)	-
+0x58B180	CHud::DrawMissionTimers	MATCH	0x58B180-0x58B6D2	hide/flash 50-frame counters, frame&4 blink, 2nd-player y offsets, bar-chart args, double-scaled counter y (exe quirk kept)	-
+0x58D240	CHud::DrawMissionTitle	MATCH	0x58D240-0x58D48C	start state (-60, SetHelpMessage(null)), slide-in 0.3/ms, 120-tick hold, alpha fade by ms, gold colour	-
+0x58CC80	CHud::DrawOddJobMessage	MATCH	0x58CC80-0x58D222	three messages, OddJob2 4-state machine (table 0x58D224), 1/6 and 0.2 factors, 40/30 clamps, 380/-380/1500/5000 constants	-
+0x58A330	CHud::DrawRadar	MATCH	0x58A330-0x58AA35	exit-enter states, radar mode, item flash, plane ring, altimeter condition and z factor, disc quarters count/order (rect literals not re-read)	-
+0x58C080	CHud::DrawScriptText	MATCH	0x58C080-0x58C24C	96 lines, before-fade filter, orientation priority, edge vs drop shadow, position from right/bottom	-
+0x58C250	CHud::DrawSubtitles	MATCH	0x58C250-0x58C69F	gating (coop), vehicle/zone to fade out, widescreen/cutscene/subtitle option, formatting/vital-stats/normal widths and positions	-
+0x58C6A0	CHud::DrawSuccessFailedMessage	MATCH	0x58C6A0-0x58CA46	posY static, start state (small messages / line count >1), slide-in 0.3/ms + alpha ramp, hold 120, fade by 0.3*ms	-
+0x58AEA0	CHud::DrawVehicleName	MATCH	0x58AEA0-0x58B16B	state machine (table 0x58B16C), 3000ms show, 1000ms fade, -0.02*-1000 fade-out, subtitle suppression, zone interplay	-

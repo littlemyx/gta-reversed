@@ -453,4 +453,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S95b	v6	asm sweep	235677	67	9	HUD draw rest all 15 MATCH, no code change
 2026-10-30	ASM-S84	v6	asm sweep	258077	102	29	road noise threshold 10x high + wheel test, broken engine played spray-paint sound, moving parts smoothing used timestep, rotor step/heli speed exe consts, Service call order; 5 M
 2026-10-30	ASM-S99	v6	asm sweep	277216	109	14	carcols partial line keeps previous green/blue (exe frame slots), wheel clone render CB, stricmp, env map dword; 35 M; not tested/landed -> ASM-S99c
-2026-10-30	ASM-S102	v6	asm sweep	0	0	0	Fx emitter brightness>100 particles black, coronas init, motion blur history[2] stale, mirror raster fallback + cam matrix normalise; 13 M
+2026-10-30	ASM-S102	v6	asm sweep	219559	78	24	Fx emitter brightness>100 particles black, coronas init, motion blur history[2] stale, mirror raster fallback + cam matrix normalise; 13 M

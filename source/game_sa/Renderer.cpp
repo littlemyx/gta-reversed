@@ -1349,33 +1349,39 @@ void CRenderer::ScanWorld() {
     NOTSA_GLOBAL_LOCAL(lastCameraPosition, 0xB76888, (CVector), {});
     NOTSA_GLOBAL_LOCAL(lastCameraForward, 0xB7687C, (CVector), {});
 
-    CVector distance = TheCamera.GetPosition() - lastCameraPosition;
+    // 0x5550E0-0x555159: unused flag (0xB745C8): |delta|^2 (z, x, y) < 16 and dot(forward, last forward) (z, x, y) > 0.98
+    const CVector& camPos = TheCamera.GetPosition();
+    const x87d dX = camPos.x - lastCameraPosition.x;
+    const x87d dY = camPos.y - lastCameraPosition.y;
+    const x87d dZ = camPos.z - lastCameraPosition.z;
+    const CVector& camForward = TheCamera.m_mCameraMatrix.GetForward();
     static bool bUnusedBool = false;
-    if (DotProduct(distance, lastCameraForward) >= 16.0f || DotProduct(TheCamera.m_mCameraMatrix.GetForward(), lastCameraForward) <= 0.98f)
+    if (!(dZ * dZ + dX * dX + dY * dY < (x87d)16.0f) || !(camForward.z * lastCameraForward.z + camForward.x * lastCameraForward.x + camForward.y * lastCameraForward.y > 0.98f))
         bUnusedBool = false;
     else
         bUnusedBool = true;
 
     lastCameraPosition = TheCamera.GetPosition();
     lastCameraForward = TheCamera.m_mCameraMatrix.GetForward();
-    frustumPoints[5] = (frustumPoints[1] * MAX_LOD_DISTANCE) / farPlane;
-    frustumPoints[7].x = frustumPoints[5].x / 5;
-    frustumPoints[7].y = frustumPoints[5].y / 5;
+    // 0x5551D1-0x555431: p * 300 is rounded to a float, then multiplied by the float 1 / farPlane (fld1; fdiv; fmul) = ExeDivide; the near copies (7, 8, 11, 12) are x, y * 0.2f (0x858CC4), not / 5
+    frustumPoints[5] = ExeDivide(frustumPoints[1] * MAX_LOD_DISTANCE, farPlane);
+    frustumPoints[7].x = frustumPoints[5].x * 0.2f;
+    frustumPoints[7].y = frustumPoints[5].y * 0.2f;
     frustumPoints[7].z = frustumPoints[5].z;
 
-    frustumPoints[6] = (frustumPoints[2] * MAX_LOD_DISTANCE) / farPlane;
-    frustumPoints[8].x = frustumPoints[6].x / 5;
-    frustumPoints[8].y = frustumPoints[6].y / 5;
+    frustumPoints[6] = ExeDivide(frustumPoints[2] * MAX_LOD_DISTANCE, farPlane);
+    frustumPoints[8].x = frustumPoints[6].x * 0.2f;
+    frustumPoints[8].y = frustumPoints[6].y * 0.2f;
     frustumPoints[8].z = frustumPoints[6].z;
 
-    frustumPoints[9] = (frustumPoints[3] * MAX_LOD_DISTANCE) / farPlane;
-    frustumPoints[11].x = frustumPoints[9].x / 5;
-    frustumPoints[11].y = frustumPoints[9].y / 5;
+    frustumPoints[9] = ExeDivide(frustumPoints[3] * MAX_LOD_DISTANCE, farPlane);
+    frustumPoints[11].x = frustumPoints[9].x * 0.2f;
+    frustumPoints[11].y = frustumPoints[9].y * 0.2f;
     frustumPoints[11].z = frustumPoints[9].z;
 
-    frustumPoints[10] = (frustumPoints[4] * MAX_LOD_DISTANCE) / farPlane;
-    frustumPoints[12].x = frustumPoints[10].x / 5;
-    frustumPoints[12].y = frustumPoints[10].y / 5;
+    frustumPoints[10] = ExeDivide(frustumPoints[4] * MAX_LOD_DISTANCE, farPlane);
+    frustumPoints[12].x = frustumPoints[10].x * 0.2f;
+    frustumPoints[12].y = frustumPoints[10].y * 0.2f;
     frustumPoints[12].z = frustumPoints[10].z;
     RwV3dTransformPoints(frustumPoints, frustumPoints, 13, TheCamera.GetRwMatrix());
     m_loadingPriority = 0;

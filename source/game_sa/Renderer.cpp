@@ -1480,13 +1480,14 @@ void CRenderer::RequestObjectsInFrustum(RwMatrix* transformMatrix, int32 modelRe
     ms_vecCameraPosition = transformMatrix->pos;
     ms_fFarClipPlane = MAX_LOD_DISTANCE;
     gnRendererModelRequestFlags = modelRequestFlags;
-    if (transformMatrix->at.z > 0.0f) {
-        frustumPoints[5] = (frustumPoints[4] * MAX_LOD_DISTANCE) / farPlane;
-        frustumPoints[6] = (frustumPoints[3] * MAX_LOD_DISTANCE) / farPlane;
+    // 0x555A7B: `fcomp 0.0; test ah,0x41; jp` takes the "at.z > 0" arm for NaN too; the points are (p * 300) * float(1 / farPlane) (ExeDivide), not a division
+    if (!(transformMatrix->at.z <= 0.0f)) {
+        frustumPoints[5] = ExeDivide(frustumPoints[4] * MAX_LOD_DISTANCE, farPlane);
+        frustumPoints[6] = ExeDivide(frustumPoints[3] * MAX_LOD_DISTANCE, farPlane);
     }
     else {
-        frustumPoints[5] = (frustumPoints[1] * MAX_LOD_DISTANCE) / farPlane;
-        frustumPoints[6] = (frustumPoints[2] * MAX_LOD_DISTANCE) / farPlane;
+        frustumPoints[5] = ExeDivide(frustumPoints[1] * MAX_LOD_DISTANCE, farPlane);
+        frustumPoints[6] = ExeDivide(frustumPoints[2] * MAX_LOD_DISTANCE, farPlane);
     }
     RwV3dTransformPoints(frustumPoints, frustumPoints, (int)std::size(frustumPoints), transformMatrix);
     CVector2D points[3] = {

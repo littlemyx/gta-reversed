@@ -3,7 +3,7 @@ addr	function	verdict	asm range	note	fix commit
 0x711EF0	CBirds::CreateNumberOfBirds	NOT_REACHED	-	out of budget; not compared	-
 0x712810	CBirds::Render	NOT_REACHED	-	out of budget; not compared	-
 0x6F4910	CBouncingPanel::ResetPanel	MATCH	0x6F4910-0x6F4914	word [ecx] = 0xFFFF	-
-0x6F49A0	CBouncingPanel::ProcessPanel	FIXED	0x6F49A0-0x6F4E7F	angular velocity = speed - (moveForce + turnForce x compPos) (exe sums the move force with the cross first, cross operands turnForce,compPos); port (speed - move) + compPos x turn. Axis switches, clamp NaN arms, areMultsSet NaN arm, pow damp, matrix write-back MATCH	7ee8a2aac
+0x6F49A0	CBouncingPanel::ProcessPanel	FIXED	0x6F49A0-0x6F4E7F	angular velocity = speed - (moveForce + turnForce x compPos) (exe sums the move force with the cross first, cross operands turnForce,compPos); port (speed - move) + compPos x turn. Axis switches, clamp NaN arms, areMultsSet NaN arm, pow damp, matrix write-back MATCH	267ae380a
 0x59E650	BreakManager_c::Init	NOT_REACHED	-	out of budget; not compared	-
 0x59E660	BreakManager_c::Exit	NOT_REACHED	-	out of budget; not compared	-
 0x59E720	BreakManager_c::ResetAll	NOT_REACHED	-	out of budget; not compared	-
@@ -17,9 +17,9 @@ addr	function	verdict	asm range	note	fix commit
 0x59E220	BreakObject_c::Update	NOT_REACHED	-	out of budget; not compared	-
 0x59E480	BreakObject_c::Render	NOT_REACHED	-	out of budget; not compared	-
 0x59E750	BreakObject_c::Init	NOT_REACHED	-	out of budget; not compared	-
-0x6F4040	CDoor::Process	FIXED	0x6F4040-0x6F4510	direction rotation is (cos*a - sin*b, cos*b + sin*a), port had the first term negated; axis 1 is not rotated (ang = sin there). dir jump table, gravity 0.0016/0.008, chassis apply/damp (widescreen / wheels), boat, firetruck 0x220, bonnet, caps, clamp, corner tests with jp/jnp NaN arms, slam shut, state codes MATCH	736f6d7a2
+0x6F4040	CDoor::Process	FIXED	0x6F4040-0x6F4510	direction rotation is (cos*a - sin*b, cos*b + sin*a), port had the first term negated; axis 1 is not rotated (ang = sin there). dir jump table, gravity 0.0016/0.008, chassis apply/damp (widescreen / wheels), boat, firetruck 0x220, bonnet, caps, clamp, corner tests with jp/jnp NaN arms, slam shut, state codes MATCH	79e7f4eaf
 0x6F4540	CDoor::ProcessImpact	MATCH	0x6F4540-0x6F4790	jump table (right/fwd/up +-), rand*c*0.75+0.75 *0.1 limit, > limit / < -limit NaN arms MATCH	-
-0x717860	CEscalator::SwitchOff	FIXED	0x717860-0x7178E0	object slots in m_StepObjects now cleared (port nulled a loop copy)	see git log
+0x717860	CEscalator::SwitchOff	FIXED	0x717860-0x7178E0	object slots in m_StepObjects now cleared (port nulled a loop copy)	3b58f3489
 0x717970	CEscalator::AddThisOne	NOT_REACHED	-	out of budget; not compared	-
 0x717D30	CEscalator::Update	MATCH	0x717D30-0x718350	camera distance create (<r+20) / switch off (r+23<d) arms, pool free > n+10, step 0.04*ts, floor, intermediate/bottom/top dir, t = (i +- pos)*0.4, speed *0.016, object type 5 MATCH	-
 0x717C50	CEscalators::Init	MATCH	0x717C50-0x717C8F	SwitchOff + exist=0 loop, then SwitchOff loop	-
@@ -40,4 +40,4 @@ addr	function	verdict	asm range	note	fix commit
 0x71AE30	CGlass::RenderShatteredPolys	NOT_REACHED	-	out of budget; not compared	-
 0x71ADA0	CGlass::RenderHiLightPolys	NOT_REACHED	-	out of budget; not compared	-
 0x71CF50	CGlass::BreakGlassPhysically	NOT_REACHED	-	out of budget; not compared	-
-0x71C1A0	CGlass::WindowRespondsToExplosion	FIXED	0x71C1A0-0x71C2B0	distance sqrt((dz^2+dy^2)+dx^2), ordered < 10 (NaN to the >= 10 arm); 0.3/dist scale, 10000 force, < 30 flag MATCH	see git log
+0x71C1A0	CGlass::WindowRespondsToExplosion	FIXED	0x71C1A0-0x71C2B0	distance sqrt((dz^2+dy^2)+dx^2), ordered < 10 (NaN to the >= 10 arm); 0.3/dist scale, 10000 force, < 30 flag MATCH	610726bd3

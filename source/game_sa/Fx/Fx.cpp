@@ -313,10 +313,13 @@ void Fx_c::InitEntitySystems() {
 
 // NOTSA
 static void CreateFxWithinCameraRange(const char* name, const CVector& pos, float range) {
-    if (DistanceBetweenPointsSquared(TheCamera.GetPosition(), pos) <= range) {
-        if (auto* fxSystem = g_fxMan.CreateFxSystem(name, pos, nullptr, false)) {
-            fxSystem->PlayAndKill();
-        }
+    // exe 0x4A1070/0x4A10E0/0x4A1150: (dx^2 + dz^2) + dy^2 at PC24 (CamDistSq_XZY), `fcomp range; test ah,0x41; je` returns only when d2 > range, so a NaN distance still creates the fx
+    // (the port's `DistanceBetweenPointsSquared(..) <= range` skipped it and summed x,y,z)
+    if (CamDistSq_XZY(pos) > (x87d)range) {
+        return;
+    }
+    if (auto* fxSystem = g_fxMan.CreateFxSystem(name, pos, nullptr, false)) {
+        fxSystem->PlayAndKill();
     }
 }
 

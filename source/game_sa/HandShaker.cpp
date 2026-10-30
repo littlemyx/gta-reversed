@@ -28,7 +28,15 @@ void CHandShaker::SetDefaults() {
 // 0x50D860
 void CHandShaker::Reset() {
     m_ang = CVector();
-    m_vel = CVector::Random({0.f, 0.f, 0.f}, m_motion);
+    // 0x50D860: three rand() draws in the order z, y, x (CVector::Random draws x, y, z). The z and y draws are rounded to a float (spilled) before the multiply
+    // by the motion limit, the x draw stays in extended precision (rand * 1/32767 * motion.x)
+    const auto k  = (x87d)RAND_MAX_FLOAT_RECIPROCAL;
+    const auto rz = (float)((x87d)CGeneral::GetRandomNumber() * k);
+    const auto ry = (float)((x87d)CGeneral::GetRandomNumber() * k);
+    const auto rx = (x87d)CGeneral::GetRandomNumber() * k;
+    m_vel.x = (float)(rx * (x87d)m_motion.x);
+    m_vel.y = (float)((x87d)ry * (x87d)m_motion.y);
+    m_vel.z = (float)((x87d)rz * (x87d)m_motion.z);
 }
 
 // 0x50D930

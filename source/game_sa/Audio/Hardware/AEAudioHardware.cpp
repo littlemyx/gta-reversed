@@ -668,62 +668,77 @@ int32 CAEAudioHardware::GetPlayingTrackID() const {
 
 // 0x4D8FA0
 void CAEAudioHardware::GetBeatInfo(tBeatInfo* beatInfo) {
-    const auto bi = &gBeatInfo;
+    auto& bi = gBeatInfo;
+    const auto ClearWindow = [&] { rng::fill(bi.BeatWindow, tTrackInfo::tBeat{}); };
 
+    // 0x4D8FB2
     if (m_pStreamThread.GetActiveTrackID() == -1) {
-        bi->IsBeatInfoPresent = false;
-        rng::fill(bi->BeatWindow, tTrackInfo::tBeat{});
+        bi.IsBeatInfoPresent = 0;
+        ClearWindow();
+        return; // NOTE: the exe returns here WITHOUT copying `gBeatInfo` into the caller's struct (the copy is at 0x4D946F)
+    }
+
+    const auto trkInfo     = std::unique_ptr<tTrackInfo>{ m_pMP3TrackLoader->GetTrackInfo(m_pStreamThread.GetActiveTrackID()) }; // freed at 0x4D9481
+    if (!trkInfo) {
         return;
     }
+    int32      trkPlayTime = m_pStreamThread.GetTrackPlayTime();
 
-    const auto trkId       = m_pStreamThread.GetActiveTrackID();
-    const auto trkInfo     = std::unique_ptr<tTrackInfo>{ m_pMP3TrackLoader->GetTrackInfo(trkId) };
-    const auto trkPlayTime = m_pStreamThread.GetTrackPlayTime();
+    // The exe reads the 1000 beats + (up to) the 8 following 8-byte units of the struct (`field_1F40`...) with the same stride, so index like it does
+    static_assert(offsetof(tTrackInfo, m_aBeats) == 0);
+    const auto* const beats = reinterpret_cast<const tTrackInfo::tBeat*>(trkInfo.get());
+    const auto Time = [&](int32 idx) { return (int32)beats[idx].m_nTime; };
+    const auto Key  = [&](int32 idx) { return (int32)beats[idx].m_nKey; };
+    const auto NumBeats = (int32)std::size(trkInfo->m_aBeats);
 
-    // Index of the first beat in the given time window
-    size_t i = 0;
-
-    if (trkPlayTime < 0 || trkInfo->m_aBeats[0].m_nTime < 0) {
+    if (trkPlayTime < 0 || Time(0) < 0) { // 0x4D9455 (all of these are signed compares)
         if (trkPlayTime != -7) {
-            bi->IsBeatInfoPresent = false;
-            rng::fill(bi->BeatWindow, tTrackInfo::tBeat{});
+            bi.IsBeatInfoPresent = 0;
+            ClearWindow();
         }
     } else {
-        const auto beatTimeWindowBegin = bi->BeatNumber
-            ? std::max(0u, (uint32)trkPlayTime - 50u)
-            : (uint32)trkPlayTime;
-
-        bi->IsBeatInfoPresent = true;
-        bi->BeatTypeThisFrame = 0;
-        bi->BeatNumber        = -1;
-        rng::fill(bi->BeatWindow, tTrackInfo::tBeat{});
-
-        //> 0x4D904C - Find first beat in the given time window
-        for (; trkInfo->m_aBeats[i].m_nKey && trkInfo->m_aBeats[i].m_nTime < beatTimeWindowBegin; i++);
-    }
-
-    // 0x4D9346 and 0x4D9088 combined - Copy beats at the beginning of the time window
-    for (auto k = 0u; k < std::min<size_t>(10u, i); k++) {
-        auto& beat    = bi->BeatWindow[10 - i];
-        beat          = trkInfo->m_aBeats[i - k - 1];
-        beat.m_nTime -= trkPlayTime;
-    }
-
-    if (trkInfo->m_aBeats[i].m_nKey != 0) {
-        // 0x4D9078
-        if (i != bi->BeatNumber && i > 0) {
-            bi->BeatTypeThisFrame = trkInfo->m_aBeats[i - 1].m_nKey;
+        const auto prevBeatNumber = bi.BeatNumber; // 0x4D9008
+        if (prevBeatNumber >= 0) {
+            trkPlayTime = std::max(trkPlayTime - 50, 0);
         }
 
-        // 0x4D91A9
-        for (auto k = 0u; k < std::min<size_t>(std::size(trkInfo->m_aBeats) - i, 10u); k++) { // Copy beats towards the end
-            auto& beat = bi->BeatWindow[10 + i];
-            if (beat.m_nKey) {
-                beat         =  trkInfo->m_aBeats[i + k];
-                beat.m_nTime -= trkPlayTime;
+        bi.IsBeatInfoPresent = 1;
+        bi.BeatTypeThisFrame = 0;
+        bi.BeatNumber        = -1;
+        ClearWindow();
+
+        // 0x4D904C - index of the first beat that is not before the (shifted) play time, stops at the first non-positive key
+        int32 i = 0;
+        while (i < NumBeats && Time(i) < trkPlayTime && Key(i) > 0) {
+            i++;
+        }
+
+        // 0x4D9078 / 0x4D9332 - the (up to) 10 beats before `i` go to BeatWindow[9..0]
+        const auto FillBeatsBefore = [&] {
+            for (int32 k = 1; k <= 10; k++) {
+                if (const auto idx = i - k; idx >= 0) {
+                    bi.BeatWindow[10 - k] = { (uint32)(Time(idx) - trkPlayTime), beats[idx].m_nKey };
+                }
             }
+        };
+
+        if (Key(i) > 0) {
+            if (i != prevBeatNumber && i > 0) {
+                bi.BeatTypeThisFrame = beats[i - 1].m_nKey;
+            }
+            FillBeatsBefore();
+            for (int32 k = 0; k < 10; k++) { // 0x4D91A1: BeatWindow[10..19] = beats `i`..`i+9` (only those with a positive key, and inside the 1000 beats)
+                if (i + k < NumBeats && Key(i + k) > 0) {
+                    bi.BeatWindow[10 + k] = { (uint32)(Time(i + k) - trkPlayTime), beats[i + k].m_nKey };
+                }
+            }
+            bi.BeatNumber = i;
+        } else if (i > 0) {
+            FillBeatsBefore();
         }
     }
+
+    *beatInfo = bi; // 0x4D946F: rep movsd x 0x2B
 }
 
 // 0x4D94E0

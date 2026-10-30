@@ -409,6 +409,7 @@ public:
 
 private:
     friend void InjectHooksMain();
+    friend class CPools; // CPools::MakeSureSlotInObjectPoolIsEmpty clears `m_pRwObject` of the moved-from object (exe 0x550142)
     static void InjectHooks();
 
     CEntity* Constructor() {

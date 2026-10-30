@@ -110,21 +110,21 @@ void CAnimBlendAssocGroup::CreateAssociations(const char* blockName, const char*
         const auto anim  = &CAnimManager::GetAnimation(id);
         const auto assoc = &m_Anims[m_NumAnims]; // Can't use GetAssociations() helper method, as m_NumAnims will always be (no. of elements + 1)
 
-        const auto* animName = animNames;
-        const auto* modelName = modelNames;
-
         // Find the anim's name and it's model's name, then initialize it
         // Remember that these 2 arrays (animNames, modelNames) are "parallel" (like kv pairs)
-        bool found;
-        for (size_t k = 0; found = k < ab->NumAnims;k++, animName += buffStride, modelName += buffStride) {
-            if (CKeyGen::GetUppercaseKey(animName) == anim->GetHashKey()) {
-                break;
+        // 0x4CE4A0: the exe scans the whole table without breaking, so with duplicated names the LAST match wins
+        int32 foundIdx = -1;
+        for (size_t k = 0; k < ab->NumAnims; k++) {
+            if (CKeyGen::GetUppercaseKey(animNames + k * buffStride) == anim->GetHashKey()) {
+                foundIdx = (int32)k;
             }
         }
-        if (!found) {
-            NOTSA_LOG_WARN("Name of Animation(Block={}; ID={}) not found", modelName, blockName, (int)id);
+        if (foundIdx == -1) {
+            NOTSA_LOG_WARN("Name of Animation(Block={}; ID={}) not found", blockName, (int)id);
             continue;
         }
+        const auto* animName  = animNames + (size_t)foundIdx * buffStride;
+        const auto* modelName = modelNames + (size_t)foundIdx * buffStride;
 
         CModelInfo::ms_lastPositionSearched = 0; // Why?
         const auto mi = CModelInfo::GetModelInfo(modelName);

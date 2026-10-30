@@ -228,7 +228,7 @@
 | S71c | rest of S71b | 1 | done (1 M) | Rope.cpp |
 | S76b | rest of S76 | 20 | done (12 M, 8 fixed) | ClothesBuilder.cpp, CustomRoadsignMgr.cpp |
 | S81 | phase3 tier A (PHASE3.md) | 41 | pending | AECollisionAudioEntity.cpp, AEDoorAudioEntity.cpp, AEFireAudioEntity.cpp, AEFrontendAudioEntity.cpp, AEGlobalWeaponAudioEntity.cpp, AEPedAudioEntity.cpp |
-| S82 | phase3 tier A (PHASE3.md) | 44 | pending | AEPedSpeechAudioEntity.cpp, AEPedlessSpeechAudioEntity.cpp, AEPoliceScannerAudioEntity.cpp |
+| S82 | phase3 tier A (PHASE3.md) | 44 | partial 17/44 (9 M, 8 fixed) -> S82b | AEPedSpeechAudioEntity.cpp, AEPedlessSpeechAudioEntity.cpp, AEPoliceScannerAudioEntity.cpp |
 | S83 | phase3 tier A (PHASE3.md) | 47 | pending | AEScriptAudioEntity.cpp, AETwinLoopSoundEntity.cpp, AEVehicleAudioEntity.cpp |
 | S84 | phase3 tier A (PHASE3.md) | 36 | pending | AEVehicleAudioEntity.cpp, AEWaterCannonAudioEntity.cpp |
 | S85 | phase3 tier A (PHASE3.md) | 33 | pending | AEAudioEnvironment.cpp, AEAudioUtility.cpp, AESound.cpp, AEWeaponAudioEntity.cpp, AEWeatherAudioEntity.cpp |
@@ -264,3 +264,4 @@
 | S115 | phase3 tier C (PHASE3.md) | 42 | pending | CarFXRenderer.cpp, CustomBuildingDNPipeline.cpp, Sprite2d.cpp |
 | S116 | phase3 tier C (PHASE3.md) | 45 | pending | BreakablePlugin.cpp, CollisionPlugin.cpp, CustomBuildingPipeline.cpp, CustomBuildingRenderer.cpp, CustomCarEnvMapPipeline.cpp, JPegCompress.cpp |
 | S117 | phase3 tier C (PHASE3.md) | 41 | pending | 2dEffect.cpp, LoadMonitor.cpp, MemoryMgr.cpp, Securom.cpp, common.cpp, platform.cpp |
+| S82b | rest of S82 | 27 | pending | AEPedSpeechAudioEntity.cpp, AEPedlessSpeechAudioEntity.cpp, AEPoliceScannerAudioEntity.cpp |

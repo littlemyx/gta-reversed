@@ -60,9 +60,13 @@ void cHandlingDataMgr::InjectHooks() {
 int32 tHandlingData::InitFromData(int32 id, const char* line) {
     m_nVehicleId = id;
 
+    // 0x5BE2AC: the exe parses the engine acceleration with `atof` (a double) and multiplies it by the DOUBLE constant 0.4 (0x86A950) before the store
+    // to the float field (one rounding of double(value) * 0.4); scanning a float and multiplying by 0.4f is 1 ulp off for e.g. 1.2 / 13.0 / 18.0 / 21.0 / 26.0
+    double engineAccel{};
+
     const auto n = sscanf_s(
         line,
-        "%*s\t%f\t%f\t%f\t%f\t%f\t%f\t%hhu\t%f\t%f\t%f\t%hhu\t%f\t%f\t%f\t%c\t%c\t%f\t%f\t%hhu\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%x\t%x\t%hhu\t%hhu\t%hhu",
+        "%*s\t%f\t%f\t%f\t%f\t%f\t%f\t%hhu\t%f\t%f\t%f\t%hhu\t%f\t%lf\t%f\t%c\t%c\t%f\t%f\t%hhu\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%x\t%x\t%hhu\t%hhu\t%hhu",
         &m_fMass, // 1
         &m_fTurnMass,
         &m_fDragMult,
@@ -79,7 +83,7 @@ int32 tHandlingData::InitFromData(int32 id, const char* line) {
 
         &m_transmissionData.m_nNumberOfGears, // 11
         &m_transmissionData.m_MaxVelocity,
-        &m_transmissionData.m_EngineAcceleration,
+        &engineAccel,
         &m_transmissionData.m_EngineInertia,
         &m_transmissionData.m_nDriveType, 1u,
         &m_transmissionData.m_nEngineType, 1u,
@@ -108,7 +112,11 @@ int32 tHandlingData::InitFromData(int32 id, const char* line) {
         &m_nAnimGroup
     );
     m_transmissionData.m_handlingFlags = m_nHandlingFlags;
-    m_transmissionData.m_EngineAcceleration *= 0.4f;
+#ifdef NOTSA_PORTABLE
+    m_transmissionData.m_EngineAcceleration = (float)notsa::fp::Round24Mul(engineAccel, 0.4);
+#else
+    m_transmissionData.m_EngineAcceleration = (float)(engineAccel * 0.4);
+#endif
     gHandlingDataMgr.ConvertDataToGameUnits(this);
     return n == 35 ? -1 : n;
 }

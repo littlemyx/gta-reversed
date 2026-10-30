@@ -1,0 +1,16 @@
+addr	file	line	cls	fn	oc
+0x52F390	source/game_sa/ControllerConfigManager.cpp	42	CControllerConfigManager	GetControllerSettingTextMouse	U
+0x52F450	source/game_sa/ControllerConfigManager.cpp	43	CControllerConfigManager	GetControllerSettingTextJoystick	U
+0x52F560	source/game_sa/ControllerConfigManager.cpp	46	CControllerConfigManager	GetButtonComboText	U
+0x52FE10	source/game_sa/ControllerConfigManager.cpp	54	CControllerConfigManager	GetControllerSettingTextKeyBoard	U
+0x531E20	source/game_sa/ControllerConfigManager.cpp	58	CControllerConfigManager	GetControllerSettingTextWithOrderNumber	U
+0x531E90	source/game_sa/ControllerConfigManager.cpp	59	CControllerConfigManager	GetFirstKeyboardControllerText	U
+0x5303D0	source/game_sa/ControllerConfigManager.cpp	60	CControllerConfigManager	GetGxtStringOfCommandKeys	U
+0x4650A0	source/game_sa/DecisionMakers/DecisionMaker.cpp	9	CDecisionMaker	Constructor	U
+0x747200	source/game_sa/Gamma.cpp	13	CGamma	SetGamma	U
+0x71D670	source/game_sa/GridRef.cpp	13	CGridRef	GetAreaName	U
+0x53F220	source/game_sa/MouseControllerState.cpp	9	CMouseControllerState	Constructor	U
+0x746ED0	source/game_sa/Pad.cpp	118	CPad	GetMouseState	U
+0x560210	source/game_sa/TimeCycle.cpp	25	CTimeCycle	SetConstantParametersForPostFX	U
+0x561A80	source/game_sa/Timer.cpp	30	CTimer	GetCurrentTimeInCycles	U
+0x5617C0	source/game_sa/Timer.cpp	35	CTimer	GetMillisecondTime	U

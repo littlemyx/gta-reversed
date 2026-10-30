@@ -1,0 +1,14 @@
+addr	file	line	cls	fn	oc
+0x526FC0	source/game_sa/Cam.cpp	511	CCam	Process	U
+0x535FA0	source/game_sa/Entity/Entity.cpp	50	None	PreRender	U
+0x5EF710	source/game_sa/PedAttractorManager.cpp	23	CPedAttractorManager	RestoreStuffFromMem	U
+0x5F7FE0	source/game_sa/PedGroupMembership.cpp	331	CPedGroupMembership	From	U
+0x604500	source/game_sa/Collision/CollisionEventScanner.cpp	66	CCollisionEventScanner	ScanForCollisionEvents	U
+0x614210	source/game_sa/Population.cpp	70	CPopulation	AddPedAtAttractor	U
+0x667AD0	source/game_sa/Tasks/TaskTypes/TaskSimpleGoTo.cpp	14	None	SetUpIK	U
+0x698790	source/game_sa/Cover.cpp	25	CCover	FindVectorFromFirstToMissingVertex	U
+0x6987F0	source/game_sa/Cover.cpp	16	CCover	CalculateHorizontalSize	U
+0x698990	source/game_sa/Cover.cpp	17	CCover	DoLineCheckWithinObject	U
+0x6A47F0	source/game_sa/Entity/Vehicle/Automobile.cpp	116	None	DoBurstAndSoftGroundRatios	U
+0x6FDC00	source/game_sa/CustomCarPlateMgr.cpp	25	CCustomCarPlateMgr	LoadPlatecharsetDat	U
+0x73A8D0	source/game_sa/Weapon.cpp	61	CWeapon	LaserScopeDot	U

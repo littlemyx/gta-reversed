@@ -8,9 +8,9 @@ addr	function	verdict	asm range	note	fix commit
 0x5599B0	CStats::LoadActionReactionStats	MATCH	0x5599B0-0x559A41 (all)	AR_STATS.DAT '%d %s %f' into StatReactionValue[id]	-
 0x55A210	CStats::FindCriminalRatingString	MATCH	0x55A210-0x55A778 (all)	4 negative + 24 + 24 positive thresholds / keys, bust (stat>0) and flight-time (x87 chain) specials, rating >= 1000000 and display money > 10000000	-
 0x55A780	CStats::ConstructStatLine	MATCH	0x55A780-0x55B6D3 (all)	table select, alwaysShow / value>0 skip, STATnnn key, German skip bytes, all value types, special-stat jump tables (<=0xF3, 0xFC-0x101, 0x140-0x151), weapon / skill / gang / flight-rank / favourite-radio lines	-
-0x55B980	CStats::DisplayScriptStatUpdateMessage	DEVIATION	0x55B980-0x55BB2A (all)	skill / ability stats: the value > 1 test is not-(value <= 1) (a NaN value shows the message); stat groups, cap test, gang-strength min() verified	4797c39d3
+0x55B980	CStats::DisplayScriptStatUpdateMessage	DEVIATION	0x55B980-0x55BB2A (all)	skill / ability stats: the value > 1 test is not-(value <= 1) (a NaN value shows the message); stat groups, cap test, gang-strength min() verified	1dd063d5c
 0x55BF20	CStats::UpdateSexAppealStat	MATCH	0x55BF20-0x55C09C (all)	x87 chain, 35.0 distance gate (NaN skips), clamp [0,1000], vehicle class multipliers 0.1/0.3/none/0.5, cheat -> 1000	-
 0x55C0C0	CStats::Init	MATCH	0x55C0C0-0x55C173 (all)	same fills / counters / 569 and 100 stats + 3 loaders (only the order of independent stores differs)	-
 0x55C410	CStats::SetNewRecordStat	MATCH	0x55C410-0x55C463 (all)	16-bit stat id, current kept only if strictly greater (NaN replaced), int slot stored as int16	-
-0x5D3B40	CStats::Save	DEVIATION	0x5D3B40-0x5D3BE5 (all)	PopulateFavoriteRadioStationList() is called right before the favourite list is saved; sizes / order of the 6 blocks + 128 displayed bytes match	2300f5b09
+0x5D3B40	CStats::Save	DEVIATION	0x5D3B40-0x5D3BE5 (all)	PopulateFavoriteRadioStationList() is called right before the favourite list is saved; sizes / order of the 6 blocks + 128 displayed bytes match	7f7ba80c2
 0x5D3BF0	CStats::Load	MATCH	0x5D3BF0-0x5D3C68 (all)	6 blocks (0x148, 0x37C, 0x80, 8, 0x38, 0x190) + 128 displayed bytes at +2, no populate	-

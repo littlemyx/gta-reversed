@@ -853,7 +853,7 @@ void CMenuManager::DrawWindow(const CRect& coords, const char* key, uint8 color,
         CFont::SetEdge(2);
         CFont::SetOrientation(eFontAlignment::ALIGN_LEFT);
         CFont::SetFontStyle(eFontStyle::FONT_GOTHIC);
-        CFont::SetScale(SCREEN_SCALE_X(1.0f), SCREEN_SCALE_Y(1.4f));
+        CFont::SetScaleForCurrentLanguage(SCREEN_SCALE_X(1.0f), SCREEN_SCALE_Y(1.4f)); // exe 0x573F6E, not plain SetScale
 
         float x = coords.left + SCREEN_SCALE_X(10.0f);
         float y = std::min(coords.bottom, coords.top) - SCREEN_SCALE_Y(16.0f);
@@ -863,8 +863,15 @@ void CMenuManager::DrawWindow(const CRect& coords, const char* key, uint8 color,
 
 // 0x578F50
 void CMenuManager::DrawWindowedText(float x, float y, float wrap, const char* title, const char* message, eFontAlignment alignment) {
+    // exe 0x578FD8-0x57904B: the text scale is 1.0 / 0.7 at the reference resolution (448 high / 640 wide), else height * (1/448), width * 0.7/640 (float constants 0x865434)
+    const auto SetTextScale = [] {
+        const float scaleY = RsGlobal.maximumHeight == 448 ? 1.0f : (float)RsGlobal.maximumHeight * SCREEN_RECIPROCAL_Y;
+        const float scaleX = RsGlobal.maximumWidth == 640 ? 0.7f : (float)RsGlobal.maximumWidth * std::bit_cast<float>(0x3A8F5C29u);
+        CFont::SetScale(scaleX, scaleY);
+    };
+
     const float wrapX = x + wrap - StretchX(10.0f);
-    const float rightWrap = StretchX(10.0f) + wrap;
+    const float rightWrap = StretchX(10.0f) + (x - wrap); // exe: x - wrap, not wrap
     const float centreSize = wrap - 2.0f * StretchX(10.0f);
 
     CFont::SetWrapx(wrapX);

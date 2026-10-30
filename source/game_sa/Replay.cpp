@@ -201,9 +201,10 @@ void CReplay::StorePedUpdate(CPed* ped, uint8 index) {
 void CReplay::RetrievePedAnimation(CPed* ped, const CStoredAnimationState& state) {
     // todo: refactor
 
-    constexpr auto ANIM_TIME_COMPRESS_VALUE  = 63.75f;
-    constexpr auto ANIM_SPEED_COMPRESS_VALUE = 85.0f;
-    constexpr auto ANIM_BLEND_COMPRESS_VALUE = 127.5f;
+    // The exe multiplies by the reciprocals from its data section (0x859C2C / 0x859C28 / 0x859C24), it does not divide by 63.75 / 85 / 127.5
+    constexpr auto ANIM_TIME_DECOMPRESS_VALUE  = 0.015686275f;
+    constexpr auto ANIM_SPEED_DECOMPRESS_VALUE = 0.011764706f;
+    constexpr auto ANIM_BLEND_DECOMPRESS_VALUE = 0.007843138f;
 
     CAnimBlendAssociation* anim = nullptr;
     if (auto first = state[0]; first.m_nAnimId > 3u) {
@@ -216,23 +217,25 @@ void CReplay::RetrievePedAnimation(CPed* ped, const CStoredAnimationState& state
     } else {
         anim = CAnimManager::BlendAnimation(ped->GetRpClump(), ped->m_nAnimGroup, (AnimationId)first.m_nAnimId, 100.0f);
     }
-    anim->SetCurrentTime(state[0].m_nTime / ANIM_TIME_COMPRESS_VALUE);
-    anim->SetSpeed(state[0].m_nSpeed / ANIM_SPEED_COMPRESS_VALUE);
+    anim->SetCurrentTime(state[0].m_nTime * ANIM_TIME_DECOMPRESS_VALUE);
+    anim->SetSpeed(state[0].m_nSpeed * ANIM_SPEED_DECOMPRESS_VALUE);
     anim->SetBlend(1.0f, 1.0f);
     anim->m_nCallbackType = ANIM_BLEND_CALLBACK_NONE;
 
     anim = nullptr;
-    if (auto second = state[1]; second.m_nGroupId1 && second.m_nAnimId && CAnimManager::GetAssocGroups()[second.m_nGroupId2].m_NumAnims > 0) {
+    if (auto second = state[1]; second.m_nGroupId1 && second.m_nAnimId) {
         if (second.m_nAnimId > 3u) {
-            anim = CAnimManager::BlendAnimation(ped->GetRpClump(), (AssocGroupId)second.m_nGroupId2, (AnimationId)second.m_nAnimId, 100.0f);
+            if (CAnimManager::GetAssocGroups()[second.m_nGroupId2].m_NumAnims > 0) { // the exe checks the group only for ids > 3
+                anim = CAnimManager::BlendAnimation(ped->GetRpClump(), (AssocGroupId)second.m_nGroupId2, (AnimationId)second.m_nAnimId, 100.0f);
+            }
         } else {
             anim = CAnimManager::BlendAnimation(ped->GetRpClump(), ped->m_nAnimGroup, (AnimationId)second.m_nAnimId, 100.0f);
         }
 
         if (anim) {
-            anim->SetCurrentTime(second.m_nTime / ANIM_TIME_COMPRESS_VALUE);
-            anim->SetSpeed(second.m_nSpeed / ANIM_SPEED_COMPRESS_VALUE);
-            anim->SetBlend(second.m_nGroupId1 / ANIM_BLEND_COMPRESS_VALUE, 1.0f);
+            anim->SetCurrentTime(second.m_nTime * ANIM_TIME_DECOMPRESS_VALUE);
+            anim->SetSpeed(second.m_nSpeed * ANIM_SPEED_DECOMPRESS_VALUE);
+            anim->SetBlend(second.m_nGroupId1 * ANIM_BLEND_DECOMPRESS_VALUE, 1.0f);
             anim->m_nCallbackType = ANIM_BLEND_CALLBACK_NONE;
         }
     }
@@ -243,10 +246,9 @@ void CReplay::RetrievePedAnimation(CPed* ped, const CStoredAnimationState& state
             if (auto animBlock = CAnimManager::GetAssocGroups()[third.m_nGroupId2].m_AnimBlock; animBlock && animBlock->IsLoaded) {
                 anim = CAnimManager::BlendAnimation(ped->GetRpClump(), (AssocGroupId)third.m_nGroupId2, (AnimationId)third.m_nAnimId, 1000.0f);
 
-                anim->SetCurrentTime(third.m_nTime / ANIM_TIME_COMPRESS_VALUE);
-                anim->SetSpeed(third.m_nSpeed / ANIM_SPEED_COMPRESS_VALUE);
-                anim->SetBlend(third.m_nGroupId1 / ANIM_BLEND_COMPRESS_VALUE, 0.0f);
-                anim->m_nCallbackType = ANIM_BLEND_CALLBACK_NONE;
+                anim->SetCurrentTime(third.m_nTime * ANIM_TIME_DECOMPRESS_VALUE);
+                anim->SetSpeed(third.m_nSpeed * ANIM_SPEED_DECOMPRESS_VALUE);
+                anim->SetBlend(third.m_nGroupId1 * ANIM_BLEND_DECOMPRESS_VALUE, 0.0f); // no callback type store here (the exe ends after the blend delta)
             }
         }
     }

@@ -1453,9 +1453,24 @@ void CPostEffects::Render() {
         colorMultFactor += (1.0f - s_ExtraMult / SCREEN_EXTRA_MULT_BASE_CAP) * SCREEN_EXTRA_MULT_BASE_MULT;
     }
 
+    // exe 0x704952-0x704D02: r,g,b = ftol(clamp(c * mult, 0, 255)): v > 255 (or NaN) -> 255, v <= 0 -> 0 (the plain ScaleRGB would wrap the uint8)
+    const auto ScaleRGBClamped = [](CRGBA& c, float mult) {
+        const auto Scale = [mult](uint8 ch) {
+            auto v = (float)ch * mult;
+            if (!(v < 255.0f)) {
+                v = 255.0f;
+            } else if (v <= 0.0f) {
+                v = 0.0f;
+            }
+            return NOTSA_FTOL(uint8, v);
+        };
+        c.r = Scale(c.r);
+        c.g = Scale(c.g);
+        c.b = Scale(c.b);
+    };
     constexpr auto COLOR1_MULT = 1.0f, COLOR2_MULT = 1.0f;
-    pass1.ScaleRGB(COLOR1_MULT * colorMultFactor);
-    pass2.ScaleRGB(COLOR2_MULT * colorMultFactor);
+    ScaleRGBClamped(pass1, COLOR1_MULT * colorMultFactor);
+    ScaleRGBClamped(pass2, COLOR2_MULT * colorMultFactor);
 
     if (m_bColorEnable) {
         ColourFilter(pass1, pass2);
@@ -1530,10 +1545,13 @@ void CPostEffects::Render() {
 
     if (m_bRainEnable || s_CurrentStrength != 0) {
         const auto rain = 128.0f * CWeather::Rain;
-        if (static_cast<float>(s_CurrentStrength) < rain) {
-            s_CurrentStrength++;
-        } else if (static_cast<float>(s_CurrentStrength) > rain) {
-            s_CurrentStrength--;
+        // exe 0x704FD2-0x705010: the second compare runs on the already incremented counter, so the strength steps toward `rain` but never overshoots it
+        auto strength = s_CurrentStrength;
+        if (static_cast<float>(strength) < rain) {
+            s_CurrentStrength = ++strength;
+        }
+        if (static_cast<float>(s_CurrentStrength) > rain) {
+            strength--;
         }
         s_CurrentStrength = std::max(s_CurrentStrength, 0);
 
@@ -1546,14 +1564,15 @@ void CPostEffects::Render() {
         Grain(m_grainStrength[0], true);
     }
 
-    if (!m_bHeatHazeFX) {
-        if (CWeather::HeatHaze > 0.0f || g_fxMan.m_bHeatHazeEnabled) {
-            if (CWeather::UnderWaterness < m_fWaterFXStartUnderWaterness) {
-                if (CWeather::HeatHaze > 0.0f) {
-                    HeatHazeFX(CWeather::HeatHazeFXControl, false);
-                } else if (g_fxMan.m_bHeatHazeEnabled) {
-                    HeatHazeFX(1.0f, true);
-                }
+    // exe 0x705099-0x70511E: the script switch (and being underwater) draws the plain full-strength haze; `<` is the exe's C0 test (true for NaN too)
+    if (m_bHeatHazeFX) {
+        HeatHazeFX(1.0f, false);
+    } else if (CWeather::HeatHaze > 0.0f || g_fxMan.m_bHeatHazeEnabled) {
+        if (!(CWeather::UnderWaterness >= m_fWaterFXStartUnderWaterness)) {
+            if (CWeather::HeatHaze > 0.0f) {
+                HeatHazeFX(CWeather::HeatHazeFXControl, false);
+            } else if (g_fxMan.m_bHeatHazeEnabled) {
+                HeatHazeFX(1.0f, true);
             }
         } else if (CWeather::UnderWaterness >= m_fWaterFXStartUnderWaterness) {
             HeatHazeFX(1.0f, false);
@@ -1568,14 +1587,14 @@ void CPostEffects::Render() {
 
         const auto depthDarkness = m_bWaterDepthDarkness
             ? 1.0f - std::min(CWeather::WaterDepth, m_fWaterFullDarknessDepth) / m_fWaterFullDarknessDepth
-            : 0.0f;
+            : 1.0f; // exe 0x705154: st(0) stays 1.0 when the depth-darkness switch is off
         color.ScaleRGB(depthDarkness);
 
         s_WaterGreen = std::min(s_WaterGreen + CTimer::GetTimeStep(), 24.0f);
 
         UnderWaterRipple(
             color,
-            SCREEN_STRETCH_X(s_WaterGreen * ExeRecip(24.0f) * m_xoffset),
+            SCREEN_STRETCH_X(s_WaterGreen * ExeRecip(24.0f)) * m_xoffset, // exe 0x705247-0x705292: ((W * k) * (green / 24)) * xoffset
             SCREEN_STRETCH_Y(m_yoffset),
             m_waterStrength,
             m_waterSpeed,
@@ -1596,7 +1615,7 @@ void CPostEffects::Render() {
 
     if (s_WaitForOneFrame) {
         if (CWeapon::ms_bTakePhoto) {
-            s_WaitForOneFrame = true;
+            s_WaitForOneFrame = false; // exe 0x705309
             CTimer::Suspend();
             if (s_SavePhotoToGallery) {
                 CVisibilityPlugins::RenderWeaponPedsForPC();

@@ -1443,7 +1443,7 @@ void CAEVehicleAudioEntity::CancelVehicleEngineSound(eVehicleEngineSoundType st)
 // notsa
 void CAEVehicleAudioEntity::CancelAllVehicleEngineSounds(std::optional<eVehicleEngineSoundType> except) {
     for (int32 i{}; i < (int32)(std::size(m_EngineSounds)); i++) {
-        if (!except.has_value() || *except == i) {
+        if (!except.has_value() || *except != i) { // `except` is the one sound that is kept (0x4F5AD0: cmp di, 2; je skip)
             CancelVehicleEngineSound((eVehicleEngineSoundType)(i));
         }
     }

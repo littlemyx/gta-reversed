@@ -1153,10 +1153,6 @@ void CShadows::CastPlayerShadowSectorList(
     uint8* pDayNightIntensity,
     int32 shadowType
 ) {
-    const CRect shadowRect{
-        cornerAX, cornerAY,
-        cornerBX, cornerBY
-    };
     for (auto* const entity : ptrList) {
         if (entity->IsScanCodeCurrent()) {
             continue;
@@ -1171,23 +1167,33 @@ void CShadows::CastPlayerShadowSectorList(
             continue;
         }
 
-        // If slightly tilted, ignore
-        if (entity->GetMatrix().GetUp().z <= 0.97f) {
+        // If slightly tilted, ignore (exe `test ah, 0x41` / `jne`: a NaN up.z also skips)
+        if (!(entity->GetMatrix().GetUp().z > 0.97f)) {
             continue;
         }
 
-        // 0x70A526
-        if (!entity->GetBoundRect().OverlapsWith(shadowRect)) {
+        // 0x70A526: the exe tests the four edges STRICTLY (and NaN rejects), unlike CRect::OverlapsWith; `top` is the max Y of the entity rect
+        const auto entityRect = entity->GetBoundRect();
+        if (!(cornerAX < entityRect.right)) {
+            continue;
+        }
+        if (cornerBX <= entityRect.left) {
+            continue;
+        }
+        if (!(cornerAY < entityRect.top)) {
+            continue;
+        }
+        if (cornerBY <= entityRect.bottom) {
             continue;
         }
 
-        // Quick Z height check of the bounding box
-        const auto& cm         = entity->GetColModel();
+        // Quick Z height check of the bounding box (the exe goes through CModelInfo, and a NaN skips the entity)
+        const auto& cm         = entity->GetModelInfo()->GetColModel();
         const auto  entityPosZ = entity->GetPosition().z;
-        if (cm->m_boundBox.m_vecMax.z + entityPosZ <= posn->z - zDistance) {
+        if (!(cm->m_boundBox.m_vecMax.z + entityPosZ > posn->z - zDistance)) {
             continue;
         }
-        if (cm->m_boundBox.m_vecMin.z + entityPosZ >= posn->z) {
+        if (!(cm->m_boundBox.m_vecMin.z + entityPosZ < posn->z)) {
             continue;
         }
 
@@ -1233,8 +1239,8 @@ void CShadows::CastShadowSectorList(PtrListType& ptrList, float conrerAX, float 
             continue;
         }
 
-        // If slightly tilted, ignore
-        if (entity->GetMatrix().GetUp().z <= 0.97f) {
+        // If slightly tilted, ignore (a NaN up.z also skips, see the exe's `test ah, 0x41`)
+        if (!(entity->GetMatrix().GetUp().z > 0.97f)) {
             continue;
         }
 
@@ -1255,7 +1261,7 @@ void CShadows::CastShadowSectorList(PtrListType& ptrList, float conrerAX, float 
         // Quick Z height check of the bounding box
         const auto& cm         = entity->GetModelInfo()->GetColModel();
         const auto  entityPosZ = entity->GetPosition().z;
-        if (cm->m_boundBox.m_vecMax.z + entityPosZ <= posn->z - zDistance) {
+        if (!(cm->m_boundBox.m_vecMax.z + entityPosZ > posn->z - zDistance)) {
             continue;
         }
         if (!(cm->m_boundBox.m_vecMin.z + entityPosZ < posn->z)) {
@@ -1320,7 +1326,7 @@ void CShadows::CastRealTimeShadowSectorList(PtrListType& ptrList, float conrerAX
         // Quick Z height check of the bounding box
         const auto& cm         = entity->GetModelInfo()->GetColModel();
         const auto  entityPosZ = entity->GetPosition().z;
-        if (cm->m_boundBox.m_vecMax.z + entityPosZ <= posn->z - zDistance) {
+        if (!(cm->m_boundBox.m_vecMax.z + entityPosZ > posn->z - zDistance)) {
             continue;
         }
         if (!(cm->m_boundBox.m_vecMin.z + entityPosZ < posn->z)) {

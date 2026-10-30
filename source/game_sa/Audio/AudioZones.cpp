@@ -27,7 +27,7 @@ void CAudioZones::Init() {
 void CAudioZones::RegisterAudioBox(char name[8], int32 id, bool isActive, CVector min, CVector max) {
 
     tAudioZoneBox audioZoneBox;
-    strcpy_s(audioZoneBox.m_szName, name);
+    strncpy(audioZoneBox.m_szName, name, sizeof(audioZoneBox.m_szName)); // exe 0x508260: unbounded strcpy into name[8]; its NUL spill lands in a field that is stored right after. An 8 char name aborted strcpy_s
     audioZoneBox.m_IsActive = isActive; // TODO: m_nFlags field has only 1 flag - Active or inactive and takes only 1 bit. Although gta uses 2 bytes for this, but how is the idea to define this single flag so as not to be confused in the future
     audioZoneBox.m_nAudioZone = id;
     audioZoneBox.m_Box = CompressedBox{ .m_vecMin = min, .m_vecMax = max };
@@ -37,7 +37,7 @@ void CAudioZones::RegisterAudioBox(char name[8], int32 id, bool isActive, CVecto
 // 0x5081C0
 void CAudioZones::RegisterAudioSphere(char name[8], int32 id, bool isActive, CVector position, float radius) {
     tAudioZoneSphere audioZoneSphere;
-    strcpy_s(audioZoneSphere.m_szName, name);
+    strncpy(audioZoneSphere.m_szName, name, sizeof(audioZoneSphere.m_szName)); // exe 0x5081D5: unbounded strcpy, see RegisterAudioBox
     audioZoneSphere.m_nAudioZone = id;
     audioZoneSphere.m_IsActive = isActive; // TODO: m_nFlags field has only 1 flag - Active or inactive and takes only 1 bit. Although gta uses 2 bytes for this, but how is the idea to define this single flag so as not to be confused in the future
     audioZoneSphere.m_Sphere = {position, radius};

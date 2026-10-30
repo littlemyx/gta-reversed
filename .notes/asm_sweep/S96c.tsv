@@ -1,0 +1,9 @@
+addr	file	line	cls	fn	oc	tier
+0x5905E0	source/game_sa/LoadingScreen.cpp	34	CLoadingScreen	Update	U	B
+0x57B750	source/game_sa/MenuManager.cpp	50	CMenuManager	DrawBackground	U	B
+0x5794A0	source/game_sa/MenuManager.cpp	51	CMenuManager	DrawStandardMenus	U	B
+0x573EE0	source/game_sa/MenuManager.cpp	52	CMenuManager	DrawWindow	U	B
+0x578F50	source/game_sa/MenuManager.cpp	53	CMenuManager	DrawWindowedText	U	B
+0x57D8D0	source/game_sa/MenuManager.cpp	55	CMenuManager	DrawControllerScreenExtraText	U	B
+0x57E6E0	source/game_sa/MenuManager.cpp	56	CMenuManager	DrawControllerBound	U	B
+0x57F300	source/game_sa/MenuManager.cpp	57	CMenuManager	DrawControllerSetupScreen	U	B

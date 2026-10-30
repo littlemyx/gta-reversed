@@ -124,12 +124,14 @@ void CCoronas::Init() {
     {
         CTxdStore::ScopedTXDSlot txd{ "particle" };
         for (auto&& [tex, name, maskName] : rng::zip_view{ gpCoronaTexture, aCoronaSpriteNames, aCoronaSpriteNamesm }) {
-            if (!tex) {
+            // 0x6FAA97: the exe creates the texture only for table entries with a non-empty name
+            if (!tex && name[0]) {
                 tex = RwTextureRead(name, maskName);
             }
         }
     }
     rng::fill(aCoronas, CRegisteredCorona{});
+    NumCoronas = 0; // 0x6FAB00 - 8: `mov [0xC3E038], 0`
 }
 
 // Terminates coronas

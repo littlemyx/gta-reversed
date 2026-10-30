@@ -111,8 +111,13 @@ void CShinyTexts::RegisterOne(CVector cornerAA, CVector cornerAB, CVector corner
     if (NumShinyTexts >= MAX_SHINYTEXTS)
         return;
 
-    const float distToCam = (TheCamera.GetPosition() - cornerAA).Magnitude();
-    if (distToCam > maxDistance)
+    // exe 0x724B80-0x724BC0: (dz^2 + dy^2) + dx^2, sqrt; the exe returns on `!(dist <= maxDistance)` (NaN too)
+    const auto  camPos    = TheCamera.GetPosition();
+    const float dx        = cornerAA.x - camPos.x;
+    const float dy        = cornerAA.y - camPos.y;
+    const float dz        = cornerAA.z - camPos.z;
+    const float distToCam = std::sqrt((dz * dz + dy * dy) + dx * dx);
+    if (!(distToCam <= maxDistance))
         return;
 
     CRegisteredShinyText& text = aShinyTexts[NumShinyTexts];

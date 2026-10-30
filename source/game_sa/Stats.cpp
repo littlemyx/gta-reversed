@@ -2109,6 +2109,7 @@ bool CStats::Save() {
     CGenericGameStorage::SaveDataToWorkBuffer(StatTypesInt);
     CGenericGameStorage::SaveDataToWorkBuffer(PedsKilledOfThisType);
     CGenericGameStorage::SaveDataToWorkBuffer(LastMissionPassedName);
+    PopulateFavoriteRadioStationList(); // 0x5D3B9E: the listen times are refreshed from the audio engine right before they are saved
     CGenericGameStorage::SaveDataToWorkBuffer(FavoriteRadioStationList);
     CGenericGameStorage::SaveDataToWorkBuffer(TimesMissionAttempted);
     // TODO: NOTSA: CGenericGameStorage::SaveDataToWorkBuffer(StatMessage);

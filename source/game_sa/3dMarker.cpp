@@ -115,12 +115,8 @@ void C3dMarker::Render() {
     auto transform = CMatrix{ m_Mat.m_pAttachMatrix };
     if (m_Type == MARKER3D_TORUS || m_Type == MARKER3D_ARROW2) {
         if (m_Normal != CVector{ 0.0f, 0.0f, 1.0f }) {
-            // 0x72247E..0x7224F6: right = normalise(Z x normal), forward = normalise(normal x right), up = normal (CMatrix::WithUp does not normalise)
-            CVector right = CVector::ZAxisVector().Cross(m_Normal);
-            right.Normalise();
-            CVector forward = m_Normal.Cross(right);
-            forward.Normalise();
-            transform *= CMatrix{ CVector{}, right, forward, m_Normal };
+            // 0x72247E..0x7224F6: right = normalise(Z x normal), forward = normalise(normal x right), up = normal
+            transform *= CMatrix::WithUp(m_Normal);
         }
     }
 

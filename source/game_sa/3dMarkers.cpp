@@ -722,19 +722,6 @@ bool C3dMarkers::SaveUser3dMarkers() {
     return true;
 }
 
-// Exe 0x72133A-0x72147B (inlined in `DirectionArrowsDraw`): (0, 0, 1) keeps the unity matrix, otherwise right = Normalise(z x up) and forward = Normalise(up x right).
-// `CMatrix::WithUp` does not normalise (that is what made the arrow narrower for a tilted normal).
-static CMatrix ExeArrowUpMatrix(const CVector& up) {
-    if (up.x == 0.f && up.y == 0.f && up.z == 1.f) {
-        return CMatrix::Unity();
-    }
-    CVector right = CrossProduct(CVector::ZAxisVector(), up);
-    right.Normalise();
-    CVector fwd = CrossProduct(up, right);
-    fwd.Normalise();
-    return CMatrix{ CVector{}, right, fwd, up };
-}
-
 // Code from (beginning at): 0x7212A4
 void tDirectionArrow::Render(RpClump* clump) {
     const auto frame = RpClumpGetFrame(clump);
@@ -747,7 +734,7 @@ void tDirectionArrow::Render(RpClump* clump) {
 
     auto DoRender = [
         &,
-        transform = CMatrix{ RwFrameGetMatrix(frame) } * ExeArrowUpMatrix(m_normal) // Build transform matrix we'll use to render
+        transform = CMatrix{ RwFrameGetMatrix(frame) } * CMatrix::WithUp(m_normal) // Build transform matrix we'll use to render
     ](CRGBA color, float scale) mutable {
         transform.Scale(scale);
         transform.UpdateRwMatrix(RwFrameGetMatrix(frame)); // Push this matrix to the underlaying RW matrix

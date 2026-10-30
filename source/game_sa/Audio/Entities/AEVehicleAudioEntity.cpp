@@ -1176,11 +1176,6 @@ void CAEVehicleAudioEntity::ProcessDummyStateTransition(eAEState newState, float
 
             break;
         }
-        case eAEState::CAR_OFF: { // 0x4FCBDF
-            StopGenericEngineSound(AE_SOUND_CAR_ID);
-            StopGenericEngineSound(AE_SOUND_CAR_REV);
-            break;
-        }
         case eAEState::DUMMY_CRZ: { // 0x4FCB56
             m_FadeOut = 0.f;
             UpdateVehicleEngineSound(
@@ -1190,15 +1185,20 @@ void CAEVehicleAudioEntity::ProcessDummyStateTransition(eAEState newState, float
             );
 
             m_FadeIn = 0.f;
-            UpdateVehicleEngineSound(
+            StartVehicleEngineSound( // 0x4FCBD1: the exe STARTS the rev sound here (call 0x4F7F20), it does not update it
                 AE_SOUND_CAR_REV,
                 GetFrequencyForDummyRev(ratio, m_FadeIn),
                 GetVolumeForDummyRev(ratio, 0.f)
             );
             break;
         }
-        default:
-            NOTSA_UNREACHABLE("Invalid new state ({})", newState);
+        default: // any other new state is handled like CAR_OFF (0x4FCB48 -> 0x4FCBDF: [this+0xA9] = 0)
+        case eAEState::CAR_OFF: { // 0x4FCBDF
+            m_State = eAEState::CAR_OFF;
+            StopGenericEngineSound(AE_SOUND_CAR_ID);
+            StopGenericEngineSound(AE_SOUND_CAR_REV);
+            break;
+        }
         }
         break;
     }
@@ -1208,14 +1208,14 @@ void CAEVehicleAudioEntity::ProcessDummyStateTransition(eAEState newState, float
             m_FadeOut = 0.f;
             UpdateVehicleEngineSound(
                 AE_SOUND_CAR_REV,
-                GetFrequencyForDummyRev(ratio, m_FadeIn),
+                GetFrequencyForDummyRev(ratio, m_FadeOut), // 0x4FCC6D: fade argument is [this+0x240] (just zeroed), the port passed the old m_FadeIn
                 GetVolumeForDummyRev(ratio, 0.f)
             );
 
             m_FadeIn = 0.f;
-            UpdateVehicleEngineSound(
+            StartVehicleEngineSound( // 0x4FCCD2: the exe STARTS the idle sound here (call 0x4F7F20), it does not update it
                 AE_SOUND_CAR_ID,
-                GetFrequencyForDummyIdle(ratio, m_FadeOut),
+                GetFrequencyForDummyIdle(ratio, m_FadeIn),
                 GetVolumeForDummyIdle(ratio, 0.f)
             );
             break;
@@ -1248,13 +1248,13 @@ void CAEVehicleAudioEntity::ProcessDummyStateTransition(eAEState newState, float
 
             break;
         }
+        default: // any other new state is handled like CAR_OFF (0x4FCCE3 -> 0x4FCDFA: [this+0xA9] = 0)
         case eAEState::CAR_OFF: { // 0x4FCDFC
+            m_State = eAEState::CAR_OFF;
             CancelVehicleEngineSound(AE_SOUND_CAR_REV);
             CancelVehicleEngineSound(AE_SOUND_CAR_ID);
             break;
         }
-        default:
-            NOTSA_UNREACHABLE("Invalid new state ({})", newState);
         }
         break;
     }
@@ -1287,16 +1287,17 @@ void CAEVehicleAudioEntity::ProcessDummyStateTransition(eAEState newState, float
             );
             break;
         }
+        default: // 0x4FCF2B: CAR_OFF / any other new state: [this+0xA9] = 0
         case eAEState::CAR_OFF: { // 0x4FCEC8
+            m_State = eAEState::CAR_OFF;
             break;
         }
-        default:
-            NOTSA_UNREACHABLE("Invalid new state ({})", newState);
         }
         break;
     }
-    default:
-        NOTSA_UNREACHABLE("Invalid old state ({})", oldState);
+    default: // 0x4FCF2B: any other old state: [this+0xA9] = 0
+        m_State = eAEState::CAR_OFF;
+        break;
     }
 }
 

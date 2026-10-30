@@ -389,7 +389,7 @@ void CSprite2d::DrawCircleAtNearClip(const CVector2D& posn, float size, const CR
     RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(TRUE));
 
     // #1
-    float step = DegreesToRadians(360.f / static_cast<float>(angle));
+    float step = DegreesToRadians(static_cast<float>(360 / angle)); // 0x727DC8: `mov eax, 360; cdq; idiv angle` - INTEGER division, then fild
     for (int32 i = 0; i < angle; ++i) {
         for (int32 l = 1; l <= 2; ++l) {
             float rad = static_cast<float>(i + l - 1) * step;

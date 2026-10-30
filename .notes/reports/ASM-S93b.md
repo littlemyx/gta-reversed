@@ -1,0 +1,7 @@
+# ASM-S93b (Fx_c wheel fx + Fx render helpers; 7 rows) - 2026-10-30
+Result: 6 MATCH, 1 DEVIATION (fixed, 1 commit), 0 UNSURE, 0 NOT_REACHED. Table in S93b.result.tsv. Continuation of ASM-S93.
+Fix:
+- 17ab09b69 RotateVecIntoVec (0x4A1660-0x4A1779): the exe's reference axis for the right-vector cross product is the constants 0.4243 / 0.5657 / 0.7071 (floats at 0x85A77C / 0x85A780 / 0x85A784), not a normalised (3,4,5); both are slightly different floats and the exe vector is not unit length. Only caller: FxEmitter_c::CreateParticle path (FxEmitter.cpp:278).
+Verified without change: AddWheelSpray (full; the comment about `(int32)` vs ftol was outdated, fixed in 401c68fb5), AddWheelSand and AddWheelDust (full: quality gates incl. signed `jl` / negative quality, speed/size/life arithmetic, bike subtype sizes 2/9/10, ftol particle count, per-particle rand order and offsets), AddWheelGravel / AddWheelMud (body byte-identical to AddWheelGrass, only the three colour pushes differ and match the port), RenderBegin, RenderAddTri_, RenderEnd.
+Note: RenderAddTri_ packs the colour with the exe's `((a<<8|r)<<8|g)<<8|b` on full ints (no masking); the port goes through CRGBA::FromInt32 (uint8 truncation). Identical for 0..255, which is all callers pass (FxEmitterBP uint8; BreakObject_c uses RenderAddTri with CRGBA).
+Tests: StandaloneRelease build OK; wave2_oracle_test 1142 functions PC24 0 / PC53 0 mismatches; PortableWin64 compile of Fx.cpp OK; v6 grep clean; combat regress PASS=14. Missions not run (no loader change).

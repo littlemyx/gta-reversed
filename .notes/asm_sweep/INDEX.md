@@ -170,7 +170,7 @@
 | S64 | phase2: unlisted non-oracle hooks | 40 | partial 9/40 (4 M, 5 fixed) -> S64b | VehicleAnimGroupData.cpp, VehicleRecording.cpp, VehicleSaveStructure.cpp, Weapon.cpp |
 | S65 | phase2: unlisted non-oracle hooks | 7 | partial (4 M, 1 fixed) -> S65b | WeaponEffects.cpp, WeaponInfo.cpp, World.cpp |
 | S41b | rest of S41 | 9 | done (2 M, 6 fixed, RunningScript row -> S66) | CarAI.cpp, PedAttractorPedPlacer.cpp, RunningScript.cpp matches |
-| S66 | phase2: RunningScript.cpp hooks (missed by the generator: grep without -a) | 15 | pending | RunningScript.cpp |
+| S66 | phase2: RunningScript.cpp hooks (missed by the generator: grep without -a) | 15 | done (4 M, 11 fixed) | RunningScript.cpp |
 | S42b | rest of S42 | 19 | UpdateCarAI fixed to 0x41FE13 (tail partial); CarEnterExit 18 NR -> S42c | CarAI.cpp, CarEnterExit.cpp |
 | S42c | rest of S42b (+ UpdateCarAI tail 0x41FE13-0x420678) | 19 | partial 10/19 (5 M, 5 fixed) -> S42d | CarEnterExit.cpp |
 | S42d | rest of S42c | 9 | 8/9 (4 M, 4 fixed) -> S42e | CarEnterExit.cpp |
@@ -194,7 +194,7 @@
 | S53c | rest of S53b | 1 | moved to S54c | PedGeometryAnalyser.cpp |
 | S58b | rest of S58 | 17 | done (11 M, 6 fixed; S58 complete; CleanUpThisPed/Vehicle re-verified MATCH) | Shopping.cpp, TheScripts.cpp |
 | S64b | rest of S64 | 31 | partial 11/31 (3 M, 8 fixed) -> S64c | VehicleAnimGroupData.cpp, VehicleRecording.cpp, VehicleSaveStructure.cpp, Weapon.cpp |
-| S57d | rest of S57c | 7 | pending | Replay.cpp |
+| S57d | rest of S57c | 7 | partial 1/7 (1 fixed) -> S57e | Replay.cpp |
 | S54c | rest of S54 (+ S53c ComputeClearTarget) | 14 | done (10 M, 3 fixed; S53, S54 complete) | PedGroupIntelligence.cpp, PedGroupMembership.cpp, PedGroupPlacer.cpp |
 | S64c | rest of S64b | 20 | done (11 M, 8 fixed, LaserScopeDot no callers; S64 complete) | VehicleAnimGroupData.cpp, VehicleRecording.cpp, VehicleSaveStructure.cpp, Weapon.cpp |
 | S46b | rest of S46 | 3 | done (2 M, 1 fixed) | EventHandler.cpp |
@@ -202,3 +202,4 @@
 | S45b | rest of S45 | 11 | pending | Entity.cpp, EntryExitManager.cpp |
 | S60b | rest of S60 | 17 | pending | Task.cpp, TaskAllocator.cpp, TaskAllocatorAttack.cpp, TaskAllocatorKillOnFoot.cpp, TaskAllocatorKillThreatsBasic.cpp, TaskAllocatorKillThreatsBasicRandomGroup.cpp, TaskAllocatorKillThreatsDriveby.cpp, TaskAllocatorPlayerCommandAttack.cpp, TaskComplex.cpp, TaskManager.cpp |
 | S65b | rest of S65 | 2 | pending | WeaponEffects.cpp, WeaponInfo.cpp |
+| S57e | rest of S57d | 6 | pending | Replay.cpp |

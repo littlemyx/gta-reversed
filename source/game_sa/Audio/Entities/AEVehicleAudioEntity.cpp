@@ -1679,9 +1679,11 @@ void CAEVehicleAudioEntity::JustGotOutOfVehicleAsDriver() {
     }
     case AE_BMX:
     case AE_BOAT:
-    case AE_ONE_GEAR: {
+    case AE_ONE_GEAR:
+    case AE_NO_VEHICLE: { // the exe does nothing for these (0x4FD097)
         break;
-    }    default:
+    }
+    default:
         NOTSA_UNREACHABLE();
     }
 }

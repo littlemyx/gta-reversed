@@ -96,12 +96,19 @@ void CCutsceneMgr::UpdateCutsceneObjectBoundingBox(RpClump* clump, eModelID mode
     assert(IsModelIDForCutScene(modelId));
     assert(RwObjectGetType(clump) == rpCLUMP);
 
-    // Figure out bounding sphere radius
-    float radius = 0.f;
+    // 0x5B01E0: the radius starts at the col model's CURRENT radius (CalculateBoundingSphereRadiusCB only ever grows it) and the result
+    // is capped at max(20, current) - the temp col models for CUTOBJ06..20 are zero initialised, 01..05 start at 2.0
+    auto& cm       = CTempColModels::ms_colModelCutObj[modelId - MODEL_CUTOBJ01];
+    const auto r0  = cm.GetBoundingSphere().m_fRadius;
+    float radius   = r0;
     RpClumpForAllAtomics(clump, CalculateBoundingSphereRadiusCB, &radius);
 
+    const float limit = r0 < 20.f ? 20.f : r0; // `jp` arm (r0 >= 20 or NaN) keeps r0
+    if (radius > limit) {
+        radius = limit;
+    }
+
     // Now update the col model with it
-    auto& cm = CTempColModels::ms_colModelCutObj[modelId - MODEL_CUTOBJ01];
     cm.GetBoundingSphere().m_fRadius = radius;
     cm.GetBoundingBox() = CBoundingBox{ // Bounding box of the sphere basically
         {-radius, -radius, -radius},
@@ -117,6 +124,7 @@ CCutsceneObject* CCutsceneMgr::CreateCutsceneObject(eModelID modelId) {
     if (IsModelIDForCutScene(modelId)) {
         const auto mi = static_cast<CClumpModelInfo*>(CModelInfo::GetModelInfo(modelId));
         mi->SetColModel(&CTempColModels::ms_colModelCutObj[modelId - MODEL_CUTOBJ01]);
+        CTempColModels::ms_colModelCutObj[modelId - MODEL_CUTOBJ01].GetBoundingSphere().m_fRadius = 0.f; // 0x5B02D7-0x5B02E3: radius is reset first
         UpdateCutsceneObjectBoundingBox(mi->GetRpClump(), modelId);
     }
 

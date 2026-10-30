@@ -266,8 +266,9 @@ void CVehicleRecording::RenderLineSegment(int32& numVertices) {
 
 // 0x45A160
 void CVehicleRecording::RemoveAllRecordingsThatArentUsed() {
-    for (auto&& [i, recording] : rngv::enumerate(GetRecordings())) {
-        if (recording.m_nNumber == i && recording.m_pData && !recording.m_nRefCount) {
+    // 0x45A160: every slot with data and no references (the port also required number == slot index, and stopped at NumPlayBackFiles)
+    for (auto& recording : StreamingArray) {
+        if (recording.m_pData && !recording.m_nRefCount) {
             recording.Remove();
         }
     }

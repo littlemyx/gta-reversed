@@ -308,14 +308,15 @@ RpAtomic* CCustomRoadsignMgr::CreateRoadsignAtomic(float xScale, float yScale, i
 RpAtomic* CCustomRoadsignMgr::RenderRoadsignAtomic(RpAtomic* atomic, const CVector& vecPos)
 {
     auto* frame = RpAtomicGetFrame(atomic);
-    auto vecDist = vecPos - *RwMatrixGetPos(RwFrameGetMatrix(frame));
-    const auto fDistSquared = vecDist.SquaredMagnitude();
+    const auto vecDist = vecPos - *RwMatrixGetPos(RwFrameGetMatrix(frame));
+    const auto fDistSquared = vecDist.z * vecDist.z + vecDist.y * vecDist.y + vecDist.x * vecDist.x; // exe 0x6FF370: the sum is z, y, x
     if (fDistSquared > 250000.0F) // 500 units away
         return atomic;
 
     if (fDistSquared >= 1600.0F) { // Fade out above 40 units away
-        const auto fFade =  1.0F - invLerp(1600, 250000, fDistSquared);
-        const auto ucAlpha = NOTSA_FTOL(RwUInt8, lerp(0.0F, 254.0F, fFade));
+        // exe 0x6FF3AC: (250000 - d2) * (float 1/248400) * 254 -> _ftol -> low byte
+        const auto fFade = (250000.0F - fDistSquared) * ExeRecip(250000.0F - 1600.0F);
+        const auto ucAlpha = (RwUInt8)NOTSA_FTOL(int32, fFade * 254.0F);
         CCustomRoadsignMgr::SetAtomicAlpha(atomic, ucAlpha);
         RpAtomicRender(atomic);
         return atomic;

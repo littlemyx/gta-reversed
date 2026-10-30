@@ -1149,7 +1149,7 @@ RpMaterial* CVehicleModelInfo::GetMatFXEffectMaterialCB(RpMaterial* material, vo
 
 RpMaterial* CVehicleModelInfo::SetEnvironmentMapCB(RpMaterial* material, void* data)
 {
-    if ((uint16)std::bit_cast<uintptr_t>(data) == 0xFFFF) {
+    if (std::bit_cast<uintptr_t>(data) == 0xFFFF) { // exe 0x4C8840: `cmp dword ptr [esp+8], 0xFFFF` (the whole argument, not its low word)
         return DisableMatFx(material, data);
     }
 

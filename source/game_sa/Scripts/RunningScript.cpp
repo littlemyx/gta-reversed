@@ -897,8 +897,7 @@ void CRunningScript::CharInAreaCheckCommand(int32 commandId) {
 
     bool result = false;
     if (!notStopped) {
-        if (!(pos.x < minX || pos.x > maxX || pos.y < minY || pos.y > maxY)
-            && (!is3D || !(pos.z < minZ || pos.z > maxZ))) {
+        if (IsInRange(pos.x, minX, maxX) && IsInRange(pos.y, minY, maxY) && (!is3D || IsInRange(pos.z, minZ, maxZ))) {
             switch (commandId) {
             case 0xA3:
             case 0xA4:

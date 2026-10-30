@@ -10,3 +10,4 @@ date	gate_sha	scenario.check	detail	reruns
 2026-10-30	S57b worktree	combat.foot.weapon_pickup	no pickup after kill (after SYSTEMIC-6 merge radius 5.0->5.5)	1 rerun PASS
 2026-10-30	S48c worktree	missions.bike.exit_return	one fail	1 rerun PASS
 2026-10-30	S71 worktree	combat.chase.player_shot_at	CJ took no damage	1 rerun PASS
+2026-10-30	3644d26d8 (S93 worktree)	missions	unhandled strcpy_s in CPedAttractor ctor via GeneratePedsAtAttractors (2 repros in S93, 0 in MISSIONS-CRASH)	fixed b8a2ea2bb (strncpy like exe sprintf 0x821BB5)

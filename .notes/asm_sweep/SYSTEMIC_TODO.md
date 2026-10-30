@@ -31,3 +31,6 @@
 
 ## Shared helpers NaN (from S46)
 - [x] DONE (S60: 2c5b5e326 GetPedFOVRange strict >, 84d4c3bf6 CVector2D::Normalise NaN sqrt path). Original: CPedIntelligence::GetPedFOVRange uses std::max (differs on equal/NaN); CVector2D::Normalise treats NaN sum as zero length while the exe takes the sqrt path. Check exe forms; CVector2D is shared — check all callers / oracle rows before changing.
+
+## strcpy_s vs exe unbounded copies (from MISSIONS-CRASH)
+- [ ] The standalone build turns a strcpy_s/strncpy_s/strcat_s rejection into a fatal exception (Fixups::OnInvalidParam). The port uses *_s where the exe copies unbounded (strcpy/sprintf/strncpy) - an exactly-full fixed buffer (8-char names: script/attractor/anim/model names) crashes the run build. MISSIONS-CRASH (b8a2ea2bb) fixed CPedAttractor ctor; the crash was intermittent and not root-caused to a real 8-char name (fx pointer may also have been stale). Sweep all *_s calls into fixed char[N] members and match the exe copy form; also confirm whether fx in CPedAttractor can be stale.

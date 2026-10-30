@@ -439,3 +439,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S87	v6	asm sweep	289545	96	27	GetBeatInfo never copied result (beat script cmds stale), reverb update test inverted, Query3DSoundEffects null deref, ambience x87 log10 + C0 compares; 19 M
 2026-10-30	ASM-S85	v6	asm sweep	329015	119	29	gunshots had doppler 0, reload A/B sounds swapped for 4 weapon groups, rolloff 0.66 vs 2/3 in 9 fns, camera sound volume, attenuation index, ResolveProbability strict rand form (shared); 12 M
 2026-10-30	ASM-S93	v6	asm sweep	277494	105	39	IplStore Load 255 fixed iterations + LoadIpls NaN min, Fx splash dist order/NaN; reported missions crash (strcpy_s in CPedAttractor ctor) -> MISSIONS-CRASH; 31 M
+2026-10-30	MISSIONS-CRASH	v6	debug	0	0	0	CPedAttractor ctor strcpy_s -> strncpy (exe sprintf unbounded); S67 AddPedAtAttractor correct (now reaches RegisterPed); not reproduced on tip

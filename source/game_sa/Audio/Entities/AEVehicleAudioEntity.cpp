@@ -679,20 +679,29 @@ void CAEVehicleAudioEntity::AddAudioEvent(eAudioEvents event, float p1) {
         if (p1 < cfg->VolMin) {
             break;
         }
-        const auto vol = std::clamp(p1 / cfg->VolMax, 0.f, 1.f);
-        if (vol <= 0.00001f) {
+        // 0x4F670B-0x4F675D: v < 1 -> (v < 0 leaves the function), otherwise (also NaN) v = 1
+        float vol = p1 / cfg->VolMax;
+        if (vol < 1.f) {
+            if (vol < 0.f) {
+                break;
+            }
+        } else {
+            vol = 1.f;
+        }
+        if (!(vol > 0.00001f)) {
             break;
         }
-        if (CWeather::UnderWaterness >= 0.5f) {
+        if (!(CWeather::UnderWaterness < 0.5f)) { // `jp` also leaves for NaN
             break;
         }
         AESoundManager.PlaySound({
             .BankSlotID    = SND_BANK_SLOT_COLLISIONS,
             .SoundID     = SND_GENRL_COLLISIONS_SPLASH_END,
             .AudioEntity = this,
-            .Pos         = GetVehicle()->GetPosition(),
-            .Volume      = vol,
+            // 0x4F677C: AudioLog10(vol) * 20 + [0xB6B9C8] (.bss, 0) + event volume (dB); the port passed the linear ratio
+            .Volume      = (CAEAudioUtility::AudioLog10(vol) * 20.f + 0.f) + GetDefaultVolume(AE_BOAT_HIT_WAVE),
         });
+        m_TimeSplashLastTriggered = CTimer::GetTimeInMS(); // 0x4F6843+: the exe stores the time after requesting the sound
         break;
     }
     case AE_TRAIN_CLACK: { // 0x4F680B
@@ -763,6 +772,9 @@ void CAEVehicleAudioEntity::AddAudioEvent(eAudioEvents event, float p1) {
         break;
     }
     case AE_SUSPENSION_BOUNCE: { // 0x4F6EE7
+        if (AESoundManager.AreSoundsOfThisEventPlayingForThisEntity(AE_SUSPENSION_BOUNCE, this)) { // 0x4F6EF2
+            break;
+        }
         AESoundManager.PlaySound({
             .BankSlotID          = SND_BANK_SLOT_VEHICLE_GEN,
             .SoundID           = SND_GENRL_VEHICLE_GEN_BOUNCE_SUSPENSION,
@@ -776,6 +788,9 @@ void CAEVehicleAudioEntity::AddAudioEvent(eAudioEvents event, float p1) {
         break;
     }
     case AE_SUSPENSION_TRIGGER: { // 0x4F6F88
+        if (AESoundManager.AreSoundsOfThisEventPlayingForThisEntity(AE_SUSPENSION_TRIGGER, this)) { // 0x4F6F93
+            break;
+        }
         AESoundManager.PlaySound({
             .BankSlotID          = SND_BANK_SLOT_VEHICLE_GEN,
             .SoundID           = SND_GENRL_VEHICLE_GEN_TRIGGER_SUSPENSION,
@@ -791,6 +806,9 @@ void CAEVehicleAudioEntity::AddAudioEvent(eAudioEvents event, float p1) {
         break;
     }
     case AE_SUSPENSION_ON: { // 0x4F7035
+        if (AESoundManager.AreSoundsOfThisEventPlayingForThisEntity(AE_SUSPENSION_ON, this)) { // 0x4F7040
+            break;
+        }
         AESoundManager.PlaySound({
             .BankSlotID          = SND_BANK_SLOT_VEHICLE_GEN,
             .SoundID           = SND_GENRL_VEHICLE_GEN_TRIGGER_SUSPENSION,
@@ -805,17 +823,18 @@ void CAEVehicleAudioEntity::AddAudioEvent(eAudioEvents event, float p1) {
         });
         break;
     }
-    case AE_SUSPENSION_OFF: { // 0x4F7183
+    case AE_SUSPENSION_OFF: { // 0x4F7169 (event 0x6F)
+        if (AESoundManager.AreSoundsOfThisEventPlayingForThisEntity(AE_SUSPENSION_OFF, this)) { // 0x4F7183
+            break;
+        }
         AESoundManager.PlaySound({
             .BankSlotID          = SND_BANK_SLOT_VEHICLE_GEN,
             .SoundID           = SND_GENRL_VEHICLE_GEN_HYDRAULIC_SUSPENSION,
             .AudioEntity       = this,
             .Pos               = GetVehicle()->GetPosition(),
-            .Volume            = GetDefaultVolume(AE_SUSPENSION_OFF) + 0.f,
+            .Volume            = GetDefaultVolume(AE_SUSPENSION_OFF) - 6.f, // 0x8CC1B4 (-6.0); no start-percentage flag / play time in the exe
             .RollOffFactor     = 2.f,
-            .Flags             = SOUND_START_PERCENTAGE,
             .FrequencyVariance = 0.05f,
-            .PlayTime          = 0,
             .EventID           = AE_SUSPENSION_OFF,
         });
         break;
@@ -902,7 +921,7 @@ void CAEVehicleAudioEntity::AddAudioEvent(eAudioEvents event, float p1) {
                 .RollOffFactor     = 1.5f,
                 .Speed             = frq,
                 .Flags             = SOUND_START_PERCENTAGE,
-                .FrequencyVariance = 0.06f,
+                .FrequencyVariance = std::bit_cast<float>(0x3D75C290u), // 0x4F6988 etc.: the exe stores 0x3D75C290, 0.06f is 0x3D75C28F
                 .PlayTime          = playTime,
                 .EventID           = AE_PED_CRUNCH
             });
@@ -925,7 +944,9 @@ void CAEVehicleAudioEntity::AddAudioEvent(eAudioEvents event, float p1) {
             .Pos               = GetVehicle()->GetPosition(),
             .Volume            = GetPedEventVolume(AE_PED_DRIVE_OVER),
             .RollOffFactor     = 1.5f,
-            .FrequencyVariance = 0.06f,
+            .Flags             = SOUND_START_PERCENTAGE, // 0x4F6BE5: word [sound+0x1A] = 0x20, play time 0
+            .FrequencyVariance = std::bit_cast<float>(0x3D75C290u), // 0x4F6988 etc.: the exe stores 0x3D75C290, 0.06f is 0x3D75C28F
+            .PlayTime          = 0,
             .EventID           = notsa::IsFixBugs() ? AE_PED_DRIVE_OVER : AE_PED_KNOCK_DOWN // Makes no sense for this to be `AE_PED_KNOCK_DOWN`
         });
         break;
@@ -939,9 +960,11 @@ void CAEVehicleAudioEntity::AddAudioEvent(eAudioEvents event, float p1) {
             .SoundID           = SND_GENRL_COLLISIONS_COLSOLIDWOOD,
             .AudioEntity       = this,
             .Pos               = GetVehicle()->GetPosition(),
-            .Volume            = GetPedEventVolume(AE_PED_KNOCK_DOWN),
+            .Volume            = GetPedEventVolume(AE_PED_KNOCK_DOWN) - 2.f, // 0x4F6A2A: fsub 2.0 (0x858CA0); the second sound has no offset
             .RollOffFactor     = 1.5f,
-            .FrequencyVariance = 0.06f,
+            .Flags             = SOUND_START_PERCENTAGE, // 0x4F6A8C: flag 0x20 and play time 0 too
+            .FrequencyVariance = std::bit_cast<float>(0x3D75C290u), // 0x4F6988 etc.: the exe stores 0x3D75C290, 0.06f is 0x3D75C28F
+            .PlayTime          = 0,
             .EventID           = AE_PED_KNOCK_DOWN
         });
         AESoundManager.PlaySound({
@@ -952,7 +975,7 @@ void CAEVehicleAudioEntity::AddAudioEvent(eAudioEvents event, float p1) {
             .Volume            = GetPedEventVolume(AE_PED_KNOCK_DOWN),
             .RollOffFactor     = 1.5f,
             .Flags             = SOUND_START_PERCENTAGE,
-            .FrequencyVariance = 0.06f,
+            .FrequencyVariance = std::bit_cast<float>(0x3D75C290u), // 0x4F6988 etc.: the exe stores 0x3D75C290, 0.06f is 0x3D75C28F
             .PlayTime          = 55,
             .EventID           = AE_PED_KNOCK_DOWN
         });
@@ -967,9 +990,11 @@ void CAEVehicleAudioEntity::AddAudioEvent(eAudioEvents event, float p1) {
             .SoundID           = SND_GENRL_COLLISIONS_COLGRASS,
             .AudioEntity       = this,
             .Pos               = GetVehicle()->GetPosition(),
-            .Volume            = GetPedEventVolume(AE_PED_BOUNCE),
+            .Volume            = GetPedEventVolume(AE_PED_BOUNCE) - 2.f, // 0x4F6C74: fsub 2.0 (0x858CA0); the second sound has no offset
             .RollOffFactor     = 1.5f,
-            .FrequencyVariance = 0.06f,
+            .Flags             = SOUND_START_PERCENTAGE, // 0x4F6C9A: flag 0x20 and play time 0 too
+            .FrequencyVariance = std::bit_cast<float>(0x3D75C290u), // 0x4F6988 etc.: the exe stores 0x3D75C290, 0.06f is 0x3D75C28F
+            .PlayTime          = 0,
             .EventID           = AE_PED_BOUNCE
         });
         AESoundManager.PlaySound({
@@ -980,7 +1005,7 @@ void CAEVehicleAudioEntity::AddAudioEvent(eAudioEvents event, float p1) {
             .Volume            = GetPedEventVolume(AE_PED_BOUNCE),
             .RollOffFactor     = 1.5f,
             .Flags             = SOUND_START_PERCENTAGE,
-            .FrequencyVariance = 0.06f,
+            .FrequencyVariance = std::bit_cast<float>(0x3D75C290u), // 0x4F6988 etc.: the exe stores 0x3D75C290, 0.06f is 0x3D75C28F
             .PlayTime          = 25,
             .EventID           = AE_PED_BOUNCE
         });

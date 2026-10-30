@@ -23,18 +23,22 @@ CVector2D::CVector2D(const CVector& v3) :
 {
 }
 
+// 0x44E480 (not hooked: the port has the extra `outMag` parameter)
+// The exe keeps the squared length and the reciprocal length unrounded on the x87 stack (same as CVector::Normalise),
+// the zero test is `sqMag <= 0` on the SQUARED length with NaN NOT handled (goes on to the sqrt path => NaN components),
+// the components are only rounded when stored.
 void CVector2D::Normalise(float* outMag) {
-    auto mag = Magnitude();
-    if (mag > 0.0f) {
-        auto recip = 1.0F / mag;
-        x *= recip;
-        y *= recip;
-    } else {
-        x = 1.0f;
-    }
+    const x87d sqMag = (x87d)x * x + (x87d)y * y;
     if (outMag) {
-        *outMag = mag;
+        *outMag = (float)std::sqrt(sqMag);
     }
+    if (sqMag <= 0.0) {
+        x = 1.0f;
+        return;
+    }
+    const x87d recip = (x87d)1.0 / std::sqrt(sqMag);
+    x = (float)(x * recip);
+    y = (float)(y * recip);
 }
 
 uint32 CVector2D::NodeHeading() const {

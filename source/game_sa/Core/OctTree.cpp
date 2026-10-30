@@ -75,7 +75,7 @@ bool COctTree::InsertTree(uint8 red, uint8 green, uint8 blue) {
 
     COctTree* treeElement{};
     if (m_aChildrens[poolIndex] >= 0) {
-        treeElement = ms_octTreePool.GetAt(poolIndex);
+        treeElement = ms_octTreePool.GetAt(m_aChildrens[poolIndex]); // 0x5A762E: the pool slot stored in the child table (the port looked up the octant number itself)
     } else {
         treeElement = ms_octTreePool.New();
         if (!treeElement) {

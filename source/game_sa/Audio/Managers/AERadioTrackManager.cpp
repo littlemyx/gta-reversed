@@ -691,7 +691,13 @@ CAERadioTrackManager::CAERadioTrackManager(int32 hwClientHandle) :
 
 // 0x5B9390
 bool CAERadioTrackManager::Initialise(int32 channelId) {
-    *this = CAERadioTrackManager{};
+    // 0x5B9390: stores the channel and the STOPPED mode, then repeats the body of Reset (0x4E7F80) store for store (histories, per-station state, settings, statistics),
+    // then field_368 = 0 and the user track play mode. (The port used to value-initialise the whole object: handle 0 instead of the channel, histories left at the image's 0.)
+    m_HwClientHandle = channelId;
+    m_nMode          = eRadioTrackMode::RADIO_STOPPED;
+    Reset();
+    field_368              = 0;
+    m_nUserTrackPlayMode   = AEUserRadioTrackManager.GetUserTrackPlayMode();
     return true;
 }
 
@@ -705,6 +711,7 @@ void CAERadioTrackManager::Reset() {
     m_bInitialised = false;
     m_bDisplayStationName = false;
     rng::copy(CStats::GetFullFavoriteRadioStationList(), m_aListenTimes.begin());
+    m_nTracksInARow.fill(0); // 0x4E805C
 
     rng::for_each(m_nDJBanterIndexHistory, &DJBanterIndexHistory::Reset);
     rng::for_each(m_nAdvertIndexHistory, &AdvertIndexHistory::Reset);
@@ -712,9 +719,13 @@ void CAERadioTrackManager::Reset() {
     rng::for_each(m_nMusicTrackIndexHistory, &MusicTrackHistory::Reset);
     rng::for_each(m_aRadioState, [](auto& s) { s.Reset(); });
 
-    m_RequestedSettings = m_ActiveSettings = tRadioSettings{CAEAudioUtility::GetRandomRadioStation()};
+    // 0x4E8073: the requested settings are rebuilt field by field and BassGain is NOT written; then the 15 dwords are copied to the active settings
+    const auto bassGain = m_RequestedSettings.BassGain;
+    m_RequestedSettings = tRadioSettings{CAEAudioUtility::GetRandomRadioStation()};
+    m_RequestedSettings.BassGain = bassGain;
+    m_ActiveSettings    = m_RequestedSettings;
     m_nStationsListed = m_nStationsListDown = 0;
-    m_nTimeRadioStationRetuned = m_nTimeToDisplayRadioName = 0;
+    m_nTimeRadioStationRetuned = m_nTimeToDisplayRadioName = m_nSavedTimeMs = 0; // 0x4E80EF..0x4E80F5: [0x50], [0x54], [0x58]
     m_prev = field_60 = 0;
     m_nRetuneStartedTime = 0;
     m_bEnabledInPauseMode = false;
@@ -1332,7 +1343,10 @@ void CAERadioTrackManager::StartRadio(eRadioID id, eBassSetting bassSetting, flo
     rs->BassSetting             = bassSetting;
     rs->BassGain            = bassGain;
     if (id == RADIO_OFF) {
-        rs->Reset();
+        // 0x4EB498: only the three queue arrays are cleared (the bass settings written above and all other fields stay)
+        rng::fill(rs->TrackQueue, -1);
+        rng::fill(rs->TrackTypes, TYPE_NONE);
+        rng::fill(rs->TrackIndices, -1);
     } else if (m_aRadioState[id].m_iTimeInMs < 0 || !TrackRadioStation(id, skipTrack)) {
         ChooseTracksForStation(rs->StationID);
         rs->PlayTime = CAEAudioUtility::GetRandomNumberInRange(0, 300'000);

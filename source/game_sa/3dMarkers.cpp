@@ -113,7 +113,7 @@ void C3dMarkers::Init() {
 
 //> 0x7227B0
 void C3dMarkers::Update() {
-    m_angleDiamondDeg += CTimer::GetTimeStep() * 5.0f;
+    m_angleDiamondDeg = (float)((x87d)CTimer::GetTimeStep() * 5.0f + m_angleDiamondDeg); // exe 0x7227B0: fmul/fadd unrounded, one fstp
 
     for (auto& marker : m_aMarkerArray) {
         if (marker.m_IsInUse) {
@@ -374,7 +374,8 @@ C3dMarker* C3dMarkers::PlaceMarker(
         }
 
         for (auto& v : m_aMarkerArray) {
-            if (IsReusableType(v.m_Type) && (!m || v.m_DistToCam2D > m->m_DistToCam2D)) {
+            // 0x725240: the replaced marker must be FARTHER from the player than the new one (`dist < v.m_DistToCam2D`, ordered), then the farthest of those
+            if (markerToPlayerDist2D < v.m_DistToCam2D && IsReusableType(v.m_Type) && (!m || v.m_DistToCam2D > m->m_DistToCam2D)) {
                 m = &v;
             }
         }
@@ -490,15 +491,18 @@ C3dMarker* C3dMarkers::PlaceMarker(
                     m->m_Mat.GetPosition().z = pos.z;
                 }
                 m->UpdateZCoordinate(pos, 10.f);
+            } else {
+                m->m_Mat.GetPosition().z = pos.z; // 0x7258B8: TORUS and TUBE without zCheck always take the requested Z
             }
             break;
         }
         case MARKER3D_CYLINDER: { //> 0x7258C2
             auto& markerZ = m->m_Mat.GetPosition().z;
-            if (float waterZ; !CWaterLevel::GetWaterLevelNoWaves(m->m_Mat.GetPosition(), &waterZ, nullptr, nullptr) || waterZ < markerZ) {
-                m->UpdateZCoordinate(pos, size);
-            } else {
+            // exe: `waterZ < markerZ` (C0, set for NaN too) selects the Z update, so the water branch needs an ORDERED `waterZ >= markerZ`
+            if (float waterZ; CWaterLevel::GetWaterLevelNoWaves(m->m_Mat.GetPosition(), &waterZ, nullptr, nullptr) && waterZ >= markerZ) {
                 markerZ = waterZ;
+            } else {
+                m->UpdateZCoordinate(pos, size);
             }
             break;
         }
@@ -523,7 +527,7 @@ C3dMarker* C3dMarkers::PlaceMarker(
         switch (type) {
         case MARKER3D_CONE:
         case MARKER3D_CONE_NO_COLLISION: {
-            pos.z += x87::sin(DegreesToRadians(m_angleDiamondDeg) * 0.3f); // NOTE/BUG: See code from the branch below, they aren't the same for some reason.
+            pos.z += X87R(x87::sin(DegreesToRadians(m_angleDiamondDeg)) * 0.3f); // 0x7259A7: fsin, THEN fmul 0.3 (0x858C24) - the port multiplied the angle
         }
         }
 
@@ -535,10 +539,11 @@ C3dMarker* C3dMarkers::PlaceMarker(
         switch (type) {
         case MARKER3D_CYLINDER: {
             auto& markerZ = m->m_Mat.GetPosition().z;
-            if (float waterZ; !CWaterLevel::GetWaterLevelNoWaves(m->m_Mat.GetPosition(), &waterZ, nullptr, nullptr) || waterZ < markerZ) {
-                m->UpdateZCoordinate(pos, size);
-            } else {
+            // exe: `waterZ < markerZ` (C0, set for NaN too) selects the Z update, so the water branch needs an ORDERED `waterZ >= markerZ`
+            if (float waterZ; CWaterLevel::GetWaterLevelNoWaves(m->m_Mat.GetPosition(), &waterZ, nullptr, nullptr) && waterZ >= markerZ) {
                 markerZ = waterZ;
+            } else {
+                m->UpdateZCoordinate(pos, size);
             }
             break;
         }
@@ -578,7 +583,12 @@ C3dMarker* C3dMarkers::PlaceMarker(
 
 //> 0x726D40
 void C3dMarkers::PlaceMarkerCone(uint32 id, CVector& point, float size, uint8 red, uint8 green, uint8 blue, uint8 alpha, uint16 pulsePeriod, float pulseFraction, int16 rotateRate, bool bEnableCollision) {
-    if ((point - TheCamera.GetPosition()).SquaredMagnitude() >= sq(1.6f)) {
+    // exe 0x726D4E-0x726D8A: dist = sqrt((dz^2 + dx^2) + dy^2); the call is skipped only if `dist < 1.6f` (NaN does NOT skip)
+    const auto camPos = TheCamera.GetPosition();
+    const x87d dx = (x87d)point.x - camPos.x;
+    const x87d dy = (x87d)point.y - camPos.y;
+    const x87d dz = (x87d)point.z - camPos.z;
+    if (!((float)x87::sqrt((dz * dz + dx * dx) + dy * dy) < 1.6f)) {
         PlaceMarker(
             id,
             bEnableCollision
@@ -712,6 +722,19 @@ bool C3dMarkers::SaveUser3dMarkers() {
     return true;
 }
 
+// Exe 0x72133A-0x72147B (inlined in `DirectionArrowsDraw`): (0, 0, 1) keeps the unity matrix, otherwise right = Normalise(z x up) and forward = Normalise(up x right).
+// `CMatrix::WithUp` does not normalise (that is what made the arrow narrower for a tilted normal).
+static CMatrix ExeArrowUpMatrix(const CVector& up) {
+    if (up.x == 0.f && up.y == 0.f && up.z == 1.f) {
+        return CMatrix::Unity();
+    }
+    CVector right = CrossProduct(CVector::ZAxisVector(), up);
+    right.Normalise();
+    CVector fwd = CrossProduct(up, right);
+    fwd.Normalise();
+    return CMatrix{ CVector{}, right, fwd, up };
+}
+
 // Code from (beginning at): 0x7212A4
 void tDirectionArrow::Render(RpClump* clump) {
     const auto frame = RpClumpGetFrame(clump);
@@ -724,7 +747,7 @@ void tDirectionArrow::Render(RpClump* clump) {
 
     auto DoRender = [
         &,
-        transform = CMatrix{ RwFrameGetMatrix(frame) } * CMatrix::WithUp(m_normal) // Build transform matrix we'll use to render
+        transform = CMatrix{ RwFrameGetMatrix(frame) } * ExeArrowUpMatrix(m_normal) // Build transform matrix we'll use to render
     ](CRGBA color, float scale) mutable {
         transform.Scale(scale);
         transform.UpdateRwMatrix(RwFrameGetMatrix(frame)); // Push this matrix to the underlaying RW matrix

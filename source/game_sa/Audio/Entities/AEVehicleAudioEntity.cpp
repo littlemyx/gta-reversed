@@ -4380,7 +4380,7 @@ void CAEVehicleAudioEntity::ProcessBoatEngine(tVehicleParams& vp) {
     if (!EnsureHasDummySlot()) {
         return;
     }
-    if (!EnsureSoundBankIsLoaded(true)) {
+    if (!EnsureSoundBankIsLoaded(true, false)) { // 0x5003D3: unlike the car code, this does not touch m_State
         return;
     }
 
@@ -4401,9 +4401,9 @@ void CAEVehicleAudioEntity::ProcessBoatEngine(tVehicleParams& vp) {
     // 0x5004C7 - Calculate speed
     {
         const auto roll  = std::min(1.f, 1.f - boat->GetUp().Dot(CVector::ZAxisVector()));
-        const auto speed = cfg->FrqEngineBase
-            + roll * cfg->FrqEngineRollFactor
-            + es * (boat->m_nBoatFlags.bBoatInWater ? cfg->FrqEngineOnWaterFactor : cfg->FrqEngineInAirFactor);
+        // 0x500510: the exe tests m_nBoatFlags bit 1 (bBoatEngineInWater) here, and sums as `roll * k + (es * f + base)`
+        const auto speed = roll * cfg->FrqEngineRollFactor
+            + (es * (boat->m_nBoatFlags.bBoatEngineInWater ? cfg->FrqEngineOnWaterFactor : cfg->FrqEngineInAirFactor) + cfg->FrqEngineBase);
         m_CurrentDummyEngineFrequency = m_CurrentDummyEngineFrequency >= 0.f
             ? notsa::step_to(m_CurrentDummyEngineFrequency, speed, 0.02f, notsa::bugfixes::GenericFrameRate)
             : speed;

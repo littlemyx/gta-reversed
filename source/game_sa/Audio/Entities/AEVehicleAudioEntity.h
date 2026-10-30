@@ -249,7 +249,7 @@ protected: // Config:
 
             float FrqEngineRollFactor{ 0.1f };    // 0x8CBED4
             float FrqEngineBase{ 0.6f };          // 0xNONE
-            float FrqEngineOnWaterFactor{ 0.4f }; // 0xNONE
+            float FrqEngineOnWaterFactor{ std::bit_cast<float>(0x3ECCCCCCu) }; // 0x862D50 (1 ulp below 0.4f: 0.3999999761581421)
             float FrqEngineInAirFactor{ std::bit_cast<float>(0x3F333332u) }; // 0xB6BA74 - initterm 0x84D0B0: [0x8CBED0] - [0x858CC8] (1 ulp below 0.7f)
 
             float VolBase{ -3.f }; // 0xNONE

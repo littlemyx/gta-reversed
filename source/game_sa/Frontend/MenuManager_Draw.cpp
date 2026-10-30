@@ -393,13 +393,15 @@ void CMenuManager::DrawStandardMenus(bool drawTitle) {
     const GxtChar* rightColumnText; // text for right column
     const GxtChar* displayText;     // text to display
 
+    GxtChar rightColumnBuffer[1'024]; // backing store of the anti-aliasing / resolution texts (rightColumnText points into it past the case block)
     float itemYPosition = 0.0;
     bool shouldDrawStandardItems = true;
     CFont::SetBackground(false, false);
     CFont::SetProportional(true);
     CFont::SetOrientation(eFontAlignment::ALIGN_LEFT);
-    CFont::SetWrapx(SCREEN_STRETCH_FROM_RIGHT(10.0f));
-    CFont::SetRightJustifyWrap(SCREEN_SCALE_X(10.0f));
+    // exe 0x5794A0-0x579500: the wrap is the plain `width - 10` (not stretched) and the right-justify wrap the literal 10.0
+    CFont::SetWrapx((float)(RsGlobal.maximumWidth - 10));
+    CFont::SetRightJustifyWrap(10.0f);
     CFont::SetCentreSize(SCREEN_WIDTH);
 
     if (m_nCurrentScreen == eMenuScreen::SCREEN_STATS) {
@@ -426,7 +428,7 @@ void CMenuManager::DrawStandardMenus(bool drawTitle) {
 
     // 0x5796B4
     if (aScreens[m_nCurrentScreen].m_aItems[0].m_nActionType == eMenuAction::MENU_ACTION_TEXT) {
-        CFont::SetWrapx(SCREEN_STRETCH_FROM_RIGHT(40.0f));
+        CFont::SetWrapx((float)(RsGlobal.maximumWidth - 40)); // exe 0x5796C1: width - 40, not stretched
         CFont::SetFontStyle(eFontStyle::FONT_SUBTITLES);
         CFont::SetScaleForCurrentLanguage(StretchX(0.49f), StretchY(1.2f));
         CFont::SetOrientation(eFontAlignment::ALIGN_LEFT);
@@ -456,7 +458,7 @@ void CMenuManager::DrawStandardMenus(bool drawTitle) {
         }
 
         CFont::PrintString(StretchX(60.0f), StretchY(97.0f), textOne);
-        CFont::SetWrapx(SCREEN_STRETCH_FROM_RIGHT(10.f));
+        CFont::SetWrapx((float)(RsGlobal.maximumWidth - 10)); // exe 0x57987F
         CFont::SetRightJustifyWrap(10.0f);
     }
 
@@ -496,7 +498,8 @@ void CMenuManager::DrawStandardMenus(bool drawTitle) {
         default:                           CFont::SetOrientation(eFontAlignment::ALIGN_CENTER); break;
         }
 
-        if (!item.m_X && !item.m_Y) {
+        // exe 0x579AE0-0x579B5F: also recomputed every frame for mission pack entries (type 9)
+        if ((!item.m_X && !item.m_Y) || item.m_nType == eMenuEntryType::TI_MPACK) {
             if (i == 0 || (i == 1 && hasLabel)) {
                 item.m_X = DEFAULT_CONTENT_X;
                 item.m_Y = DEFAULT_CONTENT_Y;
@@ -512,7 +515,7 @@ void CMenuManager::DrawStandardMenus(bool drawTitle) {
 
         const bool isSlot = IsSaveSlot(item.m_nType);
 
-        float xOffset = 0;
+        int32 xOffset = 0; // exe: an int (ftol of the stretched x), only the low 16 bits are used afterwards
 
         switch (item.m_nType) {
         case eMenuEntryType::TI_MPACK: {
@@ -567,24 +570,20 @@ void CMenuManager::DrawStandardMenus(bool drawTitle) {
                     rightColumnText = GetSavedGameDateAndTime(i - 1);
                     break;
                 }
-                case eSlotState::SLOT_CORRUPTED: { // Corrupted save
+                case eSlotState::SLOT_CORRUPTED: // Corrupted save
                     displayText = TheText.Get("FESZ_CS");
-                    if (!displayText) {
-                        CFont::SetOrientation(eFontAlignment::ALIGN_CENTER);
-                        item.m_X = DEFAULT_CONTENT_X;
-                        displayText = TheText.Get(std::format("FEM_SL{}", i).c_str());
-                        xOffset = StretchX(40.0f);
-                    }
+                    break;
+                default: // Empty slot
+                    displayText = nullptr;
                     break;
                 }
-                default: { // Empty slot
-                    AsciiToGxtChar(std::format("FEM_SL{}", i).c_str(), gGxtString);
+
+                // exe 0x579C43-0x579CD6: a null or empty text (empty save name, missing FESZ_CS) and every other slot state show the "FEM_SLn" placeholder
+                if (!displayText || !displayText[0]) {
                     CFont::SetOrientation(eFontAlignment::ALIGN_CENTER);
                     item.m_X = DEFAULT_CONTENT_X;
-                    displayText = TheText.Get((const char*)gGxtString);
-                    xOffset = StretchX(40.0f);
-                    break;
-                }
+                    displayText = TheText.Get(std::format("FEM_SL{}", i).c_str());
+                    xOffset = NOTSA_FTOL(int32, StretchX(40.0f)); // exe: ftol
                 }
                 break;
             }
@@ -652,9 +651,8 @@ void CMenuManager::DrawStandardMenus(bool drawTitle) {
             if (m_nDisplayAntialiasing <= 1) {
                 rightColumnText = TheText.Get("FEM_OFF");
             } else {
-                GxtChar tmpBuffer[64];
-                AsciiToGxtChar(std::format("{}", m_nDisplayAntialiasing - 1).c_str(), tmpBuffer);
-                rightColumnText = tmpBuffer;
+                AsciiToGxtChar(std::format("{}", m_nDisplayAntialiasing - 1).c_str(), rightColumnBuffer);
+                rightColumnText = rightColumnBuffer;
             }
             break;
         }
@@ -663,10 +661,9 @@ void CMenuManager::DrawStandardMenus(bool drawTitle) {
             rightColumnText = GetOnOffText(!bInvertMouseY);
             break;
         case eMenuAction::MENU_ACTION_RESOLUTION: {
-            GxtChar tmpBuffer[1'024];
             auto Videomodes = GetVideoModeList();
-            AsciiToGxtChar(std::format("{}", Videomodes[m_nDisplayVideoMode]).c_str(), tmpBuffer);
-            rightColumnText = tmpBuffer;
+            AsciiToGxtChar(std::format("{}", Videomodes[m_nDisplayVideoMode]).c_str(), rightColumnBuffer);
+            rightColumnText = rightColumnBuffer;
             break;
         }
         case eMenuAction::MENU_ACTION_CONTROL_TYPE:
@@ -700,14 +697,8 @@ void CMenuManager::DrawStandardMenus(bool drawTitle) {
         const auto scaledY = StretchY(item.m_Y);
 
         if (displayText) {
-            if ((isSlot && GetSavedGameState(item.m_nType - 1) != eSlotState::SLOT_FILLED) || !isSlot) {
-                CFont::PrintString(scaledX, scaledY, displayText);
-            // v1.01 +
-            } else if (isSlot && GetSavedGameState(item.m_nType - 1) == eSlotState::SLOT_FILLED) {
-                CFont::PrintString(StretchX(25.0f + item.m_X), scaledY, displayText);
-                AsciiToGxtChar(std::format("{}:", i).c_str(), gGxtString);
-                CFont::PrintString(scaledX, scaledY, gGxtString);
-            }
+            // exe 0x57A168-0x57A1FA: one PrintString at the item position for every kind of entry (the exe has no "n:" slot number prefix)
+            CFont::PrintString(scaledX, scaledY, displayText);
         }
 
         // 0x57A204
@@ -721,24 +712,27 @@ void CMenuManager::DrawStandardMenus(bool drawTitle) {
                 CFont::SetScale(StretchX(0.35f), StretchY(0.95f));
             }
 
-            CFont::PrintString(SCREEN_STRETCH_FROM_RIGHT(40.0f), scaledY, rightColumnText);
+            // exe 0x57A3D1-0x57A405: width - 40 at the reference width, else width - width * 0.0625 (both exact)
+            CFont::PrintString(SCREEN_WIDTH - (RsGlobal.maximumWidth == 640 ? 40.0f : SCREEN_WIDTH * 0.0625f), scaledY, rightColumnText);
         }
 
         // Check if text was properly initialized and we're on the current selection
         if ((displayText && i == m_nCurrentScreenItem) && (m_nCurrentScreen != SCREEN_MAP && m_nCurrentScreen != SCREEN_BRIEF)) {
             // Calculate X position for highlighted item if not already done
-            if (!xOffset) {
-                const auto align = item.m_nAlign;
-                xOffset = [&]() -> float {
-                    switch (align) {
-                    case eMenuAlign::MENU_ALIGN_LEFT:
-                        return scaledX - StretchX(40.0f);
-                    case eMenuAlign::MENU_ALIGN_RIGHT:
-                        return StretchX(40.0f) + scaledX;
-                    default:
-                        return scaledX - StretchX(40.0f) - CFont::GetStringWidth(displayText, 1, 0) * 0.5f;
-                    }
-                }();
+            // exe 0x57A40D-0x57A50C: only the low 16 bits of the int are tested; the x is `x * (W * (1/640))` (not StretchX's (W * x) * (1/640)), converted with ftol
+            if ((int16)xOffset == 0) {
+                const x87d stretchedX = (x87d)item.m_X * ((x87d)RsGlobal.maximumWidth * (x87d)SCREEN_RECIPROCAL_X);
+                switch (item.m_nAlign) {
+                case eMenuAlign::MENU_ALIGN_LEFT:
+                    xOffset = NOTSA_FTOL(int32, (float)stretchedX - StretchX(40.0f));
+                    break;
+                case eMenuAlign::MENU_ALIGN_RIGHT:
+                    xOffset = NOTSA_FTOL(int32, (x87d)StretchX(40.0f) + stretchedX);
+                    break;
+                default:
+                    xOffset = NOTSA_FTOL(int32, ((float)stretchedX - StretchX(40.0f)) - CFont::GetStringWidth(displayText, 1, 0) * 0.5f);
+                    break;
+                }
             }
 
             // 0x57A50C - Draw highlight rectangle for selected item if map is loaded
@@ -748,15 +742,19 @@ void CMenuManager::DrawStandardMenus(bool drawTitle) {
                 case eMenuScreen::SCREEN_DELETE_FINISHED:
                 case eMenuScreen::SCREEN_SAVE_DONE_1:
                     break;
-                default:
+                default: {
+                    // exe 0x57A50C-0x57A5F1: x is the int (low 16 bits), y is `y * (H * (1/448))` (float), the sizes are StretchX'd (5 / 32 / 47)
+                    const auto arrowX = (float)(int16)xOffset;
+                    const auto arrowY = (float)((x87d)item.m_Y * ((x87d)RsGlobal.maximumHeight * (x87d)SCREEN_RECIPROCAL_Y));
                     m_aFrontEndSprites[0].Draw({
-                            xOffset,
-                            scaledY - StretchX(5.0f),
-                            xOffset + StretchX(32.0f),
-                            scaledY + StretchX(47.0f)
+                            arrowX,
+                            arrowY - StretchX(5.0f),
+                            arrowX + StretchX(32.0f),
+                            arrowY + StretchX(47.0f)
                         }, CRGBA(255, 255, 255, 255)
                     );
                     break;
+                }
                 }
             }
         }
@@ -765,25 +763,27 @@ void CMenuManager::DrawStandardMenus(bool drawTitle) {
         const auto currentItemName = aScreens[m_nCurrentScreen].m_aItems[m_nCurrentScreenItem].m_szName;
         const bool isDisplaySettings = m_nCurrentScreen == SCREEN_DISPLAY_SETTINGS || m_nCurrentScreen == SCREEN_DISPLAY_ADVANCED;
 
-        if (!strcmp(currentItemName, "FED_RES")) { // RESOLUTION
-            if (m_nDisplayVideoMode == m_nPrefsVideoMode && m_HelperText == eHelperText::FET_APP) {
-                ResetHelperText();
-            } else if (m_nDisplayVideoMode != m_nPrefsVideoMode) {
-                SetHelperText(eHelperText::FET_APP);
-            }
-        } else if (m_nDisplayVideoMode != m_nPrefsVideoMode && isDisplaySettings) {
-            m_nDisplayVideoMode = m_nPrefsVideoMode;
+        // exe 0x57A5F1-0x57A7A9: six independent tests in this order (when the anti-aliasing and the video mode both changed, the video mode revert has the last word)
+        const bool isResolutionItem = !strcmp(currentItemName, "FED_RES");
+        const bool isAntialiasingItem = !strcmp(currentItemName, "FED_AAS");
+        if (m_nDisplayVideoMode == m_nPrefsVideoMode && isResolutionItem && m_HelperText == eHelperText::FET_APP) {
+            ResetHelperText();
+        }
+        if (m_nDisplayAntialiasing == m_nPrefsAntialiasing && isAntialiasingItem && m_HelperText == eHelperText::FET_APP) {
+            ResetHelperText();
+        }
+        if (m_nDisplayVideoMode != m_nPrefsVideoMode && isResolutionItem) {
+            SetHelperText(eHelperText::FET_APP);
+        }
+        if (m_nDisplayAntialiasing != m_nPrefsAntialiasing && isAntialiasingItem) {
+            SetHelperText(eHelperText::FET_APP);
+        }
+        if (m_nDisplayAntialiasing != m_nPrefsAntialiasing && !isAntialiasingItem && isDisplaySettings) {
+            m_nDisplayAntialiasing = m_nPrefsAntialiasing;
             SetHelperText(eHelperText::FET_RSO);
         }
-
-        if (!strcmp(currentItemName, "FED_AAS")) { // ANTI ALIASING
-            if (m_nDisplayAntialiasing == m_nPrefsAntialiasing && m_HelperText == eHelperText::FET_APP) {
-                ResetHelperText();
-            } else if (m_nDisplayAntialiasing != m_nPrefsAntialiasing) {
-                SetHelperText(eHelperText::FET_APP);
-            }
-        } else if (m_nDisplayAntialiasing != m_nPrefsAntialiasing && isDisplaySettings) {
-            m_nDisplayAntialiasing = m_nPrefsAntialiasing;
+        if (m_nDisplayVideoMode != m_nPrefsVideoMode && !isResolutionItem && isDisplaySettings) {
+            m_nDisplayVideoMode = m_nPrefsVideoMode;
             SetHelperText(eHelperText::FET_RSO);
         }
 
@@ -795,8 +795,9 @@ void CMenuManager::DrawStandardMenus(bool drawTitle) {
                     m_MouseInBounds = leftBound;
                 } else if (CheckHover(NOTSA_FTOL(int32, sliderPos + StretchX(3.0f)), NOTSA_FTOL(int32, StretchX(SCREEN_WIDTH)), NOTSA_FTOL(int32, StretchY(125.0f - verticalOffset)), NOTSA_FTOL(int32, StretchY(150.0f - verticalOffset)))) {
                     m_MouseInBounds = rightBound;
-                    if (StretchX(500.0f) <= m_nMousePosX && StretchY(125.0f - verticalOffset) <= m_nMousePosY && m_nMousePosY <= StretchY(150.0f - verticalOffset)) {
-                        return;
+                    // exe 0x57AFD0-0x57B229: right of the slider but outside the track area counts as no hover at all
+                    if (!(StretchX(500.0f) <= m_nMousePosX && StretchY(125.0f - verticalOffset) <= m_nMousePosY && m_nMousePosY <= StretchY(150.0f - verticalOffset))) {
+                        m_MouseInBounds = eMouseInBounds::NONE;
                     }
                 } else {
                     m_MouseInBounds = eMouseInBounds::NONE;

@@ -171,7 +171,8 @@ void CClouds::MovingFog_Update() {
         fogPosn.x += MovingFog_GetWind().x * ms_mf.m_Speed[i];
         fogPosn.y += MovingFog_GetWind().y * ms_mf.m_Speed[i];
 
-        if (offset.Magnitude() <= 60.f)
+        // 0x716B10: distance squared is summed z,y,x; `dist > 60` takes the fade-out arm, so NaN (and <= 60) fades in
+        if (!(std::sqrt(offset.z * offset.z + offset.y * offset.y + offset.x * offset.x) > 60.f))
         {
             ms_mf.m_fIntensity[i] = std::min(ms_mf.m_fIntensity[i] + CTimer::GetTimeStep(), ms_mf.m_fMaxIntensity[i]);
         }

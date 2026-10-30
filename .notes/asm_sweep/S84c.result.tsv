@@ -1,0 +1,18 @@
+addr	fn	verdict	commit	note
+0x4FF320	ProcessPlayerSeaPlane	FIXED	1110a5de8	rotor frequency was computed and dropped (never stepped); NaN prop speed arm; distant-volume base (clamped prop speed 0.2..1) verified; sound ids/slots/PoV/volume formulas MATCH
+0x4FF7C0	ProcessDummySeaPlane	FIXED	94e3395d8	near sound volume is log10(speed factor)*20+8 (port used distant-fade volume with base 0)
+0x501960	ProcessDummyJet	FIXED	422c55c2e	pedals quantised ftol(x*255)*(1/255) for prop speed and accel/brake args (port passed pedal*(1/255))
+0x501650	ProcessPlayerJet	FIXED	66c274ae5	bank check up front (before pedals/stall rand); shared stall swap runs on now > swapTime (port >=)
+0x4FF900	ProcessGenericJet	MATCH		4 model rows (Shamal/Hydra/AT400/Andromada via jump table), PoV, volumes, thrust fade, rotor step, 4 sounds
+0x4F9710	PlayBicycleSound	FIXED	e6dc2573c	bank check before updating an already playing tyre/sprocket sound
+0x4FFDC0	ProcessDummyBicycle	FIXED	b710b5cb8	NaN speed ratio -> 1.0 (shared helper); rest MATCH
+0x500040	ProcessPlayerBicycle	FIXED	b710b5cb8	same shared helper; pedaling timer MATCH
+0x500CE0	ProcessPlayerCombine	MATCH		
+0x500DC0	ProcessDummyRCCar	FIXED	f5177d634	speed/volume tables swapped, 5th junk point in both tables, |speed/max|
+0x501270	ProcessDummyGolfCart	FIXED	0c154edc7	volume table last x 1.0001f (0x3F800347); NaN arm
+0x501480	ProcessDummyVehicleEngine	MATCH		state jump table (0,1,10 -> 0.2; 2 -> 0.15; else CAR_OFF) verified
+0x501AB0	ProcessSpecialVehicle	MATCH		model jump table decoded (435/450/584/591 trailers, 441/564 RC car, 457 caddy, 464 RC plane, 465/501 RC heli, 539 vortex)
+0x501E10	ProcessVehicle	MATCH		type jump table, vp setup, per-type call order verified
+0x4FCA10	ProcessDummyStateTransition	NOT_REACHED		budget
+0x4FBB10	ProcessPlayerVehicleEngine	NOT_REACHED		budget
+0x4F6420	AddAudioEvent	NOT_REACHED		budget

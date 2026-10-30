@@ -1032,10 +1032,12 @@ void CAEVehicleAudioEntity::Service() {
         }
     }
 
+    // 0x5022D0: JustWreckedVehicle is called while the flag is still clear, the flag is stored afterwards
     const auto isWrecked = m_Entity->GetStatus() == STATUS_WRECKED;
-    if (!std::exchange(m_IsWreckedVehicle, isWrecked) && isWrecked) {
+    if (isWrecked && !m_IsWreckedVehicle) {
         JustWreckedVehicle();
     }
+    m_IsWreckedVehicle = isWrecked;
 
     const auto isPlayerVehicle    = CAEAudioUtility::FindVehicleOfPlayer() == veh; // This is the player's vehicle (They might not be in it though)
     const auto isPlayerDriver     = veh->m_pDriver && veh->m_pDriver->IsPlayer();  // The player is the driver of this vehicle
@@ -1043,16 +1045,17 @@ void CAEVehicleAudioEntity::Service() {
     const auto isPlayerInVehicle  = isPlayerDriver || isPlayerPassenger;           // The player is in the vehicle
     const auto wasPlayerInVehicle = m_IsPlayerPassenger || m_IsPlayerDriver;
 
-    if (isPlayerInVehicle && !wasPlayerInVehicle) {
-        TurnOnRadioForVehicle();
-    } else if (!isPlayerInVehicle && wasPlayerInVehicle) {
-        TurnOffRadioForVehicle();
-    }
-
+    // 0x502335 / 0x5023D0: the exe calls JustGotIn/Out first, the radio on/off after them
     if (isPlayerDriver && !m_IsPlayerDriver) {
         JustGotInVehicleAsDriver();
     } else if (!isPlayerDriver && m_IsPlayerDriver) {
         JustGotOutOfVehicleAsDriver();
+    }
+
+    if (isPlayerInVehicle && !wasPlayerInVehicle) {
+        TurnOnRadioForVehicle();
+    } else if (!isPlayerInVehicle && wasPlayerInVehicle) {
+        TurnOffRadioForVehicle();
     }
 
     m_IsPlayerDriver    = isPlayerDriver;
@@ -2643,10 +2646,10 @@ void CAEVehicleAudioEntity::ProcessMovingParts(tVehicleParams& vp) {
         cfg->StepUp, cfg->StepDown,
         notsa::bugfixes::GenericFrameRate // 0x4FB2F0: fixed 0.2 steps, no time step
     );
+
     if (vp.Vehicle->GetModelIndex() == MODEL_CEMENT) {
         return;
     }
-
 
     const auto* const props   = &cfg->PropsByModel.at(vp.Vehicle->GetModelId());
     const auto        slot    = props->Slot.value_or(m_DummySlot);
@@ -3264,10 +3267,10 @@ void CAEVehicleAudioEntity::UpdateDummyRCAcAndBrake(tVehicleParams& vp) {
 }
 #pragma endregion
 
+#pragma region Aircraft
 // 0x862D04 (0x3BAEC33C): the exe's rotor frequency step (NOT `1.f / 187.5f` = 0x3BAEC33E)
 constexpr float ROTOR_FREQ_STEP_EXE = 0.00533333234f;
 
-#pragma region Aircraft
 // notsa - Update rotor frequency smoothly
 void CAEVehicleAudioEntity::UpdateRotorFreq(float freq, float stepUp, float stepDown) {
     m_CurrentRotorFrequency = m_CurrentRotorFrequency < 0.f

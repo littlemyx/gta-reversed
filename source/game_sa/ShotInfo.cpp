@@ -64,8 +64,9 @@ bool CShotInfo::AddShot(CEntity* creator, eWeaponType weaponType, CVector origin
     shot->m_vecTargetOffset *= speed;
 
     // TODO: overflow handling?
-    const auto now      = (float)(X87R(double(CTimer::GetTimeInMS()) + ((CTimer::GetTimeInMS() & 0x80000000) ? 4294967300.0 : 0.0)));
-    shot->m_DestroyTime = now + weapInfo->m_fLifespan;
+    // 0x739DB0-0x739DD3: (time + lifespan) is truncated to an int (_ftol) and converted back to a float; the time is not rounded to a float before the add
+    const auto now      = (x87d)(X87R(double(CTimer::GetTimeInMS()) + ((CTimer::GetTimeInMS() & 0x80000000) ? 4294967300.0 : 0.0)));
+    shot->m_DestroyTime = (float)NOTSA_FTOL(int32, X87R(now + weapInfo->m_fLifespan));
     return true;
 }
 

@@ -43,44 +43,44 @@ void CMenuManager::UserInput() {
     // Initialize old option for tracking selection changes
     oldOption = m_nCurrentScreenItem;
 
-    // Check for mouse hover on menu options
-    bool mouseOverAnyItem = false;
+    // Check for mouse hover on menu options (exe 0x57FDF0)
     for (auto rowToCheck = 0; rowToCheck < 12; ++rowToCheck) {
         if (curScreen[rowToCheck].m_nActionType >= eMenuAction::MENU_ACTION_BACK) {
             float itemPosY = curScreen[rowToCheck].m_Y;
 
-            bool mouseOverItem = (StretchY(itemPosY) <= m_nMousePosY) &&
-                                 (StretchY(itemPosY + 26) >= m_nMousePosY);
+            // both bounds are strict in the exe (fcomp + test ah,5 / test ah,0x41)
+            bool mouseOverItem = (StretchY(itemPosY) < m_nMousePosY) &&
+                                 (StretchY(itemPosY + 26) > m_nMousePosY);
 
-            if (mouseOverItem) {
-                // 0x57FEEC
-                if (!bMouseHoverInitialised) {
-                    bMouseHoverInitialised = true;
-                    m_nMouseHoverScreen = m_nCurrentScreen;
+            if (!mouseOverItem) {
+                // 0x57FEBB - every row the mouse is not over restores the previous selection
+                if (m_DisplayTheMouse) {
+                    m_nCurrentScreenItem = oldOption;
+                    m_CurrentMouseOption = oldOption;
                 }
-
-                m_CurrentMouseOption = rowToCheck;
-
-                if (m_nOldMousePosX != m_nMousePosX || m_nOldMousePosY != m_nMousePosY) {
-                    m_nCurrentScreenItem = rowToCheck;
-                    m_DisplayTheMouse = true;
-                }
-
-                // 0x57FF72 - Update mouse bounds based on action type
-                if (!notsa::contains(SLIDER_ACTIONS, curScreen[rowToCheck].m_nActionType)) {
-                    m_MouseInBounds = eMouseInBounds::MENU_ITEM;
-                }
-
-                mouseOverAnyItem = true;
-                break;
+                continue;
             }
-        }
-    }
 
-    // 0x57FEBB - Reset selection only if mouse is not over any item
-    if (m_DisplayTheMouse && !mouseOverAnyItem) {
-        m_nCurrentScreenItem = oldOption;
-        m_CurrentMouseOption = oldOption;
+            // 0x57FEE5
+            if (!bMouseHoverInitialised) {
+                bMouseHoverInitialised = true;
+                m_nMouseHoverScreen = m_nCurrentScreen;
+            }
+
+            m_CurrentMouseOption = rowToCheck;
+
+            // the mouse counts as moved only when the previous position is not on an axis
+            if (m_nOldMousePosX && m_nOldMousePosY && (m_nOldMousePosX != m_nMousePosX || m_nOldMousePosY != m_nMousePosY)) {
+                m_nCurrentScreenItem = rowToCheck;
+                m_DisplayTheMouse = true;
+            }
+
+            // 0x57FF72 - Update mouse bounds based on action type
+            if (!notsa::contains(SLIDER_ACTIONS, curScreen[rowToCheck].m_nActionType)) {
+                m_MouseInBounds = eMouseInBounds::MENU_ITEM;
+            }
+            break;
+        }
     }
 
     // 0x57FF83 - Process mouse and selection changes
@@ -192,43 +192,45 @@ void CMenuManager::UserInput() {
         if (bDown || bUp || bEnter) {
             bExit = false;
         }
+    }
 
-        // Check for left/right slider movement
-        const bool isLeftPressed = CPad::IsLeftDown() || pad->GetPedWalkLeftRight() < 0 || pad->f0x57C380();
-        const bool isRightPressed = CPad::IsRightDown() || pad->GetPedWalkLeftRight() > 0 || pad->f0x57C390();
-        if (isLeftPressed || isRightPressed) {
-            auto& lastSliderMoveTime = isLeftPressed ? m_SlideLeftMoveTime : m_SlideRightMoveTime;
-            if (CTimer::GetTimeInMSPauseMode() - lastSliderMoveTime > 200) {
-                if (notsa::contains(SLIDER_ACTIONS, curScreen[m_nCurrentScreenItem].m_nActionType)
-                    || curScreen[m_nCurrentScreenItem].m_nActionType == MENU_ACTION_STAT) {
-                    sliderMove         = isLeftPressed ? -1 : 1;
-                    lastSliderMoveTime = CTimer::GetTimeInMSPauseMode();
-                }
+    // exe 0x5803CF: the left/right/wheel input below also runs on the controls definition screen
+    // Check for left/right slider movement
+    const bool isLeftPressed = CPad::IsLeftDown() || pad->GetPedWalkLeftRight() < 0 || pad->f0x57C380();
+    const bool isRightPressed = CPad::IsRightDown() || pad->GetPedWalkLeftRight() > 0 || pad->f0x57C390();
+    if (isLeftPressed || isRightPressed) {
+        auto& lastSliderMoveTime = isLeftPressed ? m_SlideLeftMoveTime : m_SlideRightMoveTime;
+        const auto now = CTimer::GetTimeInMSPauseMode();
+        if (now - lastSliderMoveTime > 200) {
+            if (notsa::contains(SLIDER_ACTIONS, curScreen[m_nCurrentScreenItem].m_nActionType)
+                || curScreen[m_nCurrentScreenItem].m_nActionType == MENU_ACTION_STAT) {
+                sliderMove = isLeftPressed ? -1 : 1;
             }
+            lastSliderMoveTime = now; // exe 0x5804B5 / 0x58050A: stamped for every action type
         }
+    }
 
-        // 0x58052C - Handle mouse wheel movement
-        if (m_nCurrentScreen != eMenuScreen::SCREEN_MAP) {
-            if (CPad::IsMouseWheelUpPressed()) {
-                sliderMove = 1;
-            } else if (CPad::IsMouseWheelDownPressed()) {
-                sliderMove = -1;
-            }
-        }
-
-        if (CheckFrontEndRightInput()) {
-            m_DisplayTheMouse = false;
+    // 0x58052C - Handle mouse wheel movement
+    if (m_nCurrentScreen != eMenuScreen::SCREEN_MAP) {
+        if (CPad::IsMouseWheelUpPressed()) {
             sliderMove = 1;
-        } else if (CheckFrontEndLeftInput()) {
-            m_DisplayTheMouse = false;
+        } else if (CPad::IsMouseWheelDownPressed()) {
             sliderMove = -1;
         }
+    }
 
-        // Play sound for specific screens and actions
-        if (sliderMove != 0 && notsa::contains(specialScreens, m_nCurrentScreen) &&
-            !notsa::contains(specialMenuActions, curScreen[m_nCurrentScreenItem].m_nActionType)) {
-            AudioEngine.ReportFrontendAudioEvent(AE_FRONTEND_SELECT);
-        }
+    if (CheckFrontEndRightInput()) {
+        m_DisplayTheMouse = false;
+        sliderMove = 1;
+    } else if (CheckFrontEndLeftInput()) {
+        m_DisplayTheMouse = false;
+        sliderMove = -1;
+    }
+
+    // Play sound for specific screens and actions
+    if (sliderMove != 0 && notsa::contains(specialScreens, m_nCurrentScreen) &&
+        !notsa::contains(specialMenuActions, curScreen[m_nCurrentScreenItem].m_nActionType)) {
+        AudioEngine.ReportFrontendAudioEvent(AE_FRONTEND_SELECT);
     }
 
     // Process all user input

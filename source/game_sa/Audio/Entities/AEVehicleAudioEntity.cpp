@@ -2505,7 +2505,7 @@ void CAEVehicleAudioEntity::ProcessRainOnVehicle(tVehicleParams& params) {
     if (!AEAudioHardware.IsSoundBankLoaded(SND_BANK_GENRL_RAIN, SND_BANK_SLOT_WEATHER)) {
         return;
     }
-    if (CAEWeatherAudioEntity::m_sfRainVolume <= -100.0f) {
+    if (!(CAEWeatherAudioEntity::m_sfRainVolume > -100.0f)) { // 0x4F92DD: fcom + `test ah, 0x41` also returns on NaN
         return;
     }
     if (++m_RainDropCounter < 3) {

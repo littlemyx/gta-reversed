@@ -219,12 +219,11 @@ bool CRopes::FindCoorsAlongRope(uint32 ropeId, float fDistAlongRope, CVector* ou
 
 // 0x558D10
 int32 CRopes::CreateRopeForSwatPed(const CVector& startPos) {
-    int32 newRopeId = m_nRopeIdCreationCounter + 100;
-    if (RegisterRope(newRopeId, static_cast<uint32>(eRopeType::SWAT), startPos, true, 0, 0, nullptr, 4000)) {
-        return -1;
-    }
-
-    m_nRopeIdCreationCounter += 1;
+    const int32 newRopeId = (int32)m_nRopeIdCreationCounter + 100;
+    // 0x558D43..0x558D4D: the exe tests the bool result with `test eax, eax; jl`, which never jumps (0 or 1), so the id is always consumed and returned
+    // (the `-1` arm is dead code); the counter is wrapped to a byte (0x558D56 `and ecx, 0xFF`)
+    RegisterRope(newRopeId, static_cast<uint32>(eRopeType::SWAT), startPos, true, 0, 0, nullptr, 4000);
+    m_nRopeIdCreationCounter = (m_nRopeIdCreationCounter + 1) & 0xFF;
     return newRopeId;
 }
 

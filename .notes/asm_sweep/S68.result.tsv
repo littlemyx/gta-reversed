@@ -1,0 +1,37 @@
+addr	function	verdict	asm range	note	fix commit
+0x4385B0	CCheat::WeaponCheat1	FIXED	0x4385B0-0x438882 (all)	models/weapons/ammo equal; player 0 via FindPlayerPed(-1) (port: 0); SetModelIsDeletable only for 9 of the 10 models in exe order (Colt45 0x15A skipped)	d6f9c51f
+0x438890	CCheat::WeaponCheat2	FIXED	0x438890-0x438B2E (all)	models/weapons/ammo/deletable equal; player 0 via FindPlayerPed(-1) (port: 0)	d6f9c51f
+0x438B30	CCheat::WeaponCheat3	FIXED	0x438B30-0x438D50 (all)	models/weapons/ammo/deletable equal; player 0 via FindPlayerPed(-1) (port: 0)	d6f9c51f
+0x439B20	CCheat::MayhemCheat	MATCH	0x439B20-0x439C6C (all)	run build: toggle 14, hate bits 0xFFFFF for ped types 4..22, pool reverse walk, non-player peds, closest-ped hate event (task 1000); NOTSA_STANDALONE_RUN already drops the port-only OFF branch and table swap	-
+0x43A4A0	CCheat::TankCheat	MATCH	0x43A4A0-0x43A4AB (all)	VehicleCheat(0x1B0 RHINO)	-
+0x43A4B0	CCheat::StockCarCheat	MATCH	0x43A4B0-0x43A4BB (all)	VehicleCheat(0x1F8 BLOODRA)	-
+0x43A4C0	CCheat::StockCar2Cheat	MATCH	0x43A4C0-0x43A4CB (all)	VehicleCheat(0x1F9 RNCHLURE)	-
+0x43A4D0	CCheat::StockCar3Cheat	MATCH	0x43A4D0-0x43A4DB (all)	VehicleCheat(0x1F6 HOTRINA)	-
+0x43A4E0	CCheat::StockCar4Cheat	MATCH	0x43A4E0-0x43A4EB (all)	VehicleCheat(0x1F7 HOTRINB)	-
+0x43A4F0	CCheat::HearseCheat	MATCH	0x43A4F0-0x43A4FB (all)	VehicleCheat(0x1BA ROMERO)	-
+0x43A500	CCheat::LovefistCheat	MATCH	0x43A500-0x43A50B (all)	VehicleCheat(0x199 STRETCH)	-
+0x43A510	CCheat::TrashmasterCheat	MATCH	0x43A510-0x43A51B (all)	VehicleCheat(0x198 TRASH)	-
+0x43A520	CCheat::GolfcartCheat	MATCH	0x43A520-0x43A52B (all)	VehicleCheat(0x1C9 CADDY)	-
+0x439D80	CCheat::BlowUpCarsCheat	MATCH	0x439D80-0x439DC3 (all)	vehicle pool walked in reverse, BlowUpCar(null,false) via vtbl+0xA4	-
+0x438FF0	CCheat::SuicideCheat	MATCH	0x438FF0-0x4390CC (all)	damage calc (1000, UNARMED, torso, no speak), CEventDamage args, AffectsPed branch, event group Add	-
+0x439110	CCheat::FatCheat	MATCH	0x439110-0x439146 (all)	STAT_FAT=1000, rebuild unless driving	-
+0x439150	CCheat::MuscleCheat	MATCH	0x439150-0x439186 (all)	STAT_MUSCLE=1000, rebuild unless driving	-
+0x439190	CCheat::SkinnyCheat	MATCH	0x439190-0x4391CC (all)	FAT=0 then MUSCLE=0, rebuild unless driving	-
+0x4391D0	CCheat::ElvisLivesCheat	MATCH	0x4391D0-0x439228 (all)	toggle 39; peds 82,83,84 + 5 unload	-
+0x439230	CCheat::BeachPartyCheat	MATCH	0x439230-0x43935E (all)	toggle 41; peds 18,45,138,139,140; 4 clothes (torso, shortskhaki+shorts, flipflop, glasses04dark+glasses04); rebuild; ExtraSunny; HandleSpecial(41); Reclassify	-
+0x439360	CCheat::GangsCheat	MATCH	0x439360-0x4393C7 (all)	toggle 42; peds 102-106,108-110	-
+0x4393F0	CCheat::LoveConquersAllCheat	MATCH	0x4393F0-0x4394A6 (all)	toggle 45; peds 249,63,64,75,238,85,207; gimpleg SPECIAL; rebuild	-
+0x4394B0	CCheat::AllCarsAreShitCheat	MATCH	0x4394B0-0x4394D3 (all)	toggle 46; HandleSpecial(46); Reclassify	-
+0x4394E0	CCheat::AllCarsAreGreatCheat	MATCH	0x4394E0-0x439503 (all)	toggle 47; HandleSpecial(47); Reclassify	-
+0x43A530	CCheat::FlyboyCheat	MATCH	0x43A530-0x43A53B (all)	VehicleCheat(0x208 HYDRA)	-
+0x43A540	CCheat::VortexCheat	MATCH	0x43A540-0x43A54B (all)	VehicleCheat(0x21B VORTEX)	-
+0x4395B0	CCheat::ParachuteCheat	MATCH	0x4395B0-0x4395F0 (all)	request 0x173 GAME_REQUIRED, load, GiveWeapon(46,0,true), SetCurrentWeapon(eWeaponType overload 0x5E6280)	-
+0x439600	CCheat::JetpackCheat	MATCH	0x439600-0x4396BD (all)	GetTaskJetPack null -> CTaskSimpleJetPack(null,10.0f,0,null) in a script-command event (task 3) added to the player event group	-
+0x4398D0	CCheat::DrivebyCheat	MATCH	0x4398D0-0x439923 (all)	toggle 73; when on and weapon slot 4 empty: GiveDelayedWeapon(MICRO_UZI,150) + SetCurrentWeapon (0x5E6280)	-
+0x439F60	CCheat::CountrysideInvasionCheat	MATCH	0x439F60-0x43A0A2 (all)	toggle 75; peds 196-198,157-161; timberfawn/bask1 shoes, captruck hat, countrytr special; rebuild; beach party re-entry; cheap/fast cleared; funhouse re-entry; Reclassify	-
+0x43A550	CCheat::ApacheCheat	MATCH	0x43A550-0x43A55B (all)	VehicleCheat(0x1A9 HUNTER)	-
+0x43A560	CCheat::QuadCheat	MATCH	0x43A560-0x43A56B (all)	VehicleCheat(0x1D7 QUAD)	-
+0x43A570	CCheat::TankerCheat	MATCH	0x43A570-0x43A656 (all)	VehicleCheat(PETRO), RequestModel(PETROTR,0), loaded test, CTrailer(584,random) at the cab position, yaw 200deg, status abandoned, CWorld::Add, SetTowLink(cab,true)	-
+0x43A660	CCheat::DozerCheat	MATCH	0x43A660-0x43A66B (all)	VehicleCheat(0x1E6 DOZER)	-
+0x43A670	CCheat::StuntPlaneCheat	MATCH	0x43A670-0x43A67B (all)	VehicleCheat(0x201 STUNT)	-
+0x43A680	CCheat::MonsterTruckCheat	MATCH	0x43A680-0x43A68B (all)	VehicleCheat(0x22C MONSTERA)	-

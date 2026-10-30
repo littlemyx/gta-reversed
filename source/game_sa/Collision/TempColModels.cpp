@@ -11,6 +11,11 @@ void CTempColModels::InjectHooks() {
 }
 
 void CTempColModels::Initialise() {
+    // The exe's immediates (0x5BAB84, 0x5BABB2, 0x5BAE5F.., see ASM-S69) are not the nearest floats of 0.2 / 0.45: they were folded from other float arithmetic.
+    constexpr auto Z_M0_2 = std::bit_cast<float>(0xBE4CCCCCu); // -0.19999999 (not -0.2f = 0xBE4CCCCD)
+    constexpr auto Z_P0_2 = std::bit_cast<float>(0x3E4CCCD0u); //  0.20000005 (not  0.2f = 0x3E4CCCCD)
+    constexpr auto Z_P0_45 = std::bit_cast<float>(0x3EE66668u); // 0.45000005 (not 0.45f = 0x3EE66666)
+
     const auto InitializeColModel = [](CColModel& cm, CVector bbMin, CVector bbMax, CVector spCenter, float spRadius, uint8 colSlot = 0) {
         cm.GetBoundingSphere().Set(spRadius, spCenter);
         cm.GetBoundingBox().Set(bbMin, bbMax);
@@ -46,8 +51,8 @@ void CTempColModels::Initialise() {
         ms_colModelPed1.AllocateData(3, 0, 2, 0, 0, false);
         auto* const cd = ms_colModelPed1.m_pColData;
 
-        cd->GetSpheres()[0].Set(0.35f, { 0.00f,  0.00f, -0.20f}, SURFACE_PED, PED_COL_SPHERE_LEG);
-        cd->GetSpheres()[1].Set(0.35f, { 0.00f,  0.00f,  0.20f}, SURFACE_PED, PED_COL_SPHERE_MID);
+        cd->GetSpheres()[0].Set(0.35f, { 0.00f,  0.00f, Z_M0_2}, SURFACE_PED, PED_COL_SPHERE_LEG);
+        cd->GetSpheres()[1].Set(0.35f, { 0.00f,  0.00f, Z_P0_2}, SURFACE_PED, PED_COL_SPHERE_MID);
         cd->GetSpheres()[2].Set(0.35f, { 0.00f,  0.00f,  0.60f}, SURFACE_PED, PED_COL_SPHERE_HEAD);
 
         cd->GetLines()[0].Set({0.f, 0.f, 0.f}, {0.f, 0.f, -1.f}); // Leg L (?)
@@ -66,15 +71,15 @@ void CTempColModels::Initialise() {
         ms_colModelPed2.AllocateData(9, 0, 2, 0, 0, false);
         auto* const cd = ms_colModelPed2.m_pColData;
 
-        cd->GetSpheres()[0].Set(0.35f, { 0.00f,  0.00f, -0.20f}, SURFACE_PED, PED_COL_SPHERE_LEG);
-        cd->GetSpheres()[1].Set(0.35f, { 0.00f,  0.00f,  0.20f}, SURFACE_PED, PED_COL_SPHERE_MID);
+        cd->GetSpheres()[0].Set(0.35f, { 0.00f,  0.00f, Z_M0_2}, SURFACE_PED, PED_COL_SPHERE_LEG);
+        cd->GetSpheres()[1].Set(0.35f, { 0.00f,  0.00f, Z_P0_2}, SURFACE_PED, PED_COL_SPHERE_MID);
         cd->GetSpheres()[2].Set(0.35f, { 0.00f,  0.00f,  0.60f}, SURFACE_PED, PED_COL_SPHERE_HEAD);
         cd->GetSpheres()[3].Set(0.13f, { 0.18f,  0.35f,  0.75f}, SURFACE_PED, PED_PIECE_RIGHT_ARM);
         cd->GetSpheres()[4].Set(0.13f, { 0.18f,  0.50f,  0.75f}, SURFACE_PED, PED_PIECE_RIGHT_ARM);
         cd->GetSpheres()[5].Set(0.13f, {-0.18f,  0.35f,  0.75f}, SURFACE_PED, PED_PIECE_LEFT_ARM);
         cd->GetSpheres()[6].Set(0.13f, {-0.18f,  0.50f,  0.75f}, SURFACE_PED, PED_PIECE_LEFT_ARM);
-        cd->GetSpheres()[7].Set(0.20f, { 0.00f,  0.50f,  0.45f}, SURFACE_PED, PED_PIECE_RIGHT_LEG);
-        cd->GetSpheres()[8].Set(0.35f, { 0.00f,  0.55f,  0.20f}, SURFACE_PED, PED_PIECE_ASS);
+        cd->GetSpheres()[7].Set(0.20f, { 0.00f,  0.50f, Z_P0_45}, SURFACE_PED, PED_PIECE_RIGHT_LEG);
+        cd->GetSpheres()[8].Set(0.35f, { 0.00f,  0.55f, Z_P0_2}, SURFACE_PED, PED_PIECE_ASS);
 
         cd->GetLines()[0].Set({0.f, 0.f, 0.f}, {0.f, 0.f, -1.f}); // Leg L (?)
         cd->GetLines()[1].Set({0.f, 0.f, 0.f}, {0.f, 0.f,  1.f}); // Leg R (?)

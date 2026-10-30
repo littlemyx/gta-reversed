@@ -113,7 +113,8 @@ void WaterCreature_c::Update(float fTimeStep)
             m_pObject->SetHeading(fNewHeading);
         }
 
-        if (CGeneral::GetRandomNumberInRange(0.0F, 100.0F) < 5.0F) // 5% chance to change speed
+        // 0x6E4759: the INT overload (`(int)(rand * 1/32768 * 100) < 5`), not the float one
+        if (CGeneral::GetRandomNumberInRange(0, 100) < 5) // 5% chance to change speed
             m_fDefaultSpeed = CGeneral::GetRandomNumberInRange(pInfo.m_fMinSpeed, m_pFollowedCreature->m_fDefaultSpeed);
 
 
@@ -122,16 +123,18 @@ void WaterCreature_c::Update(float fTimeStep)
             fSpeed = m_pFollowedCreature->m_fCurSpeed;
 
         if (fDistFromGroup > 2.0F)
-            fSpeed *= (fDistFromGroup - 2.0F) * 1.1F; // Catch up with group
+            fSpeed = fSpeed * (fDistFromGroup - 2.0F) * 1.1F; // Catch up with group (0x6E47D4: (speed * (dist - 2)) * 1.1)
 
         fSpeed *= fTimeStep;
-        fSpeed = std::min(fSpeed, std::max(0.0F, fDistFromGroup - 0.01F));
+        // 0x6E4814..0x6E4865: max(0, dist - 0.01) is `x > 0 ? x : 0`; the min keeps the speed only when speed < that (NaN speed => the cap)
+        const auto fMaxMove = (fDistFromGroup - 0.01F) > 0.0F ? (fDistFromGroup - 0.01F) : 0.0F;
+        fSpeed = fSpeed < fMaxMove ? fSpeed : fMaxMove;
 
         const auto& vecPos = m_pObject->GetPosition();
         const auto vecForward = m_pObject->GetForwardVector();
         m_pObject->SetPosn(vecPos + vecForward * fSpeed);
 
-        if (fDistFromGroup >= pInfo.m_fMaxDistFromFollowed * 5.0F)
+        if (fDistFromGroup > pInfo.m_fMaxDistFromFollowed * 5.0F) // 0x6E4909: fcomp + `jp` => strictly greater
             m_pFollowedCreature = nullptr; // Break out from group
     }
     else
@@ -149,8 +152,9 @@ void WaterCreature_c::Update(float fTimeStep)
         const auto& vecPos = m_pObject->GetPosition();
         if (pInfo.m_Speed > 0.0F)
         {
-            const auto fRand = CGeneral::GetRandomNumberInRange(0.0F, 100.0F);
-            if (fRand < 10.0F || bMove || m_bChangedDir)
+            // 0x6E49B0: INT overload again (`(int)(rand * 1/32768 * 100) < 10`)
+            const auto iRand = CGeneral::GetRandomNumberInRange(0, 100);
+            if (iRand < 10 || bMove || m_bChangedDir)
             {
                 const auto vecTargetPos = vecPos + m_pObject->GetForwardVector() * pInfo.m_Speed;
                 CColPoint colPoint;
@@ -168,13 +172,14 @@ void WaterCreature_c::Update(float fTimeStep)
         }
 
         auto fHeading = m_pObject->GetHeading();
-        if (m_fHeading + PI < fHeading)
-        {
-            m_fHeading += TWO_PI;
-        }
-        else if (m_fHeading - PI > fHeading)
+        // 0x6E4AD6..0x6E4B11: the exe tests `heading + PI < target` (=> target -= 2PI), then `heading - PI > target` (=> target += 2PI)
+        if (fHeading + PI < m_fHeading)
         {
             m_fHeading -= TWO_PI;
+        }
+        else if (fHeading - PI > m_fHeading)
+        {
+            m_fHeading += TWO_PI;
         }
 
         const auto fHeadingDiff = m_fHeading - fHeading;
@@ -218,9 +223,10 @@ void WaterCreature_c::Update(float fTimeStep)
         if (m_ucTargetSwimSpeed > 0)
         {
             m_wSpeedChangeCurTime += NOTSA_FTOL(int16, fTimeStep * 1000.0F);
-            const auto fInvProgress = std::max(0.0F, 1.0F - static_cast<float>(m_wSpeedChangeCurTime) / static_cast<float>(m_wSpeedChangeTotalTime));
+            // 0x6E4CB5: the 16-bit times are zero-extended (movzx) for the progress and compared unsigned (jb)
+            const auto fInvProgress = std::max(0.0F, 1.0F - static_cast<float>(static_cast<uint16>(m_wSpeedChangeCurTime)) / static_cast<float>(static_cast<uint16>(m_wSpeedChangeTotalTime)));
             fCurSpeed += static_cast<float>(m_ucTargetSwimSpeed) * 0.1F * fInvProgress * fCurSpeed;
-            if (m_wSpeedChangeCurTime >= m_wSpeedChangeTotalTime)
+            if (static_cast<uint16>(m_wSpeedChangeCurTime) >= static_cast<uint16>(m_wSpeedChangeTotalTime))
                 m_ucTargetSwimSpeed = 0;
 
             m_fCurSpeed = fCurSpeed;
@@ -245,6 +251,8 @@ void WaterCreature_c::Update(float fTimeStep)
     CWorld::Add(m_pObject);
 
     const auto& vecCamPos = TheCamera.GetPosition();
-    if (DistanceBetweenPointsSquared(vecCamPos, m_pObject->GetPosition()) >= WaterCreatureManager_c::ms_fMaxWaterCreaturesDrawDistanceSquared)
+    // 0x6E4EAD..0x6E4EF8: (z*z + y*y) + x*x of (object - camera), exit only when strictly greater than 60^2
+    const auto vecCamDelta = m_pObject->GetPosition() - vecCamPos;
+    if (vecCamDelta.z * vecCamDelta.z + vecCamDelta.y * vecCamDelta.y + vecCamDelta.x * vecCamDelta.x > WaterCreatureManager_c::ms_fMaxWaterCreaturesDrawDistanceSquared)
         g_waterCreatureMan.TryToExitGroup(this);
 }

@@ -1068,8 +1068,10 @@ void CAEPedSpeechAudioEntity::StopCurrentSpeech() {
 
 // 0x4E4400
 bool CAEPedSpeechAudioEntity::GetSoundAndBankIDsForScriptedSpeech(eAudioEvents scriptID) {
-    int32         soundID;
-    eSoundBankS32 bankID;
+    int32         soundID = -1;
+    eSoundBankS32 bankID  = SND_BANK_UNK;
+    m_BankID  = SND_BANK_UNK; // 0x4E440A: reset before the lookup
+    m_SoundID = -1;
     CAEAudioUtility::GetBankAndSoundFromScriptSlotAudioEvent(scriptID, bankID, soundID, -1);
     if (soundID < 0 || bankID < 0) {
         m_BankID  = SND_BANK_UNK;
@@ -1085,7 +1087,9 @@ bool CAEPedSpeechAudioEntity::GetSoundAndBankIDsForScriptedSpeech(eAudioEvents s
 // 0x4E4200
 bool CAEPedSpeechAudioEntity::GetSexFromModel(eModelID model) {
     const auto* const mi = CModelInfo::GetModelInfo(model)->AsPedModelInfoPtr();
-    assert(mi->m_nPedAudioType < PED_TYPE_NUM);
+    if ((int16)mi->m_nPedAudioType < 0 || (int16)mi->m_nPedAudioType >= PED_TYPE_NUM) { // 0x4E420F
+        return false;
+    }
     if (mi->m_nPedAudioType == PED_TYPE_SPC) {
         return true;
     }
@@ -1149,7 +1153,7 @@ void CAEPedSpeechAudioEntity::AddScriptSayEvent(eAudioEvents audioEvent, eAudioE
             ? PLAYER_SPEECH_SLOT
             : -1
         : CanWePlayScriptedSpeech();
-    if (speechSlotID == -1) {
+    if (speechSlotID < 0 || (m_PedAudioType != PED_TYPE_PLAYER && speechSlotID >= PLAYER_SPEECH_SLOT)) { // 0x4E500C: a non-player slot must be in [0, 5)
         return;
     }
     if (!GetSoundAndBankIDsForScriptedSpeech(scriptID)) {
@@ -1161,13 +1165,13 @@ void CAEPedSpeechAudioEntity::AddScriptSayEvent(eAudioEvents audioEvent, eAudioE
     m_IsFrontend      = isFrontEnd;
 
     m_IsForcedAudible = isForceAudible;
-    if (const auto veh = m_Entity->AsPed()->GetVehicleIfInOne()) {
-        if (veh == FindPlayerVehicle()) {
-            m_IsForcedAudible = true;
+    if (const auto veh = m_Entity->AsPed()->GetVehicleIfInOne()) { // 0x4E505F: sets the front-end flag (+0x9b), not the forced-audible one (+0x9c)
+        if (veh == CAEAudioUtility::FindVehicleOfPlayer()) {
+            m_IsFrontend = true;
         }
     }
 
-    m_EventVolume = GetDefaultVolume(AE_SPEECH_PED);
+    m_EventVolume = GetDefaultVolume(AE_SCRIPT_SPEECH_PED); // 0x4E5030: event 0x35, not AE_SPEECH_PED (0x34)
     if (m_PedAudioType == PED_TYPE_PLAYER) {
         m_EventVolume += 3.f;
     }

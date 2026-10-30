@@ -1,0 +1,11 @@
+# ASM-S97b - CMenuManager / CMenuSystem (rest of S97), 2026-10-30
+24 rows: 3 FIXED (4 commits), 1 MATCH, 1 UNSURE (AdditionalOptionInput, partly read), 19 NOT_REACHED (sweep budget exhausted). Table: S97b.result.tsv.
+Fixes (exe address, one line each):
+- 5fd7a196a + 63ed7d536 (build fix) CMenuManager::ProcessMenuOptions (0x576FE0-0x577347): stats scroll with direction!=0 and speed==0 starts at 150 (port did nothing); SAVE_SLOT acts only on the load (9) / delete (10) screens, load asks for every slot state but FREE/CORRUPTED (port: FILLED only, so DATA_OLD slots were not loadable); MENU_ACTION_LANGUAGE (unused by any screen) steps through all 5 languages with wrap.
+- 1ead14620 CMenuManager::ProcessPCMenuOptions (0x57CD50-0x57D44E): RESOLUTION with the accept key only applies the mode and returns; the port then also scrolled the list (display mode moved after Enter).
+- c94f27c47 CMenuManager::UserInput (0x57FD70-0x580624): strict mouse-over bounds; mouse-moved needs old X and Y non-zero; left/right/wheel/front-end slider input also runs on the controls definition screen (the port skipped it there); slide timestamps are stored for every action once 200 ms passed.
+Matched: rest of ProcessPCMenuOptions and ProcessMenuOptions, UserInput enter/click/slider/sound/exit sections and jump tables, ProcessMissionPackNewGame (valid files).
+Partly read: AdditionalOptionInput 0x5773D0 (STATS key, BRIEF, map entry guard, waypoint toggle match; pan/zoom/cursor code 0x5775E5-0x578C84 not compared).
+Open (not compared): RedefineScreenUserInput 0x57EF50, Process 0x57B440, ProcessFileActions 0x578D60, ProcessStreaming 0x573CF0, CMenuSystem Process/ActivateItems/Initialise, SaveStatsToFile, SaveLoadFileError_SetUpErrorScreen, PrintMap/Stats/Briefs/RadioStationList, DisplayHelperText, MessageScreen, SmallMessageScreen, CMenuSystem DisplayStandardMenu/DisplayGridMenu, FillGridWithCarColours.
+Tests: StandaloneRelease builds; wave2_oracle_test 1142 functions, PC24 0/0, PC53 0/0 (RW target rebuilt after the last edit); PortableWin64 compile of MenuManager_Input.cpp and MenuManager_Process.cpp clean (build/PortableWin64 configured in the worktree, both objects built); v6 pre-commit grep clean on every commit.
+Tools: C:/gta-scratch/asm-s97b (ann.py annotates a disassembly with CMenuManager field names, jt.py decodes jump tables).

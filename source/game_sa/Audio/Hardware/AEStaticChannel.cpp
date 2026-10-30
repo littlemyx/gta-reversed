@@ -150,6 +150,8 @@ void CAEStaticChannel::Stop() {
         m_pDirectSound3DBuffer = nullptr;
     }
     }
+
+    m_bPaused = false; // 0x4F100F: `mov byte ptr [esi+0x38], bl(0)` - the port left the flag set
 }
 
 // 0x4F0C40

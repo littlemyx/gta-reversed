@@ -75,5 +75,8 @@ auto CRegisteredCorona::GetPosition() const -> CVector {
 }
 
 auto CRegisteredCorona::CalculateIntensity(float scrZ, float farClip) const -> float {
-    return std::clamp(invLerp(farClip, farClip / 2.f, scrZ), 0.f, 1.f);
+    // The exe's inlined fade (Coronas.cpp ExeCoronaFade; 0x6FB07x in CCoronas::Render): half = farClip * 0.5; z < half ? 1 : 1 - (z - half) / half.
+    // Callers only get here with scrZ < farClip, so no clamp (the exe has none in Render); NOT invLerp(farClip, farClip / 2, z) (different rounding).
+    const float half = farClip * 0.5f;
+    return scrZ < half ? 1.0f : 1.0f - (scrZ - half) / half;
 }

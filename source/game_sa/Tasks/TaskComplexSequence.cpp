@@ -145,7 +145,7 @@ CTask* CTaskComplexSequence::CreateNextSubTask(CPed* ped, int32& taskIndex, int3
 // 0x41BF10
 bool CTaskComplexSequence::Contains(eTaskType taskType) const {
     for (const auto& task : m_Tasks) {
-        if (task->GetTaskType() == taskType) {
+        if (task && task->GetTaskType() == taskType) { // 0x41BF20: empty slots are skipped (the port dereferenced them)
             return true;
         }
     }

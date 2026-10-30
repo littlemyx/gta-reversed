@@ -4843,12 +4843,12 @@ void CAEVehicleAudioEntity::ProcessDummyGolfCart(tVehicleParams& vp) {
     const auto t = vp.Transmission && vp.Vehicle->GetStatus() != STATUS_ABANDONED
         ? std::clamp(std::abs(vp.Speed / vp.Transmission->m_MaxVelocity), 0.f, 1.f)
         : 0.f;
-    if (t >= 0.05f) {
-        const auto volume = CGeneral::GetPiecewiseLinear({
+    if (!(t < 0.05f)) { // 0x5013D... `fcomp 0.05; test ah, 5; jp`: also taken for NaN
+        const auto volume = CGeneral::GetPiecewiseLinear({ // 0x8CBFD8 (the last x is 1.0001f = 0x3F800347, not 1.0)
             { 0.00f, 0.00f },
             { 0.05f, 0.00f },
             { 0.10f, 0.50f },
-            { 1.00f, 1.00f }
+            { 1.0001f, 1.00f }
         }, t);
         UpdateGenericVehicleSound(
             AE_DUMMY_ID,

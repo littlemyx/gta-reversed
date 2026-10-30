@@ -158,9 +158,10 @@ int32 CVehicleRecording::RegisterRecordingFile(const char* name) {
 
 // 0x45A0A0
 void CVehicleRecording::RemoveRecordingFile(int32 fileNumber) {
-    if (const auto recording = FindRecording(fileNumber)) {
-        if (recording->m_pData && !recording->m_nRefCount) {
-            recording->Remove();
+    // 0x45A0A0: walks ALL slots (not only the registered ones) and removes EVERY slot with this number that has data and no references
+    for (auto&& [i, recording] : rngv::enumerate(StreamingArray)) {
+        if (recording.m_nNumber == fileNumber && recording.m_pData && !recording.m_nRefCount) {
+            recording.Remove();
         }
     }
 }

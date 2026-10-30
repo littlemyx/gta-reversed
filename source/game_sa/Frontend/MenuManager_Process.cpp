@@ -41,37 +41,23 @@ void CMenuManager::ProcessStreaming(bool streamAll) {
         return;
     }
 
-    // Calculate tile sizes based on map zoom
-    const float tileSizeX = (m_fMapZoom * 2.0f) / float(MAX_RADAR_WIDTH_TILES);
-    const float tileSizeY = (m_fMapZoom * 2.0f) / float(MAX_RADAR_HEIGHT_TILES);
+    // Exe 0x573D24-0x573E2F: one tile size (zoom * 1/6, constant 0x85F0A0) for both axes; a tile is requested only when it lies
+    // strictly inside the padded screen rect, otherwise it is removed (the port used an overlap test).
+    const float tileSize  = m_fMapZoom * 0.16666667f;
+    const float mapAreaX  = m_vMapOrigin.x - m_fMapZoom;
+    const float mapAreaY  = m_vMapOrigin.y - m_fMapZoom;
+    const float pad       = tileSize * 3.0f;
+    const float minXY     = 60.0f - pad;
+    const float maxX      = pad + 580.0f;
+    const float maxY      = pad + 388.0f;
 
-    // Define map boundaries
-    const CVector2D mapArea(
-        m_vMapOrigin.x - m_fMapZoom,
-        m_vMapOrigin.y - m_fMapZoom
-    );
-
-    // Define screen boundaries with padding for visibility
-    const CRect screenArea(
-        60 - tileSizeX * 3,
-        60 - tileSizeY * 3,
-        DEFAULT_SCREEN_WIDTH - 60 + tileSizeX * 3,
-        DEFAULT_SCREEN_HEIGHT - 60 + tileSizeY * 3
-    );
-
-    // Iterate over map tiles to determine which sections to load or remove
-    for (auto x = 0; x < MAX_RADAR_WIDTH_TILES; x++) {
-        for (auto y = 0; y < MAX_RADAR_HEIGHT_TILES; y++) {
-            // Calculate tile position
-            const CRect tileRect(
-                mapArea.x + x * tileSizeX,
-                mapArea.y + y * tileSizeY,
-                mapArea.x + x * tileSizeX + tileSizeX,
-                mapArea.y + y * tileSizeY + tileSizeY
-            );
-
-            // Check if tile overlaps with the visible screen area
-            if (!screenArea.OverlapsWith(tileRect)) {
+    for (auto x = 0; x < (int)MAX_RADAR_WIDTH_TILES; x++) {
+        for (auto y = 0; y < (int)MAX_RADAR_HEIGHT_TILES; y++) {
+            const float left   = (float)x * tileSize + mapAreaX;
+            const float top    = (float)y * tileSize + mapAreaY;
+            const float right  = (float)(x + 1) * tileSize + mapAreaX;
+            const float bottom = (float)(y + 1) * tileSize + mapAreaY;
+            if (left <= minXY || top <= minXY || right >= maxX || bottom >= maxY) {
                 CRadar::RemoveMapSection(x, y);
             } else {
                 CRadar::RequestMapSection(x, y);

@@ -1,0 +1,17 @@
+addr	file	line	cls	fn	oc
+0x712330	source/game_sa/Birds.cpp	30	CBirds	Update	U
+0x711EF0	source/game_sa/Birds.cpp	31	CBirds	CreateNumberOfBirds	U
+0x712810	source/game_sa/Birds.cpp	32	CBirds	Render	U
+0x59E9B0	source/game_sa/BreakManager_c.cpp	14	BreakManager_c	Add	U
+0x59D190	source/game_sa/BreakObject_c.cpp	11	BreakObject_c	CalcGroupCenter	U
+0x59DDD0	source/game_sa/BreakObject_c.cpp	14	BreakObject_c	Exit	U
+0x59DE40	source/game_sa/BreakObject_c.cpp	15	BreakObject_c	DoCollisionResponse	U
+0x59E1F0	source/game_sa/BreakObject_c.cpp	16	BreakObject_c	DoCollision	U
+0x59E220	source/game_sa/BreakObject_c.cpp	17	BreakObject_c	Update	U
+0x59E480	source/game_sa/BreakObject_c.cpp	18	BreakObject_c	Render	U
+0x59E750	source/game_sa/BreakObject_c.cpp	19	BreakObject_c	Init	U
+0x717970	source/game_sa/Escalator.cpp	13	CEscalator	AddThisOne	U
+0x71CE20	source/game_sa/Glass.cpp	19	CGlass	Render	U
+0x71AED0	source/game_sa/Glass.cpp	21	CGlass	RenderReflectionPolys	U
+0x71AE30	source/game_sa/Glass.cpp	22	CGlass	RenderShatteredPolys	U
+0x71ADA0	source/game_sa/Glass.cpp	23	CGlass	RenderHiLightPolys	U

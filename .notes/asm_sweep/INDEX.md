@@ -247,7 +247,7 @@
 | S98 | phase3 tier B (PHASE3.md) | 37 | done (31 M, 6 fixed) | AtomicModelInfo.cpp, BaseModelInfo.cpp, ClumpModelInfo.cpp, DamageAtomicModelInfo.cpp, ModelInfo.cpp, PedModelInfo.cpp |
 | S99 | phase3 tier B (PHASE3.md) | 39 | done (35 M, 4 fixed) | VehicleModelInfo.cpp, WeaponModelInfo.cpp |
 | S100 | phase3 tier B (PHASE3.md) | 35 | done (30 M, 5 fixed) | RealTimeShadow.cpp, RealTimeShadowManager.cpp, ShadowCamera.cpp |
-| S101 | phase3 tier B (PHASE3.md) | 35 | pending | Shadows.cpp, StencilShadowObject.cpp, StencilShadows.cpp |
+| S101 | phase3 tier B (PHASE3.md) | 35 | 32/35 (20 M, 12 fixed, 2 U) -> S101b | Shadows.cpp, StencilShadowObject.cpp, StencilShadows.cpp |
 | S102 | phase3 tier B (PHASE3.md) | 40 | partial 16/40 (12 M, 4 fixed) -> S102b | BrightLights.cpp, Clouds.cpp, Coronas.cpp, Mirrors.cpp, MotionBlurStreaks.cpp, Occlusion.cpp |
 | S103 | phase3 tier B (PHASE3.md) | 36 | pending | PostEffects.cpp, RegisteredMotionBlurStreak.cpp, ShinyTexts.cpp, SpecialFX.cpp |
 | S104 | phase3 tier B (PHASE3.md) | 43 | pending | GrassRenderer.cpp, PPTriPlantBuffer.cpp, PlantColEntEntry.cpp, PlantLocTri.cpp, PlantMgr.cpp, PlantSurfPropMgr.cpp |
@@ -275,3 +275,4 @@
 | S102b | rest of S102 | 24 | partial 12/24 (4 M, 8 fixed) -> S102c | BrightLights.cpp, Clouds.cpp, Coronas.cpp, Mirrors.cpp, Occlusion.cpp, PointLights.cpp |
 | S84c | rest of S84b | 15 | pending | AEVehicleAudioEntity.cpp |
 | S102c | rest of S102b | 12 | pending | Clouds.cpp, Mirrors.cpp |
+| S101b | rest of S101 | 3 | pending | StencilShadows.cpp |

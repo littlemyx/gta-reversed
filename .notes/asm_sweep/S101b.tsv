@@ -1,0 +1,4 @@
+addr	file	line	cls	fn	oc	tier
+0x70FAE0	source/game_sa/StencilShadows.cpp	220	CStencilShadows	RenderForVehicle	U	B
+0x710310	source/game_sa/StencilShadows.cpp	221	CStencilShadows	RenderForObject	U	B
+0x710AF0	source/game_sa/StencilShadows.cpp	224	CStencilShadows	SunSetPositionFromEntity	U	B

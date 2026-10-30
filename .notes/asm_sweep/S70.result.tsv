@@ -1,0 +1,43 @@
+addr	function	verdict	asm range	note	fix commit
+0x712330	CBirds::Update	NOT_REACHED	-	out of budget; not compared	-
+0x711EF0	CBirds::CreateNumberOfBirds	NOT_REACHED	-	out of budget; not compared	-
+0x712810	CBirds::Render	NOT_REACHED	-	out of budget; not compared	-
+0x6F4910	CBouncingPanel::ResetPanel	MATCH	0x6F4910-0x6F4914	word [ecx] = 0xFFFF	-
+0x6F49A0	CBouncingPanel::ProcessPanel	FIXED	0x6F49A0-0x6F4E7F	angular velocity = speed - (moveForce + turnForce x compPos) (exe sums the move force with the cross first, cross operands turnForce,compPos); port (speed - move) + compPos x turn. Axis switches, clamp NaN arms, areMultsSet NaN arm, pow damp, matrix write-back MATCH	7ee8a2aac
+0x59E650	BreakManager_c::Init	NOT_REACHED	-	out of budget; not compared	-
+0x59E660	BreakManager_c::Exit	NOT_REACHED	-	out of budget; not compared	-
+0x59E720	BreakManager_c::ResetAll	NOT_REACHED	-	out of budget; not compared	-
+0x59E9B0	BreakManager_c::Add	NOT_REACHED	-	out of budget; not compared	-
+0x59E670	BreakManager_c::Update	NOT_REACHED	-	out of budget; not compared	-
+0x59E6A0	BreakManager_c::Render	NOT_REACHED	-	out of budget; not compared	-
+0x59D190	BreakObject_c::CalcGroupCenter	NOT_REACHED	-	out of budget; not compared	-
+0x59DDD0	BreakObject_c::Exit	NOT_REACHED	-	out of budget; not compared	-
+0x59DE40	BreakObject_c::DoCollisionResponse	NOT_REACHED	-	out of budget; not compared	-
+0x59E1F0	BreakObject_c::DoCollision	NOT_REACHED	-	out of budget; not compared	-
+0x59E220	BreakObject_c::Update	NOT_REACHED	-	out of budget; not compared	-
+0x59E480	BreakObject_c::Render	NOT_REACHED	-	out of budget; not compared	-
+0x59E750	BreakObject_c::Init	NOT_REACHED	-	out of budget; not compared	-
+0x6F4040	CDoor::Process	FIXED	0x6F4040-0x6F4510	direction rotation is (cos*a - sin*b, cos*b + sin*a), port had the first term negated; axis 1 is not rotated (ang = sin there). dir jump table, gravity 0.0016/0.008, chassis apply/damp (widescreen / wheels), boat, firetruck 0x220, bonnet, caps, clamp, corner tests with jp/jnp NaN arms, slam shut, state codes MATCH	736f6d7a2
+0x6F4540	CDoor::ProcessImpact	MATCH	0x6F4540-0x6F4790	jump table (right/fwd/up +-), rand*c*0.75+0.75 *0.1 limit, > limit / < -limit NaN arms MATCH	-
+0x717860	CEscalator::SwitchOff	FIXED	0x717860-0x7178E0	object slots in m_StepObjects now cleared (port nulled a loop copy)	see git log
+0x717970	CEscalator::AddThisOne	NOT_REACHED	-	out of budget; not compared	-
+0x717D30	CEscalator::Update	MATCH	0x717D30-0x718350	camera distance create (<r+20) / switch off (r+23<d) arms, pool free > n+10, step 0.04*ts, floor, intermediate/bottom/top dir, t = (i +- pos)*0.4, speed *0.016, object type 5 MATCH	-
+0x717C50	CEscalators::Init	MATCH	0x717C50-0x717C8F	SwitchOff + exist=0 loop, then SwitchOff loop	-
+0x717940	CEscalators::Shutdown	MATCH	0x717940-0x717960	SwitchOff + exist=0	-
+0x717C90	CEscalators::AddOne	MATCH	0x717C90-0x717CC8	first free slot	-
+0x718580	CEscalators::Update	MATCH	0x718580-0x7185B0	replay playback skip, exist test	-
+0x71AA10	CFallingGlassPane::Update	NOT_REACHED	-	out of budget; not compared	-
+0x71B100	CFallingGlassPane::Render	NOT_REACHED	-	out of budget; not compared	-
+0x71CB70	CGlass::HasGlassBeenShatteredAtCoors	NOT_REACHED	-	out of budget; not compared	-
+0x71C2B0	CGlass::CarWindscreenShatters	NOT_REACHED	-	out of budget; not compared	-
+0x71C0D0	CGlass::WasGlassHitByBullet	NOT_REACHED	-	out of budget; not compared	-
+0x71BC40	CGlass::WindowRespondsToCollision	NOT_REACHED	-	out of budget; not compared	-
+0x71B620	CGlass::GeneratePanesForWindow	NOT_REACHED	-	out of budget; not compared	-
+0x71B0D0	CGlass::Update	NOT_REACHED	-	out of budget; not compared	-
+0x71CE20	CGlass::Render	NOT_REACHED	-	out of budget; not compared	-
+0x71AFC0	CGlass::FindWindowSectorList<CPtrListSingleLink<CPhysical*>>	NOT_REACHED	-	out of budget; not compared	-
+0x71AED0	CGlass::RenderReflectionPolys	NOT_REACHED	-	out of budget; not compared	-
+0x71AE30	CGlass::RenderShatteredPolys	NOT_REACHED	-	out of budget; not compared	-
+0x71ADA0	CGlass::RenderHiLightPolys	NOT_REACHED	-	out of budget; not compared	-
+0x71CF50	CGlass::BreakGlassPhysically	NOT_REACHED	-	out of budget; not compared	-
+0x71C1A0	CGlass::WindowRespondsToExplosion	FIXED	0x71C1A0-0x71C2B0	distance sqrt((dz^2+dy^2)+dx^2), ordered < 10 (NaN to the >= 10 arm); 0.3/dist scale, 10000 force, < 30 flag MATCH	see git log

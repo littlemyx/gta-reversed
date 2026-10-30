@@ -1126,19 +1126,19 @@ void CRunningScript::FlameInAngledAreaCheckCommand(int32 commandId) {
             continue;
         }
 
-        ab.Normalise(); // NOTSA: Done in-place (like in the original), so it's re-normalised each iteration
+        ExeNormalise2D(ab); // NOTSA: Done in-place (like in the original), so it's re-normalised each iteration
         const float dotAB = (shotPos.x - x1) * ab.x + (shotPos.y - y1) * ab.y;
-        if (dotAB < 0.f || dotAB > abLen) {
+        if (!(dotAB >= 0.f && dotAB <= abLen)) { // a NaN fails the test (fcom + jne/jp)
             continue;
         }
 
-        ad.Normalise(); // Same as above
+        ExeNormalise2D(ad); // Same as above
         const float dotAD = (shotPos.x - x1) * ad.x + (shotPos.y - y1) * ad.y;
-        if (dotAD < 0.f || dotAD > adLen) {
+        if (!(dotAD >= 0.f && dotAD <= adLen)) {
             continue;
         }
 
-        if (is3D && (minZ > shotPos.z || shotPos.z > maxZ)) {
+        if (is3D && !(shotPos.z >= minZ && shotPos.z <= maxZ)) {
             continue;
         }
 

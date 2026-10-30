@@ -41,12 +41,11 @@ bool CEventAttractor::AffectsPed(CPed* ped) {
             && m_2dEffect->m_nAttractorType == PED_ATTRACTOR_TRIGGER_SCRIPT
             && CPopulation::PedMICanBeCreatedAtThisAttractor(ped->GetModelId(), m_2dEffect->m_szScriptName))
         {
+            // exe 0x4AF56D-0x4AF5AE: two independent rejects, in this order - (a) an active task of type USE_EFFECT (only when the event is not "avoid looking"),
+            // (b) a SHELTER attractor while it is not raining (applies ALWAYS: the port skipped it when there was no active task or m_bAvoidLookingAtAttractor was set)
             CTask* activeTask = ped->GetTaskManager().GetActiveTask();
-            if (!activeTask
-                || m_bAvoidLookingAtAttractor
-                ||
-                activeTask->GetTaskType() != TASK_COMPLEX_USE_EFFECT
-                && (m_2dEffect->m_nAttractorType != PED_ATTRACTOR_SHELTER || CWeather::IsRainy()))
+            if (!(activeTask && !m_bAvoidLookingAtAttractor && activeTask->GetTaskType() == TASK_COMPLEX_USE_EFFECT)
+                && !(m_2dEffect->m_nAttractorType == PED_ATTRACTOR_SHELTER && !CWeather::IsRainy()))
             {
                 if (m_bAvoidLookingAtAttractor)
                     return true;

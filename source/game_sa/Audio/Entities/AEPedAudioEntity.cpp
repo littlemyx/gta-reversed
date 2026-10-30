@@ -1137,16 +1137,15 @@ void CAEPedAudioEntity::HandleSwimSplash(eAudioEvents event) {
     if (!AEAudioHardware.EnsureSoundBankIsLoaded(SND_BANK_GENRL_SWIMMING, SND_BANK_SLOT_SWIMMING)) {
         return;
     }
-    m_nSfxId = std::max(0, m_nSfxId + 1);
+    m_nSfxId = m_nSfxId + 1 > 4 ? 0 : m_nSfxId + 1; // 0x4E26E7: `inc cx; cmp cx, 4; jle` => cycles 0..4
     AESoundManager.PlaySound({
         .BankSlotID         = SND_BANK_SLOT_SWIMMING,
         .SoundID            = (eSoundID)(m_nSfxId),
         .AudioEntity        = this,
         .Pos                = m_pPed->GetPosition(),
         .Volume             = GetDefaultVolume(event),
-        .Flags              = SOUND_PLAY_PHYSICALLY | SOUND_START_PERCENTAGE | SOUND_IS_DUCKABLE,
         .FrequencyVariance  = 0.0588f,
-        .RegisterWithEntity = m_pPed,
+        .RegisterWithEntity = m_pPed, // the exe's flags are 0x80 (lifespan tied to the ped) only
     });
 }
 

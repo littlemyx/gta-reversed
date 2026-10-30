@@ -284,11 +284,18 @@ void CAESound::SetPosition(CVector pos) {
 
 // 0x4EFA10
 void CAESound::CalculateVolume() {
-    m_ListenerVolume = m_Volume - m_Headroom;
-    if (!IsFrontEnd()) {
-        m_ListenerVolume += CAEAudioEnvironment::GetDirectionalMikeAttenuation(CAEAudioEnvironment::GetPositionRelativeToCamera(m_CurrPos))
-                          + CAEAudioEnvironment::GetDistanceAttenuation(CAEAudioEnvironment::GetPositionRelativeToCamera(m_CurrPos).Magnitude() / m_RollOffFactor);
+    if (IsFrontEnd()) {
+        m_ListenerVolume = m_Volume - m_Headroom;
+        return;
     }
+    // 0x4EFA39: one position conversion; the length sums the squares as (z*z + y*y) + x*x; the volume is ((mike + distance) + volume) - headroom
+    // (the port did (volume - headroom) + (mike + distance): a different float association)
+    const auto rel         = CAEAudioEnvironment::GetPositionRelativeToCamera(m_CurrPos);
+    const auto dist        = (float)std::sqrt(((x87d)rel.z * rel.z + (x87d)rel.y * rel.y) + (x87d)rel.x * rel.x);
+    const auto distAtten   = CAEAudioEnvironment::GetDistanceAttenuation(dist / m_RollOffFactor);
+    const auto mikeAtten   = CAEAudioEnvironment::GetDirectionalMikeAttenuation(rel);
+    m_ListenerVolume = m_Volume + (mikeAtten + distAtten);
+    m_ListenerVolume = m_ListenerVolume - m_Headroom;
 }
 
 // 0x4EFF50

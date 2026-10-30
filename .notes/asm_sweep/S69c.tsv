@@ -1,0 +1,7 @@
+addr	file	line	cls	fn	oc
+0x415320	source/game_sa/Collision/Collision.cpp	3644	CCollision	CheckCameraCollisionPeds	U
+0x4181B0	source/game_sa/Collision/Collision.cpp	3659	CCollision	SphereCastVsCaches	U
+0x419F00	source/game_sa/Collision/Collision.cpp	3660	CCollision	SphereCastVsEntity	U
+0x41A5A0	source/game_sa/Collision/Collision.cpp	3661	CCollision	SphereVsEntity	U
+0x41AC40	source/game_sa/Collision/Collision.cpp	3665	CCollision	BuildCacheOfCameraCollision	U
+0x41B000	source/game_sa/Collision/Collision.cpp	3666	CCollision	CameraConeCastVsWorldCollision	U

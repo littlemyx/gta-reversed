@@ -219,6 +219,7 @@
 | S79 | phase2b: coverage audit (COVERAGE.md) | 50 | pending | 3dMarker.cpp, AccidentManager.cpp, BouncingPanel.cpp, BreakObject_c.cpp, C_PcSave.cpp, ClothesBuilder.cpp |
 | S80 | phase2b: coverage audit (COVERAGE.md) | 15 | pending | ControllerConfigManager.cpp, DecisionMaker.cpp, Gamma.cpp, GridRef.cpp, MouseControllerState.cpp, Pad.cpp |
 | S74b | rest of S74 | 19 | done (16 M, 3 fixed) | MissionCleanup.cpp, OnscreenCounterEntry.cpp, OnscreenTimer.cpp, PatrolRoute.cpp, PlaceName.cpp, TagManager.cpp, UserDisplay.cpp |
-| S69b | rest of S69 | 10 | pending | Collision.cpp |
+| S69b | rest of S69 | 10 | partial 4/10 (3 M, 1 fixed + Invert(CMatrix)) -> S69c | Collision.cpp |
 | S70b | rest of S70 | 31 | pending | Birds.cpp, BreakManager_c.cpp, BreakObject_c.cpp, Escalator.cpp, FallingGlassPane.cpp, Glass.cpp |
 | S75b | rest of S75 | 17 | pending | AccidentManager.cpp, BulletTraces.cpp, C_PcSave.cpp, NodeRoute.cpp, Skidmarks.cpp, cTransmission.cpp |
+| S69c | rest of S69b | 6 | pending | Collision.cpp |

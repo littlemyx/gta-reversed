@@ -1,0 +1,17 @@
+# ASM-S106 (phase 3 tier B: CVisibilityPlugins, render callbacks / alpha lists / vehicle component visibility) - 2026-10-30
+Result: 41 rows, all compared in full (6 functions FIXED in 7 commits, 35 MATCH), 0 NOT_REACHED. Tables in S106.result.tsv.
+
+Compared against the exe: the list set-up (sizes 20 / 20 / 200 / 100 / 50 links, head distance 0, tail 1e8, weapon-ped list 100), the sorted insert 0x733910 (break on `i.dist >= new.dist`, NaN keeps walking, insert before i, full list returns 0 and the caller renders immediately), the list walks (tail to head, farthest first), every vehicle callback (LOD0 / big-vehicle LOD0 distance, multi-pass flag, cull distance 20/50 squared, DONT_CULL 0x400, angle < 0.2, dot > 0, FLAT or dot^2 > dist * 0.1, alpha atomics inserted at dist - 0.0001 / dist / dist + dot, boat list for boats), the ped / weapon distance tests, RenderEntity (z-write, alpha ref 0/100, fade path with flag bits 13 and 27, lighting, additive blend), the weapon ped renderer (bone 24 / 3, twin pistol rotate-then-translate, exe constants 0x8D6098 / 0x8D60A4 / 0x8D60B0 / 0x8D2338) and the plugin set-up. All the distance / strict-compare logic MATCHed (all the `fcomp; test ah,5; jp` arms agree with the port, including NaN skipping in the ped / weapon / LoDetail tests).
+
+Fixes (one commit each, all in source/game_sa/VisibilityPlugins.cpp):
+- c39060741 IsClumpVisible (0x732AE0): the exe tail-jumps into the clump's visibility callback (`jmp [plugin]` with the clump on the stack); the port returned the function pointer cast to bool (always true).
+- 50f80a010 RenderAtomicWithAlpha (0x732480): the alpha clamp is a signed compare of the material byte against the whole int argument then stores the low byte (`jle skip; mov [mat+7], dl`); the port truncated the argument to a byte first (differs for negative / > 255 arguments: CalculateFadingAtomicAlpha can return negative past the fade range). The restore loop runs last material to first.
+- 359eb29d7 SetupVehicleVariables (0x733160): gVehicleDistanceFromCamera = (z2 + y2) + x2 (the port summed x, y, z through SquaredMagnitude). It feeds every vehicle LOD test, the multi-pass flag, the sort distance of vehicle alpha atomics. The angle (atan2(dz, sqrt(dy2 + dx2))) MATCHes.
+- 481defb1f VehicleVisibilityCB (0x7336F0): `fcomp; test ah,0x41; jne` goes to the frustum test unless an ordered `dist > lod1Dist`; the port's `<=` skipped it for NaN.
+- e6a4ae5f5 RenderVehicleCB_ControlRenderMultiPassLOD (inlined in the 8 hi-detail callbacks): `jp` sets the unique-materials flag for everything but an ordered `dist < multiPassDist`; the port's `>=` cleared it for NaN.
+- 9579684b0 IsAtomicVisible (0x732990, unused): the sphere centre is transformed in place and that sphere tested (the port tested the untransformed copy).
+- c2cc54d6c RenderObjNormalAtomic (0x7323E0, unused): the up-vector dot is summed y, x, z.
+
+Notes (MATCH, no change): the exe's FrustumSphereCB / PluginAttach / SetClumpModelInfo store the CClumpModelInfo pointer in the 4 byte frame slot (the port keeps it in a second slot under NOTSA_PORTABLE); PluginAttach does not test the frame plugin offset (same in the port); RenderPlayerCB reads CWorld::Players[0].m_pSkinTexture (0xB7CF1C = +0x184); the heli rotor callbacks, GetDotProductWithCameraVector, CalculateFadingAtomicAlpha and the list inserts are outside this slice.
+
+Gate: see the final report (StandaloneRelease + StandaloneRW built after the last edit, wave2_oracle_test, PortableWin64 compile, v6 grep, combat + missions + render_vmode run once at the end).

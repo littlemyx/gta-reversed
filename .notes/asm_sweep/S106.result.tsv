@@ -1,0 +1,42 @@
+addr	function	verdict	asm range	note	fix commit
+0x733A20	CVisibilityPlugins::Initialise	MATCH	(all)	6 lists 20/20/200/100/50 links (+100 weapon peds), head dist 0 / tail 1e8, same order	-
+0x732EB0	CVisibilityPlugins::Shutdown	MATCH	(all)	six delete[] in the exe order	-
+0x732A40	CVisibilityPlugins::FrustumSphereCB	MATCH	(all)	bound sphere centre/radius from the col model, LTM, transformed in place, != OUTSIDE	-
+0x732C80	CVisibilityPlugins::GetDistanceSquaredFromCamera	MATCH	(all)	(z2+y2)+x2	-
+0x732990	CVisibilityPlugins::IsAtomicVisible	FIXED	(all)	sphere centre transformed in place and that sphere tested (port tested the untransformed one); unused function	9579684b0
+0x732E30	CVisibilityPlugins::PluginAttach	MATCH	(all)	atomic 4 / frame 4 / clump 8 bytes, ids 0x253f200/02/01; frame offset not in the result (as exe)	-
+0x732480	CVisibilityPlugins::RenderAtomicWithAlpha	FIXED	(all)	signed compare vs the full alpha argument (port truncated to a byte first); restore loop runs last to first	50f80a010
+0x733E90	CVisibilityPlugins::RenderAlphaAtomics	MATCH	(all)	list tail to head	-
+0x732660	CVisibilityPlugins::RenderAtomicWithAlphaCB	MATCH	(all)	rpATOMICRENDER (4) test	-
+0x733EC0	CVisibilityPlugins::RenderBoatAlphaAtomics	MATCH	(all)	cull none / back around the boat list	-
+0x732B40	CVisibilityPlugins::RenderEntity	MATCH	(all)	z-write off for bDontWriteZBuffer, alpha ref 0 / 100, fade path flags (bit 13, bit 27), lighting, fading atomic/clump	-
+0x732610	CVisibilityPlugins::RenderFadingAtomic	MATCH	(all)	additive blend one / invsrcalpha around	-
+0x732680	CVisibilityPlugins::RenderFadingClump	MATCH	(all)	same	-
+0x733630	CVisibilityPlugins::RenderFadingClumpCB	MATCH	(all)	clump alpha 255 -> default render	-
+0x733F10	CVisibilityPlugins::RenderFadingEntities	MATCH	(all)	entity list then boat atomics	-
+0x7337D0	CVisibilityPlugins::RenderFadingUnderwaterEntities	MATCH	(all)	underwater list	-
+0x7323E0	CVisibilityPlugins::RenderObjNormalAtomic	FIXED	(all)	up dot summed y,x,z; unused function	c2cc54d6c
+0x7337A0	CVisibilityPlugins::RenderOrderedList	MATCH	(all)	tail to head	-
+0x7335B0	CVisibilityPlugins::RenderPedCB	MATCH	(all)	z,y,x distance, strict < pedLodDist, NaN skipped	-
+0x732870	CVisibilityPlugins::RenderPlayerCB	MATCH	(all)	skin texture on all materials, then default render	-
+0x733800	CVisibilityPlugins::RenderReallyDrawLastObjects	MATCH	(all)	8 render states, SetAmbientColours, DeActivateDirectional, list, fog off	-
+0x734240	CVisibilityPlugins::RenderTrainHiDetailAlphaCB	MATCH	(all)	bigVehicleLod0Dist, cullCompsDist complex heuristic; alpha atoms insert dist (no epsilon), else dist+dot	-
+0x733330	CVisibilityPlugins::RenderTrainHiDetailCB	MATCH	(all)	bigVehicleLod0Dist, cullCompsDist complex heuristic	-
+0x733F80	CVisibilityPlugins::RenderVehicleHiDetailAlphaCB	MATCH	(all)	lod0Dist, cullCompsDist complex; alpha dist-0.0001 (0x858FC4) else dist+dot; insert failure renders	-
+0x734370	CVisibilityPlugins::RenderVehicleHiDetailAlphaCB_BigVehicle	MATCH	(all)	bigVehicleLod0Dist, cullBigCompsDist complex; alpha dist-0.0001	-
+0x7344A0	CVisibilityPlugins::RenderVehicleHiDetailAlphaCB_Boat	MATCH	(all)	lod0Dist, alpha flag 0x40 -> boat list else render	-
+0x733240	CVisibilityPlugins::RenderVehicleHiDetailCB	MATCH	(all)	lod0Dist, multipass (NaN arm fixed in e6a4ae5f5), cullCompsDist, angle < 0.2, dot > 0, FLAT or dot2 > dist*0.1	-
+0x733420	CVisibilityPlugins::RenderVehicleHiDetailCB_BigVehicle	MATCH	(all)	bigVehicleLod0Dist, cullBigCompsDist, simple heuristic (dot > 0)	-
+0x733550	CVisibilityPlugins::RenderVehicleHiDetailCB_Boat	MATCH	(all)	lod0Dist, multipass flag, default render	-
+0x7334F0	CVisibilityPlugins::RenderVehicleLoDetailCB_Boat	MATCH	(all)	dist >= lod0Dist (NaN skipped), unique materials flag, alpha	-
+0x7331E0	CVisibilityPlugins::RenderVehicleReallyLowDetailCB	MATCH	(all)	same as the boat variant	-
+0x732820	CVisibilityPlugins::RenderVehicleReallyLowDetailCB_BigVehicle	MATCH	(all)	dist >= bigVehicleLod0Dist, NaN skipped	-
+0x733670	CVisibilityPlugins::RenderWeaponCB	MATCH	(all)	dist2 < (LODmult*drawDist)^2 strict	-
+0x732F30	CVisibilityPlugins::RenderWeaponPedsForPC	MATCH	(all)	states, bone 24 / 3 (parachute), twin pistol left hand with rotate 180 then translate, constants 0x8D6098/A4/B0	-
+0x733750	CVisibilityPlugins::SetClumpModelInfo	MATCH	(all)	vehicle type 6 or 8 -> BigVehicle callback	-
+0x733160	CVisibilityPlugins::SetupVehicleVariables	FIXED	(all)	camera distance summed z,y,x (port x,y,z); angle atan2(dz, sqrt(dy2+dx2)) MATCH	359eb29d7
+0x7336F0	CVisibilityPlugins::VehicleVisibilityCB	FIXED	(all)	NaN distance takes the frustum test (fcomp/jne 0x41)	481defb1f
+0x732AB0	CVisibilityPlugins::VehicleVisibilityCB_BigVehicle	MATCH	(all)	FrustumSphereCB tail jump	-
+0x7323C0	CVisibilityPlugins::RenderWheelAtomicCB	MATCH	(all)	default render	-
+0x732AE0	CVisibilityPlugins::IsClumpVisible	FIXED	(all)	exe tail-jumps into the clump visibility callback; port returned the pointer cast to bool	c39060741
+0x732850	CVisibilityPlugins::SetTextureCB	MATCH	(all)	RpMaterialSetTexture	-

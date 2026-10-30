@@ -1472,8 +1472,6 @@ void CAEVehicleAudioEntity::StopGenericEngineSound(eVehicleEngineSoundType st) {
 
 // 0x4F7A50
 void CAEVehicleAudioEntity::RequestNewPlayerCarEngineSound(eVehicleEngineSoundType st, float speed, float volume) {
-    volume += m_EventVolume;
-
     if (m_DummySlot == -1) {
         return;
     }
@@ -1495,6 +1493,13 @@ void CAEVehicleAudioEntity::RequestNewPlayerCarEngineSound(eVehicleEngineSoundTy
         break;
     default:
         NOTSA_UNREACHABLE();
+    }
+
+    volume += m_EventVolume;
+
+    // 0x4F7B0D: the exe cancels the existing sound of this type first (not for AE_SOUND_PLAYER_OFF)
+    if (GetEngineSound(st) && st != AE_SOUND_PLAYER_OFF) {
+        CancelVehicleEngineSound(st);
     }
 
     const auto DoPlayEngineSoundSound = [&](eSoundBankSlot slot, eSoundID sfx, float rollOffFactor, uint32 flags = 0, int16 playTime = 0) {
@@ -1555,7 +1560,7 @@ void CAEVehicleAudioEntity::RequestNewPlayerCarEngineSound(eVehicleEngineSoundTy
         if (delta <= cfg->SoundLength) {
             // 0x4F7D96 - Using that delta we can calculate the new play position (in %)
             const auto pos = std::clamp(
-                lerp((float)(m_ACPlayPercentWhenStopped), 0.f, (float)(delta) / (float)(cfg->SoundLength)),
+                (float)(m_ACPlayPercentWhenStopped) * (1.f - (float)(delta) / (float)(cfg->SoundLength)), // 0x4F7D77: percent * (1 - t); NOT lerp()'s (to - from) * t + from (differs in the last bit)
                 0.f, cfg->LoopMaxPlayTimePercentage
             );
 

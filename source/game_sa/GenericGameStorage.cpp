@@ -615,7 +615,8 @@ bool CGenericGameStorage::LoadDataFromWorkBuffer(void* data, int32 size) {
     }
 
     if (static_cast<uint32>(ms_WorkBufferPos + size) > ms_WorkBufferSize) {
-        const auto buffSizeRemaining = ms_WorkBufferSize - ms_WorkBufferPos;
+        // exe 0x5D1326-0x5D1332: the test uses the size of the current chunk (0x8D2BE0), but the amount copied before refilling is the full 0xC800 - pos
+        const auto buffSizeRemaining = (int32)BUFFER_SIZE - ms_WorkBufferPos;
         if (!LoadDataFromWorkBuffer(data, buffSizeRemaining)) {
             return false;
         }

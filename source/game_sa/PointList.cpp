@@ -16,5 +16,5 @@ CVector CPointList::GetCentroid() const noexcept {
     for (const auto& pt : GetPoints()) {
         sum += pt;
     }
-    return sum / (float)m_Count;
+    return ExeDivide(sum, (float)m_Count); // exe 0x69B2C2..: sum * (1.0f / n), as in operator/(CVector, float) 0x4119D0
 }

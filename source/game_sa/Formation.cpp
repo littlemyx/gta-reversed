@@ -144,20 +144,26 @@ void CFormation::GenerateGatherDestinations_AroundCar(CPedList& pedList, CVehicl
     AddDestinations(pedList.m_count - leftCount, sideOffset);
 }
 
+// Distance as the exe inlines it in 0x69B1B0 / 0x69B240: sqrt((dz^2 + dy^2) + dx^2) on unrounded differences (CVector::Magnitude sums x,y,z)
+static float LengthZYX(x87d x, x87d y, x87d z) {
+    return (float)std::sqrt((z * z + y * y) + x * x);
+}
+
 // 0x69B1B0
 static int32 FindNearestUnclaimedDestination(const CVector& pt, float& totalCost) {
-    int32 bestIdx    = -1;
-    float bestDistSq = FLT_MAX;
+    int32 bestIdx  = -1;
+    float bestDist = 10000000.0f; // 0x86D270
     for (auto&& [i, destPt] : rngv::enumerate(CFormation::m_Destinations.GetPoints())) {
         if (CFormation::m_Destinations.m_PointHasBeenClaimed[i]) {
             continue;
         }
-        if (const auto distSq = CVector::DistSqr(destPt, pt); distSq < bestDistSq) {
-            bestIdx    = (int32)i;
-            bestDistSq = distSq;
+        // the exe compares the (float rounded) DISTANCE, strictly
+        if (const auto dist = LengthZYX((x87d)destPt.x - pt.x, (x87d)destPt.y - pt.y, (x87d)destPt.z - pt.z); dist < bestDist) {
+            bestIdx  = (int32)i;
+            bestDist = dist;
         }
     }
-    totalCost += std::sqrt(bestDistSq);
+    totalCost += bestDist;
     return bestIdx;
 }
 
@@ -177,7 +183,7 @@ void CFormation::DistributeDestinations(CPedList& pedList) {
     const auto GetAverageDistanceTo = [](const CPointList& points, const CVector& centre) {
         float total = 0.0f;
         for (const auto& pt : points.GetPoints()) {
-            total += CVector::Dist(pt, centre);
+            total += LengthZYX((x87d)pt.x - centre.x, (x87d)pt.y - centre.y, (x87d)pt.z - centre.z);
         }
         return total / (float)points.m_Count;
     };
@@ -191,7 +197,7 @@ void CFormation::DistributeDestinations(CPedList& pedList) {
         pt = (pt - pedCentre) * scale + destCentre;
     }
 
-    float bestCost = FLT_MAX;
+    float bestCost = std::bit_cast<float>(0x497423FEu); // 0x69B510: 999999.875f, not FLT_MAX
     for (uint32 trial = 0; trial < m_Peds.m_count; trial++) {
         // PC only clears 7 entries here (Android clears all 8), but every entry that's used is overwritten below anyway
         rng::fill_n(m_aPedLinkToDestinations.begin(), TOTAL_PED_GROUP_FOLLOWERS, -1);

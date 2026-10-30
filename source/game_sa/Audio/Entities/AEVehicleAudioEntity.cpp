@@ -263,7 +263,9 @@ void CAEVehicleAudioEntity::Terminate() {
 
     // 0x4FBA43
     if (const auto s = std::exchange(m_DummySlot, SND_BANK_SLOT_NONE); s != SND_BANK_SLOT_NONE) {
-        StoppedUsingBankSlot(s);
+        if (DoesBankSlotContainThisBank(s, m_DummyEngineBank)) { // 0x4FBA43: the exe only drops the reference if the slot still holds our bank
+            StoppedUsingBankSlot(s);
+        }
     }
 
     m_DummyEngineBank  = SND_BANK_UNK;
@@ -276,11 +278,11 @@ void CAEVehicleAudioEntity::Terminate() {
         s_pPlayerDriver  = nullptr;
     } else if (m_IsPlayerPassenger) {
         m_IsPlayerPassenger = false;
-    }
 
-    // OG | Replaced by TurnOffRadioForVehicle
-    // s_pPlayerAttachedForRadio = nullptr;
-    // s_pVehicleAudioSettingsForRadio = nullptr;
+        // 0x4FBAEC: the exe clears the radio globals for a passenger too (they point into this entity's m_AuSettings)
+        s_pPlayerAttachedForRadio       = nullptr;
+        s_pVehicleAudioSettingsForRadio = nullptr;
+    }
 
     m_IsPlayerDriverAboutToExit = false;
     m_IsInitialized            = false;

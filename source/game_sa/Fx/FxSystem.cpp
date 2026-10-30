@@ -296,7 +296,7 @@ uint32 FxSystem_c::ForAllParticles(void(*callback)(Particle_c*, int32, FxBox_c**
 
     for (auto& prim : m_SystemBP->GetPrims()) {
         for (auto* particle = prim->m_Particles.GetHead(); particle; particle = prim->m_Particles.GetNext(particle)) {
-            if (prim->m_Type && this == particle->m_System) {
+            if (!prim->m_Type && this == particle->m_System) { // 0x4AA95A: `test al, al; jne skip` on the prim type (0 = emitter)
                 callback(particle, 0, &data);
                 count++;
             }

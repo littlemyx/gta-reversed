@@ -431,7 +431,7 @@ void CVehicleRecording::SkipToEndAndStopPlaybackRecordedCar(CVehicle* vehicle) {
     if (const auto i = FindVehicleRecordingIndex(vehicle); i != -1) {
         assert(!GetFramesFromPlaybackBuffer(i).empty());
 
-        vehicle->physicalFlags.bCollidable = false;
+        vehicle->physicalFlags.bDisableCollisionForce = false; // 0x45A57B: and [veh+0x40], ~4 (the port cleared bCollidable)
         RestoreInfoForCar(vehicle, GetFramesFromPlaybackBuffer(i).back(), false);
         vehicle->ProcessControlCollisionCheck(false);
         pVehicleForPlayback[i] = nullptr;

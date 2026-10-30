@@ -1,0 +1,38 @@
+addr	function	verdict	asm range	note	fix commit
+0x4F1800	CAEStreamingChannel::Constructor	MATCH	0x4F1800-0x4F186D (all)	base ctor (48000,16) + member inits (state -6, EQ scale 1.0, ptrs 0) = in-class initialisers	-
+0x4F2200	CAEStreamingChannel::Destructor	MATCH	0x4F2200-0x4F22D5 (all)	fade-to-silence, state -5, SetFX(0), release silence/main buffer, delete both decoders	-
+0x4F1870	CAEStreamingChannel::SynchPlayback	MATCH	0x4F1870 (all)	nop	-
+0x4F23D0	CAEStreamingChannel::PrepareStream	MATCH	0x4F23D0-0x4F2541 (all)	all arms: reset-state fade, Lock/fill/|=0x10001/Unlock, state -2 unless -3/-1/-7, lastSlot 0, SetCurrentPosition(0)	-
+0x4F22F0	CAEStreamingChannel::Initialise	MATCH	0x4F22F0-0x4F23C4 (all)	48000/16/stereo, 0xC0000 bytes, flags 0x182A8; exe returns bool, only caller (AEAudioHardware::Initialise) ignores it	-
+0x4F2170	CAEStreamingChannel::Pause	FIXED	0x4F2170-0x4F21B2 (all)	requires buffer and IsBufferPlaying (0x4D7990); port faded + set Paused regardless	7626c702a
+0x4F1FF0	CAEStreamingChannel::SetReady	FIXED	0x4F1FF0-0x4F203B (all)	Stopping->Stopped falls through to the Stopped test (decoder -> state -2 in the same call); port switch/break skipped it	451fbddd7
+0x4F1F30	CAEStreamingChannel::SetBassEQ	MATCH	0x4F1F30-0x4F1FE2 (all)	preset index mode*2+ch, gain scales fGain, both channels	-
+0x4F1E20	CAEStreamingChannel::FillBuffer	MATCH	0x4F1E20-0x4F1F26 (all)	loop SetCursor(1) refill, next decoder swap on equal rate, silence + m_bSilenced on rate change, Finished(-4) without next, GetStreamPlayTimeMs = vtable slot 3	-
+0x4F1C70	CAEStreamingChannel::InitialiseSilence	MATCH	0x4F1C70-0x4F1D3A (all)	0x8000 byte buffer flags 0x8008, zero fill, looping play	-
+0x4F1DE0	CAEStreamingChannel::SetNextStream	MATCH	0x4F1DE0-0x4F1E1B (all)	delete old next, store new	-
+0x4F1AE0	CAEStreamingChannel::AddFX	MATCH	0x4F1AE0-0x4F1C0E (all)	two ParamEQ effects, preset 0 on both channels, stop/replay around SetFX	-
+0x4F1A90	CAEStreamingChannel::Stop(bool)	MATCH	0x4F1A90-0x4F1AD4 (all)	fade -100 dB/35 ms stop, state -5 + counter only with the flag	-
+0x4F1A60	CAEStreamingChannel::GetPlayingTrackID	MATCH	0x4F1A60-0x4F1A8E (all)	states -3/-4/-1/-5	-
+0x4F1A40	CAEStreamingChannel::GetActiveTrackID	MATCH	0x4F1A40-0x4F1A52 (all)	decoder slot 7	-
+0x4F18A0	CAEStreamingChannel::UpdatePlayTime	FIXED	0x4F18A0-0x4F19DF (all)	slot test is playCursor/0x60000 (port: freqFactor/0x60000 = always 0, slot-1 arms never taken); operand order (stream-limit)+cur; wrap = ftol(playTime - limit) not playTime - ftol(limit)	fcbc25975
+0x4F1C20	CAEStreamingChannel::RemoveFX	MATCH	0x4F1C20-0x4F1C60 (all)	stop/SetFX(0)/replay	-
+0x4F2550	CAEStreamingChannel::Service	MATCH	0x4F2550-0x4F27ED (all)	state machine, slot detection, Finished/silenced/needSwitch/needToFinish arms, Lock/copy/zero/|=0x10001/Unlock, lastSlot store all MATCH	-
+0x4F2040	CAEStreamingChannel::IsSoundPlaying	MATCH	0x4F2040-0x4F205F (all)	states -3/-4/-5/-1	-
+0x4F19E0	CAEStreamingChannel::GetPlayTime	MATCH	0x4F19E0-0x4F1A32 (all)	logic MATCH; backend note: exe returns the full 32 bit eax (AEStreamThread stores it in a uint32), the port virtual is declared int16 (truncates after 32 s) - base signature in AEAudioChannel.h/AEStaticChannel (S111 files)	-
+0x4F1880	CAEStreamingChannel::GetLength	MATCH	0x4F1880-0x4F1890 (all)	logic MATCH; same int16/uint16 vtable width note as GetPlayTime (exe returns the decoder GetStreamLengthMs as eax)	-
+0x4F1D40	CAEStreamingChannel::Play	MATCH	0x4F1D40-0x4F1DD6 (all)	SetOriginalFrequency, loop flag unless Paused, Stopping cancel+stop, state -1, volume m_Volume*100, play looping	-
+0x4F21C0	CAEStreamingChannel::Stop()	MATCH	0x4F21C0-0x4F21FC (all)	fade, state -5, counter 0	-
+0x4F2060	CAEStreamingChannel::SetFrequencyScalingFactor	FIXED	0x4F2060-0x4F2168 (all)	zero arm MATCH (needs buffer, not Paused, IsBufferPlaying); resume arm: state -> Started also with a null buffer (0x4F2159)	16d72ccc9
+0x4DC490	CAEDataStream::Destructor	MATCH	0x4DC490-0x4DC4C6 (all)	close handle if open, free filename	-
+0x4DC2B0	CAEDataStream::Initialise	MATCH	0x4DC2B0-0x4DC313 (all)	open rb, seek to start, length 0 -> file size; port skips the length fetch when the open fails (exe takes GetFileSize(-1)); backend CFileMgr	-
+0x4DC1C0	CAEDataStream::FillBuffer	MATCH	0x4DC1C0-0x4DC223 (all)	toRead = min(size, (pos - length) - start) as in the exe (underflow kept), TransformBuffer(dest,n,pos) if encrypted, pos += n; port guards !open (exe does not)	-
+0x4DC230	CAEDataStream::GetCurrentPosition	MATCH	0x4DC230-0x4DC247 (all)	tell - start	-
+0x4DC250	CAEDataStream::Seek(long,int)	MATCH	0x4DC250-0x4DC299 (all)	SET: +start, END: length+start-offset as SEEK_SET, CUR as is; returns tell - start; port guards !open	-
+0x4DC320	CAEDataStream::Read	MATCH	0x4DC320-0x4DC33B (all)	FillBuffer into *readed, S_OK	-
+0x4DC340	CAEDataStream::Seek(IStream)	MATCH	0x4DC340-0x4DC39A (all)	same math + *newOffset = pos; port guards !open (E_INVALIDARG, exe has none)	-
+0x4DC3A0	CAEDataStream::Stat	MATCH	0x4DC3A0-0x4DC40A (all)	flags==NONAME, type 2, cbSize low = file size; port adds !open guard and omits the GetLastError path (backend)	-
+0x4DC410	CAEDataStream::QueryInterface	MATCH	0x4DC410-0x4DC458 (all)	IUnknown/IStream, AddRef, else E_NOINTERFACE	-
+0x4DC460	CAEDataStream::AddRef	MATCH	0x4DC460-0x4DC46B (all)	exe InterlockedIncrement(+0x24), port plain ++ (backend)	-
+0x4DC5B0	CAEDataStream::Release	MATCH	0x4DC5B0-0x4DC60E (all)	decrement; 0 -> destroy + 0, else 0xBAD; port non-atomic (backend)	-
+0x4F2810	CAEStreamingDecoder::Constructor	MATCH	0x4F2810 (all)	store stream, Initialise if non-null	-
+0x4F2830	CAEStreamingDecoder::Destructor	MATCH	0x4F2830 (all)	delete stream, null	-

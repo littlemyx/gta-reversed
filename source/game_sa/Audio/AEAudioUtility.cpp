@@ -61,7 +61,12 @@ void CAEAudioUtility::InjectHooks() {
 
 // 0x4d9c80
 bool CAEAudioUtility::ResolveProbability(float p) {
-    return p >= 1.0f || CGeneral::RandomBool(100.0f * p);
+    if (p >= 1.0f) {
+        return true;
+    }
+    // 0x4D9C92: `rand() * (1/32767) < p` (strict, a single draw only when p < 1), NOT RandomBool(100 * p): that is `<=` on rand * (1/32767) * 100
+    const x87d r = (x87d)CGeneral::GetRandomNumber() * (x87d)RAND_MAX_FLOAT_RECIPROCAL;
+    return r < (x87d)p;
 }
 
 // 0x4d9d90

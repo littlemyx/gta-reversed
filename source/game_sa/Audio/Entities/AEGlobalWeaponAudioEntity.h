@@ -16,7 +16,7 @@ public:
 
 private:
     CPhysical* m_Physical;
-    int8       m_FrequencyVariation;
+    int8       m_FrequencyVariation{}; // 0x5075B0 ctor stores 0
 
 private:
     friend void InjectHooksMain();

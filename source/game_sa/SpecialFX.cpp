@@ -215,9 +215,9 @@ void CSpecialFX::Render2DFXs() {
             CSprite2d::DrawRect(
                 CRect{
                     float(x),
-                    float(y),
+                    float(y + 2),
                     float(x + 20),
-                    float(y + 2)
+                    float(y)
                 },
                 { 255, 255, 255, 64 }
             );

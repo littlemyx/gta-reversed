@@ -130,13 +130,20 @@ void CLoadingScreen::LoadSplashes(bool useSplashId, eLoadingLogo id) {
     if (notsa::rr::Active()) { srand(notsa::rr::Seed()); } // RR: fixed seed
 #endif
 
-    // NOTSA
-    // Generate random splash order
-    std::array<uint8, +eDisplayedSplash::COUNT> indices{};
-    rng::iota(indices, 0);
-
-    // exclude 0, title_pcXX.
-    std::shuffle(indices.begin() + 1, indices.end(), std::mt19937{ std::random_device{}() });
+    // 0x5900F0-0x59016F: the exe draws the splash order from the 15 loadscN textures WITHOUT replacement with the CRT rand():
+    // pool = {0..14}; for k in 0..14: r = (k == 0) ? 0 : ftol(rand() * 2^-15 * (14 - k + 1)); order[k] = pool[r]; remove pool[r]
+    // (so order[0] is always 0 = the title and order[1..6] are six random picks out of loadsc1..loadsc14; it consumes 14 rand() calls)
+    constexpr size_t NUM_TEXTURES = 15;
+    uint8 pool[NUM_TEXTURES];
+    uint8 order[NUM_TEXTURES]{};
+    std::iota(std::begin(pool), std::end(pool), (uint8)0);
+    for (size_t k = 0, last = NUM_TEXTURES - 1; k < NUM_TEXTURES; k++, last--) {
+        const size_t r = k == 0 ? 0 : (size_t)(((uint32)(rand() & 0xFFFF) * (uint32)(last + 1)) >> 15); // exact: x87 fild * 2^-15 * n, then _ftol
+        order[k] = pool[r];
+        if (r < last) {
+            std::memmove(&pool[r], &pool[r + 1], last - r);
+        }
+    }
 
     for (auto i = +eDisplayedSplash::COPYRIGHT; i < +eDisplayedSplash::COUNT; i++) {
         char texName[20];
@@ -149,7 +156,7 @@ void CLoadingScreen::LoadSplashes(bool useSplashId, eLoadingLogo id) {
             }
             notsa::format_to_sz(texName, "{}", logoName);
         } else if (i != 0) {
-            notsa::format_to_sz(texName, "loadsc{}", indices[i]);
+            notsa::format_to_sz(texName, "loadsc{}", order[i]);
         } else {
 #ifdef USE_EU_STUFF
             strcpy_s(texName, "title_pc_EU");

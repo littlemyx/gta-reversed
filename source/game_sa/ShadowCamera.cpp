@@ -424,10 +424,6 @@ RwRaster* CShadowCamera::RasterBlur(RwRaster* blurRaster, int32 numPasses) {
 
     const auto camRaster = RwCameraGetRaster(m_pRwCamera);
 
-    if (!numPasses) { // NOTSA
-        return camRaster;
-    }
-
     const auto DoRenderQuad2D = [
         brwidth = RwRasterGetWidth(blurRaster),
         rhw = 1.f / RwCameraGetNearClipPlane(m_pRwCamera)

@@ -1,12 +1,12 @@
 addr	function	verdict	asm range	note	fix commit
-0x535FA0	CEntity::PreRender	DEVIATION	0x536174-0x536BAA (tail; head 0x535FA0-0x536174 done in S45)	object/pickup/flare/missile/grenade/molotov/beachball/crane/windsock/traffic-light chain compared: model tests, constants, shadow/light/corona arg orders MATCH; crane+hook shadow range 110 (port 100), molotov streak registered for a NaN z (jnp arm), beachball shadow intensity full int16	9930b211a
+0x535FA0	CEntity::PreRender	DEVIATION	0x536174-0x536BAA (tail; head 0x535FA0-0x536174 done in S45)	object/pickup/flare/missile/grenade/molotov/beachball/crane/windsock/traffic-light chain compared: model tests, constants, shadow/light/corona arg orders MATCH; crane+hook shadow range 110 (port 100), molotov streak registered for a NaN z (jnp arm), beachball shadow intensity full int16	17847559a
 0x6FC7A0	CEntity::ProcessLightsForEntity	NOT_REACHED	-	not reached (budget, 951-line function)	-
 0x43ECF0	CEntryExitManager::SetAreaCodeForVisibleObjects	MATCH	0x43ECF0-0x43ED79 (all)	GetObjectsInFrustum(6.0, null), 32 cap tested before each entity, area test + player exclusion, 13 stored, old area saved	-
-0x43ED80	CEntryExitManager::ResetAreaCodeForVisibleObjects	DEVIATION	0x43ED80-0x43EDAF (all)	exe decrements the counter once more after the loop (left at -1); port left 0	f345ed0e3
+0x43ED80	CEntryExitManager::ResetAreaCodeForVisibleObjects	DEVIATION	0x43ED80-0x43EDAF (all)	exe decrements the counter once more after the loop (left at -1); port left 0	9dd0c9be6
 0x43EFD0	CEntryExitManager::GetEntryExitIndex	MATCH	0x43EFD0-0x43F042 (all)	reverse walk, free-slot skip, 8 bit flag masks, _strnicmp(..., 8)	-
-0x43F050	CEntryExitManager::LinkEntryExit	DEVIATION	0x43F050-0x43F097 (all)	back link set when the target has NONE (port inverted: the paired exit never linked back); no flag test inside; target timeOn 0 / timeOff 24	5c140c6d7
-0x43F0A0	CEntryExitManager::PostEntryExitsCreation	MATCH	0x43F0A0-0x43F12A (all)	reverse walk, flag 4 and no link -> same body as LinkEntryExit (fixed there)	5c140c6d7
+0x43F050	CEntryExitManager::LinkEntryExit	DEVIATION	0x43F050-0x43F097 (all)	back link set when the target has NONE (port inverted: the paired exit never linked back); no flag test inside; target timeOn 0 / timeOff 24	940cd47c5
+0x43F0A0	CEntryExitManager::PostEntryExitsCreation	MATCH	0x43F0A0-0x43F12A (all)	reverse walk, flag 4 and no link -> same body as LinkEntryExit (fixed there)	940cd47c5
 0x43F150	CEntryExitManager::GetPositionRelativeToOutsideWorld	MATCH	0x43F150-0x43F173 (all)	stack walked top to bottom	-
-0x43F630	CEntryExitManager::FindNearestDoor	DEVIATION	0x43F630-0x43F713 (all)	best distance starts at the radius (not FLT_MAX), sqrt distance (dz2+dx2)+dy2 strict <, candidates walked last to first	c1788db97
-0x43F880	CEntryExitManager::Init	DEVIATION	0x43F880-0x43F94F (all)	pool name "Entry Exits" (cosmetic); tree bounds, state resets, pool size 400, DealWithNoMemory match	4bdcc6004
-0x43FA00	CEntryExitManager::AddOne	DEVIATION	0x43FA00-0x43FD48 (all)	quad tree rect from SetRotateZ(angle in degrees) corners; rand()<0x3FFF window; strncpy(8); link only with CREATE_LINKED_PAIR (also fixes the CEntryExit ctor)	eef4ad9ec
+0x43F630	CEntryExitManager::FindNearestDoor	DEVIATION	0x43F630-0x43F713 (all)	best distance starts at the radius (not FLT_MAX), sqrt distance (dz2+dx2)+dy2 strict <, candidates walked last to first	03dd15aae
+0x43F880	CEntryExitManager::Init	DEVIATION	0x43F880-0x43F94F (all)	pool name "Entry Exits" (cosmetic); tree bounds, state resets, pool size 400, DealWithNoMemory match	00be2211f
+0x43FA00	CEntryExitManager::AddOne	DEVIATION	0x43FA00-0x43FD48 (all)	quad tree rect from SetRotateZ(angle in degrees) corners; rand()<0x3FFF window; strncpy(8); link only with CREATE_LINKED_PAIR (also fixes the CEntryExit ctor)	863176186

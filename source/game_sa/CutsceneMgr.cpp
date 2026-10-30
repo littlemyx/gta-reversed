@@ -745,9 +745,10 @@ void CCutsceneMgr::LoadCutsceneData_preload() {
     }
 
     // Unload cutscene models
-    for (int32 i = MODEL_CUTOBJ01; i < MODEL_CUTOBJ20; i++) {
+    // 0x5B05A0: 20 iterations (300..319 inclusive); `cmp word [ref], 0; jg` is a signed test
+    for (int32 i = MODEL_CUTOBJ01; i <= MODEL_CUTOBJ20; i++) {
         const auto mi = CModelInfo::GetModelInfo(i);
-        if (mi->m_nRefCount) {
+        if ((int16)mi->m_nRefCount > 0) {
             continue;
         }
         if (!CStreaming::IsModelLoaded(i)) {
@@ -805,9 +806,10 @@ void CCutsceneMgr::LoadCutsceneData_preload() {
     // Append objects added by script to the ones added by `LoadCutSceneFile`
     rng::fill(ms_iModelIndex | rngv::drop(ms_numLoadObjectNames) | rngv::take(ms_numAppendObjectNames), MODEL_LOAD_THIS); // Appended objects are loaded directly
     for (auto i = 0; i < ms_numAppendObjectNames; i++) {
+        // 0x5B1040: the source is the i-th appended name, the destination the next free load slot (they differ once the .CUT file defined objects)
         const auto objId = ms_numLoadObjectNames++;
-        strcpy_s(ms_cLoadObjectName[objId], ms_cAppendObjectName[objId]);
-        strcpy_s(ms_cLoadAnimName[objId], ms_cAppendAnimName[objId]);
+        strcpy_s(ms_cLoadObjectName[objId], ms_cAppendObjectName[i]);
+        strcpy_s(ms_cLoadAnimName[objId], ms_cAppendAnimName[i]);
     }
     ms_numAppendObjectNames = 0;
 

@@ -428,4 +428,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-PHASE3-PLAN	v6	phase-3 slicing	135114	28	4	1521 uncovered: 94 REPLACED, 1427 sliced S81-S117 (A 546, B 599, C 282)
 2026-10-30	ASM-S76b	v6	asm sweep	272247	102	27	clothes BlendTextures blended only a quarter of the raster (+ per-term truncation), CreateSkinnedClump change flags, bone -1 map, roadsign fade; 12 M
 2026-10-30	ASM-S82	v6	asm sweep	241958	94	23	speech: pedless voice -1 (police radio speech never played), sound 0 twice as likely, slot rebuilt dropping sound ptr, CJ mood override path, strain volume scale; 9 M
-2026-10-30	ASM-S86	v6	asm sweep	0	0	0	CAudioEngine facade all 38 MATCH, no code change
+2026-10-30	ASM-S86	v6	asm sweep	151943	37	6	CAudioEngine facade all 38 MATCH, no code change

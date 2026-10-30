@@ -1,0 +1,18 @@
+addr	function	verdict	asm range	note	fix commit
+0x69C3C0	CTaskAllocator::IsFinished	MATCH	0x69C3C0-0x69C3E5 (all)	8 pairs, stride 0x14, task at +4 of the pair	-
+0x69C2D0	CTaskAllocatorAttack::Destructor	MATCH	0x69C2D0-0x69C330 (all)	target (+4) and originator (+0xC) references cleaned, base vftable stored	-
+0x69C3F0	CTaskAllocatorAttack::AllocateTasks	MATCH	0x69C3F0-0x69C461 (all)	timer start 3000 (constant, guard folds), KillOnFoot{target, groupTargetId}.AllocateTasks	-
+0x69D0C0	CTaskAllocatorAttack::ProcessGroup	FIXED	0x69D0C0-0x69D107 (all)	re-allocation is the direct Attack::AllocateTasks call; the port dispatched virtually (PlayerCommandAttack ran its own ped-type allocation every 3 s)	8882115b8
+0x69BBF0	CTaskAllocatorKillOnFoot::Destructor	MATCH	0x69BBF0-0x69BC40 (all)	-	-
+0x69BCA0	CTaskAllocatorKillOnFoot::AllocateTasks	FIXED	0x69BCA0-0x69C21B (all)	look-about after the armed kill task is rand 1000..1999 ms (port 0..999); the skip list lacks KILL_PED_ON_FOOT_STEALTH (0x404). Rest (list build, leader-player filter, gun extraction, cover points, per-list sequences, SetTask slot -1) MATCH; static 0xC1A554 is never written	37fec9f74
+0x69C780	CTaskAllocatorKillThreatsBasic::Destructor	MATCH	0x69C780-0x69C7D0 (all)	-	-
+0x69C850	CTaskAllocatorKillThreatsBasic::ComputeClosestPeds	MATCH	0x69C850-0x69CAEE (all)	dz2+dx2+dy2 in extended precision, strict < greedy pairing, FLT_MAX wipes, leader/first-7 fallback	-
+0x69D170	CTaskAllocatorKillThreatsBasic::AllocateTasks	MATCH	0x69D170-0x69D454 (all)	group branch (events 24), no-group sequence KillPedOnFoot + LookAbout(1000..1999), members 0..7 incl. leader slot, same-group early return	-
+0x69D460	CTaskAllocatorKillThreatsBasicRandomGroup::AllocateTasks	MATCH	0x69D460-0x69D8D2 (all)	melee/seek-cover condition (!memMelee || threatMelee -> kill), group id from GetGroupId	-
+0x69CB60	CTaskAllocatorKillThreatsDriveby::Destructor	MATCH	0x69CB60-0x69CBB0 (all)	-	-
+0x69CC30	CTaskAllocatorKillThreatsDriveby::AllocateTasks	MATCH	0x69CC30-0x69D08E (all)	BE_IN_GROUP (0xF3) in primary slot 3, driver skip, GangDriveBy(target,0,60,90,8,0), group id from the task	-
+0x69C4D0	CTaskAllocatorPlayerCommandAttack::AllocateTasks	FIXED	0x69C4D0-0x69C6FC (all)	target-only path for a negative ped type (jl), port used IsPedTypePlayer (types 0/1); formation target no longer uninitialised	b36248f7a
+0x69D110	CTaskAllocatorPlayerCommandAttack::ProcessGroup	MATCH	0x69D110-0x69D167 (all)	Attack::ProcessGroup inlined + IsFinished; its direct Attack::AllocateTasks call is covered by the 0x69D0C0 fix	8882115b8
+0x61A5B0	CTask::operator delete	MATCH	0x61A5B0-0x61A5D8 (all)	pool slot flag |= 0x80, first-free index lowered	-
+0x61A620	CTaskComplex::~CTaskComplex (scalar deleting)	MATCH	0x61A620-0x61A658 + 0x61A3D0 body	sub-task deleted and nulled, vftables CTaskComplex then CTask	-
+0x6816D0	CTaskManager::~CTaskManager	MATCH	0x6816D0-0x681712 (all)	primary 0..4 then secondary 0..5, delete + null (Flush)	-

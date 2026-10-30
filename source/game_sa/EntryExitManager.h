@@ -75,5 +75,5 @@ public:
     static CEntryExitsPool* GetPool();
 
 private:
-    static void AddEnExToWorld(CEntryExit* enex);
+    static void AddEnExToWorld(CEntryExit* enex, const CVector& center, float entranceAngleDeg, const CVector2D& entranceRange);
 };

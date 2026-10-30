@@ -217,7 +217,7 @@ int32 CEntryExitManager::AddOne(
         name
     };
 
-    AddEnExToWorld(enex);
+    AddEnExToWorld(enex, { centerX, centerY, centerZ }, entranceAngle, { entranceRangeX, entranceRangeY });
     if (enex->bCreateLinkedPair) { // exe 0x43FCB7
         LinkEntryExit(enex);
     }
@@ -395,33 +395,29 @@ void CEntryExitManager::SetAreaCodeForVisibleObjects() {
     ms_oldAreaCode = CGame::currArea;
 }
 
-// NOTSA (Code somewhat based on 0x43FC00)
-void CEntryExitManager::AddEnExToWorld(CEntryExit* enex) {
-    // Calculate rotated corner positions (We ain't gonna use a matrix for this like they did, too complicated)
-    const auto& r  = enex->m_recEntrance;
-    const auto  rc = r.GetCenter();
-    CVector2D corners[]{
-        { r.right, r.top },
-        { r.left, r.bottom }
+// NOTSA (the quad tree part of AddOne, exe 0x43FB9D-0x43FCB2)
+void CEntryExitManager::AddEnExToWorld(CEntryExit* enex, const CVector& center, float entranceAngleDeg, const CVector2D& entranceRange) {
+    // Two opposite corners (-range/2, +range/2) rotated by CMatrix::SetRotateZ and moved to the centre. NOTE: the exe passes the angle in DEGREES (not converted to radians) to SetRotateZ.
+    CVector corners[]{
+        { entranceRange.x * -0.5f, entranceRange.y * -0.5f, 0.f },
+        { entranceRange.x * 0.5f,  entranceRange.y * 0.5f,  0.f },
     };
 
-    // Rotate it around the center
+    CMatrix mat;
+    mat.SetRotateZ(entranceAngleDeg);
     for (auto& corner : corners) {
-        corner = rc + (corner - rc).RotatedBy(enex->m_fEntranceAngleRad); // NOTE: If doesn't work properly, negate (-angle) the angle
+        const CVector rotated = mat.TransformPoint(corner);
+        corner = CVector{ center.x + rotated.x, center.y + rotated.y, rotated.z };
     }
 
-    const auto GetMinMaxAxis = [&](size_t axis) {
-        return rng::minmax(
-            corners | rng::views::transform([axis](auto&& c) { return c[axis]; })
-        );
-    };
+    // exe 0x43FC54-0x43FCA6: `fcom; test ah, 5; jp` - corner 0 goes to the min side only when it is strictly smaller (equal / NaN: it is the max)
+    const auto& a = corners[0];
+    const auto& b = corners[1];
+    const float minX = a.x < b.x ? a.x : b.x, maxX = a.x < b.x ? b.x : a.x;
+    const float minY = a.y < b.y ? a.y : b.y, maxY = a.y < b.y ? b.y : a.y;
 
-    // Calculate min-max coordinates
-    const auto [minX, maxX] = GetMinMaxAxis(0);
-    const auto [minY, maxY] = GetMinMaxAxis(1);
-    
     // Add it to the QuadTree using the calculated bounding rect
-    mp_QuadTree->AddItem(enex, {minX, minY, maxX, maxY});
+    mp_QuadTree->AddItem(enex, { minX, minY, maxX, maxY });
 }
 
 bool CEntryExitManager::WeAreInInteriorTransition() {

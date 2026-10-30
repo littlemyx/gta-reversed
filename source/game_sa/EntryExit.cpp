@@ -52,7 +52,7 @@ CEntryExit::CEntryExit(
         center.x + entranceRange.x / 2.f,
         center.y + entranceRange.y / 2.f,
     },
-    m_vecExitPos{ exit + CVector{ 0.f, 0.f, 1.f } },
+    m_vecExitPos{ exit.x, exit.y, exit.z + 1.f }, // exe 0x43FB5A: only z is offset
     m_nArea{ area },
     m_nNumberOfPeds{ (uint8)numberOfPeds },
     m_fExitAngle{ exitAngle },
@@ -60,22 +60,24 @@ CEntryExit::CEntryExit(
     m_fEntranceZ{ center.z + 1.f },
     m_fEntranceAngleRad{ DegreesToRadians(entranceAngleDeg) }
 {
-    std::tie(m_nTimeOn, m_nTimeOff) = [&]() -> std::pair<uint8, uint8> {
-        if (bUnknownBurglary && CGeneral::RandomBool(50.f)) {
-            return { 0, 0 };
-        } else if (bBurglaryAccess) {
-            return { 0, 24 };
-        } else {
-            return { timeOn, timeOff };
-        }
-    }();
+    // exe 0x43FA54-0x43FA8B: the burglary window first (0, 24), then the unknown-burglary coin flip (`rand() < 0x3FFF`, one rand call only when the flag is set) overrides with (0, 0)
+    m_nTimeOn  = (uint8)timeOn;
+    m_nTimeOff = (uint8)timeOff;
+    if (bBurglaryAccess) {
+        m_nTimeOn  = 0;
+        m_nTimeOff = 24;
+    }
+    if (bUnknownBurglary && !CGeneral::DoCoinFlip()) {
+        m_nTimeOn  = 0;
+        m_nTimeOff = 0;
+    }
 
     if (CEntryExitManager::ms_bBurglaryHousesEnabled || !bBurglaryAccess) {
         bEnableAccess = true;
     }
 
-    if (name){
-        strcpy_s(m_szName, name);
+    if (name) {
+        strncpy(m_szName, name, std::size(m_szName)); // exe 0x43FB8C: strncpy(…, 8), an 8 character name is not terminated (strcpy_s aborted on it)
     } else {
         m_szName[0] = 0;
     }

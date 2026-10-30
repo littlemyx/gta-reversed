@@ -1,0 +1,42 @@
+addr	function	verdict	asm range	note	fix commit
+0x4C57D0	C2dEffect::Shutdown	MATCH	0x4C57D0-0x4C5832 (all)	light: textures +0x30/+0x34, roadsign (type 7): text free +0x28, atomic +0x2C	-
+0x6FA970	C2dEffect::PluginAttach	MATCH	0x6FA970-0x6FA9BA (all)	size 4, chunk 0x253F2F8, ctor/dtor/copy and stream callbacks, result != -1	-
+0x4C54E0	C2dEffect::DestroyAtomic	MATCH	0x4C54E0-0x4C550D (all)		-
+0x6FA880	C2dEffect::t2dEffectPluginDestructor	MATCH	0x6FA880-0x6FA961 (all)	exe inlines Shutdown; entry freed afterwards, pointer not cleared (same)	-
+0x6F9FD0	C2dEffect::Rwt2dEffectPluginDataChunkReadCallBack	FIXED	0x6F9FD0-0x6FA612 (all)	ped attractor: PedExistingProbability/unk1/unk2/script name were never stored; ENEX TimeOff took TimeOn; SUN_GLARE hit NOTSA_UNREACHABLE (exe moves on). Light/particle/roadsign/cover/trigger/escalator and the skip+count logic match	503b187d8
+0x619410	RsTimer	MATCH	all	tail jump / forwarder to the ps* function	-
+0x619420	RsWindowSetText	MATCH	all	tail jump / forwarder to the ps* function	-
+0x619450	RsCameraBeginUpdate	MATCH	all	tail jump / forwarder to the ps* function; psCameraBeginUpdate ignores its argument (uses the Scene camera)	-
+0x619460	RsAlwaysOnTop	MATCH	all	tail jump / forwarder to the ps* function	-
+0x619490	RsMouseSetVisibility	MATCH	all	tail jump / forwarder to the ps* function	-
+0x6194A0	RsMouseSetPos	MATCH	all	tail jump / forwarder to the ps* function	-
+0x6194B0	RsSelectDevice	MATCH	all	tail jump / forwarder to the ps* function	-
+0x619510	rsCommandLine	MATCH	all	RsEventHandler(rsFILELOAD, param), returns 1; no callers	-
+0x6195C0	RsPathnameDestroy	MATCH	all	tail jump / forwarder to the ps* function	-
+0x6195D0	RsPathnameCreate	MATCH	all	tail jump / forwarder to the ps* function	-
+0x6195E0	RsRwTerminate	MATCH	all	RwEngineStop, RwEngineClose, RwEngineTerm	-
+0x619AF0	RsGrabScreen	MATCH	all	tail jump / forwarder to the ps* function	-
+0x619600	RsInitialize	FIXED	0x619600-0x61966B (all)	maximumHeight is the literal 480, port used DEFAULT_SCREEN_HEIGHT (448); rest matches	547975269
+0x619B00	RsErrorMessage	FIXED	0x619B00-0x619B2F (all)	key-up event gets keyScanCode 0x420, port passed an uninitialised RsKeyStatus	bfe66387b
+0x619B30	RsWarningMessage	FIXED	0x619B30-0x619B5F (all)	same as RsErrorMessage	bfe66387b
+0x619B60	RsEventHandler	MATCH	0x619B60-0x619C3D (all)	jump table decoded: 1 cmdline, 3/10 processed, 21..25, 37; others NOTPROCESSED	-
+0x619C90	RsRwInitialize	MATCH	0x619C90-0x619D5D (all)	arena size arg (4 MB in the exe) is ignored by the standalone RwEngineInit	-
+0x619D60	RsLoadPresetViews	MATCH	0x619D60-0x619F5D (all)	field order / sscanf arg order / error paths decoded	-
+0x619FA0	RsSavePresetView	MATCH	0x619FA0-0x61A11F (all)		-
+0x744A70	SecuromDisplayInit	MATCH	0x744A70-0x744A8F (all)		-
+0x744AE0	SecuromStateDisplay	FIXED	0x744AE0-0x744D4F (all)	labels are "Trigger: %d" / "Trap: %d" (colon); font setup, positions 30/160/350/450, y 140 step 12 match; no DRM check involved	9e6bbece4
+0x53CFA0	CLoadMonitor::Constructor	MATCH	0x53CFA0-0x53D019 (all)		-
+0x856430	CLoadMonitor::Destructor	MATCH	0x856430 (ret)		-
+0x53D030	CLoadMonitor::BeginFrame	MATCH	0x53D030-0x53D044 (all)		-
+0x53D0B0	CLoadMonitor::EndFrame	FIXED	0x53D0B0-0x53D47D (all)	thresholds 0.66666f/0.33333f (not 2/3, 1/3); move speed = sqrt((z2+y2)+x2) of components*50; fild+fadd single rounding for the sums; smoothed = min(sum*0.125, max)	ddde0de3b
+0x53D050	CLoadMonitor::StartTimer	MATCH	0x53D050-0x53D061 (all)		-
+0x53D070	CLoadMonitor::EndTimer	MATCH	0x53D070-0x53D08F (all)		-
+0x53D480	CLoadMonitor::Render	MATCH	0x53D480 (ret)		-
+0x72F480	CMemoryMgr::InitScratchPad	MATCH	0x72F480-0x72F496 (all)	heap at 0xC87BD0, buffer 0xC8E0C8, 0x4000, no size lists	-
+0x72F420	CMemoryMgr::Malloc	MATCH	0x72F420-0x72F42D (all)	CRT malloc(size); hint ignored (the RR zeroing is a documented port branch)	-
+0x72F430	CMemoryMgr::Free	MATCH	0x72F430 (jmp free)		-
+0x72F440	CMemoryMgr::Realloc	MATCH	0x72F440-0x72F452 (all)	CRT realloc	-
+0x72F460	CMemoryMgr::Calloc	MATCH	0x72F460-0x72F472 (all)	CRT calloc(n, size)	-
+0x72E8E0	CMemoryHeap::IntegrityCheck	MATCH	0x72E8E0-0x72E97A (all)	debug walker, no observable effect	-
+0x718600	AsciiToGxtChar	MATCH	0x718600-0x718625 (all)	byte copy incl. NUL	-
+0x5A4150	WriteRaster	MATCH	0x5A4150-0x5A418C (all)		-

@@ -71,37 +71,27 @@ void CMirrors::CreateBuffer() {
 
     const auto depth = RwRasterGetDepth(RwCameraGetRaster(Scene.m_pRwCamera));
 
-    switch (g_fx.GetFxQuality()) {
-    case FX_QUALITY_LOW:
-        pBuffer = RwRasterCreate(512, 256, depth, rwRASTERTYPECAMERATEXTURE);
-        pZBuffer = RwRasterCreate(512, 256, depth, rwRASTERTYPEZBUFFER);
-        break;
-    case FX_QUALITY_MEDIUM:
-    case FX_QUALITY_HIGH:
-    case FX_QUALITY_VERY_HIGH:
+    // 0x7230A0: quality >= 1 tries the 1024x512 pair; when either raster can't be created (the first one is destroyed again) the exe falls through to the 512x256 pair, which is not checked
+    if (g_fx.GetFxQuality() >= FX_QUALITY_MEDIUM) {
         pBuffer = RwRasterCreate(1024, 512, depth, rwRASTERTYPECAMERATEXTURE);
-        if (!pBuffer)
-            break;
-
-        pZBuffer = RwRasterCreate(1024, 512, depth, rwRASTERTYPEZBUFFER);
-        if (pZBuffer) {
-            return; // All needed buffers created
+        if (pBuffer) {
+            pZBuffer = RwRasterCreate(1024, 512, depth, rwRASTERTYPEZBUFFER);
+            if (pZBuffer) {
+                return; // All needed buffers created
+            }
+            RwRasterDestroy(pBuffer);
+            pBuffer = nullptr;
         }
-
-        RwRasterDestroy(pBuffer);
-        pBuffer = nullptr;
-        break;
-    default:
-        NOTSA_UNREACHABLE();
-        break;
     }
+    pBuffer  = RwRasterCreate(512, 256, depth, rwRASTERTYPECAMERATEXTURE);
+    pZBuffer = RwRasterCreate(512, 256, depth, rwRASTERTYPEZBUFFER);
 }
 
 // 0x723150
 void CMirrors::BuildCamMatrix(CMatrix& mat, CVector pointA, CVector pointB) {
     mat.SetTranslateOnly(pointA);
     mat.GetForward() = Normalized(pointB - pointA);
-    mat.GetRight() = CrossProduct({ 0.0f, 0.0f, 1.0f }, mat.GetForward());
+    mat.GetRight() = Normalized(CrossProduct({ 0.0f, 0.0f, 1.0f }, mat.GetForward())); // 0x723150: the exe calls CVector::Normalise on the right vector as well
     mat.GetUp() = CrossProduct(mat.GetForward(), mat.GetRight());
 }
 

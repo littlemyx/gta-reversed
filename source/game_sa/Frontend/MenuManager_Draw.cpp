@@ -879,13 +879,14 @@ void CMenuManager::DrawWindowedText(float x, float y, float wrap, const char* ti
     CFont::SetCentreSize(centreSize);
     CFont::SetFontStyle(eFontStyle::FONT_SUBTITLES);
     CFont::SetOrientation(alignment);
-    CFont::SetScale(StretchX(0.7f), StretchY(1.0f));
+    SetTextScale();
 
     CRect textRect;
     CFont::GetTextRect(&textRect, x, y, TheText.Get(message));
     textRect.left -= 4.0f;
-    textRect.bottom += StretchY(22.0f);
-    CSprite2d::DrawRect(textRect, MENU_BG);
+    // exe: height * (22/448) (float constant 0x865430), 22.0 at 448 high
+    textRect.bottom += RsGlobal.maximumHeight == 448 ? 22.0f : (float)RsGlobal.maximumHeight * std::bit_cast<float>(0x3D492492u);
+    CSprite2d::DrawRect(textRect, CRGBA(0, 0, 0, 190)); // exe pushes alpha 0xBE
     CFont::SetColor(MENU_TEXT_LIGHT_GRAY);
     CFont::SetDropColor(MENU_BG);
     CFont::SetEdge(2);
@@ -904,7 +905,8 @@ void CMenuManager::DrawWindowedText(float x, float y, float wrap, const char* ti
         CFont::SetCentreSize(centreSize);
         CFont::SetFontStyle(eFontStyle::FONT_SUBTITLES);
         CFont::SetOrientation(alignment);
-        CFont::SetScale(StretchX(0.7f), StretchY(1.0f));
+        SetTextScale();
+        CFont::SetColor(HudColour.GetRGB(HUD_COLOUR_LIGHT_BLUE)); // exe 0x5792AB: the message is light blue
         CFont::SetDropShadowPosition(2);
         CFont::SetDropColor(MENU_BG);
         CFont::PrintString(x, y + StretchY(15.0f), TheText.Get(message));

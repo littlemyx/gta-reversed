@@ -298,7 +298,7 @@ void CText::LoadMissionText(const char* mission) {
     CTimer::Resume();
     CFileMgr::SetDir("");
 
-    strncpy_s(m_szMissionName, mission, sizeof(m_szMissionName));
+    strncpy(m_szMissionName, mission, sizeof(m_szMissionName)); // exe 0x69FEF0: unbounded strcpy into name[8] (8 char names like DESERT10 aborted strncpy_s); the exe NUL spills into the next field, the port leaves an 8 char name unterminated (readers use string_copy with the size)
     m_bIsMissionPackLoaded = true;
 }
 

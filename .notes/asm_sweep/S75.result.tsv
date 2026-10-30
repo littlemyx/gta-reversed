@@ -1,0 +1,38 @@
+addr	function	verdict	asm range	note	fix commit
+0x56CE80	CAccidentManager::ReportAccident	NOT_REACHED		budget	
+0x41B980	CAutoPilot::ModifySpeed	MATCH	0x41B980-0x41BC6D	clamp 0.01 (fcom 0x41 arm), unsigned elapsed / signed scale factor, dir x0.01 x smth, lane offsets x5.4, 1/8 posn scale, _ftol of 1000/speed and of now - scale*progress agree	
+0x41B950	CAutoPilot::RemoveOnePathNode	MATCH	0x41B950-0x41B97C	count-- then int16 shift loop	
+0x736000	CBulletInfo::Shutdown	MATCH	0x736000	empty	
+0x736010	CBulletInfo::AddBullet	MATCH	0x736010-0x7360C2	8 slots x 0x2c, damage word from weapon info (STD skill), fild of time+1000 stored as float	
+0x721D50	CBulletTraces::Init	NOT_REACHED		budget	
+0x723750	CBulletTraces::AddTrace	NOT_REACHED		budget	
+0x726AF0	CBulletTraces::AddTrace	NOT_REACHED		budget	
+0x723C10	CBulletTraces::Render	NOT_REACHED		budget	
+0x723FB0	CBulletTraces::Update	NOT_REACHED		budget	
+0x6C23B0	CDamageManager::ProgressEngineDamage	MATCH	0x6C23B0	exe is xor al,al; ret 4 with no direct callers; port is an empty function	
+0x41B860	CNodeRoute::operator new	NOT_REACHED		budget	
+0x41B870	CNodeRoute::operator delete	NOT_REACHED		budget	
+0x737BC0	CProjectileInfo::Shutdown	MATCH	0x737BC0-0x737BE9	DestroyFxSystem on every non-null fx of the 32 slots	
+0x737C00	CProjectileInfo::RemoveNotAdd	MATCH	0x737C00-0x737C7A	grenade/satchel 0, molotov 1, rocket/HS 2; victim null, sound on, shake -1	
+0x737C80	CProjectileInfo::AddProjectile	MATCH	0x737C80-0x7387D3	whole function traced: jump tables decoded (16/39 grenade+satchel, 17 teargas, 18 molotov, 19/20 rockets, 21 bomb, 58 flare), destroy times 2000/20000/2000/3000/10000/2000000/10000, speed formulas incl. force==0 arms and molotov 0.2 floor, sentinel velocity add, elasticities 0.5/0.03/0.75, camera/dir/vehicle rocket matrices, slot scan, per-type model creation + col sphere (0.75 radius, surface 56), +0x160 object info 4, fx teargasAD, ignored-collision registration, HS blip colours, audio event	
+0x738860	CProjectileInfo::RemoveDetonatorProjectiles	MATCH	0x738860-0x7388EC	type 39 only, explosion args, active cleared, fx killed, remove-from-world flag	
+0x7399B0	CProjectileInfo::RemoveAllProjectiles	MATCH	0x7399B0-0x739A3D	active=0, instant fx destroy, blip clear, CWorld::Remove, virtual delete	
+0x737B80	CProjectileInfo::RemoveFXSystem	MATCH	0x737B80-0x737BB5	DestroyFxSystem vs Kill by flag, pointer cleared	
+0x6186D0	IKChainManager_c::Update	MATCH	0x6186D0-0x61874B	4 slots, scan code advance, parent ped UpdateRpHAnim once per scan code, chain update	
+0x618800	IKChainManager_c::CanAccept	FIXED	0x618800-0x6188A4	the two FCOMP arms accept on NaN (port rejected); sniper test moved first like the exe	ce73c4138
+0x6188B0	IKChainManager_c::CanAcceptLookAt	MATCH	0x6188B0-0x61896D	range 20, bDontAcceptIKLookAts aborts an existing look-at, bEverythingUsed, anim ids 299-302	
+0x618B60	IKChainManager_c::PointArm	MATCH	0x618B60-0x618CE6	CanAccept, create manager task, update or add point-arm task at slot arm+1	
+0x739C20	CShotInfo::Shutdown	MATCH	0x739C20	ret	
+0x739C30	CShotInfo::AddShot	FIXED	0x739C30-0x739DDE	100 slots, stores, spread (!=0 incl NaN), z not scaled by spread, rand%20, speed, normalise agree; destroy time: exe truncates (time+lifespan) via _ftol, port kept float(time)+lifespan	5da3d8c14
+0x7204E0	CSkidmarks::Init	NOT_REACHED		budget	
+0x720570	CSkidmarks::Shutdown	NOT_REACHED		budget	
+0x720640	CSkidmarks::Render	NOT_REACHED		budget	
+0x720EC0	CSkidmarks::RegisterOne	NOT_REACHED		budget	
+0x5BD830	cHandlingDataMgr::LoadHandlingData	FIXED	0x5BD830-0x5BE47D	token tables decoded for all 4 branches (vehicle 0..35, bike, flying, boat): store offsets/order agree with the port formats; vehicle engine acceleration = atof * double 0.4 with one rounding (port float*0.4f: 6 of 35 distinct file values 1 ulp off)	c06741525
+0x6F5240	cHandlingDataMgr::ConvertBikeDataToWorldUnits	MATCH	0x6F5240-0x6F5285	asin*57.29578 for +0x14/+0x2c/+0x30, plain multiply for +0x18	
+0x6F4F30	cHandlingDataMgr::FindExactWord	MATCH	0x6F4F30-0x6F4F92	prefix compare agrees; not found: exe returns entryCount (210), port logs and returns -1 (invalid data only, left)	
+0x6D0590	cTransmission::DisplayGearRatios	NOT_REACHED		debug text	
+0x6190A0	C_PcSave::GenerateGameFilename	NOT_REACHED		budget	
+0x619140	C_PcSave::PopulateSlotInfo	NOT_REACHED		budget	
+0x619060	C_PcSave::SaveSlot	NOT_REACHED		budget	
+0x6190D0	C_PcSave::DeleteSlot	NOT_REACHED		budget	

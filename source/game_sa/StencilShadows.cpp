@@ -144,7 +144,8 @@ static void BuildShadowVolume(CStencilShadowObject* obj, CCollisionData* colData
         const float ny = e2x * e1z - e2z * e1x;
         const float nz = e2y * e1x - e2x * e1y;
 
-        if (dirZ * nz + ny * dirY + nx * dirX < 0.0f) {
+        // exe: fcomp 0.0 / test ah,1 / jne => taken for dot < 0 and for an unordered (NaN) compare
+        if (!(dirZ * nz + ny * dirY + nx * dirX >= 0.0f)) {
             // Facing the light => Add the extruded copy of the triangle
             const float ex = s_SunPosNrm.x * extrudeDist;
             const float ey = s_SunPosNrm.y * extrudeDist;

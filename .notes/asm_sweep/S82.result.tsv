@@ -1,10 +1,10 @@
 addr	function	verdict	asm range	note	fix commit
 0x4E4F10	CAEPedSpeechAudioEntity::Constructor	UNSURE	0x4E4F10-0x4E4F6E (all)	exe stores m_PedAudioType=0 (GEN); port default is PED_TYPE_UNK (only visible on a ped whose model is invalid / never Initialise()d; left alone)	-
 0x4E4760	CAEPedSpeechAudioEntity::GetVoiceForMood	MATCH	0x4E4760-0x4E47B3 (all)	rand(0,1)+2*mood, default shares CR	-
-0x4E4AE0	CAEPedSpeechAudioEntity::GetSpeechContextVolumeOffset	FIXED	0x4E4AE0-0x4E4CD6 (all)	strain/exhale: t=clamp((fat-muscle)*0.001) (port had no 0.001), result=(t+1)*0.5*(0-base)+base (port used base for both)	51afecef7
+0x4E4AE0	CAEPedSpeechAudioEntity::GetSpeechContextVolumeOffset	FIXED	0x4E4AE0-0x4E4CD6 (all)	strain/exhale: t=clamp((fat-muscle)*0.001) (port had no 0.001), result=(t+1)*0.5*(0-base)+base (port used base for both)	a3cbc723c
 0x4E50E0	CAEPedSpeechAudioEntity::RequestPedConversation	NOT_REACHED	-	-	-
 0x4E52A0	CAEPedSpeechAudioEntity::ReleasePedConversation	NOT_REACHED	-	-	-
-0x4E53B0	CAEPedSpeechAudioEntity::GetCurrentCJMood	FIXED	0x4E53B0-0x4E563F (all)	script override only in the fall-through path and only while override_time > now; early-out paths (wanted>1, mission passed) use computed flags; post-3-min path reads a stale well-dressed byte (non-zero => CD); fat test x87 precision	46d59dbc5
+0x4E53B0	CAEPedSpeechAudioEntity::GetCurrentCJMood	FIXED	0x4E53B0-0x4E563F (all)	script override only in the fall-through path and only while override_time > now; early-out paths (wanted>1, mission passed) use computed flags; post-3-min path reads a stale well-dressed byte (non-zero => CD); fat test x87 precision	fc299d043
 0x5B98C0	CAEPedSpeechAudioEntity::StaticInitialise	NOT_REACHED	-	-	-
 0x4E3710	CAEPedSpeechAudioEntity::Service	MATCH	0x4E3710-0x4E37A9 (all)	-	-
 0x4E37B0	CAEPedSpeechAudioEntity::Reset	NOT_REACHED	-	-	-
@@ -12,13 +12,13 @@ addr	function	verdict	asm range	note	fix commit
 0x4E3960	CAEPedSpeechAudioEntity::ReleasePlayerConversation	NOT_REACHED	-	-	-
 0x4E3A00	CAEPedSpeechAudioEntity::SetUpConversation	NOT_REACHED	-	-	-
 0x4E4270	CAEPedSpeechAudioEntity::IsCJDressedInForGangSpeech	MATCH	0x4E4270-0x4E43FF (all)	clothes parts/hash strings verified against the exe table	-
-0x4E4840	CAEPedSpeechAudioEntity::LoadAndPlaySpeech	FIXED	0x4E4840-0x4E493E (all)	only status/entity/ids/start/gctx/type/forceAudible are written; port rebuilt the slot and dropped Sound + conversation-reservation flags	ef0a748fa
+0x4E4840	CAEPedSpeechAudioEntity::LoadAndPlaySpeech	FIXED	0x4E4840-0x4E493E (all)	only status/entity/ids/start/gctx/type/forceAudible are written; port rebuilt the slot and dropped Sound + conversation-reservation flags	584aada6f
 0x4E4A20	CAEPedSpeechAudioEntity::SetNextPlayTime	MATCH	0x4E4A20-0x4E4ADA (all)	int16 sum cannot overflow (max RepeatTime 30000)	-
 0x4E56D0	CAEPedSpeechAudioEntity::DisablePedSpeech	NOT_REACHED	-	-	-
 0x4E5700	CAEPedSpeechAudioEntity::DisablePedSpeechForScriptSpeech	NOT_REACHED	-	-	-
 0x4E58C0	CAEPedSpeechAudioEntity::GetVoiceAndTypeFromModel	NOT_REACHED	-	-	-
-0x4E5920	CAEPedSpeechAudioEntity::GetSoundAndBankIDs	FIXED	0x4E5920-0x4E5CBB (all)	first-candidate rand is GetRandomNumberInRange(0, numSounds-1); tables/mood loop/phrase memory LRU verified	e2babe938
-0x4E6550	CAEPedSpeechAudioEntity::AddSayEvent	FIXED	0x4E6550-0x4E68CF (all)	slot picked (must be in [0,5) unless player) BEFORE GetSoundAndBankIDs; distance rejected only when strictly > 1600; in-vehicle front-end via CAEAudioUtility::FindVehicleOfPlayer	431ac3791
+0x4E5920	CAEPedSpeechAudioEntity::GetSoundAndBankIDs	FIXED	0x4E5920-0x4E5CBB (all)	first-candidate rand is GetRandomNumberInRange(0, numSounds-1); tables/mood loop/phrase memory LRU verified	0c75fccaf
+0x4E6550	CAEPedSpeechAudioEntity::AddSayEvent	FIXED	0x4E6550-0x4E68CF (all)	slot picked (must be in [0,5) unless player) BEFORE GetSoundAndBankIDs; distance rejected only when strictly > 1600; in-vehicle front-end via CAEAudioUtility::FindVehicleOfPlayer	04dcbce63
 0x4E68D0	CAEPedSpeechAudioEntity::Initialise	MATCH	0x4E68D0-0x4E69D8 (all)	fresh-object assignment is equivalent to the field resets	-
 0x4E3FB0	CAEPedSpeechAudioEntity::StopCurrentSpeech	MATCH	0x4E3FB0-0x4E4116 (all)	-	-
 0x4E4400	CAEPedSpeechAudioEntity::GetSoundAndBankIDsForScriptedSpeech	NOT_REACHED	-	-	-
@@ -27,14 +27,14 @@ addr	function	verdict	asm range	note	fix commit
 0x4E3520	CAEPedSpeechAudioEntity::UpdateParameters	NOT_REACHED	-	-	-
 0x4E4F70	CAEPedSpeechAudioEntity::AddScriptSayEvent	NOT_REACHED	-	-	-
 0x4E5670	CAEPedSpeechAudioEntity::Terminate	NOT_REACHED	-	-	-
-0x4E5CD0	CAEPedSpeechAudioEntity::PlayLoadedSound	FIXED	0x4E5CD0-0x4E5EFE (all)	facial request B duration 0 (flags 0x307/0x6, volumes, rolloff 3/2, slot writes verified)	431ac3791
+0x4E5CD0	CAEPedSpeechAudioEntity::PlayLoadedSound	FIXED	0x4E5CD0-0x4E5EFE (all)	facial request B duration 0 (flags 0x307/0x6, volumes, rolloff 3/2, slot writes verified)	04dcbce63
 0x4E6070	CAEPedlessSpeechAudioEntity::Constructor	NOT_REACHED	-	-	-
 0x4E4E10	CAEPedlessSpeechAudioEntity::Initialise	NOT_REACHED	-	-	-
 0x4E4E80	CAEPedlessSpeechAudioEntity::StopCurrentSpeech	MATCH	0x4E4E80-0x4E4F0A (all)	-	-
-0x4E60D0	CAEPedlessSpeechAudioEntity::AddSayEvent	FIXED	0x4E60D0-0x4E62FF (all)	sets type GFD + voice 10 (port left voice -1 so no sound could be chosen), slot before sound, attaches only after all checks, 3600 compare strict	431ac3791
+0x4E60D0	CAEPedlessSpeechAudioEntity::AddSayEvent	FIXED	0x4E60D0-0x4E62FF (all)	sets type GFD + voice 10 (port left voice -1 so no sound could be chosen), slot before sound, attaches only after all checks, 3600 compare strict	04dcbce63
 0x4E4D10	CAEPedlessSpeechAudioEntity::UpdateParameters	NOT_REACHED	-	-	-
 0x4E6300	CAEPedlessSpeechAudioEntity::Terminate	NOT_REACHED	-	-	-
-0x4E6380	CAEPedlessSpeechAudioEntity::PlayLoadedSound	FIXED	0x4E6380-0x4E64FF (all)	pedless sound flags 0x387 (front-end) / 0x86 include LIFESPAN_TIED_TO_PHYSICAL_ENTITY; volume 12 / rolloff 3.5 verified	431ac3791
+0x4E6380	CAEPedlessSpeechAudioEntity::PlayLoadedSound	FIXED	0x4E6380-0x4E64FF (all)	pedless sound flags 0x387 (front-end) / 0x86 include LIFESPAN_TIED_TO_PHYSICAL_ENTITY; volume 12 / rolloff 3.5 verified	04dcbce63
 0x56DA00	CAEPoliceScannerAudioEntity::Constructor	NOT_REACHED	-	-	-
 0x4E6E00	CAEPoliceScannerAudioEntity::Destructor	NOT_REACHED	-	-	-
 0x4E6E90	CAEPoliceScannerAudioEntity::Reset	NOT_REACHED	-	-	-

@@ -466,7 +466,7 @@ void CAEStreamingChannel::Play(int16 startOffsetMs, int8 soundFlags, float freqF
 
 // 0x4F2170
 void CAEStreamingChannel::Pause() {
-    if (!m_pDirectSoundBuffer)
+    if (!m_pDirectSoundBuffer || !IsBufferPlaying()) // 0x4F217A: call 0x4D7990 (IsBufferPlaying); not playing -> nothing happens, state is kept
         return;
 
     DirectSoundBufferFadeToSilence();

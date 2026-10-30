@@ -210,7 +210,8 @@ int32 CClouds::MovingFog_GetFirstFreeSlot() {
 void CClouds::MovingFogRender() {
     ZoneScoped;
 
-    if (MovingFog_GetFXIntensity() == 0.f || !CGame::CanSeeOutSideFromCurrArea() && FindPlayerPed()->GetAreaCode() != AREA_CODE_NORMAL_WORLD)
+    // 0x716C90: returns when the current area is not the normal world OR the player's own area code is not 0 (the port had `&&`)
+    if (MovingFog_GetFXIntensity() == 0.f || !CGame::CanSeeOutSideFromCurrArea() || FindPlayerPed()->GetAreaCode() != AREA_CODE_NORMAL_WORLD)
         return;
 
     // Adjust fog intensity
@@ -221,7 +222,7 @@ void CClouds::MovingFogRender() {
         else
             CurrentFogIntensity = std::min(CurrentFogIntensity + step, 1.f); // Increasing [towards 1]
 
-        if (CWeather::UnderWaterness >= CPostEffects::m_fWaterFXStartUnderWaterness) {
+        if (!(CWeather::UnderWaterness < CPostEffects::m_fWaterFXStartUnderWaterness)) { // 0x716D48: `fcomp` + `test ah, 1` (NaN returns too)
             CurrentFogIntensity = 0.f;
             return;
         }
@@ -264,7 +265,7 @@ void CClouds::MovingFogRender() {
 
         // Original code used a switch case, we're going to use a lookup table to make it nicer. (And faster)
         const struct { CVector pos; RwTexCoords uv; } corners[]{
-            { pos + fogRight + fogUp,  {0.f, 0.f} }, // Top right
+            { fogRight + fogUp + pos,  {0.f, 0.f} }, // Top right (0x716F00: (right + up) + pos, the others are (pos +- right) +- up)
             { pos + fogRight - fogUp,  {1.f, 0.f} }, // Bottom right
             { pos - fogRight - fogUp,  {1.f, 1.f} }, // Bottom left
             { pos - fogRight + fogUp,  {0.f, 1.f} }, // Top left

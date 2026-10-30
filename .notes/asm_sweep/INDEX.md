@@ -233,7 +233,7 @@
 | S84 | phase3 tier A (PHASE3.md) | 36 | pending | AEVehicleAudioEntity.cpp, AEWaterCannonAudioEntity.cpp |
 | S85 | phase3 tier A (PHASE3.md) | 33 | pending | AEAudioEnvironment.cpp, AEAudioUtility.cpp, AESound.cpp, AEWeaponAudioEntity.cpp, AEWeatherAudioEntity.cpp |
 | S86 | phase3 tier A (PHASE3.md) | 38 | done (38 M) | AudioEngine.cpp |
-| S87 | phase3 tier A (PHASE3.md) | 24 | pending | AEAmbienceTrackManager.cpp, AEAudioHardware.cpp, AECutsceneTrackManager.cpp |
+| S87 | phase3 tier A (PHASE3.md) | 24 | done (19 M, 5 fixed) | AEAmbienceTrackManager.cpp, AEAudioHardware.cpp, AECutsceneTrackManager.cpp |
 | S88 | phase3 tier A (PHASE3.md) | 43 | done (31 M, 12 fixed) | AERadioTrackManager.cpp, AESoundManager.cpp |
 | S89 | phase3 tier A (PHASE3.md) | 46 | pending | AEUserRadioTrackManager.cpp, AnimBlendAssocGroup.cpp, AnimManager.cpp |
 | S90 | phase3 tier A (PHASE3.md) | 40 | pending | AEBankLoader.cpp, AEMP3BankLoader.cpp, AEMP3TrackLoader.cpp, AETrackLoader.cpp, ColStore.cpp, Directory.cpp |

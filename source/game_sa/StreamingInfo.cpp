@@ -15,7 +15,14 @@ void CStreamingInfo::InjectHooks() {
 
 // 0x407460
 void CStreamingInfo::Init() {
-    *this = {};
+    // 0x407460: next / prev / next-on-cd = -1, img id, cd offset, cd size, load state = 0; the flags byte (+6) is NOT written
+    m_NextIndex     = -1;
+    m_PrevIndex     = -1;
+    m_NextIndexOnCd = -1;
+    m_ImgID         = 0;
+    m_CDOffset      = 0;
+    m_CDSize        = 0;
+    m_LoadState     = LOADSTATE_NOT_LOADED;
 }
 
 // 0x407570

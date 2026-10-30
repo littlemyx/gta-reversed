@@ -267,5 +267,5 @@
 | S82b | rest of S82 | 27 | done (17 M, 15 fixed; S82 mood fix was wrong, redone) | AEPedSpeechAudioEntity.cpp, AEPedlessSpeechAudioEntity.cpp, AEPoliceScannerAudioEntity.cpp |
 | S81b | rest of S81 | 21 | done (11 M, 10 fixed) | AEFrontendAudioEntity.cpp, AEGlobalWeaponAudioEntity.cpp, AEPedAudioEntity.cpp |
 | S83b | rest of S83 | 21 | pending | AEVehicleAudioEntity.cpp |
-| S85b | rest of S85 | 3 | pending | AEWeaponAudioEntity.cpp, AEWeatherAudioEntity.cpp |
+| S85b | rest of S85 | 3 | done (3 M, 1 fixed; ResolveProbability callers verified) | AEWeaponAudioEntity.cpp, AEWeatherAudioEntity.cpp |
 | S93b | rest of S93 | 7 | pending | Fx.cpp |

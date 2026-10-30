@@ -849,11 +849,11 @@ void CAEWeaponAudioEntity::PlayCameraSound(CPhysical* entity, eAudioEvents event
         .SoundID            = 45,
         .AudioEntity        = this,
         .Pos                = entity->GetPosition(),
-        .Volume             = GetDefaultVolume(event),
-        .RollOffFactor      = 2.f / 3.f,
-        .Flags              = SOUND_LIFESPAN_TIED_TO_PHYSICAL_ENTITY | SOUND_IS_PAUSABLE, // NOTE/BUG: `UNPAUSABLE` typo?
+        .Volume             = GetDefaultVolume(event) + audability, // 0x504752: `fadd [esp+0x18]` - the offset argument (-14 from WeaponFire) was ignored
+        .RollOffFactor      = 0.66f, // 0x3F28F5C3
+        .Flags              = SOUND_LIFESPAN_TIED_TO_PHYSICAL_ENTITY | SOUND_IS_PAUSABLE, // 0x90 (SOUND_IS_PAUSABLE is bit 4 = the unpausable flag)
         .RegisterWithEntity = entity,
-        .EventID            = AE_WEAPON_SOUND_CAT_CHAINSAW_STOP
+        // 0x5047A2: no event id is stored after Initialise (it stays AE_UNDEFINED), the port used the chainsaw stop category
     });
 }
 

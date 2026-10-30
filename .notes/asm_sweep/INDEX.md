@@ -266,6 +266,6 @@
 | S117 | phase3 tier C (PHASE3.md) | 41 | pending | 2dEffect.cpp, LoadMonitor.cpp, MemoryMgr.cpp, Securom.cpp, common.cpp, platform.cpp |
 | S82b | rest of S82 | 27 | done (17 M, 15 fixed; S82 mood fix was wrong, redone) | AEPedSpeechAudioEntity.cpp, AEPedlessSpeechAudioEntity.cpp, AEPoliceScannerAudioEntity.cpp |
 | S81b | rest of S81 | 21 | done (11 M, 10 fixed) | AEFrontendAudioEntity.cpp, AEGlobalWeaponAudioEntity.cpp, AEPedAudioEntity.cpp |
-| S83b | rest of S83 | 21 | pending | AEVehicleAudioEntity.cpp |
+| S83b | rest of S83 | 21 | done (7 M, 14 fixed + stall table) | AEVehicleAudioEntity.cpp |
 | S85b | rest of S85 | 3 | done (3 M, 1 fixed; ResolveProbability callers verified) | AEWeaponAudioEntity.cpp, AEWeatherAudioEntity.cpp |
 | S93b | rest of S93 | 7 | pending | Fx.cpp |

@@ -1058,7 +1058,10 @@ void CFont::PrintString(float x, float y, const GxtChar* text) {
     if (m_bFontBackground) {
         CRect rt;
 
-        RenderState.m_color = m_Color;
+        // 0x71A731..0x71A755: only r, g, b are copied (the alpha of the render-state colour is left alone)
+        RenderState.m_color.r = m_Color.r;
+        RenderState.m_color.g = m_Color.g;
+        RenderState.m_color.b = m_Color.b;
         GetTextRect(&rt, x, y, text);
 
         if (m_bEnlargeBackgroundBox) {

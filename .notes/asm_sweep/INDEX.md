@@ -204,3 +204,17 @@
 | S65b | rest of S65 | 2 | pending | WeaponEffects.cpp, WeaponInfo.cpp |
 | S57e | rest of S57d | 6 | pending | Replay.cpp |
 | S45c | rest of S45b (ProcessLightsForEntity) | 1 | pending | Entity.cpp |
+| S67 | phase2b: coverage audit (COVERAGE.md) | 13 | pending | Automobile.cpp, Cam.cpp, CollisionEventScanner.cpp, Cover.cpp, CustomCarPlateMgr.cpp, Entity.cpp |
+| S68 | phase2b: coverage audit (COVERAGE.md) | 36 | pending | Cheat.cpp |
+| S69 | phase2b: coverage audit (COVERAGE.md) | 38 | pending | ColAccel.cpp, ColModel.cpp, Collision.cpp, CollisionData.cpp, TempColModels.cpp |
+| S70 | phase2b: coverage audit (COVERAGE.md) | 42 | pending | Birds.cpp, BouncingPanel.cpp, BreakManager_c.cpp, BreakObject_c.cpp, Door.cpp, Escalator.cpp |
+| S71 | phase2b: coverage audit (COVERAGE.md) | 34 | pending | 3dMarker.cpp, MovingThings.cpp, Rope.cpp, Ropes.cpp, TrafficLights.cpp, WaterCannon.cpp |
+| S72 | phase2b: coverage audit (COVERAGE.md) | 35 | pending | 3dMarkers.cpp, Checkpoint.cpp, Checkpoints.cpp, ConversationNode.cpp, Conversations.cpp, Credits.cpp |
+| S73 | phase2b: coverage audit (COVERAGE.md) | 44 | pending | CutsceneMgr.cpp, Formation.cpp, IdleCam.cpp, MentalHealth.cpp, Messages.cpp |
+| S74 | phase2b: coverage audit (COVERAGE.md) | 41 | pending | MissionCleanup.cpp, OnscreenCounterEntry.cpp, OnscreenTimer.cpp, PatrolRoute.cpp, PlaceName.cpp, RoadBlocks.cpp |
+| S75 | phase2b: coverage audit (COVERAGE.md) | 37 | pending | AccidentManager.cpp, AutoPilot.cpp, BulletInfo.cpp, BulletTraces.cpp, C_PcSave.cpp, DamageManager.cpp |
+| S76 | phase2b: coverage audit (COVERAGE.md) | 46 | pending | ClothesBuilder.cpp, CustomRoadsignMgr.cpp, GenericGameStorage.cpp |
+| S77 | phase2b: coverage audit (COVERAGE.md) | 46 | pending | BuildingPool.h, Clock.cpp, ColModelPool.h, ControllerConfigManager.cpp, ControllerState.cpp, Curves.cpp |
+| S78 | phase2b: coverage audit (COVERAGE.md) | 23 | pending | KeyboardState.cpp, ModelIndices.cpp, MouseControllerState.cpp, Pad.cpp, PopCycle.cpp, TimeCycle.cpp |
+| S79 | phase2b: coverage audit (COVERAGE.md) | 50 | pending | 3dMarker.cpp, AccidentManager.cpp, BouncingPanel.cpp, BreakObject_c.cpp, C_PcSave.cpp, ClothesBuilder.cpp |
+| S80 | phase2b: coverage audit (COVERAGE.md) | 15 | pending | ControllerConfigManager.cpp, DecisionMaker.cpp, Gamma.cpp, GridRef.cpp, MouseControllerState.cpp, Pad.cpp |

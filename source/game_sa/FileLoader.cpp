@@ -2180,14 +2180,14 @@ void LinkLods(int32 numRelatedIPLs) {
         VERIFY(!isIPL || gNumLoadedBuildings <= i && i < totalN);
         const auto building = gpLoadedBuildings[i];
 
-        // I'm very much unsure how this works, because `CColAccel`
-        // works on the same thread, so if its ever in loading state... it wont ever change...
-        if (!isIPL && CColAccel::isCacheLoading()) {
-            continue;
-        }
-
-        // Newly loaded IPLs have to be created
-        if (isIPL) {
+        // exe 0x5B5227-0x5B5250: while the cache is loading only the buildings are processed (the related-IPL entities, i >= gNumLoadedBuildings,
+        // are skipped); otherwise every entry is processed and the related-IPL entities are registered first (port had the skip on the buildings)
+        if (CColAccel::isCacheLoading()) {
+            if (isIPL) {
+                continue;
+            }
+        } else if (isIPL) {
+            // Newly loaded IPLs have to be created
             CColAccel::addIPLEntity(gpLoadedBuildings.data(), gNumLoadedBuildings, i);
         }
 

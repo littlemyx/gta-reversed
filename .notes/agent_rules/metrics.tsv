@@ -424,4 +424,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S78	v6	asm sweep	286450	117	64	mouse wheel delta never stored (sniper/camera wheel zoom dead), rain streaks never moved, rain/sand rand order + constants, Timer pause clock, PopCycle init resets, WindModifiers active==1; 13 M
 2026-10-30	ASM-S76	v6	asm sweep	232282	106	76	save work buffer chunking used stale size (checksum could differ after a load), load refill bytes, no save-version check in exe (port refusal -> FIX_BUGS); save format MATCH; 23 M
 2026-10-30	ASM-S79	v6	asm sweep	298881	141	25	SetCutsceneAnim started anim playing, GetAtomicWithName returned last match, accident search sqrt vs squared, BreakObject group velocity, clock beep stride walk, IdleCam NaN, EntryInfoNodePool hook label; 43 M
-2026-10-30	ASM-S70c	v6	asm sweep	0	0	0	Birds desert cap/water dist/signed angle/grey colour, BreakObject RW table-sqrt normalise + box centre, escalator plane count; glass render MATCH; 8 M
+2026-10-30	ASM-S70c	v6	asm sweep	300757	110	83	Birds desert cap/water dist/signed angle/grey colour, BreakObject RW table-sqrt normalise + box centre, escalator plane count; glass render MATCH; 8 M

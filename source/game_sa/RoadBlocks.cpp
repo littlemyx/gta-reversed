@@ -423,7 +423,7 @@ void CRoadBlocks::CreateRoadBlockBetween2Points(CVector a, CVector b, bool isGan
 
 // 0x461170
 void CRoadBlocks::GenerateRoadBlockPedsForCar(CVehicle* vehicle, int32 pedsPositionsType, ePedType pedType) {
-    const auto Generate = [&](eModelID pedModel = MODEL_INVALID, eCopType copType = COP_TYPE_CITYCOP, bool isSpecialCop = false) {
+    const auto Generate = [&](eModelID pedModel = (eModelID)0, eCopType copType = COP_TYPE_CITYCOP, bool isSpecialCop = false) {
         static constexpr auto PLACEMENTS = std::to_array<CVector>({
             { -1.5f, +1.9f, 0.0f },
             { -1.5f, -2.6f, 0.0f },
@@ -454,18 +454,26 @@ void CRoadBlocks::GenerateRoadBlockPedsForCar(CVehicle* vehicle, int32 pedsPosit
                 if (pedType != PED_TYPE_COP) { // 0x461560
                     return new CCivilianPed(pedType, pedModel);
                 } else {
-                    auto* p = new CCopPed(CStreaming::IsModelLoaded(pedModel) ? copType : COP_TYPE_CITYCOP);
-                    if (copType == COP_TYPE_CITYCOP) {
+                    // exe 0x4614F0-0x461557: a non-city cop type falls back to a city cop when its ped model isn't loaded
+                    const auto actualCopType = copType != COP_TYPE_CITYCOP && !CStreaming::IsModelLoaded(pedModel)
+                        ? COP_TYPE_CITYCOP
+                        : copType;
+                    auto* p = new CCopPed(actualCopType);
+                    if (actualCopType == COP_TYPE_CITYCOP) { // (so also when the fallback was used)
                         p->SetCurrentWeapon(WEAPON_PISTOL);
                     }
                     return p;
                 }
             }();
+            if (pedType != PED_TYPE_COP) {
+                ped->SetCurrentWeapon(WEAPON_PISTOL); // exe 0x461592 is reached by the non-cop path too (before the placement)
+            }
 
             ped->SetPosn(std::get<CVector>(CPedPlacement::FindZCoorForPed(pos)));
             ped->GetMatrix().SetRotateKeepPos({ 0.0f, 0.0f, -HALF_PI });
 
             if (pedType == PED_TYPE_COP) {
+                ped->AsCop()->m_bDontPursuit = true; // exe 0x46163C: `mov byte [esi+0x79C], 1`
                 auto* t = new CTaskComplexWanderCop(PEDMOVE_STILL, CGeneral::GetRandomNumberInRange(8ui8));
                 t->m_nSubTaskCreatedTimer = {};
                 t->m_nScanForStuffTimer   = {};
@@ -482,7 +490,18 @@ void CRoadBlocks::GenerateRoadBlockPedsForCar(CVehicle* vehicle, int32 pedsPosit
             CVisibilityPlugins::SetClumpAlpha(ped->GetRpClump(), 0);
 
             if (pedType != PED_TYPE_COP) {
-                const auto weapon = CGangs::Gang[pedType - PED_TYPE_GANG1].GetRandomWeapon(false);
+                // exe 0x461790-0x4617F8: the gang's weapon roll is `(int)(rand * (1/32768) * 100)`; with a 3rd weapon: <33 / <66 / rest,
+                // without it: the 2nd weapon from 50 up (when set), else the 1st
+                const auto& gangWeapons = CGangs::Gang[pedType - PED_TYPE_GANG1].m_nGangWeapons;
+                const auto  roll        = CGeneral::GetRandomNumberInRange(0, 100);
+                eWeaponType weapon;
+                if (gangWeapons[2] != WEAPON_UNARMED) {
+                    weapon = roll < 33 ? gangWeapons[0] : roll < 66 ? gangWeapons[1] : gangWeapons[2];
+                } else if (gangWeapons[1] != WEAPON_UNARMED && roll >= 50) {
+                    weapon = gangWeapons[1];
+                } else {
+                    weapon = gangWeapons[0];
+                }
                 if (weapon != WEAPON_UNARMED) {
                     ped->GiveDelayedWeapon(weapon, 25'001);
                     ped->SetCurrentWeapon(weapon);
@@ -502,16 +521,20 @@ void CRoadBlocks::GenerateRoadBlockPedsForCar(CVehicle* vehicle, int32 pedsPosit
         default:             Generate(MODEL_INVALID, COP_TYPE_CITYCOP, false); break;
         }
     } else if (IsPedTypeGang(pedType)) {
+        // exe 0x461395-0x4613E2: the model is kept from the last gang that was asked (0 if none had a strength),
+        // the road block is only skipped when that is -1
+        auto pedModel = (eModelID)0;
         for (auto i = 0; i < TOTAL_GANGS; i++) {
             if (!CPopCycle::m_pCurrZoneInfo->GangStrength[i]) {
                 continue;
             }
-            const auto pedModel = CGangs::ChooseGangPedModel((eGangID)i);
-            if (pedModel == MODEL_INVALID) {
-                continue;
+            pedModel = CGangs::ChooseGangPedModel((eGangID)i);
+            if (pedModel != MODEL_INVALID) {
+                break;
             }
+        }
+        if (pedModel != MODEL_INVALID) {
             Generate(pedModel);
-            return;
         }
     } else {
         Generate();

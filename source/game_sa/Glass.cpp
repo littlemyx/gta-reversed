@@ -69,43 +69,51 @@ bool CGlass::HasGlassBeenShatteredAtCoors(CVector point) {
 // 0x71C2B0
 void CGlass::CarWindscreenShatters(CVehicle* vehicle) {
     const auto colModel = vehicle->GetColModel();
-    if (!colModel || colModel->GetTriCount() < 2) {
+    if (!colModel || !colModel->m_pColData || colModel->GetTriCount() < 2) {
         return;
     }
 
     const auto& triangles = colModel->m_pColData->m_pTriangles;
 
-    // Find the triangle of the glass rectangle
-    // They're after each other, so we just have to find the first one here
-    uint32 glassTriIdx{};
-    for (; glassTriIdx < colModel->GetTriCount(); glassTriIdx++) {
-        if (g_surfaceInfos.IsGlass(triangles[glassTriIdx].m_nMaterial)) {
-            break;
+    // exe 0x71C300-0x71C33F: the window is made of the FIRST TWO glass triangles of the model (not necessarily next to each other);
+    // fewer than two glass triangles = nothing happens
+    uint32 glassTriIdx{}, glassTri2Idx{};
+    bool   foundFirst{}, foundSecond{};
+    for (uint32 i = 0; i < colModel->GetTriCount(); i++) {
+        if (g_surfaceInfos.IsGlass(triangles[i].m_nMaterial)) {
+            if (!foundFirst) {
+                glassTriIdx = i;
+                foundFirst  = true;
+            } else {
+                glassTri2Idx = i;
+                foundSecond  = true;
+                break;
+            }
         }
     }
-
-    // `glassTriIdx` is the first triangle of the glass rectangle, the second one is the one after it.
-    // So, logically, if `glassTriIdx + 1` is valid, `glassTriIdx` is going to be valid as well.
-    if (glassTriIdx + 1 >= colModel->GetTriCount())
+    if (!foundSecond)
         return;
 
     CCollision::CalculateTrianglePlanes(colModel);
+    if (!colModel->m_pColData->m_pTrianglePlanes)
+        return;
 
     auto& vehMat = (CMatrix&)vehicle->GetMatrix();
 
     // Grab normal and transform it to world space
     const auto normal = vehMat.TransformVector(colModel->m_pColData->m_pTrianglePlanes[glassTriIdx].GetNormal());
 
-    // Calculate direction vectors
+    // Calculate direction vectors: fwd = right x normal, right = normal x up (exe 0x71C3A5-0x71C3EB; the second cross product has its operands the other way round)
     const auto fwd   = Normalized(CrossProduct(vehMat.GetRight(), normal));
-    const auto right = Normalized(CrossProduct(vehMat.GetUp(), normal));
+    const auto right = Normalized(CrossProduct(normal, vehMat.GetUp()));
 
     // Store world space vertex positions of both triangles
     // Should be more like [2][3] but a multdim array would've been way harder to deal with
     // so we're going to use a flattened [6] array
     CVector triVertices[6]{};
+    const uint32 triIdxs[2] = { glassTriIdx, glassTri2Idx };
     for (auto t = 0; t < 2; t++) { // t - triangle idx
-        const auto& tri = triangles[glassTriIdx + t];
+        const auto& tri = triangles[triIdxs[t]];
         for (auto v = 0; v < 3; v++) { // v - vertex idx of this triangle
             triVertices[t * 3 + v] = vehMat.TransformPoint(colModel->m_pColData->m_pVertices[tri.m_vertIndices[v]]);
         }
@@ -115,46 +123,59 @@ void CGlass::CarWindscreenShatters(CVehicle* vehicle) {
     // The dot product of the position of a vertex and `right` will give it's "position" on the `right` axis
     // same goes for `fwd`
     // By this we basically get a 2D position of each vertex on the plane of the glass.
+    // exe 0x71C7C8-0x71C90B: the terms are summed in the order x, z, y (unrounded), stored as floats; the dots of vertex 0 stay on the FPU stack unrounded
+    const auto DotXZY = [](const CVector& v, const CVector& d) { return ((x87d)v.x * d.x + (x87d)v.z * d.z) + (x87d)v.y * d.y; };
+    std::array<float, 6> rightDots, fwdDots;
+    for (auto i = 0u; i < 6u; i++) {
+        rightDots[i] = (float)DotXZY(triVertices[i], right);
+        fwdDots[i]   = (float)DotXZY(triVertices[i], fwd);
+    }
 
-    const auto CalculateDotProducts = [&](CVector direction) {
-        std::array<float, 6> out{};
-        rng::transform(triVertices, out.begin(), [&](auto&& v) { return DotProduct(v, direction); });
-        return out;
-    };
-
-    // Calculate dot products for all vertices on both direction vectors
-    // In 2D terms right would be `x` and `fwd` would be `y`
-    const auto rightDots = CalculateDotProducts(right);
-    const auto fwdDots   = CalculateDotProducts(fwd);
-
-    // Find max values in each direction
-    // This will give us the top right point basically
-    const float maxDotFwd   = *rng::max_element(fwdDots);
-    const float maxDotRight = *rng::max_element(rightDots);
-
-    // Calculate bottom left corner
-    float minRightFwdDotSum = FLT_MAX; // todo: FLT_MAX is not NOTSA ?
+    // exe 0x71C90B-0x71C96A: the bottom left corner is the vertex with the smallest right + fwd (the first one wins a tie, vertex 0 sets the initial value, with the
+    // unrounded fwd dot), the top right one is built from the maximum of each axis (strictly greater replaces)
+    float  maxDotFwd       = fwdDots[0];
+    float  maxDotRight     = rightDots[0];
+    float  minRightFwdDotSum = (float)((x87d)rightDots[0] + DotXZY(triVertices[0], fwd));
     uint32 minRightFwdDotSumIdx{};
-    for (auto i = 0u; i < 6u; i++) { // todo: should be start from 1 ?
-        const auto rightDot = rightDots[i], fwdDot = fwdDots[i];
-        if (rightDot + fwdDot < minRightFwdDotSum) {
-            minRightFwdDotSum = rightDot + fwdDot;
+    for (auto i = 1u; i < 6u; i++) {
+        const x87d sum = (x87d)rightDots[i] + fwdDots[i];
+        if (sum < minRightFwdDotSum) {
+            minRightFwdDotSum    = (float)sum;
             minRightFwdDotSumIdx = i;
+        }
+        if (fwdDots[i] > maxDotFwd) {
+            maxDotFwd = fwdDots[i];
+        }
+        if (maxDotRight < rightDots[i]) {
+            maxDotRight = rightDots[i];
         }
     }
 
-    assert(0 <= minRightFwdDotSumIdx && minRightFwdDotSumIdx < std::size(rightDots));
     // Size of pane in directions
-    auto extentRight = maxDotRight - rightDots[minRightFwdDotSumIdx];
-    auto extentFwd = maxDotFwd - fwdDots[minRightFwdDotSumIdx];
+    const float extentRight = maxDotRight - rightDots[minRightFwdDotSumIdx];
+    const float extentFwd   = maxDotFwd - fwdDots[minRightFwdDotSumIdx];
 
     const auto blPos = triVertices[minRightFwdDotSumIdx];
+
+    AudioEngine.ReportGlassCollisionEvent(AE_GLASS_BREAK_FAST, vehicle->GetPosition()); // exe 0x71C99E: event 0x7E, missing in the port
+
+    // exe 0x71C9B1-0x71CA32: centre = (fwd * (extentFwd * 0.5) + blPos) + right * (extentRight * 0.5); x keeps the products unrounded, y/z round the products to floats
+    const float halfFwd = extentFwd * 0.5f, halfRight = extentRight * 0.5f;
+    const float fwdHalfY = (float)((x87d)fwd.y * halfFwd), fwdHalfZ = (float)((x87d)fwd.z * halfFwd);
+    const float rightHalfY = (float)((x87d)right.y * halfRight), rightHalfZ = (float)((x87d)right.z * halfRight);
+    const float centerSumY = (float)((x87d)fwdHalfY + blPos.y), centerSumZ = (float)((x87d)fwdHalfZ + blPos.z);
+    const CVector center{
+        (float)((((x87d)fwd.x * halfFwd) + blPos.x) + (x87d)right.x * halfRight),
+        (float)((x87d)centerSumY + rightHalfY),
+        (float)((x87d)centerSumZ + rightHalfZ)
+    };
+
     GeneratePanesForWindow(
         ePaneType::CAR,
         blPos,
         fwd * extentFwd,
         right * extentRight, vehicle->m_vecMoveSpeed,
-        blPos + fwd * extentFwd / 2.f + right * extentRight / 2.f,
+        center,
         0.1f,
         false,
         false,

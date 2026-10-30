@@ -1113,12 +1113,19 @@ void CMenuManager::SmallMessageScreen(const char* key) {
     );
 
     float x = StretchX(320.0f);
-    float y = StretchY(190.0f);
 
-    const auto lines = CFont::GetNumberLines(StretchX(320.0f), StretchX(135.0f), TheText.Get(key));
+    const auto lines = CFont::GetNumberLines(StretchX(320.0f), StretchY(135.0f), TheText.Get(key)); // exe 0x5741BA: the y is the Y-stretched 135 (port: X)
+    // exe 0x574211-0x57426F: the text y is an int (ftol): 200 - lines * 9 for several lines, 190 for one; off the reference height H * (200/448) - lines * (H * (9/448)) / H * (190/448) (float constants 0x86528C / 0x865288 / 0x865284)
+    const bool refHeight = RsGlobal.maximumHeight == DEFAULT_SCREEN_HEIGHT;
+    int32 yi;
     if (lines > 1) {
-        y = StretchY(float(200 - lines * 9));
+        yi = refHeight
+            ? 200 - lines * 9
+            : NOTSA_FTOL(int32, (x87d)RsGlobal.maximumHeight * (x87d)std::bit_cast<float>(0x3EE49249u) - (x87d)lines * ((x87d)RsGlobal.maximumHeight * (x87d)std::bit_cast<float>(0x3CA49249u)));
+    } else {
+        yi = refHeight ? 190 : NOTSA_FTOL(int32, (x87d)RsGlobal.maximumHeight * (x87d)std::bit_cast<float>(0x3ED92492u));
     }
+    float y = (float)yi;
 
     auto text = TheText.Get(key);
     if (!TheText.m_bCdErrorLoaded) {

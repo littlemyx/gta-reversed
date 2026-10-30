@@ -1221,7 +1221,7 @@ void CMenuManager::CheckCodesForControls(eControllerType type) {
         if (keyCode == rsESC) {
             AudioEngine.ReportFrontendAudioEvent(AE_FRONTEND_ERROR);
             escapePressed = true;
-        } else if (!keyCode || notsa::contains({ rsF1, rsF2, rsF3, rsLWIN, rsRWIN }, keyCode)) { // Fixed from v1.01
+        } else if (!keyCode || notsa::contains({ rsF1, rsF2, rsF3, rsF9, rsPAD5, rsRALT, rsLWIN, rsRWIN }, keyCode)) { // exe 0x57DC21..0x57DC5E: 1001-1003, 1009, 1032, 1052-1054
             AudioEngine.ReportFrontendAudioEvent(AE_FRONTEND_ERROR);
             invalidKeyPressed = true;
         } else {
@@ -1246,13 +1246,27 @@ void CMenuManager::CheckCodesForControls(eControllerType type) {
         break;
     }
 
-    // Handle escape key or invalid key press
-    if (escapePressed || invalidKeyPressed || (m_MenuIsAbleToQuit && escapePressed)) {
+    // exe 0x57DB78..0x57DDD8: with m_MenuIsAbleToQuit set (joystick combo action) only escape resets the state, otherwise nothing is bound;
+    // an invalid key returns WITHOUT resetting anything (the redefine window keeps waiting)
+    if (m_MenuIsAbleToQuit) {
+        if (escapePressed) {
+            m_DeleteAllNextDefine = 0;
+            m_pPressedKey = nullptr;
+            m_EditingControlOptions = false;
+            m_KeyPressedCode = (RsKeyCodes)-1;
+            m_bJustOpenedControlRedefWindow = false;
+        }
+        return;
+    }
+    if (escapePressed) {
         m_DeleteAllNextDefine = 0;
         m_pPressedKey = nullptr;
         m_EditingControlOptions = false;
         m_KeyPressedCode = (RsKeyCodes)-1;
         m_bJustOpenedControlRedefWindow = false;
+        return;
+    }
+    if (invalidKeyPressed) {
         return;
     }
 

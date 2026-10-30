@@ -65,7 +65,7 @@ void CUpsideDownCarCheck::UpdateTimers() {
 // never used
 bool CUpsideDownCarCheck::AreAnyCarsUpsideDown() {
     for (auto& car : m_aUpsideDownCars) {
-        if (car.m_nHandle >= 0 && car.m_nTime >= UPSIDE_DOWN_CAR_MIN_TIME) {
+        if (car.m_nHandle >= 0 && car.m_nTime > UPSIDE_DOWN_CAR_MIN_TIME) { // exe 0x4638B0: `ja`
             return true;
         }
     }

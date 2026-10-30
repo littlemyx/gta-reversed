@@ -514,11 +514,14 @@ void CSprite2d::DrawBarChart(float x, float y, uint16 width, uint8 height, float
     RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RWRSTATE(NULL));
     RwRenderStateSet(rwRENDERSTATESHADEMODE,     RWRSTATE(rwSHADEMODEFLAT));
 
-    progress = std::clamp(progress, 0.0f, 100.0f);
+    // exe 0x72865C: only the lower bound is clamped (`progress < 0` -> 0, NaN stays); values above 100 reach the bar through min(unclampedCurrX, endX) and the percentage text unchanged
+    if (progress < 0.0f) {
+        progress = 0.0f;
+    }
 
     const float endX = x + (float)width;
-    const float unclampedCurrX = x + (float)width * progress * ExeRecip(100.0f);
-    const float currX = std::min(unclampedCurrX, endX);
+    const float unclampedCurrX = x + (float)width * (progress * ExeRecip(100.0f)); // 0x858C58 = 0.01f: width * (progress * 0.01f) + x
+    const float currX = (unclampedCurrX < endX) ? unclampedCurrX : endX; // fcom + `test ah, 5`: NaN gives endX
     const auto fheight = (float)height;
 
     // Progress rect
@@ -528,12 +531,10 @@ void CSprite2d::DrawBarChart(float x, float y, uint16 width, uint8 height, float
 
     if (progressAdd) {
         addColor.a = color.a;
-        DrawRect({
-            std::max<float>(x - 1.0f, currX - progressAdd < 0 ? 127.0f : progressAdd), // FIX_BUGS: Because of the progressAdd overflow, the green bar is out of bounds.
-            y,
-            currX,
-            y + fheight
-        }, addColor);
+        // exe 0x7287A7: left = max(x - 1, currX - (int8)progressAdd) (fisub of the sign-extended byte, fcom + `test ah, 0x41`: strict greater wins)
+        const float xm1  = x - 1.0f;
+        const float diff = currX - (float)(int32)progressAdd;
+        DrawRect({ (diff > xm1) ? diff : xm1, y, currX, y + fheight }, addColor);
     }
 
     if (drawBlackBorder) {
@@ -541,9 +542,9 @@ void CSprite2d::DrawBarChart(float x, float y, uint16 width, uint8 height, float
         const CRect rects[] = {
             //left,     top,              right,    bottom
             { x,        y,                endX,     y + h       },       // Top
-            { x,        y + fheight - h,  endX,     y + fheight },       // Bottom
+            { x,        y + fheight,      endX,     y + fheight - h },   // Bottom (exe 0x72889B: bottom = y + height, top = y + height - h, i.e. flipped against Top)
             { x,        y,                x + w,    y + fheight },       // Left
-            { endX - w, y,                endX,     y + fheight }        // Right
+            { endX,     y,                endX - w, y + fheight }        // Right (exe 0x728933: left = endX, right = endX - w)
         };
 
         const auto black = CRGBA{ 0, 0, 0, color.a };

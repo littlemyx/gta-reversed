@@ -476,72 +476,88 @@ void CAEPedAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) {
 
 // 0x4E13A0
 void CAEPedAudioEntity::HandleFootstepEvent(eAudioEvents event, float volume, float speed, eSurfaceType forcedSurfaceType) {
-    volume += GetDefaultVolume(event);
-
-    if (m_pPed->bIsInTheAir) {
+    if (m_pPed->bIsInTheAir) { // 0x4E13B3
         return;
     }
 
-    const auto PlayFootstepSound = [&] (eSoundBank bank, eSoundBankSlot slot, eSoundID sfx, int16 playTime = 0) {
-        if (AEAudioHardware.IsSoundBankLoaded(SND_BANK_FEET_GENERIC, slot)) {
-            AESoundManager.PlaySound({
-                .BankSlotID         = slot,
-                .SoundID            = sfx,
-                .AudioEntity        = this,
-                .Pos                = m_pPed->GetPosition(),
-                .Volume             = volume,
-                .Speed              = speed,
-                .Flags              = SOUND_START_PERCENTAGE,
-                .FrequencyVariance  = 0.0588f,
-                .PlayTime           = playTime,
-                .RegisterWithEntity = m_pPed,
-            });
+    // 0x4E13C7..0x4E13F2: (default + volume) + rand(-3, 3), the random value is drawn for the player and for every other ped
+    volume = GetDefaultVolume(event) + volume;
+    volume = (float)CAEAudioUtility::GetRandomNumberInRange(-3, 3) + volume;
+
+    // 0x4E1777..0x4E17CE: every footstep sound is played with these parameters
+    const auto PlayFootstepSound = [&](eSoundBankSlot slot, eSoundID sfx, int16 playTime) {
+        AESoundManager.PlaySound({
+            .BankSlotID         = slot,
+            .SoundID            = sfx,
+            .AudioEntity        = this,
+            .Pos                = m_pPed->GetPosition(),
+            .Volume             = volume,
+            .Speed              = speed,
+            .Flags              = SOUND_START_PERCENTAGE,
+            .FrequencyVariance  = 0.0588f,
+            .PlayTime           = playTime,
+            .RegisterWithEntity = m_pPed,
+        });
+    };
+
+    // 0x4E1686 (the player's fallback) / 0x4E172D (every other ped): the generic bank, sound 1..5
+    const auto PlayGenericFootstepSound = [&]() {
+        if (!AEAudioHardware.IsSoundBankLoaded(SND_BANK_FEET_GENERIC, SND_BANK_SLOT_FOOTSTEPS_GENERIC)) {
+            AEAudioHardware.LoadSoundBank(SND_BANK_FEET_GENERIC, SND_BANK_SLOT_FOOTSTEPS_GENERIC);
+            return;
+        }
+        PlayFootstepSound(SND_BANK_SLOT_FOOTSTEPS_GENERIC, (eSoundID)(CAEAudioUtility::GetRandomNumberInRange(1, 5)), 0);
+    };
+
+    if (FindPlayerPed(-1) != m_pPed) { // 0x4E172D
+        if (!AEAudioHardware.IsSoundBankLoaded(SND_BANK_FEET_GENERIC, SND_BANK_SLOT_FOOTSTEPS_GENERIC)) {
+            AEAudioHardware.LoadSoundBank(SND_BANK_FEET_GENERIC, SND_BANK_SLOT_FOOTSTEPS_GENERIC);
+            return;
+        }
+        volume -= 3.0f; // 0x4E1743
+        PlayFootstepSound(SND_BANK_SLOT_FOOTSTEPS_GENERIC, (eSoundID)(CAEAudioUtility::GetRandomNumberInRange(1, 5)), 0);
+        return;
+    }
+
+    // The player: one bank per surface, all in the player's footstep slot. A bank that isn't there yet is requested (the sounds
+    // that play in the slot at that moment are cancelled) and the generic footstep is played instead.
+    const auto PlayPlayerSurfaceFootstepSound = [&](eSoundBank bank, int32 maxSfx) {
+        if (AEAudioHardware.IsSoundBankLoaded(bank, SND_BANK_SLOT_FOOTSTEPS_PLAYER)) {
+            PlayFootstepSound(SND_BANK_SLOT_FOOTSTEPS_PLAYER, (eSoundID)(CAEAudioUtility::GetRandomNumberInRange(0, maxSfx)), 0);
+            return;
+        }
+        const auto status = AESoundManager.AreSoundsPlayingInBankSlot(SND_BANK_SLOT_FOOTSTEPS_PLAYER);
+        if (status == 1 || status == 2) {
+            AESoundManager.CancelSoundsInBankSlot(SND_BANK_SLOT_FOOTSTEPS_PLAYER, false);
+        }
+        AEAudioHardware.LoadSoundBank(bank, SND_BANK_SLOT_FOOTSTEPS_PLAYER);
+        PlayGenericFootstepSound();
+    };
+
+    const auto contactSurface = m_pPed->m_nContactSurface;
+    if (g_surfaceInfos.IsAudioWater((uint8)forcedSurfaceType) || g_surfaceInfos.IsAudioWater(contactSurface)) { // 0x4E1703
+        if (AEAudioHardware.IsSoundBankLoaded(SND_BANK_GENRL_SWIMMING, SND_BANK_SLOT_SWIMMING)) {
+            PlayFootstepSound(SND_BANK_SLOT_SWIMMING, (eSoundID)(CAEAudioUtility::GetRandomNumberInRange(0, 4)), 50);
         } else {
-            AEAudioHardware.LoadSoundBank(bank, slot);
+            AEAudioHardware.LoadSoundBank(SND_BANK_GENRL_SWIMMING, SND_BANK_SLOT_SWIMMING);
+            PlayGenericFootstepSound();
         }
-    };
-
-    const auto PlayRandomGenericFootstepSound = [&] () {
-        PlayFootstepSound(SND_BANK_FEET_GENERIC, SND_BANK_SLOT_FOOTSTEPS_GENERIC, (eSoundID)(CAEAudioUtility::GetRandomNumberInRange(1, 5)));
-    };
-
-    if (FindPlayerPed(-1) != m_pPed) {
-        PlayRandomGenericFootstepSound();
-    } else {
-        const auto TryPlayPlayerFootstepSound = [&] (eSoundBank bank, eSoundBankSlot slot, eSoundID sfx, bool needCancelSoundsInSlot = false, int16 playTime = 0) {
-            if (AEAudioHardware.IsSoundBankLoaded(bank, slot)) {
-                PlayFootstepSound(bank, slot, sfx);
-                return true;
-            } else {
-                if (needCancelSoundsInSlot) {
-                    if (AESoundManager.AreSoundsPlayingInBankSlot(slot) - 1 <= 1) {
-                        AESoundManager.CancelSoundsInBankSlot(slot, false);
-                    }
-                }
-                AEAudioHardware.LoadSoundBank(bank, slot);
-                PlayRandomGenericFootstepSound();
-                return false;
-            }
-        };
-        if (g_surfaceInfos.IsAudioWater(forcedSurfaceType) || g_surfaceInfos.IsAudioWater(m_pPed->m_nContactSurface)) { // 0x4E1703
-            TryPlayPlayerFootstepSound(SND_BANK_GENRL_SWIMMING, SND_BANK_SLOT_SWIMMING, (eSoundID)(CAEAudioUtility::GetRandomNumberInRange(0, 4)), false, 50);
-        } else if (g_surfaceInfos.IsAudioConcrete(m_pPed->m_nContactSurface)) { // 0x4E145E
-            PlayRandomGenericFootstepSound();
-        } else if (g_surfaceInfos.IsAudioGrass(m_pPed->m_nContactSurface) || g_surfaceInfos.IsAudioLongGrass(m_pPed->m_nContactSurface)) { // 0x4E16BA
-            TryPlayPlayerFootstepSound(SND_BANK_FEET_GRASS, SND_BANK_SLOT_FOOTSTEPS_PLAYER, (eSoundID)(CAEAudioUtility::GetRandomNumberInRange(0, 4)), true);
-        } else if (g_surfaceInfos.IsAudioSand(m_pPed->m_nContactSurface)) { // 0x4E14B7
-            TryPlayPlayerFootstepSound(SND_BANK_FEET_SAND, SND_BANK_SLOT_FOOTSTEPS_PLAYER, (eSoundID)(CAEAudioUtility::GetRandomNumberInRange(0, 3)), true);
-        } else if (g_surfaceInfos.IsAudioGravel(m_pPed->m_nContactSurface)) { // 0x4E1531
-            TryPlayPlayerFootstepSound(SND_BANK_FEET_GRAVEL, SND_BANK_SLOT_FOOTSTEPS_PLAYER, (eSoundID)(CAEAudioUtility::GetRandomNumberInRange(0, 4)), true);
-        } else if (g_surfaceInfos.IsAudioWood(m_pPed->m_nContactSurface)) { // 0x4E157D
-            TryPlayPlayerFootstepSound(SND_BANK_FEET_WOOD, SND_BANK_SLOT_FOOTSTEPS_PLAYER, (eSoundID)(CAEAudioUtility::GetRandomNumberInRange(0, 4)), true);
-        } else if (g_surfaceInfos.IsAudioTile(m_pPed->m_nContactSurface)) { // 0x4E15DB
-            TryPlayPlayerFootstepSound(SND_BANK_FEET_TILE, SND_BANK_SLOT_FOOTSTEPS_PLAYER, (eSoundID)(CAEAudioUtility::GetRandomNumberInRange(0, 4)), true);
-        } else if (g_surfaceInfos.IsAudioMetal(m_pPed->m_nContactSurface)) { // 0x4E1636
-            TryPlayPlayerFootstepSound(SND_BANK_FEET_METAL, SND_BANK_SLOT_FOOTSTEPS_PLAYER, (eSoundID)(CAEAudioUtility::GetRandomNumberInRange(0, 4)), true);
-        } else { // 0x4E168F
-            PlayRandomGenericFootstepSound();
-        }
+    } else if (g_surfaceInfos.IsAudioConcrete(contactSurface)) { // 0x4E145E
+        PlayGenericFootstepSound();
+    } else if (g_surfaceInfos.IsAudioGrass(contactSurface) || g_surfaceInfos.IsAudioLongGrass(contactSurface)) { // 0x4E16BA
+        PlayPlayerSurfaceFootstepSound(SND_BANK_FEET_GRASS, 4);
+    } else if (g_surfaceInfos.IsAudioSand(contactSurface)) { // 0x4E14B7
+        PlayPlayerSurfaceFootstepSound(SND_BANK_FEET_SAND, 3);
+    } else if (g_surfaceInfos.IsAudioGravel(contactSurface)) { // 0x4E1531
+        PlayPlayerSurfaceFootstepSound(SND_BANK_FEET_GRAVEL, 4);
+    } else if (g_surfaceInfos.IsAudioWood(contactSurface)) { // 0x4E157D
+        PlayPlayerSurfaceFootstepSound(SND_BANK_FEET_WOOD, 4);
+    } else if (g_surfaceInfos.IsAudioTile(contactSurface)) { // 0x4E15DB
+        PlayPlayerSurfaceFootstepSound(SND_BANK_FEET_TILE, 4);
+    } else if (g_surfaceInfos.IsAudioMetal(contactSurface)) { // 0x4E1636
+        PlayPlayerSurfaceFootstepSound(SND_BANK_FEET_METAL, 4);
+    } else { // 0x4E168F
+        PlayGenericFootstepSound();
     }
 }
 

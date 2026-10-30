@@ -82,3 +82,8 @@
 - Phase 2 queue done except S45c/S57e; coverage audit (COVERAGE.md): 487 gameplay hooks uncovered -> S67-S80; 1521 audio/fx/UI hooks left for a phase 3.
 - Gate df4d307ec GREEN (74/74, soak OK, regress 70 PASS, portable 0); C:\gta-play = df4d307ec. Gate GPU tests starved ~2h by 5 agents' combat regress (gpu.lock has no queue) -> phase-3 agents run regress once at the end. Next gate 8f00acb1d (229 commits: S67-S80 phase 2b, S81/S82/S86/S91 phase 3).
 - 10:2x gate 8f00acb1d stopped (GPU-starved 3h, mis-read as stuck: its log only prints the first wait line); restarted on 71979d2d1 with GPULOCK-PRIO (gpu.prio). Deleted 9 empty worktree dirs (user OK).
+
+## Checkpoint 2026-10-30 (evening)
+- Gate 4ca75523c GREEN (74/74, soak OK, regress 70/70, portable 0); C:\gta-play = 4ca75523c.
+- Gate on 67dedce7a started (S106, S111-S114 not yet gated).
+- Pacing: <=2 sweep agents (quota). Running: S96, S115. Left: S97 (after S96), S117, S101b (3 rows).

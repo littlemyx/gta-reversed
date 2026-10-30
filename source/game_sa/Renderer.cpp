@@ -979,7 +979,7 @@ int32 CRenderer::SetupEntityVisibility(CEntity* entity, float& outDistance) {
             position = entity->GetLod()->GetPosition();
         }
 
-        outDistance = DistanceBetweenPoints(ms_vecCameraPosition, position);
+        outDistance = ExeDistanceZYX(position, ms_vecCameraPosition); // 0x5545C0-0x5545D2: inline z, y, x sum of squares
         if (outDistance > MAX_LOD_DISTANCE) {
             const float fDrawDistanceRadius = TheCamera.m_fLODDistMultiplier * baseModelInfo->m_fDrawDistance;
             if (fDrawDistanceRadius > MAX_LOD_DISTANCE &&

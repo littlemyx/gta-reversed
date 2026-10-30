@@ -246,7 +246,7 @@
 | S97 | phase3 tier B (PHASE3.md) | 34 | pending | MenuManager.cpp, MenuSystem.cpp |
 | S98 | phase3 tier B (PHASE3.md) | 37 | done (31 M, 6 fixed) | AtomicModelInfo.cpp, BaseModelInfo.cpp, ClumpModelInfo.cpp, DamageAtomicModelInfo.cpp, ModelInfo.cpp, PedModelInfo.cpp |
 | S99 | phase3 tier B (PHASE3.md) | 39 | pending | VehicleModelInfo.cpp, WeaponModelInfo.cpp |
-| S100 | phase3 tier B (PHASE3.md) | 35 | pending | RealTimeShadow.cpp, RealTimeShadowManager.cpp, ShadowCamera.cpp |
+| S100 | phase3 tier B (PHASE3.md) | 35 | done (30 M, 5 fixed) | RealTimeShadow.cpp, RealTimeShadowManager.cpp, ShadowCamera.cpp |
 | S101 | phase3 tier B (PHASE3.md) | 35 | pending | Shadows.cpp, StencilShadowObject.cpp, StencilShadows.cpp |
 | S102 | phase3 tier B (PHASE3.md) | 40 | partial 16/40 (12 M, 4 fixed) -> S102b | BrightLights.cpp, Clouds.cpp, Coronas.cpp, Mirrors.cpp, MotionBlurStreaks.cpp, Occlusion.cpp |
 | S103 | phase3 tier B (PHASE3.md) | 36 | pending | PostEffects.cpp, RegisteredMotionBlurStreak.cpp, ShinyTexts.cpp, SpecialFX.cpp |

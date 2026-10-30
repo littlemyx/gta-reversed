@@ -516,7 +516,7 @@ void CStats::LoadStatUpdateConditions() {
             msg.condition = STATMESSAGE_MORETHAN;
         }
         msg.value = value;
-        strcpy_s(msg.text_id, textId);
+        strncpy(msg.text_id, textId, sizeof(msg.text_id)); // exe 0x559902: sscanf("%s") straight into text_id[8], the NUL spills one byte; an 8 char id aborted strcpy_s
 
         numMessages++;
     }

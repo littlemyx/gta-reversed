@@ -203,7 +203,7 @@
 | S60b | rest of S60 | 17 | done (14 M, 3 fixed) | Task.cpp, TaskAllocator.cpp, TaskAllocatorAttack.cpp, TaskAllocatorKillOnFoot.cpp, TaskAllocatorKillThreatsBasic.cpp, TaskAllocatorKillThreatsBasicRandomGroup.cpp, TaskAllocatorKillThreatsDriveby.cpp, TaskAllocatorPlayerCommandAttack.cpp, TaskComplex.cpp, TaskManager.cpp |
 | S65b | rest of S65 | 2 | done (1 M, 4 fixed incl. 3 Zones extras) | WeaponEffects.cpp, WeaponInfo.cpp |
 | S57e | rest of S57d | 6 | done (2 M, 4 fixed + IsVehicleStopped) | Replay.cpp |
-| S45c | rest of S45b (ProcessLightsForEntity) | 1 | pending | Entity.cpp |
+| S45c | rest of S45b (ProcessLightsForEntity) | 1 | done (1 fixed, 5 deviations) | Entity.cpp |
 | S67 | phase2b: coverage audit (COVERAGE.md) | 13 | done (2 M, 3 fixed, 2 covered, 7 dead in exe) | Automobile.cpp, Cam.cpp, CollisionEventScanner.cpp, Cover.cpp, CustomCarPlateMgr.cpp, Entity.cpp |
 | S68 | phase2b: coverage audit (COVERAGE.md) | 36 | pending | Cheat.cpp |
 | S69 | phase2b: coverage audit (COVERAGE.md) | 38 | pending | ColAccel.cpp, ColModel.cpp, Collision.cpp, CollisionData.cpp, TempColModels.cpp |

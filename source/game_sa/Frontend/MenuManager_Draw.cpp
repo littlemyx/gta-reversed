@@ -1398,14 +1398,8 @@ uint32 CMenuManager::GetMaxAction() {
     // TODO: Magis values
     switch (m_RedefiningControls) {
     case eControlMode::FOOT:
-        switch (m_ControlMethod) {
-        case eController::MOUSE_PLUS_KEYS:
-            return 22;
-        case eController::JOYPAD:
-            return 28;
-        default:
-            NOTSA_UNREACHABLE();
-        }
+        // exe 0x57D923: the method byte is only tested against 0, anything else counts as the joypad
+        return m_ControlMethod == eController::MOUSE_PLUS_KEYS ? 22u : 28u;
     case eControlMode::VEHICLE:
         return 25;
     default:
@@ -1419,14 +1413,8 @@ uint32 CMenuManager::GetVerticalSpacing() {
     // TODO: Magis values
     switch (m_RedefiningControls) {
     case eControlMode::FOOT:
-        switch (m_ControlMethod) {
-        case eController::MOUSE_PLUS_KEYS:
-            return 15; // 4 * 1 + 11
-        case eController::JOYPAD:
-            return 11; // 4 * 0 + 11
-        default:
-            NOTSA_UNREACHABLE();
-        }
+        // exe 0x57D8FA: (method == 0) * 4 + 11
+        return m_ControlMethod == eController::MOUSE_PLUS_KEYS ? 15u : 11u; // 4 * 1 + 11 / 4 * 0 + 11
     case eControlMode::VEHICLE:
         return 13;
     default:

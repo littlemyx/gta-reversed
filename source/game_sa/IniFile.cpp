@@ -19,7 +19,8 @@ void CIniFile::LoadIniFile() {
     if (file) {
         CFileMgr::ReadLine(file, gString, 200);
         VERIFY(sscanf_s(gString, "%f", &PedNumberMultiplier) == 1);
-        if (PedNumberMultiplier >= 0.5f) {
+        // exe 0x56D0BB: `!(x < 0.5)` (fcomp + test ah,0x41), then `x > 3.0` (jp skips unordered): a NaN stays a NaN
+        if (!(PedNumberMultiplier < 0.5f)) {
             if (PedNumberMultiplier > 3.0f)
                 PedNumberMultiplier = 3.0f;
         } else {
@@ -28,7 +29,8 @@ void CIniFile::LoadIniFile() {
 
         CFileMgr::ReadLine(file, gString, 200);
         VERIFY(sscanf_s(gString, "%f", &CarNumberMultiplier) == 1);
-        if (CarNumberMultiplier >= 0.5f) {
+        // exe 0x56D0BB: `!(x < 0.5)` (fcomp + test ah,0x41), then `x > 3.0` (jp skips unordered): a NaN stays a NaN
+        if (!(CarNumberMultiplier < 0.5f)) {
             if (CarNumberMultiplier > 3.0f)
                 CarNumberMultiplier = 3.0f;
         } else {

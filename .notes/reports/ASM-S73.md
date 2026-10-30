@@ -5,18 +5,18 @@ Verdicts: 28 MATCH, 14 FIXED (12 commits), 2 NOT_REACHED (no exe caller: CCutsce
 
 | commit | function | finding |
 |---|---|---|
-| 1d9f35b64 | CCutsceneMgr::LoadCutsceneData_preload | model-unload loop stopped at CUTOBJ19 (exe: 20 iterations, CUTOBJ01..CUTOBJ20, signed refcount `jg`); script-appended object/anim names were copied from the destination slot index instead of the i-th append slot (wrong names whenever the .CUT file defines objects too) |
-| dfb2b68b8 | CCutsceneMgr::LoadCutsceneData_loading | waited for every model (exe waits only for the 300..319 cutscene models); bone attachments attached the ped object to itself (exe: attachment object = m_nCutsceneAttachmentObjectId, target = ped object) |
-| edf1130de | CCutsceneMgr::Update_overlay | particle-effect stop and subtitle start tests are strict unsigned `>` (jbe), port had `>=` (one frame early) |
-| 2d229fb5d | CCutsceneMgr::DeleteCutsceneData_overlay | objects freed last to first; `ms_useCutsceneShadows` (0x8AC158) reset to 1; `CPad::Clear` after the streaming restore, not before MakePlayerSafe |
-| 6193fa214 | CCutsceneMgr::HideRequestedObjects (+ CalculateBoundingSphereRadiusCB) | the hidden-entity counter holds the number of `remove` lines on entry and must be reset to 0 before the entities are registered (port appended after it: wrong slots, 50-slot overrun); sphere CB stores only a strictly greater radius |
-| 4d7d0d821 | CCutsceneMgr::UpdateCutsceneObjectBoundingBox + CreateCutsceneObject | radius starts at the col model's current radius and is capped at max(20, current); CreateCutsceneObject zeroes the radius first. Port started at 0 and never capped (cutscene object col spheres could be far larger than the exe) |
-| 09c0236ec | CFormation::GenerateGatherDestinations | angle = (i/n*2pi - rot) + pi/n (association) |
-| ebcb9208a | CFormation::DistributeDestinations (+0x69B1B0, CPointList::GetCentroid) | centroids are sum*(1/n); distances sqrt((dz2+dy2)+dx2); nearest-destination search compares the strict float distance starting from 1e7 and adds it to the cost (port: squared distance from FLT_MAX, sqrt'd afterwards); best cost starts at 999999.875 |
-| 9f87a1eb7 | CFormation::DistributeDestinations_CoverPoints | NaN arm of the distance prefilter |
-| 117aa1a58 | CFormation::DistributeDestinations_PedsToAttack | nearest pair by strict sqrt 2D distance from 999999.875 (port: squared from FLT_MAX) |
-| 89a82d8e1 | CFormation::FindCoverPoints | speed < 0.005, max.z < 1.5, up.z > 0.95 prefilters skip on NaN like the exe |
-| 4c90961a0 | CIdleCam::ProcessFOVZoom | FOV settle tests take the interpolation arm on NaN |
+| 3b09bee27 | CCutsceneMgr::LoadCutsceneData_preload | model-unload loop stopped at CUTOBJ19 (exe: 20 iterations, CUTOBJ01..CUTOBJ20, signed refcount `jg`); script-appended object/anim names were copied from the destination slot index instead of the i-th append slot (wrong names whenever the .CUT file defines objects too) |
+| 40fd98cdd | CCutsceneMgr::LoadCutsceneData_loading | waited for every model (exe waits only for the 300..319 cutscene models); bone attachments attached the ped object to itself (exe: attachment object = m_nCutsceneAttachmentObjectId, target = ped object) |
+| 22f5e5616 | CCutsceneMgr::Update_overlay | particle-effect stop and subtitle start tests are strict unsigned `>` (jbe), port had `>=` (one frame early) |
+| 9d00a8d77 | CCutsceneMgr::DeleteCutsceneData_overlay | objects freed last to first; `ms_useCutsceneShadows` (0x8AC158) reset to 1; `CPad::Clear` after the streaming restore, not before MakePlayerSafe |
+| a8d1e1a80 | CCutsceneMgr::HideRequestedObjects (+ CalculateBoundingSphereRadiusCB) | the hidden-entity counter holds the number of `remove` lines on entry and must be reset to 0 before the entities are registered (port appended after it: wrong slots, 50-slot overrun); sphere CB stores only a strictly greater radius |
+| e456d3a94 | CCutsceneMgr::UpdateCutsceneObjectBoundingBox + CreateCutsceneObject | radius starts at the col model's current radius and is capped at max(20, current); CreateCutsceneObject zeroes the radius first. Port started at 0 and never capped (cutscene object col spheres could be far larger than the exe) |
+| 6048995b7 | CFormation::GenerateGatherDestinations | angle = (i/n*2pi - rot) + pi/n (association) |
+| 04b46d718 | CFormation::DistributeDestinations (+0x69B1B0, CPointList::GetCentroid) | centroids are sum*(1/n); distances sqrt((dz2+dy2)+dx2); nearest-destination search compares the strict float distance starting from 1e7 and adds it to the cost (port: squared distance from FLT_MAX, sqrt'd afterwards); best cost starts at 999999.875 |
+| d15027348 | CFormation::DistributeDestinations_CoverPoints | NaN arm of the distance prefilter |
+| 9b52eac09 | CFormation::DistributeDestinations_PedsToAttack | nearest pair by strict sqrt 2D distance from 999999.875 (port: squared from FLT_MAX) |
+| 4b8573d6d | CFormation::FindCoverPoints | speed < 0.005, max.z < 1.5, up.z > 0.95 prefilters skip on NaN like the exe |
+| d7be4367b | CIdleCam::ProcessFOVZoom | FOV settle tests take the interpolation arm on NaN |
 
 ## Notes
 

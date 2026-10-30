@@ -878,8 +878,8 @@ void CPostEffects::InfraredVision(RwRGBA color, RwRGBA colorMain) {
         DrawQuadSetUVs(
             ms_imf.fFrontBufferU1, ms_imf.fFrontBufferV1,
             ms_imf.fFrontBufferU2, ms_imf.fFrontBufferV1,
-            ms_imf.fFrontBufferU1, ms_imf.fFrontBufferV2,
-            ms_imf.fFrontBufferU2, ms_imf.fFrontBufferV2
+            ms_imf.fFrontBufferU2, ms_imf.fFrontBufferV2,
+            ms_imf.fFrontBufferU1, ms_imf.fFrontBufferV2
         );
 
         xy = (float)(j) * radius;

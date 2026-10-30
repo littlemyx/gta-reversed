@@ -409,10 +409,13 @@ void CGlass::FindWindowSectorList(PtrListType& objList, float& outDist, CEntity*
             case eModelInfoSpecialType::GLASS_TYPE_1:
             case eModelInfoSpecialType::GLASS_TYPE_2: {
                 object->SetScanCode(CWorld::ms_nCurrentScanCode);
-                const auto dist = DistanceBetweenPoints(point, object->GetPosition());
+                // exe 0x71B054-0x71B08E: sqrt((dz^2 + dy^2) + dx^2), the differences, squares and sums unrounded
+                const auto& objPos = object->GetPosition();
+                const x87d dx = (x87d)point.x - objPos.x, dy = (x87d)point.y - objPos.y, dz = (x87d)point.z - objPos.z;
+                const x87d dist = std::sqrt((dz * dz + dy * dy) + dx * dx);
                 if (dist < outDist) {
                     outEntity = entity;
-                    outDist = dist;
+                    outDist = (float)dist;
                 }
                 break;
             }

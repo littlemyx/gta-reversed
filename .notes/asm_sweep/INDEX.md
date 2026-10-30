@@ -203,4 +203,4 @@
 | S60b | rest of S60 | 17 | done (14 M, 3 fixed) | Task.cpp, TaskAllocator.cpp, TaskAllocatorAttack.cpp, TaskAllocatorKillOnFoot.cpp, TaskAllocatorKillThreatsBasic.cpp, TaskAllocatorKillThreatsBasicRandomGroup.cpp, TaskAllocatorKillThreatsDriveby.cpp, TaskAllocatorPlayerCommandAttack.cpp, TaskComplex.cpp, TaskManager.cpp |
 | S65b | rest of S65 | 2 | pending | WeaponEffects.cpp, WeaponInfo.cpp |
 | S57e | rest of S57d | 6 | pending | Replay.cpp |
-| S45c | rest of S45b + EntryExitManager Load/Save | 1 | pending | Entity.cpp, EntryExitManager.cpp |
+| S45c | rest of S45b (ProcessLightsForEntity) | 1 | pending | Entity.cpp |

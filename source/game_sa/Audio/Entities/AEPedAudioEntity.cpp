@@ -211,7 +211,7 @@ void CAEPedAudioEntity::AddAudioEvent(eAudioEvents event, float volume, float sp
             .Doppler           = 1.0f,
             .FrameDelay        = 0,
             .Flags             = SOUND_DEFAULT,
-            .FrequencyVariance = 0.06f,
+            .FrequencyVariance = std::bit_cast<float>(0x3D75C290u), // 0x4E2D8C / 0x4E2E29: the exe stores 0x3D75C290, 0.06f is 0x3D75C28F
             .PlayTime          = 0,
             .EventID           = AE_PED_CRUNCH
         });
@@ -230,7 +230,7 @@ void CAEPedAudioEntity::AddAudioEvent(eAudioEvents event, float volume, float sp
             .Doppler           = 1.0f,
             .FrameDelay        = 0,
             .Flags             = SOUND_DEFAULT,
-            .FrequencyVariance = 0.06f,
+            .FrequencyVariance = std::bit_cast<float>(0x3D75C290u), // 0x4E2D8C / 0x4E2E29: the exe stores 0x3D75C290, 0.06f is 0x3D75C28F
             .PlayTime          = 0,
             .EventID           = AE_PED_KNOCK_DOWN
         });

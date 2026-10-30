@@ -2864,18 +2864,19 @@ void CEventHandler::ComputeReviveResponse(CEventRevived* e, CTask* tactive, CTas
         m_Ped->SetPedState(PEDSTATE_IDLE);
         m_Ped->RestartNonPartialAnims();
 
+        // 0x4B981A..0x4B988F: both response tasks are allocated BEFORE the default wander task
+        const auto getUp = new CTaskComplexGetUpAndStandStill{};
+        const auto say   = new CTaskSimpleSay{CTX_GLOBAL_SAVED};
+
         const auto tm = &m_Ped->GetTaskManager();
         if (!tm->GetTaskPrimary(TASK_PRIMARY_DEFAULT) && !tm->GetTaskPrimary(TASK_PRIMARY_PRIMARY)) {
             tm->SetTask(
                 CTaskComplexWander::GetWanderTaskByPedType(m_Ped),
-                TASK_PRIMARY_PRIMARY
+                TASK_PRIMARY_DEFAULT // 0x4B98B6: push 4 = DEFAULT (the port stored it in PRIMARY)
             );
         }
-        
-        return {
-            new CTaskComplexGetUpAndStandStill{},
-            new CTaskSimpleSay{CTX_GLOBAL_SAVED}
-        };
+
+        return { getUp, say };
     }();
 }
 

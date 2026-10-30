@@ -196,5 +196,5 @@
 | S64b | rest of S64 | 31 | partial 11/31 (3 M, 8 fixed) -> S64c | VehicleAnimGroupData.cpp, VehicleRecording.cpp, VehicleSaveStructure.cpp, Weapon.cpp |
 | S57d | rest of S57c | 7 | pending | Replay.cpp |
 | S54c | rest of S54 (+ S53c ComputeClearTarget) | 14 | done (10 M, 3 fixed; S53, S54 complete) | PedGroupIntelligence.cpp, PedGroupMembership.cpp, PedGroupPlacer.cpp |
-| S64c | rest of S64b | 20 | pending | VehicleAnimGroupData.cpp, VehicleRecording.cpp, VehicleSaveStructure.cpp, Weapon.cpp |
+| S64c | rest of S64b | 20 | done (11 M, 8 fixed, LaserScopeDot no callers; S64 complete) | VehicleAnimGroupData.cpp, VehicleRecording.cpp, VehicleSaveStructure.cpp, Weapon.cpp |
 | S46b | rest of S46 | 3 | pending | EventHandler.cpp |

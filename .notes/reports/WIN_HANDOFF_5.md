@@ -74,3 +74,5 @@
 - Briefs: scratchpad phase2_brief.md (+ asm_brief_template.md); cont.py carries NOT/PARTIAL/UNSURE/OPEN rows.
 - Flake to watch: combat.foot.weapon_pickup (after TryToMerge radius 5.0->5.5, SYSTEMIC-6).
 - Pending user decision: delete busy empty dirs C:/gta-wt/asm-s04, asm-s19j, asm-s43c + old scratch.
+
+- [win] 2026-10-30 02:15: S46 was skipped by mistake in the phase-2 launch order — still pending.

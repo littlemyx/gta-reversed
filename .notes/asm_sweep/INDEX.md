@@ -193,6 +193,7 @@
 | S57c | rest of S57b | 10 | 3/10 (3 M) -> S57d | PedIntelligencePool.h, PedPool.h, Replay.cpp, VehiclePool.h |
 | S53c | rest of S53b | 1 | moved to S54c | PedGeometryAnalyser.cpp |
 | S58b | rest of S58 | 17 | done (11 M, 6 fixed; S58 complete; CleanUpThisPed/Vehicle re-verified MATCH) | Shopping.cpp, TheScripts.cpp |
-| S64b | rest of S64 | 31 | pending | VehicleAnimGroupData.cpp, VehicleRecording.cpp, VehicleSaveStructure.cpp, Weapon.cpp |
+| S64b | rest of S64 | 31 | partial 11/31 (3 M, 8 fixed) -> S64c | VehicleAnimGroupData.cpp, VehicleRecording.cpp, VehicleSaveStructure.cpp, Weapon.cpp |
 | S57d | rest of S57c | 7 | pending | Replay.cpp |
 | S54c | rest of S54 (+ S53c ComputeClearTarget) | 14 | pending | PedGroupIntelligence.cpp, PedGroupMembership.cpp, PedGroupPlacer.cpp |
+| S64c | rest of S64b | 20 | pending | VehicleAnimGroupData.cpp, VehicleRecording.cpp, VehicleSaveStructure.cpp, Weapon.cpp |

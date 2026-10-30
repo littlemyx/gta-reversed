@@ -22,8 +22,8 @@ CTaskSimplePlayHandSignalAnim::CTaskSimplePlayHandSignalAnim(AnimationId animati
 }
 
 CTaskSimplePlayHandSignalAnim::~CTaskSimplePlayHandSignalAnim() {
-#ifdef NOTSA_PORTABLE
-    // MAC-PLAY1: CWorld::ShutDown deletes the sector lists one by one; a hand object (CObject) can already be gone when the ped that owns this task is deleted
+#if defined(NOTSA_PORTABLE) || defined(NOTSA_STANDALONE_RUN)
+    // MAC-PLAY1 (portable) / gate 71979d2d1 render_vmode (Win32 run build: access violation in CWorld::Remove during CWorld::ShutDown): CWorld::ShutDown deletes the sector lists one by one; a hand object (CObject) can already be gone when the ped that owns this task is deleted
     // (peds are deleted after objects of earlier sectors). The exe then virtual-calls `Remove` through the stale vtable of a freed pool slot, which happens to be harmless
     // on Win32 (the slot keeps a base vtable followed by other code pointers) but is a null call under clang. Skip hands whose pool slot is already free.
     const auto IsAlive = [](CObject* obj) { return GetObjectPool()->IsObjectValid(obj); };

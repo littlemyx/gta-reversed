@@ -275,7 +275,7 @@
 | S102b | rest of S102 | 24 | partial 12/24 (4 M, 8 fixed) -> S102c | BrightLights.cpp, Clouds.cpp, Coronas.cpp, Mirrors.cpp, Occlusion.cpp, PointLights.cpp |
 | S84c | rest of S84b | 15 | 13/16 (5 M, 8 fixed) -> S84d | AEVehicleAudioEntity.cpp |
 | S102c | rest of S102b | 12 | 9/12 (3 M, 6 fixed) -> S102d | Clouds.cpp, Mirrors.cpp |
-| S101b | rest of S101 | 3 | pending | StencilShadows.cpp |
+| S101b | rest of S101 | 3 | done (2 fixed: shadow-volume light-facing test NaN arm, 1 NR uncalled) | StencilShadows.cpp |
 | S84d | rest of S84c | 3 | done (3 fixed) | AEVehicleAudioEntity.cpp |
 | S102d | rest of S102c | 3 | done (2 fixed; RenderBottomFromHeight -> S104b) | Clouds.cpp |
 | S104b | rest of S104 + RenderBottomFromHeight | 25 | done (14 M, 11 fixed; regress left to gate) | GrassRenderer.cpp, PlantMgr.cpp, PlantSurfPropMgr.cpp, ProcSurfaceInfo.cpp, SurfaceInfos_c.cpp |

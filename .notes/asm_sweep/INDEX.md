@@ -226,7 +226,7 @@
 | S70c | rest of S70b | 16 | done (8 M, 8 fixed) | Birds.cpp, BreakManager_c.cpp, BreakObject_c.cpp, Escalator.cpp, Glass.cpp |
 | S71b | rest of S71 | 15 | 14/15 (8 M, 6 fixed + WithUp) -> S71c | 3dMarker.cpp, Rope.cpp, Ropes.cpp, WaterCannon.cpp, WaterCannons.cpp |
 | S71c | rest of S71b | 1 | done (1 M) | Rope.cpp |
-| S76b | rest of S76 | 20 | pending | ClothesBuilder.cpp, CustomRoadsignMgr.cpp |
+| S76b | rest of S76 | 20 | done (12 M, 8 fixed) | ClothesBuilder.cpp, CustomRoadsignMgr.cpp |
 | S81 | phase3 tier A (PHASE3.md) | 41 | pending | AECollisionAudioEntity.cpp, AEDoorAudioEntity.cpp, AEFireAudioEntity.cpp, AEFrontendAudioEntity.cpp, AEGlobalWeaponAudioEntity.cpp, AEPedAudioEntity.cpp |
 | S82 | phase3 tier A (PHASE3.md) | 44 | pending | AEPedSpeechAudioEntity.cpp, AEPedlessSpeechAudioEntity.cpp, AEPoliceScannerAudioEntity.cpp |
 | S83 | phase3 tier A (PHASE3.md) | 47 | pending | AEScriptAudioEntity.cpp, AETwinLoopSoundEntity.cpp, AEVehicleAudioEntity.cpp |

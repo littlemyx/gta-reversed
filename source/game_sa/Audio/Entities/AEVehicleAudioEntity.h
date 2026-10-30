@@ -266,7 +266,7 @@ protected: // Config:
                 float VolUnderwaterOffset{ 6.f };    //	0x8CBEF0
 
                 float FrqBase{ 0.8f };               // 0xNONE
-                float FrqSpeedFactor{ 0.2f };        // 0xNONE
+                float FrqSpeedFactor{ std::bit_cast<float>(0x3E4CCCCCu) }; // 0x862D00 (1 ulp below 0.2f: 0.19999998807907104)
                 float FrqUnderwaterFactor{ 0.185f }; //	0x8CBEEC
             } MovingOverWaterSound;
         } Boat{};

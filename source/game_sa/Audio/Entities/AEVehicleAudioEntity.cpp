@@ -4435,7 +4435,7 @@ void CAEVehicleAudioEntity::ProcessBoatMovingOverWater(tVehicleParams& vp) {
 
     const auto sf = std::min(0.75f, std::abs(vp.Speed)) * ExeRecip(0.75f);
 
-    auto volume = boat->m_nBoatFlags.bBoatInWater && sf >= 0.00001f
+    auto volume = boat->m_nBoatFlags.bBoatInWater && !(sf < 0.00001f) /* 0x4FA108: jp, NaN passes */
         ? (m_AuSettings.IsSeaplane() ? cfg->VolBaseOfSeaplane : cfg->VolBase) + CAEAudioUtility::AudioLog10(sf) * 20.f
         : -100.f;
     auto speed = cfg->FrqBase + cfg->FrqSpeedFactor * sf;

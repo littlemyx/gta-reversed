@@ -759,12 +759,14 @@ void CClouds::RenderSkyPolys() {
     CVector invNorm = -norm;
     float fBlendFactor = (pos.z - 25.0f) * ExeRecip(80.0f);
     fBlendFactor = std::clamp(fBlendFactor, 0.f, 1.f);
-    fBlendFactor = std::max(fBlendFactor, CWeather::Foggyness);
+    fBlendFactor = fBlendFactor > CWeather::Foggyness ? fBlendFactor : CWeather::Foggyness; // 0x714733: `fcom; test ah,0x41; je` (NaN picks Foggyness; std::max picks the blend)
 
+    // 0x71474A-0x7147D1: `ftol(grey * (1 - b) + sky * b)` stored as the byte, NOT `grey + ftol(b * (sky - grey))` (the two truncate differently, e.g. grey 100, sky 51, b 0.5: 75 vs 76)
+    const float fBlendInv = 1.0f - fBlendFactor;
     RwRGBA belowHorizonGrey = CTimeCycle::m_BelowHorizonGrey;
-    belowHorizonGrey.red   += NOTSA_FTOL(RwUInt8, fBlendFactor * static_cast<float>(CTimeCycle::m_CurrentColours.m_nSkyBottomRed - belowHorizonGrey.red));
-    belowHorizonGrey.green += NOTSA_FTOL(RwUInt8, fBlendFactor * static_cast<float>(CTimeCycle::m_CurrentColours.m_nSkyBottomGreen - belowHorizonGrey.green));
-    belowHorizonGrey.blue  += NOTSA_FTOL(RwUInt8, fBlendFactor * static_cast<float>(CTimeCycle::m_CurrentColours.m_nSkyBottomBlue - belowHorizonGrey.blue));
+    belowHorizonGrey.red   = NOTSA_FTOL(RwUInt8, (float)belowHorizonGrey.red * fBlendInv + (float)CTimeCycle::m_CurrentColours.m_nSkyBottomRed * fBlendFactor);
+    belowHorizonGrey.green = NOTSA_FTOL(RwUInt8, (float)belowHorizonGrey.green * fBlendInv + (float)CTimeCycle::m_CurrentColours.m_nSkyBottomGreen * fBlendFactor);
+    belowHorizonGrey.blue  = NOTSA_FTOL(RwUInt8, (float)belowHorizonGrey.blue * fBlendInv + (float)CTimeCycle::m_CurrentColours.m_nSkyBottomBlue * fBlendFactor);
 
     RwRenderStateSet(rwRENDERSTATETEXTURERASTER,     RWRSTATE(NULL));
     RwRenderStateSet(rwRENDERSTATEZTESTENABLE,       RWRSTATE(NULL));

@@ -133,19 +133,22 @@ void CBulletTraces::AddTrace(const CVector& posMuzzle, const CVector& posBulletH
         case MODE_ROCKETLAUNCHER_RUNABOUT:
         case MODE_ROCKETLAUNCHER_RUNABOUT_HS:
         case MODE_HELICANNON_1STPERSON: {
-            if (FindPlayerEntity()->AsPhysical()->m_vecMoveSpeed.Magnitude() < 0.05f) {
+            const CVector& speed = FindPlayerEntity()->AsPhysical()->m_vecMoveSpeed; // 0x726BA6-0x726BE6: z,y,x sum
+            if ((float)x87::sqrt((x87d)speed.z * speed.z + (x87d)speed.y * speed.y + (x87d)speed.x * speed.x) < 0.05f) {
                 return;
             }
         }
         }
     }
 
+    // 0x726BEC-0x726CF5: z,y,x length; the exe's min() macro evaluates GetRandomNumberInRange(2, 5) a second time (a second rand() call) when it is the smaller operand
     CVector dir = posBulletHit - posMuzzle;
-    const float traceLengthOriginal = dir.Magnitude();
+    const float traceLengthOriginal = (float)x87::sqrt((x87d)dir.z * dir.z + (x87d)dir.y * dir.y + (x87d)dir.x * dir.x);
     dir.Normalise();
 
     const float traceLengthNew = CGeneral::GetRandomNumberInRange(0.0f, traceLengthOriginal);
-    const float fRadius = std::min(CGeneral::GetRandomNumberInRange(2.0f, 5.0f), traceLengthOriginal - traceLengthNew);
+    const float remaining      = traceLengthOriginal - traceLengthNew;
+    const float fRadius        = CGeneral::GetRandomNumberInRange(2.0f, 5.0f) < remaining ? CGeneral::GetRandomNumberInRange(2.0f, 5.0f) : remaining;
 
     CVector from = posMuzzle + dir * traceLengthNew;
     CVector to = from + dir * fRadius;

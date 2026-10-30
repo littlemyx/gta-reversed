@@ -131,8 +131,7 @@ AssocGroupId CVehicleAnimGroup::GetGroup(AnimationId animId) const {
         return m_animFlags.bDoorLocked ? GetSecondGroup() : GetFirstGroup();
     }
 
-    NOTSA_UNREACHABLE(); // Shouldn't ever get to this point
-    // 0x6E3BE4: every other anim id tests the flag bit `2^animId` (pow, then _ftol)
+    // 0x6E3BE4: every other anim id (ANIM_ID_UNKNOWN_26 / 377 is in the jump table range but maps to this too) tests the flag bit `2^animId` (pow, then _ftol); this IS reachable in the exe
     return (m_animFlags.intValue & (uint32)NOTSA_FTOL(int32, x87::pow(2.0, (double)animId))) != 0 ? GetSecondGroup() : GetFirstGroup();
 }
 

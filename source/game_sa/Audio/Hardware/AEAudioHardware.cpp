@@ -835,8 +835,10 @@ void CAEAudioHardware::Query3DSoundEffects() {
         return;
 
     IDirectSound3DBuffer* ppDS3DBuffer{};
-    if (FAILED(ppDSBuffer->QueryInterface(IID_IDirectSound3DBuffer, (LPVOID*)&ppDS3DBuffer)) || !ppDS3DBuffer)
-        ppDSBuffer->Release();
+    if (FAILED(ppDSBuffer->QueryInterface(IID_IDirectSound3DBuffer, (LPVOID*)&ppDS3DBuffer)) || !ppDS3DBuffer) {
+        ppDSBuffer->Release(); // 0x4D854D: the exe returns here (without releasing, and with the result left at 0); the port used to carry on and dereference the null 3D buffer
+        return;
+    }
 
     IKsPropertySet* ppIKsPropertySet{};
     if (ppDS3DBuffer->QueryInterface(IID_IKsPropertySet, (LPVOID*)&ppIKsPropertySet) == S_OK) {

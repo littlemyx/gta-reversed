@@ -1,0 +1,46 @@
+addr	function	verdict	asm range	note	fix commit
+0x5D7D90	CCustomBuildingPipeline::CreatePipe	MATCH	0x5D7D90-0x5D7DA3 (all)	create obj pipe, store, return != null (portable GL3 branch is the intentional R-8 adaptation)	-
+0x5D7380	CCustomBuildingPipeline::DestroyPipe	MATCH	0x5D7380-0x5D739C (all)	RxPipelineDestroy + null	-
+0x5D7E50	CCustomBuildingPipeline::CustomPipeAtomicSetup	MATCH	0x5D7E50-0x5D7E7F (all)	ForAllMaterials, atomic->pipeline, pipeline id 0x53F2009C	-
+0x5D7AA0	CCustomBuildingPipeline::CreateCustomObjPipe	MATCH	0x5D7AA0-0x5D7B37 (all)	lock/add fragment/unlock/find node, instance cb kept, reinstance + render cb, plugin id at +0x2C/+0x30	-
+0x5D7DB0	CCustomBuildingPipeline::CustomPipeMaterialSetup	MATCH	0x5D7DB0-0x5D7E44 (all)	env tex setup (wrap/linear), flags = shine-cam iff shininess != 0 && texture; flags word written whole = exe zero+or	-
+0x5D77A0	CCustomBuildingPipeline::CustomPipeReinstanceCB	MATCH	0x5D77A0-0x5D77C6 (all)	null cb counts as success, cb(object, resEntry+0x18, 1) != 0	-
+0x5D7EC0	CCustomBuildingRenderer::Initialise	MATCH	0x5D7EC0-0x5D7ECA (all)	building pipe then DN pipe	-
+0x5D7EE0	CCustomBuildingRenderer::Shutdown	MATCH	0x5D7EE0-0x5D7EE5 (all)	building destroy then DN destroy	-
+0x5D7EF0	CCustomBuildingRenderer::PluginAttach	MATCH	0x5D7EF0-0x5D7EFB (all)	DN ExtraVertColourPluginAttach normalised to bool	-
+0x5D7F00	CCustomBuildingRenderer::AtomicSetup	MATCH	0x5D7F00-0x5D7F34 (all)	night colours ptr && preLit -> DN setup else building setup	-
+0x5DA450	CCustomCarEnvMapPipeline::RegisterPlugin	MATCH	0x5DA450-0x5DA558 (all)	env mat plugin 0x253F2FC + stream, fake mat data defaults, env atm plugin 0x253F2F4 (no stream), spec mat plugin 0x253F2F6 + stream; failure arms identical	-
+0x5DA020	CCustomCarEnvMapPipeline::CreatePipe	MATCH	0x5DA020-0x5DA12D (all)	obj pipe kept even when mapping unsupported (returns false), g_GameLight cleared, pools 4096/1024/4096 in order	-
+0x5DA130	CCustomCarEnvMapPipeline::DestroyPipe	MATCH	0x5DA130-0x5DA225 (all)	pools mat/atm/spec then pipeline	-
+0x5DA610	CCustomCarEnvMapPipeline::CustomPipeAtomicSetup	MATCH	0x5DA610-0x5DA63F (all)	id 0x53F2009A	-
+0x5D9F80	CCustomCarEnvMapPipeline::CreateCustomObjPipe	FIXED	0x5D9F80-0x5DA010 (all)	exe passes AddFragment result to Unlock (port ignored it; only differs when the fragment add fails)	20895b8ec
+0x5D8490	CCustomCarEnvMapPipeline::CustomPipeInstanceCB	MATCH	0x5D8490-0x5D84B6 (all)	same as building reinstance cb	-
+0x59CD70	BreakableConstructor	MATCH	0x59CD70-0x59CD85 (all)	slot = 0 if offset > 0	-
+0x59CD90	BreakableDestructor	MATCH	0x59CD90-0x59CDDA (all)	destroy numMaterials textures, free blob; slot not cleared in either	-
+0x59D100	BreakablePluginAttach	MATCH	0x59D100-0x59D167 (all)	geometry plugin 4 bytes id 0x253F2FD, stream read/write/getsize, -1 handling	-
+0x59CEC0	BreakableStreamRead	MATCH	0x59CEC0-0x59D0E8 (all)	blob layout/offsets (pos 12nv, uv 8nv, col 4nv, tri 6nt, idx 2nt, names 32nm x2, props 12nm, textures 4nm), read order and sizes, texture read with null mask when mask[0]==0, pointers re-pointed	-
+0x59CDE0	BreakableStreamWrite	MATCH	0x59CDE0-0x59CEB3 (all)	same order/sizes as read	-
+0x59D0F0	BreakableStreamGetSize	MATCH	0x59D0F0-0x59D0F5 (all)	0x34	-
+0x41B310	CCollisionPlugin::PluginAttach	MATCH	0x41B310-0x41B34E (all)	clump plugin size 0 id 0x253F2FA + stream; returns true	-
+0x41B350	CCollisionPlugin::SetModelInfo	MATCH	0x41B350-0x41B359 (all)	stores the model info	-
+0x41B1D0	CCollisionPlugin::ClumpCollisionStreamRead	MATCH	0x41B1D0-0x41B2E0 (all)	COLL/COL2/COL3/unknown (header-based) dispatch, size-0x18, MakeMultipleAlloc, SetColModel(.., true), owns flag bit 0x08 of flags byte	-
+0x5D0470	JPegCompressScreen	MATCH	0x5D0470-0x5D056C (all)	port-only: JCS_EXT_RGBA instead of JCS_RGB (libjpeg-turbo), error_exit hook; scanline loop and float DCT same	-
+0x5D0820	JPegCompressScreenToFile	MATCH	0x5D0820-0x5D0876 (all)	wb, 0x32000 buffer callbacks 0x5D03E0/0x5D0400/0x5D0440 match	-
+0x5D0740	JPegCompressScreenToBuffer	FIXED	0x5D0740-0x5D0799, 0x5D0260-0x5D031C	port never called JPegCompressScreen (buffer stayed empty); term callback copied a whole buffer instead of the used bytes. Unused by the game	b5a222ffe
+0x5D05F0	JPegDecompressToRaster	UNSURE	0x5D05F0-0x5D0736	NOT_REACHED (only caller 0x5D07A0 has no callers). Exe returns bool and converts rows via 0x5D0570(raster,row,0x40,0x240); port is a different inline loop returning void. Left as is	-
+0x5D0320	JPegDecompressToVramFromBuffer	FIXED	0x5D07A0-0x5D0818, 0x5D0320-0x5D0361	hook was on the fill_input_buffer callback 0x5D0320; the function is 0x5D07A0 (bool: false when !enable). Re-pointed, bool return. Dead code in the exe	b5a222ffe
+0x72FAB0	NodeNamePluginAttach	MATCH	0x72FAB0-0x72FAFA (all)	frame plugin 0x18 bytes id 0x253F2FE + stream; != -1	-
+0x72FB30	GetFrameNodeName	MATCH	0x72FB30-0x72FB42 (all)		-
+0x72FB00	SetFrameNodeName	MATCH	0x72FB00-0x72FB26 (all)	strncpy(dst,src,23); dst[23]=0 (port already padded identically; now shares the helper with the copy callback 0x72F9F0, which used strncpy_s)	b746a68d4
+0x72FBD0	PipelinePluginAttach	MATCH	0x72FBD0-0x72FC34 (all)	atomic plugin 4 bytes id 0x253F2F3; exe registers the stream with write cb NULL, port passes a no-op writer on purpose (librw calls the write cb unconditionally); never written in game	-
+0x72FC40	GetPipelineID	MATCH	0x72FC40-0x72FC4D (all)		-
+0x72FC50	SetPipelineID	MATCH	0x72FC50-0x72FC61 (all)		-
+0x4D6150	RpAnimBlendPluginAttach	MATCH	0x4D6150-0x4D61F5 (all)	clump plugin 4 bytes id 0x253F2FB, interpolation scheme (0x1C/0x24, callbacks 0x4D5FA0,0x7C60C0,0x4D60C0,0x7C6720,...)	-
+0x4D6720	RpAnimBlendClumpInit	MATCH	0x4D6720-0x4D6752, 0x4D66A0-0x4D6715	skinned test then skinned/non-skinned init; HasVelocity (bit 8 of first frame) set at the end of both	-
+0x4D6110	ClumpAnimDestruct	MATCH	0x4D6110-0x4D614C (all)	remove all associations, destroy+free data, clear slot	-
+0x4D5F50	RpAnimBlendAllocateData	MATCH	0x4D5F50-0x4D5F72 (all)		-
+0x4D6790	RpAnimBlendClumpAddAssociation	FIXED	0x4D6790-0x4D67D6 (all)	port was NOTSA_UNREACHABLE, exe implements it (no callers): prepend, Start(startTime), flags |= playFlags, blend amount	30974c381
+0x4D64A0	RpAnimBlendClumpFillFrameArray	MATCH	0x4D64A0-0x4D64E2, 0x4D6450-0x4D6498, 0x4D6430	skinned: bones 1..18 by bone tag index (stride 0x18); else by hierarchy id	-
+0x4D6870	RpAnimBlendClumpGetAssociation	MATCH	0x4D6870-0x4D68A1 (all)	hash key compare walking the list from the head	-
+0x4D60E0	RpAnimBlendCreateAnimationForHierarchy	MATCH	0x4D60E0-0x4D610D (all)	numFrames = 2 * numNodes	-
+0x4D34F0	RpAnimBlendClumpUpdateAnimations	FIXED	0x4D34F0-0x4D3773 (all)	exe skips associations whose hierarchy sequence POINTER is null, port tested the count; blend/step/time math, array size 12, flag bits, frame callbacks selection and root flag updates match	6f3618683

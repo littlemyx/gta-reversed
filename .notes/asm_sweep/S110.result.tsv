@@ -1,0 +1,13 @@
+addr	function	verdict	asm range	note	fix commit
+0x552C00	CQuadTreeNode::InitPool	MATCH	0x552C00-0x552C73 (all)	pool of 400 nodes (0x28 each), name arg unused by the exe pool ctor	-
+0x5525A0	CQuadTreeNode::FindSector(CRect)	FIXED	0x5525A0-0x552632 (all)	ordered case identical (centre (R+L)*0.5, (B+T)*0.5, sectors 2/-1/3/0/1); NaN arms: exe sends unordered to -1	5c36bf150
+0x552640	CQuadTreeNode::FindSector(CVector2D)	FIXED	0x552640-0x55269C (all)	ordered case identical; NaN on cy vs posn.y counts as "<=" (cl=1)	5c36bf150
+0x5526A0	CQuadTreeNode::InSector	FIXED	0x5526A0-0x55278E (all)	jump table 0x552798 = sector 0..3 order as port GetSectorRect; exe rejects only on strict ordered violation (jp/jnp arms), NaN passes	5c36bf150
+0x552A40	CQuadTreeNode::DeleteItem(T)	MATCH	0x552A40-0x552A85 (all)	list delete + 4 children in order, null-checked	-
+0x552A90	CQuadTreeNode::DeleteItem(T,CRect)	FIXED	0x552A90-0x552AE7 (all)	children recursion uses the 2-arg overload with the rect; port called the 1-arg one (flushed the subtree). Exe has no null-child check (would crash), port keeps its guard	957b050b2
+0x552CD0	CQuadTreeNode::AddItem	MATCH	0x552CD0-0x552E4B (all)	leaf: head insert; else InSector per sector 0..3, child created with sector rect and level-1 (rect halves verified per case), recursed	-
+0x552870	CQuadTreeNode::GetAll	MATCH	0x552870-0x5528B5 (all)	head-to-tail list copy via AddItem (head insert), then children 0..3	-
+0x5528C0	CQuadTreeNode::GetAllMatching(CRect)	MATCH	0x5528C0-0x552920 (all)	child non-null then InSector, order 0..3	-
+0x552930	CQuadTreeNode::GetAllMatching(CVector2D)	MATCH	0x552930-0x552975 (all)	exe loops, port recurses; same walk (FindSector, -1/null stop)	-
+0x552980	CQuadTreeNode::ForAllMatching(CRect)	MATCH	0x552980-0x5529E1 (all)	callback(rect, item) cdecl order	-
+0x5529F0	CQuadTreeNode::ForAllMatching(CVector2D)	MATCH	0x5529F0-0x552A34 (all)	callback(posn, item)	-

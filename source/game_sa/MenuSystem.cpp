@@ -257,26 +257,46 @@ void CMenuSystem::Display(MenuId id, uint8 unk) {
 // 0x580E00
 void CMenuSystem::DisplayStandardMenu(MenuId id, bool bBrightFont) {
     auto menu = MenuNumber[id];
-    auto fBaseY = SCREEN_STRETCH_Y(20.0f);
+    // exe 0x580E00-0x5816D0: the screen factors W/640 and H/448 stay unrounded x87 values (no 640x448 shortcut), the text offsets accumulate in ints
+    // (ftol after every column/row, kept as 16 bits) and the text y is posY + int
+    const x87d Xr = (x87d)RsGlobal.maximumWidth  * (x87d)SCREEN_RECIPROCAL_X;
+    const x87d Yr = (x87d)RsGlobal.maximumHeight * (x87d)SCREEN_RECIPROCAL_Y;
+    int32 fBaseY = NOTSA_FTOL(int32, Yr * (x87d)20.0f);
     uint8 windowOpacity = bBrightFont ? 0 : 120;
+    // ftol(offset + colWidth) once per column, the next step starts from the low 16 bits
+    const auto AddColumnWidth = [](int32 acc, float colWidth) {
+        return NOTSA_FTOL(int32, (x87d)(float)(uint16)acc + (x87d)colWidth);
+    };
+    // x of the text of column `column`: StretchX(10) + [column width * 0.5 | column width] + posX + int offset (exe order of the adds)
+    const auto TextX = [&](eFontAlignment alignment, int32 column, int32 xOffset) {
+        switch (alignment) {
+        case eFontAlignment::ALIGN_CENTER: // 0
+            return (float)((((x87d)menu->m_afColumnWidth[column] * (x87d)0.5f + Xr * (x87d)10.0f) + (x87d)menu->m_vPosn.x) + (x87d)(float)(uint16)xOffset);
+        case eFontAlignment::ALIGN_RIGHT: // 2
+            return (float)((((Xr * (x87d)10.0f + (x87d)menu->m_afColumnWidth[column])) + (x87d)menu->m_vPosn.x) + (x87d)(float)(uint16)xOffset);
+        default: // left
+            return (float)(((Xr * (x87d)10.0f) + (x87d)menu->m_vPosn.x) + (x87d)(float)(uint16)xOffset);
+        }
+    };
 
     if (menu->m_bColumnBackground) {
-        float menuWidth = 0, menuHeight = 50;
+        int32 menuWidth = 0;
+        uint8 menuHeight = 50;
         for (auto i = 0; i < menu->m_nNumColumns; i++) {
-            menuWidth += menu->m_afColumnWidth[i];
+            menuWidth = AddColumnWidth(menuWidth, menu->m_afColumnWidth[i]);
             if (menu->m_aacColumnHeaders[i][0]) {
                 menuHeight = 70;
-                fBaseY = SCREEN_STRETCH_Y(40.f);
+                fBaseY = NOTSA_FTOL(int32, Yr * (x87d)40.0f);
             }
         }
-        menuWidth += SCREEN_STRETCH_X(20);
-        menuHeight = SCREEN_STRETCH_Y(menuHeight) + menu->m_nNumRows * SCREEN_STRETCH_Y(16.0f);
+        const float rectRight  = (float)((Xr * (x87d)20.0f + (x87d)(float)(uint16)menuWidth) + (x87d)menu->m_vPosn.x);
+        const float rectBottom = (float)((x87d)menu->m_nNumRows * (Yr * (x87d)16.0f) + (x87d)menuHeight * Yr + (x87d)menu->m_vPosn.y);
 
-        CRect rect(menu->m_vPosn.x, menu->m_vPosn.y, menu->m_vPosn.x + menuWidth, menu->m_vPosn.y + menuHeight);
+        CRect rect(menu->m_vPosn.x, menu->m_vPosn.y, rectRight, rectBottom);
         FrontEndMenuManager.DrawWindow(rect, menu->m_szTitle, windowOpacity, CRGBA(0, 0, 0, 190), false, true);
     }
     CFont::SetFontStyle(eFontStyle::FONT_SUBTITLES);
-    CFont::SetScale(SCREEN_STRETCH_X(0.52f), SCREEN_STRETCH_Y(1.0f));
+    CFont::SetScale((float)(Xr * (x87d)0.52f), (float)Yr);
     CFont::SetDropShadowPosition(2);
     CFont::SetDropColor(CRGBA(0, 0, 0, 255));
     CFont::SetOrientation(eFontAlignment::ALIGN_CENTER);
@@ -296,49 +316,43 @@ void CMenuSystem::DisplayStandardMenu(MenuId id, bool bBrightFont) {
         CFont::SetColor(CRGBA(225 - windowOpacity, 225 - windowOpacity, 225 - windowOpacity, 255));
 
         // add previous columns width
-        float xOffset = 0.f;
+        int32 xOffset = 0;
         for (auto i = 0; i < column; ++i) {
-            xOffset += menu->m_afColumnWidth[i];
+            xOffset = AddColumnWidth(xOffset, menu->m_afColumnWidth[i]);
         }
 
-        float textX = menu->m_vPosn.x + SCREEN_STRETCH_X(10.0f) + xOffset;
-        float textY = menu->m_vPosn.y + SCREEN_STRETCH_Y(20.0f);
-        switch (menu->m_anColumnAlignment[column]) {
-        case eFontAlignment::ALIGN_CENTER:
-            textX += menu->m_afColumnWidth[column] / 2.0f;
-            break;
-        case eFontAlignment::ALIGN_LEFT:
-            break;
-        case eFontAlignment::ALIGN_RIGHT:
-            textX += menu->m_afColumnWidth[column];
-            break;
-        default:
-            NOTSA_UNREACHABLE();
-        }
+        // exe 0x581094: the position follows the header's own alignment (port: the column alignment)
+        const float textX = TextX(alignment, column, xOffset);
+        const float textY = (float)(Yr * (x87d)20.0f + (x87d)menu->m_vPosn.y);
 
         const auto columnText = menu->m_aacColumnHeaders[column];
         const auto headerText = TheText.Get(columnText);
         CFont::PrintString(textX, textY, headerText);
     }
 
+    // exe 0x5812C1-0x5813E0: the row colour is the HUD colour with windowOpacity subtracted from r, g and b (bytes, they wrap)
     const auto GetColor = [=](auto row) -> CRGBA {
+        const auto Dim = [&](eHudColours colour) {
+            const auto c = HudColour.GetRGB(colour);
+            return CRGBA((uint8)(c.r - windowOpacity), (uint8)(c.g - windowOpacity), (uint8)(c.b - windowOpacity), 255);
+        };
         if (menu->m_abColumnInteractive[INTERACTIVE_DEFAULT]) {
             if (row == menu->m_nSelectedRow && menu->m_abRowSelectable[row]) {
-                return HudColour.GetRGB(HUD_COLOUR_LIGHT_BLUE);
+                return Dim(HUD_COLOUR_LIGHT_BLUE);
             } else if (menu->m_abRowAlreadyBought[row]) {
-                return HudColour.GetRGB(HUD_COLOUR_GREEN);
+                return Dim(HUD_COLOUR_GREEN);
             } else if (menu->m_abRowSelectable[row]) {
-                return HudColour.GetRGB(HUD_COLOUR_NIGHT_BLUE);
+                return Dim(HUD_COLOUR_NIGHT_BLUE);
             }
-            return HudColour.GetRGB(HUD_COLOUR_DARK_GRAY);
+            return Dim(HUD_COLOUR_DARK_GRAY);
         }
 
         if (menu->m_abRowAlreadyBought[row]) {
-            return HudColour.GetRGB(HUD_COLOUR_GREEN);
+            return Dim(HUD_COLOUR_GREEN);
         } else if (menu->m_abRowSelectable[row]) {
-            return HudColour.GetRGB(HUD_COLOUR_LIGHT_BLUE);
+            return Dim(HUD_COLOUR_LIGHT_BLUE);
         }
-        return HudColour.GetRGB(HUD_COLOUR_NIGHT_BLUE);
+        return Dim(HUD_COLOUR_NIGHT_BLUE);
     };
 
     // 0x581216
@@ -360,35 +374,24 @@ void CMenuSystem::DisplayStandardMenu(MenuId id, bool bBrightFont) {
             CMessages::InsertPlayerControlKeysInString(buffer);
 
             auto _panelWidthTotal = 0.52f;
-            CFont::SetScale(SCREEN_STRETCH_X(_panelWidthTotal), SCREEN_STRETCH_Y(1.0f));
+            CFont::SetScale((float)(Xr * (x87d)_panelWidthTotal), (float)Yr);
             while (CFont::GetStringWidth(buffer, true, false) > menu->m_afColumnWidth[column]) {
                 _panelWidthTotal -= 0.05f;
-                CFont::SetScale(SCREEN_STRETCH_X(_panelWidthTotal), SCREEN_STRETCH_Y(1.0f)); // make text smaller :)
+                CFont::SetScale((float)(Xr * (x87d)_panelWidthTotal), (float)Yr); // make text smaller :)
             }
 
             // add previous columns width
-            float xOffset = 0.f;
+            int32 xOffset = 0;
             for (auto i = 0; i < column; ++i) {
-                xOffset += menu->m_afColumnWidth[i];
+                xOffset = AddColumnWidth(xOffset, menu->m_afColumnWidth[i]);
             }
 
-            float textX = menu->m_vPosn.x + SCREEN_STRETCH_X(10.0f) + xOffset;
-            float textY = menu->m_vPosn.y + fBaseY;
-            switch (menu->m_anColumnAlignment[column]) {
-            case eFontAlignment::ALIGN_CENTER:
-                textX += menu->m_afColumnWidth[column] / 2.0f;
-                break;
-            case eFontAlignment::ALIGN_LEFT:
-                break;
-            case eFontAlignment::ALIGN_RIGHT:
-                textX += menu->m_afColumnWidth[column];
-                break;
-            default:
-                NOTSA_UNREACHABLE();
-            }
+            const float textX = TextX(menu->m_anColumnAlignment[column], column, xOffset);
+            const float textY = (float)((x87d)(float)(uint16)fBaseY + (x87d)menu->m_vPosn.y);
             CFont::PrintString(textX, textY, buffer);
         }
-        fBaseY += SCREEN_STRETCH_Y(16.0f);
+        // exe 0x58168A: the next row base is ftol(16 * H/448 + low 16 bits of the previous base)
+        fBaseY = NOTSA_FTOL(int32, Yr * (x87d)16.0f + (x87d)(float)(uint16)fBaseY);
     }
 }
 

@@ -444,4 +444,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S85b	v6	asm sweep	259723	102	23	ResolveProbability 39 exe call sites all 0..1 (S85 change confirmed), thunder volume x87 + NaN clamp; weather UpdateParameters 988 lines MATCH; stall table 420->410 forwarded to S83b; 3 M
 2026-10-30	SYSTEMIC-9	v6	systemic	177804	79	11	175 *_s sites, 26 fixed (11 commits) incl. ReadTextLabelFromScript full-length labels, LoadMissionText 8-char names; not tested/landed -> SYSTEMIC-9b
 2026-10-30	ASM-S83b	v6	asm sweep	398573	154	44	CancelAllVehicleEngineSounds(except) cancelled only the excepted sound, new player engine sound leaked old one, BMX skid speed/volume swapped, boat in-water bit, train speed sign, stall 410; 7 M
-2026-10-30	SYSTEMIC-9b	v6	systemic	0	0	0	reviewed + tested + landed SYSTEMIC-9 (11 fixes); residual: ms_cutsceneName char[8] formatted with {} (8-char name over-reads)
+2026-10-30	SYSTEMIC-9b	v6	systemic	115894	44	14	reviewed + tested + landed SYSTEMIC-9 (11 fixes); residual: ms_cutsceneName char[8] formatted with {} (8-char name over-reads)

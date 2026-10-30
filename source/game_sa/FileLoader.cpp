@@ -1621,7 +1621,11 @@ void CFileLoader::LoadOcclusionVolume(const char* line, const char* filename) {
         width, length, height,
         rotZ, rotY, rotX,
         flags,
-        std::string_view{ filename }.ends_with("int.ipl")
+        // exe 0x5B4D09: only 'i','n','t' at filename[len-7..len-5] are tested (the rest of "int.ipl" is not)
+        [&] {
+            const size_t len = strlen(filename);
+            return len >= 7 && std::memcmp(filename + len - 7, "int", 3) == 0;
+        }()
     );
 }
 

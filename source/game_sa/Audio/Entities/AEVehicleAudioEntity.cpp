@@ -1796,12 +1796,15 @@ void CAEVehicleAudioEntity::JustGotInVehicleAsDriver() {
 
         if (m_DummyEngineBank != SND_BANK_UNK && m_DummySlot == SND_BANK_SLOT_NONE) {
             m_DummySlot = DemandBankSlot(m_DummyEngineBank);
-
-            EnsurePlayerEngineSoundBankIsLoaded();
         }
+
+        EnsurePlayerEngineSoundBankIsLoaded(); // 0x4F5932: the exe jumps to the bank check (0x4F57C2) in every case, not only after demanding a slot
 
         break;
     }
+    case AE_ONE_GEAR:
+    case AE_NO_VEHICLE: // the exe does nothing for these (0x4F5B0C)
+        break;
     default:
         NOTSA_UNREACHABLE();
     }

@@ -58,7 +58,7 @@ void C_PcSave::PopulateSlotInfo() {
             CFileMgr::Read(file, &vars, sizeof(CSimpleVariablesSaveStructure));
 
             // TODO: This is stupid
-            if (std::string_view{TopLineEmptyFile} != (char*)vars.m_szSaveName) {
+            if (strncmp((const char*)vars.m_szSaveName, TopLineEmptyFile, 26) != 0) { // exe 0x61920b: strncmp(name, "THIS FILE IS NOT VALID YET", 0x1a)
                 memcpy(CGenericGameStorage::ms_SlotFileName[i], vars.m_szSaveName, 48); // TODO: why 48?
                 CGenericGameStorage::ms_Slots[i] = eSlotState::SLOT_FILLED;
                 CGenericGameStorage::ms_SlotFileName[i][24] = 0; // Truncate the name at 24th character
@@ -83,7 +83,7 @@ void C_PcSave::PopulateSlotInfo() {
             sprintf_s(date, "%02d %s %04d %02d:%02d:%02d", time.wDay, GxtCharToUTF8(TheText.Get(monthGXTKey)), time.wYear, time.wHour, time.wMinute, time.wSecond);
             AsciiToGxtChar(date, CGenericGameStorage::ms_SlotSaveDate[i]);
         } else {
-            CMessages::InsertNumberInString(TheText.Get("FEC_SLC"), i, -1, -1, -1, -1, -1, CGenericGameStorage::ms_SlotFileName[i]);
+            CMessages::InsertNumberInString(TheText.Get("FEC_SLC"), i + 1 /* exe 0x619282: esi = slot + 1 */, -1, -1, -1, -1, -1, CGenericGameStorage::ms_SlotFileName[i]);
 #ifdef NOTSA_STANDALONE_RUN
             // NOTSA-AUDIT: the exe (0x619140, 0x619268..0x61928C) does not set SLOT_CORRUPTED for a slot whose data fails CheckDataNotCorrupt: it only formats the "corrupted" text
 #else

@@ -630,13 +630,18 @@ void CGlass::BreakGlassPhysically(CVector point, float radius) {
         const auto& objPos = object.GetPosition();
         // Test if point touches any of the model's triangles
         {
+            // exe 0x71D036-0x71D0D4: the sphere centre is the offset taken into object space (one dot product with each axis: right, forward, up - NOT
+            // CMatrix::TransformVector, which is the rotation in the other direction), terms in the order z, y, x, unrounded sums
+            const auto& mat = object.GetMatrix();
+            const x87d dx = (x87d)point.x - objPos.x, dy = (x87d)point.y - objPos.y, dz = (x87d)point.z - objPos.z;
+            const auto Dot = [&](const CVector& axis) { return (float)((dz * axis.z + dy * axis.y) + dx * axis.x); };
             const CColSphere sphere{
-                object.GetMatrix().TransformVector(point - objPos),
+                CVector{ Dot(mat.GetRight()), Dot(mat.GetForward()), Dot(mat.GetUp()) },
                 radius
             };
             CCollision::CalculateTrianglePlanes(colModel);
 
-            // TODO / NOTE: Shouldn't the loop stop the first time it hits a triangle? Unsure why they didn't do it like that?
+            // The exe tests every triangle (no early out)
             bool hasHit{};
             for (auto tri = 0u; tri < colModel->GetTriCount(); tri++) {
                 if (CCollision::TestSphereTriangle(sphere, colData->m_pVertices, colData->m_pTriangles[tri], colData->m_pTrianglePlanes[tri])) {
@@ -650,9 +655,10 @@ void CGlass::BreakGlassPhysically(CVector point, float radius) {
         LastColCheckMS = CTimer::GetTimeInMS();
 
         if (!object.objectFlags.bHasBrokenGlass) {
+            // exe 0x71D4A6: only marks the glass as cracked, the loop goes on with the next object (no return)
             AudioEngine.ReportGlassCollisionEvent(AE_GLASS_HIT, objPos);
             object.objectFlags.bHasBrokenGlass = true;
-            return;
+            continue;
         }
 
         CVector verticesObjSpace[4];
@@ -663,14 +669,12 @@ void CGlass::BreakGlassPhysically(CVector point, float radius) {
         const auto [minZ, maxZ] = FindMinMaxZOfVertices(verticesObjSpace);
 
         // Vertex furthest of vertex 0
-        const auto furthestOfV0 = rng::max_element(verticesObjSpace, {},
-            [&](const auto& v) { return DistanceBetweenPoints2D(verticesObjSpace[0], v); }
-        );
+        const auto furthestOfV0 = &verticesObjSpace[FindFurthestVertexIdx2D(verticesObjSpace)];
 
         const auto v0Pos = object.GetMatrix().TransformPoint({ verticesObjSpace[0].x, verticesObjSpace[0].y, minZ });
         const auto furthestOfV0Pos = object.GetMatrix().TransformPoint({ furthestOfV0->x, furthestOfV0->y, minZ });
 
-        AudioEngine.ReportGlassCollisionEvent(AE_GLASS_HIT, objPos);
+        AudioEngine.ReportGlassCollisionEvent(AE_GLASS_BREAK_FAST, objPos); // exe 0x71D330: event 0x7E
 
         GeneratePanesForWindow(
             ePaneType::DELAYED,
@@ -687,7 +691,7 @@ void CGlass::BreakGlassPhysically(CVector point, float radius) {
         );
         object.SetUsesCollision(false);
         object.SetIsVisible(false);
-        object.objectFlags.bHasBrokenGlass = true;
+        object.objectFlags.bGlassBrokenAltogether = true; // exe 0x71D463: `or [obj+0x140], 0x20`
     }
 }
 

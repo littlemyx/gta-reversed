@@ -617,23 +617,18 @@ void CReplay::ProcessLookAroundCam() {
 
         const auto& pad = CPad::GetPad();
         auto steer = pad->NewMouseControllerState.m_AmountMoved * ExeRecip(200.0f);
-        // steerX2 = steer.x;
-        // steerY2 = steer.y;
-        // if (v2 | v2)
-        // if (steerX2 > 0.01f)
-        //     goto LABEL_8
-        // if (v6 | v7)
-        //     steerY2 = -steerY2;
-        // if (steerY2 > 0.01f)
-        //     goto LABEL_8
-        //
+        // 0x45D7A4-0x45D7EC: the look-around cam is (re)armed when EITHER mouse axis moved by more than 0.01 (fabs: fchs when < 0), the port tested only y > 0.01
+        // 0x45D7F2-0x45D8E1: the clamp [3, 15] is `!(d < 15) ? 15 : (d > 3 ? d : 3)` (jp after the 15.0 compare: NaN and 15 itself give 15), std::clamp let a NaN through
+        constexpr auto ClampCamDistance = [](float d) { return !(d < 15.0f) ? 15.0f : (d > 3.0f ? d : 3.0f); };
 
-        if (steer.y > 0.01f) {
+        if (steer.x > 0.01f || steer.x < -0.01f || steer.y > 0.01f || steer.y < -0.01f) {
             if (!FramesActiveLookAroundCam) {
                 const auto& camPos    = TheCamera.GetPosition();
-                const auto& playerPos = FindPlayerCoors();
-                playerCameraDistance = std::clamp(DistanceBetweenPoints(playerPos, camPos), 3.0f, 15.0f);
-                playerCameraDirAngle = x87::atan2(camPos.x - playerPos.x, camPos.y - playerPos.y);
+                const auto  playerPos = FindPlayerCoors();
+                // 0x45D81F-0x45D842: sqrt((dz*dz + dy*dy) + dx*dx)
+                const x87d dx = playerPos.x - camPos.x, dy = playerPos.y - camPos.y, dz = playerPos.z - camPos.z;
+                playerCameraDistance = ClampCamDistance((float)std::sqrt(dz * dz + dy * dy + dx * dx));
+                playerCameraDirAngle = x87::atan2(camPos.x - FindPlayerCoors().x, camPos.y - FindPlayerCoors().y);
             }
             FramesActiveLookAroundCam = 60;
         }
@@ -646,7 +641,7 @@ void CReplay::ProcessLookAroundCam() {
             FramesActiveLookAroundCam--;
 
             if (pad->NewMouseControllerState.isMouseLeftButtonPressed && pad->NewMouseControllerState.isMouseRightButtonPressed) {
-                playerCameraDistance = std::clamp(playerCameraDistance + 2.0f * steer.y, 3.0f, 15.0f);
+                playerCameraDistance = ClampCamDistance(playerCameraDistance + 2.0f * steer.y);
             } else {
                 viewAngle = std::clamp(viewAngle + steer.y, 0.1f, 1.5f); // probably some kind of cheap clamping between [0, pi/2].
             }
@@ -661,15 +656,21 @@ void CReplay::ProcessLookAroundCam() {
             CEntity* outEntity{};
             if (CWorld::ProcessLineOfSight(CameraFocus, target, colPoint, outEntity, true, false, false, false, false, true, true, false)) {
                 target = colPoint.m_vecPoint;
-                const auto focusCollisionDir = (CameraFocus - colPoint.m_vecPoint).Normalized();
-                target.x += focusCollisionDir.x / 4.0f;
-                target.y += focusCollisionDir.y / 4.0f;
-                target.z += focusCollisionDir.z;
+                // 0x45DB39-0x45DB7A: all three components of the (CVector::Normalise'd) focus direction are scaled by 0.25 - the port left z unscaled
+                CVector focusCollisionDir = CVector{ CameraFocus } - colPoint.m_vecPoint;
+                focusCollisionDir.Normalise();
+                target.x += focusCollisionDir.x * 0.25f;
+                target.y += focusCollisionDir.y * 0.25f;
+                target.z += focusCollisionDir.z * 0.25f;
             }
 
-            const auto forward = (CameraFocus - target).Normalized();
-            const auto right   = CVector{0.0f, 0.0f, 1.0f}.Cross(forward);
-            const auto up      = forward.Cross(right);
+            // 0x45DB7E-0x45DC5E: forward, right and up are all CVector::Normalise'd (0x59C910); the port normalised only forward (and via NormaliseAndMag)
+            CVector forward = CVector{ CameraFocus } - target;
+            forward.Normalise();
+            CVector right = CrossProduct(CVector{0.0f, 0.0f, 1.0f}, forward);
+            right.Normalise();
+            CVector up = CrossProduct(forward, right);
+            up.Normalise();
 
             TheCamera.GetForward()  = forward;
             TheCamera.GetUp()       = up;

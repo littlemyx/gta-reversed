@@ -50,7 +50,7 @@ public:
     // VTABLE
     virtual void   Service() = 0;
     virtual bool   IsSoundPlaying() = 0;
-    virtual int16  GetPlayTime() = 0;
+    virtual int32  GetPlayTime() = 0;
     virtual int32  GetLength() = 0;
     virtual void   Play(int16, int8, float) = 0;
     virtual void   SynchPlayback() = 0;

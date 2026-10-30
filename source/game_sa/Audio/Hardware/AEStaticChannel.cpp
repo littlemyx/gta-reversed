@@ -84,12 +84,12 @@ bool CAEStaticChannel::IsSoundPlaying() {
 }
 
 // 0x4F0F70
-int16 CAEStaticChannel::GetPlayTime() {
+int32 CAEStaticChannel::GetPlayTime() {
     if (!IsSoundPlaying())
         return -1;
 
     const auto curPos = CAEAudioChannel::GetCurrentPlaybackPosition();
-    return CAEAudioChannel::ConvertFromBytesToMS(curPos);
+    return (int16)CAEAudioChannel::ConvertFromBytesToMS(curPos); // 0x4F0F90: movsx eax, ax
 }
 
 // 0x4F0FA0

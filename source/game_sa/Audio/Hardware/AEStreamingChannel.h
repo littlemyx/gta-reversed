@@ -45,7 +45,7 @@ public:
 
     void   Service() override;
     bool   IsSoundPlaying() override;
-    int16  GetPlayTime() override;
+    int32  GetPlayTime() override;
     int32  GetLength() override;
     void   Play(int16 startOffsetMs, int8 soundFlags, float freqFac) override;
     void   SynchPlayback() override;

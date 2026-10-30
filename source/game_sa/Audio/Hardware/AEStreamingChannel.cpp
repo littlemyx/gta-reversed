@@ -427,20 +427,20 @@ bool CAEStreamingChannel::IsSoundPlaying() {
 }
 
 // 0x4F19E0
-int16 CAEStreamingChannel::GetPlayTime() {
+int32 CAEStreamingChannel::GetPlayTime() { // 0x4F19E0: the whole 32-bit eax (the port returned int16: a track played > 32.7 s went negative)
     switch (m_nState) {
     case StreamingChannelState::Started:
     case StreamingChannelState::UNK_MINUS_3:
         if (CAEAudioUtility::GetCurrentTimeInMS() - m_nLastUpdateTime >= 1000u)
             return UpdatePlayTime();
         else
-            return static_cast<int16>(m_nPlayTime - static_cast<uint32>(m_nLastUpdateTime) + CAEAudioUtility::GetCurrentTimeInMS());
+            return static_cast<int32>(m_nPlayTime - static_cast<uint32>(m_nLastUpdateTime) + CAEAudioUtility::GetCurrentTimeInMS());
         break;
     default:
         break;
     }
 
-    return static_cast<int16>(m_nState); // possibly not intended.
+    return static_cast<int32>(m_nState); // 0x4F1A27: the state value itself (eax)
 }
 
 // 0x4F1880

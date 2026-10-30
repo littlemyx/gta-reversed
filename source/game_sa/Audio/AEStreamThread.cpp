@@ -89,7 +89,7 @@ void CAEStreamThread::WaitForExit() const {
 }
 
 // 0x4F1530
-int16 CAEStreamThread::GetTrackPlayTime() const {
+int32 CAEStreamThread::GetTrackPlayTime() const { // 0x4F1530: returns the full eax of the channel call (-8 while preparing)
     if (m_bPreparingStream)
         return -8;
     else

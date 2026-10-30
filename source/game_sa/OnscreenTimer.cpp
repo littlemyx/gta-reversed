@@ -61,9 +61,15 @@ void COnscreenTimer::ClearClock(uint32 varId) {
 
 // 0x44CEE0
 void COnscreenTimer::SetClockBeepCountdownSecs(uint32 varId, uint32 time) {
-    for (COnscreenCounterEntry& counter : m_aCounters) {
-        if (m_Clock.m_nVarId == varId) {
-            m_Clock.m_nClockBeepCountdownSecs = time;
+    // 0x44CEE0: the exe walks 4 blocks of 0x40 bytes starting at `this` (the clock, then 0x40-byte steps into the 0x44-byte counters - an
+    // original bug): `if (*(u32*)blk == varId) *(u32*)(blk + 0x3C) = time`. Only the first block is the clock, the rest alias counter memory.
+    static_assert(sizeof(COnscreenTimerEntry) == 0x40 && offsetof(COnscreenTimerEntry, m_nVarId) == 0 && offsetof(COnscreenTimerEntry, m_nClockBeepCountdownSecs) == 0x3C);
+    auto* blk = reinterpret_cast<uint8*>(this);
+    for (auto i = 0u; i < 4u; i++, blk += sizeof(COnscreenTimerEntry)) {
+        uint32 id;
+        std::memcpy(&id, blk, sizeof(id));
+        if (id == varId) {
+            std::memcpy(blk + offsetof(COnscreenTimerEntry, m_nClockBeepCountdownSecs), &time, sizeof(time));
         }
     }
 }

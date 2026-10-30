@@ -22,7 +22,9 @@ bool WaterCreature_c::Init(int32 nType, CVector* vecPos, WaterCreature_c* parent
     {
         auto fMaxZ = fWaterLevel - info.m_fMinSpawnDepth;
         auto fMinZ = fWaterLevel - fWaterDepth + 2.0F;
-        fMinZ = std::max(fMinZ, fWaterLevel - 50.0F);
+        // 0x6E41E0: fcom + `test ah, 0x41; jne` keeps (water level - 50) unless fMinZ > it (a NaN fMinZ yields the clamp), not std::max
+        const auto fClampZ = fWaterLevel - 50.0F;
+        fMinZ = fMinZ > fClampZ ? fMinZ : fClampZ;
 
         if (fMaxZ < fMinZ)
             return false;
@@ -58,8 +60,10 @@ bool WaterCreature_c::Init(int32 nType, CVector* vecPos, WaterCreature_c* parent
         vecDirection.z = CGeneral::GetRandomNumberInRange(-0.5F, 0.5F);
         const auto fDist = CGeneral::GetRandomNumberInRange(info.m_fMinDistFromFollowed, info.m_fMaxDistFromFollowed);
 
-        m_vecOffsetFromFollowed = vecDirection * fDist;
-        m_pObject->SetPosn(*vecPos + m_vecOffsetFromFollowed);
+        // 0x6E4350..0x6E43C0: the object is placed at pos + dir*dist but the stored offset is (pos - newPos), i.e. the group slot is mirrored
+        const CVector vecNewPos = *vecPos + vecDirection * fDist;
+        m_vecOffsetFromFollowed = *vecPos - vecNewPos;
+        m_pObject->SetPosn(vecNewPos);
         m_fHeading = parent->GetObject()->GetHeading();
         m_fDefaultSpeed = CGeneral::GetRandomNumberInRange(info.m_fMinSpeed, parent->m_fDefaultSpeed);
     }

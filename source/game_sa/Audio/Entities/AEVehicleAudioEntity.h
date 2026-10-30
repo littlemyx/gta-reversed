@@ -770,7 +770,7 @@ public:
     auto GetVehicle() const { return m_Entity->AsVehicle(); }
 
 private:
-    void ProcessPropOrJetStall(const CPlane* plane, float& outVolume, float& outFreq);
+    void ProcessPropOrJetStall(const CPlane* plane, float& outVolume, float& outFreq, bool isPlayerProp = false);
     bool EnsureHasDummySlot() noexcept;
     bool EnsureSoundBankIsLoaded(bool isDummy, bool turnOffIfNotLoaded = true);
     auto GetEngineSound(eVehicleEngineSoundType st) const noexcept { return m_EngineSounds[st].Sound; }

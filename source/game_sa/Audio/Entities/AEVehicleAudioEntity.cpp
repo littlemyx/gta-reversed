@@ -3430,11 +3430,12 @@ auto GetPropSpeedFactor(float propSpeed) {
     }, std::clamp(propSpeed, 0.f, 1.f));
 }
 
-// notsa
-float CalculatePropSpeed(const CPlane* plane, float gas, float brake) {
-    return plane->m_autoPilot.m_vehicleRecordingId != -1
+// notsa (0x4FD9F6-0x4FDA57, 0x4FE15D-0x4FE196, 0x50169C): the prop speed is multiplied by the exe constant 0x862D18 (0x403C3C3C = 1/0.34f), not divided by 0.34f (differs in the last bit for ~10% of the inputs).
+// The recording test is the signed byte `m_vehicleRecordingId >= 0` (`test cl, cl; setge bl`). The player's propeller does not look at the recording (0x4FD33B)
+float CalculatePropSpeed(const CPlane* plane, float gas, float brake, bool useRecording = true) {
+    return useRecording && plane->m_autoPilot.m_vehicleRecordingId >= 0
         ? 0.7f + 0.3f * std::clamp(std::max(gas, brake), 0.f, 1.f)
-        : plane->m_fPropSpeed / 0.34f;
+        : plane->m_fPropSpeed * ExeRecip(0.34f);
 }
 
 // notsa
@@ -3498,7 +3499,8 @@ void CAEVehicleAudioEntity::ProcessDummyOrPlayerProp(tVehicleParams& vp, bool is
         return;
     }
 
-    if (!plane->vehicleFlags.bEngineOn && (isDummy || plane->m_autoPilot.m_vehicleRecordingId < 0)) {
+    // 0x4FD33B (player: only the engine flag) / 0x4FD95F (dummy: engine flag, or a recording being played)
+    if (!plane->vehicleFlags.bEngineOn && (!isDummy || plane->m_autoPilot.m_vehicleRecordingId < 0)) {
         CancelAllVehicleEngineSounds();
         return;
     }
@@ -3511,11 +3513,11 @@ void CAEVehicleAudioEntity::ProcessDummyOrPlayerProp(tVehicleParams& vp, bool is
     }
 
     // 0x4FDA9B
-    const auto propSpeedFactor = GetPropSpeedFactor(std::clamp(CalculatePropSpeed(plane, vp.ThisAccel, vp.ThisBrake), 0.f, 1.f));
+    const auto propSpeedFactor = GetPropSpeedFactor(std::clamp(CalculatePropSpeed(plane, vp.ThisAccel, vp.ThisBrake, isDummy), 0.f, 1.f));
 
     // 0x4FDDCA
     float propStalledVol, propStalledFreq;
-    ProcessPropOrJetStall(plane, propStalledVol, propStalledFreq);
+    ProcessPropOrJetStall(plane, propStalledVol, propStalledFreq, !isDummy);
 
     // 0x4FDEB7 - Calculate and update rotor frequency
     UpdateRotorFreq(CalculatePlanePropFreq(vp, GetAircraftAcceleration(vp)) * propStalledFreq, ROTOR_FREQ_STEP_EXE, ROTOR_FREQ_STEP_EXE); // 0x862D04
@@ -3527,21 +3529,21 @@ void CAEVehicleAudioEntity::ProcessDummyOrPlayerProp(tVehicleParams& vp, bool is
         AE_SOUND_AIRCRAFT_FRONT,
         SND_BANK_SLOT_PLAYER_ENGINE_P,
         0,
-        propStalledVol + CAEAudioUtility::AudioLog10((1.f - s_Config.RotorVolTiltFactor * camPoVFactor) * propSpeedFactor) * 20.f + 8.f, // 0x4FDBC9
+        propStalledVol + (CAEAudioUtility::AudioLog10((1.f - s_Config.RotorVolTiltFactor * camPoVFactor) * propSpeedFactor) * 20.f + 8.f), // 0x4FDBC9 (stall + (log10*20 + 8): `fadd [esp+0x34]` of the finished volume)
         m_CurrentRotorFrequency
     );
     PlayAircraftSound(
         AE_SOUND_AIRCRAFT_REAR,
         SND_BANK_SLOT_PLAYER_ENGINE_P,
         1,
-        propStalledVol + CAEAudioUtility::AudioLog10((camPoVFactor * 0.5f + 0.5f) * propSpeedFactor) * 20.f + 8.f, // 0x4FDC1A
+        propStalledVol + (CAEAudioUtility::AudioLog10((camPoVFactor * 0.5f + 0.5f) * propSpeedFactor) * 20.f + 8.f), // 0x4FDC1A
         m_CurrentRotorFrequency
     );
     PlayAircraftSound(
         AE_SOUND_AIRCRAFT_NEAR,
         SND_BANK_SLOT_VEHICLE_GEN,
         17,
-        propStalledVol + CAEAudioUtility::AudioLog10(propSpeedFactor) * 20.f + 8.f, // 0x4FDC3C
+        propStalledVol + (CAEAudioUtility::AudioLog10(propSpeedFactor) * 20.f + 8.f), // 0x4FDC3C
         1.f
     );
     PlayAircraftSound(
@@ -3563,15 +3565,28 @@ void CAEVehicleAudioEntity::ProcessDummyProp(tVehicleParams& vp) {
     ProcessDummyOrPlayerProp(vp, true);
 }
 
+VALIDATE_OFFSET(CAutomobile, m_nNumContactWheels, 0x960); // read by ProcessPlayerProp (0x4FD62B: `byte [ebx+0x960]`)
+
 // notsa (Used in ProcessPlayerProp, ProcessDummyProp, ProcessPlayerJet)
-void CAEVehicleAudioEntity::ProcessPropOrJetStall(const CPlane* plane, float& outVol, float& outFreq) {
+void CAEVehicleAudioEntity::ProcessPropOrJetStall(const CPlane* plane, float& outVol, float& outFreq, bool isPlayerProp) {
     outVol        = -100.f;
     outFreq       = 1.f;
 
     const auto hp = plane->m_fHealth;
 
+    if (m_DoCountStalls) {
+        m_StalledCount = 15; // 0x8CBDC4
+    }
+
+    // 0x4FD62B (ProcessPlayerProp only): counting down a stall while no wheel touches the ground forces the 0.8 / -12 dB stall, whatever the health is
+    // (CAutomobile+0x960 is the number of contact wheels). ProcessDummyProp and ProcessPlayerJet go straight to the health ladder.
+    const auto forceStall = isPlayerProp && m_StalledCount > 0 && plane->m_nNumContactWheels == 0;
+
     // NOTE: Why not use piecewise?
     std::tie(outVol, outFreq) = [&]() -> std::pair<float, float> {
+        if (forceStall) {
+            return { -12.f, 0.8f }; // 0x8CBDD4, 0x8CBDD0
+        }
         if (hp >= 650.f) {
             return { 0.f, 1.f };
         }
@@ -3587,11 +3602,7 @@ void CAEVehicleAudioEntity::ProcessPropOrJetStall(const CPlane* plane, float& ou
         return { -18.f, 0.80f }; // 0x50177C
     }();
 
-    if (m_DoCountStalls) {
-        m_StalledCount = 15;
-    }
-
-    if (hp >= 650.f) {
+    if (!forceStall && hp >= 650.f) { // 0x4FD6C9: jumps to the `mov [esp+0x18], 0` (volume 0), skipping the stall timer
         return;
     }
 
@@ -3615,7 +3626,8 @@ void CAEVehicleAudioEntity::ProcessPropOrJetStall(const CPlane* plane, float& ou
     }
     m_StalledCount = std::max(0, m_StalledCount - 1);
 
-    if (m_IsSilentStalled) {
+    // 0x4FD7A9 / 0x4FDE85 / 0x5018E8: `test al, al; jne skip; mov dword [esp+0x18], 0` - the volume is zeroed when the flag is CLEAR (port had it inverted)
+    if (!m_IsSilentStalled) {
         outVol = 0.f;
     }
 }

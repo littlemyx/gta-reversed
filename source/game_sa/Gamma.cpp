@@ -44,6 +44,7 @@ void CGamma::SetGamma(float gammaLevel, bool fade) {
         return;
     }
     const auto level = gammaLevel * 0.7f;
+    m_PrevLevel = level; // exe 0x74720F: stored unconditionally (before the compare with the target)
     if (level != m_TargetLevel) {
         m_TargetLevel = level;
     } else if (!fade) {

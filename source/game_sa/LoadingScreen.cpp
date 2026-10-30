@@ -236,11 +236,8 @@ void CLoadingScreen::RenderLoadingBar() {
     NOTSA_LOG_DEBUG("{} -> {}", AsciiFromGxtChar(m_LoadingGxtMsg1), AsciiFromGxtChar(m_LoadingGxtMsg2));
 #endif
 
-    if (m_TimeBarAppeared == 0.0f) {
-        m_TimeBarAppeared = GetClockTime();
-    }
-
-    if (m_bLegalScreen || m_PercentLoaded <= 0.0f || m_PercentLoaded >= 100.0f) {
+    // 0x59041E-0x590449: 0 < percent < 100 (NaN fails), and the bar is not drawn on the legal screen
+    if (m_bLegalScreen || !(m_PercentLoaded > 0.0f && m_PercentLoaded < 100.0f)) {
         return;
     }
 
@@ -256,6 +253,11 @@ void CLoadingScreen::RenderLoadingBar() {
         HudColour.GetRGBA(HUD_COLOUR_LIGHT_GRAY, 255),
         CRGBA{ 0, 0, 0, 0 }
     );
+
+    // 0x590485-0x5904BE: AFTER the bar was drawn (not before the early out), stamped with the pause-corrected clock
+    if (m_TimeBarAppeared == 0.0f) {
+        m_TimeBarAppeared = GetClockTime(false);
+    }
 }
 
 // 0x5904D0
@@ -363,7 +365,7 @@ void CLoadingScreen::DoPCScreenChange(bool isLastOne) {
         m_FadeAlpha = NOTSA_FTOL(uint8, alpha);
 
         if (isLastOne || m_bFadeInNextSplashFromBlack) {
-            float amp = (isLastOne && m_bFadeOutCurrSplashToBlack)
+            float amp = m_bFadeOutCurrSplashToBlack // 0x590B8E: tests only the flag (isLastOne merely enters this block)
                 ? ((255.0f - (float)m_FadeAlpha) * ExeRecip(255.0f)) // 0x590B96: (255 - (uint8)alpha) * 0x859A3C (1/255f), a 0..1 volume (was / 25)
                 : 1.0f;
             AudioEngine.ServiceLoadingTune(amp);

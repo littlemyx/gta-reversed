@@ -51,17 +51,23 @@ void CFallingGlassPane::Update() {
 }
 
 RwRGBA CFallingGlassPane::CalculateHiLightPolyColor() {
-    const auto alpha       = static_cast<float>(CGlass::CalcAlphaWithNormal(Normalized(m_Matrix.GetForward())));
-    const auto delta       = static_cast<float>(std::clamp(CTimer::GetTimeInMS() - m_nCreatedTime, 0u, 500u));
-    const auto scaledAlpha = NOTSA_FTOL(uint32, alpha * delta / 500.f);
-    const auto color       = static_cast<uint8>(m_f6F ? std::max(64u, scaledAlpha) : scaledAlpha);
+    // exe 0x71B16E-0x71B1F0: colour = _ftol2((delta * 0.002f) * alpha), the delta is a SIGNED clamp(time - created, 0, 500) (a pane that has not started yet is dark),
+    // the low byte is the colour and a slowly falling (m_f6F) pane has at least 0x40
+    const auto alpha = (uint32)CGlass::CalcAlphaWithNormal(Normalized(m_Matrix.GetForward()));
+    const auto delta = std::clamp((int32)(CTimer::GetTimeInMS() - m_nCreatedTime), 0, 500);
+    const auto colorI = NOTSA_FTOL(int32, ((x87d)delta * 0.002f) * (x87d)alpha);
+    auto       color  = (uint8)colorI;
+    if (m_f6F && color < 0x40) {
+        color = 0x40;
+    }
     return { color, color, color, color };
 }
 
-RwRGBA CFallingGlassPane::CalculateShatterPolyColor() {
-    const auto camDist = (m_Matrix.GetPosition() - TheCamera.GetPosition()).Magnitude();
+RwRGBA CFallingGlassPane::CalculateShatterPolyColor(float camDist) {
+    // exe 0x71B454-0x71B49B: ftol((1.0 - (camDist - 30.0) * 0.1f) * 140.0), the low byte
     if (camDist > 30.f) {
-        const auto alpha = NOTSA_FTOL(uint8, (1.0f - (camDist - 30.f) / 10.f) * 140.f);
+        const auto alphaI = NOTSA_FTOL(int32, ((x87d)1.0 - ((x87d)camDist - 30.0f) * 0.1f) * 140.0f);
+        const auto alpha  = (uint8)alphaI;
         return { alpha, alpha, alpha, alpha };
     }
     return { 140u, 140u, 140u, 140u};
@@ -71,10 +77,22 @@ RwRGBA CFallingGlassPane::CalculateShatterPolyColor() {
 void CFallingGlassPane::Render() {
     constexpr RwImVertexIndex indices[]{ 0u, 1u, 2u, 0u, 2u, 1u };
 
+    // exe 0x71B100-0x71B160: the distance to the camera, sqrt((dz^2 + dy^2) + dx^2) unrounded
+    const auto& camPos  = TheCamera.GetPosition();
+    const auto& panePos = m_Matrix.GetPosition();
+    const x87d cdx = (x87d)camPos.x - panePos.x, cdy = (x87d)camPos.y - panePos.y, cdz = (x87d)camPos.z - panePos.z;
+    const float camDist = (float)std::sqrt((cdz * cdz + cdy * cdy) + cdx * cdx);
+
     // Render HiLightPoly's
     CVector vertices[3]{};
     {
         const auto color = CalculateHiLightPolyColor();
+
+        // exe 0x71B1D0: flush when the index buffer (>= 0x7F9) or the vertex buffer (>= 0x3FC) is nearly full
+        if (CGlass::HiLightPolyIndicesIdx >= 0x7F9 || CGlass::H1iLightPolyVerticesIdx >= 0x3FC) {
+            CGlass::RenderHiLightPolys();
+        }
+
         constexpr RwTexCoords uv[3] = {
             { 0.5f, 0.5f },
             { 0.5f, 0.6f },
@@ -104,7 +122,12 @@ void CFallingGlassPane::Render() {
     }
 
     if (m_bRenderShatter) {
-        const auto color = CalculateShatterPolyColor();
+        // exe 0x71B43F: flush when the index buffer (>= 0xBF9) or the vertex buffer (>= 0x5FC) is nearly full
+        if (CGlass::ShatteredIndicesBaseIdx >= 0xBF9 || CGlass::ShatteredVerticesBaseIdx >= 0x5FC) {
+            CGlass::RenderShatteredPolys();
+        }
+
+        const auto color = CalculateShatterPolyColor(camDist);
         for (auto i = 0u; i < 3u; i++) {
             auto vertex = &TempBufferVertices.m_3d[CGlass::ShatteredVerticesBaseIdx + i];
 
@@ -116,9 +139,12 @@ void CFallingGlassPane::Render() {
             RxObjSpace3DVertexSetV(vertex, uv.y);
         }
 
-        uint32 i = CGlass::ShatteredVerticesBaseIdx;
+        // exe 0x71B53E-0x71B5F0: the indices are relative to the start of the shattered vertex buffer (1024), the cursors advance by 3 vertices / 6 indices
+        uint32 i = CGlass::ShatteredIndicesBaseIdx;
         for (const auto idx : indices) {
-            aTempBufferIndices[i++] = (RwImVertexIndex)(CGlass::ShatteredVerticesBaseIdx - 1024u - idx);
+            aTempBufferIndices[i++] = (RwImVertexIndex)(CGlass::ShatteredVerticesBaseIdx - 1024u + idx);
         }
+        CGlass::ShatteredVerticesBaseIdx += 3;
+        CGlass::ShatteredIndicesBaseIdx += 6;
     }
 }

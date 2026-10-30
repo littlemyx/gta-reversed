@@ -201,4 +201,4 @@
 | S59b | rest of S59 | 15 | pending | Stats.cpp |
 | S45b | rest of S45 | 11 | pending | Entity.cpp, EntryExitManager.cpp |
 | S60b | rest of S60 | 17 | pending | Task.cpp, TaskAllocator.cpp, TaskAllocatorAttack.cpp, TaskAllocatorKillOnFoot.cpp, TaskAllocatorKillThreatsBasic.cpp, TaskAllocatorKillThreatsBasicRandomGroup.cpp, TaskAllocatorKillThreatsDriveby.cpp, TaskAllocatorPlayerCommandAttack.cpp, TaskComplex.cpp, TaskManager.cpp |
-| S65b | rest of S65 | 1 | pending | WeaponEffects.cpp |
+| S65b | rest of S65 | 2 | pending | WeaponEffects.cpp, WeaponInfo.cpp |

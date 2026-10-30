@@ -1,2 +1,3 @@
 addr	file	line	cls	fn	oc
 0x742CF0	source/game_sa/WeaponEffects.cpp	23	None	Render	U
+0x5BE670	source/game_sa/WeaponInfo.cpp	16	None	LoadWeaponData (rest: $ % melee scanf field mapping)	U

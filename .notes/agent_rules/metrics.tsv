@@ -401,3 +401,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S60b	v6	asm sweep	217613	92	20	KillOnFoot look-about 1000+rand ms + stealth skip, Attack::ProcessGroup virtual vs direct re-alloc, PlayerCommandAttack ped type <0 path; 14 M
 2026-10-30	ASM-S45b	v6	asm sweep	230883	88	32	LinkEntryExit back-link inverted (paired exits never linked), FindNearestDoor radius start, AddOne quad-tree box degrees quirk + burglary rand + strncpy, PreRender crane shadow 110; 4 M
 2026-10-30	ASM-COVERAGE	v6	coverage audit	129244	30	8	9492 hooks: 2367 sweep, 5070 oracle-only, 2008 uncovered (487 gameplay sliced S67-S80, 1521 audio/fx/UI left); generator truncated 8-digit addresses
+2026-10-30	ASM-S65b	v6	asm sweep	0	0	0	WeaponEffects::Render min/max NaN form, LoadWeaponData ENDWEAPONDATA prefix test + comment skip (29 fields MATCH), Zones visited low byte + unsigned counters; 1 M

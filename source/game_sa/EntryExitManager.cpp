@@ -363,9 +363,12 @@ int32 CEntryExitManager::GetEntryExitIndex(const char* name, uint16 enabledFlags
 
 // 0x43ED80
 void CEntryExitManager::ResetAreaCodeForVisibleObjects() {
-    while (ms_numVisibleEntities) {
+    // exe 0x43ED80-0x43EDAF: the loop is followed by an unconditional `dec ms_numVisibleEntities`, i.e. the counter is left at -1 (the exe then walks off the list if it is reset twice
+    // without a Set in between; the port does not enter the loop for a negative count).
+    while (ms_numVisibleEntities > 0) {
         ms_visibleEntityList[--ms_numVisibleEntities]->SetAreaCode((eAreaCodes)ms_oldAreaCode);
     }
+    ms_numVisibleEntities--;
 }
 
 // 0x43ECF0

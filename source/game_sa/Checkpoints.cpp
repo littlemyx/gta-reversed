@@ -65,15 +65,22 @@ CCheckpoint* CCheckpoints::PlaceMarker(
     const auto cpDistToPlayer2D = CVector2D::Dist(pos, FindPlayerCentreOfWorld(0));
 
     CCheckpoint* cp{};
-    
-    if (cp = FindById(id)) { // 0x722CA1 - re-use existing
-        assert(cp->m_IsUsed); // NOTE: OG code checked for this, but `FindById` doesn't
 
+    //> 0x722C94 - exe matches `IsUsed && ID == id` (FindById alone ignores IsUsed)
+    for (auto& v : m_aCheckPtArray) {
+        if (v.m_IsUsed && v.m_ID == (int32)id) {
+            cp = &v;
+            break;
+        }
+    }
+
+    if (cp) { // 0x722CA1 - re-use existing
         switch (type) {
         case eCheckpointType::TORUS:
         case eCheckpointType::TORUSROT:
         case eCheckpointType::TORUS_UPDOWN: {
-            if (CVector2D::DistSqr(pos, FindPlayerCoors()) <= sq(2.f)) {
+            // 0x722D50: sqrt(dist2D) < 2.0f (strict, sqrt'd) - not `DistSqr <= 4`
+            if (CVector2D::Dist(pos, FindPlayerCoors()) < 2.f) {
                 type = type == eCheckpointType::TORUS_UPDOWN
                     ? eCheckpointType::TORUS_DOWN
                     : eCheckpointType::TORUSTHROUGH;

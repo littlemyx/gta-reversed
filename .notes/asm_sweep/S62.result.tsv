@@ -1,0 +1,41 @@
+addr	function	verdict	asm range	note	fix commit
+0x670A70	CTaskComplexFollowPatrolRoute::ComputeNextSubTaskType	MATCH	0x670A70-0x670AEB + jump table 0x670AEC	empty route -> FINISHED, cur+1<n -> GoToPoint, ==n -> GoToPointAndStandStill, cur!=n -> NONE; end of route: loops++, mode switch (ONCE / BACK_ONCE / PING_PONG reverse / LOOP)	-
+0x672BB0	CTaskComplexFollowPatrolRoute scalar deleting dtor	MATCH	0x672BB0-+0x1B (all); body 0x6709F0	calls the dtor body, deletes when flag&1 (operator delete 0x61A5B0); body owns what the port owns	-
+0x65EA50	CTaskComplexGangLeader::TryToPassObject	MATCH	0x65EA50-0x65EA93 (all)	closest group ped, dist^2 < 4.0 strict (jp arm), the passing ped must not be the player	-
+0x6293A0	CTaskComplexKillAllThreats scalar deleting dtor	MATCH	0x6293A0-+0x1B (all); body 0x6221C0	calls the dtor body, deletes when flag&1 (operator delete 0x61A5B0); body owns what the port owns	-
+0x622450	CTaskComplexKillPedGroupOnFoot::ComputeNearestLivingGroupPed	FIXED	0x622450-0x6225DE (all)	no ignore ped when ped is the leader; recursion runs on the leader; fallback result = ignored ped; !(health>0); x87 z,y,x distance	641177815
+0x63BA00	CTaskComplexLeaveCar::SetupGettingOut	MATCH	0x63BA00-0x63BA9A (all)	door flag, getting-in counters, driver autopilot reset (cruise speed 0x3D0, mission 0x3BA), player driver -> status 0x48 (FORCED_STOP)	-
+0x637F60	CTaskComplexObserveTrafficLights scalar deleting dtor	MATCH	0x637F60-+0x1B (all); body 0x6317C0	calls the dtor body, deletes when flag&1 (operator delete 0x61A5B0); body owns what the port owns	-
+0x631950	CTaskComplexObserveTrafficLightsAndAchieveHeading::MakeAbortable	MATCH	0x631950-0x631979 (all)	URGENT / IMMEDIATE only, forwards to the sub task	-
+0x631A70	CTaskComplexObserveTrafficLightsAndAchieveHeading::CreateNextSubTask	MATCH	0x631A70-0x631AB1 (all)	observe -> FINISHED (null), achieve heading -> observe	-
+0x631AC0	CTaskComplexObserveTrafficLightsAndAchieveHeading::CreateFirstSubTask	MATCH	0x631AC0-0x631ACC (all)	tail-jumps CreateSubTask(ACHIEVE_HEADING)	-
+0x631AD0	CTaskComplexObserveTrafficLightsAndAchieveHeading::ControlSubTask	MATCH	0x631AD0-0x631AD3 (all)	returns the sub task	-
+0x636490	CTaskComplexObserveTrafficLightsAndAchieveHeading::Clone	MATCH	0x636490-0x6364F9 (all)	new task(duration +0xC, heading +0x10)	-
+0x643CA0	CTaskComplexOpenDriverDoor scalar deleting dtor	MATCH	0x643CA0-+0x1B (all); body 0x6403D0	calls the dtor body, deletes when flag&1 (operator delete 0x61A5B0); body owns what the port owns	-
+0x643CC0	CTaskComplexOpenPassengerDoor scalar deleting dtor	MATCH	0x643CC0-+0x1B (all); body 0x640420	calls the dtor body, deletes when flag&1 (operator delete 0x61A5B0); body owns what the port owns	-
+0x65A0F0	CTaskComplexPresentIdToCop scalar deleting dtor	MATCH	0x65A0F0-+0x1B (all); body 0x659240	calls the dtor body, deletes when flag&1 (operator delete 0x61A5B0); body owns what the port owns	-
+0x625C00	CTaskComplexReactToAttack scalar deleting dtor	MATCH	0x625C00-+0x1B (all); body 0x620B90	calls the dtor body, deletes when flag&1 (operator delete 0x61A5B0); body owns what the port owns	-
+0x6332C0	CTaskComplexUseAttractorPartner::Constructor	MATCH	0x6332C0-0x6332DF (all)	isLeader +0xC, pair pointer +0x10	-
+0x639660	CTaskComplexUseMobilePhone scalar deleting dtor	MATCH	0x639660-+0x1B (all); body 0x6348E0	calls the dtor body, deletes when flag&1 (operator delete 0x61A5B0); body owns what the port owns	-
+0x633330	CTaskComplexUseScriptedAttractor::Constructor	MATCH	0x633330-0x633348 (all)	attractor reference +0xC	-
+0x6358B0	CTaskComplexUseScriptedBrain::Constructor	MATCH	0x6358B0-0x6358DF (all)	aborting 0 at +0xC, name copied to +0xD, currTask 0 at +0x18 (port: strcpy_s into char[8])	-
+0x6581B0	CTaskComplexWalkRoundFire::ComputeDetourTarget	MATCH	0x6581B0-0x6581F8 (all)	ComputeRouteRoundSphere(ped, sphere(centre +0x10, r +0x1C), initialPedPos +0x2C, target +0x20, unused, out)	-
+0x6585C0	CTaskComplexWalkRoundFire::ControlSubTask	MATCH	0x6585C0-0x65867C (all)	inline UpdatePoint (x,y,z,radius==0.5 all-equal test with NaN arms, flags low nibble cleared | 0x20) == port UpdatePoint	-
+0x66F650	CTaskComplexWanderGang scalar deleting dtor	MATCH	0x66F650-+0x1B (all); body 0x66F670	calls the dtor body, deletes when flag&1 (operator delete 0x61A5B0); body owns what the port owns	-
+0x658830	CTaskComplexWanderMedic scalar deleting dtor	MATCH	0x658830-+0x1B (all); body 0x658850	calls the dtor body, deletes when flag&1 (operator delete 0x61A5B0); body owns what the port owns	-
+0x65FDD0	CTaskGangHassleVehicle::GetTargetHeading	MATCH	0x65FDD0-0x65FE8F (all)	vehicle right / -right / forward / -forward by hassle id (0,2,default / 1,3 / 4 / 5), GetRadianAngleBetweenPoints(x,y,0,0) then LimitRadianAngle	-
+0x659DE0	CTaskSimpleAbseil scalar deleting dtor	MATCH	0x659DE0-+0x1B (all); body 0x659E00	calls the dtor body, deletes when flag&1 (operator delete 0x61A5B0); body owns what the port owns	-
+0x692FB0	CTaskSimpleAffectSecondaryBehaviour scalar deleting dtor	MATCH	0x692FB0-+0x1B (all); body 0x6912C0	calls the dtor body, deletes when flag&1 (operator delete 0x61A5B0); body owns what the port owns	-
+0x625BA0	CTaskSimpleBeHitWhileMoving scalar deleting dtor	MATCH	0x625BA0-+0x1B (all); body 0x61FE70	calls the dtor body, deletes when flag&1 (operator delete 0x61A5B0); body owns what the port owns	-
+0x625B80	CTaskSimpleBeKickedOnGround scalar deleting dtor	MATCH	0x625B80-+0x1B (all); body 0x61FC50	calls the dtor body, deletes when flag&1 (operator delete 0x61A5B0); body owns what the port owns	-
+0x648E90	CTaskSimpleCarFallOut::ComputeAnimID	MATCH	0x648E90-0x648EDE (all)	door 10/11 -> FALLOUT_LHS (0x183) else RHS (0x184); group from the handling anim group (hook commented out: signature differs)	-
+0x648330	CTaskSimpleCarSlowBeDraggedOut::ComputeAnimID	MATCH	0x648330-0x64837F + table 0x648384	doors 8,9 -> JACKEDRHS (379), 10,11 -> JACKEDLHS (378) (hook commented out)	-
+0x646AB0	CTaskSimpleCarWaitToSlowDown::SetPedPosition	MATCH	0x646AB0-0x646AC3 (all)	SetPedPositionInCar when a vehicle is set; returns true (hook commented out)	-
+0x635DA0	CTaskSimpleDie::Clone	MATCH	0x635DA0-0x635E51 (all)	hierarchy ? new(hierarchy,flags,delta,speed) : new(group,anim,delta,speed) (hook commented out)	-
+0x6375B0	CTaskSimpleDieInCar scalar deleting dtor	MATCH	0x6375B0-+0x1B (all); body 0x62FC70	calls the dtor body, deletes when flag&1 (operator delete 0x61A5B0); body owns what the port owns	-
+0x693B80	CTaskSimpleDuckWhileShotsWhizzing scalar deleting dtor	MATCH	0x693B80-+0x1B (all); body 0x6926F0	calls the dtor body, deletes when flag&1 (operator delete 0x61A5B0); body owns what the port owns	-
+0x655F00	CTaskSimpleEvasiveDive scalar deleting dtor	MATCH	0x655F00-+0x1B (all); body 0x6535D0	calls the dtor body, deletes when flag&1 (operator delete 0x61A5B0); body owns what the port owns	-
+0x655E80	CTaskSimpleEvasiveStep scalar deleting dtor	MATCH	0x655E80-+0x1B (all); body 0x6531D0	calls the dtor body, deletes when flag&1 (operator delete 0x61A5B0); body owns what the port owns	-
+0x678110	CTaskSimpleGetUp::FinishGetUpAnimCB	MATCH	0x678110-0x67812D (all)	done=1, finished=1, assoc blend delta -1000, assoc=0	-
+0x633940	CTaskSimpleIKManager::AddIKChainTask	MATCH	0x633940-0x63396B (all)	slot -1: first free slot (all full: dropped), else store at slot	-
+0x6339B0	CTaskSimpleIKManager::GetTaskAtSlot	MATCH	0x6339B0-0x6339B8 (all)	returns tasks[slot]	-

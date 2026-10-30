@@ -426,6 +426,7 @@ void CTheZones::Update() {
             if (!CTheScripts::bPlayerIsOffTheMap && CGame::CanSeeOutSideFromCurrArea() && SetZoneWasVisited(pos, true)) {
                 CTheZones::ZonesRevealed++;
             }
+            CountSeconds = CTimer::GetTimeInMS(); // exe 0x572D59-0x572D65: the delay restarts after every update (port ran it every frame once the 5s had passed)
         }
     } else {
         CountSeconds = CTimer::GetTimeInMS();

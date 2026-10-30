@@ -1,0 +1,44 @@
+addr	function	verdict	asm range	note	fix commit
+0x5DB1D0	CGrassRenderer::AddTriPlant	NOT_REACHED	-	budget: not compared	-
+0x5DAD00	CGrassRenderer::DrawTriPlants	NOT_REACHED	-	budget: not compared	-
+0x5DB250	CGrassRenderer::FlushTriPlantBuffer	NOT_REACHED	-	budget: not compared	-
+0x5DB0C0	CPPTriPlantBuffer::Flush	MATCH	0x5DB0C0-0x5DB127	model set jump table 0..3 (else null), rand saved before DrawTriPlants and restored with srand	-
+0x5DB140	CPPTriPlantBuffer::GetPPTriPlantPtr	MATCH	0x5DB140-0x5DB16F	flush when index+n > 32, stride 0x5C	-
+0x5DB170	CPPTriPlantBuffer::ChangeCurrentPlantModelsSet	MATCH	0x5DB170-0x5DB19F	flush on change then store	-
+0x5DB1A0	CPPTriPlantBuffer::IncreaseBufferIndex	MATCH	0x5DB1A0-0x5DB1C3	only for the current set; flush at >= 32	-
+0x5DAC10	CPPTriPlantBuffer::SetGrassMaterialCB	MATCH	0x5DAC10-0x5DAC3D	colour copy, texture replaced when different	-
+0x5DB7D0	CPlantColEntEntry::AddEntry	MATCH	0x5DB7D0-0x5DB89F	unused(0xC03998)->close(0xC0399C) relink, reference registration, alloc/zero	-
+0x5DB8A0	CPlantColEntEntry::ReleaseEntry	MATCH	0x5DB8A0-0x5DB93F	release tris, free, clean ref only when set, close->unused relink	-
+0x5DC290	CPlantLocTri::Add	DEVIATION	0x5DC290-0x5DC4FF	sphere radius sqrt((dz2+dy2)+dx2)*1.75 (port x,y,z order). Rest MATCH: field copies, flag bits, centre (p1+p2)+p3 * 0.33333334, density ftol per slot, seed rand order, list moves	b6d07be90
+0x5DB6D0	CPlantLocTri::Release	MATCH	0x5DB6D0-0x5DB7BA	list unlink/relink for both branches, surface 0xFE/0xFF, flags cleared, ProcessTriangleRemoved on bit2	-
+0x5DC210	CPlantLocTri::GetPlantDensity	DEVIATION	0x5DC210-0x5DC28F	|cross| summed z,y,x then * 0.5 (port Magnitude() x,y,z)	18cb6c967
+0x5A3EA0	ProcObjectMan_c::Init	MATCH	0x5A3EA0-0x5A3EDF	512 list items stride 0x14, count 0, LoadDataFile, matrices 0	-
+0x5A3110	ProcObjectMan_c::Update	MATCH	0x5A3110-0x5A3110	ret	-
+0x5A3EE0	ProcObjectMan_c::Exit	MATCH	0x5A3EE0-0x5A3F1F	Exit of every info then RemoveAll	-
+0x5A3140	ProcObjectMan_c::LoadDataFile	MATCH	0x5A3140-0x5A3267	format string 0x866FE8 and 14 args, comment/empty-line skip, Init argument order not stepped	-
+0x5A3120	ProcObjectMan_c::GetEntityFromPool	MATCH	0x5A3120-0x5A3127	list RemoveHead	-
+0x5A3130	ProcObjectMan_c::ReturnEntityToPool	MATCH	0x5A3130-0x5A3137	list AddItem	-
+0x5A3F20	ProcObjectMan_c::ProcessTriangleAdded	MATCH	0x5A3F20-0x5A3F6F	sums AddObjects per info with the same surface; exe returns only the low byte (al)	-
+0x5A3F70	ProcObjectMan_c::ProcessTriangleRemoved	MATCH	0x5A3F70-0x5A402F	per info/list item removal incl. temp-object and matrix counters, delete order	-
+0x5A2EB0	ProcSurfaceInfo_c::Init	NOT_REACHED	-	budget: not compared	-
+0x5A3270	ProcSurfaceInfo_c::Exit	NOT_REACHED	-	budget: not compared	-
+0x5A32D0	ProcSurfaceInfo_c::AddObject	NOT_REACHED	-	budget: not compared	-
+0x5A3850	ProcSurfaceInfo_c::AddObjects	DEVIATION	0x5A3850-0x5A3E1B	grid mode: exe reloads the start y for every x column, the port kept the exhausted yCur so only the first column got objects; rand seed ((V3z+V3y)+V3x + (V2..)) + (V1..) + modelIndex, ftol, srand (port summed the vector then x,y,z); dist2 and |normal| z,y,x; Normalise inside the loop per accepted candidate; density<=0/NaN exit. Min/max, step, ftol rounding, rand order MATCH	9cdaf133c
+0x5DD910	CPlantMgr::Initialise	NOT_REACHED	-	budget: not compared	-
+0x5DB940	CPlantMgr::Shutdown	NOT_REACHED	-	budget: not compared	-
+0x5DD780	CPlantMgr::ReloadConfig	NOT_REACHED	-	budget: not compared	-
+0x5DCFA0	CPlantMgr::Update	NOT_REACHED	-	budget: not compared	-
+0x5DCF30	CPlantMgr::PreUpdateOnceForNewCameraPos	NOT_REACHED	-	budget: not compared	-
+0x5DB3D0	CPlantMgr::CalculateWindBending	NOT_REACHED	-	budget: not compared	-
+0x5DBEB0	CPlantMgr::_ColEntityCache_Add	NOT_REACHED	-	budget: not compared	-
+0x5DBEF0	CPlantMgr::_ColEntityCache_Remove	NOT_REACHED	-	budget: not compared	-
+0x5DC510	CPlantMgr::_ColEntityCache_Update	NOT_REACHED	-	budget: not compared	-
+0x5DCD80	CPlantMgr::_ProcessEntryCollisionDataSections	NOT_REACHED	-	budget: not compared	-
+0x5DC8B0	CPlantMgr::_ProcessEntryCollisionDataSections_AddLocTris	NOT_REACHED	-	budget: not compared	-
+0x5DBF20	CPlantMgr::_ProcessEntryCollisionDataSections_RemoveLocTris	NOT_REACHED	-	budget: not compared	-
+0x5DCF00	CPlantMgr::_UpdateLocTris	NOT_REACHED	-	budget: not compared	-
+0x5DBAE0	CPlantMgr::Render	NOT_REACHED	-	budget: not compared	-
+0x5DD6C0	CPlantSurfPropMgr::Initialise	NOT_REACHED	-	budget: not compared	-
+0x5DD3B0	CPlantSurfPropMgr::LoadPlantsDat	NOT_REACHED	-	budget: not compared	-
+0x55D0E0	SurfaceInfos_c::LoadAdhesiveLimits	NOT_REACHED	-	budget: not compared	-
+0x55F420	SurfaceInfos_c::Init	NOT_REACHED	-	budget: not compared	-

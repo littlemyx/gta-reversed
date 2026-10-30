@@ -28,7 +28,7 @@ void cTransmission::DisplayGearRatios()
     static constexpr float magic_0 = 1000.0f / 3600.0f;
     static constexpr float magic = magic_0 / 50.0f;
 
-    for (size_t i = 0; i <= m_nNumberOfGears; i++)
+    for (size_t i = 0; i < m_aGears.size(); i++) // exe 0x6D05D8: cmp edi, 6
     {
         tTransmissionGear& gear = m_aGears[i];
         NOTSA_LOG_DEBUG(

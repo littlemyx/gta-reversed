@@ -847,8 +847,11 @@ void CMenuManager::SaveStatsToFile() {
 
     auto file = CFileMgr::OpenFile("stats.html", "w");
     const auto End = [&]() {
+        // Exe 0x57E1E6-0x57E1F7: fclose only on the success path, before SetDir
+        if (file) {
+            CFileMgr::CloseFile(file);
+        }
         CFileMgr::SetDir("");
-        CFileMgr::CloseFile(file); // FIX_BUGS
         m_HelperText = FET_STS;
         m_nHelperTextFadingAlpha = 300;
     };
@@ -885,10 +888,10 @@ void CMenuManager::SaveStatsToFile() {
     fprintf_s(file, "<tr align=\"center\" valign=\"top\" bgcolor=\"#000000\"> <td height=\"5\" colspan=\"2\"></td> </tr> <tr align=\"center\" valign=\"top\" bgcolor=\"#000000\"> \n"
                   "<td height=\"10\" colspan=\"2\"></td> </tr> <tr align=\"center\" valign=\"top\" bgcolor=\"#000000\"> \n");
     fprintf_s(file, R"(<td height="20" colspan="2"><font color="#F0000C" size="2" face="Arial, Helvetica, sans-serif">)");
-    fprintf_s(file, "<strong> %s</strong>\n ", GxtCharToUTF8(TheText.Get("CRIMRA"), 0u)); // Criminal rating:
+    fprintf_s(file, "<strong>%s</strong>\n", GxtCharToUTF8(TheText.Get("CRIMRA"), 0u)); // Criminal rating: (exe 0x865DA0: no blank after <strong>, none after the newline)
     TextCopy(gGxtString, CStats::FindCriminalRatingString());
-    fprintf_s(file, "%s (%d)</font></td>  </tr>", GxtCharToUTF8(gGxtString, 0u), CStats::FindCriminalRatingNumber());
-    fprintf_s(file, "<tr align=\"left\" valign=\"top\" bgcolor=\"#000000\"><td height=\"10\" colspan=\"2\"></td>  </tr>\n");
+    // exe 0x865D28: one format string, two blanks around the closing </tr>
+    fprintf_s(file, "%s (%d)</font></td>  </tr>  <tr align=\"left\" valign=\"top\" bgcolor=\"#000000\"><td height=\"10\" colspan=\"2\"></td>  </tr>\n", GxtCharToUTF8(gGxtString, 0u), CStats::FindCriminalRatingNumber());
 
     static constexpr const char* strToPrint[] = {
         "FES_PLA", "FES_MON", "FES_WEA", "FES_GAN",
@@ -932,6 +935,14 @@ void CMenuManager::SaveStatsToFile() {
             fprintf_s(file, "%s", valFormatted);
         }
     }
+
+    // Exe 0x57E19D-0x57E1E6: closing row and footer links (missing in the port)
+    fprintf_s(file, "</font></strong></div></td> </tr> <tr align=\"left\" valign=\"top\" bgcolor=\"#000000\">  <td height=\"10\" colspan=\"2\"></td> </tr>\n");
+    fprintf_s(file, "</table><br><table width=\"560\" border=\"0\"  align=\"center\" cellspacing=\"0\" cellpadding=\"5\"><tr align=\"center\" valign=\"middle\" bgcolor=\"#000000\">");
+    fprintf_s(file, "<td><font color=\"#F0000C\" size=\"2\" face=\"Arial, Helvetica, sans-serif\"><a href=\"http://www.rockstargames.com/sanandreas\">rockstargames.com/sanandreas</a></font></td>\n");
+    fprintf_s(file, "<td><font color=\"#F0000C\" size=\"2\" face=\"Arial, Helvetica, sans-serif\"><a href=\"http://www.rockstargames.com\">rockstargames.com</a></font></td>\n");
+    fprintf_s(file, "<td><font color=\"#F0000C\" size=\"2\" face=\"Arial, Helvetica, sans-serif\">&nbsp;<a href=\"http://www.rockstarnorth.com\">rockstarnorth.com</a></font></td></tr>\n");
+    fprintf_s(file, "</table>\n</body>\n");
 
     End();
 }

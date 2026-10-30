@@ -1,0 +1,44 @@
+addr	function	verdict	asm range	note	fix commit
+0x406080	CIplStore::LoadIpl	MATCH	0x406080-0x406354 (all)	bb flipped test, +-350/200 resize, setIplDef/AddItem, binary (header relocation, instances, car gens) and text (inst/end state machine) paths, LOD/AddLodChildren/Add/IncludeEntity identical	-
+0x405FA0	CIplStore::Shutdown	MATCH	0x405FA0-0x406074 (all)	RemoveAllIpls, RemoveIplSlot over all 256 slots, pool and entity-array free, quad tree destroy	-
+0x405EC0	CIplStore::Initialise	MATCH	0x405EC0-0x405F98 (all)	pool 256 "IPL Files", "generic" slot, quad tree (-3000..3000, depth 3)	-
+0x405C00	CIplStore::LoadIplBoundingBox	MATCH	0x405C00-0x405EAE (all)	isLarge from draw distance > 150, ppCurrIplInstance store only for LOD children, GetBoundRect + Restrict after IncludeEntity	-
+0x405B60	CIplStore::RemoveIplSlot	MATCH	0x405B60-0x405BFE (all)	RemoveIpl if loaded, DeleteItem, pool free	-
+0x405780	CIplStore::LoadAllRemainingIpls	MATCH	0x405780-0x405840 (all)	flipped-bb slots: cache -> getIplDef/AddItem, else Request(0x18)/LoadAll/Remove	-
+0x405720	CIplStore::RemoveAllIpls	MATCH	0x405720-0x40577F (all)	RemoveModel unless GAME|MISSION required (flags & 6)	-
+0x405600	CIplStore::HaveIplsLoaded	MATCH	0x405600-0x405718 (all)	exe returns false at the first missing slot and clears loadRequested of all remaining slots; port clears while continuing: same state and result	-
+0x405520	CIplStore::RequestIpls	MATCH	0x405520-0x4055F7 (all)	inline +-190 box test (strict, NaN passes), Request 0x18	-
+0x5D54A0	CIplStore::Load	DEVIATION (fixed)	0x5D54A0-0x5D5524 (all)	exe loops a fixed 255 slots, port looped to the count read from the save	0ee5c77c8
+0x5D5420	CIplStore::Save	MATCH	0x5D5420-0x5D549E (all)	count 256 then 255 bool bytes (loaded && disableDynamicStreaming)	-
+0x4053F0	CIplStore::EnsureIplsAreInMemory	MATCH	0x4053F0-0x40551C (all)	area-code gate, IsPointInside(-190), loaded test, MessageScreen LOADCOL, Suspend/LoadAll/Resume, loadRequested cleared for every requested slot	-
+0x405110	CIplStore::RemoveRelatedIpls	MATCH	0x405110-0x40516A (all)	staticIdx == arg -> RemoveModel	-
+0x404DE0	CIplStore::SetupRelatedIpls	MATCH	0x404DE0-0x405104 (all)	13 interior names decoded from the exe data match; _stream prefix compare, cache/non-cache branches, Request(8), LoadAll(0), count via ppCurrIplInstance	-
+0x404B20	CIplStore::RemoveIpl	MATCH	0x404B20-0x404C61 (all)	building/dummy ranges inclusive, object pool 0..size-1 with dummy re-add, CarGenerators	-
+0x404780	CIplStore::GetNewIplEntityIndexArray	MATCH	0x404780-0x4047AB (all)	alloc + counter	-
+0x404700	CIplStore::SetIplsRequired	MATCH	0x404700-0x40477E (all)	area code from player, z >= 900 callback pick; callbacks 0x4045F0/0x404660/0x404690 also decoded (-140/-160 boxes)	-
+0x405170	CIplStore::LoadIpls	DEVIATION (fixed)	0x405170-0x4053E2 (all)	vehicle look-ahead (40 < v*80) ? 40 : v like the exe inline compare (NaN stays NaN); mission-cleanup loop, status/state tests, ascending slot loop already matched	70bab6d09
+0x49EE10	Fx_c::AddWood	MATCH	0x49EE10 (all)	XZY dist, colour/size constants (bit patterns 0x3DF5C290/0x3CF5C294/0x3CF5C290), rand order, vel*4, m_Blood system	-
+0x49F300	Fx_c::AddTyreBurst	MATCH	0x49F300 (all)	4 smoke particles, i*0.05 delay, mults (1,1,1,0.4,0.12,0,0.1)	-
+0x49F3D0	Fx_c::AddBulletImpact	MATCH	0x49F3D0 (all)	case 1 sparks(3.0,SPARK,0.4,1.0)+smoke, 2/4 sand colours + 0.6 grey, 3 wood amount*0.5, alpha doubling at amount>=8	-
+0x49F670	Fx_c::AddPunchImpact	MATCH			-
+0x49F750	Fx_c::AddDebris	MATCH	0x49F750 (all)	ZXY dist, 1/255 colours, rot, vel formulas, prim toggling + counter at 0xA9ADE4	-
+0x49F970	Fx_c::AddGlass	MATCH	0x49F970 (all)	as AddDebris without prim toggling, m_Glass	-
+0x49FB30	Fx_c::AddWheelSpray	NOT_COMPARED	-	out of budget, open for a continuation	-
+0x49FF20	Fx_c::AddWheelGrass	MATCH	0x49FF20 (gating+mults+loop)	driver==player0/1, ZYX dist 625/400/64 gates + frame&3/&1, colours decoded (grass .03/.09/.03, gravel .25, mud .25/.12/.06), size/vel/pos formulas (Grass compared in full; Gravel/Mud share the body, only colours compared)	-
+0x4A0170	Fx_c::AddWheelGravel	MATCH	0x4A0170 (gating+mults+loop)	driver==player0/1, ZYX dist 625/400/64 gates + frame&3/&1, colours decoded (grass .03/.09/.03, gravel .25, mud .25/.12/.06), size/vel/pos formulas (Grass compared in full; Gravel/Mud share the body, only colours compared)	-
+0x4A03C0	Fx_c::AddWheelMud	MATCH	0x4A03C0 (gating+mults+loop)	driver==player0/1, ZYX dist 625/400/64 gates + frame&3/&1, colours decoded (grass .03/.09/.03, gravel .25, mud .25/.12/.06), size/vel/pos formulas (Grass compared in full; Gravel/Mud share the body, only colours compared)	-
+0x4A0610	Fx_c::AddWheelSand	UNSURE	0x4A0610 (head only)	dist/NaN gate, FxQuality frame gates (&1/&3/&7), colours (0.81/.67/.57 sand, .51/.44/.31 dust) match; speed/size/step/particle-count arithmetic not compared (budget)	-
+0x4A09C0	Fx_c::AddWheelDust	UNSURE	0x4A09C0 (head only)	dist/NaN gate, FxQuality frame gates (&1/&3/&7), colours (0.81/.67/.57 sand, .51/.44/.31 dust) match; speed/size/step/particle-count arithmetic not compared (budget)	-
+0x4A0D70	Fx_c::TriggerWaterHydrant	MATCH	0x4A0D70 (all)	XZY dist, "water_hydrant"	-
+0x4A0DE0	Fx_c::TriggerGunshot	MATCH	0x4A0DE0 (all)	ZXY dist, entity matrix path (AllocateMatrix, 0x59C810 inverse transform), temp matrix + CopyParentMatrix only without entity, gunflash/gunsmoke	-
+0x4A0FA0	Fx_c::TriggerTankFire	MATCH	0x4A0FA0 (all)	XZY dist, matrix create/destroy, "tank_fire"	-
+0x4A1070	Fx_c::TriggerWaterSplash	DEVIATION (fixed)	0x4A1070-0x4A10DF (all)	range test is (dx^2+dz^2)+dy^2 and returns only when > 625 (NaN creates the fx); port summed x,y,z with <= (NaN skipped); fx names decoded	a37dc00ac
+0x4A10E0	Fx_c::TriggerBulletSplash	DEVIATION (fixed)	0x4A10E0-0x4A114F (all)	range test is (dx^2+dz^2)+dy^2 and returns only when > 625 (NaN creates the fx); port summed x,y,z with <= (NaN skipped); fx names decoded	a37dc00ac
+0x4A1150	Fx_c::TriggerFootSplash	DEVIATION (fixed)	0x4A1150-0x4A11B9 (all)	range test is (dx^2+dz^2)+dy^2 and returns only when > 625 (NaN creates the fx); port summed x,y,z with <= (NaN skipped); fx names decoded	a37dc00ac
+0x4A1410	Fx_c::RenderAddTri_	NOT_COMPARED	-	out of budget, open for a continuation	-
+0x4A1600	Fx_c::RenderEnd	NOT_COMPARED	-	out of budget, open for a continuation	-
+0x4A13B0	Fx_c::RenderBegin	NOT_COMPARED	-	out of budget, open for a continuation	-
+0x4A1660	Fx_c::RotateVecIntoVec	NOT_COMPARED	-	out of budget, open for a continuation	-
+0x4A3EA0	FxEmitter_c::AddParticle	MATCH	0x4A3EA0 (all)	matrix creation order, identity/pos (or 16-dword copy), parent multiply, prim matrix, rotZ >= 0 -> ftol(rotZ*0.5), destroy order	-
+0x4A4050	FxEmitter_c::AddParticle	MATCH	0x4A4050 (all)	matrix creation order, identity/pos (or 16-dword copy), parent multiply, prim matrix, rotZ >= 0 -> ftol(rotZ*0.5), destroy order	-
+0x4A41E0	FxEmitter_c::CreateParticles	MATCH	0x4A41E0-0x4A4446 (all)	emission info args, lod visibility with NaN arms, intensity accumulate, wind/rain gates (offsets 0x58..0x64), matrix chain and destroy order, ftol loop, createLocal bit 1 of +0x62	-

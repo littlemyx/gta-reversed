@@ -1,0 +1,39 @@
+addr	function	verdict	asm range	note	fix commit
+0x507670	CAudioEngine::Constructor	MATCH	0x507670-0x507746 (all)	vtable/field stores belong to the member entity ctors (S81-S85); engine ctor sets no own field; port default ctor over default-constructed members	-
+0x506CD0	CAudioEngine::Destructor	MATCH	0x506CD0-0x506D70 (all)	member dtors only	-
+0x5B9C60	CAudioEngine::Initialise	MATCH	0x5B9C60-0x5B9E27 (all)	order: hardware init, AllocateChannels(1) -> [this+4], radio/cutscene/ambience/soundmgr init, CAEAudioEntity file read, frontend init, effects fader 0, entity StaticInitialise sequence, script/pedless/collision init, [+2]=0xFF [+0]=[+1]=0, Continue; same. NOTSA: CAEAudioUtility::StaticInitialise moved before hardware init (crash guard, shifts a time base by ms); extra CAEWaterCannonAudioEntity::StaticInitialise is a NOP	-
+0x507CB0	CAudioEngine::Shutdown	MATCH	0x507CB0-0x507DB1 (all)	radio/ambience(wait)/cutscene stop chain, collision+radio reset, frontend 0x24 then 0x23, resets, delete weapon AE, soundmgr reset+terminate, hardware terminate, entity shutdown, user radio shutdown	-
+0x507C30	CAudioEngine::ResetSoundEffects	MATCH	0x507C30-0x507CAD (all)	service, collision reset, frontend 0x24/0x23 + reset, script reset, weather, ped speech, soundmgr reset+service+pause(true); no radio/flag resets, as exe	-
+0x507A90	CAudioEngine::Reset	MATCH	0x507A90-0x507C20 (all)	radio stop+wait / ambience stop + special mission ambience stop / cutscene stop+wait, resets in exe order, [+2]=0xFF [+0]=[+1]=0 (= m_nCurrentRadioStationId, playing, stopping)	-
+0x507220	CAudioEngine::StopAmbienceTrack	MATCH	0x507220-0x50726D (all)	stop, then optional service loop while active	-
+0x507DF0	CAudioEngine::StartRadio	MATCH	0x507DF0-0x507E08 (all)	only if cutscene track status == 0, forwards settings	-
+0x507DC0	CAudioEngine::StartRadio	MATCH	0x507DC0-0x507DE6 (all)	StartRadio(id, bass, 0, 0) gated by cutscene track status	-
+0x5078A0	CAudioEngine::ServiceLoadingTune	MATCH	0x5078A0-0x5078E9 (all)	x87 compare arg>cur, cur+0.005f (0x858B4C = 0.005f) < arg picks the sum; float rounding stores the same value	-
+0x507440	CAudioEngine::ResumeAllSounds	MATCH	0x507440-0x507445 (all)	tail jump	-
+0x507430	CAudioEngine::PauseAllSounds	MATCH	0x507430-0x507435 (all)	tail jump	-
+0x506FA0	CAudioEngine::SetRadioBassSetting	MATCH	0x506FA0-0x506FB4 (all)	SetBassSetting(bass, 1.0f)	-
+0x506F90	CAudioEngine::SetBassEnhanceOnOff	MATCH	0x506F90-0x506F95 (all)	tail jump	-
+0x506F70	CAudioEngine::StopRadio	MATCH	0x506F70-0x506F75 (all)	tail jump (settings, duringPause)	-
+0x507030	CAudioEngine::DisplayRadioStationName	MATCH	0x507030-0x507035 (all)	tail jump	-
+0x507010	CAudioEngine::GetRadioStationNameKey	MATCH	0x507010-0x507015 (all)	tail jump	-
+0x507000	CAudioEngine::GetRadioStationName	MATCH	0x507000-0x507005 (all)	tail jump	-
+0x5072B0	CAudioEngine::PlayLoadedMissionAudio	MATCH	0x5072B0-0x5072B6 (all)	script AE at +0x2A0	-
+0x507290	CAudioEngine::PreloadMissionAudio	MATCH	0x507290-0x507296 (all)	script AE (slot, event)	-
+0x507E30	CAudioEngine::PreloadCutsceneTrack	MATCH	0x507E30-0x507F39 (all)	radio: save station id to [+2], stop with player vehicle settings, frontend 0x23, wait; ambience: stop(wait); cutscene: stop+wait; then manager preload(track, wait)	-
+0x5078F0	CAudioEngine::InitialisePostLoading	MATCH	0x5078F0-0x507A82 (all)	frontend 0x33, Service, collision post-load, new global weapon AE + Initialise, all 12 (bank,slot) pairs checked against exe values, hardware Service loop	-
+0x5071D0	CAudioEngine::IsBeatInfoPresent	MATCH	0x5071D0-0x5071F7 (all)	int32 field at +0xA0 of the beat info	-
+0x507410	CAudioEngine::StartLoadingTune	MATCH	0x507410-0x507429 (all)	frontend 0x32 then soundmgr Service	-
+0x5073C0	CAudioEngine::SayPedless	MATCH	0x5073C0-0x5073C6 (all)	pedless speech AE at +0x1E38, same stack args	-
+0x507750	CAudioEngine::Service	MATCH	0x507750-0x50789B (all)	frontend 0x1F; 0x24 if not paused (b7cb48/49); mission-complete track -4/-6 state machine; cutscene, ambience, radio Service(playTime); ambient gunfire if player ped; collision Service; paused: music/effects/stream faders 1.0; else stream fader 1.0 or 0.0 by CCutsceneMgr::ms_running (b5f851); script, ped speech, soundmgr, police scanner; GetChannelPlayTimes(.., null) has no effect	-
+0x506F10	CAudioEngine::ReportWaterSplash	MATCH	0x506F10-0x506F39 (all)	CVector copied by value then volume, to collision AE	-
+0x506F00	CAudioEngine::ReportWaterSplash	MATCH	0x506F00-0x506F06 (all)	tail jump to collision AE	-
+0x506ED0	CAudioEngine::ReportObjectDestruction	MATCH	0x506ED0-0x506ED6 (all)	tail jump to collision AE	-
+0x506EC0	CAudioEngine::ReportBulletHit	MATCH	0x506EC0-0x506EC6 (all)	tail jump to collision AE, same stack args	-
+0x506EB0	CAudioEngine::ReportCollision	MATCH	0x506EB0-0x506EB6 (all)	tail jump to collision AE, all 10 args in same order	-
+0x506EA0	CAudioEngine::ReportFrontendAudioEvent	MATCH	0x506EA0-0x506EA6 (all)	tail jump to frontend AddAudioEvent(event, volume, speed)	-
+0x506F40	CAudioEngine::ReportWeaponEvent	MATCH	0x506F40-0x506F46 (all)	global weapon AE pointer from +0x1E34, no null check, as port	-
+0x506F50	CAudioEngine::ReportDoorMovement	MATCH	0x506F50-0x506F65 (all)	door AE at +0x1F50 AddAudioEvent(0xA3, physical)	-
+0x507370	CAudioEngine::ReportMissionAudioEvent	MATCH	0x507370-0x50738C (all)	script AE (event, ped, 0, 1.0f)	-
+0x507390	CAudioEngine::ReportMissionAudioEvent	MATCH	0x507390-0x5073AC (all)	script AE (event, vehicle, 0, 1.0f); port defaults are 0.0f/1.0f	-
+0x5073B0	CAudioEngine::ReportMissionAudioEvent	MATCH	0x5073B0-0x5073B6 (all)	tail jump, args forwarded	-
+0x507080	CAudioEngine::StopCutsceneTrack	MATCH	0x507080-0x507140 (all)	stop; no-wait: pending mission-complete flag -> stopping flag; wait: service loop then restart radio (saved id >=0: StartRadio(id,0,0,0); <0: player vehicle settings) only if vehicle radio active; [+2]=0xFF only in the id>=0 branch; [+0]=0	-

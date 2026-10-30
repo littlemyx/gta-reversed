@@ -291,6 +291,10 @@ void CAEMP3BankLoader::Service() {
                 m_BankSlotSound[req.Slot] = -1; // Whole bank loaded, so use `-1`
 
                 CMemoryMgr::Free(std::exchange(req.StreamBufPtr, nullptr));
+                // 0x4DFFF6: a finished request forgets its bank/slot/sound, else the duplicate test of LoadSoundBank/LoadSound would swallow a later request for the same bank
+                req.Bank    = SND_BANK_UNK;
+                req.Slot    = SND_BANK_SLOT_NONE;
+                req.SoundID = -1;
                 m_RequestCnt--;
 
                 req.Status = eSoundRequestStatus::INACTIVE;
@@ -351,6 +355,10 @@ void CAEMP3BankLoader::Service() {
             m_BankSlotSound[req.Slot] = req.SoundID;
 
             CMemoryMgr::Free(std::exchange(req.StreamBufPtr, nullptr));
+            // 0x4DFF11: same reset as the whole bank path
+            req.Bank    = SND_BANK_UNK;
+            req.Slot    = SND_BANK_SLOT_NONE;
+            req.SoundID = -1;
             m_RequestCnt--;
 
             req.Status = eSoundRequestStatus::INACTIVE;

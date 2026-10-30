@@ -209,7 +209,7 @@
 | S69 | phase2b: coverage audit (COVERAGE.md) | 38 | partial 28/38 (23 M, 5 fixed) -> S69b | ColAccel.cpp, ColModel.cpp, Collision.cpp, CollisionData.cpp, TempColModels.cpp |
 | S70 | phase2b: coverage audit (COVERAGE.md) | 42 | partial 11/42 (7 M, 4 fixed) -> S70b | Birds.cpp, BouncingPanel.cpp, BreakManager_c.cpp, BreakObject_c.cpp, Door.cpp, Escalator.cpp |
 | S71 | phase2b: coverage audit (COVERAGE.md) | 34 | partial 21/34 (13 M, 8 fixed) -> S71b | 3dMarker.cpp, MovingThings.cpp, Rope.cpp, Ropes.cpp, TrafficLights.cpp, WaterCannon.cpp |
-| S72 | phase2b: coverage audit (COVERAGE.md) | 35 | pending | 3dMarkers.cpp, Checkpoint.cpp, Checkpoints.cpp, ConversationNode.cpp, Conversations.cpp, Credits.cpp |
+| S72 | phase2b: coverage audit (COVERAGE.md) | 35 | done (28 M, 7 fixed) | 3dMarkers.cpp, Checkpoint.cpp, Checkpoints.cpp, ConversationNode.cpp, Conversations.cpp, Credits.cpp |
 | S73 | phase2b: coverage audit (COVERAGE.md) | 44 | done (28 M, 14 fixed, 2 dead in exe) | CutsceneMgr.cpp, Formation.cpp, IdleCam.cpp, MentalHealth.cpp, Messages.cpp |
 | S74 | phase2b: coverage audit (COVERAGE.md) | 41 | partial 22/41 (15 M, 7 fixed) -> S74b | MissionCleanup.cpp, OnscreenCounterEntry.cpp, OnscreenTimer.cpp, PatrolRoute.cpp, PlaceName.cpp, RoadBlocks.cpp |
 | S75 | phase2b: coverage audit (COVERAGE.md) | 37 | partial 20/37 (17 M, 3 fixed) -> S75b | AccidentManager.cpp, AutoPilot.cpp, BulletInfo.cpp, BulletTraces.cpp, C_PcSave.cpp, DamageManager.cpp |

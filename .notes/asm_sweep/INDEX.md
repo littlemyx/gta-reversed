@@ -248,7 +248,7 @@
 | S99 | phase3 tier B (PHASE3.md) | 39 | pending | VehicleModelInfo.cpp, WeaponModelInfo.cpp |
 | S100 | phase3 tier B (PHASE3.md) | 35 | pending | RealTimeShadow.cpp, RealTimeShadowManager.cpp, ShadowCamera.cpp |
 | S101 | phase3 tier B (PHASE3.md) | 35 | pending | Shadows.cpp, StencilShadowObject.cpp, StencilShadows.cpp |
-| S102 | phase3 tier B (PHASE3.md) | 40 | pending | BrightLights.cpp, Clouds.cpp, Coronas.cpp, Mirrors.cpp, MotionBlurStreaks.cpp, Occlusion.cpp |
+| S102 | phase3 tier B (PHASE3.md) | 40 | partial 16/40 (12 M, 4 fixed) -> S102b | BrightLights.cpp, Clouds.cpp, Coronas.cpp, Mirrors.cpp, MotionBlurStreaks.cpp, Occlusion.cpp |
 | S103 | phase3 tier B (PHASE3.md) | 36 | pending | PostEffects.cpp, RegisteredMotionBlurStreak.cpp, ShinyTexts.cpp, SpecialFX.cpp |
 | S104 | phase3 tier B (PHASE3.md) | 43 | pending | GrassRenderer.cpp, PPTriPlantBuffer.cpp, PlantColEntEntry.cpp, PlantLocTri.cpp, PlantMgr.cpp, PlantSurfPropMgr.cpp |
 | S105 | phase3 tier B (PHASE3.md) | 39 | pending | Renderer.cpp, StreamingInfo.cpp, TxdStore.cpp |
@@ -269,6 +269,7 @@
 | S83b | rest of S83 | 21 | done (7 M, 14 fixed + stall table) | AEVehicleAudioEntity.cpp |
 | S85b | rest of S85 | 3 | done (3 M, 1 fixed; ResolveProbability callers verified) | AEWeaponAudioEntity.cpp, AEWeatherAudioEntity.cpp |
 | S93b | rest of S93 | 7 | done (6 M, 1 fixed) | Fx.cpp |
-| S94b | rest of S94 | 2 | pending | FxEmitterBP.cpp |
+| S94b | rest of S94 | 2 | done (1 M, 1 fixed) | FxEmitterBP.cpp |
 | S95b | rest of S95 | 15 | done (15 M) | Hud.cpp |
 | S84b | rest of S84 | 19 | pending | AEVehicleAudioEntity.cpp |
+| S102b | rest of S102 | 24 | pending | BrightLights.cpp, Clouds.cpp, Coronas.cpp, Mirrors.cpp, Occlusion.cpp, PointLights.cpp |

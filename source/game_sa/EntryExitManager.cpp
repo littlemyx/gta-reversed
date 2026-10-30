@@ -218,7 +218,9 @@ int32 CEntryExitManager::AddOne(
     };
 
     AddEnExToWorld(enex);
-    LinkEntryExit(enex);
+    if (enex->bCreateLinkedPair) { // exe 0x43FCB7
+        LinkEntryExit(enex);
+    }
 
     return mp_poolEntryExits->GetIndex(enex);
 }
@@ -327,10 +329,7 @@ void CEntryExitManager::PostEntryExitsCreation() {
 
 // 0x43F050
 void CEntryExitManager::LinkEntryExit(CEntryExit* enex) {
-    if (!enex->bCreateLinkedPair) {
-        return;
-    }
-
+    // exe 0x43F050-0x43F097: no `bCreateLinkedPair` test here (the callers AddOne / PostEntryExitsCreation test it themselves)
     const auto linkedEnExIdx{ GetEntryExitIndex(enex->m_szName, 0, CEntryExit::eFlags::CREATE_LINKED_PAIR) };
     if (linkedEnExIdx == -1) {
         return;
@@ -338,11 +337,10 @@ void CEntryExitManager::LinkEntryExit(CEntryExit* enex) {
 
     if (const auto linkedEnEx{ mp_poolEntryExits->GetAt(linkedEnExIdx) }) {
         enex->m_pLink = linkedEnEx;
-        if (linkedEnEx->m_pLink) {
+        if (!linkedEnEx->m_pLink) { // exe 0x43F084: `test ecx, ecx; jne` - the back link is only set when the target has none (the port had the test inverted)
             linkedEnEx->m_pLink = enex;
         }
-        // ?????
-        linkedEnEx->m_nTimeOn = 0;
+        linkedEnEx->m_nTimeOn  = 0;
         linkedEnEx->m_nTimeOff = 24;
     }
 }

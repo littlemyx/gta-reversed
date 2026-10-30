@@ -494,6 +494,11 @@ void CPath::AddRef() {
 void CPath::RemoveRef() {
     CARREC_LOG("Ref removed for path {} (number= {}, size= {}, ptr= {})", GetIndex(), m_nNumber, m_nSize, LOG_PTR(m_pData));
     if (!--m_nRefCount) {
-        Remove();
+        // 0x459493 / 0x45A5DE: unlike Remove() there is no m_pData test - the model is removed even when the data is already gone
+        if (m_pData) {
+            CMemoryMgr::Free(m_pData);
+        }
+        m_pData = nullptr;
+        CStreaming::RemoveModel(RRRToModelId(GetIndex()));
     }
 }

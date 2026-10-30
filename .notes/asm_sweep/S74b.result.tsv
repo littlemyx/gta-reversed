@@ -1,0 +1,20 @@
+addr	function	verdict	asm range	note	fix commit
+0x468560	CMissionCleanup::Process	MATCH	0x468560-0x468D0C	Whole function traced: fade/pad, train/plane/density resets, gang-war + population flags, garage/cull/wanted/pickup/roadblock/cop-bike/ambient-crime/SAM site resets, ThePaths x3, camera (mode words 0x32/0x31/3/0x30, wide-screen), audio, weather, special-char loop (10), HUD/script globals (all addresses cross-checked against the port globals), player group/ped/pad block, mobile-phone Quit (0x634A40 inlined), ClearSkip/respawn guard (states 2/1, ped states 0x37/0x36), fire/riot/store-vehicle/upside-down (6 inline)/stuck-car resets, mini-game guard block, entity loop with the 13-entry jump table decoded (1 veh 2 ped 3 obj 4 fx 5 group 7 2dfx 8 seq 9 DM 11 light 12 checkpoint 13 txd, 6/10 default) and the 24x8x5 + 8x5 acquaintance loops	-
+0x4637C0	CMissionCleanup::FindFree	MATCH	0x4637C0-0x4637D6	first slot with type 0 of 75	-
+0x4652D0	CMissionCleanup::CheckIfCollisionHasLoadedForMissionObjects	MATCH	0x4652D0-0x465497	veh/ped/obj dispatch, flag 0x40000 test, HasCollisionLoaded then HaveIplsLoaded, clear flag, AddToMovingList if not static, vehicle type 0/11 -> automobile PlaceOnRoad, 9 -> bike	-
+0x44CA90	COnscreenCounterEntry::ProcessForDisplayCounter	FIXED	0x44CA90-0x44CAF8	DOUBLE: second number is the script variable at offset m_nMaxVarValue (raw, unclamped), port repeated the first variable	42568ad55
+0x44CD50	COnscreenTimer::AddClock	MATCH	0x44CD50-0x44CD91	insert only when slot free; key copied (10)	-
+0x44CE60	COnscreenTimer::ClearClock	MATCH	0x44CE60-0x44CE76	var 0, key[0]=0, enabled 0, direction DECREASE	-
+0x44CDA0	COnscreenTimer::AddCounter	MATCH	0x44CDA0-0x44CDF1	index*0x44, max=0, type word, flash=1, colour 3	-
+0x44CE80	COnscreenTimer::ClearCounter	MATCH	0x44CE80-0x44CEAA	4 entries; var, max, key[0], type, enabled cleared	-
+0x41B810	CPatrolRoute::operator new	MATCH	0x41B810-0x41B816	pool New	-
+0x41B820	CPatrolRoute::operator delete	MATCH	0x41B820-0x41B852	pool free (port keeps a documented null guard)	-
+0x66D4B0	CPatrolRoute::Set	MATCH	0x66D4B0-0x66D548	count, position, strcpy name then group per node	-
+0x66D550	CPatrolRoute::Reverse	MATCH	0x66D550-0x66D6AA	i<j swap through stack temp	-
+0x571F20	CPlaceName::Process	FIXED	0x571F20-0x572025	same-zone shortcut is currArea != 0 (any interior), port tested == 1; null-zone Display passes stack garbage in the exe, port passes nullptr (kept)	028121604
+0x49CE10	CTagManager::SetupAtomic	MATCH	0x49CE10-0x49CE3D	material[1] pipeline, geometry flag 0x40, user value 0	-
+0x49CE40	CTagManager::RenderTagForPC	FIXED	0x49CE40-0x49CE95	alpha = (uint8)v*(uint16)v/255 (user value twice), port used v	1794d71d0
+0x5D3D60	CTagManager::Save	MATCH	0x5D3D60-0x5D3D9E	count then one alpha byte per tag (returns true in the exe)	-
+0x5D3DA0	CTagManager::Load	MATCH	0x5D3DA0-0x5D3DDE	count is SAVED (original bug kept), alpha bytes loaded	-
+0x571EE0	CUserDisplay::Init	MATCH	0x571EE0-0x571F08	PlaceName, OnscnTimer, CurrentVehicle order	-
+0x5720A0	CUserDisplay::Process	MATCH	0x5720A0-0x5720BE	PlaceName, OnscnTimer.Process, CurrentVehicle order	-

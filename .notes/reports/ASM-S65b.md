@@ -4,11 +4,11 @@ Base daa957222 (origin/reverse/interior_c). Result table: `.notes/asm_sweep/S65b
 
 | row | verdict | commit |
 |---|---|---|
-| CWeaponEffects::Render (0x742CF0-0x743C1E) | FIXED (NaN-only min/max form) | b9b01950a |
-| CWeaponInfo::LoadWeaponData rest (0x5BE670-0x5BEDB5) | FIXED (loop head), field mapping MATCH | 707031435 |
-| CTheZones::GetZoneWasVisited 0x572130 (extra) | FIXED | f453a240d |
+| CWeaponEffects::Render (0x742CF0-0x743C1E) | FIXED (NaN-only min/max form) | 4568b87f0 |
+| CWeaponInfo::LoadWeaponData rest (0x5BE670-0x5BEDB5) | FIXED (loop head), field mapping MATCH | 3247f38ae |
+| CTheZones::GetZoneWasVisited 0x572130 (extra) | FIXED | 3b92e5121 |
 | CTheZones::SetCurrentZoneAsUnlocked 0x572800 (extra) | MATCH | - |
-| CTheZones::Save/Load (extra) | FIXED (unsigned counters) | 6d8c4a1b9 |
+| CTheZones::Save/Load (extra) | FIXED (unsigned counters) | 5a8528002 |
 
 ## Notes
 

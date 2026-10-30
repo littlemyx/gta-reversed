@@ -331,9 +331,9 @@ void CMenuManager::ProcessMenuOptions(int8 pressedLR, bool& cancelPressed, bool 
         // exe 0x5771B8: step through the 5 base languages, wrapping
         const auto prevLanguage = m_nPrefsLanguage;
         if (pressedLR > 0) {
-            m_nPrefsLanguage = prevLanguage == eLanguage::SPANISH ? eLanguage::AMERICAN : eLanguage(prevLanguage + 1);
+            m_nPrefsLanguage = prevLanguage == eLanguage::SPANISH ? eLanguage::AMERICAN : eLanguage(int(prevLanguage) + 1);
         } else {
-            m_nPrefsLanguage = prevLanguage == eLanguage::AMERICAN ? eLanguage::SPANISH : eLanguage(prevLanguage - 1);
+            m_nPrefsLanguage = prevLanguage == eLanguage::AMERICAN ? eLanguage::SPANISH : eLanguage(int(prevLanguage) - 1);
         }
 
         m_nPreviousLanguage = (eLanguage)-99; // what the fuck

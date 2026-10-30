@@ -1,0 +1,46 @@
+addr	function	verdict	asm range	note	fix commit
+0x4A7400	FxInfoJitter_c::scalar-deleting dtor (vtable)	MATCH	0x4A7400-(all)	member dtor + vftable restore, delete if flag&1	
+0x4A5B90	FxInfoJitter_c::Load	MATCH	0x4A5B90-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A5BB0	FxInfoJitter_c::GetValue	FIXED	0x4A5BB0-(all)	3 rand() calls for x,y,z (port used one value for all axes), RwV3dNormalize 0x7ED9B0 (table-based) instead of CVector::Normalise; value*totalTime, += m_Pos, mult handling MATCH	4a6efc8bc
+0x4A6E60	FxInfoNoise_c::scalar-deleting dtor (vtable)	MATCH	0x4A6E60-(all)	member dtor + vftable restore, delete if flag&1	
+0x4A52E0	FxInfoNoise_c::Load	MATCH	0x4A52E0-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A5300	FxInfoNoise_c::GetValue	FIXED	0x4A5300-(all)	3 rand() calls for x,y,z (port: one), RwV3dLength 0x7EDAC0 / RwV3dNormalize 0x7ED9B0 instead of Magnitude/Normalise; renormalise test is > 0 (NaN skips); vel *= pre-length MATCH	493778c2d
+0x4A7470	FxInfoRotSpeed_c::scalar-deleting dtor (vtable)	MATCH	0x4A7470-(all)	member dtor + vftable restore, delete if flag&1	
+0x4A5D20	FxInfoRotSpeed_c::Load	MATCH	0x4A5D20-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A79B0	FxInfoSelfLit_c::scalar-deleting dtor (vtable)	MATCH	0x4A79B0-(all)	member dtor + vftable restore, delete if flag&1	
+0x4A7630	FxInfoSize_c::scalar-deleting dtor (vtable)	MATCH	0x4A7630-(all)	member dtor + vftable restore, delete if flag&1	
+0x4A6010	FxInfoSize_c::Load	MATCH	0x4A6010-(all)	forwards to m_InterpInfo vtable slot 1; version<105 -> count=2	
+0x4A7A90	FxInfoSmoke_c::scalar-deleting dtor (vtable)	MATCH	0x4A7A90-(all)	member dtor + vftable restore, delete if flag&1	
+0x4A6950	FxInfoSmoke_c::Load	MATCH	0x4A6950-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A76A0	FxInfoSpriteRect_c::scalar-deleting dtor (vtable)	MATCH	0x4A76A0-(all)	member dtor + vftable restore, delete if flag&1	
+0x4A6120	FxInfoSpriteRect_c::Load	MATCH	0x4A6120-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A7780	FxInfoTrail_c::scalar-deleting dtor (vtable)	MATCH	0x4A7780-(all)	member dtor + vftable restore, delete if flag&1	
+0x4A6290	FxInfoTrail_c::Load	MATCH	0x4A6290-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A7550	FxInfoUnderwater_c::scalar-deleting dtor (vtable)	MATCH	0x4A7550-(all)	member dtor + vftable restore, delete if flag&1	
+0x4A5E70	FxInfoUnderwater_c::Load	MATCH	0x4A5E70-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A7390	FxInfoWind_c::scalar-deleting dtor (vtable)	MATCH	0x4A7390-(all)	member dtor + vftable restore, delete if flag&1	
+0x4A5A80	FxInfoWind_c::Load	MATCH	0x4A5A80-(all)	forwards to m_InterpInfo vtable slot 1	
+0x4A8D10	FxInterpInfo_c::scalar-deleting dtor (vtable)	MATCH	0x4A8D10-(all)	member dtor + vftable restore, delete if flag&1	
+0x4A8D90	FxInterpInfo255_c::scalar-deleting dtor (vtable)	MATCH	0x4A8D90-(all)	member dtor + vftable restore, delete if flag&1	
+0x5C1D30	FxInterpInfo255_c::Load	MATCH	0x5C1D30-(all)	fgets/sscanf order, GetMem(n*2 or n*4, align), time*256, key scale (128/1000/256/raw float) MATCH	
+0x4A8D70	FxInterpInfo32_c::scalar-deleting dtor (vtable)	MATCH	0x4A8D70-(all)	member dtor + vftable restore, delete if flag&1	
+0x5C1B10	FxInterpInfo32_c::Load	MATCH	0x5C1B10-(all)	fgets/sscanf order, GetMem(n*2 or n*4, align), time*256, key scale (128/1000/256/raw float) MATCH	
+0x4A8D30	FxInterpInfoFloat_c::scalar-deleting dtor (vtable)	MATCH	0x4A8D30-(all)	member dtor + vftable restore, delete if flag&1	
+0x5C16F0	FxInterpInfoFloat_c::Load	MATCH	0x5C16F0-(all)	fgets/sscanf order, GetMem(n*2 or n*4, align), time*256, key scale (128/1000/256/raw float) MATCH	
+0x4A8D50	FxInterpInfoU255_c::scalar-deleting dtor (vtable)	MATCH	0x4A8D50-(all)	member dtor + vftable restore, delete if flag&1	
+0x5C18F0	FxInterpInfoU255_c::Load	MATCH	0x5C18F0-(all)	fgets/sscanf order, GetMem(n*2 or n*4, align), time*256, key scale (128/1000/256/raw float) MATCH	
+0x4A9C30	FxMemoryPool_c::Init	MATCH	0x4A9C30-(all)	1 MB zeroed; exe returns bool (false on null), port void, only caller ignores it	
+0x4A9C80	FxMemoryPool_c::Exit	MATCH	0x4A9C80-(all)	frees m_pData only	
+0x4A9CD0	FxMemoryPool_c::Optimise	MATCH	0x4A9CD0-(all)	Realloc(data, pos), size=pos	
+0x4CEFA0	CAnimBlendAssociation::scalar-deleting dtor (vtable)	MATCH	0x4CEFA0-(all)	member dtor + vftable restore, delete if flag&1	
+0x4CF100	CAnimBlendClumpData::Destructor	MATCH	0x4CF100-(all)	MATCH	
+0x4CF970	CAnimBlendHierarchy::Destructor	MATCH	0x4CF970-(all)	MATCH	
+0x4CF980	CAnimBlendHierarchy::Shutdown	MATCH	0x4CF980-(all)	MATCH	
+0x4CF8E0	CAnimBlendHierarchy::RemoveAnimSequences	MATCH	0x4CF8E0-(all)	MATCH	
+0x4CF510	CAnimBlendHierarchy::AllocSequenceBlock	MATCH	0x4CF510-(all)	MATCH	
+0x4CF290	CAnimBlendHierarchy::FindSequence	MATCH	0x4CF290-(all)	MATCH	
+0x4CF2D0	CAnimBlendHierarchy::SetName	MATCH	0x4CF2D0-(all)	MATCH	
+0x4CF5F0	CAnimBlendHierarchy::Uncompress	MATCH	0x4CF5F0-(all)	flag bits, stride 0xC, signed count loops; Uncompress fcomp arm == 0.0f	
+0x4CF6C0	CAnimBlendHierarchy::CompressKeyframes	MATCH	0x4CF6C0-(all)	MATCH	
+0x4CF760	CAnimBlendHierarchy::RemoveUncompressedData	MATCH	0x4CF760-(all)	MATCH	
+0x4CF8A0	CAnimBlendHierarchy::Print	MATCH	0x4CF8A0-(all)	MATCH	

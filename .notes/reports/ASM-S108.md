@@ -1,0 +1,8 @@
+# ASM-S108 (phase 3 tier B: Fx blueprint infos, FxInterpInfo*, FxMemoryPool, CAnimBlendHierarchy/ClumpData) - 2026-10-30
+Result: 45 of 45 rows compared in full (2 FIXED in 2 commits, 43 MATCH). Table in S108.result.tsv.
+The slice has no CAnimBlendAssociation time/blend logic (UpdateBlend/UpdateTime are not in it, only the scalar-deleting dtor 0x4CEFA0, MATCH).
+Fixes:
+- 4a6efc8bc FxInfoJitter_c::GetValue (0x4A5BB0): the exe calls rand() three times (x, y, z in this order, each `rand() % 10000 * 0.0002f - 1`); the port drew one value and used it for all axes (`CVector(float)` fills x=y=z), so the jitter was always along the (1,1,1) diagonal and consumed 1 rand instead of 3 (shifts the rand sequence for everything after). Also RwV3dNormalize (0x7ED9B0, table-based) instead of CVector::Normalise.
+- 493778c2d FxInfoNoise_c::GetValue (0x4A5300): same three-rand fix; RwV3dLength (0x7EDAC0) for the speed before/after instead of CVector::Magnitude, the `> 0` test (NaN skips) kept, RwV3dNormalize for the renormalise.
+MATCH: Hierarchy RemoveAnimSequences/AllocSequenceBlock/Uncompress (fcomp + test ah,0x44 / jp == `== 0.0f`)/CompressKeyframes/RemoveUncompressedData (the exe calls seq.RemoveUncompressedData = FramesNum guard + CompressKeyframes, equivalent)/Print/FindSequence/SetName/Shutdown/dtor, ClumpData dtor (link unlink + FreeAlign), all Fx blueprint scalar-deleting dtors, all Load (FxInfo forwards; FxInfoSize version<105 sets count 2; Interp Load key scales 256/128/1000/raw, GetMem sizes and alignments), FxMemoryPool Init/Exit/Optimise.
+Notes for others: FxInfoGroundCollide.cpp:46 (slice S107) has the same single-rand `CVector in(float)` pattern; FxMemoryPool_c::Init returns void (exe: bool), the only caller (FxManager_c::Init 0x4A98E0) ignores it.

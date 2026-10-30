@@ -903,16 +903,22 @@ RpClump* CClothesBuilder::CreateSkinnedClump(RpClump* bones, RwTexDictionary* di
     }
 
     if (odscr) {
+        // exe 0x5A6B84-0x5A6C2B: the three flags start cleared; a different fat/muscle stat sets the ratios flag AND the geometry flag,
+        // different model keys the geometry flag, different texture keys the texture flag (nothing is ever cleared again)
         ms_geometryHasChanged = false;
-        ms_ratiosHaveChanged  = false;
+        ms_textureHasChanged  = false;
         if (odscr->m_fFatStat != ndscr.m_fFatStat || odscr->m_fMuscleStat != ndscr.m_fMuscleStat) {
-            ms_textureHasChanged = true;
+            ms_ratiosHaveChanged  = true;
             ms_geometryHasChanged = true;
         } else {
+            ms_ratiosHaveChanged = false;
+        }
+        if (!rng::equal(ndscr.m_anModelKeys, odscr->m_anModelKeys)) {
+            ms_geometryHasChanged = true;
+        }
+        if (!rng::equal(ndscr.m_anTextureKeys, odscr->m_anTextureKeys)) {
             ms_textureHasChanged = true;
         }
-        ms_geometryHasChanged = !rng::equal(ndscr.m_anModelKeys, odscr->m_anModelKeys);
-        ms_ratiosHaveChanged  = !rng::equal(ndscr.m_anTextureKeys, odscr->m_anTextureKeys);
         if (!ms_ratiosHaveChanged && !ms_geometryHasChanged && !ms_textureHasChanged) {
             return nullptr;
         }
@@ -1049,6 +1055,7 @@ RpClump* CClothesBuilder::CreateSkinnedClump(RpClump* bones, RwTexDictionary* di
     // Free memory
     {
         RpGeometryDestroy(tmpGeo);
+        tmpGeo->flags |= rpGEOMETRYPOSITIONS; // exe 0x5A6D5A: `or [geometry + 8], 2` (the geometry was created without it, the atomic keeps it alive)
 
         RwTexDictionarySetCurrent(dict);
         for (auto i = 0; i < NO_BODY_PARTS; i++) {

@@ -60,6 +60,7 @@ bool CAEWaveDecoder::Initialise() {
 
 // 0x5032a0
 size_t CAEWaveDecoder::FillBuffer(void* dest, size_t size) {
+#ifdef FIX_BUGS
     switch (channelCount) {
     case 1: {
         // Read half of it
@@ -78,6 +79,10 @@ size_t CAEWaveDecoder::FillBuffer(void* dest, size_t size) {
     default:
         return 0;
     }
+#else
+    // 0x5032A0: a plain pass-through (only stereo files are accepted by Initialise)
+    return _dataStreamCopy->FillBuffer(dest, size);
+#endif
 }
 
 // 0x503310

@@ -397,7 +397,7 @@ void FxSystem_c::ResetBoundingSphere() {
         if (!m_BoundingSphere) {
             m_BoundingSphere = new (true) FxSphere_c();
         }
-        m_BoundingSphere = m_SystemBP->m_BoundingSphere;
+        *m_BoundingSphere = *m_SystemBP->m_BoundingSphere; // 0x4AAC1E: 5 dwords copied, the pointer is not replaced
     } else if (m_BoundingSphere) {
         CMemoryMgr::Free(m_BoundingSphere);
         m_BoundingSphere = nullptr;

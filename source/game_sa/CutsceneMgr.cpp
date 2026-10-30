@@ -357,8 +357,9 @@ void CCutsceneMgr::LoadCutsceneData(const char* cutsceneName) {
 // 0x5B11C0
 void CCutsceneMgr::LoadCutsceneData_loading() {
     // Make sure all neceesary models are streamed in
+    // 0x5B11C0: only the special (cutscene) models are waited for; regular models were already loaded by LoadAllRequestedModels
     for (const auto model : ms_iModelIndex | rngv::take(ms_numLoadObjectNames)) {
-        if (!CStreaming::IsModelLoaded(model)) {
+        if (IsModelIDForCutScene(model) && !CStreaming::IsModelLoaded(model)) {
             return;
         }
     }
@@ -417,7 +418,7 @@ void CCutsceneMgr::LoadCutsceneData_loading() {
 
     // Finally, process attachments
     for (const auto& v : ms_iAttachObjectToBone | rngv::take(ms_numAttachObjectToBones)) {
-        AttachObjectToBone(ms_pCutsceneObjects[v.m_nCutscenePedObjectId], ms_pCutsceneObjects[v.m_nCutscenePedObjectId], v.m_nBoneId);
+        AttachObjectToBone(ms_pCutsceneObjects[v.m_nCutsceneAttachmentObjectId], ms_pCutsceneObjects[v.m_nCutscenePedObjectId], v.m_nBoneId);
     }
 }
 

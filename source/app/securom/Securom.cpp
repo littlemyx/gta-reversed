@@ -23,6 +23,7 @@ void SecuromDisplayInit() {
 
 // 0x744AE0
 void SecuromStateDisplay() {
+    // formats: 0x872ECC "Trigger: %d", 0x872EC0 "Trap: %d" (the port printed them without the colon)
     CFont::SetColor(CRGBA(200, 200, 200, 255));
     CFont::SetFontStyle(eFontStyle::FONT_SUBTITLES);
     CFont::SetScale(0.5f, 0.8f);
@@ -39,13 +40,13 @@ void SecuromStateDisplay() {
     float y = 140.f;
     for (int32 i = 0; i < 16; i++) {
         if (triggerDisplay[i]) {
-            notsa::format_to_sz(fmttmp, "Trigger {}", i);
+            notsa::format_to_sz(fmttmp, "Trigger: {}", i);
             AsciiToGxtChar(fmttmp, gxt);
             CFont::PrintString(30.f, y, gxt);
             --triggerDisplay[i];
         }
         if (triggerDisplay[i + 16]) {
-            notsa::format_to_sz(fmttmp, "Trigger {}", i + 16);
+            notsa::format_to_sz(fmttmp, "Trigger: {}", i + 16);
             AsciiToGxtChar(fmttmp, gxt);
             CFont::PrintString(160.f, y, gxt);
             --triggerDisplay[i + 16];
@@ -56,13 +57,13 @@ void SecuromStateDisplay() {
     y = 140.f;
     for (int32 i = 0; i < 16; i++) {
         if (trapDisplay[i]) {
-            notsa::format_to_sz(fmttmp, "Trap {}", i);
+            notsa::format_to_sz(fmttmp, "Trap: {}", i);
             AsciiToGxtChar(fmttmp, gxt);
             CFont::PrintString(350.f, y, gxt);
             --trapDisplay[i];
         }
         if (trapDisplay[i + 16]) {
-            notsa::format_to_sz(fmttmp, "Trap {}", i + 16);
+            notsa::format_to_sz(fmttmp, "Trap: {}", i + 16);
             AsciiToGxtChar(fmttmp, gxt);
             CFont::PrintString(450.f, y, gxt);
             --trapDisplay[i + 16];

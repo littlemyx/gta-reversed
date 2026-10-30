@@ -4726,25 +4726,26 @@ void CAEVehicleAudioEntity::ProcessDummyRCCar(tVehicleParams& vp) {
         CancelAllVehicleEngineSounds();
         return;
     }
-    const auto sf = std::clamp(vp.Speed / vp.Transmission->m_MaxVelocity, 0.f, 1.f);
+    // 0x500E8D: |speed / max velocity| (the port clamped the signed ratio, so reversing was silent), NaN is kept (jp arms)
+    const auto sf = std::clamp(std::abs(vp.Speed / vp.Transmission->m_MaxVelocity), 0.f, 1.f);
+    // 0x500EE9-0x500F3A: speed = table 0x8CBF8C (frequency), volume = table 0x8CC0A4 (dB), both with 4 points (the port had the two tables swapped
+    // and appended a 5th junk point to each, which made GetPiecewiseLinear return the junk y for every x >= 0)
     UpdateGenericVehicleSound(
         AE_SOUND_CAR_ID,
         m_DummySlot,
         m_DummyEngineBank,
         0,
-        CGeneral::GetPiecewiseLinear({ // 0x8CC0A4
-            { 0.00f, -100.f },
-            { 0.05f, -24.0f },
-            { 0.20f, 0.000f },
-            { 1.00f, 0.000f },
-            { 0.00f, 1.000f }
-        }, sf),
         CGeneral::GetPiecewiseLinear({ // 0x8CBF8C
             { 0.00f, 0.70f },
             { 0.05f, 0.70f },
             { 0.20f, 0.90f },
-            { 1.00f, 1.15f },
-            { -12.f, -6.0f }
+            { 1.00f, 1.15f }
+        }, sf),
+        CGeneral::GetPiecewiseLinear({ // 0x8CC0A4
+            { 0.00f, -100.f },
+            { 0.05f, -24.0f },
+            { 0.20f, 0.000f },
+            { 1.00f, 0.000f }
         }, sf),
         1.f
     );

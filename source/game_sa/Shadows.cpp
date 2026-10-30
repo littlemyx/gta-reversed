@@ -792,7 +792,7 @@ void CShadows::RenderStaticShadows() {
                 );
 
                 // 0x70851D: Write vertices (`if` not necessary, it's part of the loop condition)
-                const auto a = NOTSA_FTOL(uint8, (float)ishdw.m_nIntensity * (1.f - CWeather::Foggyness * 0.5f));
+                const auto a = NOTSA_FTOL(uint8, (float)(int16)ishdw.m_nIntensity * (1.f - CWeather::Foggyness * 0.5f)); // exe: `movsx` + `fimul`, so a "negative" intensity stays negative
                 for (auto i{ 0 }; i < poly->m_wNumVerts; i++, vtxIt++) {
                     const auto& pos = poly->m_avecPosn[i];
                     RwIm3DVertexSetPos(vtxIt, pos.x, pos.y, pos.z + 0.06f);

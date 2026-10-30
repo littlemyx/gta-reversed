@@ -493,14 +493,17 @@ bool CMenuManager::ProcessPCMenuOptions(int8 pressedLR, bool acceptPressed) {
         SwitchToNewScreen(SCREEN_GO_BACK);
         return true;
     case MENU_ACTION_RESOLUTION: {
-        if (acceptPressed && m_nDisplayVideoMode != m_nPrefsVideoMode) {
-            m_nPrefsVideoMode = m_nDisplayVideoMode;
-            SetVideoMode(m_nDisplayVideoMode);
-            CentreMousePointer();
-            m_DisplayTheMouse = true;
-            m_nCurrentScreenItem = 5;
-            SaveSettings();
-            CPostEffects::DoScreenModeDependentInitializations();
+        if (acceptPressed) { // exe 0x57CF9B: the accept key only applies the chosen mode, it never scrolls the list
+            if (m_nDisplayVideoMode != m_nPrefsVideoMode) {
+                m_nPrefsVideoMode = m_nDisplayVideoMode;
+                SetVideoMode(m_nDisplayVideoMode);
+                CentreMousePointer();
+                m_DisplayTheMouse = true;
+                m_nCurrentScreenItem = 5;
+                SaveSettings();
+                CPostEffects::DoScreenModeDependentInitializations();
+            }
+            return true;
         }
 
         auto numVideoModes = RwEngineGetNumVideoModes();

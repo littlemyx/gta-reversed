@@ -1810,7 +1810,7 @@ void CSaveGarage::CopyGarageIntoSaveGarage(Const CGarage& g) {
     m_fDoorPosition = g.m_fDoorPosition;
     m_nTimeToOpen   = g.m_nTimeToOpen;
     m_nOriginalType = g.m_nOriginalType;
-    strcpy_s(m_anName, g.m_anName);
+    strncpy(m_anName, g.m_anName, sizeof(m_anName)); // exe 0x5D30A0: unbounded strcpy (the NUL spill is overwritten by the byte stored at +0x4C right after); an 8 char name aborted strcpy_s
 }
 
 // 0x5D30C0
@@ -1832,7 +1832,7 @@ void CSaveGarage::CopyGarageOutOfSaveGarage(CGarage& g) const {
     g.m_nTimeToOpen   = m_nTimeToOpen;
     g.m_nOriginalType = m_nOriginalType;
     g.m_pTargetCar    = nullptr;
-    strcpy_s(g.m_anName, m_anName);
+    strncpy(g.m_anName, m_anName, sizeof(g.m_anName)); // exe 0x5D3145: unbounded strcpy, see CopyGarageIntoSaveGarage
 }
 
 // todo move

@@ -22,8 +22,8 @@ struct CColAccelColEntry {
 VALIDATE_SIZE_FILE(CColAccelColEntry, 0x30);
 
 struct CColAccelIPLEntry {
-    int32 m_nLodIndex;
-    int32 m_nEntityIndex;
+    int32 m_nEntityIndex; // +0 (0x5B3040 stores the entity's index here; the port had the first two fields swapped)
+    int32 m_nLodIndex;    // +4 (index of the entity's LOD in the sector, -1 if none; cacheIPLSection marks THIS entity as underwater)
     int32 m_nModelId;
     int32 m_nLodModelId;
     union {

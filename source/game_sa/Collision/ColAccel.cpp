@@ -45,7 +45,7 @@ void CColAccel::endCache() {
         CFileMgr::Write(file, &m_iNumColItems,  sizeof(m_iNumColItems));
         CFileMgr::Write(file, mp_caccColItems,  sizeof(CColAccelColEntry) * m_iNumColItems);
         CFileMgr::Write(file, &m_iNumSections,  sizeof(m_iNumSections));
-        CFileMgr::Write(file, m_iSectionSize,   sizeof(m_iSectionSize) * m_iNumSections);
+        CFileMgr::Write(file, m_iSectionSize,   sizeof(int32) * m_iNumSections);
         CFileMgr::Write(file, m_iplDefs,        sizeof(IplDef) * TOTAL_IPL_MODEL_IDS);
         CFileMgr::Write(file, &m_iNumColBounds, sizeof(m_iNumColBounds));
         CFileMgr::Write(file, m_colBounds,      sizeof(CColAccelColBound) * m_iNumColBounds);
@@ -148,7 +148,7 @@ void CColAccel::cacheIPLSection(CEntity** ppEntities, int32 entitiesCount) {
         for (auto i = m_iNumIPLItems; i < m_iSectionSize[m_iNumSections]; ++i) {
             auto& iplEntry = mp_caccIPLItems[i];
             if (iplEntry.m_bIsUnderwater)
-                ppEntities[iplEntry.m_nEntityIndex]->m_bUnderwater = true;
+                ppEntities[iplEntry.m_nLodIndex]->m_bUnderwater = true; // the exe reads +4, which addIPLEntity fills with the LOD's index
 
             if (iplEntry.m_bOwnsColModel)
                 CModelInfo::GetModelInfo(iplEntry.m_nModelId)->SetOwnsColModel(true);
@@ -188,8 +188,11 @@ void CColAccel::addIPLEntity(CEntity** ppEntities, int32 entitiesCount, int32 en
     iplEntry.m_nLodModelId = entity->GetLod()->GetModelIndex();
     iplEntry.m_nLodIndex = -1;
 
-    if (entity->GetNumLodChildren() || TheCamera.m_fLODDistMultiplier * entModelInfo->m_fDrawDistance > 300.0F)
-        iplEntry.m_bIsFarDrawDist = true;
+    // 0x5B3086..0x5B30AD: the exe writes the value 8 here (the reader, cacheIPLSection 0x5B2F71, treats 8 as "owns the col model") and the value 4 for the
+    // "owns col model" case below (the reader treats 4 as "far draw distance"): the exe's writer and reader disagree, the port keeps the exe's raw bit values.
+    // `mult * drawDist > 300` is an unrounded x87 product (fld/fmul/fcomp).
+    if (entity->GetNumLodChildren() || (x87d)TheCamera.m_fLODDistMultiplier * entModelInfo->m_fDrawDistance > (x87d)300.0F)
+        iplEntry.m_nFlags |= 8;
 
     for (auto i = 0; i < entitiesCount; ++i) {
         if (ppEntities[i] != entity->GetLod())
@@ -202,13 +205,14 @@ void CColAccel::addIPLEntity(CEntity** ppEntities, int32 entitiesCount, int32 en
     auto* lodModelInfo = CModelInfo::GetModelInfo(iplEntry.m_nLodModelId);
     if (entity->GetLod()->GetNumLodChildren() == 1) {
         if (entity->m_bUnderwater)
-            iplEntry.m_bIsUnderwater = true;
+            iplEntry.m_nFlags |= 1;
 
-        if (lodModelInfo->GetColModel() != entModelInfo->GetColModel() || !entModelInfo->GetColModel())
-            iplEntry.m_bHasColModel = true;
+        // 0x5B30F5: different col models AND the entity has one (the port had `|| !entCol`)
+        if (lodModelInfo->GetColModel() != entModelInfo->GetColModel() && entModelInfo->GetColModel())
+            iplEntry.m_nFlags |= 2;
     } else {
         if (entModelInfo->bDoWeOwnTheColModel)
-            iplEntry.m_bOwnsColModel = true;
+            iplEntry.m_nFlags |= 4;
     }
 
     if (iplEntry.m_nFlags) {

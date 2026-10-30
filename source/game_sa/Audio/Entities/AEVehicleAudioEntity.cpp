@@ -2562,7 +2562,7 @@ void CAEVehicleAudioEntity::ProcessEngineDamage(tVehicleParams& vp) {
             AE_SOUND_FUCKED,
             SND_BANK_SLOT_VEHICLE_GEN,
             SND_BANK_GENRL_VEHICLE_GEN,
-            SND_GENRL_WEAPONS_SPRAY_PAINT,
+            SND_GENRL_VEHICLE_GEN_BROKEN_ENGINE, // 0x4FAFA5: `push 2` (was SND_GENRL_WEAPONS_SPRAY_PAINT = 28 from the steam call)
             lerp(cfg->FuckedSound.FrqMin, cfg->FuckedSound.FrqMax, vf),
             lerp(cfg->FuckedSound.VolMin, cfg->FuckedSound.VolMax, vf),
             cfg->FuckedSound.RollOff

@@ -1078,7 +1078,8 @@ void CPostEffects::Grain(int32 strengthMask, bool update) {
     RwRenderStateSet(rwRENDERSTATETEXTUREADDRESS, RWRSTATE(rwTEXTUREADDRESSWRAP));
     RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, RWRSTATE(rwFILTERLINEAR));
 
-    const auto ux = SCREEN_STRETCH_X(1.5f), uy = SCREEN_HEIGHT / SCREEN_WIDTH * ux;
+    // exe 0x7038B8-0x7038E3: the 1.5 tiling is only stretched for screens wider than 640
+    const auto ux = RsGlobal.maximumWidth > 640 ? SCREEN_STRETCH_X(1.5f) : 1.5f, uy = SCREEN_HEIGHT / SCREEN_WIDTH * ux;
 
     ms_imf.quad[0].u = 0.0f;
     ms_imf.quad[0].v = 0.0f;

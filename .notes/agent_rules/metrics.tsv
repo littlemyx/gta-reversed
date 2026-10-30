@@ -437,3 +437,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	ASM-S81b	v6	asm sweep	387703	144	55	player footsteps on grass/sand/gravel/wood/tile/metal never played (bank id test), ambient gunfire distance inverted + foghorn once, projectile 2nd sound bank, swim splash index grew; frontend dispatch MATCH; 11 M
 2026-10-30	ASM-S83	v6	asm sweep	345358	141	29	horn pattern table shifted by one row (+ invented row), flat tyre roll-off 3.0 vs 2.0, script entity ctor; unicorn emulation of ProcessMissionAudioEvent all ids MATCH; 22 M
 2026-10-30	ASM-S87	v6	asm sweep	289545	96	27	GetBeatInfo never copied result (beat script cmds stale), reverb update test inverted, Query3DSoundEffects null deref, ambience x87 log10 + C0 compares; 19 M
+2026-10-30	ASM-S85	v6	asm sweep	0	0	0	gunshots had doppler 0, reload A/B sounds swapped for 4 weapon groups, rolloff 0.66 vs 2/3 in 9 fns, camera sound volume, attenuation index, ResolveProbability strict rand form (shared); 12 M

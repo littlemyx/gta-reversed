@@ -1,0 +1,4 @@
+addr	file	line	cls	fn	oc	tier
+0x5DE990	source/game_sa/Audio/Entities/AEWeaponAudioEntity.cpp	22	None	Constructor	U	A
+0x506800	source/game_sa/Audio/Entities/AEWeatherAudioEntity.cpp	458	None	AddAudioEvent	U	A
+0x505A00	source/game_sa/Audio/Entities/AEWeatherAudioEntity.cpp	459	None	UpdateParameters	U	A

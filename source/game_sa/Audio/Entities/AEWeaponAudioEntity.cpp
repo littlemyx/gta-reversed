@@ -827,7 +827,7 @@ void CAEWeaponAudioEntity::PlayChainsawStopSound(CPhysical* entity) {
                 .AudioEntity        = this,
                 .Pos                = entity->GetPosition(),
                 .Volume             = GetDefaultVolume(AE_WEAPON_CHAINSAW_ACTIVE),
-                .RollOffFactor      = 2.f / 3.f,
+                .RollOffFactor      = 0.66f, // 0x3F28F5C3
                 .Flags              = SOUND_LIFESPAN_TIED_TO_PHYSICAL_ENTITY | SOUND_REQUEST_UPDATES,
                 .RegisterWithEntity = entity,
                 .EventID            = AE_WEAPON_SOUND_CAT_CHAINSAW_STOP

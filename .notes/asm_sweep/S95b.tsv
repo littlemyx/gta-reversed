@@ -1,0 +1,16 @@
+addr	file	line	cls	fn	oc	tier
+0x5BA850	source/game_sa/Hud.cpp	34	CHud	Initialise	U	B
+0x588850	source/game_sa/Hud.cpp	36	CHud	Shutdown	U	B
+0x58FAE0	source/game_sa/Hud.cpp	37	CHud	Draw	U	B
+0x58D490	source/game_sa/Hud.cpp	49	CHud	DrawAfterFade	U	B
+0x58CA50	source/game_sa/Hud.cpp	51	CHud	DrawBustedWastedMessage	U	B
+0x58E020	source/game_sa/Hud.cpp	52	CHud	DrawCrossHairs	U	B
+0x58B6E0	source/game_sa/Hud.cpp	54	CHud	DrawHelpText	U	B
+0x58B180	source/game_sa/Hud.cpp	55	CHud	DrawMissionTimers	U	B
+0x58D240	source/game_sa/Hud.cpp	56	CHud	DrawMissionTitle	U	B
+0x58CC80	source/game_sa/Hud.cpp	57	CHud	DrawOddJobMessage	U	B
+0x58A330	source/game_sa/Hud.cpp	58	CHud	DrawRadar	U	B
+0x58C080	source/game_sa/Hud.cpp	59	CHud	DrawScriptText	U	B
+0x58C250	source/game_sa/Hud.cpp	60	CHud	DrawSubtitles	U	B
+0x58C6A0	source/game_sa/Hud.cpp	61	CHud	DrawSuccessFailedMessage	U	B
+0x58AEA0	source/game_sa/Hud.cpp	62	CHud	DrawVehicleName	U	B

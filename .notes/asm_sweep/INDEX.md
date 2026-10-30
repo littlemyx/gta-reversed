@@ -241,7 +241,7 @@
 | S92 | phase3 tier A (PHASE3.md) | 42 | done (34 M, 6 fixed, 2 NR: COL1/COL4 loaders unused) | FileLoader.cpp, FileMgr.cpp, IniFile.cpp |
 | S93 | phase3 tier A (PHASE3.md) | 43 | partial 36/43 (31 M, 5 fixed) -> S93b | Fx.cpp, FxEmitter.cpp, IplStore.cpp |
 | S94 | phase3 tier A (PHASE3.md) | 45 | 43/45 (39 M, 4 fixed) -> S94b | FxEmitterBP.cpp, FxInfoManager.cpp, FxManager.cpp, FxPrimBP.cpp, FxSphere.cpp, FxSystem.cpp |
-| S95 | phase3 tier B (PHASE3.md) | 30 | pending | Hud.cpp, HudColours.cpp |
+| S95 | phase3 tier B (PHASE3.md) | 30 | partial 15/30 (15 M) -> S95b | Hud.cpp, HudColours.cpp |
 | S96 | phase3 tier B (PHASE3.md) | 45 | pending | LoadingScreen.cpp, MenuManager.cpp |
 | S97 | phase3 tier B (PHASE3.md) | 34 | pending | MenuManager.cpp, MenuSystem.cpp |
 | S98 | phase3 tier B (PHASE3.md) | 37 | pending | AtomicModelInfo.cpp, BaseModelInfo.cpp, ClumpModelInfo.cpp, DamageAtomicModelInfo.cpp, ModelInfo.cpp, PedModelInfo.cpp |
@@ -270,3 +270,4 @@
 | S85b | rest of S85 | 3 | done (3 M, 1 fixed; ResolveProbability callers verified) | AEWeaponAudioEntity.cpp, AEWeatherAudioEntity.cpp |
 | S93b | rest of S93 | 7 | pending | Fx.cpp |
 | S94b | rest of S94 | 2 | pending | FxEmitterBP.cpp |
+| S95b | rest of S95 | 15 | pending | Hud.cpp |

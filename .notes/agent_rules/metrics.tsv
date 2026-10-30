@@ -447,3 +447,4 @@ date	agent	rules	kind	tokens	tool_uses	minutes	outcome	notes
 2026-10-30	SYSTEMIC-9b	v6	systemic	115894	44	14	reviewed + tested + landed SYSTEMIC-9 (11 fixes); residual: ms_cutsceneName char[8] formatted with {} (8-char name over-reads)
 2026-10-30	ASM-S90	v6	asm sweep	266935	112	28	MP3 bank sound length end offset, finished requests not reset (later same-bank requests ignored), missing PAKFILES returned true, ColDef refcount int16 signed; ColStore/CDirectory MATCH; 32 M
 2026-10-30	ASM-S94	v6	asm sweep	273746	95	31	FxSystem ForAllParticles test inverted (bbox fallback always), bounding sphere aliased blueprint ptr (double free) / uninit, emitter NaN arms; fxp loaders MATCH; 39 M
+2026-10-30	ASM-S95	v6	asm sweep	0	0	0	HUD bars/stars/area name/colours all MATCH, no code change; 15 M

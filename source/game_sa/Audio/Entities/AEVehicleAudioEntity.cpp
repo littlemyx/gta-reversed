@@ -1634,7 +1634,20 @@ void CAEVehicleAudioEntity::JustWreckedVehicle() {
         CancelAllVehicleEngineSounds();
     }
     }
-    StopNonEngineSounds();
+
+    // 0x4FD13F: like StopNonEngineSounds(), but the exe only stops the horn/siren sounds here (no StopSoundAndForget: they stay owned by this entity)
+    PlaySkidSound(-1);
+    GracefullyStopSound(m_SurfaceSound);
+    m_SurfaceSoundType = -1;
+    GracefullyStopSound(m_RoadNoiseSound);
+    m_RoadNoiseSoundType = -1;
+    GracefullyStopSound(m_FlatTireSound);
+    m_FlatTireSoundType = -1;
+    GracefullyStopSound(m_ReverseGearSound);
+    m_ReverseGearSoundType = -1;
+    GracefullyStopSound(m_HornSound);
+    GracefullyStopSound(m_SirenSound);
+    GracefullyStopSound(m_FastSirenSound);
 }
 
 // 0x4FCF40

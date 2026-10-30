@@ -5,16 +5,16 @@ addr	fn	verdict	commit	note
 0x4EEC80	CAESmoothFadeThread::SetBufferVolume	MATCH		0x4EEC80-0x4EED03; stop flag / equal / abs(diff)<0.01 return (jnp = PF=0), else cancel + SetVolume(ftol(v*100)); constants 0.01f (0x858C58) and 100.0f (0x858628) read from the exe
 0x4EEE90	CAESmoothFadeThread::SmoothFadeProc	MATCH		while active { Service; Sleep(1) }
 0x4EEAA0	CAESmoothFadeThread::RequestFade	MATCH		0x4EEAA0-0x4EEC6B; status/volume checks, slot search (idle first, active same buffer with remaining > 1 ms), fade time 20/28/30 by LOCHARDWARE (bit 8), AddRef + counter, diff/start/cur stores all identical
-0x4F1680	CAEStreamThread::Initialise	FIXED	e764af1dc	state init, thread suspended prio 0, CS init, MP3 track loader all match; the length stored into +0x2C was the uint16-truncated GetLength (see GetLength)
+0x4F1680	CAEStreamThread::Initialise	FIXED	09e24502b	state init, thread suspended prio 0, CS init, MP3 track loader all match; the length stored into +0x2C was the uint16-truncated GetLength (see GetLength)
 0x4F11F0	CAEStreamThread::Start	MATCH		
 0x4F1590	CAEStreamThread::Stop	MATCH		thread flag cleared always, loader destroyed once, active cleared
 0x4F1200	CAEStreamThread::Pause	MATCH		SuspendThread
 0x4F1210	CAEStreamThread::Resume	MATCH		ResumeThread
 0x4F1220	CAEStreamThread::WaitForExit	MATCH		
 0x4F1230	CAEStreamThread::PlayTrack	MATCH		CS enter, GetPlayTime==-2 -> Stop, field order +0x18/+0x20/+0x1C/+0x24/+0x13/+0x14, +0x12=1, CS leave
-0x4F1530	CAEStreamThread::GetTrackPlayTime	FIXED	5b3441532	-8 while preparing, else the channel call passes through as the full eax (port returned int16)
+0x4F1530	CAEStreamThread::GetTrackPlayTime	FIXED	a4f98da92	-8 while preparing, else the channel call passes through as the full eax (port returned int16)
 0x4F15C0	CAEStreamThread::MainLoop	MATCH		foreground/background pause-resume, 5 ms service pacing (unsigned compare), Sleep(100)
-0x4F1290	CAEStreamThread::Service	FIXED	e764af1dc	decoder load order, GetDataStream(trackId,0)+Vorbis ctor arg 0, playing-id test, field_1C % length, PrepareStream/SetNextStream arms, preparing flag and id fallbacks match; length stored into +0x2C was uint16-truncated (GetLength). PrepareStream 2nd arg: the exe passes a dword whose upper 24 bits are stack garbage (only the low byte is written), the port passes the sign-extended int8
+0x4F1290	CAEStreamThread::Service	FIXED	09e24502b	decoder load order, GetDataStream(trackId,0)+Vorbis ctor arg 0, playing-id test, field_1C % length, PrepareStream/SetNextStream arms, preparing flag and id fallbacks match; length stored into +0x2C was uint16-truncated (GetLength). PrepareStream 2nd arg: the exe passes a dword whose upper 24 bits are stack garbage (only the low byte is written), the port passes the sign-extended int8
 0x4D7950	CAEAudioChannel::SetPosition	MATCH		buffer + 3D buffer checks, SetPosition(x,y,z,DS3D_DEFERRED)
 0x4D7BD0	CAEAudioChannel::UpdateStatus	MATCH		BUFFERLOST (bit 2) -> Lost
 0x4D7A10	CAEAudioChannel::Lost	MATCH		Restore until not DSERR_BUFFERLOST with Sleep(10); the exe calls Restore twice per round - backend only
@@ -27,19 +27,19 @@ addr	fn	verdict	commit	note
 0x4D79A0	CAEAudioChannel::GetCurrentPlaybackPosition	MATCH		
 0x4D7AA0	CAEAudioChannel::SetReverbAndDepth	MATCH		EAX property sets are compiled out in the port (backend: no EAX on the OpenAL shim); depth*100 and the guards match
 0x4D7B50	CAEAudioChannel::SetNotInRoom	MATCH		same: EAX room set compiled out (backend)
-0x4D83A0	CAEAudioHardware::Destructor	FIXED	d7ab23c38	-> CAEStreamThread dtor 0x4F11E0 is DeleteCriticalSection(+0x38); the port called OS_MutexRelease (ReleaseMutex on a stack address)
+0x4D83A0	CAEAudioHardware::Destructor	FIXED	6cd1740aa	-> CAEStreamThread dtor 0x4F11E0 is DeleteCriticalSection(+0x38); the port called OS_MutexRelease (ReleaseMutex on a stack address)
 0x4D94A0	CAEAudioHardware::SetBassSetting	MATCH		stores (int8 sign-extended) setting + gain, forwards to the streaming channel
 0x4D94D0	CAEAudioHardware::DisableBassEq	MATCH		SetBassEQ(0, 0)
 0x4D94E0	CAEAudioHardware::EnableBassEq	MATCH		SetBassEQ(stored setting, gain)
 0x4D95E0	CAEAudioHardware::CheckDVD	MATCH		
 0x4D9640	CAEAudioHardware::InitDirectSoundListener	MATCH		primary buffer 0x11, format (blockAlign=(bits>>3)*ch), listener pos 0, orientation front(0,1,0) top(0,0,-1), rolloff 0, doppler 0, commit, Query3DSoundEffects; SetFormat-fail leak is FIX_BUGS-guarded
-0x4D97A0	CAEAudioHardware::Terminate	FIXED	5d22e3a93 a33b31377	missing AESmoothFadeThread.WaitForExit (0x4D97C8); channel slots all 64 deleted + nulled
-0x4D9930	CAEAudioHardware::Initialise	FIXED	77cee7c43	user-track auto-scan wait must reset COMPLETE/ERROR to OFF (0x4D9B90-0x4D9BAE); channel count / hw-mix / smooth-fade buffer count (48 vs min(free3D,64)-7 and 7), static channel ctor args (44100, 16), streaming channel volume -100 and flags[0]=55, thread start order match; DSound creation is backend (DirectSoundCreate8 vs EAX)
+0x4D97A0	CAEAudioHardware::Terminate	FIXED	3685bc876 e18042324	missing AESmoothFadeThread.WaitForExit (0x4D97C8); channel slots all 64 deleted + nulled
+0x4D9930	CAEAudioHardware::Initialise	FIXED	81f8d0b12	user-track auto-scan wait must reset COMPLETE/ERROR to OFF (0x4D9B90-0x4D9BAE); channel count / hw-mix / smooth-fade buffer count (48 vs min(free3D,64)-7 and 7), static channel ctor args (44100, 16), streaming channel volume -100 and flags[0]=55, thread start order match; DSound creation is backend (DirectSoundCreate8 vs EAX)
 0x4F10D0	CAEStaticChannel::Service	MATCH		0x4F10D0-0x4F11C2; unsigned (now - syncTime) > field_74, Lock/copy numLoops tail copies/Unlock, release when not paused and not playing
 0x4F0F40	CAEStaticChannel::IsSoundPlaying	MATCH		
-0x4F0F70	CAEStaticChannel::GetPlayTime	FIXED	5b3441532	-1 when not playing, else (int16)bytes->ms returned as the full eax (movsx): the vtable slot returns int32 now
-0x4F0FA0	CAEStaticChannel::GetLength	FIXED	e764af1dc	movsx eax,ax: the vtable slot returns the sign-extended 32-bit value (PlaySound reads all of eax); the port's uint16 return zero-extended
-0x4F0BD0	CAEStaticChannel::Play	FIXED	f80d411de	m_bPaused is assigned (factor == 0), the exe clears it for a non-zero factor; no visible effect because Play follows SetAudioBuffer (paused=0)
+0x4F0F70	CAEStaticChannel::GetPlayTime	FIXED	a4f98da92	-1 when not playing, else (int16)bytes->ms returned as the full eax (movsx): the vtable slot returns int32 now
+0x4F0FA0	CAEStaticChannel::GetLength	FIXED	09e24502b	movsx eax,ax: the vtable slot returns the sign-extended 32-bit value (PlaySound reads all of eax); the port's uint16 return zero-extended
+0x4F0BD0	CAEStaticChannel::Play	FIXED	5e9e607b7	m_bPaused is assigned (factor == 0), the exe clears it for a non-zero factor; no visible effect because Play follows SetAudioBuffer (paused=0)
 0x4F1040	CAEStaticChannel::SynchPlayback	MATCH		
-0x4F0FB0	CAEStaticChannel::Stop	FIXED	a10081b95	m_bPaused cleared at the end (0x4F100F); not visible because the buffer is null afterwards
+0x4F0FB0	CAEStaticChannel::Stop	FIXED	8ae9f24a6	m_bPaused cleared at the end (0x4F100F); not visible because the buffer is null afterwards
 0x4F0C40	CAEStaticChannel::SetAudioBuffer	MATCH		0x4F0C40-0x4F0F3C; all fields, loop-offset maths ((int16<<4)>>3, 24000 minimum, field_6C), buffer flags 0x80B4/0x80B8, lock/copy/memset, tail fill loop count, SetCurrentPosition, QI 3D, volume -100 / -10000. field_8C is a word store in the exe (int32 in the port, never read)

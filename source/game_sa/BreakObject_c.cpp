@@ -48,12 +48,18 @@ bool BreakObject_c::Init(CObject* object, const CVector* velocity, float fVeloci
     CVector vecOrigin;
     auto* colModel = object->GetModelInfo()->GetColModel();
     if (info->m_uiPosRule != eBreakablePluginPositionRule::OBJECT_ORIGIN) {
-        auto usedPoint = colModel->GetBoundingBox().GetCenter();
-        usedPoint.z += 0.25f;
+        // 0x59E822: centre = (max - min) * 0.5 + min per axis (not (max + min) / 2), z + 0.25 afterwards
+        const auto& bb = colModel->GetBoundingBox();
+        CVector usedPoint{
+            (bb.m_vecMax.x - bb.m_vecMin.x) * 0.5f + bb.m_vecMin.x,
+            (bb.m_vecMax.y - bb.m_vecMin.y) * 0.5f + bb.m_vecMin.y,
+            ((bb.m_vecMax.z - bb.m_vecMin.z) * 0.5f + bb.m_vecMin.z) + 0.25f
+        };
         vecOrigin = object->m_matrix->TransformPoint(usedPoint);
     } else {
+        // 0x59E7DD: (pos.z + min.z) + 0.25
         vecOrigin = *RwMatrixGetPos(ltm);
-        vecOrigin.z += colModel->GetBoundingBox().m_vecMin.z + 0.25f;
+        vecOrigin.z = (vecOrigin.z + colModel->GetBoundingBox().m_vecMin.z) + 0.25f;
     }
 
     CColPoint colPoint;

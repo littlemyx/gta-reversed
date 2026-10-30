@@ -150,9 +150,9 @@ struct tReplayPedUpdateBlock : tReplayBlockBase {
     uint16 animGroup;
     uint8 contactSurfaceBrightness;
     struct {
-        bool isTalking : 1;
-        bool stillOnValidPoly : 1;
-        bool usesCollision : 1;
+        bool isVisible : 1;        // entity flags bit 7
+        bool tunnel : 1;           // entity flags bit 30
+        bool tunnelTransition : 1; // entity flags bit 31
     } flags;
     uint8 __pad2[2];
 };

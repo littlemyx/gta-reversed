@@ -188,9 +188,13 @@ void CReplay::StorePedUpdate(CPed* ped, uint8 index) {
     block->matrix.CompressFromFullMatrix(ped->GetMatrix());
     block->weaponModel              = (int16)ped->m_nWeaponModelId;
     block->contactSurfaceBrightness = NOTSA_FTOL(uint8, ped->m_fContactSurfaceBrightness * 100.0f);
-    block->flags.stillOnValidPoly   = (bool)ped->bStillOnValidPoly;
-    block->flags.usesCollision      = ped->GetUsesCollision();
-    block->flags.isTalking          = (bool)(ped == FindPlayerPed() && gbFirstPersonRunThisFrame && ped->bIsTalking);
+    // 0x45C99D: the three flag bits are the ENTITY flags (ped + 0x1C) bit 7 (visible), bit 30 (tunnel), bit 31 (tunnel transition) - not CPed bits; the visible bit is cleared for the player in first person (0x45C9ED)
+    block->flags.isVisible          = ped->m_bIsVisible;
+    block->flags.tunnel             = ped->m_bTunnel;
+    block->flags.tunnelTransition   = ped->m_bTunnelTransition;
+    if (ped == FindPlayerPed() && gbFirstPersonRunThisFrame) {
+        block->flags.isVisible = false;
+    }
     block->vehicleIndex             = (uint8)vehicleIdx;
     block->animGroup                = (uint16)ped->m_nAnimGroup;
     StorePedAnimation(ped, block->animState);
@@ -506,8 +510,10 @@ void CReplay::ProcessPedUpdate(CPed* ped, float interpValue, CAddressInReplayBuf
     if (!ped)
         return;
 
-    ped->m_fCurrentRotation = (float)packet.heading / HEADING_COMPRESS_VALUE;
-    ped->m_fAimingRotation  = (float)packet.heading / HEADING_COMPRESS_VALUE;
+    // 0x45CABF: multiplied by the exe constant 0x859C44 (= 0.02453125f), not divided by HEADING_COMPRESS_VALUE (1/40.764328f is a different float)
+    constexpr float HEADING_DECOMPRESS_VALUE = 0.02453125f;
+    ped->m_fCurrentRotation = (float)packet.heading * HEADING_DECOMPRESS_VALUE;
+    ped->m_fAimingRotation  = (float)packet.heading * HEADING_DECOMPRESS_VALUE;
 
     ped->GetMatrix() = Lerp(ped->GetMatrix(), CCompressedMatrixNotAligned::Decompress(packet.matrix), interpValue);
 
@@ -526,16 +532,17 @@ void CReplay::ProcessPedUpdate(CPed* ped, float interpValue, CAddressInReplayBuf
         ped->m_pVehicle = nullptr;
         ped->bInVehicle = false;
     }
-    if (const auto ag = packet.animGroup; ag != ped->m_nAnimGroup) {
+    if (const auto ag = (int32)(int16)packet.animGroup; ag != ped->m_nAnimGroup) { // 0x45CBE0: movsx word
         ped->m_nAnimGroup = static_cast<AssocGroupId>(ag);
         if (ped == FindPlayerPed()) {
             ped->AsPlayer()->ReApplyMoveAnims();
         }
     }
 
-    ped->bIsTalking = packet.flags.isTalking;
-    ped->bStillOnValidPoly = packet.flags.stillOnValidPoly;
-    ped->SetUsesCollision(packet.flags.usesCollision);
+    // 0x45CC07: entity flags bit 7 / 30 / 31 (see StorePedUpdate)
+    ped->m_bIsVisible        = packet.flags.isVisible;
+    ped->m_bTunnel           = packet.flags.tunnel;
+    ped->m_bTunnelTransition = packet.flags.tunnelTransition;
     ped->m_fContactSurfaceBrightness = static_cast<float>(packet.contactSurfaceBrightness) * ExeRecip(100.0f);
     RetrievePedAnimation(ped, packet.animState);
 

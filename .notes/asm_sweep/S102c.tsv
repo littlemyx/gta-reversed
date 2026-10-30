@@ -1,0 +1,13 @@
+addr	file	line	cls	fn	oc	tier
+0x713950	source/game_sa/Clouds.cpp	22	CClouds	Render	U	B
+0x714650	source/game_sa/Clouds.cpp	23	CClouds	RenderSkyPolys	U	B
+0x7154B0	source/game_sa/Clouds.cpp	24	CClouds	RenderBottomFromHeight	U	B
+0x713760	source/game_sa/Clouds.cpp	28	CClouds	MovingFog_Create	U	B
+0x716B10	source/game_sa/Clouds.cpp	30	CClouds	MovingFog_Update	U	B
+0x716C90	source/game_sa/Clouds.cpp	34	CClouds	MovingFogRender	U	B
+0x715F40	source/game_sa/Clouds.cpp	38	CClouds	VolumetricClouds_Create	U	B
+0x716380	source/game_sa/Clouds.cpp	42	CClouds	VolumetricCloudsRender	U	B
+0x726090	source/game_sa/Mirrors.cpp	42	CMirrors	RenderMirrorBuffer	U	B
+0x7266B0	source/game_sa/Mirrors.cpp	43	CMirrors	BuildCameraMatrixForScreens	U	B
+0x726DF0	source/game_sa/Mirrors.cpp	44	CMirrors	BeforeConstructRenderList	U	B
+0x727140	source/game_sa/Mirrors.cpp	45	CMirrors	BeforeMainRender	U	B

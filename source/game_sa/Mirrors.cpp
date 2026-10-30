@@ -174,7 +174,19 @@ void CMirrors::RenderMirrorBuffer() {
         RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, vertices, std::size(vertices), indices, std::size(indices));
     }
 
-    if (DistanceBetweenPoints({ 1003.0f, -42.0f, 216.0f }, TheCamera.GetPosition()) < 50.0f) {
+    // 0x726090..: centre (216, -42, 1003) (the consts at 0x8729EC are stored z,y,x), squared sum added z,y,x, fsqrt, strict `< 50` (NaN skips)
+    const auto exeDistLt50 = [] {
+        const CVector& cam = TheCamera.GetPosition();
+        const float dx = cam.x - 216.0f, dy = cam.y - (-42.0f), dz = cam.z - 1003.0f;
+        return std::sqrt(dz * dz + dy * dy + dx * dx) < 50.0f;
+    };
+    if (exeDistLt50()) {
+        // 0x726090: the exe sets these four states before the Z-only quad (write Z, no vertex alpha, src ZERO / dst ONE: colour untouched)
+        RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      RWRSTATE(TRUE));
+        RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, RWRSTATE(FALSE));
+        RwRenderStateSet(rwRENDERSTATESRCBLEND,          RWRSTATE(rwBLENDZERO));
+        RwRenderStateSet(rwRENDERSTATEDESTBLEND,         RWRSTATE(rwBLENDONE));
+
         const CVector pos[]{
             { 216.0f, -45.0f, 1000.0f },
             { 216.0f, -45.0f, 1006.0f },

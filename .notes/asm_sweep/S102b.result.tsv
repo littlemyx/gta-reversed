@@ -1,0 +1,25 @@
+addr	function	verdict	asm range	note	fix commit
+0x7200B0	COcclusion::IsPositionOccluded	FIXED	0x7200B0-0x7201A9	depth test is strict with int16 dist (port <= with uint16); long edge is scaleX > scaleY ? scaleX : scaleY	e3c04c7ff
+0x71E080	COcclusion::OccluderHidesBehind	MATCH	0x71E080-0x71E127	inlined IsPointInsideLine incl. NaN-inside arm; association equal at PC24	-
+0x7201C0	COcclusion::ProcessBeforeRendering	FIXED	0x7201C0-0x7204BA	interior occluders only when the outside cannot be seen (port always); far list walked before nearby list also when a walk is in progress (port reversed); full active array is skipped, not overrun; occluded occluders erased by shift + recheck of the same index (port remove_if on the live array, unsigned dist)	5bc2c4f92
+0x6FFFF0	CPointLights::ProcessVerticalLineUsingCache	MATCH	0x6FFFF0-0x7000D3	32-entry cache, float == compare, ProcessVerticalLine args and z-20	-
+0x7002D0	CPointLights::RenderFogEffect	FIXED	0x7002D0-0x700BDC	NaN-skipping tests; vertical line end z (z+10)-20; dot (dz,dx,dy) and length (dz,dy,dx) association; x*(1/12), x*0.2 constants; point branch compares the rounded distance and uses (d*(1/size))^2; angle uses the double constants 6.28/8192 and 6.28/32768	95ef83c7b
+0x6FAA10	CCoronas::RenderOutGeometryBufferForReflections	MATCH	(all)	-	-
+0x6FAEC0	CCoronas::Render	FIXED	0x6FAEC0-0x6FB62D	fade = 1 or 1-(z-half)/half (port invLerp/clamp: other rounding); int half sizes; strict NaN-skipping off-screen and far-clip tests	7343823be
+0x6FB630	CCoronas::RenderReflections	FIXED	0x6FB630-0x6FB9E0	no id/alpha/reflection-type skip; no InitSpriteBuffer; height < 20 compared the FLAG; ground test < vs <=; colour = (cc*int16 mult)>>8 with one ftol'd multiplier; lean matrix used for bikes; width (w*size)*0.75; fade formula	4a6d7b18e
+0x6FBAA0	CCoronas::RenderSunReflection	FIXED	0x6FBAA0-0x6FC175	scale constant 3.333f (port 1/0.3f); spot fade helper 0x6FBA20 (4th spot radius 350, ramp *0.01f, 2D distance compare); NaN returns; vertex sum association	951f03694
+0x722150	CBrightLights::RenderOutGeometryBuffer	MATCH	(all)	-	-
+0x7241C0	CBrightLights::Render	FIXED	0x7241C0-0x72472E	rnd = ftol((rand&0xFF)*0.2) (port: range overload); alpha ramp *(1/15) (port /15); vertex sums (right*u + top*s) + pos	768cd8cf3
+0x724770	CBrightLights::RegisterOne	FIXED	0x724770-0x724882	dist sums z,y,x; NaN rejects (dist <= 60 required)	768cd8cf3
+0x713950	CClouds::Render	UNSURE	not compared	budget	-
+0x714650	CClouds::RenderSkyPolys	UNSURE	not compared	budget	-
+0x7154B0	CClouds::RenderBottomFromHeight	UNSURE	not compared	budget	-
+0x713760	CClouds::MovingFog_Create	UNSURE	not compared	budget	-
+0x716B10	CClouds::MovingFog_Update	UNSURE	not compared	budget	-
+0x716C90	CClouds::MovingFogRender	UNSURE	not compared	budget	-
+0x715F40	CClouds::VolumetricClouds_Create	UNSURE	not compared	budget	-
+0x716380	CClouds::VolumetricCloudsRender	UNSURE	not compared	budget	-
+0x726090	CMirrors::RenderMirrorBuffer	UNSURE	not compared	budget	-
+0x7266B0	CMirrors::BuildCameraMatrixForScreens	UNSURE	not compared	budget	-
+0x726DF0	CMirrors::BeforeConstructRenderList	UNSURE	not compared	budget	-
+0x727140	CMirrors::BeforeMainRender	UNSURE	not compared	budget	-

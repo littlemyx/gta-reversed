@@ -83,7 +83,7 @@ CText::CText() {
     m_nLangCode = eTextLangCode::ENGLISH;
 
     m_szCdErrorText[0] = '\0';
-    m_szMissionName[0] = '\0';
+    rng::fill(m_szMissionName, '\0'); // 0x6A00F0 clears all 8 bytes
     GxtErrorString[0] = '\0';
 }
 
@@ -108,7 +108,7 @@ void CText::Unload(bool unloadMissionData) {
         m_MissionText.Unload();
 
         m_bIsMissionPackLoaded = false;
-        m_szMissionName[0] = '\0';
+        rng::fill(m_szMissionName, '\0'); // 0x69FF8E: clears all 8 bytes
     }
 }
 
@@ -324,19 +324,26 @@ void CText::LoadMissionPackText() {
     }
 
     uint16 version = 0, encoding = 0;
-    CFileMgr::Read(file, &version, sizeof(version));
-    CFileMgr::Read(file, &encoding, sizeof(encoding));
+    if (CFileMgr::Read(file, &version, sizeof(version)) != sizeof(version) || CFileMgr::Read(file, &encoding, sizeof(encoding)) != sizeof(encoding)) { // 0x69FA49 / 0x69FA59: a short read fails the load
+        m_bIsMissionPackLoaded = false;
+        CFileMgr::CloseFile(file);
+        return;
+    }
     CheckFileEncoding(fileName, version, encoding);
 
     uint32 offset = sizeof(uint16) * 2;
     ChunkHeader header{};
 
     bool bKey = false, bText = false;
-    while (!bKey && !bText) {
+    while (!bKey || !bText) { // 0x69FA88: reads until BOTH the key and the text chunk are loaded (`&&` stopped after the first one)
         if (!ReadChunkHeader(&header, file, &offset, false)) {
             m_bIsMissionPackLoaded = false;
             CFileMgr::CloseFile(file);
             return;
+        }
+
+        if (header.size == 0) { // 0x69FABC
+            continue;
         }
 
         if (!strncmp(header.magic, CHUNK_TKEY, sizeof(header.magic))) {
@@ -351,9 +358,9 @@ void CText::LoadMissionPackText() {
             continue;
         }
 
-        // Skip any other data
+        // Skip any other data (0x69FB35: the exe's byte counter is 16 bit: `movzx ecx, di; cmp ecx, size`)
         int8 tmp;
-        for (auto i = 0; i < header.size; ++i) {
+        for (uint16 i = 0; i < (uint32)header.size; ++i) {
             if (!CFileMgr::Read(file, &tmp, sizeof(int8))) {
                 m_bIsMissionPackLoaded = false;
                 CFileMgr::CloseFile(file);
@@ -361,7 +368,7 @@ void CText::LoadMissionPackText() {
             }
         }
     }
-    m_MainKeyArray.Update(m_MissionText.m_data);
+    m_MissionKeyArray.Update(m_MissionText.m_data); // 0x69FB64: relocates the MISSION key array (the port relocated the main one)
     m_bIsMissionPackLoaded = true;
     strcpy_s(m_szMissionName, "MPNAME");
     CFileMgr::CloseFile(file);
@@ -400,7 +407,8 @@ void CText::GetNameOfLoadedMissionText(char* outStr) {
 // 0x69F940
 bool CText::ReadChunkHeader(ChunkHeader* header, FILESTREAM file, uint32* offset, uint8 unknown) {
     // Same as in Android 2.0
-    if (!CFileMgr::Read(file, header, sizeof(ChunkHeader))) {
+    // 0x69F940: the exe reads the 8 bytes one by one and fails on the first short read; a partial header is a failure here too (`!read` accepted it)
+    if (CFileMgr::Read(file, header, sizeof(ChunkHeader)) != sizeof(ChunkHeader)) {
         return false;
     }
     *offset += sizeof(ChunkHeader);

@@ -134,13 +134,19 @@ void CMenuManager::ProcessFileActions() {
                     // Save Game
                     //
                     // Save failed! The current Mission Pack is not available. Please recheck that the current Mission Pack is installed correctly.
-                    return JumpToGenericMessageScreen(SCREEN_GAME_LOADED, "FET_SG", "FES_NIM");
+                    // Exe 0x578E3D-0x578E5E: the flag is cleared after the jump (the early return left it set)
+                    JumpToGenericMessageScreen(SCREEN_GAME_LOADED, "FET_SG", "FES_NIM");
+                    m_CurrentlySaving = false;
+                    return;
                 } else {
                     CFileMgr::CloseFile(file);
                 }
             }
 
-            if (s_PcSaveHelper.SaveSlot(m_SelectedSlot)) {
+            // Exe 0x578DEC-0x578E13: PopulateSlotInfo runs before the screen switch / error screen
+            const bool saveFailed = s_PcSaveHelper.SaveSlot(m_SelectedSlot);
+            s_PcSaveHelper.PopulateSlotInfo();
+            if (saveFailed) {
                 // Save Game
                 //
                 // Save failed! There was an error while saving the current game. Please check your savegame directory and try again.
@@ -151,7 +157,6 @@ void CMenuManager::ProcessFileActions() {
                 // Save Successful. Select OK to continue.
                 SwitchToNewScreen(SCREEN_SAVE_DONE_2);
             }
-            s_PcSaveHelper.PopulateSlotInfo();
 
             m_CurrentlySaving = false;
         } else {

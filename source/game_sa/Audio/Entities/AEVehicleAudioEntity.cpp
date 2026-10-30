@@ -3264,6 +3264,9 @@ void CAEVehicleAudioEntity::UpdateDummyRCAcAndBrake(tVehicleParams& vp) {
 }
 #pragma endregion
 
+// 0x862D04 (0x3BAEC33C): the exe's rotor frequency step (NOT `1.f / 187.5f` = 0x3BAEC33E)
+constexpr float ROTOR_FREQ_STEP_EXE = 0.00533333234f;
+
 #pragma region Aircraft
 // notsa - Update rotor frequency smoothly
 void CAEVehicleAudioEntity::UpdateRotorFreq(float freq, float stepUp, float stepDown) {
@@ -3464,7 +3467,7 @@ void CAEVehicleAudioEntity::ProcessAIProp(tVehicleParams& vp) {
     const auto propSpeedFactor = GetPropSpeedFactor(propSpeed);
 
     // 0x4FE25A
-    UpdateRotorFreq(CalculatePlanePropFreq(vp, 0.f), 1.f / 187.5f, 1.f / 187.5f);
+    UpdateRotorFreq(CalculatePlanePropFreq(vp, 0.f), ROTOR_FREQ_STEP_EXE, ROTOR_FREQ_STEP_EXE); // 0x862D04
     
     // 0x4FE3CF
     PlayAircraftSound(
@@ -3511,7 +3514,7 @@ void CAEVehicleAudioEntity::ProcessDummyOrPlayerProp(tVehicleParams& vp, bool is
     ProcessPropOrJetStall(plane, propStalledVol, propStalledFreq);
 
     // 0x4FDEB7 - Calculate and update rotor frequency
-    UpdateRotorFreq(CalculatePlanePropFreq(vp, GetAircraftAcceleration(vp)) * propStalledFreq, 1 / 187.5f, 1 / 187.5f);
+    UpdateRotorFreq(CalculatePlanePropFreq(vp, GetAircraftAcceleration(vp)) * propStalledFreq, ROTOR_FREQ_STEP_EXE, ROTOR_FREQ_STEP_EXE); // 0x862D04
     
     const auto camPoVFactor = GetAircraftCameraPoVFactor(plane);
 
@@ -4014,7 +4017,6 @@ void CAEVehicleAudioEntity::ProcessDummyHovercraft(tVehicleParams& params) {
     constexpr float VOL_MIN = -12.f, VOL_MAX = -6.f;   // 0x8CBFAC, 0x8CBFB0
     constexpr float FRQ_MIN = 0.8f, FRQ_MAX = 1.15f;   // 0x8CBFB4, 0x8CBFB8
     constexpr float FRQ_STEER_FACTOR = 0.15f;          // 0x8CBFBC
-    constexpr float ROTOR_FREQ_STEP  = 0.00533333234f; // 0x862D04 (0x3BAEC33C, not exactly `1.f / 187.5f`)
 
     const auto pad = CPad::GetPad(0);
 
@@ -4065,7 +4067,7 @@ void CAEVehicleAudioEntity::ProcessDummyHovercraft(tVehicleParams& params) {
     const auto freq   = (((FRQ_MAX - FRQ_MIN) * propFactor + FRQ_STEER_FACTOR * steer) + FRQ_MIN) + accelFrqOffset;
 
     // 0x5011AE
-    UpdateRotorFreq(freq, ROTOR_FREQ_STEP, ROTOR_FREQ_STEP);
+    UpdateRotorFreq(freq, ROTOR_FREQ_STEP_EXE, ROTOR_FREQ_STEP_EXE);
 
     // 0x501210
     UpdateGenericVehicleSound(

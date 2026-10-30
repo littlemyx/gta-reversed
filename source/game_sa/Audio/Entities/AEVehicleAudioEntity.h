@@ -350,7 +350,7 @@ protected: // Config:
         } Heli;
 
         struct {
-            float RotorFreqStepUp{1.f / 187.5f}, RotorFreqStepDown{1.f / 187.5f}; // 0xNONE
+            float RotorFreqStepUp{0.00533333234f}, RotorFreqStepDown{0.00533333234f}; // 0x862D04 (0x3BAEC33C, not exactly `1.f / 187.5f` = 0x3BAEC33E)
             float RotorVolBase{0.f}; // 0xB6BA04
         } DummyRCPlane{};
 
@@ -373,7 +373,7 @@ protected: // Config:
         } Jet{};
 
         struct {
-            float RotorFreqStepUp{1.f / 187.5f}, RotorFreqStepDown{1.f / 187.5f}; // 0xNONE
+            float RotorFreqStepUp{0.00533333234f}, RotorFreqStepDown{0.00533333234f}; // 0x862D04 (0x3BAEC33C, not exactly `1.f / 187.5f` = 0x3BAEC33E)
             float TiltDownStep{ 0.07f };     // 0x8CBF6C
             float VolBase{ -6.0f };          // 0x8CBF68
             float FrqTiltDownFactor{ 0.2f }; // 0xNONE

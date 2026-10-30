@@ -1,0 +1,37 @@
+addr	function	verdict	asm range	note	fix commit
+0x704630	CPostEffects::Initialise	FIXED	0x704630-0x704696 (all)	grain fill ran 16384 iterations instead of 0x10000 (1 rand() per pixel, whole 256x256x4 raster)	b03e85e0a
+0x7010C0	CPostEffects::Close	MATCH	(all)		-
+0x7046D0	CPostEffects::DoScreenModeDependentInitializations	MATCH	(all)		-
+0x7043D0	CPostEffects::SetupBackBufferVertex	MATCH	0x7043D0-0x704626	raster size, vertex positions/uv/rhw compared; error-log arm not compared	-
+0x7046A0	CPostEffects::Update	MATCH	(all)		-
+0x700EC0	CPostEffects::DrawQuad	MATCH	(all)		-
+0x703CC0	CPostEffects::ImmediateModeFilterStuffInitialize	MATCH	(all)		-
+0x700D70	CPostEffects::ImmediateModeRenderStatesSet	MATCH	(all)		-
+0x700CC0	CPostEffects::ImmediateModeRenderStatesStore	MATCH	(all)		-
+0x700E00	CPostEffects::ImmediateModeRenderStatesReStore	MATCH	(all)		-
+0x7039C0	CPostEffects::UnderWaterRipple	FIXED	0x7039C0-0x703CB0 (all)	vertex colour ARGB (0xFF<<24|r<<16|g<<8|b), port used ABGR (r/b swapped)	aeab18d17
+0x701780	CPostEffects::HeatHazeFX	MATCH	0x701780-0x70207F (all)		-
+0x7011C0	CPostEffects::NightVision	FIXED	0x7011C0-0x701277 (all)	switch-on counter max(count-step,0), port min() (flash never ran)	e389f020a
+0x703520	CPostEffects::SetFilterMainColour	MATCH	(all)		-
+0x703F80	CPostEffects::InfraredVision	FIXED	0x703F80-0x7040F0 (all)	quad size W+(xy+xy); DrawQuadSetUVs vertex mapping (3rd pair -> vertex 3) so DrawQuadSetDefaultUVs no longer swaps vertices 2/3	006f67017 5a000786b
+0x704150	CPostEffects::Fog	MATCH	0x704150-0x7043A4	already fixed by SYSTEMIC-9; states/angle step/colours re-read	-
+0x702F40	CPostEffects::CCTV	MATCH	(all)		-
+0x7037C0	CPostEffects::Grain	FIXED	0x7037C0-0x703980 (all)	UV tiling 1.5 only stretched for width > 640	d9d8d561c
+0x7030A0	CPostEffects::SpeedFX	MATCH	0x7030A0-0x7034AF (all)	level table, jitter, offsets compared	-
+0x702F00	CPostEffects::DarknessFilter	MATCH	(all)		-
+0x703650	CPostEffects::ColourFilter	MATCH	(all)		-
+0x702080	CPostEffects::Radiosity	MATCH	0x702080-0x702F00 (strip-copy path, filter passes, limit quad)	4x-unrolled remainder loops and the non-strip path skimmed only	-
+0x7046E0	CPostEffects::Render	FIXED	0x7046E0-0x7053E9 (all)	colour passes clamp to [0,255] before ftol (was uint8 wrap); rain strength no overshoot; heat haze script switch/underwater arms call HeatHazeFX(1,false); water depth factor 1.0 when off; xoffset association; photo wait flag cleared; NaN arm of UnderWaterness	ac82ae22e ebed7f097 50c9ec3a8
+0x721EE0	CRegisteredMotionBlurStreak::Update	MATCH	(all)		-
+0x721F70	CRegisteredMotionBlurStreak::Render	MATCH	(all)		-
+0x7221B0	CShinyTexts::Init	MATCH	(all)		-
+0x7221C0	CShinyTexts::RenderOutGeometryBuffer	MATCH	(all)		-
+0x724890	CShinyTexts::Render	FIXED	0x724890-0x724B54 (all)	vertex colour alpha 0xFF (port 12)	c447d354a
+0x724B60	CShinyTexts::RegisterOne	FIXED	0x724B60-0x724D30 (all)	distance (dz^2+dy^2)+dx^2, !(dist<=max) return	bd85ebba8
+0x7268F0	CSpecialFX::Init	MATCH	(all)		-
+0x726AA0	CSpecialFX::Update	MATCH	(all)		-
+0x723390	CSpecialFX::Shutdown	MATCH	(all)		-
+0x7233F0	CSpecialFX::AddWeaponStreak	FIXED	0x7233F0-0x72372F (all)	TransformPoint for both points (port TransformVector); uninitialised RwMatrix* write removed	cce39ba19
+0x726AD0	CSpecialFX::Render	MATCH	(all)		-
+0x721660	CSpecialFX::Render2DFXs	FIXED	0x721660-0x721D1C (all)	video cam text (W*8)/10 int; scanline band ftol before -70; lift-cam rects rand()%W/%H {x,y+2,x+20,y}; snapshot flash *0.65	df4ae783a bfa59677a
+0x721D30	CSpecialFX::ReplayStarted	MATCH	(all)		-

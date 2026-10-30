@@ -34,13 +34,11 @@ bool CUpsideDownCarCheck::IsCarUpsideDown(const CVehicle* vehicle) {
         }
     };
 
-    if (!vehicle->CanPedStepOutCar(false)) {
-        const auto& up = vehicle->GetUp();
-        return up.z < 0.3f && GetNumContactWheels() < 4  // Not totally up-side down
-            || up.z < 0.f;                               // Literally up-side down
-    }
-
-    return false;
+    // exe 0x463830-0x463895: the shape test first, then the vcall (slot 0xE4 = CanPedStepOutCar(false)) must be TRUE (the port had it inverted: `!CanPedStepOutCar`)
+    const auto& up = vehicle->GetUp();
+    const bool  isUpsideDown = up.z < 0.3f && GetNumContactWheels() < 4  // Not totally up-side down
+                            || up.z < 0.f;                               // Literally up-side down
+    return isUpsideDown && vehicle->CanPedStepOutCar(false);
 }
 
 // Process

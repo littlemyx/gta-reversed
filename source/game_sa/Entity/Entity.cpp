@@ -577,7 +577,7 @@ void CEntity::PreRender() {
             if (CVector2D(obj->m_vecMoveSpeed).Magnitude() > 0.03F) {
                 float fWaterLevel;
                 if (!CWaterLevel::GetWaterLevelNoWaves(vecPos, &fWaterLevel, nullptr, nullptr) || 
-                    vecPos.z > fWaterLevel) {
+                    !(vecPos.z <= fWaterLevel)) { // exe 0x536737: `fcomp; test ah, 0x41; jnp skip` - a NaN z registers the streak
                     CMotionBlurStreaks::RegisterStreak(
                         NOTSA_PTR_ID32(this), 255, 160, 100, 255, 
                         vecStreakStart, vecStreakEnd
@@ -587,10 +587,10 @@ void CEntity::PreRender() {
         } else if (modelIndex == ModelIndices::MI_BEACHBALL) {
             if (DistanceBetweenPoints(GetPosition(), TheCamera.GetPosition()) < 50.0F) {
                 const auto ucShadowStrength = static_cast<uint8>(CTimeCycle::m_CurrentColours.m_nShadowStrength);
-                CShadows::StoreShadowToBeRendered(
+                CShadows::StoreShadowToBeRendered( // exe 0x5367F9-0x536849: the intensity is the full int16 (`push eax`), only red / green / blue are the low byte
                     eShadowType::SHADOW_DEFAULT, gpShadowPedTex, GetPosition(),
                     0.4F, 0.0F, 0.0F, -0.4F,
-                    ucShadowStrength, ucShadowStrength, ucShadowStrength, ucShadowStrength,
+                    CTimeCycle::m_CurrentColours.m_nShadowStrength, ucShadowStrength, ucShadowStrength, ucShadowStrength,
                     20.0F, false, 1.0F, nullptr, false
                 );
             }
@@ -599,7 +599,7 @@ void CEntity::PreRender() {
                    || modelIndex == ModelIndices::MI_CRANE_MAGNET
                    || modelIndex == ModelIndices::MI_MINI_MAGNET
                    || modelIndex == ModelIndices::MI_CRANE_HARNESS) {
-            if (DistanceBetweenPoints(GetPosition(), TheCamera.GetPosition()) < 100.0F) {
+            if (DistanceBetweenPoints(GetPosition(), TheCamera.GetPosition()) < 110.0F) { // exe 0x5368DF: 110.0 (flt_858BA8)
                 CShadows::StoreShadowToBeRendered(
                     eShadowType::SHADOW_DEFAULT, gpShadowPedTex, GetPosition(),
                     2.0F, 0.0F, 0.0F, -2.0F, 128, 128, 128, 128,

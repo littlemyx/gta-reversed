@@ -544,8 +544,7 @@ void CRunningScript::LocateCharCommand(int32 commandId) {
     bool result = false;
     if (!notStopped) {
         const bool inVehicle = ped->bInVehicle;
-        if (!(x - rx > pos.x || x + rx < pos.x || y - ry > pos.y || y + ry < pos.y)
-            && (!is3D || !(z - rz > pos.z || z + rz < pos.z))) {
+        if (IsInCentreRange(x, rx, pos.x) && IsInCentreRange(y, ry, pos.y) && (!is3D || IsInCentreRange(z, rz, pos.z))) {
             switch (commandId) {
             case 0xEC:
             case 0xEF:

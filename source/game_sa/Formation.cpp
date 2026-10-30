@@ -312,12 +312,12 @@ void CFormation::FindCoverPoints(CVector pos, float radius) {
     rng::fill(m_Destinations.m_PointHasBeenClaimed, false);
 
     for (auto& vehicle : NOTSA_EXE_OR(GetVehiclePool()->GetAllValidReverse(), GetVehiclePool()->GetAllValid())) {
-        if (!vehicle.IsAutomobile() || vehicle.GetMoveSpeed().Magnitude() >= 0.005f) {
+        if (!vehicle.IsAutomobile() || !(vehicle.GetMoveSpeed().Magnitude() < 0.005f)) { // 0x69B8DA: `fcomp; jp` skips NaN too
             continue;
         }
         const auto* colModel = vehicle.GetModelInfo()->GetColModel();
         const auto& bb       = colModel->m_boundBox;
-        if (bb.m_vecMax.z >= 1.5f) { // Too tall to take cover behind
+        if (!(bb.m_vecMax.z < 1.5f)) { // Too tall to take cover behind (NaN skips too, 0x69B8F6)
             continue;
         }
         CPointList points;
@@ -336,7 +336,7 @@ void CFormation::FindCoverPoints(CVector pos, float radius) {
     }
 
     for (auto& object : NOTSA_EXE_OR(GetObjectPool()->GetAllValidReverse(), GetObjectPool()->GetAllValid())) {
-        if (object.m_matrix->GetUp().z <= 0.95f || !object.CanBeUsedToTakeCoverBehind()) {
+        if (!(object.m_matrix->GetUp().z > 0.95f) || !object.CanBeUsedToTakeCoverBehind()) { // 0x69BA2A: `jne` on C0|C3 also catches NaN
             continue;
         }
         const auto& objPos = object.GetPosition();

@@ -28,7 +28,9 @@ public:
                 continue;
             }
             assert(!tp.Task);
-            if (ped == leader) {
+            // 0x5F6B40: the 7 follower slots get the follow task, the LEADER slot (7) wanders (the port tested `ped == leader`,
+            // i.e. every slot wandered when the whole group was allocated)
+            if (i != CPedGroupMembership::LEADER_MEM_ID) {
                 tp.Task = new CTaskComplexFollowLeaderAnyMeans{
                     pedGroup,
                     leader,

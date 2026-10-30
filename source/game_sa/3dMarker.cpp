@@ -115,14 +115,22 @@ void C3dMarker::Render() {
     auto transform = CMatrix{ m_Mat.m_pAttachMatrix };
     if (m_Type == MARKER3D_TORUS || m_Type == MARKER3D_ARROW2) {
         if (m_Normal != CVector{ 0.0f, 0.0f, 1.0f }) {
-            transform *= CMatrix::WithUp(m_Normal);
+            // 0x72247E..0x7224F6: right = normalise(Z x normal), forward = normalise(normal x right), up = normal (CMatrix::WithUp does not normalise)
+            CVector right = CVector::ZAxisVector().Cross(m_Normal);
+            right.Normalise();
+            CVector forward = m_Normal.Cross(right);
+            forward.Normalise();
+            transform *= CMatrix{ CVector{}, right, forward, m_Normal };
         }
     }
 
+    // 0x722570..0x7225AA: Scale(size) for every type, then 0x5A2E60 (1, 1, 20) on top for the tube (not size * 20 in one step)
+    transform.Scale(m_Size);
     if (m_Type == MARKER3D_TUBE) {
-        transform.ScaleXYZ(m_Size, m_Size, m_Size * 20.0f);
-    } else {
-        transform.Scale(m_Size);
+        // 0x5A2E60 scales the x/y/z COMPONENT of each of the three rows (x*1, y*1, z*20), not the axis vectors
+        transform.GetRight().z   *= 20.0f;
+        transform.GetForward().z *= 20.0f;
+        transform.GetUp().z      *= 20.0f;
     }
 
     transform.UpdateRW();

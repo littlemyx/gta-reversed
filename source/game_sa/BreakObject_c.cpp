@@ -396,6 +396,10 @@ void BreakObject_c::Render(bool isDrawLast) const {
     if (isDrawLast != m_bDrawLast)
         return;
 
+    if (m_NumBreakGroups <= 0) {
+        return; // 0x59E49B: jle straight to the epilogue - no RenderEnd
+    }
+
     RwRaster* lastRaster = nullptr;
     for (auto& group : GetBreakGroups()) {
         RwRaster* curRaster = nullptr;

@@ -275,12 +275,12 @@ void BreakObject_c::DoCollisionResponse(BreakGroup_t* group, float timeStep, con
         CGeneral::GetRandomNumberInRange(-1.0f, 1.0f),
         CGeneral::GetRandomNumberInRange(-1.0f, 1.0f),
     };
-    vecRand.Normalise();
+    RwV3dNormalize(&vecRand, &vecRand); // 0x7ED9B0 (RW table-based, not CVector::Normalise)
     vecRand *= fTimeScale;
 
-    auto fOriginalVelocityScale = newVelocity.Magnitude();
+    auto fOriginalVelocityScale = RwV3dLength(&newVelocity); // 0x7EDAC0
     newVelocity += vecRand;
-    newVelocity.Normalise();
+    RwV3dNormalize(&newVelocity, &newVelocity);
     newVelocity *= fOriginalVelocityScale;
     newVelocity *= velocityScaling;
 
@@ -288,27 +288,31 @@ void BreakObject_c::DoCollisionResponse(BreakGroup_t* group, float timeStep, con
     group->m_Velocity = newVelocity;
     RwMatrixGetPos(&group->m_Matrix)->z = groundZ + group->m_BoundingSize;
 
-    if (fOriginalVelocityScale >= 0.05f) {
-        if (m_JustFaces)
-            return;
-    } else {
+    if (fOriginalVelocityScale < 0.05f) { // 0x59DFE5: `test ah, 5; jp` - NaN skips the stop
         group->m_bStoppedMoving = true;
         if (m_JustFaces) {
             group->m_FramesToLive = 32 + CGeneral::GetRandomNumberInRange(0, 32); // todo: magic numbers
             return;
         }
+    } else {
+        if (m_JustFaces)
+            return;
     }
 
     const auto NUM_PARTICLES = 4;
     CVector groupPos = *RwMatrixGetPos(&group->m_Matrix);
     for (auto i = 0; i < NUM_PARTICLES; ++i) {
+        // 0x59E07A: the exe evaluates `(rand * (1/32767) + pos) - 0.5` (not pos + lerp(-0.5, 0.5)) and `rand * (1/32767) * 0.3 - 0.15`; one rand per component, x y vx vy
+        const auto RandT = []() -> x87d { return (x87d)CGeneral::GetRandomNumber() * (x87d)RAND_MAX_FLOAT_RECIPROCAL; };
         CVector particlePos = groupPos;
-        particlePos.x += CGeneral::GetRandomNumberInRange(-0.5f, 0.5f);
-        particlePos.y += CGeneral::GetRandomNumberInRange(-0.5f, 0.5f);
+        particlePos.x = (float)((RandT() + (x87d)particlePos.x) - (x87d)0.5f);
+        particlePos.y = (float)((RandT() + (x87d)particlePos.y) - (x87d)0.5f);
+        const float velX = (float)((RandT() * (x87d)0.3f) - (x87d)0.15f);
+        const float velY = (float)((RandT() * (x87d)0.3f) - (x87d)0.15f);
 
         g_fx.m_SmokeII3expand->AddParticle(
             particlePos,
-            { CGeneral::GetRandomNumberInRange(-0.15f, 0.15f), CGeneral::GetRandomNumberInRange(-0.15f, 0.15f), 0.0f },
+            { velX, velY, 0.0f },
             0.0f,
             FxPrtMult_c(1.0f, 1.0f, 1.0f, 0.1f, 0.3f, 0.0f, 0.15f)
         );
@@ -316,7 +320,7 @@ void BreakObject_c::DoCollisionResponse(BreakGroup_t* group, float timeStep, con
 
     if (m_AddSparks) {
         CVector particleVelocity = { 0.0f, 0.0f, 1.0f };
-        auto amount = NOTSA_FTOL(int32, group->m_Velocity.Magnitude() * 100.0f);
+        auto amount = NOTSA_FTOL(int32, RwV3dLength(&group->m_Velocity) * 100.0f); // 0x7EDAC0
         g_fx.AddSparks(groupPos, particleVelocity, 2.0f, amount, CVector(0.0f, 0.0f, 0.0f), SPARK_PARTICLE_SPARK, 0.4f, 1.0f);
     }
 }

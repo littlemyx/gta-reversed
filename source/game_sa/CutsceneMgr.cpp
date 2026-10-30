@@ -177,9 +177,11 @@ void CCutsceneMgr::DeleteCutsceneData_overlay() {
 
     ms_cutsceneProcessing = false;
     ms_useLodMultiplier = false;
+    ms_useCutsceneShadows = true; // 0x5AFE46
 
-    // Delete cutscene objects
-    for (auto& obj : ms_pCutsceneObjects | rngv::take(ms_numCutsceneObjs)) {
+    // Delete cutscene objects (0x5AFE60: last to first)
+    while (ms_numCutsceneObjs > 0) {
+        auto& obj = ms_pCutsceneObjects[--ms_numCutsceneObjs];
         assert(obj);
 
         CWorld::Remove(obj);
@@ -212,7 +214,6 @@ void CCutsceneMgr::DeleteCutsceneData_overlay() {
     const auto pad = CPad::GetPad(0);
     player->SetIsVisible(true);
     pad->bPlayerSafeForCutscene = false;
-    pad->Clear(false, false); // moved up here
     player->GetPlayerInfoForThisPlayerPed()->MakePlayerSafe(0, 10000.0);
 
     if (!IsPlayingCSTheFinale()) {
@@ -228,7 +229,7 @@ void CCutsceneMgr::DeleteCutsceneData_overlay() {
         CGame::DrasticTidyUpMemory(TheCamera.CCamera::GetScreenFadeStatus() == NAME_FADE_IN ? true : false);
     }
 
-    // cpad clear moved up a few lines
+    CPad::GetPad(0)->Clear(false, false); // 0x5AFFC4: after the streaming restore, not before MakePlayerSafe
 
     // there's some code to restore the player's stored weapons, but it
     // doesn't seem to do anything, cause the guarding `if`'s

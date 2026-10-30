@@ -139,7 +139,8 @@ void RenderEffects() {
 void RenderScene() {
     ZoneScoped;
 
-    const auto underWater = CWeather::UnderWaterness <= 0.0f;
+    // 0x53DF49: the exe's flag is `UnderWaterness > 0` (a NaN compares as "not above water level" = false); the port's old `underWater = UnderWaterness <= 0` had the opposite NaN result
+    const bool isUnderWater = CWeather::UnderWaterness > 0.0f;
 
     RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RWRSTATE(NULL));
     RwRenderStateSet(rwRENDERSTATEZTESTENABLE, RWRSTATE(FALSE));
@@ -165,7 +166,7 @@ void RenderScene() {
 
     // If under water render this immediately, otherwise
     // only after rendering the stuff below.
-    if (underWater) {
+    if (!isUnderWater) {
         RwRenderStateSet(rwRENDERSTATECULLMODE, RWRSTATE(rwCULLMODECULLNONE));
         CWaterLevel::RenderWater();
         RwRenderStateSet(rwRENDERSTATECULLMODE, RWRSTATE(rwCULLMODECULLBACK));
@@ -178,7 +179,7 @@ void RenderScene() {
 
         float v3;
         float z = CCamera::GetActiveCamera().m_vecFront.z;
-        if (z <= 0.0f)
+        if (!(z > 0.0f)) // 0x53E05A: fcom + `test ah, 0x41; jne` => z <= 0 or NaN takes the -z arm
             v3 = -z;
         else
             v3 = 0.0f;
@@ -212,7 +213,7 @@ void RenderScene() {
         CCoronas::RenderSunReflection();
     }
 
-    if (!underWater) {
+    if (isUnderWater) {
         RwRenderStateSet(rwRENDERSTATECULLMODE, RWRSTATE(rwCULLMODECULLNONE));
         CWaterLevel::RenderWater();
         RwRenderStateSet(rwRENDERSTATECULLMODE, RWRSTATE(rwCULLMODECULLBACK));

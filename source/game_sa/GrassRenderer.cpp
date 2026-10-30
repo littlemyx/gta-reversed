@@ -59,8 +59,15 @@ void CGrassRenderer::DrawTriPlants(PPTriPlant* triPlants, int32 numTriPlants, Rp
             return m_farDist;
         }
     }();
+    // 0x5DAD1F / 0x5DAF4A: both distances sum z, y, x (CVector::Magnitude sums x, y, z)
+    const auto zyxDist = [](const CVector& p) -> float {
+        const x87d dx = (x87d)p.x - m_vecCameraPos.x;
+        const x87d dy = (x87d)p.y - m_vecCameraPos.y;
+        const x87d dz = (x87d)p.z - m_vecCameraPos.z;
+        return (float)std::sqrt((dz * dz + dy * dy) + dx * dx);
+    };
     for (const auto& plant : std::span{triPlants, (size_t)numTriPlants}) {
-        const auto camDist = DistanceBetweenPoints(m_vecCameraPos, plant.Center);
+        const auto camDist = zyxDist(plant.Center);
         if (camDist > farDist + 20.0f) {
             continue;
         }
@@ -69,15 +76,16 @@ void CGrassRenderer::DrawTriPlants(PPTriPlant* triPlants, int32 numTriPlants, Rp
         auto frame = RpAtomicGetFrame(atomic);
 
 #if FIX_BUGS
+        // The original's srand() is not thread safe
         std::mt19937 randomGen(*(uint32*)&plant.seed);
-#else
-        // Due to how this is set up, the random seed is always 0. the seed is betwee [0:1), so after the cast to int, we can't have any other result.
-        std::mt19937 randomGen(NOTSA_FTOL_SC(uint32, plant.seed));
-#endif
         std::uniform_real_distribution<float> randomDistribution(0, 1.f);
-
-        // Original implementation used srand(), which is absolutely not thread safe, and caused all the plants to just jump randomly all over the screen.
-        //srand(static_cast<uint32>(plant.seed));
+        const auto nextRand = [&] { return randomDistribution(randomGen); };
+#else
+        // 0x5DADDF: srand(ftol(seed)) (the seed is in [0:1), so it is always srand(0): every tuft of a triangle gets the same pattern),
+        // then the CRT rand() * (1/32767) for every value (port used a std::mt19937 here: different offsets/scales than the exe)
+        srand(NOTSA_FTOL_SC(uint32, plant.seed));
+        const auto nextRand = [] { return (float)((x87d)CGeneral::GetRandomNumber() * (x87d)RAND_MAX_FLOAT_RECIPROCAL); };
+#endif
 
         RwRGBA newColorIntensity{};
         if (camDist >= farDist) {
@@ -98,32 +106,30 @@ void CGrassRenderer::DrawTriPlants(PPTriPlant* triPlants, int32 numTriPlants, Rp
         RpGeometryForAllMaterials(RpAtomicGetGeometry(atomic), CPPTriPlantBuffer::SetGrassMaterialCB, &newColorIntensity);
 
         for (auto j = 0; j < plant.num_plants; j++) {
-            auto randX = randomDistribution(randomGen); //CGeneral::GetRandomNumberInRange(0.0f, 1.0f);
-            auto randY = randomDistribution(randomGen); //CGeneral::GetRandomNumberInRange(0.0f, 1.0f);
-            CVector posn = GenPointInTriangle(
-                posn,
-                plant.V1,
-                plant.V2,
-                plant.V3,
-                randX,
-                randY
-            );
+            const auto randX = nextRand();
+            const auto randY = nextRand();
+            CVector posn;
+            GenPointInTriangle(posn, plant.V1, plant.V2, plant.V3, randX, randY);
 
-            //Intentally placed here, need to keep them before the if check below so that the PRNG stays consistent
-            auto rand1 = randomDistribution(randomGen); //CGeneral::GetRandomNumberInRange(0.0f, 1.0f);
-            auto rand2 = randomDistribution(randomGen);
-            auto rand3 = randomDistribution(randomGen);
-            if (DistanceBetweenPoints(m_vecCameraPos, posn) < m_closeDist - 2.0f) {
+            // the 3 rand() calls of the draw path (0x5DAFB5 scale xy, 0x5DAFF5 scale z, 0x5DB01A wind) are made after the close-distance test; the
+            // skip path (0x5DAF8A) burns three rand() calls so that the PRNG stays consistent
+            if (zyxDist(posn) < m_closeDist - 2.0f) {
+                nextRand();
+                nextRand();
+                nextRand();
                 continue;
             }
 
             RwFrameTranslate(frame, &posn, rwCOMBINEREPLACE);
 
+            const auto rand1 = nextRand();
             const auto xy = rand1 * plant.scale_var_xy + plant.scale.x;
             RwFrameGetMatrix(frame)->right.x *= xy;
             RwFrameGetMatrix(frame)->up.y *= xy;
-            RwFrameGetMatrix(frame)->at.z *= (rand2 * plant.scale_var_z + plant.scale.y) ;
+            const auto rand2 = nextRand();
+            RwFrameGetMatrix(frame)->at.z *= (rand2 * plant.scale_var_z + plant.scale.y);
 
+            const auto rand3 = nextRand();
             const auto xy1 = (rand3 * plant.wind_bend_var + 1.0f) * (m_windBending * plant.wind_bend_scale);
             RwFrameGetMatrix(frame)->at.x = xy1;
             RwFrameGetMatrix(frame)->at.y = xy1;

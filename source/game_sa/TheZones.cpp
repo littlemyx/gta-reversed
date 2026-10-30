@@ -445,15 +445,16 @@ void CTheZones::Save() {
     CGenericGameStorage::SaveDataToWorkBuffer(TotalNumberOfZoneInfos);
     CGenericGameStorage::SaveDataToWorkBuffer(TotalNumberOfMapZones);
 
-    for (int32 i = 0; i < TotalNumberOfNavigationZones; i++) {
+    // exe 0x5D2E96-0x5D2F1F: the 16 bit counters are compared unsigned (movzx index, jbe/jb)
+    for (uint16 i = 0; i < (uint16)TotalNumberOfNavigationZones; i++) {
         CGenericGameStorage::SaveDataToWorkBuffer(NavigationZoneArray[i]);
     }
 
-    for (int32 i = 0; i < TotalNumberOfZoneInfos; i++) {
+    for (uint16 i = 0; i < (uint16)TotalNumberOfZoneInfos; i++) {
         CGenericGameStorage::SaveDataToWorkBuffer(ZoneInfoArray[i]);
     }
 
-    for (int32 i = 0; i < TotalNumberOfMapZones; i++) {
+    for (uint16 i = 0; i < (uint16)TotalNumberOfMapZones; i++) {
         CGenericGameStorage::SaveDataToWorkBuffer(MapZoneArray[i]);
     }
 
@@ -471,15 +472,15 @@ void CTheZones::Load() {
     CGenericGameStorage::LoadDataFromWorkBuffer(TotalNumberOfZoneInfos);
     CGenericGameStorage::LoadDataFromWorkBuffer(TotalNumberOfMapZones);
 
-    for (int32 i = 0; i < TotalNumberOfNavigationZones; i++) {
+    for (uint16 i = 0; i < (uint16)TotalNumberOfNavigationZones; i++) {
         CGenericGameStorage::LoadDataFromWorkBuffer(NavigationZoneArray[i]);
     }
 
-    for (int32 i = 0; i < TotalNumberOfZoneInfos; i++) {
+    for (uint16 i = 0; i < (uint16)TotalNumberOfZoneInfos; i++) {
         CGenericGameStorage::LoadDataFromWorkBuffer(ZoneInfoArray[i]);
     }
 
-    for (int32 i = 0; i < TotalNumberOfMapZones; i++) {
+    for (uint16 i = 0; i < (uint16)TotalNumberOfMapZones; i++) {
         CGenericGameStorage::LoadDataFromWorkBuffer(MapZoneArray[i]);
     }
     CGenericGameStorage::LoadDataFromWorkBuffer(ZonesVisited);

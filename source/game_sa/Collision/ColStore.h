@@ -11,7 +11,7 @@ struct ColDef {
     char   name[18]{};
     int16  m_nModelIdStart;
     int16  m_nModelIdEnd;
-    uint16 m_nRefCount;
+    int16  m_nRefCount; // signed: the exe tests it with `jg` (LoadCollision at 0x410A6A), a RemoveRef underflow reads as "not referenced"
     bool   m_bActive;
     bool   m_bCollisionIsRequired;
     bool   m_bProcedural;

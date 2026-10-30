@@ -454,7 +454,7 @@ void CCutsceneMgr::LoadCutsceneData_overlay(const char* cutsceneName) {
 
     CStreaming::RemoveUnusedModelsInLoadedList();
     CGame::DrasticTidyUpMemory(true);
-    strcpy_s(ms_cutsceneName, cutsceneName);
+    strncpy(ms_cutsceneName, cutsceneName, sizeof(ms_cutsceneName)); // exe 0x5B1447: unbounded strcpy into name[8]; an 8 char cutscene name aborted strcpy_s
     CCutsceneMgr::LoadCutsceneData_preload();
 
     CTimer::Resume();

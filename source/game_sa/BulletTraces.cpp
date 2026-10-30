@@ -187,14 +187,19 @@ void CBulletTraces::Render() {
             // Direction from camera to trace's origin (aka `start`)
             const auto camToOriginDir = (trace.m_vecStart - TheCamera.GetPosition()).Normalized();
 
+            // exe 0x723D05-0x723E27: the direction is normalised, the length (z,y,x sum) is kept and multiplied back in below
+            const CVector rawDir = trace.GetDirection();
+            const float   dirLen = (float)x87::sqrt((x87d)rawDir.z * rawDir.z + (x87d)rawDir.y * rawDir.y + (x87d)rawDir.x * rawDir.x);
+            const CVector dirNorm = rawDir.Normalized();
+
             // Upward direction relative to the camera's position
-            const auto up = camToOriginDir.Cross(trace.GetDirection().Normalized()).Normalized();
+            const auto up = camToOriginDir.Cross(dirNorm).Normalized();
 
             // Size vector
             const auto sizeVec = up * (trace.m_fRadius * t);
 
             // Current position on the trace's line segment (Inverted because `t` is going 1 => 0 not 0 => 1)
-            const CVector currPosOnTrace = trace.m_vecEnd - trace.GetDirection() * t;
+            const CVector currPosOnTrace = trace.m_vecEnd - CVector{ dirNorm.x * dirLen, dirNorm.y * dirLen, dirNorm.z * dirLen } * t;
 
             // Finally, calculate the position for each vertex
             const CVector vertPositions[std::size(verts)] = {

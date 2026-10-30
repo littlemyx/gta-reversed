@@ -302,8 +302,15 @@ void CClouds::MovingFogRender() {
     MovingFog_Update();
 }
 
-uint8 CalculateColorWithBalance(uint8 blue, float colorBalance) {
-    return lerp<uint8>(blue, 0u, colorBalance);
+// The exe's `(1.0 - balance) * colour` (fsubr 1.0 / fimul / ftol), NOT the `lerp` form `(0 - c) * t + c` (which rounds differently, e.g. c = 100, t = 0.1f: 89 vs 90).
+// Returns the full int: the moon tests `<= 0` on it, the sprite calls take its low byte
+static int32 CalculateColorWithBalance(int32 colour, float colorBalance) {
+    return NOTSA_FTOL(int32, (1.0f - colorBalance) * (float)colour);
+}
+
+// 0x7139B2 / 0x713DAE / 0x714019: `max(Foggyness, CloudCoverage)` is `fcomp; test ah,0x41; jne` => `F > C ? F : C` (NaN picks CloudCoverage; std::max picks Foggyness)
+static float CalculateFogCloudBalance() {
+    return CWeather::Foggyness > CWeather::CloudCoverage ? CWeather::Foggyness : CWeather::CloudCoverage;
 }
 
 // From `CClouds::Render` [0x7139B2 - 0x713D2A]
@@ -337,8 +344,8 @@ void CClouds::Render_MaybeRenderMoon(float colorBalance) {
 
     const auto colorB  = MOON_VISIBILITY_RANGE_MINS - moonVisibilityTimeMins;
     static_assert(MOON_VISIBILITY_RANGE_MINS == 220); // NOTE/TODO: The above will break otherwise, as it's really just a clever trick to avoid a more complex solution
-    const auto colorRG = CalculateColorWithBalance(colorB, colorBalance);
-    if (colorRG == 0) {
+    const auto colorRG = CalculateColorWithBalance((int32)colorB, colorBalance);
+    if (colorRG <= 0) { // 0x713A5A `jle`
         return;
     }
 
@@ -379,10 +386,13 @@ void CClouds::Render_MaybeRenderMoon(float colorBalance) {
     RwRenderStateSet(rwRENDERSTATESRCBLEND,      RWRSTATE(rwBLENDSRCALPHA));
     RwRenderStateSet(rwRENDERSTATEDESTBLEND,     RWRSTATE(rwBLENDONE));
 
+    // 0x713B3A-0x713BC2: the mask's position is built from the UNSCALED moon size: x glides with the game day by `(moonSz.x * 5.4) * (day / 31 - 0.5)`, y is `moonSz.y * 0.7`
+    // (the port used the 1.7x mask size and had the two factors on the swapped axes)
     const auto moonMaskSz     = moonSz * MOON_TO_MASK_SIZE_MULT;
-    const auto moonMaskPosScr = moonPosScr + moonMaskSz * CVector2D{
-        0.7f,
-        5.4f * (((float)CClock::GetGameClockDays() * ExeRecip(31.f) - 0.5f)) // Slowly glide on the X axis according to current game day
+    const float moonDayFrac   = (float)CClock::GetGameClockDays() * ExeRecip(31.f); // 0x87287C
+    const CVector2D moonMaskPosScr{
+        moonSz.x * 5.4f * (moonDayFrac - 0.5f) + moonPosScr.x, // Slowly glide on the X axis according to current game day
+        moonSz.y * 0.7f + moonPosScr.y
     };
     CSprite::RenderOneXLUSprite(
         { moonMaskPosScr.x, moonMaskPosScr.y, z },
@@ -402,10 +412,12 @@ void CClouds::Render_MaybeRenderMoon(float colorBalance) {
     RwRenderStateSet(rwRENDERSTATEDESTBLEND,     RWRSTATE(rwBLENDONE));
     RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,  RWRSTATE(FALSE));
 
+    const uint8 colorRG8 = (uint8)colorRG;
+    const uint8 colorB8  = NOTSA_FTOL(uint8, (float)colorB * 0.85f);
     CSprite::RenderOneXLUSprite(
         { moonPosScr.x, moonPosScr.y, z },
         moonSz,
-        colorRG, colorRG, NOTSA_FTOL(uint8, (float)colorB * 0.85f), 255,
+        colorRG8, colorRG8, colorB8, 255,
         rhw,
         255,
         0,
@@ -453,8 +465,7 @@ void CClouds::Render_MaybeRenderRockstarLogo(float colorBalance) {
         return;
     }
 
-    const auto colorB  = (uint8)(255u * t / 60u);
-    const auto colorRG = CalculateColorWithBalance(colorB, colorBalance);
+    const auto colorB  = (int32)(255u * t / 60u);
 
     RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RWRSTATE(RwTextureGetRaster(gpCoronaTexture[CORONATYPE_SHINYSTAR])));
 
@@ -470,18 +481,26 @@ void CClouds::Render_MaybeRenderRockstarLogo(float colorBalance) {
         }
 
         const auto posIdx = i % STARS_NUM_POSITIONS;
-        offset.y -= STARS_Y_POSITIONS[posIdx] * 90.f;
-        offset.z += STARS_Z_POSITIONS[posIdx] * 80.f;
+
+        // 0x713DE0-0x713E8F: z is `(Z * 80) + (cam.z + 10)` (the port added 10 to Z * 80 first)
+        const CVector starPosWorld{
+            offset.x + camPos.x,
+            camPos.y - STARS_Y_POSITIONS[posIdx] * 90.f,
+            STARS_Z_POSITIONS[posIdx] * 80.f + (camPos.z + R_OFFSET_FROM_CAMERA.z)
+        };
 
         CVector   starPosScr;
         CVector2D starSizeScr;
-        if (!CSprite::CalcScreenCoors(camPos + offset, &starPosScr, &starSizeScr.x, &starSizeScr.y, false, true)) {
+        if (!CSprite::CalcScreenCoors(starPosWorld, &starPosScr, &starSizeScr.x, &starSizeScr.y, false, true)) {
             continue;
         }
 
-        const auto cc = CalculateColorWithBalance(colorB, (float)(rand() % 32) * 0.015f);
+        const float ccBalance = (float)(rand() % 32) * 0.015f;
+        const auto  cc        = (uint8)CalculateColorWithBalance(colorB, ccBalance);
 
-        starSizeScr *= STARS_SIZES[posIdx] * 0.8f;
+        // 0x713EAA-0x713EE0: (size * STARS_SIZES) * 0.8, two roundings (not size * (STARS_SIZES * 0.8))
+        starSizeScr.x = starSizeScr.x * STARS_SIZES[posIdx] * 0.8f;
+        starSizeScr.y = starSizeScr.y * STARS_SIZES[posIdx] * 0.8f;
 
         CSprite::RenderBufferedOneXLUSprite(
             starPosScr,
@@ -498,7 +517,8 @@ void CClouds::Render_MaybeRenderRockstarLogo(float colorBalance) {
     CVector   lastStarPosScr;
     CVector2D lastStarSizeScr;
     if (CSprite::CalcScreenCoors(camPos + STAR_OFFSET_FROM_CAMERA, &lastStarPosScr, &lastStarSizeScr.x, &lastStarSizeScr.y, false, true)) {
-        const auto cc = CalculateColorWithBalance(colorB, (float)(rand() % 128) * 0.0015625f + 0.5f);
+        // 0x713F84-0x713FA0: `(rand & 0x7F) * 0.0015625 + 0.5` times colorB: NO `1 - x` here (the R stars above have it; the port applied it here too)
+        const auto cc = NOTSA_FTOL(uint8, ((float)(rand() % 128) * 0.0015625f + 0.5f) * (float)colorB);
 
         lastStarSizeScr.x *= 5.f;
         lastStarSizeScr.y *= 5.f;
@@ -535,9 +555,9 @@ void CClouds::Render_RenderLowClouds(float colorBalance) {
         {-0.4f, -0.8f, 1.7f},
     };
 
-    const auto colorR = CalculateColorWithBalance((uint8)CTimeCycle::m_CurrentColours.m_nLowCloudsRed, colorBalance);
-    const auto colorG = CalculateColorWithBalance((uint8)CTimeCycle::m_CurrentColours.m_nLowCloudsGreen, colorBalance);
-    const auto colorB = CalculateColorWithBalance((uint8)CTimeCycle::m_CurrentColours.m_nLowCloudsBlue, colorBalance);
+    const auto colorR = (uint8)CalculateColorWithBalance((uint8)CTimeCycle::m_CurrentColours.m_nLowCloudsRed, colorBalance);
+    const auto colorG = (uint8)CalculateColorWithBalance((uint8)CTimeCycle::m_CurrentColours.m_nLowCloudsGreen, colorBalance);
+    const auto colorB = (uint8)CalculateColorWithBalance((uint8)CTimeCycle::m_CurrentColours.m_nLowCloudsBlue, colorBalance);
 
     if (!s_DebugSettings.LowClouds.Enabled) {
         return;
@@ -688,7 +708,7 @@ void CClouds::Render_MaybeRenderStreaks() {
     PushVertex(scale,        { 255, 255, 255, 225 });
     PushVertex(scale + 50.f, { 255, 255, 255, 0 });
 
-    RenderBuffer::PushIndices({ 1, 0 }, false);
+    RenderBuffer::PushIndices({ 0, 1 }, false); // 0x8D579C = { 0, 1 } (the port had 1, 0)
 
     RenderBuffer::Render(rwPRIMTYPEPOLYLINE, nullptr, rwIM3D_VERTEXRGBA | rwIM3D_VERTEXXYZ);
 }
@@ -709,13 +729,13 @@ void CClouds::Render() {
 
     CSprite::InitSpriteBuffer();
 
-    const auto colorBalance = std::max(CWeather::Foggyness, CWeather::CloudCoverage);
+    const auto colorBalance = CalculateFogCloudBalance();
 
     // I've broken up this function into several others to make the code easier to understand
 
     Render_MaybeRenderMoon(colorBalance); // [0x7139B2 - 0x713D2A]
     Render_MaybeRenderRockstarLogo(colorBalance); // 0x713D2A - 0x714019
-    Render_RenderLowClouds(std::max(colorBalance, CWeather::ExtraSunnyness));
+    Render_RenderLowClouds(CWeather::ExtraSunnyness > colorBalance ? CWeather::ExtraSunnyness : colorBalance); // 0x71403F: `E > m ? E : m`
     Render_MaybeRenderRainbows();
     Render_MaybeRenderStreaks();
 }

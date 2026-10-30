@@ -871,7 +871,7 @@ void CAERadioTrackManager::DisplayRadioStationName() {
             CFont::SetEdge(1);
             CFont::SetDropColor(CRGBA(0, 0, 0, 255));
             CFont::SetColor(HudColour.GetRGB(m_nStationsListed || m_nStationsListDown ? HUD_COLOUR_DARK_GRAY : HUD_COLOUR_GOLD));
-            CFont::PrintString(SCREEN_WIDTH / 2, SCREEN_SCALE_Y(22.0f), GetRadioStationName((eRadioID)station));
+            CFont::PrintString((float)(RsGlobal.maximumWidth / 2), SCREEN_SCALE_Y(22.0f), GetRadioStationName((eRadioID)station)); // 0x4E9FCA: `cdq; sub eax, edx; sar eax, 1` = INTEGER width / 2, then fild
             CFont::DrawFonts();
         }
     }

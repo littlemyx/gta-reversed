@@ -487,21 +487,14 @@ eCJMood CAEPedSpeechAudioEntity::GetCurrentCJMood() {
         return MOOD_CR;
     }
 
-    // exe 0x4E5579: the script override (`SetCJMood`) is only looked at in the fall-through path (wanted level <= 1 and no
-    // recent mission passed); the early-out paths (0x4E5537 / 0x4E554B / 0x4E555C) use the computed flags directly.
-    // It is active while `override_time > now` (unsigned, `jbe` skips it).
-    bool isMoodOverrideActive = false;
-    
-    bool useStaleWellDressedFlag = false;
+    // exe 0x4E557E: every path (wanted > 3, wanted > 1, mission-passed window, fall-through) ends here: the script override
+    // (`SetCJMood`) is applied to the basic mood and to the gang/fat/well-dressed flags while `override_time > now` (unsigned, `jbe` skips it).
+    // The flags themselves are always computed from the game state first (0x4E53DD..0x4E551F), so the override can never leave one stale.
+    const bool isMoodOverrideActive = s_nCJMoodOverrideTime > CTimer::GetTimeInMS();
+
     const auto CheckCJIsWellDressed = [&] { // 0x4E53DF
-        if (useStaleWellDressedFlag) {
-            // exe 0x4E5579-0x4E55CC: only the override block loads the "well dressed" byte (`cl`) before the mood switch; the
-            // time >= LastMissionPassedTime + 3 min path jumps straight to the switch with `cl` = low byte of the CWanted* left in
-            // ecx (non-zero in practice), so the result is CD instead of CR whenever the CJ is neither gang banging nor fat
-            return true;
-        }
         if (isMoodOverrideActive && s_nCJWellDressed != -1) {
-            return s_nCJWellDressed != 0;
+            return (uint8)s_nCJWellDressed != 0; // 0x4E559B: only the low byte (cl) is kept
         }
         return CStats::GetStatValue(STAT_CLOTHES_RESPECT) >= 650.f
             && CStats::GetStatValue(STAT_FASHION_BUDGET) >= 10'000.f;
@@ -509,7 +502,7 @@ eCJMood CAEPedSpeechAudioEntity::GetCurrentCJMood() {
 
     const auto CheckCJIsGangBanging = [&] { // 0x4E5440
         if (isMoodOverrideActive && s_nCJGangBanging != -1) {
-            return s_nCJGangBanging != 0;
+            return (uint8)s_nCJGangBanging != 0; // 0x4E5598: low byte (bl)
         }
         if (IsCJDressedInForGangSpeech()) {
             return true;
@@ -518,14 +511,18 @@ eCJMood CAEPedSpeechAudioEntity::GetCurrentCJMood() {
         switch (plyrGrp.GetMembership().CountMembersExcludingLeader()) {
         case 0: // No other members, just the player alone
             return false;
-        case 1: { // Exactly one
-            const auto& mem = plyrGrp.GetMembership().GetMembers().front(); // The one-and-only member (This isnt the same as `GetMember(0)`!!!)
-            if (mem->m_nPedType == PED_TYPE_GANG2) {
-                return true;
+        case 1: { // Exactly one: 0x4E544F loops over all 8 membership slots (the leader included) and any match is enough
+            for (auto* const mem : plyrGrp.GetMembership().GetMembers()) {
+                if (mem->m_nPedType == PED_TYPE_GANG2) {
+                    return true;
+                }
+                auto& memSpeech = mem->GetSpeechAE();
+                if (memSpeech.m_PedAudioType == PED_TYPE_GANG
+                    && notsa::contains({ VOICE_GNG_RYDER, VOICE_GNG_SWEET, VOICE_GNG_SMOKE }, (eGngSpeechVoices)memSpeech.m_VoiceID)) {
+                    return true;
+                }
             }
-            auto& memSpeech = mem->GetSpeechAE();
-            return memSpeech.m_PedAudioType == PED_TYPE_GANG
-                && notsa::contains({ VOICE_GNG_RYDER, VOICE_GNG_SWEET, VOICE_GNG_SMOKE }, (eGngSpeechVoices)memSpeech.m_VoiceID);
+            return false;
         }
         default: // 2 or more
             return true;
@@ -534,7 +531,7 @@ eCJMood CAEPedSpeechAudioEntity::GetCurrentCJMood() {
 
     const auto CheckCJIsFat = [&] { // 0x4E54E0
         if (isMoodOverrideActive && s_nCJFat != -1) {
-            return s_nCJFat != 0;
+            return (uint8)s_nCJFat != 0; // 0x4E55A7: low byte (dl)
         }
         return CStats::GetStatValue(STAT_FAT) >= 600.f
             && (x87d)CStats::GetStatValue(STAT_FAT) - (x87d)200.f > (x87d)CStats::GetStatValue(STAT_MUSCLE); // exe 0x4E54E0: fsub keeps the x87 precision
@@ -586,14 +583,12 @@ eCJMood CAEPedSpeechAudioEntity::GetCurrentCJMood() {
             if (CTimer::GetTimeInMS() < CTheScripts::LastMissionPassedTime + 180'000) {
                 return DeriveMood(MOOD_WR);
             }
-            useStaleWellDressedFlag = true;
             return DeriveMood(MOOD_CR);
         } else {
             CTheScripts::LastMissionPassedTime = CTimer::GetTimeInMS();
         }
     }
 
-    isMoodOverrideActive = s_nCJMoodOverrideTime > CTimer::GetTimeInMS();
     return DeriveMood(MOOD_CR); // 0x4E5579
 }
 

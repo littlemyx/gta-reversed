@@ -60,7 +60,7 @@ public: // Eventually make this private
     bool          m_bBlurred{};
     CShadowCamera m_blurCamera{};
     uint32        m_nBlurPasses{};
-    bool          m_bDrawMoreBlur;
+    bool          m_bDrawMoreBlur{}; // exe ctor zeroes byte +0x20
     uint32        m_nRwObjectType{(uint32)-1};
     RpLight*      m_pLight{};
     CSphere       m_boundingSphere{};

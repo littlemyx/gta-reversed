@@ -529,7 +529,8 @@ bool CVisibilityPlugins::IsAtomicVisible(RpAtomic* atomic) {
 
 // 0x732AE0
 bool CVisibilityPlugins::IsClumpVisible(RpClump* clump) {
-    return CLUMPPLG_VISIBILITYCB(clump);
+    // the exe tail-jumps into the clump's visibility callback with the clump (0x732AEE: jmp [plugin]) and returns its verdict
+    return CLUMPPLG_VISIBILITYCB(clump)(clump);
 }
 
 // 0x732480

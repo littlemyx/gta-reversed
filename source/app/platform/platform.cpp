@@ -247,7 +247,8 @@ RwImage* RsGrabScreen(RwCamera* camera) {
 
 // 0x619B00
 void RsErrorMessage(const RwChar* msg) {
-    RsKeyStatus ks;
+    RsKeyStatus ks{};
+    ks.keyScanCode = 0x420; // 0x619B08: the exe stores 0x420 into the key status before the key-up event
     if (RsGlobal.keyboard.used) {
         RsKeyboardEventHandler(rsKEYUP, &ks);
     }
@@ -256,7 +257,8 @@ void RsErrorMessage(const RwChar* msg) {
 
 // 0x619B30
 void RsWarningMessage(const RwChar* msg) {
-    RsKeyStatus ks;
+    RsKeyStatus ks{};
+    ks.keyScanCode = 0x420; // 0x619B38: see RsErrorMessage
     if (RsGlobal.keyboard.used) {
         RsKeyboardEventHandler(rsKEYUP, &ks);
     }

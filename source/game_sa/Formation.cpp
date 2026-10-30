@@ -235,7 +235,7 @@ void CFormation::DistributeDestinations_CoverPoints(const CPedList& pedList, CVe
                 continue;
             }
             const auto pedToTarget = CVector2D::Dist(ped->GetPosition(), pos);
-            if (destToTarget > pedToTarget + 1.0f) { // Destination is further away from the target than the ped
+            if (!(pedToTarget + 1.0f >= destToTarget)) { // Destination is further away from the target than the ped (0x69B664: `fcomp; test ah,1; jne` - NaN skips too)
                 continue;
             }
             // How much of a detour going to the destination is, compared to going straight to the target

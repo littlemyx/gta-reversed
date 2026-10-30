@@ -15,6 +15,7 @@ CAEScriptAudioEntity::CAEScriptAudioEntity() : CAEAudioEntity() {
     m_Speed = 1.0f;
     field_7D = 0;
     field_8C = 0.0f;
+    m_Physical = nullptr; // 0x5074D0: `mov [eax+0x110], ecx` (ecx = 0)
 }
 
 // 0x5B9B60

@@ -549,8 +549,8 @@ void CShadows::StoreShadowForPedObject(CPed* ped, float displacementX, float dis
     const auto& camPos            = TheCamera.GetPosition();
     const auto  boneToCamDist2DSq = (bonePos - camPos).SquaredMagnitude2D();
 
-    // Check if ped is close enough
-    if (boneToCamDist2DSq >= MAX_DISTANCE_PED_SHADOWS_SQR) {
+    // Check if ped is close enough (exe `fcomp` + `test ah, 5` / `jp`: a NaN distance returns too)
+    if (!(boneToCamDist2DSq < MAX_DISTANCE_PED_SHADOWS_SQR)) {
         return;
     }
 
@@ -593,8 +593,8 @@ void CShadows::StoreRealTimeShadow(CPhysical* physical, float displacementX, flo
         : physical->GetPosition();
     const auto shdwToCamDist2DSq = (shdwPos - camPos).SquaredMagnitude2D();
 
-    // Check distance to camera
-    if (shdwToCamDist2DSq > MAX_DISTANCE_PED_SHADOWS_SQR) {
+    // Check distance to camera (exe 0x707D3B: `fcomp` + `test ah, 5` / `jp` returns for `>=` and NaN)
+    if (!(shdwToCamDist2DSq < MAX_DISTANCE_PED_SHADOWS_SQR)) {
         return;
     }
 
@@ -608,21 +608,30 @@ void CShadows::StoreRealTimeShadow(CPhysical* physical, float displacementX, flo
     const auto strength = (float)CalculateShadowStrength(std::sqrt(shdwToCamDist2DSq), MAX_DISTANCE_PED_SHADOWS, CTimeCycle::m_CurrentColours.m_nShadowStrength);
     const auto cc       = NOTSA_FTOL(uint8, (float)rtshdw->m_nIntensity * ExeRecip(100.f) * strength);
 
+    // The exe draws the black border around the shadow texture before it sets up the light (0x707DC4)
+    const auto shadowTexture = rtshdw->GetShadowRwTexture();
+    rtshdw->DrawBorderAroundTexture(RwRGBA{ 0, 0, 0, 255 });
+
     const auto& vecToSun = CTimeCycle::m_VectorToSun[CTimeCycle::m_CurrentStoredValue];
     const auto lightFrame = rtshdw->SetLightProperties(
         RadiansToDegrees(+x87::atan2(-vecToSun.x, -vecToSun.y)),
-        RadiansToDegrees(-x87::atan2(+vecToSun.x, -vecToSun.z)),
+        RadiansToDegrees(-x87::atan2(-vecToSun.y, -vecToSun.z)), // (unused by SetLightProperties)
         true
     );
+
+    // The exe normalises the light direction (the frame's `at` vector) before using it (0x707E0E)
+    CVector lightDir = *RwMatrixGetAt(RwFrameGetMatrix(lightFrame));
+    lightDir.Normalise();
+    // NOTE: The out arguments are (front, side, displacement) = our arguments 4..7 and 2..3, NOT (displacement, front, side) (0x707E1D..)
     CalcPedShadowValues(
-        *RwMatrixGetAt(RwFrameGetMatrix(lightFrame)),
-        displacementX, displacementY,
+        lightDir,
         frontX, frontY,
-        sideX, sideY
+        sideX, sideY,
+        displacementX, displacementY
     );
     StoreShadowToBeRendered(
         SHADOW_INVCOLOR,
-        rtshdw->GetShadowRwTexture(),
+        shadowTexture,
         shdwPos - CVector{ displacementX, displacementY, 0.f } * 2.5f,
         frontX * 1.5f, frontY * 1.5f,
         sideX * 1.5f, sideY * 1.5f,

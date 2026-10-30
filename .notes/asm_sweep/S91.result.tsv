@@ -1,0 +1,25 @@
+addr	function	verdict	asm range	note	fix commit
+0x5B3910	CFileLoader::AddTexDictionaries	MATCH	0x5B3910-0x5B3927 (all)	ForAllTextures(base, cb 0x5B38F0, dict)	-
+0x5B3860	CFileLoader::LoadTexDictionary	FIXED	0x5B3860-0x5B38B1 (all)	stream closed once; port closed twice when the txd read failed	e8ec9691a
+0x5371F0	CFileLoader::LoadAtomicFile	MATCH	0x5371F0-0x537280 (all)	common-vehicle-dict bit 0x80 at mi+0x13, rwobject +0x1c check; null-mi crash path guarded under FIX_BUGS	-
+0x5B39D0	CFileLoader::LoadAtomicFile	MATCH	0x5B39D0-0x5B3A26 (all)	FindRelatedModelInfoCB, one close	-
+0x5B4D70	CFileLoader::LoadAudioZone	FIXED	0x5B4D70-0x5B4E59 (all)	active flag is flags!=0 (setne), port used ==1; formats, field order, box-then-sphere fallback match	1e276a9cf
+0x537990	CFileLoader::LoadCarGenerator	MATCH	0x537990-0x537A0F (all)	arg order, flags&1 force / flags&2 ignore-pop, angle*0x859878, SwitchOn when index>=0	-
+0x5B4740	CFileLoader::LoadCarGenerator	MATCH	0x5B4740-0x5B47AB (all)	12-field format, struct offsets 0x00-0x2C, ==12 gate	-
+0x5373F0	CFileLoader::StartLoadClumpFile	MATCH	0x5373F0-0x537448 (all)	vehicle (type 6) common dict bracket	-
+0x537450	CFileLoader::FinishLoadClumpFile	MATCH	0x537450-0x5374A5 (all)	SetClump via vtable +0x40	-
+0x5B3A30	CFileLoader::LoadClumpFile	MATCH	0x5B3A30-0x5B3AB1 (all)	clump name -> GetModelInfo(name,0) -> SetClump else destroy	-
+0x5372D0	CFileLoader::LoadClumpFile	MATCH	0x5372D0-0x5373E8 (all)	complex hierarchy loop, vehicle collision plugin bracket, JOURNEY(508) doors=2	-
+0x5B4040	CFileLoader::LoadClumpObject	MATCH	0x5B4040-0x5B40B7 (all)	'%d %s %s', AddClumpModel, key, txd, BBox colmodel, returns id	-
+0x5B4B40	CFileLoader::LoadCullZone	MATCH	0x5B4B40-0x5B4C70 (all)	14-float mirror format then 11-field cull format; flags2 pushed but ignored by callee (8 args)	-
+0x5B3C60	CFileLoader::LoadObject	MATCH	0x5B3C60-0x5B3DDD (all)	draw dist <4 (NaN passes) reparse, objType 1/2/3 formats, damageable bit 0x1000 selects AddDamageAtomicModel	-
+0x5B7670	CFileLoader::Load2dEffect	MATCH	0x5B7670-0x5B7FFE (all)	all 9 effect types: formats, jump table 0x5B8004, stack slot to struct offset mapping, truncation widths, quote parsing, roadsign 16-byte lines, interior -1 defaults and status 50, ftol dims	-
+0x538090	CFileLoader::LoadObjectInstance	MATCH	0x538090-0x53843C (all)	building/animated/dummy choice, glass hide, |rot|>0.05 matrix vs heading 2*acos / -2*acos, flag bits 20/29/30/31, area code, lod, train crossing 0x3FACE9CC, col area restrict, underwater	-
+0x538690	CFileLoader::LoadObjectInstance	MATCH	0x538690-0x5386EB (all)	11-field format into CFileObjectInstance	-
+0x5B4C80	CFileLoader::LoadOcclusionVolume	FIXED	0x5B4C80-0x5B4D63 (all)	interior test only 'int' at filename[len-7..len-5]; port required the whole 'int.ipl' suffix; z=h*0.5+bottom, z/y/x rot order match	57be74ce8
+0x5B41C0	CFileLoader::LoadPathHeader	MATCH	0x5B41C0-0x5B41E8 (all)	'%d %d %s', returns second int	-
+0x5B45D0	CFileLoader::LoadStuntJump	MATCH	0x5B45D0-0x5B4738 (all)	16-field format, start/target boxes, camera, reward, ==16 gate	-
+0x5B75E0	CFileLoader::LoadTXDParent	MATCH	0x5B75E0-0x5B7669 (all)	find-or-add both slots, parent word store, returns parent slot	-
+0x5B81D0	CFileLoader::LoadTimeCyclesModifier	MATCH	0x5B81D0-0x5B82B2 (all)	12-field format, defaults 100/1/1, lod=unused when <12 read, box.Set(min,max)	-
+0x5B3DE0	CFileLoader::LoadTimeObject	MATCH	0x5B3DE0-0x5B3FA5 (all)	7-field format then objType 1/2/3 formats, times, other-time-model link; default objType case NOTSA_UNREACHABLE vs exe falling through (malformed data only)	-
+0x5B3FB0	CFileLoader::LoadWeaponObject	MATCH	0x5B3FB0-0x5B4032 (all)	'%d %s %s %s %d %f', AddWeaponModel, SetAnimFile(vtable 0x30), weapon colmodel	-

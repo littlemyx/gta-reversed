@@ -453,7 +453,7 @@ public:
         m_fWheelSizeRear = rear;
     }
     void SetGameName(const char* name) {
-        strcpy_s(m_szGameName, name);
+        strncpy(m_szGameName, name, sizeof(m_szGameName)); // an 8 char game name is not terminated (strcpy_s rejected it)
     }
     void SetHandlingId(const char* handlingName);
 

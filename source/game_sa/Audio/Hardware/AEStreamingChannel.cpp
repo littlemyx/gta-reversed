@@ -320,23 +320,31 @@ int32 CAEStreamingChannel::UpdatePlayTime() {
 
     DWORD currentPlayCursor;
     m_pDirectSoundBuffer->GetCurrentPosition(&currentPlayCursor, nullptr);
-    auto freqFactor = m_nFrequency * ExeRecip(250.f);
-    auto upperLimit = 393216.f / freqFactor; //TODO: Magic number (393.216 khz can be found often with oscilators / clock generators, also that's 0x60000 in hex)
-    auto curStep    = currentPlayCursor / freqFactor;
-    if ((NOTSA_FTOL(uint32, freqFactor) / 0x60000) > 0) {
-        if (m_lastWrittenSlot == 1) {
-            m_nPlayTime = NOTSA_FTOL(int32, m_nStreamPlayTimeMs + curStep - (2 * upperLimit));
-        } else {
-            m_nPlayTime = NOTSA_FTOL(int32, m_nStreamPlayTimeMs + curStep - upperLimit);
-        }
-    } else if (m_lastWrittenSlot == 0) {
-        m_nPlayTime = NOTSA_FTOL(int32, m_nStreamPlayTimeMs + curStep - upperLimit);
-    } else {
-        m_nPlayTime = NOTSA_FTOL(int32, m_nStreamPlayTimeMs + curStep);
-    }
 
-    if (m_nPlayTime >= upperLimit) {
-        m_nPlayTime -= NOTSA_FTOL(int32, upperLimit);
+    // 0x4F1901..0x4F19A1: one x87 expression chain (PC=24), operand order as in the exe
+    const x87d  streamPlayMs = (x87d)(int32)m_nStreamPlayTimeMs;             // fild (signed)
+    const x87d  freqFactor   = (x87d)m_nFrequency * (x87d)ExeRecip(250.f);   // fild (+2^32 if negative); fmul [0x859CE0]
+    const float upperLimit   = (float)((x87d)393216.0 / freqFactor);         // fdiv; fstp dword [esp+8]  (0x60000 bytes = one slot)
+    const x87d  curStep      = (x87d)currentPlayCursor / freqFactor;         // fdivrp
+    const auto  playSlot     = (uint8)(currentPlayCursor / 0x60000u);        // 0x4F1943: mul 0xAAAAAAAB; shr 0x12; test dl (the port tested freqFactor / 0x60000, always 0)
+
+    x87d playTime;
+    if (playSlot == 0) {
+        if (m_lastWrittenSlot == 0) {
+            playTime = (streamPlayMs - upperLimit) + curStep;
+        } else {
+            playTime = curStep + streamPlayMs;
+        }
+    } else if (m_lastWrittenSlot == 1) {
+        playTime = (curStep - upperLimit) + (streamPlayMs - upperLimit);
+    } else {
+        playTime = (curStep - upperLimit) + streamPlayMs;
+    }
+    m_nPlayTime = NOTSA_FTOL(int32, playTime);
+
+    // 0x4F196D: fcom; the subtraction is done on the exact value, not on the truncated limit
+    if ((x87d)m_nPlayTime >= (x87d)upperLimit) {
+        m_nPlayTime = NOTSA_FTOL(int32, (x87d)m_nPlayTime - upperLimit);
     }
 
     m_nLastUpdateTime = CAEAudioUtility::GetCurrentTimeInMS();

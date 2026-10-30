@@ -109,14 +109,17 @@ void CVehicleRecording::Load(RwStream* stream, int32 recordId, int32 totalSize) 
 
     CARREC_LOG("Load carrec to streaming slot idx:{} (size={})", recordId, totalSize);
 
-    for (auto&& [i, frame] : rngv::enumerate(StreamingArray[recordId].GetFrames())) {
-        if (i != 0 && frame.m_nTime == 0) {
-            // no valid frame that is not zeroth can have zero as a time.
-            // so we count them as invalid and prune the following including itself.
-            CARREC_LOG("\tRecording pruned at index {}", i);
-
-            StreamingArray[recordId].m_nSize = i * sizeof(CVehicleStateEachFrame);
-            break;
+    // 0x45A8F0: walks BYTE offsets in steps of 0x20 (a trailing partial frame is tested, too) while offset < the (shrinking) size; the first
+    // frame past 0 whose time is 0 ends the data. The size is only walked when it is positive.
+    auto& path = StreamingArray[recordId];
+    if (path.m_nSize > 0) {
+        for (int32 off = 0; off < path.m_nSize; off += (int32)sizeof(CVehicleStateEachFrame)) {
+            if (*reinterpret_cast<const uint32*>(reinterpret_cast<const uint8*>(path.m_pData) + off) == 0 && off != 0) {
+                // no valid frame that is not zeroth can have zero as a time.
+                // so we count them as invalid and prune the following including itself.
+                CARREC_LOG("\tRecording pruned at offset {}", off);
+                path.m_nSize = off;
+            }
         }
     }
     SmoothRecording(recordId);

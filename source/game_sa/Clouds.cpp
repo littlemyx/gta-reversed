@@ -276,7 +276,7 @@ void CClouds::MovingFogRender() {
             { Chain([](float r, float u, float p) { return ((x87d)p - r) + u; }), {0.f, 1.f} }, // Top left
         };
 
-        const auto alpha = notsa::detail::Ftol((x87d)MovingFog_GetFXIntensity() * ms_mf.m_fIntensity[fogIdx] * CurrentFogIntensity); // 0x716E?? fld; fmul; fmul; _ftol (no spill)
+        const auto alpha = notsa::detail::Ftol((x87d)MovingFog_GetFXIntensity() * ms_mf.m_fIntensity[fogIdx] * CurrentFogIntensity); // fld; fmul; fmul; _ftol (no spill)
         for (const auto& vertIdx : ms_mf.m_nPrimIndices) {
             const auto& corner = corners[vertIdx];
 
@@ -1329,12 +1329,13 @@ void CClouds::VolumetricCloudsRender() {
     m_fVolumetricCloudDensity = [] {
         switch (g_fx.GetFxQuality()) {
         case FX_QUALITY_LOW:    return 0.5f;
-        case FX_QUALITY_MEDIUM: return 1.f / 3.f;
+        case FX_QUALITY_MEDIUM: return 0.66f; // 0x7163B6: 0x3F28F5C3 (the port had 1/3)
         default:                return 1.f;
         }
     }();
 
-    m_VolumetricCloudsUsedNum = lerp(0, MAX_VOLUMETRIC_CLOUDS, m_fVolumetricCloudDensity);
+    // 0x7163D8: ftol(density * 180), stored before the `<= 0` test, clamped to 180
+    m_VolumetricCloudsUsedNum = (uint32)std::min(notsa::detail::Ftol((x87d)m_fVolumetricCloudDensity * (x87d)MAX_VOLUMETRIC_CLOUDS), (int32)MAX_VOLUMETRIC_CLOUDS);
 
     if (!m_VolumetricCloudsUsedNum) {
         return;
@@ -1351,13 +1352,16 @@ void CClouds::VolumetricCloudsRender() {
     if (m_bVolumetricCloudHeightSwitch) {
         const auto delta = CTimer::GetTimeStep() * 4.f;
         if (camPos.z < 220.f) {
-            gfVolumetricCloudFader += delta;
-            if (gfVolumetricCloudFader >= 255.f) {
+            gfVolumetricCloudFader = (float)((x87d)delta + gfVolumetricCloudFader);
+            if (!(gfVolumetricCloudFader < 255.f)) { // 0x71646B: fcomp + `test ah, 1`
                 gfVolumetricCloudFader = 255.f;
                 return;
             }
         } else {
-            gfVolumetricCloudFader = std::max(0.f, gfVolumetricCloudFader - delta);
+            gfVolumetricCloudFader -= delta; // 0x71649A: fsubr, then set to 0 only when < 0 (NaN is kept)
+            if (gfVolumetricCloudFader < 0.f) {
+                gfVolumetricCloudFader = 0.f;
+            }
         }
     } else {
         gfVolumetricCloudFader = 0.f;
@@ -1370,7 +1374,7 @@ void CClouds::VolumetricCloudsRender() {
     RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RWRSTATE(RwTextureGetRaster(ms_vc.texture)));
     RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, RWRSTATE(rwFILTERLINEAR));
 
-    FindPlayerPed()->GetMoveSpeed() = CVector{0.f, 0.f, 0.f};
+    // (the port zeroed the player ped's move speed here every frame - there is no such store in the exe)
 
     const auto plyrPos = FindPlayerCoors();
     const auto plyrVeh = FindPlayerVehicle();
@@ -1434,10 +1438,13 @@ void CClouds::VolumetricCloudsRender() {
         auto& vcPos = ms_vc.pos[vcidx];
         auto& vcSz  = ms_vc.size[vcidx];
 
-        const auto vcDistToCam = (camPos - vcPos).Magnitude();
+        // 0x716720: the differences are never spilled, the sum is z,y,x and only the root is stored as a float
+        const x87d dX = (x87d)vcPos.x - camPos.x, dY = (x87d)vcPos.y - camPos.y, dZ = (x87d)vcPos.z - camPos.z;
+        const float vcDistToCam = (float)x87::sqrt(dZ * dZ + dY * dY + dX * dX);
 
-        //> 0x71674E - Adjust vc position by wind [TODO: Should use TimeStep/Framedelta]
-        vcPos += CVector{ m_fVolumetricCloudWindMoveFactor * CVector2D{ CWeather::WindDir } };
+        //> 0x71674E - Adjust vc position by wind [TODO: Should use TimeStep/Framedelta] (z is untouched; the product is not rounded before the add)
+        vcPos.x = (float)((x87d)m_fVolumetricCloudWindMoveFactor * CWeather::WindDir.x + vcPos.x);
+        vcPos.y = (float)((x87d)CWeather::WindDir.y * m_fVolumetricCloudWindMoveFactor + vcPos.y);
 
         //> 0x716772 - VC too far, delete it
         if (!ms_vc.bJustCreated[vcidx] && vcDistToCam > m_fVolumetricCloudMaxDistance) {
@@ -1445,7 +1452,8 @@ void CClouds::VolumetricCloudsRender() {
             continue;
         }
 
-        if (vcDistToCam <= m_fVolumetricCloudMaxDistance || fadeOutDist <= vcDistToCam) {
+        // 0x71679B: `dist < max` (jnp after fcomp) or `max + 200 < dist` (strict, the sum is not rounded); the port had <= / <=
+        if (vcDistToCam < m_fVolumetricCloudMaxDistance || (x87d)m_fVolumetricCloudMaxDistance + 200.0f < (x87d)vcDistToCam) {
             ms_vc.bJustCreated[vcidx] = false;
         }
 
@@ -1458,7 +1466,9 @@ void CClouds::VolumetricCloudsRender() {
             if (vcDistToCam > m_fVolumetricCloudMaxDistance) {
                 continue;
             }
-            const auto distAlpha = std::max<int32>(0, NOTSA_FTOL(int32, ((m_fVolumetricCloudMaxDistance - fadeOutBeginDist) - (vcDistToCam - fadeOutBeginDist)) * (float)vcAlpha / (m_fVolumetricCloudMaxDistance - fadeOutBeginDist)));
+            // 0x716830: A = max - begin, B = dist - begin, ftol((A - B) * alpha / A) on the FPU stack
+            const x87d fadeA = (x87d)m_fVolumetricCloudMaxDistance - fadeOutBeginDist, fadeB = (x87d)vcDistToCam - fadeOutBeginDist;
+            const auto distAlpha = std::max<int32>(0, notsa::detail::Ftol((fadeA - fadeB) * (x87d)vcAlpha / fadeA));
             vcAlpha = std::min<int32>(vcAlpha, distAlpha);
             if (!vcAlpha) {
                 continue;
@@ -1466,17 +1476,22 @@ void CClouds::VolumetricCloudsRender() {
         }
 
         // Direction of vc to camera
-        const auto vcToCamDir = (vcPos - camPos).Normalized();
+        // 0x7168B0: normalised unless all three components compare equal to 0 (NaN is normalised)
+        CVector vcToCamDir = vcPos - camPos;
+        if (!(vcToCamDir.x == 0.f && vcToCamDir.y == 0.f && vcToCamDir.z == 0.f)) {
+            vcToCamDir.Normalise();
+        }
 
         //> 0x7168F0 - Calculate quad colors
         CRGBA quadColors[3];
         for (auto i = 0; i < 3; i++) {
-            quadColors[i] = {
-                vcClr,
-                vcClr,
-                vcClr,
-                NOTSA_FTOL(uint8, std::abs(vcToCamDir.Dot(ms_vc.quadNormal[i])) * (float)vcAlpha)
-            };
+            // 0x7168F0: (nz*dz + ny*dy) + nx*dx on the FPU stack, fabs, * alpha, _ftol
+            const auto& n = ms_vc.quadNormal[i];
+            x87d dot = ((x87d)n.z * vcToCamDir.z + (x87d)n.y * vcToCamDir.y) + (x87d)n.x * vcToCamDir.x;
+            if (dot < (x87d)0.0f) {
+                dot = -dot;
+            }
+            quadColors[i] = { vcClr, vcClr, vcClr, (uint8)notsa::detail::Ftol(dot * (x87d)(float)vcAlpha) };
         }
 
         //> 0x7169F0 - Each quad has 3 vertices [As each quad consists of 2 triangles, each with 3 vertices]
@@ -1491,7 +1506,11 @@ void CClouds::VolumetricCloudsRender() {
             }
 
             RenderBuffer::PushVertex(
-                vcPos + CVector{ ms_vc.modelX[k], ms_vc.modelY[k], ms_vc.modelZ[k] } * vcSz,
+                CVector{ // 0x7169F0: fld size; fmul model; fadd pos; fstp
+                    (float)((x87d)vcSz.x * ms_vc.modelX[k] + vcPos.x),
+                    (float)((x87d)vcSz.y * ms_vc.modelY[k] + vcPos.y),
+                    (float)((x87d)vcSz.z * ms_vc.modelZ[k] + vcPos.z)
+                },
                 CVector2D{ms_vc.modelU[k], ms_vc.modelV[k]},
                 quadColors[k / 6]
             );

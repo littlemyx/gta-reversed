@@ -396,10 +396,13 @@ void CSprite::RenderOneXLUSprite_Rotate_2Colours(float, float, float, float, flo
 
 // 0x70F540
 void CSprite::RenderOneXLUSprite2D(CVector2D screen, CVector2D size, const CRGBA& color, int16 intensity, uint8 alpha) {
-    CRGBA vertsColor{};
-    for (auto i = 0; i < 4; i++) {
-        vertsColor[i] = static_cast<uint8>((intensity * color[i]) >> 8);
-    }
+    // 0x70F540: the 4th component is the `alpha` argument (the old port scaled color.a by the intensity and ignored `alpha`)
+    const CRGBA vertsColor{
+        static_cast<uint8>((intensity * color.r) >> 8),
+        static_cast<uint8>((intensity * color.g) >> 8),
+        static_cast<uint8>((intensity * color.b) >> 8),
+        alpha
+    };
 
     std::array<RwIm2DVertex, 4> vertices;
     Set4Vertices2D(

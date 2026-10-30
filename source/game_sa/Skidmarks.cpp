@@ -93,10 +93,11 @@ void CSkidmarks::RegisterOne(uint32 index, const CVector& posn, float dirX, floa
 // 0x720EC0
 // unused
 void CSkidmarks::RegisterOne(uint32 index, const CVector& posn, float dirX, float dirY, bool* isSandy, bool* bloodState, float length) {
-    if (bloodState)
+    // 0x720EC0-0x720EF4: the flags are read through the pointers (`*bloodState`, then `*isSandy`, no null checks)
+    if (*bloodState)
         RegisterOne(index, posn, dirX, dirY, eSkidmarkType::BLOODY, bloodState, length);
     else
-        RegisterOne(index, posn, dirX, dirY, isSandy ? eSkidmarkType::SANDY : eSkidmarkType::DEFAULT, bloodState, length);
+        RegisterOne(index, posn, dirX, dirY, *isSandy ? eSkidmarkType::SANDY : eSkidmarkType::DEFAULT, bloodState, length);
 }
 
 // NOTSA

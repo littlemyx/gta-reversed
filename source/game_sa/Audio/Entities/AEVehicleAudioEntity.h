@@ -378,7 +378,7 @@ protected: // Config:
             float VolBase{ -6.0f };          // 0x8CBF68
             float FrqTiltDownFactor{ 0.2f }; // 0xNONE
             float FrqBase{ 0.8f };           // 0xNONE
-            float FrqSpeedFactor{ 0.2f };    // 0xNONE
+            float FrqSpeedFactor{ 0.19999998807907104f }; // 0x862D00 (0x3E4CCCCC, 1 ulp below 0.2f)
         } DummyRCHeli{};
 
         struct {

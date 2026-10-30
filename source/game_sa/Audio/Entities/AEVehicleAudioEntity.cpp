@@ -4162,10 +4162,11 @@ void CAEVehicleAudioEntity::ProcessDummyRCHeli(tVehicleParams& vp) {
 
     // 0x4FABFF - Update rotor frequency
     {
-        const auto rotorFrq = cfg->FrqBase
-            + sf * cfg->FrqSpeedFactor
+        // 0x4FAC4B: ((sf * 0.19999999 + tilt * 0.2) + accel) + 0.8 - the base is added last
+        const auto rotorFrq = sf * cfg->FrqSpeedFactor
             + std::min(1.f, (1.f - heli->GetUp().Dot(CVector::ZAxisVector())) * 0.5f / cfg->TiltDownStep) * cfg->FrqTiltDownFactor
-            + GetDummyRCAcceleration(vp);
+            + GetDummyRCAcceleration(vp)
+            + cfg->FrqBase;
         UpdateRotorFreq(rotorFrq, cfg->RotorFreqStepUp, cfg->RotorFreqStepDown);
     }
 

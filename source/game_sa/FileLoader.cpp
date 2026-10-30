@@ -109,14 +109,14 @@ void CFileLoader::SaveTexDictionary(RwTexDictionary* dictionary, const char* fil
 // 0x5B3860
 RwTexDictionary* CFileLoader::LoadTexDictionary(const char* filename) {
     RwStream* stream = RwStreamOpen(rwSTREAMFILENAME, rwSTREAMREAD, filename);
+    RwTexDictionary* txd = nullptr;
     if (stream) {
         if (RwStreamFindChunk(stream, rwID_TEXDICTIONARY, nullptr, nullptr)) {
-            RwTexDictionary* txd = RwTexDictionaryGtaStreamRead(stream);
-            RwStreamClose(stream, nullptr);
-            if (txd)
-                return txd; // TODO: Stream closed twice if txd is nullptr.
+            txd = RwTexDictionaryGtaStreamRead(stream);
         }
-        RwStreamClose(stream, nullptr);
+        RwStreamClose(stream, nullptr); // exe 0x5B3897: closed exactly once
+        if (txd)
+            return txd;
     }
     return RwTexDictionaryCreate();
 }

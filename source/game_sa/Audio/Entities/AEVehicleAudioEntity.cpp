@@ -2222,8 +2222,8 @@ void CAEVehicleAudioEntity::ProcessVehicleSkidding(tVehicleParams& vp) {
     const auto DoPlaySkidSound = [&](eSoundID sfx, float speed, float volume) {
         const float skidPerWheel = sumWheelSkid / (float)(numWheels);
         if (skidPerWheel > 0.00001f) {
-            volume += CAEAudioUtility::AudioLog10(skidPerWheel) * 20.0f + s_Config.Skid.VolBase;
-            if (volume >= -100.0f) {
+            volume = (s_Config.Skid.VolBase + volume) + CAEAudioUtility::AudioLog10(skidPerWheel) * 20.0f; // 0x4F925C: (VolBase + vol) + log10 * 20
+            if (!(volume < -100.0f)) { // 0x4F926C: fcomp + `test ah, 5; jp` plays on NaN
                 return PlaySkidSound(sfx, speed, volume);
             }
         }
@@ -2231,7 +2231,7 @@ void CAEVehicleAudioEntity::ProcessVehicleSkidding(tVehicleParams& vp) {
     };
     if (m_AuSettings.VehicleAudioType == AE_BMX) { // 0x4F90D3
         auto* const cfg = &s_Config.Skid.BMX;
-        DoPlaySkidSound(SND_GENRL_VEHICLE_GEN_BIKE_SKID_A, cfg->VolBase, cfg->FrqBase + cfg->FrqWheelSkidFactor * sumWheelSkid);
+        DoPlaySkidSound(SND_GENRL_VEHICLE_GEN_BIKE_SKID_A, cfg->FrqBase + cfg->FrqWheelSkidFactor * sumWheelSkid, cfg->VolBase); // (sfx, speed, volume)
     } else {
         float vol = m_AuSettings.IsPlaneOrHeli()
             ? s_Config.Skid.VolOffsetForPlaneOrHeli
@@ -2244,11 +2244,11 @@ void CAEVehicleAudioEntity::ProcessVehicleSkidding(tVehicleParams& vp) {
             DoPlaySkidSound(SND_GENRL_VEHICLE_GEN_GRAVEL_SKID_A, cfg->FrqBase + cfg->FrqWheelSkidFactor * sumWheelSkid, cfg->VolBase + vol);
         } else { // 0x4F919B
             auto* const cfg = &s_Config.Skid.Generic.StdSurface;
-            vol += cfg->VolBase;
-            if (m_AuSettings.IsBike()) {
-                vol *= cfg->FrqFactorForBikes;
+            float speed = cfg->FrqBase + cfg->FrqWheelSkidFactor * sumWheelSkid;
+            if (m_AuSettings.IsBike()) { // 0x4F91AF: the factor is applied to the speed (frequency), not the volume
+                speed *= cfg->FrqFactorForBikes;
             }
-            DoPlaySkidSound(SND_GENRL_VEHICLE_GEN_TARSKIDTWIN1, cfg->FrqBase + cfg->FrqWheelSkidFactor * sumWheelSkid, vol);
+            DoPlaySkidSound(SND_GENRL_VEHICLE_GEN_TARSKIDTWIN1, speed, vol + cfg->VolBase);
         }
     }
 }

@@ -111,7 +111,11 @@ void CEntryExitManager::Update() {
                             continue;
                         }
 
-                        if ((enexCenter - TheCamera.GetPosition()).SquaredMagnitude() >= 40.f * 40.f) {
+                        // exe 0x440EF0-0x440F16: the distance is 2D (x, y only) and a NaN distance is rejected (jp), i.e. the marker needs dx*dx + dy*dy < 1600
+                        const auto& camPos = TheCamera.GetPosition();
+                        const float dx     = enexCenter.x - camPos.x;
+                        const float dy     = enexCenter.y - camPos.y;
+                        if (!(dx * dx + dy * dy < 40.f * 40.f)) {
                             continue;
                         }
 

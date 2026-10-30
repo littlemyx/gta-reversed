@@ -82,15 +82,13 @@ void CSpecialFX::Shutdown() {
 void CSpecialFX::AddWeaponStreak(eWeaponType weaponType) {
     const auto plyr = FindPlayerPed();
     static CMatrix attachMat;
-    RwMatrix* LTM;
-    CVector end;
     if (!plyr || !plyr->m_pWeaponObject) {
         return;
     }
 
-    const auto DoStreak = [plyr, LTM, end](CVector endO) {
-        *LTM      = *RwFrameGetLTM(RpAtomicGetFrame(plyr->m_pWeaponObject));
-        attachMat = CMatrix(LTM, false);
+    // exe 0x723486-0x72371B: both end points go through CMatrix::operator*(CVector) (TransformPoint, 0x59C890), not TransformVector
+    const auto DoStreak = [plyr](CVector endO) {
+        attachMat = CMatrix(RwFrameGetLTM(RpAtomicGetFrame(plyr->m_pWeaponObject)), false);
         CMotionBlurStreaks::RegisterStreak(
             NOTSA_PTR_ID32(plyr->m_pWeaponObject),
             100,
@@ -98,7 +96,7 @@ void CSpecialFX::AddWeaponStreak(eWeaponType weaponType) {
             100,
             255,
             attachMat.TransformPoint({ 0.02f, 0.05f, 0.07f }),
-            attachMat.TransformVector(endO)
+            attachMat.TransformPoint(endO)
         );
     };
 

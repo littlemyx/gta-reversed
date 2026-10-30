@@ -9,7 +9,7 @@ public:
         RH_ScopedClass(CEntryInfoNodePool);
         RH_ScopedCategory("Pools");
 
-        RH_ScopedInstall(GetAt, 0x00536D10);
+        RH_ScopedInstall(New, 0x00536D10); // the exe function is the pool allocator (tail-called by CEntryInfoNode::operator new 0x536DC0), it was hooked as GetAt(idx)
     }
 
 public:

@@ -67,11 +67,14 @@ int32 WaterCreatureManager_c::GetRandomWaterCreatureId() {
 int32 WaterCreatureManager_c::TryToFreeUpWaterCreatures(int32 numToFree) {
     auto* creature = m_waterCreatureList.GetHead();
     int32 numFreed = 0;
-    while (numFreed < numToFree && creature) {
+    // 0x6E40F0..0x6E4150: the count is tested only after a creature was freed (numToFree <= 0 still frees the first match)
+    while (creature) {
         auto* nextCreature = m_waterCreatureList.GetNext(creature);
         if (creature->m_pObject->m_bOffscreen && creature->m_pFollowedCreature) {
             creature->Exit();
-            ++numFreed;
+            if (++numFreed >= numToFree) {
+                break;
+            }
         }
         creature = nextCreature;
     }
@@ -118,7 +121,9 @@ void WaterCreatureManager_c::TryToExitGroup(WaterCreature_c* waterCreature) {
 
     const auto& camPos = TheCamera.GetPosition();
     for (int32 i = 0; i < numCreaturesInGroup; ++i) {
-        if (DistanceBetweenPointsSquared(camPos, creaturesInGroup[i]->GetObject()->GetPosition()) < ms_fMaxWaterCreaturesDrawDistanceSquared) {
+        // 0x6E4617..0x6E4650: ((x*x + z*z) + y*y) of (object - camera); `jnp` after the fcomp returns for dist^2 <= 60^2 (equal too)
+        const auto vecDelta = creaturesInGroup[i]->GetObject()->GetPosition() - camPos;
+        if (vecDelta.x * vecDelta.x + vecDelta.z * vecDelta.z + vecDelta.y * vecDelta.y <= ms_fMaxWaterCreaturesDrawDistanceSquared) {
             return; // Jump out of function if any of the creatures in group aren't out of camera reach.
                     // All fishes in group have to be destroyed at once as no to leave any of them with dangling pointers
         }

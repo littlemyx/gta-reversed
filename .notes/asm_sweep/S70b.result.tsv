@@ -1,0 +1,32 @@
+addr	function	verdict	asm range	note	fix commit
+0x712330	CBirds::Update	NOT_REACHED	-	out of budget; not compared	-
+0x711EF0	CBirds::CreateNumberOfBirds	NOT_REACHED	-	out of budget; not compared	-
+0x712810	CBirds::Render	NOT_REACHED	-	out of budget; not compared	-
+0x59E650	BreakManager_c::Init	MATCH	0x59E650-0x59E652	returns true	-
+0x59E660	BreakManager_c::Exit	MATCH	0x59E660	ret	-
+0x59E720	BreakManager_c::ResetAll	MATCH	0x59E720-0x59E746	64 slots of 0x20, Exit on the active ones	-
+0x59E9B0	BreakManager_c::Add	NOT_REACHED	-	out of budget; not compared	-
+0x59E670	BreakManager_c::Update	MATCH	0x59E670-0x59E698	64 slots, the active ones are updated with the time step	-
+0x59E6A0	BreakManager_c::Render	MATCH	0x59E6A0-0x59E6FB	vertex alpha on, src alpha, inv src alpha, fog on, then the active slots	-
+0x59D190	BreakObject_c::CalcGroupCenter	NOT_REACHED	-	out of budget; not compared	-
+0x59DDD0	BreakObject_c::Exit	NOT_REACHED	-	out of budget; not compared	-
+0x59DE40	BreakObject_c::DoCollisionResponse	NOT_REACHED	-	out of budget; not compared	-
+0x59E1F0	BreakObject_c::DoCollision	NOT_REACHED	-	out of budget; not compared	-
+0x59E220	BreakObject_c::Update	NOT_REACHED	-	out of budget; not compared	-
+0x59E480	BreakObject_c::Render	NOT_REACHED	-	out of budget; not compared	-
+0x59E750	BreakObject_c::Init	NOT_REACHED	-	out of budget; not compared	-
+0x717970	CEscalator::AddThisOne	NOT_REACHED	-	out of budget; not compared	-
+0x71AA10	CFallingGlassPane::Update	FIXED	0x71AA10-0x71AB00	ground sound + particles at (x, y, groundZ), not the pane position; f6F step is (ts*vel)*0.35 (port (ts*0.35)*vel); products unrounded; z drag constants 0.01/0.02	eb44cccbd
+0x71B100	CFallingGlassPane::Render	FIXED	0x71B100-0x71B60E	delta = SIGNED clamp(time-created,0,500) (delayed panes were drawn at full alpha); colour = (delta*0.002)*alpha; buffer flush checks (0x7F9/0x3FC, 0xBF9/0x5FC); shattered polys: indices base+idx (port base-idx) and both cursors advance (port never advanced them: cracks never rendered); slope 0.1 not /10; camera distance z,y,x	fb11e8046
+0x71CB70	CGlass::HasGlassBeenShatteredAtCoors	FIXED	0x71CB70-0x71CE0D	sector clamps MATCH; result is bit 5 (bGlassBrokenAltogether), the port tested bit 4	bff427479
+0x71C2B0	CGlass::CarWindscreenShatters	FIXED	0x71C2B0-0x71CB5A	window = first TWO glass triangles (not idx+1); right = normal x up (port up x normal = mirrored panes); dots summed x,z,y; min-sum init from unrounded fwd dot; centre arithmetic; AE_GLASS_BREAK_FAST report was missing; colData null guard	d0de146a2
+0x71C0D0	CGlass::WasGlassHitByBullet	MATCH	0x71C0D0-0x71C195	glass object check, first hit only marks bit 4, later hits rand&3==2 -> WindowRespondsToCollision(0, zero speed, hit, false)	-
+0x71BC40	CGlass::WindowRespondsToCollision	FIXED	0x71BC40-0x71C0BD	furthest vertex: search starts at vertex 1 with sqrt distance, strictly greater wins; DELAYED arm for NaN damage; rest MATCH (min/max z, sound 0x7E, args, flags 0x20/~0x81)	f2c2c615a
+0x71B620	CGlass::GeneratePanesForWindow	FIXED	0x71B620-0x71BC3C	count = ftol(max(1.0, size+0.75))*n (port had no max: windows thinner than 0.25 got 0 panes); lengths z,y,x; sizeX/sizeY and offsets posN*total/count; axes via reciprocal; position sum order; first rand() -> random.y, second -> random.x (port x then y); drag velocity unrounded; DELAYED time = ftol(len*100+time)	4eaa01d5b
+0x71B0D0	CGlass::Update	MATCH	0x71B0D0-0x71B0E8	loops the 45 panes, updates the existing ones	-
+0x71CE20	CGlass::Render	NOT_REACHED	-	out of budget; not compared	-
+0x71AFC0	CGlass::FindWindowSectorList<CPtrListSingleLink<CPhysical*>>	FIXED	0x71AFC0-0x71B0CD	distance sqrt((dz^2+dy^2)+dx^2) unrounded vs the float best (port: float Magnitude, x,y,z order); type/glass/scan code MATCH	39f4fea95
+0x71AED0	CGlass::RenderReflectionPolys	NOT_REACHED	-	out of budget; not compared	-
+0x71AE30	CGlass::RenderShatteredPolys	NOT_REACHED	-	out of budget; not compared	-
+0x71ADA0	CGlass::RenderHiLightPolys	NOT_REACHED	-	out of budget; not compared	-
+0x71CF50	CGlass::BreakGlassPhysically	FIXED	0x71CF50-0x71D4D5	sphere centre = inverse-rotated offset (dot with right/forward/up, z,y,x), the port used the forward transform; no early return after cracking a pane (loop goes on); shatter sound 0x7E (port 0x7B); sets bGlassBrokenAltogether (0x20) (port bit 0x10); furthest vertex as above	32c06ec92

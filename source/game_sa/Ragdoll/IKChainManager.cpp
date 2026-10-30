@@ -125,15 +125,16 @@ inline bool IKChainManager_c::CanAccept(CPed* ped, float range) const {
         return false;
     }
 
-    if (range >= s_MaxRange) {
-        return true;
-    }
-
     if (TheCamera.m_PlayerWeaponMode.m_nMode == MODE_SNIPER) {
         return true;
     }
 
-    if ((ped->GetPosition() - TheCamera.GetPosition()).SquaredMagnitude() <= sq(range)) {
+    // 0x618841 / 0x61888C: FCOMP + `test ah, 5; jp` leave the function with `true` unless range < 999 / range^2 < sqDist (a NaN range therefore accepts)
+    if (!(range < s_MaxRange)) {
+        return true;
+    }
+
+    if (!(sq(range) < (ped->GetPosition() - TheCamera.GetPosition()).SquaredMagnitude())) {
         return true;
     }
 

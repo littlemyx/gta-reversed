@@ -453,8 +453,9 @@ void CMenuManager::SwitchToNewScreen(eMenuScreen screen) {
             m_nCurrentScreen     = screen;
         }
         else {
-            m_nCurrentScreenItem = 0;
+            // exe 0x573758-0x57377D: the target of the CURRENTLY SELECTED entry is read first, only then the selection is reset to 0
             m_nCurrentScreen     = aScreens[m_nCurrentScreen].m_aItems[m_nCurrentScreenItem].m_nTargetMenu;
+            m_nCurrentScreenItem = 0;
         }
     }
 

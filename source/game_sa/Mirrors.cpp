@@ -316,7 +316,13 @@ void CMirrors::BeforeConstructRenderList() {
 
         return rng::any_of(Screens8Track, [](const auto& track) {
             TheCamera.m_bMirrorActive = false;
-            return TheCamera.IsSphereVisible(CVector::Centroid(track), 8.0f);
+            // 0x726EA0..: the exe sums z as z0+z1+z3+z2, y as y0+y1+y3+y2 and x as x0+x1+x2+x3 (each *0.25); CVector::Centroid adds v0..v3 in order
+            const CVector centre{
+                (track[0].x + track[1].x + track[2].x + track[3].x) * 0.25f,
+                (track[0].y + track[1].y + track[3].y + track[2].y) * 0.25f,
+                (track[0].z + track[1].z + track[3].z + track[2].z) * 0.25f,
+            };
+            return TheCamera.IsSphereVisible(centre, 8.0f);
         });
     }();
 

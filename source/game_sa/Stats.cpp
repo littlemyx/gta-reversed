@@ -1619,7 +1619,7 @@ void CStats::UpdateRespectStat(uint8 arg0) {
     const x87d S1 = (A + C) + (x87d)StatTypesFloat[STAT_GIRLFRIEND_RESPECT] * (x87d)0.03f;
 
     x87d territory = (x87d)CGangWars::TerritoryUnderControlPercentage - (x87d)0.2f;
-    if (territory < 0.0) {
+    if (!(territory >= 0.0)) { // exe 0x55BCD6: fcomp + jne keeps the value only when 0.0 <= territory (NaN takes 0.0)
         territory = (x87d)0.0;
     }
     const float S2 = (float)(territory * (x87d)1250.0 * (x87d)0.05f + S1);

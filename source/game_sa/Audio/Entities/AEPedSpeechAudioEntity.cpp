@@ -120,9 +120,18 @@ tPedSpeechSlotID CAEPedSpeechAudioEntity::CanWePlayScriptedSpeech() {
 
 // 0x4E4AE0
 float CAEPedSpeechAudioEntity::GetSpeechContextVolumeOffset(eGlobalSpeechContextS16 gctx) {
-    const auto CalculateStrainVolumeOffset = [](float base) {
-        const auto t = std::clamp(CStats::GetStatValue(STAT_FAT) - CStats::GetStatValue(STAT_MUSCLE), -1.f, 1.f);
-        return (t + 1.f) * 0.5f * base + base;
+    // exe 0x4E4B08 / 0x4E4BE2: t = clamp((fat - muscle) * 0.001f, -1, 1) kept in an x87 register; result = (t + 1.0) * 0.5 * (G - base) + base,
+    // where G is a float at 0xB61C14 / 0xB61C18 that nothing ever writes (.bss => 0.0f)
+    const auto CalculateStrainVolumeOffset = [](float base) -> float {
+        x87d t = (x87d)CStats::GetStatValue(STAT_FAT);
+        t = t - (x87d)CStats::GetStatValue(STAT_MUSCLE);
+        t = t * (x87d)0.001f;
+        if (t > (x87d)1.0f) {
+            t = (x87d)1.0f;
+        } else if (t < (x87d)-1.0f) {
+            t = (x87d)-1.0f;
+        }
+        return (float)((t + (x87d)1.0) * (x87d)0.5 * ((x87d)0.0f - (x87d)base) + (x87d)base);
     };
     switch (gctx) {
     case CTX_GLOBAL_STOMACH_RUMBLE:        return -6.f; // 0x4E4CBB

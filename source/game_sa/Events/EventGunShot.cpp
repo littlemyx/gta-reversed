@@ -56,11 +56,19 @@ bool CEventGunShot::AffectsPed(CPed* ped) {
             }
 
             const auto& pedPos = ped->GetPosition();
-            if (DistanceBetweenPointsSquared(m_firedBy->GetPosition(), pedPos) <= sq(fGunShotRange)) {
+            // exe 0x4B2DDE-0x4B2E57: d = ped - firedBy, |d|^2 = (dz^2 + dy^2) + dx^2 (rounded to float), rejected when range^2 < |d|^2 (NaN is NOT rejected: fcompp + test 0x41)
+            const auto& firedPos = m_firedBy->GetPosition();
+            const float dx = pedPos.x - firedPos.x, dy = pedPos.y - firedPos.y, dz = pedPos.z - firedPos.z;
+            const float distSq = (dz * dz + dy * dy) + dx * dx;
+            if (!(distSq > sq(fGunShotRange))) {
                 if (!m_bHasNoSound)
                     return true;
 
-                if (DotProduct(m_startPoint - pedPos, ped->GetForward()) > 0.0f) {
+                // exe 0x4B2E79-0x4B2EA0: (y*fwd.y + z*fwd.z) + x*fwd.x of (startPoint - pedPos), accepted when NOT (dot <= 0) (NaN passes)
+                const CVector toStart = m_startPoint - pedPos;
+                const auto&   fwd     = ped->GetForward();
+                const float   dot     = (toStart.y * fwd.y + toStart.z * fwd.z) + toStart.x * fwd.x;
+                if (!(dot <= 0.0f)) {
                     if (CWorld::GetIsLineOfSightClear(m_startPoint, pedPos, true, true, true, true, true, false, false))
                         return true;
                 }

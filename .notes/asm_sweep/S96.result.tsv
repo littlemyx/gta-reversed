@@ -2,32 +2,32 @@ addr	function	verdict	asm range	note	fix commit
 0x5902B0	CLoadingScreen::Init	MATCH	0x5902B0-0x590303 (all)	m_timeSinceLastScreen from the real-time clock (no pause correction) as in the exe	-
 0x58FF10	CLoadingScreen::Shutdown	MATCH	0x58FF10-0x58FF5B (all)	-	-
 0x58FF60	CLoadingScreen::RenderSplash	MATCH	0x58FF60-0x5900A4 (all)	rect -5..W+5 x -5..H+5 (CRect members left,top,right,bottom), black overlay alpha 255-a / a, previous splash alpha 255-a all identical	-
-0x5900B0	CLoadingScreen::LoadSplashes	FIXED	0x5900B0-0x590214 (all)	splash order was a std::shuffle of loadsc1..6 (mt19937); exe draws 6 of loadsc1..loadsc14 without replacement with CRT rand() (14 calls, r=rand*n>>15), the title is index 0	9345c78d3
+0x5900B0	CLoadingScreen::LoadSplashes	FIXED	0x5900B0-0x590214 (all)	splash order was a std::shuffle of loadsc1..6 (mt19937); exe draws 6 of loadsc1..loadsc14 without replacement with CRT rand() (14 calls, r=rand*n>>15), the title is index 0	90ba3850b
 0x590220	CLoadingScreen::DisplayMessage	MATCH	0x590220-0x59023B (all)	-	-
 0x590240	CLoadingScreen::SetLoadingBarMsg	MATCH	0x590240-0x59027F (all)	-	-
 0x590280	CLoadingScreen::GetClockTime	MATCH	0x590280-0x5902AD (all)	exe rounds once (fild exact * 0.001f); port rounds the ms count to float first: differs by 1ulp only above 2^24 ms uptime	-
 0x590310	CLoadingScreen::Pause	MATCH	0x590310 (all)	ret	-
 0x590320	CLoadingScreen::Continue	MATCH	0x590320-0x59036F (all)	-	-
-0x590370	CLoadingScreen::RenderLoadingBar	FIXED	0x590370-0x5904C9 (all)	m_TimeBarAppeared was stamped at function entry with the real clock; exe stamps it only after the bar was drawn (0<pct<100, not legal screen) with GetClockTime(false). Bar geometry/colour identical	ecdd8079e
+0x590370	CLoadingScreen::RenderLoadingBar	FIXED	0x590370-0x5904C9 (all)	m_TimeBarAppeared was stamped at function entry with the real clock; exe stamps it only after the bar was drawn (0<pct<100, not legal screen) with GetClockTime(false). Bar geometry/colour identical	a732b17ef
 0x5904D0	CLoadingScreen::DisplayNextSplash	MATCH	0x5904D0-0x59052B (all)	-	-
 0x590530	CLoadingScreen::StartFading	MATCH	0x590530-0x59056A (all)	-	-
 0x590570	CLoadingScreen::DisplayPCScreen	MATCH	0x590570-0x5905D4 (all)	port adds NOTSA FastLoader NoLoadBar guard (default off)	-
 0x5905E0	CLoadingScreen::Update	NOT_REACHED	0x5905E0-0x590857 (read only)	no caller in the exe (xref scan: only the hook); the port body is a rewrite that differs from the exe, left as is	-
 0x590860	CLoadingScreen::DoPCTitleFadeIn	MATCH	0x590860-0x590983 (all)	-	-
 0x590990	CLoadingScreen::DoPCTitleFadeOut	MATCH	0x590990-0x590AB8 (all)	-	-
-0x590AC0	CLoadingScreen::DoPCScreenChange	FIXED	0x590AC0-0x590CFA (all)	loading-tune amp tested isLastOne&&FadeOut, exe tests only the FadeOut flag (cannot differ in the shipped flow)	ecdd8079e
+0x590AC0	CLoadingScreen::DoPCScreenChange	FIXED	0x590AC0-0x590CFA (all)	loading-tune amp tested isLastOne&&FadeOut, exe tests only the FadeOut flag (cannot differ in the shipped flow)	a732b17ef
 0x590D00	CLoadingScreen::NewChunkLoaded	MATCH	0x590D00-0x590DDC (all)	only differs with m_currDisplayedSplash==-1 (FastLoader NoCopyright path: exe would draw splash[-1] = UB); not changed	-
 0x744DB0	CLoadingScreen::IsActive	MATCH	0x744DB0 (all)	-	-
 0x53DED0	LoadingScreen	MATCH	0x53DED0-0x53DEE6 (all)	-	-
 0x574350	CMenuManager::Constructor	MATCH	0x574350-0x5744CA (all)	all field stores identical (radio station random pinned in detached builds)	-
 0x579440	CMenuManager::Destructor	MATCH	0x579440-0x579496 (all)	-	-
-0x5744D0	CMenuManager::Initialise	FIXED	0x5744D0-0x574627 (all)	map-origin clamp: x - x - K gave -K and the below-frame fix used a re-associated sum; exe: origin -= (origin-K) / origin += (640-(origin+K)) with all four bounds from the entry origin	7d86ce7b7
-0x572EC0	CMenuManager::LoadAllTextures	FIXED	0x572EC0-0x57309E (all)	exe loads FRONTEN1 (0x21000, TidyUp), FRONTEN_pc (0x3000, TidyUp), FRONTEN2 (0x4C000, no TidyUp); port had an extra frontend3 TXD (0x6800) and the 0x3000/0x4C000 reservations swapped	cb5e5d4ed
+0x5744D0	CMenuManager::Initialise	FIXED	0x5744D0-0x574627 (all)	map-origin clamp: x - x - K gave -K and the below-frame fix used a re-associated sum; exe: origin -= (origin-K) / origin += (640-(origin+K)) with all four bounds from the entry origin	b98b93091
+0x572EC0	CMenuManager::LoadAllTextures	FIXED	0x572EC0-0x57309E (all)	exe loads FRONTEN1 (0x21000, TidyUp), FRONTEN_pc (0x3000, TidyUp), FRONTEN2 (0x4C000, no TidyUp); port had an extra frontend3 TXD (0x6800) and the 0x3000/0x4C000 reservations swapped	4613f7c2d
 0x5730A0	CMenuManager::SwapTexturesRound	MATCH	0x5730A0-0x573252 (all)	same structure incl. the FindTxdSlot==0 quirk; only ever called with false	-
-0x574630	CMenuManager::UnloadTextures	FIXED	0x574630-0x5746E1 (all)	removed the frontend3 unload (it would RemoveTxd(-1) now that the TXD is not loaded); order frontend1, frontend_pc, frontend2	cb5e5d4ed
+0x574630	CMenuManager::UnloadTextures	FIXED	0x574630-0x5746E1 (all)	removed the frontend3 unload (it would RemoveTxd(-1) now that the TXD is not loaded); order frontend1, frontend_pc, frontend2	4613f7c2d
 0x573260	CMenuManager::InitialiseChangedLanguageSettings	MATCH	0x573260-0x573317 (all)	jump table 0x57331C decoded: 1 -> French, 0/2/3/4 -> normal	-
 0x573330	CMenuManager::DoSettingsBeforeStartingAGame	MATCH	0x573330-0x5733D6 (all)	-	-
-0x573680	CMenuManager::SwitchToNewScreen	FIXED	0x573680-0x573831 (all)	SwitchToNewScreen(0) must follow the CURRENT entry's target; port reset the selection first and read entry 0	c1c16320d
+0x573680	CMenuManager::SwitchToNewScreen	FIXED	0x573680-0x573831 (all)	SwitchToNewScreen(0) must follow the CURRENT entry's target; port reset the selection first and read entry 0	af7333cb2
 0x573A00	CMenuManager::ScrollRadioStations	MATCH	0x573A00-0x573A50 (all)	-	-
 0x573A60	CMenuManager::SetFrontEndRenderStates	MATCH	0x573A60-0x573AD8 (all)	-	-
 0x573AE0	CMenuManager::SetDefaultPreferences	MATCH	0x573AE0-0x573C4B (all)	jump table 0x573C60/0x573C50 decoded (3 audio, 4/27 display, 36 controller)	-
@@ -42,5 +42,5 @@ addr	function	verdict	asm range	note	fix commit
 0x57E6E0	CMenuManager::DrawControllerBound	UNSURE	not compared	budget	-
 0x57F300	CMenuManager::DrawControllerSetupScreen	UNSURE	not compared	budget	-
 0x57C520	CMenuManager::CentreMousePointer	MATCH	0x57C520-0x57C5D6 (game side)	cursor placement is the port platform layer (RsMouseSetPos)	-
-0x57C8F0	CMenuManager::LoadSettings	FIXED	0x57C8F0-0x57CD0A (all)	defaults arm: m_nCurrentRwSubsystem=0 (port zeroed m_nPrefsVideoMode), previous language restored (port forced American); bInvertMouseY=true after open. Read order/sizes identical	2073cff5e
+0x57C8F0	CMenuManager::LoadSettings	FIXED	0x57C8F0-0x57CD0A (all)	defaults arm: m_nCurrentRwSubsystem=0 (port zeroed m_nPrefsVideoMode), previous language restored (port forced American); bInvertMouseY=true after open. Read order/sizes identical	42f614cc0
 0x57C660	CMenuManager::SaveSettings	MATCH	0x57C660-0x57C8EB (all)	write order/sizes identical	-

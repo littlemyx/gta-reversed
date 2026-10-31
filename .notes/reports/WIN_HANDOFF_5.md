@@ -91,3 +91,4 @@
 - Phase 3 left: S97b (running), S96c (8 Draw rows, after S97b).
 - Gate 09b19a8c6 GREEN (74/74, soak OK, 70/70, portable 0); C:\gta-play = 09b19a8c6. Gate on ea87a5842 started (S97b, S97c, S97d/S96c). S97e+S96d (last menu rows) running.
 - Phase 3 COMPLETE (S97f landed 16e80bf4d). INDEX 0 pending. Next gate after ea87a5842 must cover S97e/S96d/S97f.
+- Gates ea87a5842 and a7e0e9339 GREEN (74/74, soak OK, 70/70, portable 0); C:\gta-play = a7e0e9339 = all of phase 3. No agents running. Next: user playtest feedback; optional FIX_BUGS auto aspect (offered, unanswered).

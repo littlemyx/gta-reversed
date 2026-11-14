@@ -2360,20 +2360,19 @@ void CEventHandler::ComputePedFriendResponse(CEventAcquaintancePed* e, CTask* ta
 
 // 0x4B9D40
 void CEventHandler::ComputePedSoundQuietResponse(CEventSoundQuiet* e, CTask* tactive, CTask* tsimplest) {
-    m_EventResponseTask = [&]() -> CTask* {
-        if (!e->GetSourceEntity()) {
-            return nullptr;
-        }
-        switch (e->m_TaskId) {
-        case TASK_NONE:
-            return nullptr;
-        case TASK_COMPLEX_INVESTIGATE_DISTURBANCE:
-            return new CTaskComplexInvestigateDisturbance{e->m_position, e->GetSourceEntity()};
-        default:
-            NOTSA_UNREACHABLE();
-            return m_EventResponseTask; // 0x4B9DB5: default leaves the response task untouched
-        }
-    }();
+    if (!e->GetSourceEntity()) { // 0x4B9D68: `je 0x4B9DB5` - no source entity leaves the response task untouched (port wrote nullptr)
+        return;
+    }
+    switch (e->m_TaskId) {
+    case TASK_NONE:
+        m_EventResponseTask = nullptr;
+        break;
+    case TASK_COMPLEX_INVESTIGATE_DISTURBANCE:
+        m_EventResponseTask = new CTaskComplexInvestigateDisturbance{e->m_position, e->GetSourceEntity()};
+        break;
+    default: // 0x4B9D7D: `jne 0x4B9DB5` - any other task id leaves the response task untouched
+        break;
+    }
 }
 
 // 0x4B9C90

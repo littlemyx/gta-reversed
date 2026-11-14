@@ -26,3 +26,8 @@ Corrections to the 14.11 read-only audit: it counted verdict ROWS, not functions
 6. After every gate that moves interior-c-ref: give the TS session the list of changed functions (git diff of source/game_sa between snapshots).
 
 Pace: 1-2 sonnet agents at once (quota shared with the TS session, ~12%/day there). Gate (orch_gate.sh regress) after each few landings.
+
+## Process changes (2026-11-14, from the peer audit cpp-sweep-audit.md; phases 1-3 cost ~61M tokens, ~14k/function)
+
+Order: (T1) shared annotator + exe-vs-our-build signature diff (calls, immediates, float literals, branch count, size) in tools/standalone; AUTO_MATCH is triage only, not counted in the metric; mismatches go to agents with the diff list. (T2) class scanners (ftol/int truncation, neighbour constants, bit fields, jcc inversion) over all oracle-only rows. (T3) hit-counter build over hooked addresses, run on the 70 scenarios + soak; intersect with web PORT_MAP partial/not-ported + sweep2-list.md. Then: script opcode handlers first, then high-defect classes (Scripts, Camera, CWaterLevel, CRadar 59-73%), low-defect classes (Loaders, HUD, Interior_c 0-17%) only via T1/T2. Second pass: 30-row sample of sonnet MATCH first.
+Bookkeeping: one result commit per slice, metrics by script, rules v1-v6 merged into a single v7 (<=6 KB), full gate once a day. Agents: 1 at a time (shared quota; TS port has priority).

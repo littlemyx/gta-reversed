@@ -1,0 +1,12 @@
+# ASM-P4LEFT
+
+38 rows checked (P4LEFT.tsv): 16 MATCH, 0 FIXED, 22 INTENTIONAL, 0 UNSURE, 0 NOT_REACHED. Table: .notes/asm_sweep/P4LEFT.result.tsv.
+Commits: none for code (no deviation found). Only the result tsv and this report are added.
+- 6 old DEVIATION rows (ApplyCollision-1, ApplySoftCollision-1, ProcessCollision, ProcessEntityCollision, ProcessShift, Fx_c::TriggerBulletSplash): all fixes are already in the source (cross-product collision mass, dot order, bRestingOnPhysical 6b2bc7f6, m_bIsStaticWaitingForCollision, ped damp bits, CamDistSq_XZY in Fx.cpp 13599c179), re-read against the exe.
+- CWorldScan::ScanWorld (real code, in Renderer.cpp): re-compared 0x72CAE0-0x72D4D0 (gift wrapping, hull, edge starts/slopes, NaN arms, extra-rectangle quirk) = MATCH; only the right-edge tail 0x72D4D0-0x72D5CA read as the mirror of the left edge.
+- CAEUserRadioTrackManager: ScanUserTracks/ReadUserTracks/DeleteUserTracksInfo/Shutdown MATCH. WriteUserTracksFile/Thread/ResolveShortcut are in AEUserRadioTrackManager.cpp, rewritten on std::filesystem/IShellLinkW: same sa-ufiles.dat/sa-utrax.dat content and state machine (INTENTIONAL, small NOTSA extras).
+- CFileLoader::LoadCollisionModel/Ver4 MATCH (COL1/COL4 absent from SA data; no change, so no world-content regress).
+- CAnimManager::AddAnimAssocDefinition: exe slot skip is a no-op at boot (INTENTIONAL). CPed m_roadRageWith byte vs pointer null: INTENTIONAL.
+- Dead code in the exe (no caller): Cover x3, LoadPlatecharsetDat, CutString, CLoadingScreen::Update, RestoreStuffFromMem, SunSetPositionFromEntity, LaserScopeDot, PedGroupMembership::From, JPegDecompressToRaster, CutsceneMgr remove, PathFind x2. CPad::ProcessPad = SDL3 layer; CInterestingEvents::Destructor = atexit.
+- Tests: no source change, so no rebuild / oracle / `combat missions` regress run.
+- Script commands (read-only count): python script parsing source/game_sa/Enums/eScriptCommands.h and every REGISTER_COMMAND_{HANDLER,HANDLER_BEGIN,NOP,UNIMPLEMENTED}( in source/game_sa/Scripts (comments stripped). Ids 0..2639: 1913 have a real handler or NOP, 713 are registered REGISTER_COMMAND_UNIMPLEMENTED (macro doc: commands the original game did not implement either; handler logs and returns OR_INTERRUPT), 14 have no registration (0x54, 0x56, 0x57, 0x178, 0x23A, 0x30E, 0x30F, 0x311-0x316, 0xA4F). The old "977 of 2640 unregistered" (PHASE2_STATUS.md S6) is closed; what remains is whether the 713 are truly unused by the scripts.

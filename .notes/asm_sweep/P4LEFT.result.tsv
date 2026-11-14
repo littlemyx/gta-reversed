@@ -1,0 +1,39 @@
+addr	function	verdict	asm range	note	fix commit
+0x4F32F0	CAEUserRadioTrackManager::DeleteUserTracksInfo	MATCH	0x4F32F0-0x4F332F	TerminateThread(handle,0), SetDirMyDocuments, delete sa-ufiles.dat then sa-utrax.dat, SetDir(empty), state=0; port the same (fs::remove instead of DeleteFileA, same files and order)	-
+0x4F2FD0	CAEUserRadioTrackManager::ReadUserTracks	MATCH	0x4F2FD0-0x4F3050	same file (sa-utrax.dat in My Documents), count = size/12 (word), malloc+read; port also frees a previous buffer (NOTSA leak fix, no visible effect)	-
+0x4F30F0	CAEUserRadioTrackManager::ResolveShortcut	INTENTIONAL	0x4F30F0-0x4F31F0 (not diffed)	Windows build: port resolves .lnk with IShellLinkW on wide paths in AEUserRadioTrackManager.cpp (same COM resolution as the exe); portable build: .lnk stays unresolved (no shell). Windows result matches	-
+0x4F4BA0	CAEUserRadioTrackManager::ScanUserTracks	MATCH	0x4F4BA0-0x4F4BDB	state 0 -> state=1 + CreateThread(WriteUserTracksThread, this), return false; 1 -> false; 2,3 -> true; same in port	-
+0x4F2FB0	CAEUserRadioTrackManager::Shutdown	MATCH	0x4F2FB0-0x4F2FCB	free the track buffer when loaded flag and pointer set, then the WMA/MF decoder shutdowns (exe tail-calls 0x502BF0 and 0x4E7850); same in port	-
+0x4F4690	CAEUserRadioTrackManager::WriteUserTracksFile	INTENTIONAL	0x4F4690-0x4F4A1F (not diffed)	recursive User Tracks scan rewritten on std::filesystem / wide paths in AEUserRadioTrackManager.cpp (depth limit, .lnk resolve, type by extension, record offset/len/type); same sa-ufiles.dat / sa-utrax.dat content, enumeration order is the file system's, paths UTF-8 generic	-
+0x4F4A20	CAEUserRadioTrackManager::WriteUserTracksThread	INTENTIONAL	0x4F4A20-0x4F4B93	exe: CoInitialize, open sa-ufiles.dat, scan, close, open sa-utrax.dat, write (first entry once more when exactly one track), menu track index 0, state 2. Port the same plus NOTSA: error state when sa-utrax.dat cannot be opened (exe faults) and ReadUserTracks right after the scan; no visible difference	-
+0x4D3BA0	CAnimManager::AddAnimAssocDefinition	INTENTIONAL	0x4D3BA0-0x4D3C80 (all)	exe first advances the slot index over slots with a non-zero name byte (table zeroed at boot: no-op); only a second Initialise would differ, the port never re-initialises and the advance would overflow the 145-slot table. Rest matches	-
+0x5D6D80	CCustomBuildingDNPipeline::pluginExtraVertColourStreamWriteCB	INTENTIONAL	0x5D6D80-0x5D6DBB	geometry export only (never in the game); exe passes the NightColors value as source pointer (exe bug, faults), port writes the array; unreachable in the run build	-
+0x4D5AF0	CCutsceneMgr::RemoveEverythingBecauseCutsceneDoesntFitInMemory	INTENTIONAL	0x4D5AF0-0x4D5C0F	dead code: no caller in the exe, trigger flag 0xB5F85C never set	-
+0x537580	CFileLoader::LoadCollisionModel	MATCH	0x537580-0x53798F (all)	earlier sweep diffed instruction by instruction (sphere/line/box/vertex*128 ftol/face order, strides 20/24/28/12/16); COLL v1 does not occur in SA data; counts word/byte in exe, dword in port (equal for valid data). No change, no world-content effect	-
+0x537AE0	CFileLoader::LoadCollisionModelVer4	MATCH	0x537AE0-0x537CD9 (all)	identical to Ver3 with a 0x5C header (diffed by the earlier sweep); COL4 does not occur in SA data	-
+0x856880	CInterestingEvents::Destructor	INTENTIONAL	0x856880	atexit destructor of the global (no this, unhookable); process exit only	-
+0x5905E0	CLoadingScreen::Update	INTENTIONAL	0x5905E0	dead code: no caller or pointer in the exe (ASM-S96)	-
+0x69DC50	CMessages::CutString	INTENTIONAL	0x69DC50	dead code: no caller in the exe	-
+0x746A10	CPad::ProcessPad	INTENTIONAL	0x746A10	DirectInput joystick poll replaced by the SDL3 pad layer; same pad state is fed to CPad, different device API	-
+0x4512D0	CPathFind::AddDynamicLinkBetween2Nodes	INTENTIONAL	0x4512D0-0x4512F0	dead code: no port function, no callers in the exe (exe = _For1Node(a,b) then (b,a))	-
+0x452000	CPathFind::TestCoorsCloseness	INTENTIONAL	0x452000	dead code: no callers in the exe, not ported	-
+0x5E8411	CPed::CPed (m_roadRageWith)	INTENTIONAL	0x5E8411	exe writes only the low byte of the pointer slot at +0x460, port nulls the whole pointer (superset); stale upper bytes in the exe are never relied on, the field is assigned before use	-
+0x5EF710	CPedAttractorManager::RestoreStuffFromMem	INTENTIONAL	0x5EF710	dead code: no callers in the exe (S52); port NOTSA_UNREACHABLE	-
+0x5435C0	CPhysical::ApplyCollision-1	MATCH	0x5435C0-0x543780	earlier-sweep fixes present in Physical.cpp (else-branch dot (n.y*s.y+n.x*s.x)+s.z*n.z, mass from |r x n|^2); re-read first 150 exe instructions against the source: both branches match	earlier sweep (in branch)
+0x543890	CPhysical::ApplySoftCollision-1	MATCH	0x543890-0x543AA1	|r x n|^2 collision mass fix present in Physical.cpp ApplySoftCollision	earlier sweep (in branch)
+0x54DFB0	CPhysical::ProcessCollision	MATCH	0x54E74F-0x54E766	fix present: vehicle keep-processing tests bRestingOnPhysical; 6b2bc7f6	6b2bc7f6
+0x546D00	CPhysical::ProcessEntityCollision	MATCH	0x546D83-0x546D96	fix present: HasHitWall set for building || static || m_bIsStaticWaitingForCollision	earlier sweep (in branch)
+0x54DB10	CPhysical::ProcessShift	MATCH	0x54DB63-0x54DB92	fix present: ped damp when no standing entity or dword at +0x40 lacks bit 2 or has bit 3	earlier sweep (in branch)
+0x710AF0	CStencilShadows::SunSetPositionFromEntity	INTENTIONAL	0x710AF0-0x710B4A	dead code: no caller or pointer in the exe; exe arg is an RW frame object, port takes an entity	-
+0x72CAE0	CWorldScan::ScanWorld	MATCH	0x72CAE0-0x72D4D0	dedupe, lowest-y, gift wrapping (atan arg order, 2pi wrap with NaN skip, uninitialised best), hull y range, edge starts, float slopes, ceil start x, floor compares, ls/rs sign tests incl. NaN arms, scan loop with extra-rectangle removal (k=4 quirk) and per-row edge advance equal; right-edge tail 0x72D4D0-0x72D5CA read only as the mirror of the left edge	-
+0x6987F0	Cover::CalculateHorizontalSize	INTENTIONAL	0x6987F0	dead code: no caller in the exe (S43d); port stub	-
+0x698990	Cover::DoLineCheckWithinObject	INTENTIONAL	0x698990	dead code: no caller in the exe (S43d); port stub	-
+0x698790	Cover::FindVectorFromFirstToMissingVertex	INTENTIONAL	0x698790-0x6987E7	dead code: no caller in the exe; port stub	-
+0x6FDC00	CustomCarPlateMgr::LoadPlatecharsetDat	INTENTIONAL	0x6FDC00	dead code: no caller in the exe (S43d)	-
+0x4A10E0	Fx_c::TriggerBulletSplash	MATCH	0x4A10E0-0x4A114F	fix present in Fx.cpp CreateFxWithinCameraRange: (dx^2+dz^2)+dy^2 at PC24, returns only when > 625 (NaN creates the fx); 13599c179	13599c179
+0x591D20	Interior_c::AddGotoPt	MATCH	0x591D20	oracle wave3 row, 3000 cases, 0 mismatches	-
+0x591C50	Interior_c::FindEmptyTiles	MATCH	0x591C50	oracle wave3 row, 2500 cases, 0 mismatches	-
+0x591B20	Interior_c::GetRandomTile	MATCH	0x591B20	oracle wave3 row, 1500 cases, 0 mismatches incl. rand state	-
+0x5D05F0	JPegDecompressToRaster	INTENTIONAL	0x5D05F0-0x5D0736	dead code: only caller 0x5D07A0 has no callers; port is a different void inline loop	-
+0x73A8D0	LaserScopeDot	INTENTIONAL	0x73A8D0-0x73AAB9	dead code: no exe callers (S64b/c); port stub NOTSA_UNREACHABLE	-
+0x5F7FE0	PedGroupMembership::From	INTENTIONAL	0x5F7FE0-0x5F8013	dead code: only caller is copy ctor 0x5FB140, which has no reference in the exe	-

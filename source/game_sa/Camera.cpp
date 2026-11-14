@@ -1729,7 +1729,7 @@ void CCamera::ProcessFade() {
 
         m_bFading = false;
     } else {
-        if (m_nFadeInOutFlag == eFadeFlag::FADE_OUT) { // stupid, why not use a switch instead?
+        if (m_nFadeInOutFlag != eFadeFlag::FADE_IN) { // 0x50B640: `cmp ax, 0; jne 0x50B6B8` - a flag that is neither FADE_OUT (1) nor FADE_IN (0) (script-supplied) only refreshes FadeValue; the port faded in
             CDraw::FadeValue = NOTSA_FTOL(uint8, m_fFadeAlpha);
             return;
         }

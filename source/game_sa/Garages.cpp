@@ -410,7 +410,7 @@ void CGarages::ActivateGarage(int16 garageId) {
     auto& garage = GetGarage(garageId);
     garage.m_bInactive = false;
     if (   garage.m_nType == eGarageType::UNKN_CLOSESONTOUCH
-        && garage.m_nDoorState != GARAGE_DOOR_CLOSED
+        && garage.m_nDoorState == GARAGE_DOOR_CLOSED // 0x447CEA: the exe skips the door change when the state byte is non-zero (port had it inverted)
     ) {
         garage.m_nDoorState = GARAGE_DOOR_OPENING;
     }

@@ -6,11 +6,10 @@
 set -u
 D="$(cd "$(dirname "$0")" && pwd)"; STEPS="$(cygpath -w "$(cd "$(dirname "${1:?steps file}")" && pwd)/$(basename "$1")")"; OUT="${2:-C:/gta-scratch/scmtrace/out/full}"; LIMIT="${3:-1800}"
 RUN="$D/../scmtrace_run.sh"; mkdir -p "$OUT"
-HEAD="# MDRIVER-1 base route: New Game, 6 standing peds + a police car (pins the population), rr_start, injected start of mission index 24 (GUNS1 = RYDER_1)
+HEAD="# MDRIVER-1 base route: New Game, a fixed 600 ms wait (no extra spawns: they shift the pool handles), game clock 06:30, rr_start, injected start of mission index 24 (GUNS1 = RYDER_1)
 #include header
-cmd:spawnmany:6:7:0
-cmd:spawnveh:596:1:14
 wait:600
+cmd:time:6:30
 cmd:rr_start
 mission:24"
 printf '%s\nwait:3600000\ncmd:quit\n' "$HEAD" > "$OUT/driver_route.txt"

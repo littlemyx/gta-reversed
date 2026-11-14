@@ -75,6 +75,9 @@ namespace notsa::portable { bool AudioCmd(const char* name, const std::string& a
 #endif
 #ifdef NOTSA_STATEHASH
 #include "portable/statehash.h" // RR-1: virtual script clock + cmd:rr_*
+#ifdef NOTSA_MDRIVER
+#include "portable/mdriver.h" // MDRIVER-1
+#endif
 #endif
 struct NotsaInjectMissionInfo { int32 offset; uint8 bytes[16]; };
 bool NotsaInjectStartMission(int32 missionId, NotsaInjectMissionInfo* info); // toolsmenu/DebugModules/Script/MissionDebugModule.cpp
@@ -181,6 +184,7 @@ void InjInit() {
         if (c == std::string::npos) continue;
         const auto cmd = item.substr(0, c), arg = item.substr(c + 1);
         if (cmd == "wait") { t += std::atoll(arg.c_str()); }
+        else if (cmd == "at") { t = std::atoll(arg.c_str()); } // at:T  absolute script clock in ms (MDRIVER-1 recorded routes)
         else if (cmd == "key") { s_InjEvents.push_back({ t, true, InjKey(arg) }); s_InjEvents.push_back({ t + 150, false, InjKey(arg) }); t += 150; }
         else if (cmd == "mouse") { // mouse:x,y  (window pixels): SDL_EVENT_MOUSE_MOTION, e.g. to select a menu item the real pointer hovers over
             int x = 0, y = 0;
@@ -394,6 +398,9 @@ static void InjRunCmd(const std::string& c) {
 #endif
 #ifdef NOTSA_STATEHASH
     if (notsa::rr::Cmd(name, args)) { return; } // RR-1: cmd:rr_start[:SEED] / rr_stop / rr_stat
+#ifdef NOTSA_MDRIVER
+    if (notsa::mdriver::Cmd(name, args)) { return; } // MDRIVER-1: cmd:mdkey / mdped / mdveh
+#endif
 #endif
     if (NotsaGrCmd(name, args)) { return; } // gameplay regression suite commands (GameplayRegress.cpp: snap, spawncop, spawnveh, shootlast, shootdrv, hitplayer, time, quit)
     NOTSA_INJ_LOG("[cmd] %s", c.c_str());
@@ -566,6 +573,10 @@ static void InjRunCmd(const std::string& c) {
     else if (!std::strcmp(name, "health")) { pl->m_fHealth = (float)std::atoi(args.c_str()); }
 }
 #endif
+#ifdef NOTSA_MDRIVER
+static void MdPushKey(const char* n, bool down) { SDL_Event e{}; e.type = down ? SDL_EVENT_KEY_DOWN : SDL_EVENT_KEY_UP; e.key.key = InjKey(n); e.key.down = down; e.key.scancode = SDL_GetScancodeFromKey(e.key.key, nullptr); SDL_PushEvent(&e); }
+static void MdRunCmd(const std::string& c) { InjRunCmd(c); }
+#endif
 void InjPump() {
     if (!s_InjInit) InjInit();
 #ifdef NOTSA_STANDALONE_RUN
@@ -712,6 +723,12 @@ void InjPump() {
         SDL_PushEvent(&e);
         NOTSA_INJ_LOG("injected key %d %s at %u ms", (int)ev.key, ev.down ? "down" : "up", (unsigned)now);
     }
+#ifdef NOTSA_MDRIVER
+    if (notsa::mdriver::Enabled() && !s_InjHolding) {
+        notsa::mdriver::SetKeyPusher(MdPushKey); notsa::mdriver::SetCmdRunner(MdRunCmd);
+        notsa::mdriver::Tick(clock());
+    }
+#endif
 }
 } // namespace
 

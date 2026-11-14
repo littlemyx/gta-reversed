@@ -1,0 +1,88 @@
+# MDRIVER-1 steps for mission 24 (script GUNS1, Home Invasion = RYDER_1), mirroring playRyder1 (web/packages/game/test/mission13Harness.ts) one to one.
+# Trigger: the mission thread stood at one IP for `stall` frames outside a cutscene (mission6Harness.ts playMissionBody); the FIRST step whose conditions all hold runs once, then the count restarts.
+# Conditions: `if EXPR OP VALUE` (EXPR: stall frame cutscene L<n> area invehicle holding fading hasveh:<slot> peddist:x:y vehdist:<slot>:x:y crate:<lo>:<hi>).
+# Actions: `do wait N` | waituntil EXPR OP VALUE MAXFRAMES | key down|up NAME | pedwarp x y z | vehwarp x y z (the ped vehicle, occupants with it) | standcrate LO HI DIST | standdrop LX LY DIST | standenex NAME AREA link|self DIST | entercar SLOT DIST
+script GUNS1
+stall 600
+answers 12
+
+step car_to_house                      # stage 2: the car with CJ and Ryder at the house locate (arriveCar)
+ if L51 == 2
+ if hasveh:102 == 1
+ if invehicle == 1
+ if vehdist:102:2819.9:-1181.7 > 3
+ do vehwarp 2819.9 -1181.7 25.15
+ do wait 60
+
+step door                              # stage 4: CJ at the door locate (z 25.4)
+ if L51 == 4
+ if area == 0
+ if invehicle == 0
+ if peddist:2807.96:-1176.24 > 1
+ do pedwarp 2807.96 -1176.24 25.4
+ do wait 20
+
+step crate_pickup                      # stage 6, inside: 1.5 m before a liftable crate (L117..L123), triangle until held
+ if L51 == 6
+ if area == 8
+ if holding == 0
+ if crate:117:123 == 1
+ do standcrate 117 123 1.5
+ do wait 10
+ do key down return
+ do wait 1
+ do key up return
+ do waituntil holding == 1 600
+
+step carry_out                         # stage 6, inside, holding: walk out through the real BURHOUS entry exit (area 8 side), 3 m before it
+ if L51 == 6
+ if area == 8
+ if holding == 1
+ do standenex BURHOUS 8 self 3
+ do wait 10
+ do key down w
+ do waituntil area == 0 400
+ do key up w
+ do waituntil fading == 0 60
+
+step enter_truck                       # stage 8: the enter-vehicle key at the truck (L102)
+ if L51 == 8
+ if hasveh:102 == 1
+ if invehicle == 0
+ do entercar 102 2.5
+ do wait 40
+ do key down return
+ do wait 1
+ do key up return
+ do waituntil invehicle == 1 600
+
+step truck_to_lockup                   # stage 8: the truck with CJ and Ryder at the lockup locate
+ if L51 == 8
+ if hasveh:102 == 1
+ if invehicle == 1
+ if vehdist:102:2741.24:-2011.27 > 3
+ do vehwarp 2741.24 -2011.27 13.6
+ do wait 60
+
+step back_in                           # stage 6, outside, empty-handed: walk back in through the linked (outer) BURHOUS exit
+ if L51 == 6
+ if area == 0
+ if holding == 0
+ if invehicle == 0
+ do standenex BURHOUS 8 link 3
+ do wait 10
+ do key down w
+ do waituntil area == 8 400
+ do key up w
+ do waituntil fading == 0 60
+
+step drop_crate                        # stage 6, outside, holding: 0.6 m before the truck drop point (L154, L155), triangle once
+ if L51 == 6
+ if area == 0
+ if holding == 1
+ do standdrop 154 155 0.6
+ do wait 10
+ do key down return
+ do wait 1
+ do key up return
+ do waituntil holding == 0 600

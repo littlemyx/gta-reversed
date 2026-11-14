@@ -1,0 +1,41 @@
+addr	function	verdict	asm range	note	fix commit
+0x6549D0	CTaskComplexWalkRoundBuildingAttempt::MakeAbortable	MATCH			
+0x415CF0	SphereCastVersusVsPoly	NOT_REACHED		large function (0x3ec-0x61c bytes), budget; left for the oracle-only sweep	
+0x695E40	CTaskComplexFollowPedFootsteps::CreateSubTask	MATCH			
+0x50B5D0	ProcessFade	FIXED		fade flag not 0/1 (script-supplied) ran the fade-in branch; exe only refreshes FadeValue	09c9b925e
+0x608F70	CEventNewGangMember::Constructor	MATCH			
+0x5FF610	CEventLowAngerAtPlayer::CloneEditable	MATCH			
+0x63CA40	CTaskComplexCarDrive::Destructor	MATCH			
+0x428990	SteerAICarWithPhysicsTryingToBlockTarget_Stop	MATCH			
+0x6D3370	CVehicle::FindUpgradeCB	MATCH			
+0x61AB70	CTaskSimpleRunTimedAnim::Constructor-1	MATCH			
+0x4AD3A0	CEventDraggedOutCar::AffectsPed	MATCH			
+0x685680	CTaskComplexWalkAlongsidePed::CreateNextSubTask	MATCH			
+0x668570	CTaskComplexGoToPointAndStandStill::ControlSubTask	MATCH			
+0x5B2E60	CColAccel::getColDef	MATCH			
+0x4ACB10	CEventPedCollisionWithPed::AffectsPed	MATCH			
+0x735FD0	Initialise	MATCH			
+0x4867C0	CTheScripts::ReadMultiScriptFileOffsetsFromScript	MATCH			
+0x6C34E0	AddSplashParticles	NOT_REACHED		large function (0x3ec-0x61c bytes), budget; left for the oracle-only sweep	
+0x62EE70	CTaskSimpleHitByGunFromFront::Constructor	MATCH			
+0x65C430	CTaskComplexSmartFleeEntity::Constructor	MATCH			
+0x5FB8A0	RemoveAllFollowersFromGroup	MATCH			
+0x6227C0	CTaskComplexKillPedFromBoat::Constructor	MATCH			
+0x50B930	Restore	MATCH			
+0x736950	TestForExplosionInArea	MATCH			
+0x447CD0	ActivateGarage	FIXED		inverted door-state test: OPENING set when state != CLOSED, exe only when state == CLOSED	e5a388f01
+0x6C2B90	PreCalcSetup	NOT_REACHED		large function (0x3ec-0x61c bytes), budget; left for the oracle-only sweep	
+0x447B80	TriggerMessage	MATCH			
+0x61A8B0	CTaskSimpleRunAnim::Constructor	MATCH			
+0x65DFA0	CTaskComplexGangLeader::MakeAbortable	MATCH			
+0x61DCA0	CTaskSimpleFightingControl::Destructor	MATCH			
+0x632B80	CTaskSimpleWaitForPizza::ProcessPed	MATCH			
+0x4B9D40	CEventHandler::ComputePedSoundQuietResponse	FIXED		no source entity / unknown task id wrote nullptr; exe leaves the response task untouched	1a3c62e5e
+0x6A0670	CEventVehicleDamageCollision::CloneEditable	MATCH			
+0x623750	CTaskComplexKillAllThreats::Clone	MATCH			
+0x424130	FindSpeedMultiplierWithSpeedFromNodes	MATCH			
+0x694B90	CTaskComplexSeekEntityAiming::Constructor	MATCH			
+0x6C3B00	SimpleCalcBuoyancy	NOT_REACHED		large function (0x3ec-0x61c bytes), budget; left for the oracle-only sweep	
+0x61FE30	CTaskSimpleBeHitWhileMoving::Constructor	MATCH			
+0x6C3030	ProcessBuoyancyBoat	NOT_REACHED		large function (0x3ec-0x61c bytes), budget; left for the oracle-only sweep	
+0x6F5930	CTrain::GetDooorAngleOpenRatioU32	MATCH			

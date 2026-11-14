@@ -1,0 +1,41 @@
+addr	file	line	cls	fn	oc	tier
+0x6549D0	source/game_sa/Tasks/TaskTypes/TaskComplexWalkRoundBuildingAttempt.cpp	26	CTaskComplexWalkRoundBuildingAttempt	MakeAbortable	U	B
+0x415CF0	source/game_sa/Collision/Collision.cpp	3658		SphereCastVersusVsPoly	U	B
+0x695E40	source/game_sa/Tasks/TaskTypes/TaskComplexFollowPedFootsteps.cpp	21	CTaskComplexFollowPedFootsteps	CreateSubTask	U	B
+0x50B5D0	source/game_sa/Camera.cpp	143		ProcessFade	U	B
+0x608F70	source/game_sa/Events/EventNewGangMember.cpp	10	CEventNewGangMember	Constructor	U	B
+0x5FF610	source/game_sa/Events/EventLowAngerAtPlayer.cpp	14	CEventLowAngerAtPlayer	CloneEditable	U	B
+0x63CA40	source/game_sa/Tasks/TaskTypes/TaskComplexCarDrive.cpp	18	CTaskComplexCarDrive	Destructor	U	B
+0x428990	source/game_sa/CarCtrl.cpp	266		SteerAICarWithPhysicsTryingToBlockTarget_Stop	U	B
+0x6D3370	source/game_sa/Entity/Vehicle/Vehicle.cpp	259	CVehicle	FindUpgradeCB	U	B
+0x61AB70	source/game_sa/Tasks/TaskTypes/TaskSimpleRunTimedAnim.cpp	8	CTaskSimpleRunTimedAnim	Constructor-1	U	B
+0x4AD3A0	source/game_sa/Events/EventDraggedOutCar.cpp	13	CEventDraggedOutCar	AffectsPed	U	B
+0x685680	source/game_sa/Tasks/TaskTypes/TaskComplexWalkAlongsidePed.cpp	22	CTaskComplexWalkAlongsidePed	CreateNextSubTask	U	B
+0x668570	source/game_sa/Tasks/TaskTypes/TaskComplexGoToPointAndStandStill.cpp	21	CTaskComplexGoToPointAndStandStill	ControlSubTask	U	B
+0x5B2E60	source/game_sa/Collision/ColAccel.cpp	16	CColAccel	getColDef	U	B
+0x4ACB10	source/game_sa/Events/EventPedCollisionWithPed.cpp	17	CEventPedCollisionWithPed	AffectsPed	U	B
+0x735FD0	source/game_sa/BulletInfo.cpp	15		Initialise	U	B
+0x4867C0	source/game_sa/Scripts/TheScripts.cpp	40	CTheScripts	ReadMultiScriptFileOffsetsFromScript	U	B
+0x6C34E0	source/game_sa/Buoyancy.cpp	16		AddSplashParticles	U	B
+0x62EE70	source/game_sa/Tasks/TaskTypes/TaskSimpleHitByGunFromFront.cpp	8	CTaskSimpleHitByGunFromFront	Constructor	U	B
+0x65C430	source/game_sa/Tasks/TaskTypes/TaskComplexSmartFleeEntity.cpp	14	CTaskComplexSmartFleeEntity	Constructor	U	B
+0x5FB8A0	source/game_sa/PedGroups.cpp	11		RemoveAllFollowersFromGroup	U	B
+0x6227C0	source/game_sa/Tasks/TaskTypes/TaskComplexKillPedFromBoat.cpp	11	CTaskComplexKillPedFromBoat	Constructor	U	B
+0x50B930	source/game_sa/Camera.cpp	145		Restore	U	B
+0x736950	source/game_sa/Explosion.cpp	20		TestForExplosionInArea	U	B
+0x447CD0	source/game_sa/Garages.cpp	26		ActivateGarage	U	B
+0x6C2B90	source/game_sa/Buoyancy.cpp	15		PreCalcSetup	U	B
+0x447B80	source/game_sa/Garages.cpp	31		TriggerMessage	U	B
+0x61A8B0	source/game_sa/Tasks/TaskTypes/TaskSimpleRunAnim.cpp	9	CTaskSimpleRunAnim	Constructor	U	B
+0x65DFA0	source/game_sa/Tasks/TaskTypes/TaskComplexGangLeader.cpp	45	CTaskComplexGangLeader	MakeAbortable	U	B
+0x61DCA0	source/game_sa/Tasks/TaskTypes/TaskSimpleFightingControl.cpp	18	CTaskSimpleFightingControl	Destructor	U	B
+0x632B80	source/game_sa/Tasks/TaskTypes/TaskSimpleWaitForPizza.cpp	14	CTaskSimpleWaitForPizza	ProcessPed	U	B
+0x4B9D40	source/game_sa/Events/EventHandler.cpp	296	CEventHandler	ComputePedSoundQuietResponse	U	B
+0x6A0670	source/game_sa/Events/EventVehicleDamageCollision.cpp	11	CEventVehicleDamageCollision	CloneEditable	U	B
+0x623750	source/game_sa/Tasks/TaskTypes/TaskComplexKillAllThreats.cpp	16	CTaskComplexKillAllThreats	Clone	U	B
+0x424130	source/game_sa/CarCtrl.cpp	248		FindSpeedMultiplierWithSpeedFromNodes	U	B
+0x694B90	source/game_sa/Tasks/TaskTypes/TaskComplexSeekEntityAiming.cpp	12	CTaskComplexSeekEntityAiming	Constructor	U	B
+0x6C3B00	source/game_sa/Buoyancy.cpp	17		SimpleCalcBuoyancy	U	B
+0x61FE30	source/game_sa/Tasks/TaskTypes/TaskSimpleBeHitWhileMoving.cpp	10	CTaskSimpleBeHitWhileMoving	Constructor	U	B
+0x6C3030	source/game_sa/Buoyancy.cpp	13		ProcessBuoyancyBoat	U	B
+0x6F5930	source/game_sa/Entity/Vehicle/Train.cpp	100	CTrain	GetDooorAngleOpenRatioU32	U	B

@@ -2,6 +2,9 @@
 #include <numbers>
 
 #include "TheScripts.h"
+#ifdef NOTSA_SCMTRACE
+#include "portable/scmtrace.h"
+#endif
 #include "UpsideDownCarCheck.h"
 #include "Lines.h"
 #include "FireManager.h"
@@ -1097,6 +1100,9 @@ CRunningScript* CTheScripts::StartNewScript(uint8* startIP) {
     script->SetCurrentIp(startIP);
     script->AddScriptToList(&pActiveScripts);
     script->SetActive(true);
+#ifdef NOTSA_SCMTRACE
+    notsa::scmtrace::OnStart(script);
+#endif
 
     return script;
 }

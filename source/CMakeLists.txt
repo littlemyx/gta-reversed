@@ -47,6 +47,14 @@ option(${RE_PROJECT}_STATEHASH "Compile the NOTSA_STATEHASH deterministic state-
 if (${RE_PROJECT}_STATEHASH)
     add_compile_definitions(NOTSA_STATEHASH)
 endif()
+# SCMTRACE-1: reference SCM execution trace of one mission thread tree (source/portable/scmtrace.h). Only meaningful with STATEHASH; OFF by default => every TU is byte-identical to a build without it.
+option(${RE_PROJECT}_SCMTRACE "Compile the NOTSA_SCMTRACE script-trace hooks (needs ${RE_PROJECT}_STATEHASH)" OFF)
+if (${RE_PROJECT}_SCMTRACE)
+    if (NOT ${RE_PROJECT}_STATEHASH)
+        message(FATAL_ERROR "${RE_PROJECT}_SCMTRACE requires ${RE_PROJECT}_STATEHASH=ON")
+    endif()
+    add_compile_definitions(NOTSA_SCMTRACE)
+endif()
 if (${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
     if (NOT ${RE_PROJECT}_STANDALONE)
         message(FATAL_ERROR "${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY requires ${RE_PROJECT}_STANDALONE=ON")
@@ -214,6 +222,9 @@ else()
         # RR-3: the state-hash harness is the one source/portable/ TU that also builds into the Win32 StandaloneRelease variant (the portable-only parts of it are #ifdef NOTSA_PORTABLE).
         # Nothing is added when the option is OFF.
         list(APPEND SOURCE_FILES_WITHOUT_MODULES_LIST portable/statehash.cpp)
+        if (${RE_PROJECT}_SCMTRACE)
+            list(APPEND SOURCE_FILES_WITHOUT_MODULES_LIST portable/scmtrace.cpp)
+        endif()
     endif()
 endif()
 

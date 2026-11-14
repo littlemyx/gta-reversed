@@ -1,4 +1,7 @@
 #include "StdInc.h"
+#ifdef NOTSA_SCMTRACE
+#include "portable/scmtrace.h"
+#endif
 
 #include <imgui.h>
 #include <libs/imgui/misc/cpp/imgui_stdlib.h>
@@ -184,6 +187,9 @@ bool NotsaInjectStartMission(int32 missionId, NotsaInjectMissionInfo* info) {
     CFileMgr::Read(file, &CTheScripts::MissionBlock[0], MISSION_SCRIPT_SIZE);
     CFileMgr::CloseFile(file);
     if (info) { info->offset = offsetToMission; std::memcpy(info->bytes, &CTheScripts::MissionBlock[0], 16); }
+#ifdef NOTSA_SCMTRACE
+    notsa::scmtrace::ArmRoot(missionId); // SCMTRACE-1: the mission thread started here is the root of the traced tree
+#endif
     InitializeAndStartNewScript();
     CTimer::Resume();
     return true;

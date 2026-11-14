@@ -2,6 +2,9 @@
 
 #include "RunningScript.h"
 #include "TheScripts.h"
+#ifdef NOTSA_SCMTRACE
+#include "portable/scmtrace.h"
+#endif
 #include "CarGenerator.h"
 #include "Hud.h"
 #include "ShotInfo.h"
@@ -249,6 +252,9 @@ void CRunningScript::RemoveScriptFromList(CRunningScript** queueList) {
  * @addr 0x465AA0
  */
 void CRunningScript::ShutdownThisScript() {
+#ifdef NOTSA_SCMTRACE
+    notsa::scmtrace::OnEnd(this);
+#endif
     m_IsActive = false;
 
     if (m_IsExternal) {
@@ -1744,6 +1750,9 @@ void CRunningScript::ReadTextLabelFromScript(char* buffer, uint8 nBufferLength) 
 void CRunningScript::UpdateCompareFlag(bool state) {
     if (m_NotFlag)
         state = !state;
+#ifdef NOTSA_SCMTRACE
+    notsa::scmtrace::OnCond(state);
+#endif
 
     if (m_AndOrState == ANDOR_NONE) {
         m_CondResult = state;
@@ -1834,8 +1843,13 @@ OpcodeResult CRunningScript::Process() {
     CTheScripts::ReinitialiseSwitchStatementData();
 
     if (CTimer::GetTimeInMS() >= (uint32)m_WakeTime) {
+#ifdef NOTSA_SCMTRACE
+        while (notsa::scmtrace::Run(this, [this] { return ProcessOneCommand(); }) == OR_CONTINUE)
+            ; // Process commands (SCMTRACE-1: traced tree only)
+#else
         while (ProcessOneCommand() == OR_CONTINUE)
             ; // Process commands
+#endif
     }
 
     return OR_CONTINUE;

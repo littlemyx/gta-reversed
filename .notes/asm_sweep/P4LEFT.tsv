@@ -1,0 +1,39 @@
+addr	function	file	line
+0x4F32F0	CAEUserRadioTrackManager::DeleteUserTracksInfo	-	platform file layer
+0x4F2FD0	CAEUserRadioTrackManager::ReadUserTracks	-	platform file layer (sa-utrax.dat), kept
+0x4F30F0	CAEUserRadioTrackManager::ResolveShortcut	-	COM shell link, platform
+0x4F4BA0	CAEUserRadioTrackManager::ScanUserTracks	-	platform thread
+0x4F2FB0	CAEUserRadioTrackManager::Shutdown	-	platform decoder/library teardown, not compared
+0x4F4690	CAEUserRadioTrackManager::WriteUserTracksFile	-	directory scan on std::filesystem / wide paths (platform layer)
+0x4F4A20	CAEUserRadioTrackManager::WriteUserTracksThread	-	platform thread/COM
+0x4D3BA0	CAnimManager::AddAnimAssocDefinition	all	exe skips forward over occupied slots and zeroes the next slot name byte; no-op at boot (slots 118+ zero), only differs on a second Initialise; not changed (would overflow the 145-slot table)
+0x5D6D80	CCustomBuildingDNPipeline::pluginExtraVertColourStreamWriteCB	0x5D6D80-0x5D6DBB	only used when exporting a geometry (never in the game). The exe passes the NightColors VALUE as the source of RwStreamWrite(stream, nightColors, 4) and then reads the first dword of the colours as a pointer (exe bug, faults for NULL); the port writes the magic instead on purpose
+0x4D5AF0	CCutsceneMgr::RemoveEverythingBecauseCutsceneDoesntFitInMemory	0x4D5AF0-0x4D5C0F	no caller in the exe, flag 0xB5F85C never set
+0x537580	CFileLoader::LoadCollisionModel	0x537580-0x53798F (all)	COLL (V1) not present in SA data; structure matches (sphere/line/box/vertex*128 ftol/face order, strides 20/24/28/12/16); counts are word/byte slots in the exe, dword in the port (equal for valid data)
+0x537AE0	CFileLoader::LoadCollisionModelVer4	0x537AE0-0x537CD9 (all)	identical to Ver3 with a 0x5C header (diffed instruction by instruction); no COL4 files in SA
+0x856880	CInterestingEvents::Destructor	-	atexit cleanup of the global (no this), not hookable; not compared
+0x5905E0	CLoadingScreen::Update	0x5905E0-0x590857 (read only)	no caller in the exe (xref scan: only the hook); the port body is a rewrite that differs from the exe, left as is
+0x69DC50	CMessages::CutString	0x69DC50-?	no caller in the exe
+0x746A10	CPad::ProcessPad	-	Locked (SDL3 replaces the DirectInput joystick poll); platform code, not compared
+0x4512D0	CPathFind::AddDynamicLinkBetween2Nodes	0x4512D0-0x4512F0	no port function (declared in PathFind.h, never defined, no callers); exe = _For1Node(a,b) then (b,a)
+0x452000	CPathFind::TestCoorsCloseness	-	not declared or defined in the port, no callers
+0x5E8411	CPed::CPed (m_roadRageWith)	0x5E8411	exe stores one byte at +0x460 (m_roadRageWith slot), port nulls the whole pointer; harmless superset, not changed
+0x5EF710	CPedAttractorManager::RestoreStuffFromMem	0x5EF710	no callers in the exe; port NOTSA_UNREACHABLE (exe frees and zeroes the ten arrays)
+0x5435C0	CPhysical::ApplyCollision-1	5436ec-54370d, 543776-543793	(a) else-branch dot product order is (n.y*s.y+n.x*s.x)+s.z*n.z, port used z,y,x; (b) collision mass used |n|^2 instead of |r x n|^2 (cross product computed but unused)
+0x543890	CPhysical::ApplySoftCollision-1	543a85-543aa1	same collision mass bug: |n|^2 instead of |r x n|^2; the rest (depth/mult/car-line branch/ApplyForce) matches
+0x54DFB0	CPhysical::ProcessCollision		
+0x546D00	CPhysical::ProcessEntityCollision	546d83-546d96	HasHitWall also set when the entity has m_bIsStaticWaitingForCollision (flag 0x40000), port had only building||static
+0x54DB10	CPhysical::ProcessShift	54db63-54db92	ped wall-hit damping: exe damps if standingOn==null or !(standingOn+0x40 & 4) or (standingOn+0x40 & 8) (PHYSICAL flags dword), port tested null-standing=no damp and CEntity flags 0x1c; second pass/flags/moving speed match
+0x710AF0	CStencilShadows::SunSetPositionFromEntity	0x710AF0-0x710B4A (all)	no caller in the exe; exe reads an RwObject frame at-vector, port takes the entity position
+0x72CAE0	CWorldScan::ScanWorld	0x72CAE0-0x72CCFF (dedupe, lowest-y pick only)	duplicate removal and lowest-y start MATCH; gift wrapping and the scan-conversion loop (reviewed in f22f575ff) not re-compared
+0x6987F0	Cover::CalculateHorizontalSize	-	not compared (budget; spent on S42d + CarGenerator)
+0x698990	Cover::DoLineCheckWithinObject	-	not compared (budget; spent on S42d + CarGenerator)
+0x698790	Cover::FindVectorFromFirstToMissingVertex	-	not compared (budget; spent on S42d + CarGenerator)
+0x6FDC00	CustomCarPlateMgr::LoadPlatecharsetDat	-	not compared (budget; spent on S42d + CarGenerator)
+0x4A10E0	Fx_c::TriggerBulletSplash	0x4A10E0-0x4A114F (all)	range test is (dx^2+dz^2)+dy^2 and returns only when > 625 (NaN creates the fx); port summed x,y,z with <= (NaN skipped); fx names decoded
+0x591D20	Interior_c::AddGotoPt	0x591D20 (all)	new wave3 row, 3000 cases (4686 of 6000 runs compared, rest fault identically in RW transform), 0 mismatches
+0x591C50	Interior_c::FindEmptyTiles	0x591C50 (all)	new wave3 row, 2500 cases, 0 mismatches
+0x591B20	Interior_c::GetRandomTile	0x591B20 (all)	new wave3 row, 1500 cases, 0 mismatches (incl. rand state)
+0x5D05F0	JPegDecompressToRaster	0x5D05F0-0x5D0736	NOT_REACHED (only caller 0x5D07A0 has no callers). Exe returns bool and converts rows via 0x5D0570(raster,row,0x40,0x240); port is a different inline loop returning void. Left as is
+0x73A8D0	LaserScopeDot		budget: not compared
+0x5F7FE0	PedGroupMembership::From	0x5F7FE0-0x5F8013	exe copies via AddMember per slot (RegisterReference + DM type set; crashes on a null slot); port uses the default copy. Not changed: hook-only, no live caller found

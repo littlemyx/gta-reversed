@@ -1223,7 +1223,7 @@ void CEventHandler::ComputeDeadPedResponse(CEventDeadPed* e, CTask* tactive, CTa
         }
         if (m_Ped->IsPlayer()) {
             // 0x4B94E4 fcomp / test ah,5 / jp: continues only when the distance is strictly below 0.75^2 (a NaN distance leaves, `>=` would let it through)
-            if (!((m_Ped->GetPosition() - e->GetDeadPed()->GetPosition()).SquaredMagnitude2D() < sq(0.75f))) {
+            if (!((m_Ped->GetPosition() - e->GetDeadPed()->GetPosition()).SquaredMagnitude2D() < 0.5625001192092896f)) { // 0x85B9F4 is the float just above 0.5625 (not sq(0.75f)): the exe also leaves when the distance^2 is exactly 0.5625
                 return m_EventResponseTask;
             }
             if (m_Ped->GetIntelligence()->GetTaskFighting()) {

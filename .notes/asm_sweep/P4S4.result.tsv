@@ -1,0 +1,26 @@
+addr	function	verdict	asm range	note	fix commit
+0x6F0D00	CBoat::DebugCode	INTENTIONAL	-	debug-only pad-driven handling tweak, not part of the run build behaviour; skipped	
+0x6D85F0	CVehicle::FlyingControl	NOT_REACHED	-	2937-line listing; port split into FlyingControlModel*/Drag helpers (symbol-inflated score); has oracle fixtures	
+0x6F2710	CBoat::FillBoatList	NOT_REACHED	-	341 insns, budget	
+0x6D14D0	CVehicle::AddPassenger-Fixed-Seat	FIXED	0x6D14D0-0x6D1608	shared ApplyTurnForceToOccupantOnEntry: bike force up*(mass*-0.02f), offset fwd*-0.1f; non-bike z = mass*-0.2f (port divided by -50/-10/-5); seat logic MATCH	ffcf4160d
+0x5345D0	CEntity::GetIsBoundingBoxOnScreen	FIXED	0x5345D0-0x5347AC	bbox corner chosen by the normal sign bit (-0.0f picks max); rest MATCH	3141fc56e
+0x6D40E0	CVehicle::GetPlaneGunsRateOfFire	MATCH	0x6D40E0-0x6D41D0	jump table and constants equal	
+0x6B1350	CAutomobile::SetBumperDamage	FIXED	0x6B1350-0x6B1472	bouncing panel angle = r*-0.3f-0.2f, not -0.5f+r*0.3f	dca87c083
+0x6D4590	CVehicle::GetPlaneOrdnanceRateOfFire	MATCH	0x6D4590-0x6D4663		
+0x6A1460	CAutomobile::UpdateMovingCollision	NOT_REACHED	-	700 insns, budget	
+0x6A3EA0	CAutomobile::NitrousControl	MATCH	0x6A3EA0-0x6A40E8	all branches equal (NaN-only compare differences ignored)	
+0x6D13A0	CVehicle::AddPassenger-Auto-Seat	FIXED	0x6D13A0-0x6D14CC	same ApplyTurnForceToOccupantOnEntry fix as the fixed-seat row	ffcf4160d
+0x6AF250	CAutomobile::GetTowBarPos	MATCH	0x6AF250-0x6AF2FD,0x6AF33B-0x6AF40F	model lists, tow truck/tractor y/z formula equal; tail at 0x6AF300 is GetTowHitchPos	
+0x6D4290	CVehicle::GetPlaneGunsPosition	MATCH	0x6D4290-0x6D44C1	per-model constants and rustler per-gun offset equal	
+0x6A2150	CAutomobile::GetMovingCollisionOffset	FIXED	0x6A2150-0x6A220E	Packer: angle * -0.0001f, not angle / -10000	7a86e0385
+0x6A6090	CAutomobile::FindWheelWidth	MATCH	0x6A6090-0x6A6136		
+0x6F0E80	CBoat::IsSectorAffectedByWake	MATCH	0x6F0E80-0x6F0F33	oracle-proven in port; score inflated	
+0x6B1600	CAutomobile::SetDoorDamage	FIXED	0x6B1600-0x6B1878	boot branch tests m_nModelFlags bit 7 (NoswingBoot, handling+0xCC), not m_nHandlingFlags bit 7 (AltSteerOpt)	7957aa4d1
+0x545980	CPhysical::ApplyFriction-other	NOT_REACHED	-	1026 insns	
+0x6D46E0	CVehicle::GetPlaneOrdnancePosition	MATCH	0x6D46E0-0x6D4844		
+0x5442F0	CPhysical::DettachEntityFromEntity	NOT_REACHED	-	249 insns, budget	
+0x6F2550	CBoat::AddWakePoint	MATCH	0x6F2550-0x6F2703		
+0x6DFC50	CVehicle::UpdateTrailerLink	NOT_REACHED	-	budget	
+0x6E0050	CVehicle::UpdateTractorLink	NOT_REACHED	-	budget	
+0x6D6640	CVehicle::SpecialEntityPreCollisionStuff	NOT_REACHED	-	budget	
+0x49B010	IsValidModForVehicle	MATCH	0x49B010-0x49B0DF		

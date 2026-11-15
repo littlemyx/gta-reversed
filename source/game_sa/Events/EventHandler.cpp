@@ -3037,7 +3037,9 @@ void CEventHandler::ComputeShotFiredResponse(CEventGunShot* e, CTask* tactive, C
             if (IsKillTaskAppropriate(m_Ped, firedByPed, *e)) { // 0x4BCA51 - Inverted
                 return new CTaskComplexKillCriminal{ firedByPed, false }; // 0x4BCA7F
             }
-            return new CTaskComplexSmartFleeEntity{ e->m_firedBy, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
+            const auto task = new CTaskComplexSmartFleeEntity{ e->m_firedBy, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
+            task->m_moveState = PEDMOVE_WALK; // 0x4BCACB: the exe writes moveState = 4 (WALK) into the new task
+            return task;
         }
         case TASK_COMPLEX_SMART_FLEE_ENTITY: // 0x4BC8CE
             return new CTaskComplexSmartFleeEntity{ e->m_firedBy, true, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
@@ -3053,10 +3055,10 @@ void CEventHandler::ComputeShotFiredResponse(CEventGunShot* e, CTask* tactive, C
         case TASK_NONE:
             return nullptr;
         case TASK_SIMPLE_DUCK: {
-            if (m_Ped->GetIntelligence()->GetTaskDuck(true)) {
-                return new CTaskSimpleDuck{ DUCK_STANDALONE, 3000, -1 };
+            if (m_Ped->GetIntelligence()->GetTaskDuck(true)) { // 0x4BC785: already ducking => the response is left untouched; otherwise a 3000 ms duck (the port had the two arms swapped)
+                return m_EventResponseTask;
             }
-            return nullptr;
+            return new CTaskSimpleDuck{ DUCK_STANDALONE, 3000, -1 };
         }
         default:
             NOTSA_UNREACHABLE();

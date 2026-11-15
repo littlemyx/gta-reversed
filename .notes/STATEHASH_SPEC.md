@@ -99,7 +99,19 @@ Rows `frame subsys entity_key field value`, one row per word fed to the hash, in
 * value: `u:<hex>` for a U word, `f:<8-hex bits>:<%.9g>` for an F word (hex is authoritative).
 `tools/standalone/statehash/shdump_check.py <dump> <hashfile>` re-hashes the rows following sections 1 and 3 and compares each dumped subsystem (and `all` when all nine dumped) with the hash file.
 
-## 8. Rand call-site log (SH1) - NOTSA_SH_RANDLOG=<file> (see section 9 for the exact format once implemented)
+## 8. Rand call-site log (SH1) - NOTSA_SH_RANDLOG=<file> (alias NOTSA_RR_RANDLOG), independent of recording
+Row per `rand()` call: `callidx frame value caller`. `callidx` = 0-based cumulative call number since process start (the per-frame hash file's `randCount` at the end of frame k = the callidx of the first
+call of frame k+1 as long as recording is on); `frame` = recorded frame number the call belongs to (calls made before frame k's OnFrame belong to k), `-1` before `cmd:rr_start`; `value` = returned value 0..32767.
+`srand` calls are not logged (they are visible as a jump in the `rng` hash; `srand(s)` sets state = s). Counted: every `rand()` macro use (GameRand.h / msvc_rand.h): main thread only on portable builds.
+* Win32 caller = `file:line@RVA[+WRAPRVA]`: file:line is the source location of the `rand()` use (GameRand takes std::source_location), `RVA` = return address of the logging hook minus the module base,
+  `WRAPRVA` = (only when file is General.cpp, i.e. via `CGeneral::GetRandomNumber`) its return address minus module base = the real caller. Resolve RVAs to function names offline:
+  `py tools/standalone/statehash/randlog_resolve.py <log> <gta_reversed.map>` (map from a link with `/MAP`: `-DCMAKE_EXE_LINKER_FLAGS=/MAP`; no runtime symbolisation).
+* portable caller = up to 5 frame-pointer return addresses relative to `notsa::rr::StableId`, hex, comma separated (resolve with nm/atos).
+Rand sources: all gameplay/audio/render code draws through `rand()` (macro-redirected to the MSVC LCG) - grep finds no other source in the run build. Not routed (but only compiled under non-run options):
+`std::random_device/mt19937` in General.h/General.cpp (`#ifdef BETTER_RNG`, static_assert'ed off), `std::mt19937` in GrassRenderer.cpp (`#if FIX_BUGS`). Time-seeded: `srand(RsTimer())` app_game.cpp:64 when NOTSA_RR is off
+(RR pins `srand(NOTSA_RR_SEED)`). Address-seeded: `srand(NOTSA_PTR_ID32(this) + days)`-style keys and AngledRect.cpp:43 use `notsa::rr::StableId` (pool tag + slot, not the raw pointer) under STATEHASH.
+Beware for a TS port: the rand stream is also advanced by RENDER-time code (GrassRenderer.cpp:85-87 `srand(ftol(seed))` + `GetRandomNumber()` per tuft) and by audio, so skipping rendering/audio changes the stream;
+the RR runs use NOTSA_RR_NOAUDIO=1 (audio not serviced) but DO render (NOPRESENT only skips the swap).
 
 ## 9. Notes for SH2 (portable math / 64-bit reference build)
 * The game is x87 (exe) vs SSE in the Win32 StandaloneRelease: `q` hashes quantise floats to 1/256 so benign drift is visible only in `e`. A TS port in float32 (Math.fround) will

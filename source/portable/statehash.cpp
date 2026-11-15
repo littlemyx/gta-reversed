@@ -13,6 +13,10 @@
 #include <atomic>
 #include <new>
 #include <thread>
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
+#include <set>
 #include <bit>
 #include <cmath>
 #include <cstdio>
@@ -99,9 +103,12 @@ struct Acc {
 struct Sink {
     Acc          acc;
     std::string* det = nullptr; // detail text of the current entity (nullptr: hash only)
-    void U(const char* n, uint32_t v) { acc.U(v); if (det) { char b[48]; std::snprintf(b, sizeof b, " %s=%x", n, v); *det += b; } }
+    std::string* dump = nullptr; // SH1 verbose dump rows (NOTSA_SH_DUMP): one `frame subsys key field value` row per hashed word, in feed order
+    std::string  pfx;            // "frame subsys key" prefix of the dump rows
+    void Row(const char* n, const char* val) { *dump += pfx; *dump += ' '; *dump += n; *dump += ' '; *dump += val; *dump += '\n'; }
+    void U(const char* n, uint32_t v) { acc.U(v); if (det) { char b[48]; std::snprintf(b, sizeof b, " %s=%x", n, v); *det += b; } if (dump) { char b[24]; std::snprintf(b, sizeof b, "u:%x", v); Row(n, b); } }
     void I(const char* n, int32_t v) { U(n, (uint32_t)v); }
-    void F(const char* n, float v) { acc.F(v); if (det) { char b[48]; std::snprintf(b, sizeof b, " f.%s=%08x", n, std::bit_cast<uint32_t>(v)); *det += b; } }
+    void F(const char* n, float v) { acc.F(v); if (det) { char b[48]; std::snprintf(b, sizeof b, " f.%s=%08x", n, std::bit_cast<uint32_t>(v)); *det += b; } if (dump) { char b[48]; std::snprintf(b, sizeof b, "f:%08x:%.9g", std::bit_cast<uint32_t>(v), (double)v); Row(n, b); } }
     void V(const char* n, const CVector& v) { char b[16]; std::snprintf(b, sizeof b, "%sx", n); F(b, v.x); std::snprintf(b, sizeof b, "%sy", n); F(b, v.y); std::snprintf(b, sizeof b, "%sz", n); F(b, v.z); }
 };
 
@@ -123,7 +130,32 @@ uint32_t RngState() {
 }
 void RngSeed(uint32_t s) { srand(s); }
 
+// SH1: NOTSA_SH_FILE (per-frame hash file), NOTSA_SH_DUMP / NOTSA_SH_DUMP_SUBSYS / NOTSA_SH_DUMP_FILE (verbose dump), see .notes/STATEHASH_SPEC.md
+struct ShConfig {
+    std::string                 file, dumpFile = "sh_dump.txt";
+    std::set<uint32_t>          dumpFrames;
+    std::set<std::string>       dumpSubsys;
+    bool                        dumpAll = false;
+};
+const ShConfig& ShCfg() {
+    static const ShConfig c = [] {
+        ShConfig c;
+        if (const char* e = std::getenv("NOTSA_SH_FILE")) { c.file = e; }
+        if (const char* e = std::getenv("NOTSA_SH_DUMP_FILE")) { c.dumpFile = e; }
+        if (const char* e = std::getenv("NOTSA_SH_DUMP")) { for (const char* p = e; *p;) { char* end; const auto v = std::strtoul(p, &end, 0); if (end == p) break; c.dumpFrames.insert((uint32_t)v); p = *end ? end + 1 : end; } }
+        if (const char* e = std::getenv("NOTSA_SH_DUMP_SUBSYS")) { std::string t = e; for (size_t a = 0; a <= t.size();) { size_t b = t.find(',', a); if (b == std::string::npos) b = t.size(); const auto n = t.substr(a, b - a); if (n == "all") c.dumpAll = true; else if (!n.empty()) c.dumpSubsys.insert(n); a = b + 1; } }
+        return c;
+    }();
+    return c;
+}
+FILE*                 g_sh    = nullptr; // per-frame hash file
+FILE*                 g_dumpF = nullptr;
+std::atomic<uint64_t> g_randCount{ 0 };  // cumulative rand() calls (main thread on portable builds; every call on the single-state Win32 build); = the rand log's callidx
+uint64_t RandCount() { return g_randCount.load(std::memory_order_relaxed); }
+
 void CloseTrace() {
+    if (g_sh) { std::fclose(g_sh); g_sh = nullptr; }
+    if (g_dumpF) { std::fclose(g_dumpF); g_dumpF = nullptr; }
     if (g_f) { std::fflush(g_f); std::fclose(g_f); g_f = nullptr; }
     g_recording = false;
 }
@@ -178,7 +210,7 @@ void ObjectFields(Sink& s, CObject& o) { PhysicalFields(s, o); }
 struct Result { uint32_t n = 0; Acc acc; };
 
 template<typename Pool, typename Fn>
-Result HashPool(Pool* pool, const char* kind, bool detail, uint32_t frame, std::string* out, Fn&& fields) {
+Result HashPool(Pool* pool, const char* kind, bool detail, uint32_t frame, std::string* out, Fn&& fields, const char* sub = nullptr, std::string* dump = nullptr) {
     Result r;
     if (!pool) return r;
     Acc total;
@@ -188,6 +220,7 @@ Result HashPool(Pool* pool, const char* kind, bool detail, uint32_t frame, std::
         std::string det;
         Sink s;
         s.det = detail ? &det : nullptr;
+        if (dump && sub) { s.dump = dump; s.pfx = std::to_string(frame) + ' ' + sub + ' ' + std::to_string(i) + ':' + std::to_string((unsigned)obj->m_nModelIndex); }
         s.U("slot", (uint32_t)i);
         fields(s, *obj);
         total.Mix(s.acc);
@@ -223,15 +256,24 @@ void Record() {
     std::string det;
     std::string* d = detail ? &det : nullptr;
     char line[64];
+    // SH1 verbose dump (NOTSA_SH_DUMP / NOTSA_SH_DUMP_SUBSYS): rows of every hashed word of this frame
+    const auto& sh = ShCfg();
+    const bool dumpFrame = sh.dumpFrames.count(g_frame) != 0;
+    std::string dumpRows;
+    const auto DumpSel = [&](const char* sub) { return dumpFrame && (sh.dumpAll || sh.dumpSubsys.count(sub)); };
+    const auto Setup = [&](Sink& s, const char* sub) {
+        s.det = d;
+        if (DumpSel(sub)) { s.dump = &dumpRows; s.pfx = std::to_string(g_frame) + ' ' + sub + " -"; }
+    };
 
     // timer + clock + rng (integers only)
     Acc tm;
-    { Sink s; s.det = d; if (d) *d += "D " + std::to_string(g_frame) + " timer";
+    { Sink s; Setup(s, "tm"); if (d) *d += "D " + std::to_string(g_frame) + " timer";
       s.U("fc", CTimer::GetFrameCounter()); s.U("ms", CTimer::GetTimeInMS()); s.U("msnc", CTimer::GetTimeInMSNonClipped()); s.U("mspause", CTimer::GetTimeInMSPauseMode());
       s.F("step", CTimer::GetTimeStep()); s.F("scale", CTimer::GetTimeScale()); s.U("paused", CTimer::GetIsPaused() ? 1u : 0u);
       if (d) *d += '\n'; tm = s.acc; }
     Acc ck;
-    { Sink s; s.det = d; if (d) *d += "D " + std::to_string(g_frame) + " clock";
+    { Sink s; Setup(s, "ck"); if (d) *d += "D " + std::to_string(g_frame) + " clock";
       s.U("h", CClock::GetGameClockHours()); s.U("m", CClock::GetGameClockMinutes()); s.U("s", CClock::GetGameClockSeconds()); s.U("d", CClock::GetGameClockDays());
       s.U("wnew", (uint32_t)CWeather::NewWeatherType); s.U("wold", (uint32_t)CWeather::OldWeatherType);
       if (d) *d += '\n'; ck = s.acc; }
@@ -240,7 +282,7 @@ void Record() {
 
     // world counters (population / traffic / streaming)
     Acc pop;
-    { Sink s; s.det = d; if (d) *d += "D " + std::to_string(g_frame) + " pop";
+    { Sink s; Setup(s, "pop"); if (d) *d += "D " + std::to_string(g_frame) + " pop";
       s.I("peds", CPopulation::ms_nTotalPeds); s.I("civ", CPopulation::ms_nTotalCivPeds); s.I("gang", CPopulation::ms_nTotalGangPeds); s.I("cop", CPopulation::ms_nNumCop);
       s.I("rcars", CCarCtrl::NumRandomCars); s.I("law", CCarCtrl::NumLawEnforcerCars); s.I("mcars", CCarCtrl::NumMissionCars); s.I("parked", CCarCtrl::NumParkedCars);
       s.U("stmem", CStreaming::ms_memoryUsedBytes); s.I("streq", CStreaming::ms_numModelsRequested);
@@ -250,7 +292,7 @@ void Record() {
     // player (ped 0 of CWorld::Players[0]), wanted level, money; camera
     Acc pl;
     if (auto* p = FindPlayerPed()) {
-        Sink s; s.det = d; if (d) *d += "D " + std::to_string(g_frame) + " player";
+        Sink s; Setup(s, "pl"); if (d) *d += "D " + std::to_string(g_frame) + " player";
         PedFields(s, *p);
         auto* w = FindPlayerWanted();
         s.I("wl", w ? (int32_t)w->GetWantedLevel() : -1); s.I("chaos", w ? w->m_ChaosLevel : -1);
@@ -258,17 +300,18 @@ void Record() {
         if (d) *d += '\n'; pl = s.acc;
     }
     Acc cam;
-    { Sink s; s.det = d; if (d) *d += "D " + std::to_string(g_frame) + " camera";
+    { Sink s; Setup(s, "cam"); if (d) *d += "D " + std::to_string(g_frame) + " camera";
       s.V("p", TheCamera.GetPosition()); s.V("f", TheCamera.GetForward());
       if (d) *d += '\n'; cam = s.acc; }
 
     std::string ents;
-    const auto peds = HashPool(GetPedPool(), "ped", detail, g_frame, &ents, PedFields);
-    const auto vehs = HashPool(GetVehiclePool(), "veh", detail, g_frame, &ents, VehicleFields);
-    const auto objs = HashPool(GetObjectPool(), "obj", detail, g_frame, &ents, ObjectFields);
+    const auto peds = HashPool(GetPedPool(), "ped", detail, g_frame, &ents, PedFields, "pd", DumpSel("pd") ? &dumpRows : nullptr);
+    const auto vehs = HashPool(GetVehiclePool(), "veh", detail, g_frame, &ents, VehicleFields, "vh", DumpSel("vh") ? &dumpRows : nullptr);
+    const auto objs = HashPool(GetObjectPool(), "obj", detail, g_frame, &ents, ObjectFields, "ob", DumpSel("ob") ? &dumpRows : nullptr);
 
     Acc all;
-    Acc rngA; rngA.U(rng);
+    Acc rngA;
+    { Sink s; Setup(s, "rng"); s.det = nullptr; s.U("state", rng); rngA = s.acc; }
     const Acc* const parts[] = { &tm, &ck, &rngA, &pop, &pl, &cam, &peds.acc, &vehs.acc, &objs.acc };
     for (const Acc* a : parts) { all.Mix(*a); }
 
@@ -283,6 +326,15 @@ void Record() {
     out += " vh=" + std::to_string(vehs.n) + ":" + HQ(vehs.acc);
     out += " ob=" + std::to_string(objs.n) + ":" + HQ(objs.acc);
     out += " all=" + HQ(all) + "\n";
+    if (g_sh) { // SH1 per-frame hash file: frame randCount h_tm h_ck h_rng h_pop h_pl h_cam h_pd h_vh h_ob h_all (e hashes)
+        std::fprintf(g_sh, "%u %llu %s %s %s %s %s %s %s %s %s %s\n", g_frame, (unsigned long long)RandCount(), HE(tm).c_str(), HE(ck).c_str(), HE(rngA).c_str(), HE(pop).c_str(), HE(pl).c_str(), HE(cam).c_str(),
+            HE(peds.acc).c_str(), HE(vehs.acc).c_str(), HE(objs.acc).c_str(), HE(all).c_str());
+        std::fflush(g_sh);
+    }
+    if (dumpFrame && !dumpRows.empty()) {
+        if (!g_dumpF) { g_dumpF = std::fopen(sh.dumpFile.c_str(), "w"); }
+        if (g_dumpF) { std::fwrite(dumpRows.data(), 1, dumpRows.size(), g_dumpF); std::fflush(g_dumpF); }
+    }
     std::fwrite(out.data(), 1, out.size(), g_f);
     if (detail) { std::fwrite(det.data(), 1, det.size(), g_f); std::fwrite(ents.data(), 1, ents.size(), g_f); }
     std::fflush(g_f);
@@ -296,6 +348,11 @@ void StartRecording(uint32_t seed) {
     if (!g_f) { NOTSA_LOG_ERR("rr_start: cannot open '{}'", path); return; }
     if (!g_atexit) { g_atexit = true; std::atexit([] { CloseTrace(); }); }
     RngSeed(seed);
+    if (!ShCfg().file.empty()) {
+        g_sh = std::fopen(ShCfg().file.c_str(), "w");
+        if (g_sh) { std::fprintf(g_sh, "#SH 1 build=%s seed=%u subsys=tm,ck,rng,pop,pl,cam,pd,vh,ob,all\n", Cfg().tag.empty() ? "unset" : Cfg().tag.c_str(), seed); std::fflush(g_sh); }
+        else { NOTSA_LOG_ERR("rr_start: cannot open NOTSA_SH_FILE '{}'", ShCfg().file); }
+    }
     g_frame     = 0;
     g_recording = true;
     WriteHeader(seed);
@@ -324,36 +381,60 @@ uint32_t StableId(const void* p) {
     return 0xF0000000u | ((uint32_t)((uintptr_t)p - (uintptr_t)&StableId) & 0x0FFFFFFFu);
 }
 
-#ifdef NOTSA_PORTABLE
-// ---- rand() draw log (NOTSA_RR_RANDLOG=<file>, NOTSA_RR_RANDLOG_FRAMES=A-B in Idle frames): for bisecting a divergence of the RNG state down to the call site of the first differing draw
+// ---- SH1 rand() call log (NOTSA_SH_RANDLOG=<file>; NOTSA_RR_RANDLOG is accepted as an alias): one row per rand() call, `callidx frame value caller`
+//   callidx = cumulative call number since process start (0-based; same counter as `randCount` of the per-frame hash file), frame = recorded frame number (-1 before cmd:rr_start / after stop),
+//   value = the value rand() returned (0..32767), caller = see below. All rand() calls of the game go through the `rand()` macro (GameRand.h / msvc_rand.h) and so through this hook.
 namespace {
 struct RandLog {
-    FILE*    f = nullptr;
-    uint32_t from = 0, to = 0;
-    uint32_t idx = 0;
+    FILE*          f = nullptr;
     std::thread::id main;
     RandLog() {
-        if (const char* p = std::getenv("NOTSA_RR_RANDLOG")) {
-            f = std::fopen(p, "w");
-            unsigned a = 0, b = 0xFFFFFFFFu;
-            if (const char* r = std::getenv("NOTSA_RR_RANDLOG_FRAMES")) { std::sscanf(r, "%u-%u", &a, &b); }
-            from = a; to = b;
-            main = ::notsa::msvc_crt::MainThreadId();
-        }
+        const char* p = std::getenv("NOTSA_SH_RANDLOG");
+        if (!p) { p = std::getenv("NOTSA_RR_RANDLOG"); }
+        if (p) { f = std::fopen(p, "w"); }
+#ifdef NOTSA_PORTABLE
+        main = ::notsa::msvc_crt::MainThreadId();
+#endif
     }
+    ~RandLog() { if (f) { std::fclose(f); f = nullptr; } }
 };
 RandLog& RL() { static RandLog r; return r; }
+inline uint32_t RandVal(uint32_t stateBefore) { return ((stateBefore * 214013u + 2531011u) >> 16) & 0x7FFF; }
 } // namespace
+
+#ifdef NOTSA_PORTABLE
+// caller = up to 5 return addresses (frame-pointer chain) as offsets from `StableId` (stable across ASLR; resolve offline with nm / atos), hex, comma separated
 __attribute__((noinline)) void RandHook(uint32_t stateBefore) {
     auto& r = RL();
-    if (!r.f || g_idleFrames < r.from || g_idleFrames > r.to || std::this_thread::get_id() != r.main) return;
-    static const uintptr_t base = (uintptr_t)&StableId; // offsets relative to a function of this module: stable across runs (ASLR), resolve with `nm` / `atos`
+    if (std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return; // worker threads have their own LCG state and are not part of the game stream
+    const uint64_t idx = g_randCount.fetch_add(1, std::memory_order_relaxed);
+    if (!r.f) return;
+    static const uintptr_t base = (uintptr_t)&StableId;
     uintptr_t ra[5] = {};
     void**    fp    = (void**)__builtin_frame_address(0); // arm64 / x64 clang keep the frame-pointer chain: [fp] = caller's fp, [fp+1] = return address
     for (int i = 0; i < 5 && fp && ((uintptr_t)fp & 7) == 0; i++) { ra[i] = (uintptr_t)fp[1] - base; fp = (void**)fp[0]; }
-    std::fprintf(r.f, "%u %u %08x %llx %llx %llx %llx %llx\n", g_idleFrames, r.idx++, stateBefore, (unsigned long long)ra[0], (unsigned long long)ra[1], (unsigned long long)ra[2], (unsigned long long)ra[3], (unsigned long long)ra[4]);
+    std::fprintf(r.f, "%llu %d %u %llx,%llx,%llx,%llx,%llx\n", (unsigned long long)idx, g_recording ? (int)g_frame : -1, RandVal(stateBefore), (unsigned long long)ra[0], (unsigned long long)ra[1], (unsigned long long)ra[2], (unsigned long long)ra[3], (unsigned long long)ra[4]);
 }
-#endif // NOTSA_PORTABLE (rand() draw log: the RandHook call sits in portable/msvc_rand.h)
+#else
+// Win32 (single global LCG state, GameRand.h): caller = `file:line@rva[+wrap]`: source location of the `rand()` macro use, rva = return address of the hook (module-relative; the exe is linked /BASE:0x400000, resolve
+// with tools/standalone/statehash/randlog_resolve.py + the linker .map), `+wrap` = module-relative return address of CGeneral::GetRandomNumber (the wrapper hides its caller, General.cpp), if the call came through it.
+const void* g_wrapCaller = nullptr;
+__declspec(noinline) void RandHookLoc(uint32_t stateBefore, const char* file, unsigned line) {
+    auto& r = RL();
+    const uint64_t idx = g_randCount.fetch_add(1, std::memory_order_relaxed);
+    if (!r.f) return;
+    static const uintptr_t modBase = (uintptr_t)GetModuleHandleW(nullptr);
+    const char* slash = std::strrchr(file, '\\');
+    const char* fn    = slash ? slash + 1 : file;
+    const uintptr_t ra = (uintptr_t)_ReturnAddress() - modBase;
+    if (!std::strcmp(fn, "General.cpp") && g_wrapCaller) { // came through CGeneral::GetRandomNumber: log the wrapper's caller too
+        std::fprintf(r.f, "%llu %d %u %s:%u@%x+%x\n", (unsigned long long)idx, g_recording ? (int)g_frame : -1, RandVal(stateBefore), fn, line, (unsigned)ra, (unsigned)((uintptr_t)g_wrapCaller - modBase));
+    } else {
+        std::fprintf(r.f, "%llu %d %u %s:%u@%x\n", (unsigned long long)idx, g_recording ? (int)g_frame : -1, RandVal(stateBefore), fn, line, (unsigned)ra);
+    }
+}
+void SetWrapCaller(const void* ra) { g_wrapCaller = ra; }
+#endif
 
 void RngMark(const char* name) {
     static const bool on = Active() && std::getenv("NOTSA_RR_RNGMARKS");

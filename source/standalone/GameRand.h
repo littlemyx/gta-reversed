@@ -39,11 +39,17 @@ inline void (*g_SrandHook)(unsigned& seed, const char* file, unsigned line) = nu
 // stream (audio callers, so their real-time dependent call counts cannot move the gameplay stream). null function pointer = inert.
 inline uint32_t* (*g_RandHook)(const char* file, unsigned line) = nullptr;
 inline const void* g_RandCaller = nullptr; // set by CGeneral::GetRandomNumber (the wrapper hides its caller) while g_RandHook is installed; read by the hook
+#ifdef NOTSA_STATEHASH
+namespace rr { void RandHookLoc(uint32_t stateBefore, const char* file, unsigned line); } // statehash.cpp: SH1 rand() call counter + log
+#endif
 inline int GameRand(const std::source_location loc = std::source_location::current()) {
     if (g_RandHook) {
         if (uint32_t* alt = g_RandHook(loc.file_name(), loc.line())) { *alt = RandStep(*alt); return (int)((*alt >> 16) & 0x7FFF); }
     }
     g_RandCalls++;
+#ifdef NOTSA_STATEHASH
+    ::notsa::rr::RandHookLoc(g_RandSeed, loc.file_name(), loc.line());
+#endif
     g_RandSeed = RandStep(g_RandSeed);
     return (int)((g_RandSeed >> 16) & 0x7FFF);
 }

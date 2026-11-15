@@ -7,6 +7,9 @@
 #include "StdInc.h"
 
 #include <random>
+#if defined(NOTSA_STATEHASH) && !defined(NOTSA_PORTABLE)
+#include "portable/statehash.h"
+#endif
 
 static std::random_device randomDevice;
 static std::mt19937 randomEngine(randomDevice());
@@ -202,6 +205,9 @@ uint16 CGeneral::GetRandomNumber() { // Why does this return `uint16`? Should be
 #else
 #if defined(NOTSA_STANDALONE_RUN) && !defined(NOTSA_PORTABLE)
     if (notsa::g_RandHook) { notsa::g_RandCaller = _ReturnAddress(); } // REPLAY-DIFF: the caller of this wrapper, for the R log / the audio partition (inert without NOTSA_LOCKSTEP_OUT)
+#endif
+#if defined(NOTSA_STATEHASH) && !defined(NOTSA_PORTABLE)
+    notsa::rr::SetWrapCaller(_ReturnAddress()); // SH1 rand log: the wrapper hides its caller
 #endif
     return rand();
 #endif

@@ -10,6 +10,7 @@
 //   NOTSA_RR_MAXFRAMES=N       stop recording (and, with NOTSA_RR_EXIT=1, exit the game) after N recorded frames
 //   NOTSA_RR_DETAIL=A-B        recorded frames A..B (inclusive) also get one `D` line per entity with every hashed field (bit patterns)
 //   NOTSA_RR_TAG=<text>        free text stored in the trace header (build name)
+//   SH1 (.notes/STATEHASH_SPEC.md): NOTSA_SH_FILE=<file> per-frame hash file; NOTSA_SH_DUMP=<f,f..> NOTSA_SH_DUMP_SUBSYS=<tm,..|all> NOTSA_SH_DUMP_FILE=<file> verbose dump; NOTSA_SH_RANDLOG=<file> rand() call log (all need NOTSA_RR_TRACE + cmd:rr_start for per-frame output)
 // Injector commands (SDLWrapper.cpp InjRunCmd): cmd:rr_start[:SEED], cmd:rr_stop, cmd:rr_stat.
 // Trace format: see RR_PLAN.md section 3 and tools/portable/rr_diff.py.
 #pragma once
@@ -44,6 +45,10 @@ void RngMark(const char* name);
 void Probe(const char* tag);
 //! (declared in msvc_rand.h) logs a draw of the game thread's rand() when NOTSA_RR_RANDLOG is set
 void RandHook(uint32_t stateBefore);
+//! (Win32 single-state build, declared in GameRand.h) same, with the source location of the rand() macro use
+void RandHookLoc(uint32_t stateBefore, const char* file, unsigned line);
+//! CGeneral::GetRandomNumber records its own return address here (the wrapper hides its caller); read by RandHookLoc
+void SetWrapCaller(const void* ra);
 //! (declared in Base.h for NOTSA_PTR_ID32) stable replacement of an object address: pool tag + slot index for pool objects, else the offset from this module's code
 uint32_t StableId(const void* p);
 } // namespace notsa::rr

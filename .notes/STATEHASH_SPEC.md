@@ -44,7 +44,7 @@ rcars `CCarCtrl::NumRandomCars` int32; law `NumLawEnforcerCars` uint32; mcars `N
 stmem `CStreaming::ms_memoryUsedBytes` uint32; streq `CStreaming::ms_numModelsRequested` int32;
 npedpool `GetPedPool()->GetNoOfUsedSpaces()` (0 if no pool); nvehpool `GetVehiclePool()->GetNoOfUsedSpaces()`. All U.
 
-### 3.5 `pl` player (sh.cpp:250-259) - 38 words (matrix case)
+### 3.5 `pl` player (sh.cpp:250-259) - 35 words (matrix case)
 Only if `FindPlayerPed() != null`, else the Acc stays empty (cbf29ce484222325). Fields = `PedFields(ped)` (4.2; NO "slot" word), then
 wl `FindPlayerWanted()->GetWantedLevel()` (-1 if no wanted) U; chaos `m_ChaosLevel` (-1 if none) U; money `FindPlayerInfo().m_nMoney` int32 U.
 
@@ -67,17 +67,17 @@ p x,y,z = `GetPosition()` = `m_matrix ? m_matrix->pos : m_placement.m_vPosn` (3 
 if `m_matrix != null`: r x,y,z `GetRight()`, f x,y,z `GetForward()`, u x,y,z `GetUp()` (9 F) else `hd` = `m_placement.m_fHeading` (1 F);
 mv x,y,z `m_vecMoveSpeed` (3 F); tv x,y,z `m_vecTurnSpeed` (3 F).
 (matrix case: 2U + 3F + 9F + 6F = 20 words; no matrix: 2 + 3 + 1 + 6 = 12 words.)
-### 4.2 Ped (sh.cpp:145-162) = Physical, then 15 words
+### 4.2 Ped (sh.cpp:145-162) = Physical, then 12 words
 ptype `m_nPedType` U; pstate `m_nPedState` U; mstate `m_nMoveState` U; hp `m_fHealth` F; arm `m_fArmour` F; rot `m_fCurrentRotation` F; aim `m_fAimingRotation` F;
 veh `m_pVehicle ? GetVehiclePool()->GetIndex(m_pVehicle) : -1` (int32 as U); invh `bInVehicle` 0/1 U;
 wtype `GetActiveWeapon().GetType()` U; ammo `GetActiveWeapon().GetTotalAmmo()` U;
 tasks: `chain=0; n=0; for (t = GetIntelligence()->GetTaskManager().GetActiveTask(); t && n<6; t = t->GetSubTask(), n++) chain = chain*131 + (uint32)t->GetTaskType() + 1;` (uint32 wrap) U.
-(that is 4 U + 4 F + 1 + 1 + 2 + 1 = 15 incl. veh/invh/wtype/ammo/tasks.)
+(12 words: ptype pstate mstate hp arm rot aim veh invh wtype ammo tasks.)
 ### 4.3 Vehicle (sh.cpp:164-174) = Physical, then 8 words
 hp `m_fHealth` F; gas `m_GasPedal` F; brk `m_BrakePedal` F; steer `m_fSteerAngle` F; drv `m_pDriver ? GetPedPool()->GetIndex(m_pDriver) : -1` U;
 mission `m_autoPilot.m_nCarMission` U; tempact `m_autoPilot.m_nTempAction` U; col `m_nPrimaryColor | (m_nSecondaryColor << 8)` U (both uint8 fields).
 ### 4.4 Object (sh.cpp:176) = Physical only.
-Per entity words (matrix case): ped 1+20+15 = 36, vehicle 1+20+8 = 29, object 1+20 = 21. Total distinct named fields: tm 7 + ck 6 + rng 1 + pop 12 + pl (ped 15+Physical + 3) + cam 6 + 3 pool field lists.
+Per entity words (matrix case): ped 1+20+12 = 33, vehicle 1+20+8 = 29, object 1+20 = 21. Total distinct named fields: tm 7 + ck 6 + rng 1 + pop 12 + pl (Physical 20 + ped 12 + 3 = 35) + cam 6 + 3 pool field lists.
 
 ## 5. Existing on-disk format: RR trace (kept) - NOTSA_RR_TRACE=<file>
 Header `#RR 1 build=<tag> seed=<n> step_ms=<n> float=win32|portable`; per frame:
@@ -129,3 +129,21 @@ NOT isolated (they run inside `CGame::Process`, in simulation order, and a port 
 CWeather::Update (21 sites), Clouds update, Birds, Fire / FireManager, Explosion, Glass, WaterCreature_c, WaterCannon, Rope, Population, CarCtrl, Train, Plane, Heli, ScriptsForBrains, SpecialFX update, Physical, Weapon,
 WindModifiers, PlantMgr / PlantLocTri / ProcSurfaceInfo / PPTriPlantBuffer updates, audio ENTITY code called from game code (AEPedSpeech, AECollision, AEGlobalWeapon, AEVehicle, AEScript, AEAudioUtility) outside AudioEngine.Service.
 Also not isolated: draws in the loading screen and FrontendIdle (menus). With gprand=1 `randCount` and the rand log therefore describe the gameplay stream only.
+
+## 11. SH2: portable math (GTASA_RR_PORTABLE_MATH) and the 64-bit reference build
+* Build: `tools/standalone/statehash/shbuild.sh` -> `build/PortableWin64RR/bin/gta_reversed.exe` (PortableWin64 preset = MSVC x64, SSE2, `/fp:precise`, no x87 code, `NOTSA_PORTABLE`; plus GTASA_STATEHASH, GTASA_SCMTRACE, GTASA_MDRIVER, GTASA_RR_PORTABLE_MATH). The x87 sites are the lifted portable branches (`NOTSA_PORTABLE`); floats are IEEE binary32 per operation like TS `Math.fround`.
+* Math: `source/portable/v8_ieee754/` = V8 10.2.154.26 `src/base/ieee754.cc/.h` unmodified (see its README). `source/portable/rr_math.h` (force-included via StdInc.h, and via `/FI` for the librw target) turns
+  `sin cos tan asin acos atan atan2 exp log log10 log2 log1p expm1 sinh cosh tanh cbrt pow` and the f forms (`sinf cosf tanf asinf acosf atanf atan2f expf logf log10f log2f sinhf coshf tanhf cbrtf powf`) into
+  float arg(s): `(float)ieee754::f((double)x)`; double arg(s): `ieee754::f(x)`; integer args as double; mixed float/int or float/double -> double (the C++ overload rule). Covers `::f`, `std::f`, game code, CMaths / CGeneral helpers,
+  the `x87::sin/cos/tan/atan/atan2/asin/acos/log2/log10/ln/sincos/pow` helper functions (X87Intrinsics.h / X87Pow.h take their `std::` branch under this option instead of the software x87 / exe CRT pow kernel) and librw (Quat exp/log/slerp, Matrix rotate, camera tan/atan, light angles).
+* NOT routed, complete list of what I found:
+  1. `sqrt sqrtf fabs floor ceil fmod modf round trunc ldexp frexp`: IEEE correctly rounded / exact in every libm. `x87::sqrt` is the soft-x87 sqrt at PC24 (kept; for float inputs it equals `Math.fround(Math.sqrt(x))`).
+  2. The lifted x87 subroutines in `game_sa/Core/X87Sites.h` (`lift::Fpu::Sin/Cos/Patan/Yl2x`: RadarAngle* and 3 more helpers): exact software x87, still used. Radar / HUD side; nothing hashed reads them (not machine-verified).
+  3. Math functions used without a call (address taken): none found by grep (only comments and variables named sin/cos/exp).
+  4. `hypot`: 7 hits in source/, not routed, not audited. `<random>`: not compiled in the run build.
+  5. Third-party code compiled without rr_math.h: spdlog/fmt/imgui/tracy/SDL3/libjpeg/ogg/vorbis, the CRT itself. Audio-side libm use does not run (NOTSA_RR_NOAUDIO=1).
+  6. Compile-time constant folding of `sinf(constant)` by the compiler is not checked per TU.
+* TS equivalent: `Math.fround(Math.f(x))` (float call) / `Math.f(x)` (double call) in Node 18.15: V8 10.2.154.26 implements Math.sin/cos/tan/asin/acos/atan/atan2/exp/log/log2/log10/log1p/expm1/cbrt/sinh/cosh/tanh/pow with exactly this ieee754.cc.
+
+## 11. Verified (SH1)
+Runs: tools/standalone/statehash/sh1_run.sh (route sh1_route.txt: New Game, 06:30, rr_start, 2000 frames, NOTSA_RR_GAMEPLAY_RAND=1). Two runs: hash files (2001 lines) and rand logs (1333158 rows) byte-identical; frame 1500 dump (2946 rows) re-hashes to every subsystem hash and `all` (shdump_check.py: 10 hashes, 0 mismatches). randCount at frame 0 = 362627 (boot/loading draws included).

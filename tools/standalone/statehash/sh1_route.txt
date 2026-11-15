@@ -1,0 +1,7 @@
+# SH1 route: New Game (shared gameplay_regress header), 06:30, record 2000 frames (NOTSA_RR_MAXFRAMES exits)
+#include header
+wait:600
+cmd:time:6:30
+cmd:rr_start
+wait:3600000
+cmd:quit

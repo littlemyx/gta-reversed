@@ -6,12 +6,12 @@
 set -u
 . "$(dirname "$0")/../hostenv.sh"; . "$(dirname "$0")/../own_kill.sh"
 REPO="$(hp "$(cd "$(dirname "$0")/../../.." && pwd)")"
-TAG="${1:?tag}"; ROUTE="${2:-$REPO/tools/portable/rr_route_walk.txt}"; OUT="$(hp "${3:-C:/gta-scratch/statehash/out}")"; MAXF="${4:-2000}"; DUMPF="${5:-1500}"; LIMIT="${6:-900}"
+TAG="${1:?tag}"; ROUTE="${2:-$REPO/tools/standalone/statehash/sh1_route.txt}"; OUT="$(hp "${3:-C:/gta-scratch/statehash/out}")"; MAXF="${4:-2000}"; DUMPF="${5:-1500}"; LIMIT="${6:-900}"
 EXE="$(hp "${EXE:-$REPO/build/StandaloneRelease/bin/gta_reversed.exe}")"
 DATA="$(hp "${DATA:-C:/gta-scratch/statehash/d}")"; GAME_SRC="$(hp "${GAME_SRC:-$DEF_GAME_SRC}")"
 UD="$(hp C:/gta-scratch/statehash/ud)"
 mkdir -p "$OUT" "$DATA" "$UD"
-cp "$ROUTE" "$OUT/$TAG.route.txt"
+awk -v d="$REPO/tools/standalone/gameplay_regress/routes" '/^#include / { f = d "/" $2 ".inc"; while ((getline l < f) > 0) print l; close(f); next } { print }' "$ROUTE" > "$OUT/$TAG.route.txt"
 for e in "$GAME_SRC"/*; do
   n="$(basename "$e")"; case "$n" in gta_sa.exe|gta-sa.exe|gta_reversed.exe|logs|standalone*) continue;; esac
   [ -e "$DATA/$n" ] && continue

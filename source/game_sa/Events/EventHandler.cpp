@@ -2962,7 +2962,8 @@ void CEventHandler::ComputeSeenPanickedPedResponse(CEventSeenPanickedPed* e, CTa
         if (!thisEventSrc) {
             return nullptr;
         }
-        const auto currEvnt = m_History.GetCurrentEvent();
+        // 0x4C3618: the history is the one of the *source* ped (e->m_ped, via its intelligence), not of this handler
+        const auto currEvnt = e->m_ped->GetEventHandlerHistory().GetCurrentEvent();
         if (!currEvnt) {
             return nullptr;
         }
@@ -2976,7 +2977,7 @@ void CEventHandler::ComputeSeenPanickedPedResponse(CEventSeenPanickedPed* e, CTa
         case TASK_COMPLEX_FLEE_ENTITY:
             return new CTaskComplexFleeEntity{ currEvntSrc, true, 45.f };
         case TASK_COMPLEX_SMART_FLEE_ENTITY:
-            return new CTaskComplexSmartFleeEntity{ currEvntSrc, false, 45.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
+            return new CTaskComplexSmartFleeEntity{ currEvntSrc, true /* 0x4C36A5 scream */, 45.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
         default:
             NOTSA_UNREACHABLE();
             return m_EventResponseTask; // 0x4C3722: default leaves the response task untouched

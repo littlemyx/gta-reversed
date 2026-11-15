@@ -1474,11 +1474,13 @@ void CEventHandler::ComputeGunAimedAtResponse(CEventGunAimedAt* e, CTask* tactiv
         case TASK_SIMPLE_HANDS_UP:
             return new CTaskSimpleHandsUp{5'000};
         case TASK_SIMPLE_DUCK: {
-            if (const auto t = m_Ped->GetIntelligence()->GetTaskDuck()) {
-                return t;
+            if (m_Ped->GetIntelligence()->GetTaskDuck()) {
+                return m_EventResponseTask; // 0x4C2A1F: jumps to the epilogue, the response is left untouched (the port handed out the live duck task)
             }
             return new CTaskSimpleDuck{DUCK_STANDALONE, 5'000};
         }
+        case TASK_NONE: // 0x4C29A8
+            return nullptr;
         case TASK_SIMPLE_DUCK_FOREVER:
             return new CTaskSimpleDuck{DUCK_STANDALONE, 0x967Fu}; // are they trying to tell us something? "Fu" :D
         case TASK_COMPLEX_REACT_TO_GUN_AIMED_AT: // 0x4C2B2C

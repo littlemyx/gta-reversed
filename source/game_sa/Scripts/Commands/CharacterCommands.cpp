@@ -2610,7 +2610,7 @@ auto ClearCharLastDamageEntity(CPed* ped) {
 auto CreateRandomCharInVehicle(CRunningScript& S, CVehicle& veh, bool asDriver, int32 psgrSeatIdx = -1) -> CPed& {
     const auto ped = CPopulation::AddPedInCar(&veh, asDriver, -1, asDriver ? 0 : psgrSeatIdx, false, false);
     ped->SetCharCreatedBy(PED_MISSION);
-    if (!asDriver) {
+    if (asDriver) { // exe 0x48D7AE-0x48D7BD: only the driver path (0560) clears the primary task; 0561 jumps past it to 0x48D7C2
         ped->GetTaskManager().SetTask(nullptr, TASK_PRIMARY_PRIMARY);
     }
     ped->bAllowMedicsToReviveMe = false;

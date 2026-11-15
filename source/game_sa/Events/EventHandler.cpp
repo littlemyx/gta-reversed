@@ -2402,8 +2402,11 @@ void CEventHandler::ComputePedThreatResponse(CEventAcquaintancePedHate* e, CTask
         switch (e->m_TaskId) {
         case TASK_COMPLEX_SEEK_ENTITY_AIMING: // 0x4C215A
             return new CTaskComplexSeekEntityAiming{e->m_AcquaintancePed, 10.f, 5.f};
-        case TASK_SMART_FLEE_ENTITY_WALKING:
-            return new CTaskComplexSmartFleeEntity{ e->m_AcquaintancePed, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
+        case TASK_SMART_FLEE_ENTITY_WALKING: { // 0x4C22D0: the exe stores the task and then writes moveState = 4 (WALK) into it
+            const auto task = new CTaskComplexSmartFleeEntity{ e->m_AcquaintancePed, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
+            task->m_moveState = PEDMOVE_WALK;
+            return task;
+        }
         case TASK_COMPLEX_KILL_PED_ON_FOOT_TIMED: // 0x4C1E7A [yeah, this is from down below]
         case TASK_COMPLEX_KILL_PED_ON_FOOT: { // 0x4C1D71
             if (IsKillTaskAppropriate(m_Ped, e->m_AcquaintancePed, *e)) {
@@ -2438,7 +2441,7 @@ void CEventHandler::ComputePedThreatResponse(CEventAcquaintancePedHate* e, CTask
                 return nullptr;
             }
             const auto maxFireRange = std::max(pedActiveWI->m_fTargetRange, m_Ped->GetIntelligence()->GetPedFOVRange() + 5.f);
-            if ((e->m_AcquaintancePed->GetPosition() - m_Ped->GetPosition()).SquaredMagnitude() >= sq(maxFireRange)) { // out of shooting range
+            if ((e->m_AcquaintancePed->GetPosition() - m_Ped->GetPosition()).Magnitude() >= maxFireRange) { // 0x4C225B: CVector::Magnitude vs the range, not the squared compare // out of shooting range
                 return nullptr;
             }
             return new CTaskSimpleGangDriveBy{ // 0x4C229B
@@ -2452,6 +2455,16 @@ void CEventHandler::ComputePedThreatResponse(CEventAcquaintancePedHate* e, CTask
         }
         case TASK_COMPLEX_KILL_PED_ON_FOOT_STEALTH: // 0x4C22C6
           return new CTaskComplexKillPedOnFootStealth{e->m_AcquaintancePed};
+        case TASK_COMPLEX_KILL_PED_ON_FOOT_STAND_STILL: { // 0x4C1F5B: like KINDA_STAND_STILL below but sets bStayInSamePlace (bit 21); the port had no case for it
+            if (IsKillTaskAppropriate(m_Ped, e->m_AcquaintancePed, *e)) {
+                m_Ped->bStayInSamePlace = true;
+                return new CTaskComplexKillPedOnFoot{e->m_AcquaintancePed};
+            }
+            if (m_Ped->bWantedByPolice && e->m_AcquaintancePed->IsCop()) {
+                return MakeFleeAnyMeansTask(e->m_AcquaintancePed);
+            }
+            return new CTaskComplexSmartFleeEntity{ e->m_AcquaintancePed, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
+        }
         case TASK_COMPLEX_KILL_PED_ON_FOOT_KINDA_STAND_STILL: {
             if (IsKillTaskAppropriate(m_Ped, e->m_AcquaintancePed, *e)) {
                 m_Ped->bKindaStayInSamePlace = true;
@@ -2499,8 +2512,8 @@ void CEventHandler::ComputePedThreatResponse(CEventAcquaintancePedHate* e, CTask
             return new CTaskSimpleCower{};
         case TASK_SIMPLE_HANDS_UP: // 0x4C1B39
             return new CTaskSimpleHandsUp{5'000};
-        case TASK_COMPLEX_FLEE_ENTITY:
-            return new CTaskComplexSmartFleeEntity{ e->m_AcquaintancePed, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) };
+        case TASK_COMPLEX_FLEE_ENTITY: // 0x4C1CEA: a plain CTaskComplexFleeEntity (ctor defaults), no wanted/cop test (the port built a smart flee task)
+            return new CTaskComplexFleeEntity{ e->m_AcquaintancePed, false };
         case TASK_COMPLEX_SMART_FLEE_ENTITY: { // 0x4C1C4B
             if (m_Ped->bWantedByPolice && e->m_AcquaintancePed->IsCop()) { // 0x4C1C4B..0x4C1C78: wanted + cop => the flee-any-means task (jmp 0x4C206A); the port had the two arms swapped
                 return MakeFleeAnyMeansTask(e->m_AcquaintancePed);
@@ -2514,12 +2527,15 @@ void CEventHandler::ComputePedThreatResponse(CEventAcquaintancePedHate* e, CTask
         case TASK_SIMPLE_DUCK_FOREVER: // 0x4C1B5E
             return new CTaskSimpleDuck{DUCK_STANDALONE, 0x967Fu};
         case TASK_SIMPLE_DUCK: { // 0x4C1BA1
-            if (const auto t = m_Ped->GetIntelligence()->GetTaskDuck()) {
-                return t;
+            if (m_Ped->GetIntelligence()->GetTaskDuck()) {
+                return m_EventResponseTask; // 0x4C1BA8: jumps to the epilogue, the response is left untouched (the port handed out the live duck task)
             }
             return new CTaskSimpleDuck{DUCK_STANDALONE, 5'000};
         }
-        case TASK_COMPLEX_LEAVE_CAR :
+        case TASK_COMPLEX_LEAVE_CAR: // 0x4C1BE0: only when the ped has a vehicle and bInVehicle is set, else the response is left untouched
+            if (!m_Ped->IsInVehicle()) {
+                return m_EventResponseTask;
+            }
             return new CTaskComplexLeaveCar{m_Ped->m_pVehicle, 0, 0, false, 1};
         case TASK_NONE:
             return nullptr;

@@ -49,7 +49,7 @@ void CAEStreamingChannel::Initialise() {
     DSBUFFERDESC bufferDesc{};
     bufferDesc.guid3DAlgorithm = GUID_NULL;
     bufferDesc.lpwfxFormat = &m_WaveFormat;
-    bufferDesc.dwSize = 36;
+    bufferDesc.dwSize = sizeof(DSBUFFERDESC); // SH2: 36 on x86, 40 on x64 (PortableWin64 audio init failed with the x86 constant)
     bufferDesc.dwBufferBytes = 0xC0000;
     bufferDesc.dwReserved = 0;
     bufferDesc.dwFlags = DSBCAPS_GETCURRENTPOSITION2 | DSBCAPS_GLOBALFOCUS | DSBCAPS_CTRLFX | DSBCAPS_CTRLVOLUME | DSBCAPS_CTRLFREQUENCY | DSBCAPS_LOCSOFTWARE;
@@ -80,7 +80,7 @@ void CAEStreamingChannel::Initialise() {
 // 0x4F1C70
 void CAEStreamingChannel::InitialiseSilence() {
     DSBUFFERDESC bufferDesc{};
-    bufferDesc.dwSize = 36;
+    bufferDesc.dwSize = sizeof(DSBUFFERDESC); // SH2: 36 on x86, 40 on x64 (PortableWin64 audio init failed with the x86 constant)
     bufferDesc.lpwfxFormat = &m_WaveFormat;
     bufferDesc.dwBufferBytes = 0x8000;
     bufferDesc.dwFlags = DSBCAPS_GLOBALFOCUS | DSBCAPS_LOCSOFTWARE;
@@ -362,7 +362,7 @@ bool CAEStreamingChannel::AddFX() {
         desc.guidDSFXClass = GUID_DSFX_STANDARD_PARAMEQ;
         desc.dwFlags = 0;
         desc.dwReserved1 = desc.dwReserved2 = 0;
-        desc.dwSize = 32;
+        desc.dwSize = sizeof(DSEFFECTDESC); // SH2: 32 on x86, 40 on x64
     }
 
     bool wasStopped = false;

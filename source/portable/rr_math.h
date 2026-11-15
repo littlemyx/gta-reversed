@@ -7,7 +7,7 @@
  *   integer args:  as double
  * sqrt / sqrtf / floor / ceil / fabs / fmod are not routed (IEEE correctly rounded or exact in every libm).
  * Mechanism (same as msvc_rand.h): function-like macros `sin(...)` -> `rrm_sin(...)` applied after the CRT headers (StdInc.h). `std::sin(x)` becomes `std::rrm_sin(x)`,
- * hence the using-declarations into std at the bottom. Taking the address of a math function is not routed (see .notes/STATEHASH_SPEC.md section 11).
+ * hence the using-declarations into std at the bottom. Taking the address of a math function is not routed (see .notes/STATEHASH_SPEC.md section 12).
  * Only active with -DGTASA_RR_PORTABLE_MATH=ON (NOTSA_RR_PORTABLE_MATH); the normal builds never see an effect of this file.
  */
 #ifdef NOTSA_RR_PORTABLE_MATH

@@ -10,7 +10,7 @@ set -u
 REPO="$(hp "$(cd "$(dirname "$0")/../../.." && pwd)")"
 MODE="${1:?record|replay}"; TAG="${2:?tag}"; OUT="$(hp "${3:-C:/gta-scratch/statehash/ryder1}")"; LIMIT="${4:-7200}"; DUMPF="${5:-1000,5000,15000}"
 EXE="$(hp "${EXE:-$REPO/build/PortableWin64RR/bin/gta_reversed.exe}")"
-DATA="$(hp "${DATA:-C:/gta-scratch/statehash/d}")"; GAME_SRC="$(hp "${GAME_SRC:-$DEF_GAME_SRC}")"
+DATA="$(hp "${DATA:-C:/gta-scratch/statehash/d2}")"; GAME_SRC="$(hp "${GAME_SRC:-$DEF_GAME_SRC}")"
 STEPS="$(cygpath -w "${STEPS:-$REPO/tools/standalone/mdriver/ryder1.steps}")"
 UD="$(hp C:/gta-scratch/statehash/ud2)"
 mkdir -p "$OUT" "$DATA" "$UD"
@@ -45,13 +45,15 @@ for x in sh rand load scmtrace rr.trace dump log out driver; do rm -f "$OUT/$TAG
   [ "$MODE" = record ] && export NOTSA_MDRIVER="$STEPS" NOTSA_MDRIVER_OUT="$(cygpath -w "$OUT/$TAG.driver")"
   ./gta_reversed.exe > "$OUT/$TAG.out" 2>&1 &
   echo $! > "$OUT/$TAG.pid"
-)
+  wait $! ; echo $? > "$OUT/$TAG.rc"
+) &
+sleep 2; true
 WPID=$(cat "$OUT/$TAG.pid"); t0=$(date +%s); st=ok
 while kill -0 "$WPID" 2>/dev/null; do
   sleep 3
   [ $(( $(date +%s) - t0 )) -gt "$LIMIT" ] && { st=TIMEOUT; break; }
 done
-own_kill_pid "$WPID"; own_kill_in_dir gta_reversed "$DATA"
-cp -f standalone.log "$OUT/$TAG.log" 2>/dev/null
-echo "$st $(( $(date +%s) - t0 ))s  frames: $(grep -vc '^#' "$OUT/$TAG.sh" 2>/dev/null)  rand rows: $(wc -l < "$OUT/$TAG.rand" 2>/dev/null)  load rows: $(wc -l < "$OUT/$TAG.load" 2>/dev/null)"
+sleep 1; own_kill_pid "$WPID"; own_kill_in_dir gta_reversed "$DATA"
+cp -f standalone.log "$OUT/$TAG.log" 2>/dev/null; cp -f logs/log.log "$OUT/$TAG.glog" 2>/dev/null
+echo "$st $(( $(date +%s) - t0 ))s rc=$(cat "$OUT/$TAG.rc" 2>/dev/null)  frames: $(grep -vc '^#' "$OUT/$TAG.sh" 2>/dev/null)  rand rows: $(wc -l < "$OUT/$TAG.rand" 2>/dev/null)  load rows: $(wc -l < "$OUT/$TAG.load" 2>/dev/null)"
 rm -f "$OUT/$TAG.pid"

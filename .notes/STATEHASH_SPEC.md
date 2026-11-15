@@ -130,7 +130,7 @@ CWeather::Update (21 sites), Clouds update, Birds, Fire / FireManager, Explosion
 WindModifiers, PlantMgr / PlantLocTri / ProcSurfaceInfo / PPTriPlantBuffer updates, audio ENTITY code called from game code (AEPedSpeech, AECollision, AEGlobalWeapon, AEVehicle, AEScript, AEAudioUtility) outside AudioEngine.Service.
 Also not isolated: draws in the loading screen and FrontendIdle (menus). With gprand=1 `randCount` and the rand log therefore describe the gameplay stream only.
 
-## 11. SH2: portable math (GTASA_RR_PORTABLE_MATH) and the 64-bit reference build
+## 12. SH2: portable math (GTASA_RR_PORTABLE_MATH) and the 64-bit reference build
 * Build: `tools/standalone/statehash/shbuild.sh` -> `build/PortableWin64RR/bin/gta_reversed.exe` (PortableWin64 preset = MSVC x64, SSE2, `/fp:precise`, no x87 code, `NOTSA_PORTABLE`; plus GTASA_STATEHASH, GTASA_SCMTRACE, GTASA_MDRIVER, GTASA_RR_PORTABLE_MATH). The x87 sites are the lifted portable branches (`NOTSA_PORTABLE`); floats are IEEE binary32 per operation like TS `Math.fround`.
 * Math: `source/portable/v8_ieee754/` = V8 10.2.154.26 `src/base/ieee754.cc/.h` unmodified (see its README). `source/portable/rr_math.h` (force-included via StdInc.h, and via `/FI` for the librw target) turns
   `sin cos tan asin acos atan atan2 exp log log10 log2 log1p expm1 sinh cosh tanh cbrt pow` and the f forms (`sinf cosf tanf asinf acosf atanf atan2f expf logf log10f log2f sinhf coshf tanhf cbrtf powf`) into

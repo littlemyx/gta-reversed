@@ -569,6 +569,7 @@ void CVehicle::SpecialEntityPreCollisionStuff(CPhysical* colPhysical, bool bIgno
         {
             bCollisionDisabled = true;
             colPhysical->AsObject()->m_pEntityIgnoredCollision = this;
+            return; // 0x6D677C: jumps to the common tail, which returns as bCollisionDisabled is set (the port fell through to the RC car / stuck checks)
         }
         else
         {

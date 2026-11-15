@@ -164,16 +164,27 @@ CTask* CTaskComplexRoadRage::ControlSubTask(CPed* ped) {
         return m_pSubTask;
     }
 
+    // ASM-P4S3b: exe 0x62E431-0x62E51D: the port had the distance test inverted (the exe creates ENTER_CAR_AS_DRIVER when the distance^2 is > 400, not <= 400)
+    // and the two paths sum the squared deltas in different orders (DESTROY_CAR: x,z,y; KILL_PED_ON_FOOT: z,y,x)
     switch (m_pSubTask->GetTaskType()) {
-    case TASK_COMPLEX_DESTROY_CAR: { // Case positions swapped (to allow fallthru)
+    case TASK_COMPLEX_DESTROY_CAR: {
         if (!m_rageWith->bInVehicle) {
             return CreateSubTask(TASK_COMPLEX_KILL_PED_ON_FOOT, ped);
         }
-        [[fallthrough]];
+        if (ped->m_pVehicle) {
+            const auto d = m_rageWith->GetPosition() - ped->GetPosition();
+            if (d.x * d.x + d.z * d.z + d.y * d.y > sq(20.f)) {
+                return CreateSubTask(TASK_COMPLEX_ENTER_CAR_AS_DRIVER, ped);
+            }
+        }
+        break;
     }
     case TASK_COMPLEX_KILL_PED_ON_FOOT: {
-        if (ped->m_pVehicle && (ped->GetPosition() - m_rageWith->GetPosition()).SquaredMagnitude() <= sq(20.f)) {
-            return CreateSubTask(TASK_COMPLEX_ENTER_CAR_AS_DRIVER, ped);
+        if (ped->m_pVehicle) {
+            const auto d = m_rageWith->GetPosition() - ped->GetPosition();
+            if (d.z * d.z + d.y * d.y + d.x * d.x > sq(20.f)) {
+                return CreateSubTask(TASK_COMPLEX_ENTER_CAR_AS_DRIVER, ped);
+            }
         }
         break;
     }

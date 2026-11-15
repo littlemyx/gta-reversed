@@ -458,6 +458,7 @@ void CTaskSimpleHoldEntity::DropEntity(CPed* ped, bool bAddEventSoundQuiet) {
         else {
             objectToHold->physicalFlags.bAttachedToEntity = false;
             if (!bAddEventSoundQuiet) {
+                objectToHold->m_vecMoveSpeed = CVector{0.f, 0.f, 0.f}; // ASM-P4S3b: exe 0x6932B6-0x6932E2 zeroes the move speed here (the port left it untouched)
                 bUpdateEntityPosition = false;
             }
             else {
@@ -466,8 +467,12 @@ void CTaskSimpleHoldEntity::DropEntity(CPed* ped, bool bAddEventSoundQuiet) {
                     objectToHold->AddToMovingList();
                 }
                 auto* entity = m_pEntityToHold->AsPhysical();
-                entity->m_vecMoveSpeed += CGeneral::GetRandomNumberInRange(+0.03f, 0.06f) * ped->GetForward();
-                entity->m_vecMoveSpeed += CGeneral::GetRandomNumberInRange(-0.03f, 0.03f) * ped->GetRight();
+                entity->m_vecMoveSpeed = ped->m_vecMoveSpeed; // ASM-P4S3b: exe 0x6931D1-0x6931E7 starts from the ped's move speed (the port added to the object's own)
+                // ASM-P4S3b: exe 0x6931ED-0x69326A: raw CRT rand() * (1/32767) * 0.03 + 0.03, resp. * 0.06 - 0.03 (not min + t * (max - min))
+                const auto fwdRnd = (float)((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (x87d)0.03f + (x87d)0.03f);
+                entity->m_vecMoveSpeed += fwdRnd * ped->GetForward();
+                const auto rightRnd = (float)((x87d)rand() * (x87d)RAND_MAX_FLOAT_RECIPROCAL * (x87d)0.06f - (x87d)0.03f);
+                entity->m_vecMoveSpeed += rightRnd * ped->GetRight();
                 entity->m_vecMoveSpeed += 0.01f * ped->GetUp();
                 if (!objectToHold->TestCollision(false)) {
                     bUpdateEntityPosition = false;

@@ -460,8 +460,16 @@ void CBoat::FillBoatList() {
     apFrameWakeGeneratingBoats.fill(nullptr);
 
     const auto& vecCamPos = TheCamera.GetPosition();
-    auto vecCamDir = TheCamera.m_mCameraMatrix.GetForward();
-    vecCamDir.Normalise();
+    // 0x6F2736: only the XY of the camera forward is normalised (len = sqrt(x*x + y*y), skipped if len <= 0); z does not take part
+    CVector2D vecCamDir = TheCamera.m_mCameraMatrix.GetForward();
+    {
+        const auto fLen = std::sqrt(vecCamDir.x * vecCamDir.x + vecCamDir.y * vecCamDir.y);
+        if (fLen > 0.0F) {
+            const auto fInv = 1.0F / fLen;
+            vecCamDir.x *= fInv;
+            vecCamDir.y *= fInv;
+        }
+    }
 
     auto iCurBoat = 0u;
     for (auto& vehicle : NOTSA_EXE_OR(GetVehiclePool()->GetAllValidReverse(), GetVehiclePool()->GetAllValid())) {
@@ -476,14 +484,15 @@ void CBoat::FillBoatList() {
 
         const auto& vecBoatPos = boat->GetPosition();
         CVector2D vecBoatCamOffset = vecBoatPos - vecCamPos;
-        const auto fCamDot = vecBoatCamOffset.Dot(vecCamDir);
+        const auto fCamDot = vecBoatCamOffset.y * vecCamDir.y + vecBoatCamOffset.x * vecCamDir.x; // 0x6F2817: y term first
 
         if (fCamDot > 100.0F || fCamDot < -15.0F) {
             continue;
         }
 
-        const auto fDistFromCam = DistanceBetweenPoints2D(vecCamPos, vecBoatPos);
-        if (fDistFromCam > 80.0F) { // Originally squared dist, compared to 6400.0F
+        // 0x6F2850: squared distance compared against 6400.0f (not sqrt'ed)
+        const auto fDistFromCam = vecBoatCamOffset.y * vecBoatCamOffset.y + vecBoatCamOffset.x * vecBoatCamOffset.x;
+        if (fDistFromCam > 6400.0F) {
             continue;
         }
 
@@ -496,11 +505,13 @@ void CBoat::FillBoatList() {
 
         // Insert the new boat into list, based on dist from camera
         auto iNewInd = -1;
-        auto fMinDist = 999999.99F;
+        auto fMinDist = 999999.875F; // 0x6F2892: 0x497423fe; squared distances (0x6F28CE)
         for (int32 iCheckedInd = 0; iCheckedInd < NUM_WAKE_GEN_BOATS; ++iCheckedInd) {
             auto checkedBoat = apFrameWakeGeneratingBoats[iCheckedInd];
             const auto& vecCheckedPos = checkedBoat->GetPosition();
-            auto fCheckedDistFromCam = DistanceBetweenPoints2D(vecCamPos, vecCheckedPos); // Originally squared dist
+            const auto fCheckedDY = vecCheckedPos.y - vecCamPos.y;
+            const auto fCheckedDX = vecCheckedPos.x - vecCamPos.x;
+            const auto fCheckedDistFromCam = fCheckedDY * fCheckedDY + fCheckedDX * fCheckedDX;
             if (fCheckedDistFromCam < fMinDist) {
                 fMinDist = fCheckedDistFromCam;
                 iNewInd = iCheckedInd;

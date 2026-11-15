@@ -2472,7 +2472,7 @@ eWeaponSkill CPed::GetWeaponSkill(eWeaponType weaponType)
         const auto statValue = CStats::GetStatValue((eStats)CWeaponInfo::GetSkillStatIndex(weaponType));
         if (statValue >= GetReqStatLevelWith(eWeaponSkill::PRO)) {
             return eWeaponSkill::PRO;
-        } else if (statValue <= GetReqStatLevelWith(eWeaponSkill::POOR)) {
+        } else if (statValue < GetReqStatLevelWith(eWeaponSkill::POOR)) { // 0x5E3BCB..0x5E3BDE: POOR only when the stat is strictly below the POOR requirement (stat == req is STD)
             return eWeaponSkill::POOR;
         } else {
             return eWeaponSkill::STD; // Somewhere in-between poor and pro stat levels

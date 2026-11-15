@@ -1,0 +1,27 @@
+addr	function	verdict	asm range	note	fix commit
+0x62E6C0	CTaskComplexSeekCoverUntilTargetDead::CreateFirstSubTask	MATCH	0x62E6C0-0x62E8AC (all)	ref cleanup order, raw stores, register only when both present, sequence args (50000/1000/1.0/2.0/2.0/true/true, 1.5/PI offsets, turn 0.5/0.2, standstill 2000/0/0/8.0) equal	-
+0x6424C0	CTaskComplexLeaveCarAndFlee::CreateFirstSubTask	MATCH	0x6424C0-0x6424E4 (all)	bInVehicle bit 8 -> LEAVE_CAR (0x2C0) else SMART_FLEE_POINT (0x38E), tail jump to CreateSubTask	-
+0x642340	CTaskComplexLeaveCarAndWander::CreateFirstSubTask	MATCH	0x642340-0x642364 (all)	bInVehicle -> LEAVE_CAR else TASK_NONE (0xC8)	-
+0x691AE0	CTaskComplexGoPickUpEntity::CreateNextSubTask	MATCH	0x691AE0-0x691D4B (all)	3 cases (pickup->hold, heading->pickup with carry05/105 speed picks, goto->heading atan2(-dx,dy)); fcom/fcompp branch senses equal	-
+0x660390	CTaskComplexStareAtPed::Clone	MATCH	0x660390-0x66041C (all)	timer left = interval - now + start when started, else timeout	-
+0x656300	CTaskComplexHitPedWithCar::CreateFirstSubTask	MATCH	0x656300-0x6563A9 (all)	impulse > 20/12 -> kill, HitHurtsPed -> hurt, else evasive step with move dir	-
+0x66DDB0	CTaskComplexGoToPointAiming::CreateFirstSubTask	MATCH	0x66DDB0-0x66DF76 (all)	also CreateSubTask 0x6688D0; weapon flag bit tests, UseGun cmd/burst args, MakeAbortable args, GunCtrl branch equal	-
+0x6859A0	CTaskSimplePlayerOnFoot::ProcessPlayerWeapon	NOT_REACHED	-	1790-line annotated listing; budget	-
+0x6391F0	CTaskComplexOnFire::CreateFirstSubTask	MATCH	0x6391F0-0x6391FD + CreateSubTask 0x633470	SMART_FLEE_ENTITY (0x38F) args incl. runtime [0xC18CF0] read	-
+0x6560A0	CTaskComplexEvasiveDiveAndGetUp::CreateFirstSubTask	MATCH	0x6560A0-0x6560BC (all)	achieve-heading flag -> 0x386 else 0x1F7	-
+0x60D5A0	CPlayerPed::PlayerHasJustAttackedSomeone	MATCH	0x60D5A0 (jmp PlayerWantsToAttack)	tail jump	-
+0x690220	CTaskComplexArrestPed::CreateNextSubTask	MATCH	0x690220-0x6906FB (all)	jump table (drag/driver door/passenger door/wait-out-car), seek/kill branches, falling checks, close-enough |z|<=2 and sq dist <=9, cop-in-pursuit byte test equal	-
+0x62BC10	CTaskComplexKillPedOnFootMelee::CreateNextSubTask	NOT_REACHED	-	budget	-
+0x62DA90	CTaskComplexDestroyCar::CreateFirstSubTask	MATCH	0x62DA90-0x62DB14 (all)	melee/armed/leave-car/finished picks equal	-
+0x60C800	CPlayerPed::ForceGroupToNeverFollow	MATCH	0x60C800-0x60C838 (all)	bit 0x400 set/clear; TellGroupToStartFollowingPlayer(false,false,true)	-
+0x65A110	CTaskComplexPresentIdToCop::CreateSubTask	MATCH	0x65A110-0x65A213 (all)	also ComputeHeadingToCop 0x6592A0; HandsUp ctor args equal	-
+0x657820	CTaskComplexDiveFromAttachedEntityAndGetUp::CreateFirstSubTask	FIXED	0x657820-0x6579EA (all)	vehicle case: the plane test only picks a side; m_DiveDir is the entity right (dirs[3]) or left (dirs[1]) dir, the port took the bbox plane normal (normalised edge perpendicular, z=0)	879b523f4
+0x66EBE0	CTaskComplexFollowNodeRoute::CalcGoToTaskType	NOT_REACHED	-	budget	-
+0x62E3F0	CTaskComplexRoadRage::ControlSubTask	NOT_REACHED	-	budget	-
+0x640ED0	CTaskComplexEnterBoatAsDriver::CreateFirstSubTask	MATCH	0x640ED0-0x640EFF (all)	contact/standing entity == boat -> GO_TO_BOAT_STEERING_WHEEL (0x33E) else FINISHED	-
+0x695E40	CTaskComplexFollowPedFootsteps::CreateSubTask	NOT_REACHED	-	budget	-
+0x65F930	CTaskComplexTrackEntity::CalcMoveRatio	NOT_REACHED	-	budget	-
+0x5E4C50	CPed::CalculateNewVelocity	NOT_REACHED	-	414 insns; budget	-
+0x5E6580	CPed::GetWeaponSkill-Current	MATCH	0x5E6580-0x5E6598 (all)	symbol mismatch: this is the GetWeaponSkill() overload (tail call). The (type) overload 0x5E3B60 was checked instead, see next row	-
+0x5E3B60	CPed::GetWeaponSkill(eWeaponType)	FIXED	0x5E3B60-0x5E3C07 (all)	POOR only when stat < POOR req (fcompp: req<=stat -> STD); port returned POOR at equality	3a9cda6d8
+0x6930F0	CTaskSimpleHoldEntity::DropEntity	NOT_REACHED	-	241 insns; budget	-

@@ -3957,7 +3957,7 @@ float CAutomobile::GetMovingCollisionOffset() {
             return m_aCarNodes[CAR_MISC_C] ? (float)m_wMiscComponentAngle * CMonsterTruck::DUMPER_COL_ANGLEMULT : 0.0f;
 
         case eModelID::MODEL_PACKER:
-            return (float)m_wMiscComponentAngle / -10000.f;
+            return (float)m_wMiscComponentAngle * -0.0001f; // 0x6A219C: multiplies by the float constant (0x87100C), not a division by -10000
 
         case eModelID::MODEL_DOZER:
             return m_aCarNodes[CAR_MISC_A] ? (float)m_wMiscComponentAngle * ExeRecip(5000.f) : 0.0f;

@@ -2715,7 +2715,7 @@ void CPed::CalculateNewVelocity() {
         const auto isPlayer = IsPlayer();
         if (isPlayer) {
             m_fMoveAnim = 1.0f;
-        } else if (!(diff < 0.0f) && m_fMoveAnim < 0.0f) { // 0x5E4D25: a NaN `diff` takes the first branch
+        } else if (diff >= 0.0f && m_fMoveAnim < 0.0f) { // 0x5E4D25-0x5E4D34: `test ah,1` => a NaN `diff` (C0 set) jumps to the second test and then skips it, i.e. neither branch (ASM-P4S3b)
             m_fMoveAnim = 0.1f;
         } else if (diff < 0.0f && m_fMoveAnim > 0.0f) {
             m_fMoveAnim = -0.1f;

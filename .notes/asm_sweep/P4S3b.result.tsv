@@ -1,0 +1,9 @@
+addr	function	verdict	asm range	note	fix commit
+0x6859A0	CTaskSimplePlayerOnFoot::ProcessPlayerWeapon	NOT_REACHED	-	1771 insns, not started (budget)	-
+0x62BC10	CTaskComplexKillPedOnFootMelee::CreateNextSubTask	FIXED	0x62BC10-0x62BE28 (all)	FIGHT_CTRL case (and CreateFirstSubTask 0x62BE30) sum dist^2 as z*z+x*x+y*y; PAUSE case uses x,y,z; rest equal	4872230d5
+0x66EBE0	CTaskComplexFollowNodeRoute::CalcGoToTaskType	FIXED	0x66EBE0-0x66EDAF (all)	z zeroed before Normalise; slowdown iff cos < 0.707f strictly (was <= COS_45); scale *0.585823 not /(COS_45+1); idx clamped to size-1	b28dd62f9
+0x62E3F0	CTaskComplexRoadRage::ControlSubTask	FIXED	0x62E3F0-0x62E530 (all)	ENTER_CAR_AS_DRIVER when dist^2 > 400 (port had it inverted: <= 400); DESTROY_CAR path sums x,z,y, KILL_PED_ON_FOOT path z,y,x	66253316f
+0x695E40	CTaskComplexFollowPedFootsteps::CreateSubTask	MATCH	0x695E40-0x696025 (all)	GoToPoint(0.01,false,false)+RemoveAt(0), StandStill(10000,0,0,8.0), HitHead, Seek(50000,1000,r=1 or 4 in vehicle,2,2,1,1) equal	-
+0x65F930	CTaskComplexTrackEntity::CalcMoveRatio	MATCH	0x65F930-0x65FAA2 (all)	statics, range branches, sqrt*3, cap 2.0 unless flag, 0.2 ramp equal (x87d already)	-
+0x5E4C50	CPed::CalculateNewVelocity	FIXED	0x5E4C50-0x5E52DE (all)	only a NaN-diff branch (test ah,1); everything else (turn, slope pitch/roll, stairs/wall flags, moving shift) equal	ecef593fc
+0x6930F0	CTaskSimpleHoldEntity::DropEntity	FIXED	0x6930F0-0x693439 (all)	throw: object speed = ped speed + rand()*K*0.03+0.03 along fwd, rand()*K*0.06-0.03 along right (port added to own speed, CGeneral lerp); no-event drop zeroes move speed	e385cb66a

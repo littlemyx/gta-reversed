@@ -3349,7 +3349,7 @@ void CEventHandler::ComputeVehicleDamageResponse(CEventVehicleDamage* e, CTask* 
             return nullptr;
         }
         case TASK_COMPLEX_LEAVE_CAR_AND_FLEE: // 0x4C3022
-            return new CTaskComplexLeaveCarAndFlee{ m_Ped->m_pVehicle, m_Ped->GetPosition() };
+            return new CTaskComplexLeaveCarAndFlee{ m_Ped->m_pVehicle, m_Ped->m_pVehicle->GetPosition() }; // 0x4C3092: the flee point is the VEHICLE position (port used the ped position)
         case TASK_COMPLEX_CAR_DRIVE_MISSION_FLEE_SCENE: { // 0x4C3027
             if (!m_Ped->m_pVehicle->IsDriver(m_Ped)) {
                 return new CTaskComplexSmartFleeEntity{ m_Ped->m_pVehicle, false, 60.f, 1'000'000, 1'000, NOTSA_GLOBAL_EXPR(0xC18CF0, (float), notsa::shared::EntityPosChangeThreshold) }; // 0x4C302E

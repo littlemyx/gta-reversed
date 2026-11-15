@@ -10,6 +10,7 @@
 #include <numbers>
 
 #include "Population.h"
+#include "portable/statehash.h"
 #include "CarCtrl.h"
 #include "Glass.h"
 #include <PedPlacement.h>
@@ -2259,6 +2260,28 @@ int32 CPopulation::GeneratePedsAtAttractors(
     CEntity* entitiesInRng[512];
     int16    numEntitiesInRng{};
     CWorld::FindObjectsInRange(pos, maxRadius, false, &numEntitiesInRng, (int16)std::size(entitiesInRng), entitiesInRng, true, false, false, true, false);
+#ifdef NOTSA_STATEHASH
+    // NOTSA_SH_ATTRLOG=<file> (RR debug for the TS port): the first 6 calls while a trace is recorded log every entity in range with its model's attractor count
+    // (`E` rows) and every GetRandom2dEffect draw (`D` rows: pass, entity, drawn effect index). Columns are documented in the header line.
+    static FILE* s_attrLog = [] { const char* f = std::getenv("NOTSA_SH_ATTRLOG"); FILE* h = f ? std::fopen(f, "w") : nullptr; if (h) std::fprintf(h, "# C call fc pos.x pos.y pos.z n | E call idx model name mitype enttype x y z area n2dfx nattr rw | D call pass idx model drawnfx\n"); return h; }();
+    static int s_attrCalls = 0;
+    const bool attrLog = s_attrLog && notsa::rr::Recording() && s_attrCalls < 6;
+    const int  attrCall = attrLog ? s_attrCalls++ : -1;
+    if (attrLog) {
+        std::fprintf(s_attrLog, "C %d %u %.3f %.3f %.3f %d\n", attrCall, CTimer::GetFrameCounter(), pos.x, pos.y, pos.z, numEntitiesInRng);
+        for (int16 k{}; k < numEntitiesInRng; k++) {
+            const auto e  = entitiesInRng[k];
+            const auto mi = e->GetModelInfo();
+            int nAttr = 0;
+            for (int32 x = 0; x < mi->m_n2dfxCount; x++) {
+                nAttr += mi->Get2dEffect(x)->m_Type == EFFECT_ATTRACTOR;
+            }
+            const auto& p = e->GetPosition();
+            std::fprintf(s_attrLog, "E %d %d %d %s %d %d %.3f %.3f %.3f %d %d %d %d\n", attrCall, k, e->GetModelIndex(), mi->GetModelNameAsString().c_str(), (int)mi->GetModelType(), (int)e->GetType(), p.x, p.y, p.z, (int)e->GetAreaCode(), (int)mi->m_n2dfxCount, nAttr, e->GetRwObject() != nullptr);
+        }
+        std::fflush(s_attrLog);
+    }
+#endif
     if (!numEntitiesInRng) {
         return 0;
     }
@@ -2291,6 +2314,17 @@ int32 CPopulation::GeneratePedsAtAttractors(
                 continue;
             }
             auto* const attractor = notsa::cast_if_present<C2dEffectPedAttractor>(ent->GetRandom2dEffect(EFFECT_ATTRACTOR, true));
+#ifdef NOTSA_STATEHASH
+            if (attrLog && attractor) {
+                const auto mi = ent->GetModelInfo();
+                int drawn = -1;
+                for (int32 x = 0; x < mi->m_n2dfxCount; x++) {
+                    if (static_cast<const void*>(mi->Get2dEffect(x)) == static_cast<const void*>(attractor)) { drawn = x; }
+                }
+                std::fprintf(s_attrLog, "D %d %d %d %d %d\n", attrCall, (int)i, (int)o, ent->GetModelIndex(), drawn);
+                std::fflush(s_attrLog);
+            }
+#endif
             if (!attractor || !IsCorrectTimeOfDayForEffect(*attractor)) {
                 continue;
             }

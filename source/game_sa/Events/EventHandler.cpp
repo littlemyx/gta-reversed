@@ -509,7 +509,7 @@ void CEventHandler::SetEventResponseTask(const CEvent& event) {
         const auto eResponse = &static_cast<const CEventEditableResponse&>(event);
         if (const auto tfacial = tm->GetTaskSecondaryFacial()) {
             if (eResponse->GetFacialExpressionType() != eFacialExpression::NONE) {
-                tfacial->SetRequest(eResponse->GetFacialExpressionType(), 10'000);
+                tfacial->SetRequest(eResponse->GetFacialExpressionType(), 10'000, eFacialExpression::NONE, 0); // exe 0x4BC6F1 passes durationB = 0
             }
         }
     }

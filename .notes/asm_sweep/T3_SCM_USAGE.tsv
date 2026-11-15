@@ -1,0 +1,1134 @@
+opcode	name	cpp_status	static_count	missions_using	seen_in_trace	arg_count
+0x03A4	COMMAND_SCRIPT_NAME	implemented	206	206 segments (m0,m1,m10,m100,...)	yes	1
+0x004D	COMMAND_GOTO_IF_FALSE	implemented	16812	204 segments (m0,m10,m100,m101,...)	yes	1
+0x00D6	COMMAND_ANDOR	implemented	16738	204 segments (m0,m10,m100,m101,...)	yes	1
+0x0001	COMMAND_WAIT	implemented	2124	196 segments (m10,m100,m101,m102,...)	yes	1
+0x0002	COMMAND_GOTO	implemented	5014	194 segments (m10,m100,m101,m102,...)	yes	1
+0x0006	COMMAND_SET_LVAR_INT	implemented	10156	186 segments (m10,m100,m101,m102,...)	yes	2
+0x0050	COMMAND_GOSUB	implemented	2358	182 segments (m10,m100,m101,m102,...)	yes	1
+0x0004	COMMAND_SET_VAR_INT	implemented	2055	179 segments (m0,m1,m10,m100,...)	yes	2
+0x0039	COMMAND_IS_INT_LVAR_EQUAL_TO_NUMBER	implemented	5395	170 segments (m10,m100,m102,m103,...)	yes	2
+0x004E	COMMAND_TERMINATE_THIS_SCRIPT	implemented	188	164 segments (m10,m100,m101,m102,...)	yes	0
+0x0118	COMMAND_IS_CHAR_DEAD	implemented	2611	140 segments (m100,m101,m103,m104,...)	yes	1
+0x009A	COMMAND_CREATE_CHAR	implemented	926	139 segments (m100,m102,m103,m104,...)	yes	6
+0x0247	COMMAND_REQUEST_MODEL	implemented	963	136 segments (m10,m100,m101,m102,...)	yes	1
+0x0038	COMMAND_IS_INT_VAR_EQUAL_TO_NUMBER	implemented	827	131 segments (m100,m101,m104,m105,...)	yes	2
+0x054C	COMMAND_LOAD_MISSION_TEXT	implemented	131	129 segments (m10,m100,m101,m102,...)	yes	1
+0x0112	COMMAND_HAS_DEATHARREST_BEEN_EXECUTED	implemented	128	127 segments (m10,m100,m101,m102,...)	yes	0
+0x01B4	COMMAND_SET_PLAYER_CONTROL	implemented	525	124 segments (m10,m100,m101,m102,...)	yes	2
+0x000A	COMMAND_ADD_VAL_TO_INT_LVAR	implemented	1248	122 segments (m103,m105,m106,m107,...)	yes	2
+0x016A	COMMAND_DO_FADE	implemented	701	120 segments (m100,m101,m102,m104,...)	yes	2
+0x0248	COMMAND_HAS_MODEL_LOADED	implemented	820	118 segments (m10,m100,m101,m102,...)	yes	1
+0x0317	COMMAND_REGISTER_MISSION_GIVEN	implemented	119	117 segments (m10,m100,m101,m102,...)	yes	0
+0x0019	COMMAND_IS_INT_LVAR_GREATER_THAN_NUMBER	implemented	729	115 segments (m104,m105,m106,m107,...)	yes	2
+0x016B	COMMAND_GET_FADING_STATUS	implemented	459	113 segments (m100,m101,m102,m104,...)	yes	0
+0x0173	COMMAND_SET_CHAR_HEADING	implemented	1093	111 segments (m100,m101,m102,m104,...)	yes	2
+0x00BC	COMMAND_PRINT_NOW	implemented	1133	107 segments (m100,m104,m105,m106,...)	yes	3
+0x00A5	COMMAND_CREATE_CAR	implemented	536	107 segments (m10,m100,m102,m103,...)	yes	5
+0x0007	COMMAND_SET_LVAR_FLOAT	implemented	4556	103 segments (m10,m100,m102,m105,...)	yes	2
+0x060B	COMMAND_SET_CHAR_DECISION_MAKER	implemented	609	99 segments (m100,m102,m105,m106,...)	yes	2
+0x0051	COMMAND_RETURN	implemented	565	98 segments (m104,m105,m106,m107,...)	yes	0
+0x04ED	COMMAND_REQUEST_ANIMATION	implemented	168	98 segments (m101,m102,m104,m106,...)	yes	1
+0x0395	COMMAND_CLEAR_AREA	implemented	494	97 segments (m10,m100,m101,m104,...)	yes	5
+0x00A1	COMMAND_SET_CHAR_COORDINATES	implemented	448	94 segments (m100,m102,m104,m105,...)	yes	4
+0x001B	COMMAND_IS_NUMBER_GREATER_THAN_INT_LVAR	implemented	483	90 segments (m100,m102,m104,m105,...)	yes	2
+0x0871	COMMAND_SWITCH_START	implemented	172	90 segments (m103,m105,m106,m107,...)	yes	8
+0x04EE	COMMAND_HAS_ANIMATION_LOADED	implemented	152	90 segments (m101,m102,m104,m106,...)	yes	1
+0x0373	COMMAND_SET_CAMERA_BEHIND_PLAYER	implemented	197	88 segments (m10,m100,m104,m105,...)	yes	0
+0x0119	COMMAND_IS_CAR_DEAD	implemented	1118	87 segments (m10,m100,m102,m104,...)	yes	1
+0x0175	COMMAND_SET_CAR_HEADING	implemented	490	86 segments (m10,m100,m102,m104,...)	yes	2
+0x018A	COMMAND_ADD_BLIP_FOR_COORD	implemented	345	85 segments (m100,m101,m103,m104,...)	yes	4
+0x0085	COMMAND_SET_LVAR_INT_TO_LVAR_INT	implemented	860	82 segments (m105,m106,m109,m11,...)	yes	2
+0x02EB	COMMAND_RESTORE_CAMERA_JUMPCUT	implemented	177	82 segments (m10,m100,m104,m105,...)	yes	0
+0x0164	COMMAND_REMOVE_BLIP	implemented	918	81 segments (m104,m105,m106,m107,...)	yes	1
+0x00BE	COMMAND_CLEAR_PRINTS	implemented	403	81 segments (m105,m106,m108,m109,...)	yes	0
+0x02A3	COMMAND_SWITCH_WIDESCREEN	implemented	277	81 segments (m102,m105,m106,m107,...)	yes	1
+0x02EA	COMMAND_CLEAR_CUTSCENE	implemented	109	81 segments (m100,m101,m102,m104,...)	yes	0
+0x02E4	COMMAND_LOAD_CUTSCENE	implemented	108	81 segments (m100,m101,m102,m104,...)	yes	1
+0x06B9	COMMAND_HAS_CUTSCENE_LOADED	implemented	107	81 segments (m100,m101,m102,m104,...)	yes	0
+0x02E7	COMMAND_START_CUTSCENE	implemented	107	81 segments (m100,m101,m102,m104,...)	yes	0
+0x02E9	COMMAND_HAS_CUTSCENE_FINISHED	implemented	107	81 segments (m100,m101,m102,m104,...)	yes	0
+0x060A	COMMAND_LOAD_CHAR_DECISION_MAKER	implemented	152	80 segments (m100,m101,m102,m103,...)	yes	2
+0x0249	COMMAND_MARK_MODEL_AS_NO_LONGER_NEEDED	implemented	379	77 segments (m102,m105,m106,m109,...)	yes	1
+0x0615	COMMAND_OPEN_SEQUENCE_TASK	implemented	435	76 segments (m100,m101,m104,m105,...)	yes	1
+0x015F	COMMAND_SET_FIXED_CAMERA_POSITION	implemented	350	76 segments (m102,m104,m105,m106,...)	yes	6
+0x03CF	COMMAND_LOAD_MISSION_AUDIO	implemented	300	76 segments (m100,m104,m106,m11,...)	yes	2
+0x0605	COMMAND_TASK_PLAY_ANIM	implemented	518	74 segments (m100,m104,m106,m109,...)	yes	9
+0x0160	COMMAND_POINT_CAMERA_AT_POINT	implemented	344	74 segments (m102,m104,m105,m106,...)	yes	4
+0x0169	COMMAND_SET_FADING_COLOUR	implemented	172	73 segments (m10,m100,m101,m104,...)	yes	0
+0x038B	COMMAND_LOAD_ALL_MODELS_NOW	implemented	111	73 segments (m100,m104,m106,m107,...)	no	0
+0x040D	COMMAND_CLEAR_MISSION_AUDIO	implemented	470	72 segments (m104,m105,m106,m108,...)	yes	1
+0x0735	COMMAND_IS_PS2_KEYBOARD_KEY_PRESSED	implemented	151	72 segments (m100,m103,m105,m106,...)	yes	1
+0x0256	COMMAND_IS_PLAYER_PLAYING	implemented	136	72 segments (m119,m121,m127,m129,...)	yes	1
+0x03CB	COMMAND_LOAD_SCENE	implemented	133	70 segments (m10,m100,m101,m102,...)	yes	3
+0x0616	COMMAND_CLOSE_SEQUENCE_TASK	implemented	421	68 segments (m100,m104,m105,m106,...)	yes	1
+0x00DF	COMMAND_IS_CHAR_IN_ANY_CAR	implemented	248	67 segments (m102,m104,m105,m106,...)	yes	1
+0x0204	COMMAND_LOCATE_CHAR_IN_CAR_CAR_2D	implemented	113	66 segments (m105,m106,m107,m11,...)	no	9
+0x04A4	COMMAND_IS_INT_LVAR_EQUAL_TO_CONSTANT	implemented	310	61 segments (m11,m12,m121,m123,...)	yes	2
+0x03D0	COMMAND_HAS_MISSION_AUDIO_LOADED	implemented	280	61 segments (m100,m104,m106,m11,...)	yes	1
+0x0107	COMMAND_CREATE_OBJECT	implemented	266	61 segments (m1,m100,m101,m102,...)	yes	5
+0x04BB	COMMAND_SET_AREA_VISIBLE	implemented	158	61 segments (m10,m100,m101,m102,...)	yes	1
+0x00DB	COMMAND_IS_CHAR_IN_CAR	implemented	274	60 segments (m100,m104,m105,m107,...)	yes	2
+0x062E	COMMAND_GET_SCRIPT_TASK_STATUS	implemented	272	60 segments (m109,m11,m12,m121,...)	yes	3
+0x04AF	COMMAND_SET_LVAR_INT_TO_CONSTANT	implemented	1650	59 segments (m104,m105,m106,m107,...)	yes	2
+0x00E1	COMMAND_IS_BUTTON_PRESSED	implemented	237	59 segments (m104,m114,m115,m116,...)	yes	2
+0x0618	COMMAND_PERFORM_SEQUENCE_TASK	implemented	414	57 segments (m104,m105,m108,m109,...)	yes	2
+0x07E0	COMMAND_SET_BLIP_AS_FRIENDLY	implemented	137	56 segments (m100,m104,m105,m106,...)	yes	2
+0x00FE	COMMAND_LOCATE_CHAR_ANY_MEANS_3D	implemented	173	54 segments (m100,m104,m106,m107,...)	yes	8
+0x023C	COMMAND_LOAD_SPECIAL_CHARACTER	implemented	95	54 segments (m104,m105,m106,m107,...)	yes	2
+0x05D3	COMMAND_TASK_GO_STRAIGHT_TO_COORD	implemented	350	52 segments (m105,m108,m109,m11,...)	yes	6
+0x0186	COMMAND_ADD_BLIP_FOR_CAR	implemented	152	52 segments (m103,m105,m11,m117,...)	yes	2
+0x01B2	COMMAND_GIVE_WEAPON_TO_CHAR	implemented	431	50 segments (m100,m102,m104,m106,...)	yes	3
+0x009B	COMMAND_DELETE_CHAR	implemented	297	49 segments (m104,m106,m108,m11,...)	no	1
+0x0792	COMMAND_CLEAR_CHAR_TASKS_IMMEDIATELY	implemented	232	49 segments (m104,m106,m108,m109,...)	yes	1
+0x00A0	COMMAND_GET_CHAR_COORDINATES	implemented	141	49 segments (m104,m105,m106,m11,...)	yes	4
+0x0005	COMMAND_SET_VAR_FLOAT	implemented	2693	48 segments (m0,m1,m100,m101,...)	no	2
+0x0209	COMMAND_GENERATE_RANDOM_INT_IN_RANGE	implemented	178	48 segments (m107,m109,m123,m124,...)	no	3
+0x03E6	COMMAND_CLEAR_HELP	implemented	164	47 segments (m114,m115,m116,m12,...)	yes	0
+0x0187	COMMAND_ADD_BLIP_FOR_CHAR	implemented	267	46 segments (m102,m104,m105,m106,...)	no	2
+0x061B	COMMAND_CLEAR_SEQUENCE_TASK	implemented	263	46 segments (m105,m108,m109,m11,...)	yes	1
+0x01BD	COMMAND_GET_GAME_TIMER	implemented	228	46 segments (m109,m123,m124,m127,...)	yes	1
+0x03D1	COMMAND_PLAY_MISSION_AUDIO	implemented	227	46 segments (m100,m104,m106,m11,...)	yes	1
+0x023D	COMMAND_HAS_SPECIAL_CHARACTER_LOADED	implemented	74	46 segments (m104,m105,m106,m107,...)	yes	1
+0x0129	COMMAND_CREATE_CHAR_INSIDE_CAR	implemented	125	45 segments (m100,m11,m120,m124,...)	no	4
+0x029B	COMMAND_CREATE_OBJECT_NO_OFFSET	implemented	208	44 segments (m102,m103,m105,m119,...)	no	5
+0x00AB	COMMAND_SET_CAR_COORDINATES	implemented	110	43 segments (m10,m102,m104,m105,...)	yes	4
+0x0223	COMMAND_SET_CHAR_HEALTH	implemented	225	42 segments (m100,m104,m106,m107,...)	yes	2
+0x03D5	COMMAND_CLEAR_THIS_PRINT	implemented	174	42 segments (m100,m106,m109,m11,...)	yes	1
+0x0224	COMMAND_SET_CAR_HEALTH	implemented	100	42 segments (m105,m11,m112,m12,...)	yes	2
+0x0568	COMMAND_SET_CHAR_NEVER_TARGETTED	implemented	89	42 segments (m102,m104,m105,m106,...)	yes	2
+0x0008	COMMAND_ADD_VAL_TO_INT_VAR	implemented	83	42 segments (m104,m105,m106,m107,...)	yes	2
+0x04EF	COMMAND_REMOVE_ANIMATION	implemented	74	42 segments (m109,m114,m115,m116,...)	yes	1
+0x03CA	COMMAND_DOES_OBJECT_EXIST	implemented	173	41 segments (m131,m16,m22,m23,...)	yes	1
+0x0229	COMMAND_CHANGE_CAR_COLOUR	implemented	91	41 segments (m104,m105,m107,m108,...)	no	3
+0x03D2	COMMAND_HAS_MISSION_AUDIO_FINISHED	implemented	172	40 segments (m100,m106,m11,m114,...)	yes	1
+0x01B9	COMMAND_SET_CURRENT_CHAR_WEAPON	implemented	116	40 segments (m102,m104,m106,m11,...)	yes	2
+0x01EB	COMMAND_SET_CAR_DENSITY_MULTIPLIER	implemented	69	39 segments (m107,m109,m11,m112,...)	yes	1
+0x7F04	?	unregistered	48	39 segments (m105,m107,m13,m130,...)	no	9
+0x0687	COMMAND_CLEAR_CHAR_TASKS	implemented	206	38 segments (m105,m106,m109,m11,...)	yes	1
+0x020A	COMMAND_LOCK_CAR_DOORS	implemented	175	38 segments (m100,m106,m109,m11,...)	yes	2
+0x0707	COMMAND_SKIP_CUTSCENE_START_INTERNAL	implemented	59	38 segments (m102,m105,m106,m108,...)	yes	1
+0x01C2	COMMAND_MARK_CHAR_AS_NO_LONGER_NEEDED	implemented	477	36 segments (m105,m109,m121,m122,...)	yes	1
+0x02A9	COMMAND_SET_CHAR_ONLY_DAMAGED_BY_PLAYER	implemented	210	36 segments (m108,m109,m114,m123,...)	yes	2
+0x01C3	COMMAND_MARK_CAR_AS_NO_LONGER_NEEDED	implemented	205	36 segments (m102,m105,m108,m11,...)	yes	1
+0x0446	COMMAND_SET_CHAR_SUFFERS_CRITICAL_HITS	implemented	65	36 segments (m104,m106,m107,m109,...)	yes	2
+0x02AC	COMMAND_SET_CAR_PROOFS	implemented	118	35 segments (m100,m105,m106,m109,...)	yes	6
+0x0701	COMMAND_SKIP_CUTSCENE_END	implemented	53	35 segments (m102,m105,m106,m108,...)	yes	0
+0x03DE	COMMAND_SET_PED_DENSITY_MULTIPLIER	implemented	67	34 segments (m105,m107,m109,m11,...)	yes	1
+0x0A0B	COMMAND_LOAD_SCENE_IN_DIRECTION	implemented	55	34 segments (m102,m104,m106,m11,...)	no	4
+0x000B	COMMAND_ADD_VAL_TO_FLOAT_LVAR	implemented	161	33 segments (m105,m12,m121,m123,...)	yes	2
+0x0062	COMMAND_SUB_INT_LVAR_FROM_INT_LVAR	implemented	116	33 segments (m106,m109,m118,m124,...)	yes	2
+0x00A6	COMMAND_DELETE_CAR	implemented	131	32 segments (m104,m105,m106,m107,...)	yes	1
+0x000F	COMMAND_SUB_VAL_FROM_FLOAT_LVAR	implemented	107	32 segments (m102,m105,m11,m12,...)	yes	2
+0x00BA	COMMAND_PRINT_BIG	implemented	104	32 segments (m104,m106,m107,m108,...)	no	3
+0x0639	COMMAND_TASK_TURN_CHAR_TO_FACE_CHAR	implemented	99	32 segments (m104,m105,m109,m114,...)	yes	2
+0x051A	COMMAND_HAS_CHAR_BEEN_DAMAGED_BY_CHAR	implemented	77	32 segments (m121,m127,m132,m18,...)	yes	2
+0x0087	COMMAND_SET_LVAR_FLOAT_TO_LVAR_FLOAT	implemented	430	31 segments (m105,m121,m122,m123,...)	no	2
+0x001D	COMMAND_IS_INT_LVAR_GREATER_THAN_INT_LVAR	implemented	241	31 segments (m121,m124,m127,m130,...)	yes	2
+0x05E2	COMMAND_TASK_KILL_CHAR_ON_FOOT	implemented	185	31 segments (m100,m106,m109,m11,...)	no	2
+0x02AB	COMMAND_SET_CHAR_PROOFS	implemented	120	31 segments (m102,m105,m106,m109,...)	no	6
+0x036A	COMMAND_WARP_CHAR_INTO_CAR	implemented	59	31 segments (m10,m102,m104,m105,...)	no	2
+0x0674	COMMAND_CUSTOM_PLATE_FOR_NEXT_CAR	implemented	41	31 segments (m105,m107,m108,m112,...)	yes	2
+0x0029	COMMAND_IS_INT_LVAR_GREATER_OR_EQUAL_TO_NUMBER	implemented	191	30 segments (m100,m103,m106,m118,...)	no	2
+0x0519	COMMAND_FREEZE_CAR_POSITION	implemented	93	30 segments (m10,m100,m102,m105,...)	yes	2
+0x05D1	COMMAND_TASK_CAR_DRIVE_TO_COORD	implemented	70	30 segments (m100,m11,m130,m132,...)	no	6
+0x000E	COMMAND_SUB_VAL_FROM_INT_LVAR	implemented	69	30 segments (m105,m121,m123,m126,...)	yes	2
+0x053F	COMMAND_SET_CAN_BURST_CAR_TYRES	implemented	58	30 segments (m11,m112,m12,m124,...)	yes	2
+0x0108	COMMAND_DELETE_OBJECT	implemented	120	29 segments (m109,m131,m16,m21,...)	yes	1
+0x0018	COMMAND_IS_INT_VAR_GREATER_THAN_NUMBER	implemented	100	29 segments (m123,m124,m127,m129,...)	yes	2
+0x0512	COMMAND_PRINT_HELP_FOREVER	implemented	81	29 segments (m114,m115,m116,m13,...)	yes	1
+0x00FF	COMMAND_LOCATE_CHAR_ON_FOOT_3D	implemented	56	29 segments (m106,m109,m12,m124,...)	yes	8
+0x05AA	COMMAND_SET_LVAR_TEXT_LABEL	implemented	870	28 segments (m104,m105,m107,m17,...)	yes	2
+0x008B	COMMAND_SET_LVAR_INT_TO_VAR_INT	implemented	230	28 segments (m105,m11,m118,m123,...)	yes	2
+0x0177	COMMAND_SET_OBJECT_HEADING	implemented	160	28 segments (m100,m101,m102,m105,...)	no	2
+0x07C0	COMMAND_REQUEST_CAR_RECORDING	implemented	112	28 segments (m104,m105,m11,m112,...)	no	1
+0x03E5	COMMAND_PRINT_HELP	implemented	89	28 segments (m104,m11,m12,m121,...)	no	1
+0x03C7	COMMAND_SET_WANTED_MULTIPLIER	implemented	35	28 segments (m101,m106,m112,m122,...)	no	1
+0x02E2	COMMAND_SET_CHAR_ACCURACY	implemented	222	27 segments (m100,m104,m106,m107,...)	no	2
+0x077A	COMMAND_SET_CHAR_RELATIONSHIP	implemented	150	27 segments (m100,m106,m107,m109,...)	yes	3
+0x0021	COMMAND_IS_FLOAT_LVAR_GREATER_THAN_NUMBER	implemented	103	27 segments (m104,m105,m114,m115,...)	yes	2
+0x01C8	COMMAND_CREATE_CHAR_AS_PASSENGER	implemented	77	27 segments (m104,m106,m11,m112,...)	no	5
+0x00D9	COMMAND_STORE_CAR_CHAR_IS_IN	implemented	46	27 segments (m104,m106,m11,m121,...)	no	2
+0x01B6	COMMAND_FORCE_WEATHER_NOW	implemented	34	27 segments (m102,m103,m104,m105,...)	no	1
+0x07B4	COMMAND_SET_PLAYER_GROUP_RECRUITMENT	implemented	30	27 segments (m102,m105,m20,m24,...)	yes	2
+0x05A9	COMMAND_SET_VAR_TEXT_LABEL	implemented	657	26 segments (m105,m106,m11,m12,...)	yes	2
+0x00BB	COMMAND_PRINT	implemented	116	26 segments (m18,m19,m22,m24,...)	yes	3
+0x0023	COMMAND_IS_NUMBER_GREATER_THAN_FLOAT_LVAR	implemented	112	26 segments (m104,m105,m123,m124,...)	yes	2
+0x0746	COMMAND_SET_RELATIONSHIP	implemented	82	26 segments (m101,m102,m104,m109,...)	no	3
+0x0611	COMMAND_IS_CHAR_PLAYING_ANIM	implemented	71	26 segments (m109,m114,m115,m12,...)	no	2
+0x0872	COMMAND_SWITCH_CONTINUED	implemented	34	26 segments (m105,m134,m14,m18,...)	yes	2
+0x07C1	COMMAND_HAS_CAR_RECORDING_BEEN_LOADED	implemented	107	25 segments (m104,m105,m11,m112,...)	no	1
+0x0362	COMMAND_WARP_CHAR_FROM_CAR_TO_COORD	implemented	81	25 segments (m102,m104,m105,m106,...)	yes	4
+0x001A	COMMAND_IS_NUMBER_GREATER_THAN_INT_VAR	implemented	53	25 segments (m0,m105,m117,m122,...)	yes	2
+0x05CB	COMMAND_TASK_ENTER_CAR_AS_DRIVER	implemented	50	25 segments (m105,m106,m108,m11,...)	yes	3
+0x08F4	COMMAND_SET_SCRIPT_LIMIT_TO_GANG_SIZE	implemented	35	25 segments (m102,m105,m106,m122,...)	yes	1
+0x018B	COMMAND_CHANGE_BLIP_DISPLAY	implemented	238	24 segments (m0,m104,m105,m107,...)	no	2
+0x0708	COMMAND_CLEAR_CHAR_DECISION_MAKER_EVENT_RESPONSE	implemented	54	24 segments (m103,m109,m114,m124,...)	yes	2
+0x03BF	COMMAND_SET_EVERYONE_IGNORE_PLAYER	implemented	53	24 segments (m106,m114,m115,m116,...)	yes	2
+0x0709	COMMAND_ADD_CHAR_DECISION_MAKER_EVENT_RESPONSE	implemented	48	24 segments (m100,m101,m102,m106,...)	yes	9
+0x0110	COMMAND_CLEAR_WANTED_LEVEL	implemented	32	24 segments (m101,m107,m114,m115,...)	yes	1
+0x07E5	COMMAND_COPY_CHAR_DECISION_MAKER	implemented	27	24 segments (m108,m109,m124,m128,...)	yes	2
+0x008A	COMMAND_SET_VAR_INT_TO_LVAR_INT	implemented	200	23 segments (m105,m117,m124,m125,...)	yes	2
+0x0A09	COMMAND_SHUT_CHAR_UP_FOR_SCRIPTED_SPEECH	implemented	154	23 segments (m104,m106,m108,m109,...)	yes	2
+0x004F	COMMAND_START_NEW_SCRIPT	implemented	93	23 segments (m102,m104,m105,m123,...)	yes	-1
+0x05BF	COMMAND_TASK_LOOK_AT_CHAR	implemented	65	23 segments (m12,m121,m13,m16,...)	yes	3
+0x0812	COMMAND_TASK_PLAY_ANIM_NON_INTERRUPTABLE	implemented	93	22 segments (m101,m104,m109,m12,...)	no	6
+0x0631	COMMAND_SET_GROUP_MEMBER	implemented	79	22 segments (m104,m105,m106,m107,...)	yes	2
+0x0009	COMMAND_ADD_VAL_TO_FLOAT_VAR	implemented	50	22 segments (m124,m130,m132,m30,...)	no	2
+0x08F5	COMMAND_MAKE_PLAYER_GANG_DISAPPEAR	implemented	46	22 segments (m106,m108,m109,m19,...)	yes	0
+0x041E	COMMAND_SET_RADIO_CHANNEL	implemented	27	22 segments (m102,m105,m107,m11,...)	no	1
+0x005A	COMMAND_ADD_INT_LVAR_TO_INT_LVAR	implemented	104	21 segments (m109,m123,m126,m131,...)	no	2
+0x0013	COMMAND_MULT_FLOAT_LVAR_BY_VAL	implemented	84	21 segments (m105,m123,m124,m130,...)	yes	2
+0x08AF	COMMAND_SET_CHAR_MAX_HEALTH	implemented	78	21 segments (m104,m106,m107,m114,...)	no	2
+0x0736	COMMAND_IS_PS2_KEYBOARD_KEY_JUST_PRESSED	implemented	69	21 segments (m104,m107,m118,m126,...)	no	1
+0x05D4	COMMAND_TASK_ACHIEVE_HEADING	implemented	69	21 segments (m106,m109,m114,m115,...)	no	2
+0x00F2	COMMAND_LOCATE_CHAR_ANY_MEANS_CHAR_2D	implemented	69	21 segments (m105,m106,m107,m109,...)	yes	5
+0x06AB	COMMAND_HIDE_CHAR_WEAPON_FOR_SCRIPTED_CUTSCENE	implemented	56	21 segments (m108,m109,m11,m133,...)	yes	2
+0x039E	COMMAND_SET_CHAR_CANT_BE_DRAGGED_OUT	implemented	51	21 segments (m105,m108,m11,m12,...)	yes	2
+0x08F6	COMMAND_MAKE_PLAYER_GANG_REAPPEAR	implemented	48	21 segments (m106,m108,m109,m18,...)	yes	0
+0x00EC	COMMAND_LOCATE_CHAR_ANY_MEANS_2D	implemented	47	21 segments (m105,m130,m132,m22,...)	yes	6
+0x05CA	COMMAND_TASK_ENTER_CAR_AS_PASSENGER	implemented	43	21 segments (m108,m11,m12,m127,...)	yes	4
+0x05B9	COMMAND_TASK_PAUSE	implemented	82	20 segments (m104,m109,m114,m115,...)	no	2
+0x04D7	COMMAND_FREEZE_CHAR_POSITION	implemented	58	20 segments (m102,m105,m114,m115,...)	no	2
+0x01AF	COMMAND_LOCATE_CAR_3D	implemented	55	20 segments (m104,m107,m12,m124,...)	no	8
+0x03C0	COMMAND_STORE_CAR_CHAR_IS_IN_NO_SAVE	implemented	37	20 segments (m104,m109,m123,m124,...)	yes	2
+0x09C5	COMMAND_IS_CHAR_USING_MAP_ATTRACTOR	implemented	20	20 segments (s:barguy.scm,s:browse.scm,s:coplook.scm,s:copsit.scm,...)	no	1
+0x05EB	COMMAND_START_PLAYBACK_RECORDED_CAR	implemented	105	19 segments (m105,m11,m18,m2,...)	no	2
+0x075C	COMMAND_DOES_BLIP_EXIST	implemented	72	19 segments (m104,m121,m126,m18,...)	no	1
+0x056D	COMMAND_DOES_CHAR_EXIST	implemented	58	19 segments (m127,m23,m30,m42,...)	no	1
+0x08AD	COMMAND_SET_CHAR_HAS_USED_ENTRY_EXIT	implemented	55	19 segments (m10,m100,m101,m102,...)	yes	4
+0x0104	COMMAND_LOCATE_CHAR_ANY_MEANS_CHAR_3D	implemented	52	19 segments (m106,m11,m125,m127,...)	yes	6
+0x0100	COMMAND_LOCATE_CHAR_IN_CAR_3D	implemented	29	19 segments (m108,m121,m131,m133,...)	yes	8
+0x05C5	COMMAND_TASK_DUCK	implemented	29	19 segments (m114,m116,m29,m37,...)	no	2
+0x0804	COMMAND_TASK_CHAR_SLIDE_TO_COORD_AND_PLAY_ANIM	implemented	20	19 segments (m105,m134,m18,m2,...)	no	15
+0x00AD	COMMAND_SET_CAR_CRUISE_SPEED	implemented	86	18 segments (m106,m124,m132,m18,...)	no	2
+0x060E	COMMAND_IS_PLAYBACK_GOING_ON_FOR_CAR	implemented	83	18 segments (m105,m18,m2,m23,...)	no	1
+0x0063	COMMAND_SUB_FLOAT_LVAR_FROM_FLOAT_LVAR	implemented	82	18 segments (m105,m121,m123,m124,...)	no	2
+0x0860	COMMAND_SET_CHAR_AREA_VISIBLE	implemented	81	18 segments (m102,m12,m129,m22,...)	yes	2
+0x0448	COMMAND_IS_CHAR_SITTING_IN_CAR	implemented	78	18 segments (m12,m127,m13,m16,...)	yes	2
+0x0151	COMMAND_CLEAR_ONSCREEN_COUNTER	implemented	58	18 segments (m106,m123,m124,m126,...)	yes	1
+0x0633	COMMAND_TASK_LEAVE_ANY_CAR	implemented	53	18 segments (m105,m108,m109,m11,...)	yes	1
+0x003B	COMMAND_IS_INT_LVAR_EQUAL_TO_INT_LVAR	implemented	43	18 segments (m104,m121,m130,m131,...)	no	2
+0x01B7	COMMAND_RELEASE_WEATHER	implemented	20	18 segments (m104,m107,m12,m16,...)	yes	0
+0x0638	COMMAND_TASK_STAY_IN_SAME_PLACE	implemented	95	17 segments (m100,m106,m17,m30,...)	no	2
+0x0967	COMMAND_START_CHAR_FACIAL_TALK	implemented	88	17 segments (m106,m12,m13,m16,...)	yes	2
+0x01BB	COMMAND_GET_OBJECT_COORDINATES	implemented	43	17 segments (m63,m65,m69,m74,...)	yes	4
+0x0213	COMMAND_CREATE_PICKUP	implemented	42	17 segments (m0,m100,m109,m23,...)	no	6
+0x0012	COMMAND_MULT_INT_LVAR_BY_VAL	implemented	42	17 segments (m118,m123,m124,m125,...)	yes	2
+0x0022	COMMAND_IS_NUMBER_GREATER_THAN_FLOAT_VAR	implemented	41	17 segments (m105,m116,m30,m51,...)	no	2
+0x01E8	COMMAND_SWITCH_ROADS_OFF	implemented	40	17 segments (m105,m18,m20,m23,...)	no	6
+0x02AA	COMMAND_SET_CAR_ONLY_DAMAGED_BY_PLAYER	implemented	38	17 segments (m123,m130,m132,m23,...)	no	2
+0x014C	COMMAND_SWITCH_CAR_GENERATOR	implemented	37	17 segments (m100,m101,m118,m12,...)	yes	2
+0x04C4	COMMAND_GET_OFFSET_FROM_CHAR_IN_WORLD_COORDS	implemented	32	17 segments (m11,m31,m46,m47,...)	yes	7
+0x09F6	COMMAND_SET_CHAR_GET_OUT_UPSIDE_DOWN_CAR	implemented	28	17 segments (m108,m12,m13,m16,...)	no	2
+0x03C3	COMMAND_DISPLAY_ONSCREEN_TIMER_WITH_STRING	implemented	27	17 segments (m121,m123,m124,m125,...)	yes	3
+0x0245	COMMAND_SET_ANIM_GROUP_FOR_CHAR	implemented	26	17 segments (m104,m106,m107,m11,...)	yes	2
+0x0176	COMMAND_GET_OBJECT_HEADING	implemented	25	17 segments (m29,m74,m8,s:blackj.scm,...)	no	2
+0x04E4	COMMAND_REQUEST_COLLISION	implemented	24	17 segments (m104,m105,m106,m129,...)	yes	2
+0x03C4	COMMAND_DISPLAY_ONSCREEN_COUNTER_WITH_STRING	implemented	24	17 segments (m104,m106,m107,m129,...)	yes	3
+0x04AE	COMMAND_SET_VAR_INT_TO_CONSTANT	implemented	225	16 segments (m1,m13,m51,m59,...)	no	2
+0x0968	COMMAND_STOP_CHAR_FACIAL_TALK	implemented	99	16 segments (m106,m12,m13,m16,...)	yes	1
+0x005B	COMMAND_ADD_FLOAT_LVAR_TO_FLOAT_LVAR	implemented	73	16 segments (m105,m123,m124,m130,...)	yes	2
+0x0925	COMMAND_CAMERA_RESET_NEW_SCRIPTABLES	implemented	70	16 segments (m105,m11,m12,m129,...)	no	0
+0x00AA	COMMAND_GET_CAR_COORDINATES	implemented	57	16 segments (m105,m11,m124,m129,...)	no	4
+0x0662	COMMAND_WRITE_DEBUG	implemented	47	16 segments (m103,m117,m118,m121,...)	no	1
+0x0613	COMMAND_GET_CHAR_ANIM_CURRENT_TIME	implemented	45	16 segments (m109,m12,m29,m30,...)	no	3
+0x0296	COMMAND_UNLOAD_SPECIAL_CHARACTER	implemented	31	16 segments (m11,m12,m13,m16,...)	yes	1
+0x0619	COMMAND_SET_CHAR_COLLISION	implemented	27	16 segments (m23,m29,m30,m38,...)	no	2
+0x022B	COMMAND_SWITCH_PED_ROADS_OFF	implemented	23	16 segments (m106,m109,m11,m18,...)	yes	6
+0x09DD	COMMAND_MAKE_ROOM_IN_PLAYER_GANG_FOR_MISSION_PEDS	implemented	23	16 segments (m104,m107,m109,m24,...)	yes	1
+0x0084	COMMAND_SET_VAR_INT_TO_VAR_INT	implemented	92	15 segments (m1,m121,m127,m129,...)	no	2
+0x0732	COMMAND_SUPPRESS_CAR_MODEL	implemented	86	15 segments (m11,m112,m128,m17,...)	no	1
+0x0382	COMMAND_SET_OBJECT_COLLISION	implemented	64	15 segments (m121,m131,m23,m42,...)	yes	2
+0x07DD	COMMAND_SET_CHAR_SHOOT_RATE	implemented	62	15 segments (m100,m11,m114,m115,...)	no	2
+0x06EE	COMMAND_IS_GROUP_MEMBER	implemented	62	15 segments (m104,m106,m107,m124,...)	yes	2
+0x04EB	COMMAND_TASK_TOGGLE_DUCK	implemented	58	15 segments (m100,m109,m11,m16,...)	no	2
+0x0400	COMMAND_GET_OFFSET_FROM_OBJECT_IN_WORLD_COORDS	implemented	50	15 segments (m50,m74,s:arcade.scm,s:blackj.scm,...)	no	7
+0x00AE	COMMAND_SET_CAR_DRIVING_STYLE	implemented	45	15 segments (m106,m124,m132,m19,...)	no	2
+0x0663	COMMAND_WRITE_DEBUG_WITH_INT	implemented	45	15 segments (s:barguy.scm,s:bouncer.scm,s:browse.scm,s:dancer.scm,...)	no	?
+0x07FB	COMMAND_SWITCH_ENTRY_EXIT	implemented	41	15 segments (m12,m134,m16,m21,...)	yes	2
+0x0729	COMMAND_TASK_USE_MOBILE_PHONE	implemented	33	15 segments (m16,m18,m33,m38,...)	no	2
+0x05CD	COMMAND_TASK_LEAVE_CAR	implemented	31	15 segments (m12,m127,m13,m16,...)	no	2
+0x0920	COMMAND_CAMERA_SET_VECTOR_TRACK	implemented	29	15 segments (m105,m11,m12,m129,...)	no	8
+0x0109	COMMAND_ADD_SCORE	implemented	25	15 segments (m114,m115,m116,m123,...)	no	2
+0x0227	COMMAND_GET_CAR_HEALTH	implemented	24	15 segments (m121,m123,m124,m18,...)	no	2
+0x032B	COMMAND_CREATE_PICKUP_WITH_AMMO	implemented	22	15 segments (m13,m18,m22,m23,...)	no	7
+0x0303	COMMAND_PRINT_WITH_4_NUMBERS_NOW	implemented	15	15 segments (s:barguy.scm,s:bouncer.scm,s:browse.scm,s:dancer.scm,...)	no	?
+0x0088	COMMAND_SET_VAR_FLOAT_TO_LVAR_FLOAT	implemented	82	14 segments (m130,m132,m41,m59,...)	no	2
+0x0509	COMMAND_GET_DISTANCE_BETWEEN_COORDS_2D	implemented	53	14 segments (m105,m124,m126,m130,...)	no	5
+0x0017	COMMAND_DIV_FLOAT_LVAR_BY_VAL	implemented	45	14 segments (m105,m123,m124,m126,...)	no	2
+0x05BA	COMMAND_TASK_STAND_STILL	implemented	39	14 segments (m109,m11,m12,m121,...)	yes	2
+0x041D	COMMAND_SET_NEAR_CLIP	implemented	30	14 segments (m11,m12,m13,m16,...)	no	1
+0x092F	COMMAND_CAMERA_PERSIST_TRACK	implemented	28	14 segments (m105,m11,m12,m129,...)	no	1
+0x0936	COMMAND_CAMERA_SET_VECTOR_MOVE	implemented	28	14 segments (m11,m12,m129,m13,...)	no	8
+0x0550	COMMAND_FREEZE_OBJECT_POSITION	implemented	26	14 segments (m102,m23,m30,m31,...)	no	2
+0x0394	COMMAND_PLAY_MISSION_PASSED_TUNE	implemented	22	14 segments (m114,m115,m116,m123,...)	yes	1
+0x0652	COMMAND_GET_INT_STAT	implemented	18	14 segments (m117,m122,m123,m124,...)	no	2
+0x070A	COMMAND_TASK_PICK_UP_OBJECT	implemented	17	14 segments (m102,m12,m21,m65,...)	no	10
+0x0587	COMMAND_SET_LOAD_COLLISION_FOR_CAR_FLAG	implemented	106	13 segments (m10,m11,m123,m36,...)	yes	2
+0x0089	COMMAND_SET_LVAR_FLOAT_TO_VAR_FLOAT	implemented	83	13 segments (m12,m124,m130,m132,...)	no	2
+0x01AD	COMMAND_LOCATE_CAR_2D	implemented	83	13 segments (m11,m23,m29,m30,...)	no	6
+0x0086	COMMAND_SET_VAR_FLOAT_TO_VAR_FLOAT	implemented	71	13 segments (m0,m1,m124,m40,...)	no	2
+0x030C	COMMAND_PLAYER_MADE_PROGRESS	implemented	46	13 segments (m104,m107,m114,m115,...)	yes	1
+0x076F	COMMAND_IS_MESSAGE_BEING_DISPLAYED	implemented	45	13 segments (m123,m24,m39,m58,...)	yes	0
+0x0043	COMMAND_IS_FLOAT_LVAR_EQUAL_TO_NUMBER	implemented	31	13 segments (m123,m124,m29,m30,...)	no	2
+0x01E3	COMMAND_PRINT_WITH_NUMBER_BIG	implemented	31	13 segments (m114,m115,m116,m123,...)	yes	4
+0x0930	COMMAND_CAMERA_PERSIST_POS	implemented	27	13 segments (m11,m12,m129,m13,...)	no	1
+0x0016	COMMAND_DIV_INT_LVAR_BY_VAL	implemented	23	13 segments (m124,m126,m127,m130,...)	no	2
+0x00C0	COMMAND_SET_TIME_OF_DAY	implemented	22	13 segments (m102,m11,m112,m2,...)	yes	2
+0x0430	COMMAND_WARP_CHAR_INTO_CAR_AS_PASSENGER	implemented	21	13 segments (m108,m11,m16,m18,...)	no	3
+0x077E	COMMAND_GET_AREA_VISIBLE	implemented	17	13 segments (m105,m12,m124,m131,...)	yes	1
+0x0390	COMMAND_LOAD_TEXTURE_DICTIONARY	implemented	13	13 segments (m119,m120,m27,m3,...)	no	1
+0x0111	COMMAND_SET_DEATHARREST_STATE	implemented	13	13 segments (m113,m35,s:ammu.scm,s:barber.scm,...)	no	0
+0x00D8	COMMAND_MISSION_HAS_FINISHED	implemented	13	13 segments (m114,m115,m116,m123,...)	yes	0
+0x05D7	COMMAND_EXTEND_ROUTE	implemented	136	m100,m12,m131,m16,m18,m37,m53,m61,m63,m85,m93,m97	no	3
+0x054A	COMMAND_SET_CHAR_CAN_BE_SHOT_IN_VEHICLE	implemented	96	m130,m132,m30,m36,m37,m39,m43,m47,m68,m70,m76,m86	no	2
+0x0643	COMMAND_SET_SEQUENCE_TO_REPEAT	implemented	87	m104,m109,m114,m115,m116,m16,m31,m39,m61,m63,m85,m95	yes	2
+0x0407	COMMAND_GET_OFFSET_FROM_CAR_IN_WORLD_COORDS	implemented	67	m105,m130,m132,m29,m39,m43,m46,m49,m58,m66,m74,m95	yes	7
+0x0453	COMMAND_SET_OBJECT_ROTATION	implemented	64	m1,m23,m39,m53,m74,m86,m90,m96,s:crane2.scm,s:crane3.scm,s:impound.scm,s:parachute.scm	no	4
+0x05D6	COMMAND_FLUSH_ROUTE	implemented	47	m100,m12,m131,m16,m18,m37,m53,m61,m63,m85,m93,m97	no	0
+0x0020	COMMAND_IS_FLOAT_VAR_GREATER_THAN_NUMBER	implemented	36	m105,m30,m38,m51,m53,m63,m91,s:crane2.scm,s:crane3.scm,s:gymbench.scm,s:gymdumb.scm,s:parachute.scm	no	2
+0x09F5	COMMAND_SHUT_ALL_CHARS_UP	implemented	34	m108,m109,m3,m34,m4,m47,m5,m6,m64,m68,m70,m76	no	1
+0x000D	COMMAND_SUB_VAL_FROM_FLOAT_VAR	implemented	30	m124,m40,m48,m77,m91,s:crane2.scm,s:debt.scm,s:food_vendor.scm,s:gymdumb.scm,s:impound.scm,s:parachute.scm,s:player_parachute.scm	no	2
+0x06C7	COMMAND_TASK_CAR_TEMP_ACTION	implemented	25	m104,m18,m23,m34,m43,m46,m47,m53,m59,m63,m9,s:debt.scm	yes	4
+0x038F	COMMAND_LOAD_SPRITE	implemented	24	m119,m120,m27,m3,m4,m5,m6,m7,m71,m8,s:roulette.scm,s:vidpok.scm	no	?
+0x06C9	COMMAND_REMOVE_CHAR_FROM_GROUP	implemented	24	m104,m105,m109,m18,m42,m43,m44,m53,m58,m68,m69,m90	yes	1
+0x02CA	COMMAND_IS_CAR_ON_SCREEN	implemented	18	m11,m124,m130,m17,m23,m29,m31,m43,m66,m89,m93,s:debt.scm	no	1
+0x00A4	COMMAND_IS_CHAR_IN_AREA_3D	implemented	18	m105,m18,m22,m30,m48,m52,m53,m63,m79,s:basketb.scm,s:carpark1.scm,s:impound.scm	no	8
+0x010D	COMMAND_ALTER_WANTED_LEVEL	implemented	14	m109,m127,m131,m17,m34,m42,m53,m57,m58,m64,m84,m93	no	2
+0x0A20	COMMAND_SET_PLAYER_GROUP_TO_FOLLOW_ALWAYS	implemented	12	m104,m106,m107,m18,m27,m29,m40,m41,m66,m68,m69,m76	yes	2
+0x0950	COMMAND_SET_UP_SKIP	implemented	12	m105,m23,m32,m38,m39,m46,m55,m58,m77,m86,m88,m93	no	4
+0x0977	COMMAND_IS_OBJECT_WITHIN_BRAIN_ACTIVATION_RANGE	implemented	12	s:arcade.scm,s:blackj.scm,s:food_vendor.scm,s:gates_script.scm,s:gymbench.scm,s:gymbike.scm,s:gymdumb.scm,s:otb_script.scm,s:roulette.scm,s:slot_machine.scm,s:vending_machine.scm,s:wheelo.scm	no	1
+0x04A3	COMMAND_IS_INT_VAR_EQUAL_TO_CONSTANT	implemented	86	m109,m124,m47,m51,m64,m68,m70,m93,s:debt.scm,s:impound.scm,s:valet.scm	no	2
+0x05F5	COMMAND_TASK_FOLLOW_PATH_NODES_TO_COORD	implemented	68	m100,m109,m18,m23,m30,m34,m39,m43,m53,m63,m88	no	6
+0x0647	COMMAND_CLEAR_LOOK_AT	implemented	50	m11,m12,m121,m13,m16,m30,m37,m43,m75,m92,s:lowr_cont.scm	yes	1
+0x0677	COMMAND_TASK_CHAT_WITH_CHAR	implemented	42	m109,m127,m20,m23,m31,m50,m61,m68,m9,m93,m96	no	4
+0x001E	COMMAND_IS_INT_VAR_GREATER_THAN_INT_LVAR	implemented	37	m124,m129,m130,m132,m133,m40,m42,m93,m94,s:blackj.scm,s:debt.scm	yes	2
+0x014F	COMMAND_CLEAR_ONSCREEN_TIMER	implemented	35	m123,m124,m126,m127,m129,m131,m20,m47,m63,m74,s:valet.scm	yes	1
+0x06D5	COMMAND_CREATE_CHECKPOINT	implemented	34	m118,m130,m131,m132,m133,m55,m56,m75,m79,m91,m98	no	9
+0x05D8	COMMAND_TASK_FOLLOW_POINT_ROUTE	implemented	32	m100,m12,m131,m16,m18,m37,m53,m61,m63,m85,m93	no	3
+0x08C7	COMMAND_SET_CHAR_COORDINATES_DONT_WARP_GANG	implemented	29	m101,m114,m115,m116,m34,m61,m90,s:gymbench.scm,s:gymbike.scm,s:gymdumb.scm,s:gymtread.scm	no	4
+0x02F7	COMMAND_COS	implemented	27	m105,m131,m31,m9,m90,s:gymbench.scm,s:gymbike.scm,s:gymdumb.scm,s:gymtread.scm,s:parachute.scm,s:player_parachute.scm	no	2
+0x02F6	COMMAND_SIN	implemented	26	m105,m131,m31,m9,m90,s:gymbench.scm,s:gymbike.scm,s:gymdumb.scm,s:gymtread.scm,s:parachute.scm,s:player_parachute.scm	no	2
+0x04F7	COMMAND_DISPLAY_NTH_ONSCREEN_COUNTER_WITH_STRING	implemented	23	m117,m123,m124,m125,m126,m74,s:gymbench.scm,s:gymbike.scm,s:gymdumb.scm,s:gymtread.scm,s:valet.scm	no	1
+0x044B	COMMAND_IS_CHAR_ON_FOOT	implemented	19	m106,m19,m39,m65,s:bcesar3.scm,s:blackj.scm,s:crane1.scm,s:crane2.scm,s:crane3.scm,s:debt.scm,s:wheelo.scm	no	1
+0x06AD	COMMAND_SET_GROUP_DECISION_MAKER	implemented	18	m102,m109,m124,m24,m27,m29,m34,m44,m61,m88,s:debt.scm	yes	2
+0x0951	COMMAND_CLEAR_SKIP	implemented	15	m105,m23,m27,m32,m38,m39,m46,m55,m77,m86,m93	no	0
+0x03EF	COMMAND_MAKE_PLAYER_SAFE_FOR_CUTSCENE	implemented	14	m104,m105,m106,m11,m16,m27,m38,m48,m60,m88,m90	no	1
+0x03F0	COMMAND_USE_TEXT_COMMANDS	implemented	12	m2,m3,m4,m5,m6,m7,m75,m9,s:dance.scm,s:roulette.scm,s:vidpok.scm	no	1
+0x09E8	COMMAND_GET_CHAR_AREA_VISIBLE	implemented	11	m105,m114,m115,m116,m32,m37,m90,s:bar_ambience.scm,s:customer_panic.scm,s:foodbrains.scm,s:shopkeeper.scm	no	2
+0x05EC	COMMAND_STOP_PLAYBACK_RECORDED_CAR	implemented	107	m105,m11,m23,m30,m34,m37,m43,m68,m74,m93	no	1
+0x04BA	COMMAND_SET_CAR_FORWARD_SPEED	implemented	88	m105,m11,m123,m18,m19,m30,m37,m46,m63,m68	no	2
+0x08FB	COMMAND_SET_COORD_BLIP_APPEARANCE	implemented	56	m18,m44,m47,m49,m58,m60,m65,m75,m88,m95	no	2
+0x097B	COMMAND_REPORT_MISSION_AUDIO_EVENT_AT_OBJECT	implemented	49	m23,m63,m74,m79,s:crane1.scm,s:crane2.scm,s:crane3.scm,s:gates_script.scm,s:gymbench.scm,s:impound.scm	no	2
+0x0392	COMMAND_SET_OBJECT_DYNAMIC	implemented	27	m131,m23,m46,m50,m65,m68,m79,m90,s:basketb.scm,s:player_parachute.scm	yes	2
+0x07A1	COMMAND_SET_NEXT_DESIRED_MOVE_STATE	implemented	21	m108,m11,m12,m13,m16,m24,m27,m31,m76,m97	yes	1
+0x0028	COMMAND_IS_INT_VAR_GREATER_OR_EQUAL_TO_NUMBER	implemented	21	m117,m125,m129,m31,m66,m79,s:bar_ambience.scm,s:bcesar2.scm,s:bcesar3.scm,s:roulette.scm	yes	2
+0x0457	COMMAND_IS_PLAYER_TARGETTING_CHAR	implemented	20	m106,m109,m23,m32,m61,m93,s:bar_ambience.scm,s:dealer.scm,s:foodbrains.scm,s:shopkeeper.scm	no	2
+0x04E0	COMMAND_SET_CAR_STRAIGHT_LINE_DISTANCE	implemented	19	m11,m130,m132,m19,m23,m33,m46,m50,m66,m93	no	2
+0x0526	COMMAND_SET_CHAR_STAY_IN_CAR_WHEN_JACKED	implemented	19	m11,m12,m13,m16,m20,m29,m30,m37,m49,m60	no	2
+0x0657	COMMAND_OPEN_CAR_DOOR	implemented	18	m10,m17,m20,m30,m31,m62,m64,m65,m73,m99	yes	2
+0x001C	COMMAND_IS_INT_VAR_GREATER_THAN_INT_VAR	implemented	18	m114,m115,m116,m129,m133,s:gymbench.scm,s:gymbike.scm,s:gymdumb.scm,s:gymtread.scm,s:valet.scm	no	2
+0x06D7	COMMAND_SWITCH_RANDOM_TRAINS	implemented	11	m112,m126,m2,m27,m29,m60,m64,m68,m69,m82	no	1
+0x0A0E	COMMAND_CLEAR_THIS_PRINT_BIG_NOW	implemented	10	m10,m128,m129,m130,m132,m21,m60,m64,m71,m83	no	1
+0x0828	COMMAND_SET_MAX_FIRE_GENERATIONS	implemented	10	m112,m22,m23,m29,m30,m34,m37,m47,m90,m96	no	1
+0x06AE	COMMAND_LOAD_GROUP_DECISION_MAKER	implemented	10	m102,m109,m24,m27,m29,m34,m42,m44,m61,m88	yes	2
+0x01F0	COMMAND_SET_MAX_WANTED_LEVEL	implemented	10	m110,m111,m112,m30,m37,m56,m83,m86,m90,m91	no	0
+0x0168	COMMAND_CHANGE_BLIP_SCALE	implemented	145	m109,m117,m129,m30,m34,m47,m64,m74,m96	no	2
+0x0603	COMMAND_TASK_GO_TO_COORD_ANY_MEANS	implemented	65	m104,m114,m115,m116,m61,m63,m85,m90,m95	no	6
+0x000C	COMMAND_SUB_VAL_FROM_INT_VAR	implemented	63	m127,m129,m131,m30,m43,m47,m79,s:dance.scm,s:valet.scm	yes	2
+0x0491	COMMAND_HAS_CHAR_GOT_WEAPON	implemented	38	m13,m16,m22,m54,m64,m96,s:bouncer.scm,s:camera.scm,s:player_parachute.scm	no	2
+0x061D	COMMAND_ADD_ATTRACTOR	implemented	38	s:bar_ambience.scm,s:bar_staff.scm,s:casino_ambience.scm,s:foodbrains.scm,s:otb_ambience.scm,s:otb_staff.scm,s:shopkeeper.scm,s:strip_ambience.scm,s:zero_ambience.scm	no	7
+0x0165	COMMAND_CHANGE_BLIP_COLOUR	implemented	37	m127,m13,m133,m44,m55,m59,m91,m93,m96	no	2
+0x0025	COMMAND_IS_FLOAT_LVAR_GREATER_THAN_FLOAT_LVAR	implemented	35	m122,m126,m127,m130,m132,m18,m58,m79,s:crane2.scm	no	2
+0x0668	COMMAND_TASK_SHOOT_AT_COORD	implemented	32	m109,m12,m13,m16,m17,m18,m30,m34,m47	no	5
+0x0202	COMMAND_LOCATE_CHAR_ANY_MEANS_CAR_2D	implemented	25	m124,m29,m31,m47,m70,m77,m89,m93,s:debt.scm	no	5
+0x034F	COMMAND_REMOVE_CHAR_ELEGANTLY	implemented	24	m106,m23,m29,m30,m40,m43,m52,m79,m95	yes	1
+0x0749	COMMAND_CLEAR_GROUP_DECISION_MAKER_EVENT_RESPONSE	implemented	22	m102,m124,m24,m27,m29,m34,m42,m44,s:debt.scm	yes	2
+0x01BC	COMMAND_SET_OBJECT_COORDINATES	implemented	20	m23,m64,m74,m77,m86,m90,s:basketb.scm,s:gates_script.scm,s:impound.scm	no	4
+0x06D6	COMMAND_DELETE_CHECKPOINT	implemented	20	m130,m131,m132,m133,m55,m75,m79,m91,m98	no	1
+0x0947	COMMAND_SET_CHAR_SAY_CONTEXT	implemented	18	m12,m121,s:barguy.scm,s:camera.scm,s:dancer.scm,s:home_brains.scm,s:pedroul.scm,s:pedslot.scm,s:prisonr.scm	no	3
+0x0464	COMMAND_ATTACH_CHAR_TO_CAR	implemented	17	m112,m29,m46,m57,m82,m84,m9,m95,m99	no	5
+0x0632	COMMAND_REMOVE_GROUP	implemented	17	m124,m27,m33,m34,m57,m64,m68,m76,s:debt.scm	no	1
+0x01C1	COMMAND_IS_CAR_STOPPED	implemented	15	m121,m124,m127,m131,m19,m52,m77,m79,m93	no	1
+0x05DE	COMMAND_TASK_WANDER_STANDARD	implemented	15	m51,m53,m95,m96,s:bouncer.scm,s:casino_ambience.scm,s:home_brains.scm,s:lowr_cont.scm,s:strip_ambience.scm	no	1
+0x00ED	COMMAND_LOCATE_CHAR_ON_FOOT_2D	implemented	14	m13,m23,m37,m69,m93,s:gymbench.scm,s:gymbike.scm,s:gymdumb.scm,s:gymtread.scm	no	6
+0x00C2	COMMAND_IS_POINT_ON_SCREEN	implemented	14	m124,m130,m18,m30,m43,m79,m93,s:basketb.scm,s:debt.scm	no	4
+0x04AD	COMMAND_IS_CHAR_IN_WATER	implemented	14	m123,m130,m43,m60,m93,m96,s:bcesar3.scm,s:parachute.scm,s:player_parachute.scm	no	1
+0x03DC	COMMAND_ADD_BLIP_FOR_PICKUP	implemented	13	m18,m22,m32,m39,m52,m60,m77,m93,m96	no	2
+0x0172	COMMAND_GET_CHAR_HEADING	implemented	13	m104,m131,m18,m58,m64,m95,s:parachute.scm,s:player_parachute.scm,s:stripw.scm	no	2
+0x02CE	COMMAND_GET_GROUND_Z_FOR_3D_COORD	implemented	13	m130,m132,m74,m77,m79,s:blackj.scm,s:camera.scm,s:pool_script.scm,s:wheelo.scm	no	4
+0x05BE	COMMAND_TASK_DIE	implemented	12	m126,m18,m29,m30,m38,m63,m65,m95,s:player_parachute.scm	no	1
+0x0214	COMMAND_HAS_PICKUP_BEEN_COLLECTED	implemented	12	m18,m22,m28,m52,m60,m77,m93,m96,s:parachute.scm	no	1
+0x06D0	COMMAND_SWITCH_EMERGENCY_SERVICES	implemented	11	m109,m112,m22,m23,m30,m37,m38,m53,s:valet.scm	no	1
+0x02E0	COMMAND_IS_CHAR_SHOOTING	implemented	10	m23,m31,m46,s:bar_ambience.scm,s:bcesar3.scm,s:bouncer.scm,s:camera.scm,s:foodbrains.scm,s:shopper.scm	no	1
+0x065D	COMMAND_VIEW_INTEGER_VARIABLE	implemented	183	m19,m41,m50,m59,m69,m74,m77,s:vidpok.scm	no	2
+0x006B	COMMAND_MULT_FLOAT_LVAR_BY_FLOAT_LVAR	implemented	69	m105,m124,m31,m52,m9,m90,s:crane2.scm,s:player_parachute.scm	no	2
+0x0623	COMMAND_INCREMENT_INT_STAT	implemented	57	m114,m115,m116,m123,m124,m127,m131,m134	no	2
+0x0350	COMMAND_SET_CHAR_STAY_IN_SAME_PLACE	implemented	49	m100,m106,m109,m11,m31,m34,m38,m64	no	2
+0x02A8	COMMAND_ADD_SPRITE_BLIP_FOR_COORD	implemented	30	m106,m121,m18,m21,m28,m40,m44,m49	yes	5
+0x097A	COMMAND_REPORT_MISSION_AUDIO_EVENT_AT_POSITION	implemented	29	m123,m124,m129,m131,m133,m44,m96,s:player_parachute.scm	yes	4
+0x07D6	COMMAND_IS_INT_LVAR_EQUAL_TO_INT_VAR	implemented	26	m124,m130,m132,m38,m40,s:crane1.scm,s:impound.scm,s:parachute.scm	yes	2
+0x060F	COMMAND_SET_SENSE_RANGE	implemented	25	m27,m46,m61,m63,m82,m85,m93,m98	no	2
+0x01F7	COMMAND_SET_POLICE_IGNORE_PLAYER	implemented	24	m10,m102,m106,m129,m21,m53,m73,m92	yes	2
+0x05DD	COMMAND_TASK_SMART_FLEE_CHAR	implemented	23	m127,m23,m31,m46,m52,m68,m70,m96	no	4
+0x01E5	COMMAND_PRINT_WITH_NUMBER_NOW	implemented	21	m124,m127,m129,m131,m133,m70,m79,m9	no	4
+0x0093	COMMAND_CSET_LVAR_FLOAT_TO_LVAR_INT	implemented	20	m127,m130,m132,m52,m79,m9,s:player_parachute.scm,s:valet.scm	no	2
+0x020B	COMMAND_EXPLODE_CAR	implemented	20	m123,m29,m30,m47,m49,m65,m74,m98	no	1
+0x0226	COMMAND_GET_CHAR_HEALTH	implemented	18	m104,m106,m107,m109,m20,m30,m38,s:barguy.scm	no	2
+0x05C9	COMMAND_TASK_LOOK_ABOUT	implemented	18	m115,m61,m64,m77,m85,m95,s:barguy.scm,s:bouncer.scm	no	2
+0x0014	COMMAND_DIV_INT_VAR_BY_VAL	implemented	17	m104,m106,m107,m127,m129,m131,m30,m43	no	2
+0x064C	COMMAND_PLAY_FX_SYSTEM	implemented	15	m12,m131,m31,m77,m90,m98,s:home_brains.scm,s:prisonr.scm	no	1
+0x03F4	COMMAND_SET_ALL_CARS_CAN_BE_DAMAGED	implemented	14	m130,m132,m133,m22,m94,s:dance.scm,s:gf_sex.scm,s:roulette.scm	no	1
+0x08B4	COMMAND_IS_GLOBAL_VAR_BIT_SET_CONST	implemented	14	m31,s:arcade.scm,s:bar_ambience.scm,s:camera.scm,s:dancer.scm,s:gf_date.scm,s:otb_script.scm,s:pool_script.scm	no	2
+0x002A	COMMAND_IS_NUMBER_GREATER_OR_EQUAL_TO_INT_VAR	implemented	13	m126,m129,m18,m30,m38,m56,m66,m74	no	2
+0x070D	COMMAND_BUILD_PLAYER_MODEL	implemented	12	m101,m125,m130,m132,m24,m51,m97,s:gf_sex.scm	yes	1
+0x0337	COMMAND_SET_CHAR_VISIBLE	implemented	12	m48,m64,m65,m98,s:camera.scm,s:crane1.scm,s:crane2.scm,s:crane3.scm	no	2
+0x05D2	COMMAND_TASK_CAR_DRIVE_WANDER	implemented	11	m11,m13,m23,m28,m33,m89,m94,s:dealer.scm	no	3
+0x064B	COMMAND_CREATE_FX_SYSTEM	implemented	11	m12,m31,m37,m88,m90,m95,m98,s:home_brains.scm	no	6
+0x09F1	COMMAND_REPORT_MISSION_AUDIO_EVENT_AT_CHAR	implemented	10	m114,m115,m116,m12,m49,m63,s:photo.scm,s:player_parachute.scm	no	2
+0x0174	COMMAND_GET_CAR_HEADING	implemented	9	m130,m132,m29,m49,m9,m90,m91,s:valet.scm	yes	2
+0x01B5	COMMAND_FORCE_WEATHER	implemented	9	m16,m24,m64,m75,m78,m88,m97,m98	yes	1
+0x0653	COMMAND_GET_FLOAT_STAT	implemented	9	m114,m115,m116,s:blackj.scm,s:gymbench.scm,s:gymdumb.scm,s:roulette.scm,s:wheelo.scm	no	2
+0x018C	COMMAND_ADD_ONE_OFF_SOUND	implemented	60	m129,m130,m132,m23,m47,m65,m75	no	4
+0x076C	COMMAND_SET_ZONE_GANG_STRENGTH	implemented	59	m104,m106,m107,m12,m13,m20,m21	no	3
+0x0376	COMMAND_CREATE_RANDOM_CHAR	implemented	43	m130,m132,m53,m68,m71,m88,s:impound.scm	no	4
+0x050A	COMMAND_GET_DISTANCE_BETWEEN_COORDS_3D	implemented	33	m121,m122,m123,m127,m52,m79,m93	no	7
+0x0489	COMMAND_SHUT_CHAR_UP	implemented	32	m112,m114,m30,m37,m46,m81,s:impound.scm	no	2
+0x01C4	COMMAND_MARK_OBJECT_AS_NO_LONGER_NEEDED	implemented	30	m105,m23,m46,m68,s:basketb.scm,s:home_brains.scm,s:pcustom.scm	yes	1
+0x005F	COMMAND_ADD_FLOAT_LVAR_TO_FLOAT_VAR	implemented	30	m50,m90,s:crane2.scm,s:gymbike.scm,s:gymdumb.scm,s:parachute.scm,s:player_parachute.scm	no	2
+0x0770	COMMAND_SET_CHAR_IS_TARGET_PRIORITY	implemented	27	m106,m127,m18,m52,m61,m62,m63	no	2
+0x0811	COMMAND_GET_CAR_CHAR_IS_USING	implemented	27	m105,m18,m23,m48,m51,m53,s:valet.scm	no	2
+0x0681	COMMAND_ATTACH_OBJECT_TO_CAR	implemented	27	m121,m23,m65,m74,m79,m85,m95	no	8
+0x06FD	COMMAND_SET_PLAYBACK_SPEED	implemented	25	m105,m18,m23,m30,m58,m74,m93	no	2
+0x00A3	COMMAND_IS_CHAR_IN_AREA_2D	implemented	23	m108,m30,m46,m52,m79,s:impound.scm,s:valet.scm	no	6
+0x0500	COMMAND_IS_PLAYER_WEARING	implemented	19	m12,m125,m24,m51,m97,s:gf_sex.scm,s:valet.scm	yes	3
+0x08DA	COMMAND_DELETE_MENU	implemented	17	m127,m131,m75,s:gymbench.scm,s:gymbike.scm,s:gymdumb.scm,s:gymtread.scm	no	1
+0x002D	COMMAND_IS_INT_LVAR_GREATER_OR_EQUAL_TO_INT_LVAR	implemented	16	m123,m130,m45,m52,m9,s:bouncer.scm,s:photo.scm	no	2
+0x00A9	COMMAND_CAR_SET_IDLE	implemented	15	m100,m132,m23,m30,m31,m37,m92	no	1
+0x02CB	COMMAND_IS_CHAR_ON_SCREEN	implemented	14	m130,m23,m30,m31,m43,m46,s:camera.scm	no	1
+0x08A9	COMMAND_STREAM_SCRIPT	implemented	14	m102,m104,m31,m51,s:bar_ambience.scm,s:foodbrains.scm,s:strip_ambience.scm	no	1
+0x0646	COMMAND_GET_SEQUENCE_PROGRESS	implemented	13	m13,m16,m31,m53,m68,m89,s:home_brains.scm	no	2
+0x041A	COMMAND_GET_AMMO_IN_CHAR_WEAPON	implemented	13	m100,m16,m42,m52,m60,m64,m96	no	3
+0x07CB	COMMAND_LISTEN_TO_PLAYER_GROUP_COMMANDS	implemented	13	m114,m115,m116,m18,m24,m40,m53	yes	2
+0x0581	COMMAND_DISPLAY_RADAR	implemented	12	m129,m44,m69,m74,m9,s:dance.scm,s:gf_sex.scm	yes	1
+0x07B3	COMMAND_SET_GROUP_DEFAULT_TASK_ALLOCATOR	implemented	12	m102,m105,m124,m34,m68,m76,m90	no	2
+0x09D0	COMMAND_IS_VEHICLE_ON_ALL_WHEELS	implemented	11	m106,m12,m13,m16,m19,m59,m77	no	1
+0x05C8	COMMAND_TASK_SCRATCH_HEAD	implemented	11	m42,m43,m53,m61,m85,m95,m96	no	1
+0x08D0	COMMAND_IS_SKIP_CUTSCENE_BUTTON_PRESSED	implemented	10	m18,m22,m38,m42,m49,m51,m53	no	0
+0x010F	COMMAND_IS_WANTED_LEVEL_GREATER	implemented	10	m118,m44,m51,m55,s:bar_ambience.scm,s:debt.scm,s:valet.scm	yes	2
+0x008F	COMMAND_CSET_LVAR_FLOAT_TO_VAR_INT	implemented	10	m123,m74,s:crane2.scm,s:crane3.scm,s:gymbench.scm,s:parachute.scm,s:valet.scm	no	2
+0x002B	COMMAND_IS_NUMBER_GREATER_OR_EQUAL_TO_INT_LVAR	implemented	9	m121,m31,m44,m49,m55,m74,m79	no	2
+0x08E7	COMMAND_DISABLE_ALL_ENTRY_EXITS	implemented	7	m10,m130,m30,m32,m49,m72,m73	no	1
+0x09D2	COMMAND_ENABLE_AMBIENT_CRIME	implemented	7	m108,m109,m11,m27,m33,m34,m64	no	1
+0x0066	COMMAND_SUB_INT_LVAR_FROM_INT_VAR	implemented	7	m127,m131,m18,m38,m95,s:parachute.scm,s:valet.scm	no	2
+0x086A	COMMAND_CLEAR_ALL_VIEW_VARIABLES	NOP	7	m19,m41,m50,m59,m69,m74,m77	no	0
+0x00BF	COMMAND_GET_TIME_OF_DAY	implemented	7	m125,m24,m31,m33,m34,m72,m96	yes	2
+0x0560	COMMAND_CREATE_RANDOM_CHAR_AS_DRIVER	implemented	79	m123,m2,m51,m68,m76,m88	no	2
+0x00A7	COMMAND_CAR_GOTO_COORDINATES	implemented	47	m106,m23,m30,m46,m68,m92	no	4
+0x0061	COMMAND_SUB_FLOAT_VAR_FROM_FLOAT_VAR	implemented	28	m1,s:bcesar3.scm,s:crane2.scm,s:gymbench.scm,s:gymdumb.scm,s:parachute.scm	no	2
+0x0339	COMMAND_IS_AREA_OCCUPIED	implemented	27	m39,m43,m58,s:basketb.scm,s:food_vendor.scm,s:impound.scm	no	8
+0x046C	COMMAND_GET_DRIVER_OF_CAR	implemented	26	m130,m30,m31,m38,m46,s:valet.scm	no	2
+0x0031	COMMAND_IS_FLOAT_LVAR_GREATER_OR_EQUAL_TO_NUMBER	implemented	25	m12,m90,s:home_brains.scm,s:photo.scm,s:prisonr.scm,s:stripw.scm	no	2
+0x075A	COMMAND_PLAY_OBJECT_ANIM	implemented	24	m109,m42,m64,s:gymbike.scm,s:parachute.scm,s:player_parachute.scm	no	6
+0x06E1	COMMAND_TASK_CAR_MISSION	implemented	23	m11,m23,m31,m43,m46,s:debt.scm	no	6
+0x00DD	COMMAND_IS_CHAR_IN_MODEL	implemented	18	m11,m123,m124,m126,m129,s:gates_script.scm	no	2
+0x0449	COMMAND_IS_CHAR_SITTING_IN_ANY_CAR	implemented	18	m124,m23,m29,m46,m88,s:debt.scm	no	1
+0x05ED	COMMAND_PAUSE_PLAYBACK_RECORDED_CAR	implemented	18	m105,m23,m37,m63,m68,m74	no	1
+0x05EE	COMMAND_UNPAUSE_PLAYBACK_RECORDED_CAR	implemented	18	m105,m23,m37,m63,m68,m74	no	1
+0x06D8	COMMAND_CREATE_MISSION_TRAIN	implemented	16	m118,m2,m29,m52,m68,m82	no	6
+0x062F	COMMAND_CREATE_GROUP	implemented	16	m124,m17,m34,m53,m61,s:debt.scm	no	2
+0x0032	COMMAND_IS_NUMBER_GREATER_OR_EQUAL_TO_FLOAT_VAR	implemented	16	m105,m90,s:gymbench.scm,s:gymdumb.scm,s:impound.scm,s:parachute.scm	no	2
+0x0750	COMMAND_SET_OBJECT_VISIBLE	implemented	15	m121,m65,m74,m90,s:parachute.scm,s:player_parachute.scm	no	2
+0x0015	COMMAND_DIV_FLOAT_VAR_BY_VAL	implemented	14	m0,m1,s:crane2.scm,s:gymbench.scm,s:gymdumb.scm,s:parachute.scm	no	2
+0x015D	COMMAND_SET_TIME_SCALE	implemented	14	m112,m30,m37,m63,m90,m95	no	1
+0x005E	COMMAND_ADD_INT_LVAR_TO_INT_VAR	implemented	13	m123,m124,m126,m72,m9,s:dance.scm	no	2
+0x0338	COMMAND_SET_CAR_VISIBLE	implemented	12	m18,m38,m48,m58,m60,m74	no	2
+0x035F	COMMAND_ADD_ARMOUR_TO_CHAR	implemented	12	m109,m124,m126,m34,m61,m86	no	2
+0x09C1	COMMAND_ADD_NEXT_MESSAGE_TO_PREVIOUS_BRIEFS	implemented	12	m124,m127,m129,m131,m133,m79	no	1
+0x08D4	COMMAND_CREATE_MENU	implemented	12	m127,m131,s:gymbench.scm,s:gymbike.scm,s:gymdumb.scm,s:gymtread.scm	no	9
+0x0825	COMMAND_SET_HELI_BLADES_FULL_SPEED	implemented	11	m37,m47,m62,m74,m93,m98	no	1
+0x0471	COMMAND_LOCATE_CHAR_ANY_MEANS_OBJECT_2D	implemented	10	m65,s:basketb.scm,s:crane1.scm,s:crane2.scm,s:crane3.scm,s:gates_script.scm	no	5
+0x03ED	COMMAND_SET_UPSIDEDOWN_CAR_NOT_DAMAGED	implemented	10	m123,m124,m130,m132,m93,m99	no	2
+0x08DB	COMMAND_SET_MENU_COLUMN	implemented	10	m127,m131,s:gymbench.scm,s:gymbike.scm,s:gymdumb.scm,s:gymtread.scm	no	15
+0x0101	COMMAND_LOCATE_STOPPED_CHAR_ANY_MEANS_3D	implemented	9	m114,m115,m116,m126,m18,m97	no	8
+0x0595	COMMAND_REGISTER_ODDJOB_MISSION_PASSED	implemented	9	m123,m124,m126,m127,m129,m131	no	0
+0x0555	COMMAND_REMOVE_WEAPON_FROM_CHAR	implemented	8	m11,m47,m96,s:bouncer.scm,s:photo.scm,s:player_parachute.scm	no	2
+0x0477	COMMAND_SET_CAR_TEMP_ACTION	implemented	8	m124,m43,m47,m85,m89,m93	no	3
+0x09BA	COMMAND_DISPLAY_ZONE_NAMES	implemented	7	m102,m119,m2,m75,m86,m91	no	1
+0x056A	COMMAND_WAS_CUTSCENE_SKIPPED	implemented	7	m108,m2,m34,m90,m91,m94	no	0
+0x0826	COMMAND_DISPLAY_HUD	implemented	7	m69,m74,m9,m95,s:dance.scm,s:vidpok.scm	yes	1
+0x09B9	COMMAND_DISPLAY_CAR_NAMES	implemented	7	m10,m119,m130,m132,m73,m75	no	1
+0x0102	COMMAND_LOCATE_STOPPED_CHAR_ON_FOOT_3D	implemented	7	m12,m47,m56,m77,s:bar_ambience.scm,s:lowr_cont.scm	no	8
+0x073B	COMMAND_SET_CAR_CAN_GO_AGAINST_TRAFFIC	implemented	7	m18,m51,m52,m70,m94,m99	no	2
+0x065C	COMMAND_REMOVE_DECISION_MAKER	implemented	7	m123,m31,s:bouncer.scm,s:debt.scm,s:lowr_cont.scm,s:valet.scm	yes	1
+0x0629	COMMAND_SET_INT_STAT	implemented	7	m108,m127,m34,m40,m47,s:valet.scm	no	2
+0x072F	COMMAND_ADD_STUCK_CAR_CHECK_WITH_WARP	implemented	7	m130,m132,m43,m52,m70,s:debt.scm	no	7
+0x09BD	COMMAND_SET_MINIGAME_IN_PROGRESS	implemented	7	s:crane1.scm,s:crane2.scm,s:crane3.scm,s:dance.scm,s:gf_sex.scm,s:vidpok.scm	no	1
+0x01F4	COMMAND_IS_CAR_UPSIDEDOWN	implemented	6	m124,m18,m43,m55,m90,m93	no	1
+0x07AF	COMMAND_GET_PLAYER_GROUP	implemented	6	m102,m105,m20,m34,m90,m99	no	2
+0x02FA	COMMAND_CHANGE_GARAGE_TYPE	implemented	6	m109,m24,m31,m54,m65,m70	yes	2
+0x087B	COMMAND_GIVE_PLAYER_CLOTHES_OUTSIDE_SHOP	implemented	6	m101,m125,m130,m132,m24,m97	yes	4
+0x03AB	COMMAND_SET_CAR_STRONG	implemented	6	m129,m130,m132,m31,m68,m89	no	2
+0x090E	COMMAND_SET_ACTIVE_MENU_ITEM	implemented	6	m127,m131,s:gymbench.scm,s:gymbike.scm,s:gymdumb.scm,s:gymtread.scm	no	2
+0x0961	COMMAND_SET_CHAR_KEEP_TASK	implemented	51	m30,m31,m39,m93,s:debt.scm	no	2
+0x06BA	COMMAND_TASK_TURN_CHAR_TO_FACE_COORD	implemented	39	m130,m132,m37,m43,s:roulette.scm	no	4
+0x0011	COMMAND_MULT_FLOAT_VAR_BY_VAL	implemented	35	m9,s:crane2.scm,s:gates_script.scm,s:parachute.scm,s:player_parachute.scm	no	2
+0x06DD	COMMAND_SET_TRAIN_CRUISE_SPEED	implemented	31	m2,m29,m52,m68,m82	no	2
+0x081A	COMMAND_SET_CHAR_WEAPON_SKILL	implemented	27	m16,m23,m30,m62,m63	no	2
+0x07F7	COMMAND_SET_OBJECT_COLLISION_DAMAGE_EFFECT	implemented	23	m31,m42,m44,m53,m65	no	2
+0x0650	COMMAND_KILL_FX_SYSTEM	implemented	22	m131,m90,m98,s:home_brains.scm,s:prisonr.scm	no	1
+0x056E	COMMAND_DOES_VEHICLE_EXIST	implemented	20	m106,m74,m77,m9,s:valet.scm	no	1
+0x06DC	COMMAND_SET_TRAIN_SPEED	implemented	18	m2,m29,m52,m68,m82	no	2
+0x08DC	COMMAND_SET_BLIP_ENTRY_EXIT	implemented	18	m12,m22,m32,m61,m90	yes	4
+0x076D	COMMAND_GET_ZONE_GANG_STRENGTH	implemented	16	m104,m106,m107,m20,m21	no	3
+0x0940	COMMAND_SET_GROUP_FOLLOW_STATUS	implemented	16	m106,m20,m24,m44,m99	yes	2
+0x0396	COMMAND_FREEZE_ONSCREEN_TIMER	implemented	16	m121,m123,m124,m24,m47	yes	1
+0x0067	COMMAND_SUB_FLOAT_LVAR_FROM_FLOAT_VAR	implemented	15	m124,s:crane2.scm,s:crane3.scm,s:gymdumb.scm,s:player_parachute.scm	no	2
+0x0688	COMMAND_TASK_TOGGLE_PED_THREAT_SCANNER	implemented	14	m104,m29,m44,m61,m93	no	1
+0x07CC	COMMAND_SET_PLAYER_ENTER_CAR_BUTTON	implemented	14	m30,m82,s:basketb.scm,s:slot_machine.scm,s:vending_machine.scm	no	2
+0x05AD	COMMAND_IS_VAR_TEXT_LABEL_EQUAL_TO_TEXT_LABEL	implemented	14	m123,s:barber.scm,s:clothes.scm,s:junkfud.scm,s:pcustom.scm	no	2
+0x09CA	COMMAND_SET_OBJECT_PROOFS	implemented	13	m23,m65,m85,m86,m90	no	6
+0x0913	COMMAND_START_NEW_STREAMED_SCRIPT	implemented	13	m104,m31,m51,s:bar_ambience.scm,s:foodbrains.scm	no	-1
+0x074F	COMMAND_IS_CHAR_RESPONDING_TO_EVENT	implemented	13	m31,m93,s:camera.scm,s:dealer.scm,s:valet.scm	no	2
+0x0042	COMMAND_IS_FLOAT_VAR_EQUAL_TO_NUMBER	implemented	12	m124,s:gymbench.scm,s:gymdumb.scm,s:impound.scm,s:parachute.scm	no	2
+0x08F9	COMMAND_IS_VAR_TEXT_LABEL16_EQUAL_TO_TEXT_LABEL	implemented	12	s:bar_ambience.scm,s:barguy.scm,s:casino_ambience.scm,s:strip_ambience.scm,s:stripw.scm	no	2
+0x0208	COMMAND_GENERATE_RANDOM_FLOAT_IN_RANGE	implemented	11	m123,m124,m18,m63,s:debt.scm	no	3
+0x03A2	COMMAND_SET_CAR_STATUS	implemented	10	m19,m47,m49,m85,m9	no	2
+0x0784	COMMAND_GIVE_PLAYER_CLOTHES	implemented	10	m101,m24,m51,m97,s:gf_sex.scm	yes	4
+0x0992	COMMAND_SET_PLAYER_CYCLE_WEAPON_BUTTON	implemented	10	m114,m115,m116,m32,s:player_parachute.scm	no	2
+0x0682	COMMAND_DETACH_OBJECT	implemented	10	m74,m79,s:basketb.scm,s:gymbench.scm,s:player_parachute.scm	no	5
+0x01EA	COMMAND_GET_MAXIMUM_NUMBER_OF_PASSENGERS	implemented	9	m104,m106,m124,m18,m88	no	2
+0x0188	COMMAND_ADD_BLIP_FOR_OBJECT	implemented	9	m118,m50,m65,m74,m85	yes	2
+0x0852	COMMAND_SET_CAR_CAN_BE_VISIBLY_DAMAGED	implemented	8	m112,m12,m31,m33,m37	no	2
+0x0495	COMMAND_IS_CAR_ON_FIRE	implemented	8	m123,m20,m28,m49,s:dealer.scm	no	1
+0x087E	COMMAND_SET_CHAR_DROPS_WEAPONS_WHEN_DEAD	implemented	8	m32,m47,m62,m96,m98	no	2
+0x0293	COMMAND_GET_CONTROLLER_MODE	implemented	8	m121,m123,m124,m127,m75	no	1
+0x010B	COMMAND_STORE_SCORE	implemented	7	m125,m9,s:blackj.scm,s:debt.scm,s:vidpok.scm	no	2
+0x039F	COMMAND_TURN_CAR_TO_FACE_COORD	implemented	7	m11,m123,m130,m132,m72	no	3
+0x003C	COMMAND_IS_INT_VAR_EQUAL_TO_INT_LVAR	implemented	7	m23,m65,m95,s:stripw.scm,s:vidpok.scm	no	2
+0x074A	COMMAND_ADD_GROUP_DECISION_MAKER_EVENT_RESPONSE	implemented	7	m102,m27,m29,m34,m42	no	9
+0x075B	COMMAND_SET_RADAR_ZOOM	implemented	7	m32,m74,m81,m90,m96	yes	1
+0x04D8	COMMAND_SET_CHAR_DROWNS_IN_WATER	implemented	7	m105,m130,m66,m69,m96	no	2
+0x0A0C	COMMAND_IS_PLAYER_USING_JETPACK	implemented	7	s:basketb.scm,s:gymbench.scm,s:gymbike.scm,s:gymdumb.scm,s:gymtread.scm	no	1
+0x0215	COMMAND_REMOVE_PICKUP	implemented	6	m18,m45,m47,m93,s:parachute.scm	no	1
+0x050F	COMMAND_GET_MAX_WANTED_LEVEL	implemented	6	m20,m56,m60,m83,m86	no	1
+0x071F	COMMAND_SET_OBJECT_HEALTH	implemented	6	m23,m37,m81,m85,m86	no	1
+0x0949	COMMAND_ATTACH_MISSION_AUDIO_TO_CHAR	implemented	6	m23,m24,m46,m88,s:impound.scm	yes	2
+0x03FE	COMMAND_SET_CHAR_MONEY	implemented	6	m127,m23,m30,s:dealer.scm,s:debt.scm	no	2
+0x02A7	COMMAND_ADD_SPRITE_BLIP_FOR_CONTACT_POINT	implemented	6	m104,m134,m34,m45,m46	no	5
+0x03EE	COMMAND_CAN_PLAYER_START_MISSION	implemented	6	s:arcade.scm,s:otb_script.scm,s:pool_script.scm,s:roulette.scm,s:vending_machine.scm	no	1
+0x0818	COMMAND_IS_CHAR_IN_AIR	implemented	5	m18,m60,s:bcesar3.scm,s:parachute.scm,s:player_parachute.scm	no	1
+0x0294	COMMAND_SET_CAN_RESPRAY_CAR	implemented	5	m108,m27,m33,m47,m70	no	2
+0x0423	COMMAND_SET_CAR_TRACTION	implemented	5	m104,m130,m132,m31,m47	no	2
+0x0159	COMMAND_POINT_CAMERA_AT_CHAR	implemented	5	m47,m61,m63,s:gymbench.scm,s:gymdumb.scm	no	3
+0x0154	COMMAND_IS_CHAR_IN_ZONE	implemented	162	m121,m127,m52,m66	no	2
+0x0713	COMMAND_TASK_DRIVE_BY	implemented	72	m11,m30,m43,m55	no	10
+0x09B2	COMMAND_GET_RANDOM_CAR_MODEL_IN_MEMORY	implemented	68	m2,m34,m68,m88	no	3
+0x0570	COMMAND_ADD_SHORT_RANGE_SPRITE_BLIP_FOR_CONTACT_POINT	implemented	67	m0,m134,m43,m45	no	5
+0x0588	COMMAND_SET_LOAD_COLLISION_FOR_CHAR_FLAG	implemented	30	m123,m57,m70,m82	no	2
+0x065E	COMMAND_VIEW_FLOAT_VARIABLE	implemented	28	m41,m59,m69,m77	no	2
+0x08FE	COMMAND_IS_HELP_MESSAGE_BEING_DISPLAYED	implemented	25	m123,m30,m39,m74	yes	0
+0x0069	COMMAND_MULT_FLOAT_VAR_BY_FLOAT_VAR	implemented	25	m124,s:crane2.scm,s:parachute.scm,s:player_parachute.scm	no	2
+0x08B7	COMMAND_IS_LOCAL_VAR_BIT_SET_CONST	implemented	24	m22,m79,s:gf_date.scm,s:gf_sex.scm	no	2
+0x0648	COMMAND_SET_FOLLOW_NODE_THRESHOLD_DISTANCE	implemented	20	m131,m29,m32,m46	no	2
+0x0059	COMMAND_ADD_FLOAT_VAR_TO_FLOAT_VAR	implemented	20	m63,s:crane2.scm,s:parachute.scm,s:player_parachute.scm	no	2
+0x020C	COMMAND_ADD_EXPLOSION	implemented	19	m43,m63,m74,m98	no	4
+0x0065	COMMAND_SUB_FLOAT_VAR_FROM_FLOAT_LVAR	implemented	18	m9,s:crane2.scm,s:parachute.scm,s:player_parachute.scm	no	2
+0x0073	COMMAND_DIV_FLOAT_LVAR_BY_FLOAT_LVAR	implemented	18	m124,m9,s:crane2.scm,s:valet.scm	no	2
+0x0A2A	COMMAND_IS_THIS_HELP_MESSAGE_BEING_DISPLAYED	implemented	18	m47,s:blackj.scm,s:camera.scm,s:wheelo.scm	no	1
+0x01FB	COMMAND_SQRT	implemented	14	m124,m52,s:crane2.scm,s:parachute.scm	no	2
+0x074D	COMMAND_TASK_SHOOT_AT_CHAR	implemented	13	m106,m18,m61,m85	no	3
+0x0685	COMMAND_IS_OBJECT_ATTACHED	implemented	13	m109,m65,m74,s:basketb.scm	no	1
+0x03D7	COMMAND_SET_MISSION_AUDIO_POSITION	implemented	12	m100,m20,m34,s:impound.scm	no	4
+0x08A3	COMMAND_CAN_TRIGGER_GANG_WAR_WHEN_ON_A_MISSION	implemented	12	m104,m106,m107,m21	no	1
+0x0840	COMMAND_SET_VEHICLE_AREA_VISIBLE	implemented	12	m102,m129,m70,m74	no	2
+0x0630	COMMAND_SET_GROUP_LEADER	implemented	11	m124,m17,m34,s:debt.scm	no	2
+0x0583	COMMAND_IS_PLAYER_IN_INFO_ZONE	implemented	11	m104,m106,m107,m21	no	2
+0x01EC	COMMAND_SET_CAR_HEAVY	implemented	11	m30,m31,m34,m36	no	2
+0x04A2	COMMAND_HELI_GOTO_COORDS	implemented	11	m37,m57,m74,m93	no	6
+0x0816	COMMAND_SET_CHAR_KINDA_STAY_IN_SAME_PLACE	implemented	10	m18,m28,m34,m38	no	2
+0x091E	COMMAND_SWITCH_PED_ROADS_BACK_TO_ORIGINAL	implemented	10	m106,m18,m63,m92	yes	6
+0x08BD	COMMAND_SET_LOCAL_VAR_BIT_CONST	implemented	10	m22,s:gf_date.scm,s:gf_meeting.scm,s:gf_sex.scm	no	2
+0x034E	COMMAND_SLIDE_OBJECT	implemented	10	m23,m63,m84,s:gates_script.scm	no	8
+0x0431	COMMAND_IS_CAR_PASSENGER_SEAT_FREE	implemented	9	m122,m18,m49,m9	no	2
+0x0432	COMMAND_GET_CHAR_IN_CAR_PASSENGER_SEAT	implemented	9	m122,m18,m49,m9	no	3
+0x04A9	COMMAND_IS_CHAR_IN_ANY_HELI	implemented	9	m104,m77,m79,m93	no	1
+0x03D3	COMMAND_GET_CLOSEST_CAR_NODE_WITH_HEADING	implemented	9	m124,m93,s:debt.scm,s:valet.scm	no	7
+0x069A	COMMAND_ATTACH_OBJECT_TO_OBJECT	implemented	8	m85,m90,s:gymbench.scm,s:gymdumb.scm	no	8
+0x0879	COMMAND_SET_GANG_WARS_ACTIVE	implemented	7	m104,m106,m107,m21	no	1
+0x06A8	COMMAND_TASK_GOTO_CHAR_OFFSET	implemented	7	m109,m23,m76,s:camera.scm	no	5
+0x0819	COMMAND_GET_CHAR_HEIGHT_ABOVE_GROUND	implemented	7	m79,m98,s:parachute.scm,s:player_parachute.scm	no	2
+0x0494	COMMAND_GET_POSITION_OF_ANALOGUE_STICKS	implemented	7	s:crane2.scm,s:crane3.scm,s:parachute.scm,s:player_parachute.scm	no	5
+0x0622	COMMAND_TASK_LEAVE_CAR_IMMEDIATELY	implemented	6	m121,m122,m2,m31	no	2
+0x0221	COMMAND_APPLY_BRAKES_TO_PLAYERS_CAR	implemented	6	m104,m61,m9,m95	no	2
+0x0092	COMMAND_CSET_LVAR_INT_TO_LVAR_FLOAT	implemented	6	m123,m124,m52,m9	no	2
+0x0873	COMMAND_REMOVE_CAR_RECORDING	implemented	6	m105,m11,m68,m98	no	1
+0x08AB	COMMAND_HAS_STREAMED_SCRIPT_LOADED	implemented	6	m102,m104,m31,m51	no	1
+0x08F8	COMMAND_SHOW_UPDATE_STATS	implemented	6	m119,m122,m123,m83	no	1
+0x0978	COMMAND_COPY_SHARED_CHAR_DECISION_MAKER	implemented	6	s:bouncer.scm,s:burg_brains.scm,s:copsit.scm,s:dealer.scm	no	2
+0x043C	COMMAND_SET_MUSIC_DOES_FADE	implemented	5	m12,m17,m5,m70	no	1
+0x03BA	COMMAND_CLEAR_AREA_OF_CARS	implemented	5	m105,m18,m38,m83	no	6
+0x02E3	COMMAND_GET_CAR_SPEED	implemented	5	m126,m18,m43,m52	no	2
+0x0837	COMMAND_IS_OBJECT_PLAYING_ANIM	implemented	5	m109,m22,m64,s:player_parachute.scm	no	2
+0x03AF	COMMAND_SWITCH_STREAMING	implemented	5	m105,m27,m38,m48	no	1
+0x04A5	COMMAND_GET_DEAD_CHAR_PICKUP_COORDS	implemented	5	m51,m93,m96,s:parachute.scm	no	4
+0x042B	COMMAND_CLEAR_AREA_OF_CHARS	implemented	4	m18,m38,m9,m90	no	6
+0x068D	COMMAND_GET_ACTIVE_CAMERA_COORDINATES	implemented	4	m105,m9,m90,s:parachute.scm	no	3
+0x02BF	COMMAND_IS_CAR_IN_WATER	implemented	4	m11,m123,m43,m79	no	1
+0x06DB	COMMAND_DELETE_ALL_TRAINS	implemented	4	m112,m126,m27,m29	no	0
+0x0158	COMMAND_POINT_CAMERA_AT_CAR	implemented	4	m30,m37,m43,m46	no	3
+0x08BA	COMMAND_SET_GLOBAL_VAR_BIT_CONST	implemented	4	m31,m97,s:dance.scm,s:gf_date.scm	no	2
+0x0506	COMMAND_SET_CAR_MODEL_COMPONENTS	implemented	4	m31,m65,m68,m95	no	3
+0x015A	COMMAND_RESTORE_CAMERA	implemented	4	m130,m132,m74,s:lowr_cont.scm	no	0
+0x09FF	COMMAND_SET_RESPAWN_POINT_FOR_DURATION_OF_MISSION	implemented	4	m102,m129,m91,m93	no	3
+0x08A0	COMMAND_TASK_USE_CLOSEST_MAP_ATTRACTOR	implemented	4	s:dancer.scm,s:otbtill.scm,s:otbwtch.scm,s:pcustom.scm	no	7
+0x0835	COMMAND_GET_CURRENT_DATE	implemented	4	s:gymbench.scm,s:gymbike.scm,s:gymdumb.scm,s:gymtread.scm	no	2
+0x08D7	COMMAND_GET_MENU_ITEM_SELECTED	implemented	4	s:gymbench.scm,s:gymbike.scm,s:gymdumb.scm,s:gymtread.scm	no	2
+0x035D	COMMAND_MAKE_OBJECT_TARGETTABLE	implemented	33	m16,m50,m85	no	2
+0x07FE	COMMAND_GIVE_MELEE_ATTACK_TO_CHAR	implemented	24	m114,m115,m116	no	3
+0x0575	COMMAND_FREEZE_CHAR_POSITION_AND_DONT_LOAD_COLLISION	implemented	20	m11,m127,m44	no	2
+0x0672	COMMAND_TASK_DESTROY_CAR	implemented	20	m109,m17,m39	no	2
+0x0574	COMMAND_FREEZE_CAR_POSITION_AND_DONT_LOAD_COLLISION	implemented	19	m11,m123,m33	no	2
+0x02CF	COMMAND_START_SCRIPT_FIRE	implemented	19	m112,m22,m90	no	6
+0x077C	COMMAND_CLEAR_ALL_CHAR_RELATIONSHIPS	implemented	19	m100,m60,m65	no	2
+0x080A	COMMAND_GET_LEVEL_DESIGN_COORDS_FOR_OBJECT	implemented	18	s:basketb.scm,s:gates_script.scm,s:slot_machine.scm	no	5
+0x09CC	COMMAND_DOES_OBJECT_HAVE_THIS_MODEL	implemented	17	s:arcade.scm,s:basketb.scm,s:vending_machine.scm	no	2
+0x0185	COMMAND_IS_CAR_HEALTH_GREATER	implemented	16	m121,m124,m132	no	2
+0x04E6	COMMAND_LOCATE_OBJECT_3D	implemented	15	m131,m74,s:gates_script.scm	no	8
+0x09D6	COMMAND_SET_CHAR_SAY_SCRIPT	implemented	15	s:blackj.scm,s:roulette.scm,s:wheelo.scm	no	5
+0x00A8	COMMAND_CAR_WANDER_RANDOMLY	implemented	14	m124,m68,m88	no	1
+0x0856	COMMAND_SET_CHAR_ALLOWED_TO_DUCK	implemented	13	m23,m30,m96	no	2
+0x0027	COMMAND_IS_FLOAT_LVAR_GREATER_THAN_FLOAT_VAR	implemented	12	m74,s:crane2.scm,s:parachute.scm	no	2
+0x0723	COMMAND_BREAK_OBJECT	implemented	11	m16,m22,m95	no	2
+0x0321	COMMAND_EXPLODE_CHAR_HEAD	implemented	11	m30,m34,m64	no	1
+0x0364	COMMAND_HAS_CHAR_SPOTTED_CHAR	implemented	11	m106,m109,s:home_brains.scm	no	2
+0x0024	COMMAND_IS_FLOAT_VAR_GREATER_THAN_FLOAT_VAR	implemented	11	s:parachute.scm,s:player_parachute.scm,s:valet.scm	no	2
+0x05DA	COMMAND_TASK_FLEE_POINT	implemented	10	m123,m124,m93	no	6
+0x064E	COMMAND_STOP_FX_SYSTEM	implemented	9	m12,m31,s:home_brains.scm	no	1
+0x048F	COMMAND_REMOVE_ALL_CHAR_WEAPONS	implemented	9	m16,m38,m64	no	1
+0x0090	COMMAND_CSET_VAR_INT_TO_LVAR_FLOAT	implemented	9	m126,m74,s:valet.scm	yes	2
+0x005D	COMMAND_ADD_FLOAT_VAR_TO_FLOAT_LVAR	implemented	9	m124,s:crane2.scm,s:parachute.scm	no	2
+0x0366	COMMAND_HAS_OBJECT_BEEN_DAMAGED	implemented	8	m16,m22,m23	no	1
+0x05FC	COMMAND_IS_CHAR_IN_ANGLED_AREA_3D	implemented	8	m23,m76,s:gates_script.scm	no	9
+0x0676	COMMAND_TASK_SHUFFLE_TO_NEXT_CAR_SEAT	implemented	8	m30,m37,m81	no	2
+0x03EB	COMMAND_CLEAR_SMALL_PRINTS	implemented	8	m127,m42,m79	no	0
+0x05C0	COMMAND_TASK_LOOK_AT_VEHICLE	implemented	7	m11,m43,m81	no	3
+0x06F0	COMMAND_SET_GROUP_SEPARATION_RANGE	implemented	7	m29,m34,m63	no	2
+0x0460	COMMAND_SET_INTERPOLATION_PARAMETERS	implemented	7	m30,m74,m95	no	2
+0x0010	COMMAND_MULT_INT_VAR_BY_VAL	implemented	7	m43,m79,s:valet.scm	no	2
+0x04AB	COMMAND_IS_CHAR_IN_ANY_PLANE	implemented	7	m104,m77,m79	no	1
+0x01E9	COMMAND_GET_NUMBER_OF_PASSENGERS	implemented	7	m104,m106,m121	no	2
+0x04C8	COMMAND_IS_CHAR_IN_FLYING_VEHICLE	implemented	7	m104,m106,s:debt.scm	no	1
+0x01C7	COMMAND_DONT_REMOVE_OBJECT	implemented	6	m1,m42,m50	no	1
+0x07FF	COMMAND_SET_CAR_HYDRAULICS	implemented	6	m19,m59,m9	no	2
+0x08C6	COMMAND_SET_CHAR_CAN_BE_KNOCKED_OFF_BIKE	implemented	6	m11,m30,m65	no	2
+0x087A	COMMAND_IS_GANG_WAR_GOING_ON	implemented	6	m104,m106,m21	no	0
+0x00EE	COMMAND_LOCATE_CHAR_IN_CAR_2D	implemented	6	m105,m31,m68	no	6
+0x0332	COMMAND_SET_CHAR_BLEEDING	implemented	6	m37,m38,m95	no	2
+0x066D	COMMAND_CREATE_FX_SYSTEM_ON_OBJECT	implemented	6	m131,m77,m90	no	7
+0x09B7	COMMAND_SET_ZONE_NO_COPS	implemented	6	m101,m107,m109	no	2
+0x040C	COMMAND_IS_GERMAN_GAME	implemented	6	m114,m115,m116	no	0
+0x0627	COMMAND_REGISTER_INT_STAT	implemented	6	m123,m124,m129	no	2
+0x051C	COMMAND_HAS_CAR_BEEN_DAMAGED_BY_CHAR	implemented	5	m52,m89,m9	no	2
+0x091D	COMMAND_SWITCH_ROADS_BACK_TO_ORIGINAL	implemented	5	m18,m28,m92	no	6
+0x0474	COMMAND_LOCATE_CHAR_ANY_MEANS_OBJECT_3D	implemented	5	m131,m23,m65	no	6
+0x0465	COMMAND_DETACH_CHAR_FROM_CAR	implemented	5	m29,m58,m95	no	1
+0x0679	COMMAND_ATTACH_CAMERA_TO_VEHICLE	implemented	5	m30,m43,m91	no	9
+0x0205	COMMAND_LOCATE_CHAR_ANY_MEANS_CAR_3D	implemented	5	m123,m33,m60	no	6
+0x00B0	COMMAND_IS_CAR_IN_AREA_2D	implemented	5	m46,m90,s:impound.scm	no	6
+0x038A	COMMAND_IS_POINT_OBSCURED_BY_A_MISSION_ENTITY	implemented	5	m124,m93,s:debt.scm	no	6
+0x0A2D	COMMAND_DRAW_ODDJOB_TITLE_BEFORE_FADE	implemented	5	m117,m118,m125	no	1
+0x006A	COMMAND_MULT_INT_LVAR_BY_INT_LVAR	implemented	5	m124,m127,m131	no	2
+0x0621	COMMAND_CREATE_CHAR_AT_ATTRACTOR	implemented	5	s:bar_ambience.scm,s:foodbrains.scm,s:strip_ambience.scm	no	-1
+0x0829	COMMAND_TASK_DIE_NAMED_ANIM	implemented	5	s:parachute.scm,s:player_parachute.scm,s:valet.scm	no	5
+0x0952	COMMAND_PRELOAD_BEAT_TRACK	implemented	4	m2,m9,s:dance.scm	no	1
+0x0953	COMMAND_GET_BEAT_TRACK_STATUS	implemented	4	m2,m9,s:dance.scm	no	1
+0x06A9	COMMAND_TASK_LOOK_AT_COORD	implemented	4	m12,m129,m77	yes	5
+0x06C5	COMMAND_SKIP_TO_END_AND_STOP_PLAYBACK_RECORDED_CAR	implemented	4	m105,m18,m63	no	1
+0x07F6	COMMAND_GET_GROUP_SIZE	implemented	4	m109,m20,s:camera.scm	no	3
+0x0360	COMMAND_OPEN_GARAGE	implemented	4	m31,m67,m70	no	1
+0x0667	COMMAND_TASK_AIM_GUN_AT_COORD	implemented	4	m42,m44,m64	no	5
+0x0777	COMMAND_REMOVE_IPL	implemented	4	m110,m47,m63	no	1
+0x0842	COMMAND_GET_CITY_PLAYER_IS_IN	implemented	4	m127,m131,m47	no	2
+0x06AC	COMMAND_GET_CHAR_SPEED	implemented	4	m52,m63,s:debt.scm	no	2
+0x039C	COMMAND_SET_CAR_WATERTIGHT	implemented	4	m130,m132,m70	no	2
+0x0984	COMMAND_GET_OBJECT_MODEL	implemented	4	s:gates_script.scm,s:slot_machine.scm,s:vidpok.scm	no	2
+0x091C	COMMAND_GET_USER_OF_CLOSEST_MAP_ATTRACTOR	implemented	4	s:otb_staff.scm,s:slot_machine.scm,s:stripm.scm	no	4
+0x0954	COMMAND_PLAY_BEAT_TRACK	implemented	3	m2,m9,s:dance.scm	no	0
+0x1104	?	unregistered	3	m134,m41,m9	no	15
+0x0297	COMMAND_RESET_NUM_OF_MODELS_KILLED_BY_PLAYER	implemented	3	m10,s:casino_ambience.scm,s:strip_ambience.scm	no	1
+0x070B	COMMAND_DROP_OBJECT	implemented	3	m12,m77,m90	no	2
+0x0956	COMMAND_FIND_MAX_NUMBER_OF_GROUP_MEMBERS	implemented	3	m20,m44,m66	no	1
+0x083A	COMMAND_SET_OBJECT_ANIM_CURRENT_TIME	implemented	3	m109,m22,m64	no	3
+0x018D	COMMAND_ADD_CONTINUOUS_SOUND	NOP	3	m23,m42,s:ammu.scm	no	5
+0x6805	?	unregistered	3	m23,m85,m86	no	3
+0x0793	COMMAND_STORE_CLOTHES_STATE	implemented	3	m101,m24,m97	yes	0
+0x04F4	COMMAND_ATTACH_CHAR_TO_OBJECT	implemented	3	m29,s:crane1.scm,s:crane2.scm	no	5
+0x0776	COMMAND_REQUEST_IPL	implemented	3	m110,m47,m63	no	1
+0x06ED	COMMAND_GIVE_VEHICLE_PAINTJOB	implemented	3	m108,m47,m81	no	2
+0x0815	COMMAND_SET_OBJECT_COORDINATES_AND_VELOCITY	implemented	3	m50,s:crane3.scm,s:player_parachute.scm	no	4
+0x09BE	COMMAND_IS_MINIGAME_IN_PROGRESS	implemented	3	m131,m70,s:bar_ambience.scm	no	0
+0x001F	COMMAND_IS_INT_LVAR_GREATER_THAN_INT_VAR	implemented	3	m74,m95,s:player_parachute.scm	no	2
+0x07A8	COMMAND_SET_AREA51_SAM_SITE	implemented	3	m83,m93,m98	no	1
+0x0923	COMMAND_SWITCH_AMBIENT_PLANES	implemented	3	m100,m102,m91	no	1
+0x0033	COMMAND_IS_NUMBER_GREATER_OR_EQUAL_TO_FLOAT_LVAR	implemented	3	m91,s:bar_staff.scm,s:parachute.scm	no	2
+0x069B	COMMAND_ATTACH_OBJECT_TO_CHAR	implemented	3	m109,s:parachute.scm,s:player_parachute.scm	no	8
+0x089F	COMMAND_GET_PED_TYPE	implemented	3	m127,s:burg_brains.scm,s:prisonr.scm	no	2
+0x03A3	COMMAND_IS_CHAR_MALE	implemented	3	m127,s:barguy.scm,s:dancer.scm	no	1
+0x094B	COMMAND_GET_NAME_OF_ENTRY_EXIT_CHAR_USED	implemented	3	s:bar_ambience.scm,s:strip_ambience.scm,s:stripw.scm	no	2
+0x09B4	COMMAND_SET_CLOSEST_ENTRY_EXIT_FLAG	implemented	60	m0,m134	no	5
+0x0994	COMMAND_MARK_ROAD_NODE_AS_DONT_WANDER	implemented	47	m33,m89	no	3
+0x09C4	COMMAND_SET_PETROL_TANK_WEAKPOINT	implemented	28	m30,m94	no	2
+0x07BC	COMMAND_TASK_SET_CHAR_DECISION_MAKER	implemented	26	m34,m90	no	2
+0x0637	COMMAND_TASK_GO_TO_COORD_WHILE_SHOOTING	implemented	15	m17,m93	no	8
+0x0326	COMMAND_START_CHAR_FIRE	implemented	15	m123,m22	no	2
+0x094E	COMMAND_DISABLE_CHAR_SPEECH	implemented	15	m96,s:impound.scm	yes	2
+0x07FD	COMMAND_DOES_GROUP_EXIST	implemented	14	m124,s:debt.scm	no	1
+0x006D	COMMAND_MULT_FLOAT_VAR_BY_FLOAT_LVAR	implemented	14	s:parachute.scm,s:player_parachute.scm	no	2
+0x017B	COMMAND_SET_CHAR_AMMO	implemented	12	m16,m42	no	3
+0x078F	COMMAND_TASK_CLIMB	implemented	12	m28,m34	no	2
+0x099F	COMMAND_TASK_SET_IGNORE_WEAPON_RANGE_FLAG	implemented	12	m106,m34	no	2
+0x05F6	COMMAND_IS_CHAR_IN_ANGLED_AREA_2D	implemented	10	m23,m32	no	7
+0x0397	COMMAND_SWITCH_CAR_SIREN	implemented	10	m37,m68	no	2
+0x0030	COMMAND_IS_FLOAT_VAR_GREATER_OR_EQUAL_TO_NUMBER	implemented	10	m105,s:impound.scm	no	2
+0x06EF	COMMAND_IS_GROUP_LEADER	implemented	10	m124,s:debt.scm	no	2
+0x083D	COMMAND_GET_CHAR_VELOCITY	implemented	10	s:parachute.scm,s:player_parachute.scm	no	4
+0x00AF	COMMAND_SET_CAR_MISSION	implemented	9	m123,m18	no	2
+0x031D	COMMAND_HAS_CHAR_BEEN_DAMAGED_BY_WEAPON	implemented	9	m106,s:basketb.scm	no	2
+0x083E	COMMAND_SET_CHAR_ROTATION	implemented	9	s:parachute.scm,s:player_parachute.scm	no	4
+0x0356	COMMAND_IS_EXPLOSION_IN_AREA	implemented	8	m65,m74	no	7
+0x006F	COMMAND_MULT_FLOAT_LVAR_BY_FLOAT_VAR	implemented	8	s:crane2.scm,s:player_parachute.scm	no	2
+0x03F5	COMMAND_SET_CAR_CAN_BE_DAMAGED	implemented	7	m11,m123	no	2
+0x0393	COMMAND_SET_CHAR_ANIM_SPEED	implemented	7	m130,m28	no	3
+0x04BD	COMMAND_MARK_CAR_AS_CONVOY_CAR	implemented	7	m124,m33	no	2
+0x0381	COMMAND_SET_OBJECT_VELOCITY	implemented	7	m46,s:basketb.scm	no	4
+0x05D9	COMMAND_TASK_GOTO_CHAR	implemented	7	m63,m88	no	4
+0x02FD	COMMAND_PRINT_WITH_2_NUMBERS_NOW	implemented	7	m75,s:valet.scm	no	5
+0x083C	COMMAND_SET_CHAR_VELOCITY	implemented	7	s:parachute.scm,s:player_parachute.scm	no	4
+0x0917	COMMAND_SWITCH_AUDIO_ZONE	implemented	6	m31,m9	no	2
+0x0803	COMMAND_DOES_CAR_HAVE_HYDRAULICS	implemented	6	m19,m9	no	1
+0x07D5	COMMAND_APPLY_FORCE_TO_CAR	implemented	6	m74,m9	no	7
+0x047A	COMMAND_IS_CHAR_ON_ANY_BIKE	implemented	6	m11,m65	no	1
+0x0097	COMMAND_ABS_LVAR_FLOAT	implemented	6	m18,s:valet.scm	no	1
+0x078A	COMMAND_GET_TRAIN_CARRIAGE	implemented	6	m29,m52	no	3
+0x0714	COMMAND_SET_CAR_STAY_IN_SLOW_LANE	implemented	6	m68,m76	no	2
+0x007B	COMMAND_ADD_TIMED_FLOAT_LVAR_TO_FLOAT_LVAR	implemented	6	m90,s:crane2.scm	no	2
+0x056C	COMMAND_IS_CHAR_IN_ANY_POLICE_VEHICLE	implemented	6	m124,s:impound.scm	no	1
+0x08EE	COMMAND_SET_MENU_ITEM_WITH_NUMBER	implemented	6	m127,m131	no	5
+0x099A	COMMAND_SET_CAR_COLLISION	implemented	5	m2,m48	no	2
+0x07F5	COMMAND_CONTROL_CAR_HYDRAULICS	implemented	5	m19,m9	no	5
+0x03E7	COMMAND_FLASH_HUD_OBJECT	implemented	5	m12,m32	no	1
+0x02D1	COMMAND_REMOVE_SCRIPT_FIRE	implemented	5	m123,m22	no	1
+0x00F0	COMMAND_LOCATE_STOPPED_CHAR_ON_FOOT_2D	implemented	5	m23,m46	no	6
+0x038C	COMMAND_ADD_TO_OBJECT_VELOCITY	implemented	5	m131,m23	no	4
+0x09B5	COMMAND_SET_CHAR_SIGNAL_AFTER_KILL	implemented	5	m102,m30	no	2
+0x08D2	COMMAND_SET_OBJECT_SCALE	implemented	5	m31,s:player_parachute.scm	no	2
+0x06B2	COMMAND_DELETE_SEARCHLIGHT	implemented	5	m37,m47	no	1
+0x02D6	COMMAND_IS_CHAR_SHOOTING_IN_AREA	implemented	5	m39,m52	no	6
+0x0466	COMMAND_SET_CAR_STAY_IN_FAST_LANE	implemented	5	m68,m99	no	2
+0x090C	COMMAND_SET_SPECIFIC_ZONE_TO_TRIGGER_GANG_WAR	implemented	5	m106,m107	no	1
+0x0058	COMMAND_ADD_INT_VAR_TO_INT_VAR	implemented	5	s:blackj.scm,s:valet.scm	yes	2
+0x0075	COMMAND_DIV_FLOAT_VAR_BY_FLOAT_LVAR	implemented	5	s:crane2.scm,s:parachute.scm	no	2
+0x0612	COMMAND_SET_CHAR_ANIM_PLAYING_FLAG	implemented	5	s:dance.scm,s:gymbike.scm	no	3
+0x070C	COMMAND_EXPLODE_CAR_IN_CUTSCENE	implemented	4	m11,m43	no	1
+0x04F1	COMMAND_IS_CAR_WAITING_FOR_WORLD_COLLISION	implemented	4	m12,m124	no	1
+0x0972	COMMAND_SET_CHAR_COORDINATES_NO_OFFSET	implemented	4	m105,m18	no	4
+0x0003	COMMAND_SHAKE_CAM	implemented	4	m22,m62	no	1
+0x0A1B	COMMAND_IS_CHAR_TOUCHING_CHAR	implemented	4	m23,m46	no	2
+0x0A31	COMMAND_SET_PLAYER_GROUP_TO_FOLLOW_NEVER	implemented	4	m24,m99	no	2
+0x0858	COMMAND_SET_HEADING_FOR_ATTACHED_PLAYER	implemented	4	m30,m58	no	3
+0x0079	COMMAND_ADD_TIMED_VAL_TO_FLOAT_LVAR	implemented	4	m30,m90	no	2
+0x0684	COMMAND_DETACH_CAR	implemented	4	m30,m74	no	5
+0x0216	COMMAND_SET_TAXI_LIGHTS	implemented	4	m121,m52	no	2
+0x01E4	COMMAND_PRINT_WITH_NUMBER	implemented	4	m70,s:valet.scm	yes	4
+0x0361	COMMAND_CLOSE_GARAGE	implemented	4	m109,m70	yes	1
+0x04A6	COMMAND_CREATE_PROTECTION_PICKUP	implemented	4	m131,m70	no	6
+0x087F	COMMAND_SET_CHAR_NEVER_LEAVES_GROUP	implemented	4	m105,m90	no	2
+0x00F4	COMMAND_LOCATE_CHAR_IN_CAR_CHAR_2D	implemented	4	m105,m127	no	5
+0x0501	COMMAND_SET_PLAYER_CAN_DO_DRIVE_BY	implemented	4	m119,m131	no	2
+0x0843	COMMAND_GET_NAME_OF_ZONE	implemented	4	m123,m124	no	4
+0x0384	COMMAND_PRINT_STRING_IN_STRING_NOW	UNIMPLEMENTED	4	m123,m124	no	4
+0x006E	COMMAND_MULT_INT_LVAR_BY_INT_VAR	implemented	4	m123,m126	no	2
+0x008D	COMMAND_CSET_VAR_FLOAT_TO_VAR_INT	implemented	4	s:gymdumb.scm,s:parachute.scm	no	2
+0x0472	COMMAND_LOCATE_CHAR_ON_FOOT_OBJECT_2D	implemented	4	s:roulette.scm,s:vidpok.scm	no	5
+0x099C	COMMAND_CAMERA_SET_SHAKE_SIMULATION_SIMPLE	implemented	3	m102,m2	no	0
+0x0673	COMMAND_TASK_DIVE_AND_GET_UP	implemented	3	m11,m17	no	4
+0x0669	COMMAND_CREATE_FX_SYSTEM_ON_CHAR	implemented	3	m12,s:prisonr.scm	no	7
+0x0883	COMMAND_ATTACH_FX_SYSTEM_TO_CHAR_BONE	implemented	3	m12,s:prisonr.scm	no	3
+0x04FA	COMMAND_CLEAR_EXTRA_COLOURS	implemented	3	m12,m129	no	1
+0x0441	COMMAND_GET_CAR_MODEL	implemented	3	m18,m90	no	2
+0x0207	COMMAND_LOCATE_CHAR_IN_CAR_CAR_3D	implemented	3	m18,m43	no	6
+0x0844	COMMAND_IS_VAR_TEXT_LABEL_EMPTY	implemented	3	m21,s:pcustom.scm	no	1
+0x02D0	COMMAND_IS_SCRIPT_FIRE_EXTINGUISHED	implemented	3	m123,m22	no	1
+0x0A45	COMMAND_SET_RAILTRACK_RESISTANCE_MULT	implemented	3	m112,m29	no	1
+0x051D	COMMAND_HAS_CAR_BEEN_DAMAGED_BY_CAR	implemented	3	m29,m30	no	2
+0x06E7	COMMAND_ADD_VEHICLE_MOD	implemented	3	m31,m68	no	3
+0x03B0	COMMAND_IS_GARAGE_OPEN	implemented	3	m31,m70	no	1
+0x06C1	COMMAND_CREATE_SEARCHLIGHT_ON_VEHICLE	implemented	3	m37,m47	no	10
+0x05C4	COMMAND_TASK_HANDS_UP	implemented	3	m42,s:customer_panic.scm	no	2
+0x03CD	COMMAND_REMOVE_STUCK_CAR_CHECK	implemented	3	m43,m70	no	1
+0x054F	COMMAND_CLEAR_CAR_LAST_DAMAGE_ENTITY	implemented	3	m132,m52	no	1
+0x07CD	COMMAND_TASK_CHAR_SLIDE_TO_COORD	implemented	3	m52,m88	no	6
+0x09D5	COMMAND_SET_CHAR_SAY_CONTEXT_IMPORTANT	implemented	3	m53,s:burg_brains.scm	no	1
+0x06B0	COMMAND_TASK_SIT_DOWN	implemented	3	m61,m96	no	2
+0x0737	COMMAND_IS_CHAR_HOLDING_OBJECT	implemented	3	m65,s:pool_script.scm	yes	2
+0x010E	COMMAND_ALTER_WANTED_LEVEL_NO_DROP	implemented	3	m68,s:valet.scm	no	2
+0x0898	COMMAND_ENABLE_CRANE_CONTROLS	implemented	3	m69,m74	no	0
+0x03B1	COMMAND_IS_GARAGE_CLOSED	implemented	3	m109,m70	yes	1
+0x04D9	COMMAND_SET_OBJECT_RECORDS_COLLISIONS	implemented	3	m74,s:player_parachute.scm	no	2
+0x08BF	COMMAND_SET_LOCAL_VAR_BIT_LVAR	implemented	3	m79,m90	no	2
+0x07E7	COMMAND_TASK_DRIVE_POINT_ROUTE_ADVANCED	implemented	3	m85,m97	no	6
+0x05BC	COMMAND_TASK_JUMP	implemented	3	m90,m95	no	2
+0x08FD	COMMAND_SET_HEATHAZE_EFFECT	implemented	3	m102,m90	no	1
+0x08E6	COMMAND_SET_PLANE_UNDERCARRIAGE_UP	implemented	3	m102,m91	no	2
+0x0614	COMMAND_SET_CHAR_ANIM_CURRENT_TIME	implemented	3	m114,m115	no	3
+0x02DD	COMMAND_GET_RANDOM_CHAR_IN_ZONE	implemented	3	m121,m127	no	2
+0x04B9	COMMAND_GET_CLOSEST_STRAIGHT_ROAD	implemented	3	m123,m124	no	12
+0x09EE	COMMAND_FORCE_BIG_MESSAGE_AND_COUNTER	implemented	3	m124,s:dance.scm	no	1
+0x005C	COMMAND_ADD_INT_VAR_TO_INT_LVAR	implemented	3	m125,m133	no	2
+0x06C8	COMMAND_SET_LA_RIOTS	implemented	2	m0,m108	no	1
+0x014B	COMMAND_CREATE_CAR_GENERATOR	implemented	2	m0,m1	no	7
+0x067F	COMMAND_FORCE_CAR_LIGHTS	implemented	2	m131,m2	no	2
+0x0955	COMMAND_STOP_BEAT_TRACK	implemented	2	m2,s:dance.scm	no	0
+0x06D9	COMMAND_DELETE_MISSION_TRAINS	implemented	2	m2,m29	no	0
+0x0391	COMMAND_REMOVE_TEXTURE_DICTIONARY	implemented	2	m3,m4	no	?
+0x0A32	COMMAND_IS_CHAR_ATTACHED_TO_ANY_CAR	implemented	2	m9,s:hotdog.scm	no	1
+0x0508	COMMAND_CLOSE_ALL_CAR_DOORS	implemented	2	m10,m12	yes	1
+0x046E	COMMAND_GIVE_REMOTE_CONTROLLED_MODEL_TO_PLAYER	implemented	2	m10,m73	no	?
+0x0634	COMMAND_TASK_KILL_CHAR_ON_FOOT_WHILE_DUCKING	implemented	2	m11,s:bouncer.scm	no	5
+0x04CE	COMMAND_ADD_SHORT_RANGE_SPRITE_BLIP_FOR_COORD	implemented	2	m16,m66	no	5
+0x04E1	COMMAND_POP_CAR_BOOT	implemented	2	m17,m85	no	1
+0x06E3	COMMAND_TASK_WEAPON_ROLL	implemented	2	m17,m63	no	2
+0x08EA	COMMAND_SET_CREATE_RANDOM_GANG_MEMBERS	implemented	2	m17,m18	no	0
+0x09DE	COMMAND_IS_CHAR_GETTING_IN_TO_A_CAR	implemented	2	m18,m89	no	1
+0x04D3	COMMAND_GET_NTH_CLOSEST_CAR_NODE	implemented	2	m18,m47	no	7
+0x02A0	COMMAND_IS_CHAR_STOPPED	implemented	2	m19,s:camera.scm	no	1
+0x02C2	COMMAND_CAR_GOTO_COORDINATES_ACCURATE	implemented	2	m19,m29	no	4
+0x01B0	COMMAND_LOCATE_STOPPED_CAR_3D	implemented	2	m19,s:valet.scm	no	8
+0x02EE	COMMAND_IS_PROJECTILE_IN_AREA	implemented	2	m22,m65	no	6
+0x08A6	COMMAND_OPEN_CAR_DOOR_A_BIT	implemented	2	m22,m55	no	1
+0x068C	COMMAND_IS_PLAYER_TARGETTING_ANYTHING	implemented	2	m23,m46	no	1
+0x085E	COMMAND_START_PLAYBACK_RECORDED_CAR_LOOPED	implemented	2	m23,m50	no	2
+0x0946	COMMAND_SET_CHAR_USES_UPPERBODY_DAMAGE_ANIMS_ONLY	implemented	2	m23,m94	no	2
+0x071E	COMMAND_GET_OBJECT_HEALTH	implemented	2	m23,m50	no	2
+0x09AD	COMMAND_SET_PLAYER_IN_CAR_CAMERA_MODE	implemented	2	m29,m74	no	1
+0x00EF	COMMAND_LOCATE_STOPPED_CHAR_ANY_MEANS_2D	implemented	2	m30,m46	no	6
+0x06E9	COMMAND_REQUEST_VEHICLE_MOD	implemented	2	m31,m68	no	1
+0x0754	COMMAND_FLUSH_PATROL_ROUTE	implemented	2	m32,m98	no	?
+0x0755	COMMAND_EXTEND_PATROL_ROUTE	implemented	2	m32,m98	no	?
+0x088D	COMMAND_SET_USES_COLLISION_OF_CLOSEST_OBJECT_OF_TYPE	implemented	2	m42,m53	no	5
+0x0161	COMMAND_ADD_BLIP_FOR_CAR_OLD	implemented	2	m43,m67	no	1
+0x0763	COMMAND_SET_CAR_AS_MISSION_CAR	implemented	2	m48,m54	no	1
+0x0987	COMMAND_GET_CAR_BLOCKING_CAR	implemented	2	m51,s:valet.scm	no	2
+0x03F3	COMMAND_GET_CAR_COLOURS	implemented	2	m51,m90	no	3
+0x0810	COMMAND_GET_PARKING_NODE_IN_AREA	implemented	2	m51,s:valet.scm	no	9
+0x06B1	COMMAND_CREATE_SEARCHLIGHT	implemented	2	m56,m81	no	9
+0x0836	COMMAND_SET_OBJECT_ANIM_SPEED	implemented	2	m109,m64	no	3
+0x0706	COMMAND_SKIP_IN_PLAYBACK_RECORDED_CAR	implemented	2	m64,m98	no	2
+0x080E	COMMAND_GET_CHAR_HIGHEST_PRIORITY_EVENT	implemented	2	m65,s:impound.scm	no	2
+0x0064	COMMAND_SUB_INT_VAR_FROM_INT_LVAR	implemented	2	m133,m65	yes	2
+0x0496	COMMAND_IS_CAR_TYRE_BURST	implemented	2	m70,m90	no	2
+0x0772	COMMAND_TASK_GOTO_CAR	implemented	2	m70,s:debt.scm	no	4
+0x04B8	COMMAND_GET_CHAR_WEAPON_IN_SLOT	implemented	2	m72,m90	no	5
+0x03CC	COMMAND_ADD_STUCK_CAR_CHECK	implemented	2	m72,m99	no	3
+0x09AC	COMMAND_HIDE_ALL_FRONTEND_BLIPS	implemented	2	m128,m74	no	1
+0x0253	COMMAND_STORE_CLOCK	implemented	2	m74,s:dance.scm	no	0
+0x04DA	COMMAND_HAS_OBJECT_COLLIDED_WITH_ANYTHING	implemented	2	m74,s:player_parachute.scm	no	1
+0x0A24	COMMAND_SET_DISABLE_MILITARY_ZONES	implemented	2	m79,m81	no	1
+0x096A	COMMAND_SWITCH_POLICE_HELIS	implemented	2	m100,m83	no	1
+0x08A4	COMMAND_CONTROL_MOVABLE_VEHICLE_PART	implemented	2	m112,m85	no	2
+0x064F	COMMAND_PLAY_AND_KILL_FX_SYSTEM	implemented	2	m90,m95	no	1
+0x0504	COMMAND_SET_FIRST_PERSON_CONTROL_CAMERA	UNIMPLEMENTED	2	m95,s:gymdumb.scm	no	9
+0x0717	COMMAND_START_SETTING_UP_CONVERSATION	implemented	2	m96,s:dealer.scm	no	1
+0x0665	COMMAND_GET_CHAR_MODEL	implemented	2	m121,s:dancer.scm	no	2
+0x07E6	COMMAND_COPY_GROUP_DECISION_MAKER	implemented	2	m124,s:debt.scm	no	2
+0x08D6	COMMAND_SET_MENU_COLUMN_ORIENTATION	implemented	2	m127,m131	no	3
+0x0912	COMMAND_SET_MESSAGE_FORMATTING	implemented	2	m130,m132	no	5
+0x054E	COMMAND_CLEAR_CHAR_LAST_DAMAGE_ENTITY	implemented	2	m130,m132	no	1
+0x0A21	COMMAND_IMPROVE_CAR_BY_CHEATING	implemented	2	m130,m132	no	2
+0x02D8	COMMAND_IS_CURRENT_CHAR_WEAPON	implemented	2	s:bar_ambience.scm,s:camera.scm	no	2
+0x08E5	COMMAND_GET_RANDOM_CHAR_IN_SPHERE_NO_BRAIN	implemented	2	s:bar_ambience.scm,s:foodbrains.scm	no	5
+0x061E	COMMAND_CLEAR_ATTRACTOR	implemented	2	s:bar_ambience.scm,s:foodbrains.scm	no	1
+0x0A0A	COMMAND_ENABLE_DISABLED_ATTRACTORS_ON_OBJECT	implemented	2	s:blackj.scm,s:roulette.scm	no	2
+0x0A44	COMMAND_DISPLAY_NON_MINIGAME_HELP_MESSAGES	implemented	2	s:crane2.scm,s:crane3.scm	no	1
+0x0796	COMMAND_GET_ROPE_HEIGHT_FOR_OBJECT	implemented	2	s:crane2.scm,s:crane3.scm	no	2
+0x010A	COMMAND_IS_SCORE_GREATER	implemented	2	s:debt.scm,s:vending_machine.scm	no	2
+0x0716	COMMAND_IS_CLOSEST_OBJECT_OF_TYPE_SMASHED_OR_DAMAGED	implemented	44	m47	no	7
+0x0517	COMMAND_CREATE_LOCKED_PROPERTY_PICKUP	implemented	26	m0	no	5
+0x07DB	COMMAND_SET_CAR_ROTATION_VELOCITY	implemented	23	m30	no	4
+0x08EB	COMMAND_ADD_SPARKS	implemented	17	m30	no	7
+0x0875	COMMAND_SET_OBJECT_ONLY_DAMAGED_BY_PLAYER	implemented	15	m23	no	2
+0x0299	COMMAND_ACTIVATE_GARAGE	implemented	15	m134	no	1
+0x003A	COMMAND_IS_INT_VAR_EQUAL_TO_INT_VAR	implemented	14	s:valet.scm	no	2
+0x02B9	COMMAND_DEACTIVATE_GARAGE	implemented	13	m0	no	1
+0x074E	COMMAND_SET_INFORM_RESPECTED_FRIENDS	implemented	11	m93	no	3
+0x05DC	COMMAND_TASK_SMART_FLEE_POINT	implemented	9	m53	no	6
+0x0703	COMMAND_SET_TAG_STATUS_IN_AREA	implemented	8	m13	no	5
+0x04C5	COMMAND_HAS_CHAR_BEEN_PHOTOGRAPHED	implemented	8	m58	no	1
+0x0363	COMMAND_SET_VISIBILITY_OF_CLOSEST_OBJECT_OF_TYPE	implemented	8	m63	no	6
+0x0323	COMMAND_ANCHOR_BOAT	implemented	8	m105	no	2
+0x0702	COMMAND_GET_PERCENTAGE_TAGGED_IN_AREA	implemented	7	m13	no	5
+0x0325	COMMAND_START_CAR_FIRE	implemented	7	m123	no	2
+0x0518	COMMAND_CREATE_FORSALE_PROPERTY_PICKUP	implemented	6	m0	no	6
+0x071A	COMMAND_IS_CONVERSATION_AT_NODE	implemented	6	m31	no	2
+0x08ED	COMMAND_CLEAR_CONVERSATION_FOR_CHAR	implemented	6	m31	no	1
+0x034D	COMMAND_ROTATE_OBJECT	implemented	6	m46	no	-1
+0x0561	COMMAND_CREATE_RANDOM_CHAR_AS_PASSENGER	implemented	6	m123	no	3
+0x02F2	COMMAND_IS_CHAR_MODEL	implemented	6	s:camera.scm	no	?
+0x088B	COMMAND_SET_VEHICLE_AIR_RESISTANCE_MULTIPLIER	implemented	5	m18	no	2
+0x052C	COMMAND_SET_PLAYER_DRUNKENNESS	implemented	5	m47	no	2
+0x0924	COMMAND_SET_DARKNESS_EFFECT	implemented	5	m96	no	2
+0x07A5	COMMAND_TASK_KILL_CHAR_ON_FOOT_TIMED	implemented	5	s:debt.scm	no	3
+0x08C3	COMMAND_CLEAR_LOCAL_VAR_BIT_CONST	implemented	5	s:gf_sex.scm	no	2
+0x09C3	COMMAND_IS_COP_VEHICLE_IN_AREA_3D_NO_SAVE	implemented	5	s:impound.scm	no	6
+0x0683	COMMAND_ATTACH_CAR_TO_CAR	implemented	4	m30	no	8
+0x0503	COMMAND_CREATE_SWAT_ROPE	implemented	4	m37	no	6
+0x077B	COMMAND_CLEAR_CHAR_RELATIONSHIP	implemented	4	m44	no	3
+0x05BB	COMMAND_TASK_FALL_AND_GET_UP	implemented	4	m53	no	3
+0x07F8	COMMAND_SET_CAR_FOLLOW_CAR	implemented	4	m68	no	3
+0x0699	COMMAND_FIX_CAR_TYRE	implemented	4	m70	no	2
+0x050E	COMMAND_SORT_OUT_OBJECT_COLLISION_WITH_CAR	implemented	4	m74	no	2
+0x0106	COMMAND_LOCATE_CHAR_IN_CAR_CHAR_3D	implemented	4	m88	no	6
+0x046D	COMMAND_GET_NUMBER_OF_FOLLOWERS	implemented	4	m124	no	2
+0x02F8	COMMAND_GET_CAR_FORWARD_X	implemented	4	m124	no	2
+0x02F9	COMMAND_GET_CAR_FORWARD_Y	implemented	4	m124	no	2
+0x035C	COMMAND_PLACE_OBJECT_RELATIVE_TO_CAR	implemented	4	m131	no	5
+0x09AA	COMMAND_SET_UP_CONVERSATION_END_NODE_WITH_SPEECH	implemented	4	s:dealer.scm	no	2
+0x0095	COMMAND_ABS_LVAR_INT	implemented	4	s:player_parachute.scm	no	1
+0x0458	COMMAND_IS_PLAYER_TARGETTING_OBJECT	implemented	3	m16	no	2
+0x09FC	COMMAND_IS_OBJECT_INTERSECTING_WORLD	implemented	3	m74	no	1
+0x01F3	COMMAND_IS_CAR_IN_AIR_PROPER	implemented	3	m79	no	1
+0x0077	COMMAND_DIV_FLOAT_LVAR_BY_FLOAT_VAR	implemented	3	m93	no	2
+0x068B	COMMAND_TASK_EVERYONE_LEAVE_CAR	implemented	3	m123	no	1
+0x048B	COMMAND_SET_CAR_RANDOM_ROUTE_SEED	implemented	3	m124	no	2
+0x0428	COMMAND_SET_CAR_AVOID_LEVEL_TRANSITIONS	implemented	3	m124	no	2
+0x03BD	COMMAND_REMOVE_SPHERE	implemented	3	m129	no	1
+0x07E1	COMMAND_TASK_SWIM_TO_COORD	implemented	3	m130	no	4
+0x0A28	COMMAND_SET_SWIM_SPEED	implemented	3	m130	no	2
+0x0475	COMMAND_LOCATE_CHAR_ON_FOOT_OBJECT_3D	implemented	3	s:basketb.scm	yes	6
+0x0A2F	COMMAND_SET_PHOTO_CAMERA_EFFECT	implemented	3	s:camera.scm	no	1
+0x092B	COMMAND_GET_GROUP_MEMBER	implemented	3	s:camera.scm	no	3
+0x09FE	COMMAND_RESET_VEHICLE_HYDRAULICS	implemented	2	m9	no	1
+0x02C1	COMMAND_GET_CLOSEST_CAR_NODE	implemented	2	m11	no	6
+0x068A	COMMAND_FIX_CAR_DOOR	implemented	2	m12	yes	2
+0x0184	COMMAND_IS_CHAR_HEALTH_GREATER	implemented	2	m12	no	2
+0x0983	COMMAND_SET_ONLY_CREATE_GANG_MEMBERS	implemented	2	m21	no	1
+0x09CF	COMMAND_SET_TRAIN_FORCED_TO_SLOW_DOWN	implemented	2	m29	no	2
+0x07BD	COMMAND_DELETE_MISSION_TRAIN	implemented	2	m29	no	1
+0x095E	COMMAND_CONTROL_CAR_DOOR	implemented	2	m31	no	4
+0x06B4	COMMAND_MOVE_SEARCHLIGHT_BETWEEN_COORDS	implemented	2	m37	no	8
+0x07AB	COMMAND_IS_TRAILER_ATTACHED_TO_CAB	implemented	2	m43	no	2
+0x0864	COMMAND_ENABLE_ENTRY_EXIT_PLAYER_GROUP_WARPING	implemented	2	m44	no	4
+0x06B3	COMMAND_DOES_SEARCHLIGHT_EXIST	implemented	2	m47	no	1
+0x0926	COMMAND_GET_NUMBER_OF_INSTANCES_OF_STREAMED_SCRIPT	implemented	2	m51	no	2
+0x085B	COMMAND_TASK_KINDA_STAY_IN_SAME_PLACE	implemented	2	m62	no	2
+0x0035	COMMAND_IS_FLOAT_LVAR_GREATER_OR_EQUAL_TO_FLOAT_LVAR	implemented	2	m65	no	2
+0x0A2C	COMMAND_DRAW_SUBTITLES_BEFORE_FADE	implemented	2	m70	no	1
+0x0715	COMMAND_TAKE_REMOTE_CONTROL_OF_CAR	implemented	2	m74	no	2
+0x038E	COMMAND_DRAW_RECT	implemented	2	m75	no	5
+0x0931	COMMAND_CAMERA_PERSIST_FOV	implemented	2	m77	no	1
+0x0922	COMMAND_CAMERA_SET_LERP_FOV	implemented	2	m77	no	4
+0x092E	COMMAND_GET_WATER_HEIGHT_AT_COORDS	implemented	2	m79	no	4
+0x0594	COMMAND_SET_VEHICLE_TO_FADE_IN	implemented	2	m88	no	2
+0x09B8	COMMAND_ADD_BLOOD	implemented	2	m95	no	8
+0x0566	COMMAND_SET_OBJECT_AREA_VISIBLE	implemented	2	m101	yes	2
+0x06BD	COMMAND_IS_LINE_OF_SIGHT_CLEAR	implemented	2	m105	no	8
+0x0602	COMMAND_IS_CHAR_IN_TAXI	implemented	2	m121	no	1
+0x07E8	COMMAND_IS_RELATIONSHIP_SET	implemented	2	m122	no	3
+0x0747	COMMAND_CLEAR_RELATIONSHIP	implemented	2	m122	no	3
+0x0973	COMMAND_DOES_SCRIPT_FIRE_EXIST	implemented	2	m123	no	1
+0x0099	COMMAND_GENERATE_RANDOM_INT	implemented	2	m124	no	1
+0x09E6	COMMAND_ENABLE_BURGLARY_HOUSES	implemented	2	m125	no	0
+0x0624	COMMAND_INCREMENT_FLOAT_STAT	implemented	2	m127	no	2
+0x057E	COMMAND_SET_PLAYER_IS_IN_STADIUM	implemented	2	m129	no	1
+0x024F	COMMAND_DRAW_CORONA	implemented	2	m129	no	9
+0x0060	COMMAND_SUB_INT_VAR_FROM_INT_VAR	implemented	2	m129	no	2
+0x09E7	COMMAND_IS_PLAYER_CONTROL_ON	implemented	2	s:arcade.scm	no	1
+0x04EA	COMMAND_IS_OBJECT_IN_AREA_3D	implemented	2	s:basketb.scm	no	3
+0x0403	COMMAND_REGISTER_AMBULANCE_LEVEL	UNIMPLEMENTED	2	s:basketb.scm	no	0
+0x0300	COMMAND_PRINT_WITH_3_NUMBERS_NOW	implemented	2	s:basketb.scm	no	3
+0x04E5	COMMAND_LOCATE_OBJECT_2D	implemented	2	s:crane1.scm	no	6
+0x0991	COMMAND_PAUSE_CURRENT_BEAT_TRACK	implemented	2	s:dance.scm	no	1
+0x097C	COMMAND_ATTACH_MISSION_AUDIO_TO_OBJECT	implemented	2	s:impound.scm	no	2
+0x09E5	COMMAND_DRAW_LIGHT_WITH_RANGE	implemented	2	s:photo.scm	no	7
+0x0839	COMMAND_GET_OBJECT_ANIM_CURRENT_TIME	implemented	2	s:player_parachute.scm	no	3
+0x01A6	COMMAND_IS_CHAR_IN_AREA_ON_FOOT_3D	UNIMPLEMENTED	2	s:roulette.scm	no	8
+0x09DA	COMMAND_IS_MONEY_PICKUP_AT_COORDS	implemented	2	s:stripw.scm	no	3
+0x042C	COMMAND_SET_TOTAL_NUMBER_OF_MISSIONS	implemented	1	main	no	?
+0x030D	COMMAND_SET_PROGRESS_TOTAL	implemented	1	main	no	?
+0x03E0	COMMAND_SET_TEXT_DRAW_BEFORE_FADE	implemented	1	m2	no	1
+0x0349	COMMAND_SET_TEXT_FONT	implemented	1	m2	no	1
+0x09C8	COMMAND_ARE_SUBTITLES_SWITCHED_ON	implemented	1	m2	no	0
+0x0342	COMMAND_SET_TEXT_CENTRE	implemented	1	m6	no	1
+0x033F	COMMAND_SET_TEXT_SCALE	implemented	1	m6	no	2
+0x096E	COMMAND_IS_CAR_LOW_RIDER	implemented	1	m9	no	1
+0x09FA	COMMAND_HAS_GAME_JUST_RETURNED_FROM_FRONTEND	implemented	1	m9	no	0
+0x0A0F	COMMAND_HAS_LANGUAGE_CHANGED	implemented	1	m9	no	0
+0x0137	COMMAND_IS_CAR_MODEL	implemented	1	m9	no	2
+0x03A9	COMMAND_SAVE_NEWLINE_TO_DEBUG_FILE	NOP	1	m9	no	?
+0x087C	COMMAND_CLEAR_LOADED_SHOP	implemented	1	m12	no	0
+0x07A6	COMMAND_GET_NEAREST_TAG_POSITION	implemented	1	m13	no	6
+0x05DB	COMMAND_TASK_FLEE_CHAR	implemented	1	m17	no	4
+0x08EC	COMMAND_GET_VEHICLE_CLASS	implemented	1	m18	no	2
+0x08AC	COMMAND_SET_GANG_WARS_TRAINING_MISSION	implemented	1	m21	no	1
+0x08B3	COMMAND_SET_ZONE_FOR_GANG_WARS_TRAINING	implemented	1	m21	no	1
+0x0786	COMMAND_GET_NUMBER_OF_FIRES_IN_AREA	implemented	1	m22	no	7
+0x0A04	COMMAND_SET_VEHICLE_FIRING_RATE_MULTIPLIER	NOP	1	m23	no	0
+0x01AE	COMMAND_LOCATE_STOPPED_CAR_2D	implemented	1	m23	no	6
+0x0705	COMMAND_START_PLAYBACK_RECORDED_CAR_USING_AI	implemented	1	m23	no	2
+0x03D6	COMMAND_CLEAR_THIS_BIG_PRINT	implemented	1	m24	yes	1
+0x0A36	COMMAND_IS_SKIP_WAITING_FOR_SCRIPT_TO_FADE_IN	implemented	1	m27	no	0
+0x09E0	COMMAND_SET_UP_SKIP_FOR_SPECIFIC_VEHICLE	implemented	1	m27	no	5
+0x0A35	COMMAND_SET_UP_SKIP_FOR_VEHICLE_FINISHED_BY_SCRIPT	implemented	1	m27	no	5
+0x07A4	COMMAND_GET_SEQUENCE_PROGRESS_RECURSIVE	implemented	1	m28	no	3
+0x07C7	COMMAND_SET_MISSION_TRAIN_COORDINATES	implemented	1	m29	no	4
+0x09EF	COMMAND_SET_VEHICLE_CAMERA_TWEAK	implemented	1	m29	no	4
+0x07BE	COMMAND_MARK_MISSION_TRAIN_AS_NO_LONGER_NEEDED	implemented	1	m29	no	?
+0x01E7	COMMAND_SWITCH_ROADS_ON	implemented	1	m29	no	?
+0x007E	COMMAND_SUB_TIMED_VAL_FROM_FLOAT_VAR	implemented	1	m30	no	2
+0x0078	COMMAND_ADD_TIMED_VAL_TO_FLOAT_VAR	implemented	1	m30	no	2
+0x06AA	COMMAND_IS_RECORDING_GOING_ON_FOR_CAR	implemented	1	m30	no	1
+0x06EA	COMMAND_HAS_VEHICLE_MOD_LOADED	implemented	1	m31	no	1
+0x0A25	COMMAND_SET_CAMERA_POSITION_UNFIXED	implemented	1	m31	no	2
+0x06EB	COMMAND_MARK_VEHICLE_MOD_AS_NO_LONGER_NEEDED	implemented	1	m31	no	1
+0x0597	COMMAND_IS_CHAR_DUCKING	implemented	1	m32	no	1
+0x0406	COMMAND_REGISTER_LONGEST_DODO_FLIGHT	UNIMPLEMENTED	1	m32	no	?
+0x0998	COMMAND_AWARD_PLAYER_MISSION_RESPECT	implemented	1	m34	yes	?
+0x450A	?	unregistered	1	m37	no	4
+0x0697	COMMAND_POP_CAR_PANEL	implemented	1	m37	no	2
+0x03A7	COMMAND_SAVE_INT_TO_DEBUG_FILE	implemented	1	m38	no	1
+0x0470	COMMAND_GET_CURRENT_CHAR_WEAPON	implemented	1	m38	no	2
+0x0635	COMMAND_TASK_AIM_GUN_AT_CHAR	implemented	1	m43	no	3
+0x05C2	COMMAND_TASK_SHAKE_FIST	implemented	1	m43	yes	1
+0x06F8	COMMAND_GET_NTH_CLOSEST_CAR_NODE_WITH_HEADING	implemented	1	m43	no	8
+0x06FC	COMMAND_DOES_CAR_HAVE_STUCK_CAR_CHECK	implemented	1	m43	no	1
+0x06B6	COMMAND_POINT_SEARCHLIGHT_AT_CHAR	implemented	1	m47	no	3
+0x0726	COMMAND_HELI_FOLLOW_ENTITY	implemented	1	m47	no	4
+0x03FD	COMMAND_SET_DRUNK_INPUT_DELAY	implemented	1	m47	no	2
+0x06E4	COMMAND_TASK_CHAR_ARREST_CHAR	implemented	1	m47	no	2
+0x03B6	COMMAND_SWAP_NEAREST_BUILDING_MODEL	implemented	1	m50	no	6
+0x0797	COMMAND_SET_ROPE_HEIGHT_FOR_OBJECT	implemented	1	m50	no	2
+0x0459	COMMAND_TERMINATE_ALL_SCRIPTS_WITH_THIS_NAME	implemented	1	m51	no	1
+0x05C1	COMMAND_TASK_SAY	implemented	1	m51	no	2
+0x06DA	COMMAND_MARK_MISSION_TRAINS_AS_NO_LONGER_NEEDED	implemented	1	m52	no	0
+0x5905	?	unregistered	1	m53	no	3
+0x06A7	COMMAND_ATTACH_CHAR_TO_BIKE	implemented	1	m58	no	9
+0x0918	COMMAND_SET_CAR_ENGINE_ON	implemented	1	m58	no	2
+0x0801	COMMAND_GET_CAMERA_FOV	implemented	1	m58	no	1
+0x0563	COMMAND_ENSURE_PLAYER_HAS_DRIVE_BY_WEAPON	implemented	1	m59	no	2
+0x0876	COMMAND_CREATE_BIRDS	implemented	1	m61	no	7
+0x0878	COMMAND_SET_VEHICLE_DIRT_LEVEL	implemented	1	m63	no	2
+0x0919	COMMAND_SET_CAR_LIGHTS_ON	implemented	1	m63	no	2
+0x08CB	COMMAND_EXPLODE_CAR_IN_CUTSCENE_SHAKE_AND_BITS	implemented	1	m63	no	4
+0x0689	COMMAND_POP_CAR_DOOR	implemented	1	m65	no	3
+0x08E3	COMMAND_IS_OBJECT_IN_ANGLED_AREA_2D	implemented	1	m65	no	7
+0x0179	COMMAND_IS_CHAR_TOUCHING_OBJECT	implemented	1	m65	no	2
+0x0404	COMMAND_REGISTER_FIRE_EXTINGUISHED	UNIMPLEMENTED	1	m67	no	2
+0x09E9	COMMAND_GIVE_NON_PLAYER_CAR_NITRO	implemented	1	m68	no	1
+0x048A	COMMAND_SET_ENABLE_RC_DETONATE	implemented	1	m74	no	1
+0x04D6	COMMAND_SET_ENABLE_RC_DETONATE_ON_CONTACT	implemented	1	m74	no	1
+0x07DF	COMMAND_REMOVE_OIL_PUDDLES_IN_AREA	implemented	1	m74	no	4
+0x0980	COMMAND_EXTINGUISH_FIRE_AT_POINT	implemented	1	m74	no	4
+0x031E	COMMAND_HAS_CAR_BEEN_DAMAGED_BY_WEAPON	implemented	1	m74	no	2
+0x0468	COMMAND_CLEAR_CAR_LAST_WEAPON_DAMAGE	implemented	1	m74	no	1
+0x02CC	COMMAND_IS_OBJECT_ON_SCREEN	implemented	1	m74	no	1
+0x04DF	COMMAND_SET_HELI_STABILISER	implemented	1	m74	no	2
+0x0853	COMMAND_SET_HELI_REACHED_TARGET_DISTANCE	implemented	1	m74	no	2
+0x0897	COMMAND_IS_VEHICLE_TOUCHING_OBJECT	implemented	1	m74	no	2
+0x05A8	COMMAND_GET_OBJECT_SPEED	implemented	1	m74	no	2
+0x0606	COMMAND_LOAD_PATH_NODES_IN_AREA	implemented	1	m76	no	4
+0x0893	COMMAND_ATTACH_TRAILER_TO_CAB	implemented	1	m76	no	2
+0x051E	COMMAND_GET_RADIO_CHANNEL	implemented	1	m77	no	1
+0x0745	COMMAND_PLANE_STARTS_IN_AIR	implemented	1	m79	no	4
+0x09D7	COMMAND_FORCE_INTERIOR_LIGHTING_FOR_PLAYER	implemented	1	m81	no	2
+0x09A6	COMMAND_SHOW_BLIPS_ON_ALL_LEVELS	implemented	1	m81	no	0
+0x06CA	COMMAND_ATTACH_SEARCHLIGHT_TO_SEARCHLIGHT_OBJECT	implemented	1	m81	no	?
+0x07A7	COMMAND_TASK_JETPACK	implemented	1	m82	no	1
+0x0822	COMMAND_SET_FIRST_PERSON_IN_CAR_CAMERA_MODE	implemented	1	m84	no	1
+0x0A12	COMMAND_GET_EXTRA_CAR_COLOURS	implemented	1	m90	no	3
+0x0A01	COMMAND_IS_THIS_MODEL_A_CAR	implemented	1	m90	no	1
+0x09BB	COMMAND_IS_CAR_DOOR_DAMAGED	implemented	1	m90	no	2
+0x0A30	COMMAND_FIX_CAR	implemented	1	m90	no	1
+0x06AF	COMMAND_DISABLE_PLAYER_SPRINT	implemented	1	m90	no	2
+0x007F	COMMAND_SUB_TIMED_VAL_FROM_FLOAT_LVAR	implemented	1	m91	no	2
+0x088C	COMMAND_SET_CAR_COORDINATES_NO_OFFSET	implemented	1	m91	no	4
+0x07F3	COMMAND_SET_CHECKPOINT_COORDS	implemented	1	m91	no	4
+0x070F	COMMAND_PLANE_FLY_IN_DIRECTION	implemented	1	m91	no	4
+0x0564	COMMAND_MAKE_HELI_COME_CRASHING_DOWN	implemented	1	m93	no	1
+0x015B	COMMAND_SHAKE_PAD	implemented	1	m95	no	0
+0x02E8	COMMAND_GET_CUTSCENE_TIME	implemented	1	m96	no	1
+0x0905	COMMAND_LOCK_DOOR	implemented	1	m96	no	2
+0x0A18	COMMAND_SET_UP_CONVERSATION_NODE_WITH_SCRIPTED_SPEECH	implemented	1	m96	no	?
+0x072C	COMMAND_SWITCH_COPS_ON_BIKES	implemented	1	m99	no	1
+0x0190	COMMAND_ADD_UPSIDEDOWN_CAR_CHECK	implemented	1	m99	no	1
+0x0788	COMMAND_ATTACH_WINCH_TO_HELI	implemented	1	m100	no	2
+0x0771	COMMAND_CUSTOM_PLATE_DESIGN_FOR_NEXT_CAR	implemented	1	m105	no	2
+0x068E	COMMAND_GET_ACTIVE_CAMERA_POINT_AT	implemented	1	m105	no	3
+0x0971	COMMAND_SYNC_WATER	implemented	1	m105	no	0
+0x0318	COMMAND_REGISTER_MISSION_PASSED	implemented	1	m105	yes	-1
+0x098A	COMMAND_SET_GUNSHOT_SENSE_RANGE_FOR_RIOT2	implemented	1	m109	no	1
+0x0103	COMMAND_LOCATE_STOPPED_CHAR_IN_CAR_3D	implemented	1	m121	yes	8
+0x031A	COMMAND_REMOVE_ALL_SCRIPT_FIRES	implemented	1	m123	no	0
+0x055D	COMMAND_MAKE_PLAYER_FIRE_PROOF	implemented	1	m123	no	2
+0x0986	COMMAND_CLEAR_ALL_SCRIPT_FIRE_FLAGS	implemented	1	m123	no	0
+0x07DE	COMMAND_IS_MODEL_IN_CDIMAGE	implemented	1	m124	no	1
+0x03AA	COMMAND_POLICE_RADIO_MESSAGE	NOP	1	m124	no	3
+0x055F	COMMAND_INCREASE_PLAYER_MAX_ARMOUR	implemented	1	m124	no	2
+0x0327	COMMAND_GET_RANDOM_CAR_OF_TYPE_IN_AREA	implemented	1	m124	no	6
+0x02C0	COMMAND_GET_CLOSEST_CHAR_NODE	implemented	1	m124	no	6
+0x0433	COMMAND_SET_CHAR_IS_CHRIS_CRIMINAL	implemented	1	m124	no	2
+0x0982	COMMAND_SET_CHAR_FORCE_DIE_IN_CAR	implemented	1	m124	no	2
+0x09E3	COMMAND_FIND_TRAIN_DIRECTION	implemented	1	m126	no	1
+0x020D	COMMAND_IS_CAR_UPRIGHT	implemented	1	m126	no	1
+0x0981	COMMAND_HAS_TRAIN_DERAILED	implemented	1	m126	no	1
+0x055E	COMMAND_INCREASE_PLAYER_MAX_HEALTH	implemented	1	m126	no	2
+0x0A3D	COMMAND_ACTIVATE_PIMP_CHEAT	implemented	1	m127	no	1
+0x016E	COMMAND_OVERRIDE_NEXT_RESTART	implemented	1	m128	no	4
+0x0A37	COMMAND_FORCE_ALL_VEHICLE_LIGHTS_OFF	implemented	1	m128	no	1
+0x0414	COMMAND_SET_FREE_HEALTH_CARE	implemented	1	m128	no	?
+0x04F9	COMMAND_SET_EXTRA_COLOURS	implemented	1	m129	no	2
+0x03BC	COMMAND_ADD_SPHERE	implemented	1	m129	no	5
+0x0167	COMMAND_ADD_BLIP_FOR_COORD_OLD	implemented	1	m129	no	3
+0x051B	COMMAND_HAS_CHAR_BEEN_DAMAGED_BY_CAR	implemented	1	m132	no	2
+0x0996	COMMAND_SET_CHECKPOINT_HEADING	implemented	1	m133	no	2
+0x016F	COMMAND_DRAW_SHADOW	implemented	1	m133	no	0
+0x1A04	?	unregistered	1	m134	no	15
+0x059F	COMMAND_GET_OBJECT_VELOCITY	implemented	1	s:basketb.scm	no	?
+0x0704	COMMAND_CAR_GOTO_COORDINATES_RACING	implemented	1	s:burg_brains.scm	no	4
+0x072D	COMMAND_IS_FLAME_IN_ANGLED_AREA_2D	implemented	1	s:camera.scm	no	6
+0x03C5	COMMAND_CREATE_RANDOM_CAR_FOR_CAR_PARK	implemented	1	s:carpark1.scm	no	?
+0x079E	COMMAND_PLAYER_ENTERED_BUILDINGSITE_CRANE	implemented	1	s:crane1.scm	no	3
+0x079D	COMMAND_PLAYER_ENTERED_DOCK_CRANE	implemented	1	s:crane2.scm	no	0
+0x07F9	COMMAND_PLAYER_ENTERED_QUARRY_CRANE	implemented	1	s:crane3.scm	no	0
+0x0081	COMMAND_SUB_TIMED_FLOAT_LVAR_FROM_FLOAT_LVAR	implemented	1	s:crane3.scm	no	2
+0x0083	COMMAND_SUB_TIMED_FLOAT_LVAR_FROM_FLOAT_VAR	implemented	1	s:crane3.scm	no	2
+0x079F	COMMAND_PLAYER_LEFT_CRANE	implemented	1	s:crane3.scm	no	0
+0x0254	COMMAND_RESTORE_CLOCK	implemented	1	s:dance.scm	no	0
+0x08F1	COMMAND_GET_NAME_OF_INFO_ZONE	implemented	1	s:dealer.scm	no	4
+0x09A4	COMMAND_SET_UP_CONVERSATION_NODE_WITH_SPEECH	implemented	1	s:dealer.scm	no	6
+0x09FB	COMMAND_GET_CURRENT_LANGUAGE	implemented	1	s:dealer.scm	no	1
+0x0A47	COMMAND_FINISH_SETTING_UP_CONVERSATION_NO_SUBTITLES	implemented	1	s:dealer.scm	no	0
+0x0719	COMMAND_FINISH_SETTING_UP_CONVERSATION	implemented	1	s:dealer.scm	no	0
+0x089E	COMMAND_GET_RANDOM_CHAR_IN_SPHERE_ONLY_DRUGS_BUYERS	implemented	1	s:dealer.scm	no	5
+0x03CE	COMMAND_IS_CAR_STUCK	implemented	1	s:debt.scm	no	1
+0x095B	COMMAND_HAS_OBJECT_BEEN_UPROOTED	implemented	1	s:food_vendor.scm	no	1
+0x09A0	COMMAND_TASK_PICK_UP_SECOND_OBJECT	implemented	1	s:gymdumb.scm	no	5
+0x0859	COMMAND_TASK_WALK_ALONGSIDE_CHAR	implemented	1	s:home_brains.scm	no	2
+0x066A	COMMAND_CREATE_FX_SYSTEM_ON_CHAR_WITH_DIRECTION	implemented	1	s:home_brains.scm	no	10
+0x0071	COMMAND_DIV_FLOAT_VAR_BY_FLOAT_VAR	implemented	1	s:parachute.scm	no	2
+0x0800	COMMAND_IS_2PLAYER_GAME_GOING_ON	implemented	1	s:player_parachute.scm	no	0
+0x09A2	COMMAND_REMOVE_OBJECT_ELEGANTLY	implemented	1	s:player_parachute.scm	no	1
+0x073F	COMMAND_GET_RANDOM_CHAR_IN_SPHERE	implemented	1	s:prisonr.scm	no	8
+0x0A2B	COMMAND_IS_WIDESCREEN_ON_IN_OPTIONS	implemented	1	s:roulette.scm	no	0
+0x7C04	?	unregistered	1	s:slot_machine.scm	no	?
+0x0513	COMMAND_PRINT_HELP_FOREVER_WITH_NUMBER	implemented	1	s:slot_machine.scm	no	?
+0x02E1	COMMAND_CREATE_MONEY_PICKUP	implemented	1	s:stripm.scm	no	6
+0x0094	COMMAND_ABS_VAR_INT	implemented	1	s:valet.scm	no	1
+0x081D	COMMAND_SET_CAR_ENGINE_BROKEN	implemented	1	s:valet.scm	no	2
+0x095D	COMMAND_IS_CHAR_STUCK_UNDER_CAR	implemented	1	s:valet.scm	no	1
+0x0889	COMMAND_GET_DEAD_CHAR_COORDINATES	implemented	1	s:valet.scm	no	4
+0x07E4	COMMAND_GET_MODEL_DIMENSIONS	implemented	1	s:vidpok.scm	no	7
+0x1005	?	unregistered	1	s:wheelo.scm	no	?
+0x0127	COMMAND_SET_CHAR_DRIVE_AGGRESSION	UNIMPLEMENTED	1	s:wheelo.scm	no	?
+0x01FF	COMMAND_LOCATE_PLAYER_ANY_MEANS_CAR_3D	UNIMPLEMENTED	1	s:wheelo.scm	no	?

@@ -35,3 +35,9 @@ Also: one warm worktree C:/gta-wt/p4-warm with built StandaloneRelease+RW, reset
 
 ## C++ suspects from the TS port (queue; first items of the next scripts slice)
 - 2026-11-14 (SCM trace probe, m24): NOP handlers of IS_PS2_KEYBOARD_KEY_PRESSED / _JUST_PRESSED, IS_PLAYER_IN_SHORTCUT_TAXI, IS_RECORDING_GOING_ON_FOR_CAR leave the compare flag untouched in C++; the TS port (and per them the 1.0 exe) does UpdateCompareFlag(false) after reading the argument. Check against gta_sa_compact.exe; fix the NOPs if the exe sets false. Source of further suspects: web/docs/cpp-suspects.md on web-ts-port (gta-reversed-private).
+
+## Status 2026-11-15
+- RYDER_1 C++ reference trace to MISSION PASSED (MDRIVER-1..3, harness-only fixes 5d97cc83c, 8dcf07b1b; no port deviation). CATALIN opening trace for the TS session (C:/gta-scratch/scmtrace/out/catalin).
+- P4S1 (TS cpp-suspects + script NOP handlers): 6 FIXED, ~40 MATCH (89c08aa8f). Suspect queue above is closed.
+- P4T1 signature diff (tools/standalone/asmsig, 81923eec9): only ~23% of real deviations change the signature; ranking aid only, never a skip filter. P4T1_batch.tsv: REVIEW 1328 (558 with score >= 5), AUTO_MATCH 3480, NO_DATA 259.
+- Next: oracle-only sweep in the order: script/mission classes first, inside them score >= 5 first; then T3 (hit counts + main.scm usage of the 713 UNIMPLEMENTED); second-pass sample; v7 rules.

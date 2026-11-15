@@ -6540,7 +6540,7 @@ void CAutomobile::SetDoorDamage(eDoors doorIdx, bool withoutVisualEffect)
     switch (doorIdx) {
     case eDoors::DOOR_BOOT: {
         // 0x6B169C
-        if (m_pHandlingData->m_bAltSteerOpt) {
+        if (m_pHandlingData->m_bNoswingBoot) { // 0x6B1694: `test byte [handling+0xCC], 0x80` = bit 7 of m_nModelFlags (was m_bAltSteerOpt = bit 7 of m_nHandlingFlags at +0xD0)
             switch (m_damageManager.GetDoorStatus(eDoors::DOOR_BOOT)) {
             case eDoorStatus::DAMSTATE_OPENED: {
                 m_damageManager.SetDoorStatus(eDoors::DOOR_BOOT, isDamageable ? eDoorStatus::DAMSTATE_DAMAGED : eDoorStatus::DAMSTATE_NOTPRESENT);

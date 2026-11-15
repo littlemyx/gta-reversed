@@ -306,6 +306,14 @@ void DisplayNonMiniGameHelpMessages(bool state) {
 
 };
 
+namespace {
+/// SAVE_TEXT_LABEL_TO_DEBUG_FILE (exe case @0x473661): ReadTextLabelFromScript(buf, 16), nothing else
+void SaveTextLabelToDebugFile(CRunningScript* S) {
+    char buf[16];
+    S->ReadTextLabelFromScript(buf, sizeof(buf));
+}
+}
+
 void notsa::script::commands::text::RegisterHandlers() {
     REGISTER_COMMAND_HANDLER_BEGIN("Text");
 
@@ -363,7 +371,7 @@ void notsa::script::commands::text::RegisterHandlers() {
     REGISTER_COMMAND_HANDLER(COMMAND_ADD_NEXT_MESSAGE_TO_PREVIOUS_BRIEFS, AddNextMessageToPreviousBriefs);
     REGISTER_COMMAND_HANDLER(COMMAND_DISPLAY_NON_MINIGAME_HELP_MESSAGES, DisplayNonMiniGameHelpMessages);
 
-    REGISTER_COMMAND_NOP(COMMAND_SAVE_TEXT_LABEL_TO_DEBUG_FILE);
+    REGISTER_COMMAND_HANDLER(COMMAND_SAVE_TEXT_LABEL_TO_DEBUG_FILE, SaveTextLabelToDebugFile);
     REGISTER_COMMAND_NOP(COMMAND_DRAW_WINDOW_TEXT);
 
     REGISTER_COMMAND_UNIMPLEMENTED(COMMAND_DISPLAY_TEXT_WITH_3_NUMBERS);

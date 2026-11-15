@@ -187,6 +187,13 @@ void DoDebugStuff() {
 
 }
 
+namespace {
+/// SAVE_INT_TO_DEBUG_FILE / SAVE_FLOAT_TO_DEBUG_FILE (shared exe case @0x4846EF): CollectParameters(1), nothing else
+void SaveValueToDebugFile(CRunningScript* S) {
+    S->CollectParameters(1);
+}
+}
+
 void notsa::script::commands::game::RegisterHandlers() {
     REGISTER_COMMAND_HANDLER_BEGIN("Game");
 
@@ -225,8 +232,8 @@ void notsa::script::commands::game::RegisterHandlers() {
     REGISTER_COMMAND_HANDLER(COMMAND_DO_DEBUG_STUFF, DoDebugStuff);
 
     // -----------------------------[ NOP ]-----------------------------
-    REGISTER_COMMAND_NOP(COMMAND_SAVE_INT_TO_DEBUG_FILE);
-    REGISTER_COMMAND_NOP(COMMAND_SAVE_FLOAT_TO_DEBUG_FILE);
+    REGISTER_COMMAND_HANDLER(COMMAND_SAVE_INT_TO_DEBUG_FILE, SaveValueToDebugFile);
+    REGISTER_COMMAND_HANDLER(COMMAND_SAVE_FLOAT_TO_DEBUG_FILE, SaveValueToDebugFile);
     REGISTER_COMMAND_NOP(COMMAND_SET_MENU_HEADER_ORIENTATION);
     REGISTER_COMMAND_NOP(COMMAND_IS_ICECREAM_JINGLE_ON);
     REGISTER_COMMAND_NOP(COMMAND_IS_SNIPER_BULLET_IN_AREA);

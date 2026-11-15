@@ -11,6 +11,45 @@
 
 namespace {
 
+/// Debug / unused commands whose exe case (CRunningScript::ProcessCommandsNNNNToMMMM) consumes its arguments in a way the typed parser cannot express
+/// (a text label where the old NOP read a uint32 and asserted on the string tag, raw bytes) or sets the compare flag.
+/// CollectParameters(n) reads n params of any type; ReadTextLabelFromScript(buf, 40) reads any string param.
+
+/// 0x735 IS_PS2_KEYBOARD_KEY_PRESSED (case @0x46DDCA), 0x736 IS_PS2_KEYBOARD_KEY_JUST_PRESSED (@0x46DE0E): CollectParameters(1), then the PS2 keyboard stub (0x571980 / 0x571970: xor al,al) => UpdateCompareFlag(false)
+bool IsPS2KeyboardKey(CRunningScript* S) {
+    S->CollectParameters(1);
+    return false;
+}
+/// 0x6AA IS_RECORDING_GOING_ON_FOR_CAR (case @0x4971B8): CollectParameters(1), UpdateCompareFlag(false)
+bool IsRecordingGoingOnForCar(CRunningScript* S) {
+    S->CollectParameters(1);
+    return false;
+}
+/// 0x831 IS_AUDIO_BUILD (case @0x474315): no arguments, UpdateCompareFlag(false)
+bool IsAudioBuild() {
+    return false;
+}
+/// 0x662 WRITE_DEBUG (case @0x494808): ReadTextLabelFromScript(buf, 40)
+void WriteDebug(CRunningScript* S) {
+    char buf[40];
+    S->ReadTextLabelFromScript(buf, sizeof(buf));
+}
+/// 0x663 WRITE_DEBUG_WITH_INT (case @0x49481D), 0x664 WRITE_DEBUG_WITH_FLOAT (@0x49483B): ReadTextLabelFromScript(buf, 40), CollectParameters(1)
+void WriteDebugWithValue(CRunningScript* S) {
+    char buf[40];
+    S->ReadTextLabelFromScript(buf, sizeof(buf));
+    S->CollectParameters(1);
+}
+/// VIEW_INTEGER_VARIABLE / VIEW_FLOAT_VARIABLE / WATCH_INTEGER_VARIABLE / WATCH_FLOAT_VARIABLE (cases @0x4947C9 / 0x4947E5 / 0x494801): GetIndexOfGlobalVariable(), ReadTextLabelFromScript(buf, 40)
+void ViewVariable(CRunningScript* S) {
+    S->GetIndexOfGlobalVariable();
+    char buf[40];
+    S->ReadTextLabelFromScript(buf, sizeof(buf));
+}
+/// SAVE_STRING_TO_DEBUG_FILE (case @0x48FAEC): the exe copies 128 raw bytes (no type tag) from the instruction pointer
+void SaveStringToDebugFile(CRunningScript* S) {
+    S->m_IP += 128;
+}
 /// GET_LATEST_CONSOLE_COMMAND(091A)
 uint32 GetLatestConsoleCommand() {
     return 0;
@@ -136,7 +175,7 @@ void notsa::script::commands::unused::RegisterHandlers() {
     REGISTER_COMMAND_NOP(COMMAND_IS_2D_POINT_IN_TRIANGLE);
     REGISTER_COMMAND_NOP(COMMAND_IS_2D_POINT_ON_LEFT_SIDE_OF_2D_LINE);
     REGISTER_COMMAND_NOP(COMMAND_IS_AMBIENT_CRIME_ENABLED);
-    REGISTER_COMMAND_NOP(COMMAND_IS_AUDIO_BUILD);
+    REGISTER_COMMAND_HANDLER(COMMAND_IS_AUDIO_BUILD, IsAudioBuild);
     REGISTER_COMMAND_NOP(COMMAND_IS_CAR_LOWRIDER);
     REGISTER_COMMAND_NOP(COMMAND_IS_DIALOGUE_FINISHED);
     REGISTER_COMMAND_NOP(COMMAND_IS_DIALOGUE_PLAYING);
@@ -146,9 +185,9 @@ void notsa::script::commands::unused::RegisterHandlers() {
     REGISTER_COMMAND_NOP(COMMAND_IS_PERFORMANCE_CAR);
     REGISTER_COMMAND_NOP(COMMAND_IS_PLAYBACK_FOR_CAR_PAUSED);
     REGISTER_COMMAND_NOP(COMMAND_IS_POLICE_VEHICLE_IN_PURSUIT);
-    REGISTER_COMMAND_NOP(COMMAND_IS_PS2_KEYBOARD_KEY_JUST_PRESSED, uint32);
-    REGISTER_COMMAND_NOP(COMMAND_IS_PS2_KEYBOARD_KEY_PRESSED, uint32);
-    REGISTER_COMMAND_NOP(COMMAND_IS_RECORDING_GOING_ON_FOR_CAR, uint32);
+    REGISTER_COMMAND_HANDLER(COMMAND_IS_PS2_KEYBOARD_KEY_JUST_PRESSED, IsPS2KeyboardKey);
+    REGISTER_COMMAND_HANDLER(COMMAND_IS_PS2_KEYBOARD_KEY_PRESSED, IsPS2KeyboardKey);
+    REGISTER_COMMAND_HANDLER(COMMAND_IS_RECORDING_GOING_ON_FOR_CAR, IsRecordingGoingOnForCar);
     REGISTER_COMMAND_NOP(COMMAND_IS_SEARCHLIGHT_BULB_ON);
     REGISTER_COMMAND_NOP(COMMAND_IS_SEARCHLIGHT_IN_ANGLED_AREA_2D);
     REGISTER_COMMAND_NOP(COMMAND_IS_SEARCHLIGHT_IN_ANGLED_AREA_3D);
@@ -177,7 +216,7 @@ void notsa::script::commands::unused::RegisterHandlers() {
     REGISTER_COMMAND_NOP(COMMAND_REMOVE_EVERYTHING_FOR_HUGE_CUTSCENE);
     REGISTER_COMMAND_NOP(COMMAND_REMOVE_SOUND, uint32);
     REGISTER_COMMAND_NOP(COMMAND_RESET_LATEST_CONSOLE_COMMAND);
-    REGISTER_COMMAND_NOP(COMMAND_SAVE_STRING_TO_DEBUG_FILE, uint32);
+    REGISTER_COMMAND_HANDLER(COMMAND_SAVE_STRING_TO_DEBUG_FILE, SaveStringToDebugFile);
     REGISTER_COMMAND_NOP(COMMAND_SCRIPT_EVENT);
     REGISTER_COMMAND_NOP(COMMAND_SET_ALL_CARS_IN_AREA_VISIBLE);
     REGISTER_COMMAND_NOP(COMMAND_SET_ATTRACTOR_AS_COVER_NODE);
@@ -255,12 +294,12 @@ void notsa::script::commands::unused::RegisterHandlers() {
     REGISTER_COMMAND_NOP(COMMAND_TASK_WANDER_CRIMINAL);
     REGISTER_COMMAND_NOP(COMMAND_TRIGGER_PED_BOUNCE);
     REGISTER_COMMAND_NOP(COMMAND_UNLOCK_ALL_CAR_DOORS_IN_AREA);
-    REGISTER_COMMAND_NOP(COMMAND_VIEW_FLOAT_VARIABLE, uint32, uint32);
-    REGISTER_COMMAND_NOP(COMMAND_VIEW_INTEGER_VARIABLE, uint32, uint32);
+    REGISTER_COMMAND_HANDLER(COMMAND_VIEW_FLOAT_VARIABLE, ViewVariable);
+    REGISTER_COMMAND_HANDLER(COMMAND_VIEW_INTEGER_VARIABLE, ViewVariable);
     REGISTER_COMMAND_NOP(COMMAND_WANTED_STARS_ARE_FLASHING);
-    REGISTER_COMMAND_NOP(COMMAND_WATCH_FLOAT_VARIABLE, uint32, uint32);
-    REGISTER_COMMAND_NOP(COMMAND_WATCH_INTEGER_VARIABLE, uint32, uint32);
-    REGISTER_COMMAND_NOP(COMMAND_WRITE_DEBUG_WITH_FLOAT, uint32, uint32);
-    REGISTER_COMMAND_NOP(COMMAND_WRITE_DEBUG_WITH_INT, uint32, uint32);
-    REGISTER_COMMAND_NOP(COMMAND_WRITE_DEBUG, uint32);
+    REGISTER_COMMAND_HANDLER(COMMAND_WATCH_FLOAT_VARIABLE, ViewVariable);
+    REGISTER_COMMAND_HANDLER(COMMAND_WATCH_INTEGER_VARIABLE, ViewVariable);
+    REGISTER_COMMAND_HANDLER(COMMAND_WRITE_DEBUG_WITH_FLOAT, WriteDebugWithValue);
+    REGISTER_COMMAND_HANDLER(COMMAND_WRITE_DEBUG_WITH_INT, WriteDebugWithValue);
+    REGISTER_COMMAND_HANDLER(COMMAND_WRITE_DEBUG, WriteDebug);
 }

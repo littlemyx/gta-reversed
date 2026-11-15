@@ -458,6 +458,14 @@ bool HasPlayerBoughtItem(uint32 itemId) {
 
 };
 
+namespace {
+/// 0x596 IS_PLAYER_IN_SHORTCUT_TAXI (exe case @0x48EE39): CollectParameters(1), UpdateCompareFlag(false)
+bool IsPlayerInShortcutTaxi(CRunningScript* S) {
+    S->CollectParameters(1);
+    return false;
+}
+}
+
 void notsa::script::commands::player::RegisterHandlers() {
     REGISTER_COMMAND_HANDLER_BEGIN("Player");
 
@@ -529,7 +537,7 @@ void notsa::script::commands::player::RegisterHandlers() {
     // -----------------------------[ NOP ]-----------------------------
     REGISTER_COMMAND_NOP(COMMAND_GIVE_REMOTE_CONTROLLED_CAR_TO_PLAYER);
     REGISTER_COMMAND_NOP(COMMAND_SHUT_PLAYER_UP, uint32, uint32);
-    REGISTER_COMMAND_NOP(COMMAND_IS_PLAYER_IN_SHORTCUT_TAXI, uint32);
+    REGISTER_COMMAND_HANDLER(COMMAND_IS_PLAYER_IN_SHORTCUT_TAXI, IsPlayerInShortcutTaxi);
     REGISTER_COMMAND_NOP(COMMAND_SET_PLAYER_HOOKER);
     REGISTER_COMMAND_NOP(COMMAND_SET_JAMES_CAR_ON_PATH_TO_PLAYER);
     REGISTER_COMMAND_NOP(COMMAND_RESET_HAVOC_CAUSED_BY_PLAYER);

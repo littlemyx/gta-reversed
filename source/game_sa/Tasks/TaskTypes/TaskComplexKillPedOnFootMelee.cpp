@@ -106,8 +106,12 @@ CTask* CTaskComplexKillPedOnFootMelee::CreateSubTask(eTaskType taskType, CPed* p
 }
 
 // ASM-S06: the exe calls CalculateSearchPositionAndRanges and only then reads the range (the port used to pass the stale range by value)
-float CTaskComplexKillPedOnFootMelee::UpdateTargetDistSq(CPed* ped) {
+float CTaskComplexKillPedOnFootMelee::UpdateTargetDistSq(CPed* ped, bool zxySum) {
     CalculateSearchPositionAndRanges(ped);
+    if (zxySum) { // ASM-P4S3b: exe 0x62BDA2-0x62BDD3 / 0x62BE7B-0x62BEB3 sum z*z, then x*x, then y*y (the 0x62BC98 path uses CVector::SquaredMagnitude order x,y,z)
+        const auto d = m_targetPos - ped->GetPosition();
+        return d.z * d.z + d.x * d.x + d.y * d.y;
+    }
     return (ped->GetPosition() - m_targetPos).SquaredMagnitude();
 }
 
@@ -147,7 +151,7 @@ CTask* CTaskComplexKillPedOnFootMelee::CreateNextSubTask(CPed* ped) {
             return Create(TASK_SIMPLE_PAUSE);
         }
         return Create(
-            sq(m_arriveRange) < UpdateTargetDistSq(ped) // ASM-S06: exe 0x62BDD9/0x62BDE8 (strict, range read after the update)
+            sq(m_arriveRange) < UpdateTargetDistSq(ped, true) // ASM-S06: exe 0x62BDD9/0x62BDE8 (strict, range read after the update)
                 ? TASK_COMPLEX_SEEK_ENTITY
                 : TASK_SIMPLE_PAUSE
         );

@@ -31,7 +31,7 @@ public:
 
     void   CalculateSearchPositionAndRanges(CPed* ped);
     CTask* CreateSubTask(eTaskType taskType, CPed * ped);
-    float  UpdateTargetDistSq(CPed* ped); // NOTSA (ASM-S06): CalculateSearchPositionAndRanges + squared distance to m_targetPos; read the ranges AFTER this call, as the exe does
+    float  UpdateTargetDistSq(CPed* ped, bool zxySum = false); // NOTSA (ASM-S06): CalculateSearchPositionAndRanges + squared distance to m_targetPos; read the ranges AFTER this call, as the exe does
 
     CTask*    Clone() const override { return new CTaskComplexKillPedOnFootMelee{ *this }; }
     eTaskType GetTaskType() const override { return Type; }

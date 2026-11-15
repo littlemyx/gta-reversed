@@ -366,7 +366,7 @@ public:
 
     //! Get value from local array
     template<typename T>
-    T& GetArrayLocal(scm::VarLoc base, size_t idx, size_t elemSizeInDWords = std::min<size_t>(1, sizeof(T) / sizeof(int32))) {
+    T& GetArrayLocal(scm::VarLoc base, size_t idx, size_t elemSizeInDWords = std::max<size_t>(1, sizeof(T) / sizeof(int32))) {
         return GetLocal<T>((scm::VarLoc)(base + idx * elemSizeInDWords));
     }
 

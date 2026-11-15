@@ -1,0 +1,9 @@
+addr	function	verdict	asm range	note	fix commit
+0x6D85F0	CVehicle::FlyingControl	NOT_REACHED		budget; split into helpers with oracle fixtures
+0x6F2710	CBoat::FillBoatList	FIXED	0x6F2710-0x6F293C	camera forward normalised in XY only; squared dist thresholds (6400, min 999999.875); y-first dot	5707939da
+0x6A1460	CAutomobile::UpdateMovingCollision	FIXED	0x6A1460-0x6A1EC4	int16 delta + int32 sum, negative clamps to 0 (port wrapped to uint16 and clamped to 2500); multiply order of delta; rest MATCH	d8d8cf605
+0x545980	CPhysical::ApplyFriction-other	NOT_REACHED		budget (1033 insns)
+0x5442F0	CPhysical::DettachEntityFromEntity	FIXED	0x5442F0-0x54469C	force dir from attachedTo*offset (port had offset*attachedTo)	8494ade2d
+0x6DFC50	CVehicle::UpdateTrailerLink	MATCH	0x6DFC50-0x6E0046	branches, x87 order, constants verified; score from quirks already reproduced
+0x6E0050	CVehicle::UpdateTractorLink	NOT_REACHED		budget
+0x6D6640	CVehicle::SpecialEntityPreCollisionStuff	FIXED	0x6D6640-0x6D6A38	fallen lamp post must return (port fell through to RC/stuck checks)	9c1063290

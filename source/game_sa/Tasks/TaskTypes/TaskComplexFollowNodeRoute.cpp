@@ -118,14 +118,19 @@ eTaskType CTaskComplexFollowNodeRoute::CalcGoToTaskType(CPed* ped, eTaskType sub
             return TASK_SIMPLE_GO_TO_POINT;
         }
 
-        assert(m_CurrPtIdx + 1 <= m_PtRoute->GetSize()); // Original code just clamped the value [But that's a quite error imo]
+        // ASM-P4S3b: exe 0x66EC0B-0x66EC20 clamps the index to size-1 (the port only asserted)
+        const auto currIdx = std::min<int32>((int32)m_CurrPtIdx, (int32)m_PtRoute->GetSize() - 1);
 
-        const CVector currPt                     = GetCurrentPt();
-        const auto    cosAngleBetweenRoutePoints = (currPt - GetLastWaypoint(ped)).Normalized().Dot((GetNextWaypoint(ped) - currPt).Normalized()); // I'm pretty sure they're missing an `abs` here
-        if (m_bWillSlowDown = cosAngleBetweenRoutePoints <= COS_45) { // Keep in mind that the angles are inverted, so `<= COS_45` means "angle is more than 45"
+        // ASM-P4S3b: exe 0x66EC86/0x66ECB5: both direction vectors get z = 0 before Normalise (the port normalised them in 3D); the cos threshold is the literal 0.707f (not COS_45)
+        const CVector currPt = (*m_PtRoute)[currIdx];
+        auto dirIn  = currPt - GetLastWaypoint(ped);
+        auto dirOut = GetNextWaypoint(ped) - currPt;
+        dirIn.z = dirOut.z = 0.f;
+        const auto cosAngleBetweenRoutePoints = dirIn.Normalized().Dot(dirOut.Normalized()); // I'm pretty sure they're missing an `abs` here
+        if (m_bWillSlowDown = cosAngleBetweenRoutePoints < 0.707f) { // ASM-P4S3b: exe 0x66ECE8-0x66ECF3: strict `<` (equal => jp => no slow down)
             const auto sprint   = m_MoveState == PEDMOVE_SPRINT;
             m_SpeedIncreaseDist = m_SpeedDecreaseDist = sprint ? 5.f : 4.f;
-            m_SpeedDecreaseAmt  = std::clamp(1.f - (cosAngleBetweenRoutePoints + 1.f) / (COS_45 + 1.f), 0.f, 1.f) * (sprint ? 3.f : 1.5f); 
+            m_SpeedDecreaseAmt  = std::clamp(1.f - (cosAngleBetweenRoutePoints + 1.f) * 0.585823059f, 0.f, 1.f) * (sprint ? 3.f : 1.5f); // ASM-P4S3b: exe 0x66ECFB multiplies by the constant 0.5858230590820312 (not / (COS_45 + 1))
         }
     }
 

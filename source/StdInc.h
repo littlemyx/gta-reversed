@@ -31,6 +31,7 @@
 #include <format>
 
 #include "standalone/GameRand.h" // NOTSA_STANDALONE_RUN: game-owned rand/srand (after the CRT headers)
+#include "portable/rr_math.h" // SH2 NOTSA_RR_PORTABLE_MATH: math calls through the V8 ieee754 port (after the CRT headers)
 #include "app/platform/win/winincl.h"
 
 #include "Base.h"

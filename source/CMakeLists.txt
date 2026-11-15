@@ -63,6 +63,11 @@ if (${RE_PROJECT}_MDRIVER)
     endif()
     add_compile_definitions(NOTSA_MDRIVER)
 endif()
+# SH2: route every game float math call through the V8 10.2.154.26 fdlibm port (source/portable/v8_ieee754, source/portable/rr_math.h). OFF by default => the normal builds are unchanged.
+option(${RE_PROJECT}_RR_PORTABLE_MATH "Route game math (sin/cos/atan2/pow/...) through the V8 ieee754 port (reference build for the TS port)" OFF)
+if (${RE_PROJECT}_RR_PORTABLE_MATH)
+    add_compile_definitions(NOTSA_RR_PORTABLE_MATH)
+endif()
 if (${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY)
     if (NOT ${RE_PROJECT}_STANDALONE)
         message(FATAL_ERROR "${RE_PROJECT}_STANDALONE_DUMP_HOOKS_ONLY requires ${RE_PROJECT}_STANDALONE=ON")
@@ -196,7 +201,13 @@ if (${RE_PROJECT}_PORTABLE)
         # MAC-WIN64: the portable build on Windows (x64 MSVC) uses the real Windows headers and the original Win32 OS services (oswrapper_win.cpp, overlapped CdStream, Media Foundation /
         # WMA decoders, DirectSound), so the POSIX / OpenAL stand-ins in source/portable are not part of it. Everything else in source/portable (SDL3 app layer, GL3 render) is shared.
         list(APPEND PORTABLE_EXCLUDED_FILES portable/oswrapper_portable.cpp portable/cdstream_portable.cpp portable/audio_decoders_portable.cpp portable/dsound_al.cpp
-             portable/app_debug_posix.cpp portable/link_aliases.cpp portable/app_main.cpp portable/statehash.cpp)
+             portable/app_debug_posix.cpp portable/link_aliases.cpp portable/app_main.cpp)
+        if (NOT ${RE_PROJECT}_STATEHASH)
+            list(APPEND PORTABLE_EXCLUDED_FILES portable/statehash.cpp) # SH2: with GTASA_STATEHASH the harness also builds into PortableWin64 (the mach / dsound_al parts are !_WIN32)
+        endif()
+    endif()
+    if (NOT ${RE_PROJECT}_RR_PORTABLE_MATH)
+        list(APPEND PORTABLE_EXCLUDED_FILES portable/v8_ieee754/src/base/ieee754.cc) # SH2: only part of the RR reference build
     endif()
     # MAC-W0a (app/): Win32-only app/platform TUs replaced by portable/app_*.cpp
     set(PORTABLE_EXCLUDED_APP_FILES app/platform/win/VideoPlayer/VideoPlayer.cpp app/platform/win/VideoModeSelectDialog.cpp)
@@ -463,6 +474,12 @@ if (${RE_PROJECT}_RW_LIBRW)
     add_subdirectory("${PROJECT_SOURCE_DIR}/vendor/librw" "${CMAKE_BINARY_DIR}/vendor/librw")
     # librw is third-party code: never -Werror (COMPILE_WARNING_AS_ERROR is set per target on ${RE_PROJECT_LIB_NAME} only)
     set_target_properties(librw PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+    if (${RE_PROJECT}_RR_PORTABLE_MATH)
+        # SH2: librw's quaternion / matrix / animation / camera math (Quat slerp, rotate, tanf ...) goes through the V8 ieee754 port as well (force-included, C++ TUs only)
+        target_include_directories(librw PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/portable/v8_ieee754" "${CMAKE_CURRENT_SOURCE_DIR}/portable")
+        target_compile_definitions(librw PRIVATE NOTSA_RR_PORTABLE_MATH)
+        target_compile_options(librw PRIVATE "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:MSVC>>:/FIrr_math.h>")
+    endif()
     if (${RE_PROJECT}_PORTABLE)
         # C-8 (MAC-FLOOP1): librw's matrix / quaternion / animation math must not be FMA-contracted either (clang's default is -ffp-contract=on: arm64 fuses a*b+c inside one statement, the exe's x87 rounds twice)
         target_compile_options(librw PRIVATE "$<$<COMPILE_LANGUAGE:C,CXX>:-ffp-contract=off>")
@@ -2686,6 +2703,11 @@ if (${RE_PROJECT}_USE_SDL3)
     )
 endif()
 
+if (${RE_PROJECT}_RR_PORTABLE_MATH)
+    target_include_directories(${RE_PROJECT_LIB_NAME} PRIVATE portable/v8_ieee754)
+    # the fdlibm port must not see the game's force-included StdInc.h (its `sin(...)` -> `rrm_sin(...)` macros would rename the functions it defines)
+    set_source_files_properties(portable/v8_ieee754/src/base/ieee754.cc PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+endif()
 target_include_directories(${RE_PROJECT_LIB_NAME} PRIVATE
     .
     /

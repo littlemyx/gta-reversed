@@ -398,5 +398,9 @@ L82a334:                                                              // y = +-0
 } // namespace powdetail
 
 //! pow(x, y) of the exe's CRT (_CIpow 0x822130): the SSE2 kernel, result a plain double (the exe leaves it in ST0 as an exact double)
+#ifdef NOTSA_RR_PORTABLE_MATH // SH2: the RR reference build uses the V8 ieee754 pow (rr_math.h) instead of the exe CRT pow kernel
+inline double pow(double x, double y) { return std::pow(x, y); }
+#else
 inline double pow(double x, double y) { return powdetail::Pow(x, y); }
+#endif
 } // namespace x87

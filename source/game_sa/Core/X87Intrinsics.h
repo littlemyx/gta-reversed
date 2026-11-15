@@ -164,7 +164,7 @@ inline void sincos(double x, double& s, double& c) {
     }
     s = resSin; c = resCos;
 }
-#elif defined(NOTSA_PORTABLE)
+#elif defined(NOTSA_PORTABLE) && !defined(NOTSA_RR_PORTABLE_MATH) // SH2: the RR reference build (GTASA_RR_PORTABLE_MATH) takes the std:: branch below = the V8 ieee754 port (rr_math.h macros), not the software x87
 // Portable build (arm64 / x64 / clang): the instructions are reproduced by the integer-only software x87 (X87Soft.h, .notes/reports/F1_soft.md). The arithmetic steps of the CRT
 // asin / acos sequences are rounded at the game's precision control (24 bits); the transcendental results are 64 bit values, returned as a round-to-odd double so that the
 // caller's NEXT rounding to float (or to 24 bits) is identical to rounding the 80 bit value. Bit-exact vs the Win32 asm at float level (0 mismatches in > 10^7 cases per

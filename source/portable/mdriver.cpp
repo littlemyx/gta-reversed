@@ -1,6 +1,7 @@
 #ifdef NOTSA_MDRIVER
 #include "StdInc.h"
 #include "mdriver.h"
+#include "loadlog.h"
 #include "standalone/Fixups.h"
 #include "Scripts/TheScripts.h"
 #include "Scripts/RunningScript.h"
@@ -78,7 +79,7 @@ bool Cmp(double v, const std::string& op, double r) {
     return op == "==" ? v == r : op == "!=" ? v != r : op == ">" ? v > r : op == "<" ? v < r : op == ">=" ? v >= r : v <= r;
 }
 void Emit(const std::string& cmd) { // run an action through the replay path and record it
-    if (g_out) { std::fprintf(g_out, "at:%llu\ncmd:%s\n", (unsigned long long)g_clock, cmd.c_str()); std::fflush(g_out); }
+    if (g_out) { std::fprintf(g_out, "at:%llu\ncmd:%s\n# rec=%d gf=%u\n", (unsigned long long)g_clock, cmd.c_str(), notsa::rr::LoadLogRecFrame(), (unsigned)notsa::rr::LoadLogFrameCounter()); std::fflush(g_out); } // `# rec=` (no colon: the injector skips it) = recorded frame / CTimer frame the action ran in
     char name[32]{}; std::sscanf(cmd.c_str(), "%31[^:]", name);
     if (!Cmd(name, cmd.size() > std::strlen(name) ? cmd.substr(std::strlen(name) + 1) : "") && g_run) g_run(cmd);
 }

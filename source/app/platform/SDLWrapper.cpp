@@ -724,8 +724,8 @@ void InjPump() {
         NOTSA_INJ_LOG("injected key %d %s at %u ms", (int)ev.key, ev.down ? "down" : "up", (unsigned)now);
     }
 #ifdef NOTSA_MDRIVER
+    notsa::mdriver::SetKeyPusher(MdPushKey); notsa::mdriver::SetCmdRunner(MdRunCmd); // also in the replay (no NOTSA_MDRIVER): the recorded cmd:mdkey must push the key
     if (notsa::mdriver::Enabled() && !s_InjHolding) {
-        notsa::mdriver::SetKeyPusher(MdPushKey); notsa::mdriver::SetCmdRunner(MdRunCmd);
         notsa::mdriver::Tick(clock());
     }
 #endif

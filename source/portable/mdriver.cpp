@@ -1,6 +1,7 @@
 #ifdef NOTSA_MDRIVER
 #include "StdInc.h"
 #include "mdriver.h"
+#include "standalone/Fixups.h"
 #include "Scripts/TheScripts.h"
 #include "Scripts/RunningScript.h"
 #include "CutsceneMgr.h"
@@ -149,6 +150,7 @@ bool Cmd(const char* name, const std::string& args) {
     float a[5]{}; std::sscanf(args.c_str(), "%f:%f:%f:%f:%f", a, a + 1, a + 2, a + 3, a + 4);
     const CVector p{ a[0], a[1], a[2] };
     CStreaming::LoadScene(p); CStreaming::LoadSceneCollision(p);
+    { char b[200]; std::snprintf(b, sizeof b, "[mdriver] %s gf=%u ped=%.2f,%.2f,%.2f -> %.2f,%.2f,%.2f", name, (unsigned)CTimer::GetFrameCounter(), ped->GetPosition().x, ped->GetPosition().y, ped->GetPosition().z, a[0], a[1], a[2]); notsa::standalone::Fixups::Log("%s", b); }
     if (!std::strcmp(name, "mdped")) { // CWorld::Remove + SetPosn + heading + Add (the headless TS harness's addToWorldAt)
         CWorld::Remove(ped);
         ped->SetPosn(p);

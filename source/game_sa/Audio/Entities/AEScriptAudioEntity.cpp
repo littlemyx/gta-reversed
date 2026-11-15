@@ -5,6 +5,9 @@
 #include "AEAudioUtility.h"
 #include "AEAudioHardware.h"
 #include "AEAmbienceTrackManager.h"
+#ifdef NOTSA_STATEHASH
+#include "portable/statehash.h"
+#endif
 
 // 0x5074D0
 CAEScriptAudioEntity::CAEScriptAudioEntity() : CAEAudioEntity() {
@@ -82,6 +85,9 @@ int8 CAEScriptAudioEntity::GetMissionAudioLoadingStatus(uint8 sampleId) {
     if (link.m_nBankId < 0) {
         return 1;
     }
+#ifdef NOTSA_STATEHASH
+    if (notsa::rr::NoAudio()) { return 1; } // RR harness (NOTSA_RR_NOAUDIO=1): the audio engine is never serviced, so a requested mission sample would never report loaded; report loaded as the exe does once the sample is in the slot
+#endif
     const auto slot = (eSoundBankSlot)(SND_BANK_SLOT_MISSION1 + sampleId);
     if (link.m_nBankSlotId < 0) { // NOTSA: `m_nBankSlotId` is actually the sound ID in the bank (-1 = whole bank)
         return AEAudioHardware.GetSoundBankLoadingStatus((eSoundBank)(uint16)link.m_nBankId, slot);
@@ -207,6 +213,9 @@ void CAEScriptAudioEntity::PlayLoadedMissionAudio(uint8 sampleId) {
     if (GetMissionAudioLoadingStatus(sampleId) != 1) {
         return;
     }
+#ifdef NOTSA_STATEHASH
+    if (notsa::rr::NoAudio()) { return; } // RR harness: no sound object is created (nothing would ever finish it), so the sample reads as finished
+#endif
 
     bool isFrontEnd  = false; // 0x12
     bool isChannel01 = false; // 0x13

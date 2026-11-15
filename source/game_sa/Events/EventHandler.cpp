@@ -2687,15 +2687,20 @@ void CEventHandler::ComputePlayerCollisionWithPedResponse(CEventPlayerCollisionW
             return {nullptr, new CTaskSimpleSay{CTX_GLOBAL_BUMP}};
         }
 
-        const auto victimToPlayer             = (e->m_victim->GetPosition() - plyr->GetPosition());
-        const auto isCollisionInFrontOfPlayer = !std::signbit(victimToPlayer.Dot(plyr->GetForward()));
-        const auto isCollisionBehindVictim    = std::signbit(victimToPlayer.Dot(e->m_victim->GetForward()));
+        const auto victimToPlayer = (e->m_victim->GetPosition() - plyr->GetPosition());
+        // exe 0x4B8D2C: dot products are summed z, y, x; "in front" is !(dot < 0), "behind victim" is dot <= 0 (differs from signbit at +-0)
+        const auto DotZYX = [&](const CVector& d) {
+            return (victimToPlayer.z * d.z + victimToPlayer.y * d.y) + victimToPlayer.x * d.x;
+        };
+        const auto isCollisionInFrontOfPlayer = DotZYX(plyr->GetForward()) >= 0.0f;
+        const auto isCollisionBehindVictim    = DotZYX(e->m_victim->GetForward()) <= 0.0f;
 
-        const auto DoLookAt = [&](CPed* looker, int32 time) {
+        // The exe always makes the player look at the victim (never the other way round)
+        const auto DoLookAt = [&](int32 time) {
             g_ikChainMan.LookAt(
                 "CompPlayerCollPedResp",
-                looker,
-                looker == e->m_victim ? plyr : e->m_victim,
+                plyr,
+                e->m_victim,
                 time,
                 BONE_HEAD,
                 nullptr,
@@ -2708,53 +2713,63 @@ void CEventHandler::ComputePlayerCollisionWithPedResponse(CEventPlayerCollisionW
         };
 
         if (e->m_movestate == PEDMOVE_WALK) { // 0x4B8DF1
-            if (e->m_victimMoveState == PEDMOVE_WALK) { // Both peds were walking
-                if (isCollisionInFrontOfPlayer || isCollisionBehindVictim) { // 0x4B8E05 and 0x4B8E5F
-                    DoLookAt(isCollisionInFrontOfPlayer ? plyr : e->m_victim, 2000);
-                    if (isCollisionBehindVictim) {
-                        plyr->AnnoyPlayerPed(false);
-                    }
+            if (e->m_victimMoveState == PEDMOVE_WALK) { // Both peds were walking (0x4B8DFF)
+                if (isCollisionInFrontOfPlayer) { // 0x4B8E05: look + say, no annoy
+                    DoLookAt(2000);
+                    return {nullptr, new CTaskSimpleSay{CTX_GLOBAL_BUMP}};
                 }
-                return {nullptr, new CTaskSimpleSay{CTX_GLOBAL_BUMP}}; // Just say something, and move on
-            }
-        } else if (!notsa::contains({PEDMOVE_RUN, PEDMOVE_SPRINT}, e->GetMoveState()) || !notsa::contains({PEDMOVE_WALK, PEDMOVE_RUN, PEDMOVE_SPRINT}, e->GetVictimMoveState())) { // 0x4B8EDC - One of the peds was walking and the othe was running/sprinting
-            if (e->m_movestate == PEDMOVE_STILL && notsa::contains({ PEDMOVE_WALK, PEDMOVE_RUN, PEDMOVE_SPRINT }, e->GetVictimMoveState()) && isCollisionBehindVictim) {
-                DoLookAt(plyr, 2'000);
-                return {
-                    e->m_victimMoveState != PEDMOVE_WALK
-                        ? new CTaskComplexHitResponse{(eDirection)CPedGeometryAnalyser::ComputePedHitSide(*e->m_victim, *plyr)}
-                        : nullptr,
-                    new CTaskSimpleSay{CTX_GLOBAL_BUMP}
-                };
-            } else if (notsa::contains({PEDMOVE_RUN, PEDMOVE_SPRINT}, e->GetMoveState())) { // 0x4B8FBF
-                if (notsa::contains({PEDMOVE_NONE, PEDMOVE_STILL}, e->GetVictimMoveState()) && isCollisionInFrontOfPlayer && e->GetMoveState() == PEDMOVE_SPRINT) { // 0x4B8FCD
-                    DoLookAt(plyr, 2'000);
+                if (isCollisionBehindVictim) { // 0x4B8E59: look + say + annoy
+                    DoLookAt(2000);
+                    plyr->AnnoyPlayerPed(false);
                     return {nullptr, new CTaskSimpleSay{CTX_GLOBAL_BUMP}};
                 }
             }
-        } else if (!isCollisionInFrontOfPlayer && isCollisionBehindVictim || !isCollisionBehindVictim) { // 0x4B9057 and 0x4B905F
-            DoLookAt(plyr, 2'000);
-            plyr->AnnoyPlayerPed(false);
-            return {nullptr, new CTaskSimpleSay{CTX_GLOBAL_BUMP}};
-        } else if (e->m_victimMoveState != PEDMOVE_WALK) { // 0x4B9068
-            const auto plyrHitSide = CPedGeometryAnalyser::ComputePedHitSide(*e->m_victim, *plyr);
-            plyr->AnnoyPlayerPed(false);
-            if (   (plyr->m_pStats->m_fDefendWeakness <= 1.5f || e->m_victim->m_pStats->m_fDefendWeakness <= 1.5f) && plyr->m_pStats->m_fDefendWeakness <= 1.5f // 0x4B9073
-                || plyr->m_pStats->m_fDefendWeakness <=e->m_victim->m_pStats->m_fDefendWeakness
-            ) { 
-                // 0x4B90A6
-                DoLookAt(plyr, 2'000);
-                return {
-                    e->m_movestate == PEDMOVE_SPRINT
-                        ? new CTaskComplexHitResponse{(eDirection)plyrHitSide}
-                        : nullptr,
-                    new CTaskSimpleSay{CTX_GLOBAL_BUMP}
-                };
+            // 0x4B8FCD: ms is WALK, so the (ms == SPRINT) test there never passes
+        } else if (!notsa::contains({PEDMOVE_RUN, PEDMOVE_SPRINT}, e->GetMoveState()) || !notsa::contains({PEDMOVE_WALK, PEDMOVE_RUN, PEDMOVE_SPRINT}, e->GetVictimMoveState())) { // 0x4B8EDC
+            if (notsa::contains({PEDMOVE_NONE, PEDMOVE_STILL}, e->GetMoveState()) && notsa::contains({PEDMOVE_WALK, PEDMOVE_RUN, PEDMOVE_SPRINT}, e->GetVictimMoveState()) && isCollisionBehindVictim) { // 0x4B8EFE: ms is NONE or STILL
+                const auto hitSide = CPedGeometryAnalyser::ComputePedHitSide(*e->m_victim, *plyr);
+                CTask* const response = e->m_victimMoveState != PEDMOVE_WALK
+                    ? new CTaskComplexHitResponse{(eDirection)hitSide}
+                    : nullptr;
+                const auto say = new CTaskSimpleSay{CTX_GLOBAL_BUMP};
+                DoLookAt(2'000);
+                plyr->AnnoyPlayerPed(false); // 0x4B8FBA falls through to 0x4B9282
+                return {response, say};
+            } else if (notsa::contains({PEDMOVE_RUN, PEDMOVE_SPRINT}, e->GetMoveState())) { // 0x4B8FBF
+                if (notsa::contains({PEDMOVE_NONE, PEDMOVE_STILL}, e->GetVictimMoveState()) && isCollisionInFrontOfPlayer && e->GetMoveState() == PEDMOVE_SPRINT) { // 0x4B8FCD
+                    DoLookAt(1'000); // exe: 0x3E8
+                    return {nullptr, new CTaskSimpleSay{CTX_GLOBAL_BUMP}};
+                }
             }
-            return { // 0x4B90DF
-                new CTaskComplexFallAndGetUp{plyrHitSide, false},
-                nullptr
-            };
+        } else if (!isCollisionInFrontOfPlayer) { // 0x4B921D
+            if (isCollisionBehindVictim) {
+                const auto say = new CTaskSimpleSay{CTX_GLOBAL_BUMP};
+                DoLookAt(2'000);
+                plyr->AnnoyPlayerPed(false);
+                return {nullptr, say};
+            }
+        } else if (!isCollisionBehindVictim) { // 0x4B91BA: look + say, no annoy
+            const auto say = new CTaskSimpleSay{CTX_GLOBAL_BUMP};
+            DoLookAt(2'000);
+            return {nullptr, say};
+        } else { // 0x4B9065: in front of the player and behind the victim
+            const auto plyrWeak = plyr->m_pStats->m_fDefendWeakness;
+            const auto victWeak = e->m_victim->m_pStats->m_fDefendWeakness;
+            // 0x4B9073..0x4B90A4: FallAndGetUp iff victim is not walking and plyr > 1.5 and (victim <= 1.5 or plyr > victim)
+            if (e->m_victimMoveState != PEDMOVE_WALK && plyrWeak > 1.5f && (victWeak <= 1.5f || plyrWeak > victWeak)) {
+                const auto plyrHitSide = CPedGeometryAnalyser::ComputePedHitSide(*e->m_victim, *plyr);
+                plyr->AnnoyPlayerPed(false);
+                return {new CTaskComplexFallAndGetUp{plyrHitSide, false}, nullptr};
+            }
+            // 0x4B90A6
+            const auto say = new CTaskSimpleSay{CTX_GLOBAL_BUMP};
+            DoLookAt(2'000);
+            CTask* response = nullptr;
+            if (e->m_movestate == PEDMOVE_SPRINT) { // 0x4B9167
+                response = new CTaskComplexHitResponse{(eDirection)CPedGeometryAnalyser::ComputePedHitSide(*e->m_victim, *plyr)};
+            }
+            plyr->AnnoyPlayerPed(false);
+            return {response, say};
         }
         return {nullptr, nullptr};
     }();

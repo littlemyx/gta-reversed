@@ -1593,7 +1593,7 @@ void CTheScripts::ProcessAllSearchLights() {
         const auto tgtBulbDir = (sl.m_Target - bulb->GetPosition()).Normalized();
 
         const auto Transform = [&](CEntity* entity) {
-            const auto rotX = x87::atan2(tgtBulbDir.z, tgtBulbDir.Magnitude2D());
+            const auto rotX = x87::atan2((double)tgtBulbDir.z, std::sqrt((x87d)tgtBulbDir.x * tgtBulbDir.x + (x87d)tgtBulbDir.y * tgtBulbDir.y)); // 0x493D0A: fsqrt result goes unrounded into fpatan (Magnitude2D rounds it to float)
             const auto rotZ = tgtBulbDir.Heading();
 
             entity->m_matrix->SetRotateX(rotX); // 0x493D31 / 0x493DA2: SetRotateX (resets the orientation), not RotateX (which turned the already rotated matrix again every frame)

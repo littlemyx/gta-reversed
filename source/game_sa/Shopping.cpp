@@ -734,8 +734,8 @@ void CShopping::StoreVehicleMods() {
 
 // 0x49B240
 void CShopping::RestoreClothesState() {
-    auto clothesDesc = FindPlayerPed()->GetClothesDesc();
-    clothesDesc = &gStoredClothesState;
+    // exe 0x49B240: rep movsd of 0x1E dwords from the stored state into the player's clothes desc (the port only re-pointed a local)
+    memcpy(FindPlayerPed()->GetClothesDesc(), &gStoredClothesState, sizeof(CPedClothesDesc));
     gClothesHaveBeenStored = 0u;
 }
 

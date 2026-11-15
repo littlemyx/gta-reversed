@@ -1390,7 +1390,7 @@ bool CEntity::GetIsBoundingBoxOnScreen() {
 
     for (int32 i = 0; i < 2; ++i) {
         auto chooseComponent = [&](auto member_ptr) {
-            return std::invoke(member_ptr, vecNormals[i]) < 0
+            return std::signbit(std::invoke(member_ptr, vecNormals[i])) // 0x5346E0: the exe tests the sign bit (shr 0x1f), so -0.0f picks max too
                 ? std::invoke(member_ptr, cm->m_boundBox.m_vecMax)
                 : std::invoke(member_ptr, cm->m_boundBox.m_vecMin);
         };

@@ -4,7 +4,7 @@
 # Actions: `do wait N` | waituntil EXPR OP VALUE MAXFRAMES | key down|up NAME | pedwarp x y z | vehwarp x y z (the ped vehicle, occupants with it) | standcrate LO HI DIST | standdrop LX LY DIST | standenex NAME AREA link|self DIST | entercar SLOT DIST
 script GUNS1
 stall 600
-answers 12
+answers 60
 
 step car_to_house                      # stage 2: the car with CJ and Ryder at the house locate (arriveCar)
  if L51 == 2

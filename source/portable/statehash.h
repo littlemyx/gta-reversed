@@ -51,5 +51,7 @@ void RandHookLoc(uint32_t stateBefore, const char* file, unsigned line);
 void SetWrapCaller(const void* ra);
 //! (declared in Base.h for NOTSA_PTR_ID32) stable replacement of an object address: pool tag + slot index for pool objects, else the offset from this module's code
 uint32_t StableId(const void* p);
+//! RAII scope for NOTSA_RR_GAMEPLAY_RAND=1 (.notes/STATEHASH_SPEC.md sections 6, 8): rand state restored at scope exit, calls inside are not counted / logged
+struct RandIsolate { RandIsolate(); ~RandIsolate(); RandIsolate(const RandIsolate&) = delete; bool m_on = false; uint32_t m_saved = 0; };
 } // namespace notsa::rr
 #endif

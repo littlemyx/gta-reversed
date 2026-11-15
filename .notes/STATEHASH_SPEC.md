@@ -90,7 +90,7 @@ One line per frame, space separated, lowercase hex without prefix:
 * `frame`: decimal recorded frame number (0-based). `randCount`: decimal, cumulative number of `rand()` calls since process start at the END of that frame,
   the same counter as the rand log's `callidx` (the next call gets callidx == randCount). Process-wide.
 * `h_*`: 64-bit `e` hash, 16 hex digits, of subsystems 3.1-3.8 in that order. (`q` remains in the RR trace only.)
-* First line `#SH 1 build=<tag> seed=<n> subsys=tm,ck,rng,pop,pl,cam,pd,vh,ob,all` (skip lines starting with `#`).
+* With NOTSA_RR_GAMEPLAY_RAND=1 (section 10) randCount excludes render/audio draws. First line `#SH 1 build=<tag> seed=<n> gprand=<0or1> subsys=tm,ck,rng,pop,pl,cam,pd,vh,ob,all` (skip lines starting with `#`).
 
 ## 7. NEW verbose dump (SH1) - NOTSA_SH_DUMP=<frame>[,<frame>...]  NOTSA_SH_DUMP_SUBSYS=<name|all>[,<name>...]  NOTSA_SH_DUMP_FILE=<path> (default sh_dump.txt)
 Rows `frame subsys entity_key field value`, one row per word fed to the hash, in feed order (the checker relies on this order), for listed recorded-frame numbers.
@@ -118,3 +118,14 @@ the RR runs use NOTSA_RR_NOAUDIO=1 (audio not serviced) but DO render (NOPRESENT
   differ from `e` wherever the exe keeps x87 80-bit intermediates (the `x87d`/`X87R/X87W` sites, e.g. CGeneral::GetRandomNumberInRange float/int versions, General.h:150-170).
 * Math functions the game calls (sinf/cosf/atan2f/sqrt/acos/pow/floor via CRT) need fdlibm-exact ports; ftol truncation helpers `NOTSA_FTOL*` define int conversion.
 * Resource load order (streaming / IMG order, CdStream sync reads) influences model ids and pool slot allocation; pool slot order is part of the hash (slot words).
+
+## 10. NOTSA_RR_GAMEPLAY_RAND=1 (render/audio isolation; the reference runs use it)
+Needs NOTSA_RR=1. `notsa::rr::RandIsolate` (statehash.h) saves the rand state on entry and restores it (`srand(saved)`) on exit; rand() calls inside are NOT counted in `randCount` / `callidx` and NOT logged.
+Drawing is unchanged (render/audio still consume random numbers privately); gameplay sees the stream as if they never ran. The hash file header carries `gprand=1`. Scopes (app_game.cpp, Idle):
+1. `AudioEngine.Service()` (only when not NOTSA_RR_NOAUDIO=1, which skips it entirely);
+2. everything after `OnFrame()` to the end of `Idle()`: lights, scene render, 2D stuff: CGrassRenderer.cpp:85-87 (`srand` + `GetRandomNumber` per tuft), PostEffects, Coronas, Clouds render, sprites, HUD, Fx render, ...
+   Isolated as a whole, so there is no per-site list to maintain.
+NOT isolated (they run inside `CGame::Process`, in simulation order, and a port must reproduce them although cosmetic): FxManager / FxSystem / FxEmitter updates and Fx blueprints (Fx.cpp, FxEmitter.cpp, FxInfo*),
+CWeather::Update (21 sites), Clouds update, Birds, Fire / FireManager, Explosion, Glass, WaterCreature_c, WaterCannon, Rope, Population, CarCtrl, Train, Plane, Heli, ScriptsForBrains, SpecialFX update, Physical, Weapon,
+WindModifiers, PlantMgr / PlantLocTri / ProcSurfaceInfo / PPTriPlantBuffer updates, audio ENTITY code called from game code (AEPedSpeech, AECollision, AEGlobalWeapon, AEVehicle, AEScript, AEAudioUtility) outside AudioEngine.Service.
+Also not isolated: draws in the loading screen and FrontendIdle (menus). With gprand=1 `randCount` and the rand log therefore describe the gameplay stream only.

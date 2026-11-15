@@ -334,10 +334,15 @@ void Idle(void* param) {
     CGame::Process();
 #ifdef NOTSA_STATEHASH
     if (!notsa::rr::NoAudio()) // NOTSA_RR_NOAUDIO=1: the audio engine is not serviced at all (the cross-build comparison does not depend on how a DirectSound device is emulated)
+    { notsa::rr::RandIsolate iso; // NOTSA_RR_GAMEPLAY_RAND=1: audio-time rand() draws do not touch the gameplay stream
 #endif
     AudioEngine.Service();
 #ifdef NOTSA_STATEHASH
+    }
+#endif
+#ifdef NOTSA_STATEHASH
     notsa::rr::OnFrame(); // RR: per-frame state hash (end of the simulation part)
+    notsa::rr::RandIsolate isoRender; // NOTSA_RR_GAMEPLAY_RAND=1: the render part of this Idle (until return) runs on a saved/restored rand state, not counted
 #endif
     SetLightsWithTimeOfDayColour(Scene.m_pRpWorld);
     if (!param) {

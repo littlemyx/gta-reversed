@@ -148,6 +148,8 @@ const ShConfig& ShCfg() {
     }();
     return c;
 }
+int                   g_isoDepth = 0;            // >0 inside a RandIsolate scope: rand() calls are neither counted nor logged
+bool GpRand() { static const bool v = Active() && std::getenv("NOTSA_RR_GAMEPLAY_RAND") && std::getenv("NOTSA_RR_GAMEPLAY_RAND")[0] == '1'; return v; }
 FILE*                 g_sh    = nullptr; // per-frame hash file
 FILE*                 g_dumpF = nullptr;
 std::atomic<uint64_t> g_randCount{ 0 };  // cumulative rand() calls (main thread on portable builds; every call on the single-state Win32 build); = the rand log's callidx
@@ -350,7 +352,7 @@ void StartRecording(uint32_t seed) {
     RngSeed(seed);
     if (!ShCfg().file.empty()) {
         g_sh = std::fopen(ShCfg().file.c_str(), "w");
-        if (g_sh) { std::fprintf(g_sh, "#SH 1 build=%s seed=%u subsys=tm,ck,rng,pop,pl,cam,pd,vh,ob,all\n", Cfg().tag.empty() ? "unset" : Cfg().tag.c_str(), seed); std::fflush(g_sh); }
+        if (g_sh) { std::fprintf(g_sh, "#SH 1 build=%s seed=%u gprand=%d subsys=tm,ck,rng,pop,pl,cam,pd,vh,ob,all\n", Cfg().tag.empty() ? "unset" : Cfg().tag.c_str(), seed, GpRand() ? 1 : 0); std::fflush(g_sh); }
         else { NOTSA_LOG_ERR("rr_start: cannot open NOTSA_SH_FILE '{}'", ShCfg().file); }
     }
     g_frame     = 0;
@@ -405,6 +407,7 @@ inline uint32_t RandVal(uint32_t stateBefore) { return ((stateBefore * 214013u +
 #ifdef NOTSA_PORTABLE
 // caller = up to 5 return addresses (frame-pointer chain) as offsets from `StableId` (stable across ASLR; resolve offline with nm / atos), hex, comma separated
 __attribute__((noinline)) void RandHook(uint32_t stateBefore) {
+    if (g_isoDepth > 0) return;
     auto& r = RL();
     if (std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return; // worker threads have their own LCG state and are not part of the game stream
     const uint64_t idx = g_randCount.fetch_add(1, std::memory_order_relaxed);
@@ -420,6 +423,7 @@ __attribute__((noinline)) void RandHook(uint32_t stateBefore) {
 // with tools/standalone/statehash/randlog_resolve.py + the linker .map), `+wrap` = module-relative return address of CGeneral::GetRandomNumber (the wrapper hides its caller, General.cpp), if the call came through it.
 const void* g_wrapCaller = nullptr;
 __declspec(noinline) void RandHookLoc(uint32_t stateBefore, const char* file, unsigned line) {
+    if (g_isoDepth > 0) return;
     auto& r = RL();
     const uint64_t idx = g_randCount.fetch_add(1, std::memory_order_relaxed);
     if (!r.f) return;
@@ -435,6 +439,10 @@ __declspec(noinline) void RandHookLoc(uint32_t stateBefore, const char* file, un
 }
 void SetWrapCaller(const void* ra) { g_wrapCaller = ra; }
 #endif
+
+// NOTSA_RR_GAMEPLAY_RAND=1: everything inside a RandIsolate scope (the render part of Idle, AudioEngine.Service) runs with the rand state saved on entry and restored on exit, and is not counted / logged
+RandIsolate::RandIsolate() { if (GpRand()) { m_on = true; m_saved = RngState(); g_isoDepth++; } }
+RandIsolate::~RandIsolate() { if (m_on) { g_isoDepth--; RngSeed(m_saved); } }
 
 void RngMark(const char* name) {
     static const bool on = Active() && std::getenv("NOTSA_RR_RNGMARKS");

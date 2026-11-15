@@ -3839,8 +3839,14 @@ bool CAutomobile::UpdateMovingCollision(float angle) {
                     colAngleMult *= -1;
             }
 
-            m_wMiscComponentAngle += NOTSA_FTOL(uint16, ((float)pad->GetCarGunUpDown() / 128.0f) * colAngleMult * CTimer::GetTimeStep());
-            m_wMiscComponentAngle = std::clamp<uint16>(m_wMiscComponentAngle, 0, DEFAULT_COLLISION_EXTENDLIMIT);
+            // 0x6A16A9: ((gun * timestep) * mult) * (1/128), the delta is a signed 16 bit value and the sum is clamped through a signed 32 bit
+            // (a negative sum gives 0, it does NOT wrap to a huge uint16 that would be clamped to the extend limit)
+            const auto delta = NOTSA_FTOL(int16, (float)pad->GetCarGunUpDown() * CTimer::GetTimeStep() * colAngleMult * 0.0078125f);
+            const int32 sum = (int32)m_wMiscComponentAngle + (int32)delta;
+            m_wMiscComponentAngle = sum < 0 ? uint16(0) : (uint16)sum;
+            if (m_wMiscComponentAngle > (uint16)DEFAULT_COLLISION_EXTENDLIMIT) {
+                m_wMiscComponentAngle = DEFAULT_COLLISION_EXTENDLIMIT;
+            }
         }
 
         CMatrix rotMatrix;
@@ -3934,7 +3940,8 @@ bool CAutomobile::UpdateMovingCollision(float angle) {
         return false;
 
     if (pad->GetCarGunUpDown() < -10) {
-        m_wMiscComponentAngle -= NOTSA_FTOL(uint16, 2 * ((float)pad->GetCarGunUpDown() / 128.0f) * 10.0f * CTimer::GetTimeStep());
+        // 0x6A1DEC: (((gun * 2) * timestep) * 10) * (1/128)
+        m_wMiscComponentAngle -= NOTSA_FTOL(uint16, (float)(pad->GetCarGunUpDown() * 2) * CTimer::GetTimeStep() * 10.0f * 0.0078125f);
         m_wMiscComponentAngle = std::min(m_wMiscComponentAngle, DEFAULT_COLLISION_EXTENDLIMIT);
         return false;
     }
@@ -3942,7 +3949,7 @@ bool CAutomobile::UpdateMovingCollision(float angle) {
     if (!m_wMiscComponentAngle)
         return false;
 
-    m_wMiscComponentAngle -= NOTSA_FTOL(uint16, (float(pad->GetCarGunUpDown() + 100) * 10.0f * CTimer::GetTimeStep()) / 128.0f);
+    m_wMiscComponentAngle -= NOTSA_FTOL(uint16, float(pad->GetCarGunUpDown() + 100) * CTimer::GetTimeStep() * 10.0f * 0.0078125f); // 0x6A1E64: timestep first, then 10, then 1/128
     if (static_cast<int16>(m_wMiscComponentAngle) < 0)
         m_wMiscComponentAngle = 0;
 

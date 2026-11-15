@@ -6441,7 +6441,9 @@ void CAutomobile::SetBumperDamage(ePanels panelIdx, bool withoutVisualEffect) {
     case ePanelDamageState::DAMSTATE_DAMAGED: {
         if (!m_pHandlingData->m_bBouncePanels) { // TODO: Weird... The flag name might be incorrect, because here we actually set the bouncing panelIdx.
             if (auto* panelFrame = CheckIfExistsGetFree(nodeIdx)) {
-                panelFrame->SetPanel(nodeIdx, 0, CGeneral::GetRandomNumberInRange(-0.5f, -0.2f));
+                // 0x6B13F4: x87 chain `rand * (1/32767) * -0.3f - 0.2f` (every op rounds to float), NOT `-0.5f + r * 0.3f`: the same rand() gives a different angle
+                const x87d r = (x87d)CGeneral::GetRandomNumber() * (x87d)RAND_MAX_FLOAT_RECIPROCAL;
+                panelFrame->SetPanel(nodeIdx, 0, (float)(r * (x87d)-0.3f - (x87d)0.2f));
             }
         }
         break;

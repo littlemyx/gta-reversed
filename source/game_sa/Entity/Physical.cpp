@@ -1345,8 +1345,10 @@ void CPhysical::DettachEntityFromEntity(float x, float y, float z, bool bApplyTu
     vecDetachOffsetMatrix.RotateZ(y);
     vecDetachOffsetMatrix.RotateX(x);
 
-    vecDetachOffsetMatrix *= m_pAttachedTo->GetMatrix();
-    CVector vecForce = vecDetachOffsetMatrix.GetForward() * z;
+    // 0x544423: the exe copies the attached-to matrix and multiplies it BY the detach offset (attached *= offset), not the other way round
+    CMatrix vecAttachedMatrix = m_pAttachedTo->GetMatrix();
+    vecAttachedMatrix *= vecDetachOffsetMatrix;
+    CVector vecForce = vecAttachedMatrix.GetForward() * z;
     CWorld::Remove(this);
     SetIsStatic(false);
     physicalFlags.bAttachedToEntity = false;

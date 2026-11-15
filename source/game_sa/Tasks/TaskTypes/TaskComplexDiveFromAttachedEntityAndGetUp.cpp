@@ -60,9 +60,10 @@ CTask* CTaskComplexDiveFromAttachedEntityAndGetUp::CreateFirstSubTask(CPed* ped)
             const auto GetPlaneDot = [&, pedPos = ped->GetPosition()](int32 i) {
                 return std::abs(bb[i].Dot(pedPos) + bbPlanesDot[i]);
             };
-            m_DiveDir = GetPlaneDot(3) <= GetPlaneDot(1)
-                ? bb[3]
-                : bb[1];
+            // 0x65795E/0x657960/0x657976: the plane test only PICKS a side; the dive direction is the entity's own right / left dir (from ComputeEntityDirs), not the plane normal
+            m_DiveDir = CPedGeometryAnalyser::ComputeEntityDir(*attachedTo, GetPlaneDot(3) <= GetPlaneDot(1)
+                ? eDirection::RIGHT
+                : eDirection::LEFT);
         }
         ped->m_fTurretAngleB = 2.f * PI;
     } else {

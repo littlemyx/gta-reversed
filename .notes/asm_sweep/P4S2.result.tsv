@@ -1,0 +1,27 @@
+addr	function	verdict	asm range	note	fix commit
+0x4C19A0	CEventHandler::ComputePedThreatResponse	FIXED	0x4C19A0-0x4C2432 (all)	FLEE_ENTITY built a smart flee (exe: CTaskComplexFleeEntity, no cop test); SMART_FLEE_ENTITY_WALKING lacked moveState=WALK; STAND_STILL case missing (sets bStayInSamePlace); LEAVE_CAR lacked bInVehicle/vehicle guard; existing duck task handed out as response (exe: untouched); range test Magnitude vs squared. Null vs untouched exits are equivalent (response is nulled in ComputeEventResponseTask).	f6ac304b1
+0x4C3790	CEventHandler::Flush	MATCH	0x4C3790-0x4C3818 (all)	symbol mismatch in asmsig (port size 3532 = neighbour); 5 task deletes in order +0x20..+0x30 then history temp/nontemp/stored; identical	
+0x4C3820	CEventHandler::FlushImmediately	MATCH	0x4C3820-0x4C3860 (all)	symbol mismatch in asmsig; history flush only; identical	
+0x4C2840	CEventHandler::ComputeGunAimedAtResponse	FIXED	0x4C2840-0x4C2EA9 (all)	TASK_SIMPLE_DUCK with an existing duck task returned the live task (exe: untouched); TASK_NONE case added. All other arms/ctor args compared equal.	be7608f23
+0x4BC710	CEventHandler::ComputeShotFiredResponse	FIXED	0x4BC710-0x4BCB4F (all)	TASK_SIMPLE_DUCK arms inverted (exe: already ducking -> untouched, else 3000ms duck); KILL_CRIMINAL flee did not set moveState WALK. Stealth passes esi without a ped-type test (port passes null for non-peds): left, not reachable in practice.	aeed9bd85
+0x4BB800	CEventHandler::ComputeSpecialResponse	MATCH	0x4BB800-0x4BBB81 (all)	all arms and ctor args equal; TASK_NONE / KILL_CRIMINAL ids fall to the default (equivalent: response is already null)	
+0x4C2FC0	CEventHandler::ComputeVehicleDamageResponse	FIXED	0x4C2FC0-0x4C342D (all)	LEAVE_CAR_AND_FLEE used the ped position as flee point; exe uses the vehicle position (edx+0x30 / +4).	3a47a3319
+0x4B9470	CEventHandler::ComputeDeadPedResponse	FIXED	0x4B9470-0x4B96C0 (all)	player proximity compared against sq(0.75f)=0.5625; exe constant 0x85B9F4 is 0.5625 + 1ulp (differs only at exactly 0.5625). Camera-mode list, LookAt args, flee/duck/investigate arms equal.	1d4a2cfc3
+0x4B8CE0	CEventHandler::ComputePlayerCollisionWithPedResponse	NOT_REACHED		read asm (441 insns), port already reworked with exe addresses in comments; not compared branch by branch	
+0x4C2610	CEventHandler::ComputePotentialPedCollideResponse	NOT_REACHED		budget reached before comparing	
+0x4C3870	CEventHandler::ComputeEventResponseTask-0	NOT_REACHED		budget reached before comparing	
+0x4BC600	CEventHandler::SetEventResponseTask	NOT_REACHED		budget reached before comparing	
+0x4B9DD0	CEventHandler::ComputePedFriendResponse	NOT_REACHED		budget reached before comparing	
+0x4BBCD0	CEventHandler::ComputePotentialWalkIntoFireResponse	NOT_REACHED		budget reached before comparing	
+0x4BC050	CEventHandler::ComputeSeenCopResponse	NOT_REACHED		budget reached before comparing	
+0x486720	CTheScripts::ReadObjectNamesFromScript	NOT_REACHED		budget reached before comparing	
+0x4867C0	CTheScripts::ReadMultiScriptFileOffsetsFromScript	NOT_REACHED		budget reached before comparing	
+0x4939F0	CTheScripts::ProcessAllSearchLights	NOT_REACHED		budget reached before comparing	
+0x493000	CTheScripts::AddScriptSearchLight	NOT_REACHED		budget reached before comparing	
+0x4BAAD0	CEventHandler::ComputeLowAngerAtPlayerResponse	NOT_REACHED		budget reached before comparing	
+0x4BAC10	CEventHandler::ComputeHighAngerAtPlayerResponse	NOT_REACHED		budget reached before comparing	
+0x4935A0	CTheScripts::AddScriptCheckpoint	NOT_REACHED		budget reached before comparing	
+0x4C1910	CEventHandler::ComputePedToChaseResponse	NOT_REACHED		budget reached before comparing	
+0x4C35F0	CEventHandler::ComputeSeenPanickedPedResponse	NOT_REACHED		budget reached before comparing	
+0x4B92B0	CEventHandler::ComputeObjectCollisionResponse	NOT_REACHED		budget reached before comparing	
+0x4C3430	CEventHandler::ComputeGotKnockedOverByCarResponse	NOT_REACHED		budget reached before comparing	

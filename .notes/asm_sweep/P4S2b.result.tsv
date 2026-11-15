@@ -1,0 +1,19 @@
+addr	function	verdict	asm range	note	fix commit
+0x4B8CE0	CEventHandler::ComputePlayerCollisionWithPedResponse	FIXED	0x4B8CE0-0x4B92A6 (all)	player always looks at victim; walk/walk arm: front=look+say no annoy, behind-only=look+say+annoy, else nothing (port always said); NONE also takes the STILL arm and that arm annoys; front-not-behind arm no annoy, !front&&!behind nothing; victim WALK falls to the bump arm; sprint-into-still look time 1000; dot z,y,x and >=0/<=0	b9cfc364f
+0x4C2610	CEventHandler::ComputePotentialPedCollideResponse	MATCH	0x4C2610-0x4C2830 (all)	shove/avoid ctor args, wander move-state clamp (non-FIX_BUGS) identical	
+0x4C3870	CEventHandler::ComputeEventResponseTask-0	NOT_REACHED		budget reached before comparing	
+0x4BC600	CEventHandler::SetEventResponseTask	FIXED	0x4BC600-0x4BC70D (all)	facial SetRequest durationB = 0 (port default -1); rest identical	db268f753
+0x4B9DD0	CEventHandler::ComputePedFriendResponse	NOT_REACHED		budget reached before comparing	
+0x4BBCD0	CEventHandler::ComputePotentialWalkIntoFireResponse	MATCH	0x4BBCD0-0x4BBE20 (all)	all arms; safe dist global 0xC18CE8 is 60.0 (static init at 0x852690)	
+0x4BC050	CEventHandler::ComputeSeenCopResponse	MATCH	0x4BC050-0x4BC14C (all)	smart flee globals 0xC18CEC=60, 0xC18CF0; KillPedOnFoot defaults	
+0x486720	CTheScripts::ReadObjectNamesFromScript	NOT_REACHED		budget reached before comparing	
+0x4867C0	CTheScripts::ReadMultiScriptFileOffsetsFromScript	NOT_REACHED		budget reached before comparing	
+0x4939F0	CTheScripts::ProcessAllSearchLights	NOT_REACHED		budget reached before comparing	
+0x493000	CTheScripts::AddScriptSearchLight	NOT_REACHED		budget reached before comparing	
+0x4BAAD0	CEventHandler::ComputeLowAngerAtPlayerResponse	MATCH	0x4BAAD0-0x4BAC00 (all)		
+0x4BAC10	CEventHandler::ComputeHighAngerAtPlayerResponse	MATCH	0x4BAC10-0x4BAD40 (all)	instruction stream identical to Low (diff of exedis output)	
+0x4935A0	CTheScripts::AddScriptCheckpoint	NOT_REACHED		budget reached before comparing	
+0x4C1910	CEventHandler::ComputePedToChaseResponse	NOT_REACHED		budget reached before comparing	
+0x4C35F0	CEventHandler::ComputeSeenPanickedPedResponse	NOT_REACHED		budget reached before comparing	
+0x4B92B0	CEventHandler::ComputeObjectCollisionResponse	MATCH	0x4B92B0-0x4B933D (all)	already reworked; 0x4ACE80 result discarded	
+0x4C3430	CEventHandler::ComputeGotKnockedOverByCarResponse	NOT_REACHED		budget reached before comparing	

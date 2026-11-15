@@ -1421,15 +1421,16 @@ void CVehicle::ApplyTurnForceToOccupantOnEntry(CPed* passenger) {
     // Apply some turn force
     switch (m_nVehicleType) {
     case VEHICLE_TYPE_BIKE: {
+        // 0x6D1503: the exe multiplies by the constants -0.02f (0x85904C) / -0.1f (0x858EF4) and scales `up` by the float product mass * -0.02f
         ApplyTurnForce(
-            GetUp() * passenger->m_fMass / -50.f,
-            GetForward() / -10.f // Behind the bike
+            GetUp() * (passenger->m_fMass * -0.02f),
+            GetForward() * -0.1f // Behind the bike
         );
         break;
     }
     default: {
         ApplyTurnForce(
-            CVector{ .0f, .0f, passenger->m_fMass / -5.f },
+            CVector{ .0f, .0f, passenger->m_fMass * -0.2f }, // 0x6D15AE: multiply by -0.2f (0x858FDC), not divide by -5
             CVector{ CVector2D{passenger->GetPosition() - GetPosition()}, 0.f }
         );
         break;

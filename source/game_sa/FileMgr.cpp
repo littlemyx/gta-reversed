@@ -1,4 +1,5 @@
 #include "StdInc.h"
+#include "portable/loadlog.h"
 
 #include <cerrno>
 #include <cstring>
@@ -302,6 +303,7 @@ size_t CFileMgr::LoadFile(const char *path, uint8 *buf, size_t size, const char 
 // 0x538900
 FILESTREAM CFileMgr::OpenFile(const char *path, const char *mode) {
     ZoneScoped;
+    NOTSA_LOADLOG("FILE %s mode=%s", path, mode);
 
     FILESTREAM fs{nullptr};
 #ifdef NOTSA_PORTABLE

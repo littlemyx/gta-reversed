@@ -1,4 +1,5 @@
 #include "StdInc.h"
+#include "portable/loadlog.h"
 #ifdef NOTSA_STATEHASH
 #include "portable/statehash.h"
 #endif
@@ -218,6 +219,7 @@ bool CdStreamRead(int32 streamId, void* lpBuffer, CdStreamPos pos, int32 sectorC
         stream.bLocked = false;
 #ifdef NOTSA_STATEHASH
         if (notsa::rr::Active()) { // RR: synchronous streaming - the request completes inside this call (when a model is "loaded" is a function of the game's own calls, not of thread timing)
+            NOTSA_LOADLOG("CDREAD stream=%d file=%u sector=%u count=%d", streamId, (unsigned)pos.FileID, (unsigned)pos.Offset, sectorCount);
             RrReadNow(stream);
             stream.nSectorsToRead = 0;
             return true;

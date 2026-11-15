@@ -1,4 +1,5 @@
 #include "StdInc.h"
+#include "portable/loadlog.h"
 
 #include "Streaming.h"
 #include "Radar.h"
@@ -427,6 +428,7 @@ bool CStreaming::HasVehicleUpgradeLoaded(int32 modelId) {
 
 // 0x40C6B0
 bool CStreaming::ConvertBufferToObject(uint8* fileBuffer, int32 modelId) {
+    NOTSA_LOADLOG("CONVERT id=%d size=%u", modelId, (unsigned)GetInfo(modelId).GetCdSize());
     CStreamingInfo* pStartLoadedListStreamingInfo = ms_startLoadedList; // todo: useless var?
     CBaseModelInfo* mi = CModelInfo::GetModelInfo(modelId);
     CStreamingInfo& streamingInfo = GetInfo(modelId);
@@ -1102,6 +1104,7 @@ void CStreaming::LoadAllRequestedModels(bool bOnlyPriorityRequests) {
 // each model present in the file (according to file name)
 void CStreaming::LoadCdDirectory(const char* filename, StreamingImgID img) {
     ZoneScoped;
+    NOTSA_LOADLOG("IMGDIR %s img=%d", filename, (int)img);
     ZoneText(filename, strlen(filename));
 
     auto* imgFile = CFileMgr::OpenFile(filename, "rb");
@@ -1389,6 +1392,7 @@ void CStreaming::RequestFilesInChannel(int32 chIdx) {
 // Can be called on an already requested model to add `PRIORITY_REQUEST` flag
 void CStreaming::RequestModel(int32 modelId, int32 streamingFlags) {
     CStreamingInfo& info = GetInfo(modelId);
+    if (info.m_LoadState == eStreamingLoadState::LOADSTATE_NOT_LOADED || info.m_LoadState == eStreamingLoadState::LOADSTATE_LOADED) { NOTSA_LOADLOG("REQ id=%d flags=%#x state=%d", modelId, streamingFlags, (int)info.m_LoadState); }
 
     switch (info.m_LoadState) {
     case eStreamingLoadState::LOADSTATE_NOT_LOADED:
@@ -2404,6 +2408,7 @@ void CStreaming::RemoveModel(int32 modelId) {
     CStreamingInfo& streamingInfo = GetInfo(modelId);
     if (streamingInfo.m_LoadState == LOADSTATE_NOT_LOADED)
         return;
+    NOTSA_LOADLOG("REMOVE id=%d state=%d", modelId, (int)streamingInfo.m_LoadState);
 
     if (streamingInfo.IsLoaded()) {
         switch (GetModelType(modelId)) {
@@ -3722,6 +3727,7 @@ void CStreaming::StreamZoneModels_Gangs(const CVector& unused) {
 // 0x40E670
 void CStreaming::Update() {
     ZoneScoped;
+    NOTSA_LOADLOG("STREAMING_UPDATE");
 
     g_LoadMonitor.SetTimeForThisFrame(eLoadType::NUM_STREAMING_REQUESTS, ms_numModelsRequested);
     if (CTimer::GetIsPaused())

@@ -5,9 +5,11 @@
 #include "statehash.h"
 #include "fakerw.h"
 #ifdef NOTSA_PORTABLE // RR-3: this file also builds into the Win32 StandaloneRelease variant (-DGTASA_STATEHASH=ON); the portable-only parts are marked
-#include "dsound_al.h"
 #include <src/gl/rwgl3impl.h>
+#ifndef _WIN32 // SH2: the portable build on Windows (PortableWin64) has the real DirectSound and no mach
+#include "dsound_al.h"
 #include <mach/mach.h>
+#endif
 #endif
 
 #include <atomic>
@@ -52,7 +54,9 @@ void* operator new(std::size_t n) {
 }
 void* operator new[](std::size_t n) { return ::operator new(n); }
 
+#include "loadlog.h"
 namespace notsa::rr {
+uint32_t LoadLogFrameCounter() { return CTimer::GetFrameCounter(); }
 namespace {
 // ---------------------------------------------------------------- configuration
 struct Config {
@@ -368,6 +372,7 @@ uint32_t Seed() { return Cfg().seed; }
 uint64_t VirtualNs() { return g_vns.load(std::memory_order_relaxed); }
 uint64_t VirtualMs() { return (VirtualNs() - g_vStartNs) / 1'000'000ull; }
 bool     Recording() { return g_recording; }
+int      LoadLogRecFrame() { return g_recording ? (int)g_frame : -1; }
 bool     NoAudio() { static const bool v = Active() && std::getenv("NOTSA_RR_NOAUDIO") && std::getenv("NOTSA_RR_NOAUDIO")[0] == '1'; return v; }
 
 uint32_t StableId(const void* p) {
@@ -406,7 +411,12 @@ inline uint32_t RandVal(uint32_t stateBefore) { return ((stateBefore * 214013u +
 
 #ifdef NOTSA_PORTABLE
 // caller = up to 5 return addresses (frame-pointer chain) as offsets from `StableId` (stable across ASLR; resolve offline with nm / atos), hex, comma separated
-__attribute__((noinline)) void RandHook(uint32_t stateBefore) {
+#ifdef _WIN32
+__declspec(noinline)
+#else
+__attribute__((noinline))
+#endif
+void RandHook(uint32_t stateBefore) {
     if (g_isoDepth > 0) return;
     auto& r = RL();
     if (std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return; // worker threads have their own LCG state and are not part of the game stream
@@ -414,8 +424,12 @@ __attribute__((noinline)) void RandHook(uint32_t stateBefore) {
     if (!r.f) return;
     static const uintptr_t base = (uintptr_t)&StableId;
     uintptr_t ra[5] = {};
+#ifdef _WIN32 // SH2 PortableWin64: x64 unwind tables (RtlCaptureStackBackTrace), frame 0 = the caller of RandHook
+    { void* bt[6] = {}; const USHORT n = RtlCaptureStackBackTrace(1, 5, bt, nullptr); for (USHORT i = 0; i < n && i < 5; i++) { ra[i] = (uintptr_t)bt[i] - base; } }
+#else
     void**    fp    = (void**)__builtin_frame_address(0); // arm64 / x64 clang keep the frame-pointer chain: [fp] = caller's fp, [fp+1] = return address
     for (int i = 0; i < 5 && fp && ((uintptr_t)fp & 7) == 0; i++) { ra[i] = (uintptr_t)fp[1] - base; fp = (void**)fp[0]; }
+#endif
     std::fprintf(r.f, "%llu %d %u %llx,%llx,%llx,%llx,%llx\n", (unsigned long long)idx, g_recording ? (int)g_frame : -1, RandVal(stateBefore), (unsigned long long)ra[0], (unsigned long long)ra[1], (unsigned long long)ra[2], (unsigned long long)ra[3], (unsigned long long)ra[4]);
 }
 #else
@@ -497,7 +511,7 @@ void AdvanceClock() {
         }
     }
     g_vns.fetch_add((uint64_t)Cfg().stepMs * 1'000'000ull, std::memory_order_relaxed);
-#ifdef NOTSA_PORTABLE
+#if defined(NOTSA_PORTABLE) && !defined(_WIN32)
     notsa::portable::dsal::RrPump(Cfg().stepMs); // the software DirectSound mixer: cursors / playing state advance with game time (the audio entities read them and draw random numbers on that basis)
 #endif
 }
@@ -528,7 +542,7 @@ void OnFrame() {
             }
         }
     }
-#ifdef NOTSA_PORTABLE
+#if defined(NOTSA_PORTABLE) && !defined(_WIN32)
     if (Active() && (g_idleFrames == 100 || g_idleFrames == 200)) { // which threads exist (any thread that touches game state is a suspect for a nondeterminism)
         thread_act_array_t th; mach_msg_type_number_t n = 0;
         if (task_threads(mach_task_self(), &th, &n) == KERN_SUCCESS) {

@@ -373,6 +373,7 @@ uint64_t VirtualNs() { return g_vns.load(std::memory_order_relaxed); }
 uint64_t VirtualMs() { return (VirtualNs() - g_vStartNs) / 1'000'000ull; }
 bool     Recording() { return g_recording; }
 int      LoadLogRecFrame() { return g_recording ? (int)g_frame : -1; }
+uint64_t RandCountNow() { return RandCount(); }
 bool     NoAudio() { static const bool v = Active() && std::getenv("NOTSA_RR_NOAUDIO") && std::getenv("NOTSA_RR_NOAUDIO")[0] == '1'; return v; }
 
 uint32_t StableId(const void* p) {

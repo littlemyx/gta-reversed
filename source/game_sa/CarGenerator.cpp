@@ -6,6 +6,8 @@
 #include "Occlusion.h"
 #include "CarCtrl.h"
 #include "TheScripts.h"
+#include "portable/cargenlog.h"
+#include "portable/statehash.h"
 
 void CCarGenerator::InjectHooks()
 {
@@ -101,6 +103,7 @@ bool CCarGenerator::CheckIfWithinRangeOfAnyPlayers()
 }
 
 // 0x6F34D0
+static const char* g_cgGenWhy = "-"; // SH3 NOTSA_SH_CARGENLOG: set before every return of DoInternalProcessing
 void CCarGenerator::DoInternalProcessing()
 {
     int32 actualModelId;
@@ -117,6 +120,7 @@ void CCarGenerator::DoInternalProcessing()
     if (!bIgnorePopulationLimit
         && (nightTime && (int32)CCarCtrl::NumParkedCars >= 10 || !nightTime && (int32)CCarCtrl::NumParkedCars >= 5)
     )
+        g_cgGenWhy = "parked_limit";
         return;
 
     if (m_nModelId >= 0)
@@ -124,6 +128,7 @@ void CCarGenerator::DoInternalProcessing()
         if (CheckForBlockage(m_nModelId))
         {
             m_nNextGenTime += 4;
+            g_cgGenWhy = "blockage_known_model";
             return;
         }
 
@@ -140,16 +145,19 @@ void CCarGenerator::DoInternalProcessing()
             actualModelId = CPopulation::m_AppropriateLoadedCars.PickRandomCar(true, true);
 
             if (actualModelId < 0)
+                g_cgGenWhy = "no_appropriate_model";
                 return;
 
             auto mi = CModelInfo::GetModelInfo(actualModelId)->AsVehicleModelInfoPtr();
             // exe 0x6F359D: byte [mi + 0x4D] == 5, the vehicle class (VEHICLE_CLASS_BIG), not the boat type
             if (mi->m_nVehicleClass == VEHICLE_CLASS_BIG)
+                g_cgGenWhy = "vehicle_class_big";
                 return;
 
             // exe 0x6F35A6: the colmodel is optional (no bound check without it); length is max.y - min.y, strictly greater than 8
             if (auto* const col = mi->GetColModel()) {
                 if (col->GetBoundingBox().GetLength() > 8.0f)
+                    g_cgGenWhy = "too_long";
                     return;
             }
 
@@ -165,6 +173,7 @@ void CCarGenerator::DoInternalProcessing()
         if (CheckForBlockage(actualModelId))
         {
             m_nNextGenTime += 4;
+            g_cgGenWhy = "blockage_random_model";
             return;
         }
     }
@@ -174,6 +183,7 @@ void CCarGenerator::DoInternalProcessing()
         m_nModelId == MODEL_HOTDOG &&
         !CStreaming::GetInfo(MODEL_BMOCHIL).IsLoaded()
     )
+        g_cgGenWhy = "model_not_loaded";
         return;
 
     if (CModelInfo::IsBoatModel(actualModelId) ||
@@ -209,6 +219,7 @@ void CCarGenerator::DoInternalProcessing()
             posn.z = 1000.0f;
 
         if (!CWorld::ProcessVerticalLine(posn, -1000.0f, colPoint, entity, true, false, false, false, false, false, nullptr))
+            g_cgGenWhy = "no_ground_below";
             return;
 
         baseZ = colPoint.m_vecPoint.z;
@@ -358,6 +369,36 @@ void CCarGenerator::DoInternalProcessing()
 // 0x6F3E90
 void CCarGenerator::Process()
 {
+#ifdef NOTSA_STATEHASH
+    // SH3 NOTSA_SH_CARGENLOG: one G row per generator that is processed (rec 0-5)
+    if (FILE* const cgf = notsa::rr::CarGenLog()) {
+        notsa::rr::CarGenLogOnce();
+        const CVector gp = m_vecPosn;
+        const char* why = "-";
+        if (m_nVehicleHandle != -1) why = "has_car";
+        else if (!(CTheCarGenerators::GenerateEvenIfPlayerIsCloseCounter || m_nNextGenTime <= CTimer::GetTimeInMS())) why = "not_time_yet";
+        else if (m_nGenerateCount == 0) why = "generate_count_0";
+        else if (!CheckIfWithinRangeOfAnyPlayers()) why = "out_of_range";
+        else {
+            g_cgGenWhy = "-";
+            const auto r0 = notsa::rr::RandCountNow();
+            const auto genTime0 = m_nNextGenTime;
+            DoInternalProcessing();
+            if (m_nVehicleHandle != -1) {
+                why = "created";
+            } else {
+                why = g_cgGenWhy;
+            }
+            std::fprintf(cgf, "%d %llu G %d %d %.3f,%.3f,%.3f %s %d rand0=%llu next_gen=%u->%u gen_count=%d\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), (int)CTheCarGenerators::GetIndex(this), (int)m_nModelId, gp.x, gp.y, gp.z, why, (int)m_nVehicleHandle,
+                (unsigned long long)r0, (unsigned)genTime0, (unsigned)m_nNextGenTime, (int)m_nGenerateCount);
+            std::fflush(cgf);
+            goto cg_after;
+        }
+        std::fprintf(cgf, "%d %llu G %d %d %.3f,%.3f,%.3f %s %d\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), (int)CTheCarGenerators::GetIndex(this), (int)m_nModelId, gp.x, gp.y, gp.z, why, (int)m_nVehicleHandle);
+        std::fflush(cgf);
+        goto cg_after;
+    }
+#endif
     if (m_nVehicleHandle == -1 &&
         (
             CTheCarGenerators::GenerateEvenIfPlayerIsCloseCounter
@@ -366,8 +407,24 @@ void CCarGenerator::Process()
             && m_nGenerateCount != 0
             && CheckIfWithinRangeOfAnyPlayers()
     ) {
+#ifdef NOTSA_STATEHASH
+        static int s_preG = 0;
+        FILE* const pf = notsa::rr::LoadLogRecFrame() < 0 && s_preG < 1500 ? notsa::rr::CarGenLog(false, true) : nullptr;
+        if (pf) {
+            s_preG++;
+            g_cgGenWhy = "-";
+            const auto r0 = notsa::rr::RandCountNow();
+            const CVector gp = m_vecPosn;
+            DoInternalProcessing();
+            std::fprintf(pf, "-1 %llu G %d %d %.3f,%.3f,%.3f %s %d rand0=%llu\n", (unsigned long long)notsa::rr::RandCountNow(), (int)CTheCarGenerators::GetIndex(this), (int)m_nModelId, gp.x, gp.y, gp.z, m_nVehicleHandle != -1 ? "created" : g_cgGenWhy, (int)m_nVehicleHandle, (unsigned long long)r0);
+            std::fflush(pf);
+        } else
+#endif
         DoInternalProcessing();
     }
+#ifdef NOTSA_STATEHASH
+cg_after:
+#endif
 
     if (m_nVehicleHandle != -1)
     {

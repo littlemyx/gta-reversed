@@ -8,6 +8,10 @@
 #include "StdInc.h"
 
 #include "CarCtrl.h"
+#include "portable/cargenlog.h"
+#include "portable/statehash.h"
+#include "PopCycle.h"
+#include "Streaming.h"
 #include "TrafficLights.h"
 #include "TheScripts.h"
 #include "GangWars.h"
@@ -8418,6 +8422,31 @@ RandomCarSearch ChooseRandomCarSearchDirection() {
     return r;
 }
 
+#ifdef NOTSA_STATEHASH
+// NOTSA_SH_CARGENLOG (see portable/cargenlog.h): one R row per GenerateOneRandomCar call, written by the destructor
+struct CgAttempt {
+    FILE* f; uint64_t r0; int attempt; int chosen = -2; int carType = -1; const char* by = "-"; const char* why = "created"; const char* coors = "-";
+    CVector origin{}; CNodeAddress a{ 0xFFFF, 0xFFFF }, b{ 0xFFFF, 0xFFFF }; float frac = 0.f; int handle = -1; int model = -1;
+    static inline int s_n = 0;
+    CgAttempt() : f(notsa::rr::CarGenLog(true)), r0(notsa::rr::RandCountNow()), attempt(0) { if (f) { notsa::rr::CarGenLogOnce(); attempt = s_n++; } }
+    ~CgAttempt() {
+        if (!f) return;
+        const int id = model >= 0 ? model : chosen;
+        auto* mi = id >= 0 ? CModelInfo::GetModelInfo(id) : nullptr;
+        const auto* wanted = FindPlayerWanted(-1);
+        std::fprintf(f, "%d %llu R %d %d %s %d %s %.0f/%.0f/%.0f/%.0f %d %s %.3f,%.3f,%.3f %d.%d %d.%d %.4f %llu ", notsa::rr::LoadLogRecFrame(), (unsigned long long)r0, attempt, id, mi ? mi->GetModelNameAsString().c_str() : "-", carType, by,
+            (float)CPopCycle::m_NumOther_Cars, (float)CPopCycle::m_NumCops_Cars, (float)CPopCycle::m_NumGangs_Cars, (float)CPopCycle::m_NumDealers_Cars, wanted ? (int)wanted->GetWantedLevel() : -1, coors, origin.x, origin.y, origin.z,
+            (int)a.m_wAreaId, (int)a.m_wNodeId, (int)b.m_wAreaId, (int)b.m_wNodeId, frac, (unsigned long long)notsa::rr::RandCountNow());
+        if (handle >= 0) std::fprintf(f, "created %d %d\n", handle, id); else std::fprintf(f, "%s\n", why);
+        std::fflush(f);
+    }
+};
+CgAttempt* g_cg = nullptr;
+#define CGR(x) do { if (g_cg) g_cg->why = (x); } while (0)
+#else
+#define CGR(x) ((void)0)
+#endif
+
 //! 0x430050 (top) - Chooses the model (and the type) of the car to create
 //! @returns false if no car should be created
 bool ChooseRandomCarModel(int32& modelId, int32& carType) {
@@ -8446,12 +8475,20 @@ bool ChooseRandomCarModel(int32& modelId, int32& carType) {
     if (bPolice) {
         modelId = CCarCtrl::ChoosePoliceCarModel(0); // 0x43020E
         carType = 13;
+#ifdef NOTSA_STATEHASH
+        if (g_cg) { g_cg->chosen = modelId; g_cg->carType = carType; g_cg->by = "police_pursuit"; }
+#endif
     } else {
         modelId = CCarCtrl::ChooseModel(&carType); // 0x424CE0
+#ifdef NOTSA_STATEHASH
+        if (g_cg) { g_cg->chosen = modelId; g_cg->carType = carType; g_cg->by = carType == 25 ? "dealers" : carType >= 14 && carType < 24 ? "gang" : carType == 13 ? "cops" : "appropriate_loaded_cars"; }
+#endif
         if (modelId == -1) {
+            CGR("no_model");
             return false;
         }
         if ((carType == 13 || carType == 24) && (int32)Wanted()->GetWantedLevel() >= 1) {
+            CGR("cop_car_while_wanted");
             return false;
         }
     }
@@ -8830,6 +8867,11 @@ bool IsRandomCarPositionOK(RandomCarState& s) {
 
 // 0x430050
 void CCarCtrl::GenerateOneRandomCar() {
+#ifdef NOTSA_STATEHASH
+    CgAttempt cg;
+    g_cg = cg.f ? &cg : nullptr;
+    struct CgReset { ~CgReset() { g_cg = nullptr; } } cgReset;
+#endif
     RandomCarState s{};
     s.nodeA = s.nodeB = CNodeAddress{ 0xFFFF, 0xFFFF };
 
@@ -8844,17 +8886,23 @@ void CCarCtrl::GenerateOneRandomCar() {
     }
     const float numCarsF = (float)numCars;
     if ((x87d)CPopulation::FindCarMultiplierMotorway() * (int32)MaxNumberOfCarsInUse * density <= numCarsF) { // 0x43012D
+        CGR("max_cars_in_use");
         return;
     }
     if (((x87d)CPopCycle::m_NumOther_Cars + CPopCycle::m_NumCops_Cars + CPopCycle::m_NumGangs_Cars + CPopCycle::m_NumDealers_Cars) * CPopulation::FindCarMultiplierMotorway() * density <= numCarsF) { // 0x43015F
+        CGR("popcycle_car_cap");
         return;
     }
 
     // 0x43016C
     if (!ChooseRandomCarModel(s.modelId, s.carType)) {
+        CGR("no_model");
         return;
     }
 
+#ifdef NOTSA_STATEHASH
+    cg.model = s.modelId;
+#endif
     // 0x430298 - Where to look for a place
     const auto search = ChooseRandomCarSearchDirection();
     s.bLookingDown = search.bLookingDown;
@@ -8878,16 +8926,24 @@ void CCarCtrl::GenerateOneRandomCar() {
             arg12,
             false
         )) {
+            CGR("no_coors");
+#ifdef NOTSA_STATEHASH
+            cg.coors = "fail"; cg.model = s.modelId; cg.carType = s.carType;
+#endif
             return;
         }
     }
 
+#ifdef NOTSA_STATEHASH
+    cg.coors = "ok"; cg.origin = s.origin; cg.a = s.nodeA; cg.b = s.nodeB; cg.frac = s.fraction; cg.model = s.modelId; cg.carType = s.carType;
+#endif
     // 0x430465
     s.pnA = &GetPathNodeAt(s.nodeA);
     s.pnB = &GetPathNodeAt(s.nodeB);
 
     const auto minSpawnProb = std::min<uint8>(s.pnA->m_nSpawnProbability, s.pnB->m_nSpawnProbability);
     if ((rand() & 0xF) > minSpawnProb) { // 0x4304B9
+        CGR("spawn_probability");
         return;
     }
 
@@ -8899,14 +8955,17 @@ void CCarCtrl::GenerateOneRandomCar() {
             s.carType = 24;
             if (!CStreaming::GetInfo(MODEL_PREDATOR).IsLoaded()) {
                 CStreaming::RequestModel(MODEL_PREDATOR, STREAMING_KEEP_IN_MEMORY); // 0x430506
+                CGR("predator_not_loaded");
                 return;
             }
         } else {
             s.modelId = CPopulation::m_LoadedBoats.PickLeastUsedModel(1); // 0x430520
             if (s.modelId == -1) {
+                CGR("no_boat_model");
                 return;
             }
             if (!CStreaming::GetInfo(s.modelId).IsLoaded()) {
+                CGR("boat_not_loaded");
                 return;
             }
         }
@@ -8919,6 +8978,7 @@ void CCarCtrl::GenerateOneRandomCar() {
         int16 numColliding{};
         CWorld::FindObjectsKindaColliding(s.origin, searchRadius, true, &numColliding, 2, nullptr, false, true, true, false, false); // 0x430577
         if (numColliding != 0) {
+            CGR("colliding_at_origin");
             return;
         }
     }
@@ -8946,12 +9006,15 @@ void CCarCtrl::GenerateOneRandomCar() {
     // 0x430625
     if (s.numLanes > 1) {
         if (CModelInfo::GetVehicleModelInfo(s.modelId)->m_nVehicleType == VEHICLE_TYPE_BMX) {
+            CGR("bmx_on_multilane");
             return;
         }
     } else if (s.modelId == MODEL_COACH || s.modelId == MODEL_BUS) {
+        CGR("bus_coach_single_lane");
         return;
     }
     if (s.numLanes == 0) {
+        CGR("zero_lanes");
         return;
     }
 
@@ -8960,6 +9023,7 @@ void CCarCtrl::GenerateOneRandomCar() {
         const auto popType = (int32)CTheZones::GetZoneInfo(s.origin, nullptr)->PopType;
         if (popType >= +eZonePopulationType::GOLF_CLUB && popType <= +eZonePopulationType::AIRPORT_RUNWAY) {
             if (popType != CPopCycle::m_nCurrentZoneType) {
+                CGR("zone_type_mismatch");
                 return;
             }
             s.bZoneTypeMatches = true;
@@ -9008,6 +9072,7 @@ void CCarCtrl::GenerateOneRandomCar() {
     // 0x430943 - Place and orient the car
     if (!OrientRandomCar(s)) {
         AbortRandomCar(veh);
+        CGR("orient_failed");
         return;
     }
     CVector curveSpeed{};
@@ -9015,6 +9080,7 @@ void CCarCtrl::GenerateOneRandomCar() {
 
     if (!SnapRandomCarToGround(s)) {
         AbortRandomCar(veh);
+        CGR("snap_to_ground_failed");
         return;
     }
 
@@ -9031,6 +9097,7 @@ void CCarCtrl::GenerateOneRandomCar() {
 
     if (!IsRandomCarPositionOK(s)) {
         AbortRandomCar(veh);
+        CGR("position_not_ok");
         return;
     }
 
@@ -9041,18 +9108,23 @@ void CCarCtrl::GenerateOneRandomCar() {
         CWorld::FindObjectsKindaColliding(veh->GetPosition(), radius, true, &numColliding, 2, nullptr, false, true, true, false, false); // 0x431B7A
         if (numColliding != 0) {
             AbortRandomCar(veh);
+            CGR("colliding_after_create");
             return;
         }
     }
     // x87: kept in extended precision. Note: only when the car moves towards the player
     if (!((x87d)relSpeed.x * toOrigin.x + (x87d)relSpeed.y * toOrigin.y < 0.0)) { // 0x431BA6
         AbortRandomCar(veh);
+        CGR("not_moving_towards_player");
         return;
     }
 
     // 0x431BB7
     CModelInfo::GetVehicleModelInfo(veh->m_nModelIndex)->ChooseVehicleColour(veh->m_nPrimaryColor, veh->m_nSecondaryColor, veh->m_nTertiaryColor, veh->m_nQuaternaryColor, 1);
     CWorld::Add(veh); // 0x431BE6
+#ifdef NOTSA_STATEHASH
+    cg.model = veh->m_nModelIndex; cg.handle = GetVehiclePool()->GetRef(veh); cg.origin = veh->GetPosition();
+#endif
 
     if (veh->m_nModelIndex == MODEL_TRACTOR || veh->m_nModelIndex == MODEL_COMBINE || veh->m_nVehicleSubType == VEHICLE_TYPE_BMX) {
         ap.m_nCruiseSpeed = (uint8)((int32)ap.m_nCruiseSpeed / 3);
@@ -9155,3 +9227,25 @@ void CCarCtrl::GenerateOneRandomCar() {
         mi->m_nTimesUsed = (uint8)std::min<int32>((int32)(int8)mi->m_nTimesUsed + 1, 0x78);
     }
 }
+
+#ifdef NOTSA_STATEHASH
+// SH3: the one-time L / P rows of NOTSA_SH_CARGENLOG
+void notsa::rr::CarGenLogOnce() {
+    static bool done[2] = {};
+    FILE* f = CarGenLog(true);
+    const int di = LoadLogRecFrame() < 0 ? 0 : 1;
+    if (!f || done[di] || (di == 1 && LoadLogRecFrame() != 0)) return;
+    done[di] = true;
+    const auto dump = [&](const char* name, const CLoadedCarGroup& g) {
+        std::fprintf(f, "%d %llu L %s", LoadLogRecFrame(), (unsigned long long)RandCountNow(), name);
+        for (const auto m : g.GetAllModels()) { std::fprintf(f, " %d:%s:%s", (int)m, CModelInfo::GetModelInfo(m)->GetModelNameAsString().c_str(), CStreaming::IsModelLoaded(m) ? "loaded" : "notloaded"); }
+        std::fprintf(f, "\n");
+    };
+    dump("ms_vehiclesLoaded", CStreaming::ms_vehiclesLoaded);
+    dump("m_AppropriateLoadedCars", CPopulation::m_AppropriateLoadedCars);
+    std::fprintf(f, "%d %llu P zone_type=%d time_of_week=%d time_index=%d curr_zone=%s pop_type=%d cars(other/cops/gangs/dealers)=%.0f/%.0f/%.0f/%.0f max_cars=%d dontCreateGang=%d dontCreateCops=%d car_density=%.3f max_in_use=%d\n", LoadLogRecFrame(), (unsigned long long)RandCountNow(),
+        (int)CPopCycle::m_nCurrentZoneType, (int)CPopCycle::m_nCurrentTimeOfWeek, (int)CPopCycle::m_nCurrentTimeIndex, CPopCycle::m_pCurrZone ? std::string(CPopCycle::m_pCurrZone->GetInfoLabel()).c_str() : "-", CPopCycle::m_pCurrZoneInfo ? (int)CPopCycle::m_pCurrZoneInfo->PopType : -1,
+        (float)CPopCycle::m_NumOther_Cars, (float)CPopCycle::m_NumCops_Cars, (float)CPopCycle::m_NumGangs_Cars, (float)CPopCycle::m_NumDealers_Cars, (int)CPopCycle::GetMaxCarsCurrently(), (int)CPopulation::m_bDontCreateRandomGangMembers, (int)CPopulation::m_bDontCreateRandomCops, (float)CCarCtrl::CarDensityMultiplier, (int)CCarCtrl::MaxNumberOfCarsInUse);
+    std::fflush(f);
+}
+#endif

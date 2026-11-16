@@ -1,6 +1,6 @@
 #pragma once
 // SH2 NOTSA_SH_LOADLOG=<file>: resource load-order log of an RR run (files opened, streaming requests / reads / completions / removals), see .notes/STATEHASH_LOADORDER.md.
-// Row: `seq fc=<CTimer frame counter> rec=<recorded frame or -1> <kind> <args>`. Needs NOTSA_STATEHASH; one getenv + one FILE*, thread safe (the file is written from any thread, in call order).
+// Row: `seq fc=<CTimer frame counter> rec=<recorded frame or -1> rc=<rand call counter> <kind> <args>`. Needs NOTSA_STATEHASH; one getenv + one FILE*, thread safe (the file is written from any thread, in call order).
 #ifdef NOTSA_STATEHASH
 #include <cstdio>
 #include <cstdarg>
@@ -9,6 +9,7 @@
 #include <mutex>
 namespace notsa::rr {
 uint32_t LoadLogFrameCounter();  // CTimer::GetFrameCounter() (statehash.cpp)
+uint64_t RandCountNow();         // statehash.cpp: the rand call counter (= rand log callidx)
 int      LoadLogRecFrame();      // recorded frame number, -1 when not recording
 inline void LoadLog(const char* fmt, ...) {
     static FILE* f = [] { const char* p = std::getenv("NOTSA_SH_LOADLOG"); return p && p[0] ? std::fopen(p, "w") : nullptr; }();

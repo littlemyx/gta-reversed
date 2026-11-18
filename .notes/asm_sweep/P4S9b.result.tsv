@@ -1,0 +1,9 @@
+addr	function	verdict	asm range	note	fix commit
+0x62BC10	CTaskComplexKillPedOnFootMelee::CreateNextSubTask	MATCH	0x62BC10-0x62BE28	all 6 task-type cases, submerged test, strict/non-strict range compares, pause timer 3000, default null	-
+0x66EBE0	CTaskComplexFollowNodeRoute::CalcGoToTaskType	MATCH	0x66EBE0-0x66EDAF	index clamp, z=0 normalise, dot order, 0.707 strict, 0.5858 mul, clamp NaN pass-through, sprint 5/3 vs 4/1.5, flag bits 0x10/0x20/0x40	-
+0x695E40	CTaskComplexFollowPedFootsteps::CreateSubTask	MATCH	0x695E40-0x696025	goto-point (RemoveAt 0, 0.01), stand still (10000, 8.0), hit head, seek entity (50000/1000/radius 1 or 4/2/2/1/1)	-
+0x62E3F0	CTaskComplexRoadRage::ControlSubTask	MATCH	0x62E3F0-0x62E52B	null rageWith abort, DESTROY_CAR x,z,y and KILL_PED z,y,x sums vs 400, enter-car 0x2BD	-
+0x6A1460	CAutomobile::UpdateMovingCollision	MATCH	0x6A1460-0x6A1EAD	all paths compared (player/mission gating, ext-limit angle math with min/max helpers 0x404330/0x420800, per-model rotation consts, triangle/plane/sphere loops, bbox z update); only UB: exe leaves componentPos/matrix uninitialised when the misc node is missing (port zero-inits) - cosmetic	-
+0x6D6640	CVehicle::SpecialEntityPreCollisionStuff	MATCH	0x6D6640-0x6D6A26	all branches (knocked-off bike, flyers, ignored/attached, stuck, immovable, object lamp/temp/construction/smash bbox test, RC car, towing, tail stuck flag) compared	-
+0x0	CEventHandler::Compute*Response rows	NOT_REACHED	-	budget	-
+0x0	CTheScripts rows (P4S2)	NOT_REACHED	-	budget	-

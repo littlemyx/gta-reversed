@@ -43,7 +43,7 @@ def ins_at(x):
 
 def case_counts(start, lo, hi):
     """DFS over the case body; returns set of totals (or 'V' for variadic) over distinct paths to ret."""
-    res = set(); seen = set()
+    res = set(); seen = set(); calls = set(); ni = 0
     stack = [(start, 0, None, False)]
     steps = 0
     while stack:
@@ -56,7 +56,7 @@ def case_counts(start, lo, hi):
             seen.add(key)
             i = ins_at(p)
             if i is None: res.add('?dec'); break
-            m = i.mnemonic
+            m = i.mnemonic; ni += 1
             if m == 'push' and i.operands[0].type == capstone.x86.X86_OP_IMM:
                 lastpush = i.operands[0].imm
             elif m == 'call' and i.operands[0].type == capstone.x86.X86_OP_IMM:
@@ -66,6 +66,7 @@ def case_counts(start, lo, hi):
                     tot += lastpush
                 elif t in ONE: tot += 1
                 elif t == VAR: var = True
+                if t not in (COLLECT, PEEK, 0x4859D0): calls.add(t)  # 0x4859D0 = UpdateCompareFlag
             elif m == 'ret': res.add('V%d' % tot if var else tot); break
             elif m == 'jmp':
                 if i.operands[0].type == capstone.x86.X86_OP_IMM:
@@ -76,7 +77,7 @@ def case_counts(start, lo, hi):
             elif m.startswith('j') and i.operands[0].type == capstone.x86.X86_OP_IMM:
                 stack.append((i.operands[0].imm, tot, lastpush, var))
             p += i.size
-    return res
+    return res, sorted(calls), ni
 
 
 def group(fn, g):
@@ -106,7 +107,7 @@ def group(fn, g):
 
 
 tab = struct.unpack('<27I', rd(0x8A6168, 27 * 4))
-res = {}; shapes = {}
+res = {}; shapes = {}; extra = {}
 for g, fn in enumerate(tab):
     sw = group(fn, g)
     if sw is None: print('group', g, hex(fn), 'NO SWITCH', file=sys.stderr); continue
@@ -114,10 +115,10 @@ for g, fn in enumerate(tab):
     print('  ops', min(sw), max(sw), file=sys.stderr)
     for op, t in sw.items():
         if op > 0xA4E: continue
-        r = case_counts(t, fn, fn + 0x6000)
-        res[op] = sorted(map(str, r)); shapes[op] = t
+        r, cl, ni = case_counts(t, fn, fn + 0x6000)
+        res[op] = sorted(map(str, r)); shapes[op] = t; extra[op] = (cl, ni)
     print('group', g, hex(fn), 'cases', len(sw), 'default', hex(dflt), file=sys.stderr)
-json.dump({'%04X' % k: [v, hex(shapes[k])] for k, v in res.items()}, open(a.dump, 'w'))
+json.dump({'%04X' % k: [v, hex(shapes[k]), [hex(c) for c in extra[k][0]], extra[k][1]] for k, v in res.items()}, open(a.dump, 'w'))
 print(len(res), 'opcodes from exe', file=sys.stderr)
 
 # ---- merge with the Sanny Builder DB -> argcounts.tsv

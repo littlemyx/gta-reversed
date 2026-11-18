@@ -5,6 +5,9 @@
 #include "scmtrace.h"
 #include "Scripts/RunningScript.h"
 #include "Scripts/TheScripts.h"
+#ifdef NOTSA_MDRIVER
+#include "mdriver.h"
+#endif
 
 #include <algorithm>
 #include <cstdio>
@@ -34,6 +37,8 @@ std::unordered_map<const CRunningScript*, Info> g_threads;
 CRunningScript*                           g_cur = nullptr;
 Info*                                     g_curInfo = nullptr;
 uint16_t                                  g_curRaw = 0;
+const uint8_t*                            g_curPtr = nullptr;
+CRunningScript*                           g_root = nullptr;
 uint32_t                                  g_curIp = 0;
 const char*                               g_curBase = "main";
 char                                      g_curBaseBuf[16];
@@ -135,6 +140,7 @@ bool Enabled() { Open(); return g_f != nullptr; }
 void ArmRoot(int32_t missionId) { if (Enabled()) { g_armed = missionId; } }
 
 bool Traced(const CRunningScript* s) { return g_threads.find(s) != g_threads.end(); }
+CRunningScript* Root() { return (g_root && g_threads.find(g_root) != g_threads.end()) ? g_root : nullptr; }
 
 void OnStart(CRunningScript* s) {
     if (!Enabled()) return;
@@ -143,7 +149,7 @@ void OnStart(CRunningScript* s) {
     Info info; info.id = g_nextId++;
     uint32_t parent = 0;
     if (root) {
-        g_rootMission = g_armed; g_armed = -1; g_frame0 = CTimer::GetFrameCounter(); g_haveFrame0 = true;
+        g_rootMission = g_armed; g_armed = -1; g_root = s; g_frame0 = CTimer::GetFrameCounter(); g_haveFrame0 = true;
         const char* step = std::getenv("NOTSA_RR_STEP_MS"); const char* commit = std::getenv("NOTSA_SCMTRACE_COMMIT");
         std::string h = "# scmtrace 1\n# main.scm sha256 " + MainScmHash() + "\n# commit " + (commit ? commit : "unknown") + "\n# mission m" + std::to_string(g_rootMission)
             + "\n# timestep " + (step ? step : "20") + " ms fixed (virtual clock, NOTSA_RR=1)\n# start injected mission:" + std::to_string(g_rootMission) + " (same as LOAD_AND_LAUNCH_MISSION " + std::to_string(g_rootMission) + "), frame 0 = the frame of the start, mission thread at ip 0\n"
@@ -181,7 +187,7 @@ void OnCond(bool state) { if (g_cur) g_cond = state ? 1 : 0; }
 
 void Begin(CRunningScript* s) {
     g_cur = s; g_curInfo = &g_threads.find(s)->second;
-    g_curRaw = *reinterpret_cast<const uint16_t*>(s->m_IP);
+    g_curRaw = *reinterpret_cast<const uint16_t*>(s->m_IP); g_curPtr = s->m_IP;
     Locate(s, g_curBase, g_curIp);
     g_cond = -1; g_endPending = false;
     std::memcpy(g_gsnap.data(), CTheScripts::ScriptSpace.data(), g_gsize);
@@ -193,6 +199,9 @@ void Begin(CRunningScript* s) {
 
 void End(CRunningScript* s) {
     const uint32_t id = g_curInfo->id, fr = Frame();
+#ifdef NOTSA_MDRIVER
+    notsa::mdriver::OnCommand(s, g_curPtr, g_curRaw, g_cond);
+#endif
     const std::string name = Name(s);
     char b[200];
     std::snprintf(b, sizeof b, "X\t%u\t%u\t%s\t%s\t%x\t%x\t%c\n", fr, id, name.c_str(), g_curBase, g_curIp, (unsigned)g_curRaw, g_cond < 0 ? '-' : (char)('0' + g_cond));

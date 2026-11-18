@@ -18,6 +18,8 @@ void OnEnd(CRunningScript* s);
 //! the executing command evaluated a condition: `state` is the value after the NOT bit (CRunningScript::UpdateCompareFlag)
 void OnCond(bool state);
 bool Traced(const CRunningScript* s);
+//! the root (mission) thread while it is alive, else nullptr
+CRunningScript* Root();
 void Begin(CRunningScript* s);
 void End(CRunningScript* s);
 //! runs one command `f()` of script `s` (a CRunningScript::ProcessOneCommand call) and logs it when `s` is in the traced tree

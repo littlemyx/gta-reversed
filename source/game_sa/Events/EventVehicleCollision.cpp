@@ -94,7 +94,7 @@ bool CEventVehicleCollision::AffectsPed(CPed* ped)
             if ((m_vehicle->m_pVehicleBeingTowed && m_vehicle->m_pVehicleBeingTowed == walkRoundVehicle) ||
                 (m_vehicle->m_pTowingVehicle && m_vehicle->m_pTowingVehicle == walkRoundVehicle))
             {
-                pTaskWalkRoundCar->SetNewVehicle(m_vehicle, 0);
+                pTaskWalkRoundCar->SetNewVehicle(m_vehicle, pTaskWalkRoundCar->m_DirectionGoingRoundCar); // 0x4B30CD: current direction (byte +0xD bits 2-5), not 0
             }
         }
         else {

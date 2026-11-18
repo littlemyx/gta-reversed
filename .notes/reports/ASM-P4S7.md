@@ -1,0 +1,11 @@
+# ASM-P4S7: script commands the C++ left UNIMPLEMENTED / NOP but the exe implements
+
+Oracle: gta_sa_compact.exe 1.0. Case addresses from C:/gta-scratch/t3/exe_counts.json (gen_argcounts.py dump). Line list for the TS port.
+
+| Command | exe | What the exe does | Port before | Change |
+|---|---|---|---|---|
+| 0x01A6 IS_CHAR_IN_AREA_ON_FOOT_3D, 0x01A7 IS_CHAR_IN_AREA_IN_CAR_3D | case @0x47D2AD, call 0x47D2B0 -> CRunningScript::CharInAreaCheckCommand 0x488B50 | CollectParameters(8) (ped, x1 y1 z1 x2 y2 z2, highlight); ped pos (vehicle pos if bInVehicle); min/max normalised per axis; inclusive box test; 01A6 true only if !bInVehicle, 01A7 only if bInVehicle; UpdateCompareFlag; if highlight -> HighlightImportantArea (z = (zmax+zmin)/2); no debug square in 3D | UNIMPLEMENTED (helper CharInAreaCheckCommand already ported, uncalled) | one handler `IsCharInAreaOnFootOrInCar3D(S, command)` calls S.CharInAreaCheckCommand(command), registered for both (CharacterCommands.cpp) |
+| 0x0384 PRINT_STRING_IN_STRING_NOW | case @0x483C11 | label1 (8 chars) -> CText::Get = text; label2 -> CText::Get = string; CollectParameters(2) (time, flag as uint16); CMessages::AddMessageJumpQWithString(text, time, flag, string, bAddNextMessageToPreviousBriefs) 0x69E950; bAddNextMessageToPreviousBriefs = true; no "~z~" subtitle check | UNIMPLEMENTED | `PrintStringInStringNow(key, key, time, uint16 flag)` (TextCommands.cpp). Siblings PRINT_STRING_IN_STRING / _SOON remain UNIMPLEMENTED (unused by scripts) |
+| 0x0052 COMMAND_LINE | case @0x4668BE | CollectParameters(6) and return (x1 y1 z1 x2 y2 z2), nothing else | UNIMPLEMENTED | REGISTER_COMMAND_NOP(..., 6 x float) (BasicCommands.cpp) |
+| 0x018D ADD_CONTINUOUS_SOUND | case @0x47D07D | CollectParameters(4) then StoreParameters(1): writes ScriptParams[0] (raw first arg) to the 5th (output) var; no sound created | NOP, output var left unwritten | handler `AddContinuousSound(x,y,z,type)` returns bit_cast<uint32>(x) (a uint32 reader would DebugBreak on the static float args) (UnusedCommands.cpp) |
+| 0x03AD SWITCH_RUBBISH | case @0x48475A | CollectParameters(1), calls 0x7204C0(param != 0) | NOP | unchanged: 0x7204C0 is a bare `ret` in the exe (CRubbish::SetVisibility, also a NOP in the repo), so the NOP is exact; comment added |

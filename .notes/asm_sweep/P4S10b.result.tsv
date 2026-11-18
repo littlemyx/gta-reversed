@@ -1,0 +1,19 @@
+addr	function	verdict	asm range	note	fix commit
+0x61DD00	CTaskSimpleFightingControl::MakeAbortable	MATCH (review of a7d4a313b: CONFIRMED)	0x61DD00-0x61DE52	threshold 0x863C1C float, dot y,z,x, <, null-target/default paths ok |
+0x4AE420	CEventPotentialWalkIntoVehicle::AffectsPed	MATCH (review of b09f914d3: CONFIRMED)	0x4AE420-0x4AE5BB	direction arg = byte+0xD bits2-5 (uint8:4 field, exe sign-extends; low 4 bits equal) |
+0x4B2EE0	CEventVehicleCollision::AffectsPed	MATCH (review of e3a7115cf: CONFIRMED)	0x4B2EE0-0x4B3111	consts 0.35 / 0.0, plane counting, task 0x1FC/0x1F9 paths ok |
+0x609710	CPlayerPed::DoesPlayerWantNewWeapon	MATCH (review of 94d8369d0: CONFIRMED)	0x609710-0x6097DE	jetpack branch always falls to ped-state check |
+0x659E90	CTaskComplexTreatAccident::CreateSubTask	MATCH (heading args now fully traced)	0x659E90-0x659FB5	heading, 0.5, 0.2 = ctor defaults 0x667E20; types 0x66/0xC8/0x386/0x516 ok |
+0x5BD360	CTaskSimpleFight::GetHitLevel	MATCH	0x5BD360-0x5BD3A3	2-char compares unreachable on zero-extended al, ends 7 |
+0x5E6010	CPed::TakeOffGoggles	MATCH	0x5E6010-0x5E6077	|
+0x6A6140	CAutomobile::IsInAir	MATCH	0x6A6140-0x6A61D2	wheel/zero compares already in header helper |
+0x678240	CTaskComplexGetUpAndStandStill::CreateNextSubTask	MATCH	0x678240-0x67829A	|
+0x635110	CTaskComplexInWater::CreateNextSubTask	MATCH	0x635110-0x6351CA	climb height 1.40 compare, ctor arg order ok |
+0x66DFD0	CTaskComplexGoToPointAndStandStillAndAchieveHeading::CreateNextSubTask	MATCH	0x66DFD0-0x66E028	|
+0x635200	CTaskComplexInWater::CreateFirstSubTask	FIXED	0x635200-0x63540A	Die condition inverted (exe: bDrownsInWater SET -> CTaskComplexDie); mission GoToPoint lookup = CPedIntelligence::FindTaskByType (Find(false))	cf31c2587
+0x67FD10	CTaskComplexJump::CreateFirstSubTask	MATCH	0x67FD10-0x67FD1F	|
+0x6782A0	CTaskComplexGetUpAndStandStill::CreateFirstSubTask	MATCH	0x6782A0-0x6782AC	|
+0x65A440	CTaskComplexUseSwatRope::CreateFirstSubTask	MATCH	0x65A440-0x65A44F	|
+0x6577C0	CTaskComplexMoveBackAndJump::CreateFirstSubTask	MATCH	0x6577C0-0x6577CD	|
+0x642270	CTaskComplexLeaveBoat::CreateFirstSubTask	MATCH	0x642270-0x64227D	|
+0x66E030	CTaskComplexGoToPointAndStandStillAndAchieveHeading::CreateFirstSubTask	MATCH	0x66E030-0x66E040	|

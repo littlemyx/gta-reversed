@@ -293,7 +293,7 @@ void DispatchRow(const Row& row, const uint8_t* ip, int cop) { // run one table 
         const int h = I_(0); CVector pos; bool ok = false;
         if (auto* p = CPools::GetPed(h)) { pos = p->GetPosition(); ok = true; } else if (auto* vv = CPools::GetVehicle(h)) { pos = vv->GetPosition(); ok = true; } else if (auto* o = CPools::GetObject(h)) { pos = o->GetPosition(); ok = true; }
         if (!ok) { QueueActions({}, row.settle); return; }
-        QueueActions({ warp(pos.x + 1.0f, pos.y, pos.z + 0.25f, false) }, row.settle); return;
+        QueueActions({ warp(pos.x + 2.f, pos.y, pos.z + 0.5f, false) }, row.settle); return;
     }
     if (v == "failclass") { Stop(row.args.empty() ? "failclass" : row.args[0], cop, 0); return; }
     Stop("badverb " + v, cop, 0);

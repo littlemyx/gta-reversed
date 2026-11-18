@@ -720,13 +720,18 @@ void CTaskSimpleClimb::GetCameraTargetPos(CPed* ped, CVector& outTargetPt) {
 
     // Calculate offset
     CVector2D offset{};
+    // exe 0x67A3E0: t = currentTime / totalTime (stored as float); the blends are `from * (1 - t) + to * t` kept in x87 registers, rounded to float once per component
+    const auto Blend = [t = m_Anim->GetTimeProgress()](float fromH, float fromV, float toH, float toV) {
+        const x87d omt = (x87d)1.f - (x87d)t;
+        return CVector2D{ (float)((x87d)fromH * omt + (x87d)toH * (x87d)t), (float)((x87d)fromV * omt + (x87d)toV * (x87d)t) };
+    };
     switch (m_Anim->m_AnimId) {
     case ANIM_ID_FALL_GLIDE:
     case ANIM_ID_CLIMB_JUMP2FALL:    offset = { ms_fVaultOffsetHorz, ms_fVaultOffsetVert };                                                                                                  break;
-    case ANIM_ID_CLIMB_PULL:         offset = lerp<CVector2D>({ ms_fHangingOffsetHorz, ms_fAtEdgeOffsetHorz }, { ms_fHangingOffsetVert, ms_fAtEdgeOffsetVert }, m_Anim->GetTimeProgress()); break;
-    case ANIM_ID_CLIMB_STAND:        offset = lerp<CVector2D>({ ms_fAtEdgeOffsetHorz, ms_fStandUpOffsetHorz }, { ms_fAtEdgeOffsetVert, ms_fStandUpOffsetVert }, m_Anim->GetTimeProgress()); break;
+    case ANIM_ID_CLIMB_PULL:         offset = Blend(ms_fHangingOffsetHorz, ms_fHangingOffsetVert, ms_fAtEdgeOffsetHorz, ms_fAtEdgeOffsetVert); break;
+    case ANIM_ID_CLIMB_STAND:        offset = Blend(ms_fAtEdgeOffsetHorz, ms_fAtEdgeOffsetVert, ms_fStandUpOffsetHorz, ms_fStandUpOffsetVert); break;
     case ANIM_ID_CLIMB_STAND_FINISH: offset = { ms_fStandUpOffsetHorz, ms_fStandUpOffsetVert };                                                                                              break;
-    case ANIM_ID_CLIMB_JUMP_B:       offset = lerp<CVector2D>({ ms_fAtEdgeOffsetHorz, ms_fVaultOffsetHorz }, { ms_fAtEdgeOffsetVert, ms_fVaultOffsetVert }, m_Anim->GetTimeProgress());     break;
+    case ANIM_ID_CLIMB_JUMP_B:       offset = Blend(ms_fAtEdgeOffsetHorz, ms_fAtEdgeOffsetVert, ms_fVaultOffsetHorz, ms_fVaultOffsetVert);     break;
     default:                         return;
     }
 

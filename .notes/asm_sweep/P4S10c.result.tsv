@@ -1,6 +1,6 @@
 addr	function	verdict	asm range	note	fix commit
 0x635200	CTaskComplexInWater::CreateFirstSubTask	MATCH (review of cf31c2587: CONFIRMED)	0x635200-0x6353F8	Die when bDrownsInWater SET (test [ped+0x470],0x100000 -> ctor 0x630040 args 0x35/0/0x8C/4.0); FindTaskByType(0x384) = slots 4,3,1,2 (0x600EE0); swim/runanim ctor args ok	
-0x657AF0	CTaskComplexHitPedWithCar::CreateNextSubTask	FIXED	0x657AF0-0x657B53	type 414 (TASK_SIMPLE_HIT_BEHIND) also finishes (cmp chain 502/200/208/414/506); was missing	HITPED
+0x657AF0	CTaskComplexHitPedWithCar::CreateNextSubTask	FIXED	0x657AF0-0x657B53	type 414 (TASK_SIMPLE_HIT_BEHIND) also finishes (cmp chain 502/200/208/414/506); was missing	4b43a2a6c
 0x61B890	CTaskSimpleRunAnimLoopedMiddle::Clone	MATCH	0x61B890-0x61B960	both ctor branches, arg order ok	
 0x6705D0	CTaskComplexGoToPointAnyMeans::CreateSubTask	MATCH	0x6705D0-0x670772	ctor arg lists ok (follow-node-route tail only structurally checked)	
 0x61E190	CTaskSimpleUseGun::ClearAnim	MATCH	0x61E190-0x61E1F2		

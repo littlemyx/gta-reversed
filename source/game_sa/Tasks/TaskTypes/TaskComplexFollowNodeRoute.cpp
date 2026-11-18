@@ -459,7 +459,7 @@ CTask* CTaskComplexFollowNodeRoute::CreateFirstSubTask(CPed* ped) {
     if (m_bUseBlending) {
         m_SpeedDecreaseDist = m_SpeedIncreaseDist = 0.0;
         m_SpeedDecreaseAmt  = m_SpeedIncreaseAmt  = 0.f;
-        m_bSlowingDown      = m_bSpeedingUp       = false;
+        // 0x671820: the exe zeroes only the four floats at +0x50..+0x5C, m_bSlowingDown/m_bSpeedingUp (in [+0x4C]) are left alone
     }
 
     if (ped->bInVehicle) {

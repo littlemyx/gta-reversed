@@ -1,0 +1,25 @@
+addr	function	verdict	asm range	note	fix commit
+0x635200	CTaskComplexInWater::CreateFirstSubTask	MATCH (review of cf31c2587: CONFIRMED)	0x635200-0x6353F8	Die when bDrownsInWater SET (test [ped+0x470],0x100000 -> ctor 0x630040 args 0x35/0/0x8C/4.0); FindTaskByType(0x384) = slots 4,3,1,2 (0x600EE0); swim/runanim ctor args ok	
+0x657AF0	CTaskComplexHitPedWithCar::CreateNextSubTask	FIXED	0x657AF0-0x657B53	type 414 (TASK_SIMPLE_HIT_BEHIND) also finishes (cmp chain 502/200/208/414/506); was missing	HITPED
+0x61B890	CTaskSimpleRunAnimLoopedMiddle::Clone	MATCH	0x61B890-0x61B960	both ctor branches, arg order ok	
+0x6705D0	CTaskComplexGoToPointAnyMeans::CreateSubTask	MATCH	0x6705D0-0x670772	ctor arg lists ok (follow-node-route tail only structurally checked)	
+0x61E190	CTaskSimpleUseGun::ClearAnim	MATCH	0x61E190-0x61E1F2		
+0x65A3E0	CTaskComplexUseSwatRope::CreateNextSubTask	MATCH	0x65A3E0-0x65A431		
+0x5E1950	CPed::ClearLookFlag	MATCH	0x5E1950-0x5E19F2		
+0x5E3FF0	CPed::ClearLook	MATCH	0x5E3FF0	jmp ClearLookFlag	
+0x5E7B70	CPed::FlagToDestroyWhenNextProcessed	MATCH	0x5E7B70-0x5E7CA8	exe inlines SetPedState (cover release + blip clear + state store); equivalent	
+0x65ECB0	CTaskComplexGangFollower::Clone	MATCH	0x65ECB0-0x65ED30		
+0x64AD00	CTaskSimpleCarOpenDoorFromOutside::MakeAbortable	MATCH	0x64AD00-0x64AD7D		
+0x644250	CTaskComplexStealCar::ControlSubTask	MATCH	0x644250-0x6442C8	CTaskTimer::IsOutOfTime inlined	
+0x6391B0	CTaskComplexOnFire::CreateNextSubTask	MATCH	0x6391B0-0x6391E0		
+0x67CB70	CTaskComplexFallAndGetUp::CreateNextSubTask	MATCH	0x67CB70-0x67CBB4		
+0x625C20	CTaskComplexReactToAttack::CreateNextSubTask	MATCH	0x625C20-0x625C60		
+0x655570	CTaskComplexEvasiveCower::CreateSubTask	MATCH	0x655570-0x655650		
+0x629080	CTaskComplexRoadRage::CreateSubTask	MATCH	0x629080-0x6292AC	already annotated	
+0x62DC20	CTaskComplexDestroyCarMelee::CreateNextSubTask	MATCH	0x62DC20-0x62DD99	already annotated	
+0x63C0A0	CTaskComplexLeaveCarAndFlee::CreateSubTask	MATCH	0x63C0A0-0x63C227	already annotated	
+0x697600	CTaskComplexExtinguishFires::GetNearestFire	NOISE (cosmetic)	0x697600-0x69767A	dist^2 sum order exe z,x,y in extended precision vs port x,y,z float; threshold 20.0 ok	
+0x66A260	CTaskComplexAvoidOtherPedWhileWandering::MakeAbortable	MATCH	0x66A260-0x66A2B6		
+0x65EC30	CTaskComplexGangFollower::MakeAbortable	MATCH	0x65EC30-0x65EC9A	null-subtask path also clears flags	
+0x65BAC0	CTaskComplexFleeEntity::CreateNextSubTask	MATCH	0x65BAC0-0x65BAF5		
+0x65A720	CTaskComplexExtinguishFireOnFoot::CreateFirstSubTask	MATCH	0x65A720-0x65A7B0	ctor floats 2.0/2.0	

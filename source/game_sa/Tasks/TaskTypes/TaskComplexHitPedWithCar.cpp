@@ -94,6 +94,7 @@ CTask* CTaskComplexHitPedWithCar::CreateNextSubTask(CPed* ped) {
     case TASK_COMPLEX_EVASIVE_STEP:
     case TASK_NONE:
     case TASK_COMPLEX_FALL_AND_GET_UP:
+    case TASK_SIMPLE_HIT_BEHIND: // exe 0x657B13: type 414 also finishes (port was missing it)
     case TASK_SIMPLE_KILL_PED_WITH_CAR:
         return CreateSubTask(TASK_FINISHED);
     case TASK_SIMPLE_HURT_PED_WITH_CAR: {

@@ -2782,9 +2782,9 @@ auto SetLoadCollisionForCharFlag(CRunningScript& S, CPed& ped, bool loadCol) {
  * @param {Char} killer
  * @param {Char} target
  */
-auto TaskKillCharOnFoot(CRunningScript& S, eScriptCommands opcode, CPed& ped, CPed& target) {
+auto TaskKillCharOnFoot(CRunningScript& S, eScriptCommands opcode, int32 pedHandle, CPed& target) { // NOTSA: ped is a handle (-1 = building a task sequence, GivePedScriptedTask adds it to the active sequence), not a CPed&
     S.GivePedScriptedTask(
-        &ped,
+        pedHandle,
         new CTaskComplexKillPedOnFoot{ &target, -1, 0, 0, 0, true },
         (int32)(opcode)
     );
@@ -3005,9 +3005,9 @@ auto GetCharAnimTotalTime(CPed& ped, const char* animName) {
  * @param {int} actionDelay
  * @param {int} actionChance
  */
-auto TaskKillCharOnFootWhileDucking(eScriptCommands command, CRunningScript& S, CPed& ped, CPed& target, int32 flags, int32 actionDelay, int32 actionChance) {
+auto TaskKillCharOnFootWhileDucking(eScriptCommands command, CRunningScript& S, int32 pedHandle, CPed& target, int32 flags, int32 actionDelay, int32 actionChance) {
     S.GivePedScriptedTask(
-        &ped,
+        pedHandle,
         new CTaskComplexKillPedOnFoot{
             &target,
             -1,

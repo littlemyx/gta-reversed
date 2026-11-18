@@ -59,6 +59,16 @@ void PrintNow(const char* key, int32 time, uint32 flags) {
     CTheScripts::bAddNextMessageToPreviousBriefs = true;
 }
 
+// COMMAND_PRINT_STRING_IN_STRING_NOW - exe case @0x483C11 (group 3): ReadTextLabelFromScript(8) -> CText::Get (text), ReadTextLabelFromScript(8) -> CText::Get (string),
+// CollectParameters(2) (time, flag as uint16), CMessages::AddMessageJumpQWithString(text, time, flag, string, bAddNextMessageToPreviousBriefs) 0x69E950,
+// bAddNextMessageToPreviousBriefs = true. No "~z~" subtitle test (unlike PrintNow).
+void PrintStringInStringNow(const char* keyText, const char* keyString, uint32 time, uint16 flag) {
+    const auto text   = TheText.Get(keyText);
+    const auto string = TheText.Get(keyString);
+    CMessages::AddMessageJumpQWithString(text, time, flag, const_cast<GxtChar*>(string), CTheScripts::bAddNextMessageToPreviousBriefs);
+    CTheScripts::bAddNextMessageToPreviousBriefs = true;
+}
+
 void ClearThisPrintBigNow(uint16 item) {
     CMessages::ClearThisPrintBigNow(static_cast<eMessageStyle>(item - 1));
 }
@@ -383,7 +393,7 @@ void notsa::script::commands::text::RegisterHandlers() {
     REGISTER_COMMAND_UNIMPLEMENTED(COMMAND_PRINT_WITH_6_NUMBERS_SOON);
     REGISTER_COMMAND_UNIMPLEMENTED(COMMAND_PRINT_WITH_NUMBER_BIG_Q);
     REGISTER_COMMAND_UNIMPLEMENTED(COMMAND_PRINT_STRING_IN_STRING);
-    REGISTER_COMMAND_UNIMPLEMENTED(COMMAND_PRINT_STRING_IN_STRING_NOW);
+    REGISTER_COMMAND_HANDLER(COMMAND_PRINT_STRING_IN_STRING_NOW, PrintStringInStringNow);
     REGISTER_COMMAND_UNIMPLEMENTED(COMMAND_PRINT_STRING_IN_STRING_SOON);
     REGISTER_COMMAND_UNIMPLEMENTED(COMMAND_PRINT_HELP_WITH_NUMBER);
     REGISTER_COMMAND_UNIMPLEMENTED(COMMAND_SET_TEXT_BACKGROUND_COLOUR);

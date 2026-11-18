@@ -344,8 +344,8 @@ bool CPlayerPed::DoesPlayerWantNewWeapon(eWeaponType weaponType, bool arg1) {
     if (arg1)
         return false;
 
-    if (GetIntelligence()->GetTaskJetPack())
-        return false;
+    // 0x609786: the exe calls GetTaskJetPack but every path of the jetpack check (slot match + CWeaponInfo flag bit 1 test, twice) falls through to the
+    // ped-state check at 0x6097B4; a jetpack never makes this return false (the port returned false here).
 
     /* !See comment!
     if (m_nActiveWeaponSlot == weaponSlot

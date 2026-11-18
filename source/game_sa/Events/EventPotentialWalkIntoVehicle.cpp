@@ -43,7 +43,7 @@ bool CEventPotentialWalkIntoVehicle::AffectsPed(CPed* ped) {
             if ((m_vehicle->m_pVehicleBeingTowed && m_vehicle->m_pVehicleBeingTowed == task->m_Veh) ||
                 (m_vehicle->m_pTowingVehicle && m_vehicle->m_pTowingVehicle == task->m_Veh)
             ) {
-                task->SetNewVehicle(m_vehicle, 0);
+                task->SetNewVehicle(m_vehicle, task->m_DirectionGoingRoundCar); // 0x4AE4CB: the exe passes the task's current direction (bits 2-5 of byte +0xD), not 0
             }
             return false;
         }

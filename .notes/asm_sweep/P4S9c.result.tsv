@@ -1,0 +1,6 @@
+addr	function	verdict	asm range	note	fix commit
+-	CEventHandler::Compute*Response / SetEventResponseTask / ComputeEventResponseTask (18 P4S2 rows)	RESOLVED_EARLIER	-	latest status across P4S*.result.tsv is MATCH/FIXED for all 18 (P4S2b/P4S2c); no NOT_REACHED/UNSURE left; no re-compare needed	-
+-	CTheScripts rows (ProcessAllSearchLights, AddScriptSearchLight, AddScriptCheckpoint, ReadObjectNamesFromScript, ReadMultiScriptFileOffsetsFromScript)	RESOLVED_EARLIER	-	all MATCH/FIXED in P4S2b/P4S2c; the "-" placeholder rows in P4S9 are stale	-
+0x0	CEventHandler::ComputeBuildingCollisionPassiveResponse	INTENTIONAL	-	no exe function (address 0x0, NOP handler); not in the exe event table as a distinct routine	-
+0x0	CEventHandler::ComputeVehicleHitAndRunResponse	INTENTIONAL	-	no exe address (NOTSA_UNREACHABLE stub); nothing to compare	-
+-	CEventHandler::ResetResponse	INTENTIONAL	-	@addr unk: inlined in the exe (callers clear 5 task ptrs); port 5 nullptr writes	-

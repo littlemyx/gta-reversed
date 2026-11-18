@@ -49,7 +49,7 @@ CTask* CTaskComplexInWater::CreateFirstSubTask(CPed* ped) {
         return new CTaskSimpleSwim{ nullptr, nullptr };
     }
 
-    if (!ped->bDrownsInWater) {
+    if (ped->bDrownsInWater) { // 0x635242: test [ped+0x470], 0x100000 (bDrownsInWater) -> CTaskComplexDie; the port had the condition inverted
         return new CTaskComplexDie{
             WEAPON_DROWNING,
             ANIM_GROUP_DEFAULT,
@@ -67,7 +67,7 @@ CTask* CTaskComplexInWater::CreateFirstSubTask(CPed* ped) {
     }
 
     if (ped->IsCreatedByMission()) {
-        if (const auto goTo = ped->GetTaskManager().Find<CTaskSimpleGoToPoint>()) {
+        if (const auto goTo = ped->GetTaskManager().Find<CTaskSimpleGoToPoint>(false)) /* 0x63531D: CPedIntelligence::FindTaskByType(0x384) = primary slots, not FindActiveTaskByType */ {
             return new CTaskSimpleSwim{ &goTo->m_vecTargetPoint, nullptr };
         }
     }

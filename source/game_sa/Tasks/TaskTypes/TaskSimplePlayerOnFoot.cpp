@@ -350,27 +350,34 @@ void CTaskSimplePlayerOnFoot::ProcessPlayerWeapon(CPlayerPed* player) {
                     case WEAPON_FIRE_INSTANT_HIT:
                     case WEAPON_FIRE_AREA_EFFECT: {
                         CEntity* targetedObject = player->m_pTargetedObject;
-                        const auto gunCmd = [&]{
+                        const auto gunCmd = [&]() -> std::optional<eGunCommand> {
                             if (CTaskSimpleUseGun::RequirePistolWhip(player, targetedObject)) {
                                 return eGunCommand::PISTOLWHIP;
                             }
                             if (player->GetActiveWeapon().m_State == 2) {
+                                // exe 0x6862FE-0x686327: reloading (state 2) with no target button, no target and no free aim skips the whole case
+                                if (!pad->GetTarget() && !targetedObject && !playerData->m_bFreeAiming) {
+                                    return std::nullopt;
+                                }
                                 return eGunCommand::AIM;
                             }
                             return eGunCommand::FIRE;
                         }();
+                        if (!gunCmd) {
+                            break;
+                        }
                         CTask* secondaryTask = taskManager->GetTaskSecondary(TASK_SECONDARY_ATTACK);
                         if (secondaryTask) {
                             if (secondaryTask->GetTaskType() == TASK_SIMPLE_USE_GUN) {
                                 CTaskSimpleUseGun* taskUseGun = intelligence->GetTaskUseGun();
                                 if (taskUseGun) {
-                                    taskUseGun->ControlGun(player, targetedObject, gunCmd);
+                                    taskUseGun->ControlGun(player, targetedObject, *gunCmd);
                                 }
                             } else {
                                 secondaryTask->MakeAbortable(player);
                             }
                         } else {
-                            auto* taskUseGun = new CTaskSimpleUseGun(targetedObject, CVector(0.0f, 0.0f, 0.f), gunCmd, 1, false);
+                            auto* taskUseGun = new CTaskSimpleUseGun(targetedObject, CVector(0.0f, 0.0f, 0.f), *gunCmd, 1, false);
                             taskManager->SetTaskSecondary(taskUseGun, TASK_SECONDARY_ATTACK);
                             player->GetPlayerData()->m_fAttackButtonCounter = 0;
                         }
@@ -582,8 +589,8 @@ void CTaskSimplePlayerOnFoot::ProcessPlayerWeapon(CPlayerPed* player) {
 
                 if (CWeaponInfo::GetWeaponInfo(activeWeapon->m_Type, eWeaponSkill::STD)->m_nWeaponFire == WEAPON_FIRE_INSTANT_HIT) {
                     targetedEntity = (CPed*)player->m_pTargetedObject;
-                    if (targetedEntity && targetedEntity->GetIsTypePed() && intelligence->IsInSeeingRange(player->GetPosition())) {
-                        CTask* activePrimaryTask = intelligence->GetActivePrimaryTask();
+                    if (targetedEntity && targetedEntity->GetIsTypePed() && targetedEntity->GetIntelligence()->IsInSeeingRange(player->GetPosition())) { // exe 0x686AEB: the TARGET's intelligence
+                        CTask* activePrimaryTask = targetedEntity->GetIntelligence()->GetActivePrimaryTask();
                         if (!activePrimaryTask || activePrimaryTask->GetTaskType() != TASK_COMPLEX_REACT_TO_GUN_AIMED_AT) {
                             if (activeWeapon->m_Type != WEAPON_PISTOL_SILENCED) {
                                 player->Say(CTX_GLOBAL_PULL_GUN);
@@ -597,7 +604,7 @@ void CTaskSimplePlayerOnFoot::ProcessPlayerWeapon(CPlayerPed* player) {
                                 }
                             } else {
                                 CEventGunAimedAt eventGunAimedAt(player);
-                                intelligence->m_eventGroup.Add(&eventGunAimedAt, false);
+                                targetedEntity->GetIntelligence()->m_eventGroup.Add(&eventGunAimedAt, false); // exe 0x686BEA: target's event group
                             }
                         }
                     }

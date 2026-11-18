@@ -1,0 +1,18 @@
+addr	function	verdict	asm range	note	fix commit
+0x61DD00	CTaskSimpleFightingControl::MakeAbortable	FIXED	0x61DD00-0x61DE52	threshold float 0.707104981 (0x863C1C) not sqrt2/2; dot y,z,x unrounded	a7d4a313b
+0x4AE420	CEventPotentialWalkIntoVehicle::AffectsPed	FIXED	0x4AE420-0x4AE5BB	SetNewVehicle direction arg = task direction (byte+0xD bits2-5), was 0	b09f914d3
+0x4B2EE0	CEventVehicleCollision::AffectsPed	FIXED	0x4B2EE0-0x4B3108+	same SetNewVehicle direction arg	e3a7115cf
+0x609710	CPlayerPed::DoesPlayerWantNewWeapon	FIXED	0x609710-0x6097DD	jetpack task no longer returns false (exe branch always falls to ped-state check)	94d8369d0
+0x6C4E60	CHeli::ProcessFlyingCarStuff	MATCH	0x6C4E60-0x6C541A	F hints = float const double-rounding noise; already x87d port	
+0x4B4830	CEventDeadPed::AffectsPed	MATCH	0x4B4830-0x4B491B	cosmetic: exe keeps dist components unrounded (x87), port rounds to float; sums z,y,x; not changed	
+0x4B6890	CEventPotentialWalkIntoFire::AffectsPed	MATCH	0x4B6890-0x4B692F	noise (inlined GetSimplestActiveTask)	
+0x66ADE0	CTaskComplexAvoidEntity::ControlSubTask	MATCH		225 = 7.5*7.5*4 noise	
+0x632AA0	CTaskSimpleWaitForBus::ProcessPed	MATCH	0x632AA0-0x632B25	2.5e-05 = 0.005^2 noise	
+0x679510	CTaskComplexFallToDeath::ControlSubTask	MATCH		noise	
+0x659E90	CTaskComplexTreatAccident::CreateSubTask	MATCH	0x659E90-0x659FA6	partial (heading args not fully traced), 0.2 hint noise	
+0x6729C0	CTaskComplexGoToPointAnyMeans::CreateFirstSubTask	MATCH		inlined ctor noise	
+0x6728A0	CTaskComplexGoToPointAnyMeans::CreateNextSubTask	MATCH		noise	
+0x66C0D0	CTaskComplexGotoDoorAndOpen::CreateNextSubTask	MATCH	0x66C0D0-0x66C1D4	AddSubTasks/SetTaskSecondary inlining noise	
+0x67FC00	CTaskComplexJump::CreateNextSubTask	MATCH	0x67FC00-0x67FD0A	noise	
+0x59F5C0	CObject::LockDoor	MATCH		noise	
+0x6A35A0	CAutomobile::FixDoor	MATCH		noise	

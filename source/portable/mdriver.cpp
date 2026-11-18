@@ -11,6 +11,9 @@
 #include "CarCtrl.h"
 #include "Streaming.h"
 #include "Camera.h"
+#include "Game.h"
+#include "TimeCycle.h"
+#include "Tasks/TaskTypes/TaskSimpleHoldEntity.h"
 #include "scmtrace.h"
 #include "PedType.h"
 #include "PedGroups.h"
@@ -25,9 +28,11 @@
 #include <cstdlib>
 #include <vector>
 #include <map>
+#include <set>
 
 namespace notsa::mdriver {
 namespace {
+bool Generic();
 struct Cond { std::string expr, op; double val; };
 struct Step { std::string name; std::vector<Cond> conds; std::vector<std::string> actions; };
 std::vector<Step>        g_steps;
@@ -57,6 +62,30 @@ CEntryExit* FindEnex(const char* name, int area) {
         if (!std::strncmp(e.m_szName, name, 8) && (int)e.m_nArea == area) return &e;
     }
     return nullptr;
+}
+// AD3: interior-aware warps (generic mode only): the player's area after a warp to (x,y,z). z below the interior band -> 0; in the band the interior side (m_nArea != 0) entry exit nearest in 3D (< 120 m), else unchanged
+int AreaForPos(float x, float y, float z, int cur) {
+    if (z < 800.f) return 0;
+    CEntryExit* best = nullptr; float bd = 120.f;
+    for (auto& e : CEntryExitManager::GetPool()->GetAllValid()) {
+        if (e.m_nArea == 0) continue;
+        const auto c = e.GetPosition(); const float d = std::sqrt((c.x - x) * (c.x - x) + (c.y - y) * (c.y - y) + (c.z - z) * (c.z - z));
+        if (d < bd) { bd = d; best = &e; }
+    }
+    return best ? (int)best->m_nArea : cur;
+}
+// what CEntryExit::TransitionFinished does to the player once the area changes (area code, CGame::currArea, enex pointer + stack, visible objects, the held object)
+void SetPlayerArea(CPed* ped, int area, float x, float y, float z) {
+    if (!ped || (int)ped->GetAreaCode() == area) return;
+    CEntryExit* in = nullptr;
+    if (area != 0) { float bd = 1e9f; for (auto& e : CEntryExitManager::GetPool()->GetAllValid()) { if ((int)e.m_nArea != area) continue; const auto c = e.GetPosition(); const float d = (c.x - x) * (c.x - x) + (c.y - y) * (c.y - y) + (c.z - z) * (c.z - z); if (d < bd) { bd = d; in = &e; } } }
+    CGame::currArea = (eAreaCodes)area;
+    ped->SetAreaCode((eAreaCodes)area);
+    if (ped->m_pVehicle && ped->bInVehicle) ped->m_pVehicle->SetAreaCode((eAreaCodes)area);
+    if (auto* h = ped->GetEntityThatThisPedIsHolding()) h->SetAreaCode((eAreaCodes)area);
+    if (area == 0) { ped->m_pEnex = nullptr; CEntryExitManager::ms_entryExitStackPosn = 0; CTimeCycle::StopExtraColour(0); }
+    else if (in && in->m_pLink) { ped->m_pEnex = in->m_pLink; CEntryExitManager::AddEntryExitToStack(in->m_pLink); }
+    CEntryExitManager::SetAreaCodeForVisibleObjects();
 }
 CObject* FirstCrate(int lo, int hi) {
     for (int n = lo; n <= hi; n++) {
@@ -92,7 +121,12 @@ void Emit(const std::string& cmd) { // run an action through the replay path and
 }
 std::string F(double v) { char b[40]; std::snprintf(b, sizeof b, "%.9g", (double)(float)v); return b; }
 // the ped put at (x,y,z) with heading h (the player walked there)
-void PedTo(float x, float y, float z, float h, bool cam) { Emit("mdped:" + F(x) + ":" + F(y) + ":" + F(z) + ":" + F(h) + ":" + (cam ? "1" : "0")); }
+std::string AreaSuffix(float x, float y, float z, int forced = -1) { // generic mode: ":<area>" when the warp changes the player's area (recorded in the route line: replay needs no table)
+    auto* c = Cj(); if (!Generic() || !c) return "";
+    const int a = forced >= 0 ? forced : AreaForPos(x, y, z, (int)c->GetAreaCode());
+    return a != (int)c->GetAreaCode() ? ":" + std::to_string(a) : "";
+}
+void PedTo(float x, float y, float z, float h, bool cam) { Emit("mdped:" + F(x) + ":" + F(y) + ":" + F(z) + ":" + F(h) + ":" + (cam ? "1" : "0") + AreaSuffix(x, y, z)); }
 void StandBefore(float ex, float ey, float ez, float dist) { // ryder1_driver.ts standBefore: CJ `dist` m from the entity along the line from it to where he is now, facing it
     auto* c = Cj(); if (!c) return;
     float dx = c->GetPosition().x - ex, dy = c->GetPosition().y - ey;
@@ -108,6 +142,7 @@ void Dispatch(const std::string& line) { // one action (`wait` / `waituntil` onl
     else if (op == "pedwarp") { float x, y, z; ss >> x >> y >> z; PedTo(x, y, z, ped ? ped->GetHeading() : 0.f, false); }
     else if (op == "vehwarp") { float x, y, z; ss >> x >> y >> z; Emit("mdveh:" + F(x) + ":" + F(y) + ":" + F(z)); }
     else if (op == "standcrate") { int lo, hi; float d; ss >> lo >> hi >> d; if (auto* o = FirstCrate(lo, hi)) StandBefore(o->GetPosition().x, o->GetPosition().y, o->GetPosition().z, d); }
+    else if (op == "standobj") { int h; float d; ss >> h >> d; if (auto* o = CPools::GetObject(h)) StandBefore(o->GetPosition().x, o->GetPosition().y, o->GetPosition().z, d); } // AD3: generic crate pickup
     else if (op == "standdrop") { int lx, ly; float d; ss >> lx >> ly >> d; if (ped) StandBefore(LocF(lx), LocF(ly), ped->GetPosition().z - 0.3f, d); }
     else if (op == "standenex") { // entryExitWalk.ts standBeforeEntryExit; `link` = the linked (other side) entry exit
         std::string name, link; int area; float d; ss >> name >> area >> link >> d;
@@ -156,6 +191,7 @@ bool                     g_pass = false, g_fail = false;
 int                      g_passFrame = -1, g_failFrame = -1, g_killFrame = -1000000, g_killSettle = 0;
 int                      g_maxFrames = 30000;
 bool Generic() { static const bool g = std::getenv("NOTSA_MDRIVER_TABLE") != nullptr; return g; }
+std::set<std::pair<const uint8_t*, int>> g_tried; uint64_t g_sig = 0;
 const uint8_t*           g_loopCmd = nullptr; int g_loopRow = -1, g_loopN = 0;
 
 int GFrame() { return (int)(CTimer::GetFrameCounter() - g_frame0); }
@@ -254,7 +290,7 @@ void DispatchRow(const Row& row, const uint8_t* ip, int cop) { // run one table 
     auto F_ = [&](size_t i) -> float { if (i >= row.args.size()) return 0; const auto& a = row.args[i]; if (a[0] == '$') { const size_t n = (size_t)std::atoi(a.c_str() + 1); return n < dec.size() ? AF(dec[n]) : 0.f; } return (float)std::atof(a.c_str()); };
     auto I_ = [&](size_t i) -> int { if (i >= row.args.size()) return 0; const auto& a = row.args[i]; if (a[0] == '$') { const size_t n = (size_t)std::atoi(a.c_str() + 1); return n < dec.size() ? AI(dec[n]) : 0; } return std::atoi(a.c_str()); };
     auto* c = Cj(); const bool inCar = c && c->bInVehicle;
-    const auto warp = [&](float x, float y, float z, bool forceVeh) { return std::string((inCar || forceVeh) ? "emit mdveh:" : "emit mdped:") + F(x) + ":" + F(y) + ":" + F(z) + (inCar || forceVeh ? "" : ":0:0"); };
+    const auto warp = [&](float x, float y, float z, bool forceVeh, int area = -1) { return std::string((inCar || forceVeh) ? "emit mdveh:" : "emit mdped:") + F(x) + ":" + F(y) + ":" + F(z) + (inCar || forceVeh ? "" : ":0:0" + AreaSuffix(x, y, z, area)); };
     const std::string& v = row.action;
     if (v == "wait") { QueueActions({}, row.settle); return; }
     if (v == "pedwarp") { QueueActions({ warp(F_(0), F_(1), F_(2), false) }, row.settle); return; }
@@ -293,6 +329,9 @@ void DispatchRow(const Row& row, const uint8_t* ip, int cop) { // run one table 
         const int h = I_(0); CVector pos; bool ok = false;
         if (auto* p = CPools::GetPed(h)) { pos = p->GetPosition(); ok = true; } else if (auto* vv = CPools::GetVehicle(h)) { pos = vv->GetPosition(); ok = true; } else if (auto* o = CPools::GetObject(h)) { pos = o->GetPosition(); ok = true; }
         if (!ok) { QueueActions({}, row.settle); return; }
+        if (auto* o = CPools::GetObject(h); o && o->objectFlags.bIsLiftable && c && !c->GetEntityThatThisPedIsHolding()) { // AD3: a liftable object (crate): stand 1.5 m before it and press the pick-up key, as a player does
+            QueueActions({ "standobj " + std::to_string(h) + " 1.5", "wait 10", "key down return", "wait 1", "key up return", "wait 90" }, row.settle); return;
+        }
         QueueActions({ warp(pos.x + (std::getenv("NOTSA_MDRIVER_WARPOFF") ? (float)std::atof(std::getenv("NOTSA_MDRIVER_WARPOFF")) : 1.f), pos.y, pos.z + 0.5f, false) }, row.settle); return;
     }
     if (v == "failclass") { Stop(row.args.empty() ? "failclass" : row.args[0], cop, 0); return; }
@@ -336,6 +375,7 @@ void TickGeneric() {
     g_sameCount = 0; g_lastIp = nullptr;
     // candidates: conditions evaluated false in the last pass of the loop, latest first; the first row in file order that matches any of them wins; kill rows of guards are skipped
     int bestRow = -1, bestOp = -1; size_t bestRec = 0, lastCand = SIZE_MAX;
+    struct Cand { int row; size_t rec; int op; }; std::vector<Cand> cands;
     for (size_t k = g_last.size(); k-- > 0;) {
         const auto& r = g_last[k]; if (r.cond != 0) continue;
         const int op = r.raw & 0x7FFF; const bool notForm = (r.raw & 0x8000) != 0;
@@ -343,9 +383,19 @@ void TickGeneric() {
         for (size_t i = 0; i < g_rows.size(); i++) {
             const auto& w = g_rows[i]; if (w.op != op || !(w.match == 0 || (w.match == 2) == notForm)) continue;
             if (w.action == "kill") { auto h = DecodeArgs(g_thread, r.p, 1); if (h.empty() || !RealWait(k) || !KillAllowed(AI(h[0]), op == 0x0119)) continue; }
-            if (bestRow < 0 || (int)i < bestRow) { bestRow = (int)i; bestOp = op; bestRec = k; }
+            cands.push_back({ (int)i, k, op });
             break;
         }
+    }
+    { // AD3 rotation: a (command, row) pair that was already tried since the pass signature (commands + answers of the last pass) last changed is skipped while an untried candidate exists (the table's first-in-file row can be a false blocker)
+        uint64_t sig = 1469598103934665603ull; for (auto& r : g_last) { sig = (sig ^ (uint64_t)(uintptr_t)r.p) * 1099511628211ull; sig = (sig ^ (uint64_t)(r.cond + 2)) * 1099511628211ull; }
+        if (sig != g_sig) { g_tried.clear(); g_sig = sig; }
+        static const bool latest = std::getenv("NOTSA_MDRIVER_LATEST") != nullptr; // AD3 experiment: the latest false condition of the pass wins instead of the first row in file order
+        for (int pass = 0; pass < 2 && bestRow < 0; pass++) for (auto& cd : cands) {
+            if (pass == 0 && g_tried.count({ g_last[cd.rec].p, cd.row })) continue;
+            if (bestRow < 0 || (latest ? cd.rec > bestRec : cd.row < bestRow)) { bestRow = cd.row; bestOp = cd.op; bestRec = cd.rec; }
+        }
+        if (bestRow >= 0) g_tried.insert({ g_last[bestRec].p, bestRow });
     }
     if (bestRow < 0) {
         if (lastCand == SIZE_MAX) { Stop("unhandled nocond", -1, at); return; }
@@ -385,7 +435,7 @@ bool Cmd(const char* name, const std::string& args) {
     if (!std::strcmp(name, "mdkillcar")) { if (auto* k = CPools::GetVehicle(std::atoi(args.c_str()))) k->BlowUpCar(nullptr, false); return true; }
     if (!std::strcmp(name, "mdkey")) { const auto c = args.find(':'); if (g_push) g_push(args.c_str() + c + 1, args.compare(0, c, "down") == 0); return true; }
     if (!ped) return true;
-    float a[5]{}; std::sscanf(args.c_str(), "%f:%f:%f:%f:%f", a, a + 1, a + 2, a + 3, a + 4);
+    float a[6]{}; a[5] = -1.f; std::sscanf(args.c_str(), "%f:%f:%f:%f:%f:%f", a, a + 1, a + 2, a + 3, a + 4, a + 5);
     CVector p{ a[0], a[1], a[2] };
     if (p.z <= -100.f) { CStreaming::LoadScene(CVector{ p.x, p.y, 0.f }); CStreaming::LoadSceneCollision(CVector{ p.x, p.y, 0.f }); p.z = CWorld::FindGroundZForCoord(p.x, p.y) + 1.0f; } // z <= -100 = the ground (SET_CHAR_COORDINATES convention)
     CStreaming::LoadScene(p); CStreaming::LoadSceneCollision(p);
@@ -396,6 +446,7 @@ bool Cmd(const char* name, const std::string& args) {
         ped->m_fCurrentRotation = ped->m_fAimingRotation = a[3];
         ped->SetHeading(a[3]);
         CWorld::Add(ped);
+        if (a[5] >= 0.f) SetPlayerArea(ped, (int)a[5], p.x, p.y, p.z);
         if (a[4] != 0.f) { TheCamera.SetCameraDirectlyBehindForFollowPed_CamOnAString(); TheCamera.RestoreWithJumpCut(); }
         return true;
     }

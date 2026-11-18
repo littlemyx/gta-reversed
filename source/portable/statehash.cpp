@@ -26,6 +26,12 @@
 #include <cstring>
 
 #include "Pools/Pools.h"
+#include "Tasks/TaskTypes/TaskComplexCarDrive.h"
+#include "Tasks/TaskTypes/TaskComplexDriveWander.h"
+#include "Tasks/TaskTypes/TaskSimpleCarDrive.h"
+#include "Tasks/TaskTypes/TaskSimpleCarDriveTimed.h"
+#include "Tasks/TaskManager.h"
+#include <format>
 #include "Wanted.h"
 #include "Bike.h"
 #include "Automobile.h"
@@ -256,6 +262,96 @@ void WriteHeader(uint32_t seed) {
     std::fflush(g_f);
 }
 
+// ---------------------------------------------------------------- SH4 NOTSA_SH_VEHLOG=<file>: unhashed vehicle + occupant dump at recorded frames 0 and 1 (see veh_f0.README.md next to the log)
+// Rows: `frame randCount V ...` per vehicle (pool slot order), `frame randCount O ...` per occupant (driver, then passengers). key=value tokens, floats %.9g, ints decimal.
+void VehLogRows(uint32_t frame) {
+    static FILE* f = [] {
+        const char* p = std::getenv("NOTSA_SH_VEHLOG");
+        FILE* h = p && p[0] ? std::fopen(p, "w") : nullptr;
+        if (h) { std::fprintf(h, "# frame randCount V|O key=value... (see veh_f0.README.md); written after the frame-0/1 statehash line\n"); }
+        return h;
+    }();
+    if (!f || frame > 1) return;
+    const unsigned long long rc = (unsigned long long)RandCount();
+    const auto NA = [](const CNodeAddress& a) { return std::format("{}.{}", (int)a.m_wAreaId, (int)a.m_wNodeId); };
+    const auto LA = [](const CCarPathLinkAddress& a) { return std::format("{}.{}", (int)a.m_wAreaId, (int)a.m_wCarPathLinkId); };
+    const auto Name = [](int id) { auto* mi = id >= 0 ? CModelInfo::GetModelInfo(id) : nullptr; return mi ? mi->GetModelNameAsString() : std::string("-"); };
+    const auto Vec = [](const CVector& v) { return std::format("{:.9g},{:.9g},{:.9g}", v.x, v.y, v.z); };
+    const auto Slot = [](CPed* p) { return p ? (int)GetPedPool()->GetIndex(p) : -1; };
+    auto* pool = GetVehiclePool();
+    if (!pool) return;
+    for (size_t i = 0, sz = (size_t)pool->GetSize(); i < sz; i++) {
+        auto* v = pool->GetAt(i);
+        if (!v) continue;
+        const auto& ap = v->m_autoPilot;
+        std::string pn;
+        for (auto& n : ap.m_aPathFindNodesInfo) { pn += NA(n) + ","; }
+        std::string s = std::format("{} {} V slot={} sid={} model={} name={} r={} f={} u={} p={} createdBy={} status={} randomSeed={} forcedRandomRouteSeed={} col={},{},{},{} doorLock={} hp={:.9g} creationTime={} "
+            "mv={} tv={} gas={:.9g} brk={:.9g} steer={:.9g} drv={} npass={} ",
+            frame, rc, i, StableId(v), (int)v->m_nModelIndex, Name(v->m_nModelIndex), Vec(v->GetRight()), Vec(v->GetForward()), Vec(v->GetUp()), Vec(v->GetPosition()), (int)v->m_nCreatedBy, (int)v->GetStatus(), (unsigned)v->m_nRandomSeed, (int)v->m_nForcedRandomRouteSeed,
+            (int)v->m_nPrimaryColor, (int)v->m_nSecondaryColor, (int)v->m_nTertiaryColor, (int)v->m_nQuaternaryColor, (int)v->m_nDoorLock, v->m_fHealth, (unsigned)v->m_nCreationTime,
+            Vec(v->m_vecMoveSpeed), Vec(v->m_vecTurnSpeed), v->m_GasPedal, v->m_BrakePedal, v->m_fSteerAngle, Slot(v->m_pDriver), (int)v->m_nNumPassengers);
+        s += std::format("ap.currentAddress={} ap.startingRouteNode={} ap.endingRouteNode={} ap.field_C={} ap.speedScaleFactor={} ap.curLink={} ap.nextLink={} ap.prevLink={} ap.smthPrev={} ap.smthCurr={} ap.smthNext={} ap.curLane={} ap.nextLane={} ",
+            NA(ap.m_currentAddress), NA(ap.m_startingRouteNode), NA(ap.m_endingRouteNode), (int)ap.field_C, (unsigned)ap.m_nSpeedScaleFactor, LA(ap.m_nCurrentPathNodeInfo), LA(ap.m_nNextPathNodeInfo), LA(ap.m_nPreviousPathNodeInfo),
+            (int)ap._smthPrev, (int)ap._smthCurr, (int)ap._smthNext, (int)ap.m_nCurrentLane, (int)ap.m_nNextLane);
+        s += std::format("ap.drivingStyle={} ap.carMission={} ap.tempAction={} ap.tempActionTime={} ap.lastUpdateTimeMs={} ap.tempActionMode={} ap.carMissionModeCounter={} ap.timeToStartMission={} ap.timeSwitchedToRealPhysics={} ",
+            (int)ap.m_nCarDrivingStyle, (int)ap.m_nCarMission, (int)ap.m_nTempAction, (unsigned)ap.m_nTempActionTime, (unsigned)ap.m_LastUpdateTimeMs, (int)ap.m_ucTempActionMode, (int)ap.m_ucCarMissionModeCounter, (unsigned)ap.m_nTimeToStartMission, (unsigned)ap.m_nTimeSwitchedToRealPhysics);
+        s += std::format("ap.speed={:.9g} ap.maxTrafficSpeed={:.9g} ap.cruiseSpeed={} ap.speedMult={:.9g} ap.heliTargetDist={} ap.heliSpeedMult={} ap.carCtrlFlags={} ap.movementFlags={} ap.straightLineDistance={} ap.carFollowDist={} ap.heliTargetDist2={} ",
+            ap.m_speed, ap.m_fMaxTrafficSpeed, (int)ap.m_nCruiseSpeed, ap.m_SpeedMult, (int)ap.m_ucHeliTargetDist, (int)ap.m_ucHeliSpeedMult, (int)ap.m_nCarCtrlFlags, (int)ap.m_nMovementFlags, (int)ap.m_nStraightLineDistance, (int)ap.m_ucCarFollowDist, (int)ap.m_ucHeliTargetDist2);
+        s += std::format("ap.dest={} ap.pathNodesCount={} ap.pathNodes={} ap.targetEntity={} ap.obstructingEntity={} ap.recordingId={} ap.planeDogfight={} ap.field_96={}\n",
+            Vec(ap.m_vecDestinationCoors), (int)ap.m_nPathFindNodesCount, pn, ap.m_TargetEntity ? (int)GetVehiclePool()->GetIndex(ap.m_TargetEntity) : -1, ap.m_ObstructingEntity ? (int)StableId(ap.m_ObstructingEntity) : -1,
+            (int)ap.m_vehicleRecordingId, (int)ap.m_bPlaneDogfightSomething, (int)ap.field_96);
+        std::fputs(s.c_str(), f);
+        const auto Occ = [&](CPed* ped, const std::string& seat) {
+            if (!ped) return;
+            auto* im = ped->GetIntelligence();
+            std::string o = std::format("{} {} O veh={} seat={} slot={} sid={} model={} name={} pedType={} createdBy={} randomSeed={} dmType={} dmTypeInGroup={} hp={:.9g} pos={} bInVehicle={} ", frame, rc, i, seat, Slot(ped), StableId(ped), (int)ped->m_nModelIndex, Name(ped->m_nModelIndex),
+                (int)ped->m_nPedType, (int)ped->GetCreatedBy(), (unsigned)ped->m_nRandomSeed, im->m_nDecisionMakerType, im->m_nDecisionMakerTypeInGroup, ped->m_fHealth, Vec(ped->GetPosition()), (int)ped->bInVehicle);
+            auto& tm = im->GetTaskManager();
+            o += "primary=";
+            for (int slotI = 0; slotI < TASK_PRIMARY_MAX; slotI++) {
+                o += std::format("{}:", slotI);
+                int n = 0;
+                for (auto* t = tm.GetTaskPrimary(slotI); t && n < 12; t = t->GetSubTask(), n++) { o += std::format("{}{}", n ? ">" : "", (int)t->GetTaskType()); }
+                if (!tm.GetTaskPrimary(slotI)) { o += "-"; }
+                o += slotI + 1 < TASK_PRIMARY_MAX ? "," : "";
+            }
+            o += " secondary=";
+            for (int slotI = 0; slotI < TASK_SECONDARY_MAX; slotI++) {
+                auto* t = tm.GetTaskSecondary((eSecondaryTask)slotI);
+                o += std::format("{}:{}{}", slotI, t ? (int)t->GetTaskType() : -1, slotI + 1 < TASK_SECONDARY_MAX ? "," : "");
+            }
+            // every field of the car-drive task classes found anywhere in the primary chains
+            for (int slotI = 0; slotI < TASK_PRIMARY_MAX; slotI++) {
+                for (auto* t = tm.GetTaskPrimary(slotI); t; t = t->GetSubTask()) {
+                    const auto ty = t->GetTaskType();
+                    const auto Drive = [&](CTaskComplexCarDrive* d, const char* nm) {
+                        o += std::format(" [{} veh={} cruiseSpeed={:.9g} desiredModel={} drivingStyle={} asDriver={} origStyle={} origMission={} origSpeed={} carSetUp={}]", nm, d->m_Veh ? (int)GetVehiclePool()->GetIndex(d->m_Veh) : -1, d->m_CruiseSpeed, (int)d->m_DesiredCarModel,
+                            (int)d->m_CarDrivingStyle, (int)d->m_bAsDriver, (int)d->m_OriginalDrivingStyle, (int)d->m_OriginalMission, (int)d->m_OriginalSpeed, (int)d->m_bIsCarSetUp);
+                    };
+                    if (ty == TASK_COMPLEX_CAR_DRIVE) { Drive(static_cast<CTaskComplexCarDrive*>(t), "CarDrive"); }
+                    else if (ty == TASK_COMPLEX_CAR_DRIVE_WANDER) { Drive(static_cast<CTaskComplexCarDriveWander*>(t), "CarDriveWander"); }
+                    else if (ty == TASK_SIMPLE_CAR_DRIVE || ty == TASK_SIMPLE_CAR_DRIVE_TIMED) {
+                        auto* d = static_cast<CTaskSimpleCarDrive*>(t);
+                        const auto Tm = [](const CTaskTimer& x) { return std::format("{}/{}/{}/{}", (unsigned)x.m_nStartTime, (int)x.m_nInterval, (int)x.m_bStarted, (int)x.m_bStopped); };
+                        o += std::format(" [SimpleCarDrive{} veh={} noDriverTimer={} boppingStartTime={} field_24={} boppingEndTime={} boppingProgress={:.9g} boppingCompletedTimes={} headBoppingStartTime={} headBoppingDirection={} headBoppingOrientation={:.9g} randomHeadBoppingMultiplier={:.9g} headBoppingFactor={:.9g} armBoppingStartTime={} timePassedSinceCarUpSideDown={} copCarStolenTimer={} flags={}",
+                            ty == TASK_SIMPLE_CAR_DRIVE_TIMED ? "Timed" : "", d->m_pVehicle ? (int)GetVehiclePool()->GetIndex(d->m_pVehicle) : -1, Tm(d->m_NoDriverTimer), d->m_nBoppingStartTime, d->field_24, d->m_nBoppingEndTime, d->m_fBoppingProgress, d->m_nBoppingCompletedTimes,
+                            d->m_nHeadBoppingStartTime, d->m_nHeadBoppingDirection, d->m_fHeadBoppingOrientation, d->m_fRandomHeadBoppingMultiplier, d->m_fHeadBoppingFactor, d->m_nArmBoppingStartTime, d->m_nTimePassedSinceCarUpSideDown, Tm(d->m_copCarStolenTimer),
+                            (int)d->m_bHeadBopping | ((int)d->m_bArmBopping << 1) | ((int)d->m_bUpdateCurrentVehicle << 2) | ((int)d->m_b08 << 3) | ((int)d->m_bPassengerAnimBlended << 4) | ((int)d->m_bClosingDoor << 5));
+                        if (ty == TASK_SIMPLE_CAR_DRIVE_TIMED) { auto* td = static_cast<CTaskSimpleCarDriveTimed*>(t); o += std::format(" time={} timer={}", td->m_nTime, Tm(td->m_nTimer)); }
+                        o += "]";
+                    }
+                }
+            }
+            o += "\n";
+            std::fputs(o.c_str(), f);
+        };
+        Occ(v->m_pDriver, "driver");
+        for (int p = 0; p < (int)v->m_apPassengers.size(); p++) { Occ(v->m_apPassengers[p], std::to_string(p)); }
+    }
+    std::fflush(f);
+}
+
 // ---------------------------------------------------------------- the per-frame record
 void Record() {
     const bool detail = (g_frame >= Cfg().detailFrom && g_frame <= Cfg().detailTo);
@@ -337,6 +433,7 @@ void Record() {
             HE(peds.acc).c_str(), HE(vehs.acc).c_str(), HE(objs.acc).c_str(), HE(all).c_str());
         std::fflush(g_sh);
     }
+    VehLogRows(g_frame); // SH4 NOTSA_SH_VEHLOG: after the statehash line of frames 0/1
     if (dumpFrame && !dumpRows.empty()) {
         if (!g_dumpF) { g_dumpF = std::fopen(sh.dumpFile.c_str(), "w"); }
         if (g_dumpF) { std::fwrite(dumpRows.data(), 1, dumpRows.size(), g_dumpF); std::fflush(g_dumpF); }

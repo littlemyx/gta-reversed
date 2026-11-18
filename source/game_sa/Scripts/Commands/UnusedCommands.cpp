@@ -10,6 +10,12 @@
 */
 
 namespace {
+/// 0x18D ADD_CONTINUOUS_SOUND (case @0x47D07D): CollectParameters(4), then StoreParameters(1) => writes ScriptParams[0] (the raw first argument) to the 5th (output) variable.
+/// No sound is created (the "handle" is just the first argument's bits).
+uint32 AddContinuousSound(float x, float y, float z, uint32 type) { // x y z are float immediates in the scripts (a uint32 reader would DebugBreak on them)
+    return std::bit_cast<uint32>(x);
+}
+
 
 /// Debug / unused commands whose exe case (CRunningScript::ProcessCommandsNNNNToMMMM) consumes its arguments in a way the typed parser cannot express
 /// (a text label where the old NOP read a uint32 and asserted on the string tag, raw bytes) or sets the compare flag.
@@ -61,7 +67,7 @@ void notsa::script::commands::unused::RegisterHandlers() {
 
     REGISTER_COMMAND_HANDLER(COMMAND_GET_LATEST_CONSOLE_COMMAND, GetLatestConsoleCommand);
     REGISTER_COMMAND_NOP(COMMAND_ACTIVATE_INTERIORS);
-    REGISTER_COMMAND_NOP(COMMAND_ADD_CONTINUOUS_SOUND, uint32, uint32, uint32, uint32, uint32);
+    REGISTER_COMMAND_HANDLER(COMMAND_ADD_CONTINUOUS_SOUND, AddContinuousSound);
     REGISTER_COMMAND_NOP(COMMAND_ADD_FLOAT_TO_VAR_CONSOLE);
     REGISTER_COMMAND_NOP(COMMAND_ADD_INT_TO_VAR_CONSOLE);
     REGISTER_COMMAND_NOP(COMMAND_ADD_INTERESTING_ENTITY_FOR_CHAR);
@@ -270,7 +276,7 @@ void notsa::script::commands::unused::RegisterHandlers() {
     REGISTER_COMMAND_NOP(COMMAND_STOP_RECORDING_CARS);
     REGISTER_COMMAND_NOP(COMMAND_STORE_CAR_IN_NEAREST_IMPOUNDING_GARAGE);
     REGISTER_COMMAND_NOP(COMMAND_STREAM_SCRIPT_INTERNAL);
-    REGISTER_COMMAND_NOP(COMMAND_SWITCH_RUBBISH, uint32);
+    REGISTER_COMMAND_NOP(COMMAND_SWITCH_RUBBISH, uint32); // exe case @0x48475A: CollectParameters(1), CRubbish::SetVisibility(param != 0) = 0x7204C0 which is a bare `ret` => a true NOP
     REGISTER_COMMAND_NOP(COMMAND_SWITCH_SEARCHLIGHT_BULB);
     REGISTER_COMMAND_NOP(COMMAND_SWITCH);
     REGISTER_COMMAND_NOP(COMMAND_TASK_CAR_DRIVE);

@@ -1,0 +1,20 @@
+addr	function	verdict	asm range	note	fix commit
+0x657AF0	CTaskComplexHitPedWithCar::CreateNextSubTask	MATCH (review of 4b43a2a6c: CONFIRMED)	0x657AF0-0x657B53	finish on 502/200/208/414/506; 507 -> null if [task+0x10] (WillKillPed) else FALL_AND_GET_UP(208); hit-side table 0x6562E4 -> 26/25/24/27 ok	
+0x6705D0	CTaskComplexGoToPointAnyMeans::CreateSubTask	MATCH (follow-node tail CONFIRMED)	0x6705D0-0x670825	FollowNodeRoute(moveState,pos,radius,3.0 @0x86FCA4,2.0 @0x86FCA8,false,-1,true); StandStill(...,2.0 @0x86FC88,0,0); DriveToPoint/LeaveCar/EnterCar/CreateCarAndGetIn args ok	
+0x6381A0	CTaskComplexSunbathe::ControlSubTask	MATCH	0x6381A0-0x63829x	beach/sunbathe block refs, ped flags, timer pause, MakeAbortable(0,0)	
+0x628DA0	CTaskComplexDestroyCarArmed::CreateSubTask	MATCH	0x628DA0-0x628F89	all ctor args incl. SeekEntity consts, GunControl(veh,0,0,3,5,5000)	
+0x6908E0	CTaskComplexPolicePursuit::CreateFirstSubTask	MATCH	0x6908E0-0x690920		
+0x62F6E0	CTaskSimpleDuckToggle::ProcessPed	MATCH	0x62F6E0-0x62F8AC	mode tests, duck/UseGun/SetTaskSecondary args	
+0x66B1B0	CTaskComplexWanderCop::LookForCarAlarms	NOISE	0x66B1B0-0x66B28A	checks identical; dist^2 sum order z,x,y in x87 vs port x,y,z float (only at the 20m boundary)	
+0x691320	CTaskSimpleAffectSecondaryBehaviour::ProcessPed	MATCH	0x691320-0x691396		
+0x62E0A0	CTaskComplexDestroyCarArmed::CreateFirstSubTask	MATCH	0x62E0A0-0x62E160		
+0x62DF20	CTaskComplexDestroyCarArmed::CreateNextSubTask	MATCH	0x62DF20-0x62E08E	type dispatch and range^2 compare verified	
+0x624DC0	CTaskSimpleUseGun::Reset	MATCH	0x624DC0-0x624E2A		
+0x671800	CTaskComplexFollowNodeRoute::CreateFirstSubTask	MATCH	0x671800-0x6718B8		
+0x6718D0	CTaskComplexFollowNodeRoute::CreateNextSubTask	MATCH	0x6718D0-0x671996	head (timer/StandStill/LeaveCar) verified; tail not traced	
+0x68CF80	CTaskComplexArrestPed::CreateSubTask	MATCH	0x68CF80-0x68D29A	ctor args, seek radius 3/4 (0x87097C/0x870980), handbrake + status 9	
+0x67D230	CTaskComplexInAirAndLand::ControlSubTask	MATCH	0x67D230-0x67D32x	Climb args ok; (1.4-0.3) compare in float vs x87 = noise	
+0x5DEF60	CPed::GetLocalDirection	MATCH	0x5DEF60-0x5DEFD5		
+0x63A690	CTaskComplexEnterCar::GetCameraAvoidVehicle	MATCH	0x63A690-0x63A72B	all 16 task types verified numerically	
+0x68D910	CTaskComplexPolicePursuit::CreateSubTask	MATCH	0x68D910-0x68DA54	StandStill defaults = (0,0,0,8.0); seek radius = boundRadius+1.0	
+0x67A390	CTaskSimpleClimb::GetCameraTargetPos	NOT_REACHED	0x67A390-0x67A5C0	lerp/constant order not traced	

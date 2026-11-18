@@ -496,6 +496,25 @@ auto IsCharInArea3D(CRunningScript& S, CPed& ped, CVector a, CVector b, bool hig
 }
 
 /*
+ * @opcode 01A6, 01A7
+ * @command IS_CHAR_IN_AREA_ON_FOOT_3D, IS_CHAR_IN_AREA_IN_CAR_3D
+ * @class Char
+ *
+ * @brief Compare flag: the char is inside the 3D box and on foot (01A6) / in a vehicle (01A7)
+ *
+ * @param {Char} self
+ * @param {Vector} leftBottom
+ * @param {Vector} rightTop
+ * @param {bool} drawSphere
+ */
+// Exe: shared case @0x47D2AD (push cmd id, call at 0x47D2B0; the only caller) -> CRunningScript::CharInAreaCheckCommand(commandId) 0x488B50 (collects 8 params itself, UpdateCompareFlag,
+// HighlightImportantArea when the flag is set); the helper is already ported in RunningScript.cpp.
+OpcodeResult IsCharInAreaOnFootOrInCar3D(CRunningScript& S, eScriptCommands command) {
+    S.CharInAreaCheckCommand((int32)command);
+    return OR_CONTINUE;
+}
+
+/*
  * @opcode 00D9
  * @command STORE_CAR_CHAR_IS_IN
  * @class Char
@@ -4353,8 +4372,8 @@ void notsa::script::commands::character::RegisterHandlers() {
     REGISTER_COMMAND_UNIMPLEMENTED(COMMAND_IS_CHAR_STOPPED_IN_AREA_2D);
     REGISTER_COMMAND_UNIMPLEMENTED(COMMAND_IS_CHAR_STOPPED_IN_AREA_ON_FOOT_2D);
     REGISTER_COMMAND_UNIMPLEMENTED(COMMAND_IS_CHAR_STOPPED_IN_AREA_IN_CAR_2D);
-    REGISTER_COMMAND_UNIMPLEMENTED(COMMAND_IS_CHAR_IN_AREA_ON_FOOT_3D);
-    REGISTER_COMMAND_UNIMPLEMENTED(COMMAND_IS_CHAR_IN_AREA_IN_CAR_3D);
+    REGISTER_COMMAND_HANDLER(COMMAND_IS_CHAR_IN_AREA_ON_FOOT_3D, IsCharInAreaOnFootOrInCar3D);
+    REGISTER_COMMAND_HANDLER(COMMAND_IS_CHAR_IN_AREA_IN_CAR_3D, IsCharInAreaOnFootOrInCar3D);
     REGISTER_COMMAND_UNIMPLEMENTED(COMMAND_IS_CHAR_STOPPED_IN_AREA_3D);
     REGISTER_COMMAND_UNIMPLEMENTED(COMMAND_IS_CHAR_STOPPED_IN_AREA_ON_FOOT_3D);
     REGISTER_COMMAND_UNIMPLEMENTED(COMMAND_IS_CHAR_STOPPED_IN_AREA_IN_CAR_3D);

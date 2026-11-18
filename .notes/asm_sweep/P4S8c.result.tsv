@@ -1,0 +1,11 @@
+addr	function	verdict	asm range	note	fix commit
+0x6862FE	CTaskSimplePlayerOnFoot::ProcessPlayerWeapon (6fae2687b)	MATCH	0x6862FE-0x686327,0x686AEB-0x686BEA	reload skip condition, target intelligence confirmed	-
+0x490F46/0x4927D3	TASK_KILL_CHAR_ON_FOOT/_WHILE_DUCKING + GivePedScriptedTask(int32) (b4f4a81ef)	MATCH	group15 0x490DB0 cases; 0x465C20	ctor arg order, handle passed raw confirmed	-
+0x47D2AD	IS_CHAR_IN_AREA_ON_FOOT_3D/IN_CAR_3D (4faa7895d)	MATCH	0x47D2AD,0x488B50	all 0x1A3-0x1AA share the case, 8 params for >0x1A5	-
+0x483C11	PRINT_STRING_IN_STRING_NOW (cb6c42801)	MATCH	0x483C11-0x483C87	arg order/flag u16/bAdd confirmed	-
+0x4668BE	COMMAND_LINE (00bb03a2c)	MATCH	0x4668BE	CollectParameters(6) only	-
+0x47D07D	ADD_CONTINUOUS_SOUND (e20d2d6b5)	MATCH	0x47D07D	stores raw param0	-
+0x48475A	SWITCH_RUBBISH	MATCH	0x48475A,0x7204C0	true NOP	-
+0x6D8B1D	CVehicle::FlyingControlModel1345 (inputs, throttle, thrust, drag, yaw, roll, rollstab, pitch, lift)	MATCH	0x6D8B1D-0x6D9869	-	-
+0x6DA900	CVehicle::FlyingControl Drag + clamps + epilogue	MATCH	0x6DA900-0x6DAEE1	-	-
+0x6D986A	CVehicle::FlyingControlModel268	NOT_REACHED	0x6D986A-0x6DA8FF	budget	-

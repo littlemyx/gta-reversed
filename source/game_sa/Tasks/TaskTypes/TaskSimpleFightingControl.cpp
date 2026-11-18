@@ -162,7 +162,10 @@ bool CTaskSimpleFightingControl::MakeAbortable(CPed* ped, eAbortPriority priorit
                 }();
 
                 // Check if vector are opposing each other with 45deg tolerance
-                if (-DotProduct(Normalized(m_target->GetPosition() - ped->GetPosition()), impactNormal) < SQRT_2 / 2) {
+                // 0x61DDE2: dot is summed y, z, x on the x87 stack; the threshold is the float 0.707104981 (0x863C1C), not sqrt(2)/2
+                const CVector dir = Normalized(m_target->GetPosition() - ped->GetPosition());
+                const x87d dot = (x87d)dir.y * impactNormal.y + (x87d)dir.z * impactNormal.z + (x87d)dir.x * impactNormal.x;
+                if (-dot < (x87d)0.707104981f) {
                     return false; // They aren't
                 }
             }

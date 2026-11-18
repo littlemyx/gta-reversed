@@ -1,0 +1,14 @@
+addr	function	verdict	asm range	note	fix commit
+0x6D85F0	CVehicle::FlyingControlModel268 (in FlyingControl)	MATCH	0x6D986E-0x6DA8FF	model 8 autogyro (thrust, rotor spin, tilt lift), heli/hydra thrust, wind stabilisation clamps, pad inputs (normal + heliControlsCheat), min-tilt scaling, pitch/roll torques, side drag, yaw, roll all instruction-compared	-
+0x5442F0	CPhysical::DettachEntityFromEntity	MATCH	0x5442F0-0x5446A0	col-model ignore test, matrix multiply order, object mass handling, move speed + turn force	-
+0x5E4C50	CPed::CalculateNewVelocity	MATCH	0x5E4C50-0x5E52D8	heading turn, moveAnim, slope pitch/roll (both flag branches), anim moving shift	-
+0x6930F0	CTaskSimpleHoldEntity::DropEntity	MATCH	0x6930F0-0x693440	temp object path, speed/rand throw, TestCollision, sound-quiet event, reposition	-
+0x65F930	CTaskComplexTrackEntity::CalcMoveRatio	MATCH	0x65F930-0x65FAA3	statics, range ladder, clamp, 0.2 step	-
+0x62BC10	CTaskComplexKillPedOnFootMelee::CreateNextSubTask	NOT_REACHED	-	budget	-
+0x66EBE0	CTaskComplexFollowNodeRoute::CalcGoToTaskType	NOT_REACHED	-	budget	-
+0x695E40	CTaskComplexFollowPedFootsteps::CreateSubTask	NOT_REACHED	-	budget	-
+0x62E3F0	CTaskComplexRoadRage::ControlSubTask	NOT_REACHED	-	budget	-
+0x6A1460	CAutomobile::UpdateMovingCollision	NOT_REACHED	-	budget	-
+0x6D6640	CVehicle::SpecialEntityPreCollisionStuff	NOT_REACHED	-	budget	-
+-	CEventHandler::Compute*Response rows (P4S2)	NOT_REACHED	-	budget	-
+-	CTheScripts rows (P4S2)	NOT_REACHED	-	budget	-

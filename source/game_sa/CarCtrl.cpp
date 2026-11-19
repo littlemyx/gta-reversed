@@ -5321,14 +5321,26 @@ VALIDATE_OFFSET(CVehicle, m_BrakePedal, 0x4A0);
 VALIDATE_OFFSET(CVehicle, m_nRandomSeed, 0x20);
 VALIDATE_OFFSET(CBmx, m_fControlPedaling, 0x818);
 
-//! Limits the steering angle to +-`FindMaxSteerAngle`
+//! 0x427FE0 - the original returns the result in st0 without rounding it to float: 0.2f if |speed| > 0.7f, otherwise min(0.9f - |speed|, 0.7f).
+//! x87: |speed| is sqrt(x*x + y*y + z*z) kept in extended precision
+static x87d FindMaxSteerAngleOriginal(CVehicle* vehicle) {
+    const auto& spd = vehicle->m_vecMoveSpeed;
+    const auto  mag = std::sqrt(((x87d)spd.x * spd.x + (x87d)spd.y * spd.y) + (x87d)spd.z * spd.z);
+    if (mag > 0.7f) { // 0x858CB0
+        return 0.2f;  // 0x858CC4
+    }
+    const auto v = (x87d)0.9f - mag; // 0x858C20
+    return 0.7f < v ? (x87d)0.7f : v;
+}
+
+//! Limits the steering angle to +-`FindMaxSteerAngle` (exe 0x4352AB..0x4352C0: the compares and the clamp value use the unrounded x87 result)
 static float ClampSteerToMax(CVehicle* vehicle, float steer) {
-    const auto maxSteer = CCarCtrl::FindMaxSteerAngle(vehicle);
+    const auto maxSteer = FindMaxSteerAngleOriginal(vehicle);
     if (steer < -maxSteer) {
-        steer = -maxSteer;
+        steer = (float)-maxSteer;
     }
     if (steer > maxSteer) {
-        steer = maxSteer;
+        steer = (float)maxSteer;
     }
     return steer;
 }
@@ -8320,7 +8332,7 @@ void CCarCtrl::WeaveThroughObjectsSectorList(CPtrListDoubleLink<CObject*>& ptrLi
 
 // 0x427FE0
 float CCarCtrl::FindMaxSteerAngle(CVehicle* veh) {
-    return std::clamp(0.9f - veh->GetMoveSpeed().Magnitude(), 0.2f, 0.7f);
+    return (float)FindMaxSteerAngleOriginal(veh);
 }
 
 //

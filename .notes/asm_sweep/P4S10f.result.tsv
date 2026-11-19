@@ -1,0 +1,27 @@
+addr	function	verdict	asm range	note	fix commit
+0x67A390	CTaskSimpleClimb::GetCameraTargetPos	MATCH (review of 21e504b05: CONFIRMED)	0x67A390-0x67A59F	jump table 121/134 vault, 130 pull, 131 stand, 132 standup, 133 jump-B; blend from*(1-t)+to*t per component matches 0x67A3F6/437/475; sin/cos offsets noise	
+0x671800	CTaskComplexFollowNodeRoute::CreateFirstSubTask	FIXED (62c55cdd2 CONFIRMED + new bug)	0x671800-0x6718D0	flag clear removal confirmed; CalcGoToTaskType condition was inverted (exe calls it when flag 8 = m_bUseBlending is SET)	2b8fe6ef1
+0x6718D0	CTaskComplexFollowNodeRoute::CreateNextSubTask	FIXED	0x6718D0-0x671AB0	full read; GO_TO_POINT_FINE (0x39e) shares the GO_TO_POINT advance block (port returned nullptr); Calc condition inverted (same fix as above)	17cb1b369 + 2b8fe6ef1
+0x62DF20	CTaskComplexDestroyCarArmed::CreateNextSubTask	MATCH	0x62DF20-0x62E090	full read: pause branch dist^2 >= range^2 => pause else gun, 0x3fd/0x516 tails	
+0x5E7B70	CPed::FlagToDestroyWhenNextProcessed	MATCH	0x5E7B70-0x5E7CA8	full read: inlined SetPedState (cover release, blip clear) equals port SetPedState	
+0x683060	CTaskComplexChat::ControlSubTask	MATCH	0x683060-0x683140	full read; timeout counter inside chatter && !talking, flags set to 1	
+0x6B7F90	CBike::FixHandsToBars	UNSURE	0x6B7F90-0x6B8280	read only head (flag gate, chassis attach, hand-rest dummy zero test + 3 default offsets, inverse-transform branch) = MATCH; arm/breast bone loops 0x6B8280-0x6B8919 NOT_REACHED	
+0x655B90	CTaskComplexWalkRoundBuildingAttempt::Clone	MATCH	0x655B90-0x655C08	alloc size + ctor args (order/width/bit fields) equal the copy-ctor forward	
+0x6559B0	CTaskComplexHitPedWithCar::Clone	MATCH	0x6559B0-0x655A13	alloc size + ctor args (order/width/bit fields) equal the copy-ctor forward	
+0x655B00	CTaskComplexWalkRoundCar::Clone	MATCH	0x655B00-0x655B7C	alloc size + ctor args (order/width/bit fields) equal the copy-ctor forward	
+0x6366A0	CTaskComplexSunbathe::Clone	MATCH	0x6366A0-0x6366FE	alloc size + ctor args (order/width/bit fields) equal the copy-ctor forward	
+0x68CE50	CTaskComplexKillCriminal::Clone	MATCH	0x68CE50-0x68CEAC	alloc size + ctor args (order/width/bit fields) equal the copy-ctor forward	
+0x623220	CTaskSimpleChoking::Clone	MATCH	0x623220-0x62327C	alloc size + ctor args (order/width/bit fields) equal the copy-ctor forward	
+0x65F4E0	CTaskComplexTrackEntity::Clone	FIXED	0x65F4E0-0x65F58A	ctor arg b = remaining timer time when timer byte set (dead in practice: gap2 never set)	afa905e98
+0x646EC0	CTaskSimpleCarGoToPointNearDoorUntilDoorNotInUse::Clone	MATCH	0x646EC0-0x646F20	reads source sub tasks; ctor args veh,door,point,moveState equal	
+0x66D050	CTaskComplexAvoidOtherPedWhileWandering::Clone	MATCH	0x66D050-0x66D0B0	ctor args + flag 4 copy (port already audited)	
+0x68CEC0	CTaskComplexCopInCar::Clone	MATCH	0x68CEC0-0x68CF20	4 ctor args from members	
+0x65CFB0	CTaskComplexFleeShooting::Clone	MATCH	0x65CFB0-0x65D01C	8 ctor args in order (base member offsets not re-derived)	
+0x66E320	CTaskComplexFollowPointRoute::CreateFirstSubTask	MATCH	0x66E320-0x66E4D0	flags, leave-car, closest-segment search read to 0x66E4D0 (sqrt(sqmag)<=dot vs sq(dot): float noise); tail not read	
+0x61D6F0	CTaskSimpleFight::IsTargetInRange	UNSURE	0x61D6F0-0x61D857	head read (KickingWhenDown, combo-set pre-array read, bone z test, bIsDucking) ok; port emulates out-of-bounds exe array reads (D-B18, audited earlier); tail NOT_REACHED	
+0x4AE800	CEventPotentialWalkIntoPed::AffectsPed	MATCH	0x4AE800-0x4AE936	alive/ped/moveState gates, partner task types 0x4b2/0x4bf/0x4b3 + equal-type, follow-footsteps +0xc, killpedonfoot +0x10, IsGoToTask	
+0x677FE0	CTaskSimpleGetUp::MakeAbortable	FIXED	0x677FE0-0x678101	threshold ftol(ms)*3 not ftol(ms*3); rest (immediate, fatal flag, prio<61, SetFinishCallback) matches	781909686
+0x674750	CTaskComplexWanderCop::CreateFirstSubTask	MATCH	0x674750-0x674853	cop gate, bDontPursuit standstill(100000,1,0,8.0), ShouldPursue, clone goto-standstill	
+0x674860	CTaskComplexWanderCop::CreateNextSubTask	MATCH	0x674860-0x674913	full read: cop/dontpursue gates, pursuit(0x44f)->timer 3000 unguarded, same-type null, clone/base	
+0x5DDEB0	CCopPed::AddCriminalToKill	MATCH	0x5DDEB0-0x5DE02F	criminal gates, dead-slot clear, health<=0, dup/first-empty slot, ref+flags+removal mult+vehicle range, partner recursion	
+0x67D980	CTaskComplexJump::CreateSubTask	MATCH	0x67D980-0x67DBA1	InAirAndLand(1,0)+invalid-climb copy, SimpleJump(force==1)+high-jump flag, SimpleClimb ctor args + hold type 1/2 by dz<1.4 (0x8D2F34); finished/hit-head tails not re-read	

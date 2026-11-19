@@ -1743,11 +1743,13 @@ auto GetAmmoInCharWeapon(CPed& ped, eWeaponType wtype) -> uint32 {
  * @param {SeatId} seat
  */
 auto WarpCharIntoCarAsPassenger(CPed& ped, CVehicle& veh, int32 psgrSeatIdx) {
+    // exe 0x489E0F: the door starts as 0 (xor edi,edi) and is only replaced when the seat index is >= 0 (a negative seat used to be passed through as door -1)
+    int32 door = 0;
     if (psgrSeatIdx >= 0) {
-        psgrSeatIdx = CCarEnterExit::ComputeTargetDoorToEnterAsPassenger(&veh, psgrSeatIdx);
+        door = CCarEnterExit::ComputeTargetDoorToEnterAsPassenger(&veh, psgrSeatIdx);
     }
     ped.GetIntelligence()->FlushImmediately(false);
-    CTaskSimpleCarSetPedInAsPassenger{ &veh, (eTargetDoor)(psgrSeatIdx), true }.ProcessPed(&ped); // Warp ped into car
+    CTaskSimpleCarSetPedInAsPassenger{ &veh, (eTargetDoor)(door), true }.ProcessPed(&ped); // Warp ped into car
 }
 
 /*

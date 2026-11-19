@@ -119,9 +119,10 @@ void CCarGenerator::DoInternalProcessing()
     // the exe compares the counter signed (jge)
     if (!bIgnorePopulationLimit
         && (nightTime && (int32)CCarCtrl::NumParkedCars >= 10 || !nightTime && (int32)CCarCtrl::NumParkedCars >= 5)
-    )
+    ) {
         g_cgGenWhy = "parked_limit";
         return;
+    }
 
     if (m_nModelId >= 0)
     {
@@ -144,21 +145,24 @@ void CCarGenerator::DoInternalProcessing()
             CTheZones::GetZoneInfo(FindPlayerCoors(-1), nullptr);
             actualModelId = CPopulation::m_AppropriateLoadedCars.PickRandomCar(true, true);
 
-            if (actualModelId < 0)
+            if (actualModelId < 0) {
                 g_cgGenWhy = "no_appropriate_model";
                 return;
+            }
 
             auto mi = CModelInfo::GetModelInfo(actualModelId)->AsVehicleModelInfoPtr();
             // exe 0x6F359D: byte [mi + 0x4D] == 5, the vehicle class (VEHICLE_CLASS_BIG), not the boat type
-            if (mi->m_nVehicleClass == VEHICLE_CLASS_BIG)
+            if (mi->m_nVehicleClass == VEHICLE_CLASS_BIG) {
                 g_cgGenWhy = "vehicle_class_big";
                 return;
+            }
 
             // exe 0x6F35A6: the colmodel is optional (no bound check without it); length is max.y - min.y, strictly greater than 8
             if (auto* const col = mi->GetColModel()) {
-                if (col->GetBoundingBox().GetLength() > 8.0f)
+                if (col->GetBoundingBox().GetLength() > 8.0f) {
                     g_cgGenWhy = "too_long";
                     return;
+                }
             }
 
             m_nModelId = -actualModelId;
@@ -182,9 +186,10 @@ void CCarGenerator::DoInternalProcessing()
         actualModelId == MODEL_HOTDOG &&
         m_nModelId == MODEL_HOTDOG &&
         !CStreaming::GetInfo(MODEL_BMOCHIL).IsLoaded()
-    )
+    ) {
         g_cgGenWhy = "model_not_loaded";
         return;
+    }
 
     if (CModelInfo::IsBoatModel(actualModelId) ||
         actualModelId == MODEL_LEVIATHN ||
@@ -218,9 +223,10 @@ void CCarGenerator::DoInternalProcessing()
         else
             posn.z = 1000.0f;
 
-        if (!CWorld::ProcessVerticalLine(posn, -1000.0f, colPoint, entity, true, false, false, false, false, false, nullptr))
+        if (!CWorld::ProcessVerticalLine(posn, -1000.0f, colPoint, entity, true, false, false, false, false, false, nullptr)) {
             g_cgGenWhy = "no_ground_below";
             return;
+        }
 
         baseZ = colPoint.m_vecPoint.z;
         plate.m_nCarGenId = CTheCarGenerators::GetIndex(this);

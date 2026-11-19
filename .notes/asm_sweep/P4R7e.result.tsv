@@ -1,0 +1,14 @@
+addr	function	verdict	asm range	note	fix commit
+0x73B550	CWeapon::DoBulletImpact	FIXED	0x73B550-0x73C1BB	P4R7d fixes (LightingB, ObjectDamage(50), incremental blood, Magnitude()<1, head blood health<0) all CONFIRMED; plus victim==shooter exits without pad shake, null firedBy tolerated, skill-stat block keyed on ped	ce00fa891
+0x73CDC0	CWeapon::DoDoomAiming	MATCH	0x73CDC0-0x73D1D1	full compare: flags/consts/LOS args/z formula match; float-vs-x87 noise only	
+0x5625F0	CWanted::WorkOutPolicePresence	MATCH	0x5625F0-0x562752	distance sum order z,x,y vs port helper: noise	
+0x5627D0	CWanted::IsClosestCop	MATCH		already exe-audited (comments), not re-read	
+0x561C90	CWanted::UpdateWantedLevel	MATCH	0x561C90-0x561E65	thresholds, caps, stats ids, change stamp, backoff clear	
+0x562390	CWanted::Initialise	MATCH	0x562390-0x562400	flags low 6 bits, fields, pursuit array, crime queue	
+0x562470	CWanted::SetWantedLevel	MATCH	0x562470-0x56251F	cheat/min/clear/UpdateWantedLevel; chaos table not re-read	
+0x562000	CWanted::AddCrimeToQ	MATCH		already exe-audited (comments)	
+0x562760	CWanted::UpdateCrimesQ	MATCH		already exe-audited (comments)	
+0x563060	CWanted::SetPursuitCop	NOT_REACHED			
+0x562B00	CWanted::ComputePursuitCopToDisplace	NOT_REACHED			
+0x6A1ED0	CAutomobile::AddMovingCollisionSpeed	NOT_REACHED			
+0x5693F0	CWorld::FindNearestObjectOfType	NOT_REACHED			

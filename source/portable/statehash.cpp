@@ -649,6 +649,37 @@ __declspec(noinline) void RandHookLoc(uint32_t stateBefore, const char* file, un
 void SetWrapCaller(const void* ra) { g_wrapCaller = ra; }
 #endif
 
+#if defined(_WIN32) && defined(NOTSA_PORTABLE)
+// P4C1: NOTSA_CRASHLOG=<file>: a vectored exception handler writing the exception code, the faulting address and an x64-unwound stack (RtlVirtualUnwind from the fault context) as offsets from `StableId` (resolve with the .map)
+namespace {
+LONG WINAPI CrashVeh(PEXCEPTION_POINTERS ep) {
+    const DWORD code = ep->ExceptionRecord->ExceptionCode;
+    if (code != EXCEPTION_ACCESS_VIOLATION && code != EXCEPTION_STACK_OVERFLOW && code != EXCEPTION_ILLEGAL_INSTRUCTION && code != EXCEPTION_INT_DIVIDE_BY_ZERO && code != EXCEPTION_ARRAY_BOUNDS_EXCEEDED && code != EXCEPTION_PRIV_INSTRUCTION) return EXCEPTION_CONTINUE_SEARCH;
+    static volatile LONG once = 0;
+    if (InterlockedExchange(&once, 1)) return EXCEPTION_CONTINUE_SEARCH;
+    const char* path = std::getenv("NOTSA_CRASHLOG");
+    FILE* f = path ? std::fopen(path, "w") : nullptr;
+    if (!f) return EXCEPTION_CONTINUE_SEARCH;
+    const uintptr_t base = (uintptr_t)&StableId;
+    std::fprintf(f, "code=%08lx fault_ip=%llx", (unsigned long)code, (unsigned long long)((uintptr_t)ep->ExceptionRecord->ExceptionAddress - base));
+    if (code == EXCEPTION_ACCESS_VIOLATION && ep->ExceptionRecord->NumberParameters >= 2) std::fprintf(f, " av_kind=%llu av_addr=%llx", (unsigned long long)ep->ExceptionRecord->ExceptionInformation[0], (unsigned long long)ep->ExceptionRecord->ExceptionInformation[1]);
+    std::fprintf(f, "\nframes:");
+    CONTEXT ctx = *ep->ContextRecord;
+    for (int i = 0; i < 24 && ctx.Rip; i++) {
+        std::fprintf(f, " %llx", (unsigned long long)(ctx.Rip - base));
+        DWORD64 imageBase = 0;
+        auto* rf = RtlLookupFunctionEntry(ctx.Rip, &imageBase, nullptr);
+        if (rf) { PVOID hd = nullptr; DWORD64 ef = 0; RtlVirtualUnwind(UNW_FLAG_NHANDLER, imageBase, ctx.Rip, rf, &ctx, &hd, &ef, nullptr); }
+        else { ctx.Rip = *(DWORD64*)ctx.Rsp; ctx.Rsp += 8; }
+    }
+    std::fprintf(f, "\n");
+    std::fclose(f);
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+struct CrashVehInit { CrashVehInit() { if (std::getenv("NOTSA_CRASHLOG")) AddVectoredExceptionHandler(1, CrashVeh); } } g_crashVehInit;
+} // namespace
+#endif
+
 // NOTSA_RR_GAMEPLAY_RAND=1: everything inside a RandIsolate scope (the render part of Idle, AudioEngine.Service) runs with the rand state saved on entry and restored on exit, and is not counted / logged
 RandIsolate::RandIsolate() { if (GpRand()) { m_on = true; m_saved = RngState(); g_isoDepth++; } }
 RandIsolate::~RandIsolate() { if (m_on) { g_isoDepth--; RngSeed(m_saved); } }

@@ -1,0 +1,5 @@
+# ASM-HC8f: sum-order class, continuation
+STEP 1: b84af3045 (FollowPointRoute main loop) CONFIRMED against exe 0x66E3C3-0x66E513 (sqMag z,x,y; dot z,y,x via DotProduct; strict compares, NaN skips; projection distance z,y,x; Normalise 0x59C910 x,y,z matches the port).
+STEP 2: remaining HC8b sites (92) checked: 3 fixes (CAutomobile::ProcessControlInputs 0x6ADE25 strict sqrt>0.28; CBike/CBmx::ProcessAI capped speed keeps NaN), the rest MATCH or were covered earlier (see HC8f.result.tsv). Render sites (COccluder, PlaceMarker) skipped.
+Scan extended to all executed functions (tools/standalone/asm/sumorder_scan.py, committed); stopped at call count 12501 after 75 sites: 31 NEW sites in 22 functions not yet compared, listed in .notes/asm_sweep/HC8f.newsites.txt (top by count: GetIsTouching 7.5M calls, ApplyFriction, ManageObject, FindTimeCycleBox, CopyCameraMatrixToRWCam, PlayerInfo::Process, UpdateHelis). Scan not run for 2-term sqrt (Magnitude2D, order-independent).
+Build StandaloneRelease OK; no tests / game runs (left to the gate).

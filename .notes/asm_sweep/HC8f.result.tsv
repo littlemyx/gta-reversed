@@ -1,0 +1,18 @@
+function	exe addr	port	verdict	note
+CTaskComplexFollowPointRoute::CreateFirstSubTask (b84af3045)	0x66E3C3-0x66E513	TaskComplexFollowPointRoute.cpp	CONFIRMED	sqMag (z2+x2)+y2, dot z,y,x (DotProduct), strict >, NaN skips, proj dist z,y,x, compare strict < with NaN false; Normalise x,y,z matches 0x59C910
+CAutomobile::ProcessControlInputs	0x6ADE25	Automobile.cpp	FIXED	sqrt(speed^2) > 0.28 strict, was speed^2 >= 0.28^2
+CBike::ProcessAI (capped speed)	0x6BC428,0x6BC75D	Bike.cpp	FIXED	NaN speed kept (std::min gave 0.1)
+CBmx::ProcessAI (capped speed)	0x6C156F	Bmx.cpp	FIXED	same NaN fix
+CBmx::ProcessAI (abandoned / forced stop)	0x6C1D42,0x6C1E17	Bmx.cpp	MATCH	x,y,z, strict < 0.01
+CVehicle::ProcessDrivingAnims	0x6DF515	Vehicle.cpp	MATCH	Magnitude x,y,z
+CPhysical::ApplySpringDampening	0x543FFC	Physical.cpp	MATCH	x,y,z sum
+CPhysical::ApplyCollision	0x543783	Physical.cpp	MATCH	cross SquaredMagnitude x,y,z
+CCover::Update	0x699829,0x699912	Cover.cpp	MATCH	Magnitude x,y,z strict < 0.005
+CVehicleAnimGroup::ComputeAnimDoorOffsets	0x6E3D26	VehicleAnimGroupData.cpp	MATCH	!= 0 incl NaN
+CVehicle::CanPedStepOutCar	0x6D1FAD	Vehicle.cpp	MATCH	!(sq > 0.0004)
+CAutomobile::VehicleDamage	0x6A7B3A	Automobile.cpp	MATCH	x,y,z, strict >
+CProjectileInfo::Update	0x738FFB,0x739594,0x739656	ProjectileInfo.cpp	MATCH	x,y,z, speed > 9.9 strict
+CBike::ProcessControl sites 0x6BBEF6..0x6BC75D	-	Bike.cpp	MATCH/attributed	belong to ProcessAI/DamageKnockOff; x,y,z via Magnitude
+CCollision::DistToLineSqr	0x41290B	Collision.cpp	MATCH	already commented in detail
+COccluder::ProcessOneOccluder, C3dMarkers::PlaceMarker	-	-	SKIP-RENDER	
+NEW SITES (all-function scan, HC8f.newsites.txt, 31 sites in 22 functions)	various	-	TODO	GetIsTouching 0x534473, ApplyFriction 0x545CE9/0x545D7C/0x5464E3, ManageObject, FindTimeCycleBox, FindMaxSteerAngle, CopyCameraMatrixToRWCam, PlayerInfo::Process, UpdateHelis, RunNamedAnim::ProcessPed, GangLeader::ShouldLoadGangAnims, CGarage::IsStaticPlayerCarEntirelyInside, CheckCameraCollisionVehicles, CameraColDetAndReact; scan stopped at count 12501

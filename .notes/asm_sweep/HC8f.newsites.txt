@@ -1,0 +1,26 @@
+7574209 CEntity::GetIsTouching 0x5343F0 00534473 ~fsub dword ptr [esp + 0x14] ; [esp + 8] ; ~fsub dword ptr [esp + 0x10] | fcompp / fstp st(0) / fstp st(0) / fstp st(0) / test ah, 0x41
+436054 COccluder::NearCamera 0x71F960 0071f9fc ~fsub dword ptr [esp + 0xc] ; [eax + 8] ; ~fsub dword ptr [esp + 8] | fsqrt / fstp st(3) / fstp st(0) / fstp st(0) / fcomp dword ptr [0x859f80]
+346217 CPhysical::ApplyFriction 0x545980 00545ce9 ~fmul dword ptr [esp + 0x2c] ; [esp + 0x2c] ; ~fmul dword ptr [esp + 0x28] | fsqrt / fstp st(4) / fstp st(0) / fstp st(0) / fstp st(0) / fstp dword pt
+346217 CPhysical::ApplyFriction 0x545980 00545d7c [eax] ; [eax + 4] ; [eax + 8] | fstp st(3) / fstp st(0) / fstp st(0)
+346217 CPhysical::ApplyFriction 0x545980 005464e3 [eax] ; [eax + 4] ; [eax + 8] | fstp st(3) / fstp st(0) / fstp st(0)
+261291 CPlantMgr::_ProcessEntryCollisionDataSections_AddLocTris 0x5DC8B0 005dcb78 ~fmul dword ptr [0x858b8c] ; [esp + 0xac] ; ~fmul dword ptr [0x858b8c] | fcomp dword ptr [0x859aa4] / fstp st(0) / fst
+219918 CGarage::IsStaticPlayerCarEntirelyInside 0x44A830 0044a983 [ecx + 0x4c] ; [ecx + 0x4c] | fcomp dword ptr [0x858fc4] / fstp st(0) / fstp st(0) / test ah, 0x41 / fstp st(0) / je 0x44a97f
+157423 CCollision::DistToLineSqr 0x412850 0041290b ~fsub dword ptr [ecx + 8] ; [edx + 8] ; ~fsub dword ptr [ecx + 4] | fstp st(3) / fstp st(0) / fstp st(0)
+88397 CPopulation::ManageObject 0x615DC0 00615e00 ~fsub dword ptr [ecx + 8] ; [eax + 8] ; ~fsub dword ptr [ecx + 4] | fsqrt / fstp st(3) / fstp st(0) / fstp st(0) / jne 0x615f4d
+88397 CPopulation::ManageObject 0x615DC0 00615f76 ~fsub dword ptr [ecx + 8] ; [eax + 8] ; ~fsub dword ptr [ecx + 4] | fsqrt / fstp st(3) / fstp st(0) / fstp st(0) / fstp dword ptr [esp + 4] / jmp 0x61
+79740 CTimeCycle::FindTimeCycleBox 0x55FFD0 00560178 ~fmul dword ptr [0x858b3c] ; [0x858b50] ; ~fsub dword ptr [esp + 0x1c] | fsqrt / fstp st(3) / fstp st(0) / fstp st(0) / fcom dword ptr [0x858b50] /
+28393 CCarCtrl::FindMaxSteerAngle 0x427FE0 00427fed [eax + 0x44] ; [eax + 0x48] ; [eax + 0x4c] | fsqrt / fstp st(3) / fstp st(0) / fstp st(0) / fcom dword ptr [0x858cb0] / test ah, 0x41 / jne 0x42801b
+26575 CCamera::CopyCameraMatrixToRWCam 0x50AFA0 0050b122 ~fsub dword ptr [esp + 0x20] ; [0xb6ffbc] ; ~fsub dword ptr [esp + 0x1c] | fcompp / fstp st(0) / fstp st(0) / test ah, 0x41 / fstp st(0)
+26575 CCamera::CopyCameraMatrixToRWCam 0x50AFA0 0050b1ad ~fmul dword ptr [0x8ccc78] ; [0x8ccc78] ; ~fsub dword ptr [esp + 0x20] | fcomp dword ptr [esp + 0x10] / fstp st(0) / fstp st(0) / test ah, 5 / 
+26575 CCamera::CopyCameraMatrixToRWCam 0x50AFA0 0050b21e ~fsub dword ptr [esp + 0x20] ; [0xb6ffa4] ; ~fsub dword ptr [esp + 0x1c] | fcomp dword ptr [esp + 0x10] / fstp st(0) / fstp st(0) / test ah, 5 
+26575 CCamera::CopyCameraMatrixToRWCam 0x50AFA0 0050b28f ~fsub dword ptr [esp + 0x20] ; [0xb6ff98] ; ~fsub dword ptr [esp + 0x1c] | fcomp dword ptr [esp + 0x10] / fstp st(0) / fstp st(0) / test ah, 5 
+26574 CPlayerInfo::Process 0x56F8D0 00571344 [eax + 0x44] ; [eax + 0x48] ; [eax + 0x4c] | fcomp dword ptr [0x858b50] / fstp st(0) / fstp st(0) / test ah, 0x41 / fstp st(0) / jne 0x571567
+26574 CPlayerInfo::Process 0x56F8D0 00571601 ~fsub dword ptr [eax + 8] ; [0xb9b99c] ; ~fsub dword ptr [eax + 4] | fsqrt / fstp st(3) / fstp st(0) / fstp st(0) / fcomp dword ptr [0x85862c] / test ah, 5
+26574 CLoadMonitor::EndFrame 0x53D0B0 0053d123 ~fmul dword ptr [0x858b40] ; [esp + 0x18] ; ~fmul dword ptr [0x858b40] | fsqrt / fstp st(3) / fstp st(0) / fstp st(0)
+26574 CHeli::UpdateHelis 0x6C79A0 006c7b70 ~fsub dword ptr [edi + 8] ; [eax + 8] ; ~fsub dword ptr [edi + 4] | fsqrt / fstp st(3) / fstp st(0) / fstp st(0) / fcomp dword ptr [0x858f98] / test ah, 0x41
+18524 CCollision::BuildCacheOfCameraCollision 0x41AC40 0041acc3 ~fadd dword ptr [esp + 0x70] ; [esp + 0x50] ; ~fadd dword ptr [esp + 0x6c] | fsqrt / fstp st(3) / fstp st(0) / fstp st(0) / fstp dword p
+18524 CCamera::CameraColDetAndReact 0x520190 0052044e ~fsub dword ptr [edi + 8] ; [ebp + 8] ; ~fsub dword ptr [edi + 4] | fsqrt / fstp st(3) / fstp st(0) / fstp st(0) / fstp dword ptr [esp + 0x14] / f
+18524 CCamera::CameraColDetAndReact 0x520190 00520565 ~fsub dword ptr [0xb700e4] ; [ebp + 8] ; ~fsub dword ptr [0xb700e0] | fcompp / fstp st(0) / fstp st(0) / test ah, 5 / fstp st(0)
+18524 CCollision::CheckCameraCollisionVehicles 0x41A990 0041aa1e ~fsub dword ptr [esi + 0x4c] ; [eax + 8] ; ~fsub dword ptr [esi + 0x48] | fcomp dword ptr [0x8a5b18] / fstp st(0) / fstp st(0) / test a
+18517 CTaskSimpleRunNamedAnim::ProcessPed 0x61BF20 0061bfc0 ~fsub dword ptr [esp + 0x14] ; [eax + 8] ; ~fsub dword ptr [esp + 0x10] | fsqrt / fstp st(3) / fstp st(0) / fstp st(0) / fcomp dword ptr [0x
+12501 CTaskComplexGangLeader::ShouldLoadGangAnims 0x65E7F0 0065e821 [ecx + 0x44] ; [ecx + 0x48] ; [ecx + 0x4c] | fcomp dword ptr [0x863244] / fstp st(0) / fstp st(0) / test ah, 0x41 / fstp st(0) / je 

@@ -230,7 +230,7 @@ bool CTaskSimpleUseGun::RequirePistolWhip(CPed* ped, CEntity* targetEntity) {
             return false;
         }
         const auto pedToOther = otherPed.GetPosition() - ped->GetPosition();
-        if (pedToOther.SquaredMagnitude2D() > 1.f) { // 0x61E370 `fcomp 1.0; test ah,5; jp -> skip`: skipped only when sqrt(dy^2+dx^2) > 1 (exactly 1 still passes)
+        if (std::sqrt((x87d)pedToOther.x * pedToOther.x + (x87d)pedToOther.y * pedToOther.y) >= (x87d)1.f) { // 0x61E370 `fcomp 1.0; test ah,5; jp -> skip`: C0=0 and C2=0 (>= 1, equal included) or unordered skips; only `< 1` continues (ASM-P4R6b 81015baa7 misread the equal case)
             return false;
         }
         const auto pedToOtherDot = ped->GetForward().Dot(pedToOther);

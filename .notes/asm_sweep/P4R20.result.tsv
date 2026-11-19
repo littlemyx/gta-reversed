@@ -1,0 +1,43 @@
+addr	function	verdict	asm range	note	fix commit
+0x410040	CColSphere::IntersectPoint	FIXED	0x410040-0x410087	unrounded x87 diffs, squared distance summed z,x,y (port: float diff, x,y,z)	62fa28f33
+0x410090	CColSphere::IntersectSphere	MATCH	0x410090-0x4100D5	radii sum, z,x,y sum, > with NaN false	
+0x40FF20	CColSphere::IntersectRay	MATCH	0x40FF20-0x40FFE0	dot x,z,y; b/c spilled; SolveQuadratic(1,b,c)	
+0x4100E0	CColSphere::IntersectEdge	MATCH	0x4100E0-0x4102E9 (all)	length z,y,x; b/c z,x,y; disc NaN passes; n1>len/n2<0 polarity; point order	
+0x40FD10	CColSphere::Set	MATCH	0x40FD10-0x40FD44		
+0x40EE20	CBox::Recalc	MATCH	0x40EE20-0x40EE68	min>max swap, NaN no swap	
+0x40EDE0	CBox::Set	MATCH			
+0x40EF10	CColLine::Set	MATCH			
+0x40FC30	CColModel::operator new	MATCH		pool New	
+0x40FC40	CColModel::operator delete	MATCH		pool Delete	
+0x40F6E0	CCollisionData::GetLinkPtr	MATCH		(tri planes + n*10 + 3)&~3 via std::align	
+0x40F6C0	CCollisionData::SetLinkPtr	MATCH			
+0x40F640	CCollisionData::GetShadTrianglePoint	MATCH		int16 * 0.0078125 (FixedFloat reciprocal)	
+0x40F5E0	CCollisionData::GetTrianglePoint	MATCH			
+0x410820	CColStore::IncludeModelIndex	MATCH			
+0x410800	CColStore::GetBoundingBox	MATCH			
+0x4107D0	CColStore::RemoveRef	MATCH			
+0x4107A0	CColStore::AddRef	MATCH			
+0x4103A0	CColStore::AddCollisionNeededAtPosn	MATCH			
+0x5B2EF0	CColAccel::getIplDef	MATCH			
+0x5B2ED0	CColAccel::setIplDef	MATCH			
+0x5B2DD0	CColAccel::addColDef	MATCH		field offsets 0x22/0x24/0x2a/0x2b checked	
+0x5B2C20	CColAccel::addCacheCol	MATCH			
+0x5B2AC0	CColAccel::isCacheLoading	MATCH			
+0x55F4B0	CColourSet::Constructor	MATCH	0x55F4B0-end	table offsets/types, int8 sun/sprite, int16 far/fog, lod 1.0, illum *0.01	
+0x55F870	CColourSet::Interpolate	MATCH	0x55F870-0x55FD..	A*multA+B*multB pairing for all fields, ftol widths, ignoreSky split; water/postfx tail not re-read	
+0x4120C0	CCollision::TestSphereBox	MATCH	0x4120C0-0x41212A	fadd/fsub unrounded, NaN passes axis	
+0x412850	CCollision::DistToLineSqr	MATCH	0x412850-0x412924		
+0x417610	CCollision::DistToLine	MATCH	0x417610-0x4176E6	dot term order z,x,y; unrounded sqrt arg	
+0x412970	CCollision::DistToMathematicalLine	MATCH	0x412970-0x412A23		
+0x412700	CCollision::PointInTriangle	MATCH	0x412700-~0x41284F	a/b/c products, spills; tail from 0x4127F8 not re-read	
+0x4138D0	CCollision::Test2DLineAgainst2DLine	MATCH	0x4138D0-0x41395F		
+0x413960	CCollision::ProcessDiscCollision	MATCH	0x413960-0x413AB0	both thickness tests NaN->else, sqrt unclamped, >=, piece<17, depth>, surfB 0x3c	
+0x413080	CCollision::TestVerticalLineBox	MATCH	0x413080-0x4130FA		
+0x413070	CCollision::TestLineBox	MATCH		jmp TestLineBox_DW	
+0x417F20	CCollision::SphereCastVsSphere	MATCH	0x417F20-~0x417F70	inlined sphere test x,z,y; arg order; tail not re-read	
+0x4185C0	CCollision::ProcessColModels	NOT_REACHED	0x4185C0-0x418715 (prologue only)	650-line pair matrix; port already carries per-address exe notes; not re-read for budget	
+0x416BA0	CCollision::ProcessSphereTriangle	NOT_REACHED		SSE2/F24 dual template in CollisionPrimitives.cpp (stream F), not re-read	
+0x4165B0	CCollision::TestSphereTriangle	NOT_REACHED		stream F	
+0x4140F0	CCollision::ProcessLineTriangle	NOT_REACHED		stream F	
+0x412130	CCollision::ProcessSphereBox	NOT_REACHED		budget	
+0x413100	CCollision::ProcessLineBox	NOT_REACHED		budget	

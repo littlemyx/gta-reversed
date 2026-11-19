@@ -7,6 +7,7 @@
 #      MAXF (driver frame limit per mission, default 30000), WALL (wall seconds per mission, default 3000), TAG_SUFFIX (appended to the output file names, e.g. "_b" for a determinism rerun)
 # outputs in <outdir> (default C:/gta-scratch/scmtrace/out/allmissions): summary.tsv (idx name result frame thread ip opcode reason; PASSED | FAILED (reason = the last text label before M_FAIL) | STOP),
 #   <idx>_<thread>.scmtrace.gz  <idx>_<thread>.sh.gz (statehash per-frame file)  <idx>_<thread>.rand.gz (rand log, NOTSA_RR_GAMEPLAY_RAND=1)  <idx>_<thread>.driver (the actions as injector route lines)  <idx>_<thread>.log
+# HC_OUT=<dir> (T3H2, with a GTASA_HITCOUNT build as EXE): per-mission function hit dump <dir>/<idx>.hc.txt (NOTSA_HITCOUNT_FILE); the big per-mission artifacts (gz traces/logs) are then not kept.
 # A mission already listed in summary.tsv is skipped (delete its row to rerun). Row formats: README in the output dir and C:/gta-scratch/scmtrace/out/full/README.md (section "AD1").
 set -u
 . "$(dirname "$0")/../hostenv.sh"; . "$(dirname "$0")/../own_kill.sh"
@@ -54,6 +55,7 @@ for IDX in $LIST; do
     export NOTSA_RR_TRACE="$(cygpath -w "$W/m.rr.trace")" NOTSA_SH_FILE="$(cygpath -w "$W/m.sh")" NOTSA_SH_RANDLOG="$(cygpath -w "$W/m.rand")"
     export NOTSA_SCMTRACE="$(cygpath -w "$W/m.scmtrace")" NOTSA_SCMTRACE_COMMIT="$(git -C "$REPO" rev-parse --short HEAD)"
     export NOTSA_MDRIVER_ARGCOUNTS="$(cygpath -w "$REPO/tools/standalone/scmscan/argcounts.tsv")" NOTSA_MDRIVER_TABLE="$TABLE" NOTSA_MDRIVER_OUT="$(cygpath -w "$W/m.driver")" NOTSA_MDRIVER_RESULT="$(cygpath -w "$W/res")" NOTSA_MDRIVER_MAXFRAMES="$MAXF"
+    [ -n "${HC_OUT:-}" ] && export NOTSA_HITCOUNT_FILE="$(cygpath -w "$W/hc.txt")"
     ./gta_reversed.exe > "$W/m.out" 2>&1 &
     echo $! > "$W/pid"
     wait $! ; echo $? > "$W/rc"
@@ -71,8 +73,10 @@ for IDX in $LIST; do
   else RES=STOP; FR=-; TH="${MN:-?}"; IP=-; OP=-; RSN="$([ "$st" = TIMEOUT ] && echo wall-timeout || echo "no-result rc=$RC")"; fi
   TH="$(printf '%s' "$TH" | tr -c 'A-Za-z0-9_\n' '_')"
   B="$OUT/${IDX}_${TH}${SFX}"
+  if [ -n "${HC_OUT:-}" ]; then mkdir -p "$HC_OUT"; [ -f "$W/hc.txt" ] && cp "$W/hc.txt" "$HC_OUT/$IDX.hc.txt"; else
   for x in scmtrace sh rand rr.trace; do [ -f "$W/m.$x" ] && { gzip -c "$W/m.$x" > "$B.$x.gz" 2>/dev/null; }; done
   rm -f "$B.driver.gz"; [ -f "$W/m.driver" ] && cp "$W/m.driver" "$B.driver"; rm -f "$B.log.gz"; [ -f "$W/m.log" ] && cp "$W/m.log" "$B.log"
+  fi
   [ -z "$SFX" ] && printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$IDX" "${MN:-?}" "$RES" "$FR" "$TH" "$IP" "$OP" "$RSN" >> "$OUT/summary.tsv"
   echo "[$IDX] ${MN:-?}: $RES frame=$FR $RSN ($(( $(date +%s) - t0 ))s)"
   rm -rf "$W"

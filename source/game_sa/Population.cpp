@@ -742,15 +742,17 @@ void CPopulation::ManagePed(CPed* ped, const CVector& playerPosn) {
         } else {
             return GetDist();
         }
-    }() / PedCreationDistMultiplier(); // Simplify the conditions below by dividing here
+    }(); // exe 0x6120F2-0x61214F: NOT divided; the thresholds are scaled by PedCreationDistMultiplier() instead
+    const x87d creationMult = PedCreationDistMultiplier();
 
-    if (TheCamera.m_fGenerationDistMultiplier * (ped->bCullExtraFarAway ? 65.f : 54.5f) <= pedsRemovalDist) {
+    // exe compares `mult * camMult * 65` (always) and, when !bCullExtraFarAway, `mult * camMult * 54.5` against the distance with a STRICT `threshold < dist` (fcomp + `test ah,5 / jnp`)
+    if ((creationMult * TheCamera.m_fGenerationDistMultiplier * 65.f < (x87d)pedsRemovalDist) || (!ped->bCullExtraFarAway && creationMult * TheCamera.m_fGenerationDistMultiplier * 54.5f < (x87d)pedsRemovalDist)) {
         if (ped->GetIsOnScreen()) {
             ped->bFadeOut = true;
         } else {
             RemovePed(ped);
         }
-    } else if (pedsRemovalDist <= 25.f || ped->GetIsOnScreen()) { // From here on I did some truth table magic, and was able to remove some of the redudant code (So some of the code is missing)
+    } else if (!(creationMult * 25.f < (x87d)pedsRemovalDist) || ped->GetIsOnScreen()) { // 0x61213B: `jp` taken for threshold >= dist or NaN. From here on I did some truth table magic, and was able to remove some of the redudant code (So some of the code is missing)
         ped->m_nTimeTillWeNeedThisPed = CTimer::GetTimeInMS() + (ped->m_nPedType == PED_TYPE_COP ? 10'000 : 4'000);
     } else if (CTimer::GetTimeInMS() > ped->m_nTimeTillWeNeedThisPed) { // Ped not needed anymore
         const auto& activeCam = TheCamera.GetActiveCamera();

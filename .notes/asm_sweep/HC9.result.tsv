@@ -16,4 +16,4 @@ CAnimBlendAssociation::AllocateAnimBlendNodeArray	0x4CE9F0	AnimBlendAssociation.
 CPopCycle::PickPedMIToStreamInForCurrentZone	0x60FFD0	PopCycle.cpp:349	(slot+1)%npeds	int % int, loop runs only if npeds>0	harmless
 CAEVehicleAudioEntity::RequestBankSlot	0x4F4D10	AEVehicleAudioEntity.cpp:370	(idx+1)%numSlots	int16 result	harmless
 CAutomobile::PlayCarHorn	0x6A3770	Automobile.cpp:2843	and eax,7 on int8	fixed in fa566305a (HC7)	FIXED-earlier
-~125 functions in candidate list (grep % / >> sites in RYDER_1-hit functions)	various	cands.tsv	already MATCH/FIXED in earlier sweeps (instruction-level)	-	not re-read
+123 functions in candidate list (grep % / >> sites in RYDER_1-hit functions)	various	cands.tsv	already MATCH/FIXED in earlier sweeps (instruction-level)	-	not re-read

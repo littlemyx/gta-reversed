@@ -495,18 +495,19 @@ void CTheScripts::AddToListOfConnectedLodObjects(CObject* obj1, CObject* obj2) {
 
 // 0x474750
 void CTheScripts::AddToListOfSpecialAnimGroupsAttachedToCharModels(int32 modelId, Const char* ifpName) {
-    const auto aag = rng::find_if(ScriptAttachedAnimGroups, [modelId, ifpName](auto& aag) {
-        return aag.m_nModelID == modelId && !std::strcmp(aag.m_IfpName, ifpName);
-    });
-    if (aag != ScriptAttachedAnimGroups.end()) {
-        // Already exists.
-        return;
+    // 0x474750: one pass; a slot with the same model + name ends it, otherwise the LAST slot with a model of -1 is taken (the exe keeps overwriting its "free" index; a slot whose model equals `modelId` is never counted as free)
+    tScriptAttachedAnimGroup* free = nullptr;
+    for (auto& aag : ScriptAttachedAnimGroups) {
+        if (aag.m_nModelID == modelId) {
+            if (!std::strcmp(aag.m_IfpName, ifpName)) {
+                // Already exists.
+                return;
+            }
+        } else if (aag.m_nModelID == MODEL_INVALID) {
+            free = &aag;
+        }
     }
-
-    const auto free = rng::find_if(ScriptAttachedAnimGroups, [](auto& aag) {
-        return aag.m_nModelID == MODEL_INVALID;
-    });
-    if (free == ScriptAttachedAnimGroups.end()) {
+    if (!free) {
         return;
     }
 

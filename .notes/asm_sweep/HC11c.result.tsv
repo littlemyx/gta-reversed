@@ -1,0 +1,27 @@
+function	exe_addr	port_site	exe_idiom	verdict	commit
+CAutomobile::ProcessEntityCollision wheel compression min(orig,lerped)	0x6AD4FB	Automobile.cpp:~1904	fcomp+test 5+jp: orig<L?orig:L	FIXED (NaN: std::min kept orig)	4ce8bcbd6
+CAutomobile::ProcessEntityCollision delta<=0.1 skip	0x6AD524	Automobile.cpp:~1908	fcomp+test 0x41+jne: skip for <=0.1 and NaN	FIXED (port did not skip NaN)	4ce8bcbd6
+CAutomobile::ProcessEntityCollision min(0.2,delta)	0x6AD5A1	Automobile.cpp:~1925	0.2<d?0.2:d	FIXED	4ce8bcbd6
+CAutomobile::ProcessEntityCollision min(|v.fwd|,0.3)	0x6AD5D3	Automobile.cpp	|d|>0.3?0.3:|d|	MATCH	-
+CAutomobile::ProcessEntityCollision rhino extra wheels min	~0x6AD0xx	Automobile.cpp:1850	-	NOT_REACHED (RHINO only)	-
+CAutomobile::VehicleDamage max(0,health-4dt) / max(0,calc+dot*mass) / min(250,v)	0x6A775A/0x6A78D9/0x6A7A8C	Automobile.cpp:2912/2959/3025	0>v?0:v ; 250<v?250:v	FIXED (NaN/-0)	07c28cd9d
+cTransmission::CalculateDriveAcceleration min(a6,1) / clamp(acc,0.1,1) / min(q,1)	0x6D07DE/0x6D08A7-0x6D08E4/0x6D097C	cTransmission.cpp:196/204/221	1<v?1:v ; v>1->1,v<0.1->0.1 ; 1<q?1:q	MATCH	-
+CAutomobile::ProcessBuoyancy max(0.01,ts) max(0.5,v) max(1,v) max(-0.1,z)	0x6A8C9B/0x6A8D26/0x6A8E0A/0x6A9051	Automobile.cpp:5338/5350/5366/5413	K>v?K:v ; z<-0.1?-0.1:z	FIXED (NaN)	a81c04a5a
+CBike::ProcessBuoyancy max(0.01,ts) max(0.5,v) max(-0.1,z)	0x6B6061/0x6B60EB/0x6B61D9	Bike.cpp:402/414/428	same as car	FIXED (NaN)	73a236f12
+cBuoyancy::ProcessBuoyancy / ProcessBuoyancyBoat max(wavePower,0)	0x6C3EF0 / 0x6C32CD	Buoyancy.cpp:123	0>v?0:v (== std::max(v,0))	MATCH	-
+CBike::ProcessControl wheel counter max(v,0)	0x6BA730	Bike.cpp:1712	fcom 0+test 0x41+je: v>0?v:0 (NaN/-0 -> 0)	FIXED	b668d9acf
+CBike::ProcessControl shake min(x,250)/(x,150), speed min(sqrt,0.1)	0x6BBF46/0x6BBFAD/0x6BC440	Bike.cpp:2179/2183/2262/2301	250<v?250:v ; s>0.1?0.1:s	MATCH	-
+CPopulation::PedCreationDistMultiplier clamp(v,1,1.5)	0x611725-0x61173D	Population.cpp:579	NaN keeps v	MATCH	-
+CWeather::Update (SunGlare, HeatHazeFXFade, WaterFogFXFade, Wind, Wavyness, HeadLights, clamps)	0x72C021-0x72C765	Weather.cpp:491-695	each min/max/clamp decoded	MATCH	-
+CWeather::AddRain max(Rain*10,40)	0x72AB36	Weather.cpp:125	40>v?40:v (== std::max(v,40))	MATCH	-
+CPlayerPed::ProcessControl gun spin min(v,0.45) / max(v,0), markColor min	0x60EC6C/0x60ED05	PlayerPed.cpp:2645/2654/2717	v>0.45?0.45:v ; v<0?0:v	MATCH	-
+CPlayerPed::SetPlayerMoveBlendRatio min(2,v)	0x60C568	PlayerPed.cpp:1682	v>2?2:v (NaN keeps v)	FIXED	5a84beffd
+CPhysical colpoint depth max / attached rotation clamp(-0.5,0.5)	0x547A33	Physical.cpp:2216/2476	depth>0 filtered; clamp NaN keeps v	MATCH	-
+CPhysical::ProcessEntityCollision	0x546D00	Physical.cpp:659	no float min/max sites in port	NO_SITES	-
+CStats::GetFatAndMuscleModifier helper sites x5 (max(0,b) x2, min(1,b) x3)	0x559B63/D5/E3A/E66/E92	Stats.cpp:577-665	push 0/1 last => a=0/1 : 0>b?0:b ; 1<b?1:b	MATCH	-
+CRope::Update max(v,0.01)	0x558722	Rope.cpp:659	a=v (stack), b=0.01 => v>0.01?v:0.01	MATCH	-
+CCollisionEventScanner::ScanForCollisionEvents max(0,v)	0x604FC9	CollisionEventScanner.cpp:317	a=0: 0>v?0:v	MATCH	-
+CTaskComplexGangFollower::ControlSubTask max(0.85,slowed)	0x662CFF	TaskComplexGangFollower.cpp:286	0.85>s?0.85:s	MATCH	-
+CPointLights::GenerateLightsAffectingObject max(0,t)	0x6FFDE0	PointLights.cpp:100	0>t?0:t	MATCH	-
+CTaskSimpleLand::ProcessPed / CTaskComplexPartner*	0x67D380	TaskSimpleLand.cpp	no min/max sites; == compares decode as ordered-equal	MATCH (no sites)	-
+CPlayerPed::HandleSprintEnergy / Prostitute / JetPack / Swim / WalkAlongside / QuadBike helper sites	-	-	not hit in RYDER_1 (HC11b owners list: NOHIT)	SKIPPED (NOHIT)	-

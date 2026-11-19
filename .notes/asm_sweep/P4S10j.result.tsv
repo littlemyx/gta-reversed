@@ -1,0 +1,13 @@
+addr	function	verdict	asm range	note	fix commit
+0x6D56C0	CVehicle::ProcessOpenDoor	MATCH	0x6D56C0-0x6D5C25	P4S10i fix CONFIRMED: jump table 0x6D5C38 maps anim 367-370 (CLOSEDOOR) to 0x6D57E2 = timing mode 1 with the cur>new guard (0x6D5846); anim 380-383 (CLOSE) to 0x6D5940 = mode 3, unconditional OpenDoor	
+0x60C5F0	CPlayerPed::FindPedToAttack	MATCH	0x60C5F0-0x60C7BE	P4S10i fix CONFIRMED: [esp+0x14] = 0x47C34FF3 (99999.9f) at 0x60C610	
+0x6A4AF0	CAutomobile::DoSoftGroundResistance	MATCH	0x6A4AF0-0x6A4EB5	sand / rail branches, 0.09 test, offroad factors, wet-road, rail resistance 0x8D34AC; x87 spill pattern already mirrored	
+0x6E0950	CVehicle::ProcessSirenAndHorn	MATCH	0x6E0950-0x6E0A43	horn history tap/release toggle, counter, wrecked/alarm gate	
+0x685170	CTaskComplexWalkAlongsidePed::ControlSubTask	FIXED	0x685170-0x68562C	target ped flag only set when the target has a walk anim (0x685570); ped flag whenever its branch ran. (give-up dist test is > in exe vs >= port, dist<4 vs <=4: equality noise)	09d7c3ddd
+0x624710	CTaskSimpleFight::ChooseAttackPlayer	MATCH	0x624710-0x624A3B	move selection, chain counter, combo-set resets, scanner aim loop (x87 atan2 / angle wrap / 99999 -10 gate)	
+0x62DDB0	CTaskComplexDestroyCarMelee::ControlSubTask	MATCH	0x62DDB0-0x62DF1B	health gate, seek/stand-still -> fight ctrl (r^2 > d^2), fight ctrl -> seek (r+0.6 < d), angle/range writes at +0x10/+0x14	
+0x60C0C0	CPlayerPed::DoesTargetHaveToBeBroken	MATCH	0x60C0C0-0x60C1D9	visibility, range*TargetWeaponRangeMultiplier vs dist, spraycan tag alpha, CanIKReachThisTarget	
+0x6DBA30	CVehicle::SetComponentRotation	MATCH	0x6DBA30-0x6DBBA5	exe zeroes pos / rotates / re-adds saved pos = port's SetRotate*Only / Rotate*(keepPos); (-0 vs +0 noise)	
+0x66AB40	CTaskComplexAvoidEntity::LookAtTarget	MATCH	0x66AB40-0x66AD04	gates, 9.0 dist, dot threshold, look-at pos (x,y +2*dir, z +0.61), LookAt arg list	
+0x4AFEE0	CEventKnockOffBike::AffectsPed	FIXED	0x4AFEE0-0x4AFF57	veto is CantBeKnockedOffBike == 1 (mask 0x18000000) && !force; port vetoed on any non-zero and also on !bHasBeenRendered	10ccc4aba
+queue rows beyond these	-	NOT_REACHED		budget

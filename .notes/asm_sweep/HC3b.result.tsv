@@ -1,0 +1,52 @@
+addr	function	verdict	asm_range	note	fix_commit
+0x43C900	CCurves::CalcCurvePoint	MATCH	0x43C900-0x43CEB0	source asm-derived with per-address comments; spot-checked clamp, branches, total sum order, tail speed formula; not full line-by-line	
+0x6C21B0	CDamageManager::GetWheelStatus	MATCH			
+0x6C2300	CDamageManager::GetAeroplaneCompStatus	MATCH			
+0x6C2230	CDamageManager::GetDoorStatus	MATCH			
+0x6C2180	CDamageManager::GetPanelStatus	MATCH			
+0x6C2250	CDamageManager::GetDoorStatus_Component	MATCH		jump table 0x6C2288 decoded: 8->RF,9->RR,10->LF,11->LR	
+0x561A40	CTimer::GetCyclesPerMillisecond	MATCH			
+0x50AE20	CCamera::GetScreenFadeStatus	MATCH			
+0x6A04B0	cHandlingDataMgr::HasRearWheelDrive	MATCH			
+0x6A0480	cHandlingDataMgr::HasFrontWheelDrive	MATCH			
+0x6F52D0	cHandlingDataMgr::GetFlyingPointer	MATCH			
+0x50AD90	CCamera::GetCutSceneFinishTime	MATCH			
+0x50ADF0	CCamera::GetFadingDirection	MATCH			
+0x50AED0	CCamera::GetLookingForwardFirstPerson	MATCH			
+0x56DAB0	CPlayerInfo::IsPlayerInRemoteMode	MATCH			
+0x72D9F0	CCullZones::FindTunnelAttributesForCoors	MATCH		exe movsx-extends 16-bit flags (FEWER_CARS 0x8000); port truncates to uint16, callers test masks	
+0x72DA70	CCullZones::FindMirrorAttributesForCoors	MATCH			
+0x5F85A0	CPedGroupIntelligence::GetTaskMain	MATCH			
+0x5F8650	CPedGroupIntelligence::GetTaskSecondarySlot	MATCH			
+0x5F8620	CPedGroupIntelligence::GetTaskSecondary	MATCH			
+0x5F8690	CPedGroupIntelligence::GetTaskScriptCommand	MATCH			
+0x50CC50	CCamera::SetColVarsPed	MATCH			
+0x50CCA0	CCamera::SetColVarsVehicle	MATCH		jump table decoded	
+0x50CB60	CCamera::SetCamCollisionVarDataSet	MATCH			
+0x50A480	CCamera::ApplyVehicleCameraTweaks	MATCH			
+0x50CDE0	CCamera::CameraVehicleModeSpecialCases	MATCH		compare strictness, constants, sum order checked	
+0x443D50	CGangWars::TellStreamingWhichGangsAreNeeded	MATCH			
+0x4C5780	CWeaponModelInfo::GetModelType	MATCH			
+0x73A380	CWeapon::Shutdown	MATCH			
+0x4045B0	CIplStore::AddIplsNeededAtPosn	MATCH			
+0x421980	CCarCtrl::ChoosePoliceCarModel	MATCH		model ids and rand use checked	
+0x407C50	CStreaming::GetDefaultCopCarModel	MATCH			
+0x407C00	CStreaming::GetDefaultCopModel	MATCH			
+0x611BD0	CLoadedCarGroup::RemoveMember	MATCH			
+0x611C30	CLoadedCarGroup::CountMembers	MATCH			
+0x611BB0	CLoadedCarGroup::AddMember	MATCH			
+0x611B90	CLoadedCarGroup::Clear	MATCH			
+0x43E320	CTaskSimple::SetPedPosition	MATCH			
+0x420AC0	CPathFind::GetPathNode	MATCH			
+0x6089F0	CPedType::ClearPedTypeAsAcquaintance	MATCH			
+0x608A20	CPedType::ClearPedTypeAcquaintances	MATCH			
+0x608E20	CPedType::SetPedTypeAsAcquaintance	MATCH		incl. CAcquaintance::SetAsAcquaintance 0x608DA0	
+0x52D150	CClock::SetGameClock	MATCH			
+0x561FE0	CWanted::ClearQdCrimes	MATCH			
+0x460780	CRestart::AddPoliceRestartPoint	INTENTIONAL		port adds a bound check (NOTSA, documented in source)	
+0x72A510	CWeather::ReleaseWeather	MATCH			
+0x72A4F0	CWeather::ForceWeatherNow	MATCH			
+0x72A4E0	CWeather::ForceWeather	MATCH			
+0x44DCD0	CPathFind::SetPathsNeededAtPosition	MATCH			
+0x404AC0	CIplStore::FindIplSlot	MATCH			
+0x407DD0	CStreaming::IsCarModelNeededInCurrentZone	MATCH		cheat ids/groups decoded, popcycle index and gang loop checked	

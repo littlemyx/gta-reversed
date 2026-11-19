@@ -1854,7 +1854,9 @@ int32 CAutomobile::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoin
         if (m_nModelIndex == eModelID::MODEL_RHINO) {
             for (auto i = 0; i < NUM_RHINO_EXTRA_SUSP_LINES; i++) {
                 auto& compr = GetRhinosaurusRexExtraWheelSuspCompression(i);
-                compr = std::min(wheelColPtsTouchDists[NUM_AUTOMOBILE_SUSP_LINES + i], compr);
+                // 0x6AD24A-0x6AD33A: fld touchDist; fcomp saved; test ah,5; jp: `touchDist < saved ? touchDist : saved` (tie/NaN -> the saved door value; std::min(touchDist, compr) kept touchDist)
+                const float touchDist = wheelColPtsTouchDists[NUM_AUTOMOBILE_SUSP_LINES + i];
+                compr = touchDist < compr ? touchDist : compr;
             }
         }
     } else {

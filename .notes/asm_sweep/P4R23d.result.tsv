@@ -1,0 +1,10 @@
+addr	function	verdict	asm range	note	fix commit
+0x5F7AD0	CPedGroup::Teleport (review 37e416d50)	MATCH	0x5F7B9F-0x5F7BB1	review: task+0x11=1 after ctor = m_bWarpingOutOfCar, confirmed	
+0x433BA0	CCarCtrl::SteerAICarParkParallel	MATCH	0x433BA0-0x433E87	nodes, x87 dir/target, 4.0/2.0 thresholds, missions, leave-car task all match	
+0x449220	CGarage::ThrowCarsNearDoorOutOfGarage	MATCH	0x449220-0x4493DC	x87 spill of dx*ts only, break after first sphere, 0.5/0.02 consts match	
+0x55C470	CStats::UpdateFatAndMuscleStats	MATCH	0x55C470-0x55C65A	compare directions, stat ids, message states, ms*value/10 match	
+0x4494F0	CGarage::IsAnyCarBlockingDoor	MATCH	0x4494F0-0x4495DD	pool walk, sphere radius, IsPointInsideGarage polarity match	
+0x433EA0	CCarCtrl::SteerAICarParkPerpendicular	NOT_REACHED		budget	
+0x4325C0	CCarCtrl::FindAngleToWeaveThroughTraffic	NOT_REACHED		budget	
+0x4336D0	CCarCtrl::SteerAICarTowardsPointInEscort	NOT_REACHED		budget	
+0x449100	CGarage::IsAnyOtherCarTouchingGarage	NOT_REACHED		budget (source read only)	

@@ -1,0 +1,10 @@
+addr	function	verdict	asm range	note	fix commit
+0x54F610	CPlaceable::SetMatrix	MATCH	0x54F610-0x54F687	up.z==1 fast path (heading from FPATAN(-fwd.x, fwd.y)), AllocateMatrix, matrix copy	
+0x535340	CEntity::CalculateBBProjection	MATCH	0x535340-0x535E80	XY lengths, bound-box max(-min,max), dominant axis, main/offsets, abs sums, 4 corners compared; only x87 extended-precision noise	
+0x6D6C00	CVehicle::ProcessWheel	MATCH	0x6D6C00-0x6D7300	previously x87-matched port; re-checked brake/drive flags, burst, clamps, spin/skid state, anti-dive, normalise (spot check of ~70 percent)	
+0x54BA60	CPhysical::ProcessCollisionSectorList	FIXED (partial)	0x54C9D0-0x54CCF2	HasContacted loop and Alt/friction loop compared; boat branch ended at 0x54CC5D but the port also ran the train/wrecked/abandoned friction block for boats; rest of the body (0x54BD5D-0x54C9D0, 0x54CD04-0x54CF8D) NOT_REACHED	cc5babbe9
+0x548680	CPhysical::ApplyCollision-2	MATCH	-	covered by ASM-MIX1	
+0x54A2C0	CPhysical::ApplySoftCollision-2	MATCH	-	covered by ASM-MIX1	
+0x544D50	CPhysical::ApplyCollisionAlt	MATCH	-	covered by ASM-S26b	
+0x546FF0	CPhysical::PositionAttachedEntity	MATCH	-	covered by ASM-S26b	
+0x546670	CPhysical::ProcessShiftSectorList	MATCH	-	covered by ASM-S?? (DEVIATION fixed 7ff6def4)	

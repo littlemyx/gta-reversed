@@ -2909,7 +2909,10 @@ void CAutomobile::VehicleDamage(float damageIntensity, eVehicleCollisionComponen
                 return;
             }
             if (GetStatus() != STATUS_WRECKED) {
-                m_fHealth = std::max(0.f, m_fHealth - CTimer::GetTimeStep() * 4.f);
+                { // 0x6A775A: fld 0; fcomp st(1); test ah,0x41; jne: `0 > v ? 0 : v` (NaN / -0 keep v; std::max(0, v) gave 0)
+                    const float healthLeft = m_fHealth - CTimer::GetTimeStep() * 4.f;
+                    m_fHealth = 0.f > healthLeft ? 0.f : healthLeft;
+                }
             }
         }
 
@@ -2956,7 +2959,10 @@ void CAutomobile::VehicleDamage(float damageIntensity, eVehicleCollisionComponen
                 if (const auto& ped = *m_pDamageEntity->AsPed(); ped.bIsStanding) {
                     const auto impactDir = DotProduct(ped.m_matrix->GetForward() * ped.m_vecAnimMovingShift.y, m_vecLastCollisionImpactVelocity);
                     if (impactDir < 0.f) { // From behind - (-90, 90) deg
-                        calcDmgIntensity = std::max(0.f, calcDmgIntensity + impactDir * ped.m_fMass);
+                        { // 0x6A78D9: fcomp st(1) + test ah,0x41 + jne: `0 > v ? 0 : v` (NaN / -0 keep v)
+                            const float v = calcDmgIntensity + impactDir * ped.m_fMass;
+                            calcDmgIntensity = 0.f > v ? 0.f : v;
+                        }
                     }
                 }
                 break;
@@ -3022,7 +3028,8 @@ void CAutomobile::VehicleDamage(float damageIntensity, eVehicleCollisionComponen
         // 0x6A7A6E
         // Some shaky-shaky
         if (GetStatus() == STATUS_PLAYER && calcDmgIntensity > 50.f) {
-            const auto intensity = std::min(250.f, calcDmgIntensity / m_fMass * 800.f + 100.f);
+            const float intensityRaw = calcDmgIntensity / m_fMass * 800.f + 100.f;
+            const auto  intensity    = 250.f < intensityRaw ? 250.f : intensityRaw; // 0x6A7A8C: fcomp st(1) + test ah,5 + jp: NaN keeps the value (std::min gave 250)
             CPad::GetPad()->StartShake(40000 / NOTSA_FTOL(uint8, intensity), NOTSA_FTOL(uint8, intensity), 2000u);
         }
 

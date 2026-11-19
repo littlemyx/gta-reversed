@@ -7,6 +7,7 @@
 #include "TaskSimpleLeaveGroup.h"
 #include "TaskSimpleKillPedWithCar.h"
 #include "TaskSimpleHurtPedWithCar.h"
+#include "TaskSimpleHitFromBehind.h"
 #include "PedGeometryAnalyser.h"
 
 void CTaskComplexHitPedWithCar::InjectHooks() {
@@ -79,6 +80,8 @@ CTask* CTaskComplexHitPedWithCar::CreateSubTask(eTaskType tt) {
         }
         return new CTaskComplexFallAndGetUp{ animId, ANIM_GROUP_DEFAULT, m_DownTime };
     }
+    case TASK_SIMPLE_HIT_BEHIND: // 0x65612E (type 414): the exe creates a CTaskSimpleHitFromBehind, the port returned nullptr
+        return new CTaskSimpleHitFromBehind{};
     case TASK_SIMPLE_KILL_PED_WITH_CAR:
         return new CTaskSimpleKillPedWithCar{ m_Veh, m_ImpulseMag };
     case TASK_SIMPLE_HURT_PED_WITH_CAR:

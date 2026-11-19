@@ -249,7 +249,7 @@ bool CTaskComplexKillCriminal::MakeAbortable(CPed* ped, eAbortPriority priority,
                 return false;
             }
             if (notsa::contains({ EVENT_DAMAGE, EVENT_VEHICLE_DAMAGE_WEAPON }, evType)) { // Change target immediately
-                if (!m_Criminal || (m_Criminal->GetPosition() - ped->GetPosition()).SquaredMagnitude() <= sq(25.f)) {
+                if (!m_Criminal || (m_Criminal->GetPosition() - ped->GetPosition()).SquaredMagnitude() < sq(25.f)) { // exe 0x68DC02: `fcomp [625.0]; test ah, 5; jp skip` => STRICT <
                     ChangeTarget(evSrcPed);
                 }
             }

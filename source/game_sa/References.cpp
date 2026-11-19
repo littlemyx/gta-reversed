@@ -25,6 +25,7 @@ void CReferences::Init() {
     }
 
     (&aRefs[MAX_NUM_REFERENCES - 1])->m_pNext = nullptr;
+    (&aRefs[MAX_NUM_REFERENCES - 1])->m_ppEntity = nullptr; // exe 0x5719C0-0x5719CD: the loop runs for ALL 3000 nodes (m_ppEntity = 0 incl. the last); 0x5719D1 then nulls only the last m_pNext
 }
 
 uint32 CReferences::ListSize(CReference* ref) {

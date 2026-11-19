@@ -1,0 +1,10 @@
+addr	function	verdict	asm range	note	fix commit
+0x420C40	CCamera::IsSphereVisible	RECONFIRMED	0x420C40-0x420D36	near/far/4 frustum tests strictness + NaN arms (test ah,5 jnp / 0x41 je), sum order x*nx+y*ny, normals offsets 0xB24..0xB50 (S30)	-
+0x424130	CCarCtrl::FindSpeedMultiplierWithSpeedFromNodes	RECONFIRMED	all	trivial constant switch, 4 constants read from exe data	-
+0x43C660	CCurves::CalcSpeedVariationInBend	RECONFIRMED	0x43C660-0x43C700	dot<=0 / >0.7 strictness, 1/3=0x3EAAAAAA, 1/0.7 const, dx^2+dy^2 order, start-end (P4R23e)	-
+0x42EC90	CCarCtrl::DragCarToPoint	RECONFIRMED (partial)	0x42EC90-0x42F11D	first ~330 instr (len, wheel positions, ProcessLineSphere fallback, ground probes ranges) match the x87 trace in the source; tail not re-read (S22d)	-
+0x615DC0	CPopulation::ManageObject	RECONFIRMED	0x615DC0-0x615FF0 (all)	z2+y2+x2 sum order, all thresholds/constants, model groups, time compare unsigned; NOTE: NaN arms differ (dummy path / beach towel: exe returns/keeps on NaN dist, port removes/converts) - unreachable, not changed (S23b)	-
+0x6D05E0	cTransmission::CalculateDriveAcceleration	RECONFIRMED	0x6D05E0-0x6D09B4 (all)	full trace: loop/shift conditions incl. NaN, mult order, ground/free branches, clamp 0.1..1, a6/a7 stores, tail /0.05 min 1 (P4R2z)	-
+0x602C00	CPedStuckChecker::TestPedStuck	RECONFIRMED (partial)	sqDist only	0x406DA0 sums x,y,z; port order matches (S55); rest not re-read	-
+0x6D0530	cTransmission::CalculateGearForSimpleCar	NOT_REACHED	-	kept P4R2z MATCH	-
+0x557530	CRope::Update	NOT_REACHED	-	prior S71c full trace stands; 1658 instr, budget	-

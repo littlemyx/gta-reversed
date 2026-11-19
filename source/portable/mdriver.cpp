@@ -506,6 +506,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     if (v == "key") {
         std::string kk = d.args.empty() ? "" : d.args[0].str ? d.args[0].s : std::to_string((int)d.args[0].n); const int n = d.args.size() > 1 && !d.args[1].str ? (int)d.args[1].n : 8;
         const std::string nm = KeyName(kk); if (nm.empty()) { Stop("unmapped-key " + kk, cop, 0); return; }
+        if (!kk.empty() && std::isdigit((unsigned char)kk[0])) { QueueActions({ "emit mdpad:" + kk + ":" + std::to_string(n), "key down " + nm, "wait " + std::to_string(n), "key up " + nm }, row.settle); return; } // CR4: numeric pad button: the pad state itself, as TS (PadInput.joy[field] = 255)
         QueueActions({ "key down " + nm, "wait " + std::to_string(n), "key up " + nm }, row.settle); return;
     }
     if (v == "skipcut") { QueueActions(CCutsceneMgr::IsCutsceneProcessing() ? std::vector<std::string>{ "emit mdskipcut:0" } : std::vector<std::string>{}, row.settle); return; }
@@ -555,7 +556,9 @@ void ShootDead() { // actions.ts shootAttackers: every ped (not a buddy type) wh
     for (int h : victims) Emit("mdkillped:" + std::to_string(h));
 }
 static float g_passStat0 = 0.f;
+static std::map<int,int> g_padHold; // CR4: button -> frames left
 void TickGeneric() {
+    for (auto it = g_padHold.begin(); it != g_padHold.end();) { if (it->second > 0) --it->second; it = it->second > 0 ? std::next(it) : g_padHold.erase(it); }
     if (!g_loaded) { LoadTable(std::getenv("NOTSA_MDRIVER_TABLE")); LoadArity(); if (const char* o = std::getenv("NOTSA_MDRIVER_OUT")) g_out = std::fopen(o, "w"); if (const char* m = std::getenv("NOTSA_MDRIVER_MAXFRAMES")) g_maxFrames = std::atoi(m); }
     if (g_quitIn >= 0) { if (g_quitIn-- == 0) { WriteResult(); Emit("quit"); if (g_out) { std::fclose(g_out); g_out = nullptr; } g_done = true; } return; }
     auto* root = notsa::scmtrace::Root();
@@ -635,6 +638,7 @@ void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int co
     }
     if (op >= 0x00BA && op <= 0x00BD) g_lastLabel.assign(lab, strnlen(lab, 8));
 }
+bool PadHeld(int button) { auto it = g_padHold.find(button); return it != g_padHold.end() && it->second > 0; }
 void SetKeyPusher(void (*fn)(const char*, bool)) { g_push = fn; }
 void SetCmdRunner(void (*fn)(const std::string&)) { g_run = fn; }
 
@@ -643,6 +647,7 @@ bool Cmd(const char* name, const std::string& args) {
     auto* ped = Cj();
     if (!std::strcmp(name, "mdkillped")) { if (auto* k = CPools::GetPed(std::atoi(args.c_str()))) { k->m_fHealth = 0.f; k->m_nPedState = PEDSTATE_DEAD; } return true; }
     if (!std::strcmp(name, "mdkillcar")) { if (auto* k = CPools::GetVehicle(std::atoi(args.c_str()))) k->BlowUpCar(nullptr, false); return true; }
+    if (!std::strcmp(name, "mdpad")) { const auto c = args.find(':'); if (c != std::string::npos) g_padHold[std::atoi(args.c_str())] = std::atoi(args.c_str() + c + 1) + 1; return true; }
     if (!std::strcmp(name, "mdkey")) { const auto c = args.find(':'); if (g_push) g_push(args.c_str() + c + 1, args.compare(0, c, "down") == 0); return true; }
     if (!ped) return true;
     if (!std::strcmp(name, "mdskipcut")) { if (CCutsceneMgr::IsCutsceneProcessing()) CCutsceneMgr::SkipCutscene(); return true; }

@@ -4,6 +4,9 @@
 #include <CommandParser/Parser.hpp>
 #include "MenuManager.h"
 #include "Pad.h"
+#ifdef NOTSA_MDRIVER
+#include "portable/mdriver.h"
+#endif
 #include "CommandParser/Parser.hpp"
 using namespace notsa::script;
 /*!
@@ -12,6 +15,9 @@ using namespace notsa::script;
 
 namespace {
 bool IsButtonPressed(CRunningScript* S, int16 playerIndex, eButtonId button) {
+#ifdef NOTSA_MDRIVER
+    if (notsa::mdriver::PadHeld((int)button)) { return !CPad::GetPad(0)->JustOutOfFrontEnd; } // CR4 harness: the pad button the driver holds (TS PadInput)
+#endif
     return S->GetPadState(playerIndex, button) && !CPad::GetPad(0)->JustOutOfFrontEnd;
 }
 

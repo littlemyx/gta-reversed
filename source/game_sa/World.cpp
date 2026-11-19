@@ -22,6 +22,7 @@
 
 #include "Tasks/TaskTypes/TaskComplexDestroyCar.h"
 #include "Tasks/TaskTypes/TaskSimpleStandStill.h"
+#include "portable/sh7log.h"
 
 // CWorld::SnookerTableMax = CVector{ 2495.8525f, -1671.41f, 12.9f };
 // CWorld::SnookerTableMin = CVector{ 497.7925f, -1670.4f, 13.19f };
@@ -2250,7 +2251,10 @@ void CWorld::Process() {
                     delete entity;
                 }
             } else {
-                entity->ProcessControl();
+                {
+                    SH_VMX("pre_processcontrol", "post_processcontrol", entity);
+                    entity->ProcessControl();
+                }
                 if (entity->GetIsStatic()) {
                     entity->AsPhysical()->RemoveFromMovingList();
                 }

@@ -712,7 +712,9 @@ void CAutomobile::ProcessControl()
 
             if (IsAnyFrontAndRearWheelTouchingGround()) {
                 CVector point = GetForward() * -1.0f;
-                CVector force = std::min(m_fTurnMass, 2500.0f) * -0.008f * GetUp();
+                // exe 0x6B2626: fcom 2500 + test ah,5 + jnp keeps the mass only if it is strictly below 2500; equal and NaN take 2500 (std::min keeps a NaN)
+                const float cappedTurnMass = m_fTurnMass < 2500.0f ? m_fTurnMass : 2500.0f;
+                CVector force = cappedTurnMass * -0.008f * GetUp();
                 ApplyTurnForce(force, point);
             }
         }

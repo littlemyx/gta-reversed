@@ -1,0 +1,26 @@
+addr	function	verdict	asm range	note	fix commit
+0x6A3670	CAutomobile::FixPanel	MATCH	0x6A3670-0x6A3737	review of d57dcacc2: CMatrix over frame+0x10 (modelling), re-translated to own pos (0x6A36E0..0x6A36F9): CONFIRMED	
+0x6A35A0	CAutomobile::FixDoor	MATCH	0x6A35A0-0x6A366D	review of d57dcacc2: same frame matrix reset (0x6A3614..0x6A362F): CONFIRMED	
+0x4594C0	CVehicleRecording::IsPlaybackGoingOnForCar	MATCH	0x4594C0-0x45959B	16 slots, bPlaybackGoingOn && vehicle ptr	
+0x45A280	CVehicleRecording::StopPlaybackRecordedCar	MATCH	0x45A280-0x45A357	same scan then tail-call StopPlaybackWithIndex	
+0x459440	CVehicleRecording::StopPlaybackWithIndex	MATCH	0x459440-0x4594B9	refcount dec + free + RemoveModel via CPath::RemoveRef	
+0x45A980	CVehicleRecording::StartPlaybackRecordedCar	MATCH	0x45A980-0x45AB0C	slot/flags/AI mission 0x22/collision bits/id byte	
+0x543540	CPhysical::GetHasCollidedWith	MATCH	0x543540-0x54357C	flag bit + count + scan	
+0x6D16A0	CVehicle::SetDriver	MATCH	0x6D16A0-0x6D1870	freebies switch, armour fcom, turn/move force	
+0x6D1950	CVehicle::RemoveDriver	MATCH	0x6D1950-0x6D1A4B	status, engine flag, caddy/cop freebies	
+0x5E4500	CPed::SetPedState	MATCH	0x5E4500-0x5E4575	cover point release + blip clear on DIE/DEAD	
+0x5DF030	CPed::CanSetPedState	MATCH	0x5DF030-0x5DF059	6 states	
+0x5DF000	CPed::CanPedReturnToState	MATCH	0x5DF000-0x5DF02E	33 true states	
+0x5E47E0	CPed::SetCharCreatedBy	MATCH	0x5E47E0-0x5E4875	decision maker + 30.0 ranges	
+0x5F8020	CPedGroupMembership::AddFollower	MATCH	0x5F8020-0x5F80CC	flags, slots, held object	
+0x5F6A50	CPedGroupMembership::CountMembers	MATCH	0x5F6A50-0x5F6A96	8 slots	
+0x5F6950	CPedGroupMembership::GetObjectForPedToHold	MATCH	0x5F6950-0x5F6994	rand thresholds 33/66	
+0x5FB190	CPedGroupMembership::RemoveAllFollowers	MATCH	0x5FB190-0x5FB1CD		
+0x5FB1D0	CPedGroupMembership::RemoveNFollowers	MATCH	0x5FB1D0-0x5FB209		
+0x601BC0	CPedIntelligence::IsFriendlyWith	MATCH	0x601BC0-0x601C27		
+0x601C30	CPedIntelligence::IsThreatenedBy	MATCH	0x601C30-0x601C7F		
+0x601C90	CPedIntelligence::Respects	MATCH	0x601C90-0x601CBB		
+0x601D10	CPedIntelligence::AreFriends	MATCH	0x601D10-0x601D46		
+0x64F190	CCarEnterExit::ComputeTargetDoorToEnterAsPassenger	MATCH	0x64F190-0x64F1DF		
+0x64F1E0	CCarEnterExit::ComputePassengerIndexFromCarDoor	MATCH	0x64F1E0-0x64F232		
+0x64E550	CCarEnterExit::ComputeDoorFlag	MATCH	0x64E550-0x64E5D2	jump tables checked; default ids return 0 in exe (port NOTSA_UNREACHABLE, never hit)	

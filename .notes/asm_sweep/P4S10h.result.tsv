@@ -1,0 +1,18 @@
+addr	function	verdict	asm range	note	fix commit
+0x5E1B10	CPed::UpdatePosition	MATCH	0x5E1B10-0x5E1F9E	~328 insn; all branches, boat centripetal term, slope, limit-velocity consts (0.01/0.002/0.0002+ulp/0.04) checked	
+0x4B3A60	CEventDamage::ComputeDeathAnim	FIXED	0x4B3A60-0x4B3F04	~335 insn + 4 jump tables; rammed/runover dir0 piece map fixed; knock-back force normalised in 2D	017964190
+0x6575F0	CTaskComplexWalkRoundObject::ControlSubTask	MATCH	0x6575F0-0x657740	abort paths, timer, static counter, 3 thresholds	
+0x6B6D40	CBike::DoSoftGroundResistance	MATCH	0x6B6D40-0x6B7080	sand and railtrack branches, x87 spill points already modelled	
+0x61F9F0	CTaskSimpleThrowControl::ProcessPed	MATCH	0x61F9F0-0x61FC10		
+0x60D350	CPlayerPed::ProcessGroupBehaviour	MATCH	0x60D350-0x60D599	up/down hold timers, recruit paths, 32-frame gang2 hate loop	
+0x6CFFD0	CTrailer::ProcessEntityCollision	MATCH	0x6CFFD0-0x6D0388	wheel/support loops, tunnel bits, hit-wall flag	
+0x671AB0	CTaskComplexFollowNodeRoute::ControlSubTask	FIXED	0x671AB0-0x671CB0	GO_TO_POINT_FINE ratio update gated by m_bSlowingDown; speeding-up branch uses CalcBlendRatio(ped,false)	c399e2a03
+0x6D56C0	CVehicle::ProcessOpenDoor	PARTIAL	skimmed to 0x6D5B9E	structure + OPEN_START/CLOSE/ROLLDOOR constants look consistent; door-component table 0x6D5C28 and per-group tables not verified	
+0x671EF0	CTaskComplexWander::ScanForBlockedNode	NOT_REACHED			
+0x60BA80	CPlayerPed::DrawTriangleForMouseRecruitPed	NOT_REACHED			
+0x60C5F0	CPlayerPed::FindPedToAttack	NOT_REACHED			
+0x6AF110	CAutomobile::BlowUpCarsInPath	NOT_REACHED			
+0x61E040	CTaskSimpleUseGun::ControlGun	NOT_REACHED			
+0x672A50	CTaskComplexGoToPointAnyMeans::ControlSubTask	NOT_REACHED			
+0x543E90	CPhysical::ApplySpringDampening	NOT_REACHED			
+0x6F6CC0	CTrain::FindPositionOnTrackFromCoors	NOT_REACHED			

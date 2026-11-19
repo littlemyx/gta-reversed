@@ -76,7 +76,7 @@ bool CEventKnockOffBike::AffectsPed(CPed* ped)
     if (ped->IsAlive()) {
         if (m_vehicle && m_vehicle->GetStatus() == STATUS_GHOST)
             return false;
-        if (ped->CantBeKnockedOffBike && !ped->bHasBeenRendered && !m_forceKnockOff)
+        if (ped->CantBeKnockedOffBike == CANT_BE_KNOCKED_OFF_NEVER && !m_forceKnockOff) // 0x4AFF05: (flags & 0x18000000) == 0x8000000; bHasBeenRendered (bit 29) is outside the mask
             return false;
         if (m_vehicle) {
             if (m_vehicle->m_pDriver != ped

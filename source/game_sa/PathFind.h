@@ -540,7 +540,7 @@ public:
     void CompleteNewInterior(CNodeAddress* outAddress);
     void RemoveLinksToNewInteriorNode(int32 nodeIdx);
     void RemoveInterior(uint32 interior);
-    CNodeAddress ReturnInteriorNodeIndex(int32 unkn, uint32 intId, int16 nodeId);
+    CNodeAddress ReturnInteriorNodeIndex(uint32 intId, int16 nodeId);
     CCarPathLinkAddress FindLinkBetweenNodes(CNodeAddress node1, CNodeAddress node2);
     CVector FindParkingNodeInArea(float minX, float maxX, float minY, float maxY, float minZ, float maxZ);
     bool Load();

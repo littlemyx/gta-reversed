@@ -1633,7 +1633,9 @@ void CPathFind::CompleteNewInterior(CNodeAddress* outAddress) {
 }
 
 // 0x451300 unused
-CNodeAddress CPathFind::ReturnInteriorNodeIndex(int32 unkn, uint32 intId, int16 nodeId) {
+CNodeAddress CPathFind::ReturnInteriorNodeIndex(uint32 intId, int16 nodeId) {
+    // exe 0x451300 (ret 0xC = hidden return pointer + 2 args): the exe has NO third argument; the first arg is the interior id
+    // compared against m_interiorIDs, the second arg's low word is the node id (the port took a leading unused `unkn`).
     for (auto i = 0; i < NUM_PATH_INTERIOR_AREAS; ++i) {
         if (m_interiorIDs[i] == intId) {
             return CNodeAddress(NUM_PATH_MAP_AREAS + i, nodeId);

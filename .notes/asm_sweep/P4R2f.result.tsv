@@ -1,0 +1,21 @@
+addr	function	verdict	asm range	note	fix commit
+0x623370	CTaskComplexKillPedOnFoot::Clone (review of bd9b0f322)	MATCH	0x623370-0x6233F8	CONFIRMED: ctor then copies bits 0x10+0x20 of byte +0xC, bit 0x40 not copied	
+0x48E0A0	CTaskSimpleLookAbout::Constructor	MATCH	0x48E0A0-0x48E0D0	RunTimedAnim(group 0, anim 9, 4.0,-4.0, dur, type 0x1A6, false)	
+0x48E0F0	CTaskSimpleLookAbout::Clone	MATCH	0x48E0F0-0x48E15A	same args from duration at +0x20	
+0x48E160	CTaskSimpleLookAbout::IsInterruptable	MATCH	0x48E160-0x48E162	false	
+0x62F310	CTaskSimpleStandStill::Constructor	MATCH	0x62F310-0x62F34B	time/looped/idleStance/blend; timer zeroed	
+0x635CF0	CTaskSimpleStandStill::Clone	MATCH	0x635CF0-0x635D83	copies time, looped, idleStance, blend	
+0x4B8690	CTaskSimpleStandStill::MakeAbortable	MATCH	0x4B8690-0x4B86B1	priority 0 restarts timer (start=now, interval -1, started)	
+0x63C940	CTaskComplexCarDrive::Constructor_1	MATCH	0x63C940-0x63C9B0	veh, speed, model, style, asDriver=1, carSetUp=0, ref registered	
+0x63C9D0	CTaskComplexCarDrive::Constructor_0	MATCH	0x63C9D0-0x63CA2B	speed 0, model -1, style 0, asDriver 1 (port adds NOTSA asDriver arg, default true)	
+0x63DC90	CTaskComplexCarDrive::Clone	MATCH	0x63DC90-0x63DCF3	ctor_1 then copies asDriver	
+0x63CAE0	CTaskComplexCarDrive::SetUpCar	MATCH	0x63CAE0-0x63CB02	saves style/mission/speed, flag	
+0x668120	CTaskComplexGoToPointAndStandStill::Constructor	MATCH	0x668120-0x668221	stopExactly: radius=max(0.5 if state<=WALK else 1.0), msr=0; flags; exe flag byte/target uninit before GoToPoint (noise)	
+0x6685E0	CTaskComplexGoToPointAndStandStillTimed::Constructor	MATCH	0x6685E0-0x668620	base(...,false,false), time at +0x28, timer zero	
+0x66CF30	CTaskComplexGoToPointAndStandStillTimed::Clone	MATCH	0x66CF30-0x66CFC7	same args, timer reset	
+0x6D1180	CVehicle::CanBeDeleted	MATCH	0x6D1180-0x6D121D	driver/passengers mission+state 50/55, createdBy 1,3 deletable	
+0x69EE60	CMessages::Process	MATCH	0x69EE60-0x69EFB8	queue shift, front stamped, previous-brief on advance	
+0x50AC20	CCamera::Fade	MATCH	0x50AC20-0x50AD0E	music fade min(max(d*0.3,0.3),d), FADE_IN wait/-0.1 clamp	
+0x4AB5A0	CEventGroup::Remove	MATCH	0x4AB5A0-0x4AB5DF	find, null slot, virtual delete	
+0x4AB370	CEventGroup::Flush	MATCH	0x4AB370-0x4AB41A	keeps script-command BE_IN_GROUP (0xF3) event	
+0x649700	CTaskSimpleWaitUntilPedIsInCar::ProcessPed	MATCH	0x649700-0x649791	flow identical	

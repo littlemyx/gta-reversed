@@ -57,7 +57,7 @@ void CScriptsForBrains::AddNewScriptBrain(int16 ImgIndex, int16 Model, uint16 pr
         script.m_PedModelOrPedGeneratorIndex = Model;
         script.m_TypeOfBrain                = typeOfBrain;
         script.m_bBrainActive               = true;
-        script.m_ObjectBrainActivationRadius = Radius > 0.f ? Radius : 5.f;
+        script.m_ObjectBrainActivationRadius = !(Radius <= 0.f) ? Radius : 5.f; // exe 0x46A95C: fcomp + `test ah, 0x41 / jp` keeps the radius when it is > 0 or NaN (only <= 0 selects 5.0)
         return;
     }
 }

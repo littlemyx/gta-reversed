@@ -125,7 +125,7 @@ bool CPopCycle::FindNewPedType(ePedType& outPedType, eModelID& outPedMI, bool no
         return false;
     }
 
-    if (CPopulation::bInPoliceStation && CGeneral::RandomBool(70.f)) {
+    if (CPopulation::bInPoliceStation && CGeneral::GetRandomNumberInRange(0, 100) < 70) { // exe 0x60FBE0-0x60FC11: ftol((rand & 0xFFFF) * (1/32768) * 100) < 70 (int roll, strict; RandomBool is the float version `<= 70`)
         outPedType = PED_TYPE_COP;
         outPedMI = CPopulation::ChoosePolicePedOccupation();
         return true;

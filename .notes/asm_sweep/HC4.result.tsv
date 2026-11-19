@@ -1,0 +1,47 @@
+addr	function	verdict	asm range	note	fix commit
+0x4C4C70	CBaseModelInfo::Get2dEffect	MATCH	0x4C4C70-0x4C4D0F	structure, store index+m_n2dEffectIndex<<6, geometry plugin count; exe count is int32 vs port uint8 (only differs for corrupt data)	-
+0x4042D0	CRect::IsPointInside(tol)	MATCH	0x4042D0-0x40431C	strict compares, NaN passes, layout top=+4 bottom=+0xC	-
+0x464DA0	CRunningScript::UpdatePC	MATCH	0x464DA0-0x464DBC	neg: base-newIP; else ScriptSpace+newIP	-
+0x5327F0	CRect::StretchToPoint	MATCH	0x5327F0-0x532844	4 strict compares, NaN skips	-
+0x404200	CRect::Restrict	MATCH	0x404200-0x40424E	same pattern	-
+0x4C5580	CAtomicModelInfo::GetRwModelType	MATCH	0x4C5580-0x4C5585	returns 1	-
+0x4C5350	CClumpModelInfo::FindFrameFromIdCB	MATCH	0x4C5350-0x4C538F	-	-
+0x4C52F0	CClumpModelInfo::FindFrameFromNameWithoutIdCB	MATCH	0x4C52F0-0x4C5341	_stricmp, id==0 first	-
+0x470370	CTheScripts::ReinitialiseSwitchStatementData	MATCH	0x470370-0x47038D	5 stores	-
+0x470390	CTheScripts::AddToSwitchJumpTable	MATCH	0x470390-0x4703BA	-	-
+0x4703C0	CTheScripts::UseSwitchJumpTable	MATCH	0x4703C0-0x47047B	binary search, entry order mid/hi/lo/default; differs only for 0 table entries (exe byte wrap vs port 32-bit)	-
+0x59BBB0	CMatrix::UpdateRW	MATCH	0x59BBB0-0x59BBBD	-	-
+0x59BB60	CMatrix::Update	MATCH	0x59BB60-0x59BBA9	12 float copies	-
+0x59AE70	CMatrix::SetUnity	MATCH	0x59AE70-0x59AE9A	-	-
+0x59B0A0	CMatrix::SetRotateY	MATCH	0x59B0A0-0x59B0DB	cos/sin stores and signs	-
+0x59AF80	CMatrix::SetTranslateOnly	MATCH	0x59AF80-0x59AF95	-	-
+0x59AFA0	CMatrix::SetRotateXOnly	MATCH	0x59AFA0-0x59AFD0	-	-
+0x412A80	CCollision::DistAlongLine2D	MATCH	0x412A80-0x412A9A	unrounded x87 sum	-
+0x412A30	CCollision::DistToMathematicalLine2D	MATCH	0x412A30-0x412A7C	sum order py2+px2-dot2, <=0 or NaN handling, const 0.0	-
+0x411E70	CCollision::TestSphereSphere	MATCH	0x411E70-0x411EBB	sum order z,x,y, strict >	-
+0x413AC0	CCollision::TestLineTriangle	MATCH (partial)	0x413AC0-0x413C02	plane test + t + intersection point instruction-level (spill points, order z,y,x, dS*dE<=0 NaN); 2D in-triangle switch by structure only	-
+0x4C5670	CTimeModelInfo::GetTimeInfo	MATCH	0x4C5670-0x4C5673	this+0x20	-
+0x4C4AE0	CBaseModelInfo::GetAnimFileIndex	MATCH	0x4C4AE0-0x4C4AE6	-1	-
+0x4C4BA0	CBaseModelInfo::AddRef	MATCH	0x4C4BA0-0x4C4BB0	-	-
+0x4C4BC0	CBaseModelInfo::SetColModel	MATCH	0x4C4BC0-0x4C4C06	lod flag 0x80, other time model recursion	-
+0x4C4B10	CBaseModelInfo::Init	MATCH	0x4C4B10-0x4C4B3A	flags word 0xC0 = backface|lod	-
+0x4C4430	CAtomicModelInfo::Init	MATCH	0x4C4430-0x4C4430	jmp Base::Init	-
+0x4C4B80	CBaseModelInfo::AddTexDictionaryRef	MATCH	0x4C4B80-0x4C4B8F	-	-
+0x4C4360	CAtomicModelInfo::SetAtomic	MATCH	0x4C4360-0x4C4426	port calls GetAnimFileIndex once instead of twice (no side effect)	-
+0x4CFB70	CAnimBlendNode::Init	MATCH	0x4CFB70-0x4CFB8A	-	-
+0x4D0C70	CAnimBlendSequence::SetBoneTag	MATCH	0x4D0C70-0x4D0C80	-	-
+0x4D0C50	CAnimBlendSequence::SetName	MATCH	0x4D0C50-0x4D0C6A	bugfix flag is off in the run build	-
+0x4D0C90	CAnimBlendSequence::GetDataSize	MATCH	0x4D0C90-0x4D0CCF	10/16/20/32 per frame	-
+0x4CE9F0	CAnimBlendAssociation::AllocateAnimBlendNodeArray	MATCH	0x4CE9F0-0x4CEA3F	64-byte rounded size	-
+0x4D3FB0	CAnimManager::AddAnimBlockRef	MATCH	0x4D3FB0-0x4D3FC0	-	-
+0x4D4010	CAnimManager::GetNumRefsToAnimBlock	MATCH	0x4D4010-0x4D4020	-	-
+0x4D3A20	CAnimManager::GetAnimGroupName	MATCH	0x4D3A20-0x4D3A2F	-	-
+0x4D3A30	CAnimManager::GetAnimBlockName	MATCH	0x4D3A30-0x4D3A3F	-	-
+0x4D3FF0	CAnimManager::RemoveAnimBlockRefWithoutDelete	MATCH	0x4D3FF0-0x4D4000	-	-
+0x4CEBE0	CAnimBlendAssociation::SetFinishCallback	MATCH	0x4CEBE0-0x4CEBF3	type 1	-
+0x4CEBC0	CAnimBlendAssociation::SetDeleteCallback	MATCH	0x4CEBC0-0x4CEBD3	type 2	-
+0x4CEA50	CAnimBlendAssociation::ReferenceAnimBlock	MATCH	0x4CEA50-0x4CEA7C	-	-
+0x4D42A0	CAnimManager::RemoveFromUncompressedCache	MATCH	0x4D42A0-0x4D42E4	unlink + free-list insert via CLinkList::Remove (list class not re-verified)	-
+0x464C00	CRunningScript::AddScriptToList	MATCH	0x464C00-0x464C1D	-	-
+0x464BD0	CRunningScript::RemoveScriptFromList	MATCH	0x464BD0-0x464BF5	-	-
+0x4648E0	CRunningScript::Init	MATCH	0x4648E0-0x464980	all stores, name 7 bytes, ExternalType 0xFF, DeathArrest check 1	-

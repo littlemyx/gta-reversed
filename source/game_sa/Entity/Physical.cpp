@@ -4284,9 +4284,7 @@ bool CPhysical::ProcessCollisionSectorList(int32 sectorX, int32 sectorY)
                                         } else {
                                             fFriction = 0.0f;
                                         }
-                                    }
-
-                                    if (!thisVehicle->IsTrain()) {
+                                    } else if (!thisVehicle->IsTrain()) { // 0x54CB5B: a boat ends here (-> 0x54CC5D), the train / wrecked / abandoned block (0x54CBB2) is for non-boats only
                                         if (GetStatus() == STATUS_WRECKED) {
                                             fFriction *= 3.0f;
                                         } else {

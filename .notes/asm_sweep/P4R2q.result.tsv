@@ -1,0 +1,11 @@
+addr	function	verdict	asm range	note	fix commit
+0x7360D0	CBulletInfo::Update (review of P4R2o fix)	MATCH	0x7360D0-0x736824	creator IsPointerValid, end-of-loop switch-off, sniper dot order x,z,y re-verified; hitEntity reset to null per bullet matches PLOS clearing it (0x56BA3A)	
+0x737620	CExplosion::Update (review of P4R2o fix)	MATCH	0x73770C-0x7377D3	creeping fire y drawn before x, z+2.0 re-verified	
+0x738B20	CProjectileInfo::Update (review of P4R2p fix)	MATCH	0x7397A4	sum order x,z,y accepted	
+0x698F30	CCover::AddCoverPoint (review of P4R2p fix)	MATCH	0x698FA5,0x6990D6	pos-before-entity test and unregistered IPL-0 pointer re-verified	
+0x56BA00	CWorld::ProcessLineOfSight	FIXED	0x56BA00-0x56CDAC	same-X/same-Y with origin<target scans ascending from the origin (was descending from the target); diagonal branches match	853baa026
+0x56A490	CWorld::GetIsLineOfSightClear	UNSURE		same ascending/descending order difference in same-X/same-Y loops, but the boolean result is order independent (early-out) so not changed; exe not disassembled	
+0x736A50	CExplosion::AddExplosion	FIXED	0x736A50-0x7375C4	grenade with a victim creates explosion_small on the victim matrix (was nothing); fires-started stat PLAYER1 only (0x737401); rest MATCH (fuel loop, case params, fires, shadow, TriggerExplosion, cam shake)	22ff473ba
+0x60FBD0	CPopCycle::FindNewPedType	MATCH	0x60FBD0-0x60FFCA	police station, chance setup, rand order, max/dispatch order, dealers/gang/cop/civ branches	
+0x49D610	CTrafficLights::ShouldCarStopForLight	MATCH	0x49D610-0x49DAA7	three node blocks, direction tests, light state, dot limits 12/6, status test	
+0x612F90	CPopulation::ChooseCivilianOccupation	NOT_REACHED		call args from FindNewPedType match; body carries exe audit in source	

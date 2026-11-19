@@ -774,14 +774,15 @@ int32 CPedGeometryAnalyser::ComputeRouteRoundEntityBoundingBox(const CPed& ped, 
     const CVector pOrig = p;
 
     const auto ClipToPlane = [&](uint32 i) { // Returns the point where the line (starting at `pOrig`) crosses the plane
-        const float t = -(DistToPlane(i, pOrig) / (dir.y * planes[i].y + dir.x * planes[i].x + dir.z * planes[i].z));
+        // 0x5F4255 / 0x5F42FE: the numerator sums y, x, z (NOT the z, y, x order of the first loop's DistToPlane)
+        const float t = -((pOrig.y * planes[i].y + pOrig.x * planes[i].x + pOrig.z * planes[i].z + planesDots[i]) / (dir.y * planes[i].y + dir.x * planes[i].x + dir.z * planes[i].z));
         return CVector{ dir.x * t + pOrig.x, dir.y * t + pOrig.y, dir.z * t + pOrig.z };
     };
     const auto Classify = [](float dist) { // 1 = in front of the plane (outside), 0 = near the plane, -1 = behind it (inside)
         if (dist > 0.2f) { // 0x858CC4
             return 1;
         }
-        return dist >= -0.2f /* 0x858FDC */ ? 0 : -1;
+        return dist < -0.2f /* 0x858FDC; a NaN is class 0 (fcomp + test ah,5 + jp) */ ? -1 : 0;
     };
 
     bool isOutsideOnSomePlane{};
@@ -838,15 +839,19 @@ int32 CPedGeometryAnalyser::ComputeRouteRoundEntityBoundingBox(const CPed& ped, 
     for (auto i = 0u; i < 4; i++) {
         const auto& n = planes[i];
 
-        const float distP = p.y * n.y + p.z * n.z + p.x * n.x + planesDots[i];
-        const float distQ = q.y * n.y + q.z * n.z + q.x * n.x + planesDots[i];
+        // The exe unrolls this loop and the 4 copies sum in different orders: plane 0 y, z, x (0x5F44D0) - planes 1..3 x, y, z (0x5F4701, 0x5F4938, 0x5F4B6F)
+        const float distP = i == 0 ? p.y * n.y + p.z * n.z + p.x * n.x + planesDots[i] : p.x * n.x + p.y * n.y + p.z * n.z + planesDots[i];
+        const float distQ = i == 0 ? q.y * n.y + q.z * n.z + q.x * n.x + planesDots[i] : q.x * n.x + q.y * n.y + q.z * n.z + planesDots[i];
 
         if (distP == 0.f && distQ == 0.f) {
             continue;
         }
 
         const auto CrossingPoint = [&] {
-            const float t = -((pSnapshot.y * n.y + pSnapshot.z * n.z + pSnapshot.x * n.x + planesDots[i]) / (dir.y * n.y + dir.z * n.z + dir.x * n.x));
+            // plane 0 sums z, y, x (0x5F4578 / 0x5F4652), planes 1..3 x, z, y (0x5F47AC, 0x5F49E3, 0x5F4C1A)
+            const float t = i == 0
+                ? -((pSnapshot.z * n.z + pSnapshot.y * n.y + pSnapshot.x * n.x + planesDots[i]) / (dir.z * n.z + dir.y * n.y + dir.x * n.x))
+                : -((pSnapshot.x * n.x + pSnapshot.z * n.z + pSnapshot.y * n.y + planesDots[i]) / (dir.x * n.x + dir.z * n.z + dir.y * n.y));
             return CVector{ dir.x * t + pSnapshot.x, dir.y * t + pSnapshot.y, dir.z * t + pSnapshot.z };
         };
         if (distP < 0.f || distQ > 0.f) {
@@ -937,8 +942,12 @@ int32 CPedGeometryAnalyser::ComputeRouteRoundEntityBoundingBox(const CPed& ped, 
                         // Ignore peds that are moving in the direction of the path
                         bool ignore{};
                         if (hit->GetIsTypePed() && hit->AsPed()->m_nMoveState != PEDMOVE_STILL) {
+                            if (!hit->m_matrix) { // 0x5F527B-0x5F5298: a ped without a matrix gets one built from its placement
+                                hit->AllocateMatrix();
+                                hit->m_placement.UpdateMatrix(hit->m_matrix);
+                            }
                             const auto& hitFwd = hit->GetMatrix().GetForward();
-                            ignore = (next.x - cur.x) * hitFwd.x + (next.y - cur.y) * hitFwd.y + (next.z - cur.z) * hitFwd.z >= 0.f;
+                            ignore = !((next.z - cur.z) * hitFwd.z + (next.y - cur.y) * hitFwd.y + (next.x - cur.x) * hitFwd.x < 0.f); // 0x5F5581-0x5F55B0: sums z, y, x; a NaN falls through to "ignore"
                         }
                         if (!ignore) {
                             info.isClear   = false;

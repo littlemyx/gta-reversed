@@ -3047,7 +3047,12 @@ void ShutCharUpForScriptedSpeech(CPed* ped, bool disable) {
     if (!ped)
         return;
 
-    ped->DisablePedSpeechForScriptSpeech(disable);
+    // exe 0x47B779-0x47B79B: disable -> DisablePedSpeechForScriptSpeech(0) (the current line is NOT stopped); enable -> EnablePedSpeechForScriptSpeech() (port: Disable(flag) both ways)
+    if (disable) {
+        ped->DisablePedSpeechForScriptSpeech(0);
+    } else {
+        ped->EnablePedSpeechForScriptSpeech();
+    }
 }
 
 /*

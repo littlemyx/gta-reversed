@@ -30,8 +30,8 @@
 #else
 #define RD_NOTE(x) ((void)0)
 #endif
+#include "portable/sh10log.h" // SH10 debug logs (macros are no-ops without NOTSA_STATEHASH; used outside #ifdef in Idle)
 #ifdef NOTSA_STATEHASH
-#include "portable/sh10log.h" // SH10 debug logs (NOTSA_STATEHASH only)
 #include "portable/statehash.h" // RR-1: deterministic state-hash harness (hook lines below are #ifdef NOTSA_STATEHASH)
 #endif
 

@@ -21,6 +21,7 @@
 #include "Tasks/TaskTypes/TaskComplexKillPedOnFootMelee.h"
 #include "Tasks/TaskTypes/TaskComplexKillPedOnFootArmed.h"
 #include "Tasks/TaskTypes/TaskSimpleCarSetPedInAsDriver.h"
+#include "Tasks/TaskTypes/TaskSimpleCarSetPedInAsPassenger.h"
 #include <bit>
 #include <algorithm>
 #include <cstring>
@@ -438,6 +439,27 @@ std::string LocatedOther(const Rec& r) { // "ped:<handle>" / "veh:<handle>" of t
     if (!e || e == me || (me && me->bInVehicle && e == (CEntity*)me->m_pVehicle)) return "";
     return (op >= 0x01AD ? "1:" : "0:") + std::to_string((int)*h);
 }
+// MS1: actions.ts pickDoorSpot / tryEnterCar. CJ is stood 2 m from a door of the car (left, right, behind: the first whose line to the door is free), 40 frames pass, the Enter key, up to 600 frames, then the script's own WARP_CHAR_INTO_CAR (mdwarpin)
+CVehicle* NearestFreeCar(CPed* c, float best) {
+    CVehicle* car = nullptr;
+    for (auto& vv : GetVehiclePool()->GetAllValid()) {
+        if (vv.m_pDriver || vv.m_nDoorLock == CARLOCK_LOCKED || vv.m_nDoorLock == CARLOCK_LOCKED_PLAYER_INSIDE || vv.m_nDoorLock == CARLOCK_LOCKOUT_PLAYER_ONLY) continue;
+        const float dd = (float)(vv.GetPosition() - c->GetPosition()).Magnitude();
+        if (dd < best) { best = dd; car = &vv; }
+    }
+    return car;
+}
+std::vector<std::string> EnterCarActions(CVehicle* car) {
+    const auto door = CCarEnterExit::GetPositionToOpenCarDoor(car, CAR_DOOR_LF); const CVector right = car->GetRight(), front = car->GetForward();
+    const float cx[3] = { door.x - right.x * 2.f, door.x + right.x * 2.f, door.x - front.x * 2.f }, cy[3] = { door.y - right.y * 2.f, door.y + right.y * 2.f, door.y - front.y * 2.f };
+    const auto free = [&](float x, float y) {
+        for (int k = 0; k <= 4; k++) { const float t = k / 4.f; if (CWorld::TestSphereAgainstWorld(CVector{ x + (door.x - x) * t, y + (door.y - y) * t, car->GetPosition().z + 0.2f }, 0.35f, nullptr, true, false, false, false, false, false)) return false; }
+        return true;
+    };
+    int pick = 0; for (int k = 0; k < 3; k++) if (free(cx[k], cy[k])) { pick = k; break; }
+    float dx = door.x - cx[pick], dy = door.y - cy[pick]; const float len = std::hypot(dx, dy) ? (float)std::hypot(dx, dy) : 1.f; dx /= len; dy /= len;
+    return { "emit mdped:" + F(cx[pick]) + ":" + F(cy[pick]) + ":" + F(car->GetPosition().z + 0.2f) + ":" + F(std::atan2(-dx, dy)) + ":0", "wait 40", "key down return", "wait 1", "key up return", "waituntil invehicle == 1 600", "emit mdwarpin:" + std::to_string(GetVehiclePool()->GetRef(car)) };
+}
 void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass / bad verb)
     const Row& row = *d.row; const int cop = d.op;
     auto F_ = [&](size_t i) -> float { return i < d.args.size() ? (float)d.args[i].n : 0.f; };
@@ -463,18 +485,14 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     if (v == "entercar" || v == "nearest_car") {
         CVehicle* car = nullptr;
         if (v == "entercar") { car = CPools::GetVehicle(I_(0)); if (!car) { Stop("driver action failed: entercar " + std::to_string(I_(0)) + ": no such car", cop, 0); return; } }
-        else if (c) {
-            float best = 50.f;
-            for (auto& vv : GetVehiclePool()->GetAllValid()) {
-                if (vv.m_pDriver || vv.m_nDoorLock == CARLOCK_LOCKED || vv.m_nDoorLock == CARLOCK_LOCKED_PLAYER_INSIDE || vv.m_nDoorLock == CARLOCK_LOCKOUT_PLAYER_ONLY) continue;
-                const float dd = (float)(vv.GetPosition() - c->GetPosition()).Magnitude();
-                if (dd < best) { best = dd; car = &vv; }
-            }
-            if (!car) { Stop("by nature: no_car", cop, 0); return; }
-        }
+        else if (c) { car = NearestFreeCar(c, 50.f); if (!car) { Stop("by nature: no_car", cop, 0); return; } }
         if (!car || !c) { QueueActions({}, row.settle); return; }
-        const auto door = CCarEnterExit::GetPositionToOpenCarDoor(car, CAR_DOOR_LF); const CVector l = -car->GetRight();
-        QueueActions({ "emit mdped:" + F(door.x + l.x * 2.5f) + ":" + F(door.y + l.y * 2.5f) + ":" + F(car->GetPosition().z + 0.2f) + ":" + F(std::atan2(l.x, -l.y)) + ":0", "wait 10", "key down return", "wait 1", "key up return" }, row.settle);
+        if (v == "entercar" && d.cond && (cop == 0x00DB || cop == 0x0448)) { // MS1 (actions.ts entercar): IS_CHAR_IN_CAR(buddy, car) wants THAT char in the car: set in as a passenger like WARP_CHAR_INTO_CAR_AS_PASSENGER
+            const auto h = ArgInt(*d.cond, 0);
+            if (h) if (auto* oth = CPools::GetPed((int)*h)) if (oth != c) { QueueActions({ "emit mdwarppass:" + std::to_string((int)*h) + ":" + std::to_string(I_(0)) }, row.settle); return; }
+        }
+        auto acts = EnterCarActions(car);
+        QueueActions(acts, row.settle);
         return;
     }
     if (v == "kill") {
@@ -555,6 +573,10 @@ void TickGeneric() {
     if (!std::getenv("NOTSA_MDRIVER_NOFIGHT") && ++g_fightClock % 3 == 0 && !CCutsceneMgr::IsCutsceneProcessing() && Cj()) ShootDead();
     for (;;) {
         if (g_wait > 0) { g_wait--; return; }
+        if (g_untilLeft > 0) { // MS1: `waituntil` (the tryEnterCar 600-frame wait)
+            std::stringstream us(g_until); std::string e, o; double v; us >> e >> o >> v;
+            if (Cmp(Eval(e), o, v)) g_untilLeft = 0; else { g_untilLeft--; return; }
+        }
         if (g_qpos >= g_queue.size()) break;
         const std::string line = g_queue[g_qpos++];
         if (!line.compare(0, 5, "emit ")) Emit(line.substr(5)); else Dispatch(line);
@@ -637,6 +659,16 @@ bool Cmd(const char* name, const std::string& args) {
         else { CWorld::Remove(tgt); tgt->SetPosn(CVector{ w[0], w[1], gz + 1.1f }); CWorld::Add(tgt); }
         CStreaming::LoadScene(CVector{ w[0], w[1], gz }); CStreaming::LoadSceneCollision(CVector{ w[0], w[1], gz });
         notsa::standalone::Fixups::Log("[mdriver] %s gf=%u -> %.2f,%.2f,%.2f", name, (unsigned)CTimer::GetFrameCounter(), w[0], w[1], gz);
+        return true;
+    }
+    if (!std::strcmp(name, "mdwarpin")) { // tryEnterCar fallback: the Enter key did not get him in -> the script's own WARP_CHAR_INTO_CAR
+        auto* car = CPools::GetVehicle(std::atoi(args.c_str()));
+        if (car && !(ped->bInVehicle && ped->m_pVehicle == car)) { const auto pp = ped->GetPosition(), cp = car->GetPosition(); notsa::standalone::Fixups::Log("[mdriver] mdwarpin: Enter failed: CJ %.1f,%.1f,%.1f hp %.0f state %d task %d; car model %d at %.1f,%.1f,%.1f status %d locks %d driver %d controls %s", pp.x, pp.y, pp.z, ped->m_fHealth, (int)ped->m_nPedState, ped->GetIntelligence()->m_TaskMgr.GetActiveTask() ? (int)ped->GetIntelligence()->m_TaskMgr.GetActiveTask()->GetTaskType() : -1, (int)car->m_nModelIndex, cp.x, cp.y, cp.z, (int)car->GetStatus(), (int)car->m_nDoorLock, car->m_pDriver ? 1 : 0, CPad::GetPad(0)->DisablePlayerControls ? "OFF" : "on"); ped->GetIntelligence()->FlushImmediately(false); CTaskSimpleCarSetPedInAsDriver t(car, true, nullptr); t.ProcessPed(ped); notsa::standalone::Fixups::Log("[mdriver] mdwarpin gf=%u: warped in (the Enter key did not get him in)", (unsigned)CTimer::GetFrameCounter()); }
+        return true;
+    }
+    if (!std::strcmp(name, "mdwarppass")) { // actions.ts entercar of another char: set in as a passenger
+        const int h = std::atoi(args.c_str()); auto* car = CPools::GetVehicle(std::atoi(args.c_str() + args.find(':') + 1)); auto* oth = CPools::GetPed(h);
+        if (car && oth) { oth->GetIntelligence()->FlushImmediately(false); CTaskSimpleCarSetPedInAsPassenger t(car, TARGET_DOOR_FRONT_RIGHT, true, nullptr); t.ProcessPed(oth); }
         return true;
     }
     float a[6]{}; a[5] = -1.f; std::sscanf(args.c_str(), "%f:%f:%f:%f:%f:%f", a, a + 1, a + 2, a + 3, a + 4, a + 5);

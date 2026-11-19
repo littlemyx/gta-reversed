@@ -126,7 +126,9 @@ void FxSystem_c::Play() {
     m_stopParticleCreation = false;
     m_prevCulled = false;
 
-    m_LoopInterval = (float)(CGeneral::GetRandomNumber() % 10'000) / 10'000.0f * (m_SystemBP->m_fLoopLength - m_SystemBP->m_fLoopIntervalMin) + m_SystemBP->m_fLoopIntervalMin;
+    // 0x4AA2F0: the exe multiplies the (rand() % 10000) by the float constant 1e-4f (0x858FC4 = 0x38D1B717, `fild; fmul`), it does NOT divide by 10000
+    const auto rnd = CGeneral::GetRandomNumber() % 10'000;
+    m_LoopInterval = (float)((x87d)rnd * (x87d)0.0001f * ((x87d)m_SystemBP->m_fLoopLength - (x87d)m_SystemBP->m_fLoopIntervalMin) + (x87d)m_SystemBP->m_fLoopIntervalMin);
 }
 
 // 0x4AA370

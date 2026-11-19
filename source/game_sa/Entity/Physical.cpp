@@ -26,6 +26,12 @@ CVector PhysicalTransformVectorOriginal(const CMatrix& m, const CVector& v) {
     };
 }
 
+// Replicates the m_fMovingSpeed tail of `CPhysical::ProcessCollision` (exe 0x54E610-0x54E641) and `ProcessShift` (0x54DDFE-0x54DE2D): new - old stays unrounded, summed x, y, z
+float PhysicalMovedDistanceOriginal(const CVector& np, const CVector& op) {
+    const x87d dx = (x87d)np.x - op.x, dy = (x87d)np.y - op.y, dz = (x87d)np.z - op.z;
+    return (float)std::sqrt((dx * dx + dy * dy) + dz * dz);
+}
+
 // Replicates `CrossProduct` (0x59C730): the products are not rounded to float before the subtraction
 CVector PhysicalCrossProductOriginal(const CVector& a, const CVector& b) {
     return CVector{
@@ -439,7 +445,7 @@ void CPhysical::ProcessCollision() {
                 physicalFlags.bProcessCollisionEvenIfStationary = false;
                 physicalFlags.bSkipLineCol = false;
                 m_fElasticity = fOldElasticity;
-                m_fMovingSpeed = DistanceBetweenPoints(oldEntityMatrix.GetPosition(), GetPosition());
+                m_fMovingSpeed = PhysicalMovedDistanceOriginal(GetPosition(), oldEntityMatrix.GetPosition()); // exe 0x54E629 (shared tail)
                 RemoveAndAdd();
                 return;
             }
@@ -519,7 +525,7 @@ void CPhysical::ProcessCollision() {
         physicalFlags.bProcessCollisionEvenIfStationary = false;
         physicalFlags.bSkipLineCol = false;
         m_fElasticity = fOldElasticity;
-        m_fMovingSpeed = DistanceBetweenPoints(oldEntityMatrix.GetPosition(), GetPosition());
+        m_fMovingSpeed = PhysicalMovedDistanceOriginal(GetPosition(), oldEntityMatrix.GetPosition()); // exe 0x54E629 (shared tail)
         RemoveAndAdd();
         return;
     }

@@ -28,8 +28,9 @@ bool CEventInWater::AffectsPed(CPed* ped) {
 
 bool CEventInWater::TakesPriorityOver(const CEvent& refEvent) {
     switch (refEvent.GetEventType()) {
-    case EVENT_KNOCK_OFF_BIKE:
+    case EVENT_KNOCK_OFF_BIKE: // exe 0x4B142F-0x4B143E: these two win unconditionally (the port also required acceleration > 1)
     case EVENT_DAMAGE:
+        return true;
     case EVENT_STUCK_IN_AIR:
         if (m_acceleration > 1.0f) {
             return true;

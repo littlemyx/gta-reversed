@@ -5620,7 +5620,7 @@ void CAutomobile::ProcessSwingingDoor(eCarNodes nodeIdx, eDoors doorIdx)
     }
 
     if (m_damageManager.IsDoorClosed(doorIdx)) {
-        if (m_fDamageIntensity <= 100.f || doorIdx == DOOR_BONNET) {
+        if (!(m_fDamageIntensity > 100.f) || doorIdx == DOOR_BONNET) { // 0x6A9DD4: fcomp 100 / test ah,0x41 / jne -> return: <=100 AND NaN return
             return;
         }
 

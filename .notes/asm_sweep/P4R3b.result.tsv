@@ -1,0 +1,95 @@
+addr	function	verdict	asm range	note	fix commit
+0x46c6c0	HAS_CAR_RECORDING_BEEN_LOADED (0x7c1) HasCarRecordingBeenLoaded	MATCH	0x46c6c0-case	params/units/compares/-1 handling checked [Group19.cpp, exec count 295013]	-
+0x480761	HAS_CUTSCENE_FINISHED (0x2e9) HasCutsceneFinished	MATCH	0x480761-case	params/units/compares/-1 handling checked [Group05_08.cpp, exec count 289647]	-
+0x47d69e	GET_GAME_TIMER (0x1bd) GetGameTimer	MATCH	0x47d69e-case	params/units/compares/-1 handling checked [Group01_04.cpp, exec count 188698]	-
+0x49873b	IS_GROUP_MEMBER (0x6ee) IsGroupMember	MATCH	0x49873b-case	params/units/compares/-1 handling checked; tail of case not read [Group16_17c.cpp, exec count 148885]	-
+0x46eb03	DOES_BLIP_EXIST (0x75c) DoesBlipExist	MATCH	0x46eb03-case	params/units/compares/-1 handling checked [Group18.cpp, exec count 132450]	-
+0x4851c7	HAS_MISSION_AUDIO_LOADED (0x3d0) HasMissionAudioLoaded	MATCH	0x4851c7-case	params/units/compares/-1 handling checked [Group09.cpp, exec count 96748]	-
+0x485228	HAS_MISSION_AUDIO_FINISHED (0x3d2) HasMissionAudioFinished	MATCH	0x485228-case	params/units/compares/-1 handling checked [Group09.cpp, exec count 87049]	-
+0x472510	IS_INT_LVAR_EQUAL_TO_INT_VAR (0x7d6) IsIntLvarEqualToIntVar	MATCH	0x472510-case	params/units/compares/-1 handling checked [Group20a.cpp, exec count 68366]	-
+0x48daf9	DOES_VEHICLE_EXIST (0x56e) DoesVehicleExist	MATCH	0x48daf9-case	params/units/compares/-1 handling checked [Group13_15.cpp, exec count 68118]	-
+0x47d2e9	LOCATE_CAR_2D (0x1ad) LocateCar	MATCH	0x47d2e9-case	params/units/compares/-1 handling checked [Group01_04.cpp, exec count 66661]	-
+0x46b88c	GET_AREA_VISIBLE (0x77e) GetAreaVisible	MATCH	0x46b88c-case	params/units/compares/-1 handling checked [Group19.cpp, exec count 63032]	-
+0x467e05	SET_CAR_CRUISE_SPEED (0xad) SetCarCruiseSpeed	MATCH	0x467e05-case	params/units/compares/-1 handling checked [Group01_04.cpp, exec count 58651]	-
+0x47d2e9	LOCATE_CAR_3D (0x1af) LocateCar	MATCH	0x47d2e9-case	params/units/compares/-1 handling checked [Group01_04.cpp, exec count 39138]	-
+0x48b100	IS_INT_LVAR_EQUAL_TO_CONSTANT (0x4a4) IsIntLVarEqualToConstant	MATCH	0x48b100-case	params/units/compares/-1 handling checked [Group11.cpp, exec count 29443]	-
+0x4915f5	IS_PLAYBACK_GOING_ON_FOR_CAR (0x60e) IsPlaybackGoingOnForCar	MATCH	0x4915f5-case	params/units/compares/-1 handling checked [Group13_15.cpp, exec count 29227]	-
+0x47d00b	CHANGE_BLIP_DISPLAY (0x18b) ChangeBlipDisplay	MATCH	0x47d00b-case	params/units/compares/-1 handling checked [Group01_04.cpp, exec count 28953]	-
+0x47d0ac	IS_CAR_STUCK_ON_ROOF (0x18f) IsCarStuckOnRoof	MATCH	0x47d0ac-case	params/units/compares/-1 handling checked [Group01_04.cpp, exec count 28055]	-
+0x46b571	IS_MESSAGE_BEING_DISPLAYED (0x76f) IsMessageBeingDisplayed	MATCH	0x46b571-case	params/units/compares/-1 handling checked [Group19.cpp, exec count 27902]	-
+0x49220a	GET_SCRIPT_TASK_STATUS (0x62e) GetScriptTaskStatus	MATCH	0x49220a-case	params/units/compares/-1 handling checked [Group13_15.cpp, exec count 26844]	-
+0x47cc64	SET_CAR_HEADING (0x175) SetCarHeading	MATCH	0x47cc64-case	params/units/compares/-1 handling checked [Group01_04.cpp, exec count 23070]	-
+0x46c22e	IS_TRAILER_ATTACHED_TO_CAB (0x7ab) IsTrailerAttachedToCab	MATCH	0x46c22e-case	params/units/compares/-1 handling checked [Group19.cpp, exec count 22872]	-
+0x498a86	SET_PLAYBACK_SPEED (0x6fd) SetPlaybackSpeed	MATCH	0x498a86-case	params/units/compares/-1 handling checked [Group16_17c.cpp, exec count 21721]	-
+0x4956d3	IS_OBJECT_ATTACHED (0x685) IsObjectAttached	MATCH	0x4956d3-case	params/units/compares/-1 handling checked [Group16_17a.cpp, exec count 18355]	-
+0x48b0dc	IS_INT_VAR_EQUAL_TO_CONSTANT (0x4a3) IsIntVarEqualToConstant	MATCH	0x48b0dc-case	params/units/compares/-1 handling checked [Group11.cpp, exec count 17905]	-
+0x475459	IS_SKIP_CUTSCENE_BUTTON_PRESSED (0x8d0) IsSkipCutsceneButtonPressed	MATCH	0x475459-case	params/units/compares/-1 handling checked [Group22b.cpp, exec count 14754]	-
+0x46eae7	SET_RADAR_ZOOM (0x75b) SetRadarZoom	MATCH	0x46eae7-case	params/units/compares/-1 handling checked [Group18.cpp, exec count 13926]	-
+0x47fda1	IS_CAR_ON_SCREEN (0x2ca) IsCarOnScreen	MATCH	0x47fda1-case	params/units/compares/-1 handling checked [Group05_08.cpp, exec count 13413]	-
+0x4807ff	IS_PROJECTILE_IN_AREA (0x2ee) IsProjectileInArea	MATCH	0x4807ff-case	params/units/compares/-1 handling checked [Group05_08.cpp, exec count 12001]	-
+0x46de3e	IS_CHAR_HOLDING_OBJECT (0x737) IsCharHoldingObject	MATCH	0x46de3e-case	params/units/compares/-1 handling checked; tail of case not read [Group18.cpp, exec count 10197]	-
+0x47c660	REMOVE_BLIP (0x164) RemoveBlip	MATCH	0x47c660-case	params/units/compares/-1 handling checked [Group01_04.cpp, exec count 9501]	-
+0x49805a	SET_TRAIN_CRUISE_SPEED (0x6dd) SetTrainCruiseSpeed	MATCH	0x49805a-case	params/units/compares/-1 handling checked [Group16_17b.cpp, exec count 8481]	-
+0x47c831	GET_FADING_STATUS (0x16b) GetFadingStatus	MATCH	0x47c831-case	params/units/compares/-1 handling checked [Group01_04.cpp, exec count 7242]	-
+0x47ea74	GET_CAR_HEALTH (0x227) GetCarHealth	MATCH	0x47ea74-case	params/units/compares/-1 handling checked [Group05_08.cpp, exec count 6843]	-
+0x47aa8d	IS_VEHICLE_ON_ALL_WHEELS (0x9d0) IsVehicleOnAllWheels	MATCH	0x47aa8d-case	params/units/compares/-1 handling checked [Group25_26a.cpp, exec count 5998]	-
+0x48f260	IS_OBJECT_STATIC (0x5a3) IsObjectStatic	MATCH	0x48f260-case	params/units/compares/-1 handling checked [Group13_15.cpp, exec count 5346]	-
+0x473679	GET_CHAR_HIGHEST_PRIORITY_EVENT (0x80e) GetCharHighestPriorityEvent	MATCH	0x473679-case	params/units/compares/-1 handling checked [Group20b.cpp, exec count 4996]	-
+0x4940f3	GET_SEQUENCE_PROGRESS (0x646) GetSequenceProgress	MATCH	0x4940f3-case	params/units/compares/-1 handling checked [Group16_17a.cpp, exec count 4285]	-
+0x49755d	DOES_SEARCHLIGHT_EXIST (0x6b3) DoesSearchlightExist	MATCH	0x49755d-case	params/units/compares/-1 handling checked [Group16_17b.cpp, exec count 4235]	-
+0x46d6f4	GET_OBJECT_HEALTH (0x71e) GetObjectHealth	MATCH	0x46d6f4-case	params/units/compares/-1 handling checked [Group18.cpp, exec count 4221]	-
+0x472c63	HAS_OBJECT_OF_TYPE_BEEN_SMASHED (0x7f0) HasObjectOfTypeBeenSmashed	MATCH	0x472c63-case	params/units/compares/-1 handling checked; tail of case not read [Group20a.cpp, exec count 3919]	-
+0x48af33	IS_CAR_ON_FIRE (0x495) IsCarOnFire	MATCH	0x48af33-case	params/units/compares/-1 handling checked [Group11.cpp, exec count 3729]	-
+0x4843da	SET_CAR_WATERTIGHT (0x39c) SetCarWatertight	MATCH	0x4843da-case	params/units/compares/-1 handling checked; tail of case not read [Group09.cpp, exec count 3315]	-
+0x46bd94	GRAB_ENTITY_ON_ROPE_FOR_OBJECT (0x798) GrabEntityOnRopeForObject	MATCH	0x46bd94-case	params/units/compares/-1 handling checked [Group19.cpp, exec count 2532]	-
+0x48073f	GET_CUTSCENE_TIME (0x2e8) GetCutsceneTime	MATCH	0x48073f-case	params/units/compares/-1 handling checked [Group05_08.cpp, exec count 2502]	-
+0x477aa6	IS_CHAR_STUCK_UNDER_CAR (0x95d) IsCharStuckUnderCar	MATCH	0x477aa6-case	params/units/compares/-1 handling checked [Group23.cpp, exec count 2495]	-
+0x476323	IS_HELP_MESSAGE_BEING_DISPLAYED (0x8fe) IsHelpMessageBeingDisplayed	MATCH	0x476323-case	params/units/compares/-1 handling checked [Group23.cpp, exec count 2426]	-
+0x472c1b	GET_CITY_FROM_COORDS (0x7ef) GetCityFromCoords	MATCH	0x472c1b-case	params/units/compares/-1 handling checked [Group20a.cpp, exec count 2165]	-
+0x472f57	GET_GROUP_SIZE (0x7f6) GetGroupSize	MATCH	0x472f57-case	params/units/compares/-1 handling checked [Group20a.cpp, exec count 1870]	-
+0x47dd75	GET_MAXIMUM_NUMBER_OF_PASSENGERS (0x1ea) GetMaximumNumberOfPassengers	MATCH	0x47dd75-case	params/units/compares/-1 handling checked [Group01_04.cpp, exec count 1444]	-
+0x46e450	SET_RELATIONSHIP (0x746) SetRelationship	MATCH	0x46e450-case	params/units/compares/-1 handling checked [Group18.cpp, exec count 1395]	-
+0x47ce71	IS_CAR_HEALTH_GREATER (0x185) IsCarHealthGreater	MATCH	0x47ce71-case	params/units/compares/-1 handling checked [Group01_04.cpp, exec count 1334]	-
+0x47f85e	SET_CAR_ONLY_DAMAGED_BY_PLAYER (0x2aa) SetCarOnlyDamagedByPlayer	MATCH	0x47f85e-case	params/units/compares/-1 handling checked [Group05_08.cpp, exec count 1296]	-
+0x477855	FIND_MAX_NUMBER_OF_GROUP_MEMBERS (0x956) FindMaxNumberOfGroupMembers	MATCH	0x477855-case	params/units/compares/-1 handling checked [Group23.cpp, exec count 1267]	-
+0x48f73f	GET_OBJECT_SPEED (0x5a8) GetObjectSpeed	MATCH	0x48f73f-case	params/units/compares/-1 handling checked [Group13_15.cpp, exec count 1266]	-
+0x4898cb	CLEAR_MISSION_AUDIO (0x40d) ClearMissionAudio	MATCH	0x4898cb-case	params/units/compares/-1 handling checked [Group10.cpp, exec count 768]	-
+0x47972b	IS_CAR_DOOR_DAMAGED (0x9bb) IsCarDoorDamaged	MATCH	0x47972b-case	params/units/compares/-1 handling checked [Group24b.cpp, exec count 628]	-
+0x47e0d1	IS_CAR_UPSIDEDOWN (0x1f4) IsCarUpsideDown	MATCH	0x47e0d1-case	params/units/compares/-1 handling checked [Group05_08.cpp, exec count 628]	-
+0x4777ce	CLEAR_SKIP (0x951) ClearSkip	MATCH	0x4777ce-case	params/units/compares/-1 handling checked [Group23.cpp, exec count 621]	-
+0x489731	SET_DRUNK_INPUT_DELAY (0x3fd) SetDrunkInputDelay	MATCH	0x489731-case	params/units/compares/-1 handling checked [Group10.cpp, exec count 603]	-
+0x47b9af	HAS_CAR_BEEN_RESPRAYED (0xa15) HasCarBeenResprayed	MATCH	0x47b9af-case	params/units/compares/-1 handling checked [Group25_26b.cpp, exec count 602]	-
+0x4711d9	GET_SOUND_LEVEL_AT_COORDS (0x855) GetSoundLevelAtCoords	MATCH	0x4711d9-case	params/units/compares/-1 handling checked [Group21a.cpp, exec count 576]	-
+0x48afbb	IS_CAR_TYRE_BURST (0x496) IsCarTyreBurst	MATCH	0x48afbb-case	params/units/compares/-1 handling checked; tail of case not read [Group11.cpp, exec count 541]	-
+0x474a04	GET_RANDOM_CHAR_IN_SPHERE_ONLY_DRUGS_BUYERS (0x89e) GetRandomCharInSphereOnlyDrugsBuyers	MATCH	0x474a04-case	params/units/compares/-1 handling checked; tail of case not read [Group22a.cpp, exec count 539]	-
+0x491908	CLOSE_SEQUENCE_TASK (0x616) CloseSequenceTask	MATCH	0x491908-case	params/units/compares/-1 handling checked [Group13_15.cpp, exec count 488]	-
+0x49186f	OPEN_SEQUENCE_TASK (0x615) OpenSequenceTask	MATCH	0x49186f-case	params/units/compares/-1 handling checked [Group13_15.cpp, exec count 488]	-
+0x47cbe1	GET_CAR_HEADING (0x174) GetCarHeading	MATCH	0x47cbe1-case	params/units/compares/-1 handling checked [Group01_04.cpp, exec count 480]	-
+0x477b8c	GET_DOOR_ANGLE_RATIO (0x95f) GetDoorAngleRatio	MATCH	0x477b8c-case	params/units/compares/-1 handling checked [Group23.cpp, exec count 475]	-
+0x49194b	PERFORM_SEQUENCE_TASK (0x618) PerformSequenceTask	MATCH	0x49194b-case	params/units/compares/-1 handling checked; tail of case not read [Group13_15.cpp, exec count 453]	-
+0x491a4a	CLEAR_SEQUENCE_TASK (0x61b) ClearSequenceTask	MATCH	0x491a4a-case	params/units/compares/-1 handling checked [Group13_15.cpp, exec count 400]	-
+0x46754f	CREATE_CHAR (0x9a) CreateChar	MATCH	0x46754f-case	params/units/compares/-1 handling checked; tail of case not read [Group01_04.cpp, exec count 392]	-
+0x48979f	GET_OFFSET_FROM_OBJECT_IN_WORLD_COORDS (0x400) GetOffsetFromObjectInWorldCoords	MATCH	0x48979f-case	params/units/compares/-1 handling checked [Group10.cpp, exec count 357]	-
+0x47c682	CHANGE_BLIP_COLOUR (0x165) ChangeBlipColour	MATCH	0x47c682-case	params/units/compares/-1 handling checked [Group01_04.cpp, exec count 329]	-
+0x47d307	GIVE_WEAPON_TO_CHAR (0x1b2) GiveWeaponToChar	MATCH	0x47d307-case	params/units/compares/-1 handling checked; tail of case not read [Group01_04.cpp, exec count 319]	-
+0x47d2e9	LOCATE_STOPPED_CAR_3D (0x1b0) LocateCar	MATCH	0x47d2e9-case	params/units/compares/-1 handling checked [Group01_04.cpp, exec count 305]	-
+0x478266	STOP_CHAR_FACIAL_TALK (0x968) StopCharFacialTalk	MATCH	0x478266-case	params/units/compares/-1 handling checked [Group24a.cpp, exec count 263]	-
+0x478221	START_CHAR_FACIAL_TALK (0x967) StartCharFacialTalk	MATCH	0x478221-case	params/units/compares/-1 handling checked [Group24a.cpp, exec count 232]	-
+0x473350	DOES_CAR_HAVE_HYDRAULICS (0x803) DoesCarHaveHydraulics	MATCH	0x473350-case	params/units/compares/-1 handling checked [Group20b.cpp, exec count 214]	-
+0x472ebc	CONTROL_CAR_HYDRAULICS (0x7f5) ControlCarHydraulics	MATCH	0x472ebc-case	params/units/compares/-1 handling checked [Group20a.cpp, exec count 214]	-
+0x467ab3	CREATE_CAR (0xa5) CreateCar	MATCH	0x467ab3-case	params/units/compares/-1 handling checked; tail of case not read [Group01_04.cpp, exec count 184]	-
+0x48c391	HAS_ANIMATION_LOADED (0x4ee) HasAnimationLoaded	MATCH	0x48c391-case	params/units/compares/-1 handling checked [Group12.cpp, exec count 184]	-
+0x4913f5	TASK_PLAY_ANIM (0x605) TaskPlayAnim	MATCH	0x4913f5-case	params/units/compares/-1 handling checked [Group13_15_task.cpp, exec count 182]	-
+0x4976a2	HAS_CUTSCENE_LOADED (0x6b9) HasCutsceneLoaded	MATCH	0x4976a2-case	params/units/compares/-1 handling checked [Group16_17b.cpp, exec count 180]	-
+0x492975	TASK_STAY_IN_SAME_PLACE (0x638) TaskStayInSamePlace	MATCH	0x492975-case	params/units/compares/-1 handling checked [Group13_15_task.cpp, exec count 178]	-
+0x47ee2d	HAS_SPECIAL_CHARACTER_LOADED (0x23d) HasSpecialCharacterLoaded	MATCH	0x47ee2d-case	params/units/compares/-1 handling checked [Group05_08.cpp, exec count 177]	-
+0x484562	DRAW_SPHERE (0x3a1) DrawSphere	MATCH	0x484562-case	params/units/compares/-1 handling checked; tail of case not read [Group09.cpp, exec count 168]	-
+0x47f684	SWITCH_WIDESCREEN (0x2a3) SwitchWidescreen	MATCH	0x47f684-case	params/units/compares/-1 handling checked [Group05_08.cpp, exec count 164]	-
+0x47cf4e	ADD_BLIP_FOR_COORD (0x18a) AddBlipForCoord	MATCH	0x47cf4e-case	params/units/compares/-1 handling checked; tail of case not read [Group01_04.cpp, exec count 159]	-
+0x473831	TASK_PLAY_ANIM_NON_INTERRUPTABLE (0x812) TaskPlayAnimNonInterruptable	MATCH	0x473831-case	params/units/compares/-1 handling checked [Group20b.cpp, exec count 140]	-
+0x49575f	CLEAR_CHAR_TASKS (0x687) ClearCharTasks	MATCH	0x49575f-case	params/units/compares/-1 handling checked [Group16_17a.cpp, exec count 140]	-
+0x47cefd	ADD_BLIP_FOR_CHAR (0x187) AddBlipForChar	MATCH	0x47cefd-case	params/units/compares/-1 handling checked [Group01_04.cpp, exec count 131]	-
+0x46e7bc	IS_CHAR_RESPONDING_TO_EVENT (0x74f) IsCharRespondingToEvent	MATCH	0x46e7bc-case	params/units/compares/-1 handling checked [Group18.cpp, exec count 127]	-
+0x48c3d5	REMOVE_ANIMATION (0x4ef) RemoveAnimation	MATCH	0x48c3d5-case	params/units/compares/-1 handling checked [Group12.cpp, exec count 125]	-
+0x47c78c	SET_FADING_COLOUR (0x169) SetFadingColour	MATCH	0x47c78c-case	params/units/compares/-1 handling checked [Group01_04.cpp, exec count 123]	-
+0x48b98d	SET_AREA_VISIBLE (0x4bb) SetAreaVisible	MATCH	0x48b98d-case	params/units/compares/-1 handling checked [Group12.cpp, exec count 122]	-

@@ -1,0 +1,237 @@
+addr	function	verdict	asm range	note	fix commit	pattern	category
+0x411E20	CCollision::Update	MATCH	0x411E20 +0x2	exe bare ret; port body empty		NOP	logic
+0x41BC70	CBridge::Init	MATCH	0x41BC70 +0x2	exe bare ret; port body empty		NOP	logic
+0x41BC80	CBridge::Update	MATCH	0x41BC80 +0x2	exe bare ret; port body empty		NOP	logic
+0x41BC90	CBridge::ShouldLightsBeFlashing	MATCH	0x41BC90 +0x4	const 0 == exe		CONST	logic
+0x421180	CTask::StopTimer	MATCH	0x421180 +0x2	exe bare ret; port body empty		NOP	logic
+0x43E300	CTaskSimple::GetSubTask	MATCH	0x43E300 +0x4	const 0 == exe		CONST	logic
+0x4635E0	CTaskSimpleNone::ProcessPed	MATCH	0x4635E0 +0x4	const 1 == exe		CONST	logic
+0x485DE0	CTheScripts::ScriptDebugLine3D	FIXED	0x485DE0 +0x2	exe bare ret; port stored script debug lines in the run build (nothing renders them); gated out under NOTSA_STANDALONE_RUN	7a89f37a2	NOP	logic
+0x4A67B0	FxInfoSelfLit_c::Load	MATCH	0x4A67B0 +0x2	exe bare ret; port body empty		NOP	render
+0x4AA120	FxSystemBP_c::Unload	MATCH	0x4AA120 +0x2	exe bare ret; port body empty		NOP	render
+0x4AD310	CEventDraggedOutCar::GetLocalSoundLevel	MATCH	0x4AD310 +0x4	const 100.0 == exe		FCONST	logic
+0x4AD930	CEventDamage::GetLocalSoundLevel	MATCH	0x4AD930 +0x4	const 55.0 == exe		FCONST	logic
+0x4ADF50	CEventDeadPed::GetLocalSoundLevel	MATCH	0x4ADF50 +0x4	const 60.0 == exe		FCONST	logic
+0x4AE050	CEventGroupEvent::GetLocalSoundLevel	MATCH	0x4AE050 +0x4	const 100.0 == exe		FCONST	logic
+0x4AE250	CEventPotentialGetRunOver::GetLocalSoundLevel	MATCH	0x4AE250 +0x4	const 100.0 == exe		FCONST	logic
+0x4AEB70	CEventPedEnteredMyVehicle::GetLocalSoundLevel	MATCH	0x4AEB70 +0x4	const 60.0 == exe		FCONST	logic
+0x4B1BF0	CEventGotKnockedOverByCar::GetLocalSoundLevel	MATCH	0x4B1BF0 +0x4	const 55.0 == exe		FCONST	logic
+0x4C4A80	CBaseModelInfo::AsAtomicModelInfoPtr	MATCH	0x4C4A80 +0x4	const 0 == exe		CONST	logic
+0x4C4A90	CBaseModelInfo::AsDamageAtomicModelInfoPtr	MATCH	0x4C4A90 +0x4	const 0 == exe		CONST	logic
+0x4C4AA0	CBaseModelInfo::AsLodAtomicModelInfoPtr	MATCH	0x4C4AA0 +0x4	const 0 == exe		CONST	logic
+0x4C4AB0	CBaseModelInfo::GetTimeInfo	MATCH	0x4C4AB0 +0x4	const 0 == exe		CONST	logic
+0x4C4AC0	CBaseModelInfo::SetAnimFile	MATCH	0x4C4AC0 +0x2	exe bare ret; port body empty		NOP	logic
+0x4C4AD0	CBaseModelInfo::ConvertAnimFileIndex	MATCH	0x4C4AD0 +0x2	exe bare ret; port body empty		NOP	logic
+0x4C5560	CAtomicModelInfo::AsAtomicModelInfoPtr	MATCH	0x4C5560 +0x4	exe mov eax,ecx; ret; port returns this		THISRET	logic
+0x4C5570	CAtomicModelInfo::GetModelType	MATCH	0x4C5570 +0x4	const 1 == exe		CONST	logic
+0x4C5600	CLodAtomicModelInfo::GetModelType	MATCH	0x4C5600 +0x4	const 8 == exe		CONST	logic
+0x4C5660	CTimeModelInfo::GetModelType	MATCH	0x4C5660 +0x4	const 3 == exe		CONST	logic
+0x4C56C0	CLodTimeModelInfo::GetModelType	MATCH	0x4C56C0 +0x4	const 3 == exe		CONST	logic
+0x4C5720	CClumpModelInfo::GetModelType	MATCH	0x4C5720 +0x4	const 5 == exe		CONST	logic
+0x4C5730	CClumpModelInfo::GetRwModelType	MATCH	0x4C5730 +0x4	const 2 == exe		CONST	logic
+0x4C57C0	CPedModelInfo::GetModelType	MATCH	0x4C57C0 +0x4	const 7 == exe		CONST	logic
+0x4C6D40	CPedModelInfo::AddXtraAtomics	MATCH	0x4C6D40 +0x2	exe bare ret; port body empty		NOP	logic
+0x4CF1D0	CAnimBlendClumpData::LoadFramesIntoSPR	MATCH	0x4CF1D0 +0x2	exe bare ret; port body empty		NOP	logic
+0x4D1180	CAnimBlendSequence::Print	MATCH	0x4D1180 +0x2	exe bare ret; port body empty		NOP	logic
+0x4DC4D0	CAEDataStream::Write	MATCH	0x4DC4D0 +0x4	const 2147500033 == exe		CONST	audio
+0x4DC4E0	CAEDataStream::SetSize	MATCH	0x4DC4E0 +0x4	const 2147500033 == exe		CONST	audio
+0x4DC4F0	CAEDataStream::CopyTo	MATCH	0x4DC4F0 +0x4	const 2147500033 == exe		CONST	audio
+0x4DC500	CAEDataStream::Commit	MATCH	0x4DC500 +0x4	const 2147500033 == exe		CONST	audio
+0x4DC510	CAEDataStream::Revert	MATCH	0x4DC510 +0x4	const 2147500033 == exe		CONST	audio
+0x4DC520	CAEDataStream::LockRegion	MATCH	0x4DC520 +0x4	const 2147500033 == exe		CONST	audio
+0x4DC530	CAEDataStream::UnlockRegion	MATCH	0x4DC530 +0x4	const 2147500033 == exe		CONST	audio
+0x4E1170	CAEPedAudioEntity::PlayWindRush	MATCH	0x4E1170 +0x2	exe bare ret; port body empty		NOP	audio
+0x4E4260	CAEPedSpeechAudioEntity::GetSexForSpecialPed	MATCH	0x4E4260 +0x4	const 1 == exe		CONST	audio
+0x4E46F0	CAEPedSpeechAudioEntity::IsGlobalContextUberImportant	MATCH	0x4E46F0 +0x4	const 0 == exe		CONST	audio
+0x4E60A0	CAEPedlessSpeechAudioEntity::WillPedChatAboutTopic	MATCH	0x4E60A0 +0x4	const 0 == exe		CONST	audio
+0x4E60C0	CAEPedlessSpeechAudioEntity::IsPedFemaleForAudio	MATCH	0x4E60C0 +0x4	const 0 == exe		CONST	audio
+0x4F4EC0	CAEVehicleAudioEntity::StaticService	MATCH	0x4F4EC0 +0x2	exe bare ret; port body empty		NOP	audio
+0x50AF90	CCamera::InitialiseCameraForDebugMode	MATCH	0x50AF90 +0x2	exe bare ret; port body empty		NOP	logic
+0x50B880	CCamera::ProcessObbeCinemaCameraPed	MATCH	0x50B880 +0x2	exe bare ret; port body empty		NOP	logic
+0x52DC10	CControllerConfigManager::AffectControllerStateOn_ButtonDown_DebugStuff	MATCH	0x52DC10 +0x2	exe bare ret; port body empty		NOP	logic
+0x52DD80	CControllerConfigManager::AffectControllerStateOn_ButtonUp_DebugStuff	MATCH	0x52DD80 +0x2	exe bare ret; port body empty		NOP	logic
+0x52F550	CControllerConfigManager::GetIsActionAButtonCombo	MATCH	0x52F550 +0x4	const 0 == exe		CONST	logic
+0x532260	CDebug::DebugDisplayTextBuffer	MATCH	0x532260 +0x2	hand: exe bare ret; port returns at once on an empty m_debugStrings and nothing calls CDebug::DebugAddText		NOP	logic
+0x537A30	CAnimatedBuilding::ProcessControl	MATCH	0x537A30 +0x2	exe bare ret; port body empty		NOP	logic
+0x53FB40	CPad::ProcessPCSpecificStuff	MATCH	0x53FB40 +0x2	exe bare ret; port body empty		NOP	logic
+0x53FB50	CPad::StopShaking	MATCH	0x53FB50 +0x2	exe bare ret; port body empty		NOP	logic
+0x561FD0	CWanted::ResetPolicePursuit	MATCH	0x561FD0 +0x2	exe bare ret; port body empty		NOP	logic
+0x56D240	CLocalisation::Porn	MATCH	0x56D240 +0x4	const 1 == exe		CONST	logic
+0x56D260	CLocalisation::Prostitutes	MATCH	0x56D260 +0x4	const 1 == exe		CONST	logic
+0x56D270	CLocalisation::KickingWhenDown	MATCH	0x56D270 +0x4	const 1 == exe		CONST	logic
+0x56E860	CPlayerInfo::CancelPlayerEnteringCars	MATCH	0x56E860 +0x2	exe bare ret; port body empty		NOP	logic
+0x5910A0	FurnitureGroup_c::Init	MATCH	0x5910A0 +0x4	const 1 == exe		CONST	logic
+0x59A130	Interior_c::Shop_FurnishCeiling	MATCH	0x59A130 +0x2	exe bare ret; port body empty		NOP	logic
+0x5DABA0	CGrassRenderer::Shutdown	MATCH	0x5DABA0 +0x2	exe bare ret; port body empty		NOP	logic
+0x5DD6B0	CGrassRenderer::Initialise	MATCH	0x5DD6B0 +0x4	const 1 == exe		CONST	logic
+0x5DEBE0	CPed::Update	MATCH	0x5DEBE0 +0x2	exe bare ret; port body empty		NOP	logic
+0x5E01A0	CPed::UpdateStatEnteringVehicle	MATCH	0x5E01A0 +0x2	exe bare ret; port body empty		NOP	logic
+0x5E01B0	CPed::UpdateStatLeavingVehicle	MATCH	0x5E01B0 +0x2	exe bare ret; port body empty		NOP	logic
+0x5F0190	CPed::SpawnFlyingComponent	MATCH	0x5F0190 +0x2	exe bare ret; port body empty		NOP	logic
+0x5F68E0	CTaskAllocator::Abort	MATCH	0x5F68E0 +0x2	exe bare ret; port body empty		NOP	logic
+0x609490	CPlayerPed::SetMoveAnim	MATCH	0x609490 +0x2	exe bare ret; port body empty		NOP	logic
+0x6097F0	CPlayerPed::ProcessPlayerWeapon	MATCH	0x6097F0 +0x2	exe bare ret; port body empty		NOP	logic
+0x610EC0	CPopulation::Shutdown	MATCH	0x610EC0 +0x2	exe bare ret; port body empty		NOP	logic
+0x610F40	CPopulation::ChoosePolicePedOccupation	MATCH	0x610F40 +0x4	const 0 == exe		CONST	logic
+0x6114B0	CPopulation::IsSecurityGuard	MATCH	0x6114B0 +0x4	const 0 == exe		CONST	logic
+0x6116A0	CPopulation::MoveCarsAndPedsOutOfAbandonedZones	MATCH	0x6116A0 +0x2	exe bare ret; port body empty		NOP	logic
+0x6116B0	CPopulation::DealWithZoneChange	MATCH	0x6116B0 +0x2	exe bare ret; port body empty		NOP	logic
+0x611780	CPopulation::CanSolicitPlayerOnFoot	MATCH	0x611780 +0x4	const 0 == exe		CONST	logic
+0x619470	RsRegisterImageLoader	MATCH	0x619470 +0x4	const 1 == exe		CONST	logic
+0x61B570	CTaskComplexPlayHandSignalAnim::CreateNextSubTask	MATCH	0x61B570 +0x4	const 0 == exe		CONST	logic
+0x631DB0	CTaskComplexHitResponse::CreateNextSubTask	MATCH	0x631DB0 +0x4	const 0 == exe		CONST	logic
+0x631E40	CTaskComplexHitByGunResponse::CreateNextSubTask	MATCH	0x631E40 +0x4	const 0 == exe		CONST	logic
+0x632640	CTaskComplexWaitAtAttractor::CreateNextSubTask	MATCH	0x632640 +0x4	const 0 == exe		CONST	logic
+0x6332A0	CTaskComplexAttractorPartnerWait::CreateNextSubTask	MATCH	0x6332A0 +0x4	const 0 == exe		CONST	logic
+0x633310	CTaskComplexUseAttractorPartner::CreateNextSubTask	MATCH	0x633310 +0x4	const 0 == exe		CONST	logic
+0x633370	CTaskComplexUseScriptedAttractor::CreateNextSubTask	MATCH	0x633370 +0x4	const 0 == exe		CONST	logic
+0x634730	CTaskComplexUseClosestFreeScriptedAttractor::CreateNextSubTask	MATCH	0x634730 +0x4	const 0 == exe		CONST	logic
+0x63AED0	CTaskComplexEnterCarAsDriverTimed::CreateNextSubTask	MATCH	0x63AED0 +0x4	const 0 == exe		CONST	logic
+0x63B190	CTaskComplexEnterCarAsPassengerTimed::CreateNextSubTask	MATCH	0x63B190 +0x4	const 0 == exe		CONST	logic
+0x63BC30	CTaskComplexLeaveBoat::CreateNextSubTask	MATCH	0x63BC30 +0x4	const 0 == exe		CONST	logic
+0x63BCD0	CTaskComplexLeaveAnyCar::CreateNextSubTask	MATCH	0x63BCD0 +0x4	const 0 == exe		CONST	logic
+0x63D110	CTaskComplexEnterAnyCarAsDriver::CreateNextSubTask	MATCH	0x63D110 +0x4	const 0 == exe		CONST	logic
+0x649300	CTaskComplexGetOnBoatSeat::CreateNextSubTask	MATCH	0x649300 +0x4	const 0 == exe		CONST	logic
+0x65B360	CTaskComplexWanderFlee::ScanForStuff	MATCH	0x65B360 +0x2	exe bare ret; port body empty		NOP	logic
+0x66B9C0	CTaskComplexTurnToFaceEntityOrCoord::CreateNextSubTask	MATCH	0x66B9C0 +0x4	const 0 == exe		CONST	logic
+0x682E10	CTaskComplexChat::CreateNextSubTask	MATCH	0x682E10 +0x4	const 0 == exe		CONST	logic
+0x683440	CTaskComplexWaitForPed::CreateNextSubTask	MATCH	0x683440 +0x4	const 0 == exe		CONST	logic
+0x68BAC0	CTaskComplexPolicePursuit::CreateNextSubTask	MATCH	0x68BAC0 +0x4	const 0 == exe		CONST	logic
+0x69BB50	CTaskAllocator::ProcessGroup	MATCH	0x69BB50 +0x4	const 0 == exe		CONST	logic
+0x6A3850	CAutomobile::IsRoomForPedToLeaveCar	MATCH	0x6A3850 +0x4	const 1 == exe		CONST	logic
+0x6B58D0	CBike::ProcessOpenDoor	MATCH	0x6B58D0 +0x2	exe bare ret; port body empty		NOP	logic
+0x6B58E0	CBike::IsDoorReady	MATCH	0x6B58E0 +0x4	const 1 == exe		CONST	logic
+0x6B58F0	CBike::IsDoorFullyOpen	MATCH	0x6B58F0 +0x4	const 0 == exe		CONST	logic
+0x6B5900	CBike::IsDoorClosed	MATCH	0x6B5900 +0x4	const 0 == exe		CONST	logic
+0x6B5910	CBike::IsDoorMissing	MATCH	0x6B5910 +0x4	const 1 == exe		CONST	logic
+0x6B5920	CBike::IsDoorReadyU32	MATCH	0x6B5920 +0x4	const 1 == exe		CONST	logic
+0x6B5930	CBike::IsDoorFullyOpenU32	MATCH	0x6B5930 +0x4	const 0 == exe		CONST	logic
+0x6B5940	CBike::IsDoorClosedU32	MATCH	0x6B5940 +0x4	const 0 == exe		CONST	logic
+0x6B5A00	CBike::dmgDrawCarCollidingParticles	MATCH	0x6B5A00 +0x2	exe bare ret; port body empty		NOP	logic
+0x6B67A0	CBike::DebugCode	MATCH	0x6B67A0 +0x2	exe bare ret; port body empty		NOP	logic
+0x6B7070	CBike::SetupDamageAfterLoad	MATCH	0x6B7070 +0x2	exe bare ret; port body empty		NOP	logic
+0x6B7270	CBike::IsRoomForPedToLeaveCar	MATCH	0x6B7270 +0x4	const 1 == exe		CONST	logic
+0x6B8940	CBike::FindWheelWidth	MATCH	0x6B8940 +0x4	const 0.15000000596046448 == exe		FCONST	logic
+0x6BF9B0	CBmx::SetUpWheelColModel	MATCH	0x6BF9B0 +0x4	const 0 == exe		CONST	logic
+0x6C0550	CBmx::FindWheelWidth	MATCH	0x6C0550 +0x4	const 0.07000000029802322 == exe		FCONST	logic
+0x6C0560	CBmx::BlowUpCar	MATCH	0x6C0560 +0x2	exe bare ret; port body empty		NOP	logic
+0x6C4320	CHeli::SetUpWheelColModel	MATCH	0x6C4320 +0x4	const 0 == exe		CONST	logic
+0x6C7D20	CMonsterTruck::SetUpWheelColModel	MATCH	0x6C7D20 +0x4	const 0 == exe		CONST	logic
+0x6C7D30	CMonsterTruck::BurstTyre	MATCH	0x6C7D30 +0x4	const 0 == exe		CONST	logic
+0x6C9140	CPlane::SetUpWheelColModel	MATCH	0x6C9140 +0x4	const 0 == exe		CONST	logic
+0x6F0200	CBoat::IsComponentPresent	MATCH	0x6F0200 +0x4	const 1 == exe		CONST	logic
+0x6F3FC0	CCranes::InitCranes	MATCH	0x6F3FC0 +0x2	exe bare ret; port body empty		NOP	logic
+0x6F3FD0	CCranes::IsThisCarPickedUp	MATCH	0x6F3FD0 +0x4	const 0 == exe		CONST	logic
+0x6F3FF0	CCranes::IsThisCarBeingCarriedByAnyCrane	MATCH	0x6F3FF0 +0x4	const 0 == exe		CONST	logic
+0x6F5900	CTrain::UpdateTrains	MATCH	0x6F5900 +0x2	exe bare ret; port body empty		NOP	logic
+0x6F5D80	CTrain::OpenTrainDoor	MATCH	0x6F5D80 +0x2	exe bare ret; port body empty		NOP	logic
+0x6F5D90	CTrain::AddPassenger	MATCH	0x6F5D90 +0x2	exe bare ret; port body empty		NOP	logic
+0x6F5DA0	CTrain::RemovePassenger	MATCH	0x6F5DA0 +0x2	exe bare ret; port body empty		NOP	logic
+0x6F5EE0	CTrain::IsRoomForPedToLeaveCar	MATCH	0x6F5EE0 +0x4	const 1 == exe		CONST	logic
+0x7076B0	CShadows::PrintDebugPoly	MATCH	0x7076B0 +0x2	exe bare ret; port body empty		NOP	render
+0x727260	CSprite2d::SetRecipNearClip	MATCH	0x727260 +0x2	exe bare ret; port body empty		NOP	render
+0x731710	CTxdStore::TxdStoreLoadCB	MATCH	0x731710 +0x4	const 0 == exe		CONST	logic
+0x732A30	CVisibilityPlugins::DefaultVisibilityCB	MATCH	0x732A30 +0x4	const 1 == exe		CONST	logic
+0x7368F0	CExplosion::Shutdown	MATCH	0x7368F0 +0x2	exe bare ret; port body empty		NOP	logic
+0x743C50	CWeaponInfo::Shutdown	MATCH	0x743C50 +0x2	exe bare ret; port body empty		NOP	logic
+0x407320	CTimeInfo::GetTimeOn	MATCH	0x407320 +0x4	exe getter [ecx+0x0] sz1 == port CTimeInfo::m_nTimeOn (offset/width/float-ness by static_assert)		GETTER	logic
+0x421190	CTaskComplex::GetSubTask	MATCH	0x421190 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplex::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x44DD00	CPathFind::ReleaseRequestedNodes	MATCH	0x44DD00 +0x4	exe setconst [ecx+0x3c6c] sz1 == port CPathFind::m_loadAreaRequestPending (offset/width/float-ness by static_assert)		SETCONST	logic
+0x45B050	CAnimBlendAssocGroup::GetNumAnimations	MATCH	0x45B050 +0x4	exe getter [ecx+0x8] sz4 == port CAnimBlendAssocGroup::m_NumAnims (offset/width/float-ness by static_assert)		GETTER	logic
+0x4A9130	FxManager_c::GetFrustumInfo	MATCH	0x4A9130 +0x4	exe getter [ecx+0x34] addr == port FxManager_c::m_Frustum (offset/width/float-ness by static_assert)		GETTER	render
+0x4A9C90	FxMemoryPool_c::Reset	MATCH	0x4A9C90 +0x4	exe setconst [ecx+0x8] sz4 == port FxMemoryPool_c::m_nPosition (offset/width/float-ness by static_assert)		SETCONST	render
+0x4AA1F0	FxSystemBP_c::GetBoundingSphere	MATCH	0x4AA1F0 +0x4	exe getter [ecx+0x20] sz4 == port FxSystemBP_c::m_BoundingSphere (offset/width/float-ness by static_assert)		GETTER	render
+0x4AA900	FxSystem_c::GetPlayStatus	MATCH	0x4AA900 +0x4	exe getter [ecx+0x50] sz1 == port FxSystem_c::m_nPlayStatus (offset/width/float-ness by static_assert)		GETTER	render
+0x4AD300	CEventDraggedOutCar::GetSourceEntity	MATCH	0x4AD300 +0x4	exe getter [ecx+0x14] sz4 == port CEventDraggedOutCar::m_CarJacker (offset/width/float-ness by static_assert)		GETTER	logic
+0x4ADF40	CEventDeadPed::GetSourceEntity	MATCH	0x4ADF40 +0x4	hand: exe mov eax,[ecx+0x14]; ret; CEventEditableResponse size 0x14 and m_ped is the first CEventDeadPed member (offset 0x14, private: static_assert not reachable)		GETTER	logic
+0x4AEB60	CEventPedEnteredMyVehicle::GetSourceEntity	MATCH	0x4AEB60 +0x4	exe getter [ecx+0x14] sz4 == port CEventPedEnteredMyVehicle::m_PedThatEntered (offset/width/float-ness by static_assert)		GETTER	logic
+0x4AEE80	CEventSexyPed::GetSourceEntity	MATCH	0x4AEE80 +0x4	exe getter [ecx+0x14] sz4 == port CEventSexyPed::m_SexyPed (offset/width/float-ness by static_assert)		GETTER	logic
+0x4B0790	CEventGunAimedAt::GetSourceEntity	MATCH	0x4B0790 +0x4	exe getter [ecx+0x14] sz4 == port CEventGunAimedAt::m_AimedBy (offset/width/float-ness by static_assert)		GETTER	logic
+0x4C4A30	CTimeInfo::GetOtherTimeModel	MATCH	0x4C4A30 +0x4	exe getter [ecx+0x2] sz2 == port CTimeInfo::m_nOtherTimeModel (offset/width/float-ness by static_assert)		GETTER	logic
+0x4C4B70	CBaseModelInfo::ClearTexDictionary	MATCH	0x4C4B70 +0x4	exe setconst [ecx+0xa] sz2 == port CBaseModelInfo::m_nTxdIndex (offset/width/float-ness by static_assert)		SETCONST	logic
+0x4D8810	CAEAudioHardware::GetNumAvailableChannels	MATCH	0x4D8810 +0x4	exe getter [ecx+0x8c] sz2 == port CAEAudioHardware::m_nNumAvailableChannels (offset/width/float-ness by static_assert)		GETTER	audio
+0x4D8E40	CAEAudioHardware::EnableEffectsLoading	MATCH	0x4D8E40 +0x4	exe setconst [ecx+0x1] sz1 == port CAEAudioHardware::m_bDisableEffectsLoading (offset/width/float-ness by static_assert)		SETCONST	audio
+0x4D8E50	CAEAudioHardware::DisableEffectsLoading	MATCH	0x4D8E50 +0x4	exe setconst [ecx+0x1] sz1 == port CAEAudioHardware::m_bDisableEffectsLoading (offset/width/float-ness by static_assert)		SETCONST	audio
+0x4D9530	CAEAudioHardware::SetMusicMasterScalingFactor	MATCH	0x4D9530 +0x6	exe setter [ecx+0x410] sz4 == port CAEAudioHardware::m_fMusicMasterScalingFactor (offset/width/float-ness by static_assert)		SETTER	audio
+0x4D9540	CAEAudioHardware::SetEffectsMasterScalingFactor	MATCH	0x4D9540 +0x6	exe setter [ecx+0x414] sz4 == port CAEAudioHardware::m_fEffectMasterScalingFactor (offset/width/float-ness by static_assert)		SETTER	audio
+0x4D9550	CAEAudioHardware::SetMusicFaderScalingFactor	MATCH	0x4D9550 +0x6	exe setter [ecx+0x418] sz4 == port CAEAudioHardware::m_fMusicFaderScalingFactor (offset/width/float-ness by static_assert)		SETTER	audio
+0x4D9560	CAEAudioHardware::SetEffectsFaderScalingFactor	MATCH	0x4D9560 +0x6	exe setter [ecx+0x41c] sz4 == port CAEAudioHardware::m_fEffectsFaderScalingFactor (offset/width/float-ness by static_assert)		SETTER	audio
+0x4D9570	CAEAudioHardware::GetEffectsMasterScalingFactor	MATCH	0x4D9570 +0x4	exe getter [ecx+0x414] sz4 float == port CAEAudioHardware::m_fEffectMasterScalingFactor (offset/width/float-ness by static_assert)		GETTER	audio
+0x4D9580	CAEAudioHardware::GetMusicMasterScalingFactor	MATCH	0x4D9580 +0x4	exe getter [ecx+0x410] sz4 float == port CAEAudioHardware::m_fMusicMasterScalingFactor (offset/width/float-ness by static_assert)		GETTER	audio
+0x4D9590	CAEAudioHardware::GetEffectsFaderScalingFactor	MATCH	0x4D9590 +0x4	exe getter [ecx+0x41c] sz4 float == port CAEAudioHardware::m_fEffectsFaderScalingFactor (offset/width/float-ness by static_assert)		GETTER	audio
+0x4D95A0	CAEAudioHardware::SetNonStreamFaderScalingFactor	MATCH	0x4D95A0 +0x6	exe setter [ecx+0x420] sz4 == port CAEAudioHardware::m_fNonStreamFaderScalingFactor (offset/width/float-ness by static_assert)		SETTER	audio
+0x4D95B0	CAEAudioHardware::SetStreamFaderScalingFactor	MATCH	0x4D95B0 +0x6	exe setter [ecx+0x424] sz4 == port CAEAudioHardware::m_fStreamFaderScalingFactor (offset/width/float-ness by static_assert)		SETTER	audio
+0x4E4120	CAEPedSpeechAudioEntity::GetAllocatedVoice	MATCH	0x4E4120 +0x4	exe getter [ecx+0x94] sz2 == port CAEPedSpeechAudioEntity::m_VoiceID (offset/width/float-ness by static_assert)		GETTER	audio
+0x4E77B0	CAEMFDecoder::GetStreamID	MATCH	0x4E77B0 +0x4	exe getter [ecx+0xb4] sz4 == port CAEMFDecoder::m_nTrackID (offset/width/float-ness by static_assert)		GETTER	audio
+0x4E82E0	CAERadioTrackManager::SetRadioAutoRetuneOnOff	MATCH	0x4E82E0 +0x6	exe setter [ecx+0x7] sz1 == port CAERadioTrackManager::m_bRadioAutoSelect (offset/width/float-ness by static_assert)		SETTER	audio
+0x4E8370	CAERadioTrackManager::HasRadioRetuneJustStarted	MATCH	0x4E8370 +0x4	exe getter [ecx+0x6] sz1 == port CAERadioTrackManager::m_bRetuneJustStarted (offset/width/float-ness by static_assert)		GETTER	audio
+0x4EEA30	CAESmoothFadeThread::Stop	MATCH	0x4EEA30 +0x4	exe setconst [ecx+0x809] sz1 == port CAESmoothFadeThread::m_bActive (offset/width/float-ness by static_assert)		SETCONST	audio
+0x4EF510	CAESoundManager::PauseManually	MATCH	0x4EF510 +0x6	exe setter [ecx+0x8cb5] sz1 == port CAESoundManager::m_IsManuallyPaused (offset/width/float-ness by static_assert)		SETTER	audio
+0x4F1550	CAEStreamThread::GetTrackLengthMs	MATCH	0x4F1550 +0x4	exe getter [ecx+0x2c] sz4 == port CAEStreamThread::m_nTrackLengthMs (offset/width/float-ness by static_assert)		GETTER	audio
+0x4F1560	CAEStreamThread::GetActiveTrackID	MATCH	0x4F1560 +0x4	exe getter [ecx+0x30] sz4 == port CAEStreamThread::m_nActiveTrackId (offset/width/float-ness by static_assert)		GETTER	audio
+0x4F1570	CAEStreamThread::GetPlayingTrackID	MATCH	0x4F1570 +0x4	exe getter [ecx+0x34] sz4 == port CAEStreamThread::m_nPlayingTrackId (offset/width/float-ness by static_assert)		GETTER	audio
+0x4F1580	CAEStreamThread::StopTrack	MATCH	0x4F1580 +0x4	exe setconst [ecx+0x16] sz1 == port CAEStreamThread::m_bStopRequest (offset/width/float-ness by static_assert)		SETCONST	audio
+0x4F5BF0	CAEVehicleAudioEntity::DisableHelicoptor	MATCH	0x4F5BF0 +0x4	exe setconst [ecx+0xbd] sz1 == port CAEVehicleAudioEntity::m_IsHelicopterDisabled (offset/width/float-ness by static_assert)		SETCONST	audio
+0x4F5C00	CAEVehicleAudioEntity::EnableHelicoptor	MATCH	0x4F5C00 +0x4	exe setconst [ecx+0xbd] sz1 == port CAEVehicleAudioEntity::m_IsHelicopterDisabled (offset/width/float-ness by static_assert)		SETCONST	audio
+0x50AC00	CCamera::Enable1rstPersonCamCntrlsScript	MATCH	0x50AC00 +0x4	exe setconst [ecx+0x41] sz1 == port CCamera::m_bEnable1rstPersonCamCntrlsScript (offset/width/float-ness by static_assert)		SETCONST	logic
+0x50AC10	CCamera::Enable1rstPersonWeaponsCamera	MATCH	0x50AC10 +0x4	exe setconst [ecx+0x42] sz1 == port CCamera::m_bAllow1rstPersonWeaponsCamera (offset/width/float-ness by static_assert)		SETCONST	logic
+0x50ADE0	CCamera::GetFading	MATCH	0x50ADE0 +0x4	exe getter [ecx+0x51] sz1 == port CCamera::m_bFading (offset/width/float-ness by static_assert)		GETTER	logic
+0x50AE10	CCamera::Get_Just_Switched_Status	MATCH	0x50AE10 +0x4	exe getter [ecx+0x2a] sz1 == port CCamera::m_bJust_Switched (offset/width/float-ness by static_assert)		GETTER	logic
+0x50AF80	CCamera::GetPositionAlongSpline	MATCH	0x50AF80 +0x4	exe getter [ecx+0x140] sz4 float == port CCamera::m_fPositionAlongSpline (offset/width/float-ness by static_assert)		GETTER	logic
+0x50BF80	CCamera::SetMotionBlurAlpha	MATCH	0x50BF80 +0x6	exe setter [ecx+0xa4] sz4 == port CCamera::m_nMotionBlurAddAlpha (offset/width/float-ness by static_assert)		SETTER	logic
+0x50C280	CCamera::AllowShootingWith2PlayersInCar	MATCH	0x50C280 +0x6	exe setter [ecx+0x44] sz1 == port CCamera::m_bAllowShootingWith2PlayersInCar (offset/width/float-ness by static_assert)		SETTER	logic
+0x594BD0	InteriorGroup_c::GetEntity	MATCH	0x594BD0 +0x4	exe getter [ecx+0x8] sz4 == port InteriorGroup_c::m_pEntity (offset/width/float-ness by static_assert)		GETTER	logic
+0x598080	InteriorManager_c::ActivatePeds	MATCH	0x598080 +0x6	exe setter [ecx+0x4752] sz1 == port InteriorManager_c::m_ArePedsEnabled (offset/width/float-ness by static_assert)		SETTER	logic
+0x5F7340	CPedGroupIntelligence::SetGroupDecisionMakerType	MATCH	0x5F7340 +0x6	exe setter [ecx+0x298] sz4 == port CPedGroupIntelligence::m_DecisionMakerType (offset/width/float-ness by static_assert)		SETTER	logic
+0x600BB0	CPedIntelligence::SetPedDecisionMakerTypeInGroup	MATCH	0x600BB0 +0x6	exe setter [ecx+0xb8] sz4 == port CPedIntelligence::m_nDecisionMakerTypeInGroup (offset/width/float-ness by static_assert)		SETTER	logic
+0x600BE0	CPedIntelligence::SetHearingRange	MATCH	0x600BE0 +0x6	exe setter [ecx+0xbc] sz4 == port CPedIntelligence::m_fHearingRange (offset/width/float-ness by static_assert)		SETTER	logic
+0x600BF0	CPedIntelligence::SetSeeingRange	MATCH	0x600BF0 +0x6	exe setter [ecx+0xc0] sz4 == port CPedIntelligence::m_fSeeingRange (offset/width/float-ness by static_assert)		SETTER	logic
+0x616CB0	BoneNode_c::GetSpeed	MATCH	0x616CB0 +0x4	exe getter [ecx+0x94] sz4 float == port BoneNode_c::m_Speed (offset/width/float-ness by static_assert)		GETTER	logic
+0x616CC0	BoneNode_c::SetSpeed	MATCH	0x616CC0 +0x6	exe setter [ecx+0x94] sz4 == port BoneNode_c::m_Speed (offset/width/float-ness by static_assert)		SETTER	logic
+0x617C10	IKChain_c::SetBlend	MATCH	0x617C10 +0x6	exe setter [ecx+0x18] sz4 == port IKChain_c::m_Blend (offset/width/float-ness by static_assert)		SETTER	logic
+0x617C20	IKChain_c::SetOffsetBoneTag	MATCH	0x617C20 +0x6	exe setter [ecx+0x34] sz4 == port IKChain_c::m_OffsetBone (offset/width/float-ness by static_assert)		SETTER	logic
+0x617C50	IKChain_c::GetPriority	MATCH	0x617C50 +0x4	exe getter [ecx+0x56] sz1 == port IKChain_c::m_Priority (offset/width/float-ness by static_assert)		GETTER	logic
+0x617E50	IKChain_c::UpdateTarget	MATCH	0x617E50 +0x6	exe setter [ecx+0x54] sz1 == port IKChain_c::m_UpdateTarget (offset/width/float-ness by static_assert)		SETTER	logic
+0x622230	CTaskComplexKillAllThreats::ControlSubTask	MATCH	0x622230 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexKillAllThreats::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x622310	CTaskComplexKillPedGroupOnFoot::ControlSubTask	MATCH	0x622310 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexKillPedGroupOnFoot::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x62F9F0	CTaskComplexBeStill::ControlSubTask	MATCH	0x62F9F0 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexBeStill::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x631DC0	CTaskComplexHitResponse::ControlSubTask	MATCH	0x631DC0 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexHitResponse::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x631F70	CTaskComplexHitByGunResponse::ControlSubTask	MATCH	0x631F70 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexHitByGunResponse::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x6326E0	CTaskComplexWaitAtAttractor::ControlSubTask	MATCH	0x6326E0 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexWaitAtAttractor::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x6328F0	CTaskComplexWaitForDryWeather::ControlSubTask	MATCH	0x6328F0 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexWaitForDryWeather::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	render
+0x632A40	CTaskComplexWaitForBus::ControlSubTask	MATCH	0x632A40 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexWaitForBus::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x632D00	CTaskComplexSequence::ControlSubTask	MATCH	0x632D00 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexSequence::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x6332B0	CTaskComplexAttractorPartnerWait::ControlSubTask	MATCH	0x6332B0 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexAttractorPartnerWait::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x633320	CTaskComplexUseAttractorPartner::ControlSubTask	MATCH	0x633320 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexUseAttractorPartner::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x633380	CTaskComplexUseScriptedAttractor::ControlSubTask	MATCH	0x633380 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexUseScriptedAttractor::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x633C70	CTaskSimpleIKChain::GetIKChain	MATCH	0x633C70 +0x4	exe getter [ecx+0x10] sz4 == port CTaskSimpleIKChain::m_IKChain (offset/width/float-ness by static_assert)		GETTER	logic
+0x634120	CTaskSimpleIKLookAt::GetLookAtEntity	MATCH	0x634120 +0x4	exe getter [ecx+0x28] sz4 == port CTaskSimpleIKLookAt::m_TargetEntity (offset/width/float-ness by static_assert)		GETTER	logic
+0x634890	CTaskComplexUseClosestFreeScriptedAttractor::ControlSubTask	MATCH	0x634890 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexUseClosestFreeScriptedAttractor::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x635420	CTaskComplexInWater::ControlSubTask	MATCH	0x635420 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexInWater::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	render
+0x635530	CTaskComplexUseSequence::ControlSubTask	MATCH	0x635530 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexUseSequence::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x63B6B0	CTaskComplexEnterBoatAsDriver::ControlSubTask	MATCH	0x63B6B0 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexEnterBoatAsDriver::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x63BC40	CTaskComplexLeaveBoat::ControlSubTask	MATCH	0x63BC40 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexLeaveBoat::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x63BDC0	CTaskComplexLeaveAnyCar::ControlSubTask	MATCH	0x63BDC0 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexLeaveAnyCar::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x63BEB0	CTaskComplexLeaveCarAndWander::ControlSubTask	MATCH	0x63BEB0 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexLeaveCarAndWander::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x63C090	CTaskComplexLeaveCarAndFlee::ControlSubTask	MATCH	0x63C090 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexLeaveCarAndFlee::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x63CAD0	CTaskComplexCarDrive::Drive	MATCH	0x63CAD0 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexCarDrive::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x63D0C0	CTaskComplexDrivePointRoute::ControlSubTask	MATCH	0x63D0C0 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexDrivePointRoute::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x63D120	CTaskComplexEnterAnyCarAsDriver::ControlSubTask	MATCH	0x63D120 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexEnterAnyCarAsDriver::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x648510	CTaskComplexCarSlowBeDraggedOut::ControlSubTask	MATCH	0x648510 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexCarSlowBeDraggedOut::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x648B80	CTaskComplexCarSlowBeDraggedOutAndStandUp::ControlSubTask	MATCH	0x648B80 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexCarSlowBeDraggedOutAndStandUp::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x6493D0	CTaskComplexGetOnBoatSeat::ControlSubTask	MATCH	0x6493D0 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexGetOnBoatSeat::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x653810	CTaskComplexEvasiveDiveAndGetUp::ControlSubTask	MATCH	0x653810 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexEvasiveDiveAndGetUp::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x655380	CTaskComplexMoveBackAndJump::ControlSubTask	MATCH	0x655380 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexMoveBackAndJump::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x658B90	CTaskComplexTreatAccident::ControlSubTask	MATCH	0x658B90 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexTreatAccident::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x659980	CTaskComplexExtinguishFireOnFoot::ControlSubTask	MATCH	0x659980 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexExtinguishFireOnFoot::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x675090	CTaskInteriorBeInHouse::ControlSubTask	MATCH	0x675090 +0x4	exe getter [ecx+0x8] sz4 == port CTaskInteriorBeInHouse::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x6752F0	CTaskInteriorBeInOffice::ControlSubTask	MATCH	0x6752F0 +0x4	exe getter [ecx+0x8] sz4 == port CTaskInteriorBeInOffice::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x6788F0	CTaskComplexFallAndGetUp::ControlSubTask	MATCH	0x6788F0 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexFallAndGetUp::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x678BC0	CTaskComplexFallAndStayDown::ControlSubTask	MATCH	0x678BC0 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexFallAndStayDown::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x6973A0	CTaskComplexWaitForBackup::ControlSubTask	MATCH	0x6973A0 +0x4	exe getter [ecx+0x8] sz4 == port CTaskComplexWaitForBackup::m_pSubTask (offset/width/float-ness by static_assert)		GETTER	logic
+0x6A2450	CAutomobile::SetHeliOrientation	MATCH	0x6A2450 +0x6	exe setter [ecx+0x954] sz4 == port CAutomobile::m_fForcedOrientation (offset/width/float-ness by static_assert)		SETTER	logic
+0x6A62A0	CAutomobile::GetNumContactWheels	MATCH	0x6A62A0 +0x4	exe getter [ecx+0x960] sz1 == port CAutomobile::m_nNumContactWheels (offset/width/float-ness by static_assert)		GETTER	logic
+0x6B58A0	CBike::GetNumContactWheels	MATCH	0x6B58A0 +0x4	exe getter [ecx+0x804] sz1 == port CBike::m_nNoOfContactWheels (offset/width/float-ness by static_assert)		GETTER	logic
+0x6B58C0	CBike::GetRideAnimData	MATCH	0x6B58C0 +0x4	exe getter [ecx+0x640] addr == port CBike::m_RideAnimData (offset/width/float-ness by static_assert)		GETTER	logic
+0x6C22C0	CDamageManager::GetEngineStatus	MATCH	0x6C22C0 +0x4	exe getter [ecx+0x4] sz1 == port CDamageManager::m_nEngineStatus (offset/width/float-ness by static_assert)		GETTER	logic
+0x6CDC90	CQuadBike::GetRideAnimData	MATCH	0x6CDC90 +0x4	exe getter [ecx+0x98c] addr == port CQuadBike::m_sRideAnimData (offset/width/float-ness by static_assert)		GETTER	logic

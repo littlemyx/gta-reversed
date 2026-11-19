@@ -52,6 +52,7 @@ bool CTaskSimpleSitIdle::MakeAbortable(CPed* ped, eAbortPriority priority, CEven
         if (m_anim) {
             m_anim->m_BlendDelta = -1000.f;
             m_anim->SetDefaultFinishCallback();
+            m_anim = nullptr; // ASM-P4R18b: exe 0x631207 clears the anim pointer
         }
         g_ikChainMan.AbortLookAt(ped, 750); // Omitted redudant `IsLooking` check.
         return true;

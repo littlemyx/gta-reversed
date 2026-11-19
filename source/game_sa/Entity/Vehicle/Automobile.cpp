@@ -30,6 +30,8 @@
 
 // exe 0x404330 `min(a, b)`: fcomp + test ah,5 + jp -> `a < b ? a : b`; a NaN b is returned as is (std::min(a, NaN) would give a)
 static constexpr float CmpMin(float a, float b) { return a < b ? a : b; }
+// exe 0x420800 `max(a, b)`: fcomp + test ah,0x41 + jne -> `a > b ? a : b`; NaN => b (std::max(a, NaN) would give a), max(0, -0) = -0
+static constexpr float CmpMax(float a, float b) { return a > b ? a : b; }
 
 constexpr size_t NUM_AUTOMOBILE_SUSP_LINES  = (size_t)MAX_CARWHEELS;
 constexpr size_t NUM_RHINO_EXTRA_SUSP_LINES = (size_t)MAX_CARWHEELS * 2u; // 8
@@ -3690,10 +3692,10 @@ void CAutomobile::HydraulicControl() {
                 float angle = X87R(x87::atan2(gunLeftRight, gunUpDown) - DegreesToRadians(45.0f));
                 float change_rear_right = X87R(x87::cos(angle) * jumpFactor);
                 float change_front_right = X87R(x87::sin(angle) * jumpFactor);
-                suspensionChange[CAR_WHEEL_FRONT_LEFT]  = std::max(0.0f, -change_rear_right);
-                suspensionChange[CAR_WHEEL_REAR_LEFT]   = std::max(0.0f, -change_front_right);
-                suspensionChange[CAR_WHEEL_FRONT_RIGHT] = std::max(0.0f, +change_front_right);
-                suspensionChange[CAR_WHEEL_REAR_RIGHT]  = std::max(0.0f, +change_rear_right);
+                suspensionChange[CAR_WHEEL_FRONT_LEFT]  = CmpMax(0.0f, -change_rear_right); // exe 0x6A0ECC-0x6A0F03 call 0x420800 max(0, x)
+                suspensionChange[CAR_WHEEL_REAR_LEFT]   = CmpMax(0.0f, -change_front_right); // exe 0x6A0ECC-0x6A0F03 call 0x420800 max(0, x)
+                suspensionChange[CAR_WHEEL_FRONT_RIGHT] = CmpMax(0.0f, +change_front_right); // exe 0x6A0ECC-0x6A0F03 call 0x420800 max(0, x)
+                suspensionChange[CAR_WHEEL_REAR_RIGHT]  = CmpMax(0.0f, +change_rear_right); // exe 0x6A0ECC-0x6A0F03 call 0x420800 max(0, x)
             }
         }
 

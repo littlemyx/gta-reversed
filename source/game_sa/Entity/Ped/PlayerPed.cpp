@@ -1712,7 +1712,7 @@ CPed* CPlayerPed::FindPedToAttack() {
     end.z = 0.0f;
 
     CPed* closestPed{};
-    float closestDistance = std::numeric_limits<float>::max();
+    float closestDistance = 99999.9f; // exe 0x60C610: initial best distance 0x47C34FF3 (99999.9), not FLT_MAX: a ped whose score is >= that is never picked
 
     CPedGroupMembership& membership = GetPlayerGroup().GetMembership();
     for (int i = GetPedPool()->GetSize(); i-- > 0;) { // exe 0x60C65F..0x60C7A2: every pool slot, from the last one down (the port's `i < size` test was missing: endless loop)

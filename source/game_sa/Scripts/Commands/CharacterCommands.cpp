@@ -669,211 +669,7 @@ bool LocateCharEntity2D(CRunningScript& S, CPed& ped, CEntity& entity, CVector2D
 
 // => 2D
 
-/*
- * @opcode 00EC
- * @command LOCATE_CHAR_ANY_MEANS_2D
- * @class Char
- * @method LocateAnyMeans2D
- * 
- * @brief Returns true if the character is within the 2D radius of the coordinates point
- * 
- * @param {Char} self
- * @param {Vector2D} 
- * @param {Vector2D} radius
- * @param {bool} drawSphere
- */
-auto LocateCharAnyMeans2D(CRunningScript& S, CPed& ped, CVector2D pos, CVector2D radius, bool highlightArea) {
-    return LocateChar2D(S, ped, pos, radius, highlightArea, false, false, false);
-}
-
-/*
- * @opcode 00ED
- * @command LOCATE_CHAR_ON_FOOT_2D
- * @class Char
- * @method LocateOnFoot2D
- * 
- * @brief Returns true if the character is within the 2D radius of the coordinates point on foot
- * 
- * @param {Char} self
- * @param {Vector2D} 
- * @param {Vector2D} radius
- * @param {bool} drawSphere
- */
-auto LocateCharOnFoot2D(CRunningScript& S, CPed& ped, CVector2D pos, CVector2D radius, bool highlightArea) {
-    return LocateChar2D(S, ped, pos, radius, highlightArea, false, true, false);
-}
-
-/*
- * @opcode 00EE
- * @command LOCATE_CHAR_IN_CAR_2D
- * @class Char
- * @method LocateInCar2D
- * 
- * @brief Returns true if the character is within the 2D radius of the coordinates point in a vehicle
- * 
- * @param {Char} self
- * @param {Vector2D} 
- * @param {Vector2D} radius
- * @param {bool} drawSphere
- */
-auto LocateCharInCar2D(CRunningScript& S, CPed& ped, CVector2D pos, CVector2D radius, bool highlightArea) {
-    return LocateChar2D(S, ped, pos, radius, highlightArea, true, false, false);
-}
-
-/*
- * @opcode 00EF
- * @command LOCATE_STOPPED_CHAR_ANY_MEANS_2D
- * @class Char
- * @method LocateStoppedAnyMeans2D
- * 
- * @brief Returns true if the character stopped within the 2D radius of the coordinates point
- * 
- * @param {Char} self
- * @param {Vector2D} 
- * @param {Vector2D} radius
- * @param {bool} drawSphere
- */
-auto LocateStoppedCharAnyMeans2D(CRunningScript& S, CPed& ped, CVector2D pos, CVector2D radius, bool highlightArea) {
-    return LocateChar2D(S, ped, pos, radius, highlightArea, false, false, true);
-}
-
-/*
- * @opcode 00F0
- * @command LOCATE_STOPPED_CHAR_ON_FOOT_2D
- * @class Char
- * @method LocateStoppedOnFoot2D
- * 
- * @brief Returns true if the character stopped within the 2D radius of the coordinates point on foot
- * 
- * @param {Char} self
- * @param {Vector2D} 
- * @param {Vector2D} radius
- * @param {bool} drawSphere
- */
-auto LocateStoppedCharOnFoot2D(CRunningScript& S, CPed& ped, CVector2D pos, CVector2D radius, bool highlightArea) {
-    return LocateChar2D(S, ped, pos, radius, highlightArea, false, true, true);
-}
-
-/*
- * @opcode 00F1
- * @command LOCATE_STOPPED_CHAR_IN_CAR_2D
- * @class Char
- * @method LocateStoppedInCar2D
- * 
- * @brief Returns true if the character stopped within the 2D radius of the coordinates point in a vehicle
- * 
- * @param {Char} self
- * @param {Vector2D} 
- * @param {Vector2D} radius
- * @param {bool} drawSphere
- */
-auto LocateStoppedCharInCar2D(CRunningScript& S, CPed& ped, CVector2D pos, CVector2D radius, bool highlightArea) {
-    return LocateChar2D(S, ped, pos, radius, highlightArea, true, false, true);
-}
-
 // => 3D
-
-/*
- * @opcode 00FE
- * @command LOCATE_CHAR_ANY_MEANS_3D
- * @class Char
- * @method LocateAnyMeans3D
- * 
- * @brief Returns true if the character is within the 3D radius of the coordinates point
- * 
- * @param {Char} self
- * @param {Vector} 
- * @param {Vector} radius
- * @param {bool} drawSphere
- */
-auto LocateCharAnyMeans3D(CRunningScript& S, CPed& ped, CVector pos, CVector radius, bool highlightArea) {
-    return LocateChar3D(S, ped, pos, radius, highlightArea, false, false, false);
-}
-
-/*
- * @opcode 00FF
- * @command LOCATE_CHAR_ON_FOOT_3D
- * @class Char
- * @method LocateOnFoot3D
- * 
- * @brief Returns true if the character is within the 3D radius of the coordinates point on foot
- * 
- * @param {Char} self
- * @param {Vector} 
- * @param {Vector} radius
- * @param {bool} drawSphere
- */
-auto LocateCharOnFoot3D(CRunningScript& S, CPed& ped, CVector pos, CVector radius, bool highlightArea) {
-    return LocateChar3D(S, ped, pos, radius, highlightArea, false, true, false);
-}
-
-/*
- * @opcode 0100
- * @command LOCATE_CHAR_IN_CAR_3D
- * @class Char
- * @method LocateInCar3D
- * 
- * @brief Returns true if the character is within the 3D radius of the coordinates point in a vehicle
- * 
- * @param {Char} self
- * @param {Vector} 
- * @param {Vector} radius
- * @param {bool} drawSphere
- */
-auto LocateCharInCar3D(CRunningScript& S, CPed& ped, CVector pos, CVector radius, bool highlightArea) {
-    return LocateChar3D(S, ped, pos, radius, highlightArea, true, false, false);
-}
-
-/*
- * @opcode 0101
- * @command LOCATE_STOPPED_CHAR_ANY_MEANS_3D
- * @class Char
- * @method LocateStoppedAnyMeans3D
- * 
- * @brief Returns true if the character stopped within the 3D radius of the coordinates point
- * 
- * @param {Char} self
- * @param {Vector} 
- * @param {Vector} radius
- * @param {bool} drawSphere
- */
-auto LocateStoppedCharAnyMeans3D(CRunningScript& S, CPed& ped, CVector pos, CVector radius, bool highlightArea) {
-    return LocateChar3D(S, ped, pos, radius, highlightArea, false, false, true);
-}
-
-/*
- * @opcode 0102
- * @command LOCATE_STOPPED_CHAR_ON_FOOT_3D
- * @class Char
- * @method LocateStoppedOnFoot3D
- * 
- * @brief Returns true if the character stopped within the 3D radius of the coordinates point on foot
- * 
- * @param {Char} self
- * @param {Vector} 
- * @param {Vector} radius
- * @param {bool} drawSphere
- */
-auto LocateStoppedCharOnFoot3D(CRunningScript& S, CPed& ped, CVector pos, CVector radius, bool highlightArea) {
-    return LocateChar3D(S, ped, pos, radius, highlightArea, false, true, true);
-}
-
-/*
- * @opcode 0103
- * @command LOCATE_STOPPED_CHAR_IN_CAR_3D
- * @class Char
- * @method LocateStoppedInCar3D
- * 
- * @brief Returns true if the character stopped within the 3D radius of the coordinates point in a vehicle
- * 
- * @param {Char} self
- * @param {Vector} 
- * @param {Vector} radius
- * @param {bool} drawSphere
- */
-auto LocateStoppedCharInCar3D(CRunningScript& S, CPed& ped, CVector pos, CVector radius, bool highlightArea) {
-    return LocateChar3D(S, ped, pos, radius, highlightArea, true, false, true);
-}
 
 //
 // Char, Char
@@ -881,109 +677,7 @@ auto LocateStoppedCharInCar3D(CRunningScript& S, CPed& ped, CVector pos, CVector
 
 // => 2D
 
-/*
- * @opcode 00F2
- * @command LOCATE_CHAR_ANY_MEANS_CHAR_2D
- * @class Char
- * @method LocateAnyMeansChar2D
- * 
- * @brief Returns true if the character is within the 2D radius of the other character
- * 
- * @param {Char} self
- * @param {Char} target
- * @param {Vector2D} radius
- * @param {bool} drawSphere
- */
-auto LocateCharAnyMeansChar2D(CRunningScript& S, CPed& ped1, CPed& ped2, CVector2D radius, bool highlightArea) {
-    return LocateCharEntity2D(S, ped1, ped2, radius, highlightArea, false, false);
-}
-
-/*
- * @opcode 00F3
- * @command LOCATE_CHAR_ON_FOOT_CHAR_2D
- * @class Char
- * @method LocateOnFootChar2D
- * 
- * @brief Returns true if the character is within the 2D radius of the other character on foot
- * 
- * @param {Char} self
- * @param {Char} target
- * @param {Vector2D} radius
- * @param {bool} drawSphere
- */
-auto LocateCharOnFootChar2D(CRunningScript& S, CPed& ped1, CPed& ped2, CVector2D radius, bool highlightArea) {
-    return LocateCharEntity2D(S, ped1, ped2, radius, highlightArea, false, true);
-}
-
-/*
- * @opcode 00F4
- * @command LOCATE_CHAR_IN_CAR_CHAR_2D
- * @class Char
- * @method LocateInCarChar2D
- * 
- * @brief Returns true if the character is within the 2D radius of the other character in a vehicle
- * 
- * @param {Char} self
- * @param {Char} otherChar
- * @param {Vector2D} radius
- * @param {bool} drawSphere
- */
-auto LocateCharInCarChar2D(CRunningScript& S, CPed& ped1, CPed& ped2, CVector2D radius, bool highlightArea) {
-    return LocateCharEntity2D(S, ped1, ped2, radius, highlightArea, true, false);
-}
-
 // => 3D
-
-/*
- * @opcode 0104
- * @command LOCATE_CHAR_ANY_MEANS_CHAR_3D
- * @class Char
- * @method LocateAnyMeansChar3D
- * 
- * @brief Returns true if the character is within the 3D radius of the other character
- * 
- * @param {Char} self
- * @param {Char} target
- * @param {Vector} radius
- * @param {bool} drawSphere
- */
-auto LocateCharAnyMeansChar3D(CRunningScript& S, CPed& ped1, CPed& ped2, CVector radius, bool highlightArea) {
-    return LocateCharEntity3D(S, ped1, ped2, radius, highlightArea, false, false);
-}
-
-/*
- * @opcode 0105
- * @command LOCATE_CHAR_ON_FOOT_CHAR_3D
- * @class Char
- * @method LocateOnFootChar3D
- * 
- * @brief Returns true if the character is within the 3D radius of the other character on foot
- * 
- * @param {Char} self
- * @param {Char} target
- * @param {Vector} radius
- * @param {bool} drawSphere
- */
-auto LocateCharOnFootChar3D(CRunningScript& S, CPed& ped1, CPed& ped2, CVector radius, bool highlightArea) {
-    return LocateCharEntity3D(S, ped1, ped2, radius, highlightArea, false, true);
-}
-
-/*
- * @opcode 0106
- * @command LOCATE_CHAR_IN_CAR_CHAR_3D
- * @class Char
- * @method LocateInCarChar3D
- * 
- * @brief Returns true if the character is within the 3D radius of the other character in a vehicle
- * 
- * @param {Char} self
- * @param {Char} target
- * @param {Vector} radius
- * @param {bool} drawSphere
- */
-auto LocateCharInCarChar3D(CRunningScript& S, CPed& ped1, CPed& ped2, CVector radius, bool highlightArea) {
-    return LocateCharEntity3D(S, ped1, ped2, radius, highlightArea, true, false);
-}
 
 //
 // Char, Car
@@ -991,109 +685,7 @@ auto LocateCharInCarChar3D(CRunningScript& S, CPed& ped1, CPed& ped2, CVector ra
 
 // => 2D
 
-/*
- * @opcode 0202
- * @command LOCATE_CHAR_ANY_MEANS_CAR_2D
- * @class Char
- * @method LocateAnyMeansCar2D
- * 
- * @brief Returns true if the character is within the 2D radius of the vehicle
- * 
- * @param {Char} self
- * @param {Car} vehicle
- * @param {Vector2D} radius
- * @param {bool} drawSphere
- */
-auto LocateCharAnyMeansCar2D(CRunningScript& S, CPed& ped, CVehicle& veh, CVector2D radius, bool highlightArea) {
-    return LocateCharEntity2D(S, ped, veh, radius, highlightArea, false, false);
-}
-
-/*
- * @opcode 0203
- * @command LOCATE_CHAR_ON_FOOT_CAR_2D
- * @class Char
- * @method LocateOnFootCar2D
- * 
- * @brief Returns true if the character is within the 2D radius of the vehicle on foot
- * 
- * @param {Char} self
- * @param {Car} vehicle
- * @param {Vector2D} radius
- * @param {bool} drawSphere
- */
-auto LocateCharOnFootCar2D(CRunningScript& S, CPed& ped, CVehicle& veh, CVector2D radius, bool highlightArea) {
-    return LocateCharEntity2D(S, ped, veh, radius, highlightArea, false, true);
-}
-
-/*
- * @opcode 0204
- * @command LOCATE_CHAR_IN_CAR_CAR_2D
- * @class Char
- * @method LocateInCarCar2D
- * 
- * @brief Returns true if the character is within the 2D radius of the vehicle in a vehicle
- * 
- * @param {Char} self
- * @param {Car} handle
- * @param {Vector2D} radius
- * @param {bool} drawSphere
- */
-auto LocateCharInCarCar2D(CRunningScript& S, CPed& ped, CVehicle& veh, CVector2D radius, bool highlightArea) {
-    return LocateCharEntity2D(S, ped, veh, radius, highlightArea, true, false);
-}
-
 // => 3D
-
-/*
- * @opcode 0205
- * @command LOCATE_CHAR_ANY_MEANS_CAR_3D
- * @class Char
- * @method LocateAnyMeansCar3D
- * 
- * @brief Returns true if the character is within the 3D radius of the vehicle
- * 
- * @param {Char} self
- * @param {Car} vehicle
- * @param {Vector} radius
- * @param {bool} drawSphere
- */
-auto LocateCharAnyMeansCar3D(CRunningScript& S, CPed& ped, CVehicle& veh, CVector radius, bool highlightArea) {
-    return LocateCharEntity3D(S, ped, veh, radius, highlightArea, false, false);
-}
-
-/*
- * @opcode 0206
- * @command LOCATE_CHAR_ON_FOOT_CAR_3D
- * @class Char
- * @method LocateOnFootCar3D
- * 
- * @brief Returns true if the character is within the 3D radius of the vehicle on foot
- * 
- * @param {Char} self
- * @param {Car} vehicle
- * @param {Vector} radius
- * @param {bool} drawSphere
- */
-auto LocateCharOnFootCar3D(CRunningScript& S, CPed& ped, CVehicle& veh, CVector radius, bool highlightArea) {
-    return LocateCharEntity3D(S, ped, veh, radius, highlightArea, false, true);
-}
-
-/*
- * @opcode 0207
- * @command LOCATE_CHAR_IN_CAR_CAR_3D
- * @class Char
- * @method LocateInCarCar3D
- * 
- * @brief Returns true if the character is within the 3D radius of the vehicle in a vehicle
- * 
- * @param {Char} self
- * @param {Car} vehicle
- * @param {Vector} radius
- * @param {bool} drawSphere
- */
-auto LocateCharInCarCar3D(CRunningScript& S, CPed& ped, CVehicle& veh, CVector radius, bool highlightArea) {
-    return LocateCharEntity3D(S, ped, veh, radius, highlightArea, true, false);
-}
 
 //
 // Char, Obj
@@ -4060,6 +3652,22 @@ void ClearCharTasksImmediately(CPed& ped) {
 //void ClearLookAt(CPed& self) {
     //NOTSA_UNREACHABLE("Not implemented");
 //}
+
+//! LOCATE_[STOPPED_]CHAR_{ANY_MEANS,ON_FOOT,IN_CAR}_{2D,3D} (exe cases @0x469751): the exe forwards the command id to CRunningScript::LocateCharCommand
+//! (0x486D80), which reads the arguments itself (box test on the real position - the car's when in one -, highlight at z / -100, NaN fails)
+void LocateCharCmd(CRunningScript& S, eScriptCommands cmd) {
+    S.LocateCharCommand((int32)cmd);
+}
+
+//! LOCATE_CHAR_{ANY_MEANS,ON_FOOT,IN_CAR}_CHAR_{2D,3D} (case @0x469760) -> CRunningScript::LocateCharCharCommand (0x4870F0): both peds use their real position
+void LocateCharCharCmd(CRunningScript& S, eScriptCommands cmd) {
+    S.LocateCharCharCommand((int32)cmd);
+}
+
+//! LOCATE_CHAR_{ANY_MEANS,ON_FOOT,IN_CAR}_CAR_{2D,3D} (case @0x47E367) -> CRunningScript::LocateCharCarCommand (0x487420)
+void LocateCharCarCmd(CRunningScript& S, eScriptCommands cmd) {
+    S.LocateCharCarCommand((int32)cmd);
+}
 }; // namespace
 
 void notsa::script::commands::character::RegisterHandlers() {
@@ -4123,30 +3731,30 @@ void notsa::script::commands::character::RegisterHandlers() {
     REGISTER_COMMAND_HANDLER(COMMAND_IS_CHAR_IN_CAR, IsCharInCar);
     REGISTER_COMMAND_HANDLER(COMMAND_IS_CHAR_IN_MODEL, IsCharInModel);
     REGISTER_COMMAND_HANDLER(COMMAND_IS_CHAR_IN_ANY_CAR, IsCharInAnyCar);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ANY_MEANS_2D, LocateCharAnyMeans2D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ON_FOOT_2D, LocateCharOnFoot2D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_IN_CAR_2D, LocateCharInCar2D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_STOPPED_CHAR_ANY_MEANS_2D, LocateStoppedCharAnyMeans2D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_STOPPED_CHAR_ON_FOOT_2D, LocateStoppedCharOnFoot2D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_STOPPED_CHAR_IN_CAR_2D, LocateStoppedCharInCar2D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ANY_MEANS_3D, LocateCharAnyMeans3D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ON_FOOT_3D, LocateCharOnFoot3D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_IN_CAR_3D, LocateCharInCar3D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_STOPPED_CHAR_ANY_MEANS_3D, LocateStoppedCharAnyMeans3D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_STOPPED_CHAR_ON_FOOT_3D, LocateStoppedCharOnFoot3D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_STOPPED_CHAR_IN_CAR_3D, LocateStoppedCharInCar3D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ANY_MEANS_CHAR_2D, LocateCharAnyMeansChar2D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ON_FOOT_CHAR_2D, LocateCharOnFootChar2D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_IN_CAR_CHAR_2D, LocateCharInCarChar2D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ANY_MEANS_CHAR_3D, LocateCharAnyMeansChar3D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ON_FOOT_CHAR_3D, LocateCharOnFootChar3D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_IN_CAR_CHAR_3D, LocateCharInCarChar3D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ANY_MEANS_CAR_2D, LocateCharAnyMeansCar2D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ON_FOOT_CAR_2D, LocateCharOnFootCar2D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_IN_CAR_CAR_2D, LocateCharInCarCar2D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ANY_MEANS_CAR_3D, LocateCharAnyMeansCar3D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ON_FOOT_CAR_3D, LocateCharOnFootCar3D);
-    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_IN_CAR_CAR_3D, LocateCharInCarCar3D);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ANY_MEANS_2D, LocateCharCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ON_FOOT_2D, LocateCharCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_IN_CAR_2D, LocateCharCarCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_STOPPED_CHAR_ANY_MEANS_2D, LocateCharCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_STOPPED_CHAR_ON_FOOT_2D, LocateCharCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_STOPPED_CHAR_IN_CAR_2D, LocateCharCarCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ANY_MEANS_3D, LocateCharCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ON_FOOT_3D, LocateCharCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_IN_CAR_3D, LocateCharCarCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_STOPPED_CHAR_ANY_MEANS_3D, LocateCharCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_STOPPED_CHAR_ON_FOOT_3D, LocateCharCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_STOPPED_CHAR_IN_CAR_3D, LocateCharCarCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ANY_MEANS_CHAR_2D, LocateCharCharCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ON_FOOT_CHAR_2D, LocateCharCharCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_IN_CAR_CHAR_2D, LocateCharCharCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ANY_MEANS_CHAR_3D, LocateCharCharCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ON_FOOT_CHAR_3D, LocateCharCharCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_IN_CAR_CHAR_3D, LocateCharCharCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ANY_MEANS_CAR_2D, LocateCharCarCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ON_FOOT_CAR_2D, LocateCharCarCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_IN_CAR_CAR_2D, LocateCharCarCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ANY_MEANS_CAR_3D, LocateCharCarCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_ON_FOOT_CAR_3D, LocateCharCarCmd);
+    REGISTER_COMMAND_HANDLER(COMMAND_LOCATE_CHAR_IN_CAR_CAR_3D, LocateCharCarCmd);
     REGISTER_COMMAND_HANDLER(COMMAND_IS_CHAR_DEAD, IsCharDead);
     REGISTER_COMMAND_HANDLER(COMMAND_CREATE_CHAR_INSIDE_CAR, CreateCharInsideCar);
     REGISTER_COMMAND_HANDLER(COMMAND_IS_CHAR_IN_ZONE, IsCharInZone);

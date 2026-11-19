@@ -275,16 +275,22 @@ void cBuoyancy::PreCalcSetup(CPhysical* entity, float fBuoyancy)
 // 0x6C34E0
 void cBuoyancy::AddSplashParticles(CPhysical* entity, CVector vecFrom, CVector vecTo, CVector vecSplashDir, uint8 bReduceParticleSize)
 {
-    auto fDistBetweenPoints = DistanceBetweenPoints(vecFrom, vecTo);
+    // 0x6C3500: the exe sums the squares in z, y, x order, every step rounded to float (PC24)
+    const auto Mag = [](float x, float y, float z) { return sqrtf(z * z + y * y + x * x); };
+    const CVector vecDelta = vecTo - vecFrom;
+    auto fDistBetweenPoints = Mag(vecDelta.x, vecDelta.y, vecDelta.z);
     auto vecUsedSpeed = entity->m_vecMoveSpeed;
-    auto fMoveSpeed = vecUsedSpeed.Magnitude();
+    auto fMoveSpeed = Mag(vecUsedSpeed.x, vecUsedSpeed.y, vecUsedSpeed.z);
     if (fMoveSpeed > 0.1F) {
-        auto fMult = 1.0F / fMoveSpeed;
-        vecUsedSpeed *= (fMult * 0.1F); // Get the speed in [0 : 0.1] range
+        // 0x6C358B: every component is multiplied by 1/speed and then by 0.1 (two roundings), not by (1/speed * 0.1)
+        const float fMult = 1.0F / fMoveSpeed;
+        vecUsedSpeed.x = (vecUsedSpeed.x * fMult) * 0.1F;
+        vecUsedSpeed.y = (vecUsedSpeed.y * fMult) * 0.1F;
+        vecUsedSpeed.z = (vecUsedSpeed.z * fMult) * 0.1F;
         fMoveSpeed = 0.1F;
     }
 
-    if (fMoveSpeed <= 0.05F)
+    if (!(fMoveSpeed > 0.05F)) // 0x6C35F5: NaN returns too
         return;
 
     FxPrtMult_c curParticle(1.0F, 1.0F, 1.0F, 0.1F, 0.5F, 1.0F, 0.2F);
@@ -293,12 +299,14 @@ void cBuoyancy::AddSplashParticles(CPhysical* entity, CVector vecFrom, CVector v
         curParticle.m_fLife *= 0.5F;
     }
 
-    auto vecVelocityModifier = vecUsedSpeed * CVector(0.0F, 0.0F, -1.0F) * 120.0F;
+    // 0x6C3680: x = (speed.y * 0) * 120, y = (speed.z * 0) * 120, z = (-fMoveSpeed) * 120 (the scalar speed, not the z component of the speed vector)
+    const CVector vecVelocityModifier{ (vecUsedSpeed.y * 0.0F) * 120.0F, (vecUsedSpeed.z * 0.0F) * 120.0F, (fMoveSpeed * -1.0F) * 120.0F };
 
     auto iNumParticles = std::max(1, NOTSA_FTOL(int32, fDistBetweenPoints + fDistBetweenPoints));
     for (int32 iIter = 0; iIter < iNumParticles; ++iIter) {
         auto fCurrentProgress = static_cast<float>(iIter) / static_cast<float>(iNumParticles);
-        auto vecCurPoint = Lerp(vecFrom, vecTo, fCurrentProgress);
+        // 0x6C3739: from + (to - from) * progress, not the (1 - t) * from + t * to form of Lerp
+        const CVector vecCurPoint = vecFrom + vecDelta * fCurrentProgress;
         auto vecTransformedPoint = entity->m_matrix->TransformPoint(vecCurPoint);
 
         if (!entity->GetIsTypePed()) {

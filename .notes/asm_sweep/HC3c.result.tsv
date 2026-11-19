@@ -1,0 +1,17 @@
+addr	function	verdict	asm range	note	fix commit
+0x5F1FA0	CPedGeometryAnalyser::ComputeEntityBoundingBoxCornersUncached	MATCH	0x5F1FA0-0x5F2B74	structure, compares, margins, axis choice, corner assembly checked; FORWARD/UP branches only by symmetry with RIGHT	
+0x5F1670	CPedGeometryAnalyser::ComputeEntityBoundingBoxPlanesUncached	MATCH	0x5F1670-0x5F1741	z-term is 0*z so sum order is moot	
+0x5F3C20	CPedGeometryAnalyser::ComputeEntityBoundingSphere	FIXED	0x5F3C20-0x5F3DC4	dist^2 sum order (z^2+y^2)+x^2	97dc90351
+0x5F1450	CPedGeometryAnalyser::ComputeEntityHitSide(point,planes,dots)	MATCH	0x5F1450-0x5F14F4		
+0x73B4A0	CWeapon::Initialise	MATCH	0x73B4A0-0x73B54C	Reload inlined; port calls Reload, equivalent (total==0 skip)	
+0x73AEB0	CWeapon::Reload	MATCH	0x73AEB0-0x73AEF3		
+0x538B30	CFire::Initialise	MATCH	0x538B30-0x538B92		
+0x5397A0	CFireManager::ClearAllScriptFireFlags	MATCH	0x5397A0-0x5397AE		
+0x49CC90	CTagManager::AddTag	MATCH	0x49CC90-0x49CCAE		
+0x49CCB0	CTagManager::FindTagDesc	MATCH	0x49CCB0-0x49CCD3	reverse scan	
+0x43C900	CCurves::CalcCurvePoint	NOT_REACHED		no new pass beyond HC3b spot-check	
+0x5F3730	CPedGeometryAnalyser::ComputeMoveDirToAvoidEntity	NOT_REACHED			
+0x5F1890	CPedGeometryAnalyser::ComputeRouteRoundSphere	NOT_REACHED			
+0x5F3DD0	CPedGeometryAnalyser::ComputeRouteRoundEntityBoundingBox	NOT_REACHED			
+0x5B25F0	CCam::Process_FlyBy	NOT_REACHED			
+0x447600	CGarage::InitDoorsAtStart	NOT_REACHED			

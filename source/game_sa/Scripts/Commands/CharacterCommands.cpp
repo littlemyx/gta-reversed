@@ -1172,8 +1172,9 @@ auto SetCharAmmo(CPed& ped, eWeaponType wep, int32 nammo) {
  * @param {Char} self
  * @param {int} health
  */
-auto IsCharHealthGreater(CPed& ped, float health) {
-    return ped.m_fHealth >= health;
+auto IsCharHealthGreater(CPed& ped, int32 health) {
+    // exe 0x47CE3E-0x47CE56: the parameter is an int (fild) and the comparison is a strict `health > param` (unordered -> false)
+    return ped.m_fHealth > (float)health;
 }
 
 auto CreatePed(CRunningScript& S, ePedType pedType, eModelID pedModel) -> CPed& {

@@ -218,8 +218,14 @@ bool CPedIntelligence::FindRespectedFriendInInformRange() {
         CPed* pedEntity = GetPedEntities()[pedScanIndex]->AsPed();
         if (pedEntity) {
             if (CPedType::GetPedFlag(pedEntity->m_nPedType) & respect) {
-                CVector distance = m_pPed->GetPosition() - pedEntity->GetPosition();
-                if ((m_fDmRadius * m_fDmRadius) > distance.SquaredMagnitude())
+                // exe 0x600D59-0x600D90: (this - other) per axis, squared distance accumulated on the x87 stack as ((z^2 + x^2) + y^2)
+                const auto& myPos = m_pPed->GetPosition();
+                const auto& otherPos = pedEntity->GetPosition();
+                const x87d dx = (x87d)myPos.x - (x87d)otherPos.x;
+                const x87d dy = (x87d)myPos.y - (x87d)otherPos.y;
+                const x87d dz = (x87d)myPos.z - (x87d)otherPos.z;
+                const x87d radius = m_fDmRadius;
+                if (radius * radius > dz * dz + dx * dx + dy * dy)
                     return true;
             }
         }

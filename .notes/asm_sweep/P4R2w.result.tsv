@@ -1,0 +1,31 @@
+addr	function	verdict	asm range	note	fix commit
+0x50C360	CCamera::UpdateTargetEntity	MATCH	0x50C360-0x50C7BA (all)	bike flag (speed^2 > 0.3), mode 7/8 arrested, drive-by/vehicle target, ENTER_CAR/CARJACK/OPEN_DOOR/EXIT_CAR/DRAGGED/ARRESTED branches, cam target refs; open NOT_REACHED row closed	-
+0x445E20	CGangWars::ReleaseCarsInAttackWave	MATCH	0x445E20-0x445E70	reverse pool walk, flag clear, SetVehicleCreatedBy(RANDOM)	-
+0x44582F	CGangWars::GetGangColor	INTENTIONAL	-	not a function in the exe (0x44582F is the middle of CGangWars::UpdateWaveBlips-type code); port helper	-
+0x53A450	CCreepingFire::TryToStartFireAtCoors	FIXED	0x53A450-0x53A56E (all)	status test inverted (exe returns false when status != 0); vertical line args, StartFire args, flags MATCH	4f2963ae3
+0x44DB60	CPathFind::MarkRegionsForCoors	MATCH	0x44DB60-0x44DCC0 (all)	x87 clamp, [x*8+y] fill	-
+0x50B5D0	CCamera::ProcessFade	MATCH	0x50B5D0-0x50B6C8 (all)	fade in/out, duration 0, NaN paths; float-vs-x87 noise	-
+0x7000E0	CPointLights::AddLight	MATCH	0x7000E0-0x7002C2 (all)	x87 range tests, z+y+x, field stores, fade factor	-
+0x50B890	CCamera::ProcessWideScreenOn	MATCH	0x50B890-0x50B8E3	-	-
+0x50D510	CCamera::ProcessFOVLerp(float)	MATCH	0x50D510-0x50D57E	float-vs-x87 noise	-
+0x5164A0	CCamera::ProcessVectorMoveLinear()	MATCH	0x5164A0-0x5164F6	-	-
+0x50D350	CCamera::ProcessVectorTrackLinear(float)	MATCH	0x50D350-0x50D42C	-	-
+0x441560	CGameLogic::ClearSkip	MATCH	0x441560-0x4415B3	-	-
+0x566950	CWorld::ExtinguishAllCarFiresInArea	MATCH	0x566950-0x566A5A	strict <; float-vs-x87 noise	-
+0x610560	CPopCycle::UpdateAreaDodgyness	FIXED	0x610560-0x6106CB (all)	float store after every step instead of one multiply of the integer sum	ea2d3a9b4
+0x449E60	CGarages::PlayerArrestedOrDied	MATCH	0x449E60-0x449E8B	-	-
+0x448900	CGarages::IsPointWithinHideOutGarage	FIXED	0x448900-0x448963 (all)	port broke out after the first hideout garage; hideout type set (16-18,24-32,39-42,45) MATCH	5d12ba07b
+0x449BA0	CGarages::IsPointInAGarageCameraZone	MATCH	0x449BA0-0x449BFC	only type 0 skipped	-
+0x558E40	CStats::GetStatValue	MATCH	0x558E40-0x558E60	-	-
+0x559730	CStats::ProcessReactionStatsOnDecrement	MATCH	0x559730-0x559759	-	-
+0x538F10	CFireManager::GetNumOfNonScriptFires	MATCH	0x538F10-0x538F34	-	-
+0x72DAD0	CCullZones::FindZoneWithStairsAttributeForPlayer	MATCH	0x72DAD0-0x72DB4A	-	-
+0x5F7E80	CPedGroups::GetPedsGroup	MATCH	0x5F7E80-0x5F7ED6	-	-
+0x5FB870	CPedGroups::RemoveGroup	MATCH	0x5FB870-0x5FB896	-	-
+0x50AB10	CCamera::ClearPlayerWeaponMode	MATCH	0x50AB10-0x50AB31	-	-
+0x50AE60	CCamera::GetLookingLRBFirstPerson	MATCH	0x50AE60-0x50AE84	-	-
+0x50AE90	CCamera::GetLookDirection	MATCH	0x50AE90-0x50AECB	-	-
+0x50AF00	CCamera::GetArrPosForVehicleType	MATCH	0x50AF00-0x50AF5E	-	-
+0x50BF00	CCamera::SetFadeColour	MATCH	0x50BF00-0x50BF34	-	-
+0x50BF40	CCamera::SetMotionBlur	MATCH	0x50BF40-0x50BF72	-	-
+-	remaining (CCamera::Init skipped by brief, CCarCtrl::*, CPopulation::*, CWorld::Process, CCover::*, rest of the ~65 without a verdict)	NOT_REACHED	-	budget	-

@@ -1564,9 +1564,9 @@ void CTrain::ProcessControl() {
                 CVector vecDistance{};
                 if (CGameLogic::CalcDistanceToForbiddenTrainCrossing(vecPoint, m_vecMoveSpeed, true, vecDistance) < 230.0f) {
                     if (!(DotProduct(GetForwardVector(), vecDistance) > 0.0f)) { // exe 0x6F8AA1-0x6F8AA4: jne (not greater, NaN too) takes the max() branch
-                        m_fTrainGas = std::max(0.0f, m_fTrainGas);
+                        m_fTrainGas = 0.0f > m_fTrainGas ? 0.0f : m_fTrainGas; // exe 0x6F8ABD call 0x420800 max(0, gas)
                     } else {
-                        m_fTrainGas = std::min(0.0f, m_fTrainGas);
+                        m_fTrainGas = 0.0f < m_fTrainGas ? 0.0f : m_fTrainGas; // exe 0x6F8AAE call 0x404330 min(0, gas)
                     }
 
                     if (CGameLogic::CalcDistanceToForbiddenTrainCrossing(vecPoint, m_vecMoveSpeed, false, vecDistance) < 230.0f) {

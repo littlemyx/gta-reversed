@@ -1,0 +1,11 @@
+addr	function	verdict	asm range	note	fix commit
+0x5083C0	CAudioZones::Update	CONFIRMED	0x5083C0-0x508911	skip test dist<20 strict NaN continues (test ah,5 jnp); sphere z,y,x sum, strict <, NaN skips, cap 10; box int16*0.125 strict min<p<max (ah&5 / ah&0x41), cap 10; port matches c183db3bc	
+0x4F5EB0	CAEVehicleAudioEntity::UpdateGasPedalAudio	CONFIRMED	0x4F5EB0-0x4F5F21	type0->+0x964 (VALIDATE_OFFSET CAutomobile), type9->+0x808 (CBike), else return; step 0.09 up/0.07 down (0x8CBC24/28) = min/max step_to incl NaN/equal cases; port matches 1afff82fd	
+0x4D9EF0	CAEAudioUtility::ConvertFromBytesToMS	SKIP-AUDIO-OUTPUT-CONFIRMED	0x4D9EF0	pure maths, no rand, no global write	
+0x4D9E50	CAEAudioUtility::AudioLog10	SKIP-AUDIO-OUTPUT-CONFIRMED	0x4D9E50	pure	
+0x506FE0	CAudioEngine::HasRadioRetuneJustStarted	SKIP-AUDIO-OUTPUT-CONFIRMED	0x506FE0	thunk to getter byte [ecx+6]	
+0x4D9E80	CAEAudioUtility::GetCurrentTimeInMS	SKIP-AUDIO-OUTPUT-CONFIRMED	0x4D9E80	QPC-based wall clock, reads only; port uses chrono (wall-clock noise either way)	
+0x4F51F0	CAEVehicleAudioEntity::GetVolumeForDummyIdle	SKIP-AUDIO-OUTPUT-CONFIRMED	0x4F51F0	calls only GetPiecewiseLinear/AudioLog10, stack stores only	
+0x4F5310	CAEVehicleAudioEntity::GetFrequencyForDummyIdle	SKIP-AUDIO-OUTPUT-CONFIRMED	0x4F5310	same	
+0x4F53D0	CAEVehicleAudioEntity::GetVolumeForDummyRev	SKIP-AUDIO-OUTPUT-CONFIRMED	0x4F53D0	same	
+0x4F54F0	CAEVehicleAudioEntity::GetFrequencyForDummyRev	SKIP-AUDIO-OUTPUT-CONFIRMED	0x4F54F0	same	

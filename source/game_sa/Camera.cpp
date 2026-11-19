@@ -1,6 +1,7 @@
 #include "StdInc.h"
 
 #include "Camera.h"
+#include "portable/sh7log.h"
 
 #include "TaskSimpleGangDriveBy.h"
 #include "TaskSimpleHoldEntity.h"
@@ -674,6 +675,9 @@ bool CCamera::GetArrPosForVehicleType(eVehicleType type, int32& arrPos) {
 
 // 0x50AF80
 float CCamera::GetPositionAlongSpline() const {
+#ifdef NOTSA_STATEHASH
+    notsa::rr::FlyByNote("Q", (double)m_fPositionAlongSpline, (int)m_bCutsceneFinished, (unsigned)CTimer::m_snTimeInMilliseconds); // SH7B log only
+#endif
     return m_fPositionAlongSpline;
 }
 
@@ -2989,6 +2993,9 @@ bool CCamera::VectorTrackRunning() const {
 
 // 0x514950
 void CCamera::FinishCutscene() {
+#ifdef NOTSA_STATEHASH
+    notsa::rr::FlyByNote("F", (double)m_fPositionAlongSpline, (int)m_bCutsceneFinished, (unsigned)CTimer::m_snTimeInMilliseconds); // SH7B log only
+#endif
     SetPercentAlongCutScene(100.0f);
     m_fPositionAlongSpline = 1.0f;
     m_bCutsceneFinished = true;

@@ -1,0 +1,2 @@
+addr	function	verdict	asm range	note	fix commit
+(none)	(Entity zone, non-vehicle)	NOT_REACHED	-	cand.tsv has 14 non-vehicle Entity rows; all 14 already have a verdict in P4R22/P4R22b result TSVs; remaining ~310 cand rows are outside Entity/** (Radar, CarCtrl, Camera, PathFind, Weapon, PedIK, Pad, ...)	

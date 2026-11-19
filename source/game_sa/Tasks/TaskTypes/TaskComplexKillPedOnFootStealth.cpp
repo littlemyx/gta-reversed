@@ -99,7 +99,7 @@ CTask* CTaskComplexKillPedOnFootStealth::ControlSubTask(CPed* ped) {
         return m_pSubTask;
     }
 
-    if (CTimer::GetTimeInMS() - m_targetUnreachableTimeMs <= 5'000u) { // TODO: Magic number
+    if ((int32)(CTimer::GetTimeInMS() - m_targetUnreachableTimeMs) <= 5'000) { // 0x62B999: sub + cmp 0x1388 + jle = SIGNED compare (was unsigned)
         return m_pSubTask;
     }
 

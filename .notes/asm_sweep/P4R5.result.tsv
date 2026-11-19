@@ -1,0 +1,15 @@
+addr	function	verdict	asm range	note	fix commit
+0x6F5010	cHandlingDataMgr::ConvertDataToWorldUnits	MATCH	0x6F5010-0x6F5078	1/accel multiplied, drive type 4 doubles x4 else x2, collision mult mass*c*const	-
+0x6F5080	cHandlingDataMgr::ConvertDataToGameUnits	MATCH	0x6F5080-0x6F5232	loop (0.01 step, drag split at 0.01, jp NaN semantics), RC bandit / maxsp flag / bike ids 162..174 branches, -0.2 clamp, drive type scale, InitGearRatios	-
+0x6F5290	cHandlingDataMgr::ConvertBikeDataToGameUnits	MATCH	0x6F5290-0x6F52CA	sin(deg*k) for +0x14/+0x2c/+0x30, plain multiply +0x18	-
+0x6F4FD0	cHandlingDataMgr::GetHandlingId	MATCH	0x6F4FD0-0x6F5001	strncmp(14) vs strcmp equal for NUL-terminated 14 byte entries; not found returns 210	-
+0x608790	CPedType::FindPedType	MATCH	0x608790-0x60880C	32 name table at 0x8D23B8 equals port list; 2 extra strcmp only repeat PLAYER_NETWORK etc.	-
+0x5BBAC0	CPedType/CTimeCycle::Initialise	MATCH	-	already MATCH in an earlier slice; render fields skipped per brief	-
+0x5720D0	CTheZones::InitZonesPopulationSettings	MATCH	0x5720D0-0x57210E	PopType 5, radar/nocops 0, races |=0xF, dealer 0, gang strength 0	-
+0x572670	CTheZones::Init	MATCH	0x572670-0x5727F8	zone clears (0x1E bytes, type byte 0/3), visited grid, SAN_AND / THEMAP default zones, info count 1	-
+0x5728A0	CTheZones::CreateZone	MATCH	0x5728A0-0x572B58	per-axis swap, upper-case in place, strncpy 7, type 0/1 navi, 3 map else none, ftol low word, Assign before counter bump	-
+0x572180	CTheZones::AssignZoneInfoForThisZone	MATCH	0x572180-0x57221D	label compare + shared info index else TotalNumberOfZoneInfos++	-
+0x52CD90	CClock::Initialise	MATCH	0x52CD90-0x52CDD1	all 9 stores	-
+0x72A480	CWeather::Init	MATCH	0x72A480-0x72A4D4	all 15 stores, forced type 0xFFFF	-
+0x4D3BA0	CAnimManager::AddAnimAssocDefinition	INTENTIONAL	-	unchanged, see P4R2 note (re-Initialise only)	-
+-	LoadHandlingData/LoadPedStats/LoadPedData/LoadWeaponData/PopCycle/LoadPedGroups/LoadCarGroups/LoadVehicleColours/Upgrades/CFileLoader::*/LoadCdDirectory/DecisionMaker loaders/LoadAnimFiles	SKIP_DONE	-	already MATCH/FIXED in earlier result tsvs (grep verified)	-

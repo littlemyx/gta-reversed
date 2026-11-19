@@ -557,7 +557,7 @@ void CRoadBlocks::GenerateRoadBlocks() {
 
         for (; counter2 < rbsToGenerate; counter2++) {
             const auto& mrbNode = RoadBlockNodes[counter2];
-            if (!ThePaths.IsAreaLoaded(mrbNode)) {
+            if (!ThePaths.IsAreaLoaded(mrbNode.m_wAreaId)) {
                 continue;
             }
             const auto& mainNode = ThePaths.GetPathNode(mrbNode);

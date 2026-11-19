@@ -1215,15 +1215,16 @@ CPed& CreateCharInsideCar(CRunningScript& S, CVehicle& veh, ePedType pedType, eM
  * @param {Char} self
  * @param {int} health
  */
-auto SetCharHealth(CPed& ped, float health) {
-    if (health != 0.f) {
+// exe 0x47E87D: the health parameter is an int (fild), not a float
+auto SetCharHealth(CPed& ped, int32 health) {
+    if (health != 0) {
         if (ped.IsPlayer()) {
             const auto slot = CWorld::FindPlayerSlotWithPedPointer(&ped);
-            ped.m_fHealth = std::min(health, (float)CWorld::Players[slot].m_nMaxHealth);
+            ped.m_fHealth = (float)std::min(health, (int32)CWorld::Players[slot].m_nMaxHealth);
         } else {
-            ped.m_fHealth = health;
+            ped.m_fHealth = (float)health;
             if (ped.m_fMaxHealth == 100.f) {
-                ped.m_fMaxHealth = health;
+                ped.m_fMaxHealth = (float)health;
             }
         }
     } else { // Otherwise kill ped

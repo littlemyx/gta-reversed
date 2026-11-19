@@ -276,7 +276,7 @@ void CDarkel::DealWithWeaponChangeAtEndOfFrenzy() {
         }
 
         playerPed->SetCurrentWeapon(chosenWeaponSlot);
-        playerPed->MakeChangesForNewWeapon(chosenWeaponSlot);
+        playerPed->MakeChangesForNewWeapon(playerPed->GetActiveWeapon().m_Type); // exe 0x43D9C9: the type of the weapon in the active slot (movsx [ped+0x718]), not of the chosen slot
     }
 }
 

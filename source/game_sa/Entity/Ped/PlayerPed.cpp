@@ -1679,7 +1679,9 @@ void CPlayerPed::KeepAreaAroundPlayerClear() {
 void CPlayerPed::SetPlayerMoveBlendRatio(CVector* point) {
     float& moveBlendRatio = GetPlayerData()->m_fMoveBlendRatio;
     if (point) {
-        moveBlendRatio = std::min(2.0f, (*point - GetPosition()).Magnitude2D() * 2.0f);
+        // 0x60C55C-0x60C575: stores v, then fcomp 2 + test ah,0x41 + jne: `v > 2 ? 2 : v` (NaN keeps v; std::min(2, v) gave 2)
+        const float blendRaw = (*point - GetPosition()).Magnitude2D() * 2.0f;
+        moveBlendRatio = blendRaw > 2.0f ? 2.0f : blendRaw;
     } else {
         switch (m_nMoveState)
         {

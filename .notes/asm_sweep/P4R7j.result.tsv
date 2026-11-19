@@ -1,0 +1,36 @@
+addr	function	verdict	asm range	note	fix commit
+0x6D2370	CVehicle::IsLawEnforcementVehicle	MATCH	0x6D2370-0x6D2393	jump table decoded: 12 models identical	
+0x6D5400	CVehicle::CanBeDriven	MATCH	0x6D5400-0x6D548F	type/trailer/train/RC/dummy-pos>0	
+0x6D5CF0	CVehicle::CanPedLeanOut	MATCH	0x6D5CF0-0x6D5D60	anim groups 13..18 + types 3-6	
+0x6D2A10	CVehicle::PickRandomPassenger	MATCH	0x6D2A10-0x6D2A71	rand*1/32768*8 + mod-8 scan	
+0x6D1610	CVehicle::RemovePassenger	MATCH	0x6D1610-0x6D1691	train 8 seats / max seats	
+0x6D2460	CVehicle::ExtinguishCarFire	MATCH	0x6D2460-0x6D24EC	health 300, fire, engine 225->215, burn timer	
+0x6D3650	CVehicle::GetUpgrade	MATCH	0x6D3650-0x6D36F1	nos/hydraulic/stereo bits	
+0x6D3F30	CVehicle::GetPlaneNumGuns	MATCH	0x6D3F30-0x6D3F62	table decoded: 9 models identical	
+0x6D0B70	CVehicle::GetRemapIndex	MATCH	0x6D0B70-0x6D0BBC		
+0x6DFB70	CVehicle::GetTowHitchPos	MATCH	0x6DFB70-0x6DFBD7	max.y+1	
+0x6DFBE0	CVehicle::GetTowBarPos	MATCH	0x6DFBE0-0x6DFC47	min.y-1	
+0x6AF1D0	CAutomobile::GetTowHitchPos	MATCH	0x6AF1D0-0x6AF23F	max.y-0.5, z=0.5-frontHeight	
+0x6CFD60	CTrailer::GetTowBarPos	MATCH	0x6CFD60-0x6CFDDF	bagbox models, -0.05 offset	
+0x6A62C0	CAutomobile::GetDooorAngleOpenRatioU32	MATCH	0x6A62C0-0x6A6324	door map 8->RF 9->RR 10->LF 11->LR, 18->0	
+0x6A6350	CAutomobile::IsDoorReadyU32	MATCH	0x6A6350-0x6A63AE	same map, 18->true	
+0x6A63E0	CAutomobile::IsDoorFullyOpenU32	MATCH	0x6A63E0-0x6A643E	18->false	
+0x6A6500	CAutomobile::IsDoorMissingU32	MATCH	0x6A6500-0x6A655E	18->true	
+0x6A8500	CAutomobile::ProcessFlyingCarStuff	MATCH	0x6A8500-0x6A8577	status 0/8/3, cheat, speed>0, timestep>0	
+0x6A4400	CAutomobile::BreakTowLink	MATCH	0x6A4400-0x6A44B0	status 4/5, health<1 -> wrecked	
+0x6ADEF0	CAutomobile::PopDoor	MATCH	0x6ADEF0-0x6ADF6C	node0 flubber, node1 chassis(4), else 2	
+0x6ADF80	CAutomobile::PopPanel	MATCH	0x6ADF80-0x6ADFDC	wheel nodes 5/6 -> 0 else 5	
+0x6BF9C0	CBmx::BurstTyre	MATCH	0x6BF9C0-0x6BF9C2	return false	
+0x6C4330	CHeli::BurstTyre	MATCH	0x6C4330-0x6C4332	return false	
+0x6C45B0	CHeli::AddHeliSearchLight	MATCH	0x6C45B0-0x6C4630	0x4C-byte slot field copy	
+0x6CCC50	CPlane::SwitchAmbientPlanes	MATCH	0x6CCC50-0x6CCCD5	reverse pool, heli/plane, created-by 1	
+0x6F6A20	CTrain::RemoveMissionTrains	MATCH	0x6F6A20-0x6F6A91	reverse pool, flag bit5	
+0x6F6B60	CTrain::ReleaseMissionTrains	MATCH	0x6F6B60-0x6F6BBE	clears bit5	
+0x6F7090	CTrain::FindNearestTrain	MATCH	0x6F7090-0x6F7137	2D dist, front-carriage bit3	
+0x6F7260	CTrain::IsNextStationAllowed	MATCH	0x6F7260-0x6F72EF	stat 181 +1 < zone level	
+0x5DF090	CPed::CanStrafeOrMouseControl	MATCH	0x5DF090-0x5DF0C7	9 ped states checked numerically	
+0x5E62B0	CPed::ClearWeapon	MATCH	0x5E62B0-0x5E6319	goggles 44/45	
+0x5E02E0	CPed::GetEntityThatThisPedIsHolding	MATCH	0x5E02E0-0x5E0350	tasks 0x133-0x136	
+0x43ABA0	CPed::PedIsReadyForConversation	MATCH	0x43ABA0-0x43AC40	task/event ids not re-verified	
+0x5449B0	CPhysical::GetBoundRect	MATCH	0x5449B0-0x544A20	CRect memory order left/top/right/bottom ok	
+0x41BE60	CPlayerPed::GetWantedLevel	MATCH	0x41BE60-0x41BE75	exe derefs null on missing wanted; port returns clean (unreachable)	

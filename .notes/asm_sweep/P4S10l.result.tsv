@@ -1,0 +1,9 @@
+addr	function	verdict	asm range	note	fix commit
+0x544C40	CPhysical::ApplyAirResistance	MATCH	0x544C40-0x544D4F	P4S10k fix CONFIRMED: exe 0x544CE1 tests [esi+0x594] (sub type) ==0 or 9; ctors CAutomobile 0x6B0A90 set +0x590 and +0x594 to 0, CMonsterTruck 0x6C8D60 sets only +0x594=1; port m_nVehicleSubType==AUTOMOBILE || IsSubBike is the same test	
+0x676640	CTaskInteriorGoToInfo::CreateFirstSubTask	FIXED	0x676640-0x67684E	FollowNodeRoute start node = node of ped current interior (edi), not m_Int	56a8a1978
+0x664590	CTaskGoToVehicleAndLean::CreateNextSubTask	MATCH	0x664590-0x664763		
+0x643510	CTaskComplexEnterAnyCarAsDriver::CreateFirstSubTask	FIXED	0x643510-0x6436C1	fallback loop needs IsVehicleStealable	d6df483f1
+0x65FC80	CTaskGangHassleVehicle::CreateNextSubTask	MATCH	0x65FC80-0x65FDC2		
+0x6A3820	CAutomobile::PlayHornIfNecessary	MATCH	0x6A3820-0x6A3841		
+0x6560E0	CTaskComplexHitPedWithCar::CreateSubTask	FIXED	0x6560E0-0x6562E0	type 414 creates CTaskSimpleHitFromBehind	005b0077c
+0x6533E0	CTaskComplexEvasiveStep::CreateSubTask	MATCH	0x6533E0-0x6534E7		

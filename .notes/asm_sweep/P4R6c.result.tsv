@@ -1,0 +1,16 @@
+addr	function	verdict	asm range	note	fix commit
+0x6419F0	CTaskComplexLeaveCar::CreateNextSubTask (review add7a166f)	MATCH	0x641E92-0x641AAA	CONFIRMED: jne 0x641E92 -> 0x641A9E skips the m_nDieAnimID=0xF store at 0x641A97 (that store belongs to the other case)	
+0x64A820	CTaskComplexGoToCarDoorAndStandStill::ControlSubTask (review d849f7919)	MATCH	0x64AA11-0x64ABD8	CONFIRMED: locals door=0, seat path uses m_TargetDoor, passenger wait variant 0x33c, UpdatePoint(pt, radius, 0)	
+0x61E200	CTaskSimpleUseGun::RequirePistolWhip (review 81015baa7)	FIXED	0x61E370	WRONG: fcomp 1.0 / test ah,5 / jp skips on equal too (C3 only), so skip is sqrt >= 1.0; 81015baa7 made it > ; restored >= in extended precision	fe07ab82b
+0x64D440	CTaskComplexGoToCarDoorAndStandStill::CreateFirstSubTask	MATCH	0x64D440-0x64D6C0	second half done: passenger+seat priority check (+0x46C bit 29), timer start only for non-wait / not driver+seat, 0x389/0x384/0x33c outcomes; all match	
+0x66C1F0	CTaskComplexGotoDoorAndOpen::ControlSubTask	MATCH	0x66C1F0-0x66C270	abort check, urgent priority, interior transition pad bit	
+0x66C0D0	CTaskComplexGotoDoorAndOpen::CreateNextSubTask	MATCH	0x66C0D0-0x66C1E6	partial anim 0x99 8.0f, GoToPoint radius 0.2, flag 2	
+0x66BD40	CTaskComplexGotoDoorAndOpen::CreateFirstSubTask	MATCH	0x66BD40-0x66C0C9	constants 0.75/-0.5/2.0, dot>0 branch, radii 0.35/0.5, collidable flags; x87 vs float ordering is noise	
+0x6682D0	CTaskComplexGoToPointAndStandStill::CreateSubTask	MATCH	0x6682D0-0x668551	stand-still blend delta, leave car args, goto flags	
+0x668570	CTaskComplexGoToPointAndStandStill::ControlSubTask	MATCH	0x668570-0x6685D9		
+0x668250	CTaskComplexGoToPointAndStandStill::SelectMoveState	MATCH	0x668250-0x6682BA	float-vs-x87 noise (NaN boundary only)	
+0x66DBA0	CTaskComplexGoToPointAndStandStill::CreateNextSubTask	MATCH	0x66DBA0-0x66DC39		
+0x66DC40	CTaskComplexGoToPointAndStandStill::CreateFirstSubTask	MATCH	0x66DC40-0x66DC6B		
+0x668120	CTaskComplexGoToPointAndStandStill::Constructor	MATCH	0x668120-0x668221	ctor GoToPoint with uninitialised exe members: bNewTarget practically always set; port only differs for target (0,0,0)+radius 0 (noise)	
+0x46FE60	CTaskComplexGoToPointAndStandStill::GoToPoint	MATCH	0x46FE60-0x46FED7	exe compares m_fRadius with itself (never differs); port omits it as well	
+0x640BE0	CTaskComplexLeaveCarAsPassengerWait::CreateSubTask	MATCH	0x640BE0-0x640E2B	rand order, signs, 1.5 radius, door 0	

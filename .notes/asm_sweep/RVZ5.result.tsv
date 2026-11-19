@@ -1,0 +1,5 @@
+addr	function	verdict	asm range	note	fix commit
+0x520190	CCamera::CameraColDetAndReact	FIXED	0x520190-0x520684	x87 chain of 239e17beb CONFIRMED (limit/branches/compares/step/final blend); radius z^2 fix: fst keeps unrounded z diff	e9868852b
+0x5F5D80	CPedGeometryAnalyser::ComputeClearTarget	MATCH	0x5F5D80-0x5F6110	whole function incl. step dot (z,y,x, fcomp 0 test ah,1) and ftol(5/0.35)=14	
+0x434900	CCarCtrl::SteerAICarWithPhysicsFollowPath	MATCH(partial)	0x435452-0x435799	speed factor/limit selection, gas/brake/BMX, reverse-at-dest match; 0x434900-0x435452 NOT_REACHED (budget)	
+n/a	NOTSA_SH_PICKCARLOG commit 550b29e6d	MATCH	-	debug-log control flow CLEAN (all added code under NOTSA_STATEHASH, split if keeps short-circuit order)	

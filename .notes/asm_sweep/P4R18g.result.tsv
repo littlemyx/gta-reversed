@@ -1,0 +1,9 @@
+addr	function	verdict	asm range	note	fix commit
+0x64C810	CTaskComplexCarSlowBeDraggedOut::CreateNextSubTask (review of 8b997070e)	MATCH	0x64C810-0x64C887	review CONFIRMED: byte table 0x64C89C idx = type-0x330: 0x330 SET_PED_OUT=>FINISHED, 0x335 SLOW_BE_DRAGGED_OUT=>0x336, 0x336=>FINISHED, 0x342 FALL_OUT=>0x330, rest => nullptr	-
+0x6327C0	CTaskComplexUseAttractor::ControlSubTask	MATCH	0x6327C0-0x6327FC	type&7==4 object, flags bit 0x400 (bIsBroken), MakeAbortable(LEISURE, null)	-
+0x654B80	CTaskComplexWalkRoundBuildingAttempt::ComputeMoveDir	FIXED	0x654B80-0x654C2C	fcomp/test ah,5/jp => Normalise unless sumSq < 1e-8 (equal and NaN normalise); port used >	ec6eae9e7
+0x61C650	CTaskSimpleFight::BeHitWhileBlocking	MATCH	0x61C650-0x61C737	combo/move switches, dot sum z,y,x vs 0.3 (less => not facing), flag set	-
+0x675740	CTaskInteriorShopKeeper::ControlSubTask	MATCH	0x675740-0x6757C5	RunAnim(0x56,0x147,4.0,0) once, flag cleared	-
+0x659990	CTaskComplexExtinguishFireOnFoot::FindFireNearPed	MATCH	0x659990-0x659A05	args (pos,0,1), dist z,x,y < 100	-
+0x62BE30	CTaskComplexKillPedOnFootMelee::CreateFirstSubTask	FIXED	0x62BE30-0x62BEFC	x87d unrounded dist (z,x,y) vs range*range; port summed x,y,z in float	ed181dbf1
+0x65A990	CTaskComplexMedicTreatInjuredPed::CreateNextSubTask	FIXED	0x65A990-0x65ABE5	2D length fsqrt(dy*dy+dx*dx) unrounded; only dz through float	8f6b77d53

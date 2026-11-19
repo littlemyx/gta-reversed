@@ -73,7 +73,7 @@ bool CTaskComplexDestroyCarMelee::MakeAbortable(CPed* ped, eAbortPriority priori
             }
         }
 
-        return m_pSubTask->MakeAbortable(ped);
+        return m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_URGENT, event); // ASM-P4R18: exe 0x621F2C-0x621F35 forwards the event (port passed nullptr)
     }
     case ABORT_PRIORITY_LEISURE: {
         m_AbortAtLeisure = true;

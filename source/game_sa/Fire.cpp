@@ -58,14 +58,10 @@ void CFire::ExtinguishWithWater(float fWaterStrength) {
 
     /* Create particles */
     CVector particlePos = m_Position + CVector{
-        CGeneral::GetRandomNumberInRange(-1.28f, 1.28f),
-        CGeneral::GetRandomNumberInRange(-1.28f, 1.28f),
-        CGeneral::GetRandomNumberInRange(-0.64f, 0.64f)
-        /* Original code:
-        (float)((CGeneral::GetRandomNumber() % 256) - 128) / 100.0f,
-        (float)((CGeneral::GetRandomNumber() % 256) - 128) / 100.0f,
-        (float)((CGeneral::GetRandomNumber() % 256) - 128) / 200.0f
-        */
+        // 0x539554-0x5395ee: ((rand() & 0xFF) - 128) * 0.01f / 0.01f / 0.005f (integer steps, not a continuous range)
+        (float)((int32)(CGeneral::GetRandomNumber() & 0xFF) - 128) * 0.01f,
+        (float)((int32)(CGeneral::GetRandomNumber() & 0xFF) - 128) * 0.01f,
+        (float)((int32)(CGeneral::GetRandomNumber() & 0xFF) - 128) * 0.005f
     };
     FxPrtMult_c prtMult{ 1.0f, 1.0f, 1.0f, 0.6f, 0.75f, 0.0f, 0.4f };
     const auto AddParticle = [&](CVector velocity) {

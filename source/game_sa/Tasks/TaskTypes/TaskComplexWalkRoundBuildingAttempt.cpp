@@ -82,7 +82,8 @@ void CTaskComplexWalkRoundBuildingAttempt::ComputeMoveDir(CPed const& ped, CVect
     outDir.z = 0.f;
     outDir.x = dx - dot * m_normal.x;
     outDir.y = dy - dot * m_normal.y;
-    if (outDir.x * outDir.x + outDir.y * outDir.y > 1e-8f) {
+    // ASM-P4R18g: exe 0x654C02-0x654C0F: `fcomp; test ah,5; jp` => Normalise unless sumSq < 1e-8 (equal and NaN normalise too); the port used `>`
+    if (!(outDir.x * outDir.x + outDir.y * outDir.y < 1e-8f)) {
         outDir.Normalise();
     } else {
         outDir = ped.GetRight();

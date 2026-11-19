@@ -307,7 +307,8 @@ auto IsCharDucking(CPed& ped) {
  * @returns {Vector} 
  */
 auto GetCharVelocity(CPed& ped) {
-    return ped.GetMoveSpeed();
+    // exe 0x470D4F: each move speed component * 50.0f (0x858B40)
+    return ped.GetMoveSpeed() * 50.f;
 }
 
 /*
@@ -322,7 +323,8 @@ auto GetCharVelocity(CPed& ped) {
  * @param {Vector} 
  */
 auto SetCharVelocity(CPed& ped, CVector velocity) {
-    ped.SetVelocity(velocity / 50.f);
+    // exe 0x470CF4: each component * 0.02f (0x858B38), not / 50
+    ped.SetVelocity(velocity * 0.02f);
 }
 
 /*
@@ -1252,7 +1254,8 @@ auto SetCharHealth(CPed& ped, float health) {
  * @returns {int} health
  */
 auto GetCharHealth(CPed& ped) {
-    return ped.m_fHealth;
+    // exe 0x47EA2B: _ftol(health), stored as an integer
+    return (int32)ped.m_fHealth;
 }
 
 /*
@@ -2724,7 +2727,8 @@ void MarkCharAsNoLongerNeeded(CRunningScript& S, int32 handle) { // TODO: Some w
  * @returns {float} speed
  */
 float GetCharSpeed(CPed& ped) {
-    return ped.GetMoveSpeed().Magnitude() * 50.0f;
+    // exe 0x497228: the vehicle's move speed when the ped is in one
+    return GetPedOrItsVehicle(ped).GetMoveSpeed().Magnitude() * 50.0f;
 }
 
 // IS_CHAR_IN_SEARCH_LIGHT

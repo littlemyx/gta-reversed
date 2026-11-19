@@ -1,0 +1,6 @@
+addr	function	verdict	asm range	note	fix commit
+0x4B1600	CEventStuckInAir::GetEventPriority	CONFIRMED	0x4B1600-0x4B1637	jg at 0x4B162F: 75 when count>1; 26722cb6b right	
+0x4BF2B0	CEventHandler::ComputeBuildingCollisionResponse	MATCH	0x4BF2B0-0x4BF9AC	all branches, ctor arg order (pos@0x24, normal@0x18), LookAt args, climb type, rand draw checked	
+0x4C0BD0	CEventHandler::ComputeVehiclePotentialCollisionResponse (head)	MATCH	0x4C0BD0-0x4C1190	BB centers, player branch, const sets (0.02/0.05/0.1/0.7 and 0.05/0.1/0.2/0.175), shake/handsup/dive arms	
+0x4C0AA2	CEventHandler::ComputeDamageResponse (die tail)	MATCH	0x4C0A1C-0x4C0BC3	weapon set, mission-ped test, CalcFall, die ctor args, phys-response skip set, RegisterKill	
+0x4BF9B0	CEventHandler::ComputePersonalityResponseToDamage	MATCH (UNSURE 1)	0x4BF9B0-0x4C0100	ctor args of duck/flee/smartflee/fleeany/kill ped/criminal match; FleeEntity safeDist global 0xC18CE4 is BSS, assumed 60 = header default	

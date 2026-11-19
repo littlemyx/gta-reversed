@@ -3020,7 +3020,7 @@ uint32 GetCharAreaVisible(CPed& ped) {
  * @param {Char} handle
  */
 bool HasCharSpottedCharInFront(CPed& ped, CPed& other) {
-    return ped.OurPedCanSeeThisEntity(&other, true);
+    return ped.OurPedCanSeeThisEntity(&other, false); // exe 0x47B29B: isSpotted = 0 (push 0; push entity), the port passed true
 }
 
 /*

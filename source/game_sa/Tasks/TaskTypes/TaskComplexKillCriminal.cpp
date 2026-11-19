@@ -164,10 +164,16 @@ CPed* CTaskComplexKillCriminal::FindNextCriminalToKill(CPed* ped, bool any) {
     // NOTE: 0x68C3C0 is not a nearest-ped search: the reference distance is that of the CURRENT criminal (when `!any` and it is alive) and is never updated,
     // so the result is the LAST living criminal (other than the current one) closer than the current one - or simply the last living one when there is no reference (0.0).
     // It returns nullptr when nothing qualifies (the port started with the current criminal as the 'closest' one, and only when it was dead/null).
-    const auto DistSqToPed = [&](const CPed* e) { return (e->GetPosition() - ped->GetPosition()).SquaredMagnitude(); };
+    // exe 0x68C3C0: the squared distance is summed z,y,x in extended precision (a criminal's one is compared unrounded against the float-stored reference)
+    const auto DistSqToPed = [&](const CPed* e) -> x87d {
+        const x87d dx = (x87d)e->GetPosition().x - (x87d)ped->GetPosition().x;
+        const x87d dy = (x87d)e->GetPosition().y - (x87d)ped->GetPosition().y;
+        const x87d dz = (x87d)e->GetPosition().z - (x87d)ped->GetPosition().z;
+        return (dz * dz + dy * dy) + dx * dx;
+    };
     const auto criminal    = m_Criminal.Get();
     const float refDistSq  = !any && criminal && criminal->m_fHealth > 0.f
-        ? DistSqToPed(criminal)
+        ? (float)DistSqToPed(criminal)
         : 0.f;
     CPed* result = nullptr;
     for (CPed* const e : m_Cop->m_apCriminalsToKill) {

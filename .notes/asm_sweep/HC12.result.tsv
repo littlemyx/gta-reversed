@@ -1,0 +1,16 @@
+function	exe_addr	port_file:line	exe_idiom	port_op	eq_mismatch	nan_mismatch	verdict
+CAutomobile::ProcessEntityCollision (rhino extra wheel mins, 64ed2a046)	0x6AD24A-0x6AD33A	Automobile.cpp:1854	fld touch;fcomp saved;test ah,5;jp = touch<saved?touch:saved	touch<compr?touch:compr	no	no	CONFIRMED (STEP 1)
+CRect::StretchToPoint	0x5327F0	Rect.cpp:91	< test5/jp ; > test41/jne	< > < >	no	no	MATCH
+CRect::IsPointInside (2 overloads)	0x404290/0x4042D0	Rect.cpp:52	reject only on strict < / >, NaN passes	!(<),!(>)	no	no	MATCH
+CActiveOccluder::IsPointWithinOcclusionArea (+IsPointInsideLine)	0x71E580	common.cpp:213	val<radius -> false (test5/jnp), NaN continues	!(val<radius)	no	no	MATCH
+CGarage::IsPointInsideGarage	0x448740	Garage.cpp:335	z<pos / z>top / a<0 / a>w / b<0 / b>h reject strict, NaN passes	same	no	no	MATCH
+CCollision::TestLineTriangle (+IntersectPlane, IsPointInside2D)	0x413AC0	CollisionPrimitives.cpp:222-290	side: GT|NaN reject (!(dS*dE<=0)); 2D: <0 false, >0 false, !(<0)	same	no	no	MATCH
+CVisibilityPlugins::GetDotProductWithCameraVector	0x7326D0	VisibilityPlugins.cpp:488	both<0 (test5/jp) / both>0 (test41/jne), NaN not same-sign	same	no	no	MATCH
+COccluder::ProcessLineSegment min/max x4	0x71E36A-0x71E434	Occluder.cpp:258	r=cur<a?cur:a; r<b?r:b / > analog	Min2/Max2	no	no	MATCH
+CEntity::IsEntityOccluded (scale max, dist<z-r)	0x71FB27,0x71FBA5	Entity.cpp:2337,2346	test41/jne ; fcompp test5/jp	>?: ; !(<)	no	no	MATCH
+CCollision::SphereCastVersusVsPoly	0x415DBF-0x416050	Collision.cpp:2745-2790	abs>r jne; >0 je; <= jp; 3x < jp/jnp	same	no	no	MATCH
+CPhysical::ApplyFriction	0x545534	Physical.cpp:1849	test41/jne -> return: <=0 AND NaN	<= 0.0f	no	YES	FIXED 0ae65d786
+CAutomobile::ProcessSwingingDoor	0x6A9DD4	Automobile.cpp:5623	test41/jne -> return: <=100 AND NaN	<= 100.f	no	YES	FIXED 66aaceacd
+CPhysical::ApplySpeed snooker table x/y limits	0x547C44-0x547CC1	Physical.cpp:2509-2524	(new>max && v>0) / (new<min && v<0) all ordered	A<=max||v<=0 negation	no	YES (NaN only, snooker minigame branch)	NOT FIXED (dead in missions)
+CPed::ProcessEntityCollision 5810/5942 (cmpscan2 EQ/NOPAIR)	0x5E28AD	Ped.cpp:5745-5810	z+1>pos.z je; z+3>pos.z jne	>	no	no	MATCH (scan false positive)
+CEntity::ProcessLightsForEntity 2084 (cmpscan2 NAN)	0x6FC861	Entity.cpp:2084	scan paired the wrong compare (global<0); port cites 0x6FCE4D test5/jp	!(dot<0)	no	no	scan false positive

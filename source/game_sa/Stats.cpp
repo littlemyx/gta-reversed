@@ -168,9 +168,7 @@ void CStats::Init() {
 // 0x558E40
 float CStats::GetStatValue(eStats stat) {
     if (!IsStatFloat(stat)) { // int32
-        assert(stat >= FIRST_INT_STAT);
-
-        return static_cast<float>(StatTypesInt[stat - FIRST_INT_STAT]);
+        return static_cast<float>(IntStatCell(static_cast<uint16>(stat))); // 0x558E59: fild [stat*4 + 0xB78E20] for EVERY stat id >= 0x52 (no range check; ids 82..119 hit the neighbours of the array)
     }
 
     return StatTypesFloat[stat];

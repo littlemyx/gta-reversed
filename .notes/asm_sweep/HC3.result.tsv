@@ -1,0 +1,52 @@
+addr	function	verdict	asm range	note	fix commit
+0x4487D0	CGarage::IsPointInsideGarage(CVector,float)	MATCH	0x4487D0-0x44887B	extended dx/dy spill and compare order identical	
+0x448740	CGarage::IsPointInsideGarage(CVector)	MATCH	0x448740-0x4487C7		
+0x454C70	CPickup::IsVisible	MATCH	0x454C70-0x454CE2	int16*0.125 position; dist<100 (PC24)	
+0x4A1340	CMaths::GetSinFast	MATCH	0x4A1340-0x4A135B		
+0x4A1360	CMaths::GetCosFast	MATCH	0x4A1360-0x4A1381		
+0x6C2130	CDamageManager::GetLightStatus	MATCH	0x6C2130-0x6C2142		
+0x52CEE0	CClock::GetIsTimeInRange	MATCH	0x52CEE0-0x52CF07		
+0x447680	CGarages::GetGarageNumberByName	MATCH	0x447680-0x4476C6		
+0x447D00	CGarages::IsGarageOpen	MATCH	0x447D00-0x447D20	state 1 or 4	
+0x447D30	CGarages::IsGarageClosed	MATCH	0x447D30-0x447D46	state 0	
+0x409C90	CStreaming::SetMissionDoesntRequireModel	MATCH	0x409C90-0x409D09	port refactor via SetModelIsDeletable is equivalent (DFF then its TXD)	
+0x5F69E0	CPedGroupMembership::IsFollower	MATCH	0x5F69E0-0x5F6A04	slots 0..6	
+0x5F69A0	CPedGroupMembership::GetLeader	MATCH	0x5F69A0-0x5F69A3		
+0x5F69C0	CPedGroupMembership::IsLeader	MATCH	0x5F69C0-0x5F69D7		
+0x49D5A0	CTrafficLights::IsMITrafficLight	MATCH	0x49D5A0-0x49D60C	same 9-model set	
+0x53F530	CPad::ReconcileTwoControllersInput	MATCH	0x53F530-0x53F907	register-tracked LeftStick X/Y used by dpad fix = memory value	
+0x540AE0	CPad::GetForceCameraBehindPlayer	MATCH	0x540AE0-0x540B1A		
+0x540120	CPad::ExitVehicleJustDown	MATCH	0x540120-0x540165		
+0x540A70	CPad::CollectPickupJustDown	MATCH	0x540A70-0x540AC2		
+0x540640	CPad::CycleWeaponRightJustDown	MATCH	0x540640-0x54066D		
+0x540610	CPad::CycleWeaponLeftJustDown	MATCH	0x540610-0x54063D		
+0x53F210	CPad::GetTouchedTimeDelta	MATCH	0x53F210-0x53F21B		
+0x540390	CPad::MeleeAttackJustDown	MATCH	0x540390-0x5403E4		
+0x5407F0	CPad::SprintJustDown	MATCH	0x5407F0-0x540834		
+0x5408B0	CPad::GetDisplayVitalStats	MATCH	0x5408B0-0x540945		
+0x5400D0	CPad::GetExitVehicle	MATCH	0x5400D0-0x54010B		
+0x53FEE0	CPad::GetHorn	MATCH	0x53FEE0-0x53FF1A		
+0x53FE70	CPad::GetLookBehindForCar	MATCH	0x53FE70-0x53FEB5		
+0x53FDD0	CPad::GetLookLeft	MATCH	0x53FDD0-0x53FE0E		
+0x5409E0	CPad::GetAnaloguePadRight	MATCH	0x5409E0-0x540A06		
+0x5409B0	CPad::GetAnaloguePadLeft	MATCH	0x5409B0-0x5409D6		
+0x540950	CPad::GetAnaloguePadUp	MATCH	0x540950-0x540977		
+0x540980	CPad::GetAnaloguePadDown	MATCH	0x540980-0x5409A7		
+0x541BD0	CPad::ClearMouseHistory	MATCH	0x541BD0-0x541C3B	only the 7 button bools, as CMouseControllerState::Clear	
+0x541040	CPad::AimWeaponLeftRight	MATCH	0x541040-0x5410BD		
+0x5410C0	CPad::AimWeaponUpDown	MATCH	0x5410C0-0x541149		
+0x50CE80	CCamera::IsExtraEntityToIgnore	MATCH	0x50CE80-0x50CEAC	scans first count slots (already fixed earlier)	
+0x509DF0	CCam::KeepTrackOfTheSpeed	MATCH	0x509DF0-0x50A08E	first-call init via x87 stack equals port prev=cur init; offsets and LimitAngleToPi order identical	
+0x50A850	CCam::Using3rdPersonMouseCam	MATCH	0x50A850-0x50A865		
+0x561FA0	CWanted::NumOfHelisRequired	MATCH	0x561FA0-0x561FC3	port default case unreachable for levels 0..6	
+0x561F40	CWanted::AreSwatRequired	MATCH	0x561F40-0x561F54		
+0x561F60	CWanted::AreFbiRequired	MATCH	0x561F60-0x561F74		
+0x561F80	CWanted::AreArmyRequired	MATCH	0x561F80-0x561F94		
+0x4076A0	CStreaming::IsVeryBusy	MATCH	0x4076A0-0x4076BA		
+0x407F80	CStreaming::WeAreTryingToPhaseVehicleOut	MATCH	0x407F80-0x407FAF		
+0x409710	CStreaming::RemoveEntity	MATCH	0x409710-0x40975B	CLink layout data/prev/next	
+0x404C90	CIplStore::IncludeEntity	MATCH	0x404C90-0x404D2F	last compared with +0x24 (already fixed)	
+0x56E550	CPlayerInfo::IsRestartingAfterDeath	MATCH	0x56E550-0x56E55A		
+0x56E560	CPlayerInfo::IsRestartingAfterArrest	MATCH	0x56E560-0x56E56A		
+0x4509A0	CPathFind::TakeWidthIntoAccountForWandering	MATCH	0x4509A0-0x450A4B	int product then *0.00775f, pos add (PC24)	
+0x43C710	CCurves::CalcSpeedScaleFactor	NOT_REACHED	0x43C710-	budget	

@@ -1,0 +1,9 @@
+addr	function	verdict	asm range	note	fix commit
+0x7360D0	CBulletInfo::Update	FIXED	0x7360D0-0x736824	missing end-of-loop destroy of a bullet that hit something; ped creator IsPointerValid check; dead-ped blood anim PLAYING flag; sniper dot sum order x,z,y	daf6537f8
+0x737620	CExplosion::Update	FIXED	0x737620-0x737B16	car-explosion creeping fire: y drawn before x, start z + 2.0	fcd1e9d45
+0x443DE0	CGangWars::UpdateTerritoryUnderControlPercentage	MATCH	0x443DE0-0x443F60	standalone branch already carries an exe audit (classification, bubble sort order)	-
+0x55C180	CStats::IncrementStat	MATCH	0x55C180-0x55C23F (rest audited in source)	float path and capping spot-checked; int/calories/eat paths carry exe-address comments	-
+0x738B20	CProjectileInfo::Update	NOT_REACHED		budget	-
+0x56BA00	CWorld::ProcessLineOfSight	NOT_REACHED		budget	-
+0x6997E0	CCover::AddCoverPoint	NOT_REACHED		budget	-
+0x610770	CPopCycle::UpdatePercentages	NOT_REACHED		budget	-

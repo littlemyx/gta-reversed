@@ -1,0 +1,42 @@
+addr	function	verdict	asm range	note	fix commit
+0x5FC880	CPedGroups::Process (6ca59be1d)	MATCH	0x5FC880-0x5FC9A9	Part A review: mission end resets kill counter (0x5FC8B2), new flag stored then tested (0x5FC98D); CONFIRMED	-
+0x445B30	CGangWars::AttackWaveOvercome (3ef399e37)	MATCH	0x445BED	Part A: and 0xFFFFEFFF clears only bPartOfAttackWave; CONFIRMED	-
+0x443A20	CGangWars::PickStreamedInPedForThisGang (9de3e9a62)	MATCH	0x443A20-0x443A9F	Part A: static 0x96ABD4, early-out on ped count, store on both exits; CONFIRMED	-
+0x53A450	CCreepingFire::TryToStartFireAtCoors (a1bfaf569)	MATCH	0x53A47B	Part A: status != 0 returns false; CONFIRMED	-
+0x610560	CPopCycle::UpdateAreaDodgyness (8c7bc86e7)	MATCH	0x610560-0x6106CB	Part A: dealer*0.07 then +=g*0.01 x10 stored per step, clamp 1.0; constants verified; CONFIRMED	-
+0x448900	CGarages::IsPointWithinHideOutGarage (cc2c59f6d)	MATCH	0x448900-0x448963	Part A: no break, loop to end 0x96EA78; CONFIRMED	-
+0x6C26F0	CDamageManager::GetCarNodeIndexFromDoor	MATCH	0x6C26F0-0x6C2726	jump table 0x10,0x11,0xA,8,0xB,9	-
+0x611B20	CPopulation::IsCorrectTimeOfDayForEffect	MATCH	0x611B20-0x611B53	types 0,1,2,8 daytime 9..19	-
+0x50C290	CCamera::StoreValuesDuringInterPol	MATCH	0x50C290-0x50C35B	copies, beta/alpha atan order	-
+0x5674E0	CWorld::ProcessVerticalLine	MATCH	0x5674E0-0x567611	scan code, sector clamp 0..0x77, repeat sector &15	-
+0x699230	CCover::ShouldThisBuildingHaveItsCoverPointsCreated	MATCH	0x699230-0x6992AB	(dz2+dy2)+dx2 sqrt < r+30	-
+0x698740	CCover::RemoveCoverPointsForThisEntity	MATCH	0x698740-0x698789	type!=0 && entity==e -> remove	-
+0x608830	CPedType::GetPedFlag	MATCH	0x608830	signed >=32 -> 0	-
+0x50BD40	CCamera::SetCameraDirectlyBehindForFollowPed_CamOnAString	MATCH	0x50BD40-0x50BD6F	flag, atan(fwd.x,fwd.y)	-
+0x43AAC0	CConversations::IsConversationGoingOn	MATCH	0x43AAC0	any status != 0	-
+0x6116C0	CPopulation::PedCreationDistMultiplier	MATCH	0x6116C0-0x611755	clamp(speed2D-0.1+1,1,1.5); float-vs-x87 noise	-
+0x50BEC0	CCamera::SetCamPositionForFixedMode	MATCH	0x50BEC0	source, up offset, flag clear	-
+0x438370	CCheat::ApplyCheat	NOT_REACHED		budget	-
+0x44DD10	CPathFind::AreNodesLoadedForArea	MATCH	0x44DD10-0x44DDF3	clamp 0..7, x outer/y inner, id x+y*8	-
+0x49CDA0	CTagManager::GetPercentageTagged	MATCH	0x49CDA0	extended-vs-float division checked exhaustively tot<=129: no difference	-
+0x43D1F0	CDarkel::FrenzyOnGoing	MATCH	0x43D1F0	status 1 or 4	-
+0x6357C0	CScriptedBrainTaskStore::GetTask	MATCH	0x6357C0	linear find, m_task	-
+0x56DFB0	CPlayerInfo::GetPos	MATCH	0x56DFB0	in-vehicle with vehicle ptr -> vehicle pos	-
+0x614490	CPopulation::PickGangCar	MATCH	0x614490	PickRandomCar(0,0)	-
+0x516AE0	CCamera::ProcessScriptedCommands	MATCH	0x516AE0	MoveLinear, TrackLinear, FOVLerp	-
+0x742C80	CWeaponEffects::ClearCrossHairs	MATCH	0x742C80	2 slots active=0	-
+0x441390	CGameLogic::IsCoopGameGoingOn	MATCH	0x441390	Players[0].ped && Players[1].ped	-
+0x53C4A0	CGame::CanSeeOutSideFromCurrArea	MATCH	0x53C4A0	currArea==0	-
+0x6089D0	CPedType::GetPedTypeAcquaintances	MATCH	0x6089D0	[type*5+id]	-
+0x611B60	CPopulation::FindCarMultiplierMotorway	MATCH	0x611B60	1.7 / 1.0	-
+0x443AC0	CGangWars::GangWarFightingGoingOn	MATCH	0x443AC0	State!=0 || State2==2	-
+0x743C60	CWeaponInfo::GetWeaponInfo	MATCH	0x743C60-0x743CAC	skill index offsets 0x19/0/0x24/0x2f, default 0x2F	-
+0x71D780	CMBlur::ClearDrunkBlur	MATCH	0x71D780	timescale 1.0, drunkness 0	-
+0x558E30	CStats::IsStatFloat	MATCH	0x558E30	stat < 0x52	-
+0x732B00	CVisibilityPlugins::SetClumpAlpha	MATCH	0x732B00	plugin +4	-
+0x732B20	CVisibilityPlugins::GetClumpAlpha	MATCH	0x732B20	plugin +4	-
+0x4439C0	CGangWars::DontCreateCivilians	MATCH	0x4439C0	State!=0	-
+0x50AE50	CCamera::GetGameCamPosition	MATCH	0x50AE50	this+0x908	-
+0x6F4000	CCranes::IsThisCarBeingTargettedByAnyCrane	MATCH	0x6F4000	false	-
+0x56D230	CLocalisation::Blood	MATCH	0x56D230	true	-
+0x5BC520	CCamera::Init	NOT_REACHED		skipped by brief	-

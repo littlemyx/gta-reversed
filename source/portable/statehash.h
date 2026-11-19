@@ -16,6 +16,7 @@
 #pragma once
 #ifdef NOTSA_STATEHASH
 #include <cstdint>
+#include <cstdio>
 #include <string>
 
 namespace notsa::rr {
@@ -51,6 +52,17 @@ void RandHookLoc(uint32_t stateBefore, const char* file, unsigned line);
 void SetWrapCaller(const void* ra);
 //! (declared in Base.h for NOTSA_PTR_ID32) stable replacement of an object address: pool tag + slot index for pool objects, else the offset from this module's code
 uint32_t StableId(const void* p);
+//! SH5 NOTSA_SH_AUDIOLOG scope (RAII, see statehash.cpp): one row per audio event / sound request of the recorded frames NOTSA_SH_AUDIOLOG_FRAMES; no-op when the env var is unset or not recording
+struct AudioLogScope {
+    AudioLogScope(char kind, int event, const void* audioEntity, int bank = -1, int sound = -1, float x = 0.f);
+    ~AudioLogScope();
+    AudioLogScope(const AudioLogScope&) = delete;
+    bool m_on = false; char m_kind = 0; int m_event = 0, m_bank = 0, m_sound = 0, m_seq = 0, m_depth = 0; const void* m_ae = nullptr; float m_x = 0.f; uint64_t m_rc0 = 0; uint64_t m_ra[4] = {};
+};
+//! SH5 NOTSA_SH_WALKLOG=<file> (+ NOTSA_SH_WALKLOG_FRAMES, default 54): the FILE* when recording one of the frames, else null (CCarCtrl::GenerateCarCreationCoors2 rows)
+std::FILE* WalkLogFile();
+//! SH5 NOTSA_SH_BOOTLOG row ('F' per frame / 'S' at rr_start)
+void BootLogRow(char kind);
 //! RAII scope for NOTSA_RR_GAMEPLAY_RAND=1 (.notes/STATEHASH_SPEC.md sections 6, 8): rand state restored at scope exit, calls inside are not counted / logged
 struct RandIsolate { RandIsolate(); ~RandIsolate(); RandIsolate(const RandIsolate&) = delete; bool m_on = false; uint32_t m_saved = 0; };
 } // namespace notsa::rr

@@ -1,4 +1,5 @@
 #include "StdInc.h"
+#include "portable/statehash.h"
 
 #include "AEPedAudioEntity.h"
 #include "AEAudioHardware.h"
@@ -144,6 +145,9 @@ void CAEPedAudioEntity::Terminate() {
 
 // 0x4E2BB0
 void CAEPedAudioEntity::AddAudioEvent(eAudioEvents event, float volume, float speed, CPhysical* ped, eSurfaceType surfaceId, int32 a7, uint32 maxVol) {
+#ifdef NOTSA_STATEHASH
+    const notsa::rr::AudioLogScope audioLog('D', (int)event, this, -1, -1, volume); // SH5 NOTSA_SH_AUDIOLOG
+#endif
     if (!m_bCanAddEvent)
         return;
 

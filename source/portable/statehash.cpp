@@ -456,6 +456,7 @@ void StartRecording(uint32_t seed) {
         if (g_sh) { std::fprintf(g_sh, "#SH 1 build=%s seed=%u gprand=%d subsys=tm,ck,rng,pop,pl,cam,pd,vh,ob,all\n", Cfg().tag.empty() ? "unset" : Cfg().tag.c_str(), seed, GpRand() ? 1 : 0); std::fflush(g_sh); }
         else { NOTSA_LOG_ERR("rr_start: cannot open NOTSA_SH_FILE '{}'", ShCfg().file); }
     }
+    BootLogRow('S'); // SH5 NOTSA_SH_BOOTLOG: the state at the rr_start pump
     g_frame     = 0;
     g_recording = true;
     WriteHeader(seed);
@@ -484,6 +485,102 @@ uint32_t StableId(const void* p) {
     static unsigned s_Unknown = 0;
     if (s_Unknown++ < 8) { NOTSA_LOG_WARN("rr::StableId: {} is not in a known pool (static data? the offset from the module is used)", p); }
     return 0xF0000000u | ((uint32_t)((uintptr_t)p - (uintptr_t)&StableId) & 0x0FFFFFFFu);
+}
+
+// ---------------------------------------------------------------- SH5 debug logs (STATEHASH builds only)
+// NOTSA_SH_AUDIOLOG=<file> [NOTSA_SH_AUDIOLOG_FRAMES=54 | a-b,c ...]: audio events and sound requests of the given RECORDED frames (frame column = the rand log's frame column).
+//   Row (written when the scope EXITS, so an event row follows the rows of its own sounds; `seq` is the entry order, `depth` the nesting):
+//   `frame seq depth kind event owner bank sound x rc0 rc1 draws callers`
+//   kind: V CAEVehicleAudioEntity::AddAudioEvent(event,float) | P ...(event,CPhysical*) | D CAEPedAudioEntity::AddAudioEvent | R CAESoundManager::RequestNewSound (event = CAESound::m_Event) | S CAESoundManager::PlaySound (event = EventID)
+//   owner = `<pool kind>:<slot>:<model>` of the audio entity's m_Entity (v = vehicle, p = ped, o = object, -:-:- none), bank = bank slot, sound = sound id (R / S rows; -1 for the events), x = the float p1 / volume (events) or the sound position x (R/S)
+//   rc0 / rc1 = RandCountNow() at entry / exit, draws = rc1-rc0; callers = return addresses (offsets from StableId, hex) of 4 frames: the first is inside the logged function itself, then its callers
+// NOTSA_SH_BOOTLOG=<file>: one row per game frame from the first frame the `until:control` condition holds (kind F, written at OnFrame = end of the simulation part) up to cmd:rr_start (kind S, written when the command runs, i.e. before the Idle of that frame):
+//   `kind fc x y z xbits ybits zbits ts tsbits ms msNC rc vms` (CJ position / ms_fTimeStep as %.9g and raw uint32 bits, CTimer ms and NonClipped ms, rand count, virtual ms)
+namespace {
+struct AudioLogCfg {
+    FILE* f = nullptr; std::set<int> frames; bool init = false;
+    void Init() {
+        if (init) return; init = true;
+        const char* p = std::getenv("NOTSA_SH_AUDIOLOG");
+        if (!p || !p[0]) return;
+        f = std::fopen(p, "w");
+        if (!f) return;
+        std::fprintf(f, "# frame seq depth kind(V|P|D|R|S) event owner(kind:slot:model) bank sound x rc0 rc1 draws callers(offsets from StableId, hex) | rows are written at scope exit; see sh5.README.md\n");
+        const char* fr = std::getenv("NOTSA_SH_AUDIOLOG_FRAMES"); std::string str = fr && fr[0] ? fr : "54";
+        size_t i = 0;
+        while (i < str.size()) {
+            size_t j = str.find(',', i); if (j == std::string::npos) j = str.size();
+            const std::string t = str.substr(i, j - i); i = j + 1;
+            const size_t d = t.find('-');
+            const int a = std::atoi(t.c_str()), b = d == std::string::npos ? a : std::atoi(t.c_str() + d + 1);
+            for (int k = a; k <= b && k - a < 100000; k++) frames.insert(k);
+        }
+    }
+};
+AudioLogCfg& ALC() { static AudioLogCfg c; c.Init(); return c; }
+int g_alDepth = 0, g_alSeq = 0;
+}
+#ifdef _WIN32
+__declspec(noinline)
+#endif
+AudioLogScope::AudioLogScope(char kind, int event, const void* ae, int bank, int sound, float x) {
+    auto& c = ALC();
+    if (!c.f || !g_recording || !c.frames.count((int)g_frame) || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    m_on = true; m_kind = kind; m_event = event; m_ae = ae; m_bank = bank; m_sound = sound; m_x = x; m_seq = g_alSeq++; m_depth = g_alDepth++; m_rc0 = RandCount();
+#ifdef _WIN32
+    void* bt[6] = {}; const USHORT n = RtlCaptureStackBackTrace(1, 4, bt, nullptr); // skip = this constructor: bt[0] = return address inside the function that declared the scope
+    static const uintptr_t base = (uintptr_t)&StableId;
+    for (USHORT i = 0; i < n && i < 4; i++) m_ra[i] = (uintptr_t)bt[i] - base;
+#endif
+}
+AudioLogScope::~AudioLogScope() {
+    if (!m_on) return;
+    g_alDepth--;
+    auto& c = ALC();
+    char owner[48] = "-:-:-";
+    if (m_ae) {
+        if (const CEntity* e = static_cast<const CAEAudioEntity*>(m_ae)->m_Entity) {
+            const uint32_t id = StableId(e);
+            const char k = (id >> 24) == 1 ? 'p' : (id >> 24) == 2 ? 'v' : (id >> 24) == 3 ? 'o' : '?';
+            std::snprintf(owner, sizeof owner, "%c:%u:%d", k, id & 0xFFFFFFu, (int)e->m_nModelIndex);
+        }
+    }
+    const uint64_t rc1 = RandCount();
+    std::fprintf(c.f, "%u %d %d %c %d %s %d %d %.9g %llu %llu %llu %llx,%llx,%llx,%llx\n", g_frame, m_seq, m_depth, m_kind, m_event, owner, m_bank, m_sound, (double)m_x,
+        (unsigned long long)m_rc0, (unsigned long long)rc1, (unsigned long long)(rc1 - m_rc0), (unsigned long long)m_ra[0], (unsigned long long)m_ra[1], (unsigned long long)m_ra[2], (unsigned long long)m_ra[3]);
+    std::fflush(c.f);
+}
+
+FILE* WalkLogFile() {
+    static FILE* f = nullptr; static std::set<int> frames; static bool init = false;
+    if (!init) {
+        init = true;
+        const char* p = std::getenv("NOTSA_SH_WALKLOG");
+        if (p && p[0] && (f = std::fopen(p, "w"))) {
+            std::fprintf(f, "# frame randCount W posn low=(area,node)(area,node) normal=... arg12 arg13 ... | A loaded path areas (once per frame) | S start node | H hop# cur=(a,n) numLinks link next=(a,n) accum(after hop) | X hops accum reason (reason: start_unloaded cur_unloaded dist_230 dead_end dead_end_lead wrong_side 30_nodes ok)\n");
+            const char* fr = std::getenv("NOTSA_SH_WALKLOG_FRAMES"); std::string str = fr && fr[0] ? fr : "54";
+            size_t i = 0;
+            while (i < str.size()) { size_t j = str.find(',', i); if (j == std::string::npos) j = str.size(); const std::string t = str.substr(i, j - i); i = j + 1; const size_t d = t.find('-'); const int a = std::atoi(t.c_str()), b = d == std::string::npos ? a : std::atoi(t.c_str() + d + 1); for (int k = a; k <= b && k - a < 100000; k++) frames.insert(k); }
+        }
+    }
+    return (f && g_recording && frames.count((int)g_frame) && std::this_thread::get_id() == ::notsa::msvc_crt::MainThreadId()) ? f : nullptr;
+}
+
+void BootLogRow(char kind) {
+    static FILE* f = [] { const char* p = std::getenv("NOTSA_SH_BOOTLOG"); FILE* h = p && p[0] ? std::fopen(p, "w") : nullptr; if (h) { std::fprintf(h, "# kind(F frame end|S rr_start) fc x y z xbits ybits zbits ts tsbits ms msNonClipped randCount virtualMs | F rows start at the first OnFrame where `until:control` holds\n"); } return h; }();
+    static bool s_latched = false;
+    if (!f || g_recording) return;
+    auto* ped = FindPlayerPed();
+    if (!s_latched) {
+        auto* pad = CPad::GetPad(0);
+        s_latched = ped && pad && !FrontEndMenuManager.m_bMenuActive && !CCutsceneMgr::IsRunning() && !pad->bPlayerSafe && !pad->ArePlayerControlsDisabled() && !TheCamera.GetFading();
+    }
+    if (!s_latched && kind != 'S') return;
+    const CVector p = ped ? ped->GetPosition() : CVector{};
+    const float ts = CTimer::GetTimeStep();
+    std::fprintf(f, "%c %u %.9g %.9g %.9g %08x %08x %08x %.9g %08x %u %u %llu %llu\n", kind, CTimer::GetFrameCounter(), p.x, p.y, p.z, std::bit_cast<uint32_t>(p.x), std::bit_cast<uint32_t>(p.y), std::bit_cast<uint32_t>(p.z),
+        ts, std::bit_cast<uint32_t>(ts), CTimer::GetTimeInMS(), CTimer::GetTimeInMSNonClipped(), (unsigned long long)RandCount(), (unsigned long long)VirtualMs());
+    std::fflush(f);
 }
 
 // ---- SH1 rand() call log (NOTSA_SH_RANDLOG=<file>; NOTSA_RR_RANDLOG is accepted as an alias): one row per rand() call, `callidx frame value caller`
@@ -615,6 +712,7 @@ void AdvanceClock() {
 }
 
 void OnFrame() {
+    BootLogRow('F'); // SH5 NOTSA_SH_BOOTLOG
     g_idleFrames++;
     static const uint32_t s_LogFrames = [] { const char* e = std::getenv("NOTSA_RR_LOG_FRAMES"); return e ? (uint32_t)std::strtoul(e, nullptr, 0) : 0u; }();
     if (g_idleFrames <= s_LogFrames) { // bisecting a pre-record divergence: one line per frame with the cheap global state words (compare two runs with diff)

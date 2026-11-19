@@ -1,4 +1,5 @@
 #include "StdInc.h"
+#include "portable/statehash.h"
 
 #include "AEVehicleAudioEntity.h"
 #include "AEAudioHardware.h"
@@ -566,6 +567,9 @@ void CAEVehicleAudioEntity::UpdateParameters(CAESound* sound, int16 curPlayPos) 
 
 // 0x4F6420
 void CAEVehicleAudioEntity::AddAudioEvent(eAudioEvents event, float p1) {
+#ifdef NOTSA_STATEHASH
+    const notsa::rr::AudioLogScope audioLog('V', (int)event, this, -1, -1, p1); // SH5 NOTSA_SH_AUDIOLOG
+#endif
     if (!AEAudioHardware.IsSoundBankLoaded(SND_BANK_GENRL_VEHICLE_GEN, SND_BANK_SLOT_VEHICLE_GEN)) {
         return;
     }
@@ -1016,6 +1020,9 @@ void CAEVehicleAudioEntity::AddAudioEvent(eAudioEvents event, float p1) {
 
 // 0x4F7580
 void CAEVehicleAudioEntity::AddAudioEvent(eAudioEvents event, CPhysical* physical) {
+#ifdef NOTSA_STATEHASH
+    const notsa::rr::AudioLogScope audioLog('P', (int)event, this); // SH5 NOTSA_SH_AUDIOLOG
+#endif
     if (!AEAudioHardware.IsSoundBankLoaded(SND_BANK_GENRL_VEHICLE_GEN, SND_BANK_SLOT_VEHICLE_GEN)) {
         return;
     }

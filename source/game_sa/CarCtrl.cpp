@@ -2428,6 +2428,17 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
     NOTSA_GLOBAL_LOCAL_NS(nodeNormal2, 0x9690F8, (CNodeAddress), { 0, 0 }); // zero like the exe's .bss (NOT the NSDMI 0xFFFF)
 
     float accumDist = 0.0f; // Distance travelled along the nodes
+#ifdef NOTSA_STATEHASH
+    // SH5 NOTSA_SH_WALKLOG (see statehash.cpp): one W row per call, H rows per hop, an X row with the return reason at exit
+    struct WalkLog {
+        FILE* f = notsa::rr::WalkLogFile(); const char* why = "?"; int hops = 0; float* accum = nullptr;
+        ~WalkLog() { if (f) { std::fprintf(f, "%d %llu X hops=%d accum=%.9g reason=%s\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), hops, accum ? (double)*accum : 0.0, why); std::fflush(f); } }
+    } walkLog;
+    walkLog.accum = &accumDist;
+#define WALK_RET(tok, v) do { walkLog.why = tok; return v; } while (0)
+#else
+#define WALK_RET(tok, v) return v
+#endif
 
     // Init the statics (only the area of the nodes is set)
     if (!(staticInitFlags & 1)) {
@@ -2483,6 +2494,20 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
         }
     }
 
+#ifdef NOTSA_STATEHASH
+    if (walkLog.f) {
+        static int s_walkFrame = -2;
+        if (s_walkFrame != notsa::rr::LoadLogRecFrame()) { // once per recorded frame: the loaded path areas
+            s_walkFrame = notsa::rr::LoadLogRecFrame();
+            std::fprintf(walkLog.f, "%d %llu A", s_walkFrame, (unsigned long long)notsa::rr::RandCountNow());
+            for (int i = 0; i < 64; i++) { if (ThePaths.m_pPathNodes[i]) { std::fprintf(walkLog.f, " %d", i); } }
+            std::fprintf(walkLog.f, "\n");
+        }
+        std::fprintf(walkLog.f, "%d %llu W posn=%.9g,%.9g,%.9g low=(%d,%d)(%d,%d) normal=(%d,%d)(%d,%d) arg12=%d arg13=%d radius=%.9g arg3=%.9g arg4=%.9g arg5=%d arg6=%.9g arg7=%.9g\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), posn.x, posn.y, posn.z,
+            (int)(int16)nodeLow1.m_wAreaId, (int)nodeLow1.m_wNodeId, (int)(int16)nodeLow2.m_wAreaId, (int)nodeLow2.m_wNodeId, (int)(int16)nodeNormal1.m_wAreaId, (int)nodeNormal1.m_wNodeId, (int)(int16)nodeNormal2.m_wAreaId, (int)nodeNormal2.m_wNodeId,
+            (int)arg12, (int)arg13, radius, arg3, arg4, (int)arg5, arg6, arg7);
+    }
+#endif
     // Pick the node to start from
     CNodeAddress start;
     if ((rand() & 0xF) == 4 && !arg13) {
@@ -2494,8 +2519,11 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
     } else {
         start = arg12 ? nodeLow2 : nodeNormal2;
     }
+#ifdef NOTSA_STATEHASH
+    if (walkLog.f) { std::fprintf(walkLog.f, "%d %llu S start=(%d,%d) arg6=%.9g\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), (int)(int16)start.m_wAreaId, (int)start.m_wNodeId, arg6); }
+#endif
     if (start.m_wAreaId == 0xFFFF || !ThePaths.m_pPathNodes[start.m_wAreaId]) {
-        return false;
+        WALK_RET("start_unloaded", false);
     }
 
     CNodeAddress visited[30]; // The nodes we have been at
@@ -2506,10 +2534,10 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
     // Walk along the nodes (in a random direction), until a place far enough from `posn` is found (that is, between 2 nodes)
     do {
         if (!(accumDist < 230.0f)) { // 0x858F80
-            return false;
+            WALK_RET("dist_230", false);
         }
         if (!ThePaths.m_pPathNodes[cur.m_wAreaId]) {
-            return false;
+            WALK_RET("cur_unloaded", false);
         }
         const auto& curNode  = ThePaths.m_pPathNodes[cur.m_wAreaId][cur.m_wNodeId];
         const auto  numLinks = (int32)curNode.m_nNumLinks;
@@ -2517,7 +2545,7 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
 
         for (int32 i = 0;; i++) {
             if (i >= numLinks) {
-                return false;
+                WALK_RET("dead_end", false);
             }
 
             const auto idx = bSequenceOtherWay
@@ -2640,7 +2668,7 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
                     auto& nodeA = ThePaths.m_pPathNodes[pNodeAddress1->m_wAreaId][pNodeAddress1->m_wNodeId];
                     auto& nodeB = ThePaths.m_pPathNodes[pNodeAddress12->m_wAreaId][pNodeAddress12->m_wNodeId];
                     if (nodeB.m_onDeadEnd && ThePaths.ThisNodeWillLeadIntoADeadEnd(&nodeB, &nodeA) && arg12) { // 0x44D310
-                        return false;
+                        WALK_RET("dead_end_lead", false);
                     }
 
                     // The direction (from `posn` to the found position) has to be (not) in the direction of (radius, arg3). x87: kept in extended precision
@@ -2650,15 +2678,15 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
                     const x87d dot = inv * oy * arg3 + inv * ox * radius;
                     if (arg5) {
                         if (!(dot > arg4)) {
-                            return false;
+                            WALK_RET("wrong_side", false);
                         }
                     } else if (!(dot <= arg4)) {
-                        return false;
+                        WALK_RET("wrong_side", false);
                     }
 
                     // BUG: The index of the link is never used (and the name of the debug message is bogus)
                     sprintf_s(gString, "tell Obbe it happened again %d/%d %d/%d", pNodeAddress1->m_wAreaId, pNodeAddress1->m_wNodeId, pNodeAddress12->m_wAreaId, pNodeAddress12->m_wNodeId); // 0x858F58
-                    return true;
+                    WALK_RET("ok", true);
                 }
             }
 
@@ -2669,12 +2697,15 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
                 const auto   dxMoved = (float)((x87d)nextPos.x - curPos.x);
                 const x87d dyMoved = (x87d)nextPos.y - curPos.y;
                 accumDist            = (float)(std::sqrt(dyMoved * dyMoved + (x87d)dxMoved * dxMoved) + (x87d)accumDist);
+#ifdef NOTSA_STATEHASH
+                if (walkLog.f) { std::fprintf(walkLog.f, "%d %llu H %d cur=(%d,%d) numLinks=%d link=%d next=(%d,%d) accum=%.9g\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), ++walkLog.hops, (int)(int16)visited[numVisited - 2].m_wAreaId, (int)visited[numVisited - 2].m_wNodeId, numLinks, i, (int)(int16)next.m_wAreaId, (int)next.m_wNodeId, accumDist); }
+#endif
             }
             break;
         }
     } while (numVisited < 30);
 
-    return false;
+    WALK_RET("30_nodes", false);
 }
 
 // 0x42F9C0

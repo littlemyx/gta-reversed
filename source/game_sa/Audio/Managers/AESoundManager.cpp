@@ -1,4 +1,5 @@
 #include "StdInc.h"
+#include "portable/statehash.h"
 
 #include "AESoundManager.h"
 #include "DbgDangling.h"
@@ -343,6 +344,9 @@ void CAESoundManager::Service() {
 
 // 0x4EFB10
 CAESound* CAESoundManager::RequestNewSound(CAESound* pSound) {
+#ifdef NOTSA_STATEHASH
+    const notsa::rr::AudioLogScope audioLog('R', pSound->m_Event, pSound->m_AudioEntity, (int)pSound->m_BankSlot, (int)pSound->m_SoundID, pSound->m_CurrPos.x); // SH5 NOTSA_SH_AUDIOLOG
+#endif
     size_t sidx;
     auto   s = GetFreeSound(&sidx);
     NOTSA_AUDIO_STAT(reqOk); // NOTSA: NOTSA_AUDIO_STATS (reqOk counts all requests, reqRefused those that found the table full)
@@ -367,6 +371,9 @@ CAESound* CAESoundManager::RequestNewSound(CAESound* pSound) {
 }
 
 CAESound* CAESoundManager::PlaySound(tSoundPlayParams p) {
+#ifdef NOTSA_STATEHASH
+    const notsa::rr::AudioLogScope audioLog('S', p.EventID, p.AudioEntity, (int)p.BankSlotID, (int)p.SoundID, p.Pos.x); // SH5 NOTSA_SH_AUDIOLOG
+#endif
     if (p.RegisterWithEntity) {
         p.Flags |= SOUND_LIFESPAN_TIED_TO_PHYSICAL_ENTITY;
     }

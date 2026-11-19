@@ -116,7 +116,7 @@ void AddStuckCarCheckWithWarp(CVehicle& vehicle, float stuckRadius, uint32 time,
 
 void PlaneAttackPlayerUsingDogFight(CPlane& plane, CPlayerPed& player, float altitude) {
     if (plane.m_autoPilot.m_nCarMission != eCarMission::MISSION_PLANE_CRASH_AND_BURN && plane.m_autoPilot.m_nCarMission != eCarMission::MISSION_HELI_CRASH_AND_BURN) {
-        plane.m_autoPilot.SetCarMission(eCarMission::MISSION_PLANE_DOG_FIGHT_PLAYER);
+        plane.m_autoPilot.m_nCarMission = eCarMission::MISSION_PLANE_DOG_FIGHT_PLAYER; // exe 0x474E6D-0x474E74: a plain byte store, m_nTimeToStartMission is left alone (SetCarMission rewrote it)
     }
     plane.m_minAltitude = altitude;
 }

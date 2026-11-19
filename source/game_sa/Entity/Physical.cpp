@@ -1846,7 +1846,7 @@ bool CPhysical::ApplyFriction(float fFriction, CColPoint& colPoint)
     CVector vecSpeedDifference = vecSpeed - (fMoveSpeedDotProduct * colPoint.m_vecNormal);
 
     float fMoveSpeedMagnitude = ExeMagnitude3(vecSpeedDifference.z, vecSpeedDifference.y, vecSpeedDifference.x);
-    if (fMoveSpeedMagnitude <= 0.0f)
+    if (!(fMoveSpeedMagnitude > 0.0f)) // 0x545534: fcomp 0 / test ah,0x41 / jne -> return false: <=0 AND NaN leave
     {
         return false;
     }

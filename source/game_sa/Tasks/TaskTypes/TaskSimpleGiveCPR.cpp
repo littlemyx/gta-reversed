@@ -71,7 +71,8 @@ bool CTaskSimpleGiveCPR::MakeAbortable(CPed* ped, eAbortPriority priority, const
                 || eventType == EVENT_WATER_CANNON
                 || eventType == EVENT_VEHICLE_DAMAGE_WEAPON
                 || eventType == EVENT_VEHICLE_DAMAGE_COLLISION
-                || eventType == EVENT_DAMAGE && (ped->m_fHealth <= 10.0F || m_fInitialHealth - ped->m_fHealth >= 40.0F);
+                || eventType == EVENT_DAMAGE && (ped->m_fHealth <= 10.0F || m_fInitialHealth - ped->m_fHealth >= 40.0F)
+                || ped->m_fHealth <= 0.0F; // ASM-P4R18: exe 0x658A5D-0x658A6E (any other event type aborts too once the ped is dead)
         }()
     ) {
         if (m_pAnim) {

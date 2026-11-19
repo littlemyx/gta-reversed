@@ -259,7 +259,10 @@ bool CGameLogic::LaRiotsActiveHere() {
         {1620.0f, -2178.0f, 2824.0f, -1067.0f},
         {157.0f, -1950.0f, 1630.0f, -1192.0f},
     };
-    return rng::any_of(rects, [&](auto rect) { return rect.IsPointInside(coors); });
+    // 0x441C70-0x441CE0: both rectangles use STRICT comparisons (min < p < max); CRect::IsPointInside is inclusive
+    return rng::any_of(rects, [&](const CRect& rect) {
+        return coors.x > rect.left && coors.x < rect.right && coors.y > rect.bottom && coors.y < rect.top;
+    });
 }
 
 // 0x5D33C0

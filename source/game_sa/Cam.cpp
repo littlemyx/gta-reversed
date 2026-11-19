@@ -5487,7 +5487,7 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
     }
 
     float maxAlpha = cfg.maxAlpha;
-    if ((x87d)moveSpeed.x * moveSpeed.x + (x87d)moveSpeed.y * moveSpeed.y + (x87d)moveSpeed.z * moveSpeed.z < 0.04f
+    if ((x87d)moveSpeed.x * moveSpeed.x + (x87d)moveSpeed.y * moveSpeed.y + (x87d)moveSpeed.z * moveSpeed.z < std::bit_cast<float>(0x3D23D70Bu) // 0x5250DE: float at 0x863244, one ulp above 0.04f
         && (veh->m_nVehicleType != VEHICLE_TYPE_BIKE || veh->AsBike()->m_nNoOfContactWheels >= 4)
         && veh->m_nVehicleSubType != VEHICLE_TYPE_HELI
         && (veh->m_nVehicleSubType != VEHICLE_TYPE_PLANE || veh->AsAutomobile()->m_nNumContactWheels != 0)) {

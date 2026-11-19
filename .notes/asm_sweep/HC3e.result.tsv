@@ -1,0 +1,16 @@
+addr	function	verdict	asm range	note	fix commit
+0x5F3730	CPedGeometryAnalyser::ComputeMoveDirToAvoidEntity	FIXED	0x5F3730-0x5F387B	9da7b7915 was WRONG: fld [esp+0x40] at 0x5F37B2 runs before pop esi (0x5F37B6) so it is planes[3].y (S+0x3c); the other planes/offsets checked, reverted	a0d19e4d3
+0x434900	CCarCtrl::SteerAICarWithPhysicsFollowPath	FIXED	0x434900-0x435799	all compared (dirs, lane offsets, node advance, mission switch table, target, wrap, speed factors, bend, gas/brake, reverse); only FindMaxSteerAngle unrounded x87 in the clamp differed	51c97e437
+0x427FE0	CCarCtrl::FindMaxSteerAngle	FIXED	0x427FE0-0x428038	returns the unrounded st0 value (0.9f - sqrt(x2+y2+z2), min 0.7f, 0.2f if speed > 0.7f)	51c97e437
+0x4325C0	CCarCtrl::FindAngleToWeaveThroughTraffic	MATCH	0x4325C0-0x432922	prelude (lookAhead, search box, sector range, scan code) and the 4-call sector loop (args, order, ped skip for style 6) compared; tail by HC3d	-
+0x514B80	CCamera::CalculateGroundHeight	MATCH	0x514B80-0x514D50	-	-
+0x520190	CCamera::CameraColDetAndReact	FIXED	0x520190-0x520684	x87: length*v0*0.2939 and 0.18/0.3 / length unrounded, ignored-car limit unrounded, (dist-cur)*(ts*v5) unrounded to cur+step, 0.01*0.01 exact, source = diff*cur+target single rounding x/y	968547bc0
+0x44A240	CGarages::FindGarageForObject	MATCH	0x44A240-0x44A3B0	-	-
+0x40E670	CStreaming::Update	FIXED	0x40E670-0x40E950	remote-vehicle branch: AddIplsNeededAtPosn after EnsureCollisionIsInMemory (LoadMonitor stat write not compared: not gameplay)	562480b3b
+0x5F5D80	CPedGeometryAnalyser::ComputeClearTarget	FIXED	0x5F5D80-0x5F6110	x87 unrounded distance diffs, (margin+distToEdge) push-out, z,y,x dot in the step loop	240b80361
+0x572C40	CTheZones::FindZoneByLabel	FIXED	0x572C40-0x572CBA	8 raw label bytes vs first 8 chars of the name	0a9effd55
+0x60FFD0	CPopCycle::PickPedMIToStreamInForCurrentZone	MATCH	0x60FFD0-0x61014E	table indices, rand scaling (exact in float), per-group counter, loaded-8 check, race mask	-
+0x5F3DD0|0x5F6110	CPedGeometryAnalyser::ComputeRouteRoundEntityBoundingBox	NOT_REACHED			-
+0x40BA70	CStreaming::PossiblyStreamCarOutAfterCreation	NOT_REACHED			-
+0x409A90	CStreaming::AreTexturesUsedByRequestedModels	NOT_REACHED			-
+0x4504F0	CPathFind::CountNeighboursToBeSwitchedOff / SwitchOffNodeAndNeighbours	NOT_REACHED			-

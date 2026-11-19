@@ -1,0 +1,20 @@
+addr	function	verdict	asm range	note	fix commit
+0x68BBD0	CTaskComplexPolicePursuit::SetPursuit	MATCH	0x68BBD0-0x68BD81	review of 8d3a9f9b2: CONFIRMED (m_Pursued set only on SetPursuitCop success, else null)	
+0x4B5240	CEventSoundQuiet::AffectsPed	MATCH	0x4B5240-0x4B5350	review of bd1da59b8: CONFIRMED (signed jl at 0x4B52F6)	
+0x654A00	CTaskComplexWalkRoundBuildingAttempt::CreateFirstSubTask	MATCH	0x654A00-0x654B5B	jump table checked	
+0x4AD070	CEventBuildingCollision::AffectsPed	MATCH	0x4AD070-0x4AD1D3	type-60 branch dead on PC (event class absent); float noise	
+0x4AEF00	CEventSexyPed::AffectsPed	MATCH	0x4AEF00-0x4AF00D	task search order equals Find<>	
+0x4B4950	CEventPotentialWalkIntoObject::AffectsPed	MATCH	0x4B4950-0x4B4A40	avoid-entity branch dead (unused task)	
+0x659620	CTaskComplexUseSwatRope::CreateSubTask	MATCH	0x659620-0x65976F		
+0x66E710	CTaskComplexFollowPointRoute::CalcBlendRatio	MATCH	0x66E710-0x66E85A	x87-mirrored	
+0x4AFA90	CEventAcquaintancePedHateBadlyLit::AffectsPed	FIXED	0x4AFA90-0x4AFB32	start-time difference compared signed (jl), port unsigned	989801828
+0x61DAE0	CTaskSimpleFight::FinishMeleeAnimCB	MATCH	0x61DAE0-0x61DB2E		
+0x4B5120	CEventGunShotWhizzedBy::AffectsPed	FIXED	0x4B5120-0x4B5230	projection was squared component-wise product instead of dot; closest-point distance x/y only	08b1e9940
+0x669520	CTaskComplexFollowNodeRoute::MakeAbortable	MATCH	0x669520-0x66961C		
+0x6688D0	CTaskComplexGoToPointAiming::CreateSubTask	MATCH	0x6688D0-0x668A00		
+0x4B3120	CEventBuildingCollision::CanTreatBuildingAsObject	MATCH	0x4B3120-0x4B3200		
+0x6301E0	CTaskComplexDie::CreateNextSubTask	MATCH	0x6301E0-0x6302B5		
+0x4B4FD0	CEventVehicleOnFire::AffectsPed	MATCH	0x4B4FD0-0x4B50A0		
+0x630100	CTaskComplexDie::SayDeathSample	MATCH	0x630100-0x6301BC	jump table checked	
+0x4B2270	CEventAreaCodes::AffectsPed	MATCH	0x4B2270-0x4B2322	tail (area code 13) not re-read	
+0x6666A0	CTaskComplexProstituteSolicit::CreateFirstSubTask	MATCH	0x6666A0-0x666743	tail not re-read	

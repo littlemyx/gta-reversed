@@ -1,0 +1,35 @@
+addr	function	TS claim	exe verdict	action
+0x49D160	CTagManager::GetNearestTag (de5ec0895)	n/a (review)	CONFIRMED: last-to-first, fcom + test ah,5 + jp = strict <	none
+0x443AA0	CGangWars::GangWarGoingOn	State!=0 || State2!=0	TS right (test eax,eax; jne on 0x96AB4C)	FIXED 1221b09bc
+0x468F39	CTheScripts::Init	count zeroed BEFORE ReadObjectNamesFromScript	TS right (mov word [0xA44B6C],bx at 0x468F39, call at 0x468F40)	FIXED f43d2f7a5
+0x4C2164	CEventHandler GANG_DRIVEBY response	passenger shoots: not-driver, TASK_SIMPLE_CAR_DRIVE	TS right (cmp ped,[veh+0x460]; je null; FindActiveTaskByType 0x2C5)	FIXED 3f203ca32
+0x47FBC3	GET_CLOSEST_CHAR_NODE	sets compare flag	TS right (true 0x47FBC3 / false 0x47FC9D, via FindNodeCoorsForScript)	FIXED 2710e49e1
+0x535F75	CObject anim time step	ts*0.02f	exe right, C++ ALREADY RIGHT (Timer::GetTimeStepInSeconds = ms_fTimeStep*0.02f, Entity::UpdateAnim uses it)	none
+0x42FC22	ScriptGenerateOneEmergencyServicesCar	no mission timer restart	exe right but C++ ALREADY RIGHT: the 1-arg CAutoPilot::SetCarMission only stores the mission (timer restart is the 2-arg overload)	none
+0x4479A0	CGarages::IsCarSprayable	only 431,437,407,416	TS right (artict1 435 is sprayable)	FIXED c4f670e4e
+0x5E7F99	CPed::DettachPedFromEntity (TS says Attach)	bUsesCollision, not bIsStanding	TS right (or [ped+0x1C],1); function is Dettach 0x5E7EC0	FIXED 7bdb72f16
+0x458DCF	CPickups outZ + DoPickUpEffects axes	outZ=cand.z; forward (-sin,cos,0), up (0,0,scale)	TS right	FIXED bd373bcd3
+0x43A8D2	CConversations::SetUpConversationNode	yes key not upper-cased	C++ ALREADY RIGHT (uppercase only under IsFixBugs; run build has none)	none
+0x43D6E0	CDarkel::FindTotalPedsKilledByPlayer	first 400 models	TS right (40x10)	FIXED 962c7f6f2
+0x6595A3	CTaskComplexUseSwatRope health test	< 20.0	TS right	FIXED 9422fc7a6
+0x635B9A	CTaskComplexUseScriptedBrain::ControlSubTask	priority 1	TS right (push 1)	FIXED 3a7064acb
+0x41FB29	CCarAI::UpdateCarAI stuck logic	skipped for cruise0/mission set	TS right (set exact; condition was negated)	FIXED 70eb8219b
+0x47B75C	SHUT_CHAR_UP_FOR_SCRIPTED_SPEECH	disable no stop; enable via 0x5EFF90	TS right	FIXED 7637b4920
+0x5F9840	CGroupEventHandler::ComputeResponseNewGangMember	returns for non-member	TS right (condition was inverted)	FIXED a55397d26
+0x48A91F	CLEAR_CHAR_LAST_WEAPON_DAMAGE	null handle does nothing	TS right	FIXED 816b95947
+0x445B30	CGangWars::AttackWaveOvercome	clears only bPartOfAttackWave	C++ ALREADY RIGHT (fixed after 0372fa9f4, comment at GangWars.cpp)	none
+0x4B5120	CEventGunShotWhizzedBy::AffectsPed	dot z,y,x; point on line	C++ ALREADY RIGHT (matches exe 0x4B5149-0x4B5224)	none
+0x637A60	CTaskSimpleSitIdle look roll	int roll	C++ ALREADY RIGHT (GetRandomNumberInRange(0,100) < 5 = exe int formula)	none
+0x5EA56B	CPedAttractorPedPlacer	see deviations.tsv	NOT_REACHED (budget)	left
+0x5EE6E0	CPedPizzaAttractor ctor	see deviations.tsv	NOT_REACHED (budget)	left
+-	CPedShelterAttractor heading	see deviations.tsv	NOT_REACHED (budget)	left
+-	CCam::Process ped cam in car	see deviations.tsv	NOT_REACHED (budget)	left
+0x5D18E6	GenericLoad	see deviations.tsv	NOT_REACHED (budget)	left
+0x50D930	CHandShaker::Process	see deviations.tsv	NOT_REACHED (budget)	left
+-	CPedAttractorManager lookup order	see deviations.tsv	NOT_REACHED (budget)	left
+-	MissionOps61_90 x87 PC=24 chain	see deviations.tsv	NOT_REACHED (budget)	left
+0x5D1E2A	SimpleVariables language flags	see deviations.tsv	NOT_REACHED (budget)	left
+-	TaskComplexFollowPatrolRoute x87	see deviations.tsv	NOT_REACHED (budget)	left
+-	TaskComplexGoPickUpEntity fpatan	see deviations.tsv	NOT_REACHED (budget)	left
+0x632748	TaskComplexUseAttractor ATM	see deviations.tsv	NOT_REACHED (budget)	left
+-	TaskComplexUseSwatRope check order	see deviations.tsv	NOT_REACHED (budget)	left

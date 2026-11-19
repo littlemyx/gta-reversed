@@ -1327,7 +1327,7 @@ auto GetClosestCharNode(CVector pos) -> notsa::script::MultiRet<CVector, notsa::
         out = ThePaths.FindNodeCoorsForScript(node, &found);
     }
     if (!found) {
-        out = {}; // Can't find anything nearby
+        out = CVector{}; // Can't find anything nearby
     }
     return { out, notsa::script::CompareFlagUpdate{ found } };
 }

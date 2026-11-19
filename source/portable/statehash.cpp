@@ -264,14 +264,28 @@ void WriteHeader(uint32_t seed) {
 
 // ---------------------------------------------------------------- SH4 NOTSA_SH_VEHLOG=<file>: unhashed vehicle + occupant dump at recorded frames 0 and 1 (see veh_f0.README.md next to the log)
 // Rows: `frame randCount V ...` per vehicle (pool slot order), `frame randCount O ...` per occupant (driver, then passengers). key=value tokens, floats %.9g, ints decimal.
-void VehLogRows(uint32_t frame) {
+FILE* VehLogFile() {
     static FILE* f = [] {
         const char* p = std::getenv("NOTSA_SH_VEHLOG");
         FILE* h = p && p[0] ? std::fopen(p, "w") : nullptr;
-        if (h) { std::fprintf(h, "# frame randCount V|O key=value... (see veh_f0.README.md); written after the frame-0/1 statehash line\n"); }
+        if (h) { std::fprintf(h, "# frame randCount V|O key=value... (see veh_f0.README.md); written after the statehash line of the logged frames (NOTSA_SH_VEHLOG_FRAMES, default 0-1); P rows = CCarCtrl::PossiblyRemoveVehicle calls during the frame\n"); }
         return h;
     }();
-    if (!f || frame > 1) return;
+    return f;
+}
+// NOTSA_SH_VEHLOG_FRAMES ranges like "0-1,180-205" (default "0-1"); NOTSA_SH_VEHLOG_SLOT (optional) only that vehicle pool slot
+bool VehLogFrameWanted(uint32_t frame) {
+    static std::vector<std::pair<uint32_t, uint32_t>> r = [] {
+        std::vector<std::pair<uint32_t, uint32_t>> v; const char* e = std::getenv("NOTSA_SH_VEHLOG_FRAMES"); std::string s = e && e[0] ? e : "0-1";
+        size_t b = 0; while (b <= s.size()) { size_t c = s.find(',', b); if (c == std::string::npos) c = s.size(); const std::string t = s.substr(b, c - b); b = c + 1; if (t.empty()) continue; unsigned lo = 0, hi = 0; if (std::sscanf(t.c_str(), "%u-%u", &lo, &hi) == 2) v.push_back({ lo, hi }); else if (std::sscanf(t.c_str(), "%u", &lo) == 1) v.push_back({ lo, lo }); }
+        return v; }();
+    for (auto& p : r) if (frame >= p.first && frame <= p.second) return true;
+    return false;
+}
+int VehLogSlot() { static const int s = [] { const char* e = std::getenv("NOTSA_SH_VEHLOG_SLOT"); return e && e[0] ? std::atoi(e) : -1; }(); return s; }
+void VehLogRows(uint32_t frame) {
+    static FILE* f = VehLogFile();
+    if (!f || !VehLogFrameWanted(frame)) return;
     const unsigned long long rc = (unsigned long long)RandCount();
     const auto NA = [](const CNodeAddress& a) { return std::format("{}.{}", (int)a.m_wAreaId, (int)a.m_wNodeId); };
     const auto LA = [](const CCarPathLinkAddress& a) { return std::format("{}.{}", (int)a.m_wAreaId, (int)a.m_wCarPathLinkId); };
@@ -282,7 +296,7 @@ void VehLogRows(uint32_t frame) {
     if (!pool) return;
     for (size_t i = 0, sz = (size_t)pool->GetSize(); i < sz; i++) {
         auto* v = pool->GetAt(i);
-        if (!v) continue;
+        if (!v || (VehLogSlot() >= 0 && (int)i != VehLogSlot())) continue;
         const auto& ap = v->m_autoPilot;
         std::string pn;
         for (auto& n : ap.m_aPathFindNodesInfo) { pn += NA(n) + ","; }
@@ -470,6 +484,14 @@ uint32_t Seed() { return Cfg().seed; }
 uint64_t VirtualNs() { return g_vns.load(std::memory_order_relaxed); }
 uint64_t VirtualMs() { return (VirtualNs() - g_vStartNs) / 1'000'000ull; }
 bool     Recording() { return g_recording; }
+bool VehLogWants(const void* veh) { // SH4: CCarCtrl::PossiblyRemoveVehicle rows: a recording frame in NOTSA_SH_VEHLOG_FRAMES and the slot (if NOTSA_SH_VEHLOG_SLOT is set)
+    if (!VehLogFile() || !g_recording || !VehLogFrameWanted(g_frame)) return false;
+    return VehLogSlot() < 0 || (veh && (int)GetVehiclePool()->GetIndex(const_cast<CVehicle*>(static_cast<const CVehicle*>(veh))) == VehLogSlot());
+}
+void VehLogPrv(const void* veh, const std::string& kv) {
+    if (!VehLogWants(veh)) return;
+    std::fprintf(VehLogFile(), "%u %llu P slot=%d %s\n", g_frame, (unsigned long long)RandCount(), (int)GetVehiclePool()->GetIndex(const_cast<CVehicle*>(static_cast<const CVehicle*>(veh))), kv.c_str()); std::fflush(VehLogFile());
+}
 int      LoadLogRecFrame() { return g_recording ? (int)g_frame : -1; }
 uint64_t RandCountNow() { return RandCount(); }
 bool     NoAudio() { static const bool v = Active() && std::getenv("NOTSA_RR_NOAUDIO") && std::getenv("NOTSA_RR_NOAUDIO")[0] == '1'; return v; }

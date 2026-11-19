@@ -59,6 +59,9 @@ struct AudioLogScope {
     AudioLogScope(const AudioLogScope&) = delete;
     bool m_on = false; char m_kind = 0; int m_event = 0, m_bank = 0, m_sound = 0, m_seq = 0, m_depth = 0; const void* m_ae = nullptr; float m_x = 0.f; uint64_t m_rc0 = 0; uint64_t m_ra[4] = {};
 };
+//! SH4 NOTSA_SH_VEHLOG PossiblyRemoveVehicle rows (STATEHASH only; no behaviour change)
+bool VehLogWants(const void* veh);
+void VehLogPrv(const void* veh, const std::string& kv);
 //! SH5 NOTSA_SH_WALKLOG=<file> (+ NOTSA_SH_WALKLOG_FRAMES, default 54): the FILE* when recording one of the frames, else null (CCarCtrl::GenerateCarCreationCoors2 rows)
 std::FILE* WalkLogFile();
 //! SH5 NOTSA_SH_BOOTLOG row ('F' per frame / 'S' at rr_start)

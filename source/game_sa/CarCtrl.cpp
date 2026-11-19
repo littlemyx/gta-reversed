@@ -4181,7 +4181,21 @@ void CCarCtrl::PossiblyFireHSMissile(CVehicle* entityLauncher, CEntity* targetEn
 
 // 0x424F80
 void CCarCtrl::PossiblyRemoveVehicle(CVehicle* vehicle) {
+#ifdef NOTSA_STATEHASH
+    int prvBranch = 0;
+#define PRV_BRANCH(n) (prvBranch = (n))
+#define PRV_LOG(kv) do { if (notsa::rr::VehLogWants(vehicle)) { notsa::rr::VehLogPrv(vehicle, (kv)); } } while (0)
+#else
+#define PRV_BRANCH(n) ((void)0)
+#define PRV_LOG(kv) ((void)0)
+#endif
+    PRV_LOG(std::format("ENTRY model={} createdBy={} status={} pos={:.9g},{:.9g},{:.9g} up.z={:.9g} numGettingIn={} convoy={} targetEntity={} isLocked={} canBeDeleted={} fadeOut={} onScreen={} lawEnf={} carPark={} neverSmaller={} timeTillWeNeed={} timeMS={} extRange={} fakePhysics={} subType={} timeSwitchedToRealPhysics={} tempAction={} drivingStyle={} carMission={} playerFocus={}",
+        (int)vehicle->m_nModelIndex, (int)vehicle->m_nCreatedBy, (int)vehicle->GetStatus(), vehicle->GetPosition().x, vehicle->GetPosition().y, vehicle->GetPosition().z, vehicle->GetMatrix().GetUp().z, (int)vehicle->m_nNumGettingIn, (int)vehicle->vehicleFlags.bPartOfConvoy,
+        vehicle->m_autoPilot.m_TargetEntity ? 1 : 0, (int)vehicle->vehicleFlags.bIsLocked, (int)vehicle->CanBeDeleted(), (int)vehicle->vehicleFlags.bFadeOut, (int)vehicle->GetIsOnScreen(), (int)vehicle->vehicleFlags.bIsLawEnforcer, (int)vehicle->vehicleFlags.bIsCarParkVehicle,
+        (int)vehicle->vehicleFlags.bNeverUseSmallerRemovalRange, (unsigned)vehicle->m_nTimeTillWeNeedThisCar, (unsigned)CTimer::GetTimeInMS(), (int)vehicle->m_nExtendedRemovalRange, (int)vehicle->m_nFakePhysics, (int)vehicle->m_nVehicleSubType,
+        (unsigned)vehicle->m_autoPilot.m_nTimeSwitchedToRealPhysics, (int)vehicle->m_autoPilot.m_nTempAction, (int)vehicle->m_autoPilot.m_nCarDrivingStyle, (int)vehicle->m_autoPilot.m_nCarMission, (int)CWorld::PlayerInFocus));
     const auto Remove = [&] { // 0x4251E5 / 0x425220 / 0x42541D
+        PRV_LOG(std::format("REMOVE branch={}", prvBranch));
         CWorld::Remove(vehicle);
         delete vehicle;
     };
@@ -4201,6 +4215,7 @@ void CCarCtrl::PossiblyRemoveVehicle(CVehicle* vehicle) {
 
     if (!vehicle->vehicleFlags.bIsLocked && vehicle->CanBeDeleted() && !CCranes::IsThisCarBeingTargettedByAnyCrane(vehicle)) {
         if (vehicle->vehicleFlags.bFadeOut && CVisibilityPlugins::GetClumpAlpha(vehicle->GetRpClump()) == 0) {
+            PRV_BRANCH(1);
             Remove();
             return;
         }
@@ -4241,17 +4256,23 @@ void CCarCtrl::PossiblyRemoveVehicle(CVehicle* vehicle) {
         const auto extRange = (float)vehicle->m_nExtendedRemovalRange;
         const auto maxRange = extRange > 170.0f ? extRange : 170.0f;
 
+        PRV_LOG(std::format("RANGE playerCentre={:.9g},{:.9g},{:.9g} dist2D={:.9g} removalRange={:.9g} maxRange={:.9g} genDistMult={:.9g} lookDir={} lookL={} lookR={} lookBehind={} camFwd.z={:.9g} cutoff={:.9g}",
+            playerCentre.x, playerCentre.y, playerCentre.z, distToPlayer2D, removalRange, maxRange, TheCamera.m_fGenerationDistMultiplier, (int)TheCamera.GetLookDirection(), (int)activeCam.m_bLookingLeft, (int)activeCam.m_bLookingRight, (int)activeCam.m_bLookingBehind,
+            TheCamera.m_mCameraMatrix.GetForward().z, (double)((x87d)maxRange * removalRange * (x87d)ExeRecip(170.0f))));
         // x87: kept in extended precision until the comparison
         if ((x87d)maxRange * removalRange * (x87d)ExeRecip(170.0f) < (double)distToPlayer2D && vehicle->m_autoPilot.m_nCarMission != MISSION_PLANE_ATTACK_PLAYER_POLICE) {
             if (!CGarages::IsPointWithinHideOutGarage(vehicle->GetPosition())) {
                 if (IsThisVehicleInteresting(vehicle)) {
+                    PRV_LOG(std::string("INTERESTING fakePhysics=10"));
                     vehicle->m_nFakePhysics = 10;
                     return;
                 }
                 if (vehicle->GetIsOnScreen()) {
+                    PRV_LOG(std::string("FADEOUT set"));
                     vehicle->vehicleFlags.bFadeOut = true;
                     return;
                 }
+                PRV_BRANCH(2);
                 Remove();
                 return;
             }
@@ -4261,6 +4282,7 @@ void CCarCtrl::PossiblyRemoveVehicle(CVehicle* vehicle) {
             // Note: Uses the matrix directly (not null checked)
             const auto upZ = vehicle->m_matrix->GetUp().z;
             if ((upZ < 0.0f ? -upZ : upZ) < 0.74f) { // Vehicle is on its side (or upside down)
+                PRV_BRANCH(3);
                 Remove();
                 return;
             }
@@ -4270,6 +4292,7 @@ void CCarCtrl::PossiblyRemoveVehicle(CVehicle* vehicle) {
             && (vehicle->m_nVehicleSubType == VEHICLE_TYPE_PLANE || vehicle->m_nVehicleSubType == VEHICLE_TYPE_HELI)
             && vehicle->m_bIsStuck
         ) {
+            PRV_BRANCH(4);
             Remove();
             return;
         }
@@ -4296,6 +4319,7 @@ void CCarCtrl::PossiblyRemoveVehicle(CVehicle* vehicle) {
             && !CTrafficLights::ShouldCarStopForBridge(vehicle)
             && !CGarages::IsPointWithinHideOutGarage(vehicle->GetPosition())
         ) {
+            PRV_BRANCH(5);
             Remove();
             return;
         }
@@ -4317,8 +4341,11 @@ void CCarCtrl::PossiblyRemoveVehicle(CVehicle* vehicle) {
     if (CGarages::IsPointWithinHideOutGarage(vehicle->GetPosition())) {
         return;
     }
+    PRV_BRANCH(6);
     Remove();
 }
+#undef PRV_BRANCH
+#undef PRV_LOG
 
 // 0x423F10
 void CCarCtrl::PruneVehiclesOfInterest() {

@@ -1,0 +1,8 @@
+addr	function	verdict	asm range	note	fix commit
+0x6A07A0	CAutomobile::HydraulicControl (review 0c8247c3c)	MATCH	0x6A12DB-0x6A12F0	CONFIRMED: fld maxDelta; fdiv limitDiff; fabs; fcomp qword 0.01 - float division (PC24) then double compare, port fabs(float/float) > 0.01 identical	-
+0x53AF00	CFireManager::Update (0x862d50 0x3ecccccc)	SKIP-RENDER	0x53B5BE	constant feeds shadow/corona scaling only	-
+0x64A820	CTaskComplexGoToCarDoorAndStandStill::ControlSubTask (0x86ec40)	MATCH	0x64A9AF	screen false positive: sq(0.1f) float rounds to 0x3c23d70b	-
+0x535F00,0x542560,0x534AE0,0x5347D0,0x6D21F0,0x4655E0	TimeStep*0.02f users	MATCH	-	CTimer::GetTimeStepInSeconds uses ExeRecip(50) = 0.02f (header inline)	-
+0x547B80,0x54DFB0	CPhysical::ApplySpeed/ProcessCollision 1e-5f	MATCH	0x5480C2	CTimer::UpdateTimeStep max(ts,0.00001f) inlined	-
+0x41DA30,0x6D1340	16.666666 users	MATCH	-	port writes 1000/60 and 100/6 in float, same bits	-
+0x5A1B60,0x463830,0x44AA50	0.75/1.25/0.9/0.3/0.4f	MATCH	-	literals exist in port (uppercase F or other overload hid them from the screen)	-

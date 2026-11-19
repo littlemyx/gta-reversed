@@ -1,0 +1,5 @@
+# ASM-HC10
+Flagged (exe consts with no port literal): 357 functions before; 298 after following callees (2 levels, bodies in .cpp); 245 after header inline helpers + ExeRecip(K)/ExeRecip(NAMED) + PI*k + ignoring writable-section globals; 240 final (list C:/gta-scratch/hc10/missing2.tsv, per-constant C:/gta-scratch/hc10/detail3.tsv; first-pass list missing2_firstpass.tsv).
+Step 1: 0c8247c3c CONFIRMED (fld float maxDelta, fdiv, fabs, fcomp qword 0.01; port float division then compare with double 0.01 is identical; PC24 division == float division).
+Step 2: top-45 by RYDER_1 count triaged by exe context: exact powers of two (collision 1/128, 2^-12, 0.125 ...) cannot differ; remaining are screen false positives (inline CTimer helpers, float expressions 1000/60, uppercase F literals, overloads) or render (CFireManager::Update shadow/corona). No real missing logic found, no source fixed. Not done: functions past the top ~45 of the list, and a screen that evaluates arithmetic literal expressions / uppercase F (would shrink the list further).
+Screen detail: follow cap is names with <=6 definitions (uncapped run took 25 min; first-pass list was uncapped).

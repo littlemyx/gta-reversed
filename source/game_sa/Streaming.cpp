@@ -1,5 +1,6 @@
 #include "StdInc.h"
 #include "portable/loadlog.h"
+#include "portable/sh12log.h"
 
 #include "Streaming.h"
 #include "Radar.h"
@@ -1007,6 +1008,7 @@ void CStreaming::DisableCopBikes(bool bDisable) {
 
 // 0x4076A0
 bool CStreaming::IsVeryBusy() {
+    if (SH12_ON()) { char stk[200]; notsa::rr::Sh12Stack(stk, sizeof stk, 0); SH12_ROW("V loadingPriority=%d numModelsRequested=%d result=%d caller=%s", (int)CRenderer::m_loadingPriority, (int)ms_numModelsRequested, (int)(CRenderer::m_loadingPriority || ms_numModelsRequested > 5), stk); }
     return CRenderer::m_loadingPriority || ms_numModelsRequested > 5;
 }
 
@@ -1036,6 +1038,7 @@ bool CStreaming::Save() {
 // 0x40EA10
 void CStreaming::LoadAllRequestedModels(bool bOnlyPriorityRequests) {
     ZoneScoped;
+    if (SH12_ON()) { char stk[200]; notsa::rr::Sh12Stack(stk, sizeof stk, 0); SH12_ROW("A LoadAllRequestedModels onlyPriority=%d numModelsRequested=%d reentrant=%d caller=%s", (int)bOnlyPriorityRequests, (int)ms_numModelsRequested, (int)m_bLoadingAllRequestedModels, stk); }
 
     if (m_bLoadingAllRequestedModels) {
         return;
@@ -1392,6 +1395,7 @@ void CStreaming::RequestFilesInChannel(int32 chIdx) {
 // Can be called on an already requested model to add `PRIORITY_REQUEST` flag
 void CStreaming::RequestModel(int32 modelId, int32 streamingFlags) {
     CStreamingInfo& info = GetInfo(modelId);
+    if (SH12_ON()) { char nm[96], stk[200]; notsa::rr::Sh12Name(modelId, nm, sizeof nm); notsa::rr::Sh12Stack(stk, sizeof stk, 0); SH12_ROW("Q id=%d %s img=%d cdpos=%u size=%u flags=%#x state=%d caller=%s", modelId, nm, (int)info.m_ImgID, (unsigned)info.GetCdPosn().Offset, (unsigned)info.GetCdSize(), streamingFlags, (int)info.m_LoadState, stk); }
     if (info.m_LoadState == eStreamingLoadState::LOADSTATE_NOT_LOADED || info.m_LoadState == eStreamingLoadState::LOADSTATE_LOADED) { NOTSA_LOADLOG("REQ id=%d flags=%#x state=%d", modelId, streamingFlags, (int)info.m_LoadState); }
 
     switch (info.m_LoadState) {
@@ -1503,6 +1507,7 @@ int32 CStreaming::FindMIPedSlotForInterior(int32 randFactor) {
 // Finishes loading a big model by loading the second half of the file
 // residing at `pFileBuffer`.
 void CStreaming::FinishLoadingLargeFile(uint8* pFileBuffer, int32 modelId) {
+    if (SH12_ON()) { char nm[96]; notsa::rr::Sh12Name(modelId, nm, sizeof nm); SH12_ROW("F id=%d %s part2", modelId, nm); }
     CBaseModelInfo* baseModelInfo = CModelInfo::GetModelInfo(modelId);
     CStreamingInfo& streamingInfo = GetInfo(modelId);
     if (streamingInfo.IsLoadingFinishing()/*first half loaded?*/) {
@@ -1762,6 +1767,7 @@ void CStreaming::RequestModelStream(int32 chIdx) {
         ch.modelIds[j] = MODEL_INVALID;
     }
 
+    if (SH12_ON()) { char ids[400]; size_t o = 0; ids[0] = 0; for (int k = 0; k < 16; k++) if (ch.modelIds[k] != MODEL_INVALID && o + 60 < sizeof ids) { char nm[48]; notsa::rr::Sh12Name(ch.modelIds[k], nm, sizeof nm); o += (size_t)snprintf(ids + o, sizeof ids - o, "%d(%s)@%d,", ch.modelIds[k], nm, (int)ch.modelStreamingBufferOffsets[k]); } SH12_ROW("R ch=%d pos=%u/%u sectors=%u big=%d img=%d models=%s", chIdx, (unsigned)pos.Offset, (unsigned)pos.FileID, (unsigned)numSectorsToRead, (int)ms_bLoadingBigModel, (int)GetInfo(ch.modelIds[0] == MODEL_INVALID ? 0 : ch.modelIds[0]).m_ImgID, ids); }
     CdStreamRead(chIdx, ms_pStreamingBuffer[chIdx], pos, numSectorsToRead); // Request models to be read
     ch.LoadStatus   = eChannelState::READING;
     ch.loadingLevel = 0;
@@ -1913,6 +1919,7 @@ bool CStreaming::ProcessLoadingChannel(int32 chIdx) {
     }
 
     const bool isStarted = ch.IsStarted();
+    SH12_ROW("D ch=%d finished started=%d pos=%u/%u sectors=%d", chIdx, (int)isStarted, (unsigned)ch.pos.Offset, (unsigned)ch.pos.FileID, (int)ch.sectorCount);
     ch.LoadStatus = eChannelState::IDLE;
     if (isStarted) {
         // It's a large model so finish loading it
@@ -1944,6 +1951,7 @@ bool CStreaming::ProcessLoadingChannel(int32 chIdx) {
 
                 // Actually load the model into memory
                 ConvertBufferToObject(fileBuffer, modelId);
+                if (SH12_ON()) { char nm[96]; notsa::rr::Sh12Name(modelId, nm, sizeof nm); SH12_ROW("L ch=%d i=%u id=%d %s part1done started=%d loadState=%d", chIdx, i, modelId, nm, (int)info.IsLoadingFinishing(), (int)info.m_LoadState); }
 
                 if (info.IsLoadingFinishing()) {
                     // exe 0x40E2D5: the large model is always moved into slot 0 (not slot i)
@@ -2641,6 +2649,7 @@ void CStreaming::RetryLoadFile(int32 chIdx) {
             [[fallthrough]];
         }
         case eChannelState::IDLE: {
+            SH12_ROW("R ch=%d RETRY pos=%u/%u sectors=%d", chIdx, (unsigned)ch.pos.Offset, (unsigned)ch.pos.FileID, (int)ch.sectorCount);
             CdStreamRead(chIdx, ms_pStreamingBuffer[chIdx], ch.pos, ch.sectorCount);
             ch.LoadStatus = eChannelState::READING;
             ch.loadingLevel = -600;
@@ -3730,6 +3739,7 @@ void CStreaming::Update() {
     NOTSA_LOADLOG("STREAMING_UPDATE");
 
     g_LoadMonitor.SetTimeForThisFrame(eLoadType::NUM_STREAMING_REQUESTS, ms_numModelsRequested);
+    SH12_STATE("update_begin");
     if (CTimer::GetIsPaused())
         return;
 
@@ -3788,6 +3798,7 @@ void CStreaming::Update() {
     if (ms_bEnableRequestListPurge) {
         PurgeRequestList();
     }
+    SH12_STATE("update_end");
 }
 
 // unused

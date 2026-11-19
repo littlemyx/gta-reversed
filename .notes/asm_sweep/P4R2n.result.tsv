@@ -1,0 +1,22 @@
+addr	function	verdict	asm range	note	fix commit
+0x72B850	CWeather::Update	FIXED	0x72B850-0x72C80B	lightning thresholds: (rand&0xFF)<24 end, (rand&0xFFFF)<200 start (was float RandomBool); rest matched (rain/sand/cloud/fog/wind/heat-haze/water-fog/traffic-light brightness)	580a97050
+0x739E60	CShotInfo::Update	FIXED	0x739E60-0x73A258	ped distance sum order z,y,x; spray dot order y,z,x	9c575a13e
+0x72B630	CWeather::UpdateInTunnelness	MATCH	0x72B630-0x72B84D	all	-
+0x72A640	CWeather::UpdateWeatherRegion	MATCH	0x72A640-0x72A78E	region bounds (constants not re-read)	-
+0x72A520	CWeather::FindWeatherTypesList	MATCH	0x72A520-0x72A550	-	-
+0x4ABF50	CWeather::IsRainy	MATCH	0x4ABF50-0x4ABF6B	>=0.2	-
+0x72DEC0	CCullZones::Update	MATCH	0x72DEC0-0x72DF6F	frame&7 ==2 camera / ==6 player, military -> wanted 5	-
+0x72D970	CCullZones::FindAttributesForCoors	MATCH	0x72D970-0x72D9E3	movsx of 16-bit flags absorbed by the (int16) casts of the callers	-
+0x72DD90	CCullZones::FewerPeds	MATCH	-	flag bit test	-
+0x72DD80	CCullZones::FewerCars	MATCH	-	flag bit test	-
+0x72DDC0	CCullZones::PlayerNoRain	MATCH	-	flag bit test	-
+0x72DDB0	CCullZones::CamNoRain	MATCH	-	flag bit test	-
+0x72DD30	CCullZones::CamStairsForPlayer	MATCH	-	flag bit test	-
+0x72DD20	CCullZones::CamCloseInForPlayer	MATCH	-	flag bit test	-
+0x539CE0	CCreepingFire::Update	MATCH	0x539CE0-0x539D0F	all	-
+0x562360	CWanted::UpdateEachFrame	MATCH	0x562360-0x562388	all	-
+0x6F3FE0	CCranes::UpdateCranes	MATCH	0x6F3FE0	ret	-
+0x423F10	CCarCtrl::PruneVehiclesOfInterest	MATCH	0x423F10-0x423F7A	all	-
+0x423EA0	CCarCtrl::IsThisVehicleInteresting	MATCH	0x423EA0-0x423EC8	all	-
+0x423F00	CCarCtrl::ClearInterestingVehicleList	MATCH	0x423F00-0x423F0C	all	-
+0x439AF0	CCheat::DoCheats	MATCH	0x439AF0-0x439B1C	all	-

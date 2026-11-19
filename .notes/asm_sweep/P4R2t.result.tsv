@@ -1,0 +1,20 @@
+addr	function	verdict	asm range	note	fix commit
+0x565610	CWorld::SetPedsOnFire/TriggerExplosion (review of P4R2s fix cd91bdbe2)	MATCH	0x565610-0x5657F2	not-invulnerable test (je 0x5657c9) and no scan code advance confirmed	-
+0x539450	CFireManager::ExtinguishPoint	FIXED	0x539450-0x5394B7	strict distSq < r*r	476fea6ba
+0x5394C0	CFireManager::ExtinguishPointWithWater	FIXED	0x5394C0-0x5396CF	strict distSq < r*r	476fea6ba
+0x5394C0	CFire::ExtinguishWithWater (inlined)	FIXED	0x539524-0x53968D	particle offset ((rand&0xFF)-128)*0.01/0.01/0.005	9c99d51ff
+0x441C10	CGameLogic::LaRiotsActiveHere	FIXED	0x441C10-0x441CF2	strict rect tests	48c0dca5a
+0x572360	CTheZones::FindSmallestZoneForPosition	MATCH	-	-	-
+0x572400	CTheZones::GetZoneInfo	MATCH	-	-	-
+0x538F40	CFireManager::FindNearestFire	MATCH	-	-	-
+0x539E50	CFireManager::GetNextFreeFire	MATCH	-	-	-
+0x55A070	CStats::SetStatValue	MATCH	-	-	-
+0x5595F0	CStats::CheckForThreshold	MATCH	-	-	-
+0x6CCA50	CPlane::CountPlanesAndHelis	MATCH	-	-	-
+0x6CCAA0	CPlane::AreWeInNoPlaneZone	MATCH	-	-	-
+0x6CCBB0	CPlane::AreWeInNoBigPlaneZone	MATCH	-	-	-
+0x7369E0	CExplosion::RemoveAllExplosionsInArea	MATCH	-	-	-
+0x698D40	CCover::FindDirFromVector	MATCH	-	-	-
+0x49D420	CTrafficLights::ShouldCarStopForBridge	MATCH	-	-	-
+0x4489F0	CGarages::FindSafeHouseIndexForGarageType	MATCH	-	jump table already verified in source	-
+-	remaining ~75 no-verdict functions (CCamera::*, CStats::*, CGangWars::*, CRestart, CPointLights::AddLight ...)	NOT_REACHED	-	budget	-

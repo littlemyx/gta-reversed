@@ -1,0 +1,42 @@
+addr	function	verdict	asm range	note	fix commit
+0x50C140	CCamera::SetWideScreenOn	MATCH		2 stores	
+0x50C150	CCamera::SetWideScreenOff	MATCH		bool == 1 equals bool	
+0x742C60	CWeaponEffects::ClearCrossHair	MATCH		time+400	
+0x50A160	CIdleCam::Reset	MATCH		8 fields -1, 70 fov, LastTimeTouched	
+0x50E490	CCam::Init	MATCH		full store list incl. history loop and globals (0x8CC380..0xB6FD18)	
+0x474800	CTheScripts::ScriptAttachAnimGroupToCharModel	MATCH		vcalls 0x38/0x30/0x34	
+0x7010F0	CPostEffects::ScriptResetForEffects	MATCH		5 flags + water fog 1	
+0x464FF0	CTheScripts::CheckStreamedScriptVersion	MATCH		returns 1	
+0x481200	CTheScripts::AddToInvisibilitySwapArray	MATCH		visible+unknown entity: no add (already in source)	
+0x464F50	CRunningScript::GetCorrectPedModelIndexForEmergencyServiceType	MATCH		jump table 280-287 mapped	
+0x464D40	CTheScripts::StartTestScript	MATCH		StartNewScript(ScriptSpace)	
+0x608710	CPedScriptedTaskRecord::GetStatus(ped opcode)	MATCH		task layout	
+0x608750	CPedScriptedTaskRecord::GetStatus(ped)	MATCH		1/0 == TASK/EVENT values	
+0x608390	CPedScriptedTaskRecordData::Set(event)	MATCH			
+0x6083E0	CPedScriptedTaskRecordData::Set(task)	MATCH			
+0x737B40	CProjectileInfo::Initialise	MATCH		32 ptrs, 32 infos stride 0x24 type 16	
+0x515200	CCamera::StartTransition	UNSURE		only header/atan/weapon-mode part read; source carries exe-address audit comments; rest NOT_REACHED	
+0x50BFF0	CCamera::Using1stPersonWeaponMode	MATCH		7 modes 7,34,8,51,45,46,65	
+0x5B2090	CCam::FlyBySplineVec3	MATCH		fully traced: idx advance, stale duration, clamp, float stores t3f/u2f/u3f/utf, sum order, straight line, cutscene offset	
+0x5B2330	CCam::FlyBySplineFloat	MATCH		fully traced incl. recomputed duration	
+0x485A50	CRunningScript::DoDeathArrestCheck	MATCH		ResetIP end state equal	
+0x489490	CRunningScript::ThisIsAValidRandomPed	MATCH			
+0x4812D0	CTheScripts::UndoEntityInvisibilitySettings	MATCH		flags 0x80|1	
+0x481140	CTheScripts::AddToBuildingSwapArray	MATCH		struct order, first free slot	
+0x46B200	CTheScripts::AddToVehicleModelsBlockedByScript	MATCH		OOB case asserted	
+0x46A840	CTheScripts::ClearAllVehicleModelsBlockedByScript	MATCH			
+0x464D70	CRunningScript::IsPedDead	MATCH		states 54-56	
+0x492F90	CTheScripts::AddScriptEffectSystem	MATCH		first unused slot	
+0x492FD0	CTheScripts::RemoveScriptEffectSystem	MATCH			
+0x483BA0	CTheScripts::RemoveScriptSphere	MATCH			
+0x474730	CTheScripts::InitialiseSpecialAnimGroupsAttachedToCharModels	MATCH			
+0x474710	CTheScripts::InitialiseSpecialAnimGroup	MATCH			
+0x470960	CTheScripts::InitialiseAllConnectLodObjects	MATCH			
+0x470940	CTheScripts::InitialiseConnectLodObjects	MATCH			
+0x464D20	CTheScripts::GetScriptIndexFromPointer	MATCH			
+0x463CA0	CRunningScript::GetPointerToLocalVariable	MATCH			
+0x463CC0	CRunningScript::GetPointerToLocalArrayElement	MATCH			
+0x71F960	COccluder::NearCamera	SKIP		render	
+0x7326D0	CVisibilityPlugins::GetDotProductWithCameraVector	SKIP		render	
+0x7328C0	CVisibilityPlugins::SetRenderWareCamera	SKIP		render	
+0x5DABC0	CGrassRenderer::SetGlobalCameraPos	SKIP		render	

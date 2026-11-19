@@ -1,0 +1,17 @@
+function	exe_addr	port_file:line	exe_idiom	port_expr	verdict
+CAnimBlendAssociation::UpdateBlend	0x4D1490	AnimBlendAssociation.cpp:241	fcomp 0 + test ah,0x41 + jne (delta>0 only)	std::min(0,delta)	FIXED 73bc..(NaN/-0 kept)
+CAnimBlendAssociation::UpdateBlend (other 3 compares)	0x4D14A0-0x4D1552	AnimBlendAssociation.cpp:243-270	<=0 / <0 / >1 all NaN-skip	same strictness	MATCH
+CAutomobile::ProcessControl turn-mass cap	0x6B2626	Automobile.cpp:~715	fcom 2500 + test 5 + jnp (NaN/equal -> 2500)	std::min(mass,2500)	FIXED 6de5b4c1f
+CAutomobile::ProcessControl steer min(x,1)	0x6B2990	Automobile.cpp:812	fld 1; fcomp st1; test 5; jp keep (NaN keeps x)	std::min(x,1)	MATCH
+CAutomobile::ProcessControl frequency caps 250/150	0x6B2EB7,0x6B2F24	Automobile.cpp:975,983	same shape (NaN keeps value)	std::min(f,K)	MATCH
+CAutomobile::ProcessControl roughnessShake max	0x6B2CC7	Automobile.cpp:925	shake>rough?shake:rough	std::max(shake,rough)	MATCH (NaN-only difference, operands never NaN)
+CAutomobile::ProcessControl suspensionShake	0x6B2C7E	Automobile.cpp:~920	change>shake (NaN skip)	if >	MATCH
+CPed::CalculateNewVelocity asin clamp	0x5E50A3-0x5E5128	Ped.cpp:2779	-1>x ->-1; 1>=x||NaN ->x; else 1	std::clamp(v,-1,1)	MATCH
+CAutomobile::ProcessAI min(1,3000/mass)	0x6B4E83	Automobile.cpp:1444	call 0x404330: a<b?a:b (NaN->b)	std::min(1,x) (NaN->1)	FIXED 57ebe9f28
+CAutomobile::ProcessCarWheelPair min(1,3000/mass)	0x6A4FFB	Automobile.cpp:4733	call 0x404330	std::min(1,x)	FIXED 57ebe9f28
+CBike::ProcessAI max(speed/0.1,pedal) x2	0x6BCA9C,0x6BCB65	Bike.cpp:512,524	call 0x420800: a>b?a:b (NaN->b)	std::max(a,b) (NaN->a)	FIXED 24ce7d402
+CVehicle::ProcessDrivingAnims clamp	0x6DF803	Vehicle.cpp:1030	explicit steer compare already ported	std::clamp(angle,0,1)	UNSURE (helper sites 0x6DFE9E/0x6E024D not located inside this function)
+CBmx::ProcessAI max(0,min(mult,2))	0x6C1470	Bmx.cpp:989	not compared	std::max/min	NOT_REACHED
+CTrain::ProcessControl gas max/min(0,gas)	0x6F86A0	Train.cpp:1567,1569	not compared	std::max/min	NOT_REACHED
+CAutomobile::HydraulicControl, UpdateMovingCollision, CObject::ProcessControl clamp, CCarAI::UpdateCarAI clamp, CTransmission::CalculateDriveAcceleration, CPlayerPed::ProcessControl, CWeather::Update, CPopulation::PedCreationDistMultiplier	-	-	-	std::min/max/clamp float sites	NOT_REACHED
+other 0x404330/0x420800 call sites (36 funcs)	see report	-	helper min/max	already explicit ternaries (no std::min/max in function)	NOT_CHECKED

@@ -1,0 +1,23 @@
+addr	function	verdict	asm range	note	fix commit
+0x626D90	CTaskComplexKillPedOnFootMelee::ControlSubTask (P4R18 0xCB case)	CONFIRMED	0x626DF7-0x626E12	0xCB falls into the sequence path; P4R18 fix right	9e09a6f43
+0x6589B0	CTaskSimpleGiveCPR::MakeAbortable (P4R18 tail)	CONFIRMED	0x658A5D-0x658A6E	health<=0 tail check applies to every event type; fix right	2918530ac
+0x621E00	CTaskComplexDestroyCarMelee::MakeAbortable (P4R18 event fwd)	CONFIRMED	0x621F2C-0x621F35	event forwarded with priority 1; fix right	5abcc7553
+0x68C6E0	CTaskComplexKillCriminal::ChangeTarget	MATCH	0x68C6E0-0x68C7ED		
+0x6311E0	CTaskSimpleSitIdle::MakeAbortable	FIXED	0x6311E0-0x631250	IMMEDIATE did not clear m_anim (exe 0x631207)	aab007f4b
+0x631510	CTaskComplexSitDownThenIdleThenStandUp::MakeAbortable	MATCH	0x631510-0x631544		
+0x690C10	CTaskSimpleShakeFist::MakeAbortable	MATCH	0x690C10-0x690C5C		
+0x6787F0	CTaskComplexFallAndGetUp::MakeAbortable	MATCH	0x6787F0-0x678865		
+0x675D60	CTaskInteriorSitOnChair::MakeAbortable	MATCH	0x675D60-0x675DC0		
+0x64AF50	CTaskSimpleCarCloseDoorFromInside::MakeAbortable	MATCH	0x64AF50-0x64AFA5		
+0x675F60	CTaskInteriorLieInBed::MakeAbortable	MATCH	0x675F60-0x675FB6		
+0x676150	CTaskInteriorSitAtDesk::MakeAbortable	MATCH	0x676150-0x67618B		
+0x6749F0	CTaskComplexInvestigateDisturbance::CreateNextSubTask	MATCH	0x6749F0-0x674BA2	constants 0x86FC84/88/870188/8C checked	
+0x66AED0	CTaskComplexWanderStandard::WillChat	MATCH	0x66AED0-0x66AF4E		
+0x65F330	CTaskSimpleGoToPointFine::SetTargetPos	MATCH	0x65F330-0x65F399		
+0x63C900	CTaskSimpleCarDrive::UpdateBopping	MATCH	0x63C900-0x63C938		
+0x667AD0	CTaskSimpleGoTo::SetUpIK	MATCH	0x667AD0-0x667C8F	structure and compares checked; position z x87 chain taken from earlier audit	
+0x61E0C0	CTaskSimpleUseGun::ControlGunMove	MATCH	0x61E0C0-0x61E149		
+0x65BA30	CTaskComplexFleeEntity::CreateSubTask	MATCH	0x65BA30-0x65BAB4		
+0x6458A0	CTaskComplexGoToCarDoorAndStandStill::IsVehicleInRange	MATCH	0x6458A0-0x645909		
+0x65E7F0	CTaskComplexGangLeader::ShouldLoadGangAnims	MATCH	0x65E7F0-0x65E852		
+(remaining 51 of the 70)		NOT_REACHED		incl. KillCriminal::ControlSubTask 0x68E950 (largest; port is x87-annotated, not compared)	

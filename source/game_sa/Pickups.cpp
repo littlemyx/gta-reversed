@@ -655,7 +655,7 @@ int32 CPickups::GetActualPickupIndex(tPickupReference pickupRef) {
 // 0x456A30
 tPickupReference CPickups::GetNewUniquePickupIndex(int32 pickupIndex) {
     auto& refIdx = aPickUps[pickupIndex].m_nReferenceIndex;
-    refIdx = (refIdx == -1) ? 1 : refIdx + 1;
+    refIdx = ((uint16)refIdx < 0xFFFE) ? (int16)(refIdx + 1) : (int16)1; // 0x456A44: unsigned cmp cx, 0xFFFE (was: == -1, which wrapped differently at 0xFFFE)
 
     return GetUniquePickupIndex(pickupIndex);
 }

@@ -1,0 +1,14 @@
+addr	function	verdict	asm range	note	fix commit
+0x61E370	CTaskSimpleUseGun::RequirePistolWhip (60de888ca review)	CONFIRMED	0x61E2D0-0x61E3C4	fcomp 1.0; test ah,5; jp skips on >= 1.0 (equal and NaN too), constant 0x8D2E68 = 1.0f; 60de888ca is right	
+0x621300	CTaskComplexKillPedOnFootArmed::IsPedInLeaderFiringLine	FIXED	0x621300-0x6214FD	projection dir is (target-leader) with z=0 then normalised; dot test uses un-normalised 3D z,y,x	865f8d57c
+0x669DA0	CTaskComplexWander::UpdateDir	FIXED	0x669DA0-0x669ECC	UpdatePathNodes got stack copies of m_LastNode/m_NextNode; port passed members by ref	8a71b17ed
+0x667A10	CTaskSimpleGoTo::HasCircledTarget	MATCH	0x667A10-0x667AC4	NaN-only difference in height test	
+0x668060	CTaskSimpleAchieveHeading::ProcessPed	MATCH	0x668060-0x668114	
+0x667F20	CTaskSimpleAchieveHeading::SetUpIK	MATCH	0x667F20-0x66805C	float-vs-x87 single rounding of pos+2*sin	
+0x5BD3B0	CTaskSimpleFight::GetHitSound	MATCH	0x5BD3B0-0x5BD3F0	jump table checked: 1->61, 2->62(default), 3..8->63..68	
+0x692550	CTaskSimpleDuck::DeleteDuckAnimCB	MATCH	0x692550-0x69259D	null-arg early return is an assert in port (release no-op)	
+0x63BEC0	CTaskComplexLeaveCarAndWander::CreateSubTask	MATCH	0x63BEC0-0x63BF8B		
+0x654370	CTaskComplexWalkRoundCar::ControlSubTask	MATCH	0x654370-0x6544E5	NaN-only difference in the moved-vehicle test	
+0x62CCE0	CTaskComplexKillPedOnFootArmed::ControlSubTask	NOT_REACHED	-	already reviewed in ASM-S05e (comments in source); no fresh pass	
+0x621500	CTaskComplexKillPedOnFootArmed::LineOfSightClearForAttack	NOT_REACHED	-	already reviewed in ASM-S05d	
+0x62B840	CTaskComplexKillPedOnFootStealth::ControlSubTask	NOT_REACHED	-	already reviewed in ASM-S06	

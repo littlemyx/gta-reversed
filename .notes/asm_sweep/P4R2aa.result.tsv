@@ -1,0 +1,62 @@
+addr	function	verdict	asm range	note	fix commit
+423de0	CCarCtrl::RegisterVehicleOfInterest	MATCH		compared against exe, 0 differences	
+439a80	CPlaceable::SetOrientation	MATCH		compared against exe, 0 differences	
+4a9810	FxManager_c::DestroyFxSystem	NOT_REACHED		budget	
+4aa2f0	FxSystem_c::Play	NOT_REACHED		budget	
+4aa440	FxSystem_c::AddParticle	NOT_REACHED		budget	
+4b35a0	CEventDamage::AffectsPed	MATCH		compared against exe, 0 differences	
+50a9f0	CCamera::CamShake	NOT_REACHED		budget	
+50bff0	CCamera::Using1stPersonWeaponMode	NOT_REACHED		budget	
+535300	CEntity::GetColModel	NOT_REACHED		budget	
+53f920	CPad::StartShake	FIXED	0x53F920-0x53F996	ShakeDur test was `!=0` not `time > ShakeDur`; NoShakeBeforeThis uint32 not float; NoShakeFreq unsigned	8e4ff513b
+53fb80	CPad::GetSteeringLeftRight	MATCH		compared against exe, 0 differences	
+53fbd0	CPad::GetSteeringUpDown	MATCH		compared against exe, 0 differences	
+53fc10	CPad::GetCarGunUpDown	MATCH		compared against exe, 0 differences	
+53fc50	CPad::GetCarGunLeftRight	MATCH		compared against exe, 0 differences	
+53ff30	CPad::HornJustDown	MATCH		compared against exe, 0 differences	
+53ffe0	CPad::CarGunJustDown	MATCH		compared against exe, 0 differences	
+540040	CPad::GetHandBrake	MATCH		compared against exe, 0 differences	
+540080	CPad::GetBrake	MATCH		compared against exe, 0 differences	
+540180	CPad::GetWeapon	MATCH		compared against exe, 0 differences	
+540250	CPad::WeaponJustDown	MATCH		compared against exe, 0 differences	
+5403f0	CPad::GetAccelerate	MATCH		compared against exe, 0 differences	
+540440	CPad::GetAccelerateJustDown	MATCH		compared against exe, 0 differences	
+540670	CPad::GetTarget	MATCH		compared against exe, 0 differences	
+542a50	CPhysical::ApplyTurnForce	NOT_REACHED		budget	
+542ce0	CPhysical::GetSpeed	NOT_REACHED		budget	
+542dd0	CPhysical::ApplyMoveSpeed	NOT_REACHED		budget	
+542e20	CPhysical::ApplyTurnSpeed	NOT_REACHED		budget	
+542fe0	CPhysical::ApplyGravity	NOT_REACHED		budget	
+543c90	CPhysical::ApplySpringCollision	NOT_REACHED		budget	
+543d60	CPhysical::ApplySpringCollisionAlt	NOT_REACHED		budget	
+54d690	CPhysical::AttachEntityToEntity	FIXED	0x54D690-0x54D91C	m_pEntityIgnoredCollision = new target (exe reads +0xFC after the store); attach target without matrix gets one	a26e65c5f
+54f560	CPlaceable::AllocateMatrix	NOT_REACHED		budget	
+555f80	CRopes::IsCarriedByRope	MATCH		compared against exe, 0 differences	
+562c90	CWanted::Update	MATCH		compared against exe, 0 differences	
+571a00	CEntity::CleanUpOldReference	MATCH		compared against exe, 0 differences	
+571a90	CEntity::PruneReferences	MATCH		compared against exe, 0 differences	
+571b70	CEntity::RegisterReference	MATCH		compared against exe, 0 differences	
+59b390	CMatrix::RotateZ	MATCH		compared against exe, 0 differences	
+59b6a0	CMatrix::Reorthogonalise	NOT_REACHED		budget	
+59c910	CVector::Normalise	MATCH		compared against exe, 0 differences	
+5fb0a0	CPedGroup::FindDistanceToNearestMember	MATCH		compared against exe, 0 differences	
+600b50	CPedIntelligence::SetPedDecisionMakerType	MATCH		compared against exe, 0 differences	
+609560	CPlayerPed::GetPadFromPlayer	MATCH		compared against exe, 0 differences	
+611570	CPopulation::UpdatePedCount	MATCH		compared against exe, 0 differences	
+6a38a0	CAutomobile::ProcessAutoBusDoors	NOT_REACHED		budget	
+6a3a60	CAutomobile::BoostJumpControl	NOT_REACHED		budget	
+6adff0	CAutomobile::ScanForCrimes	NOT_REACHED		budget	
+6b6740	CBike::ResetSuspension	NOT_REACHED		budget	
+6c3ef0	cBuoyancy::ProcessBuoyancy	NOT_REACHED		budget	
+6c4760	CHeli::FindSwatPositionRelativeToHeli	NOT_REACHED		budget	
+6c7d80	CMonsterTruck::ExtendSuspension	NOT_REACHED		budget	
+6d05e0	cTransmission::CalculateDriveAcceleration	NOT_REACHED		budget	
+6d1340	CVehicle::ProcessDelayedExplosion	NOT_REACHED		budget	
+6d21f0	CVehicle::ProcessCarAlarm	MATCH		compared against exe, 0 differences	
+6d2570	CVehicle::ActivateBombWhenEntered	MATCH		compared against exe, 0 differences	
+6d73b0	CVehicle::ProcessBikeWheel	NOT_REACHED		budget	
+6d8470	CVehicle::UsesSiren	MATCH		compared against exe, 0 differences	
+6f0e20	CBoat::PruneWakeTrail	NOT_REACHED		budget	
+734a40	::GetAnimHierarchyFromSkinClump	NOT_REACHED		budget	
+73db40	CWeapon::Update	NOT_REACHED		budget	
+742bf0	CWeaponEffects::MarkTarget	NOT_REACHED		budget	

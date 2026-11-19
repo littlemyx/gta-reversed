@@ -196,7 +196,9 @@ void CTaskComplexWander::UpdateDir(CPed* ped) {
 
     if (newDir != m_nDir) {
         uint8 outDir;
-        UpdatePathNodes(ped, newDir, m_LastNode, m_NextNode, outDir);
+        // ASM-P4R6d: exe 0x669E65-0x669E8C: the call gets stack COPIES of m_LastNode / m_NextNode, the members are not modified by it (port passed them by reference)
+        CNodeAddress lastNodeCopy = m_LastNode, nextNodeCopy = m_NextNode;
+        UpdatePathNodes(ped, newDir, lastNodeCopy, nextNodeCopy, outDir);
 
         uint8 currentDir = m_nDir;
         uint8 theDir = outDir;

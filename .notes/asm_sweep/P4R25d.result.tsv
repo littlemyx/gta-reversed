@@ -1,0 +1,19 @@
+addr	function	verdict	asm range	note	fix commit
+0x741C9D	CWeapon::FireM16_1stPerson (52e51c6c8)	CONFIRMED	0x741C60-0x741D3F	target = origin + front*3*range; x/y/z rounding spills re-derived from asm (offX float, offY ext, offZ float after *3, then fadd with origin)	
+0x73E330	CWeapon::FindNearestTargetEntityWithScreenCoors hunk (52e51c6c8)	CONFIRMED	0x73E2B0-0x73E3AD	sqrt(dy^2+dx^2) and (dz^2+dy^2)+dx^2 vs range^2 in ext precision, closest stored as float; compare direction verified	
+0x739B60	CShotInfo::Initialise (fc4dc6ef6)	CONFIRMED	0x739BF5-0x739C16	fst stores rounded copy, fadd 0.005 continues on unrounded st0	
+0x741360	CWeapon::FireProjectile HS crosshair (5d952a7b7)	CONFIRMED	0x74178B-0x7417AA	only bytes 0xC8A84C-E written, alpha 0xC8A84F untouched	
+0x4555A0	CPickups::TryToMerge_WeaponType	MATCH	0x4555A0-0x455677	5.5f, strict <, (dz^2+dy^2)+dx^2 (shorts*0.125 exact in float)	
+0x44FEE0	CPathFind::FindNodePairClosestToCoors	MATCH	0x44FEE0-0x450315	weighted score, float-spilled best, link loop, heading fpatan all identical	
+0x452760	CPathFind::ComputeRoute	MATCH	0x452760-0x45281B	DoPathSearch arg order/constants, 8-entry copy	
+0x44DED0	CPathFind::AddInteriorLink	MATCH	0x44DED0-0x44DF2C	first negative of 6 (or entry 6) per row, both directions	
+0x451300	CPathFind::ReturnInteriorNodeIndex	MATCH	0x451300-0x45134D	unused; port has a phantom first param (exe takes 2 args) - no callers	
+0x452C80	CPathFind::SwitchRoadsOffInArea	MATCH	0x452C80-0x452EEE	R* shift bug kept (StrayAreas fix off in run build), store order verified	
+0x452820	CPathFind::SwitchRoadsOffInAreaForOneRegion	MATCH	0x452820-0x4529DE	NaN-skip, bBackToOriginal flag compare, next1/next2 chains	
+0x44E000	CPathFind::AddDynamicLinkBetween2Nodes_For1Node	MATCH	0x44E000-0x44E18B	signed compares, 12-stride free-block search, dynamic link tables	
+0x435830	CCarCtrl::SteerAICarWithPhysicsFollowPath_Racing	NOT_REACHED		budget	
+0x452270	CPathFind::CompleteNewInterior	NOT_REACHED		budget	
+0x44D080	CPathFind::Init	NOT_REACHED		budget	
+0x422B20	CCarCtrl::SteerAICarBlockingPlayerForwardAndBack	NOT_REACHED		budget	
+0x425B30	CCarCtrl::TestCollisionBetween2MovingRects	NOT_REACHED		budget	
+0x73DB40	CWeapon::Update	NOT_REACHED		budget	

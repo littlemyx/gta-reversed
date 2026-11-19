@@ -1640,7 +1640,7 @@ void CWorld::StopAllLawEnforcersInTheirTracks() {
 
 // 0x566C90
 CVehicle* CWorld::FindUnsuspectingTargetCar(CVector point, CVector playerPosn) {
-    float nearestDist2D = std::numeric_limits<float>::max();
+    float nearestDist2D = std::bit_cast<float>(0x461C3F9Au); // exe 0x566C93 (9999.9f), not FLT_MAX
     CVehicle* nearestVeh{};
     for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValidReverse(), GetVehiclePool()->GetAllValid())) {
         if (!veh.IsCreatedBy(eVehicleCreatedBy::RANDOM_VEHICLE) || !veh.IsSubAutomobile()) {

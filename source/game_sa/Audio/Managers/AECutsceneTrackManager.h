@@ -49,6 +49,9 @@ public:
     void PreloadBeatTrack(int16 trackId, bool wait);
     void PreloadCutsceneTrack(int16 trackId, bool wait);
     void StartTrackPlayback() const;
+#ifdef NOTSA_STATEHASH
+    void ServiceNoAudio(); //!< RR harness (NOTSA_RR_NOAUDIO=1): steps the track state without the audio hardware (virtual clock)
+#endif
 };
 
 VALIDATE_SIZE(CAECutsceneTrackManager, 0x30);

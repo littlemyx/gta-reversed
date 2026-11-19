@@ -1,6 +1,7 @@
 #include "StdInc.h"
 
 #include "app_game.h"
+#include "AECutsceneTrackManager.h"
 #include "LoadingScreen.h"
 #include "PlantMgr.h"
 #include "Shadows.h"
@@ -338,6 +339,7 @@ void Idle(void* param) {
     CGame::Process();
     SH10_MARK("Idle:AudioEngine.Service");
 #ifdef NOTSA_STATEHASH
+    if (notsa::rr::NoAudio()) { AECutsceneTrackManager.ServiceNoAudio(); } // harness stub: beat/cutscene track state machine on the game clock
     if (!notsa::rr::NoAudio()) // NOTSA_RR_NOAUDIO=1: the audio engine is not serviced at all (the cross-build comparison does not depend on how a DirectSound device is emulated)
     { notsa::rr::RandIsolate iso; // NOTSA_RR_GAMEPLAY_RAND=1: audio-time rand() draws do not touch the gameplay stream
 #endif

@@ -131,6 +131,29 @@ void CAECutsceneTrackManager::Service(int32 trackPlayTime) {
     }
 }
 
+#ifdef NOTSA_STATEHASH
+// RR harness (NOTSA_RR_NOAUDIO=1): CAudioEngine::Service() is never run, so the track state machine (Service 0x4DBFB0) would never leave S1.
+// Same transitions as Service() with the hardware answers emulated on the game clock: S0->S1, S1->S2 one frame later (play time -2), a play request
+// starts playback, the track ends (-6) after kNoAudioTrackMs, a stop goes S4/S5/S6->S7->S8 one step per frame. Harness only; the normal path is untouched.
+void CAECutsceneTrackManager::ServiceNoAudio() {
+    constexpr uint32 kNoAudioTrackMs = 3000;
+    static uint32 playStart = 0;
+    switch (m_nStatus) {
+    case S0: m_nStatus = S1; break;
+    case S1: m_nStatus = S2; break;
+    case S2:
+        if (m_bPlayRequest) { m_nStatus = STATE_PLAYING; m_bPlayRequest = false; playStart = CTimer::GetTimeInMS(); }
+        break;
+    case STATE_PLAYING:
+        if (CTimer::GetTimeInMS() - playStart >= kNoAudioTrackMs) { m_nStatus = S8; }
+        break;
+    case STATE_STOP_REQUESTED: case S5: case S6: m_nStatus = S7; break;
+    case S7: m_nStatus = S8; break;
+    default: break;
+    }
+}
+#endif
+
 // 0x4DBF10
 void CAECutsceneTrackManager::StartTrackPlayback() const {
     AEAudioHardware.DisableBassEq();

@@ -82,7 +82,7 @@ CTask* CTaskComplexUseScriptedBrain::ControlSubTask(CPed* ped) {
     const auto brainsTask = CScriptedBrainTaskStore::GetTask(ped);
 
     // Task is same, or can't abort it..
-    if (brainsTask == m_currTask || !m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_LEISURE, nullptr)) {
+    if (brainsTask == m_currTask || !m_pSubTask->MakeAbortable(ped, ABORT_PRIORITY_URGENT, nullptr) /* exe 0x635B95-0x635B9A: push 0 (event); push 1 (priority = URGENT); port: LEISURE */) {
         return m_pSubTask;
     }
 

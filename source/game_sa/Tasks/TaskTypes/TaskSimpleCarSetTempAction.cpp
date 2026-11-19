@@ -33,6 +33,7 @@ bool CTaskSimpleCarSetTempAction::MakeAbortable(CPed* ped, eAbortPriority priori
     if (CTaskSimpleCarDrive::MakeAbortable(ped, priority, event)) {
         if (m_pVehicle) {
             m_pVehicle->m_autoPilot.ClearTempAct();
+            m_pVehicle->m_autoPilot.m_nTempActionTime = CTimer::GetTimeInMS(); // 0x63D75A: the exe also stamps the current time (dword at autopilot+0x1C)
         }
         return true;
     }

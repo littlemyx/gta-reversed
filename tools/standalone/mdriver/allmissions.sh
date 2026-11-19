@@ -41,7 +41,9 @@ cd "$DATA" || exit 2
 for IDX in $LIST; do
   awk -F'\t' -v i="$IDX" '$1==i{f=1} END{exit !f}' "$OUT/summary.tsv" && { echo "skip $IDX (done)"; continue; }
   MN="$(mname "$IDX")"; W="$OUT/w$IDX"; mkdir -p "$W"
-  printf '%s\nmission:%s\nwait:3600000\ncmd:quit\n' "$HEAD" "$IDX" > "$W/route.in"; expand "$W/route.in" > "$W/route.txt"
+  # AD4 launch context (TS launch.ts): 36/48 CESAR1 in a car (492), 132 MTBIKER (510), 133 STUNT (481): CJ at the wheel; 71 DSKOOL: area 4
+  LAUNCH="# no launch context"; case "$IDX" in 36|48) LAUNCH=$'cmd:mdlaunch:492\nwait:400';; 132) LAUNCH=$'cmd:mdlaunch:510\nwait:400';; 133) LAUNCH=$'cmd:mdlaunch:481\nwait:400';; 71) LAUNCH=$'cmd:mdarea:4\nwait:100';; esac
+  printf '%s\n%s\nmission:%s\nwait:3600000\ncmd:quit\n' "$HEAD" "$LAUNCH" "$IDX" > "$W/route.in"; expand "$W/route.in" > "$W/route.txt"
   own_kill_in_dir gta_reversed "$DATA"
   rm -rf "$UD"/* logs standalone*.log; rm -f gta_reversed.exe; cp "$EXE" gta_reversed.exe
   rm -f "$W"/res "$W"/*.rc

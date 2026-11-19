@@ -65,7 +65,8 @@ int32 CStreamedScripts::FindStreamedScriptQuiet(const char* scriptName) {
 
 // 0x470810
 int16 CStreamedScripts::GetProperIndexFromIndexUsedByScript(int16 scmIndex) {
-    for (const auto&& [i, scr] : GetActiveScriptsWithIndex()) {
+    // exe 0x470810: scans ALL 82 slots (not only the registered m_nCountOfScripts); unused slots hold -1, so an index of -1 finds the first unused slot
+    for (const auto&& [i, scr] : m_aScripts | rngv::enumerate) {
         if (scr.m_IndexUsedByScriptFile == scmIndex) {
             return (int16)(i);
         }

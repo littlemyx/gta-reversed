@@ -650,6 +650,7 @@ bool Cmd(const char* name, const std::string& args) {
     }
     if (!std::strcmp(name, "mdwped") || !std::strcmp(name, "mdwveh") || !std::strcmp(name, "mdwother")) { // AD4: actions.ts warp / warpOther (z <= -100 = the ground; a ped lands at z + 1.1, a car at z)
         CEntity* tgt = ped; bool isPed = !std::strcmp(name, "mdwped"); std::string rest = args;
+        if (!std::strcmp(name, "mdwveh")) { if (ped->bInVehicle && ped->m_pVehicle) tgt = ped->m_pVehicle; else isPed = true; } // CR3: mdwveh = warp the CAR the player is in; tgt stayed the PED and was static_cast to CVehicle (NaN player position -> script wanted 4 + cop flood, missions 24/25/27-31/67/80 crash)
         if (!std::strcmp(name, "mdwother")) { const int kind = std::atoi(rest.c_str()); rest = rest.substr(rest.find(':') + 1); const int h = std::atoi(rest.c_str()); rest = rest.substr(rest.find(':') + 1); isPed = kind == 0; tgt = isPed ? (CEntity*)CPools::GetPed(h) : (CEntity*)CPools::GetVehicle(h); if (!tgt) return true; }
         float w[3]{}; std::sscanf(rest.c_str(), "%f:%f:%f", w, w + 1, w + 2);
         CStreaming::LoadScene(CVector{ w[0], w[1], 0.f }); CStreaming::LoadSceneCollision(CVector{ w[0], w[1], 0.f });

@@ -2991,7 +2991,7 @@ bool IsCharGettingInToACar(CPed& ped) {
  * @returns {int} areaId
  */
 uint32 GetCharAreaVisible(CPed& ped) {
-    return ped.GetAreaCode() != eAreaCodes::AREA_CODE_NORMAL_WORLD;
+    return (uint32)ped.GetAreaCode(); // exe 0x47B145: the raw area code byte (ped+0x2F), not a bool
 }
 
 /*
@@ -3039,12 +3039,16 @@ void ShutCharUpForScriptedSpeech(CPed* ped, bool disable) {
  * @param {Char} other
  */
 bool IsCharTouchingChar(CPed& ped, CPed& other) {
-    const auto GetRelevantEntity = [](CPed& p) -> CPhysical* {
-        return p.IsInVehicle()
-            ? p.m_pVehicle->AsPhysical()
-            : p.AsPhysical();
-    };
-    return GetRelevantEntity(ped)->GetHasCollidedWith(GetRelevantEntity(other));
+    // exe 0x47BB17: the vehicles (null if the ped isn't in one) decide which collision records are asked, and in which direction
+    CPhysical* const veh1 = ped.bInVehicle ? ped.m_pVehicle : nullptr;
+    CPhysical* const veh2 = other.bInVehicle ? other.m_pVehicle : nullptr;
+    if (veh1) {
+        if (!veh2) {
+            return other.GetHasCollidedWith(veh1);
+        }
+        return veh1->GetHasCollidedWith(veh2) || veh2->GetHasCollidedWith(veh1);
+    }
+    return ped.GetHasCollidedWith(veh2 ? (CEntity*)veh2 : &other);
 }
 
 /*

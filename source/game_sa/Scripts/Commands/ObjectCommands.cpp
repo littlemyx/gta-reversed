@@ -77,7 +77,12 @@ CVector GetObjectCoordinates(CObject& object) {
 }
 
 void SetObjectCoordinates(CObject& object, CVector posn) {
-    object.SetPosn(posn);
+    // exe 0x47D5C9: z <= -100 => ground z at (x,y), Teleport (vtbl+0x38), then clear the space
+    if (posn.z <= -100.f) {
+        posn.z = CWorld::FindGroundZForCoord(posn.x, posn.y);
+    }
+    object.Teleport(posn, false);
+    CTheScripts::ClearSpaceForMissionEntity(posn, &object);
 }
 
 CVector GetObjectVelocity(CObject& object) {
@@ -85,7 +90,7 @@ CVector GetObjectVelocity(CObject& object) {
 }
 
 void SetObjectVelocity(CObject& object, CVector velocity) {
-    object.SetVelocity(velocity / 50.0f);
+    object.SetVelocity(velocity * 0.02f); // exe: *0.02f (0x858B38)
 }
 
 float GetObjectHeading(CObject& object) {

@@ -408,7 +408,7 @@ CTask* CTaskComplexFollowPointRoute::CreateFirstSubTask(CPed* ped) {
                     continue; // Ped is in the opposite direction compared to the next point relative to the current point.
                 }
 
-                if (thisToNextPt.SquaredMagnitude() <= sq(dot)) { // Simplified the square-root by squaring both sides
+                if (std::sqrt((x87d)thisToNextPt.SquaredMagnitude()) <= (x87d)dot) { // exe 0x66E3F0..: fsqrt (PC24) of the stored squared length vs. the stored dot, NOT `sqMag <= dot^2` (the squaring rounds differently at the boundary)
                     continue;
                 }
 

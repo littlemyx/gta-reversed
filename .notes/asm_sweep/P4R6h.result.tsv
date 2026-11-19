@@ -1,0 +1,24 @@
+addr	function	verdict	asm range	note	fix commit
+0x4AFA90	CEventAcquaintancePedHateBadlyLit::AffectsPed	MATCH	0x4AFA90-0x4AFB32	P4R6g fix CONFIRMED (jl signed; tail fcomp >=1.0 ok)	
+0x4B5120	CEventGunShotWhizzedBy::AffectsPed	MATCH	0x4B5120-0x4B5230	P4R6g fix CONFIRMED (z,y,x dot, x/y distance; float == PC24 so no x87d needed)	
+0x4B2270	CEventAreaCodes::AffectsPed	MATCH	0x4B2270-0x4B2344	tail (area code 13) verified	
+0x6666A0	CTaskComplexProstituteSolicit::CreateFirstSubTask	MATCH	0x6666A0-0x666778	tail verified	
+0x4ACE30	CEventObjectCollision::AffectsPed	MATCH	0x4ACE30-0x4ACE74		
+0x4B53C0	CEventSeenPanickedPed::AffectsPed	MATCH	0x4B53C0-0x4B545E		
+0x4AF760	CEventVehicleToSteal::AffectsPed	MATCH	0x4AF760-0x4AF814		
+0x4B1050	CEventOnFire::AffectsPed	MATCH	0x4B1050-0x4B10BD		
+0x4AC780	CEventGunShot::TakesPriorityOver	MATCH	0x4AC780-0x4AC806		
+0x4AF8F0	CEventAcquaintancePed::TakesPriorityOver	FIXED	0x4AF8F0-0x4AF962	null ref-event ped counts as not-player	eb90291ab
+0x4B1A90	CEventVehicleDamage::IsCriminalEvent	MATCH	0x4B1A90-0x4B1AD8		
+0x4BC580	CEventHandlerHistory::TakesPriorityOverCurrentEvent	MATCH	0x4BC580-0x4BC5EB		
+0x4B8B90	CEventHandlerHistory::IsRespondingToEvent	MATCH	0x4B8B90-0x4B8BE5		
+0x4B1420	CEventInWater::TakesPriorityOver	FIXED	0x4B1420-0x4B147E	KNOCK_OFF_BIKE/DAMAGE true unconditionally	36e25f96a
+0x4BC370	CEventHandler::IsTemporaryEvent	MATCH	0x4BC370-0x4BC3D6	17 event ids checked against enum	
+0x4BC4B0	CEventHandlerHistory::RecordCurrentEvent	MATCH	0x4BC4B0-0x4BC543		
+0x4B0EF0	CEventLeaderEnteredCarAsDriver::AffectsPedGroup	MATCH	0x4B0EF0-0x4B0F5E		
+0x5F7A60	CGroupEventHandler::IsKillTaskAppropriate	MATCH	0x5F7A60-0x5F7AC8		
+0x4AB840	CEventGroup::HasScriptCommandOfTaskType	MATCH	0x4AB840-0x4AB894		
+0x4AC5A0	CEventEditableResponse::TriggerLookAt	MATCH	0x4AC5A0-0x4AC600		
+0x678900	CTaskComplexFallAndGetUp::CreateSubTask	MATCH	0x678900-0x6789CB		
+0x65C3C0	CTaskComplexSmartFleePoint::SetFleePosition	MATCH	0x65C3C0-0x65C425		
+0x4AD9C0	CEventDamage::From	MATCH	0x4AD9C0-0x4ADA6C		

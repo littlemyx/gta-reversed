@@ -238,7 +238,11 @@ bool CPickup::Update(CPlayerPed* player, CVehicle* vehicle, int32 playerId) {
         const auto elapsed = CTimer::GetTimeInMS() - m_nRegenerationTime;
         m_nRegenerationTime = CTimer::GetTimeInMS();
 
-        if (DistanceBetweenPoints(GetPosn(), FindPlayerCoors()) > 10.0f) {
+        // 0x457502-0x457531: the inlined distance is sqrt((dz^2 + dy^2) + dx^2) (differences pushed x, y, z: z is squared first), `>` (fcomp, test ah,0x41)
+        const CVector playerPos = FindPlayerCoors();
+        const CVector pickupPos = GetPosn();
+        const float dx = playerPos.x - pickupPos.x, dy = playerPos.y - pickupPos.y, dz = playerPos.z - pickupPos.z;
+        if ((float)std::sqrt(((x87d)dz * dz + (x87d)dy * dy) + (x87d)dx * dx) > 10.0f) {
             m_fRevenueValue += ((float)elapsed * m_nMoneyPerDay) / 1'440'000.0f; // 1,440,000 = 1 game day (24mins) in ms
         }
         m_fRevenueValue = std::min(m_fRevenueValue, (float)m_nAmmo);

@@ -491,10 +491,15 @@ void CExplosion::Update() {
             case eExplosionType::EXPLOSION_QUICK_CAR:
             case eExplosionType::EXPLOSION_BOAT: {
                 if (exp.m_pVictim && CGeneral::GetRandomNumber() % 32 == 0) {
-                    CVector rndOffset = {CGeneral::GetRandomNumberInRange(-0.5f, 0.5f), CGeneral::GetRandomNumberInRange(-0.5f, 0.5f), 0.0f};
+                    // 0x73772E / 0x737741: the exe draws y first, then x (right-to-left argument order), and lifts the fire start by 2.0 (0x7377A9)
+                    const float rndY = CGeneral::GetRandomNumberInRange(-0.5f, 0.5f);
+                    const float rndX = CGeneral::GetRandomNumberInRange(-0.5f, 0.5f);
+                    CVector rndOffset = {rndX, rndY, 0.0f};
                     rndOffset.Normalise();
                     rndOffset *= CGeneral::GetRandomNumberInRange(1.0f, 2.0f);
-                    CCreepingFire::TryToStartFireAtCoors(exp.m_vecPosition + rndOffset, 0, true, false, 10.0f);
+                    CVector firePos = exp.m_vecPosition + rndOffset;
+                    firePos.z += 2.0f;
+                    CCreepingFire::TryToStartFireAtCoors(firePos, 0, true, false, 10.0f);
                 }
                 if (CTimer::GetFrameCounter() % 2) {
                     CPointLights::AddLight(ePointLightType::PLTYPE_POINTLIGHT, exp.m_vecPosition, {}, 15.0f, 1.0f, 0.7f, 0.5f, 0, true, nullptr);

@@ -3089,7 +3089,7 @@ void CEventHandler::ComputeShotFiredWhizzedByResponse(CEventGunShotWhizzedBy* e,
     m_EventResponseTask = [&]() -> CTask* {
         const auto esrc = e->GetSourceEntity();
         if (!esrc) {
-            return nullptr;
+            return m_EventResponseTask; // 0x4BBE5B: je 0x4BBE94, the response task is left untouched
         }
         switch (e->m_TaskId) {
         case TASK_NONE:

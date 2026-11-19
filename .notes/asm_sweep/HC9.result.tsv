@@ -1,0 +1,19 @@
+function	exe_addr	port_site	exe_op	port_op	verdict
+CTaskSimpleCarDrive::UpdateBopping	0x63C900	TaskSimpleCarDrive.cpp:155	idiv + (and 0x80000001, jns fixup) signed %2	signed int32 / and % 2	MATCH
+CTaskSimpleCarDrive::StartBopping	0x642760	TaskSimpleCarDrive.cpp:201	same signed idiv/%2 pattern as UpdateBopping (tail not read line by line)	signed int32 / and % 2	MATCH
+CTaskComplexWander::UpdateDir	0x669DA0	TaskComplexWander.cpp:213	movzx bytes, sub, add 8, and 0x80000007 + jns fixup, cmp al,3 ja	(int)(a-b+8)%8 <= 3u	MATCH
+CTheScripts::UseSwitchJumpTable	0x4703C0	TheScripts.cpp:1703	uint8 ptr1/ptr2, sar eax,1	uint32 (p1+p2)/2	harmless (table <= 75 entries)
+CAESound::UpdatePlayTime	0x4EF2E0	AESound.cpp:193	movsx word, cdq idiv	int16 % int16 (promoted)	MATCH
+CTaskComplexWalkRoundCar::ComputeRouteRoundSmallCar	0x6544F0	TaskComplexWalkRoundCar.cpp:142	shl dl,4 / sar eax,4 (sign-extend 4-bit)	(int8)(x<<4)>>4	MATCH
+CWaterLevel::CalculateWavesOnlyForCoordinate2	0x6E7210	WaterLevel.cpp:1786	unsigned div ecx on time delta, sar 1 + and 7	uint32 % period	MATCH
+CBirds::Render	0x712810	Birds.cpp:300	unsigned div ecx (uint32 time % wingStillness)	uint32 %	MATCH
+CTimeCycle::CalcColoursForPoint	0x5603D0	TimeCycle.cpp:491	no idiv in range, TunnelWeather const 9	int % int	harmless (non-negative)
+CDamageManager::GetLightStatus/GetPanelStatus/GetAeroplaneCompStatus	0x6C2130/0x6C2180/0x6C2300	DamageManager.cpp:210,308,318	shr by (unsigned) count, and mask	unsigned shifts	MATCH
+FxMemoryPool_c::GetMem	0x4A9CA0	FxMemoryPool.cpp:43	unsigned div	int32 %	harmless (non-negative position)
+CAEMP3BankLoader::GetSoundBuffer	0x4E0280	AEMP3BankLoader.cpp:93	(sid+1)%N	uint16 promoted	harmless
+CRadar::GetActualBlipArrayIndex	0x582870	Radar.cpp:238	uint16 truncation	static_cast<uint16>(blip>>16)	harmless
+CAnimBlendAssociation::AllocateAnimBlendNodeArray	0x4CE9F0	AnimBlendAssociation.cpp:170	((n-1)>>6)+1<<6 unsigned	uint32 shift	harmless
+CPopCycle::PickPedMIToStreamInForCurrentZone	0x60FFD0	PopCycle.cpp:349	(slot+1)%npeds	int % int, loop runs only if npeds>0	harmless
+CAEVehicleAudioEntity::RequestBankSlot	0x4F4D10	AEVehicleAudioEntity.cpp:370	(idx+1)%numSlots	int16 result	harmless
+CAutomobile::PlayCarHorn	0x6A3770	Automobile.cpp:2843	and eax,7 on int8	fixed in fa566305a (HC7)	FIXED-earlier
+~125 functions in candidate list (grep % / >> sites in RYDER_1-hit functions)	various	cands.tsv	already MATCH/FIXED in earlier sweeps (instruction-level)	-	not re-read

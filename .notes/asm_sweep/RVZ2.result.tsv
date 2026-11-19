@@ -1,0 +1,5 @@
+addr	function	verdict	asm range	note	fix commit
+0x5EC500	CPedAttractor::GetTaskForPed	CONFIRMED	0x5EC500-0x5EC5AF	erase only when found; marks used, returns task	0b57ed9ac
+0x61A4B0	CTask::IsTaskPtr	CONFIRMED	0x61A4B0-0x61A4F8	used-slot walk, pointer equality	07ad3d1ec
+0x6467F0	CTaskSimpleCarGetIn::FinishAnimCarGetInCB	CONFIRMED	0x6467F0-0x64680B	anim+0x1C (m_CurrentTime)=-1000.0f only if anim non-null; field +0xC cleared	e0f3a2307
+0x63D740	CTaskSimpleCarSetTempAction::MakeAbortable	CONFIRMED	0x63D740-0x63D77B	autopilot+0x1B cleared, +0x1C = timer ms (0xB7CB84)	7946fc426

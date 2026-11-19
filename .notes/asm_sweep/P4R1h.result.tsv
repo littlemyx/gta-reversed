@@ -1,0 +1,40 @@
+addr	function	verdict	asm range	note	fix commit
+0x47B26F	HasCharSpottedCharInFront	CONFIRMED	0x47B26F-0x47B2B0	push 0 isSpotted=false (P4R1g fix correct)	-
+0x47A089	IsCharAttachedToAnyCar	CONFIRMED	0x47A089-0x47A0C5	m_pAttachedTo (+0xFC) type==vehicle (fix correct)	-
+0x474E43	PlaneAttackPlayerUsingDogFight	CONFIRMED	0x474E43-0x474E81	byte store 0x3F unless 0x39/0x3A; time-to-start untouched (fix correct)	-
+0x4760AB	AreTextLabelsEqual	MATCH	0x4760AB-0x4760F8	exe calls strncmp(a,b,16) (0x8214D0, case-sensitive) = 16-char string compare	-
+0x477017	DrawWindow	FIXED	0x477017-0x477172	cornerA.y=p1*sy, cornerB.y=p3*sy (port had Y swapped via CRect top/bottom)	7de1b5e12
+0x47B8CE	IncrementIntStatNoMessage	FIXED	0x47B8CE-0x47B8EB	int param fild (port read int bits as float)	c908b4988
+0x4730F4	DisplayTextWithFloat	FIXED	0x4730F4-0x47322C	precision is int (fild); port declared float	9164c8c1d
+0x466EFB	MultInPlace<float>	MATCH	0x466EFB	compared (noise: u16 ids / bool vs byte)	-
+0x466ACA	AddInPlace<int32>	MATCH	0x466ACA	compared (noise: u16 ids / bool vs byte)	-
+0x4670E4	DivInPlace<int32>	MATCH	0x4670E4	compared (noise: u16 ids / bool vs byte)	-
+0x467079	DivInPlace<float>	MATCH	0x467079	compared (noise: u16 ids / bool vs byte)	-
+0x467429	AssignTo<float,int32>	MATCH	0x467429	compared (noise: u16 ids / bool vs byte)	-
+0x4673CE	AssignTo<int32,float>	MATCH	0x4673CE	compared (noise: u16 ids / bool vs byte)	-
+0x4666CF	IsEqual<float>	MATCH	0x4666CF	compared (noise: u16 ids / bool vs byte)	-
+0x467196	AddTimedStore	MATCH	0x467196	compared (noise: u16 ids / bool vs byte)	-
+0x492142	RegisterStat<int32>	MATCH	0x492142	compared (noise: u16 ids / bool vs byte)	-
+0x494470	GetStat<float>	MATCH	0x494470	compared (noise: u16 ids / bool vs byte)	-
+0x49209D	IncrementStat<float>	MATCH	0x49209D	compared (noise: u16 ids / bool vs byte)	-
+0x4921CD	SetStat<float>	MATCH	0x4921CD	compared (noise: u16 ids / bool vs byte)	-
+0x4920C0	DecrementStat<int32>	MATCH	0x4920C0	compared (noise: u16 ids / bool vs byte)	-
+0x473DD1	SetTextEdge	MATCH	0x473DD1	compared (noise: u16 ids / bool vs byte)	-
+0x4832BB	PrintWithNumbersBig<2>	MATCH	0x4832BB	compared (noise: u16 ids / bool vs byte)	-
+0x479F21	DrawOddJobTitleBeforeFade	MATCH	0x479F21	compared (noise: u16 ids / bool vs byte)	-
+0x47BA32	SetHasBeenOwnedForCarGenerator	MATCH	0x47BA32	compared (noise: u16 ids / bool vs byte)	-
+0x46E55E	DrawSpriteWithRotation	MATCH	0x46E55E	compared (noise: u16 ids / bool vs byte)	-
+0x48DA4A	IsCharInAnyPoliceVehicle	MATCH	0x48DA4A	compared (noise: u16 ids / bool vs byte)	-
+0x491298	IsCharInTaxi	MATCH	0x491298	compared (noise: u16 ids / bool vs byte)	-
+0x46994E	IsScoreGreater	MATCH	0x46994E	compared (noise: u16 ids / bool vs byte)	-
+0x48A3D2	GetDebugCameraCoordinates	MATCH	0x48A3D2	compared (noise: u16 ids / bool vs byte)	-
+0x48A766	GetDebugCameraPointAt	MATCH	0x48A766	compared (noise: u16 ids / bool vs byte)	-
+0x46ECA2	SetZonePopulationType	MATCH	0x46ECA2	compared (noise: u16 ids / bool vs byte)	-
+0x46ED05	SetZoneDealerStrength	MATCH	0x46ED05	compared (noise: u16 ids / bool vs byte)	-
+0x4718A9	SetZonePopulationRace	MATCH	0x4718A9	compared (noise: u16 ids / bool vs byte)	-
+0x48175F	SetPlayerNeverGetsTired	MATCH	0x48175F	compared (noise: u16 ids / bool vs byte)	-
+0x48D08F	HasCharBeenDamagedByCar	MATCH	0x48D08F	compared (noise: u16 ids / bool vs byte)	-
+0x4802C4	GetRandomCharInZone	NOT_REACHED	-	-	-
+0x48C589	CSetPieces::AddOne	NOT_REACHED	-	-	-
+0x489921	LoadAndLaunchMissionInternal	NOT_REACHED	-	-	-
+0x497DE8	SetTextLabel<16>	NOT_REACHED	-	-	-

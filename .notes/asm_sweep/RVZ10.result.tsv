@@ -1,0 +1,5 @@
+addr	function	verdict	asm range	note	fix commit
+0x615DC0	CPopulation::ManageObject	MATCH	0x615DC0-0x615FEF	HC8g d771f35e4 confirmed: z,y,x sum; towel 64.5/35, 120, 54.5/25, dummy 80/750 strictness and NaN	
+0x54DE2B	CPhysical::ProcessShift (m_fMovingSpeed)	MATCH	0x54DDFE-0x54DE2D	ce7485d38 confirmed: unrounded diffs, x,y,z	
+0x54E629	CPhysical::ProcessCollision site 442	FIXED	0x54E5B1-0x54E641	shared tail with site 522; port used rounded float diffs	HEAD
+0x54E629	CPhysical::ProcessCollision site 522	FIXED	0x54E6B2->0x54E5DA	same exe tail	HEAD

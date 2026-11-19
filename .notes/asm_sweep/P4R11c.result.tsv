@@ -1,0 +1,48 @@
+addr	function	verdict	asm range	note	fix commit
+0x6CB7C0	CPlane::ProcessFlyingCarStuff	MATCH	whole	16 draws = Rand01 lambda uses	-
+0x614720	CPopulation::AddToPopulation	MATCH	whole	exe inlines AddToPopulationDetail helpers (WanderCop dir, gang/peds/couple placement)	-
+0x673D00	CTaskComplexWander::GetWanderTaskByPedType	MATCH	whole	5 per-case copies of the dir draw, 1 executed	-
+0x48E610	CTaskComplexWanderCriminal::ctor	MATCH	whole	exe=0 draws; heuristic overrun	-
+0x728DA0	CWaterCannon::Update_OncePerFrame	MATCH	whole	CVector::Random inlined (3 draws each): 1+3+3+3=10	-
+0x72AF70	CWeather::AddRain/streaks	MATCH	whole	9 draws: Random(0,5) x3 + 4 + 2	-
+0x6DE880	CVehicle::AddWheelSmoke	MATCH	whole	AddTrailOfSmoke lambda inlined at 2 sites + 4	-
+0x73DF00	CVehicle::FireTankGun	MATCH	whole	FireFromGun lambda x2 (3 draws each)	-
+0x4BCC30	CEventHandler::ComputeDraggedOutCarResponse	MATCH	whole	CreateStealCarBackSeq lambda inlined 3x	-
+0x71AA10	CFallingGlassPane::Update	MATCH	whole	4-iteration loop unrolled	-
+0x50D930	CHandShaker::Process	MATCH	whole	3-iteration loop unrolled + twitch + CVector::Random(3)	-
+0x590EE0	FurnitureSubGroup_c::GetRandomFurniture	MATCH	whole	second draw belongs to the next function (0x590FD0)	-
+0x5FD330	CPedGroupPlacer::PlaceRandomGroup	MATCH	whole	PlacePedsInCircle inlined (2 jitter draws)	-
+0x5DC290	CPlantLocTri::Add	MATCH	whole	rng::generate over 3 seeds unrolled	-
+0x60FBD0	CPopCycle::PickPedMIToStreamInForCurrentZone	MATCH	whole	4-element chance loop unrolled	-
+0x612710	CPopulation::AddPed	MATCH	whole	GetWanderTaskByPedType inlined for cop (0x612A54)	-
+0x69BB80	CTaskAllocatorKillOnFoot	MATCH	whole	draw at 0x69BF86 outside disasm sweep, cited in port	-
+0x41C9D0	CCarAI::FindPoliceCarMissionForWantedLevel	MATCH	whole	switch cases duplicated, 1 draw executed	-
+0x6C25D0	CDamageManager::FuckCarCompletely	MATCH	whole	ProgressPanelDamage inlined in the 3x loop	-
+0x6FD5B0	CCustomCarPlateMgr::GeneratePlateText	MATCH	whole	7 chars = 7 draws	-
+0x6B7280	CBike::ProcessRiderAnims	MATCH	whole	2-axis loop unrolled	-
+0x593FC0	Interior_c::FurnishBedroom	MATCH	whole	5 PlaceItem draws + roll + chance; branches duplicated	-
+0x596930	Interior_c::FurnishLivingRoom	MATCH	whole	RandBelow loops unrolled	-
+0x6A9680	CAutomobile::ProcessHarvester	MATCH	whole	x/y velocity loop unrolled	-
+0x63F970	CTaskComplexEnterCar::CreateNextSubTask	MATCH	whole	ternary branches duplicated	-
+0x65DFF0	CTaskComplexGangLeader::CreateNextSubTask	MATCH	whole	RandScaled lambda x4	-
+0x682630	CTaskComplexPartnerGreet	MATCH	whole	4 RandDuration + rand	-
+0x620660	CTaskSimpleChoking::UpdateChoke	MATCH	whole	third draw is the next function	-
+0x63C500	CTaskSimpleCarDrive	MATCH	whole	second draw is the next function	-
+0x429300	CCarCtrl::PlaneAI-turn	MATCH	whole	left/right turns share the &0x1FF case in the exe	-
+0x424210	CCarCtrl::PickNextNodeRandomly	MATCH	whole	InitSequence (0x421740) inlined: rand%n and rand&0x10	-
+0x430050	CCarCtrl::GenerateOneRandomCar	MATCH	whole	SetCruiseSpeed (5 float draws, 0x4306E8) and helpers inlined	-
+0x59D570	BreakObject_c::Add	MATCH	whole	AddRand lambda / unrolled axes	-
+0x59DE40	BreakObject_c::Update	MATCH	whole	RandT lambda	-
+0x6A7090	CAutomobile::AddDamagedVehicleParticles	MATCH	whole	two branches (5 draws each) + 0x6A7499	-
+0x5DAD00	CGrassRenderer::AddTriangle	MATCH	whole	nextRand lambda 9 uses (6 static in exe due to unrolled)	-
+0x738B20	CProjectileInfo::Update	MATCH	whole	Rand01 lambda	-
+0x662A10	CTaskComplexGangFollower::CreateNextSubTask	UNSURE	whole	12 exe draws vs 11 port + SaySomethingRandom x2; order not mapped one-to-one	-
+0x6A2530	CAutomobile::4050	MATCH	whole	7=7 (counts equal)	-
+0x53A570	CFire::Update	MATCH	whole	9=9 (counts equal)	-
+0x41DA30	CCarAI::634	NOT_REACHED	whole	port 1 / exe 0 unexamined	-
+0x5965E0	InteriorGroup_c::147	NOT_REACHED	whole	4=4 equal by heuristic	-
+0x599210	Interior_c::699	NOT_REACHED	whole	2=2 equal by heuristic	-
+0x590FD0	FurnitureSubGroup_c::102	NOT_REACHED	whole	2=2 equal by heuristic	-
+0x6605C0	CTaskComplexStareAtPed	NOT_REACHED	whole	2=2	-
+0x67BA80	CTaskComplexStuckInAir	NOT_REACHED	whole	1=1	-
+0x664380	CTaskGangHasslePed	NOT_REACHED	whole	2=2	-

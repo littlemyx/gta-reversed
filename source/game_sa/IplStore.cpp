@@ -9,6 +9,7 @@
 #include "IplStore.h"
 #include "tBinaryIplFile.h"
 #include "TheCarGenerators.h"
+#include "portable/sh12log.h"
 
 using IplTreeNode  = CQuadTreeNode<IplDef*>;
 #ifdef NOTSA_PORTABLE
@@ -678,6 +679,7 @@ void CIplStore::RemoveRelatedIpls(int32 iplSlotIndex) {
  * @addr 0x405850
  */
 void CIplStore::RequestIplAndIgnore(int32 iplSlotIndex) {
+    if (SH12_ON()) { char stk[200]; notsa::rr::Sh12Stack(stk, sizeof stk, 0); SH12_ROW("I RequestIplAndIgnore slot=%d name=%s caller=%s", (int)iplSlotIndex, CIplStore::GetIplName(iplSlotIndex), stk); }
     auto& def = *ms_pPool->GetAt(iplSlotIndex);
     CStreaming::RequestModel(IPLToModelId(iplSlotIndex), STREAMING_KEEP_IN_MEMORY);
     def.disableDynamicStreaming = true;

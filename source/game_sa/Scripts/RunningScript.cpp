@@ -4,6 +4,7 @@
 #include "TheScripts.h"
 #ifdef NOTSA_SCMTRACE
 #include "portable/scmtrace.h"
+#include "portable/sh12log.h"
 #endif
 #include "CarGenerator.h"
 #include "Hud.h"
@@ -1842,9 +1843,10 @@ OpcodeResult CRunningScript::Process() {
 
     CTheScripts::ReinitialiseSwitchStatementData();
 
+    SH12_SCM_BEGIN(this);
     if (CTimer::GetTimeInMS() >= (uint32)m_WakeTime) {
 #ifdef NOTSA_SCMTRACE
-        while (notsa::scmtrace::Run(this, [this] { return ProcessOneCommand(); }) == OR_CONTINUE)
+        while (SH12_SCM_CMD(this), notsa::scmtrace::Run(this, [this] { return ProcessOneCommand(); }) == OR_CONTINUE)
             ; // Process commands (SCMTRACE-1: traced tree only)
 #else
         while (ProcessOneCommand() == OR_CONTINUE)

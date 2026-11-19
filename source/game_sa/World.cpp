@@ -23,6 +23,7 @@
 #include "Tasks/TaskTypes/TaskComplexDestroyCar.h"
 #include "Tasks/TaskTypes/TaskSimpleStandStill.h"
 #include "portable/sh7log.h"
+#include "portable/sh12log.h"
 
 // CWorld::SnookerTableMax = CVector{ 2495.8525f, -1671.41f, 12.9f };
 // CWorld::SnookerTableMin = CVector{ 497.7925f, -1670.4f, 13.19f };
@@ -2299,10 +2300,12 @@ void CWorld::Process() {
             ZoneScopedN("Process collision");
 
             const auto ProcessMovingEntityCollision = [](CEntity* entity) {
+                SH12_SAFE("ent_check", entity);
                 if (!entity->GetIsInSafePosition()) {
                     entity->ProcessCollision();
                     entity->UpdateRwMatrix();
                     entity->UpdateRwFrame();
+                    SH12_SAFE("ent_after_processcollision", entity);
                 }
             };
 
@@ -2310,8 +2313,11 @@ void CWorld::Process() {
                 IterateMovingList(ProcessMovingEntityCollision);
             };
 
+            SH12_PASS("pre_collision"); SH12_SAFEALL("before_collision_passes");
             bNoMoreCollisionTorque = false;
+            SH12_PASS("coll0");
             ProcessMovingEntityCollisions();
+            SH12_SAFEALL("after_coll0");
 #ifdef NOTSA_STATEHASH
             notsa::rr::Probe("coll0");
 #endif
@@ -2319,20 +2325,25 @@ void CWorld::Process() {
 
             // Process entities a few more times..
             for (auto i = 0; i < 4; i++) {
+                SH12_PASS(i == 0 ? "coll1" : i == 1 ? "coll2" : i == 2 ? "coll3" : "coll4");
                 ProcessMovingEntityCollisions();
+                SH12_SAFEALL(i == 0 ? "after_coll1" : i == 1 ? "after_coll2" : i == 2 ? "after_coll3" : "after_coll4");
 #ifdef NOTSA_STATEHASH
                 notsa::rr::Probe(i == 0 ? "coll1" : i == 1 ? "coll2" : i == 2 ? "coll3" : "coll4");
 #endif
             }
 
             // Mark entities as `stuck` if they're still in unsafe positions
+            SH12_PASS("stuck");
             IterateMovingList([&](CEntity* entity) {
+                SH12_SAFE("stuck_check", entity);
                 if (!entity->GetIsInSafePosition()) {
                     entity->SetIsStuck(true);
 
                     entity->ProcessCollision();
                     entity->UpdateRwMatrix();
                     entity->UpdateRwFrame();
+                    SH12_SAFE("stuck_after_processcollision", entity);
 
                     if (!entity->GetIsInSafePosition()) {
                         entity->SetIsStuck(true);

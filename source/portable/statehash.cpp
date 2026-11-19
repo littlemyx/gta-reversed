@@ -63,6 +63,7 @@ void* operator new[](std::size_t n) { return ::operator new(n); }
 #include "loadlog.h"
 #include "portable/sh7log.h"
 #include "portable/cargenlog.h"
+#include "portable/sh12log.h"
 namespace notsa::rr {
 uint32_t LoadLogFrameCounter() { return CTimer::GetFrameCounter(); }
 namespace {
@@ -637,6 +638,61 @@ void VehMtxLog(const char* tag, const void* entity) {
     std::fflush(f);
 }
 
+// SH12 (see sh12log.h): pure reads only
+void Sh12Name(int id, char* buf, size_t n) {
+    buf[0] = 0;
+    if (id < 0) { std::snprintf(buf, n, "inv"); return; }
+    if (IsModelDFF(id)) { CBaseModelInfo* mi = CModelInfo::GetModelInfo(id); std::snprintf(buf, n, "dff#%d %s", id, mi ? mi->GetModelNameAsString().c_str() : "-"); }
+    else if (IsModelTXD(id)) std::snprintf(buf, n, "txd#%d", ModelIdToTXD(id));
+    else if (IsModelCOL(id)) std::snprintf(buf, n, "col#%d", ModelIdToCOL(id));
+    else if (IsModelIPL(id)) std::snprintf(buf, n, "ipl#%d %s", ModelIdToIPL(id), CIplStore::GetIplName(ModelIdToIPL(id)));
+    else if (IsModelIFP(id)) { const int r = ModelIdToIFP(id); std::snprintf(buf, n, "ifp#%d", r); }
+    else std::snprintf(buf, n, "other#%d", id);
+}
+void Sh12Stack(char* buf, size_t n, int skip) {
+    static const uintptr_t base = (uintptr_t)&StableId;
+    buf[0] = 0; size_t o = 0;
+#ifdef _WIN32
+    void* bt[16] = {}; const USHORT c = RtlCaptureStackBackTrace((DWORD)skip + 1, 8, bt, nullptr);
+    for (USHORT i = 0; i < c && o + 20 < n; i++) o += (size_t)std::snprintf(buf + o, n - o, "%s%llx", i ? "," : "", (unsigned long long)((uintptr_t)bt[i] - base));
+#endif
+}
+void Sh12StreamState(const char* when) {
+    char b[1200]; size_t o = 0;
+    o += (size_t)std::snprintf(b + o, sizeof b - o, "S %s numModelsRequested=%d loadingPriority=%d veryBusy=%d numPriorityRequests=%u channelError=%d bLoadingBigModel=%d disableStreaming=%d", when, (int)CStreaming::ms_numModelsRequested, (int)CRenderer::m_loadingPriority, (int)(CRenderer::m_loadingPriority || CStreaming::ms_numModelsRequested > 5), (unsigned)CStreaming::ms_numPriorityRequests, (int)CStreaming::ms_channelError, (int)CStreaming::ms_bLoadingBigModel, (int)CStreaming::ms_disableStreaming);
+    for (int c = 0; c < 2; c++) {
+        auto& ch = CStreaming::ms_channel[c];
+        o += (size_t)std::snprintf(b + o, sizeof b - o, " ch%d={state=%d cdStatus=%d pos=%u/%u sectors=%d tries=%d ids=", c, (int)ch.LoadStatus, (int)ch.m_nCdStreamStatus, (unsigned)ch.pos.Offset, (unsigned)ch.pos.FileID, ch.sectorCount, ch.totalTries);
+        for (int i = 0; i < 16; i++) if (ch.modelIds[i] != -1) o += (size_t)std::snprintf(b + o, sizeof b - o, "%d,", ch.modelIds[i]);
+        o += (size_t)std::snprintf(b + o, sizeof b - o, "}");
+    }
+    if (FILE* f = Sh12StreamLog()) { std::fprintf(f, "%d %llu %s %s\n", LoadLogRecFrame(), (unsigned long long)RandCount(), Sh12Stage(), b); std::fflush(f); }
+}
+static const char* g_sh12Pass = "-";
+void Sh12SetPass(const char* p) { g_sh12Pass = p; }
+void Sh12SafePos(const char* tag, const void* entity) {
+    static Sh7Log l = [] { Sh7Log x; x.Init("NOTSA_SH12_SAFEPOS", "NOTSA_SH12_SAFEPOS_FRAMES", "0", "# frame randCount P tag pass slot pos/move/turn (hex bits/%.9g) + safe/stuck/static/usesCol/contacted/colProcessed/hitWall/postponed/numCollided"); return x; }();
+    static std::set<int> slots = [] { std::set<int> s; const char* e = std::getenv("NOTSA_SH12_SAFEPOS_SLOTS"); std::string str = e && e[0] ? e : "3"; size_t b = 0; while (b <= str.size()) { size_t c = str.find(',', b); if (c == std::string::npos) c = str.size(); if (c > b) s.insert(std::atoi(str.substr(b, c - b).c_str())); b = c + 1; } return s; }();
+    FILE* f = l.Get();
+    if (!f || !entity || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    const auto* ent = static_cast<const CEntity*>(entity);
+    if (!ent->GetIsTypeVehicle()) return;
+    auto* pool = GetVehiclePool(); if (!pool) return;
+    auto* veh = const_cast<CVehicle*>(static_cast<const CVehicle*>(ent));
+    const int slot = (int)pool->GetIndex(veh);
+    if (!slots.count(slot)) return;
+    const CVector p = veh->GetPosition(), ms = veh->m_vecMoveSpeed, ts = veh->m_vecTurnSpeed;
+    auto H = [](float v) { return Sh7Bits(v); };
+    std::fprintf(f, "%d %llu P %s pass=%s slot=%d pos=%08x/%.9g,%08x/%.9g,%08x/%.9g move=%08x/%.9g,%08x/%.9g,%08x/%.9g turn=%08x/%.9g,%08x/%.9g,%08x/%.9g safe=%d stuck=%d static=%d usesCol=%d contacted=%d colProcessed=%d hitWall=%d postponed=%d numCollided=%d\n", LoadLogRecFrame(), (unsigned long long)RandCount(), tag, g_sh12Pass, slot,
+        H(p.x), (double)p.x, H(p.y), (double)p.y, H(p.z), (double)p.z, H(ms.x), (double)ms.x, H(ms.y), (double)ms.y, H(ms.z), (double)ms.z, H(ts.x), (double)ts.x, H(ts.y), (double)ts.y, H(ts.z), (double)ts.z,
+        (int)veh->m_bIsInSafePosition, (int)veh->m_bIsStuck, (int)veh->m_bIsStatic, (int)veh->m_bUsesCollision, (int)veh->m_bHasContacted, (int)veh->m_bCollisionProcessed, (int)veh->m_bHasHitWall, (int)veh->m_bWasPostponed, (int)veh->m_nNumEntitiesCollided);
+    std::fflush(f);
+}
+void Sh12SafePosAll(const char* tag) {
+    auto* pool = GetVehiclePool(); if (!pool) return;
+    for (int i = 0; i < pool->GetSize(); i++) if (CVehicle* v = pool->GetAt(i)) Sh12SafePos(tag, v);
+}
+
 FILE* WalkLogFile() {
     static FILE* f = nullptr; static std::set<int> frames; static bool init = false;
     if (!init) {
@@ -721,7 +777,7 @@ void RandHook(uint32_t stateBefore) {
         const int fr = g_recording ? (int)g_frame : -1;
         if (df && fr >= lo && fr <= hi) {
             void* bt[20] = {}; const USHORT n = RtlCaptureStackBackTrace(1, 16, bt, nullptr);
-            std::fprintf(df, "%llu %d %u", (unsigned long long)idx, fr, RandVal(stateBefore));
+            std::fprintf(df, "%llu %d %u %s", (unsigned long long)idx, fr, RandVal(stateBefore), Sh12Stage()); // SH12: stage tag column
             for (USHORT i = 0; i < n; i++) std::fprintf(df, "%c%llx", i ? ',' : ' ', (unsigned long long)((uintptr_t)bt[i] - base));
             std::fputc(10, df); std::fflush(df);
         }

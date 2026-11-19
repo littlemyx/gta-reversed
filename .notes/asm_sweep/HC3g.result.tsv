@@ -1,0 +1,9 @@
+addr	function	verdict	asm range	note	fix commit
+0x5F3DD0	CPedGeometryAnalyser::ComputeRouteRoundEntityBoundingBox	FIXED	0x5F3DD0-0x5F5A2B	HC3f 9b73b85b2 CONFIRMED instruction-level (plane sum orders, clip numerator, classify NaN, ped-forward dot z,y,x, matrix alloc). Rest checked: box centre, CheckPath (LOS arg order, ignore rule, blockedAt), path choice mode 0, modes 1/2, route build, first-point side test. Fixed: enter/exit tests NaN-faithful; path length sums z,y,x	2155214a9
+0x43C710	CCurves::CalcSpeedScaleFactor	MATCH	0x43C710-0x43C87F	inlined DistForLine x2, min(d1,d2)/min(5,m), (2m+s2)+s1, else-branch bend/(1-sv)	
+-	CPathFind::FindIntersection	MATCH	0x44D480-0x44D514	inlined in TestForPedTrafficLight/TestCrossesRoad: both areas loaded, link search, intersection byte	
+0x44D480	CPathFind::TestForPedTrafficLight	MATCH	0x44D480-0x44D514	bit1 of intersection byte	
+0x44D790	CPathFind::TestCrossesRoad	MATCH	0x44D790-0x44D822	bit0	
+0x556000	CRopes::FindRope	MATCH	0x556000-0x55602E	8 ropes, type byte +0x325, id at +0x300	
+0x5347D0	CEntity::Add(CRect)	MATCH	0x5347D0-0x534AC8	clamps (NaN skips), LOD 0.005f/15 and sector 0.02f/60 floor, jump table types, loop order	
+0x465680	CStuckCarCheck::Process	MATCH	0x465680-0x465965	full walk incl. FindNth args, warp loop break, dist sum order	

@@ -1,0 +1,14 @@
+addr	function	verdict	asm range	note	fix commit
+0x685170	CTaskComplexWalkAlongsidePed::ControlSubTask	MATCH	0x685170-0x68562C	P4S10j fix CONFIRMED: [esp+0x11] (target flag) set at 0x685570 only when target walk anim exists, [esp+0x50] (ped flag) set at 0x685434/0x685492/0x685515; stored at 0x6855E1 / 0x685600	
+0x4AFEE0	CEventKnockOffBike::AffectsPed	MATCH	0x4AFEE0-0x4AFF57	P4S10j fix CONFIRMED: (flags&0x18000000)==0x8000000 (NEVER) && !(byte+0x35 &2); ghost status 0x60; driver/passenger scan	
+0x544C40	CPhysical::ApplyAirResistance	FIXED	0x544C40-0x544D4F	extra air-resistance mult tests vehicle SUB type (+0x594)==0 or 9, port used IsAutomobile() (type +0x590): monster trucks/quads wrongly got it	e84e192c6
+0x542B50	CPhysical::ApplyForce	MATCH	0x542B50-0x542CDB	flag bits (0x80 DisableZ, 0x60, 0x40 infinite mass turn mass, 0x20), cross(diff,force), x87 unrounded x add	
+0x543220	CPhysical::ApplyFrictionForce	MATCH	0x543220-0x54339F	same body as ApplyForce (diffed asm modulo stack offsets), friction accumulators, always updates turn	
+0x4BC230	CEventHandler::ComputeDangerResponse	MATCH	0x4BC230-0x4BC36D	task ids 0x2D6/0x38F, in-vehicle driver check, SmartFlee args (1e5, 1000000, 1000, EntityPosChangeThreshold), null on alloc fail	
+0x62E270	CTaskComplexRoadRage::CreateNextSubTask	MATCH	0x62E270-0x62E3EC	all 7 subtask transitions + default null; cruise mission/speed 10 on enter-car	
+0x63BAB0	CTaskComplexLeaveCar::ComputeTargetDoor	MATCH	0x63BAB0-0x63BACF		
+0x60CC50	CPlayerPed::PlayerWantsToAttack	MATCH	0x60CC50-0x60CD17	group gates, target pick (mouse target fallback, tag/object CanBeTargetted), FindPedToAttack, PlayerGaveCommand_Attack	
+0x6F0F50	CBoat::IsVertexAffectedByWake	MATCH	0x6F0F50-0x6F10B3	radius, 20/10 skip thresholds, 0.6/0.05/0.4/150 constants, x87 unrounded; port already oracle-proven	
+0x62D9E0	CTaskComplexDestroyCar::CreateNextSubTask	MATCH	0x62D9E0-0x62DA8D	exe also maps MELEE/ARMED subtasks to FINISHED, whose CreateSubTask result is null = port default null	
+0x6287A0	CTaskComplexDestroyCar::CreateSubTask	MATCH	0x6287A0-0x6288B4	LeaveCar(veh,0,0,1,0), Melee(+0x10), Armed(+0x10..0x1C)	
+queue rows beyond these	-	NOT_REACHED		budget	

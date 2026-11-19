@@ -160,10 +160,10 @@ void CTheScripts::Init() {
     LastRandomPedId       = -1;
 
     rng::fill(UsedObjectArray, tUsedObject{});
+    NumberOfUsedObjects                        = 0; // exe 0x468F39: stored BEFORE ReadObjectNamesFromScript (it sets the count read from main.scm; port zeroed it after)
     ReadObjectNamesFromScript();
     UpdateObjectIndices();
     rng::fill(MultiScriptArray, 0u);
-    NumberOfUsedObjects                        = 0;
     bAlreadyRunningAMissionScript              = false;
     bUsingAMultiScriptFile                     = true;
     MainScriptSize                             = 0;

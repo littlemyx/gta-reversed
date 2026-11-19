@@ -1,0 +1,8 @@
+addr	function	verdict	asm range	note	fix commit
+0x626D90	CTaskComplexKillPedOnFootMelee::ControlSubTask	FIXED	0x626D90-0x626F85	subtask type 0xCB (STAND_STILL) takes the sequence path like 0xF4; port skipped it	9ed7eaab1
+0x626AC0	CTaskComplexKillPedOnFootMelee::CreateSubTask	MATCH	0x626AC0-0x626D8B	all 6 cases, ctor args and floats compared	
+0x66E150	CTaskComplexFollowPointRoute::CalcGoToTaskType	MATCH	0x66E150-0x66E317	flags, clamps, constants, early returns	
+0x6589B0	CTaskSimpleGiveCPR::MakeAbortable	FIXED	0x6589B0-0x658A98	tail check health<=0 aborts for any event type; port only for DAMAGE	8d2761dbb
+0x659530	CTaskComplexUseSwatRope::MakeAbortable	MATCH	0x659530-0x65961B	strict <20, state resets	
+0x621E00	CTaskComplexDestroyCarMelee::MakeAbortable	FIXED	0x621E00-0x621F4D	URGENT path forwards event to subtask (port passed nullptr)	a754bdc4c
+0x6923F0	CTaskSimpleDuck::ControlDuckMove	MATCH	0x6923F0-0x6924A6	compare strictness, NaN paths, constants	

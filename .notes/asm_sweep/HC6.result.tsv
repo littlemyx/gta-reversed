@@ -1,0 +1,90 @@
+addr	function	verdict	asm range	note	fix commit
+0x4D9EF0	CAEAudioUtility::ConvertFromBytesToMS	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x5034E0	CAEWeaponAudioEntity::StopFlameThrowerIdleGasLoop	MATCH			
+0x4D9E50	CAEAudioUtility::AudioLog10	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x506FE0	CAudioEngine::HasRadioRetuneJustStarted	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4F5EB0	CAEVehicleAudioEntity::UpdateGasPedalAudio	FIXED		types other than automobile(0)/bike(9) return without writing; port wrote through AsAutomobile() into heli/plane/boat	
+0x4D9E80	CAEAudioUtility::GetCurrentTimeInMS	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x5083C0	CAudioZones::Update	FIXED		sphere/box tests: exe is dist(z,y,x, unrounded)<r and strict min<p<max; port used squared<=r^2 and inclusive CBox	
+0x4F5310	CAEVehicleAudioEntity::GetFrequencyForDummyIdle	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4F51F0	CAEVehicleAudioEntity::GetVolumeForDummyIdle	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4F54F0	CAEVehicleAudioEntity::GetFrequencyForDummyRev	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4F53D0	CAEVehicleAudioEntity::GetVolumeForDummyRev	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4EF880	CAESound::SetPosition	MATCH		first-frame path compared; dist sums z,y,x	
+0x4EFE50	CAESound::Initialise	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4E46B0	CAEPedSpeechAudioEntity::IsGlobalContextImportantForWidescreen	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x507150	CAudioEngine::IsCutsceneTrackActive	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4E8350	CAERadioTrackManager::IsRadioOn	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x506FD0	CAudioEngine::IsRadioOn	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x506D90	CAudioEngine::IsLoadingTuneActive	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x506E50	CAudioEngine::SetEffectsFaderScalingFactor	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x506E40	CAudioEngine::SetMusicFaderScalingFactor	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4D9D90	CAEAudioUtility::GetPiecewiseLinear	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4EFCD0	CAESoundManager::CancelSoundsOwnedByAudioEntity	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4EF820	CAESound::RegisterWithPhysicalEntity	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4F4D10	CAEVehicleAudioEntity::RequestBankSlot	MATCH		bank slot round robin + refcounts	
+0x4E3CD0	CAEPedSpeechAudioEntity::GetVoice	MATCH		all 5 voice name tables (209/46/20/52/18) checked against the exe by script	
+0x4EF680	CAESound::operator=	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4EF1A0	CAESound::UnregisterWithPhysicalEntity	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x503450	CAEWeaponAudioEntity::Initialise	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x503480	CAEWeaponAudioEntity::Terminate	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4E1360	CAEPedAudioEntity::Terminate	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4E1120	CAEPedAudioEntity::StopJetPackSound	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4E0E80	CAEPedAudioEntity::Initialise	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4F5F30	CAEVehicleAudioEntity::GetVehicleDriveWheelSkidValue	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4EF1C0	CAESound::StopSound	MATCH		EntityRef cleanup == CleanUpOldReference	
+0x4EF440	CAESound::GetSlowMoFrequencyScalingFactor	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4EF400	CAESound::GetRelativePlaybackFrequencyWithDoppler	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4DA2C0	CAECollisionAudioEntity::Service	MATCH			
+0x506FF0	CAudioEngine::IsRadioRetuneInProgress	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4E3C60	CAEPedSpeechAudioEntity::GetAudioPedType	MATCH		6 type names verified from exe table	
+0x4EF850	CAESound::StopSoundAndForget	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4F6000	CAEVehicleAudioEntity::GetVehicleNonDriveWheelSkidValue	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x5072A0	CAudioEngine::GetMissionAudioLoadingStatus	MATCH		wrapper to the ScriptAE function above	
+0x4EBF60	CAEScriptAudioEntity::GetMissionAudioLoadingStatus	MATCH			
+0x508240	CAudioZones::RegisterAudioBox	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4EF520	CAESoundManager::AreSoundsPlayingInBankSlot	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4EF2E0	CAESound::UpdatePlayTime	MATCH		ftol of (progress*speed+playTime)	
+0x4EFC60	CAESoundManager::CancelSoundsInBankSlot	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x5072F0	CAudioEngine::ClearMissionAudio	MATCH		wrapper to the ScriptAE function above	
+0x4EC040	CAEScriptAudioEntity::ClearMissionAudio	MATCH			
+0x5072C0	CAudioEngine::IsMissionAudioSampleFinished	MATCH		wrapper to the ScriptAE function above	
+0x4EBFE0	CAEScriptAudioEntity::IsMissionAudioSampleFinished	MATCH			
+0x507310	CAudioEngine::AttachMissionAudioToPed	MATCH		wrapper to the ScriptAE function above	
+0x4EC100	CAEScriptAudioEntity::AttachMissionAudioToPhysical	MATCH			
+0x4EF2B0	CAESound::SetFlags	MATCH			
+0x4E5F10	CAEPedSpeechAudioEntity::CanWePlayGlobalSpeechContext	MATCH		conversation slots, free-slot round robin, next-play-time test and pain table index all equal	
+0x4E49E0	CAEPedSpeechAudioEntity::GetNextPlayTime	MATCH			
+0x4E5730	CAEPedSpeechAudioEntity::CanPedSayGlobalContext	MATCH		GEN table is 2-byte entries in the exe, port widened: same result for ids < 255	
+0x4E3F90	CAEPedSpeechAudioEntity::EnablePedSpeechForScriptSpeech	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4E69E0	CAEPedSpeechAudioEntity::CanPedHoldConversation	MATCH			
+0x5081C0	CAudioZones::RegisterAudioSphere	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4E3F70	CAEPedSpeechAudioEntity::EnablePedSpeech	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x507210	CAudioEngine::IsAmbienceTrackActive	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x507070	CAudioEngine::PlayPreloadedCutsceneTrack	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x506E90	CAudioEngine::EnableEffectsLoading	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x506E80	CAudioEngine::DisableEffectsLoading	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4F4ED0	CAEVehicleAudioEntity::StaticGetPlayerVehicleAudioSettingsForRadio	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4EC150	CAEScriptAudioEntity::Reset	MATCH			
+0x4E9800	CAERadioTrackManager::IsVehicleRadioActive	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4E3F50	CAEPedSpeechAudioEntity::GetPedTalking	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4E3EC0	CAEPedSpeechAudioEntity::EnableAllPedSpeech	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4E3EB0	CAEPedSpeechAudioEntity::DisableAllPedSpeech	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4DA320	CAECollisionAudioEntity::Reset	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x5B9BD0	CAECollisionAudioEntity::Initialise	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x5B9B60	CAEScriptAudioEntity::Initialise	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x5B99F0	CAEVehicleAudioEntity::StaticInitialise	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x5B98A0	CAEPedAudioEntity::StaticInitialise	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x5081A0	CAudioZones::Init	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x507F40	CAudioEngine::PreloadBeatTrack	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x507180	CAudioEngine::PlayPreloadedBeatTrack	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x507040	CAudioEngine::GetCurrentRadioStationID	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x507020	CAudioEngine::GetRadioStationListenTimes	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x506F80	CAudioEngine::SetRadioAutoRetuneOnOff	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x506E10	CAudioEngine::SetEffectsMasterVolume	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x506DE0	CAudioEngine::SetMusicMasterVolume	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x506DB0	CAudioEngine::Restart	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4E83F0	CAERadioTrackManager::GetCurrentRadioStationID	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4E83E0	CAERadioTrackManager::GetRadioStationListenTimes	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	
+0x4E5800	CAEPedSpeechAudioEntity::WillPedChatAboutTopic	MATCH			
+0x4DA050	CAECollisionAudioEntity::InitialisePostLoading	SKIP-AUDIO-OUTPUT		no rand, no game-state write: volume/frequency maths, queries or bank/sound bookkeeping fed only to the audio side	

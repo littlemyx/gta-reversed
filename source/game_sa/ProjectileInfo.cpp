@@ -551,7 +551,7 @@ void CProjectileInfo::Update() {
                     const auto dx = info.m_vecLastPosn.x - creatorPos.x;
                     const auto dy = info.m_vecLastPosn.y - creatorPos.y;
                     const auto dz = info.m_vecLastPosn.z - creatorPos.z;
-                    if ((dx * dx + dy * dy) + dz * dz < 2.0f) { // Close to the creator => don't check
+                    if ((dx * dx + dz * dz) + dy * dy < 2.0f) { // Close to the creator => dont check (exe 0x7397A4: sum order x,z,y)
                         doChecks = false;
                     }
                 }

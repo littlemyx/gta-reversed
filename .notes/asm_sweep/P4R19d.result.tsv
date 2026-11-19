@@ -4,3 +4,4 @@ addr	function	verdict	asm range	note	fix commit
 0x4C0BD0	CEventHandler::ComputeVehiclePotentialCollisionResponse (head)	MATCH	0x4C0BD0-0x4C1190	BB centers, player branch, const sets (0.02/0.05/0.1/0.7 and 0.05/0.1/0.2/0.175), shake/handsup/dive arms	
 0x4C0AA2	CEventHandler::ComputeDamageResponse (die tail)	MATCH	0x4C0A1C-0x4C0BC3	weapon set, mission-ped test, CalcFall, die ctor args, phys-response skip set, RegisterKill	
 0x4BF9B0	CEventHandler::ComputePersonalityResponseToDamage	MATCH (UNSURE 1)	0x4BF9B0-0x4C0100	ctor args of duck/flee/smartflee/fleeany/kill ped/criminal match; FleeEntity safeDist global 0xC18CE4 is BSS, assumed 60 = header default	
+-	remaining Events rows (ctors, Clone, AffectsPedGroup, IsValid, TakesPriorityOver, GetSourceEntity, IsKillTaskAppropriate, ReportCriminalEvent)	NOT_REACHED	-	budget	

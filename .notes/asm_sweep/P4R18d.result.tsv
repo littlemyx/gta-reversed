@@ -1,0 +1,49 @@
+addr	function	verdict	asm range	note	fix commit
+0x621500	CTaskComplexKillPedOnFootArmed::LineOfSightClearForAttack	MATCH	0x621500-0x6217A0	cache gates, ja/jae, z,y,x sums, ducking head pos, LOS flags 1,1,0,1,0,1,0, vehicle collision toggle verified	-
+0x68C3C0	CTaskComplexKillCriminal::FindNextCriminalToKill	FIXED	0x68C3C0-0x68C6D0	structure matched; squared distance now z,y,x extended precision, ref float-stored	8c4796dd6
+0x65ABF0	CTaskComplexMedicTreatInjuredPed::ControlSubTask	MATCH	0x65ABF0-0x65AEFA	all 4 cases + thresholds 10^2/25/0.125 verified	-
+0x654C80	CTaskComplexWalkRoundBuildingAttempt::CreateSubTask	MATCH	0x654C80-0x654F25	all 8 cases, ctor args/defaults verified	-
+0x62BF00	CTaskComplexKillPedOnFootArmed::CreateFirstSubTask	MATCH	0x62BF00-0x62C115	first 80% (cover branch, LOS flags, GoToPoint args) verified; tail CreateSubTask selection not re-read (S05d audited)	-
+0x681820	CTaskManager::HasTaskSecondary	MATCH	0x681820-0x681844	6-slot pointer compare	-
+0x622C90	CTaskComplexSeekCoverUntilTargetDead::CreateNextSubTask	MATCH	0x622C90-0x622CB2		-
+0x622790	CTaskSimpleStealthKill::FinishAnimStealthKillCB	MATCH	0x622790-0x6227BF		-
+0x64E350	CTaskComplexGoToBoatSteeringWheel::CreateNextSubTask	MATCH	0x64E350-0x64E37D		-
+0x635A90	CTaskComplexUseScriptedBrain::CreateFirstSubTask	MATCH	0x635A90-0x635B3x	pause 2000 fallback	-
+0x65BE00	CTaskComplexSmartFleePoint::SetDefaultTaskWanderDir	MATCH	0x65BE00-0x65BE30	0x669D50 inlined	-
+0x6592A0	CTaskComplexPresentIdToCop::ComputeHeadingToCop	MATCH	0x6592A0-0x6592F5	arg order cop,ped verified	-
+0x696EE0	CTaskComplexInvestigateDeadPed::ComputeTargetPos	MATCH	0x696EE0-0x696F8C	z kept (esp shift after pop checked)	-
+0x637DB0	CTaskComplexSitDownThenIdleThenStandUp::CreateNextSubTask	NOT_REACHED			-
+0x65A990	CTaskComplexMedicTreatInjuredPed::CreateNextSubTask	NOT_REACHED			-
+0x669690	CTaskComplexFollowNodeRoute::CreateSubTask	NOT_REACHED			-
+0x696F90	CTaskComplexInvestigateDeadPed::CreateSubTask	NOT_REACHED			-
+0x65B460	CTaskComplexFleePoint::CreateSubTask	NOT_REACHED			-
+0x640F30	CTaskComplexStealCar::CreateSubTask	NOT_REACHED			-
+0x6613A0	CTaskComplexPassObject::CreateFirstSubTask	NOT_REACHED			-
+0x64D2B0	CTaskComplexGoToCarDoorAndStandStill::CreateNextSubTask	NOT_REACHED			-
+0x64C6A0	CTaskComplexCarSlowBeDraggedOut::CreateSubTask	NOT_REACHED			-
+0x690DC0	CTaskComplexFacial::CreateNextSubTask	NOT_REACHED			-
+0x697A00	CTaskComplexInvestigateDeadPed::ControlSubTask	NOT_REACHED			-
+0x638040	CTaskComplexHitResponse::CreateFirstSubTask	NOT_REACHED			-
+0x657220	CTaskComplexWalkRoundObject::CreateNextSubTask	NOT_REACHED			-
+0x631550	CTaskComplexSitDownThenIdleThenStandUp::CreateSubTask	NOT_REACHED			-
+0x639200	CTaskComplexOnFire::ControlSubTask	NOT_REACHED			-
+0x642390	CTaskComplexLeaveCarAndFlee::CreateNextSubTask	NOT_REACHED			-
+0x628C80	CTaskComplexDestroyCarArmed::CalculateSearchPositionAndRanges	NOT_REACHED			-
+0x631E50	CTaskComplexHitByGunResponse::CreateFirstSubTask	NOT_REACHED			-
+0x671630	CTaskComplexFollowPointRoute::CreateNextSubTask	NOT_REACHED			-
+0x694EE0	CTaskComplexFollowPedFootsteps::CreateNextSubTask	NOT_REACHED			-
+0x624A40	CTaskSimpleFight::ChooseAttackAI	NOT_REACHED			-
+0x63B6C0	CTaskComplexEnterBoatAsDriver::CreateSubTask	NOT_REACHED			-
+0x654B80	CTaskComplexWalkRoundBuildingAttempt::ComputeMoveDir	NOT_REACHED			-
+0x61C650	CTaskSimpleFight::BeHitWhileBlocking	NOT_REACHED			-
+0x62BE30	CTaskComplexKillPedOnFootMelee::CreateFirstSubTask	NOT_REACHED			-
+0x6359C0	CTaskComplexUseScriptedBrain::CreateNextSubTask	NOT_REACHED			-
+0x63CF90	CTaskComplexDrivePointRoute::CreateNextSubTask	NOT_REACHED			-
+0x64C810	CTaskComplexCarSlowBeDraggedOut::CreateNextSubTask	NOT_REACHED			-
+0x655140	CTaskComplexWalkRoundObject::CreateRouteTask	NOT_REACHED			-
+0x675740	CTaskInteriorShopKeeper::ControlSubTask	NOT_REACHED			-
+0x695000	CTaskComplexFollowPedFootsteps::CreateFirstSubTask	NOT_REACHED			-
+0x649F50	CTaskSimpleCarSetPedOut::Clone	NOT_REACHED			-
+0x659990	CTaskComplexExtinguishFireOnFoot::FindFireNearPed	NOT_REACHED			-
+0x6327C0	CTaskComplexUseAttractor::ControlSubTask	NOT_REACHED			-
+0x644210	CTaskComplexStealCar::CreateFirstSubTask	NOT_REACHED			-

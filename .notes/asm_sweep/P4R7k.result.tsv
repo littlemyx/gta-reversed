@@ -1,0 +1,34 @@
+addr	function	verdict	asm range	note	fix commit
+0x4C63B0	CModelInfo::ReInit2dEffects	FIXED	0x4C63B0-0x4C63D7	null model slot skipped in exe	aa886f9cd
+0x4C5A70	CModelInfo::IsBoatModel	MATCH	0x4C5A70+0x30	type 6 check + vehicleType==5	
+0x4C5AA0	CModelInfo::IsCarModel	MATCH	0x4C5AA0+0x30	type 6 check + vehicleType==0	
+0x4C5AD0	CModelInfo::IsTrainModel	MATCH	0x4C5AD0+0x30	type 6 check + vehicleType==6	
+0x4C5B00	CModelInfo::IsHeliModel	MATCH	0x4C5B00+0x30	type 6 check + vehicleType==3	
+0x4C5B30	CModelInfo::IsPlaneModel	MATCH	0x4C5B30+0x30	type 6 check + vehicleType==4	
+0x4C5B60	CModelInfo::IsBikeModel	MATCH	0x4C5B60+0x30	type 6 check + vehicleType==9	
+0x4C5B90	CModelInfo::IsFakePlaneModel	MATCH	0x4C5B90+0x30	type 6 check + vehicleType==8	
+0x4C5BC0	CModelInfo::IsMonsterTruckModel	MATCH	0x4C5BC0+0x30	type 6 check + vehicleType==1	
+0x4C5BF0	CModelInfo::IsQuadBikeModel	MATCH	0x4C5BF0+0x30	type 6 check + vehicleType==2	
+0x4C5C20	CModelInfo::IsBmxModel	MATCH	0x4C5C20+0x30	type 6 check + vehicleType==10	
+0x4C5C50	CModelInfo::IsTrailerModel	MATCH	0x4C5C50+0x30	type 6 check + vehicleType==11	
+0x4C5C80	CModelInfo::IsVehicleModelType	MATCH	0x4C5C80-0x4CAF		
+0x4C59B0	CModelInfo::GetModelInfoFromHashKey	MATCH	0x4C59B0-0x4C59E6		
+0x4C6620	CModelInfo::AddAtomicModel	MATCH	0x4C6620+0x2C	store count++, virtual Init, SetModelInfo (AtomicModel and PedModel disassembled, rest same shape)	
+0x4C6650	CModelInfo::AddDamageAtomicModel	MATCH	0x4C6650+0x2C	store count++, virtual Init, SetModelInfo (AtomicModel and PedModel disassembled, rest same shape)	
+0x4C6680	CModelInfo::AddLodAtomicModel	MATCH	0x4C6680+0x2C	store count++, virtual Init, SetModelInfo (AtomicModel and PedModel disassembled, rest same shape)	
+0x4C66B0	CModelInfo::AddTimeModel	MATCH	0x4C66B0+0x2C	store count++, virtual Init, SetModelInfo (AtomicModel and PedModel disassembled, rest same shape)	
+0x4C66E0	CModelInfo::AddLodTimeModel	MATCH	0x4C66E0+0x2C	store count++, virtual Init, SetModelInfo (AtomicModel and PedModel disassembled, rest same shape)	
+0x4C6710	CModelInfo::AddWeaponModel	MATCH	0x4C6710+0x2C	store count++, virtual Init, SetModelInfo (AtomicModel and PedModel disassembled, rest same shape)	
+0x4C6740	CModelInfo::AddClumpModel	MATCH	0x4C6740+0x2C	store count++, virtual Init, SetModelInfo (AtomicModel and PedModel disassembled, rest same shape)	
+0x4C6770	CModelInfo::AddVehicleModel	MATCH	0x4C6770+0x2C	store count++, virtual Init, SetModelInfo (AtomicModel and PedModel disassembled, rest same shape)	
+0x4C67A0	CModelInfo::AddPedModel	MATCH	0x4C67A0+0x2C	store count++, virtual Init, SetModelInfo (AtomicModel and PedModel disassembled, rest same shape)	
+0x6042B0	CDecisionMakerTypes::HasAnyEventResponse	MATCH	0x6042B0-0x604396		
+0x6043A0	CDecisionMakerTypes::RemoveDecisionMaker	MATCH	0x6043A0-0x604486		
+0x604490	CDecisionMakerTypes::FlushDecisionMakerEventResponse	MATCH	0x604490-0x6044B0		
+0x6044C0	CDecisionMakerTypes::AddEventResponse	MATCH	0x6044C0-0x6044EF		
+0x41BF70	CCarAI::FindSwitchDistanceFar	MATCH	0x41BF70-0x41BF99	50.0 / +5.0 consts verified	
+0x607050	CDecisionMakerTypes::AddDecisionMaker	MATCH	0x607050-0x6070DE	already had exe-address comments; structure re-checked	
+0x607D00	CDecisionMakerTypesFileLoader::ReStart	MATCH	0x607D00-0x607D23	already commented; slots 10..19 confirmed	
+0x4684F0	CDecisionMakerTypes::GetInstance	NOT_REACHED		already has exe-address comments in body (not never-audited by the brief rule)	
+0x606F80	CDecisionMakerTypes::MakeDecision-group	NOT_REACHED		already has exe-address comments in body (not never-audited by the brief rule)	
+0x607D30	CDecisionMakerTypesFileLoader::LoadDecisionMaker-enum	NOT_REACHED		already has exe-address comments in body (not never-audited by the brief rule)	

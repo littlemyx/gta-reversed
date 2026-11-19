@@ -38,3 +38,5 @@ addr	function	verdict	asm range	note	fix commit
 0x48C589	CSetPieces::AddOne	NOT_REACHED	-	-	-
 0x489921	LoadAndLaunchMissionInternal	NOT_REACHED	-	-	-
 0x497DE8	SetTextLabel<16>	NOT_REACHED	-	-	-
+-	CRunningScript helpers (Locate/AreaCheck/GivePedScriptedTask/PlayAnim/ProcessOneCommand)	NOT_REACHED	-	budget	-
+-	int/float signature scan (sa.json vs 555 non-template handlers)	MATCH	-	only DISPLAY_TEXT_WITH_FLOAT mismatched (fixed)	-

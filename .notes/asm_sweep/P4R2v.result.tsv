@@ -1,0 +1,12 @@
+addr	function	verdict	asm range	note	fix commit
+0x539554	CFire::ExtinguishWithWater (review of P4R2u)	MATCH	0x539554-0x5395F6	z = (rand&0xFF)*0.005 with no -128 confirmed; x,y -128 and 0.01 confirmed	-
+0x56A30E	CWorld::RemoveVehicleAndItsOccupants (review of P4R2u)	MATCH	0x56A30E-0x56A339	CleanUpOldReference + m_pDriver=0 confirmed	-
+0x73A530	CWeapon::GenerateDamageEvent	MATCH	0x73A530-0x73A8CF	ctor args, dead-ped kick anim (task 0xDA), AffectsPed, melee/fall cond, anim cases 0x1C-0x1F/0xBF/0xC0, stealth, driveby skip, return value; earlier fix 587798e6c confirmed	-
+0x45A610	CVehicleRecording::SaveOrRetrieveDataForThisFrame	MATCH	0x45A610-0x45A8EC	paused clock, x87 step/interp, forward/back frame search, loop/stop, train + collision mark; earlier fix a1d1534a5 confirmed	-
+0x5FC800	CPedGroups::Process	FIXED	0x5FC800-0x5FC9A9	loop/flush, dm switch (mission groups skipped) match; mission end did not reset kill counter and end test used the old flag	43c8cb50f
+0x443F80	CGangWars::CanPlayerStartAGangWarHere	MATCH	0x443F80-0x443FE0	training/zone list compare	-
+0x445B30	CGangWars::AttackWaveOvercome	FIXED	0x445B30-0x445C2A	port also cleared bDonePositionOutOfCollision on dying wave peds; distance float-vs-x87 noise	0d2ebb966
+0x443AE0	CGangWars::DoesPlayerControlThisZone	MATCH	0x443AE0-0x443AFE	-	-
+0x4439D0	CGangWars::PedStreamedInForThisGang	MATCH	0x4439D0-0x443A1F	-	-
+0x443A20	CGangWars::PickStreamedInPedForThisGang	FIXED	0x443A20-0x443A9F	counter aliased the first stored safehouse car x (0x96ABD8) instead of its own static 0x96ABD4; early-out tests ped count	414096cea
+-	remaining (CCamera::UpdateTargetEntity, CStats::DisplayScriptStatUpdateMessage, CPointLights::AddLight, CGangWars::GetGangColor, CPathFind::MarkRegionsForCoors, CCreepingFire::TryToStartFireAtCoors and the rest of the 69)	NOT_REACHED	-	budget	-

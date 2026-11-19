@@ -72,6 +72,23 @@ def verdicts(repo):
     return ok, other
 
 
+def inventory(repo):
+    """oracle_coverage.inventory without its reset of the class at RH_ScopedCategoryGlobal (RH_ScopedClass(X) is followed by it in most files)."""
+    out = []
+    for path in sorted(glob.glob(repo + '/source/**/*.cpp', recursive=True)):
+        cur = None
+        for ln in open(path, encoding='utf-8', errors='replace'):
+            if ln.lstrip().startswith('//') or 'define' in ln: continue
+            m = oc.CLS.match(ln) or oc.NS.match(ln)
+            if m: cur = m.group(1); continue
+            m = oc.SITE.match(ln)
+            if not m or m.group(1) == 'RH_ScopedInstallScriptCommand': continue
+            fn = m.group(2).strip()
+            if m.group(1).startswith('RH_ScopedNamed'): fn = m.group(3).strip('"')
+            out.append(dict(cls=cur, fn=fn, addr=int(m.group(4), 16)))
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--dump', required=True); ap.add_argument('--map', required=True)
@@ -82,7 +99,7 @@ def main():
     addrs = [s[0] for s in syms]
     un = undname()
     by = collections.defaultdict(set)
-    for s in oc.inventory(a.repo):
+    for s in inventory(a.repo):
         fn = s['fn'].split('-')[0]
         by[(s['cls'] + '::' if s['cls'] else '') + fn].add(s['addr'])
         by[fn].add(s['addr']) if not s['cls'] else None

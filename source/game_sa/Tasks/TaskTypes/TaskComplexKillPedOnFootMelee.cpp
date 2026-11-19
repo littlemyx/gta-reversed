@@ -106,11 +106,15 @@ CTask* CTaskComplexKillPedOnFootMelee::CreateSubTask(eTaskType taskType, CPed* p
 }
 
 // ASM-S06: the exe calls CalculateSearchPositionAndRanges and only then reads the range (the port used to pass the stale range by value)
-float CTaskComplexKillPedOnFootMelee::UpdateTargetDistSq(CPed* ped, bool zxySum) {
+x87d CTaskComplexKillPedOnFootMelee::UpdateTargetDistSq(CPed* ped, bool zxySum) {
     CalculateSearchPositionAndRanges(ped);
     if (zxySum) { // ASM-P4S3b: exe 0x62BDA2-0x62BDD3 / 0x62BE7B-0x62BEB3 sum z*z, then x*x, then y*y (the 0x62BC98 path uses CVector::SquaredMagnitude order x,y,z)
-        const auto d = m_targetPos - ped->GetPosition();
-        return d.z * d.z + d.x * d.x + d.y * d.y;
+        // ASM-P4R18g: the differences are fsub results that stay on the x87 stack (not rounded to float), compared against range*range in the same unrounded form
+        const auto& p  = ped->GetPosition();
+        const x87d  dx = (x87d)m_targetPos.x - (x87d)p.x;
+        const x87d  dy = (x87d)m_targetPos.y - (x87d)p.y;
+        const x87d  dz = (x87d)m_targetPos.z - (x87d)p.z;
+        return (dz * dz + dx * dx) + dy * dy;
     }
     return (ped->GetPosition() - m_targetPos).SquaredMagnitude();
 }
@@ -150,8 +154,10 @@ CTask* CTaskComplexKillPedOnFootMelee::CreateNextSubTask(CPed* ped) {
         if (ped->bStayInSamePlace) {
             return Create(TASK_SIMPLE_PAUSE);
         }
+        const x87d distSqZxy = UpdateTargetDistSq(ped, true);
+        const x87d rngZxy    = (x87d)m_arriveRange; // ASM-P4R18g: range*range unrounded like the sum
         return Create(
-            sq(m_arriveRange) < UpdateTargetDistSq(ped, true) // ASM-S06: exe 0x62BDD9/0x62BDE8 (strict, range read after the update)
+            rngZxy * rngZxy < distSqZxy // ASM-S06: exe 0x62BDD9/0x62BDE8 (strict, range read after the update)
                 ? TASK_COMPLEX_SEEK_ENTITY
                 : TASK_SIMPLE_PAUSE
         );
@@ -170,8 +176,9 @@ CTask* CTaskComplexKillPedOnFootMelee::CreateFirstSubTask(CPed* ped) {
         return nullptr;
     }
     return CreateSubTask([this, ped] {
-        const auto distSq = UpdateTargetDistSq(ped);
-        if (!(sq(m_arriveRange) < distSq)) { // ASM-S06: exe 0x62BEB5-0x62BEC4 (strict; range read after the update)
+        const auto distSq = UpdateTargetDistSq(ped, true); // ASM-P4R18g: exe 0x62BE8A-0x62BEB3 sums z,x,y (port: x,y,z in float)
+        const x87d rng    = (x87d)m_arriveRange;
+        if (!(rng * rng < distSq)) { // ASM-S06: exe 0x62BEB5-0x62BEC4 (strict; range read after the update; range*range unrounded like the sum)
             return TASK_SIMPLE_FIGHT_CTRL;
         }
         return ped->bStayInSamePlace

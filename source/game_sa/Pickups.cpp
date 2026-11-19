@@ -143,8 +143,7 @@ void CPickups::CreatePickupCoorsCloseToCoors(float inX, float inY, float inZ, fl
 
         outX = cand.x;
         outY = cand.y;
-        // BUG: the original writes the candidate's Y coordinate into outZ
-        outZ = notsa::IsFixBugs() ? cand.z : cand.y;
+        outZ = cand.z; // exe 0x458DCF: the candidate's Z (the port wrote Y without FIX_BUGS)
         return;
     }
 
@@ -497,8 +496,8 @@ void CPickups::DoPickUpEffects(CEntity* entity) {
 
     auto& mat = obj->GetMatrix();
     mat.GetRight() = CVector{ cs, sn, 0.0f };
-    mat.GetUp()    = CVector{ -sn, cs, 0.0f };
-    mat.GetForward() = CVector{ 0.0f, 0.0f, scale };
+    mat.GetForward() = CVector{ -sn, cs, 0.0f }; // exe 0x455D72-0x455E0E: +0x10 = (-sin, cos, 0) is the forward axis, +0x20 = (0, 0, scale) the up axis (port had them swapped)
+    mat.GetUp()      = CVector{ 0.0f, 0.0f, scale };
 }
 
 // 0x4551C0

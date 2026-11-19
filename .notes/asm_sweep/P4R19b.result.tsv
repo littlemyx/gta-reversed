@@ -1,0 +1,11 @@
+addr	function	verdict	asm range	note	fix commit
+0x4BBE30	CEventHandler::ComputeShotFiredWhizzedByResponse	MATCH	0x4BBE30-0x4BBF4F	P4R19 fix CONFIRMED: no source entity -> je 0x4BBE94 skips the +0x24 store; id 0xC8 stores null (0x4BBE91)	
+0x4BA8B0	CEventHandler::ComputeVehicleDiedResponse	MATCH	0x4BA8B0-0x4BA97F	P4R19 fix CONFIRMED: no vehicle -> je 0x4BA976 untouched; Die ctor first arg 0x33 (EXPLOSION) correct here	
+0x4BB2E0	CEventHandler::ComputeVehicleOnFireResponse	MATCH	0x4BB2E0-0x4BB655	P4R19 fix CONFIRMED: Die ctor weapon arg = esi = 0 (UNARMED); null vehicle -> 0x4BB63E untouched; wreck/health/in-THE-vehicle test equal	
+0x4BF2B0	CEventHandler::ComputeBuildingCollisionResponse	MATCH	0x4BF2B0-0x4BF99D	all branches, random draw position, 0.707, task ids, ctor arg order equal; exe target-pos vec (0x4BF47F) is only built when tKillPed has a target and is never consumed on those paths, so port use of tGoToPoint point is equivalent	
+0x4BE7D0	CEventHandler::ComputePedCollisionWithPlayerResponse	MATCH	0x4BE7D0-0x4BF19F	compared: prologue, d vector, dot order z,y,x and NaN flags, move-state set {4,6,7}, group check (<3 return), task ids, Say, follow-in-formation randoms (0.25/0.33/0.66), route response + FollowPointRoute args; tail after 0x4BF19F (gang follower offset block) only structurally checked	
+0x4C0170	CEventHandler::ComputeDamageResponse	NOT_REACHED			
+0x4C0BD0	CEventHandler::ComputeVehiclePotentialCollisionResponse	NOT_REACHED			
+0x4BF9B0	CEventHandler::ComputePersonalityResponseToDamage	NOT_REACHED			
+	Event ctors / Clone / priority getters	NOT_REACHED			
+	All other CEventHandler::Compute*Response early-exit class scan	MATCH	n/a	ComputeEventResponseTask nulls m_EventResponseTask on entry (EventHandler.cpp:3638) and nested Compute calls (KnockOffBike) already return the field, so return nullptr vs untouched is behaviourally inert outside the 3 P4R19 sites; no change	

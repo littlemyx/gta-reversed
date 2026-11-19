@@ -98,7 +98,12 @@ float GetObjectHeading(CObject& object) {
 }
 
 void SetObjectHeading(CObject& object, float heading) {
+    // exe 0x47CCEE: CWorld::Remove, SetHeading, UpdateRwMatrix, UpdateRwFrame, CWorld::Add
+    CWorld::Remove(&object);
     object.SetHeading(DegreesToRadians(FixAngleDegrees(heading)));
+    object.UpdateRwMatrix();
+    object.UpdateRwFrame();
+    CWorld::Add(&object);
 }
 
 void SetObjectScale(CObject& object, float scale) {

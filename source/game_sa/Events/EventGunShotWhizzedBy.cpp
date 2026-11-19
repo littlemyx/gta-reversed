@@ -31,10 +31,13 @@ bool CEventGunShotWhizzedBy::AffectsPed(CPed* ped)
         CVector direction = m_endPoint - m_startPoint;
         direction.Normalise();
         CVector distance = ped->GetPosition() - m_startPoint;
-        float squaredMagnitude = (distance * direction).SquaredMagnitude();
-        if (squaredMagnitude > 0.0f) {
-            CVector2D point = (direction * squaredMagnitude) + m_startPoint;
-            return 2.0f * 2.0f > (ped->GetPosition() - point).SquaredMagnitude();
+        // exe 0x4B5149-0x4B51A2: the projection length is the dot product (z,y,x order); the port squared the component-wise product
+        const float proj = distance.z * direction.z + distance.y * direction.y + distance.x * direction.x;
+        if (proj > 0.0f) {
+            // exe 0x4B51D4-0x4B5224: only x/y of the closest point are used (the port's CVector2D -> CVector conversion added a z term)
+            const float dx = ped->GetPosition().x - (direction.x * proj + m_startPoint.x);
+            const float dy = ped->GetPosition().y - (direction.y * proj + m_startPoint.y);
+            return 2.0f * 2.0f > dy * dy + dx * dx;
         }
     }
     return false;

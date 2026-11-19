@@ -1,0 +1,16 @@
+addr	function	verdict	asm range	note	fix commit
+0x6699E0	CTaskComplexFollowNodeRoute::ComputeRoute	MATCH	0x6699E0-0x669D1C	unrolled x4 loop equals sequential; area-loaded skip, 8-cap add	
+0x681FE0	CTaskComplexPartner::CalculateMeetingPoints	MATCH	0x681FE0-0x68226F	already x87-mirrored incl. spill slots	
+0x65F780	CTaskComplexTrackEntity::CalcTargetPos	MATCH	0x65F780-0x65F91E	already x87-mirrored	
+0x65ED40	CTaskComplexGangFollower::CalculateOffsetPosition	MATCH	0x65ED40-0x65EE7F	sum order (dz,dy,dx) already mirrored	
+0x648710	CTaskComplexCarSlowBeDraggedOutAndStandUp::CreateSubTask	MATCH	0x648710-0x6488E7	anim groups/doors/args equal	
+0x68BBD0	CTaskComplexPolicePursuit::SetPursuit	FIXED	0x68BBD0-0x68BD81	m_Pursued nulled unless SetPursuitCop succeeds; distance sum order is x87 noise	68ea61b72
+0x4B0810	CEventGunAimedAt::TakesPriorityOver	MATCH	0x4B0810-0x4B0897		
+0x634A60	CTaskComplexUseMobilePhone::CreateNextSubTask	MATCH	0x634A60-0x634C03		
+0x64E3B0	CTaskComplexGoToBoatSteeringWheel::ControlSubTask	MATCH	0x64E3B0-0x64E46F	port's extra radius/pos guard is always true after the 0.04 distance test	
+0x4B5240	CEventSoundQuiet::AffectsPed	FIXED	0x4B5240-0x4B5350	start-time diff compared signed (jl); port uint32	7bafcdc3b
+0x654370	CTaskComplexWalkRoundCar::ControlSubTask	MATCH	0x654370-0x6544E5	float vs x87 dot/sum noise only	
+0x6641A0	CTaskGangHassleVehicle::CalcTargetOffset	MATCH	0x6641A0-0x664297		
+0x4B38D0	CEventDamage::AffectsPedGroup	MATCH	0x4B38D0-0x4B3A13	dot order z,y,x float noise	
+0x4B3440	CEventDamage::ReportCriminalEvent	MATCH	0x4B3440-0x4B3599	crime ids/weapon ranges equal	
+0x6617A0	CTaskComplexGangJoinRespond::CreateNextSubTask	MATCH	0x6617A0-0x6618B0		

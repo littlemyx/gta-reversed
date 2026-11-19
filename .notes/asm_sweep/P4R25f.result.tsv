@@ -1,0 +1,3 @@
+addr	function	verdict	asm range	note	fix commit
+0x73DD25	CWeapon::Update (reload audio/progress<0.9, f61ba729f)	MATCH	0x73DD25-0x73DDD4	f61ba729f CONFIRMED: rload=fild*0.001f, cur-step<rload, cur/total<0.9 all unrounded; compare directions checked (fcom C0|C3 / fcomp C0)	-
+0x435830	CCarCtrl::SteerAICarWithPhysicsFollowPath_Racing (head)	MATCH	0x435830-0x4361F6	node advance, DoPathSearch args, link search, dirs/links arrays, DealWithBend loop args, no-bend/bend orientation blends all match; outUnk3 initial is stale ptr in exe (unused)	-

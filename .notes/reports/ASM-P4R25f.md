@@ -1,0 +1,3 @@
+# ASM-P4R25f
+Step 1: f61ba729f (CWeapon::Update 0x73DD25-0x73DDD4) CONFIRMED against the exe: fild*0.001f stays extended, `cur-step` extended, `cur/total` (fdivr) compared unrounded to 0.9f; directions (rload<=cur, cur-step<rload, ratio<0.9) match.
+Step 2: SteerAICarWithPhysicsFollowPath_Racing head 0x435830-0x4361F6: MATCH (no source change). Checked curSpeed order, fwd2D, link x/y*0.125, dist/dot/cos tests, DoPathSearch 15 args, RemoveOnePathNode logic, field shuffle (3b4..3b8), link search, links/dirs/nodes arrays, DealWithBend args, both orientation blends (t / 1-t, (t+2)/3), final clip call.

@@ -53,6 +53,11 @@ void CRestart::Initialise() {
 
 // 0x460730
 void CRestart::AddHospitalRestartPoint(CVector const& point, float angle, int32 townId) {
+    // NOTSA: the exe (0x460730) has no bound check - a second run of the main script's init (the mission-driver's "mission 0") adds past MAX_RESTART_POINTS and overwrites the neighbouring globals,
+    // harmless in the exe's fixed .data layout, a crash in the portable build where the arrays are separate objects. A real game runs the init once.
+    if (NumberOfHospitalRestarts >= MAX_RESTART_POINTS) {
+        return;
+    }
     HospitalRestartPoints[NumberOfHospitalRestarts]    = point;
     HospitalRestartHeadings[NumberOfHospitalRestarts]  = angle;
     HospitalRestartWhenToUse[NumberOfHospitalRestarts] = townId;
@@ -61,6 +66,11 @@ void CRestart::AddHospitalRestartPoint(CVector const& point, float angle, int32 
 
 // 0x460780
 void CRestart::AddPoliceRestartPoint(CVector const& point, float angle, int32 townId) {
+    // NOTSA: the exe (0x460780) has no bound check - a second run of the main script's init (the mission-driver's "mission 0") adds past MAX_RESTART_POINTS and overwrites the neighbouring globals,
+    // harmless in the exe's fixed .data layout, a crash in the portable build where the arrays are separate objects. A real game runs the init once.
+    if (NumberOfPoliceRestarts >= MAX_RESTART_POINTS) {
+        return;
+    }
     PoliceRestartPoints[NumberOfPoliceRestarts]    = point;
     PoliceRestartHeadings[NumberOfPoliceRestarts]  = angle;
     PoliceRestartWhenToUse[NumberOfPoliceRestarts] = townId;

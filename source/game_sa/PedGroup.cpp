@@ -52,10 +52,8 @@ float CPedGroup::FindDistanceToNearestMember(CPed** ppOutNearestMember) {
 // 0x5FACD0
 CPed* CPedGroup::GetClosestGroupPed(CPed* ped, float* pOutDistSq) {
     const auto [closest, distSq] = GetMembership().GetMemberClosestTo(ped);
-    if (closest) {
-        if (pOutDistSq) {
-            *pOutDistSq = distSq;
-        }
+    if (pOutDistSq) { // exe 0x5FAFF3: stored unconditionally; with no member found it is the initial 1e8 (0x86C848)
+        *pOutDistSq = closest ? distSq : 100000000.0f;
     }
     return closest;
 }

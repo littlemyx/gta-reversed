@@ -62,6 +62,10 @@ void CBulletInfo::AddBullet(CEntity* creator, eWeaponType weaponType, CVector po
 // 0x7360D0
 void CBulletInfo::Update() {
     for (auto& info : aBulletInfos) {
+        // 0x7360E7..0x7360FF: a ped creator that is no longer a valid pool ped is forgotten (checked for every slot, before the exists test)
+        if (info.m_pCreator && info.m_pCreator->GetIsTypePed() && !info.m_pCreator->AsPed()->IsPointerValid())
+            info.m_pCreator = nullptr;
+
         // 0x736105 / 0x736126: a bullet that does not exist is skipped, then an expired one is switched off but STILL processed this last frame
         if (!info.m_bExists)
             continue;
@@ -87,7 +91,7 @@ void CBulletInfo::Update() {
         CWorld::pIgnoreEntity    = info.m_pCreator;
 
         CColPoint colPoint;
-        CEntity* hitEntity;
+        CEntity* hitEntity = nullptr;
         if (CWorld::ProcessLineOfSight(info.m_vecPosition, newPosition, colPoint, hitEntity, true, true, true, true, true, false, false, true)) {
             CWeapon::CheckForShootingVehicleOccupant(&hitEntity, &colPoint, info.m_nWeaponType, info.m_vecPosition, newPosition);
 
@@ -123,6 +127,7 @@ void CBulletInfo::Update() {
                         if (auto assoc = CAnimManager::BlendAnimation(hitPed->GetRpClump(), ANIM_GROUP_DEFAULT, anim, 8.0f)) {
                             assoc->SetCurrentTime(0.0f);
                             assoc->SetFlag(ANIMATION_IS_FINISH_AUTO_REMOVE, false);
+                            assoc->SetFlag(ANIMATION_IS_PLAYING, true); // 0x7363C4: flags = (flags & ~8) | 1
                             // std::cout << "Blood anim\n";
                         }
                     }
@@ -224,13 +229,15 @@ void CBulletInfo::Update() {
                 // std::cout << "Register sniper bullet hit\n";
                 CVector dir = newPosition - info.m_vecPosition;
                 dir.Normalise();
-                const float dirDotColPointNorm = DotProduct(dir, colPoint.m_vecNormal);
+                // 0x7366FB: sum order x, z, y
+                const float dirDotColPointNorm = colPoint.m_vecNormal.x * dir.x + colPoint.m_vecNormal.z * dir.z + colPoint.m_vecNormal.y * dir.y;
                 if (dirDotColPointNorm < 0.0f) {
                     AudioEngine.ReportBulletHit(hitEntity, colPoint.m_nSurfaceTypeB, colPoint.m_vecPoint, RadiansToDegrees(x87::asin(-dirDotColPointNorm)));
                 }
             }
             CGlass::WasGlassHitByBullet(hitEntity, colPoint.m_vecPoint);
         }
+        const bool wasHit = hitEntity != nullptr; // 0x7367FF
 
         CWorld::bIncludeDeadPeds = false;
         CWorld::bIncludeCarTyres = false;
@@ -244,6 +251,10 @@ void CBulletInfo::Update() {
         }
 
         info.m_vecPosition = newPosition;
+
+        // 0x7367FF..0x736807: a bullet that hit something is switched off
+        if (wasHit)
+            info.m_bExists = false;
     }
 }
 

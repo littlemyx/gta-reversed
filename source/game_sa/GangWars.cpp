@@ -679,10 +679,11 @@ bool CGangWars::PedStreamedInForThisGang(eGangID gangId) {
 bool CGangWars::PickStreamedInPedForThisGang(eGangID gangId, int32& outPedId) {
     auto groupId = CPopulation::GetGangGroupId(gangId);
     auto numPeds = CPopulation::GetNumPedsInGroup(groupId);
-    if (groupId <= 0)
+    if (numPeds <= 0) // 0x443A3C: the exe tests the ped count (not the group id)
         return false;
 
-    auto& x = *reinterpret_cast<int32*>(&CGarages::aCarsInSafeHouse[0][0].m_vPosn.x); // ?
+    // 0x443A44: the rotating index is its own static (0x96ABD4); the port used the x of the first stored safehouse car (0x96ABD8), clobbering it
+    auto& x = PickStreamedInPedCounter;
     for (auto i = 0; i < numPeds; i++) {
         x = (x + 1) % numPeds;
         outPedId = CPopulation::GetPedGroupModelId(groupId, x);

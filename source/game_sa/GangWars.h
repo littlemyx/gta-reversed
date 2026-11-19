@@ -75,6 +75,7 @@ public:
     static inline NOTSA_GLOBAL(bCanTriggerGangWarWhenOnAMission, 0x96AB93, (bool), {});
     static inline NOTSA_GLOBAL(NumSpecificZones, 0x96AB94, (int32), {});
     static inline NOTSA_GLOBAL(RadarBlip, 0x96AB98, (int32), {});
+    static inline NOTSA_GLOBAL(PickStreamedInPedCounter, 0x96ABD4, (int32), {}); // NOTSA name: rotating index of PickStreamedInPedForThisGang
     static inline NOTSA_GLOBAL(TerritoryUnderControlPercentage, 0x96AB9C, (float), {});
     static inline NOTSA_GLOBAL(bIsPlayerOnAMission, 0x96ABA0, (bool), {});
     static inline NOTSA_GLOBAL(CoorsOfPlayerAtStartOfWar, 0x96ABBC, (CVector), {});

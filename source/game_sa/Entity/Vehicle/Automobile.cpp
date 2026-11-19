@@ -3765,7 +3765,7 @@ void CAutomobile::HydraulicControl() {
             }
         }
         float limitDiff = extendedLowerLimit - normalLowerLimit;
-        if (limitDiff != 0.0f && std::fabs(maxDelta / limitDiff) > 0.01f) {
+        if (limitDiff != 0.0f && std::fabs(maxDelta / limitDiff) > 0.01) { // 0x6A12E5: fcomp qword [0x85A308] = double 0.01 (not 0.01f)
             float f = (limitDiff + maxDelta) * 0.5f / limitDiff;
             f = std::clamp(f, 0.0f, 1.0f);
             if (f < 0.4f || f > 0.6f)

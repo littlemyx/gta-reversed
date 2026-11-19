@@ -4365,6 +4365,9 @@ bool CPhysical::ProcessCollisionSectorList(int32 sectorX, int32 sectorY)
                                 (colPoint2->m_nPieceTypeB >= 13 && colPoint2->m_nPieceTypeB <= 16)) {
                                 ++totalAcceptableColPoints;
                                 ApplySoftCollision(physicalEntity, *colPoint2, fThisDamageIntensity, fEntityDamageIntensity);
+                                if (colPoint2->m_nPieceTypeB >= 13 && colPoint2->m_nPieceTypeB <= 16) { // 0x54BE21: same B-piece record as in the other soft branches
+                                    physicalEntity->SetDamagedPieceRecord(fEntityDamageIntensity, this, *colPoint2, -1.0f);
+                                }
                             } else {
                                 if (ApplyCollision(entity, *colPoint2, fThisDamageIntensity, fEntityDamageIntensity)) {
                                     if (fThisDamageIntensity > fThisMaxDamageIntensity) {

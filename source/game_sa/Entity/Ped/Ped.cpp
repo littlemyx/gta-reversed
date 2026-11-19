@@ -2178,7 +2178,8 @@ void CPed::UpdatePosition()
                 maxMag = CTimer::GetTimeStep() * 0.002f;
             } else {
                 const auto vehType = standingOn2->AsVehicle()->m_nVehicleType;
-                if (vehType == VEHICLE_TYPE_BIKE && standingOn2->AsPhysical()->m_vecMoveSpeed.SquaredMagnitude() > 0.04f) {
+                // 0x5E1EEC: compares against the float at 0x863244 = 0x3D23D70B (one ulp above the literal 0.04f)
+                if (vehType == VEHICLE_TYPE_BIKE && standingOn2->AsPhysical()->m_vecMoveSpeed.SquaredMagnitude() > std::bit_cast<float>(0x3D23D70Bu)) {
                     maxMag = CTimer::GetTimeStep() * std::bit_cast<float>(0x3951B718u); // 0x86C304 (one ulp above the literal 0.0002f)
                 } else {
                     maxMag = mag;

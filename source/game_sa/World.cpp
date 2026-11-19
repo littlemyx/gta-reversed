@@ -3308,7 +3308,8 @@ bool CWorld::ProcessLineOfSight(const CVector& origin, const CVector& target, CC
 void CWorld::RemoveVehicleAndItsOccupants(CVehicle* veh) {
     if (const auto driver = veh->m_pDriver) {
         CPopulation::RemovePed(driver);
-        // CEntity::ClearReference(driver); // Entity has been deleted, it makes no sense to call this
+        // 0x56A31E-0x56A333: the exe cleans up the old reference and nulls m_pDriver, so ~CVehicle doesn't flag the (already deleted) ped
+        veh->m_pDriver = nullptr;
     }
 
     for (const auto passenger : veh->GetPassengers()) {

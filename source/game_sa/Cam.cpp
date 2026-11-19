@@ -1335,7 +1335,10 @@ void CCam::Process() {
                 target = playerPos;
 
                 bool bReset =
-                    9.0f < sq(gCamPlayerLastPos.z - playerPos.z) + sq(gCamPlayerLastPos.y - playerPos.y) + sq(gCamPlayerLastPos.x - playerPos.x) // NOTE: summation order as in the original
+                    9.0 < [&] { // exe 0x5273C4: unrounded x87 differences (constant - player), summed z, y, x
+                        const x87d dz = (x87d)gCamPlayerLastPos.z - playerPos.z, dy = (x87d)gCamPlayerLastPos.y - playerPos.y, dx = (x87d)gCamPlayerLastPos.x - playerPos.x;
+                        return dz * dz + dy * dy + dx * dx;
+                    }()
                     || CTimer::GetTimeStep() < 0.2f
                     || Using3rdPersonMouseCam()
                     || TheCamera.m_bCamDirectlyBehind

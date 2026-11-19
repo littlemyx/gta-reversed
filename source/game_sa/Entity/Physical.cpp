@@ -4827,10 +4827,13 @@ void CPhysical::AttachEntityToEntity(CPhysical* entityAttachTo, CVector* vecAtta
     if (!entityAttachTo)
         return;
 
-    CPhysical* oldEntityAttachedTo = m_pAttachedTo;
     m_pAttachedTo = entityAttachTo;
     assert(m_pAttachedTo);
     m_pAttachedTo->RegisterReference(reinterpret_cast<CEntity**>(&m_pAttachedTo));
+    if (!m_pAttachedTo->m_matrix) { // 0x54D6D6-0x54D6E9: the target without a matrix gets one built from its placement
+        m_pAttachedTo->AllocateMatrix();
+        m_pAttachedTo->m_placement.UpdateMatrix(m_pAttachedTo->m_matrix);
+    }
     CMatrix entityAttachedtoMatrix(m_pAttachedTo->GetMatrix());
     auto* attachedToAutoMobile = m_pAttachedTo->AsAutomobile();
     if (GetIsTypeObject() && m_pAttachedTo->m_nModelIndex == MODEL_FORKLIFT)
@@ -4878,7 +4881,7 @@ void CPhysical::AttachEntityToEntity(CPhysical* entityAttachTo, CVector* vecAtta
     if (physicalFlags.bInfiniteMass)
         m_vecAttachedEntityRotation = GetPosition();
 
-    m_pEntityIgnoredCollision = oldEntityAttachedTo;
+    m_pEntityIgnoredCollision = m_pAttachedTo; // 0x54D8DE-0x54D8E1: the exe reads +0xFC AFTER overwriting it, so this is the NEW target (the port stored the old one)
     PositionAttachedEntity();
 }
 

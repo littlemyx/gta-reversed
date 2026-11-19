@@ -1,0 +1,21 @@
+addr	function	verdict	asm range	note	fix commit
+0x414D70	CCollision::IsStoredPolyStillValidVerticalLine	MATCH	0x414D70-0x41520F	plane/axis select/side test/intersection/6-case projection+jump table/3 edge tests all instruction-level	
+0x415730	CCollision::PointInPoly	MATCH	0x415730-0x415946	3 axis cases, compare strictness (>=,<=,>=), result combine	
+0x416450	CCollision::ProcessSphereSphere	MATCH	0x416450-0x4165A7	spills, sum order z,x,y, unrounded touchDistSq compare, colpoint fields	
+0x417470	CCollision::TestLineSphere	MATCH	0x417470-0x41760E	degenerate branch, quadratic, NaN behaviour	
+0x412AA0	CCollision::ProcessLineSphere	MATCH	0x412AA0-0x412C66		
+0x413AC0	CCollision::TestLineTriangle (2D in-triangle switch)	MATCH	0x413C02-0x4140D7	6 cases loads + shared tail; case 0 instruction-level, others by operand offsets	
+0x5EBB00	CPedAttractorManager::HasEmptySlot	FIXED	0x5EBB00-0x5EBB73	null fx / type != EFFECT_ATTRACTOR returned false in exe	66f63385a
+0x598A60	InteriorManager_c::PruneVisibleEffects	MATCH	0x598A60-0x598D7C	sum, dist min (strict <), exchange sort (strict <), cull	
+0x4C53C0	CClumpModelInfo::GetFrameFromId	MATCH	0x4C53C0		
+0x4C5390	CClumpModelInfo::FillFrameArrayCB	MATCH	0x4C5390		
+0x4C5460	CClumpModelInfo::SetFrameIds	MATCH	0x4C5460		
+0x4C5740	CClumpModelInfo::GetAnimFileIndex	MATCH	0x4C5740		
+0x4C5780	CWeaponModelInfo::GetModelType	MATCH	0x4C5780	returns 4 = MODEL_INFO_WEAPON	
+0x4C4D20	CBaseModelInfo::Add2dEffect	MATCH	0x4C4D20		
+0x46A810	CTheScripts::HasCarModelBeenSuppressed	MATCH	0x46A810	40 entries	
+0x46A890	CTheScripts::HasVehicleModelBeenBlockedByScript	MATCH	0x46A890	20 entries	
+0x5EB4C0	CPedAttractor::IsRegisteredWithPed	MATCH	0x5EB4C0		
+0x5EB590	CPedAttractor::GetHeadOfQueue	MATCH	0x5EB590		
+0x5EB530	CPedAttractor::IsAtHeadOfQueue	MATCH	0x5EB530		
+0x53CF30	CKeyGen::GetUppercaseKey	NOT_REACHED			

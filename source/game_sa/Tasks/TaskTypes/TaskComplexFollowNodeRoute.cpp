@@ -381,7 +381,7 @@ bool CTaskComplexFollowNodeRoute::MakeAbortable(CPed* ped, eAbortPriority priori
                     return nullptr;
                 }
             }();
-            if (vehicle && vehicle->GetMoveSpeed().SquaredMagnitude() <= sq(0.125f)) {
+            if (vehicle && vehicle->GetMoveSpeed().SquaredMagnitude() < sq(0.125f)) { // exe 0x6695A1: `fcomp [0.015625]; test ah, 5; jp skip` => STRICT <
                 switch (m_pSubTask->GetTaskType()) {
                 case TASK_SIMPLE_GO_TO_POINT:
                 case TASK_SIMPLE_GO_TO_POINT_FINE: {

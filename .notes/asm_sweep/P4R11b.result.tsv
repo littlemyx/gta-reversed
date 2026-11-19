@@ -1,0 +1,22 @@
+addr	function	verdict	asm range	note	fix commit
+0x60FBD0	CPopCycle::FindNewPedType	MATCH	0x60FBEB-0x60FC11	review of e629899ba CONFIRMED: ftol((rand&0xFFFF)/32768*100) cmp 70 jge => <70	-
+0x637A60	CTaskSimpleSitIdle::ProcessPed	MATCH	0x637A8C-0x637B81	review of b3015a4a8 CONFIRMED: int rolls <5 and <25; draw order ok	-
+0x66C820	CTaskComplexInvestigateDisturbance::CreateFirstSubTask	MATCH	0x66C865-0x66C8E4	review of 93afb7744 CONFIRMED: rand*(1/32767)<0.2f strict; 0xCC if <, else 0xCA/0xCB	-
+0x4D9C80	CAEAudioUtility::ResolveProbability	MATCH	0x4D9C92	rand*(1/32767) < p strict, no draw when p>=1	-
+0x41C110	CCarAI cop spawn shotgun rolls	MATCH	0x41C124-0x41C160	two float range(0,1) < 0.25f draws, second only when first fails	-
+0x41C9D0	CCarAI::FindPoliceCarMissionForWantedLevel	MATCH	0x41C9E9-0x41CA1C	rand&3 < limit	-
+0x615B80	CPopulation police-station attractor roll	MATCH	0x615B94	int range(0,100) <= 70 (jg 0x46)	-
+0x675310	CTaskInteriorBeInOffice duration	MATCH	0x675338-0x6753C7	int <=20 then range(5000,30000); same draw order	-
+0x690D38	CTaskComplexFacial m_IsChewing	MATCH	0x690D38-0x690D5E	ftol(r*(1/32768)*100) > 70	-
+0x62BFD7	CTaskComplexKillPedOnFootArmed RandomBit	MATCH	0x62BFD7	rand&1 (S05d review, not re-disassembled)	-
+0x62CDFF	CTaskComplexKillPedOnFootArmed duck chance	MATCH	0x62CDFB-0x62CE0C	int range(0,100) unsigned < chance (jae)	-
+0x6605C0	CTaskComplexStareAtPed::ControlSubTask	MATCH	0x6607B6-0x6607D1	int range(0,100) == 50.0f	-
+0x63863F	CTaskComplexUseAttractor	MATCH	0x63863F-0x638669	int range(0,100) <=40 then range(15000,60000)	-
+0x63C500	CTaskSimpleCarDrive	MATCH	0x63C564-0x63C5E0	int <5 rolls	-
+0x73EB5C	CWeapon::FireInstantHit flamethrower	MATCH	0x73EB5C-0x73EB9A	rand&3==2 then one scalar draw	-
+-	CGeneral::RandomBool callers	NONE_LEFT	-	git grep RandomBool: only definition/declaration remain; all former callers converted (sites above)	-
+0x424CE0	CCarCtrl::ChooseModel spot	MATCH	0x424D15-0x424F3A	draw kinds/order consistent	-
+0x429300	CCarCtrl plane temp action	MATCH	0x429422-0x4294EB	rand&0xFF switch + &0x3FF/&0x1FF/&0x7FF	-
+0x6A9680	CAutomobile harvester limb	MATCH	0x6A9A2C-0x6A9B9A	draw order/args z,y,x ok; cosmetic: exe rounds first turn-speed draw to float before *0.08-0.04, port keeps x87d	-
+0x67BA80	CTaskComplexStuckInAir	MATCH	0x67BC5D	rand&1	-
+other	~370 funcs with rand (static draw-count heuristic)	NOT_REACHED	-	100 count diffs, 12 inspected (explained by inlined helpers/merged cases); Audio, BreakObject, Clouds, Interior, Population, Plane, Vehicle.cpp, Fx, Cam not reached; list in C:/gta-scratch/p4r11b/mis.txt	-

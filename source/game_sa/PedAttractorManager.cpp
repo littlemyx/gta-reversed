@@ -148,7 +148,9 @@ bool CPedAttractorManager::HasQueueTailArrivedAtSlot(const C2dEffectPedAttractor
 
 // 0x5EBB00
 bool CPedAttractorManager::HasEmptySlot(const C2dEffectPedAttractor* fx, const CEntity* entity) {
-    assert(notsa::isa<C2dEffectPedAttractor>(fx)); // NOTE: Original function just returned `false`
+    if (!fx || fx->m_Type != EFFECT_ATTRACTOR) { // 0x5EBB00..0x5EBB0E: null / not an attractor effect => false (the port asserted and dereferenced)
+        return false;
+    }
 
     const auto* const attractor = FindAssociatedAttractor(fx, entity);
     return !attractor || attractor->HasEmptySlot();

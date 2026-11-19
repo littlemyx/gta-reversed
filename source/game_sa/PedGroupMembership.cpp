@@ -156,6 +156,9 @@ void CPedGroupMembership::Process() {
         if (sq(m_separationRange) >= (leaderPos - mem->GetPosition()).SquaredMagnitude()) {
             continue;
         }
+        if (mem->GetAreaCode() != GetLeader()->GetAreaCode()) { // 0x5FBB49: `mov al, [edx+0x2F] / cmp al, [edi+0x2F] / jne skip` - a ped in another area (interior) than the leader is never removed for distance
+            continue;
+        }
         RemoveMember(i); // Ped is too far
     }
 }

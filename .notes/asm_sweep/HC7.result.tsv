@@ -1,0 +1,20 @@
+addr	function	verdict	asm range	note	fix commit
+0x5334F0/0x533560	CEntity::TransformFromObjectSpace	RECONFIRMED	0x5334F0-0x533558 + 0x59C890 + 0x54ECE0	matrix path = x87 (up*z+fwd*y)+right*x order, heading path cos/sin chain equal; prior verdict had no entry	
+0x535300	CEntity::GetColModel	RECONFIRMED	all	special col index > -1, *0x30 stride	
+0x533410	CEntity::GetRandom2dEffect	RECONFIRMED	all	32 cap, one rand(&0xFFFF)*2^-15*n, ftol	
+0x534250/0x534290	CEntity::GetBoundCentre	RECONFIRMED	-	colmodel bound centre through TransformFromObjectSpace	
+0x416330	CCollision::CalculateTrianglePlanes(CCollisionData*)	RECONFIRMED	all	move-to-front / evict-tail LRU; no floats	
+0x54F200/0x54F2B0	CPlaceable::IsWithinArea	RECONFIRMED	0x54F200-0x54F2AD	swap only when a>b ordered (test ah,0x41), >= min / <= max NaN fails; same as port compares	
+0x420B80/0x4241C0	CPlaceable::SetPosn	RECONFIRMED	all	matrix pos or placement	
+0x5483D0	CPhysical::ApplyFriction()	RECONFIRMED	0x5483D0-0x5485D2	pow(0.98,ts) unrounded then mul, 0.707 strict (test ah,5), c^2 > sqmag strict, bike pow(0.5) -> float	
+0x5454C0	CPhysical::ApplyFriction(float,CColPoint&)	RECONFIRMED	0x5454C0-0x545699 (head)	disable-turn branch dot/sqrt order, fcom+test ah,5 clamp = ordered '<'; rest was x87-vetted in-source (ExeMagnitude3)	
+0x54D920	CPhysical::CheckCollision	RECONFIRMED	0x54D920-0x54DAAE	S26 UNSURE (sector idx x/50 vs x*0.02f) is stale: GetSectorX = floor(x*0.02f+60) -> ftol like the exe	
+0x6D21F0	CVehicle::ProcessCarAlarm	RECONFIRMED	all	ftol step, unsigned 16-bit compare, subtract	
+0x6D1340	CVehicle::ProcessDelayedExplosion	RECONFIRMED	all	ts*16.666666f (0x858CF0) ftol, unsigned ja, BlowUpCar virtual	
+0x6D1080	CVehicle::GetVehicleAppearance	RECONFIRMED	all	flag mask 0xF000000 -> 1/2/3/5/4	
+0x6D29E0	CVehicle::UpdatePassengerList	RECONFIRMED	all	8 slots all-null -> 0	
+0x6D2570	CVehicle::ActivateBombWhenEntered	RECONFIRMED	all	RegisterReference only for non-null	
+0x571B70	CEntity::RegisterReference	RECONFIRMED	0x571B70-0x571C0E	flags test, dup scan, pool prune from last slot	
+0x642E70	CTaskSimpleCarDrive::ProcessBopping	RECONFIRMED	all	dist^2 = (ped-cam) x,y,z sum order, arg order head/arm	
+0x6A3820	CAutomobile::PlayHornIfNecessary	RECONFIRMED	all	flags &3, virtual PlayCarHorn	
+0x6A3770	CAutomobile::PlayCarHorn	FIXED	0x6A3770-0x6A3818	m_nCarHornTimer is a signed char; exe does `and eax,7` on the byte, port used signed `% 8` (negative timer -> r in -7..0, so always the r<2 path; Say() and the 45-tick horn were chosen wrongly for ~84% of draws)	see git log

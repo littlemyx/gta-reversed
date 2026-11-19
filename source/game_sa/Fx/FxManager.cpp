@@ -254,6 +254,10 @@ void FxManager_c::CalcFrustumInfo(RwCamera* camera) {
         for (int i = 0; i < 4; i++) { const auto& p = m_Frustum.m_Planes[i]; std::fprintf(lf, "%s%.9g/%08x,%.9g/%08x,%.9g/%08x,%.9g/%08x", i ? ";" : "", SH7F(p.normal.x), SH7F(p.normal.y), SH7F(p.normal.z), SH7F(p.distance)); }
         std::fprintf(lf, " cam6=");
         for (int i = 0; i < 6; i++) { const auto& p = camera->frustumPlanes[i].plane; std::fprintf(lf, "%s%.9g,%.9g,%.9g,%.9g", i ? ";" : "", (double)p.normal.x, (double)p.normal.y, (double)p.normal.z, (double)p.distance); }
+        if (RwFrame* cf = RwCameraGetFrame(camera)) { // camera frame LTM (read directly, no sync)
+            const RwMatrix& m = cf->ltm;
+            std::fprintf(lf, " camframe=right:%.9g,%.9g,%.9g up:%.9g,%.9g,%.9g at:%.9g,%.9g,%.9g pos:%.9g,%.9g,%.9g", (double)m.right.x, (double)m.right.y, (double)m.right.z, (double)m.up.x, (double)m.up.y, (double)m.up.z, (double)m.at.x, (double)m.at.y, (double)m.at.z, (double)m.pos.x, (double)m.pos.y, (double)m.pos.z);
+        }
         std::fprintf(lf, "\n"); std::fflush(lf);
     }
 #endif

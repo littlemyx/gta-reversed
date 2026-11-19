@@ -1,8 +1,8 @@
 #pragma once
 // SH7 RR debug logs for the TS port (STATEHASH builds only, no behaviour change). Every row: `frame randCount TAG ...`, frame = recorded frame.
-//   NOTSA_SH_FRUSTLOG=<file>  NOTSA_SH_FRUSTLOG_FRAMES ("2700-2725" default): G row per FxManager_c::CalcFrustumInfo (camera + the frustum FxSystem_c::IsVisible reads),
+//   NOTSA_SH_FRUSTLOG=<file>  NOTSA_SH_FRUSTLOG_FRAMES ("2700-2725" default; SH7B run uses 2712-2724): G row per FxManager_c::CalcFrustumInfo (camera + the frustum FxSystem_c::IsVisible reads),
 //                             I row per FxSystem_c::IsVisible call (system name, world bounding sphere, result, culling reason)
-//   NOTSA_SH_FLYBYLOG=<file>  NOTSA_SH_FLYBYLOG_FRAMES ("3080-3095" default): B row per CCam::Process_FlyBy call (spline state), E = early return (cutscene finished)
+//   NOTSA_SH_FLYBYLOG=<file>  NOTSA_SH_FLYBYLOG_FRAMES ("50-62,3075-3090" default): B row per CCam::Process_FlyBy call (spline state), E = early return (cutscene finished)
 // Floats are %.9g and raw bits (0x........).
 #ifdef NOTSA_STATEHASH
 #include <cstdio>
@@ -28,7 +28,8 @@ struct Sh7Log {
     FILE* Get() const { const int fr = LoadLogRecFrame(); if (!f || fr < 0) return nullptr; for (auto& p : r) { if (fr >= p.first && fr <= p.second) return f; } return nullptr; }
 };
 inline FILE* FrustLog() { static Sh7Log l = [] { Sh7Log x; x.Init("NOTSA_SH_FRUSTLOG", "NOTSA_SH_FRUSTLOG_FRAMES", "2700-2725", "# frame randCount G|I ... | G: G camId view=x,y near far proj aspect(CDraw) sphere=cx,cy,cz,r frustplanes[0..3 = camera planes 2..5]=nx,ny,nz,d(+bits) camplanes[0..5] | I: I name key sysptr hasSphere sphere=cx,cy,cz,r result reason(S sphere-vs-frustum-sphere; P<i> plane index; N none; X no bounding sphere) planedist[0..3]=double,numPlanesPassed"); return x; }(); return l.Get(); }
-inline FILE* FlyByLog() { static Sh7Log l = [] { Sh7Log x; x.Init("NOTSA_SH_FLYBYLOG", "NOTSA_SH_FLYBYLOG_FRAMES", "3080-3095", "# frame randCount B|E ... | cam mode, bStartingSpline, bCutsceneFinished, timeStep, timeStepNonClipped, timeElapsedFloat, finishTime, posAlongSpline, seg idx src/look/roll/fov, fov, vecSource, vecFront"); return x; }(); return l.Get(); }
+inline FILE* FlyByLog() { static Sh7Log l = [] { Sh7Log x; x.Init("NOTSA_SH_FLYBYLOG", "NOTSA_SH_FLYBYLOG_FRAMES", "50-62,3075-3090", "# frame randCount B|E|Q|F ... | Q: script read of CCamera::GetPositionAlongSpline (value, finished flag, time ms); F: CCamera::FinishCutscene call | B also has time (truncated ms) endtest (finishTime<=time) | cam mode, bStartingSpline, bCutsceneFinished, timeStep, timeStepNonClipped, timeElapsedFloat, finishTime, posAlongSpline, seg idx src/look/roll/fov, fov, vecSource, vecFront"); return x; }(); return l.Get(); }
+inline void FlyByNote(const char* tag, double v, int flag, unsigned ms) { if (FILE* lf = FlyByLog()) { std::fprintf(lf, "%d %llu %s v=%.9g finished=%d ms=%u\n", LoadLogRecFrame(), (unsigned long long)RandCountNow(), tag, v, flag, ms); std::fflush(lf); } }
 inline std::unordered_map<uint32_t, std::string>& FxNameMap() { static std::unordered_map<uint32_t, std::string> m; return m; }
 inline uint32_t Sh7Bits(float v) { uint32_t u; std::memcpy(&u, &v, 4); return u; }
 } // namespace notsa::rr

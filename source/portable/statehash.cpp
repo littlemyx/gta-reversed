@@ -61,6 +61,7 @@ void* operator new(std::size_t n) {
 void* operator new[](std::size_t n) { return ::operator new(n); }
 
 #include "loadlog.h"
+#include "portable/sh7log.h"
 namespace notsa::rr {
 uint32_t LoadLogFrameCounter() { return CTimer::GetFrameCounter(); }
 namespace {
@@ -305,6 +306,17 @@ void PedModelRows(uint32_t frame) {
     std::fprintf(f, "%u %llu Z", frame, rc); for (auto v : CStreaming::ms_NextPedToLoadFromGroup) std::fprintf(f, " %d", (int)v); std::fprintf(f, "\n");
     std::fflush(f);
 }
+// SH7B NOTSA_SH_FRUSTLOG H row: player right-hand bone world position (CEntity::GetBoneMatrix: pure lookup, no UpdateRpHAnim)
+void HandBoneRow(uint32_t frame) {
+    FILE* lf = FrustLog();
+    if (!lf) return;
+    auto* ped = FindPlayerPed();
+    if (!ped) return;
+    const RwMatrix* m = ped->GetBoneMatrix((RwUInt32)BONE_R_HAND);
+    if (m) std::fprintf(lf, "%u %llu H rhand=%.9g,%.9g,%.9g calledPreRender=%d pedpos=%.9g,%.9g,%.9g\n", frame, (unsigned long long)RandCount(), (double)m->pos.x, (double)m->pos.y, (double)m->pos.z, (int)ped->bCalledPreRender, (double)ped->GetPosition().x, (double)ped->GetPosition().y, (double)ped->GetPosition().z);
+    else std::fprintf(lf, "%u %llu H rhand=none\n", frame, (unsigned long long)RandCount());
+    std::fflush(lf);
+}
 void VehLogRows(uint32_t frame) {
     static FILE* f = VehLogFile();
     if (!f || !VehLogFrameWanted(frame)) return;
@@ -470,6 +482,7 @@ void Record() {
         std::fflush(g_sh);
     }
     PedModelRows(g_frame); // SH7 NOTSA_SH_PEDMODELLOG
+    HandBoneRow(g_frame); // SH7B NOTSA_SH_FRUSTLOG H row
     VehLogRows(g_frame); // SH4 NOTSA_SH_VEHLOG: after the statehash line of frames 0/1
     if (dumpFrame && !dumpRows.empty()) {
         if (!g_dumpF) { g_dumpF = std::fopen(sh.dumpFile.c_str(), "w"); }

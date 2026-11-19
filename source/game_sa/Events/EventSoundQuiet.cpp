@@ -51,7 +51,7 @@ bool CEventSoundQuiet::AffectsPed(CPed* ped)
     if (currentEvent &&
         currentEvent->GetEventType() == EVENT_SOUND_QUIET && currentEvent->GetSourceEntity() == GetSourceEntity()) {
         CVector distance = m_position - currentEvent->m_position;
-        if (m_startTimeInMs - currentEvent->m_startTimeInMs >= 2000 && distance.SquaredMagnitude() >= 1.0f)
+        if ((int32)(m_startTimeInMs - currentEvent->m_startTimeInMs) >= 2000 && distance.SquaredMagnitude() >= 1.0f) // exe 0x4B52F3-0x4B52F6: signed compare (jl)
             return true;
         if (soundLevel - currentEvent->GetSoundLevel(nullptr, ped->GetPosition()) < 3.0f)
             return false;

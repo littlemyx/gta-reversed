@@ -855,18 +855,16 @@ void CPhysical::ApplyTurnSpeed()
     }
     else
     {
-        CVector vecTurnSpeedTimeStep = CTimer::GetTimeStep() * m_vecTurnSpeed;
-        CVector vecCrossProduct;
-        CrossProduct(&vecCrossProduct, &vecTurnSpeedTimeStep, &GetRight());
-        GetRight() += vecCrossProduct;
-        CrossProduct(&vecCrossProduct, &vecTurnSpeedTimeStep, &GetForward());
-        GetForward() += vecCrossProduct;
-        CrossProduct(&vecCrossProduct, &vecTurnSpeedTimeStep, &GetUp());
-        GetUp() += vecCrossProduct;
+        // 0x542E44-0x542EBD: the cross products (0x59C730) keep their products unrounded before the subtraction
+        const float ts = CTimer::GetTimeStep();
+        const CVector vecTurnSpeedTimeStep{ ts * m_vecTurnSpeed.x, ts * m_vecTurnSpeed.y, ts * m_vecTurnSpeed.z };
+        GetRight()   += PhysicalCrossProductOriginal(vecTurnSpeedTimeStep, GetRight());
+        GetForward() += PhysicalCrossProductOriginal(vecTurnSpeedTimeStep, GetForward());
+        GetUp()      += PhysicalCrossProductOriginal(vecTurnSpeedTimeStep, GetUp());
         if (!physicalFlags.bInfiniteMass && !physicalFlags.bDisableMoveForce) {
-            CVector vecNegativeCentreOfMass = m_vecCentreOfMass * -1.0f;
-            CVector vecCentreOfMassMultiplied = GetMatrix().TransformVector(vecNegativeCentreOfMass);
-            GetPosition() += CrossProduct(vecTurnSpeedTimeStep, vecCentreOfMassMultiplied);
+            const CVector vecNegativeCentreOfMass{ -m_vecCentreOfMass.x, -m_vecCentreOfMass.y, -m_vecCentreOfMass.z };
+            const CVector vecCentreOfMassMultiplied = PhysicalTransformVectorOriginal(GetMatrix(), vecNegativeCentreOfMass); // 0x59C790
+            GetPosition() += PhysicalCrossProductOriginal(vecTurnSpeedTimeStep, vecCentreOfMassMultiplied);
         }
     }
 }

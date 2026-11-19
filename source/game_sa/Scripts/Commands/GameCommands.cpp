@@ -92,7 +92,7 @@ void TakePhoto(bool save) {
 
 void SetNoResprays(bool enabled) {
     CGarages::NoResprays = enabled;
-    CGarages::AllRespraysCloseOrOpen(enabled);
+    CGarages::AllRespraysCloseOrOpen(!enabled); // exe 0x47B997-0x47B9A0: bOpen = !NoResprays (the port passed the flag un-negated)
 }
 
 void SetRespawnPointForDurationOfMission(CVector point) {

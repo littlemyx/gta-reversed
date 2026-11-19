@@ -95,8 +95,8 @@ void CVehicleRecording::InterpolateInfoForCar(CVehicle* vehicle, const CVehicleS
 
 // 0x45A060
 bool CVehicleRecording::HasRecordingFileBeenLoaded(int32 fileNumber) {
-    const auto recording = FindRecording(fileNumber);
-    return recording && recording->m_pData;
+    // 0x45A060: not found => index 0 (the exe loop falls through with eax = 0), the answer is entry 0's data pointer test
+    return StreamingArray[FindIndexWithFileNameNumber(fileNumber)].m_pData != nullptr;
 }
 
 // 0x45A8F0
@@ -171,10 +171,8 @@ void CVehicleRecording::RemoveRecordingFile(int32 fileNumber) {
 
 // 0x45A020
 void CVehicleRecording::RequestRecordingFile(int32 fileNumber) {
-    if (const auto rec = FindRecording(fileNumber)) {
-        CStreaming::RequestModel(RRRToModelId(rec->GetIndex()), STREAMING_KEEP_IN_MEMORY | STREAMING_MISSION_REQUIRED);
-        rec->Remove();
-    }
+    // 0x45A020: only RequestModel(0x649B + index, 0xC); not found => index 0. The port freed the loaded data (rec->Remove()) after the request: not in the exe
+    CStreaming::RequestModel(RRRToModelId(FindIndexWithFileNameNumber(fileNumber)), STREAMING_KEEP_IN_MEMORY | STREAMING_MISSION_REQUIRED);
 }
 
 // 0x459440

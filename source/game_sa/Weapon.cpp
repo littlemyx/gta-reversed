@@ -1251,11 +1251,12 @@ void CWeapon::Update(CPed* owner) {
                 }
                 if (animRLoad) { // 0x73DD30
                     ProcessReloadAudioIf([&](uint32 rloadMs, eAudioEvents ae) {
-                        const auto rloadS = (float)rloadMs * ExeRecip(1000.f);
-                        return rloadS <= animRLoad->m_CurrentTime && animRLoad->m_CurrentTime - animRLoad->m_TimeStep < rloadS;
+                        // 0x73DD25-0x73DD4F: `fild` * 0.001f and `cur - step` stay in extended precision (x87), nothing is rounded to float before the compares
+                        const x87d rloadS = (x87d)rloadMs * (x87d)ExeRecip(1000.f);
+                        return rloadS <= (x87d)animRLoad->m_CurrentTime && (x87d)animRLoad->m_CurrentTime - (x87d)animRLoad->m_TimeStep < rloadS;
                     });
                     if (CTimer::GetTimeInMS() > m_TimeForNextShotMs) {
-                        if (animRLoad->GetTimeProgress() < 0.9f) {
+                        if ((x87d)animRLoad->m_CurrentTime / (x87d)animRLoad->m_BlendHier->m_fTotalTime < (x87d)0.9f) { // 0x73DDCB: `fdivr` result is compared unrounded
                             m_TimeForNextShotMs = CTimer::GetTimeInMS();
                         }
                     }

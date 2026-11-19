@@ -1,0 +1,20 @@
+addr	function	verdict	asm range	note	fix commit
+0x62B840	CTaskComplexKillPedOnFootStealth::ControlSubTask	MATCH	0x62B999-0x62B9A1	review of f7a5f8581: sub+cmp 0x1388+jle signed; port casts to int32 now - CONFIRMED	f7a5f8581
+0x558E40	CStats::GetStatValue	FIXED	0x558E40-0x558E60	int stat read [stat*4+0xB78E20] unchecked; port indexed StatTypesInt[stat-120] (OOB for ids 82..119)	e5a0fa8f2
+0x43DAC0	CDarkel::Update	MATCH	0x43DAE7-0x43DB60	signed jg, port int32	
+0x43CEC0	CDarkel::DrawMessages	MATCH	0x43CEF5-0x43D1A9	jb/jae/div unsigned, port uint32	
+0x533170	CEntity::ModifyMatrixForCrane	MATCH	0x5331CC	jge is the uint->float fixup of a masked value	
+0x729B60	CAutomobile::FireTruckControl	MATCH	0x729F64	jge = fild fixup	
+0x6A38A0	CAutomobile::ProcessAutoBusDoors	MATCH	0x6A38F6,0x6A3983	jge = fild fixup of uint32 sum; port (float)uint32	
+0x6A8580	CAutomobile::SpawnFlyingComponent	MATCH	0x6A884D-0x6A8889	jge = fild fixup	
+0x6C79A0	CHeli::UpdateHelis	MATCH	0x6C7AB8	jge is not a time compare	
+0x6C7050	CHeli::ProcessControl	MATCH	0x6C72A4-0x6C72C3	jle signed, port int32 timeSinceLastRecord	
+0x6DBCE0	CBoat::ProcessBoatControl	MATCH	0x6DC18D-0x6DC1BF	jge = fild fixup	
+0x455E20-0x455720	CPickups::Do*Effects	MATCH	jge sites	jge = fild fixups only	
+0x611FC0	CPopulation::ManagePed	MATCH	0x61202A	signed jg, port int32	
+0x4619C0	CRoadBlocks::CreateRoadBlockBetween2Points	MATCH	0x4623A5	jle is a count compare, not time	
+0x562C90	CWanted::Update	MATCH	0x562CC6-0x562D49,0x562CEB	jbe unsigned; jge = fild fixup	
+0x56F8D0	CPlayerInfo::Process	MATCH	0x56F957-0x5716A3	only unsigned jb/jae/je time compares	
+0x446610	CGangWars::Update	MATCH	0x4466F9-0x446EA4	only unsigned jbe/je	
+0x56EAB0	CPlayerInfo::AddHealth	MATCH	0x56EAB0-0x56EAFD	fild amount, fadd into unrounded sum; port float sum differs only by sub-ulp, results identical	
+0x559FA0/0x55C410/0x55C180	CStats::DecrementStat/SetNewRecordStat/IncrementStat	MATCH	whole	int stats fild/ftol+movsx int16 already modelled	

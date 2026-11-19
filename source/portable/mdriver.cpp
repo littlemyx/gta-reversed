@@ -18,6 +18,9 @@
 #include "PedType.h"
 #include "PedGroups.h"
 #include "Tasks/TaskTypes/TaskComplexKillPedOnFoot.h"
+#include "Tasks/TaskTypes/TaskComplexKillPedOnFootMelee.h"
+#include "Tasks/TaskTypes/TaskComplexKillPedOnFootArmed.h"
+#include "Tasks/TaskTypes/TaskSimpleCarSetPedInAsDriver.h"
 #include <bit>
 #include <algorithm>
 #include <cstring>
@@ -29,6 +32,9 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <deque>
+#include <memory>
+#include <optional>
 
 namespace notsa::mdriver {
 namespace {
@@ -179,23 +185,31 @@ CRunningScript* FindThread() {
     }
     return nullptr;
 }
-// ---- AD1: generic driver (NOTSA_MDRIVER_TABLE = driver-classes.tsv, NOTSA_MDRIVER_RESULT = result line file) ----
+// ---- AD1/AD4: generic driver (NOTSA_MDRIVER_TABLE = driver-classes.tsv, NOTSA_MDRIVER_RESULT = result line file). AD4: an exact mirror of the TS driver rules (web/packages/game/test/autodrive: drive.ts, driverTable.ts decide(), branch.ts, actions.ts).
+// The C++-only inventions of AD3 (interior-aware warp, liftable pickup) are behind NOTSA_MDRIVER_AD3 (off by default); the rotation / LATEST experiments are removed.
+struct Arg { uint32_t bits = 0; int kind = 0; };
 struct Row { uint16_t op; int match; /*0 any 1 plain 2 not*/ std::string name, action; std::vector<std::string> args; int settle; };
 std::vector<Row>         g_rows;
-struct Rec { const uint8_t* p; uint16_t raw; int cond; };
-std::vector<Rec>         g_cur, g_last;      // commands of the root thread: the frame in progress / the last frame that ran it
+// a conditional command of the root thread as the TS StallSink records it (opcode, NOT form, state, decoded operands, the WAIT count, where the following GOTO_IF_FALSE led)
+struct Rec { const uint8_t* p; uint16_t raw; int cond; int waitSeq; std::vector<Arg> args; bool hasBranch = false, jumped = false; const uint8_t *target = nullptr, *fall = nullptr; };
+using RecP = std::shared_ptr<Rec>;
+std::deque<RecP>         g_recs;             // the last 64 conditional commands (KEEP)
+std::vector<RecP>        g_pending;          // the conditions since the last GOTO_IF_FALSE (max 12)
+int                      g_waitSeq = 0;
+std::map<int, int>       g_arity;            // opcode -> operand count (tools/standalone/scmscan/argcounts.tsv, exe derived; -1 variadic)
 uint32_t                 g_frame0 = 0;
 std::string              g_name = "?", g_stopReason, g_failText, g_lastLabel;
 int                      g_stopOp = -1; uint32_t g_stopIp = 0;
-bool                     g_pass = false, g_fail = false;
-int                      g_passFrame = -1, g_failFrame = -1, g_killFrame = -1000000, g_killSettle = 0;
-int                      g_maxFrames = 30000;
+bool                     g_pass = false, g_fail = false, g_endedFail = false;
+int                      g_passFrame = -1, g_failFrame = -1, g_endFrame = -1, g_killFrame = -1000000, g_killSettle = 0;
+int                      g_maxFrames = 30000, g_fightClock = 0, g_fightKills = 0;
+std::set<int>            g_enemyTypes;       // ped types shot for going after CJ himself (TS enemyTypes)
+std::map<const uint8_t*, int> g_attemptsAt;  // actions per stall ip
+std::map<std::string, int>    g_noProgress;  // (ip, row, args) -> times
 bool Generic() { static const bool g = std::getenv("NOTSA_MDRIVER_TABLE") != nullptr; return g; }
-std::set<std::pair<const uint8_t*, int>> g_tried; uint64_t g_sig = 0;
-const uint8_t*           g_loopCmd = nullptr; int g_loopRow = -1, g_loopN = 0;
+bool Ad3() { static const bool g = std::getenv("NOTSA_MDRIVER_AD3") != nullptr; return g; }
 
 int GFrame() { return (int)(CTimer::GetFrameCounter() - g_frame0); }
-struct Arg { uint32_t bits = 0; int kind = 0; };
 const uint8_t* Resolve(const CRunningScript* s, int32_t off) { return off < 0 ? s->m_BaseIP - off : CTheScripts::ScriptSpace.data() + off; }
 tScriptParam* LocalAt(const CRunningScript* s, int i) { auto* m = const_cast<CRunningScript*>(s); return m->m_ThisMustBeTheOnlyMissionRunning ? &CTheScripts::LocalVariablesForCurrentMission[i] : &m->m_LocalVars[i]; }
 std::vector<Arg> DecodeArgs(const CRunningScript* s, const uint8_t* p, int n) { // the first n arguments of the command at p (SCM typed arguments)
@@ -223,32 +237,97 @@ std::vector<Arg> DecodeArgs(const CRunningScript* s, const uint8_t* p, int n) { 
     return r;
 }
 float  AF(const Arg& a) { return a.kind == 0 ? (float)(int32_t)a.bits : std::bit_cast<float>(a.bits); }
-int    AI(const Arg& a) { return (int)a.bits; }
+std::optional<double> ArgFloat(const Rec& r, size_t i) { if (i >= r.args.size()) return std::nullopt; return (double)AF(r.args[i]); } // driverTable.argFloat
+std::optional<double> ArgInt(const Rec& r, size_t i) { // driverTable.argInt: a float constant truncates, an integer / variable is itself
+    if (i >= r.args.size()) return std::nullopt; const auto& a = r.args[i];
+    return a.kind == 1 ? (double)std::trunc(std::bit_cast<float>(a.bits)) : (double)(int32_t)a.bits;
+}
+int Arity(int op) { auto it = g_arity.find(op); return it == g_arity.end() || it->second < 0 ? -1 : it->second; }
+void LoadArity() {
+    const char* p = std::getenv("NOTSA_MDRIVER_ARGCOUNTS"); std::ifstream f(p ? p : "tools/standalone/scmscan/argcounts.tsv"); std::string l;
+    while (std::getline(f, l)) { unsigned op; int n; if (std::sscanf(l.c_str(), "0x%x\t%d", &op, &n) == 2) g_arity[(int)op] = n; }
+    if (g_arity.empty()) std::fprintf(stderr, "[mdriver] WARNING: no argcounts (the guard walk reads operands up to the next non-type byte)\n");
+}
 
-bool LeadsToFail(const CRunningScript* s, const uint8_t* p) { // the code taken when the condition is TRUE: prints M_FAIL within 96 bytes, hopping GOTO / GOSUB (5 hops)
-    for (int hop = 0; hop < 5 && p; hop++) {
-        for (int i = 0; i + 7 <= 96; i++) { if (!std::memcmp(p + i, "M_FAIL\0", 7)) return true; }
-        if ((p[0] == 0x02 || p[0] == 0x50) && p[1] == 0 && p[2] == 1) p = Resolve(s, *(const int32_t*)(p + 3)); else break;
+// ---- branch.ts: where the jump after a condition leads ----
+bool InSpace(const uint8_t* p) { const uint8_t* b = CTheScripts::ScriptSpace.data(); return p >= b && p + 24 <= b + CTheScripts::ScriptSpace.size(); }
+const uint8_t* SkipOperand(const uint8_t* p, bool& mfail, bool& isInt, int32_t& iv) {
+    isInt = false;
+    switch (*p) {
+    case 1: isInt = true; iv = *(const int32_t*)(p + 1); return p + 5;
+    case 6: return p + 5;
+    case 2: case 3: case 5: case 10: case 11: case 16: case 17: return p + 3;
+    case 4: return p + 2;
+    case 7: case 8: case 12: case 13: case 18: case 19: return p + 7;
+    case 9: mfail = !std::memcmp(p + 1, "M_FAIL\0\0", 8); return p + 9;
+    case 15: return p + 17;
+    case 14: return p + 2 + p[1];
+    default: return nullptr;
+    }
+}
+bool WalkFail(const CRunningScript* s, const uint8_t* p, int hops, bool sub, std::set<const uint8_t*>& seen) {
+    for (int n = 0; n < 200 && InSpace(p); n++) {
+        const int op = *(const uint16_t*)p & 0x7FFF;
+        if (!seen.insert(p).second) return false;
+        if (op == 0x0001) return false;
+        if (op == 0x0051) return !sub;
+        const uint8_t* q = p + 2; bool mf = false, isI = false, firstInt = false; int32_t iv = 0, first = 0; const int want = Arity(op); int count = 0;
+        for (;;) {
+            if (want >= 0 && count >= want) break;
+            if (!InSpace(q)) return false;
+            const uint8_t* r = SkipOperand(q, mf, isI, iv);
+            if (!r) break;
+            if (mf) return true;
+            if (count == 0) { firstInt = isI; first = iv; }
+            q = r; count++;
+        }
+        if (op == 0x0002 || op == 0x0050) {
+            if (!firstInt || hops >= 12) return false;
+            const uint8_t* nx = Resolve(s, first);
+            if (op == 0x0002) return WalkFail(s, nx, hops + 1, sub, seen);
+            if (WalkFail(s, nx, hops + 1, true, seen)) return true;
+        }
+        p = q;
     }
     return false;
 }
-bool RealWait(size_t i) { // the GOTO_IF_FALSE after the condition at g_last[i] jumps back (a wait loop), or forward to code that does not fail the mission
-    size_t j = i + 1; while (j < g_last.size() && g_last[j].cond >= 0) j++;
-    if (j >= g_last.size() || (g_last[j].raw & 0x7FFF) != 0x004D) return false;
-    const uint8_t* q = g_last[j].p; if (q[2] != 1) return false;
-    const uint8_t* t = Resolve(g_thread, *(const int32_t*)(q + 3));
-    return t <= q || !LeadsToFail(g_thread, q + 7);
+enum class Verdict { Wait, GoesOn, Guard, Unknown };
+Verdict VerdictOf(const CRunningScript* s, const Rec& r) {
+    if (!r.hasBranch) return Verdict::Unknown;
+    if (r.jumped && r.target < r.p) return Verdict::Wait;
+    std::set<const uint8_t*> seen; return WalkFail(s, r.fall, 0, false, seen) ? Verdict::Guard : Verdict::GoesOn;
 }
+
+// ---- actions.ts: guards, buddies ----
 bool Likes(ePedType a, ePedType b) { return ((CPedType::GetPedTypeAcquaintances(ACQUAINTANCE_LIKE, a) | CPedType::GetPedTypeAcquaintances(ACQUAINTANCE_RESPECT, a)) & (1u << b)) != 0; }
-bool Enemy(ePedType a, ePedType b) { return ((CPedType::GetPedTypeAcquaintances(ACQUAINTANCE_DISLIKE, a) | CPedType::GetPedTypeAcquaintances(ACQUAINTANCE_HATE, a)) & (1u << b)) != 0; }
-bool Friendly(CPed* p) { auto* c = FindPlayerPed(); return (int)p->m_nPedType <= 3 || Likes(PED_TYPE_PLAYER1, p->m_nPedType) || (c && c->GetPlayerGroup().GetMembership().IsMember(p)); }
-bool KillAllowed(int handle, bool car) {
-    if (!car) { auto* p = CPools::GetPed(handle); return p && !p->IsStateDeadForScript() && !Friendly(p); }
-    auto* v = CPools::GetVehicle(handle); if (!v) return false;
+bool Hates(ePedType a, ePedType b) { return ((CPedType::GetPedTypeAcquaintances(ACQUAINTANCE_DISLIKE, a) | CPedType::GetPedTypeAcquaintances(ACQUAINTANCE_HATE, a)) & (1u << b)) != 0; }
+bool LikesSide(int t) { return Likes((ePedType)t, PED_TYPE_PLAYER1) || Likes(PED_TYPE_PLAYER1, (ePedType)t); }
+bool HatesSide(int t) { return Hates((ePedType)t, PED_TYPE_PLAYER1) || Hates(PED_TYPE_PLAYER1, (ePedType)t); }
+bool ProtectedPed(CPed* p) { auto* c = FindPlayerPed(); return (int)p->m_nPedType <= 3 || LikesSide((int)p->m_nPedType) || (c && c->GetPlayerGroup().GetMembership().IsMember(p)); }
+bool ProtectedHandle(int h) { // actions.ts protectedHandle
+    if (auto* p = CPools::GetPed(h)) return p == Cj() || ProtectedPed(p);
+    auto* v = CPools::GetVehicle(h); if (!v) return false;
     std::vector<CPed*> occ; if (v->m_pDriver) occ.push_back(v->m_pDriver); for (auto* pp : v->m_apPassengers) if (pp) occ.push_back(pp);
-    for (auto* o : occ) { if (o == Cj() || Friendly(o)) return false; if (!o->IsStateDeadForScript() && !Enemy(PED_TYPE_PLAYER1, o->m_nPedType)) return false; }
-    return true;
+    for (auto* o : occ) { if (o == Cj() || ProtectedPed(o) || (o->m_fHealth > 0.f && !HatesSide((int)o->m_nPedType))) return true; }
+    return false;
 }
+bool IsPlayerGuard(const Rec& r) {
+    const int op = r.raw & 0x7FFF; if (op != 0x0118 && op != 0x0119) return false;
+    auto* ped = Cj(); const auto h = ArgInt(r, 0); if (!ped || !h) return false;
+    return op == 0x0118 ? CPools::GetPed((int)*h) == ped : ped->m_pVehicle && CPools::GetVehicle((int)*h) == ped->m_pVehicle;
+}
+bool KillRefusal(const CRunningScript* s, const Rec& r) { // true = the driver must not kill for this condition
+    const int op = r.raw & 0x7FFF; if ((op != 0x0118 && op != 0x0119) || (r.raw & 0x8000)) return false;
+    const auto h = ArgInt(r, 0); if (!h) return false;
+    if (ProtectedHandle((int)*h)) return true;
+    const auto v = VerdictOf(s, r); return !(v == Verdict::Wait || v == Verdict::GoesOn);
+}
+bool NotInCarGuard(const CRunningScript* s, const Rec& r) {
+    const int op = r.raw & 0x7FFF; if (!(r.raw & 0x8000) || (op != 0x00DB && op != 0x00DF)) return false;
+    const auto v = VerdictOf(s, r); return v == Verdict::Guard || v == Verdict::GoesOn;
+}
+bool AnyGuard(const Rec& r) { return IsPlayerGuard(r) || KillRefusal(g_thread, r) || NotInCarGuard(g_thread, r); }
+
 std::string KeyName(const std::string& k) {
     static const std::pair<const char*, const char*> m[] = { { "Enter", "return" }, { "Space", "space" }, { "Escape", "escape" }, { "ShiftLeft", "lshift" }, { "ControlLeft", "lctrl" }, { "ArrowUp", "up" }, { "ArrowDown", "down" }, { "ArrowLeft", "left" }, { "ArrowRight", "right" }, { "Tab", "tab" } };
     for (auto& [a, b] : m) if (k == a) return b;
@@ -267,7 +346,7 @@ void LoadTable(const char* path) {
         std::vector<std::string> c; { size_t b = 0; for (;;) { const auto t = l.find('\t', b); if (t == std::string::npos) { c.push_back(l.substr(b)); break; } c.push_back(l.substr(b, t - b)); b = t + 1; } }
         if (c.size() < 6) continue;
         Row r; r.op = (uint16_t)std::strtoul(c[0].c_str(), nullptr, 16); r.name = c[1]; r.match = c[2] == "any" ? 0 : c[2] == "plain" ? 1 : 2; r.action = c[3];
-        { std::stringstream ss(c[4]); std::string t; while (std::getline(ss, t, ',')) r.args.push_back(t); }
+        { std::stringstream ss(c[4]); std::string t; while (std::getline(ss, t, ',')) { const auto b = t.find_first_not_of(' '), e = t.find_last_not_of(' '); r.args.push_back(b == std::string::npos ? "" : t.substr(b, e - b + 1)); } }
         r.settle = std::atoi(c[5].c_str()); g_rows.push_back(std::move(r));
     }
     g_loaded = true;
@@ -275,91 +354,200 @@ void LoadTable(const char* path) {
 void WriteResult() {
     const char* rp = std::getenv("NOTSA_MDRIVER_RESULT"); if (!rp) return;
     std::FILE* f = std::fopen(rp, "w"); if (!f) return;
-    const bool guardStop = g_stopReason.find("killed a guard") != std::string::npos;
-    const char* res = g_pass ? "PASSED" : (g_fail && !guardStop) ? "FAILED" : "STOP";
-    const std::string reason = g_pass ? "-" : (g_fail && !guardStop) ? g_failText : (g_stopReason.empty() ? "ended" : g_stopReason);
+    const bool failed = !g_pass && (g_fail || g_endedFail) && g_stopReason.empty();
+    const char* res = g_pass ? "PASSED" : failed ? "FAILED" : "STOP";
+    const std::string ftxt = !g_failText.empty() ? g_failText : !g_lastLabel.empty() ? g_lastLabel : "M_FAIL";
+    const std::string reason = g_pass ? "-" : failed ? ftxt : (g_stopReason.empty() ? "ended" : g_stopReason);
     char op[8] = "-"; if (g_stopOp >= 0) std::snprintf(op, sizeof op, "%04X", g_stopOp);
-    std::fprintf(f, "%s\t%d\t%s\t%x\t%s\t%s\n", res, g_pass ? g_passFrame : (g_fail && !guardStop) ? g_failFrame : GFrame(), g_name.c_str(), g_stopIp, op, reason.c_str());
+    std::fprintf(f, "%s\t%d\t%s\t%x\t%s\t%s\n", res, g_pass ? g_passFrame : g_fail ? g_failFrame : g_endFrame >= 0 ? g_endFrame : GFrame(), g_name.c_str(), g_stopIp, op, reason.c_str());
     std::fclose(f);
 }
 void Stop(const std::string& reason, int op, uint32_t ip) { if (g_stopReason.empty()) { g_stopReason = reason; g_stopOp = op; g_stopIp = ip; } g_quitIn = 0; std::fprintf(stderr, "[mdriver] stop: %s (op %04X ip %x frame %d)\n", reason.c_str(), op < 0 ? 0 : op, ip, GFrame()); }
 void QueueActions(const std::vector<std::string>& acts, int settle) { g_queue = acts; if (settle > 0) g_queue.push_back("wait " + std::to_string(settle)); g_qpos = 0; }
-void DispatchRow(const Row& row, const uint8_t* ip, int cop) { // run one table action (Stop() on a failclass / bad verb)
-    int need = 0; for (auto& a : row.args) if (a.size() > 1 && a[0] == '$') need = std::max(need, std::atoi(a.c_str() + 1) + 1);
-    const auto dec = need ? DecodeArgs(g_thread, ip, need) : std::vector<Arg>{};
-    auto F_ = [&](size_t i) -> float { if (i >= row.args.size()) return 0; const auto& a = row.args[i]; if (a[0] == '$') { const size_t n = (size_t)std::atoi(a.c_str() + 1); return n < dec.size() ? AF(dec[n]) : 0.f; } return (float)std::atof(a.c_str()); };
-    auto I_ = [&](size_t i) -> int { if (i >= row.args.size()) return 0; const auto& a = row.args[i]; if (a[0] == '$') { const size_t n = (size_t)std::atoi(a.c_str() + 1); return n < dec.size() ? AI(dec[n]) : 0; } return std::atoi(a.c_str()); };
-    auto* c = Cj(); const bool inCar = c && c->bInVehicle;
-    const auto warp = [&](float x, float y, float z, bool forceVeh, int area = -1) { return std::string((inCar || forceVeh) ? "emit mdveh:" : "emit mdped:") + F(x) + ":" + F(y) + ":" + F(z) + (inCar || forceVeh ? "" : ":0:0" + AreaSuffix(x, y, z, area)); };
+
+// ---- driverTable.ts decide() ----
+struct RArg { bool str = false; double n = 0; std::string s; };
+std::string RKey(const std::optional<std::vector<RArg>>& a) { if (!a) return "null"; std::string k; for (auto& x : *a) { k += x.str ? "s:" + x.s : "n:" + std::to_string(x.n); k += ','; } return k; }
+bool IsNum(const std::string& s) { size_t i = 0; if (i < s.size() && s[i] == '-') i++; const size_t d0 = i; while (i < s.size() && std::isdigit((unsigned char)s[i])) i++; if (i == d0) return false; if (i == s.size()) return true; if (s[i] != '.') return false; i++; const size_t d1 = i; while (i < s.size() && std::isdigit((unsigned char)s[i])) i++; return i > d1 && i == s.size(); }
+std::optional<std::vector<RArg>> ResolveArgs(const Row& row, const Rec& rec) {
+    const bool fl = row.action == "pedwarp" || row.action == "vehwarp" || row.action == "midpoint";
+    std::vector<RArg> out;
+    for (auto& a : row.args) {
+        RArg r;
+        if (a.size() > 1 && a[0] == '$' && std::all_of(a.begin() + 1, a.end(), [](char c) { return std::isdigit((unsigned char)c); })) {
+            const auto v = fl ? ArgFloat(rec, (size_t)std::atoi(a.c_str() + 1)) : ArgInt(rec, (size_t)std::atoi(a.c_str() + 1));
+            if (!v || !std::isfinite(*v)) return std::nullopt;
+            r.n = *v;
+        } else if (IsNum(a)) r.n = std::atof(a.c_str());
+        else { r.str = true; r.s = a; }
+        out.push_back(r);
+    }
+    return out;
+}
+bool Matches(const Row& w, const Rec& r) { return w.op == (r.raw & 0x7FFF) && (w.match == 0 || (w.match == 2) == ((r.raw & 0x8000) != 0)); }
+struct Dec { bool act = false; const Row* row = nullptr; int rowIdx = -1; RecP cond; std::vector<RArg> args; int op = -1; std::string reason; };
+Dec Decide(const std::vector<RecP>& loop, int attempt) {
+    Dec d;
+    std::vector<RecP> falses;
+    for (size_t k = loop.size(); k-- > 0;) { const auto& r = loop[k]; if (r->cond == 0 && !AnyGuard(*r)) falses.push_back(r); }
+    if (falses.empty()) { d.reason = "no condition evaluated false in the loop (the guards left out)"; return d; }
+    for (size_t i = 0; i < g_rows.size(); i++) {
+        const auto& row = g_rows[i];
+        for (auto& c : falses) {
+            if (!Matches(row, *c)) continue;
+            struct Opt { RecP c; std::optional<std::vector<RArg>> args; }; std::vector<Opt> opts; std::set<std::string> seen;
+            for (auto& q : falses) { if (!Matches(row, *q)) continue; auto a = ResolveArgs(row, *q); if (seen.insert(RKey(a)).second) opts.push_back({ q, a }); }
+            auto& pick = opts[(size_t)attempt % opts.size()];
+            if (!pick.args && !row.args.empty()) { d.op = pick.c->raw & 0x7FFF; d.reason = "unhandled " + row.name + ": argument of the row cannot be read"; return d; }
+            d.act = true; d.row = &row; d.rowIdx = (int)i; d.cond = pick.c; d.args = pick.args.value_or(std::vector<RArg>{}); d.op = pick.c->raw & 0x7FFF; return d;
+        }
+    }
+    // a TRUE NOT-form locate in a wait loop (92 CASIN10): the plain row of the same opcode when it is a warp
+    for (size_t i = 0; i < g_rows.size(); i++) {
+        const auto& row = g_rows[i]; if (row.match == 2 || !(row.action == "pedwarp" || row.action == "vehwarp" || row.action == "midpoint")) continue;
+        for (size_t k = loop.size(); k-- > 0;) {
+            const auto& c = loop[k]; if (!(c->raw & 0x8000) || c->cond != 1 || AnyGuard(*c) || row.op != (c->raw & 0x7FFF)) continue;
+            auto a = ResolveArgs(row, *c); if (!a) continue;
+            d.act = true; d.row = &row; d.rowIdx = (int)i; d.cond = c; d.args = *a; d.op = c->raw & 0x7FFF; return d;
+        }
+    }
+    const auto& last = *falses[0]; d.op = last.raw & 0x7FFF;
+    char b[16]; std::snprintf(b, sizeof b, "%04X", d.op); std::string nm; for (auto& w : g_rows) if (w.op == d.op) { nm = w.name; break; }
+    d.reason = std::string("unhandled ") + b + ((last.raw & 0x8000) ? " (NOT form)" : "") + (nm.empty() ? "" : " " + nm); return d;
+}
+
+// ---- actions.ts: entities of a handle, execute() ----
+CEntity* EntityOfHandle(int h, int op) { // a locate says which pool its operand is from
+    if ((op >= 0x01AD && op <= 0x01B0) || (op >= 0x0202 && op <= 0x0207)) return CPools::GetVehicle(h);
+    if (op >= 0x0471 && op <= 0x0476) return CPools::GetObject(h);
+    if ((op >= 0x00EC && op <= 0x00F4) || (op >= 0x00FE && op <= 0x0106)) return CPools::GetPed(h);
+    if (auto* p = CPools::GetPed(h)) return p;
+    if (auto* v = CPools::GetVehicle(h)) return v;
+    return CPools::GetObject(h);
+}
+bool IsLocateOp(int op) { return (op >= 0x00EC && op <= 0x00F1) || (op >= 0x00FE && op <= 0x0103) || (op >= 0x01AD && op <= 0x01B0); }
+std::string LocatedOther(const Rec& r) { // "ped:<handle>" / "veh:<handle>" of the entity a locate is about when it is not CJ (nor his car): that one is moved
+    const int op = r.raw & 0x7FFF; if (!IsLocateOp(op)) return "";
+    const auto h = ArgInt(r, 0); if (!h) return "";
+    auto* e = EntityOfHandle((int)*h, op); auto* me = Cj();
+    if (!e || e == me || (me && me->bInVehicle && e == (CEntity*)me->m_pVehicle)) return "";
+    return (op >= 0x01AD ? "1:" : "0:") + std::to_string((int)*h);
+}
+void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass / bad verb)
+    const Row& row = *d.row; const int cop = d.op;
+    auto F_ = [&](size_t i) -> float { return i < d.args.size() ? (float)d.args[i].n : 0.f; };
+    auto I_ = [&](size_t i) -> int { return i < d.args.size() ? (int)d.args[i].n : 0; };
+    auto* c = Cj();
     const std::string& v = row.action;
+    const auto warp = [&](float x, float y, float z, bool vehOnly) -> std::string { // actions.ts warp: CJ's vehicle when he drives one, else CJ (z + 1.1); z <= -100 = the ground
+        const bool inCar = c && c->bInVehicle;
+        if (vehOnly && !inCar) return "";
+        return std::string(inCar ? "emit mdwveh:" : "emit mdwped:") + F(x) + ":" + F(y) + ":" + F(z) + (inCar || !Ad3() ? "" : AreaSuffix(x, y, z));
+    };
+    const auto one = [&](const std::string& a) { QueueActions(a.empty() ? std::vector<std::string>{} : std::vector<std::string>{ a }, row.settle); };
     if (v == "wait") { QueueActions({}, row.settle); return; }
-    if (v == "pedwarp") { QueueActions({ warp(F_(0), F_(1), F_(2), false) }, row.settle); return; }
-    if (v == "vehwarp") { QueueActions(inCar ? std::vector<std::string>{ warp(F_(0), F_(1), F_(2), true) } : std::vector<std::string>{}, row.settle); return; }
+    if (v == "pedwarp" || v == "vehwarp") {
+        if (d.cond) { const auto o = LocatedOther(*d.cond); if (!o.empty()) { QueueActions({ "emit mdwother:" + o + ":" + F(F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) }, row.settle); return; } } // LOCATE_CAR_3D(car 2049, ...) is satisfied by moving THAT car
+        one(warp(F_(0), F_(1), F_(2), v == "vehwarp")); return;
+    }
     if (v == "midpoint") {
         float x, y, z = -100.f;
-        if (row.args.size() >= 6) { x = (F_(0) + F_(3)) / 2; y = (F_(1) + F_(4)) / 2; z = (F_(2) + F_(5)) / 2; } else { x = (F_(0) + F_(2)) / 2; y = (F_(1) + F_(3)) / 2; }
-        QueueActions({ warp(x, y, z, false) }, row.settle); return;
+        if (d.args.size() >= 6) { x = (F_(0) + F_(3)) / 2; y = (F_(1) + F_(4)) / 2; z = (F_(2) + F_(5)) / 2; } else { x = (F_(0) + F_(2)) / 2; y = (F_(1) + F_(3)) / 2; }
+        one(warp(x, y, z, false)); return;
     }
     if (v == "entercar" || v == "nearest_car") {
         CVehicle* car = nullptr;
-        if (v == "entercar") car = CPools::GetVehicle(I_(0));
+        if (v == "entercar") { car = CPools::GetVehicle(I_(0)); if (!car) { Stop("driver action failed: entercar " + std::to_string(I_(0)) + ": no such car", cop, 0); return; } }
         else if (c) {
             float best = 50.f;
             for (auto& vv : GetVehiclePool()->GetAllValid()) {
                 if (vv.m_pDriver || vv.m_nDoorLock == CARLOCK_LOCKED || vv.m_nDoorLock == CARLOCK_LOCKED_PLAYER_INSIDE || vv.m_nDoorLock == CARLOCK_LOCKOUT_PLAYER_ONLY) continue;
-                const float d = (float)(vv.GetPosition() - c->GetPosition()).Magnitude();
-                if (d < best) { best = d; car = &vv; }
+                const float dd = (float)(vv.GetPosition() - c->GetPosition()).Magnitude();
+                if (dd < best) { best = dd; car = &vv; }
             }
-            if (!car) { Stop("no_car", cop, 0); return; }
+            if (!car) { Stop("by nature: no_car", cop, 0); return; }
         }
         if (!car || !c) { QueueActions({}, row.settle); return; }
         const auto door = CCarEnterExit::GetPositionToOpenCarDoor(car, CAR_DOOR_LF); const CVector l = -car->GetRight();
         QueueActions({ "emit mdped:" + F(door.x + l.x * 2.5f) + ":" + F(door.y + l.y * 2.5f) + ":" + F(car->GetPosition().z + 0.2f) + ":" + F(std::atan2(l.x, -l.y)) + ":0", "wait 10", "key down return", "wait 1", "key up return" }, row.settle);
         return;
     }
-    if (v == "kill") { const bool car = cop == 0x0119; QueueActions({ std::string("emit mdkill") + (car ? "car:" : "ped:") + std::to_string(I_(0)) }, row.settle); g_killFrame = GFrame(); g_killSettle = row.settle; return; }
+    if (v == "kill") {
+        const int h = I_(0);
+        if (ProtectedHandle(h)) { Stop("driver action failed: driver would kill a buddy (kill " + std::to_string(h) + ")", cop, 0); return; }
+        std::string cmd;
+        if (auto* p = CPools::GetPed(h)) { if (p != c) cmd = "emit mdkillped:" + std::to_string(h); } else if (CPools::GetVehicle(h)) cmd = "emit mdkillcar:" + std::to_string(h);
+        if (cmd.empty()) { QueueActions({}, 0); return; } // kill: no such char or car (TS returns without settling)
+        QueueActions({ cmd }, row.settle); g_killFrame = GFrame(); g_killSettle = row.settle; return;
+    }
     if (v == "key") {
-        std::string kk = row.args.empty() ? "" : row.args[0]; const int n = row.args.size() > 1 ? std::atoi(row.args[1].c_str()) : 10;
-        if (!kk.empty() && kk[0] == '$') kk = std::to_string(I_(0));
+        std::string kk = d.args.empty() ? "" : d.args[0].str ? d.args[0].s : std::to_string((int)d.args[0].n); const int n = d.args.size() > 1 && !d.args[1].str ? (int)d.args[1].n : 8;
         const std::string nm = KeyName(kk); if (nm.empty()) { Stop("unmapped-key " + kk, cop, 0); return; }
         QueueActions({ "key down " + nm, "wait " + std::to_string(n), "key up " + nm }, row.settle); return;
     }
-    if (v == "skipcut") { QueueActions({ "key down return", "wait 10", "key up return" }, row.settle); return; }
+    if (v == "skipcut") { QueueActions(CCutsceneMgr::IsCutsceneProcessing() ? std::vector<std::string>{ "emit mdskipcut:0" } : std::vector<std::string>{}, row.settle); return; }
     if (v == "warpto_handle") {
-        const int h = I_(0); CVector pos; bool ok = false;
-        if (auto* p = CPools::GetPed(h)) { pos = p->GetPosition(); ok = true; } else if (auto* vv = CPools::GetVehicle(h)) { pos = vv->GetPosition(); ok = true; } else if (auto* o = CPools::GetObject(h)) { pos = o->GetPosition(); ok = true; }
-        if (!ok) { QueueActions({}, row.settle); return; }
-        if (auto* o = CPools::GetObject(h); o && o->objectFlags.bIsLiftable && c && !c->GetEntityThatThisPedIsHolding()) { // AD3: a liftable object (crate): stand 1.5 m before it and press the pick-up key, as a player does
+        const int h = I_(0); CEntity* e = EntityOfHandle(h, cop);
+        if (!e) { QueueActions({}, 0); return; }
+        const auto pos = e->GetPosition();
+        if (Ad3()) if (auto* o = CPools::GetObject(h); o && o->objectFlags.bIsLiftable && c && !c->GetEntityThatThisPedIsHolding()) { // AD3 (off by default): stand 1.5 m before a liftable object and press the pick-up key
             QueueActions({ "standobj " + std::to_string(h) + " 1.5", "wait 10", "key down return", "wait 1", "key up return", "wait 90" }, row.settle); return;
         }
-        QueueActions({ warp(pos.x + (std::getenv("NOTSA_MDRIVER_WARPOFF") ? (float)std::atof(std::getenv("NOTSA_MDRIVER_WARPOFF")) : 1.f), pos.y, pos.z + 0.5f, false) }, row.settle); return;
+        one(warp(pos.x + 0.5f, pos.y, pos.z, false)); return;
     }
-    if (v == "failclass") { Stop(row.args.empty() ? "failclass" : row.args[0], cop, 0); return; }
+    if (v == "failclass") { Stop("by nature: " + (d.args.empty() ? std::string("failclass") : d.args[0].s), cop, 0); return; }
     Stop("badverb " + v, cop, 0);
 }
-void ShootDead() { // scripted fights (table header): a hostile kill-ped-on-foot ped aimed at CJ / his group / a ped his side likes is shot dead
+CPed* KillTarget(CPed* ped) { // actions.ts killTarget: a kill-ped-on-foot task anywhere in the task tree whose target is a ped (the on-foot / melee / armed classes)
+    auto& tm = ped->GetIntelligence()->m_TaskMgr;
+    std::vector<CTask*> roots(tm.m_aPrimaryTasks.begin(), tm.m_aPrimaryTasks.end()); roots.insert(roots.end(), tm.m_aSecondaryTasks.begin(), tm.m_aSecondaryTasks.end());
+    for (auto* root : roots) {
+        for (CTask* t = root; t; t = t->GetSubTask()) {
+            CPed* tg = nullptr;
+            switch (t->GetTaskType()) {
+            case TASK_COMPLEX_KILL_PED_ON_FOOT: tg = static_cast<CTaskComplexKillPedOnFoot*>(t)->m_target; break;
+            case TASK_COMPLEX_KILL_PED_ON_FOOT_MELEE: tg = static_cast<CTaskComplexKillPedOnFootMelee*>(t)->m_target; break;
+            case TASK_COMPLEX_KILL_PED_ON_FOOT_ARMED: tg = static_cast<CTaskComplexKillPedOnFootArmed*>(t)->m_target; break;
+            default: break;
+            }
+            if (tg) return tg;
+        }
+    }
+    return nullptr;
+}
+bool IsBuddyTarget(CPed* target, CPed* attacker, CPed* me) {
+    if (target == me || ProtectedPed(target)) return true;
+    if (target->m_fHealth <= 0.f || HatesSide((int)target->m_nPedType) || g_enemyTypes.count((int)target->m_nPedType)) return false;
+    if ((int)target->m_nPedType < 23 || target->m_nPedType == attacker->m_nPedType) return false;
+    auto* tg = KillTarget(target); return !tg || (tg != me && !ProtectedPed(tg));
+}
+void ShootDead() { // actions.ts shootAttackers: every ped (not a buddy type) whose kill task targets CJ / a buddy is shot dead (max 60)
+    if (g_fightKills >= 60) return; auto* me = Cj(); if (!me) return;
     std::vector<int> victims;
     for (auto& p : GetPedPool()->GetAllValid()) {
-        if (&p == Cj() || p.IsStateDeadForScript() || Friendly(&p)) continue;
-        auto* t = static_cast<CTaskComplexKillPedOnFoot*>(p.GetIntelligence()->FindTaskByType(TASK_COMPLEX_KILL_PED_ON_FOOT));
-        if (!t || !t->m_target) continue;
-        if (t->m_target == Cj() || Friendly(t->m_target) || ((int)t->m_target->m_nPedType >= 23 && !Enemy(p.m_nPedType, t->m_target->m_nPedType))) victims.push_back(CPools::GetPedRef(&p));
+        if (&p == me || p.m_fHealth <= 0.f || ProtectedPed(&p)) continue;
+        auto* tg = KillTarget(&p); if (!tg || !IsBuddyTarget(tg, &p, me) || LikesSide((int)p.m_nPedType)) continue;
+        victims.push_back(CPools::GetPedRef(&p)); if (tg == me) g_enemyTypes.insert((int)p.m_nPedType); g_fightKills++;
     }
     for (int h : victims) Emit("mdkillped:" + std::to_string(h));
 }
 void TickGeneric() {
-    if (!g_loaded) { LoadTable(std::getenv("NOTSA_MDRIVER_TABLE")); if (const char* o = std::getenv("NOTSA_MDRIVER_OUT")) g_out = std::fopen(o, "w"); if (const char* m = std::getenv("NOTSA_MDRIVER_MAXFRAMES")) g_maxFrames = std::atoi(m); }
-    if (!g_cur.empty()) { g_last = std::move(g_cur); g_cur.clear(); }
+    if (!g_loaded) { LoadTable(std::getenv("NOTSA_MDRIVER_TABLE")); LoadArity(); if (const char* o = std::getenv("NOTSA_MDRIVER_OUT")) g_out = std::fopen(o, "w"); if (const char* m = std::getenv("NOTSA_MDRIVER_MAXFRAMES")) g_maxFrames = std::atoi(m); }
     if (g_quitIn >= 0) { if (g_quitIn-- == 0) { WriteResult(); Emit("quit"); if (g_out) { std::fclose(g_out); g_out = nullptr; } g_done = true; } return; }
     auto* root = notsa::scmtrace::Root();
     if (!g_started) { if (!root) return; g_started = true; g_thread = root; g_frame0 = CTimer::GetFrameCounter(); g_sameCount = 0; g_lastIp = nullptr; }
     const int fr = GFrame();
     if (root) { char n[9]{}; std::memcpy(n, root->m_szName, 8); g_name = n; }
-    if (!root) { std::fprintf(stderr, "[mdriver] mission thread ended at frame %d (pass=%d fail=%d)\n", fr, (int)g_pass, (int)g_fail); g_quitIn = 50; return; }
+    if (!root) { // the thread ended (TS: !alive(script)): PASSED / FAILED, or STOP when a kill of the driver was just before it
+        g_endFrame = fr;
+        if (!g_pass && fr - g_killFrame <= g_killSettle + 5) { g_stopReason = "driver stop: killed a guard"; g_stopOp = -1; }
+        else if (!g_pass) g_endedFail = true;
+        std::fprintf(stderr, "[mdriver] mission thread ended at frame %d (pass=%d fail=%d)\n", fr, (int)g_pass, (int)g_fail); g_quitIn = 50; return;
+    }
     if (g_pass && fr - g_passFrame > 1500) { g_quitIn = 0; return; }
     if (g_fail && fr - g_failFrame > 600) { g_quitIn = 0; return; }
-    if (fr >= g_maxFrames) { Stop("timeout", -1, (uint32_t)(root->m_IP - root->m_BaseIP)); return; }
-    if (fr % 3 == 0 && !CCutsceneMgr::IsCutsceneProcessing() && Cj()) ShootDead();
+    if (fr >= g_maxFrames) { Stop("budget: " + std::to_string(g_maxFrames) + " frames", -1, (uint32_t)(root->m_IP - root->m_BaseIP)); return; }
+    if (!std::getenv("NOTSA_MDRIVER_NOFIGHT") && ++g_fightClock % 3 == 0 && !CCutsceneMgr::IsCutsceneProcessing() && Cj()) ShootDead();
     for (;;) {
         if (g_wait > 0) { g_wait--; return; }
         if (g_qpos >= g_queue.size()) break;
@@ -372,55 +560,44 @@ void TickGeneric() {
     else { g_sameCount = 0; g_lastIp = root->m_IP; }
     if (g_sameCount < g_stall) return;
     const uint32_t at = (uint32_t)(root->m_IP - root->m_BaseIP);
-    g_sameCount = 0; g_lastIp = nullptr;
-    // candidates: conditions evaluated false in the last pass of the loop, latest first; the first row in file order that matches any of them wins; kill rows of guards are skipped
-    int bestRow = -1, bestOp = -1; size_t bestRec = 0, lastCand = SIZE_MAX;
-    struct Cand { int row; size_t rec; int op; }; std::vector<Cand> cands;
-    for (size_t k = g_last.size(); k-- > 0;) {
-        const auto& r = g_last[k]; if (r.cond != 0) continue;
-        const int op = r.raw & 0x7FFF; const bool notForm = (r.raw & 0x8000) != 0;
-        if (lastCand == SIZE_MAX) lastCand = k;
-        for (size_t i = 0; i < g_rows.size(); i++) {
-            const auto& w = g_rows[i]; if (w.op != op || !(w.match == 0 || (w.match == 2) == notForm)) continue;
-            if (w.action == "kill") { auto h = DecodeArgs(g_thread, r.p, 1); if (h.empty() || !RealWait(k) || !KillAllowed(AI(h[0]), op == 0x0119)) continue; }
-            cands.push_back({ (int)i, k, op });
-            break;
-        }
-    }
-    { // AD3 rotation: a (command, row) pair that was already tried since the pass signature (commands + answers of the last pass) last changed is skipped while an untried candidate exists (the table's first-in-file row can be a false blocker)
-        uint64_t sig = 1469598103934665603ull; for (auto& r : g_last) { sig = (sig ^ (uint64_t)(uintptr_t)r.p) * 1099511628211ull; sig = (sig ^ (uint64_t)(r.cond + 2)) * 1099511628211ull; }
-        if (sig != g_sig) { g_tried.clear(); g_sig = sig; }
-        static const bool latest = std::getenv("NOTSA_MDRIVER_LATEST") != nullptr; // AD3 experiment: the latest false condition of the pass wins instead of the first row in file order
-        for (int pass = 0; pass < 2 && bestRow < 0; pass++) for (auto& cd : cands) {
-            if (pass == 0 && g_tried.count({ g_last[cd.rec].p, cd.row })) continue;
-            if (bestRow < 0 || (latest ? cd.rec > bestRec : cd.row < bestRow)) { bestRow = cd.row; bestOp = cd.op; bestRec = cd.rec; }
-        }
-        if (bestRow >= 0) g_tried.insert({ g_last[bestRec].p, bestRow });
-    }
-    if (bestRow < 0) {
-        if (lastCand == SIZE_MAX) { Stop("unhandled nocond", -1, at); return; }
-        const int op = g_last[lastCand].raw & 0x7FFF; std::string nm = "?"; for (auto& w : g_rows) if (w.op == op) { nm = w.name; break; }
-        char b[16]; std::snprintf(b, sizeof b, "%04X", op); Stop(std::string("unhandled ") + b + " " + nm, op, at); return;
-    }
-    const auto& row = g_rows[bestRow];
-    if (g_last[bestRec].p == g_loopCmd && bestRow == g_loopRow) g_loopN++; else { g_loopN = 1; g_loopCmd = g_last[bestRec].p; g_loopRow = bestRow; }
-    if (g_loopN > 5) { char b[16]; std::snprintf(b, sizeof b, "loop %04X", bestOp); Stop(b, bestOp, at); return; }
-    std::fprintf(stderr, "[mdriver] frame %d ip %x row %d %04X %s -> %s\n", fr, at, bestRow, bestOp, row.name.c_str(), row.action.c_str());
-    g_stopIp = at; g_stopOp = bestOp; // the last answered condition (reported when the mission ends without a driver stop)
-    DispatchRow(row, g_last[bestRec].p, bestOp);
+    const uint8_t* ipPtr = root->m_IP;
+    g_sameCount = 0;
+    std::vector<RecP> loop; for (auto& r : g_recs) if (r->waitSeq >= g_waitSeq - 3) loop.push_back(r);
+    Dec d = Decide(loop, g_attemptsAt[ipPtr]);
+    if (!d.act) { Stop(d.reason, d.op, at); return; }
+    g_attemptsAt[ipPtr]++;
+    const std::string key = std::to_string(at) + ":" + std::to_string(d.rowIdx) + ":" + RKey(d.args);
+    const int n = ++g_noProgress[key];
+    g_stopIp = at; g_stopOp = d.op; // the last answered condition (reported when the mission ends without a driver stop)
+    if (d.row->action == "failclass") { DispatchRow(d); return; }
+    if (n > 8) { char b[16]; std::snprintf(b, sizeof b, "%04X", d.op); Stop("the driver acted " + std::to_string(n - 1) + " times (" + d.row->action + ") and the condition stays false: " + b + " " + d.row->name, d.op, at); return; }
+    std::fprintf(stderr, "[mdriver] frame %d ip %x row %d %04X %s -> %s\n", fr, at, d.rowIdx, d.op, d.row->name.c_str(), d.row->action.c_str());
+    DispatchRow(d);
 }
 } // namespace
 
 bool Enabled() { static const bool e = std::getenv("NOTSA_MDRIVER") != nullptr || Generic(); return e; }
 void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int cond) {
     if (!Generic() || !g_loaded) return;
-    if (s == notsa::scmtrace::Root()) { g_cur.push_back({ ptr, raw, cond }); if (g_cur.size() > 600) g_cur.erase(g_cur.begin(), g_cur.begin() + 300); }
+    if (s == notsa::scmtrace::Root()) { // the StallSink: conditions with their state + operands, WAIT count, where the GOTO_IF_FALSE after them led
+        const int op = raw & 0x7FFF;
+        if (op == 0x0001) g_waitSeq++;
+        else if (op == 0x004D) {
+            const bool jumped = s->m_IP != ptr + 7;
+            for (auto& r : g_pending) { r->hasBranch = true; r->jumped = jumped; r->fall = ptr + 7; r->target = jumped ? s->m_IP : ptr + 7; }
+            g_pending.clear();
+        } else if (cond >= 0) {
+            auto r = std::make_shared<Rec>(); r->p = ptr; r->raw = raw; r->cond = cond; r->waitSeq = g_waitSeq;
+            const int n = Arity(op); r->args = DecodeArgs(s, ptr, n >= 0 ? n : 10);
+            g_recs.push_back(r); if (g_recs.size() > 64) g_recs.pop_front();
+            g_pending.push_back(r); if (g_pending.size() > 12) g_pending.erase(g_pending.begin());
+        }
+    }
     if (ptr[2] != 9) return;
     const char* lab = (const char*)(ptr + 3); const int op = raw & 0x7FFF;
     if (!std::memcmp(lab, "M_PASS\0", 7)) { if (!g_pass) { g_pass = true; g_passFrame = GFrame(); } return; }
     if (!std::memcmp(lab, "M_FAIL\0", 7)) {
         if (!g_fail) { g_fail = true; g_failFrame = GFrame(); g_failText = g_lastLabel.empty() ? "M_FAIL" : g_lastLabel; }
-        if (GFrame() - g_killFrame <= g_killSettle + 5) { g_stopReason = "driver stop: killed a guard"; g_quitIn = 600; }
         return;
     }
     if (op >= 0x00BA && op <= 0x00BD) g_lastLabel.assign(lab, strnlen(lab, 8));
@@ -435,6 +612,28 @@ bool Cmd(const char* name, const std::string& args) {
     if (!std::strcmp(name, "mdkillcar")) { if (auto* k = CPools::GetVehicle(std::atoi(args.c_str()))) k->BlowUpCar(nullptr, false); return true; }
     if (!std::strcmp(name, "mdkey")) { const auto c = args.find(':'); if (g_push) g_push(args.c_str() + c + 1, args.compare(0, c, "down") == 0); return true; }
     if (!ped) return true;
+    if (!std::strcmp(name, "mdskipcut")) { if (CCutsceneMgr::IsCutsceneProcessing()) CCutsceneMgr::SkipCutscene(); return true; }
+    if (!std::strcmp(name, "mdarea")) { const int ar = std::atoi(args.c_str()); CGame::currArea = (eAreaCodes)ar; ped->SetAreaCode((eAreaCodes)ar); CEntryExitManager::SetAreaCodeForVisibleObjects(); return true; } // launch.ts LAUNCH_AREA
+    if (!std::strcmp(name, "mdlaunch")) { // launch.ts LAUNCH_VEHICLE: CJ at the wheel of a car of this model (the main script starts these missions with him in one)
+        const int model = std::atoi(args.c_str());
+        CStreaming::RequestModel(model, STREAMING_GAME_REQUIRED); CStreaming::LoadAllRequestedModels(false);
+        const auto pp = ped->GetPosition();
+        if (auto* car = CCarCtrl::CreateCarForScript(model, CVector{ pp.x + 3.f, pp.y, pp.z + 1.f }, false)) { CTaskSimpleCarSetPedInAsDriver t(car, true, nullptr); t.ProcessPed(ped); }
+        return true;
+    }
+    if (!std::strcmp(name, "mdwped") || !std::strcmp(name, "mdwveh") || !std::strcmp(name, "mdwother")) { // AD4: actions.ts warp / warpOther (z <= -100 = the ground; a ped lands at z + 1.1, a car at z)
+        CEntity* tgt = ped; bool isPed = !std::strcmp(name, "mdwped"); std::string rest = args;
+        if (!std::strcmp(name, "mdwother")) { const int kind = std::atoi(rest.c_str()); rest = rest.substr(rest.find(':') + 1); const int h = std::atoi(rest.c_str()); rest = rest.substr(rest.find(':') + 1); isPed = kind == 0; tgt = isPed ? (CEntity*)CPools::GetPed(h) : (CEntity*)CPools::GetVehicle(h); if (!tgt) return true; }
+        float w[3]{}; std::sscanf(rest.c_str(), "%f:%f:%f", w, w + 1, w + 2);
+        CStreaming::LoadScene(CVector{ w[0], w[1], 0.f }); CStreaming::LoadSceneCollision(CVector{ w[0], w[1], 0.f });
+        const float gz = w[2] <= -100.f ? CWorld::FindGroundZForCoord(w[0], w[1]) : w[2];
+        CVehicle* veh = nullptr; if (isPed) { auto* pd = static_cast<CPed*>(tgt); if (pd->bInVehicle) veh = pd->m_pVehicle; } else veh = static_cast<CVehicle*>(tgt);
+        if (veh) { CCarCtrl::SetCoordsOfScriptCar(veh, w[0], w[1], gz, 0, 1); veh->m_vecMoveSpeed = CVector{}; veh->m_vecTurnSpeed = CVector{}; }
+        else { CWorld::Remove(tgt); tgt->SetPosn(CVector{ w[0], w[1], gz + 1.1f }); CWorld::Add(tgt); }
+        CStreaming::LoadScene(CVector{ w[0], w[1], gz }); CStreaming::LoadSceneCollision(CVector{ w[0], w[1], gz });
+        notsa::standalone::Fixups::Log("[mdriver] %s gf=%u -> %.2f,%.2f,%.2f", name, (unsigned)CTimer::GetFrameCounter(), w[0], w[1], gz);
+        return true;
+    }
     float a[6]{}; a[5] = -1.f; std::sscanf(args.c_str(), "%f:%f:%f:%f:%f:%f", a, a + 1, a + 2, a + 3, a + 4, a + 5);
     CVector p{ a[0], a[1], a[2] };
     if (p.z <= -100.f) { CStreaming::LoadScene(CVector{ p.x, p.y, 0.f }); CStreaming::LoadSceneCollision(CVector{ p.x, p.y, 0.f }); p.z = CWorld::FindGroundZForCoord(p.x, p.y) + 1.0f; } // z <= -100 = the ground (SET_CHAR_COORDINATES convention)

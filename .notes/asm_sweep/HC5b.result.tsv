@@ -1,0 +1,61 @@
+addr	function	verdict	asm range	note	fix commit
+0x69E160	CMessages::InsertPlayerControlKeysInString	SKIP-TEXT	-	display text only	-
+0x45C940	CReplay::StorePedUpdate	SKIP-REPLAY	-	recording buffer only: no rand, no game state beyond the recorded flags	-
+0x52E450	CControllerConfigManager::GetIsKeyboardKeyJustDown	NOT_REACHED	-	not compared (budget)	-
+0x45C850	CReplay::FindSizeOfPacket	SKIP-REPLAY	-	recording buffer only: no rand, no game state beyond the recorded flags	-
+0x6E6A10	CWaterLevel::RenderDetailedSeaBedSegment	SKIP-RENDER	-	render	-
+0x5314A0	CControllerConfigManager::AffectPadFromMouse	MATCH	-	inlined ButtonDown dispatch (driving / first-person camera modes 0x10,7,8,0x33,0x22,0x2e / third), enter-exit 0xFF, release resets +0x28/+0x2c; GTATranslateShiftKey skipped under SDL3 (INTENTIONAL, portable input layer)	-
+0x531140	CControllerConfigManager::AffectPadFromKeyBoard	MATCH	-	inlined ButtonDown dispatch (driving / first-person camera modes 0x10,7,8,0x33,0x22,0x2e / third), enter-exit 0xFF, release resets +0x28/+0x2c; GTATranslateShiftKey skipped under SDL3 (INTENTIONAL, portable input layer)	-
+0x52DD90	CControllerConfigManager::ClearSimButtonPressCheckers	NOT_REACHED	-	not compared (budget)	-
+0x5603D0	CTimeCycle::CalcColoursForPoint	NOT_REACHED	-	not compared (budget)	-
+0x45C440	CReplay::ShouldStandardCameraBeProcessed	SKIP-REPLAY	-	recording buffer only: no rand, no game state beyond the recorded flags	-
+0x6181A0	IKChainManager_c::IsLooking	MATCH	-	slot ids/arm+1/BlendOut args identical; exe has no null check on the IK manager task (crash), port returns	-
+0x45D430	CReplay::MarkEverythingAsNew	MATCH	-	ped flag bit 13 of ped+0x470, vehicle bit 26 of vehicleFlags verified	-
+0x45E220	CReplay::Init	SKIP-REPLAY	-	recording buffer only: no rand, no game state beyond the recorded flags	-
+0x6181D0	IKChainManager_c::GetLookAtEntity	MATCH	-	slot ids/arm+1/BlendOut args identical; exe has no null check on the IK manager task (crash), port returns	-
+0x731720	CTxdStore::TxdStoreFindCB	MATCH	-	exe derefs null slot/parent (crash), port returns - unreachable	-
+0x616CD0	BoneNode_c::CalcWldMat	NOT_REACHED	-	not compared (budget)	-
+0x52FCA0	CControllerConfigManager::AffectControllerStateOn_ButtonDown_AllStates	NOT_REACHED	-	not compared (budget)	-
+0x52FAB0	CControllerConfigManager::AffectControllerStateOn_ButtonDown_FirstAndThirdPersonOnly	NOT_REACHED	-	not compared (budget)	-
+0x6E7210	CWaterLevel::CalculateWavesOnlyForCoordinate2	MATCH	-	3 sine layers: phase terms, constants (6 floats checked against the exe), PC24 rounding points, LUT index via ftol & 0xFF	-
+0x6184B0	IKChain_c::Update	MATCH	-	pivot matrix via hierarchy index; CalcWldMat of last bone, MoveBonesToTarget, BlendKeyframe per bone	-
+0x6178B0	IKChain_c::MoveBonesToTarget	MATCH	-	walked the whole function: target WS (entity matrix, bone pos + transformed offset), 1e-5 length gates, (O.y*R.y+O.x*R.x)+O.z*R.z < 0.997, cross product order, quat normalise (-recp on imag), speed*acos*m_Speed*57.29578, Limit gate byte 0x8D2BD2=1, parent matrix choice	-
+0x616E30	BoneNode_c::BlendKeyframe	MATCH	-	BlendKeyframe: exe early-outs (blend>=1 -> q=orientation, blend<=0 -> keep) are inside the port's RtQuatSlerp; NaN blend: exe keeps q, port slerps (unreachable)	-
+0x617650	BoneNode_c::Limit	NOT_REACHED	-	not compared (budget)	-
+0x617080	BoneNode_c::QuatToEuler	NOT_REACHED	-	not compared (budget)	-
+0x6182B0	IKChainManager_c::IsArmPointing	MATCH	-	slot ids/arm+1/BlendOut args identical; exe has no null check on the IK manager task (crash), port returns	-
+0x52F5F0	CControllerConfigManager::ResetSettingOrder	NOT_REACHED	-	not compared (budget)	-
+0x45EBB0	CReplay::RecordVehicleDeleted	SKIP-REPLAY	-	recording buffer only: no rand, no game state beyond the recorded flags	-
+0x6E5750	CWaterLevel::AddPolyToBlock	MATCH	-	block index, single->combo transition, terminator handling; quad/tri bound compares and loop counts re-read	-
+0x6E9D70	CWaterLevel::FindNearestWaterAndItsFlow	MATCH	-	full x87 compare chain: range gates, dist-to-quad ranges, wavy/any quad update, closest-vertex flow *1/64, NaN behaviour	-
+0x731D50	CTxdStore::SetupTxdParent	MATCH	-	exe derefs null slot/parent (crash), port returns - unreachable	-
+0x45EC20	CReplay::RecordPedDeleted	SKIP-REPLAY	-	recording buffer only: no rand, no game state beyond the recorded flags	-
+0x618970	IKChainManager_c::LookAt	MATCH	-	force/CanAcceptLookAt order, byte_C1542C is never written in the exe (always 0), priority/useTorso/abort(250) branches identical	-
+0x69DE90	CMessages::InsertNumberInString	SKIP-TEXT	-	display text only	-
+0x52F4A0	CControllerConfigManager::GetNumOfSettingsForAction	NOT_REACHED	-	not compared (budget)	-
+0x618280	IKChainManager_c::AbortLookAt	MATCH	-	slot ids/arm+1/BlendOut args identical; exe has no null check on the IK manager task (crash), port returns	-
+0x618750	IKChainManager_c::AddIKChain	MATCH	-	free/active list order, 32 chains stride 0x58, Exit returns nodes in index order	-
+0x618520	IKChain_c::ClampLimits	MATCH	-	identical (ClampLimits*: both gate bytes 0x8D2BD0/1 are 1 in the exe, so the clamp is a no-op)	-
+0x618370	IKChain_c::Init	MATCH	-	frame flag bits 5/7, bHasBeenRendered bit 29 of ped+0x474, any-non-zero translation test (NaN passes), ref registered after the checks, field stores	-
+0x618170	IKChainManager_c::RemoveIKChain	MATCH	-	free/active list order, 32 chains stride 0x58, Exit returns nodes in index order	-
+0x617CA0	IKChain_c::SetupBones	MATCH	-	do-while on parent tag; port adds a BONE_UNKNOWN guard (exe would run away on invalid data - unreachable for valid tags)	-
+0x617C60	IKChain_c::GetBoneNodeFromTag	MATCH	-	identical (ClampLimits*: both gate bytes 0x8D2BD0/1 are 1 in the exe, so the clamp is a no-op)	-
+0x617870	IKChain_c::Exit	MATCH	-	identical (ClampLimits*: both gate bytes 0x8D2BD0/1 are 1 in the exe, so the clamp is a no-op)	-
+0x6177B0	BoneNode_c::Init	MATCH	-	BlendKeyframe: exe early-outs (blend>=1 -> q=orientation, blend<=0 -> keep) are inside the port's RtQuatSlerp; NaN blend: exe keeps q, port slerps (unreachable)	-
+0x6175D0	BoneNode_c::ClampLimitsCurrent	MATCH	-	BlendKeyframe: exe early-outs (blend>=1 -> q=orientation, blend<=0 -> keep) are inside the port's RtQuatSlerp; NaN blend: exe keeps q, port slerps (unreachable)	-
+0x617470	BoneNodeManager_c::ReturnBoneNode	MATCH	-	128 nodes stride 0x98, list ops	-
+0x617460	BoneNodeManager_c::GetBoneNode	MATCH	-	128 nodes stride 0x98, list ops	-
+0x45B160	CReplay::EnableReplays	SKIP-REPLAY	-	recording buffer only: no rand, no game state beyond the recorded flags	-
+0x45B150	CReplay::DisableReplays	SKIP-REPLAY	-	recording buffer only: no rand, no game state beyond the recorded flags	-
+0x617E20	IKChain_c::UpdateOffset	MATCH	-	identical (ClampLimits*: both gate bytes 0x8D2BD0/1 are 1 in the exe, so the clamp is a no-op)	-
+0x617E00	IKChain_c::UpdateEntity	MATCH	-	identical (ClampLimits*: both gate bytes 0x8D2BD0/1 are 1 in the exe, so the clamp is a no-op)	-
+0x530640	CControllerConfigManager::InitDefaultControlConfiguration	NOT_REACHED	-	not compared (budget)	-
+0x530500	CControllerConfigManager::MakeControllerActionsBlank	NOT_REACHED	-	not compared (budget)	-
+0x6E7B30	CWaterLevel::FillQuadsAndTrianglesList	MATCH	-	block index, single->combo transition, terminator handling; quad/tri bound compares and loop counts re-read	-
+0x6180D0	IKChainManager_c::Exit	MATCH	-	free/active list order, 32 chains stride 0x58, Exit returns nodes in index order	-
+0x6180A0	IKChainManager_c::Init	MATCH	-	free/active list order, 32 chains stride 0x58, Exit returns nodes in index order	-
+0x617420	BoneNodeManager_c::Exit	MATCH	-	128 nodes stride 0x98, list ops	-
+0x6173F0	BoneNodeManager_c::Init	MATCH	-	128 nodes stride 0x98, list ops	-
+0x531F20	CControllerConfigManager::ReinitControls	NOT_REACHED	-	not compared (budget)	-
+0x52D260	CControllerConfigManager::InitialiseControllerActionNameArray	NOT_REACHED	-	not compared (budget)	-
+0x45EC90	CReplay::EmptyReplayBuffer	SKIP-REPLAY	-	recording buffer only: no rand, no game state beyond the recorded flags	-

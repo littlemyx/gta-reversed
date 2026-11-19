@@ -28,11 +28,12 @@ d = open(a.exe, 'rb').read()
 pe = struct.unpack_from('<I', d, 0x3c)[0]
 n = struct.unpack_from('<H', d, pe + 6)[0]; so = struct.unpack_from('<H', d, pe + 20)[0]
 base = struct.unpack_from('<I', d, pe + 52)[0]
-secs = []
+secs = []; RW = []   # RW: writable sections (variables, not constants)
 for i in range(n):
     o = pe + 24 + so + i * 40
     vs, va, rs, ra = struct.unpack_from('<IIII', d, o + 8)
     secs.append((va + base, max(vs, rs), ra))
+    if struct.unpack_from('<I', d, o + 36)[0] & 0x80000000: RW.append((va + base, va + base + max(vs, rs)))
 def rd(x, k):
     for va, sz, ra in secs:
         if va <= x < va + sz: return d[ra + x - va: ra + x - va + k]
@@ -48,7 +49,7 @@ def exe_consts(start, maxn=3000):
         if not ins: break
         i = ins[0]
         m = re.match(r'^' + FOP + r'\s+(dword|qword) ptr \[(0x[0-9a-f]+)\]$', i.mnemonic + ' ' + i.op_str)
-        if m and int(m.group(2), 16) >= base + 0x450000:
+        if m and int(m.group(2), 16) >= base + 0x450000 and not any(lo <= int(m.group(2), 16) < hi for lo, hi in RW):
             (outf if m.group(1) == 'dword' else outd).add(int(m.group(2), 16))
         if i.mnemonic[0] == 'j':
             mm = re.match(r'^0x([0-9a-f]+)$', i.op_str)
@@ -125,6 +126,13 @@ def _collect(body, bpath):
     for m in re.finditer(r'(?<![\w.])(\d+\.\d+(?:[eE][-+]?\d+)?|\d+[eE][-+]?\d+|\.\d+)(?![\w.])', body):
         try: v = float(m.group(0)); dlits.add(v); flits.add(fbits(v))   # a double literal narrowed to float is a float literal too
         except Exception: pass
+    for m in re.finditer(r'ExeRecip\(\s*([\d.\']+)f?\s*\)', body):
+        try: v = f32(1.0 / float(m.group(1).replace("'", ''))); flits.add(fbits(v)); dlits.add(v)
+        except Exception: pass
+    for m in re.finditer(r'\b(?:PI|TWO_PI|HALF_PI)\b(?:\s*([*/])\s*([\d.]+)f?)?', body):
+        base = {'PI': PI, 'TWO_PI': 2 * PI, 'HALF_PI': PI / 2}[m.group(0).split()[0].strip('*/ ')] if m.group(0).split()[0] in ('PI', 'TWO_PI', 'HALF_PI') else PI
+        v = base if not m.group(1) else (base * float(m.group(2)) if m.group(1) == '*' else base / float(m.group(2)))
+        flits.add(fbits(f32(v))); dlits.add(f32(v)); dlits.add(v)
     for hn, vals in HELPERS.items():
         if re.search(r'(?<![\w.:])' + re.escape(hn) + r'\s*\(', body):
             for v in vals: flits.add(fbits(v)); dlits.add(v); dlits.add(f32(v))
@@ -149,6 +157,11 @@ if a.follow:
                 e = t.find('\n}', m.end())
                 if e < 0: continue
                 FUNCS.setdefault(m.group(1), []).append((re.sub(r'//[^\n]*|/\*.*?\*/', '', t[m.start():e + 2], flags=re.S), pth))
+    for pth in glob.glob(a.src + '/**/*.h', recursive=True) + glob.glob('source/*.h'):
+        t = open(pth, encoding='utf8', errors='ignore').read()
+        for m in re.finditer(r'\b(\w+)\s*\([^;{}]*\)\s*(?:const\s*)?(?:noexcept\s*)?\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}', t):
+            if m.group(1) in ('if', 'for', 'while', 'switch', 'return'): continue
+            FUNCS.setdefault(m.group(1), []).append((re.sub(r'//[^\n]*|/\*.*?\*/', '', m.group(0), flags=re.S), pth))
     print('indexed callee names:', len(FUNCS), file=sys.stderr)
 fbits = lambda x: struct.unpack('<I', struct.pack('<f', x))[0]
 rows = []

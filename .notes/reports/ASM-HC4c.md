@@ -1,0 +1,5 @@
+# ASM-HC4c (continuation of HC4 + HC4b)
+Zone: the HC4b NOT_REACHED list (~45 functions); 27 compared (21 MATCH, 6 FIXED functions in 3 commits), plus the independent review of HasEmptySlot. Skipped-render: none new.
+Review 6f182123c CPedAttractorManager::HasEmptySlot: CONFIRMED (null fx / type != 3 -> false; the 10-slot switch matches).
+Fixes: ReadTextLabelFromScript pascal-string zero-fill (low byte compare, 80850134d); GetActualScriptThingIndex + GetNewUniqueScriptThingIndex unsigned id words (cd37db4e7); CAnimBlendSequence::Uncompress output size + RemoveQuaternionFlips sum order w,z,y,x (3a829aa1d).
+Not reached: TestLineTriangle 2D switch cases 1-5 (budget; exe differential test exists in Collision.cpp), CDecisionMakerTypes ctor arrays, CWeaponModelInfo::Init, CDamageAtomicModelInfo::Init, CPedModelInfo::IncrementVoice, CModelInfo::Get2dEffectStore, CAtomicModelInfo::SetupVehicleUpgradeFlags, InteriorManager_c::{GetPedsInteriorGroup,SetEntryExitPtr}, CPedAttractor::GetTaskForPed, CAnimBlendStaticAssociation::Init, CTheScripts remaining rows.

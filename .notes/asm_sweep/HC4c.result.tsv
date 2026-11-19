@@ -1,0 +1,28 @@
+0x5EBB00	CPedAttractorManager::HasEmptySlot	MATCH	0x5EBB00-0x5EBB73	independent review of 6f182123c: CONFIRMED (null / type!=3 -> false; type>9 -> true is unreachable data)	
+0x463D50	CRunningScript::ReadTextLabelFromScript	FIXED	0x463D50-0x464050	all 11 jump-table slots compared; pascal string zero-fill used signed int16 length (negative length overran)	80850134d
+0x464250	CRunningScript::CollectNextParameterWithoutIncreasingPC	MATCH	0x464250-0x46434D		
+0x464370	CRunningScript::StoreParameters	MATCH	0x464370-0x4644D7		
+0x464500	CRunningScript::ReadParametersForNewlyStartedScript	MATCH	0x464500-0x4646A0		
+0x464700	CRunningScript::GetIndexOfGlobalVariable	MATCH	0x464700-0x464785		
+0x485B10	CRunningScript::GetPadState	MATCH	0x485B10-0x485BC1	20-slot table verified (offsets 0..0x26, default 0)	
+0x4839A0	CTheScripts::GetActualScriptThingIndex	FIXED	0x4839A0-0x483B05	id compare is unsigned word (int16 ids were sign-extended)	cd37db4e7
+0x483720	CTheScripts::GetNewUniqueScriptThingIndex	FIXED	0x483720-0x48396E	0xFFFE wrap is unsigned (uint16 id arrays never wrapped)	cd37db4e7
+0x464080	CRunningScript::CollectParameters	MATCH	0x464080-0x46421E	re-confirmed	
+0x53CF30	CKeyGen::GetUppercaseKey	MATCH	0x53CF30-0x53CF6B	CRT toupper (C locale) = ASCII upper	
+0x4684F0	CDecisionMakerTypes::GetInstance	MATCH	0x4684F0 + ctor tail 0x465229-0x46528E	static init (group flags, ref idx=1, active) verified; ctor decision arrays not compared	
+0x6F9F60	CScripted2dEffects::GetIndex	MATCH	0x6F9F60-0x6F9F80		
+0x6FA6F0	CScripted2dEffects::Init	MATCH	0x6FA6F0-0x6FA769		
+0x607A70	CDecisionMakerTypesFileLoader::UnloadDecisionMaker	MATCH	0x607A70		
+0x600860	CDecisionMakerTypesFileLoader::GetPedDMName	MATCH	0x600860	table 0x8D2364 strings read from exe (6th slot overlaps the grp table)	
+0x600880	CDecisionMakerTypesFileLoader::GetGrpDMName	MATCH	0x600880		
+0x4C4E40	CClumpModelInfo::Init	MATCH	0x4C4E40		
+0x4C4EF0	CClumpModelInfo::SetHierarchyForSkinAtomic	MATCH	0x4C4EF0-0x4C4F24		
+0x4C4F30	CClumpModelInfo::AtomicSetupLightingCB	MATCH	0x4C4F30-0x4C4F67		
+0x4C5280	CClumpModelInfo::SetAtomicRendererCB	MATCH	0x4C5280		
+0x4C52A0	CClumpModelInfo::FindFrameFromNameCB	MATCH	0x4C52A0-0x4C52E4		
+0x4C5400	CClumpModelInfo::GetFrameFromName	MATCH	0x4C5400		
+0x4C5440	CClumpModelInfo::FillFrameArray	MATCH	0x4C5440		
+0x4D0D40	CAnimBlendSequence::Uncompress	FIXED	0x4D0D40-0x4D0F3D	output buffer sized as compressed format (overrun when pDataBlock null); conversion constants checked	3a829aa1d
+0x4D0F40	CAnimBlendSequence::CompressKeyframes	MATCH	0x4D0F40-0x4D114C		
+0x4D1190	CAnimBlendSequence::RemoveQuaternionFlips	FIXED	0x4D1190-0x4D1290	dot summed w,z,y,x in exe (port x,y,z,w); flip iff dot<0	3a829aa1d
+0x413AC0	CCollision::TestLineTriangle 2D cases 1-5	NOT_REACHED		covered only by the existing exe differential test in Collision.cpp	

@@ -41,27 +41,47 @@ void CHandShaker::Reset() {
 
 // 0x50D930
 void CHandShaker::Process(float degree) {
-    // Process velocity on each axis
+    // 0x50D936-0x50D97D: scale[i] = |ang / lim| * (max - min) + min (every op rounds to a float, PC=24)
+    const float span = m_scaleReactionMax - m_scaleReactionMin;
+    float scale[3];
     for (auto i = 0; i < 3; i++) {
-        //> 0x50D951 - Calculate scale [of motion]
-        auto scale = std::lerp(m_scaleReactionMin, m_scaleReactionMax, std::abs(m_ang[i] / m_lim[i]));
-        if (std::signbit(m_ang[i]) == std::signbit(m_vel[i])) {
-            scale *= m_slow[i];
+        scale[i] = std::abs(m_ang[i] / m_lim[i]) * span + m_scaleReactionMin;
+    }
+    // 0x50D97F-0x50DA53: scale *= slow only when ang and vel are BOTH strictly positive or BOTH strictly negative
+    // (the port used signbit equality, which multiplied for a zero angle / zero velocity)
+    for (auto i = 0; i < 3; i++) {
+        if ((m_ang[i] > 0.f && m_vel[i] > 0.f) || (m_ang[i] < 0.f && m_vel[i] < 0.f)) {
+            scale[i] *= m_slow[i];
         }
+    }
 
-        //> 0x50DA61 - Calculate random motion using it
-        float motion = CGeneral::GetRandomNumberInRange(0.f, 1.f) * m_motion[i] * scale;
+    //> 0x50DA61-0x50DB29: three draws in the order z, y, x (the port drew x, y, z); motion = r * m_motion * scale, negated while ang > 0; then vel += motion
+    float motion[3];
+    for (auto i = 2; i >= 0; i--) {
+        const float r = static_cast<float>(CGeneral::GetRandomNumber()) * RAND_MAX_FLOAT_RECIPROCAL;
+        motion[i]     = r * m_motion[i] * scale[i];
+    }
+    for (auto i = 0; i < 3; i++) {
         if (m_ang[i] > 0.f) {
-            motion = -motion;
+            motion[i] = -motion[i];
         }
-
-        //> 0x50DB29
-        m_vel[i] += motion;
+        m_vel[i] += motion[i];
     }
 
     const auto twitchT = (float)NOTSA_FTOL(size_t, CTimer::GetTimeStepNonClippedInMS()) * std::bit_cast<float>(0x3CF5C290u); // 0x85A6EC (one ulp above the literal 0.03f)
-    if (CGeneral::GetRandomNumberInRange(NOTSA_FTOL(size_t, (float)m_twitchFreq * twitchT)) == 1) { //> 0x50DB97
-        m_vel += CVector::Random(-m_twitchVel, m_twitchVel);
+    // 0x50DB65-0x50DB9D: twitch fires when GetRandomNumberInRange(1, ftol(twitchFreq * twitchT)) == 2, i.e. 1 + (int)(r / 32768 * (N - 1)) == 2
+    // (the port tested a one-argument range == 1, i.e. (int)(r / 32768 * N))
+    if (CGeneral::GetRandomNumberInRange(1, NOTSA_FTOL(int32, (float)m_twitchFreq * twitchT)) == 2) {
+        // 0x50DBA7-0x50DC71: CVector::Random(-v, v) drawn z, y, x (CVector::Random draws x, y, z); each (v - -v) * r + -v
+        const float lo = -m_twitchVel;
+        float c[3];
+        for (auto i = 2; i >= 0; i--) {
+            const float r = static_cast<float>(CGeneral::GetRandomNumber()) * RAND_MAX_FLOAT_RECIPROCAL;
+            c[i]          = (m_twitchVel - lo) * r + lo;
+        }
+        m_vel.x += c[0];
+        m_vel.y += c[1];
+        m_vel.z += c[2];
     }
     m_ang += twitchT * m_vel; //> 0x50DC74
     m_ang  = Clamp(m_ang, -m_lim, m_lim); //> 0x50DCAF

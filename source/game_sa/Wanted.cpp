@@ -476,6 +476,11 @@ void CWanted::ClearWantedLevelAndGoOnParole() {
 // 0x5625F0
 int32 CWanted::WorkOutPolicePresence(CVector posn, float radius) {
     auto numCops = 0;
+    // 0x562665 / 0x56271A: the inlined distance is sqrt((dz^2 + dy^2) + dx^2) (the differences are pushed x, y, z, so z is squared first); CVector::Magnitude sums x, y, z
+    const auto DistZYX = [&](const CVector& a) {
+        const float dx = posn.x - a.x, dy = posn.y - a.y, dz = posn.z - a.z;
+        return (float)std::sqrt(((x87d)dz * dz + (x87d)dy * dy) + (x87d)dx * dx);
+    };
 
     auto pedPool = GetPedPool();
     for (auto i = pedPool->GetSize(); i; i--) {
@@ -483,7 +488,7 @@ int32 CWanted::WorkOutPolicePresence(CVector posn, float radius) {
             if (ped->m_nPedType != PED_TYPE_COP || !ped->IsAlive())
                 continue;
 
-            if (DistanceBetweenPoints(ped->GetPosition(), posn) < radius)
+            if (DistZYX(ped->GetPosition()) < radius)
                 numCops++;
         }
     }
@@ -501,7 +506,7 @@ int32 CWanted::WorkOutPolicePresence(CVector posn, float radius) {
                 continue;
             }
 
-            if (DistanceBetweenPoints(veh->GetPosition(), posn) < radius) {
+            if (DistZYX(veh->GetPosition()) < radius) {
                 numCops++;
             }
         }

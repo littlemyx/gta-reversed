@@ -263,7 +263,10 @@ bool CAnimBlendAssociation::UpdateBlend(float timeStep) {
 
     if (m_BlendAmount > 1.0f) { // Maximally faded in, clamp values
         m_BlendAmount = 1.0f;
-        m_BlendDelta  = std::min(0.0f, m_BlendDelta);
+        // exe 0x4D1552: fcomp + test ah,0x41 + jne - the delta is zeroed only if delta > 0 (ordered); std::min(0, NaN) would zero a NaN, std::min(0, -0) would give +0
+        if (m_BlendDelta > 0.0f) {
+            m_BlendDelta = 0.0f;
+        }
     }
 
     return true;

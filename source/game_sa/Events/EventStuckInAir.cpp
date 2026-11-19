@@ -27,7 +27,7 @@ CEventStuckInAir::~CEventStuckInAir()
 
 // 0x4B1600
 int32 CEventStuckInAir::GetEventPriority() const {
-    return m_ped && m_ped->GetIntelligence()->GetEventHandler().GetCurrentEventType() != EVENT_STUCK_IN_AIR && m_ped->GetIntelligence()->GetEventGroup().GetNumEventsInQueue() <= 1
+    return m_ped && m_ped->GetIntelligence()->GetEventHandler().GetCurrentEventType() != EVENT_STUCK_IN_AIR && m_ped->GetIntelligence()->GetEventGroup().GetNumEventsInQueue() > 1 // 0x4B1626: `cmp [group+0x70], 1; jg` -> 75 when MORE than one event is queued (the port had it inverted)
         ? 75
         : 63;
 }

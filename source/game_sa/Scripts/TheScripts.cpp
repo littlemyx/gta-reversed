@@ -1147,7 +1147,7 @@ void CTheScripts::UndoBuildingSwaps() {
 // 0x486110
 bool CTheScripts::IsPedStopped(CPed* ped) {
     if (ped->IsInVehicle()) {
-        return CTimer::GetTimeStep() * ExeRecip(100.f) >= ped->m_pVehicle->m_fMovingSpeed;
+        return !(CTimer::GetTimeStep() * ExeRecip(100.f) < ped->m_pVehicle->m_fMovingSpeed); // exe 0x486110: fcompp + `test ah, 1 / jne` => a NaN speed counts as stopped
     }
     if (!ped->IsPedStandingInPlace()) {
         return false;

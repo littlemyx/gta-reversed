@@ -1,0 +1,11 @@
+addr	function	verdict	asm range	note	fix commit
+0x6A38A0	CAutomobile::ProcessAutoBusDoors (review of c894318b9)	MATCH	0x6A38A0-0x6A3A58	CONFIRMED	
+0x6ADFF0	CAutomobile::ScanForCrimes (review of d6013cca9)	MATCH	0x6AE060-0x6AE0C9	CONFIRMED (z+x)+y	
+0x73DB40	CWeapon::Update reload audio (review of 65f681c52)	MATCH	0x73DD0F-0x73DE9C	CONFIRMED	
+0x6F34D0	CCarGenerator::DoInternalProcessing	FIXED	0x6F34D0-0x6F3E5A	SH3 log commit 80d427780 left 6 unbraced early-return ifs: return ran unconditionally, no generator spawned	39492b3e7
+0x6F3E90	CCarGenerator::Process	MATCH	0x6F3E90-0x6F3F35		
+0x5FBA60	CPedGroupMembership::Process	FIXED	0x5FBA60-0x5FBB6A	area-code equality required before distance removal	(see git log)
+0x43F4B0	CEntryExitManager::FindNearestEntryExit	MATCH	0x43F4B0-0x43F610		
+0x448BE0	CGarage::IsEntityEntirelyInside3D	MATCH	0x448BE0-0x448D2A	x87d already	
+0x46B3D0	CScriptsForBrains::IsObjectWithinBrainActivationRange	MATCH	0x46B3D0-0x46B455	sum order noise	
+*	remaining ~140 zone candidates (Garage Update* lambdas, GetClosestGroupPed, TheZones, Darkel, StuckCar...)	NOT_REACHED		budget	

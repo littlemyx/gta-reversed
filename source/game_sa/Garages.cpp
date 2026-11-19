@@ -368,12 +368,7 @@ bool CGarages::IsCarSprayable(CVehicle* vehicle) {
     switch (vehicle->m_nModelIndex) {
     case eModelID::MODEL_BUS:
     case eModelID::MODEL_COACH:
-    /* TODO:
-    * In the source it compares against -2, but the in the ASM comment it says `artict1`
-    * artict1 is Articulated Trailer which by logic cannot to sprayed due big size, but who know..
-    * original code also disallow artict1 to be sprayed (tested)
-    */
-    case eModelID::MODEL_ARTICT1:
+    // exe 0x4479A0: only 431, 437, 407, 416 and the model index -2 (never a real model) are refused; MODEL_ARTICT1 (435) IS sprayable (port refused it)
     case eModelID::MODEL_FIRETRUK:
     case eModelID::MODEL_AMBULAN:
         return false;

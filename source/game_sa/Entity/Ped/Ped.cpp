@@ -4031,7 +4031,7 @@ void CPed::DettachPedFromEntity(){
 
     default: {
         CAnimManager::BlendAnimation(GetRpClump(), m_nAnimGroup, ANIM_ID_IDLE, 1000.f);
-        bIsStanding = true;
+        SetUsesCollision(true); // exe 0x5E7F99: `or [ped+0x1C], 1` = the entity flag bUsesCollision (port set bIsStanding at +0x46C)
 
         // Restore old weapon if any
         if (m_nSavedWeapon != WEAPON_UNIDENTIFIED) {

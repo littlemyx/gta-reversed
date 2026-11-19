@@ -616,7 +616,10 @@ void CAEAudioHardware::DisableEffectsLoading() {
 
 // 0x4D8E60
 void CAEAudioHardware::RequestVirtualChannelSoundInfo(uint16 vch, eSoundID sfx, eSoundBankSlot slot) {
-    assert(vch < MAX_NUM_SOUNDS);
+    // 0x4D8E60: out-of-range channels are ignored (`cmp ax, 0x12C / jae`)
+    if (vch >= MAX_NUM_SOUNDS) {
+        return;
+    }
 
     m_VirtualChannelSettings.BankSlotIDs[vch] = slot;
     m_VirtualChannelSettings.SoundIDs[vch]    = sfx;

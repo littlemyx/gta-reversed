@@ -1,0 +1,47 @@
+addr	function	verdict	asm range	note	fix commit
+0x5052F0	CAEWeatherAudioEntity::Service	MATCH	0x5052F0-0x5059F9 (all)	rand order (GetRandomNumberInRange(-6,6) before ResolveProbability(0.5)), x87 volume path, fcom/test ah NaN branches, twin-loop init args, pos tables all match	-
+0x5052B0	CAEWeatherAudioEntity::StaticReset	MATCH	all		-
+0x4F28A0	CAETwinLoopSoundEntity::Initialise	MATCH	all	member offsets 0x7c..0xa4 equal	-
+0x4F2960	CAETwinLoopSoundEntity::StopSoundAndForget	MATCH	all	port nulls the pointer before the call, exe after (no re-entry observed)	-
+0x4F29A0	CAETwinLoopSoundEntity::UpdateTwinLoopSound	MATCH	all		-
+0x4E0220	CAEMP3BankLoader::IsSoundBankLoaded	MATCH	all		-
+0x4D88C0	CAEAudioHardware::IsSoundBankLoaded	MATCH	all		-
+0x4E01B0	CAEBankLoader::GetBankLookup	MATCH	all	port drops the unloaded/oob nullptr return (exe crashed on use anyway)	-
+0x4D8F90	CAEAudioHardware::GetPlayingTrackID	MATCH	all	thunk to stream thread	-
+0x4D8F70	CAEAudioHardware::GetTrackLengthMs	MATCH	all	thunk	-
+0x4D8F50	CAEAudioHardware::StopTrack	MATCH	all	thunk	-
+0x4DBEB0	CAECutsceneTrackManager::IsCutsceneTrackActive	MATCH	all		-
+0x4DBEC0	CAECutsceneTrackManager::GetCutsceneTrackStatus	MATCH	all	jump table 0,1->1 2->2 3->3 4..7->4 else 0	-
+0x4DBE70	CAECutsceneTrackManager::PlayPreloadedCutsceneTrack	MATCH	all		-
+0x4D6CF0	CAEAmbienceTrackManager::IsAmbienceTrackActive	MATCH	all		-
+0x4DD470	CAEFrontendAudioEntity::IsLoadingTuneActive	MATCH	all		-
+0x4DD480	CAEFrontendAudioEntity::IsRadioTuneSoundActive	MATCH	all		-
+0x4DD440	CAEFrontendAudioEntity::Reset	MATCH	all	field offsets verified (0x7e,0x80,0x84,0x88,0x8c)	-
+0x4DC6B0	CAEDoorAudioEntity::Reset	MATCH	all		-
+0x4DCF20	CAEFireAudioEntity::Initialise	MATCH	all		-
+0x4DCF40	CAEFireAudioEntity::Terminate	MATCH	all		-
+0x503060	CAEWaterCannonAudioEntity::Initialise	MATCH	all		-
+0x5B9A90	CAEFireAudioEntity::StaticInitialise	MATCH	all	bank 0x34 slot 4	-
+0x5B9A80	CAEDoorAudioEntity::StaticInitialise	MATCH	all		-
+0x5B9A70	CAEWeatherAudioEntity::StaticInitialise	MATCH	all		-
+0x5B9A60	CAEExplosionAudioEntity::StaticInitialise	MATCH	all		-
+0x4E01E0	CAEMP3BankLoader::GetSoundHeadroom	MATCH	all	const 0x858c58 = 0.01f	-
+0x4D8E30	CAEAudioHardware::GetSoundHeadroom	MATCH	all	thunk	-
+0x4D8E60	CAEAudioHardware::RequestVirtualChannelSoundInfo	FIXED	all	vch >= 300 is ignored in the exe (cmp ax,0x12C/jae); port only asserted (OOB write in release)	see
+git	log				
+0x4D8E90	CAEAudioHardware::GetVirtualChannelSoundLengths	MATCH	all	600 bytes	-
+0x4D8EB0	CAEAudioHardware::GetVirtualChannelSoundLoopStartTimes	MATCH	all		-
+0x4D8870	CAEAudioHardware::SetChannelVolume	MATCH	all		-
+0x4D8960	CAEAudioHardware::SetChannelFrequencyScalingFactor	MATCH	all		-
+0x4D88A0	CAEAudioHardware::LoadSoundBank	MATCH	all		-
+0x4D8ED0	CAEAudioHardware::LoadSound	MATCH	all		-
+0x4E0670	CAEMP3BankLoader::LoadSoundBank	MATCH	all	request record fields and ring index checked	-
+0x4E0280	CAEMP3BankLoader::GetSoundBuffer	MATCH	all		-
+0x4E03B0	CAEMP3BankLoader::IsSoundLoaded	MATCH	all		-
+0x4E07A0	CAEMP3BankLoader::LoadSound	UNSURE	first 0x4E0821 only (guards, dup check start)	-	
+0x502460	CAEVorbisDecoder::GetStreamID	SKIP-OUTPUT	decoder/hardware output, no rand	-	
+0x502560	CAEVorbisDecoder::GetSampleRate	SKIP-OUTPUT	decoder/hardware output, no rand	-	
+0x4F17D0	CAEStreamTransformer::TransformBuffer	SKIP-OUTPUT	decoder/hardware output, no rand	-	
+0x5B9340	CAEAudioHardware::AllocateChannels	SKIP-OUTPUT	decoder/hardware output, no rand	-	
+0x502B80	CAEWMADecoder::InitLibrary	SKIP-OUTPUT	decoder/hardware output, no rand	-	
+0x4E7C70	CAEMFDecoder::InitLibrary	SKIP-OUTPUT	decoder/hardware output, no rand	-	

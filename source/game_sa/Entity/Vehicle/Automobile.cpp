@@ -5997,7 +5997,11 @@ void CAutomobile::ScanForCrimes() {
         && plyrveh->GetStatus() != STATUS_WRECKED
         && plyrveh->m_nAlarmState
         && plyrveh->m_nAlarmState != 0xFFFF
-        && DistanceBetweenPointsSquared(GetPosition(), plyrveh->GetPosition()) < sq(20.f)
+        && [&] {
+            // 0x6AE07B-0x6AE099: the squared distance is summed as (dz^2 + dx^2) + dy^2
+            const auto d = plyrveh->GetPosition() - GetPosition();
+            return (d.z * d.z + d.x * d.x) + d.y * d.y;
+        }() < sq(20.f)
     ) {
         FindPlayerPed()->SetWantedLevelNoDrop(eWantedLevel::WANTED_LEVEL_1);
     }

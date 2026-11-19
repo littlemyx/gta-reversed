@@ -40,7 +40,7 @@ void LoadScene(CVector point) {
 
 void LoadSceneInDirection(CVector point, float heading) {
     CTimer::Stop();
-    CRenderer::RequestObjectsInDirection(point, heading, STREAMING_LOADING_SCENE);
+    CRenderer::RequestObjectsInDirection(point, DegreesToRadians(heading), STREAMING_LOADING_SCENE); // exe 0x47B7E4: heading * 0.017453292f (0x8595EC), the function takes radians
     CStreaming::LoadScene(point);
     CTimer::Update();
 }

@@ -1,0 +1,12 @@
+addr	function	verdict	asm range	note	fix commit
+0x4B3A60	CEventDamage::ComputeDeathAnim	MATCH	0x4B3A60-0x4B3F04	P4S10h fix CONFIRMED: weapon->case byte table, all 4 direction tables, RAMMED/RUNOVER dir0/dir2 piece maps, 2D-normalised force, z 5.0, adrenaline/fat-muscle, mega punch x20 checked	
+0x671AB0	CTaskComplexFollowNodeRoute::ControlSubTask	MATCH	0x671AB0-0x671CB0	P4S10h fix CONFIRMED: slowing / speeding-up / will-slow-down branches, NaN paths, flag masks	
+0x6D56C0	CVehicle::ProcessOpenDoor	FIXED	0x6D56C0-0x6D5C25	full function incl. door-component table (0x6D5C28), anim switch, group tables: cur-ratio guard sat on CLOSE_* in the port, exe has it on CLOSEDOOR_*	caf3399ba
+0x671EF0	CTaskComplexWander::ScanForBlockedNode	MATCH	0x671EF0-0x671FCE (+0x66F4C0-0x66F528)	(<=9 vs NaN edge only)	
+0x60C5F0	CPlayerPed::FindPedToAttack	FIXED	0x60C5F0-0x60C7BE	initial best distance 99999.9f (0x47C34FF3), was FLT_MAX	3c3de413e
+0x6AF110	CAutomobile::BlowUpCarsInPath	MATCH	0x6AF110-0x6AF1C8	speed test is `mag <= 0.1` in the exe vs `sq < sq(0.1)`: equality/sqrt noise only	
+0x61E040	CTaskSimpleUseGun::ControlGun	MATCH	0x61E040-0x61E094		
+0x672A50	CTaskComplexGoToPointAnyMeans::ControlSubTask	MATCH	0x672A50-0x672BA6	distance sum order noise (z,y,x)	
+0x543E90	CPhysical::ApplySpringDampening	MATCH	0x543E90-0x5440F8	all sign/limit branches, NaN paths, inlined GetMass, limit constants	
+0x6F6CC0	CTrain::FindPositionOnTrackFromCoors	MATCH	0x6F6CC0-0x707084	projection, 3.0 on-track test, rail distance, bbox half-length, speed/direction sign, lighting blend (6F5F80 body itself not compared)	
+queue rows beyond the 7 named	-	NOT_REACHED		budget	

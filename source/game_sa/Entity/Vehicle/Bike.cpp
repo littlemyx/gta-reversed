@@ -1709,7 +1709,9 @@ void CBike::ProcessControl() {
             if (m_aWheelRatios[i] < 1.0f) {
                 m_WheelCounts[i] = 4.0f;
             } else {
-                m_WheelCounts[i] = std::max(m_WheelCounts[i] - CTimer::GetTimeStep(), 0.0f);
+                // 0x6BA730: fcom 0 + test ah,0x41 + je keeps v only for v > 0; NaN / -0 / <= 0 store +0 (std::max(v, 0) kept NaN and -0)
+                const float countLeft = m_WheelCounts[i] - CTimer::GetTimeStep();
+                m_WheelCounts[i] = countLeft > 0.0f ? countLeft : 0.0f;
                 if (m_WheelCounts[i] <= 0.0f) {
                     continue;
                 }

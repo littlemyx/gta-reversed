@@ -557,9 +557,10 @@ void CPedGeometryAnalyser::ComputeEntityBoundingSphere(const CPed& ped, CEntity&
     // Find the corner furthest away from the center
     float maxDistSq = 0.f;
     for (const auto& corner : corners) {
-        const float distSq = (corner.x - center.x) * (corner.x - center.x)
+        // exe 0x5F3CAB-0x5F3CB9: (z^2 + y^2) + x^2 (the port summed x, y, z)
+        const float distSq = (corner.z - center.z) * (corner.z - center.z)
                            + (corner.y - center.y) * (corner.y - center.y)
-                           + (corner.z - center.z) * (corner.z - center.z);
+                           + (corner.x - center.x) * (corner.x - center.x);
         if (maxDistSq < distSq) {
             maxDistSq = distSq;
         }

@@ -172,8 +172,10 @@ void CPedGeometryAnalyser::ComputeClearTarget(const CPed& ped, const CVector& ta
             return;
         }
         // 0x5F5DEA..0x5F5E23: the squared distance is summed z, y, x (not x, y, z) and the test is `jne` after `fcompp` (skips on sum >= 25 AND on NaN)
-        const auto d = entity->GetPosition() - outTarget;
-        if (!(d.z * d.z + d.y * d.y + d.x * d.x < 5.f * 5.f)) { // 0x86C6A4
+        // x87: the differences are not rounded to float (fsub results stay in the FPU)
+        const auto& ep = entity->GetPosition();
+        const x87d dx = (x87d)ep.x - outTarget.x, dy = (x87d)ep.y - outTarget.y, dz = (x87d)ep.z - outTarget.z;
+        if (!((dz * dz + dy * dy) + dx * dx < (x87d)5.f * 5.f)) { // 0x86C6A4
             return;
         }
         if (!LiesInsideBoundingBox(ped, outTarget, *entity)) {
@@ -184,7 +186,13 @@ void CPedGeometryAnalyser::ComputeClearTarget(const CPed& ped, const CVector& ta
         }
         CVector dir = outTarget - pedPos;
         dir.Normalise();
-        outTarget -= dir * (s_BoundingBoxMargin + distToEdge);
+        // exe 0x5F5E3A-0x5F5E9C: (margin + distToEdge) stays unrounded; x: (dir.x * k) is subtracted unrounded, y / z: the product is stored as float first
+        const x87d k = (x87d)s_BoundingBoxMargin + distToEdge;
+        const float py = (float)((x87d)dir.y * k);
+        const float pz = (float)((x87d)dir.z * k);
+        outTarget.x = (float)((x87d)outTarget.x - (x87d)dir.x * k);
+        outTarget.y = outTarget.y - py;
+        outTarget.z = outTarget.z - pz;
     };
     for (auto* const entity : intel->m_vehicleScanner.m_apEntities) {
         PushTargetOutOf(entity);
@@ -202,12 +210,13 @@ void CPedGeometryAnalyser::ComputeClearTarget(const CPed& ped, const CVector& ta
     for (auto i = 0; i < maxIterations;) {
         i++;
 
-        const CVector toPed = pedPos - outTarget;
+        // x87: the differences are not rounded to float
+        const x87d tx = (x87d)pedPos.x - outTarget.x, ty = (x87d)pedPos.y - outTarget.y, tz = (x87d)pedPos.z - outTarget.z;
         // 0x5F604F..0x5F6072: sum z, y, x; breaks on sum >= 25 and on NaN (`jne` after fcompp)
-        if (!(toPed.z * toPed.z + toPed.y * toPed.y + toPed.x * toPed.x < 5.f * 5.f)) {
+        if (!((tz * tz + ty * ty) + tx * tx < (x87d)5.f * 5.f)) {
             break;
         }
-        if (!(toPed.Dot(step) >= 0.f)) { // 0x5F608E: `fcomp 0; test ah,1; jne` => breaks when dot < 0 or NaN
+        if (!((step.z * tz + step.y * ty) + step.x * tx >= 0.0)) { // 0x5F608E: `fcomp 0; test ah,1; jne` => breaks when dot < 0 or NaN (the dot is summed z, y, x)
             break;
         }
 

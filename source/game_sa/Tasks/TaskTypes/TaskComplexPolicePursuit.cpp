@@ -103,8 +103,13 @@ bool CTaskComplexPolicePursuit::SetPursuit(CPed* ped) {
         closestPlayer = plyr;
         minDistSq     = distSq;
     }
-    m_Pursued = closestPlayer;
-    return closestPlayer && FindPlayerWanted()->SetPursuitCop(ped->AsCop());
+    // exe 0x68BD3B-0x68BD77: the old reference is dropped first; `m_Pursued` is only set (and registered) if `SetPursuitCop` succeeds, otherwise it ends up null
+    m_Pursued = nullptr;
+    if (closestPlayer && FindPlayerWanted()->SetPursuitCop(ped->AsCop())) {
+        m_Pursued = closestPlayer;
+        return true;
+    }
+    return false;
 }
 
 // 0x68BDC0

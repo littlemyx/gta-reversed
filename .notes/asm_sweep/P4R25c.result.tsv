@@ -1,0 +1,22 @@
+addr	function	verdict	asm range	note	fix commit
+0x42D680	CCarCtrl::WeaveThroughCarsSectorList	MATCH	0x42D680-0x42D7D4	scan code, centre bounds, |dz|<8 x87, convoy flag, WeaveForOtherCar args	
+0x425F70	CCarCtrl::TestCollisionBetween2MovingRects_OnlyFrontBumper	MATCH	0x425F70-0x42620F	q1/q2 rounding, 4 corner cases, s1/s2, m1*n1, t min; full loop incl. strict compares	
+0x42AEB0	CCarCtrl::SteerAIHeliToKeepEntityInView	MATCH	0x42AEB0-0x42B260	unrounded atan, wrap loops, clamps, throttle consts 0.1/0.2/0.3/noise, sideways/pitch dot order	
+0x44EFC0	CPathFind::CalcRoadDensity	MATCH	0x44EFC0-0x44F186	|d|<80 strict, link node, navi lane bits low3/next3, *0.0004	
+0x450320	CPathFind::FindNodeOrientationForCarPlacement	MATCH	0x450320-0x4504DE	lane-dir link scan, dir z=0, fpatan(-x,y)*180/pi unrounded	
+0x4513F0	CPathFind::FindParkingNodeInArea	MATCH	0x4513F0-0x4515C9	strict bounds, behaviour==2, round-robin idx, selected/first/zero tail	
+0x44D960	CPathFind::SetLinksBridgeLights	MATCH	0x44D960-0x44DA13	strict x/y bounds, bridge bit (byte+0xc bit2)	
+0x435830	CCarCtrl::SteerAICarWithPhysicsFollowPath_Racing	NOT_REACHED		budget	
+0x44FEE0	CPathFind::FindNodePairClosestToCoors	NOT_REACHED		budget	
+0x452270	CPathFind::CompleteNewInterior	NOT_REACHED		budget	
+0x452C80	CPathFind::SwitchRoadsOffInArea	NOT_REACHED		budget	
+0x452820	CPathFind::SwitchRoadsOffInAreaForOneRegion	NOT_REACHED		budget	
+0x44E000	CPathFind::AddDynamicLinkBetween2Nodes_For1Node	NOT_REACHED		budget	
+0x4555A0	CPickups::TryToMerge_WeaponType	NOT_REACHED		budget	
+0x452760	CPathFind::ComputeRoute	NOT_REACHED		budget	
+0x44D080	CPathFind::Init	NOT_REACHED		budget	
+0x44DED0	CPathFind::AddInteriorLink	NOT_REACHED		budget	
+0x451300	CPathFind::ReturnInteriorNodeIndex	NOT_REACHED		budget	
+0x422B20	CCarCtrl::SteerAICarBlockingPlayerForwardAndBack	NOT_REACHED		budget	
+0x425B30	CCarCtrl::TestCollisionBetween2MovingRects	NOT_REACHED		budget	
+0x73DB40	CWeapon::Update	NOT_REACHED		budget	

@@ -3410,14 +3410,14 @@ void CEventHandler::ComputeVehicleHitAndRunResponse(CEventVehicleHitAndRun* e, C
 void CEventHandler::ComputeVehicleOnFireResponse(CEventVehicleOnFire* e, CTask* tactive, CTask* tsimplest) {
     m_EventResponseTask = [&]() -> CTask* {
         if (!e->m_vehicle) {
-            return nullptr;
+            return m_EventResponseTask; // 0x4BB306: je 0x4BB63E, the response task is left untouched
         }
         if ((e->m_vehicle->GetStatus() == STATUS_WRECKED || e->m_vehicle->m_fHealth <= 0.f) && m_Ped->IsInVehicle(e->m_vehicle)) { // 0x4BB336: the ped must be in THE burning vehicle
             if ((m_Ped->m_pVehicle->IsBike() || m_Ped->m_pVehicle->IsSubQuad())) {
                 ComputeKnockOffBikeResponse(e, tactive, tsimplest);
                 return m_EventResponseTask;
             }
-            return new CTaskComplexDie{ WEAPON_EXPLOSION, ANIM_GROUP_DEFAULT, ANIM_ID_KO_SHOT_FRONT_0 };
+            return new CTaskComplexDie{ WEAPON_UNARMED, ANIM_GROUP_DEFAULT, ANIM_ID_KO_SHOT_FRONT_0 }; // 0x4BB397: ctor(0, 0, 0xF, 4.0, 0, ...): the weapon type is 0 (UNARMED), not EXPLOSION
         }
         switch (e->m_TaskId) {
         case TASK_COMPLEX_LEAVE_CAR: {

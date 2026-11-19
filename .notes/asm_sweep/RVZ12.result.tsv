@@ -1,0 +1,6 @@
+addr	function	verdict	asm range	note	fix commit
+0x6A07A0	CAutomobile::HydraulicControl	MATCH	0x6A0EC1-0x6A0F08	4x max(0,x) via 0x420800, a=last pushed=0, slots FL/RL/FR/RR = -cos,-sin,+sin,+cos; -0 and NaN keep x	f5f1f10ee
+0x6A3EA0	CAutomobile::NitrousControl	MATCH	0x6A4075-0x6A40BF	max(0.25,1-gas)=0.25>a?0.25:a (NaN keeps a); min(1,b)=b>1?1:b; 0.001f ts factor	fb33fd71f
+0x6C1470	CBmx::ProcessAI	MATCH	0x6C18C9-0x6C1996,0x6C1F01-0x6C1F7B	max(0.5,v), max(0,v-0.4), clamp 2/0 (fcom 2 jne; fcom 0 test 5 jp: NaN and -0 stay)	997b2287e
+0x6F86A0	CTrain::ProcessControl gas	MATCH	0x6F8A81-0x6F8AC2	dot z,y,x > 0 -> min(0,gas)=0<g?0:g (0x404330) else max(0,gas) (0x420800); ebp=0 pushed last	8c9325d2c
+0x6E1A60	CVehicle::DoVehicleLights zr350	MATCH	0x6E1C53-0x6E1CC8	up: K<v?K:v (NaN keeps v), then prop<K returns; down: max(0,v); K=0.69813174 ts*0.01f	ab9a1c287

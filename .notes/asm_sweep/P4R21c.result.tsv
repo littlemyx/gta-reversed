@@ -1,5 +1,5 @@
 addr	function	verdict	asm range	note	fix commit
-0x6C34E0	cBuoyancy::AddSplashParticles (review of 22c83b78b)	FIXED	0x6C34E0-0x6C3AFF	sum order/clamp/delta/NaN/lerp CONFIRMED; velocity modifier WRONG in 22c83b78b (x,y shifted, z used scalar speed): exe = (sx*0,sy*0,sz*-1)*120 + trailing moveSpeed*0*0 term	11c61ecb
+0x6C34E0	cBuoyancy::AddSplashParticles (review of 22c83b78b)	FIXED	0x6C34E0-0x6C3AFF	sum order/clamp/delta/NaN/lerp CONFIRMED; velocity modifier WRONG in 22c83b78b (x,y shifted, z used scalar speed): exe = (sx*0,sy*0,sz*-1)*120 + trailing moveSpeed*0*0 term	011c61ecb
 0x59BE30	CMatrix::operator*-Mat pos cells	MATCH	0x59BF31-0x59BF8F		
 0x59B6A0	CMatrix::Reorthogonalise	MATCH	0x59B6A0-0x59B7B1	cross/normalise 1+2 and stores verified; n3 only by structure	
 0x59C230	CQuaternion::Get-AxisAngle	MATCH	0x59C230-0x59C266		

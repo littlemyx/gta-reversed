@@ -1,0 +1,15 @@
+addr	function	old commit	verdict	note
+0x6B1880	CAutomobile::ProcessControl	a7a10944	CONFIRMED	hit-wall read before CPhysical::ProcessControl (0x6B2131), traction K*mult*0.25 and physics order, 0.005 limit, earthquake z+=, shake freq 400000/byte divide; rest of 28-line diff (dot orders) not re-read
+0x6A7650	CAutomobile::VehicleDamage	d812c1f9	CONFIRMED	wing sign/conditions, ReactToVehicleDamage sites, Say 0.66, mission-vehicle skip, +0x928 store; mask-order and dot-sum orders not all re-read -> PARTIAL on those
+0x41DA30	CCarAI::UpdateCarAI	968e04e1	PARTIAL	plane +10000 destination + mission 0x16, RAMPLAYER/BLOCKPLAYER_FARAWAY entry checked; rest of 109-line diff not reached
+0x6F1770	CBoat::ProcessControl	1084855f	CONFIRMED	BlowUpTimer ftol add, hit-wall pre-read, skimmer/0.05 double/cheat structure
+0x5A2130	CObject::ProcessControl	a08b8942	CONFIRMED	dumper/forklift (0x86c angle) test, RC bomb turn force and pow arg order; door stuck test not re-read
+0x44C8C0	CGarages::Update	720ad53b3	CONFIRMED	type skip, id advance before pick, abs>40 extended compare
+0x526FC0	CCam::Process	3dce1dfe	CONFIRMED	speed sign unordered branch, LookBehindForCar/Left/Right test
+0x6B5FB0	CBike::ProcessBuoyancy	486c374a	CONFIRMED	0.008f constant, (ts*mass)*K order, 1.05 order
+0x6A8C00	CAutomobile::ProcessBuoyancy	6a5101db	CONFIRMED	constants 0x871248/0x871244/0x863984 exact bit patterns, force scale order
+0x6F21B0	CBoat::BlowUpCar	fede4f79	CONFIRMED	0x3DDA740F stored at 0x6F23D9
+0x6CC4B0	CPlane::VehicleDamage	25feddf7	CONFIRMED	mass/10000 unrounded then compare with 1.0
+0x6F86A0	CTrain::ProcessControl	90b3ab08	PARTIAL	buoyancy block (force.z, pow unrounded) matches 0x6F9CF0; carriage-flag sites not re-read
+0x6DD6F0	CVehicle::DoSunGlare	a2f7f78f	CONFIRMED	portability-only (PTR_ID32), no exe change
+0x6CB7C0	CPlane::ProcessFlyingCarStuff	328b2d35	PARTIAL	sum order only, ULP-level, not re-read

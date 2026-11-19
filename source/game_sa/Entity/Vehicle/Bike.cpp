@@ -508,7 +508,7 @@ bool CBike::ProcessAI(uint32& extraHandlingFlags) {
                 m_vecCentreOfMass.y = bh.m_fLeanBakCOM * m_RideAnimData.LeanFwd + m_pHandlingData->m_vecCentreOfMass.y;
 
                 if (!((m_BrakePedal != 0.0f || vehicleFlags.bIsHandbrakeOn) && m_nNoOfContactWheels)) {
-                    const auto speed = std::min(0.1f, m_vecMoveSpeed.Magnitude());
+                    const auto speed = [&] { const float mag = m_vecMoveSpeed.Magnitude(); return mag > 0.1f ? 0.1f : mag; }(); // exe 0x6BC440/0x6BC77B: `mag <= 0.1 ? mag : 0.1`, NaN keeps the speed (std::min(0.1, NaN) would give 0.1)
                     const auto mult  = std::max(speed / 0.1f, m_GasPedal) + m_GasPedal;
                     const auto force = (mult * (((bh.m_fLeanBakForce * m_fTurnMass) * m_RideAnimData.LeanFwd) * speed)) * 0.5f;
                     ApplyTurnForce(
@@ -520,7 +520,7 @@ bool CBike::ProcessAI(uint32& extraHandlingFlags) {
                 m_vecCentreOfMass.y = bh.m_fLeanFwdCOM * m_RideAnimData.LeanFwd + m_pHandlingData->m_vecCentreOfMass.y;
 
                 if (m_BrakePedal < 0.0f || !m_nNoOfContactWheels) {
-                    const auto speed = std::min(0.1f, m_vecMoveSpeed.Magnitude());
+                    const auto speed = [&] { const float mag = m_vecMoveSpeed.Magnitude(); return mag > 0.1f ? 0.1f : mag; }(); // exe 0x6BC440/0x6BC77B: `mag <= 0.1 ? mag : 0.1`, NaN keeps the speed (std::min(0.1, NaN) would give 0.1)
                     const auto mult  = std::max(speed / 0.1f, m_BrakePedal) + m_BrakePedal;
                     const auto force = (mult * (((bh.m_fLeanFwdForce * m_fTurnMass) * m_RideAnimData.LeanFwd) * speed)) * 0.5f;
                     ApplyTurnForce(

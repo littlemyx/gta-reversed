@@ -236,7 +236,10 @@ bool CScriptsForBrains::IsObjectWithinBrainActivationRange(CObject* entity, cons
     if (brain.m_TypeOfBrain != 1) {
         return false;
     }
-    return (point - entity->GetPosition()).Magnitude() < brain.m_ObjectBrainActivationRadius;
+    // 0x46B426: the inlined distance is sqrt((dz^2 + dy^2) + dx^2) (differences pushed x, y, z: z is squared first), compared with `<`
+    const auto& pos = entity->GetPosition();
+    const float dx = point.x - pos.x, dy = point.y - pos.y, dz = point.z - pos.z;
+    return (float)std::sqrt(((x87d)dz * dz + (x87d)dy * dy) + (x87d)dx * dx) < brain.m_ObjectBrainActivationRadius;
 }
 
 int16 CScriptsForBrains::GetIndexOfScriptBrainWithThisName(const char* name, int8 type) {

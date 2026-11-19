@@ -72,7 +72,7 @@ bool CTaskComplexUseSwatRope::MakeAbortable(CPed* ped, eAbortPriority priority, 
                 || eventType == EVENT_VEHICLE_DAMAGE_WEAPON
                 || eventType == EVENT_VEHICLE_DAMAGE_COLLISION;
         }()
-        || ped->m_fHealth <= 20.0F
+        || ped->m_fHealth < 20.0F /* exe 0x6595A3: fcomp 20.0; test ah,5; jp -> strict < (port: <=) */
         )
         && m_pSubTask->MakeAbortable(ped, priority, event)
     ) {

@@ -1,0 +1,7 @@
+addr	function	verdict	asm range	note	fix commit
+0x5F3C20	CPedGeometryAnalyser::ComputeEntityBoundingSphere	CONFIRMED	0x5F3CAB-0x5F3CB9	(z2+y2)+x2 order verified from x87 stack trace	97dc90351
+0x463D50	CRunningScript::ReadTextLabelFromScript	CONFIRMED	0x463EC0-0x463F2D	low-byte compare/subtract, jae unsigned, negative len skips copy loop	696205986
+0x4839A0	CTheScripts::GetActualScriptThingIndex	CONFIRMED	0x4839A0-0x483B05	movzx word id compares in all 9 cases	75843de9c
+0x483720	CTheScripts::GetNewUniqueScriptThingIndex	CONFIRMED	0x483720-0x48396B	cmp 0xFFFE jae unsigned, wrap to 1, movzx id<<16|idx	75843de9c
+0x4D0D40	CAnimBlendSequence::Uncompress	CONFIRMED	0x4D0D40-0x4D0F3C	Malloc 32*n / 20*n (output fmt); compress side 16*n via 0x4D0F70	49427fda8
+0x4D1190	CAnimBlendSequence::RemoveQuaternionFlips	CONFIRMED	0x4D1190-0x4D1277	dot ((lw*rw+lz*rz)+ly*ry)+lx*rx, flip iff <0.0 (fcomp 0.0, test ah,5), negates all 4, last=post-flip	49427fda8

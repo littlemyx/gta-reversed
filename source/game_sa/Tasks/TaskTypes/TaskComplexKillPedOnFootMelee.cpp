@@ -199,6 +199,7 @@ CTask* CTaskComplexKillPedOnFootMelee::ControlSubTask(CPed* ped) {
     };
 
     switch (m_pSubTask->GetTaskType()) {
+    case TASK_SIMPLE_STAND_STILL: // ASM-P4R18: exe 0x626E0B-0x626E12 (`dec eax; jne` falls into the sequence path for type 0xCB)
     case TASK_COMPLEX_SEQUENCE: { // 0x626dfe
         return m_target->physicalFlags.bSubmergedInWater
             ? m_pSubTask

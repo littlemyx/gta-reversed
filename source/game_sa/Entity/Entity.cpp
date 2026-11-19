@@ -1090,9 +1090,10 @@ void CEntity::CreateEffects() {
                 srand(NOTSA_PTR_ID32(this) + ucDays);
             }
 
-            const auto fHeading = GetHeading();
-            const auto fExitRot = effect->enEx.m_fExitAngle + RadiansToDegrees(fHeading);
-            const auto fEnterRot = effect->enEx.m_fEnterAngle + RadiansToDegrees(fHeading);
+            // exe 0x533A0B-0x533A84: FPATAN heading stays unrounded in ST0, `* 57.2957763671875` (0x859878), `+ angle` and only then stored as float
+            const x87d fHeading   = GetHeadingExt();
+            const auto fExitRot   = (float)(fHeading * (x87d)RAD_TO_DEG + (x87d)effect->enEx.m_fExitAngle);
+            const auto fEnterRot  = (float)(fHeading * (x87d)RAD_TO_DEG + (x87d)effect->enEx.m_fEnterAngle);
             const auto iEnExId = CEntryExitManager::AddOne(
                 vecWorldEffect.x, vecWorldEffect.y, vecWorldEffect.z,
                 fEnterRot,

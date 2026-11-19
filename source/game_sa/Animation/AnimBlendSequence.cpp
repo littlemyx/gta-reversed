@@ -43,7 +43,7 @@ bool CAnimBlendSequence::ConvertKeyFrames(byte* pDataBlock) {
 
     void* const outFrames = pDataBlock
         ? pDataBlock
-        : CMemoryMgr::Malloc(GetDataSize(true));
+        : CMemoryMgr::Malloc(sizeof(To) * m_FramesNum); // exe 0x4D0D6D / 0x4D0E5D (uncompressed) and 0x4D0F70 / 0x4D1074 (compressed): the size of the OUTPUT format (the port always sized it as compressed, so Uncompress(nullptr) overran)
 
     auto* inKF  = static_cast<From*>(m_Frames);
     auto* outKF = static_cast<To*>(outFrames);
@@ -114,7 +114,7 @@ void CAnimBlendSequence::RemoveQuaternionFlips() const {
     CQuaternion last = GetUKeyFrame(0)->Rot;
     for (auto i = 1u; i < m_FramesNum; i++) {
         f = GetUKeyFrame(i);
-        if (DotProduct(last, f->Rot) < 0.0f) {
+        if ((((last.w * f->Rot.w + last.z * f->Rot.z) + last.y * f->Rot.y) + last.x * f->Rot.x) < 0.0f) { // exe 0x4D11F4..0x4D1237: summed w, z, y, x (DotProduct sums x, y, z, w: a different last bit near 0)
             f->Rot = -f->Rot;
         }
         last = f->Rot;

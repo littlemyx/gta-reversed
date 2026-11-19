@@ -339,6 +339,7 @@ auto SetCharVelocity(CPed& ped, CVector velocity) {
  * @param {Vector} 
  */
 auto SetCharRotation(CPed& ped, CVector angles) {
+    CWorld::Remove(&ped); // exe 0x470DAA: removed from the world sectors before the orientation changes
     ped.SetOrientation(angles * DegreesToRadians(1.0f)); // make euler angles from degrees
     CWorld::Add(&ped);
 }

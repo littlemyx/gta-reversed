@@ -498,7 +498,7 @@ float CWeapon::TargetWeaponRangeMultiplier(CEntity* target, CEntity* weaponOwner
 
 // 0x73B550
 void CWeapon::DoBulletImpact(CEntity* firedBy, CEntity* victim, const CVector& startPoint, const CVector& endPoint, const CColPoint& hitCP, int32 incrementalHit) {
-    const auto firedByPed = firedBy->GetIsTypePed()
+    const auto firedByPed = firedBy && firedBy->GetIsTypePed() // exe 0x73B586: firedBy may be null here
         ? firedBy->AsPed()
         : nullptr;
     const auto firedByPlayer = firedByPed && firedByPed->IsPlayer()
@@ -545,10 +545,10 @@ void CWeapon::DoBulletImpact(CEntity* firedBy, CEntity* victim, const CVector& s
                     CStats::IncrementStat(STAT_BULLETS_THAT_HIT);
                 }
             }
-            if (CWeaponInfo::TypeHasSkillStats(GetType())) { // 0x73B738
+            if (firedByPed && CWeaponInfo::TypeHasSkillStats(GetType())) { // 0x73B738 (0x73B740: the exe skips the block unless the shooter is a ped, and reads +0x71C of any ped)
                 // Redundant `if` check here was removed
                 if ([&]{
-                    const auto victimEntity = notsa::coalesce(firedByPlayer->m_pTargetedObject, victim);
+                    const auto victimEntity = notsa::coalesce(firedByPed->m_pTargetedObject, victim);
 
                     // NOTE: The code is written upside down to make the controlflow easier
 
@@ -753,6 +753,8 @@ void CWeapon::DoBulletImpact(CEntity* firedBy, CEntity* victim, const CVector& s
                     );
                 }
             }
+        } else {
+            return; // 0x73B8A1: victim == shooter jumps straight to the epilogue (no pad shake)
         }
     } else {
         CBulletTraces::AddTrace(startPoint, endPoint, GetType(), firedBy);
@@ -2311,7 +2313,7 @@ bool CWeapon::FireInstantHit(CEntity* firingEntity, CVector* origin, CVector* mu
 bool CWeapon::FireProjectile(CEntity* firedBy, const CVector& origin, CEntity* targetEntity, const CVector* targetPos, float force) {
     assert(firedBy);
 
-    const auto firedByPed = firedBy->GetIsTypePed()
+    const auto firedByPed = firedBy && firedBy->GetIsTypePed() // exe 0x73B586: firedBy may be null here
         ? firedBy->AsPed()
         : nullptr;
     auto projOrigin     = origin;

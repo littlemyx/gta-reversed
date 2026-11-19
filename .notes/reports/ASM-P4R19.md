@@ -1,0 +1,3 @@
+# ASM-P4R19
+Events/** no-verdict list (2730-row nv.tsv, zone ~150 rows >= 0x30): 7 compared (VehicleCollision, PedEnteredVehicle, IsKillTaskAppropriate, HandleEvents MATCH; WhizzedBy, VehicleDied, VehicleOnFire FIXED, 3 commits), rest NOT_REACHED (budget): ComputeDamage, PedCollisionWithPlayer, VehiclePotentialCollision, PersonalityResponseToDamage, BuildingCollision and the Event ctors/Clone/priority getters.
+Class found: Compute*Response early `return nullptr` where the exe jumps to the epilogue without writing +0x24 (leaves the response task untouched); other Compute* functions may share it (harmless while the task is null on entry). Real behaviour fix: VehicleOnFire die task weapon UNARMED (exe 0), port EXPLOSION.

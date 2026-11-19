@@ -1,0 +1,13 @@
+addr	function	verdict	asm range	note	fix commit
+0x4BD6A0	CEventHandler::ComputeVehicleCollisionResponse	MATCH	0x4BD6A0-0x4BDB6E	structure, constants (0.05/0.001/0.01/20), anger task id 0x1F9, LookAt args, weapon-slot test all equal; dot*mass+dmg is rounded in float in the port vs extended in the exe (1 ulp, ignored)	
+0x4C1590	CEventHandler::ComputePedEnteredVehicleResponse	MATCH	0x4C1590-0x4C18F2	all task ids/ctor args/random draw order equal	
+0x4BC3E0	CEventHandler::IsKillTaskAppropriate	MATCH	0x4BC3E0-0x4BC43B		
+0x4C3F10	CEventHandler::HandleEvents	MATCH	0x4C3F10-0x4C4215	every branch and call order checked; RecordAbortedTask(null) is before ComputeEventResponseTask in the port, after it in the exe (Compute does not read it)	
+0x4BBE30	CEventHandler::ComputeShotFiredWhizzedByResponse	FIXED	0x4BBE30-0x4BBF4F	no source entity: exe leaves the response task untouched, port nulled it	fa439cf74
+0x4BA8B0	CEventHandler::ComputeVehicleDiedResponse	FIXED	0x4BA8B0-0x4BA97F	no vehicle: response task left untouched, port nulled it	ca8824ebf
+0x4BB2E0	CEventHandler::ComputeVehicleOnFireResponse	FIXED	0x4BB2E0-0x4BB655	die task weapon 0 (UNARMED) not EXPLOSION; no vehicle leaves the task untouched	31ec6291f
+0x4BE7D0	CEventHandler::ComputePedCollisionWithPlayerResponse	NOT_REACHED			
+0x4C0170	CEventHandler::ComputeDamageResponse	NOT_REACHED			
+0x4C0BD0	CEventHandler::ComputeVehiclePotentialCollisionResponse	NOT_REACHED			
+0x4BF9B0	CEventHandler::ComputePersonalityResponseToDamage	NOT_REACHED			
+0x4BF2B0	CEventHandler::ComputeBuildingCollisionResponse	NOT_REACHED			

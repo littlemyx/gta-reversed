@@ -1,0 +1,13 @@
+addr	function	verdict	asm range	note	fix commit
+0x533790	CEntity::CreateEffects (ENEX heading)	MATCH	0x533A07-0x533A87	684911aa6 confirmed: both FPATAN stay unrounded in ST0, *57.2957763671875 (0x859878) + angle, stored as float (enter [esi+0x10] first arg, exit [esi+0x28])	
+0x5B1720	CCutsceneMgr::Update_overlay (timer accumulation)	MATCH	0x5B17B8-0x5B17D8	timer += stepNonClipped*0.02f (0x858b38) stored float, *1000.0f then _ftol; under PC24 float rounding identical to port; no 2-frame skew source here	
+0x5B0570	CCutsceneMgr::HasCutsceneFinished	MATCH	0x5B0570	already MATCH (earlier sweep)	
+0x4D5D00	CCutsceneMgr::Update	MATCH	0x4D5D00	already MATCH	
+0x561B10	CTimer::Update	MATCH	-	already FIXED earlier; RR timer path not reviewed (game logic only)	
+0x66D710	CTaskSimpleGoToPoint::ProcessPed	MATCH	0x66D710-0x66DB5D	already MATCH earlier	
+0x64D9A0	CTaskSimpleCarCloseDoorFromInside::ProcessPed	MATCH	0x64D9A0-0x64DA86	re-read: finished/veh null early returns, bDontClose path ProcessOpenDoor(ped,door,group,animId,1.0), ARRESTED(0x3f) early return before StartAnim, normal ProcessOpenDoor(...,m_CurrentTime), returns false	
+0x645780	CTaskComplexGoToCarDoorAndStandStill::Constructor	MATCH	0x645780-0x645824	field layout and RegisterReference match	
+0x645840	CTaskComplexGoToCarDoorAndStandStill::MakeAbortable	MATCH	0x645840-0x6458A0	IN_WATER(66)/IN_AIR(33) refusal while PAUSE subtask and flag 0x48	
+0x64A5F0	CTaskComplexGoToCarDoorAndStandStill::CreateSubTask	MATCH	0x64A5F0-0x64A815	all 7 cases, ctor args (StandStill 1,0,0,8.0; FollowPointRoute 0.5/5.0; GoToPoint r,1,0), bHasJustLeftCar set for NEAR_DOOR and GO_TO_POINT	
+0x64D2B0/0x64D440/0x64A820	GoToCarDoorAndStandStill CreateNext/CreateFirst/ControlSubTask	MATCH	-	already FIXED earlier (S05c)	
+-	camera functions (old Part B list)	NOT_REACHED	-	replaced by orchestrator message; budget	

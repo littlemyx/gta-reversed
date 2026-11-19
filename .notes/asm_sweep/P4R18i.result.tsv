@@ -1,0 +1,255 @@
+addr	function	verdict	asm range	note	fix commit
+0x4211A0	CTaskComplex::IsSimple	MATCH	0x4211A0 +0x10	const 0 == exe mov-imm/ret	
+0x43E200	CEventLeaderEntryExit::GetEventType	MATCH	0x43E200 +0x10	const 77 == exe mov-imm/ret	
+0x43E210	CEventLeaderEntryExit::GetLifeTime	MATCH	0x43E210 +0x10	const 0 == exe mov-imm/ret	
+0x43E280	CEventLeaderEntryExit::CanBeInterruptedBySameEvent	MATCH	0x43E280 +0x60	const 1 == exe mov-imm/ret	
+0x43E310	CTaskSimple::IsSimple	MATCH	0x43E310 +0x10	const 1 == exe mov-imm/ret	
+0x4635D0	CTaskSimpleNone::MakeAbortable	MATCH	0x4635D0 +0x10	const 1 == exe mov-imm/ret	
+0x46A500	CTaskSimpleSetCharDecisionMaker::MakeAbortable	MATCH	0x46A500 +0x150	const 0 == exe mov-imm/ret	
+0x46ACE0	CTaskComplexSeekEntityStandard::GetTaskType	MATCH	0x46ACE0 +0x10	by hand: exe mov eax,0x38b(907); port template CTaskComplexSeekEntity<T>::GetTaskType returns TASK_COMPLEX_SEEK_ENTITY=907	
+0x4746B0	CTaskSimpleSetCharIgnoreWeaponRangeFlag::MakeAbortable	MATCH	0x4746B0 +0x60	const 0 == exe mov-imm/ret	
+0x48DF20	CTaskSimpleCower::IsInterruptable	MATCH	0x48DF20 +0x40	const 0 == exe mov-imm/ret	
+0x48DFD0	CTaskSimpleScratchHead::IsInterruptable	MATCH	0x48DFD0 +0x10	const 0 == exe mov-imm/ret	
+0x48E080	CTaskSimpleUseAtm::IsInterruptable	MATCH	0x48E080 +0x10	const 0 == exe mov-imm/ret	
+0x48E430	CTaskSimpleSay::MakeAbortable	MATCH	0x48E430 +0x10	const 1 == exe mov-imm/ret	
+0x48E9B0	CTaskSimpleHandsUp::IsInterruptable	MATCH	0x48E9B0 +0x10	const 0 == exe mov-imm/ret	
+0x492DE0	CTaskSimpleTogglePedThreatScanner::MakeAbortable	MATCH	0x492DE0 +0x40	const 0 == exe mov-imm/ret	
+0x493800	CTaskComplexSeekEntityRadiusAngleOffset::GetTaskType	MATCH	0x493800 +0x10	by hand: exe 907; same template GetTaskType	
+0x4ACDA0	CEventObjectCollision::GetEventType	MATCH	0x4ACDA0 +0x10	const 5 == exe mov-imm/ret	
+0x4ACDB0	CEventObjectCollision::GetLifeTime	MATCH	0x4ACDB0 +0x10	const 0 == exe mov-imm/ret	
+0x4ACDC0	CEventObjectCollision::GetEventPriority	MATCH	0x4ACDC0 +0x70	const 57 == exe mov-imm/ret	
+0x4ACEF0	CEventObjectCollision::TakesPriorityOver	MATCH	0x4ACEF0 +0x10	const 1 == exe mov-imm/ret	
+0x4ACFB0	CEventBuildingCollision::GetEventType	MATCH	0x4ACFB0 +0x10	const 6 == exe mov-imm/ret	
+0x4ACFC0	CEventBuildingCollision::GetLifeTime	MATCH	0x4ACFC0 +0x10	const 0 == exe mov-imm/ret	
+0x4ACFD0	CEventBuildingCollision::CanBeInterruptedBySameEvent	MATCH	0x4ACFD0 +0x10	const 1 == exe mov-imm/ret	
+0x4ACFE0	CEventBuildingCollision::GetEventPriority	MATCH	0x4ACFE0 +0x70	const 59 == exe mov-imm/ret	
+0x4AD2E0	CEventDraggedOutCar::GetEventType	MATCH	0x4AD2E0 +0x10	const 7 == exe mov-imm/ret	
+0x4AD2F0	CEventDraggedOutCar::GetLifeTime	MATCH	0x4AD2F0 +0x10	const 0 == exe mov-imm/ret	
+0x4AD320	CEventDraggedOutCar::GetEventPriority	MATCH	0x4AD320 +0x80	const 40 == exe mov-imm/ret	
+0x4AD910	CEventDamage::GetEventType	MATCH	0x4AD910 +0x10	const 9 == exe mov-imm/ret	
+0x4AD920	CEventDamage::GetLifeTime	MATCH	0x4AD920 +0x10	const 0 == exe mov-imm/ret	
+0x4AD940	CEventDamage::CanBeInterruptedBySameEvent	MATCH	0x4AD940 +0x10	const 1 == exe mov-imm/ret	
+0x4AD950	CEventDamage::GetEventPriority	MATCH	0x4AD950 +0x70	const 65 == exe mov-imm/ret	
+0x4ADE20	CEventDeath::GetEventType	MATCH	0x4ADE20 +0x10	const 10 == exe mov-imm/ret	
+0x4ADE30	CEventDeath::GetLifeTime	MATCH	0x4ADE30 +0x10	const 0 == exe mov-imm/ret	
+0x4ADE40	CEventDeath::GetEventPriority	MATCH	0x4ADE40 +0x40	const 73 == exe mov-imm/ret	
+0x4ADF20	CEventDeadPed::GetEventType	MATCH	0x4ADF20 +0x10	const 11 == exe mov-imm/ret	
+0x4ADF30	CEventDeadPed::GetLifeTime	MATCH	0x4ADF30 +0x10	const 0 == exe mov-imm/ret	
+0x4ADF60	CEventDeadPed::GetEventPriority	MATCH	0x4ADF60 +0xD0	const 15 == exe mov-imm/ret	
+0x4AE030	CEventGroupEvent::GetEventType	MATCH	0x4AE030 +0x10	const 47 == exe mov-imm/ret	
+0x4AE040	CEventGroupEvent::GetLifeTime	MATCH	0x4AE040 +0x10	const 0 == exe mov-imm/ret	
+0x4AE060	CEventGroupEvent::GetEventPriority	MATCH	0x4AE060 +0x70	const 41 == exe mov-imm/ret	
+0x4AE0D0	CEventGroupEvent::AffectsPed	MATCH	0x4AE0D0 +0x10	const 0 == exe mov-imm/ret	
+0x4AE210	CEventPotentialGetRunOver::GetEventType	MATCH	0x4AE210 +0x10	const 12 == exe mov-imm/ret	
+0x4AE220	CEventPotentialGetRunOver::GetLifeTime	MATCH	0x4AE220 +0x10	const 0 == exe mov-imm/ret	
+0x4AE260	CEventPotentialGetRunOver::GetEventPriority	MATCH	0x4AE260 +0x70	const 51 == exe mov-imm/ret	
+0x4AEB40	CEventPedEnteredMyVehicle::GetEventType	MATCH	0x4AEB40 +0x10	const 17 == exe mov-imm/ret	
+0x4AEB50	CEventPedEnteredMyVehicle::GetLifeTime	MATCH	0x4AEB50 +0x10	const 0 == exe mov-imm/ret	
+0x4AEB80	CEventPedEnteredMyVehicle::GetEventPriority	MATCH	0x4AEB80 +0x80	const 39 == exe mov-imm/ret	
+0x4AEC70	CEventRevived::GetEventType	MATCH	0x4AEC70 +0x10	const 18 == exe mov-imm/ret	
+0x4AEC80	CEventRevived::GetLifeTime	MATCH	0x4AEC80 +0x10	const 0 == exe mov-imm/ret	
+0x4AEC90	CEventRevived::GetEventPriority	MATCH	0x4AEC90 +0x20	const 74 == exe mov-imm/ret	
+0x4AED30	CEventChatPartner::GetEventType	MATCH	0x4AED30 +0x10	const 19 == exe mov-imm/ret	
+0x4AED40	CEventChatPartner::GetLifeTime	MATCH	0x4AED40 +0x10	const 0 == exe mov-imm/ret	
+0x4AED50	CEventChatPartner::GetEventPriority	MATCH	0x4AED50 +0x70	const 5 == exe mov-imm/ret	
+0x4AEE60	CEventSexyPed::GetEventType	MATCH	0x4AEE60 +0x10	const 20 == exe mov-imm/ret	
+0x4AEE70	CEventSexyPed::GetLifeTime	MATCH	0x4AEE70 +0x10	const 0 == exe mov-imm/ret	
+0x4AEE90	CEventSexyPed::GetEventPriority	MATCH	0x4AEE90 +0x70	const 4 == exe mov-imm/ret	
+0x4AF070	CEventSexyVehicle::GetEventType	MATCH	0x4AF070 +0x10	const 21 == exe mov-imm/ret	
+0x4AF080	CEventSexyVehicle::GetLifeTime	MATCH	0x4AF080 +0x10	const 0 == exe mov-imm/ret	
+0x4AF090	CEventSexyVehicle::GetEventPriority	MATCH	0x4AF090 +0x70	const 3 == exe mov-imm/ret	
+0x4AF190	CEventPedToChase::GetEventType	MATCH	0x4AF190 +0x10	const 25 == exe mov-imm/ret	
+0x4AF1A0	CEventPedToChase::GetLifeTime	MATCH	0x4AF1A0 +0x10	const 0 == exe mov-imm/ret	
+0x4AF1B0	CEventPedToChase::GetEventPriority	MATCH	0x4AF1B0 +0x70	const 1 == exe mov-imm/ret	
+0x4AF2A0	CEventPedToFlee::GetEventType	MATCH	0x4AF2A0 +0x10	const 26 == exe mov-imm/ret	
+0x4AF2B0	CEventPedToFlee::GetLifeTime	MATCH	0x4AF2B0 +0x10	const 0 == exe mov-imm/ret	
+0x4AF2C0	CEventPedToFlee::GetEventPriority	MATCH	0x4AF2C0 +0x70	const 2 == exe mov-imm/ret	
+0x4AF6D0	CEventVehicleToSteal::GetEventType	MATCH	0x4AF6D0 +0x10	const 28 == exe mov-imm/ret	
+0x4AF6E0	CEventVehicleToSteal::GetLifeTime	MATCH	0x4AF6E0 +0x10	const 0 == exe mov-imm/ret	
+0x4AF6F0	CEventVehicleToSteal::GetEventPriority	MATCH	0x4AF6F0 +0x70	const 7 == exe mov-imm/ret	
+0x4AFBC0	CEventVehicleThreat::GetEventType	MATCH	0x4AFBC0 +0x10	const 30 == exe mov-imm/ret	
+0x4AFBD0	CEventVehicleThreat::GetLifeTime	MATCH	0x4AFBD0 +0x10	const 0 == exe mov-imm/ret	
+0x4AFBE0	CEventVehicleThreat::GetEventPriority	MATCH	0x4AFBE0 +0x70	const 19 == exe mov-imm/ret	
+0x4B0770	CEventGunAimedAt::GetEventType	MATCH	0x4B0770 +0x10	const 31 == exe mov-imm/ret	
+0x4B0780	CEventGunAimedAt::GetLifeTime	MATCH	0x4B0780 +0x10	const 0 == exe mov-imm/ret	
+0x4B07A0	CEventGunAimedAt::GetEventPriority	MATCH	0x4B07A0 +0x70	const 50 == exe mov-imm/ret	
+0x4B0A30	CEventScriptCommand::GetEventType	MATCH	0x4B0A30 +0x70	const 32 == exe mov-imm/ret	
+0x4B1390	CEventInWater::GetEventType	MATCH	0x4B1390 +0x10	const 66 == exe mov-imm/ret	
+0x4B13A0	CEventInWater::GetLifeTime	MATCH	0x4B13A0 +0x10	const 0 == exe mov-imm/ret	
+0x4B13B0	CEventInWater::GetEventPriority	MATCH	0x4B13B0 +0x20	const 62 == exe mov-imm/ret	
+0x4B1B10	CEventSpecial::GetEventType	MATCH	0x4B1B10 +0x10	const 42 == exe mov-imm/ret	
+0x4B1B20	CEventSpecial::GetLifeTime	MATCH	0x4B1B20 +0x10	const 0 == exe mov-imm/ret	
+0x4B1B30	CEventSpecial::AffectsPed	MATCH	0x4B1B30 +0x10	const 1 == exe mov-imm/ret	
+0x4B1B40	CEventSpecial::GetEventPriority	MATCH	0x4B1B40 +0x90	const 52 == exe mov-imm/ret	
+0x4B1BD0	CEventGotKnockedOverByCar::GetEventType	MATCH	0x4B1BD0 +0x10	const 43 == exe mov-imm/ret	
+0x4B1BE0	CEventGotKnockedOverByCar::GetLifeTime	MATCH	0x4B1BE0 +0x10	const 0 == exe mov-imm/ret	
+0x4B1C00	CEventGotKnockedOverByCar::GetEventPriority	MATCH	0x4B1C00 +0x70	const 37 == exe mov-imm/ret	
+0x4B1F50	CEventFireNearby::GetEventType	MATCH	0x4B1F50 +0x10	const 59 == exe mov-imm/ret	
+0x4B1F60	CEventFireNearby::GetLifeTime	MATCH	0x4B1F60 +0x10	const 0 == exe mov-imm/ret	
+0x4B1F70	CEventFireNearby::GetEventPriority	MATCH	0x4B1F70 +0x20	const 17 == exe mov-imm/ret	
+0x4B1FC0	CEventFireNearby::TakesPriorityOver	MATCH	0x4B1FC0 +0x10	const 1 == exe mov-imm/ret	
+0x4B2390	CEventLeaderEntryExit::TakesPriorityOver	MATCH	0x4B2390 +0x10	const 1 == exe mov-imm/ret	
+0x5F6260	CEventCreatePartnerTask::GetEventType	MATCH	0x5F6260 +0x10	const 70 == exe mov-imm/ret	
+0x5F6270	CEventCreatePartnerTask::GetLifeTime	MATCH	0x5F6270 +0x10	const 0 == exe mov-imm/ret	
+0x5F62F0	CEventCreatePartnerTask::AffectsPed	MATCH	0x5F62F0 +0x50	const 1 == exe mov-imm/ret	
+0x5F6410	CEventCreatePartnerTask::GetEventPriority	MATCH	0x5F6410 +0x1D0	const 6 == exe mov-imm/ret	
+0x5F6650	CTaskSimpleChat::IsInterruptable	MATCH	0x5F6650 +0x30	const 0 == exe mov-imm/ret	
+0x5F68F0	CTaskAllocatorKillThreatsBasicRandomGroup::GetType	MATCH	0x5F68F0 +0x60	const 10 == exe mov-imm/ret	
+0x5FF040	CEventAcquaintancePedRespect::GetEventType	MATCH	0x5FF040 +0x10	const 39 == exe mov-imm/ret	
+0x5FF100	CEventAcquaintancePedLike::GetEventType	MATCH	0x5FF100 +0x10	const 38 == exe mov-imm/ret	
+0x5FF1C0	CEventAcquaintancePedDislike::GetEventType	MATCH	0x5FF1C0 +0x10	const 37 == exe mov-imm/ret	
+0x5FF470	CEventHealthLow::GetEventType	MATCH	0x5FF470 +0x10	const 53 == exe mov-imm/ret	
+0x5FF480	CEventHealthLow::GetLifeTime	MATCH	0x5FF480 +0x10	const 0 == exe mov-imm/ret	
+0x5FF530	CEventHealthReallyLow::GetEventType	MATCH	0x5FF530 +0x10	const 52 == exe mov-imm/ret	
+0x5FF540	CEventHealthReallyLow::GetLifeTime	MATCH	0x5FF540 +0x10	const 0 == exe mov-imm/ret	
+0x5FF5F0	CEventLowAngerAtPlayer::GetEventType	MATCH	0x5FF5F0 +0x10	const 50 == exe mov-imm/ret	
+0x5FF600	CEventLowAngerAtPlayer::GetLifeTime	MATCH	0x5FF600 +0x10	const 0 == exe mov-imm/ret	
+0x5FF6B0	CEventHighAngerAtPlayer::GetEventType	MATCH	0x5FF6B0 +0x10	const 51 == exe mov-imm/ret	
+0x5FF6C0	CEventHighAngerAtPlayer::GetLifeTime	MATCH	0x5FF6C0 +0x10	const 0 == exe mov-imm/ret	
+0x5FF8B0	CEventAcquaintancePedRespect::GetEventPriority	MATCH	0x5FF8B0 +0x10	const 23 == exe mov-imm/ret	
+0x5FF8C0	CEventAcquaintancePedLike::GetEventPriority	MATCH	0x5FF8C0 +0x10	const 22 == exe mov-imm/ret	
+0x5FF8D0	CEventAcquaintancePedDislike::GetEventPriority	MATCH	0x5FF8D0 +0x10	const 24 == exe mov-imm/ret	
+0x5FF8E0	CEventHealthReallyLow::GetEventPriority	MATCH	0x5FF8E0 +0x10	const 69 == exe mov-imm/ret	
+0x5FF8F0	CEventHighAngerAtPlayer::GetEventPriority	MATCH	0x5FF8F0 +0x10	const 34 == exe mov-imm/ret	
+0x5FF900	CEventHealthLow::GetEventPriority	MATCH	0x5FF900 +0x10	const 68 == exe mov-imm/ret	
+0x5FF910	CEventLowAngerAtPlayer::GetEventPriority	MATCH	0x5FF910 +0x80	const 33 == exe mov-imm/ret	
+0x608FD0	CEventNewGangMember::GetEventType	MATCH	0x608FD0 +0x10	const 90 == exe mov-imm/ret	
+0x608FE0	CEventNewGangMember::GetLifeTime	MATCH	0x608FE0 +0x10	const 0 == exe mov-imm/ret	
+0x6091A0	CEventDontJoinPlayerGroup::GetEventType	MATCH	0x6091A0 +0x10	const 94 == exe mov-imm/ret	
+0x6091B0	CEventDontJoinPlayerGroup::GetLifeTime	MATCH	0x6091B0 +0x10	const 0 == exe mov-imm/ret	
+0x609220	CEventDontJoinPlayerGroup::AffectsPed	MATCH	0x609220 +0x30	const 1 == exe mov-imm/ret	
+0x609310	CEventNewGangMember::GetEventPriority	MATCH	0x609310 +0x10	const 42 == exe mov-imm/ret	
+0x609320	CEventDontJoinPlayerGroup::GetEventPriority	MATCH	0x609320 +0x170	const 43 == exe mov-imm/ret	
+0x62ED00	CTaskSimpleHitFromBack::IsInterruptable	MATCH	0x62ED00 +0x10	const 0 == exe mov-imm/ret	
+0x62EDB0	CTaskSimpleHitFromLeft::IsInterruptable	MATCH	0x62EDB0 +0x10	const 0 == exe mov-imm/ret	
+0x62EE60	CTaskSimpleHitFromRight::IsInterruptable	MATCH	0x62EE60 +0x10	const 0 == exe mov-imm/ret	
+0x62EF10	CTaskSimpleHitByGunFromFront::IsInterruptable	MATCH	0x62EF10 +0x10	const 0 == exe mov-imm/ret	
+0x62EFC0	CTaskSimpleHitByGunFromRear::IsInterruptable	MATCH	0x62EFC0 +0x10	const 0 == exe mov-imm/ret	
+0x62F070	CTaskSimpleHitByGunFromLeft::IsInterruptable	MATCH	0x62F070 +0x10	const 0 == exe mov-imm/ret	
+0x62F120	CTaskSimpleHitByGunFromRight::IsInterruptable	MATCH	0x62F120 +0xB0	const 0 == exe mov-imm/ret	
+0x62F5C0	CTaskSimpleSetStayInSamePlace::MakeAbortable	MATCH	0x62F5C0 +0x20	const 1 == exe mov-imm/ret	
+0x62F640	CTaskSimpleSetKindaStayInSamePlace::MakeAbortable	MATCH	0x62F640 +0x10	const 1 == exe mov-imm/ret	
+0x62F6C0	CTaskSimpleDuckToggle::MakeAbortable	MATCH	0x62F6C0 +0x10	by hand: exe mov al,1; ret 0xC; port inline return true	
+0x6317D0	CTaskComplexObserveTrafficLights::MakeAbortable	MATCH	0x6317D0 +0x10	const 1 == exe mov-imm/ret	
+0x631CF0	CTaskSimpleTurn180::MakeAbortable	MATCH	0x631CF0 +0x10	const 0 == exe mov-imm/ret	
+0x632A80	CTaskSimpleWaitForBus::MakeAbortable	MATCH	0x632A80 +0x10	const 1 == exe mov-imm/ret	
+0x632B60	CTaskSimpleWaitForPizza::MakeAbortable	MATCH	0x632B60 +0x20	const 1 == exe mov-imm/ret	
+0x6335A0	CTaskSimplePlayerOnFire::MakeAbortable	MATCH	0x6335A0 +0x10	const 0 == exe mov-imm/ret	
+0x634610	CTaskSimpleTriggerLookAt::MakeAbortable	MATCH	0x634610 +0x10	const 1 == exe mov-imm/ret	
+0x6346B0	CTaskSimpleClearLookAt::MakeAbortable	MATCH	0x6346B0 +0x10	const 1 == exe mov-imm/ret	
+0x637280	CTaskSimpleHitFromFront::IsInterruptable	MATCH	0x637280 +0x10	const 0 == exe mov-imm/ret	
+0x646BF0	CTaskSimpleCarWaitForDoorNotToBeInUse::MakeAbortable	MATCH	0x646BF0 +0x10	const 1 == exe mov-imm/ret	
+0x646E40	CTaskSimpleCarGoToPointNearDoorUntilDoorNotInUse::MakeAbortable	MATCH	0x646E40 +0x10	const 1 == exe mov-imm/ret	
+0x647780	CTaskSimpleCarForcePedOut::MakeAbortable	MATCH	0x647780 +0x10	const 0 == exe mov-imm/ret	
+0x648420	CTaskSimpleCarSetPedSlowDraggedOut::MakeAbortable	MATCH	0x648420 +0x10	const 0 == exe mov-imm/ret	
+0x648FB0	CTaskSimpleSetPedAsAutoDriver::MakeAbortable	MATCH	0x648FB0 +0x10	const 0 == exe mov-imm/ret	
+0x649440	CTaskSimpleCreateCarAndGetIn::MakeAbortable	MATCH	0x649440 +0x10	const 1 == exe mov-imm/ret	
+0x6494E0	CTaskSimpleWaitUntilPedIsOutCar::MakeAbortable	MATCH	0x6494E0 +0x10	const 1 == exe mov-imm/ret	
+0x649690	CTaskSimpleWaitUntilPedIsInCar::MakeAbortable	MATCH	0x649690 +0x10	const 1 == exe mov-imm/ret	
+0x652F80	CTaskSimpleHitFromBehind::IsInterruptable	MATCH	0x652F80 +0x10	const 0 == exe mov-imm/ret	
+0x653030	CTaskSimpleHitWall::IsInterruptable	MATCH	0x653030 +0x30	const 0 == exe mov-imm/ret	
+0x653C80	CTaskSimpleKillPedWithCar::MakeAbortable	MATCH	0x653C80 +0x10	const 0 == exe mov-imm/ret	
+0x653F20	CTaskSimpleHurtPedWithCar::MakeAbortable	MATCH	0x653F20 +0x10	const 0 == exe mov-imm/ret	
+0x658740	CTaskSimpleAbseil::IsInterruptable	MATCH	0x658740 +0x60	const 0 == exe mov-imm/ret	
+0x658810	CTaskComplexWanderMedic::GetWanderType	MATCH	0x658810 +0x10	const 2 == exe mov-imm/ret	
+0x65B350	CTaskComplexWanderFlee::GetWanderType	MATCH	0x65B350 +0x10	const 6 == exe mov-imm/ret	
+0x660930	CTaskSimpleDoHandSignal::MakeAbortable	MATCH	0x660930 +0x10	const 1 == exe mov-imm/ret	
+0x661790	CTaskComplexGangJoinRespond::MakeAbortable	MATCH	0x661790 +0x10	const 1 == exe mov-imm/ret	
+0x66F630	CTaskComplexWanderGang::GetWanderType	MATCH	0x66F630 +0x10	const 4 == exe mov-imm/ret	
+0x674EE0	CEventInteriorUseInfo::GetEventType	MATCH	0x674EE0 +0x10	const 81 == exe mov-imm/ret	
+0x674EF0	CEventInteriorUseInfo::GetLifeTime	MATCH	0x674EF0 +0x10	const 0 == exe mov-imm/ret	
+0x674F80	CEventInteriorUseInfo::AffectsPed	MATCH	0x674F80 +0x30	const 1 == exe mov-imm/ret	
+0x674FB0	CEventInteriorUseInfo::GetEventPriority	MATCH	0x674FB0 +0x10	const 9 == exe mov-imm/ret	
+0x675440	CTaskInteriorBeInShop::GetWanderType	MATCH	0x675440 +0x10	by hand: exe mov eax,5; port WANDER_TYPE_SHOP = 5	
+0x683430	CTaskComplexWaitForPed::MakeAbortable	MATCH	0x683430 +0x10	const 1 == exe mov-imm/ret	
+0x6857C0	CTaskSimplePlayerOnFoot::GetTaskType	MATCH	0x6857C0 +0x10	const 0 == exe mov-imm/ret	
+0x6912B0	CTaskSimpleAffectSecondaryBehaviour::MakeAbortable	MATCH	0x6912B0 +0x70	const 0 == exe mov-imm/ret	
+0x695690	CTaskComplexSeekEntityAnyMeansXYOffset::GetTaskType	MATCH	0x695690 +0x10	by hand: exe 0x39a(922); Type = TASK_COMPLEX_SEEK_ENTITY_ANY_MEANS = 922 (via CTaskComplexSeekEntityAnyMeans<>)	
+0x69BBE0	CTaskAllocatorKillOnFoot::GetType	MATCH	0x69BBE0 +0x10	const 4 == exe mov-imm/ret	
+0x69C2C0	CTaskAllocatorAttack::GetType	MATCH	0x69C2C0 +0x10	const 1 == exe mov-imm/ret	
+0x69C4C0	CTaskAllocatorPlayerCommandAttack::GetType	MATCH	0x69C4C0 +0x10	const 6 == exe mov-imm/ret	
+0x69C770	CTaskAllocatorKillThreatsBasic::GetType	MATCH	0x69C770 +0x10	const 9 == exe mov-imm/ret	
+0x69CB50	CTaskAllocatorKillThreatsDriveby::GetType	MATCH	0x69CB50 +0x10	const 11 == exe mov-imm/ret	
+0x421270	CTaskComplexLeaveAnyCar::Destructor	MATCH	0x421270 +0x50	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x463560	CTaskSimpleLeaveGroup::Destructor	MATCH	0x463560 +0x10	by hand: exe jmp CTaskSimple dtor; port base CTaskSimpleNone has default dtor only (itself bare jmp CTaskSimple dtor)	
+0x46AF10	CTaskSimpleSetCharDecisionMaker::Destructor	MATCH	0x46AF10 +0x10	exe: vtable store + jmp CTaskSimple dtor; port dtor default/empty, base CTaskSimple	
+0x4748F0	CTaskSimpleSetCharIgnoreWeaponRangeFlag::Destructor	MATCH	0x4748F0 +0x5420	exe: vtable store + jmp CTaskSimple dtor; port dtor default/empty, base CTaskSimple	
+0x48E090	CTaskSimpleRunTimedAnim::Destructor	MATCH	0x48E090 +0x10	exe: vtable store + jmp CTaskSimpleAnim dtor; port dtor default/empty, base CTaskSimpleAnim	
+0x48E4E0	CTaskSimpleSay::Destructor	MATCH	0x48E4E0 +0x270	exe: vtable store + jmp CTaskSimple dtor; port dtor default/empty, base CTaskSimple	
+0x48E900	CTaskSimpleCower::Destructor	MATCH	0x48E900 +0x60	by hand: exe jmp CTaskSimpleAnim dtor; port base (CTaskSimpleRunAnim / RunTimedAnim) has default dtor only	
+0x48E960	CTaskSimpleUseAtm::Destructor	MATCH	0x48E960 +0x10	by hand: exe jmp CTaskSimpleAnim dtor; port base (CTaskSimpleRunAnim / RunTimedAnim) has default dtor only	
+0x48EA60	CTaskSimpleHandsUp::Destructor	MATCH	0x48EA60 +0x42F0	by hand: exe jmp CTaskSimpleAnim dtor; port base (CTaskSimpleRunAnim / RunTimedAnim) has default dtor only	
+0x492F10	CTaskComplexDiveFromAttachedEntityAndGetUp::Destructor	MATCH	0x492F10 +0x80	exe: vtable store + jmp CTaskComplexEvasiveDiveAndGetUp dtor; port dtor default/empty, base CTaskComplexEvasiveDiveAndGetUp	
+0x4B8840	CTaskComplexUseClosestFreeScriptedAttractorRun::Destructor	MATCH	0x4B8840 +0x10	exe: vtable store + jmp CTaskComplexUseClosestFreeScriptedAttractor dtor; port dtor default/empty, base CTaskComplexUseClosestFreeScriptedAttractor	
+0x4B8900	CTaskComplexUseClosestFreeScriptedAttractorSprint::Destructor	MATCH	0x4B8900 +0x50	exe: vtable store + jmp CTaskComplexUseClosestFreeScriptedAttractor dtor; port dtor default/empty, base CTaskComplexUseClosestFreeScriptedAttractor	
+0x5F7FD0	CTaskSimpleChat::Destructor	MATCH	0x5F7FD0 +0x10	by hand: exe jmp CTaskSimpleAnim dtor; port base (CTaskSimpleRunAnim / RunTimedAnim) has default dtor only	
+0x61BF10	CTaskSimpleRunNamedAnim::Destructor	MATCH	0x61BF10 +0x10	exe: vtable store + jmp CTaskSimpleAnim dtor; port dtor default/empty, base CTaskSimpleAnim	
+0x620FF0	CTaskComplexKillPedOnFootStealth::Destructor	MATCH	0x620FF0 +0x10	exe: vtable store + jmp CTaskComplexKillPedOnFoot dtor; port dtor default/empty, base CTaskComplexKillPedOnFoot	
+0x62F650	CTaskSimpleSetKindaStayInSamePlace::Destructor	MATCH	0x62F650 +0x10	exe: vtable store + jmp CTaskSimple dtor; port dtor default/empty, base CTaskSimple	
+0x62F6D0	CTaskSimpleDuckToggle::Destructor	MATCH	0x62F6D0 +0x10	exe: vtable store + jmp CTaskSimple dtor; port dtor default/empty, base CTaskSimple	
+0x630F60	CTaskSimpleTired::Destructor	MATCH	0x630F60 +0x10	exe: vtable store + jmp CTaskSimple dtor; port dtor default/empty, base CTaskSimple	
+0x6311B0	CTaskSimpleSitIdle::Destructor	MATCH	0x6311B0 +0x30	exe: vtable store + jmp CTaskSimple dtor; port dtor default/empty, base CTaskSimple	
+0x631DA0	CTaskComplexHitResponse::Destructor	MATCH	0x631DA0 +0x10	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x631E30	CTaskComplexHitByGunResponse::Destructor	MATCH	0x631E30 +0x10	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x632630	CTaskComplexWaitAtAttractor::Destructor	MATCH	0x632630 +0x10	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x632720	CTaskComplexUseAttractor::Destructor	MATCH	0x632720 +0x10	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x632830	CTaskComplexWaitForDryWeather::Destructor	MATCH	0x632830 +0x10	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x632930	CTaskComplexWaitForBus::Destructor	MATCH	0x632930 +0x10	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x632A90	CTaskSimpleWaitForBus::Destructor	MATCH	0x632A90 +0x10	exe: vtable store + jmp CTaskSimple dtor; port dtor default/empty, base CTaskSimple	
+0x632EA0	CTaskComplexBeInGroup::Destructor	MATCH	0x632EA0 +0x10	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x6331E0	CTaskComplexUsePairedAttractor::Destructor	INTENTIONAL	0x6331E0 +0x10	exe dtor = vtable store + jmp CTaskComplex dtor and never CleanUpOldReference on the registered m_Partner (exe SetPartnership RegisterReference, ClearPartnership cleans up; task dtor leaves a dangling registered ref); port notsa::EntityRef cleans it: safe superset, kept	
+0x633300	CTaskComplexUseAttractorPartner::Destructor	MATCH	0x633300 +0x10	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x633360	CTaskComplexUseScriptedAttractor::Destructor	MATCH	0x633360 +0x10	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x6333C0	CTaskComplexOnFire::Destructor	MATCH	0x6333C0 +0x10	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x6335B0	CTaskSimplePlayerOnFire::Destructor	MATCH	0x6335B0 +0x10	exe: vtable store + jmp CTaskSimple dtor; port dtor default/empty, base CTaskSimple	
+0x6346A0	CTaskSimpleClearLookAt::Destructor	MATCH	0x6346A0 +0x10	exe: vtable store + jmp CTaskSimple dtor; port dtor default/empty, base CTaskSimple	
+0x634720	CTaskComplexUseClosestFreeScriptedAttractor::Destructor	MATCH	0x634720 +0x10	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x635100	CTaskComplexInWater::Destructor	MATCH	0x635100 +0x10	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x655370	CTaskComplexMoveBackAndJump::Destructor	MATCH	0x655370 +0x10	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x655780	CTaskComplexWalkRoundFire::Destructor	MATCH	0x655780 +0x10	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x65B370	CTaskComplexWanderFlee::Destructor	MATCH	0x65B370 +0x10	exe: vtable store + jmp CTaskComplexWander dtor; port dtor default/empty, base CTaskComplexWander	
+0x65B410	CTaskComplexFleePoint::Destructor	MATCH	0x65B410 +0x10	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x65BDB0	CTaskComplexSmartFleePoint::Destructor	MATCH	0x65BDB0 +0x10	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x6608B0	CTaskSimpleDoHandSignal::Destructor	MATCH	0x6608B0 +0x10	exe: vtable store + jmp CTaskSimple dtor; port dtor default/empty, base CTaskSimple	
+0x668D40	CTaskComplexGoToPointAndStandStillAndAchieveHeading::Destructor	MATCH	0x668D40 +0x140	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x66B6A0	CTaskComplexGoToAttractor::Destructor	MATCH	0x66B6A0 +0x20	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x675000	CTaskInteriorBeInHouse::Destructor	MATCH	0x675000 +0x10	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x675260	CTaskInteriorBeInOffice::Destructor	MATCH	0x675260 +0x10	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x675460	CTaskInteriorBeInShop::Destructor	MATCH	0x675460 +0x10	exe: vtable store + jmp CTaskComplexWander dtor; port dtor default/empty, base CTaskComplexWander	
+0x675810	CTaskInteriorGoToInfo::Destructor	MATCH	0x675810 +0x10	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x6857D0	CTaskSimplePlayerOnFoot::Destructor	MATCH	0x6857D0 +0x10	exe: vtable store + jmp CTaskSimple dtor; port dtor default/empty, base CTaskSimple	
+0x6975F0	CTaskComplexExtinguishFires::Destructor	MATCH	0x6975F0 +0x10	exe: vtable store + jmp CTaskComplex dtor; port dtor default/empty, base CTaskComplex	
+0x420E70	CEventAcquaintancePedHate::Constructor2	MATCH	0x420E70 +0x60	exe ctor = base ctor call + vtable store only; port class has no own data members	
+0x43E1C0	CEventLeaderEntryExit::Constructor	MATCH	0x43E1C0 +0x40	exe ctor = base ctor call + vtable store only; port class has no own data members	
+0x43E2E0	CTaskSimpleUninterruptable::Constructor	MATCH	0x43E2E0 +0x20	exe ctor = base ctor call + vtable store only; port class has no own data members	
+0x463540	CTaskSimpleLeaveGroup::Constructor	MATCH	0x463540 +0x20	exe ctor = base ctor call + vtable store only; port class has no own data members	
+0x48DE70	CTaskSimpleCower::Constructor	MATCH	0x48DE70 +0x40	by script+hand: exe ctor = base CTaskSimpleRunAnim/RunTimedAnim ctor with pushes (group 0, animId, blend 4.0, [unused -4.0, duration], taskType, name, 0) + vtable; animId/taskType/blend equal port init-list (names strings not compared)	
+0x48DFE0	CTaskSimpleUseAtm::Constructor	MATCH	0x48DFE0 +0x30	by script+hand: exe ctor = base CTaskSimpleRunAnim/RunTimedAnim ctor with pushes (group 0, animId, blend 4.0, [unused -4.0, duration], taskType, name, 0) + vtable; animId/taskType/blend equal port init-list (names strings not compared)	
+0x48E970	CTaskSimpleHandsUp::Constructor	MATCH	0x48E970 +0x40	by script+hand: exe ctor = base CTaskSimpleRunAnim/RunTimedAnim ctor with pushes (group 0, animId, blend 4.0, [unused -4.0, duration], taskType, name, 0) + vtable; animId/taskType/blend equal port init-list (names strings not compared)	
+0x4B8300	CEventLeaderExitedCarAsDriver::Constructor	MATCH	0x4B8300 +0x2B0	exe ctor = base ctor call + vtable store only; port class has no own data members	
+0x5F6340	CEventPlayerCommandToGroupAttack::Constructor	MATCH	0x5F6340 +0xD0	exe ctor = base ctor call + vtable store only; port class has no own data members	
+0x5FED40	CEventPedCollisionWithPlayer::Constructor	MATCH	0x5FED40 +0x100	exe ctor = base ctor call + vtable store only; port class has no own data members	
+0x5FEE40	CEventPlayerCollisionWithPed::Constructor	MATCH	0x5FEE40 +0x100	exe ctor = base ctor call + vtable store only; port class has no own data members	
+0x5FEF40	CEventScriptedAttractor::Constructor	MATCH	0x5FEF40 +0x100	exe ctor = base ctor call + vtable store only; port class has no own data members	
+0x5FF380	CEventSeenCop::Constructor1	MATCH	0x5FF380 +0xF0	exe ctor = base ctor call + vtable store only; port class has no own data members	
+0x609250	CEventPlayerCommandToGroupGather::Constructor	MATCH	0x609250 +0xC0	exe ctor = base ctor call + vtable store only; port class has no own data members	
+0x61C2E0	CEventVehicleDamageWeapon::Constructor	MATCH	0x61C2E0 +0x50	exe ctor = base ctor call + vtable store only; port class has no own data members	
+0x62EC60	CTaskSimpleHitFromBack::Constructor	MATCH	0x62EC60 +0x30	by script+hand: exe ctor = base CTaskSimpleRunAnim/RunTimedAnim ctor with pushes (group 0, animId, blend 4.0, [unused -4.0, duration], taskType, name, 0) + vtable; animId/taskType/blend equal port init-list (names strings not compared)	
+0x62ED10	CTaskSimpleHitFromLeft::Constructor	MATCH	0x62ED10 +0x30	by script+hand: exe ctor = base CTaskSimpleRunAnim/RunTimedAnim ctor with pushes (group 0, animId, blend 4.0, [unused -4.0, duration], taskType, name, 0) + vtable; animId/taskType/blend equal port init-list (names strings not compared)	
+0x62EDC0	CTaskSimpleHitFromRight::Constructor	MATCH	0x62EDC0 +0x30	by script+hand: exe ctor = base CTaskSimpleRunAnim/RunTimedAnim ctor with pushes (group 0, animId, blend 4.0, [unused -4.0, duration], taskType, name, 0) + vtable; animId/taskType/blend equal port init-list (names strings not compared)	
+0x62EF20	CTaskSimpleHitByGunFromRear::Constructor	MATCH	0x62EF20 +0x30	by script+hand: exe ctor = base CTaskSimpleRunAnim/RunTimedAnim ctor with pushes (group 0, animId, blend 4.0, [unused -4.0, duration], taskType, name, 0) + vtable; animId/taskType/blend equal port init-list (names strings not compared)	
+0x62EFD0	CTaskSimpleHitByGunFromLeft::Constructor	MATCH	0x62EFD0 +0x30	by script+hand: exe ctor = base CTaskSimpleRunAnim/RunTimedAnim ctor with pushes (group 0, animId, blend 4.0, [unused -4.0, duration], taskType, name, 0) + vtable; animId/taskType/blend equal port init-list (names strings not compared)	
+0x62F080	CTaskSimpleHitByGunFromRight::Constructor	MATCH	0x62F080 +0x30	by script+hand: exe ctor = base CTaskSimpleRunAnim/RunTimedAnim ctor with pushes (group 0, animId, blend 4.0, [unused -4.0, duration], taskType, name, 0) + vtable; animId/taskType/blend equal port init-list (names strings not compared)	
+0x632800	CTaskComplexWaitForDryWeather::Constructor	MATCH	0x632800 +0x20	exe ctor = base ctor call + vtable store only; port class has no own data members	
+0x633390	CTaskComplexOnFire::Constructor	MATCH	0x633390 +0x20	exe ctor = base ctor call + vtable store only; port class has no own data members	
+0x634670	CTaskSimpleClearLookAt::Constructor	MATCH	0x634670 +0x20	exe ctor = base ctor call + vtable store only; port class has no own data members	
+0x6350D0	CTaskComplexInWater::Constructor	MATCH	0x6350D0 +0x20	exe ctor = base ctor call + vtable store only; port class has no own data members	
+0x637250	CTaskSimpleHitFromFront::Constructor	MATCH	0x637250 +0x30	by script+hand: exe ctor = base CTaskSimpleRunAnim/RunTimedAnim ctor with pushes (group 0, animId, blend 4.0, [unused -4.0, duration], taskType, name, 0) + vtable; animId/taskType/blend equal port init-list (names strings not compared)	
+0x63A110	CEventLeaderQuitEnteringCarAsDriver::Constructor	MATCH	0x63A110 +0x110	exe ctor = base ctor call + vtable store only; port class has no own data members	
+0x652EE0	CTaskSimpleHitFromBehind::Constructor	MATCH	0x652EE0 +0x30	by script+hand: exe ctor = base CTaskSimpleRunAnim/RunTimedAnim ctor with pushes (group 0, animId, blend 4.0, [unused -4.0, duration], taskType, name, 0) + vtable; animId/taskType/blend equal port init-list (names strings not compared)	
+0x652F90	CTaskSimpleHitWall::Constructor	MATCH	0x652F90 +0x30	by script+hand: exe ctor = base CTaskSimpleRunAnim/RunTimedAnim ctor with pushes (group 0, animId, blend 4.0, [unused -4.0, duration], taskType, name, 0) + vtable; animId/taskType/blend equal port init-list (names strings not compared)	
+0x655340	CTaskComplexMoveBackAndJump::Constructor	MATCH	0x655340 +0x20	exe ctor = base ctor call + vtable store only; port class has no own data members	
+0x65B320	CTaskComplexWanderFlee::Constructor	MATCH	0x65B320 +0x30	by hand: exe CTaskComplexWander ctor(moveState, dir, 0, [0x86FCB0]=0.5f); port Wander{moveState,dir,false} default radius 0.5f	
+0x6A0620	CEventVehicleDamageCollision::Constructor	MATCH	0x6A0620 +0x50	exe ctor = base ctor call + vtable store only; port class has no own data members	
+0x48E0E0	CTaskSimpleRunTimedAnim::GetTaskType	MATCH	0x48E0E0 +0x10	by hand: exe movzx eax,word [ecx+0x30]; port returns m_taskId (field at 0x30 after CTaskTimer; low word equal)	
+0x61AD00	CTaskSimpleRunAnimLoopedMiddle::GetTaskType	MATCH	0x61AD00 +0x10	by hand: exe movzx eax,word [ecx+0x6C]; port returns (eTaskType)m_TaskType, uint16 at 0x6C	

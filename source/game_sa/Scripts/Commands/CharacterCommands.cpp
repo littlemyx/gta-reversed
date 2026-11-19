@@ -1318,13 +1318,14 @@ auto SetCharOnlyDamagedByPlayer(CPed& ped, bool enabled) {
  * 
  * @returns {Vector} node
  */
-// exe 0x47FAE6: the node coords come from CPathFind::FindNodeCoorsForScript(node, &found) (0x4505E0) and the compare flag is set (true at 0x47FBC3 / false at 0x47FC9D with zeros stored); the port set no flag
+// exe 0x47FAE6-0x47FBC3: the PED node (type 1) position is CPathNode::GetPosition (0x420A10) of the found node (FindNodeCoorsForScript 0x4505E0 is only the CAR-node command at 0x47FC76); the compare flag is true when found, false (zeros stored) otherwise
 auto GetClosestCharNode(CVector pos) -> notsa::script::MultiRet<CVector, notsa::script::CompareFlagUpdate> {
     CWorld::PutToGroundIfTooLow(pos);
     bool found = false;
     CVector out{};
     if (const auto node = ThePaths.FindNodeClosestToCoors(pos); node.IsValid()) {
-        out = ThePaths.FindNodeCoorsForScript(node, &found);
+        out   = ThePaths.GetPathNode(node)->GetPosition();
+        found = true;
     }
     if (!found) {
         out = CVector{}; // Can't find anything nearby

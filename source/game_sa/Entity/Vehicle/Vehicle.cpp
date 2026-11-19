@@ -6994,7 +6994,7 @@ void CVehicle::DoVehicleLights(CMatrix& vehicleMatrix, eVehicleLightsFlags flags
             vehicleMatrix.GetForward(),
             20.0f,
             1.0f, 1.0f, 1.0f,
-            m_vecMoveSpeed.SquaredMagnitude2D() < 0.2025f ? 1u : 0u // ASM-S19f: 0x6E2769-0x6E2775 push 1 below the threshold, 0 at/above it (and for NaN)
+            m_vecMoveSpeed.SquaredMagnitude2D() < std::bit_cast<float>(0x3E4F5C28u) ? 1u : 0u // ASM-S19f: 0x6E2769-0x6E2775 push 1 below the threshold, 0 at/above it (and for NaN)
         );
     }
 

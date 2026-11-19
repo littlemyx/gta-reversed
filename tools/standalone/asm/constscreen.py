@@ -133,6 +133,10 @@ def _collect(body, bpath):
         base = {'PI': PI, 'TWO_PI': 2 * PI, 'HALF_PI': PI / 2}[m.group(0).split()[0].strip('*/ ')] if m.group(0).split()[0] in ('PI', 'TWO_PI', 'HALF_PI') else PI
         v = base if not m.group(1) else (base * float(m.group(2)) if m.group(1) == '*' else base / float(m.group(2)))
         flits.add(fbits(f32(v))); dlits.add(f32(v)); dlits.add(v)
+    for m in re.finditer(r'ExeRecip\(\s*([A-Za-z_]\w*)\s*\)', body):
+        for v0 in named_for(bpath).get(m.group(1), ()):
+            try: v = f32(1.0 / v0); flits.add(fbits(v)); dlits.add(v)
+            except Exception: pass
     for hn, vals in HELPERS.items():
         if re.search(r'(?<![\w.:])' + re.escape(hn) + r'\s*\(', body):
             for v in vals: flits.add(fbits(v)); dlits.add(v); dlits.add(f32(v))

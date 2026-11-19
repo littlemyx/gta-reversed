@@ -1,0 +1,35 @@
+addr	function	verdict	asm range	note	fix commit
+0x6718A9	CTaskComplexFollowNodeRoute::CreateFirstSubTask (CalcGoToTaskType gate)	MATCH	0x671800-0x6718C3	P4S10f 2b8fe6ef1 CONFIRMED: test flags,8 (UseBlending) -> CalcGoToTaskType; whole function re-read (timer, zeroing 4 floats, leave-car, SetTarget, flag clear, inline GetSubTaskType)	2b8fe6ef1
+0x671A8A	CTaskComplexFollowNodeRoute::CreateNextSubTask (CalcGoToTaskType gate)	MATCH	0x6718D0-0x671AAC	2b8fe6ef1 + 17cb1b369 CONFIRMED: 0x39e shares the 0x384 block (0x6719EE->0x6719F9); full function re-read, all branches equal	17cb1b369
+0x65F4F9	CTaskComplexTrackEntity::Clone	MATCH	0x65F4E0-0x65F57A	afa905e98 CONFIRMED: byte[0x38] set -> interval-now+start else [0x20]; ctor arg order, base offsets 0x1C/0x20/0x24/0x28/0x2C, [0x3C] copy equal	afa905e98
+0x678049	CTaskSimpleGetUp::MakeAbortable	MATCH	0x677FE0-0x678101	781909686 CONFIRMED: elapsed(u32) > ftol(ts*0.02*1000)*3, strict, fcompp/test ah,5 logic checked	781909686
+0x6B7F90	CBike::FixHandsToBars	MATCH	0x6B7F90-0x6B8919	tail read: bone ids 0x19/0x1a/0x17/0x16/0x12d and 0x22/0x23/0x24/0x21/0x20/0x12e, scales 0.667/0.333/0.75/0.4, left x*-1, flag clear [0x7b4]/[0x7b5], per-step float stores equal	
+0x61D6F0	CTaskSimpleFight::IsTargetInRange	MATCH	0x61D6F0-0x61DACE	tail read: ped target dot products (limitB fwd, limitA right), fall-anim check, no-target scan loop (dead-ped skip, atan2(-dx,dy), +-pi wrap, abs, <pi/3, health preference, bestDiff init pi, aim rot store), standing-on-car; constants checked	
+0x655B90	CTaskComplexWalkRoundBuildingAttempt::Clone	MATCH	0x655B90	base offsets re-derived: moveState 0x48, flags 0x49, targetPos 0x14, pos 0x20, normal 0x2C, size 0x4C	
+0x6559B0	CTaskComplexHitPedWithCar::Clone	MATCH	0x6559B0	base offsets re-derived: veh 0xC, impulse 0x10, size 0x28	
+0x655B00	CTaskComplexWalkRoundCar::Clone	MATCH	0x655B00	offsets re-derived (MSVC bitfield packing: Force nibble = byte 0xE low, [0xD]&1 isGoingForDoor, TargetPt 0x10, Veh 0x1C, size 0x58)	
+0x6366A0	CTaskComplexSunbathe::Clone	MATCH	0x6366A0	offsets re-derived: startStanding 0xC, towel 0x34, size 0x38	
+0x68CE50	CTaskComplexKillCriminal::Clone	MATCH	0x68CE50	criminal at 0xC (EntityRef first member), size 0x20	
+0x623220	CTaskSimpleChoking::Clone	MATCH	0x623220	attacker 0x8, isTeargas 0x18, size 0x1C	
+0x646EC0	CTaskSimpleCarGoToPointNearDoorUntilDoorNotInUse::Clone	MATCH	0x646EC0	unchanged from P4S10f (reads sub task fields)	
+0x66D050	CTaskComplexAvoidOtherPedWhileWandering::Clone	MATCH	0x66D050	unchanged from P4S10f (audited; flag byte 0x5C copy)	
+0x68CEC0	CTaskComplexCopInCar::Clone	MATCH	0x68CEC0	offsets re-derived: veh 0xC, cop 0x10, suspect 0x14, flags byte 0x30, size 0x34	
+0x65CFB0	CTaskComplexFleeShooting::Clone	MATCH	0x65CFB0	offsets re-derived via SmartFleeEntity layout: fleeFrom 0xC, time 0x1C, safe 0x20, scream 0x24, period 0x28, tol 0x2C, shootTime 0x40, recover 0x44; 8 args equal	
+0x66CD80	CTaskComplexGoToPointAiming::Clone	MATCH	0x66CD80	offsets 0xC/0x10/0x14/0x20/0x2C/0x30, size 0x38, arg order equal	
+0x63DC20	CTaskSimpleCarDrive::Clone	MATCH	0x63DC20	veh [8], ctor(veh,0,0), copies bit 2 of byte 0x5C (m_bUpdateCurrentVehicle)	
+0x673BE0	CTaskComplexFollowPointRoute::Clone	MATCH	0x673BE0	args moveState,*route,mode,radius,slow, bits 0/3/2 of [0x28] = overshoot/blending/standstill	
+0x66D0C0	CTaskComplexAvoidEntity::Clone	MATCH	0x66D0C0	ctor(moveState [0x10], entity [0xC], targetPos [0x20])	
+0x623600	CTaskComplexDestroyCarArmed::Clone	MATCH	0x623600	ctor(veh [0x10], [0x58], [0x5C], [0x60]) equal	
+0x655940	CTaskComplexEvasiveDiveAndGetUp::Clone	MATCH	0x655940	veh 0xC, time 0x10, dir 0x14, byte 0x20, size 0x24	
+0x65CE50	CTaskComplexFleeEntity::Clone	MATCH	0x65CE50	entity 0xC, time 0x1C, safe 0x2C, scream 0x30, period 0x34, tol 0x38, size 0x3C	
+0x695740	CTaskComplexFollowLeaderInFormation::Clone	MATCH	0x695740	group 0xC, leader 0x10, pos 0x14, dist 0x24, size 0x28	
+0x692C80	CTaskComplexGoPickUpEntity::Clone	MATCH	0x692C80	ctor(entity [0xC], animGroup [0x2C])	
+0x6498B0	CTaskComplexGoToCarDoorAndStandStill::Clone	MATCH	0x6498B0	8 args from 0xC/0x10/0x14/0x44/0x18/0x1C/0x20/0x24, size 0x50	
+0x6234C0	CTaskComplexKillPedOnFootArmed::Clone	MATCH	0x6234C0	5 args + aimImmediate byte 0x35 copy; layout 0x30 competence, size 0x5C	
+0x63DB40	CTaskComplexLeaveCarAndFlee::Clone	MATCH	0x63DB40	veh 0xC, door 0x10, point 0x14, delay 0x20, wait=false	
+0x65CF40	CTaskComplexSmartFleeEntity::Clone	MATCH	0x65CF40	6 args + moveState [0x30] copied after ctor (port passes as 7th ctor arg; same result)	
+0x697740	CTaskComplexWaitForBackup::Clone	MATCH	0x697740	dist 0xC, aggressor 0x10, backup 0x14, size 0x24	
+0x65FC00	CTaskGangHassleVehicle::Clone	MATCH	0x65FC00	gapC[4] pad: veh 0x10, pos 0x14, aggressive 0x18, trigger 0x1C, offsetX 0x20	
+0x649930	CTaskSimpleCarAlign::Clone	MATCH	0x649930	veh 0x10, doorPos 0x14, door 0x20, lineUp 0x24	
+0x622FB0	CTaskSimpleGunControl::Clone	MATCH	0x622FB0	6 args from 0xC/0x10/0x1C/0x2E/0x2C/0x28 + aimImmediate byte 0x3A	
+0x633F00	CTaskSimpleIKLookAt::Clone	MATCH	0x633F00	9 ctor args; if IKChain set copies 0x44/0x48/0x4C/0x50 + word 0x16 (Blend/EndTime/TargetBlend/TargetTime/PivotBone)	

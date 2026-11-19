@@ -2435,7 +2435,8 @@ void CEventHandler::ComputePedThreatResponse(CEventAcquaintancePedHate* e, CTask
                 10'000
             };
         case TASK_SIMPLE_GANG_DRIVEBY: {
-            if (!m_Ped->IsInVehicle() || !m_Ped->m_pVehicle->IsDriver(m_Ped) || !m_Ped->GetTaskManager().Find<CTaskComplexCarDrive>()) {
+            // exe 0x4C2164-0x4C21A5: in a vehicle, vehicle != null, the ped is NOT the driver (cmp ped,[veh+0x460]; je null: the PASSENGER shoots), and an active TASK_SIMPLE_CAR_DRIVE (0x2C5) (port: the driver test was inverted and it searched TASK_COMPLEX_CAR_DRIVE)
+            if (!m_Ped->IsInVehicle() || !m_Ped->m_pVehicle || m_Ped->m_pVehicle->IsDriver(m_Ped) || !m_Ped->GetTaskManager().FindActiveTaskByType(TASK_SIMPLE_CAR_DRIVE)) {
                 return nullptr;
             }
             const auto pedActiveWI = &m_Ped->GetActiveWeapon().GetWeaponInfo(m_Ped);

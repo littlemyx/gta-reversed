@@ -122,7 +122,7 @@ bool CGangWars::AttackWaveOvercome() {
             continue;
 
         if (ped.IsStateDying()) {
-            ped.bDonePositionOutOfCollision = false;
+            // 0x445BED: only 0x474 bit 12 (bPartOfAttackWave) is cleared; the port also cleared bDonePositionOutOfCollision (0x474 bit 0)
             ped.bPartOfAttackWave = false;
             ped.SetCharCreatedBy(PED_GAME);
             continue;

@@ -1,0 +1,21 @@
+addr	function	verdict	asm range	note	fix commit
+0x4515D0	CPathFind::DoPathSearch	MATCH	0x4515D0-0x451B60	hash-bucket Dijkstra, lane/water/forbidden filters, depth/cleared-list limits, back-walk, early-out distances (0/100000) agree	
+0x610F50	CPopulation::ArePedStatsCompatible	MATCH	0x610F50-0x6110B9	never-paired set and old guy/girl rule checked against enum values	
+0x60F8D0	CPopCycle::PickGangToCreateMembersOf	MATCH	0x60F8D0-0x60FA2C	cheat path 7+int(r*8); sum<=0 -> 0; strict > compare; per-gang tail read for gangs 0-4	
+0x730740	D3DResourceSystem::TidyUpD3DIndexBuffers	INTENTIONAL		D3D index-buffer housekeeping replaced by librw/portable render layer (not compared)	
+0x50A9F0	CCamera::CamShake	MATCH	0x50A9F0-0x50AB0C	x87 chain, clamps, 0.35, strict > agree; uint32 ms diff float-rounded before *0.001 (unobservable)	
+0x44E4F0	CPathFind::RemoveBadStartNode	MATCH	0x44E4F0-0x44E60A	dot order, float-spilled factor, NaN keeps node, shift loop agree	
+0x50D2D0	CCamera::InitialiseScriptableComponents	MATCH	0x50D2D0-0x50D34C	19 stores agree	
+0x49CEC0	CTagManager::SetAlpha	MATCH	0x49CEC0-0x49CF8D	SetUserValue, tag search, 228 threshold, messages agree	
+0x611450	CPopulation::PedMICanBeCreatedInInterior	MATCH	0x611450-0x61146D	false for ped types 6..22	
+0x49D310	CTrafficLights::LightForCars2	MATCH	0x49D310-0x49D34C	thresholds and states agree	
+0x5725B0	CTheZones::Calc2DDistanceBetween2Zones	MATCH	0x5725B0-0x57266B	overlap logic and sqrt agree	
+0x49D2D0	CTrafficLights::LightForCars1	MATCH	0x49D2D0-0x49D302	thresholds agree	
+0x610720	CPopCycle::PedIsAcceptableInCurrentZone	MATCH	0x610720-0x610764	zone/cheat/race bit agree	
+0x531FC0	CCrime::FindImmediateDetectionRange	MATCH	0x531FC0-0x531FEE	jump table decoded: 12,16,17 -> 60; 20 -> 30; else 14	
+0x539340	CFireManager::PlentyFiresAvailable	MATCH	0x539340-0x53935D	6 inactive of 60	
+0x49CCE0	CTagManager::IsTag	MATCH	0x49CCE0-0x49CD29	atomic type, tag flag, bTagDisabled agree	
+0x611760	CPopulation::IsSunbather	MATCH	0x611760-0x61177D	stats 38/39	
+0x608A40	CPedType::PoliceDontCareAboutCrimesAgainstPedType	MATCH	0x608A40-0x608A60	7..16, 17, 20	
+0x610ED0	CPopulation::FindDummyDistForModel	MATCH	0x610ED0-0x610EF7	750/80	
+0x5FBA60	CPedGroupMembership::Process	MATCH	0x5FBA60-0x5FBB6A	review of 1aa7e5dc3 CONFIRMED	

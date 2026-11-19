@@ -8,6 +8,10 @@
 #include "StdInc.h"
 
 #include "LoadedCarGroup.h"
+#include "portable/attrlog.h"
+#ifdef NOTSA_STATEHASH
+#include <intrin.h>
+#endif
 
 constexpr auto SENTINEL_VALUE_OF_UNUSED = (int16)(MODEL_INVALID);
 
@@ -61,7 +65,22 @@ eModelID CLoadedCarGroup::PickRandomCar(bool bNotTooManyInTheWorld, bool bOnlyPi
     // Shape of the exe: build the candidate list and the sum of `m_nFrq` (a SIGNED word, +0x52) in one pass; with a zero sum the answer is -1 and
     // no random number is consumed. Then up to 10 tries of: one rand() -> `(rand() & 0xFFFF) * (1/32768) * (float)sum` truncated -> walk the list
     // subtracting frq until `pick <= frq(candidate)`.
+#ifdef NOTSA_STATEHASH
+    static int s_pickCalls = 0;
+    FILE* const pkLog = notsa::rr::PickCarLog();
+    const int   pkCall = pkLog ? s_pickCalls++ : -1;
+    if (pkLog) {
+        std::fprintf(pkLog, "%d %llu K %d PickRandomCar caller=%p group=%p nmodels=%u notTooMany=%d onlyNormal=%d\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), pkCall, _ReturnAddress(), (const void*)this, CountMembers(), (int)bNotTooManyInTheWorld, (int)bOnlyPickNormalCars);
+        std::fflush(pkLog);
+    }
+#endif
     if (Empty()) {
+#ifdef NOTSA_STATEHASH
+        if (pkLog) {
+            std::fprintf(pkLog, "%d %llu R %d empty -> -1\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), pkCall);
+            std::fflush(pkLog);
+        }
+#endif
         return MODEL_INVALID;
     }
 
@@ -70,6 +89,11 @@ eModelID CLoadedCarGroup::PickRandomCar(bool bNotTooManyInTheWorld, bool bOnlyPi
     int32                 weightSum = 0;
     for (const auto modelId : GetAllModels()) {
         const auto mi = CModelInfo::GetVehicleModelInfo(modelId);
+#ifdef NOTSA_STATEHASH
+        if (pkLog) {
+            std::fprintf(pkLog, "%d %llu M %d model=%d frq=%d class=%d ref=%d used=%d\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), pkCall, (int)modelId, (int)(int16)mi->m_nFrq, (int)(int8)mi->m_nVehicleClass, (int)(int16)mi->m_nRefCount, (int)(int8)mi->m_nTimesUsed);
+        }
+#endif
         if (bOnlyPickNormalCars) {
             // movsx byte [+0x4d]: accepts 0..2 (NORMAL, POORFAMILY, RICHFAMILY) and 8 (MOTORBIKE)
             const auto cls = (int8)mi->m_nVehicleClass;
@@ -81,6 +105,12 @@ eModelID CLoadedCarGroup::PickRandomCar(bool bNotTooManyInTheWorld, bool bOnlyPi
         weightSum += (int16)mi->m_nFrq;
     }
     if (weightSum == 0) {
+#ifdef NOTSA_STATEHASH
+        if (pkLog) {
+            std::fprintf(pkLog, "%d %llu R %d sum0 -> -1\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), pkCall);
+            std::fflush(pkLog);
+        }
+#endif
         return MODEL_INVALID;
     }
 
@@ -90,6 +120,11 @@ eModelID CLoadedCarGroup::PickRandomCar(bool bNotTooManyInTheWorld, bool bOnlyPi
         // First, pick a model
         const auto pickedModel = [&] {
             auto   pickedWeight = CGeneral::GetRandomNumberInRange(0, weightSum);
+#ifdef NOTSA_STATEHASH
+            if (pkLog) {
+                std::fprintf(pkLog, "%d %llu W %d try=%d draw=%d sum=%d\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), pkCall, tr, (int)pickedWeight, (int)weightSum);
+            }
+#endif
             size_t i{};
             // 0x611D65: the exe does not bound this walk (the sum guarantees it ends inside the list)
             while (pickedWeight > Frq(i)) {
@@ -106,11 +141,28 @@ eModelID CLoadedCarGroup::PickRandomCar(bool bNotTooManyInTheWorld, bool bOnlyPi
             && !CStreaming::WeAreTryingToPhaseVehicleOut(pickedModel)
             && (!bNotTooManyInTheWorld || (int16)CModelInfo::GetVehicleModelInfo(pickedModel)->m_nRefCount < 3) // 0x611DD0: signed word compare `< 3`
         ) {
+#ifdef NOTSA_STATEHASH
+            if (pkLog) {
+                std::fprintf(pkLog, "%d %llu R %d chosen=%d try=%d\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), pkCall, (int)pickedModel, tr);
+                std::fflush(pkLog);
+            }
+#endif
             return pickedModel;
         }
+#ifdef NOTSA_STATEHASH
+        if (pkLog) {
+            std::fprintf(pkLog, "%d %llu T %d try=%d model=%d rejected suppressed=%d blocked=%d phasing=%d ref=%d\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), pkCall, tr, (int)pickedModel, (int)CTheScripts::HasCarModelBeenSuppressed(pickedModel), (int)CTheScripts::HasVehicleModelBeenBlockedByScript(pickedModel), (int)CStreaming::WeAreTryingToPhaseVehicleOut(pickedModel), (int)(int16)CModelInfo::GetVehicleModelInfo(pickedModel)->m_nRefCount);
+        }
+#endif
     }
 
     // 10 tries, but no luck
+#ifdef NOTSA_STATEHASH
+    if (pkLog) {
+        std::fprintf(pkLog, "%d %llu R %d notries -> -1\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), pkCall);
+        std::fflush(pkLog);
+    }
+#endif
     return MODEL_INVALID;
 }
 
@@ -118,6 +170,14 @@ eModelID CLoadedCarGroup::PickRandomCar(bool bNotTooManyInTheWorld, bool bOnlyPi
 eModelID CLoadedCarGroup::PickLeastUsedModel(int32 maxTimesUsed) {
     // Exe: the best candidate starts at {ref = 999, used = 999} and is replaced when `ref < bestRef` or (`ref == bestRef` and `used < bestUsed`);
     // `m_nRefCount` is read as a signed word, `m_nTimesUsed` as a signed byte, the final test is a signed `bestUsed <= maxTimesUsed`.
+#ifdef NOTSA_STATEHASH
+    static int s_leastCalls = 0;
+    FILE* const pkLog = notsa::rr::PickCarLog();
+    const int   pkCall = pkLog ? 100000 + s_leastCalls++ : -1;
+    if (pkLog) {
+        std::fprintf(pkLog, "%d %llu K %d PickLeastUsedModel caller=%p group=%p nmodels=%u maxTimesUsed=%d\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), pkCall, _ReturnAddress(), (const void*)this, CountMembers(), (int)maxTimesUsed);
+    }
+#endif
     int32    bestRef  = 999;
     int32    bestUsed = 999;
     eModelID best     = MODEL_INVALID;
@@ -125,12 +185,23 @@ eModelID CLoadedCarGroup::PickLeastUsedModel(int32 maxTimesUsed) {
         const auto mi   = CModelInfo::GetVehicleModelInfo(modelId);
         const auto ref  = (int32)(int16)mi->m_nRefCount;
         const auto used = (int32)(int8)mi->m_nTimesUsed;
+#ifdef NOTSA_STATEHASH
+        if (pkLog) {
+            std::fprintf(pkLog, "%d %llu M %d model=%d frq=%d class=%d ref=%d used=%d\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), pkCall, (int)modelId, (int)(int16)mi->m_nFrq, (int)(int8)mi->m_nVehicleClass, (int)ref, (int)used);
+        }
+#endif
         if (ref < bestRef || (ref == bestRef && used < bestUsed)) {
             best     = (eModelID)(modelId);
             bestRef  = ref;
             bestUsed = used;
         }
     }
+#ifdef NOTSA_STATEHASH
+    if (pkLog) {
+        std::fprintf(pkLog, "%d %llu R %d best=%d bestRef=%d bestUsed=%d -> %d\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), pkCall, (int)best, (int)bestRef, (int)bestUsed, (int)(bestUsed <= maxTimesUsed ? best : MODEL_INVALID));
+        std::fflush(pkLog);
+    }
+#endif
     return bestUsed <= maxTimesUsed
         ? best
         : MODEL_INVALID;

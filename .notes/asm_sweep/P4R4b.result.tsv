@@ -1,0 +1,8 @@
+addr	function	verdict	asm range	note	fix commit
+0x600C60	CPedIntelligence::IsInSeeingRange (89bc567c4 review)	CONFIRMED	0x600C60-0x600CDF	stack walked: (dz2+dy2)+dx2, dot (fz*dz+fy*dy)+fx*dx, strict compares	-
+0x600CF0	CPedIntelligence::FindRespectedFriendInInformRange (36a744502 review)	CONFIRMED	0x600CF0-0x600DAA	stack walked: (dz2+dx2)+dy2, this-other, R2>sum	-
+0x426EF0	CCarCtrl::PickNextNodeToChaseCar	MATCH	0x426EF0-0x427737	full walk: search args, 3x range test, link pick, atan angle wrap, lanes (lower->opposite bits0-2), 256 lane-change test mission list, slow/fast lane	-
+0x427740	CCarCtrl::PickNextNodeToFollowPath	MATCH	0x427740-0x427FD0	full walk: path search args, double RemoveOnePathNode, lanes (lower->same bits3-5), dir*0.01*sign, k1 float/k2 ext, speed scale ftol, parking node	-
+0x42DAB0	CCarCtrl::IsThisAnAppropriateNode	MATCH	0x42DAB0-0x42DE53	jump table decoded (1 roadblock,2 parking,5/10,8/9), all checks	-
+0x41DA30	CCarAI::UpdateCarAI	MATCH(prior)	0x41DA30-0x420678	not re-walked: already fully covered by S42b (968e04e14) + S42c (c08957acf)	-
+0x42FC40	CCarCtrl::ReconsiderRoute	UNSURE	0x42FC40-0x42FF8F	only head compared (timer /2000, mission table, node equality tests); tail not walked	-

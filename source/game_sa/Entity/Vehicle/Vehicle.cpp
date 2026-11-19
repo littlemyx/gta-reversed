@@ -6910,12 +6910,12 @@ void CVehicle::DoVehicleLights(CMatrix& vehicleMatrix, eVehicleLightsFlags flags
         // calculate zr350's pop-up lights rotation
         constexpr auto popUpTarget = 0.69813174f; // aka (2.f / 9.f) * PI rad = 40 deg
         if (vehicleFlags.bLightsOn || forceOn || !CanUpdateHornCounter()) {
-            asAuto->m_fPropRotate = notsa::step_up_to(asAuto->m_fPropRotate, popUpTarget, CTimer::GetTimeStep() * 0.01f);
+            { const float v = asAuto->m_fPropRotate + CTimer::GetTimeStep() * 0.01f; asAuto->m_fPropRotate = popUpTarget < v ? popUpTarget : v; } // exe 0x6E1CA6: fcomp st(1) + test 5 + jp = `K < v ? K : v` (NaN keeps v; std::min would give K)
             if (asAuto->m_fPropRotate < popUpTarget) {
                 return;
             }
         } else if (asAuto->m_fPropRotate > 0.0f) {
-            asAuto->m_fPropRotate = notsa::step_down_to(asAuto->m_fPropRotate, 0.0f, CTimer::GetTimeStep() * 0.01f);
+            { const float v = asAuto->m_fPropRotate - CTimer::GetTimeStep() * 0.01f; asAuto->m_fPropRotate = 0.0f > v ? 0.0f : v; } // exe 0x6E1C7E call 0x420800 max(0, v) (NaN keeps v)
         }
     }
 

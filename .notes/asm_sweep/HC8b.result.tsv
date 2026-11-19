@@ -1,0 +1,28 @@
+function	exe addr	port file:line	exe order	port order	verdict
+CPedIntelligence::ProcessStaticCounter	0x605765	PedIntelligence.cpp:945	zyx	zyx (5c498d09e)	CONFIRMED
+CPhysical::ProcessCollision	0x54E629	Physical.cpp:442,522	xyz	xyz (Magnitude)	MATCH
+CPhysical::ProcessCollisionSectorList	0x54BA60	Physical.cpp:4291-4542	call 0x406DA0 x10 (xyz)	SquaredMagnitude xyz	MATCH (call-count 10 vs 11 not reconciled)
+CAutomobile::ProcessControl	0x6B1C38..0x6B323D	Automobile.cpp:505-1033	xyz (5 inline)	xyz	MATCH
+CAutomobile::ProcessAI	0x6B48B9,0x6B54E5,0x6B552C	Automobile.cpp:1182-1347	xyz	xyz	MATCH
+CObject::SpecialEntityCalcCollisionSteps	0x5A06E1	Object.cpp:469	xyz	xyz	MATCH
+CVehicle::SpecialEntityCalcCollisionSteps	0x6D0EAE	Vehicle.cpp:653	xyz	xyz	MATCH
+CWanted::WorkOutPolicePresence	0x562665,0x56271A	Wanted.cpp:486,504	zyx	xyz	FIXED
+CScriptsForBrains::IsObjectWithinBrainActivationRange	0x46B426	ScriptsForBrains.cpp:239	zyx	xyz	FIXED
+CPickup::Update (revenue)	0x457519	Pickup.cpp:241	zyx	xyz	FIXED
+CPickup::Update (disabled branch)	?	Pickup.cpp:253	no inline fsqrt found	DistanceBetweenPoints	UNSURE
+CStuckCarCheck::Process	0x465712	StuckCarCheck.cpp:128	zyx	x+(y+z) (commutative = zyx)	MATCH
+CVisibilityPlugins::SetupVehicleVariables	0x733190	VisibilityPlugins.cpp:1202	zyx	zyx helper	MATCH (already)
+CPlantLocTri::Add	0x5DC3E2	PlantLocTri.cpp:41	zyx	zyx	MATCH (already)
+CTaskGoToVehicleAndLean::CreateFirstSubTask	0x664DC3	TaskGoToVehicleAndLean.cpp:94	xyz	xyz	MATCH
+CPopulation::AddPed	0x612BE0	Population.cpp	xyz	n/a	MATCH
+CPhysical::ProcessShift	0x54DE15	Physical.cpp	xyz	n/a	NOT_CHECKED_IN_PORT
+CRope::Update	0x55863B,0x558AFB	Rope.cpp:544-549	zyx	not reviewed	TODO
+CCamera::ImproveNearClip	0x516B45	Camera.cpp:3184	zyx	xyz Magnitude	TODO
+CRoadBlocks::GenerateRoadBlocks	0x462E2B	RoadBlocks.cpp:678	zyx	xyz DistanceBetweenPoints	TODO
+CTrain::ProcessControl	0x6F9929	Train.cpp:1878	zyx	xyz SquaredMagnitude	TODO
+CCam::Process_FollowCar_SA	0x524801	Cam.cpp	zyx	not reviewed	TODO
+CPlane::ProcessFlyingCarStuff	0x6CBE7C	Plane.cpp	zyx (compare, no sqrt, `>`)	not located	TODO
+CPedGeometryAnalyser::ComputeClearTarget	0x5F5DFA,0x5F5F0A,0x5F604F	PedGeometryAnalyser.cpp:188,206	zyx (Normalise inline)	CVector::Normalise	TODO
+CCam::Process	0x5273C4	Cam.cpp	zyx	not reviewed	TODO
+CPopulation::FindDistanceToNearestPedOfType	0x614450	Population.cpp:1577	zyx	xyz SquaredMagnitude	TODO
+CTaskComplexFollowPointRoute::CreateFirstSubTask	0x66E55C..	TaskComplexFollowPointRoute.cpp:416,429	mixed/unclear	xyz	TODO

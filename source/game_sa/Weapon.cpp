@@ -599,7 +599,7 @@ void CWeapon::DoBulletImpact(CEntity* firedBy, CEntity* victim, const CVector& s
                         hitCP.m_vecNormal,
                         hitCP.m_nSurfaceTypeB,
                         incrementalHit ? 2 : 8,
-                        hitCP.m_nLightingA.GetCurrentLighting()
+                        hitCP.m_nLightingB.GetCurrentLighting() // exe 0x73BB7B/0x73BF0D/0x73C028 read the B lighting (+0x25), the port read A
                     );
                 }
             };
@@ -686,6 +686,7 @@ void CWeapon::DoBulletImpact(CEntity* firedBy, CEntity* victim, const CVector& s
                             );
                         }
                     }
+                    victimObj->ObjectDamage(50.f, &hitCP.m_vecPoint, &hitCP.m_vecNormal, firedBy, GetType()); // 0x73BD0C: every ColDamageEffect < 200 path ends here (the port skipped it)
                 } else { // 0x73BB94
                     victimObj->ObjectDamage(
                         [&]{
@@ -714,8 +715,8 @@ void CWeapon::DoBulletImpact(CEntity* firedBy, CEntity* victim, const CVector& s
                 || firedByPlayer
             ) {
                 const auto bAddBloodFx = [&]{
-                    if (incrementalHit > 0) { // 0x73B8B8
-                        return false;
+                    if (incrementalHit > 0) { // 0x73B8B8 (the exe's blood flag is preset to 1 here: incremental hits still add blood)
+                        return true;
                     }
                     DoBulletHitFx();
                     return GenerateDamageEvent(
@@ -724,7 +725,7 @@ void CWeapon::DoBulletImpact(CEntity* firedBy, CEntity* victim, const CVector& s
                         GetType(),
                         [&] {
                             if (firedByPlayer
-                                && (victim->GetPosition() - startPoint).SquaredMagnitude() <= 1.f
+                                && (victim->GetPosition() - startPoint).Magnitude() < 1.f // 0x73B9F8: Magnitude() < 1.0, not squared <= 1
                                 && !victimPed->bNoCriticalHits
                                 && !notsa::contains({ WEAPON_SHOTGUN, WEAPON_SPAS12_SHOTGUN }, GetType())
                             ) {
@@ -746,7 +747,7 @@ void CWeapon::DoBulletImpact(CEntity* firedBy, CEntity* victim, const CVector& s
                         hitCP.m_vecPoint,
                         hitCP.m_vecNormal,
                         hitCP.m_nPieceTypeB == ePedPieceTypes::PED_PIECE_HEAD
-                                ? victimPed->m_fHealth <= 0.f ? 32 : 16
+                                ? victimPed->m_fHealth < 0.f ? 32 : 16 // 0x73BABA: 32 only when health < 0
                                 : incrementalHit ? 4 : 8,
                         victimPed->m_fContactSurfaceBrightness
                     );

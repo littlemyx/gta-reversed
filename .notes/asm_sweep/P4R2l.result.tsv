@@ -1,0 +1,40 @@
+addr	function	verdict	asm range	note	fix commit
+0x4D2100	FrameUpdateCallBackNonSkinnedWithVelocityExtraction	MATCH	all	2D vel, no flips, ignore-root + x-flag checks, t=nextT-nextV with NO FramePos, RwMatrixUpdate; port FrameUpdateCallBackT<0,0,1,0>	
+0x4D2450	FrameUpdateCallBackNonSkinnedWith3dVelocityExtraction	MATCH	all	3D, no ignore-root/x-flag checks (BUG kept), adds FramePos after subtraction	
+0x4D27F0	FrameUpdateCallBackWithVelocityExtractionCompressedNonSkinned	MATCH	all	diff vs 0x4D2450 = 3 compressed calls only	
+0x4D2E40	FrameUpdateCallBackCompressedSkinned	MATCH	all	diff vs 0x4D2B90 = compressed Update + dispatch straight to 0x4D1DB0	
+0x4D32D0	FrameUpdateCallBackCompressedNonSkinned	MATCH	all	diff vs 0x4D30A0 = compressed Update + dispatch straight to 0x4D27F0	
+0x4D2E10	FrameUpdateCallBackOffscreen	MATCH	all	HasVelocity && PedPosition -> 0x4D1680 else nothing	
+0x4D2B90/0x4D30A0	FrameUpdateCallBackSkinned/NonSkinned dispatch	MATCH	all	HasZVelocity picks 0x4D1A50/0x4D2450 else 0x4D1680/0x4D2100	
+0x4D6910	RpAnimBlendClumpGetMainAssociation	MATCH	all	main/2nd by blend, strict >, initial 0	
+0x4D69A0	RpAnimBlendClumpGetMainPartialAssociation	MATCH	all		
+0x4D69F0	RpAnimBlendClumpGetMainPartialAssociation_N	MATCH	all	exe selects NON-partial (port comment notes it)	
+0x4D6A30	RpAnimBlendClumpGetMainAssociation_N	MATCH	all	exe selects partial (as port)	
+0x4D6A70	RpAnimBlendClumpGetFirstAssociation(flags)	MATCH	all		
+0x4D6B00	RpAnimBlendClumpPauseAllAnimations	MATCH	all	&= ~1	
+0x4D6B30	RpAnimBlendClumpUnPauseAllAnimations	MATCH	all	|= 1	
+0x4D6B60	RpAnimBlendClumpGetNumAssociations	MATCH	all		
+0x4D6B80	RpAnimBlendClumpGetNumPartialAssociations	MATCH	all		
+0x4D6BB0	RpAnimBlendClumpGetNumNonPartialAssociations	MATCH	all		
+0x4D6760	RpAnimBlendClumpIsInitialized	MATCH	all		
+0x4D6BE0	RpAnimBlendClumpExtractAssociations	INTENTIONAL	all	port adds a null-head guard; exe would write through null	
+0x4D6C00	RpAnimBlendClumpRemoveAllAssociations	MATCH	all	next cached before virtual delete	
+0x4D6C30	RpAnimBlendClumpGiveAssociations	MATCH	all		
+0x4D6820	RpAnimBlendClumpRemoveAssociations	MATCH	all	flags==0 removes all	
+0x4D67E0	RpAnimBlendClumpSetBlendDeltas	MATCH	all		
+0x4D6400	RpAnimBlendClumpFindBone	MATCH	all	last match wins via ForAllFrames	
+0x4D62A0	RpAnimBlendClumpFindFrame	MATCH	all	skinned: bone-name stricmp (0x4D6240); else frame-name stricmp (0x4D6270)	
+0x4D6370	RpAnimBlendClumpFindFrameFromHashKey	MATCH	all	skinned 0x4D6310, else 0x4D6340	
+0x4D64A0	RpAnimBlendClumpFillFrameArray	MATCH	all	skinned i=1..18 via hierarchy index; else frame hierarchy id	
+0x4D5EF0/0x4D5F00	RpAnimBlendFrameGetName/SetName	MATCH	all		
+0x4D5F40/0x4D5F90	ClumpAnimConstruct/ClumpAnimCopy	MATCH	all		
+0x4D5FA0	RtAnimBlendKeyFrameApply	MATCH	all	standalone RtQuatUnitConvertToMatrix mirrors the exe spills, flags=3	
+0x4D60C0	RpAnimBlendKeyFrameInterpolate	MATCH	all	q=(0,0,0,1), t=0	
+0x4CF0E0	CAnimBlendClumpData::Constructor	MATCH	all		
+0x4CF140	CAnimBlendClumpData::SetNumberOfBones	MATCH	all	size rounded up to 64	
+0x4CF190	CAnimBlendClumpData::ForAllFrames	MATCH	all		
+0x4CF1F0/0x4CF220	CAnimBlendSequence::GetUKeyFrame/GetCKeyFrame	MATCH	all	stride 32/16 when has-translation	
+0x4CFC50	CAnimBlendNode::GetCurrentTranslation	UNSURE	0x4CFC50-0x4CFD76	flow/flags/blend-weight checked; x87 spill order of lerp products not re-verified	
+0x4CFD90,0x4CFE60,0x4D0000	CAnimBlendNode::GetEndTranslation/GetCurrentTranslationCompressed/GetEndTranslationCompressed	NOT_REACHED	-	budget	
+0x4D0160,0x4D0570,0x4D08D0,0x4D0D40,0x4CF2F0,0x4D6720	UpdateTime/NextKeyFrameCompressed/UpdateCompressed/Uncompress/CalcTotalTime/ClumpInit	NOT_REACHED	-	budget	
+part 2	ped movement physics list	NOT_REACHED	-	budget; already MATCH/FIXED earlier: CPed::ProcessControl, CPhysical::ProcessControl/ProcessCollision, CPlayerPed::ProcessControl, PlayerOnFoot::ProcessPed/PlayerControlZeldaWeapon, CPed::ProcessBuoyancy; unverdicted: ProcessPlayerMovement, CPedIK, CalculateNewOrientation	

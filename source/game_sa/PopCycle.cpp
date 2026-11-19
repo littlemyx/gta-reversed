@@ -401,7 +401,12 @@ void CPopCycle::Update() {
 
 // 0x610560
 void CPopCycle::UpdateAreaDodgyness() {
-    m_fCurrentZoneDodgyness = std::min((float)m_pCurrZoneInfo->DealerStrength * 0.07f + (float)m_pCurrZoneInfo->GetSumOfGangDensity() * ExeRecip(100.f), 1.0f);
+    // exe 0x610560: the value is stored as a float after EVERY step: dealer * 0.07, then += density[i] * 0.01 for each of the 10 gangs in order (the port summed the densities first)
+    float dodgy = (float)((x87d)m_pCurrZoneInfo->DealerStrength * (x87d)0.07f);
+    for (const auto density : m_pCurrZoneInfo->GangStrength) {
+        dodgy = (float)((x87d)density * (x87d)0.01f + (x87d)dodgy);
+    }
+    m_fCurrentZoneDodgyness = std::min(dodgy, 1.0f);
 }
 
 // 0x6104B0

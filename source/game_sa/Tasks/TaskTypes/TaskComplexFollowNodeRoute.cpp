@@ -422,6 +422,7 @@ CTask* CTaskComplexFollowNodeRoute::CreateNextSubTask(CPed* ped) {
         }
         case TASK_SIMPLE_STAND_STILL: // 0x6719B6
             return CreateSubTask(TASK_FINISHED, ped);
+        case TASK_SIMPLE_GO_TO_POINT_FINE: // exe 0x6719EE: 0x39e (GO_TO_POINT_FINE) jumps to the same block as 0x384 (the port returned nullptr)
         case TASK_SIMPLE_GO_TO_POINT: { // 0x6719FC - Go to next node in the route
             m_CurrPtIdx++;
             if (m_CurrPtIdx < m_NodeRoute->GetSize()) { 
@@ -429,8 +430,7 @@ CTask* CTaskComplexFollowNodeRoute::CreateNextSubTask(CPed* ped) {
             }
             break;
         }
-        case TASK_SIMPLE_GO_TO_POINT_FINE: // 0x671AA7
-        default:
+        default: // 0x671AA7
             return nullptr; // 0x6719C9             
         }
     } else { // 0x671A3A - Proceed to the next point

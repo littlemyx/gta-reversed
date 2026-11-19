@@ -1,0 +1,76 @@
+addr	function	verdict	asm range	note	fix commit
+0x59AD20	CMatrix::UpdateMatrix	MATCH	0x59AD20-0x59AD6B	12 dword copies	
+0x59AF40	CMatrix::SetTranslate	MATCH	0x59AF40-0x59AF76	identity + pos	
+0x59AED0	CMatrix::SetScale-f	MATCH	0x59AED0-0x59AEFD		
+0x59AF00	CMatrix::SetScale-fff	MATCH	0x59AF00-0x59AF31		
+0x59B060	CMatrix::SetRotateX	MATCH	0x59B060-0x59B099	cos/sin order, -sin	
+0x59B0E0	CMatrix::SetRotateZ	MATCH	0x59B0E0-0x59B119		
+0x59B8B0	CMatrix::CopyToRwMatrix	MATCH	0x59B8B0-0x59B916	copy + RwMatrixUpdate	
+0x459350	CMatrix::Scale	MATCH	0x459350-0x45937C	rows right/fwd/up only, not pos	
+0x59BBF0	CMatrix::SetRotate-quat	MATCH	0x59BBF0-0x59BCDF	x87 stack traced line by line	
+0x59ADF0	CMatrix::operator+=	MATCH	0x59ADF0-0x59AE5F		
+0x59BE30	CMatrix::operator*-Mat	NOT_REACHED			
+0x59A840	CMatrix::ConvertToEulerAngles	MATCH	verbatim x87 block in port	not re-compared this pass	
+0x59AA40	CMatrix::ConvertFromEulerAngles	MATCH	verbatim x87 block in port	not re-compared this pass	
+0x59B460	CMatrix::Rotate	MATCH	verbatim x87 block in port	not re-compared this pass	
+0x59B6A0	CMatrix::Reorthogonalise	NOT_REACHED			
+0x59C080	CQuaternion::Get-RwMatrix	MATCH	0x59C080-0x59C160	traced	
+0x59C160	CQuaternion::Get-Euler	NOT_REACHED			
+0x59C230	CQuaternion::Get-AxisAngle	NOT_REACHED			
+0x59C270	CQuaternion::Multiply	NOT_REACHED			
+0x59C300	CQuaternion::Slerp-Core	MATCH	verbatim x87 block in port	not re-compared this pass	
+0x59C3E0	CQuaternion::Set-Matrix	NOT_REACHED			
+0x59C530	CQuaternion::Set-Euler	NOT_REACHED			
+0x59C600	CQuaternion::Set-AxisAngle	NOT_REACHED			
+0x59C630	CQuaternion::Slerp-	NOT_REACHED			
+0x4CF9B0	CQuaternion::Scale	NOT_REACHED			
+0x4CF9E0	CQuaternion::Copy	NOT_REACHED			
+0x4D37D0	CQuaternion::Conjugate	NOT_REACHED			
+0x59C970	CVector::NormaliseAndMag	MATCH	0x59C970-0x59C9D0	sumsq order, <=0 test (0x41/jp), 1/sqrt unrounded	
+0x70F890	CVector::Cross_OG	MATCH	0x70F890-0x70F8D0		
+0x59C730	CVector::CrossProduct-out	MATCH	0x59C730-0x59C78B		
+0x40FDB0	CVector::DotProduct	MATCH	0x40FDB0-0x40FDCF	z,y,x order	
+0x406D50	CVector::Magnitude2D	MATCH	0x406D50-0x406D6F		
+0x40FDD0	CVector::Sum	MATCH	0x40FDD0-0x40FDF5		
+0x40FE00	CVector::Difference	NOT_REACHED			
+0x59C670	CVector::FromMultiply	MATCH	0x59C670-0x59C6D0	same as TransformPoint 0x59C890 order	
+0x59C6D0	CVector::FromMultiply3x3	NOT_REACHED			
+0x420860	CVector2D::Magnitude	MATCH	0x420860-0x42088F		
+0x43E110	CVector2D::operator=	NOT_REACHED			
+0x54E8F0	CMatrixLink::Insert	MATCH	0x54E8F0-0x54E90F		
+0x54E910	CMatrixLink::Remove	MATCH	0x54E910-0x54E92F		
+0x54E9D0	CMatrixLinkList::AddToList1	MATCH	0x54E9D0-0x54EA0F	list offsets 0/0xA8/0x150/0x1A4	
+0x54EA10	CMatrixLinkList::AddToList2	MATCH	0x54EA10-0x54EA5F		
+0x54EA60	CMatrixLinkList::MoveToList1	MATCH	0x54EA60-0x54EA8F		
+0x54EA90	CMatrixLinkList::MoveToList2	MATCH	0x54EA90-0x54EACF		
+0x54EAD0	CMatrixLinkList::MoveToFreeList	MATCH	0x54EAD0-0x54EB0F		
+0x54EB10	CMatrixLinkList::GetNumFree	MATCH	0x54EB10-0x54EB2F		
+0x54EB30	CMatrixLinkList::GetNumUsed1	NOT_REACHED			
+0x54EB50	CMatrixLinkList::GetNumUsed2	NOT_REACHED			
+0x420B80	CPlaceable::SetPosn-xyz	MATCH	0x420B80-0x420BBF		
+0x4241C0	CPlaceable::SetPosn-vector	NOT_REACHED			
+0x54F200	CPlaceable::IsWithinArea-xy	MATCH	0x54F200-0x54F2AF	NaN flag handling matches	
+0x54F2B0	CPlaceable::IsWithinArea-xyz	NOT_REACHED			
+0x54F010	CPlaceable::FreeStaticMatrix	NOT_REACHED			
+0x54F4C0	CPlaceable::AllocateStaticMatrix	NOT_REACHED			
+0x411990	CPlaceable::GetMatrix	NOT_REACHED			
+0x533560	CEntity::TransformFromObjectSpace-ptr	MATCH	0x533560-0x5336FF	59C890 / 54ECE0	
+0x5334F0	CEntity::TransformFromObjectSpace-ref	NOT_REACHED			
+0x534250	CEntity::GetBoundCentre-vec	NOT_REACHED			
+0x534290	CEntity::GetBoundCentre-ref	NOT_REACHED			
+0x53CB00	CGeneral::LimitAngle	MATCH	0x53CB00-0x53CB44	NaN/compare flags	
+0x53CB50	CGeneral::LimitRadianAngle	MATCH	0x53CB50-0x53CBDF		
+0x53CBE0	CGeneral::GetRadianAngleBetweenPoints	MATCH	0x53CBE0-0x53CC6F	y==0 -> 0.0001, quadrant order	
+0x53CC70	CGeneral::GetATanOfXY	MATCH	0x53CC70-0x53CDBF	all 8 branches	
+0x53CDC0	CGeneral::GetNodeHeadingFromVector	MATCH	0x53CDC0-0x53CE2F		
+0x53CE30	CGeneral::SolveQuadratic	MATCH	0x53CE30-0x53CE9F		
+0x53CEA0	CGeneral::GetAngleBetweenPoints	MATCH	0x53CEA0-0x53CEBF		
+0x6C2750	cBuoyancy::CalcBuoyancyForce	MATCH	0x6C2750-0x6C2802		
+0x6C2810	cBuoyancy::FindWaterLevel	MATCH	0x6C2810-0x6C28BF		
+0x6C28C0	cBuoyancy::FindWaterLevelNorm	NOT_REACHED		same shape as FindWaterLevel, not line-read	
+0x6C2970	cBuoyancy::SimpleSumBuoyancyData	NOT_REACHED			
+0x6C2B90	cBuoyancy::PreCalcSetup	NOT_REACHED			
+0x6C3030	cBuoyancy::ProcessBuoyancyBoat	NOT_REACHED			
+0x6C34E0	cBuoyancy::AddSplashParticles	NOT_REACHED			
+0x6C3B00	cBuoyancy::SimpleCalcBuoyancy	NOT_REACHED			
+0x59BFA0	CMatrix::operator+-	NOT_REACHED			

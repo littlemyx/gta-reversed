@@ -29,7 +29,7 @@ void CTaskSimpleCarFallOut::FinishAnimFallOutCB(CAnimBlendAssociation* anim, voi
     self->m_Anim        = nullptr;
 
     if (self->m_Vehicle && self->m_Vehicle->IsAutomobile()) {
-        self->m_Vehicle->AsAutomobile()->GetDamageManager().SetDoorClosed_Component((tComponent)(self->m_Door));
+        self->m_Vehicle->AsAutomobile()->GetDamageManager().SetDoorOpen_Component((tComponent)(self->m_Door)); // exe 0x648EE0-0x648F36: status 0 -> 1, 2 -> 3 (door opens); the port closed it (1 -> 0, 3 -> 2)
     }
 }
 

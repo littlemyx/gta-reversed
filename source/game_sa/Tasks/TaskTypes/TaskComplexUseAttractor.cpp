@@ -46,7 +46,9 @@ CTask* CTaskComplexUseAttractor::CreateNextSubTask(CPed* ped) {
         break;
     }
     case PED_ATTRACTOR_ATM: {
-        ped->m_nMoneyCount += 20 + 20 * CGeneral::GetRandomNumberInRange(0, 50);
+        // exe 0x63276E-0x63279E: r = (int)((rand() & 0xFFFF) * (1/32768) * -50.0) is in (-100, 0]; money += 20 - 20 * r (port: 20 + 20 * [0, 50))
+        const x87d t = static_cast<x87d>(CGeneral::GetRandomNumber() & 0xFFFF) * static_cast<x87d>(1.f / 32768.f) * static_cast<x87d>(-50.f);
+        ped->m_nMoneyCount += static_cast<decltype(ped->m_nMoneyCount)>(20 - 20 * static_cast<int32>(t));
         break;
     }
     }

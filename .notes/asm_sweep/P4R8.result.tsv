@@ -1,0 +1,16 @@
+addr	function	verdict	asm range	note	fix commit
+0x606E70	CDecisionMakerTypes::MakeDecision-ped	MATCH	all	default player/mission/random/indexed DM selection, 0x606060 forwarder, event index and result defaults match	
+0x5B3440	CTimeInfo::SetOtherTimeModel	MATCH	all	single int16 store at +2	
+0x532900	CBaseModelInfo::IncreaseAlpha	MATCH	all	alpha>=239 -> 255 else +16	
+0x5BFB40	FurnitureManager_c::GetGroupId	MATCH	all	group names/ids incl IT_MISC=8 (setne/dec/and 9/dec)	
+0x591220	FurnitureManager_c::GetRandomId	MATCH	all	group -> subgroup list walk -> FurnitureSubGroup_c::GetRandomId	
+0x590FD0	FurnitureSubGroup_c::GetRandomId	MATCH	all	wealth range test, rand*(1/32768)*count, pick loop; float-vs-x87 noise only	
+0x591170	FurnitureGroup_c::GetRandomId	MATCH	all	subgroup lookup, -1 if missing	
+0x5913E0	Interior_c::IsPtInside	MATCH	all	axis order, 0.5*size+bias, reject only on strict less (NaN passes)	
+0x5929F0	Interior_c::IsVisible	MATCH	all	cam pos with bias 5,5,0; door>0 and dist^2<100	
+0x593910	Interior_c::ResetTiles	MATCH	0x593910-0x593A34	door/window marking (first two) match; remainder NOT_REACHED	
+0x410C00	CColStore::RequestCollision	MATCH	all	tolerance -110 inlined as left+110/right-110; flag cleared after test	
+0x4103D0	CColStore::SetIfCollisionIsRequired	MATCH	all	interior skip only when area==0; strict rect test	
+0x410470	CColStore::SetIfCollisionIsRequiredReducedBB	MATCH	all	tolerance -80, (area!=0)==interior	
+0x5DC290	CPlantLocTri::Add	MATCH	0x5DC290-0x5DC4DC	field stores/bit packing, centre sum*1/3, radius (dz2+dy2)+dx2 *1.75, density ftol; tail NOT_REACHED	
+0x411660	CColTrianglePlane::Set	MATCH	0x411660-0x4117F0	quantised normal path, cross product and normalise	

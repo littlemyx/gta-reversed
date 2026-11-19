@@ -189,9 +189,14 @@ void CPedScriptedTaskRecord::Process()
                 }
                 else {
                     CTaskManager& taskManager = taskRecordData.m_ped->GetTaskManager();
+                    // 0x6086AD..0x6086F3: the exe's "is it a primary task" test is not HasTaskPrimary: slots 0..2 are tested as ONE value (the first non-null of
+                    // slots 0, 1, 2, or slot 2 itself when all are null), then slots 3 and 4 separately. So a task in slot 1/2 behind a non-null earlier slot is not PRIMARY.
+                    const auto& prim = taskManager.GetPrimaryTasks();
+                    const CTask* firstOf012 = prim[0] ? prim[0] : prim[1] ? prim[1] : prim[2];
+                    const bool isPrimary = firstOf012 == taskRecordData.m_task || prim[3] == taskRecordData.m_task || prim[4] == taskRecordData.m_task;
                     if (taskManager.GetActiveTask() == taskRecordData.m_task)
                         taskRecordData.m_status = eScriptedTaskStatus::TASK_ASSOCIATED;
-                    else if (taskManager.HasTaskPrimary(taskRecordData.m_task))
+                    else if (isPrimary)
                         taskRecordData.m_status = eScriptedTaskStatus::PRIMARY;
                     else if (taskManager.HasTaskSecondary(taskRecordData.m_task))
                         taskRecordData.m_status = eScriptedTaskStatus::SECONDARY;

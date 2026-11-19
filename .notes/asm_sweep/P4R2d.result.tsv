@@ -1,0 +1,23 @@
+addr	function	verdict	asm range	note	fix commit
+0x4335E0	CCarCtrl::SteerAICarWithPhysicsTryingToBlockTarget	MATCH	0x4335E0-0x4336D0	limit 0.13 dir, x60 target, style 2, <25 => mission 0x13/6; x87 order ok	
+0x42D0E0	CCarCtrl::SlowCarDownForOtherCar	MATCH	0x42D0E0-0x42D4F0	factor stores (>=sf / <=sf quirks) replicated; x87 noise only	
+0x42D4F0	CCarCtrl::SlowCarDownForObjectsSectorList	MATCH	0x42D4F0-0x42D672	scan code, 3 model ids, bounds, |dz|<10, |zErr|<3	
+0x432420	CCarCtrl::SlowCarDownForCarsSectorList	MATCH	0x432420-0x4325BB	self/scan/usesCollision order, bounds, dz, zErr	
+0x632BD0	CTaskComplexSequence::Constructor	MATCH	0x632BD0-0x632BFF	layout	
+0x632C00	CTaskComplexSequence::MakeAbortable	MATCH	0x632C00-0x632C08	forwards to sub task (CTaskComplex base)	
+0x632C10	CTaskComplexSequence::Flush	MATCH	0x632C10-0x632C50		
+0x632C70	CTaskComplexSequence::CreateNextSubTask	MATCH	0x632C70-0x632CE0		
+0x638A60	CTaskComplexSequence::CreateFirstSubTask	MATCH	0x638A60-0x638A76		
+0x66DC40	CTaskComplexGoToPointAndStandStill::CreateFirstSubTask	MATCH	0x66DC40-0x66DC6C	leave car 0x2c0 vs go-to-point 0x384	
+0x66DC90	CTaskComplexGoToPointAndStandStillTimed::CreateFirstSubTask	MATCH	0x66DC90-0x66DCD3		
+0x668640	CTaskComplexGoToPointAndStandStillTimed::MakeAbortable	MATCH	0x668640-0x66869A		
+0x678130	CTaskComplexGetUpAndStandStill::Constructor	MATCH	0x678130-0x678142		
+0x678170	CTaskComplexGetUpAndStandStill::CreateSubTask	MATCH	0x678170-0x67823F		
+0x6782B0	CTaskComplexGetUpAndStandStill::ControlSubTask	MATCH	0x6782B0-0x6782B4		
+0x63AD70	CTaskComplexEnterCarAsDriverTimed::Constructor	MATCH	0x63AD70-0x63AE00		
+0x63AE60	CTaskComplexEnterCarAsDriverTimed::MakeAbortable	MATCH	0x63AE60-0x63AEC0		
+0x63AEE0	CTaskComplexEnterCarAsDriverTimed::ControlSubTask	MATCH	0x63AEE0-0x63AFD3	warp-in task ctor 0x6470E0 + flag	
+0x6405B0	CTaskComplexEnterCarAsDriverTimed::CreateFirstSubTask	MATCH	0x6405B0-0x640633		
+0x63B1A0	CTaskComplexEnterCarAsPassengerTimed::ControlSubTask	MATCH	0x63B1A0-0x63B2C5	seat/passenger-slot logic equal	
+0x640660	CTaskComplexEnterCarAsPassengerTimed::CreateFirstSubTask	MATCH	0x640660-0x6406F5	port also forwards m_MoveState (always RUN = exe default at +0x24)	
+0x63A220	CTaskComplexEnterCar::Constructor	MATCH	0x63A220-0x63A2D2	flag bit order and defaults	

@@ -1,0 +1,14 @@
+addr	function	old commit	verdict	note
+0x6B1880	CAutomobile::ProcessControl	a7a109443	CONFIRMED	hit-wall read 0x6B2131 before CPhysical::ProcessControl 0x6B2178; traction K*mult order 0x6B2803; shake freq/byte 0x6B2E94; limit 0.005; (vehicle zone, not continued)
+0x41DA30	CCarAI::UpdateCarAI	968e04e14,c08957acf	CONFIRMED	sampled: plane dest +10000/mission 0x16 (0x41DAB6), BLOCKPLAYER_FARAWAY case 0x41DF54, slower-than-player + raw fwd dot + strict speed (0x41FEB0); rest not re-read
+0x56F8D0	CPlayerInfo::Process	4a7f863ce	CONFIRMED	NaN-edge only, harmless
+0x60EA90	CPlayerPed::ProcessControl	dd5ecf616,9e0bf9782,c91aa6540	CONFIRMED	early return on bWasPostponed 0x60EB7C; pad only for PLAYER1/2; stand-still uses 2D speed 0x60F4C8
+0x5E4C50	CPed::CalculateNewVelocity	ecef593fc	CONFIRMED	NaN-edge only
+0x544C40	CPhysical::ApplyAirResistance	e84e192c6	CONFIRMED	sub type 0 or 9 at 0x544CE1
+0x5442F0	CPhysical::DettachEntityFromEntity	8494ade2d	CONFIRMED	attached matrix *= offset (0x59BBC0 copy + 0x411A80)
+0x6D14D0	CVehicle::AddPassenger (turn force)	ffcf4160d	CONFIRMED	-0.02f/-0.1f/-0.2f multiplies
+0x6D0E90	CVehicle::SpecialEntityCalcCollisionSteps	f5f5381b8	CONFIRMED	(v2*dt)*dt
+0x4C19A0	CEventHandler::ComputePedThreatResponse	f6ac304b1	CONFIRMED	duck/LEAVE_CAR epilogue paths, FLEE_ENTITY ctor, STAND_STILL case
+0x4B3FC0	CEventDamage::ComputeDamageAnim	e9e0e1220	CONFIRMED	knock-back 2D normalised dir, z=5 (0x4B47B1)
+0x630600	CTaskSimpleDead::ProcessPed	765d7537a	CONFIRMED	0x85B900 = 0x3F400001
+0x662A10	CTaskComplexGangFollower::ControlSubTask	6943b280e	CONFIRMED	NaN-edge only (not asm-checked)

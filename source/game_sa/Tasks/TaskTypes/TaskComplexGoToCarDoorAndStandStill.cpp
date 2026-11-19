@@ -209,9 +209,32 @@ CTask* CTaskComplexGoToCarDoorAndStandStill::ControlSubTask(CPed* ped) {
             return CreateSubTask(TASK_SIMPLE_STAND_STILL, ped); // 0x64AA50 
         }
 
-        if (bool bCanWaitForDoorToBeFree; !CalculateTargetDoor(ped, bCanWaitForDoorToBeFree)) {
-            return CreateSubTask(bCanWaitForDoorToBeFree ? TASK_SIMPLE_GO_TO_POINT_NEAR_CAR_DOOR_UNTIL_DOOR_NOT_IN_USE : TASK_SIMPLE_STAND_STILL, ped);
+        // 0x64AA5C..0x64ABC7: the exe does not use CalculateTargetDoor here. With a seat it only refreshes the point from the CURRENT m_TargetDoor (0x64AB84, m_TargetDoor is not
+        // overwritten with the seat); otherwise the nearest-door query runs on locals (door starts at 0, which GetNearestCarDoor reads) and m_TargetDoor/m_TargetPt are only written afterwards.
+        if (m_TargetSeat != 0) {
+            m_TargetPt = CCarEnterExit::GetPositionToOpenCarDoor(m_Vehicle, m_TargetDoor);
+            static_cast<CTaskSimpleGoToPoint*>(m_pSubTask)->UpdatePoint(m_TargetPt, m_TargetRadius);
+            return m_pSubTask;
         }
+
+        CVector doorPt{};
+        int32   door = 0;
+        if (m_bIsDriver) {
+            if (!CCarEnterExit::GetNearestCarDoor(ped, m_Vehicle, doorPt, door)) { // 0x64AADB
+                m_TargetPt = doorPt;
+                return CreateSubTask(TASK_SIMPLE_STAND_STILL, ped);
+            }
+        } else if (!CCarEnterExit::GetNearestCarPassengerDoor(ped, m_Vehicle, &doorPt, &door, true, true, true)) {
+            const bool canWait = CCarEnterExit::GetNearestCarPassengerDoor(ped, m_Vehicle, &doorPt, &door, true, false, true); // 0x64AB0D
+            m_TargetPt = doorPt;
+            if (!canWait) {
+                return CreateSubTask(TASK_SIMPLE_STAND_STILL, ped);
+            }
+            m_TargetDoor = door;
+            return CreateSubTask(TASK_SIMPLE_GO_TO_POINT_NEAR_CAR_DOOR_UNTIL_DOOR_NOT_IN_USE, ped);
+        }
+        m_TargetPt   = doorPt;
+        m_TargetDoor = door;
         static_cast<CTaskSimpleGoToPoint*>(m_pSubTask)->UpdatePoint(m_TargetPt, m_TargetRadius);
 
         return m_pSubTask;

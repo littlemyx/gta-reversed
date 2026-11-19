@@ -1,0 +1,17 @@
+addr	function	verdict	asm range	note	fix commit
+0x4D0190	CAnimBlendNode::CalcDeltas	MATCH	all	re-disassembled; KFPrev=+0xa/KFCurr=+8, arg order irrelevant (dot symmetric, w,z,y,x in 0x4D00E0)	
+0x4D0350	CAnimBlendNode::CalcDeltasCompressed	MATCH	all	decode, dot order w,z,y,x unrounded, flips CURRENT kf (0x4CFA30 write-back), theta from negated floats	
+0x4D0650	CAnimBlendNode::SetupKeyFrameCompressed	MATCH	all	kf1 delta = int16 * 0x859044 float, single-frame case ok	
+0x4D0240	CAnimBlendNode::FindKeyFrame	MATCH	all	re-disassembled: x87 time, loop/wrap/non-loop exit, remaining time	
+0x4D1680	FrameUpdateCallBackSkinnedWithVelocityExtraction	MATCH	all	partial sum w/ DONT_ADD, ignore-root/x-flag, flip dot, looped end translation, z -0.8/-0.4 adjust	
+0x4D1A50	FrameUpdateCallBackSkinnedWith3dVelocityExtraction	MATCH	all	no flips, no ignore-root/x flags (BUG kept), 3D	
+0x4D1DB0	FrameUpdateCallBackWithVelocityExtractionCompressedSkinned	MATCH	all	diff vs 0x4D1A50 = compressed calls + no DONT_ADD check only	
+0x4D2B90	FrameUpdateCallBackSkinned	MATCH	all	flip dot, blend sum, t*blend + (1-blend)*bone	
+0x4D30A0	FrameUpdateCallBackNonSkinned	MATCH	all	no flips, identity+Get, nextT + (1-blend)*FramePos, RwMatrixUpdate	
+0x4D2100	FrameUpdateCallBackNonSkinnedWithVelocityExtraction	NOT_REACHED	-	budget	
+0x4D2450	FrameUpdateCallBackNonSkinnedWith3dVelocityExtraction	NOT_REACHED	-	budget	
+0x4D27F0	FrameUpdateCallBackWithVelocityExtractionCompressedNonSkinned	NOT_REACHED	-	budget	
+0x4D2E40	FrameUpdateCallBackCompressedSkinned	NOT_REACHED	-	budget (structure = 0x4D2B90 with compressed calls)	
+0x4D32D0	FrameUpdateCallBackCompressedNonSkinned	NOT_REACHED	-	budget	
+0x4D2E10	FrameUpdateCallBackOffscreen	NOT_REACHED	-	budget	
+CAnimBlendClumpData members, RpAnimBlendClumpFindAnimation/GetAssociation, ClumpInit/FillFrameArray, CalcTotalTime, Uncompress, key-frame accessors	NOT_REACHED	-	budget	

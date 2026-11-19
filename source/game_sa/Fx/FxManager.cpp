@@ -9,6 +9,7 @@
 #include "FxManager.h"
 #ifdef NOTSA_PORTABLE
 #include "portable/path_resolve.h"
+#include "portable/sh7log.h"
 #endif
 #include "FxEmitterPrt.h"
 #include "CustomBuildingDNPipeline.h"
@@ -244,6 +245,18 @@ void FxManager_c::CalcFrustumInfo(RwCamera* camera) {
     m_Frustum.m_Planes[1] = camera->frustumPlanes[3].plane;
     m_Frustum.m_Planes[2] = camera->frustumPlanes[4].plane;
     m_Frustum.m_Planes[3] = camera->frustumPlanes[5].plane;
+#ifdef NOTSA_STATEHASH
+    // SH7 NOTSA_SH_FRUSTLOG G row (log only)
+    if (FILE* lf = notsa::rr::FrustLog()) {
+        std::fprintf(lf, "%d %llu G cam=%p view=%.9g,%.9g near=%.9g far=%.9g proj=%d aspect=%.9g sphere=%.9g,%.9g,%.9g,%.9g fr=", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), (void*)camera,
+            (double)viewWindow->x, (double)viewWindow->y, (double)camera->nearPlane, (double)camera->farPlane, (int)camera->projection, (double)CDraw::GetAspectRatio(),
+            (double)m_Frustum.m_Sphere.m_vecCenter.x, (double)m_Frustum.m_Sphere.m_vecCenter.y, (double)m_Frustum.m_Sphere.m_vecCenter.z, (double)m_Frustum.m_Sphere.m_fRadius);
+        for (int i = 0; i < 4; i++) { const auto& p = m_Frustum.m_Planes[i]; std::fprintf(lf, "%s%.9g/%08x,%.9g/%08x,%.9g/%08x,%.9g/%08x", i ? ";" : "", SH7F(p.normal.x), SH7F(p.normal.y), SH7F(p.normal.z), SH7F(p.distance)); }
+        std::fprintf(lf, " cam6=");
+        for (int i = 0; i < 6; i++) { const auto& p = camera->frustumPlanes[i].plane; std::fprintf(lf, "%s%.9g,%.9g,%.9g,%.9g", i ? ";" : "", (double)p.normal.x, (double)p.normal.y, (double)p.normal.z, (double)p.distance); }
+        std::fprintf(lf, "\n"); std::fflush(lf);
+    }
+#endif
 }
 
 // 0x4A9A80

@@ -1,6 +1,7 @@
 #include "StdInc.h"
 
 #include "FxSystem.h"
+#include "portable/sh7log.h"
 #include "FxPrim.h"
 #include "FxEmitter.h"
 #include "FxEmitterBP.h"
@@ -435,9 +436,35 @@ bool FxSystem_c::IsVisible() const {
     FxSphere_c sphere;
     if (GetBoundingSphereWld(&sphere)) {
         FxFrustumInfo_c* info = g_fxMan.GetFrustumInfo();
+#ifdef NOTSA_STATEHASH
+        const bool visLog = info->IsCollision(sphere);
+        if (FILE* lf = notsa::rr::FrustLog()) { // SH7 NOTSA_SH_FRUSTLOG I row (log only)
+            const uint32_t key = m_SystemBP ? m_SystemBP->GetNameKey() : 0u;
+            const auto it = notsa::rr::FxNameMap().find(key);
+            std::fprintf(lf, "%d %llu I %s key=%08x sys=%p sphere=%.9g,%.9g,%.9g,%.9g result=%d ", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), it != notsa::rr::FxNameMap().end() ? it->second.c_str() : "?", key, (const void*)this,
+                (double)sphere.m_vecCenter.x, (double)sphere.m_vecCenter.y, (double)sphere.m_vecCenter.z, (double)sphere.m_fRadius, (int)visLog);
+            const auto& fs = info->m_Sphere;
+            const double dx = (double)sphere.m_vecCenter.x - fs.m_vecCenter.x, dy = (double)sphere.m_vecCenter.y - fs.m_vecCenter.y, dz = (double)sphere.m_vecCenter.z - fs.m_vecCenter.z, rr = (double)fs.m_fRadius + sphere.m_fRadius;
+            double pd[4]; for (int i = 0; i < 4; i++) { const auto& p = info->m_Planes[i]; pd[i] = (double)p.normal.y * sphere.m_vecCenter.y + (double)p.normal.x * sphere.m_vecCenter.x + (double)p.normal.z * sphere.m_vecCenter.z - (double)p.distance; }
+            char why[8] = "N"; if (!(rr * rr > dz * dz + dy * dy + dx * dx)) { std::strcpy(why, "S"); } else if (!visLog) { std::snprintf(why, sizeof(why), "P%d", (int)sphere.m_nNumPlanesPassed); }
+            std::fprintf(lf, "reason=%s frustSphere=%.9g,%.9g,%.9g,%.9g planedist=%.9g,%.9g,%.9g,%.9g planesPassed=%d\n", why, (double)fs.m_vecCenter.x, (double)fs.m_vecCenter.y, (double)fs.m_vecCenter.z, (double)fs.m_fRadius, pd[0], pd[1], pd[2], pd[3], (int)sphere.m_nNumPlanesPassed);
+            std::fflush(lf);
+        }
+        if (!visLog)
+            return false;
+#else
         if (!info->IsCollision(sphere))
             return false;
+#endif
     }
+#ifdef NOTSA_STATEHASH
+    else if (FILE* lf = notsa::rr::FrustLog()) { // SH7: no bounding sphere => always visible
+        const uint32_t key = m_SystemBP ? m_SystemBP->GetNameKey() : 0u;
+        const auto it = notsa::rr::FxNameMap().find(key);
+        std::fprintf(lf, "%d %llu I %s key=%08x sys=%p nosphere result=1 reason=X\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), it != notsa::rr::FxNameMap().end() ? it->second.c_str() : "?", key, (const void*)this);
+        std::fflush(lf);
+    }
+#endif
     return true;
 }
 

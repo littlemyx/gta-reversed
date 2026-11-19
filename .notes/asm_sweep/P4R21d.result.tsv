@@ -1,0 +1,10 @@
+addr	function	verdict	asm range	note	fix commit
+0x6C34E0	cBuoyancy::AddSplashParticles	MATCH	0x6C34E0-0x6C3AF9	whole function re-read vs exe (distance/speed z,y,x sums; clamp x*(1/s)*0.1; vel modifier (sx*0,sy*0,sz*-1)*120 + moveSpeed*0*0 term; loop from+delta*t; dir z=0 + Normalise; rand*(1/32767)*0.5; (dir*speed)*60+mod+zero; ped wake block; ReportWaterSplash). 011c61ecb CONFIRMED	
+0x59A840	CMatrix::ConvertToEulerAngles	MATCH	0x59A840-0x59AA3F	port embeds the exe x87 body; mechanically compared 179 instrs + 8 jump targets vs exe (only +16 table-base spelling / ret 16 differ), tables T866D9C/95/94 byte-equal to exe	
+0x59AA40	CMatrix::ConvertFromEulerAngles	MATCH	0x59AA40-0x59AC1F	same method: 179 instrs, 6 jumps, tables equal	
+0x59B460	CMatrix::Rotate	MATCH	0x59B460-0x59B69F	184 instrs mapped esp->A/L locals, all equal (only [esp] vs [L+0] spelling)	
+0x59C160	CQuaternion::Get-Euler	MATCH	0x59C160-0x59C223	atan2(ry,uy)->z, atan2(-ay,sz*ry+cz*uy)->x, atan2(-(rz*cz-uz*sz),rx*cz-ux*sz)->y; +2pi iff angle<0 (jp logic checked)	
+0x59C530	CQuaternion::Set-Euler	MATCH	0x59C530-0x59C5EF	stack traced: P=ca2*ca1, Q=s2*s1, R=s1*ca2 spilled, S=ca1*s2 on stack; w,x,y,z formulas equal	
+0x59C3E0	CQuaternion::Set-Matrix	MATCH	0x59C3E0-0x59C526	all 4 branches checked (tests: C0 set also for NaN, so tr>=0 skip semantics equal), operand order equal	
+0x59B6A0	CMatrix::Reorthogonalise	MATCH	0x59B6A0-0x59B7CD	third cross product n3 = n2 x n1 and all stores traced; right=n2 forward=n3 up=n1; 2nd recip uses float spill (moot at PC=24)	
+0x54F4C0	CPlaceable::AllocateStaticMatrix	MATCH	0x54F4C0-0x54F55E	null branch: free list empty -> RemoveMatrix(owner of list tail.prev) then AddToList2; else AddToList2 inline; owner+m_matrix set; AddToList2 0x54EA10 equal to inline code	

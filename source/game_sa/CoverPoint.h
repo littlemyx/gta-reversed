@@ -37,6 +37,17 @@ public:
     static void InjectHooks();
 
     CCoverPoint() = default;
+#ifdef NOTSA_PORTABLE
+    // CR1: `CCover::m_Points` is a static array in the portable build, destroyed by exit() AFTER the pools are gone. Since b31214ee7 a point may hold an UNREGISTERED
+    // IPL-0 building pointer (exe 0x6990D6), and the default dtor's `CleanUpOldReference` on that freed CBuilding crashed every run at exit (rc=139).
+    // The exe never destroys the array (plain pointers, 0xC197C8).
+    ~CCoverPoint() {
+        m_CoverEntity.ForgetAtExit();
+        for (auto& p : m_CoveredPeds) {
+            p.ForgetAtExit();
+        }
+    }
+#endif
     CCoverPoint(eType type, eUsage usage, Dir dir, CEntity* coverEntity, const CVector* pos);
      
     bool CanAccommodateAnotherPed() const noexcept;

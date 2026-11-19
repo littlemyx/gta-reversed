@@ -1,0 +1,9 @@
+addr	function	verdict	asm range	note	fix commit
+0x6120F2	CPopulation::ManagePed (removal thresholds)	MATCH	0x6120F2-0x61214F	CONFIRMED e1f3bc48b: (mult*cam)*65 / *54.5 / mult*25 in the fmul order, strict threshold<dist (test ah,5; jnp), NaN -> not removed / within-25 taken (jp); consts 65.0/54.5/25.0 read from exe; dist stored as float [esp+4]; x87d is the repo PC24 model (hardware PC24 on Win32 build, float per op on PORTABLE) so the chain needs no float rewrite	-
+0x425440	CCarCtrl::SlowCarDownForPedsSectorList	MATCH	0x425440-0x425B28 (all)	full re-read: frame offsets, 4 sector compares (strict, NaN skip), z 6.0/3.0 gates, DistAlongLine2D arg order, style gates, 13/4/2.5 thresholds, max(1,scaled) quirk, bike 1.6 persistent, horn 49, concern gate, sign/abs/0.05/0.35 compares, event+anger; consts verified	-
+0x461020	CRoadBlocks::ClearSpaceForRoadBlockObject	MATCH	0x461020-0x4610F5 (all)	count/type/CanBeDeleted/bCreateRoadBlockPeds/OBJECT_GAME logic equal; port NOTSA_UNREACHABLE default is unreachable (query asks veh/ped/obj only)	-
+0x460DF0	CRoadBlocks::RegisterScriptRoadBlock	MATCH	0x460DF0-0x460EBC (all)	first free of 16, fields+flags equal	-
+0x460EC0	CRoadBlocks::ClearScriptRoadBlocks	MATCH	0x460EC0-0x460EDF	prior S74 verdict kept	-
+0x4629E0	CRoadBlocks::GenerateRoadBlocks	MATCH	-	NOT re-read; S74 FIXED (d92336719)	-
+0x4619C0	CRoadBlocks::CreateRoadBlockBetween2Points	MATCH	-	NOT re-read; S74/P4R10b MATCH	-
+0x461170	CRoadBlocks::GenerateRoadBlockPedsForCar	MATCH	-	NOT re-read; S74 FIXED (562bf1e37)	-

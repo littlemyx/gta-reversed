@@ -198,8 +198,14 @@ FxEmitterPrt_c* FxEmitter_c::CreateParticle(const EmissionInfo_t& emissionInfo, 
         return nullptr;
     }
 
+    // exe 0x4A25C7..0x4A2AD0: EVERY random draw of this function is `(rand() % 10000)` (0x821B1E, idiv 10000) times a float constant, never the 1/32767
+    // range helpers: 1e-4f (0x858FC4 = 0x38D1B717) for [0,1) and 2e-4f (0x85A7D0, = 1/5000) for [-1,1). Draw order = the order below.
+    const auto Rnd = [] { return (x87d)(rand() % 10000); };
+    constexpr x87d K1E4 = (x87d)std::bit_cast<float>(0x38D1B717u); // 0x858FC4
+    constexpr x87d K2E4 = (x87d)ExeRecip(5000.0f);                // 0x85A7D0
+
     particle->m_fCurrentLife = 0.0f;
-    particle->m_fTotalLife = (((float)(CGeneral::GetRandomNumber() % 10'000) / 5'000.0f - 1.0f) * emissionInfo.m_fLifeBias + emissionInfo.m_fLife) * fxMults.m_fLife;
+    particle->m_fTotalLife = (float)(((Rnd() * K2E4 - (x87d)1.0) * (x87d)emissionInfo.m_fLifeBias + (x87d)emissionInfo.m_fLife) * (x87d)fxMults.m_fLife); // 0x4A25C7
     particle->m_System = m_System;
 
     particle->m_MultColor = CRGBA{fxMults.m_Color};
@@ -210,40 +216,40 @@ FxEmitterPrt_c* FxEmitter_c::CreateParticle(const EmissionInfo_t& emissionInfo, 
 
     particle->m_bLocalToSystem = createLocal;
 
-    particle->m_RandR = CGeneral::GetRandomNumberInRange(0, 256);
-    particle->m_RandG = CGeneral::GetRandomNumberInRange(0, 256);
-    particle->m_RandB = CGeneral::GetRandomNumberInRange(0, 256);
+    particle->m_RandR = NOTSA_FTOL(uint8, Rnd() * K1E4 * (x87d)255.0f); // 0x4A2675: `fild; fmul 1e-4f; fmul 255.0f (0x859AAC); _ftol2` (low byte)
+    particle->m_RandG = NOTSA_FTOL(uint8, Rnd() * K1E4 * (x87d)255.0f);
+    particle->m_RandB = NOTSA_FTOL(uint8, Rnd() * K1E4 * (x87d)255.0f);
     particle->m_Brightness = (uint8)NOTSA_FTOL(int32, brightness * 100.0f);
 
     particle->m_RotZ = 0xFF;
-    particle->m_CurrentRotation = CGeneral::GetRandomNumberInRange(0.0f, 1.0f) * (emissionInfo.m_fRotationMaxAngle - emissionInfo.m_fRotationMinAngle) + emissionInfo.m_fRotationMinAngle;
+    particle->m_CurrentRotation = (float)(Rnd() * K1E4 * ((x87d)emissionInfo.m_fRotationMaxAngle - (x87d)emissionInfo.m_fRotationMinAngle) + (x87d)emissionInfo.m_fRotationMinAngle); // 0x4A2702
 
     if (createLocal) {
         m_PrimBP->GetRWMatrix(wldMat);
     }
 
     CVector vec;
-    if (approxEqual(emissionInfo.m_fRadius, 0.0f, 0.001f)) {
-        vec = CVector{
-            CGeneral::GetRandomNumberInRange(0.0f, 1.0f) * (emissionInfo.m_SizeMax.x - emissionInfo.m_SizeMin.x) + emissionInfo.m_SizeMin.x,
-            CGeneral::GetRandomNumberInRange(0.0f, 1.0f) * (emissionInfo.m_SizeMax.y - emissionInfo.m_SizeMin.y) + emissionInfo.m_SizeMin.y,
-            CGeneral::GetRandomNumberInRange(0.0f, 1.0f) * (emissionInfo.m_SizeMax.z - emissionInfo.m_SizeMin.z) + emissionInfo.m_SizeMin.z,
-        };
+    // 0x4A2743: `fabs(radius) < (double)0.001f` (0x85A7C8, `test ah, 1; jne`): also true for NaN (unordered sets C0)
+    if (!(std::fabs(emissionInfo.m_fRadius) >= 0.001f)) {
+        // 0x4A283C: x, y, z in draw order, lerp `(max - min) * t + min`
+        vec.x = (float)(Rnd() * K1E4 * ((x87d)emissionInfo.m_SizeMax.x - (x87d)emissionInfo.m_SizeMin.x) + (x87d)emissionInfo.m_SizeMin.x);
+        vec.y = (float)(Rnd() * K1E4 * ((x87d)emissionInfo.m_SizeMax.y - (x87d)emissionInfo.m_SizeMin.y) + (x87d)emissionInfo.m_SizeMin.y);
+        vec.z = (float)(Rnd() * K1E4 * ((x87d)emissionInfo.m_SizeMax.z - (x87d)emissionInfo.m_SizeMin.z) + (x87d)emissionInfo.m_SizeMin.z);
     } else {
-        vec = CVector{
-            CGeneral::GetRandomNumberInRange(0.0f, 2.0f) - 1.0f,
-            CGeneral::GetRandomNumberInRange(0.0f, 2.0f) - 1.0f,
-            CGeneral::GetRandomNumberInRange(0.0f, 2.0f) - 1.0f,
-        };
-
-        float radius;
-        auto invDist = 1.0f / vec.Magnitude();
-        if (emissionInfo.m_fRadius < 0.0f) { // todo: check comp.
-            radius = invDist * emissionInfo.m_fRadius;
-        } else {
-            radius = (invDist * CGeneral::GetRandomNumberInRange(0.0f, 1.0f)) * emissionInfo.m_fRadius;
+        // 0x4A2759: three draws in [-1, 1), spilled to floats; |v|^2 summed z, y, x (fsqrt, 1.0 / len), then (only for radius >= 0 / NaN) a 4th draw
+        const float a = (float)(Rnd() * K2E4 - (x87d)1.0);
+        const float b = (float)(Rnd() * K2E4 - (x87d)1.0);
+        const float c = (float)(Rnd() * K2E4 - (x87d)1.0);
+        const x87d  sum = ((x87d)c * (x87d)c + (x87d)b * (x87d)b) + (x87d)a * (x87d)a;
+        x87d        scale = (x87d)1.0 / std::sqrt(sum); // 0x85A310 = 1.0 (double)
+        if (!(emissionInfo.m_fRadius < 0.0f)) { // 0x4A27FA: `jnp` skips the draw only for radius < 0
+            const float invDist = (float)scale; // fstp dword [esp+4C]
+            scale = Rnd() * K1E4 * (x87d)invDist;
         }
-        vec *= radius;
+        scale = scale * (x87d)emissionInfo.m_fRadius;
+        vec.x = (float)((x87d)a * scale);
+        vec.y = (float)((x87d)b * scale);
+        vec.z = (float)((x87d)c * scale);
     }
     vec += emissionInfo.m_Pos;
 
@@ -267,16 +273,19 @@ FxEmitterPrt_c* FxEmitter_c::CreateParticle(const EmissionInfo_t& emissionInfo, 
 
         CVector vectorsIn;
         CVector vectorsOut;
-        if (emissionInfo.m_Direction.x <= 10.0f) {
+        if (!(emissionInfo.m_Direction.x > 10.0f)) { // 0x4A2A16: `fcomp 10.0f; test ah, 0x41; jne` => x <= 10 or NaN
             vectorsIn = emissionInfo.m_Direction;
-            vectorsIn.Normalise();
+            RwV3dNormalize(&vectorsIn, &vectorsIn); // 0x4A2A59: RW's table-based 0x7ED9B0, not CVector::Normalise
         } else {
             vectorsIn = particle->m_Pos;
         }
         RwV3dTransformVectors(&vectorsOut, &vectorsIn, 1, &wldMat);
         CVector v38;
         RotateVecIntoVec(v38, randomizedAngleVec, vectorsOut);
-        particle->m_Velocity = v38 * ((CGeneral::GetRandomNumberInRange(0.0f, 2.0f) - 1.0f) * emissionInfo.m_fSpeedBias + emissionInfo.m_Speed);
+        const x87d speedMul = (Rnd() * K2E4 - (x87d)1.0) * (x87d)emissionInfo.m_fSpeedBias + (x87d)emissionInfo.m_Speed; // 0x4A2A8C
+        particle->m_Velocity.x = (float)((x87d)v38.x * speedMul);
+        particle->m_Velocity.y = (float)((x87d)v38.y * speedMul);
+        particle->m_Velocity.z = (float)((x87d)v38.z * speedMul);
     }
 
     particle->m_Velocity += m_System->m_VelAdd;

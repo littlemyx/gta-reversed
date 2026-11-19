@@ -1231,6 +1231,9 @@ void CWeapon::Update(CPed* owner) {
                     &,
                     shootDelta = m_TimeForNextShotMs - wi->GetWeaponReloadTime()
                 ](uint32 rload, eAudioEvents ae) {
+                    if (!rload) { // 0x73DE2C / 0x73DE6F: `test ax, ax / jbe skip` (the animation path 0x73DD0F has no such check)
+                        return false;
+                    }
                     const auto audioTimeMs = rload + shootDelta;
                     return CTimer::GetPreviousTimeInMS() < audioTimeMs && CTimer::GetTimeInMS() >= audioTimeMs;
                 });

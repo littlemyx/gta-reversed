@@ -95,8 +95,8 @@ public:
     uint32   LastTimeTouched;
     int32    AverageWeapon;
     int32    AverageEntries;
-    float    NoShakeBeforeThis;
-    char     NoShakeFreq;
+    uint32   NoShakeBeforeThis; // 0x53F920: the exe stores/compares an integer ms stamp (was float)
+    uint8    NoShakeFreq;       // 0x53F95A: unsigned byte compare (jbe)
     char    _pad131[3];
 
 public:

@@ -544,11 +544,11 @@ void CPad::StartShake(int16 time, uint8 freq, uint32 shakeDelayMs) {
 
     if (freq) {
         if (CTimer::GetTimeInMS() >= NoShakeBeforeThis || freq > NoShakeFreq) {
-            if (ShakeDur) {
+            if (time > ShakeDur) { // 0x53F962-0x53F977: signed `time > ShakeDur` (the port tested `ShakeDur != 0`)
                 ShakeDur = time;
                 ShakeFreq = freq;
             }
-            NoShakeBeforeThis = (float)(shakeDelayMs + CTimer::GetTimeInMS());
+            NoShakeBeforeThis = shakeDelayMs + CTimer::GetTimeInMS(); // 0x53F97D-0x53F989: integer stamp
             NoShakeFreq = freq;
         }
     } else {

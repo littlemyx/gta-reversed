@@ -59,7 +59,8 @@ void PointCameraAtChar(CPed* ped, eCamMode mode, eSwitchType switchType) {
     if (!ped) {
         return;
     }
-    TheCamera.TakeControl(ped->IsPlayer() ? ped : nullptr, mode, switchType, 1);
+    // exe 0x47C46C-0x47C4A1: a player ped is passed as a null target, any other ped as the target (the port had it inverted)
+    TheCamera.TakeControl(ped->IsPlayer() ? nullptr : ped, mode, switchType, 1);
 }
 
 // RESTORE_CAMERA (346) - 0x47C4CC

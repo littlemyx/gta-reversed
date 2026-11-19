@@ -1,0 +1,6 @@
+addr	function	verdict	asm range	note	fix commit
+0x6311E0	CTaskSimpleSitIdle::MakeAbortable (review of 88928fe20)	CONFIRMED	0x6311E0-0x631250	IMMEDIATE: SetFinishCallback then [esi+0x10]=0 at 0x631207; IsLooking-guarded AbortLookAt; non-immediate path matches	88928fe20
+0x68E950	CTaskComplexKillCriminal::ControlSubTask	MATCH	0x68E950-0x68F9C9	full structural+instruction pass (branches, thresholds, vector subtraction order, x87 compare directions, bike driveby setup, passenger driveby loop, task dispatch); no difference	
+0x68E4F0	CTaskComplexKillCriminal::CreateNextSubTask	MATCH	0x68E4F0-0x68E93C	all 6 cases (ENTER_DRIVER/PASSENGER/LEAVE_CAR/KILL_ON_FOOT/GANG_DRIVEBY/default) match; m_HasFinished store order after CreateSubTask is unobservable	
+0x68BDC0	CTaskComplexPolicePursuit::PersistPursuit	MATCH	0x68BDC0-0x68BE70	flag logic and Clear/RemovePursuitCop inlining match	
+0x669420	CTaskComplexFollowPointRoute::GetNextWaypoint	MATCH	0x669420-0x6694B0	entry stride/wrap per mode match	

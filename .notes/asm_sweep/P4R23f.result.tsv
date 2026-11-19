@@ -1,0 +1,18 @@
+addr	function	verdict	asm range	note	fix commit
+0x6143E0	CPopulation::FindDistanceToNearestPedOfType	MATCH	0x6143E0-0x614484	review of P4R23e fix: fst float best, fcomp/ah&5 = strict <, start 1e7 float, reload float on update; fix is correct	
+0x44A660	CGarage::SlideDoorOpen	MATCH	0x44A660-0x44A741	hangar types 0x2C/0x2D use 0.0011 else 0.011, >=1 clamp, audio 0xA0/0x9F	
+0x44A750	CGarage::SlideDoorClosed	MATCH	0x44A750-0x44A7E4+	0.0013/0.013, <=0 clamp, audio 0xA2/0xA1	
+0x4495F0	CGarage::CountCarsWithCenterPointWithinGarage	MATCH	0x4495F0-0x449674	reverse pool walk, ignored vehicle, IsPointInsideGarage	
+0x447D80	CGarage::CalcDistToGarageRectangleSquared	MATCH	0x447D80-0x447E0C	dy^2+dx^2 extended; returns float (exe st0 unrounded: callers compare, last-bit only)	
+0x44EFC0	CPathFind::CalcRoadDensity	MATCH	0x44EFC0-0x44F186	0.125 scale, 80 strict, opposite then same lanes * len, *0.0004	
+0x451300	CPathFind::ReturnInteriorNodeIndex	FIXED	0x451300-0x45134D	exe has 2 args after hidden retptr (ret 0xC); port had leading unused arg	38152c0bf
+0x541C40	CPad::Update	MATCH	0x541C40-0x541D5B	reconcile order, horn history, steering buffer shift 9, JustOutOfFrontEnd	
+0x42D680	CCarCtrl::WeaveThroughCarsSectorList	MATCH	0x42D680-0x42D7D4	scan code, bound centre strict, |dz|<8, convoy flag	
+0x53FE10	CPad::GetLookRight	MATCH	0x53FE10-0x53FE4E	pressed/justup logic	
+0x53FF90	CPad::GetCarGunFired	MATCH	0x53FF90-0x53FFDB		
+0x540340	CPad::GetMeleeAttack	MATCH	0x540340-0x540384		
+0x460730	CRestart::AddHospitalRestartPoint	MATCH	0x460730-0x46077B	port adds a NOTSA bound check	
+0x55D090	CStats::ModifyStat	MATCH	0x55D090-0x55D0BD		
+0x4551C0	CPickups::FindPickUpForThisObject	MATCH	0x4551C0-0x4551F6		
+0x44A210	CGarages::CountCarsInHideoutGarage	MATCH	0x44A210-0x44A23E		
+0x43EF90	CEntryExitManager::SetEntryExitFlagWithIndex	MATCH	0x43EF90-0x43EFCA	word flag; null deref guarded only under FIX_BUGS	

@@ -65,7 +65,8 @@ void CModelInfo::ReInit2dEffects()
 {
     ms_2dFXInfoStore.m_nCount = 0;
     for (int32 i = 0; i < NUM_MODEL_INFOS; ++i)
-        GetModelInfo(i)->Init2dEffects();
+        if (auto* mi = GetModelInfo(i)) // exe 0x4C63C2: null model slots are skipped
+            mi->Init2dEffects();
 }
 
 // 0x4C63E0

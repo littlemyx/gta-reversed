@@ -1,0 +1,16 @@
+function	exe addr	verdict	note	commit
+CWanted::WorkOutPolicePresence	0x562665,0x56271A	CONFIRMED	zyx, strict <	a5654ced6
+CScriptsForBrains::IsObjectWithinBrainActivationRange	0x46B426	CONFIRMED	point-pos zyx, strict <	bef64598d
+CPickup::Update (revenue)	0x457519	CONFIRMED	player-pickup zyx, > (NaN skips)	56ee1ffcf
+CPickup::Update (disabled)	0x4587AA	FIXED	exe is 2D squared (dy_f*dy+dx*dx) > 100 or shop > 2.4 (raw); port was 3D dist > 10 / 2.4	see git log
+CRope::Update	0x55863B,0x558AFB	MATCH	already zyx in port (ped/object sites)	-
+CCamera::ImproveNearClip	0x516B45,0x516C34	MATCH	already zyx; jetpack site is out-of-line Magnitude (0x4082C0)	-
+CRoadBlocks::GenerateRoadBlocks	0x462E2B	FIXED	exe order is xyz (HC8b said zyx), port xyz already; now unrounded x87	see git log
+CTrain::ProcessControl	0x6F9929	MATCH	already zyx unrounded (Train.cpp:1839)	-
+CCam::Process_FollowCar_SA	0x524801	MATCH	already zyx (trailer bbox)	-
+CPlane::ProcessFlyingCarStuff	0x6CBE7C	FIXED	zyx already, now unrounded x87 and 6400.0	see git log
+CPedGeometryAnalyser::ComputeClearTarget	0x5F5DFA,0x5F5F0A,0x5F604F	MATCH	sites already zyx; Normalise is out-of-line 0x59C910	-
+CCam::Process	0x5273C4	FIXED	zyx, now unrounded x87	see git log
+CPopulation::FindDistanceToNearestPedOfType	0x614450	MATCH	already per-ped sqrt zyx unrounded	-
+CTaskComplexFollowPointRoute::CreateFirstSubTask	0x66E54C	FIXED	fallback loop zyx unrounded; main loop (0x66E4xx) not re-read	see git log
+CPhysical::ProcessCollisionSectorList	0x54BA60	MATCH	port 11 vs exe 10: extra is the dead fThisMoveSpeedDot at Physical.cpp:4536 (pure, unused)	-

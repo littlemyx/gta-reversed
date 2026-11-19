@@ -20,6 +20,8 @@ ap.add_argument('--src', default='source/game_sa')
 ap.add_argument('--ulp', type=int, default=8)
 ap.add_argument('--drel', type=float, default=1e-6)
 ap.add_argument('--missing', default='')
+ap.add_argument('--follow', type=int, default=2, help='follow calls in the port body into the callees port bodies (levels; split helpers)')
+ap.add_argument('--detail', default='', help='write per-constant missing list: addr func kind constaddr value')
 ap.add_argument('--skip', default=r'Render|HUD|Font|Sprite|Audio|AE|Draw|Shadow|Coronas|Fx|Particle')
 a = ap.parse_args()
 d = open(a.exe, 'rb').read()
@@ -108,25 +110,13 @@ def named_for(path):
         file_named[path] = m
     return file_named[path]
 
-src = {}
-for p in glob.glob(a.src + '/**/*.cpp', recursive=True):
-    src.setdefault(os.path.basename(p) + '.obj', []).append(p)
-fbits = lambda x: struct.unpack('<I', struct.pack('<f', x))[0]
-rows = []
-for l in open(a.tsv, encoding='utf8').read().splitlines()[1:]:
-    c = l.split('\t')
-    if len(c) >= 5 and c[0] != '-' and not re.search(a.skip, c[1] + c[3]): rows.append((int(c[2]), c[0], c[1], c[3], c[4]))
-rows.sort(reverse=True)
-nos = 0; scr = 0; miss = []
-for cnt, addr, fn, obj, verdict in rows:
-    body = None; bpath = None
-    for p in src.get(obj, []):
-        t = open(p, encoding='utf8', errors='ignore').read()
-        m = re.search(r'\n[^\n;{}]*\b' + re.escape(fn) + r'\s*\([^;{]*\)[^;{]*\{.*?\n\}', t, re.S)
-        if m: body = m.group(0); bpath = p; break
-    if not body: nos += 1; continue
-    body = re.sub(r'//[^\n]*|/\*.*?\*/', '', body, flags=re.S)   # literals quoted in comments are not code
-    flits = set(); dlits = set()    # float bit patterns; double values
+_CC = {}
+def collect(body, bpath):
+    k = (hash(body), bpath)
+    if k not in _CC: _CC[k] = _collect(body, bpath)
+    return _CC[k]
+def _collect(body, bpath):
+    flits = set(); dlits = set()
     for m in re.finditer(r'(?<![\w.])(\d+\.\d*|\.\d+|\d+)(?:[eE][-+]?\d+)?f\b', body):
         try: v = float(m.group(0)[:-1]); flits.add(fbits(v)); dlits.add(f32(v))
         except Exception: pass
@@ -143,6 +133,51 @@ for cnt, addr, fn, obj, verdict in rows:
             for v in vals:
                 try: flits.add(fbits(v)); dlits.add(v); dlits.add(f32(v))
                 except Exception: pass
+    return flits, dlits
+
+src = {}
+for p in glob.glob(a.src + '/**/*.cpp', recursive=True):
+    src.setdefault(os.path.basename(p) + '.obj', []).append(p)
+FUNCS = {}
+if a.follow:
+    HEAD = re.compile(r'^[A-Za-z_][^;{}#=\n]*?\b(\w+)\s*\(')
+    for ps in src.values():
+        for pth in ps:
+            t = open(pth, encoding='utf8', errors='ignore').read()
+            for m in re.finditer(r'^[A-Za-z_][^\n;{}#=]*?\b(\w+)\s*\([^\n;{}]*(?:\n[^\n;{}]*)?\)[^\n;{}]*\n?\{', t, re.M):
+                if m.group(1) in ('if', 'for', 'while', 'switch', 'return'): continue
+                e = t.find('\n}', m.end())
+                if e < 0: continue
+                FUNCS.setdefault(m.group(1), []).append((re.sub(r'//[^\n]*|/\*.*?\*/', '', t[m.start():e + 2], flags=re.S), pth))
+    print('indexed callee names:', len(FUNCS), file=sys.stderr)
+fbits = lambda x: struct.unpack('<I', struct.pack('<f', x))[0]
+rows = []
+for l in open(a.tsv, encoding='utf8').read().splitlines()[1:]:
+    c = l.split('\t')
+    if len(c) >= 5 and c[0] != '-' and not re.search(a.skip, c[1] + c[3]): rows.append((int(c[2]), c[0], c[1], c[3], c[4]))
+rows.sort(reverse=True)
+nos = 0; scr = 0; miss = []; det = []
+for cnt, addr, fn, obj, verdict in rows:
+    body = None; bpath = None
+    for p in src.get(obj, []):
+        t = open(p, encoding='utf8', errors='ignore').read()
+        m = re.search(r'\n[^\n;{}]*\b' + re.escape(fn) + r'\s*\([^;{]*\)[^;{]*\{.*?\n\}', t, re.S)
+        if m: body = m.group(0); bpath = p; break
+    if not body: nos += 1; continue
+    body = re.sub(r'//[^\n]*|/\*.*?\*/', '', body, flags=re.S)   # literals quoted in comments are not code
+    flits, dlits = collect(body, bpath)
+    if a.follow:
+        seen = {fn.split('::')[-1]}; frontier = [body]
+        for _lvl in range(a.follow):
+            nxt = []
+            for b in frontier:
+                for cm in re.finditer(r'(?<![\w])(\w+)\s*\(', b):
+                    nm = cm.group(1)
+                    if nm in seen or nm not in FUNCS or len(FUNCS[nm]) > 6: continue
+                    seen.add(nm)
+                    for cb, cp in FUNCS[nm]:
+                        f2, d2 = collect(cb, cp); flits |= f2; dlits |= d2; nxt.append(cb)
+            frontier = nxt
     flits |= {x ^ 0x80000000 for x in flits}; dlits |= {-x for x in dlits}   # a negative exe constant matches the port's `-lit`
     try: cf, cd = exe_consts(int(addr, 16))
     except Exception: continue
@@ -155,7 +190,7 @@ for cnt, addr, fn, obj, verdict in rows:
         if v in flits or v == 0: continue
         near = [x for x in flits if x != v and abs(x - v) <= a.ulp]
         if near: fl.append('F %#x exe=%#x port~%s' % (ca, v, [hex(x) for x in near]))
-        else: nmf += 1
+        else: nmf += 1; det.append((addr, fn, 'F', ca, struct.unpack('<f', b)[0]))
     for ca in sorted(cd):
         b = rd(ca, 8)
         if len(b) < 8: continue
@@ -163,10 +198,13 @@ for cnt, addr, fn, obj, verdict in rows:
         if v == 0 or not math.isfinite(v) or v in dlits: continue
         near = [x for x in dlits if x != 0 and x != v and abs(x - v) <= a.drel * abs(v)]
         if near: fl.append('D %#x exe=%r port~%s' % (ca, v, near))
-        else: nmd += 1
+        else: nmd += 1; det.append((addr, fn, 'D', ca, v))
     if fl: print(cnt, addr, fn, verdict, fl)
     if nmf or nmd: miss.append((addr, fn, nmf, nmd))
 if a.missing:
     with open(a.missing, 'w', encoding='utf8') as o:
         for r in miss: o.write('%s\t%s\t%d\t%d\n' % r)
+if a.detail:
+    with open(a.detail, 'w', encoding='utf8') as o:
+        for r in det: o.write('%s\t%s\t%s\t%#x\t%r\n' % r)
 print('screened', scr, 'nosrc', nos, 'functions with exe consts lacking a port counterpart:', len(miss), file=sys.stderr)

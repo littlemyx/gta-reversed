@@ -1,0 +1,10 @@
+addr	function	verdict	asm range	note	fix commit
+0x412C70	CCollision::TestLineBox_DW	MATCH	0x412C70-0x413064 (all)	sign-bit outcode gather (bit0 x-min..bit5 maxz-z), imul==0 test, plane order x/y/z min then max, t=[diff]*1/d (chs for min), strict > min / < max with NaN fail	
+0x412700	CCollision::PointInTriangle	MATCH	0x412700-0x412843 (tail 0x4127F8 read)	a spilled + b unrounded, NaN passes a<0 / b<0, return !(c < a+b)	
+0x413100	CCollision::ProcessLineBox	MATCH	0x413100-0x4138C0 (tail)	start-inside + crossing counts (+1/+2), mint<maxTouch gate, point/normal/surface stores, end-inside count	
+0x419F00	CCollision::SphereCastVsEntity	MATCH	0x419F00-0x41A595 (all)	spAws radius for both spheres (BUG kept), cache cap 99 returns true, types tri1/sph2/box3, idx offsets 8/0xa/0xc, 0xFFFF-idx backside, face group walk, double-sided test read once	
+0x4185C0	CCollision::ProcessColModels (line block 0x4196B9-0x419968)	MATCH	0x4196B9-0x419968	A lines to B space, sphere/box/triangle order, collPoly null, per-line flag, point+normal to world (port moved the sphere-CP world transform into the disk/line branches: equivalent)	
+0x4185C0	CCollision::ProcessColModels (disk block, A-tri/box vs B-sphere tail 0x419A5E+)	NOT_REACHED		budget	
+0x4165B0	CCollision::TestSphereTriangle	MATCH (oracle-validated, not re-read)		stream F: float fast path + RangeGuard, F24 (PC24-exact) fallback when any value leaves the safe range; F1 report: 1M-case rows vs the exe x87 code, 0 hard mismatches incl. NaN/inf/denormal; hit flip at the edge is covered by the PC24 emulation	
+0x416BA0	CCollision::ProcessSphereTriangle	MATCH (oracle-validated, not re-read)		same design as TestSphereTriangle	
+0x4140F0	CCollision::ProcessLineTriangle	MATCH (oracle-validated, not re-read)		same design	

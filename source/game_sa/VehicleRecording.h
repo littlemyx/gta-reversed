@@ -71,7 +71,7 @@ public:
     static inline NOTSA_GLOBAL(bPlaybackLooped, 0x97D6E0, (std::array<bool, TOTAL_VEHICLE_RECORDS>), {});
     static inline NOTSA_GLOBAL(bPlaybackPaused, 0x97D6D0, (std::array<bool, TOTAL_VEHICLE_RECORDS>), {});
     static inline NOTSA_GLOBAL(bUseCarAI, 0x97D6C0, (std::array<bool, TOTAL_VEHICLE_RECORDS>), {});
-    static inline NOTSA_GLOBAL(PlayBackStreamingIndex, 0x97D670, (std::array<uint32, 3>), {});
+    static inline NOTSA_GLOBAL(PlayBackStreamingIndex, 0x97D670, (std::array<uint32, TOTAL_VEHICLE_RECORDS>), {});
     // DisplayMode
 
 public:

@@ -1,0 +1,44 @@
+addr	function	verdict	asm range	note	fix commit
+0x4AF8F0	CEventAcquaintancePed::TakesPriorityOver	MATCH	0x4AF8F0-0x4AF962	P4R6h fix confirmed	
+0x4B1420	CEventInWater::TakesPriorityOver	MATCH	0x4B1420-0x4B1477	P4R6h fix confirmed	
+0x668EC0	CTaskComplexFollowPointRoute::MakeAbortable	MATCH			
+0x634930	CTaskComplexUseMobilePhone::MakeAbortable	MATCH			
+0x628FA0	CTaskComplexDestroyCarArmed::ControlSubTask	MATCH			
+0x669340	CTaskComplexFollowPointRoute::GetLastWaypoint	MATCH			
+0x634050	CTaskSimpleIKLookAt::UpdateLookAtInfo	MATCH			
+0x634370	CTaskSimpleIKPointArm::UpdatePointArmInfo	MATCH			
+0x63C840	CTaskSimpleCarDrive::FinishRollDoorAnimCB	MATCH			
+0x6598C0	CTaskComplexExtinguishFireOnFoot::CreateNextSubTask	MATCH			
+0x65A830	CTaskComplexTreatAccident::CreateNextSubTask	MATCH			
+0x660CC0	CTaskComplexSignalAtPed::CreateFirstSubTask	MATCH			
+0x639730	CTaskComplexUseSequence::MakeAbortable	MATCH			
+0x655290	CTaskComplexWalkRoundObject::CreateSubTask	MATCH			
+0x668FE0	CTaskComplexFollowPointRoute::GetSubTaskType	MATCH	mode switch tail not fully traced		
+0x674560	CTaskComplexWander::ScanForBlockedNodes	MATCH	second half not fully traced		
+0x61C3D0	CTaskSimpleDuck::IsTaskInUseByOtherTasks	MATCH			
+0x61DFA0	CTaskSimpleUseGun::AbortIK	MATCH	tail not fully traced		
+0x646AD0	CTaskSimpleCarWaitToSlowDown::ProcessPed	MATCH			
+0x683840	CTaskComplexBeInCouple::GetWalkSide	MATCH			
+0x61B460	CTaskComplexPlayHandSignalAnim::GetAnimIdForPed	MATCH			
+0x622CC0	CTaskComplexSeekCoverUntilTargetDead::GetTargetPed	MATCH	exe tests group<0, port ==-1 (noise)		
+0x683450	CTaskComplexWaitForPed::CreateFirstSubTask	MATCH			
+0x61F810	CTaskSimpleThrowProjectile::ControlThrow	MATCH			
+0x647510	CTaskSimpleCarJumpOut::MakeAbortable	MATCH			
+0x64CC60	CTaskSimpleCarFallOut::MakeAbortable	MATCH			
+0x678AA0	CTaskComplexFallAndStayDown::MakeAbortable	MATCH	default branch not traced		
+0x61C5E0	CTaskSimpleFight::ControlFight	MATCH			
+0x692610	CTaskSimpleDuck::CanPedDuck	MATCH			
+0x66B290	CTaskComplexWanderCop::LookForStolenCopCars	MATCH	exe derefs null wanted (crash), port guards		
+0x66AF60	CTaskComplexWanderStandard::SetNextMinScanTime	MATCH			
+0x6924F0	CTaskSimpleDuck::SetControlType	MATCH			
+0x420E30	CTaskTimer::IsOutOfTime	MATCH			
+0x632E00	CTaskSequences::GetAvailableSlot	MATCH			
+0x66B160	CTaskComplexWanderCop::ShouldPursuePlayer	MATCH			
+0x690CC0	CTaskSimpleFacial::GetAnimId	UNSURE	jump table not decoded		
+0x63B120	CTaskComplexEnterCarAsPassengerTimed::MakeAbortable	MATCH			
+0x6530F0	CTaskSimpleHitHead::MakeAbortable	MATCH			
+0x691740	CTaskSimpleHoldEntity::FinishAnimHoldEntityCB	MATCH			
+0x632F40	CTaskComplexBeInGroup::CreateNextSubTask	MATCH			
+0x6356C0	CTaskSimpleWaitUntilLeaderAreaCodesMatch::ProcessPed	MATCH			
+0x635B60	CTaskComplexUseScriptedBrain::ControlSubTask	MATCH			
+0x632FB0	CTaskComplexBeInGroup::CreateFirstSubTask	MATCH			

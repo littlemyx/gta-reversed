@@ -613,7 +613,8 @@ bool CGangWars::GangWarFightingGoingOn() {
 
 // 0x443AA0
 bool CGangWars::GangWarGoingOn() {
-    return State != NOT_IN_WAR || State2 == WAR_NOTIFIED;
+    // exe 0x443AA0: true for any non-zero State or State2 (port: State2 == WAR_NOTIFIED only)
+    return State != NOT_IN_WAR || State2 != NO_ATTACK;
 }
 
 // 0x445FD0

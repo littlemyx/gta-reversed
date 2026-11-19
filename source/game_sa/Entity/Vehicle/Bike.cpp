@@ -399,7 +399,8 @@ void CBike::ProcessBuoyancy() {
     ApplyMoveForce(vecBuoyancyForce);
     ApplyTurnForce(vecBuoyancyForce, vecBuoyancyTurnPoint);
 
-    auto fTimeStep = std::max(0.01F, CTimer::GetTimeStep());
+    // 0x6B6061: fcomp + test ah,0x41 + jne: `0.01 > ts ? 0.01 : ts` (NaN keeps ts; std::max(0.01, ts) gave 0.01)
+    auto fTimeStep = 0.01F > CTimer::GetTimeStep() ? 0.01F : CTimer::GetTimeStep();
     // 0x6B6076..0x6B60B9: the exe multiplies by the constant 0.008f (0x863984), in this order: (ts * mass) * 0.008f, then force.z / that
     constexpr auto BUOY_MASS_K = std::bit_cast<float>(0x3C03126Fu);
     auto fUsedMass = m_fMass * BUOY_MASS_K;
@@ -411,7 +412,9 @@ void CBike::ProcessBuoyancy() {
     if (physicalFlags.bMakeMassTwiceAsBig)
         fBuoyancyForceZ *= 1.5F;
 
-    auto fBuoyancyForceMult = std::max(0.5F, 1.0F - fBuoyancyForceZ * 0.05F); // 0x6B60D9: multiply by 0.05f, not divide by 20
+    // 0x6B60D9: multiply by 0.05f, not divide by 20; 0x6B60EB: fcomp st(1) + test ah,0x41 + jne: `0.5 > v ? 0.5 : v` (NaN keeps v)
+    const float buoyancyMultRaw    = 1.0F - fBuoyancyForceZ * 0.05F;
+    auto        fBuoyancyForceMult = 0.5F > buoyancyMultRaw ? 0.5F : buoyancyMultRaw;
     const auto fSpeedMult = x87::pow(X87W((x87d)fBuoyancyForceMult), X87W((x87d)CTimer::GetTimeStep())); // exe 0x6B610E: kept unrounded, each multiply rounds
     m_vecMoveSpeed.x = (float)(X87R(fSpeedMult * (x87d)m_vecMoveSpeed.x));
     m_vecMoveSpeed.y = (float)(X87R(fSpeedMult * (x87d)m_vecMoveSpeed.y));
@@ -425,7 +428,9 @@ void CBike::ProcessBuoyancy() {
         vehicleFlags.bIsDrowning = true;
         physicalFlags.bSubmergedInWater = true;
 
-        m_vecMoveSpeed.z = std::max(-0.1F, m_vecMoveSpeed.z);
+        if (m_vecMoveSpeed.z < -0.1F) { // 0x6B61D9: fcomp + test ah,5 + jp: stores -0.1 only when z < -0.1 (NaN keeps z)
+            m_vecMoveSpeed.z = -0.1F;
+        }
 
         if (m_pDriver) {
             ProcessPedInVehicleBuoyancy(m_pDriver->AsPed(), true);

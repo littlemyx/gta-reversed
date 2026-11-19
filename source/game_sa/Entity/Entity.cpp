@@ -1316,7 +1316,9 @@ bool CEntity::GetIsTouching(CEntity* entity) const {
 
     const auto radius = GetBoundRadius() + entity->GetBoundRadius();
 
-    return (centreA - centreB).SquaredMagnitude() < sq(radius);
+    // exe 0x5343F0..0x534494: squared distance summed (dz^2 + dy^2) + dx^2 (the port summed x,y,z), then R^2 > sum
+    const CVector d = centreA - centreB;
+    return (d.z * d.z + d.y * d.y) + d.x * d.x < sq(radius);
 }
 
 // Checks if the bounding sphere of this entity intersects with a given sphere

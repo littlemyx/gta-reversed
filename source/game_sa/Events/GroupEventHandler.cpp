@@ -274,7 +274,8 @@ CTaskAllocator* CGroupEventHandler::ComputeResponsePedFriend(const CEventAcquain
 
 // 0x5F9840
 CTaskAllocator* CGroupEventHandler::ComputeResponseNewGangMember(const CEventNewGangMember& e, CPedGroup* pg, CPed* originator) {
-    if (!e.m_member || pg->GetMembership().IsMember(e.m_member)) {
+    // exe 0x5F9873 / 0x5F9890: returns for no ped and for a ped that is NOT a member (7 slots + leader); a member (the recruit just added) answers (port: the test was inverted)
+    if (!e.m_member || !pg->GetMembership().IsMember(e.m_member)) {
         return nullptr;
     }
     CTaskComplexSequence tseq{

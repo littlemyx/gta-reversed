@@ -2034,7 +2034,7 @@ static tStoredLine aStoredLines[MAX_NUM_STORED_LINES];
 
 // 0x485DE0
 void CTheScripts::ScriptDebugLine3D(const CVector& start, const CVector& end, uint32 color1, uint32 color2) {
-#ifndef FINAL
+#if !defined(FINAL) && !defined(NOTSA_STANDALONE_RUN) // exe 0x485DE0 is a bare ret; RenderDebugShit (the only consumer) is not run in the standalone run build
     if (NumScriptDebugLines >= MAX_NUM_STORED_LINES)
         return;
 

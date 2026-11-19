@@ -426,8 +426,11 @@ CTask* CTaskComplexFollowPointRoute::CreateFirstSubTask(CPed* ped) {
             auto closestDistSq = std::numeric_limits<float>::max();
         
             for (auto i = 0u; i < npts; i++) {
-                const auto dist = (pedPos - (*m_route)[i]).SquaredMagnitude();
-                if (dist < sq(closestDistSq)) { // Noo, they must be doing this on purpose (squaring the previous closest point's dist)
+                // exe 0x66E54C-0x66E6xx: unrounded differences summed z, y, x, stored as float; the previous best is squared unrounded
+                const auto& rp = (*m_route)[i];
+                const x87d  ddx = (x87d)pedPos.x - rp.x, ddy = (x87d)pedPos.y - rp.y, ddz = (x87d)pedPos.z - rp.z;
+                const float dist = (float)((ddz * ddz + ddy * ddy) + ddx * ddx);
+                if ((x87d)dist < (x87d)closestDistSq * closestDistSq) { // Noo, they must be doing this on purpose (squaring the previous closest point's dist)
                     closestDistSq = dist;
                     closestNextPtIdx = (int32)i;
                 }

@@ -1,0 +1,117 @@
+addr	function	verdict	asm range	note	fix commit
+0x55E9F0	SurfaceInfos_c::CreatesObjects	MATCH	-	bitfield getter: bit/shift of the exe dword matches SurfaceInfo_c layout (checked every flag position; GetSurfaceIdFromName: all 178 name->id pairs + order extracted from the exe and diffed by script)	-
+0x69E160	CMessages::InsertPlayerControlKeysInString	NOT_REACHED	-	not compared (budget)	-
+0x55E6B0	SurfaceInfos_c::IsSeeThrough	MATCH	-	bitfield getter: bit/shift of the exe dword matches SurfaceInfo_c layout (checked every flag position; GetSurfaceIdFromName: all 178 name->id pairs + order extracted from the exe and diffed by script)	-
+0x5603B0	CTimeCycle::GetAmbientBlue_BeforeBrightness	MATCH	-	LaRiotsLightMult * field / field, offsets in CColourSet verified	-
+0x5603A0	CTimeCycle::GetAmbientGreen_BeforeBrightness	MATCH	-	LaRiotsLightMult * field / field, offsets in CColourSet verified	-
+0x560390	CTimeCycle::GetAmbientRed_BeforeBrightness	MATCH	-	LaRiotsLightMult * field / field, offsets in CColourSet verified	-
+0x69DB50	CMessages::GetStringLength	MATCH	-	slot layout/stores/shift loop identical; exe only clears Text/String fields on clear (port clears whole struct; unobservable); text copy/insert on the discarded local buffer has no state effect	-
+0x55EAD0	SurfaceInfos_c::IsAudioWater	MATCH	-	bitfield getter: bit/shift of the exe dword matches SurfaceInfo_c layout (checked every flag position; GetSurfaceIdFromName: all 178 name->id pairs + order extracted from the exe and diffed by script)	-
+0x55EA50	SurfaceInfos_c::IsAudioGrass	MATCH	-	bitfield getter: bit/shift of the exe dword matches SurfaceInfo_c layout (checked every flag position; GetSurfaceIdFromName: all 178 name->id pairs + order extracted from the exe and diffed by script)	-
+0x55EB10	SurfaceInfos_c::IsAudioLongGrass	MATCH	-	bitfield getter: bit/shift of the exe dword matches SurfaceInfo_c layout (checked every flag position; GetSurfaceIdFromName: all 178 name->id pairs + order extracted from the exe and diffed by script)	-
+0x55EA70	SurfaceInfos_c::IsAudioSand	MATCH	-	bitfield getter: bit/shift of the exe dword matches SurfaceInfo_c layout (checked every flag position; GetSurfaceIdFromName: all 178 name->id pairs + order extracted from the exe and diffed by script)	-
+0x55EA90	SurfaceInfos_c::IsAudioGravel	MATCH	-	bitfield getter: bit/shift of the exe dword matches SurfaceInfo_c layout (checked every flag position; GetSurfaceIdFromName: all 178 name->id pairs + order extracted from the exe and diffed by script)	-
+0x45C940	CReplay::StorePedUpdate	NOT_REACHED	-	not compared (budget)	-
+0x55E710	SurfaceInfos_c::IsWater	MATCH	-	bitfield getter: bit/shift of the exe dword matches SurfaceInfo_c layout (checked every flag position; GetSurfaceIdFromName: all 178 name->id pairs + order extracted from the exe and diffed by script)	-
+0x408340	CTxdStore::GetTxd	MATCH	-	valid-slot path identical; free slot: exe dereferences null (crash), port returns null/no-op - not reachable in a run	-
+0x560350	CTimeCycle::GetAmbientBlue	MATCH	-	LaRiotsLightMult * field / field, offsets in CColourSet verified	-
+0x560340	CTimeCycle::GetAmbientGreen	MATCH	-	LaRiotsLightMult * field / field, offsets in CColourSet verified	-
+0x52E450	CControllerConfigManager::GetIsKeyboardKeyJustDown	NOT_REACHED	-	not compared (budget)	-
+0x45C850	CReplay::FindSizeOfPacket	NOT_REACHED	-	not compared (budget)	-
+0x6E6A10	CWaterLevel::RenderDetailedSeaBedSegment	NOT_REACHED	-	not compared (budget)	-
+0x55E7B0	SurfaceInfos_c::IsStairs	MATCH	-	bitfield getter: bit/shift of the exe dword matches SurfaceInfo_c layout (checked every flag position; GetSurfaceIdFromName: all 178 name->id pairs + order extracted from the exe and diffed by script)	-
+0x5314A0	CControllerConfigManager::AffectPadFromMouse	NOT_REACHED	-	not compared (budget)	-
+0x531140	CControllerConfigManager::AffectPadFromKeyBoard	NOT_REACHED	-	not compared (budget)	-
+0x52DD90	CControllerConfigManager::ClearSimButtonPressCheckers	NOT_REACHED	-	not compared (budget)	-
+0x5603D0	CTimeCycle::CalcColoursForPoint	NOT_REACHED	-	not compared (budget)	-
+0x560380	CTimeCycle::GetAmbientBlue_Obj	MATCH	-	LaRiotsLightMult * field / field, offsets in CColourSet verified	-
+0x560370	CTimeCycle::GetAmbientGreen_Obj	MATCH	-	LaRiotsLightMult * field / field, offsets in CColourSet verified	-
+0x560360	CTimeCycle::GetAmbientRed_Obj	MATCH	-	LaRiotsLightMult * field / field, offsets in CColourSet verified	-
+0x45C440	CReplay::ShouldStandardCameraBeProcessed	NOT_REACHED	-	not compared (budget)	-
+0x731A00	CTxdStore::AddRef	MATCH	-	valid-slot path identical; free slot: exe dereferences null (crash), port returns null/no-op - not reachable in a run	-
+0x69DB70	CMessages::StringCopy	MATCH	-	slot layout/stores/shift loop identical; exe only clears Text/String fields on clear (port clears whole struct; unobservable); text copy/insert on the discarded local buffer has no state effect	-
+0x6181A0	IKChainManager_c::IsLooking	NOT_REACHED	-	not compared (budget)	-
+0x55E870	SurfaceInfos_c::CantSprintOn	MATCH	-	bitfield getter: bit/shift of the exe dword matches SurfaceInfo_c layout (checked every flag position; GetSurfaceIdFromName: all 178 name->id pairs + order extracted from the exe and diffed by script)	-
+0x731AA0	CTxdStore::GetNumRefs	MATCH	-	valid-slot path identical; free slot: exe dereferences null (crash), port returns null/no-op - not reachable in a run	-
+0x45D430	CReplay::MarkEverythingAsNew	NOT_REACHED	-	not compared (budget)	-
+0x45E220	CReplay::Init	NOT_REACHED	-	not compared (budget)	-
+0x6181D0	IKChainManager_c::GetLookAtEntity	NOT_REACHED	-	not compared (budget)	-
+0x55E7F0	SurfaceInfos_c::IsPavement	MATCH	-	bitfield getter: bit/shift of the exe dword matches SurfaceInfo_c layout (checked every flag position; GetSurfaceIdFromName: all 178 name->id pairs + order extracted from the exe and diffed by script)	-
+0x55E8F0	SurfaceInfos_c::MakesCarClean	MATCH	-	bitfield getter: bit/shift of the exe dword matches SurfaceInfo_c layout (checked every flag position; GetSurfaceIdFromName: all 178 name->id pairs + order extracted from the exe and diffed by script)	-
+0x55E8D0	SurfaceInfos_c::MakesCarDirty	MATCH	-	bitfield getter: bit/shift of the exe dword matches SurfaceInfo_c layout (checked every flag position; GetSurfaceIdFromName: all 178 name->id pairs + order extracted from the exe and diffed by script)	-
+0x731720	CTxdStore::TxdStoreFindCB	NOT_REACHED	-	not compared (budget)	-
+0x616CD0	BoneNode_c::CalcWldMat	NOT_REACHED	-	not compared (budget)	-
+0x52FCA0	CControllerConfigManager::AffectControllerStateOn_ButtonDown_AllStates	NOT_REACHED	-	not compared (budget)	-
+0x52FAB0	CControllerConfigManager::AffectControllerStateOn_ButtonDown_FirstAndThirdPersonOnly	NOT_REACHED	-	not compared (budget)	-
+0x6E7210	CWaterLevel::CalculateWavesOnlyForCoordinate2	NOT_REACHED	-	not compared (budget)	-
+0x408370	CTxdStore::GetParentTxdSlot	MATCH	-	valid-slot path identical; free slot: exe dereferences null (crash), port returns null/no-op - not reachable in a run	-
+0x6184B0	IKChain_c::Update	NOT_REACHED	-	not compared (budget)	-
+0x6178B0	IKChain_c::MoveBonesToTarget	NOT_REACHED	-	not compared (budget)	-
+0x616E30	BoneNode_c::BlendKeyframe	NOT_REACHED	-	not compared (budget)	-
+0x69DBD0	CMessages::StringCompare	MATCH	-	slot layout/stores/shift loop identical; exe only clears Text/String fields on clear (port clears whole struct; unobservable); text copy/insert on the discarded local buffer has no state effect	-
+0x7319C0	CTxdStore::SetCurrentTxd	MATCH	-	valid-slot path identical; free slot: exe dereferences null (crash), port returns null/no-op - not reachable in a run	-
+0x617650	BoneNode_c::Limit	NOT_REACHED	-	not compared (budget)	-
+0x617080	BoneNode_c::QuatToEuler	NOT_REACHED	-	not compared (budget)	-
+0x731A70	CTxdStore::RemoveRefWithoutDelete	MATCH	-	valid-slot path identical; free slot: exe dereferences null (crash), port returns null/no-op - not reachable in a run	-
+0x6182B0	IKChainManager_c::IsArmPointing	NOT_REACHED	-	not compared (budget)	-
+0x52F5F0	CControllerConfigManager::ResetSettingOrder	NOT_REACHED	-	not compared (budget)	-
+0x45EBB0	CReplay::RecordVehicleDeleted	NOT_REACHED	-	not compared (budget)	-
+0x6E5750	CWaterLevel::AddPolyToBlock	NOT_REACHED	-	not compared (budget)	-
+0x6E9D70	CWaterLevel::FindNearestWaterAndItsFlow	NOT_REACHED	-	not compared (budget)	-
+0x55E890	SurfaceInfos_c::LeavesFootsteps	MATCH	-	bitfield getter: bit/shift of the exe dword matches SurfaceInfo_c layout (checked every flag position; GetSurfaceIdFromName: all 178 name->id pairs + order extracted from the exe and diffed by script)	-
+0x55E730	SurfaceInfos_c::IsShallowWater	MATCH	-	bitfield getter: bit/shift of the exe dword matches SurfaceInfo_c layout (checked every flag position; GetSurfaceIdFromName: all 178 name->id pairs + order extracted from the exe and diffed by script)	-
+0x731D50	CTxdStore::SetupTxdParent	NOT_REACHED	-	not compared (budget)	-
+0x45EC20	CReplay::RecordPedDeleted	NOT_REACHED	-	not compared (budget)	-
+0x618970	IKChainManager_c::LookAt	NOT_REACHED	-	not compared (budget)	-
+0x69DE90	CMessages::InsertNumberInString	NOT_REACHED	-	not compared (budget)	-
+0x7316B0	CTxdStore::PopCurrentTxd	MATCH	-	valid-slot path identical; free slot: exe dereferences null (crash), port returns null/no-op - not reachable in a run	-
+0x7316A0	CTxdStore::PushCurrentTxd	MATCH	-	valid-slot path identical; free slot: exe dereferences null (crash), port returns null/no-op - not reachable in a run	-
+0x55D220	SurfaceInfos_c::GetSurfaceIdFromName	MATCH	-	bitfield getter: bit/shift of the exe dword matches SurfaceInfo_c layout (checked every flag position; GetSurfaceIdFromName: all 178 name->id pairs + order extracted from the exe and diffed by script)	-
+0x52F4A0	CControllerConfigManager::GetNumOfSettingsForAction	NOT_REACHED	-	not compared (budget)	-
+0x55E8B0	SurfaceInfos_c::ProducesFootDust	MATCH	-	bitfield getter: bit/shift of the exe dword matches SurfaceInfo_c layout (checked every flag position; GetSurfaceIdFromName: all 178 name->id pairs + order extracted from the exe and diffed by script)	-
+0x55EA30	SurfaceInfos_c::IsAudioConcrete	MATCH	-	bitfield getter: bit/shift of the exe dword matches SurfaceInfo_c layout (checked every flag position; GetSurfaceIdFromName: all 178 name->id pairs + order extracted from the exe and diffed by script)	-
+0x69DCD0	CMessages::ClearMessages	MATCH	-	slot layout/stores/shift loop identical; exe only clears Text/String fields on clear (port clears whole struct; unobservable); text copy/insert on the discarded local buffer has no state effect	-
+0x618280	IKChainManager_c::AbortLookAt	NOT_REACHED	-	not compared (budget)	-
+0x69F1E0	CMessages::AddMessageJump	MATCH	-	slot layout/stores/shift loop identical; exe only clears Text/String fields on clear (port clears whole struct; unobservable); text copy/insert on the discarded local buffer has no state effect	-
+0x618750	IKChainManager_c::AddIKChain	NOT_REACHED	-	not compared (budget)	-
+0x618520	IKChain_c::ClampLimits	NOT_REACHED	-	not compared (budget)	-
+0x618370	IKChain_c::Init	NOT_REACHED	-	not compared (budget)	-
+0x618170	IKChainManager_c::RemoveIKChain	NOT_REACHED	-	not compared (budget)	-
+0x617CA0	IKChain_c::SetupBones	NOT_REACHED	-	not compared (budget)	-
+0x617C60	IKChain_c::GetBoneNodeFromTag	NOT_REACHED	-	not compared (budget)	-
+0x617870	IKChain_c::Exit	NOT_REACHED	-	not compared (budget)	-
+0x6177B0	BoneNode_c::Init	NOT_REACHED	-	not compared (budget)	-
+0x6175D0	BoneNode_c::ClampLimitsCurrent	NOT_REACHED	-	not compared (budget)	-
+0x617470	BoneNodeManager_c::ReturnBoneNode	NOT_REACHED	-	not compared (budget)	-
+0x617460	BoneNodeManager_c::GetBoneNode	NOT_REACHED	-	not compared (budget)	-
+0x69EA30	CMessages::ClearThisPrint	MATCH	-	slot layout/stores/shift loop identical; exe only clears Text/String fields on clear (port clears whole struct; unobservable); text copy/insert on the discarded local buffer has no state effect	-
+0x6C26A0	CDamageManager::GetCarNodeIndexFromPanel	MATCH	-	offsets/shifts/jump tables checked (door component table, panel->node table, light/panel shifts); invalid-index paths only differ by UB	-
+0x45B160	CReplay::EnableReplays	NOT_REACHED	-	not compared (budget)	-
+0x55FF20	CTimeCycle::StopExtraColour	MATCH	-	constants (0.01f, 4.0, 32), ftol, field stores, save/restore of extra-colour flag verified	-
+0x69F0B0	CMessages::AddMessageQ	MATCH	-	slot layout/stores/shift loop identical; exe only clears Text/String fields on clear (port clears whole struct; unobservable); text copy/insert on the discarded local buffer has no state effect	-
+0x6C21C0	CDamageManager::SetDoorStatus	MATCH	-	offsets/shifts/jump tables checked (door component table, panel->node table, light/panel shifts); invalid-index paths only differ by UB	-
+0x55FF40	CTimeCycle::AddOne	MATCH	-	constants (0.01f, 4.0, 32), ftol, field stores, save/restore of extra-colour flag verified	-
+0x45B150	CReplay::DisableReplays	NOT_REACHED	-	not compared (budget)	-
+0x55FEC0	CTimeCycle::StartExtraColour	MATCH	-	constants (0.01f, 4.0, 32), ftol, field stores, save/restore of extra-colour flag verified	-
+0x5616E0	CTimeCycle::FindFarClipForCoors	MATCH	-	constants (0.01f, 4.0, 32), ftol, field stores, save/restore of extra-colour flag verified	-
+0x55E650	SurfaceInfos_c::GetFrictionEffect	MATCH	-	bitfield getter: bit/shift of the exe dword matches SurfaceInfo_c layout (checked every flag position; GetSurfaceIdFromName: all 178 name->id pairs + order extracted from the exe and diffed by script)	-
+0x69EDC0	CMessages::ClearAllMessagesDisplayedByGame	MATCH	-	slot layout/stores/shift loop identical; exe only clears Text/String fields on clear (port clears whole struct; unobservable); text copy/insert on the discarded local buffer has no state effect	-
+0x69ED80	CMessages::ClearThisPrintBigNow	MATCH	-	slot layout/stores/shift loop identical; exe only clears Text/String fields on clear (port clears whole struct; unobservable); text copy/insert on the discarded local buffer has no state effect	-
+0x617E20	IKChain_c::UpdateOffset	NOT_REACHED	-	not compared (budget)	-
+0x617E00	IKChain_c::UpdateEntity	NOT_REACHED	-	not compared (budget)	-
+0x530640	CControllerConfigManager::InitDefaultControlConfiguration	NOT_REACHED	-	not compared (budget)	-
+0x530500	CControllerConfigManager::MakeControllerActionsBlank	NOT_REACHED	-	not compared (budget)	-
+0x6E7B30	CWaterLevel::FillQuadsAndTrianglesList	NOT_REACHED	-	not compared (budget)	-
+0x6C21C0	CDamageManager::SetDoorStatus	MATCH	-	offsets/shifts/jump tables checked (door component table, panel->node table, light/panel shifts); invalid-index paths only differ by UB	-
+0x6C2150	CDamageManager::SetPanelStatus	MATCH	-	offsets/shifts/jump tables checked (door component table, panel->node table, light/panel shifts); invalid-index paths only differ by UB	-
+0x69EE00	CMessages::Init	MATCH	-	slot layout/stores/shift loop identical; exe only clears Text/String fields on clear (port clears whole struct; unobservable); text copy/insert on the discarded local buffer has no state effect	-
+0x69E5F0	CMessages::AddBigMessageWithNumber	MATCH	-	slot layout/stores/shift loop identical; exe only clears Text/String fields on clear (port clears whole struct; unobservable); text copy/insert on the discarded local buffer has no state effect	-
+0x69E360	CMessages::AddMessageWithNumberQ	MATCH	-	slot layout/stores/shift loop identical; exe only clears Text/String fields on clear (port clears whole struct; unobservable); text copy/insert on the discarded local buffer has no state effect	-
+0x6180D0	IKChainManager_c::Exit	NOT_REACHED	-	not compared (budget)	-
+0x6180A0	IKChainManager_c::Init	NOT_REACHED	-	not compared (budget)	-
+0x617420	BoneNodeManager_c::Exit	NOT_REACHED	-	not compared (budget)	-
+0x6173F0	BoneNodeManager_c::Init	NOT_REACHED	-	not compared (budget)	-
+0x55EAB0	SurfaceInfos_c::IsAudioWood	MATCH	-	bitfield getter: bit/shift of the exe dword matches SurfaceInfo_c layout (checked every flag position; GetSurfaceIdFromName: all 178 name->id pairs + order extracted from the exe and diffed by script)	-
+0x531F20	CControllerConfigManager::ReinitControls	NOT_REACHED	-	not compared (budget)	-
+0x52D260	CControllerConfigManager::InitialiseControllerActionNameArray	NOT_REACHED	-	not compared (budget)	-
+0x45EC90	CReplay::EmptyReplayBuffer	NOT_REACHED	-	not compared (budget)	-

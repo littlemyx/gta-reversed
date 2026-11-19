@@ -1,0 +1,17 @@
+addr	function	verdict	asm range	note	fix commit
+0x5DC290	CPlantLocTri::Add	MATCH	0x5DC290-0x5DC504	whole function: flags/radius, density = ftol(area*density[k]) x3 (area calc 0x5DC210 order z,y,x), if sum>0: 3 rand() draws seed[0..2] = rand*(1/32767) stored as float, counts as uint16, list move to slot list; else objects-only -> list 3 (flag bit0 cleared), else return 0	
+0x5DC8B0	CPlantMgr::_ProcessEntryCollisionDataSections_AddLocTris	MATCH	all	skip mask (i&7, 0xFAFAFAFA = all), existing entry skip, unused-list empty skip, 7-point range test <10000, plant/object flags, Add, ProcessTriangleAdded/Release handling	
+0x5DCD80	CPlantMgr::_ProcessEntryCollisionDataSections	MATCH	all	numTriangles check, Remove then Add, face groups walked memory-descending, TestSphereBox(100)	
+0x5DCF30	CPlantMgr::PreUpdateOnceForNewCameraPos	MATCH	all	scancode, cam pos, ambient, wind, cache update(full), all entries mask 0xFAFAFAFA	
+0x5DCFA0	CPlantMgr::Update	MATCH	all	u8 counters: %32 full cache update, mask = counter&7	
+0x5DCF00	CPlantMgr::_UpdateLocTris	MATCH	all	walk close list	
+0x5DBF20	CPlantMgr::_ProcessEntryCollisionDataSections_RemoveLocTris	MATCH	all	retry ProcessTriangleAdded, 7-point test, Release	
+0x5DB590	CPlantMgr::MoveLocTriToList	MATCH	all	list unlink/push-front	
+0x5DB7D0	CPlantColEntEntry::AddEntry	MATCH	all	register ref, alloc+zero object table, list move	
+0x5DB8A0	CPlantColEntEntry::ReleaseEntry	MATCH	all	release tris, free, cleanup ref, list move	
+0x5DB6D0	CPlantLocTri::Release	MATCH	all	zero counts, ProcessTriangleRemoved, objects-only vs slot list, surface 0xFE/0xFF, flags&0xF8	
+0x6F9DE0	CPlantSurfPropMgr::GetSurfProperties	MATCH	all	id<0xB2 table else null	
+0x55E9D0	SurfaceInfos_c::CreatesPlants/CreatesObjects	MATCH	all	bits 7 / 8 of the 12-byte surface record at +0x98	
+0x411660	CColTrianglePlane::Set	MATCH	0x4117F0-0x411982	tail: quantised normal, offset ftol((z*nz+y*ny+x*nx)*128) int16, orientation by |nx|>|ny|,|nz| then sign (0/1,2/3,4/5)	
+0x593910	Interior_c::ResetTiles	MATCH	all	doors 8, windows 9, no-go 11: bounds checks and tile addressing x*30+y match	
+0x690CC0	CTaskSimpleFacial::GetAnimId	MATCH	all	jump table 0x690CF8 = 154,155,156,157,156,157,-1,160,161; >8 unsigned -> -1	

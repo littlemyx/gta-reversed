@@ -182,7 +182,7 @@ void Load(const char* path) {
 }
 CRunningScript* FindThread() {
     for (auto* s = CTheScripts::pActiveScripts; s; s = s->m_pNext) {
-        if (!std::strncmp((const char*)s->m_szName, g_script.c_str(), 8)) return s;
+        if (!_strnicmp((const char*)s->m_szName, g_script.c_str(), 8)) return s;
     }
     return nullptr;
 }

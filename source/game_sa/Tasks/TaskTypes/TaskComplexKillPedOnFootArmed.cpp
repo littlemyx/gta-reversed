@@ -168,7 +168,14 @@ bool CTaskComplexKillPedOnFootArmed::IsPedInLeaderFiringLine(CPed* ped) {
     const auto &leaderPos2D      = grpLeaderPlyr->GetPosition2D();
     const auto &leaderPos        = grpLeaderPlyr->GetPosition();
     const auto leaderToPed       = ped->GetPosition() - leaderPos, // 0x6213BD
-               leaderToTargetDir = (grpLeaderPlyr->m_pTargetedObject->GetPosition() - leaderPos).Normalized(); // 0x621394
+               leaderToTarget    = grpLeaderPlyr->m_pTargetedObject->GetPosition() - leaderPos; // 0x621394
+    // ASM-P4R6d: exe 0x6213A1: `mov [esp+18h],0` before CVector::Normalise -> the direction used for the projection is the 2D-normalised vector (z = 0), the port normalised in 3D
+    const auto leaderToTargetDir = [&] {
+        CVector dir = leaderToTarget;
+        dir.z = 0.f;
+        dir.Normalise();
+        return dir;
+    }();
 
     /* clang-format off
      * --[projPointOnLeaderToTargetRay2D]-->[leaderPos]---[leaderToTargetDir]-->[Target]
@@ -190,7 +197,8 @@ bool CTaskComplexKillPedOnFootArmed::IsPedInLeaderFiringLine(CPed* ped) {
     }
 
     //> 0x0621482
-    if (leaderToTargetDir.Dot(leaderToPed) <= 0.f) { // Ped is "behind" leader (Like on the ASCII art above)
+    // exe 0x621482-0x6214AE: dot of the fresh un-normalised (target - leader) 3D vector with (ped - leader), summed z,y,x in extended precision
+    if (!((x87d)leaderToPed.z * leaderToTarget.z + (x87d)leaderToPed.y * leaderToTarget.y + (x87d)leaderToPed.x * leaderToTarget.x > (x87d)0.f)) { // Ped is "behind" leader (Like on the ASCII art above)
         return false;
     }
 

@@ -854,14 +854,14 @@ int32 CPedGeometryAnalyser::ComputeRouteRoundEntityBoundingBox(const CPed& ped, 
                 : -((pSnapshot.x * n.x + pSnapshot.z * n.z + pSnapshot.y * n.y + planesDots[i]) / (dir.x * n.x + dir.z * n.z + dir.y * n.y));
             return CVector{ dir.x * t + pSnapshot.x, dir.y * t + pSnapshot.y, dir.z * t + pSnapshot.z };
         };
-        if (distP < 0.f || distQ > 0.f) {
-            if (distP <= 0.f && distQ >= 0.f) { // Leaves the box
-                exitIdx = i;
-                q       = CrossingPoint();
-            }
-        } else { // Enters the box (distP >= 0 && distQ <= 0)
+        // 0x5F4545-0x5F462C (plane 0; the same shape at 0x5F4779, 0x5F49B0, 0x5F4BE7): enters iff distP >= 0 && distQ <= 0, else leaves iff distP <= 0 && distQ >= 0;
+        // a NaN fails every one of these tests (fcom + test ah,1 / ah,0x41 + jp), so it does neither
+        if (distP >= 0.f && distQ <= 0.f) { // Enters the box
             entryIdx = i;
             p        = CrossingPoint();
+        } else if (distP <= 0.f && distQ >= 0.f) { // Leaves the box
+            exitIdx = i;
+            q       = CrossingPoint();
         }
     }
     if (exitIdx < 0 || entryIdx < 0) {
@@ -961,8 +961,9 @@ int32 CPedGeometryAnalyser::ComputeRouteRoundEntityBoundingBox(const CPed& ped, 
                 cur = next;
             }
 
-            for (auto k = 0u; k + 1 < numPoints; k++) {
-                info.length += (path[k + 1] - path[k]).Magnitude();
+            for (auto k = 0u; k + 1 < numPoints; k++) { // 0x5F5634 / 0x5F5680: sqrt((dz*dz + dy*dy) + dx*dx), PC24 float per operation
+                const float dx = path[k + 1].x - path[k].x, dy = path[k + 1].y - path[k].y, dz = path[k + 1].z - path[k].z;
+                info.length += std::sqrt(dz * dz + dy * dy + dx * dx);
             }
             return info;
         };

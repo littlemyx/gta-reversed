@@ -1,0 +1,12 @@
+addr	function	verdict	asm range	note	fix commit
+0x73B550	CWeapon::DoBulletImpact (review of 4315bbf2f)	MATCH (CONFIRMED)	0x73B550-0x73C1BB	self-shot exit (0x73B85B..0x73B8A1), null firedBy (0x73B586), skill block gated on ped + +0x71C of any ped (0x73B731) all correct; the FireProjectile hunk of that commit only adds a null guard behind the assert (comment cites the wrong address, no behaviour)	
+0x563060	CWanted::SetPursuitCop	MATCH	0x563060-0x5630E3	RemovePursuitCop(nullptr) path equals exe	
+0x562B00	CWanted::ComputePursuitCopToDisplace	MATCH	0x562B00-0x562C08	x,y,z vs z,y,x sum order float noise	
+0x6A1ED0	CAutomobile::AddMovingCollisionSpeed	FIXED	0x6A1ED0-0x6A2125	dumper without misc node keeps multiplier 0	1208ec9ba
+0x5693F0	CWorld::FindNearestObjectOfType	MATCH	0x5693F0-0x569648	radius arg unused by the sector-list callee; sector clamp noise	
+0x5F6AE0	CPedGroupMembership::AddMember	MATCH	0x5F6AE0-0x5F6B3B	dead scan loop only	
+0x6A2F70	CAutomobile::GetAllWheelsOffGround	MATCH	0x6A2F70-0x6A2F7B	trivial getter	
+0x73D1E0	CWeapon::DoTankDoomAiming	MATCH	0x73D1E0-0x73D71C	all thresholds/constants/compare directions checked; AllocateMatrix side effect and x87 rounding noise	
+0x539860	CFireManager::GetNumFiresInArea	MATCH	0x539860-0x53992E+	inclusive bounds, NaN skip identical	
+0x5FACD0	CPedGroup::GetClosestGroupPed	FIXED	0x5FACD0-0x5FB00C	*pOutDistSq stored even with no member (1e8)	604c15bb3
+(rest of zone)	627 never-audited zone rows left	NOT_REACHED		budget	

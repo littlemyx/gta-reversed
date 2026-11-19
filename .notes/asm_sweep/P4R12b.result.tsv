@@ -1,0 +1,11 @@
+addr	function	verdict	asm range	note	fix commit
+0x44F8C0	CPathFind::FindNthNodeClosestToCoors	MATCH	0x44F8C0-0x44FA19	clear-visited ranges per node type, nth loop, final call with bIgnoreInterior=0 identical	-
+0x45C490	CReplay::CanWeFindPoolIndexForVehicle	MATCH	0x45C490-0x45C4A2	table[index] >= 0	-
+0x5DE680	CGangs::Initialise	MATCH	0x5DE680-0x5DE708	all 7 gangs weapon triples (22/28, 22, 22, 22/28, 24, 22/30, 22/28), SF_RIFA untouched	-
+0x460630	CRestart::Initialise	MATCH	0x460630-0x46072D	every store matches; WhenToUse / Extra coors / respawn base point untouched in both	-
+0x541A70	CPad::Clear	MATCH	0x541A70-0x541BCC	all offsets and the two flag guards identical	-
+0x49D160	CTagManager::GetNearestTag	FIXED	0x49D160-0x49D1D2	exe walks tags last to first with strict <: higher index wins an exact tie	c3d972508
+0x6FD5B0	CCustomCarPlateMgr::GeneratePlateText	MATCH	0x6FD5B0-0x6FD713	letters A..W, digits 0..8 (exe quirk kept without FIX_BUGS), order and rand()&0xFFFF identical	-
+0x538BC0	CFireManager::Init	MATCH	0x538BC0-0x538CE9	inlined CFire ctors == CFire::Initialise, max generations 999999	-
+0x724E40	C3dMarkers::Init	MATCH	0x724E40-0x724FAD	clump slots (cylinder, hoop, diamond_3 x3), angle/count reset identical	-
+0x454E80	CPickups::DoMoneyEffects	MATCH	0x454E80-0x454FF5	ms&0x7FF * const, rotate Z only; PC24 rounding makes float angle equal	-

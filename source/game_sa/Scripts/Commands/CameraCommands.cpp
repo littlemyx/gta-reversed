@@ -16,8 +16,8 @@ bool IsPointOnScreen(CVector pos, float radius) {
     return TheCamera.IsSphereVisible(pos, radius);
 }
 
-void ShakeCam(float strength) {
-    CamShakeNoPos(&TheCamera, strength / 1000.0f);
+void ShakeCam(int32 strength) {
+    CamShakeNoPos(&TheCamera, (float)strength * 0.001f); // exe 0x465EEB: fild int param * 0.001f (0x858CDC), not a float param / 1000
 }
 
 void AttachCameraToVehicleLookAtVehicle(CVehicle& attachTo, CVector offset, CVehicle& lookAt, float tilt, eSwitchType switchType) {
@@ -38,8 +38,8 @@ void DoCameraBump(float horizontal, float vertical) {
 }
 
 // DO_FADE - 0x47C7C7
-void DoCamFade(CRunningScript* S, uint32 time, eFadeFlag direction) {
-    TheCamera.Fade((float)time / 1000.f, direction);
+void DoCamFade(CRunningScript* S, int32 time, eFadeFlag direction) {
+    TheCamera.Fade((float)time * 0.001f, direction); // exe 0x47C7C3: fild int param * 0.001f (0x858CDC)
     if (S->m_UsesMissionCleanup) {
         CTheScripts::bScriptHasFadedOut = direction == eFadeFlag::FADE_IN;
     }

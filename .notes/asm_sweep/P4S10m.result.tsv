@@ -1,0 +1,23 @@
+addr	function	verdict	asm range	note	fix commit
+0x676640	CTaskInteriorGoToInfo::CreateFirstSubTask	MATCH	0x676640-0x67684E	P4S10l fix CONFIRMED: start node [edi+0x3f0] of the ped's interior (0x676835), position node = m_Int	56a8a1978
+0x643510	CTaskComplexEnterAnyCarAsDriver::CreateFirstSubTask	MATCH	0x643510-0x6436C1	P4S10l fix CONFIRMED: IsVehicleStealable in the fallback loop (0x643612); 16 slots, FLT_MAX init, strict <	d6df483f1
+0x6560E0	CTaskComplexHitPedWithCar::CreateSubTask	MATCH	0x6560E0-0x6562E0	P4S10l fix CONFIRMED: 414 -> HitFromBehind; jump table side0..3 -> anim 26/25/24/27; evasive/kill/hurt args match	005b0077c
+0x675890	CTaskInteriorGoToInfo::CreateNextSubTask	MATCH	0x675890-0x675A2F	0.04 const, GetRadianAngleBetweenPoints heading; sum-order noise
+0x6452C0	CTaskComplexDriveToPoint::IsTargetBlocked(Ped)	MATCH	0x6452C0-0x64534D	36 const, ped scanner (+0x130) before vehicle (+0xE0), NaN path ok
+0x5E7B20	CPed::Look	MATCH	0x5E7B20	jmp TurnBody
+0x5E5320	CPed::ClearAll	MATCH	0x5E5320-0x5E5379	condition == IsPedInControl||dead; bits 13/4/31, state, move state, ignored-collision
+0x656E70	CTaskComplexWalkRoundBuildingAttempt::CreateNextSubTask	MATCH	0x656E70-0x656F6E
+0x63AC10	CTaskComplexEnterCar::PrepareVehicleForPedEnter	MATCH	0x63AC10-0x63AC75
+0x632940	CTaskComplexWaitForBus::CreateNextSubTask	MATCH	0x632940-0x632A28
+0x66DBA0	CTaskComplexGoToPointAndStandStill::CreateNextSubTask	MATCH	0x66DBA0-0x66DC39
+0x620C30	CTaskComplexReactToAttack::CreateSubTask	MATCH	0x620C30-0x620DED
+0x685000	CTaskComplexWalkAlongsidePed::CreateSubTask	MATCH	0x685000-0x685150	seek-entity consts 0.5/5/2, SPRINT, offset
+0x653820	CTaskComplexEvasiveDiveAndGetUp::CreateSubTask	MATCH	0x653820-0x653999
+0x66AD10	CTaskComplexAvoidEntity::StopLooking	MATCH	0x66AD10-0x66AD3B
+0x66AD40	CTaskComplexAvoidEntity::MakeAbortable	MATCH	0x66AD40-0x66AD6D
+0x66AD70	CTaskComplexAvoidEntity::CreateNextSubTask	MATCH	0x66AD70	StopLooking + nullptr
+0x6A3670	CAutomobile::FixPanel	FIXED	0x6A3670-0x6A3737	frame matrix reset: MODELLING matrix (frame+0x10) re-translated to its own pos; port used LTM + vehicle pos	d57dcacc2
+0x6A35A0	CAutomobile::FixDoor	FIXED	0x6A35A0-0x6A366D	same defect as FixPanel (earlier P4S10 row said MATCH/noise)	d57dcacc2
+0x5E8830	CPed::SetAimFlag(float)	MATCH	0x5E8830-0x5E88D0
+0x622D50	CTaskComplexSeekCoverUntilTargetDead::GetCoverPed	MATCH	0x622D50-0x622E2D	8 members incl leader, strict <, melee+alive filter
+0x4B33B0	CEventDamage::Constructor(copy)	MATCH	0x4B33B0-0x4B341C	base defaults + From()

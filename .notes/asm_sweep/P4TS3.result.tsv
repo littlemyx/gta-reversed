@@ -1,0 +1,11 @@
+addr	function	verdict	asm range	note	fix commit
+0x47FAE6	GET_CLOSEST_CHAR_NODE (752412206)	CONFIRMED	0x47FB7C-0x47FBC3	ped node = CPathNode::GetPosition (0x420A10); flag true when found, false+zeros otherwise	-
+0x5EA390	CPedAttractorPedPlacer::PlacePedAtEffect heading (f0895a0a1)	CONFIRMED	0x5EA452-0x5EA56B	fwd dir = fx+0x28 transformed (call 0x5EA47C) -> edi/ebx -> GetRadianAngleBetweenPoints; same vector scales the position	-
+0x5EE6E0	CPedPizzaAttractor ctor (985f5a14a)	CONFIRMED	0x5EE6E0-0x5EE724	push 5; consts 1.0, 30000, 3000, 0.2 (0x86C458), 0.1 x3	-
+0x632730	CTaskComplexUseAttractor::CreateNextSubTask ATM (fcfbbc78c)	CONFIRMED	0x63276E-0x63279E	money(int16) += 20 - 20*(int)(r/32768*-50); r=rand&0xFFFF	-
+0x5D1E00	CSimpleVariablesSaveStructure::Construct (8e3804a8c)	CONFIRMED	0x5D1E2A-0x5D1E4E	german(B9B7ED)->+0xED, french(B9B7EE)->+0xEC; Extract 0x5D20CA reads back the same	-
+0x50D930	CHandShaker::Process	FIXED	0x50D930-0x50DD40	slow test strict-sign (not signbit); motion draws z,y,x; twitch test = Range(1,N)==2; twitch vec draws z,y,x; scale = |a/l|*span+min	189ae4a67
+-	CCam::Process ped cam in car (TS Camera.ts:2206)	TS-ONLY (C++ matches exe)	0x527FA0 CamControl	TS aimFromCar is a web-runtime addition; exe reads CCamera+0x830 (weapon mode) only at 0x529C09/0x529C64/0x529E2A (ped branch) and 0x52B251/0x52B385 (common tail), none in the vehicle branch; C++ has the same; no change	-
+-	IsPointInAngledAreaOriginal (MissionOps61_90 x87)	MATCH	0x477DA0	port already x87d/X87R at PC24 (d65c1985e, 2aa955846); chain equals the TS text step by step	-
+0x670E20	CTaskComplexFollowPatrolRoute::CreateFirstSubTask	MATCH	0x670E20	x87d chains in the exe order, identical to TS (stale audit row)	-
+0x693610	CTaskComplexGoPickUpEntity::CreateFirstSubTask	MATCH	0x693610-0x6937xx	fpatan stays unrounded in the 2nd branch (X87R), x87d chains; identical to TS	-

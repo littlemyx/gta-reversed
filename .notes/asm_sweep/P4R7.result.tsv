@@ -1,0 +1,10 @@
+addr	function	verdict	asm range	note	fix commit
+0x5DFDF0	CPed::PositionAttachedPed	MATCH	0x5DFDF0-0x5E00EE	firetruck ladder branch, turret angle limit, speed copy compared	
+0x6D2030	CVehicle::CanPedJumpOutCar	MATCH	0x6D2030-0x6D21E6	bike/plane/car paths, 0.9 damping and timestep slowdown	
+0x6D5D70	CVehicle::SetVehicleCreatedBy	MATCH	0x6D5D70-0x6D5D9E		
+0x6D4900	CVehicle::SelectPlaneWeapon	MATCH	0x6D4900-0x6D4A11	jump table 425/476/447/464/520/576 verified	
+0x541F70	CEntity::TreatAsPlayerForCollisions	MATCH	0x541F70-0x541F7B	status==0	
+0x5428C0	CPhysical::SetDamagedPieceRecord	MATCH	0x5428C0-0x5429E1	bDamaged bit 0x80000, 50/53 weapon	
+0x44D520	CAutomobile::HasCarStoppedBecauseOfLight	MATCH	0x44D520-0x44D773	link/navi light state bits	
+0x6A2470	CAutomobile::TellPlaneToGoToCoors	MATCH	0x6A2470-0x6A2508	alt min stored raw, max=max(z,altMax)	
+0x534AE0	CEntity::Remove	MATCH	0x534AE0-0x534C51	rect clamps; sector iteration helpers not re-compared	

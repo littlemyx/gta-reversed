@@ -1874,8 +1874,11 @@ auto DetachCharFromCar(CPed* ped) {
  * 
  * @param {Char} self
  */
-auto ClearCharLastWeaponDamage(CPed& ped) {
-    ped.m_nLastWeaponDamage = -1;
+// exe 0x48A91F: a handle that resolves to no ped is skipped (the port's CPed& asserted a live ped)
+auto ClearCharLastWeaponDamage(CPed* ped) {
+    if (ped) {
+        ped->m_nLastWeaponDamage = -1;
+    }
 }
 
 /*

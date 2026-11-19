@@ -4345,10 +4345,13 @@ void CAutomobile::ProcessAutoBusDoors() {
         }
 
         if (!IsDoorMissing(eDoors::DOOR_RIGHT_FRONT) && !(m_nGettingInFlags & 4)) { // 0x6A3966: `test [esi+0x486], 4 / jne skip`
+            // 0x6A3979-0x6A39DE: same as the left door - a closed door starts the timer and gets ratio 0, an open one gets 1 - (t + 500) / 500 (the port passed 0 always)
             if (IsDoorClosed(eDoors::DOOR_RIGHT_FRONT)) {
                 m_nBusDoorTimerEnd = CTimer::GetTimeInMS();
+                OpenDoor(nullptr, COMPONENT_DOOR_RF, DOOR_RIGHT_FRONT, 0.f, true);
+            } else {
+                OpenDoor(nullptr, COMPONENT_DOOR_RF, DOOR_RIGHT_FRONT, 1.f - (float)(CTimer::GetTimeInMS() - m_nBusDoorTimerEnd + 500) * ExeRecip(500.f), true);
             }
-            OpenDoor(nullptr, COMPONENT_DOOR_RF, DOOR_RIGHT_FRONT, 0.f, true);
         }
     }
 }

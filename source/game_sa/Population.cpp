@@ -1553,17 +1553,21 @@ bool CPopulation::AddPedAtAttractor(eModelID modelIndex, C2dEffectPedAttractor* 
 // 0x6143E0
 // NOTSA: Added option to use `ePedType::NONE` as valid value to ignore the ped type (this way you can get the distance of the nearest ped of any type)
 float CPopulation::FindDistanceToNearestPedOfType(ePedType pedType, CVector posn) {
-    float closest3DSq = sq(10'000'000.f);
+    // exe 0x6143E0: per ped the 3D distance (extended: (dz*dz + dy*dy) + dx*dx, sqrt) is compared (`<`, strict) with the best so far,
+    // and the best is kept as a float (`fst dword ptr [esp+10]`); the start value is the distance 10'000'000.
+    float closest3D = 10'000'000.f;
     for (CPed& ped : NOTSA_EXE_OR(GetPedPool()->GetAllValidReverse(), GetPedPool()->GetAllValid())) {
         if (pedType != PED_TYPE_NONE /*notsa*/ && ped.m_nPedType != pedType) {
             continue;
         }
-        // 0x614444: posn - ped, squares summed z, y, x
         const auto& pp = ped.GetPosition();
-        const float dx = posn.x - pp.x, dy = posn.y - pp.y, dz = posn.z - pp.z;
-        closest3DSq = std::min(closest3DSq, (dz * dz + dy * dy) + dx * dx);
+        const x87d  dx = (x87d)posn.x - (x87d)pp.x, dy = (x87d)posn.y - (x87d)pp.y, dz = (x87d)posn.z - (x87d)pp.z;
+        const x87d  dist = std::sqrt((dz * dz + dy * dy) + dx * dx);
+        if (dist < (x87d)closest3D) {
+            closest3D = (float)dist;
+        }
     }
-    return std::sqrt(closest3DSq);
+    return closest3D;
 
     /* Which is more readable? Really trying to love `ranges`, but man... (Above is also twice as fast :D, because the transform isn't invoked every time)
     * 

@@ -1,0 +1,31 @@
+addr	function	verdict	asm range	note	fix commit
+0x43C660	CCurves::CalcSpeedVariationInBend	MATCH	0x43C660-0x43C700	branches/operand order/constants (1/3 trunc) re-read; last-bit x87 rounding of dist/sqrt not chased	
+0x43C880	CCurves::CalcCorrectedDist	MATCH	0x43C880-0x43C8FC	x87 chain as ported	
+0x4325C0	CCarCtrl::FindAngleToWeaveThroughTraffic	UNSURE	0x4325C0-	port comments detailed; only first part skimmed, not compared line by line	
+0x5660B0	CWorld::UseDetonator	MATCH	0x5660B0-0x56612C	bomb state 3, installer compare, timer 500, RegisterReference (exe does not null-check creator)	
+0x566C10	CWorld::StopAllLawEnforcersInTheirTracks	MATCH	0x566C10-0x566C87	flag +0x428 bit0, move speed zeroed	
+0x448D30	CGarage::IsEntityEntirelyOutside	MATCH	0x448D30-0x448DB0 (rect part)	strict rect compares; sphere loop shape	
+0x449100	CGarage::IsAnyOtherCarTouchingGarage	MATCH	0x449100-0x4491BA (partial)	pool reverse walk, wrecked skip (status 0x28), touching3D, sphere loop	
+0x449050	CGarage::EntityHasASphereWayOutsideGarage	MATCH	0x449050-0x4490D3 (partial)	matrix alloc, sphere test	
+0x55CD60	CStats::UpdateStatsWhenOnMotorBike	MATCH	0x55CD60-0x55CEA4	constants 0.6/0.1/0.2/1.5/0.5 and TimeStepInMS ftol verified	
+0x6F2F40	CCarGenerator::CheckIfWithinRangeOfAnyPlayers	MATCH	0x6F2F40-0x6F3182	whole function incl. area/z test, bHighPriority, speed dot	
+0x611C50	CLoadedCarGroup::PickRandomCar	MATCH	0x611C50-0x611D85 (partial)	filter classes 0..2,8, frq sum, rand*(1/32768)*float(sum)	
+0x611E10	CLoadedCarGroup::SortBasedOnUsage	MATCH	0x611E10-0x611E86	signed byte compare, bubble sort	
+0x43EA00	CEntryExit::GetPositionRelativeToOutsideWorld	MATCH	0x43EA00-0x43EA8C	x87 stack traced: sum unrounded, only final diff stored	
+0x6143E0	CPopulation::FindDistanceToNearestPedOfType	FIXED	0x6143E0-0x614482	exe keeps min of float(sqrt(extended (dz2+dy2)+dx2)) with strict <; port took min of float squares then sqrt	see git log ASM-P4R23e
+0x612240	CPopulation::FindNumberOfPedsWeCanPlaceOnBenches	MATCH	0x612240-0x6122B2	whole function	
+0x5FDC00	CPedIK::PointGunInDirection	MATCH	0x5FDC00-0x5FDDAD	whole function (head node 2, atan2, quats, flag 0x4000)	
+0x4416E0	CGameLogic::IsPointWithinLineArea	MATCH	0x4416E0-0x44175F	ray 1e6, parity	
+0x434900	CCarCtrl::SteerAICarWithPhysicsFollowPath	NOT_REACHED			
+0x435830	CCarCtrl::SteerAICarWithPhysicsFollowPath_Racing	NOT_REACHED			
+0x73FB10	CWeapon::FireInstantHit	NOT_REACHED			
+0x741360	CWeapon::FireProjectile	NOT_REACHED			
+0x742300	CWeapon::Fire	NOT_REACHED			
+0x5FE0E0	CPedIK::PitchForSlope	NOT_REACHED			
+0x422B20	CCarCtrl::SteerAICarBlockingPlayerForwardAndBack	NOT_REACHED			
+0x4336D0	CCarCtrl::SteerAICarTowardsPointInEscort	NOT_REACHED			
+0x44FEE0	CPathFind::FindNodePairClosestToCoors	NOT_REACHED			
+0x42AEB0	CCarCtrl::SteerAIHeliToKeepEntityInView	NOT_REACHED			
+0x4404A0	CEntryExit::TransitionFinished	NOT_REACHED			
+0x43EAF0	CEntryExit::FindValidTeleportPoint	NOT_REACHED			
+0x44A240	CGarages::FindGarageForObject	NOT_REACHED			

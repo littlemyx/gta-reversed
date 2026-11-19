@@ -62,6 +62,7 @@ void* operator new[](std::size_t n) { return ::operator new(n); }
 
 #include "loadlog.h"
 #include "portable/sh7log.h"
+#include "portable/cargenlog.h"
 namespace notsa::rr {
 uint32_t LoadLogFrameCounter() { return CTimer::GetFrameCounter(); }
 namespace {
@@ -609,12 +610,42 @@ AudioLogScope::~AudioLogScope() {
     std::fflush(c.f);
 }
 
+// SH11 NOTSA_SH_VEHMTX (see sh7log.h): pure reads, logs only vehicles in the listed pool slots at the listed recorded frames
+void VehMtxLog(const char* tag, const void* entity) {
+    static Sh7Log l = [] { Sh7Log x; x.Init("NOTSA_SH_VEHMTX", "NOTSA_SH_VEHMTX_FRAMES", "0", "# frame randCount M|T tag slot ... | M: all 16 floats of the matrix (right,flags,fwd,pad1,up,pad2,pos,pad3) as bits/%.9g | T: m_vecTurnSpeed x,y,z bits/%.9g"); return x; }();
+    static std::set<int> slots = [] { std::set<int> s; const char* e = std::getenv("NOTSA_SH_VEHMTX_SLOTS"); std::string str = e && e[0] ? e : "2,3"; size_t b = 0; while (b <= str.size()) { size_t c = str.find(',', b); if (c == std::string::npos) c = str.size(); if (c > b) s.insert(std::atoi(str.substr(b, c - b).c_str())); b = c + 1; } return s; }();
+    FILE* f = l.Get();
+    if (!f || !entity || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    const auto* ent = static_cast<const CEntity*>(entity);
+    if (!ent->GetIsTypeVehicle()) return;
+    auto* pool = GetVehiclePool();
+    if (!pool) return;
+    const int slot = (int)pool->GetIndex(const_cast<CVehicle*>(static_cast<const CVehicle*>(ent)));
+    if (!slots.count(slot)) return;
+    const unsigned long long rc = (unsigned long long)RandCount();
+    if (ent->m_matrix) {
+        uint32_t w[16]; static_assert(sizeof(w) == 0x40);
+        std::memcpy(w, static_cast<const CMatrix*>(ent->m_matrix), sizeof(w));
+        std::fprintf(f, "%d %llu M %s slot=%d", LoadLogRecFrame(), rc, tag, slot);
+        for (int i = 0; i < 16; i++) { float v; std::memcpy(&v, &w[i], 4); std::fprintf(f, " %08x/%.9g", w[i], (double)v); }
+        std::fprintf(f, "\n");
+    } else {
+        std::fprintf(f, "%d %llu M %s slot=%d nomatrix\n", LoadLogRecFrame(), rc, tag, slot);
+    }
+    const auto& ts = static_cast<const CVehicle*>(ent)->m_vecTurnSpeed;
+    std::fprintf(f, "%d %llu T %s slot=%d x=%08x/%.9g y=%08x/%.9g z=%08x/%.9g\n", LoadLogRecFrame(), rc, tag, slot, Sh7Bits(ts.x), (double)ts.x, Sh7Bits(ts.y), (double)ts.y, Sh7Bits(ts.z), (double)ts.z);
+    std::fflush(f);
+}
+
 FILE* WalkLogFile() {
     static FILE* f = nullptr; static std::set<int> frames; static bool init = false;
     if (!init) {
         init = true;
         const char* p = std::getenv("NOTSA_SH_WALKLOG");
-        if (p && p[0] && (f = std::fopen(p, "w"))) {
+        const char* cg = std::getenv("NOTSA_SH_CARGENLOG");
+        if (p && p[0] && cg && !std::strcmp(p, cg)) f = CarGenLog(false, true); // SH11: same file as the car generation log (rows interleave in call order)
+        else if (p && p[0]) f = std::fopen(p, "w");
+        if (f) {
             std::fprintf(f, "# frame randCount W posn low=(area,node)(area,node) normal=... arg12 arg13 ... | A loaded path areas (once per frame) | S start node | H hop# cur=(a,n) numLinks link next=(a,n) accum(after hop) | X hops accum reason (reason: start_unloaded cur_unloaded dist_230 dead_end dead_end_lead wrong_side 30_nodes ok)\n");
             const char* fr = std::getenv("NOTSA_SH_WALKLOG_FRAMES"); std::string str = fr && fr[0] ? fr : "54";
             size_t i = 0;

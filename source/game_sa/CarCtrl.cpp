@@ -8486,7 +8486,18 @@ struct CgAttempt {
     FILE* f; uint64_t r0; int attempt; int chosen = -2; int carType = -1; const char* by = "-"; const char* why = "created"; const char* coors = "-";
     CVector origin{}; CNodeAddress a{ 0xFFFF, 0xFFFF }, b{ 0xFFFF, 0xFFFF }; float frac = 0.f; int handle = -1; int model = -1;
     static inline int s_n = 0;
-    CgAttempt() : f(notsa::rr::CarGenLog(true)), r0(notsa::rr::RandCountNow()), attempt(0) { if (f) { notsa::rr::CarGenLogOnce(); attempt = s_n++; } }
+    CgAttempt() : f(notsa::rr::CarGenLog(true)), r0(notsa::rr::RandCountNow()), attempt(0) {
+        if (f) {
+            notsa::rr::CarGenLogOnce(); attempt = s_n++;
+            if (notsa::rr::CarGenFramesSet()) { // SH11: E row = the CCarCtrl counters / limits GenerateOneRandomCar reads (pure reads)
+                const auto* w = FindPlayerWanted(-1);
+                std::fprintf(f, "%d %llu E %d NumRandomCars=%d NumLawEnforcerCars=%u NumMissionCars=%d NumParkedCars=%u NumAmbulancesOnDuty=%u NumFireTrucksOnDuty=%u MaxNumberOfCarsInUse=%d CarDensityMultiplier=%.9g fewerCars=%d moreCarsFewerPeds=%d popcycle(other/cops/gangs/dealers)=%.9g/%.9g/%.9g/%.9g wanted=%d lawEnforcerLast=%u timeMs=%u countDownToCarsAtStart=%d gangWar=%d\n",
+                    notsa::rr::LoadLogRecFrame(), (unsigned long long)r0, attempt, (int)CCarCtrl::NumRandomCars, (unsigned)CCarCtrl::NumLawEnforcerCars, (int)CCarCtrl::NumMissionCars, (unsigned)CCarCtrl::NumParkedCars, (unsigned)CCarCtrl::NumAmbulancesOnDuty, (unsigned)CCarCtrl::NumFireTrucksOnDuty,
+                    (int)CCarCtrl::MaxNumberOfCarsInUse, (double)CCarCtrl::CarDensityMultiplier, (int)CCullZones::FewerCars(), (int)CPopulation::m_bMoreCarsAndFewerPeds, (double)CPopCycle::m_NumOther_Cars, (double)CPopCycle::m_NumCops_Cars, (double)CPopCycle::m_NumGangs_Cars, (double)CPopCycle::m_NumDealers_Cars,
+                    w ? (int)w->GetWantedLevel() : -1, (unsigned)CCarCtrl::LastTimeLawEnforcerCreated, (unsigned)CTimer::GetTimeInMS(), (int)CCarCtrl::CountDownToCarsAtStart, (int)CGangWars::GangWarFightingGoingOn());
+            }
+        }
+    }
     ~CgAttempt() {
         if (!f) return;
         const int id = model >= 0 ? model : chosen;
@@ -9290,8 +9301,13 @@ void CCarCtrl::GenerateOneRandomCar() {
 // SH3: the one-time L / P rows of NOTSA_SH_CARGENLOG
 void notsa::rr::CarGenLogOnce() {
     static bool done[2] = {};
+    static int s_lastFrame = -999;
     FILE* f = CarGenLog(true);
     const int di = LoadLogRecFrame() < 0 ? 0 : 1;
+    if (CarGenFramesSet()) { // SH11: L/P rows once per logged frame
+        if (!f || s_lastFrame == LoadLogRecFrame()) return;
+        s_lastFrame = LoadLogRecFrame();
+    } else
     if (!f || done[di] || (di == 1 && LoadLogRecFrame() != 0)) return;
     done[di] = true;
     const auto dump = [&](const char* name, const CLoadedCarGroup& g) {
@@ -9301,6 +9317,7 @@ void notsa::rr::CarGenLogOnce() {
     };
     dump("ms_vehiclesLoaded", CStreaming::ms_vehiclesLoaded);
     dump("m_AppropriateLoadedCars", CPopulation::m_AppropriateLoadedCars);
+    if (CarGenFramesSet()) { for (size_t gi = 0; gi < CPopulation::m_LoadedGangCars.size(); gi++) { char nm[32]; std::snprintf(nm, sizeof nm, "m_LoadedGangCars[%zu]", gi); dump(nm, CPopulation::m_LoadedGangCars[gi]); } }
     std::fprintf(f, "%d %llu P zone_type=%d time_of_week=%d time_index=%d curr_zone=%s pop_type=%d cars(other/cops/gangs/dealers)=%.0f/%.0f/%.0f/%.0f max_cars=%d dontCreateGang=%d dontCreateCops=%d car_density=%.3f max_in_use=%d\n", LoadLogRecFrame(), (unsigned long long)RandCountNow(),
         (int)CPopCycle::m_nCurrentZoneType, (int)CPopCycle::m_nCurrentTimeOfWeek, (int)CPopCycle::m_nCurrentTimeIndex, CPopCycle::m_pCurrZone ? std::string(CPopCycle::m_pCurrZone->GetInfoLabel()).c_str() : "-", CPopCycle::m_pCurrZoneInfo ? (int)CPopCycle::m_pCurrZoneInfo->PopType : -1,
         (float)CPopCycle::m_NumOther_Cars, (float)CPopCycle::m_NumCops_Cars, (float)CPopCycle::m_NumGangs_Cars, (float)CPopCycle::m_NumDealers_Cars, (int)CPopCycle::GetMaxCarsCurrently(), (int)CPopulation::m_bDontCreateRandomGangMembers, (int)CPopulation::m_bDontCreateRandomCops, (float)CCarCtrl::CarDensityMultiplier, (int)CCarCtrl::MaxNumberOfCarsInUse);

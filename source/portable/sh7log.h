@@ -32,6 +32,12 @@ inline FILE* FlyByLog() { static Sh7Log l = [] { Sh7Log x; x.Init("NOTSA_SH_FLYB
 inline void FlyByNote(const char* tag, double v, int flag, unsigned ms) { if (FILE* lf = FlyByLog()) { std::fprintf(lf, "%d %llu %s v=%.9g finished=%d ms=%u\n", LoadLogRecFrame(), (unsigned long long)RandCountNow(), tag, v, flag, ms); std::fflush(lf); } }
 inline std::unordered_map<uint32_t, std::string>& FxNameMap() { static std::unordered_map<uint32_t, std::string> m; return m; }
 inline uint32_t Sh7Bits(float v) { uint32_t u; std::memcpy(&u, &v, 4); return u; }
+// SH11 NOTSA_SH_VEHMTX=<file> (+ NOTSA_SH_VEHMTX_FRAMES default "0", NOTSA_SH_VEHMTX_SLOTS default "2,3"): M row = all 16 floats of the vehicle matrix (hex bits / %.9g), T row = turn speed, before/after a call
+void VehMtxLog(const char* tag, const void* entity); // statehash.cpp
+struct VehMtxScope { const char* b; const void* e; VehMtxScope(const char* a, const char* b_, const void* e_) : b(b_), e(e_) { VehMtxLog(a, e); } ~VehMtxScope() { VehMtxLog(b, e); } VehMtxScope(const VehMtxScope&) = delete; };
 } // namespace notsa::rr
 #define SH7F(v) (double)(v), notsa::rr::Sh7Bits(v)
+#define SH_VMX(a, b, e) notsa::rr::VehMtxScope shVmxScope_(a, b, e)
+#else
+#define SH_VMX(a, b, e) ((void)0)
 #endif

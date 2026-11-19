@@ -1,0 +1,3 @@
+# ASM-P4R9: sentinel / boundary-compare sweep
+Reviewed 6d90dd05e (FindUnsuspectingTargetCar 0x566C90) and 7e7556ad6 (PickTargetForHeatSeekingMissile 0x73F910): both CONFIRMED (9999.9f / 99999.9f, strict <).
+Swept ~50 sites (all FLT_MAX/numeric_limits sites in hooked functions plus hand-written 10000/1e6/1e7 sentinels). One mismatch: CVehicleRecording::SetRecordingToPointClosestToCoors used 1e6, exe 999999.875f (fixed, a5b3cfddf). All others MATCH (see P4R9.result.tsv). Skipped: tools/render/NOTSA code (OctTreeBase, MemoryHeap, WaterCannon, PedGeometryAnalyser bbox, TaskAllocator fill matrix internals). InteriorGroup_c::SetupPaths 1e9 init has no exe constant found but is irrelevant (threshold 3.0). Build: StandaloneRelease links. No tests/game runs.

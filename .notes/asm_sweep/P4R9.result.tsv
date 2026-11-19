@@ -1,0 +1,50 @@
+addr	function	port value/compare	exe value/compare	verdict
+0x566C90	CWorld::FindUnsuspectingTargetCar	9999.9f, strict <	0x864F90=9999.9f, strict < (fcomp+jp), dot<=0 skip	CONFIRMED (reviewed)
+0x73F910	CWeapon::PickTargetForHeatSeekingMissile	99999.9f, strict <	0x47C34FF3, strict < (fcom+jp)	CONFIRMED (reviewed)
+0x56CF90	CAccidentManager closest	FLT_MAX	0x7F7FFFFF	MATCH
+0x603570	CAttractorScanner	FLT_MAX	0x7F7FFFFF	MATCH
+0x600180	CAttractorScanner	FLT_MAX	[0x863A3C]	MATCH
+0x5FFA20	CEntityScanner	FLT_MAX	0x7F7FFFFF	MATCH
+0x538F40	CFireManager	FLT_MAX	[0x863A3C]	MATCH
+0x4418E0	CGameLogic	100000.0f	0x47C35000	MATCH
+0x5F2C10	CPedGeometryAnalyser	FLT_MAX	[0x863A3C]	MATCH
+0x5F3590	CPedGeometryAnalyser	FLT_MAX	0x7F7FFFFF	MATCH
+0x456A70	CPickups	999999.88f	0x497423FE	MATCH
+0x614210	CPopulation	FLT_MAX	[0x863A3C]	MATCH
+0x460850	CRestart	1e7	0x4B189680	MATCH
+0x460A50	CRestart	99999.898f	0x47C34FF3	MATCH
+0x69C850	CTaskAllocatorKillThreatsBasic	FLT_MAX	0x7F7FFFFF	MATCH
+0x643510	TaskComplexEnterAnyCarAsDriver	FLT_MAX	0x7F7FFFFF	MATCH
+0x66E320	TaskComplexFollowPointRoute (2 sites)	FLT_MAX	0x7F7FFFFF + [0x863A3C]	MATCH
+0x68BBD0	TaskComplexPolicePursuit	FLT_MAX	[0x863A3C]	MATCH
+0x634740	TaskComplexUseClosestFreeScriptedAttractor	FLT_MAX	0x7F7FFFFF	MATCH
+0x66B4F0	TaskComplexWanderCriminal	FLT_MAX	0x7F7FFFFF	MATCH
+0x670E20	TaskComplexFollowPatrolRoute	FLT_MAX	0x7F7FFFFF/[0x863A3C]	MATCH
+0x622450	TaskComplexKillPedGroupOnFoot	FLT_MAX	0x7F7FFFFF	MATCH
+0x5627D0	CWanted	FLT_MAX	0x7F7FFFFF/[0x863A3C]	MATCH
+0x45A1E0	CVehicleRecording::SetRecordingToPointClosestToCoors	1e6 (999999.875 intended), strict <	0x497423FE, strict <	FIXED a5b3cfddf
+0x73CDC0	CWeapon::DoDoomAiming	10000	0x461C4000	MATCH
+0x73D1E0	CWeapon::DoTankDoomAiming	10000	0x461C4000	MATCH
+0x73D720	CWeapon	10000	0x461C4000	MATCH
+0x426EF0	CCarCtrl (bestAngle)	10.0f, <=	0x41200000, <= (fcom, test ah 0x41, jp)	MATCH
+0x5161A0	CCam	10000	0x461C4000	MATCH
+0x51B120	CCam	10000	0x461C4000	MATCH
+0x516B20	CCamera	999999.0f	0x497423F0	MATCH
+0x6A1460	CAutomobile	1000	0x447A0000	MATCH
+0x6CC4B0	CPlane	1000	0x447A0000	MATCH
+0x6F5BA0	CTrain	10000	0x461C4000	MATCH
+0x6F6BD0	CTrain	99999.9f	0x47C34FF3	MATCH
+0x6F7090	CTrain	1e7	0x4B189680	MATCH
+0x6F8170	CTrain	999999.0f	0x497423F0	MATCH
+0x5FA314/0x5FA5E5	CGroupEventHandler greet/dodeal inline	999999.0f strict <	0x497423F0 strict <	MATCH
+0x594A50	InteriorGroup_c	999999.0f	0x497423F0	MATCH
+0x451B70	CPathFind::FindNextNodeWandering	-999999.0f	0xC97423F0	MATCH
+0x616300	CPopulation	1e7	0x4B189680	MATCH
+0x624710	CTaskSimpleFight	-1000/1000	0xC47A0000/0x447A0000	MATCH
+0x6992B0	CCover	99999.9f	[0x85999C]=99999.9	MATCH
+0x44A3C0	CGarages	99999.9f	0x47C34FF3	MATCH
+0x72CAE0	CRenderer	99999.9f	0x47C34FF3	MATCH
+0x69B1B0	CFormation	1e7	[0x86D270]	MATCH
+0x44FCE0/0x44FEE0	CPathFind	10000	0x461C4000/[0x859AA4]	MATCH
+0x6F2710	CBoat	999999.875	0x497423FE	MATCH
+0x595590	InteriorGroup_c::SetupPaths (1e9 init)	1e9, <, then >=3 removes	no such constant found in function; threshold 3.0 makes the init irrelevant	UNSURE-benign (not reached further)

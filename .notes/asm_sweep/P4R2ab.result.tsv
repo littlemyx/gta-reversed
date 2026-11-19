@@ -1,0 +1,32 @@
+addr	function	verdict	asm range	note	fix commit
+53f920	CPad::StartShake (P4R2aa fix)	CONFIRMED	0x53F920-0x53F996	time>ShakeDur (signed), uint32 stamp at +0x12C, uint8 freq at +0x130; struct offsets/sizes unchanged	
+54d690	CPhysical::AttachEntityToEntity (P4R2aa fix)	CONFIRMED	0x54D690-0x54D91C	+0xFC stored first, +0x128 read from +0xFC after the store = new target; AllocateMatrix + UpdateMatrix(0x54F1B0) for matrix-less target	
+6d05e0	cTransmission::CalculateDriveAcceleration	MATCH	0x6D05E0-0x6D09B4	all branches, constants and operation order verified; (1-0.6667f) float vs x87: noise	
+542ce0	CPhysical::GetSpeed	MATCH	0x542CE0-0x542DC6	
+542dd0	CPhysical::ApplyMoveSpeed	MATCH	0x542DD0-0x542E1E	
+542e20	CPhysical::ApplyTurnSpeed	FIXED	0x542E20-0x542FD6	cross products (0x59C730) and 0x59C790 transform are unrounded-extended, port used the float-rounding helpers	a19269161
+542fe0	CPhysical::ApplyGravity	MATCH	0x542FE0	
+543c90	CPhysical::ApplySpringCollision	MATCH	0x543C90-0x543D56	
+543d60	CPhysical::ApplySpringCollisionAlt	MATCH	0x543D60-0x543E80	
+54f560	CPlaceable::AllocateMatrix	MATCH	0x54F560-0x54F5CC	
+535300	CEntity::GetColModel	MATCH	0x535300-0x535330	
+6a3a60	CAutomobile::BoostJumpControl	MATCH	0x6A3A60-	
+6b6740	CBike::ResetSuspension	MATCH	0x6B6740-0x6B678F	
+6c7d80	CMonsterTruck::ExtendSuspension	MATCH	0x6C7D80-0x6C7DDF	product rounding: noise	
+6d1340	CVehicle::ProcessDelayedExplosion	MATCH	0x6D1340-0x6D139B	
+6f0e20	CBoat::PruneWakeTrail	MATCH	0x6F0E20-0x6F0E79	
+50a9f0	CCamera::CamShake	MATCH	0x50A9F0-	
+50bff0	CCamera::Using1stPersonWeaponMode	MATCH	0x50BFF0-0x50C026	7 modes verified
+6d73b0	CVehicle::ProcessBikeWheel	NOT_REACHED		port is x87-annotated throughout (spot-read only), budget
+4a9810	FxManager_c::DestroyFxSystem	NOT_REACHED		budget
+4aa2f0	FxSystem_c::Play	NOT_REACHED		budget
+4aa440	FxSystem_c::AddParticle	NOT_REACHED		budget
+542a50	CPhysical::ApplyTurnForce	NOT_REACHED		budget
+59b6a0	CMatrix::Reorthogonalise	NOT_REACHED		budget
+6a38a0	CAutomobile::ProcessAutoBusDoors	NOT_REACHED		budget
+6adff0	CAutomobile::ScanForCrimes	NOT_REACHED		budget
+6c3ef0	cBuoyancy::ProcessBuoyancy	NOT_REACHED		budget
+6c4760	CHeli::FindSwatPositionRelativeToHeli	NOT_REACHED		budget
+734a40	::GetAnimHierarchyFromSkinClump	NOT_REACHED		budget
+73db40	CWeapon::Update	NOT_REACHED		budget
+742bf0	CWeaponEffects::MarkTarget	NOT_REACHED		budget

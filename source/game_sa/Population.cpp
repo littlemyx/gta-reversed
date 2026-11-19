@@ -2524,7 +2524,8 @@ void CPopulation::ManageAllPopulation() {
         }
     }
 
-    for (auto& dummy : GetDummyPool()->GetAllValid()) {
+    // exe 0x616146-0x61617D: the dummy pool is walked from the last slot down, like the object pool above
+    for (auto& dummy : NOTSA_EXE_OR(GetDummyPool()->GetAllValidReverse(), GetDummyPool()->GetAllValid())) {
         ManageDummy(&dummy, center);
     }
 }

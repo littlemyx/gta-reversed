@@ -1,0 +1,52 @@
+addr	function	verdict	asm range	note	fix commit
+0x646A60	CTaskSimpleCarWaitToSlowDown::MakeAbortable	MATCH	0x646A60+fn		
+0x667EB0	CTaskSimpleAchieveHeading::MakeAbortable	MATCH	0x667EB0+fn		
+0x676190	CTaskInteriorSitAtDesk::FinishAnimCB	MATCH	0x676190+fn		
+0x608440	CPedScriptedTaskRecordData::SetAsAttractorScriptTask	MATCH	0x608440+fn		
+0x6084A0	CPedScriptedTaskRecordData::SetAsGroupTask	MATCH	0x6084A0+fn		
+0x6338E0	CTaskSimpleIKManager::ProcessPed	MATCH	0x6338E0+fn		
+0x646490	CTaskSimpleCarCloseDoorFromInside::FinishAnimCarCloseDoorFromI	MATCH	0x646490+fn		
+0x648EE0	CTaskSimpleCarFallOut::FinishAnimFallOutCB	FIXED	0x648EE0+0x58	status 0->1 / 2->3 (SetDoorOpen_Component); port closed the door	391375dbb
+0x64B020	CTaskSimpleCarCloseDoorFromOutside::MakeAbortable	MATCH	0x64B020+fn		
+0x64BFB0	CTaskSimpleCarSlowDragPedOut::MakeAbortable	MATCH	0x64BFB0+fn		
+0x64C080	CTaskSimpleCarSlowBeDraggedOut::MakeAbortable	MATCH	0x64C080+fn		
+0x4B2530	CEventPlayerCommandToGroupAttack::AffectsPedGroup	MATCH	0x4B2530+fn		
+0x61F3A0	CTaskSimpleUseGun::FinishGunAnimCB	MATCH	0x61F3A0+0x42	m_BurstShots uint16 vs exe signed word (differs only >32767 shots, unreachable)	
+0x6320F0	CTaskComplexSunbathe::MakeAbortable	MATCH	0x6320F0+fn		
+0x634620	CTaskSimpleTriggerLookAt::ProcessPed	MATCH	0x634620+fn		
+0x635970	CTaskComplexUseScriptedBrain::MakeAbortable	MATCH	0x635970+fn		
+0x654290	CTaskComplexWalkRoundCar::SetNewVehicle	MATCH	0x654290+fn		
+0x661110	CTaskLeanOnVehicle::MakeAbortable	MATCH	0x661110+fn		
+0x661160	CTaskLeanOnVehicle::FinishAnimCB	MATCH	0x661160+fn		
+0x675DD0	CTaskInteriorSitOnChair::FinishAnimCB	MATCH	0x675DD0+fn		
+0x682C60	CTaskComplexPartnerChat::MakeAbortable	MATCH	0x682C60+fn		
+0x620BF0	CTaskComplexReactToAttack::MakeAbortable	MATCH	0x620BF0+fn		
+0x6338A0	CTaskSimpleIKManager::MakeAbortable	MATCH	0x6338A0+fn		
+0x65B420	CTaskComplexFleePoint::MakeAbortable	MATCH	0x65B420+fn		
+0x669650	CTaskComplexFollowNodeRoute::GetSubTaskType	MATCH	0x669650+fn		
+0x678FA0	CTaskSimpleLand::FinishAnimCB	MATCH	0x678FA0+fn		
+0x633C40	CTaskSimpleIKChain::BlendOut	MATCH	0x633C40+fn		
+0x6462A0	CTaskSimplePickUpBike::MakeAbortable	MATCH	0x6462A0+fn		
+0x648D30	CTaskSimpleBikeJacked::FinishAnimBikeHitCB	MATCH	0x648D30+fn		
+0x4C63B0	CModelInfo::ReInit2dEffects	MATCH	0x4C63B0-0x4C63D7	review of fc3ccbca1: CONFIRMED (null slots skipped, 20000 slots)	
+0x4C5A70	CModelInfo::IsBoatModel	MATCH	0x4C5A70+0x2F	disassembled: type==6 then vehicleType compare	
+0x4C5AA0	CModelInfo::IsCarModel	MATCH	0x4C5AA0+0x2F	disassembled: type==6 then vehicleType compare	
+0x4C5AD0	CModelInfo::IsTrainModel	MATCH	0x4C5AD0+0x2F	disassembled: type==6 then vehicleType compare	
+0x4C5B00	CModelInfo::IsHeliModel	MATCH	0x4C5B00+0x2F	disassembled: type==6 then vehicleType compare	
+0x4C5B30	CModelInfo::IsPlaneModel	MATCH	0x4C5B30+0x2F	disassembled: type==6 then vehicleType compare	
+0x4C5B60	CModelInfo::IsBikeModel	MATCH	0x4C5B60+0x2F	disassembled: type==6 then vehicleType compare	
+0x4C5B90	CModelInfo::IsFakePlaneModel	MATCH	0x4C5B90+0x2F	disassembled: type==6 then vehicleType compare	
+0x4C5BC0	CModelInfo::IsMonsterTruckModel	MATCH	0x4C5BC0+0x2F	disassembled: type==6 then vehicleType compare	
+0x4C5BF0	CModelInfo::IsQuadBikeModel	MATCH	0x4C5BF0+0x2F	disassembled: type==6 then vehicleType compare	
+0x4C5C20	CModelInfo::IsBmxModel	MATCH	0x4C5C20+0x2F	disassembled: type==6 then vehicleType compare	
+0x4C5C50	CModelInfo::IsTrailerModel	MATCH	0x4C5C50+0x2F	disassembled: type==6 then vehicleType compare	
+0x4C5C80	CModelInfo::IsVehicleModelType	MATCH	0x4C5C80-0x4C5CAF	disassembled	
+0x4C6620	CModelInfo::AddAtomicModel	MATCH	0x4C6620+0x2C	disassembled: store base/count/stride match, virtual Init (+0x18), SetModelInfo	
+0x4C6650	CModelInfo::AddDamageAtomicModel	MATCH	0x4C6650+0x2C	disassembled: store base/count/stride match, virtual Init (+0x18), SetModelInfo	
+0x4C6680	CModelInfo::AddLodAtomicModel	MATCH	0x4C6680+0x2C	disassembled: store base/count/stride match, virtual Init (+0x18), SetModelInfo	
+0x4C66B0	CModelInfo::AddTimeModel	MATCH	0x4C66B0+0x2C	disassembled: store base/count/stride match, virtual Init (+0x18), SetModelInfo	
+0x4C66E0	CModelInfo::AddLodTimeModel	MATCH	0x4C66E0+0x2C	disassembled: store base/count/stride match, virtual Init (+0x18), SetModelInfo	
+0x4C6710	CModelInfo::AddWeaponModel	MATCH	0x4C6710+0x2C	disassembled: store base/count/stride match, virtual Init (+0x18), SetModelInfo	
+0x4C6740	CModelInfo::AddClumpModel	MATCH	0x4C6740+0x2C	disassembled: store base/count/stride match, virtual Init (+0x18), SetModelInfo	
+0x4C6770	CModelInfo::AddVehicleModel	MATCH	0x4C6770+0x2C	disassembled: store base/count/stride match, virtual Init (+0x18), SetModelInfo	
+0x4C67A0	CModelInfo::AddPedModel	MATCH	0x4C67A0+0x2C	disassembled: store base/count/stride match, virtual Init (+0x18), SetModelInfo	

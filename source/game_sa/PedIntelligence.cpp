@@ -198,10 +198,15 @@ bool CPedIntelligence::IsInHearingRange(const CVector& posn) {
 
 // 0x600C60
 bool CPedIntelligence::IsInSeeingRange(const CVector& posn) const {
-    CVector distance = posn - m_pPed->GetPosition();
-    if (m_fSeeingRange * m_fSeeingRange > distance.SquaredMagnitude()) {
-        if (DotProduct(distance, m_pPed->GetForward()) > 0.0f)
-            return true;
+    // exe 0x600C60-0x600CDF: x87 sums, range test as ((z^2 + y^2) + x^2), forward dot as ((fz*dz + fy*dy) + fx*dx)
+    const auto& pedPos = m_pPed->GetPosition();
+    const x87d  dx = (x87d)posn.x - (x87d)pedPos.x;
+    const x87d  dy = (x87d)posn.y - (x87d)pedPos.y;
+    const x87d  dz = (x87d)posn.z - (x87d)pedPos.z;
+    const x87d  range = m_fSeeingRange;
+    if (range * range > dz * dz + dy * dy + dx * dx) {
+        const auto& fwd = m_pPed->GetForward();
+        return (x87d)fwd.z * dz + (x87d)fwd.y * dy + (x87d)fwd.x * dx > (x87d)0.0f;
     }
     return false;
 }

@@ -1,0 +1,15 @@
+addr	function	verdict	asm range	note	fix commit
+0x4AB6D0	CEventGroup::TickEvents	MATCH	-	unconditional inc of event+4 per slot	-
+0x4AB760	CEventGroup::RemoveInvalidEvents	MATCH	-	IsValid / script-command keep logic equal	-
+0x4AB700	CEventGroup::Reorganise	MATCH	-	compaction via local array	-
+0x4AB7C0	CEventGroup::GetHighestPriorityEvent	MATCH	-	script cmd strict >, others >=; AffectsPed	-
+0x4AB650	CEventGroup::GetEventOfType	MATCH	-		-
+0x5429F0	CPhysical::ApplyMoveForce	MATCH	-	reciprocal multiply; z zero under bDisableZ	-
+0x542A50	CPhysical::ApplyTurnForce	MATCH	-		-
+0x542CE0	CPhysical::GetSpeed	MATCH	-		-
+0x5433B0	CPhysical::SkipPhysics	MATCH	-		-
+0x543490	CPhysical::AddCollisionRecord	MATCH	-		-
+0x6ADFF0	CAutomobile::ScanForCrimes	MATCH	-	dist^2 sum order z,x,y in exe: float noise	-
+0x6A3A60	CAutomobile::BoostJumpControl	MATCH	-	constants 1.0/0.15/0.01 verified	-
+0x6F5BA0	CTrain::FindMaximumSpeedToStopAtStations	MATCH	-	constants and loops verified (6 stations)	-
+0x6F5CD0	CTrain::FindNumCarriagesPulled	MATCH	-		-

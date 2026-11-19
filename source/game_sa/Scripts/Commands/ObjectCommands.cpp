@@ -189,7 +189,7 @@ auto GetObjectAnimCurrentTime(CObject& obj, const char* animName) {
 
 auto SetObjectAnimCurrentTime(CObject& obj, const char* animName, float progress) {
     if (const auto anim = RpAnimBlendClumpGetAssociation(obj.GetRpClump(), animName)) {
-        anim->SetCurrentTime(anim->m_Speed * progress);
+        anim->SetCurrentTime(anim->m_BlendHier->m_fTotalTime * progress); // exe 0x470C81: hierarchy total time (+0x10), not the play speed
     }
 }
 } // namespace Animation

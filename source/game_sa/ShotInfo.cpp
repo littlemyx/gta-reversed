@@ -23,9 +23,10 @@ void CShotInfo::InjectHooks() {
 void CShotInfo::Initialise() {
     rng::fill(aShotInfos, CShotInfo{});
     // 0x739BF5: the table is filled by repeatedly adding 0.005 (0x858B4C) to the running value, starting at -0.05 (0x85901C)
-    float v = -0.05f;
+    // x87: the running value stays in extended precision (fst stores a rounded copy, fadd continues with the unrounded st0)
+    x87d v = -0.05f;
     for (auto& rd : RandTable) {
-        rd = v;
+        rd = (float)v;
         v += 0.005f;
     }
 }

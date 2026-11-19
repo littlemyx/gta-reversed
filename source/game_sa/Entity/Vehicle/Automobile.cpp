@@ -2123,8 +2123,9 @@ void CAutomobile::ProcessControlInputs(uint8 playerNum) {
         m_GasPedal = 0.f;
         m_BrakePedal = 1.f;
         FindPlayerPed()->KeepAreaAroundPlayerClear();
-        if (const auto speedsq = GetMoveSpeed().SquaredMagnitude(); speedsq >= sq(0.28f)) {
-            GetMoveSpeed() *= 0.28f / std::sqrt(speedsq);
+        // exe 0x6ADE25-0x6ADE87: speed = sqrt(x*x+y*y+z*z) (PC24), `speed > 0.28` STRICT (fcom + test ah,0x41 + jne; NaN skips), then * (0.28 / speed); NOT `speedsq >= 0.28^2`
+        if (const auto speed = GetMoveSpeed().Magnitude(); speed > 0.28f) {
+            GetMoveSpeed() *= 0.28f / speed;
         }
     }
 

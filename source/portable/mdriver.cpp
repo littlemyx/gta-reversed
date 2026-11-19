@@ -212,6 +212,9 @@ bool Ad3() { static const bool g = std::getenv("NOTSA_MDRIVER_AD3") != nullptr; 
 int GFrame() { return (int)(CTimer::GetFrameCounter() - g_frame0); }
 const uint8_t* Resolve(const CRunningScript* s, int32_t off) { return off < 0 ? s->m_BaseIP - off : CTheScripts::ScriptSpace.data() + off; }
 tScriptParam* LocalAt(const CRunningScript* s, int i) { auto* m = const_cast<CRunningScript*>(s); return m->m_ThisMustBeTheOnlyMissionRunning ? &CTheScripts::LocalVariablesForCurrentMission[i] : &m->m_LocalVars[i]; }
+// P4C1: the look-ahead decodes a command that has not run yet: an array index variable can hold anything then (missions 39 / 50 / 74 read far outside ScriptSpace / the locals) -> an out-of-range operand ends the decode (the caller sees fewer arguments)
+bool LocalOk(const CRunningScript* s, int64_t i) { return i >= 0 && (size_t)i < (const_cast<CRunningScript*>(s)->m_ThisMustBeTheOnlyMissionRunning ? CTheScripts::LocalVariablesForCurrentMission.size() : s->m_LocalVars.size()); }
+bool GlobalOk(int64_t off) { return off >= 0 && (size_t)off + 4 <= CTheScripts::ScriptSpace.size(); }
 std::vector<Arg> DecodeArgs(const CRunningScript* s, const uint8_t* p, int n) { // the first n arguments of the command at p (SCM typed arguments)
     std::vector<Arg> r; p += 2;
     for (int k = 0; k < n; k++) {
@@ -219,13 +222,15 @@ std::vector<Arg> DecodeArgs(const CRunningScript* s, const uint8_t* p, int n) { 
         switch (t) {
         case 1: a.bits = *(const uint32_t*)p; p += 4; break;
         case 2: a.bits = *(const uint32_t*)(CTheScripts::ScriptSpace.data() + *(const uint16_t*)p); a.kind = 2; p += 2; break;
-        case 3: a.bits = LocalAt(s, *(const uint16_t*)p)->uParam; a.kind = 2; p += 2; break;
+        case 3: if (!LocalOk(s, *(const uint16_t*)p)) return r; a.bits = LocalAt(s, *(const uint16_t*)p)->uParam; a.kind = 2; p += 2; break;
         case 4: a.bits = (uint32_t)(int32_t)*(const int8_t*)p; p += 1; break;
         case 5: a.bits = (uint32_t)(int32_t)*(const int16_t*)p; p += 2; break;
         case 6: a.bits = *(const uint32_t*)p; a.kind = 1; p += 4; break;
         case 7: case 8: { // array: u16 base, u16 index var, u8 size, u8 flags (bit 7: index var is local)
             const uint16_t base = *(const uint16_t*)p, iv = *(const uint16_t*)(p + 2); const uint8_t fl = p[5];
+            if ((fl & 0x80) ? !LocalOk(s, iv) : !GlobalOk(iv)) return r;
             const int idx = (int)((fl & 0x80) ? LocalAt(s, iv)->uParam : *(const uint32_t*)(CTheScripts::ScriptSpace.data() + iv));
+            if (t == 7 ? !GlobalOk((int64_t)base + 4 * (int64_t)idx) : !LocalOk(s, (int64_t)base + idx)) return r;
             a.bits = t == 7 ? *(const uint32_t*)(CTheScripts::ScriptSpace.data() + base + 4 * idx) : LocalAt(s, base + idx)->uParam; a.kind = 2; p += 6; break; }
         case 9: p += 8; break;
         case 0xA: p += 16; break;

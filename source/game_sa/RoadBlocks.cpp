@@ -675,7 +675,10 @@ void CRoadBlocks::GenerateRoadBlocks() {
     if (auto& srb = aScriptRoadBlocks[CTimer::GetFrameCounter() % MAX_SCRIPT_ROADBLOCKS]; srb.IsActive) {
         const auto c = CVector::Centroid({ srb.CornerA, srb.CornerB });
 
-        if (DistanceBetweenPoints(FindPlayerCoors(), c) >= 90.0f) {
+        // 0x462E14-0x462E4E: unrounded x87 differences, summed (dx^2 + dy^2) + dz^2; `fcomp` + `test ah,5` + `jp` => taken when dist >= 90 or NaN
+        const CVector playerPos = FindPlayerCoors();
+        const x87d dx = (x87d)playerPos.x - c.x, dy = (x87d)playerPos.y - c.y, dz = (x87d)playerPos.z - c.z;
+        if (!(std::sqrt((dx * dx + dy * dy) + dz * dz) < 90.0)) {
             srb.IsSafeToCreate = true;
         } else if (srb.IsSafeToCreate) {
             CreateRoadBlockBetween2Points(srb.CornerA, srb.CornerB, srb.IsGangRoadBlock);

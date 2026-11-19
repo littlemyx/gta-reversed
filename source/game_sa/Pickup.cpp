@@ -254,8 +254,14 @@ bool CPickup::Update(CPlayerPed* player, CVehicle* vehicle, int32 playerId) {
 
     if (m_nFlags.bDisabled) {
         if (CTimer::GetTimeInMS() > m_nRegenerationTime) {
-            const auto dist = DistanceBetweenPoints(GetPosn(), FindPlayerCoors());
-            if (dist > 10.0f || (pt == PICKUP_IN_SHOP && dist > 2.4f)) {
+            // 0x4587AA-0x45883B: the exe uses the 2D SQUARED distance (no z, no sqrt): sq = dy_f * dy + dx * dx, where dy_f is the y difference rounded to float (stored) and the others stay extended;
+            // sq > 100 (squared 10) gives the pickup back, shop pickups also at sq > 2.4 (the raw 2.4, not squared). NaN: the first test fails, the second jne skips => no respawn
+            const CVector pickupPos = GetPosn();
+            const CVector playerPos = FindPlayerCoors();
+            const x87d    dyE       = (x87d)playerPos.y - pickupPos.y;
+            const x87d    dxE       = (x87d)playerPos.x - pickupPos.x;
+            const x87d    sq        = (x87d)(float)dyE * dyE + dxE * dxE;
+            if (sq > 100.0 || (pt == PICKUP_IN_SHOP && sq > (x87d)2.4f)) {
                 GiveUsAPickUpObject(m_pObject);
 
                 if (m_pObject) {

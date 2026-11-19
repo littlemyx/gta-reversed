@@ -1,0 +1,18 @@
+addr	function	verdict	asm range	note	fix commit
+0x465E90	COMMAND_WAIT (0x1)	MATCH	0x465E90-0x465EBE	CollectParameters(1), wake = now + arg, OR_WAIT	-
+0x4667A3	COMMAND_GOTO_IF_FALSE (0x4D)	MATCH	0x4667A3-0x4667D8	flag test + UpdatePC	-
+0x4693CF	COMMAND_ANDOR (0xD6)	MATCH	0x4693CF-0x469435	state 0 / 1..8 / 21..28 transitions	-
+0x469B13	COMMAND_IS_CHAR_DEAD (0x118)	MATCH	0x469B13-0x469B68	null ped -> true; IsPedDead states 54..56 (0x464D70)	-
+0x469B6D	COMMAND_IS_CAR_DEAD (0x119)	MATCH	0x469B6D-0x469BCC	null / WRECKED -> true, else drowning bit	-
+0x4695A9	COMMAND_IS_CHAR_IN_CAR (0xDB)	MATCH	0x4695A9-0x469609	-	-
+0x469667	COMMAND_IS_CHAR_IN_ANY_CAR (0xDF)	MATCH	0x469667-0x4696B3	-	-
+0x48D017	COMMAND_HAS_CHAR_BEEN_DAMAGED_BY_CHAR (0x51A)	MATCH	0x48D017-0x48D087	null ped / null last damage -> false; own or its vehicle	-
+0x48A074	COMMAND_IS_CHAR_SITTING_IN_CAR (0x448)	MATCH	0x48A074-0x48A0FB	simplest task 709 / 1022	-
+0x48A174	COMMAND_IS_CHAR_ON_FOOT (0x44B)	MATCH	0x48A174-0x48A1E4	tasks 700/701	-
+0x4677E2	COMMAND_GET_CHAR_COORDINATES (0xA0)	MATCH	0x4677E2-0x467862	vehicle position when in one	-
+0x47D721	COMMAND_MARK_CHAR_AS_NO_LONGER_NEEDED (0x1C2)	MATCH	0x47D721-0x47D75A	CleanUpThisPed + mission cleanup list	-
+0x48DCB7	COMMAND_FREEZE_CHAR_POSITION_AND_DONT_LOAD_COLLISION (0x575)	MATCH	0x48DCB7-0x48DD24	-	-
+0x4678C5	COMMAND_IS_CHAR_IN_AREA_2D (0xA3)	MATCH	0x4678C5-0x46798E	vehicle IsWithinArea, highlight z -100	-
+0x469751	COMMAND_LOCATE_CHAR_*_2D/3D (0xEC-0xF1,0xFE-0x103)	FIXED	0x486D80-0x4870A5	port handlers re-implemented the helper (DbgFlag square only after checks, NaN passes 2D, highlight z midpoint); now forward the command id to CRunningScript::LocateCharCommand (compared in S66)|3c9d4c242	-
+0x469760	COMMAND_LOCATE_CHAR_*_CHAR_2D/3D (0xF2-0xF4,0x104-0x106)	FIXED	0x4870F0-0x4873F5	port used the other ped's own position (exe: real position, the car's when in one); forwards to CRunningScript::LocateCharCharCommand|3c9d4c242	-
+0x47E367	COMMAND_LOCATE_CHAR_*_CAR_2D/3D (0x202-0x207)	FIXED	0x487420-0x487700	same, forwards to CRunningScript::LocateCharCarCommand|3c9d4c242	-

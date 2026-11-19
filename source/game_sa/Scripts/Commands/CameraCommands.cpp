@@ -234,8 +234,8 @@ bool CameraIsVectorTrackRunning() {
 }
 
 // CAMERA_SET_VECTOR_MOVE (2358)
-void CameraSetVectorMove(CVector from, CVector to, float time, bool ease) {
-    TheCamera.VectorMoveLinear(&to, &from, time, ease);
+void CameraSetVectorMove(CVector from, CVector to, int32 time, bool ease) {
+    TheCamera.VectorMoveLinear(&to, &from, (float)time, ease); // exe 0x476F9D: the time parameter is an int (fild), not a float
 }
 
 // SET_CINEMA_CAMERA (2365)

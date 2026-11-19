@@ -28,7 +28,7 @@ CTask* CTaskComplexEnterAnyCarAsDriver::CreateFirstSubTask(CPed* ped) {
     CVehicle* closest{};
     for (auto& vehicle : ped->GetIntelligence()->GetVehicleScanner().GetEntities<CVehicle>()) {
         const auto distSq = (vehicle.GetPosition() - ped->GetPosition()).SquaredMagnitude();
-        if (distSq < closestDistSq) {
+        if (distSq < closestDistSq && CCarEnterExit::IsVehicleStealable(vehicle.AsVehicle(), ped)) { // 0x643612: the closest candidate must also be stealable
             closestDistSq = distSq;
             closest = vehicle.AsVehicle();
         }

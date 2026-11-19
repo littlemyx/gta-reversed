@@ -1,0 +1,15 @@
+addr	function	verdict	asm range	note	fix commit
+0x5394C0	CFireManager::ExtinguishPoint/ExtinguishPointWithWater (review of P4R2t)	MATCH	0x539470-0x53951E	strict distSq < r*r confirmed	-
+0x441C10	CGameLogic::LaRiotsActiveHere (review of P4R2t)	MATCH	0x441C10-0x441CF2	z>950 false, cheat, flag, both rects strict confirmed	-
+0x5394C0	CFire::ExtinguishWithWater (review of P4R2t)	FIXED	0x539554-0x5395F6	z offset is (rand&0xFF)*0.005 with NO -128 (P4R2t fix wrongly subtracted 128 on z)	0801f4fd3
+0x460850	CRestart::FindClosestHospitalRestartPoint	MATCH	0x460850-0x460A45	override/base-point/extra radius/level x6/strict compare/10000000 init; float-vs-x87 noise	-
+0x460A50	CRestart::FindClosestPoliceRestartPoint	MATCH	0x460A50-0x460C45	same; init 99999.898; NaN handling matches	-
+0x56A0D0	CWorld::ClearExcitingStuffFromArea	MATCH	0x56A0D0-0x56A489	ped/vehicle loops, strict radius, boat-contact, locked, garage, tail calls match	-
+0x56A30E	CWorld::RemoveVehicleAndItsOccupants (inlined)	FIXED	0x56A30E-0x56A333	m_pDriver nulled after driver removal (port left it dangling; ~CVehicle flagged the freed ped)	e30a57539
+0x438480	CCheat::AddToCheatString	MATCH	0x438480-0x4385A9	shift, hash scan from full length down, first matching slot, help message args, flag, apply, clear	-
+0x559FA0	CStats::DecrementStat	MATCH	0x559FA0-0x55A06B	float/int arms, clamp, FAT recursion on energy < 0	-
+0x55CFC0	CStats::UpdateStatsOnRespawn	MATCH	0x55CFC0-0x55D02A	counter > limit (57), health > 400, DEC (25) idx	-
+0x55D030	CStats::UpdateStatsAddToHealth	MATCH	0x55D030-0x55D087	counter > limit (58), INC (11) idx	-
+0x55B900	CStats::ProcessReactionStatsOnIncrement	MATCH	0x55B900-0x55B97F	byte id compare, energy tests (already addressed in source)	-
+0x55BC50	CStats::UpdateRespectStat	MATCH	-	old DEVIATION row already fixed by b5a99235a	-
+-	remaining no-verdict (CCamera::*, CPointLights::AddLight, CGangWars::*, CStats::DisplayScript.., CWeapon::GenerateDamageEvent, CVehicleRecording...)	NOT_REACHED	-	budget	-

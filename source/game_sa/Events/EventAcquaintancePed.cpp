@@ -67,7 +67,7 @@ bool CEventAcquaintancePed::TakesPriorityOver(const CEvent& refEvent)
     if (refEvent.GetEventType() == GetEventType()) {
         const auto theRefEvent = static_cast<const CEventAcquaintancePed*>(&refEvent);
         if (m_AcquaintancePed && m_AcquaintancePed->IsPlayer())
-            return theRefEvent->m_AcquaintancePed && !theRefEvent->m_AcquaintancePed->IsPlayer();
+            return !theRefEvent->m_AcquaintancePed || !theRefEvent->m_AcquaintancePed->IsPlayer(); // exe 0x4AF92B-0x4AF937: a null ref-event ped counts as not-player (port returned false)
         return false;
     }
     return CEvent::TakesPriorityOver(refEvent);

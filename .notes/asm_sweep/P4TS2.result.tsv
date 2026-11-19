@@ -1,0 +1,28 @@
+addr	function	verdict	asm range	note	fix commit
+0x443AA0	CGangWars::GangWarGoingOn	CONFIRMED	0x443AA0-0x443ABA	State(0x96AB64) or State2(0x96AB4C) non-zero	-
+0x468F39	CTheScripts::Init	CONFIRMED	0x468F39-0x468F40	count zeroed before ReadObjectNamesFromScript	-
+0x4C2164	CEventHandler GANG_DRIVEBY passenger	CONFIRMED	0x4C2164-0x4C21A5	not-driver, vehicle non-null, task 0x2C5	-
+0x47FAE6	GET_CLOSEST_CHAR_NODE	WRONG->FIXED	0x47FB7C-0x47FBC3	P4TS1 used FindNodeCoorsForScript (that is the CAR-node command 0x47FC76); ped node is CPathNode::GetPosition, flag true/false+zeros kept	752412206
+0x4479A0	CGarages::IsCarSprayable	CONFIRMED	0x4479A0-0x4479E5	431,437,407,416,-2 refused	-
+0x5E7EC0	CPed::DettachPedFromEntity	CONFIRMED	0x5E7F90-0x5E7FA1	or [ped+0x1C],1	-
+0x458DCF	CPickups outZ + DoPickUpEffects axes	CONFIRMED	0x458DC1-0x458DD5; 0x455D6D-0x455E12	outZ=cand.z; +0x10=(-sin,cos,0), +0x20=(0,0,scale)	-
+0x43D6E0	CDarkel::FindTotalPedsKilledByPlayer	CONFIRMED	0x43D6E0-0x43D738	40 x 10 models = 400	-
+0x6595A3	CTaskComplexUseSwatRope health	CONFIRMED	0x6595A3-0x6595B4	strict < 20.0	-
+0x635B9A	CTaskComplexUseScriptedBrain priority	CONFIRMED	0x635B95-0x635B97	push 0; push 1	-
+0x41FB29	CCarAI stuck condition	CONFIRMED	0x41FB1B-0x41FB96	skip for cruise 0 and missions 0,6,11,27-32,53	-
+0x47B75C	SHUT_CHAR_UP_FOR_SCRIPTED_SPEECH	CONFIRMED	0x47B779-0x47B79B	disable->Disable(0), enable->Enable()	-
+0x5F9840	CGroupEventHandler NewGangMember	CONFIRMED	0x5F9873-0x5F9890	non-member (7 slots + leader) returns null	-
+0x48A91F	CLEAR_CHAR_LAST_WEAPON_DAMAGE	CONFIRMED	0x48A91F	null ped skipped	-
+0x5EA390	CPedAttractorPedPlacer::PlacePedAtEffect	FIXED	0x5EA481-0x5EA56B	heading uses the forward dir (fx+0x28, edi/ebx), not use dir (S41b used use)	f0895a0a1
+0x5EE6E0	CPedPizzaAttractor ctor	FIXED	0x5EE6E0-0x5EE732	max peds 5, arrive range 0.2 (0x86C458)	985f5a14a
+0x5E9690	CPedShelterAttractor::ComputeAttractHeading	MATCH	0x5E9690-0x5E96B1	rand*recip*2pi, same chain as GetRandomNumberInRange(0,2pi)	-
+0x5D17B0	CGenericGameStorage::GenericLoad	ALREADY RIGHT	0x5D18E1-0x5D18E6	version compare only under FIX_BUGS; run build discards it as the exe; other TS header findings not compared	-
+-	CPedAttractorManager lookup order	NO EFFECT	-	TS: exe searches ATM first; a ped is in at most one attractor and the query answers a boolean / that one attractor; not changed	-
+0x632748	CTaskComplexUseAttractor ATM money	FIXED	0x63276E-0x63279E	money += 20 - 20*(int)((rand&0xFFFF)/32768*-50) (0..99 steps), port 0..49	1d350361e
+0x5D1E2A	CSimpleVariablesSaveStructure::Construct	FIXED	0x5D1E2A-0x5D1E4E	french->+0xEC, german->+0xED (port swapped, wrongly 'reproduced')	4109a56a2
+0x659540	CTaskComplexUseSwatRope::MakeAbortable check order	MATCH	0x659540-0x6595A3	same 7 event types {10,52,58,66,64,73,41}; order of pure compares irrelevant	-
+-	CCam::Process ped cam in car	NOT_REACHED	-	budget	-
+0x50D930	CHandShaker::Process	NOT_REACHED	-	budget (cosmetic)	-
+-	MissionOps61_90 x87 PC=24 chain	NOT_REACHED	-	budget (rounding only)	-
+0x670E20	TaskComplexFollowPatrolRoute::CreateFirstSubTask x87	NOT_REACHED	-	budget (rounding only)	-
+-	TaskComplexGoPickUpEntity::CreateFirstSubTask fpatan	NOT_REACHED	-	budget (rounding only)	-

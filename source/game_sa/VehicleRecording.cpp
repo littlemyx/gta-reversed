@@ -391,7 +391,7 @@ void CVehicleRecording::SaveOrRetrieveDataForThisFrame() {
 
 // 0x45A1E0
 void CVehicleRecording::SetRecordingToPointClosestToCoors(int32 playbackId, CVector posn) {
-    auto minDist = 1'000'000.0f; // FLT_MAX
+    float minDist = std::bit_cast<float>(0x497423FEu); // exe 0x45A1F4: 999999.875f (not 1e6, not FLT_MAX)
     for (auto&& [i, frame] : rngv::enumerate(GetFramesFromPlaybackBuffer(playbackId))) {
         if (const auto d = DistanceBetweenPoints(frame.m_vecPosn, posn); d < minDist) {
             PlaybackIndex[playbackId] = (int32)(i * sizeof(CVehicleStateEachFrame)); // 0x45A1E0: a BYTE offset into the playback buffer (see GetCurrentFrameIndex)

@@ -1,0 +1,10 @@
+addr	function	verdict	asm range	note	fix commit
+0x6A6050	CAutomobile::GetCarPitch	MATCH	0x6A6050-0x6A6086	review of 920f09f45: CONFIRMED (y*y+x*x sqrt stays unrounded into fpatan, -mag when up.z<0)	
+0x534E90	CEntity::ModifyMatrixForTreeInWind	MATCH	0x534E90-0x53503A	constants, branch NaN handling, table order, sway flag, wind dir, FindWindModifier all equal	
+0x532DB0	CEntity::BuildWindSockMatrix	MATCH	0x532DB0-0x533013	dir = -(Wind+0.01), 0.1; cross order, normalise, stores equal	
+0x535040	CEntity::ModifyMatrixForBannerInWind	MATCH	0x535040-0x5352F5	offset index, 0.2/0.43/0.66 select, sqrt(1-o^2), cross order equal	
+0x6E2E50	CVehicle::DoBladeCollision	MATCH	0x6E2E50-0x6E326F	jump table axes, box/sphere, sector bounds+clamp, list order/damage equal (vehicle class; reviewed before the zone split, no change)	
+0x5DE040	CCopPed::RemoveCriminalToKill	MATCH	0x5DE040-0x5DE05F	cleanup-if-set then null	
+0x6C0390	CBmx::LaunchBunnyHopCB	NOT_REACHED	0x6C0390-0x6C04FF	moved to P4R24 (vehicle zone)	
+0x71FAE0	CEntity::IsEntityOccluded	NOT_REACHED	0x71FAE0-0x71FEB0	budget; port already carries many exe-address fixes	
+0x60BA80	CPlayerPed::DrawTriangleForMouseRecruitPed	NOT_REACHED	0x60BA80-0x60C0C0	budget	

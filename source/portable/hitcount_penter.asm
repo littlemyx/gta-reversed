@@ -1,3 +1,4 @@
+; NOTE: RFLAGS must be preserved: MSVC places the _penter call after the prologue, possibly between a cmp and the cmov/jcc that uses it.
 ; T3H GTASA_HITCOUNT: x64 _penter hook for MSVC /Gh. Saves everything a callee may expect live at its entry (arg regs, rax, r10/r11, xmm0-5),
 ; aligns the stack, calls notsa_hitcount_hit(return address). The return address lies inside the instrumented function: it identifies it.
 EXTERN notsa_hitcount_hit:PROC
@@ -5,6 +6,7 @@ EXTERN notsa_hitcount_hit:PROC
 _penter PROC
     push rbp
     mov rbp, rsp
+    pushfq
     push rax
     push rcx
     push rdx
@@ -28,7 +30,7 @@ _penter PROC
     movaps xmm3, [rsp+80]
     movaps xmm4, [rsp+96]
     movaps xmm5, [rsp+112]
-    lea rsp, [rbp-56]
+    lea rsp, [rbp-64]
     pop r11
     pop r10
     pop r9
@@ -36,6 +38,7 @@ _penter PROC
     pop rdx
     pop rcx
     pop rax
+    popfq
     pop rbp
     ret
 _penter ENDP

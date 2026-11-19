@@ -1,0 +1,51 @@
+addr	function	verdict	asm range	note	fix commit
+0x477017	DrawWindow (P4R1h fix review)	CONFIRMED	0x477017-0x477172	cornerA=(p0*sx,p1*sy) cornerB=(p2*sx,p3*sy); CRect(l,b,r,t) so Y=bottom/top is right	
+0x47B8CE	IncrementIntStatNoMessage (review)	CONFIRMED	0x47B8CE-0x47B8EB	fild of int then IncrementStat(stat u16, float)	
+0x4730F4	DisplayTextWithFloat (review)	CONFIRMED	0x4730F4-0x47322C	precision fild->float; pow(10,prec)*(value-whole) then ftol	
+0x47B983	SET_NO_RESPRAYS	FIXED	0x47B983-0x47B9A5	AllRespraysCloseOrOpen(bOpen=!NoResprays); port passed the flag un-negated	68189b08d
+0x48465b	IsCharMale	MATCH			
+0x480913	IsCharModel	MATCH			
+0x494844	GetCharModel	MATCH			
+0x489f05	SetCharIsChrisCriminal(bit 0x400 of +0x470)	MATCH			
+0x470f3b	IsTextLabelEmpty	MATCH			
+0x48b6d0	IsGreaterEqual<int32>	MATCH			
+0x466fe8	MultInPlace<int32>	MATCH			
+0x492168	RegisterStat<float>	MATCH			
+0x46943a	LaunchMission	MATCH			
+0x47bc8f	IncrementFloatStatNoMessage	MATCH			
+0x468272	GetMinutesToTimeOfDay	MATCH			
+0x480b88	PrintWithNumbers<4>/<3>/<6> + Now	MATCH			
+0x47f457	ResetNumOfModelsKilledByPlayer	MATCH			
+0x47b250	AllowFixedCameraCollision	MATCH			
+0x467528	GenerateRandomInt	MATCH			
+0x472d93	IsPlayerPerformingWheelie	MATCH			
+0x472df2	IsPlayerPerformingStoppie	MATCH			
+0x47a615	GetPCMouseMovement	MATCH			
+0x4668dc	CreatePlayer	MATCH			
+0x47c9df	DrawShadow	MATCH			
+0x4753f4	InitZonePopulationSettings	MATCH			
+0x47a1cb	GetPlayerInCarCameraMode	MATCH			
+0x47a29c	ActivatePimpCheat	MATCH			
+0x47e150	GetPlayerChar	MATCH			
+0x48d6a7	MakePlayerFireProof	MATCH			
+0x48d729	IncreasePlayerMaxArmour	MATCH			
+0x48dc04	SetAllTaxisHaveNitro	MATCH			
+0x48eb1d	RegisterBestPosition	MATCH			
+0x489feb	AreAnyCarCheatsActivated	MATCH			
+0x47a52d	GetRidOfPlayerProstitute	MATCH			
+0x4859D0	CRunningScript::UpdateCompareFlag	MATCH			
+0x464C20	CTheScripts::StartNewScript(ip)	MATCH			
+0x4866C0	CTheScripts::CleanUpThisObject	MATCH			
+0x464D50	CTheScripts::IsPlayerOnAMission	MATCH			
+0x464080	CRunningScript::CollectParameters	MATCH			
+0x463CF0	CRunningScript::ReadArrayInformation	MATCH			
+0x464790	CRunningScript::GetPointerToScriptVariable	MATCH			
+0x470150	CRunningScript::PlayAnimScriptCommand	MATCH			
+0x465C20	CRunningScript::GivePedScriptedTask(int32)	MATCH			
+0x464C90	CTheScripts::StartNewScript(ip,index)	MATCH	0x464C90-0x464D1A	noise: port skips SetCurrentIp for null ip (Init already nulls it)	
+0x4768D5	GetLatestConsoleCommand	UNSURE		unused opcode; exe only reads the var pointer and writes nothing, port stores 0	
+0x4802C4	GetRandomCharInZone	NOT_REACHED			
+0x48C589	CSetPieces::AddOne	NOT_REACHED			
+0x489921	LoadAndLaunchMissionInternal	NOT_REACHED			
+0x497DE8	SetTextLabel<16>	NOT_REACHED			
+0x483B30	CTheScripts::AddScriptSphere	MATCH		already fixed earlier (exe 0x483B85 comment in source), not re-compared	

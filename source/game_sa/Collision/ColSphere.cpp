@@ -74,8 +74,11 @@ bool CColSphere::IntersectEdge(const CVector& startPoint, const CVector& endPoin
 
 // 0x410040
 bool CColSphere::IntersectPoint(const CVector& point) {
-    CVector distance = m_vecCenter - point;
-    return m_fRadius * m_fRadius > distance.SquaredMagnitude();
+    // 0x410040: the differences stay unrounded on the x87 stack and the squared distance is summed in z, x, y order (the port summed x, y, z)
+    const x87d dx = (x87d)m_vecCenter.x - point.x;
+    const x87d dy = (x87d)m_vecCenter.y - point.y;
+    const x87d dz = (x87d)m_vecCenter.z - point.z;
+    return (x87d)m_fRadius * m_fRadius > dz * dz + dx * dx + dy * dy;
 }
 
 // 0x410090

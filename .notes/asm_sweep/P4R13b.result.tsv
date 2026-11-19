@@ -1,0 +1,17 @@
+addr	function	verdict	asm range	note	fix commit
+0x68DAD0	CTaskComplexKillCriminal::ProcessEvent (f45f4e2ec)	CONFIRMED	0x68DC02-0x68DC0D	fcomp [625]; test ah,5; jp skip => ChangeTarget iff mag < 625	-
+0x685170	CTaskComplexWalkAlongsidePed::ControlSubTask (b1c114564)	CONFIRMED	0x685598-0x6855A3	strict < 4	-
+0x669520	CTaskComplexFollowNodeRoute::MakeAbortable (f9aa30481)	CONFIRMED	0x6695A1-0x6695B2	strict < 0.015625	-
+0x66E320	CTaskComplexFollowPointRoute::ControlSubTask (c7af78257)	CONFIRMED	0x66E454-0x66E474	fsqrt(stored mag) vs stored dot, test ah,0x41 jne => continue iff sqrt<=dot (NaN only differs)	-
+0x611FC0	CPopulation::ManagePed	FIXED	0x6120F2-0x61214F	port divided dist by PedCreationDistMultiplier and used <=; exe scales thresholds (mult*cam*65 / *54.5 / *25) and removes iff thr < dist strict	1aabc0b9f
+0x572300	CTheZones::GetLevelFromPosition (+PointLiesWithinZone 0x572270)	MATCH	0x572300-0x5722FD	inclusive, NaN rejects as CBox::IsPointInside	-
+0x4103D0	CColStore::SetIfCollisionIsRequired / CRect::IsPointInside	MATCH	0x4103D0-0x41041D	same reject-only-strictly-outside pattern as 0x404290	-
+0x6C1470	CBmx::ProcessAI (capped speed)	MATCH(NaN only)	0x6C156F-0x6C15A7	mag<=0.1 ? mag : 0.1	-
+0x614210	CPopulation::AddPedAtAttractor	MATCH	0x6142A6	min XY dist^2 <= 0.1225 refuses	-
+0x425440	CCarCtrl::SlowCarDownForPedsSectorList	UNSURE(spot)	0x425440 (first 4 range compares only)	sector-bound compares match (strict >/<); rest not re-read	-
+0x442AD0	CGameLogic::Update (2P distance warnings)	MATCH	0x442B54-0x442C09	>100, >85 && last<=85, > Max && last<=Max	-
+0x446610	CGangWars::Update	MATCH (prior S sweep)	-	not re-read	-
+0x60A1D0	CPlayerPed::TellGroupToStartFollowingPlayer	MATCH (prior sweep)	-	-	-
+0x615DC0	CPopulation::ManageObject	MATCH (prior sweep)	-	-	-
+various	IplStore callbacks, StuntJump, TagManager, SetPiece, EntryExit, Garage IsPointInsideGarage, CullZones	MATCH (prior sweeps)	-	per existing asm_sweep tsv	-
+various	RoadBlocks, Audio/Scripts/render	NOT_REACHED	-	budget / excluded	-

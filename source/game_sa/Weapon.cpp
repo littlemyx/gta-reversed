@@ -1685,7 +1685,7 @@ bool CWeapon::CheckForShootingVehicleOccupant(CEntity** pCarEntity, CColPoint* c
 
 // 0x73F910
 CEntity* CWeapon::PickTargetForHeatSeekingMissile(CVector origin, CVector direction, float distanceMultiplier, CEntity* ignoreEntity, bool arePlanesPriority, CEntity* preferredExistingTarget) {
-    float minRating  = FLT_MAX;
+    float minRating  = std::bit_cast<float>(0x47C34FF3u); // exe 0x73F910 ([esp+8] = 99999.9f), not FLT_MAX
     CEntity* minRated{};
     const auto point = origin + direction * 5.f;
     for (auto& veh : NOTSA_EXE_OR(GetVehiclePool()->GetAllValidReverse(), GetVehiclePool()->GetAllValid())) {
@@ -1699,7 +1699,7 @@ CEntity* CWeapon::PickTargetForHeatSeekingMissile(CVector origin, CVector direct
             continue;
         }
         const auto rating = EvaluateTargetForHeatSeekingMissile(&veh, point, direction, distanceMultiplier, arePlanesPriority, preferredExistingTarget);
-        if (rating >= 0.f && rating <= minRating) {
+        if (rating >= 0.f && rating < minRating) { // exe 0x73F9D3: strict less (a tie keeps the first / later-in-pool-order-visited one)
             minRating = rating;
             minRated  = &veh;
         }

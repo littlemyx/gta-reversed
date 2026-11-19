@@ -1,0 +1,12 @@
+addr	function	verdict	asm range	note	fix commit
+0x410040	CColSphere::IntersectPoint (7610612cd)	MATCH	0x410040-0x410087	review: x87 diffs unrounded, sum z,x,y, r*r > sum via fcompp+test ah 0x41 confirmed; commit CONFIRMED	-
+0x4185C0	CCollision::ProcessColModels	MATCH (partial)	0x4185C0-0x419EFD	structure and call counts (3 TestSphereTriangle, 3 ProcessSphereTriangle, 3 ProcessSphereBox, 2 ProcessSphereSphere, 1 ProcessDiscCollision), limits 0x257/0x40/0x1f/0x967340, face-group loop and inlined bbox tests (NaN passes) checked; disk block 0x418F4C-0x4196B9 and line/tail blocks only by limits and call structure, not instruction by instruction	-
+0x412130	CCollision::ProcessSphereBox	MATCH	0x412130-0x4126FB	per-axis MIN/MAX/INSIDE (NaN=inside), unrounded distSq compare vs minDistSq, fsqrt of spilled float, dist<=r, 0x4119D0 normal, depth r-dist, inside path depth+=r and minDist=0 checked	-
+0x413100	CCollision::ProcessLineBox	MATCH (partial)	0x413100-0x413370	plane order min x,max x,min y,max y..., a/(a-b) rounded t, coord order, first block vs constant then running mint, NaN rejects checked for x planes; tail (crossings, maxTouch) not re-read	-
+0x417950	CCollision::ProcessLineOfSight	MATCH	0x417950-0x417BEA	arg order, see/shoot-through skips, ProcessLineTriangle(collPoly=0), tail !(local<max) reject, transforms checked	-
+0x417BF0	CCollision::ProcessVerticalLine	MATCH	0x417BF0-0x417EF2	inlined inverse transform (terms x,z,y), only see-through skipped, stored poly reset after CalculateTrianglePlanes, 0x2C copy and per-vertex transform checked	-
+0x417F20	CCollision::SphereCastVsSphere	MATCH	0x417F20-0x417FC1	inlined sphere test (terms x,z,y), radius sum spilled to float, TestLineSphere tail checked	-
+0x412C70	CCollision::TestLineBox_DW	NOT_REACHED	-	budget	-
+0x4127F8	CCollision::PointInTriangle (tail)	NOT_REACHED	-	budget	-
+-	CCollision::SphereCastVsEntity	NOT_REACHED	-	budget	-
+0x4165B0/0x416BA0/0x4140F0	TestSphereTriangle/ProcessSphereTriangle/ProcessLineTriangle (stream F SSE2)	NOT_REACHED	-	budget; built as float fast path + F24 exact fallback by design (2d495dc7c)	-

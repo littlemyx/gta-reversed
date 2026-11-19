@@ -1199,6 +1199,12 @@ void CWorld::RemoveReferencesToDeletedObject(CEntity* entity) {
     }
 }
 
+// 0x565610 / 0x565800 / 0x5659F0 (and TriggerExplosion): the exe tests |pos.z - cz| < 5, |pos.x - cx| < radius, |pos.y - cy| < radius with STRICT
+// comparisons on the float differences (NaN fails). The CBoundingBox min/max form is inclusive and rounds the bounds instead of the differences.
+static bool IsWithinAbsBox(const CVector& pos, float cx, float cy, float cz, float radius) {
+    return std::abs(pos.z - cz) < 5.f && std::abs(pos.x - cx) < radius && std::abs(pos.y - cy) < radius;
+}
+
 // 0x565610
 // NOTE: Radius is treated as a cuboid with the height of 10, width and length of 2 * radius
 //       Radius for `fireCreator` ped is halved
@@ -1207,18 +1213,13 @@ void CWorld::SetPedsOnFire(float x, float y, float z, float radius, CEntity* fir
         if (CPed* ped = GetPedPool()->GetAt(i - 1)) {
             float radiusForThisPed = ped == fireCreator ? radius / 2.f : radius;
 
-            // NOTSA - Originally it was some abs() macro crap, we ain't gonna do it like that
-            const CBoundingBox bb{
-                { x - radiusForThisPed, y - radiusForThisPed, z - 5.f },
-                { x + radiusForThisPed, y + radiusForThisPed, z + 5.f }
-            };
-
             if (ped->m_nPedState != PEDSTATE_DEAD
                 && !ped->bInVehicle
                 && !ped->physicalFlags.bFireProof
                 && !ped->m_pFire
-                && bb.IsPointWithin(ped->GetPosition())) {
-                if (ped->physicalFlags.bInvulnerable
+                && IsWithinAbsBox(ped->GetPosition(), x, y, z, radiusForThisPed)) {
+                // 0x5657A7: `test flags, 0x400000; je start` - a ped that is NOT invulnerable is set on fire (the port had the test inverted)
+                if (!ped->physicalFlags.bInvulnerable
                     || !fireCreator
                     || fireCreator->GetIsTypePed() && fireCreator->AsPed()->IsPlayer()) {
                     gFireManager.StartFire(ped, fireCreator, 0.8f, 1, 7'000, 2);
@@ -1233,12 +1234,6 @@ void CWorld::SetPedsOnFire(float x, float y, float z, float radius, CEntity* fir
 void CWorld::SetPedsChoking(float x, float y, float z, float radius, CEntity* gasCreator) {
     const CVector point{ x, y, z };
 
-    // NOTSA - Originally it was some abs() macro crap, we ain't gonna do it like that
-    const CBoundingBox bb{
-        { x - radius, y - radius, z - 5.f },
-        { x + radius, y + radius, z + 5.f }
-    };
-
     for (int32 i = GetPedPool()->GetSize(); i; i--) {
         if (CPed* ped = GetPedPool()->GetAt(i - 1)) {
             if (ped->m_nPedState != PEDSTATE_DEAD
@@ -1246,7 +1241,7 @@ void CWorld::SetPedsChoking(float x, float y, float z, float radius, CEntity* ga
                 && !ped->physicalFlags.bFireProof
                 && !ped->m_pFire
                 && !ped->IsCreatedByMission()
-                && bb.IsPointWithin(ped->GetPosition())) {
+                && IsWithinAbsBox(ped->GetPosition(), x, y, z, radius)) {
                 CWeapon::GenerateDamageEvent(
                     ped,
                     gasCreator,
@@ -1263,11 +1258,6 @@ void CWorld::SetPedsChoking(float x, float y, float z, float radius, CEntity* ga
 // 0x5659F0
 // NOTE: Radius is treated as a cuboid with the height of 10, width and length of 2 * radius
 void CWorld::SetCarsOnFire(CVector pos, float radius, CEntity* fireCreator) {
-    // NOTSA - Originally it was some abs() macro crap, we ain't gonna do it like that
-    const CBoundingBox bb{
-        { pos.x - radius, pos.y - radius, pos.z - 5.f },
-        { pos.x + radius, pos.y + radius, pos.z + 5.f }
-    };
     for (int32 i = GetVehiclePool()->GetSize(); i; i--) {
         if (CVehicle* vehicle = GetVehiclePool()->GetAt(i - 1)) {
             if (vehicle->GetStatus() == STATUS_WRECKED) {
@@ -1282,7 +1272,7 @@ void CWorld::SetCarsOnFire(CVector pos, float radius, CEntity* fireCreator) {
                 continue;
             }
 
-            if (bb.IsPointWithin(vehicle->GetPosition())) {
+            if (IsWithinAbsBox(vehicle->GetPosition(), pos.x, pos.y, pos.z, radius)) {
                 gFireManager.StartFire(vehicle, fireCreator, 0.8f, 1, 7'000, 100);
             }
         }
@@ -3128,7 +3118,7 @@ void CWorld::TriggerExplosion(const CVector& point, float radius, float visibleD
     const int32 endSectorX = GetSectorX(point.x + radius);
     const int32 endSectorY = GetSectorY(point.y + radius);
 
-    AdvanceCurrentScanCode();
+    // 0x56B790: the exe does NOT advance the scan code here (TriggerExplosionSectorList 0x567750 does not use scan codes)
 
     for (int32 sectorY = startSectorY; sectorY <= endSectorY; ++sectorY) {
         for (int32 sectorX = startSectorX; sectorX <= endSectorX; ++sectorX) {

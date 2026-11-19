@@ -585,7 +585,7 @@ void CAutomobile::ProcessControl()
                 HydraulicControl();
             else if ((CCheat::IsActive(CHEAT_PERFECT_HANDLING) || (extraHandlingFlags & EXTRA_HANDLING_TAXI_BOOST))
                 && GetStatus() == STATUS_PLAYER
-                && m_vecMoveSpeed.SquaredMagnitude() > 0.04f)
+                && m_vecMoveSpeed.SquaredMagnitude() > std::bit_cast<float>(0x3D23D70Bu)) // 0x6B1FF0: float at 0x863244, one ulp above 0.04f
             {
                 BoostJumpControl();
             }
@@ -914,7 +914,7 @@ void CAutomobile::ProcessControl()
     float wheelSpinRate = 0.0f;
     for (int32 i = 0; i < 4; i++) {
         float suspensionChange = m_fWheelsSuspensionCompressionPrev[i] - m_fWheelsSuspensionCompression[i];
-        if (suspensionChange > 0.3f && !extraHandlingWheelsTouchingSand && m_vecMoveSpeed.SquaredMagnitude() > 0.04f) {
+        if (suspensionChange > 0.3f && !extraHandlingWheelsTouchingSand && m_vecMoveSpeed.SquaredMagnitude() > std::bit_cast<float>(0x3D23D70Bu)) { // 0x6B2C61: float at 0x863244, one ulp above 0.04f
             //m_damageManager.GetWheelStatus(i); // return value is ignored
             if (suspensionChange > suspensionShake)
                 suspensionShake = suspensionChange;
@@ -967,7 +967,7 @@ void CAutomobile::ProcessControl()
         && GetStatus() == STATUS_PLAYER)
     {
         float speed = m_vecMoveSpeed.SquaredMagnitude();
-        if (speed > 0.01f) {
+        if (speed > std::bit_cast<float>(0x3C23D70Bu)) { // 0x6B2E83: float at 0x86CD7C, one ulp above 0.01f
             speed = sqrt(speed);
             if (suspensionShake > 0.0f) {
                 // 0x6B2E94-0x6B2F12: ((speed / mass) * shake) * 400000 + 100; the shake time divides by the truncated byte
@@ -1030,7 +1030,7 @@ void CAutomobile::ProcessControl()
     if (m_pTowingVehicle) {
         if (GetStatus() == STATUS_IS_TOWED) {
             bool updateTractorLink = false; // TODO: rename this variable later
-            if (m_pTowingVehicle->m_vecMoveSpeed != 0.0f || m_vecMoveSpeed.SquaredMagnitude() > 0.01f) {
+            if (m_pTowingVehicle->m_vecMoveSpeed != 0.0f || m_vecMoveSpeed.SquaredMagnitude() > std::bit_cast<float>(0x3C23D70Bu)) { // 0x6B324D: float at 0x86CD7C, one ulp above 0.01f
                 updateTractorLink = true;
                 m_pTowingVehicle->UpdateTractorLink(false, false);
             }

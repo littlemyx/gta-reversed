@@ -1,0 +1,14 @@
+addr	function	verdict	asm range	note	fix commit
+0x5FBA60	CPedGroupMembership::Process	FIXED	0x5FBA60-0x5FBB6A	1b7e1db38 area-code check CONFIRMED (cmp [edx+0x2F],[edi+0x2F]; jne skip). New: exe sums dz^2+dy^2+dx^2 and removes only when sep^2 < dist^2 (NaN skips); port summed x,y,z and used >=	1aa7e5dc3
+0x50D930	CHandShaker::Process	CONFIRMED	0x50D930-0x50DD64	ff523f8ba: sign test (strict same sign), z,y,x draws, Range(1,N)==2, scale=|a/l|*span+min, twitch z,y,x draws, clamp NaN arms, SetRotate arg order all match	-
+0x509CE0	CCam::GetVectorsReadyForRW	MATCH	0x509CE0-0x509DB0	Normalise, 0==x&&0==y test (NaN skips) -> 0.0001f both, cross(front,up(0,0,1)) normalised, up=cross(a,front)	-
+0x51D470	CCam::Process_Fixed	MATCH	0x51D470-0x51D75F (all)	front, fudge target, up offset+(0,0,1) normalised cross order, FOV 70 / train FOV, water test src.z<wl + inlined blur == ApplyUnderwaterMotionBlur, scripted-collision ConeCast args (2.0,0.1)	-
+0x527FA0	CCamera::CamControl (ped garage/stairs fixed cam)	MATCH	0x5291EB-0x529B9A	door/stairs point selection, GetCenterOfZone (0x72D6D0), extent max, 2*extent LOS candidates (+/-), scale ext*0.7+3.75 / 3.75 / 13.0, zoom==4 z (+2.1, clamp vs garage+0x2c NaN keeps), ground z (-0.2), +3.1, door mid/right, dist -10 height 2; ebx==2 for door2-only matches port mode 2. Stack-uninitialised reads (pointB / right) unmatchable	-
+0x522D40	CCam::Process_FollowPed_SA (=Cam_On_A_String)	PRIOR_VERDICT	-	FIXED in earlier sweep (all range); Cam_On_A_String routes here, no separate function in port	-
+0x5245B0	CCam::Process_FollowCar_SA	PRIOR_VERDICT	-	DEVIATION fixed in earlier sweep (full range)	-
+0x521500	CCam::Process_AimWeapon	PRIOR_VERDICT	-	FIXED earlier (full range)	-
+0x512110	CCam::Process_WheelCam	PRIOR_VERDICT	-	FIXED earlier (full range)	-
+0x517EA0	CCam::Process_1stPerson	PRIOR_VERDICT	-	FIXED earlier (full range)	-
+0x50EB70	CCam::Process_1rstPersonPedOnPC	PRIOR_VERDICT	-	MATCH earlier (full range)	-
+0x52B730	CCamera::Process	PRIOR_VERDICT	-	MATCH earlier (top, middle, tail all reached)	-
+0x50C360	CCamera::UpdateTargetEntity	SKIPPED	-	MATCH per brief	-

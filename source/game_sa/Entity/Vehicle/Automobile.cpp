@@ -2841,7 +2841,8 @@ void CAutomobile::PlayCarHorn()
     }
 
     m_nCarHornTimer = CGeneral::GetRandomNumber() % 128 - 106; // TODO: GetRandomNumberInRange
-    if (const auto r = m_nCarHornTimer % 8; r < 4) {
+    // 0x6A37BF: `and eax, 7` on the (signed char) timer byte, not a signed C++ modulo (negative timers gave r in -7..0 and always took the r < 2 path)
+    if (const auto r = (uint32)((uint8)m_nCarHornTimer & 7u); r < 4) {
         if (r >= 2) {
             if (m_pDriver && m_autoPilot.carCtrlFlags.bHonkAtCar) {
                 m_pDriver->Say(CTX_GLOBAL_BLOCKED);

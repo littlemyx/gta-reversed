@@ -1318,12 +1318,18 @@ auto SetCharOnlyDamagedByPlayer(CPed& ped, bool enabled) {
  * 
  * @returns {Vector} node
  */
-auto GetClosestCharNode(CVector pos) -> CVector {
+// exe 0x47FAE6: the node coords come from CPathFind::FindNodeCoorsForScript(node, &found) (0x4505E0) and the compare flag is set (true at 0x47FBC3 / false at 0x47FC9D with zeros stored); the port set no flag
+auto GetClosestCharNode(CVector pos) -> notsa::script::MultiRet<CVector, notsa::script::CompareFlagUpdate> {
     CWorld::PutToGroundIfTooLow(pos);
-    if (const auto node = ThePaths.FindNodeClosestToCoors(pos)) {
-        return ThePaths.GetPathNode(node)->GetPosition();
+    bool found = false;
+    CVector out{};
+    if (const auto node = ThePaths.FindNodeClosestToCoors(pos); node.IsValid()) {
+        out = ThePaths.FindNodeCoorsForScript(node, &found);
     }
-    return {}; // Can't find anything nearby
+    if (!found) {
+        out = {}; // Can't find anything nearby
+    }
+    return { out, notsa::script::CompareFlagUpdate{ found } };
 }
 
 /*

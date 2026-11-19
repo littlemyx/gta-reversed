@@ -1,0 +1,21 @@
+addr	function	verdict	asm range	note	fix commit
+0x620E30	CTaskComplexKillPedOnFoot::Constructor	MATCH	0x620E30-0x620ED2	arg->field map, flags bit2 set / bits3-6 cleared, startTime, timer zero; bits 0/1 left uninit in exe (port true; noise)	
+0x625E40	CTaskComplexKillPedOnFoot::MakeAbortable	MATCH	0x625E40-0x625E6E	clears ped flag 0x474 bit22 (bDontAcceptIKLookAts); subtask forward	
+0x623370	CTaskComplexKillPedOnFoot::Clone	FIXED	0x623370-0x6233F8	ctor then copies bits 0x10 (aimImmediate)+0x20 (waitFor); bit 0x40 not copied; port copied waiting and dropped aimImmediate	bd9b0f322
+0x63CC30	CTaskComplexCarDriveMission::Constructor	MATCH	0x63CC30-0x63CC9F	base ctor(veh,speed,-1,style), target+mission, register ref	
+0x63CCC0	CTaskComplexCarDriveMission::Destructor	MATCH	0x63CCC0-0x63CD1A	cleanup ref then base dtor	
+0x63DD70	CTaskComplexCarDriveMission::Clone	MATCH	0x63DD70-0x63DDE0	veh,target,mission,style,speed	
+0x667CD0	CTaskSimpleGoToPoint::Constructor	MATCH	0x667CD0-0x667D33	flags bit0 moveTowards, bit3 a6	
+0x66CC60	CTaskSimpleGoToPoint::Clone	MATCH	0x66CC60-0x66CCD0	same args from bits 0 / 3	
+0x65EEB0	CTaskSimpleGoToPointFine::Constructor	MATCH	0x65EEB0-0x65EED7	GoTo(walk=4,pos,radius), moveRatio at 0x20	
+0x662040	CTaskSimpleGoToPointFine::Clone	MATCH	0x662040-0x6620C0	ratio/pos/radius copy	
+0x65EF30	CTaskSimpleGoToPointFine::BaseRatio	MATCH	0x65EF30-0x65EF5C	4->1,6->2,7->3 else 0	
+0x621190	CTaskComplexKillPedOnFootArmed::Constructor	MATCH	0x621190-0x62123D	field zero/-9999 inits, competence at 0x30	
+0x6212B0	CTaskComplexKillPedOnFootArmed::MakeAbortable	MATCH	0x6212B0-0x6212FA	URGENT: GunAimedAt by target => false; IMMEDIATE passes; else false	
+0x620F70	CTaskComplexKillPedOnFootStealth::Constructor	MATCH	0x620F70-0x620FD3	base(target,-1,0,0,0,1); pos or -9999.9; -1	
+0x621000	CTaskComplexKillPedOnFootMelee::Constructor	MATCH	0x621000-0x62106E	-1 attackPointIndex / pauseTimer, zero rest	
+0x65F3B0	CTaskComplexTrackEntity::Constructor	MATCH	0x65F3B0-0x65F450	field map; moveRatio -1	
+0x65F700	CTaskComplexTrackEntity::CreateFirstSubTask	MATCH	0x65F700-0x65F754	ratio<0 => by move state (1/4/6/else 0/1/2/3), tail to CreateNext	
+0x65F590	CTaskComplexTrackEntity::CreateNextSubTask	MATCH	0x65F590-0x65F6E3	dist<min^2 => GoToPointFine(0.25), else FollowNodeRoute(RUN,0.5,0.2,2.0,..); stand still 50	
+0x5DEED0	CPed::SetAimFlag-Entity	MATCH	0x5DEED0-0x5DEF14	flags, ref change, lookTime=0 (exe registers ref without null test: unreachable with null)	
+0x48E830	CTaskSimplePause::ProcessPed	MATCH	0x48E830-0x48E87C	timer start/reset/out-of-time	

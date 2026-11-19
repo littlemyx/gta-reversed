@@ -97,8 +97,9 @@ void DrawSpriteWithRotation(int32 slot, float x, float y, float width, float hei
 void DrawWindow(CRect bounds, const char* header, int32 style) {
     auto* const rect = &CTheScripts::IntroRectangles[CTheScripts::NumberOfIntroRectanglesThisFrame++];
     
-    rect->cornerA             = { SCREEN_STRETCH_X(bounds.left), SCREEN_STRETCH_Y(bounds.top) };
-    rect->cornerB             = { SCREEN_STRETCH_X(bounds.right), SCREEN_STRETCH_Y(bounds.bottom) };
+    // exe 0x4770A1-0x477105: cornerA = (p0, p1), cornerB = (p2, p3) in script order; CRect{p0,p1,p2,p3} is (left, bottom, right, top), so Y comes from bottom/top respectively (the port had them swapped)
+    rect->cornerA             = { SCREEN_STRETCH_X(bounds.left), SCREEN_STRETCH_Y(bounds.bottom) };
+    rect->cornerB             = { SCREEN_STRETCH_X(bounds.right), SCREEN_STRETCH_Y(bounds.top) };
     rect->m_nType             = eScriptRectangleType::TEXT;
     rect->m_nTextureId        = -1;
     rect->m_nAngle            = 0.0f;

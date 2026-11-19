@@ -87,11 +87,11 @@ CTask* CTaskComplexInvestigateDisturbance::CreateFirstSubTask(CPed* ped) {
     if (const auto event = ped->GetIntelligence()->GetEventHandler().GetHistory().GetCurrentEvent()) {
         switch (event->GetEventType()) {
         case EVENT_SOUND_QUIET: {
-            ped->Say(CGeneral::RandomBool(20) ? CTX_GLOBAL_STEALTH_ALERT_GENERIC : CTX_GLOBAL_STEALTH_ALERT_SOUND);
+            ped->Say(CGeneral::GetRandomNumberInRange(0.f, 1.f) < 0.2f ? CTX_GLOBAL_STEALTH_ALERT_GENERIC : CTX_GLOBAL_STEALTH_ALERT_SOUND /* exe 0x66C865-0x66C899: rand/32767 < 0.2f, not RandomBool's range(0,100) <= 20 */);
             break;
         }
         case EVENT_ACQUAINTANCE_PED_HATE_BADLY_LIT: {
-            ped->Say(CGeneral::RandomBool(20) ? CTX_GLOBAL_STEALTH_ALERT_GENERIC : CTX_GLOBAL_STEALTH_ALERT_SIGHT);
+            ped->Say(CGeneral::GetRandomNumberInRange(0.f, 1.f) < 0.2f ? CTX_GLOBAL_STEALTH_ALERT_GENERIC : CTX_GLOBAL_STEALTH_ALERT_SIGHT /* exe 0x66C8AE-0x66C8E4 */);
             break;
         }
         }

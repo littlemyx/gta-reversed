@@ -2361,7 +2361,10 @@ bool CWeapon::FireProjectile(CEntity* firedBy, const CVector& origin, CEntity* t
                         // 0x741771..0x7417BB: the heat seeking target is only kept when it is non-null, equals the last one AND the button was held > 1500 ms; otherwise a plain rocket without target
                         if (hsMissleTarget && hsMissleTarget == pd->m_LastHSMissileTarget && CTimer::GetTimeInMS() - pd->m_nFireHSMissilePressedTime > 1500) { // 0x74178B
                             const auto ch = &gCrossHair[0];
-                            ch->m_color                 = { 255, 0, 0, 255 };
+                            // 0x741793..0x7417AB: the exe stores only r, g, b (0xC8A84C..E); the alpha byte (0xC8A84F) is left as it was
+                            ch->m_color.r               = 255;
+                            ch->m_color.g               = 0;
+                            ch->m_color.b               = 0;
                             ch->m_fRotation             = 1.f;
                             ch->m_nTimeWhenToDeactivate = 0;
                         } else {

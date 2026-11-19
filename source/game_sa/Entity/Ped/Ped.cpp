@@ -1261,7 +1261,9 @@ void CPed::ResetGunFlashAlpha() {
 */
 float CPed::GetBikeRidingSkill() const {
     if (GetPlayerData()) {
-        return std::min(1000.f, CStats::GetStatValue(eStats::STAT_BIKE_SKILL) / 1000.f);
+        // exe 0x5DF510..0x5DF55E: stat/1000 returned as is unless it is > 1.0 (then 1.0); the port clamped to 1000.0 (a NaN stays NaN)
+        const float skill = CStats::GetStatValue(eStats::STAT_BIKE_SKILL) / 1000.f;
+        return skill > 1.f ? 1.f : skill;
     }
     return IsCreatedByMission() ? 1.f : 0.f;
 }

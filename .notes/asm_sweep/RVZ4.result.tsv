@@ -1,0 +1,11 @@
+addr	function	verdict	asm range	note	fix commit
+0x474750	CTheScripts::AddToListOfSpecialAnimGroupsAttachedToCharModels	CONFIRMED	0x474750-0x4747FE	last free slot (model -1), same-model slots never free (387be1240)	
+0x486110	CTheScripts::IsPedStopped	WRONG	0x486110-0x4861E4	fcompp unordered sets C0 -> jne 0x4861E2 (xor al,al): NaN = not stopped; 2bdffac12 inverted it	46d1f1de3
+0x5F3730	CPedGeometryAnalyser::ComputeMoveDirToAvoidEntity	WRONG (already reverted by HC3e 5c7b187c0)	0x5F3730-0x5F387B	fld [esp+0x40] at 0x5F37B2 precedes pop esi => planes[3].y; revert verified in tree	
+0x427FE0	CCarCtrl::FindMaxSteerAngle	CONFIRMED	0x427FE0-0x428038	0.2 if mag>0.7 else min(0.9-mag,0.7) unrounded, sum x,y,z (48e900630)	
+0x434900	CCarCtrl::SteerAICarWithPhysicsFollowPath (clamp 0x43528C-0x4352C0)	CONFIRMED	0x43528C-0x4352C0	compares/clamp on unrounded st0; rest of function not re-read	
+0x420224	CarAI.cpp:1336 steer clamp after FindMaxSteerAngle	CONFIRMED (no fix)	0x420224-0x42025C	exe stores max (and -max) to float before comparing, so float FindMaxSteerAngle is right	
+0x40E670	CStreaming::Update	CONFIRMED	0x40E821-0x40E8B1	AddIplsNeededAtPosn after EnsureCollisionIsInMemory (c7dc7da60)	
+0x572C40	CTheZones::FindZoneByLabel	CONFIRMED	0x572C40-0x572CBA	8 raw bytes vs zero padded buf (7b07f830c)	
+0x5F5D80	CPedGeometryAnalyser::ComputeClearTarget	PARTIAL	0x5F5DC5-0x5F5EB7	entity distance + push-out confirmed; ped step dot (0x5F6080..) not re-read (04adfa255)	
+0x520190	CCamera::CameraColDetAndReact	NOT_REACHED	0x520190-0x520684	budget (239e17beb)	

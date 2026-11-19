@@ -19,14 +19,14 @@ void CPedAttractorPedPlacer::PlacePedAtEffect(C2dEffectPedAttractor const& fx, C
         : CMatrix::Unity();
 
     const auto fxPos      = CPedAttractorManager::ComputeEffectPos(&fx, mat);
-    const auto fxUseDir   = CPedAttractorManager::ComputeEffectUseDir(&fx, mat);
     const auto fxFwdDir   = CPedAttractorManager::ComputeEffectForwardDir(&fx, mat);
     //const auto fxQueueDir = CPedAttractorManager::ComputeEffectQueueDir(&fx, mat); // NOTSA: Actually unused
 
     ped->SetPosn(std::get<CVector>(CPedPlacement::FindZCoorForPed(fxPos + fxFwdDir * forwardOffsetMultiplier)));
 
-    // 0x5EA56B: LimitRadianAngle(GetRadianAngleBetweenPoints(use.x, use.y, 0, 0)) - NOT atan2(-x, y) (differs for y == 0, the atan form and the limiting)
-    const auto angle = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(fxUseDir.x, fxUseDir.y, 0.f, 0.f));
+    // 0x5EA56B: LimitRadianAngle(GetRadianAngleBetweenPoints(fwd.x, fwd.y, 0, 0)) - NOT atan2(-x, y) (differs for y == 0, the atan form and the limiting).
+    // The vector is the FORWARD dir (fx+0x28 transformed, edi/ebx at 0x5EA481; the same one scaled by forwardOffsetMultiplier for the position), not the use dir (TS audit)
+    const auto angle = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(fxFwdDir.x, fxFwdDir.y, 0.f, 0.f));
     ped->SetHeading(angle);
     ped->m_fAimingRotation = angle;
     ped->m_fCurrentRotation = angle;

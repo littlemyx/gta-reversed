@@ -1,0 +1,66 @@
+addr	function	verdict	asm range	note	fix commit
+0x47E87D	SET_CHAR_HEALTH	MATCH	0x47E87D-0x47E9DD	P4R1c fix confirmed (int param, fild, min vs int max)	-
+0x47CCEE	SET_OBJECT_HEADING	MATCH	0x47CCEE-0x47CD6E	P4R1c fix confirmed (Remove/SetHeading/UpdateRwMatrix/UpdateRwFrame/Add)	-
+0x470C81	SET_OBJECT_ANIM_CURRENT_TIME	MATCH	0x470C81-0x470CEF	P4R1c fix confirmed (hier total time +0x10 * progress)	-
+0x465EEB	SHAKE_CAM	MATCH	0x465EEB-0x465F23	P4R1c fix confirmed (int * 0.001f)	-
+0x47C7C3	DO_FADE	MATCH	0x47C7C3-0x47C82E	P4R1c fix confirmed (int * 0.001f; faded-out flag logic equal)	-
+0x470DAA	SET_CHAR_ROTATION	MATCH	0x470DAA-0x470E10	P4R1c fix confirmed (Remove/SetOrientation/Add)	-
+0x476F9D	CAMERA_SET_VECTOR_MOVE	FIXED	0x476F9D-0x477014	time param is an int (fild), port read it as float bits	6600ffe0d
+0x47D4A8	SET_CURRENT_CHAR_WEAPON	FIXED	0x47D4A8-0x47D564	type 0 -> slot 0 only; port slot scan matched every empty slot	6652f3453
+0x47B7E4	LOAD_SCENE_IN_DIRECTION	FIXED	0x47B7E4-0x47B847	heading deg->rad (*0x8595EC) before RequestObjectsInDirection	81bb9e265
+0x480948	SIN	MATCH	all	fsin(deg*rad)	-
+0x4806B3	GET_CAR_SPEED	MATCH	all	magnitude*50	-
+0x485160	IS_CAR_STUCK	MATCH	all	pool ref	-
+0x46815B	PRINT_NOW	MATCH	all	~z~ subtitle test, u16 flags	-
+0x48CB6D	PRINT_HELP_FOREVER	MATCH	all	SetHelpMessage+brief array	-
+0x4681E2	CLEAR_PRINTS	MATCH	all	ClearMessages(0)	-
+0x48537F	CLEAR_THIS_PRINT	MATCH	all	-	-
+0x48CA89	GET_DISTANCE_BETWEEN_COORDS_3D	MATCH	all	x87 sum order noise	-
+0x497656	IS_CHAR_IN_SEARCHLIGHT	MATCH	all	-	-
+0x47EFDE	HAS_MODEL_LOADED	MATCH	all	-	-
+0x468201	GET_TIME_OF_DAY	MATCH	all	-	-
+0x48BA97	GET_OFFSET_FROM_CHAR_IN_WORLD_COORDS	MATCH	all	TransformPoint	-
+0x46947D	STORE_CAR_CHAR_IS_IN	MATCH	all	-	-
+0x484C06	STORE_CAR_CHAR_IS_IN_NO_SAVE	MATCH	all	-	-
+0x47ED44	IS_CHAR_TOUCHING_OBJECT_ON_FOOT	MATCH	all	-	-
+0x485203	PLAY_MISSION_AUDIO	MATCH	all	byte slot-1	-
+0x48519B	LOAD_MISSION_AUDIO	MATCH	all	byte slot-1	-
+0x47D3C8	SET_PLAYER_CONTROL	MATCH	all	MakePlayerSafe(!state,10.0)	-
+0x47E385	GENERATE_RANDOM_FLOAT_IN_RANGE	MATCH	all	-	-
+0x47DEC8	IS_CAR_IN_AIR_PROPER	MATCH	all	colliding entity types 1/2	-
+0x469A52	CLEAR_WANTED_LEVEL	MATCH	all	-	-
+0x48EAFD	DISPLAY_RADAR	MATCH	all	-	-
+0x48A861	DETACH_CHAR_FROM_CAR	MATCH	all	-	-
+0x476F7D	CAMERA_IS_VECTOR_TRACK_RUNNING	MATCH	all	-	-
+0x48079E	RESTORE_CAMERA_JUMPCUT	MATCH	all	-	-
+0x48331B	SET_CAMERA_BEHIND_PLAYER	MATCH	all	-	-
+0x476BDE	CAMERA_SET_VECTOR_TRACK	MATCH	all	int duration, arg order	-
+0x476F10	CAMERA_PERSIST_POS	MATCH	all	-	-
+0x476EE9	CAMERA_PERSIST_TRACK	MATCH	all	-	-
+0x476CF8	CAMERA_RESET_NEW_SCRIPTABLES	MATCH	all	-	-
+0x4682B7	IS_POINT_ON_SCREEN	MATCH	all	-	-
+0x47F88F	SET_CHAR_PROOFS	MATCH	all	flag order	-
+0x47F908	SET_CAR_PROOFS	MATCH	all	-	-
+0x46976F	CREATE_OBJECT	MATCH	all	-	-
+0x46BCE6	CLEAR_CHAR_TASKS_IMMEDIATELY	MATCH	all	-	-
+0x483DDB	LOAD_ALL_MODELS_NOW	MATCH	all	-	-
+0x480CFC	PLAYER_MADE_PROGRESS	MATCH	all	int->float	-
+0x47B88E	CLEAR_THIS_PRINT_BIG_NOW	MATCH	all	-	-
+0x476C58	CAMERA_SET_LERP_FOV	MATCH	all	int duration	-
+0x4754B8	SET_OBJECT_SCALE	MATCH	all	-	-
+0x48A7B4	ATTACH_CHAR_TO_CAR	MATCH	all	u16 pos, angle*rad	-
+0x47A558	SET_RAILTRACK_RESISTANCE_MULT	MATCH	all	-	-
+0x47B75C	SHUT_CHAR_UP_FOR_SCRIPTED_SPEECH	MATCH	all	-	-
+0x470B91	IS_OBJECT_PLAYING_ANIM	MATCH	all	-	-
+0x4714A5	SET_CHAR_AREA_VISIBLE	MATCH	all	-	-
+0x483239	WARP_CHAR_INTO_CAR	MATCH	all	-	-
+0x469C3A	CREATE_CHAR_INSIDE_CAR	MATCH	all	-	-
+0x48AB19	LOCATE_CHAR_*_OBJECT_2D/3D	MATCH	all	inclusive box; vehicle position; in-car test uses IsInVehicle (bInVehicle && ptr) vs exe bit only: edge case	-
+0x465EC1	GOTO	MATCH	all	sampled Basic template handler (the other ~80 Basic arithmetic/compare/assign handlers share these templates; not read one by one)	-
+0x466860	GOSUB	MATCH	all	sampled Basic template handler (the other ~80 Basic arithmetic/compare/assign handlers share these templates; not read one by one)	-
+0x46689A	RETURN	MATCH	all	sampled Basic template handler (the other ~80 Basic arithmetic/compare/assign handlers share these templates; not read one by one)	-
+0x466288	IS_NUMBER_GREATER_THAN_INT_LVAR	MATCH	all	sampled Basic template handler (the other ~80 Basic arithmetic/compare/assign handlers share these templates; not read one by one)	-
+0x46614C	DIV_INT_VAR_BY_VAL	MATCH	all	sampled Basic template handler (the other ~80 Basic arithmetic/compare/assign handlers share these templates; not read one by one)	-
+0x4673B3	CSET_VAR_FLOAT_TO_VAR_INT	MATCH	all	sampled Basic template handler (the other ~80 Basic arithmetic/compare/assign handlers share these templates; not read one by one)	-
+0x467409	CSET_VAR_INT_TO_LVAR_FLOAT	MATCH	all	sampled Basic template handler (the other ~80 Basic arithmetic/compare/assign handlers share these templates; not read one by one)	-
+0x466105	MULT_FLOAT_VAR_BY_VAL	MATCH	all	sampled Basic template handler (the other ~80 Basic arithmetic/compare/assign handlers share these templates; not read one by one)	-

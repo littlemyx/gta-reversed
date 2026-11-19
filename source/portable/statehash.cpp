@@ -683,6 +683,19 @@ void RandHook(uint32_t stateBefore) {
     void**    fp    = (void**)__builtin_frame_address(0); // arm64 / x64 clang keep the frame-pointer chain: [fp] = caller's fp, [fp+1] = return address
     for (int i = 0; i < 5 && fp && ((uintptr_t)fp & 7) == 0; i++) { ra[i] = (uintptr_t)fp[1] - base; fp = (void**)fp[0]; }
 #endif
+#if defined(_WIN32) // SH10 NOTSA_SH10_RANDDEEP=<file> (+ NOTSA_SH10_RANDDEEP_FRAMES=lo-hi, default 3085-3086): 16-frame stacks of the rand draws of those frames (log only)
+    {
+        static FILE* df = nullptr; static int lo = 3085, hi = 3086; static bool init = false;
+        if (!init) { init = true; if (const char* p = std::getenv("NOTSA_SH10_RANDDEEP")) { if (p[0]) df = std::fopen(p, "w"); } if (const char* e = std::getenv("NOTSA_SH10_RANDDEEP_FRAMES")) std::sscanf(e, "%d-%d", &lo, &hi); }
+        const int fr = g_recording ? (int)g_frame : -1;
+        if (df && fr >= lo && fr <= hi) {
+            void* bt[20] = {}; const USHORT n = RtlCaptureStackBackTrace(1, 16, bt, nullptr);
+            std::fprintf(df, "%llu %d %u", (unsigned long long)idx, fr, RandVal(stateBefore));
+            for (USHORT i = 0; i < n; i++) std::fprintf(df, "%c%llx", i ? ',' : ' ', (unsigned long long)((uintptr_t)bt[i] - base));
+            std::fputc(10, df); std::fflush(df);
+        }
+    }
+#endif
     std::fprintf(r.f, "%llu %d %u %llx,%llx,%llx,%llx,%llx\n", (unsigned long long)idx, g_recording ? (int)g_frame : -1, RandVal(stateBefore), (unsigned long long)ra[0], (unsigned long long)ra[1], (unsigned long long)ra[2], (unsigned long long)ra[3], (unsigned long long)ra[4]);
 }
 #else

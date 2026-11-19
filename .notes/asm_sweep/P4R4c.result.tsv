@@ -1,0 +1,15 @@
+addr	function	verdict	asm range	note	fix commit
+0x434400	CCarCtrl::FindMaximumSpeedForThisCarInTraffic	MATCH	0x434400-0x434770	style gate 2/3/5, +-14 box x87, clamp 0..119 sectors, style 6 skips cars, final (cruise+speed)*0.5 ext / speed for styles 0,4, bWarnedPeds	-
+0x426BC0	CCarCtrl::WeaveForObject	MATCH	0x426BC0-0x426EDE	pole offsets + model slots, matrix pole x float / y ext, atan ext, width/sqrt, both wrap loops and half-width updates	-
+0x42BD20	CCarCtrl::FindNodesThisCarIsNearestTo	MATCH	0x42BD20-0x42C226	region borders 200/550 (relY ext), clamps 0/7, x outer y inner, 150 range (dz,dy,dx order), DistToLine z*3 args, dot z,y,x ext, strict < best, 0xFFFF init	-
+0x422760	CCarCtrl::ClitargetOrientationToLink	MATCH	0x422760-0x422B15	lane nibble pairs by dirSign, 0.3 offsets, x1/x2/y2 float y1 ext, atan ext, diff wraps, both-sign branches, [0,2pi] wrap	-
+0x426EF0	CCarCtrl::PickNextNodeToChaseCar	SUPERSEDED	-	S22 NOT_REACHED row already MATCH/FIXED in a later slice (S22b-h/P4R4b), not redone	-
+0x427740	CCarCtrl::PickNextNodeToFollowPath	SUPERSEDED	-	S22 NOT_REACHED row already MATCH/FIXED in a later slice (S22b-h/P4R4b), not redone	-
+0x428040	CCarCtrl::DealWithBend_Racing	SUPERSEDED	-	S22 NOT_REACHED row already MATCH/FIXED in a later slice (S22b-h/P4R4b), not redone	-
+0x42C740	CCarCtrl::CreateConvoy	SUPERSEDED	-	S22 NOT_REACHED row already MATCH/FIXED in a later slice (S22b-h/P4R4b), not redone	-
+0x42C2B0	CCarCtrl::CreatePoliceChase	SUPERSEDED	-	S22 NOT_REACHED row already MATCH/FIXED in a later slice (S22b-h/P4R4b), not redone	-
+0x430050	CCarCtrl::GenerateOneRandomCar	SUPERSEDED	-	S22 NOT_REACHED row already MATCH/FIXED in a later slice (S22b-h/P4R4b), not redone	-
+0x429A70	CCarCtrl::FlyAIHeliInCertainDirection	SUPERSEDED	-	S22 NOT_REACHED row already MATCH/FIXED in a later slice (S22b-h/P4R4b), not redone	-
+0x436A90	CCarCtrl::SteerAICarWithPhysics_OnlyMission	SUPERSEDED	-	S22 NOT_REACHED row already MATCH/FIXED in a later slice (S22b-h/P4R4b), not redone	-
+0x42FC40	CCarCtrl::ReconsiderRoute	SUPERSEDED	-	S22 NOT_REACHED row already MATCH/FIXED in a later slice (S22b-h/P4R4b), not redone	-
+0x424F80	CCarCtrl::PossiblyRemoveVehicle	SUPERSEDED	-	S22 NOT_REACHED row already MATCH/FIXED in a later slice (S22b-h/P4R4b), not redone	-

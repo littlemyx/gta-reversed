@@ -13,4 +13,4 @@ addr	function	verdict	asm range	note	fix commit
 0x44F190	CPathFind::CalcDistToAnyConnectingLinks	MATCH	0x44F190-0x44F2B7	DistToLineSqr(node,link,pos), min update polarity, fsqrt unrounded	-
 0x420D40	CCamera::IsSphereVisible (2-arg)	MATCH	0x420D40-0x420D8C	matrix at +0xA4C, mirror matrix +0xA94 gated by +0x970 (offsets not re-verified against the struct)	-
 0x424210	CCarCtrl::GenerateCarCreationCoors2	MATCH	0x424210-0x424CD7	already MATCH in S22c; all helpers on the walk now MATCH too	-
-0x645CB0	CTaskSimpleCarAlign::FixHeading	FIXED	0x645CB0-0x645E33	dot summed z,y,x extended; NaN/<=0 returns; only x,y of the car vector scaled by dot and the product subtracted twice before the heading	see commit
+0x645CB0	CTaskSimpleCarAlign::FixHeading	FIXED	0x645CB0-0x645E33	dot summed z,y,x extended; NaN/<=0 returns; only x,y of the car vector scaled by dot and the product subtracted twice before the heading	7c3d32a16

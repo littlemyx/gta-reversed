@@ -1,0 +1,8 @@
+addr	function	verdict	asm range	note	fix commit
+0x5561B0	CRope::UpdateWeightInRope	MATCH	0x5561B0-0x556503	stretch branch + relax loops + speed update compared; final backward pass spot-checked only	
+0x49BF70	CShopping::Buy	MATCH	0x49BF70-0x49C264	all 9 jump-table sections match; food stats called in swapped order (0xC8 then 0x14 in exe), no observable effect	
+0x564C70	CWorld::FindObjectsOfTypeInRange	MATCH	0x564C70-0x564EC8	sector math, scan-code, list order buildings/vehicles/peds/objects/dummies	
+0x6F59E0	CTrain::FindCoorsFromPositionOnTrack	MATCH	0x6F59E0-0x6F5B8D		
+0x6B1480	CAutomobile::SetPanelDamage	MATCH	0x6B1480-0x6B15F0	CGlass::CarWindscreenShatters extra pushed 0 is a dummy arg	
+0x54F3B0	CPlaceable::RemoveMatrix	MATCH	0x54F3B0-0x54F4BC		
+0x6AF910	CAutomobile::PopBoot	MATCH	0x6AF910-0x6AFA0C	IsDoorClosed = status 0 or 2	

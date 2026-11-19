@@ -1,0 +1,10 @@
+addr	function	verdict	asm range	note	fix commit
+0x6E7EF0	CWaterLevel::AddWaterLevelQuad	MATCH	-	exe groups by min y then sorts by x; port sorts (y,x): identical for axis-aligned rectangles (the only water.dat case, asserted); non-rect quads would order differently	-
+0x6E7D40	CWaterLevel::AddWaterLevelTriangle	MATCH	-	all 3 index branches and the early-outs identical	-
+0x72DF70	CCullZones::AddCullZone	MATCH	-	flag mask 0xF77F, CZoneDef field order/doubling/ftol identical	-
+0x69DD50	CMessages::AddToPreviousBriefArray	MATCH	-	dup check, shift (incl. full-array case) identical	-
+0x69EBE0	CMessages::ClearThisBigPrint	MATCH	-	identical	-
+0x470510	CScriptResourceManager::RemoveFromResourceManager	MATCH	-	last match wins, other-user count, clear identical	-
+0x53CC70	CGeneral::GetATanOfXY	MATCH	-	branch structure and constants identical	-
+0x459850	CVehicleRecording::UnpausePlaybackRecordedCar	INTENTIONAL	0x459850-0x459954	not found: exe writes bPlaybackPaused[16] = bPlaybackLooped[0]=0 (OOB); port guards, same class as PausePlayback	-
+rest of the 73 leftover rows (ControllerConfigManager, CdStream*, Pad, remaining Messages/Water/CullZones Init, Gangs/Restart Initialise, Replay, PathFind FindNth..., Cam, etc.)	NOT_REACHED	-	budget	-

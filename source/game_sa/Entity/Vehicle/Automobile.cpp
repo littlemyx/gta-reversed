@@ -1900,12 +1900,11 @@ int32 CAutomobile::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoin
             if (m_damageManager.GetWheelStatus((eCarWheel)i) != eCarWheelStatus::WHEEL_STATUS_OK) { // Move to top
                 continue;
             }
-            const auto compressionNow = std::min(
-                originalWheelSuspCompr[i],
-                lerpBlend(m_fWheelsSuspensionCompressionPrev[i], 1.f, 1.f - m_aSuspensionSpringLength[i] / m_aSuspensionLineLength[i]) // exe: `(1 - t) * prev + t`
-            );
+            const float lerpedCompr = lerpBlend(m_fWheelsSuspensionCompressionPrev[i], 1.f, 1.f - m_aSuspensionSpringLength[i] / m_aSuspensionLineLength[i]); // exe: `(1 - t) * prev + t`
+            // 0x6AD4FB-0x6AD50E: fcomp + test ah,5 + jp: `orig < lerped ? orig : lerped` (NaN/equal -> lerped; std::min(orig, lerped) kept orig)
+            const float compressionNow = originalWheelSuspCompr[i] < lerpedCompr ? originalWheelSuspCompr[i] : lerpedCompr;
             const auto suspComprDelta = (compressionNow - m_fWheelsSuspensionCompression[i]) * m_aSuspensionLineLength[i]; // Suspension compression delta (In meters)
-            if (suspComprDelta <= 0.1f /* 0x8D3200 */) {
+            if (!(suspComprDelta > 0.1f /* 0x8D3200 */)) { // 0x6AD524: fcomp + test ah,0x41 + jne -> skip also for NaN
                 continue;
             }
             const auto& wheelcp = m_wheelColPoint[i];
@@ -1922,7 +1921,8 @@ int32 CAutomobile::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoin
             const auto& ms  = GetMoveSpeed();
             const float normalDotUp = std::abs(nrm.z * up.z + nrm.x * up.x + nrm.y * up.y);
             const float forwardSpeedClamped = std::min(std::abs(ms.z * fwd.z + ms.y * fwd.y + ms.x * fwd.x), 0.3f); // Forward speedsq
-            outcp.m_fDepth = ((((normalDotUp * forwardSpeedClamped) * std::min(0.2f, suspComprDelta)) * ExeRecip(0.3f)) * m_pHandlingData->m_fSuspensionHighSpdComDamp);
+            // 0x6AD5A1-0x6AD5B0: fcomp st(1) + test ah,5 + jp: `0.2 < delta ? 0.2 : delta` (NaN keeps delta; std::min gave 0.2)
+            outcp.m_fDepth = ((((normalDotUp * forwardSpeedClamped) * (0.2f < suspComprDelta ? 0.2f : suspComprDelta)) * ExeRecip(0.3f)) * m_pHandlingData->m_fSuspensionHighSpdComDamp);
             outcp.m_nPieceTypeA = CarWheelToCarPiece((eCarWheel)i);
             outcp.m_nSurfaceTypeA = outcp.m_nSurfaceTypeB = SURFACE_WHEELBASE;
             // 0x6AD657-0x6AD66F: the exe counts the point (while numColPts < 31) and goes on with the next wheel; the port only counted it (and stopped) under FIX_BUGS,

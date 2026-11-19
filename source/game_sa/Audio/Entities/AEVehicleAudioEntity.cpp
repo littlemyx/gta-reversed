@@ -417,9 +417,17 @@ void CAEVehicleAudioEntity::UpdateGasPedalAudio(CVehicle* vehicle, int32 vehicle
     auto* const cfg = &s_Config.GasPedal;
 
     const auto current = std::fabs(vehicle->m_GasPedal);
-    float& value = vehicleType == VEHICLE_TYPE_BIKE
-        ? vehicle->AsBike()->m_GasPedalAudioRevs
-        : vehicle->AsAutomobile()->m_GasPedalAudioRevs;
+    // exe 0x4F5EC0-0x4F5ED5: type 0 (automobile) -> +0x964, type 9 (bike) -> +0x808, EVERY other type (heli, plane, boat, bmx, ...) returns without writing
+    // (the port wrote through `AsAutomobile()` for them, i.e. into an unrelated field of that vehicle)
+    float* pValue{};
+    if (vehicleType == VEHICLE_TYPE_AUTOMOBILE) {
+        pValue = &vehicle->AsAutomobile()->m_GasPedalAudioRevs;
+    } else if (vehicleType == VEHICLE_TYPE_BIKE) {
+        pValue = &vehicle->AsBike()->m_GasPedalAudioRevs;
+    } else {
+        return;
+    }
+    float& value = *pValue;
     value = notsa::step_to(value, current, cfg->StepUp, cfg->StepDown, notsa::bugfixes::GenericFrameRate);
 }
 

@@ -213,6 +213,7 @@ bool CTaskSimpleInAir::MakeAbortable(CPed* ped, eAbortPriority priority, const C
             m_pAnim->SetFinishCallback(CDefaultAnimCallback::DefaultAnimCB, nullptr);
             m_pAnim = nullptr;
         }
+        ped->bIsInTheAir = false; // 0x678E35-0x678E42: exe clears ped flag bit 9 (+0x46C & ~0x200) on every abort, port kept it
         return true;
     }
     else

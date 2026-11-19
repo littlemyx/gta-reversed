@@ -1,0 +1,22 @@
+addr	function	verdict	asm range	note	fix commit
+0x62B840	CTaskComplexKillPedOnFootStealth::ControlSubTask	FIXED	0x62B999-0x62B9A1	sub+cmp 0x1388+jle signed; port unsigned	e673b5bf9
+0x561C90	CWanted::Update	MATCH	0x562CC6-0x562D49	jbe unsigned ok	
+0x6F86A0	CTrain::ProcessControl	MATCH	0x6F889A	jae	
+0x446610	CGangWars::Update	MATCH	0x446A18	jbe	
+0x725120	C3dMarkers::PlaceMarker	MATCH	0x725511	jb	
+0x591F90	Interior_c::AddPickups	MATCH	0x591FA3	jb	
+0x460500	CReplay::Update	MATCH	0x460576	jbe	
+0x6E0400	CVehicle::ScanAndMarkTargetForHeatSeekingMissile	MATCH	0x6E048B	jbe	
+0x62BC10	TaskComplexKillPedOnFootMelee::CreateNextSubTask	MATCH	0x62BD12	jbe	
+0x6428C0	ProcessHeadBopping	MATCH	0x642976	jbe	
+0x642AE0	ProcessArmBopping	MATCH	0x642E0D	jbe	
+0x62CCE0	KillPedOnFootArmed::ControlSubTask	MATCH	0x62D1AC	jbe	
+0x572D10	CTheZones::Update	MATCH	0x572D47	jbe	
+0x43CEC0	CDarkel::DrawMessages	MATCH	0x43CEFC-0x43D1A9	jb/jae/jae	
+0x511B50	CCam::Process_Rocket	MATCH	0x511F5B	jbe	
+0x677FE0	CTaskSimpleGetUp::MakeAbortable	MATCH	0x678049	fild+jge = uint->float fixup	
+0x626FC0	KillPedOnFootArmed::CreateSubTask	MATCH	0x627122	same uint->float	
+0x436540	CCarCtrl::UpdateCarOnRails	MATCH	0x436594	64-bit compare already ported	
+0x6C7050	CHeli::ProcessControl	MATCH	0x6C72A4	signed already ported	
+0x6A38A0	CAutomobile::ProcessAutoBusDoors	MATCH	0x6A38F6	fild fixup	
+0x4B3FC0	CEventDamage::ComputeDamageAnim	MATCH	0x4B447C	jbe	

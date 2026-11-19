@@ -28,6 +28,9 @@
 
 #include <FireManager.h>
 
+// exe 0x404330 `min(a, b)`: fcomp + test ah,5 + jp -> `a < b ? a : b`; a NaN b is returned as is (std::min(a, NaN) would give a)
+static constexpr float CmpMin(float a, float b) { return a < b ? a : b; }
+
 constexpr size_t NUM_AUTOMOBILE_SUSP_LINES  = (size_t)MAX_CARWHEELS;
 constexpr size_t NUM_RHINO_EXTRA_SUSP_LINES = (size_t)MAX_CARWHEELS * 2u; // 8
 constexpr size_t NUM_RHINO_SUSP_LINES       = NUM_AUTOMOBILE_SUSP_LINES + NUM_RHINO_EXTRA_SUSP_LINES; // 8
@@ -1441,7 +1444,7 @@ bool CAutomobile::ProcessAI(uint32& extraHandlingFlags) {
         carWeightMult = 0.0025f;
     else
         carWeightMult *= CStats::GetFatAndMuscleModifier(STAT_MOD_DRIVING_SKILL);
-    carWeightMult = std::min(1.0f, 3000.0f / m_fTurnMass) * carWeightMult * m_fTurnMass; // 0x6B4E6E-0x6B4E97: (min * mult) * turnMass
+    carWeightMult = CmpMin(1.0f, 3000.0f / m_fTurnMass) * carWeightMult * m_fTurnMass; // 0x6B4E6E-0x6B4E97: (min * mult) * turnMass
 
     float steerLeftRight = (float)pad->GetSteeringLeftRight() / 128.0f;
     float steerUpDown    = (float)pad->GetSteeringUpDown() / 128.0f;
@@ -4730,7 +4733,7 @@ void CAutomobile::ProcessCarWheelPair(eCarWheel leftWheel, eCarWheel rightWheel,
                 traction = 0.0f;
                 // 0x6A4FC8-0x6A5036: min(1, 3000/turnMass) * (-0.002*turnMass), then *steerAngle, then * right
                 const float turnMassTerm = -0.002f * m_fTurnMass;
-                const float burnoutScale = std::min(1.0f, 3000.0f / m_fTurnMass) * turnMassTerm;
+                const float burnoutScale = CmpMin(1.0f, 3000.0f / m_fTurnMass) * turnMassTerm;
                 CVector point = GetRight() * (burnoutScale * m_fSteerAngle);
                 ApplyTurnForce(contactPoints[leftWheel], point);
             } else if (!handlingFlags.bNosInst && gHandlingDataMgr.HasRearWheelDrive(m_pHandlingData->m_nVehicleId)) {

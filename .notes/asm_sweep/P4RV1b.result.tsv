@@ -1,0 +1,11 @@
+addr	function	old commit	verdict	note
+0x688A90	CTaskSimpleSwim::ProcessControlInput	f73e09fcf	CONFIRMED	fpatan unrounded fsub 0x688BE5; blend-ratio compare 0x6892FF takes assignment on NaN/<=; pow unrounded at 0x6894F7/0x68953F/0x6895BD
+0x4BC710	CEventHandler::ComputeShotFiredResponse	aeed9bd85	CONFIRMED	duck arm: GetTaskDuck -> untouched else 3000ms duck (0x4BC785); KILL_CRIMINAL flee moveState=4 (0x4BCACB)
+0x4C2FC0	CEventHandler::ComputeVehicleDamageResponse	3a47a3319	CONFIRMED	LEAVE_CAR_AND_FLEE point = vehicle position (matrix+0x30 / placement+4 of ped->m_pVehicle)
+0x4C2840	CEventHandler::ComputeGunAimedAtResponse	be7608f23	CONFIRMED	existing duck -> epilogue (0x4C2A1F/0x4C2E97); TASK_NONE arm not re-read
+0x4B8CE0	CEventHandler::ComputePlayerCollisionWithPedResponse	b9cfc364f	CONFIRMED	whole function re-read: dot sign tests (!<0 / <=0, z,y,x), all arms, look times 2000/1000, annoy/no-annoy, defend-weakness logic, hit response on sprint
+0x6899F0	CTaskSimpleSwim::ProcessSwimAnims	38e4c36d2	CONFIRMED	climb-jump branch: no water -> break, z+0.5>=level/NaN -> break (0x689C9B-0x689CCA); 80deg literal not re-read
+0x67DE10	CTaskSimpleClimb::ScanToGrabSectorList	5ed79b2a7	CONFIRMED	col model standup>vault 0x67DEA2; train test 3D Magnitude < 0.1; (x+z)+y sphere test, dist < r1+r2; dot orders/flat-normal tests not re-read
+0x4B9470	CEventHandler::ComputeDeadPedResponse	1d4a2cfc3	CONFIRMED	constant 0x85B9F4 = 0.5625001, jp -> strict <
+0x4C35F0	CEventHandler::ComputeSeenPanickedPedResponse	243f7eb7d	CONFIRMED	source ped intelligence history; smart flee scream=1, 45.0f
+0x6564A0	CTaskSimpleKillPedWithCar::ProcessPed	a1135a608	CONFIRMED	bonnet branch z>0.1, fwd.z <-0.2/>0.1 strict, max.z, direction-of-travel widths, else arm FROM_FRONT+RUNOVERBYCAR(0x32); pedPosOS dots and shake/force tail not re-read

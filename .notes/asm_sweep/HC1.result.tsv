@@ -1,5 +1,5 @@
 addr	function	verdict	asm range	note	fix commit
-0x5343F0	CEntity::GetIsTouching(CEntity*)	FIXED	0x5343F0-0x5344A8 (all)	squared distance summed (dz^2+dy^2)+dx^2 (port x,y,z), then R^2>sum; centres/radii matched	ef4566646
+0x5343F0	CEntity::GetIsTouching(CEntity*)	FIXED	0x5343F0-0x5344A8 (all)	squared distance summed (dz^2+dy^2)+dx^2 (port x,y,z), then R^2>sum; centres/radii matched	a71789b11
 0x5344B0	CEntity::GetIsTouching(vec,r)	MATCH	0x5344B0-0x534537 (all)	port is the exe x87 sequence verbatim	
 0x553370	CEntity::RemoveLighting	MATCH	0x553370-0x553387 (all)		
 0x553DC0	CEntity::SetupLighting	MATCH	0x553DC0-0x553E04 (all)	bit 28 = m_bLightObject; light*0.5 exact	
@@ -8,7 +8,7 @@ addr	function	verdict	asm range	note	fix commit
 0x5E4280	CPed::GetBonePosition	MATCH	0x5E4280-0x5E437E (all)	bCalledPreRender, std pose, no-hierarchy fallback	
 0x59F120	CObject::CanBeDeleted	MATCH	0x59F120-0x59F13A (all)	jump table: types 2,4,5,6 false	
 0x6D0CC0	CVehicle::UpdateLightingFromStoredPolys	MATCH	0x6D0CC0-0x6D0CE4 (all)		
-0x5DF510	CPed::GetBikeRidingSkill	FIXED	0x5DF510-0x5DF55F (all)	stat/1000 clamped to 1.0, not 1000.0; NaN passes through	4ed9ad69d
+0x5DF510	CPed::GetBikeRidingSkill	FIXED	0x5DF510-0x5DF55F (all)	stat/1000 clamped to 1.0, not 1000.0; NaN passes through	dac6bef9f
 0x6A2350	CAutomobile::IsOpenTopCar	MATCH	0x6A2350-0x6A238D (all)		
 0x609FF0	CPlayerPed::GetPlayerInfoForThisPlayerPed	MATCH	0x609FF0-0x60A018 (all)		
 0x6D3D60	CVehicle::RenderDriverAndPassengers	SKIP-RENDER		render	

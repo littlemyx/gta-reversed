@@ -154,7 +154,8 @@ void CPedGroup::Teleport(const CVector& pos) {
             CTaskSimpleCarSetPedOut{
                 f->m_pVehicle,
                 (eTargetDoor)CCarEnterExit::ComputeTargetDoorToExit(f->m_pVehicle, f),
-                false
+                false,
+                true // exe 0x5F7BAC: `mov byte [task+0x11], 1` right after the ctor = m_bWarpingOutOfCar (the ped is warped out, not animated)
             }.ProcessPed(f);
         }
     }

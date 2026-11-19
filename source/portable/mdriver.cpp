@@ -554,11 +554,12 @@ void ShootDead() { // actions.ts shootAttackers: every ped (not a buddy type) wh
     }
     for (int h : victims) Emit("mdkillped:" + std::to_string(h));
 }
+static float g_passStat0 = 0.f;
 void TickGeneric() {
     if (!g_loaded) { LoadTable(std::getenv("NOTSA_MDRIVER_TABLE")); LoadArity(); if (const char* o = std::getenv("NOTSA_MDRIVER_OUT")) g_out = std::fopen(o, "w"); if (const char* m = std::getenv("NOTSA_MDRIVER_MAXFRAMES")) g_maxFrames = std::atoi(m); }
     if (g_quitIn >= 0) { if (g_quitIn-- == 0) { WriteResult(); Emit("quit"); if (g_out) { std::fclose(g_out); g_out = nullptr; } g_done = true; } return; }
     auto* root = notsa::scmtrace::Root();
-    if (!g_started) { if (!root) return; g_started = true; g_thread = root; g_frame0 = CTimer::GetFrameCounter(); g_sameCount = 0; g_lastIp = nullptr; }
+    if (!g_started) { if (!root) return; g_started = true; g_passStat0 = CStats::GetStatValue(STAT_MISSIONS_PASSED); g_thread = root; g_frame0 = CTimer::GetFrameCounter(); g_sameCount = 0; g_lastIp = nullptr; }
     const int fr = GFrame();
     if (root) { char n[9]{}; std::memcpy(n, root->m_szName, 8); g_name = n; }
     if (!root) { // the thread ended (TS: !alive(script)): PASSED / FAILED, or STOP when a kill of the driver was just before it
@@ -570,7 +571,12 @@ void TickGeneric() {
     if (g_pass && fr - g_passFrame > 1500) { g_quitIn = 0; return; }
     if (g_fail && fr - g_failFrame > 600) { g_quitIn = 0; return; }
     if (fr >= g_maxFrames) { Stop("budget: " + std::to_string(g_maxFrames) + " frames", -1, (uint32_t)(root->m_IP - root->m_BaseIP)); return; }
+    if (!g_pass && CStats::GetStatValue(STAT_MISSIONS_PASSED) > g_passStat0) { g_pass = true; g_passFrame = fr; } // CR4: TS drive.ts: PASSED = STAT_MISSIONS_PASSED rose (0x0318 SET_LATEST_MISSION_PASSED; missions 87 78 print no M_PASS)
     if (!std::getenv("NOTSA_MDRIVER_NOFIGHT") && ++g_fightClock % 3 == 0 && !CCutsceneMgr::IsCutsceneProcessing() && Cj()) ShootDead();
+    if (!std::getenv("NOTSA_MDRIVER_NOGOD")) if (auto* me = Cj()) { // CR4: TS drive.ts driverFrame: CJ and the vehicle he drives are invulnerable every frame (AUTODRIVE_GOD=0 off)
+        me->physicalFlags.bInvulnerable = true;
+        if (me->bInVehicle && me->m_pVehicle) me->m_pVehicle->physicalFlags.bInvulnerable = true;
+    }
     for (;;) {
         if (g_wait > 0) { g_wait--; return; }
         if (g_untilLeft > 0) { // MS1: `waituntil` (the tryEnterCar 600-frame wait)
@@ -623,7 +629,7 @@ void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int co
     if (ptr[2] != 9) return;
     const char* lab = (const char*)(ptr + 3); const int op = raw & 0x7FFF;
     if (!std::memcmp(lab, "M_PASS\0", 7)) { if (!g_pass) { g_pass = true; g_passFrame = GFrame(); } return; }
-    if (!std::memcmp(lab, "M_FAIL\0", 7)) {
+    if (!std::memcmp(lab, "M_FAIL\0", 7) && op >= 0x00BA && op <= 0x00BD) { // CR4: only the print opcodes (TS branch.ts); mission 17 runs 03D5 CLEAR_THIS_PRINT M_FAIL at frame 2
         if (!g_fail) { g_fail = true; g_failFrame = GFrame(); g_failText = g_lastLabel.empty() ? "M_FAIL" : g_lastLabel; }
         return;
     }

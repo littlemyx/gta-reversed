@@ -1320,16 +1320,20 @@ CEntity* CWeapon::FindNearestTargetEntityWithScreenCoors(float screenX, float sc
         if (!CSprite::CalcScreenCoors(epos, &scrPos, &scrSz.x, &scrSz.y, true, true)) {
             return;
         }
-        const auto dx = scrPos.x - screenX;
-        const auto dy = scrPos.y - screenY;
-        const auto scrDist = std::sqrt(dx * dx + dy * dy);
+        // x87 (0x73E330-0x73E3AD): the differences and sums are kept in extended precision, summed (y, x) / (z, y, x); only the stored closest distance is a float
+        const x87d dx = (x87d)scrPos.x - screenX;
+        const x87d dy = (x87d)scrPos.y - screenY;
+        const x87d scrDist = std::sqrt(dy * dy + dx * dx);
         if (!(scrDist < closestScrDist)) {
             return;
         }
-        if (!((epos.x - point.x) * (epos.x - point.x) + (epos.y - point.y) * (epos.y - point.y) + (epos.z - point.z) * (epos.z - point.z) < range * range)) {
+        const x87d ex = (x87d)epos.x - point.x;
+        const x87d ey = (x87d)epos.y - point.y;
+        const x87d ez = (x87d)epos.z - point.z;
+        if (!((ez * ez + ey * ey) + ex * ex < (x87d)range * range)) {
             return;
         }
-        closestScrDist = scrDist;
+        closestScrDist = (float)scrDist;
         closest        = e;
 
         // BUG: Original only checks `outScrX` for null, but writes both
@@ -2516,7 +2520,13 @@ bool CWeapon::FireM16_1stPerson(CPed* owner) {
     CWorld::bIncludeBikers   = true;
 
     const auto camOriginPos = cam->m_vecSource;
-    const auto camTargetPos = camOriginPos + cam->m_vecFront * 3.f;
+    // 0x741C9D-0x741D37: the target is origin + front * 3 * WEAPON RANGE (the port used front * 3 only; a 3 m line of sight).
+    // x87: X and Y keep the unrounded 3 * front, Z is rounded to float after the * 3 (spilled to [esp+0x40]), the product with the range is added to the origin
+    const x87d range = wi->m_fWeaponRange;
+    const auto offX  = (float)((x87d)cam->m_vecFront.x * 3.0f * range);
+    const auto offY  = (x87d)cam->m_vecFront.y * 3.0f * range;
+    const auto offZ  = (float)((x87d)(float)((x87d)cam->m_vecFront.z * 3.0f) * range);
+    const CVector camTargetPos{ camOriginPos.x + offX, (float)((x87d)camOriginPos.y + offY), camOriginPos.z + offZ };
 
     CBirds::HandleGunShot(&camOriginPos, &camTargetPos);
     CShadows::GunShotSetsOilOnFire(camOriginPos, camTargetPos);

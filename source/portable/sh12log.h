@@ -29,6 +29,8 @@ inline const char* Sh12Stage() { const char* s = Sh10Cur().name; return s ? s : 
 #define SH12_SAFEALL(tag) notsa::rr::Sh12SafePosAll(tag)
 #define SH12_PASS(p) notsa::rr::Sh12SetPass(p)
 #else
+#include <cstddef>
+namespace notsa::rr { inline void Sh12Name(int, char* b, size_t) { b[0] = 0; } inline void Sh12Stack(char* b, size_t, int) { b[0] = 0; } } // stubs: the SH12_ON()-guarded blocks are compiled (never run) without NOTSA_STATEHASH
 #define SH12_ROW(...) ((void)0)
 #define SH12_SCM_BEGIN(s) 0
 #define SH12_SCM_CMD(s) 0

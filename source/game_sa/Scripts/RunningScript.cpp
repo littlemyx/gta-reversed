@@ -4,9 +4,9 @@
 #include "TheScripts.h"
 #ifdef NOTSA_SCMTRACE
 #include "portable/scmtrace.h"
-#include "portable/sh12log.h"
 #endif
 #include "CarGenerator.h"
+#include "portable/sh12log.h" // SH12 macros (no-ops without NOTSA_STATEHASH); SH12_SCM_BEGIN is used outside the SCMTRACE #ifdef
 #include "Hud.h"
 #include "ShotInfo.h"
 #include "PedScriptedTaskRecord.h"

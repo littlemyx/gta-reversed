@@ -3,6 +3,7 @@
 # usage: tools/standalone/statehash/shbuild.sh [build-dir (default build/PortableWin64RR)]      (run it as a background job: a full build is ~15-30 min at -j4 / low priority)
 # Output: <build-dir>/bin/gta_reversed.exe.  Needs the conan deps of the PortableWin64 gate (tools/portable/win64/conan_install_win64.sh, cached in ~/.conan2);
 # the conan generators dir is copied from the main checkout's build/PortableWin64 (absolute ~/.conan2 paths inside) when the worktree has none.
+# HITCOUNT=1 adds -DGTASA_HITCOUNT=ON (T3H function hit counter, writes a .map; use build dir build/PortableWin64RR_HC).
 # Never builds in the main checkout. env: MAIN_CHECKOUT (default C:/Users/littl/github/gta-reversed), JOBS (default 4).
 set -u
 REPO="$(cd "$(dirname "$0")/../../.." && pwd)"; cd "$REPO" || exit 2
@@ -16,7 +17,7 @@ GEN="build/PortableWin64/generators"
   command -v cl >/dev/null 2>&1 || exit 97
   PY="${GTASA_PYTHON:-python}"
   if [ ! -f "$BD/build.ninja" ] || [ "${RECONF:-0}" = 1 ]; then
-    cmake --preset PortableWin64 -B "$BD" -DGTASA_PYTHON="$PY" -DGTASA_STATEHASH=ON -DGTASA_SCMTRACE=ON -DGTASA_MDRIVER=ON -DGTASA_RR_PORTABLE_MATH=ON \
+    cmake --preset PortableWin64 -B "$BD" -DGTASA_PYTHON="$PY" -DGTASA_STATEHASH=ON -DGTASA_SCMTRACE=ON -DGTASA_MDRIVER=ON -DGTASA_RR_PORTABLE_MATH=ON ${HITCOUNT:+-DGTASA_HITCOUNT=ON} \
       "-DCMAKE_CXX_FLAGS=/WX- /wd4005 /DWIN32 /D_WINDOWS /EHsc /fp:precise" || exit 4
   fi
   # low priority (BelowNormal; children inherit), output to <build-dir>/build.log, waits for the end

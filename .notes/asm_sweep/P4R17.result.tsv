@@ -1,0 +1,19 @@
+addr	function	verdict	asm range	note	fix commit
+0x648EE0	CTaskSimpleCarFallOut::FinishAnimFallOutCB (review of 7a04ec197)	MATCH	648EE0-648F38	CONFIRMED: status 0->1 / 2->3 is SetDoorOpen_Component	
+0x6E81E0	CWaterLevel::AddWaveToResult	MATCH	6E81E0-6E8549	both triangles, with/without normal, cross-product arg order	
+0x6E8580	CWaterLevel::GetWaterLevelNoWaves	MATCH	6E8580-6E8760	block lookup, jump table, combo loop, out-of-world defaults	
+0x441770	CGameLogic::SetPlayerWantedLevelForForbiddenTerritories	MATCH	441770-4418DC	polygon data checked against exe, stat compares	
+0x605550	CPedIntelligence::CanSeeEntityWithLights	MATCH	605550-605646	x87 order and constants match; return is a float vs unrounded st0 (negligible)	
+0x59B920	Invert(CMatrix&,CMatrix&)	MATCH	59B920-59B9ED	exact step order	
+0x59B120	CMatrix::SetRotate(xyz)	MATCH	59B120-59B1FF	verbatim x87 lifted	
+0x5447B0	CPhysical::GetLightingFromCol	MATCH	5447B0-54483F	add/mul order, 0x863C10 constant	
+0x5448B0	CPhysical::CanPhysicalBeDamaged	MATCH	5448B0-544935	jump table 0x544954 mapped for all 55 weapons	
+0x5F7F40	CPedGroups::AreInSameGroup	MATCH	5F7F40-5F7FAA	IsMember (0x5F6A10) identical	
+0x6C2750	cBuoyancy::CalcBuoyancyForce	NOT_REACHED		budget	
+0x59B8B0	CMatrix::CopyToRwMatrix	NOT_REACHED		budget	
+0x5334F0	CEntity::TransformFromObjectSpace	NOT_REACHED		budget	
+0x59AD20	CMatrix::UpdateMatrix	NOT_REACHED		budget	
+0x420A10	CPathNode::GetPosition	NOT_REACHED		budget	
+0x54E9D0	CMatrixLinkList::AddToList1	NOT_REACHED		budget	
+0x4AA390	FxSystem_c::Stop	NOT_REACHED		budget	
+0x59AF40	CMatrix::SetTranslate	NOT_REACHED		budget	

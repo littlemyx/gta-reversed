@@ -299,8 +299,10 @@ void cBuoyancy::AddSplashParticles(CPhysical* entity, CVector vecFrom, CVector v
         curParticle.m_fLife *= 0.5F;
     }
 
-    // 0x6C3680: x = (speed.y * 0) * 120, y = (speed.z * 0) * 120, z = (-fMoveSpeed) * 120 (the scalar speed, not the z component of the speed vector)
-    const CVector vecVelocityModifier{ (vecUsedSpeed.y * 0.0F) * 120.0F, (vecUsedSpeed.z * 0.0F) * 120.0F, (fMoveSpeed * -1.0F) * 120.0F };
+    // 0x6C3680: x = (speed.x * 0) * 120, y = (speed.y * 0) * 120, z = (speed.z * -1) * 120 (components of the clamped speed vector; the first review wrongly shifted them / used the scalar speed)
+    const CVector vecVelocityModifier{ (vecUsedSpeed.x * 0.0F) * 120.0F, (vecUsedSpeed.y * 0.0F) * 120.0F, (vecUsedSpeed.z * -1.0F) * 120.0F };
+    // 0x6C36CA: the exe adds a second term, the entity's unclamped move speed * 0 * 0 (zero apart from sign/NaN), after the modifier
+    const CVector vecZeroTerm{ entity->m_vecMoveSpeed.x * 0.0F, entity->m_vecMoveSpeed.y * 0.0F, (entity->m_vecMoveSpeed.z * 0.0F) * 0.0F };
 
     auto iNumParticles = std::max(1, NOTSA_FTOL(int32, fDistBetweenPoints + fDistBetweenPoints));
     for (int32 iIter = 0; iIter < iNumParticles; ++iIter) {
@@ -318,7 +320,7 @@ void cBuoyancy::AddSplashParticles(CPhysical* entity, CVector vecFrom, CVector v
 
         float fRand = CGeneral::GetRandomNumberInRange(0.0F, 0.5F);
         vecTransformedPoint += (vecSplashDir * fRand);
-        g_fx.m_WaterSplash->AddParticle(vecTransformedPoint, vecSplashDir * fMoveSpeed * 60.0F + vecVelocityModifier, 0.0F, curParticle);
+        g_fx.m_WaterSplash->AddParticle(vecTransformedPoint, vecSplashDir * fMoveSpeed * 60.0F + vecVelocityModifier + vecZeroTerm, 0.0F, curParticle);
     }
 
     if (entity->GetIsTypePed()) {

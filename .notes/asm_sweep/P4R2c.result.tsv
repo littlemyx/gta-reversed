@@ -1,0 +1,19 @@
+addr	function	verdict	asm range	note	fix commit
+0x4B96D0	CEventHandler::ComputeVehiclePotentialPassiveCollisionResponse	MATCH	0x4B96D0-0x4B979D	review of 32ff1022f: CONFIRMED (mov esi,6 at 0x4B9742 with a ped group)	
+0x45A020	CVehicleRecording::RequestRecordingFile	MATCH	0x45A020-0x45A055	review of 6c5601514: CONFIRMED (RequestModel(0x649B+idx, 0xC) only, not found -> 0)	
+0x45A060	CVehicleRecording::HasRecordingFileBeenLoaded	MATCH	0x45A060-0x45A097	review of 6c5601514: CONFIRMED (entry 0 data test on not found)	
+0x456A30	CPickups::GetNewUniquePickupIndex	MATCH	0x456A30-0x456A65	review of 977b1f573: CONFIRMED (cmp cx,0xFFFE; jae -> 1)	
+0x427FE0	CCarCtrl::FindMaxSteerAngle	MATCH	0x427FE0-0x428038	clamp(0.9-|v|,0.2,0.7)	
+0x433280	CCarCtrl::SteerAICarWithPhysicsHeadingForTarget	MATCH	0x433280-0x4335DF	x87 order noise only	
+0x458DE0	CPickups::Update	MATCH	0x458DE0-0x4590B7	player 2 arm unreachable (confirmed)	
+0x456F20	CPickups::GenerateNewOneRaw	MATCH	0x456F20-0x457370	slot search order, regen times, flags, x8 ftol coords, ref wrap	
+0x459960	CVehicleRecording::RestoreInfoForMatrix	MATCH	0x459960-0x459A2F		
+0x459A30	CVehicleRecording::RestoreInfoForCar	MATCH	0x459A30-0x459B2F		
+0x459B30	CVehicleRecording::InterpolateInfoForCar	MATCH	0x459B30-0x459D0F	x87 unrounded vel blend: noise	
+0x66B9D0	CTaskComplexTurnToFaceEntityOrCoord::ComputeTargetHeading	MATCH	0x66B9D0-0x66BA6A		
+0x670850	CTaskComplexTurnToFaceEntityOrCoord::CreateFirstSubTask	MATCH	0x670850-0x670920		
+0x670920	CTaskComplexTurnToFaceEntityOrCoord::ControlSubTask	MATCH	0x670920-0x6709F0	SetHeading arg order verified	
+0x5E4000	CPed::TurnBody	MATCH	0x5E4000-0x5E4115		
+0x6D1D90	CVehicle::IsUpsideDown	MATCH	0x6D1D90-0x6D1DCD		
+0x6D1E80	CVehicle::CanPedEnterCar	MATCH	0x6D1E80-0x6D1F2B		
+0x434900	CCarCtrl::SteerAICarWithPhysicsFollowPath	NOT_REACHED	-	large; port already carries per-instruction exe annotations	

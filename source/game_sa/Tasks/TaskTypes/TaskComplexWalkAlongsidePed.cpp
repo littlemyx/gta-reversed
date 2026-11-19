@@ -186,7 +186,7 @@ CTask* CTaskComplexWalkAlongsidePed::ControlSubTask(CPed* ped) {
         pedTaskGoToPoint->UpdatePoint(targetPtForPed); // 0x685586
     }
 
-    if (ped->GetIntelligence()->m_AnotherStaticCounter > 8 && targetToPedDist2DSq <= sq(2.f) && m_pSubTask->MakeAbortable(ped)) { // 0x6855C2
+    if (ped->GetIntelligence()->m_AnotherStaticCounter > 8 && targetToPedDist2DSq < sq(2.f) && m_pSubTask->MakeAbortable(ped)) { // 0x6855C2 (exe 0x685598: `fcomp [4.0]; test ah, 5; jp skip` => STRICT <)
         m_Offset = CVector{CVector2D{pedToTarget}};
         return CreateSubTask(TASK_SIMPLE_STAND_STILL, ped);
     }

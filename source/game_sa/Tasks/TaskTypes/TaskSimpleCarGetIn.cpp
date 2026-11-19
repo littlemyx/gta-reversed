@@ -44,7 +44,10 @@ CTaskSimpleCarGetIn::~CTaskSimpleCarGetIn() {
 void CTaskSimpleCarGetIn::FinishAnimCarGetInCB(CAnimBlendAssociation* anim, void* data) {
     const auto self = static_cast<CTaskSimpleCarGetIn*>(data);
     self->m_finished = true;
-    self->m_anim = nullptr;
+    if (self->m_anim) { // 0x6467F0-0x646800: the finished anim's play time is pushed to -1000 (the exe does this only in this callback)
+        self->m_anim->m_CurrentTime = -1000.f;
+        self->m_anim = nullptr;
+    }
 }
 
 // 0x64B2D0

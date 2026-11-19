@@ -1614,7 +1614,7 @@ void CCamera::ResetDuckingSystem(CPed* ped) {
         return;
 
     float factor;
-    if (ped->m_vecMoveSpeed.SquaredMagnitude() <= 0.000001f) // NOTE: the exe compares the SQUARED length (no sqrt), as HandleCameraMotionForDucking does (exe 0x50CF56)
+    if (ped->m_vecMoveSpeed.SquaredMagnitude() <= std::bit_cast<float>(0x358637BEu)) // 0x50CF56: float at 0x8630EC, one ulp above 0.000001f. NOTE: the exe compares the SQUARED length (no sqrt), as HandleCameraMotionForDucking does (exe 0x50CF56)
         factor = 0.3f - 1.0f;
     else
         factor = 0.3f - 0.5f;
@@ -1628,7 +1628,7 @@ void CCamera::ResetDuckingSystem(CPed* ped) {
 void CCamera::HandleCameraMotionForDucking(CPed* ped, CVector* source, CVector* targPosn, bool arg5) {
     float target = 0.0f;
     if (const auto* const task = ped->GetIntelligence()->GetTaskDuck(true); task && ped->bIsDucking && !task->m_bIsAborting) {
-        target = ped->m_vecMoveSpeed.SquaredMagnitude() <= 0.000001f
+        target = ped->m_vecMoveSpeed.SquaredMagnitude() <= std::bit_cast<float>(0x358637BEu) // 0x50CFFA: float at 0x8630EC, one ulp above 0.000001f
             ? 0.3f - 1.0f
             : 0.3f - 0.5f;
     }

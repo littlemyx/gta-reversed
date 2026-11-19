@@ -1,0 +1,24 @@
+addr	function	verdict	asm range	note	fix commit
+0x4CEB70	CAnimBlendAssociation::Start	MATCH	all	or flags 1 + tail SetCurrentTime	
+0x4CEBA0	CAnimBlendAssociation::SetBlend	MATCH	all		
+0x4CEA80	CAnimBlendAssociation::SetCurrentTime	MATCH	all	loop while cur>=total; compressed vs FindKeyFrame branch	
+0x4CEB40	CAnimBlendAssociation::SyncAnimation	MATCH	all	single x87 chain	
+0x4D13D0	CAnimBlendAssociation::UpdateTime	MATCH	all	flag bit3 -> blend auto-remove + delta -4.0; finish cb re-armed	
+0x4D1490	CAnimBlendAssociation::UpdateBlend	MATCH	all	same-kind callback re-arm; clamps	
+0x4D13A0	CAnimBlendAssociation::UpdateTimeStep	MATCH	all		
+0x4D04A0	CAnimBlendNode::NextKeyFrame	MATCH	all	loop while rem<=0; prev wrap	
+0x4D06C0	CAnimBlendNode::Update	MATCH	all	blend*weight unless partial; progress 0/NaN; lerp; slerp	
+0x4D0240	CAnimBlendNode::FindKeyFrame	MATCH	all	structural only; x87d search already annotated	
+0x4D0650	CAnimBlendNode::SetupKeyFrameCompressed	UNSURE	all	not re-disassembled	
+0x4D0190	CAnimBlendNode::CalcDeltas	UNSURE	all	not re-disassembled	
+0x4D1680-0x4D32D0	FrameUpdateCallBack* (10 variants)	NOT_REACHED	all	usercall templated; budget	
+0x4D15E0	RpAnimBlendClumpGetFirstAssociation	MATCH	all		
+0x4D6A70	RpAnimBlendClumpGetFirstAssociation(flags)	MATCH	all	u16 flag test	
+0x635720	CScriptedBrainTaskStore::SetTask	MATCH	all	48 entries x0x10; delete old task	
+0x561E70	CWanted::SetMaximumWantedLevel	MATCH	all	chaos 0/115/365/875/1800/3500/6900	
+0x50C7C0	CCamera::TakeControl	MATCH	all		
+0x6A4520	CAutomobile::CloseAllDoors	MATCH	all	pairs (10 2)(8 3)(11 4)(9 5)	
+0x6F6AA0	CTrain::RemoveAllTrains	MATCH	all		
+0x559A50	CStats::FindMaxNumberOfGroupMembers	MATCH	all	thresholds 10/60/160/330/540/800	
+0x4094B0	CStreaming::RemoveBuildingsNotInArea	MATCH	all	flag bits 8/13; objType==1	
+PartA	C2dEffectEnEx angles	MATCH	all	EnterAngle +0x10 ExitAngle +0x28 match exe; no change	

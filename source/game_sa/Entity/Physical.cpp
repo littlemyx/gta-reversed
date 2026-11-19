@@ -621,7 +621,11 @@ void CPhysical::ProcessShift() {
         }
         SetIsStuck(false);
         SetIsInSafePosition(true);
-        m_fMovingSpeed = (GetPosition() - oldEntityMatrix.GetPosition()).Magnitude();
+        { // exe 0x54E610-0x54E641: the new - old differences stay unrounded in x87 (not rounded to float), summed x, y, z
+            const auto& np = GetPosition(); const auto& op = oldEntityMatrix.GetPosition();
+            const x87d dx = (x87d)np.x - op.x, dy = (x87d)np.y - op.y, dz = (x87d)np.z - op.z;
+            m_fMovingSpeed = (float)std::sqrt((dx * dx + dy * dy) + dz * dz);
+        }
         RemoveAndAdd();
     }
 }

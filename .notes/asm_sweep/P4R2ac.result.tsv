@@ -1,0 +1,15 @@
+addr	function	verdict	asm range	note	fix commit
+542e20	CPhysical::ApplyTurnSpeed	MATCH	0x542E20-0x542FD6	Part A: review of d56535783 CONFIRMED (arg order of 0x59C730/0x59C790, flag bits 0x2000/0x60, reset of 0x50..0x58, position update all match)
+542a50	CPhysical::ApplyTurnForce	MATCH	0x542A50-0x542B42	flags 0x10/0x40/0x20, z=0 when !MoveForce, 1/turnMass reciprocal, x unrounded / y,z spilled
+59b6a0	CMatrix::Reorthogonalise	MATCH	0x59B6A0-0x59B7D0	all 3 cross products/normalisations and store order verified; float-vs-x87 noise only
+6d73b0	CVehicle::ProcessBikeWheel	MATCH	0x6D73B0-0x6D7BB2	compared for real (flags, brake/thrust, skid/spin/fixed states, burst rand, normalise, 3 force applications, dot orders); noise only
+6c3ef0	cBuoyancy::ProcessBuoyancy	MATCH	0x6C3EF0-0x6C4124	water level, ped immersion clamp, splash args, boat/force return
+6a38a0	CAutomobile::ProcessAutoBusDoors	FIXED	0x6A38A0-0x6A3A58	right door of an open bus got ratio 0 always, exe uses 1-(t+500)/500 like the left door	7d4d45c30
+6adff0	CAutomobile::ScanForCrimes	FIXED	0x6ADFF0-0x6AE0C9	squared distance sum order (z+x)+y	b9c8b1d19
+6c4760	CHeli::FindSwatPositionRelativeToHeli	MATCH	0x6C4760-0x6C47EA	jump table read from the exe (0:-1.2,-1; 1:1.2,-1; 2:-1.2,1; 3:1.2,1; z -0.5)
+734a40	::GetAnimHierarchyFromSkinClump	MATCH	0x734A40-0x734A64	first atomic only (callback returns 0)
+73db40	CWeapon::Update	FIXED	0x73DB40-0x73DED9	animation-less reload audio had no rload!=0 check (exe 0x73DE2C/0x73DE6F)	c7642d1d3
+742bf0	CWeaponEffects::MarkTarget	MATCH	0x742BF0-0x742C5E	field offsets and colour order verified
+4a9810	FxManager_c::DestroyFxSystem	NOT_REACHED		budget (no rand expected)
+4aa2f0	FxSystem_c::Play	NOT_REACHED		budget
+4aa440	FxSystem_c::AddParticle	NOT_REACHED		budget

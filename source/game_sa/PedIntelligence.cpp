@@ -942,7 +942,9 @@ void CPedIntelligence::ProcessStaticCounter() {
         return;
     }
 
-    if ((m_pPed->GetPosition() - m_vecLastPedPosDuringDamageEntity).SquaredMagnitude() < 1.0f / 16.0f) {
+    // 0x605765: the exe sums the squares as (z*z + y*y) + x*x (CVector::SquaredMagnitude does (x*x + y*y) + z*z), limit 0x86C940 = 0.0625f
+    const CVector d = m_pPed->GetPosition() - m_vecLastPedPosDuringDamageEntity;
+    if (((x87d)d.z * d.z + (x87d)d.y * d.y) + (x87d)d.x * d.x < (double)(1.0f / 16.0f)) {
         m_AnotherStaticCounter++;
     } else {
         m_AnotherStaticCounter = 0;

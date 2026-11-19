@@ -71,7 +71,7 @@ bool CTaskSimpleSitIdle::ProcessPed(CPed* ped) {
     }
 
     // Do look at somewhere/another ped with random chance
-    if (!g_ikChainMan.IsLooking(ped) && CGeneral::RandomBool(5.f)) {
+    if (!g_ikChainMan.IsLooking(ped) && CGeneral::GetRandomNumberInRange(0, 100) < 5) { // exe 0x637A8C-0x637AB2: int roll < 5 (RandomBool is the float `<= 5`)
         const auto lookTime = CGeneral::GetRandomNumberInRange(3000, 8000); // 0x637A9F-0x637AC0: 3000 + (int)(r * 5000)
 
         // First try looking at the closest ped (if any)
@@ -87,7 +87,7 @@ bool CTaskSimpleSitIdle::ProcessPed(CPed* ped) {
             if (dot <= 0.2f) { // Must be in cone of [-78, 78] deg in front of `ped`
                 return false;
             }
-            if (!CGeneral::RandomBool(25.f)) {
+            if (!(CGeneral::GetRandomNumberInRange(0, 100) < 25)) { // exe 0x637B76-0x637B81: int GetRandomNumberInRange(0, 100) < 25 (not RandomBool)
                 return false;
             }
 

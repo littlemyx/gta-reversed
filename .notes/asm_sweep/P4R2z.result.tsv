@@ -1,0 +1,185 @@
+addr	function	verdict	asm range	note	fix commit
+403d60		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+404330		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+406da0		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+407180	::GetRandomNumberInRange_int32	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+4082c0	CVector::Magnitude	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+40fc80		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+40fdb0	CVector::DotProduct	SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+40fe30		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+40fe60		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+40fe90		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+40fec0		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+4119d0		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+411a00		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+41bd90		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+41ccb0		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+420800		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+422370	CCarCtrl::FindGhostRoadHeight	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+423de0	CCarCtrl::RegisterVehicleOfInterest	NOT_REACHED		budget	
+423fc0	CCarCtrl::SwitchVehicleToRealPhysics	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+424100		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+439a80	CPlaceable::SetOrientation	NOT_REACHED		budget	
+43e0c0	CPlaceable::SetHeading	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+43e400		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+441130		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+441db0	CPlaceable::GetHeading	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+4a9810	FxManager_c::DestroyFxSystem	NOT_REACHED		budget	
+4a9be0	FxManager_c::CreateFxSystem	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+4aa2f0	FxSystem_c::Play	NOT_REACHED		budget	
+4aa3f0	FxSystem_c::Kill	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+4aa440	FxSystem_c::AddParticle	NOT_REACHED		budget	
+4aa910	FxSystem_c::SetLocalParticles	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+4ab290		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+4ad420		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+4ad830	CEventDamage::Constructor	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+4ad960		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+4b10c0	CEventVehicleOnFire::Constructor	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+4b1170		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+4b35a0	CEventDamage::AffectsPed	NOT_REACHED		budget	
+4d68b0	::RpAnimBlendClumpGetAssociation	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+4da030	CEntity::GetIsTypePhysical	SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+4e69f0		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+4e6ae0		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+4f4ce0		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+50a9f0	CCamera::CamShake	AUDITED-IN-SOURCE		port body carries exe-address/x87 audit comments	
+50bff0	CCamera::Using1stPersonWeaponMode	NOT_REACHED		budget	
+50e420		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+532b00	CEntity::UpdateRwFrame	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+534540	CEntity::GetIsOnScreen	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+535300	CEntity::GetColModel	NOT_REACHED		budget	
+53cb50	::LimitRadianAngle	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+53ee60		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+53f920	CPad::StartShake	NOT_REACHED		budget	
+53fb70		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+53fb80	CPad::GetSteeringLeftRight	NOT_REACHED		budget	
+53fbd0	CPad::GetSteeringUpDown	NOT_REACHED		budget	
+53fc10	CPad::GetCarGunUpDown	NOT_REACHED		budget	
+53fc50	CPad::GetCarGunLeftRight	NOT_REACHED		budget	
+53ff30	CPad::HornJustDown	NOT_REACHED		budget	
+53ffe0	CPad::CarGunJustDown	NOT_REACHED		budget	
+540040	CPad::GetHandBrake	NOT_REACHED		budget	
+540080	CPad::GetBrake	NOT_REACHED		budget	
+540180	CPad::GetWeapon	NOT_REACHED		budget	
+540250	CPad::WeaponJustDown	NOT_REACHED		budget	
+5403f0	CPad::GetAccelerate	NOT_REACHED		budget	
+540440	CPad::GetAccelerateJustDown	NOT_REACHED		budget	
+540670	CPad::GetTarget	NOT_REACHED		budget	
+542800	CPhysical::AddToMovingList	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+542860	CPhysical::RemoveFromMovingList	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+5429f0	CPhysical::ApplyMoveForce	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+542a50	CPhysical::ApplyTurnForce	AUDITED-IN-SOURCE		port body carries exe-address/x87 audit comments	
+542ce0	CPhysical::GetSpeed	AUDITED-IN-SOURCE		port body carries exe-address/x87 audit comments	
+542dd0	CPhysical::ApplyMoveSpeed	AUDITED-IN-SOURCE		port body carries exe-address/x87 audit comments	
+542e20	CPhysical::ApplyTurnSpeed	NOT_REACHED		budget	
+542fe0	CPhysical::ApplyGravity	AUDITED-IN-SOURCE		port body carries exe-address/x87 audit comments	
+5433b0	CPhysical::SkipPhysics	MATCH		flag masks, status simple skip, friction/damage resets identical	
+543490	CPhysical::AddCollisionRecord	MATCH		alarm 0xFFFF->15000, collided list (max 6) identical	
+543c90	CPhysical::ApplySpringCollision	NOT_REACHED		budget	
+543d60	CPhysical::ApplySpringCollisionAlt	NOT_REACHED		budget	
+544850	CPhysical::GetLightingTotal	MATCH		interior lighting logic identical	
+54d690	CPhysical::AttachEntityToEntity	NOT_REACHED		budget	
+54e881		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+54e888		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+54ef40		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+54f1b0		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+54f560	CPlaceable::AllocateMatrix	NOT_REACHED		budget	
+555df0	CRopes::SetSpeedOfTopNode	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+555f80	CRopes::IsCarriedByRope	NOT_REACHED		budget	
+5591e0	CStats::GetPercentageProgress	MATCH		zero-total and NaN paths, clamp 100 identical	
+559af0	CStats::GetFatAndMuscleModifier	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+55e5c0	SurfaceInfos_c::GetAdhesionGroup	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+55e600	SurfaceInfos_c::GetWetMultiplier	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+55e630	SurfaceInfos_c::GetSkidmarkType	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+55e690	SurfaceInfos_c::IsSoftLanding	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+55e770	SurfaceInfos_c::IsSteepSlope	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+55e810	SurfaceInfos_c::GetRoughness	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+55eb50	SurfaceInfos_c::GetAdhesiveLimit	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+562c90	CWanted::Update	NOT_REACHED		budget	
+563fa0	CWorld::FindPlayerSlotWithPedPointer	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+563fd0	CWorld::FindPlayerSlotWithRemoteVehiclePointer	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+56e010	CWorld::FindPlayerCoors	SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+56e090	CWorld::FindPlayerSpeed	SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+56e0d0	CWorld::FindPlayerVehicle	SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+56e120	CWorld::FindPlayerEntity	SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+56e210	CWorld::FindPlayerPed	SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+56e230	CWorld::FindPlayerWanted	SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+56e320	CWorld::FindPlayerCentreOfWorld_NoSniperShift	SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+571a00	CEntity::CleanUpOldReference	NOT_REACHED		budget	
+571a90	CEntity::PruneReferences	NOT_REACHED		budget	
+571b70	CEntity::RegisterReference	NOT_REACHED		budget	
+59acd0		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+59ad70	CMatrix::UpdateRwMatrix	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+59b020	CMatrix::SetRotateZOnly	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+59b390	CMatrix::RotateZ	NOT_REACHED		budget	
+59b6a0	CMatrix::Reorthogonalise	AUDITED-IN-SOURCE		port body carries exe-address/x87 audit comments	
+59b7e0	CMatrix::ForceUpVector	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+59bbc0		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+59bcf0		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+59c050		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+59c730	CVector::CrossProduct	SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+59c790		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+59c810		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+59c890		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+59c910	CVector::Normalise	NOT_REACHED		budget	
+59f050		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+59f0c0		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+5dedc0	CPed::SetLookFlag	MATCH		float overload; flow incl. torso/ref clear identical	
+5df8d0	CPed::SetLookTimer	MATCH		unsigned compare + add identical	
+5df8f0	CPed::IsPlayer	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+5e0170	CPed::IsAlive	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+5effe0	CPed::Say	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+5f69b0	CPedGroupMembership::GetMember	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+5f6a10	CPedGroupMembership::IsMember	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+5f6aa0	CPedGroupMembership::CountMembersExcludingLeader	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+5fb0a0	CPedGroup::FindDistanceToNearestMember	NOT_REACHED		budget	
+600b50	CPedIntelligence::SetPedDecisionMakerType	NOT_REACHED		budget	
+601070	CPedIntelligence::GetTaskSwim	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+609560	CPlayerPed::GetPadFromPlayer	NOT_REACHED		budget	
+60a820	CPlayerPed::GetButtonSprintResults	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+60a8a0	CPlayerPed::ResetPlayerBreath	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+611570	CPopulation::UpdatePedCount	AUDITED-IN-SOURCE		port body carries exe-address/x87 audit comments	
+6a38a0	CAutomobile::ProcessAutoBusDoors	AUDITED-IN-SOURCE		port body carries exe-address/x87 audit comments	
+6a3a60	CAutomobile::BoostJumpControl	NOT_REACHED		budget	
+6adff0	CAutomobile::ScanForCrimes	NOT_REACHED		budget	
+6b5f90	CBike::ReduceHornCounter	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+6b6740	CBike::ResetSuspension	NOT_REACHED		budget	
+6b7130	CBike::PlayHornIfNecessary	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+6c21a0	CDamageManager::SetWheelStatus	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+6c21b0	CDamageManager::GetWheelStatus_Hooked	SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+6c3ef0	cBuoyancy::ProcessBuoyancy	AUDITED-IN-SOURCE		port body carries exe-address/x87 audit comments	
+6c4760	CHeli::FindSwatPositionRelativeToHeli	NOT_REACHED		budget	
+6c7d80	CMonsterTruck::ExtendSuspension	NOT_REACHED		budget	
+6d0530	cTransmission::CalculateGearForSimpleCar	MATCH		up/down shift, clamp to max gear and >=0, NaN paths identical	
+6d05e0	cTransmission::CalculateDriveAcceleration	AUDITED-IN-SOURCE		port body carries exe-address/x87 audit comments	
+6d1080	CVehicle::GetVehicleAppearance	MATCH		flag->appearance mapping identical (enum values checked)	
+6d1230	CVehicle::ProcessWheelRotation	MATCH		exe constants -1.1 / 0 and z,y,x dot order verified	
+6d1340	CVehicle::ProcessDelayedExplosion	AUDITED-IN-SOURCE		port body carries exe-address/x87 audit comments	
+6d21f0	CVehicle::ProcessCarAlarm	AUDITED-IN-SOURCE		port body carries exe-address/x87 audit comments	
+6d24f0	CVehicle::ActivateBomb	MATCH		bomb state 1->4 (7000, FindPlayerPed), 2->5, GA_12 msg identical	
+6d2570	CVehicle::ActivateBombWhenEntered	NOT_REACHED		budget	
+6d29e0	CVehicle::UpdatePassengerList	MATCH		uint8 count + 8-slot all-null scan identical	
+6d73b0	CVehicle::ProcessBikeWheel	AUDITED-IN-SOURCE		port body carries exe-address/x87 audit comments	
+6d8470	CVehicle::UsesSiren	NOT_REACHED		budget	
+6eb690	CWaterLevel::GetWaterLevel	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+6f0e20	CBoat::PruneWakeTrail	NOT_REACHED		budget	
+6f5300	cHandlingDataMgr::GetBoatPointer	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+6f5440		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+6f5ba0	CTrain::FindMaximumSpeedToStopAtStations	MATCH		all constants read from exe (0.5,-0.5,40,500,0.002,1,50,5), wrap loops, clockwise/anti branches identical	
+6f5cd0	CTrain::FindNumCarriagesPulled	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+6f5f80		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+71d730		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+72dd50	CCullZones::NoPolice	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+72ddd0	CCullZones::DoExtraAirResistanceForPlayer	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+734a40	::GetAnimHierarchyFromSkinClump	NOT_REACHED		budget	
+734b10	::GetAnimHierarchyFromClump	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+73db40	CWeapon::Update	AUDITED-IN-SOURCE		port body carries exe-address/x87 audit comments	
+742bf0	CWeaponEffects::MarkTarget	NOT_REACHED		budget	
+743d50	CWeaponInfo::GetTargetHeadRange	TRIVIAL		port body <=9 lines (likely < 0x30 bytes)	
+7c5120		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+7c51a0		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+7f0990		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+821b1e		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+821b40		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+821e70		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	
+822130		SKIPPED_NO_PORT_BODY		unnamed/inlined/not a hooked port function; no body found	

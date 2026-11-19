@@ -1,0 +1,64 @@
+addr	function	verdict	asm range	note	fix commit
+0x5343F0	CEntity::GetIsTouching(CEntity*)	FIXED	0x5343F0-0x5344A8 (all)	squared distance summed (dz^2+dy^2)+dx^2 (port x,y,z), then R^2>sum; centres/radii matched	ef4566646
+0x5344B0	CEntity::GetIsTouching(vec,r)	MATCH	0x5344B0-0x534537 (all)	port is the exe x87 sequence verbatim	
+0x553370	CEntity::RemoveLighting	MATCH	0x553370-0x553387 (all)		
+0x553DC0	CEntity::SetupLighting	MATCH	0x553DC0-0x553E04 (all)	bit 28 = m_bLightObject; light*0.5 exact	
+0x5DF100	CPed::CanBeDeleted	MATCH	0x5DF100-0x5DF14E (all)	bInVehicle, group follower, createdBy 2/3 -> false	
+0x5E0290	CPed::GetHoldingTask	MATCH	0x5E0290-0x5E02D5 (all)	tasks 0x133,0x134,0x135 in order	
+0x5E4280	CPed::GetBonePosition	MATCH	0x5E4280-0x5E437E (all)	bCalledPreRender, std pose, no-hierarchy fallback	
+0x59F120	CObject::CanBeDeleted	MATCH	0x59F120-0x59F13A (all)	jump table: types 2,4,5,6 false	
+0x6D0CC0	CVehicle::UpdateLightingFromStoredPolys	MATCH	0x6D0CC0-0x6D0CE4 (all)		
+0x5DF510	CPed::GetBikeRidingSkill	FIXED	0x5DF510-0x5DF55F (all)	stat/1000 clamped to 1.0, not 1000.0; NaN passes through	4ed9ad69d
+0x6A2350	CAutomobile::IsOpenTopCar	MATCH	0x6A2350-0x6A238D (all)		
+0x609FF0	CPlayerPed::GetPlayerInfoForThisPlayerPed	MATCH	0x609FF0-0x60A018 (all)		
+0x6D3D60	CVehicle::RenderDriverAndPassengers	SKIP-RENDER		render	
+0x6D1BD0	CVehicle::IsPassenger(CPed*)	MATCH	0x6D1BD0-0x6D1BFA (all)		
+0x6D1C00	CVehicle::IsPassenger(int)	MATCH	0x6D1C00-0x6D1C31 (all)		
+0x5DEFD0	CPed::IsPedShootable	MATCH	0x5DEFD0-0x5DEFDB (all)	state<=46 = the port's 47 cases	
+0x5E3960	CPed::IsPedInControl	MATCH	0x5E3960-0x5E3986 (all)		
+0x609ED0	CPlayerPed::Clear3rdPersonMouseTarget	MATCH	0x609ED0-0x609EEB (all)		
+0x6D1E20	CVehicle::CanPedOpenLocks	MATCH	0x6D1E20-0x6D1E5D (all)		
+0x536BC0	CEntity::IsVisible	MATCH	0x536BC0-0x536BD6 (all)		
+0x5E0460	CPed::IsPlayingHandSignal	MATCH	0x5E0460-0x5E0479 (all)		
+0x533150	CEntity::SetupBigBuilding	MATCH	0x533150-0x53316E (all)		
+0x5DF4E0	CPed::ResetGunFlashAlpha	MATCH	0x5DF4E0-0x5DF507 (all)		
+0x5A0760	CObject::SetIsStatic	MATCH	0x5A0760-0x5A07C8 (all)		
+0x6A2330	CAutomobile::IsDoorMissing	MATCH	0x6A2330-0x6A2346 (all)		
+0x5DFD60	CPed::RestoreHeadingRate	MATCH	0x5DFD60-0x5DFD70 (all)		
+0x571A40	CEntity::ResolveReferences	MATCH	0x571A40-0x571A8E (all)		
+0x59F160	CObject::SetRelatedDummy	MATCH	0x59F160-0x59F175 (all)		
+0x5E4720	CPed::operator new	MATCH	0x5E4720 + pool 0x5E45E0		
+0x5E4730	CPed::operator new(poolRef)	MATCH	0x5E4730-0x5E4754 + 0x5E0540		
+0x5E4760	CPed::operator delete	MATCH	0x5E4760-0x5E4791 (all)		
+0x6D1C40	CVehicle::IsDriver(CPed*)	MATCH	0x6D1C40-0x6D1C57 (all)		
+0x6D1C60	CVehicle::IsDriver(int)	MATCH	0x6D1C60-0x6D1C7C (all)		
+0x6A2270	CAutomobile::GetDooorAngleOpenRatio	MATCH	0x6A2270-0x6A2284 (all)		
+0x532D40	CEntity::DoesNotCollideWithFlyers	MATCH	0x532D40-0x532D6E (all)		
+0x6928B0	CTaskComplexFacial::Clone	MATCH	0x6928B0-0x692907 (all)		
+0x403E20	CEntity::SetIsStatic	MATCH	0x403E20-0x403E36 (all)		
+0x6D2330	CVehicle::ChangeLawEnforcerState	MATCH	0x6D2330-0x6D2366 (all)		
+0x6D0CA0	CVehicle::SetCollisionLighting	MATCH	0x6D0CA0-0x6D0CB9 (all)		
+0x60A070	CPlayerPed::ClearAdrenaline	MATCH	0x60A070-0x60A095 (all)		
+0x6D2700	CVehicle::SetComponentVisibility	MATCH	0x6D2700-0x6D2738 + CBs 0x6D2690/0x6D26D0		
+0x609C80	CPlayerPed::ClearWeaponTarget	MATCH	0x609C80-0x609CCB (all)		
+0x6A22D0	CAutomobile::IsDoorFullyOpen	MATCH	0x6A22D0-0x6A2304 (all)	virtual slot 38 = IsDoorMissing	
+0x5E0480	CPed::StopPlayingHandSignal	MATCH	0x5E0480-0x5E04A8 (all)		
+0x5EFF80	CPed::DisablePedSpeechForScriptSpeech	MATCH	0x5EFF80-0x5EFF86 (all)	tail-jump to speech AE (+0x294)	
+0x5EFF90	CPed::EnablePedSpeechForScriptSpeech	MATCH	0x5EFF90-0x5EFF96 (all)		
+0x5EFFA0	CPed::CanPedHoldConversation	MATCH	0x5EFFA0-0x5EFFA6 (all)		
+0x6B67B0	CBike::RemoveRefsToVehicle	MATCH	0x6B67B0-0x6B67D1 (all)		
+0x6D3040	CVehicle::ClearGettingInFlags	MATCH	0x6D3040-0x6D3055 (all)		
+0x6D3000	CVehicle::SetGettingInFlags	MATCH	0x6D3000-0x6D3013 (all)		
+0x5EFF70	CPed::EnablePedSpeech	MATCH	0x5EFF70-0x5EFF76 (all)		
+0x60A4B0	CPlayerPed::MakePlayerGroupReappear	MATCH	0x60A4B0-0x60A52E (all)		
+0x60C7C0	CPlayerPed::ForceGroupToAlwaysFollow	MATCH	0x60C7C0-0x60C7F6 (all)		
+0x6A2AE0	CAutomobile::ResetSuspension	MATCH	0x6A2AE0-0x6A2B09 (all)		
+0x6D1DD0	CVehicle::IsOnItsSide	MATCH	0x6D1DD0-0x6D1E18 (all)	NaN -> false both	
+0x6F5DB0	CTrain::DisableRandomTrains	MATCH	0x6F5DB0-0x6F5DBA (all)		
+0x5EFF50	CPed::GetPedTalking	MATCH	0x5EFF50-0x5EFF56 (all)		
+0x60A530	CPlayerPed::ResetSprintEnergy	MATCH	0x60A530-0x60A546 (all)		
+0x6D3020	CVehicle::SetGettingOutFlags	MATCH	0x6D3020-0x6D3033 (all)		
+0x6D3060	CVehicle::ClearGettingOutFlags	MATCH	0x6D3060-0x6D3075 (all)		
+0x5DEF20	CPed::ClearAimFlag	MATCH	0x5DEF20-0x5DEF53 (all)		
+0x6C4560	CHeli::InitHelis	MATCH	0x6C4560-0x6C45A2 (all)		
+0x6A2290	CAutomobile::IsDoorReady	MATCH	0x6A2290-0x6A22C4 (all)		

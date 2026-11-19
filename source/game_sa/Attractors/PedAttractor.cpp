@@ -162,7 +162,10 @@ CTask* CPedAttractor::GetTaskForPed(CPed* ped) {
         return nullptr;
     }
     if (!it->UsedTask) {
-        ms_tasks.erase(rng::find(ms_tasks, it->Task));
+        // 0x5EC561-0x5EC592: when the task is not in ms_tasks the exe just marks the pair as used (no erase)
+        if (const auto tit = rng::find(ms_tasks, it->Task); tit != ms_tasks.end()) {
+            ms_tasks.erase(tit);
+        }
     }
     it->UsedTask = true;
     return it->Task;

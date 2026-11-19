@@ -1124,7 +1124,9 @@ CVector CAutomobile::AddMovingCollisionSpeed(CVector& point) {
     if (ModelIndices::IsDumper(m_nModelIndex))
     {
         carNodeMisc = m_aCarNodes[CAR_MISC_C];
-        colAngleMult = CMonsterTruck::DUMPER_COL_ANGLEMULT;
+        if (carNodeMisc) { // exe 0x6A1F74: the multiplier is only set when the node exists (otherwise 0 -> zero speed)
+            colAngleMult = CMonsterTruck::DUMPER_COL_ANGLEMULT;
+        }
     }
     else if (ModelIndices::IsPacker(m_nModelIndex)) {
         colAngleMult = PACKER_COL_ANGLE_MULT;

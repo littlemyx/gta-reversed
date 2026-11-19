@@ -1,0 +1,10 @@
+addr	function	verdict	asm range	note	fix commit
+0x6B1880	CAutomobile::ProcessControl (review of 460a77e7f)	CONFIRMED	0x6B1FF0,0x6B2C61,0x6B2E83,0x6B324D	dword floats 0x863244=0x3D23D70B, 0x86CD7C=0x3C23D70B; same-expression, direction (fcomp/ah&0x41 -> >) matches	-
+0x54BA60	CPhysical::ProcessCollisionSectorList (review of 8676992a3)	CONFIRMED	0x54C5B5	dword float 0x858CD8=0x3B23D70B	-
+0x6E1A60	CVehicle::DoVehicleLights (review of 1f4e6793a)	CONFIRMED	0x6E2763	dword float 0x871FDC=0x3E4F5C28; fcomp then test ah,5 -> <	-
+0x66FDA0	CTaskComplexWanderStandard::LookForChatPartners (review of d9be6dd05)	CONFIRMED	0x66FE2B	dword float 0x863244; x87d sum stays extended, compare vs widened float	-
+0x5245B0	CCam::Process_FollowCar_SA (review of 5567d7592)	CONFIRMED	0x5250DE	dword float 0x863244; x87d sum < const	-
+0x614210	CPopulation::AddPedAtAttractor (review of 4018dba3c)	CONFIRMED	0x6142A6	dword float 0x86D26C=0x3DFAE147; fcomp, ah&0x41 je -> continue only when >; port <= returns false (NaN differs, ignored)	-
+0x50CFA0	CCamera::HandleCameraMotionForDucking + ResetDuckingSystem (review of 73a5eb8be)	CONFIRMED	0x50CFFA,0x50CF57	dword float 0x8630EC=0x358637BE; Reset's fcom is at 0x50CF57 (port comment says 0x50CF56: cosmetic)	-
+0x6A07A0	CAutomobile::HydraulicControl	FIXED	0x6A12E5	fcomp qword [0x85A308]=double 0.01; port had 0.01f (0.00999999977)	537327d17
+0x442AD0	CGameLogic::Update	MATCH	0x442F95,0x443340,0x4435EB	screen flag was a false positive (port helper RadiansToDegrees uses 0x42652EE0 = exe 0x859878)	-

@@ -200,7 +200,8 @@ void CTagManager::SetAlphaInArea(const CRect& area, uint8 alphaToSet) {
 CEntity* CTagManager::GetNearestTag(const CVector& nearestToPoint) {
     tTagDesc* closest         = nullptr;
     float     closestDist2DSq = RwRealMAXVAL;
-    for (auto& tag : GetTags()) {
+    // exe 0x49D160-0x49D1C6: walks the tags from the last one down to the first with a strict `<`, so on an exact tie the HIGHER index wins (the port walked upwards: lowest index won)
+    for (auto& tag : GetTags() | std::views::reverse) {
         if (const auto dist2DSq = CVector2D::DistSqr(nearestToPoint, tag.Entity->GetPosition2D()); dist2DSq < closestDist2DSq) {
             closestDist2DSq = dist2DSq;
             closest         = &tag;

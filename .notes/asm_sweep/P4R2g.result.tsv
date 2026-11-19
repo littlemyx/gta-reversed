@@ -1,0 +1,16 @@
+addr	function	verdict	asm range	note	fix commit
+0x6A2310	CAutomobile::IsDoorClosed	MATCH	0x6A2310-0x6A2328	door*0x18 + 0x5B8 -> CDoor::IsClosed (0x6F4800, angle == closed; MATCH earlier)	-
+0x6A6470	CAutomobile::IsDoorClosedU32	MATCH	0x6A6470-0x6A64CE	jump table bytes decoded: 8->RF(3) 9->RR(5) 10->LF(2) 11->LR(4) 18->false, others false	-
+0x43FA00	CEntryExitManager::AddOne / CEntryExit ctor	MATCH	0x43FA00-0x43FB40	no srand in the exe; unknown-burglary flag does rand() < 0x3FFF -> window (0,0) (DoCoinFlip equivalent); burglary window 0/24 first	-
+0x421740	CCarCtrl::InitSequence	MATCH	0x421740-0x42176A	rand()%n, (rand()>>4)&1	-
+0x420A60	CCarPathLink::GetNodeCoors	MATCH	0x420A60-0x420A95	int16*0.125 x,y	-
+0x44D310	CPathFind::ThisNodeWillLeadIntoADeadEnd	MATCH	0x44D310-0x44D3A8	skip prev / unloaded areas / type 1..10; 2 candidates -> false	-
+0x44D230	CPathFind::These2NodesAreAdjacent	MATCH	0x44D230-0x44D28D	-	-
+0x452090	CPathFind::Find2NodesForCarCreation	MATCH	0x452090-0x45214B	arg order into RecordNodesClosestToCoors, first non-adjacent of 3	-
+0x44FA30	CPathFind::RecordNodesClosestToCoors	MATCH	0x44FA30-0x44FB5D	marker clear bit 2 of +0x19, arg order to FindNodeClosestToCoors	-
+0x44F460	CPathFind::FindNodeClosestToCoors	MATCH	0x44F460-0x44F8BB	grid ftol clamp 0..7, border t (float stored), ring order, t+750, interior sweep only when unk6==0	-
+0x44F2C0	CPathFind::FindNodeClosestInRegion	MATCH	0x44F2C0-0x44F44F	flags +0x18&0x20, +0x19&2, water bit, 3*dz + dy + dx *0.3, +0.2*linkdist	-
+0x44F190	CPathFind::CalcDistToAnyConnectingLinks	MATCH	0x44F190-0x44F2B7	DistToLineSqr(node,link,pos), min update polarity, fsqrt unrounded	-
+0x420D40	CCamera::IsSphereVisible (2-arg)	MATCH	0x420D40-0x420D8C	matrix at +0xA4C, mirror matrix +0xA94 gated by +0x970 (offsets not re-verified against the struct)	-
+0x424210	CCarCtrl::GenerateCarCreationCoors2	MATCH	0x424210-0x424CD7	already MATCH in S22c; all helpers on the walk now MATCH too	-
+0x645CB0	CTaskSimpleCarAlign::FixHeading	FIXED	0x645CB0-0x645E33	dot summed z,y,x extended; NaN/<=0 returns; only x,y of the car vector scaled by dot and the product subtracted twice before the heading	see commit

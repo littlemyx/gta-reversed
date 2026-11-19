@@ -68,13 +68,20 @@ void CTaskSimpleCarAlign::FixHeading(CPed* ped) {
         }
     }();
 
+    // exe 0x645D33-0x645D6D: the dot is summed z, y, x in extended precision (one rounding)
     const auto pedFwd = ped->GetForwardVector();
-    const auto dot = DotProduct(carLeftOrRight, pedFwd);
-    if (dot <= 0.f || dot >= 0.1f) {
+    const x87d dotX   = (x87d)carLeftOrRight.z * pedFwd.z + (x87d)carLeftOrRight.y * pedFwd.y + (x87d)carLeftOrRight.x * pedFwd.x;
+    if (!(dotX > 0.0 && dotX < (x87d)0.1f)) { // 0x645D4B: `<= 0` or NaN returns, `>= 0.1` returns
         return;
     }
 
-    ped->m_fAimingRotation = ped->m_fCurrentRotation = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(pedFwd - carLeftOrRight * dot, {}));
+    // exe 0x645DB1-0x645E20: only X and Y of the car vector are scaled by the dot and the product is subtracted TWICE
+    // (fcom-less `fsub` chain at 0x645DDB/0x645DEA and 0x645DE4/0x645DF6) before the heading is derived
+    const float tx = (float)(dotX * carLeftOrRight.x);
+    const float ty = (float)(dotX * carLeftOrRight.y);
+    const float vx = (float)((x87d)pedFwd.x - tx - tx);
+    const float vy = (float)((x87d)pedFwd.y - ty - ty);
+    ped->m_fAimingRotation = ped->m_fCurrentRotation = CGeneral::LimitRadianAngle(CGeneral::GetRadianAngleBetweenPoints(vx, vy, 0.f, 0.f));
 }
 
 // 0x64AC00

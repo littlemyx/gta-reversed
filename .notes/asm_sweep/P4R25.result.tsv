@@ -1,0 +1,18 @@
+addr	function	verdict	asm range	note	fix commit
+0x741C00	CWeapon::FireM16_1stPerson	FIXED	0x741C00-0x741FC4	target = origin + front*3*range (port had no range factor)	see git log ASM-P4R25
+0x73E240	CWeapon::FindNearestTargetEntityWithScreenCoors	FIXED	0x73E240-0x73E55F	x87 extended dist/sum order z,y,x (minor)	see git log ASM-P4R25
+0x739B60	CShotInfo::Initialise	FIXED	0x739B60-0x739C18	RandTable accumulates in extended precision	see git log ASM-P4R25
+0x421FE0	CCarCtrl::ThisVehicleShouldTryNotToTurn	MATCH	0x421FE0-0x422005	jump table bytes decoded: 9 models identical	
+0x422590	CCarCtrl::StopCarIfNodesAreInvalid	MATCH	0x422590-0x422618	packed 10/6-bit link addresses ok	
+0x421900	CCarCtrl::ChooseCarModelToLoad	MATCH	0x421900-0x421968		
+0x42C250	CCarCtrl::IsAnyoneParking	MATCH	0x42C250-0x42C2A0	missions 45,46,49,50	
+0x423ED0	CCarCtrl::RemoveFromInterestingVehicleList	MATCH	0x423ED0-0x423EF0		
+0x423880	CCarCtrl::SteerAIPlaneToCrashAndBurn	MATCH	0x423880-0x4238D0		
+0x4238E0	CCarCtrl::SteerAIHeliToCrashAndBurn	MATCH	0x4238E0-0x423938		
+0x426220	CCarCtrl::SlowCarDownForObject	MATCH	0x426220-0x426344		
+0x422090	CCarCtrl::FindPathDirection	MATCH	0x422090-0x422292		
+0x426970	CCarCtrl::WeaveForPed	MATCH	0x426970-0x426BAD	lower/upper wrap loops not line-compared to the end	
+0x44DA30	CPathFind::FindPedCreationPosBetweenNodes	MATCH	0x44DA30-0x44DAF3		
+0x450DE0	CPathFind::IsWaterNodeNearby	MATCH	0x450DE0-0x450E7A		
+0x743CD0	CWeaponInfo::GetSkillStatIndex	MATCH	0x743CD0-0x743D0C		
+0x742CC0	CWeaponEffects::ClearCrossHairsImmediately	MATCH	0x742CC0-0x742CE0		

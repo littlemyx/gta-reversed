@@ -11,6 +11,7 @@
 
 #include "Population.h"
 #include "portable/statehash.h"
+#include "portable/attrlog.h"
 #include "CarCtrl.h"
 #include "Glass.h"
 #include <PedPlacement.h>
@@ -2267,14 +2268,14 @@ int32 CPopulation::GeneratePedsAtAttractors(
     int16    numEntitiesInRng{};
     CWorld::FindObjectsInRange(pos, maxRadius, false, &numEntitiesInRng, (int16)std::size(entitiesInRng), entitiesInRng, true, false, false, true, false);
 #ifdef NOTSA_STATEHASH
-    // NOTSA_SH_ATTRLOG=<file> (RR debug for the TS port): the first 6 calls while a trace is recorded log every entity in range with its model's attractor count
-    // (`E` rows) and every GetRandom2dEffect draw (`D` rows: pass, entity, drawn effect index). Columns are documented in the header line.
-    static FILE* s_attrLog = [] { const char* f = std::getenv("NOTSA_SH_ATTRLOG"); FILE* h = f ? std::fopen(f, "w") : nullptr; if (h) std::fprintf(h, "# C call fc pos.x pos.y pos.z n | E call idx model name mitype enttype x y z area n2dfx nattr rw | D call pass idx model drawnfx\n"); return h; }();
+    // SH6 NOTSA_SH_ATTRLOG (portable/attrlog.h): every call during a wanted recorded frame logs the entities in range (E rows)
     static int s_attrCalls = 0;
-    const bool attrLog = s_attrLog && notsa::rr::Recording() && s_attrCalls < 6;
-    const int  attrCall = attrLog ? s_attrCalls++ : -1;
+    FILE* const attrLog = notsa::rr::AttrLog();
+    const int   attrCall = attrLog ? s_attrCalls++ : -1;
     if (attrLog) {
-        std::fprintf(s_attrLog, "C %d %u %.3f %.3f %.3f %d\n", attrCall, CTimer::GetFrameCounter(), pos.x, pos.y, pos.z, numEntitiesInRng);
+        const int  rf = notsa::rr::LoadLogRecFrame();
+        const auto rc = (unsigned long long)notsa::rr::RandCountNow();
+        std::fprintf(attrLog, "%d %llu C %d pos=%.3f,%.3f,%.3f n=%d minR=%.3f maxR=%.3f minRc=%.3f maxRc=%.3f dm=%d want=%d\n", rf, rc, attrCall, pos.x, pos.y, pos.z, numEntitiesInRng, minRadius, maxRadius, minRadiusClose, maxRadiusClose, decisionMaker, numPedsToCreate);
         for (int16 k{}; k < numEntitiesInRng; k++) {
             const auto e  = entitiesInRng[k];
             const auto mi = e->GetModelInfo();
@@ -2282,10 +2283,9 @@ int32 CPopulation::GeneratePedsAtAttractors(
             for (int32 x = 0; x < mi->m_n2dfxCount; x++) {
                 nAttr += mi->Get2dEffect(x)->m_Type == EFFECT_ATTRACTOR;
             }
-            const auto& p = e->GetPosition();
-            std::fprintf(s_attrLog, "E %d %d %d %s %d %d %.3f %.3f %.3f %d %d %d %d\n", attrCall, k, e->GetModelIndex(), mi->GetModelNameAsString().c_str(), (int)mi->GetModelType(), (int)e->GetType(), p.x, p.y, p.z, (int)e->GetAreaCode(), (int)mi->m_n2dfxCount, nAttr, e->GetRwObject() != nullptr);
+            std::fprintf(attrLog, "%d %llu E %d %d %s %d %d %d\n", rf, rc, (int)k, e->GetModelIndex(), mi->GetModelNameAsString().c_str(), (int)mi->m_n2dfxCount, nAttr, (int)(e->GetRwObject() != nullptr));
         }
-        std::fflush(s_attrLog);
+        std::fflush(attrLog);
     }
 #endif
     if (!numEntitiesInRng) {
@@ -2313,38 +2313,79 @@ int32 CPopulation::GeneratePedsAtAttractors(
             }
             const auto ent = entitiesInRng[o];
             assert(ent);
+#ifdef NOTSA_STATEHASH
+            const auto shVisit = [&](const char* result, int drawn = -1, unsigned long long r0 = 0, unsigned long long r1 = 0) {
+                if (attrLog) {
+                    const auto mi = ent->GetModelInfo();
+                    int nAttr = 0;
+                    for (int32 x = 0; x < mi->m_n2dfxCount; x++) {
+                        nAttr += mi->Get2dEffect(x)->m_Type == EFFECT_ATTRACTOR;
+                    }
+                    std::fprintf(attrLog, "%d %llu V %d %d %d %d %s rw=%d n2dfx=%d nattr=%d drawn=%d r0=%llu r1=%llu %s\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), attrCall, (int)i, (int)o, ent->GetModelIndex(), mi->GetModelNameAsString().c_str(), (int)(ent->GetRwObject() != nullptr), (int)mi->m_n2dfxCount, nAttr, drawn, r0, r1, result);
+                    std::fflush(attrLog);
+                }
+            };
+#endif
             if (!ent->GetRwObject()) {
+#ifdef NOTSA_STATEHASH
+                shVisit("skip:norw");
+#endif
                 continue;
             }
             if (static_cast<int32>(CGame::currArea) != static_cast<int32>(static_cast<uint8>(ent->GetAreaCode()))) { // 0x615A17: exact match only (IsInCurrentArea also lets area 13 through)
+#ifdef NOTSA_STATEHASH
+                shVisit("skip:area");
+#endif
                 continue;
             }
+#ifdef NOTSA_STATEHASH
+            const unsigned long long shR0 = (unsigned long long)notsa::rr::RandCountNow();
+#endif
             auto* const attractor = notsa::cast_if_present<C2dEffectPedAttractor>(ent->GetRandom2dEffect(EFFECT_ATTRACTOR, true));
 #ifdef NOTSA_STATEHASH
+            const unsigned long long shR1 = (unsigned long long)notsa::rr::RandCountNow();
+            int shDrawn = -1;
             if (attrLog && attractor) {
                 const auto mi = ent->GetModelInfo();
-                int drawn = -1;
                 for (int32 x = 0; x < mi->m_n2dfxCount; x++) {
-                    if (static_cast<const void*>(mi->Get2dEffect(x)) == static_cast<const void*>(attractor)) { drawn = x; }
+                    if (static_cast<const void*>(mi->Get2dEffect(x)) == static_cast<const void*>(attractor)) { shDrawn = x; }
                 }
-                std::fprintf(s_attrLog, "D %d %d %d %d %d\n", attrCall, (int)i, (int)o, ent->GetModelIndex(), drawn);
-                std::fflush(s_attrLog);
+                std::fprintf(attrLog, "%d %llu D %d %d %d %d %d %llu %llu\n", notsa::rr::LoadLogRecFrame(), shR1, attrCall, (int)i, (int)o, ent->GetModelIndex(), shDrawn, shR0, shR1);
+                std::fflush(attrLog);
             }
 #endif
-            if (!attractor || !IsCorrectTimeOfDayForEffect(*attractor)) {
+            if (!attractor) {
+#ifdef NOTSA_STATEHASH
+                shVisit("skip:noattractor", shDrawn, shR0, shR1);
+#endif
+                continue;
+            }
+            if (!IsCorrectTimeOfDayForEffect(*attractor)) {
+#ifdef NOTSA_STATEHASH
+                shVisit("skip:timeofday", shDrawn, shR0, shR1);
+#endif
                 continue;
             }
             if (attractor->m_nFlags & 1) {
                 if (!ent->GetIsTypeObject()) {
+#ifdef NOTSA_STATEHASH
+                    shVisit("skip:disabled_notobject", shDrawn, shR0, shR1);
+#endif
                     continue;
                 }
                 if (!ent->AsObject()->objectFlags.bEnableDisabledAttractors) {
+#ifdef NOTSA_STATEHASH
+                    shVisit("skip:disabled_noenable", shDrawn, shR0, shR1);
+#endif
                     continue;
                 }
             }
 
             const auto effectPosWS = ent->GetMatrix().TransformPoint(attractor->m_Pos); // ws = world space
             if (!IsEffectInRadius(effectPosWS)) {
+#ifdef NOTSA_STATEHASH
+                shVisit("skip:radius", shDrawn, shR0, shR1);
+#endif
                 continue;
             }
 
@@ -2371,12 +2412,21 @@ int32 CPopulation::GeneratePedsAtAttractors(
             }
 
             if (model <= 0 || model == MODEL_MALE01) { // 0x615BE3 `test eax, eax; jle` / 0x615BE7 `cmp eax, 7`
+#ifdef NOTSA_STATEHASH
+                shVisit("skip:badmodel", shDrawn, shR0, shR1);
+#endif
                 continue;
             }
 
             if (!AddPedAtAttractor(model, attractor, effectPosWS, ent, decisionMaker)) {
+#ifdef NOTSA_STATEHASH
+                shVisit("skip:addped_failed", shDrawn, shR0, shR1);
+#endif
                 continue;
             }
+#ifdef NOTSA_STATEHASH
+            shVisit("created", shDrawn, shR0, shR1);
+#endif
 
             numPedsCreated++;
 

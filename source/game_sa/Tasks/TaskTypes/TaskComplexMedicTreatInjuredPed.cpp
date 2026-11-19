@@ -165,8 +165,13 @@ CTask* CTaskComplexMedicTreatInjuredPed::CreateNextSubTask(CPed* ped) {
     }
 
     if (subTaskId == TASK_COMPLEX_GO_TO_POINT_AND_STAND_STILL) {
-        auto relPosn = ped->GetPosition() - m_vecAccidentPosition;
-        if (!(relPosn.Magnitude2D() > 1.0F) && !(fabs(relPosn.z) > 2.0F)) // 0x65AAA1: fcomp/test 0x41 - NaN counts as in range
+        // ASM-P4R18g: exe 0x65AA7C-0x65AABF: dx/dy stay on the x87 stack (not rounded to float), the 2D length is fsqrt(dy*dy + dx*dx) of them; only dz is stored to a float ([esp+0x10]) before fabs
+        const auto& pedPos = ped->GetPosition();
+        const x87d  dx     = (x87d)pedPos.x - (x87d)m_vecAccidentPosition.x;
+        const x87d  dy     = (x87d)pedPos.y - (x87d)m_vecAccidentPosition.y;
+        const float dz     = (float)((x87d)pedPos.z - (x87d)m_vecAccidentPosition.z);
+        const x87d  mag2D  = std::sqrt(dy * dy + dx * dx);
+        if (!(mag2D > (x87d)1.0) && !(fabs(dz) > 2.0F)) // 0x65AAA1: fcomp/test 0x41 - NaN counts as in range
             return CreateSubTask(TASK_COMPLEX_TREAT_ACCIDENT);
         else
             return CreateDealWithNextAccidentTask(ped, m_pAccident);

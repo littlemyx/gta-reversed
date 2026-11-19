@@ -3770,11 +3770,11 @@ void CStreaming::Update() {
 
     if (CVehicle* remoteVehicle = FindPlayerInfo(0).m_pRemoteVehicle) {
         CColStore::AddCollisionNeededAtPosn(playerPos);
-        CIplStore::AddIplsNeededAtPosn(playerPos);
 
         const auto& removeVehiclePos = remoteVehicle->GetPosition();
         CColStore::LoadCollision(removeVehiclePos, false);
         CColStore::EnsureCollisionIsInMemory(removeVehiclePos);
+        CIplStore::AddIplsNeededAtPosn(playerPos); // exe 0x40E87A: called after EnsureCollisionIsInMemory (the port did it right after AddCollisionNeededAtPosn)
         CIplStore::LoadIpls(removeVehiclePos, false);
         CIplStore::EnsureIplsAreInMemory(removeVehiclePos);
     }

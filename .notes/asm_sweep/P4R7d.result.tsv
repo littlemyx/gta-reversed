@@ -1,0 +1,7 @@
+addr	function	verdict	asm range	note	fix commit
+0x54BE21	CPhysical::ProcessCollisionSectorList (91fba7fb6 review)	MATCH	0x54BD90-0x54BE3F	CONFIRMED: after ApplySoftCollision B piece 13..16 -> other.SetDamagedPieceRecord(otherDmg, this, cp, -1)	
+0x73B550	CWeapon::DoBulletImpact	FIXED	0x73B550-0x73C1BB	LightingB, ObjectDamage(50) for ColDamageEffect<200, incremental blood, Magnitude<1, head blood health<0	7cbe37ee1
+0x421A50	WouldBoxesCollide (CarCtrl)	MATCH	0x421A50-0x421C0D	structure + 4x Test2DLineAgainst2DLine arg order checked; rest by inspection	
+0x73CDC0	CWeapon::DoDoomAiming	UNSURE	0x73CDC0-0x73CFE0	port carries exe: x87 notes; only first 40% read, no diff seen	
+0x564A20	CWorld::FindObjectsInRange	MATCH	0x564A20-0x564BBB	list order buildings/vehicles/peds/objects/dummies, repeat-sector index ok	
+0x534120	CEntity::GetBoundRect	MATCH	0x534120-0x534240	CRect init 1e6/-1e6, 4 corners, X swap	

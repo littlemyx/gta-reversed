@@ -1,0 +1,14 @@
+addr	function	verdict	asm range	note	fix commit
+0x43D7A0	CDarkel::DealWithWeaponChangeAtEndOfFrenzy	MATCH	0x43D940-0x43D9D1	review of 6e9bf526e: movsx [ped+0x718] * 0x1c + 0x5A0 = type of the active-slot weapon, as committed	
+0x611570	CPopulation::UpdatePedCount	MATCH	0x611570-0x611631	flag test, both jump tables (bum = no-op, prostitute -> female, criminal -> male), gang bucket indexing identical	
+0x73D720	CWeapon::DoDriveByAutoAiming	MATCH	0x73D720-0x73DB38	z,y,x sums, 0.15 / 5.0 / tan, strict compares, closest score as float, final scale identical	
+0x55C660	CStats::UpdateStatsWhenSprinting	MATCH	0x55C660-0x55C6EA	fcompp strict limit<counter, stat ids, timestep identical	
+0x55C6F0	CStats::UpdateStatsWhenRunning	MATCH	0x55C6F0-0x55C77A	same	
+0x55C990	CStats::UpdateStatsWhenSwimming	MATCH	0x55C990-0x55CAB5	swim vs swim-sprint rate, both counters, stat ids identical	
+0x5F7AD0	CPedGroup::Teleport	FIXED	0x5F7AD0-0x5F7CBB	follower CTaskSimpleCarSetPedOut gets m_bWarpingOutOfCar = true (exe sets task+0x11 = 1 after the ctor)	5bc604c8f
+0x5F7DB0	CPedGroup::IsAnyoneUsingCar	MATCH	0x5F7DB0-0x5F7E2A	vehicle + both enter-car tasks checked per member	
+0x5F7CC0	CPedGroup::PlayerGaveCommand_Attack	MATCH	0x5F7CC0-0x5F7D87+	event args, GANG2 exclusion, speaker = commander (tail speech ids not diffed)	
+0x613260	CPopulation::ChooseCivilianOccupationForVehicle	MATCH	0x613260-0x6133E1	loop nesting, 8 cheat bytes, class bit, male check, 4-seat inside check identical	
+0x610150	CPopCycle::IsPedAppropriateForCurrentZone	MATCH	0x610150-0x610202	18 groups, stride 12, row index identical	
+0x6106D0	CPopCycle::UpdateIsGangArea	MATCH	0x6106D0-0x61071B	sum of 10 densities > 20 (0x14)	
+0x610420	CPopCycle::PickARandomGroupOfOtherPeds	MATCH	0x610420-0x61048F	unbounded loop reproduced (random roll not diffed)	

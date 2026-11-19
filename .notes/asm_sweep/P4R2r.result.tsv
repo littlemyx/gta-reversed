@@ -8,5 +8,5 @@ addr	function	verdict	asm range	note	fix commit
 0x50BAB0	CCamera::RestoreWithJumpCut	MATCH	0x50BAB0-0x50BD1C	flag stores incl. 0x1C/0x41/0x42, ped states 0x35/0x39/0x3B -> on a string, 0x3D -> follow ped, co-op branches	
 0x532010	CCrime::ReportCrime	MATCH	0x532010-0x53222C	player type 0/1 gate, GOODBOY branch (dying 0x36/0x37, +50 money), multiplier test, police presence / German list (4,5,13,14), RegisterCrime(_Immediately), SetWantedLevelNoDrop 1 / 2 (3; 5,19)	
 0x6110E0	CPopulation::PedMICanBeCreatedAtThisAttractor	MATCH	0x6110E0-0x611249	name order, COP rule, DANCER / BARGUY+PEDROUL+PEDCARD+PEDSLOT / STRIPW model sets decoded from the three jump tables and diffed against the port lists (identical), STRIPM female test	
-0x6085E0	CPedScriptedTaskRecord::Process	FIXED	0x6085E0-0x60870D	primary test is first-non-null(slot0,1,2) / slot3 / slot4, not HasTaskPrimary over 5 slots	d68b14f65
+0x6085E0	CPedScriptedTaskRecord::Process	FIXED	0x6085E0-0x60870D	primary test is first-non-null(slot0,1,2) / slot3 / slot4, not HasTaskPrimary over 5 slots	b1f8ff71d
 0x50B6D0	CCamera::ProcessMusicFade	MATCH	0x50B6D0-0x50B82B	wait/fade directions (FADE_OUT=1 at +0xC3A, FADE_IN=0 at +0xC30 bug), ts*0.02f, NaN tests, audio faders

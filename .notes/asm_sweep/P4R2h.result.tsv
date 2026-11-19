@@ -1,0 +1,14 @@
+addr	function	verdict	asm range	note	fix commit
+0x645CB0	CTaskSimpleCarAlign::FixHeading	MATCH	0x645CB0-0x645E33	P4R2g fix CONFIRMED independently: veh/type/door 10,11 gate, x*-1 flip, dot z,y,x extended, >0 && <0.1 (NaN returns), copy scaled only x,y by dot, fwd - t - t (extended chain, y first-sub kept extended), GetRadianAngleBetweenPoints(vx,vy,0,0)	-
+0x420D40	CCamera::IsSphereVisible (2-arg) offsets	MATCH	0x420D40-0x420D8C	m_mCameraMatrix=0x974 (CarCtrl VALIDATE_LAYOUT 2444), CMatrix=0x48: m_mMatInverse 0xA4C, m_mMatMirrorInverse 0xA94, m_bMirrorActive 0x970 - all three offsets CONFIRMED	-
+0x533790	CEntity::CreateEffects	FIXED	0x533790-0x533BB7	all 2dfx cases compared (jump table decoded); ENEX: srand(this+days) with 32-bit day dec CONFIRMED, AddOne args/order CONFIRMED, bEnableAccess clear CONFIRMED; deviation: enter/exit rotation = float(heading_ext*57.2957763671875 + angle) in extended (port rounded the heading to float first)	see commit
+0x533BF0	CEntity::DestroyEffects	MATCH	0x533BF0-0x533D2C	attractor type 5, particle, roadsign atomic (null skip), ENEX FindNearestEntryExit(1.5,-1) + 0x2000->0x8000 else DeleteOne	-
+0x43FA00	CEntryExitManager::AddOne	MATCH	0x43FA00-0x43FD48	arg slots, burglary 0x1000 (0/24) then coin 0x400 (rand()<0x3FFF -> 0/0), +0x4000 enable, rect order (left,top,right,bottom), exit z+1, name strncpy 8, corners via SetRotateZ(deg) + 0x59C890, strict-less min/max, link (back link only if none; 0/24), index via /0x3C	-
+0x645E40	CTaskSimpleCarAlign::FinishAnimCarAlignCB	MATCH	0x645E40-0x645E4F	m_anim=0 (+0xC), finished=1 (+8)	-
+0x64AC00	CTaskSimpleCarAlign::StartAnim	MATCH	-	already MATCH (S42/S15 results)	-
+0x64D6D0	CTaskSimpleCarAlign::ProcessPed	MATCH	-	already MATCH	-
+0x63E040	CTaskComplexEnterCar::CreateSubTask	MATCH	-	already DEVIATION (fixed) in S03b	7bbae679
+0x64E740	CCarEnterExit::GetPositionToOpenCarDoor	MATCH	-	already MATCH (S42x)	-
+0x6528F0	CCarEnterExit::GetNearestCarDoor	FIXED	-	already fixed in S42e	ec224aabc
+0x650BB0	CCarEnterExit::GetNearestCarPassengerDoor	MATCH	-	already MATCH	-
+0x651210	CCarEnterExit::IsPathToDoorBlockedByVehicleCollisionModel	FIXED	-	already fixed earlier	-

@@ -1,0 +1,27 @@
+addr	function	verdict	asm range	note	fix commit
+0x4C0170	CEventHandler::ComputeDamageResponse	MATCH	0x4C0170-0x4C0BB1 (head, weapon/non-weapon/death-anim arms)	control flow, constants, task ctor args and anim-state writes match; final DoDie tail (0x4C0AA2+) per prior audit comments, not re-read	
+0x4BF9B0	CEventHandler::ComputePersonalityResponseToDamage	UNSURE	0x4BF9B0-0x4C0100 (dispatch only)	jump table (200/253->null, 260/261/262 attractors) + FLEE_ENTITY defaults verified; per-case ctor args rely on prior audit comments	
+0x4C0BD0	CEventHandler::ComputeVehiclePotentialCollisionResponse	MATCH	0x4C1118-0x4C156D (tail)	horn/evade/dive/flee/sequence/lookat arms match; head geometry (0x4C0BD0-0x4C1118) not re-read, prior audit comments	
+0x4BE7D0	CEventHandler::ComputePedCollisionWithPlayerResponse	MATCH	0x4BF19F-0x4BF231 (tail)	gang-follower tail: Magnitude, SetWantsToQuit/target radius +0.1, SetMaxEntityDist2D, offset when dist < 8	
+0x4B1600	CEventStuckInAir::GetEventPriority	FIXED	0x4B1600-0x4B1637	75 only when more than one event is queued (jg); port had <= 1	b19708b63
+0x4B15B0	CEventStuckInAir::TakesPriorityOver	MATCH	0x4B15B0-0x4B15D7		
+23 addrs	CEvent*::GetEventPriority constants (ObjectCollision..DontJoinPlayerGroup)	MATCH	mov eax,N;ret	all 22 constants equal the port values	
+0x4ADE80	CEventDeath::AffectsPed	MATCH			
+0x609050	CEventNewGangMember::AffectsPed	MATCH			
+0x4AEDC0	CEventChatPartner::AffectsPed	MATCH			
+0x4AF100	CEventSexyVehicle::AffectsPed	MATCH			
+0x4AE2D0	CEventPotentialGetRunOver::AffectsPed	MATCH			
+0x4AEC00	CEventPedEnteredMyVehicle::AffectsPed	MATCH			
+0x4AECB0	CEventRevived::AffectsPed	MATCH			
+0x4AF220	CEventPedToChase::AffectsPed	MATCH			
+0x4AFA30	CEventAcquaintancePed::AffectsPed	MATCH			
+0x4B0E00	CEventVehicleDied::AffectsPed	MATCH			
+0x4B1330	CEventHitByWaterCannon::AffectsPed	MATCH			
+0x4B13D0	CEventInWater::AffectsPed	MATCH			
+0x4B1860	CEventCopCarBeingStolen::AffectsPed	MATCH			
+0x4B1A00	CEventVehicleDamage::AffectsPed	MATCH			
+0x4B1DB0	CEventCarUpsideDown::AffectsPed	MATCH			
+0x4B2580	CEventEscalator::AffectsPed	MATCH			
+0x4B5470	CEventDanger::AffectsPed	MATCH			
+0x4BF2B0	CEventHandler::ComputeBuildingCollisionResponse	NOT_REACHED			
+	remaining nv.tsv Events rows (ctors, Clone, CloneEditable, AffectsPedGroup, ReportCriminalEvent, IsValid, other TakesPriorityOver, Danger::GetSourceEntity, IsKillTaskAppropriate)	NOT_REACHED		budget	

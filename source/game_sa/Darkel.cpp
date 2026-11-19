@@ -231,7 +231,8 @@ int16 CDarkel::QueryModelsKilledByPlayer(eModelID modelId, int32 playerId) {
 // 0x43D6E0
 int32 CDarkel::FindTotalPedsKilledByPlayer(int32 playerId) {
     int32 sum = 0;
-    for (auto& model : RegisteredKills) {
+    // exe 0x43D6E0: 40 iterations x 10 models = only the first 400 models (the ped models); the port summed all 800
+    for (const auto& model : RegisteredKills | std::views::take(400)) {
         sum += model[playerId];
     }
     return sum;

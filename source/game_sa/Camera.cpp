@@ -3814,7 +3814,9 @@ bool CCamera::CameraColDetAndReact(CVector* source, CVector* target) {
     // (the length stays unrounded in st0: 0x5201E7 `fmul [v0]; fmul 0.2939` / 0x52045A `fdivr` are applied to it before the store)
     const auto LengthZYX = [](x87d x, x87d y, x87d z) -> x87d { return std::sqrt((z * z + y * y) + x * x); };
 
-    float radius = (float)(LengthZYX(diff.x, diff.y, diff.z) * gpCamColVars[0] * 0.2939f);
+    // 0x5201C5-0x5201CF: `fsub; fst [z]; fmul [z]`: the z difference stays unrounded in st0 and is multiplied by its own float-rounded copy; x/y were stored as float first
+    const x87d zdiffU = (x87d)source->z - target->z;
+    float radius = (float)(std::sqrt((zdiffU * diff.z + (x87d)diff.y * diff.y) + (x87d)diff.x * diff.x) * gpCamColVars[0] * 0.2939f);
 
     if (gCurCamColVars > 9 && ignored) {
         x87d xlimit;

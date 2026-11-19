@@ -1,0 +1,31 @@
+addr	function	verdict	asm range	note	fix commit
+0x662A10	CTaskComplexGangFollower::ControlSubTask (brief said CreateNextSubTask)	MATCH	0x662A10-0x66349B	exe 11 GetRandomNumberInRange sites + 1 rand() = port 9 + SaySomethingRandom lambda x2 + rand; same order and ranges; P4R11c "12 vs 11+2" was the inlined lambda duplicated	-
+0x665E00	CTaskComplexGangFollower::CreateNextSubTask	MATCH	0x665E00-0x666160	3 draws exe = 3 port	-
+0x49C300	CBoundingBox::IsPointWithin	MATCH	0x49C300-0x49C356	inclusive, NaN rejects (test ah,1 jne / 0x41 jp)	-
+0x736950	CExplosion::TestForExplosionInArea	MATCH	0x736950-0x7369D3	same inclusive pattern	-
+0x539860	CFireManager::GetNumFiresInArea	MATCH	0x539860	same inclusive pattern	-
+0x456D30	CPickups::RemovePickUpsInArea	MATCH	0x456D30-0x456DDF	same inclusive pattern	-
+0x566610	CWorld::ClearCarsFromArea	MATCH	0x566699-0x5666E0	same inclusive pattern	-
+0x5667F0	CWorld::ClearPedsFromArea	MATCH	0x566864-0x5668BD	same inclusive pattern	-
+0x43E460	CEntryExit::IsInArea	MATCH	0x43E460	CRect semantics (less rejects, NaN passes)	-
+0x499A80	CSetPiece::Update	MATCH	0x499A80	CRect semantics	-
+0x739860	CProjectileInfo::IsProjectileInRange	MATCH	0x739860-0x73998A	inclusive box	-
+0x6EA9F0	CWaterLevel::SetUpWaterFog	MATCH(NaN only)	0x6EAAA1-0x6EAAE7	inclusive; exe rejects a NaN player coord, CRect::IsPointInside passes it	-
+0x4B4830	CEventDeadPed::AffectsPed	MATCH(NaN only)	0x4B48EA-0x4B492D	dot>=0, mag<=64, mag<400 as port	-
+0x690220	CTaskComplexArrestPed (IsPedCloseEnoughToArrest x4)	MATCH	0x690220-0x69067A	|z|>2 reject, mag<=9 as port	-
+0x66A850	CTaskComplexAvoidOtherPedWhileWandering::ScanForBlockedNode-ish	MATCH	0x66A91D-0x66A95E	mag<=9, dot>=thr	-
+0x697600	CTaskComplexExtinguishFires::GetNearestFire	MATCH	0x697665	mag<=400	-
+0x669520	CTaskComplexFollowNodeRoute::MakeAbortable	FIXED	0x6695A1-0x6695B2	speed^2 < 0.015625 STRICT (jp skips on >=), port had <=	see git log
+0x66E320	CTaskComplexFollowPointRoute::ControlSubTask	FIXED	0x66E3F0-0x66E4xx	fsqrt(PC24) of mag vs dot, not mag <= dot^2 (rounding at the boundary)	see git log
+0x68DAD0	CTaskComplexKillCriminal::ProcessEvent	FIXED	0x68DC02-0x68DC0D	ChangeTarget iff dist^2 < 625 STRICT, port had <=	see git log
+0x685170	CTaskComplexWalkAlongsidePed::ControlSubTask	FIXED	0x685598-0x6855A3	MakeAbortable branch iff dist2D^2 < 4 STRICT, port had <=	see git log
+0x671EF0	CTaskComplexWander::ScanForBlockedNode	MATCH	0x671F8x	dist2D^2 <= 9	-
+0x6637C0	CTaskGangHassleVehicle::ControlSubTask	MATCH	0x663B6F	dist^2 <= trig^2	-
+0x40D3F0	CStreaming::ProcessEntitiesInSectorList(area)	MATCH	0x40D6A8-0x40D6E4	integer inner/outer sector radius <=	-
+0x5DE470	CEmergencyPed::InRange	MATCH(NaN only)	0x5DE4C4	mag <= 30	-
+0x4B4FD0	CEventVehicleOnFire::AffectsPed	MATCH	0x4B508C	sq<=100	-
+0x4AFA90	CEventAcquaintancePedHateBadlyLit::IsValid-ish	MATCH	0x4AFB0E	sq>=1	-
+0x4B54E0	CEventDanger::AffectsPedGroup	MATCH	0x4B5548	sq<=r^2	-
+0x5397F0	CFireManager::GetNumFiresInRange	MATCH	0x5397F0	2D mag <= r	-
+0x420B30	CPlaceable::IsPointInRange	INTENTIONAL	-	NOTSA helper, no callers	-
+0x6C1470 0x4453D0 0x446610 0x4629E0 0x614250 0x60D071 other annotated sites	remaining grep hits (Bmx, GangWars, RoadBlocks, Population, PlayerPed, GameLogic, CarCtrl...)	NOT_REACHED	-	budget; most already carry exe-address comments from earlier sweeps	-

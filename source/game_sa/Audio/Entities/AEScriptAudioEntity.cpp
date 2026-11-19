@@ -52,12 +52,20 @@ CVector* CAEScriptAudioEntity::AttachMissionAudioToPhysical(uint8 sampleId, CPhy
     return &link.m_vPosition; // NOTSA: The original returns this in EAX (even though it's a `void` function)
 }
 
+#ifdef NOTSA_STATEHASH
+static uint32 s_noAudioEnd[CAEScriptAudioEntity::MISSION_AUDIO_COUNT]{};
+static constexpr uint32 kNoAudioLineMs = 3000; // NOTSA_RR_NOAUDIO: assumed mission line length (the bank sample length is not read)
+#endif
+
 // 0x4EC040
 void CAEScriptAudioEntity::ClearMissionAudio(uint8 sampleId) {
     if (sampleId >= MISSION_AUDIO_COUNT) {
         return;
     }
     AESoundManager.CancelSoundsInBankSlot((int16)(SND_BANK_SLOT_MISSION1 + sampleId), true);
+#ifdef NOTSA_STATEHASH
+    s_noAudioEnd[sampleId] = 0;
+#endif
 
     auto& link = wavLinks[sampleId];
     link.m_pEntity   = nullptr;
@@ -70,6 +78,9 @@ bool CAEScriptAudioEntity::IsMissionAudioSampleFinished(uint8 sampleId) {
     if (sampleId >= MISSION_AUDIO_COUNT) {
         return true;
     }
+#ifdef NOTSA_STATEHASH
+    if (notsa::rr::NoAudio() && s_noAudioEnd[sampleId] != 0 && CTimer::GetTimeInMS() < s_noAudioEnd[sampleId]) { return false; } // RR harness: the line "plays" for kNoAudioLineMs on the game clock (no sound object exists)
+#endif
     if (sampleId >= 2) {
         return AESoundManager.AreSoundsPlayingInBankSlot((int16)(SND_BANK_SLOT_MISSION1 + sampleId)) == 0;
     }
@@ -214,7 +225,7 @@ void CAEScriptAudioEntity::PlayLoadedMissionAudio(uint8 sampleId) {
         return;
     }
 #ifdef NOTSA_STATEHASH
-    if (notsa::rr::NoAudio()) { return; } // RR harness: no sound object is created (nothing would ever finish it), so the sample reads as finished
+    if (notsa::rr::NoAudio()) { s_noAudioEnd[sampleId] = CTimer::GetTimeInMS() + kNoAudioLineMs; return; } // RR harness: no sound object is created (nothing would ever finish it), so the sample reads as finished
 #endif
 
     bool isFrontEnd  = false; // 0x12

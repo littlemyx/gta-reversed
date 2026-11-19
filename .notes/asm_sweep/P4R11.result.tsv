@@ -1,0 +1,30 @@
+addr	function	verdict	asm range	note	fix commit
+0x45A1E0	CVehicleRecording::SetRecordingToPointClosestToCoors	MATCH	0x45A1F4	review of 1bf1e7799: initial min dist 0x497423FE = 999999.875f CONFIRMED	-
+0x60FBD0	CPopCycle::FindNewPedType	FIXED	0x60FBEB-0x60FC11	police-station roll: ftol((rand&0xFFFF)/32768*100) < 70 (int), port used float RandomBool(70) (<=)	e629899ba
+0x637A60	CTaskSimpleSitIdle::ProcessPed	FIXED	0x637A8C-0x637AB2, 0x637B76-0x637B81	two rolls are int range(0,100) < 5 and < 25; port used float RandomBool	b3015a4a8
+0x66C820	CTaskComplexInvestigateDisturbance::CreateFirstSubTask	FIXED	0x66C865-0x66C8E4	say context roll rand/32767 < 0.2f (strict) ; port used RandomBool(20) (range(0,100) <= 20)	93afb7744
+0x739C30	CShotInfo::AddShot	MATCH	0x739CFF-0x739D8B	spread x,y,z order and z unscaled; 4th draw for bRandSpeed	-
+0x736A50	CExplosion::AddExplosion (fuel dirs)	MATCH	0x736B50-0x736C17	x,y,z,dist,speed order and formulas; coin 0x3FFF	-
+0x737620	CExplosion::Update	MATCH	0x737717-0x7378DF	rand&31, y-then-x offset, int<5 aircraft	-
+0x6F34D0	CCarGenerator::DoInternalProcessing	MATCH	0x6F3D7D-0x6F3DAA	alarm / door lock int rolls (< chance)	-
+0x711EF0	CBirds::CreateNumberOfBirds	MATCH	0x712125-0x7122D9	per-biome draw order and formulas	-
+0x535FA0	CEntity::PreRender (missile/flare shadow)	MATCH	0x536230,0x5363EC	rand&0xF * 1/16	-
+0x6FC7A0	CEntity::ProcessLightsForEntity	MATCH	0x6FCED4	(rand&0x1F)*0.012 blink	-
+0x5E57F0	CPed::PlayFootSteps	MATCH	0x5E59DA,0x5E5A10	loose &0x7F / sand &0x3F	-
+0x5DF340	CPed::DoGunFlash	MATCH	0x5DF3AA	single float draw -360..360	-
+0x738B20	CProjectileInfo::Update	MATCH	0x738C18-0x738E4D	teargas int<10, smoke trail draw order (shade, life, x,y,z)	-
+0x684930	CTaskComplexBeInCouple::ControlSubTask	MATCH	0x684C3B-0x684CB0	int >80 look rolls	-
+0x63C500	CTaskSimpleCarDrive::TriggerIK	MATCH	0x63C564	int >=5 skip	-
+0x6428C0/0x642AE0	CTaskSimpleCarDrive::ProcessHead/ArmBopping	MATCH	0x642901-0x642E1F	int range(0,1000) vs 995	-
+0x644470	CTaskSimpleCarDrive::ProcessPed	MATCH	0x644B24	range(0,60)==15	-
+0x65B660	CTaskComplexFleePoint::ControlSubTask	MATCH	0x65B76C	int <=5	-
+0x65C1E0	CTaskComplexSmartFleePoint::ControlSubTask	MATCH	0x65C289	int <=5	-
+0x6637C0	CTaskGangHassleVehicle::ControlSubTask	MATCH	0x663A24-0x663E04	int >60 rolls	-
+0x692E80	CTaskSimpleFacial::ProcessPed	MATCH	0x692EBE,0x692EE6	int<40 then float 0.5..3	-
+0x444810	CGangWars::CreateAttackWave	MATCH	0x444D27-0x444FF1	x before y for ped and pickup offsets	-
+0x4453D0	CGangWars::CreateDefendingGroup	MATCH	0x445573-0x4455E8	x (sin) then y (cos); radius rand*3+2	-
+0x613180	CPopulation::ChooseCivilianCoupleOccupations	MATCH	0x613197-0x6131A0	rand&0x10 then rand&0x20	-
+0x612710	CPopulation::AddPed	MATCH	0x612797-0x612B35	rand%5 cheat weapons, int <33 gang weapon rolls	-
+0x614720	CPopulation::AddToPopulation	MATCH	0x614A51-0x6151A8	float >0.9 couple roll, rand&0xF, offsets	-
+0x430050	CCarCtrl::GenerateOneRandomCar	MATCH	0x430275-0x4308CC	rand&0x7F<0x37 riots, int/float draws as ported	-
+other	remaining ~250 rand sites (CarCtrl, Automobile, Vehicle, Ped tasks, Cam, Weapon, Clouds...)	NOT_REACHED	-	either already carry exe-address comments from earlier sweeps or were not reached within budget	-

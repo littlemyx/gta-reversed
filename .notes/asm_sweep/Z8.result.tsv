@@ -1,0 +1,23 @@
+addr	function	verdict	asm range	note	fix commit
+0x46754F	COMMAND_CREATE_CHAR (0x9A) CreateChar (tail)	MATCH	0x46754F-0x467786	ctor by type 6/0x12,0x13/other, StandStill(999999,1,0,8.0) task slot 4, SetCharCreatedBy(2) then clear flag bit31, z<=-100 FindGroundZ (NaN skips), +1.0, SetPosn, SetOrientation(0,0,0), ClearSpace, +0x1C|=0x40000 if cleanup, CWorld::Add, ms_nTotalMissionPeds++, handle, AddEntityToList(h,2)	-
+0x467AB3	COMMAND_CREATE_CAR (0xA5) CreateCar (tail)	MATCH	0x467AB3-0x467B15	CollectParameters(4), CreateCarForScript(model,pos,cleanup byte), pool ref of result	-
+0x49194B	COMMAND_PERFORM_SEQUENCE_TASK (0x618) (tail)	MATCH	0x49194B-0x492AA5	idx = GetActualScriptThingIndex(h,4) in [0,0x40), new CTaskComplexUseSequence(idx), GivePedScriptedTask(ped,task,opcode)	-
+0x48F77F	COMMAND_SET_VAR_TEXT_LABEL (0x5A9) / 0x48F7B5 SET_LVAR_TEXT_LABEL (0x5AA)	MATCH	0x48F77F-0x48F7E6	dest pointer first, then 8 byte label read, strncpy(dst,src,8); port memset(Cap=8)+strncpy equal for real scripts (16 char dest not used)	-
+0x497DE8	COMMAND_SET_VAR_TEXT_LABEL16 / LVAR16 (0x6D1/0x6D2)	MATCH	0x497DE8-0x497E4D	dest pointer first, 16 byte read, strncpy 16 with zero pad	-
+0x46681E	COMMAND_START_NEW_SCRIPT (0x4F)	MATCH	0x46681E-0x46685D	StartNewScript(ScriptSpace+offset), ReadParametersForNewlyStartedScript; exe uses a stack garbage offset for negative (port asserts, UB in exe)	-
+0x4667DB	COMMAND_TERMINATE_THIS_SCRIPT (0x4E)	MATCH	0x4667DB-0x46681B	clear bAlreadyRunningAMissionScript if +0xDC, Active->Idle list, ShutdownThisScript, OR_WAIT	-
+0x466898	COMMAND_RETURN (0x51)	MATCH	0x466898-0x4668BB	--depth(word) then IP = stack[depth]	-
+0x47EF8F	COMMAND_REQUEST_MODEL (0x247)	MATCH	0x47EF8F-0x47EFDB	negative = UsedObjectArray[-v].model (stride 0x1C, +0x18), RequestModel(m,0xC), AddToResourceManager(m,2,script)	-
+0x47D75A	COMMAND_MARK_CAR_AS_NO_LONGER_NEEDED (0x1C3)	MATCH	0x47D75A-0x47D7FD	CleanUpThisVehicle(GetAtRef) then RemoveEntityFromList(h,1) if cleanup	-
+0x48D9E2	COMMAND_SET_CHAR_NEVER_TARGETTED (0x568)	MATCH	0x48D9E2-	ped flag word1 bit 28	-
+0x48A023	COMMAND_SET_CHAR_SUFFERS_CRITICAL_HITS (0x446)	MATCH	0x48A023-0x48A061	ped flag word1 bit 12 = !value	-
+0x47F821	COMMAND_SET_CHAR_ONLY_DAMAGED_BY_PLAYER (0x2A9)	MATCH	0x47F821-0x47F87A	physical flags bit 22 (bInvulnerable)	-
+0x48D1DF	COMMAND_SET_CHAR_STAY_IN_CAR_WHEN_JACKED (0x526)	MATCH	0x48D1DF-0x48D221	ped flag word1 bit 23	-
+0x48D52D	COMMAND_SET_CHAR_CAN_BE_SHOT_IN_VEHICLE (0x54A)	MATCH	0x48D52D-0x48D56F	ped flag word1 bit 26	-
+0x47B42F	COMMAND_SET_CHAR_GET_OUT_UPSIDE_DOWN_CAR (0x9F6)	MATCH	0x47B42F-	+0x478 bit 17	-
+0x49036C	COMMAND_TASK_ENTER_CAR_AS_PASSENGER (0x5CA)	MATCH	0x49036C-0x490431	door only when seat!=-1, time -2->-1 / -1->20000, moveState from [0x8D237C], then set to 6	-
+0x490554	COMMAND_TASK_LEAVE_CAR (0x5CD) / 0x49277A TASK_LEAVE_ANY_CAR (0x633)	MATCH	0x490554-0x490B79 / 0x49277A-0x4927C0	ctor args (veh,0,0,1,0) / (0,1,0)	-
+0x47C22F	COMMAND_SWITCH_CAR_GENERATOR (0x14C)	MATCH	0x47C22F-0x47C274 + 0x47C0E0	0 -> SwitchOff; else SwitchOn and for count<=100 word +0x1A = count	-
+0x4940AD	COMMAND_SET_SEQUENCE_TO_REPEAT (0x643)	MATCH	0x4940AD-0x495DE3	validates idx but stores into the ACTIVE sequence +0x30 (port same); exe stores raw int, port normalises to bool (0/1 only in scripts)	-
+0x484B95	COMMAND_SET_EVERYONE_IGNORE_PLAYER (0x3BF) / 0x47E1B6 SET_POLICE_IGNORE_PLAYER (0x1F7)	MATCH	0x484B95-0x484BF9 / 0x47E1B6-	wanted+0x1E bit 4 / bit 1, StopAllLawEnforcers only when set	-
+-	remaining ~170 candidates of z6 cand.json (task_* misc, zone, group, roads-back-to-original, variable template ops)	NOT_REACHED	-	budget	-

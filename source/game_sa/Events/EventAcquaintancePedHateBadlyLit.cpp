@@ -40,7 +40,7 @@ bool CEventAcquaintancePedHateBadlyLit::AffectsPed(CPed* ped)
             return true;
         }
         auto theCurrentEvent = static_cast<CEventAcquaintancePedHateBadlyLit*>(currentEvent);
-        if (m_startTimeInMs - theCurrentEvent->m_startTimeInMs >= 2000) {
+        if ((int32)(m_startTimeInMs - theCurrentEvent->m_startTimeInMs) >= 2000) { // exe 0x4AFAE5-0x4AFAF3: signed compare (jl)
             CVector distance = m_point - theCurrentEvent->m_point;
             return distance.SquaredMagnitude() >= 1.0f;
         }

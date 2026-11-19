@@ -1,0 +1,4 @@
+addr	function	verdict	asm range	note	fix commit
+0x6E2E50	CVehicle::DoBladeCollision	MATCH	0x6E2E50-0x6E326F	jump table (rotor -3/-2/-1/1/2/3 -> z/y/x/x/y/z, 0 none), box min/max, sphere set, 0x59C890 transform (z,y,x order, x87d), sector clamps 0..120, y-outer/x-inner, Buildings/Vehicles/Peds(0)/Objects order, &15 repeat index, teardown all agree	
+0x6C0390	CBmx::LaunchBunnyHopCB	MATCH	0x6C0390-0x6C04FF	wheel-count tests, min(jump/25,1)+1, player fat/muscle stat 6, cheat idx 0x31, 0.06*mass*power / 0.01*turnMass*power on x87, up/forward vectors, ApplyTurnForce(force,point) order all agree	
+(rest of zone)	remaining vehicle-class rows of cand.tsv	NONE		cand.tsv held only 13 vehicle rows; 11 already had P4R22 verdicts	

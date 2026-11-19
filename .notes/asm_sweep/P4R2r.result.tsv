@@ -1,0 +1,12 @@
+addr	function	verdict	asm range	note	fix commit
+0x56BA00	CWorld::ProcessLineOfSight (review of P4R2q fix)	MATCH	0x56BB8D,0x56BD8B	same-X / same-Y with origin<target: ascending loops (inc, jle) confirmed	
+0x736A50	CExplosion::AddExplosion (review of P4R2q fix)	MATCH	0x736C97,0x7373F0	explosion_small with a victim (attached to victim matrix in the exe, position-only in the port: not a gameplay difference) and fires-started stat PLAYER1 only (type == 0) confirmed	
+0x443DE0	CGangWars::UpdateTerritoryUnderControlPercentage	MATCH	0x443DE0-0x443F60	already MATCH in P4R2o, not re-walked	
+0x610770	CPopCycle::UpdatePercentages	MATCH	0x610770-0x610BC7	already MATCH in P4R2p, not re-walked	
+0x73F480	CWeapon::CheckForShootingVehicleOccupant	MATCH	0x73F480-0x73F903	head sphere (0.2, piece 9, light 0xFF, z+0.1), 8 passengers, windscreen dot sum orders and thresholds, bIsBig, glass triangle loop, panel damage, colpoint restore	
+0x612F90	CPopulation::ChooseCivilianOccupation	MATCH	0x612F90-0x613178	pass counts 3/5/7, ref-count word compare, zone/foot/male/female/anim/attractor (types 17..22)/interior (6..22)/stat/rain+sunbather tests, return -1 or 7	
+0x50BAB0	CCamera::RestoreWithJumpCut	MATCH	0x50BAB0-0x50BD1C	flag stores incl. 0x1C/0x41/0x42, ped states 0x35/0x39/0x3B -> on a string, 0x3D -> follow ped, co-op branches	
+0x532010	CCrime::ReportCrime	MATCH	0x532010-0x53222C	player type 0/1 gate, GOODBOY branch (dying 0x36/0x37, +50 money), multiplier test, police presence / German list (4,5,13,14), RegisterCrime(_Immediately), SetWantedLevelNoDrop 1 / 2 (3; 5,19)	
+0x6110E0	CPopulation::PedMICanBeCreatedAtThisAttractor	MATCH	0x6110E0-0x611249	name order, COP rule, DANCER / BARGUY+PEDROUL+PEDCARD+PEDSLOT / STRIPW model sets decoded from the three jump tables and diffed against the port lists (identical), STRIPM female test	
+0x6085E0	CPedScriptedTaskRecord::Process	FIXED	0x6085E0-0x60870D	primary test is first-non-null(slot0,1,2) / slot3 / slot4, not HasTaskPrimary over 5 slots	d68b14f65
+0x50B6D0	CCamera::ProcessMusicFade	MATCH	0x50B6D0-0x50B82B	wait/fade directions (FADE_OUT=1 at +0xC3A, FADE_IN=0 at +0xC30 bug), ts*0.02f, NaN tests, audio faders

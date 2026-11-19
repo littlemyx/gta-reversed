@@ -1,0 +1,17 @@
+addr	function	verdict	asm range	note	fix commit
+0x6AD4FB	CAutomobile::ProcessEntityCollision wheel compression min	CONFIRMED	0x6AD4FB-0x6AD50E	fld orig; fcomp lerped; test 5; jp: orig<lerped?orig:lerped	4ce8bcbd6
+0x6AD524	CAutomobile::ProcessEntityCollision delta skip	CONFIRMED	0x6AD524-0x6AD52F	fcomp 0.1; test 0x41; jne: skip <=0.1 and NaN (global 0xC1C214 never written, fsub is identity)	4ce8bcbd6
+0x6AD5A1	CAutomobile::ProcessEntityCollision min(0.2,delta)	CONFIRMED	0x6AD5A1-0x6AD5B8	0.2<d?0.2:d	4ce8bcbd6
+0x6AD24A	CAutomobile::ProcessEntityCollision rhino extra wheel mins (8)	FIXED	0x6AD24A-0x6AD33A	exe: touchDist<saved?touchDist:saved (tie/NaN keep the saved door value); port std::min(touchDist,compr) kept touchDist on tie/NaN	see report
+0x6A775A	CAutomobile::VehicleDamage health	CONFIRMED	0x6A7742-0x6A776B	0>v?0:v (NaN/-0 keep v)	07c28cd9d
+0x6A78D9	CAutomobile::VehicleDamage ped impact	CONFIRMED	0x6A78B9-0x6A78EE (+0x6A7BC8 store)	dot<0 guard (jp); 0>v?0:v, store +0 or v	07c28cd9d
+0x6A7A8C	CAutomobile::VehicleDamage shake intensity	CONFIRMED	0x6A7A70-0x6A7A9D	250<v?250:v then ftol	07c28cd9d
+0x6A8C9B	CAutomobile::ProcessBuoyancy max(0.01,ts)	CONFIRMED	0x6A8C8B-0x6A8CB8	0.01>ts?0.01:ts	a81c04a5a
+0x6A8D26	CAutomobile::ProcessBuoyancy max(0.5,v)	CONFIRMED	0x6A8D10-0x6A8D3B	0.5>v?0.5:v, v=1-f*0.05	a81c04a5a
+0x6A8E0A	CAutomobile::ProcessBuoyancy max(1,f*8)	CONFIRMED	0x6A8DFA-0x6A8E1F	1>v?1:v	a81c04a5a
+0x6A9051	CAutomobile::ProcessBuoyancy z>=-0.1	CONFIRMED	0x6A9048-0x6A9072	store -0.1 only if z<-0.1 (jp)	a81c04a5a
+0x6B6061	CBike::ProcessBuoyancy max(0.01,ts)	CONFIRMED	0x6B605B-0x6B607C	0.01>ts?0.01:ts	73a236f12
+0x6B60EB	CBike::ProcessBuoyancy max(0.5,v)	CONFIRMED	0x6B60D5-0x6B6100	0.5>v?0.5:v	73a236f12
+0x6B61D9	CBike::ProcessBuoyancy z>=-0.1	CONFIRMED	0x6B61D6-0x6B61FA	store -0.1 only if z<-0.1	73a236f12
+0x6BA710	CBike::ProcessControl wheel counter	CONFIRMED	0x6BA710-0x6BA752	ratio<1 (jp) ->4; else v>0?v:+0 (je on 0x41); then <=0/NaN continue	b668d9acf
+0x60C568	CPlayerPed::SetPlayerMoveBlendRatio	CONFIRMED	0x60C55C-0x60C5ED	v>2?2:v, SetRealMoveAnim on both paths	5a84beffd

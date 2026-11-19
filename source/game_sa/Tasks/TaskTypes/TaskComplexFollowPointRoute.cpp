@@ -401,19 +401,22 @@ CTask* CTaskComplexFollowPointRoute::CreateFirstSubTask(CPed* ped) {
 
                 const auto& thisPtPos       = (*m_route)[i]; // No need for `%` here, trust me
                 const auto  thisToNextPt    = (*m_route)[nextPtIdx] - thisPtPos;
+                // exe 0x66E3C3-0x66E423: the squared length is (z^2 + x^2) + y^2 (stored as float), NOT x,y,z
+                const float thisToNextSqMag = (float)(((x87d)thisToNextPt.z * thisToNextPt.z + (x87d)thisToNextPt.x * thisToNextPt.x) + (x87d)thisToNextPt.y * thisToNextPt.y);
                 const auto  thisToNextPtDir = thisToNextPt.Normalized();
                 const auto  dot             = (pedPos - thisPtPos).Dot(thisToNextPtDir); // NOTE: Since the first argument isn't normalized the dot will be scaled by it's magnitue.
 
-                if (dot <= 0.f) { 
+                if (!(dot > 0.f)) { // exe 0x66E454: fcomp + test ah,0x41 + jne => NaN skips too
                     continue; // Ped is in the opposite direction compared to the next point relative to the current point.
                 }
 
-                if (std::sqrt((x87d)thisToNextPt.SquaredMagnitude()) <= (x87d)dot) { // exe 0x66E3F0..: fsqrt (PC24) of the stored squared length vs. the stored dot, NOT `sqMag <= dot^2` (the squaring rounds differently at the boundary)
+                if (!(std::sqrt((x87d)thisToNextSqMag) > (x87d)dot)) { // (NaN skips as well: 0x66E46B fcomp + test ah,0x41 + jne) // exe 0x66E3F0..: fsqrt (PC24) of the stored squared length vs. the stored dot, NOT `sqMag <= dot^2` (the squaring rounds differently at the boundary)
                     continue;
                 }
 
                 const auto proj = thisPtPos + thisToNextPtDir * dot; // Project `thisToNextPtDir` onto the segment between the `thisPtPos` and `pedPos`
-                const auto dist = (pedPos - proj).SquaredMagnitude();
+                const auto pd   = pedPos - proj; // exe 0x66E4C0-0x66E4F2: differences stored as float, squared sum z, y, x
+                const float dist = (float)(((x87d)pd.z * pd.z + (x87d)pd.y * pd.y) + (x87d)pd.x * pd.x);
                 if (dist < sq(closestNextPtDistSq)) { // NOTE: I think they did a fuckup again? Why square it?...
                     closestNextPtDistSq = dist; // ...here it's not square-rooted, so
                     closestNextPtIdx = (int32)nextPtIdx;

@@ -1,0 +1,31 @@
+0x4C4570	CAtomicModelInfo::SetupVehicleUpgradeFlags	MATCH	0x4C4570-0x4C47DA	both name tables (13 + 8 prefixes, flags) read from .rdata, strncmp case-sensitive, 0x8000|flag<<10 / 0x8100|flag<<10, upper flag byte cleared	
+0x4CEC20	CAnimBlendStaticAssociation::Init	MATCH	0x4CEC20-0x4CECEB	frame idx /24; (port skips frames==0, exe skips signed <=0; unreachable data)	
+0x4C7300	CPedModelInfo::IncrementVoice	MATCH	0x4C7300-0x4C7332		
+0x4C5A60	CModelInfo::Get2dEffectStore	MATCH	0x4C5A60		
+0x4C48B0	CDamageAtomicModelInfo::Init	MATCH	0x4C48B0-0x4C48C0		
+0x4C98F0	CWeaponModelInfo::Init	MATCH	0x4C98F0-0x4C9900		
+0x598240	InteriorManager_c::GetPedsInteriorGroup	MATCH	0x598240-0x598277		
+0x598180	InteriorManager_c::SetEntryExitPtr	MATCH	0x598180-0x598233	reset on any rect component unequal/NaN, always stores ptr + rect	
+0x4650F0	CDecisionMakerTypes ctor arrays	MATCH	0x4650F0-0x46528E	5 default DMs = CDecision ctor+SetDefault x41 (port default ctors same); the 20 DM slots are NOT initialised by the exe (0x4634C0 = ret), port zero/default-inits: no observable difference (slots are filled before use)	
+0x413AC0	CCollision::TestLineTriangle 2D cases 1-5	MATCH	0x413CBA-0x4140D7	all 6 cases instruction-level: loaded vertex components, spill slots, ip axes, tail (3 edge tests, strict </> with NaN passing); odd orientations swap B/C	
+0x59BBC0	CMatrix::operator=	MATCH	0x59BBC0-0x59BBE6		
+0x59BAD0	CCompressedMatrixNotAligned::CompressFromFullMatrix	MATCH	0x59BAD0-0x59BB50	x*127 truncating ftol per component, pos copy	
+0x470810	CStreamedScripts::GetProperIndexFromIndexUsedByScript	FIXED	0x470810-0x470839	exe scans all 82 slots (unused hold -1); port only the registered count	7188202e9
+0x41BD90	CGeneral::GetRandomNumberInRange<float>	MATCH	0x41BD90-0x41BDB3		
+0x404260	CRect::Resize	MATCH	0x404260-0x404286	(port names: offset 0xC = bottom, 4 = top)	
+0x5DB310	CPlantMgr::UpdateAmbientColor	MATCH	0x5DB310-0x5DB3C8		
+0x5DB650	CPlantMgr::SetPlantFriendlyFlagInAtomicMI	MATCH	0x5DB650-0x5DB6C7		
+0x405AC0	CIplStore::AddIplSlot	MATCH	0x405AC0-0x405B4F	IplDef defaults checked field by field	
+0x4047B0	CIplStore::GetIplEntityIndexArray	MATCH	0x4047B0		
+0x4045E0	CIplStore::ClearIplsNeededAtPosn	MATCH	0x4045E0		
+0x405850	CIplStore::RequestIplAndIgnore	MATCH	0x405850-0x40588A		
+0x46A930	CScriptsForBrains::AddNewScriptBrain	FIXED	0x46A930-0x46A9B0	NaN radius kept (jp after fcomp)	4ac788774
+0x46A9C0	CScriptsForBrains::AddNewStreamedScriptBrainForCodeUse	MATCH	0x46A9C0-0x46AA2B		
+0x46A8C0	CScriptsForBrains::Init	MATCH	0x46A8C0-0x46A8F9		
+0x4810C0	CTheScripts::GetUniqueScriptThingIndex	MATCH	0x4810C0		
+0x46ABC0	CTheScripts::RemoveFromWaitingForScriptBrainArray	MATCH	0x46ABC0-0x46AC03		
+0x46AB60	CTheScripts::AddToWaitingForScriptBrainArray	MATCH	0x46AB60-0x46ABAF		
+0x46A7C0	CTheScripts::ClearAllSuppressedCarModels	MATCH	0x46A7C0		
+0x464BB0	CTheScripts::WipeLocalVariableMemoryForMissionScript	MATCH	0x464BB0		
+0x415CF0	CCollision::SphereCastVersusVsPoly	NOT_REACHED		1.7M calls, large; budget	
+0x4096D0	CStreaming::RenderEntity	SKIP-RENDER			

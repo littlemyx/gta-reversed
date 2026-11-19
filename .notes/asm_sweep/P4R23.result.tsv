@@ -1,0 +1,6 @@
+addr	function	verdict	asm range	note	fix commit
+0x4185C0	CCollision::ProcessColModels (A-tri/box vs B-sphere tail)	MATCH	0x4199E5-0x419EEA	bound-sphere transform, tri collect (<0x257), box collect (no limit), sphere-tri/box loops, 31-CP breaks, -1 normal, A/B surface swap + world transform all agree	
+0x4185C0	CCollision::ProcessColModels (disk block 0x418902-0x4196B9)	NOT_REACHED		disks are disabled in SA (CFileLoader), dead path; only quirks spot-read	
+0x6E5BB0	CWaterQuad::GetWaterLevel	MATCH	0x6E5BB0-0x6E5E82	early-outs, u float/v unrounded, both triangles, depth tests agree	
+0x6E5E90	CWaterTriangle::GetWaterLevel	MATCH	0x6E5E90-0x6E61A7	minmax y, u/v float, both edge cases, limited depth agree	
+0x50A4F0	CCam::RotCamIfInFrontCar	MATCH	0x50A4F0-0x50A84D	z,y,x dot, atan2, wrap loops, WellBufferMe args, flags all agree	

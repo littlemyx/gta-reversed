@@ -592,8 +592,8 @@ void CPad::StartShake_Train(CVector2D point) {
     const x87d dy = (x87d)camPos.y - point.y;
     const x87d dx = (x87d)camPos.x - point.x;
     const float fDistSq = (float)(dy * dy + dx * dx);
-    // exe 0x53FAFD-0x53FB08: fcomp [4900.0f]; test ah,5; jp -> returns only when dist > 4900 (or NaN), so the test is `<=`
-    if (ShakeDur < 100 && fDistSq <= 4900.0f) {
+    // exe 0x53FAFD-0x53FB08: fcomp [4900.0f]; test ah,5; jp -> returns when dist >= 4900 (equal gives C0=C2=0 -> PF=1) or NaN, so the test is `<`
+    if (ShakeDur < 100 && fDistSq < 4900.0f) {
         ShakeDur = 100;
         // exe 0x53FB18-0x53FB36: fsqrt on the float, 70 - sqrt + 30 unrounded in the FPU, _ftol, low byte stored
         ShakeFreq = (uint8)NOTSA_FTOL(int32, (x87d)70.0f - x87::sqrt((x87d)fDistSq) + (x87d)30.0f);

@@ -1,0 +1,4 @@
+addr	function	verdict	asm range	note	fix commit
+0x6160A0	CPopulation::ManageAllPopulation	CONFIRMED	0x6160A0-0x616186	dummy pool reverse + held-object skip match (type 0x133, object-type check redundant for pool compare)	-
+0x53FA70	CPad::StartShake_Train	WRONG	0x53FA70-0x53FB3D	x87 chain ok; test ah,5 + jp returns on >= 4900 (equal too) so test must be < not <= (wrong in 89525a073)	ASM-P4RVY
+P4R18h/P4R25e	source fix commits	NONE_FOUND	-	no such commits in last 3h	-

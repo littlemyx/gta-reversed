@@ -779,11 +779,9 @@ void CVehicle::ProcessOpenDoor(CPed* ped, uint32 doorComponentId_, uint32 animGr
         } else if (fTime > fAnimEnd) {
             OpenDoor(ped, doorComponentId, iCheckedDoor, 0.0F, true);
         } else if (fTime > fAnimStart && fTime < fAnimEnd) {
+            // 0x6D5980 (mode 3): no current-ratio check here, the check belongs to the CLOSEDOOR case (0x6D57E2)
             const auto fNewRatio = 1.0F - invLerp(fAnimStart, fAnimEnd, fTime);
-            const auto fCurRatio = GetDooorAngleOpenRatio(iCheckedDoor);
-            if (fCurRatio > fNewRatio) {
-                OpenDoor(ped, doorComponentId, iCheckedDoor, fNewRatio, true);
-            }
+            OpenDoor(ped, doorComponentId, iCheckedDoor, fNewRatio, true);
         }
         return;
     }
@@ -797,8 +795,12 @@ void CVehicle::ProcessOpenDoor(CPed* ped, uint32 doorComponentId_, uint32 animGr
         } else if (fTime > fAnimEnd) {
             OpenDoor(ped, doorComponentId, iCheckedDoor, 0.0F, true);
         } else if (fTime > fAnimStart && fTime < fAnimEnd) {
+            // 0x6D5826-0x6D584F: only opens while the current ratio is still above the new one
             const auto fNewRatio = 1.0F - invLerp(fAnimStart, fAnimEnd, fTime);
-            OpenDoor(ped, doorComponentId, iCheckedDoor, fNewRatio, true);
+            const auto fCurRatio = GetDooorAngleOpenRatio(iCheckedDoor);
+            if (fCurRatio > fNewRatio) {
+                OpenDoor(ped, doorComponentId, iCheckedDoor, fNewRatio, true);
+            }
         }
         return;
     }

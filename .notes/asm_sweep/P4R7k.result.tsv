@@ -11,7 +11,7 @@ addr	function	verdict	asm range	note	fix commit
 0x4C5BF0	CModelInfo::IsQuadBikeModel	MATCH	0x4C5BF0+0x30	type 6 check + vehicleType==2	
 0x4C5C20	CModelInfo::IsBmxModel	MATCH	0x4C5C20+0x30	type 6 check + vehicleType==10	
 0x4C5C50	CModelInfo::IsTrailerModel	MATCH	0x4C5C50+0x30	type 6 check + vehicleType==11	
-0x4C5C80	CModelInfo::IsVehicleModelType	MATCH	0x4C5C80-0x4CAF		
+0x4C5C80	CModelInfo::IsVehicleModelType	MATCH	0x4C5C80-0x4C5CAF		
 0x4C59B0	CModelInfo::GetModelInfoFromHashKey	MATCH	0x4C59B0-0x4C59E6		
 0x4C6620	CModelInfo::AddAtomicModel	MATCH	0x4C6620+0x2C	store count++, virtual Init, SetModelInfo (AtomicModel and PedModel disassembled, rest same shape)	
 0x4C6650	CModelInfo::AddDamageAtomicModel	MATCH	0x4C6650+0x2C	store count++, virtual Init, SetModelInfo (AtomicModel and PedModel disassembled, rest same shape)	

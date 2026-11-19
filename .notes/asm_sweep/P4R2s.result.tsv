@@ -1,0 +1,18 @@
+addr	function	verdict	asm range	note	fix commit
+0x6085E0	CPedScriptedTaskRecord::Process (review of P4R2r fix)	MATCH	0x6085E0-0x6086E8	slots 0..2 as one value, slots 3/4 separate confirmed	-
+0x56A490	CWorld::GetIsLineOfSightClear	MATCH	0x56A490-0x56A6BC (head)	same-X/Y loop direction differs from exe (ascending from origin) but the result is an AND over sectors, order independent; not changed	-
+0x613180	CPopulation::ChooseCivilianCoupleOccupations	MATCH	0x613180-0x613259	arg order, rand tests, skater check equal	-
+0x565B70	CWorld::SprayPaintWorld	MATCH	0x565B70-0x565CAB	FindObjectsInRange args, alpha +8 clamp, return values equal	-
+0x6104B0	CPopCycle::UpdateDealerStrengths	MATCH	0x6104B0-0x610552	-	-
+0x6144B0	CPopulation::PickRiotRoadBlockCar	MATCH	0x6144B0-0x614579	port stops at last member instead of reading modelInfo[-1] (exe bug, guarded)	-
+0x73E560	CWeapon::EvaluateTargetForHeatSeekingMissile	MATCH	0x73E560-0x73E68B	-	-
+0x572440	CTheZones::FillZonesWithGangColours	MATCH	0x572440-0x572581	gang colour table equal	-
+0x565610	CWorld::SetPedsOnFire	FIXED	0x565610-0x5657F2	invulnerable test inverted; strict |d|<r area test	cd91bdbe2
+0x565800	CWorld::SetPedsChoking	FIXED	0x565800-0x5659EC	strict |d|<r area test	cd91bdbe2
+0x5659F0	CWorld::SetCarsOnFire	FIXED	0x5659F0-0x565B6B	strict |d|<r area test	cd91bdbe2
+0x56B790	CWorld::TriggerExplosion	FIXED	0x56B790-0x56B90D	no AdvanceCurrentScanCode in the exe	cd91bdbe2
+0x56B910	CWorld::SetWorldOnFire	MATCH	0x56B910-0x56B9B2	-	-
+0x610310	CPopCycle::GetCurrentPercOther_Peds	MATCH	0x610310-0x6103C7	-	-
+0x5DE5A0	CGangs::ChooseGangPedModel	MATCH	0x5DE5A0-0x5DE677	-	-
+0x559630	CStats::IsStatCapped	MATCH	0x559630-0x559726	32 stat ids equal	-
+0x6997E0	CCover::Update, 13 other DEVIATION rows (UpdateTargetEntity, StartFrenzy, GenerateDamageEvent, ...)	-	-	already fixed in earlier slices (DEVIATION row carries a fix commit); not re-walked	-

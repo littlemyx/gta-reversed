@@ -827,41 +827,41 @@ int32 CTheScripts::GetActualScriptThingIndex(int32 ref, eScriptThingType type) {
         return -1;
     }
 
-    const auto idx = LOWORD(ref), id = HIWORD(ref);
+    const uint32 idx = LOWORD(ref), id = HIWORD(ref); // exe: movzx / shr, both unsigned (the int16 id fields below were compared sign-extended)
 
     switch (type) {
     case SCRIPT_THING_SPHERE:
-        if (const auto& s = ScriptSphereArray[idx]; s.IsActive() && s.m_nUniqueId == id) {
+        if (const auto& s = ScriptSphereArray[idx]; s.IsActive() && (uint16)s.m_nUniqueId == id) {
             return idx;
         }
         break;
     case SCRIPT_THING_EFFECT_SYSTEM:
-        if (const auto& fx = ScriptEffectSystemArray[idx]; fx.IsActive() && fx.m_nId == id) {
+        if (const auto& fx = ScriptEffectSystemArray[idx]; fx.IsActive() && (uint16)fx.m_nId == id) {
             return idx;
         }
         break;
     case SCRIPT_THING_SEARCH_LIGHT:
-        if (const auto& sl = ScriptSearchLightArray[idx]; sl.IsActive() && sl.m_nId == id) {
+        if (const auto& sl = ScriptSearchLightArray[idx]; sl.IsActive() && (uint16)sl.m_nId == id) {
             return idx;
         }
         break;
     case SCRIPT_THING_CHECKPOINT:
-        if (const auto& cp = ScriptCheckpointArray[idx]; cp.IsActive() && cp.m_nId == id) {
+        if (const auto& cp = ScriptCheckpointArray[idx]; cp.IsActive() && (uint16)cp.m_nId == id) {
             return idx;
         }
         break;
     case SCRIPT_THING_SEQUENCE_TASK:
-        if (const auto& sqt = ScriptSequenceTaskArray[idx]; sqt.IsActive() && sqt.m_nId == id) {
+        if (const auto& sqt = ScriptSequenceTaskArray[idx]; sqt.IsActive() && (uint16)sqt.m_nId == id) {
             return idx;
         }
         break;
     case SCRIPT_THING_FIRE:
-        if (const auto& f = gFireManager.Get(idx); f.IsScript() && f.GetId() == id) {
+        if (const auto& f = gFireManager.Get(idx); f.IsScript() && (uint16)f.GetId() == id) {
             return idx;
         }
         break;
     case SCRIPT_THING_2D_EFFECT:
-        if (CScripted2dEffects::ms_activated[idx] && CScripted2dEffects::ScriptReferenceIndex[idx] == id) {
+        if (CScripted2dEffects::ms_activated[idx] && (uint16)CScripted2dEffects::ScriptReferenceIndex[idx] == id) {
             return idx;
         }
         break;
@@ -886,13 +886,13 @@ int32 CTheScripts::GetActualScriptThingIndex(int32 ref, eScriptThingType type) {
 // TODO: TEST REFACTOR!
 int32 CTheScripts::GetNewUniqueScriptThingIndex(int32 index, eScriptThingType type) {
     const auto NewUniqueId = [index](auto& id) -> int32 {
-        if (id == -1 || id == -2) {
+        if ((uint16)id >= 0xFFFE) { // exe 0x483749 etc: `cmp cx, 0xfffe; jae` is an UNSIGNED word compare (the port compared against -1/-2, never true for the uint16 id arrays)
             id = 1;
         } else {
             ++id;
         }
 
-        return (uint32)id << 16 | index;
+        return (uint32)(uint16)id << 16 | index;
     };
 
     switch (type) {

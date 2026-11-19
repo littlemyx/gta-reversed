@@ -2486,10 +2486,11 @@ void CPopulation::ManageObject(CObject* object, const CVector& posn) {
         const float maxDist = (object->m_nModelIndex == ModelIndices::MI_SAMSITE || object->m_nModelIndex == ModelIndices::MI_SAMSITE2)
             ? 750.f
             : 80.f;
-        if (dist <= maxDist) {
+        // exe 0x615FC6-0x615FE3: `fcomp; test ah,0x41; jne` returns for <= AND for NaN; `fcomp; test ah,5; jp` converts only for an ordered `FindDummyDist < distToDummy`
+        if (!(dist > maxDist)) {
             return;
         }
-        if (FindDummyDistForModel((eModelID)object->m_nModelIndex) >= distToDummy) {
+        if (!(FindDummyDistForModel((eModelID)object->m_nModelIndex) < distToDummy)) {
             return;
         }
         ConvertToDummyObject(object);
@@ -2511,8 +2512,9 @@ void CPopulation::ManageObject(CObject* object, const CVector& posn) {
     }
 
     if (modelId >= Mi(ModelIndices::MI_BEACHTOWEL01) && modelId <= Mi(ModelIndices::MI_BEACHTOWEL04)) {
-        if (dist <= 64.5f) {
-            if (dist <= 35.f) {
+        // exe 0x615E74-0x615E99: `fcom; test ah,0x41; je` removes only for an ordered dist > 64.5 (NaN does not); `fcomp; test ah,0x41; jne` returns for dist <= 35 and for NaN
+        if (!(dist > 64.5f)) {
+            if (!(dist > 35.f)) {
                 return;
             }
             if (object->GetIsOnScreen()) {

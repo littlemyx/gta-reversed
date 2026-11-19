@@ -4257,8 +4257,10 @@ void CAutomobile::FixDoor(int32 nodeIndex, eDoors door) {
             SetComponentVisibility(frame, eAtomicComponentFlag::ATOMIC_OK);
 
             // Reset it's matrix
-            CMatrix mat{ RwFrameGetLTM(frame), false };
-            mat.SetTranslate(GetPosition());
+            // 0x6A3614: CMatrix over the frame's MODELLING matrix (frame + 0x10, not the LTM) and re-translated to its own position (0x6A3623..0x6A362F)
+            CMatrix mat{ RwFrameGetMatrix(frame), false };
+            const CVector pos = mat.GetPosition();
+            mat.SetTranslate(pos);
             mat.UpdateRW();
         }
     }
@@ -4278,8 +4280,10 @@ void CAutomobile::FixPanel(eCarNodes nodeIndex, ePanels panel) {
     if (const auto frame = m_aCarNodes[nodeIndex]) { // Same code as in FixDoor.. Maybe this was a standalone function, like "FixNode"?
         SetComponentVisibility(frame, eAtomicComponentFlag::ATOMIC_OK);
 
-        CMatrix mat{ RwFrameGetLTM(frame), false };
-        mat.SetTranslate(GetPosition());
+        // 0x6A36E0: CMatrix over the frame's MODELLING matrix (frame + 0x10, not the LTM) and re-translated to its own position (0x6A36ED..0x6A36F9)
+        CMatrix mat{ RwFrameGetMatrix(frame), false };
+        const CVector pos = mat.GetPosition();
+        mat.SetTranslate(pos);
         mat.UpdateRW();
     }
 }

@@ -132,7 +132,8 @@ void CFireManager::ExtinguishPoint(CVector point, float fRadius) {
         if (!fire.IsActive())
             continue;
 
-        if ((fire.GetPosition() - point).SquaredMagnitude() > fRadius * fRadius)
+        // 0x539494: `fcompp` + `test ah, 0x41; jne skip` => skipped unless distSq < r*r (STRICT; equal and NaN skip)
+        if (!((fire.GetPosition() - point).SquaredMagnitude() < fRadius * fRadius))
             continue;
 
         fire.SetIsScript(false);
@@ -147,7 +148,8 @@ bool CFireManager::ExtinguishPointWithWater(CVector point, float fRadius, float 
         if (!fire.IsActive())
             continue;
 
-        if ((fire.GetPosition() - point).SquaredMagnitude() > fRadius * fRadius)
+        // 0x539511: same strict `distSq < r*r` test as ExtinguishPoint (equal and NaN skip)
+        if (!((fire.GetPosition() - point).SquaredMagnitude() < fRadius * fRadius))
             continue;
 
         fire.ExtinguishWithWater(fWaterStrength);

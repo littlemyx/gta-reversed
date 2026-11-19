@@ -342,9 +342,9 @@ float CGarages::FindDoorHeightForMI(uint32 modelIndex) {
 bool CGarages::IsPointWithinHideOutGarage(Const CVector& point) {
     for (auto& garage : aGarages) {
         if (garage.IsHideOut()) {
+            // exe 0x44892A-0x44894C: a hideout the point is not in goes on to the next garage (the port stopped at the first hideout garage)
             if (garage.IsPointInsideGarage(point))
                 return true;
-            break;
         }
     }
     return false;

@@ -1,0 +1,9 @@
+addr	function	verdict	asm range	note	fix commit
+0x41B980	CAutoPilot::ModifySpeed	MATCH	0x41B980-0x41BC6D (all)	reconfirmed (S75): x87 stack order, k1 rounded to float / k2 not, int-div of unsigned time diff, ftol chain	-
+0x6F3E90	CCarGenerator::Process	MATCH	0x6F3E90-0x6F3F35 (all)	reconfirmed (P4R2ad/S43b): uint8 counter test, unsigned count/time compares, STATUS_PLAYER branch	-
+0x6008A0	CMentalState::Process	MATCH	0x6008A0-0x600B23 (all)	reconfirmed (S73): ped/vehicle thresholds, anger thresholds, unsigned byte compares, copies	-
+0x44A830	CGarage::IsStaticPlayerCarEntirelyInside	MATCH	0x44A830-0x44A9B1 (all)	reconfirmed (S50b): fcomp+test ah,5 / 0x41 strictness incl. NaN, abs via test ah,5, sum (z,y,x)	-
+0x6020D0	CPedIntelligence::LookAtInterestingEntities	MATCH	0x6020D0-0x602236 (all)	reconfirmed (S24): FindObjectsInRange arg order, rand draw order, LookAt args	-
+0x568AD0	CWorld::GetIsLineOfSightSectorClear	MATCH	0x568AD0-0x568B7E (all)	reconfirmed (S27): list order/offsets, camera-ignore only for objects	-
+0x6019B0	CPedIntelligence::ProcessAfterPreRender	MATCH	0x6019B0-0x601BA7 (all)	reconfirmed (S24): slots/task types, molotov fx matrix, bike hands	-
+0x605650	CPedIntelligence::ProcessStaticCounter	FIXED	0x605650-0x6057EC (all)	S24 MATCH was wrong: squared distance summed (z*z+y*y)+x*x in the exe (port used (x*x+y*y)+z*z); counters/moveState/threshold 0.0625f matched	76fd22dc0

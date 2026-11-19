@@ -36,7 +36,11 @@ public:
     ~CTaskComplexKillPedOnFoot() override;
 
     eTaskType GetTaskType() const override { return Type; }
-    CTask* Clone() const override { return new CTaskComplexKillPedOnFoot(m_target, m_time, m_pedFlags, m_actionDelay, m_actionChance, m_nCompetence, m_bWaitForPlayerToBeSafe, m_bWaitingForPlayerToBeSafe); } // 0x623370: also copies bits 0x10 / 0x20 of byte +0xC
+    CTask* Clone() const override { // 0x623370: ctor, then copies bits 0x10 (aimImmediate) and 0x20 (waitForPlayerToBeSafe) of byte +0xC; bit 0x40 (waiting) is NOT copied (ctor clears it)
+        const auto t = new CTaskComplexKillPedOnFoot(m_target, m_time, m_pedFlags, m_actionDelay, m_actionChance, m_nCompetence, m_bWaitForPlayerToBeSafe, false);
+        t->m_bAimImmediate = m_bAimImmediate;
+        return t;
+    }
     bool   MakeAbortable(CPed* ped, eAbortPriority priority = ABORT_PRIORITY_URGENT, const CEvent* event = nullptr) override;
     CTask* CreateNextSubTask(CPed* ped) override;
     CTask* CreateFirstSubTask(CPed* ped) override;

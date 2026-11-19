@@ -1,0 +1,34 @@
+addr	function	verdict	asm range	note	fix commit
+0x67A390	CTaskSimpleClimb::GetCameraTargetPos	FIXED	0x67A390-0x67A59F	pull/stand/jump-B blend used wrong lerp components; now from*(1-t)+to*t in x87	21e504b05
+0x6381A0	CTaskComplexSunbathe::ControlSubTask	MATCH	0x6381A0-0x63828F	abort, anim-block refs (RequestModel idx+0x63e7, KEEP), slope-pitch/fallen flags, timer pause, MakeAbortable prio 0	
+0x628DA0	CTaskComplexDestroyCarArmed::CreateSubTask	MATCH	0x628DA0-0x628F89	gun ctrl/throw by weapon flag bit8, seek, pause 100, goto-stand-still (RUN,0.5,2.0) ok	
+0x61B890	CTaskSimpleRunAnimLoopedMiddle::Clone	MATCH	0x61B890-0x61B960	both ctor variants, arg order ok	
+0x6908E0	CTaskComplexPolicePursuit::CreateFirstSubTask	MATCH	0x6908E0-0x690920	pursuer stored, TASK_FINISHED path clears flag 4	
+0x61E190	CTaskSimpleUseGun::ClearAnim	MATCH	0x61E190-0x61E1F0	blend>0 and delta>=0 -> -8, delete cb, cmd<6 -> 0, AbortIK	
+0x66B1B0	CTaskComplexWanderCop::LookForCarAlarms	NOISE	0x66B1B0-0x66B28A	dist^2 sum order z,y,x only	
+0x68CF80	CTaskComplexArrestPed::CreateSubTask	MATCH	0x68CF80-0x68D29A	switch structure/sizes/vehicle fields ok (args not each re-read)	
+0x635200	CTaskComplexInWater::CreateFirstSubTask	MATCH	0x635200-0x635410	player/sunbather swim, drown flag 0x100000 -> Die(53,.,.), leader player data 0x480 swim, mission goto	
+0x6705D0	CTaskComplexGoToPointAnyMeans::CreateSubTask	MATCH	0x6705D0-0x670775	leave-car/drive-to-point arg order checked	
+0x6330B0	CTaskComplexBeInGroup::MonitorSecondaryGroupTask	MATCH	0x6330B0-0x6331A0	report-finished, abort old slot prio 0, clone onto ped	
+0x62F6E0	CTaskSimpleDuckToggle::ProcessPed	MATCH	0x62F6E0-0x62F8B0	mode OFF/AUTO/ON branches, duck task type 0x19f, abort/ClearAnim	
+0x691320	CTaskSimpleAffectSecondaryBehaviour::ProcessPed	MATCH	0x691320-0x6913A0	add/remove paths, prio 1/0	
+0x63A690	CTaskComplexEnterCar::GetCameraAvoidVehicle	MATCH	0x63A690-0x63A730	all 16 task type ids identical	
+0x624DC0	CTaskSimpleUseGun::Reset	MATCH	0x624DC0-0x624E40	AbortIK before IK-flag clear, entity ref only on change	
+0x62DC20	CTaskComplexDestroyCarMelee::CreateNextSubTask	MATCH	0x62DC20-0x62DD9A	pause/fight-ctrl/goto/seek transitions, r^2 > dist^2 strict, stay-in-place flag	
+0x62E0A0	CTaskComplexDestroyCarArmed::CreateFirstSubTask	MATCH	0x62E0A0-0x62E140	dist<=range -> gun ctrl; stay flag -> pause; goto flag -> goto; else seek	
+0x678240	CTaskComplexGetUpAndStandStill::CreateNextSubTask	MATCH	0x678240-0x67829A	stand still->finished, get-up -> stand still iff got up	
+0x65A3E0	CTaskComplexUseSwatRope::CreateNextSubTask	MATCH	0x65A3E0-0x65A430	NONE/PAUSE finish, abseil -> pause	
+0x5BD360	CTaskSimpleFight::GetHitLevel	MATCH	0x5BD360-0x5BD39F	first-char switch, unreachable 2-char compares -> 7	
+0x66DFD0	CTaskComplexGoToPointAndStandStillAndAchieveHeading::CreateNextSubTask	MATCH	0x66DFD0-0x66E02A	goto->stand still, stand still->achieve heading, heading->finished	
+0x62DF20	CTaskComplexDestroyCarArmed::CreateNextSubTask	MATCH	0x62DF20-0x62E090	gun/throw/seek/pause transitions (spot-checked first half)	
+0x5E1950	CPed::ClearLookFlag	MATCH	0x5E1950-0x5E19F3	flag bits 4/8, bShakeFist 0x800, torso, look time 2000/4000	
+0x5E3FF0	CPed::ClearLook	MATCH	0x5E3FF0-0x5E3FF5	tail jump to ClearLookFlag	
+0x671800	CTaskComplexFollowNodeRoute::CreateFirstSubTask	FIXED	0x671800-0x6718D0	blend reset left slowing/speeding-up flags alone in exe (rest through SetTarget call matches)	62c55cdd2
+0x6718D0	CTaskComplexFollowNodeRoute::CreateNextSubTask	MATCH	0x6718D0-0x671AB0	timer out-of-time inline, leave-car, route advance (first half read)	
+0x683060	CTaskComplexChat::ControlSubTask	MATCH	0x683060-0x683140	MakeAbortable prio 1, partner task 0x4c2, stage compare, finished flags (first half read)	
+0x5E7B70	CPed::FlagToDestroyWhenNextProcessed	MATCH	0x5E7B70-0x5E7CA8	remove flag 0x800, driver ref clear, ABANDONED status (first half read)	
+0x625C70	CTaskComplexReactToAttack::CreateFirstSubTask	MATCH	0x625C70-0x625E80	already fully address-annotated; player-no-react, shotgun push, health<30 checks as read	
+0x65ECB0	CTaskComplexGangFollower::Clone	MATCH	0x65ECB0-0x65ED40	ctor arg order, trailing flag copy	
+0x64AD00	CTaskSimpleCarOpenDoorFromOutside::MakeAbortable	MATCH	0x64AD00-0x64AD85	IMMEDIATE only: blend -1000, ProcessOpenDoor(...,1.0), player-can-exit flag	
+0x644250	CTaskComplexStealCar::ControlSubTask	MATCH	0x644250-0x6442C5	enter-as-driver sub-task, timer out, MakeAbortable prio 1, pause	
+0x66A850	CTaskComplexAvoidOtherPedWhileWandering::SetUpIK	MATCH	0x66A850-0x66AA10	early-out chain checked up to the parent-task test (rest not re-read)	

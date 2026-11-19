@@ -76,6 +76,11 @@ void SetDisableMilitaryZones(bool disable) {
     CCullZones::bMilitaryZonesDisabled = disable;
 }
 
+// exe 0x47B8CE (INCREMENT_INT_STAT_NO_MESSAGE): the int parameter is converted with fild before CStats::IncrementStat (the port registered the float handler and read the int's bits as a float)
+void IncrementIntStatNoMessage(eStats stat, int32 value) {
+    CStats::IncrementStat(stat, (float)value);
+}
+
 void IncrementFloatStatNoMessage(eStats stat, float value) {
     CStats::IncrementStat(stat, value);
 }
@@ -212,7 +217,7 @@ void notsa::script::commands::game::RegisterHandlers() {
     REGISTER_COMMAND_HANDLER(COMMAND_SET_RADIO_TO_PLAYERS_FAVOURITE_STATION, SetRadioToPlayersFavorite);
     REGISTER_COMMAND_HANDLER(COMMAND_SET_DISABLE_MILITARY_ZONES, SetDisableMilitaryZones);
     REGISTER_COMMAND_HANDLER(COMMAND_INCREMENT_FLOAT_STAT_NO_MESSAGE, IncrementFloatStatNoMessage);
-    REGISTER_COMMAND_HANDLER(COMMAND_INCREMENT_INT_STAT_NO_MESSAGE, IncrementFloatStatNoMessage);
+    REGISTER_COMMAND_HANDLER(COMMAND_INCREMENT_INT_STAT_NO_MESSAGE, IncrementIntStatNoMessage);
     REGISTER_COMMAND_HANDLER(COMMAND_TAKE_PHOTO, TakePhoto);
     REGISTER_COMMAND_HANDLER(COMMAND_SET_NO_RESPRAYS, SetNoResprays);
     REGISTER_COMMAND_HANDLER(COMMAND_SET_RESPAWN_POINT_FOR_DURATION_OF_MISSION, SetRespawnPointForDurationOfMission);

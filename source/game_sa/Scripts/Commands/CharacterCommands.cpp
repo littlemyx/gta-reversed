@@ -3076,7 +3076,8 @@ bool IsCharTouchingChar(CPed& ped, CPed& other) {
  * @param {Char} self
  */
 bool IsCharAttachedToAnyCar(CPed* ped) {
-    return ped && ped->GetIsTypeVehicle();
+    // exe 0x47A0A4-0x47A0BC: ped->m_pAttachedTo != null && its entity type == vehicle (the port tested the ped's own type, always false)
+    return ped && ped->m_pAttachedTo && ped->m_pAttachedTo->GetIsTypeVehicle();
 }
 
 /*

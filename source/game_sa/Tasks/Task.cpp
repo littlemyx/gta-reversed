@@ -44,7 +44,18 @@ bool CTask::IsGoToTask(CTask* task) {
 
 // 0x61A4B0
 bool CTask::IsTaskPtr(CTask* task) {
-    return task && GetTaskPool()->IsObjectValid(task);
+    // 0x61A4B0-0x61A4F3: the exe walks the used slots and compares the pointer for EQUALITY (a pointer into the middle of a slot is not a task pointer;
+    // Pool::IsObjectValid maps it to the slot it lies in)
+    auto* const pool = GetTaskPool();
+    if (!task) {
+        return false;
+    }
+    for (int32 i = (int32)pool->GetSize() - 1; i >= 0; i--) {
+        if (pool->GetAt(i) == task) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void CTask::InjectHooks() {

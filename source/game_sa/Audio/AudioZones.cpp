@@ -65,7 +65,12 @@ void CAudioZones::Update(bool forceUpdate, CVector posn) {
     static CVector LastUpdateCoors{};
 
     // TODO: FPS-independent counter
-    if (!forceUpdate && (CTimer::m_FrameCounter % 16) != 6 && DistanceBetweenPoints(posn, LastUpdateCoors) < 20.0f)
+    // 0x5083C0: the distance is `sqrt(dz*dz + dy*dy + dx*dx)` summed z,y,x on unrounded x87 values (fsub/fmul/fsqrt stay in registers) and compared with `<` (NaN continues)
+    const auto DistZYX = [](const CVector& a, const CVector& b) -> x87d {
+        const x87d dx = (x87d)a.x - (x87d)b.x, dy = (x87d)a.y - (x87d)b.y, dz = (x87d)a.z - (x87d)b.z;
+        return std::sqrt(((dz * dz) + (dy * dy)) + (dx * dx));
+    };
+    if (!forceUpdate && (CTimer::m_FrameCounter % 16) != 6 && DistZYX(posn, LastUpdateCoors) < (x87d)20.0f)
         return;
 
     LastUpdateCoors = posn;
@@ -79,7 +84,8 @@ void CAudioZones::Update(bool forceUpdate, CVector posn) {
         if (!sphere.m_IsActive)
             continue;
 
-        if (sphere.m_Sphere.IsPointWithin(posn))
+        // 0x508465: dist(z,y,x order, unrounded) < radius, strict
+        if (DistZYX(posn, sphere.m_Sphere.m_vecCenter) < (x87d)sphere.m_Sphere.m_fRadius)
             m_aActiveSpheres[m_NumActiveSpheres++] = idx;
     }
 
@@ -91,7 +97,11 @@ void CAudioZones::Update(bool forceUpdate, CVector posn) {
         if (!box.m_IsActive)
             continue;
 
-        if (CBox{box.m_Box}.IsPointInside(posn))
+        // 0x5084D1: min < p < max on every axis, both strict (`test ah,5` / `test ah,0x41`); the exe takes the sphere/box limit AFTER the test (same result)
+        const CBox b = box.m_Box;
+        if (b.m_vecMin.x < posn.x && b.m_vecMax.x > posn.x
+         && b.m_vecMin.y < posn.y && b.m_vecMax.y > posn.y
+         && b.m_vecMin.z < posn.z && b.m_vecMax.z > posn.z)
             m_aActiveBoxes[m_NumActiveBoxes++] = idx;
     }
 }

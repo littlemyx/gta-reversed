@@ -1,0 +1,4 @@
+addr	function	verdict	asm range	note	fix commit
+0x520190	CCamera::CameraColDetAndReact	CONFIRMED	0x5201C5-0x5201E7	0ea5811fc: fsub; fst [z]; fmul [z] = unrounded z diff * float copy; x,y stored float first; sum z,y,x; matches port	-
+0x434900	CCarCtrl::SteerAICarWithPhysicsFollowPath (first half)	MATCH	0x434900-0x435452	fwd2D, dirs, lane K (cur float/next unrounded/BMX), start/end/dist/dot/cos, node pick + mission switch (2,4,8,12,15,17,43,65-68), recalc path, target pt (0.35, >40), heading/weave styles 2,5,6, angle wrap, curSpeed z,y,x*60, speedFactor/light style tables, bend atan + both FindSpeedMultiplier args all identical	-
+0x4325C0	CCarCtrl::FindAngleToWeaveThroughTraffic	NOT_REACHED	-	HC3e report already covers prelude+loop	-

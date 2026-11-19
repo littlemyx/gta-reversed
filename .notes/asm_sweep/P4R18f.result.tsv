@@ -1,0 +1,28 @@
+addr	function	verdict	asm range	note	fix commit
+0x62C104	CTaskComplexKillPedOnFootArmed::CreateFirstSubTask (review of 68c3eafed)	MATCH	0x62C104-0x62C12A	review CONFIRMED: r*r*0.25 (const 0x858C84 = 0.25), dist compared with fcompp, not-greater => gun ctrl, NaN in range	-
+0x62BE30	CTaskComplexKillPedOnFootMelee::CreateFirstSubTask	MATCH	0x62BE30-0x62BEFC	dist sum z,x,y; strict range^2<dist; tasks 0x3fb/0x38b/0xca by flag 0x200000; float vs extended rounding only	-
+0x631E50	CTaskComplexHitByGunResponse::CreateFirstSubTask	MATCH	0x631E50-0x631F57	jump table front/left/rear/right matches	-
+0x669690	CTaskComplexFollowNodeRoute::CreateSubTask	MATCH	0x669690-0x6698D6	all 6 cases, ctor args (0.5 const 0x86FC78) match	-
+0x671630	CTaskComplexFollowPointRoute::CreateNextSubTask	MATCH	0x671630-0x67171E	flags 4/8 bits, all cases	-
+0x63CF90	CTaskComplexDrivePointRoute::CreateNextSubTask	MATCH	0x63CF90-0x63D021	new index compared, ctor arg order	-
+0x6359C0	CTaskComplexUseScriptedBrain::CreateNextSubTask	MATCH	0x6359C0-0x635A87	inlined first-subtask, pause 2000	-
+0x642390	CTaskComplexLeaveCarAndFlee::CreateNextSubTask	MATCH	0x642390-0x6424B3	boat flee point = pos + fwd*(-2r) (const 0x858B18 = -2)	-
+0x65B460	CTaskComplexFleePoint::CreateSubTask	MATCH	0x65B460-0x65B651	all cases, consts 0.5/2.0	-
+0x63B6C0	CTaskComplexEnterBoatAsDriver::CreateSubTask	MATCH	0x63B6C0-0x63B7C5	-	-
+0x64C6A0	CTaskComplexCarSlowBeDraggedOut::CreateSubTask	MATCH	0x64C6A0-0x64C809	ctor args, negated flag	-
+0x64C810	CTaskComplexCarSlowBeDraggedOut::CreateNextSubTask	FIXED	0x64C810-0x64C887	jump/byte tables: SET_PED_OUT => FINISHED (port went to SET_PED_SLOW_DRAGGED_OUT)	0a9601278
+0x64D2B0	CTaskComplexGoToCarDoorAndStandStill::CreateNextSubTask	MATCH	0x64D2B0-0x64D42D	-	-
+0x65A990	CTaskComplexMedicTreatInjuredPed::CreateNextSubTask	MATCH	0x65A990-0x65ABE5	float-rounded magnitude vs extended only	-
+0x690DC0	CTaskComplexFacial::CreateNextSubTask	MATCH	0x690DC0-0x690F25	-	-
+0x649F50	CTaskSimpleCarSetPedOut::Clone	MATCH	0x649F50-0x649FC6	bytes 0x11-0x15 copied	-
+0x694EE0	CTaskComplexFollowPedFootsteps::CreateNextSubTask	MATCH	0x694EE0-0x694FF8	sum z,x,y, > 1.4	-
+0x695000	CTaskComplexFollowPedFootsteps::CreateFirstSubTask	MATCH	0x695000-0x69508A	sum x,z,y	-
+0x657220	CTaskComplexWalkRoundObject::CreateNextSubTask	MATCH	0x657220-0x65735F	-	-
+0x655140	CTaskComplexWalkRoundObject::CreateRouteTask	MATCH	0x655140-0x6551BF	-	-
+0x639200	CTaskComplexOnFire::ControlSubTask	MATCH	0x639200-0x639301	MakeAbortable goes to subtask (CTaskComplex forwarder)	-
+0x628C80	CTaskComplexDestroyCarArmed::CalculateSearchPositionAndRanges	MATCH	0x628C80-0x628D8F	-	-
+0x6327C0	CTaskComplexUseAttractor::ControlSubTask	NOT_REACHED	-	budget	-
+0x654B80	CTaskComplexWalkRoundBuildingAttempt::ComputeMoveDir	NOT_REACHED	-	budget	-
+0x61C650	CTaskSimpleFight::BeHitWhileBlocking	NOT_REACHED	-	budget	-
+0x675740	CTaskInteriorShopKeeper::ControlSubTask	NOT_REACHED	-	budget	-
+0x659990	CTaskComplexExtinguishFireOnFoot::FindFireNearPed	NOT_REACHED	-	budget	-

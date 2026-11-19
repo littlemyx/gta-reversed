@@ -1,0 +1,29 @@
+function	exe_addr	port_site	exe_idiom	verdict	commit
+CAutomobile::HydraulicControl max(0,+-x) x4	0x6A0ECC/EE3/EF3/F03	Automobile.cpp suspensionChange	call 0x420800 first arg 0: 0>x?0:x (NaN/-0 keep x)	FIXED	d4ef8da6a
+CAutomobile::HydraulicControl max(extUpper,limit)	0x6A0973	Automobile.cpp:3597	fcomp st1 + test 5 + jp: X<L?L:X	MATCH	-
+CAutomobile::HydraulicControl min(compressed,1) x4 + min(change,1)	0x6A0C5C,0C7D...,0F68	Automobile.cpp:3651-3769	fcomp + test 0x41 + jne: v>1?1:v (NaN keeps)	MATCH	-
+CAutomobile::HydraulicControl clamp(f,0,1) + f<.4||f>.6	0x6A1308-0x6A1349	Automobile.cpp:3776	fcom 0 test5 jp / fcom 1 test 0x41 jne	MATCH	-
+CAutomobile::NitrousControl max(0.25,1-gas)	0x6A4087	Automobile.cpp:~4504	0.25>a?0.25:a (NaN keeps a)	FIXED	305d8dd2b
+CAutomobile::NitrousControl min(1,temp)	0x6A40B2	Automobile.cpp:~4507	fcomp 1 + test 0x41 + jne: b>1?1:b	FIXED	305d8dd2b
+CAutomobile::ProcessCarWheelPair min(2,adhesion) x2, temp<=3	0x6A5531,0x6A598A,0x6A5C97	Automobile.cpp:4796/4846/4887	2<X?2:X ; X>3?3:X	MATCH (std::min(X,K) == exe K<X?K:X)	-
+CAutomobile::ProcessAI mouse clamp +-1.5 (max+min helpers)	0x6B4F19-0x6B4F5B	Automobile.cpp:~1452	max(-1.5,x) then min(1.5,m): NaN stays	MATCH (std::clamp same)	-
+CAutomobile::UpdateMovingCollision min/max on (float)int	0x6A1E38,0x6A1E97	Automobile.cpp:3949	int-valued floats, no NaN	MATCH	-
+CBmx::ProcessAI max(0.5,v)	0x6C18E7	Bmx.cpp:816	0.5>v?0.5:v	FIXED	a2b63e42b
+CBmx::ProcessAI max(0,pedaling-0.4)	0x6C1991	Bmx.cpp:824	0>v?0:v	FIXED	a2b63e42b
+CBmx::ProcessAI mult clamp [0,2]	0x6C1F4B-0x6C1F71	Bmx.cpp:989	v>2?2:(v<0?0:v); NaN and -0 stay (port gave 0)	FIXED	a2b63e42b
+CTrain::ProcessControl gas max(0,g)/min(0,g)	0x6F8ABD/0x6F8AAE	Train.cpp:1567/1569	0>g?0:g ; 0<g?0:g	FIXED	d37f6f02f
+CVehicle::DoVehicleLights zr350 pop-up step down	0x6E1C7E	Vehicle.cpp:~6918	call 0x420800 max(0,v)	FIXED	d1341c4a6
+CVehicle::DoVehicleLights zr350 pop-up step up	0x6E1CA6	Vehicle.cpp:~6913	fcomp st1 test 5 jp: K<v?K:v (NaN keeps v; std::min gave K)	FIXED	d1341c4a6
+CVehicle::ProcessDrivingAnims steer clamp [0,1]	0x6DF81C-0x6DF840	Vehicle.cpp:1030	fcom 0 test 5 jp / fcom 1 test 0x41 jne = std::clamp	MATCH (UNSURE of HC11 resolved)	-
+helper sites 0x6DFE9E/0x6E024D	-	UpdateTrailerLink (0x6DFC50) / UpdateTractorLink (0x6E0050), not ProcessDrivingAnims	max(1,ts): port `1 > ts ? 1 : ts`	MATCH (not hit in RYDER_1)	-
+CVehicle::FlyingControl max/min/max	0x6D96A1,B5,C5	Vehicle.cpp:4429-4432	max(0.01,speed), min(1,r), max(-1,r)	MATCH	-
+CBike::ProcessAI speed min(0.1,mag) / max(q,pedal) x2	0x6BCA7B,9C,B44,B65	Bike.cpp:511-524	explicit ternaries in exe order	MATCH	-
+CVehicle::ProcessBikeWheel min(health,1100)	0x6D7FCB	Vehicle.cpp:3951	a<b?a:b	MATCH	-
+CCamera::ImproveNearClip min(a,b)	0x516DCC	Camera.cpp:3183	a<b?a:b	MATCH	-
+CCam::Process_FollowCar_SA max sites	0x52523D,0x5256E7	Cam.cpp:5194 FollowCarMax	a>b?a:b	MATCH	-
+CCarCtrl::PossiblyRemoveVehicle / GenerateOneRandomCar max(170,x)	0x42512B,0x4319FF	CarCtrl.cpp:4257,8910	explicit ternary / Max420800(170,range)	MATCH	-
+CEntity::PreRender max(rand%16/16,0.5)	0x536406	Entity.cpp:526	no NaN possible	MATCH	-
+CGarage::Update max(1000,health)	0x44AF8E	Garage.cpp:841	1000>h?1000:h	MATCH	-
+CPed::Say (row 0x5F1251/0x5F1268)	-	sites belong to a CPedGeometryAnalyser function (not hit)	-	MISATTRIBUTED (not hit)	-
+other float sites of the 38 (Stats, Rope, CollisionEventScanner, SimpleLand, GangFollower, Partner, ...)	see ASM-HC11	-	already explicit ternaries with exe-address comments (earlier sweeps)	NOT_RECHECKED	-
+inlined float min/max in hit functions (ProcessEntityCollision 1917, VehicleDamage 2905/2952/3018, CalculateDriveAcceleration 196-221, ProcessBuoyancy, Bike::ProcessControl, PedCreationDistMultiplier, ...)	-	-	-	NOT_REACHED	-

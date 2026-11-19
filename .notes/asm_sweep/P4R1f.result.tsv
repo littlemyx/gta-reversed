@@ -1,0 +1,119 @@
+addr	function	verdict	asm range	note	fix commit
+0x489E0F	WarpCharIntoCarAsPassenger	MATCH	0x489DDA-0x489E6E	review of d2d0482f7: door 0 for negative seat, ctor(veh,door,warp=1) confirmed	d2d0482f7
+0x47C446	PointCameraAtChar	FIXED	0x47C446-0x47C4C1	player ped -> null target, other ped -> target (was inverted)	fbd5a1b5b
+0x47CE23	IsCharHealthGreater	FIXED	0x47CE23-0x47CE67	int param (fild); strict health > param (was float, >=)	447b2f77d
+0x48953e	ClearSmallPrints	MATCH	-	P4R1e tail handler compared	
+0x48b138	GetDeadCharPickupCoords	MATCH	-	P4R1e tail handler compared	
+0x47eae0	SwitchPedRoadsOn	MATCH	-	P4R1e tail handler compared	
+0x480dfb	RemoveAllScriptFires	MATCH	-	P4R1e tail handler compared	
+0x482ea3	WarpCharFromCarToCoord	MATCH	-	P4R1e tail handler compared	
+0x47125a	SetCharAllowedToDuck	MATCH	-	P4R1e tail handler compared	
+0x467e85	SetCarDrivingStyle	MATCH	-	P4R1e tail handler compared	
+0x4919ac	SetCharCollision	MATCH	-	P4R1e tail handler compared	
+0x47960d	SetZoneNoCops	MATCH	-	P4R1e tail handler compared	
+0x47c3f9	PointCameraAtCar	MATCH	-	P4R1e tail handler compared	
+0x4895d1	MakePlayerSafeForCutscene	MATCH	-	P4R1e tail handler compared	
+0x48961b	UseTextCommands	MATCH	-	P4R1e tail handler compared	
+0x46c334	GetPlayerGroup	MATCH	-	P4R1e tail handler compared	
+0x47b5cb	SetRespawnPointForDurationOfMission	MATCH	-	P4R1e tail handler compared	
+0x48c02b	SetCharDrownsInWater	MATCH	-	P4R1e tail handler compared	
+0x492188	SetStat<int32>	MATCH	-	P4R1e tail handler compared	
+0x46b9f8	GivePlayerClothes	MATCH	-	P4R1e tail handler compared	
+0x476612	SetSpecificZoneToTriggerGangWar	MATCH	-	P4R1e tail handler compared	
+0x47970c	DisplayZoneNames	MATCH	-	P4R1e tail handler compared	
+0x47fe8c	GetGroundZFor3DCoord	MATCH	-	P4R1e tail handler compared	
+0x46d21a	BuildPlayerModel	MATCH	-	P4R1e tail handler compared	
+0x481824	SetCharVisible	MATCH	-	P4R1e tail handler compared	
+0x4841bb	RemoveTextureDictionary	MATCH	-	P4R1e tail handler compared	
+0x4853ac	ClearThisBigPrint	MATCH	-	P4R1e tail handler compared	
+0x497cfb	RemoveCharFromGroup	MATCH	-	P4R1e tail handler compared	
+0x46dc2c	AddStuckCarCheckWithWarp	MATCH	-	P4R1e tail handler compared	
+0x46ca3c	SetPlayerEnterCarButton	MATCH	-	P4R1e tail handler compared	
+0x471b4f	SetCharDropsWeaponsWhenDead	MATCH	-	P4R1e tail handler compared	
+0x47bdb4	SetDisableMilitaryZones	MATCH	-	P4R1e tail handler compared	
+0x469922	AddScore	MATCH	-	P4R1e tail handler compared	
+0x466109	MultInPlace<int32>	MATCH	-	P4R1e tail handler compared	
+0x47da0b	PrintWithNumbersBig<int32>	MATCH	-	P4R1e tail handler compared	
+0x47da71	PrintWithNumbers<int32>	MATCH	-	P4R1e tail handler compared	
+0x48975d	SetCharMoney	MATCH	-	P4R1e tail handler compared	
+0x48c109	RemoveRCBuggy	MATCH	-	P4R1e tail handler compared	
+0x48d820	CreateRandomCharAsPassenger	MATCH	-	P4R1e tail handler compared	
+0x473f52	SetFirstPersonInCarCameraMode	MATCH	-	P4R1e tail handler compared	
+0x474261	SetPlayerAbleToUseCrouch	MATCH	-	P4R1e tail handler compared	
+0x47fddd	IsCharOnScreen	MATCH	-	P4R1e tail handler compared	
+0x471bf1	SetPlayerFireButton	MATCH	-	P4R1e tail handler compared	
+0x4763f2	SetPlayerJumpButton	MATCH	-	P4R1e tail handler compared	
+0x476f37	CameraPersistFov	MATCH	-	P4R1e tail handler compared	
+0x4792e5	SetUpConversationEndNodeWithSpeech	MATCH	-	P4R1e tail handler compared	
+0x47b343	ReportMissionAudioEventAtChar	MATCH	-	P4R1e tail handler compared	
+0x46618f	DivInPlace<int32>	MATCH	-	P4R1e tail handler compared	
+0x47ccce	GetObjectHeading	MATCH	-	P4R1e tail handler compared	
+0x47daec	PrintWithNumbersNow<int32>	MATCH	-	P4R1e tail handler compared	
+0x47f63a	IsCharStopped	MATCH	-	P4R1e tail handler compared	
+0x481619	SetCameraZoom	MATCH	-	P4R1e tail handler compared	
+0x4817bd	SetCharBleeding	MATCH	-	P4R1e tail handler compared	
+0x485026	SetCameraInFrontOfPlayer	MATCH	-	P4R1e tail handler compared	
+0x485107	AddStuckCarCheck	MATCH	-	P4R1e tail handler compared	
+0x489595	CanPlayerStartMission	MATCH	-	P4R1e tail handler compared	
+0x48aa48	GiveRemoteControlledModelToPlayer	MATCH	-	P4R1e tail handler compared	
+0x48aacf	GetCurrentCharWeapon	MATCH	-	P4R1e tail handler compared	
+0x48ae69	RemoveAllCharWeapons	MATCH	-	P4R1e tail handler compared	
+0x48c216	SetPlayerMood	MATCH	-	P4R1e tail handler compared	
+0x48c49d	AttachCharToObject	MATCH	-	P4R1e tail handler compared	
+0x48d862	EnsurePlayerHasDriveByWeapon	MATCH	-	P4R1e tail handler compared	
+0x466a2f	AddInPlace<int32>	MATCH	-	P4R1e tail handler compared	
+0x495a51	IsPlayerTargettingAnything	MATCH	-	P4R1e tail handler compared	
+0x46d65e	StartSettingUpConversation	MATCH	-	P4R1e tail handler compared	
+0x472bd0	SetCarAlwaysCreateSkids	MATCH	-	P4R1e tail handler compared	
+0x470b2c	SetObjectAnimSpeed	MATCH	-	P4R1e tail handler compared	
+0x471d7a	GetDeadCharCoordinates	MATCH	-	P4R1e tail handler compared	
+0x4749bb	EnableConversation	MATCH	-	P4R1e tail handler compared	
+0x47adb9	IsCharGettingInToACar	MATCH	-	P4R1e tail handler compared	
+0x47520d	SetZoneForGangWarsTraining	MATCH	-	P4R1e tail handler compared	
+0x4773f8	SetCameraInFrontOfChar	MATCH	-	P4R1e tail handler compared	
+0x478f6e	CameraSetShakeSimulationSimple	MATCH	-	P4R1e tail handler compared	
+0x47938d	SetPlayerInCarCameraMode	MATCH	-	P4R1e tail handler compared	
+0x47b2d8	SetVehicleCameraTweak	MATCH	-	P4R1e tail handler compared	
+0x47b314	ResetVehicleCameraTweak	MATCH	-	P4R1e tail handler compared	
+0x47b4ec	GetCurrentLanguage	MATCH	-	P4R1e tail handler compared	
+0x47bbb6	DisableHeliAudio	MATCH	-	P4R1e tail handler compared	
+0x47a5e4	FinishSettingUpConversationNoSubtitles	MATCH	-	P4R1e tail handler compared	
+0x469a15	IsWantedLevelGreater	MATCH	-	story static usage, not executed in traces	
+0x4699e8	AlterPlayerWantedLevelNoDrop	MATCH	-	story static usage, not executed in traces	
+0x47379b	GetCarCharIsUsing	MATCH	-	story static usage, not executed in traces	
+0x47c4c7	RestoreCamera	MATCH	-	story static usage, not executed in traces	
+0x480e14	HasCharBeenDamagedByWeapon	MATCH	-	story static usage, not executed in traces	
+0x48513f	RemoveStuckCarCheck	MATCH	-	story static usage, not executed in traces	
+0x47e814	ApplyBrakesToPlayersCar	MATCH	-	story static usage, not executed in traces	
+0x467192	AddTimedStore	MATCH	-	story static usage, not executed in traces	
+0x495a7d	GetActiveCameraCoordinates	MATCH	-	story static usage, not executed in traces	
+0x4660d1	MultInPlace	MATCH	-	story static usage, not executed in traces	
+0x48424a	SetCharAnimSpeed	MATCH	-	story static usage, not executed in traces	
+0x47cdc7	SetCharAmmo	MATCH	-	story static usage, not executed in traces	
+0x495aa1	GetActiveCameraPointAt	MATCH	-	story static usage, not executed in traces	
+0x466b26	AddInPlace	MATCH	-	story static usage, not executed in traces	
+0x47c4db	ShakePad	MATCH	-	story static usage, not executed in traces	
+0x48a902	ClearCharLastWeaponDamage	MATCH	-	story static usage, not executed in traces	
+0x47cd71	IsCharTouchingObject	MATCH	-	story static usage, not executed in traces	
+0x481ade	SetTextColour	MATCH	-	story static usage, not executed in traces	
+0x481aae	SetTextScale	MATCH	-	story static usage, not executed in traces	
+0x4855b6	SetTextRightJustify	MATCH	-	story static usage, not executed in traces	
+0x481b84	SetTextCentre	MATCH	-	story static usage, not executed in traces	
+0x481bc1	SetTextWrapX	MATCH	-	story static usage, not executed in traces	
+0x491802	SetCharAnimCurrentTime	MATCH	-	story static usage, not executed in traces	
+0x489ebc	GetCharInCarPassengerSeat	MATCH	-	story static usage, not executed in traces	
+0x48b75a	GetCharWeaponInSlot	MATCH	-	story static usage, not executed in traces	
+0x48ee52	IsCharDucking	MATCH	-	story static usage, not executed in traces	
+0x471c3c	AttachFxSystemToCharBone	MATCH	-	story static usage, not executed in traces	
+0x481a08	DisplayText	MATCH	-	story static usage, not executed in traces	
+0x48a5b5	DisplayTextWithNumbers	MATCH	-	story static usage, not executed in traces	
+0x492058	IncrementStat<int32>	MATCH	-	story static usage, not executed in traces	
+0x46998a	StoreScore	MATCH	-	story static usage, not executed in traces	
+0x47a261	SetUpConversationEndNodeWithScriptedSpeech	MATCH	-	story static usage, not executed in traces	
+0x47ba6e	SetUpConversationNodeWithScriptedSpeech	MATCH	-	story static usage, not executed in traces	
+0x48bb50	HasCharBeenPhotographed	MATCH	-	story static usage, not executed in traces	
+0x48eade	SetPlayerInStadium	MATCH	-	story static usage, not executed in traces	
+0x48567e	FlashHudObject	MATCH	-	story static usage, not executed in traces	
+0x48d6dd	IncreasePlayerMaxHealth	MATCH	-	story static usage, not executed in traces	
+0x483e80	DrawSprite	MATCH	-	story static usage, not executed in traces	
+0x483f8f	DrawRect	MATCH	-	story static usage, not executed in traces	

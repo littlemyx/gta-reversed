@@ -3389,7 +3389,7 @@ void CEventHandler::ComputeVehicleDamageResponse(CEventVehicleDamage* e, CTask* 
 void CEventHandler::ComputeVehicleDiedResponse(CEventVehicleDied* e, CTask* tactive, CTask* tsimplest) {
     m_EventResponseTask = [&]() -> CTask* {
         if (!e->m_vehicle) {
-            return nullptr;
+            return m_EventResponseTask; // 0x4BA8D1: je 0x4BA976, the response task is left untouched
         }
         m_Ped->physicalFlags.bRenderScorched = true;
         m_Ped->m_fHealth = 0.f;

@@ -1171,7 +1171,8 @@ void CCarAI::UpdateCarAI(CVehicle* veh) {
     }
 
     if (ap->m_nTempAction == TEMPACT_NONE) { // 0x41FB1B
-        if (ap->m_nCruiseSpeed == 0 || notsa::contains({ // 0x41FB29
+        // exe 0x41FB29-0x41FB96: jumps OVER the reverse-out-of-a-jam logic (je 0x41FD36) when cruiseSpeed == 0 or the mission is one of these; the port entered it for exactly those (negated)
+        if (!(ap->m_nCruiseSpeed == 0 || notsa::contains({
                 MISSION_NONE,
                 MISSION_STOP_FOREVER,
                 MISSION_BLOCKPLAYER_HANDBRAKESTOP,
@@ -1182,7 +1183,7 @@ void CCarAI::UpdateCarAI(CVehicle* veh) {
                 MISSION_ESCORT_REAR,
                 MISSION_ESCORT_FRONT,
                 MISSION_FOLLOWCAR_CLOSE,
-            }, ap->m_nCarMission)
+            }, ap->m_nCarMission))
         ) {
             if (CTimer::GetTimeInMS() - veh->m_nLastCollisionTime > 500) { // 0x41FBA8
                 ap->m_nTimeToStartMission = CTimer::GetTimeInMS();

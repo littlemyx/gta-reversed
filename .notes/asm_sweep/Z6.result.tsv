@@ -1,0 +1,25 @@
+addr	function	verdict	asm range	note	fix commit
+0x50C910	CCamera::TakeControlAttachToEntity	MATCH	0x50C910-0x50CAD7	tail after 0x50CA81 compared: tilt store (+0x950), attached entity ChangeEntityReference (+0x95C), mode 0x2F, switch type, bLookingAtPlayer=0, bStartInterScript=1, FindPlayerPed result discarded; offset default (0,0,2)	-
+0x4846A1	COMMAND_SCRIPT_NAME (0x3A4)	FIXED	0x4846A1-0x4846DE	exe lowercases the 8 byte label (A-Z only) then copies 8 bytes into m_szName; port lowercased into an unused buffer and stored the original (breaks strcmp(name,"intro1") in PedDamageResponseCalculator)	a3ed84212
+0x465F26	COMMAND_SET_VAR_INT/SET_LVAR_INT/SET_VAR_FLOAT/SET_LVAR_FLOAT (0x4-0x7)	MATCH	0x465F26-0x465F53	GetPointerToScriptVariable then CollectParameters(1), raw 32 bit copy	-
+0x465FBF	COMMAND_ADD_VAL_TO_INT_VAR/LVAR, SUB, MULT, DIV float (0x8-0x17)	MATCH	0x465FBF-0x4661B1+	int wrap add; float via x87 single op (fld/fmul/fdiv, operand order irrelevant)	-
+0x466210	COMMAND_IS_*_GREATER/EQUAL int + float compares (0x18-0x45)	MATCH	0x466210-0x4666ED+	int setg/setge; float fcomp test ah,0x41 (NaN false) / test ah,0x44 jnp for equal (NaN false) = C++ >, >=, ==	-
+0x47CB44	COMMAND_SET_CHAR_HEADING (0x173)	MATCH	0x47CB44-0x47CBDE	FixAngleDegrees (<0 +360, >360 -360, NaN untouched), skipped in vehicle, both rotations, SetHeading, UpdateRwMatrix	-
+0x47D3C8	COMMAND_SET_PLAYER_CONTROL (0x1B4)	MATCH	0x47D3C8-0x47D428	MakePlayerSafe(!state, 10.0)	-
+0x467875	COMMAND_SET_CHAR_COORDINATES (0xA1)	MATCH	0x467875-0x4678C2	SetCharCoordinates(ped,x,y,z,1,1)	-
+0x4842EC	COMMAND_CLEAR_AREA (0x395)	MATCH	0x4842EC-0x484369	z<=-100 -> FindGroundZForCoord, flag low byte	-
+0x46807B	COMMAND_PRINT_BIG (0xBA)	MATCH	0x46807B-	label, CText::Get, AddBigMessage(text,time,style-1)	-
+0x48D587	COMMAND_LOAD_MISSION_TEXT (0x54C)	MATCH	0x48D587-	-	-
+0x47F03E	COMMAND_MARK_MODEL_AS_NO_LONGER_NEEDED (0x249)	MATCH	0x47F03E-	RemoveFromResourceManager(model,2,script) then SetMissionDoesntRequireModel	-
+0x480D54	COMMAND_REGISTER_MISSION_GIVEN (0x317)	MATCH	0x480D54-	IncrementStat(0x92,1.0)	-
+0x4914A5	COMMAND_LOAD_CHAR_DECISION_MAKER (0x60A)	MATCH	0x4914A5-0x492203	exe also peeks the output var and discards GetActualScriptThingIndex(peek,7) (no effect); LoadDecisionMaker(buf,0,cleanup), unique handle, cleanup list type 9	-
+0x49152D	COMMAND_SET_CHAR_DECISION_MAKER (0x60B)	MATCH	0x49152D-0x49155F	-1 passthrough else GetActualScriptThingIndex(h,7)	-
+0x490F46	COMMAND_TASK_KILL_CHAR_ON_FOOT (0x5E2)	MATCH	0x490F46-	CTaskComplexKillPedOnFoot(target,-1,0,0,0)	-
+0x492A36	COMMAND_TASK_TURN_CHAR_TO_FACE_CHAR (0x639)	MATCH	0x492A36-	TurnToFaceEntityOrCoord(target,0.5,0.2) = ctor defaults	-
+0x4855F8	COMMAND_PRINT_HELP (0x3E5)	MATCH	0x4855F8-0x48569B	gate, SetHelpMessage, previous-briefs flag	-
+0x47E3C8	COMMAND_GENERATE_RANDOM_INT_IN_RANGE (0x209)	MATCH	0x47E3C8-	0x407180 int range (port comment confirms)	-
+0x4698C2	COMMAND_DELETE_OBJECT (0x108)	MATCH	0x4698C2-	-	-
+0x48BFE3	COMMAND_FREEZE_CHAR_POSITION (0x4D7) / SET_CHAR_STAY_IN_SAME_PLACE (0x350)	MATCH	0x48BFE3-	bits 0x2000 @+0x40, 0x100000 @+0x470	-
+0x47DC4B	COMMAND_SWITCH_ROADS_OFF/ON (0x1E8/0x1E7)	MATCH	0x47DC4B-	x87 min/max swap, SwitchRoadsOffInArea	-
+0x47DE9A	COMMAND_SET_MAX_WANTED_LEVEL (0x1F0)	MATCH	0x47DE9A-	-	-
+-	remaining 200+ candidate opcodes of T3_SCM_USAGE without verdict	NOT_REACHED	-	budget	-

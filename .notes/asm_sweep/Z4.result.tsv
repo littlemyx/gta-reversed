@@ -1,0 +1,30 @@
+addr	function	verdict	asm range	note	fix commit
+0x515200	CCamera::StartTransition	MATCH		full: jump table (3,4,7,8,12,16,1D,22,27-2B,2D,2E,33,34), 12-mode ped-rotation list, all 3 duration/fraction branches (globals 0x8CCCBC..CC = 400/1000/0.8/0.2/1.0, B70044=0), tail (script params, special-interp copy, target-coors 350/600), Init skip + 0x230 save/restore, atan constants 0x858FE4/0x858CB8/0x8631DC	
+0x509AE0	WellBufferMe	MATCH		full incl. fcom/test-ah masks, angle wrap loops, speed clamp, min(10,timestep); 26575 hits in RYDER_1	
+0x50BFB0	CCamera::SetNewPlayerWeaponMode	MATCH		stores	
+0x50C030	CCamera::SetParametersForScriptInterpolation	MATCH		x*0.01f (0x858C58), store order irrelevant	
+0x50C070	CCamera::SetPercentAlongCutScene	MATCH		fild+2^32 fixup, other-cam path	
+0x50C160	CCamera::SetZoomValueFollowPedScript	MATCH		0.25/1.5/2.9, flag only on other values	
+0x50C1B0	CCamera::SetZoomValueCamStringScript	MATCH		tables 0x8CC3E0/F4/408 read from exe, arrPos=0 default	
+0x50C910	CCamera::TakeControlAttachToEntity	UNSURE		asm read to 0x50CA81 (matches); tail (attached entity ref, mode/switch stores) not read	
+0x50CB10	CCamera::UpdateAimingCoors	MATCH		vec copy	
+0x50AD20	CCamera::FindCamFOV	MATCH		getter	
+0x50AD40	CCamera::Find3rdPersonQuickAimPitch	MATCH		fptan/fpatan chain, reciprocal of aspect (fld1;fdiv;fmulp), fchs	
+0x50CD80	CCamera::CameraPedModeSpecialCases	MATCH		3 flag stores	
+0x50CDA0	CCamera::CameraPedAimModeSpecialCases	MATCH		flags + extra entity push when in vehicle	
+0x50D160	CCamera::VectorMoveLinear	MATCH		start=(float)now, end=(float)(now+dur) one rounding	
+0x50D240	CCamera::AddShakeSimple	MATCH		same pattern	
+0x50D280	CCamera::LerpFOV	MATCH		same pattern	
+0x50A970	CCamera::CamShakeNoPos	NOT_REACHED		asm read, source not compared	
+0x50A200	ProcessIdleCamTicker	NOT_REACHED		no hits in RYDER_1; budget	
+0x50A280	SetTarget	NOT_REACHED		no hits in RYDER_1; budget	
+0x50A3B0	InitCameraVehicleTweaks	NOT_REACHED		no hits in RYDER_1; budget	
+0x50AB50	GetScreenRect	NOT_REACHED		no hits in RYDER_1; budget	
+0x50B380	CalculateMirroredMatrix	NOT_REACHED		no hits in RYDER_1; budget	
+0x514970	Find3rdPersonCamTargetVector	NOT_REACHED		no hits in RYDER_1; budget	
+0x51A5D0	ConeCastCollisionResolve	NOT_REACHED		no hits in RYDER_1; budget	
+0x5179E0	ProcessSlerp	NOT_REACHED		no hits in RYDER_1; budget	
+0x50E760	FinaliseIdleCamera	NOT_REACHED		no hits in RYDER_1; budget	
+0x513510	CCam::Process_Cam_TwoPlayer_Separate_Cars	NOT_REACHED		no hits in RYDER_1; budget	
+0x515D80	CCam::GetArrestCamPosBesideCop	NOT_REACHED		no hits in RYDER_1; budget	
+0x517130	CCam::GetCoreDataForDWCineyCamMode	NOT_REACHED		no hits in RYDER_1; budget	

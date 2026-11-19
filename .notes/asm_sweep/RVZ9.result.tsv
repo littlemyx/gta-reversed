@@ -1,0 +1,7 @@
+addr	function	verdict	asm range	note	fix commit
+0x457410	CPickup::Update (disabled branch)	CONFIRMED	0x458740-0x45883B	2D squared dist (dy_f*dy+dx*dx), >100, shop >2.4 raw, NaN no respawn, jbe time check, reachability via bDisabled (0x1d bit0) identical; HC8e 537dd640a correct	-
+0x462DA0	CRoadBlocks::GenerateRoadBlocks (script rb)	CONFIRMED	0x462DA0-0x462E5A	centroid (A+B)*0.5 stored float, diffs c-p, (dx2+dy2)+dz2, fsqrt, test ah,5 jp = !(d<90); HC8e a76d08a7f correct	-
+0x527340	CCam::Process climb reset	CONFIRMED	0x5273A6-0x5273E5	(dz2+dy2)+dx2 of last-player, >9 strict, NaN no reset, then timestep<0.2 jnp; HC8e de8c74e2d correct	-
+0x6CBE6C	CPlane::ProcessFlyingCarStuff smoke dist	CONFIRMED	0x6CBE4B-0x6CBEA3	(dz2+dy2)+dx2, test ah,5 jnp => <6400, else status!=PLAYER skips (NaN goes to status test = port); HC8e b2dbb0178 correct	-
+0x66E320	CTaskComplexFollowPointRoute::CreateFirstSubTask fallback loop	CONFIRMED	0x66E54C-0x66E6CB	z,y,x sum stored float, strict < best^2, best=FLT_MAX; HC8e 064d905f9 correct	-
+0x66E320	CTaskComplexFollowPointRoute::CreateFirstSubTask main loop	FIXED	0x66E3C3-0x66E513	sqMag of next-this is (z2+x2)+y2 (port x,y,z), dist ped-proj (z2+y2)+x2 (port x,y,z), dot<=0 and sqrt<=dot did not skip on NaN (exe fcomp+test ah,0x41+jne skips); dot z,y,x, Normalise, proj, best^2 compare matched	b84af3045

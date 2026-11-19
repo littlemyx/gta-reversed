@@ -5350,7 +5350,8 @@ void CAutomobile::ProcessBuoyancy()
     }
 
     physicalFlags.bTouchingWater = true;
-    auto fTimeStep = std::max(0.01F, CTimer::GetTimeStep());
+    // 0x6A8C9B: fcomp + test ah,0x41 + jne: `0.01 > ts ? 0.01 : ts` (NaN keeps ts; std::max(0.01, ts) gave 0.01)
+    auto fTimeStep = 0.01F > CTimer::GetTimeStep() ? 0.01F : CTimer::GetTimeStep();
     // 0x6A8C8B..0x6A8CF9: the exe multiplies by the constant 0.008f (the compiler's mass / 125), in this order: (ts * mass) * 0.008f, then force.z / that
     constexpr auto BUOY_MASS_K = std::bit_cast<float>(0x3C03126Fu); // 0x863984 = 0.008f
     auto fUsedMass = m_fMass * BUOY_MASS_K;
@@ -5362,7 +5363,9 @@ void CAutomobile::ProcessBuoyancy()
     if (physicalFlags.bMakeMassTwiceAsBig)
         fBuoyancyForceZ *= 1.5F;
 
-    auto fBuoyancyForceMult = std::max(0.5F, 1.0F - fBuoyancyForceZ * 0.05F); // 0x6A8D14: multiply by 0.05f, not divide by 20
+    // 0x6A8D14: multiply by 0.05f, not divide by 20; 0x6A8D26: fcomp st(1) + test ah,0x41 + jne: `0.5 > v ? 0.5 : v` (NaN keeps v)
+    const float buoyancyMultRaw   = 1.0F - fBuoyancyForceZ * 0.05F;
+    auto        fBuoyancyForceMult = 0.5F > buoyancyMultRaw ? 0.5F : buoyancyMultRaw;
     // pow() (the exe's _CIpow, 0x822130) returns its result on the x87 stack and 0x6A8D54 stores it as a float
     auto fSpeedMult = (float)x87::pow((double)fBuoyancyForceMult, (double)CTimer::GetTimeStep()); // todo:: shadow var
 
@@ -5378,7 +5381,8 @@ void CAutomobile::ProcessBuoyancy()
     if (m_pHandlingData->m_bIsHeli && m_fHeliRotorSpeed > 0.15F) {
         bool bForceKillRotor = false;
         if (m_nModelIndex != MODEL_SEASPAR && m_nModelIndex != MODEL_LEVIATHN) {
-            auto fUsedForce = std::max(1.0F, fBuoyancyForceZ * 8.0F);
+            const float usedForceRaw = fBuoyancyForceZ * 8.0F;
+            auto fUsedForce = 1.0F > usedForceRaw ? 1.0F : usedForceRaw; // 0x6A8E0A: fcomp st(1) + test ah,0x41 + jne: NaN keeps the product
             auto vecMoveForceHeli = ExeDivide(vecBuoyancyForce * -2.0F, fUsedForce); // 0x6A8E5C: call 0x4119D0
             ApplyMoveForce(vecMoveForceHeli);
             m_vecTurnSpeed *= fSpeedMult;
@@ -5425,7 +5429,9 @@ void CAutomobile::ProcessBuoyancy()
         vehicleFlags.bIsDrowning = true;
         physicalFlags.bSubmergedInWater = true;
 
-        m_vecMoveSpeed.z = std::max(-0.1F, m_vecMoveSpeed.z);
+        if (m_vecMoveSpeed.z < -0.1F) { // 0x6A9051: fcomp + test ah,5 + jp: stores -0.1 only when z < -0.1 (NaN keeps z)
+            m_vecMoveSpeed.z = -0.1F;
+        }
 
         // 0x6A9079..0x6A90C5: float constants 0.0064f (0x871248), 8.0000009e-6f (0x871244), 0.008f (0x863984) multiplied with the mass
         if (m_fMass * std::bit_cast<float>(0x3BD1B718u) < m_fBuoyancyConstant) // 0x871248 = 0.0064f

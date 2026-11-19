@@ -73,12 +73,14 @@ CTask* CTaskInteriorGoToInfo::CreateFirstSubTask(CPed* ped) {
         return nullptr;
     }
 
-    if (g_interiorMan.GetPedsInterior(ped) == m_Int) {
+    const auto pedInt = g_interiorMan.GetPedsInterior(ped);
+    if (pedInt == m_Int) {
         return new CTaskSimpleGoToPoint{ PEDMOVE_WALK,  m_IntInfo->Pos, 0.2f };
     }
 
     const auto tFollowNodeRoute = new CTaskComplexFollowNodeRoute{ PEDMOVE_WALK, ThePaths.GetPathNode(m_Int->GetNodeAddress())->GetPosition(), 0.2f};
-    tFollowNodeRoute->SetStartNode(m_Int->GetNodeAddress());
+    // 0x676835: the start node is the node of the ped's CURRENT interior (edi = GetPedsInterior result, [edi+0x3f0]), the target position is m_Int's node
+    tFollowNodeRoute->SetStartNode((pedInt ? pedInt : m_Int)->GetNodeAddress());
     return tFollowNodeRoute;
 }
 

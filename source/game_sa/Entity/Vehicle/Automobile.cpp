@@ -4942,10 +4942,11 @@ float CAutomobile::GetCarRoll() {
 */
 float CAutomobile::GetCarPitch() {
     const auto& fwd = m_matrix->GetForward();
-    const auto  fwdMag2D = fwd.Magnitude2D();
+    // exe 0x6A6050: the sqrt result stays on the x87 stack (`fsqrt ; fstp st(2)`), no float spill before the fpatan (same as GetCarRoll)
+    const x87d fwdMag2D = std::sqrt((x87d)fwd.x * fwd.x + (x87d)fwd.y * fwd.y);
 
     // `up.z` < 0 means we're flipped on the roof, which also means `forward` is more like `backward`, so we have to negate it.
-    return x87::atan2(fwd.z, m_matrix->GetUp().z < 0.f ? -fwdMag2D : fwdMag2D);
+    return (float)(X87R(x87::atan2(fwd.z, m_matrix->GetUp().z < 0.f ? -fwdMag2D : fwdMag2D)));
 }
 
 // 0x6A6140

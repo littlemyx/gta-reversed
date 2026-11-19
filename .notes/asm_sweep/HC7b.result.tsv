@@ -1,0 +1,5 @@
+addr	function	verdict	asm range	note	fix commit
+0x6A3770	CAutomobile::PlayCarHorn	RECONFIRMED	0x6A3770-0x6A3818	fa566305a reviewed: char timer, and eax,7 on the byte, rand&0x7f-0x6a, branches/Say args match	
+0x542560	CPhysical::RemoveAndAdd	RECONFIRMED	0x542560-0x5427ef	sector idx floor*0.02f+60, bound-rect order, & 0xF row-major, type list selection, node reuse/trim match	
+0x5E1B10	CPed::UpdatePosition	FIXED	0x5E1B10-0x5E1F9E	bike SquaredMagnitude threshold is float 0x3D23D70B not 0.04f; rest (slope dot, boat centripetal, limits, NaN strictness) match	f587dac51
+-	174 hot MATCH rows in zones (ryder1 top by count)	SCREENED	-	exe float-constant vs port-literal screen (<=3 ulp near-misses): none beyond UpdatePosition	

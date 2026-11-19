@@ -69,7 +69,7 @@ static void TestW3WorldB() {
         const uint32_t intId = r.below(3) ? (r.below(4) | (r.below(5) << 16)) : r.u32();
         const int16_t nodeId = (int16_t)r.below(70);
         Tw tw([&](Rng& rr) { if (rr.below(2)) P.m_interiorIDs[rr.below(8)] = intId; });
-        IC(const CNodeAddress a = P.ReturnInteriorNodeIndex(0, intId, nodeId); uint32_t v; std::memcpy(&v, &a, 4); return (uint64_t)v;,
+        IC(const CNodeAddress a = P.ReturnInteriorNodeIndex(intId, nodeId); uint32_t v; std::memcpy(&v, &a, 4); return (uint64_t)v;,
            CNodeAddress a = CNodeAddress((uint16)0x1111, (uint16)0x2222); oracle::Fn<CNodeAddress* __fastcall(CPathFind*, int, CNodeAddress*, uint32_t, int16_t)>(0x451300)(&P, 0, &a, intId, nodeId); uint32_t v; std::memcpy(&v, &a, 4); return (uint64_t)v;);
     } ENDROW;
     ROW("CPathFind::SetPathsNeededAtPosition", 0x44DCD0, 80) {

@@ -1,0 +1,49 @@
+addr	function	verdict	asm range	note	fix commit
+0x476F9D	CAMERA_SET_VECTOR_MOVE	MATCH	0x476F9D-0x477014	P4R1d fix confirmed: fild time, from/to arg order ok	-
+0x47D4A8	SET_CURRENT_CHAR_WEAPON	MATCH	0x47D4A8-0x47D55E	P4R1d fix confirmed: type 0 -> slot 0 only; non-zero loop has no break like exe	-
+0x47B7E4	LOAD_SCENE_IN_DIRECTION	MATCH	0x47B7E4-0x47B847	P4R1d fix confirmed: heading*0x8595EC, flags 0x20	-
+0x489DDA	WARP_CHAR_INTO_CAR_AS_PASSENGER	FIXED	0x489DDA-0x489E6E	door 0 for negative seat (was -1)	0f9941508
+0x48953e	CLEAR_SMALL_PRINTS	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x48b138	GET_DEAD_CHAR_PICKUP_COORDS	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x47eae0	SWITCH_PED_ROADS_ON	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x480dfb	REMOVE_ALL_SCRIPT_FIRES	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x482ea3	WARP_CHAR_FROM_CAR_TO_COORD	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x47125a	SET_CHAR_ALLOWED_TO_DUCK	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x467e85	SET_CAR_DRIVING_STYLE	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x4919ac	SET_CHAR_COLLISION	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x47960d	SET_ZONE_NO_COPS	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x47c3f9	POINT_CAMERA_AT_CAR	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x4895d1	MAKE_PLAYER_SAFE_FOR_CUTSCENE	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x48961b	USE_TEXT_COMMANDS	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x46c334	GET_PLAYER_GROUP	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x47b5cb	SET_RESPAWN_POINT_FOR_DURATION_OF_MISSION	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x48c02b	SET_CHAR_DROWNS_IN_WATER	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x492188	SET_INT_STAT	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x46b9f8	GIVE_PLAYER_CLOTHES	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x476612	SET_SPECIFIC_ZONE_TO_TRIGGER_GANG_WAR	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x47970c	DISPLAY_ZONE_NAMES	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x47fe8c	GET_GROUND_Z_FOR_3D_COORD	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x46d21a	BUILD_PLAYER_MODEL	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x481824	SET_CHAR_VISIBLE	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x4840f2	LOAD_TEXTURE_DICTIONARY	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x4841bb	REMOVE_TEXTURE_DICTIONARY	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x4853ac	CLEAR_THIS_BIG_PRINT	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x497cfb	REMOVE_CHAR_FROM_GROUP	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x46dc2c	ADD_STUCK_CAR_CHECK_WITH_WARP	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x46ca3c	SET_PLAYER_ENTER_CAR_BUTTON	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x471b4f	SET_CHAR_DROPS_WEAPONS_WHEN_DEAD	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x47bdb4	SET_DISABLE_MILITARY_ZONES	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x469922	ADD_SCORE	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x466109	MULT_INT_LVAR_BY_VAL	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x47c446	POINT_CAMERA_AT_CHAR	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x47da0b	PRINT_WITH_NUMBER_BIG	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x47da71	PRINT_WITH_NUMBER	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x48975d	SET_CHAR_MONEY	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x48c109	REMOVE_RC_BUGGY	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x48d820	CREATE_RANDOM_CHAR_AS_PASSENGER	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x473f52	SET_FIRST_PERSON_IN_CAR_CAMERA_MODE	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x481619	SET_CAMERA_ZOOM	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x478f6e	CAMERA_SET_SHAKE_SIMULATION_SIMPLE	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x47b343	REPORT_MISSION_AUDIO_EVENT_AT_CHAR	MATCH	-	handler compared; operand order/types/flag bits agree (int16 vs int32 param width noise)	-
+0x47ccce	GET_OBJECT_HEADING	NOT_REACHED	-	tail, no numeric/flag operand; not compared	-
+0x47a5e4	FINISH_SETTING_UP_CONVERSATION_NO_SUBTITLES	NOT_REACHED	-	tail, no numeric/flag operand; not compared	-

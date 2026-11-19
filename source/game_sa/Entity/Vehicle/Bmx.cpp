@@ -813,7 +813,7 @@ bool CBmx::ProcessAI(uint32& extraHandlingFlags) {
             bikeFlags.bPlayerBoost = true;
             m_fControlPedaling     = driver->GetPlayerData()->m_fMoveSpeed;
         } else {
-            driver->HandleSprintEnergy(false, std::max(0.5f, 1.0f - (float)pad->GetAccelerate() * ExeRecip(255.0f) * 0.5f)); // 0x859A3C - 1/255
+            driver->HandleSprintEnergy(false, [&] { const float v = 1.0f - (float)pad->GetAccelerate() * ExeRecip(255.0f) * 0.5f; return 0.5f > v ? 0.5f : v; }()); // 0x859A3C - 1/255; exe 0x6C18E7 call 0x420800 max(0.5, v) = `0.5 > v ? 0.5 : v` (NaN keeps v)
 
             if (driver->GetButtonSprintResults(SPRINT_BMX) <= 0.0f) {
                 if (driver->GetPlayerData()->m_fTimeCanRun >= 0.0f) {
@@ -821,7 +821,7 @@ bool CBmx::ProcessAI(uint32& extraHandlingFlags) {
                 } else if (pad->GetAccelerateJustDown()) {
                     m_fControlPedaling = std::bit_cast<float>(0x409ccccdu); // ~4.9
                 } else {
-                    m_fControlPedaling = std::max(0.0f, m_fControlPedaling - 0.4f);
+                    { const float v = m_fControlPedaling - 0.4f; m_fControlPedaling = 0.0f > v ? 0.0f : v; } // exe 0x6C1991 call 0x420800 max(0, v) (NaN / -0 keep v)
                 }
             } else {
                 m_fControlPedaling = std::bit_cast<float>(0x409ccccdu);
@@ -986,7 +986,7 @@ bool CBmx::ProcessAI(uint32& extraHandlingFlags) {
         const auto  fwdSpeed = (m_vecMoveSpeed.z * fwd.z + m_vecMoveSpeed.y * fwd.y) + m_vecMoveSpeed.x * fwd.x;
 
         auto mult = 2.4f - (fwdSpeed / m_pHandlingData->m_transmissionData.m_MaxFlatVelocity) * 1.5f; // 0x858FB0, 0x858CE8
-        mult      = std::max(0.0f, std::min(mult, 2.0f)); // Clamped to [0, 2] // 0x858CA0
+        mult      = mult > 2.0f ? 2.0f : (mult < 0.0f ? 0.0f : mult); // Clamped to [0, 2] // 0x858CA0; exe 0x6C1F4B-0x6C1F71: fcom 2 + test 0x41 + jne, fcom 0 + test 5 + jp (NaN and -0 stay)
         if (GetStatus() == STATUS_PLAYER) {
             mult *= CStats::GetFatAndMuscleModifier(STAT_MOD_5);
         } else if (vehicleFlags.bUseCarCheats /* 0x42F & 2 */) {

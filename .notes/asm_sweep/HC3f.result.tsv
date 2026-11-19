@@ -1,0 +1,20 @@
+addr	function	verdict	asm range	note	fix commit
+0x4509A0	CPathFind::TakeWidthIntoAccountForWandering	MATCH	0x4509A0-0x450A5A	const 0.00775f, seed masks, order checked	-
+0x44DCD0	CPathFind::SetPathsNeededAtPosition	MATCH	0x44DCD0-0x44DCF4	-	-
+0x420AC0	CPathFind::GetPathNode	MATCH	0x420AC0-0x420AD6	-	-
+0x409A90	CStreaming::AreTexturesUsedByRequestedModels	MATCH	0x409A90-0x409BFC	requested list + both channels; channel TXD branch unreachable as documented	-
+0x40BA70	CStreaming::PossiblyStreamCarOutAfterCreation	MATCH	0x40BA70-0x40BA95	-	-
+0x4504F0	CPathFind::CountNeighboursToBeSwitchedOff	MATCH	0x4504F0-0x450559	-	-
+0x452160	CPathFind::SwitchOffNodeAndNeighbours	MATCH	0x452160-0x452267	flag bits, order of checks, outNext writes	-
+0x44D3B0	CPathFind::TidyUpNodeSwitchesAfterMission	MATCH	0x44D3B0-0x44D3C6	-	-
+0x44D400	CPathFind::UnMarkAllRoadNodesAsDontWander	MATCH	0x44D400-0x44D443	-	-
+0x452F00	CPathFind::SwitchPedRoadsOffInArea	MATCH	0x452F00-0x452F2F	-	-
+0x404290	CRect::IsPointInside(point)	MATCH	0x404290-0x4042CC	NaN passes	-
+0x4042D0	CRect::IsPointInside(point,tol)	MATCH	0x4042D0-0x40431C	-	-
+0x448740	CGarage::IsPointInsideGarage(point)	MATCH	0x448740-0x4487C7	x87 spill pattern	-
+0x5F1890	CPedGeometryAnalyser::ComputeRouteRoundSphere	MATCH	0x5F1890-0x5F1AFC	full x87 trace incl. compare sense and closest-point order	-
+0x540BD0	CPad::LookAroundLeftRight(ped)	MATCH	0x540BD0-0x540CB7	-	-
+0x540CC0	CPad::LookAroundUpDown(ped)	MATCH	0x540CC0-0x540DB0	-	-
+0x562300	CWanted::RemovePursuitCop(3 args)	MATCH	0x562300-0x56232A	-	-
+0x562C10	CWanted::RemovePursuitCop(cop)	MATCH	0x562C10-0x562C3A	-	-
+0x5F3DD0	CPedGeometryAnalyser::ComputeRouteRoundEntityBoundingBox	FIXED	0x5F3DD0-0x5F55D1	compared prelude, plane loops, entry/exit, path build, centre, path-A blocked check; mode-0 path choice 0x5F55D1+ NOT_REACHED	2a6a36713

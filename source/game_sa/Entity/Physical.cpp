@@ -4534,7 +4534,7 @@ bool CPhysical::ProcessCollisionSectorList(int32 sectorX, int32 sectorY)
 
                 if (entity->GetIsTypePed() && GetIsTypeVehicle()) {
                     float fThisMoveSpeedDot = m_vecMoveSpeed.SquaredMagnitude();
-                    if (!entityPed->IsPlayer() || entity->m_bIsStuck && m_vecMoveSpeed.SquaredMagnitude() > 0.0025f) {
+                    if (!entityPed->IsPlayer() || entity->m_bIsStuck && m_vecMoveSpeed.SquaredMagnitude() > std::bit_cast<float>(0x3B23D70Bu)) { // 0x54C5B5: float at 0x858CD8, one ulp above 0.0025f
                         entityPed->KillPedWithCar(AsVehicle(), fEntityMaxDamageIntensity, false);
                     }
                 } else if (GetIsTypePed() && entity->GetIsTypeVehicle() && entityVehicle->IsSubTrain() &&

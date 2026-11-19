@@ -1,0 +1,9 @@
+addr	function	verdict	asm range	note	fix commit
+0x422090	CCarCtrl::FindPathDirection	MATCH	0x422090-0x422292	x87 order, constants, return values verified (zone moved to P4R25 afterwards)	
+0x426970	CCarCtrl::WeaveForPed	MATCH	0x426970-0x426bad	wrap loops and compare chains identical	
+0x73E800	CWeapon::FireAreaEffect	MATCH	0x73E800-0x73EC1C	heading/pitch/rand/fire args identical	
+0x44FCE0	CPathFind::FindNodeClosestToCoorsFavourDirection	MATCH	0x44FCE0-0x44FED0	x87 stack traced, score formula identical	
+0x43DCD0	CDarkel::RegisterKillByPlayer	MATCH	0x43DCD0-0x43DF00	stat order, frenzy compare chain, counters identical	
+0x43D7A0	CDarkel::DealWithWeaponChangeAtEndOfFrenzy	FIXED	0x43D7A0-0x43D9DD	MakeChangesForNewWeapon gets the type in the ACTIVE slot (exe) not the chosen slot	143c46050
+0x43D3B0	CDarkel::StartFrenzy	MATCH	0x43D3B0-0x43D692	all globals/args/branches identical	
+0x559080	CStats::FindCriminalRatingNumber	MATCH	0x559080-0x5591D2	formula, clamps, strict >100 verified	

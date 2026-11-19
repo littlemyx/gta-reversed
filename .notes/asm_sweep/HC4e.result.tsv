@@ -1,0 +1,15 @@
+addr	function	verdict	asm range	note	fix commit
+0x470810	CStreamedScripts::GetProperIndexFromIndexUsedByScript	MATCH	0x470810-0x470839	CONFIRMED 4a6dd6ed8: 82 slots, stride 32, +6 int16, -1 if none	-
+0x46A930	CScriptsForBrains::AddNewScriptBrain	MATCH	0x46A930-0x46A9B0	CONFIRMED 2e53966f0: 70 slots, field offsets, fcomp+test ah,0x41+jp keeps NaN/>0 radius	-
+0x415CF0	CCollision::SphereCastVersusVsPoly	MATCH	0x415CF0-0x4160EF	full walk: AB/distSq order z,y,x; plane dist; touching test !(|d|>r); vtx test (>0 false, NaN passes), vtxDist<=dot false; ratio; PointInPoly args; 3 line tests strict < NaN false, arg order (vA,vB)(vC,vB)(vA,vC)	-
+0x486110	CTheScripts::IsPedStopped	FIXED	0x486110-0x4861E4	vehicle branch NaN	2bdffac12
+0x470980	CTheScripts::AddToListOfConnectedLodObjects	MATCH	0x470980-0x470A1B	one pass, last free, pair ends	-
+0x474750	CTheScripts::AddToListOfSpecialAnimGroupsAttachedToCharModels	FIXED	0x474750-0x4747FE	last free slot	387be1240
+0x409A90	CStreaming::AreTexturesUsedByRequestedModels	MATCH	0x409A90-0x409BFD	INTENTIONAL: free TXD slot returns -1 (exe derefs null); channel loop bug already reproduced	-
+0x408000	CStreaming::AddToLoadedVehiclesList	MATCH	0x408000-0x4080A0	groups/addresses (boats=29, gangs 18..27) verified	-
+0x40BA70	CStreaming::PossiblyStreamCarOutAfterCreation	MATCH	0x40BA70-0x40BA9B	vehicle flags +0x4E bit0, rand&1	-
+0x404290	CRect::IsPointInside	MATCH	0x404290-0x4042CA	strict, NaN passes; top=+4 bottom=+0xC	-
+0x4042D0	CRect::IsPointInside(tol)	MATCH	0x4042D0-0x40431A	same	-
+0x407260	CWorld::GetSector	MATCH	0x407260-0x4072A0	clamp 0..119, y*120+x	-
+0x407410	CCheat::IsZoneStreamingAllowed	MATCH	0x407410-0x40745C	8 cheat ids	-
+0x53CF30	CKeyGen::GetUppercaseKey	MATCH	0x53CF30-0x53CF70	CRC table, toupper C locale	-

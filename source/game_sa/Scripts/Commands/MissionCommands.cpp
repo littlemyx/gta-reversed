@@ -61,9 +61,13 @@ void LoadAndLaunchMissionInternal(int32 missionId) {
 }
 
 void ScriptName(CRunningScript* S, std::string_view name) {
-    char lowered[8]{0};
-    rng::transform(name, lowered, [](char c) { return (char)std::tolower(c); });
-    S->SetName(name);
+    // exe 0x4846A1: ReadTextLabel(8), ASCII 'A'-'Z' += 0x20 over all 8 bytes, 8-byte copy into script+8 (no terminator)
+    char lowered[9]{};
+    for (size_t i = 0; i < 8 && i < name.size(); i++) {
+        const char c = name[i];
+        lowered[i] = (c >= 'A' && c <= 'Z') ? char(c + 0x20) : c;
+    }
+    S->SetName(lowered);
 }
 
 int32 StartScriptFire(CVector pos, int8 propagation, int32 size) {

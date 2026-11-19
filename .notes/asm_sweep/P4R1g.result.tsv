@@ -1,0 +1,53 @@
+addr	function	verdict	asm range	note	fix commit
+0x47C446	PointCameraAtChar	CONFIRMED	0x47C446-0x47C4C1	player ped -> null target, other ped -> ped (P4R1f fix 9fdb75233 correct)	-
+0x47CE23	IsCharHealthGreater	CONFIRMED	0x47CE23-0x47CE67	int param (fild), strict health > param (P4R1f fix 94249281f correct)	-
+0x47B26F	HasCharSpottedCharInFront	FIXED	0x47B26F-0x47B2B0	OurPedCanSeeThisEntity isSpotted = false (was true)	1d9f56d33
+0x47A089	IsCharAttachedToAnyCar	FIXED	0x47A089-0x47A0C5	m_pAttachedTo must be a vehicle (was the ped's own type, always false)	23425d725
+0x474E43	PlaneAttackPlayerUsingDogFight	FIXED	0x474E43-0x474E81	plain byte store of the mission, m_nTimeToStartMission untouched (SetCarMission rewrote it)	eb932c251
+0x466511	IsGreaterEqual<float> (0x466511/4665B9/4665EF/466611)	MATCH	-	!(a<b) vs a>=b only differs for NaN	-
+0x46720A	SubTimedStore (007E/007F/0081)	MATCH	0x4671E3-0x46724A	lhs - ts*rhs	-
+0x4674A7	AbsStore<int32/float>	MATCH	0x4674A7	abs	-
+0x4664D1	IsGreaterEqual<int32>	MATCH	0x4664D1	setge	-
+0x467393	AssignTo<int32,float>	MATCH	0x467393	ftol	-
+0x481C45	SetTextProportional/Justify/Background/Font/DrawBeforeFade	MATCH	0x481B47-0x481C82,0x485532	bool/int field stores	-
+0x491575	SetTextDropshadow	MATCH	0x491575	shadow byte c78, colour c7c..c88	-
+0x47AB57	SetCharSayContextImportant	MATCH	0x47AB57	Say(ctx u16, 0, 1.0, c80, c84, c88), int16 result	-
+0x495066	AttachCameraToVehicle/Char/LookAt variants	MATCH	0x495066,0x495104,0x49520C,0x49531B	TakeControlAttachToEntity arg order	-
+0x47E367	LocateCharCarCmd / 0x469760 LocateCharCharCmd	MATCH	-	delegates to CRunningScript::Locate*Command	-
+0x479931	AddNextMessageToPreviousBriefs	MATCH	0x479931	byte store	-
+0x4674E0	AbsStore<float>	MATCH	-	-	-
+0x475DB1	ClearConversationForChar	MATCH	0x475DB1	-	-
+0x48D5B0	ClearCharLastDamageEntity	MATCH	0x48D5B0	-	-
+0x48B268	IsCharInAnyBoat	MATCH	0x48B268	appearance == 4	-
+0x47B9FB	AttachMissionAudioToCar	MATCH	0x47B9FB	u8 slot-1 vs uint32 slot-1: noise	-
+0x47B479	ReportMissionAudioEventAtCar	MATCH	0x47B479	u16 event id: noise	-
+0x48C418	IsCharWaitingForWorldCollision	MATCH	0x48C418	flag 0x40000	-
+0x476646	ClearSpecificZonesToTriggerGangWar	MATCH	0x476646	-	-
+0x476F5D	CameraIsVectorMoveRunning	MATCH	0x476F5D	-	-
+0x4760AB	AreTextLabelsEqual	UNSURE	0x4760AB	exe compares 16 bytes via 0x8214d0; port string_view ==	-
+0x485574	SetSpritesDrawBeforeFade	MATCH	0x485574	-	-
+0x477017	DrawWindow	UNSURE	0x477017-0x4771xx	header copy/colour/type match; corner maths not traced	-
+0x4814E4	StartCharFire	MATCH	0x4814E4	StartScriptFire(pos, ped, 0.8, 1, 0, 1)	-
+0x470C0C	GetObjectAnimCurrentTime	MATCH	0x470C0C	-	-
+0x47FAE6	GetClosestCharNode	MATCH	0x47FAE6	-	-
+0x47BAD9	SetAreaName	MATCH	0x47BAD9	-	-
+0x47B4C0	HasGameJustReturnedFromFrontend	MATCH	0x47B4C0	byte == 1 vs bool: noise	-
+0x47A649	IsPCUsingJoyPad	MATCH	0x47A649	-	-
+0x47F1AC	StoreClock/RestoreClock	MATCH	-	-	-
+0x48A4A9	IsPlayerTargettingObject	MATCH	0x48A4A9	-	-
+0x48ABDA	CanCharSeeDeadChar	MATCH	0x48ABDA	-	-
+0x470ACE	DoCameraBump	MATCH	0x470ACE	-	-
+0x469ADE	IsPlayerDead	MATCH	0x469ADE	-	-
+0x48ECAA	AddBigGunFlash	MATCH	0x48ECAA-0x48ED50	AddLight + TriggerGunshot args	-
+0x49401E	IsCharAtScriptedAttractor	MATCH	0x49401E	-	-
+0x47BEE7	SetDeathWeaponPersist / IgnoreHeightDifference...	MATCH	-	flag bits	-
+0x479F07	DrawSubtitlesBeforeFade	MATCH	-	-	-
+0x469BD1	IsPlayerPressingHorn	MATCH	0x469BD1	-	-
+0x496EBB	AttachCharToBike	MATCH	0x496EBB	-	-
+0x473328	GetCameraFov	MATCH	-	-	-
+0x47A880	RemoveCharFromCarMaintainPosition	MATCH	0x47A880	-	-
+0x47B933	GetExtraCarColors	MATCH	-	-	-
+0x47BDD2	SetCameraPositionUnfixed	MATCH	0x47BDD2	-	-
+0x479E34	IsPlayerClimbing	MATCH	-	-	-
+0x479DDA	SetSwimSpeed	MATCH	-	-	-
+PORTED	Ported/Group*.cpp sample (EXPLODE_CAR, TASK_SMART_FLEE_CHAR, SET_UP_SKIP, SWITCH_CAR_SIREN, SET_CHAR_KINDA_STAY_IN_SAME_PLACE, SET_INTERPOLATION_PARAMETERS, TASK_DESTROY_CAR, CLEAR_AREA_OF_CHARS, SET_CHAR_SAY_CONTEXT, SET_CAR_ROTATION_VELOCITY, BURST_CAR_TYRE, IS_CAR_IN_AREA_3D, SET_CAR_ENGINE_ON, IS_AREA_OCCUPIED, ANCHOR_BOAT)	MATCH	-	15 of 255 static-story Ported handlers compared, 0 bugs; remaining 240 NOT_REACHED	-

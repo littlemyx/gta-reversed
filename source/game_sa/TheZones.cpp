@@ -396,8 +396,14 @@ bool CTheZones::FindZone(const CVector& point, std::string_view name, eZoneType 
 int16 CTheZones::FindZoneByLabel(const char* name, eZoneType type) {
     assert(type == eZoneType::ZONE_TYPE_INFO); // Originally an `if` returning `-1`, but let's be safe
 
+    // exe 0x572C40-0x572CBA: the name is copied into a zeroed 8 byte buffer (strcpy, so the first 8 chars are what counts) and compared
+    // with the 8 raw bytes of the label (the port compared C strings, which differs for an 8 char label without the terminator and for names longer than 8)
+    char buf[8]{};
+    for (size_t k = 0; k < sizeof(buf) && name[k]; k++) {
+        buf[k] = name[k];
+    }
     for (auto&& [i, v] : rngv::enumerate(GetNavigationZones())) {
-        if (name == v.GetInfoLabel()) {
+        if (memcmp(buf, v.m_InfoLabel, sizeof(buf)) == 0) {
             return (int16)i;
         }
     }

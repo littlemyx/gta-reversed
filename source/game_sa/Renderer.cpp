@@ -13,6 +13,7 @@
 #include "Occlusion.h"
 #include "PostEffects.h"
 #include "Shadows.h"
+#include "portable/sh7log.h"
 #include "CarFXRenderer.h"
 
 #include "toolsmenu/UIRenderer.h"
@@ -607,16 +608,16 @@ void CRenderer::PreRender() {
     ZoneScoped;
 
     assert(ms_nNoOfVisibleLods <= MAX_VISIBLE_LOD_PTRS);
-    std::ranges::for_each(GetVisibleLodPtrs(), [](auto& entity) { entity->PreRender(); });
+    std::ranges::for_each(GetVisibleLodPtrs(), [](auto& entity) { SH_VMX("pre_prerender", "post_prerender", entity); entity->PreRender(); });
 
     assert(ms_nNoOfVisibleEntities <= MAX_VISIBLE_ENTITY_PTRS);
-    std::ranges::for_each(GetVisibleEntityPtrs(), [](auto& entity) { entity->PreRender(); });
+    std::ranges::for_each(GetVisibleEntityPtrs(), [](auto& entity) { SH_VMX("pre_prerender", "post_prerender", entity); entity->PreRender(); });
 
     assert(ms_nNoOfVisibleSuperLods <= MAX_VISIBLE_SUPERLOD_PTRS);
-    std::ranges::for_each(GetVisibleSuperLodPtrs(), [](auto& entity) { entity->PreRender(); });
+    std::ranges::for_each(GetVisibleSuperLodPtrs(), [](auto& entity) { SH_VMX("pre_prerender", "post_prerender", entity); entity->PreRender(); });
 
     assert(ms_nNoOfInVisibleEntities <= MAX_INVISIBLE_ENTITY_PTRS);
-    std::ranges::for_each(GetInVisibleEntityPtrs(), [](auto& entity) { entity->PreRender(); });
+    std::ranges::for_each(GetInVisibleEntityPtrs(), [](auto& entity) { SH_VMX("pre_prerender", "post_prerender", entity); entity->PreRender(); });
 
     for (auto* link = CVisibilityPlugins::GetAlphaList().usedListHead.next;
         link != &CVisibilityPlugins::GetAlphaList().usedListTail;
@@ -625,6 +626,7 @@ void CRenderer::PreRender() {
         if (link->data.m_pCallback == CVisibilityPlugins::RenderEntity) {
             auto* entity = (CEntity*)link->data.m_pObj;
             entity->m_bOffscreen = false;
+            SH_VMX("pre_prerender", "post_prerender", entity);
             entity->PreRender();
         }
     }
@@ -636,6 +638,7 @@ void CRenderer::PreRender() {
         if (link->data.m_pCallback == CVisibilityPlugins::RenderEntity) {
             auto* entity = (CEntity*)link->data.m_pObj;
             entity->m_bOffscreen = false;
+            SH_VMX("pre_prerender", "post_prerender", entity);
             entity->PreRender();
         }
     }

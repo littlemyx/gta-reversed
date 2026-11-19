@@ -665,7 +665,9 @@ CTask* CTaskComplexKillPedOnFootArmed::CreateFirstSubTask(CPed* ped) {
     return CreateSubTask([&, this] {
         const auto& ourActiveWep = ped->GetActiveWeapon().GetWeaponInfo(ped);
 
-        if (!(targetToOurPedDistSq > sq(ourActiveWep.m_fTargetRange / 4.f)) && LineOfSightClearForAttack(ped)) { // exe: `fcompp; je` => NaN counts as in range
+        // ASM-P4R18e: exe 0x62C104-0x62C12A: the threshold is range^2 * 0.25 (constant 0x858C84; i.e. (range/2)^2, the port used (range/4)^2), range^2 unrounded in extended precision
+        const x87d rangeSq = (x87d)ourActiveWep.m_fTargetRange * (x87d)ourActiveWep.m_fTargetRange * (x87d)0.25f;
+        if (!((x87d)targetToOurPedDistSq > rangeSq) && LineOfSightClearForAttack(ped)) { // exe: `fcompp; je` => NaN counts as in range
             return TASK_SIMPLE_GUN_CTRL;
         }
 

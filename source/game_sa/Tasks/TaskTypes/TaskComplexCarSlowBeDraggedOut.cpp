@@ -79,8 +79,9 @@ CTask* CTaskComplexCarSlowBeDraggedOut::CreateNextSubTask(CPed* ped) {
     return CreateSubTask([this, ped] {
         switch (m_pSubTask->GetTaskType()) {
         case TASK_SIMPLE_CAR_FALL_OUT:                 return TASK_SIMPLE_CAR_SET_PED_OUT;
-        case TASK_SIMPLE_CAR_SET_PED_OUT:
+        // ASM-P4R18f: exe 0x64C837-0x64C881 (byte table 0x64C89C + dword table 0x64C88C): SET_PED_OUT and SET_PED_SLOW_DRAGGED_OUT => FINISHED (0x64C875), only SLOW_BE_DRAGGED_OUT => SET_PED_SLOW_DRAGGED_OUT (0x64C84F); the port sent SET_PED_OUT on to SET_PED_SLOW_DRAGGED_OUT
         case TASK_SIMPLE_CAR_SLOW_BE_DRAGGED_OUT:      return TASK_SIMPLE_CAR_SET_PED_SLOW_DRAGGED_OUT;
+        case TASK_SIMPLE_CAR_SET_PED_OUT:
         case TASK_SIMPLE_CAR_SET_PED_SLOW_DRAGGED_OUT: return TASK_FINISHED;
         default:                                       NOTSA_UNREACHABLE(); return TASK_FINISHED; // 0x64C883: returns nullptr without CreateSubTask; CreateSubTask(TASK_FINISHED) => nullptr
         }

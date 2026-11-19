@@ -1,0 +1,27 @@
+addr	function	verdict	asm range	note	fix commit
+0x47B983	SET_NO_RESPRAYS (c0bdcae69 review)	MATCH	0x47B983-0x47B9A5	NoResprays=(param!=0); AllRespraysCloseOrOpen(!NoResprays): CONFIRMED	
+0x681920	CTaskManager::SetNextSubTask	MATCH	0x681920-0x681967	vtable +0x20/+0x1c, parent walk	
+0x681A30	CTaskManager::AddSubTasks	MATCH	0x681A30-0x681A7A		
+0x681A80	CTaskManager::ParentsControlChildren	MATCH	0x681A80-0x681AEC	MakeAbortable(ped,URGENT,null) default args	
+0x681BD0	CTaskManager::ClearTaskEventResponse	MATCH	0x681BD0-0x681C0A		
+0x681720	CTaskManager::GetActiveTask	MATCH	0x681720-0x681734		
+0x6817D0	CTaskManager::FindTaskByType	MATCH	0x6817D0-0x681807		
+0x600B50	CPedIntelligence::SetPedDecisionMakerType	MATCH	0x600B50-0x600B9F		
+0x600C00	CPedIntelligence::IsInHearingRange	MATCH	0x600C00-0x600C5A	x87d already	
+0x600C60	CPedIntelligence::IsInSeeingRange	FIXED	0x600C60-0x600CDF	x87 sum order (z2+y2)+x2, dot (z,y,x)	0f95bfc94
+0x600CF0	CPedIntelligence::FindRespectedFriendInInformRange	FIXED	0x600CF0-0x600DAA	x87 sum order (z2+x2)+y2	d28cd677c
+0x600FF0	CPedIntelligence::GetTaskHold/GetTaskSwim/GetTaskJetPack	MATCH	0x600FF0-0x60113D	type ids 0x133/0x518/0x517	
+0x602050	CPedIntelligence::RecordEventForScript	MATCH	0x602050-0x60207A		
+0x6020A0	CPedIntelligence::IsInterestingEntity	MATCH	0x6020A0-0x6020BF		
+0x421050	CPedIntelligence::IncrementAngerAtPlayer	MATCH	0x421050-0x4210B5	Start(3000) guard equals exe	
+0x4B85B0	CPedIntelligence::GetActivePrimaryTask	MATCH	0x4B85B0-0x4B85C1		
+0x5FF9D0	CEntityScanner::Clear	MATCH	0x5FF9D0-0x5FFA11		
+0x5FFA20	CEntityScanner::ScanForEntitiesInRange	MATCH	0x5FFA20-0x5FFE52	tick, range, sectors, scan codes, insertion sort, refs	
+0x5FFE60	CVehicleScanner::ScanForVehiclesInRange	MATCH	0x5FFE60-0x5FFEC2		
+0x4224E0	CCarCtrl::FindSpeedMultiplier	MATCH	0x4224E0-0x422581		
+0x4226F0	CCarCtrl::FindIntersection2Lines	MATCH	0x4226F0-0x422753		
+0x421770	CCarCtrl::FindSequenceElement	MATCH	0x421770-0x4217A8		
+0x41C050	CCarAI::CarHasReasonToStop	MATCH	0x41C050-0x41C060		
+0x41CA40	CCarAI::FindPoliceBikeMissionForWantedLevel	MATCH	0x41CA40	=43	
+0x41DA30	CCarAI::UpdateCarAI	NOT_REACHED		large, out of budget	
+0x426EF0	CCarCtrl::PickNextNodeToChaseCar	NOT_REACHED		out of budget	

@@ -98,20 +98,21 @@ bool IsCarInAirProper(CRunningScript& S, CVehicle& vehicle) {
     return true;
 }
 
-bool IsCarStuck(CVehicle& vehicle) {
-    return CTheScripts::StuckCars.HasCarBeenStuckForAWhile(GetVehiclePool()->GetRef(&vehicle));
+// exe (ProcessCommands900To999 stuck-car cases): the commands pass the script handle itself to CStuckCarCheck (no pool lookup); the CVehicle& parameter dereferenced a null/stale handle (REMOVE_STUCK_CAR_CHECK 0x3CD with -1 crashed)
+bool IsCarStuck(int32 vehicleHandle) {
+    return CTheScripts::StuckCars.HasCarBeenStuckForAWhile(vehicleHandle);
 }
 
-void AddStuckCarCheck(CVehicle& vehicle, float stuckRadius, uint32 time) {
-    CTheScripts::StuckCars.AddCarToCheck(GetVehiclePool()->GetRef(&vehicle), stuckRadius, time, false, false, false, false, 0);
+void AddStuckCarCheck(int32 vehicleHandle, float stuckRadius, uint32 time) {
+    CTheScripts::StuckCars.AddCarToCheck(vehicleHandle, stuckRadius, time, false, false, false, false, 0);
 }
 
-void RemoveStuckCarCheck(CVehicle& vehicle) {
-    CTheScripts::StuckCars.RemoveCarFromCheck(GetVehiclePool()->GetRef(&vehicle));
+void RemoveStuckCarCheck(int32 vehicleHandle) {
+    CTheScripts::StuckCars.RemoveCarFromCheck(vehicleHandle);
 }
 
-void AddStuckCarCheckWithWarp(CVehicle& vehicle, float stuckRadius, uint32 time, bool stuck, bool flipped, bool inWater, int8 numberOfNodesToCheck) {
-    CTheScripts::StuckCars.AddCarToCheck(GetVehiclePool()->GetRef(&vehicle), stuckRadius, time, true, stuck, flipped, inWater, numberOfNodesToCheck);
+void AddStuckCarCheckWithWarp(int32 vehicleHandle, float stuckRadius, uint32 time, bool stuck, bool flipped, bool inWater, int8 numberOfNodesToCheck) {
+    CTheScripts::StuckCars.AddCarToCheck(vehicleHandle, stuckRadius, time, true, stuck, flipped, inWater, numberOfNodesToCheck);
 }
 
 void PlaneAttackPlayerUsingDogFight(CPlane& plane, CPlayerPed& player, float altitude) {

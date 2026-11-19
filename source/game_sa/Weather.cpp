@@ -486,7 +486,7 @@ void CWeather::Update() {
     // and the start/stop chances are rolled once per frame
     if (IsRainy(NewWeatherType) && IsRainy(OldWeatherType) && !CCullZones::CamNoRain() && !CCullZones::PlayerNoRain() && !IsUnderWater() && CGame::CanSeeOutSideFromCurrArea()) {
         if (LightningBurst) {
-            if (CGeneral::RandomBool(9.4f)) { // 24 / 256 * 100 ~ 9.4
+            if ((CGeneral::GetRandomNumber() & 0xFF) < 24) { // exe 0x72B9DB: (rand() & 0xFF) < 0x18 (not a float percentage)
                 LightningBurst = false;
                 LightningDuration = std::min(CTimer::GetFrameCounter() - LightningStart, 20u);
                 WhenToPlayLightningSound = (20 - LightningDuration) * 150 + CTimer::GetTimeInMS();
@@ -498,7 +498,7 @@ void CWeather::Update() {
                     LightningFlashLastChange = CTimer::GetTimeInMS();
                 }
             }
-        } else if (CGeneral::RandomBool(0.6f)) { // 200 / RAND_MAX * 100 ~ 0.6
+        } else if ((CGeneral::GetRandomNumber() & 0xFFFF) < 200) { // exe 0x72BA88: (rand() & 0xFFFF) < 0xC8 (not a float percentage)
             LightningStart = CTimer::GetFrameCounter();
             LightningFlashLastChange = CTimer::GetTimeInMS();
             LightningBurst = true;

@@ -1,0 +1,38 @@
+addr	function	verdict	asm range	note	fix commit
+0x68C3C0	CTaskComplexKillCriminal::FindNextCriminalToKill	MATCH	0x68C3C0-0x68C6D2	review of 925f1993f CONFIRMED: sum z,y,x extended, ref stored float, compare unrounded, ref==0 takes, 5 slots 0x7ac-0x7bc	-
+0x62BF00	CTaskComplexKillPedOnFootArmed::CreateFirstSubTask	FIXED	0x62C104-0x62C186	gun-control threshold range^2*0.25 (const 0x858C84), port used (range/4)^2; rest of CreateSubTask selection (0x38b/0xca/0x3fc, flags 0x600000, bThrow) MATCH	5f23ed2b6
+0x637DB0	CTaskComplexSitDownThenIdleThenStandUp::CreateNextSubTask	MATCH	0x637DB0-0x637F20	instruction-level compare, no difference	-
+0x631550	CTaskComplexSitDownThenIdleThenStandUp::CreateSubTask	MATCH	0x631550-0x631685	instruction-level compare, no difference	-
+0x640F30	CTaskComplexStealCar::CreateSubTask	MATCH	0x640F30-0x6410C6	instruction-level compare, no difference	-
+0x644210	CTaskComplexStealCar::CreateFirstSubTask	MATCH	0x644210-0x644243	instruction-level compare, no difference	-
+0x6613A0	CTaskComplexPassObject::CreateFirstSubTask	MATCH	0x6613A0-0x661558	instruction-level compare, no difference	-
+0x624A40	CTaskSimpleFight::ChooseAttackAI	MATCH	0x624A40-0x624B1F	instruction-level compare, no difference	-
+0x696F90	CTaskComplexInvestigateDeadPed::CreateSubTask	MATCH	0x696F90-0x69718D	instruction-level compare, no difference	-
+0x697A00	CTaskComplexInvestigateDeadPed::ControlSubTask	MATCH	0x697A00-0x697B4A	instruction-level compare, no difference	-
+0x638040	CTaskComplexHitResponse::CreateFirstSubTask	MATCH	0x638040-0x638147	instruction-level compare, no difference	-
+0x65A990	CTaskComplexMedicTreatInjuredPed::CreateNextSubTask	NOT_REACHED		budget	-
+0x669690	CTaskComplexFollowNodeRoute::CreateSubTask	NOT_REACHED		budget	-
+0x65B460	CTaskComplexFleePoint::CreateSubTask	NOT_REACHED		budget	-
+0x64D2B0	CTaskComplexGoToCarDoorAndStandStill::CreateNextSubTask	NOT_REACHED		budget	-
+0x64C6A0	CTaskComplexCarSlowBeDraggedOut::CreateSubTask	NOT_REACHED		budget	-
+0x690DC0	CTaskComplexFacial::CreateNextSubTask	NOT_REACHED		budget	-
+0x657220	CTaskComplexWalkRoundObject::CreateNextSubTask	NOT_REACHED		budget	-
+0x639200	CTaskComplexOnFire::ControlSubTask	NOT_REACHED		budget	-
+0x642390	CTaskComplexLeaveCarAndFlee::CreateNextSubTask	NOT_REACHED		budget	-
+0x628C80	CTaskComplexDestroyCarArmed::CalculateSearchPositionAndRanges	NOT_REACHED		budget	-
+0x631E50	CTaskComplexHitByGunResponse::CreateFirstSubTask	NOT_REACHED		budget	-
+0x671630	CTaskComplexFollowPointRoute::CreateNextSubTask	NOT_REACHED		budget	-
+0x694EE0	CTaskComplexFollowPedFootsteps::CreateNextSubTask	NOT_REACHED		budget	-
+0x63B6C0	CTaskComplexEnterBoatAsDriver::CreateSubTask	NOT_REACHED		budget	-
+0x654B80	CTaskComplexWalkRoundBuildingAttempt::ComputeMoveDir	NOT_REACHED		budget	-
+0x61C650	CTaskSimpleFight::BeHitWhileBlocking	NOT_REACHED		budget	-
+0x62BE30	CTaskComplexKillPedOnFootMelee::CreateFirstSubTask	NOT_REACHED		budget	-
+0x6359C0	CTaskComplexUseScriptedBrain::CreateNextSubTask	NOT_REACHED		budget	-
+0x63CF90	CTaskComplexDrivePointRoute::CreateNextSubTask	NOT_REACHED		budget	-
+0x64C810	CTaskComplexCarSlowBeDraggedOut::CreateNextSubTask	NOT_REACHED		budget	-
+0x655140	CTaskComplexWalkRoundObject::CreateRouteTask	NOT_REACHED		budget	-
+0x675740	CTaskInteriorShopKeeper::ControlSubTask	NOT_REACHED		budget	-
+0x695000	CTaskComplexFollowPedFootsteps::CreateFirstSubTask	NOT_REACHED		budget	-
+0x649F50	CTaskSimpleCarSetPedOut::Clone	NOT_REACHED		budget	-
+0x659990	CTaskComplexExtinguishFireOnFoot::FindFireNearPed	NOT_REACHED		budget	-
+0x6327C0	CTaskComplexUseAttractor::ControlSubTask	NOT_REACHED		budget	-

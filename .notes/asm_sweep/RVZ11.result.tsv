@@ -1,0 +1,7 @@
+addr	function	verdict	asm range	note	fix commit
+0x4D1490	CAnimBlendAssociation::UpdateBlend	MATCH	0x4D1490-0x4D1569	fcomp 0x4D1552 delta>0 -> 0, other branches (blend<=0 && delta<0, blend>1) match; consts 0/1	b21f72963
+0x6B2626	CAutomobile::ProcessControl turn-mass cap	MATCH	0x6B2620-0x6B263B	fcom+test 5+jnp: mass<2500 ? mass : 2500; then *-0.008, *up	0dd8ff704
+0x6B4E83	CAutomobile::ProcessAI min	MATCH	0x6B4E6E-0x6B4E97	call 0x404330(1.0, 3000/mass) = 1<q?1:q; (min*mult)*mass	9c89a16e6
+0x6A4FFB	CAutomobile::ProcessCarWheelPair min	MATCH	0x6A4FC8-0x6A5036	same helper args; min*(-0.002*mass) then *steer, GetRight*	9c89a16e6
+0x6BCA9C	CBike::ProcessAI (two sites)	MATCH	0x6BCA68-0x6BCB6A	speed=min(0.1,mag); max(q,pedal)=q>pedal?q:pedal (args pushed pedal then q); gas 0x49c / brake 0x4a0	7a602db4c
+0x54E629	CPhysical::ProcessCollision tail	MATCH	0x54E5DA-0x54E641	new-old unrounded, (x2+y2)+z2, fsqrt; both port sites share tail	9ca82aa7a

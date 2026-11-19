@@ -411,7 +411,7 @@ CTask* CTaskComplexLeaveCar::CreateNextSubTask(CPed* ped) {
         }
 
         if (m_bIsInAir) {
-            m_nDieAnimID = ANIM_ID_KO_SHOT_FRONT_0; // 0x641A9E: also reset by the exe
+            // 0x641E92 `jne 0x641A9E`: the exe jumps past the `m_nDieAnimID = 0xF` store at 0x641A97, so m_nDieAnimID is left untouched here
             return CreateSubTask(TASK_SIMPLE_CAR_SET_PED_OUT, ped);
         }
 

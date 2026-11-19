@@ -3811,12 +3811,13 @@ bool CCamera::CameraColDetAndReact(CVector* source, CVector* target) {
     const CVector  diff    = *source - *target;
 
     // 0x5201CB-0x5201E7 / 0x52044E-0x52045E: the exe inlines the length with the terms added in `z, y, x` order (CVector::Magnitude adds x, y, z)
-    const auto LengthZYX = [](x87d x, x87d y, x87d z) { return (float)std::sqrt((z * z + y * y) + x * x); };
+    // (the length stays unrounded in st0: 0x5201E7 `fmul [v0]; fmul 0.2939` / 0x52045A `fdivr` are applied to it before the store)
+    const auto LengthZYX = [](x87d x, x87d y, x87d z) -> x87d { return std::sqrt((z * z + y * y) + x * x); };
 
-    float radius = LengthZYX(diff.x, diff.y, diff.z) * gpCamColVars[0] * 0.2939f;
+    float radius = (float)(LengthZYX(diff.x, diff.y, diff.z) * gpCamColVars[0] * 0.2939f);
 
     if (gCurCamColVars > 9 && ignored) {
-        float limit;
+        x87d xlimit;
         if (ignored->GetIsTypeVehicle() && ignored->AsVehicle()->m_nVehicleSubType == VEHICLE_TYPE_AUTOMOBILE) {
             if (ignored->m_nModelIndex != gCamColLastModelIdx) {
                 gCamColLowestSphereZ = 100.f;
@@ -3837,18 +3838,19 @@ bool CCamera::CameraColDetAndReact(CVector* source, CVector* target) {
             }
             const CMatrix& mat = *ignored->m_matrix;
             const CVector& pos = ignored->GetPosition();
-            limit = (((target->z - pos.z) * mat.GetUp().z
-                    + (target->y - pos.y) * mat.GetUp().y)
-                    + (target->x - pos.x) * mat.GetUp().x) - gCamColLowestSphereZ; // NOTE: addition order as in the original
-            if (limit < 0.2f) {
-                limit = 0.2f;
+            // x87: the whole expression stays unrounded (0x5202CF-0x520303), `limit` is only rounded when it is stored into `radius`
+            xlimit = (((((x87d)target->z - pos.z) * mat.GetUp().z
+                      + ((x87d)target->y - pos.y) * mat.GetUp().y)
+                      + ((x87d)target->x - pos.x) * mat.GetUp().x) - gCamColLowestSphereZ); // NOTE: addition order as in the original
+            if (xlimit < 0.2f) {
+                xlimit = 0.2f;
             }
         } else {
             const auto& bb = CModelInfo::GetModelInfo(ignored->m_nModelIndex)->GetColModel()->GetBoundingBox();
             const float sz = bb.m_vecMax.z - bb.m_vecMin.z;
             const float hx = (bb.m_vecMax.x - bb.m_vecMin.x) * 0.5f;
             const float hy = (bb.m_vecMax.y - bb.m_vecMin.y) * 0.5f;
-            limit = sz * 0.5f;
+            float limit = sz * 0.5f;
             if (!(hx < hy)) { // 0x520392: an unordered compare takes this side as well
                 if (hy < limit) {
                     limit = hy;
@@ -3856,14 +3858,15 @@ bool CCamera::CameraColDetAndReact(CVector* source, CVector* target) {
             } else if (hx < limit) {
                 limit = hx;
             }
+            xlimit = limit;
         }
 
-        if (gpCamColVars[1] < limit) {
+        if (gpCamColVars[1] < xlimit) {
             if (gpCamColVars[1] < radius) {
                 radius = gpCamColVars[1];
             }
-        } else if (limit < radius) {
-            radius = limit;
+        } else if (xlimit < radius) {
+            radius = (float)xlimit;
         }
     }
 
@@ -3876,7 +3879,7 @@ bool CCamera::CameraColDetAndReact(CVector* source, CVector* target) {
 
     float minDist = gpCamColVars[2];
     if (gCurCamColVars < 10) {
-        minDist = (gCurCamColVars < 4 ? 0.18f : 0.3f) / LengthZYX((x87d)source->x - target->x, (x87d)source->y - target->y, (x87d)source->z - target->z);
+        minDist = (float)((x87d)(gCurCamColVars < 4 ? 0.18f : 0.3f) / LengthZYX((x87d)source->x - target->x, (x87d)source->y - target->y, (x87d)source->z - target->z));
     }
 
     bool bIsBike = false;
@@ -3900,12 +3903,13 @@ bool CCamera::CameraColDetAndReact(CVector* source, CVector* target) {
             gCamColLastSource = CVector{ 0.f, 0.f, 0.f };
         }
         const x87d mdx = (x87d)source->x - gCamColLastSource.x, mdy = (x87d)source->y - gCamColLastSource.y, mdz = (x87d)source->z - gCamColLastSource.z;
-        if ((x87d)(0.01f * 0.01f) < (mdz * mdz + mdy * mdy) + mdx * mdx) { // 0x52054A-0x52058C: sum in `z, y, x` order
-            float step = (dist - gCurDistForCam) * (CTimer::GetTimeStep() * gpCamColVars[5]);
+        if ((x87d)0.01f * 0.01f < (mdz * mdz + mdy * mdy) + mdx * mdx) { // 0x52054A-0x52058C: sum in `z, y, x` order, the product of the 2 constants is exact (x87)
+            // x87: (dist - cur) * (timestep * v5) stays unrounded up to the final store of `cur + step` (0x52058C-0x5205C6)
+            x87d step = ((x87d)dist - gCurDistForCam) * ((x87d)CTimer::GetTimeStep() * gpCamColVars[5]);
             if (step > 0.05f) {
                 step = 0.05f;
             }
-            gCurDistForCam += step;
+            gCurDistForCam = (float)(step + gCurDistForCam);
         }
         gCamColLastSource = *source;
     } else {
@@ -3915,7 +3919,10 @@ bool CCamera::CameraColDetAndReact(CVector* source, CVector* target) {
         gCurDistForCam = 1.f;
     }
 
-    *source = diff * gCurDistForCam + *target;
+    // 0x5205E6-0x52062C: x/y: (diff * cur) is kept unrounded until the add; z: the product is stored as float first
+    source->x = (float)((x87d)diff.x * gCurDistForCam + target->x);
+    source->y = (float)((x87d)diff.y * gCurDistForCam + target->y);
+    source->z = (float)((x87d)diff.z * gCurDistForCam) + target->z;
 
     if (bIsBike && gCurDistForCam < 0.5f) {
         RwCameraSetNearClipPlane(Scene.m_pRwCamera, 0.05f);

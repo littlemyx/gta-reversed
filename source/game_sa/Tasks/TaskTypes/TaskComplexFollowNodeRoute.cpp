@@ -447,7 +447,7 @@ CTask* CTaskComplexFollowNodeRoute::CreateNextSubTask(CPed* ped) {
     }
 
     const auto tt = GetSubTaskType(m_CurrPtIdx, m_LastRoutePointIsTarget, *m_PtRoute);
-    return CreateSubTask(m_bUseBlending ? tt : CTaskComplexFollowNodeRoute::CalcGoToTaskType(ped, tt), ped);
+    return CreateSubTask(m_bUseBlending ? CalcGoToTaskType(ped, tt) : tt, ped); // exe: `test flags, 8` (m_bUseBlending) => CalcGoToTaskType; the port had the condition inverted
 }
 
 // 0x671800
@@ -470,7 +470,7 @@ CTask* CTaskComplexFollowNodeRoute::CreateFirstSubTask(CPed* ped) {
     m_bNewTarget = false;
 
     const auto tt = GetSubTaskType(m_CurrPtIdx, m_LastRoutePointIsTarget, *m_PtRoute);
-    return CreateSubTask(m_bUseBlending ? tt : CTaskComplexFollowNodeRoute::CalcGoToTaskType(ped, tt), ped);
+    return CreateSubTask(m_bUseBlending ? CalcGoToTaskType(ped, tt) : tt, ped); // exe: `test flags, 8` (m_bUseBlending) => CalcGoToTaskType; the port had the condition inverted
     
 }
 

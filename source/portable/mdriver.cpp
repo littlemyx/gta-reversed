@@ -513,7 +513,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         const int h = I_(0); CEntity* e = EntityOfHandle(h, cop);
         if (!e) { QueueActions({}, 0); return; }
         const auto pos = e->GetPosition();
-        if (Ad3()) if (auto* o = CPools::GetObject(h); o && o->objectFlags.bIsLiftable && c && !c->GetEntityThatThisPedIsHolding()) { // AD3 (off by default): stand 1.5 m before a liftable object and press the pick-up key
+        if (auto* o = CPools::GetObject(h); o && o->objectFlags.bIsLiftable && c && !c->GetEntityThatThisPedIsHolding()) { // CR4: default on (was AD3-only): stand 1.5 m before a liftable object and press the pick-up key
             QueueActions({ "standobj " + std::to_string(h) + " 1.5", "wait 10", "key down return", "wait 1", "key up return", "wait 90" }, row.settle); return;
         }
         one(warp(pos.x + 0.5f, pos.y, pos.z, false)); return;

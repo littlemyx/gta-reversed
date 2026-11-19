@@ -540,9 +540,10 @@ void CEventDamage::ComputeDeathAnim(CPed* ped, bool bMakeActiveTaskAbortable) {
                         if (m_pedPieceType == PED_PIECE_LEFT_ARM)
                             m_nAnimID = ANIM_ID_KD_LEFT;
                         else
-                            m_nAnimID = m_pedPieceType
-                                ? ANIM_ID_KO_SKID_BACK
-                                : ANIM_ID_KD_RIGHT;
+                            // 0x4B3DD9: right arm -> KD_RIGHT, every other piece -> KO_SKID_BACK
+                            m_nAnimID = m_pedPieceType == PED_PIECE_RIGHT_ARM
+                                ? ANIM_ID_KD_RIGHT
+                                : ANIM_ID_KO_SKID_BACK;
                         break;
                     case 1:
                         m_nAnimID = ANIM_ID_KO_SPIN_R;
@@ -624,11 +625,11 @@ void CEventDamage::ComputeDeathAnim(CPed* ped, bool bMakeActiveTaskAbortable) {
                 fForceFactor *= -5.0f;
                 ped->bWasStanding = false;
                 ped->bIsStanding = false;
-                CVector vecForce = m_pSourceEntity->GetPosition() - ped->GetPosition();
-                vecForce.Normalise();
-                vecForce *= fForceFactor;
-                vecForce.z = 5.0f;
-                ped->ApplyMoveForce(vecForce);
+                // 0x4B3E5A-0x4B3EE7: CVector2D::Normalise on (dx, dy) only (port normalised the 3D vector incl. z)
+                const auto diff = m_pSourceEntity->GetPosition() - ped->GetPosition();
+                CVector2D dir2d{ diff.x, diff.y };
+                dir2d.Normalise();
+                ped->ApplyMoveForce(CVector{ dir2d.x * fForceFactor, dir2d.y * fForceFactor, 5.0f });
             }
         }
     }

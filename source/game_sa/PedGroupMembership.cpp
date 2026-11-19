@@ -153,7 +153,10 @@ void CPedGroupMembership::Process() {
         if (IsLeader(mem)) { // Leader's distance to itself always 0, thus ignore
             continue;
         }
-        if (sq(m_separationRange) >= (leaderPos - mem->GetPosition()).SquaredMagnitude()) {
+        // 0x5FBB11-0x5FBB47: the exe sums dz^2 + dy^2 + dx^2 (z,y,x order; each op rounds to float, PC=24) and compares sep^2 < dist^2 (a NaN distance never removes)
+        const auto d = mem->GetPosition() - leaderPos;
+        const float distSq = (d.z * d.z + d.y * d.y) + d.x * d.x;
+        if (!(m_separationRange * m_separationRange < distSq)) {
             continue;
         }
         if (mem->GetAreaCode() != GetLeader()->GetAreaCode()) { // 0x5FBB49: `mov al, [edx+0x2F] / cmp al, [edi+0x2F] / jne skip` - a ped in another area (interior) than the leader is never removed for distance

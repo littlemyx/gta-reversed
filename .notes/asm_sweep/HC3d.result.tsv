@@ -1,0 +1,14 @@
+addr	function	verdict	asm range	note	fix commit
+0x43C900	CCurves::CalcCurvePoint	MATCH	0x43C900-0x43CE5A	clamp/NaN branches, inlined DistForLine (cross==0 -> -1), min(d1,d2)/min(5,m), arg slots, tail speed lerp*total/(ms*0.001f); previous bit-exact oracle pass 19e622df2	-
+0x5F1890	CPedGeometryAnalyser::ComputeRouteRoundSphere	MATCH	0x5F1890-0x5F1AFC	IntersectRay out slots, z,y,x sums, e1z spill, fcompp strictness, closest-point order	-
+0x5F3730	CPedGeometryAnalyser::ComputeMoveDirToAvoidEntity	FIXED	0x5F3730-0x5F387B	dist3 first product is planes[3].z*ped.y (exe quirk)	e9830403b
+0x447600	CGarage::InitDoorsAtStart	MATCH	0x447600-0x44763C	flags &0x39|0x40, jump tables decoded: closed for 1,6-12,14-45; open 2-5; 13/0 untouched	-
+0x5B25F0	CCam::Process_FlyBy	MATCH	0x5B25F0-0x5B2A91	init/finished/normal branches, segment loops <=, uint32 time, up/roll cos-sin, front/up cross order, FOV	-
+0x4325C0	CCarCtrl::FindAngleToWeaveThroughTraffic	MATCH	0x432922-0x432B0A	tail only (wrap/middle/diff/return choice, strictness); prelude+sector loop not re-read	-
+0x55FFD0	CTimeCycle::FindTimeCycleBox	MATCH	0x55FFD0-0x5601D4	-	-
+0x560330	CTimeCycle::GetAmbientRed/Green/Blue (+_Obj, _BeforeBrightness)	MATCH	0x560330-0x5603BC	9 getters	-
+0x608970	CAcquaintance::GetAcquaintances/ClearAsAcquaintance/ClearAcquaintances/SetAsAcquaintance	MATCH	0x608970-0x608E1B	-	-
+0x53F200	CPad::SetTouched	MATCH	0x53F200-0x53F20B	offset 0x120 not cross-checked	-
+0x6E6CA0	CWaterLevel::BlockHit	MATCH	0x6E6CA0-0x6E6D06		-
+0x5F3DD0|0x5F6110	CPedGeometryAnalyser::ComputeRouteRoundEntityBoundingBox	NOT_REACHED		1900 asm instructions, budget	-
+0x44A240 etc.	CGarages/CPathFind/CIplStore/CStreaming small rows, CCarCtrl::SteerAICarWithPhysicsFollowPath	NOT_REACHED		budget	-

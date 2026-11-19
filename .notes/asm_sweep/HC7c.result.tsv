@@ -1,0 +1,13 @@
+addr	function	verdict	asm range	note	fix commit
+0x5E1B10	CPed::UpdatePosition (review of 1a2b5529e)	CONFIRMED	0x5E1EEC	fcomp [0x863244]=0x3D23D70B read from the exe	-
+0x6B1880	CAutomobile::ProcessControl	FIXED	0x6B1FF0,0x6B2C61,0x6B2E83,0x6B324D	four thresholds 0.04f/0.01f +1ulp (earlier MATCH: S16*/P4RV*)	460a77e7f
+0x54BA60	CPhysical::ProcessCollisionSectorList	FIXED	0x54C5B5	0.0025f+1ulp (S26b/P4R7*)	8676992a3
+0x6E1A60	CVehicle::DoVehicleLights	FIXED	0x6E2763	0.2025f-1ulp (S19*)	1f4e6793a
+0x66FDA0	CTaskComplexWanderStandard::LookForChatPartners	FIXED	0x66FE2B	0.04f+1ulp (S09 MATCH)	d9be6dd05
+0x5245B0	CCam::Process_FollowCar_SA	FIXED	0x5250DE	0.04f+1ulp (S31*/P4RVX)	5567d7592
+0x614210	CPopulation::AddPedAtAttractor	FIXED	0x6142A6	0.1225f-1ulp (S23*/P4R9/P4R13b/S67)	4018dba3c
+0x50CFA0	CCamera::HandleCameraMotionForDucking	FIXED	0x50CFFA	1e-6f+1ulp (S30 MATCH)	73a5eb8be
+0x50CEF0	CCamera::ResetDuckingSystem	FIXED	0x50CF57	1e-6f+1ulp (S30 MATCH)	73a5eb8be
+0x5435C0	CPhysical::ApplyCollision-1	RECONFIRMED	all	dot order, mass from |rxn|^2, consts 0.7/0.3, ApplyForce arg order	-
+0x548680	CPhysical::ApplyCollision-2	NOT_REACHED	call/const skeleton only	constants 0x858ee4/0x858c98/0x858c1c vs port friction block agree; full compare not done (2185 insns)	-
+0x4181B0	CCollision::SphereCastVsCaches	NOT_REACHED	-	S69c already MATCH over the whole function	-

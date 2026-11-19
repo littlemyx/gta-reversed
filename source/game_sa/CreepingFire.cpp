@@ -36,7 +36,8 @@ void CCreepingFire::Update() {
 // 0x53A450
 bool CCreepingFire::TryToStartFireAtCoors(CVector pos, uint8 nGenerations, bool a5, bool bScriptFire, float fDistance) {
     uint8& status = m_aFireStatus[NOTSA_FTOL(size_t, pos.x) % 32][NOTSA_FTOL(size_t, pos.y) % 32];
-    if (status == 0)
+    // exe 0x53A47B: a cell that is not idle (status != 0) returns false; the port tested == 0
+    if (status != 0)
         return false;
 
     if (!gFireManager.PlentyFiresAvailable())

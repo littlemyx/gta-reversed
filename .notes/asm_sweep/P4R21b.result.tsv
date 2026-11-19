@@ -1,0 +1,34 @@
+addr	function	verdict	asm range	note	fix commit
+0x6C2B90	cBuoyancy::PreCalcSetup	MATCH	0x6C2B90-0x2F64	all model tables/constants/branch order checked	
+0x6C2970	cBuoyancy::SimpleSumBuoyancyData	MATCH	0x6C2970-0x2B6E	NaN and operation order ok	
+0x6C28C0	cBuoyancy::FindWaterLevelNorm	MATCH	0x6C28C0-0x296B		
+0x6C3B00	cBuoyancy::SimpleCalcBuoyancy	MATCH	0x6C3B00-0x3EE9	sample accumulation, 4 splash edges ok	
+0x6C3030	cBuoyancy::ProcessBuoyancyBoat	MATCH	0x6C3030-0x341B	volume tables, dot z,y,x ok	
+0x6C34E0	cBuoyancy::AddSplashParticles	FIXED	0x6C34E0-0x3AF3	magnitude order z,y,x; clamp x*(1/s)*0.1; velocity z=-speed*120; from+delta*t; NaN	6ec7eaba0
+0x59BE30	CMatrix::operator*-Mat	MATCH	0x59BE30-0x59BEFF	first 9 output cells checked; pos row not read	
+0x59BFA0	CMatrix::operator+	MATCH	0x59BFA0-0x59C045		
+0x59B6A0	CMatrix::Reorthogonalise	NOT_REACHED		budget	
+0x59C160	CQuaternion::Get-Euler	NOT_REACHED		budget	
+0x59C230	CQuaternion::Get-AxisAngle	NOT_REACHED		budget	
+0x59C270	CQuaternion::Multiply	NOT_REACHED		budget	
+0x59C3E0	CQuaternion::Set-Matrix	NOT_REACHED		budget	
+0x59C530	CQuaternion::Set-Euler	NOT_REACHED		budget	
+0x59C600	CQuaternion::Set-AxisAngle	NOT_REACHED		budget	
+0x59C630	CQuaternion::Slerp	NOT_REACHED		budget	
+0x4CF9B0	CQuaternion::Scale	NOT_REACHED		budget	
+0x4CF9E0	CQuaternion::Copy	NOT_REACHED		budget	
+0x4D37D0	CQuaternion::Conjugate	NOT_REACHED		budget	
+0x40FE00	CVector::Difference	NOT_REACHED		budget	
+0x59C6D0	CVector::FromMultiply3x3	NOT_REACHED		budget	
+0x43E110	CVector2D::operator=	NOT_REACHED		budget	
+0x54EB30	CMatrixLinkList::GetNumUsed1	NOT_REACHED		budget	
+0x54EB50	CMatrixLinkList::GetNumUsed2	NOT_REACHED		budget	
+0x4241C0	CPlaceable::SetPosn-vector	NOT_REACHED		budget	
+0x54F2B0	CPlaceable::IsWithinArea-xyz	NOT_REACHED		budget	
+0x54F010	CPlaceable::FreeStaticMatrix	NOT_REACHED		budget	
+0x54F4C0	CPlaceable::AllocateStaticMatrix	NOT_REACHED		budget	
+0x411990	CPlaceable::GetMatrix	NOT_REACHED		budget	
+0x5334F0	CEntity::TransformFromObjectSpace-ref	NOT_REACHED		budget	
+0x534250	CEntity::GetBoundCentre-vec	NOT_REACHED		budget	
+0x534290	CEntity::GetBoundCentre-ref	NOT_REACHED		budget	
+CPathNode::GetPosition,ConvertToEulerAngles,ConvertFromEulerAngles,Rotate,Slerp-core		NOT_REACHED		budget	

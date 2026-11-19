@@ -752,9 +752,8 @@ bool CBmx::ProcessAI(uint32& extraHandlingFlags) {
         //> Apply a turn force based on the lean (wheelie/stoppie)
         const auto& bh = *m_BikeHandling;
         const auto  GetCappedSpeed = [&] { // min(speed, 0.1)
-            return m_vecMoveSpeed.Magnitude() <= 0.1f
-                ? m_vecMoveSpeed.Magnitude()
-                : 0.1f;
+            const float mag = m_vecMoveSpeed.Magnitude();
+            return mag > 0.1f ? 0.1f : mag; // NaN keeps the speed (exe fcomp + test ah,0x41 + jne)
         };
         if (m_RideAnimData.LeanFwd < 0.0f) {
             m_vecCentreOfMass.y = bh.m_fLeanBakCOM * m_RideAnimData.LeanFwd + m_pHandlingData->m_vecCentreOfMass.y;

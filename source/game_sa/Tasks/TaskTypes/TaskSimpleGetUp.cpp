@@ -61,7 +61,7 @@ bool CTaskSimpleGetUp::MakeAbortable(CPed* ped, eAbortPriority priority, const C
                 const auto eventDamage = static_cast<const CEventDamage*>(event);
                 if (eventDamage->m_damageResponse.m_bHealthZero && eventDamage->m_bAddToEventGroup)
                     bFatalDamage = true;
-                else if (CTimer::GetTimeInMS() - eventDamage->m_nStartTime > NOTSA_FTOL(uint32, CTimer::GetTimeStepInMS() * 3.0F))
+                else if ((uint64)(uint32)(CTimer::GetTimeInMS() - eventDamage->m_nStartTime) > (uint64)NOTSA_FTOL(uint32, CTimer::GetTimeStepInMS()) * 3u /* exe 0x678049-0x67809A: ftol(timeStepMs) is truncated first, then * 3.0 (the port truncated timeStepMs * 3) */)
                     bTooMuchTimePassed = true;
             } else if (event->GetEventPriority() < 61)
                 return false;

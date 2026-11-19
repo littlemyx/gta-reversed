@@ -283,6 +283,28 @@ bool VehLogFrameWanted(uint32_t frame) {
     return false;
 }
 int VehLogSlot() { static const int s = [] { const char* e = std::getenv("NOTSA_SH_VEHLOG_SLOT"); return e && e[0] ? std::atoi(e) : -1; }(); return s; }
+// SH7 NOTSA_SH_PEDMODELLOG=<file> (frames NOTSA_SH_PEDMODELLOG_FRAMES, default "0"): CStreaming::ms_pedsLoaded after the statehash line of the frame
+void PedModelRows(uint32_t frame) {
+    static FILE* f = [] { const char* p = std::getenv("NOTSA_SH_PEDMODELLOG"); FILE* h = p && p[0] ? std::fopen(p, "w") : nullptr;
+        if (h) { std::fprintf(h, "# frame randCount N|M|Z ... | N: n=ms_numPedsLoaded loadedGangs gangCars zoneType popZoneType timeIdx timeOfWeek | M: slot model name loadState groups=popcycle ped groups that contain the model | Z: nextPedToLoadFromGroup[18]\n"); }
+        return h; }();
+    static int s_lo = -1, s_hi = -1;
+    if (!f) return;
+    if (s_lo < 0) { const char* e = std::getenv("NOTSA_SH_PEDMODELLOG_FRAMES"); unsigned a = 0, b = 0; if (e && std::sscanf(e, "%u-%u", &a, &b) == 2) { s_lo = (int)a; s_hi = (int)b; } else if (e && std::sscanf(e, "%u", &a) == 1) { s_lo = s_hi = (int)a; } else { s_lo = s_hi = 0; } }
+    if ((int)frame < s_lo || (int)frame > s_hi) return;
+    const unsigned long long rc = (unsigned long long)RandCount();
+    std::fprintf(f, "%u %llu N n=%u loadedGangs=0x%x gangCars=0x%x zoneType=%d popZoneType=%d timeIdx=%d timeOfWeek=%d\n", frame, rc, (unsigned)CStreaming::ms_numPedsLoaded, (unsigned)CStreaming::ms_loadedGangs, (unsigned)CStreaming::ms_loadedGangCars,
+        (int)CStreaming::ms_currentZoneType, (int)CPopCycle::m_nCurrentZoneType, (int)CPopCycle::m_nCurrentTimeIndex, (int)CPopCycle::m_nCurrentTimeOfWeek);
+    for (unsigned i = 0; i < (unsigned)CStreaming::ms_pedsLoaded.size(); i++) {
+        const int id = (int)CStreaming::ms_pedsLoaded[i];
+        auto* mi = id >= 0 ? CModelInfo::GetModelInfo(id) : nullptr;
+        std::string groups;
+        for (int g = 0; g < (int)POPCYCLE_TOTAL_PEDGROUPS; g++) { for (auto m : CPopulation::GetModelsInPedGroup((ePopcyclePedGroup)g)) { if ((int)m == id) groups += std::to_string(g) + ","; } }
+        std::fprintf(f, "%u %llu M slot=%u model=%d name=%s%s loadState=%d groups=%s\n", frame, rc, i, id, mi ? mi->GetModelNameAsString().c_str() : "-", i < CStreaming::ms_numPedsLoaded ? "" : " (inactive)", id >= 0 ? (int)CStreaming::GetInfo(id).m_LoadState : -1, groups.empty() ? "-" : groups.c_str());
+    }
+    std::fprintf(f, "%u %llu Z", frame, rc); for (auto v : CStreaming::ms_NextPedToLoadFromGroup) std::fprintf(f, " %d", (int)v); std::fprintf(f, "\n");
+    std::fflush(f);
+}
 void VehLogRows(uint32_t frame) {
     static FILE* f = VehLogFile();
     if (!f || !VehLogFrameWanted(frame)) return;
@@ -312,9 +334,9 @@ void VehLogRows(uint32_t frame) {
             (int)ap.m_nCarDrivingStyle, (int)ap.m_nCarMission, (int)ap.m_nTempAction, (unsigned)ap.m_nTempActionTime, (unsigned)ap.m_LastUpdateTimeMs, (int)ap.m_ucTempActionMode, (int)ap.m_ucCarMissionModeCounter, (unsigned)ap.m_nTimeToStartMission, (unsigned)ap.m_nTimeSwitchedToRealPhysics);
         s += std::format("ap.speed={:.9g} ap.maxTrafficSpeed={:.9g} ap.cruiseSpeed={} ap.speedMult={:.9g} ap.heliTargetDist={} ap.heliSpeedMult={} ap.carCtrlFlags={} ap.movementFlags={} ap.straightLineDistance={} ap.carFollowDist={} ap.heliTargetDist2={} ",
             ap.m_speed, ap.m_fMaxTrafficSpeed, (int)ap.m_nCruiseSpeed, ap.m_SpeedMult, (int)ap.m_ucHeliTargetDist, (int)ap.m_ucHeliSpeedMult, (int)ap.m_nCarCtrlFlags, (int)ap.m_nMovementFlags, (int)ap.m_nStraightLineDistance, (int)ap.m_ucCarFollowDist, (int)ap.m_ucHeliTargetDist2);
-        s += std::format("ap.dest={} ap.pathNodesCount={} ap.pathNodes={} ap.targetEntity={} ap.obstructingEntity={} ap.recordingId={} ap.planeDogfight={} ap.field_96={}\n",
+        s += std::format("ap.dest={} ap.pathNodesCount={} ap.pathNodes={} ap.targetEntity={} ap.obstructingEntity={} ap.recordingId={} ap.planeDogfight={} ap.field_96={} ap.field_50={}\n",
             Vec(ap.m_vecDestinationCoors), (int)ap.m_nPathFindNodesCount, pn, ap.m_TargetEntity ? (int)GetVehiclePool()->GetIndex(ap.m_TargetEntity) : -1, ap.m_ObstructingEntity ? (int)StableId(ap.m_ObstructingEntity) : -1,
-            (int)ap.m_vehicleRecordingId, (int)ap.m_bPlaneDogfightSomething, (int)ap.field_96);
+            (int)ap.m_vehicleRecordingId, (int)ap.m_bPlaneDogfightSomething, (int)ap.field_96, (int)ap.field_50);
         std::fputs(s.c_str(), f);
         const auto Occ = [&](CPed* ped, const std::string& seat) {
             if (!ped) return;
@@ -447,6 +469,7 @@ void Record() {
             HE(peds.acc).c_str(), HE(vehs.acc).c_str(), HE(objs.acc).c_str(), HE(all).c_str());
         std::fflush(g_sh);
     }
+    PedModelRows(g_frame); // SH7 NOTSA_SH_PEDMODELLOG
     VehLogRows(g_frame); // SH4 NOTSA_SH_VEHLOG: after the statehash line of frames 0/1
     if (dumpFrame && !dumpRows.empty()) {
         if (!g_dumpF) { g_dumpF = std::fopen(sh.dumpFile.c_str(), "w"); }

@@ -1,6 +1,7 @@
 #include "StdInc.h"
 
 #include "FxSystemBP.h"
+#include "portable/sh7log.h"
 #include "FxPrimBP.h"
 #include "FxEmitterBP.h"
 #include "FxInfo.h"
@@ -64,6 +65,9 @@ void FxSystemBP_c::Load(Const char* filename, FILESTREAM file, int32 version) {
     char name[32];
     ReadFieldImpl(file, name, "NAME:");
     m_nNameKey = CKeyGen::GetUppercaseKey(name);
+#ifdef NOTSA_STATEHASH
+    notsa::rr::FxNameMap()[m_nNameKey] = name; // SH7: key -> name for the FRUSTLOG
+#endif
 
     m_fLength = ReadField<float>(file, "LENGTH:");
 

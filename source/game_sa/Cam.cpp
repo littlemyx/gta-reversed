@@ -3,6 +3,7 @@
 #include <numbers>
 
 #include "Cam.h"
+#include "portable/sh7log.h"
 #include "TimeCycle.h"
 #include "Camera.h"
 #include "Shadows.h"
@@ -5054,6 +5055,14 @@ void FlyBySplineFloat(float* out, float* data, float time, int32* idx) {
 // 0x5B25F0
 void CCam::Process_FlyBy(const CVector& target, float orientation, float speedVar, float speedVarWanted) {
     if (TheCamera.m_bCutsceneFinished) {
+#ifdef NOTSA_STATEHASH
+    if (FILE* lf = notsa::rr::FlyByLog()) { // SH7 NOTSA_SH_FLYBYLOG (log only)
+        std::fprintf(lf, "%d %llu %s mode=%d starting=%d finished=%d ts=%.9g tsNC=%.9g elapsed=%.9g finish=%u pos=%.9g seg=%d,%d,%d,%d fov=%.9g src=%.9g,%.9g,%.9g front=%.9g,%.9g,%.9g\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), "E", (int)m_nMode,
+            (int)TheCamera.m_bStartingSpline, (int)TheCamera.m_bCutsceneFinished, (double)CTimer::GetTimeStep(), (double)CTimer::GetTimeStepNonClipped(), (double)m_fTimeElapsedFloat, (unsigned)m_nFinishTime, (double)TheCamera.m_fPositionAlongSpline,
+            (int)gFlyBySrcSegmentIdx, (int)gFlyByLookSegmentIdx, (int)gFlyByRollSegmentIdx, (int)gFlyByFovSegmentIdx, (double)gFlyByFov, (double)m_vecSource.x, (double)m_vecSource.y, (double)m_vecSource.z, (double)m_vecFront.x, (double)m_vecFront.y, (double)m_vecFront.z);
+        std::fflush(lf);
+    }
+#endif
         return;
     }
 
@@ -5142,6 +5151,14 @@ void CCam::Process_FlyBy(const CVector& target, float orientation, float speedVa
     m_vecUp.Normalise();
 
     m_fFOV = gFlyByFov;
+#ifdef NOTSA_STATEHASH
+    if (FILE* lf = notsa::rr::FlyByLog()) { // SH7 NOTSA_SH_FLYBYLOG (log only)
+        std::fprintf(lf, "%d %llu %s mode=%d starting=%d finished=%d ts=%.9g tsNC=%.9g elapsed=%.9g finish=%u pos=%.9g seg=%d,%d,%d,%d fov=%.9g src=%.9g,%.9g,%.9g front=%.9g,%.9g,%.9g\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), "B", (int)m_nMode,
+            (int)TheCamera.m_bStartingSpline, (int)TheCamera.m_bCutsceneFinished, (double)CTimer::GetTimeStep(), (double)CTimer::GetTimeStepNonClipped(), (double)m_fTimeElapsedFloat, (unsigned)m_nFinishTime, (double)TheCamera.m_fPositionAlongSpline,
+            (int)gFlyBySrcSegmentIdx, (int)gFlyByLookSegmentIdx, (int)gFlyByRollSegmentIdx, (int)gFlyByFovSegmentIdx, (double)gFlyByFov, (double)m_vecSource.x, (double)m_vecSource.y, (double)m_vecSource.z, (double)m_vecFront.x, (double)m_vecFront.y, (double)m_vecFront.z);
+        std::fflush(lf);
+    }
+#endif
 }
 
 namespace {

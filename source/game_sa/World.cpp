@@ -3202,8 +3202,8 @@ bool CWorld::ProcessLineOfSight(const CVector& origin, const CVector& target, CC
             for (auto y = originSectorY; y >= targetSectorY; y--) {
                 ProcessSector(originSectorX, y);
             }
-        } else { // target => origin on Y axis
-            for (auto y = targetSectorY; y >= originSectorY; y--) {
+        } else { // origin => target on Y axis, ascending (exe 0x56BB8D: y from the origin sector up to the target sector)
+            for (auto y = originSectorY; y <= targetSectorY; y++) {
                 ProcessSector(originSectorX, y);
             }
         }
@@ -3212,8 +3212,8 @@ bool CWorld::ProcessLineOfSight(const CVector& origin, const CVector& target, CC
             for (auto x = originSectorX; x >= targetSectorX; x--) {
                 ProcessSector(x, originSectorY);
             }
-        } else { // target => origin on X axis
-            for (auto x = targetSectorX; x >= originSectorX; x--) {
+        } else { // origin => target on X axis, ascending (exe 0x56BD8B: x from the origin sector up to the target sector)
+            for (auto x = originSectorX; x <= targetSectorX; x++) {
                 ProcessSector(x, originSectorY);
             }
         }

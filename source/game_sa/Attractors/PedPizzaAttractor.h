@@ -13,11 +13,11 @@ public:
             effect,
             entity,
             moveState,
-            1,
+            5,      // exe 0x5EE71D: push 5 (max peds; port: 1)
             1.0f,
             30000.0f,
             3000.0f,
-            0.125f,
+            0.2f,   // exe 0x86C458 = 0.2 (arrive range; port: 0.125)
             0.1f,
             0.1f,
             0.1f

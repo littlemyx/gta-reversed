@@ -148,7 +148,7 @@ bool CTaskComplexWanderStandard::LookForChatPartners(CPed* ped) {
             const auto& ms = playerVeh->m_vecMoveSpeed;
             // x87: (x^2 + y^2) + z^2 in extended precision; fails only if strictly greater
             const x87d speed2 = ((x87d)ms.x * ms.x + (x87d)ms.y * ms.y) + (x87d)ms.z * ms.z;
-            if (speed2 > (double)0.04f) { // 0x863244
+            if (speed2 > std::bit_cast<float>(0x3D23D70Bu)) { // 0x66FE2B: float at 0x863244, one ulp above 0.04f
                 return false;
             }
         }

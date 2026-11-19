@@ -1713,8 +1713,8 @@ void CRunningScript::ReadTextLabelFromScript(char* buffer, uint8 nBufferLength) 
         for (auto i = 0; i < nStringLen; i++)
             buffer[i] = CTheScripts::Read1ByteFromScript(m_IP);
 
-        if (nStringLen < nBufferLength)
-            memset(&buffer[(uint8)nStringLen], 0, (uint8)(nBufferLength - nStringLen));
+        if ((uint8)nStringLen < nBufferLength) // exe 0x463EFD: `cmp al, cl; jae` on the low BYTE of the length (a negative length no longer zero-fills past the buffer)
+            memset(&buffer[(uint8)nStringLen], 0, (uint8)(nBufferLength - (uint8)nStringLen));
         break;
     }
 

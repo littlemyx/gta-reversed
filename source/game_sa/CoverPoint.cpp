@@ -15,6 +15,11 @@ CCoverPoint::CCoverPoint(eType type, eUsage usage, Dir dir, CEntity* coverEntity
     if (coverEntity) {
         if (!coverEntity->GetIsTypeBuilding() || coverEntity->GetIplIndex() != 0) {
             m_CoverEntity = coverEntity;
+        } else {
+            // 0x6990D6: the exe stores the pointer ALWAYS and only skips `RegisterReference` for IPL-index-0 buildings;
+            // a null entity here made CCoverPoint::CanBeRemoved (0x699810) drop the POINTONMAP point of every such building at once
+            const CEntity* const raw = coverEntity;
+            std::memcpy(static_cast<void*>(std::addressof(m_CoverEntity)), &raw, sizeof(raw));
         }
     }
 }

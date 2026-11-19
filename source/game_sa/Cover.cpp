@@ -229,9 +229,10 @@ CCoverPoint* CCover::AddCoverPoint(CCoverPoint::eType type, CEntity* coverEntity
             continue;
         }
 
-        const CVector atPos = coverEntity
-            ? coverEntity->GetPosition()
-            : *pos;
+        // 0x698FA5: the explicit position wins (`test ebp, ebp`), the entity's position is only used when there is none (POINTONMAP has both)
+        const CVector atPos = pos
+            ? *pos
+            : coverEntity->GetPosition();
         // 0x698FDD: dx, dy, dz = cpt - at (x87, the sum is dz*dz + dy*dy + dx*dx) and the exe compares the SQUARE ROOT (fsqrt) with 0.8 / 2.0
         const x87d dx = (x87d)cpt.GetPointOnMap().x - (x87d)atPos.x;
         const x87d dy = (x87d)cpt.GetPointOnMap().y - (x87d)atPos.y;

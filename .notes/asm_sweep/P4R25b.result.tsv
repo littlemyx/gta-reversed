@@ -1,0 +1,7 @@
+addr	function	verdict	asm range	note	fix commit
+0x73A3E0	CWeapon::AddGunshell	MATCH	0x73A3E0-0x73A52D	constants + FxPrtMult/AddParticle defaults checked	
+0x73FA20	CWeapon::FireFromCar	MATCH	0x73FA20-0x73FB05	status bits, ammo/progress branches, reload time	
+0x742300	CWeapon::Fire	MATCH	0x742300-0x742A08	jump tables 0x742A0C/0x742A30/0x742A4C decoded (type groups, stats); post-fire ammo/reload/time branches	
+0x741360	CWeapon::FireProjectile	FIXED	0x741360-0x741BE0	HS lock-on crosshair: exe writes only r,g,b (0xC8A84C-E), port also wrote alpha=255	see git log ASM-P4R25b
+0x428BE0	CCarCtrl::SteerAIBoatWithPhysicsHeadingForTarget	MATCH	0x428BE0-0x428DC6	wrap, clamp, boat gas inline	
+0x429090	CCarCtrl::SteerAIBoatWithPhysicsCirclingPlayer	MATCH	0x429090-0x4292E0	radius -12/26 by seed bit0, unrounded target	

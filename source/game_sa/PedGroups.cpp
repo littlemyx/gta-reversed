@@ -154,6 +154,7 @@ void CPedGroups::Process() {
         ms_iNoOfPlayerKills = 0;
         SetGroupsDecisionMakerType(eDecisionMakerType::GROUP_RANDOM_PASSIVE);
     } else if (!CTheScripts::IsPlayerOnAMission() && ms_bIsPlayerOnAMission) { // 0x5FC8B2 - Player ended a mission (inverted)
+        ms_iNoOfPlayerKills = 0; // 0x5FC8B2
         SetGroupsDecisionMakerType(eDecisionMakerType::UNKNOWN);
     } else if (CTheScripts::IsPlayerOnAMission() && CPedGroups::ms_iNoOfPlayerKills == 8) { // 0x5FC8BF (inverted)
         SetGroupsDecisionMakerType(eDecisionMakerType::UNKNOWN);
@@ -161,7 +162,9 @@ void CPedGroups::Process() {
         SetGroupsDecisionMakerType(eDecisionMakerType::GROUP_RANDOM_PASSIVE);
     }
 
-    if (!std::exchange(ms_bIsPlayerOnAMission, CTheScripts::IsPlayerOnAMission())) { // 0x5FC98D
+    // 0x5FC98D: the exe stores the NEW flag and tests the NEW value (the port tested the old one, so the kill counter was not reset when a mission ended)
+    ms_bIsPlayerOnAMission = CTheScripts::IsPlayerOnAMission();
+    if (!ms_bIsPlayerOnAMission) {
         ms_iNoOfPlayerKills = 0;
     }
 }

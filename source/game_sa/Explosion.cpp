@@ -234,11 +234,8 @@ void CExplosion::AddExplosion(CEntity* victim, CEntity* creator, eExplosionType 
         }
         exp->m_nExpireTime = (float)(CTimer::GetTimeInMS() + lifetime + 750);
         exp->m_fPropagationRate = 0.5f;
-        if (exp->m_pVictim) {
-
-        } else {
-            CreateAndPlayFxWithSound("explosion_small");
-        }
+        // 0x736C97: both paths create "explosion_small" (0x737239); with a victim it is attached to the victim's matrix (0x736CB6..0x736CE5), without it at the position (0x737193)
+        CreateAndPlayFxWithSound("explosion_small");
         break;
     }
     case eExplosionType::EXPLOSION_MOLOTOV: {
@@ -403,7 +400,7 @@ void CExplosion::AddExplosion(CEntity* victim, CEntity* creator, eExplosionType 
                         gFireManager.StartFire(firePos, 0.8f, 0, exp->m_pCreator, (uint32)burnTime, 3, 1);
                     }
                 }
-                if (creator && creator->GetIsTypePed() && creator->AsPed()->IsPlayer()) {
+                if (creator && creator->GetIsTypePed() && creator->AsPed()->m_nPedType == PED_TYPE_PLAYER1) { // 0x737401: [ped+0x598] == 0 (PLAYER1 only, not IsPlayer())
                     CStats::IncrementStat(eStats::STAT_FIRES_STARTED, 1.0f);
                 }
             }

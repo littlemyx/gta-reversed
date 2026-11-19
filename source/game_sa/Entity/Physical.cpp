@@ -1545,7 +1545,7 @@ void CPhysical::ApplyAirResistance()
             if (GetIsTypeVehicle())
             {
                 CVehicle* vehicle = this->AsVehicle();
-                if (vehicle->IsAutomobile() || vehicle->IsSubBike())
+                if (vehicle->m_nVehicleSubType == VEHICLE_TYPE_AUTOMOBILE || vehicle->IsSubBike()) // 0x544CE1: exe tests the SUB type (+0x594) == 0 or 9; IsAutomobile() tests +0x590, which is also 0 for monster trucks / quads
                     fSpeedMagnitude = CVehicle::m_fAirResistanceMult * fSpeedMagnitude;
             }
         }

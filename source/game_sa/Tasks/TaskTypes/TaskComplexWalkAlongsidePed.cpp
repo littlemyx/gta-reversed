@@ -125,7 +125,8 @@ CTask* CTaskComplexWalkAlongsidePed::ControlSubTask(CPed* ped) {
     const auto pedTaskFollowNodeRoute = ped->GetTaskManager().Find<CTaskComplexFollowNodeRoute>();
     const auto pedTaskGoToPoint       = ped->GetTaskManager().Find<CTaskSimpleGoToPoint>();
 
-    bool bChangedAnimSpeed = false;
+    bool bChangedAnimSpeed       = false; // exe [esp+0x4c] (-> ped flag)
+    bool bChangedTargetAnimSpeed = false; // exe [esp+0xd] (-> target flag): only set when the target has a walk anim too (0x685570)
     if (pedTaskGoToPoint && !pedTaskFollowNodeRoute) { // 0x685308 (Inverted)
         auto targetPtForPed = m_TargetPed->GetMatrix().TransformPoint(m_Offset);
         if (isTargetMoving) { // 0x68535C
@@ -149,11 +150,13 @@ CTask* CTaskComplexWalkAlongsidePed::ControlSubTask(CPed* ped) {
                         DecreaseWalkAnimSpeed(pedWalkAnim);
                         if (targetPedWalkAnim) {
                             IncreaseWalkAnimSpeed(targetPedWalkAnim);
+                            bChangedTargetAnimSpeed = true;
                         }
                     } else if (pedToTargetPtDist2DSq > sq(0.25f)) { // 0x68545E
                         IncreaseWalkAnimSpeed(pedWalkAnim);
                         if (targetPedWalkAnim) {
                             DecreaseWalkAnimSpeed(targetPedWalkAnim);
+                            bChangedTargetAnimSpeed = true;
                         }
                     } else { // 0x6854BC: re-derive the speed from the move state, keep it if (nearly) unchanged, else nudge it by 0.0125 towards the new value's side
                         const auto RecalcWalkAnimSpeed = [](CPed* p, CAnimBlendAssociation* walkAnim) {
@@ -171,6 +174,7 @@ CTask* CTaskComplexWalkAlongsidePed::ControlSubTask(CPed* ped) {
                         RecalcWalkAnimSpeed(ped, pedWalkAnim);
                         if (targetPedWalkAnim) {
                             RecalcWalkAnimSpeed(m_TargetPed, targetPedWalkAnim);
+                            bChangedTargetAnimSpeed = true;
                         }
                     }
 
@@ -187,7 +191,8 @@ CTask* CTaskComplexWalkAlongsidePed::ControlSubTask(CPed* ped) {
         return CreateSubTask(TASK_SIMPLE_STAND_STILL, ped);
     }
 
-    m_TargetPed->bMoveAnimSpeedHasBeenSetByTask = ped->bMoveAnimSpeedHasBeenSetByTask = bChangedAnimSpeed;
+    m_TargetPed->bMoveAnimSpeedHasBeenSetByTask = bChangedTargetAnimSpeed; // 0x6855E1
+    ped->bMoveAnimSpeedHasBeenSetByTask         = bChangedAnimSpeed;
 
     return m_pSubTask;
 }

@@ -1,4 +1,5 @@
 #include "StdInc.h"
+#include "portable/sh10log.h" // SH10 debug logs (NOTSA_STATEHASH only)
 
 #include "UIRenderer.h"
 
@@ -742,46 +743,76 @@ void CGame::InitialiseWhenRestarting() {
 void CGame::Process() {
     ZoneScoped;
 
+    SH10_MARK("CPad::UpdatePads");
     CPad::UpdatePads();
+    SH10_MARK("g_LoadMonitor.BeginFrame");
     g_LoadMonitor.BeginFrame();
 
     const auto GetTime = [] { return CTimer::GetCurrentTimeInCycles() / CTimer::GetCyclesPerMillisecond(); };
 
     const auto timeBeforeStreamingUpdate = GetTime();
+    SH10_MARK("CStreaming::Update");
     CStreaming::Update();
     auto updateTimeDelta = GetTime() - timeBeforeStreamingUpdate;
+    SH10_ROW("T streaming timeBefore=%lld timeAfter=%lld updateTimeDelta=%lld cycles=%lld cyclesPerMs=%lld ms=%u prevMs=%u timeStep=%.9g frameCounter=%u", (long long)timeBeforeStreamingUpdate, (long long)GetTime(), (long long)updateTimeDelta, (long long)CTimer::GetCurrentTimeInCycles(), (long long)CTimer::GetCyclesPerMillisecond(), (unsigned)CTimer::m_snTimeInMilliseconds, (unsigned)CTimer::m_snPreviousTimeInMilliseconds, CTimer::ms_fTimeStep, (unsigned)CTimer::m_FrameCounter);
 
+    SH10_MARK("CCutsceneMgr::Update");
     CCutsceneMgr::Update();
+    SH10_CUT("afterCutsceneMgrUpdate");
 
     if (!CCutsceneMgr::IsCutsceneProcessing() && !CTimer::GetIsCodePaused()) {
+        SH10_MARK("FrontEndMenuManager.Process");
         FrontEndMenuManager.Process();
     }
 
+    SH10_MARK("CTheZones::Update");
     CTheZones::Update();
+    SH10_MARK("CCover::Update");
     CCover::Update();
+    SH10_MARK("CAudioZones::Update");
     CAudioZones::Update(false, TheCamera.GetPosition());
+    SH10_MARK("CWindModifiers::Number");
     CWindModifiers::Number = 0;
 
     if (!CTimer::GetIsPaused()) {
+        SH10_MARK("CSprite2d::SetRecipNearClip");
         CSprite2d::SetRecipNearClip();
         CSprite2d::InitPerFrame();
+        SH10_MARK("CFont::InitPerFrame");
         CFont::InitPerFrame();
+        SH10_MARK("CCheat::DoCheats");
         CCheat::DoCheats();
+        SH10_MARK("CClock::Update");
         CClock::Update();
+        SH10_MARK("CWeather::Update");
         CWeather::Update();
+        SH10_MARK("CTheScripts::Process");
         CTheScripts::Process();
+        SH10_MARK("CCollision::Update");
         CCollision::Update();
+        SH10_MARK("ThePaths.UpdateStreaming");
         ThePaths.UpdateStreaming(false);
+        SH10_MARK("CTrain::UpdateTrains");
         CTrain::UpdateTrains();
+        SH10_MARK("CHeli::UpdateHelis");
         CHeli::UpdateHelis();
+        SH10_MARK("CDarkel::Update");
         CDarkel::Update();
+        SH10_MARK("CSkidmarks::Update");
         CSkidmarks::Update();
+        SH10_MARK("CGlass::Update");
         CGlass::Update();
+        SH10_MARK("CWanted::UpdateEachFrame");
         CWanted::UpdateEachFrame();
+        SH10_MARK("CCreepingFire::Update");
         CCreepingFire::Update();
+        SH10_MARK("CSetPieces::Update");
         CSetPieces::Update();
+        SH10_MARK("gFireManager.Update");
         gFireManager.Update();
 
+        SH10_MARK("CPopulation::Update");
+        SH10_ROW("P popFlag=%d updateTimeDelta=%lld ms=%u", updateTimeDelta >= 4 ? 0 : 1, (long long)updateTimeDelta, (unsigned)CTimer::m_snTimeInMilliseconds);
         if (updateTimeDelta >= 4) {
             CPopulation::Update(false);
         } else {
@@ -789,26 +820,37 @@ void CGame::Process() {
             CPopulation::Update(true);
             updateTimeDelta = GetTime() - timeBeforePopulationUpdate;
         }
+        SH10_ROW("G updateTimeDelta=%lld generateRandomCars=%d", (long long)updateTimeDelta, updateTimeDelta < 4 ? 1 : 0);
+        SH10_MARK("CWeapon::UpdateWeapons");
         CWeapon::UpdateWeapons();
 
         if (!CCutsceneMgr::IsRunning()) {
+            SH10_MARK("CTheCarGenerators::Process");
             CTheCarGenerators::Process();
         }
 
         if (CReplay::Mode != MODE_PLAYBACK) {
+            SH10_MARK("CCranes::UpdateCranes");
             CCranes::UpdateCranes();
         }
 
+        SH10_MARK("CClouds::Update");
         CClouds::Update();
+        SH10_MARK("CMovingThings::Update");
         CMovingThings::Update();
+        SH10_MARK("CWaterCannons::Update");
         CWaterCannons::Update();
+        SH10_MARK("CUserDisplay::Process");
         CUserDisplay::Process();
+        SH10_MARK("CReplay::Update");
         CReplay::Update();
+        SH10_MARK("CWorld::Process");
         CWorld::Process();
 #ifdef NOTSA_PORTABLE
         { extern bool NotsaCheckMatrixLists(const char*); NotsaCheckMatrixLists("CGame::Process after CWorld::Process"); }
 #endif
 
+        SH10_MARK("g_LoadMonitor.EndFrame");
         g_LoadMonitor.EndFrame();
 
         if (!CTimer::bSkipProcessThisFrame) {
@@ -821,8 +863,11 @@ void CGame::Process() {
             CSpecialFX::Update();
             CRopes::Update();
         }
+        SH10_MARK("CPostEffects::Update");
         CPostEffects::Update();
+        SH10_MARK("CTimeCycle::Update");
         CTimeCycle::Update();
+        SH10_MARK("CPopCycle::Update");
         CPopCycle::Update();
 
         if (g_InterestingEvents.m_b1) {
@@ -834,48 +879,75 @@ void CGame::Process() {
 
         if (CReplay::ShouldStandardCameraBeProcessed()) {
             TheCamera.Process();
+            SH10_CAM("afterCameraProcess");
         } else {
             TheCamera.ProcessFade();
         }
 
+        SH10_MARK("CCullZones::Update");
         CCullZones::Update();
         if (CReplay::Mode != MODE_PLAYBACK) {
+            SH10_MARK("CGameLogic::Update");
             CGameLogic::Update();
+            SH10_MARK("CGangWars::Update");
             CGangWars::Update();
         }
+        SH10_MARK("CConversations::Update");
         CConversations::Update();
+        SH10_MARK("CPedToPlayerConversations::Update");
         CPedToPlayerConversations::Update();
+        SH10_MARK("CBridge::Update");
         CBridge::Update();
+        SH10_MARK("CCoronas::DoSunAndMoon");
         CCoronas::DoSunAndMoon();
+        SH10_MARK("CCoronas::Update");
         CCoronas::Update();
+        SH10_MARK("CShadows::UpdatePermanentShadows");
         CShadows::UpdatePermanentShadows();
 
+        SH10_MARK("CPlantMgr::Update");
         CPlantMgr::Update(TheCamera.GetPosition());
+        SH10_MARK("CCustomBuildingRenderer::Update");
         CCustomBuildingRenderer::Update();
 
+        SH10_MARK("CStencilShadows::RenderBuffer");
         CStencilShadows::RenderBuffer({
             CTimeCycle::m_fShadowFrontX[CTimeCycle::m_CurrentStoredValue] * 2.f,
             CTimeCycle::m_fShadowFrontY[CTimeCycle::m_CurrentStoredValue] * 2.f,
             -1.5f
         });
 
+        SH10_MARK("CStencilShadows::Process");
         CStencilShadows::Process(TheCamera.GetPosition());
         if (CReplay::Mode != MODE_PLAYBACK) {
             if (updateTimeDelta < 4) {
+                SH10_MARK("CCarCtrl::GenerateRandomCars");
                 CCarCtrl::GenerateRandomCars();
             }
+            SH10_MARK("CRoadBlocks::GenerateRoadBlocks");
             CRoadBlocks::GenerateRoadBlocks();
+            SH10_MARK("CCarCtrl::RemoveDistantCars");
             CCarCtrl::RemoveDistantCars();
+            SH10_MARK("CCarCtrl::RemoveCarsIfThePoolGetsFull");
             CCarCtrl::RemoveCarsIfThePoolGetsFull();
         }
 
+        SH10_MARK("g_fx.Update");
         g_fx.Update(TheCamera.m_pRwCamera, CTimer::GetTimeStepInSeconds());
+        SH10_MARK("g_breakMan.Update");
         g_breakMan.Update(CTimer::GetTimeStep());
+        SH10_MARK("g_interiorMan.Update");
         g_interiorMan.Update();
+        SH10_MARK("g_procObjMan.Update");
         g_procObjMan.Update();
+        SH10_MARK("g_waterCreatureMan.Update");
         g_waterCreatureMan.Update(CTimer::GetTimeStepInSeconds());
     }
+    SH10_MARK("CWaterLevel::PreRenderWater");
     CWaterLevel::PreRenderWater();
+    SH10_END();
+    SH10_CAM("endOfCGameProcess");
+    SH10_CUT("endOfCGameProcess");
 }
 
 // 0x53BCF0

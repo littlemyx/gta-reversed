@@ -3600,7 +3600,7 @@ void CEventHandler::ComputeVehiclePotentialPassiveCollisionResponse(CEventPotent
     const auto tGoTo = static_cast<CTaskSimpleGoTo*>(tsimplest);
     m_EventResponseTask = new CTaskComplexWalkRoundCar{
         m_Ped->GetGroup()
-        ? PEDMOVE_RUN
+        ? PEDMOVE_SPRINT /* 0x4B9742: mov esi, 6 */
         : (eMoveState)e->m_moveState,
         tGoTo->m_vecTargetPoint,
         e->m_vehicle,

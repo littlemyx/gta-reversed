@@ -582,7 +582,8 @@ void CPedGeometryAnalyser::ComputeMoveDirToAvoidEntity(const CPed& ped, CEntity&
 
     // Distance to the planes on the sides of the box
     const float dist1 = planes[1].y * pedPos.y + planes[1].z * pedPos.z + planes[1].x * pedPos.x + dots[1];
-    const float dist3 = planes[3].y * pedPos.y + planes[3].z * pedPos.z + planes[3].x * pedPos.x + dots[3];
+    // exe 0x5F37B2-0x5F37CB: the first product reads planes[3].z (not .y) times ped.y (planes[1] above uses .y)
+    const float dist3 = planes[3].z * pedPos.y + planes[3].z * pedPos.z + planes[3].x * pedPos.x + dots[3];
 
     if (dist1 > 0.f) {
         outDirToAvoidEntity = planes[1];

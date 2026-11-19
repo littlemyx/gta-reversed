@@ -2686,6 +2686,15 @@ auto GetCharModel(CPed& ped) {
  * @param {WeaponType} weaponType
  */
 void SetCurrentCharWeapon(CPed& ped, eWeaponType weaponType) {
+    // exe 0x47D4A8: weapon type 0 (UNARMED) selects slot 0 only; the slot loop (0x47D517) is for non-zero types
+    if (weaponType == WEAPON_UNARMED) {
+        if (ped.IsPlayer()) {
+            ped.AsPlayer()->GetPlayerData()->m_nChosenWeapon = 0;
+        } else {
+            ped.SetCurrentWeapon(0);
+        }
+        return;
+    }
     for (auto&& [slot, weapon] : rngv::enumerate(ped.m_aWeapons)) {
         if (weapon.m_Type != weaponType)
             continue;

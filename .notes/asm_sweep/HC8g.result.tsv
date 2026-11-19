@@ -1,0 +1,24 @@
+function	exe addr	port	verdict	note
+CBike::ProcessAI capped speed (cfa3ada05)	0x6BC440,0x6BC77B	Bike.cpp	CONFIRMED	mag>0.1?0.1:mag, NaN keeps mag (fcomp+test ah,0x41 jne / test ah,5 jp)
+CBmx::ProcessAI capped speed (037c5763f)	0x6C156F	Bmx.cpp	CONFIRMED	same
+CAutomobile::ProcessControlInputs (a68eca8bb)	0x6ADE25	Automobile.cpp	CONFIRMED	sqrt(x,y,z sum) > 0.28 strict, then 0.28/speed
+CEntity::GetIsTouching(CEntity*)	0x5343F0	Entity.cpp	MATCH	z,y,x sum, R^2 > sum strict
+CPhysical::ApplyFriction(CPhysical*)	0x545CE9,0x545D7C,0x5464E3	Physical.cpp	MATCH	per-branch ExeMagnitude3 order; cross SquaredMagnitude x,y,z
+CGarage::IsStaticPlayerCarEntirelyInside	0x44A983	Garage.cpp	MATCH	
+CPopulation::ManageObject	0x615DC0	Population.cpp	FIXED	NaN strictness of 3 compares (64.5/35 towel, dist<=maxDist, FindDummyDist<distToDummy); sums z,y,x already ok
+CTimeCycle::FindTimeCycleBox	0x55FFD0	TimeCycle.cpp	MATCH	
+CCarCtrl::FindMaxSteerAngle	0x427FE0	CarCtrl.cpp	MATCH	
+CPlayerInfo::Process	0x571344,0x571601	PlayerInfo.cpp	MATCH	
+CHeli::UpdateHelis	0x6C7B70	Heli.cpp	MATCH	
+CTaskSimpleRunNamedAnim::ProcessPed	0x61BFC0	TaskSimpleRunNamedAnim.cpp	MATCH	
+CCamera::CopyCameraMatrixToRWCam	0x50B122..0x50B28F	Camera.cpp	MATCH	
+CCamera::CameraColDetAndReact	0x52044E,0x520565	Camera.cpp	MATCH	
+CCollision::CheckCameraCollisionVehicles	0x41AA1E	Collision.cpp	MATCH	
+CCollision::BuildCacheOfCameraCollision	0x41ACC3	Collision.cpp	MATCH	
+CPlantMgr::_ProcessEntryCollisionDataSections_AddLocTris	0x5DCB78	PlantMgr.cpp	MATCH	
+CTaskComplexGangLeader::ShouldLoadGangAnims	0x65E821	TaskComplexGangLeader.cpp	MATCH	
+CPhysical::ApplyAirResistance	0x544CAB	Physical.cpp	MATCH	
+CPhysical::ProcessCollision (m_fMovingSpeed)	0x54E629	Physical.cpp	FIXED	diffs unrounded x87 (port rounded to float via CVector operator-)
+CPhysical::ProcessCollision other DistanceBetweenPoints sites	0x54E... (lines 442,522)	Physical.cpp	UNSURE	same float-rounded-diff pattern, exe sites not mapped
+COccluder::NearCamera, CLoadMonitor::EndFrame	-	-	SKIP-RENDER	
+Scan below call count 12501 / 2-term+sqrt extension	-	-	NOT_REACHED	scan (mincount 2000) slow; only top rows done

@@ -38,7 +38,7 @@ CTaskComplexTrackEntity::CTaskComplexTrackEntity(CEntity* entity, CVector offset
 
 // NOTSA
 CTaskComplexTrackEntity::CTaskComplexTrackEntity(const CTaskComplexTrackEntity& o) :
-    CTaskComplexTrackEntity{o.m_toTrack, o.m_offsetPosn, o.a, o.b, o.m_rangeMin, o.m_rangeMax, o.f}
+    CTaskComplexTrackEntity{o.m_toTrack, o.m_offsetPosn, o.a, o.gap2 ? (int32)(o.m_expirationInterval - CTimer::GetTimeInMS() + o.m_someStartTimeMs) : o.b, o.m_rangeMin, o.m_rangeMax, o.f}
 {
     m_fMoveRatio = o.m_fMoveRatio;
 }

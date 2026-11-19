@@ -491,15 +491,21 @@ CTask* CTaskComplexFollowNodeRoute::ControlSubTask(CPed* ped) {
     }
 
     if (m_bUseBlending) {
-        // If we're already going fine (Eg.: using `CTaskSimpleGoToPointFine`), adjust move ratio
-        if (subTaskType == TASK_SIMPLE_GO_TO_POINT_FINE) {
+        if (m_bSlowingDown && subTaskType == TASK_SIMPLE_GO_TO_POINT_FINE) { // 0x671AD8 (flag 0x20 + type 0x39E)
             const auto tGoToPointFine = static_cast<CTaskSimpleGoToPointFine*>(m_pSubTask);
 
             const auto br = CalcBlendRatio(ped, true);
-            tGoToPointFine->SetMoveRatio(br >= 0.f ? br : CTaskSimpleGoToPointFine::BaseRatio(m_MoveState));
+            // `fcomp 0; test ah,5; jp`: br >= 0 or NaN keeps br
+            tGoToPointFine->SetMoveRatio(!(br < 0.f) ? br : CTaskSimpleGoToPointFine::BaseRatio(m_MoveState));
+        } else if (m_bSpeedingUp && subTaskType == TASK_SIMPLE_GO_TO_POINT_FINE) { // 0x671C2E (flag 0x40 + type 0x39E), CalcBlendRatio(ped, false)
+            const auto tGoToPointFine = static_cast<CTaskSimpleGoToPointFine*>(m_pSubTask);
 
-            if (m_bSpeedingUp && br < 0.f) {
+            const auto br = CalcBlendRatio(ped, false);
+            if (br >= 0.f) {
+                tGoToPointFine->SetMoveRatio(br); // then falls through to the slow-down check
+            } else { // 0x671C70
                 m_bSpeedingUp = false;
+                tGoToPointFine->SetMoveRatio(CTaskSimpleGoToPointFine::BaseRatio(m_MoveState));
                 return CreateSubTask(TASK_SIMPLE_GO_TO_POINT, ped);
             }
         }

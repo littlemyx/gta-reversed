@@ -135,7 +135,9 @@ void CShotInfo::Update() {
                 if (!ped->IsPedInControl()) {
                     continue;
                 }
-                if (DistanceBetweenPointsSquared(ped->GetPosition(), shot.m_vecOrigin) >= range) {
+                // exe 0x73A013: squared distance summed z, y, x (not x, y, z)
+                const auto pedToShot = ped->GetPosition() - shot.m_vecOrigin;
+                if (pedToShot.z * pedToShot.z + pedToShot.y * pedToShot.y + pedToShot.x * pedToShot.x >= range) {
                     continue;
                 }
 
@@ -171,7 +173,9 @@ void CShotInfo::Update() {
             if (sprayState != eSprayPaintState::NOT_FOUND) {
                 shot.m_bExecuted = true;
 
-                shot.m_vecTargetOffset -= sprayDir * shot.m_vecTargetOffset.Dot(sprayDir);
+                // exe 0x73A112: the dot product is summed y, z, x
+                const auto dot = sprayDir.y * shot.m_vecTargetOffset.y + sprayDir.z * shot.m_vecTargetOffset.z + sprayDir.x * shot.m_vecTargetOffset.x;
+                shot.m_vecTargetOffset -= sprayDir * dot;
                 shot.m_vecTargetOffset += shot.m_vecTargetOffset;
                 if (sprayState == eSprayPaintState::PAINTED && shot.m_pCreator == FindPlayerPed()) {
                     AudioEngine.ReportFrontendAudioEvent(eAudioEvents::AE_FRONTEND_PART_MISSION_COMPLETE, 0.f, 1.f);

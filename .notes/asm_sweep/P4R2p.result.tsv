@@ -1,0 +1,7 @@
+addr	function	verdict	asm range	note	fix commit
+0x738B20	CProjectileInfo::Update	FIXED	0x738B20-0x739852	molotov/bomb close-to-creator distance sum order x,z,y (0x7397A4); rest MATCH (rocket smoke, heat-seek, satchel, flare; Rand01 float-vs-x87 noise)	e2ae76faf
+0x7388F0	CProjectileInfo::RemoveProjectile	MATCH	0x7388F0-0x738B16	callee of Update, explosion types/creators match	
+0x698F30	CCover::AddCoverPoint	FIXED	0x698F30-0x69911E	near-point test: explicit pos wins over entity position (0x698FA5); IPL-0 building entity still stored unregistered (0x6990D6) so Update (0x699810) does not drop its POINTONMAP point; dy/dz float-rounding in 2.0 test = noise	b31214ee7
+0x610770	CPopCycle::UpdatePercentages	MATCH	0x610770-0x610BC7	caps/floors, jump table (types 4,14,16 floor 0.1; 5 floor 0.05; 8,17 zero), riot mult, peds/cars shares and 0.75 riot cars all match; float-vs-x87 noise	
+0x56BA00	CWorld::ProcessLineOfSight	NOT_REACHED		budget	
+0x56A490	CWorld::GetIsLineOfSightClear	NOT_REACHED		budget	

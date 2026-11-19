@@ -1522,7 +1522,7 @@ bool CPopulation::AddPedAtAttractor(eModelID modelIndex, C2dEffectPedAttractor* 
         const float dx = posn.x - pp.x, dy = posn.y - pp.y;
         minDistSq = std::min(minDistSq, dx * dx + dy * dy);
     }
-    if (minDistSq <= 0.1225f) {
+    if (minDistSq <= std::bit_cast<float>(0x3DFAE147u)) { // 0x6142A6: float at 0x86D26C, one ulp below 0.1225f
         return false;
     }
 

@@ -200,11 +200,12 @@ inline T Read(CRunningScript* S) {
                 return detail::safe_arithmetic_cast<T>(S->GetAtIPAs<int32>());
             case SCRIPT_PARAM_STATIC_FLOAT: {
                 if constexpr (!std::is_floating_point_v<T>) {
-                    // Check your call stack and change the function argument type to a float.
-                    // Possibly unintended truncation of `float` to integeral type!
-                    DebugBreak();
+                    // exe: CollectParameters stores the raw dword into ScriptParams and the handler uses it as an int (e.g. fild). Scripts do pass float
+                    // constants to int parameters (SWEET4: TASK_FLEE_CHAR safe distance 50f, exe 0x490B7E): return the raw bits like the exe (was DebugBreak).
+                    return static_cast<T>(std::bit_cast<int32>(S->GetAtIPAs<float>()));
+                } else {
+                    return detail::safe_arithmetic_cast<T>(S->GetAtIPAs<float>());
                 }
-                return detail::safe_arithmetic_cast<T>(S->GetAtIPAs<float>());
             }
             case SCRIPT_PARAM_GLOBAL_NUMBER_ARRAY:
                 return S->GetAtIPFromArray<T>(true);

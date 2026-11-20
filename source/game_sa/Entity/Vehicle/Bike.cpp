@@ -1212,7 +1212,8 @@ int32 CBike::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoints) {
         const auto pcd = m_pDriver->GetColData();
         if (!pcd->m_nNumLines) {
             CMatrix driverMat = GetMatrix();
-            driverMat.GetPosition() += GetDriverSeatDummyPositionWS();
+            // exe 0x6BE04C: the seat dummy (object space) goes through 0x59C790 (Multiply3x3, rotation only) and is ADDED to the bike position
+            driverMat.GetPosition() += GetMatrix().TransformVector(GetDriverSeatDummyPositionOS());
 
             std::array<CColPoint, 32> pedEntityColPts{};
             const auto numPedEntityColPts = CCollision::ProcessColModels(

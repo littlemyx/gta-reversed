@@ -661,7 +661,7 @@ void SetCmdRunner(void (*fn)(const std::string&)) { g_run = fn; }
 bool Cmd(const char* name, const std::string& args) {
     if (std::strncmp(name, "md", 2)) return false;
     auto* ped = Cj();
-    if (!std::strcmp(name, "mdkillped")) { if (auto* k = CPools::GetPed(std::atoi(args.c_str()))) { if (std::getenv("NOTSA_MDRIVER_PLOG")) notsa::standalone::Fixups::Log("[mdplog] kill h=%s type=%d model=%d hp=%.0f pos=%.0f,%.0f wanted=%d\n", args.c_str(), (int)k->m_nPedType, (int)k->m_nModelIndex, k->m_fHealth, k->GetPosition().x, k->GetPosition().y, (int)FindPlayerWanted()->m_WantedLevel); k->m_fHealth = 0.f; k->m_nPedState = PEDSTATE_DEAD; } return true; }
+    if (!std::strcmp(name, "mdkillped")) { if (auto* k = CPools::GetPed(std::atoi(args.c_str()))) { if (std::getenv("NOTSA_MDRIVER_PLOG")) notsa::standalone::Fixups::Log("[mdplog] kill h=%s type=%d model=%d hp=%.0f pos=%.0f,%.0f wanted=%d\n", args.c_str(), (int)k->m_nPedType, (int)k->m_nModelIndex, k->m_fHealth, k->GetPosition().x, k->GetPosition().y, (int)FindPlayerWanted()->m_WantedLevel); if (ped) CWeapon::GenerateDamageEvent(k, ped, WEAPON_PISTOL, 1000, PED_PIECE_TORSO, 0); if (!k->IsStateDeadForScript()) { k->m_fHealth = 0.f; k->m_nPedState = PEDSTATE_DEAD; } } return true; }
     if (!std::strcmp(name, "mdkillcar")) { if (auto* k = CPools::GetVehicle(std::atoi(args.c_str()))) k->BlowUpCar(nullptr, false); return true; }
     if (!std::strcmp(name, "mdpad")) { const auto c = args.find(':'); if (c != std::string::npos) g_padHold[std::atoi(args.c_str())] = std::atoi(args.c_str() + c + 1) + 1; return true; }
     if (!std::strcmp(name, "mdkey")) { const auto c = args.find(':'); if (g_push) g_push(args.c_str() + c + 1, args.compare(0, c, "down") == 0); return true; }

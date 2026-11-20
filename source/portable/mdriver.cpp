@@ -592,6 +592,10 @@ void TickGeneric() {
             v ? (int)v->m_nModelIndex : -1, v ? v->m_fHealth : 0.f, v ? (int)v->GetStatus() : 0, v ? (int)v->vehicleFlags.bIsDrowning : 0, w ? (int)w->m_WantedLevel : -1, me->m_pLastEntityDamage ? (int)me->m_pLastEntityDamage->GetType() : -1, (int)me->m_nLastWeaponDamage);
         for (int gi = 0; gi < CGarages::NumGarages; gi++) { auto& g = CGarages::GetGarage(gi); if (g.m_nType != PAYNSPRAY || g.CalcDistToGarageRectangleSquared(pp.x, pp.y) > 900.f) continue; notsa::standalone::Fixups::Log("[mdplog] garage %d door=%d inside=%d outside=%d sprayable=%d NoResprays=%d free=%d money=%d spd=%.3f wantedBackOff=%d\n", gi, (int)g.m_nDoorState, (int)g.IsStaticPlayerCarEntirelyInside(), (int)g.IsPlayerOutsideGarage(0.0f), v ? (int)CGarages::IsCarSprayable(v) : -1, (int)CGarages::NoResprays, (int)CGarages::RespraysAreFree, (int)CWorld::Players[CWorld::PlayerInFocus].m_nMoney, v ? v->m_vecMoveSpeed.Magnitude() : -1.f, w ? (int)w->m_bPoliceBackOffGarage : -1); }
     }
+    if (static const bool bl = std::getenv("NOTSA_MDRIVER_BIKELOG") != nullptr; bl && root && fr % 30 == 0) { // CR17: debug: the script cars of the locals 52..65 (mission 55 ambush bikes) and CJ's car
+        std::string o; for (int li = 52; li < 66; li++) { auto* c = CPools::GetVehicle(LocalAt(root, li)->iParam); if (!c) continue; o += " L" + std::to_string(li) + "=" + std::to_string((int)c->GetPosition().x) + "," + std::to_string((int)c->GetPosition().y) + (c->m_pDriver ? "d" : "-") + (c->m_fHealth > 0 ? "" : "X"); }
+        auto* me = Cj(); const auto pp = me ? me->GetPosition() : CVector{}; notsa::standalone::Fixups::Log("[bikelog] f%d cj=%d,%d%s", fr, (int)pp.x, (int)pp.y, o.c_str());
+    }
     if (static const char* cl = std::getenv("NOTSA_MDRIVER_CARLOG"); cl && root && fr % 10 == 0) { // CR16: debug: the script car (local N) and the ped in it every 10 frames
         const int li = std::atoi(cl); const int li2 = std::getenv("NOTSA_MDRIVER_CARLOG2") ? std::atoi(std::getenv("NOTSA_MDRIVER_CARLOG2")) : -1;
         auto* cr = CPools::GetVehicle(LocalAt(root, li)->iParam);
@@ -626,6 +630,7 @@ void TickGeneric() {
     const uint8_t* ipPtr = root->m_IP;
     g_sameCount = 0;
     std::vector<RecP> loop; for (auto& r : g_recs) if (r->waitSeq >= g_waitSeq - 3) loop.push_back(r);
+    if (std::getenv("NOTSA_MDRIVER_BIKELOG")) { std::string o; for (auto& r : loop) if (r->cond == 0) { o += " " + std::to_string((unsigned)(r->p - root->m_BaseIP)) + "/" + std::to_string(r->raw & 0x7FFF); } notsa::standalone::Fixups::Log("[decide] frame %d attempt %d loop %zu falses:%s", fr, g_attemptsAt[ipPtr], loop.size(), o.c_str()); }
     Dec d = Decide(loop, g_attemptsAt[ipPtr]);
     if (!d.act) { Stop(d.reason, d.op, at); return; }
     g_attemptsAt[ipPtr]++;

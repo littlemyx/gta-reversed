@@ -568,10 +568,7 @@ static std::map<int,int> g_padHold; // CR4: button -> frames left
 void TickGeneric() {
     for (auto it = g_padHold.begin(); it != g_padHold.end();) { if (it->second > 0) --it->second; it = it->second > 0 ? std::next(it) : g_padHold.erase(it); }
     if (!g_loaded) { LoadTable(std::getenv("NOTSA_MDRIVER_TABLE")); LoadArity(); if (const char* o = std::getenv("NOTSA_MDRIVER_OUT")) g_out = std::fopen(o, "w"); if (const char* m = std::getenv("NOTSA_MDRIVER_MAXFRAMES")) g_maxFrames = std::atoi(m); }
-    if (static const bool once = [] { // CR16: TS stallFrames = 600 frames of its fixed 30 fps (33.33 ms) step = 20 s of game time; the RR run steps NOTSA_RR_STEP_MS (20) per frame, so the same 20 s is 1000 frames. 600 frames (12 s) made the stall land after the van of mission 46 had driven off its locate (01AD false -> 8x vehwarp of the script's own car, TS: 0448 CJ in the van -> entercar)
-        if (std::getenv("NOTSA_RR")) { const char* e = std::getenv("NOTSA_RR_STEP_MS"); const int ms = e ? std::max(1, std::atoi(e)) : 20; g_stall = (int)std::lround(600.0 * (100.0 / 3.0) / ms); }
-        if (const char* st = std::getenv("NOTSA_MDRIVER_STALL")) g_stall = std::atoi(st); // debug override
-        return true; }(); once) {}
+    if (static const char* st = std::getenv("NOTSA_MDRIVER_STALL")) g_stall = std::atoi(st); // CR16: per-run override of the stall threshold (TS stallFrames = 600 frames of 33.33 ms = 20 s; 1000 frames of the 20 ms RR step are the same game time; allmissions.sh sets it for mission 46)
     if (g_quitIn >= 0) { if (g_quitIn-- == 0) { WriteResult(); Emit("quit"); if (g_out) { std::fclose(g_out); g_out = nullptr; } g_done = true; } return; }
     auto* root = notsa::scmtrace::Root();
     if (!g_started) { if (!root) return; g_started = true; if (!std::getenv("NOTSA_MDRIVER_NOCITY")) CStats::SetStatValue(STAT_CITY_UNLOCKED, 2.f); /* CR10: a mission started cold stands where the story would have opened the cities: SF/LV closed = 4 stars on arrival (SetPlayerWantedLevelForForbiddenTerritories), cops attack */ g_passStat0 = CStats::GetStatValue(STAT_MISSIONS_PASSED); g_thread = root; g_frame0 = CTimer::GetFrameCounter(); g_sameCount = 0; g_lastIp = nullptr; }

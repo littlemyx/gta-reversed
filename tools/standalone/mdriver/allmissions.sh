@@ -50,6 +50,8 @@ for IDX in $LIST; do
   rm -f "$W"/res "$W"/*.rc
   (
     export NOTSA_STANDALONE_SKIP_VIDEOS=1 NOTSA_STANDALONE_MUTE=1 NOTSA_STANDALONE_INPUT="$(cygpath -w "$W/route.txt")" NOTSA_STANDALONE_USERDIR="$(cygpath -w "$UD")"
+    # CR16: mission 46 (TRUTH1): TS stalls after 600 frames of 33.33 ms = 20 s; 600 RR frames (20 ms) = 12 s landed after the patrol van left its locate (01AD false -> 8x vehwarp). 1000 frames = the same 20 s; the action sequence then equals the TS run. (Not global: 89 needs the old 600.)
+    case "$IDX" in 46) export NOTSA_MDRIVER_STALL="${NOTSA_MDRIVER_STALL:-1000}";; esac
     export NOTSA_STANDALONE_WINDOWED=960x600 NOTSA_STANDALONE_NOPRESENT=1 NOTSA_STANDALONE_NOVSYNC=1
     export NOTSA_RR=1 NOTSA_RR_NOAUDIO=1 NOTSA_RR_AUDIOSTUBS=1 NOTSA_RR_SEED="${RR_SEED:-12345}" NOTSA_RR_STEP_MS=20 NOTSA_RR_SCREEN=1280x720 NOTSA_AUDIO=null NOTSA_RR_GAMEPLAY_RAND=1
     export NOTSA_RR_TRACE="$(cygpath -w "$W/m.rr.trace")" NOTSA_SH_FILE="$(cygpath -w "$W/m.sh")" NOTSA_SH_RANDLOG="$(cygpath -w "$W/m.rand")"

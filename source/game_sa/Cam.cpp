@@ -975,18 +975,23 @@ void CCam::LookBehind() {
         m_vecSource.y    = dist * m_vecSource.y + targetPos.y;
         m_vecSource.z    = dist * m_vecSource.z + targetPos.z;
 
-        // 0x8CCE18, 0x8CCE24, 0x8CCE30, 0x8CCE3C - indexed by the ped zoom level
-        constexpr float SWIM_Z_OFFSET[]    = { 0.65f, 0.0f, 1.0f };
-        constexpr float SWIM_LERP_FACTOR[] = { 1.0f, -1.0f, -1.0f };
-        constexpr float TARGET_Z_OFFSET[]  = { -1.0f, 0.6f, 0.6f };
-        constexpr float SOURCE_Z_OFFSET[]  = { 0.6f, 0.6f, 0.0f };
-        const auto      zoom               = TheCamera.m_nPedZoom;
-        const float     srcZOffset         = SOURCE_Z_OFFSET[zoom];
-        const float     targetZOffset      = TARGET_Z_OFFSET[zoom];
+        // exe 0x520C5C-0x520C75: the index is `m_nPedZoom - 1` (lea ebx,[zoom*4-4]), no clamp; m_nPedZoom is 1..3.
+        // Tables are 3 floats each, back to back (exe values dumped):
+        //   0x8CCE1C swim z offset   { 0.0, 1.0, 1.0 }
+        //   0x8CCE28 swim lerp       { -1.0, -1.0, -1.0 }
+        //   0x8CCE34 target z offset { 0.6, 0.6, 0.6 }
+        //   0x8CCE40 source z offset { 0.6, 0.0, 0.0 }   (the dword after it, 0x8CCE4C, is the 2.0f dist constant)
+        constexpr float SWIM_Z_OFFSET[]    = { 0.0f, 1.0f, 1.0f };
+        constexpr float SWIM_LERP_FACTOR[] = { -1.0f, -1.0f, -1.0f };
+        constexpr float TARGET_Z_OFFSET[]  = { 0.6f, 0.6f, 0.6f };
+        constexpr float SOURCE_Z_OFFSET[]  = { 0.6f, 0.0f, 0.0f };
+        const auto      zoomIdx            = TheCamera.m_nPedZoom - 1;
+        const float     srcZOffset         = SOURCE_Z_OFFSET[zoomIdx];
+        const float     targetZOffset      = TARGET_Z_OFFSET[zoomIdx];
 
         if (ped->GetIntelligence()->GetTaskSwim()) {
-            const float lerpFactor = SWIM_LERP_FACTOR[zoom];
-            const float swimZ      = SWIM_Z_OFFSET[zoom];
+            const float lerpFactor = SWIM_LERP_FACTOR[zoomIdx];
+            const float swimZ      = SWIM_Z_OFFSET[zoomIdx];
             const float dz         = targetPos.z - m_vecSource.z;
             m_vecSource.x          = (targetPos.x - m_vecSource.x) * lerpFactor + targetPos.x;
             m_vecSource.y          = (targetPos.y - m_vecSource.y) * lerpFactor + targetPos.y;

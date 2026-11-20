@@ -350,7 +350,7 @@ void OverrideNextRestart(CVector pos, float heading) {
 //! 372 GET_CAR_HEADING (case @0x47CBE1): car => 1 float (degrees)
 float GetCarHeading(CVehicle& veh) {
     constexpr float RAD_TO_DEG = 57.2957763671875f; // 0x859878
-    float heading = (float)((x87d)veh.GetHeading() * (x87d)RAD_TO_DEG); // fmul + fst (float spill)
+    float heading = (float)X87R(veh.GetHeadingExt() * (double)RAD_TO_DEG); // GetHeading (0x441DB0) leaves FPATAN unrounded in ST0; fmul + fst (float spill) round once
     if (heading < 0.0f) {                                                   // fcomp 0.0 (0x858B50), `test ah,5; jp`
         heading = (float)((x87d)heading + (x87d)360.0);                         // 0x859E2C
     }

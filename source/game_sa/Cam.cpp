@@ -5525,7 +5525,7 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
             const auto&  pos         = veh->GetPosition();
             const float  zRel        = (float)(((x87d)tgt.z - (x87d)pos.z) + heightAbove);
 
-            const x87d relBeta1 = (x87d)m_fHorizontalAngle - ((x87d)veh->GetHeading() - (x87d)HALF_PI);
+            const x87d relBeta1 = (x87d)m_fHorizontalAngle - X87R(veh->GetHeadingExt() - (double)HALF_PI); // 0x5251E7: GetHeading unrounded in ST0, `fsub HALF_PI` rounds once
             const double phi      = x87::asin(X87R(std::fabs(x87::sin(relBeta1))));
             const double thr      = x87::atan2((double)bb.m_vecMax.x, -(double)bb.m_vecMin.y);
             x87d       d1;
@@ -5538,7 +5538,7 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
             }
             const float d1f = (float)d1;
 
-            const x87d relBeta2 = (x87d)m_fHorizontalAngle - ((x87d)veh->GetHeading() - (x87d)HALF_PI);
+            const x87d relBeta2 = (x87d)m_fHorizontalAngle - X87R(veh->GetHeadingExt() - (double)HALF_PI); // 0x52527D
             const double pitch    = x87::atan2((double)mat.GetForward().z, std::sqrt((x87d)mat.GetForward().x * (x87d)mat.GetForward().x + (x87d)mat.GetForward().y * (x87d)mat.GetForward().y));
             const x87d p1       = X87R(pitch * x87::cos(relBeta2));
             maxAlpha              = (float)(X87R(x87::atan2((double)zRel, (x87d)d1f * 1.2f) + p1));
@@ -5546,7 +5546,7 @@ void CCam::Process_FollowCar_SA(const CVector& target, float orientation, float 
             if (veh->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE
                 && veh->AsAutomobile()->m_nNumContactWheels > 1
                 && std::fabs(DotProduct(veh->m_vecTurnSpeed, mat.GetForward())) < 0.05f) {
-                const x87d relBeta3 = ((x87d)m_fHorizontalAngle - ((x87d)veh->GetHeading() - (x87d)HALF_PI)) + (x87d)HALF_PI;
+                const x87d relBeta3 = ((x87d)m_fHorizontalAngle - X87R(veh->GetHeadingExt() - (double)HALF_PI)) + (x87d)HALF_PI; // 0x52531B
                 const double pitchR   = x87::atan2((double)mat.GetRight().z, std::sqrt((x87d)mat.GetRight().y * (x87d)mat.GetRight().y + (x87d)mat.GetRight().x * (x87d)mat.GetRight().x));
                 maxAlpha              = (float)(X87R(pitchR * x87::cos(relBeta3)) + (x87d)maxAlpha);
             }

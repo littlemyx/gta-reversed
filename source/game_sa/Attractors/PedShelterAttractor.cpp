@@ -3,6 +3,7 @@
 #include <numbers>
 
 #include "PedShelterAttractor.h"
+#include "portable/sh13log.h" // SH13 debug logs (NOTSA_STATEHASH only)
 #include "Tasks/TaskTypes/TaskComplexGoToAttractor.h"
 
 // The one in `common.h` is rounded to 5 decimals, the original uses the exact float (0x858CBC)
@@ -18,6 +19,7 @@ static void EraseFromSArray(SArray<T>& arr, T* pos) {
 // 0x5EF420
 // NOTE: The original returns a pointer to the element (not a copy)
 CVector& CPedShelterAttractor::GetDisplacement(int32 pedId) {
+    SH13_ATTR("D CPedShelterAttractor::GetDisplacement", "");
     if (ms_displacements.empty()) {
         ms_displacements.reserve(5); // NOTE: `SArray::emplace_back` can't grow an array which has no storage yet
         // Generate 5 random displacements (inside a circle with radius 2), each at least 1 unit away from all others
@@ -62,6 +64,7 @@ void CPedShelterAttractor::ComputeAttractPos(int32 pedId, CVector& outPos) {
 
 // 0x5E9690
 void CPedShelterAttractor::ComputeAttractHeading(int32 bQueue, float& heading) {
+    SH13_ATTR("D CPedShelterAttractor::ComputeAttractHeading", "");
     heading = CGeneral::GetRandomNumberInRange(0.0f, TWO_PI);
 }
 

@@ -64,6 +64,7 @@ void* operator new[](std::size_t n) { return ::operator new(n); }
 #include "portable/sh7log.h"
 #include "portable/cargenlog.h"
 #include "portable/sh12log.h"
+#include "portable/sh13log.h"
 namespace notsa::rr {
 uint32_t LoadLogFrameCounter() { return CTimer::GetFrameCounter(); }
 namespace {
@@ -694,6 +695,68 @@ void Sh12SafePosAll(const char* tag) {
     for (int i = 0; i < pool->GetSize(); i++) if (CVehicle* v = pool->GetAt(i)) Sh12SafePos(tag, v);
 }
 
+// SH13 (see sh13log.h): pure reads only
+void Sh13Ped(const char* where) {
+    FILE* f = Sh13PedLog(); if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    CPlayerPed* p = FindPlayerPed(0); if (!p || !p->m_matrix) return;
+    const auto& m = p->GetMatrix();
+    auto V = [&](const char* n, const CVector& v) { return std::fprintf(f, " %s=%08x/%.9g,%08x/%.9g,%08x/%.9g", n, Sh7Bits(v.x), (double)v.x, Sh7Bits(v.y), (double)v.y, Sh7Bits(v.z), (double)v.z); };
+    std::fprintf(f, "%d %llu %s H %s", LoadLogRecFrame(), (unsigned long long)RandCount(), Sh12Stage(), where);
+    V("R", m.GetRight()); V("F", m.GetForward()); V("U", m.GetUp()); V("P", m.GetPosition());
+    const float h = p->GetHeading();
+    std::fprintf(f, " rot=%08x/%.9g aim=%08x/%.9g heading=%08x/%.9g headingExt=%.17g\n", Sh7Bits(p->m_fCurrentRotation), (double)p->m_fCurrentRotation, Sh7Bits(p->m_fAimingRotation), (double)p->m_fAimingRotation, Sh7Bits(h), (double)h, (double)p->GetHeadingExt());
+    std::fflush(f);
+}
+void Sh13Put(const char* where) {
+    FILE* f = Sh13PutLog(); if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    CPlayerPed* p = FindPlayerPed(0); if (!p) return;
+    const int fr = LoadLogRecFrame(); const unsigned long long rc = RandCount();
+    int n = 0;
+    if (p->GetRwObject()) for (auto* a = RpAnimBlendClumpGetFirstAssociation(p->GetRpClump()); a; a = RpAnimBlendGetNextAssociation(a), n++) {
+        std::fprintf(f, "%d %llu %s A %s anim=%d group=%d blend=%08x/%.9g delta=%08x/%.9g time=%08x/%.9g speed=%08x/%.9g flags=%#x hier=%p\n", fr, rc, Sh12Stage(), where, (int)a->m_AnimId, (int)a->m_AnimGroupId,
+            Sh7Bits(a->m_BlendAmount), (double)a->m_BlendAmount, Sh7Bits(a->m_BlendDelta), (double)a->m_BlendDelta, Sh7Bits(a->m_CurrentTime), (double)a->m_CurrentTime, Sh7Bits(a->m_Speed), (double)a->m_Speed, (unsigned)a->m_Flags, (void*)a->m_BlendHier);
+    }
+    char b[1500]; size_t o = 0;
+    auto chain = [&](CTask* t) { for (int d = 0; t && d < 8 && o + 16 < sizeof b; t = t->GetSubTask(), d++) o += (size_t)std::snprintf(b + o, sizeof b - o, "%s%d", d ? ">" : "", (int)t->GetTaskType()); };
+    auto& tm = p->GetIntelligence()->GetTaskManager();
+    o += (size_t)std::snprintf(b + o, sizeof b - o, "primary:");
+    for (int i = 0; i < TASK_PRIMARY_MAX; i++) if (tm.m_aPrimaryTasks[i]) { o += (size_t)std::snprintf(b + o, sizeof b - o, " [%d]=", i); chain(tm.m_aPrimaryTasks[i]); }
+    o += (size_t)std::snprintf(b + o, sizeof b - o, " secondary:");
+    for (int i = 0; i < TASK_SECONDARY_MAX; i++) if (tm.m_aSecondaryTasks[i]) { o += (size_t)std::snprintf(b + o, sizeof b - o, " [%d]=", i); chain(tm.m_aSecondaryTasks[i]); }
+    std::fprintf(f, "%d %llu %s T %s nAnims=%d pedState=%d %s\n", fr, rc, Sh12Stage(), where, n, (int)p->m_nPedState, b);
+    std::fflush(f);
+}
+void Sh13VehDump(const char* where) {
+    FILE* f = Sh13VehLog(); if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    auto* pool = GetVehiclePool(); if (!pool) return;
+    auto V3 = [&](const CVector& v) { std::fprintf(f, "%08x/%.9g,%08x/%.9g,%08x/%.9g", Sh7Bits(v.x), (double)v.x, Sh7Bits(v.y), (double)v.y, Sh7Bits(v.z), (double)v.z); };
+    for (int i = 0; i < pool->GetSize(); i++) {
+        CVehicle* v = pool->GetAt(i); if (!v) continue;
+        CBaseModelInfo* mi = CModelInfo::GetModelInfo(v->GetModelIndex());
+        std::fprintf(f, "%d %llu %s V %s slot=%d model=%d name=%s pos=", LoadLogRecFrame(), (unsigned long long)RandCount(), Sh12Stage(), where, i, (int)v->GetModelIndex(), mi ? mi->GetModelNameAsString().c_str() : "-");
+        if (v->m_matrix) { V3(v->GetMatrix().GetPosition()); std::fprintf(f, " right="); V3(v->GetMatrix().GetRight()); std::fprintf(f, " fwd="); V3(v->GetMatrix().GetForward()); std::fprintf(f, " up="); V3(v->GetMatrix().GetUp()); } else { V3(v->GetPosition()); std::fprintf(f, " (no matrix)"); }
+        std::fprintf(f, " move="); V3(v->m_vecMoveSpeed); std::fprintf(f, " turn="); V3(v->m_vecTurnSpeed);
+        std::fprintf(f, " status=%d created=%d driver=%d\n", (int)v->GetStatus(), (int)v->m_nCreatedBy, v->m_pDriver ? (int)GetPedPool()->GetIndex(v->m_pDriver) : -1);
+    }
+    std::fflush(f);
+}
+void Sh13PopPoll(const char* where, bool stack) {
+    FILE* f = Sh13PopCntLog(); if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    static uint32_t last[32]; static int lastFrame = -2;
+    uint32_t cur[32] = {}; int k = 0;
+    cur[k++] = CPopulation::ms_nNumCivMale; cur[k++] = CPopulation::ms_nNumCivFemale; cur[k++] = CPopulation::ms_nNumCop; cur[k++] = CPopulation::ms_nNumEmergency; cur[k++] = CPopulation::ms_nNumDealers;
+    for (size_t i = 0; i < CPopulation::ms_nNumGang.size() && k < 24; i++) cur[k++] = CPopulation::ms_nNumGang[i];
+    cur[k++] = CPopulation::ms_nTotalPeds; cur[k++] = CPopulation::ms_nTotalGangPeds; cur[k++] = CPopulation::ms_nTotalCivPeds; cur[k++] = CPopulation::ms_nTotalCarPassengerPeds; cur[k++] = CPopulation::ms_nTotalMissionPeds; cur[k++] = (uint32_t)CPopulation::m_CountDownToPedsAtStart;
+    const int fr = LoadLogRecFrame(); const bool changed = std::memcmp(cur, last, sizeof cur) != 0, first = fr != lastFrame;
+    if (!changed && !first) return;
+    char st[200] = ""; if (stack || first) Sh12Stack(st, sizeof st, 1);
+    std::fprintf(f, "%d %llu %s N %s changed=%d |", fr, (unsigned long long)RandCount(), Sh12Stage(), where, (int)changed);
+    for (int i = 0; i < k; i++) std::fprintf(f, " %u", cur[i]);
+    std::fprintf(f, " | %s\n", st); std::fflush(f);
+    std::memcpy(last, cur, sizeof cur); lastFrame = fr;
+}
+
+void Sh13PopPollMark(const char* w) { if (Sh13PopCntLog()) Sh13PopPoll(w, false); }
 FILE* WalkLogFile() {
     static FILE* f = nullptr; static std::set<int> frames; static bool init = false;
     if (!init) {

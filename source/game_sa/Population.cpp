@@ -10,6 +10,7 @@
 #include <numbers>
 
 #include "Population.h"
+#include "portable/sh13log.h" // SH13 debug logs (NOTSA_STATEHASH only)
 #include "portable/statehash.h"
 #include "portable/attrlog.h"
 #include "CarCtrl.h"
@@ -242,6 +243,7 @@ void CPopulation::LoadCarGroups() {
 
 // 0x610E10
 void CPopulation::Initialise() {
+    SH13_POPSCOPE("CPopulation::Initialise");
     ms_nNumCivMale = 0;
     ms_nNumCivFemale = 0;
     ms_nNumCop = 0;
@@ -513,6 +515,7 @@ CPed* CPopulation::AddExistingPedInCar(CPed* ped, CVehicle* vehicle) {
 
 // 0x611570
 void CPopulation::UpdatePedCount(CPed* ped, bool pedAddedOrRemoved) {
+    SH13_POPSCOPE("CPopulation::UpdatePedCount");
     if (pedAddedOrRemoved != ped->bHasBeenAddedToPopulation) {
         return;
     }
@@ -2216,16 +2219,20 @@ bool CPopulation::AddToPopulation(float minRadius, float maxRadius, float minRad
     CVector      pos{};
     CNodeAddress addr1{}, addr2{};
     float        orientation{};
-    if (!ThePaths.GeneratePedCreationCoors(
+    const auto shRc0 = SH13_RC();
+    const bool shLow = pedType == PED_TYPE_COP && FindPlayerWanted(-1)->m_WantedLevel > eWantedLevel::WANTED_CLEAN;
+    const bool shPccOk = ThePaths.GeneratePedCreationCoors(
         playerCentre.x, playerCentre.y,
         minDist1, maxDist1,
         minRadiusClose, maxRadiusClose,
         &pos,
         &addr1, &addr2,
         &orientation,
-        pedType == PED_TYPE_COP && FindPlayerWanted(-1)->m_WantedLevel > eWantedLevel::WANTED_CLEAN,
+        shLow,
         nullptr
-    )) {
+    );
+    SH13_PCC(shRc0, shPccOk, playerCentre.x, playerCentre.y, minDist1, maxDist1, minRadiusClose, maxRadiusClose, pos, addr1, addr2, orientation, shLow);
+    if (!shPccOk) {
         return result;
     }
 
@@ -2259,6 +2266,10 @@ int32 CPopulation::GeneratePedsAtAttractors(
     int32   numPedsToCreate
 ) {
     ZoneScoped;
+#ifdef NOTSA_STATEHASH
+    char shArgs_[160]; if (notsa::rr::Sh13PopLog()) { std::snprintf(shArgs_, sizeof shArgs_, "pos=%.9g,%.9g,%.9g r=%.9g,%.9g,%.9g,%.9g dm=%d want=%d", pos.x, pos.y, pos.z, minRadius, maxRadius, minRadiusClose, maxRadiusClose, (int)decisionMaker, (int)numPedsToCreate); } else { shArgs_[0] = 0; }
+#endif
+    SH13_ATTR("G GeneratePedsAtAttractors", shArgs_);
 
     if (!numPedsToCreate) {
         return 0;
@@ -2781,6 +2792,7 @@ uint32 CPopulation::CalculateTotalNumGangPeds() {
 // NOTSA - Moved here for reuseability
 void CPopulation::UpdatePedCounts() {
     ZoneScoped;
+    SH13_POPSCOPE("CPopulation::UpdatePedCounts");
 
     ms_nTotalGangPeds = CalculateTotalNumGangPeds();
     ms_nTotalCivPeds = ms_nNumCivMale + ms_nNumCivFemale;

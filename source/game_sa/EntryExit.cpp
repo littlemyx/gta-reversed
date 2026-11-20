@@ -2,6 +2,7 @@
 
 #include "EntryExit.h"
 #include "portable/sh14log.h" // SH14 debug logs (NOTSA_STATEHASH only)
+#include "portable/sh20log.h" // SH24 debug logs (NOTSA_STATEHASH only)
 #include "portable/sh18log.h" // SH18 debug logs (NOTSA_STATEHASH only)
 #include "EntryExitManager.h"
 #include "TaskComplexGotoDoorAndOpen.h"
@@ -328,6 +329,7 @@ bool CEntryExit::TransitionStarted(CPed* ped) {
         };
 
 
+        { const auto sh24p = GetPosition(); const auto sh24c = ped->GetPosition(); SH24_DROW("X enex pos=%.9g,%.9g,%.9g bits=%08x,%08x,%08x spawnPointExitToUs=%.9g,%.9g,%.9g bits=%08x,%08x,%08x dir=%.9g,%.9g,%.9g warping=%d ped=%.9g,%.9g,%.9g", (double)sh24p.x, (double)sh24p.y, (double)sh24p.z, notsa::rr::Sh7Bits(sh24p.x), notsa::rr::Sh7Bits(sh24p.y), notsa::rr::Sh7Bits(sh24p.z), (double)spawnPointExitToUs.x, (double)spawnPointExitToUs.y, (double)spawnPointExitToUs.z, notsa::rr::Sh7Bits(spawnPointExitToUs.x), notsa::rr::Sh7Bits(spawnPointExitToUs.y), notsa::rr::Sh7Bits(spawnPointExitToUs.z), (double)spawnPointExitToUsDir.x, (double)spawnPointExitToUsDir.y, (double)spawnPointExitToUsDir.z, (int)ms_bWarping, (double)sh24c.x, (double)sh24c.y, (double)sh24c.z); }
         if (const auto door = CEntryExitManager::FindNearestDoor(*this, 10.f)) {
             // 0x4401AB
 

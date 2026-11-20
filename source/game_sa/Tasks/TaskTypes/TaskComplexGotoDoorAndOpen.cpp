@@ -5,6 +5,7 @@
 #include "TaskSimpleRunAnim.h"
 #include "EventAreaCodes.h"
 #include "Animation/AnimManager.h"
+#include "portable/sh20log.h" // SH24 debug logs (NOTSA_STATEHASH only)
 
 void CTaskComplexGotoDoorAndOpen::InjectHooks() {
     RH_ScopedVirtualClass(CTaskComplexGotoDoorAndOpen, 0x86FFC0, 11);
@@ -22,6 +23,7 @@ void CTaskComplexGotoDoorAndOpen::InjectHooks() {
 // 0x66BB20
 CTaskComplexGotoDoorAndOpen::CTaskComplexGotoDoorAndOpen(CObject* door) : CTaskComplex() {
     m_Object = door;
+    SH24_DROW("D ctor(door) door=%p", (void*)door);
     m_nStartTime = 0;
     m_nOffsetTime = 0;
     byte30 = 0;
@@ -106,6 +108,7 @@ CTask* CTaskComplexGotoDoorAndOpen::CreateFirstSubTask(CPed* ped) {
     byte30          = true;
 
     if (!m_Object) {
+        SH24_DOOR("CreateFirstSubTask-noObject", this, ped);
         if ((m_nFlags & 1) != 0) { // The door was destroyed in the meantime
             return nullptr;
         }
@@ -133,6 +136,8 @@ CTask* CTaskComplexGotoDoorAndOpen::CreateFirstSubTask(CPed* ped) {
         m_End   = CVector{px - fwd.x *  2.0f, py - fwd.y *  2.0f, pz - fwd.z *  2.0f};
     }
 
+    SH24_DOOR("CreateFirstSubTask", this, ped);
+    SH24_DROW("D CreateFirstSubTask dot=%.9g/%08x p=%.9g,%.9g,%.9g bits=%08x,%08x,%08x dotPositive=%d", (double)dot, notsa::rr::Sh7Bits(dot), (double)px, (double)py, (double)pz, notsa::rr::Sh7Bits(px), notsa::rr::Sh7Bits(py), notsa::rr::Sh7Bits(pz), (int)(dot > 0.f));
     if (m_Object->physicalFlags.bCollidable) {
         m_nFlags |= 4;
         m_Object->physicalFlags.bCollidable = false;

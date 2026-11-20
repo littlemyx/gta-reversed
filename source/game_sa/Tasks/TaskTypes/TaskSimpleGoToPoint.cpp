@@ -6,6 +6,7 @@
 #include "Ragdoll/IKChainManager.h"
 #include "TaskSimpleHoldEntity.h"
 #include "TaskSimpleDuck.h"
+#include "portable/sh20log.h" // SH24 debug logs (NOTSA_STATEHASH only)
 
 void CTaskSimpleGoToPoint::InjectHooks() {
     RH_ScopedVirtualClass(CTaskSimpleGoToPoint, 0x86fd50, 9);
@@ -137,6 +138,7 @@ bool CTaskSimpleGoToPoint::ProcessPed(CPed* ped) {
         else {
             gotoPointFlags.m_b03 = true;
         }
+        SH24_GOTO(this, ped, vecDistance.x, vecDistance.y, vecDirection.x, vecDirection.y, bAimingRotationSet);
         if (!bAimingRotationSet) {
             QuitIK(ped);
             return true;

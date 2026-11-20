@@ -4,6 +4,7 @@
 //   R2: NOTSA_SH20_BMX=<file> NOTSA_SH20_BMX_FRAMES (0): bike slot 2 (wheel ratios, ratio history, fake physics, status, move speed) and the matrix of vehicle slot 4, at the start and end of the frame.
 #ifdef NOTSA_STATEHASH
 #include "sh13log.h"
+class CTaskComplexGotoDoorAndOpen; class CTaskSimpleGoToPoint; // SH24
 namespace notsa::rr {
 inline FILE* Sh20BmxLog() { static Sh7Log l = [] { Sh7Log x; x.Init("NOTSA_SH20_BMX", "NOTSA_SH20_BMX_FRAMES", "0", "# frame randCount stage B|M where ... (see statehash.cpp Sh20Bmx)"); return x; }(); return l.Get(); }
 void Sh20Pad(const char* where);                              // statehash.cpp
@@ -36,7 +37,24 @@ inline FILE* Sh23CjLog() { static FILE* f = Sh23Open("NOTSA_SH23_CJPOS"); const 
 inline const void*& Sh23ScriptHint() { static const void* s = nullptr; return s; }
 void Sh23Pick(unsigned modelId, int type, unsigned ammo, unsigned moneyPerDay, bool isEmpty, float x, float y, float z, int slot, unsigned ret);
 void Sh23Cj();
+// SH24 (STATEHASH-only, pure reads): R8 NOTSA_SH24_COUNTDOWN=<file>: every write of CPopulation::m_CountDownToPedsAtStart boot..3140 with caller stack, V row per frame, GeneratePedsAtStartOfGame call
+//   R9 NOTSA_SH24_DOOR=<file>: enex door task (FindNearestDoor candidates, ctor, CreateFirstSubTask, GoToPoint aim intermediates, per-frame CJ task chain) frames 19313..19360
+inline FILE* Sh24Open(const char* env) { const char* p = std::getenv(env); FILE* f = p && p[0] ? std::fopen(p, "w") : nullptr; if (f) { std::fprintf(f, "# SH24 %s frame fc randCount stage ...\n", env); std::fflush(f); } return f; }
+inline FILE* Sh24CdLog() { static FILE* f = Sh24Open("NOTSA_SH24_COUNTDOWN"); return (f && LoadLogRecFrame() <= 3140) ? f : nullptr; }
+inline FILE* Sh24DoorLog() { static FILE* f = Sh24Open("NOTSA_SH24_DOOR"); const int fr = LoadLogRecFrame(); return (f && fr >= 19313 && fr <= 19360) ? f : nullptr; }
+void Sh24Cd(const char* where, int oldv, int newv);
+void Sh24CdFrame();
+void Sh24ObjDesc(char* b, size_t n, const class CObject* o);
+void Sh24Door(const char* ev, const class CTaskComplexGotoDoorAndOpen* t, const class CPed* ped);
+void Sh24DoorFrame();
+void Sh24Goto(const class CTaskSimpleGoToPoint* t, const class CPed* ped, float dx, float dy, float nx, float ny, bool aimSet);
 } // namespace notsa::rr
+#define SH24_DROW(...) do { if (FILE* sh24f_ = notsa::rr::Sh24DoorLog()) { std::fprintf(sh24f_, "%d %u %llu %s ", notsa::rr::LoadLogRecFrame(), (unsigned)CTimer::GetFrameCounter(), (unsigned long long)notsa::rr::RandCountNow(), notsa::rr::Sh12Stage()); std::fprintf(sh24f_, __VA_ARGS__); std::fputc(10, sh24f_); std::fflush(sh24f_); } } while (0)
+#define SH24_CD(w, o, n) do { if (notsa::rr::Sh24CdLog()) notsa::rr::Sh24Cd(w, o, n); } while (0)
+#define SH24_CDFRAME() do { if (notsa::rr::Sh24CdLog()) notsa::rr::Sh24CdFrame(); } while (0)
+#define SH24_DOOR(ev, t, ped) do { if (notsa::rr::Sh24DoorLog()) notsa::rr::Sh24Door(ev, t, ped); } while (0)
+#define SH24_DOORFRAME() do { if (notsa::rr::Sh24DoorLog()) notsa::rr::Sh24DoorFrame(); } while (0)
+#define SH24_GOTO(t, ped, dx, dy, nx, ny, a) do { if (notsa::rr::Sh24DoorLog()) notsa::rr::Sh24Goto(t, ped, dx, dy, nx, ny, a); } while (0)
 #define SH20_PAD(w) do { if (notsa::rr::Sh13PutLog()) notsa::rr::Sh20Pad(w); } while (0)
 #define SH20_HOLD(t, p, ph) do { if (notsa::rr::Sh13PutLog()) notsa::rr::Sh20Hold(t, p, ph); } while (0)
 #define SH20_EVENT(p) do { if (notsa::rr::Sh13PutLog()) notsa::rr::Sh20Event(p); } while (0)
@@ -54,6 +72,12 @@ void Sh23Cj();
 #define SH23_PICK(m, t, a, mpd, e, pos, slot, ret) do { if (notsa::rr::Sh23PickLog()) notsa::rr::Sh23Pick(m, t, a, mpd, e, (pos).x, (pos).y, (pos).z, slot, ret); } while (0)
 #define SH23_CJ() do { if (notsa::rr::Sh23CjLog()) notsa::rr::Sh23Cj(); } while (0)
 #else
+#define SH24_DROW(...) ((void)0)
+#define SH24_CD(w, o, n) ((void)0)
+#define SH24_CDFRAME() ((void)0)
+#define SH24_DOOR(ev, t, ped) ((void)0)
+#define SH24_DOORFRAME() ((void)0)
+#define SH24_GOTO(t, ped, dx, dy, nx, ny, a) ((void)0)
 #define SH20_PAD(w) ((void)0)
 #define SH20_HOLD(t, p, ph) ((void)0)
 #define SH20_EVENT(p) ((void)0)

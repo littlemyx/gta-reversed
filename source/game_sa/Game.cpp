@@ -953,7 +953,7 @@ void CGame::Process() {
     SH10_END();
     SH10_CAM("endOfCGameProcess");
     SH10_CUT("endOfCGameProcess");
-    SH13_PED("endOfCGameProcess"); SH13_PUT("endOfCGameProcess"); SH22_IDLEFRAME(); SH23_CJ(); SH20_BMX("frameEnd"); SH13_POP("endOfCGameProcess");
+    SH13_PED("endOfCGameProcess"); SH13_PUT("endOfCGameProcess"); SH22_IDLEFRAME(); SH23_CJ(); SH24_CDFRAME(); SH24_DOORFRAME(); SH20_BMX("frameEnd"); SH13_POP("endOfCGameProcess");
 }
 
 // 0x53BCF0

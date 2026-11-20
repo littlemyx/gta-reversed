@@ -1,6 +1,7 @@
 #include "StdInc.h"
 
 #include "EntryExitManager.h"
+#include "portable/sh20log.h" // SH24 debug logs (NOTSA_STATEHASH only)
 #include "portable/sh18log.h" // SH18 debug logs (NOTSA_STATEHASH only)
 
 using EntryExitTreeNode = CQuadTreeNode<CEntryExit*>;
@@ -250,6 +251,12 @@ CObject* CEntryExitManager::FindNearestDoor(CEntryExit const& exit, float radius
 
     // exe 0x43F69E-0x43F70A: the candidates are walked from the LAST to the first, the best distance starts at `radius` (not FLT_MAX) and is a sqrt (x87, rounded to float
     // when it is stored): the sum is (dz*dz + dx*dx) + dy*dy; an object is taken when dist < best (strict, a NaN distance is rejected).
+    SH24_DROW("N FindNearestDoor enex=%.9g,%.9g,%.9g bits=%08x,%08x,%08x radius=%.9g count=%d (list order below; the walk is last to first)", (double)entranceCenter.x, (double)entranceCenter.y, (double)entranceCenter.z, notsa::rr::Sh7Bits(entranceCenter.x), notsa::rr::Sh7Bits(entranceCenter.y), notsa::rr::Sh7Bits(entranceCenter.z), (double)radius, (int)numObjsInRange);
+#ifdef NOTSA_STATEHASH
+    for (int16 sh24i = 0; sh24i < numObjsInRange; sh24i++) {
+        if (notsa::rr::Sh24DoorLog()) { char b[1200]; notsa::rr::Sh24ObjDesc(b, sizeof b, objsInRange[sh24i]->AsObject()); const auto& q = objsInRange[sh24i]->GetPosition(); SH24_DROW("N cand[%d] %s distNaive=%.9g", (int)sh24i, b, (double)std::sqrt((entranceCenter.x - q.x) * (entranceCenter.x - q.x) + (entranceCenter.y - q.y) * (entranceCenter.y - q.y) + (entranceCenter.z - q.z) * (entranceCenter.z - q.z))); }
+    }
+#endif
     CObject* closest{};
     float    bestDist = radius;
     for (int16 n = numObjsInRange; n; ) {
@@ -269,6 +276,9 @@ CObject* CEntryExitManager::FindNearestDoor(CEntryExit const& exit, float radius
             closest  = obj;
         }
     }
+#ifdef NOTSA_STATEHASH
+    if (notsa::rr::Sh24DoorLog()) { char b[1200]; notsa::rr::Sh24ObjDesc(b, sizeof b, closest); SH24_DROW("N chosen %s bestDist=%.9g", b, (double)bestDist); }
+#endif
     return closest;
 }
 

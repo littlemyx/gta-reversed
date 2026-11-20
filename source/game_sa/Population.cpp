@@ -8,7 +8,8 @@
 #include "StdInc.h"
 #include "portable/sh14log.h" // SH14 debug logs (NOTSA_STATEHASH only)
 #include "portable/sh18log.h" // SH18 debug logs (NOTSA_STATEHASH only)
-#include "portable/sh19log.h" // SH19 debug logs (NOTSA_STATEHASH only)
+#include "portable/sh19log.h"
+#include "portable/sh20log.h" // SH24 // SH19 debug logs (NOTSA_STATEHASH only)
 
 #include <numbers>
 
@@ -257,6 +258,7 @@ void CPopulation::Initialise() {
     ms_nTotalGangPeds = 0;
     ms_nTotalPeds = 0;
     ms_nTotalMissionPeds = 0;
+    SH24_CD("Population::Initialise", (int)m_CountDownToPedsAtStart, 5);
     m_CountDownToPedsAtStart = 5;
     bZoneChangeHasHappened = 0;
     PedDensityMultiplier = 1.0f;
@@ -2801,7 +2803,9 @@ void CPopulation::Update(bool generatePeds) {
     }
 
     if (m_CountDownToPedsAtStart) {
+        SH24_CD("Population::Update --", (int)m_CountDownToPedsAtStart, (int)m_CountDownToPedsAtStart - 1);
         if (--m_CountDownToPedsAtStart == 0) {
+            SH24_CD("GeneratePedsAtStartOfGame call", 0, 0);
             SH18_SCOPE(shS, "GeneratePedsAtStartOfGame", "-");
             GeneratePedsAtStartOfGame();
         }

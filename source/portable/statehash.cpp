@@ -67,6 +67,9 @@ void* operator new[](std::size_t n) { return ::operator new(n); }
 #include "portable/sh13log.h"
 #include "portable/sh20log.h"
 #include "Tasks/TaskTypes/TaskSimpleHoldEntity.h"
+#include "Tasks/TaskTypes/TaskComplexGotoDoorAndOpen.h"
+#include "Tasks/TaskTypes/TaskSimpleGoToPoint.h"
+#include "GameLogic.h"
 #include "Entity/Vehicle/Bike.h"
 namespace notsa::rr {
 uint32_t LoadLogFrameCounter() { return CTimer::GetFrameCounter(); }
@@ -879,6 +882,66 @@ void Sh23Cj() {
         (double)pos.x, (double)pos.y, (double)pos.z, Sh7Bits(pos.x), Sh7Bits(pos.y), Sh7Bits(pos.z), Sh7Bits(p->GetHeading()), (double)p->GetHeading(), Sh7Bits(p->m_fCurrentRotation), (double)p->m_fCurrentRotation, Sh7Bits(p->m_fAimingRotation), (double)p->m_fAimingRotation,
         (int)p->m_nMoveState, pri ? (int)pri->GetTaskType() : -1, act ? (int)act->GetTaskType() : -1,
         Sh7Bits(ms.x), (double)ms.x, Sh7Bits(ms.y), (double)ms.y, Sh7Bits(ms.z), (double)ms.z, Sh7Bits(p->m_vecAnimMovingShiftLocal.x), (double)p->m_vecAnimMovingShiftLocal.x, Sh7Bits(p->m_vecAnimMovingShiftLocal.y), (double)p->m_vecAnimMovingShiftLocal.y);
+    std::fflush(f);
+}
+// SH24 R8: m_CountDownToPedsAtStart writes
+void Sh24Cd(const char* where, int oldv, int newv) {
+    FILE* f = Sh24CdLog(); if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    char st[200]; Sh12Stack(st, sizeof st, 1);
+    std::fprintf(f, "%d %u %llu %s W %s old=%d new=%d carsAtStart=%d gameState=%d callers=%s\n", LoadLogRecFrame(), (unsigned)CTimer::GetFrameCounter(), (unsigned long long)RandCount(), Sh12Stage(), where, oldv, newv, (int)CCarCtrl::CountDownToCarsAtStart, (int)CGameLogic::GameState, st);
+    std::fflush(f);
+}
+void Sh24CdFrame() {
+    FILE* f = Sh24CdLog(); const int fr = LoadLogRecFrame(); if (!f || fr < 3120 || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    std::fprintf(f, "%d %u %llu %s V countDownToPedsAtStart=%d carsAtStart=%d gameState=%d totalPeds=%d\n", fr, (unsigned)CTimer::GetFrameCounter(), (unsigned long long)RandCount(), Sh12Stage(), (int)CPopulation::m_CountDownToPedsAtStart, (int)CCarCtrl::CountDownToCarsAtStart, (int)CGameLogic::GameState, (int)CPopulation::ms_nTotalPeds);
+    std::fflush(f);
+}
+// SH24 R9: object description (pool + slot, model, matrix + bits, flags)
+void Sh24ObjDesc(char* b, size_t n, const CObject* o) {
+    if (!o) { std::snprintf(b, n, "obj=null"); return; }
+    auto* pool = GetObjectPool();
+    const CVector& p = o->GetPosition(); const CVector& r = o->GetRight(); const CVector& fw = o->GetForward(); const CVector& u = o->GetUp();
+    uint32_t pf = 0; static_assert(sizeof(o->physicalFlags) == 4); std::memcpy(&pf, &o->physicalFlags, 4);
+    std::snprintf(b, n, "obj=%p slot=%d model=%d pos=%.9g,%.9g,%.9g bits=%08x,%08x,%08x right=%.9g,%.9g,%.9g bits=%08x,%08x,%08x fwd=%.9g,%.9g,%.9g bits=%08x,%08x,%08x up=%.9g,%.9g,%.9g bits=%08x,%08x,%08x hasMatrix=%d entFlags=%08x physFlags=%08x bDisableMoveForce=%d bCollidable=%d bDisableCollisionForce=%d bUsesCollision=%d",
+        (const void*)o, pool ? (int)pool->GetIndex(const_cast<CObject*>(o)) : -1, (int)o->GetModelIndex(),
+        (double)p.x, (double)p.y, (double)p.z, Sh7Bits(p.x), Sh7Bits(p.y), Sh7Bits(p.z), (double)r.x, (double)r.y, (double)r.z, Sh7Bits(r.x), Sh7Bits(r.y), Sh7Bits(r.z),
+        (double)fw.x, (double)fw.y, (double)fw.z, Sh7Bits(fw.x), Sh7Bits(fw.y), Sh7Bits(fw.z), (double)u.x, (double)u.y, (double)u.z, Sh7Bits(u.x), Sh7Bits(u.y), Sh7Bits(u.z),
+        (int)(o->m_matrix != nullptr), (unsigned)o->m_nFlags, pf, (int)o->physicalFlags.bDisableMoveForce, (int)o->physicalFlags.bCollidable, (int)o->physicalFlags.bDisableCollisionForce, (int)o->m_bUsesCollision);
+}
+void Sh24Door(const char* ev, const CTaskComplexGotoDoorAndOpen* t, const CPed* ped) {
+    FILE* f = Sh24DoorLog(); if (!f || !t || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    char b[1200]; Sh24ObjDesc(b, sizeof b, t->m_Object);
+    const CVector pp = ped ? ped->GetPosition() : CVector{};
+    std::fprintf(f, "%d %u %llu %s D %s task=%p ped=%.9g,%.9g,%.9g bits=%08x,%08x,%08x start(before)=%.9g,%.9g,%.9g end(before)=%.9g,%.9g,%.9g flags=%02x %s\n", LoadLogRecFrame(), (unsigned)CTimer::GetFrameCounter(), (unsigned long long)RandCount(), Sh12Stage(), ev, (const void*)t,
+        (double)pp.x, (double)pp.y, (double)pp.z, Sh7Bits(pp.x), Sh7Bits(pp.y), Sh7Bits(pp.z), (double)t->m_Start.x, (double)t->m_Start.y, (double)t->m_Start.z, (double)t->m_End.x, (double)t->m_End.y, (double)t->m_End.z, (unsigned)t->m_nFlags, b);
+    std::fflush(f);
+}
+// per frame: CJ position/aim + primary task chain, GotoDoor start/end bits, GoToPoint target
+void Sh24DoorFrame() {
+    FILE* f = Sh24DoorLog(); if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    CPlayerPed* p = FindPlayerPed(0); if (!p) return;
+    const CVector pos = p->GetPosition();
+    char chain[200]; size_t o = 0; chain[0] = 0;
+    char extra[500]; extra[0] = 0;
+    for (CTask* t = p->GetTaskManager().GetTaskPrimary(TASK_PRIMARY_PRIMARY); t && o + 16 < sizeof chain; t = t->GetSubTask()) {
+        o += (size_t)std::snprintf(chain + o, sizeof chain - o, "%s%d", o ? ">" : "", (int)t->GetTaskType());
+        if (t->GetTaskType() == TASK_COMPLEX_GOTO_DOOR_AND_OPEN) {
+            auto* d = static_cast<CTaskComplexGotoDoorAndOpen*>(t);
+            std::snprintf(extra, sizeof extra, " door{obj=%p start=%.9g,%.9g,%.9g bits=%08x,%08x,%08x end=%.9g,%.9g,%.9g bits=%08x,%08x,%08x flags=%02x}", (const void*)d->m_Object, (double)d->m_Start.x, (double)d->m_Start.y, (double)d->m_Start.z, Sh7Bits(d->m_Start.x), Sh7Bits(d->m_Start.y), Sh7Bits(d->m_Start.z),
+                (double)d->m_End.x, (double)d->m_End.y, (double)d->m_End.z, Sh7Bits(d->m_End.x), Sh7Bits(d->m_End.y), Sh7Bits(d->m_End.z), (unsigned)d->m_nFlags);
+        }
+    }
+    std::fprintf(f, "%d %u %llu %s F pos=%.9g,%.9g,%.9g bits=%08x,%08x,%08x aim=%08x/%.9g rot=%08x/%.9g moveState=%d chain=%s%s\n", LoadLogRecFrame(), (unsigned)CTimer::GetFrameCounter(), (unsigned long long)RandCount(), Sh12Stage(),
+        (double)pos.x, (double)pos.y, (double)pos.z, Sh7Bits(pos.x), Sh7Bits(pos.y), Sh7Bits(pos.z), Sh7Bits(p->m_fAimingRotation), (double)p->m_fAimingRotation, Sh7Bits(p->m_fCurrentRotation), (double)p->m_fCurrentRotation, (int)p->m_nMoveState, chain, extra);
+    std::fflush(f);
+}
+// inside CTaskSimpleGoToPoint::ProcessPed, player only: target, distance vector, normalised direction (+bits), aim result
+void Sh24Goto(const CTaskSimpleGoToPoint* t, const CPed* ped, float dx, float dy, float nx, float ny, bool aimSet) {
+    FILE* f = Sh24DoorLog(); if (!f || !ped || !ped->IsPlayer() || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    const CVector pp = ped->GetPosition(); const CVector& tp = t->m_vecTargetPoint;
+    std::fprintf(f, "%d %u %llu %s G target=%.9g,%.9g,%.9g bits=%08x,%08x,%08x ped=%.9g,%.9g,%.9g bits=%08x,%08x,%08x dist=%.9g,%.9g bits=%08x,%08x dir=%.9g,%.9g bits=%08x,%08x radius=%.9g moveState=%d aimSet=%d aimAfter=%08x/%.9g flags=%02x lastPedPos=%.9g,%.9g,%.9g\n", LoadLogRecFrame(), (unsigned)CTimer::GetFrameCounter(), (unsigned long long)RandCount(), Sh12Stage(),
+        (double)tp.x, (double)tp.y, (double)tp.z, Sh7Bits(tp.x), Sh7Bits(tp.y), Sh7Bits(tp.z), (double)pp.x, (double)pp.y, (double)pp.z, Sh7Bits(pp.x), Sh7Bits(pp.y), Sh7Bits(pp.z),
+        (double)dx, (double)dy, Sh7Bits(dx), Sh7Bits(dy), (double)nx, (double)ny, Sh7Bits(nx), Sh7Bits(ny), (double)t->m_fRadius, (int)t->m_moveState, (int)aimSet, Sh7Bits(ped->m_fAimingRotation), (double)ped->m_fAimingRotation, (unsigned)t->m_GoToPointFlags, (double)t->m_vecLastPedPos.x, (double)t->m_vecLastPedPos.y, (double)t->m_vecLastPedPos.z);
     std::fflush(f);
 }
 void Sh13VehDump(const char* where) {

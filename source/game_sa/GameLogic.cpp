@@ -1,5 +1,6 @@
 #include "StdInc.h"
 #include "MBlur.h"
+#include "portable/sh20log.h" // SH24
 #include "EntryExitManager.h"
 #include "Garages.h"
 #include "PedClothesDesc.h"
@@ -351,6 +352,7 @@ void CGameLogic::ResetStuffUponResurrection() {
     CPad::GetPad(PED_TYPE_PLAYER1)->StopShaking(0);
     CReferences::RemoveReferencesToPlayer();
     CCarCtrl::CountDownToCarsAtStart = 10;
+    SH24_CD("GameLogic::ResetStuffUponResurrection", (int)CPopulation::m_CountDownToPedsAtStart, 10);
     CPopulation::m_CountDownToPedsAtStart = 10;
     CPad::GetPad(CWorld::PlayerInFocus)->DisablePlayerControls = 0;
 
@@ -671,6 +673,7 @@ void CGameLogic::Update() {
             CPad::GetPad(PED_TYPE_PLAYER1)->StopShaking(0);
             CReferences::RemoveReferencesToPlayer();
             CCarCtrl::CountDownToCarsAtStart = 10;
+            SH24_CD("GameLogic::Update restart", (int)CPopulation::m_CountDownToPedsAtStart, 10);
             CPopulation::m_CountDownToPedsAtStart = 10;
             CPad::GetPad(CWorld::PlayerInFocus)->DisablePlayerControls = false;
 

@@ -4,6 +4,7 @@
 #include <CommandParser/Parser.hpp>
 
 #include <cmath>
+#include "portable/sh20log.h" // SH23 debug logs (NOTSA_STATEHASH only)
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -182,6 +183,7 @@ bool IsCarUpright(CVehicle& veh) {
 int32 CreatePickup(CRunningScript& S, notsa::script::Model model, int32 type, CVector pos) {
     pos.z = GroundZIfAutoPlusHalf(pos.x, pos.y, pos.z);
     CPickups::GetActualPickupIndex(tPickupReference{ S.CollectNextParameterWithoutIncreasingPC() });
+    SH23_SCRIPT(S);
     return CPickups::GenerateNewOne(pos, (uint32)model.value, (ePickupType)(uint8)type, 0, 0, false, nullptr).num;
 }
 
@@ -547,6 +549,7 @@ int32 CreateMoneyPickup(CRunningScript& S, CVector pos, int32 amount, int32 perm
     pos.z = GroundZIfAutoPlusHalf(pos.x, pos.y, pos.z);
     CPickups::GetActualPickupIndex(tPickupReference{ S.CollectNextParameterWithoutIncreasingPC() });
     const auto type = permanent != 0 ? (ePickupType)0x13 : PICKUP_MONEY;
+    SH23_SCRIPT(S);
     return CPickups::GenerateNewOne(pos, (uint32)(uint16)ModelIndices::MI_MONEY, type, (uint32)amount, 0, false, nullptr).num;
 }
 

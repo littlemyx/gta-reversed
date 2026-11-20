@@ -857,6 +857,30 @@ void Sh22IdleFrame() {
     if (found) Sh22AssocRow(f, "I", "", found); else std::fprintf(f, "%d %u %llu %s I none\n", fr, (unsigned)CTimer::GetFrameCounter(), (unsigned long long)RandCount(), Sh12Stage());
     std::fflush(f);
 }
+// SH23 R6: GenerateNewOne rows (script thread + ip, or C++ caller stack)
+void Sh23Pick(unsigned modelId, int type, unsigned ammo, unsigned moneyPerDay, bool isEmpty, float x, float y, float z, int slot, unsigned ret) {
+    FILE* f = Sh23PickLog(); const int fr = LoadLogRecFrame();
+    const void*& hint = Sh23ScriptHint(); const auto* S = (const CRunningScript*)hint; hint = nullptr;
+    if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId() || !(CTimer::GetFrameCounter() <= 300 || fr == 0)) return;
+    char st[200]; Sh12Stack(st, sizeof st, 1); char who[96];
+    if (S) std::snprintf(who, sizeof who, "script=%.8s ip=%#x", (const char*)S->m_szName, (unsigned)(S->m_IP - S->m_BaseIP)); else std::snprintf(who, sizeof who, "script=none");
+    const bool created = slot >= 0 && slot < 620 && CPickups::aPickUps[slot].m_pObject;
+    std::fprintf(f, "%d %u %llu G %s model=%u type=%d slot=%d ret=%#x pos=%.9g,%.9g,%.9g bits=%08x,%08x,%08x ammo=%u moneyPerDay=%u isEmpty=%d object=%s stage=%s callers=%s\n", fr, (unsigned)CTimer::GetFrameCounter(), (unsigned long long)RandCount(), who, modelId, type, slot, ret,
+        (double)x, (double)y, (double)z, Sh7Bits(x), Sh7Bits(y), Sh7Bits(z), ammo, moneyPerDay, (int)isEmpty, created ? "yes" : "no", Sh12Stage(), st);
+    std::fflush(f);
+}
+// SH23 R7: CJ position per frame
+void Sh23Cj() {
+    FILE* f = Sh23CjLog(); if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    CPlayerPed* p = FindPlayerPed(0); if (!p) return;
+    const CVector pos = p->GetPosition(); const auto& ms = p->m_vecMoveSpeed;
+    const CTask* pri = p->GetTaskManager().GetTaskPrimary(TASK_PRIMARY_PRIMARY); const CTask* act = p->GetTaskManager().GetSimplestActiveTask();
+    std::fprintf(f, "%d %u %llu %s pos=%.9g,%.9g,%.9g bits=%08x,%08x,%08x heading=%08x/%.9g rot=%08x/%.9g aim=%08x/%.9g moveState=%d primaryTask=%d simplest=%d moveSpeed=%08x/%.9g,%08x/%.9g,%08x/%.9g animShift=%08x/%.9g,%08x/%.9g\n", LoadLogRecFrame(), (unsigned)CTimer::GetFrameCounter(), (unsigned long long)RandCount(), Sh12Stage(),
+        (double)pos.x, (double)pos.y, (double)pos.z, Sh7Bits(pos.x), Sh7Bits(pos.y), Sh7Bits(pos.z), Sh7Bits(p->GetHeading()), (double)p->GetHeading(), Sh7Bits(p->m_fCurrentRotation), (double)p->m_fCurrentRotation, Sh7Bits(p->m_fAimingRotation), (double)p->m_fAimingRotation,
+        (int)p->m_nMoveState, pri ? (int)pri->GetTaskType() : -1, act ? (int)act->GetTaskType() : -1,
+        Sh7Bits(ms.x), (double)ms.x, Sh7Bits(ms.y), (double)ms.y, Sh7Bits(ms.z), (double)ms.z, Sh7Bits(p->m_vecAnimMovingShiftLocal.x), (double)p->m_vecAnimMovingShiftLocal.x, Sh7Bits(p->m_vecAnimMovingShiftLocal.y), (double)p->m_vecAnimMovingShiftLocal.y);
+    std::fflush(f);
+}
 void Sh13VehDump(const char* where) {
     FILE* f = Sh13VehLog(); if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
     auto* pool = GetVehiclePool(); if (!pool) return;

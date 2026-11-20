@@ -615,7 +615,9 @@ static uint32 GenerateNewOneRaw(CVector coors, uint32 modelId, ePickupType picku
     } else {
         pickup.m_nReferenceIndex = 1;
     }
-    return ((uint32)(uint16)pickup.m_nReferenceIndex << 16) | (uint32)slot;
+    const uint32 sh23Ret = ((uint32)(uint16)pickup.m_nReferenceIndex << 16) | (uint32)slot;
+    SH23_PICK(modelId, (int)pickupType, ammo, moneyPerDay, isEmpty, coors, slot, sh23Ret);
+    return sh23Ret;
 }
 
 // returns pickup handle

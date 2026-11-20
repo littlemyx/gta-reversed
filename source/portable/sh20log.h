@@ -28,6 +28,14 @@ void Sh22Avgn(const class CBike* b, const char* where);
 void Sh22IdleFrame();
 void Sh22IdleEvent(const char* ev, const class CAnimBlendAssociation* a);
 struct Sh22PickScope { const class CPickup* p; class CObject*& o; Sh22PickScope(const class CPickup* p_, class CObject*& o_) : p(p_), o(o_) {} ~Sh22PickScope() { if (Sh22PickLog()) Sh22Pick("C", p, o); } Sh22PickScope(const Sh22PickScope&) = delete; };
+// SH23 (STATEHASH-only, pure reads): R6 NOTSA_SH23_BOOTPICK=<file>: every CPickups::GenerateNewOne (script CREATE_PICKUP/_WITH_AMMO/CREATE_MONEY_PICKUP, IPL, save, weapon drops...) at fc <= 300 or frame 0: model/type/slot/pos/ammo, script thread+ip when from a script, else C++ caller stack
+//   R7 NOTSA_SH23_CJPOS=<file>: CJ position (+bits), heading, move state, primary task, move speed per frame 19313..19454
+inline FILE* Sh23Open(const char* env) { const char* p = std::getenv(env); FILE* f = p && p[0] ? std::fopen(p, "w") : nullptr; if (f) { std::fprintf(f, "# SH23 %s frame fc randCount ...\n", env); std::fflush(f); } return f; }
+inline FILE* Sh23PickLog() { static FILE* f = Sh23Open("NOTSA_SH23_BOOTPICK"); return f; }
+inline FILE* Sh23CjLog() { static FILE* f = Sh23Open("NOTSA_SH23_CJPOS"); const int fr = LoadLogRecFrame(); return (f && fr >= 19313 && fr <= 19454) ? f : nullptr; }
+inline const void*& Sh23ScriptHint() { static const void* s = nullptr; return s; }
+void Sh23Pick(unsigned modelId, int type, unsigned ammo, unsigned moneyPerDay, bool isEmpty, float x, float y, float z, int slot, unsigned ret);
+void Sh23Cj();
 } // namespace notsa::rr
 #define SH20_PAD(w) do { if (notsa::rr::Sh13PutLog()) notsa::rr::Sh20Pad(w); } while (0)
 #define SH20_HOLD(t, p, ph) do { if (notsa::rr::Sh13PutLog()) notsa::rr::Sh20Hold(t, p, ph); } while (0)
@@ -42,6 +50,9 @@ struct Sh22PickScope { const class CPickup* p; class CObject*& o; Sh22PickScope(
 #define SH22_AVGN(b, w) do { if (notsa::rr::Sh22AvgnLog()) notsa::rr::Sh22Avgn(b, w); } while (0)
 #define SH22_IDLEFRAME() do { if (notsa::rr::Sh22IdleFile()) notsa::rr::Sh22IdleFrame(); } while (0)
 #define SH22_IDLEEVENT(ev, a) do { if (notsa::rr::Sh22IdleFile()) notsa::rr::Sh22IdleEvent(ev, a); } while (0)
+#define SH23_SCRIPT(S) do { if (notsa::rr::Sh23PickLog()) notsa::rr::Sh23ScriptHint() = &(S); } while (0)
+#define SH23_PICK(m, t, a, mpd, e, pos, slot, ret) do { if (notsa::rr::Sh23PickLog()) notsa::rr::Sh23Pick(m, t, a, mpd, e, (pos).x, (pos).y, (pos).z, slot, ret); } while (0)
+#define SH23_CJ() do { if (notsa::rr::Sh23CjLog()) notsa::rr::Sh23Cj(); } while (0)
 #else
 #define SH20_PAD(w) ((void)0)
 #define SH20_HOLD(t, p, ph) ((void)0)
@@ -56,4 +67,7 @@ struct Sh22PickScope { const class CPickup* p; class CObject*& o; Sh22PickScope(
 #define SH22_AVGN(b, w) ((void)0)
 #define SH22_IDLEFRAME() ((void)0)
 #define SH22_IDLEEVENT(ev, a) ((void)0)
+#define SH23_SCRIPT(S) ((void)0)
+#define SH23_PICK(m, t, a, mpd, e, pos, slot, ret) ((void)0)
+#define SH23_CJ() ((void)0)
 #endif

@@ -1,0 +1,73 @@
+addr	function	verdict	asm range	note	fix commit
+0x469B6D	COMMAND_IS_CAR_DEAD (0x119)	MATCH	0x469B6D-0x469BCC	null/wrecked (status bits 0xF8==0x28) -> true, else bIsDrowning (byte 0x42B bit 6)	-
+0x4677E2	COMMAND_GET_CHAR_COORDINATES (0xA0)	MATCH	0x4677E2-0x467860	bInVehicle+m_pVehicle ? vehicle pos : ped pos	-
+0x469667	COMMAND_IS_CHAR_IN_ANY_CAR (0xDF)	MATCH	0x469667-0x4696B3	bInVehicle && m_pVehicle	-
+0x47E87D	COMMAND_SET_CHAR_HEALTH (0x223)	MATCH	0x47E87D-0x47E9DD	int health (fild); player min(health, maxHealth); max health follows when 100; 0 -> CEventScriptCommand(3, CTaskComplexDie(0,0,0xF,4.0,0.0))	-
+0x47D4A8	COMMAND_SET_CURRENT_CHAR_WEAPON (0x1B9)	MATCH	0x47D4A8-0x47D55E	type 0 -> slot 0; else the 13 slots with the type; player chosen weapon, else SetCurrentWeapon	-
+0x47D721	COMMAND_MARK_CHAR_AS_NO_LONGER_NEEDED (0x1C2)	MATCH	0x47D721-0x47D75A	CleanUpThisPed(GetAtRef), cleanup list type 2 only if m_UsesMissionCleanup	-
+0x47D307	COMMAND_GIVE_WEAPON_TO_CHAR (0x1B2)	MATCH	0x47D307-0x47D3C8	GiveWeapon(type, ammo, true); player chosen weapon = slot, else SetCurrentWeapon + vehicle weapon model removal	-
+0x47C660	COMMAND_REMOVE_BLIP (0x164)	MATCH	0x47C660-0x47C678	CRadar::ClearBlip	-
+0x47CF4E	COMMAND_ADD_BLIP_FOR_COORD (0x18A)	MATCH	0x47CF4E-0x47D00A	z<=-100 -> ground z, SetCoordBlip(4, pos, 5, 3, name), scale 3	-
+0x47CEFD	COMMAND_ADD_BLIP_FOR_CHAR/CAR/OBJECT (0x187/0x186/0x188)	MATCH	0x47CEBF-0x47CF25	shared tail SetEntityBlip(type, handle, colour, 3), scale 3	-
+0x47C831	COMMAND_GET_FADING_STATUS (0x16B)	MATCH	0x47C831-0x47C850	TheCamera.GetFading -> compare flag	-
+0x47D69E	COMMAND_GET_GAME_TIMER (0x1BD)	MATCH	0x47D69E-0x47D6A8	CTimer::m_snTimeInMilliseconds	-
+0x4680CF	COMMAND_PRINT (0xBB) / PRINT_NOW (0xBC @0x46815B)	MATCH	0x4680CF-0x4681CD	label 8, ~z~ subtitle test, AddMessageQ/AddMessageJump(text, time, u16 flags, previousBriefs), flag set true	-
+0x48537F	COMMAND_CLEAR_THIS_PRINT (0x3D5) / CLEAR_HELP (0x3E6 @0x48566A)	MATCH	0x48537F-0x4853A7, 0x48566A-0x48567A	ClearThisPrint(Get(label)); SetHelpMessage(null,true,false,false)	-
+0x48519B	COMMAND_LOAD_MISSION_AUDIO (0x3CF) / PLAY_MISSION_AUDIO (0x3D1 @0x485203)	MATCH	0x48519B-0x4851C2, 0x485203-0x485223	slot-1 as u8 (port passes uint32 slot-1: differs only for slot 0), sample id	-
+0x48509F	COMMAND_LOAD_SCENE (0x3CB) / LOAD_SCENE_IN_DIRECTION (0xA0B @0x47B7E4)	MATCH	0x48509F-0x485102, 0x47B7E4-0x47B847	Timer Stop, (RequestObjectsInDirection(pos, deg*0.017453292, 0x20)), CStreaming::LoadScene, Timer Update	-
+0x469C3A	COMMAND_CREATE_CHAR_INSIDE_CAR (0x129)	MATCH	0x469C3A-0x469DB9	ped by type (cop 6 / medic+fireman 0x12,0x13 / civ), mission created, bit31 cleared, CarSetPedInAsDriver, CWorld::Add, mission ped counter, cleanup type 2	-
+0x482EA3	COMMAND_WARP_CHAR_FROM_CAR_TO_COORD (0x362)	MATCH	0x482EA3-0x482F7F	ground z if z<=-100, FlushImmediately(true), z += dist to base, Teleport(pos,false), ClearSpaceForMissionEntity	-
+0x483239	COMMAND_WARP_CHAR_INTO_CAR (0x36A)	MATCH	0x483239-0x4832B1	FlushImmediately(false), CTaskSimpleCarSetPedInAsDriver(veh) warping flag 1, ProcessPed	-
+0x469A52	COMMAND_CLEAR_WANTED_LEVEL (0x110)	MATCH	0x469A52-0x469A76	CPlayerPed::SetWantedLevel(0)	-
+0x47F1E2	COMMAND_IS_PLAYER_PLAYING (0x256)	MATCH	0x47F1E2-0x47F221	Players[idx].m_nPlayerState == 0	-
+0x469922	COMMAND_ADD_SCORE (0x109) / IS_SCORE_GREATER (0x10A)	MATCH	0x469922-0x469983	m_nMoney += score; money > score (signed)	-
+0x480CFC	COMMAND_PLAYER_MADE_PROGRESS (0x30C)	MATCH	0x480CFC-0x480D19	IncrementStat(0, (float)progress) (fild)	-
+0x485516	COMMAND_SET_PED_DENSITY_MULTIPLIER (0x3DE)	MATCH	0x485516-0x48552B	raw dword store to 0x8D2530	-
+0x4696B8	COMMAND_IS_BUTTON_PRESSED (0xE1)	MATCH	0x4696B8-0x469710	GetPadState(u16,u16) && !CPad[0].JustOutOfFrontEnd	-
+0x49220A	COMMAND_GET_SCRIPT_TASK_STATUS (0x62E) / CREATE_GROUP (0x62F @0x492258)	MATCH	0x49220A-0x4922D1	GetStatus(ped, cmd), -1 -> 7; group allocator, mission group flag, cleanup type 5	-
+0x49575F	COMMAND_CLEAR_CHAR_TASKS (0x687)	MATCH	0x49575F-0x49578A	ClearTasks(true, true)	-
+0x492975	COMMAND_TASK_STAY_IN_SAME_PLACE (0x638)	MATCH	0x492975-0x492A34	ped!=-1: stack task ProcessPed; -1: heap task into the active sequence	-
+0x467789	COMMAND_DELETE_CHAR (0x9B) / DELETE_CAR (0xA6 @0x467B1A)	MATCH	0x467789-0x4677CF, 0x467B1A-0x467B70	RemoveThisPed(maybe null) / CWorld::Remove + RemoveReferences + delete; cleanup entry only if m_UsesMissionCleanup	-
+0x48FB0E	COMMAND_TASK_PAUSE (0x5B9) / TASK_STAND_STILL (0x5BA @0x48FB82)	MATCH	0x48FB0E-0x48FC2A	CTaskSimplePause(time); StandStill(-1 -> 20000, -2 -> 999999 looped, 8.0f)	-
+0x49046B	COMMAND_TASK_ENTER_CAR_AS_DRIVER (0x5CB)	MATCH	0x49046B-0x49053C	time -2 -> -1, -1 -> 0x86E698, EnterCarAsDriverTimed ctor args (the move-state tail was not re-read)	-
+0x49090B	COMMAND_TASK_ACHIEVE_HEADING (0x5D4)	MATCH	0x49090B-0x49097C	heading*0.017453292, ctor(rad, 0x86FC7C, 0x86FC80)	-
+0x490649	COMMAND_TASK_CAR_DRIVE_TO_COORD (0x5D1)	MATCH	0x490649-0x490742	9 params; veh null if handle<0; z<=-100 ground z; model 0->-1, 1->0x19F; ctor(veh,&pt,speed,arg4,model,-1.0,style)	-
+0x48FD8D	COMMAND_TASK_DIE (0x5BE) / TASK_LEAVE_ANY_CAR (0x633 @0x49277A)	MATCH	0x48FD8D, 0x49277A-0x4927CE	CTaskComplexDie(0,0,0xF,4.0,0,...); CTaskComplexLeaveAnyCar(0,true,false)	-
+0x4916CA	COMMAND_IS_CHAR_PLAYING_ANIM (0x611)	MATCH	0x4916CA-0x491722	label, RpAnimBlendClumpGetAssociation(clump, name) != 0	-
+0x48C351	COMMAND_REQUEST_ANIMATION (0x4ED) / HAS_ANIMATION_LOADED (0x4EE) / REMOVE_ANIMATION (0x4EF)	MATCH	0x48C351-0x48C411	16-char label, block index, RequestModel(0x63E7+block, 4), resource manager add/remove, IsLoaded == 1	-
+0x47EFDE	COMMAND_HAS_MODEL_LOADED (0x248)	MATCH	0x47EFDE-0x47F028	negative id -> UsedObjectArray[-id], load state == 1 (script::Model reader does the same)	-
+0x483DDB	COMMAND_LOAD_ALL_MODELS_NOW (0x38B) / DOES_OBJECT_EXIST (0x3CA @0x485063)	MATCH	0x483DDB-0x483DEF, 0x485063-0x485098	Timer suspend, LoadAllRequestedModels(false), resume; GetAtRef != 0	-
+0x46C6A1	COMMAND_REQUEST_CAR_RECORDING (0x7C0) / HAS_CAR_RECORDING_BEEN_LOADED (0x7C1)	MATCH	0x46C6A1-0x46C6DF	RequestRecordingFile / HasRecordingFileBeenLoaded	-
+0x490FB0	COMMAND_START_PLAYBACK_RECORDED_CAR (0x5EB) / IS_PLAYBACK_GOING_ON_FOR_CAR (0x60E @0x4915F5)	MATCH	0x490FB0-0x490FDF, 0x4915F5-0x49161F	StartPlayback(veh maybe null, file, 0, 0); IsPlaybackGoingOn(maybe null)	-
+0x48CFA5	COMMAND_FREEZE_CAR_POSITION (0x519) / SET_CAN_BURST_CAR_TYRES (0x53F @0x48D356)	MATCH	0x48CFA5-0x48D00B, 0x48D356-0x48D39E	flags |= 0x200C + SkipPhysics + zero speeds / &= 0xFFFFDFF3; byte 0x42B bit 7	-
+0x494EA4	COMMAND_CUSTOM_PLATE_FOR_NEXT_CAR (0x674)	MATCH	0x494EA4-0x494F04	model first, label (9) after; '_' and NUL -> ' ' for 8 chars; vehicle model info with plate material	-
+0x472845	COMMAND_SET_BLIP_AS_FRIENDLY (0x7E0)	MATCH	0x472845-0x472865	SetBlipFriendly(blip, u8 flag)	-
+0x47176C	COMMAND_SWITCH_START (0x871) / SWITCH_CONTINUED (0x872)	MATCH	0x47176C-0x471842	4 params then 14/18 collected, jump-table batches, stillToRead (u16) semantic, UseSwitchJumpTable + UpdatePC	-
+0x48B98D	COMMAND_SET_AREA_VISIBLE (0x4BB)	MATCH	0x48B98D-0x48B9A9	CGame::currArea = area; RemoveBuildingsNotInArea	-
+0x47C78C	COMMAND_SET_FADING_COLOUR (0x169)	MATCH	0x47C78C-0x47C7B9	r,g,b as u8 in call order	-
+0x478ECB	COMMAND_AWARD_PLAYER_MISSION_RESPECT (0x998)	MATCH	0x478ECB-0x478EEB	IncrementStat(0xE0, (float)value)	-
+0x47DDBB	COMMAND_SET_CAR_DENSITY_MULTIPLIER (0x1EB)	MATCH	0x47DDBB-0x47DDD2	raw dword store	-
+0x47F684	COMMAND_SWITCH_WIDESCREEN (0x2A3)	MATCH	0x47F684-0x47F6B1	TheCamera widescreen on/off	-
+0x482A96	COMMAND_REMOVE_CHAR_ELEGANTLY (0x34F)	MATCH	0x482A96-0x482B48	created-by == 2; in car -> RemoveThisPed, else GAME, leave group, --mission peds, fade flag, RemoveReferences; cleanup type 2 always	-
+0x4806B3	COMMAND_GET_CAR_SPEED (0x2E3)	MATCH	0x4806B3-0x4806EC	|moveSpeed| * 50	-
+0x467E85	COMMAND_SET_CAR_DRIVING_STYLE (0xAE)	MATCH	0x467E85-0x467EAC	byte store at +0x3B9	-
+0x48CA44	COMMAND_GET_DISTANCE_BETWEEN_COORDS_2D (0x509) / 3D (0x50A @0x48CA89)	MATCH	0x48CA44-0x48CB11	(a-b) per axis stored as float, sqrt of the sum of squares (sign irrelevant)	-
+0x480948	COMMAND_SIN (0x2F6) / COS (0x2F7 @0x48097D)	MATCH	0x480948-0x4809A3	deg * 0.017453292 (float product), fsin/fcos, stored as float	-
+0x46947D	COMMAND_STORE_CAR_CHAR_IS_IN (0xD9)	MATCH	0x46947D-0x46959D	previous stored car cleanup, jump table created-by 1/3 -> mission + was-random + list add, 2/4 -> not random; port adds a -1 index guard and throws for a char on foot (the exe reads garbage)	-
+0x46B74C	COMMAND_SET_CHAR_RELATIONSHIP (0x77A)	MATCH	0x46B74C-0x46B78A	SetAsAcquaintance(id, GetPedFlag(type)) on ped+0x4E0	-
+0x475170	COMMAND_SET_CHAR_MAX_HEALTH (0x8AF)	MATCH	0x475170-0x4751A0	fild -> float at +0x544	-
+0x472759	COMMAND_SET_CHAR_SHOOT_RATE (0x7DD)	MATCH	0x472759-0x472781	u8 at +0x719	-
+0x48AE9A	COMMAND_HAS_CHAR_GOT_WEAPON (0x491) / REMOVE_WEAPON_FROM_CHAR (0x555 @0x48D673)	MATCH	0x48AE9A-0x48AED7, 0x48D673-0x48D69B	13 slots type compare; ClearWeapon	-
+0x489B74	COMMAND_SET_RADIO_CHANNEL (0x41E)	MATCH	0x489B74-0x489BA9	-1 skip, 11 -> 12, id+1 low byte, RetuneRadio	-
+0x467159	COMMAND_ADD_TIMED_VAL_TO_FLOAT_VAR (0x78) family	MATCH	0x467159-0x46717F	timestep * value + var	-
+0x47CAA9	COMMAND_GET_CHAR_HEADING (0x172)	FIXED	0x47CAA9-0x47CB35	CPlaceable::GetHeading leaves the FPATAN result unrounded in ST0 and the fmul by 0x859878 rounds once; the port rounded the heading to a float first (RadiansToDegrees(GetHeading()))	fa8d36606
+0x47CBE1	COMMAND_GET_CAR_HEADING (0x174)	FIXED	0x47CBE1-0x47CC5A	same: GetHeadingExt() * 57.29578f rounded once	d67db1cdf
+0x47CCCE	COMMAND_GET_OBJECT_HEADING (0x176)	FIXED	0x47CCCE -> 0x47CBFC	jumps into the GET_CAR_HEADING body: same fix	9416174ad
+0x481CA5	COMMAND_ROTATE_OBJECT (0x34D)	FIXED	0x481CA5-0x481CD5	current heading = GetHeadingExt() * 57.29578f, one rounding	04247a9b5
+0x50EB70	CCam::Process_1rstPersonPedOnPC	FIXED	0x50F0AD-0x50F0EB	attached entity heading +/- PI terms: GetHeadingExt (unrounded) with one rounding	5d926a7c0
+0x519810	CCam::Process_Cam_TwoPlayer_InCarAndShooting	FIXED	0x51A33E-0x51A343	ang - GetHeadingExt() rounded once	a6f6c73c5
+0x5245B0	CCam::Process_FollowCar_SA	FIXED	0x5251E7, 0x52527D, 0x52531B	vehicle heading - HALF_PI (unrounded heading, one rounding) at three sites	cf119efbb
+0x527FA0	CCamera::CamControl	FIXED	0x52A88D, 0x52AB34	ped heading - HALF_PI at two sites	fffa342f4
+0x442480	CGameLogic::UpdateSkip	FIXED	0x442741-0x442759	camera heading = GetHeadingExt() - PI/2 rounded once	eb496846c
+0x6637C0	CTaskGangHassleVehicle::ControlSubTask	FIXED	0x663C3F-0x663C4A	|GetHeadingExt() - targetHeading| rounded once (the 0x663BA1 site stores to a float first: already right)	6180d7722
+-	other CPlaceable::GetHeading callers (0x458282, 0x46DD3B, 0x5872EA, 0x5E2638, 0x6046C4, 0x510F11-0x51104F M16 cam, 0x548270, 0x64DF04)	MATCH	-	all store the result to a float first or already use GetHeadingExt	-

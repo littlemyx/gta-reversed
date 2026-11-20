@@ -294,8 +294,7 @@ CTask* CTaskGangHassleVehicle::ControlSubTask(CPed* ped) {
     }
 
     const auto targetHeading = GetTargetHeading(ped);
-    const auto heading       = ped->GetHeading();
-    if (std::abs(heading - targetHeading) >= 0.1f) { // 0x663C4A: `fcomp` + `test ah, 1` (NaN keeps the state)
+    if (std::abs(X87R(ped->GetHeadingExt() - (double)targetHeading)) >= 0.1f) { // 0x663C3F-0x663C4A: GetHeading stays unrounded in ST0 for the fsub; `fcomp` + `test ah, 1` (NaN keeps the state)
         m_State = 1;
     }
 

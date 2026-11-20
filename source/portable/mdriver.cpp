@@ -635,7 +635,7 @@ void SetCmdRunner(void (*fn)(const std::string&)) { g_run = fn; }
 bool Cmd(const char* name, const std::string& args) {
     if (std::strncmp(name, "md", 2)) return false;
     auto* ped = Cj();
-    if (!std::strcmp(name, "mdkillped")) { if (auto* k = CPools::GetPed(std::atoi(args.c_str()))) { k->m_fHealth = 0.f; k->m_nPedState = PEDSTATE_DEAD; } return true; }
+    if (!std::strcmp(name, "mdkillped")) { if (auto* k = CPools::GetPed(std::atoi(args.c_str()))) { /* CR12: mirror TS shootDead (generateDamageEvent from the player, pistol, 1000, torso): a driver in a car keeps its driving state when only m_nPedState is set (mission 89: IS_CHAR_DEAD stayed false, the kill repeated) */ if (ped) CWeapon::GenerateDamageEvent(k, ped, WEAPON_PISTOL, 1000, PED_PIECE_TORSO, 0); if (!k->IsStateDeadForScript()) { k->m_fHealth = 0.f; k->m_nPedState = PEDSTATE_DEAD; } } return true; }
     if (!std::strcmp(name, "mdkillcar")) { if (auto* k = CPools::GetVehicle(std::atoi(args.c_str()))) k->BlowUpCar(nullptr, false); return true; }
     if (!std::strcmp(name, "mdkey")) { const auto c = args.find(':'); if (g_push) g_push(args.c_str() + c + 1, args.compare(0, c, "down") == 0); return true; }
     if (!ped) return true;

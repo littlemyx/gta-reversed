@@ -591,6 +591,16 @@ void TickGeneric() {
             v ? (int)v->m_nModelIndex : -1, v ? v->m_fHealth : 0.f, v ? (int)v->GetStatus() : 0, v ? (int)v->vehicleFlags.bIsDrowning : 0, w ? (int)w->m_WantedLevel : -1, me->m_pLastEntityDamage ? (int)me->m_pLastEntityDamage->GetType() : -1, (int)me->m_nLastWeaponDamage);
         for (int gi = 0; gi < CGarages::NumGarages; gi++) { auto& g = CGarages::GetGarage(gi); if (g.m_nType != PAYNSPRAY || g.CalcDistToGarageRectangleSquared(pp.x, pp.y) > 900.f) continue; notsa::standalone::Fixups::Log("[mdplog] garage %d door=%d inside=%d outside=%d sprayable=%d NoResprays=%d free=%d money=%d spd=%.3f wantedBackOff=%d\n", gi, (int)g.m_nDoorState, (int)g.IsStaticPlayerCarEntirelyInside(), (int)g.IsPlayerOutsideGarage(0.0f), v ? (int)CGarages::IsCarSprayable(v) : -1, (int)CGarages::NoResprays, (int)CGarages::RespraysAreFree, (int)CWorld::Players[CWorld::PlayerInFocus].m_nMoney, v ? v->m_vecMoveSpeed.Magnitude() : -1.f, w ? (int)w->m_bPoliceBackOffGarage : -1); }
     }
+    if (static const char* cl = std::getenv("NOTSA_MDRIVER_CARLOG"); cl && root && fr % 10 == 0) { // CR16: debug: the script car (local N) and the ped in it every 10 frames
+        const int li = std::atoi(cl); const int li2 = std::getenv("NOTSA_MDRIVER_CARLOG2") ? std::atoi(std::getenv("NOTSA_MDRIVER_CARLOG2")) : -1;
+        auto* cr = CPools::GetVehicle(LocalAt(root, li)->iParam);
+        if (cr) {
+            auto* dr = cr->m_pDriver; std::string tk;
+            if (dr) { auto& tm = dr->GetIntelligence()->m_TaskMgr; for (int k = 0; k < 5; k++) for (CTask* t = tm.m_aPrimaryTasks[k]; t; t = t->GetSubTask()) tk += std::to_string((int)t->GetTaskType()) + (t->GetSubTask() ? ">" : ""), tk += ","; }
+            (void)li2;
+            notsa::standalone::Fixups::Log("[carlog] f%d car=%.1f,%.1f,%.1f spd=%.3f st=%d drv=%d dmode=%d tasks=%s ip=%x", fr, cr->GetPosition().x, cr->GetPosition().y, cr->GetPosition().z, cr->m_vecMoveSpeed.Magnitude(), (int)cr->GetStatus(), dr ? (int)dr->m_nModelIndex : -1, (int)cr->m_autoPilot.m_nCarMission, tk.c_str(), (unsigned)(root->m_IP - root->m_BaseIP));
+        }
+    }
     if (!std::getenv("NOTSA_MDRIVER_NOGOD")) if (auto* me = Cj()) { // CR4: TS drive.ts driverFrame: CJ and the vehicle he drives are invulnerable every frame (AUTODRIVE_GOD=0 off)
         me->physicalFlags.bInvulnerable = true;
         if (me->bInVehicle && me->m_pVehicle) me->m_pVehicle->physicalFlags.bInvulnerable = true;

@@ -563,7 +563,7 @@ void TickGeneric() {
     if (!g_loaded) { LoadTable(std::getenv("NOTSA_MDRIVER_TABLE")); LoadArity(); if (const char* o = std::getenv("NOTSA_MDRIVER_OUT")) g_out = std::fopen(o, "w"); if (const char* m = std::getenv("NOTSA_MDRIVER_MAXFRAMES")) g_maxFrames = std::atoi(m); }
     if (g_quitIn >= 0) { if (g_quitIn-- == 0) { WriteResult(); Emit("quit"); if (g_out) { std::fclose(g_out); g_out = nullptr; } g_done = true; } return; }
     auto* root = notsa::scmtrace::Root();
-    if (!g_started) { if (!root) return; g_started = true; g_passStat0 = CStats::GetStatValue(STAT_MISSIONS_PASSED); g_thread = root; g_frame0 = CTimer::GetFrameCounter(); g_sameCount = 0; g_lastIp = nullptr; }
+    if (!g_started) { if (!root) return; g_started = true; if (!std::getenv("NOTSA_MDRIVER_NOCITY")) CStats::SetStatValue(STAT_CITY_UNLOCKED, 2.f); /* CR10: a mission started cold stands where the story would have opened the cities: SF/LV closed = 4 stars on arrival (SetPlayerWantedLevelForForbiddenTerritories), cops attack */ g_passStat0 = CStats::GetStatValue(STAT_MISSIONS_PASSED); g_thread = root; g_frame0 = CTimer::GetFrameCounter(); g_sameCount = 0; g_lastIp = nullptr; }
     const int fr = GFrame();
     if (root) { char n[9]{}; std::memcpy(n, root->m_szName, 8); g_name = n; }
     if (!root) { // the thread ended (TS: !alive(script)): PASSED / FAILED, or STOP when a kill of the driver was just before it

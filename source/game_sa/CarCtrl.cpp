@@ -6,6 +6,7 @@
 */
 
 #include "StdInc.h"
+#include "portable/sh14log.h" // SH14 debug logs (NOTSA_STATEHASH only)
 
 #include "CarCtrl.h"
 #include "portable/cargenlog.h"
@@ -378,6 +379,7 @@ int32 CCarCtrl::ChooseBoatModel() {
 
 // 0x421900
 int32 CCarCtrl::ChooseCarModelToLoad(int32 groupID) {
+    SH14_CAR("ChooseCarModelToLoad", "group=%d numInGroup=%d", (int)groupID, (int)CPopulation::m_nNumCarsInGroup[groupID]);
     // Exe: no `numCarsInGroup > 0` guard (an empty group simply yields slot 0 every try; the model is read as an unsigned word)
     const auto numCarsInGroup = CPopulation::m_nNumCarsInGroup[groupID];
     for (auto i = 0; i < 16; i++) { // 16 tries
@@ -395,6 +397,7 @@ eModelID CCarCtrl::ChooseGangCarModel(eGangID loadedCarGroupId) {
 
 // 0x424CE0
 int32 CCarCtrl::ChooseModel(int32* carType) {
+    SH14_CAR("ChooseModel", "other=%.9g cops=%.9g gangs=%.9g dealers=%.9g", (double)CPopCycle::m_NumOther_Cars, (double)CPopCycle::m_NumCops_Cars, (double)CPopCycle::m_NumGangs_Cars, (double)CPopCycle::m_NumDealers_Cars);
     // x87: The sum of the (float) counts is kept in extended precision
     const auto total = NOTSA_FTOL(int32, (((x87d)CPopCycle::m_NumOther_Cars + CPopCycle::m_NumCops_Cars) + CPopCycle::m_NumGangs_Cars) + CPopCycle::m_NumDealers_Cars);
     if (total <= 0) {
@@ -494,6 +497,7 @@ int32 CCarCtrl::ChooseModel(int32* carType) {
 }
 
 int32 CCarCtrl::ChoosePoliceCarModel(uint32 ignoreLvpd1Model) {
+    SH14_CAR("ChoosePoliceCarModel", "ignoreLvpd1=%u", (unsigned)ignoreLvpd1Model);
     CWanted* playerWanted = FindPlayerWanted();
     if (playerWanted->AreSwatRequired()
         && CStreaming::IsModelLoaded(MODEL_ENFORCER)
@@ -2418,6 +2422,7 @@ void CCarCtrl::FlyAIPlaneInCertainDirection(CPlane* plane) {
 // where the car is created (`arg6`: where it has to be visible, `arg7`: where it must not be). `arg12`: use the low traffic nodes (and don't use switched off nodes/dead ends). `arg13`: don't pick the closest node to `posn` from time to time.
 // Returns the position (`pOrigin`), the 2 nodes it's between (`pNodeAddress1`, `pNodeAddress12`) and where (`arg11`: fraction) between them.
 bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3, float arg4, bool arg5, float arg6, float arg7, CVector* pOrigin, CNodeAddress* pNodeAddress1, CNodeAddress* pNodeAddress12, float* arg11, bool arg12, bool arg13) {
+    SH14_CAR("GenerateCarCreationCoors2", "posn=%.9g,%.9g,%.9g radius=%.9g a3=%.9g a4=%.9g a5=%d a6=%.9g a7=%.9g a12=%d a13=%d", (double)posn.x, (double)posn.y, (double)posn.z, (double)radius, (double)arg3, (double)arg4, (int)arg5, (double)arg6, (double)arg7, (int)arg12, (int)arg13);
     // Function-local statics of the original (the flags @ 0x969108 are the "initialized" flags of them)
     NOTSA_GLOBAL_LOCAL_NS(staticInitFlags, 0x969108, (uint32), {});
     NOTSA_GLOBAL_LOCAL_NS(nextUpdateTime, 0x9690E8, (uint32), {});

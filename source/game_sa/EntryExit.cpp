@@ -1,6 +1,7 @@
 #include "StdInc.h"
 
 #include "EntryExit.h"
+#include "portable/sh14log.h" // SH14 debug logs (NOTSA_STATEHASH only)
 #include "EntryExitManager.h"
 #include "TaskComplexGotoDoorAndOpen.h"
 #include "TaskSimpleUninterruptable.h"
@@ -67,7 +68,10 @@ CEntryExit::CEntryExit(
         m_nTimeOn  = 0;
         m_nTimeOff = 24;
     }
-    if (bUnknownBurglary && !CGeneral::DoCoinFlip()) {
+    const auto shRc0 = SH14_LS_ON() ? SH_RC14() : 0ull; const bool shRolled = bUnknownBurglary;
+    const bool shFlip = bUnknownBurglary ? CGeneral::DoCoinFlip() : true;
+    SH14_LS("X", "name=%.8s flags=%04x burglaryAccess=%d unknownBurglary=%d on=%d off=%d rolled=%d flip=%d r0=%llu r1=%llu", name ? name : "-", (unsigned)flags, (int)bBurglaryAccess, (int)bUnknownBurglary, (int)timeOn, (int)timeOff, (int)shRolled, (int)shFlip, shRc0, SH_RC14());
+    if (bUnknownBurglary && !shFlip) {
         m_nTimeOn  = 0;
         m_nTimeOff = 0;
     }

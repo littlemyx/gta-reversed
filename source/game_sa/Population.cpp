@@ -6,6 +6,7 @@
 */
 
 #include "StdInc.h"
+#include "portable/sh14log.h" // SH14 debug logs (NOTSA_STATEHASH only)
 
 #include <numbers>
 
@@ -296,6 +297,7 @@ void CPopulation::RemovePed(CPed* ped) {
 
 // 0x610F40
 eModelID CPopulation::ChoosePolicePedOccupation() {
+    SH14_CAR("ChoosePolicePedOccupation", "-");
     return (eModelID)COP_TYPE_CITYCOP; // See CCopPed::GetPedModelForCopType
 }
 
@@ -505,6 +507,7 @@ bool CPopulation::IsSkateable(const CVector& point) {
 
 // 0x611550
 eModelID CPopulation::ChooseGangOccupation(eGangID gangId) {
+    SH14_CAR("ChooseGangOccupation", "gang=%d", (int)gangId);
     return CGangs::ChooseGangPedModel(gangId);
 }
 
@@ -1043,6 +1046,7 @@ eModelID CPopulation::ChooseCivilianOccupation(
     bool         isAtAttractor,
     const char*  attractorScriptName
 ) {
+    SH14_CAR("ChooseCivilianOccupation", "male=%d female=%d animGroup=%d notModel=%d stat=%d onFoot=%d testUsed=%d atAttractor=%d", (int)mustBeMale, (int)mustBeFemale, (int)mustUseThisAnimGroup, (int)mustNotBeThisModel, (int)mustBeCompatibleWithThisPedStat, (int)bOnlyOnFoots, (int)doTestForUsedOccupations, (int)isAtAttractor);
     // 0x612F90: number of passes. Pass `p` only accepts models with exactly `p` references, i.e. the least used loaded ped models come first
     // (3 passes (5 inside with many peds) when testing for used occupations, 7 otherwise)
     size_t numPasses = 3;
@@ -1149,6 +1153,7 @@ void CPopulation::ChooseCivilianCoupleOccupations(eModelID& husbandOccupation, e
 
 // 0x613260
 eModelID CPopulation::ChooseCivilianOccupationForVehicle(bool mustBeMale, CVehicle* vehicle) {
+    SH14_CAR("ChooseCivilianOccupationForVehicle", "mustBeMale=%d veh=%d", (int)mustBeMale, vehicle ? (int)vehicle->m_nModelIndex : -1);
     const auto vehClass = (eVehicleClass)(int8)vehicle->GetVehicleModelInfo()->m_nVehicleClass;
     // 0x61335D: only the driver and the first 3 passenger seats are looked at (not all 8)
     const auto IsPedOfModelInside = [&](eModelID model) {
@@ -1600,6 +1605,7 @@ float CPopulation::FindDistanceToNearestPed(CVector pos) {
 
 // 0x614490
 eModelID CPopulation::PickGangCar(eGangID forGang) {
+    SH14_CAR("PickGangCar", "gang=%d", (int)forGang);
     return (eModelID)m_LoadedGangCars[(size_t)(forGang)].PickRandomCar(false, false);
 }
 
@@ -2110,6 +2116,7 @@ void AddPedsToPopulation(ePedType pedType, eModelID pedModel, int32 numPeds, CVe
 
 // 0x614720
 bool CPopulation::AddToPopulation(float minRadius, float maxRadius, float minRadiusClose, float maxRadiusClose) {
+    SH14_CAR("AddToPopulation", "r=%.9g,%.9g,%.9g,%.9g", (double)minRadius, (double)maxRadius, (double)minRadiusClose, (double)maxRadiusClose);
     ZoneScoped;
 
     using namespace AddToPopulationDetail;

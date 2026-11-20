@@ -1,4 +1,5 @@
 #include "StdInc.h"
+#include "portable/sh14log.h" // SH14 debug logs (NOTSA_STATEHASH only)
 #include "portable/loadlog.h"
 #include "portable/sh12log.h"
 
@@ -3370,6 +3371,7 @@ void CStreaming::StreamPedsForInterior(int32 interiorType) {
 // * Positive values - Load given model into slot
 // 0x40BDA0
 void CStreaming::StreamPedsIntoRandomSlots(const int32(&modelArray)[TOTAL_LOADED_PEDS]) {
+    SH14_CAR("StreamPedsIntoRandomSlots", "-");
     for (int32 i = 0; i < TOTAL_LOADED_PEDS; i++) {
         if (modelArray[i] >= 0) {
             // Load model into slot
@@ -3395,6 +3397,7 @@ void CStreaming::StreamPedsIntoRandomSlots(const int32(&modelArray)[TOTAL_LOADED
 
 // 0x40B700
 void CStreaming::StreamVehiclesAndPeds() {
+    SH14_CAR("StreamVehiclesAndPeds", "-");
     StreamCopModels(CTheZones::m_CurrLevel);
 
     CWanted* wanted = FindPlayerWanted();
@@ -3499,6 +3502,7 @@ void CStreaming::StreamVehiclesAndPeds() {
 
 // 0x40B650
 void CStreaming::StreamVehiclesAndPeds_Always(const CVector& unused) {
+    SH14_CAR("StreamVehiclesAndPeds_Always", "-");
     if (CVehicle* vehicle = FindPlayerVehicle()) {
         switch (vehicle->m_nVehicleSubType) {
         case VEHICLE_TYPE_PLANE:
@@ -3527,6 +3531,7 @@ void CStreaming::StreamVehiclesAndPeds_Always(const CVector& unused) {
 
 // 0x40A560
 void CStreaming::StreamZoneModels(const CVector& unused) {
+    SH14_CAR("StreamZoneModels", "-");
     if (!CPopCycle::m_pCurrZoneInfo || CCheat::IsZoneStreamingAllowed())
         return;
 
@@ -3635,6 +3640,7 @@ void CStreaming::StreamZoneModels(const CVector& unused) {
 
 // 0x40AA10
 void CStreaming::StreamZoneModels_Gangs(const CVector& unused) {
+    SH14_CAR("StreamZoneModels_Gangs", "-");
     if (!CPopCycle::m_pCurrZoneInfo) {
         return;
     }

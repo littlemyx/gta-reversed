@@ -8,6 +8,7 @@
 
 #include "VehicleModelInfo.h"
 #include "CustomCarPlateMgr.h"
+#include "portable/sh14log.h" // SH14 debug logs (NOTSA_STATEHASH only)
 #include "LoadingScreen.h"
 #include "CarFXRenderer.h"
 
@@ -516,7 +517,9 @@ void CVehicleModelInfo::SetCarCustomPlate()
     m_nPlateType = CARPLATE_DEFAULT;
     char plateBuffer[8 + 1] = "DEFAULT";
 
+    const auto shRc0 = SH14_LS_ON() ? SH_RC14() : 0ull;
     CCustomCarPlateMgr::GeneratePlateText(plateBuffer, sizeof(plateBuffer) - 1);
+    SH14_LS("P", "key=%08x name=%s objIdx=%d plate=%.8s r0=%llu r1=%llu", (unsigned)m_nKey, GetModelNameAsString().c_str(), (int)m_nObjectInfoIndex, plateBuffer, shRc0, SH_RC14());
     if (auto* material = CCustomCarPlateMgr::SetupClump(GetRpClump(), plateBuffer, m_nPlateType)) {
         m_pPlateMaterial = material;
     }

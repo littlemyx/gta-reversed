@@ -2331,10 +2331,10 @@ void CCam::Process_1rstPersonPedOnPC(const CVector& target, float orientation, f
     if (targetPed->IsPlayer() && targetPed->m_pAttachedTo) {
         x87d base;
         switch (targetPed->m_fTurretAngleA) {
-        case 0:  base = (x87d)targetPed->m_pAttachedTo->GetHeading() + (x87d)(PI / 2.0f); break;
-        case 1:  base = (x87d)targetPed->m_pAttachedTo->GetHeading() + (x87d)PI; break;
-        case 2:  base = (x87d)targetPed->m_pAttachedTo->GetHeading() - (x87d)(PI / 2.0f); break;
-        case 3:  base = (x87d)targetPed->m_pAttachedTo->GetHeading(); break;
+        case 0:  base = X87R(targetPed->m_pAttachedTo->GetHeadingExt() + (double)(PI / 2.0f)); break; // 0x50F0AD: GetHeading's FPATAN result is unrounded in ST0, the fadd rounds once
+        case 1:  base = X87R(targetPed->m_pAttachedTo->GetHeadingExt() + (double)PI); break; // 0x50F0C0
+        case 2:  base = X87R(targetPed->m_pAttachedTo->GetHeadingExt() - (double)(PI / 2.0f)); break; // 0x50F0D3
+        case 3:  base = targetPed->m_pAttachedTo->GetHeadingExt(); break; // 0x50F0E6: unrounded
         default: base = (x87d)stickV; break; // BUG: the original uses the (reused) vertical stick/mouse variable here
         }
         x87d diff = (x87d)m_fHorizontalAngle - base;

@@ -1,5 +1,6 @@
 #include "StdInc.h"
 #include "portable/sh10log.h" // SH10 debug logs (NOTSA_STATEHASH only)
+#include "portable/sh13log.h" // SH13 debug logs (NOTSA_STATEHASH only)
 
 #include "UIRenderer.h"
 
@@ -846,6 +847,7 @@ void CGame::Process() {
         CReplay::Update();
         SH10_MARK("CWorld::Process");
         CWorld::Process();
+        SH13_PED("afterWorldProcess"); SH13_VEHDUMP("afterWorldProcess");
 #ifdef NOTSA_PORTABLE
         { extern bool NotsaCheckMatrixLists(const char*); NotsaCheckMatrixLists("CGame::Process after CWorld::Process"); }
 #endif
@@ -880,6 +882,7 @@ void CGame::Process() {
         if (CReplay::ShouldStandardCameraBeProcessed()) {
             TheCamera.Process();
             SH10_CAM("afterCameraProcess");
+            SH13_PED("afterCameraProcess");
         } else {
             TheCamera.ProcessFade();
         }
@@ -948,6 +951,7 @@ void CGame::Process() {
     SH10_END();
     SH10_CAM("endOfCGameProcess");
     SH10_CUT("endOfCGameProcess");
+    SH13_PED("endOfCGameProcess"); SH13_PUT("endOfCGameProcess"); SH13_POP("endOfCGameProcess");
 }
 
 // 0x53BCF0

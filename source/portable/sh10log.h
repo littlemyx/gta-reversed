@@ -11,11 +11,13 @@ inline FILE* Sh10StageLog() { static Sh7Log l = [] { Sh7Log x; x.Init("NOTSA_SH1
 inline FILE* Sh10CamLog()   { static Sh7Log l = [] { Sh7Log x; x.Init("NOTSA_SH10_CAM", "NOTSA_SH10_CAM_FRAMES", "3085", "# frame randCount CAM where ..."); return x; }(); return l.Get(); }
 inline FILE* Sh10CutLog()   { static Sh7Log l = [] { Sh7Log x; x.Init("NOTSA_SH10_CUT", "NOTSA_SH10_CUT_FRAMES", "3086-3100", "# frame randCount C|O where ..."); return x; }(); return l.Get(); }
 
+void Sh13PopPollMark(const char* where); // statehash.cpp (SH13 popcount log)
 struct Sh10Stage { const char* name = nullptr; uint64_t before = 0; };
 inline Sh10Stage& Sh10Cur() { static Sh10Stage s; return s; }
 inline void Sh10End() {
     Sh10Stage& s = Sh10Cur();
     if (!s.name) return;
+    Sh13PopPollMark(s.name);
     if (FILE* f = Sh10StageLog()) { const uint64_t a = RandCountNow(); std::fprintf(f, "%d %llu S %s %llu %llu %llu\n", LoadLogRecFrame(), (unsigned long long)a, s.name, (unsigned long long)s.before, (unsigned long long)a, (unsigned long long)(a - s.before)); std::fflush(f); }
     s.name = nullptr;
 }

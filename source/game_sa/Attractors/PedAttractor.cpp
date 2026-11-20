@@ -1,6 +1,7 @@
 #include "StdInc.h"
 
 #include "PedAttractor.h"
+#include "portable/sh13log.h" // SH13 debug logs (NOTSA_STATEHASH only)
 
 #include "Tasks/TaskTypes/TaskComplexGoToAttractor.h"
 #include "Tasks/TaskTypes/TaskComplexWaitAtAttractor.h"
@@ -199,11 +200,13 @@ int32 CPedAttractor::ComputeFreeSlot() {
 
 // 0x5E9600
 float CPedAttractor::ComputeDeltaPos() const {
+    SH13_ATTR("D CPedAttractor::ComputeDeltaPos", "");
     return CGeneral::GetRandomNumberInRange(-m_DeltaPos, m_DeltaPos);
 }
 
 // 0x5E9640
 float CPedAttractor::ComputeDeltaHeading() const {
+    SH13_ATTR("D CPedAttractor::ComputeDeltaHeading", "");
     return CGeneral::GetRandomNumberInRange(-m_DeltaHeading, m_DeltaHeading);
 }
 

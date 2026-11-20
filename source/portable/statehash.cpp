@@ -872,11 +872,11 @@ void SetWrapCaller(const void* ra) { g_wrapCaller = ra; }
 #endif
 
 #if defined(_WIN32) && defined(NOTSA_PORTABLE)
-// P4C1: NOTSA_CRASHLOG=<file>: a vectored exception handler writing the exception code, the faulting address and an x64-unwound stack (RtlVirtualUnwind from the fault context) as offsets from `StableId` (resolve with the .map)
+// CR6: also the abort / terminate / purecall / invalid-parameter exceptions 0xE0AB0001-5 raised by standalone/Fixups.cpp (rc=3 aborts). P4C1: NOTSA_CRASHLOG=<file>: a vectored exception handler writing the exception code, the faulting address and an x64-unwound stack (RtlVirtualUnwind from the fault context) as offsets from `StableId` (resolve with the .map)
 namespace {
 LONG WINAPI CrashVeh(PEXCEPTION_POINTERS ep) {
     const DWORD code = ep->ExceptionRecord->ExceptionCode;
-    if (code != EXCEPTION_ACCESS_VIOLATION && code != EXCEPTION_STACK_OVERFLOW && code != EXCEPTION_ILLEGAL_INSTRUCTION && code != EXCEPTION_INT_DIVIDE_BY_ZERO && code != EXCEPTION_ARRAY_BOUNDS_EXCEEDED && code != EXCEPTION_PRIV_INSTRUCTION) return EXCEPTION_CONTINUE_SEARCH;
+    if ((code < 0xE0AB0001u || code > 0xE0AB0005u) && code != EXCEPTION_ACCESS_VIOLATION && code != EXCEPTION_STACK_OVERFLOW && code != EXCEPTION_ILLEGAL_INSTRUCTION && code != EXCEPTION_INT_DIVIDE_BY_ZERO && code != EXCEPTION_ARRAY_BOUNDS_EXCEEDED && code != EXCEPTION_PRIV_INSTRUCTION) return EXCEPTION_CONTINUE_SEARCH;
     static volatile LONG once = 0;
     if (InterlockedExchange(&once, 1)) return EXCEPTION_CONTINUE_SEARCH;
     const char* path = std::getenv("NOTSA_CRASHLOG");

@@ -142,11 +142,19 @@ void StandBefore(float ex, float ey, float ez, float dist) { // ryder1_driver.ts
     const float len = std::hypot(dx, dy) ? (float)std::hypot(dx, dy) : 1.f; dx /= len; dy /= len;
     PedTo(ex + dx * dist, ey + dy * dist, ez + 0.3f, std::atan2(dx, -dy), false);
 }
+// CR14: every generic-driver stall / wait is a TS frame count (drive.ts stallFrames 600, row settles, waits) at the TS frame step (test/p2World.ts frameStep.ms = 1000/30); here it is the same game time in C++ frames. NOTSA_MDRIVER_FRAMEMS = override of the C++ frame ms; NOTSA_MDRIVER_TSFRAMES=0 = legacy (raw frame counts)
+int TsFrames(int n) {
+    if (!Generic() || n <= 0) return n;
+    static const bool legacy = [] { const char* e = std::getenv("NOTSA_MDRIVER_TSFRAMES"); return e && !std::strcmp(e, "0"); }();
+    if (legacy) return n;
+    static const double cppMs = [] { if (const char* e = std::getenv("NOTSA_MDRIVER_FRAMEMS")) { const double v = std::atof(e); if (v > 0) return v; } if (const char* e = std::getenv("NOTSA_RR_STEP_MS")) { const double v = std::atof(e); if (v > 0) return v; } const double v = (double)CTimer::GetTimeStep() * 20.0; return v > 1.0 ? v : 20.0; }();
+    return std::max(1, (int)std::lround(n * (1000.0 / 30.0) / cppMs));
+}
 void Dispatch(const std::string& line) { // one action (`wait` / `waituntil` only arm the counters)
     std::stringstream ss(line); std::string op; ss >> op;
     auto* ped = Cj();
-    if (op == "wait") { ss >> g_wait; }
-    else if (op == "waituntil") { std::string e, o; double v; int n; ss >> e >> o >> v >> n; g_until = e + " " + o + " " + std::to_string(v); g_untilLeft = n; }
+    if (op == "wait") { ss >> g_wait; g_wait = TsFrames(g_wait); }
+    else if (op == "waituntil") { std::string e, o; double v; int n; ss >> e >> o >> v >> n; g_until = e + " " + o + " " + std::to_string(v); g_untilLeft = TsFrames(n); }
     else if (op == "key") { std::string d, n; ss >> d >> n; Emit("mdkey:" + d + ":" + n); }
     else if (op == "pedwarp") { float x, y, z; ss >> x >> y >> z; PedTo(x, y, z, ped ? ped->GetHeading() : 0.f, false); }
     else if (op == "vehwarp") { float x, y, z; ss >> x >> y >> z; Emit("mdveh:" + F(x) + ":" + F(y) + ":" + F(z)); }
@@ -520,6 +528,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         const int h = I_(0); CEntity* e = EntityOfHandle(h, cop);
         if (!e) { QueueActions({}, 0); return; }
         const auto pos = e->GetPosition();
+        if (std::getenv("NOTSA_MDRIVER_PLOG")) { auto* ev = CPools::GetVehicle(h); notsa::standalone::Fixups::Log("[mdplog] warpto_handle h=%d op=%04X model=%d pos=%.1f,%.1f,%.1f veh=%d driver=%d status=%d cj=%d\n", h, cop, (int)e->m_nModelIndex, pos.x, pos.y, pos.z, ev ? 1 : 0, ev && ev->m_pDriver ? 1 : 0, ev ? (int)ev->GetStatus() : -1, c && c->bInVehicle ? 1 : 0); }
         if (auto* o = CPools::GetObject(h); o && o->objectFlags.bIsLiftable && c && !c->GetEntityThatThisPedIsHolding()) { // CR4: default on (was AD3-only): stand 1.5 m before a liftable object and press the pick-up key
             QueueActions({ "standobj " + std::to_string(h) + " 1.5", "wait 10", "key down return", "wait 1", "key up return", "wait 90" }, row.settle); return;
         }
@@ -609,8 +618,9 @@ void TickGeneric() {
     if (CCutsceneMgr::IsCutsceneProcessing()) g_sameCount = 0;
     else if (root->m_IP == g_lastIp) g_sameCount++;
     else { g_sameCount = 0; g_lastIp = root->m_IP; }
-    if (g_sameCount >= g_stall) for (auto& r : g_recs) if (r->waitSeq >= g_waitSeq - 3 && (r->raw & 0x7FFF) == 0x010F && r->cond == 0) { if (auto* w = FindPlayerWanted()) if (w->m_WantedLevel != eWantedLevel::WANTED_CLEAN) { w->SetWantedLevel(eWantedLevel::WANTED_CLEAN); g_sameCount = 0; return; } break; } // CR11: as drive.ts:309 (at the stall threshold, then no decide this round; level only): // CR9: the thread waits for the wanted level to drop (SWEET4 ip 0x45e7 after the second pay n spray stage; the exe decays above 1 star only in the countryside, a real player drives into the pay n spray = ClearWantedLevelAndGoOnParole 0x44AC16): clear it, as the TS port does implicitly
-    if (g_sameCount < g_stall) return;
+    const int stallN = TsFrames(g_stall);
+    if (g_sameCount >= stallN) for (auto& r : g_recs) if (r->waitSeq >= g_waitSeq - 3 && (r->raw & 0x7FFF) == 0x010F && r->cond == 0) { if (auto* w = FindPlayerWanted()) if (w->m_WantedLevel != eWantedLevel::WANTED_CLEAN) { w->SetWantedLevel(eWantedLevel::WANTED_CLEAN); g_sameCount = 0; return; } break; } // CR11: as drive.ts:309 (at the stall threshold, then no decide this round; level only): // CR9: the thread waits for the wanted level to drop (SWEET4 ip 0x45e7 after the second pay n spray stage; the exe decays above 1 star only in the countryside, a real player drives into the pay n spray = ClearWantedLevelAndGoOnParole 0x44AC16): clear it, as the TS port does implicitly
+    if (g_sameCount < stallN) return;
     const uint32_t at = (uint32_t)(root->m_IP - root->m_BaseIP);
     const uint8_t* ipPtr = root->m_IP;
     g_sameCount = 0;

@@ -775,6 +775,24 @@ void Sh20Bmx(const char* where) {
     }
     std::fflush(f);
 }
+void Sh21Bmx(const CPhysical* self, const char* where, int extra) {
+    FILE* f = Sh21BmxPcLog(); if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    auto* pool = GetVehiclePool(); if (!pool) return;
+    CVehicle* v = pool->GetAt(2); if (!v || static_cast<const CPhysical*>(v) != self) return;
+    auto V3 = [&](const CVector& q) { std::fprintf(f, "%08x/%.9g,%08x/%.9g,%08x/%.9g", Sh7Bits(q.x), (double)q.x, Sh7Bits(q.y), (double)q.y, Sh7Bits(q.z), (double)q.z); };
+    std::fprintf(f, "%d %llu %s Z %s%s | move=", LoadLogRecFrame(), (unsigned long long)RandCount(), Sh12Stage(), where, extra == 1 ? "(exit)" : "");
+    V3(v->m_vecMoveSpeed); std::fprintf(f, " turn="); V3(v->m_vecTurnSpeed);
+    std::fprintf(f, " fake=%d col=%d status=%d dontApply=%d disMove=%d pos=", (int)v->m_nFakePhysics, (int)v->vehicleFlags.bVehicleColProcessed, (int)v->GetStatus(), (int)v->physicalFlags.bDontApplySpeed, (int)v->physicalFlags.bDisableMoveForce);
+    V3(v->GetPosition()); std::fprintf(f, "\n"); std::fflush(f);
+}
+void Sh21Vals(const CPhysical* self, const char* where, float a, float b, float c, float d) {
+    FILE* f = Sh21BmxPcLog(); if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    auto* pool = GetVehiclePool(); if (!pool) return;
+    CVehicle* v = pool->GetAt(2); if (!v || static_cast<const CPhysical*>(v) != self) return;
+    std::fprintf(f, "%d %llu %s Z %s | vals=%08x/%.9g,%08x/%.9g,%08x/%.9g,%08x/%.9g turn=%08x/%.9g,%08x/%.9g,%08x/%.9g\n", LoadLogRecFrame(), (unsigned long long)RandCount(), Sh12Stage(), where,
+        Sh7Bits(a), (double)a, Sh7Bits(b), (double)b, Sh7Bits(c), (double)c, Sh7Bits(d), (double)d, Sh7Bits(v->m_vecTurnSpeed.x), (double)v->m_vecTurnSpeed.x, Sh7Bits(v->m_vecTurnSpeed.y), (double)v->m_vecTurnSpeed.y, Sh7Bits(v->m_vecTurnSpeed.z), (double)v->m_vecTurnSpeed.z);
+    std::fflush(f);
+}
 void Sh13VehDump(const char* where) {
     FILE* f = Sh13VehLog(); if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
     auto* pool = GetVehiclePool(); if (!pool) return;

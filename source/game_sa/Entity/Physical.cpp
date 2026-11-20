@@ -7,6 +7,7 @@
 #include "StdInc.h"
 
 #include "Physical.h"
+#include "portable/sh20log.h" // SH21 debug logs (NOTSA_STATEHASH only)
 #include "CarCtrl.h"
 #include "Glass.h"
 #include "TaskSimpleClimb.h"
@@ -319,6 +320,7 @@ void CPhysical::ProcessControl()
 // 0x54DFB0
 void CPhysical::ProcessCollision() {
     ZoneScoped;
+    SH21_SCOPE(this, "CPhysical::ProcessCollision");
 
     auto* vehicle    = AsVehicle();
     auto* automobile = AsAutomobile();
@@ -845,6 +847,7 @@ CVector CPhysical::GetSpeed(CVector point)
 
 void CPhysical::ApplyMoveSpeed()
 {
+    SH21_Z(this, "ApplyMoveSpeed", 0);
     if (physicalFlags.bDontApplySpeed || physicalFlags.bDisableMoveForce)
         ResetMoveSpeed();
     else {
@@ -860,6 +863,7 @@ void CPhysical::ApplyMoveSpeed()
 // 0x542E20
 void CPhysical::ApplyTurnSpeed()
 {
+    SH21_Z(this, "ApplyTurnSpeed", 0);
     if (physicalFlags.bDontApplySpeed) {
         ResetTurnSpeed();
     }

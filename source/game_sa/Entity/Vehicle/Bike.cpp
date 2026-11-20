@@ -9,6 +9,7 @@
 #include <bit>
 
 #include "Bike.h"
+#include "portable/sh20log.h" // SH21 debug logs (NOTSA_STATEHASH only)
 
 #include "Buoyancy.h"
 #include "CarCtrl.h"
@@ -1301,6 +1302,7 @@ int32 CBike::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoints) {
 
 // 0x6B9250
 void CBike::ProcessControl() {
+    SH21_SCOPE(this, "CBike::ProcessControl");
     CCollisionData* const colData = GetColModel()->m_pColData;
     const auto            mi      = GetVehicleModelInfo();
 
@@ -1466,6 +1468,7 @@ void CBike::ProcessControl() {
         }
     }
 
+    SH21_Z(this, bSkipPhysics ? "PC:afterIdleBlock skip=1" : "PC:afterIdleBlock skip=0", 0);
     for (const auto physical : m_aGroundPhysicalPtrs) {
         if (physical) {
             vehicleFlags.bRestingOnPhysical = true;
@@ -1498,6 +1501,7 @@ void CBike::ProcessControl() {
         bFallenOver = true;
     }
 
+    SH21_Z(this, bSkipPhysics ? "PC:branch skipPhysics" : "PC:branch fullPhysics", 0);
     if (bSkipPhysics) {
         SkipPhysics();
         vehicleFlags.bVehicleColProcessed = false;
@@ -1551,7 +1555,9 @@ void CBike::ProcessControl() {
         }
 
         const auto wasSubmerged = physicalFlags.bSubmergedInWater;
+        SH21_Z(this, "PC:beforePhysicalProcessControl", 0);
         CPhysical::ProcessControl();
+        SH21_Z(this, "PC:afterPhysicalProcessControl", 0);
         m_fAirResistance = savedAirResistance;
         ProcessBuoyancy();
 
@@ -2110,6 +2116,7 @@ void CBike::ProcessControl() {
         }
     }
 
+    SH21_Z(this, "PC:afterBranch", 0);
     // Burning
     if (m_fHealth < 250.0f && GetStatus() != STATUS_WRECKED) {
         if (m_nVehicleSubType != VEHICLE_TYPE_BMX) {
@@ -2141,7 +2148,9 @@ void CBike::ProcessControl() {
         }
     }
 
+    SH21_Z(this, "PC:afterBurning", 0);
     ProcessDelayedExplosion();
+    SH21_Z(this, "PC:afterDelayedExplosion", 0);
 
     // Controller shake
     float suspensionShake = 0.0f;
@@ -2195,6 +2204,7 @@ void CBike::ProcessControl() {
         }
     }
 
+    SH21_Z(this, "PC:beforeTail", 0);
     vehicleFlags.bVehicleColProcessed = false;
     vehicleFlags.bAudioChangingGear   = false;
 
@@ -2234,6 +2244,7 @@ void CBike::ProcessControl() {
     {
         const auto tiltForce = (tiltDot * m_fTurnMass) * ((extraHandlingFlags & BIKE_EXTRA_PLAYER_CONTROLLED) ? -0.07f : -0.1f);
         const auto& up = GetUp();
+        SH21_VALS(this, "PC:tilt tiltDot,tiltForce,turnMass,timeStep", tiltDot, tiltForce, m_fTurnMass, CTimer::GetTimeStep());
         ApplyTurnForce(
             CVector{
                 (tiltForce * up.x) * CTimer::GetTimeStep(),
@@ -2242,6 +2253,7 @@ void CBike::ProcessControl() {
             },
             comWorld + GetRight()
         );
+        SH21_Z(this, "PC:afterTiltTurnForce", 0);
         if (extraHandlingFlags & BIKE_EXTRA_PLAYER_CONTROLLED) {
             bikeFlags.bOnSideStand = false;
         }

@@ -788,7 +788,7 @@ bool RotateObject(CObject& obj, float target, float rate, int32 collisionCheck) 
     constexpr float RAD_TO_DEG = 57.2957763671875f; // 0x859878
     constexpr float DEG_TO_RAD = 0.01745329238474369f; // 0x8595EC
 
-    x87d cur = (x87d)obj.GetHeading() * (x87d)RAD_TO_DEG;
+    x87d cur = X87R(obj.GetHeadingExt() * (double)RAD_TO_DEG); // 0x481CC4: GetHeading's FPATAN result is unrounded in ST0, the fmul rounds once
     if (cur < 0.0) {
         cur += (x87d)360.0;
     }

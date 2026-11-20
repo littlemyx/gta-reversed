@@ -4824,7 +4824,7 @@ void CCamera::CamControl() {
                             const CVector dir = targeted->GetPosition() - targetPed->GetPosition();
                             aimHeading        = X87R(x87::atan2(-static_cast<double>(dir.x), static_cast<double>(dir.y)) - static_cast<double>(HALF_PI)); // 53-bit fpatan result, the fsub rounds to 24 bits
                         } else {
-                            aimHeading = static_cast<x87d>(targetPed->GetHeading()) - HALF_PI;
+                            aimHeading = X87R(targetPed->GetHeadingExt() - static_cast<double>(HALF_PI)); // 0x52A88D: GetHeading's FPATAN result is unrounded in ST0, the fsub rounds once
                         }
 
                         const x87d camHeading = GetActiveCam().m_fHorizontalAngle;
@@ -4916,7 +4916,7 @@ void CCamera::CamControl() {
                         const x87d PI             = static_cast<x87d>(std::numbers::pi_v<float>);
                         const x87d HALF_PI        = static_cast<x87d>(std::numbers::pi_v<float> / 2.f);
                         const x87d TWO_PI         = static_cast<x87d>(std::numbers::pi_v<float> * 2.f);
-                        x87d       heading        = static_cast<x87d>(targetPed->GetHeading()) - HALF_PI;
+                        x87d       heading        = X87R(targetPed->GetHeadingExt() - static_cast<double>(HALF_PI)); // 0x52AB34: unrounded FPATAN heading, one rounding at the fsub
                         const x87d camHeading     = cam.m_fHorizontalAngle;
                         if (heading > camHeading + PI) {
                             heading -= TWO_PI;

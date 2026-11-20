@@ -2441,8 +2441,11 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
     } walkLog;
     walkLog.accum = &accumDist;
 #define WALK_RET(tok, v) do { walkLog.why = tok; return v; } while (0)
+    // SH25: per-link detail rows (L): every candidate link of every hop with the reject reason
+#define WALK_L(...) do { if (walkLog.f) { std::fprintf(walkLog.f, "%d %llu L hop=%d ", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), walkLog.hops + 1); std::fprintf(walkLog.f, __VA_ARGS__); std::fprintf(walkLog.f, "\n"); } } while (0)
 #else
 #define WALK_RET(tok, v) return v
+#define WALK_L(...) ((void)0)
 #endif
 
     // Init the statics (only the area of the nodes is set)
@@ -2558,11 +2561,15 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
                 : (SequenceElements + SequenceRandomOffset - i) % SequenceElements;
             const auto linkIdx = curNode.m_wBaseLinkId + idx;
             const auto next    = ThePaths.m_pNodeLinks[cur.m_wAreaId][linkIdx];
+            WALK_L("i=%d idx=%d linkIdx=%d cur=(%d,%d) next=(%d,%d) nextAreaLoaded=%d", i, (int)idx, (int)linkIdx, (int)(int16)cur.m_wAreaId, (int)cur.m_wNodeId, (int)(int16)next.m_wAreaId, (int)next.m_wNodeId, ThePaths.m_pPathNodes[next.m_wAreaId] ? 1 : 0);
             if (!ThePaths.m_pPathNodes[next.m_wAreaId]) {
+                WALK_L("  reject=next_area_unloaded");
                 continue;
             }
             const auto navi = ThePaths.m_pNaviLinks[cur.m_wAreaId][linkIdx];
+            WALK_L("  navi=(%d,%d) naviAreaLoaded=%d", (int)(int16)navi.m_wAreaId, (int)navi.m_wCarPathLinkId, ThePaths.m_pPathNodes[navi.m_wAreaId] ? 1 : 0);
             if (!ThePaths.m_pPathNodes[navi.m_wAreaId]) { // (The original checks the path node area table with the area of the link)
+                WALK_L("  reject=navi_area_unloaded");
                 continue;
             }
 
@@ -2573,6 +2580,7 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
                 }
             }
             if (isVisited) {
+                WALK_L("  reject=visited numVisited=%d", numVisited);
                 continue;
             }
 
@@ -2588,8 +2596,10 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
             const x87d dyNext   = (x87d)posn.y - nextPos.y;
             const auto   distNext = (float)std::sqrt(dyNext * dyNext + (x87d)dxNext * dxNext);
 
+            WALK_L("  curPos=%.9g,%.9g,%.9g nextPos=%.9g,%.9g,%.9g distCur=%.9g distNext=%.9g arg6=%.9g arg7=%.9g switchedOff(cur,next)=%d,%d arg12=%d", curPos.x, curPos.y, curPos.z, nextPos.x, nextPos.y, nextPos.z, distCur, distNext, arg6, arg7, (int)curNode.m_isSwitchedOff, (int)nextNode.m_isSwitchedOff, (int)arg12);
             // Is this place OK?
             bool foundPlace = false;
+            [[maybe_unused]] const char* pl1 = "skipped_switched_off"; [[maybe_unused]] const char* pl2 = "-";
             if (!((nextNode.m_isSwitchedOff || curNode.m_isSwitchedOff) && arg12)) {
                 const auto AbsNaN = [](double v) { return v < 0.0 ? -v : v; }; // (NaN stays NaN)
 
@@ -2597,7 +2607,9 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
                 {
                     const x87d a = (x87d)distNext - arg6;
                     const x87d b = (x87d)distCur - arg6;
+                    pl1 = "no_crossing";
                     if (b * a < 0.0) {
+                        pl1 = "crossing";
                         const double absA = AbsNaN(a);
                         const auto   absB = (float)AbsNaN(b);
 
@@ -2615,9 +2627,14 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
                         pOrigin->x = (float)((x87d)px * inv);
                         pOrigin->y = (float)((x87d)py * inv);
                         pOrigin->z = (float)(pz * inv);
-                        if (TheCamera.IsSphereVisible(*pOrigin, 5.0f)) { // 0x420D40
+                        const bool vis1 = TheCamera.IsSphereVisible(*pOrigin, 5.0f); // 0x420D40
+                        WALK_L("  p1=%.9g,%.9g,%.9g visible=%d", pOrigin->x, pOrigin->y, pOrigin->z, (int)vis1);
+                        if (vis1) {
                             *arg11     = (float)((x87d)(float)inv * absB);
                             foundPlace = true;
+                            pl1 = "found_visible";
+                        } else {
+                            pl1 = "crossing_not_visible";
                         }
                     }
                 }
@@ -2626,7 +2643,9 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
                 if (!foundPlace) {
                     const x87d a = (x87d)distNext - arg7;
                     const x87d b = (x87d)distCur - arg7;
+                    pl2 = "no_crossing";
                     if (b * a < 0.0) {
+                        pl2 = "crossing";
                         const auto absB = (float)AbsNaN(b);
                         const auto absA = (float)AbsNaN(a);
 
@@ -2644,20 +2663,27 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
                         pOrigin->x = (float)((x87d)px * inv);
                         pOrigin->y = (float)(py * inv);
                         pOrigin->z = (float)(pz * inv);
-                        if (!TheCamera.IsSphereVisible(*pOrigin, 5.0f)) { // 0x420D40
+                        const bool vis2 = TheCamera.IsSphereVisible(*pOrigin, 5.0f); // 0x420D40
+                        WALK_L("  p2=%.9g,%.9g,%.9g visible=%d", pOrigin->x, pOrigin->y, pOrigin->z, (int)vis2);
+                        if (!vis2) {
                             *arg11     = (float)((x87d)(float)inv * absB);
                             foundPlace = true;
+                            pl2 = "found_not_visible";
+                        } else {
+                            pl2 = "crossing_visible";
                         }
                     }
                 }
             }
 
+            WALK_L("  circle1(arg6)=%s circle2(arg7)=%s foundPlace=%d", pl1, pl2, (int)foundPlace);
             if (foundPlace) {
                 // The road can't be too steep. x87: kept in extended precision
                 const auto   dx  = (float)((x87d)curPos.x - nextPos.x);
                 const x87d dy  = (x87d)curPos.y - nextPos.y;
                 const x87d dz  = std::fabs((x87d)curPos.z - nextPos.z);
                 const x87d len = std::sqrt(dy * dy + (x87d)dx * dx);
+                WALK_L("  steep len=%.9g dz=%.9g too_steep=%d", (double)len, (double)dz, (int)(len * 0.5f < dz));
                 if (!(len * 0.5f < dz)) { // 0x858B8C (NaN => continue)
                     // Which one is the first node is random
                     if (rand() & 8) {
@@ -2681,6 +2707,7 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
                     const x87d oy  = (x87d)pOrigin->y - posn.y;
                     const x87d inv = (x87d)1.0 / std::sqrt(oy * oy + ox * ox);
                     const x87d dot = inv * oy * arg3 + inv * ox * radius;
+                    WALK_L("  dir dot=%.9g arg4=%.9g arg5=%d", (double)dot, (double)arg4, (int)arg5);
                     if (arg5) {
                         if (!(dot > arg4)) {
                             WALK_RET("wrong_side", false);
@@ -2696,6 +2723,7 @@ bool CCarCtrl::GenerateCarCreationCoors2(CVector posn, float radius, float arg3,
             }
 
             // Move on to the next node
+            WALK_L("  chosen=move_on");
             {
                 cur                     = next;
                 visited[numVisited++]   = next;

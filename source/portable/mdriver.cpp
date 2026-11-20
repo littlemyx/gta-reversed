@@ -229,10 +229,10 @@ std::vector<Arg> DecodeArgs(const CRunningScript* s, const uint8_t* p, int n) { 
         case 4: a.bits = (uint32_t)(int32_t)*(const int8_t*)p; p += 1; break;
         case 5: a.bits = (uint32_t)(int32_t)*(const int16_t*)p; p += 2; break;
         case 6: a.bits = *(const uint32_t*)p; a.kind = 1; p += 4; break;
-        case 7: case 8: { // array: u16 base, u16 index var, u8 size, u8 flags (bit 7: index var is local)
+        case 7: case 8: { // array: u16 base, u16 index var, u8 size, u8 flags (bit 7: index var is GLOBAL = scm::ArrayAccess::IdxVarIsGlobal; CR15: was inverted)
             const uint16_t base = *(const uint16_t*)p, iv = *(const uint16_t*)(p + 2); const uint8_t fl = p[5];
-            if ((fl & 0x80) ? !LocalOk(s, iv) : !GlobalOk(iv)) return r;
-            const int idx = (int)((fl & 0x80) ? LocalAt(s, iv)->uParam : *(const uint32_t*)(CTheScripts::ScriptSpace.data() + iv));
+            if ((fl & 0x80) ? !GlobalOk(iv) : !LocalOk(s, iv)) return r;
+            const int idx = (int)((fl & 0x80) ? *(const uint32_t*)(CTheScripts::ScriptSpace.data() + iv) : LocalAt(s, iv)->uParam);
             if (t == 7 ? !GlobalOk((int64_t)base + 4 * (int64_t)idx) : !LocalOk(s, (int64_t)base + idx)) return r;
             a.bits = t == 7 ? *(const uint32_t*)(CTheScripts::ScriptSpace.data() + base + 4 * idx) : LocalAt(s, base + idx)->uParam; a.kind = 2; p += 6; break; }
         case 9: p += 8; break;

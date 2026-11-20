@@ -1,0 +1,17 @@
+addr	function	verdict	asm range	note	fix commit
+0x4907CE	COMMAND_TASK_GO_STRAIGHT_TO_COORD (0x5D3)	MATCH	0x4907CE-0x490904	CollectParameters(6); time -2 -> GoToPointAndStandStill(ms,pt,0.5,2.0,false,true), -1 -> Timed 20000, else Timed(time)	-
+0x47CC64	COMMAND_SET_CAR_HEADING (0x175)	MATCH	0x47CC64-0x47CCAC	x87 wrap (<0 +360, >360 -360) then *DEG2RAD, SetHeading, UpdateRwMatrix	-
+0x467DB5	COMMAND_SET_CAR_COORDINATES (0xAB)	MATCH	0x467DB5-0x467DE0	CollectParameters(4), GetAtRef veh, SetCoordsOfScriptCar (structure only; trailing constant pushes not re-verified)	-
+0x47C537	COMMAND_SET_FIXED_CAMERA_POSITION (0x15F)	MATCH	0x47C537-0x47C58E	6 params: pos(78..80) then offset(84..8C) -> CCamera::SetCamPositionForFixedMode(0x50BEC0)	-
+0x47C598	COMMAND_POINT_CAMERA_AT_POINT (0x160)	MATCH	0x47C598-0x47C5F0	z<=-100 (NaN skips) FindGroundZ, TakeControlNoEntity(pos, ushort switchType, 1)	-
+0x47C7C3	COMMAND_DO_FADE (0x16A)	MATCH	0x47C7C3-0x47C82E	time int *0.001f, ushort dir; cleanup script: bScriptHasFadedOut = (dir != 1)	-
+0x47F88F	COMMAND_SET_CHAR_PROOFS (0x2AB)	MATCH	0x47F88F-0x47F980	bullet bit18, fire 19, explosion 23, collision 20, melee 21 in the exe param order	-
+0x48067D	COMMAND_SET_CHAR_ACCURACY (0x2E2)	MATCH	0x48067D-0x4806A0	byte store at ped+0x71A	-
+0x469B13	COMMAND_IS_CHAR_DEAD (0x118)	MATCH	0x469B13-0x469B80	null ped -> true else IsPedDead states 0x36/0x37/0x38 (0x464D70)	-
+0x4695A9	COMMAND_IS_CHAR_IN_CAR (0xDB)	MATCH	0x4695A9-0x469600	bInVehicle && vehicle == veh (exe tolerates a null veh handle, port asserts: edge only)	-
+0x46976F	COMMAND_CREATE_OBJECT (0x107)	MATCH	0x46976F-0x469860	alpha 255, Create(model,false), type 2/6, z<=-100 FindGroundZ + CoM offset, SetPosn, SetOrientation(0), UpdateRw*, LodAtomic -> SetupBigBuilding, ClearSpace, Add	-
+0x47CCEE	COMMAND_SET_OBJECT_HEADING (0x177)	MATCH	0x47CCEE-0x47CD4A	Remove, wrap/convert, SetHeading, UpdateRwMatrix/Frame, Add (float vs x87d intermediate: same under PC24, as accepted for SET_CHAR_HEADING)	-
+0x4714A5	COMMAND_SET_CHAR_AREA_VISIBLE (0x860)	MATCH	0x4714A5-0x4714FF	area byte +0x2F; area 0: enex=0, player: stack pos=0 + StopExtraColour(0)	-
+0x47C7B0	COMMAND_RESTORE_CAMERA_JUMPCUT (0x2EB) / SET_CAMERA_BEHIND_PLAYER (0x373)	MATCH	0x48079E / 0x48331B	RestoreWithJumpCut 0x50BAB0 / 0x50BD40	-
+0x486D80	COMMAND_LOCATE_CHAR_* family	SKIP	-	already FIXED by P4R1 (see P4R1.result.tsv)	-
+-	remaining ~150 handlers (GIVE_WEAPON_TO_CHAR, GET_SCRIPT_TASK_STATUS, CREATE_CHAR_INSIDE_CAR, WARP_CHAR_FROM_CAR_TO_COORD, REMOVE_CHAR_ELEGANTLY, CAMERA_SET_VECTOR_*, zone setters, TASK_PLAY_ANIM, ...)	NOT_REACHED	-	no deviation found in the 14 compared; budget	-

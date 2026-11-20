@@ -1105,7 +1105,9 @@ auto IsCharInZone(CPed& ped, std::string_view zoneName) {
  * @returns {float} heading
  */
 auto GetCharHeading(CPed& ped) {
-    return FixAngleDegrees(RadiansToDegrees(GetPedOrItsVehicle(ped).GetHeading()));
+    // exe 0x47CAA9: CPlaceable::GetHeading (0x441DB0) leaves the FPATAN result UNROUNDED in ST0 and the `fmul [0x859878]` rounds the product once (storing it to a float);
+    // GetHeading() would round the heading to a float first (double rounding: the last bit differs for ~1 in 4 headings)
+    return FixAngleDegrees((float)X87R(GetPedOrItsVehicle(ped).GetHeadingExt() * (double)RAD_TO_DEG));
 }
 
 /*

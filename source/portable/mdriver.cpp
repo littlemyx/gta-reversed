@@ -577,6 +577,11 @@ void TickGeneric() {
     if (fr >= g_maxFrames) { Stop("budget: " + std::to_string(g_maxFrames) + " frames", -1, (uint32_t)(root->m_IP - root->m_BaseIP)); return; }
     if (!g_pass && CStats::GetStatValue(STAT_MISSIONS_PASSED) > g_passStat0) { g_pass = true; g_passFrame = fr; } // CR4: TS drive.ts: PASSED = STAT_MISSIONS_PASSED rose (0x0318 SET_LATEST_MISSION_PASSED; missions 87 78 print no M_PASS)
     if (!std::getenv("NOTSA_MDRIVER_NOFIGHT") && ++g_fightClock % 3 == 0 && !CCutsceneMgr::IsCutsceneProcessing() && Cj()) ShootDead();
+    if (static const bool plog = std::getenv("NOTSA_MDRIVER_PLOG") != nullptr; plog && Cj() && fr % 50 == 0) { // CR8: CJ state every 50 frames (debug)
+        auto* me = Cj(); const auto pp = me->GetPosition(); auto* v = me->bInVehicle ? me->m_pVehicle : nullptr; auto* w = FindPlayerWanted();
+        notsa::standalone::Fixups::Log("[mdplog] f%d cj=%.1f,%.1f,%.1f hp=%.0f st=%d inv=%d veh=%d(%.0f hp, st %d, drown %d) wanted=%d lastDmg=%d wpn=%d\n", fr, pp.x, pp.y, pp.z, me->m_fHealth, (int)me->m_nPedState, (int)me->bInVehicle,
+            v ? (int)v->m_nModelIndex : -1, v ? v->m_fHealth : 0.f, v ? (int)v->GetStatus() : 0, v ? (int)v->vehicleFlags.bIsDrowning : 0, w ? (int)w->m_WantedLevel : -1, me->m_pLastEntityDamage ? (int)me->m_pLastEntityDamage->GetType() : -1, (int)me->m_nLastWeaponDamage);
+    }
     if (!std::getenv("NOTSA_MDRIVER_NOGOD")) if (auto* me = Cj()) { // CR4: TS drive.ts driverFrame: CJ and the vehicle he drives are invulnerable every frame (AUTODRIVE_GOD=0 off)
         me->physicalFlags.bInvulnerable = true;
         if (me->bInVehicle && me->m_pVehicle) me->m_pVehicle->physicalFlags.bInvulnerable = true;

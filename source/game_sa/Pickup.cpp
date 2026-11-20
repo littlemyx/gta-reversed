@@ -615,15 +615,21 @@ bool CPickup::Update(CPlayerPed* player, CVehicle* vehicle, int32 playerId) {
                                 if (!CHud::HelpMessageDisplayed()) {
                                     CHud::SetHelpMessage(gGxtString, false, false, false);
                                 }
+                                // 0x458181-0x4581fd: buy only in the collect-button window, not on a mission, money >= price (signed jl); the purchase takes the money,
+                                // clears the help message and removes the pickup (the exe returns true => the caller frees the slot)
                                 if (CollectPickupBuffer) {
-                                    const GxtChar* textToPrint = nullptr;
                                     if (CTheScripts::IsPlayerOnAMission()) {
-                                        textToPrint = TheText.Get("PROP_2");
-                                    } else if (FindPlayerInfo().m_nMoney < (int32)m_nAmmo) {
-                                        textToPrint = TheText.Get("PROP_1");
+                                        CHud::SetHelpMessage(TheText.Get("PROP_2"), true, false, false);
+                                    } else {
+                                        auto& money = FindPlayerInfo().m_nMoney;
+                                        if (money < (int32)m_nAmmo) {
+                                            CHud::SetHelpMessage(TheText.Get("PROP_1"), true, false, false);
+                                        } else {
+                                            money -= (int32)m_nAmmo;
+                                            CHud::SetHelpMessage(nullptr, true, false, false);
+                                            SetRemoved();
+                                        }
                                     }
-
-                                    CHud::SetHelpMessage(textToPrint, true, false, false);
                                 }
                                 break;
                             case PICKUP_2P:

@@ -3739,7 +3739,7 @@ void CCam::Process_Cam_TwoPlayer_InCarAndShooting() {
 
         const auto toAim = aimPos - m_vecSource;
         const x87d ang  = (x87d)(float)x87::atan2((x87d)-toAim.x, (x87d)toAim.y);
-        x87d       diff = ang - (x87d)veh->GetHeading(); // NOTE: x87 extended precision
+        x87d       diff = X87R(ang - veh->GetHeadingExt()); // 0x51A33E: `call GetHeading; fsubr [ang]`: the FPATAN heading stays unrounded in ST0, one rounding at the fsubr
         if (diff > (double)PI) {
             diff -= (x87d)(2.0f * PI);
         } else if (diff < (double)-PI) {

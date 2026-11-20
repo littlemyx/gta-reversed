@@ -567,9 +567,10 @@ void TickGeneric() {
     if (root) { char n[9]{}; std::memcpy(n, root->m_szName, 8); g_name = n; }
     if (!root) { // the thread ended (TS: !alive(script)): PASSED / FAILED, or STOP when a kill of the driver was just before it
         g_endFrame = fr;
+        if (!g_pass && CStats::GetStatValue(STAT_MISSIONS_PASSED) > g_passStat0) { g_pass = true; g_passFrame = fr; } // CR6: TS checks the stat at thread end too (87 78: cutscene-only, the stat rises in the thread's last command)
         if (!g_pass && fr - g_killFrame <= g_killSettle + 5) { g_stopReason = "driver stop: killed a guard"; g_stopOp = -1; }
         else if (!g_pass) g_endedFail = true;
-        std::fprintf(stderr, "[mdriver] mission thread ended at frame %d (pass=%d fail=%d)\n", fr, (int)g_pass, (int)g_fail); g_quitIn = 50; return;
+        notsa::standalone::Fixups::Log("[mdriver] STAT_MISSIONS_PASSED %.1f at start %.1f", CStats::GetStatValue(STAT_MISSIONS_PASSED), g_passStat0); std::fprintf(stderr, "[mdriver] mission thread ended at frame %d (pass=%d fail=%d)\n", fr, (int)g_pass, (int)g_fail); g_quitIn = 50; return;
     }
     if (g_pass && fr - g_passFrame > 1500) { g_quitIn = 0; return; }
     if (g_fail && fr - g_failFrame > 600) { g_quitIn = 0; return; }

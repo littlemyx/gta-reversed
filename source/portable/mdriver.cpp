@@ -21,6 +21,7 @@
 #include "Tasks/TaskTypes/TaskComplexKillPedOnFoot.h"
 #include "Tasks/TaskTypes/TaskComplexKillPedOnFootMelee.h"
 #include "Tasks/TaskTypes/TaskComplexKillPedOnFootArmed.h"
+#include "Tasks/TaskTypes/TaskComplexKillPedOnFootStealth.h"
 #include "Tasks/TaskTypes/TaskSimpleCarSetPedInAsDriver.h"
 #include "Tasks/TaskTypes/TaskSimpleCarSetPedInAsPassenger.h"
 #include <bit>
@@ -537,6 +538,8 @@ CPed* KillTarget(CPed* ped) { // actions.ts killTarget: a kill-ped-on-foot task 
             case TASK_COMPLEX_KILL_PED_ON_FOOT: tg = static_cast<CTaskComplexKillPedOnFoot*>(t)->m_target; break;
             case TASK_COMPLEX_KILL_PED_ON_FOOT_MELEE: tg = static_cast<CTaskComplexKillPedOnFootMelee*>(t)->m_target; break;
             case TASK_COMPLEX_KILL_PED_ON_FOOT_ARMED: tg = static_cast<CTaskComplexKillPedOnFootArmed*>(t)->m_target; break;
+            case TASK_COMPLEX_KILL_PED_ON_FOOT_STEALTH: tg = static_cast<CTaskComplexKillPedOnFootStealth*>(t)->m_target; break; // CR11: actions.ts KILL_TASKS also lists TIMED / STAND_STILL / WHILE_DUCKING / STEALTH
+            case TASK_COMPLEX_KILL_PED_ON_FOOT_TIMED: case TASK_COMPLEX_KILL_PED_ON_FOOT_STAND_STILL: case TASK_KILL_PED_ON_FOOT_WHILE_DUCKING: tg = static_cast<CTaskComplexKillPedOnFoot*>(t)->m_target; break;
             default: break;
             }
             if (tg) return tg;

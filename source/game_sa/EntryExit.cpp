@@ -561,7 +561,8 @@ bool CEntryExit::TransitionFinished(CPed* ped) {
 
 // 0x43E6D0
 void CEntryExit::RequestAmbientPeds() {
-    if (!CGame::CanSeeOutSideFromCurrArea()) {
+    // exe 0x43E6D8-0x43E6DD: test currArea; jne -> stream ambient peds; area == 0 (outside) -> tail-jmp RemoveDodgyPedsFromRandomSlots
+    if (CGame::CanSeeOutSideFromCurrArea()) {
         CStreaming::RemoveDodgyPedsFromRandomSlots();
         return;
     }

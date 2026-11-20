@@ -925,7 +925,7 @@ void CGameLogic::UpdateSkip() {
             }
 
             vehicle->m_vecMoveSpeed = vehicle->GetMatrix().GetForward() * ExeRecip(2.5f); // 0x442705: push 0x3ECCCCCD (0.4f) -> operator*(vec, float), not a division. Make the vehicle appear as it's driving to the point.
-            CCamera::GetActiveCamera().m_fHorizontalAngle = vehicle->GetHeading() - FRAC_PI_2;
+            CCamera::GetActiveCamera().m_fHorizontalAngle = (float)X87R(vehicle->GetHeadingExt() - (double)FRAC_PI_2); // 0x442741: GetHeading's FPATAN result is unrounded in ST0, `fsub [0x858FE4]` + fstp round once
         } else {
             CTheScripts::ClearSpaceForMissionEntity(SkipPosition, player);
             player->Teleport(SkipPosition, false);

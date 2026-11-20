@@ -1,6 +1,7 @@
 #ifdef NOTSA_MDRIVER
 #include "StdInc.h"
 #include "mdriver.h"
+#include "Garages.h"
 #include "loadlog.h"
 #include "standalone/Fixups.h"
 #include "Scripts/TheScripts.h"
@@ -581,6 +582,7 @@ void TickGeneric() {
         auto* me = Cj(); const auto pp = me->GetPosition(); auto* v = me->bInVehicle ? me->m_pVehicle : nullptr; auto* w = FindPlayerWanted();
         notsa::standalone::Fixups::Log("[mdplog] f%d cj=%.1f,%.1f,%.1f hp=%.0f st=%d inv=%d veh=%d(%.0f hp, st %d, drown %d) wanted=%d lastDmg=%d wpn=%d\n", fr, pp.x, pp.y, pp.z, me->m_fHealth, (int)me->m_nPedState, (int)me->bInVehicle,
             v ? (int)v->m_nModelIndex : -1, v ? v->m_fHealth : 0.f, v ? (int)v->GetStatus() : 0, v ? (int)v->vehicleFlags.bIsDrowning : 0, w ? (int)w->m_WantedLevel : -1, me->m_pLastEntityDamage ? (int)me->m_pLastEntityDamage->GetType() : -1, (int)me->m_nLastWeaponDamage);
+        for (int gi = 0; gi < CGarages::NumGarages; gi++) { auto& g = CGarages::GetGarage(gi); if (g.m_nType != PAYNSPRAY || g.CalcDistToGarageRectangleSquared(pp.x, pp.y) > 900.f) continue; notsa::standalone::Fixups::Log("[mdplog] garage %d door=%d inside=%d outside=%d sprayable=%d NoResprays=%d free=%d money=%d spd=%.3f wantedBackOff=%d\n", gi, (int)g.m_nDoorState, (int)g.IsStaticPlayerCarEntirelyInside(), (int)g.IsPlayerOutsideGarage(0.0f), v ? (int)CGarages::IsCarSprayable(v) : -1, (int)CGarages::NoResprays, (int)CGarages::RespraysAreFree, (int)CWorld::Players[CWorld::PlayerInFocus].m_nMoney, v ? v->m_vecMoveSpeed.Magnitude() : -1.f, w ? (int)w->m_bPoliceBackOffGarage : -1); }
     }
     if (!std::getenv("NOTSA_MDRIVER_NOGOD")) if (auto* me = Cj()) { // CR4: TS drive.ts driverFrame: CJ and the vehicle he drives are invulnerable every frame (AUTODRIVE_GOD=0 off)
         me->physicalFlags.bInvulnerable = true;
@@ -600,6 +602,7 @@ void TickGeneric() {
     if (CCutsceneMgr::IsCutsceneProcessing()) g_sameCount = 0;
     else if (root->m_IP == g_lastIp) g_sameCount++;
     else { g_sameCount = 0; g_lastIp = root->m_IP; }
+    if (g_sameCount >= 30) for (auto& r : g_recs) if (r->waitSeq >= g_waitSeq - 3 && (r->raw & 0x7FFF) == 0x010F && r->cond == 0) { if (auto* w = FindPlayerWanted()) if (w->m_WantedLevel != eWantedLevel::WANTED_CLEAN) w->SetWantedLevel(eWantedLevel::WANTED_CLEAN); break; } // CR9: the thread waits for the wanted level to drop (SWEET4 ip 0x45e7 after the second pay n spray stage; the exe decays above 1 star only in the countryside, a real player drives into the pay n spray = ClearWantedLevelAndGoOnParole 0x44AC16): clear it, as the TS port does implicitly
     if (g_sameCount < g_stall) return;
     const uint32_t at = (uint32_t)(root->m_IP - root->m_BaseIP);
     const uint8_t* ipPtr = root->m_IP;
@@ -651,7 +654,7 @@ void SetCmdRunner(void (*fn)(const std::string&)) { g_run = fn; }
 bool Cmd(const char* name, const std::string& args) {
     if (std::strncmp(name, "md", 2)) return false;
     auto* ped = Cj();
-    if (!std::strcmp(name, "mdkillped")) { if (auto* k = CPools::GetPed(std::atoi(args.c_str()))) { k->m_fHealth = 0.f; k->m_nPedState = PEDSTATE_DEAD; } return true; }
+    if (!std::strcmp(name, "mdkillped")) { if (auto* k = CPools::GetPed(std::atoi(args.c_str()))) { if (std::getenv("NOTSA_MDRIVER_PLOG")) notsa::standalone::Fixups::Log("[mdplog] kill h=%s type=%d model=%d hp=%.0f pos=%.0f,%.0f wanted=%d\n", args.c_str(), (int)k->m_nPedType, (int)k->m_nModelIndex, k->m_fHealth, k->GetPosition().x, k->GetPosition().y, (int)FindPlayerWanted()->m_WantedLevel); k->m_fHealth = 0.f; k->m_nPedState = PEDSTATE_DEAD; } return true; }
     if (!std::strcmp(name, "mdkillcar")) { if (auto* k = CPools::GetVehicle(std::atoi(args.c_str()))) k->BlowUpCar(nullptr, false); return true; }
     if (!std::strcmp(name, "mdpad")) { const auto c = args.find(':'); if (c != std::string::npos) g_padHold[std::atoi(args.c_str())] = std::atoi(args.c_str() + c + 1) + 1; return true; }
     if (!std::strcmp(name, "mdkey")) { const auto c = args.find(':'); if (g_push) g_push(args.c_str() + c + 1, args.compare(0, c, "down") == 0); return true; }

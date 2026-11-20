@@ -94,7 +94,8 @@ void SetObjectVelocity(CObject& object, CVector velocity) {
 }
 
 float GetObjectHeading(CObject& object) {
-    return FixAngleDegrees(RadiansToDegrees(object.GetHeading()));
+    // exe 0x47CCCE jumps into the GET_CAR_HEADING body (0x47CBFC): the unrounded FPATAN heading is multiplied by 0x859878 and rounded once (see GetCharHeading)
+    return FixAngleDegrees((float)X87R(object.GetHeadingExt() * (double)RAD_TO_DEG));
 }
 
 void SetObjectHeading(CObject& object, float heading) {

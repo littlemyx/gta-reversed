@@ -60,6 +60,48 @@ void CLoadedCarGroup::RemoveMember(eModelID modelIndex) {
     }
 }
 
+#ifdef NOTSA_STATEHASH
+// SH26: name of a car group + per-frame dump of every car group (G rows) for NOTSA_SH_PICKCARLOG
+static const char* SH26GroupName(const CLoadedCarGroup* g) {
+    static char buf[32];
+    if (g == &CPopulation::m_AppropriateLoadedCars) return "Appropriate";
+    if (g == &CPopulation::m_InAppropriateLoadedCars) return "InAppropriate";
+    if (g == &CPopulation::m_LoadedBoats) return "Boats";
+    if (g == &CStreaming::ms_vehiclesLoaded) return "StreamingVehiclesLoaded";
+    for (size_t i = 0; i < CPopulation::m_LoadedGangCars.size(); i++) {
+        if (g == &CPopulation::m_LoadedGangCars[i]) { std::snprintf(buf, sizeof(buf), "Gang%zu", i); return buf; }
+    }
+    return "Other";
+}
+static void SH26DumpGroup(FILE* f, const char* name, CLoadedCarGroup& g) {
+    const int fr = notsa::rr::LoadLogRecFrame();
+    const auto n = g.CountMembers();
+    int sum = 0;
+    for (uint32 i = 0; i < n; i++) { sum += (int)(int16)CModelInfo::GetVehicleModelInfo(g.GetMember(i))->m_nFrq; }
+    std::fprintf(f, "%d %llu GH %s n=%u frqsum=%d\n", fr, (unsigned long long)notsa::rr::RandCountNow(), name, n, sum);
+    for (uint32 i = 0; i < n; i++) {
+        const int m = (int)g.GetMember(i);
+        const auto mi = CModelInfo::GetVehicleModelInfo(m);
+        std::fprintf(f, "%d %llu GM %s idx=%u model=%d frq=%d class=%d ref=%d used=%d loadstate=%d loaded=%d\n", fr, (unsigned long long)notsa::rr::RandCountNow(), name, i, m, (int)(int16)mi->m_nFrq, (int)(int8)mi->m_nVehicleClass, (int)(int16)mi->m_nRefCount, (int)(int8)mi->m_nTimesUsed, (int)CStreaming::GetInfo(m).m_LoadState, (int)CStreaming::IsModelLoaded(m));
+    }
+}
+static void SH26DumpAllGroups(FILE* f) {
+    static int s_lastFrame = -1;
+    const int fr = notsa::rr::LoadLogRecFrame();
+    if (fr == s_lastFrame) return;
+    s_lastFrame = fr;
+    SH26DumpGroup(f, "Appropriate", CPopulation::m_AppropriateLoadedCars);
+    SH26DumpGroup(f, "InAppropriate", CPopulation::m_InAppropriateLoadedCars);
+    SH26DumpGroup(f, "Boats", CPopulation::m_LoadedBoats);
+    SH26DumpGroup(f, "StreamingVehiclesLoaded", CStreaming::ms_vehiclesLoaded);
+    for (size_t i = 0; i < CPopulation::m_LoadedGangCars.size(); i++) {
+        char nm[16]; std::snprintf(nm, sizeof(nm), "Gang%zu", i);
+        SH26DumpGroup(f, nm, CPopulation::m_LoadedGangCars[i]);
+    }
+    std::fflush(f);
+}
+#endif
+
 // 0x611C50
 eModelID CLoadedCarGroup::PickRandomCar(bool bNotTooManyInTheWorld, bool bOnlyPickNormalCars) {
     // Shape of the exe: build the candidate list and the sum of `m_nFrq` (a SIGNED word, +0x52) in one pass; with a zero sum the answer is -1 and
@@ -70,7 +112,8 @@ eModelID CLoadedCarGroup::PickRandomCar(bool bNotTooManyInTheWorld, bool bOnlyPi
     FILE* const pkLog = notsa::rr::PickCarLog();
     const int   pkCall = pkLog ? s_pickCalls++ : -1;
     if (pkLog) {
-        std::fprintf(pkLog, "%d %llu K %d PickRandomCar caller=%p group=%p nmodels=%u notTooMany=%d onlyNormal=%d\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), pkCall, _ReturnAddress(), (const void*)this, CountMembers(), (int)bNotTooManyInTheWorld, (int)bOnlyPickNormalCars);
+        SH26DumpAllGroups(pkLog);
+        std::fprintf(pkLog, "%d %llu K %d PickRandomCar gname=%s caller=%p group=%p nmodels=%u notTooMany=%d onlyNormal=%d\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), pkCall, SH26GroupName(this), _ReturnAddress(), (const void*)this, CountMembers(), (int)bNotTooManyInTheWorld, (int)bOnlyPickNormalCars);
         std::fflush(pkLog);
     }
 #endif
@@ -132,6 +175,11 @@ eModelID CLoadedCarGroup::PickRandomCar(bool bNotTooManyInTheWorld, bool bOnlyPi
                 i++;
                 assert(i < nChoices);
             }
+#ifdef NOTSA_STATEHASH
+            if (pkLog) {
+                std::fprintf(pkLog, "%d %llu I %d try=%d idx=%zu model=%d remaining=%d nChoices=%zu\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), pkCall, tr, i, (int)choices[i], (int)pickedWeight, nChoices);
+            }
+#endif
             return (eModelID)(choices[i]);
         }();
 

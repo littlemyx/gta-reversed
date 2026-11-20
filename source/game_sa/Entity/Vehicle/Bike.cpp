@@ -1303,6 +1303,7 @@ int32 CBike::ProcessEntityCollision(CEntity* entity, CColPoint* outColPoints) {
 // 0x6B9250
 void CBike::ProcessControl() {
     SH21_SCOPE(this, "CBike::ProcessControl");
+    SH22_AVGN(this, "PC:entry");
     CCollisionData* const colData = GetColModel()->m_pColData;
     const auto            mi      = GetVehicleModelInfo();
 
@@ -1754,6 +1755,7 @@ void CBike::ProcessControl() {
                 m_vecAveGroundNormal.z = m_vecAveGroundNormal.z * -1.0f;
             }
         }
+        SH22_AVGN(this, "PC:wheelLoopWrite");
 
         // The front/rear wheel that is compressed the most is used as the contact wheel
         const int32 frontWheel = m_aWheelRatios[0] >= m_aWheelRatios[1] ? 1 : 0;
@@ -2052,6 +2054,7 @@ void CBike::ProcessControl() {
             sideways.Normalise();
             m_vecAveGroundNormal = CrossProduct(sideways, GetForward());
             m_vecAveGroundNormal.Normalise();
+            SH22_AVGN(this, "PC:bFallenOverWrite");
         }
 
         float lean;
@@ -2232,6 +2235,7 @@ void CBike::ProcessControl() {
         return;
     }
 
+    SH22_AVGN(this, "PC:beforeTilt");
     // Tilt the bike so that it aligns with the ground
     float tiltDot = (m_vecAveGroundNormal.z * GetRight().z + m_vecAveGroundNormal.y * GetRight().y) + GetRight().x * m_vecAveGroundNormal.x;
     if (tiltDot > 1.0f) {

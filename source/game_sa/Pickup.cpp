@@ -2,6 +2,7 @@
 
 #include "Pickup.h"
 #include "ModelIndices.h"
+#include "portable/sh20log.h" // SH22 debug logs (NOTSA_STATEHASH only)
 
 using namespace ModelIndices;
 
@@ -92,6 +93,7 @@ ePickupPropertyText CPickup::FindTextIndexForString(const char* message) {
 // 0x454CF0
 void CPickup::GetRidOfObjects() {
     if (m_pObject) {
+        SH22_PICK("F:GetRidOfObjects", this, m_pObject);
         CWorld::Remove(m_pObject);
         delete std::exchange(m_pObject, nullptr);
     }
@@ -101,6 +103,7 @@ void CPickup::GetRidOfObjects() {
 // 0x4567E0
 void CPickup::GiveUsAPickUpObject(CObject*& obj, int32 slotIndex) {
     obj = nullptr; // 0x4567E5: the out reference is cleared first (also when the cutscene early-out is taken)
+    SH22_PICKSCOPE(this, obj);
 
     const auto mi = CModelInfo::GetModelInfo(m_nModelIndex);
 

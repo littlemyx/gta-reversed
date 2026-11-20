@@ -793,6 +793,70 @@ void Sh21Vals(const CPhysical* self, const char* where, float a, float b, float 
         Sh7Bits(a), (double)a, Sh7Bits(b), (double)b, Sh7Bits(c), (double)c, Sh7Bits(d), (double)d, Sh7Bits(v->m_vecTurnSpeed.x), (double)v->m_vecTurnSpeed.x, Sh7Bits(v->m_vecTurnSpeed.y), (double)v->m_vecTurnSpeed.y, Sh7Bits(v->m_vecTurnSpeed.z), (double)v->m_vecTurnSpeed.z);
     std::fflush(f);
 }
+// SH22 R3: pickup object create / free / scan rows
+void Sh22Pick(const char* ev, const CPickup* p, const CObject* obj) {
+    FILE* f = Sh22PickLog(); if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId() || !p) return;
+    char st[200]; Sh12Stack(st, sizeof st, 1);
+    const CVector pos = const_cast<CPickup*>(p)->GetPosn();
+    const int slot = (int)(p - CPickups::aPickUps.data());
+    std::fprintf(f, "%d %u %llu %s %s slot=%d model=%d type=%d pos=%.9g,%.9g,%.9g bits=%08x,%08x,%08x disabled=%d visible=%d obj=%s objModel=%d camera=%.9g,%.9g,%.9g stage=%s callers=%s\n", LoadLogRecFrame(), (unsigned)CTimer::GetFrameCounter(), (unsigned long long)RandCount(), ev, ev[0] == 'C' ? (obj ? "created" : "none") : "freed",
+        slot, (int)p->m_nModelIndex, (int)p->m_nPickupType, (double)pos.x, (double)pos.y, (double)pos.z, Sh7Bits(pos.x), Sh7Bits(pos.y), Sh7Bits(pos.z), (int)p->m_nFlags.bDisabled, (int)p->m_nFlags.bVisible, obj ? "yes" : "no", obj ? (int)obj->m_nModelIndex : -1,
+        (double)TheCamera.GetPosition().x, (double)TheCamera.GetPosition().y, (double)TheCamera.GetPosition().z, Sh12Stage(), st);
+    std::fflush(f);
+}
+void Sh22PickScan(const char* where) {
+    FILE* f = Sh22PickLog(); if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    static const CObject* last[620] = {}; static bool listed = false;
+    const int fr = LoadLogRecFrame();
+    if (fr >= 0 && !listed && std::strcmp(where, "UpdateStart") == 0) {
+        listed = true;
+        for (int i = 0; i < 620; i++) {
+            auto& p = CPickups::aPickUps[i]; if (p.m_nPickupType == PICKUP_NONE) continue;
+            const CVector pos = p.GetPosn();
+            std::fprintf(f, "%d %u %llu L slot=%d type=%d model=%d pos=%.9g,%.9g,%.9g disabled=%d visible=%d object=%s objModel=%d\n", fr, (unsigned)CTimer::GetFrameCounter(), (unsigned long long)RandCount(), i, (int)p.m_nPickupType, (int)p.m_nModelIndex, (double)pos.x, (double)pos.y, (double)pos.z, (int)p.m_nFlags.bDisabled, (int)p.m_nFlags.bVisible, p.m_pObject ? "yes" : "no", p.m_pObject ? (int)p.m_pObject->m_nModelIndex : -1);
+        }
+        std::fflush(f);
+    }
+    for (int i = 0; i < 620; i++) {
+        auto& p = CPickups::aPickUps[i];
+        if (last[i] != p.m_pObject) { // object pointer changed since the previous scan (hooked C/F rows of the same slot+fc explain it; an X without one = an unhooked site)
+            const CVector pos = p.GetPosn();
+            std::fprintf(f, "%d %u %llu X scan=%s slot=%d type=%d model=%d pos=%.9g,%.9g,%.9g obj %s->%s objModel=%d stage=%s\n", fr, (unsigned)CTimer::GetFrameCounter(), (unsigned long long)RandCount(), where, i, (int)p.m_nPickupType, (int)p.m_nModelIndex, (double)pos.x, (double)pos.y, (double)pos.z, last[i] ? "yes" : "no", p.m_pObject ? "yes" : "no", p.m_pObject ? (int)p.m_pObject->m_nModelIndex : -1, Sh12Stage());
+            last[i] = p.m_pObject;
+        }
+    }
+    std::fflush(f);
+}
+// SH22 R4
+void Sh22Avgn(const CBike* b, const char* where) {
+    FILE* f = Sh22AvgnLog(); if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId() || !b) return;
+    auto* pool = GetVehiclePool(); if (!pool || pool->GetAt(2) != static_cast<const CVehicle*>(b)) return;
+    static int rows = 0; if (rows++ > 20000) return;
+    const auto& n = b->m_vecAveGroundNormal;
+    std::fprintf(f, "%d %u %llu %s Z %s | avgn=%08x/%.9g,%08x/%.9g,%08x/%.9g contactWheels=%d right.z=%08x/%.9g\n", LoadLogRecFrame(), (unsigned)CTimer::GetFrameCounter(), (unsigned long long)RandCount(), Sh12Stage(), where,
+        Sh7Bits(n.x), (double)n.x, Sh7Bits(n.y), (double)n.y, Sh7Bits(n.z), (double)n.z, (int)b->m_nNoOfContactWheels, Sh7Bits(b->GetRight().z), (double)b->GetRight().z);
+    std::fflush(f);
+}
+// SH22 R5
+static bool Sh22IsIdle3(const CAnimBlendAssociation* a) { return a && (int)a->m_AnimGroupId == 69 && (int)a->m_AnimId == 3; }
+static void Sh22AssocRow(FILE* f, const char* kind, const char* ev, const CAnimBlendAssociation* a) {
+    std::fprintf(f, "%d %u %llu %s %s%s%s assoc=%p anim=%d group=%d blend=%08x/%.9g delta=%08x/%.9g time=%08x/%.9g speed=%08x/%.9g flags=%#x\n", LoadLogRecFrame(), (unsigned)CTimer::GetFrameCounter(), (unsigned long long)RandCount(), Sh12Stage(), kind, ev[0] ? " " : "", ev, (const void*)a, (int)a->m_AnimId, (int)a->m_AnimGroupId,
+        Sh7Bits(a->m_BlendAmount), (double)a->m_BlendAmount, Sh7Bits(a->m_BlendDelta), (double)a->m_BlendDelta, Sh7Bits(a->m_CurrentTime), (double)a->m_CurrentTime, Sh7Bits(a->m_Speed), (double)a->m_Speed, (unsigned)a->m_Flags);
+}
+void Sh22IdleEvent(const char* ev, const CAnimBlendAssociation* a) {
+    FILE* f = Sh22IdleFile(); if (!f || LoadLogRecFrame() < 0 || !Sh22IsIdle3(a) || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    char st[200]; Sh12Stack(st, sizeof st, 1);
+    Sh22AssocRow(f, "E", ev, a); std::fprintf(f, "  callers=%s\n", st); std::fflush(f);
+}
+void Sh22IdleFrame() {
+    FILE* f = Sh22IdleFile(); const int fr = LoadLogRecFrame(); if (!f || fr < 20000 || fr > 22550 || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    CPlayerPed* p = FindPlayerPed(0); const CAnimBlendAssociation* found = nullptr;
+    if (p && p->GetRwObject()) for (auto* a = RpAnimBlendClumpGetFirstAssociation(p->GetRpClump()); a; a = RpAnimBlendGetNextAssociation(a)) if (Sh22IsIdle3(a)) { found = a; break; }
+    static const CAnimBlendAssociation* prev = nullptr;
+    if (found != prev) { std::fprintf(f, "%d %u %llu %s N %s assoc=%p (was %p)\n", fr, (unsigned)CTimer::GetFrameCounter(), (unsigned long long)RandCount(), Sh12Stage(), found ? "NEW" : "GONE", (const void*)found, (const void*)prev); prev = found; }
+    if (found) Sh22AssocRow(f, "I", "", found); else std::fprintf(f, "%d %u %llu %s I none\n", fr, (unsigned)CTimer::GetFrameCounter(), (unsigned long long)RandCount(), Sh12Stage());
+    std::fflush(f);
+}
 void Sh13VehDump(const char* where) {
     FILE* f = Sh13VehLog(); if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
     auto* pool = GetVehiclePool(); if (!pool) return;

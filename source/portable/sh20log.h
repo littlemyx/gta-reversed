@@ -15,6 +15,19 @@ inline FILE* Sh21BmxPcLog() { static Sh7Log l = [] { Sh7Log x; x.Init("NOTSA_SH2
 void Sh21Bmx(const class CPhysical* self, const char* where, int extra);
 void Sh21Vals(const class CPhysical* self, const char* where, float a, float b, float c, float d);
 struct Sh21Scope { const class CPhysical* s; const char* w; Sh21Scope(const class CPhysical* s_, const char* w_) : s(s_), w(w_) { if (Sh21BmxPcLog()) Sh21Bmx(s, w, 0); } ~Sh21Scope() { if (Sh21BmxPcLog()) Sh21Bmx(s, w, 1); } Sh21Scope(const Sh21Scope&) = delete; };
+// SH22 (STATEHASH-only, pure reads): R3 NOTSA_SH22_PICK=<file>: every pickup object create (C) / free (F) / unhooked change seen by a scan (X) from boot (frame -1 rows too) to frame 4100, + the pickup list at the first CPickups::Update of frame 0 (L rows)
+//   R4 NOTSA_SH22_AVGN=<file>: bike slot 2 m_vecAveGroundNormal at marked points of CBike::ProcessControl, frames <= 2 (boot rows have frame -1)
+//   R5 NOTSA_SH22_IDLE=<file>: CJ anim (group 69, id 3) per-frame row (I) in 20000..22550 and event rows (E: Start/SetBlend/SetBlendTo/dtor of any assoc of that group+id, with its pointer) from frame 0
+inline FILE* Sh22Open(const char* env) { const char* p = std::getenv(env); FILE* f = p && p[0] ? std::fopen(p, "w") : nullptr; if (f) { std::fprintf(f, "# SH22 %s frame fc randCount ...\n", env); std::fflush(f); } return f; }
+inline FILE* Sh22PickLog() { static FILE* f = Sh22Open("NOTSA_SH22_PICK"); const int fr = LoadLogRecFrame(); return (f && fr <= 4100) ? f : nullptr; }
+inline FILE* Sh22AvgnLog() { static FILE* f = Sh22Open("NOTSA_SH22_AVGN"); const int fr = LoadLogRecFrame(); return (f && fr <= 2) ? f : nullptr; }
+inline FILE* Sh22IdleFile() { static FILE* f = Sh22Open("NOTSA_SH22_IDLE"); return f; }
+void Sh22Pick(const char* ev, const class CPickup* p, const class CObject* obj);
+void Sh22PickScan(const char* where);
+void Sh22Avgn(const class CBike* b, const char* where);
+void Sh22IdleFrame();
+void Sh22IdleEvent(const char* ev, const class CAnimBlendAssociation* a);
+struct Sh22PickScope { const class CPickup* p; class CObject*& o; Sh22PickScope(const class CPickup* p_, class CObject*& o_) : p(p_), o(o_) {} ~Sh22PickScope() { if (Sh22PickLog()) Sh22Pick("C", p, o); } Sh22PickScope(const Sh22PickScope&) = delete; };
 } // namespace notsa::rr
 #define SH20_PAD(w) do { if (notsa::rr::Sh13PutLog()) notsa::rr::Sh20Pad(w); } while (0)
 #define SH20_HOLD(t, p, ph) do { if (notsa::rr::Sh13PutLog()) notsa::rr::Sh20Hold(t, p, ph); } while (0)
@@ -23,6 +36,12 @@ struct Sh21Scope { const class CPhysical* s; const char* w; Sh21Scope(const clas
 #define SH21_Z(self, w, x) do { if (notsa::rr::Sh21BmxPcLog()) notsa::rr::Sh21Bmx(self, w, x); } while (0)
 #define SH21_SCOPE(self, w) notsa::rr::Sh21Scope sh21Scope_(self, w)
 #define SH21_VALS(self, w, a, b, c, d) do { if (notsa::rr::Sh21BmxPcLog()) notsa::rr::Sh21Vals(self, w, a, b, c, d); } while (0)
+#define SH22_PICK(ev, p, o) do { if (notsa::rr::Sh22PickLog()) notsa::rr::Sh22Pick(ev, p, o); } while (0)
+#define SH22_PICKSCOPE(p, o) notsa::rr::Sh22PickScope sh22PickScope_(p, o)
+#define SH22_PICKSCAN(w) do { if (notsa::rr::Sh22PickLog()) notsa::rr::Sh22PickScan(w); } while (0)
+#define SH22_AVGN(b, w) do { if (notsa::rr::Sh22AvgnLog()) notsa::rr::Sh22Avgn(b, w); } while (0)
+#define SH22_IDLEFRAME() do { if (notsa::rr::Sh22IdleFile()) notsa::rr::Sh22IdleFrame(); } while (0)
+#define SH22_IDLEEVENT(ev, a) do { if (notsa::rr::Sh22IdleFile()) notsa::rr::Sh22IdleEvent(ev, a); } while (0)
 #else
 #define SH20_PAD(w) ((void)0)
 #define SH20_HOLD(t, p, ph) ((void)0)
@@ -31,4 +50,10 @@ struct Sh21Scope { const class CPhysical* s; const char* w; Sh21Scope(const clas
 #define SH21_Z(self, w, x) ((void)0)
 #define SH21_SCOPE(self, w) ((void)0)
 #define SH21_VALS(self, w, a, b, c, d) ((void)0)
+#define SH22_PICK(ev, p, o) ((void)0)
+#define SH22_PICKSCOPE(p, o) ((void)0)
+#define SH22_PICKSCAN(w) ((void)0)
+#define SH22_AVGN(b, w) ((void)0)
+#define SH22_IDLEFRAME() ((void)0)
+#define SH22_IDLEEVENT(ev, a) ((void)0)
 #endif

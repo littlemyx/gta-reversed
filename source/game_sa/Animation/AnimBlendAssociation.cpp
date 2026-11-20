@@ -1,6 +1,7 @@
 #include "StdInc.h"
 
 #include "AnimBlendAssociation.h"
+#include "portable/sh20log.h" // SH22 debug logs (NOTSA_STATEHASH only)
 
 void CAnimBlendAssociation::InjectHooks() {
     RH_ScopedVirtualClass(CAnimBlendAssociation, 0x85C6D0, 1);
@@ -88,6 +89,7 @@ CAnimBlendAssociation::CAnimBlendAssociation(CAnimBlendStaticAssociation& assoc)
 
 // 0x4CECF0
 CAnimBlendAssociation::~CAnimBlendAssociation() {
+    SH22_IDLEEVENT("dtor", this);
     if (m_BlendNodes) {
         CMemoryMgr::FreeAlign(m_BlendNodes);
     }
@@ -155,6 +157,7 @@ void CAnimBlendAssociation::Init(CAnimBlendStaticAssociation& assoc) {
 
 // 0x4CEB70
 void CAnimBlendAssociation::Start(float currentTime) {
+    SH22_IDLEEVENT("Start", this);
     m_Flags |= ANIMATION_IS_PLAYING;
     SetCurrentTime(currentTime);
 }
@@ -182,12 +185,14 @@ void CAnimBlendAssociation::FreeAnimBlendNodeArray() {
 
 // 0x4CEBA0
 void CAnimBlendAssociation::SetBlend(float blendAmount, float blendDelta) {
+    SH22_IDLEEVENT("SetBlend", this);
     m_BlendAmount = blendAmount;
     m_BlendDelta  = blendDelta;
 }
 
 // 0x4CEB80
 void CAnimBlendAssociation::SetBlendTo(float blendAmount, float blendDelta) {
+    SH22_IDLEEVENT("SetBlendTo", this);
     m_BlendDelta = (blendAmount - m_BlendAmount) * blendDelta;
 }
 

@@ -17,6 +17,7 @@
 #include "Sprite.h"
 #include "PostEffects.h"
 #include "Fx/FxFtol.h"
+#include "portable/sh20log.h" // SH22 debug logs (NOTSA_STATEHASH only)
 
 using namespace ModelIndices;
 
@@ -83,6 +84,7 @@ void CPickups::Init() {
     aPickUpsCollected.fill(0);
     CollectedPickUpIndex = 0u;
     DisplayHelpMessage = 10u;
+    SH22_PICKSCAN("Init");
 }
 
 // 0x456E60
@@ -518,6 +520,7 @@ static uint32 GenerateNewOneRaw(CVector coors, uint32 modelId, ePickupType picku
     // Reuses the pickup object slot of an old pickup
     const auto FreeObjectOf = [](CPickup& pickup) {
         if (pickup.m_pObject) {
+            SH22_PICK("F:GenerateNewOne", &pickup, pickup.m_pObject);
             CWorld::Remove(pickup.m_pObject);
             delete pickup.m_pObject;
             pickup.m_pObject = nullptr;
@@ -997,6 +1000,7 @@ void CPickups::Update() {
     if (CReplay::Mode == MODE_PLAYBACK)
         return;
 
+    SH22_PICKSCAN("UpdateStart");
     auto start = 620 * (CTimer::GetFrameCounter() % 32) / 32;
     auto end   = 620 * (CTimer::GetFrameCounter() % 32 + 1) / 32;
     for (auto i = start; i < end; i++) {

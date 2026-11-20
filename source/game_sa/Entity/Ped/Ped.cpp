@@ -5,6 +5,7 @@
     Do not delete this comment block. Respect others' work!
 */
 #include "StdInc.h"
+#include "portable/sh27log.h"
 
 #include "Ped.h"
 
@@ -3051,6 +3052,7 @@ void CPed::DoFootLanded(bool leftFoot, uint8 arg1) {
 * @addr 0x5E57F0
 */
 void CPed::PlayFootSteps() {
+    SH27_FOOT(this, "PFS-enter", 0, 0, 0, 0, 0);
     auto* const firstAssoc = RpAnimBlendClumpGetFirstAssociation(GetRpClump());
 
     float                  idleBlendTotal{}; // Blend of all non-walk animations
@@ -3073,6 +3075,7 @@ void CPed::PlayFootSteps() {
     }
 
     if (!bIsStanding) {
+        SH27_FOOT(this, "PFS-skip-notStanding", 0, 0, 0, 0, 0);
         return;
     }
 
@@ -3106,6 +3109,7 @@ void CPed::PlayFootSteps() {
     }
 
     if (!walkAssoc || walkBlendTotal <= 0.5f || idleBlendTotal >= 1.0f) {
+        SH27_FOOT(this, "PFS-skip-noWalk", walkBlendTotal, idleBlendTotal, 0, 0, walkAssoc ? (int)walkAssoc->m_AnimId : -1);
         ProcessLanding();
         return;
     }
@@ -3121,8 +3125,10 @@ void CPed::PlayFootSteps() {
         maxAnimTime += 0.2f;
     }
 
+    SH27_FOOT(this, "PFS-walk", curTime, timeStep, minAnimTime, maxAnimTime, (int)walkAssoc->m_AnimId);
     // Plays the footstep audio event + (ducking/sneaking adjusted)
     const auto DoFootStepAE = [&](eAudioEvents event) {
+        SH27_FOOTSCOPE(this, event == AE_PED_FOOTSTEP_RIGHT ? "AE-right" : "AE-left", curTime, timeStep, 1);
         float volume{}, speed{};
         if (!bIsDucking) {
             if (m_nMoveState == PEDMOVE_RUN) {
@@ -3194,6 +3200,7 @@ void CPed::PlayFootSteps() {
         // Right foot
         if (curTime >= maxAnimTime && curTime - timeStep < maxAnimTime) {
             DoFootStepAE(AE_PED_FOOTSTEP_RIGHT);
+            SH27_FOOTSCOPE(this, "FootLanded-right", curTime, timeStep, 2);
             DoFootLanded(false, isWalkRunSprintAnim);
         }
     } else {
@@ -3235,6 +3242,7 @@ void CPed::PlayFootSteps() {
         }
 
         DoFootStepAE(AE_PED_FOOTSTEP_LEFT);
+        SH27_FOOTSCOPE(this, "FootLanded-left", curTime, timeStep, 3);
         DoFootLanded(true, isWalkRunSprintAnim);
     }
 

@@ -66,6 +66,7 @@ void* operator new[](std::size_t n) { return ::operator new(n); }
 #include "portable/sh12log.h"
 #include "portable/sh13log.h"
 #include "portable/sh20log.h"
+#include "portable/sh27log.h"
 #include "Tasks/TaskTypes/TaskSimpleHoldEntity.h"
 #include "Tasks/TaskTypes/TaskComplexGotoDoorAndOpen.h"
 #include "Tasks/TaskTypes/TaskSimpleGoToPoint.h"
@@ -731,6 +732,44 @@ void Sh13Put(const char* where) {
     for (int i = 0; i < TASK_SECONDARY_MAX; i++) if (tm.m_aSecondaryTasks[i]) { o += (size_t)std::snprintf(b + o, sizeof b - o, " [%d]=", i); chain(tm.m_aSecondaryTasks[i]); }
     std::fprintf(f, "%d %llu %s T %s nAnims=%d pedState=%d %s\n", fr, rc, Sh12Stage(), where, n, (int)p->m_nPedState, b);
     std::fflush(f);
+}
+// Ryder = the first pool ped with model 290 (pool slot printed in the P row; TS slot 3 numbering may differ)
+static CPed* Sh27Find() { auto* pool = GetPedPool(); for (int i = 0; i < pool->GetSize(); i++) { if (auto* q = pool->GetAt(i); q && q->m_nModelIndex == 290) return q; } return nullptr; }
+bool Sh27IsRyder(const CPed* ped) { return ped && ped == Sh27Find(); }
+void Sh27Foot(const CPed* ped, const char* kind, float a, float b, float c, float d, int i, unsigned long long r0, unsigned long long r1) {
+    FILE* f = Sh27Log(); if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    std::fprintf(f, "%d %llu %s F %s i=%d a=%08x/%.9g b=%08x/%.9g c=%08x/%.9g d=%08x/%.9g r0=%llu r1=%llu draws=%llu moveState=%d standing=%d model=%d\n", LoadLogRecFrame(), r1, Sh12Stage(), kind, i,
+        Sh7Bits(a), (double)a, Sh7Bits(b), (double)b, Sh7Bits(c), (double)c, Sh7Bits(d), (double)d, r0, r1, r1 - r0, (int)ped->m_nMoveState, (int)ped->bIsStanding, (int)ped->m_nModelIndex);
+    std::fflush(f);
+}
+void Sh27Snap(const char* where, const char* extra) {
+    FILE* f = Sh27Log(); if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    CPed* p = Sh27Find(); if (!p) return;
+    const int fr = LoadLogRecFrame(); const unsigned long long rc = RandCount();
+    std::fprintf(f, "%d %llu %s P %s %spoolSlot=%d model=%d moveState=%d animGroup=%d pedState=%d standing=%d ducking=%d pos=%08x/%.9g,%08x/%.9g,%08x/%.9g head=%08x/%.9g moveSpd=%08x/%.9g,%08x/%.9g offscreen=%d\n", fr, rc, Sh12Stage(), where, extra, (int)GetPedPool()->GetIndex(p), (int)p->m_nModelIndex, (int)p->m_nMoveState, (int)p->m_nAnimGroup, (int)p->m_nPedState,
+        (int)p->bIsStanding, (int)p->bIsDucking, Sh7Bits(p->GetPosition().x), (double)p->GetPosition().x, Sh7Bits(p->GetPosition().y), (double)p->GetPosition().y, Sh7Bits(p->GetPosition().z), (double)p->GetPosition().z,
+        Sh7Bits(p->m_fCurrentRotation), (double)p->m_fCurrentRotation, Sh7Bits(p->m_vecMoveSpeed.x), (double)p->m_vecMoveSpeed.x, Sh7Bits(p->m_vecMoveSpeed.y), (double)p->m_vecMoveSpeed.y, (int)p->m_bOffscreen);
+    int n = 0;
+    if (p->GetRwObject()) for (auto* a = RpAnimBlendClumpGetFirstAssociation(p->GetRpClump()); a; a = RpAnimBlendGetNextAssociation(a), n++) {
+        std::fprintf(f, "%d %llu %s A %s anim=%d group=%d blend=%08x/%.9g delta=%08x/%.9g time=%08x/%.9g step=%08x/%.9g speed=%08x/%.9g flags=%#x total=%.9g hier=%p\n", fr, rc, Sh12Stage(), where, (int)a->m_AnimId, (int)a->m_AnimGroupId,
+            Sh7Bits(a->m_BlendAmount), (double)a->m_BlendAmount, Sh7Bits(a->m_BlendDelta), (double)a->m_BlendDelta, Sh7Bits(a->m_CurrentTime), (double)a->m_CurrentTime, Sh7Bits(a->m_TimeStep), (double)a->m_TimeStep,
+            Sh7Bits(a->m_Speed), (double)a->m_Speed, (unsigned)a->m_Flags, a->m_BlendHier ? (double)a->m_BlendHier->m_fTotalTime : -1.0, (void*)a->m_BlendHier);
+    }
+    char b[1500]; size_t o = 0;
+    auto chain = [&](CTask* t) { for (int d = 0; t && d < 8 && o + 16 < sizeof b; t = t->GetSubTask(), d++) o += (size_t)std::snprintf(b + o, sizeof b - o, "%s%d", d ? ">" : "", (int)t->GetTaskType()); };
+    auto& tm = p->GetIntelligence()->GetTaskManager();
+    o += (size_t)std::snprintf(b + o, sizeof b - o, "primary:");
+    for (int i = 0; i < TASK_PRIMARY_MAX; i++) if (tm.m_aPrimaryTasks[i]) { o += (size_t)std::snprintf(b + o, sizeof b - o, " [%d]=", i); chain(tm.m_aPrimaryTasks[i]); }
+    o += (size_t)std::snprintf(b + o, sizeof b - o, " secondary:");
+    for (int i = 0; i < TASK_SECONDARY_MAX; i++) if (tm.m_aSecondaryTasks[i]) { o += (size_t)std::snprintf(b + o, sizeof b - o, " [%d]=", i); chain(tm.m_aSecondaryTasks[i]); }
+    std::fprintf(f, "%d %llu %s T %s nAnims=%d %s\n", fr, rc, Sh12Stage(), where, n, b);
+    std::fflush(f);
+}
+void Sh27Upd(void* clump, float step, bool onScreen, bool post) {
+    FILE* f = Sh27Log(); if (!f) return;
+    CPed* p = Sh27Find(); if (!p || !p->GetRwObject() || (void*)p->GetRpClump() != clump) return;
+    char ex[96]; std::snprintf(ex, sizeof ex, "step=%08x/%.9g onScreen=%d ", Sh7Bits(step), (double)step, (int)onScreen);
+    Sh27Snap(post ? "updPost" : "updPre", ex);
 }
 void Sh20Pad(const char* where) {
     FILE* f = Sh13PutLog(); if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;

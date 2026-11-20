@@ -1,6 +1,7 @@
 #include "StdInc.h"
 
 #include "RpAnimBlend.h"
+#include "portable/sh27log.h"
 
 static NOTSA_GLOBAL(ClumpOffset, 0xB5F878, (uint32), {});
 
@@ -965,6 +966,7 @@ void RpAnimBlendNodeUpdateKeyFrames(AnimBlendUpdateData* c, AnimBlendFrameData* 
 
 // 0x4D34F0
 void RpAnimBlendClumpUpdateAnimations(RpClump* clump, float timeStep, bool isOnScreen) {
+    SH27_UPD(clump, timeStep, isOnScreen);
     const auto bd = RpAnimBlendClumpGetData(clump);
 
     gpAnimBlendClump = bd; // NOTE: Set even if the clump has no animations (as the original code does)

@@ -7,6 +7,7 @@
 
 #include "StdInc.h"
 #include "portable/sh14log.h" // SH14 debug logs (NOTSA_STATEHASH only)
+#include "portable/sh18log.h" // SH18 debug logs (NOTSA_STATEHASH only)
 
 #include <numbers>
 
@@ -2122,6 +2123,7 @@ bool CPopulation::AddToPopulation(float minRadius, float maxRadius, float minRad
     using namespace AddToPopulationDetail;
 
     if (CGangWars::DontCreateCivilians() || CCheat::IsActive(CHEAT_REDUCED_TRAFFIC)) { // Ghost town cheat
+        SH18_ROW("A:ret", "reason=gangwar_or_ghosttown gangWarState=%d reducedTraffic=%d ret=0", (int)CGangWars::State, (int)CCheat::IsActive(CHEAT_REDUCED_TRAFFIC));
         return false;
     }
 
@@ -2175,7 +2177,11 @@ bool CPopulation::AddToPopulation(float minRadius, float maxRadius, float minRad
 
     // NOTE: Returns true if there are less peds than there should be - even if we've failed to create one
     const bool result = static_cast<double>(static_cast<int32>(ms_nTotalPeds)) < targetNumPeds;
+    SH18_ROW("A:gate", "createCop=%d wantedLevel=%d numCop=%u maxCopsInPursuit=%d totalPeds=%u maxNumberOfPedsInUse=%u maxPeds=%.9g popCycle(other=%.9g cops=%.9g gangs=%.9g dealers=%.9g) pedsAllowedByPopCycle=%.9g currAreaNormal=%d interiorPeds=%u fewerPedsScale=%.9g pedDensity=%.9g targetNumPeds=%.9g result=%d",
+        (int)createCop, (int)playerInfo.m_pPed->GetPlayerWanted()->m_WantedLevel, (unsigned)ms_nNumCop, (int)playerInfo.m_pPed->GetPlayerWanted()->m_MaxCopsInPursuit, (unsigned)ms_nTotalPeds, (unsigned)MaxNumberOfPedsInUse, (double)maxPeds,
+        (double)CPopCycle::m_NumOther_Peds, (double)CPopCycle::m_NumCops_Peds, (double)CPopCycle::m_NumGangs_Peds, (double)CPopCycle::m_NumDealers_Peds, (double)pedsAllowedByPopCycle, (int)(CGame::currArea == AREA_CODE_NORMAL_WORLD), (unsigned)NumberOfPedsInUseInterior, (double)fewerPedsScale, (double)PedDensityMultiplier, (double)targetNumPeds, (int)result);
     if (!result && !createCop) {
+        SH18_ROW("A:ret", "reason=totalPeds>=target ret=0");
         return false;
     }
 
@@ -2191,7 +2197,11 @@ bool CPopulation::AddToPopulation(float minRadius, float maxRadius, float minRad
     } else {
         // No gangs and cops up high (above 950)
         const bool noGangsAndCops = playerCentre.z > 950.f;
-        if (!CPopCycle::FindNewPedType(pedType, pedModel, noGangsAndCops, noGangsAndCops)) {
+        [[maybe_unused]] const auto shR0 = SH18_RC();
+        const bool shFnp = CPopCycle::FindNewPedType(pedType, pedModel, noGangsAndCops, noGangsAndCops);
+        SH18_ROW("A:fnpt", "ok=%d pedType=%d model=%d r0=%llu r1=%llu", (int)shFnp, (int)pedType, (int)pedModel, shR0, SH18_RC());
+        if (!shFnp) {
+            SH18_ROW("A:ret", "reason=FindNewPedType_failed ret=%d", (int)result);
             return result;
         }
 
@@ -2199,6 +2209,7 @@ bool CPopulation::AddToPopulation(float minRadius, float maxRadius, float minRad
         if ((pedType == PED_TYPE_CIVMALE || pedType == PED_TYPE_CIVFEMALE) && CGeneral::GetRandomNumberInRange(0.f, 1.f) > 0.9f) {
             ChooseCivilianCoupleOccupations(husbandModel, wifeModel);
             if (husbandModel == MODEL_INVALID || wifeModel == MODEL_INVALID) {
+                SH18_ROW("A:ret", "reason=couple_invalid ret=%d", (int)result);
                 return result;
             }
             pedType = CModelInfo::GetPedModelInfo(husbandModel)->GetPedType();
@@ -2240,6 +2251,7 @@ bool CPopulation::AddToPopulation(float minRadius, float maxRadius, float minRad
     );
     SH13_PCC(shRc0, shPccOk, playerCentre.x, playerCentre.y, minDist1, maxDist1, minRadiusClose, maxRadiusClose, pos, addr1, addr2, orientation, shLow);
     if (!shPccOk) {
+        SH18_ROW("A:ret", "reason=GeneratePedCreationCoors_failed ret=%d", (int)result);
         return result;
     }
 
@@ -2247,6 +2259,7 @@ bool CPopulation::AddToPopulation(float minRadius, float maxRadius, float minRad
     const uint32 spawnProb1 = ThePaths.GetPathNode(addr1)->m_nSpawnProbability;
     const uint32 spawnProb2 = ThePaths.GetPathNode(addr2)->m_nSpawnProbability;
     if (static_cast<uint32>(rand() & 0xF) > std::min(spawnProb1, spawnProb2)) {
+        SH18_ROW("A:ret", "reason=spawnProb spawnProb1=%u spawnProb2=%u ret=%d", (unsigned)spawnProb1, (unsigned)spawnProb2, (int)result);
         return result;
     }
     ThePaths.FindPedCreationPosBetweenNodes(addr1, addr2, rand(), &pos.x, &pos.y); // 0x44DA30
@@ -2259,6 +2272,7 @@ bool CPopulation::AddToPopulation(float minRadius, float maxRadius, float minRad
         AddCoupleToPopulation(husbandModel, wifeModel, pos);
     }
 
+    SH18_ROW("A:ret", "reason=placed isGang=%d numPeds=%d pedType=%d ret=%d totalPedsAfterPlace=%u", (int)isGang, (int)numPeds, (int)pedType, (int)result, (unsigned)ms_nTotalPeds);
     return result;
 }
 
@@ -2747,22 +2761,38 @@ void CPopulation::Update(bool generatePeds) {
         }
     }();
 
+    SH18_ROW("U:start", "generatePeds=%d replayMode=%d countDownAtStart=%d cutsceneProcessing=%d totalPeds=%u civM=%u civF=%u cop=%u emerg=%u totalCarPass=%u dontCreateRandomGang=%d onlyRandomGang=%d dontCreateRandomCops=%d moreCarsFewerPeds=%d pedDensity=%.9g pedDist=%.9g gdm=%.9g",
+        (int)generatePeds, (int)CReplay::Mode, (int)m_CountDownToPedsAtStart, (int)CCutsceneMgr::IsCutsceneProcessing(), (unsigned)ms_nTotalPeds, (unsigned)ms_nNumCivMale, (unsigned)ms_nNumCivFemale, (unsigned)ms_nNumCop, (unsigned)ms_nNumEmergency, (unsigned)ms_nTotalCarPassengerPeds,
+        (int)m_bDontCreateRandomGangMembers, (int)m_bOnlyCreateRandomGangMembers, (int)m_bDontCreateRandomCops, (int)m_bMoreCarsAndFewerPeds, (double)PedDensityMultiplier, (double)PedCreationDistMultiplier(), (double)TheCamera.m_fGenerationDistMultiplier);
     if (CReplay::Mode == MODE_PLAYBACK) {
+        SH18_ROW("U:gate", "exit=replay");
         return;
     }
 
-    ManagePopulation();
-    RemovePedsIfThePoolGetsFull();
+    {
+        SH18_SCOPE(shS, "ManagePopulation", "-");
+        ManagePopulation();
+    }
+    {
+        SH18_SCOPE(shS, "RemovePedsIfThePoolGetsFull", "-");
+        RemovePedsIfThePoolGetsFull();
+    }
 
     if (m_CountDownToPedsAtStart) {
         if (--m_CountDownToPedsAtStart == 0) {
+            SH18_SCOPE(shS, "GeneratePedsAtStartOfGame", "-");
             GeneratePedsAtStartOfGame();
         }
+        SH18_ROW("U:gate", "exit=countDownAtStart now=%d", (int)m_CountDownToPedsAtStart);
         return;
     }
 
-    UpdatePedCounts();
+    {
+        SH18_SCOPE(shS, "UpdatePedCounts", "-");
+        UpdatePedCounts();
+    }
 
+    SH18_ROW("U:gate", "cutsceneProcessing=%d generatePeds=%d totalPeds=%u (exit before AddToPopulation if cutscene || !generatePeds)", (int)CCutsceneMgr::IsCutsceneProcessing(), (int)generatePeds, (unsigned)ms_nTotalPeds);
     if (CCutsceneMgr::IsCutsceneProcessing() || !generatePeds) {
         return;
     }
@@ -2776,14 +2806,24 @@ void CPopulation::Update(bool generatePeds) {
         pcdm * 25.f
     };
 
-    if (AddToPopulation(dists[0], dists[1], dists[2], dists[3])) {
-        GeneratePedsAtAttractors(
+    bool shAdd;
+    {
+        SH18_SCOPE(shS, "AddToPopulation", "r=%.9g,%.9g,%.9g,%.9g", (double)dists[0], (double)dists[1], (double)dists[2], (double)dists[3]);
+        shAdd = AddToPopulation(dists[0], dists[1], dists[2], dists[3]);
+        SH18_RET(shS, shAdd);
+    }
+    SH18_ROW("U:gate", "GeneratePedsAtAttractors called iff AddToPopulation()==true: addToPop=%d totalPeds=%u", (int)shAdd, (unsigned)ms_nTotalPeds);
+    if (shAdd) {
+        SH18_SCOPE(shS, "GeneratePedsAtAttractors", "canSeeOutside=%d totalPeds=%u", (int)CGame::CanSeeOutSideFromCurrArea(), (unsigned)ms_nTotalPeds);
+        [[maybe_unused]] const auto shN = GeneratePedsAtAttractors(
             FindPlayerCentreOfWorld(),
             dists[0], dists[1],
             dists[2], dists[3],
             CGame::CanSeeOutSideFromCurrArea() ? -1 : 7,
             true
         );
+        SH18_RET(shS, shN);
+        SH18_ROW("U:gen", "created=%d totalPedsAfter=%u", (int)shN, (unsigned)ms_nTotalPeds);
     }
 }
 

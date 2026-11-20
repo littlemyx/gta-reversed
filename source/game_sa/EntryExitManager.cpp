@@ -1,6 +1,7 @@
 #include "StdInc.h"
 
 #include "EntryExitManager.h"
+#include "portable/sh18log.h" // SH18 debug logs (NOTSA_STATEHASH only)
 
 using EntryExitTreeNode = CQuadTreeNode<CEntryExit*>;
 NOTSA_GLOBAL(mp_QuadTree, 0x96A7D0, (EntryExitTreeNode*), {});
@@ -222,6 +223,7 @@ int32 CEntryExitManager::AddOne(
         LinkEntryExit(enex);
     }
 
+    SH18_EE("I", "name=%.8s index=%d", name ? name : "-", (int)mp_poolEntryExits->GetIndex(enex));
     return mp_poolEntryExits->GetIndex(enex);
 }
 

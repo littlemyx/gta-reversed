@@ -2,6 +2,7 @@
 
 #include "EntryExit.h"
 #include "portable/sh14log.h" // SH14 debug logs (NOTSA_STATEHASH only)
+#include "portable/sh18log.h" // SH18 debug logs (NOTSA_STATEHASH only)
 #include "EntryExitManager.h"
 #include "TaskComplexGotoDoorAndOpen.h"
 #include "TaskSimpleUninterruptable.h"
@@ -69,7 +70,15 @@ CEntryExit::CEntryExit(
         m_nTimeOff = 24;
     }
     const auto shRc0 = SH14_LS_ON() ? SH_RC14() : 0ull; const bool shRolled = bUnknownBurglary;
+#ifdef NOTSA_STATEHASH
+    int shDraw = -1; // SH18: the draw value itself (CGeneral::DoCoinFlip == GetRandomNumber() >= RAND_MAX / 2)
+    bool shFlip = true;
+    if (bUnknownBurglary) { shDraw = CGeneral::GetRandomNumber(); shFlip = shDraw >= RAND_MAX / 2; }
+    static int shOrd = 0;
+    SH18_EE("E", "ord=%d name=%.8s center=%.9g,%.9g,%.9g exit=%.9g,%.9g,%.9g flags=%04x burglaryAccess=%d unknownBurglary=%d on=%d off=%d draw=%d flip=%d r0=%llu r1=%llu", shOrd++, name ? name : "-", (double)center.x, (double)center.y, (double)center.z, (double)exit.x, (double)exit.y, (double)exit.z, (unsigned)flags, (int)bBurglaryAccess, (int)bUnknownBurglary, (int)timeOn, (int)timeOff, shDraw, (int)shFlip, shRc0, SH18_RC());
+#else
     const bool shFlip = bUnknownBurglary ? CGeneral::DoCoinFlip() : true;
+#endif
     SH14_LS("X", "name=%.8s flags=%04x burglaryAccess=%d unknownBurglary=%d on=%d off=%d rolled=%d flip=%d r0=%llu r1=%llu", name ? name : "-", (unsigned)flags, (int)bBurglaryAccess, (int)bUnknownBurglary, (int)timeOn, (int)timeOff, (int)shRolled, (int)shFlip, shRc0, SH_RC14());
     if (bUnknownBurglary && !shFlip) {
         m_nTimeOn  = 0;

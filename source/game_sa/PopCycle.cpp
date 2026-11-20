@@ -5,6 +5,7 @@
     Do not delete this comment block. Respect others' work!
 */
 #include "StdInc.h"
+#include "portable/sh19log.h" // SH19 debug logs (NOTSA_STATEHASH only)
 
 #include "PopCycle.h"
 #include "Core/X87Intrinsics.h"
@@ -120,14 +121,17 @@ void CPopCycle::Initialise() {
 bool CPopCycle::FindNewPedType(ePedType& outPedType, eModelID& outPedMI, bool noGangs, bool noCops) {
     // NOTSA: Bug prevention
     outPedMI = MODEL_INVALID;
+    SH19_ROW("F:enter", "noGangs=%d noCops=%d zoneInfo=%d bInPoliceStation=%d", (int)noGangs, (int)noCops, (int)(m_pCurrZoneInfo != nullptr), (int)CPopulation::bInPoliceStation);
 
     if (!m_pCurrZoneInfo) {
+        SH19_ROW("F:ret", "reason=no_zoneinfo ok=0");
         return false;
     }
 
     if (CPopulation::bInPoliceStation && CGeneral::GetRandomNumberInRange(0, 100) < 70) { // exe 0x60FBE0-0x60FC11: ftol((rand & 0xFFFF) * (1/32768) * 100) < 70 (int roll, strict; RandomBool is the float version `<= 70`)
         outPedType = PED_TYPE_COP;
         outPedMI = CPopulation::ChoosePolicePedOccupation();
+        SH19_ROW("F:ret", "reason=policeStation ok=1 model=%d type=%d", (int)outPedMI, (int)outPedType);
         return true;
     }
 
@@ -148,9 +152,21 @@ bool CPopCycle::FindNewPedType(ePedType& outPedType, eModelID& outPedMI, bool no
 
     auto civPedsChance = CPopCycle::m_NumOther_Peds - (float)(CPopulation::ms_nNumCivMale + CPopulation::ms_nNumCivFemale);
 
-    for (auto chance : { &civPedsChance, &copChance, &dealersChance, &gangChance }) {
-        if (*chance < 2.f) {
-            *chance *= CGeneral::GetRandomNumberInRange(0.f, 1.f);
+    SH19_ROW("F:chances0", "civ=%.9g cop=%.9g dealers=%.9g gang=%.9g | numOther=%.9g numCops=%.9g numGangs=%.9g numDealers=%.9g | civMale=%u civFemale=%u cop=%u dealers=%u totalGang=%u | onlyGang=%d dontGang=%d dontCops=%d gangWarFight=%d noCopsZone=%d canSeeOutside=%d",
+        (double)civPedsChance, (double)copChance, (double)dealersChance, (double)gangChance, (double)m_NumOther_Peds, (double)m_NumCops_Peds, (double)m_NumGangs_Peds, (double)m_NumDealers_Peds,
+        (unsigned)CPopulation::ms_nNumCivMale, (unsigned)CPopulation::ms_nNumCivFemale, (unsigned)CPopulation::ms_nNumCop, (unsigned)CPopulation::ms_nNumDealers, (unsigned)CPopulation::CalculateTotalNumGangPeds(),
+        (int)CPopulation::m_bOnlyCreateRandomGangMembers, (int)CPopulation::m_bDontCreateRandomGangMembers, (int)CPopulation::m_bDontCreateRandomCops, (int)CGangWars::GangWarFightingGoingOn(), (int)m_pCurrZoneInfo->IsNoCops, (int)CGame::CanSeeOutSideFromCurrArea());
+    {
+        int shIdx = 0; static const char* const shNames[] = { "civ", "cop", "dealers", "gang" };
+        for (auto chance : { &civPedsChance, &copChance, &dealersChance, &gangChance }) {
+            if (*chance < 2.f) {
+                const auto shR0 = SH19_RC(); const auto shOld = *chance;
+                *chance *= CGeneral::GetRandomNumberInRange(0.f, 1.f);
+                SH19_ROW("F:scale", "which=%s old=%.9g new=%.9g r0=%llu r1=%llu", shNames[shIdx], (double)shOld, (double)*chance, shR0, SH19_RC());
+            } else {
+                SH19_ROW("F:scale", "which=%s old=%.9g (>=2, no draw)", shNames[shIdx], (double)*chance);
+            }
+            shIdx++;
         }
     }
 
@@ -161,8 +177,10 @@ bool CPopCycle::FindNewPedType(ePedType& outPedType, eModelID& outPedMI, bool no
     // Pirulax: I had to refactor the code to be acceptable and bugless - sorry
     while (true) {
         const auto highestChance = std::max({ civPedsChance, copChance, dealersChance, gangChance });
+        SH19_ROW("F:round", "civ=%.9g cop=%.9g dealers=%.9g gang=%.9g highest=%.9g", (double)civPedsChance, (double)copChance, (double)dealersChance, (double)gangChance, (double)highestChance);
 
         if (highestChance <= 0.f) {
+            SH19_ROW("F:ret", "reason=highest<=0 ok=0");
             return false;
         }
 
@@ -176,9 +194,11 @@ bool CPopCycle::FindNewPedType(ePedType& outPedType, eModelID& outPedMI, bool no
                     outPedMI = modelId;
                     assert(outPedMI != MODEL_PLAYER);
                     outPedType = PED_TYPE_DEALER;
+                    SH19_ROW("F:ret", "reason=dealer ok=1 model=%d", (int)outPedMI);
                     return true;
                 }
             }
+            SH19_ROW("F:branch", "dealers: no loaded dealer model -> dealersChance=0");
             dealersChance = 0.f;
             continue;
         } else if (highestChance == gangChance) { // 0x60FF13
@@ -188,10 +208,13 @@ bool CPopCycle::FindNewPedType(ePedType& outPedType, eModelID& outPedMI, bool no
                 ? CPopulation::ChooseGangOccupation((eGangID)(outPedType - ePedType::PED_TYPE_GANG1))
                 : MODEL_INVALID;
             assert(outPedMI != MODEL_PLAYER);
+            SH19_ROW("F:branch", "gang: pedType=%d model=%d", (int)outPedType, (int)outPedMI);
             if (outPedMI >= 0) {
+                SH19_ROW("F:ret", "reason=gang ok=1 model=%d type=%d", (int)outPedMI, (int)outPedType);
                 return true;
             }
             if (CPopulation::m_bOnlyCreateRandomGangMembers) {
+                SH19_ROW("F:ret", "reason=gang_none_onlyGang ok=0");
                 return false;
             }
             gangChance = 0.f;
@@ -199,16 +222,20 @@ bool CPopCycle::FindNewPedType(ePedType& outPedType, eModelID& outPedMI, bool no
         } else if (highestChance == copChance) { // 0x60FF62
             outPedMI = CPopulation::ChoosePolicePedOccupation();
             outPedType = PED_TYPE_COP;
+            SH19_ROW("F:ret", "reason=cop ok=1 model=%d", (int)outPedMI);
             return true;
         } else if (highestChance == civPedsChance) { // 0x60FF8F
+            SH19_ROW("F:branch", "civilian: calling ChooseCivilianOccupation()");
             outPedMI = CPopulation::ChooseCivilianOccupation();
             switch (outPedMI) {
             case MODEL_INVALID:
             case MODEL_MALE01:
+                SH19_ROW("F:ret", "reason=civ_model_invalid_or_male01 ok=0 model=%d", (int)outPedMI);
                 return false;
             }
             assert(outPedMI != MODEL_PLAYER);
             outPedType = CModelInfo::GetPedModelInfo(outPedMI)->m_nPedType;
+            SH19_ROW("F:ret", "reason=civilian ok=1 model=%d type=%d", (int)outPedMI, (int)outPedType);
             return true;
         } else {
             NOTSA_UNREACHABLE();

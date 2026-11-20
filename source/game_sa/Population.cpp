@@ -8,6 +8,7 @@
 #include "StdInc.h"
 #include "portable/sh14log.h" // SH14 debug logs (NOTSA_STATEHASH only)
 #include "portable/sh18log.h" // SH18 debug logs (NOTSA_STATEHASH only)
+#include "portable/sh19log.h" // SH19 debug logs (NOTSA_STATEHASH only)
 
 #include <numbers>
 
@@ -509,7 +510,10 @@ bool CPopulation::IsSkateable(const CVector& point) {
 // 0x611550
 eModelID CPopulation::ChooseGangOccupation(eGangID gangId) {
     SH14_CAR("ChooseGangOccupation", "gang=%d", (int)gangId);
-    return CGangs::ChooseGangPedModel(gangId);
+    const auto shG0 = SH19_RC();
+    const auto shGm = CGangs::ChooseGangPedModel(gangId);
+    SH19_ROW("G:ChooseGangOccupation", "gang=%d model=%d r0=%llu r1=%llu", (int)gangId, (int)shGm, shG0, SH19_RC());
+    return shGm;
 }
 
 // 0x611560 (Unused)
@@ -1048,6 +1052,7 @@ eModelID CPopulation::ChooseCivilianOccupation(
     const char*  attractorScriptName
 ) {
     SH14_CAR("ChooseCivilianOccupation", "male=%d female=%d animGroup=%d notModel=%d stat=%d onFoot=%d testUsed=%d atAttractor=%d", (int)mustBeMale, (int)mustBeFemale, (int)mustUseThisAnimGroup, (int)mustNotBeThisModel, (int)mustBeCompatibleWithThisPedStat, (int)bOnlyOnFoots, (int)doTestForUsedOccupations, (int)isAtAttractor);
+    SH19_ROW("C:enter", "male=%d female=%d animGroup=%d notModel=%d stat=%d onFoot=%d testUsed=%d atAttractor=%d script=%s canSeeOutside=%d interiorPeds=%u rain=%.9g numPedsLoaded=%d", (int)mustBeMale, (int)mustBeFemale, (int)mustUseThisAnimGroup, (int)mustNotBeThisModel, (int)mustBeCompatibleWithThisPedStat, (int)bOnlyOnFoots, (int)doTestForUsedOccupations, (int)isAtAttractor, attractorScriptName ? attractorScriptName : "-", (int)CGame::CanSeeOutSideFromCurrArea(), (unsigned)NumberOfPedsInUseInterior, (double)CWeather::Rain, (int)CStreaming::ms_numPedsLoaded);
     // 0x612F90: number of passes. Pass `p` only accepts models with exactly `p` references, i.e. the least used loaded ped models come first
     // (3 passes (5 inside with many peds) when testing for used occupations, 7 otherwise)
     size_t numPasses = 3;
@@ -1058,34 +1063,44 @@ eModelID CPopulation::ChooseCivilianOccupation(
         numPasses = 7;
     }
 
+    SH19_ROW("C:passes", "numPasses=%d", (int)numPasses);
     for (size_t pass{}; pass < numPasses; pass++) {
         for (const auto modelId : CStreaming::ms_pedsLoaded) {
             if (modelId < 0) { // 0x612FF4: signed test
+                SH19_ROW("C:cand", "pass=%d model=%d REJECT=%s", (int)pass, (int)modelId, "slot_empty");
                 continue;
             }
             if (!CStreaming::IsModelLoaded(modelId)) { // So why the fuck is it in the `ms_pedsLoaded` array if it's not loaded?
+                SH19_ROW("C:cand", "pass=%d model=%d REJECT=%s", (int)pass, (int)modelId, "not_loaded");
                 continue;
             }
             const auto mi = CModelInfo::GetPedModelInfo(modelId);
             if ((int16)mi->m_nRefCount != (int32)pass) { // 0x613012: signed word compare against the pass counter
+                SH19_ROW("C:cand", "pass=%d model=%d ref=%d pedType=%d animType=%d stat=%d carsMask=0x%x REJECT=%s", (int)pass, (int)modelId, (int)(int16)mi->m_nRefCount, (int)mi->GetPedType(), (int)mi->m_nAnimType, (int)mi->GetPedStatType(), (unsigned)mi->m_nCarsCanDriveMask, "refcount");
                 continue;
             }
             if (mustNotBeThisModel == modelId) {
+                SH19_ROW("C:cand", "pass=%d model=%d ref=%d pedType=%d animType=%d stat=%d carsMask=0x%x REJECT=%s", (int)pass, (int)modelId, (int)(int16)mi->m_nRefCount, (int)mi->GetPedType(), (int)mi->m_nAnimType, (int)mi->GetPedStatType(), (unsigned)mi->m_nCarsCanDriveMask, "mustNotBeThisModel");
                 continue;
             }
             if (!CPopCycle::PedIsAcceptableInCurrentZone(modelId) && CGame::CanSeeOutSideFromCurrArea()) {
+                SH19_ROW("C:cand", "pass=%d model=%d ref=%d pedType=%d animType=%d stat=%d carsMask=0x%x REJECT=%s", (int)pass, (int)modelId, (int)(int16)mi->m_nRefCount, (int)mi->GetPedType(), (int)mi->m_nAnimType, (int)mi->GetPedStatType(), (unsigned)mi->m_nCarsCanDriveMask, "not_in_zone");
                 continue;
             }
             if (bOnlyOnFoots && (mi->m_nCarsCanDriveMask & 0x1000) == 0) {
+                SH19_ROW("C:cand", "pass=%d model=%d ref=%d pedType=%d animType=%d stat=%d carsMask=0x%x REJECT=%s", (int)pass, (int)modelId, (int)(int16)mi->m_nRefCount, (int)mi->GetPedType(), (int)mi->m_nAnimType, (int)mi->GetPedStatType(), (unsigned)mi->m_nCarsCanDriveMask, "onFoot_mask");
                 continue;
             }
             if (mustBeMale && mi->GetPedType() != PED_TYPE_CIVMALE) {
+                SH19_ROW("C:cand", "pass=%d model=%d ref=%d pedType=%d animType=%d stat=%d carsMask=0x%x REJECT=%s", (int)pass, (int)modelId, (int)(int16)mi->m_nRefCount, (int)mi->GetPedType(), (int)mi->m_nAnimType, (int)mi->GetPedStatType(), (unsigned)mi->m_nCarsCanDriveMask, "not_male");
                 continue;
             }
             if (mustBeFemale && mi->GetPedType() != PED_TYPE_CIVFEMALE) {
+                SH19_ROW("C:cand", "pass=%d model=%d ref=%d pedType=%d animType=%d stat=%d carsMask=0x%x REJECT=%s", (int)pass, (int)modelId, (int)(int16)mi->m_nRefCount, (int)mi->GetPedType(), (int)mi->m_nAnimType, (int)mi->GetPedStatType(), (unsigned)mi->m_nCarsCanDriveMask, "not_female");
                 continue;
             }
             if (mustUseThisAnimGroup >= 0 && mi->m_nAnimType != mustUseThisAnimGroup) {
+                SH19_ROW("C:cand", "pass=%d model=%d ref=%d pedType=%d animType=%d stat=%d carsMask=0x%x REJECT=%s", (int)pass, (int)modelId, (int)(int16)mi->m_nRefCount, (int)mi->GetPedType(), (int)mi->m_nAnimType, (int)mi->GetPedStatType(), (unsigned)mi->m_nCarsCanDriveMask, "animGroup");
                 continue;
             }
             if (isAtAttractor) {
@@ -1100,21 +1115,28 @@ eModelID CPopulation::ChooseCivilianOccupation(
                     continue;
                 }
                 if (!PedMICanBeCreatedAtThisAttractor(modelId, attractorScriptName)) { // 0x6130C5
+                    SH19_ROW("C:cand", "pass=%d model=%d ref=%d pedType=%d animType=%d stat=%d carsMask=0x%x REJECT=%s", (int)pass, (int)modelId, (int)(int16)mi->m_nRefCount, (int)mi->GetPedType(), (int)mi->m_nAnimType, (int)mi->GetPedStatType(), (unsigned)mi->m_nCarsCanDriveMask, "attractor_script");
                     continue;
                 }
             }
             if (!CGame::CanSeeOutSideFromCurrArea() && !PedMICanBeCreatedInInterior(modelId)) {
+                SH19_ROW("C:cand", "pass=%d model=%d ref=%d pedType=%d animType=%d stat=%d carsMask=0x%x REJECT=%s", (int)pass, (int)modelId, (int)(int16)mi->m_nRefCount, (int)mi->GetPedType(), (int)mi->m_nAnimType, (int)mi->GetPedStatType(), (unsigned)mi->m_nCarsCanDriveMask, "interior_not_allowed");
                 continue;
             }
             if (mustBeCompatibleWithThisPedStat != ePedStats::NONE && !ArePedStatsCompatible(mi->GetPedStatType(), mustBeCompatibleWithThisPedStat)) {
+                SH19_ROW("C:cand", "pass=%d model=%d ref=%d pedType=%d animType=%d stat=%d carsMask=0x%x REJECT=%s", (int)pass, (int)modelId, (int)(int16)mi->m_nRefCount, (int)mi->GetPedType(), (int)mi->m_nAnimType, (int)mi->GetPedStatType(), (unsigned)mi->m_nCarsCanDriveMask, "pedstat");
                 continue;
             }
             if (CWeather::Rain >= 0.1f && IsSunbather(modelId)) {
+                SH19_ROW("C:cand", "pass=%d model=%d ref=%d pedType=%d animType=%d stat=%d carsMask=0x%x REJECT=%s", (int)pass, (int)modelId, (int)(int16)mi->m_nRefCount, (int)mi->GetPedType(), (int)mi->m_nAnimType, (int)mi->GetPedStatType(), (unsigned)mi->m_nCarsCanDriveMask, "rain_sunbather");
                 continue;
             }
+            SH19_ROW("C:cand", "pass=%d model=%d ref=%d pedType=%d ACCEPT", (int)pass, (int)modelId, (int)(int16)mi->m_nRefCount, (int)mi->GetPedType());
+            SH19_ROW("C:exit", "result=%d", (int)modelId);
             return modelId;
         }
     }
+    SH19_ROW("C:exit", "result=%d (no candidate; testUsed=%d)", doTestForUsedOccupations ? -1 : (int)MODEL_MALE01, (int)doTestForUsedOccupations);
     return doTestForUsedOccupations
         ? MODEL_INVALID
         : MODEL_MALE01;

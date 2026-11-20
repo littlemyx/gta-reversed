@@ -161,11 +161,13 @@ void CEntryExitManager::Update() {
 
 // 0x43E410
 void CEntryExitManager::AddEntryExitToStack(CEntryExit* enex) {
-    enex = enex->GetLinkedOrThis();
-    
-    if (ms_entryExitStackPosn > 0 && ms_entryExitStack[ms_entryExitStackPosn - 1] == enex) {
+    // exe 0x43E414-0x43E41D: ecx = linked-or-this, used ONLY for the top-of-stack compare and the area test;
+    // exe 0x43E44C pushes edx = the ORIGINAL argument
+    const auto linked = enex->GetLinkedOrThis();
+
+    if (ms_entryExitStackPosn > 0 && ms_entryExitStack[ms_entryExitStackPosn - 1] == linked) {
         ms_entryExitStackPosn--;
-    } else if (enex->m_nArea != AREA_CODE_NORMAL_WORLD) {
+    } else if (linked->m_nArea != AREA_CODE_NORMAL_WORLD) {
         ms_entryExitStack[ms_entryExitStackPosn++] = enex;
     } else {
         ms_entryExitStackPosn = 0;

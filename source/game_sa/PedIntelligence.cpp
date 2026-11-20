@@ -10,6 +10,7 @@
 
 #include "Ragdoll/IKChainManager.h"
 #include "PedType.h"
+#include "portable/sh20log.h" // SH20 debug logs (NOTSA_STATEHASH only)
 #include "TaskComplexBeInGroup.h"
 #include "TaskSimpleCarDriveTimed.h"
 #include "TaskSimpleStandStill.h"
@@ -451,6 +452,7 @@ void CPedIntelligence::ClearTasks(bool bClearPrimaryTasks, bool bClearSecondaryT
         }
 
         m_eventHandler.HandleEvents();
+        SH20_EVENT(m_pPed);
         m_TaskMgr.ManageTasks();
         CPedScriptedTaskRecord::Process();
     }
@@ -638,6 +640,7 @@ void CPedIntelligence::ProcessAfterPreRender() {
 // 0x601BB0
 void CPedIntelligence::ProcessEventHandler() {
     m_eventHandler.HandleEvents();
+    SH20_EVENT(m_pPed);
 }
 
 // 0x601BC0
@@ -991,6 +994,7 @@ void CPedIntelligence::Process() {
     m_pedScanner.ScanForPedsInRange(*m_pPed);
     m_eventScanner.ScanForEvents(*m_pPed);
     m_eventHandler.HandleEvents();
+    SH20_EVENT(m_pPed);
     m_TaskMgr.ManageTasks();
     GetPlayerRelationshipRecorder().RecordRelationshipWithPlayer(m_pPed);
     LookAtInterestingEntities();

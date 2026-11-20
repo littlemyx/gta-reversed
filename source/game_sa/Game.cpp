@@ -1,5 +1,6 @@
 #include "StdInc.h"
 #include "portable/sh10log.h" // SH10 debug logs (NOTSA_STATEHASH only)
+#include "portable/sh20log.h" // SH20 debug logs (NOTSA_STATEHASH only)
 #include "portable/sh13log.h" // SH13 debug logs (NOTSA_STATEHASH only)
 
 #include "UIRenderer.h"
@@ -746,6 +747,7 @@ void CGame::Process() {
 
     SH10_MARK("CPad::UpdatePads");
     CPad::UpdatePads();
+    SH20_PAD("afterUpdatePads"); SH20_BMX("frameStart");
     SH10_MARK("g_LoadMonitor.BeginFrame");
     g_LoadMonitor.BeginFrame();
 
@@ -951,7 +953,7 @@ void CGame::Process() {
     SH10_END();
     SH10_CAM("endOfCGameProcess");
     SH10_CUT("endOfCGameProcess");
-    SH13_PED("endOfCGameProcess"); SH13_PUT("endOfCGameProcess"); SH13_POP("endOfCGameProcess");
+    SH13_PED("endOfCGameProcess"); SH13_PUT("endOfCGameProcess"); SH20_BMX("frameEnd"); SH13_POP("endOfCGameProcess");
 }
 
 // 0x53BCF0

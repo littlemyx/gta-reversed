@@ -65,6 +65,9 @@ void* operator new[](std::size_t n) { return ::operator new(n); }
 #include "portable/cargenlog.h"
 #include "portable/sh12log.h"
 #include "portable/sh13log.h"
+#include "portable/sh20log.h"
+#include "Tasks/TaskTypes/TaskSimpleHoldEntity.h"
+#include "Entity/Vehicle/Bike.h"
 namespace notsa::rr {
 uint32_t LoadLogFrameCounter() { return CTimer::GetFrameCounter(); }
 namespace {
@@ -724,6 +727,52 @@ void Sh13Put(const char* where) {
     o += (size_t)std::snprintf(b + o, sizeof b - o, " secondary:");
     for (int i = 0; i < TASK_SECONDARY_MAX; i++) if (tm.m_aSecondaryTasks[i]) { o += (size_t)std::snprintf(b + o, sizeof b - o, " [%d]=", i); chain(tm.m_aSecondaryTasks[i]); }
     std::fprintf(f, "%d %llu %s T %s nAnims=%d pedState=%d %s\n", fr, rc, Sh12Stage(), where, n, (int)p->m_nPedState, b);
+    std::fflush(f);
+}
+void Sh20Pad(const char* where) {
+    FILE* f = Sh13PutLog(); if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    CPad* pad = CPad::GetPad(0); if (!pad) return;
+    std::fprintf(f, "%d %llu %s P %s tri new=%d old=%d mode=%d disableCtrls=%d disableEnterCar=%d\n", LoadLogRecFrame(), (unsigned long long)RandCount(), Sh12Stage(), where,
+        (int)pad->NewState.ButtonTriangle, (int)pad->OldState.ButtonTriangle, (int)pad->Mode, (int)pad->DisablePlayerControls, (int)pad->bDisablePlayerEnterCar);
+    std::fflush(f);
+}
+void Sh20Hold(const CTaskSimpleHoldEntity* t, const CPed* ped, int phase) {
+    FILE* f = Sh13PutLog(); if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    if (ped != FindPlayerPed(0)) return;
+    CPad* pad = FindPlayerPed(0)->GetPadFromPlayer();
+    std::fprintf(f, "%d %llu %s H %s phase=%s taskType=%d animGroup=%d exitVehJustDown=%d hasAssoc=%d entityDropped=%d\n", LoadLogRecFrame(), (unsigned long long)RandCount(), Sh12Stage(), phase == 0 ? "ProcessPed" : phase == 1 ? "EventScriptCommandAdded" : "StartAnim",
+        phase == 0 ? "enter" : phase == 1 ? "added" : "start", (int)t->GetTaskType(), (int)t->m_nAnimGroupId, pad ? (int)pad->ExitVehicleJustDown() : -1, t->m_pAnimBlendAssociation != nullptr, (int)t->m_bEntityDropped);
+    std::fflush(f);
+}
+void Sh20Event(const CPed* ped) {
+    FILE* f = Sh13PutLog(); if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    if (ped != FindPlayerPed(0)) return;
+    auto& ig = *ped->GetIntelligence();
+    char b[400] = ""; size_t o = 0;
+    for (auto* e : ig.GetEventGroup().GetEvents()) if (e && o + 16 < sizeof b) o += (size_t)std::snprintf(b + o, sizeof b - o, " %d", (int)e->GetEventType());
+    CTask* pt = ig.GetTaskManager().GetTaskPrimary(TASK_PRIMARY_PRIMARY);
+    std::fprintf(f, "%d %llu %s E afterHandleEvents eventCount=%d events:%s primaryPrimary=%d\n", LoadLogRecFrame(), (unsigned long long)RandCount(), Sh12Stage(), (int)ig.GetEventGroup().GetEvents().size(), b, pt ? (int)pt->GetTaskType() : -1);
+    std::fflush(f);
+}
+void Sh20Bmx(const char* where) {
+    FILE* f = Sh20BmxLog(); if (!f || std::this_thread::get_id() != ::notsa::msvc_crt::MainThreadId()) return;
+    auto* pool = GetVehiclePool(); if (!pool) return;
+    auto V3 = [&](const CVector& v) { std::fprintf(f, "%08x/%.9g,%08x/%.9g,%08x/%.9g", Sh7Bits(v.x), (double)v.x, Sh7Bits(v.y), (double)v.y, Sh7Bits(v.z), (double)v.z); };
+    auto Fl = [&](float x) { std::fprintf(f, "%08x/%.9g", Sh7Bits(x), (double)x); };
+    for (int slot : { 2, 4 }) {
+        CVehicle* v = pool->GetAt(slot); if (!v) { std::fprintf(f, "%d %llu %s M %s slot=%d (empty)\n", LoadLogRecFrame(), (unsigned long long)RandCount(), Sh12Stage(), where, slot); continue; }
+        if (slot == 4 && v->m_matrix) {
+            std::fprintf(f, "%d %llu %s M %s slot=4 model=%d right=", LoadLogRecFrame(), (unsigned long long)RandCount(), Sh12Stage(), where, (int)v->GetModelIndex());
+            V3(v->GetMatrix().GetRight()); std::fprintf(f, " fwd="); V3(v->GetMatrix().GetForward()); std::fprintf(f, " up="); V3(v->GetMatrix().GetUp()); std::fprintf(f, " pos="); V3(v->GetMatrix().GetPosition()); std::fprintf(f, "\n");
+        }
+        if (slot == 2) {
+            std::fprintf(f, "%d %llu %s B %s slot=2 model=%d isBike=%d fakePhysics=%d colProcessed=%d status=%d move=", LoadLogRecFrame(), (unsigned long long)RandCount(), Sh12Stage(), where, (int)v->GetModelIndex(), (int)v->IsBike(), (int)v->m_nFakePhysics, (int)v->vehicleFlags.bVehicleColProcessed, (int)v->GetStatus());
+            V3(v->m_vecMoveSpeed); std::fprintf(f, " turn="); V3(v->m_vecTurnSpeed);
+            std::fprintf(f, " flagsBits=%08x", (unsigned)reinterpret_cast<const uint32*>(&v->vehicleFlags)[0]);
+            if (v->IsBike()) { auto* b = v->AsBike(); for (int i = 0; i < 4; i++) { std::fprintf(f, " wheelRatio%d=", i); Fl(b->m_aWheelRatios[i]); } for (int i = 0; i < 4; i++) { std::fprintf(f, " ratioHist%d=", i); Fl(b->m_aRatioHistory[i]); } }
+            std::fprintf(f, "\n");
+        }
+    }
     std::fflush(f);
 }
 void Sh13VehDump(const char* where) {

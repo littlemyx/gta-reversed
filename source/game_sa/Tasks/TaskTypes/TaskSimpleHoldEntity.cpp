@@ -4,6 +4,7 @@
 
 #include "TaskSimplePickUpEntity.h"
 #include "TaskSimplePutDownEntity.h"
+#include "portable/sh20log.h" // SH20 debug logs (NOTSA_STATEHASH only)
 
 void CTaskSimpleHoldEntity::InjectHooks() {
     RH_ScopedVirtualClass(CTaskSimpleHoldEntity, 0x870B2C, 9);
@@ -182,6 +183,7 @@ bool CTaskSimpleHoldEntity::MakeAbortable(CPed* ped, eAbortPriority priority, co
 
 // 0x693C40
 bool CTaskSimpleHoldEntity::ProcessPed(CPed* ped) {
+    SH20_HOLD(this, ped, 0);
     CTaskManager* taskManager = &ped->GetTaskManager();
     if (m_bEntityRequiresProcessing) {
         m_bEntityRequiresProcessing = false;
@@ -269,6 +271,7 @@ bool CTaskSimpleHoldEntity::ProcessPed(CPed* ped) {
                     auto pTaskSimplePutDownEntity = new CTaskSimplePutDownEntity();
                     CEventScriptCommand eventScriptCommand(TASK_PRIMARY_PRIMARY, pTaskSimplePutDownEntity, false);
                     ped->GetEventGroup().Add(&eventScriptCommand, false);
+                    SH20_HOLD(this, ped, 1);
                 }
             }
         }
@@ -398,6 +401,7 @@ void CTaskSimpleHoldEntity::FinishAnimHoldEntityCB(CAnimBlendAssociation* animAs
 
 // 0x692FF0
 void CTaskSimpleHoldEntity::StartAnim(CPed* ped) {
+    SH20_HOLD(this, ped, 2);
     if (m_pAnimBlendHierarchy) {
         m_animFlags |= ANIMATION_DONT_ADD_TO_PARTIAL_BLEND | ANIMATION_IS_BLEND_AUTO_REMOVE | ANIMATION_IS_PARTIAL;
         m_pAnimBlendAssociation = CAnimManager::BlendAnimation(ped->GetRpClump(), m_pAnimBlendHierarchy, m_animFlags, 4.0f);

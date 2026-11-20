@@ -79,7 +79,7 @@ bool CAEScriptAudioEntity::IsMissionAudioSampleFinished(uint8 sampleId) {
         return true;
     }
 #ifdef NOTSA_STATEHASH
-    if (notsa::rr::NoAudio() && s_noAudioEnd[sampleId] != 0 && CTimer::GetTimeInMS() < s_noAudioEnd[sampleId]) { return false; } // RR harness: the line "plays" for kNoAudioLineMs on the game clock (no sound object exists)
+    if (notsa::rr::AudioStubs() && s_noAudioEnd[sampleId] != 0 && CTimer::GetTimeInMS() < s_noAudioEnd[sampleId]) { return false; } // RR harness: the line "plays" for kNoAudioLineMs on the game clock (no sound object exists)
 #endif
     if (sampleId >= 2) {
         return AESoundManager.AreSoundsPlayingInBankSlot((int16)(SND_BANK_SLOT_MISSION1 + sampleId)) == 0;
@@ -225,7 +225,7 @@ void CAEScriptAudioEntity::PlayLoadedMissionAudio(uint8 sampleId) {
         return;
     }
 #ifdef NOTSA_STATEHASH
-    if (notsa::rr::NoAudio()) { s_noAudioEnd[sampleId] = CTimer::GetTimeInMS() + kNoAudioLineMs; return; } // RR harness: no sound object is created (nothing would ever finish it), so the sample reads as finished
+    if (notsa::rr::NoAudio()) { if (notsa::rr::AudioStubs()) { s_noAudioEnd[sampleId] = CTimer::GetTimeInMS() + kNoAudioLineMs; } return; } // RR harness: no sound object is created (nothing would ever finish it), so the sample reads as finished
 #endif
 
     bool isFrontEnd  = false; // 0x12

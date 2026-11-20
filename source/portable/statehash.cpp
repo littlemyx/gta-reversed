@@ -533,6 +533,7 @@ void VehLogPrv(const void* veh, const std::string& kv) {
 int      LoadLogRecFrame() { return g_recording ? (int)g_frame : -1; }
 uint64_t RandCountNow() { return RandCount(); }
 bool     NoAudio() { static const bool v = Active() && std::getenv("NOTSA_RR_NOAUDIO") && std::getenv("NOTSA_RR_NOAUDIO")[0] == '1'; return v; }
+bool     AudioStubs() { static const bool v = NoAudio() && std::getenv("NOTSA_RR_AUDIOSTUBS") && std::getenv("NOTSA_RR_AUDIOSTUBS")[0] == '1'; return v; } // CR5: CR4 NoAudio stand-ins (mission line 3 s, beat-track stepping) only for the all-missions driver
 
 uint32_t StableId(const void* p) {
     if (!p) return 0;

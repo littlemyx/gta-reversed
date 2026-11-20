@@ -38,6 +38,7 @@ bool Cmd(const char* name, const std::string& args);
 void PinHeap();
 //! NOTSA_RR_NOAUDIO=1 (with NOTSA_RR=1): Idle() does not call AudioEngine.Service()
 bool NoAudio();
+bool AudioStubs();
 //! true while a trace is being recorded
 bool Recording();
 //! RR-3 diagnostics: logs `rrm <name> rng=<state> idle=<n>` when NOTSA_RR_RNGMARKS=1 (bisecting where the RNG state of two builds first differs)

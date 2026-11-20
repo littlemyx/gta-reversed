@@ -3,6 +3,7 @@
 # usage: tools/standalone/gpu_locked.sh -o AUTODRIVE tools/standalone/mdriver/allmissions.sh [outdir] [idx list, e.g. "24 25" (default: story missions first, then odd jobs / sub-missions)]
 # build: tools/standalone/statehash/shbuild.sh -> build/PortableWin64RR/bin/gta_reversed.exe (64-bit SSE RR reference build: STATEHASH + SCMTRACE + MDRIVER + portable math)
 # AD4: the dispatch mirrors the TS driver (README in the output dir); env NOTSA_MDRIVER_AD3=1 re-enables the AD3-only warp area / crate pickup.
+# RR_STEP_MS (default 33 = the TS autodrive 30 fps step, so the driver stall of 600 frames is the same 20 s of game time as in TS; 20 = the old step)
 # env: TABLE (driver-classes.tsv path; default the private TS worktree, read only, never copied into this repo), EXE, DATA (short path with the game data), GAME_SRC, RR_SEED (12345),
 #      MAXF (driver frame limit per mission, default 30000), WALL (wall seconds per mission, default 3000), TAG_SUFFIX (appended to the output file names, e.g. "_b" for a determinism rerun)
 # outputs in <outdir> (default C:/gta-scratch/scmtrace/out/allmissions): summary.tsv (idx name result frame thread ip opcode reason; PASSED | FAILED (reason = the last text label before M_FAIL) | STOP),
@@ -51,9 +52,8 @@ for IDX in $LIST; do
   (
     export NOTSA_STANDALONE_SKIP_VIDEOS=1 NOTSA_STANDALONE_MUTE=1 NOTSA_STANDALONE_INPUT="$(cygpath -w "$W/route.txt")" NOTSA_STANDALONE_USERDIR="$(cygpath -w "$UD")"
     # CR16: mission 46 (TRUTH1): TS stalls after 600 frames of 33.33 ms = 20 s; 600 RR frames (20 ms) = 12 s landed after the patrol van left its locate (01AD false -> 8x vehwarp). 1000 frames = the same 20 s; the action sequence then equals the TS run. (Not global: 89 needs the old 600.)
-    [ "${RR_STEP_MS:-20}" = 20 ] && case "$IDX" in 46) export NOTSA_MDRIVER_STALL="${NOTSA_MDRIVER_STALL:-1000}";; esac
     export NOTSA_STANDALONE_WINDOWED=960x600 NOTSA_STANDALONE_NOPRESENT=1 NOTSA_STANDALONE_NOVSYNC=1
-    export NOTSA_RR=1 NOTSA_RR_NOAUDIO=1 NOTSA_RR_AUDIOSTUBS=1 NOTSA_RR_SEED="${RR_SEED:-12345}" NOTSA_RR_STEP_MS="${RR_STEP_MS:-20}" NOTSA_RR_SCREEN=1280x720 NOTSA_AUDIO=null NOTSA_RR_GAMEPLAY_RAND=1
+    export NOTSA_RR=1 NOTSA_RR_NOAUDIO=1 NOTSA_RR_AUDIOSTUBS=1 NOTSA_RR_SEED="${RR_SEED:-12345}" NOTSA_RR_STEP_MS="${RR_STEP_MS:-33}" NOTSA_RR_SCREEN=1280x720 NOTSA_AUDIO=null NOTSA_RR_GAMEPLAY_RAND=1
     export NOTSA_RR_TRACE="$(cygpath -w "$W/m.rr.trace")" NOTSA_SH_FILE="$(cygpath -w "$W/m.sh")" NOTSA_SH_RANDLOG="$(cygpath -w "$W/m.rand")"
     export NOTSA_SCMTRACE="$(cygpath -w "$W/m.scmtrace")" NOTSA_SCMTRACE_COMMIT="$(git -C "$REPO" rev-parse --short HEAD)"
     export NOTSA_MDRIVER_ARGCOUNTS="$(cygpath -w "$REPO/tools/standalone/scmscan/argcounts.tsv")" NOTSA_MDRIVER_TABLE="$TABLE" NOTSA_MDRIVER_OUT="$(cygpath -w "$W/m.driver")" NOTSA_MDRIVER_RESULT="$(cygpath -w "$W/res")" NOTSA_MDRIVER_MAXFRAMES="$MAXF"

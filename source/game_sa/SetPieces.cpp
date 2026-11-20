@@ -14,7 +14,9 @@ void CSetPieces::InjectHooks() {
 }
 
 // 0x499500
-void CSetPieces::AddOne(eSetPieceType type, CVector2D cornerA, CVector2D cornerB, CVector2D spawnCoord1, CVector2D spawnCoord2, CVector2D targetCoord1, CVector2D targetCoord2) { // exe 0x499500: the pairs are stored in this order at +0xC/+0x10/+0x14/+0x18
+void CSetPieces::AddOne(eSetPieceType type, CVector2D cornerA, CVector2D cornerB, CVector2D spawnCoord1, CVector2D targetCoord1, CVector2D spawnCoord2, CVector2D targetCoord2) {
+    // exe 0x499500: arg pairs 1..4 are stored at element +0xC, +0x14, +0x10, +0x18, i.e. spawn1, target1, spawn2, target2
+    // (the script passes them in this order)
     if (NumSetPieces >= MAX_SET_PIECES) {
         return;
     }
@@ -25,10 +27,10 @@ void CSetPieces::AddOne(eSetPieceType type, CVector2D cornerA, CVector2D cornerB
     auto& sp = aSetPieces[NumSetPieces++];
     sp.m_nType        = type;
     sp.m_AreaRect     = CRect{ left, bottom, right, top };
-    sp.m_SpawnCoord1  = spawnCoord1;
-    sp.m_SpawnCoord2  = spawnCoord2;
-    sp.m_TargetCoord1 = targetCoord1;
-    sp.m_TargetCoord2 = targetCoord2;
+    sp.m_SpawnCoord1  = spawnCoord1;  // exe: arg1 -> +0xC
+    sp.m_TargetCoord1 = targetCoord1; // exe: arg2 -> +0x14
+    sp.m_SpawnCoord2  = spawnCoord2;  // exe: arg3 -> +0x10
+    sp.m_TargetCoord2 = targetCoord2; // exe: arg4 -> +0x18
 }
 
 // 0x4994F0

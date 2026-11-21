@@ -48,7 +48,7 @@ struct Cond { std::string expr, op; double val; };
 struct Step { std::string name; std::vector<Cond> conds; std::vector<std::string> actions; };
 std::vector<Step>        g_steps;
 std::string              g_script;           // thread name
-int                      g_watchVeh = -1, g_buddyRef = -1, g_stall = 600, g_maxAnswers = 12;
+int                      g_watchVeh = -1, g_buddyRef = -1, g_stall = 600, g_maxAnswers = 12; int g_nextStall = 0;
 bool                     g_loaded = false, g_started = false, g_done = false, g_failed = false;
 std::FILE*               g_out = nullptr;
 void                   (*g_push)(const char*, bool) = nullptr;
@@ -412,7 +412,11 @@ bool NotInCarGuard(const CRunningScript* s, const Rec& r) {
     if (r.waitAfter && !r.jumped && !std::getenv("NOTSA_MDRIVER_NOWAITNOTGUARD")) return false; // CR22: the true branch of the NOT-in-car test is the WAIT itself (`WHILE NOT IS_CHAR_IN_CAR`, 13): the script waits for the car, it is no guard
     const auto v = VerdictOf(s, r); return v == Verdict::Guard || v == Verdict::GoesOn;
 }
-bool AnyGuard(const Rec& r) { return IsPlayerGuard(r) || KillRefusal(g_thread, r) || NotInCarGuard(g_thread, r); }
+bool ButtonGuard(const Rec& r) { // CR24 (10 BEEFY BARON): a plain IS_BUTTON_PRESSED whose true branch ends in the mission's failure (directly or through a fail flag) is a guard: the driver never presses that button (here: the RC plane's self-destruct after 4 s of hovering; the mission is passed by surviving the timer)
+    if ((r.raw & 0x7FFF) != 0x00E1 || (r.raw & 0x8000) || !g_thread || std::getenv("NOTSA_MDRIVER_NOBUTTONGUARD")) return false;
+    return VerdictOf(g_thread, r) == Verdict::Guard;
+}
+bool AnyGuard(const Rec& r) { return IsPlayerGuard(r) || KillRefusal(g_thread, r) || NotInCarGuard(g_thread, r) || ButtonGuard(r); }
 
 std::string KeyName(const std::string& k) {
     static const std::pair<const char*, const char*> m[] = { { "Enter", "return" }, { "Space", "space" }, { "Escape", "escape" }, { "ShiftLeft", "lshift" }, { "ControlLeft", "lctrl" }, { "ArrowUp", "up" }, { "ArrowDown", "down" }, { "ArrowLeft", "left" }, { "ArrowRight", "right" }, { "Tab", "tab" } };
@@ -628,6 +632,14 @@ std::vector<std::string> EnterCarActions(CVehicle* car) {
     float dx = door.x - cx[pick], dy = door.y - cy[pick]; const float len = std::hypot(dx, dy) ? (float)std::hypot(dx, dy) : 1.f; dx /= len; dy /= len;
     return { "emit mdped:" + F(cx[pick]) + ":" + F(cy[pick]) + ":" + F(car->GetPosition().z + 0.2f) + ":" + F(std::atan2(-dx, dy)) + ":0", "wait 40", "key down return", "wait 1", "key up return", "waituntil invehicle == 1 600", "emit mdwarpin:" + std::to_string(GetVehiclePool()->GetRef(car)) };
 }
+CVehicle* SphereTarget(int centreHandle, int model) { // CR24: the car the game's own GET_RANDOM_CAR_IN_SPHERE_NO_SAVE would pick for a sphere centred on this vehicle (appearance 1/2, not a law enforcer, wanted model, CanBeDeleted: the mission's decoy is refused), nearest first
+    auto* cv = CPools::GetVehicle(centreHandle); CVehicle* best = nullptr; float bd = 1e9f;
+    if (cv) for (auto& vv : GetVehiclePool()->GetAllValid()) {
+        if (&vv == cv || (vv.GetVehicleAppearance() != 1 && vv.GetVehicleAppearance() != 2) || vv.vehicleFlags.bIsLawEnforcer || (model >= 0 && (int)(int16_t)vv.m_nModelIndex != model) || !vv.CanBeDeleted()) continue;
+        const float dd = (vv.GetPosition() - cv->GetPosition()).Magnitude(); if (dd < bd) { bd = dd; best = &vv; }
+    }
+    return best;
+}
 void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass / bad verb)
     const Row& row = *d.row; const int cop = d.op;
     auto F_ = [&](size_t i) -> float { return i < d.args.size() ? (float)d.args[i].n : 0.f; };
@@ -691,6 +703,14 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     if (v == "warpto_handle") {
         const int h = I_(0); CEntity* e = EntityOfHandle(h, cop);
         if (!e) { QueueActions({}, 0); return; }
+        if (e == (CEntity*)c && c && d.cond && !std::getenv("NOTSA_MDRIVER_NOFETCH")) { // CR24 (14 CLEANING THE HOOD: `NOT LOCATE_CHAR_ANY_MEANS_CHAR_3D(Sweet, CJ, 30 m)`): the target of the locate IS CJ and the tested char is another one: that char is the one that has to move (to CJ), as LocatedOther does for the place locates; CJ warping onto himself changes nothing
+            const auto h0 = ArgInt(*d.cond, 0);
+            if (h0) if (auto* oth = CPools::GetPed((int)*h0); oth && oth != c) {
+                const CVector cp = c->GetPosition(); const bool veh = oth->bInVehicle && oth->m_pVehicle; const CVector fw = c->bInVehicle && c->m_pVehicle ? c->m_pVehicle->GetForward() : c->GetForward();
+                const CVector q = cp - fw * (veh ? 8.f : 2.f);
+                QueueActions({ "emit mdwother:0:" + std::to_string((int)*h0) + ":" + F(q.x) + ":" + F(q.y) + ":" + F(cp.z) }, row.settle); return;
+            }
+        }
         const auto pos = e->GetPosition();
         if (auto* o = CPools::GetObject(h); o && o->objectFlags.bIsLiftable && c && !c->GetEntityThatThisPedIsHolding()) { // CR4: default on (was AD3-only): stand 1.5 m before a liftable object and press the pick-up key
             QueueActions({ "standobj " + std::to_string(h) + " 1.5", "wait 10", "key down return", "wait 1", "key up return", "wait 90" }, row.settle); return;
@@ -715,14 +735,13 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     }
     if (v == "damageobj") { QueueActions({ "emit mddmgobj:" + std::to_string(I_(0)) }, row.settle); return; } // CR22: HAS_OBJECT_BEEN_DAMAGED(obj): CJ damages the object (16 NINES AND AK'S shooting range)
     if (v == "tosphere") { // CR24: the vehicle at the centre of a GET_RANDOM_CAR_IN_SPHERE search is moved next to the nearest car the game's own search would accept (appearance 1/2, not a law enforcer, wanted model, CanBeDeleted: the mission's decoy is refused), 8 m above it
-        auto* cv = CPools::GetVehicle(g_sphCur.veh); CVehicle* best = nullptr; float bd = 1e9f;
-        if (cv) for (auto& vv : GetVehiclePool()->GetAllValid()) {
-            if (&vv == cv || (vv.GetVehicleAppearance() != 1 && vv.GetVehicleAppearance() != 2) || vv.vehicleFlags.bIsLawEnforcer || (g_sphCur.model >= 0 && (int)(int16_t)vv.m_nModelIndex != g_sphCur.model) || !vv.CanBeDeleted()) continue;
-            const float dd = (vv.GetPosition() - cv->GetPosition()).Magnitude(); if (dd < bd) { bd = dd; best = &vv; }
-        }
+        CVehicle* best = SphereTarget(g_sphCur.veh, g_sphCur.model);
         if (!best) { QueueActions({}, row.settle); return; }
-        const auto bp = best->GetPosition();
-        QueueActions({ "emit mdwother:1:" + std::to_string(g_sphCur.veh) + ":" + F(bp.x) + ":" + F(bp.y) + ":" + F(bp.z + 8.f) }, row.settle); return;
+        // the search needs the car within the radius NOW (warp 1: on top of it); the script holds the remote vehicle for 4 s before the bomb button counts, and a cruising car is gone by then: warp 2 puts the vehicle where the car will be at the end of the hold (position + velocity * 4.3 s), the next decision comes 128 frames later
+        const auto bp = best->GetPosition(); const CVector vel = best->m_vecMoveSpeed * 50.f * 4.3f; const bool moving = vel.Magnitude() > 3.f && !std::getenv("NOTSA_MDRIVER_NOINTERCEPT");
+        std::vector<std::string> acts{ "emit mdwother:1:" + std::to_string(g_sphCur.veh) + ":" + F(bp.x) + ":" + F(bp.y) + ":" + F(bp.z + 3.f) };
+        if (moving) { acts.push_back("wait 8"); acts.push_back("emit mdtosphere:" + std::to_string(g_sphCur.veh) + ":" + std::to_string(g_sphCur.model)); }
+        QueueActions(acts, 0); g_nextStall = 128; return;
     }
     if (v == "tagarea") { QueueActions({ "emit mdtag:" + F(g_tagRect[0]) + ":" + F(g_tagRect[1]) + ":" + F(g_tagRect[2]) + ":" + F(g_tagRect[3]) }, row.settle); return; } // CR22: the script waits for the tagged percentage of an area: spray every tag of it (13 TAGGING UP TURF)
     if (v == "enterarea") { // CR23: stand on the entrance marker of the nearest exterior entry exit (area 0) whose linked interior side is in area g_enterArea (CEntryExitManager does the rest: fade, area switch)
@@ -826,9 +845,9 @@ void TickGeneric() {
         static float s_hp = -1.f; auto* v = Cj()->bInVehicle ? Cj()->m_pVehicle : nullptr;
         if (v && v->m_fHealth != s_hp) { if (s_hp >= 0.f && v->m_fHealth < s_hp) notsa::standalone::Fixups::Log("[hplog] f%d hp %.0f->%.0f pos=%.1f,%.1f,%.1f spd=%.3f water=%d drown=%d fire=%d wpn=%d dmgEnt=%d inv=%d shooter=%s", fr, s_hp, v->m_fHealth, v->GetPosition().x, v->GetPosition().y, v->GetPosition().z, v->m_vecMoveSpeed.Magnitude(), (int)v->physicalFlags.bTouchingWater, (int)v->vehicleFlags.bIsDrowning, v->m_pFire ? 1 : 0, (int)v->m_nLastWeaponDamageType, v->m_pLastDamageEntity ? (int)v->m_pLastDamageEntity->GetType() : -1, (int)v->physicalFlags.bInvulnerable, ShooterDesc(v->m_pLastDamageEntity).c_str()); s_hp = v->m_fHealth; }
     }
-    if (static const bool xl = std::getenv("NOTSA_MDRIVER_ENEXLOG") != nullptr; xl && Cj() && fr % 25 == 0 && fr > 16400 && fr < 17600) { // CR23: debug: why does standing on an entrance marker not start the transition
+    if (static const bool xl = std::getenv("NOTSA_MDRIVER_ENEXLOG") != nullptr; xl && Cj() && fr % 25 == 0 && fr > (std::getenv("NOTSA_MDRIVER_ENEXFROM") ? std::atoi(std::getenv("NOTSA_MDRIVER_ENEXFROM")) : 16400) && fr < 99999) { // CR23: debug: why does standing on an entrance marker not start the transition
         auto* me = Cj(); const auto pp = me->GetPosition(); std::string tk; auto& tm = me->GetIntelligence()->m_TaskMgr; for (int ti = 0; ti < 5; ti++) if (auto* t = tm.GetTaskPrimary(ti)) { tk += " P" + std::to_string(ti) + ":"; for (auto* tt = t; tt; tt = tt->GetSubTask()) tk += std::to_string((int)tt->GetTaskType()) + ">"; }
-        for (auto& ex : CEntryExitManager::GetPool()->GetAllValid()) { if (std::strncmp(ex.m_szName, "CSCHP", 5) || ex.m_nArea != 0) continue; const auto c = ex.GetPosition(); if ((c - pp).Magnitude() > 30.f) continue;
+        for (auto& ex : CEntryExitManager::GetPool()->GetAllValid()) { if (std::strncmp(ex.m_szName, std::getenv("NOTSA_MDRIVER_ENEXNAME") ? std::getenv("NOTSA_MDRIVER_ENEXNAME") : "CSCHP", std::strlen(std::getenv("NOTSA_MDRIVER_ENEXNAME") ? std::getenv("NOTSA_MDRIVER_ENEXNAME") : "CSCHP")) || ex.m_nArea != 0) continue; const auto c = ex.GetPosition(); if ((c - pp).Magnitude() > 30.f) continue;
             notsa::standalone::Fixups::Log("[enexlog] f%d cj=%.2f,%.2f,%.2f inArea=%d access=%d vis=%d on=%d off=%d clock=%d:%d state=%d active=%p inCtl=%d pstate=%d ctlOff=%d gstate=%d disabled=%d cutscene=%d area=%d tasks=%s", fr, pp.x, pp.y, pp.z, (int)ex.IsInArea(pp), (int)ex.bEnableAccess, (int)ex.IsVisibleByTime(), (int)ex.m_nTimeOn, (int)ex.m_nTimeOff, (int)CClock::GetGameClockHours(), (int)CClock::GetGameClockMinutes(), (int)CEntryExitManager::ms_exitEnterState, (void*)CEntryExitManager::mp_Active, (int)me->IsPedInControl(), (int)me->m_nPedState, (int)CPad::GetPad(0)->DisablePlayerControls, (int)CGameLogic::GameState, (int)CEntryExitManager::ms_bDisabled, (int)CCutsceneMgr::ms_cutsceneProcessing, (int)CGame::currArea, tk.c_str()); }
     }
     if (static const char* ll = std::getenv("NOTSA_MDRIVER_LOGLOCALS"); ll && root && fr % 60 == 0 && Cj()) { // CR23: debug: "n,n,..": script locals that hold a ped or vehicle handle: model, position, distance to CJ; and (CARSLOG=1) the vehicles within 150 m of CJ by model
@@ -866,7 +885,8 @@ void TickGeneric() {
     else if (root->m_IP == g_lastIp) g_sameCount++;
     else { g_sameCount = 0; g_lastIp = root->m_IP; }
     if (g_sameCount >= g_stall) for (auto& r : g_recs) if (r->waitSeq >= g_waitSeq - 3 && (r->raw & 0x7FFF) == 0x010F && r->cond == 0) { if (auto* w = FindPlayerWanted()) if (w->m_WantedLevel != eWantedLevel::WANTED_CLEAN) { w->SetWantedLevel(eWantedLevel::WANTED_CLEAN); g_sameCount = 0; return; } break; } // CR11: as drive.ts:309 (at the stall threshold, then no decide this round; level only): // CR9: the thread waits for the wanted level to drop (SWEET4 ip 0x45e7 after the second pay n spray stage; the exe decays above 1 star only in the countryside, a real player drives into the pay n spray = ClearWantedLevelAndGoOnParole 0x44AC16): clear it, as the TS port does implicitly
-    if (g_sameCount < g_stall) return;
+    if (g_sameCount < (g_nextStall > 0 ? g_nextStall : g_stall)) return;
+    g_nextStall = 0; // CR24: a verb may ask for an early next decision (the bomb run of the remote vehicle: the script's 4 s hold timer)
     const uint32_t at = (uint32_t)(root->m_IP - root->m_BaseIP);
     const uint8_t* ipPtr = root->m_IP;
     g_sameCount = 0;
@@ -1001,6 +1021,11 @@ bool Cmd(const char* name, const std::string& args) {
         const int h = std::atoi(args.c_str()); auto* car = CPools::GetVehicle(std::atoi(args.c_str() + args.find(':') + 1)); auto* oth = CPools::GetPed(h);
         if (car && oth) { oth->GetIntelligence()->FlushImmediately(false); CTaskSimpleCarSetPedInAsPassenger t(car, TARGET_DOOR_FRONT_RIGHT, true, nullptr); t.ProcessPed(oth); g_buddyRef = h; }
         if (std::getenv("NOTSA_MDRIVER_ENTERLOG")) notsa::standalone::Fixups::Log("[enterlog] mdwarppass ped %d=%p car %d=%p -> inVeh %d same %d model %d", h, (void*)oth, std::atoi(args.c_str() + args.find(':') + 1), (void*)car, oth ? (int)oth->bInVehicle : -1, oth ? (int)(oth->m_pVehicle == car) : -1, oth ? (int)oth->m_nModelIndex : -1);
+        return true;
+    }
+    if (!std::strcmp(name, "mdtosphere")) { // CR24: the intercept warp of the remote vehicle: where the nearest qualifying car will be in 4.3 s (position + velocity * 4.3 s, 3 m up)
+        const int h = std::atoi(args.c_str()); const int model = std::atoi(args.c_str() + args.find(':') + 1);
+        if (auto* best = SphereTarget(h, model)) { const CVector p = best->GetPosition() + best->m_vecMoveSpeed * 50.f * 4.3f; notsa::standalone::Fixups::Log("[mdriver] mdtosphere: car %d at %.1f,%.1f,%.1f speed %.1f -> %.1f,%.1f,%.1f", (int)best->m_nModelIndex, best->GetPosition().x, best->GetPosition().y, best->GetPosition().z, best->m_vecMoveSpeed.Magnitude() * 50.f, p.x, p.y, p.z); return Cmd("mdwother", "1:" + std::to_string(h) + ":" + F(p.x) + ":" + F(p.y) + ":" + F(p.z + 3.f)); }
         return true;
     }
     if (!std::strcmp(name, "mddmgobj")) { // CR22: CObject::ObjectDamage, CJ the damager, pistol (the port's object damage path of a bullet hit)

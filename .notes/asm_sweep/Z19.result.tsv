@@ -1,0 +1,134 @@
+exe_addr	function	verdict	note
+0x4B2350	CEventAreaCodes::TakesPriorityOver	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x4B09C0	CEventGunAimedAt::IsCriminalEvent	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x4AC810	CEventGunShot::IsCriminalEvent	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x4B0E80	CEventHealthReallyLow::AffectsPed	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x4B0EC0	CEventHighAngerAtPlayer::AffectsPed	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x4B1640	CEventInteriorUseInfo::IsValid	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x4B16C0	CEventLeanOnVehicle::IsValid	FIXED	null-ped path called itself (infinite recursion); exe inlines CEvent::IsValid; now CEvent::IsValid(ped) (2397079fb)
+0x4B0EA0	CEventLowAngerAtPlayer::AffectsPed	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x4B1700	CEventPassObject::IsValid	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x4AF330	CEventPedToFlee::AffectsPed	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x4AFC50	CEventVehicleThreat::AffectsPed	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x4211B0	CTaskComplex::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x6956A0	CTaskComplexSeekEntityAnyMeansXYOffset::CreateNextSubTask	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x6486F0	CTaskComplexCarSlowBeDraggedOutAndStandUp::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x621C80	CTaskComplexDestroyCar::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x622070	CTaskComplexDestroyCarArmed::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x6300D0	CTaskComplexDie::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x62FCC0	CTaskComplexDieInCar::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x655710	CTaskComplexDiveFromAttachedEntityAndGetUp::ControlSubTask	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x63D030	CTaskComplexDrivePointRoute::CreateFirstSubTask	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x6537A0	CTaskComplexEvasiveDiveAndGetUp::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x6790C0	CTaskComplexFallToDeath::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x66BB00	CTaskComplexFollowPatrolRoute::ControlSubTask	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x694ED0	CTaskComplexFollowPedFootsteps::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x6492E0	CTaskComplexGetOnBoatSeat::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x668E80	CTaskComplexGoToPointAndStandStillAndAchieveHeading::ControlSubTask	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x631E00	CTaskComplexHitByGunResponse::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x653A90	CTaskComplexHitPedWithCar::ControlSubTask	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x66CA30	CTaskComplexInvestigateDisturbance::ControlSubTask	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x622890	CTaskComplexKillPedFromBoat::CreateNextSubTask	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x6210F0	CTaskComplexKillPedOnFootMelee::MakeAbortable	MATCH	MATCH forwarder (m_pSubTask->MakeAbortable)
+0x63BC50	CTaskComplexLeaveBoat::CreateSubTask	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x68BAB0	CTaskComplexPolicePursuit::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x65B050	CTaskComplexPresentIdToCop::CreateFirstSubTask	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x65B070	CTaskComplexPresentIdToCop::ControlSubTask	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x620E00	CTaskComplexReactToAttack::ControlSubTask	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x622170	CTaskComplexRoadRage::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x63C320	CTaskComplexScreamInCarThenLeave::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x63D220	CTaskComplexShuffleSeats::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x65BDC0	CTaskComplexSmartFleePoint::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x65F4C0	CTaskComplexTrackEntity::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x6597C0	CTaskComplexUseWaterCannon::CreateNextSubTask	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x632650	CTaskComplexWaitAtAttractor::CreateFirstSubTask	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x632840	CTaskComplexWaitForDryWeather::CreateNextSubTask	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x632860	CTaskComplexWaitForDryWeather::CreateFirstSubTask	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x683320	CTaskComplexWalkAlongsidePed::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x655790	CTaskComplexWalkRoundFire::CreateNextSubTask	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x664500	CTaskGoToVehicleAndLean::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x648CE0	CTaskSimpleBikeJacked::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x645C50	CTaskSimpleCarAlign::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x646780	CTaskSimpleCarGetIn::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x6472D0	CTaskSimpleCarGetOut::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x646160	CTaskSimpleCarOpenLockedDoorFromOutside::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x646900	CTaskSimpleCarShuffle::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x646C90	CTaskSimpleCarWaitForDoorNotToBeInUse::ProcessPed	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x6346C0	CTaskSimpleClearLookAt::ProcessPed	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x663500	CTaskSimpleGoToPointFine::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x639450	CTaskSimpleIKChain::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x679B60	CTaskSimpleJump::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x635430	CTaskSimpleSetCharDecisionMaker::ProcessPed	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x622B50	CTaskSimpleSetCharIgnoreWeaponRangeFlag::ProcessPed	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x62F660	CTaskSimpleSetKindaStayInSamePlace::ProcessPed	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x61F9B0	CTaskSimpleThrowControl::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x6337A0	CTaskSimpleTogglePedThreatScanner::ProcessPed	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x6355D0	CTaskSimpleWaitUntilAreaCodesMatch::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x6356A0	CTaskSimpleWaitUntilLeaderAreaCodesMatch::MakeAbortable	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x4ADA70	CEventDamage::GetSourceEntity	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x4B2700	CEventDanger::GetSourceEntity	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x4AD3C0	CEventDraggedOutCar::AffectsPedGroup	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x4B1CA0	CEventGotKnockedOverByCar::GetSourceEntity	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x4B09E0	CEventGunAimedAt::ReportCriminalEvent	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x4B8CA0	CEventHandlerHistory::GetCurrentEvent	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x4B8C80	CEventHandlerHistory::GetCurrentEventPriority	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x4B8BF0	CEventHandlerHistory::StoreActiveEvent	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x4B24D0	CEventPlayerCommandToGroup::AffectsPedGroup	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x4B1A70	CEventVehicleDamage::GetSourceEntity	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x69CBC0	CTaskAllocatorKillThreatsDriveby::ProcessGroup	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x61A430	CTaskComplex::SetSubTask	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x463610	CTaskComplexSequence::SetCanBeEmptied	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x636BC0	CTaskComplexSequence::DeRegister	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x6485A0	CTaskComplexCarSlowBeDraggedOut::PrepareVehicleForPedExit	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x678700	CTaskComplexFallAndGetUp::Constructor2	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x6789D0	CTaskComplexFallAndStayDown::Constructor1	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x678A10	CTaskComplexFallAndStayDown::Constructor2	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x684380	CTaskComplexPartnerChat::GetPartnerSequence	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x682440	CTaskComplexPartnerDeal::GetPartnerSequence	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x683120	CTaskComplexPartnerShove::GetPartnerSequence	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x68BD90	CTaskComplexPolicePursuit::ClearPursuit	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x622BC0	CTaskComplexSeekCoverUntilTargetDead::Constructor_Ped	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x622B80	CTaskComplexSeekCoverUntilTargetDead::Constructor_Grp	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x634A40	CTaskComplexUseMobilePhone::Quit	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x6331F0	CTaskComplexUsePairedAttractor::SetPartnership	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x633220	CTaskComplexUsePairedAttractor::ClearPartnership	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x658820	CTaskComplexWanderMedic::ScanForStuff	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x660F60	CTaskGoToVehicleAndLean::DoTidyUp	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x61FF30	CTaskSimpleBeHitWhileMoving::FinishAnimCB	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x61FD10	CTaskSimpleBeKickedOnGround::FinishAnimCB	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x647700	CTaskSimpleCarJumpOut::FinishAnimCarJumpOutCB	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x6461A0	CTaskSimpleCarOpenLockedDoorFromOutside::FinishAnimCarOpenLockedDoorFromOutsideCB	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x646970	CTaskSimpleCarShuffle::FinishAnimCarShuffleCB	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x6483A0	CTaskSimpleCarSlowBeDraggedOut::FinishAnimCarSlowBeDraggedOutCB	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x67A380	CTaskSimpleClimb::DeleteAnimCB	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x62FC10	CTaskSimpleDie::FinishAnimDieCB	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x6786B0	CTaskSimpleFall::FinishFallAnimCB	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x621BE0	CTaskSimpleGangDriveBy::FinishDriveByAnimCB	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x658990	CTaskSimpleGiveCPR::FinishGiveCPRAnimCB	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x65EF00	CTaskSimpleGoToPointFine::Finish	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x653150	CTaskSimpleHitHead::FinishAnimCB	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x634130	CTaskSimpleIKLookAt::GetLookAtOffset	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x678E60	CTaskSimpleInAir::DeleteAnimCB	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x67A020	CTaskSimpleJump::JumpAnimFinishCB	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x6462F0	CTaskSimplePickUpBike::FinishAnimPickUpBikeCB	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x61AC90	CTaskSimpleRunAnimLoopedMiddle::Constructor1	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x631150	CTaskSimpleSitDown::FinishAnimSitDownCB	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x631400	CTaskSimpleStandUp::FinishAnimStandUpCB	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x68AA50	CTaskSimpleSwim::DestroyFxSystem	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x61F890	CTaskSimpleThrowProjectile::FinishAnimThrowProjectileCB	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x61E0A0	CTaskSimpleUseGun::PlayerPassiveControlGun	MATCH	compared against exe body: flags/compares/branches/field offsets
+0x68BE70	CTaskComplexKillCriminal::Constructor	MATCH	ctor sample
+0x460C80	CTaskComplexWanderCop::Constructor	MATCH	ctor sample
+0x63BF90	CTaskComplexLeaveCarAndFlee::Constructor	MATCH	ctor sample
+0x63B030	CTaskComplexEnterCarAsPassengerTimed::Constructor	MATCH	ctor sample
+0x6541B0	CTaskComplexWalkRoundCar::Constructor	MATCH	ctor sample (bitfield nibbles ok)
+0x6348A0	CTaskComplexUseMobilePhone::Constructor	MATCH	ctor sample
+0x620B00	CTaskComplexReactToAttack::Constructor	MATCH	ctor sample
+0x65C900	CTaskComplexFleeShooting::Constructor	MATCH	ctor sample
+0x622180	CTaskComplexKillAllThreats::Constructor	MATCH	ctor sample
+0x6949A0	CTaskComplexFollowLeaderInFormation::Constructor	MATCH	ctor sample
+0x668790	CTaskComplexGoToPointAiming::Constructor	MATCH	ctor sample
+0x63B7D0	CTaskComplexStealCar::Constructor	MATCH	ctor sample
+0x63B430	CTaskComplexLeaveCarAsPassengerWait::Constructor	MATCH	ctor sample
+0x66F450	CTaskComplexWander::Constructor	MATCH	ctor sample (flags nibble fixed earlier)
+0x61AC90	CTaskSimpleRunAnimLoopedMiddle::Constructor1	MATCH	ctor sample (bitfield)

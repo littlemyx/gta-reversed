@@ -413,8 +413,11 @@ Dec Decide(const std::vector<RecP>& loop, int attempt) {
     std::vector<RecP> falses;
     for (size_t k = loop.size(); k-- > 0;) { const auto& r = loop[k]; if (r->cond == 0 && !AnyGuard(*r) && !satisfied.count(r->p)) falses.push_back(r); }
     if (falses.empty() && blockers.empty()) { d.reason = "no condition evaluated false in the loop (the guards left out)"; return d; }
+    for (int pass = 0; pass < 2; pass++) {
+    if (pass == 1 && blockers.empty()) break;
     for (size_t i = 0; i < g_rows.size(); i++) {
         const auto& row = g_rows[i];
+        if (pass == 0 && !blockers.empty() && row.action == "wait") continue; // CR19: a wait row does not shadow the blockers of the wait group
         for (auto& c : falses) {
             if (!Matches(row, *c)) continue;
             struct Opt { RecP c; std::optional<std::vector<RArg>> args; }; std::vector<Opt> opts; std::set<std::string> seen;
@@ -424,7 +427,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt) {
             d.act = true; d.row = &row; d.rowIdx = (int)i; d.cond = pick.c; d.args = pick.args.value_or(std::vector<RArg>{}); d.op = pick.c->raw & 0x7FFF; return d;
         }
     }
-    for (size_t i = 0; i < g_rows.size(); i++) { // CR19: the true NOT-form members of the wait OR group (last member first)
+    if (pass == 0 && !blockers.empty()) for (size_t i = 0; i < g_rows.size(); i++) { // CR19: the true NOT-form members of the wait OR group (last member first)
         const auto& row = g_rows[i]; if (row.match == 2 || !(row.action == "pedwarp" || row.action == "vehwarp" || row.action == "midpoint" || row.action == "entercar")) continue;
         for (size_t k = blockers.size(); k-- > 0;) {
             const auto& c = blockers[k]; if (row.op != (c->raw & 0x7FFF)) continue;
@@ -432,6 +435,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt) {
             d.act = true; d.row = &row; d.rowIdx = (int)i; d.cond = c; d.args = *a; d.op = c->raw & 0x7FFF; return d;
         }
     }
+    } // pass: 0 = (wait rows skipped, blockers), 1 = the wait rows again
     // a TRUE NOT-form locate in a wait loop (92 CASIN10): the plain row of the same opcode when it is a warp
     for (size_t i = 0; i < g_rows.size(); i++) {
         const auto& row = g_rows[i]; if (row.match == 2 || !(row.action == "pedwarp" || row.action == "vehwarp" || row.action == "midpoint")) continue;

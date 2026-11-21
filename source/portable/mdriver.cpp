@@ -407,6 +407,7 @@ bool KillRefusal(const CRunningScript* s, const Rec& r) { // true = the driver m
 }
 bool NotInCarGuard(const CRunningScript* s, const Rec& r) {
     const int op = r.raw & 0x7FFF; if (!(r.raw & 0x8000) || (op != 0x00DB && op != 0x00DF)) return false;
+    if (r.waitAfter && !r.jumped && !std::getenv("NOTSA_MDRIVER_NOWAITNOTGUARD")) return false; // CR22: the true branch of the NOT-in-car test is the WAIT itself (`WHILE NOT IS_CHAR_IN_CAR`, 13): the script waits for the car, it is no guard
     const auto v = VerdictOf(s, r); return v == Verdict::Guard || v == Verdict::GoesOn;
 }
 bool AnyGuard(const Rec& r) { return IsPlayerGuard(r) || KillRefusal(g_thread, r) || NotInCarGuard(g_thread, r); }
@@ -480,7 +481,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt) {
         if (lr->hasBranch && !lr->jumped && lr->waitAfter) {
             std::vector<RecP> mem; for (auto& r : loop) if (r->fall == lr->fall && r->waitSeq == lr->waitSeq) mem.push_back(r);
             const uint8_t* f = mem.front()->p;
-            if (f[-4] == 0xD6 && f[-3] == 0x00 && f[-2] == 0x04 && f[-1] >= 21 && f[-1] <= 27)
+            if (f[-4] == 0xD6 && f[-3] == 0x00 && f[-2] == 0x04 && ((f[-1] >= 21 && f[-1] <= 27) || (f[-1] <= 7 && !std::getenv("NOTSA_MDRIVER_NOANDBLOCK")))) // CR22: AND groups (and singletons: `WHILE NOT IS_CHAR_IN_CAR`, 13) that fell into the WAIT too: their TRUE NOT-form members are the blockers
                 for (auto& m : mem) if (m->raw & 0x8000) { if (m->cond == 0) satisfied.insert(m->p); else if (!AnyGuard(*m)) blockers.push_back(m); }
         }
     }
@@ -759,7 +760,7 @@ void TickGeneric() {
         auto* me = Cj(); const auto pp = me ? me->GetPosition() : CVector{}; notsa::standalone::Fixups::Log("[bikelog] f%d cj=%d,%d%s", fr, (int)pp.x, (int)pp.y, o.c_str());
     }
     if (static const bool el = std::getenv("NOTSA_MDRIVER_ENTERLOG") != nullptr; el && Cj() && (fr % 10 == 0 || (std::getenv("NOTSA_MDRIVER_ENTERLOG")[0] == (char)50 && fr > 5880))) { // CR19: debug: CJ's task chain + cars within 12 m (door lock, status, driver) every 10 frames
-        if (fr % 200 == 0) { std::string th; for (auto* t = CTheScripts::pActiveScripts; t; t = t->m_pNext) { char n[9]{}; std::memcpy(n, t->m_szName, 8); th += std::string(" ") + n; } int32_t v676 = 0; std::memcpy(&v676, CTheScripts::ScriptSpace.data() + 2704, 4); notsa::standalone::Fixups::Log("[enterlog] f%d g676=%d threads:%s", fr, v676, th.c_str()); }
+        if (fr % 200 == 0) { std::string th; for (auto* t = CTheScripts::pActiveScripts; t; t = t->m_pNext) { char n[9]{}; std::memcpy(n, t->m_szName, 8); th += std::string(" ") + n; } int32_t v676 = 0, v409 = 0, v418 = 0, v34 = 0, v40 = 0, v713 = 0; std::memcpy(&v676, CTheScripts::ScriptSpace.data() + 2704, 4); std::memcpy(&v409, CTheScripts::ScriptSpace.data() + 409 * 4, 4); std::memcpy(&v418, CTheScripts::ScriptSpace.data() + 418 * 4, 4); std::memcpy(&v34, CTheScripts::ScriptSpace.data() + 34 * 4, 4); std::memcpy(&v40, CTheScripts::ScriptSpace.data() + 40 * 4, 4); std::memcpy(&v713, CTheScripts::ScriptSpace.data() + 713 * 4, 4); notsa::standalone::Fixups::Log("[enterlog] f%d g676=%d $409(onmission)=%d $418=%d $713=%d $34(hour)=%d $40(area)=%d currArea=%d threads:%s", fr, v676, v409, v418, v713, v34, v40, (int)CGame::currArea, th.c_str()); }
         auto* me = Cj(); const auto pp = me->GetPosition(); std::string tk; auto& tm = me->GetIntelligence()->m_TaskMgr;
         for (int ti = 0; ti < 5; ti++) { if (auto* t = tm.GetTaskPrimary(ti)) { tk += " P" + std::to_string(ti) + ":"; for (auto* tt = t; tt; tt = tt->GetSubTask()) tk += std::to_string((int)tt->GetTaskType()) + ">"; } }
         for (int ti = 0; ti < 6; ti++) { if (auto* t = tm.GetTaskSecondary((eSecondaryTask)ti)) tk += " S" + std::to_string(ti) + ":" + std::to_string((int)t->GetTaskType()); }

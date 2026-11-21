@@ -60,16 +60,20 @@ bool DoesObjectExists(CObject* object) {
     return object != nullptr;
 }
 
-void MarkObjectNoLongerNeeded(CRunningScript& S, CObject* object) {
-    CTheScripts::CleanUpThisObject(object);
+// 452 MARK_OBJECT_AS_NO_LONGER_NEEDED (exe 0x47D78B..0x47D7CB): CleanUpThisObject(pool lookup, may be null), then - object or not - CMissionCleanup::RemoveEntityFromList
+// with the SCRIPT HANDLE (ScriptParams[0]), type OBJECT (3), when the script uses mission cleanup. The port skipped the removal (and DONT_REMOVE_OBJECT dereferenced)
+// for a stale handle, leaving its mission-cleanup entry behind.
+void MarkObjectNoLongerNeeded(CRunningScript& S, int32 handle) {
+    CTheScripts::CleanUpThisObject(CPools::GetObject(handle));
 
-    if (object && S.m_UsesMissionCleanup) {
-        CTheScripts::MissionCleanUp.RemoveEntityFromList(*object);
+    if (S.m_UsesMissionCleanup) {
+        CTheScripts::MissionCleanUp.RemoveEntityFromList(handle, MISSION_CLEANUP_ENTITY_TYPE_OBJECT);
     }
 }
 
-void DoNotRemoveObject(CObject& object) {
-    CTheScripts::MissionCleanUp.RemoveEntityFromList(object);
+// 455 DONT_REMOVE_OBJECT (exe 0x47D813): RemoveEntityFromList(ScriptParams[0], OBJECT), no pool lookup, no m_UsesMissionCleanup test
+void DoNotRemoveObject(int32 handle) {
+    CTheScripts::MissionCleanUp.RemoveEntityFromList(handle, MISSION_CLEANUP_ENTITY_TYPE_OBJECT);
 }
 
 CVector GetObjectCoordinates(CObject& object) {

@@ -641,7 +641,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             if (c->raw != 0x0023 || c->cond != 0 || c->args.size() < 2 || AnyGuard(*c)) continue; auto* me = Cj(); if (!me) continue;
             const float lim = AF(c->args[0]), dv = AF(c->args[1]); if (!(dv > lim) || !(dv < 2000.f)) continue;
             CPed* hit = nullptr; for (auto& pd : GetPedPool()->GetAllValid()) { if (&pd == me || pd.m_fHealth <= 0.f) continue; const float dd = (pd.GetPosition() - me->GetPosition()).Magnitude(); if (std::fabs(dd - dv) < 1.5f) { if (hit) { hit = nullptr; break; } hit = &pd; } }
-            if (!hit) continue; static const Row kDist{ 0x0023, 0, "distance to CJ over the limit", "distfetch", {}, 60 };
+            if (!hit) continue; static std::map<int, int> distTry; if (++distTry[CPools::GetPedRef(hit)] > 2) continue; /* a ped brought twice and the compare still false: not the answer (19 CESAR: 8 futile warps) */ static const Row kDist{ 0x0023, 0, "distance to CJ over the limit", "distfetch", {}, 60 };
             d.act = true; d.row = &kDist; d.rowIdx = -15; d.cond = c; d.op = 0x0023; RArg ha; ha.n = CPools::GetPedRef(hit); d.args = { ha }; return d;
         }
         for (auto& c : falses) { // CR23 (16 NINES AND AK'S: `WHILE @86 != 15` after the Binco blip): a false plain `var == N` of a GET_AREA_VISIBLE result variable: walk in through the entrance of interior N (an entry exit whose interior side is in area N)
@@ -1234,7 +1234,7 @@ void TickGeneric() {
     if (d.row->action == "kill" && !d.args.empty()) if (auto* kp = CPools::GetPed((int)d.args[0].n)) notsa::standalone::Fixups::Log("[mdriver] kill target h=%d model %d type %d hp %.0f pos %.0f,%.0f,%.0f (CJ %.0f,%.0f)", (int)d.args[0].n, (int)kp->m_nModelIndex, (int)kp->m_nPedType, kp->m_fHealth, kp->GetPosition().x, kp->GetPosition().y, kp->GetPosition().z, Cj() ? Cj()->GetPosition().x : 0.f, Cj() ? Cj()->GetPosition().y : 0.f); // CR27 debug log
     if ((d.row->action == "entercar" || d.row->action == "vehwarp") && !d.args.empty() && d.cond && !d.cond->args.empty()) { const int ch = (int)(int32_t)d.cond->args[0].bits; if (CPools::GetVehicle(ch)) g_usedCars.insert(ch); } // CR27: the car of an entercar / `LOCATE_CAR` vehwarp answer
     DispatchRow(d);
-    if (d.row->action == "key" && d.op == 0x00E1 && !g_auxAnswered && !earlyAux && !std::getenv("NOTSA_MDRIVER_NOFASTKEY") && g_attemptsAt[ipPtr] >= 3 && g_nextStall == 0) { g_fastDec = d; g_fastIp = ipPtr; g_fastLeft = 60; g_fastNext = true; g_nextStall = 45; } // CR30 (25): a button poll answered after the key deferral: repeat the press every 30 frames while the thread stays at the wake ip (40 repeats at most)
+    if (d.row->action == "key" && d.op == 0x00E1 && !g_auxAnswered && !earlyAux && !std::getenv("NOTSA_MDRIVER_NOFASTKEY") && g_attemptsAt[ipPtr] >= 3 && g_nextStall == 0) { g_fastDec = d; g_fastIp = ipPtr; g_fastLeft = 20; g_fastNext = true; g_nextStall = 45; } // CR30 (25): a button poll answered after the key deferral: repeat the press every 30 frames while the thread stays at the wake ip (20 repeats at most)
     if (g_auxAnswered) { g_auxAnswered = false; if (g_nextStall == 0 && !std::getenv("NOTSA_MDRIVER_NOAUXFAST")) { g_nextStall = 90; g_auxEarly = true; } } // CR27: a menu has several steps: the next decision after 90 frames, not 600
 }
 } // namespace

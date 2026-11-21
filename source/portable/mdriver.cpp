@@ -905,6 +905,19 @@ void ShootDead() { // actions.ts shootAttackers: every ped (not a buddy type) wh
     }
     for (int h : victims) Emit("mdkillped:" + std::to_string(h));
 }
+// CR27 (12 RYDER, 19 CESAR VIALPANDO): the awaited global is written by a STREAMED script thread (barber.scm: the chair + haircut menu, carmod1.scm: the mod-shop menu), whose locate / button conditions nobody answers. Every streamed-script thread's conditions are recorded
+// like the root's (AuxBegin/AuxEnd, called from scmtrace::Run for threads outside the traced tree); when the root wait stands (the wait row answered twice) and such a thread writes a global the root's pass compares, Decide() runs over THAT thread's last passes.
+struct AuxState { std::deque<RecP> recs; std::vector<RecP> group, pending; bool fallPending = false; int waitSeq = 0; std::map<uint16_t, bool> writes; };
+std::map<const CRunningScript*, AuxState> g_aux;
+const uint8_t* g_auxIp = nullptr; uint16_t g_auxRaw = 0;
+bool IntCompareOp(int op) { return (op >= 0x0018 && op <= 0x0041) || (op >= 0x04A3 && op <= 0x04B7) || (op >= 0x07D6 && op <= 0x07D9); }
+bool WritesGlobal(const CRunningScript* t, uint16_t off) { // a command of the thread's code whose FIRST operand is the global variable `off` (not a compare): a static byte scan of the streamed script
+    auto& st = g_aux[t]; if (auto it = st.writes.find(off); it != st.writes.end()) return it->second;
+    int32_t size = 0; for (auto& si : CTheScripts::StreamedScripts.m_aScripts) if (si.m_StreamedScriptMemory && si.m_StreamedScriptMemory == t->m_BaseIP) size = si.m_SizeInBytes;
+    bool w = false; const uint8_t* b = t->m_BaseIP;
+    for (int32_t i = 0; i + 5 <= size && !w; i++) if (b[i + 2] == 2 && *(const uint16_t*)(b + i + 3) == off) { const int op = *(const uint16_t*)(b + i) & 0x7FFF; if (op > 0 && op < 0x0200 && !IntCompareOp(op) && op != 0x0001 && op != 0x0002 && op != 0x004D && op != 0x0050 && op != 0x00D6) w = true; }
+    return st.writes[off] = w;
+}
 static float g_passStat0 = 0.f;
 static std::map<int,int> g_padHold; // CR4: button -> frames left
 static std::string ShooterDesc(CEntity* e) { // CR18: debug: model, vehicle (model, driver or passenger), distance to CJ, active weapon of the last damager of CJ's car
@@ -1037,6 +1050,22 @@ void TickGeneric() {
         Dec d3 = Decide(big, g_attemptsAt[ipPtr]);
         if (d3.act && d3.row->action != "wait") { notsa::standalone::Fixups::Log("[mdriver] frame %d big window (%zu -> %zu records): %s", fr, loop.size(), big.size(), d3.row->name.c_str()); d = d3; }
     }
+    if (d.act && d.row->action == "wait" && g_attemptsAt[ipPtr] >= 2 && !std::getenv("NOTSA_MDRIVER_NOAUX")) { // CR27: see AuxState: the root's wait compares a global that a streamed script thread writes: answer THAT thread's conditions (locate / button of the menu) with the same rows; a non-wait answer wins
+        std::set<uint16_t> gl; for (auto& r : g_recsBig) { if (r->waitSeq < g_waitSeq - 3 || !IntCompareOp(r->raw & 0x7FFF)) continue; for (int k = 0; k < 2; k++) if ((r->vref[k] >> 16) == 2) gl.insert((uint16_t)(r->vref[k] & 0xFFFF)); }
+        for (auto* t = CTheScripts::pActiveScripts; t && !gl.empty(); t = t->m_pNext) {
+            auto it = g_aux.find(t); if (it == g_aux.end() || it->second.recs.empty()) continue;
+            bool wr = false; for (const auto g : gl) wr = wr || WritesGlobal(t, g); if (!wr) continue;
+            std::vector<RecP> al; for (auto& r : it->second.recs) if (r->waitSeq >= it->second.waitSeq - 3) al.push_back(r);
+            if (const char* lg = std::getenv("NOTSA_MDRIVER_AUXLOG")) { // debug (no control flow): the false conditions of the aux thread's pass (ip/opcode/NOT/args) + the globals "off,off,.." of the env value
+                std::string o; for (auto& r : al) { if (r->cond != 0) continue; char q[96]; std::snprintf(q, sizeof q, " %x/%04X%s(", (unsigned)(r->p - t->m_BaseIP), r->raw & 0x7FFF, (r->raw & 0x8000) ? "!" : ""); o += q; for (size_t k = 0; k < r->args.size() && k < 4; k++) { std::snprintf(q, sizeof q, "%s%d", k ? "," : "", (int)r->args[k].bits); o += q; } o += ")"; }
+                std::string gv; for (const char* c = lg; *c;) { const int off = std::atoi(c); while (*c && *c != ',') c++; if (*c == ',') c++; int32_t v = 0; if (GlobalOk(off)) std::memcpy(&v, CTheScripts::ScriptSpace.data() + off, 4); gv += " $" + std::to_string(off) + "=" + std::to_string(v); }
+                notsa::standalone::Fixups::Log("[auxlog] f%d falses:%s |%s", fr, o.c_str(), gv.c_str());
+            }
+            Dec d4 = Decide(al, g_attemptsAt[ipPtr]);
+            notsa::standalone::Fixups::Log("[mdriver] frame %d aux thread %.8s (%zu records, globals %zu): %s", fr, t->m_szName, al.size(), gl.size(), d4.act ? d4.row->name.c_str() : d4.reason.c_str());
+            if (d4.act && d4.row->action != "wait") { d = d4; break; }
+        }
+    }
     if (d.act && d.row->action == "wait" && !std::getenv("NOTSA_MDRIVER_NOPICKUP")) { // CR26 (22 BURNING DESIRE): the same wait answer was given twice in a row at this wake ip (no progress in between) and a plain HAS_PICKUP_BEEN_COLLECTED is false in the last passes: the player walks onto the pickup (a wait row after progress, as in 18, leaves it alone: its pickup is not the stage's)
         const auto wk = std::to_string(at) + ":" + std::to_string(d.rowIdx) + ":" + RKey(d.args); const auto wi = g_noProgress.find(wk);
         if (wi != g_noProgress.end() && wi->second >= 2) {
@@ -1115,6 +1144,28 @@ void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int co
         return;
     }
     if (op >= 0x00BA && op <= 0x00BD) g_lastLabel.assign(lab, strnlen(lab, 8));
+}
+bool AuxBegin(CRunningScript* s) {
+    static const bool off = std::getenv("NOTSA_MDRIVER_NOAUX") != nullptr;
+    if (off || !Generic() || !g_loaded || !g_started || !s || s == notsa::scmtrace::Root()) return false;
+    const uint8_t* b = s->m_BaseIP, *sp = CTheScripts::ScriptSpace.data(); if (!b || (b >= sp && b < sp + CTheScripts::ScriptSpace.size())) return false; // streamed scripts only
+    g_auxIp = s->m_IP; g_auxRaw = *(const uint16_t*)g_auxIp; return true;
+}
+void AuxEnd(CRunningScript* s, int cond) {
+    auto& st = g_aux[s]; const uint8_t* ptr = g_auxIp; const uint16_t raw = g_auxRaw; const int op = raw & 0x7FFF;
+    if (st.fallPending) { if (op == 0x0001) for (auto& r : st.group) r->waitAfter = true; st.fallPending = false; st.group.clear(); }
+    if (op == 0x0001) st.waitSeq++;
+    else if (op == 0x004D) {
+        const bool jumped = s->m_IP != ptr + 7;
+        for (auto& r : st.pending) { r->hasBranch = true; r->jumped = jumped; r->fall = ptr + 7; r->target = jumped ? s->m_IP : ptr + 7; }
+        if (!jumped) { st.group = st.pending; st.fallPending = true; }
+        st.pending.clear();
+    } else if (cond >= 0) {
+        auto r = std::make_shared<Rec>(); r->p = ptr; r->raw = raw; r->cond = cond; r->waitSeq = st.waitSeq;
+        const int n = Arity(op); r->args = DecodeArgs(s, ptr, n >= 0 ? n : 10);
+        st.recs.push_back(r); if (st.recs.size() > 200) st.recs.pop_front();
+        st.pending.push_back(r); if (st.pending.size() > 12) st.pending.erase(st.pending.begin());
+    }
 }
 bool PadHeld(int button) { auto it = g_padHold.find(button); return it != g_padHold.end() && it->second > 0; }
 void SetKeyPusher(void (*fn)(const char*, bool)) { g_push = fn; }

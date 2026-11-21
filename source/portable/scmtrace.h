@@ -5,6 +5,9 @@
 #pragma once
 #ifdef NOTSA_SCMTRACE
 #include <cstdint>
+#ifdef NOTSA_MDRIVER
+#include "mdriver.h"
+#endif
 class CRunningScript;
 
 namespace notsa::scmtrace {
@@ -18,13 +21,23 @@ void OnEnd(CRunningScript* s);
 //! the executing command evaluated a condition: `state` is the value after the NOT bit (CRunningScript::UpdateCompareFlag)
 void OnCond(bool state);
 bool Traced(const CRunningScript* s);
+//! CR27: the value (after NOT) of the last condition evaluated since AuxReset(), -1 when none
+int AuxCond();
+void AuxReset();
 //! the root (mission) thread while it is alive, else nullptr
 CRunningScript* Root();
 void Begin(CRunningScript* s);
 void End(CRunningScript* s);
 //! runs one command `f()` of script `s` (a CRunningScript::ProcessOneCommand call) and logs it when `s` is in the traced tree
 template<class F> auto Run(CRunningScript* s, F&& f) {
-    if (!Enabled() || !Traced(s)) { return f(); }
+    if (!Enabled()) { return f(); }
+    if (!Traced(s)) {
+#ifdef NOTSA_MDRIVER
+        // CR27: a script thread outside the traced tree (a streamed script such as barber.scm / carmod1.scm, started by main): the MDRIVER watches its conditions too
+        if (notsa::mdriver::AuxBegin(s)) { AuxReset(); auto r = f(); notsa::mdriver::AuxEnd(s, AuxCond()); return r; }
+#endif
+        return f();
+    }
     Begin(s);
     auto r = f();
     End(s);

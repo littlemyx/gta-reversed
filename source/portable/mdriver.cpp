@@ -529,7 +529,11 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         if (!car || !c) { QueueActions({}, row.settle); return; }
         if (v == "entercar" && d.cond && (cop == 0x00DB || cop == 0x0448)) { // MS1 (actions.ts entercar): IS_CHAR_IN_CAR(buddy, car) wants THAT char in the car: set in as a passenger like WARP_CHAR_INTO_CAR_AS_PASSENGER
             const auto h = ArgInt(*d.cond, 0);
-            if (h) if (auto* oth = CPools::GetPed((int)*h)) if (oth != c) { QueueActions({ "emit mdwarppass:" + std::to_string((int)*h) + ":" + std::to_string(I_(0)) }, row.settle); return; }
+            if (h) if (auto* oth = CPools::GetPed((int)*h)) if (oth != c) {
+                // CR19 (58 PHOTO): a member of CJ's group (TASK_COMPLEX_BE_IN_GROUP) follows its leader: set in as a passenger while CJ stands outside it climbs out again. CJ gets into the car first (Enter key / warp), then the buddy is set in
+                const bool follower = oth->GetIntelligence()->m_TaskMgr.GetTaskPrimary(TASK_PRIMARY_PRIMARY) && oth->GetIntelligence()->m_TaskMgr.GetTaskPrimary(TASK_PRIMARY_PRIMARY)->GetTaskType() == TASK_COMPLEX_BE_IN_GROUP;
+                std::vector<std::string> acts; if (follower && !(c->bInVehicle && c->m_pVehicle == car) && !std::getenv("NOTSA_MDRIVER_NOLEADERFIRST")) acts = EnterCarActions(car);
+                acts.push_back("emit mdwarppass:" + std::to_string((int)*h) + ":" + std::to_string(I_(0))); QueueActions(acts, row.settle); return; }
         }
         auto acts = EnterCarActions(car);
         QueueActions(acts, row.settle);

@@ -180,6 +180,9 @@ void OnEnd(CRunningScript* s) {
     if (s == g_cur) { g_endPending = true; return; }
     char b[96]; std::snprintf(b, sizeof b, "E\t%u\t%u\t%s\n", Frame(), it->second.id, Name(s).c_str());
     Line(b);
+#ifdef NOTSA_MDRIVER
+    notsa::mdriver::AuxForget(s);
+#endif
     g_threads.erase(it);
 }
 
@@ -213,7 +216,11 @@ void End(CRunningScript* s) {
     if (std::memcmp(now, g_gsnap.data(), g_gsize) != 0) {
         for (size_t o = 0; o + 4 <= g_gsize; o += 4) {
             uint32_t a, c; std::memcpy(&a, g_gsnap.data() + o, 4); std::memcpy(&c, now + o, 4);
-            if (a != c) { std::snprintf(b, sizeof b, "G\t%u\t%u\t%zu\t", fr, id, o); Line(b); Line(Val(c)); Line("\n"); }
+            if (a != c) { std::snprintf(b, sizeof b, "G\t%u\t%u\t%zu\t", fr, id, o); Line(b); Line(Val(c)); Line("\n");
+#ifdef NOTSA_MDRIVER
+                notsa::mdriver::AuxGlobalWrite(s, (uint32_t)o);
+#endif
+            }
         }
     }
     {
@@ -226,6 +233,9 @@ void End(CRunningScript* s) {
     Line(g_pending); g_pending.clear();
     if (g_endPending) {
         std::snprintf(b, sizeof b, "E\t%u\t%u\t%s\n", fr, id, name.c_str()); Line(b);
+#ifdef NOTSA_MDRIVER
+        notsa::mdriver::AuxForget(s);
+#endif
         g_threads.erase(s);
     }
     g_cur = nullptr; g_curInfo = nullptr; g_endPending = false;

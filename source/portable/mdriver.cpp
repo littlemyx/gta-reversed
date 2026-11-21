@@ -818,6 +818,10 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         if (d.args.size() == 6 && d.cond && cop >= 0x05FC && cop <= 0x0601 && !std::getenv("NOTSA_MDRIVER_NOANGLEDCENTRE")) { // 3D variants: x1 y1 z1 x2 y2 z2 width (width = argument 7)
             if (const auto w = ArgFloat(*d.cond, 7)) { const float a = CGeneral::GetRadianAngleBetweenPoints(F_(0), F_(1), F_(3), F_(4)) + std::numbers::pi_v<float> / 2.f; x += std::sin(a) * (float)*w * 0.5f; y -= std::cos(a) * (float)*w * 0.5f; }
         }
+        if (d.cond && !std::getenv("NOTSA_MDRIVER_NOAREAOTHER")) { // CR29 (22 BURNING DESIRE: `IS_CHAR_IN_AREA_3D(Denise, interior box)` in the OR group that lets the stage go on, CJ standing at the exit locate): the area test is about ANOTHER char (a group member): that ped is moved into the area, not CJ (who would leave his own locate)
+            static const std::set<int> charArea = { 0x00A3, 0x00A4, 0x01A1, 0x01A2, 0x01A3, 0x01A4, 0x01A5, 0x01A6, 0x01A7, 0x01A8, 0x01A9, 0x01AA, 0x05F6, 0x05F7, 0x05F8, 0x05F9, 0x05FA, 0x05FB, 0x05FC, 0x05FD, 0x05FE, 0x05FF, 0x0600, 0x0601 };
+            if (charArea.count(cop & 0x7FFF)) if (const auto h = ArgInt(*d.cond, 0)) if (auto* oth = CPools::GetPed((int)*h); oth && oth != c) { QueueActions({ "emit mdwother:0:" + std::to_string((int)*h) + ":" + F(x) + ":" + F(y) + ":" + F(z) }, row.settle); return; }
+        }
         one(warp(x, y, z, false)); return;
     }
     if (v == "entercar" || v == "nearest_car") {
@@ -912,6 +916,10 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         acts.push_back("pedwarp " + F(c.x) + " " + F(c.y) + " " + F(c.z));
         QueueActions(acts, row.settle); return;
     }
+    if (v == "failclass" && d.cond && (cop == 0x04E5 || cop == 0x04E6) && !d.args.empty() && d.args[0].str && d.args[0].s == "object-must-move" && !std::getenv("NOTSA_MDRIVER_NOOBJMOVE")) { // CR29 (26 ROBBING UNCLE SAM: `LOCATE_OBJECT_3D(crate, offset of the truck, ..)`): the script object is put at the centre of the box (the way warpOther moves a car for LOCATE_CAR_3D)
+        const auto h = ArgInt(*d.cond, 0); const bool d3 = cop == 0x04E6; const auto x = ArgFloat(*d.cond, 1), y = ArgFloat(*d.cond, 2), z = d3 ? ArgFloat(*d.cond, 3) : std::optional<double>(-100.0);
+        if (h && x && y && z && CPools::GetObject((int)*h)) { QueueActions({ "emit mdwobj:" + std::to_string((int)*h) + ":" + F((float)*x) + ":" + F((float)*y) + ":" + F((float)*z) }, 60); return; }
+    }
     if (v == "failclass") { Stop("by nature: " + (d.args.empty() ? std::string("failclass") : d.args[0].s), cop, 0); return; }
     Stop("badverb " + v, cop, 0);
 }
@@ -955,12 +963,13 @@ void ShootDead() { // actions.ts shootAttackers: every ped (not a buddy type) wh
 }
 // CR27 (12 RYDER, 19 CESAR VIALPANDO): the awaited global is written by a STREAMED script thread (barber.scm: the chair + haircut menu, carmod1.scm: the mod-shop menu), whose locate / button conditions nobody answers. Every streamed-script thread's conditions are recorded
 // like the root's (AuxBegin/AuxEnd, called from scmtrace::Run for threads outside the traced tree); when the root wait stands (the wait row answered twice) and such a thread writes a global the root's pass compares, Decide() runs over THAT thread's last passes.
-struct AuxState { std::deque<RecP> recs; std::vector<RecP> group, pending; bool fallPending = false; int waitSeq = 0; std::map<uint16_t, bool> writes; };
+struct AuxState { std::deque<RecP> recs; std::vector<RecP> group, pending; bool fallPending = false; int waitSeq = 0; std::map<uint16_t, bool> writes; bool dyn = false; std::set<uint16_t> dynWrites; };
 std::map<const CRunningScript*, AuxState> g_aux; bool g_auxTouched = false, g_auxDone = false; std::map<uint32_t, int> g_auxVisits; std::string g_auxTag; bool g_auxAnswered = false, g_auxEarly = false;
 const uint8_t* g_auxIp = nullptr; uint16_t g_auxRaw = 0;
 bool IntCompareOp(int op) { return (op >= 0x0018 && op <= 0x0041) || (op >= 0x04A3 && op <= 0x04B7) || (op >= 0x07D6 && op <= 0x07D9); }
 bool WritesGlobal(const CRunningScript* t, uint16_t off) { // a command of the thread's code whose FIRST operand is the global variable `off` (not a compare): a static byte scan of the streamed script
-    auto& st = g_aux[t]; if (auto it = st.writes.find(off); it != st.writes.end()) return it->second;
+    auto& st = g_aux[t]; if (st.dyn) return st.dynWrites.count(off) > 0; // CR29: a thread of the traced tree (started by the mission: lowrider game thread of main.scm): the globals it was SEEN writing (scmtrace G rows)
+    if (auto it = st.writes.find(off); it != st.writes.end()) return it->second;
     int32_t size = 0; for (auto& si : CTheScripts::StreamedScripts.m_aScripts) if (si.m_StreamedScriptMemory && si.m_StreamedScriptMemory == t->m_BaseIP) size = si.m_SizeInBytes;
     bool w = false; const uint8_t* b = t->m_BaseIP;
     for (int32_t i = 0; i + 5 <= size && !w; i++) if (b[i + 2] == 2 && *(const uint16_t*)(b + i + 3) == off) { const int op = *(const uint16_t*)(b + i) & 0x7FFF; if (op > 0 && op < 0x0200 && !IntCompareOp(op) && op != 0x0001 && op != 0x0002 && op != 0x004D && op != 0x0050 && op != 0x00D6) w = true; }
@@ -1110,7 +1119,7 @@ void TickGeneric() {
         std::set<uint16_t> gl; for (auto& r : g_recsBig) { if (r->waitSeq < g_waitSeq - 3 || !IntCompareOp(r->raw & 0x7FFF)) continue; for (int k = 0; k < 2; k++) if ((r->vref[k] >> 16) == 2) gl.insert((uint16_t)(r->vref[k] & 0xFFFF)); }
         bool auxRel = false; for (auto* t = CTheScripts::pActiveScripts; t && !auxRel && !gl.empty(); t = t->m_pNext) { auto it = g_aux.find(t); if (it == g_aux.end() || it->second.recs.empty()) continue; for (const auto g : gl) auxRel = auxRel || WritesGlobal(t, g); }
         if (g_auxTouched && !auxRel) { g_auxTouched = false; g_auxDone = true; }
-        const bool auxTrig = d.row->action == "wait" ? g_attemptsAt[ipPtr] >= 2 : g_auxTouched;
+        const bool auxTrig = d.row->action == "wait" ? g_attemptsAt[ipPtr] >= 2 : (g_auxTouched || (d.row->action == "key" && g_attemptsAt[ipPtr] >= 2 && !std::getenv("NOTSA_MDRIVER_NOAUXKEY"))); // CR29: a root key answer repeated at the same wake ip (19: the stage presses SELECT, the lowrider game thread that holds $4068 polls TRIANGLE) also hands over to the aux thread
         for (auto* t = CTheScripts::pActiveScripts; t && auxRel && auxTrig && !gl.empty(); t = t->m_pNext) {
             auto it = g_aux.find(t); if (it == g_aux.end() || it->second.recs.empty()) continue;
             bool wr = false; for (const auto g : gl) wr = wr || WritesGlobal(t, g); if (!wr) continue;
@@ -1190,6 +1199,7 @@ void TickGeneric() {
 bool Enabled() { static const bool e = std::getenv("NOTSA_MDRIVER") != nullptr || Generic(); return e; }
 void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int cond) {
     if (!Generic() || !g_loaded) return;
+    if (s != notsa::scmtrace::Root() && g_started) AuxTree(const_cast<CRunningScript*>(s), ptr, raw, cond);
     if (s == notsa::scmtrace::Root()) { // the StallSink: conditions with their state + operands, WAIT count, where the GOTO_IF_FALSE after them led
         const int op = raw & 0x7FFF;
         if (g_fallPending) { if (op == 0x0001) for (auto& r : g_group) r->waitAfter = true; g_fallPending = false; g_group.clear(); } // CR19: a group that fell through straight into a WAIT
@@ -1241,8 +1251,8 @@ bool AuxBegin(CRunningScript* s) {
     const uint8_t* b = s->m_BaseIP, *sp = CTheScripts::ScriptSpace.data(); if (!b || (b >= sp && b < sp + CTheScripts::ScriptSpace.size())) return false; // streamed scripts only
     g_auxIp = s->m_IP; g_auxRaw = *(const uint16_t*)g_auxIp; return true;
 }
-void AuxEnd(CRunningScript* s, int cond) {
-    auto& st = g_aux[s]; const uint8_t* ptr = g_auxIp; const uint16_t raw = g_auxRaw; const int op = raw & 0x7FFF;
+static void AuxRecord(CRunningScript* s, const uint8_t* ptr, uint16_t raw, int cond) {
+    auto& st = g_aux[s]; const int op = raw & 0x7FFF;
     if (st.fallPending) { if (op == 0x0001) for (auto& r : st.group) r->waitAfter = true; st.fallPending = false; st.group.clear(); }
     if (op == 0x0001) st.waitSeq++;
     else if (op == 0x004D) {
@@ -1257,6 +1267,15 @@ void AuxEnd(CRunningScript* s, int cond) {
         st.pending.push_back(r); if (st.pending.size() > 12) st.pending.erase(st.pending.begin());
     }
 }
+void AuxEnd(CRunningScript* s, int cond) { AuxRecord(s, g_auxIp, g_auxRaw, cond); }
+// CR29 (19 CESAR VIALPANDO): a thread of the traced tree other than the root (the mission starts main.scm's LOWGAME thread, which writes the global the stage waits on and polls its own buttons) is an aux thread too: its conditions are recorded like a streamed script's (called from OnCommand), the globals it writes are learnt from the scmtrace G rows
+void AuxTree(CRunningScript* s, const uint8_t* ptr, uint16_t raw, int cond) {
+    static const bool off = std::getenv("NOTSA_MDRIVER_NOAUX") != nullptr || std::getenv("NOTSA_MDRIVER_NOAUXTREE") != nullptr;
+    if (off || !s || s == notsa::scmtrace::Root()) return;
+    g_aux[s].dyn = true; AuxRecord(s, ptr, raw, cond);
+}
+void AuxGlobalWrite(const CRunningScript* s, uint32_t off) { if (s && s != notsa::scmtrace::Root() && off < 0x10000) { auto it = g_aux.find(s); if (it != g_aux.end() && it->second.dyn) it->second.dynWrites.insert((uint16_t)off); } }
+void AuxForget(const CRunningScript* s) { g_aux.erase(s); }
 bool PadHeld(int button) { auto it = g_padHold.find(button); return it != g_padHold.end() && it->second > 0; }
 void SetKeyPusher(void (*fn)(const char*, bool)) { g_push = fn; }
 void SetCmdRunner(void (*fn)(const std::string&)) { g_run = fn; }
@@ -1348,6 +1367,11 @@ bool Cmd(const char* name, const std::string& args) {
             // CR26 (58 PHOTO OPPORTUNITY): a script that also tests GET_CAMERA_FOV (`N > fov`: the zoomed shot) needs the shot repeated with the camera zoomed in, in the frames before its timed condition (the walker's task) ends: hold the photographed flag and the zoomed FOV for 600 frames (the script's own 04C5 read clears the flag each pass)
             if (!std::getenv("NOTSA_MDRIVER_NOZOOM") && PhotoWantsZoom()) { g_photoPed = std::atoi(args.c_str()); g_photoHold = 600; } // a GET_CAMERA_FOV (0801 into a local) within 2 KB before a photo test
         }
+        return true;
+    }
+    if (!std::strcmp(name, "mdwobj")) { // CR29: move a script object to x:y:z (z <= -100 = keep its height); the object stops
+        int h = 0; float w[3]{}; std::sscanf(args.c_str(), "%d:%f:%f:%f", &h, w, w + 1, w + 2);
+        if (auto* o = CPools::GetObject(h)) { const CVector old = o->GetPosition(); CWorld::Remove(o); o->SetPosn(CVector{ w[0], w[1], w[2] <= -100.f ? old.z : w[2] }); o->m_vecMoveSpeed = CVector{}; o->m_vecTurnSpeed = CVector{}; CWorld::Add(o); notsa::standalone::Fixups::Log("[mdriver] mdwobj gf=%u obj %d model %d %.2f,%.2f,%.2f -> %.2f,%.2f,%.2f", (unsigned)CTimer::GetFrameCounter(), h, (int)o->m_nModelIndex, old.x, old.y, old.z, w[0], w[1], w[2]); }
         return true;
     }
     if (!std::strcmp(name, "mddmgobj")) { // CR22: CObject::ObjectDamage, CJ the damager, pistol (the port's object damage path of a bullet hit)

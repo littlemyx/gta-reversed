@@ -493,7 +493,10 @@ bool ButtonGuard(const Rec& r) { // CR24 (10 BEEFY BARON): a plain IS_BUTTON_PRE
 bool LocateGuard(const CRunningScript* s, const Rec& r) { // CR28 (24 HOME INVASION: `IF OR(HAS_CHAR_BEEN_DAMAGED_BY_CHAR owner cj, LOCATE_CHAR_ANY_MEANS_CHAR_3D cj owner 1 m)` wakes the sleeping owner, the true branch is the alarm and the mission's failure): a plain locate / area condition a warp row would answer, whose TRUE branch reaches the fail text, is never answered
     if ((r.raw & 0x8000) || !s || std::getenv("NOTSA_MDRIVER_NOLOCATEGUARD")) return false;
     bool warp = false; for (auto& row : g_rows) if (row.match != 2 && row.op == (r.raw & 0x7FFF) && (row.action == "pedwarp" || row.action == "vehwarp" || row.action == "midpoint" || row.action == "warpto_handle")) { warp = true; break; }
-    return warp && VerdictOf(s, r) == Verdict::Guard;
+    if (!warp) return false;
+    if (VerdictOf(s, r) == Verdict::Guard) return true;
+    if (r.fall && !std::getenv("NOTSA_MDRIVER_NOTRAPGUARD")) for (auto& o : g_recs) if (o->fall == r.fall && o->waitSeq == r.waitSeq && o->raw == 0x051A) return true; // the same OR group also holds HAS_CHAR_BEEN_DAMAGED_BY_CHAR: a wake-up trap (the owner wakes when he is hit OR CJ comes within 1 m), its true branch is an alarm state machine the fail walk does not follow
+    return false;
 }
 bool AnyGuard(const Rec& r) { return IsPlayerGuard(r) || KillRefusal(g_thread, r) || NotInCarGuard(g_thread, r) || ButtonGuard(r) || LocateGuard(g_thread, r); }
 

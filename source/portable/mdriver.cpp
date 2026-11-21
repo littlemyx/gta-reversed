@@ -514,7 +514,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
         for (auto& c : falses) { // CR23 (16 NINES AND AK'S: `WHILE @86 != 15` after the Binco blip): a false plain `var == N` of a GET_AREA_VISIBLE result variable: walk in through the entrance of interior N (an entry exit whose interior side is in area N)
             const int op = c->raw & 0x7FFF; if ((c->raw & 0x8000) || (op != 0x0038 && op != 0x0039) || std::getenv("NOTSA_MDRIVER_NOENTERAREA")) continue;
             if (!(c->vref[0] && g_areaVars.count(c->vref[0]))) continue;
-            const auto n = ArgInt(*c, 1); if (!n || *n <= 0) continue;
+            const auto n = ArgInt(*c, 1); if (!n || *n < 0) continue;
             g_enterArea = (int)*n; d.act = true; d.row = &kEnter; d.rowIdx = -4; d.cond = c; d.op = op; return d;
         }
         for (auto& c : blockers) if (tagCond(c)) { d.act = true; d.row = &kTag; d.rowIdx = -3; d.cond = c; d.op = c->raw & 0x7FFF; return d; }
@@ -688,13 +688,13 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     }
     if (v == "damageobj") { QueueActions({ "emit mddmgobj:" + std::to_string(I_(0)) }, row.settle); return; } // CR22: HAS_OBJECT_BEEN_DAMAGED(obj): CJ damages the object (16 NINES AND AK'S shooting range)
     if (v == "tagarea") { QueueActions({ "emit mdtag:" + F(g_tagRect[0]) + ":" + F(g_tagRect[1]) + ":" + F(g_tagRect[2]) + ":" + F(g_tagRect[3]) }, row.settle); return; } // CR22: the script waits for the tagged percentage of an area: spray every tag of it (13 TAGGING UP TURF)
-    if (v == "enterarea") { // CR23: stand on the entrance marker of the nearest exterior entry exit that leads to interior g_enterArea (CEntryExitManager does the rest: fade, area switch)
+    if (v == "enterarea") { // CR23: stand on the entrance marker of the nearest exterior entry exit (area 0) whose linked interior side is in area g_enterArea (CEntryExitManager does the rest: fade, area switch)
         auto* me = Cj(); CEntryExit* best = nullptr; float bd = 1e30f;
-        if (me) for (auto& ex : CEntryExitManager::GetPool()->GetAllValid()) { if ((int)ex.m_nArea != g_enterArea || !ex.m_pLink || (int)ex.m_pLink->m_nArea != 0) continue; const auto c = ex.m_pLink->GetPosition(); const float dd = (c - me->GetPosition()).Magnitude(); if (dd < bd) { bd = dd; best = ex.m_pLink; } }
+        if (me) for (auto& ex : CEntryExitManager::GetPool()->GetAllValid()) { if (g_enterArea == 0 ? ((int)ex.m_nArea != (int)CGame::currArea || ex.m_nArea == 0 || !ex.m_pLink || (int)ex.m_pLink->m_nArea != 0) /* leave: the exit marker of the interior CJ is in */ : ((int)ex.m_nArea != 0 || !ex.m_pLink || (int)ex.m_pLink->m_nArea != g_enterArea)) continue; const auto c = ex.GetPosition(); const float dd = (c - me->GetPosition()).Magnitude(); if (dd < bd) { bd = dd; best = &ex; } }
         if (!best) { QueueActions({}, 0); return; }
         const auto c = best->GetPosition(); float dx = c.x - best->m_vecExitPos.x, dy = c.y - best->m_vecExitPos.y; const float len = std::max(0.01f, (float)std::hypot(dx, dy));
-        notsa::standalone::Fixups::Log("[mdriver] enterarea %d: entry exit %.8s at %.1f,%.1f,%.1f", g_enterArea, best->m_szName, c.x, c.y, c.z);
-        QueueActions({ "pedwarp " + F(c.x - dx / len * 0.3f) + " " + F(c.y - dy / len * 0.3f) + " " + F(c.z) }, row.settle); return;
+        notsa::standalone::Fixups::Log("[mdriver] enterarea %d: entry exit %.8s at %.1f,%.1f,%.1f (%.0f m from CJ)", g_enterArea, best->m_szName, c.x, c.y, c.z, bd);
+        QueueActions({ "pedwarp " + F(c.x) + " " + F(c.y) + " " + F(c.z) }, row.settle); return;
     }
     if (v == "failclass") { Stop("by nature: " + (d.args.empty() ? std::string("failclass") : d.args[0].s), cop, 0); return; }
     Stop("badverb " + v, cop, 0);
@@ -788,6 +788,11 @@ void TickGeneric() {
     if (static const bool hl = std::getenv("NOTSA_MDRIVER_HPLOG") != nullptr; hl && Cj()) { // CR18: debug: every health drop of the car CJ is in (position, speed, water, fire, last damager)
         static float s_hp = -1.f; auto* v = Cj()->bInVehicle ? Cj()->m_pVehicle : nullptr;
         if (v && v->m_fHealth != s_hp) { if (s_hp >= 0.f && v->m_fHealth < s_hp) notsa::standalone::Fixups::Log("[hplog] f%d hp %.0f->%.0f pos=%.1f,%.1f,%.1f spd=%.3f water=%d drown=%d fire=%d wpn=%d dmgEnt=%d inv=%d shooter=%s", fr, s_hp, v->m_fHealth, v->GetPosition().x, v->GetPosition().y, v->GetPosition().z, v->m_vecMoveSpeed.Magnitude(), (int)v->physicalFlags.bTouchingWater, (int)v->vehicleFlags.bIsDrowning, v->m_pFire ? 1 : 0, (int)v->m_nLastWeaponDamageType, v->m_pLastDamageEntity ? (int)v->m_pLastDamageEntity->GetType() : -1, (int)v->physicalFlags.bInvulnerable, ShooterDesc(v->m_pLastDamageEntity).c_str()); s_hp = v->m_fHealth; }
+    }
+    if (static const bool xl = std::getenv("NOTSA_MDRIVER_ENEXLOG") != nullptr; xl && Cj() && fr % 25 == 0 && fr > 16400 && fr < 17600) { // CR23: debug: why does standing on an entrance marker not start the transition
+        auto* me = Cj(); const auto pp = me->GetPosition(); std::string tk; auto& tm = me->GetIntelligence()->m_TaskMgr; for (int ti = 0; ti < 5; ti++) if (auto* t = tm.GetTaskPrimary(ti)) { tk += " P" + std::to_string(ti) + ":"; for (auto* tt = t; tt; tt = tt->GetSubTask()) tk += std::to_string((int)tt->GetTaskType()) + ">"; }
+        for (auto& ex : CEntryExitManager::GetPool()->GetAllValid()) { if (std::strncmp(ex.m_szName, "CSCHP", 5) || ex.m_nArea != 0) continue; const auto c = ex.GetPosition(); if ((c - pp).Magnitude() > 30.f) continue;
+            notsa::standalone::Fixups::Log("[enexlog] f%d cj=%.2f,%.2f,%.2f inArea=%d access=%d vis=%d on=%d off=%d clock=%d:%d state=%d active=%p inCtl=%d pstate=%d ctlOff=%d gstate=%d disabled=%d cutscene=%d area=%d tasks=%s", fr, pp.x, pp.y, pp.z, (int)ex.IsInArea(pp), (int)ex.bEnableAccess, (int)ex.IsVisibleByTime(), (int)ex.m_nTimeOn, (int)ex.m_nTimeOff, (int)CClock::GetGameClockHours(), (int)CClock::GetGameClockMinutes(), (int)CEntryExitManager::ms_exitEnterState, (void*)CEntryExitManager::mp_Active, (int)me->IsPedInControl(), (int)me->m_nPedState, (int)CPad::GetPad(0)->DisablePlayerControls, (int)CGameLogic::GameState, (int)CEntryExitManager::ms_bDisabled, (int)CCutsceneMgr::ms_cutsceneProcessing, (int)CGame::currArea, tk.c_str()); }
     }
     if (static const char* ll = std::getenv("NOTSA_MDRIVER_LOGLOCALS"); ll && root && fr % 60 == 0 && Cj()) { // CR23: debug: "n,n,..": script locals that hold a ped or vehicle handle: model, position, distance to CJ; and (CARSLOG=1) the vehicles within 150 m of CJ by model
         std::string o; const auto pp = Cj()->GetPosition();

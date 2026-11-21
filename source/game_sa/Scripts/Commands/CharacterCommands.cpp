@@ -1362,16 +1362,20 @@ auto IsCharOnScreen(CPed& ped) {
  * @param {Vector2D} topRight
  * @param {bool} drawSphere
  */
-auto IsCharShootingInArea(CRunningScript& S, CPed& ped, CRect area, bool highlightArea) {
+// exe 0x480148 (case 02D6): the 4 corner floats stay in script order (x1, y1, x2, y2) - CPlaceable::IsWithinArea (0x54F200) sorts them itself. The port used a CRect built
+// from them (unsorted: left > right never contains a point), so the missions that pass flipped corners (m39, m42, m81 of main.scm) could never see the shot.
+auto IsCharShootingInArea(CRunningScript& S, CPed& ped, float x1, float y1, float x2, float y2, bool highlightArea) {
+    const bool isIn = ped.bFiringWeapon && ped.IsWithinArea(x1, y1, x2, y2);
+
     if (highlightArea) {
-        S.HighlightImportantArea(area);
+        S.HighlightImportantArea(CVector2D{ x1, y1 }, CVector2D{ x2, y2 }); // exe: CTheScripts::HighlightImportantArea(id, x1, y1, x2, y2, -100.0f)
     }
 
     if (CTheScripts::DbgFlag) {
-        CTheScripts::DrawDebugSquare(area);
+        CTheScripts::DrawDebugSquare(x1, y1, x2, y2);
     }
 
-    return ped.bFiringWeapon && area.IsPointInside(ped.GetPosition2D());
+    return isIn;
 }
 
 /*

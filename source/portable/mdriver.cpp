@@ -812,6 +812,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         one(warp(F_(0), F_(1), F_(2), v == "vehwarp")); return;
     }
     if (v == "joingroup") { QueueActions({ "emit mdjoingrp:" + std::to_string(I_(0)) + ":" + std::to_string(I_(1)) }, row.settle); return; } // CR26: IS_GROUP_MEMBER(ped, group) is false: the ped joins the group (what SET_GROUP_MEMBER does for a recruit)
+    if (v == "nearfetch") { QueueActions({ "emit mdwother:0:" + std::to_string((int)F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) + ":" + F(F_(3)) }, row.settle); return; } // CR32
     if (v == "zonego") { one(warp(F_(0), F_(1), F_(2), false)); return; } // CR26
     if (v == "gangwar") { QueueActions({ "emit mdprovoke:3" }, row.settle); return; } // CR26
     if (v == "pickupgo") { // CR26: HAS_PICKUP_BEEN_COLLECTED(pickup) is false: the player walks onto the pickup (on foot, at its position)
@@ -1143,8 +1144,8 @@ void TickGeneric() {
     Dec dn; bool nearRec = false;
     if (g_attemptsAt[ipPtr] >= 1 && !std::getenv("NOTSA_MDRIVER_NONEARPED")) for (size_t k = g_recsBig.size(); k-- > 0;) { const auto& c = g_recsBig[k]; const int op = c->raw & 0x7FFF; if (c->cond != 0 || (c->raw & 0x8000) || !((op >= 0x00F2 && op <= 0x00F4) || (op >= 0x0104 && op <= 0x0106)) || c->waitSeq < g_waitSeq - 3) continue; // CR32 (27 OG LOC): a plain false `CJ near ped X` (CJ the first operand; the stage waits for the player to catch up with X, here a recorded-path car that parks at the end of its leg): after the first answer failed, CJ joins X (X is not moved: it belongs to the script's path)
                 const auto h0 = ArgInt(*c, 0), h1 = ArgInt(*c, 1);
-                if (h0 && h1 && CPools::GetPed((int)*h0) == Cj()) if (auto* x = CPools::GetPed((int)*h1); x && x != Cj() && x->m_fHealth > 0.f) { static Row kNear{ op, 0, "LOCATE_CHAR_CHAR (CJ near ped)", "zonego", {}, 60 }; const CVector xp = x->GetRealPosition();
-                    dn.act = true; dn.row = &kNear; dn.rowIdx = -13; dn.cond = c; dn.op = op; dn.args.clear(); for (const float f : { xp.x + 5.f, xp.y, -100.f }) { RArg ra; ra.n = f; dn.args.push_back(ra); }
+                if (h0 && h1 && CPools::GetPed((int)*h0) == Cj()) if (auto* x = CPools::GetPed((int)*h1); x && x != Cj() && x->m_fHealth > 0.f) { static Row kNear{ op, 0, "LOCATE_CHAR_CHAR (CJ near ped)", "zonego", {}, 60 }, kFetch{ op, 0, "LOCATE_CHAR_CHAR (ped to CJ)", "nearfetch", {}, 60 }; static std::map<int, int> s_nearCnt; const CVector xp = x->GetRealPosition(); const int nc = s_nearCnt[(int)*h1]++; // the 1st answer: CJ joins the ped (a script-driven car that parks); the later ones: the ped joins CJ (a buddy that must come along to the place the other conditions ask for)
+                    dn.act = true; dn.row = nc == 0 ? &kNear : &kFetch; dn.rowIdx = -13; dn.cond = c; dn.op = op; dn.args.clear(); if (nc == 0) for (const float f : { xp.x + 5.f, xp.y, -100.f }) { RArg ra; ra.n = f; dn.args.push_back(ra); } else { const CVector cp = Cj()->GetPosition(); for (const float f : { (float)*h1, cp.x + 3.f, cp.y, -100.f }) { RArg ra; ra.n = f; dn.args.push_back(ra); } }
                     notsa::standalone::Fixups::Log("[mdriver] nearped: CJ joins ped %d at %.0f,%.0f", (int)*h1, (double)xp.x, (double)xp.y); nearRec = true; break; } }
     Dec d = Decide(loop, g_attemptsAt[ipPtr]);
     if (nearRec) d = dn;

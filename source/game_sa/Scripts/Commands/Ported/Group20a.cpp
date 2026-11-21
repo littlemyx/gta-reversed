@@ -32,6 +32,9 @@
 #include "TaskSimpleSwim.h"
 #include "TaskComplexDrivePointRoute.h"
 #include "game_sa/DetachedShared.h"
+#ifdef NOTSA_STATEHASH
+#include "standalone/Fixups.h"
+#endif
 #line 34
 
 using namespace notsa::script;
@@ -407,6 +410,11 @@ void SwitchEntryExit(CRunningScript& S) {
     char label[8 + 1]{}; // NOTSA: + terminator (the exe's buffer is 8 bytes and strncmp's at most 8 chars)
     S.ReadTextLabelFromScript(label, 8); // 0x463D50
     const auto enable = notsa::script::Read<int32>(&S); // CollectParameters(1)
+#ifdef NOTSA_STATEHASH
+    if (std::getenv("NOTSA_ENEXSWLOG")) { // CR28 debug log (off by default, no control flow): every SWITCH_ENTRY_EXIT
+        notsa::standalone::Fixups::Log("[enexsw] SWITCH_ENTRY_EXIT %.8s %d by %.8s ip %x gf %u", label, (int)enable, S.m_szName, (unsigned)(S.m_IP - S.m_BaseIP), (unsigned)CTimer::GetFrameCounter());
+    }
+#endif
     SetEntryExitFlagByName(label, 0x4000, enable != 0);
 }
 }; // namespace

@@ -2827,14 +2827,15 @@ void AttachCharToBike(CPed& ped, CVehicle& bike, CVector posn, uint16 heading, f
  * 
  * @returns {Car} handle
  */
+// exe 0x47379B: CTaskManager::FindActiveTaskByType (0x681740: active chain + secondaries) for 0x2BD (driver), then 0x2BC (passenger); the port searched the primary slots (Find(false))
 CVehicle* GetCarCharIsUsing(CPed& ped) {
     if (ped.bInVehicle) {
         return ped.m_pVehicle;
     }
-    if (const auto task = ped.GetTaskManager().Find<CTaskComplexEnterCarAsDriver>(false)) {
+    if (const auto task = ped.GetTaskManager().Find<CTaskComplexEnterCarAsDriver>(true)) {
         return task->GetTargetCar();
     }
-    if (const auto task = ped.GetTaskManager().Find<CTaskComplexEnterCarAsPassenger>(false)) {
+    if (const auto task = ped.GetTaskManager().Find<CTaskComplexEnterCarAsPassenger>(true)) {
         return task->GetTargetCar();
     }
     return nullptr;

@@ -9,3 +9,39 @@ exe_addr	function	verdict	note
 0x50E760	CIdleCam::FinaliseIdleCamera	MATCH	front/lastIdlePos/hand shake (0x59C810 inverse transform)/up/3 orthonormalise + 0.0001 degenerate fix order
 0x50A280	CIdleCam::SetTarget	MATCH	slerp-from pos, reference change, timers at +0x10/+0x34, LOS counter 0, zoomed-in flag
 0x50EB50	CIdleCam::SetTargetPlayer	MATCH	FindPlayerPed(-1), then m_nForceAZoomOut = 1
+0x4B7280	CEventSexyPed::CloneEditable	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x4B5D40	CEventDamage::CloneEditable	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x682DA0	CTaskComplexChat::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x5FF1D0	CEventAcquaintancePedDislike::CloneEditable	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x4B6E70	CEventDeadPed::CloneEditable	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x4B6E30	CEventDeath::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x66CCF0	CTaskSimpleAchieveHeading::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x5F6280	CEventCreatePartnerTask::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x5F65E0	CTaskSimpleChat::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x48E780	CTaskSimplePause::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x662140	CTaskComplexSignalAtPed::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x6236D0	CTaskSimpleGangDriveBy::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x635BD0	CTaskSimpleSetStayInSamePlace::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x61C330	CEventVehicleDamageWeapon::CloneEditable	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x692CF0	CTaskSimpleDuck::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x48E9C0	CTaskSimpleHandsUp::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x684DA0	CTaskComplexPartnerGreet::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x4B72F0	CEventSexyVehicle::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x6608C0	CTaskSimpleDoHandSignal::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x4B6DC0	CEventDraggedOutCar::CloneEditable	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x6713E0	CTaskComplexFollowNodeRoute::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x64A190	CTaskComplexCarSlowBeDraggedOutAndStandUp::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x63DD00	CTaskComplexCarDriveWander::Clone	FIXED	clone must be a Wander task (exe stores vtable 0x86E96C after CarDrive ctor); 8647ad131
+0x636FD0	CTaskComplexUseMobilePhone::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x4B7740	CEventVehicleOnFire::CloneEditable	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x46A650	CTaskComplexClimb::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x492D50	CTaskSimpleTogglePedThreatScanner::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x63D850	CTaskComplexEnterCarAsPassengerWait::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x6927B0	CTaskSimpleShakeFist::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x692910	CTaskSimpleAffectSecondaryBehaviour::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x643780	CTaskComplexEnterCarAsDriver::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x636710	CTaskComplexUseEffect::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x66CE10	CTaskComplexGoToPointShooting::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x4B7960	CEventGotKnockedOverByCar::CloneEditable	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x65CED0	CTaskComplexSmartFleePoint::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x48E390	CTaskSimpleSay::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body

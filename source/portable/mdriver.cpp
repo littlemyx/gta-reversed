@@ -708,6 +708,15 @@ void TickGeneric() {
     if (std::getenv("NOTSA_MDRIVER_BIKELOG")) { std::string o; for (auto& r : loop) if (r->cond == 0) { o += " " + std::to_string((unsigned)(r->p - root->m_BaseIP)) + "/" + std::to_string(r->raw & 0x7FFF); } notsa::standalone::Fixups::Log("[decide] frame %d attempt %d loop %zu falses:%s", fr, g_attemptsAt[ipPtr], loop.size(), o.c_str()); }
     Dec d = Decide(loop, g_attemptsAt[ipPtr]);
     if (!d.act) { Stop(d.reason, d.op, at); return; }
+    if (d.act && d.row->action == "wait" && g_attemptsAt[ipPtr] >= 1 && !std::getenv("NOTSA_MDRIVER_NOESCALATE")) { // CR21: the wait row answered this wake ip before and the thread still stands: a TRUE `NOT IS_CHAR_DEAD(x)` of the pass is a wait-until-dead (89: the paramedic passengers of the three ambulances stay alive once the cruising ambulances moved on; the plain 0118 rows only see the drivers): kill that live non-buddy char
+        const Row* kr = nullptr; int kri = -1; for (size_t i = 0; i < g_rows.size(); i++) if (g_rows[i].op == 0x0118 && g_rows[i].match == 1 && g_rows[i].action == "kill") { kr = &g_rows[i]; kri = (int)i; break; }
+        if (kr) for (size_t k = loop.size(); k-- > 0;) {
+            const auto& r = loop[k]; if (r->raw != 0x8118 || r->cond != 1 || AnyGuard(*r)) continue;
+            const auto a2 = ResolveArgs(*kr, *r); if (!a2 || a2->empty()) continue;
+            const int h = (int)(*a2)[0].n; auto* pp = CPools::GetPed(h); if (!pp || pp == Cj() || pp->m_fHealth <= 0.f || ProtectedHandle(h)) continue;
+            d.row = kr; d.rowIdx = kri; d.cond = r; d.args = *a2; d.op = 0x0118; break;
+        }
+    }
     g_attemptsAt[ipPtr]++;
     const std::string key = std::to_string(at) + ":" + std::to_string(d.rowIdx) + ":" + RKey(d.args);
     const int n = ++g_noProgress[key];

@@ -410,6 +410,13 @@ Dec Decide(const std::vector<RecP>& loop, int attempt) {
                 for (auto& m : mem) if (m->raw & 0x8000) { if (m->cond == 0) satisfied.insert(m->p); else if (!AnyGuard(*m)) blockers.push_back(m); }
         }
     }
+    if (!std::getenv("NOTSA_MDRIVER_NOORGROUP")) { // CR19: ANY OR group of the pass with a TRUE member is true: its false members (13 TAGGING UP TURF: OR(at A, at B) with CJ at B) are satisfied too, no candidates
+        std::map<std::pair<const uint8_t*, int>, std::vector<RecP>> groups; for (auto& r : loop) if (r->hasBranch) groups[{ r->fall, r->waitSeq }].push_back(r);
+        for (auto& [k, mem] : groups) {
+            const uint8_t* f = mem.front()->p; if (!(f[-4] == 0xD6 && f[-3] == 0x00 && f[-2] == 0x04 && f[-1] >= 21 && f[-1] <= 27)) continue;
+            if (std::any_of(mem.begin(), mem.end(), [](auto& m) { return m->cond == 1; })) for (auto& m : mem) if (m->cond == 0) satisfied.insert(m->p);
+        }
+    }
     std::vector<RecP> falses;
     for (size_t k = loop.size(); k-- > 0;) { const auto& r = loop[k]; if (r->cond == 0 && !AnyGuard(*r) && !satisfied.count(r->p)) falses.push_back(r); }
     if (falses.empty() && blockers.empty()) { d.reason = "no condition evaluated false in the loop (the guards left out)"; return d; }

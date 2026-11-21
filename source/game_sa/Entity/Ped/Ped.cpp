@@ -3915,6 +3915,7 @@ void CPed::SetLook(float heading) {
     }
 
     bIsLooking = true;
+    bIsRestoringLook = false; // exe 0x5E79FE: `and eax, 0xFFFFFFF7 ; or eax, 4` on the flag word (the port left bIsRestoringLook as it was)
     m_fLookDirection = heading;
     m_nLookTime = 0;
 

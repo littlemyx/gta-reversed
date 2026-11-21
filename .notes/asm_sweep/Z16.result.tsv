@@ -35,8 +35,8 @@ addr	function	verdict	asm range	note	fix commit
 0x59AFE0	CMatrix::SetRotateYOnly (+CopyOnlyMatrix, ResetOrientation)	MATCH	0x59ADD0-0x59B012	-	-
 0x43E020	CRect::SetFromCenter / GetCenter / IsFlipped	MATCH	0x43E020-0x43E073	field order left,top,right,bottom	-
 0x438E40	CCheat::MoneyArmourHealthCheat / WantedLevelDown / NotWanted / Wanted / WantedLevelUp	MATCH	0x438E40-0x438F33	armour read from player 0 in the exe (same unless player 1 is in focus)	-
-0x65B7B0	CTaskComplexFleePoint::SetFleePosition	FIXED	0x65B7B0-0x65B815	the exe takes the new position when x, y, z OR m_safeDist differ (fcomp/test ah,0x44/jp chain); the port compared the position only	FLEEFIX
-0x646CC0	CTaskSimpleCarWaitForDoorNotToBeInUse::SetPedPosition	FIXED	0x646CC0-0x646CE5	a null m_veh skips SetPedPositionInCar (the port called it when the ped was bInVehicle with a null vehicle)	WAITFIX
+0x65B7B0	CTaskComplexFleePoint::SetFleePosition	FIXED	0x65B7B0-0x65B815	the exe takes the new position when x, y, z OR m_safeDist differ (fcomp/test ah,0x44/jp chain); the port compared the position only	fd6198ad1
+0x646CC0	CTaskSimpleCarWaitForDoorNotToBeInUse::SetPedPosition	FIXED	0x646CC0-0x646CE5	a null m_veh skips SetPedPositionInCar (the port called it when the ped was bInVehicle with a null vehicle)	d2e31e679
 0x6D4010	CVehicle::SetFiringRateMultiplier	MATCH	0x6D4010-0x6D4085	clamp 0..15.9375 (NaN kept), *16 ftol into plane/heli byte	-
 0x6D3A50	CVehicle::GetReplacementUpgrade (+FindReplacementUpgradeCB 0x6D3490)	MATCH	0x6D3490-0x6D3A9C	ATOMIC_UPGRADE 0x800 test	-
 0x41BF50	CCarAI::FindSwitchDistanceClose	MATCH	0x41BF50-0x41BF63	-	-

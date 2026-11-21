@@ -27,3 +27,5 @@ Remaining oracle-only gameplay candidates (not compared): CCheat vehicle-spawn a
 
 ## Build
 StandaloneRelease (non-STATEHASH, ninja -j4, nice) in C:/gta-wt/p4r2d/build/StandaloneRelease under buildslot.2 (owner Z16): see the note below.
+
+Build note: the StandaloneRelease tree (GTASA_STATEHASH=OFF) in C:/gta-wt/p4r2d/build/StandaloneRelease was linked at 06:49:48 with all three source fixes (objects 06:49:39, newer than the sources), `ninja -n` reports no work to do on the pushed sources; pushed after that.

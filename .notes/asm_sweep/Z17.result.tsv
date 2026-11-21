@@ -1,0 +1,36 @@
+addr	function	verdict	asm range	note	fix commit
+0x5F3880	CPedGeometryAnalyser::LiesInsideBoundingBox	FIXED	0x5F3880-0x5F396B	sphere distance summed (dz^2+dy^2)+dx^2 (port: x,y,z); NaN leaves false (jne after fcompp)	5418f304c
+0x562120	CWanted::ReportCrimeNow	MATCH	0x562120-0x56229B	jump table 0x5622A0 decoded (crime 2..22 -> 5,45,30,80,15,10,5,5,18,80,400,20,80,20,400,25,35,100,70,2,2) and all float constants checked	-
+0x562330	CWanted::IsInPursuit	MATCH	0x562330-0x562354	10 slots at +0x1F4	-
+0x562410	CWanted::RegisterCrime / RegisterCrime_Immediately	MATCH	0x562410-0x562463	AddCrimeToQ with immediate flag; fallback ReportCrimeNow	-
+0x562540	CWanted::CheatWantedLevel / SetWantedLevelNoDrop / ClearWantedLevelAndGoOnParole	MATCH	0x562540-0x5625E7	ResetPolicePursuit is a NOP in the port, the exe has no call	-
+0x561F30	CWanted::AreMiamiViceRequired	MATCH	0x561F30-0x561F3B	>= 3	-
+0x562C40	CWanted::RemoveExcessPursuitCops / CanCopJoinPursuit (func + method)	MATCH	0x562C40-0x563053	back-off flag bits 0..2 at +0x1E; array copy of 10 slots	-
+0x73B1C0	CWeapon::IsTypeMelee / IsType2Handed / IsTypeProjectile	MATCH	0x73B1C0-0x73B230	weapon id lists identical	-
+0x73B2A0	CWeapon::HasWeaponAmmoToBeUsed / CanBeUsedFor2Player (both)	MATCH	0x73B2A0-0x73B2CB, 0x73B240-0x73B25F	byte tables decoded: ammo-free 0-5,8-14,46; not 2-player 9,34,35,46	-
+0x73B360	CWeapon::StopWeaponEffect / TargetWeaponRangeMultiplier	MATCH	0x73B360-0x73B425	bike = vehicle type 9, cam modes 0x31 -> 2.0, 0x2D -> 3.0	-
+0x447D50	CGarage::OpenThisGarage / RightModTypeForThisGarage	MATCH	0x447D50-0x447D63, 0x447720-0x447781	handling flags 0x2000000 / 0x4000000 / 0x6000000	-
+0x4486C0	CGarage::PlayerArrestedOrDied	MATCH	0x4486C0-0x4486FB	type byte table decoded: types 2-5,13 open, other 1..45 close	-
+0x447C40	CGarages::SetTargetCarForMissionGarage	MATCH	0x447C40-0x447C85	state 5 -> 0	-
+0x448EE0	CGarage::IsEntityTouching3D	MATCH	0x448EE0-0x449041	six strict compares with NaN fallthrough, sphere loop	-
+0x5F3970	CPedGeometryAnalyser::IsEntityBlockingTarget	MATCH	0x5F3970-0x5F3AB1	radius^2 + d^2 vs sqrt (original bug kept), plane sum order	-
+0x5F1500	CPedGeometryAnalyser::ComputeEntityDirs	MATCH	0x5F1500-0x5F15FB	fwd, -right, -fwd, right; returns &out[3]	-
+0x5F1450	CPedGeometryAnalyser::ComputeEntityHitSide (3 overloads) / ComputePedHitSide (2) / ComputePedShotSide	MATCH	0x5F1450, 0x5F3AC0, 0x5F3BC0, 0x5F1E70, 0x5F3640, 0x5F13F0	compare strictness and tie rules checked	-
+0x5F1600	CPedGeometryAnalyser::ComputeEntityBoundingBoxCentreUncached (+All) / SegmentPlanesUncached (+All) / ComputeClosestSurfacePoint (posn, ped)	MATCH	0x5F1600, 0x5F3B40, 0x5F1750, 0x5F2BC0, 0x5F36F0, 0x5F3B70	-	-
+0x42D7E0	CCarCtrl::WeaveThroughPedsSectorList / WeaveThroughObjectsSectorList	MATCH	0x42D7E0-0x42DAAE	|dz| < 4 / 8, up.z > 0.9, scan code set before the box test	-
+0x423DE0	CCarCtrl::RegisterVehicleOfInterest / SwitchVehicleToRealPhysics	MATCH	0x423DE0-0x423E98, 0x423FC0-0x423FFC	2 slots, oldest replaced (unsigned compare)	-
+0x5F6AA0	CPedGroupMembership::CountMembersExcludingLeader / IsMember / GetMember / AppointNewLeader	MATCH	0x5F6AA0, 0x5F6A10, 0x5F69B0, 0x5FB240	-	-
+0x698DB0	CCover::RemoveCoverPointIfEntityLost / DoesCoverPointStillProvideCover / FindVectorFromDir	MATCH	0x698DB0-0x698E64, 0x698D60	dot order z,y,x	-
+0x698E70	CCoverPoint::CanAccommodateAnotherPed	MATCH	0x698E70-0x698EA1	-	-
+0x611470	CPopulation::IsMale / IsFemale / CanJeerAtStripper / CanSolicitPlayerInCar	MATCH	0x611470-0x6117A2	ped types 4 / 5 / 4 / 22	-
+0x5DF8F0	CPed::IsPlayer / IsAlive / PedIsInvolvedInConversation	MATCH	0x5DF8F0, 0x5E0170, 0x43AB90	-	-
+0x601070	CPedIntelligence::GetTaskSwim / HasInterestingEntites / RemoveAllInterestingEntities / Get/SetEffectInUse	MATCH	0x601070, 0x602080, 0x602320, 0x6018D0, 0x6018E0	-	-
+0x61E160	CTaskSimpleUseGun::StartCountDown / PlayerPassiveControlGun	MATCH	0x61E160, 0x61E0A0	unsigned min, signed < 2 on both commands	-
+0x62F5E0	CTaskSimpleSetStayInSamePlace / SetKindaStayInSamePlace / SetCharIgnoreWeaponRangeFlag / SetCharDecisionMaker / TogglePedThreatScanner / ClearLookAt ProcessPed	MATCH	0x62F5E0, 0x62F660, 0x622B50, 0x635430, 0x6337A0, 0x6346C0	ped bits 21 / 22 at 0x46C, bit 9 at 0x478	-
+0x67BA10	CTaskSimpleJetPack::StopJetPackEffect	MATCH	0x67BA10-0x67BA3A	-	-
+0x559AF0	CStats::GetFatAndMuscleModifier / GetPercentageProgress / ConvertToMins / ConvertToSecs	MATCH	0x559AF0, 0x5591E0, 0x559540, 0x559560	GetFatAndMuscleModifier: x87 chain already audited in the source, only structure re-read; the other three fully compared	-
+0x6C2040	CDamageManager::GetComponentGroup / ResetDamageStatus / SetWheelStatus / SetDoorStatus_Component / SetEngineStatus / SetAeroplaneCompStatus	MATCH	0x6C2040-0x6C22F8	door table 8..11 -> +0xC,+0xE,+0xB,+0xD	-
+0x736900	CExplosion::GetExplosionActiveCounter / GetExplosionType / GetExplosionPosition	MATCH	0x736900-0x73694D	stride 0x7C	-
+0x5396E0	CFireManager::IsScriptFireExtinguished / RemoveScriptFire / GetScriptFireCoords	MATCH	0x5396E0-0x5397EC	stride 0x28; RemoveScriptFire takes uint16 (exe movsx word): unreachable for ids >= 0x8000	-
+0x542E20	CPhysical::ApplyTurnSpeed / AddToMovingList / RemoveFromMovingList	MATCH	0x542E20, 0x542800, 0x542860	ApplyTurnSpeed read up to the centre-of-mass term	-
+0x422370	CCarCtrl::FindGhostRoadHeight / FindPercDependingOnDistToLink	UNSURE	0x422370, 0x422620	x87-audited bodies not re-derived	-

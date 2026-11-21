@@ -396,6 +396,14 @@ bool FlagGuard(const CRunningScript* s, const Rec& r) {
         const auto v = ArgInt(*f, 1); if (!v || (int32_t)*v != val) continue;
         std::set<const uint8_t*> sn; if (WalkFail(s, f->fall, 0, false, sn)) return true;
     }
+    if (!std::getenv("NOTSA_MDRIVER_NOLOOPFLAG")) // CR27 (26 ROBBING UNCLE SAM: `IS_CHAR_DEAD $528 -> @37 = 1, print`; the main loop is `WHILE @37 == 0`, its exit reaches the fail): the flag test is `var == W` with W != the value set, and its FALSE branch (the GOTO_IF_FALSE after it) reaches the M_FAIL print
+        for (auto& [ref, val] : sets) for (auto& [pp, f] : g_flagConds) {
+            if (!f->vref[0] || f->vref[0] != ref || ref == 0xFFFFFFFFu) continue;
+            const auto v = ArgInt(*f, 1); if (!v || (int32_t)*v == val) continue;
+            const uint8_t* ops[3]{}; int cnt = 0; const uint8_t* e = CmdOps(f->p, ops, cnt); if (!e || !InSpace(e) || (*(const uint16_t*)e & 0x7FFF) != 0x004D || e[2] != 1) continue;
+            const uint8_t* tgt = Resolve(s, *(const int32_t*)(e + 3)); if (!InSpace(tgt)) continue;
+            std::set<const uint8_t*> sn; if (WalkFail(s, tgt, 0, false, sn)) return true;
+        }
     return false;
 }
 enum class Verdict { Wait, GoesOn, Guard, Unknown };
@@ -415,10 +423,10 @@ void StaticScan(const CRunningScript* s) {
         const uint16_t w = *(const uint16_t*)p; const int op = w & 0x7FFF; if (op > 0x0AFF) break;
         const uint8_t* ops[3]{}; int cnt = 0; const uint8_t* e = CmdOps(p, ops, cnt); if (!e) break;
         if (Arity(op) < 0 && InSpace(e) && *e == 0) e++; // variadic: the END operand
-        if (op == 0x004D) { if (pend) { pend->hasBranch = true; pend->jumped = false; pend->fall = p + 7; pend->target = p + 7; if ((pend->raw & 0x7FFF) == 0x0118) { g_deadConds[pend->p] = pend; nd++; } else { g_flagConds[pend->p] = pend; nf++; } } pend.reset(); single = false; p = e; continue; }
+        if (op == 0x004D) { if (pend) { pend->hasBranch = true; pend->jumped = false; pend->fall = p + 7; pend->target = p + 7; if ((pend->raw & 0x7FFF) == 0x0118 || (pend->raw & 0x7FFF) == 0x0119) { g_deadConds[pend->p] = pend; nd++; } else { g_flagConds[pend->p] = pend; nf++; } } pend.reset(); single = false; p = e; continue; }
         if ((op == 0x08F9 || op == 0x05AD) && cnt >= 2 && ops[1] && InSpace(ops[1]) && *ops[1] == 0x0E && ops[1][1] > 0 && ops[1][1] <= 8) g_enexNames.insert(std::string((const char*)ops[1] + 2, strnlen((const char*)ops[1] + 2, ops[1][1]))); // CR27
         if (op == 0x00D6) { int32_t v; single = cnt >= 1 && OperandInt(ops[0], v) && v == 0; pend.reset(); p = e; continue; }
-        if (single && !(w & 0x8000) && (op == 0x0118 || op == 0x0038 || op == 0x0039)) {
+        if (single && !(w & 0x8000) && (op == 0x0118 || op == 0x0038 || op == 0x0039 || (op == 0x0119 && !std::getenv("NOTSA_MDRIVER_NOCARGUARD")))) {
             auto r = std::make_shared<Rec>(); r->p = p; r->raw = w; r->cond = -1; r->waitSeq = 0; r->args = DecodeArgs(s, p, op == 0x0118 ? 1 : 2);
             for (int k = 0; k < 2 && k < cnt; k++) { uint32_t ref; if (OperandVar(ops[k], ref)) r->vref[k] = ref; }
             pend = r;
@@ -433,9 +441,11 @@ bool Hates(ePedType a, ePedType b) { return ((CPedType::GetPedTypeAcquaintances(
 bool LikesSide(int t) { return Likes((ePedType)t, PED_TYPE_PLAYER1) || Likes(PED_TYPE_PLAYER1, (ePedType)t); }
 bool HatesSide(int t) { return Hates((ePedType)t, PED_TYPE_PLAYER1) || Hates(PED_TYPE_PLAYER1, (ePedType)t); }
 bool ProtectedPed(CPed* p) { auto* c = FindPlayerPed(); return (int)p->m_nPedType <= 3 || LikesSide((int)p->m_nPedType) || (c && c->GetPlayerGroup().GetMembership().IsMember(p)); }
+std::set<int> g_usedCars; // CR27: vehicle handles the driver itself entered / drove to a place (the mission car): never wrecked by a kill answer
 bool ProtectedHandle(int h) { // actions.ts protectedHandle
     if (auto* p = CPools::GetPed(h)) return p == Cj() || ProtectedPed(p);
     auto* v = CPools::GetVehicle(h); if (!v) return false;
+    if (g_usedCars.count(h) && !std::getenv("NOTSA_MDRIVER_NOUSEDCAR")) return true;
     std::vector<CPed*> occ; if (v->m_pDriver) occ.push_back(v->m_pDriver); for (auto* pp : v->m_apPassengers) if (pp) occ.push_back(pp);
     for (auto* o : occ) { if (o == Cj() || ProtectedPed(o) || (o->m_fHealth > 0.f && !HatesSide((int)o->m_nPedType))) return true; }
     return false;
@@ -451,7 +461,7 @@ const std::set<int>& Guarded() {
     const int fr = (int)CTimer::GetFrameCounter(); if (fr == lastFr) return out; lastFr = fr; out.clear();
     if (std::getenv("NOTSA_MDRIVER_NOGUARDPROTECT") || !g_thread) return out;
     for (auto& [site, r] : g_deadConds) {
-        if ((r->raw & 0x8000) || (r->raw & 0x7FFF) != 0x0118) continue;
+        if ((r->raw & 0x8000) || ((r->raw & 0x7FFF) != 0x0118 && (r->raw & 0x7FFF) != 0x0119)) continue; // CR27: IS_CAR_DEAD sites too (26: the mission's truck)
         auto& ce = cache[site]; const size_t gen = g_flagConds.size() + g_deadConds.size();
         if (ce.first != gen + 1) { ce = { gen + 1, VerdictOf(g_thread, *r) == Verdict::Guard }; if (std::getenv("NOTSA_MDRIVER_PLOG") && ce.second) notsa::standalone::Fixups::Log("[mdplog] guard site ip=%x flagconds=%zu", (unsigned)(site - g_thread->m_BaseIP), g_flagConds.size()); }
         if (!ce.second) continue; const auto da = DecodeArgs(g_thread, site, 1); if (!da.empty()) out.insert((int)da[0].bits);
@@ -1048,7 +1058,7 @@ void TickGeneric() {
         if (kr && d.row == kr) break;
         if (kr) for (size_t k = loop.size(); k-- > 0;) {
             const auto& r = loop[k]; if (r->raw != (0x8000 | kop) || r->cond != 1 || AnyGuard(*r)) continue;
-            if (kop == 0x0119 && !(r->waitAfter && !r->jumped)) continue; // the car form only when the TRUE branch IS the WAIT of its group (`WHILE NOT IS_CAR_DEAD(x)`, 16): elsewhere `NOT IS_CAR_DEAD` is a plain if (10: the RC plane @34 whose death fails the mission)
+            if ((kop == 0x0119 || (kop == 0x0118 && !std::getenv("NOTSA_MDRIVER_NOPEDWAITONLY"))) && !(r->waitAfter && !r->jumped)) continue; // CR27 (26 ROBBING UNCLE SAM: the driver killed Ryder, the mission's friend, for a `NOT IS_CHAR_DEAD(Ryder)` that is a plain if): the ped form too only when the TRUE branch IS the WAIT of its group // the car form only when the TRUE branch IS the WAIT of its group (`WHILE NOT IS_CAR_DEAD(x)`, 16): elsewhere `NOT IS_CAR_DEAD` is a plain if (10: the RC plane @34 whose death fails the mission)
             const auto a2 = ResolveArgs(*kr, *r); if (!a2 || a2->empty()) continue;
             const int h = (int)(*a2)[0].n;
             if (kop == 0x0118 && !std::getenv("NOTSA_MDRIVER_NOPHOTO") && std::any_of(g_recs.begin(), g_recs.end(), [&](const RecP& q) { const auto qh = ArgInt(*q, 0); return (q->raw & 0x7FFF) == 0x04C5 && qh && (int)*qh == h; })) continue; // CR25 (58): a ped the script wants PHOTOGRAPHED is no wait-until-dead (`NOT IS_CHAR_DEAD(x) AND HAS_CHAR_BEEN_PHOTOGRAPHED(x)`)
@@ -1134,6 +1144,7 @@ void TickGeneric() {
     std::fprintf(stderr, "[mdriver] frame %d ip %x row %d %04X %s -> %s\n", fr, at, d.rowIdx, d.op, d.row->name.c_str(), d.row->action.c_str());
     notsa::standalone::Fixups::Log("[mdriver] decide frame %d ip %x row %d %04X %s -> %s args %s cond-args %zu a0=%d cj=%d", fr, at, d.rowIdx, d.op, d.row->name.c_str(), d.row->action.c_str(), RKey(d.args).c_str(), d.cond ? d.cond->args.size() : (size_t)0, (d.cond && !d.cond->args.empty()) ? (int)d.cond->args[0].bits : -1, Cj() ? CPools::GetPedRef(Cj()) : -1); // CR16
     if (d.row->action == "kill" && !d.args.empty()) if (auto* kp = CPools::GetPed((int)d.args[0].n)) notsa::standalone::Fixups::Log("[mdriver] kill target h=%d model %d type %d hp %.0f pos %.0f,%.0f,%.0f (CJ %.0f,%.0f)", (int)d.args[0].n, (int)kp->m_nModelIndex, (int)kp->m_nPedType, kp->m_fHealth, kp->GetPosition().x, kp->GetPosition().y, kp->GetPosition().z, Cj() ? Cj()->GetPosition().x : 0.f, Cj() ? Cj()->GetPosition().y : 0.f); // CR27 debug log
+    if ((d.row->action == "entercar" || d.row->action == "vehwarp") && !d.args.empty() && d.cond && !d.cond->args.empty()) { const int ch = (int)(int32_t)d.cond->args[0].bits; if (CPools::GetVehicle(ch)) g_usedCars.insert(ch); } // CR27: the car of an entercar / `LOCATE_CAR` vehwarp answer
     DispatchRow(d);
     if (g_auxAnswered) { g_auxAnswered = false; if (g_nextStall == 0 && !std::getenv("NOTSA_MDRIVER_NOAUXFAST")) { g_nextStall = 90; g_auxEarly = true; } } // CR27: a menu has several steps: the next decision after 90 frames, not 600
 }

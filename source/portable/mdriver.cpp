@@ -233,6 +233,7 @@ std::vector<Row>         g_rows;
 // a conditional command of the root thread as the TS StallSink records it (opcode, NOT form, state, decoded operands, the WAIT count, where the following GOTO_IF_FALSE led)
 struct Rec { const uint8_t* p; uint16_t raw; int cond; int waitSeq; std::vector<Arg> args; bool hasBranch = false, jumped = false, waitAfter = false; const uint8_t *target = nullptr, *fall = nullptr; uint32_t vref[2] = { 0, 0 }; /* CR22: identity of operand 0 / 1 when it is a variable: (type << 16) | offset-or-index, else 0 */ };
 using RecP = std::shared_ptr<Rec>;
+bool g_auxMode = false; // CR27: Decide() over an aux (streamed script) thread answers only with warps / key presses (no kills of the streamed script's peds)
 std::map<const uint8_t*, RecP> g_deadConds; // CR21
 std::map<const uint8_t*, RecP> g_flagConds; // CR22: every plain `var == number` condition seen (IS_INT_VAR/LVAR_EQUAL_TO_NUMBER): the flag tests of the fail-flag guard
 std::set<uint32_t> g_areaVars; int g_enterArea = -1; // CR23: variables written by GET_AREA_VISIBLE (077E); the interior id a compare of one of them asks for
@@ -652,6 +653,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
     if (pass == 1 && blockers.empty()) break;
     for (size_t i = 0; i < g_rows.size(); i++) {
         const auto& row = g_rows[i];
+        if (g_auxMode && !(row.action == "pedwarp" || row.action == "vehwarp" || row.action == "key")) continue; // CR27
         if (pass == 0 && !blockers.empty() && row.action == "wait") continue; // CR19: a wait row does not shadow the blockers of the wait group
         for (auto& c : falses) {
             if (!Matches(row, *c)) continue;
@@ -1072,7 +1074,7 @@ void TickGeneric() {
             // the thread's own state = which conditions of its passes are false (a big state machine loop has one WAIT): the n-th decision in the same state rotates through the answers (accept first, cancel next: a menu whose accept leads nowhere is left by its cancel button)
             uint32_t ak = 7; { std::set<uint32_t> fs; for (auto& r : al) if (r->cond == 0) fs.insert((uint32_t)(r->p - t->m_BaseIP)); for (const auto f : fs) ak = ak * 1000003u + f; } // the state = the set of conditions that are false in its last passes
             const int visit = g_auxVisits[ak]++;
-            Dec d4 = Decide(al, visit);
+            g_auxMode = true; Dec d4 = Decide(al, visit + 3); g_auxMode = false; // +3: no key-deferral (a streamed script polls its buttons while other conditions of its pass are false too)
             if (d4.act && d4.row->action == "key" && (CMenuSystem::MenuInUse[0] || CMenuSystem::MenuInUse[1]) && !std::getenv("NOTSA_MDRIVER_NOMENUACCEPT")) { // CR27: a menu is up: the accept button (CROSS = 16) first, then the others
                 std::vector<RecP> opts; std::set<int> sb; for (size_t k = al.size(); k-- > 0;) { const auto& r = al[k]; const auto b = ArgInt(*r, 1); if (r->raw != 0x00E1 || r->cond != 0 || !b) continue; if (sb.insert((int)*b).second) opts.push_back(r); }
                 std::stable_sort(opts.begin(), opts.end(), [](const RecP& a, const RecP& b) { return (*ArgInt(*a, 1) != 16) < (*ArgInt(*b, 1) != 16); });

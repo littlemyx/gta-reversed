@@ -488,6 +488,7 @@ std::optional<std::vector<RArg>> ResolveArgs(const Row& row, const Rec& rec) {
 bool Matches(const Row& w, const Rec& r) { return w.op == (r.raw & 0x7FFF) && (w.match == 0 || (w.match == 2) == ((r.raw & 0x8000) != 0)); }
 struct Dec { bool act = false; const Row* row = nullptr; int rowIdx = -1; RecP cond; std::vector<RArg> args; int op = -1; std::string reason; };
 CEntity* EntityOfHandle(int h, int op);
+std::string LocatedOther(const Rec& r);
 Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
     Dec d;
     // CR19: the wait group. The last condition group of the pass fell straight into a WAIT and is an OR (00D6 21..27: `WHILE OR(NOT a, NOT b, ...)`): the thread waits until EVERY member is false. The NOT-form members that are
@@ -567,6 +568,13 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
                     d.act = true; d.row = &row; d.rowIdx = (int)i; d.cond = c; d.args = *a; d.op = c->raw & 0x7FFF; return d;
                 }
             }
+    }
+    if (!blockers.empty() && !std::getenv("NOTSA_MDRIVER_NOKILLFIRST") && std::any_of(falses.begin(), falses.end(), [](const RecP& c) { return !(c->raw & 0x8000) && !LocatedOther(*c).empty(); })) { // CR25 (15 DRIVE-THRU: `WHILE OR(NOT dead @89, NOT dead @90)` waits for the Ballas in the Voodoo to die; the false `LOCATE_CAR_3D(Voodoo, spot)` of the body was answered by warping the Voodoo to the spot, which the script takes as the escape and fails): before ANOTHER entity is warped to a place, the live hostile NOT-dead blockers of the wait group are killed
+        for (size_t i = 0; i < g_rows.size(); i++) { const auto& kr = g_rows[i]; if (kr.op != 0x0118 || kr.match != 1 || kr.action != "kill") continue;
+            for (auto& b : blockers) { if (b->raw != 0x8118) continue; const auto a = ResolveArgs(kr, *b); if (!a || a->empty()) continue; const int h = (int)(*a)[0].n; auto* pp = CPools::GetPed(h);
+                if (!pp || pp == Cj() || pp->m_fHealth <= 0.f || ProtectedHandle(h) || Guarded().count(h)) continue;
+                d.act = true; d.row = &kr; d.rowIdx = (int)i; d.cond = b; d.args = *a; d.op = 0x0118; return d; }
+            break; }
     }
     for (int pass = 0; pass < 2; pass++) {
     if (pass == 1 && blockers.empty()) break;
@@ -840,6 +848,7 @@ void TickGeneric() {
     if (g_fail && fr - g_failFrame > 600) { g_quitIn = 0; return; }
     if (fr >= g_maxFrames) { Stop("budget: " + std::to_string(g_maxFrames) + " frames", -1, (uint32_t)(root->m_IP - root->m_BaseIP)); return; }
     if (!g_pass && CStats::GetStatValue(STAT_MISSIONS_PASSED) > g_passStat0) { g_pass = true; g_passFrame = fr; } // CR4: TS drive.ts: PASSED = STAT_MISSIONS_PASSED rose (0x0318 SET_LATEST_MISSION_PASSED; missions 87 78 print no M_PASS)
+    if (!g_pass && fr - g_killFrame <= 900 && !std::getenv("NOTSA_MDRIVER_KEEPKILLWANTED")) if (auto* w = FindPlayerWanted()) if (w->m_WantedLevel != eWantedLevel::WANTED_CLEAN) w->SetWantedLevel(eWantedLevel::WANTED_CLEAN); // CR25 (15 DRIVE-THRU): the driver's own `kill` (a stand-in for shooting the hostile peds) is reported as a murder by witnesses: the one star got CJ, who stood still in his car, ARRESTED 250 frames later (HAS_DEATHARREST_BEEN_EXECUTED -> the script's fail path). The star the kill raised is cleared for 900 frames
     if (!std::getenv("NOTSA_MDRIVER_NOFIGHT") && ++g_fightClock % 3 == 0 && !CCutsceneMgr::IsCutsceneProcessing() && Cj()) ShootDead();
     if (static const bool plog = std::getenv("NOTSA_MDRIVER_PLOG") != nullptr; plog && Cj() && fr % 50 == 0) { // CR8: CJ state every 50 frames (debug)
         auto* me = Cj(); const auto pp = me->GetPosition(); auto* v = me->bInVehicle ? me->m_pVehicle : nullptr; auto* w = FindPlayerWanted();

@@ -524,6 +524,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
     if (falses.empty() && blockers.empty()) { d.reason = "no condition evaluated false in the loop (the guards left out)"; return d; }
     // CR22: built-in verbs for opcodes the TS table has no row for (proposed rows: see C:/gta-scratch/cr22/FINDINGS.txt FOR TS). They come before every table row (a wait row of another false condition of the pass must not shadow them).
     static const Row kDmg{ 0x0366, 1, "HAS_OBJECT_BEEN_DAMAGED", "damageobj", { "$0" }, 30 };
+    static const Row kPho{ 0x04C5, 1, "HAS_CHAR_BEEN_PHOTOGRAPHED", "photo", { "$0" }, 30 }; // CR25 (58 PHOTO OPPORTUNITY)
     static const Row kTag{ 0x0038, 0, "int compare of the GET_PERCENTAGE_TAGGED_IN_AREA result", "tagarea", {}, 60 };
     if (!std::getenv("NOTSA_MDRIVER_NOBUILTIN")) {
         const auto tagCond = [&](const RecP& c) { // an integer compare of the result variable of a GET_PERCENTAGE_TAGGED_IN_AREA: the area it measured (a false plain compare, or the TRUE NOT-form compare of the wait group: `WHILE NOT $27 == 100`)
@@ -533,6 +534,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
         };
         for (auto& c : falses) {
             const int op = c->raw & 0x7FFF; if (c->raw & 0x8000) continue;
+            if (op == 0x04C5 && !std::getenv("NOTSA_MDRIVER_NOPHOTO")) { auto a2 = ResolveArgs(kPho, *c); if (a2) { d.act = true; d.row = &kPho; d.rowIdx = -6; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (op == 0x0366) { auto a2 = ResolveArgs(kDmg, *c); if (a2 && wide && (a2->empty() || !CPools::GetObject((int)(*a2)[0].n))) continue; /* CR23: a record of an older pass: the object may be gone */ if (a2) { d.act = true; d.row = &kDmg; d.rowIdx = -2; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (tagCond(c)) { d.act = true; d.row = &kTag; d.rowIdx = -3; d.cond = c; d.op = op; return d; }
         }
@@ -759,6 +761,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         notsa::standalone::Fixups::Log("[mdriver] warpto_handle: no clear spot, +0.5 m");
         one(warp(pos.x + 0.5f, pos.y, pos.z, false)); return;
     }
+    if (v == "photo") { QueueActions({ "emit mdphoto:" + std::to_string(I_(0)) }, row.settle); return; } // CR25: HAS_CHAR_BEEN_PHOTOGRAPHED(ped): the camera shot of the ped (the flag CWeapon::TakePhotograph sets for a ped in frame, in range and in line of sight)
     if (v == "damageobj") { QueueActions({ "emit mddmgobj:" + std::to_string(I_(0)) }, row.settle); return; } // CR22: HAS_OBJECT_BEEN_DAMAGED(obj): CJ damages the object (16 NINES AND AK'S shooting range)
     if (v == "tosphere") { // CR24: the vehicle at the centre of a GET_RANDOM_CAR_IN_SPHERE search is moved next to the nearest car the game's own search would accept (appearance 1/2, not a law enforcer, wanted model, CanBeDeleted: the mission's decoy is refused), 8 m above it
         CVehicle* best = SphereTarget(g_sphCur.veh, g_sphCur.model);
@@ -938,6 +941,7 @@ void TickGeneric() {
             if (kop == 0x0119 && !(r->waitAfter && !r->jumped)) continue; // the car form only when the TRUE branch IS the WAIT of its group (`WHILE NOT IS_CAR_DEAD(x)`, 16): elsewhere `NOT IS_CAR_DEAD` is a plain if (10: the RC plane @34 whose death fails the mission)
             const auto a2 = ResolveArgs(*kr, *r); if (!a2 || a2->empty()) continue;
             const int h = (int)(*a2)[0].n;
+            if (kop == 0x0118 && !std::getenv("NOTSA_MDRIVER_NOPHOTO") && std::any_of(g_recs.begin(), g_recs.end(), [&](const RecP& q) { const auto qh = ArgInt(*q, 0); return (q->raw & 0x7FFF) == 0x04C5 && qh && (int)*qh == h; })) continue; // CR25 (58): a ped the script wants PHOTOGRAPHED is no wait-until-dead (`NOT IS_CHAR_DEAD(x) AND HAS_CHAR_BEEN_PHOTOGRAPHED(x)`)
             if (kop == 0x0118) { auto* pp = CPools::GetPed(h); if (!pp || pp == Cj() || pp->m_fHealth <= 0.f || ProtectedHandle(h) || Guarded().count(h)) continue; }
             else { auto* vv = CPools::GetVehicle(h); if (!vv || vv->m_fHealth <= 0.f || ProtectedHandle(h) || (Cj() && Cj()->m_pVehicle == vv)) continue; }
             d.row = kr; d.rowIdx = kri; d.cond = r; d.args = *a2; d.op = kop; break;
@@ -1057,6 +1061,7 @@ bool Cmd(const char* name, const std::string& args) {
         if (auto* best = SphereTarget(h, model)) { const CVector p = best->GetPosition() + best->m_vecMoveSpeed * 50.f * 4.3f; notsa::standalone::Fixups::Log("[mdriver] mdtosphere: car %d at %.1f,%.1f,%.1f speed %.1f -> %.1f,%.1f,%.1f", (int)best->m_nModelIndex, best->GetPosition().x, best->GetPosition().y, best->GetPosition().z, best->m_vecMoveSpeed.Magnitude() * 50.f, p.x, p.y, p.z); return Cmd("mdwother", "1:" + std::to_string(h) + ":" + F(p.x) + ":" + F(p.y) + ":" + F(p.z + 3.f)); }
         return true;
     }
+    if (!std::strcmp(name, "mdphoto")) { if (auto* k = CPools::GetPed(std::atoi(args.c_str()))) { k->bHasBeenPhotographed = true; notsa::standalone::Fixups::Log("[mdriver] mdphoto %s", args.c_str()); } return true; }
     if (!std::strcmp(name, "mddmgobj")) { // CR22: CObject::ObjectDamage, CJ the damager, pistol (the port's object damage path of a bullet hit)
         if (auto* o = CPools::GetObject(std::atoi(args.c_str()))) { const CVector pos = o->GetPosition(); CVector dir = pos - ped->GetPosition(); dir.Normalise(); o->ObjectDamage(1000.f, &pos, &dir, ped, WEAPON_PISTOL); notsa::standalone::Fixups::Log("[mdriver] mddmgobj %s model %d renderDamaged=%d visible=%d", args.c_str(), (int)o->m_nModelIndex, (int)o->m_bRenderDamaged, (int)o->m_bIsVisible); }
         return true;

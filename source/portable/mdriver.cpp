@@ -1053,13 +1053,6 @@ void TickGeneric() {
             notsa::standalone::Fixups::Log("[mdriver] leashkeep frame %d: CJ %.0f m from the target ped, joins it at %.0f,%.0f", fr, (double)(xp - cp).Magnitude2D(), (double)q.x, (double)q.y);
             Emit("mdwveh:" + F(q.x) + ":" + F(q.y) + ":-100"); break; }
     }
-    if (static const bool nu = std::getenv("NOTSA_MDRIVER_NOUPRIGHT") != nullptr; !nu && fr % 15 == 0 && root && Cj() && Cj()->bInVehicle && Cj()->m_pVehicle && !CCutsceneMgr::IsCutsceneProcessing()) { // CR32 (25 CATALYST): the script-placed truck settles on its side (up.z < 0.3 => IS_CAR_UPSIDEDOWN => Ryder dies, RYD3_B): the player would right a car he sits in; CJ's stationary automobile tilted past up.z 0.5 for 45 frames is put back on its wheels at the same spot and heading
-        static int s_tilt = 0; auto* v = Cj()->m_pVehicle;
-        if (v->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE && v->GetUp().z < 0.5f && v->m_vecMoveSpeed.Magnitude() < 0.03f && !v->physicalFlags.bTouchingWater) {
-            if (++s_tilt >= 3) { s_tilt = 0; const CVector vp = v->GetPosition(); const float hd = v->GetHeading(); CCarCtrl::SetCoordsOfScriptCar(v, vp.x, vp.y, vp.z + 0.6f, 1, 0); v->SetHeading(hd); v->m_vecMoveSpeed = CVector{}; v->m_vecTurnSpeed = CVector{};
-                notsa::standalone::Fixups::Log("[mdriver] upright frame %d: CJ's car tilted (up.z) at %.1f,%.1f,%.1f: put back on its wheels", fr, (double)vp.x, (double)vp.y, (double)vp.z); }
-        } else s_tilt = 0;
-    }
     if (static const bool bl = std::getenv("NOTSA_MDRIVER_BIKELOG") != nullptr; bl && root && fr % 30 == 0) { // CR17: debug: the script cars of the locals 52..65 (mission 55 ambush bikes) and CJ's car
         std::string o; for (int li = 52; li < 66; li++) { auto* c = CPools::GetVehicle(LocalAt(root, li)->iParam); if (!c) continue; o += " L" + std::to_string(li) + "=" + std::to_string((int)c->GetPosition().x) + "," + std::to_string((int)c->GetPosition().y) + (c->m_pDriver ? "d" : "-") + (c->m_fHealth > 0 ? "" : "X"); }
         auto* me = Cj(); const auto pp = me ? me->GetPosition() : CVector{}; notsa::standalone::Fixups::Log("[bikelog] f%d cj=%d,%d%s", fr, (int)pp.x, (int)pp.y, o.c_str());

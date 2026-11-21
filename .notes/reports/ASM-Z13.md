@@ -1,6 +1,6 @@
 # ASM-Z13: script handlers on the story-mission path without an asm verdict (continuation of Z12)
 
-Rows: .notes/asm_sweep/Z13.result.tsv (35 MATCH rows covering ~50 opcodes, 5 FIXED rows / 6 opcodes). StandaloneRelease links after each push (ninja -j4); no unit test covers these handlers; no game run.
+Rows: .notes/asm_sweep/Z13.result.tsv (32 MATCH rows covering ~50 opcodes, 5 FIXED rows / 6 opcodes). StandaloneRelease links after each push (ninja -j4); no unit test covers these handlers; no game run.
 
 ## Item 1: int operand where the handler reads a float (Z12 open risk)
 `script::Read<float>` converts a static INT operand by value (the exe keeps the raw dword). A scan of main.scm + script.img (scmscan decode, parameter types from sa.json) found

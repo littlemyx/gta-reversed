@@ -158,6 +158,11 @@ void CCoverPoint::Update() {
 bool CCoverPoint::CanBeRemoved() const {
     switch (GetType()) {
     case CCoverPoint::eType::OBJECT: { // 0x699850
+        if (auto* const e = GetCoverEntity(); e && !e->m_matrix) {
+            // 0x699857: the exe gives the entity a matrix first (0x54F560, 0x54F1B0); the port dereferenced a null matrix
+            e->AllocateMatrix();
+            e->m_placement.UpdateMatrix(e->m_matrix);
+        }
         if (!GetCoverEntity() || GetCoverEntity()->GetUp().z < 0.9f) {
             return true;
         }

@@ -1,0 +1,22 @@
+exe_addr	function	verdict	note
+0x5F7470	CPedGroupIntelligence::AddEvent	MATCH	event type 0x2F, AffectsPedGroup x2, ped-source membership, response type, delete before clone
+0x608DA0	CAcquaintance::SetAsAcquaintance	MATCH	clears the bit in the other 4 sets
+0x55E6D0	SurfaceInfos_c::IsShootThrough	MATCH	flag bit 13
+0x562F60	CWanted::CanCopJoinPursuit(4 args)	MATCH	displace loop
+0x562FB0	CWanted::CanCopJoinPursuit(cop)	MATCH	wrapper
+0x564000	CWorld::FindPlayerSlotWithVehiclePointer	MATCH	returns 0 when not found
+0x5E4220	CPed::IsPointerValid	MATCH	exe has no free-slot test (index range + collision list / is player); port pool test also checks the slot, no effect for live peds
+0x72DD60	CCullZones::PoliceAbandonCars	MATCH	bit 8 of CurrentFlags_Player
+0x73B380	CWeapon::TargetWeaponRangeMultiplier	MATCH	non-bike vehicle 3.0; camera mode 49 -> 2.0, 45 -> 3.0
+0x743D70	CWeaponInfo::GetWeaponReloadTime	MATCH	flag bits 11/12/15, aim offset order, min 400
+0x5393F0	CFire::Extinguish	MATCH	flags and 0xF6 or 0x10, fx kill, ped/vehicle fire ptr cleared
+0x41BD90	CGeneral::GetRandomNumberInRange<float>	MATCH	x87 chain
+0x6F4790	CDoor::Open	MATCH	>=1 branch, fixed-state bit, angVel at 0
+0x64F070	CCarEnterExit::ComputeSlowJackedPed	MATCH	jump tables decoded from the exe
+0x64E610	CCarEnterExit::ComputeOppositeDoorFlag	MATCH	jump tables decoded from the exe
+0x569660	CWorld::FindGroundZForCoord	MATCH	ProcessVerticalLine args, 20.0 fallback
+0x4B4AC0	CEventKnockOffBike::SetPedSafePosition	MATCH	heading, z,y,x dot order, 0.5/0.6 raises, LOS args, tail
+0x5FE0E0	CPedIK::PitchForSlope	MATCH	first half re-derived; roll half matched the annotated port
+0x464250	CRunningScript::CollectNextParameterWithoutIncreasingPC	MATCH	all operand kinds, IP restored
+0x464370	CRunningScript::StoreParameters	MATCH	global/local/array stores
+0x464500	CRunningScript::ReadParametersForNewlyStartedScript	MATCH	same operand kinds

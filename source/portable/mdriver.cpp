@@ -494,7 +494,6 @@ bool LocateGuard(const CRunningScript* s, const Rec& r) { // CR28 (24 HOME INVAS
     if ((r.raw & 0x8000) || !s || std::getenv("NOTSA_MDRIVER_NOLOCATEGUARD")) return false;
     bool warp = false; for (auto& row : g_rows) if (row.match != 2 && row.op == (r.raw & 0x7FFF) && (row.action == "pedwarp" || row.action == "vehwarp" || row.action == "midpoint" || row.action == "warpto_handle")) { warp = true; break; }
     if (!warp) return false;
-    if (VerdictOf(s, r) == Verdict::Guard) return true;
     if (r.fall && !std::getenv("NOTSA_MDRIVER_NOTRAPGUARD")) for (auto& o : g_recs) if (o->fall == r.fall && o->waitSeq == r.waitSeq && o->raw == 0x051A) return true; // the same OR group also holds HAS_CHAR_BEEN_DAMAGED_BY_CHAR: a wake-up trap (the owner wakes when he is hit OR CJ comes within 1 m), its true branch is an alarm state machine the fail walk does not follow
     return false;
 }
@@ -813,6 +812,12 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     if (v == "midpoint") {
         float x, y, z = -100.f;
         if (d.args.size() >= 6) { x = (F_(0) + F_(3)) / 2; y = (F_(1) + F_(4)) / 2; z = (F_(2) + F_(5)) / 2; } else { x = (F_(0) + F_(2)) / 2; y = (F_(1) + F_(3)) / 2; }
+        if (d.args.size() == 4 && d.cond && cop >= 0x05F6 && cop <= 0x05FB && !std::getenv("NOTSA_MDRIVER_NOANGLEDCENTRE")) { // CR28 (23 GRAY IMPORTS): the angled rectangle (x1,y1)-(x2,y2) has the AB segment as ONE side and extends `width` to one side (exe CalculateAngledAreaCorners: D = A + (sin a, -cos a) * width, a = angle(A,B) + pi/2): the middle of AB lies ON the border (float noise decides), the centre is half a width in from it
+            if (const auto w = ArgFloat(*d.cond, 5)) { const float a = CGeneral::GetRadianAngleBetweenPoints(F_(0), F_(1), F_(2), F_(3)) + std::numbers::pi_v<float> / 2.f; x += std::sin(a) * (float)*w * 0.5f; y -= std::cos(a) * (float)*w * 0.5f; }
+        }
+        if (d.args.size() == 6 && d.cond && cop >= 0x05FC && cop <= 0x0601 && !std::getenv("NOTSA_MDRIVER_NOANGLEDCENTRE")) { // 3D variants: x1 y1 z1 x2 y2 z2 width (width = argument 7)
+            if (const auto w = ArgFloat(*d.cond, 7)) { const float a = CGeneral::GetRadianAngleBetweenPoints(F_(0), F_(1), F_(3), F_(4)) + std::numbers::pi_v<float> / 2.f; x += std::sin(a) * (float)*w * 0.5f; y -= std::cos(a) * (float)*w * 0.5f; }
+        }
         one(warp(x, y, z, false)); return;
     }
     if (v == "entercar" || v == "nearest_car") {

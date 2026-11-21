@@ -526,6 +526,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             const int op = c->raw & 0x7FFF; if ((c->raw & 0x8000) || (op != 0x0038 && op != 0x0039) || std::getenv("NOTSA_MDRIVER_NOENTERAREA")) continue;
             if (!(c->vref[0] && g_areaVars.count(c->vref[0]))) continue;
             const auto n = ArgInt(*c, 1); if (!n || *n < 0) continue;
+            if (*n == 0 && c->jumped && c->target && InSpace(c->target) && (*(const uint16_t*)c->target & 0x7FFF) == 0x0051 && !std::getenv("NOTSA_MDRIVER_LEAVEANY")) continue; // CR24 (14): `GET_AREA_VISIBLE == 0` whose false branch skips to the RETURN of a helper sub (`IF @78 == 0` of a sub run every pass while CJ is inside the interior) is no wait: it must not drag CJ out of the interior
             g_enterArea = (int)*n; d.act = true; d.row = &kEnter; d.rowIdx = -4; d.cond = c; d.op = op; return d;
         }
         static const Row kSph{ 0x0119, 2, "NOT IS_CAR_DEAD of a GET_RANDOM_CAR_IN_SPHERE result", "tosphere", {}, 90 };
@@ -750,7 +751,9 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         if (!best) { QueueActions({}, 0); return; }
         const auto c = best->GetPosition(); float dx = c.x - best->m_vecExitPos.x, dy = c.y - best->m_vecExitPos.y; const float len = std::max(0.01f, (float)std::hypot(dx, dy));
         notsa::standalone::Fixups::Log("[mdriver] enterarea %d: entry exit %.8s at %.1f,%.1f,%.1f (%.0f m from CJ)", g_enterArea, best->m_szName, c.x, c.y, c.z, bd);
-        QueueActions({ "pedwarp " + F(c.x) + " " + F(c.y) + " " + F(c.z) }, row.settle); return;
+        std::vector<std::string> acts; if (me && me->bInVehicle && !std::getenv("NOTSA_MDRIVER_NOEXITFIRST")) acts = { "key down return", "wait 1", "key up return", "waituntil invehicle == 0 300" }; // CR24 (14: CJ drives Sweet's car to the crack den): an entry exit is entered on foot, the warp of a driver only moves the car: get out first
+        acts.push_back("pedwarp " + F(c.x) + " " + F(c.y) + " " + F(c.z));
+        QueueActions(acts, row.settle); return;
     }
     if (v == "failclass") { Stop("by nature: " + (d.args.empty() ? std::string("failclass") : d.args[0].s), cop, 0); return; }
     Stop("badverb " + v, cop, 0);

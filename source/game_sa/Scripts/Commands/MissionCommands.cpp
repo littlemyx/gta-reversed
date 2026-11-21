@@ -70,7 +70,11 @@ void ScriptName(CRunningScript* S, std::string_view name) {
     S->SetName(lowered);
 }
 
+// exe 0x47FEEC: z <= -100.0f (not NaN) => z = CWorld::FindGroundZForCoord(x, y) before the fire is started (the port skipped it, so "auto z" fires spawned at -100)
 int32 StartScriptFire(CVector pos, int8 propagation, int32 size) {
+    if (pos.z <= -100.f) {
+        pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
+    }
     return gFireManager.StartScriptFire(pos, nullptr, 0.8f, 1, propagation, size);
 }
 

@@ -65,6 +65,7 @@ struct Cond { std::string expr, op; double val; };
 struct Step { std::string name; std::vector<Cond> conds; std::vector<std::string> actions; };
 std::vector<Step>        g_steps;
 std::string              g_script;           // thread name
+int                      g_trainFollow = -1, g_trainFollowUntil = 0; /* CR32 */
 int                      g_watchVeh = -1, g_buddyRef = -1, g_stall = 600, g_maxAnswers = 12; int g_nextStall = 0; int g_dangerUntil = 0, g_vhpPrev = -1, g_dropWin = 0; const void* g_vhpVeh = nullptr; /* CR31 urgency */ int g_photoPed = -1, g_photoHold = 0; bool g_photoEarly = false;
 bool                     g_loaded = false, g_started = false, g_done = false, g_failed = false;
 std::FILE*               g_out = nullptr;
@@ -792,7 +793,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     if (v == "wait") { QueueActions({}, row.settle); return; }
     if (v == "pedwarp" || v == "vehwarp") {
         if (d.cond) { const auto o = LocatedOther(*d.cond); if (!o.empty()) {
-            if (!o.compare(0, 2, "1:") && !std::getenv("NOTSA_MDRIVER_NOTRAINWAIT")) if (auto* tv = CPools::GetVehicle(std::atoi(o.c_str() + 2)); tv && tv->IsTrain()) { notsa::standalone::Fixups::Log("[mdriver] trainwait: the locate is about a train (%s): it runs to the place on its tracks, not warped", o.c_str()); QueueActions({}, row.settle); return; } // CR31 (29 WRONG SIDE OF THE TRACKS: `LOCATE_CAR_2D(train, ..)` was answered by warping the train 2 km along its line = derailed, mission failed): a train is waited for
+            if (!o.compare(0, 2, "1:") && !std::getenv("NOTSA_MDRIVER_NOTRAINWAIT")) if (auto* tv = CPools::GetVehicle(std::atoi(o.c_str() + 2)); tv && tv->IsTrain()) { g_trainFollow = std::atoi(o.c_str() + 2); g_trainFollowUntil = (int)CTimer::GetFrameCounter() + 800; notsa::standalone::Fixups::Log("[mdriver] trainwait: the locate is about a train (%s): it runs to the place on its tracks, not warped", o.c_str()); QueueActions({}, row.settle); return; } // CR31 (29 WRONG SIDE OF THE TRACKS: `LOCATE_CAR_2D(train, ..)` was answered by warping the train 2 km along its line = derailed, mission failed): a train is waited for
             std::vector<std::string> acts{ "emit mdwother:" + o + ":" + F(F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) };
             if (!o.compare(0, 2, "1:") && c && !std::getenv("NOTSA_MDRIVER_NOLEASHJOIN")) { // CR30 (23 GRAY IMPORTS, chase): the car that is moved to the place carries a ped the pass keeps in a `ped near CJ` leash locate (00F2..00F4 / 0104..0106, plain or NOT, either operand order): CJ rides along, the leash (the script fails the mission when CJ is far from the dealer) stays true
                 auto* mv = CPools::GetVehicle(std::atoi(o.c_str() + 2)); bool leash = false;
@@ -1052,6 +1053,10 @@ void TickGeneric() {
             const CVector fw = carOp ? ((CVehicle*)x)->GetForward() : (((CPed*)x)->bInVehicle && ((CPed*)x)->m_pVehicle ? ((CPed*)x)->m_pVehicle->GetForward() : ((CPed*)x)->GetForward()); const CVector q = carOp && ((CVehicle*)x)->IsTrain() ? xp + ((CVehicle*)x)->GetRight() * 14.f : xp - fw * 12.f; // a train: beside the tracks, not on them
             notsa::standalone::Fixups::Log("[mdriver] leashkeep frame %d: CJ %.0f m from the target ped, joins it at %.0f,%.0f", fr, (double)(xp - cp).Magnitude2D(), (double)q.x, (double)q.y);
             Emit("mdwveh:" + F(q.x) + ":" + F(q.y) + ":-100"); break; }
+    }
+    if (fr % 30 == 0 && g_trainFollow >= 0 && (int)CTimer::GetFrameCounter() < g_trainFollowUntil && g_wait == 0 && g_qpos >= g_queue.size() && g_untilLeft == 0 && root && Cj() && !CCutsceneMgr::IsCutsceneProcessing() && !std::getenv("NOTSA_MDRIVER_NOTRAINFOLLOW")) { // CR32 (29 WRONG SIDE OF THE TRACKS): while the driver waits for a train to reach a place (trainwait) CJ rides along with it: the script stops / ends the chase when CJ is far from the train
+        if (auto* tv = CPools::GetVehicle(g_trainFollow); tv && tv->IsTrain() && tv->m_fHealth > 0.f && !(Cj()->bInVehicle && Cj()->m_pVehicle == tv)) { const CVector tp = tv->GetPosition(), cp = Cj()->GetPosition();
+            if ((tp - cp).Magnitude2D() > 60.f) { const CVector q = tp + tv->GetRight() * 14.f; notsa::standalone::Fixups::Log("[mdriver] trainfollow frame %d: CJ %.0f m from the train, joins it at %.0f,%.0f", fr, (double)(tp - cp).Magnitude2D(), (double)q.x, (double)q.y); Emit("mdwveh:" + F(q.x) + ":" + F(q.y) + ":-100"); } }
     }
     if (static const bool bl = std::getenv("NOTSA_MDRIVER_BIKELOG") != nullptr; bl && root && fr % 30 == 0) { // CR17: debug: the script cars of the locals 52..65 (mission 55 ambush bikes) and CJ's car
         std::string o; for (int li = 52; li < 66; li++) { auto* c = CPools::GetVehicle(LocalAt(root, li)->iParam); if (!c) continue; o += " L" + std::to_string(li) + "=" + std::to_string((int)c->GetPosition().x) + "," + std::to_string((int)c->GetPosition().y) + (c->m_pDriver ? "d" : "-") + (c->m_fHealth > 0 ? "" : "X"); }

@@ -804,10 +804,6 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
                 if (mp && mp != c) { const float dd = (mp->GetPosition() - c->GetPosition()).Magnitude(); for (auto& r : g_recsBig) { if (r->waitSeq < g_waitSeq - 3 || (r->raw != 0x0021 && r->raw != 0x0023) || r->args.size() < 2) continue; const float dv = AF(r->args[r->raw == 0x0021 ? 0 : 1]); if (dv > 20.f && std::fabs(dv - dd) < 1.5f) { dist = true; break; } } }
                 if (dist) acts.push_back("emit mdwveh:" + F(F_(0) + 3.f) + ":" + F(F_(1)) + ":" + F(F_(2)));
             }
-            if (!o.compare(0, 2, "0:") && c && acts.size() == 1 && !std::getenv("NOTSA_MDRIVER_NOBUDDYJOIN")) { // CR31 (22 BURNING DESIRE: Denise is led to her house 550 m away, the stage then plays an anim script on her; the ped is not processed in full while CJ stays at the old place): a buddy of CJ (ProtectedPed) warped > 150 m away from CJ: CJ joins him at the place
-                auto* mp = CPools::GetPed(std::atoi(o.c_str() + 2));
-                if (mp && mp != c && ProtectedPed(mp) && std::hypot(F_(0) - c->GetPosition().x, F_(1) - c->GetPosition().y) > 150.f) { notsa::standalone::Fixups::Log("[mdriver] buddyjoin: CJ follows the buddy %s to %.0f,%.0f", o.c_str(), F_(0), F_(1)); acts.push_back("emit mdwveh:" + F(F_(0) + 3.f) + ":" + F(F_(1)) + ":" + F(F_(2))); }
-            }
             QueueActions(acts, row.settle); return; } } // LOCATE_CAR_3D(car 2049, ...) is satisfied by moving THAT car
         if (v == "pedwarp" && c && c->bInVehicle) { // CR10: actions.ts pedwarp on an ON_FOOT locate while CJ is in a vehicle: get out first (Enter, up to 300 frames; getOnFoot), then warp him (mission 77: 8x mdwveh on LOCATE_CHAR_ON_FOOT_3D)
             static const std::set<int> onFoot = { 0xE4, 0xE7, 0xEA, 0xED, 0xF0, 0xF3, 0xF6, 0xF9, 0xFC, 0xFF, 0x102, 0x105, 0x197, 0x19A, 0x19C, 0x19F, 0x1A1, 0x1A4, 0x1A6, 0x1A9, 0x1FD, 0x200, 0x203, 0x206, 0x27C, 0x27F, 0x282, 0x285, 0x288 };
@@ -1126,7 +1122,7 @@ void TickGeneric() {
     else { g_sameCount = 0; g_lastIp = root->m_IP; if (g_fastLeft > 0 && g_fastIp != root->m_IP) { g_fastLeft = 0; if (g_fastNext) g_nextStall = 0; g_fastNext = false; } }
     if (g_sameCount >= g_stall) for (auto& r : g_recs) if (r->waitSeq >= g_waitSeq - 3 && (r->raw & 0x7FFF) == 0x010F && r->cond == 0) { if (auto* w = FindPlayerWanted()) if (w->m_WantedLevel != eWantedLevel::WANTED_CLEAN) { w->SetWantedLevel(eWantedLevel::WANTED_CLEAN); g_sameCount = 0; return; } break; } // CR11: as drive.ts:309 (at the stall threshold, then no decide this round; level only): // CR9: the thread waits for the wanted level to drop (SWEET4 ip 0x45e7 after the second pay n spray stage; the exe decays above 1 star only in the countryside, a real player drives into the pay n spray = ClearWantedLevelAndGoOnParole 0x44AC16): clear it, as the TS port does implicitly
     bool urgentTimer = false; // CR31 (25 CATALYST: the 90 s script timer runs while the driver waits 600 frames at every decision): a countdown clock on the screen shortens the patience to 150 frames; a vehicle of CJ that keeps losing health (army fire, 26) to 90 (NOTSA_MDRIVER_NOURGENT)
-    if (!std::getenv("NOTSA_MDRIVER_NOURGENT")) {
+    if (std::getenv("NOTSA_MDRIVER_TIMERURGENT")) { // opt-in: on by default it broke 20 LOS SEPULCROS (FAILED TWAR646) and moved 74, and did not make 25 pass
         const auto& ck = CUserDisplay::OnscnTimer.m_Clock;
         urgentTimer = ck.m_nVarId != 0 && !CUserDisplay::OnscnTimer.m_bPaused && ck.m_nTimerDirection == eTimerDirection::DECREASE;
     }

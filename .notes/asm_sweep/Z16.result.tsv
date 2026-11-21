@@ -35,3 +35,23 @@ addr	function	verdict	asm range	note	fix commit
 0x59AFE0	CMatrix::SetRotateYOnly (+CopyOnlyMatrix, ResetOrientation)	MATCH	0x59ADD0-0x59B012	-	-
 0x43E020	CRect::SetFromCenter / GetCenter / IsFlipped	MATCH	0x43E020-0x43E073	field order left,top,right,bottom	-
 0x438E40	CCheat::MoneyArmourHealthCheat / WantedLevelDown / NotWanted / Wanted / WantedLevelUp	MATCH	0x438E40-0x438F33	armour read from player 0 in the exe (same unless player 1 is in focus)	-
+0x65B7B0	CTaskComplexFleePoint::SetFleePosition	FIXED	0x65B7B0-0x65B815	the exe takes the new position when x, y, z OR m_safeDist differ (fcomp/test ah,0x44/jp chain); the port compared the position only	FLEEFIX
+0x646CC0	CTaskSimpleCarWaitForDoorNotToBeInUse::SetPedPosition	FIXED	0x646CC0-0x646CE5	a null m_veh skips SetPedPositionInCar (the port called it when the ped was bInVehicle with a null vehicle)	WAITFIX
+0x6D4010	CVehicle::SetFiringRateMultiplier	MATCH	0x6D4010-0x6D4085	clamp 0..15.9375 (NaN kept), *16 ftol into plane/heli byte	-
+0x6D3A50	CVehicle::GetReplacementUpgrade (+FindReplacementUpgradeCB 0x6D3490)	MATCH	0x6D3490-0x6D3A9C	ATOMIC_UPGRADE 0x800 test	-
+0x41BF50	CCarAI::FindSwitchDistanceClose	MATCH	0x41BF50-0x41BF63	-	-
+0x6D3B60	CVehicle::InitWinch / Release/Query PickedUpEntity / Get/SetRopeHeightForHeli	MATCH	0x6D3B60-0x6D3D4C	rope id = &m_nFlags+1, rope 0x328 stride	-
+0x6CAB90	CPlane::IsAlreadyFlying / SetupDamageAfterLoad / CBike::IsComponentPresent / CBoat::ModifyHandlingValue	MATCH	0x6CAB90-0x6F0E17	bIsDamaged = bit 16; started-flying = now-20000	-
+0x63B500	CTaskComplexLeaveCarAsPassengerWait::GetNextPassengerToLeave	MATCH	0x63B500-0x63B539	first non-null of m_nMaxPassengers slots	-
+0x63D5C0	CTaskComplexShuffleSeats::ControlSubTask	MATCH	0x63D5C0-0x63D60A	-	-
+0x65F760	CTaskComplexTrackEntity::SetOffsetPos	MATCH	0x65F760-0x65F777	-	-
+0x648D00	CTaskSimpleBikeJacked::SetPedPosition	MATCH	0x648D00-0x648D20	-	-
+0x634F90	CTaskComplexUseGoggles::CreateFirstSubTask	MATCH	0x634F90-0x635034	task type 0x645/0x646, group 0x20, anim 0xE0, blend 4	-
+0x68BA60	CTaskComplexArrestPed / RoadRage / FallToDeath MakeAbortable	MATCH	0x68BA60-0x679116	forwarders; FallToDeath immediate only, blend delta -1000	-
+0x622900	CTaskComplexKillPedFromBoat::CreateFirstSubTask / CreateNextSubTask	MATCH	0x622890-0x622968	bStayInSamePlace = bit 21	-
+0x638940	CTaskComplexWaitForBus / WaitAtAttractor / WaitForDryWeather CreateFirstSubTask	MATCH	0x632650-0x6328D4	StandStill 10000 / 1000	-
+0x698290	CTaskComplexExtinguishFires::CreateFirstSubTask	MATCH	0x698290-0x698306	-	-
+0x6618D0	CTaskComplexGangJoinRespond::CreateFirstSubTask	MATCH	0x6618D0-0x66193B	-	-
+0x620900	FinishAnim callbacks: BeHit, BeHitWhileMoving, BeKickedOnGround, CarJumpOut, CarOpenLockedDoor, CarShuffle, CarSlowBeDraggedOut, Die, Fall, GangDriveBy, GiveCPR, HitHead, Jump, PickUpBike, SitDown, StandUp, ThrowProjectile, Climb/InAir DeleteAnimCB	MATCH	0x61FD10-0x678E7C	field offsets and flag bits checked against the headers	-
+0x5E4220	CPed::IsPointerValid	DIFF-KEPT	0x5E4220-0x5E4276	the exe checks only the pool index range (0..139) and the collision list / player, not the slot's empty flag; the port's IsObjectValid also rejects a free slot. No gameplay effect (a freed ped has an empty collision list)	-
+0x6E38F0	IsVehiclePointerValid	MATCH	0x6E38F0-0x6E3947	-	-

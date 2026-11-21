@@ -196,6 +196,7 @@ std::vector<Row>         g_rows;
 // a conditional command of the root thread as the TS StallSink records it (opcode, NOT form, state, decoded operands, the WAIT count, where the following GOTO_IF_FALSE led)
 struct Rec { const uint8_t* p; uint16_t raw; int cond; int waitSeq; std::vector<Arg> args; bool hasBranch = false, jumped = false, waitAfter = false; const uint8_t *target = nullptr, *fall = nullptr; };
 using RecP = std::shared_ptr<Rec>;
+std::map<const uint8_t*, RecP> g_deadConds; // CR21
 std::deque<RecP>         g_recs;             // the last 64 conditional commands (KEEP)
 std::vector<RecP>        g_group; bool g_fallPending = false; // CR19: the conditions of the last GOTO_IF_FALSE, and whether it fell through (the next command decides waitAfter)
 std::vector<RecP>        g_pending;          // the conditions since the last GOTO_IF_FALSE (max 12)
@@ -607,17 +608,19 @@ bool IsBuddyTarget(CPed* target, CPed* attacker, CPed* me) {
     if (target == me || ProtectedPed(target)) return true;
     if (target->m_fHealth <= 0.f || HatesSide((int)target->m_nPedType) || g_enemyTypes.count((int)target->m_nPedType)) return false;
     if ((int)target->m_nPedType < 23 || target->m_nPedType == attacker->m_nPedType) return false;
+    if ((int)target->m_nPedType >= 24 && !std::getenv("NOTSA_MDRIVER_MISSIONBUDDY")) return false; // CR21: a mission-type ped (MISSION1..8, script made) that is neither liked, in CJ's group nor a member of a protected type is a scripted enemy, not a buddy (11 BIG SMOKE: Ryder/Smoke (type 24) shooting a Ballas (type 25) were shot dead by the driver -> INT2_F2)
     auto* tg = KillTarget(target); return !tg || (tg != me && !ProtectedPed(tg));
 }
 void ShootDead() { // actions.ts shootAttackers: every ped (not a buddy type) whose kill task targets CJ / a buddy is shot dead (max 60)
     if (g_fightKills >= 60) return; auto* me = Cj(); if (!me) return;
     std::vector<int> victims;
-    std::set<int> guarded; if (!std::getenv("NOTSA_MDRIVER_NOGUARDPROTECT")) for (auto& r : g_recs) { // CR21: a char the script fails the mission for when he dies (plain IS_CHAR_DEAD whose true branch leads to the fail text, among the last conditions) is a buddy, whatever his ped type (11 BIG SMOKE: mission chars type 24 attacking Ballas were shot dead -> INT2_F2)
+    std::set<int> guarded; if (!std::getenv("NOTSA_MDRIVER_NOGUARDPROTECT")) for (auto& [site, r] : g_deadConds) { // CR21: a char the script fails the mission for when he dies (plain IS_CHAR_DEAD whose true branch leads to the fail text, among the last conditions) is a buddy, whatever his ped type (11 BIG SMOKE: mission chars type 24 attacking Ballas were shot dead -> INT2_F2)
         if ((r->raw & 0x8000) || (r->raw & 0x7FFF) != 0x0118) continue; const auto h = ArgInt(*r, 0); if (h && VerdictOf(g_thread, *r) == Verdict::Guard) guarded.insert((int)*h);
     }
     for (auto& p : GetPedPool()->GetAllValid()) {
         if (&p == me || p.m_fHealth <= 0.f || ProtectedPed(&p) || guarded.count(CPools::GetPedRef(&p))) continue;
         auto* tg = KillTarget(&p); if (!tg || !IsBuddyTarget(tg, &p, me) || LikesSide((int)p.m_nPedType)) continue;
+        if (std::getenv("NOTSA_MDRIVER_PLOG")) notsa::standalone::Fixups::Log("[mdplog] shootdead: attacker h=%d type=%d model=%d target h=%d type=%d model=%d hp=%.0f tgtkill=%p", CPools::GetPedRef(&p), (int)p.m_nPedType, (int)p.m_nModelIndex, CPools::GetPedRef(tg), (int)tg->m_nPedType, (int)tg->m_nModelIndex, tg->m_fHealth, (void*)KillTarget(tg));
         victims.push_back(CPools::GetPedRef(&p)); if (tg == me) g_enemyTypes.insert((int)p.m_nPedType); g_fightKills++;
     }
     for (int h : victims) Emit("mdkillped:" + std::to_string(h));
@@ -748,6 +751,7 @@ void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int co
             auto r = std::make_shared<Rec>(); r->p = ptr; r->raw = raw; r->cond = cond; r->waitSeq = g_waitSeq;
             const int n = Arity(op); r->args = DecodeArgs(s, ptr, n >= 0 ? n : 10);
             g_recs.push_back(r); if (g_recs.size() > 64) g_recs.pop_front();
+            if (!(raw & 0x8000) && op == 0x0118) g_deadConds[ptr] = r; // CR21: every plain IS_CHAR_DEAD site seen (the 64-condition window misses the rarely-run ones)
             g_pending.push_back(r); if (g_pending.size() > 12) g_pending.erase(g_pending.begin());
         }
     }

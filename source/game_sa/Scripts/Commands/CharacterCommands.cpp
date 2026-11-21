@@ -3001,12 +3001,11 @@ void SetCharSayScript(CPed& ped, eAudioEvents scriptID, bool overrideSilence, bo
  * 
  * @param {Char} self
  */
+// exe 0x47ADB9: (driver 0x2BD || passenger 0x2BC) && !GO_TO_CAR_DOOR_AND_STAND_STILL (0x320). The port OR-ed the third task in (true for a ped that only walks to the door).
 bool IsCharGettingInToACar(CPed& ped) {
-    return ped.GetTaskManager().FindActiveTaskFromList({
-        TASK_COMPLEX_ENTER_CAR_AS_DRIVER,
-        TASK_COMPLEX_ENTER_CAR_AS_PASSENGER,
-        TASK_COMPLEX_GO_TO_CAR_DOOR_AND_STAND_STILL
-    });
+    auto& tm = ped.GetTaskManager();
+    return tm.FindActiveTaskFromList({ TASK_COMPLEX_ENTER_CAR_AS_DRIVER, TASK_COMPLEX_ENTER_CAR_AS_PASSENGER })
+        && !tm.FindActiveTaskByType(TASK_COMPLEX_GO_TO_CAR_DOOR_AND_STAND_STILL);
 }
 
 /*

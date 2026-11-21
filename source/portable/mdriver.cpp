@@ -574,7 +574,6 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
     static const Row kPho{ 0x04C5, 1, "HAS_CHAR_BEEN_PHOTOGRAPHED", "photo", { "$0" }, 30 }; // CR25 (58 PHOTO OPPORTUNITY)
     static const Row kTag{ 0x0038, 0, "int compare of the GET_PERCENTAGE_TAGGED_IN_AREA result", "tagarea", {}, 60 };
     static const Row kPrj{ 0x02EE, 1, "IS_PROJECTILE_IN_AREA", "projectile", { "$0", "$1", "$2", "$3", "$4", "$5" }, 40 }; // CR26 (22 BURNING DESIRE)
-    static const Row kPck{ 0x0214, 1, "HAS_PICKUP_BEEN_COLLECTED", "pickupgo", { "$0" }, 60 }; // CR26 (22 BURNING DESIRE)
     static const Row kGrp{ 0x06EE, 1, "IS_GROUP_MEMBER", "joingroup", { "$0", "$1" }, 30 }; // CR26 (20 LOS SEPULCROS)
     if (!std::getenv("NOTSA_MDRIVER_NOBUILTIN")) {
         const auto tagCond = [&](const RecP& c) { // an integer compare of the result variable of a GET_PERCENTAGE_TAGGED_IN_AREA: the area it measured (a false plain compare, or the TRUE NOT-form compare of the wait group: `WHILE NOT $27 == 100`)
@@ -586,7 +585,6 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             const int op = c->raw & 0x7FFF; if (c->raw & 0x8000) continue;
             if (op == 0x04C5 && !std::getenv("NOTSA_MDRIVER_NOPHOTO")) { auto a2 = ResolveArgs(kPho, *c); if (a2) { d.act = true; d.row = &kPho; d.rowIdx = -6; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (op == 0x06EE && !std::getenv("NOTSA_MDRIVER_NOJOINGROUP")) { auto a2 = ResolveArgs(kGrp, *c); if (a2 && a2->size() == 2 && CPools::GetPed((int)(*a2)[0].n) && CPools::GetPed((int)(*a2)[0].n) != Cj()) { d.act = true; d.row = &kGrp; d.rowIdx = -8; d.cond = c; d.args = *a2; d.op = op; return d; } }
-            if (op == 0x0214 && attempt >= 2 && !std::getenv("NOTSA_MDRIVER_NOPICKUP")) { auto a2 = ResolveArgs(kPck, *c); if (a2 && !a2->empty()) { d.act = true; d.row = &kPck; d.rowIdx = -11; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (op == 0x02EE && !std::getenv("NOTSA_MDRIVER_NOPROJ")) { auto a2 = ResolveArgs(kPrj, *c); if (a2 && a2->size() == 6) { d.act = true; d.row = &kPrj; d.rowIdx = -12; d.cond = c; d.args = *a2; d.op = op; d.reason = "";
                 // every distinct false projectile area of the loop gets its molotov in the same frame (the script counts them in one pass)
                 for (auto& q : falses) if (q != c && (q->raw & 0x7FFF) == 0x02EE && !(q->raw & 0x8000)) if (auto a3 = ResolveArgs(kPrj, *q); a3 && a3->size() == 6) for (auto& x : *a3) d.args.push_back(x);
@@ -1038,6 +1036,15 @@ void TickGeneric() {
         std::vector<RecP> big; for (auto& r : g_recsBig) if (r->waitSeq >= g_waitSeq - 3) big.push_back(r);
         Dec d3 = Decide(big, g_attemptsAt[ipPtr]);
         if (d3.act && d3.row->action != "wait") { notsa::standalone::Fixups::Log("[mdriver] frame %d big window (%zu -> %zu records): %s", fr, loop.size(), big.size(), d3.row->name.c_str()); d = d3; }
+    }
+    if (d.act && d.row->action == "wait" && !std::getenv("NOTSA_MDRIVER_NOPICKUP")) { // CR26 (22 BURNING DESIRE): the same wait answer was given twice in a row at this wake ip (no progress in between) and a plain HAS_PICKUP_BEEN_COLLECTED is false in the last passes: the player walks onto the pickup (a wait row after progress, as in 18, leaves it alone: its pickup is not the stage's)
+        const auto wk = std::to_string(at) + ":" + std::to_string(d.rowIdx) + ":" + RKey(d.args); const auto wi = g_noProgress.find(wk);
+        if (wi != g_noProgress.end() && wi->second >= 2) {
+            static const Row kPck{ 0x0214, 1, "HAS_PICKUP_BEEN_COLLECTED", "pickupgo", { "$0" }, 60 };
+            std::vector<RecP> big; for (auto& r : g_recsBig) if (r->waitSeq >= g_waitSeq - 3) big.push_back(r);
+            for (size_t k = big.size(); k-- > 0;) { const auto& r = big[k]; if ((r->raw & 0x7FFF) != 0x0214 || (r->raw & 0x8000) || r->cond != 0 || AnyGuard(*r)) continue;
+                auto a2 = ResolveArgs(kPck, *r); if (!a2 || a2->empty()) continue; d.row = &kPck; d.rowIdx = -11; d.cond = r; d.args = *a2; d.op = 0x0214; break; }
+        }
     }
     if (d.act && d.row->action == "wait" && g_attemptsAt[ipPtr] >= 2 && !std::getenv("NOTSA_MDRIVER_NOBLIPGO")) { // CR26 (19 CESAR VIALPANDO: stage 19 waits for a flag the mod-shop script sets once the garage opens; the only open task is the destination blip): the wait row answered this wake ip twice and the thread still stands: CJ (with his car) goes to the mission's coordinate blip (the newest BLIP_COORD of the radar)
         const tRadarTrace* best = nullptr;

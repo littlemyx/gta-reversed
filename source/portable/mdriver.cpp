@@ -2,6 +2,7 @@
 #include "StdInc.h"
 #include "mdriver.h"
 #include "Garages.h"
+#include "MenuSystem.h"
 #include "ProjectileInfo.h"
 #include "Pickups.h"
 #include "GangWars.h"
@@ -55,6 +56,7 @@
 #include <optional>
 #include <array>
 
+extern std::array<CMenuSystem::Menu*, 2> MenuNumber; // MenuSystem.cpp
 namespace notsa::mdriver {
 namespace {
 bool Generic();
@@ -804,8 +806,10 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     }
     if (v == "key") {
         std::string kk = d.args.empty() ? "" : d.args[0].str ? d.args[0].s : std::to_string((int)d.args[0].n); const int n = d.args.size() > 1 && !d.args[1].str ? (int)d.args[1].n : 8;
-        const std::string nm = KeyName(kk); if (nm.empty()) { Stop("unmapped-key " + kk, cop, 0); return; }
-        if (!kk.empty() && std::isdigit((unsigned char)kk[0])) { QueueActions({ "emit mdpad:" + kk + ":" + std::to_string(n), "key down " + nm, "wait " + std::to_string(n), "key up " + nm }, row.settle); return; } // CR4: numeric pad button: the pad state itself, as TS (PadInput.joy[field] = 255)
+        const std::string nm = KeyName(kk);
+        if (nm.empty() && !kk.empty() && std::isdigit((unsigned char)kk[0]) && !std::getenv("NOTSA_MDRIVER_NOPADONLY")) { QueueActions({ "emit mdpad:" + kk + ":" + std::to_string(n), "wait " + std::to_string(n) }, row.settle); return; } // CR27: a pad button without a keyboard binding (13 = SELECT): the pad state alone (IS_BUTTON_PRESSED reads it)
+        if (nm.empty()) { Stop("unmapped-key " + kk, cop, 0); return; }
+        if (!kk.empty() && std::isdigit((unsigned char)kk[0])) { QueueActions({ "emit mdpad:" + kk + ":" + std::to_string(n), (kk == "16" && (CMenuSystem::MenuInUse[0] || CMenuSystem::MenuInUse[1]) && !std::getenv("NOTSA_MDRIVER_NOMENUACCEPT")) ? "emit mdmenu:0" : "wait 0", "key down " + nm, "wait " + std::to_string(n), "key up " + nm }, row.settle); return; } // CR4: numeric pad button: the pad state itself, as TS (PadInput.joy[field] = 255)
         QueueActions({ "key down " + nm, "wait " + std::to_string(n), "key up " + nm }, row.settle); return;
     }
     if (v == "skipcut") { QueueActions(CCutsceneMgr::IsCutsceneProcessing() ? std::vector<std::string>{ "emit mdskipcut:0" } : std::vector<std::string>{}, row.settle); return; }
@@ -908,7 +912,7 @@ void ShootDead() { // actions.ts shootAttackers: every ped (not a buddy type) wh
 // CR27 (12 RYDER, 19 CESAR VIALPANDO): the awaited global is written by a STREAMED script thread (barber.scm: the chair + haircut menu, carmod1.scm: the mod-shop menu), whose locate / button conditions nobody answers. Every streamed-script thread's conditions are recorded
 // like the root's (AuxBegin/AuxEnd, called from scmtrace::Run for threads outside the traced tree); when the root wait stands (the wait row answered twice) and such a thread writes a global the root's pass compares, Decide() runs over THAT thread's last passes.
 struct AuxState { std::deque<RecP> recs; std::vector<RecP> group, pending; bool fallPending = false; int waitSeq = 0; std::map<uint16_t, bool> writes; };
-std::map<const CRunningScript*, AuxState> g_aux;
+std::map<const CRunningScript*, AuxState> g_aux; std::map<uint32_t, int> g_auxVisits; std::string g_auxTag; bool g_auxAnswered = false, g_auxEarly = false;
 const uint8_t* g_auxIp = nullptr; uint16_t g_auxRaw = 0;
 bool IntCompareOp(int op) { return (op >= 0x0018 && op <= 0x0041) || (op >= 0x04A3 && op <= 0x04B7) || (op >= 0x07D6 && op <= 0x07D9); }
 bool WritesGlobal(const CRunningScript* t, uint16_t off) { // a command of the thread's code whose FIRST operand is the global variable `off` (not a compare): a static byte scan of the streamed script
@@ -992,6 +996,9 @@ void TickGeneric() {
             notsa::standalone::Fixups::Log("[carlog] f%d car=%.1f,%.1f,%.1f spd=%.3f st=%d drv=%d dmode=%d tasks=%s ip=%x", fr, cr->GetPosition().x, cr->GetPosition().y, cr->GetPosition().z, cr->m_vecMoveSpeed.Magnitude(), (int)cr->GetStatus(), dr ? (int)dr->m_nModelIndex : -1, (int)cr->m_autoPilot.m_nCarMission, tk.c_str(), (unsigned)(root->m_IP - root->m_BaseIP));
         }
     }
+    if (static const char* ag = std::getenv("NOTSA_MDRIVER_AUXLOG"); ag && root) { // debug (no control flow): every change of the listed globals
+        static std::map<int, int32_t> last; for (const char* c = ag; *c;) { const int off = std::atoi(c); while (*c && *c != ',') c++; if (*c == ',') c++; if (!GlobalOk(off)) continue; int32_t v; std::memcpy(&v, CTheScripts::ScriptSpace.data() + off, 4); auto it = last.find(off); if (it == last.end()) last[off] = v; else if (it->second != v) { notsa::standalone::Fixups::Log("[auxchg] f%d $%d %d -> %d (menus in use %d,%d)", fr, off, it->second, v, (int)CMenuSystem::MenuInUse[0], (int)CMenuSystem::MenuInUse[1]); it->second = v; } }
+    }
     if (!std::getenv("NOTSA_MDRIVER_NOGOD")) if (auto* me = Cj()) { // CR4: TS drive.ts driverFrame: CJ and the vehicle he drives are invulnerable every frame (AUTODRIVE_GOD=0 off)
         me->physicalFlags.bInvulnerable = true;
         if (me->bInVehicle && me->m_pVehicle) me->m_pVehicle->physicalFlags.bInvulnerable = true;
@@ -1012,6 +1019,7 @@ void TickGeneric() {
     else { g_sameCount = 0; g_lastIp = root->m_IP; }
     if (g_sameCount >= g_stall) for (auto& r : g_recs) if (r->waitSeq >= g_waitSeq - 3 && (r->raw & 0x7FFF) == 0x010F && r->cond == 0) { if (auto* w = FindPlayerWanted()) if (w->m_WantedLevel != eWantedLevel::WANTED_CLEAN) { w->SetWantedLevel(eWantedLevel::WANTED_CLEAN); g_sameCount = 0; return; } break; } // CR11: as drive.ts:309 (at the stall threshold, then no decide this round; level only): // CR9: the thread waits for the wanted level to drop (SWEET4 ip 0x45e7 after the second pay n spray stage; the exe decays above 1 star only in the countryside, a real player drives into the pay n spray = ClearWantedLevelAndGoOnParole 0x44AC16): clear it, as the TS port does implicitly
     if (g_sameCount < (g_nextStall > 0 ? g_nextStall : g_stall)) return;
+    const bool earlyAux = g_auxEarly; g_auxEarly = false; // CR27: the early re-decision after an aux answer answers the aux thread only
     const bool earlyPhoto = g_photoEarly; g_photoEarly = false; // CR26: the early re-decision after a zoomed photo answers a photo condition only (no wait / kill escalation of a half-evaluated pass)
     g_nextStall = 0; // CR24: a verb may ask for an early next decision (the bomb run of the remote vehicle: the script's 4 s hold timer)
     const uint32_t at = (uint32_t)(root->m_IP - root->m_BaseIP);
@@ -1061,11 +1069,20 @@ void TickGeneric() {
                 std::string gv; for (const char* c = lg; *c;) { const int off = std::atoi(c); while (*c && *c != ',') c++; if (*c == ',') c++; int32_t v = 0; if (GlobalOk(off)) std::memcpy(&v, CTheScripts::ScriptSpace.data() + off, 4); gv += " $" + std::to_string(off) + "=" + std::to_string(v); }
                 notsa::standalone::Fixups::Log("[auxlog] f%d falses:%s |%s", fr, o.c_str(), gv.c_str());
             }
-            Dec d4 = Decide(al, g_attemptsAt[ipPtr]);
-            notsa::standalone::Fixups::Log("[mdriver] frame %d aux thread %.8s (%zu records, globals %zu): %s", fr, t->m_szName, al.size(), gl.size(), d4.act ? d4.row->name.c_str() : d4.reason.c_str());
+            // the thread's own state = which conditions of its passes are false (a big state machine loop has one WAIT): the n-th decision in the same state rotates through the answers (accept first, cancel next: a menu whose accept leads nowhere is left by its cancel button)
+            uint32_t ak = 7; { std::set<uint32_t> fs; for (auto& r : al) if (r->cond == 0) fs.insert((uint32_t)(r->p - t->m_BaseIP)); for (const auto f : fs) ak = ak * 1000003u + f; } // the state = the set of conditions that are false in its last passes
+            const int visit = g_auxVisits[ak]++;
+            Dec d4 = Decide(al, visit);
+            if (d4.act && d4.row->action == "key" && (CMenuSystem::MenuInUse[0] || CMenuSystem::MenuInUse[1]) && !std::getenv("NOTSA_MDRIVER_NOMENUACCEPT")) { // CR27: a menu is up: the accept button (CROSS = 16) first, then the others
+                std::vector<RecP> opts; std::set<int> sb; for (size_t k = al.size(); k-- > 0;) { const auto& r = al[k]; const auto b = ArgInt(*r, 1); if (r->raw != 0x00E1 || r->cond != 0 || !b) continue; if (sb.insert((int)*b).second) opts.push_back(r); }
+                std::stable_sort(opts.begin(), opts.end(), [](const RecP& a, const RecP& b) { return (*ArgInt(*a, 1) != 16) < (*ArgInt(*b, 1) != 16); });
+                if (!opts.empty()) { const auto& pick = opts[(size_t)visit % opts.size()]; if (auto a2 = ResolveArgs(*d4.row, *pick)) { d4.args = *a2; d4.cond = pick; } }
+            }
+            if (d4.act && d4.row->action != "wait") { g_auxTag = ":aux" + std::to_string(ak); g_auxAnswered = true; }
             if (d4.act && d4.row->action != "wait") { d = d4; break; }
         }
     }
+    if (earlyAux && !g_auxAnswered) return;
     if (d.act && d.row->action == "wait" && !std::getenv("NOTSA_MDRIVER_NOPICKUP")) { // CR26 (22 BURNING DESIRE): the same wait answer was given twice in a row at this wake ip (no progress in between) and a plain HAS_PICKUP_BEEN_COLLECTED is false in the last passes: the player walks onto the pickup (a wait row after progress, as in 18, leaves it alone: its pickup is not the stage's)
         const auto wk = std::to_string(at) + ":" + std::to_string(d.rowIdx) + ":" + RKey(d.args); const auto wi = g_noProgress.find(wk);
         if (wi != g_noProgress.end() && wi->second >= 2) {
@@ -1086,7 +1103,7 @@ void TickGeneric() {
         }
     }
     g_attemptsAt[ipPtr]++;
-    const std::string key = std::to_string(at) + ":" + std::to_string(d.rowIdx) + ":" + RKey(d.args);
+    const std::string key = std::to_string(at) + ":" + std::to_string(d.rowIdx) + ":" + RKey(d.args) + g_auxTag; g_auxTag.clear();
     const int n = ++g_noProgress[key];
     g_stopIp = at; g_stopOp = d.op; // the last answered condition (reported when the mission ends without a driver stop)
     if (d.row->action == "failclass") { DispatchRow(d); return; }
@@ -1094,6 +1111,7 @@ void TickGeneric() {
     std::fprintf(stderr, "[mdriver] frame %d ip %x row %d %04X %s -> %s\n", fr, at, d.rowIdx, d.op, d.row->name.c_str(), d.row->action.c_str());
     notsa::standalone::Fixups::Log("[mdriver] decide frame %d ip %x row %d %04X %s -> %s args %s cond-args %zu", fr, at, d.rowIdx, d.op, d.row->name.c_str(), d.row->action.c_str(), RKey(d.args).c_str(), d.cond ? d.cond->args.size() : (size_t)0); // CR16
     DispatchRow(d);
+    if (g_auxAnswered) { g_auxAnswered = false; if (g_nextStall == 0 && !std::getenv("NOTSA_MDRIVER_NOAUXFAST")) { g_nextStall = 90; g_auxEarly = true; } } // CR27: a menu has several steps: the next decision after 90 frames, not 600
 }
 } // namespace
 
@@ -1177,6 +1195,14 @@ bool Cmd(const char* name, const std::string& args) {
     if (!std::strcmp(name, "mdkillped")) { if (auto* k = CPools::GetPed(std::atoi(args.c_str()))) { if (std::getenv("NOTSA_MDRIVER_PLOG")) notsa::standalone::Fixups::Log("[mdplog] kill h=%s type=%d model=%d hp=%.0f pos=%.0f,%.0f wanted=%d\n", args.c_str(), (int)k->m_nPedType, (int)k->m_nModelIndex, k->m_fHealth, k->GetPosition().x, k->GetPosition().y, (int)FindPlayerWanted()->m_WantedLevel); if (ped) CWeapon::GenerateDamageEvent(k, ped, WEAPON_PISTOL, 1000, PED_PIECE_TORSO, 0); /* CR13: no forced health 0 / PEDSTATE_DEAD fallback: TS shootDead has none, the ped dies through its death task over the next frames */ } return true; }
     if (!std::strcmp(name, "mdkillcar")) { if (auto* k = CPools::GetVehicle(std::atoi(args.c_str()))) k->BlowUpCar(nullptr, false); return true; }
     if (!std::strcmp(name, "mdpad")) { const auto c = args.find(':'); if (c != std::string::npos) g_padHold[std::atoi(args.c_str())] = std::atoi(args.c_str() + c + 1) + 1; return true; }
+    if (!std::strcmp(name, "mdmenu")) { // CR27: the player's CROSS press on a menu (CMenuSystem::InputStandardMenu): the selected row (the first selectable one when none) becomes the accepted row of every menu in use
+        for (int id = 0; id < CMenuSystem::MENU_COUNT; id++) {
+            auto* m = MenuNumber[id]; if (!CMenuSystem::MenuInUse[id] || !m || m->m_nNumRows == 0) continue;
+            int r = m->m_nSelectedRow; if (r < 0 || r >= m->m_nNumRows || !m->m_abRowSelectable[r]) { r = -1; for (int k = 0; k < m->m_nNumRows; k++) if (m->m_abRowSelectable[k] && m->m_aaacRowTitles[0][k][0]) { r = k; break; } if (r < 0) continue; m->m_nSelectedRow = (int8)r; }
+            m->m_nAcceptedRow = (int8)r;
+        }
+        return true;
+    }
     if (!std::strcmp(name, "mdkey")) { const auto c = args.find(':'); if (g_push) g_push(args.c_str() + c + 1, args.compare(0, c, "down") == 0); return true; }
     if (!ped) return true;
     if (!std::strcmp(name, "mdskipcut")) { if (CCutsceneMgr::IsCutsceneProcessing()) CCutsceneMgr::SkipCutscene(); return true; }

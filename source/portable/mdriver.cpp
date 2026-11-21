@@ -2,6 +2,7 @@
 #include "StdInc.h"
 #include "mdriver.h"
 #include "Garages.h"
+#include "UserDisplay.h"
 #include "MenuSystem.h"
 #include "ProjectileInfo.h"
 #include "Pickups.h"
@@ -64,7 +65,7 @@ struct Cond { std::string expr, op; double val; };
 struct Step { std::string name; std::vector<Cond> conds; std::vector<std::string> actions; };
 std::vector<Step>        g_steps;
 std::string              g_script;           // thread name
-int                      g_watchVeh = -1, g_buddyRef = -1, g_stall = 600, g_maxAnswers = 12; int g_nextStall = 0; int g_photoPed = -1, g_photoHold = 0; bool g_photoEarly = false;
+int                      g_watchVeh = -1, g_buddyRef = -1, g_stall = 600, g_maxAnswers = 12; int g_nextStall = 0; int g_dangerUntil = 0, g_vhpPrev = -1, g_dropWin = 0; const void* g_vhpVeh = nullptr; /* CR31 urgency */ int g_photoPed = -1, g_photoHold = 0; bool g_photoEarly = false;
 bool                     g_loaded = false, g_started = false, g_done = false, g_failed = false;
 std::FILE*               g_out = nullptr;
 void                   (*g_push)(const char*, bool) = nullptr;
@@ -791,6 +792,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     if (v == "wait") { QueueActions({}, row.settle); return; }
     if (v == "pedwarp" || v == "vehwarp") {
         if (d.cond) { const auto o = LocatedOther(*d.cond); if (!o.empty()) {
+            if (!o.compare(0, 2, "1:") && !std::getenv("NOTSA_MDRIVER_NOTRAINWAIT")) if (auto* tv = CPools::GetVehicle(std::atoi(o.c_str() + 2)); tv && tv->IsTrain()) { notsa::standalone::Fixups::Log("[mdriver] trainwait: the locate is about a train (%s): it runs to the place on its tracks, not warped", o.c_str()); QueueActions({}, row.settle); return; } // CR31 (29 WRONG SIDE OF THE TRACKS: `LOCATE_CAR_2D(train, ..)` was answered by warping the train 2 km along its line = derailed, mission failed): a train is waited for
             std::vector<std::string> acts{ "emit mdwother:" + o + ":" + F(F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) };
             if (!o.compare(0, 2, "1:") && c && !std::getenv("NOTSA_MDRIVER_NOLEASHJOIN")) { // CR30 (23 GRAY IMPORTS, chase): the car that is moved to the place carries a ped the pass keeps in a `ped near CJ` leash locate (00F2..00F4 / 0104..0106, plain or NOT, either operand order): CJ rides along, the leash (the script fails the mission when CJ is far from the dealer) stays true
                 auto* mv = CPools::GetVehicle(std::atoi(o.c_str() + 2)); bool leash = false;
@@ -801,6 +803,10 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
                 auto* mp = CPools::GetPed(std::atoi(o.c_str() + 2)); bool dist = false;
                 if (mp && mp != c) { const float dd = (mp->GetPosition() - c->GetPosition()).Magnitude(); for (auto& r : g_recsBig) { if (r->waitSeq < g_waitSeq - 3 || (r->raw != 0x0021 && r->raw != 0x0023) || r->args.size() < 2) continue; const float dv = AF(r->args[r->raw == 0x0021 ? 0 : 1]); if (dv > 20.f && std::fabs(dv - dd) < 1.5f) { dist = true; break; } } }
                 if (dist) acts.push_back("emit mdwveh:" + F(F_(0) + 3.f) + ":" + F(F_(1)) + ":" + F(F_(2)));
+            }
+            if (!o.compare(0, 2, "0:") && c && acts.size() == 1 && !std::getenv("NOTSA_MDRIVER_NOBUDDYJOIN")) { // CR31 (22 BURNING DESIRE: Denise is led to her house 550 m away, the stage then plays an anim script on her; the ped is not processed in full while CJ stays at the old place): a buddy of CJ (ProtectedPed) warped > 150 m away from CJ: CJ joins him at the place
+                auto* mp = CPools::GetPed(std::atoi(o.c_str() + 2));
+                if (mp && mp != c && ProtectedPed(mp) && std::hypot(F_(0) - c->GetPosition().x, F_(1) - c->GetPosition().y) > 150.f) { notsa::standalone::Fixups::Log("[mdriver] buddyjoin: CJ follows the buddy %s to %.0f,%.0f", o.c_str(), F_(0), F_(1)); acts.push_back("emit mdwveh:" + F(F_(0) + 3.f) + ":" + F(F_(1)) + ":" + F(F_(2))); }
             }
             QueueActions(acts, row.settle); return; } } // LOCATE_CAR_3D(car 2049, ...) is satisfied by moving THAT car
         if (v == "pedwarp" && c && c->bInVehicle) { // CR10: actions.ts pedwarp on an ON_FOOT locate while CJ is in a vehicle: get out first (Enter, up to 300 frames; getOnFoot), then warp him (mission 77: 8x mdwveh on LOCATE_CHAR_ON_FOOT_3D)
@@ -1036,8 +1042,8 @@ void TickGeneric() {
             v ? (int)v->m_nModelIndex : -1, v ? v->m_fHealth : 0.f, v ? (int)v->GetStatus() : 0, v ? (int)v->vehicleFlags.bIsDrowning : 0, w ? (int)w->m_WantedLevel : -1, me->m_pLastEntityDamage ? (int)me->m_pLastEntityDamage->GetType() : -1, (int)me->m_nLastWeaponDamage);
         for (int gi = 0; gi < CGarages::NumGarages; gi++) { auto& g = CGarages::GetGarage(gi); if (g.m_nType != PAYNSPRAY || g.CalcDistToGarageRectangleSquared(pp.x, pp.y) > 900.f) continue; notsa::standalone::Fixups::Log("[mdplog] garage %d door=%d inside=%d outside=%d sprayable=%d NoResprays=%d free=%d money=%d spd=%.3f wantedBackOff=%d\n", gi, (int)g.m_nDoorState, (int)g.IsStaticPlayerCarEntirelyInside(), (int)g.IsPlayerOutsideGarage(0.0f), v ? (int)CGarages::IsCarSprayable(v) : -1, (int)CGarages::NoResprays, (int)CGarages::RespraysAreFree, (int)CWorld::Players[CWorld::PlayerInFocus].m_nMoney, v ? v->m_vecMoveSpeed.Magnitude() : -1.f, w ? (int)w->m_bPoliceBackOffGarage : -1); }
     }
-    if (static const char* lgl = std::getenv("NOTSA_MDRIVER_LOCLOG"); lgl && root && Cj() && fr % 50 == 0) { // CR30: debug (no control flow): position of the ped / car held by each mission local of the env list "101,54" (the dealer chase of 23); a value >= 100000 is a global byte offset + 100000
-        std::string o; for (const char* q = lgl; *q;) { const int li = std::atoi(q); while (*q && *q != ',') q++; if (*q == ',') q++; int hv = 0; if (li >= 100000) { if (GlobalOk(li - 100000)) std::memcpy(&hv, CTheScripts::ScriptSpace.data() + (li - 100000), 4); } else hv = LocalAt(root, li)->iParam; char t[128]; if (auto* pd = CPools::GetPed(hv)) { const auto pp = pd->GetPosition(); std::snprintf(t, sizeof t, " L%d=ped(m%d %.0f,%.0f,%.0f hp%.0f dmg%d,%d%s)", li, (int)pd->m_nModelIndex, pp.x, pp.y, pp.z, pd->m_fHealth, pd->m_pLastEntityDamage ? (int)pd->m_pLastEntityDamage->GetType() : -1, (int)pd->m_nLastWeaponDamage, pd->bInVehicle ? " inveh" : ""); o += t; } else if (auto* vh = CPools::GetVehicle(hv)) { const auto pp = vh->GetPosition(); std::snprintf(t, sizeof t, " L%d=veh(%.0f,%.0f,%.0f hp%.0f drv%d)", li, pp.x, pp.y, pp.z, vh->m_fHealth, vh->m_pDriver ? 1 : 0); o += t; } }
+    if (static const char* lgl = std::getenv("NOTSA_MDRIVER_LOCLOG"); lgl && root && Cj() && fr % (std::getenv("NOTSA_MDRIVER_LOCLOGSTEP") ? std::max(1, std::atoi(std::getenv("NOTSA_MDRIVER_LOCLOGSTEP"))) : 50) == 0) { // CR30: debug (no control flow): position of the ped / car held by each mission local of the env list "101,54" (the dealer chase of 23); a value >= 100000 is a global byte offset + 100000
+        std::string o; for (const char* q = lgl; *q;) { const int li = std::atoi(q); while (*q && *q != ',') q++; if (*q == ',') q++; int hv = 0; if (li >= 100000) { if (GlobalOk(li - 100000)) std::memcpy(&hv, CTheScripts::ScriptSpace.data() + (li - 100000), 4); } else hv = LocalAt(root, li)->iParam; char t[128]; if (auto* pd = CPools::GetPed(hv)) { const auto pp = pd->GetPosition(); std::snprintf(t, sizeof t, " L%d=ped(m%d %.0f,%.0f,%.0f hp%.0f st%d dmg%d,%d%s)", li, (int)pd->m_nModelIndex, pp.x, pp.y, pp.z, pd->m_fHealth, (int)pd->m_nPedState, pd->m_pLastEntityDamage ? (int)pd->m_pLastEntityDamage->GetType() : -1, (int)pd->m_nLastWeaponDamage, pd->bInVehicle ? " inveh" : ""); o += t; } else if (auto* vh = CPools::GetVehicle(hv)) { const auto pp = vh->GetPosition(); std::snprintf(t, sizeof t, " L%d=veh(%.0f,%.0f,%.0f hp%.0f drv%d)", li, pp.x, pp.y, pp.z, vh->m_fHealth, vh->m_pDriver ? 1 : 0); o += t; } }
         const auto cp = Cj()->GetPosition(); notsa::standalone::Fixups::Log("[loclog] f%d cj=%.0f,%.0f,%.0f%s", fr, cp.x, cp.y, cp.z, o.c_str());
     }
     if (fr % 20 == 0 && g_wait == 0 && g_qpos >= g_queue.size() && g_untilLeft == 0 && root && Cj() && !CCutsceneMgr::IsCutsceneProcessing() && !std::getenv("NOTSA_MDRIVER_NOLEASHKEEP")) { // CR30 (23 GRAY IMPORTS, the dealer chase): the pass holds a `NOT (CJ within R m of ped X)` fail guard (00F2..00F4 / 0104..0106, CJ the first operand, R >= 150 m: the script fails the mission when CJ lost the moving target) and X has driven off to more than 0.6 R: CJ joins X (the warp the player's chase amounts to), behind it
@@ -1099,6 +1105,11 @@ void TickGeneric() {
         me->physicalFlags.bInvulnerable = true;
         if (me->bInVehicle && me->m_pVehicle) me->m_pVehicle->physicalFlags.bInvulnerable = true;
     }
+    if (fr % 30 == 0 && !std::getenv("NOTSA_MDRIVER_NOURGENT")) { // CR31 (26 ROBBING UNCLE SAM: army fire on the truck CJ sits in): the vehicle of CJ lost >= 45 health in each of 3 consecutive 30-frame windows = danger for 120 frames (shorter patience, CJ drives to the destination blip)
+        auto* me2 = Cj(); auto* v2 = me2 && me2->bInVehicle ? me2->m_pVehicle : nullptr;
+        if (!v2) { g_vhpVeh = nullptr; g_vhpPrev = -1; g_dropWin = 0; }
+        else { const int h2 = (int)v2->m_fHealth; if (g_vhpVeh == v2 && g_vhpPrev >= 0 && h2 <= g_vhpPrev - 45) g_dropWin++; else g_dropWin = 0; g_vhpVeh = v2; g_vhpPrev = h2; if (g_dropWin >= 3) { if (fr >= g_dangerUntil) notsa::standalone::Fixups::Log("[mdriver] danger frame %d: the vehicle keeps losing health (%d)", fr, h2); g_dangerUntil = fr + 120; } }
+    }
     for (;;) {
         if (g_wait > 0) { g_wait--; return; }
         if (g_untilLeft > 0) { // MS1: `waituntil` (the tryEnterCar 600-frame wait)
@@ -1114,7 +1125,12 @@ void TickGeneric() {
     else if (root->m_IP == g_lastIp) g_sameCount++;
     else { g_sameCount = 0; g_lastIp = root->m_IP; if (g_fastLeft > 0 && g_fastIp != root->m_IP) { g_fastLeft = 0; if (g_fastNext) g_nextStall = 0; g_fastNext = false; } }
     if (g_sameCount >= g_stall) for (auto& r : g_recs) if (r->waitSeq >= g_waitSeq - 3 && (r->raw & 0x7FFF) == 0x010F && r->cond == 0) { if (auto* w = FindPlayerWanted()) if (w->m_WantedLevel != eWantedLevel::WANTED_CLEAN) { w->SetWantedLevel(eWantedLevel::WANTED_CLEAN); g_sameCount = 0; return; } break; } // CR11: as drive.ts:309 (at the stall threshold, then no decide this round; level only): // CR9: the thread waits for the wanted level to drop (SWEET4 ip 0x45e7 after the second pay n spray stage; the exe decays above 1 star only in the countryside, a real player drives into the pay n spray = ClearWantedLevelAndGoOnParole 0x44AC16): clear it, as the TS port does implicitly
-    if (g_sameCount < (g_nextStall > 0 ? g_nextStall : g_stall)) return;
+    bool urgentTimer = false; // CR31 (25 CATALYST: the 90 s script timer runs while the driver waits 600 frames at every decision): a countdown clock on the screen shortens the patience to 150 frames; a vehicle of CJ that keeps losing health (army fire, 26) to 90 (NOTSA_MDRIVER_NOURGENT)
+    if (!std::getenv("NOTSA_MDRIVER_NOURGENT")) {
+        const auto& ck = CUserDisplay::OnscnTimer.m_Clock;
+        urgentTimer = ck.m_nVarId != 0 && !CUserDisplay::OnscnTimer.m_bPaused && ck.m_nTimerDirection == eTimerDirection::DECREASE;
+    }
+    if (g_nextStall > 0 ? g_sameCount < g_nextStall : g_sameCount < (fr < g_dangerUntil ? std::min(g_stall, 90) : urgentTimer ? std::min(g_stall, 150) : g_stall)) return;
     const uint8_t* ipPtrEarly = root->m_IP;
     const bool earlyAux = g_auxEarly; g_auxEarly = false; // CR27: the early re-decision after an aux answer answers the aux thread only
     const bool earlyPhoto = g_photoEarly; g_photoEarly = false; // CR26: the early re-decision after a zoomed photo answers a photo condition only (no wait / kill escalation of a half-evaluated pass)
@@ -1134,6 +1150,15 @@ void TickGeneric() {
     }
     if (earlyPhoto && !(d.act && d.row->action == "photo")) return;
     if (!d.act) { Stop(d.reason, d.op, at); return; }
+    if (d.act && fr < g_dangerUntil && d.row->action != "blipgo" && !std::getenv("NOTSA_MDRIVER_NOFLEE")) { // CR31 (26): CJ is driving a vehicle that is being shot to pieces: whatever the pass asks, a player drives off to the destination blip (the newest coordinate blip of the radar) -- the vehicle is moved there
+        auto* me3 = Cj(); const tRadarTrace* bb = nullptr;
+        for (auto& t : CRadar::ms_RadarTrace) if (t.m_nBlipType == BLIP_COORD && !t.HasSprite() && (!bb || t.m_nCounter >= bb->m_nCounter)) bb = &t;
+        if (bb && me3 && me3->bInVehicle && (me3->GetPosition() - bb->m_vPosition).Magnitude2D() > 30.f) {
+            static Row kFlee{ 0, 0, "destination blip (the vehicle is under fire)", "blipgo", {}, 120 };
+            d.row = &kFlee; d.rowIdx = -16; d.cond = nullptr; d.op = 0; d.args.clear();
+            for (const float f : { bb->m_vPosition.x, bb->m_vPosition.y, std::fabs(bb->m_vPosition.z) < 0.5f ? -100.f : bb->m_vPosition.z }) { RArg a; a.n = f; d.args.push_back(a); }
+        }
+    }
     if (d.act && d.row->action == "wait" && g_attemptsAt[ipPtr] >= 1 && !std::getenv("NOTSA_MDRIVER_NOESCALATE")) { // CR21: the wait row answered this wake ip before and the thread still stands: a TRUE `NOT IS_CHAR_DEAD(x)` of the pass is a wait-until-dead (89: the paramedic passengers of the three ambulances stay alive once the cruising ambulances moved on; the plain 0118 rows only see the drivers): kill that live non-buddy char
         for (const int kop : { 0x0118, 0x0119 }) { // CR23 (16 NINES AND AK'S, last stage: `WHILE NOT IS_CAR_DEAD(@83)`): the car form too (the plain 0119 kill row wrecks the car; a car with a buddy / CJ in it is refused by ProtectedHandle)
         if (kop == 0x0119 && std::getenv("NOTSA_MDRIVER_NOCARESCALATE")) break;

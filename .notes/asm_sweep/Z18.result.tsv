@@ -1,0 +1,88 @@
+addr	function	verdict	asm range	note	fix commit
+0x422370	CCarCtrl::FindGhostRoadHeight	MATCH	0x422370-0x4224DC	re-derived: dist1 stored as float, dist2 kept in st0, ((dist1*z2)+(dist2*z1))/(dist2+dist1); early-outs 0.0; z1 node1 (current), z2 node2 (start)	-
+0x422620	CCarCtrl::FindPercDependingOnDistToLink	MATCH	0x422620-0x4226EF	re-derived: raw int16*0.125, dy^2+dx^2, 1st compare on st0, others on the float store; (d-5)*0.05+0.5 unrounded; constants decoded	-
+0x56E010	CWorld::FindPlayerCoors	MATCH	0x56E010-0x56E08B	vehicle only when bInVehicle && m_pVehicle	-
+0x56E090	CWorld::FindPlayerSpeed	MATCH	0x56E090-0x56E0C7	same selection; no null check in exe	-
+0x56E120	CWorld::FindPlayerEntity	MATCH	0x56E120-0x56E152		-
+0x56E160	CWorld::FindPlayerTrain	MATCH	0x56E160-0x56E205	vehicle type 6	-
+0x56E0D0	CWorld::FindPlayerVehicle	MATCH	0x56E0D0-0x56E115	remote vehicle via Players[slot] (port: ped's own info, same for the player ped)	-
+0x56E210	CWorld::FindPlayerPed	MATCH	0x56E210-0x56E22B		-
+0x611B80	CPopulation::FindPedMultiplierMotorway	MATCH	0x611B80-0x611B8B	1.0	-
+0x610F00	CPopulation::FindPedDensityMultiplierCullZone	MATCH	0x610F00-0x610F16	0.6 / 1.0	-
+0x611790	CPopulation::CanSolicitPlayerInCar	MATCH	0x611790-0x6117A2	ped type 22	-
+0x6117B0	CPopulation::CanJeerAtStripper	MATCH	0x6117B0-0x6117C2	ped type 4	-
+0x611490	CPopulation::IsFemale	MATCH	0x611490-0x6114A6	ped type 5	-
+0x6110C0	CPopulation::PedMICanBeCreatedAtAttractor	MATCH	0x6110C0-0x6110DD	types 17..22 false	-
+0x611560	CPopulation::AddExistingPedInCar	MATCH	0x611560-0x611564	returns arg	-
+0x611900	CPopulation::FindSpecificDriverModelForCar_ToUse	MATCH	0x611900-0x611962	jump + byte tables decoded (409,420,423,428,438,448,463,481), rand(0,3) order	-
+0x44D830	CPathFind::FindRegionForCoors	MATCH	0x44D830-0x44D889	x + y*8, each ftol((p+3000)*0.0013333f) clamped 0..7	-
+0x44D8C0	CPathFind::FindYRegionForCoors	MATCH	0x44D8C0-0x44D8E9		-
+0x44D890	CPathFind::FindXRegionForCoors	MATCH	0x44D890-0x44D8B9		-
+0x44D930	CPathFind::FindStartPointOfRegion	MATCH	0x44D930-0x44D95C	x*750-3000	-
+0x44D910	CPathFind::FindYCoorsForRegion	MATCH	0x44D910-0x44D920		-
+0x44D8F0	CPathFind::FindXCoorsForRegion	MATCH	0x44D8F0-0x44D900		-
+0x44D3E0	CPathFind::ThisNodeHasToBeSwitchedOff	MATCH	0x44D3E0-0x44D3F9	behaviour 1/2 false	-
+0x451350	CPathFind::FindLinkBetweenNodes	MATCH	0x451350-0x4513E0	exe has no link-count bound on the search (UB if absent), port bounded	-
+0x44D1E0	CPathFind::AddNodeToList	MATCH	0x44D1E0-0x44D21F		-
+0x44D1B0	CPathFind::RemoveNodeFromList	MATCH	0x44D1B0-0x44D1CF		-
+0x450560	CPathFind::MarkRoadNodeAsDontWander	MATCH	0x450560-0x4505DB	FindNodeClosestToCoors(veh, 999999.88, 5 zeros), byte 0x19 bit 2	-
+0x420AA0	CPathFind::IsAreaNodesAvailable	MATCH	0x420AA0-0x420AB7		-
+0x450DB0	CPathFind::HaveRequestedNodesBeenLoaded	MATCH	0x450DB0-0x450DD1		-
+0x450D70	CPathFind::MakeRequestForNodesToBeLoaded	MATCH	0x450D70-0x450DA6		-
+0x44DE80	CPathFind::StartNewInterior	MATCH	0x44DE80-0x44DEC0		-
+0x450E90	CPathFind::AddNodeToNewInterior	MATCH	0x450E90-0x450F25		-
+0x59B7E0	CMatrix::ForceUpVector	MATCH	0x59B7E0-0x59B888	right=fwd x up, fwd=up x right, same term order	-
+0x59B020	CMatrix::SetRotateZOnly	MATCH	0x59B020-0x59B050		-
+0x59AEA0	CMatrix::ResetOrientation	MATCH	0x59AEA0-0x59AEC1		-
+0x59ADD0	CMatrix::CopyOnlyMatrix	MATCH	0x59ADD0-0x59ADE1	0x40 bytes	-
+0x59AD70	CMatrix::UpdateRwMatrix	MATCH	0x59AD70-0x59ADC1		-
+0x59B9F0	CCompressedMatrixNotAligned::DecompressIntoFullMatrix	MATCH	0x59B9F0-0x59BAC3		-
+0x6988E0	CCover::Find2HighestPoints	MATCH	0x6988E0-0x698980	all three branches write both outputs	-
+0x698DD0	CCover::DoesCoverPointStillProvideCover	MATCH	0x698DD0-0x698E64	dot sum order differs only through the z=0 term (no effect)	-
+0x6A0520	CDamageManager::Init	MATCH	0x6A0520-0x6A0531		-
+0x6A04E0	CDamageManager::ResetDamageStatusAndWheelDamage	MATCH	0x6A04E0-0x6A04F1		-
+0x6C20E0	CDamageManager::ResetDamageStatus	MATCH	0x6C20E0-0x6C20F7	byte 0xF untouched	-
+0x6C2100	CDamageManager::SetLightStatus	MATCH	0x6C2100-0x6C2126		-
+0x6C21A0	CDamageManager::SetWheelStatus	MATCH	0x6C21A0-0x6C21AC		-
+0x6C21E0	CDamageManager::SetDoorStatus_Component	MATCH	0x6C21E0-0x6C2218	jump table decoded	-
+0x6C22A0	CDamageManager::SetEngineStatus	MATCH	0x6C22A0-0x6C22B5		-
+0x6C22D0	CDamageManager::SetAeroplaneCompStatus	MATCH	0x6C22D0-0x6C22F8		-
+0x6C2320	CDamageManager::ProgressDoorDamage	MATCH	0x6C2320-0x6C2394		-
+0x6C23C0	CDamageManager::ProgressPanelDamage	MATCH	0x6C23C0-0x6C2433		-
+0x6C2440	CDamageManager::ProgressWheelDamage	MATCH	0x6C2440-0x6C245A		-
+0x6C2460	CDamageManager::ProgressAeroplaneDamage	MATCH	0x6C2460-0x6C249E		-
+0x6C24B0	CDamageManager::ApplyDamage	MATCH	0x6C24B0-0x6C25A6	jump + multiplier tables decoded	-
+0x43D1E0	CDarkel::ReadStatus	MATCH	0x43D1E0-0x43D1E6		-
+0x43D2F0	CDarkel::ThisPedShouldBeKilledForFrenzy	MATCH	0x43D2F0-0x43D345		-
+0x43D350	CDarkel::ThisVehicleShouldBeKilledForFrenzy	MATCH	0x43D350-0x43D3A4		-
+0x43D6A0	CDarkel::ResetModelsKilledByPlayer	MATCH	0x43D6A0-0x43D6BB		-
+0x43D6C0	CDarkel::QueryModelsKilledByPlayer	MATCH	0x43D6C0-0x43D6D3		-
+0x43D9E0	CDarkel::CheckDamagedWeaponType	MATCH	0x43D9E0-0x43DA22	both byte/jump tables decoded	-
+0x43DC60	CDarkel::FailKillFrenzy	MATCH	0x43DC60-0x43DCC1		-
+0x43D740	CDarkel::CalcFade	MATCH	0x43D740-0x43D799		-
+0x558FA0	CStats::FindMostFavoriteRadioStation	MATCH	0x558FA0-0x559009	stations 1..12, strict >	-
+0x559010	CStats::FindLeastFavoriteRadioStation	MATCH	0x559010-0x55907D		-
+0x559590	CStats::SafeToShowThisStat	MATCH	0x559590-0x5595BB	tables decoded: 167,168,177,205-209	-
+0x55A0B0	CStats::RegisterFastestTime	MATCH	0x55A0B0-0x55A159		-
+0x55A160	CStats::RegisterBestPosition	MATCH	0x55A160-0x55A209		-
+0x558E70	CStats::GetTimesMissionAttempted	MATCH	0x558E70-0x558E7C		-
+0x558E80	CStats::RegisterMissionAttempted	MATCH	0x558E80-0x558E99		-
+0x558EA0	CStats::RegisterMissionPassed	MATCH	0x558EA0-0x558EB0		-
+0x55CFA0	CStats::UpdateStatsWhenFighting	MATCH	0x55CFA0-0x55CFB2		-
+0x572270	CTheZones::PointLiesWithinZone	MATCH	0x572270-0x57229F		-
+0x572220	CTheZones::ZoneIsEntirelyContainedWithinOtherZone	MATCH	0x572220-0x572269		-
+0x572590	CTheZones::GetNavigationZone	MATCH	0x572590-0x57259D		-
+0x5725A0	CTheZones::GetMapZone	MATCH	0x5725A0-0x5725AD		-
+0x572110	CTheZones::ResetZonesRevealed	MATCH	0x572110-0x57212A		-
+0x572CC0	CTheZones::SetZoneRadarColours	MATCH	0x572CC0-0x572D00		-
+0x572B80	CTheZones::FindZone	MATCH	0x572B80-0x572C3B	exe compares 8 raw label bytes, port C-string equality (same for zero padded labels)	-
+0x562400	CWanted::Reset	MATCH	0x562400-0x562400	exe jumps to Initialise; port also calls the NOP ResetPolicePursuit	-
+0x561C70	CWanted::InitialiseStaticVariables	MATCH	0x561C70-0x561C8B		-
+0x562430	CWanted::RegisterCrime_Immediately	MATCH	0x562430-0x562463		-
+0x562570	CWanted::SetWantedLevelNoDrop	MATCH	0x562570-0x562595		-
+0x5625A0	CWanted::ClearWantedLevelAndGoOnParole	MATCH	0x5625A0-0x5625E7	port adds a NOP ResetPolicePursuit call	-
+0x421970	CCarCtrl::ChooseBoatModel	MATCH	0x421970-0x42197C	PickLeastUsedModel(1) on m_LoadedBoats	-
+0x429520	CCarCtrl::TestWhetherToFirePlaneGuns	MATCH	0x429520-0x4295F5	x87 order (x2+y2)+z2 with unrounded y,z; dot (z,y,x); strict >0.8, <150	-
+0x433EA0	CCarCtrl::SteerAICarParkPerpendicular	MATCH	0x433EA0-0x4341BF	line args (start,cur,pos), mission 45->49 at <6, target cur/start, cruise min 8, park <2, inlined occupant-leave tasks	-
+0x46AF20	CEntitySeekPosCalculatorStandard::ComputeEntitySeekPos	MATCH	0x46AF20-0x46AF47		-
+0x63A300	CTaskComplexEnterCar::GetTargetPos	MATCH	0x63A300-0x63A373	door pos, else go-to-door subtask (type 0x320) target, else zero	-

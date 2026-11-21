@@ -201,6 +201,7 @@ using RecP = std::shared_ptr<Rec>;
 std::map<const uint8_t*, RecP> g_deadConds; // CR21
 std::map<const uint8_t*, RecP> g_flagConds; // CR22: every plain `var == number` condition seen (IS_INT_VAR/LVAR_EQUAL_TO_NUMBER): the flag tests of the fail-flag guard
 std::set<uint32_t> g_areaVars; int g_enterArea = -1; // CR23: variables written by GET_AREA_VISIBLE (077E); the interior id a compare of one of them asks for
+std::map<uint32_t, int> g_coordVeh; struct SphSearch { int veh; int model; float radius; }; std::map<uint32_t, SphSearch> g_sphSearch; SphSearch g_sphCur{}; // CR24: GET_CAR_COORDINATES x var -> vehicle handle; GET_RANDOM_CAR_IN_SPHERE (073E) result var -> {the vehicle whose coordinates are the centre, model, radius}
 std::map<uint32_t, std::array<float, 4>> g_tagAreas; float g_tagRect[4]{}; // CR22: destination variable -> area of the last GET_PERCENTAGE_TAGGED_IN_AREA (0702) that wrote it; the area of the picked decision
 std::deque<RecP>         g_recs;             // the last 64 conditional commands (KEEP)
 std::vector<RecP>        g_group; bool g_fallPending = false; // CR19: the conditions of the last GOTO_IF_FALSE, and whether it fell through (the next command decides waitAfter)
@@ -471,6 +472,7 @@ std::optional<std::vector<RArg>> ResolveArgs(const Row& row, const Rec& rec) {
 }
 bool Matches(const Row& w, const Rec& r) { return w.op == (r.raw & 0x7FFF) && (w.match == 0 || (w.match == 2) == ((r.raw & 0x8000) != 0)); }
 struct Dec { bool act = false; const Row* row = nullptr; int rowIdx = -1; RecP cond; std::vector<RArg> args; int op = -1; std::string reason; };
+CEntity* EntityOfHandle(int h, int op);
 Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
     Dec d;
     // CR19: the wait group. The last condition group of the pass fell straight into a WAIT and is an OR (00D6 21..27: `WHILE OR(NOT a, NOT b, ...)`): the thread waits until EVERY member is false. The NOT-form members that are
@@ -485,6 +487,11 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             if (f[-4] == 0xD6 && f[-3] == 0x00 && f[-2] == 0x04 && ((f[-1] >= 21 && f[-1] <= 27) || (f[-1] <= 7 && !std::getenv("NOTSA_MDRIVER_NOANDBLOCK")))) // CR22: AND groups (and singletons: `WHILE NOT IS_CHAR_IN_CAR`, 13) that fell into the WAIT too: their TRUE NOT-form members are the blockers
                 for (auto& m : mem) if (m->raw & 0x8000) { if (m->cond == 0) satisfied.insert(m->p); else if (!AnyGuard(*m)) blockers.push_back(m); }
         }
+    }
+    if (!std::getenv("NOTSA_MDRIVER_NOESCORT") && blockers.size() > 1) { // CR24 (11 BIG SMOKE: `WHILE OR(NOT CJ at house, NOT CJ near Ryder)`): in the wait group the TRUE `NOT CJ near char X` blockers go before the `NOT CJ at place` ones (the table rows are in file order, the place row would always win): the place blockers are dropped for this round
+        const auto isNearB = [](const RecP& c) { const int op = c->raw & 0x7FFF; if (!((op >= 0x00F2 && op <= 0x00F4) || (op >= 0x0104 && op <= 0x0106))) return false; const auto h = ArgInt(*c, 0); return h && EntityOfHandle((int)*h, op) == (CEntity*)Cj(); };
+        const auto isPlaceB = [](const RecP& c) { const int op = c->raw & 0x7FFF; return (op >= 0x00EC && op <= 0x00F1) || (op >= 0x00FE && op <= 0x0103); };
+        if (std::any_of(blockers.begin(), blockers.end(), isNearB) && std::any_of(blockers.begin(), blockers.end(), isPlaceB)) blockers.erase(std::remove_if(blockers.begin(), blockers.end(), isPlaceB), blockers.end());
     }
     if (!std::getenv("NOTSA_MDRIVER_NOORGROUP")) { // CR19: ANY OR group of the pass with a TRUE member is true: its false members (13 TAGGING UP TURF: OR(at A, at B) with CJ at B) are satisfied too, no candidates
         std::map<std::pair<const uint8_t*, int>, std::vector<RecP>> groups; for (auto& r : loop) if (r->hasBranch) groups[{ r->fall, r->waitSeq }].push_back(r);
@@ -517,7 +524,27 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             const auto n = ArgInt(*c, 1); if (!n || *n < 0) continue;
             g_enterArea = (int)*n; d.act = true; d.row = &kEnter; d.rowIdx = -4; d.cond = c; d.op = op; return d;
         }
+        static const Row kSph{ 0x0119, 2, "NOT IS_CAR_DEAD of a GET_RANDOM_CAR_IN_SPHERE result", "tosphere", {}, 90 };
+        for (auto& c : falses) { // CR24 (10 BEEFY BARON: `GET_CAR_COORDINATES @34 -> GET_RANDOM_CAR_IN_SPHERE_NO_SAVE(coords, 30 m, 459) -> @36; WHILE NOT IS_CAR_DEAD(@36)`): the sphere is centred on a vehicle (the remote-controlled RC plane) that stands still the whole run: bring THAT vehicle next to the nearest car of the wanted model
+            if (c->raw != 0x8119 || !c->vref[0] || std::getenv("NOTSA_MDRIVER_NOSPHERE")) continue;
+            const auto it = g_sphSearch.find(c->vref[0]); if (it == g_sphSearch.end()) continue;
+            g_sphCur = it->second; d.act = true; d.row = &kSph; d.rowIdx = -5; d.cond = c; d.op = 0x0119; return d;
+        }
         for (auto& c : blockers) if (tagCond(c)) { d.act = true; d.row = &kTag; d.rowIdx = -3; d.cond = c; d.op = c->raw & 0x7FFF; return d; }
+    }
+    if (!std::getenv("NOTSA_MDRIVER_NOESCORT")) { // CR24 (11 BIG SMOKE): escort ordering. A false `CJ near char X` locate (00F2..00F4, 0104..0106 with CJ as the first operand) of the same pass as a false `CJ at place` locate is answered FIRST: the buddy of the escort stage is frozen by the script's own helper
+        // (FREEZE_CHAR/CAR_POSITION when he is more than 130 m from CJ), so a lone CJ warp to the place leaves the escorted entity behind for ever. CJ joins the buddy (it unfreezes and rides on); the place locate is answered at the next stall.
+        const auto isNear = [](const RecP& c) { const int op = c->raw & 0x7FFF; if ((c->raw & 0x8000) || c->cond != 0 || !((op >= 0x00F2 && op <= 0x00F4) || (op >= 0x0104 && op <= 0x0106))) return false; const auto h = ArgInt(*c, 0); return h && EntityOfHandle((int)*h, op) == (CEntity*)Cj(); };
+        const auto isPlace = [](const RecP& c) { const int op = c->raw & 0x7FFF; return !(c->raw & 0x8000) && ((op >= 0x00EC && op <= 0x00F1) || (op >= 0x00FE && op <= 0x0103)); };
+        if (std::any_of(falses.begin(), falses.end(), isPlace))
+            for (auto& c : falses) {
+                if (!isNear(c)) continue;
+                for (size_t i = 0; i < g_rows.size(); i++) {
+                    const auto& row = g_rows[i]; if (row.action == "wait" || !Matches(row, *c)) continue;
+                    auto a = ResolveArgs(row, *c); if (!a) continue;
+                    d.act = true; d.row = &row; d.rowIdx = (int)i; d.cond = c; d.args = *a; d.op = c->raw & 0x7FFF; return d;
+                }
+            }
     }
     for (int pass = 0; pass < 2; pass++) {
     if (pass == 1 && blockers.empty()) break;
@@ -540,7 +567,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
         }
     }
     if (pass == 0 && !blockers.empty()) for (size_t i = 0; i < g_rows.size(); i++) { // CR19: the true NOT-form members of the wait OR group (last member first)
-        const auto& row = g_rows[i]; if (row.match == 2 || !(row.action == "pedwarp" || row.action == "vehwarp" || row.action == "midpoint" || row.action == "entercar")) continue;
+        const auto& row = g_rows[i]; if (row.match == 2 || !(row.action == "pedwarp" || row.action == "vehwarp" || row.action == "midpoint" || row.action == "entercar" || (row.action == "warpto_handle" && !std::getenv("NOTSA_MDRIVER_NOESCORT")))) continue; // CR24: warpto_handle too (the TRUE `NOT CJ near char X` blocker of an escort wait loop)
         for (size_t k = blockers.size(); k-- > 0;) {
             const auto& c = blockers[k]; if (row.op != (c->raw & 0x7FFF)) continue;
             auto a = ResolveArgs(row, *c); if (!a) continue;
@@ -687,6 +714,16 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         one(warp(pos.x + 0.5f, pos.y, pos.z, false)); return;
     }
     if (v == "damageobj") { QueueActions({ "emit mddmgobj:" + std::to_string(I_(0)) }, row.settle); return; } // CR22: HAS_OBJECT_BEEN_DAMAGED(obj): CJ damages the object (16 NINES AND AK'S shooting range)
+    if (v == "tosphere") { // CR24: the vehicle at the centre of a GET_RANDOM_CAR_IN_SPHERE search is moved next to the nearest car the game's own search would accept (appearance 1/2, not a law enforcer, wanted model, CanBeDeleted: the mission's decoy is refused), 8 m above it
+        auto* cv = CPools::GetVehicle(g_sphCur.veh); CVehicle* best = nullptr; float bd = 1e9f;
+        if (cv) for (auto& vv : GetVehiclePool()->GetAllValid()) {
+            if (&vv == cv || (vv.GetVehicleAppearance() != 1 && vv.GetVehicleAppearance() != 2) || vv.vehicleFlags.bIsLawEnforcer || (g_sphCur.model >= 0 && (int)(int16_t)vv.m_nModelIndex != g_sphCur.model) || !vv.CanBeDeleted()) continue;
+            const float dd = (vv.GetPosition() - cv->GetPosition()).Magnitude(); if (dd < bd) { bd = dd; best = &vv; }
+        }
+        if (!best) { QueueActions({}, row.settle); return; }
+        const auto bp = best->GetPosition();
+        QueueActions({ "emit mdwother:1:" + std::to_string(g_sphCur.veh) + ":" + F(bp.x) + ":" + F(bp.y) + ":" + F(bp.z + 8.f) }, row.settle); return;
+    }
     if (v == "tagarea") { QueueActions({ "emit mdtag:" + F(g_tagRect[0]) + ":" + F(g_tagRect[1]) + ":" + F(g_tagRect[2]) + ":" + F(g_tagRect[3]) }, row.settle); return; } // CR22: the script waits for the tagged percentage of an area: spray every tag of it (13 TAGGING UP TURF)
     if (v == "enterarea") { // CR23: stand on the entrance marker of the nearest exterior entry exit (area 0) whose linked interior side is in area g_enterArea (CEntryExitManager does the rest: fade, area switch)
         auto* me = Cj(); CEntryExit* best = nullptr; float bd = 1e30f;
@@ -891,6 +928,14 @@ void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int co
                 for (; k < 5 && q && InSpace(q); k++) { ops5[k] = q; q = SkipOperand(q, mf, isI, iv); }
                 uint32_t ref = 0; const auto a = DecodeArgs(s, ptr, 4);
                 if (k == 5 && a.size() == 4 && OperandVar(ops5[4], ref)) { g_tagAreas[ref] = { AF(a[0]), AF(a[1]), AF(a[2]), AF(a[3]) }; }
+            }
+        } else if (op == 0x00AA || op == 0x073E) { // CR24 (10 BEEFY BARON): GET_CAR_COORDINATES h x y z (remember which vehicle the coordinate variable was read from), then GET_RANDOM_CAR_IN_SPHERE_NO_SAVE x y z radius model -> var: when the centre is a vehicle's own coordinates, remember (result var -> that vehicle, model, radius)
+            if (InSpace(ptr)) {
+                const int nops = op == 0x00AA ? 2 : 6; const uint8_t* o[6]{}; const uint8_t* q = ptr + 2; bool mf = false, isI = false; int32_t iv = 0; int k = 0;
+                for (; k < nops && q && InSpace(q); k++) { o[k] = q; q = SkipOperand(q, mf, isI, iv); }
+                uint32_t ref = 0, ref2 = 0;
+                if (k == nops && op == 0x00AA) { const auto a = DecodeArgs(s, ptr, 1); if (a.size() == 1 && OperandVar(o[1], ref)) g_coordVeh[ref] = (int)(int32_t)a[0].bits; }
+                else if (k == nops && OperandVar(o[0], ref) && OperandVar(o[5], ref2)) { const auto a = DecodeArgs(s, ptr, 5); if (a.size() == 5) { if (auto it = g_coordVeh.find(ref); it != g_coordVeh.end()) g_sphSearch[ref2] = { it->second, (int)(int32_t)a[4].bits, AF(a[3]) }; else g_sphSearch.erase(ref2); } }
             }
         } else if (cond >= 0) {
             auto r = std::make_shared<Rec>(); r->p = ptr; r->raw = raw; r->cond = cond; r->waitSeq = g_waitSeq;

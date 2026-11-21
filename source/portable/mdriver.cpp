@@ -637,6 +637,13 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             for (auto& row : g_rows) if (row.match != 2 && row.op == 0x00DB && row.action == "entercar" && ResolveArgs(row, *r)) { blockers.push_back(r); blockAnswerable = true; break; }
             if (blockAnswerable) break;
         }
+        if (!blockAnswerable && !std::getenv("NOTSA_MDRIVER_NODISTFETCH")) for (auto& c : falses) { // CR30 (22 BURNING DESIRE: the buddy follow stage tests `20 > distance` (IS_NUMBER_GREATER_THAN_FLOAT_LVAR, the var from GET_DISTANCE_BETWEEN_COORDS between CJ and the buddy)): the compared distance value identifies the ped at that distance from CJ; it is brought next to CJ
+            if (c->raw != 0x0023 || c->cond != 0 || c->args.size() < 2 || AnyGuard(*c)) continue; auto* me = Cj(); if (!me) continue;
+            const float lim = AF(c->args[0]), dv = AF(c->args[1]); if (!(dv > lim) || !(dv < 2000.f)) continue;
+            CPed* hit = nullptr; for (auto& pd : GetPedPool()->GetAllValid()) { if (&pd == me || pd.m_fHealth <= 0.f) continue; const float dd = (pd.GetPosition() - me->GetPosition()).Magnitude(); if (std::fabs(dd - dv) < 1.5f) { if (hit) { hit = nullptr; break; } hit = &pd; } }
+            if (!hit) continue; static const Row kDist{ 0x0023, 0, "distance to CJ over the limit", "distfetch", {}, 60 };
+            d.act = true; d.row = &kDist; d.rowIdx = -15; d.cond = c; d.op = 0x0023; RArg ha; ha.n = CPools::GetPedRef(hit); d.args = { ha }; return d;
+        }
         for (auto& c : falses) { // CR23 (16 NINES AND AK'S: `WHILE @86 != 15` after the Binco blip): a false plain `var == N` of a GET_AREA_VISIBLE result variable: walk in through the entrance of interior N (an entry exit whose interior side is in area N)
             const int op = c->raw & 0x7FFF; if ((c->raw & 0x8000) || (op != 0x0038 && op != 0x0039) || std::getenv("NOTSA_MDRIVER_NOENTERAREA")) continue;
             if (!(c->vref[0] && g_areaVars.count(c->vref[0]))) continue;
@@ -790,6 +797,11 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
                 if (mv) for (auto& r : g_recsBig) { const int rop = r->raw & 0x7FFF; if (r->waitSeq < g_waitSeq - 3 || !((rop >= 0x00F2 && rop <= 0x00F4) || (rop >= 0x0104 && rop <= 0x0106))) continue; const auto h0 = ArgInt(*r, 0), h1 = ArgInt(*r, 1); if (!h0 || !h1) continue; const bool cjSecond = EntityOfHandle((int)*h1, rop) == (CEntity*)c; if (!cjSecond && EntityOfHandle((int)*h0, rop) != (CEntity*)c) continue; auto* lp = CPools::GetPed((int)(cjSecond ? *h0 : *h1)); if (lp && lp != c && lp->bInVehicle && lp->m_pVehicle == mv) { leash = true; break; } }
                 if (leash) acts.push_back("emit mdwveh:" + F(F_(0) + 6.f) + ":" + F(F_(1)) + ":" + F(F_(2)));
             }
+            if (!o.compare(0, 2, "0:") && c && !std::getenv("NOTSA_MDRIVER_NOPEDJOIN")) { // CR30 (22 BURNING DESIRE: Denise is led home, the stage also tests `20 > distance(CJ, Denise)`): the pass holds a float compare of a value equal to the distance between CJ and the ped that is moved (the var of a GET_DISTANCE_BETWEEN_COORDS): CJ joins the ped at the place, so the distance test stays true
+                auto* mp = CPools::GetPed(std::atoi(o.c_str() + 2)); bool dist = false;
+                if (mp && mp != c) { const float dd = (mp->GetPosition() - c->GetPosition()).Magnitude(); for (auto& r : g_recsBig) { if (r->waitSeq < g_waitSeq - 3 || (r->raw != 0x0021 && r->raw != 0x0023) || r->args.size() < 2) continue; const float dv = AF(r->args[r->raw == 0x0021 ? 0 : 1]); if (dv > 20.f && std::fabs(dv - dd) < 1.5f) { dist = true; break; } } }
+                if (dist) acts.push_back("emit mdwveh:" + F(F_(0) + 3.f) + ":" + F(F_(1)) + ":" + F(F_(2)));
+            }
             QueueActions(acts, row.settle); return; } } // LOCATE_CAR_3D(car 2049, ...) is satisfied by moving THAT car
         if (v == "pedwarp" && c && c->bInVehicle) { // CR10: actions.ts pedwarp on an ON_FOOT locate while CJ is in a vehicle: get out first (Enter, up to 300 frames; getOnFoot), then warp him (mission 77: 8x mdwveh on LOCATE_CHAR_ON_FOOT_3D)
             static const std::set<int> onFoot = { 0xE4, 0xE7, 0xEA, 0xED, 0xF0, 0xF3, 0xF6, 0xF9, 0xFC, 0xFF, 0x102, 0x105, 0x197, 0x19A, 0x19C, 0x19F, 0x1A1, 0x1A4, 0x1A6, 0x1A9, 0x1FD, 0x200, 0x203, 0x206, 0x27C, 0x27F, 0x282, 0x285, 0x288 };
@@ -867,6 +879,11 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         QueueActions({ "key down " + nm, "wait " + std::to_string(n), "key up " + nm }, row.settle); return;
     }
     if (v == "skipcut") { QueueActions(CCutsceneMgr::IsCutsceneProcessing() ? std::vector<std::string>{ "emit mdskipcut:0" } : std::vector<std::string>{}, row.settle); return; }
+    if (v == "distfetch" && !d.args.empty()) { // CR30: see Decide (kDist): the ped comes next to CJ
+        if (auto* oth = CPools::GetPed((int)d.args[0].n); oth && c && oth != c) { const CVector cp = c->GetPosition(); const bool veh = oth->bInVehicle && oth->m_pVehicle; const CVector fw = c->bInVehicle && c->m_pVehicle ? c->m_pVehicle->GetForward() : c->GetForward(); const CVector q = cp - fw * (veh ? 8.f : 2.f);
+            QueueActions({ "emit mdwother:0:" + std::to_string((int)d.args[0].n) + ":" + F(q.x) + ":" + F(q.y) + ":" + F(cp.z) }, row.settle); return; }
+        QueueActions({}, 0); return;
+    }
     if (v == "warpto_handle") {
         const int h = I_(0); CEntity* e = EntityOfHandle(h, cop);
         if (!e) { QueueActions({}, 0); return; }
@@ -1019,8 +1036,8 @@ void TickGeneric() {
             v ? (int)v->m_nModelIndex : -1, v ? v->m_fHealth : 0.f, v ? (int)v->GetStatus() : 0, v ? (int)v->vehicleFlags.bIsDrowning : 0, w ? (int)w->m_WantedLevel : -1, me->m_pLastEntityDamage ? (int)me->m_pLastEntityDamage->GetType() : -1, (int)me->m_nLastWeaponDamage);
         for (int gi = 0; gi < CGarages::NumGarages; gi++) { auto& g = CGarages::GetGarage(gi); if (g.m_nType != PAYNSPRAY || g.CalcDistToGarageRectangleSquared(pp.x, pp.y) > 900.f) continue; notsa::standalone::Fixups::Log("[mdplog] garage %d door=%d inside=%d outside=%d sprayable=%d NoResprays=%d free=%d money=%d spd=%.3f wantedBackOff=%d\n", gi, (int)g.m_nDoorState, (int)g.IsStaticPlayerCarEntirelyInside(), (int)g.IsPlayerOutsideGarage(0.0f), v ? (int)CGarages::IsCarSprayable(v) : -1, (int)CGarages::NoResprays, (int)CGarages::RespraysAreFree, (int)CWorld::Players[CWorld::PlayerInFocus].m_nMoney, v ? v->m_vecMoveSpeed.Magnitude() : -1.f, w ? (int)w->m_bPoliceBackOffGarage : -1); }
     }
-    if (static const char* lgl = std::getenv("NOTSA_MDRIVER_LOCLOG"); lgl && root && Cj() && fr % 50 == 0) { // CR30: debug (no control flow): position of the ped / car held by each mission local of the env list "101,54" (the dealer chase of 23)
-        std::string o; for (const char* q = lgl; *q;) { const int li = std::atoi(q); while (*q && *q != ',') q++; if (*q == ',') q++; const int hv = LocalAt(root, li)->iParam; char t[96]; if (auto* pd = CPools::GetPed(hv)) { const auto pp = pd->GetPosition(); std::snprintf(t, sizeof t, " L%d=ped(%.0f,%.0f,%.0f hp%.0f%s)", li, pp.x, pp.y, pp.z, pd->m_fHealth, pd->bInVehicle ? " inveh" : ""); o += t; } else if (auto* vh = CPools::GetVehicle(hv)) { const auto pp = vh->GetPosition(); std::snprintf(t, sizeof t, " L%d=veh(%.0f,%.0f,%.0f hp%.0f drv%d)", li, pp.x, pp.y, pp.z, vh->m_fHealth, vh->m_pDriver ? 1 : 0); o += t; } }
+    if (static const char* lgl = std::getenv("NOTSA_MDRIVER_LOCLOG"); lgl && root && Cj() && fr % 50 == 0) { // CR30: debug (no control flow): position of the ped / car held by each mission local of the env list "101,54" (the dealer chase of 23); a value >= 100000 is a global byte offset + 100000
+        std::string o; for (const char* q = lgl; *q;) { const int li = std::atoi(q); while (*q && *q != ',') q++; if (*q == ',') q++; int hv = 0; if (li >= 100000) { if (GlobalOk(li - 100000)) std::memcpy(&hv, CTheScripts::ScriptSpace.data() + (li - 100000), 4); } else hv = LocalAt(root, li)->iParam; char t[128]; if (auto* pd = CPools::GetPed(hv)) { const auto pp = pd->GetPosition(); std::snprintf(t, sizeof t, " L%d=ped(m%d %.0f,%.0f,%.0f hp%.0f dmg%d,%d%s)", li, (int)pd->m_nModelIndex, pp.x, pp.y, pp.z, pd->m_fHealth, pd->m_pLastEntityDamage ? (int)pd->m_pLastEntityDamage->GetType() : -1, (int)pd->m_nLastWeaponDamage, pd->bInVehicle ? " inveh" : ""); o += t; } else if (auto* vh = CPools::GetVehicle(hv)) { const auto pp = vh->GetPosition(); std::snprintf(t, sizeof t, " L%d=veh(%.0f,%.0f,%.0f hp%.0f drv%d)", li, pp.x, pp.y, pp.z, vh->m_fHealth, vh->m_pDriver ? 1 : 0); o += t; } }
         const auto cp = Cj()->GetPosition(); notsa::standalone::Fixups::Log("[loclog] f%d cj=%.0f,%.0f,%.0f%s", fr, cp.x, cp.y, cp.z, o.c_str());
     }
     if (fr % 20 == 0 && g_wait == 0 && g_qpos >= g_queue.size() && g_untilLeft == 0 && root && Cj() && !CCutsceneMgr::IsCutsceneProcessing() && !std::getenv("NOTSA_MDRIVER_NOLEASHKEEP")) { // CR30 (23 GRAY IMPORTS, the dealer chase): the pass holds a `NOT (CJ within R m of ped X)` fail guard (00F2..00F4 / 0104..0106, CJ the first operand, R >= 150 m: the script fails the mission when CJ lost the moving target) and X has driven off to more than 0.6 R: CJ joins X (the warp the player's chase amounts to), behind it

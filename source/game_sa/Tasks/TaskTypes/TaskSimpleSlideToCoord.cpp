@@ -32,7 +32,7 @@ CTaskSimpleSlideToCoord::CTaskSimpleSlideToCoord(const CVector& slideToPos, floa
     m_fAimingRotation{ aimingRotation },
     m_Speed{ speed },
     m_bFirstTime{ true },
-    m_bRunningAnim{ false },
+    m_bRunningAnim{ true }, // exe 0x66C4A6: `or byte [this+0x78], 3` (first-time | running-anim); only the no-anim constructor (0x66C426) leaves the anim bit clear
     m_Timer{ -1 }
 {
 }

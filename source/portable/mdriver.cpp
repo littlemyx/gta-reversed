@@ -586,7 +586,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             const int op = c->raw & 0x7FFF; if (c->raw & 0x8000) continue;
             if (op == 0x04C5 && !std::getenv("NOTSA_MDRIVER_NOPHOTO")) { auto a2 = ResolveArgs(kPho, *c); if (a2) { d.act = true; d.row = &kPho; d.rowIdx = -6; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (op == 0x06EE && !std::getenv("NOTSA_MDRIVER_NOJOINGROUP")) { auto a2 = ResolveArgs(kGrp, *c); if (a2 && a2->size() == 2 && CPools::GetPed((int)(*a2)[0].n) && CPools::GetPed((int)(*a2)[0].n) != Cj()) { d.act = true; d.row = &kGrp; d.rowIdx = -8; d.cond = c; d.args = *a2; d.op = op; return d; } }
-            if (op == 0x0214 && !std::getenv("NOTSA_MDRIVER_NOPICKUP")) { auto a2 = ResolveArgs(kPck, *c); if (a2 && !a2->empty()) { d.act = true; d.row = &kPck; d.rowIdx = -11; d.cond = c; d.args = *a2; d.op = op; return d; } }
+            if (op == 0x0214 && attempt >= 2 && !std::getenv("NOTSA_MDRIVER_NOPICKUP")) { auto a2 = ResolveArgs(kPck, *c); if (a2 && !a2->empty()) { d.act = true; d.row = &kPck; d.rowIdx = -11; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (op == 0x02EE && !std::getenv("NOTSA_MDRIVER_NOPROJ")) { auto a2 = ResolveArgs(kPrj, *c); if (a2 && a2->size() == 6) { d.act = true; d.row = &kPrj; d.rowIdx = -12; d.cond = c; d.args = *a2; d.op = op; d.reason = "";
                 // every distinct false projectile area of the loop gets its molotov in the same frame (the script counts them in one pass)
                 for (auto& q : falses) if (q != c && (q->raw & 0x7FFF) == 0x02EE && !(q->raw & 0x8000)) if (auto a3 = ResolveArgs(kPrj, *q); a3 && a3->size() == 6) for (auto& x : *a3) d.args.push_back(x);

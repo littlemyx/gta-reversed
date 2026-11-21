@@ -641,7 +641,8 @@ void TickGeneric() {
         std::string o; for (int li = 52; li < 66; li++) { auto* c = CPools::GetVehicle(LocalAt(root, li)->iParam); if (!c) continue; o += " L" + std::to_string(li) + "=" + std::to_string((int)c->GetPosition().x) + "," + std::to_string((int)c->GetPosition().y) + (c->m_pDriver ? "d" : "-") + (c->m_fHealth > 0 ? "" : "X"); }
         auto* me = Cj(); const auto pp = me ? me->GetPosition() : CVector{}; notsa::standalone::Fixups::Log("[bikelog] f%d cj=%d,%d%s", fr, (int)pp.x, (int)pp.y, o.c_str());
     }
-    if (static const bool el = std::getenv("NOTSA_MDRIVER_ENTERLOG") != nullptr; el && Cj() && fr % 10 == 0) { // CR19: debug: CJ's task chain + cars within 12 m (door lock, status, driver) every 10 frames
+    if (static const bool el = std::getenv("NOTSA_MDRIVER_ENTERLOG") != nullptr; el && Cj() && (fr % 10 == 0 || (std::getenv("NOTSA_MDRIVER_ENTERLOG")[0] == (char)50 && fr > 5880))) { // CR19: debug: CJ's task chain + cars within 12 m (door lock, status, driver) every 10 frames
+        if (fr % 200 == 0) { std::string th; for (auto* t = CTheScripts::pActiveScripts; t; t = t->m_pNext) { char n[9]{}; std::memcpy(n, t->m_szName, 8); th += std::string(" ") + n; } int32_t v676 = 0; std::memcpy(&v676, CTheScripts::ScriptSpace.data() + 2704, 4); notsa::standalone::Fixups::Log("[enterlog] f%d g676=%d threads:%s", fr, v676, th.c_str()); }
         auto* me = Cj(); const auto pp = me->GetPosition(); std::string tk; auto& tm = me->GetIntelligence()->m_TaskMgr;
         for (int ti = 0; ti < 5; ti++) { if (auto* t = tm.GetTaskPrimary(ti)) { tk += " P" + std::to_string(ti) + ":"; for (auto* tt = t; tt; tt = tt->GetSubTask()) tk += std::to_string((int)tt->GetTaskType()) + ">"; } }
         for (int ti = 0; ti < 6; ti++) { if (auto* t = tm.GetTaskSecondary((eSecondaryTask)ti)) tk += " S" + std::to_string(ti) + ":" + std::to_string((int)t->GetTaskType()); }

@@ -490,7 +490,12 @@ bool ButtonGuard(const Rec& r) { // CR24 (10 BEEFY BARON): a plain IS_BUTTON_PRE
     }
     return false;
 }
-bool AnyGuard(const Rec& r) { return IsPlayerGuard(r) || KillRefusal(g_thread, r) || NotInCarGuard(g_thread, r) || ButtonGuard(r); }
+bool LocateGuard(const CRunningScript* s, const Rec& r) { // CR28 (24 HOME INVASION: `IF OR(HAS_CHAR_BEEN_DAMAGED_BY_CHAR owner cj, LOCATE_CHAR_ANY_MEANS_CHAR_3D cj owner 1 m)` wakes the sleeping owner, the true branch is the alarm and the mission's failure): a plain locate / area condition a warp row would answer, whose TRUE branch reaches the fail text, is never answered
+    if ((r.raw & 0x8000) || !s || std::getenv("NOTSA_MDRIVER_NOLOCATEGUARD")) return false;
+    bool warp = false; for (auto& row : g_rows) if (row.match != 2 && row.op == (r.raw & 0x7FFF) && (row.action == "pedwarp" || row.action == "vehwarp" || row.action == "midpoint" || row.action == "warpto_handle")) { warp = true; break; }
+    return warp && VerdictOf(s, r) == Verdict::Guard;
+}
+bool AnyGuard(const Rec& r) { return IsPlayerGuard(r) || KillRefusal(g_thread, r) || NotInCarGuard(g_thread, r) || ButtonGuard(r) || LocateGuard(g_thread, r); }
 
 std::string KeyName(const std::string& k) {
     static const std::pair<const char*, const char*> m[] = { { "Enter", "return" }, { "Space", "space" }, { "Escape", "escape" }, { "ShiftLeft", "lshift" }, { "ControlLeft", "lctrl" }, { "ArrowUp", "up" }, { "ArrowDown", "down" }, { "ArrowLeft", "left" }, { "ArrowRight", "right" }, { "Tab", "tab" } };
@@ -636,6 +641,10 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             const auto n = ArgInt(*c, 1); if (!n || *n < 0) continue;
             if (blockAnswerable) continue;
             if (*n == 0 && c->jumped && c->target && InSpace(c->target) && (*(const uint16_t*)c->target & 0x7FFF) == 0x0051 && !std::getenv("NOTSA_MDRIVER_LEAVEANY")) continue; // CR24 (14): `GET_AREA_VISIBLE == 0` whose false branch skips to the RETURN of a helper sub (`IF @78 == 0` of a sub run every pass while CJ is inside the interior) is no wait: it must not drag CJ out of the interior
+            if (!c->waitAfter && !std::getenv("NOTSA_MDRIVER_NOENTERLOOSE")) { // CR28 (24 HOME INVASION: the false `GET_AREA_VISIBLE == 8` is an IF of the main loop (the burglary timer display), its false branch is no wait; the stage's own plain false `LOCATE_CHAR_IN_CAR_3D` at the house is the blocker): an area compare that is no wait goes after the plain false conditions a warp / enter-car row answers
+                bool other = false; for (auto& f2 : falses) { if (f2 == c || (f2->raw & 0x8000)) continue; for (auto& row : g_rows) if (row.match != 2 && row.op == (f2->raw & 0x7FFF) && (row.action == "pedwarp" || row.action == "vehwarp" || row.action == "midpoint" || row.action == "entercar") && ResolveArgs(row, *f2)) { other = true; break; } if (other) break; }
+                if (other) continue;
+            }
             g_enterArea = (int)*n; d.act = true; d.row = &kEnter; d.rowIdx = -4; d.cond = c; d.op = op; return d;
         }
         static const Row kSph{ 0x0119, 2, "NOT IS_CAR_DEAD of a GET_RANDOM_CAR_IN_SPHERE result", "tosphere", {}, 90 };

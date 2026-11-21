@@ -416,7 +416,14 @@ bool NotInCarGuard(const CRunningScript* s, const Rec& r) {
 }
 bool ButtonGuard(const Rec& r) { // CR24 (10 BEEFY BARON): a plain IS_BUTTON_PRESSED whose true branch ends in the mission's failure (directly or through a fail flag) is a guard: the driver never presses that button (here: the RC plane's self-destruct after 4 s of hovering; the mission is passed by surviving the timer)
     if ((r.raw & 0x7FFF) != 0x00E1 || (r.raw & 0x8000) || !g_thread || std::getenv("NOTSA_MDRIVER_NOBUTTONGUARD")) return false;
-    return VerdictOf(g_thread, r) == Verdict::Guard;
+    if (!r.hasBranch || !r.fall) return false;
+    for (const uint8_t* p = r.fall; InSpace(p);) { // the true branch only: the straight-line commands up to the first wait / branch / call / return; a print of M_FAIL on it = the press fails the mission (10: self-destruct). VerdictOf walked through the following conditions and flagged 46's passing press too
+        const int op = *(const uint16_t*)p & 0x7FFF; if (op == 0x0001 || op == 0x0051 || op == 0x004D || op == 0x0050 || op == 0x00D6 || op == 0x0002) return false;
+        const uint8_t* q = p + 2; bool mf = false, isI = false; int32_t iv = 0; const int want = Arity(op); int count = 0;
+        for (;;) { if (want >= 0 && count >= want) break; if (!InSpace(q)) return false; const uint8_t* nx = SkipOperand(q, mf, isI, iv); if (!nx) break; if (mf && op >= 0x00BA && op <= 0x00BD) return true; q = nx; count++; }
+        p = q;
+    }
+    return false;
 }
 bool AnyGuard(const Rec& r) { return IsPlayerGuard(r) || KillRefusal(g_thread, r) || NotInCarGuard(g_thread, r) || ButtonGuard(r); }
 

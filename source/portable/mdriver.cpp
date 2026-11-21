@@ -773,6 +773,12 @@ void TickGeneric() {
         static float s_hp = -1.f; auto* v = Cj()->bInVehicle ? Cj()->m_pVehicle : nullptr;
         if (v && v->m_fHealth != s_hp) { if (s_hp >= 0.f && v->m_fHealth < s_hp) notsa::standalone::Fixups::Log("[hplog] f%d hp %.0f->%.0f pos=%.1f,%.1f,%.1f spd=%.3f water=%d drown=%d fire=%d wpn=%d dmgEnt=%d inv=%d shooter=%s", fr, s_hp, v->m_fHealth, v->GetPosition().x, v->GetPosition().y, v->GetPosition().z, v->m_vecMoveSpeed.Magnitude(), (int)v->physicalFlags.bTouchingWater, (int)v->vehicleFlags.bIsDrowning, v->m_pFire ? 1 : 0, (int)v->m_nLastWeaponDamageType, v->m_pLastDamageEntity ? (int)v->m_pLastDamageEntity->GetType() : -1, (int)v->physicalFlags.bInvulnerable, ShooterDesc(v->m_pLastDamageEntity).c_str()); s_hp = v->m_fHealth; }
     }
+    if (static const char* ll = std::getenv("NOTSA_MDRIVER_LOGLOCALS"); ll && root && fr % 60 == 0 && Cj()) { // CR23: debug: "n,n,..": script locals that hold a ped or vehicle handle: model, position, distance to CJ; and (CARSLOG=1) the vehicles within 150 m of CJ by model
+        std::string o; const auto pp = Cj()->GetPosition();
+        for (const char* q = ll; *q;) { const int li = std::atoi(q); while (*q && *q != ',') q++; if (*q == ',') q++; const int h = LocalAt(root, li)->iParam; if (auto* pe = CPools::GetPed(h)) { const auto p2 = pe->GetPosition(); o += " L" + std::to_string(li) + "=ped" + std::to_string((int)pe->m_nModelIndex) + "@" + std::to_string((int)p2.x) + "," + std::to_string((int)p2.y) + " d" + std::to_string((int)(p2 - pp).Magnitude()) + (pe->m_fHealth > 0 ? "" : "X") + (pe->bInVehicle ? "v" : ""); } else if (auto* ve = CPools::GetVehicle(h)) { const auto p2 = ve->GetPosition(); o += " L" + std::to_string(li) + "=veh" + std::to_string((int)ve->m_nModelIndex) + "@" + std::to_string((int)p2.x) + "," + std::to_string((int)p2.y) + " d" + std::to_string((int)(p2 - pp).Magnitude()) + (ve->m_fHealth > 0 ? "" : "X") + " spd" + std::to_string((int)(ve->m_vecMoveSpeed.Magnitude() * 100)); } else o += " L" + std::to_string(li) + "=-"; }
+        notsa::standalone::Fixups::Log("[loglocals] f%d cj=%d,%d%s", fr, (int)pp.x, (int)pp.y, o.c_str());
+        if (std::getenv("NOTSA_MDRIVER_CARSLOG")) { std::map<int, int> cnt; float nearest459 = 1e9f; int total = 0, near150 = 0; for (auto& vv : GetVehiclePool()->GetAllValid()) { total++; const float d = (vv.GetPosition() - pp).Magnitude(); if (d < 150.f) { near150++; cnt[(int)vv.m_nModelIndex]++; } if (vv.m_nModelIndex == 459 && d < nearest459) nearest459 = d; } std::string m; for (auto& [k, v] : cnt) m += " " + std::to_string(k) + "x" + std::to_string(v); notsa::standalone::Fixups::Log("[carslog] f%d vehicles total %d within150 %d nearest459 %.0f models:%s", fr, total, near150, nearest459, m.c_str()); }
+    }
     if (static const char* cl = std::getenv("NOTSA_MDRIVER_CARLOG"); cl && root && fr % 10 == 0) { // CR16: debug: the script car (local N) and the ped in it every 10 frames
         const int li = std::atoi(cl); const int li2 = std::getenv("NOTSA_MDRIVER_CARLOG2") ? std::atoi(std::getenv("NOTSA_MDRIVER_CARLOG2")) : -1;
         auto* cr = CPools::GetVehicle(LocalAt(root, li)->iParam);
@@ -816,12 +822,19 @@ void TickGeneric() {
     }
     if (!d.act) { Stop(d.reason, d.op, at); return; }
     if (d.act && d.row->action == "wait" && g_attemptsAt[ipPtr] >= 1 && !std::getenv("NOTSA_MDRIVER_NOESCALATE")) { // CR21: the wait row answered this wake ip before and the thread still stands: a TRUE `NOT IS_CHAR_DEAD(x)` of the pass is a wait-until-dead (89: the paramedic passengers of the three ambulances stay alive once the cruising ambulances moved on; the plain 0118 rows only see the drivers): kill that live non-buddy char
-        const Row* kr = nullptr; int kri = -1; for (size_t i = 0; i < g_rows.size(); i++) if (g_rows[i].op == 0x0118 && g_rows[i].match == 1 && g_rows[i].action == "kill") { kr = &g_rows[i]; kri = (int)i; break; }
+        for (const int kop : { 0x0118, 0x0119 }) { // CR23 (16 NINES AND AK'S, last stage: `WHILE NOT IS_CAR_DEAD(@83)`): the car form too (the plain 0119 kill row wrecks the car; a car with a buddy / CJ in it is refused by ProtectedHandle)
+        if (kop == 0x0119 && std::getenv("NOTSA_MDRIVER_NOCARESCALATE")) break;
+        const Row* kr = nullptr; int kri = -1; for (size_t i = 0; i < g_rows.size(); i++) if (g_rows[i].op == kop && g_rows[i].match == 1 && g_rows[i].action == "kill") { kr = &g_rows[i]; kri = (int)i; break; }
+        if (kr && d.row == kr) break;
         if (kr) for (size_t k = loop.size(); k-- > 0;) {
-            const auto& r = loop[k]; if (r->raw != 0x8118 || r->cond != 1 || AnyGuard(*r)) continue;
+            const auto& r = loop[k]; if (r->raw != (0x8000 | kop) || r->cond != 1 || AnyGuard(*r)) continue;
             const auto a2 = ResolveArgs(*kr, *r); if (!a2 || a2->empty()) continue;
-            const int h = (int)(*a2)[0].n; auto* pp = CPools::GetPed(h); if (!pp || pp == Cj() || pp->m_fHealth <= 0.f || ProtectedHandle(h) || Guarded().count(h)) continue;
-            d.row = kr; d.rowIdx = kri; d.cond = r; d.args = *a2; d.op = 0x0118; break;
+            const int h = (int)(*a2)[0].n;
+            if (kop == 0x0118) { auto* pp = CPools::GetPed(h); if (!pp || pp == Cj() || pp->m_fHealth <= 0.f || ProtectedHandle(h) || Guarded().count(h)) continue; }
+            else { auto* vv = CPools::GetVehicle(h); if (!vv || vv->m_fHealth <= 0.f || ProtectedHandle(h) || (Cj() && Cj()->m_pVehicle == vv)) continue; }
+            d.row = kr; d.rowIdx = kri; d.cond = r; d.args = *a2; d.op = kop; break;
+        }
+        if (d.row == kr) break;
         }
     }
     g_attemptsAt[ipPtr]++;

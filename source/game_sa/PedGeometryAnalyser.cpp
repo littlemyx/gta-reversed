@@ -1331,10 +1331,12 @@ bool CPedGeometryAnalyser::LiesInsideBoundingBox(const CPed& ped, const CVector&
 
     // Quick check using the bounding sphere
     const float radius = entity.GetModelInfo()->GetColModel()->GetBoundRadius();
-    const float distSq = (posn.x - entityPos.x) * (posn.x - entityPos.x)
-                       + (posn.y - entityPos.y) * (posn.y - entityPos.y)
-                       + (posn.z - entityPos.z) * (posn.z - entityPos.z);
-    if (radius * radius <= distSq) {
+    // exe 0x5F38BC-0x5F38E2: the sum is (dz^2 + dy^2) + dx^2 (z, y, x order); `fcompp / test ah,0x41 / jne` leaves for r^2 <= distSq or NaN
+    const float dx = posn.x - entityPos.x;
+    const float dy = posn.y - entityPos.y;
+    const float dz = posn.z - entityPos.z;
+    const float distSq = (dz * dz + dy * dy) + dx * dx;
+    if (!(radius * radius > distSq)) {
         return false;
     }
 

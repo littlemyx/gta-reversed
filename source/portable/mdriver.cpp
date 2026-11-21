@@ -849,6 +849,7 @@ void TickGeneric() {
         if (kr && d.row == kr) break;
         if (kr) for (size_t k = loop.size(); k-- > 0;) {
             const auto& r = loop[k]; if (r->raw != (0x8000 | kop) || r->cond != 1 || AnyGuard(*r)) continue;
+            if (kop == 0x0119 && !(r->waitAfter && !r->jumped)) continue; // the car form only when the TRUE branch IS the WAIT of its group (`WHILE NOT IS_CAR_DEAD(x)`, 16): elsewhere `NOT IS_CAR_DEAD` is a plain if (10: the RC plane @34 whose death fails the mission)
             const auto a2 = ResolveArgs(*kr, *r); if (!a2 || a2->empty()) continue;
             const int h = (int)(*a2)[0].n;
             if (kop == 0x0118) { auto* pp = CPools::GetPed(h); if (!pp || pp == Cj() || pp->m_fHealth <= 0.f || ProtectedHandle(h) || Guarded().count(h)) continue; }

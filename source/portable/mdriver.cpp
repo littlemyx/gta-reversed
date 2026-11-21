@@ -645,7 +645,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             if (blockAnswerable) continue;
             if (*n == 0 && c->jumped && c->target && InSpace(c->target) && (*(const uint16_t*)c->target & 0x7FFF) == 0x0051 && !std::getenv("NOTSA_MDRIVER_LEAVEANY")) continue; // CR24 (14): `GET_AREA_VISIBLE == 0` whose false branch skips to the RETURN of a helper sub (`IF @78 == 0` of a sub run every pass while CJ is inside the interior) is no wait: it must not drag CJ out of the interior
             if (!c->waitAfter && !std::getenv("NOTSA_MDRIVER_NOENTERLOOSE")) { // CR28 (24 HOME INVASION: the false `GET_AREA_VISIBLE == 8` is an IF of the main loop (the burglary timer display), its false branch is no wait; the stage's own plain false `LOCATE_CHAR_IN_CAR_3D` at the house is the blocker): an area compare that is no wait goes after the plain false conditions a warp / enter-car row answers
-                bool other = false; for (auto& f2 : falses) { if (f2 == c || (f2->raw & 0x8000)) continue; for (auto& row : g_rows) if (row.match != 2 && row.op == (f2->raw & 0x7FFF) && (row.action == "pedwarp" || row.action == "vehwarp" || row.action == "midpoint" || row.action == "entercar") && ResolveArgs(row, *f2)) { other = true; break; } if (other) break; }
+                bool other = false; for (auto& f2 : falses) { if (f2 == c || (f2->raw & 0x8000)) continue; if (f2->raw == 0x0214 || f2->raw == 0x0491) { other = true; break; } /* the pickup of the stage (22: the molotovs; the `pickupgo` verb answers it after a wait) */ for (auto& row : g_rows) if (row.match != 2 && row.op == (f2->raw & 0x7FFF) && (row.action == "pedwarp" || row.action == "vehwarp" || row.action == "midpoint" || row.action == "entercar" || row.action == "warpto_handle") && ResolveArgs(row, *f2)) { other = true; break; } if (other) break; }
                 if (other) continue;
             }
             g_enterArea = (int)*n; d.act = true; d.row = &kEnter; d.rowIdx = -4; d.cond = c; d.op = op; return d;
@@ -798,6 +798,12 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         const int pi = CPickups::GetActualPickupIndex(tPickupReference{ I_(0) });
         if (pi < 0) { QueueActions({}, row.settle); return; }
         const CVector pp = CPickups::aPickUps[pi].GetPosn(); one(warp(pp.x, pp.y, pp.z, false)); return;
+    }
+    if (v == "weaponpickup") { // CR28: HAS_CHAR_GOT_WEAPON(cj, w) is false: the player walks onto the nearest live pickup whose model is the weapon's
+        const auto mdl = CPickups::ModelForWeapon((eWeaponType)I_(0)); const auto* me = Cj(); const CPickup* best = nullptr; float bd = 1e9f;
+        if (me && mdl > 0) for (auto& pk : CPickups::GetAllActivePickups()) { if (pk.m_nModelIndex != mdl || pk.m_nFlags.bDisabled) continue; const float dd = (pk.GetPosn() - me->GetPosition()).Magnitude(); if (dd < bd) { bd = dd; best = &pk; } }
+        if (!best) { QueueActions({}, row.settle); return; }
+        const CVector pp = best->GetPosn(); one(warp(pp.x, pp.y, pp.z, false)); return;
     }
     if (v == "projectile") { // CR26: IS_PROJECTILE_IN_AREA(box) is false: a molotov is thrown into the area (the box centre); one per distinct area
         std::string a; for (size_t i = 0; i + 5 < d.args.size(); i += 6) { if (!a.empty()) a += "|"; a += F(0.5f * (F_(i) + F_(i + 3))) + "," + F(0.5f * (F_(i + 1) + F_(i + 4))) + "," + F(0.5f * (F_(i + 2) + F_(i + 5))); }
@@ -1130,6 +1136,11 @@ void TickGeneric() {
             std::vector<RecP> big; for (auto& r : g_recsBig) if (r->waitSeq >= g_waitSeq - 3) big.push_back(r);
             for (size_t k = big.size(); k-- > 0;) { const auto& r = big[k]; if ((r->raw & 0x7FFF) != 0x0214 || (r->raw & 0x8000) || r->cond != 0 || AnyGuard(*r)) continue;
                 auto a2 = ResolveArgs(kPck, *r); if (!a2 || a2->empty()) continue; d.row = &kPck; d.rowIdx = -11; d.cond = r; d.args = *a2; d.op = 0x0214; break; }
+            if (d.row->action == "wait" && !std::getenv("NOTSA_MDRIVER_NOWEAPONPICKUP")) { // CR28 (22 BURNING DESIRE: `HAS_CHAR_GOT_WEAPON cj 42` (fire extinguisher) while the stage's weapon pickup lies in the world): the player walks onto the nearest pickup of that weapon's model
+                static const Row kWp{ 0x0491, 1, "HAS_CHAR_GOT_WEAPON", "weaponpickup", { "$1" }, 60 };
+                for (size_t k = big.size(); k-- > 0;) { const auto& r = big[k]; if ((r->raw & 0x7FFF) != 0x0491 || (r->raw & 0x8000) || r->cond != 0 || AnyGuard(*r)) continue;
+                    auto a2 = ResolveArgs(kWp, *r); if (!a2 || a2->empty()) continue; d.row = &kWp; d.rowIdx = -13; d.cond = r; d.args = *a2; d.op = 0x0491; break; }
+            }
         }
     }
     if (d.act && d.row->action == "wait" && g_attemptsAt[ipPtr] >= 2 && !std::getenv("NOTSA_MDRIVER_NOBLIPGO")) { // CR26 (19 CESAR VIALPANDO: stage 19 waits for a flag the mod-shop script sets once the garage opens; the only open task is the destination blip): the wait row answered this wake ip twice and the thread still stands: CJ (with his car) goes to the mission's coordinate blip (the newest BLIP_COORD of the radar)

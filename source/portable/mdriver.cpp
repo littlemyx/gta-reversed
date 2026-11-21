@@ -563,8 +563,8 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         if (auto* o = CPools::GetObject(h); o && o->objectFlags.bIsLiftable && c && !c->GetEntityThatThisPedIsHolding()) { // CR4: default on (was AD3-only): stand 1.5 m before a liftable object and press the pick-up key
             QueueActions({ "standobj " + std::to_string(h) + " 1.5", "wait 10", "key down return", "wait 1", "key up return", "wait 90" }, row.settle); return;
         }
-        if (c && c->bInVehicle && c->m_pVehicle && e->IsVehicle() && e != c->m_pVehicle && !std::getenv("NOTSA_MDRIVER_NOCLEARSPOT")) { // CR21: the target is a (possibly moving) car: put CJ's car in a clear spot beside / behind it, never onto it (89: the ambulances cruise; the +0.5 m warp overlapped one -> RAMMED_BY_CAR every frame -> CJ dead). General rule for the TS driver: candidates behind, left, right, ahead of the target at (half extent of both cars + 1.5 m), the first with no building/vehicle/object within the car's radius; none free -> the old +0.5 m
-            const auto* tcm = e->GetColModel(); const auto* ocm = c->m_pVehicle->GetColModel();
+        if (c && c->bInVehicle && c->m_pVehicle && e->GetIsTypeVehicle() && e != c->m_pVehicle && !std::getenv("NOTSA_MDRIVER_NOCLEARSPOT")) { // CR21: the target is a (possibly moving) car: put CJ's car in a clear spot beside / behind it, never onto it (89: the ambulances cruise; the +0.5 m warp overlapped one -> RAMMED_BY_CAR every frame -> CJ dead). General rule for the TS driver: candidates behind, left, right, ahead of the target at (half extent of both cars + 1.5 m), the first with no building/vehicle/object within the car's radius; none free -> the old +0.5 m
+            auto* tcm = e->GetColModel(); auto* ocm = c->m_pVehicle->GetColModel();
             if (tcm && ocm) {
                 const auto tb = tcm->GetBoundingBox(), ob = ocm->GetBoundingBox();
                 const float tl = (tb.m_vecMax.y - tb.m_vecMin.y) * 0.5f, ol = (ob.m_vecMax.y - ob.m_vecMin.y) * 0.5f, tw = (tb.m_vecMax.x - tb.m_vecMin.x) * 0.5f, ow = (ob.m_vecMax.x - ob.m_vecMin.x) * 0.5f;
@@ -572,12 +572,13 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
                 const CVector fw = e->GetForward(), rt = e->GetRight();
                 const CVector cand[4] = { pos - fw * dl, pos - rt * dw, pos + rt * dw, pos + fw * dl };
                 for (const auto& q : cand) {
-                    if (CWorld::TestSphereAgainstWorld(CVector{ q.x, q.y, q.z + 0.6f }, rad, c->m_pVehicle, true, true, false, true, false, false)) continue;
+                    if (CWorld::TestSphereAgainstWorld(CVector{ q.x, q.y, q.z + 0.6f }, rad, c->m_pVehicle, false, true, false, true, false, false) || CWorld::TestSphereAgainstWorld(CVector{ q.x, q.y, q.z + 1.4f }, 1.0f, c->m_pVehicle, true, false, false, false, false, false)) continue; // cars/objects within the car radius; buildings (walls, poles) above the road surface
                     notsa::standalone::Fixups::Log("[mdriver] warpto_handle: clear spot beside car %d (%.2f,%.2f) -> (%.2f,%.2f)", h, pos.x, pos.y, q.x, q.y);
                     one(warp(q.x, q.y, q.z, false)); return;
                 }
             }
         }
+        notsa::standalone::Fixups::Log("[mdriver] warpto_handle: no clear spot, +0.5 m");
         one(warp(pos.x + 0.5f, pos.y, pos.z, false)); return;
     }
     if (v == "failclass") { Stop("by nature: " + (d.args.empty() ? std::string("failclass") : d.args[0].s), cop, 0); return; }

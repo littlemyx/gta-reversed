@@ -324,7 +324,10 @@ int32 CEntryExitManager::FindNearestEntryExit(const CVector2D& position, float r
 void CEntryExitManager::EnableBurglaryHouses(bool enable) {
     ms_bBurglaryHousesEnabled = enable;
     for (auto& enex : NOTSA_EXE_OR(mp_poolEntryExits->GetAllValidReverse(), mp_poolEntryExits->GetAllValid())) {
-        enex.bBurglaryAccess = enable;
+        // exe 0x43F180: only entry exits with the burglary flag (0x1000) get bEnableAccess (0x4000) set / cleared
+        if (enex.bBurglaryAccess) {
+            enex.bEnableAccess = enable;
+        }
     }
 }
 

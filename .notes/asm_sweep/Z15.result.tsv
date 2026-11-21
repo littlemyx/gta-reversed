@@ -1,0 +1,84 @@
+addr	function	verdict	asm range	note	fix commit
+0x6997E0	CCover::Update	MATCH	0x6997E0-0x699DA6	pool walks (vehicles/objects reverse), sqrt speed < 0.005 / 25 range, frame-counter dispatch, building list delete/add, clamped sector loop, scan codes	-
+0x699800	CCoverPoint::Update (inline CanBeRemoved)	FIXED	0x699800-0x699892	OBJECT point whose entity has no matrix: the exe allocates one (AllocateMatrix + UpdateMatrix) before the up.z test, the port dereferenced null	8a260b264
+0x5F80D0	CPedGroupMembership::RemoveMember(int)	MATCH	0x5F80D0-0x5F817C	reference clear, radar blip, decision maker restore, bDrownsInWater when the leader has player data; flag bits 77 / 52 checked	-
+0x5FB210	CPedGroupMembership::RemoveMember(CPed*)	MATCH	0x5FB210-0x5FB23B	slot scan	-
+0x64F860	CCarEnterExit::SetAnimOffsetForEnterOrExitVehicle	MATCH	0x64F860-0x64FBA8	office requested before house, refs added reverse, removed house first; group/anim ids 0x70/0x151/0x154/0x148/0x157, dragged-out constants bit-equal	-
+0x43F050	CEntryExitManager::LinkEntryExit	MATCH	0x43F050-0x43F097		-
+0x43F0A0	CEntryExitManager::PostEntryExitsCreation	MATCH	0x43F0A0-0x43F12A	inlined link code identical to LinkEntryExit	-
+0x43EFD0	CEntryExitManager::GetEntryExitIndex	MATCH	0x43EFD0-0x43F03C	8-char _strnicmp, byte masks	-
+0x4404A0	CEntryExit::TransitionFinished (tail)	MATCH	0x440678-0x440B89	pairing branch states 0/2/default; tail: area code, m_pEnex mask, stack, ped flag bit 90, pad 0x10E bit 3, camera pos, streaming sequence, vehicle z, ped teleport / rotations, shop, population, gang, delete-enex, facial StopAll	-
+0x5F2F70	CPedGeometryAnalyser::IsWanderPathClear (water loop + drop checks)	MATCH	0x5F2F70-0x5F32C3	full: return codes 0-4, p = dir*i + from, maxZ pick, ProcessVerticalLine args, 0.5/2/1/5 constants	-
+0x5E79B0	CPed::SetLook(float)	FIXED	0x5E79B0-0x5E7A55	also clears bIsRestoringLook (flag word & ~8 | 4)	90278fd2a
+0x5E7A60	CPed::SetLook(CEntity*)	MATCH	0x5E7A60-0x5E7B0F		-
+0x5DEDC0	CPed::SetLookFlag(float)	MATCH	0x5DEDC0-0x5DEE3D		-
+0x5DEE40	CPed::SetLookFlag(CEntity*)	MATCH	0x5DEE40-0x5DEEC3		-
+0x5DED90	CPed::CanUseTorsoWhenLooking	MATCH	0x5DED90-0x5DEDB1	states 0x32/0x3A, bIsDucking	-
+0x5DF8D0	CPed::SetLookTimer	MATCH	-		-
+0x481090	CPed::SetStayInSamePlace	MATCH	-		-
+0x5E0270	CPed::ReleaseCoverPoint	MATCH	-		-
+0x5DF060	CPed::CanBeArrested	MATCH	-		-
+0x5E06E0	CPed::SetPedDefaultDecisionMaker	MATCH	-		-
+0x5DEFE0	CPed::UseGroundColModel	MATCH	-		-
+0x5E7980	CPed::SetIdle	MATCH	-		-
+0x5DF150	CPed::CanBeDeletedEvenInVehicle	MATCH	-		-
+0x5E0400	CPed::CanThrowEntityThatThisPedIsHolding	MATCH	-	task types 0x133-0x135	-
+0x5DF300	CPed::DoWeHaveWeaponAvailable	MATCH	-		-
+0x5E3C10	CPed::SetWeaponSkill	MATCH	-		-
+0x5DEBC0	CPed::SetPedStats	MATCH	-		-
+0x479D10	CPed::IsWearingGoggles	MATCH	-		-
+0x5DF200	CPed::GetWeaponSlot	MATCH	-		-
+0x609EF0	CPlayerPed::Busted	MATCH	-		-
+0x609F10	CPlayerPed::SetWantedLevel	MATCH	-		-
+0x609F30	CPlayerPed::SetWantedLevelNoDrop	MATCH	-		-
+0x60A020	CPlayerPed::DoStuffToGoOnFire	MATCH	-		-
+0x609D90	CPlayerPed::PedCanBeTargettedVehicleWise	MATCH	-		-
+0x609DE0	CPlayerPed::FindTargetPriority	MATCH	-	priority order incl. bThisPedIsATargetPriority (bit 61), constants	-
+0x609830	CPlayerPed::UpdateCameraWeaponModes	MATCH	-	jump table decoded	-
+0x60A440	CPlayerPed::MakePlayerGroupDisappear	FIXED	0x60A440-0x60A4A3	clears bUsesCollision (bit 0) like the exe (and [m+0x1C], ~0x81); the port cleared bCollisionProcessed (bit 1)	fccfb76e9
+0x60A4B0	CPlayerPed::MakePlayerGroupReappear	MATCH	-		-
+0x60A820	CPlayerPed::GetButtonSprintResults	MATCH	-		-
+0x60A8A0	CPlayerPed::ResetPlayerBreath	MATCH	-		-
+0x6D63F0	CVehicle::GetHeightAboveRoad	MATCH	-		-
+0x6D1E60	CVehicle::CanDoorsBeDamaged	MATCH	-		-
+0x6D22F0	CVehicle::IsVehicleNormal	MATCH	-		-
+0x6D25D0	CVehicle::CarHasRoof	MATCH	-		-
+0x6D8470	CVehicle::UsesSiren	MATCH	-	jump table decoded (407/416/423 true, 432 false)	-
+0x6D24F0	CVehicle::ActivateBomb	MATCH	-		-
+0x6D3AE0	CVehicle::GetSpareHasslePosId	MATCH	-		-
+0x6D3B30	CVehicle::SetHasslePosId	MATCH	-		-
+0x6A44C0	CAutomobile::KnockPedOutCar	MATCH	-	stub	-
+0x6A2460	CAutomobile::ClearHeliOrientation	MATCH	-		-
+0x6A29A0	CAutomobile::ReduceHornCounter	MATCH	-		-
+0x6A3580	CAutomobile::FixTyre	MATCH	-		-
+0x6A3740	CAutomobile::SetTaxiLight	MATCH	-		-
+0x6A3760	CAutomobile::SetAllTaxiLights	MATCH	-		-
+0x6A3860	CAutomobile::SetBusDoorTimer	MATCH	-		-
+0x6A2250	CAutomobile::IsComponentPresent	MATCH	-		-
+0x6F5DC0	CTrain::RemoveOneMissionTrain	MATCH	-		-
+0x6F5DF0	CTrain::ReleaseOneMissionTrain	MATCH	-		-
+0x6F5E50	CTrain::SetTrainCruiseSpeed	MATCH	-		-
+0x6F5E70	CTrain::FindCaboose	MATCH	-		-
+0x6F5E90	CTrain::FindEngine	MATCH	-		-
+0x6F5EB0	CTrain::FindCarriage	MATCH	-		-
+0x6F5EF0	CTrain::FindSideStationIsOn	MATCH	-		-
+0x6F7140	CTrain::SetNewTrainPosition	MATCH	-		-
+0x543580	CPhysical::GetHasCollidedWithAnyObject	MATCH	-		-
+0x4ADAE0	CEventDamage::DoInformVehicleOccupants	MATCH	-		-
+0x675A30	CTaskInteriorGoToInfo::ControlSubTask	MATCH	-		-
+0x675B60	CTaskInteriorUseInfo::CreateFirstSubTask	MATCH	-		-
+0x675C00	CTaskInteriorUseInfo::ControlSubTask	MATCH	-		-
+0x678870	CTaskComplexFallAndGetUp::CreateFirstSubTask	MATCH	-		-
+0x6787D0	CTaskComplexFallAndGetUp::IsFalling	MATCH	-		-
+0x6787A0	CTaskComplexFallAndGetUp::SetDownTime	MATCH	-		-
+0x6B5F40	CBike::KnockOffRider	MATCH	-	stub	-
+0x6B7050	CBike::Fix	MATCH	-		-
+0x6B6740	CBike::ResetSuspension	MATCH	-		-
+0x6B6790	CBike::GetAllWheelsOffGround	MATCH	-		-
+0x59F300	CObject::SetObjectTargettable	MATCH	-		-
+0x59F320	CObject::CanBeTargetted	MATCH	-		-
+0x5DDE80	CCopPed::SetPartner	MATCH	-		-
+0x5DE070	CCopPed::ClearCriminalsToKill	MATCH	-		-
+0x439A80	CPlaceable::SetOrientation(x,y,z)	MATCH	-		-
+0x403EB0	CEntity::FlagToDestroyWhenNextProcessed	MATCH	-		-
+0x4B35A0	CEventDamage::AffectsPed	MATCH	0x4B35A0-0x4B3704	first part only (invulnerable / vest tail not re-read)	-

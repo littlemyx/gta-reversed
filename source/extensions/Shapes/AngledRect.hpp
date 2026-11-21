@@ -54,9 +54,10 @@ public:
     //! Highlight this rect with markers in each corner
     void HighlightWithMarkers(const CMatrix& transform = CMatrix::Unity()) const;
 private:
-    CVector2D m_a{}, m_b{};             //< Corner A and B 
+    CVector2D m_a{}, m_b{};             //< Corner A and B
+    float     m_height{};               //< Height (always positive); declared BEFORE the directions: m_dirBtoA{ ...Normalized(&m_height) } writes it, a later default member initializer would zero it again
     CVector2D m_dirBtoA{}, m_dirDtoA{}; //< Directions to/from corners `C -> A` is the same as `B -> D`
-    float     m_width{}, m_height{};    //< Width and height (both always positive)
+    float     m_width{};                //< Width (always positive)
 };
 };
 }; // namespace notsa

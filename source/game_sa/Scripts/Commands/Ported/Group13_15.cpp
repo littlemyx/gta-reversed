@@ -813,7 +813,8 @@ void SetCarEscortCar(CVehicle& veh, CVehicle& target) {
     veh.m_autoPilot.m_nCarMission = Mission;
 }
 
-//! 1531 IS_CHAR_STOPPED_IN_ANGLED_AREA_IN_CAR_2D / 1537 ..._3D (case @0x491289, shared): `CharInAngledAreaCheckCommand(commandId)`; no CollectParameters before.
+//! 1526..1537 IS_CHAR_[STOPPED_]IN_ANGLED_AREA_[ON_FOOT_/IN_CAR_]2D and 1532..1537 the 3D ones (case @0x491289, shared): `CharInAngledAreaCheckCommand(commandId)`; no CollectParameters before.
+//! (CR28: all of them are registered here now; the CharacterCommands.cpp AngledRect versions were never true: AngledRect::m_height was zeroed by its default member initializer.)
 void CharStoppedInAngledAreaInCar(CRunningScript& S, eScriptCommands command) {
     S.CharInAngledAreaCheckCommand((int32)command);
 }
@@ -1218,6 +1219,16 @@ void notsa::script::commands::ported::g13_15::RegisterHandlers() {
     REGISTER_COMMAND_HANDLER(COMMAND_SET_CAR_ESCORT_CAR_RIGHT, SetCarEscortCar<MISSION_ESCORT_RIGHT>);
     REGISTER_COMMAND_HANDLER(COMMAND_SET_CAR_ESCORT_CAR_REAR, SetCarEscortCar<MISSION_ESCORT_REAR>);
     REGISTER_COMMAND_HANDLER(COMMAND_SET_CAR_ESCORT_CAR_FRONT, SetCarEscortCar<MISSION_ESCORT_FRONT>);
+    REGISTER_COMMAND_HANDLER(COMMAND_IS_CHAR_IN_ANGLED_AREA_2D, CharStoppedInAngledAreaInCar);
+    REGISTER_COMMAND_HANDLER(COMMAND_IS_CHAR_IN_ANGLED_AREA_ON_FOOT_2D, CharStoppedInAngledAreaInCar);
+    REGISTER_COMMAND_HANDLER(COMMAND_IS_CHAR_IN_ANGLED_AREA_IN_CAR_2D, CharStoppedInAngledAreaInCar);
+    REGISTER_COMMAND_HANDLER(COMMAND_IS_CHAR_STOPPED_IN_ANGLED_AREA_2D, CharStoppedInAngledAreaInCar);
+    REGISTER_COMMAND_HANDLER(COMMAND_IS_CHAR_STOPPED_IN_ANGLED_AREA_ON_FOOT_2D, CharStoppedInAngledAreaInCar);
+    REGISTER_COMMAND_HANDLER(COMMAND_IS_CHAR_IN_ANGLED_AREA_3D, CharStoppedInAngledAreaInCar);
+    REGISTER_COMMAND_HANDLER(COMMAND_IS_CHAR_IN_ANGLED_AREA_ON_FOOT_3D, CharStoppedInAngledAreaInCar);
+    REGISTER_COMMAND_HANDLER(COMMAND_IS_CHAR_IN_ANGLED_AREA_IN_CAR_3D, CharStoppedInAngledAreaInCar);
+    REGISTER_COMMAND_HANDLER(COMMAND_IS_CHAR_STOPPED_IN_ANGLED_AREA_3D, CharStoppedInAngledAreaInCar);
+    REGISTER_COMMAND_HANDLER(COMMAND_IS_CHAR_STOPPED_IN_ANGLED_AREA_ON_FOOT_3D, CharStoppedInAngledAreaInCar);
     REGISTER_COMMAND_HANDLER(COMMAND_IS_CHAR_STOPPED_IN_ANGLED_AREA_IN_CAR_2D, CharStoppedInAngledAreaInCar);
     REGISTER_COMMAND_HANDLER(COMMAND_IS_CHAR_STOPPED_IN_ANGLED_AREA_IN_CAR_3D, CharStoppedInAngledAreaInCar);
     REGISTER_COMMAND_HANDLER(COMMAND_GET_HEADING_FROM_VECTOR_2D, GetHeadingFromVector2D);

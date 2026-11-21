@@ -72,7 +72,8 @@ CTask * CTaskComplexFleePoint::CreateSubTask(eTaskType taskType) {
 * @brief Set a new flee position
 */
 void CTaskComplexFleePoint::SetFleePosition(CVector const& fleePos, float safeDistance, bool scream) {
-    if (m_fleeFromPos != fleePos) {
+    // exe 0x65B7B0-0x65B7E6: x, y, z AND m_safeDist are compared (the port only compared the position)
+    if (m_fleeFromPos != fleePos || m_safeDist != safeDistance) {
         m_fleeFromPos = fleePos;
         m_safeDist = safeDistance;
         m_newFleePosWasSet = true;

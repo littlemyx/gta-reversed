@@ -366,7 +366,7 @@ void StaticScan(const CRunningScript* s) {
         } else pend.reset();
         single = false; p = e;
     }
-    std::fprintf(stderr, "[mdriver] static scan: %d commands, %d IS_CHAR_DEAD sites, %d flag tests\n", n, nd, nf);
+    notsa::standalone::Fixups::Log("[mdriver] static scan: base %x %d commands, %d IS_CHAR_DEAD sites, %d flag tests", (unsigned)(s->m_BaseIP - CTheScripts::ScriptSpace.data()), n, nd, nf);
 }
 // ---- actions.ts: guards, buddies ----
 bool Likes(ePedType a, ePedType b) { return ((CPedType::GetPedTypeAcquaintances(ACQUAINTANCE_LIKE, a) | CPedType::GetPedTypeAcquaintances(ACQUAINTANCE_RESPECT, a)) & (1u << b)) != 0; }
@@ -386,10 +386,23 @@ bool IsPlayerGuard(const Rec& r) {
     auto* ped = Cj(); const auto h = ArgInt(r, 0); if (!ped || !h) return false;
     return op == 0x0118 ? CPools::GetPed((int)*h) == ped : ped->m_pVehicle && CPools::GetVehicle((int)*h) == ped->m_pVehicle;
 }
+// CR22: the handles the script fails the mission for when they die (a plain IS_CHAR_DEAD site, singleton group, whose true branch reaches the fail text directly or through a fail flag): never killed by the driver, whatever the site that asks for the kill
+const std::set<int>& Guarded() {
+    static std::set<int> out; static int lastFr = -1; static std::map<const uint8_t*, std::pair<size_t, bool>> cache;
+    const int fr = (int)CTimer::GetFrameCounter(); if (fr == lastFr) return out; lastFr = fr; out.clear();
+    if (std::getenv("NOTSA_MDRIVER_NOGUARDPROTECT") || !g_thread) return out;
+    for (auto& [site, r] : g_deadConds) {
+        if ((r->raw & 0x8000) || (r->raw & 0x7FFF) != 0x0118) continue;
+        auto& ce = cache[site]; const size_t gen = g_flagConds.size() + g_deadConds.size();
+        if (ce.first != gen + 1) { ce = { gen + 1, VerdictOf(g_thread, *r) == Verdict::Guard }; if (std::getenv("NOTSA_MDRIVER_PLOG") && ce.second) notsa::standalone::Fixups::Log("[mdplog] guard site ip=%x flagconds=%zu", (unsigned)(site - g_thread->m_BaseIP), g_flagConds.size()); }
+        if (!ce.second) continue; const auto da = DecodeArgs(g_thread, site, 1); if (!da.empty()) out.insert((int)da[0].bits);
+    }
+    return out;
+}
 bool KillRefusal(const CRunningScript* s, const Rec& r) { // true = the driver must not kill for this condition
     const int op = r.raw & 0x7FFF; if ((op != 0x0118 && op != 0x0119) || (r.raw & 0x8000)) return false;
     const auto h = ArgInt(r, 0); if (!h) return false;
-    if (ProtectedHandle((int)*h)) return true;
+    if (ProtectedHandle((int)*h) || Guarded().count((int)*h)) return true;
     const auto v = VerdictOf(s, r); return !(v == Verdict::Wait || v == Verdict::GoesOn);
 }
 bool NotInCarGuard(const CRunningScript* s, const Rec& r) {
@@ -698,11 +711,7 @@ bool IsBuddyTarget(CPed* target, CPed* attacker, CPed* me) {
 void ShootDead() { // actions.ts shootAttackers: every ped (not a buddy type) whose kill task targets CJ / a buddy is shot dead (max 60)
     if (g_fightKills >= 60) return; auto* me = Cj(); if (!me) return;
     std::vector<int> victims;
-    std::set<int> guarded; if (!std::getenv("NOTSA_MDRIVER_NOGUARDPROTECT")) for (auto& [site, r] : g_deadConds) { // CR21: a char the script fails the mission for when he dies (plain IS_CHAR_DEAD whose true branch leads to the fail text, among the last conditions) is a buddy, whatever his ped type (11 BIG SMOKE: mission chars type 24 attacking Ballas were shot dead -> INT2_F2)
-        if ((r->raw & 0x8000) || (r->raw & 0x7FFF) != 0x0118) continue;
-        static std::map<const uint8_t*, std::pair<size_t, bool>> cache; auto& ce = cache[site]; const size_t gen = g_flagConds.size() + g_deadConds.size(); if (ce.first != gen + 1) { ce = { gen + 1, VerdictOf(g_thread, *r) == Verdict::Guard }; } // CR22: the verdict is cached (it changes only when a new flag test / site is seen)
-        if (!ce.second) continue; const auto da = DecodeArgs(g_thread, site, 1); if (!da.empty()) guarded.insert((int)da[0].bits);
-    }
+    const std::set<int>& guarded = Guarded();
     for (auto& p : GetPedPool()->GetAllValid()) {
         if (&p == me || p.m_fHealth <= 0.f || ProtectedPed(&p) || guarded.count(CPools::GetPedRef(&p))) continue;
         auto* tg = KillTarget(&p); if (!tg || !IsBuddyTarget(tg, &p, me) || LikesSide((int)p.m_nPedType)) continue;
@@ -805,7 +814,7 @@ void TickGeneric() {
         if (kr) for (size_t k = loop.size(); k-- > 0;) {
             const auto& r = loop[k]; if (r->raw != 0x8118 || r->cond != 1 || AnyGuard(*r)) continue;
             const auto a2 = ResolveArgs(*kr, *r); if (!a2 || a2->empty()) continue;
-            const int h = (int)(*a2)[0].n; auto* pp = CPools::GetPed(h); if (!pp || pp == Cj() || pp->m_fHealth <= 0.f || ProtectedHandle(h)) continue;
+            const int h = (int)(*a2)[0].n; auto* pp = CPools::GetPed(h); if (!pp || pp == Cj() || pp->m_fHealth <= 0.f || ProtectedHandle(h) || Guarded().count(h)) continue;
             d.row = kr; d.rowIdx = kri; d.cond = r; d.args = *a2; d.op = 0x0118; break;
         }
     }

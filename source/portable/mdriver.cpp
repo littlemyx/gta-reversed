@@ -470,7 +470,7 @@ std::optional<std::vector<RArg>> ResolveArgs(const Row& row, const Rec& rec) {
 }
 bool Matches(const Row& w, const Rec& r) { return w.op == (r.raw & 0x7FFF) && (w.match == 0 || (w.match == 2) == ((r.raw & 0x8000) != 0)); }
 struct Dec { bool act = false; const Row* row = nullptr; int rowIdx = -1; RecP cond; std::vector<RArg> args; int op = -1; std::string reason; };
-Dec Decide(const std::vector<RecP>& loop, int attempt) {
+Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
     Dec d;
     // CR19: the wait group. The last condition group of the pass fell straight into a WAIT and is an OR (00D6 21..27: `WHILE OR(NOT a, NOT b, ...)`): the thread waits until EVERY member is false. The NOT-form members that are
     // false are already satisfied (a is true), so they are no candidates (NOT IS_CHAR_SITTING_IN_CAR false = CJ sits: the Enter key got him OUT of the car, 12 13 15 16 58); the NOT-form members that are TRUE
@@ -506,7 +506,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt) {
         };
         for (auto& c : falses) {
             const int op = c->raw & 0x7FFF; if (c->raw & 0x8000) continue;
-            if (op == 0x0366) { auto a2 = ResolveArgs(kDmg, *c); if (a2) { d.act = true; d.row = &kDmg; d.rowIdx = -2; d.cond = c; d.args = *a2; d.op = op; return d; } }
+            if (op == 0x0366) { auto a2 = ResolveArgs(kDmg, *c); if (a2 && wide && (a2->empty() || !CPools::GetObject((int)(*a2)[0].n))) continue; /* CR23: a record of an older pass: the object may be gone */ if (a2) { d.act = true; d.row = &kDmg; d.rowIdx = -2; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (tagCond(c)) { d.act = true; d.row = &kTag; d.rowIdx = -3; d.cond = c; d.op = op; return d; }
         }
         for (auto& c : blockers) if (tagCond(c)) { d.act = true; d.row = &kTag; d.rowIdx = -3; d.cond = c; d.op = c->raw & 0x7FFF; return d; }
@@ -809,6 +809,12 @@ void TickGeneric() {
     std::vector<RecP> loop; for (auto& r : g_recs) if (r->waitSeq >= g_waitSeq - 3) loop.push_back(r);
     if (std::getenv("NOTSA_MDRIVER_BIKELOG")) { std::string o; for (auto& r : loop) if (r->cond == 0) { o += " " + std::to_string((unsigned)(r->p - root->m_BaseIP)) + "/" + std::to_string(r->raw & 0x7FFF); } notsa::standalone::Fixups::Log("[decide] frame %d attempt %d loop %zu falses:%s", fr, g_attemptsAt[ipPtr], loop.size(), o.c_str()); }
     Dec d = Decide(loop, g_attemptsAt[ipPtr]);
+    if ((!d.act || d.row->action == "wait") && !std::getenv("NOTSA_MDRIVER_NOWIDE") && g_recs.size() > loop.size()) { // CR23 (16 NINES AND AK'S): the loop window (the last 3 passes) is one frame of a script that tests ONE array element per pass (@42 = 0..4, 5 passes per revolution) and the stall frame is phase-locked to the slot of an object that no longer exists: the answer is the plain `wait` of the end-of-stage locate, the target that can be shot is only in older passes. Rule: when the narrow window gives only `wait` (or nothing), look at every retained pass of the stalled loop (the 64 records, all from the stall period) and take a non-wait answer from there.
+        const std::vector<RecP> wide(g_recs.begin(), g_recs.end());
+        Dec d2 = Decide(wide, g_attemptsAt[ipPtr], true);
+        if (d2.act && d2.row->action != "wait") { std::fprintf(stderr, "[mdriver] frame %d widened window (%zu -> %zu records): %s
+", fr, loop.size(), wide.size(), d2.row->name.c_str()); d = d2; }
+    }
     if (!d.act) { Stop(d.reason, d.op, at); return; }
     if (d.act && d.row->action == "wait" && g_attemptsAt[ipPtr] >= 1 && !std::getenv("NOTSA_MDRIVER_NOESCALATE")) { // CR21: the wait row answered this wake ip before and the thread still stands: a TRUE `NOT IS_CHAR_DEAD(x)` of the pass is a wait-until-dead (89: the paramedic passengers of the three ambulances stay alive once the cruising ambulances moved on; the plain 0118 rows only see the drivers): kill that live non-buddy char
         const Row* kr = nullptr; int kri = -1; for (size_t i = 0; i < g_rows.size(); i++) if (g_rows[i].op == 0x0118 && g_rows[i].match == 1 && g_rows[i].action == "kill") { kr = &g_rows[i]; kri = (int)i; break; }

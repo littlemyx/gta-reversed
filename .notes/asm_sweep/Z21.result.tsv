@@ -1,0 +1,11 @@
+exe_addr	function	verdict	note
+0x73FB10	CWeapon::FireInstantHit	MATCH	full body 0x73FB10-0x74132E: spread/skip-aim/AI-target/player-aim/default aim/vehicle drive-by/events/muzzle flash jump table/water/pellet loop; all flags, constants, rand order, x87 rounding checked
+0x4B0020	CEventKnockOffBike::CalcForcesAndAnims	MATCH	already compared+fixed in S47b (4e5aa2be9); re-read of the port against that fix: no new deviation
+0x616CD0	BoneNode_c::CalcWldMat	MATCH	quaternion->matrix product order, flags 3, RwMatrixMultiply arg order, child loop
+0x617080	BoneNode_c::QuatToEuler	MATCH	A..D,s,V, gimbal test (==+-1, NaN general), fpatan order, constants 180/(1/pi)
+0x617650	BoneNode_c::Limit	FIXED	NaN head factor kept (2b9a58a71)
+0x616BD0	BoneNode_c::AddChild	MATCH	parent +0x2c, List_c::AddItem 0x4A8DF0 head insert
+0x5179E0	CIdleCam::ProcessSlerp	MATCH	4 atan calls order, wrap tests, slerpT clamp, (270-t*180)*k sin, lerp form; exe calls GetLookAtPositionOnTarget unconditionally first (port only when counter<frames; no side effects, only a null-target crash differs)
+0x50E760	CIdleCam::FinaliseIdleCamera	MATCH	front/lastIdlePos/hand shake (0x59C810 inverse transform)/up/3 orthonormalise + 0.0001 degenerate fix order
+0x50A280	CIdleCam::SetTarget	MATCH	slerp-from pos, reference change, timers at +0x10/+0x34, LOS counter 0, zoomed-in flag
+0x50EB50	CIdleCam::SetTargetPlayer	MATCH	FindPlayerPed(-1), then m_nForceAZoomOut = 1

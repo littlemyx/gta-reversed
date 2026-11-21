@@ -281,11 +281,13 @@ const uint8_t* SkipOperand(const uint8_t* p, bool& mfail, bool& isInt, int32_t& 
     default: return nullptr;
     }
 }
+const bool g_oldWalkFail = std::getenv("NOTSA_MDRIVER_OLDWALKFAIL") != nullptr; // CR25 off-switch: restores the walk past following conditions
 bool WalkFail(const CRunningScript* s, const uint8_t* p, int hops, bool sub, std::set<const uint8_t*>& seen) {
     for (int n = 0; n < 200 && InSpace(p); n++) {
         const int op = *(const uint16_t*)p & 0x7FFF;
         if (!seen.insert(p).second) return false;
         if (op == 0x0001) return false;
+        if ((op == 0x00D6 || op == 0x004D) && !g_oldWalkFail) return false; // CR25: the true branch ends at its first condition / GOTO_IF_FALSE (14: the dealers IS_CHAR_DEAD waits continue into later IF chains that reach an M_FAIL print further on)
         if (op == 0x0051) return !sub;
         const uint8_t* q = p + 2; bool mf = false, isI = false, firstInt = false; int32_t iv = 0, first = 0; const int want = Arity(op); int count = 0;
         for (;;) {

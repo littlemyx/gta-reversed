@@ -1,0 +1,37 @@
+addr	function	verdict	asm range	note	fix commit
+0x609CD0	CPlayerPed::GetWeaponRadiusOnScreen	FIXED	0x609CD0-0x609D8C	radius = (counter*0.5+1) * (rangeProg * accuracyProg): the exe multiplies range*accuracy first; the port did (A*range)*accuracy (float rounding)	47cb7e405
+0x6094A0	CPlayerPed::RemovePlayerPed	MATCH	0x6094A0-0x609517	status bits, gas 0 / brake 0.1, CWorld::Remove, virtual delete, slot nulled	-
+0x609F50	CPlayerPed::CheatWantedLevel	MATCH	0x609F50-0x609F6C	wanted of ped (null -> null this)	-
+0x609800	CPlayerPed::PickWeaponAllowedFor2Player	MATCH	0x609800-0x60982A	-	-
+0x5EFF60	CPed::DisablePedSpeech	MATCH	0x5EFF60-0x5EFF66	forwards to speech entity (ped+0x294)	-
+0x6698E0	CTaskComplexFollowNodeRoute::GetLastWaypoint	MATCH	0x6698E0-0x669972	size==1 -> pt0, idx0 -> ped pos, else pt[idx-1]	-
+0x669980	CTaskComplexFollowNodeRoute::GetNextWaypoint	MATCH	0x669980-0x6699D4	pt[idx+1] else pt[idx-1]	-
+0x4ABDA0	CTaskSimpleFight::GetComboAnimGroupID	MATCH	0x4ABDA0-0x4ABDBD	clamp(comboSet-4,0), stride 0x88	-
+0x4ABDC0	CTaskSimpleFight::IsComboSet	MATCH	0x4ABDC0-0x4ABDEF	0x10<<move on flags word	-
+0x4ABDF0	CTaskSimpleFight::IsHitComboSet	MATCH	0x4ABDF0-0x4ABE29	move>2 -> false, 0x1000<<move	-
+0x6924B0	CTaskSimpleDuck::ForceStopMove	MATCH	0x6924B0-0x6924BB	-	-
+0x692530	CTaskSimpleDuck::SetDuckTimer	MATCH	0x692530-0x692547	-	-
+0x691700	CTaskSimpleHoldEntity::CanThrowEntity	MATCH	0x691700-0x691718	bone flags 0x10, frame 6	-
+0x6916E0	CTaskSimpleHoldEntity::ReleaseEntity	MATCH	0x6916E0-0x6916F7	-	-
+0x4AB5E0	CEventGroup::HasEventOfType	MATCH	0x4AB5E0-0x4AB636	null event -> true	-
+0x632140	CanSunbathe (+IsExtraSunnyWeather 0x62F2D0)	MATCH	0x632140-0x63218C	hours 10..17, weather list	-
+0x621100	CTaskComplexKillPedOnFootMelee::CalculateSearchPositionAndRanges	MATCH	0x621100-0x621184	attackRange 8, arriveRange from combo table, target pos	-
+0x654720	CTaskComplexWalkRoundCar::GoingForDoor	MATCH	0x654720-0x65473B	-	-
+0x4B1F90	CEventFireNearby::AffectsPed	MATCH	0x4B1F90-0x4B1FBA	task 0x25C absent && alive	-
+0x4B1C70	CEventGotKnockedOverByCar::AffectsPed	MATCH	0x4B1C70-0x4B1C9A	-	-
+0x4B0E60	CEventHealthLow::AffectsPed (+HealthReallyLow/HighAnger/LowAnger/PedToFlee/VehicleThreat)	MATCH	0x4B0E60-0x4B0E6E	IsAlive	-
+0x653AE0	CTaskComplexHitPedWithCar::HitHurtsPed	MATCH	0x653AE0-0x653B39	thresholds 10/6, z<-0.8 && >3	-
+0x6764C0	CTaskInteriorShopKeeper::CreateNextSubTask	MATCH	0x6764C0-0x676543	-	-
+0x66C800	CTaskComplexInvestigateDisturbance::MakeAbortable/ControlSubTask	MATCH	0x66C800-0x66CA33	forwarders	-
+0x66BA90	CTaskComplexFollowPatrolRoute::MakeAbortable	MATCH	0x66BA90-0x66BAF5	-	-
+0x4AFDD0	CEventKnockOffBike::From	MATCH	0x4AFDD0-0x4AFE6A	field map and bit-0 merge of the flag byte	-
+0x4B27D0	CEventVehicleHitAndRun::ReportCriminalEvent	MATCH	0x4B27D0-0x4B283E	crime 0xB / 0xA	-
+0x4B50B0	CEventVehicleDamage::ReportCriminalEvent	MATCH	0x4B50B0-0x4B5114	crime 8	-
+0x4B4E80	CEventKnockOffBike::ReportCriminalEvent	MATCH	0x4B4E80-0x4B4ED2	crime 5	-
+0x6584E0	CTaskComplexWalkRoundFire::CreateFirstSubTask	MATCH	0x6584E0-0x6585B5	-	-
+0x658D20	CTaskComplexMedicTreatInjuredPed::CalcTargetPosWithOffset	MATCH	0x658D20-0x658DA7	thigh bones 41/51 mean	-
+0x69C7E0	CTaskAllocatorKillThreatsBasic/Driveby::ProcessGroup	MATCH	0x69C7E0-0x69CC26	timer 5000	-
+0x59F330	CObject::RefModelInfo/SetRemapTexture/Get/SetRopeHeight/GetObjectCarriedWithRope/ReleaseObjectCarriedWithRope	MATCH	0x59F330-0x59F3F7	-	-
+0x59AFE0	CMatrix::SetRotateYOnly (+CopyOnlyMatrix, ResetOrientation)	MATCH	0x59ADD0-0x59B012	-	-
+0x43E020	CRect::SetFromCenter / GetCenter / IsFlipped	MATCH	0x43E020-0x43E073	field order left,top,right,bottom	-
+0x438E40	CCheat::MoneyArmourHealthCheat / WantedLevelDown / NotWanted / Wanted / WantedLevelUp	MATCH	0x438E40-0x438F33	armour read from player 0 in the exe (same unless player 1 is in focus)	-

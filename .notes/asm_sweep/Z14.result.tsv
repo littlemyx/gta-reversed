@@ -1,0 +1,16 @@
+addr	function	verdict	asm range	note	fix commit
+0x480148	IS_CHAR_SHOOTING_IN_AREA review of 31ca9b75a	MATCH	0x480148-0x480211	independent review: OK	-
+0x47D78B	MARK_OBJECT_AS_NO_LONGER_NEEDED review of f294480d6	MATCH	0x47D78B-0x47D7DE	independent review: OK	-
+0x47D813	DONT_REMOVE_OBJECT review of f294480d6	MATCH	0x47D813-0x47D842	independent review: OK	-
+0x47379B	GET_CAR_CHAR_IS_USING review of 2eac021b7	MATCH	0x47379B-0x473817	independent review: OK	-
+0x47ADB9	IS_CHAR_GETTING_IN_TO_A_CAR review of c821191fe	MATCH	0x47ADB9-0x47AE27	independent review: OK	-
+0x47FEEC	START_SCRIPT_FIRE review of ec0e527ec	MATCH	0x47FEEC-0x47FF7A	independent review: OK (fcom/test 0x41/jp = z<=-100 non-NaN)	-
+0x64F720	CCarEnterExit::AddInCarAnim	MATCH	0x64F720-0x64F84F	all 8 anim id/group/blend 1000 paths	-
+0x650280	CCarEnterExit::SetPedInCarDirect	MATCH	0x650280-0x6504BF	driver DriveWander(+0x1c=1 via ctor), bike CarDrive(false), acquaintance loop incl. -1 index	-
+0x5FC4A0	CPedGroupIntelligence::Process	MATCH	0x5FC4A0-0x5FC7DE	full: slot-wise member sync, event swap order, clone for same-type event, ProcessGroup result discard	-
+0x5F1C40	CPedGeometryAnalyser::CanPedTargetPed	MATCH	0x5F1C40-0x5F1CA9	z+0.75, duck -1.0 as two roundings	-
+0x5F2F70	CPedGeometryAnalyser::IsWanderPathClear	MATCH	0x5F2F70-0x5F3082	first part (height NaN, minZ NaN, LOS, magnitude order) re-verified; water loop not re-read (carries 0x5F3140 exe comments)	-
+0x5A7FB0	CClothes::GetPlayerMotionGroupToLoad	MATCH	0x5A7FB0-0x5A8011	fat>500&&fat>muscle, muscle>500, NaN cases	-
+0x4404A0	CEntryExit::TransitionFinished	MATCH	0x4404A0-0x440678	state machine start only (states 0/1/2, warp streaming); tail not re-read	-
+0x43FFD0	CEntryExit::TransitionStarted	MATCH	0x43FFD0-0x440495	full: vehicle/flag gates, warp magnitude compare, door/no-door branches, fixed camera	-
+0x43F630	CEntryExitManager::FindNearestDoor	MATCH	0x43F630-0x43F6F9	range query args, last-to-first walk, bDisableMoveForce test, sqrt sum order	-

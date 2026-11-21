@@ -816,7 +816,7 @@ void CPlayerPed::MakePlayerGroupDisappear() {
     for (int i = 0; i < TOTAL_PED_GROUP_FOLLOWERS; i++) {
         if (CPed* member = membership.GetMember(i)) {
             if (!member->IsCreatedByMission()) {
-                member->SetCollisionProcessed(false);
+                member->SetUsesCollision(false); // exe 0x60A478: `and [member+0x1C], 0xFFFFFF7E` clears bit 0 (bUsesCollision) and bit 7 (bIsVisible); the port cleared bit 1 (bCollisionProcessed)
                 member->SetIsVisible(false);
                 abTempNeverLeavesGroup[i] = member->bNeverLeavesGroup;
                 member->bNeverLeavesGroup = true;

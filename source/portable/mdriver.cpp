@@ -608,6 +608,11 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
         for (auto& c : falses) {
             const int op = c->raw & 0x7FFF; if (c->raw & 0x8000) continue;
             if (op == 0x04C5 && !std::getenv("NOTSA_MDRIVER_NOPHOTO")) { auto a2 = ResolveArgs(kPho, *c); if (a2) { d.act = true; d.row = &kPho; d.rowIdx = -6; d.cond = c; d.args = *a2; d.op = op; return d; } }
+            if (attempt >= 1 && ((op >= 0x00F2 && op <= 0x00F4) || (op >= 0x0104 && op <= 0x0106)) && !std::getenv("NOTSA_MDRIVER_NONEARPED")) { // CR32 (27 OG LOC): a plain false `CJ near ped X` (CJ the first operand; the stage waits for the player to catch up with X, here a recorded-path car that parks at the end of its leg): after the first answer failed, CJ joins X (X is not moved: it belongs to the script's path)
+                const auto h0 = ArgInt(*c, 0), h1 = ArgInt(*c, 1);
+                if (h0 && h1 && CPools::GetPed((int)*h0) == Cj()) if (auto* x = CPools::GetPed((int)*h1); x && x != Cj() && x->m_fHealth > 0.f) { static Row kNear{ op, 0, "LOCATE_CHAR_CHAR (CJ near ped)", "zonego", {}, 60 }; const CVector xp = x->GetRealPosition();
+                    d.act = true; d.row = &kNear; d.rowIdx = -13; d.cond = c; d.op = op; d.args.clear(); for (const float f : { xp.x + 5.f, xp.y, -100.f }) { RArg ra; ra.n = f; d.args.push_back(ra); }
+                    notsa::standalone::Fixups::Log("[mdriver] nearped: CJ joins ped %d at %.0f,%.0f", (int)*h1, (double)xp.x, (double)xp.y); return d; } }
             if (op == 0x06EE && !std::getenv("NOTSA_MDRIVER_NOJOINGROUP")) { auto a2 = ResolveArgs(kGrp, *c); if (a2 && a2->size() == 2 && CPools::GetPed((int)(*a2)[0].n) && CPools::GetPed((int)(*a2)[0].n) != Cj()) { d.act = true; d.row = &kGrp; d.rowIdx = -8; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (op == 0x02EE && !std::getenv("NOTSA_MDRIVER_NOPROJ")) { auto a2 = ResolveArgs(kPrj, *c); if (a2 && a2->size() == 6) { d.act = true; d.row = &kPrj; d.rowIdx = -12; d.cond = c; d.args = *a2; d.op = op; d.reason = "";
                 // every distinct false projectile area of the loop gets its molotov in the same frame (the script counts them in one pass)

@@ -81,4 +81,25 @@ addr	function	verdict	asm range	note	fix commit
 0x5DE070	CCopPed::ClearCriminalsToKill	MATCH	-		-
 0x439A80	CPlaceable::SetOrientation(x,y,z)	MATCH	-		-
 0x403EB0	CEntity::FlagToDestroyWhenNextProcessed	MATCH	-		-
-0x4B35A0	CEventDamage::AffectsPed	MATCH	0x4B35A0-0x4B3704	first part only (invulnerable / vest tail not re-read)	-
+0x4B35A0	CEventDamage::AffectsPed	MATCH	0x4B35A0-0x4B38CC	full: invulnerable, vest, silenced witness, stealth-kill witness test (diff source-ped, dot y,z,x == generic z,y,x), group test, CanPhysicalBeDamaged + fall exceptions	-
+0x6C4800	CHeli::SwitchPoliceHelis	MATCH	-		-
+0x6C4760	CHeli::FindSwatPositionRelativeToHeli	MATCH	0x6C4760-0x6C47EC	jump table decoded	-
+0x5EB550	CPedAttractor::GetQueueSlot	MATCH	-		-
+0x5EB5B0	CPedAttractor::GetTailOfQueue	MATCH	-		-
+0x5EAF10	CPedAttractor::HasEmptySlot	MATCH	-		-
+0x5E95E0	CPedAttractor::ComputeAttractTime	MATCH	-		-
+0x678B20	CTaskComplexFallAndStayDown::CreateFirstSubTask	MATCH	-	99999999 down time	-
+0x678BD0	CTaskComplexFallAndStayDown::CreateSubTask	MATCH	-		-
+0x67CBE0	CTaskComplexFallAndStayDown::CreateNextSubTask	MATCH	-		-
+0x6612C0	CTaskComplexPassObject::CreateNextSubTask	MATCH	-	PointArm args, StandStill 999999	-
+0x664A50	CTaskComplexPassObject::MakeAbortable	MATCH	-		-
+0x661290	CTaskComplexPassObject::AbortIK	MATCH	-		-
+0x591680	Interior_c::CheckTilesEmpty	MATCH	0x591680-0x5916FC	tile layout [x*0x1e+y]	-
+0x591700	Interior_c::SetTilesStatus	MATCH	0x591700-0x5917B3	9->10 when status 5, overwrite vs no-overwrite arms, early return on status 3	-
+0x5918E0	Interior_c::GetTileStatus	MATCH	-		-
+0x591920	Interior_c::GetNumEmptyTiles	MATCH	0x591920-0x591A54	both axis branches	-
+0x598280	InteriorManager_c::IsGroupActive	MATCH	-	exe compares the group type as signed byte, port as uint8 (values < 128 only)	-
+0x5982B0	InteriorManager_c::HasInteriorHadStealDataSetup	MATCH	-		-
+0x5982F0	InteriorManager_c::FindStealableObjectId(int,int,CVector)	MATCH	-		-
+0x598360	InteriorManager_c::FindStealableObjectId(CEntity*)	MATCH	-		-
+0x598390	InteriorManager_c::SetStealableObjectStolen	MATCH	-		-

@@ -2,6 +2,8 @@
 #include "StdInc.h"
 #include "mdriver.h"
 #include "Garages.h"
+#include "GangWars.h"
+#include "TheZones.h"
 #include "PedGroup.h"
 #include "Tasks/TaskTypes/TaskComplexBeInGroup.h"
 #include "Events/EventScriptCommand.h"
@@ -247,6 +249,17 @@ int                      g_maxFrames = 30000, g_fightClock = 0, g_fightKills = 0
 std::set<int>            g_enemyTypes;       // ped types shot for going after CJ himself (TS enemyTypes)
 // CR26 (58): a photo test of the retained passes with a GET_CAMERA_FOV (0801 into a local) within 2 KB before it = the script wants a ZOOMED shot (`N > fov`)
 bool PhotoWantsZoom() { return std::any_of(g_recs.begin(), g_recs.end(), [](const RecP& q) { if ((q->raw & 0x7FFF) != 0x04C5 || !g_thread) return false; const uint8_t* lo = std::max((const uint8_t*)g_thread->m_BaseIP, q->p - 0x800); for (const uint8_t* b = lo; b + 3 <= q->p; b++) if (b[0] == 0x01 && b[1] == 0x08 && b[2] == 0x03) return true; return false; }); }
+// CR26 (21 DOBERMAN: `IF NOT IS_PLAYER_IN_INFO_ZONE($8, 'GLN1') ... WAIT`): the zone label of a 0583 / 0154-like command whose second operand is an 8-char text label, and the centre of the first info zone with that label
+bool ZoneNameOf(const Rec& r, char (&nm)[9]) {
+    const uint8_t* q = r.p + 2; const uint8_t t = *q++;
+    switch (t) { case 1: case 6: q += 4; break; case 2: case 3: case 5: q += 2; break; case 4: q += 1; break; default: return false; }
+    if (*q++ != 9) return false;
+    std::memcpy(nm, q, 8); nm[8] = 0; return true;
+}
+bool InfoZoneCentre(const char* nm, float& x, float& y) {
+    for (auto& z : CTheZones::GetNavigationZones()) if (std::strncmp(z.m_InfoLabel, nm, 8) == 0) { x = ((float)z.m_fX1 + (float)z.m_fX2) / 2.f; y = ((float)z.m_fY1 + (float)z.m_fY2) / 2.f; return true; }
+    return false;
+}
 std::map<const uint8_t*, int> g_attemptsAt;  // actions per stall ip
 std::map<std::string, int>    g_noProgress;  // (ip, row, args) -> times
 bool Generic() { static const bool g = std::getenv("NOTSA_MDRIVER_TABLE") != nullptr; return g; }
@@ -572,6 +585,20 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             if (op == 0x0366) { auto a2 = ResolveArgs(kDmg, *c); if (a2 && wide && (a2->empty() || !CPools::GetObject((int)(*a2)[0].n))) continue; /* CR23: a record of an older pass: the object may be gone */ if (a2) { d.act = true; d.row = &kDmg; d.rowIdx = -2; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (tagCond(c)) { d.act = true; d.row = &kTag; d.rowIdx = -3; d.cond = c; d.op = op; return d; }
         }
+        if (!std::getenv("NOTSA_MDRIVER_NOZONEGO")) for (size_t k = loop.size(); k-- > 0;) { // CR26 (21 DOBERMAN): the stage waits for the player to be in an info zone (a plain false IS_PLAYER_IN_INFO_ZONE, or its TRUE NOT form straight before a WAIT): the player (with his car) goes to the zone's centre
+            const auto& r = loop[k]; if ((r->raw & 0x7FFF) != 0x0583 || AnyGuard(*r)) continue;
+            const bool plainFalse = !(r->raw & 0x8000) && r->cond == 0, notBlocker = (r->raw & 0x8000) && r->cond == 1 && r->waitAfter && !r->jumped; if (!plainFalse && !notBlocker) continue;
+            char nm[9]; float zx, zy; if (!ZoneNameOf(*r, nm) || !InfoZoneCentre(nm, zx, zy)) continue;
+            static Row kZone{ 0x0583, 0, "IS_PLAYER_IN_INFO_ZONE", "zonego", {}, 60 };
+            d.act = true; d.row = &kZone; d.rowIdx = -9; d.cond = r; d.op = 0x0583; d.args.clear(); for (const float f : { zx, zy, -100.f }) { RArg a; a.n = f; d.args.push_back(a); }
+            notsa::standalone::Fixups::Log("[mdriver] zonego %s -> %.1f,%.1f", nm, zx, zy); return d;
+        }
+        if (!std::getenv("NOTSA_MDRIVER_NOGANGWAR")) for (size_t k = loop.size(); k-- > 0;) { // CR26 (21 DOBERMAN): the stage waits for a gang war (the TRUE NOT form of IS_GANG_WAR_GOING_ON straight before a WAIT, or the plain false one): the player provokes it the way the game does, by killing gang members in the zone (CGangWars::AddKillToProvocation: 3 kills > 2.1)
+            const auto& r = loop[k]; if ((r->raw & 0x7FFF) != 0x087A || AnyGuard(*r)) continue;
+            const bool plainFalse = !(r->raw & 0x8000) && r->cond == 0, notBlocker = (r->raw & 0x8000) && r->cond == 1 && r->waitAfter && !r->jumped; if (!plainFalse && !notBlocker) continue;
+            static Row kGw{ 0x087A, 0, "IS_GANG_WAR_GOING_ON", "gangwar", {}, 60 };
+            d.act = true; d.row = &kGw; d.rowIdx = -10; d.cond = r; d.op = 0x087A; d.args.clear(); return d;
+        }
         static const Row kEnter{ 0x0039, 1, "int compare of the GET_AREA_VISIBLE result", "enterarea", {}, 200 };
         bool blockAnswerable = false; // CR25 (14): the loop's own wait group has a TRUE NOT-form member a warp row answers (CJ / Sweet not at the house): the stage waits for THAT, not for the area compare of an IF of the loop body
         if (!std::getenv("NOTSA_MDRIVER_NOBLOCKFIRST")) for (auto& b : blockers) for (auto& row : g_rows) if (row.match != 2 && row.op == (b->raw & 0x7FFF) && (row.action == "pedwarp" || row.action == "vehwarp" || row.action == "midpoint" || row.action == "entercar" || row.action == "warpto_handle") && ResolveArgs(row, *b)) blockAnswerable = true;
@@ -724,6 +751,8 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         one(warp(F_(0), F_(1), F_(2), v == "vehwarp")); return;
     }
     if (v == "joingroup") { QueueActions({ "emit mdjoingrp:" + std::to_string(I_(0)) + ":" + std::to_string(I_(1)) }, row.settle); return; } // CR26: IS_GROUP_MEMBER(ped, group) is false: the ped joins the group (what SET_GROUP_MEMBER does for a recruit)
+    if (v == "zonego") { one(warp(F_(0), F_(1), F_(2), false)); return; } // CR26
+    if (v == "gangwar") { QueueActions({ "emit mdprovoke:3" }, row.settle); return; } // CR26
     if (v == "blipgo") { one(warp(F_(0), F_(1), F_(2), false)); return; } // CR26
     if (v == "midpoint") {
         float x, y, z = -100.f;
@@ -1114,6 +1143,11 @@ bool Cmd(const char* name, const std::string& args) {
     if (!std::strcmp(name, "mdtosphere")) { // CR24: the intercept warp of the remote vehicle: where the nearest qualifying car will be in 4.3 s (position + velocity * 4.3 s, 3 m up)
         const int h = std::atoi(args.c_str()); const int model = std::atoi(args.c_str() + args.find(':') + 1);
         if (auto* best = SphereTarget(h, model)) { const CVector p = best->GetPosition() + best->m_vecMoveSpeed * 50.f * 4.3f; notsa::standalone::Fixups::Log("[mdriver] mdtosphere: car %d at %.1f,%.1f,%.1f speed %.1f -> %.1f,%.1f,%.1f", (int)best->m_nModelIndex, best->GetPosition().x, best->GetPosition().y, best->GetPosition().z, best->m_vecMoveSpeed.Magnitude() * 50.f, p.x, p.y, p.z); return Cmd("mdwother", "1:" + std::to_string(h) + ":" + F(p.x) + ":" + F(p.y) + ":" + F(p.z + 3.f)); }
+        return true;
+    }
+    if (!std::strcmp(name, "mdprovoke")) { // CR26: the kills that provoke a gang war (CGangWars::AddKillToProvocation is what a killed gang ped calls; only a zone with that gang's strength counts)
+        const int n = std::atoi(args.c_str()); for (int i = 0; i < n; i++) { CGangWars::AddKillToProvocation(PED_TYPE_GANG1); CGangWars::AddKillToProvocation(PED_TYPE_GANG3); }
+        notsa::standalone::Fixups::Log("[mdriver] mdprovoke %d: provocation %.1f bCanTriggerOnMission %d war %d", n, CGangWars::Provocation, (int)CGangWars::bCanTriggerGangWarWhenOnAMission, (int)CGangWars::bGangWarsActive);
         return true;
     }
     if (!std::strcmp(name, "mdjoingrp")) { // CR26: SET_GROUP_MEMBER(group, ped) without the car part: be-in-group task event, AddFollower, group.Process()

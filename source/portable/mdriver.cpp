@@ -46,7 +46,7 @@ struct Cond { std::string expr, op; double val; };
 struct Step { std::string name; std::vector<Cond> conds; std::vector<std::string> actions; };
 std::vector<Step>        g_steps;
 std::string              g_script;           // thread name
-int                      g_buddyRef = -1, g_stall = 600, g_maxAnswers = 12;
+int                      g_watchVeh = -1, g_buddyRef = -1, g_stall = 600, g_maxAnswers = 12;
 bool                     g_loaded = false, g_started = false, g_done = false, g_failed = false;
 std::FILE*               g_out = nullptr;
 void                   (*g_push)(const char*, bool) = nullptr;
@@ -646,6 +646,7 @@ void TickGeneric() {
         for (int ti = 0; ti < 5; ti++) { if (auto* t = tm.GetTaskPrimary(ti)) { tk += " P" + std::to_string(ti) + ":"; for (auto* tt = t; tt; tt = tt->GetSubTask()) tk += std::to_string((int)tt->GetTaskType()) + ">"; } }
         for (int ti = 0; ti < 6; ti++) { if (auto* t = tm.GetTaskSecondary((eSecondaryTask)ti)) tk += " S" + std::to_string(ti) + ":" + std::to_string((int)t->GetTaskType()); }
         notsa::standalone::Fixups::Log("[enterlog] f%d cj=%.2f,%.2f,%.2f h=%.2f inv=%d st=%d ctl=%s%s", fr, pp.x, pp.y, pp.z, me->GetHeading(), (int)me->bInVehicle, (int)me->m_nPedState, CPad::GetPad(0)->DisablePlayerControls ? "OFF" : "on", tk.c_str());
+        if (auto* wv = g_watchVeh >= 0 ? CPools::GetVehicle(g_watchVeh) : nullptr) { const auto wp = wv->GetPosition(); notsa::standalone::Fixups::Log("[enterlog]   watch car %d model %d pos %.2f,%.2f,%.2f hp %.0f st %d spd %.3f drv %s fire %d wrecked %d upZ %.2f", g_watchVeh, (int)wv->m_nModelIndex, wp.x, wp.y, wp.z, wv->m_fHealth, (int)wv->GetStatus(), wv->m_vecMoveSpeed.Magnitude(), wv->m_pDriver ? "y" : "-", (int)wv->vehicleFlags.bIsOnFire, (int)(wv->GetStatus() == STATUS_WRECKED), wv->GetUp().z); }
         if (auto* bd = g_buddyRef >= 0 ? CPools::GetPed(g_buddyRef) : nullptr) { std::string bt; auto& btm = bd->GetIntelligence()->m_TaskMgr; for (int ti = 0; ti < 5; ti++) if (auto* t = btm.GetTaskPrimary(ti)) { bt += " P" + std::to_string(ti) + ":"; for (auto* tt = t; tt; tt = tt->GetSubTask()) bt += std::to_string((int)tt->GetTaskType()) + ">"; } const auto bp = bd->GetPosition(); notsa::standalone::Fixups::Log("[enterlog]   buddy %d model %d pos %.2f,%.2f,%.2f inv %d st %d hp %.0f veh %p%s", g_buddyRef, (int)bd->m_nModelIndex, bp.x, bp.y, bp.z, (int)bd->bInVehicle, (int)bd->m_nPedState, bd->m_fHealth, (void*)bd->m_pVehicle, bt.c_str()); }
         for (auto& vv : GetVehiclePool()->GetAllValid()) { const auto cp = vv.GetPosition(); if ((cp - pp).Magnitude() > 12.f) continue; std::string occ; for (auto* pa : vv.m_apPassengers) if (pa) occ += "p"; notsa::standalone::Fixups::Log("[enterlog]   car ref %d model %d pos %.2f,%.2f,%.2f fwd %.2f,%.2f lock %d status %d drv %s %s mission %d hp %.0f spd %.3f", GetVehiclePool()->GetRef(&vv), (int)vv.m_nModelIndex, cp.x, cp.y, cp.z, vv.GetForward().x, vv.GetForward().y, (int)vv.m_nDoorLock, (int)vv.GetStatus(), vv.m_pDriver ? (vv.m_pDriver == me ? "CJ" : "ped") : "-", occ.c_str(), (int)vv.m_nCreatedBy, vv.m_fHealth, vv.m_vecMoveSpeed.Magnitude()); }
     }
@@ -759,7 +760,7 @@ bool Cmd(const char* name, const std::string& args) {
         CStreaming::LoadScene(CVector{ w[0], w[1], 0.f }); CStreaming::LoadSceneCollision(CVector{ w[0], w[1], 0.f });
         const float gz = w[2] <= -100.f ? CWorld::FindGroundZForCoord(w[0], w[1]) : w[2];
         CVehicle* veh = nullptr; if (isPed) { auto* pd = static_cast<CPed*>(tgt); if (pd->bInVehicle) veh = pd->m_pVehicle; } else veh = static_cast<CVehicle*>(tgt);
-        if (veh) { CCarCtrl::SetCoordsOfScriptCar(veh, w[0], w[1], gz, 0, 1); veh->m_vecMoveSpeed = CVector{}; veh->m_vecTurnSpeed = CVector{}; }
+        if (veh) { CCarCtrl::SetCoordsOfScriptCar(veh, w[0], w[1], gz, 0, 1); veh->m_vecMoveSpeed = CVector{}; veh->m_vecTurnSpeed = CVector{}; if (std::getenv("NOTSA_MDRIVER_ENTERLOG")) g_watchVeh = GetVehiclePool()->GetRef(veh); }
         else { CWorld::Remove(tgt); tgt->SetPosn(CVector{ w[0], w[1], gz + 1.1f }); CWorld::Add(tgt); }
         CStreaming::LoadScene(CVector{ w[0], w[1], gz }); CStreaming::LoadSceneCollision(CVector{ w[0], w[1], gz });
         notsa::standalone::Fixups::Log("[mdriver] %s gf=%u -> %.2f,%.2f,%.2f", name, (unsigned)CTimer::GetFrameCounter(), w[0], w[1], gz);

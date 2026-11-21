@@ -17,6 +17,10 @@ void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int co
 //! CR27: a script thread outside the traced tree (streamed script): AuxBegin (true = watch this command, remembers ip/opcode) before ProcessOneCommand, AuxEnd after it (cond = value after NOT, -1 none)
 bool AuxBegin(CRunningScript* s);
 void AuxEnd(CRunningScript* s, int cond);
+//! CR29: a non-root thread of the traced tree (called from OnCommand): its conditions are recorded as aux; AuxGlobalWrite = a global it wrote (scmtrace G row); AuxForget = the thread ended
+void AuxTree(CRunningScript* s, const uint8_t* ptr, uint16_t raw, int cond);
+void AuxGlobalWrite(const CRunningScript* s, uint32_t off);
+void AuxForget(const CRunningScript* s);
 //! CR4: pad button (IS_BUTTON_PRESSED numbering) held by `cmd:mdpad:<button>:<frames>` (TS actions.ts key: PadInput.joy[field]=255 for the frames); read by IS_BUTTON_PRESSED
 bool PadHeld(int button);
 //! SDL key push implemented by the injector (name: return, w)

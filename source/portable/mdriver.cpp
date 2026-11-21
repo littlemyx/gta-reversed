@@ -194,9 +194,10 @@ struct Arg { uint32_t bits = 0; int kind = 0; };
 struct Row { uint16_t op; int match; /*0 any 1 plain 2 not*/ std::string name, action; std::vector<std::string> args; int settle; };
 std::vector<Row>         g_rows;
 // a conditional command of the root thread as the TS StallSink records it (opcode, NOT form, state, decoded operands, the WAIT count, where the following GOTO_IF_FALSE led)
-struct Rec { const uint8_t* p; uint16_t raw; int cond; int waitSeq; std::vector<Arg> args; bool hasBranch = false, jumped = false; const uint8_t *target = nullptr, *fall = nullptr; };
+struct Rec { const uint8_t* p; uint16_t raw; int cond; int waitSeq; std::vector<Arg> args; bool hasBranch = false, jumped = false, waitAfter = false; const uint8_t *target = nullptr, *fall = nullptr; };
 using RecP = std::shared_ptr<Rec>;
 std::deque<RecP>         g_recs;             // the last 64 conditional commands (KEEP)
+std::vector<RecP>        g_group; bool g_fallPending = false; // CR19: the conditions of the last GOTO_IF_FALSE, and whether it fell through (the next command decides waitAfter)
 std::vector<RecP>        g_pending;          // the conditions since the last GOTO_IF_FALSE (max 12)
 int                      g_waitSeq = 0;
 std::map<int, int>       g_arity;            // opcode -> operand count (tools/standalone/scmscan/argcounts.tsv, exe derived; -1 variadic)
@@ -396,9 +397,22 @@ bool Matches(const Row& w, const Rec& r) { return w.op == (r.raw & 0x7FFF) && (w
 struct Dec { bool act = false; const Row* row = nullptr; int rowIdx = -1; RecP cond; std::vector<RArg> args; int op = -1; std::string reason; };
 Dec Decide(const std::vector<RecP>& loop, int attempt) {
     Dec d;
+    // CR19: the wait group. The last condition group of the pass fell straight into a WAIT and is an OR (00D6 21..27: `WHILE OR(NOT a, NOT b, ...)`): the thread waits until EVERY member is false. The NOT-form members that are
+    // false are already satisfied (a is true), so they are no candidates (NOT IS_CHAR_SITTING_IN_CAR false = CJ sits: the Enter key got him OUT of the car, 12 13 15 16 58); the NOT-form members that are TRUE
+    // are the blockers (a is false): the plain row of their opcode (entercar / vehwarp / pedwarp) answers them, after the false conditions found no row.
+    std::set<const uint8_t*> satisfied; std::vector<RecP> blockers;
+    if (!loop.empty() && !std::getenv("NOTSA_MDRIVER_NOORGROUP")) {
+        const auto& lr = loop.back();
+        if (lr->hasBranch && !lr->jumped && lr->waitAfter) {
+            std::vector<RecP> mem; for (auto& r : loop) if (r->fall == lr->fall && r->waitSeq == lr->waitSeq) mem.push_back(r);
+            const uint8_t* f = mem.front()->p;
+            if (f[-4] == 0xD6 && f[-3] == 0x00 && f[-2] == 0x04 && f[-1] >= 21 && f[-1] <= 27)
+                for (auto& m : mem) if (m->raw & 0x8000) { if (m->cond == 0) satisfied.insert(m->p); else if (!AnyGuard(*m)) blockers.push_back(m); }
+        }
+    }
     std::vector<RecP> falses;
-    for (size_t k = loop.size(); k-- > 0;) { const auto& r = loop[k]; if (r->cond == 0 && !AnyGuard(*r)) falses.push_back(r); }
-    if (falses.empty()) { d.reason = "no condition evaluated false in the loop (the guards left out)"; return d; }
+    for (size_t k = loop.size(); k-- > 0;) { const auto& r = loop[k]; if (r->cond == 0 && !AnyGuard(*r) && !satisfied.count(r->p)) falses.push_back(r); }
+    if (falses.empty() && blockers.empty()) { d.reason = "no condition evaluated false in the loop (the guards left out)"; return d; }
     for (size_t i = 0; i < g_rows.size(); i++) {
         const auto& row = g_rows[i];
         for (auto& c : falses) {
@@ -410,6 +424,14 @@ Dec Decide(const std::vector<RecP>& loop, int attempt) {
             d.act = true; d.row = &row; d.rowIdx = (int)i; d.cond = pick.c; d.args = pick.args.value_or(std::vector<RArg>{}); d.op = pick.c->raw & 0x7FFF; return d;
         }
     }
+    for (size_t i = 0; i < g_rows.size(); i++) { // CR19: the true NOT-form members of the wait OR group (last member first)
+        const auto& row = g_rows[i]; if (row.match == 2 || !(row.action == "pedwarp" || row.action == "vehwarp" || row.action == "midpoint" || row.action == "entercar")) continue;
+        for (size_t k = blockers.size(); k-- > 0;) {
+            const auto& c = blockers[k]; if (row.op != (c->raw & 0x7FFF)) continue;
+            auto a = ResolveArgs(row, *c); if (!a) continue;
+            d.act = true; d.row = &row; d.rowIdx = (int)i; d.cond = c; d.args = *a; d.op = c->raw & 0x7FFF; return d;
+        }
+    }
     // a TRUE NOT-form locate in a wait loop (92 CASIN10): the plain row of the same opcode when it is a warp
     for (size_t i = 0; i < g_rows.size(); i++) {
         const auto& row = g_rows[i]; if (row.match == 2 || !(row.action == "pedwarp" || row.action == "vehwarp" || row.action == "midpoint")) continue;
@@ -419,6 +441,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt) {
             d.act = true; d.row = &row; d.rowIdx = (int)i; d.cond = c; d.args = *a; d.op = c->raw & 0x7FFF; return d;
         }
     }
+    if (falses.empty()) { d.reason = "no condition evaluated false in the loop (the guards left out)"; return d; }
     const auto& last = *falses[0]; d.op = last.raw & 0x7FFF;
     char b[16]; std::snprintf(b, sizeof b, "%04X", d.op); std::string nm; for (auto& w : g_rows) if (w.op == d.op) { nm = w.name; break; }
     d.reason = std::string("unhandled ") + b + ((last.raw & 0x8000) ? " (NOT form)" : "") + (nm.empty() ? "" : " " + nm); return d;
@@ -666,10 +689,12 @@ void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int co
     if (!Generic() || !g_loaded) return;
     if (s == notsa::scmtrace::Root()) { // the StallSink: conditions with their state + operands, WAIT count, where the GOTO_IF_FALSE after them led
         const int op = raw & 0x7FFF;
+        if (g_fallPending) { if (op == 0x0001) for (auto& r : g_group) r->waitAfter = true; g_fallPending = false; g_group.clear(); } // CR19: a group that fell through straight into a WAIT
         if (op == 0x0001) g_waitSeq++;
         else if (op == 0x004D) {
             const bool jumped = s->m_IP != ptr + 7;
             for (auto& r : g_pending) { r->hasBranch = true; r->jumped = jumped; r->fall = ptr + 7; r->target = jumped ? s->m_IP : ptr + 7; }
+            if (!jumped) { g_group = g_pending; g_fallPending = true; }
             g_pending.clear();
         } else if (cond >= 0) {
             auto r = std::make_shared<Rec>(); r->p = ptr; r->raw = raw; r->cond = cond; r->waitSeq = g_waitSeq;

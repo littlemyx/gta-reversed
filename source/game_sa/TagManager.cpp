@@ -104,9 +104,9 @@ int32 CTagManager::GetPercentageTaggedInArea(const CRect& area) {
             ++numTagged;
         }
     }
-    return numTotalTaggable != 0
-        ? (numTagged * 100) / numTotalTaggable /* Do division without converting to float at all, this isn't how it was done, but it's the same logic... */
-        : 0;
+    // exe 0x49D13D..0x49D158: `fild tagged; fidiv total; fmul 100.0; jmp _ftol (0x821B40)`: the quotient is rounded to 24 bits BEFORE the *100 (PC=24), so e.g. 53 of 100 gives
+    // 0.53f * 100 = 52.999996 -> 52 (an integer `tagged * 100 / total` gives 53); no zero guard: 0 / 0 is NaN and the CRT conversion of NaN gives 0
+    return NOTSA_FTOL(int32, ((x87d)numTagged / (x87d)numTotalTaggable) * (x87d)100.0);
 }
 
 // 0x49CDE0

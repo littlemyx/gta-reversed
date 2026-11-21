@@ -48,7 +48,7 @@ struct Cond { std::string expr, op; double val; };
 struct Step { std::string name; std::vector<Cond> conds; std::vector<std::string> actions; };
 std::vector<Step>        g_steps;
 std::string              g_script;           // thread name
-int                      g_watchVeh = -1, g_buddyRef = -1, g_stall = 600, g_maxAnswers = 12; int g_nextStall = 0;
+int                      g_watchVeh = -1, g_buddyRef = -1, g_stall = 600, g_maxAnswers = 12; int g_nextStall = 0; int g_photoPed = -1, g_photoHold = 0;
 bool                     g_loaded = false, g_started = false, g_done = false, g_failed = false;
 std::FILE*               g_out = nullptr;
 void                   (*g_push)(const char*, bool) = nullptr;
@@ -215,6 +215,8 @@ bool                     g_pass = false, g_fail = false, g_endedFail = false;
 int                      g_passFrame = -1, g_failFrame = -1, g_endFrame = -1, g_killFrame = -1000000, g_killSettle = 0;
 int                      g_maxFrames = 30000, g_fightClock = 0, g_fightKills = 0;
 std::set<int>            g_enemyTypes;       // ped types shot for going after CJ himself (TS enemyTypes)
+// CR26 (58): a photo test of the retained passes with a GET_CAMERA_FOV (0801 into a local) within 2 KB before it = the script wants a ZOOMED shot (`N > fov`)
+bool PhotoWantsZoom() { return std::any_of(g_recs.begin(), g_recs.end(), [](const RecP& q) { if ((q->raw & 0x7FFF) != 0x04C5 || !g_thread) return false; const uint8_t* lo = std::max((const uint8_t*)g_thread->m_BaseIP, q->p - 0x800); for (const uint8_t* b = lo; b + 3 <= q->p; b++) if (b[0] == 0x01 && b[1] == 0x08 && b[2] == 0x03) return true; return false; }); }
 std::map<const uint8_t*, int> g_attemptsAt;  // actions per stall ip
 std::map<std::string, int>    g_noProgress;  // (ip, row, args) -> times
 bool Generic() { static const bool g = std::getenv("NOTSA_MDRIVER_TABLE") != nullptr; return g; }
@@ -761,7 +763,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         notsa::standalone::Fixups::Log("[mdriver] warpto_handle: no clear spot, +0.5 m");
         one(warp(pos.x + 0.5f, pos.y, pos.z, false)); return;
     }
-    if (v == "photo") { QueueActions({ "emit mdphoto:" + std::to_string(I_(0)) }, row.settle); return; } // CR25: HAS_CHAR_BEEN_PHOTOGRAPHED(ped): the camera shot of the ped (the flag CWeapon::TakePhotograph sets for a ped in frame, in range and in line of sight)
+    if (v == "photo") { QueueActions({ "emit mdphoto:" + std::to_string(I_(0)) }, row.settle); if (!std::getenv("NOTSA_MDRIVER_NOEARLY") && !std::getenv("NOTSA_MDRIVER_NOZOOM") && PhotoWantsZoom()) g_nextStall = 90; /* CR26: a timed (zoomed) photo condition: the next decision after 90 frames, not 600 (the walker's task ends sooner) */ return; } // CR25: HAS_CHAR_BEEN_PHOTOGRAPHED(ped): the camera shot of the ped (the flag CWeapon::TakePhotograph sets for a ped in frame, in range and in line of sight)
     if (v == "damageobj") { QueueActions({ "emit mddmgobj:" + std::to_string(I_(0)) }, row.settle); return; } // CR22: HAS_OBJECT_BEEN_DAMAGED(obj): CJ damages the object (16 NINES AND AK'S shooting range)
     if (v == "tosphere") { // CR24: the vehicle at the centre of a GET_RANDOM_CAR_IN_SPHERE search is moved next to the nearest car the game's own search would accept (appearance 1/2, not a law enforcer, wanted model, CanBeDeleted: the mission's decoy is refused), 8 m above it
         CVehicle* best = SphereTarget(g_sphCur.veh, g_sphCur.model);
@@ -1061,7 +1063,14 @@ bool Cmd(const char* name, const std::string& args) {
         if (auto* best = SphereTarget(h, model)) { const CVector p = best->GetPosition() + best->m_vecMoveSpeed * 50.f * 4.3f; notsa::standalone::Fixups::Log("[mdriver] mdtosphere: car %d at %.1f,%.1f,%.1f speed %.1f -> %.1f,%.1f,%.1f", (int)best->m_nModelIndex, best->GetPosition().x, best->GetPosition().y, best->GetPosition().z, best->m_vecMoveSpeed.Magnitude() * 50.f, p.x, p.y, p.z); return Cmd("mdwother", "1:" + std::to_string(h) + ":" + F(p.x) + ":" + F(p.y) + ":" + F(p.z + 3.f)); }
         return true;
     }
-    if (!std::strcmp(name, "mdphoto")) { if (auto* k = CPools::GetPed(std::atoi(args.c_str()))) { k->bHasBeenPhotographed = true; notsa::standalone::Fixups::Log("[mdriver] mdphoto %s", args.c_str()); } return true; }
+    if (!std::strcmp(name, "mdphoto")) {
+        if (auto* k = CPools::GetPed(std::atoi(args.c_str()))) {
+            k->bHasBeenPhotographed = true; notsa::standalone::Fixups::Log("[mdriver] mdphoto %s", args.c_str());
+            // CR26 (58 PHOTO OPPORTUNITY): a script that also tests GET_CAMERA_FOV (`N > fov`: the zoomed shot) needs the shot repeated with the camera zoomed in, in the frames before its timed condition (the walker's task) ends: hold the photographed flag and the zoomed FOV for 600 frames (the script's own 04C5 read clears the flag each pass)
+            if (!std::getenv("NOTSA_MDRIVER_NOZOOM") && PhotoWantsZoom()) { g_photoPed = std::atoi(args.c_str()); g_photoHold = 600; } // a GET_CAMERA_FOV (0801 into a local) within 2 KB before a photo test
+        }
+        return true;
+    }
     if (!std::strcmp(name, "mddmgobj")) { // CR22: CObject::ObjectDamage, CJ the damager, pistol (the port's object damage path of a bullet hit)
         if (auto* o = CPools::GetObject(std::atoi(args.c_str()))) { const CVector pos = o->GetPosition(); CVector dir = pos - ped->GetPosition(); dir.Normalise(); o->ObjectDamage(1000.f, &pos, &dir, ped, WEAPON_PISTOL); notsa::standalone::Fixups::Log("[mdriver] mddmgobj %s model %d renderDamaged=%d visible=%d", args.c_str(), (int)o->m_nModelIndex, (int)o->m_bRenderDamaged, (int)o->m_bIsVisible); }
         return true;
@@ -1100,6 +1109,7 @@ bool Cmd(const char* name, const std::string& args) {
 void Tick(uint64_t clockMs) {
     if (!Enabled() || g_done) return;
     g_clock = clockMs;
+    if (g_photoHold > 0) { g_photoHold--; if (auto* k = CPools::GetPed(g_photoPed)) { k->bHasBeenPhotographed = true; TheCamera.GetActiveCam().m_fFOV = 15.f; if (g_photoHold == 0) notsa::standalone::Fixups::Log("[mdriver] photo hold ended"); } else g_photoHold = 0; } // CR26: see mdphoto
     if (Generic()) { TickGeneric(); return; }
     if (!g_loaded) { Load(std::getenv("NOTSA_MDRIVER")); if (const char* o = std::getenv("NOTSA_MDRIVER_OUT")) g_out = std::fopen(o, "w"); }
     if (g_quitIn >= 0) {

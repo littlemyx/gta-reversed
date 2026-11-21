@@ -9,6 +9,7 @@
 #include "CutsceneMgr.h"
 #include "EntryExitManager.h"
 #include "CarEnterExit.h"
+#include "TagManager.h"
 #include "CarCtrl.h"
 #include "Streaming.h"
 #include "Camera.h"
@@ -194,9 +195,11 @@ struct Arg { uint32_t bits = 0; int kind = 0; };
 struct Row { uint16_t op; int match; /*0 any 1 plain 2 not*/ std::string name, action; std::vector<std::string> args; int settle; };
 std::vector<Row>         g_rows;
 // a conditional command of the root thread as the TS StallSink records it (opcode, NOT form, state, decoded operands, the WAIT count, where the following GOTO_IF_FALSE led)
-struct Rec { const uint8_t* p; uint16_t raw; int cond; int waitSeq; std::vector<Arg> args; bool hasBranch = false, jumped = false, waitAfter = false; const uint8_t *target = nullptr, *fall = nullptr; };
+struct Rec { const uint8_t* p; uint16_t raw; int cond; int waitSeq; std::vector<Arg> args; bool hasBranch = false, jumped = false, waitAfter = false; const uint8_t *target = nullptr, *fall = nullptr; uint32_t vref[2] = { 0, 0 }; /* CR22: identity of operand 0 / 1 when it is a variable: (type << 16) | offset-or-index, else 0 */ };
 using RecP = std::shared_ptr<Rec>;
 std::map<const uint8_t*, RecP> g_deadConds; // CR21
+std::map<const uint8_t*, RecP> g_flagConds; // CR22: every plain `var == number` condition seen (IS_INT_VAR/LVAR_EQUAL_TO_NUMBER): the flag tests of the fail-flag guard
+uint32_t g_tagVar = 0; float g_tagRect[4]{}; bool g_tagSeen = false; // CR22: destination variable + area of the last GET_PERCENTAGE_TAGGED_IN_AREA (0702)
 std::deque<RecP>         g_recs;             // the last 64 conditional commands (KEEP)
 std::vector<RecP>        g_group; bool g_fallPending = false; // CR19: the conditions of the last GOTO_IF_FALSE, and whether it fell through (the next command decides waitAfter)
 std::vector<RecP>        g_pending;          // the conditions since the last GOTO_IF_FALSE (max 12)
@@ -301,11 +304,47 @@ bool WalkFail(const CRunningScript* s, const uint8_t* p, int hops, bool sub, std
     }
     return false;
 }
+// CR22: the fail-FLAG guard. 11 BIG SMOKE: IS_CHAR_DEAD @65 -> true branch: print a fail text (label INT2_F2, not M_FAIL), @45 = 1, goto on; the M_FAIL print is reached later by the flag test @45 == 1 (ip 2d41).
+// WalkFail alone calls that branch GoesOn and the driver kills the friend. A true branch that sets a variable to a constant is a Guard when a flag test of that very variable/value (any `var == number` condition seen in this run) leads to the M_FAIL print.
+const uint8_t* CmdOps(const uint8_t* p, const uint8_t* ops[3], int& cnt) { // end of the command at p (nullptr: undecodable); the first three operand pointers
+    const int op = *(const uint16_t*)p & 0x7FFF; const int want = Arity(op); const uint8_t* q = p + 2; bool mf = false, isI = false; int32_t iv = 0; cnt = 0;
+    for (;;) {
+        if (want >= 0 && cnt >= want) break;
+        if (!InSpace(q)) return nullptr;
+        const uint8_t* r = SkipOperand(q, mf, isI, iv); if (!r) break;
+        if (cnt < 3) ops[cnt] = q;
+        q = r; cnt++;
+    }
+    return q;
+}
+bool OperandVar(const uint8_t* q, uint32_t& ref) { if (*q == 2 || *q == 3) { ref = ((uint32_t)*q << 16) | *(const uint16_t*)(q + 1); return true; } return false; }
+bool OperandInt(const uint8_t* q, int32_t& v) { switch (*q) { case 1: v = *(const int32_t*)(q + 1); return true; case 4: v = *(const int8_t*)(q + 1); return true; case 5: v = *(const int16_t*)(q + 1); return true; default: return false; } }
+void FlagSets(const CRunningScript* s, const uint8_t* p, int hops, std::vector<std::pair<uint32_t, int32_t>>& out, std::set<const uint8_t*>& seen) { // the `var = constant` commands of the straight-line path from p (gotos followed, a condition / wait / return ends it)
+    for (int n = 0; n < 40 && InSpace(p); n++) {
+        const int op = *(const uint16_t*)p & 0x7FFF; if (!seen.insert(p).second) return;
+        if (op == 0x0001 || op == 0x0051 || op == 0x00D6 || op == 0x004D || op == 0x0050) return;
+        const uint8_t* ops[3]{}; int cnt = 0; const uint8_t* e = CmdOps(p, ops, cnt); if (!e) return;
+        if ((op == 0x0004 || op == 0x0006) && cnt >= 2) { uint32_t ref; int32_t v; if (OperandVar(ops[0], ref) && OperandInt(ops[1], v)) out.push_back({ ref, v }); }
+        if (op == 0x0002) { int32_t off; if (cnt < 1 || !OperandInt(ops[0], off) || hops >= 8) return; FlagSets(s, Resolve(s, off), hops + 1, out, seen); return; }
+        p = e;
+    }
+}
+bool FlagGuard(const CRunningScript* s, const Rec& r) {
+    if (!r.fall || g_flagConds.empty() || std::getenv("NOTSA_MDRIVER_NOFLAGGUARD")) return false;
+    std::vector<std::pair<uint32_t, int32_t>> sets; std::set<const uint8_t*> seen; FlagSets(s, r.fall, 0, sets, seen);
+    for (auto& [ref, val] : sets) for (auto& [pp, f] : g_flagConds) {
+        if (!f->vref[0] || f->vref[0] != ref || !f->hasBranch) continue;
+        const auto v = ArgInt(*f, 1); if (!v || (int32_t)*v != val) continue;
+        std::set<const uint8_t*> sn; if (WalkFail(s, f->fall, 0, false, sn)) return true;
+    }
+    return false;
+}
 enum class Verdict { Wait, GoesOn, Guard, Unknown };
 Verdict VerdictOf(const CRunningScript* s, const Rec& r) {
     if (!r.hasBranch) return Verdict::Unknown;
     if (r.jumped && r.target < r.p) return Verdict::Wait;
-    std::set<const uint8_t*> seen; return WalkFail(s, r.fall, 0, false, seen) ? Verdict::Guard : Verdict::GoesOn;
+    std::set<const uint8_t*> seen; if (WalkFail(s, r.fall, 0, false, seen)) return Verdict::Guard;
+    return FlagGuard(s, r) ? Verdict::Guard : Verdict::GoesOn; // CR22
 }
 
 // ---- actions.ts: guards, buddies ----
@@ -421,6 +460,15 @@ Dec Decide(const std::vector<RecP>& loop, int attempt) {
     std::vector<RecP> falses;
     for (size_t k = loop.size(); k-- > 0;) { const auto& r = loop[k]; if (r->cond == 0 && !AnyGuard(*r) && !satisfied.count(r->p)) falses.push_back(r); }
     if (falses.empty() && blockers.empty()) { d.reason = "no condition evaluated false in the loop (the guards left out)"; return d; }
+    // CR22: built-in verbs for opcodes the TS table has no row for (proposed rows: see C:/gta-scratch/cr22/FINDINGS.txt FOR TS). They come before every table row (a wait row of another false condition of the pass must not shadow them).
+    static const Row kDmg{ 0x0366, 1, "HAS_OBJECT_BEEN_DAMAGED", "damageobj", { "$0" }, 30 };
+    static const Row kTag{ 0x0038, 0, "int compare of the GET_PERCENTAGE_TAGGED_IN_AREA result", "tagarea", {}, 60 };
+    if (!std::getenv("NOTSA_MDRIVER_NOBUILTIN")) for (auto& c : falses) {
+        const int op = c->raw & 0x7FFF; if (c->raw & 0x8000) continue;
+        if (op == 0x0366) { auto a2 = ResolveArgs(kDmg, *c); if (a2) { d.act = true; d.row = &kDmg; d.rowIdx = -2; d.cond = c; d.args = *a2; d.op = op; return d; } }
+        const bool intCmp = (op >= 0x0018 && op <= 0x0041) || (op >= 0x04A3 && op <= 0x04B7) || (op >= 0x07D6 && op <= 0x07D9);
+        if (intCmp && g_tagSeen && g_tagVar && (c->vref[0] == g_tagVar || c->vref[1] == g_tagVar)) { d.act = true; d.row = &kTag; d.rowIdx = -3; d.cond = c; d.op = op; return d; }
+    }
     for (int pass = 0; pass < 2; pass++) {
     if (pass == 1 && blockers.empty()) break;
     for (size_t i = 0; i < g_rows.size(); i++) {
@@ -431,6 +479,12 @@ Dec Decide(const std::vector<RecP>& loop, int attempt) {
             struct Opt { RecP c; std::optional<std::vector<RArg>> args; }; std::vector<Opt> opts; std::set<std::string> seen;
             for (auto& q : falses) { if (!Matches(row, *q)) continue; auto a = ResolveArgs(row, *q); if (seen.insert(RKey(a)).second) opts.push_back({ q, a }); }
             auto& pick = opts[(size_t)attempt % opts.size()];
+            if (row.action == "key" && row.op == 0x00E1 && attempt < 3 && !std::getenv("NOTSA_MDRIVER_NOKEYDEFER")) { // CR22 (10 BEEFY BARON): a button poll whose failing jump leads on to ANOTHER false condition of the pass that only a wait row answers (a world event: here `NOT IS_CAR_DEAD(@36)`, the Topfun van the script searches for after the button test) is not what the script waits for: it waits for that event first. The button is pressed only after 3 stalls.
+                size_t at = 0; while (at < loop.size() && loop[at] != pick.c) at++;
+                bool eventAfter = false;
+                for (size_t k = at + 1; k < loop.size() && !eventAfter; k++) { const auto& r = loop[k]; if (r->cond != 0 || AnyGuard(*r) || satisfied.count(r->p)) continue; for (auto& w : g_rows) if (w.action == "wait" && Matches(w, *r)) { eventAfter = true; break; } }
+                if (eventAfter) break; // the next row (the wait rows) answers
+            }
             if (!pick.args && !row.args.empty()) { d.op = pick.c->raw & 0x7FFF; d.reason = "unhandled " + row.name + ": argument of the row cannot be read"; return d; }
             d.act = true; d.row = &row; d.rowIdx = (int)i; d.cond = pick.c; d.args = pick.args.value_or(std::vector<RArg>{}); d.op = pick.c->raw & 0x7FFF; return d;
         }
@@ -582,6 +636,8 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         notsa::standalone::Fixups::Log("[mdriver] warpto_handle: no clear spot, +0.5 m");
         one(warp(pos.x + 0.5f, pos.y, pos.z, false)); return;
     }
+    if (v == "damageobj") { QueueActions({ "emit mddmgobj:" + std::to_string(I_(0)) }, row.settle); return; } // CR22: HAS_OBJECT_BEEN_DAMAGED(obj): CJ damages the object (16 NINES AND AK'S shooting range)
+    if (v == "tagarea") { QueueActions({ "emit mdtag:" + F(g_tagRect[0]) + ":" + F(g_tagRect[1]) + ":" + F(g_tagRect[2]) + ":" + F(g_tagRect[3]) }, row.settle); return; } // CR22: the script waits for the tagged percentage of an area: spray every tag of it (13 TAGGING UP TURF)
     if (v == "failclass") { Stop("by nature: " + (d.args.empty() ? std::string("failclass") : d.args[0].s), cop, 0); return; }
     Stop("badverb " + v, cop, 0);
 }
@@ -747,9 +803,18 @@ void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int co
             for (auto& r : g_pending) { r->hasBranch = true; r->jumped = jumped; r->fall = ptr + 7; r->target = jumped ? s->m_IP : ptr + 7; }
             if (!jumped) { g_group = g_pending; g_fallPending = true; }
             g_pending.clear();
+        } else if (op == 0x0702) { // CR22: GET_PERCENTAGE_TAGGED_IN_AREA x1 y1 x2 y2 -> var: remember the area and the destination variable (a later `var == 100` wait = spray these tags)
+            if (InSpace(ptr)) {
+                const uint8_t* ops5[5]{}; const uint8_t* q = ptr + 2; bool mf = false, isI = false; int32_t iv = 0; int k = 0;
+                for (; k < 5 && q && InSpace(q); k++) { ops5[k] = q; q = SkipOperand(q, mf, isI, iv); }
+                uint32_t ref = 0; const auto a = DecodeArgs(s, ptr, 4);
+                if (k == 5 && a.size() == 4 && OperandVar(ops5[4], ref)) { for (int j = 0; j < 4; j++) g_tagRect[j] = AF(a[j]); g_tagVar = ref; g_tagSeen = true; }
+            }
         } else if (cond >= 0) {
             auto r = std::make_shared<Rec>(); r->p = ptr; r->raw = raw; r->cond = cond; r->waitSeq = g_waitSeq;
             const int n = Arity(op); r->args = DecodeArgs(s, ptr, n >= 0 ? n : 10);
+            { const uint8_t* ops[3]{}; int cnt = 0; if (InSpace(ptr) && CmdOps(ptr, ops, cnt)) for (int k = 0; k < 2 && k < cnt; k++) { uint32_t ref; if (OperandVar(ops[k], ref)) r->vref[k] = ref; } } // CR22
+            if (!(raw & 0x8000) && (op == 0x0038 || op == 0x0039)) g_flagConds[ptr] = r; // CR22
             g_recs.push_back(r); if (g_recs.size() > 64) g_recs.pop_front();
             if (!(raw & 0x8000) && op == 0x0118) g_deadConds[ptr] = r; // CR21: every plain IS_CHAR_DEAD site seen (the 64-condition window misses the rarely-run ones)
             g_pending.push_back(r); if (g_pending.size() > 12) g_pending.erase(g_pending.begin());
@@ -809,6 +874,19 @@ bool Cmd(const char* name, const std::string& args) {
         const int h = std::atoi(args.c_str()); auto* car = CPools::GetVehicle(std::atoi(args.c_str() + args.find(':') + 1)); auto* oth = CPools::GetPed(h);
         if (car && oth) { oth->GetIntelligence()->FlushImmediately(false); CTaskSimpleCarSetPedInAsPassenger t(car, TARGET_DOOR_FRONT_RIGHT, true, nullptr); t.ProcessPed(oth); g_buddyRef = h; }
         if (std::getenv("NOTSA_MDRIVER_ENTERLOG")) notsa::standalone::Fixups::Log("[enterlog] mdwarppass ped %d=%p car %d=%p -> inVeh %d same %d model %d", h, (void*)oth, std::atoi(args.c_str() + args.find(':') + 1), (void*)car, oth ? (int)oth->bInVehicle : -1, oth ? (int)(oth->m_pVehicle == car) : -1, oth ? (int)oth->m_nModelIndex : -1);
+        return true;
+    }
+    if (!std::strcmp(name, "mddmgobj")) { // CR22: CObject::ObjectDamage, CJ the damager, pistol (the port's object damage path of a bullet hit)
+        if (auto* o = CPools::GetObject(std::atoi(args.c_str()))) { const CVector pos = o->GetPosition(); CVector dir = pos - ped->GetPosition(); dir.Normalise(); o->ObjectDamage(1000.f, &pos, &dir, ped, WEAPON_PISTOL); notsa::standalone::Fixups::Log("[mdriver] mddmgobj %s model %d renderDamaged=%d visible=%d", args.c_str(), (int)o->m_nModelIndex, (int)o->m_bRenderDamaged, (int)o->m_bIsVisible); }
+        return true;
+    }
+    if (!std::strcmp(name, "mdtag")) { // CR22: spray every tag of the area the way the spray can shot does (CWorld::SprayPaintWorld: +8 alpha per hit to the tags within the range), until each is fully tagged
+        float r[4]{}; std::sscanf(args.c_str(), "%f:%f:%f:%f", r, r + 1, r + 2, r + 3);
+        const CRect area{ std::min(r[0], r[2]), std::min(r[1], r[3]), std::max(r[0], r[2]), std::max(r[1], r[3]) };
+        std::vector<CVector> pos; for (auto& t : CTagManager::GetTagsInArea(area)) pos.push_back(t.Entity->GetPosition());
+        int shots = 0;
+        for (const auto& q : pos) for (int k = 0; k < 40; k++) { CVector o = q, dir{}; if (CWorld::SprayPaintWorld(o, dir, 1.0f, true) != eSprayPaintState::DISCOVERED) break; shots++; }
+        notsa::standalone::Fixups::Log("[mdriver] mdtag area %.0f,%.0f..%.0f,%.0f: %zu tags, %d spray hits, now %d%%", r[0], r[1], r[2], r[3], pos.size(), shots, CTagManager::GetPercentageTaggedInArea(area));
         return true;
     }
     float a[6]{}; a[5] = -1.f; std::sscanf(args.c_str(), "%f:%f:%f:%f:%f:%f", a, a + 1, a + 2, a + 3, a + 4, a + 5);

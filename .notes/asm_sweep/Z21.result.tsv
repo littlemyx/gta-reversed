@@ -45,3 +45,22 @@ exe_addr	function	verdict	note
 0x4B7960	CEventGotKnockedOverByCar::CloneEditable	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
 0x65CED0	CTaskComplexSmartFleePoint::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
 0x48E390	CTaskSimpleSay::Clone	MATCH	ctor args / copied fields / post-ctor field copies compared to the exe clone body
+0x52E450	CControllerConfigManager::GetIsKeyboardKeyJustDown	MATCH	jump table 1000..1055 -> (new,old) state fields checked by script against CKeyboardState layout + IsKeyboardKeyDownInState (all 44 special keys, F1-F12 loop, <0xFF array)
+0x52DD90	CControllerConfigManager::ClearSimButtonPressCheckers	MATCH	4 byte arrays x 4 types cleared
+0x52FCA0	CControllerConfigManager::AffectControllerStateOn_ButtonDown_AllStates	MATCH	actions, NO-before-YES order, field offsets
+0x52FAB0	CControllerConfigManager::AffectControllerStateOn_ButtonDown_FirstAndThirdPersonOnly	MATCH	all 14 actions: order, stick flags (0x12D0..0x12DC), +-128 forms, joypad gate
+0x52F7B0	CControllerConfigManager::AffectControllerStateOn_ButtonDown_Driving	MATCH	all 22 actions: order, fields, LOOKBEHIND sets both shoulders
+0x52F4A0	CControllerConfigManager::GetNumOfSettingsForAction	MATCH	0x420 blank for keyboard/extra, 0 for mouse/joy
+0x52F5F0	CControllerConfigManager::ResetSettingOrder	MATCH	result index persists across orders, strict < update, > order && != 0
+0x463B80	CStuckCarCheck::RemoveCarFromCheck	MATCH	no break after first match
+0x463C70	CStuckCarCheck::IsCarInStuckCarArray	MATCH	16 entries stride 0x24
+0x460810	CRestart::SetRespawnPointForDurationOfMission	MATCH	flag + point
+0x5FB7D0	CPedGroup::RemoveAllFollowers	MATCH	== CPedGroupMembership::RemoveAllFollowers(false) 0x5FB190
+0x5F86C0	CPedGroupIntelligence::GetTaskDefault	MATCH	8 pairs stride 0x14
+0x610490	CPopCycle::PlayerKilledADealer	MATCH	DealerStrength > 0 -> --
+0x443950	CGangWars::AddKillToProvocation	MATCH	gang1/gang3, no-zones +1, per-zone GangStrength[type-7]
+0x43E410	CEntryExitManager::AddEntryExitToStack	MATCH	linked-or-this compare, original arg pushed
+0x438450	CCheat::ResetCheats	MATCH	92 bytes, weather, time scale 1.0, string/flag
+0x49B610	CShopping::SetPlayerHasBought	MATCH	index search 0x230
+0x49CFE0	CTagManager::SetAlphaInArea	MATCH	atomic user value only when atomic, tag alpha always, UpdateNumTagged
+0x49D0B0	CTagManager::GetPercentageTaggedInArea	FIXED	ftol((float)tagged/total*100) not integer division (53/100 -> 52); ad64b46fa

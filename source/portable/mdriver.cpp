@@ -1043,11 +1043,13 @@ void TickGeneric() {
         const auto cp = Cj()->GetPosition(); notsa::standalone::Fixups::Log("[loclog] f%d cj=%.0f,%.0f,%.0f%s", fr, cp.x, cp.y, cp.z, o.c_str());
     }
     if (fr % 20 == 0 && g_wait == 0 && g_qpos >= g_queue.size() && g_untilLeft == 0 && root && Cj() && !CCutsceneMgr::IsCutsceneProcessing() && !std::getenv("NOTSA_MDRIVER_NOLEASHKEEP")) { // CR30 (23 GRAY IMPORTS, the dealer chase): the pass holds a `NOT (CJ within R m of ped X)` fail guard (00F2..00F4 / 0104..0106, CJ the first operand, R >= 150 m: the script fails the mission when CJ lost the moving target) and X has driven off to more than 0.6 R: CJ joins X (the warp the player's chase amounts to), behind it
-        for (auto& r : g_recsBig) { const int rop = r->raw & 0x7FFF; if (r->waitSeq < g_waitSeq - 3 || !(r->raw & 0x8000) || !((rop >= 0x00F2 && rop <= 0x00F4) || (rop >= 0x0104 && rop <= 0x0106))) continue;
-            const auto h0 = ArgInt(*r, 0), h1 = ArgInt(*r, 1), rr = ArgFloat(*r, 2); if (!h0 || !h1 || !rr || *rr < 150.0 || EntityOfHandle((int)*h0, rop) != (CEntity*)Cj()) continue;
-            auto* x = CPools::GetPed((int)*h1); if (!x || x == Cj() || x->m_fHealth <= 0.f) continue; const CVector xp = x->GetPosition(), cp = Cj()->GetPosition();
+        for (auto& r : g_recsBig) { const int rop = r->raw & 0x7FFF; if (r->waitSeq < g_waitSeq - 3 || !(r->raw & 0x8000) || !((rop >= 0x00F2 && rop <= 0x00F4) || (rop >= 0x0104 && rop <= 0x0106) || (rop >= 0x0202 && rop <= 0x0207 && !std::getenv("NOTSA_MDRIVER_NOCARKEEP")))) continue; // CR32: 0202..0207 = the same guard about a CAR (29 WRONG SIDE OF THE TRACKS: `NOT locate CJ within 200 m of the train` ends the mission when the train ran off)
+            const bool carOp = rop >= 0x0202 && rop <= 0x0207;
+            const auto h0 = ArgInt(*r, 0), h1 = ArgInt(*r, 1), rr = ArgFloat(*r, 2); if (!h0 || !h1 || !rr || *rr < 150.0 || (carOp ? (CEntity*)CPools::GetPed((int)*h0) : EntityOfHandle((int)*h0, rop)) != (CEntity*)Cj()) continue;
+            CPhysical* x = carOp ? (CPhysical*)CPools::GetVehicle((int)*h1) : (CPhysical*)CPools::GetPed((int)*h1); if (!x || x == (CPhysical*)Cj() || (carOp ? ((CVehicle*)x)->m_fHealth : ((CPed*)x)->m_fHealth) <= 0.f) continue; const CVector xp = x->GetPosition(), cp = Cj()->GetPosition();
             if ((xp - cp).Magnitude2D() <= 0.6 * *rr) break;
-            const CVector fw = x->bInVehicle && x->m_pVehicle ? x->m_pVehicle->GetForward() : x->GetForward(); const CVector q = xp - fw * 12.f;
+            if (carOp && Cj()->bInVehicle && Cj()->m_pVehicle == (CVehicle*)x) break;
+            const CVector fw = carOp ? ((CVehicle*)x)->GetForward() : (((CPed*)x)->bInVehicle && ((CPed*)x)->m_pVehicle ? ((CPed*)x)->m_pVehicle->GetForward() : ((CPed*)x)->GetForward()); const CVector q = carOp && ((CVehicle*)x)->IsTrain() ? xp + ((CVehicle*)x)->GetRight() * 14.f : xp - fw * 12.f; // a train: beside the tracks, not on them
             notsa::standalone::Fixups::Log("[mdriver] leashkeep frame %d: CJ %.0f m from the target ped, joins it at %.0f,%.0f", fr, (double)(xp - cp).Magnitude2D(), (double)q.x, (double)q.y);
             Emit("mdwveh:" + F(q.x) + ":" + F(q.y) + ":-100"); break; }
     }

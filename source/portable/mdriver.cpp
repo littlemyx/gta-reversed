@@ -65,6 +65,7 @@ struct Cond { std::string expr, op; double val; };
 struct Step { std::string name; std::vector<Cond> conds; std::vector<std::string> actions; };
 std::vector<Step>        g_steps;
 std::string              g_script;           // thread name
+std::map<int, int>       g_nearCnt; /* CR32 */
 int                      g_watchVeh = -1, g_buddyRef = -1, g_stall = 600, g_maxAnswers = 12; int g_nextStall = 0; int g_dangerUntil = 0, g_vhpPrev = -1, g_dropWin = 0; const void* g_vhpVeh = nullptr; /* CR31 urgency */ int g_photoPed = -1, g_photoHold = 0; bool g_photoEarly = false;
 bool                     g_loaded = false, g_started = false, g_done = false, g_failed = false;
 std::FILE*               g_out = nullptr;
@@ -1141,14 +1142,14 @@ void TickGeneric() {
     g_sameCount = 0;
     std::vector<RecP> loop; for (auto& r : g_recs) if (r->waitSeq >= g_waitSeq - 3) loop.push_back(r);
     if (std::getenv("NOTSA_MDRIVER_BIKELOG")) { std::string o; for (auto& r : loop) if (r->cond == 0) { o += " " + std::to_string((unsigned)(r->p - root->m_BaseIP)) + "/" + std::to_string(r->raw & 0x7FFF); } notsa::standalone::Fixups::Log("[decide] frame %d attempt %d loop %zu falses:%s", fr, g_attemptsAt[ipPtr], loop.size(), o.c_str()); }
-    Dec dn; bool nearRec = false;
+    Dec dn; bool nearRec = false; int nearH = -1;
     if (g_attemptsAt[ipPtr] >= 1 && !std::getenv("NOTSA_MDRIVER_NONEARPED")) for (size_t k = g_recsBig.size(); k-- > 0;) { const auto& c = g_recsBig[k]; const int op = c->raw & 0x7FFF; if (c->cond != 0 || (c->raw & 0x8000) || !((op >= 0x00F2 && op <= 0x00F4) || (op >= 0x0104 && op <= 0x0106)) || c->waitSeq < g_waitSeq - 3) continue; // CR32 (27 OG LOC): a plain false `CJ near ped X` (CJ the first operand; the stage waits for the player to catch up with X, here a recorded-path car that parks at the end of its leg): after the first answer failed, CJ joins X (X is not moved: it belongs to the script's path)
                 const auto h0 = ArgInt(*c, 0), h1 = ArgInt(*c, 1);
-                if (h0 && h1 && CPools::GetPed((int)*h0) == Cj()) if (auto* x = CPools::GetPed((int)*h1); x && x != Cj() && x->m_fHealth > 0.f) { static Row kNear{ op, 0, "LOCATE_CHAR_CHAR (CJ near ped)", "zonego", {}, 60 }, kFetch{ op, 0, "LOCATE_CHAR_CHAR (ped to CJ)", "nearfetch", {}, 60 }; static std::map<int, int> s_nearCnt; const CVector xp = x->GetRealPosition(); const int nc = s_nearCnt[(int)*h1]++; // the 1st answer: CJ joins the ped (a script-driven car that parks); the later ones: the ped joins CJ (a buddy that must come along to the place the other conditions ask for)
+                if (h0 && h1 && CPools::GetPed((int)*h0) == Cj()) if (auto* x = CPools::GetPed((int)*h1); x && x != Cj() && x->m_fHealth > 0.f) { static Row kNear{ op, 0, "LOCATE_CHAR_CHAR (CJ near ped)", "zonego", {}, 60 }, kFetch{ op, 0, "LOCATE_CHAR_CHAR (ped to CJ)", "nearfetch", {}, 60 }; const CVector xp = x->GetRealPosition(); const int nc = g_nearCnt[(int)*h1]; nearH = (int)*h1; // the 1st answer: CJ joins the ped (a script-driven car that parks); the later ones: the ped joins CJ (a buddy that must come along to the place the other conditions ask for)
                     dn.act = true; dn.row = nc == 0 ? &kNear : &kFetch; dn.rowIdx = -13; dn.cond = c; dn.op = op; dn.args.clear(); if (nc == 0) for (const float f : { xp.x + 5.f, xp.y, -100.f }) { RArg ra; ra.n = f; dn.args.push_back(ra); } else { const CVector cp = Cj()->GetPosition(); for (const float f : { (float)*h1, cp.x + 3.f, cp.y, -100.f }) { RArg ra; ra.n = f; dn.args.push_back(ra); } }
                     notsa::standalone::Fixups::Log("[mdriver] nearped: CJ joins ped %d at %.0f,%.0f", (int)*h1, (double)xp.x, (double)xp.y); nearRec = true; break; } }
     Dec d = Decide(loop, g_attemptsAt[ipPtr]);
-    if (nearRec) d = dn;
+    if (nearRec && d.act && (d.row->action == "kill" || (!g_nearCnt.empty() && (d.row->action == "pedwarp" || d.row->action == "vehwarp")))) { g_nearCnt[nearH]++; d = dn; } // only over a kill answer that did not help (the near-ped locate is in the pass, the ped is alive)
     if ((!d.act || d.row->action == "wait") && g_attemptsAt[ipPtr] >= 0 && !std::getenv("NOTSA_MDRIVER_NOCLOCKSKIP")) for (auto& r : g_recsBig) { // CR32 (33 MANAGEMENT ISSUES: `WAIT UNTIL hour > 21`, the hour copied by GET_TIME_OF_DAY into a local; the idle player is arrested long before the game clock gets there): a false `local > N` whose local holds the current game hour is answered by the clock moving to N+1:00 (the player waits for the night, or sleeps)
         if (r->waitSeq < g_waitSeq - 3 || (r->raw & 0x7FFF) != 0x0019 || (r->raw & 0x8000) || r->cond != 0) continue;
         const auto v = ArgInt(*r, 0), n = ArgInt(*r, 1); if (!v || !n || *v != (int)CClock::GetGameClockHours() || *n < *v || *n > 22) continue;

@@ -328,6 +328,7 @@ void FlagSets(const CRunningScript* s, const uint8_t* p, int hops, std::vector<s
         if (op == 0x0001 || op == 0x0051 || op == 0x00D6 || op == 0x004D || op == 0x0050) return;
         const uint8_t* ops[3]{}; int cnt = 0; const uint8_t* e = CmdOps(p, ops, cnt); if (!e) return;
         if ((op == 0x0004 || op == 0x0006) && cnt >= 2) { uint32_t ref; int32_t v; if (OperandVar(ops[0], ref) && OperandInt(ops[1], v)) out.push_back({ ref, v }); }
+        if (op >= 0x00BA && op <= 0x00BD) out.push_back({ 0xFFFFFFFFu, 0x7FFFFFFF }); // CR24: a text print on the path (the fail text of the CR21 / 11 guard shape: `IS_CHAR_DEAD -> print text, flag = 1`)
         if (op == 0x0002) { int32_t off; if (cnt < 1 || !OperandInt(ops[0], off) || hops >= 8) return; FlagSets(s, Resolve(s, off), hops + 1, out, seen); return; }
         p = e;
     }
@@ -335,6 +336,7 @@ void FlagSets(const CRunningScript* s, const uint8_t* p, int hops, std::vector<s
 bool FlagGuard(const CRunningScript* s, const Rec& r) {
     if (!r.fall || g_flagConds.empty() || std::getenv("NOTSA_MDRIVER_NOFLAGGUARD")) return false;
     std::vector<std::pair<uint32_t, int32_t>> sets; std::set<const uint8_t*> seen; FlagSets(s, r.fall, 0, sets, seen);
+    if (!std::getenv("NOTSA_MDRIVER_FLAGNOPRINT") && std::none_of(sets.begin(), sets.end(), [](auto& q) { return q.first == 0xFFFFFFFFu; })) return false; // CR24: the flag guard is the `fail text + flag` shape: without a print on the true branch the flag is an ordinary state variable (14: `@43 = 1` after the dealers die)
     for (auto& [ref, val] : sets) for (auto& [pp, f] : g_flagConds) {
         if (!f->vref[0] || f->vref[0] != ref || !f->hasBranch) continue;
         const auto v = ArgInt(*f, 1); if (!v || (int32_t)*v != val) continue;
@@ -505,6 +507,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
         }
     }
     std::vector<RecP> falses;
+    if (std::getenv("NOTSA_MDRIVER_BIKELOG") && !wide) for (auto& r : loop) if (r->cond == 0 && (r->raw & 0x7FFF) == 0x0118 && !(r->raw & 0x8000)) { const auto h = ArgInt(*r, 0); const auto v = VerdictOf(g_thread, *r); auto* pe = h ? CPools::GetPed((int)*h) : nullptr; notsa::standalone::Fixups::Log("[kilrefuse] ip %x ped %d type %d model %d hp %.0f protected %d guarded %d verdict %d", (unsigned)(r->p - g_thread->m_BaseIP), h ? (int)*h : -1, pe ? (int)pe->m_nPedType : -1, pe ? (int)pe->m_nModelIndex : -1, pe ? pe->m_fHealth : -1.f, h ? (int)ProtectedHandle((int)*h) : -1, h ? (int)Guarded().count((int)*h) : -1, (int)v); }
     for (size_t k = loop.size(); k-- > 0;) { const auto& r = loop[k]; if (r->cond == 0 && !AnyGuard(*r) && !satisfied.count(r->p)) falses.push_back(r); }
     if (falses.empty() && blockers.empty()) { d.reason = "no condition evaluated false in the loop (the guards left out)"; return d; }
     // CR22: built-in verbs for opcodes the TS table has no row for (proposed rows: see C:/gta-scratch/cr22/FINDINGS.txt FOR TS). They come before every table row (a wait row of another false condition of the pass must not shadow them).
@@ -704,7 +707,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     if (v == "warpto_handle") {
         const int h = I_(0); CEntity* e = EntityOfHandle(h, cop);
         if (!e) { QueueActions({}, 0); return; }
-        if (e == (CEntity*)c && c && d.cond && !std::getenv("NOTSA_MDRIVER_NOFETCH")) { // CR24 (14 CLEANING THE HOOD: `NOT LOCATE_CHAR_ANY_MEANS_CHAR_3D(Sweet, CJ, 30 m)`): the target of the locate IS CJ and the tested char is another one: that char is the one that has to move (to CJ), as LocatedOther does for the place locates; CJ warping onto himself changes nothing
+        if (e == (CEntity*)c && c && d.cond && (d.cond->raw & 0x8000) && !std::getenv("NOTSA_MDRIVER_NOFETCH")) { // only for the TRUE NOT-form blocker of a wait group (a plain false helper test of the buddy helper in 11 must not move the buddy) // CR24 (14 CLEANING THE HOOD: `NOT LOCATE_CHAR_ANY_MEANS_CHAR_3D(Sweet, CJ, 30 m)`): the target of the locate IS CJ and the tested char is another one: that char is the one that has to move (to CJ), as LocatedOther does for the place locates; CJ warping onto himself changes nothing
             const auto h0 = ArgInt(*d.cond, 0);
             if (h0) if (auto* oth = CPools::GetPed((int)*h0); oth && oth != c) {
                 const CVector cp = c->GetPosition(); const bool veh = oth->bInVehicle && oth->m_pVehicle; const CVector fw = c->bInVehicle && c->m_pVehicle ? c->m_pVehicle->GetForward() : c->GetForward();

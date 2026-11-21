@@ -612,8 +612,11 @@ bool IsBuddyTarget(CPed* target, CPed* attacker, CPed* me) {
 void ShootDead() { // actions.ts shootAttackers: every ped (not a buddy type) whose kill task targets CJ / a buddy is shot dead (max 60)
     if (g_fightKills >= 60) return; auto* me = Cj(); if (!me) return;
     std::vector<int> victims;
+    std::set<int> guarded; if (!std::getenv("NOTSA_MDRIVER_NOGUARDPROTECT")) for (auto& r : g_recs) { // CR21: a char the script fails the mission for when he dies (plain IS_CHAR_DEAD whose true branch leads to the fail text, among the last conditions) is a buddy, whatever his ped type (11 BIG SMOKE: mission chars type 24 attacking Ballas were shot dead -> INT2_F2)
+        if ((r->raw & 0x8000) || (r->raw & 0x7FFF) != 0x0118) continue; const auto h = ArgInt(*r, 0); if (h && VerdictOf(g_thread, *r) == Verdict::Guard) guarded.insert((int)*h);
+    }
     for (auto& p : GetPedPool()->GetAllValid()) {
-        if (&p == me || p.m_fHealth <= 0.f || ProtectedPed(&p)) continue;
+        if (&p == me || p.m_fHealth <= 0.f || ProtectedPed(&p) || guarded.count(CPools::GetPedRef(&p))) continue;
         auto* tg = KillTarget(&p); if (!tg || !IsBuddyTarget(tg, &p, me) || LikesSide((int)p.m_nPedType)) continue;
         victims.push_back(CPools::GetPedRef(&p)); if (tg == me) g_enemyTypes.insert((int)p.m_nPedType); g_fightKills++;
     }

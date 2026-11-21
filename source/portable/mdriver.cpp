@@ -445,7 +445,6 @@ std::set<int> g_usedCars; // CR27: vehicle handles the driver itself entered / d
 bool ProtectedHandle(int h) { // actions.ts protectedHandle
     if (auto* p = CPools::GetPed(h)) return p == Cj() || ProtectedPed(p);
     auto* v = CPools::GetVehicle(h); if (!v) return false;
-    if (g_usedCars.count(h) && !std::getenv("NOTSA_MDRIVER_NOUSEDCAR")) return true;
     std::vector<CPed*> occ; if (v->m_pDriver) occ.push_back(v->m_pDriver); for (auto* pp : v->m_apPassengers) if (pp) occ.push_back(pp);
     for (auto* o : occ) { if (o == Cj() || ProtectedPed(o) || (o->m_fHealth > 0.f && !HatesSide((int)o->m_nPedType))) return true; }
     return false;
@@ -472,6 +471,7 @@ bool KillRefusal(const CRunningScript* s, const Rec& r) { // true = the driver m
     const int op = r.raw & 0x7FFF; if ((op != 0x0118 && op != 0x0119) || (r.raw & 0x8000)) return false;
     const auto h = ArgInt(r, 0); if (!h) return false;
     if (ProtectedHandle((int)*h) || Guarded().count((int)*h)) return true;
+    if (op == 0x0119 && g_usedCars.count((int)*h) && !std::getenv("NOTSA_MDRIVER_NOUSEDCAR")) return true; // CR27 (26): a PLAIN false IS_CAR_DEAD of a car the driver entered / moved is no kill order (the escalation of a wait group still may wreck it: 89)
     const auto v = VerdictOf(s, r); return !(v == Verdict::Wait || v == Verdict::GoesOn);
 }
 bool NotInCarGuard(const CRunningScript* s, const Rec& r) {
@@ -1058,7 +1058,7 @@ void TickGeneric() {
         if (kr && d.row == kr) break;
         if (kr) for (size_t k = loop.size(); k-- > 0;) {
             const auto& r = loop[k]; if (r->raw != (0x8000 | kop) || r->cond != 1 || AnyGuard(*r)) continue;
-            if ((kop == 0x0119 || (kop == 0x0118 && !std::getenv("NOTSA_MDRIVER_NOPEDWAITONLY"))) && !(r->waitAfter && !r->jumped)) continue; // CR27 (26 ROBBING UNCLE SAM: the driver killed Ryder, the mission's friend, for a `NOT IS_CHAR_DEAD(Ryder)` that is a plain if): the ped form too only when the TRUE branch IS the WAIT of its group // the car form only when the TRUE branch IS the WAIT of its group (`WHILE NOT IS_CAR_DEAD(x)`, 16): elsewhere `NOT IS_CAR_DEAD` is a plain if (10: the RC plane @34 whose death fails the mission)
+            if (kop == 0x0119 && !(r->waitAfter && !r->jumped)) continue; // the car form only when the TRUE branch IS the WAIT of its group (`WHILE NOT IS_CAR_DEAD(x)`, 16): elsewhere `NOT IS_CAR_DEAD` is a plain if (10: the RC plane @34 whose death fails the mission)
             const auto a2 = ResolveArgs(*kr, *r); if (!a2 || a2->empty()) continue;
             const int h = (int)(*a2)[0].n;
             if (kop == 0x0118 && !std::getenv("NOTSA_MDRIVER_NOPHOTO") && std::any_of(g_recs.begin(), g_recs.end(), [&](const RecP& q) { const auto qh = ArgInt(*q, 0); return (q->raw & 0x7FFF) == 0x04C5 && qh && (int)*qh == h; })) continue; // CR25 (58): a ped the script wants PHOTOGRAPHED is no wait-until-dead (`NOT IS_CHAR_DEAD(x) AND HAS_CHAR_BEEN_PHOTOGRAPHED(x)`)

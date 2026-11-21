@@ -2,6 +2,8 @@
 #include "StdInc.h"
 #include "mdriver.h"
 #include "Garages.h"
+#include "ProjectileInfo.h"
+#include "Pickups.h"
 #include "GangWars.h"
 #include "TheZones.h"
 #include "PedGroup.h"
@@ -516,7 +518,7 @@ struct RArg { bool str = false; double n = 0; std::string s; };
 std::string RKey(const std::optional<std::vector<RArg>>& a) { if (!a) return "null"; std::string k; for (auto& x : *a) { k += x.str ? "s:" + x.s : "n:" + std::to_string(x.n); k += ','; } return k; }
 bool IsNum(const std::string& s) { size_t i = 0; if (i < s.size() && s[i] == '-') i++; const size_t d0 = i; while (i < s.size() && std::isdigit((unsigned char)s[i])) i++; if (i == d0) return false; if (i == s.size()) return true; if (s[i] != '.') return false; i++; const size_t d1 = i; while (i < s.size() && std::isdigit((unsigned char)s[i])) i++; return i > d1 && i == s.size(); }
 std::optional<std::vector<RArg>> ResolveArgs(const Row& row, const Rec& rec) {
-    const bool fl = row.action == "pedwarp" || row.action == "vehwarp" || row.action == "midpoint";
+    const bool fl = row.action == "pedwarp" || row.action == "vehwarp" || row.action == "midpoint" || row.action == "projectile";
     std::vector<RArg> out;
     for (auto& a : row.args) {
         RArg r;
@@ -571,6 +573,8 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
     static const Row kDmg{ 0x0366, 1, "HAS_OBJECT_BEEN_DAMAGED", "damageobj", { "$0" }, 30 };
     static const Row kPho{ 0x04C5, 1, "HAS_CHAR_BEEN_PHOTOGRAPHED", "photo", { "$0" }, 30 }; // CR25 (58 PHOTO OPPORTUNITY)
     static const Row kTag{ 0x0038, 0, "int compare of the GET_PERCENTAGE_TAGGED_IN_AREA result", "tagarea", {}, 60 };
+    static const Row kPrj{ 0x02EE, 1, "IS_PROJECTILE_IN_AREA", "projectile", { "$0", "$1", "$2", "$3", "$4", "$5" }, 40 }; // CR26 (22 BURNING DESIRE)
+    static const Row kPck{ 0x0214, 1, "HAS_PICKUP_BEEN_COLLECTED", "pickupgo", { "$0" }, 60 }; // CR26 (22 BURNING DESIRE)
     static const Row kGrp{ 0x06EE, 1, "IS_GROUP_MEMBER", "joingroup", { "$0", "$1" }, 30 }; // CR26 (20 LOS SEPULCROS)
     if (!std::getenv("NOTSA_MDRIVER_NOBUILTIN")) {
         const auto tagCond = [&](const RecP& c) { // an integer compare of the result variable of a GET_PERCENTAGE_TAGGED_IN_AREA: the area it measured (a false plain compare, or the TRUE NOT-form compare of the wait group: `WHILE NOT $27 == 100`)
@@ -582,6 +586,11 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             const int op = c->raw & 0x7FFF; if (c->raw & 0x8000) continue;
             if (op == 0x04C5 && !std::getenv("NOTSA_MDRIVER_NOPHOTO")) { auto a2 = ResolveArgs(kPho, *c); if (a2) { d.act = true; d.row = &kPho; d.rowIdx = -6; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (op == 0x06EE && !std::getenv("NOTSA_MDRIVER_NOJOINGROUP")) { auto a2 = ResolveArgs(kGrp, *c); if (a2 && a2->size() == 2 && CPools::GetPed((int)(*a2)[0].n) && CPools::GetPed((int)(*a2)[0].n) != Cj()) { d.act = true; d.row = &kGrp; d.rowIdx = -8; d.cond = c; d.args = *a2; d.op = op; return d; } }
+            if (op == 0x0214 && !std::getenv("NOTSA_MDRIVER_NOPICKUP")) { auto a2 = ResolveArgs(kPck, *c); if (a2 && !a2->empty()) { d.act = true; d.row = &kPck; d.rowIdx = -11; d.cond = c; d.args = *a2; d.op = op; return d; } }
+            if (op == 0x02EE && !std::getenv("NOTSA_MDRIVER_NOPROJ")) { auto a2 = ResolveArgs(kPrj, *c); if (a2 && a2->size() == 6) { d.act = true; d.row = &kPrj; d.rowIdx = -12; d.cond = c; d.args = *a2; d.op = op; d.reason = "";
+                // every distinct false projectile area of the loop gets its molotov in the same frame (the script counts them in one pass)
+                for (auto& q : falses) if (q != c && (q->raw & 0x7FFF) == 0x02EE && !(q->raw & 0x8000)) if (auto a3 = ResolveArgs(kPrj, *q); a3 && a3->size() == 6) for (auto& x : *a3) d.args.push_back(x);
+                return d; } }
             if (op == 0x0366) { auto a2 = ResolveArgs(kDmg, *c); if (a2 && wide && (a2->empty() || !CPools::GetObject((int)(*a2)[0].n))) continue; /* CR23: a record of an older pass: the object may be gone */ if (a2) { d.act = true; d.row = &kDmg; d.rowIdx = -2; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (tagCond(c)) { d.act = true; d.row = &kTag; d.rowIdx = -3; d.cond = c; d.op = op; return d; }
         }
@@ -753,6 +762,15 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     if (v == "joingroup") { QueueActions({ "emit mdjoingrp:" + std::to_string(I_(0)) + ":" + std::to_string(I_(1)) }, row.settle); return; } // CR26: IS_GROUP_MEMBER(ped, group) is false: the ped joins the group (what SET_GROUP_MEMBER does for a recruit)
     if (v == "zonego") { one(warp(F_(0), F_(1), F_(2), false)); return; } // CR26
     if (v == "gangwar") { QueueActions({ "emit mdprovoke:3" }, row.settle); return; } // CR26
+    if (v == "pickupgo") { // CR26: HAS_PICKUP_BEEN_COLLECTED(pickup) is false: the player walks onto the pickup (on foot, at its position)
+        const int pi = CPickups::GetActualPickupIndex(tPickupReference{ I_(0) });
+        if (pi < 0) { QueueActions({}, row.settle); return; }
+        const CVector pp = CPickups::aPickUps[pi].GetPosn(); one(warp(pp.x, pp.y, pp.z, false)); return;
+    }
+    if (v == "projectile") { // CR26: IS_PROJECTILE_IN_AREA(box) is false: a molotov is thrown into the area (the box centre); one per distinct area
+        std::string a; for (size_t i = 0; i + 5 < d.args.size(); i += 6) { if (!a.empty()) a += "|"; a += F(0.5f * (F_(i) + F_(i + 3))) + "," + F(0.5f * (F_(i + 1) + F_(i + 4))) + "," + F(0.5f * (F_(i + 2) + F_(i + 5))); }
+        QueueActions({ "emit mdproj:" + a }, row.settle); return;
+    }
     if (v == "blipgo") { one(warp(F_(0), F_(1), F_(2), false)); return; } // CR26
     if (v == "midpoint") {
         float x, y, z = -100.f;
@@ -1148,6 +1166,11 @@ bool Cmd(const char* name, const std::string& args) {
     if (!std::strcmp(name, "mdprovoke")) { // CR26: the kills that provoke a gang war (CGangWars::AddKillToProvocation is what a killed gang ped calls; only a zone with that gang's strength counts)
         const int n = std::atoi(args.c_str()); for (int i = 0; i < n; i++) { CGangWars::AddKillToProvocation(PED_TYPE_GANG1); CGangWars::AddKillToProvocation(PED_TYPE_GANG3); }
         notsa::standalone::Fixups::Log("[mdriver] mdprovoke %d: provocation %.1f bCanTriggerOnMission %d war %d", n, CGangWars::Provocation, (int)CGangWars::bCanTriggerGangWarWhenOnAMission, (int)CGangWars::bGangWarsActive);
+        return true;
+    }
+    if (!std::strcmp(name, "mdproj")) { // CR26: a molotov (CProjectileInfo::AddProjectile, CJ the creator) at each given point
+        std::string a = args; size_t pos = 0;
+        while (pos < a.size()) { size_t e = a.find('|', pos); if (e == std::string::npos) e = a.size(); float x = 0, y = 0, z = 0; if (std::sscanf(a.substr(pos, e - pos).c_str(), "%f,%f,%f", &x, &y, &z) == 3) { const bool ok = CProjectileInfo::AddProjectile(ped, WEAPON_MOLOTOV, CVector{ x, y, z }, 0.f, nullptr, nullptr); notsa::standalone::Fixups::Log("[mdriver] mdproj molotov at %.1f,%.1f,%.1f -> %d", x, y, z, (int)ok); } pos = e + 1; }
         return true;
     }
     if (!std::strcmp(name, "mdjoingrp")) { // CR26: SET_GROUP_MEMBER(group, ped) without the car part: be-in-group task event, AddFollower, group.Process()

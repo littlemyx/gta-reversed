@@ -183,7 +183,10 @@ void OnEnd(CRunningScript* s) {
     g_threads.erase(it);
 }
 
-void OnCond(bool state) { if (g_cur) g_cond = state ? 1 : 0; }
+static int g_auxCond = -1;
+int AuxCond() { return g_auxCond; }
+void AuxReset() { g_auxCond = -1; }
+void OnCond(bool state) { g_auxCond = state ? 1 : 0; if (g_cur) g_cond = state ? 1 : 0; }
 
 void Begin(CRunningScript* s) {
     g_cur = s; g_curInfo = &g_threads.find(s)->second;

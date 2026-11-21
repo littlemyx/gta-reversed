@@ -14,6 +14,9 @@ void Tick(uint64_t clockMs);
 bool Cmd(const char* name, const std::string& args);
 //! AD1 generic mode (NOTSA_MDRIVER_TABLE=<driver-classes.tsv>; needs NOTSA_SCMTRACE): every command of a traced thread (called from scmtrace End); cond = -1 / 0 / 1 (value after NOT)
 void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int cond);
+//! CR27: a script thread outside the traced tree (streamed script): AuxBegin (true = watch this command, remembers ip/opcode) before ProcessOneCommand, AuxEnd after it (cond = value after NOT, -1 none)
+bool AuxBegin(CRunningScript* s);
+void AuxEnd(CRunningScript* s, int cond);
 //! CR4: pad button (IS_BUTTON_PRESSED numbering) held by `cmd:mdpad:<button>:<frames>` (TS actions.ts key: PadInput.joy[field]=255 for the frames); read by IS_BUTTON_PRESSED
 bool PadHeld(int button);
 //! SDL key push implemented by the injector (name: return, w)

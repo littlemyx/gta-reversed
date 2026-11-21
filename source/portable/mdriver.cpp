@@ -233,6 +233,7 @@ std::vector<Row>         g_rows;
 // a conditional command of the root thread as the TS StallSink records it (opcode, NOT form, state, decoded operands, the WAIT count, where the following GOTO_IF_FALSE led)
 struct Rec { const uint8_t* p; uint16_t raw; int cond; int waitSeq; std::vector<Arg> args; bool hasBranch = false, jumped = false, waitAfter = false; const uint8_t *target = nullptr, *fall = nullptr; uint32_t vref[2] = { 0, 0 }; /* CR22: identity of operand 0 / 1 when it is a variable: (type << 16) | offset-or-index, else 0 */ };
 using RecP = std::shared_ptr<Rec>;
+CEntryExit* g_enterEx = nullptr; // CR27: the entry exit the `enterarea` verb goes through (an interior blip's), instead of searching by area
 bool g_auxMode = false; // CR27: Decide() over an aux (streamed script) thread answers only with warps / key presses (no kills of the streamed script's peds)
 std::map<const uint8_t*, RecP> g_deadConds; // CR21
 std::map<const uint8_t*, RecP> g_flagConds; // CR22: every plain `var == number` condition seen (IS_INT_VAR/LVAR_EQUAL_TO_NUMBER): the flag tests of the fail-flag guard
@@ -863,6 +864,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     if (v == "enterarea") { // CR23: stand on the entrance marker of the nearest exterior entry exit (area 0) whose linked interior side is in area g_enterArea (CEntryExitManager does the rest: fade, area switch)
         auto* me = Cj(); CEntryExit* best = nullptr; float bd = 1e30f;
         if (me) for (auto& ex : CEntryExitManager::GetPool()->GetAllValid()) { if (g_enterArea == 0 ? ((int)ex.m_nArea != (int)CGame::currArea || ex.m_nArea == 0 || !ex.m_pLink || (int)ex.m_pLink->m_nArea != 0) /* leave: the exit marker of the interior CJ is in */ : ((int)ex.m_nArea != 0 || !ex.m_pLink || (int)ex.m_pLink->m_nArea != g_enterArea)) continue; const auto c = ex.GetPosition(); const float dd = (c - me->GetPosition()).Magnitude(); if (dd < bd) { bd = dd; best = &ex; } }
+        if (g_enterEx) { best = g_enterEx; g_enterEx = nullptr; bd = 0.f; }
         if (!best) { QueueActions({}, 0); return; }
         const auto c = best->GetPosition(); float dx = c.x - best->m_vecExitPos.x, dy = c.y - best->m_vecExitPos.y; const float len = std::max(0.01f, (float)std::hypot(dx, dy));
         notsa::standalone::Fixups::Log("[mdriver] enterarea %d: entry exit %.8s at %.1f,%.1f,%.1f (%.0f m from CJ)", g_enterArea, best->m_szName, c.x, c.y, c.z, bd);
@@ -914,7 +916,7 @@ void ShootDead() { // actions.ts shootAttackers: every ped (not a buddy type) wh
 // CR27 (12 RYDER, 19 CESAR VIALPANDO): the awaited global is written by a STREAMED script thread (barber.scm: the chair + haircut menu, carmod1.scm: the mod-shop menu), whose locate / button conditions nobody answers. Every streamed-script thread's conditions are recorded
 // like the root's (AuxBegin/AuxEnd, called from scmtrace::Run for threads outside the traced tree); when the root wait stands (the wait row answered twice) and such a thread writes a global the root's pass compares, Decide() runs over THAT thread's last passes.
 struct AuxState { std::deque<RecP> recs; std::vector<RecP> group, pending; bool fallPending = false; int waitSeq = 0; std::map<uint16_t, bool> writes; };
-std::map<const CRunningScript*, AuxState> g_aux; std::map<uint32_t, int> g_auxVisits; std::string g_auxTag; bool g_auxAnswered = false, g_auxEarly = false;
+std::map<const CRunningScript*, AuxState> g_aux; bool g_auxTouched = false, g_auxDone = false; std::map<uint32_t, int> g_auxVisits; std::string g_auxTag; bool g_auxAnswered = false, g_auxEarly = false;
 const uint8_t* g_auxIp = nullptr; uint16_t g_auxRaw = 0;
 bool IntCompareOp(int op) { return (op >= 0x0018 && op <= 0x0041) || (op >= 0x04A3 && op <= 0x04B7) || (op >= 0x07D6 && op <= 0x07D9); }
 bool WritesGlobal(const CRunningScript* t, uint16_t off) { // a command of the thread's code whose FIRST operand is the global variable `off` (not a compare): a static byte scan of the streamed script
@@ -1060,9 +1062,12 @@ void TickGeneric() {
         Dec d3 = Decide(big, g_attemptsAt[ipPtr]);
         if (d3.act && d3.row->action != "wait") { notsa::standalone::Fixups::Log("[mdriver] frame %d big window (%zu -> %zu records): %s", fr, loop.size(), big.size(), d3.row->name.c_str()); d = d3; }
     }
-    if (d.act && d.row->action == "wait" && g_attemptsAt[ipPtr] >= 2 && !std::getenv("NOTSA_MDRIVER_NOAUX")) { // CR27: see AuxState: the root's wait compares a global that a streamed script thread writes: answer THAT thread's conditions (locate / button of the menu) with the same rows; a non-wait answer wins
+    if (d.act && !std::getenv("NOTSA_MDRIVER_NOAUX")) { // CR27: see AuxState: the root's wait compares a global that a streamed script thread writes: answer THAT thread's conditions (locate / button of the menu) with the same rows; a non-wait answer wins. Once such a thread was answered it goes first (the root's own warps would pull CJ away from it); when the root's pass no longer compares a global of it, it is done (g_auxDone)
         std::set<uint16_t> gl; for (auto& r : g_recsBig) { if (r->waitSeq < g_waitSeq - 3 || !IntCompareOp(r->raw & 0x7FFF)) continue; for (int k = 0; k < 2; k++) if ((r->vref[k] >> 16) == 2) gl.insert((uint16_t)(r->vref[k] & 0xFFFF)); }
-        for (auto* t = CTheScripts::pActiveScripts; t && !gl.empty(); t = t->m_pNext) {
+        bool auxRel = false; for (auto* t = CTheScripts::pActiveScripts; t && !auxRel && !gl.empty(); t = t->m_pNext) { auto it = g_aux.find(t); if (it == g_aux.end() || it->second.recs.empty()) continue; for (const auto g : gl) auxRel = auxRel || WritesGlobal(t, g); }
+        if (g_auxTouched && !auxRel) { g_auxTouched = false; g_auxDone = true; }
+        const bool auxTrig = d.row->action == "wait" ? g_attemptsAt[ipPtr] >= 2 : g_auxTouched;
+        for (auto* t = CTheScripts::pActiveScripts; t && auxRel && auxTrig && !gl.empty(); t = t->m_pNext) {
             auto it = g_aux.find(t); if (it == g_aux.end() || it->second.recs.empty()) continue;
             bool wr = false; for (const auto g : gl) wr = wr || WritesGlobal(t, g); if (!wr) continue;
             std::vector<RecP> al; for (auto& r : it->second.recs) if (r->waitSeq >= it->second.waitSeq - 3) al.push_back(r);
@@ -1080,7 +1085,7 @@ void TickGeneric() {
                 std::stable_sort(opts.begin(), opts.end(), [](const RecP& a, const RecP& b) { return (*ArgInt(*a, 1) != 16) < (*ArgInt(*b, 1) != 16); });
                 if (!opts.empty()) { const auto& pick = opts[(size_t)visit % opts.size()]; if (auto a2 = ResolveArgs(*d4.row, *pick)) { d4.args = *a2; d4.cond = pick; } }
             }
-            if (d4.act && d4.row->action != "wait") { g_auxTag = ":aux" + std::to_string(ak); g_auxAnswered = true; }
+            if (d4.act && d4.row->action != "wait") { g_auxTag = ":aux" + std::to_string(ak); g_auxAnswered = true; g_auxTouched = true; }
             if (d4.act && d4.row->action != "wait") { d = d4; break; }
         }
     }
@@ -1102,6 +1107,20 @@ void TickGeneric() {
             static Row kBlip{ 0, 0, "destination blip (no condition of the pass is answerable)", "blipgo", {}, 120 };
             d.row = &kBlip; d.rowIdx = -7; d.cond = nullptr; d.op = 0; d.args.clear();
             for (const float f : { best->m_vPosition.x, best->m_vPosition.y, std::fabs(best->m_vPosition.z) < 0.5f ? -100.f : best->m_vPosition.z }) { RArg a; a.n = f; d.args.push_back(a); }
+        }
+    }
+    if (g_auxDone && !CMenuSystem::MenuInUse[0] && !CMenuSystem::MenuInUse[1]) g_auxDone = false;
+    if (g_auxDone && d.act && !g_auxAnswered && (CMenuSystem::MenuInUse[0] || CMenuSystem::MenuInUse[1]) && !std::getenv("NOTSA_MDRIVER_NOMENULEAVE")) { // CR27 (12 RYDER: the haircut is done, the shop script still holds CJ in its menu): after an aux answer, a menu still up and the root's own answer repeated (a warp / enter-area twice at this wake ip, or the wait row twice): the player leaves the menu with the cancel button (TRIANGLE = 15)
+        const auto wk = std::to_string(at) + ":" + std::to_string(d.rowIdx) + ":" + RKey(d.args); const auto wi = g_noProgress.find(wk);
+        if (d.row->action == "wait" ? g_attemptsAt[ipPtr] >= 2 : (wi != g_noProgress.end() && wi->second >= 2)) for (auto& kr : g_rows) if (kr.op == 0x00E1 && kr.match == 1 && kr.action == "key") {
+            d.row = &kr; d.rowIdx = -14; d.cond = nullptr; d.op = 0x00E1; d.args.clear(); for (const double v : { 15.0, 10.0 }) { RArg a; a.n = v; d.args.push_back(a); } break; }
+    }
+    if (d.act && (d.row->action == "pedwarp" || d.row->action == "vehwarp") && !std::getenv("NOTSA_MDRIVER_NOBLIPENEX")) { // CR27 (12 RYDER, stage `NOT CJ at the shop counter` while the counter's coordinates are not written yet): the same warp answered twice at this wake ip, its target is neither the blip nor the blip's entry marker (30 m), and a coordinate blip leads through an entry exit (SET_BLIP_ENTRY_EXIT: its coordinates are inside an interior): CJ walks out of the interior he is in / in through that entrance instead
+        const auto wk = std::to_string(at) + ":" + std::to_string(d.rowIdx) + ":" + RKey(d.args); const auto wi = g_noProgress.find(wk);
+        if (wi != g_noProgress.end() && wi->second >= 2) {
+            const tRadarTrace* bt = nullptr; for (auto& t : CRadar::ms_RadarTrace) if (t.m_nBlipType == BLIP_COORD && !t.HasSprite() && t.m_pEntryExit && (!bt || t.m_nCounter >= bt->m_nCounter)) bt = &t;
+            const auto far2d = [&](const CVector& a, float x, float y) { return std::hypot(a.x - x, a.y - y) > 30.f; };
+            if (bt && d.args.size() >= 2 && !d.args[0].str && !d.args[1].str && far2d(bt->m_vPosition, (float)d.args[0].n, (float)d.args[1].n) && far2d(bt->m_pEntryExit->GetPosition(), (float)d.args[0].n, (float)d.args[1].n)) { static Row kEnter2{ 0, 0, "interior blip: through its entry exit", "enterarea", {}, 200 }; if (CGame::currArea != 0) { g_enterArea = 0; g_enterEx = nullptr; } else g_enterEx = bt->m_pEntryExit; d.row = &kEnter2; d.rowIdx = -13; d.cond = nullptr; d.op = 0; d.args.clear(); }
         }
     }
     g_attemptsAt[ipPtr]++;

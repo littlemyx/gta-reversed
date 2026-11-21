@@ -608,7 +608,7 @@ bool IsBuddyTarget(CPed* target, CPed* attacker, CPed* me) {
     if (target == me || ProtectedPed(target)) return true;
     if (target->m_fHealth <= 0.f || HatesSide((int)target->m_nPedType) || g_enemyTypes.count((int)target->m_nPedType)) return false;
     if ((int)target->m_nPedType < 23 || target->m_nPedType == attacker->m_nPedType) return false;
-    if ((int)target->m_nPedType >= 24 && !std::getenv("NOTSA_MDRIVER_MISSIONBUDDY")) return false; // CR21: a mission-type ped (MISSION1..8, script made) that is neither liked, in CJ's group nor a member of a protected type is a scripted enemy, not a buddy (11 BIG SMOKE: Ryder/Smoke (type 24) shooting a Ballas (type 25) were shot dead by the driver -> INT2_F2)
+    if ((int)target->m_nPedType >= 24 && std::getenv("NOTSA_MDRIVER_MISSIONFOE")) return false; // CR21 (OPT-IN: regresses 77 where type-25 MIB agents attack a type-24 friend): a mission-type ped (MISSION1..8, script made) that is neither liked, in CJ's group nor a member of a protected type is a scripted enemy, not a buddy (11 BIG SMOKE: Ryder/Smoke (type 24) shooting a Ballas (type 25) were shot dead by the driver -> INT2_F2)
     auto* tg = KillTarget(target); return !tg || (tg != me && !ProtectedPed(tg));
 }
 void ShootDead() { // actions.ts shootAttackers: every ped (not a buddy type) whose kill task targets CJ / a buddy is shot dead (max 60)

@@ -17,3 +17,4 @@ KillCriminal, WanderCop, Wander, LeaveCarAndFlee, EnterCarAsPassengerTimed, Walk
 The ~566 CTask*/CEvent* Constructor/Clone/Destructor rows are mostly done only as a sample; the CTask*/CEvent* non-constructor oracle-only rows of the behaviour class are now exhausted (52 + 66 compared). Remaining no-verdict rows are CarCtrl steering, CCheat, Shopping, VehicleModelInfo, Entity, Object, Pickup, PedGroup helpers.
 
 Link: see below.
+Link: StandaloneRelease (STATEHASH=OFF) rebuilt EventLeanOnVehicle.cpp and linked gta_reversed.exe, exit 0.

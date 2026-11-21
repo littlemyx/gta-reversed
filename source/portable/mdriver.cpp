@@ -200,6 +200,7 @@ struct Rec { const uint8_t* p; uint16_t raw; int cond; int waitSeq; std::vector<
 using RecP = std::shared_ptr<Rec>;
 std::map<const uint8_t*, RecP> g_deadConds; // CR21
 std::map<const uint8_t*, RecP> g_flagConds; // CR22: every plain `var == number` condition seen (IS_INT_VAR/LVAR_EQUAL_TO_NUMBER): the flag tests of the fail-flag guard
+std::set<uint32_t> g_areaVars; int g_enterArea = -1; // CR23: variables written by GET_AREA_VISIBLE (077E); the interior id a compare of one of them asks for
 std::map<uint32_t, std::array<float, 4>> g_tagAreas; float g_tagRect[4]{}; // CR22: destination variable -> area of the last GET_PERCENTAGE_TAGGED_IN_AREA (0702) that wrote it; the area of the picked decision
 std::deque<RecP>         g_recs;             // the last 64 conditional commands (KEEP)
 std::vector<RecP>        g_group; bool g_fallPending = false; // CR19: the conditions of the last GOTO_IF_FALSE, and whether it fell through (the next command decides waitAfter)
@@ -509,6 +510,13 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             if (op == 0x0366) { auto a2 = ResolveArgs(kDmg, *c); if (a2 && wide && (a2->empty() || !CPools::GetObject((int)(*a2)[0].n))) continue; /* CR23: a record of an older pass: the object may be gone */ if (a2) { d.act = true; d.row = &kDmg; d.rowIdx = -2; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (tagCond(c)) { d.act = true; d.row = &kTag; d.rowIdx = -3; d.cond = c; d.op = op; return d; }
         }
+        static const Row kEnter{ 0x0039, 1, "int compare of the GET_AREA_VISIBLE result", "enterarea", {}, 200 };
+        for (auto& c : falses) { // CR23 (16 NINES AND AK'S: `WHILE @86 != 15` after the Binco blip): a false plain `var == N` of a GET_AREA_VISIBLE result variable: walk in through the entrance of interior N (an entry exit whose interior side is in area N)
+            const int op = c->raw & 0x7FFF; if ((c->raw & 0x8000) || (op != 0x0038 && op != 0x0039) || std::getenv("NOTSA_MDRIVER_NOENTERAREA")) continue;
+            if (!(c->vref[0] && g_areaVars.count(c->vref[0]))) continue;
+            const auto n = ArgInt(*c, 1); if (!n || *n <= 0) continue;
+            g_enterArea = (int)*n; d.act = true; d.row = &kEnter; d.rowIdx = -4; d.cond = c; d.op = op; return d;
+        }
         for (auto& c : blockers) if (tagCond(c)) { d.act = true; d.row = &kTag; d.rowIdx = -3; d.cond = c; d.op = c->raw & 0x7FFF; return d; }
     }
     for (int pass = 0; pass < 2; pass++) {
@@ -680,6 +688,14 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     }
     if (v == "damageobj") { QueueActions({ "emit mddmgobj:" + std::to_string(I_(0)) }, row.settle); return; } // CR22: HAS_OBJECT_BEEN_DAMAGED(obj): CJ damages the object (16 NINES AND AK'S shooting range)
     if (v == "tagarea") { QueueActions({ "emit mdtag:" + F(g_tagRect[0]) + ":" + F(g_tagRect[1]) + ":" + F(g_tagRect[2]) + ":" + F(g_tagRect[3]) }, row.settle); return; } // CR22: the script waits for the tagged percentage of an area: spray every tag of it (13 TAGGING UP TURF)
+    if (v == "enterarea") { // CR23: stand on the entrance marker of the nearest exterior entry exit that leads to interior g_enterArea (CEntryExitManager does the rest: fade, area switch)
+        auto* me = Cj(); CEntryExit* best = nullptr; float bd = 1e30f;
+        if (me) for (auto& ex : CEntryExitManager::GetPool()->GetAllValid()) { if ((int)ex.m_nArea != g_enterArea || !ex.m_pLink || (int)ex.m_pLink->m_nArea != 0) continue; const auto c = ex.m_pLink->GetPosition(); const float dd = (c - me->GetPosition()).Magnitude(); if (dd < bd) { bd = dd; best = ex.m_pLink; } }
+        if (!best) { QueueActions({}, 0); return; }
+        const auto c = best->GetPosition(); float dx = c.x - best->m_vecExitPos.x, dy = c.y - best->m_vecExitPos.y; const float len = std::max(0.01f, (float)std::hypot(dx, dy));
+        notsa::standalone::Fixups::Log("[mdriver] enterarea %d: entry exit %.8s at %.1f,%.1f,%.1f", g_enterArea, best->m_szName, c.x, c.y, c.z);
+        QueueActions({ "pedwarp " + F(c.x - dx / len * 0.3f) + " " + F(c.y - dy / len * 0.3f) + " " + F(c.z) }, row.settle); return;
+    }
     if (v == "failclass") { Stop("by nature: " + (d.args.empty() ? std::string("failclass") : d.args[0].s), cop, 0); return; }
     Stop("badverb " + v, cop, 0);
 }
@@ -861,6 +877,8 @@ void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int co
             for (auto& r : g_pending) { r->hasBranch = true; r->jumped = jumped; r->fall = ptr + 7; r->target = jumped ? s->m_IP : ptr + 7; }
             if (!jumped) { g_group = g_pending; g_fallPending = true; }
             g_pending.clear();
+        } else if (op == 0x077E) { // CR23: GET_AREA_VISIBLE var: remember the destination variable (a later `var == N` wait = be in interior N)
+            if (InSpace(ptr)) { uint32_t ref = 0; if (OperandVar(ptr + 2, ref)) g_areaVars.insert(ref); }
         } else if (op == 0x0702) { // CR22: GET_PERCENTAGE_TAGGED_IN_AREA x1 y1 x2 y2 -> var: remember the area and the destination variable (a later `var == 100` wait = spray these tags)
             if (InSpace(ptr)) {
                 const uint8_t* ops5[5]{}; const uint8_t* q = ptr + 2; bool mf = false, isI = false; int32_t iv = 0; int k = 0;

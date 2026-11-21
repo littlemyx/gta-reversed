@@ -39,6 +39,7 @@
 #include <deque>
 #include <memory>
 #include <optional>
+#include <array>
 
 namespace notsa::mdriver {
 namespace {
@@ -199,7 +200,7 @@ struct Rec { const uint8_t* p; uint16_t raw; int cond; int waitSeq; std::vector<
 using RecP = std::shared_ptr<Rec>;
 std::map<const uint8_t*, RecP> g_deadConds; // CR21
 std::map<const uint8_t*, RecP> g_flagConds; // CR22: every plain `var == number` condition seen (IS_INT_VAR/LVAR_EQUAL_TO_NUMBER): the flag tests of the fail-flag guard
-uint32_t g_tagVar = 0; float g_tagRect[4]{}; bool g_tagSeen = false; // CR22: destination variable + area of the last GET_PERCENTAGE_TAGGED_IN_AREA (0702)
+std::map<uint32_t, std::array<float, 4>> g_tagAreas; float g_tagRect[4]{}; // CR22: destination variable -> area of the last GET_PERCENTAGE_TAGGED_IN_AREA (0702) that wrote it; the area of the picked decision
 std::deque<RecP>         g_recs;             // the last 64 conditional commands (KEEP)
 std::vector<RecP>        g_group; bool g_fallPending = false; // CR19: the conditions of the last GOTO_IF_FALSE, and whether it fell through (the next command decides waitAfter)
 std::vector<RecP>        g_pending;          // the conditions since the last GOTO_IF_FALSE (max 12)
@@ -347,6 +348,26 @@ Verdict VerdictOf(const CRunningScript* s, const Rec& r) {
     return FlagGuard(s, r) ? Verdict::Guard : Verdict::GoesOn; // CR22
 }
 
+// CR22: static scan of the mission's code at its start: every singleton-group plain IS_CHAR_DEAD site and `var == number` flag test (the dynamic window only knows the conditions already run: 11 BIG SMOKE shoots Ryder/Smoke at f6621, long before the
+// IS_CHAR_DEAD(@65) guard at ip 4cc6 ran). Linear decode of the code from the base ip (stops at the first undecodable command); the handle operand is re-read from the variable when a site is used.
+void StaticScan(const CRunningScript* s) {
+    if (std::getenv("NOTSA_MDRIVER_NOSTATICSCAN")) return;
+    const uint8_t* p = s->m_BaseIP; RecP pend; bool single = false; int n = 0, nd = 0, nf = 0;
+    while (InSpace(p) && n++ < 60000) {
+        const uint16_t w = *(const uint16_t*)p; const int op = w & 0x7FFF; if (op > 0x0AFF) break;
+        const uint8_t* ops[3]{}; int cnt = 0; const uint8_t* e = CmdOps(p, ops, cnt); if (!e) break;
+        if (Arity(op) < 0 && InSpace(e) && *e == 0) e++; // variadic: the END operand
+        if (op == 0x004D) { if (pend) { pend->hasBranch = true; pend->jumped = false; pend->fall = p + 7; pend->target = p + 7; if ((pend->raw & 0x7FFF) == 0x0118) { g_deadConds[pend->p] = pend; nd++; } else { g_flagConds[pend->p] = pend; nf++; } } pend.reset(); single = false; p = e; continue; }
+        if (op == 0x00D6) { int32_t v; single = cnt >= 1 && OperandInt(ops[0], v) && v == 0; pend.reset(); p = e; continue; }
+        if (single && !(w & 0x8000) && (op == 0x0118 || op == 0x0038 || op == 0x0039)) {
+            auto r = std::make_shared<Rec>(); r->p = p; r->raw = w; r->cond = -1; r->waitSeq = 0; r->args = DecodeArgs(s, p, op == 0x0118 ? 1 : 2);
+            for (int k = 0; k < 2 && k < cnt; k++) { uint32_t ref; if (OperandVar(ops[k], ref)) r->vref[k] = ref; }
+            pend = r;
+        } else pend.reset();
+        single = false; p = e;
+    }
+    std::fprintf(stderr, "[mdriver] static scan: %d commands, %d IS_CHAR_DEAD sites, %d flag tests\n", n, nd, nf);
+}
 // ---- actions.ts: guards, buddies ----
 bool Likes(ePedType a, ePedType b) { return ((CPedType::GetPedTypeAcquaintances(ACQUAINTANCE_LIKE, a) | CPedType::GetPedTypeAcquaintances(ACQUAINTANCE_RESPECT, a)) & (1u << b)) != 0; }
 bool Hates(ePedType a, ePedType b) { return ((CPedType::GetPedTypeAcquaintances(ACQUAINTANCE_DISLIKE, a) | CPedType::GetPedTypeAcquaintances(ACQUAINTANCE_HATE, a)) & (1u << b)) != 0; }
@@ -463,11 +484,18 @@ Dec Decide(const std::vector<RecP>& loop, int attempt) {
     // CR22: built-in verbs for opcodes the TS table has no row for (proposed rows: see C:/gta-scratch/cr22/FINDINGS.txt FOR TS). They come before every table row (a wait row of another false condition of the pass must not shadow them).
     static const Row kDmg{ 0x0366, 1, "HAS_OBJECT_BEEN_DAMAGED", "damageobj", { "$0" }, 30 };
     static const Row kTag{ 0x0038, 0, "int compare of the GET_PERCENTAGE_TAGGED_IN_AREA result", "tagarea", {}, 60 };
-    if (!std::getenv("NOTSA_MDRIVER_NOBUILTIN")) for (auto& c : falses) {
-        const int op = c->raw & 0x7FFF; if (c->raw & 0x8000) continue;
-        if (op == 0x0366) { auto a2 = ResolveArgs(kDmg, *c); if (a2) { d.act = true; d.row = &kDmg; d.rowIdx = -2; d.cond = c; d.args = *a2; d.op = op; return d; } }
-        const bool intCmp = (op >= 0x0018 && op <= 0x0041) || (op >= 0x04A3 && op <= 0x04B7) || (op >= 0x07D6 && op <= 0x07D9);
-        if (intCmp && g_tagSeen && g_tagVar && (c->vref[0] == g_tagVar || c->vref[1] == g_tagVar)) { d.act = true; d.row = &kTag; d.rowIdx = -3; d.cond = c; d.op = op; return d; }
+    if (!std::getenv("NOTSA_MDRIVER_NOBUILTIN")) {
+        const auto tagCond = [&](const RecP& c) { // an integer compare of the result variable of a GET_PERCENTAGE_TAGGED_IN_AREA: the area it measured (a false plain compare, or the TRUE NOT-form compare of the wait group: `WHILE NOT $27 == 100`)
+            const int op = c->raw & 0x7FFF; const bool intCmp = (op >= 0x0018 && op <= 0x0041) || (op >= 0x04A3 && op <= 0x04B7) || (op >= 0x07D6 && op <= 0x07D9); if (!intCmp) return false;
+            for (int k = 0; k < 2; k++) if (c->vref[k]) if (auto it = g_tagAreas.find(c->vref[k]); it != g_tagAreas.end()) { for (int j = 0; j < 4; j++) g_tagRect[j] = it->second[j]; return true; }
+            return false;
+        };
+        for (auto& c : falses) {
+            const int op = c->raw & 0x7FFF; if (c->raw & 0x8000) continue;
+            if (op == 0x0366) { auto a2 = ResolveArgs(kDmg, *c); if (a2) { d.act = true; d.row = &kDmg; d.rowIdx = -2; d.cond = c; d.args = *a2; d.op = op; return d; } }
+            if (tagCond(c)) { d.act = true; d.row = &kTag; d.rowIdx = -3; d.cond = c; d.op = op; return d; }
+        }
+        for (auto& c : blockers) if (tagCond(c)) { d.act = true; d.row = &kTag; d.rowIdx = -3; d.cond = c; d.op = c->raw & 0x7FFF; return d; }
     }
     for (int pass = 0; pass < 2; pass++) {
     if (pass == 1 && blockers.empty()) break;
@@ -671,7 +699,9 @@ void ShootDead() { // actions.ts shootAttackers: every ped (not a buddy type) wh
     if (g_fightKills >= 60) return; auto* me = Cj(); if (!me) return;
     std::vector<int> victims;
     std::set<int> guarded; if (!std::getenv("NOTSA_MDRIVER_NOGUARDPROTECT")) for (auto& [site, r] : g_deadConds) { // CR21: a char the script fails the mission for when he dies (plain IS_CHAR_DEAD whose true branch leads to the fail text, among the last conditions) is a buddy, whatever his ped type (11 BIG SMOKE: mission chars type 24 attacking Ballas were shot dead -> INT2_F2)
-        if ((r->raw & 0x8000) || (r->raw & 0x7FFF) != 0x0118) continue; const auto h = ArgInt(*r, 0); if (h && VerdictOf(g_thread, *r) == Verdict::Guard) guarded.insert((int)*h);
+        if ((r->raw & 0x8000) || (r->raw & 0x7FFF) != 0x0118) continue;
+        static std::map<const uint8_t*, std::pair<size_t, bool>> cache; auto& ce = cache[site]; const size_t gen = g_flagConds.size() + g_deadConds.size(); if (ce.first != gen + 1) { ce = { gen + 1, VerdictOf(g_thread, *r) == Verdict::Guard }; } // CR22: the verdict is cached (it changes only when a new flag test / site is seen)
+        if (!ce.second) continue; const auto da = DecodeArgs(g_thread, site, 1); if (!da.empty()) guarded.insert((int)da[0].bits);
     }
     for (auto& p : GetPedPool()->GetAllValid()) {
         if (&p == me || p.m_fHealth <= 0.f || ProtectedPed(&p) || guarded.count(CPools::GetPedRef(&p))) continue;
@@ -694,7 +724,7 @@ void TickGeneric() {
     if (static const char* st = std::getenv("NOTSA_MDRIVER_STALL")) g_stall = std::atoi(st); // CR16: per-run override of the stall threshold (TS stallFrames = 600 frames of 33.33 ms = 20 s; 1000 frames of the 20 ms RR step are the same game time; allmissions.sh sets it for mission 46)
     if (g_quitIn >= 0) { if (g_quitIn-- == 0) { WriteResult(); Emit("quit"); if (g_out) { std::fclose(g_out); g_out = nullptr; } g_done = true; } return; }
     auto* root = notsa::scmtrace::Root();
-    if (!g_started) { if (!root) return; g_started = true; if (!std::getenv("NOTSA_MDRIVER_NOCITY")) CStats::SetStatValue(STAT_CITY_UNLOCKED, 2.f); /* CR10: a mission started cold stands where the story would have opened the cities: SF/LV closed = 4 stars on arrival (SetPlayerWantedLevelForForbiddenTerritories), cops attack */ g_passStat0 = CStats::GetStatValue(STAT_MISSIONS_PASSED); g_thread = root; g_frame0 = CTimer::GetFrameCounter(); g_sameCount = 0; g_lastIp = nullptr; }
+    if (!g_started) { if (!root) return; g_started = true; StaticScan(root); if (!std::getenv("NOTSA_MDRIVER_NOCITY")) CStats::SetStatValue(STAT_CITY_UNLOCKED, 2.f); /* CR10: a mission started cold stands where the story would have opened the cities: SF/LV closed = 4 stars on arrival (SetPlayerWantedLevelForForbiddenTerritories), cops attack */ g_passStat0 = CStats::GetStatValue(STAT_MISSIONS_PASSED); g_thread = root; g_frame0 = CTimer::GetFrameCounter(); g_sameCount = 0; g_lastIp = nullptr; }
     const int fr = GFrame();
     if (root) { char n[9]{}; std::memcpy(n, root->m_szName, 8); g_name = n; }
     if (!root) { // the thread ended (TS: !alive(script)): PASSED / FAILED, or STOP when a kill of the driver was just before it
@@ -808,7 +838,7 @@ void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int co
                 const uint8_t* ops5[5]{}; const uint8_t* q = ptr + 2; bool mf = false, isI = false; int32_t iv = 0; int k = 0;
                 for (; k < 5 && q && InSpace(q); k++) { ops5[k] = q; q = SkipOperand(q, mf, isI, iv); }
                 uint32_t ref = 0; const auto a = DecodeArgs(s, ptr, 4);
-                if (k == 5 && a.size() == 4 && OperandVar(ops5[4], ref)) { for (int j = 0; j < 4; j++) g_tagRect[j] = AF(a[j]); g_tagVar = ref; g_tagSeen = true; }
+                if (k == 5 && a.size() == 4 && OperandVar(ops5[4], ref)) { g_tagAreas[ref] = { AF(a[0]), AF(a[1]), AF(a[2]), AF(a[3]) }; }
             }
         } else if (cond >= 0) {
             auto r = std::make_shared<Rec>(); r->p = ptr; r->raw = raw; r->cond = cond; r->waitSeq = g_waitSeq;

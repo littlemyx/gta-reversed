@@ -625,6 +625,11 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
         static const Row kEnter{ 0x0039, 1, "int compare of the GET_AREA_VISIBLE result", "enterarea", {}, 200 };
         bool blockAnswerable = false; // CR25 (14): the loop's own wait group has a TRUE NOT-form member a warp row answers (CJ / Sweet not at the house): the stage waits for THAT, not for the area compare of an IF of the loop body
         if (!std::getenv("NOTSA_MDRIVER_NOBLOCKFIRST")) for (auto& b : blockers) for (auto& row : g_rows) if (row.match != 2 && row.op == (b->raw & 0x7FFF) && (row.action == "pedwarp" || row.action == "vehwarp" || row.action == "midpoint" || row.action == "entercar" || row.action == "warpto_handle") && ResolveArgs(row, *b)) blockAnswerable = true;
+        if (!blockAnswerable && blockers.empty() && !std::getenv("NOTSA_MDRIVER_NOLOOSECAR")) for (auto& r : loop) { // CR28 (24 HOME INVASION: the escort stage is an IF ladder, `IF NOT IS_CHAR_IN_CAR cj @car` is TRUE all the time and its body only re-adds the car blip; the `GET_AREA_VISIBLE == 8` IF of another stage step is false): a TRUE NOT IS_CHAR_IN_CAR of CJ for a script car var outside the wait group is the real blocker, not the area compare
+            if (r->raw != 0x80DB || r->cond != 1 || AnyGuard(*r)) continue;
+            for (auto& row : g_rows) if (row.match != 2 && row.op == 0x00DB && row.action == "entercar" && ResolveArgs(row, *r)) { blockers.push_back(r); blockAnswerable = true; break; }
+            if (blockAnswerable) break;
+        }
         for (auto& c : falses) { // CR23 (16 NINES AND AK'S: `WHILE @86 != 15` after the Binco blip): a false plain `var == N` of a GET_AREA_VISIBLE result variable: walk in through the entrance of interior N (an entry exit whose interior side is in area N)
             const int op = c->raw & 0x7FFF; if ((c->raw & 0x8000) || (op != 0x0038 && op != 0x0039) || std::getenv("NOTSA_MDRIVER_NOENTERAREA")) continue;
             if (!(c->vref[0] && g_areaVars.count(c->vref[0]))) continue;

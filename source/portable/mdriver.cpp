@@ -495,7 +495,9 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
     // are the blockers (a is false): the plain row of their opcode (entercar / vehwarp / pedwarp) answers them, after the false conditions found no row.
     std::set<const uint8_t*> satisfied; std::vector<RecP> blockers;
     if (!loop.empty() && !std::getenv("NOTSA_MDRIVER_NOORGROUP")) {
-        const auto& lr = loop.back();
+        auto lrp = loop.back(); // CR25 (14, stage `WHILE OR(NOT CJ at house, NOT Sweet at house)` with an IF ladder as the loop body): the wait group is not the LAST condition group of the pass: the last group of the pass that fell into the WAIT is the loop's own wait condition
+        if (!(lrp->hasBranch && !lrp->jumped && lrp->waitAfter) && !std::getenv("NOTSA_MDRIVER_NOWAITGRP2")) for (size_t k = loop.size(); k-- > 0;) if (loop[k]->hasBranch && !loop[k]->jumped && loop[k]->waitAfter) { lrp = loop[k]; break; }
+        const auto& lr = lrp;
         if (lr->hasBranch && !lr->jumped && lr->waitAfter) {
             std::vector<RecP> mem; for (auto& r : loop) if (r->fall == lr->fall && r->waitSeq == lr->waitSeq) mem.push_back(r);
             const uint8_t* f = mem.front()->p;
@@ -534,10 +536,13 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             if (tagCond(c)) { d.act = true; d.row = &kTag; d.rowIdx = -3; d.cond = c; d.op = op; return d; }
         }
         static const Row kEnter{ 0x0039, 1, "int compare of the GET_AREA_VISIBLE result", "enterarea", {}, 200 };
+        bool blockAnswerable = false; // CR25 (14): the loop's own wait group has a TRUE NOT-form member a warp row answers (CJ / Sweet not at the house): the stage waits for THAT, not for the area compare of an IF of the loop body
+        if (!std::getenv("NOTSA_MDRIVER_NOBLOCKFIRST")) for (auto& b : blockers) for (auto& row : g_rows) if (row.match != 2 && row.op == (b->raw & 0x7FFF) && (row.action == "pedwarp" || row.action == "vehwarp" || row.action == "midpoint" || row.action == "entercar" || row.action == "warpto_handle") && ResolveArgs(row, *b)) blockAnswerable = true;
         for (auto& c : falses) { // CR23 (16 NINES AND AK'S: `WHILE @86 != 15` after the Binco blip): a false plain `var == N` of a GET_AREA_VISIBLE result variable: walk in through the entrance of interior N (an entry exit whose interior side is in area N)
             const int op = c->raw & 0x7FFF; if ((c->raw & 0x8000) || (op != 0x0038 && op != 0x0039) || std::getenv("NOTSA_MDRIVER_NOENTERAREA")) continue;
             if (!(c->vref[0] && g_areaVars.count(c->vref[0]))) continue;
             const auto n = ArgInt(*c, 1); if (!n || *n < 0) continue;
+            if (blockAnswerable) continue;
             if (*n == 0 && c->jumped && c->target && InSpace(c->target) && (*(const uint16_t*)c->target & 0x7FFF) == 0x0051 && !std::getenv("NOTSA_MDRIVER_LEAVEANY")) continue; // CR24 (14): `GET_AREA_VISIBLE == 0` whose false branch skips to the RETURN of a helper sub (`IF @78 == 0` of a sub run every pass while CJ is inside the interior) is no wait: it must not drag CJ out of the interior
             g_enterArea = (int)*n; d.act = true; d.row = &kEnter; d.rowIdx = -4; d.cond = c; d.op = op; return d;
         }

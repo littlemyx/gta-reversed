@@ -233,6 +233,7 @@ std::vector<Row>         g_rows;
 // a conditional command of the root thread as the TS StallSink records it (opcode, NOT form, state, decoded operands, the WAIT count, where the following GOTO_IF_FALSE led)
 struct Rec { const uint8_t* p; uint16_t raw; int cond; int waitSeq; std::vector<Arg> args; bool hasBranch = false, jumped = false, waitAfter = false; const uint8_t *target = nullptr, *fall = nullptr; uint32_t vref[2] = { 0, 0 }; /* CR22: identity of operand 0 / 1 when it is a variable: (type << 16) | offset-or-index, else 0 */ };
 using RecP = std::shared_ptr<Rec>;
+std::set<std::string> g_enexNames; // CR27: text literals the mission compares an entry exit name with (IS_VAR_TEXT_LABEL16_EQUAL_TO_TEXT_LABEL after GET_NAME_OF_ENTRY_EXIT_CHAR_USED): the entrance the stage wants
 CEntryExit* g_enterEx = nullptr; // CR27: the entry exit the `enterarea` verb goes through (an interior blip's), instead of searching by area
 bool g_auxMode = false; // CR27: Decide() over an aux (streamed script) thread answers only with warps / key presses (no kills of the streamed script's peds)
 std::map<const uint8_t*, RecP> g_deadConds; // CR21
@@ -415,6 +416,7 @@ void StaticScan(const CRunningScript* s) {
         const uint8_t* ops[3]{}; int cnt = 0; const uint8_t* e = CmdOps(p, ops, cnt); if (!e) break;
         if (Arity(op) < 0 && InSpace(e) && *e == 0) e++; // variadic: the END operand
         if (op == 0x004D) { if (pend) { pend->hasBranch = true; pend->jumped = false; pend->fall = p + 7; pend->target = p + 7; if ((pend->raw & 0x7FFF) == 0x0118) { g_deadConds[pend->p] = pend; nd++; } else { g_flagConds[pend->p] = pend; nf++; } } pend.reset(); single = false; p = e; continue; }
+        if ((op == 0x08F9 || op == 0x05AD) && cnt >= 2 && ops[1] && InSpace(ops[1]) && *ops[1] == 0x0E && ops[1][1] > 0 && ops[1][1] <= 8) g_enexNames.insert(std::string((const char*)ops[1] + 2, strnlen((const char*)ops[1] + 2, ops[1][1]))); // CR27
         if (op == 0x00D6) { int32_t v; single = cnt >= 1 && OperandInt(ops[0], v) && v == 0; pend.reset(); p = e; continue; }
         if (single && !(w & 0x8000) && (op == 0x0118 || op == 0x0038 || op == 0x0039)) {
             auto r = std::make_shared<Rec>(); r->p = p; r->raw = w; r->cond = -1; r->waitSeq = 0; r->args = DecodeArgs(s, p, op == 0x0118 ? 1 : 2);
@@ -863,7 +865,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     if (v == "tagarea") { QueueActions({ "emit mdtag:" + F(g_tagRect[0]) + ":" + F(g_tagRect[1]) + ":" + F(g_tagRect[2]) + ":" + F(g_tagRect[3]) }, row.settle); return; } // CR22: the script waits for the tagged percentage of an area: spray every tag of it (13 TAGGING UP TURF)
     if (v == "enterarea") { // CR23: stand on the entrance marker of the nearest exterior entry exit (area 0) whose linked interior side is in area g_enterArea (CEntryExitManager does the rest: fade, area switch)
         auto* me = Cj(); CEntryExit* best = nullptr; float bd = 1e30f;
-        if (me) for (auto& ex : CEntryExitManager::GetPool()->GetAllValid()) { if (g_enterArea == 0 ? ((int)ex.m_nArea != (int)CGame::currArea || ex.m_nArea == 0 || !ex.m_pLink || (int)ex.m_pLink->m_nArea != 0) /* leave: the exit marker of the interior CJ is in */ : ((int)ex.m_nArea != 0 || !ex.m_pLink || (int)ex.m_pLink->m_nArea != g_enterArea)) continue; const auto c = ex.GetPosition(); const float dd = (c - me->GetPosition()).Magnitude(); if (dd < bd) { bd = dd; best = &ex; } }
+        if (me) for (auto& ex : CEntryExitManager::GetPool()->GetAllValid()) { if (g_enterArea == 0 ? ((int)ex.m_nArea != (int)CGame::currArea || ex.m_nArea == 0 || !ex.m_pLink || (int)ex.m_pLink->m_nArea != 0) /* leave: the exit marker of the interior CJ is in */ : ((int)ex.m_nArea != 0 || !ex.m_pLink || (int)ex.m_pLink->m_nArea != g_enterArea)) continue; const auto c = ex.GetPosition(); const float dd = (c - me->GetPosition()).Magnitude(); const float key = dd + (g_enexNames.count(std::string(ex.m_szName, strnlen(ex.m_szName, 8))) || g_enexNames.count(std::string(ex.m_pLink ? ex.m_pLink->m_szName : "", ex.m_pLink ? strnlen(ex.m_pLink->m_szName, 8) : 0)) ? 0.f : 1e6f); if (key < bd) { bd = key; best = &ex; } } // CR27: an entrance whose name the mission compares with wins over the nearest one
         if (g_enterEx) { best = g_enterEx; g_enterEx = nullptr; bd = 0.f; }
         if (!best) { QueueActions({}, 0); return; }
         const auto c = best->GetPosition(); float dx = c.x - best->m_vecExitPos.x, dy = c.y - best->m_vecExitPos.y; const float len = std::max(0.01f, (float)std::hypot(dx, dy));
@@ -1148,8 +1150,8 @@ void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int co
             for (auto& r : g_pending) { r->hasBranch = true; r->jumped = jumped; r->fall = ptr + 7; r->target = jumped ? s->m_IP : ptr + 7; }
             if (!jumped) { g_group = g_pending; g_fallPending = true; }
             g_pending.clear();
-        } else if (op == 0x077E) { // CR23: GET_AREA_VISIBLE var: remember the destination variable (a later `var == N` wait = be in interior N)
-            if (InSpace(ptr)) { uint32_t ref = 0; if (OperandVar(ptr + 2, ref)) g_areaVars.insert(ref); }
+        } else if (op == 0x077E || (op == 0x09E8 && !std::getenv("NOTSA_MDRIVER_NOCHARAREA"))) { // CR23: GET_AREA_VISIBLE var: remember the destination variable (a later `var == N` wait = be in interior N). CR27 (22 BURNING DESIRE): GET_CHAR_AREA_VISIBLE char var too (the helper sub of the mission reads the player's area with it)
+            if (InSpace(ptr)) { uint32_t ref = 0; const uint8_t* q = ptr + 2; bool mf = false, isI = false; int32_t iv = 0; if (op == 0x09E8) q = SkipOperand(q, mf, isI, iv); if (q && OperandVar(q, ref)) g_areaVars.insert(ref); }
         } else if (op == 0x0702) { // CR22: GET_PERCENTAGE_TAGGED_IN_AREA x1 y1 x2 y2 -> var: remember the area and the destination variable (a later `var == 100` wait = spray these tags)
             if (InSpace(ptr)) {
                 const uint8_t* ops5[5]{}; const uint8_t* q = ptr + 2; bool mf = false, isI = false; int32_t iv = 0; int k = 0;

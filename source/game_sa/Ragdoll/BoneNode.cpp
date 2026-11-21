@@ -235,9 +235,9 @@ void BoneNode_c::Limit(float blend) {
             float pose = info->PoseRots.z;
 
             // Scale the Z range toward boneOffset as angleX approaches 45°
-            // 0x617707: factor = 1.0 - |angleX| * (1/45 as a float, 0x86D2B8), NOT `|angleX| / -45 + 1` (different rounding); `fcomp 0.0` replaces a negative / NaN factor by 0
+            // 0x617707: factor = 1.0 - |angleX| * (1/45 as a float, 0x86D2B8), NOT `|angleX| / -45 + 1` (different rounding); `fcomp 0.0` replaces a negative factor by 0
             const float f      = 1.0f - std::abs(angles.x) * std::bit_cast<float>(0x3CB60B61u);
-            const float factor = f >= 0.0f ? f : 0.0f;
+            const float factor = f < 0.0f ? 0.0f : f; // exe: `fcomp` + `test ah, 0x41` / `jne`: the replacement by 0 only happens for f < 0 (a NaN factor is kept)
             minZ = (minZ - pose) * factor + pose;
             maxZ = (maxZ - pose) * factor + pose;
         }

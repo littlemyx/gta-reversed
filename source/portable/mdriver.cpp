@@ -2,6 +2,16 @@
 #include "StdInc.h"
 #include "mdriver.h"
 #include "Garages.h"
+#include "PedGroup.h"
+#include "Tasks/TaskTypes/TaskComplexBeInGroup.h"
+#include "Events/EventScriptCommand.h"
+#include "Tasks/TaskTypes/TaskComplexEnterCarAsPassenger.h"
+#include "Tasks/TaskTypes/TaskSimpleCarDrive.h"
+#include "Tasks/TaskComplexSequence.h"
+#include "Events/EventGroupEvent.h"
+#include "Events/EventLeaderEnteredCarAsDriver.h"
+#include "PedGroupIntelligence.h"
+#include "Radar.h"
 #include "loadlog.h"
 #include "standalone/Fixups.h"
 #include "Scripts/TheScripts.h"
@@ -184,6 +194,25 @@ void Load(const char* path) {
     }
     g_loaded = true;
 }
+// CR26 (20 LOS SEPULCROS): the car part of SET_GROUP_MEMBER (Group13_15.cpp SetGroupMember, exe 0x4923BA): the group's leader is in a vehicle with a free passenger seat => the group's response to CEventLeaderEnteredCarAsDriver (TASK_GROUP_ENTER_CAR: the follower gets the enter-car-as-passenger script task and, once, the default task sequence {CarDrive, previous default}: that is what makes IS_CHAR_SITTING_IN_CAR (TASK_SIMPLE_CAR_DRIVE) true for a group member)
+void GroupEnterLeaderCar(CPed* ped, int idx) {
+    if (!ped || idx < 0 || idx >= 8) return;
+    auto& group = CPedGroups::ms_groups[idx]; auto& mem = group.GetMembership();
+    CPed* const leader = mem.GetLeader(); if (!leader) return;
+    CVehicle* veh = leader->bInVehicle ? leader->m_pVehicle : nullptr; if (!veh) return;
+    bool hasFreeSeat = false; for (int32 i = 0; i < (int32)veh->m_nMaxPassengers; i++) if (!veh->m_apPassengers[i]) { hasFreeSeat = true; break; }
+    if (!hasFreeSeat) return;
+    CEventLeaderEnteredCarAsDriver leaderEvent{ veh }; leaderEvent.ComputeResponseTaskType(&group);
+    auto& intel = group.GetIntelligence();
+    switch ((int16)leaderEvent.m_TaskId) {
+    case TASK_GROUP_ENTER_CAR_AND_PERFORM_SEQUENCE: { CEventGroupEvent groupEvent{ leader, new CEventLeaderEnteredCarAsDriver{ veh } }; intel.AddEvent(&groupEvent); break; }
+    case TASK_GROUP_ENTER_CAR: {
+        CTaskComplexEnterCarAsPassenger enterTask{ veh, 0, true }; intel.SetScriptCommandTask(ped, enterTask);
+        if (!ped->bHasGroupDriveTask) { ped->bHasGroupDriveTask = true; CTaskComplexSequence seq; seq.AddTask(new CTaskSimpleCarDrive{ veh, nullptr, true }); if (const auto def = intel.GetTaskDefault(ped)) seq.AddTask(def->Clone()); intel.SetDefaultTask(ped, seq); }
+        break; }
+    default: break;
+    }
+}
 CRunningScript* FindThread() {
     for (auto* s = CTheScripts::pActiveScripts; s; s = s->m_pNext) {
         if (!_strnicmp((const char*)s->m_szName, g_script.c_str(), 8)) return s;
@@ -203,6 +232,7 @@ std::map<const uint8_t*, RecP> g_flagConds; // CR22: every plain `var == number`
 std::set<uint32_t> g_areaVars; int g_enterArea = -1; // CR23: variables written by GET_AREA_VISIBLE (077E); the interior id a compare of one of them asks for
 std::map<uint32_t, int> g_coordVeh; struct SphSearch { int veh; int model; float radius; }; std::map<uint32_t, SphSearch> g_sphSearch; SphSearch g_sphCur{}; // CR24: GET_CAR_COORDINATES x var -> vehicle handle; GET_RANDOM_CAR_IN_SPHERE (073E) result var -> {the vehicle whose coordinates are the centre, model, radius}
 std::map<uint32_t, std::array<float, 4>> g_tagAreas; float g_tagRect[4]{}; // CR22: destination variable -> area of the last GET_PERCENTAGE_TAGGED_IN_AREA (0702) that wrote it; the area of the picked decision
+std::deque<RecP>         g_recsBig;          // CR26: the last 400 conditional commands (the 64-condition window is too short for a pass of ~100 conditions)
 std::deque<RecP>         g_recs;             // the last 64 conditional commands (KEEP)
 std::vector<RecP>        g_group; bool g_fallPending = false; // CR19: the conditions of the last GOTO_IF_FALSE, and whether it fell through (the next command decides waitAfter)
 std::vector<RecP>        g_pending;          // the conditions since the last GOTO_IF_FALSE (max 12)
@@ -528,6 +558,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
     static const Row kDmg{ 0x0366, 1, "HAS_OBJECT_BEEN_DAMAGED", "damageobj", { "$0" }, 30 };
     static const Row kPho{ 0x04C5, 1, "HAS_CHAR_BEEN_PHOTOGRAPHED", "photo", { "$0" }, 30 }; // CR25 (58 PHOTO OPPORTUNITY)
     static const Row kTag{ 0x0038, 0, "int compare of the GET_PERCENTAGE_TAGGED_IN_AREA result", "tagarea", {}, 60 };
+    static const Row kGrp{ 0x06EE, 1, "IS_GROUP_MEMBER", "joingroup", { "$0", "$1" }, 30 }; // CR26 (20 LOS SEPULCROS)
     if (!std::getenv("NOTSA_MDRIVER_NOBUILTIN")) {
         const auto tagCond = [&](const RecP& c) { // an integer compare of the result variable of a GET_PERCENTAGE_TAGGED_IN_AREA: the area it measured (a false plain compare, or the TRUE NOT-form compare of the wait group: `WHILE NOT $27 == 100`)
             const int op = c->raw & 0x7FFF; const bool intCmp = (op >= 0x0018 && op <= 0x0041) || (op >= 0x04A3 && op <= 0x04B7) || (op >= 0x07D6 && op <= 0x07D9); if (!intCmp) return false;
@@ -537,6 +568,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
         for (auto& c : falses) {
             const int op = c->raw & 0x7FFF; if (c->raw & 0x8000) continue;
             if (op == 0x04C5 && !std::getenv("NOTSA_MDRIVER_NOPHOTO")) { auto a2 = ResolveArgs(kPho, *c); if (a2) { d.act = true; d.row = &kPho; d.rowIdx = -6; d.cond = c; d.args = *a2; d.op = op; return d; } }
+            if (op == 0x06EE && !std::getenv("NOTSA_MDRIVER_NOJOINGROUP")) { auto a2 = ResolveArgs(kGrp, *c); if (a2 && a2->size() == 2 && CPools::GetPed((int)(*a2)[0].n) && CPools::GetPed((int)(*a2)[0].n) != Cj()) { d.act = true; d.row = &kGrp; d.rowIdx = -8; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (op == 0x0366) { auto a2 = ResolveArgs(kDmg, *c); if (a2 && wide && (a2->empty() || !CPools::GetObject((int)(*a2)[0].n))) continue; /* CR23: a record of an older pass: the object may be gone */ if (a2) { d.act = true; d.row = &kDmg; d.rowIdx = -2; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (tagCond(c)) { d.act = true; d.row = &kTag; d.rowIdx = -3; d.cond = c; d.op = op; return d; }
         }
@@ -691,6 +723,8 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         }
         one(warp(F_(0), F_(1), F_(2), v == "vehwarp")); return;
     }
+    if (v == "joingroup") { QueueActions({ "emit mdjoingrp:" + std::to_string(I_(0)) + ":" + std::to_string(I_(1)) }, row.settle); return; } // CR26: IS_GROUP_MEMBER(ped, group) is false: the ped joins the group (what SET_GROUP_MEMBER does for a recruit)
+    if (v == "blipgo") { one(warp(F_(0), F_(1), F_(2), false)); return; } // CR26
     if (v == "midpoint") {
         float x, y, z = -100.f;
         if (d.args.size() >= 6) { x = (F_(0) + F_(3)) / 2; y = (F_(1) + F_(4)) / 2; z = (F_(2) + F_(5)) / 2; } else { x = (F_(0) + F_(2)) / 2; y = (F_(1) + F_(3)) / 2; }
@@ -953,6 +987,21 @@ void TickGeneric() {
         if (d.row == kr) break;
         }
     }
+    if (d.act && d.row->action == "wait" && g_attemptsAt[ipPtr] >= 2 && !std::getenv("NOTSA_MDRIVER_NOBIGWIN") && g_recsBig.size() > g_recs.size()) { // CR26 (20 LOS SEPULCROS: a pass of ~100 conditions, the 64-condition window holds only its last third; the stage test `IS_CHAR_SITTING_IN_CAR` / the three IS_CHAR_DEAD of the pass' first half are outside it): the wait row answered this wake ip twice and the thread still stands: decide again over the whole last 3 passes (up to 400 conditions); a non-wait answer wins
+        std::vector<RecP> big; for (auto& r : g_recsBig) if (r->waitSeq >= g_waitSeq - 3) big.push_back(r);
+        Dec d3 = Decide(big, g_attemptsAt[ipPtr]);
+        if (d3.act && d3.row->action != "wait") { notsa::standalone::Fixups::Log("[mdriver] frame %d big window (%zu -> %zu records): %s", fr, loop.size(), big.size(), d3.row->name.c_str()); d = d3; }
+    }
+    if (d.act && d.row->action == "wait" && g_attemptsAt[ipPtr] >= 2 && !std::getenv("NOTSA_MDRIVER_NOBLIPGO")) { // CR26 (19 CESAR VIALPANDO: stage 19 waits for a flag the mod-shop script sets once the garage opens; the only open task is the destination blip): the wait row answered this wake ip twice and the thread still stands: CJ (with his car) goes to the mission's coordinate blip (the newest BLIP_COORD of the radar)
+        const tRadarTrace* best = nullptr;
+        for (auto& t : CRadar::ms_RadarTrace) if (t.m_nBlipType == BLIP_COORD && !t.HasSprite() && (!best || t.m_nCounter >= best->m_nCounter)) best = &t;
+        auto* me = Cj();
+        if (best && me && (me->GetPosition() - best->m_vPosition).Magnitude2D() > 6.f) {
+            static Row kBlip{ 0, 0, "destination blip (no condition of the pass is answerable)", "blipgo", {}, 120 };
+            d.row = &kBlip; d.rowIdx = -7; d.cond = nullptr; d.op = 0; d.args.clear();
+            for (const float f : { best->m_vPosition.x, best->m_vPosition.y, std::fabs(best->m_vPosition.z) < 0.5f ? -100.f : best->m_vPosition.z }) { RArg a; a.n = f; d.args.push_back(a); }
+        }
+    }
     g_attemptsAt[ipPtr]++;
     const std::string key = std::to_string(at) + ":" + std::to_string(d.rowIdx) + ":" + RKey(d.args);
     const int n = ++g_noProgress[key];
@@ -999,7 +1048,7 @@ void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int co
             const int n = Arity(op); r->args = DecodeArgs(s, ptr, n >= 0 ? n : 10);
             { const uint8_t* ops[3]{}; int cnt = 0; if (InSpace(ptr) && CmdOps(ptr, ops, cnt)) for (int k = 0; k < 2 && k < cnt; k++) { uint32_t ref; if (OperandVar(ops[k], ref)) r->vref[k] = ref; } } // CR22
             if (!(raw & 0x8000) && (op == 0x0038 || op == 0x0039)) g_flagConds[ptr] = r; // CR22
-            g_recs.push_back(r); if (g_recs.size() > 64) g_recs.pop_front();
+            g_recs.push_back(r); if (g_recs.size() > 64) g_recs.pop_front(); g_recsBig.push_back(r); if (g_recsBig.size() > 400) g_recsBig.pop_front();
             if (!(raw & 0x8000) && op == 0x0118) g_deadConds[ptr] = r; // CR21: every plain IS_CHAR_DEAD site seen (the 64-condition window misses the rarely-run ones)
             g_pending.push_back(r); if (g_pending.size() > 12) g_pending.erase(g_pending.begin());
         }
@@ -1056,6 +1105,8 @@ bool Cmd(const char* name, const std::string& args) {
     }
     if (!std::strcmp(name, "mdwarppass")) { // actions.ts entercar of another char: set in as a passenger
         const int h = std::atoi(args.c_str()); auto* car = CPools::GetVehicle(std::atoi(args.c_str() + args.find(':') + 1)); auto* oth = CPools::GetPed(h);
+        if (car && oth && !std::getenv("NOTSA_MDRIVER_NOGROUPCAR")) if (auto* cj0 = Cj(); cj0 && cj0->bInVehicle && cj0->m_pVehicle == car) for (int gi = 0; gi < 8; gi++) if (CPedGroups::ms_activeGroups[gi] && CPedGroups::ms_groups[gi].GetMembership().IsFollower(oth) && CPedGroups::ms_groups[gi].GetMembership().GetLeader() == cj0) { // CR26: a member of CJ's group, CJ at the wheel: the group's own enter-car response (as SET_GROUP_MEMBER) instead of a warp: the follower then has the CarDrive task (IS_CHAR_SITTING_IN_CAR)
+            GroupEnterLeaderCar(oth, gi); g_buddyRef = h; if (std::getenv("NOTSA_MDRIVER_ENTERLOG")) notsa::standalone::Fixups::Log("[enterlog] mdwarppass ped %d: group %d enter-car response", h, gi); return true; }
         if (car && oth) { oth->GetIntelligence()->FlushImmediately(false); CTaskSimpleCarSetPedInAsPassenger t(car, TARGET_DOOR_FRONT_RIGHT, true, nullptr); t.ProcessPed(oth); g_buddyRef = h; }
         if (std::getenv("NOTSA_MDRIVER_ENTERLOG")) notsa::standalone::Fixups::Log("[enterlog] mdwarppass ped %d=%p car %d=%p -> inVeh %d same %d model %d", h, (void*)oth, std::atoi(args.c_str() + args.find(':') + 1), (void*)car, oth ? (int)oth->bInVehicle : -1, oth ? (int)(oth->m_pVehicle == car) : -1, oth ? (int)oth->m_nModelIndex : -1);
         return true;
@@ -1063,6 +1114,19 @@ bool Cmd(const char* name, const std::string& args) {
     if (!std::strcmp(name, "mdtosphere")) { // CR24: the intercept warp of the remote vehicle: where the nearest qualifying car will be in 4.3 s (position + velocity * 4.3 s, 3 m up)
         const int h = std::atoi(args.c_str()); const int model = std::atoi(args.c_str() + args.find(':') + 1);
         if (auto* best = SphereTarget(h, model)) { const CVector p = best->GetPosition() + best->m_vecMoveSpeed * 50.f * 4.3f; notsa::standalone::Fixups::Log("[mdriver] mdtosphere: car %d at %.1f,%.1f,%.1f speed %.1f -> %.1f,%.1f,%.1f", (int)best->m_nModelIndex, best->GetPosition().x, best->GetPosition().y, best->GetPosition().z, best->m_vecMoveSpeed.Magnitude() * 50.f, p.x, p.y, p.z); return Cmd("mdwother", "1:" + std::to_string(h) + ":" + F(p.x) + ":" + F(p.y) + ":" + F(p.z + 3.f)); }
+        return true;
+    }
+    if (!std::strcmp(name, "mdjoingrp")) { // CR26: SET_GROUP_MEMBER(group, ped) without the car part: be-in-group task event, AddFollower, group.Process()
+        const int ph = std::atoi(args.c_str()); const int gh = std::atoi(args.c_str() + args.find(':') + 1);
+        const int idx = CTheScripts::GetActualScriptThingIndex(gh, SCRIPT_THING_PED_GROUP);
+        if (auto* k = CPools::GetPed(ph); k && idx >= 0 && idx < 8) {
+            CEventScriptCommand ev{ TASK_PRIMARY_PRIMARY, new CTaskComplexBeInGroup{ idx, false }, false };
+            k->GetIntelligence()->m_eventGroup.Add(&ev, false);
+            auto& grp = CPedGroups::ms_groups[idx]; auto& mem = grp.GetMembership();
+            if (mem.CountMembersExcludingLeader() >= 7 && mem.GetLeader() && mem.GetLeader()->IsPlayer()) mem.RemoveNFollowers(1);
+            mem.AddFollower(k); grp.Process(); GroupEnterLeaderCar(k, idx);
+            notsa::standalone::Fixups::Log("[mdriver] mdjoingrp ped %d group %d (idx %d)", ph, gh, idx);
+        }
         return true;
     }
     if (!std::strcmp(name, "mdphoto")) {

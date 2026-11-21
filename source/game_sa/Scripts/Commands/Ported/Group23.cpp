@@ -18,6 +18,7 @@
 #include "MenuSystem.h"
 #include "Streaming.h"
 #include "StreamedScripts.h"
+#include "standalone/Fixups.h"
 #include "ScriptsForBrains.h"
 #include "Weather.h"
 #include "WaterLevel.h"
@@ -298,6 +299,10 @@ void SetMessageFormatting(int32 flag, int32 centre, int32 width) {
 void StartNewStreamedScript(CRunningScript& S, int32 scmIndex) {
     const int16 proper = CTheScripts::StreamedScripts.GetProperIndexFromIndexUsedByScript((int16)(uint16)scmIndex);
     CRunningScript* const newScript = CTheScripts::StreamedScripts.StartNewStreamedScript((int32)proper);
+    if (std::getenv("NOTSA_STREAMLOG")) { // CR26 debug log (off by default, no control flow): which streamed scripts are started
+        const auto* si = (proper >= 0 && proper < (int)CTheScripts::StreamedScripts.m_aScripts.size()) ? &CTheScripts::StreamedScripts.m_aScripts[proper] : nullptr;
+        notsa::standalone::Fixups::Log("[streamlog] START_NEW_STREAMED_SCRIPT scmIdx %d proper %d name %s users %d loaded %d by %.8s ip %x -> %p gf %u", (int)scmIndex, (int)proper, si ? si->m_Filename : "?", si ? (int)si->m_NumberOfUsers : -1, si ? (int)(si->m_StreamedScriptMemory != nullptr) : -1, S.m_szName, (unsigned)(S.m_IP - S.m_BaseIP), (void*)newScript, (unsigned)CTimer::GetFrameCounter());
+    }
     S.ReadParametersForNewlyStartedScript(newScript);
 }
 
@@ -381,6 +386,9 @@ void SetDarknessEffect(int32 flag, int32 alpha) {
 //! No bounds check on the index (a "not found" index of -1 reads the memory in front of the array, like the exe).
 int32 GetNumberOfInstancesOfStreamedScript(int32 scmIndex) {
     const int16 proper = CTheScripts::StreamedScripts.GetProperIndexFromIndexUsedByScript((int16)(uint16)scmIndex);
+    if (std::getenv("NOTSA_STREAMLOG")) { // CR26 debug log (off by default, no control flow)
+        notsa::standalone::Fixups::Log("[streamlog] GET_NUMBER_OF_INSTANCES scmIdx %d proper %d name %s users %d gf %u", (int)scmIndex, (int)proper, proper >= 0 ? CTheScripts::StreamedScripts.m_aScripts[proper].m_Filename : "?", (int)CTheScripts::StreamedScripts.m_aScripts.data()[proper].m_NumberOfUsers, (unsigned)CTimer::GetFrameCounter());
+    }
     return (int32)CTheScripts::StreamedScripts.m_aScripts.data()[proper].m_NumberOfUsers;
 }
 

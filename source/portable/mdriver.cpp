@@ -1018,7 +1018,8 @@ static std::map<int,int> g_padHold; // CR4: button -> frames left
 static std::string ShooterDesc(CEntity* e) { // CR18: debug: model, vehicle (model, driver or passenger), distance to CJ, active weapon of the last damager of CJ's car
     if (!e || e->GetType() != ENTITY_TYPE_PED) return "-"; auto* p = static_cast<CPed*>(e); char b[160]; auto* me = Cj();
     std::snprintf(b, sizeof b, "ped%d/inveh=%d(%d,%s)/d=%.1f/wpn=%d", (int)p->m_nModelIndex, (int)p->bInVehicle, p->m_pVehicle ? (int)p->m_pVehicle->m_nModelIndex : -1, p->m_pVehicle ? (p->m_pVehicle->m_pDriver == p ? "drv" : "pax") : "-", me ? (p->GetPosition() - me->GetPosition()).Magnitude() : -1.f, (int)p->GetActiveWeapon().m_Type);
-    return b;
+    std::string o = b; o += " pedtype=" + std::to_string((int)p->m_nPedType) + " wanted=" + std::to_string(FindPlayerWanted() ? (int)FindPlayerWanted()->m_WantedLevel : -1); auto& tm = p->GetIntelligence()->m_TaskMgr; for (int ti = 0; ti < 5; ti++) if (auto* t = tm.GetTaskPrimary(ti)) { o += " P" + std::to_string(ti) + ":"; for (auto* tt = t; tt; tt = tt->GetSubTask()) o += std::to_string((int)tt->GetTaskType()) + ">"; } // CR34: tasks of the shooter
+    return o;
 }
 void TickGeneric() {
     for (auto it = g_padHold.begin(); it != g_padHold.end();) { if (it->second > 0) --it->second; it = it->second > 0 ? std::next(it) : g_padHold.erase(it); }
@@ -1092,6 +1093,17 @@ void TickGeneric() {
     if (static const bool hl = std::getenv("NOTSA_MDRIVER_HPLOG") != nullptr; hl && Cj()) { // CR18: debug: every health drop of the car CJ is in (position, speed, water, fire, last damager)
         static float s_hp = -1.f; auto* v = Cj()->bInVehicle ? Cj()->m_pVehicle : nullptr;
         if (v && v->m_fHealth != s_hp) { if (s_hp >= 0.f && v->m_fHealth < s_hp) notsa::standalone::Fixups::Log("[hplog] f%d hp %.0f->%.0f pos=%.1f,%.1f,%.1f spd=%.3f water=%d drown=%d fire=%d wpn=%d dmgEnt=%d inv=%d shooter=%s", fr, s_hp, v->m_fHealth, v->GetPosition().x, v->GetPosition().y, v->GetPosition().z, v->m_vecMoveSpeed.Magnitude(), (int)v->physicalFlags.bTouchingWater, (int)v->vehicleFlags.bIsDrowning, v->m_pFire ? 1 : 0, (int)v->m_nLastWeaponDamageType, v->m_pLastDamageEntity ? (int)v->m_pLastDamageEntity->GetType() : -1, (int)v->physicalFlags.bInvulnerable, ShooterDesc(v->m_pLastDamageEntity).c_str()); s_hp = v->m_fHealth; }
+    }
+    if (root && Cj() && fr % 5 == 0 && g_wait == 0 && g_qpos >= g_queue.size() && g_untilLeft == 0 && !CCutsceneMgr::IsCutsceneProcessing() && !std::getenv("NOTSA_MDRIVER_NORETALIATE")) { // CR34 (33 MANAGEMENT ISSUES: the mission's own guards (ped type MISSION1+) shoot CJ's car while the stage waits for the player to arrive; the car burns down and the passenger the script keeps alive dies): a player returns the fire. 4 health drops of CJ (or his car) from the same hostile script ped = the ped is killed (never a buddy / protected ped)
+        static CPhysical* s_t = nullptr; static float s_hp = -1.f; static CPed* s_sh = nullptr; static int s_hits = 0;
+        CPhysical* t = Cj()->bInVehicle && Cj()->m_pVehicle ? (CPhysical*)Cj()->m_pVehicle : (CPhysical*)Cj(); const float hp = Cj()->bInVehicle && Cj()->m_pVehicle ? Cj()->m_pVehicle->m_fHealth : Cj()->m_fHealth;
+        if (t != s_t) { s_t = t; s_hp = hp; }
+        else if (hp < s_hp - 0.5f) {
+            CEntity* dm = Cj()->bInVehicle && Cj()->m_pVehicle ? Cj()->m_pVehicle->m_pLastDamageEntity : Cj()->m_pLastEntityDamage;
+            if (dm && dm->GetType() == ENTITY_TYPE_PED && dm != Cj() && (int)static_cast<CPed*>(dm)->m_nPedType >= (int)PED_TYPE_MISSION1) { auto* sp = static_cast<CPed*>(dm); if (sp != s_sh) { s_sh = sp; s_hits = 0; } s_hits++; }
+            s_hp = hp;
+            if (s_sh && s_hits >= 4) { const int h = CPools::GetPedRef(s_sh); if (s_sh->m_fHealth > 0.f && !ProtectedHandle(h)) { notsa::standalone::Fixups::Log("[mdriver] retaliate frame %d: ped %d (model %d, type %d) shot CJ's %s %d times: killed", fr, h, (int)s_sh->m_nModelIndex, (int)s_sh->m_nPedType, Cj()->bInVehicle ? "car" : "ped", s_hits); Emit("mdkillped:" + std::to_string(h)); } s_hits = 0; s_sh = nullptr; }
+        } else if (hp > s_hp) s_hp = hp;
     }
     if (static const bool xl = std::getenv("NOTSA_MDRIVER_ENEXLOG") != nullptr; xl && Cj() && fr % 25 == 0 && fr > (std::getenv("NOTSA_MDRIVER_ENEXFROM") ? std::atoi(std::getenv("NOTSA_MDRIVER_ENEXFROM")) : 16400) && fr < 99999) { // CR23: debug: why does standing on an entrance marker not start the transition
         auto* me = Cj(); const auto pp = me->GetPosition(); std::string tk; auto& tm = me->GetIntelligence()->m_TaskMgr; for (int ti = 0; ti < 5; ti++) if (auto* t = tm.GetTaskPrimary(ti)) { tk += " P" + std::to_string(ti) + ":"; for (auto* tt = t; tt; tt = tt->GetSubTask()) tk += std::to_string((int)tt->GetTaskType()) + ">"; }

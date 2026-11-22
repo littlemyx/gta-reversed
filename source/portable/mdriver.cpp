@@ -389,7 +389,7 @@ bool OperandInt(const uint8_t* q, int32_t& v) { switch (*q) { case 1: v = *(cons
 void FlagSets(const CRunningScript* s, const uint8_t* p, int hops, std::vector<std::pair<uint32_t, int32_t>>& out, std::set<const uint8_t*>& seen) { // the `var = constant` commands of the straight-line path from p (gotos followed, a condition / wait / return ends it)
     for (int n = 0; n < 40 && InSpace(p); n++) {
         const int op = *(const uint16_t*)p & 0x7FFF; if (!seen.insert(p).second) return;
-        if (op == 0x0001 || op == 0x0051 || op == 0x00D6 || op == 0x004D || op == 0x0050) return;
+        if (op == 0x0001 || op == 0x0051 || op == 0x00D6 || op == 0x004D || (op == 0x0050 && std::getenv("NOTSA_MDRIVER_NOGOSUBFLAG"))) return; // CR41 (59 JIZZY: `IS_CHAR_DEAD @67 -> GOSUB cleanup, PRINT_NOW SYN_F_5, @37 = 1`, the loop head is `WHILE @37 == 0`): a GOSUB returns, the straight line goes on past it
         const uint8_t* ops[3]{}; int cnt = 0; const uint8_t* e = CmdOps(p, ops, cnt); if (!e) return;
         if ((op == 0x0004 || op == 0x0006) && cnt >= 2) { uint32_t ref; int32_t v; if (OperandVar(ops[0], ref) && OperandInt(ops[1], v)) out.push_back({ ref, v }); }
         if (op >= 0x00BA && op <= 0x00BD) out.push_back({ 0xFFFFFFFFu, 0x7FFFFFFF }); // CR24: a text print on the path (the fail text of the CR21 / 11 guard shape: `IS_CHAR_DEAD -> print text, flag = 1`)

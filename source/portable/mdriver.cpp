@@ -238,6 +238,8 @@ std::vector<Row>         g_rows;
 // a conditional command of the root thread as the TS StallSink records it (opcode, NOT form, state, decoded operands, the WAIT count, where the following GOTO_IF_FALSE led)
 struct Rec { const uint8_t* p; uint16_t raw; int cond; int waitSeq; std::vector<Arg> args; bool hasBranch = false, jumped = false, waitAfter = false; const uint8_t *target = nullptr, *fall = nullptr; uint32_t vref[2] = { 0, 0 }; /* CR22: identity of operand 0 / 1 when it is a variable: (type << 16) | offset-or-index, else 0 */ };
 using RecP = std::shared_ptr<Rec>;
+static const size_t g_bigCap = std::getenv("NOTSA_MDRIVER_BIGCAP") ? (size_t)std::atoi(std::getenv("NOTSA_MDRIVER_BIGCAP")) : 400; // CR39: the window of the last conditional commands
+CVehicle* NearestCarOfModel(CPed* c, int model, float best); // CR39
 std::set<std::string> g_enexNames; // CR27: text literals the mission compares an entry exit name with (IS_VAR_TEXT_LABEL16_EQUAL_TO_TEXT_LABEL after GET_NAME_OF_ENTRY_EXIT_CHAR_USED): the entrance the stage wants
 CEntryExit* g_enterEx = nullptr; // CR27: the entry exit the `enterarea` verb goes through (an interior blip's), instead of searching by area
 bool g_auxMode = false; // CR27: Decide() over an aux (streamed script) thread answers only with warps / key presses (no kills of the streamed script's peds)
@@ -256,7 +258,7 @@ uint32_t                 g_frame0 = 0;
 std::string              g_name = "?", g_stopReason, g_failText, g_lastLabel;
 int                      g_stopOp = -1; uint32_t g_stopIp = 0;
 bool                     g_pass = false, g_fail = false, g_endedFail = false, g_relaunched = false; int g_relaunchWait = 0;
-int                      g_passFrame = -1, g_failFrame = -1, g_endFrame = -1, g_killFrame = -1000000, g_killSettle = 0;
+int                      g_passFrame = -1, g_failFrame = -1, g_endFrame = -1, g_killFrame = -1000000, g_killSettle = 0, g_wantedClrFrame = -1000000;
 int                      g_maxFrames = 30000, g_fightClock = 0, g_fightKills = 0;
 struct HurtNow { int h = 0; int hp = 0; } g_hurtNow; // CR37: a false `N > GET_CHAR_HEALTH var` seen in the pass: the ped is hurt at the next tick (37: the scripted biker punches CJ to death 550 frames after the stage starts, the 600-frame stall answer is too late)
 std::set<int>            g_enemyTypes;       // ped types shot for going after CJ himself (TS enemyTypes)
@@ -631,6 +633,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
     static const Row kExp{ 0x0356, 1, "IS_EXPLOSION_IN_AREA", "explode", { "$0", "$1", "$2", "$3", "$4", "$5", "$6" }, 60 }; // CR36 (42 SMALL TOWN BANK: the vault wall waits for an explosion in a 2 m box)
     static const Row kAtt{ 0x07AB, 1, "IS_TRAILER_ATTACHED_TO_CAB", "attachtrailer", { "$0", "$1" }, 60 }; // CR37 (43 TANKER COMMANDER: the trailer has to be hitched to the cab)
     static const Row kSmash{ 0x0716, 1, "IS_CLOSEST_OBJECT_OF_TYPE_SMASHED_OR_DAMAGED", "smashobj", { "$0", "$1", "$2", "$3", "$4", "$5", "$6" }, 30 }; // CR38 (47 ARE YOU GOING TO SAN FIERRO?: the three pot plants have to be damaged)
+    static const Row kObjLoc{ 0x04E6, 1, "LOCATE_OBJECT_3D", "objto", { "$0", "$1", "$2", "$3" }, 60 }; // CR39 (50 DECONSTRUCTION: the toilet object has to be pushed into the pit: the locate box is 2.9 x 5 m)
     static const Row kPho{ 0x04C5, 1, "HAS_CHAR_BEEN_PHOTOGRAPHED", "photo", { "$0" }, 30 }; // CR25 (58 PHOTO OPPORTUNITY)
     static const Row kTag{ 0x0038, 0, "int compare of the GET_PERCENTAGE_TAGGED_IN_AREA result", "tagarea", {}, 60 };
     static const Row kFix{ 0x03C9, 0, "NOT IS_CAR_VISIBLY_DAMAGED", "carfix", { "$0" }, 30 }; // CR34 (33 MANAGEMENT ISSUES)
@@ -665,6 +668,8 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
                 for (auto& q : falses) if (q != c && (q->raw & 0x7FFF) == 0x02EE && !(q->raw & 0x8000)) if (auto a3 = ResolveArgs(kPrj, *q); a3 && a3->size() == 6) for (auto& x : *a3) d.args.push_back(x);
                 return d; } }
             if (op == 0x0356 && !std::getenv("NOTSA_MDRIVER_NOEXPLODE")) { auto a2 = ResolveArgs(kExp, *c); if (a2 && a2->size() == 7) { d.act = true; d.row = &kExp; d.rowIdx = -16; d.cond = c; d.args = *a2; d.op = op; return d; } } // CR36: IS_EXPLOSION_IN_AREA(type, box) is false: an explosion of that type at the box centre
+            if (op == 0x04E6 && !std::getenv("NOTSA_MDRIVER_NOOBJTO")) { auto a2 = ResolveArgs(kObjLoc, *c); if (a2 && a2->size() == 4 && CPools::GetObject((int)(*a2)[0].n)) { d.act = true; d.row = &kObjLoc; d.rowIdx = -19; d.cond = c; d.args = *a2; d.op = op; return d; } } // CR39: LOCATE_OBJECT_3D(obj, box) is false: the object is put at the centre of the box (a stand-in for the push)
+            if (op == 0x00DD && !std::getenv("NOTSA_MDRIVER_NOINMODEL") && c->args.size() >= 2 && ArgInt(*c, 1)) { auto* cj = Cj(); const auto h0 = ArgInt(*c, 0); if (cj && h0 && CPools::GetPed((int)*h0) == cj && NearestCarOfModel(cj, (int)*ArgInt(*c, 1), 600.f)) { static const Row kInModel{ 0x00DD, 1, "IS_CHAR_IN_MODEL", "entermodel", { "$1" }, 60 }; auto a2 = ResolveArgs(kInModel, *c); if (a2 && a2->size() == 1) { d.act = true; d.row = &kInModel; d.rowIdx = -20; d.cond = c; d.args = *a2; d.op = op; return d; } } } // CR39 (50 DECONSTRUCTION: CJ has to sit in the cement truck, model 524): IS_CHAR_IN_MODEL(CJ, model) is false: CJ goes into the nearest free car of that model
             if (op == 0x07AB && !std::getenv("NOTSA_MDRIVER_NOATTACH")) { auto a2 = ResolveArgs(kAtt, *c); if (a2 && a2->size() == 2) { d.act = true; d.row = &kAtt; d.rowIdx = -17; d.cond = c; d.args = *a2; d.op = op; return d; } } // CR37: IS_TRAILER_ATTACHED_TO_CAB(trailer, cab) is false: the cab is put at the trailer hitch, the trailer scans for it
             if (op == 0x001B && !(c->raw & 0x8000) && c->vref[1] && !std::getenv("NOTSA_MDRIVER_NOOBJHP") && ArgInt(*c, 0) && *ArgInt(*c, 0) <= 1) { // CR38: only `1 > health` (the object has to be destroyed; 26 ROBBING UNCLE SAM reads `5 > health` of a crate that is not to be shot, the damage answer shadowed the real one) // CR37 (42 SMALL TOWN BANK: `IF 1 > health` of the vault wall's second object, read with GET_OBJECT_HEALTH): the object is damaged as by a bullet (CJ the damager), like HAS_OBJECT_BEEN_DAMAGED
                 if (auto it = g_objHealthVars.find(c->vref[1]); it != g_objHealthVars.end() && CPools::GetObject(it->second)) { d.act = true; d.row = &kDmg; d.rowIdx = -2; d.cond = c; d.op = op; d.args = { RArg{ false, (double)it->second, {} } }; return d; } }
@@ -809,8 +814,47 @@ std::string LocatedOther(const Rec& r) { // "ped:<handle>" / "veh:<handle>" of t
 // MS1: actions.ts pickDoorSpot / tryEnterCar. CJ is stood 2 m from a door of the car (left, right, behind: the first whose line to the door is free), 40 frames pass, the Enter key, up to 600 frames, then the script's own WARP_CHAR_INTO_CAR (mdwarpin)
 CVehicle* NearestFreeCar(CPed* c, float best) {
     CVehicle* car = nullptr;
+    const bool lawSkip = (int)FindPlayerWanted()->m_WantedLevel > 0 && !std::getenv("NOTSA_MDRIVER_NOLAWCAR"); // CR39 (50 DECONSTRUCTION): with a wanted level the nearest car was a police car (busted); a police car is no car for a mission
     for (auto& vv : GetVehiclePool()->GetAllValid()) {
-        if (vv.m_pDriver || vv.m_nDoorLock == CARLOCK_LOCKED || vv.m_nDoorLock == CARLOCK_LOCKED_PLAYER_INSIDE || vv.m_nDoorLock == CARLOCK_LOCKOUT_PLAYER_ONLY) continue;
+        if (vv.m_pDriver || (lawSkip && (vv.vehicleFlags.bIsLawEnforcer || vv.m_nModelIndex == 596 || vv.m_nModelIndex == 597 || vv.m_nModelIndex == 598 || vv.m_nModelIndex == 599 || vv.m_nModelIndex == 427 || vv.m_nModelIndex == 490 || vv.m_nModelIndex == 523 || vv.m_nModelIndex == 528)) || vv.m_nDoorLock == CARLOCK_LOCKED || vv.m_nDoorLock == CARLOCK_LOCKED_PLAYER_INSIDE || vv.m_nDoorLock == CARLOCK_LOCKOUT_PLAYER_ONLY) continue;
+        const float dd = (float)(vv.GetPosition() - c->GetPosition()).Magnitude();
+        if (dd < best) { best = dd; car = &vv; }
+    }
+    return car;
+}
+// CR39 (50 DECONSTRUCTION: `IF IS_CHAR_IN_ANY_CAR CJ / STORE_CAR_CHAR_IS_IN_NO_SAVE / IS_CAR_MODEL car 524` wants the cement truck; the nearest car was a police car -> busted): the model of an IS_CAR_MODEL (0137) that follows the 00DF test in the same condition list, -1 when none
+// CR39 (50 DECONSTRUCTION: `LOCATE_CHAR_ANY_MEANS_3D CJ pit / IS_CHAR_IN_MODEL CJ 524 / IS_CAR_STOPPED / heading`): the model of an IS_CHAR_IN_MODEL (00DD, CJ) that follows a locate in the same condition list, -1 when none
+int ModelWantedAfterLocate(const uint8_t* p) {
+    if (!p || !InSpace(p) || (*(const uint16_t*)p & 0x7FFF) != 0x00FE) return -1;
+    const uint8_t* q = p; bool mf = false, isI = false; int32_t iv = 0;
+    for (int k = 0; k < 6 && q && InSpace(q); k++) {
+        const uint16_t op = *(const uint16_t*)q & 0x7FFF; const int n = (op == 0x004D || op == 0x00D6) ? 1 : op == 0x00FE ? 8 : op == 0x00DD ? 2 : -1;
+        if (n < 0) return -1;
+        const uint8_t* a = q + 2; const uint8_t* second = nullptr;
+        for (int i = 0; i < n && a && InSpace(a); i++) { if (i == 1) second = a; a = SkipOperand(a, mf, isI, iv); }
+        if (op == 0x00DD && second) { if (*second == 1) return *(const int32_t*)(second + 1); if (*second == 5) return *(const int16_t*)(second + 1); if (*second == 4) return *(const int8_t*)(second + 1); return -1; }
+        q = a;
+    }
+    return -1;
+}
+int ModelWantedAfterInCarTest(const uint8_t* p) {
+    if (!p || !InSpace(p) || (*(const uint16_t*)p & 0x7FFF) != 0x00DF) return -1;
+    const uint8_t* q = p + 2; bool mf = false, isI = false; int32_t iv = 0;
+    q = SkipOperand(q, mf, isI, iv); // CJ operand
+    for (int k = 0; k < 6 && q && InSpace(q); k++) {
+        const uint16_t op = *(const uint16_t*)q & 0x7FFF; int n = 0;
+        if (op == 0x03C0 || op == 0x0137) n = 2; else if (op == 0x00D6 || op == 0x004D) n = 1; else return -1;
+        const uint8_t* a = q + 2; const uint8_t* second = nullptr;
+        for (int i = 0; i < n && a && InSpace(a); i++) { if (i == 1) second = a; a = SkipOperand(a, mf, isI, iv); }
+        if (op == 0x0137 && second) { if (*second == 1) return *(const int32_t*)(second + 1); if (*second == 5) return *(const int16_t*)(second + 1); if (*second == 4) return *(const int8_t*)(second + 1); return -1; }
+        q = a;
+    }
+    return -1;
+}
+CVehicle* NearestCarOfModel(CPed* c, int model, float best) {
+    CVehicle* car = nullptr;
+    for (auto& vv : GetVehiclePool()->GetAllValid()) {
+        if ((int)(int16_t)vv.m_nModelIndex != model || vv.m_pDriver || vv.m_fHealth <= 0.f || vv.vehicleFlags.bIsLawEnforcer) continue;
         const float dd = (float)(vv.GetPosition() - c->GetPosition()).Magnitude();
         if (dd < best) { best = dd; car = &vv; }
     }
@@ -871,6 +915,10 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
                 }
             }
             QueueActions(acts, row.settle); return; } } // LOCATE_CAR_3D(car 2049, ...) is satisfied by moving THAT car
+        if (v == "pedwarp" && c && d.cond && (cop & 0x7FFF) == 0x00FE && !std::getenv("NOTSA_MDRIVER_NOINMODEL")) { // CR39: the locate is followed by IS_CHAR_IN_MODEL(CJ, model): CJ gets into the nearest free car of that model first, then the car is put at the locate point
+            const int wm = ModelWantedAfterLocate(d.cond->p); auto* mcar = wm >= 0 ? NearestCarOfModel(c, wm, 600.f) : nullptr;
+            if (mcar) { std::vector<std::string> acts; if (!(c->bInVehicle && c->m_pVehicle == mcar)) acts = EnterCarActions(mcar); acts.push_back("emit mdwveh:" + F(F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2))); QueueActions(acts, row.settle); return; }
+        }
         if (v == "pedwarp" && c && c->bInVehicle) { // CR10: actions.ts pedwarp on an ON_FOOT locate while CJ is in a vehicle: get out first (Enter, up to 300 frames; getOnFoot), then warp him (mission 77: 8x mdwveh on LOCATE_CHAR_ON_FOOT_3D)
             static const std::set<int> onFoot = { 0xE4, 0xE7, 0xEA, 0xED, 0xF0, 0xF3, 0xF6, 0xF9, 0xFC, 0xFF, 0x102, 0x105, 0x197, 0x19A, 0x19C, 0x19F, 0x1A1, 0x1A4, 0x1A6, 0x1A9, 0x1FD, 0x200, 0x203, 0x206, 0x27C, 0x27F, 0x282, 0x285, 0x288 };
             if (onFoot.count(cop & 0x7FFF)) { QueueActions({ "key down return", "wait 1", "key up return", "waituntil invehicle == 0 300", "emit mdwveh:" + F(F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) }, row.settle); return; } // CR11: after a 300-frame timeout CJ may still be in the vehicle: TS warp() then moves the CAR; mdwveh does that (ped warp when he is out)
@@ -919,7 +967,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     if (v == "entercar" || v == "nearest_car") {
         CVehicle* car = nullptr;
         if (v == "entercar") { car = CPools::GetVehicle(I_(0)); if (!car) { Stop("driver action failed: entercar " + std::to_string(I_(0)) + ": no such car", cop, 0); return; } }
-        else if (c) { car = NearestFreeCar(c, 50.f); if (!car) { Stop("by nature: no_car", cop, 0); return; } }
+        else if (c) { if (cop == 0x00DF && d.cond && !std::getenv("NOTSA_MDRIVER_NOMODELCAR")) { const int wm = ModelWantedAfterInCarTest(d.cond->p); if (wm >= 0) car = NearestCarOfModel(c, wm, 400.f); } if (!car) car = NearestFreeCar(c, 50.f); if (!car && (int)FindPlayerWanted()->m_WantedLevel > 0 && !std::getenv("NOTSA_MDRIVER_NOLAWCAR")) car = NearestFreeCar(c, 150.f); if (!car) { Stop("by nature: no_car", cop, 0); return; } if ((int)FindPlayerWanted()->m_WantedLevel > 0 && !std::getenv("NOTSA_MDRIVER_NOLAWCAR")) g_wantedClrFrame = GFrame(); /* CR39 (50): a stopped CJ in a car with cops around is busted: the wanted level is dropped for the next 900 frames, as after the driver's own kills */ if (std::getenv("NOTSA_MDRIVER_CARLOG")) notsa::standalone::Fixups::Log("[mdriver] nearest_car: model %d law=%d wanted=%d dist %.0f", (int)car->m_nModelIndex, (int)car->vehicleFlags.bIsLawEnforcer, (int)FindPlayerWanted()->m_WantedLevel, (double)(car->GetPosition() - c->GetPosition()).Magnitude()); }
         if (!car || !c) { QueueActions({}, row.settle); return; }
         if (v == "entercar" && d.cond && (cop == 0x00DB || cop == 0x0448)) { // MS1 (actions.ts entercar): IS_CHAR_IN_CAR(buddy, car) wants THAT char in the car: set in as a passenger like WARP_CHAR_INTO_CAR_AS_PASSENGER
             const auto h = ArgInt(*d.cond, 0);
@@ -1012,6 +1060,8 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
             acts.push_back("emit mdsmash:" + F(F_(k)) + ":" + F(F_(k + 1)) + ":" + F(F_(k + 2)) + ":" + F(F_(k + 3)) + ":" + std::to_string(I_(k + 4)) + ":" + std::to_string(I_(k + 5)) + ":" + std::to_string(I_(k + 6)));
         }
         QueueActions(acts, row.settle); return; }
+    if (v == "entermodel") { auto* car = c ? NearestCarOfModel(c, I_(0), 600.f) : nullptr; if (!car) { QueueActions({}, 0); return; } QueueActions(EnterCarActions(car), row.settle); return; } // CR39
+    if (v == "objto") { QueueActions({ "emit mdobjto:" + std::to_string(I_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) + ":" + F(F_(3)) }, row.settle); return; } // CR39
     if (v == "damageobj") { QueueActions({ "emit mddmgobj:" + std::to_string(I_(0)) }, row.settle); return; } // CR22: HAS_OBJECT_BEEN_DAMAGED(obj): CJ damages the object (16 NINES AND AK'S shooting range)
     if (v == "tosphere") { // CR24: the vehicle at the centre of a GET_RANDOM_CAR_IN_SPHERE search is moved next to the nearest car the game's own search would accept (appearance 1/2, not a law enforcer, wanted model, CanBeDeleted: the mission's decoy is refused), 8 m above it
         CVehicle* best = SphereTarget(g_sphCur.veh, g_sphCur.model);
@@ -1134,7 +1184,7 @@ void TickGeneric() {
     if (g_fail && fr - g_failFrame > 600) { g_quitIn = 0; return; }
     if (fr >= g_maxFrames) { Stop("budget: " + std::to_string(g_maxFrames) + " frames", -1, (uint32_t)(root->m_IP - root->m_BaseIP)); return; }
     if (!g_pass && CStats::GetStatValue(STAT_MISSIONS_PASSED) > g_passStat0) { g_pass = true; g_passFrame = fr; } // CR4: TS drive.ts: PASSED = STAT_MISSIONS_PASSED rose (0x0318 SET_LATEST_MISSION_PASSED; missions 87 78 print no M_PASS)
-    if (!g_pass && fr - g_killFrame <= 900 && !std::getenv("NOTSA_MDRIVER_KEEPKILLWANTED")) if (auto* w = FindPlayerWanted()) if (w->m_WantedLevel != eWantedLevel::WANTED_CLEAN) w->SetWantedLevel(eWantedLevel::WANTED_CLEAN); // CR25 (15 DRIVE-THRU): the driver's own `kill` (a stand-in for shooting the hostile peds) is reported as a murder by witnesses: the one star got CJ, who stood still in his car, ARRESTED 250 frames later (HAS_DEATHARREST_BEEN_EXECUTED -> the script's fail path). The star the kill raised is cleared for 900 frames
+    if (!g_pass && (fr - g_killFrame <= 900 || fr - g_wantedClrFrame <= 900) && !std::getenv("NOTSA_MDRIVER_KEEPKILLWANTED")) if (auto* w = FindPlayerWanted()) if (w->m_WantedLevel != eWantedLevel::WANTED_CLEAN) w->SetWantedLevel(eWantedLevel::WANTED_CLEAN); // CR25 (15 DRIVE-THRU): the driver's own `kill` (a stand-in for shooting the hostile peds) is reported as a murder by witnesses: the one star got CJ, who stood still in his car, ARRESTED 250 frames later (HAS_DEATHARREST_BEEN_EXECUTED -> the script's fail path). The star the kill raised is cleared for 900 frames
     if (g_hurtNow.h) { auto* pp = CPools::GetPed(g_hurtNow.h); if (pp && pp != Cj() && pp->m_fHealth > (float)g_hurtNow.hp && !ProtectedHandle(g_hurtNow.h)) Emit("mdhurt:" + std::to_string(g_hurtNow.h) + ":" + std::to_string(g_hurtNow.hp)); g_hurtNow = {}; } // CR37
     if (!std::getenv("NOTSA_MDRIVER_NOFIGHT") && ++g_fightClock % 3 == 0 && !CCutsceneMgr::IsCutsceneProcessing() && Cj()) ShootDead();
     if (static const bool plog = std::getenv("NOTSA_MDRIVER_PLOG") != nullptr; plog && Cj() && fr % 50 == 0) { // CR8: CJ state every 50 frames (debug)
@@ -1439,7 +1489,7 @@ void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int co
             const int n = Arity(op); r->args = DecodeArgs(s, ptr, n >= 0 ? n : 10);
             { const uint8_t* ops[3]{}; int cnt = 0; if (InSpace(ptr) && CmdOps(ptr, ops, cnt)) for (int k = 0; k < 2 && k < cnt; k++) { uint32_t ref; if (OperandVar(ops[k], ref)) r->vref[k] = ref; } } // CR22
             if (!(raw & 0x8000) && (op == 0x0038 || op == 0x0039)) g_flagConds[ptr] = r; // CR22
-            g_recs.push_back(r); if (g_recs.size() > 64) g_recs.pop_front(); g_recsBig.push_back(r); if (g_recsBig.size() > 400) g_recsBig.pop_front();
+            g_recs.push_back(r); if (g_recs.size() > 64) g_recs.pop_front(); g_recsBig.push_back(r); if (g_recsBig.size() > g_bigCap) g_recsBig.pop_front();
             if (raw == 0x001B) g_healthConds[ptr] = r; if (raw == 0x001B && cond == 0 && r->vref[1] && !std::getenv("NOTSA_MDRIVER_NOHURT") && !std::getenv("NOTSA_MDRIVER_NOHURTNOW")) { const auto it = g_healthVars.find(r->vref[1]); const auto thr = ArgInt(*r, 0); auto* hp0 = it != g_healthVars.end() ? CPools::GetPed(it->second) : nullptr; if (it != g_healthVars.end() && thr && *thr >= 2 && hp0 && HostileScriptPed(hp0)) g_hurtNow = { it->second, (int)*thr - 1 }; } // CR37 // CR35: every `N > var` site seen (the pass is longer than the 400-record window)
             if (!(raw & 0x8000) && op == 0x0118) g_deadConds[ptr] = r; // CR21: every plain IS_CHAR_DEAD site seen (the 64-condition window misses the rarely-run ones)
             g_pending.push_back(r); if (g_pending.size() > 12) g_pending.erase(g_pending.begin());
@@ -1622,6 +1672,10 @@ bool Cmd(const char* name, const std::string& args) {
             if (sm && !o->objectFlags.bIsBroken) o->objectFlags.bIsBroken = true;
             notsa::standalone::Fixups::Log("[mdriver] mdsmash model %d at %.1f,%.1f,%.1f: renderDamaged=%d visible=%d broken=%d", model, op.x, op.y, op.z, (int)o->m_bRenderDamaged, (int)o->m_bIsVisible, (int)o->objectFlags.bIsBroken); }
         else notsa::standalone::Fixups::Log("[mdriver] mdsmash model %d at %.1f,%.1f,%.1f: no object found", model, x, y, z);
+        return true;
+    }
+    if (!std::strcmp(name, "mdobjto")) { // CR39: CObject placed at x,y,z (the pushed toilet of 50 DECONSTRUCTION), at rest
+        int h = 0; float x = 0, y = 0, z = 0; if (std::sscanf(args.c_str(), "%d:%f:%f:%f", &h, &x, &y, &z) == 4) if (auto* o = CPools::GetObject(h)) { o->SetPosn(CVector{ x, y, z }); o->ResetMoveSpeed(); o->ResetTurnSpeed(); o->UpdateRwFrame(); notsa::standalone::Fixups::Log("[mdriver] mdobjto %d model %d -> %.2f,%.2f,%.2f", h, (int)o->m_nModelIndex, x, y, z); }
         return true;
     }
     if (!std::strcmp(name, "mddmgobj")) { // CR22: CObject::ObjectDamage, CJ the damager, pistol (the port's object damage path of a bullet hit)

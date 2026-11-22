@@ -552,6 +552,19 @@ bool TrackerOnly(const Rec& r) { // CR46 (69 CUSTOMS FAST TRACK: `@39 == 4 AND I
     }
     return false;
 }
+bool GovernorOnly(const Rec& r) { // CR46 (76 HIGHJACK: `LOCATE_CHAR_ANY_MEANS_CAR_2D cj, truck, 20` of the cruise-speed subroutine: the true branch only calls SET_CAR_CRUISE_SPEED): a plain car locate that only tunes a speed is no stage blocker
+    const int rop = r.raw & 0x7FFF; if ((r.raw & 0x8000) || rop < 0x0202 || rop > 0x0207 || !g_thread || !r.hasBranch || !r.fall || std::getenv("NOTSA_MDRIVER_NOGOVERNOR")) return false;
+    int n = 0;
+    for (const uint8_t* p = r.fall; InSpace(p);) {
+        const int op = *(const uint16_t*)p & 0x7FFF;
+        if (op == 0x0002 || op == 0x004D || op == 0x00D6 || op == 0x0001 || op == 0x0050 || op == 0x0051 || op == 0x004C) return n > 0;
+        if (!(op == 0x00AD || op == 0x00AE || (op >= 0x0004 && op <= 0x0007) || op == 0x0084 || op == 0x0085 || op == 0x0086 || op == 0x0087)) return false;
+        const uint8_t* q = p + 2; bool mf = false, isI = false; int32_t iv = 0; const int want = Arity(op); int count = 0;
+        for (;;) { if (want >= 0 && count >= want) break; if (!InSpace(q)) return false; const uint8_t* nx = SkipOperand(q, mf, isI, iv); if (!nx) return false; q = nx; count++; }
+        p = q; n++;
+    }
+    return false;
+}
 bool AnyGuard(const Rec& r) { return IsPlayerGuard(r) || KillRefusal(g_thread, r) || NotInCarGuard(g_thread, r) || ButtonGuard(r) || LocateGuard(g_thread, r) || TrackerOnly(r); }
 
 std::string KeyName(const std::string& k) {
@@ -663,6 +676,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
         return false; };
     const auto foreignCarLoc = [](const Rec& r) { if ((r.raw & 0xFFFF) != 0x0204 || !std::getenv("NOTSA_MDRIVER_FOREIGNCARLOC")) return false; const auto h0 = ArgInt(r, 0); auto* tc = h0 ? CPools::GetPed((int)*h0) : nullptr; return tc && tc != Cj() && tc->bInVehicle && tc->m_fHealth > 0.f; }; // CR42 (60 OUTRIDER): LOCATE_CHAR_IN_CAR_CAR_2D of the van's driver (not CJ) is not an answer for CJ: no candidate (the roadblock peds' IS_CHAR_DEAD of the widened window answers)
     for (size_t k = loop.size(); k-- > 0;) { const auto& r = loop[k]; if (r->cond == 0 && !AnyGuard(*r) && !satisfied.count(r->p) && !sentinelLocate(*r) && !trainLocate(*r) && !leashLocate(*r) && !foreignCarLoc(*r)) falses.push_back(r); }
+    if (falses.size() > 1) { const auto gv = std::stable_partition(falses.begin(), falses.end(), [](const RecP& r) { return !GovernorOnly(*r); }); if (gv != falses.begin()) falses.erase(gv, falses.end()); } // CR46: the speed governors of the pass are answered only when nothing else is false
     if (falses.size() > 1 && !std::getenv("NOTSA_MDRIVER_NOGUARDNEAR") && !g_auxMode) { // CR43 (57 THE DA NANG THANG: the strip area (-2375..-2379 x 1537..1556) wakes the grenadier, whose grenade lands 6.7 m from the refugee the script fails the mission for ("One of the refugees died!"); the other false area of the pass (the north zone) wakes him as well, far from the refugee): a false plain area / locate of CJ whose centre lies within 12 m of a living char the script fails the mission for (a Guarded() handle) is answered after the other false conditions
         std::vector<CVector> gp; for (const int gh : Guarded()) if (auto* gpd = CPools::GetPed(gh); gpd && gpd != Cj() && gpd->m_fHealth > 0.f) gp.push_back(gpd->GetPosition());
         if (!gp.empty()) {

@@ -77,7 +77,7 @@ void                   (*g_push)(const char*, bool) = nullptr;
 void                   (*g_run)(const std::string&) = nullptr;
 CRunningScript*          g_thread = nullptr;
 int                      g_sameCount = 0;
-const uint8*             g_lastIp = nullptr;
+const uint8*             g_lastIp = nullptr; std::map<const uint8*, int> g_ipSeen; // CR46: frame each wake ip was last seen (a loop over a few wait sites is one stall)
 std::map<int, int>       g_answers;
 std::vector<std::string> g_queue;            // actions of the running step
 size_t                   g_qpos = 0;
@@ -522,6 +522,9 @@ bool ButtonGuard(const Rec& r) { // CR24 (10 BEEFY BARON): a plain IS_BUTTON_PRE
         if (op == 0x0002 && hops < 4 && !std::getenv("NOTSA_MDRIVER_NOSKIPBUTTON")) { // CR36: follow an unconditional GOTO of the true branch (mission scripts: a negative offset is local)
             const uint8_t* gq = p + 2; bool gmf = false, gI = false; int32_t gv = 0; const uint8_t* gn = SkipOperand(gq, gmf, gI, gv);
             if (!gn || !gI) return false; const uint8_t* nx = Resolve(g_thread, gv); if (!nx || !InSpace(nx)) return false; hops++; p = nx; continue; }
+        if (op == 0x0050 && !(hops > 0 && skipSeen) && !std::getenv("NOTSA_MDRIVER_NOEXITBUTTON")) { // CR46 (71 BACK TO SCHOOL: `IF IS_BUTTON_PRESSED pad 15` = leave the school: GOSUB hud, DO_FADE t,0, ... cleanup): a GOSUB of the true branch is stepped over; a fade-out on the way = an exit button
+            const uint8_t* q = p + 2; bool mf = false, isI = false; int32_t iv = 0; const uint8_t* nx = SkipOperand(q, mf, isI, iv); if (!nx) return false; p = nx; continue; }
+        if (op == 0x016A && !std::getenv("NOTSA_MDRIVER_NOEXITBUTTON")) { const uint8_t* q = p + 2; bool mf = false, isI = false; int32_t iv = 0; const uint8_t* n1 = SkipOperand(q, mf, isI, iv); if (!n1) return false; bool mf2 = false, i2 = false; int32_t v2 = 1; const uint8_t* n2 = SkipOperand(n1, mf2, i2, v2); if (!n2) return false; if (i2 && v2 == 0) return true; p = n2; continue; }
         if (op == 0x0001 || op == 0x0051 || op == 0x004D || op == 0x0050 || op == 0x00D6 || op == 0x0002) return hops > 0 && skipSeen && !std::getenv("NOTSA_MDRIVER_NOSKIPBUTTON"); // CR36 (45 KING IN EXILE: `IF IS_BUTTON_PRESSED pad 15` of the phone call stage: the true branch silences the mission audio, puts the phone away and jumps to the cleanup = the 'hang up' button; the call ends by itself and passes, the press ended the mission thread without a pass): a skip / hang-up button is no answer
         const uint8_t* q = p + 2; bool mf = false, isI = false; int32_t iv = 0; const int want = Arity(op); int count = 0;
         for (;;) { if (want >= 0 && count >= want) break; if (!InSpace(q)) return false; const uint8_t* nx = SkipOperand(q, mf, isI, iv); if (!nx) break; if (mf && op >= 0x00BA && op <= 0x00BD) return true; q = nx; count++; }
@@ -536,7 +539,20 @@ bool LocateGuard(const CRunningScript* s, const Rec& r) { // CR28 (24 HOME INVAS
     if (r.fall && !std::getenv("NOTSA_MDRIVER_NOTRAPGUARD")) for (auto& o : g_recs) if (o->fall == r.fall && o->waitSeq == r.waitSeq && o->raw == 0x051A) return true; // the same OR group also holds HAS_CHAR_BEEN_DAMAGED_BY_CHAR: a wake-up trap (the owner wakes when he is hit OR CJ comes within 1 m), its true branch is an alarm state machine the fail walk does not follow
     return false;
 }
-bool AnyGuard(const Rec& r) { return IsPlayerGuard(r) || KillRefusal(g_thread, r) || NotInCarGuard(g_thread, r) || ButtonGuard(r) || LocateGuard(g_thread, r); }
+bool TrackerOnly(const Rec& r) { // CR46 (69 CUSTOMS FAST TRACK: `@39 == 4 AND IS_CHAR_IN_ANY_CAR cj AND NOT IS_CAR_DEAD @82` of a shared subroutine only stores the car CJ sits in; the nearest_car answer teleported CJ out of the crane cab): a plain false CJ-in-car test whose TRUE branch is nothing but STORE_CAR_CHAR_IS_IN / variable assignments up to the next jump is a passive tracker, never answered
+    const int rop = r.raw & 0x7FFF; if ((r.raw & 0x8000) || (rop != 0x00DB && rop != 0x00DF) || !g_thread || !r.hasBranch || !r.fall || std::getenv("NOTSA_MDRIVER_NOTRACKER")) return false;
+    int n = 0;
+    for (const uint8_t* p = r.fall; InSpace(p);) {
+        const int op = *(const uint16_t*)p & 0x7FFF;
+        if (op == 0x0002 || op == 0x004D || op == 0x00D6 || op == 0x0001 || op == 0x0050 || op == 0x0051 || op == 0x004C) return n > 0;
+        if (!(op == 0x03C0 || op == 0x0811 || (op >= 0x0004 && op <= 0x0007) || op == 0x0084 || op == 0x0085 || op == 0x0086 || op == 0x0087)) return false;
+        const uint8_t* q = p + 2; bool mf = false, isI = false; int32_t iv = 0; const int want = Arity(op); int count = 0;
+        for (;;) { if (want >= 0 && count >= want) break; if (!InSpace(q)) return false; const uint8_t* nx = SkipOperand(q, mf, isI, iv); if (!nx) return false; q = nx; count++; }
+        p = q; n++;
+    }
+    return false;
+}
+bool AnyGuard(const Rec& r) { return IsPlayerGuard(r) || KillRefusal(g_thread, r) || NotInCarGuard(g_thread, r) || ButtonGuard(r) || LocateGuard(g_thread, r) || TrackerOnly(r); }
 
 std::string KeyName(const std::string& k) {
     static const std::pair<const char*, const char*> m[] = { { "Enter", "return" }, { "Space", "space" }, { "Escape", "escape" }, { "ShiftLeft", "lshift" }, { "ControlLeft", "lctrl" }, { "ArrowUp", "up" }, { "ArrowDown", "down" }, { "ArrowLeft", "left" }, { "ArrowRight", "right" }, { "Tab", "tab" } };
@@ -825,6 +841,11 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
                 d.act = true; d.row = &kr; d.rowIdx = (int)i; d.cond = b; d.args = *a; d.op = 0x0118; return d; }
             break; }
     }
+    // CR46 (70 PUNCTURE WOUNDS: the chase stage tests `IS_CHAR_IN_CAR cj, @39` (plain, false: CJ walked away from his car) next to a speed-governor locate `LOCATE_CHAR_ANY_MEANS_CAR_2D cj, chased car`; table order answered the locate 7 times (CJ on foot to the moving car) and never the car): a prerequisite condition of CJ sitting in a named live car, with CJ on foot, is answered before every position / proximity row
+    if (!wide && !g_auxMode && blockers.empty() && Cj() && !Cj()->bInVehicle && !std::getenv("NOTSA_MDRIVER_NOENTERFIRST")) {
+        for (auto& c : falses) { if ((c->raw & 0xFFFF) != 0x00DB) continue; const auto h0 = ArgInt(*c, 0), h1 = ArgInt(*c, 1); if (!h0 || !h1 || EntityOfHandle((int)*h0, 0x00DB) != (CEntity*)Cj()) continue; auto* ve = CPools::GetVehicle((int)*h1); if (!ve || ve->m_fHealth <= 0.f || Guarded().count((int)*h1)) continue;
+            for (size_t ri = 0; ri < g_rows.size(); ri++) { const auto& kr = g_rows[ri]; if (kr.op != 0x00DB || kr.match != 1 || kr.action != "entercar") continue; const auto a = ResolveArgs(kr, *c); if (!a) break; d.act = true; d.row = &kr; d.rowIdx = (int)ri; d.cond = c; d.args = *a; d.op = 0x00DB; return d; } }
+    }
     for (int pass = 0; pass < 2; pass++) {
     if (pass == 1 && blockers.empty()) break;
     for (size_t i = 0; i < g_rows.size(); i++) {
@@ -837,6 +858,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             for (auto& q : falses) { if (!Matches(row, *q)) continue; auto a = ResolveArgs(row, *q); if (seen.insert(RKey(a)).second) opts.push_back({ q, a }); }
             auto& pick = opts[(size_t)attempt % opts.size()];
             if ((row.action == "warpto_handle" || row.action == "pedwarp" || row.action == "vehwarp") && pass == 0 && !g_auxMode && pick.args && !std::getenv("NOTSA_MDRIVER_NOSPENTWARP")) { const auto sk = g_noProgress.find(std::to_string(g_stopIp) + ":" + std::to_string((int)i) + ":" + RKey(pick.args.value())); if ((sk != g_noProgress.end() && sk->second >= 3) || CoordLeashLive()) { bool other = false; for (auto& q : falses) if (q != pick.c && (q->raw & 0x7FFF) == 0x0118 && !(q->raw & 0x8000) && !AnyGuard(*q)) other = true; /* the later row is a plain IS_CHAR_DEAD kill (11 / 37 / 23 regressed with any other condition) */ if (other) break; } } // CR41 (59 JIZZY: the chase stage's `CJ near the driver` throttle IF, answered by warps that cannot keep up with the moving car, shadowed the plain `IS_CHAR_DEAD driver` kill row 98 until the 8-answer stop): a warp row answered 3 times with the same arguments at this wake ip without progress is spent while another false condition of the pass is left for the later rows
+            if (row.action == "vehwarp" && pass == 0 && !g_auxMode && (attempt % 2) == 0 && !std::getenv("NOTSA_MDRIVER_NOKEYBEFOREWARP") && std::any_of(falses.begin(), falses.end(), [](const RecP& q) { return (q->raw & 0xFFFF) == 0x00E1 && !AnyGuard(*q); }) && std::any_of(g_rows.begin(), g_rows.end(), [](const Row& w) { return w.action == "key" && w.op == 0x00E1; })) break; // CR46 (73 SUPPLY LINES: the stage's `IS_BUTTON_PRESSED 16` (start the RC plane) is a plain false test of the pass; the vehicle-warp rows of the enemy-car proximity tests came first and dragged the hostile cars onto the parked plane): on every even attempt the button row is tried before a vehicle warp
             if (row.action == "key" && row.op == 0x00E1 && pass == 0 && std::getenv("NOTSA_MDRIVER_KEYKILLFIRST")) { bool killLeft = false; for (auto& q : falses) if (q != pick.c && (q->raw & 0x7FFF) == 0x0118 && !(q->raw & 0x8000) && !AnyGuard(*q)) killLeft = true; if (killLeft) break; } // CR44 (63 YAY KA-BOOM-BOOM: the key row 97 (the skip-cutscene button of an AND group that can not become true) shadowed the plain IS_CHAR_DEAD kill row 98 after the warps were spent): a plain false kill test of the pass goes before a button poll
             if (row.action == "key" && row.op == 0x00E1 && attempt < 3 && !std::getenv("NOTSA_MDRIVER_NOKEYDEFER")) { // CR22 (10 BEEFY BARON): a button poll whose failing jump leads on to ANOTHER false condition of the pass that only a wait row answers (a world event: here `NOT IS_CAR_DEAD(@36)`, the Topfun van the script searches for after the button test) is not what the script waits for: it waits for that event first. The button is pressed only after 3 stalls.
                 size_t at = 0; while (at < loop.size() && loop[at] != pick.c) at++;
@@ -1341,7 +1363,7 @@ void TickGeneric() {
             if (!CTheScripts::IsPlayerOnAMission() && CTheScripts::FailCurrentMission == 0) {
                 g_relaunched = true; g_relaunchWait = 0; notsa::standalone::Fixups::Log("[mdriver] relaunch frame %d: mission %d ended without M_PASS / M_FAIL: started again", fr, (int)NotsaLastInjectedMission);
                 NotsaInjectMissionInfo mi{}; NotsaInjectStartMission(NotsaLastInjectedMission, &mi);
-                g_started = false; g_thread = nullptr; g_recs.clear(); g_recsBig.clear(); g_attemptsAt.clear(); g_queue.clear(); g_qpos = 0; g_wait = 0; g_untilLeft = 0; g_sameCount = 0; g_lastIp = nullptr; g_endFrame = -1; g_lastLabel.clear();
+                g_started = false; g_thread = nullptr; g_recs.clear(); g_recsBig.clear(); g_attemptsAt.clear(); g_queue.clear(); g_qpos = 0; g_wait = 0; g_untilLeft = 0; g_sameCount = 0; g_lastIp = nullptr; g_ipSeen.clear(); g_endFrame = -1; g_lastLabel.clear();
                 return;
             }
             g_endedFail = true;
@@ -1474,8 +1496,9 @@ void TickGeneric() {
     }
     g_queue.clear(); g_qpos = 0;
     if (CCutsceneMgr::IsCutsceneProcessing()) g_sameCount = 0;
-    else if (root->m_IP == g_lastIp) g_sameCount++;
-    else { g_sameCount = 0; g_lastIp = root->m_IP; if (g_fastLeft > 0 && g_fastIp != root->m_IP) { g_fastLeft = 0; if (g_fastNext) g_nextStall = 0; g_fastNext = false; } }
+    else if (root->m_IP == g_lastIp) { g_sameCount++; g_ipSeen[root->m_IP] = fr; }
+    else if (g_lastIp && g_ipSeen.count(root->m_IP) && fr - g_ipSeen[root->m_IP] < g_stall && !std::getenv("NOTSA_MDRIVER_NOIPRING")) { g_sameCount++; g_lastIp = root->m_IP; g_ipSeen[root->m_IP] = fr; } // CR46 (72 AIR RAID: the wake ip alternated 158e / 104 / 797 / 14d9 for 6500 frames and the stall counter never reached 600): a wake ip seen within the last stall window is the same loop
+    else { g_ipSeen[root->m_IP] = fr; g_sameCount = 0; g_lastIp = root->m_IP; if (g_fastLeft > 0 && g_fastIp != root->m_IP) { g_fastLeft = 0; if (g_fastNext) g_nextStall = 0; g_fastNext = false; } }
     if (g_sameCount >= g_stall) for (auto& r : g_recs) if (r->waitSeq >= g_waitSeq - 3 && (r->raw & 0x7FFF) == 0x010F && r->cond == 0) { if (auto* w = FindPlayerWanted()) if (w->m_WantedLevel != eWantedLevel::WANTED_CLEAN) { w->SetWantedLevel(eWantedLevel::WANTED_CLEAN); g_sameCount = 0; return; } break; } // CR11: as drive.ts:309 (at the stall threshold, then no decide this round; level only): // CR9: the thread waits for the wanted level to drop (SWEET4 ip 0x45e7 after the second pay n spray stage; the exe decays above 1 star only in the countryside, a real player drives into the pay n spray = ClearWantedLevelAndGoOnParole 0x44AC16): clear it, as the TS port does implicitly
     bool urgentTimer = false; // CR31 (25 CATALYST: the 90 s script timer runs while the driver waits 600 frames at every decision): a countdown clock on the screen shortens the patience to 150 frames; a vehicle of CJ that keeps losing health (army fire, 26) to 90 (NOTSA_MDRIVER_NOURGENT)
     if (std::getenv("NOTSA_MDRIVER_TIMERURGENT")) { // opt-in: on by default it broke 20 LOS SEPULCROS (FAILED TWAR646) and moved 74, and did not make 25 pass
@@ -1636,7 +1659,7 @@ void TickGeneric() {
     if ((d.row->action == "entercar" || d.row->action == "vehwarp") && !d.args.empty() && d.cond && !d.cond->args.empty()) { const int ch = (int)(int32_t)d.cond->args[0].bits; if (CPools::GetVehicle(ch)) g_usedCars.insert(ch); } // CR27: the car of an entercar / `LOCATE_CAR` vehwarp answer
     DispatchRow(d);
     if (d.row->action == "warpto_handle" && g_nextStall == 0 && !d.args.empty() && !std::getenv("NOTSA_MDRIVER_NOCARLEASHFAST")) { // CR43 (62 TORENO'S LAST FLIGHT: the answer warped CJ to the helicopter the pass holds a `NOT locate CJ car 100 100 50` leash on; the helicopter lands, takes off and is out of the box 300 frames later, the next decision is 600 frames away): the next decision after 60 frames (CJ is at the leash car)
-        const int th = (int)d.args[0].n; for (auto& r : g_recsBig) { const int rop = r->raw & 0x7FFF; if (r->waitSeq < g_waitSeq - 3 || !(r->raw & 0x8000) || rop < 0x0202 || rop > 0x0207) continue; const auto h1 = ArgInt(*r, 1); if (h1 && (int)*h1 == th) { g_nextStall = 60; break; } }
+        const int th = (int)d.args[0].n; const bool movingCar = !std::getenv("NOTSA_MDRIVER_NOMOVINGFAST") && CPools::GetVehicle(th) && CPools::GetVehicle(th)->m_vecMoveSpeed.Magnitude() > 0.03f; /* CR46 (76 HIGHJACK: CJ was warped to the moving truck every 660 frames; the truck is 800 m away 90 frames later): a plain locate of a MOVING car is re-decided after 60 frames too */ for (auto& r : g_recsBig) { const int rop = r->raw & 0x7FFF; if (r->waitSeq < g_waitSeq - 3 || (!(r->raw & 0x8000) && !movingCar) || rop < 0x0202 || rop > 0x0207) continue; const auto h1 = ArgInt(*r, 1); if (h1 && (int)*h1 == th) { g_nextStall = 60; break; } }
     }
     if (d.row->action == "key" && d.op == 0x00E1 && !g_auxAnswered && !earlyAux && !std::getenv("NOTSA_MDRIVER_NOFASTKEY") && g_attemptsAt[ipPtr] >= 3 && g_nextStall == 0) { g_fastDec = d; g_fastIp = ipPtr; g_fastLeft = 20; g_fastNext = true; g_nextStall = 45; } // CR30 (25): a button poll answered after the key deferral: repeat the press every 30 frames while the thread stays at the wake ip (20 repeats at most)
     if (g_auxAnswered) { g_auxAnswered = false; if (g_nextStall == 0 && !std::getenv("NOTSA_MDRIVER_NOAUXFAST")) { g_nextStall = 90; g_auxEarly = true; } } // CR27: a menu has several steps: the next decision after 90 frames, not 600

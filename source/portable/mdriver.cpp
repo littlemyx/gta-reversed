@@ -714,6 +714,13 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             if (!hit) continue; static std::map<int, int> distTry; if (++distTry[CPools::GetPedRef(hit)] > 2) continue; /* a ped brought twice and the compare still false: not the answer (19 CESAR: 8 futile warps) */ static const Row kDist{ 0x0023, 0, "distance to CJ over the limit", "distfetch", {}, 60 };
             d.act = true; d.row = &kDist; d.rowIdx = -15; d.cond = c; d.op = 0x0023; RArg ha; ha.n = CPools::GetPedRef(hit); d.args = { ha }; return d;
         }
+        if (!blockAnswerable && !std::getenv("NOTSA_MDRIVER_NOTRAINNEAR")) for (auto& c : falses) { // CR41 (52 SNAIL TRAIL: `300 > @121`, @121 = the int distance from CJ to the followed train): a false plain `N > var` (001B, N >= 100) whose compared value equals the distance from CJ to a train (+-60 m, the nearest match): CJ joins that train, beside the tracks
+            if (c->raw != 0x001B || c->cond != 0 || c->args.size() < 2 || AnyGuard(*c)) continue; auto* me = Cj(); if (!me) continue;
+            const float lim = AF(c->args[0]), dv = AF(c->args[1]); if (!(lim >= 100.f) || !(dv >= lim) || !(dv < 20000.f)) continue;
+            CVehicle* hit = nullptr; float bestd = 60.f; for (auto& vv : GetVehiclePool()->GetAllValid()) { if (!vv.IsTrain() || vv.m_fHealth <= 0.f) continue; const float dd = std::fabs((vv.GetPosition() - me->GetPosition()).Magnitude2D() - dv); if (dd < bestd) { bestd = dd; hit = &vv; } }
+            if (!hit) continue; static int trainTry = 0; if (++trainTry > 12) continue; static const Row kTN{ 0x001B, 0, "distance to a train over the limit", "trainnear", {}, 90 };
+            d.act = true; d.row = &kTN; d.rowIdx = -25; d.cond = c; d.op = 0x001B; RArg ha; ha.n = GetVehiclePool()->GetRef(hit); d.args = { ha }; return d;
+        }
         for (auto& c : falses) { // CR23 (16 NINES AND AK'S: `WHILE @86 != 15` after the Binco blip): a false plain `var == N` of a GET_AREA_VISIBLE result variable: walk in through the entrance of interior N (an entry exit whose interior side is in area N)
             const int op = c->raw & 0x7FFF; if ((c->raw & 0x8000) || (op != 0x0038 && op != 0x0039) || std::getenv("NOTSA_MDRIVER_NOENTERAREA")) continue;
             if (!(c->vref[0] && g_areaVars.count(c->vref[0]))) continue;
@@ -768,6 +775,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             struct Opt { RecP c; std::optional<std::vector<RArg>> args; }; std::vector<Opt> opts; std::set<std::string> seen;
             for (auto& q : falses) { if (!Matches(row, *q)) continue; auto a = ResolveArgs(row, *q); if (seen.insert(RKey(a)).second) opts.push_back({ q, a }); }
             auto& pick = opts[(size_t)attempt % opts.size()];
+            if ((row.action == "warpto_handle" || row.action == "pedwarp" || row.action == "vehwarp") && pass == 0 && !g_auxMode && pick.args && !std::getenv("NOTSA_MDRIVER_NOSPENTWARP")) { const auto sk = g_noProgress.find(std::to_string(g_stopIp) + ":" + std::to_string((int)i) + ":" + RKey(pick.args.value())); if (sk != g_noProgress.end() && sk->second >= 3) { bool other = false; for (auto& q : falses) if (q != pick.c && (q->raw & 0x7FFF) != (pick.c->raw & 0x7FFF)) other = true; if (other) break; } } // CR41 (59 JIZZY: the chase stage's `CJ near the driver` throttle IF, answered by warps that cannot keep up with the moving car, shadowed the plain `IS_CHAR_DEAD driver` kill row 98 until the 8-answer stop): a warp row answered 3 times with the same arguments at this wake ip without progress is spent while another false condition of the pass is left for the later rows
             if (row.action == "key" && row.op == 0x00E1 && attempt < 3 && !std::getenv("NOTSA_MDRIVER_NOKEYDEFER")) { // CR22 (10 BEEFY BARON): a button poll whose failing jump leads on to ANOTHER false condition of the pass that only a wait row answers (a world event: here `NOT IS_CAR_DEAD(@36)`, the Topfun van the script searches for after the button test) is not what the script waits for: it waits for that event first. The button is pressed only after 3 stalls.
                 size_t at = 0; while (at < loop.size() && loop[at] != pick.c) at++;
                 bool eventAfter = false;
@@ -1054,6 +1062,13 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     if (v == "distfetch" && !d.args.empty()) { // CR30: see Decide (kDist): the ped comes next to CJ
         if (auto* oth = CPools::GetPed((int)d.args[0].n); oth && c && oth != c) { const CVector cp = c->GetPosition(); const bool veh = oth->bInVehicle && oth->m_pVehicle; const CVector fw = c->bInVehicle && c->m_pVehicle ? c->m_pVehicle->GetForward() : c->GetForward(); const CVector q = cp - fw * (veh ? 8.f : 2.f);
             QueueActions({ "emit mdwother:0:" + std::to_string((int)d.args[0].n) + ":" + F(q.x) + ":" + F(q.y) + ":" + F(cp.z) }, row.settle); return; }
+        QueueActions({}, 0); return;
+    }
+    if (v == "trainnear" && !d.args.empty()) { // CR41: see Decide (kTN): CJ (with his vehicle) joins the train, beside the tracks, with the train's velocity
+        if (auto* tv = CPools::GetVehicle((int)d.args[0].n); tv && c) { const CVector tp = tv->GetPosition(), q = tp + tv->GetRight() * 14.f; const auto sp = tv->m_vecMoveSpeed; const CVector fw = tv->GetForward();
+            if (c->bInVehicle && c->m_pVehicle) QueueActions({ "emit mdwveh:" + F(q.x) + ":" + F(q.y) + ":-100:" + F(sp.x) + ":" + F(sp.y) + ":" + F(sp.z) + ":" + F(std::atan2(-fw.x, fw.y)) }, row.settle);
+            else QueueActions({ "emit mdwped:" + F(q.x) + ":" + F(q.y) + ":-100" }, row.settle);
+            notsa::standalone::Fixups::Log("[mdriver] trainnear: CJ joins the train at %.0f,%.0f (speed %.1f)", (double)q.x, (double)q.y, (double)(sp.Magnitude() * 50.f)); return; }
         QueueActions({}, 0); return;
     }
     if (v == "warpto_handle") {

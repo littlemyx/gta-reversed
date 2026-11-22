@@ -850,7 +850,7 @@ int ModelWantedAfterLocate(const uint8_t* p) {
     return -1;
 }
 // CR40 (51 555 WE TIP: `WHILE NOT IS_CHAR_DEAD guard / GET_DEAD_CHAR_PICKUP_COORDS guard @x @y @z / AND(@x > a, @y > b, @z > c, d > @x, e > @y, f > @z)`, else the mission fails): the centre x, y of the box the dead ped's pickup coordinates must lie in, found within 16 commands after the IS_CHAR_DEAD at p
-bool PeekDeadBox(const uint8_t* p, float& cx, float& cy) {
+bool PeekDeadBox(const uint8_t* p, float* box /* x0 x1 y0 y1 z0 z1 (z: -1e9 / 1e9 when the script gives none) */) {
     if (!p || !InSpace(p) || (*(const uint16_t*)p & 0x7FFF) != 0x0118) return false;
     int lv[3]{ -1, -1, -1 }; float lo[3]{ NAN, NAN, NAN }, hi[3]{ NAN, NAN, NAN };
     for (int k = 0; k < 16 && p && InSpace(p); k++) {
@@ -863,7 +863,8 @@ bool PeekDeadBox(const uint8_t* p, float& cx, float& cy) {
         p = e;
     }
     if (std::isnan(lo[0]) || std::isnan(hi[0]) || std::isnan(lo[1]) || std::isnan(hi[1])) return false;
-    cx = (lo[0] + hi[0]) * 0.5f; cy = (lo[1] + hi[1]) * 0.5f; return true;
+    for (int i = 0; i < 3; i++) { box[2 * i] = std::isnan(lo[i]) ? -1e9f : lo[i]; box[2 * i + 1] = std::isnan(hi[i]) ? 1e9f : hi[i]; }
+    return true;
 }
 // CR39 (56 AMPHIBIOUS ASSAULT): the x, y of the first LOCATE_CHAR_ON_FOOT_2D (00ED) within 14 commands after p
 bool PeekFootLocateXY(const uint8_t* p, float& x, float& y) {
@@ -1030,7 +1031,10 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         if (auto* p = CPools::GetPed(h)) { if (p != c) cmd = "emit mdkillped:" + std::to_string(h); } else if (CPools::GetVehicle(h)) cmd = "emit mdkillcar:" + std::to_string(h);
         if (cmd.empty()) { QueueActions({}, 0); return; } // kill: no such char or car (TS returns without settling)
         std::vector<std::string> kacts{ cmd };
-        if (d.cond && (d.cond->raw & 0x7FFF) == 0x0118 && !(d.cond->raw & 0x8000) && cmd.rfind("emit mdkillped", 0) == 0 && !std::getenv("NOTSA_MDRIVER_NODEADBOX")) { float bx, by; if (PeekDeadBox(d.cond->p, bx, by)) kacts.insert(kacts.begin(), "emit mdwother:0:" + std::to_string(h) + ":" + F(bx) + ":" + F(by) + ":-100"); } // CR40
+        if (d.cond && (d.cond->raw & 0x7FFF) == 0x0118 && !(d.cond->raw & 0x8000) && cmd.rfind("emit mdkillped", 0) == 0 && !std::getenv("NOTSA_MDRIVER_NODEADBOX")) { float bx[6]; if (PeekDeadBox(d.cond->p, bx)) { const float cx0 = (bx[0] + bx[1]) * 0.5f, cy0 = (bx[2] + bx[3]) * 0.5f; CStreaming::LoadScene(CVector{ cx0, cy0, 0.f }); CStreaming::LoadSceneCollision(CVector{ cx0, cy0, 0.f }); float bestx = cx0, besty = cy0, bestz = (bx[4] + bx[5]) * 0.5f - 1.1f, bd = 1e30f; // the point of the box (10 x 10 grid) whose ground lies inside the z range, nearest to the centre
+        for (int gi = 1; gi < 10; gi++) for (int gj = 1; gj < 10; gj++) { const float px = bx[0] + (bx[1] - bx[0]) * gi / 10.f, py = bx[2] + (bx[3] - bx[2]) * gj / 10.f; CStreaming::LoadSceneCollision(CVector{ px, py, 0.f }); const float gz = CWorld::FindGroundZForCoord(px, py); if (gz + 1.1f < bx[4] || gz + 1.1f > bx[5]) continue; const float dd = (px - cx0) * (px - cx0) + (py - cy0) * (py - cy0); if (dd < bd) { bd = dd; bestx = px; besty = py; bestz = gz; } }
+        notsa::standalone::Fixups::Log("[mdriver] deadbox: ped %d -> %.1f,%.1f,%.1f (box %.0f..%.0f %.0f..%.0f %.0f..%.0f)", h, bestx, besty, bestz, bx[0], bx[1], bx[2], bx[3], bx[4], bx[5]);
+        kacts.insert(kacts.begin(), "emit mdwother:0:" + std::to_string(h) + ":" + F(bestx) + ":" + F(besty) + ":" + F(bestz)); } } // CR40
         if (d.cond && (d.cond->raw & 0x7FFF) == 0x0118 && !(d.cond->raw & 0x8000) && cmd.rfind("emit mdkillped", 0) == 0 && c && !std::getenv("NOTSA_MDRIVER_NOKILLGROUP")) { // CR36 (41 LOCAL LIQUOR STORE: `AND(dead robber1, dead robber2, dead robber3)` of the stage; the robbers flee in cars, one answer per 600-frame stall lets the third one drive out of the 300 m the script allows): the false IS_CHAR_DEAD tests of the SAME condition group (the same fall-through) are answered in the same action when the first target is out of CJ's reach (> 100 m)
             auto* t0 = CPools::GetPed(h); if (t0 && (t0->GetPosition() - c->GetPosition()).Magnitude() > 100.f) { std::set<int> done{ h };
                 for (auto& q : g_recsBig) { if (q->waitSeq < g_waitSeq - 3 || q->raw != 0x0118 || q->cond != 0 || q->fall != d.cond->fall || !ArgInt(*q, 0)) continue; const int h2 = (int)*ArgInt(*q, 0); if (!done.insert(h2).second) continue; auto* p2 = CPools::GetPed(h2); if (!p2 || p2 == c || p2->m_fHealth <= 0.f || ProtectedHandle(h2) || Guarded().count(h2)) continue; kacts.push_back("emit mdkillped:" + std::to_string(h2)); notsa::standalone::Fixups::Log("[mdriver] killgroup: also ped %d", h2); } } }

@@ -925,6 +925,10 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
             }
         }
         const auto pos = e->GetPosition();
+        if (!std::getenv("NOTSA_MDRIVER_NOLEASHWARP") && c && e != (CEntity*)c) { // CR35 (29 WRONG SIDE OF THE TRACKS: the stage tests `ped near the front carriage` (165 m) while a guard `NOT locate CJ within 200 m of the train` ends the mission; the answer warped CJ to the front carriage 360 m from the train = failed): a warp of CJ that lands outside 0.9 R of a car the pass holds a NOT-locate leash on (CJ the first operand, a car 0202..0207, R >= 30) is not made
+            for (auto& r : g_recsBig) { const int rop = r->raw & 0x7FFF; if (r->waitSeq < g_waitSeq - 3 || !(r->raw & 0x8000) || rop < 0x0202 || rop > 0x0207) continue; const auto h0 = ArgInt(*r, 0), h1 = ArgInt(*r, 1), rr = ArgFloat(*r, 2); if (!h0 || !h1 || !rr || *rr < 30.0 || (CEntity*)CPools::GetPed((int)*h0) != (CEntity*)c) continue;
+                auto* lv = CPools::GetVehicle((int)*h1); if (!lv || lv == (CVehicle*)e || lv->m_fHealth <= 0.f) continue; if ((lv->GetPosition() - pos).Magnitude2D() > 0.9 * *rr) { notsa::standalone::Fixups::Log("[mdriver] leashwarp: the warp onto handle %d lands %.0f m from the leash car %d (R %.0f): not made", h, (double)(lv->GetPosition() - pos).Magnitude2D(), (int)*h1, *rr); QueueActions({}, row.settle); return; } }
+        }
         if (auto* o = CPools::GetObject(h); o && o->objectFlags.bIsLiftable && c && !c->GetEntityThatThisPedIsHolding()) { // CR4: default on (was AD3-only): stand 1.5 m before a liftable object and press the pick-up key
             QueueActions({ "standobj " + std::to_string(h) + " 1.5", "wait 10", "key down return", "wait 1", "key up return", "wait 90" }, row.settle); return;
         }

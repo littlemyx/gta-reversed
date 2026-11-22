@@ -7,6 +7,10 @@
 #include "StdInc.h"
 
 #include <optional>
+#ifdef NOTSA_STATEHASH
+#include <intrin.h>
+#include "standalone/Fixups.h"
+#endif
 #include <functional>
 #include <extensions/utility.hpp>
 #include <reversiblebugfixes/Bugs.hpp>
@@ -2010,6 +2014,12 @@ void CVehicle::SetComponentVisibility(RwFrame* component, uint32 visibilityState
     assert(visibilityState == ATOMIC_NONE || visibilityState == ATOMIC_OK || visibilityState == ATOMIC_DAMAGED);
     if (component) {
         if (visibilityState == eAtomicComponentFlag::ATOMIC_DAMAGED) {
+#ifdef NOTSA_STATEHASH
+            if (!vehicleFlags.bIsDamaged && std::getenv("NOTSA_VISDMGLOG")) { // CR34 debug: who makes a car visibly damaged (off by default)
+                void* bt[6]{}; const auto nbt = CaptureStackBackTrace(0, 6, bt, nullptr); char frames[160]{}; for (int i = 1; i < nbt; i++) std::snprintf(frames + std::strlen(frames), sizeof(frames) - std::strlen(frames), " %x", (unsigned)((char*)bt[i] - (char*)GetModuleHandleA(nullptr)));
+                notsa::standalone::Fixups::Log("[visdmg] veh %p model %d at %.1f,%.1f,%.1f spd %.2f gf %u frames%s playerveh %p damager %p status %d inv %d createdBy %d drv %p apmission %d", (void*)this, (int)m_nModelIndex, GetPosition().x, GetPosition().y, GetPosition().z, m_vecMoveSpeed.Magnitude(), (unsigned)CTimer::GetFrameCounter(), frames, (void*)FindPlayerVehicle(), (void*)m_pDamageEntity, (int)GetStatus(), (int)physicalFlags.bInvulnerable, (int)m_nCreatedBy, (void*)m_pDriver, (int)m_autoPilot.m_nCarMission);
+            }
+#endif
             vehicleFlags.bIsDamaged = true;
         }
         RwFrameForAllObjects(component, SetVehicleAtomicVisibilityCB, (void*)(uintptr_t)visibilityState);

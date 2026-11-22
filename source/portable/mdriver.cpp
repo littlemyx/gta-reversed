@@ -445,6 +445,7 @@ bool Hates(ePedType a, ePedType b) { return ((CPedType::GetPedTypeAcquaintances(
 bool LikesSide(int t) { return Likes((ePedType)t, PED_TYPE_PLAYER1) || Likes(PED_TYPE_PLAYER1, (ePedType)t); }
 bool HatesSide(int t) { return Hates((ePedType)t, PED_TYPE_PLAYER1) || Hates(PED_TYPE_PLAYER1, (ePedType)t); }
 bool ProtectedPed(CPed* p) { auto* c = FindPlayerPed(); return (int)p->m_nPedType <= 3 || LikesSide((int)p->m_nPedType) || (c && c->GetPlayerGroup().GetMembership().IsMember(p)); }
+std::set<int> g_fixCars; // CR34: vehicle handles the carfix answer repaired: kept repaired every frame afterwards (the player takes the car to the Pay n Spray whenever random traffic bumps it again; 33)
 std::set<int> g_usedCars; // CR27: vehicle handles the driver itself entered / drove to a place (the mission car): never wrecked by a kill answer
 bool ProtectedHandle(int h) { // actions.ts protectedHandle
     if (auto* p = CPools::GetPed(h)) return p == Cj() || ProtectedPed(p);
@@ -600,6 +601,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
     static const Row kDmg{ 0x0366, 1, "HAS_OBJECT_BEEN_DAMAGED", "damageobj", { "$0" }, 30 };
     static const Row kPho{ 0x04C5, 1, "HAS_CHAR_BEEN_PHOTOGRAPHED", "photo", { "$0" }, 30 }; // CR25 (58 PHOTO OPPORTUNITY)
     static const Row kTag{ 0x0038, 0, "int compare of the GET_PERCENTAGE_TAGGED_IN_AREA result", "tagarea", {}, 60 };
+    static const Row kFix{ 0x03C9, 0, "NOT IS_CAR_VISIBLY_DAMAGED", "carfix", { "$0" }, 30 }; // CR34 (33 MANAGEMENT ISSUES)
     static const Row kPrj{ 0x02EE, 1, "IS_PROJECTILE_IN_AREA", "projectile", { "$0", "$1", "$2", "$3", "$4", "$5" }, 40 }; // CR26 (22 BURNING DESIRE)
     static const Row kGrp{ 0x06EE, 1, "IS_GROUP_MEMBER", "joingroup", { "$0", "$1" }, 30 }; // CR26 (20 LOS SEPULCROS)
     if (!std::getenv("NOTSA_MDRIVER_NOBUILTIN")) {
@@ -608,6 +610,9 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             for (int k = 0; k < 2; k++) if (c->vref[k]) if (auto it = g_tagAreas.find(c->vref[k]); it != g_tagAreas.end()) { for (int j = 0; j < 4; j++) g_tagRect[j] = it->second[j]; return true; }
             return false;
         };
+        if (!std::getenv("NOTSA_MDRIVER_NOCARFIX")) for (auto& c : falses) { // CR34 (33 MANAGEMENT ISSUES: random traffic bumped the mission car on its way, the stage waits for `NOT IS_CAR_VISIBLY_DAMAGED car` (+ the car health), the Pay n Spray cannot do it, SET_CAN_RESPRAY_CAR 0): a false NOT-form IS_CAR_VISIBLY_DAMAGED is answered by repairing that car (CVehicle::Fix: the Pay n Spray outcome)
+            if (c->raw != 0x83C9) continue; auto a2 = ResolveArgs(kFix, *c); if (!a2 || a2->empty() || !CPools::GetVehicle((int)(*a2)[0].n)) continue;
+            d.act = true; d.row = &kFix; d.rowIdx = -14; d.cond = c; d.args = *a2; d.op = 0x03C9; return d; }
         for (auto& c : falses) {
             const int op = c->raw & 0x7FFF; if (c->raw & 0x8000) continue;
             if (op == 0x04C5 && !std::getenv("NOTSA_MDRIVER_NOPHOTO")) { auto a2 = ResolveArgs(kPho, *c); if (a2) { d.act = true; d.row = &kPho; d.rowIdx = -6; d.cond = c; d.args = *a2; d.op = op; return d; } }
@@ -925,6 +930,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         one(warp(pos.x + 0.5f, pos.y, pos.z, false)); return;
     }
     if (v == "photo") { QueueActions({ "emit mdphoto:" + std::to_string(I_(0)) }, row.settle); if (!std::getenv("NOTSA_MDRIVER_NOEARLY") && !std::getenv("NOTSA_MDRIVER_NOZOOM") && PhotoWantsZoom()) g_nextStall = 90, g_photoEarly = true; /* CR26: a timed (zoomed) photo condition: the next decision after 90 frames, not 600 (the walker's task ends sooner) */ return; } // CR25: HAS_CHAR_BEEN_PHOTOGRAPHED(ped): the camera shot of the ped (the flag CWeapon::TakePhotograph sets for a ped in frame, in range and in line of sight)
+    if (v == "carfix") { QueueActions({ "emit mdfixcar:" + std::to_string(I_(0)) }, row.settle); return; } // CR34
     if (v == "damageobj") { QueueActions({ "emit mddmgobj:" + std::to_string(I_(0)) }, row.settle); return; } // CR22: HAS_OBJECT_BEEN_DAMAGED(obj): CJ damages the object (16 NINES AND AK'S shooting range)
     if (v == "tosphere") { // CR24: the vehicle at the centre of a GET_RANDOM_CAR_IN_SPHERE search is moved next to the nearest car the game's own search would accept (appearance 1/2, not a law enforcer, wanted model, CanBeDeleted: the mission's decoy is refused), 8 m above it
         CVehicle* best = SphereTarget(g_sphCur.veh, g_sphCur.model);
@@ -1022,6 +1028,7 @@ void TickGeneric() {
     auto* root = notsa::scmtrace::Root();
     if (!g_started) { if (!root) return; g_started = true; StaticScan(root); if (!std::getenv("NOTSA_MDRIVER_NOCITY")) CStats::SetStatValue(STAT_CITY_UNLOCKED, 2.f); /* CR10: a mission started cold stands where the story would have opened the cities: SF/LV closed = 4 stars on arrival (SetPlayerWantedLevelForForbiddenTerritories), cops attack */ g_passStat0 = CStats::GetStatValue(STAT_MISSIONS_PASSED); g_thread = root; g_frame0 = CTimer::GetFrameCounter(); g_sameCount = 0; g_lastIp = nullptr; }
     const int fr = GFrame();
+    if (!g_fixCars.empty()) for (const int h : g_fixCars) if (auto* v = CPools::GetVehicle(h); v && v->vehicleFlags.bIsDamaged && v->m_fHealth > 0.f && !std::getenv("NOTSA_MDRIVER_NOKEEPFIX")) { v->Fix(); v->m_fHealth = 1000.f; }
     if (root) { char n[9]{}; std::memcpy(n, root->m_szName, 8); g_name = n; }
     if (!root) { // the thread ended (TS: !alive(script)): PASSED / FAILED, or STOP when a kill of the driver was just before it
         g_endFrame = fr;
@@ -1163,6 +1170,7 @@ void TickGeneric() {
     Dec d = Decide(loop, g_attemptsAt[ipPtr]);
     if ((!d.act || d.row->action == "wait") && g_attemptsAt[ipPtr] >= 0 && !std::getenv("NOTSA_MDRIVER_NOCLOCKSKIP")) for (auto& r : g_recsBig) { // CR32 (33 MANAGEMENT ISSUES: `WAIT UNTIL hour > 21`, the hour copied by GET_TIME_OF_DAY into a local; the idle player is arrested long before the game clock gets there): a false `local > N` whose local holds the current game hour is answered by the clock moving to N+1:00 (the player waits for the night, or sleeps)
         if (r->waitSeq < g_waitSeq - 3 || (r->raw & 0x7FFF) != 0x0019 || (r->raw & 0x8000) || r->cond != 0) continue;
+        if (!std::getenv("NOTSA_MDRIVER_CLOCKGUARD") && VerdictOf(g_thread, *r) != Verdict::Wait) continue; /* CR34 (33: `IF hour > 21` jumps FORWARD when false and its true branch is the mission's failure (a time limit): moving the clock made the mission fail at f5553) */
         const auto v = ArgInt(*r, 0), n = ArgInt(*r, 1); if (!v || !n || *v != (int)CClock::GetGameClockHours() || *n < *v || *n > 22) continue;
         notsa::standalone::Fixups::Log("[mdriver] clockskip frame %d: the wait is for hour > %d (now %d): the game clock goes to %d:00", fr, (int)*n, (int)*v, (int)*n + 1); CClock::SetGameClock((uint8)(*n + 1), 0, CClock::GetGameClockDays()); QueueActions({}, 60); return; }
     if ((!d.act || d.row->action == "wait") && !std::getenv("NOTSA_MDRIVER_NOWIDE") && g_recs.size() > loop.size()) { // CR23 (16 NINES AND AK'S): the loop window (the last 3 passes) is one frame of a script that tests ONE array element per pass (@42 = 0..4, 5 passes per revolution) and the stall frame is phase-locked to the slot of an object that no longer exists: the answer is the plain `wait` of the end-of-stage locate, the target that can be shot is only in older passes. Rule: when the narrow window gives only `wait` (or nothing), look at every retained pass of the stalled loop (the 64 records, all from the stall period) and take a non-wait answer from there.
@@ -1465,6 +1473,9 @@ bool Cmd(const char* name, const std::string& args) {
         if (auto* o = CPools::GetObject(h)) { const CVector old = o->GetPosition(); CWorld::Remove(o); o->SetPosn(CVector{ w[0], w[1], w[2] <= -100.f ? old.z : w[2] }); o->m_vecMoveSpeed = CVector{}; o->m_vecTurnSpeed = CVector{}; CWorld::Add(o); notsa::standalone::Fixups::Log("[mdriver] mdwobj gf=%u obj %d model %d %.2f,%.2f,%.2f -> %.2f,%.2f,%.2f", (unsigned)CTimer::GetFrameCounter(), h, (int)o->m_nModelIndex, old.x, old.y, old.z, w[0], w[1], w[2]); }
         return true;
     }
+    if (!std::strcmp(name, "mdfixcar")) { // CR34: CVehicle::Fix + full health (what the script command FIX_CAR does)
+        if (auto* v = CPools::GetVehicle(std::atoi(args.c_str()))) { g_fixCars.insert(std::atoi(args.c_str())); v->Fix(); v->m_fHealth = 1000.f; notsa::standalone::Fixups::Log("[mdriver] mdfixcar %d model %d", std::atoi(args.c_str()), (int)v->m_nModelIndex); }
+        return true; }
     if (!std::strcmp(name, "mddmgobj")) { // CR22: CObject::ObjectDamage, CJ the damager, pistol (the port's object damage path of a bullet hit)
         if (auto* o = CPools::GetObject(std::atoi(args.c_str()))) { const CVector pos = o->GetPosition(); CVector dir = pos - ped->GetPosition(); dir.Normalise(); o->ObjectDamage(1000.f, &pos, &dir, ped, WEAPON_PISTOL); notsa::standalone::Fixups::Log("[mdriver] mddmgobj %s model %d renderDamaged=%d visible=%d", args.c_str(), (int)o->m_nModelIndex, (int)o->m_bRenderDamaged, (int)o->m_bIsVisible); }
         return true;

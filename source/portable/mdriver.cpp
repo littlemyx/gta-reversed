@@ -1323,9 +1323,6 @@ void TickGeneric() {
         me->physicalFlags.bInvulnerable = true;
         if (me->bInVehicle && me->m_pVehicle) me->m_pVehicle->physicalFlags.bInvulnerable = true;
     }
-    if (static const bool noGG = std::getenv("NOTSA_MDRIVER_NOGROUPGOD") != nullptr; !noGG) if (auto* me = Cj()) { // CR40 (53 MOUNTAIN CLOUD BOYS: Woozie, a follower of CJ's group, was shot by the type 24 gang: 'Woozie Died'): the followers of CJ's groups are invulnerable too (the TS driver keeps its buddies alive)
-        for (int gi = 0; gi < 8; gi++) { auto& mem = CPedGroups::ms_groups[gi].GetMembership(); if (mem.GetLeader() != me) continue; for (int mi = 0; mi < 7; mi++) if (auto* fo = mem.GetMember(mi); fo && fo != me) fo->physicalFlags.bInvulnerable = true; }
-    }
     if (fr % 30 == 0 && !std::getenv("NOTSA_MDRIVER_NOURGENT")) { // CR31 (26 ROBBING UNCLE SAM: army fire on the truck CJ sits in): the vehicle of CJ lost >= 45 health in each of 3 consecutive 30-frame windows = danger for 120 frames (shorter patience, CJ drives to the destination blip)
         auto* me2 = Cj(); auto* v2 = me2 && me2->bInVehicle ? me2->m_pVehicle : nullptr;
         if (!v2) { g_vhpVeh = nullptr; g_vhpPrev = -1; g_dropWin = 0; }

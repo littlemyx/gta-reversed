@@ -6,6 +6,7 @@
 #include "MenuSystem.h"
 #include "ProjectileInfo.h"
 #include "Pickups.h"
+#include "Explosion.h"
 #include "GangWars.h"
 #include "TheZones.h"
 #include "PedGroup.h"
@@ -491,8 +492,14 @@ bool NotInCarGuard(const CRunningScript* s, const Rec& r) {
 bool ButtonGuard(const Rec& r) { // CR24 (10 BEEFY BARON): a plain IS_BUTTON_PRESSED whose true branch ends in the mission's failure (directly or through a fail flag) is a guard: the driver never presses that button (here: the RC plane's self-destruct after 4 s of hovering; the mission is passed by surviving the timer)
     if ((r.raw & 0x7FFF) != 0x00E1 || (r.raw & 0x8000) || !g_thread || std::getenv("NOTSA_MDRIVER_NOBUTTONGUARD")) return false;
     if (!r.hasBranch || !r.fall) return false;
+    bool skipSeen = false; int hops = 0;
     for (const uint8_t* p = r.fall; InSpace(p);) { // the true branch only: the straight-line commands up to the first wait / branch / call / return; a print of M_FAIL on it = the press fails the mission (10: self-destruct). VerdictOf walked through the following conditions and flagged 46's passing press too
-        const int op = *(const uint16_t*)p & 0x7FFF; if (op == 0x0001 || op == 0x0051 || op == 0x004D || op == 0x0050 || op == 0x00D6 || op == 0x0002) return false;
+        const int op = *(const uint16_t*)p & 0x7FFF;
+        if (op == 0x040D || op == 0x0729) skipSeen = true; // CR36 (45 KING IN EXILE): CLEAR_MISSION_AUDIO / TASK_USE_MOBILE_PHONE (put the phone away) on the way
+        if (op == 0x0002 && hops < 4 && !std::getenv("NOTSA_MDRIVER_NOSKIPBUTTON")) { // CR36: follow an unconditional GOTO of the true branch (mission scripts: a negative offset is local)
+            const uint8_t* gq = p + 2; bool gmf = false, gI = false; int32_t gv = 0; const uint8_t* gn = SkipOperand(gq, gmf, gI, gv);
+            if (!gn || !gI) return false; const uint8_t* nx = Resolve(g_thread, gv); if (!nx || !InSpace(nx)) return false; hops++; p = nx; continue; }
+        if (op == 0x0001 || op == 0x0051 || op == 0x004D || op == 0x0050 || op == 0x00D6 || op == 0x0002) return hops > 0 && skipSeen && !std::getenv("NOTSA_MDRIVER_NOSKIPBUTTON"); // CR36 (45 KING IN EXILE: `IF IS_BUTTON_PRESSED pad 15` of the phone call stage: the true branch silences the mission audio, puts the phone away and jumps to the cleanup = the 'hang up' button; the call ends by itself and passes, the press ended the mission thread without a pass): a skip / hang-up button is no answer
         const uint8_t* q = p + 2; bool mf = false, isI = false; int32_t iv = 0; const int want = Arity(op); int count = 0;
         for (;;) { if (want >= 0 && count >= want) break; if (!InSpace(q)) return false; const uint8_t* nx = SkipOperand(q, mf, isI, iv); if (!nx) break; if (mf && op >= 0x00BA && op <= 0x00BD) return true; q = nx; count++; }
         p = q;
@@ -555,7 +562,7 @@ std::optional<std::vector<RArg>> ResolveArgs(const Row& row, const Rec& rec) {
     for (auto& a : row.args) {
         RArg r;
         if (a.size() > 1 && a[0] == '$' && std::all_of(a.begin() + 1, a.end(), [](char c) { return std::isdigit((unsigned char)c); })) {
-            const auto v = fl ? ArgFloat(rec, (size_t)std::atoi(a.c_str() + 1)) : ArgInt(rec, (size_t)std::atoi(a.c_str() + 1));
+            const size_t ai = (size_t)std::atoi(a.c_str() + 1); const auto v = (fl || (row.action == "explode" && ai >= 1)) ? ArgFloat(rec, ai) : ArgInt(rec, ai); // CR36: explode = (type int, 6 floats)
             if (!v || !std::isfinite(*v)) return std::nullopt;
             r.n = *v;
         } else if (IsNum(a)) r.n = std::atof(a.c_str());
@@ -603,10 +610,22 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
     const auto sentinelLocate = [](const Rec& r) { const int op = r.raw & 0x7FFF; if (!((op >= 0x00EC && op <= 0x00F1) || (op >= 0x00FE && op <= 0x0103) || (op >= 0x01AD && op <= 0x01B0)) || std::getenv("NOTSA_MDRIVER_NOSENTINEL")) return false; for (size_t i = 1; i <= 3; i++) if (const auto f = ArgFloat(r, i); f && std::fabs(*f) >= 20000.0) return true; return false; };
     // CR35 (29 WRONG SIDE OF THE TRACKS): a locate about a TRAIN is never answered (it runs to the place on its tracks: CR31 trainwait), so it must not shadow the other false conditions of the pass (the four Vagos' IS_CHAR_DEAD tests were never reached: three 600-frame stalls were spent on the train)
     const auto trainLocate = [](const Rec& r) { if (std::getenv("NOTSA_MDRIVER_NOTRAINWAIT") || std::getenv("NOTSA_MDRIVER_NOTRAINSKIP")) return false; const auto o = LocatedOther(r); if (o.compare(0, 2, "1:")) return false; auto* tv = CPools::GetVehicle(std::atoi(o.c_str() + 2)); return tv && tv->IsTrain(); };
-    for (size_t k = loop.size(); k-- > 0;) { const auto& r = loop[k]; if (r->cond == 0 && !AnyGuard(*r) && !satisfied.count(r->p) && !sentinelLocate(*r) && !trainLocate(*r)) falses.push_back(r); }
+    // CR36 (41 LOCAL LIQUOR STORE: the stage chases three robbers in cars and ends with "You lost the robbers" when the distance variables (`300 > dist`, GET_DISTANCE_BETWEEN_COORDS of CJ and a robber, TRUE in the pass) pass 300 m; the answer to an unrelated accuracy locate (LOCATE_CHAR_ANY_MEANS_2D at a far place) put CJ 1100 m away = lost): a place locate whose centre lies farther than 0.9 N from the ped that a TRUE `N > dist` test of the pass measures (N 100..1000, the ped found as in the distance fetch: at that distance from CJ) is not a candidate
+    const auto leashActive = []() { if (std::getenv("NOTSA_MDRIVER_NOLEASHLOCATE")) return false; auto* me = Cj(); if (!me) return false; // CR36: a TRUE `N > dist` test (N 100..1000) of the pass measures the distance from CJ to a ped: CJ must not be moved far away (the area entrance walk-in of 41 lost the robbers the same way)
+        for (auto& g : g_recsBig) { if (g->waitSeq < g_waitSeq - 3 || g->raw != 0x0023 || g->cond != 1 || g->args.size() < 2) continue; const float lim = AF(g->args[0]), dv = AF(g->args[1]); if (!(lim >= 100.f && lim <= 1000.f) || !(dv > 0.3f * lim && dv < lim)) continue;
+            for (auto& pd : GetPedPool()->GetAllValid()) { if (&pd == me || pd.m_fHealth <= 0.f) continue; if (std::fabs((pd.GetPosition() - me->GetPosition()).Magnitude() - dv) < 1.5f) return true; } }
+        return false; };
+    const auto leashLocate = [](const Rec& r) { const int op = r.raw & 0x7FFF; if (!((op >= 0x00EC && op <= 0x00F1) || (op >= 0x00FE && op <= 0x0103)) || std::getenv("NOTSA_MDRIVER_NOLEASHLOCATE")) return false; auto* me = Cj(); if (!me) return false;
+        const auto lx = ArgFloat(r, 1), ly = ArgFloat(r, 2); if (!lx || !ly) return false;
+        for (auto& g : g_recsBig) { if (g->waitSeq < g_waitSeq - 3 || g->raw != 0x0023 || g->cond != 1 || g->args.size() < 2) continue; const float lim = AF(g->args[0]), dv = AF(g->args[1]); if (!(lim >= 100.f && lim <= 1000.f) || !(dv > 0.3f * lim && dv < lim)) continue;
+            for (auto& pd : GetPedPool()->GetAllValid()) { if (&pd == me || pd.m_fHealth <= 0.f) continue; if (std::fabs((pd.GetPosition() - me->GetPosition()).Magnitude() - dv) >= 1.5f) continue;
+                const float dx = (float)*lx - pd.GetPosition().x, dy = (float)*ly - pd.GetPosition().y; if (std::sqrt(dx * dx + dy * dy) > 0.9f * lim) { notsa::standalone::Fixups::Log("[mdriver] leashlocate: the locate at %.0f,%.0f is %.0f m from ped %d (leash %.0f): not a candidate", *lx, *ly, (double)std::sqrt(dx * dx + dy * dy), CPools::GetPedRef(&pd), (double)lim); return true; } } }
+        return false; };
+    for (size_t k = loop.size(); k-- > 0;) { const auto& r = loop[k]; if (r->cond == 0 && !AnyGuard(*r) && !satisfied.count(r->p) && !sentinelLocate(*r) && !trainLocate(*r) && !leashLocate(*r)) falses.push_back(r); }
     if (falses.empty() && blockers.empty()) { d.reason = "no condition evaluated false in the loop (the guards left out)"; return d; }
     // CR22: built-in verbs for opcodes the TS table has no row for (proposed rows: see C:/gta-scratch/cr22/FINDINGS.txt FOR TS). They come before every table row (a wait row of another false condition of the pass must not shadow them).
     static const Row kDmg{ 0x0366, 1, "HAS_OBJECT_BEEN_DAMAGED", "damageobj", { "$0" }, 30 };
+    static const Row kExp{ 0x0356, 1, "IS_EXPLOSION_IN_AREA", "explode", { "$0", "$1", "$2", "$3", "$4", "$5", "$6" }, 60 }; // CR36 (42 SMALL TOWN BANK: the vault wall waits for an explosion in a 2 m box)
     static const Row kPho{ 0x04C5, 1, "HAS_CHAR_BEEN_PHOTOGRAPHED", "photo", { "$0" }, 30 }; // CR25 (58 PHOTO OPPORTUNITY)
     static const Row kTag{ 0x0038, 0, "int compare of the GET_PERCENTAGE_TAGGED_IN_AREA result", "tagarea", {}, 60 };
     static const Row kFix{ 0x03C9, 0, "NOT IS_CAR_VISIBLY_DAMAGED", "carfix", { "$0" }, 30 }; // CR34 (33 MANAGEMENT ISSUES)
@@ -640,6 +659,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
                 // every distinct false projectile area of the loop gets its molotov in the same frame (the script counts them in one pass)
                 for (auto& q : falses) if (q != c && (q->raw & 0x7FFF) == 0x02EE && !(q->raw & 0x8000)) if (auto a3 = ResolveArgs(kPrj, *q); a3 && a3->size() == 6) for (auto& x : *a3) d.args.push_back(x);
                 return d; } }
+            if (op == 0x0356 && !std::getenv("NOTSA_MDRIVER_NOEXPLODE")) { auto a2 = ResolveArgs(kExp, *c); if (a2 && a2->size() == 7) { d.act = true; d.row = &kExp; d.rowIdx = -16; d.cond = c; d.args = *a2; d.op = op; return d; } } // CR36: IS_EXPLOSION_IN_AREA(type, box) is false: an explosion of that type at the box centre
             if (op == 0x0366) { auto a2 = ResolveArgs(kDmg, *c); if (a2 && wide && (a2->empty() || !CPools::GetObject((int)(*a2)[0].n))) continue; /* CR23: a record of an older pass: the object may be gone */ if (a2) { d.act = true; d.row = &kDmg; d.rowIdx = -2; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (tagCond(c)) { d.act = true; d.row = &kTag; d.rowIdx = -3; d.cond = c; d.op = op; return d; }
         }
@@ -677,6 +697,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             if (!(c->vref[0] && g_areaVars.count(c->vref[0]))) continue;
             const auto n = ArgInt(*c, 1); if (!n || *n < 0) continue;
             if (blockAnswerable) continue;
+            if (leashActive()) continue; // CR36
             if (*n == 0 && c->jumped && c->target && InSpace(c->target) && (*(const uint16_t*)c->target & 0x7FFF) == 0x0051 && !std::getenv("NOTSA_MDRIVER_LEAVEANY")) continue; // CR24 (14): `GET_AREA_VISIBLE == 0` whose false branch skips to the RETURN of a helper sub (`IF @78 == 0` of a sub run every pass while CJ is inside the interior) is no wait: it must not drag CJ out of the interior
             if (!c->waitAfter && !std::getenv("NOTSA_MDRIVER_NOENTERLOOSE")) { // CR28 (24 HOME INVASION: the false `GET_AREA_VISIBLE == 8` is an IF of the main loop (the burglary timer display), its false branch is no wait; the stage's own plain false `LOCATE_CHAR_IN_CAR_3D` at the house is the blocker): an area compare that is no wait goes after the plain false conditions a warp / enter-car row answers
                 bool other = false; for (auto& f2 : falses) { if (f2 == c || (f2->raw & 0x8000)) continue; if (f2->raw == 0x0214 || f2->raw == 0x0491) { other = true; break; } /* the pickup of the stage (22: the molotovs; the `pickupgo` verb answers it after a wait) */ for (auto& row : g_rows) if (row.match != 2 && row.op == (f2->raw & 0x7FFF) && (row.action == "pedwarp" || row.action == "vehwarp" || row.action == "midpoint" || row.action == "entercar" || row.action == "warpto_handle") && ResolveArgs(row, *f2)) { other = true; break; } if (other) break; }
@@ -865,6 +886,9 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         std::string a; for (size_t i = 0; i + 5 < d.args.size(); i += 6) { if (!a.empty()) a += "|"; a += F(0.5f * (F_(i) + F_(i + 3))) + "," + F(0.5f * (F_(i + 1) + F_(i + 4))) + "," + F(0.5f * (F_(i + 2) + F_(i + 5))); }
         QueueActions({ "emit mdproj:" + a }, row.settle); return;
     }
+    if (v == "explode") { // CR36: the script command ADD_EXPLOSION at the centre of the tested box (type -1 = any: a grenade)
+        QueueActions({ "emit mdexplode:" + std::to_string((int)F_(0)) + ":" + F(0.5f * (F_(1) + F_(4))) + ":" + F(0.5f * (F_(2) + F_(5))) + ":" + F(0.5f * (F_(3) + F_(6))) }, row.settle); return;
+    }
     if (v == "blipgo") { one(warp(F_(0), F_(1), F_(2), false)); return; } // CR26
     if (v == "midpoint") {
         float x, y, z = -100.f;
@@ -906,7 +930,11 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         std::string cmd;
         if (auto* p = CPools::GetPed(h)) { if (p != c) cmd = "emit mdkillped:" + std::to_string(h); } else if (CPools::GetVehicle(h)) cmd = "emit mdkillcar:" + std::to_string(h);
         if (cmd.empty()) { QueueActions({}, 0); return; } // kill: no such char or car (TS returns without settling)
-        QueueActions({ cmd }, row.settle); g_killFrame = GFrame(); g_killSettle = row.settle;
+        std::vector<std::string> kacts{ cmd };
+        if (d.cond && (d.cond->raw & 0x7FFF) == 0x0118 && !(d.cond->raw & 0x8000) && cmd.rfind("emit mdkillped", 0) == 0 && c && !std::getenv("NOTSA_MDRIVER_NOKILLGROUP")) { // CR36 (41 LOCAL LIQUOR STORE: `AND(dead robber1, dead robber2, dead robber3)` of the stage; the robbers flee in cars, one answer per 600-frame stall lets the third one drive out of the 300 m the script allows): the false IS_CHAR_DEAD tests of the SAME condition group (the same fall-through) are answered in the same action when the first target is out of CJ's reach (> 100 m)
+            auto* t0 = CPools::GetPed(h); if (t0 && (t0->GetPosition() - c->GetPosition()).Magnitude() > 100.f) { std::set<int> done{ h };
+                for (auto& q : g_recsBig) { if (q->waitSeq < g_waitSeq - 3 || q->raw != 0x0118 || q->cond != 0 || q->fall != d.cond->fall || !ArgInt(*q, 0)) continue; const int h2 = (int)*ArgInt(*q, 0); if (!done.insert(h2).second) continue; auto* p2 = CPools::GetPed(h2); if (!p2 || p2 == c || p2->m_fHealth <= 0.f || ProtectedHandle(h2) || Guarded().count(h2)) continue; kacts.push_back("emit mdkillped:" + std::to_string(h2)); notsa::standalone::Fixups::Log("[mdriver] killgroup: also ped %d", h2); } } }
+        QueueActions(kacts, row.settle); g_killFrame = GFrame(); g_killSettle = row.settle;
         if (d.cond && (d.cond->raw & 0x7FFF) == 0x0118 && !(d.cond->raw & 0x8000) && cmd.rfind("emit mdkillped", 0) == 0 && std::count_if(g_recsBig.begin(), g_recsBig.end(), [&](const RecP& q) { return q->waitSeq >= g_waitSeq - 3 && (q->raw == 0x0118) && q->cond == 0 && ArgInt(*q, 0) && (int)*ArgInt(*q, 0) != h; }) >= 2 && c && CPools::GetPed(h) && (CPools::GetPed(h)->GetPosition() - c->GetPosition()).Magnitude() < 50.f /* the killed char is near CJ (20: chars 80 and 1400 m away) */ && !std::getenv("NOTSA_MDRIVER_NOKILLFAST") && MovingTrainNear(c)) g_nextStall = 60; /* only while a moving train is next to CJ (the targets ride past: 18 and 89 changed their frames without it) */ /* CR35 (29): the pass tests several other chars dead (the four Vagos): the next one is answered after 60 frames, not 600 */
         return;
     }
@@ -1541,6 +1569,14 @@ bool Cmd(const char* name, const std::string& args) {
     if (!std::strcmp(name, "mdfixcar")) { // CR34: CVehicle::Fix + full health (what the script command FIX_CAR does)
         if (auto* v = CPools::GetVehicle(std::atoi(args.c_str()))) { g_fixCars.insert(std::atoi(args.c_str())); v->Fix(); v->m_fHealth = 1000.f; notsa::standalone::Fixups::Log("[mdriver] mdfixcar %d model %d", std::atoi(args.c_str()), (int)v->m_nModelIndex); }
         return true; }
+    if (!std::strcmp(name, "mdexplode")) { // CR36: CExplosion::AddExplosion as the script command ADD_EXPLOSION does (no creator, sound, no camera shake)
+        int t = -1; float x = 0, y = 0, z = 0; std::sscanf(args.c_str(), "%d:%f:%f:%f", &t, &x, &y, &z);
+        if (!std::getenv("NOTSA_MDRIVER_NOEXPLOSIONPROOF")) for (auto& pd : GetPedPool()->GetAllValid()) { // the player throws the grenade from a distance in the game: the peds near the box (CJ, the buddy) are explosion proof, the explosion only has to be SEEN by the script's area test
+            if (pd.m_fHealth > 0.f && (pd.GetPosition() - CVector{ x, y, z }).Magnitude() < 25.f) pd.physicalFlags.bExplosionProof = true; }
+        CExplosion::AddExplosion(nullptr, nullptr, t < 0 ? EXPLOSION_GRENADE : (eExplosionType)t, CVector{ x, y, z }, 0, true, -1.0f, false);
+        notsa::standalone::Fixups::Log("[mdriver] mdexplode gf=%u type %d at %.2f,%.2f,%.2f", (unsigned)CTimer::GetFrameCounter(), t, x, y, z);
+        return true;
+    }
     if (!std::strcmp(name, "mddmgobj")) { // CR22: CObject::ObjectDamage, CJ the damager, pistol (the port's object damage path of a bullet hit)
         if (auto* o = CPools::GetObject(std::atoi(args.c_str()))) { const CVector pos = o->GetPosition(); CVector dir = pos - ped->GetPosition(); dir.Normalise(); o->ObjectDamage(1000.f, &pos, &dir, ped, WEAPON_PISTOL); notsa::standalone::Fixups::Log("[mdriver] mddmgobj %s model %d renderDamaged=%d visible=%d", args.c_str(), (int)o->m_nModelIndex, (int)o->m_bRenderDamaged, (int)o->m_bIsVisible); }
         return true;

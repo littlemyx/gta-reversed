@@ -95,8 +95,12 @@ bool IsPlayerClimbing(CPlayerPed& player) {
 }
 
 /// SET_SWIM_SPEED(0A28)
-void SetSwimSpeed(CPlayerPed& player, float speed) {
-    if (auto swim = player.GetIntelligence()->GetTaskSwim()) {
+/// exe @0x479DDA: the first operand is a char handle (CPedPool::GetAtRef: any ped, null = ignored), not a player index (the missions pass a CREATE_CHAR handle: 64 PIER 69 swimmer)
+void SetSwimSpeed(CPed* ped, float speed) {
+    if (!ped) {
+        return;
+    }
+    if (auto swim = ped->GetIntelligence()->GetTaskSwim()) {
         swim->m_fAnimSpeed = speed;
     }
 }

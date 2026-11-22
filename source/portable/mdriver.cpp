@@ -947,7 +947,10 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         }
         one(warp(F_(0), F_(1), F_(2), v == "vehwarp")); return;
     }
-    if (v == "joingroup") { QueueActions({ "emit mdjoingrp:" + std::to_string(I_(0)) + ":" + std::to_string(I_(1)) }, row.settle); return; } // CR26: IS_GROUP_MEMBER(ped, group) is false: the ped joins the group (what SET_GROUP_MEMBER does for a recruit)
+    if (v == "joingroup") {
+        std::vector<std::string> jacts; // CR39 (53 MOUNTAIN CLOUD BOYS: Woozie falls out of the group when CJ warps away; the group takes a follower only near its leader, the script re-recruits him when CJ is within 6 m): the ped comes next to CJ first
+        if (auto* jp = CPools::GetPed(I_(0)); jp && c && jp != c && !std::getenv("NOTSA_MDRIVER_NOJOINFETCH") && (jp->GetPosition() - c->GetPosition()).Magnitude() > 10.f) { const CVector cp = c->GetPosition(); const CVector fw = c->bInVehicle && c->m_pVehicle ? c->m_pVehicle->GetForward() : c->GetForward(); const CVector q = cp - fw * 2.f; jacts.push_back("emit mdwother:0:" + std::to_string(I_(0)) + ":" + F(q.x) + ":" + F(q.y) + ":" + F(cp.z)); }
+        jacts.push_back("emit mdjoingrp:" + std::to_string(I_(0)) + ":" + std::to_string(I_(1))); QueueActions(jacts, row.settle); return; } // CR26: IS_GROUP_MEMBER(ped, group) is false: the ped joins the group (what SET_GROUP_MEMBER does for a recruit)
     if (v == "nearfetch") { QueueActions({ "emit mdwother:0:" + std::to_string((int)F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) + ":" + F(F_(3)) }, row.settle); return; } // CR32
     if (v == "zonego") { one(warp(F_(0), F_(1), F_(2), false)); return; } // CR26
     if (v == "gangwar") { QueueActions({ "emit mdprovoke:3" }, row.settle); return; } // CR26

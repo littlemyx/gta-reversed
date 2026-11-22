@@ -635,6 +635,27 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
     for (size_t k = loop.size(); k-- > 0;) { const auto& r = loop[k]; if (r->cond == 0 && !AnyGuard(*r) && !satisfied.count(r->p) && !sentinelLocate(*r) && !trainLocate(*r) && !leashLocate(*r) && !foreignCarLoc(*r)) falses.push_back(r); }
     if (falses.size() > 1 && !std::getenv("NOTSA_MDRIVER_NOTIMERVAR")) { const auto tz = [&](const RecP& r) { return (r->raw & 0x7FFF) == 0x0038 && !(r->raw & 0x8000) && g_timerVars.count(r->vref[0]) && ArgInt(*r, 1) && *ArgInt(*r, 1) == 0; }; if (std::any_of(falses.begin(), falses.end(), [&](const RecP& r) { return !tz(r); })) falses.erase(std::remove_if(falses.begin(), falses.end(), tz), falses.end()); } // CR39 (47)
     if (std::getenv("NOTSA_MDRIVER_FALSELOG")) { std::string fs; for (auto& f : falses) { char b[24]; std::snprintf(b, sizeof b, "%x ", (unsigned)f->raw); fs += b; } for (auto& r : loop) if (r->cond == 0 && ((r->raw & 0x7FFF) == 0x0119 || (r->raw & 0x7FFF) == 0x0118)) { char b[48]; std::snprintf(b, sizeof b, "[119 h=%d guard=%d] ", ArgInt(*r, 0) ? (int)*ArgInt(*r, 0) : -1, (int)AnyGuard(*r) * 1000 + (int)IsPlayerGuard(*r) * 100 + (int)KillRefusal(g_thread, *r) * 10 + (int)NotInCarGuard(g_thread, *r) + (int)VerdictOf(g_thread, *r) * 10000 + (int)Guarded().count(ArgInt(*r, 0) ? (int)*ArgInt(*r, 0) : -1) * 100000 + (int)ProtectedHandle(ArgInt(*r, 0) ? (int)*ArgInt(*r, 0) : -1) * 1000000); fs += b; } notsa::standalone::Fixups::Log("[mdriver] falses: %s loop=%zu", fs.c_str(), loop.size()); }
+    // CR43 (60 OUTRIDER: the roadblock stage clears a flag per live gunman / car: `@176 = 1; FOR i: IF NOT IS_CHAR_DEAD ped[i] -> @176 = 0; IF NOT IS_CAR_DEAD car[i] -> @176 = 0`, the van is let through when `@176 == 1` and is shot by the gunmen while it waits): a TRUE NOT-form IS_CHAR_DEAD / IS_CAR_DEAD in the passes (a ped / car that lives) whose true branch sets a variable to 0 while a plain `var == N` (N != 0) compare of that variable is FALSE in the same passes: those peds die and those cars are wrecked in one answer (never a buddy or a fail guard)
+    if (!wide && !g_auxMode && !std::getenv("NOTSA_MDRIVER_NOFLAGKILL") && g_thread) {
+        std::set<uint32_t> want; for (auto& r : g_recsBig) { if (r->waitSeq < g_waitSeq - 3 || r->cond != 0 || (r->raw & 0x8000) || ((r->raw & 0x7FFF) != 0x0038 && (r->raw & 0x7FFF) != 0x0039) || !r->vref[0]) continue; const auto v = ArgInt(*r, 1); if (v && *v != 0) want.insert(r->vref[0]); }
+        if (!want.empty()) {
+            std::vector<int> hs; std::set<int> seenH;
+            for (auto& q : g_recsBig) {
+                if (q->waitSeq < g_waitSeq - 3 || q->cond != 1 || (q->raw != 0x8118 && q->raw != 0x8119) || !q->hasBranch || q->jumped || !q->fall) continue;
+                const auto h = ArgInt(*q, 0); if (!h || *h <= 0) continue; const int hh = (int)*h; if (seenH.count(q->raw == 0x8118 ? hh : -hh)) continue;
+                std::vector<std::pair<uint32_t, int32_t>> sets; std::set<const uint8_t*> seen; FlagSets(g_thread, q->fall, 0, sets, seen);
+                bool clears = false; for (auto& [ref, val] : sets) if (ref != 0xFFFFFFFFu && val == 0 && want.count(ref)) clears = true;
+                if (!clears) continue;
+                if (q->raw == 0x8118) { auto* pe = CPools::GetPed(hh); if (!pe || pe == Cj() || pe->m_fHealth <= 0.f || ProtectedPed(pe) || Guarded().count(hh)) continue; seenH.insert(hh); hs.push_back(hh); }
+                else { auto* ve = CPools::GetVehicle(hh); if (!ve || ve->m_fHealth <= 0.f) continue; bool prot = false; std::vector<CPed*> occ; if (ve->m_pDriver) occ.push_back(ve->m_pDriver); for (auto* pp : ve->m_apPassengers) if (pp) occ.push_back(pp); for (auto* o : occ) if (o == Cj() || ProtectedPed(o) || (o->m_fHealth > 0.f && !HatesSide((int)o->m_nPedType) && (int)o->m_nPedType != (int)PED_TYPE_MISSION1)) prot = true; if (prot || Guarded().count(hh)) continue; seenH.insert(-hh); hs.push_back(-hh); } /* a car handle is passed negated (a ped and a car may share a pool ref) */
+            }
+            if (!hs.empty()) {
+                static const Row kKs{ 0x8118, 2, "NOT IS_CHAR_DEAD / IS_CAR_DEAD true: a flag the script clears while the char / car lives", "killset", {}, 30 };
+                d.act = true; d.row = &kKs; d.rowIdx = -30; d.cond = nullptr; d.op = 0x0118; d.args.clear(); for (const int hh : hs) { RArg a; a.n = hh; d.args.push_back(a); }
+                notsa::standalone::Fixups::Log("[mdriver] flagkill: %zu chars / cars whose live state clears a flag the pass waits for", hs.size()); return d;
+            }
+        }
+    }
     if (falses.empty() && blockers.empty()) { d.reason = "no condition evaluated false in the loop (the guards left out)"; return d; }
     // CR22: built-in verbs for opcodes the TS table has no row for (proposed rows: see C:/gta-scratch/cr22/FINDINGS.txt FOR TS). They come before every table row (a wait row of another false condition of the pass must not shadow them).
     static const Row kDmg{ 0x0366, 1, "HAS_OBJECT_BEEN_DAMAGED", "damageobj", { "$0" }, 30 };
@@ -1155,6 +1176,10 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
             acts.push_back("emit mdsmash:" + F(F_(k)) + ":" + F(F_(k + 1)) + ":" + F(F_(k + 2)) + ":" + F(F_(k + 3)) + ":" + std::to_string(I_(k + 4)) + ":" + std::to_string(I_(k + 5)) + ":" + std::to_string(I_(k + 6)));
         }
         QueueActions(acts, row.settle); return; }
+    if (v == "killset") { // CR43: see Decide (flagkill): every listed ped dies, every listed car is wrecked
+        std::vector<std::string> acts; for (auto& a : d.args) { const int h = (int)a.n; if (h < 0) acts.push_back("emit mdkillcar:" + std::to_string(-h)); else if (auto* p = CPools::GetPed(h); p && p != c) acts.push_back("emit mdkillped:" + std::to_string(h)); }
+        QueueActions(acts, row.settle); if (!acts.empty()) { g_killFrame = GFrame(); g_killSettle = row.settle; if (!std::getenv("NOTSA_MDRIVER_NOFLAGKILLFAST")) g_nextStall = 40; /* the script clears the flag at the FIRST live member of its loop: the next one shows in the next pass */ } return;
+    }
     if (v == "horn") { QueueActions({ "emit mdpad:-100:30", "wait 30" }, row.settle); return; } // CR39
     if (v == "swimgo") { std::vector<std::string> acts; if (c && c->bInVehicle) { acts = { "key down return", "wait 1", "key up return", "waituntil invehicle == 0 300" }; } if (!c || !c->bInVehicle) acts.push_back("emit mdswim:" + F(F_(0)) + ":" + F(F_(1))); QueueActions(acts, row.settle); return; } // CR39 (CJ leaves the boat in the water: he swims)
     if (v == "objto") { QueueActions({ "emit mdobjto:" + std::to_string(I_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) + ":" + F(F_(3)) }, row.settle); return; } // CR39
@@ -1653,7 +1678,7 @@ bool Cmd(const char* name, const std::string& args) {
     auto* ped = Cj();
     if (!std::strcmp(name, "mdkillped")) { if (auto* k = CPools::GetPed(std::atoi(args.c_str()))) { if (std::getenv("NOTSA_MDRIVER_PLOG")) notsa::standalone::Fixups::Log("[mdplog] kill h=%s type=%d model=%d hp=%.0f pos=%.0f,%.0f wanted=%d\n", args.c_str(), (int)k->m_nPedType, (int)k->m_nModelIndex, k->m_fHealth, k->GetPosition().x, k->GetPosition().y, (int)FindPlayerWanted()->m_WantedLevel); if (ped) CWeapon::GenerateDamageEvent(k, ped, WEAPON_PISTOL, 1000, PED_PIECE_TORSO, 0); /* CR13: no forced health 0 / PEDSTATE_DEAD fallback: TS shootDead has none, the ped dies through its death task over the next frames */ } return true; }
     if (!std::strcmp(name, "mdhurt")) { int h = 0, hp = 0; std::sscanf(args.c_str(), "%d:%d", &h, &hp); if (auto* k = CPools::GetPed(h)) { if (k->m_fHealth > (float)hp) k->m_fHealth = (float)hp; notsa::standalone::Fixups::Log("[mdriver] mdhurt ped %d health -> %d type %d model %d", h, hp, (int)k->m_nPedType, (int)k->m_nModelIndex); } return true; } // CR35
-    if (!std::strcmp(name, "mdkillcar")) { if (auto* k = CPools::GetVehicle(std::atoi(args.c_str()))) k->BlowUpCar(nullptr, false); return true; }
+    if (!std::strcmp(name, "mdkillcar")) { if (auto* k = CPools::GetVehicle(std::atoi(args.c_str()))) { if (std::getenv("NOTSA_MDRIVER_KILLLOG")) notsa::standalone::Fixups::Log("[mdriver] mdkillcar %s model %d hp %.0f status %d canBeDamaged %d fixed %d type %d", args.c_str(), (int)k->m_nModelIndex, k->m_fHealth, (int)k->GetStatus(), (int)k->vehicleFlags.bCanBeDamaged, (int)k->physicalFlags.bDisableCollisionForce, (int)k->GetType()); k->BlowUpCar(nullptr, false); if (std::getenv("NOTSA_MDRIVER_KILLLOG")) notsa::standalone::Fixups::Log("[mdriver]   after: hp %.0f status %d", k->m_fHealth, (int)k->GetStatus()); } return true; }
     if (!std::strcmp(name, "mdpad")) { const auto c = args.find(':'); if (c != std::string::npos) g_padHold[std::atoi(args.c_str())] = std::atoi(args.c_str() + c + 1) + 1; return true; }
     if (!std::strcmp(name, "mdmenu")) { // CR27: the player's CROSS press on a menu (CMenuSystem::InputStandardMenu): the selected row (the first selectable one when none) becomes the accepted row of every menu in use
         for (int id = 0; id < CMenuSystem::MENU_COUNT; id++) {

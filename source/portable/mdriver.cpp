@@ -1625,7 +1625,7 @@ bool Cmd(const char* name, const std::string& args) {
         return true;
     }
     if (!std::strcmp(name, "mddmgobj")) { // CR22: CObject::ObjectDamage, CJ the damager, pistol (the port's object damage path of a bullet hit)
-        if (auto* o = CPools::GetObject(std::atoi(args.c_str()))) { const CVector pos = o->GetPosition(); CVector dir = pos - ped->GetPosition(); dir.Normalise(); o->ObjectDamage(1000.f, &pos, &dir, ped, WEAPON_PISTOL); notsa::standalone::Fixups::Log("[mdriver] mddmgobj %s model %d renderDamaged=%d visible=%d", args.c_str(), (int)o->m_nModelIndex, (int)o->m_bRenderDamaged, (int)o->m_bIsVisible); }
+        if (auto* o = CPools::GetObject(std::atoi(args.c_str()))) { const CVector pos = o->GetPosition(); CVector dir = pos - ped->GetPosition(); dir.Normalise(); o->ObjectDamage(1000.f, &pos, &dir, ped, WEAPON_PISTOL); if (!o->m_bRenderDamaged && o->m_bIsVisible) { o->ObjectDamage(1.0e5f, &pos, &dir, ped, WEAPON_PISTOL); } /* CR39: 50 DECONSTRUCTION portakabin (colDamMult 0.01, breakable): a bulldozer hit is > 150 after the multiplier, a pistol 1000 is not */ notsa::standalone::Fixups::Log("[mdriver] mddmgobj %s model %d renderDamaged=%d visible=%d", args.c_str(), (int)o->m_nModelIndex, (int)o->m_bRenderDamaged, (int)o->m_bIsVisible); }
         return true;
     }
     if (!std::strcmp(name, "mdtag")) { // CR22: spray every tag of the area the way the spray can shot does (CWorld::SprayPaintWorld: +8 alpha per hit to the tags within the range), until each is fully tagged

@@ -665,6 +665,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
     static const Row kObjLoc{ 0x04E6, 1, "LOCATE_OBJECT_3D", "objto", { "$0", "$1", "$2", "$3" }, 60 }; // CR39 (50 DECONSTRUCTION: the toilet object has to be pushed into the pit: the locate box is 2.9 x 5 m)
     static const Row kHorn{ 0x0122, 1, "IS_PLAYER_PRESSING_HORN", "horn", {}, 60 }; // CR39 (49 WEAR FLOWERS IN YOUR HAIR: the hydraulics stage waits for the horn)
     static const Row kWater{ 0x04AD, 1, "IS_CHAR_IN_WATER", "swimgo", {}, 90 }; // CR39 (56 AMPHIBIOUS ASSAULT: CJ has to swim to the dock)
+    static const Row kCarDmg{ 0x051C, 1, "HAS_CAR_BEEN_DAMAGED_BY_CHAR", "cardmg", { "$0", "$1" }, 30 }; // CR43 (62 TORENO'S LAST FLIGHT: the landed helicopter has to be damaged by CJ)
     static const Row kPho{ 0x04C5, 1, "HAS_CHAR_BEEN_PHOTOGRAPHED", "photo", { "$0" }, 30 }; // CR25 (58 PHOTO OPPORTUNITY)
     static const Row kTag{ 0x0038, 0, "int compare of the GET_PERCENTAGE_TAGGED_IN_AREA result", "tagarea", {}, 60 };
     static const Row kFix{ 0x03C9, 0, "NOT IS_CAR_VISIBLY_DAMAGED", "carfix", { "$0" }, 30 }; // CR34 (33 MANAGEMENT ISSUES)
@@ -692,6 +693,8 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             const int op = c->raw & 0x7FFF; if (c->raw & 0x8000) continue;
             // CR35 (39 BADLANDS): a photo test answered 3 times that is still false is not the blocker when another false condition of the pass can be answered (the shot is consumed by the script's own read, a later gate of the same AND chain stays false: here a LOCATE_CHAR_IN_CAR_3D, CJ on foot): the later answers go to the other conditions
             static std::map<const uint8_t*, int> s_photoAns; const bool photoSpent = !std::getenv("NOTSA_MDRIVER_NOPHOTOSPENT") && op == 0x04C5 && s_photoAns[c->p] >= 3 && falses.size() > 1;
+            if (op == 0x051C && !std::getenv("NOTSA_MDRIVER_NOCARDMG")) { auto a2 = ResolveArgs(kCarDmg, *c); const auto ch = ArgInt(*c, 1); auto* tv = a2 && a2->size() == 2 ? CPools::GetVehicle((int)(*a2)[0].n) : nullptr; const auto vd = VerdictOf(g_thread, *c); // the char is CJ (or any: -1), the car lives and has no buddy in it, the true branch is no fail
+                if (tv && tv->m_fHealth > 0.f && ch && (*ch == -1 || CPools::GetPed((int)*ch) == Cj()) && (vd == Verdict::Wait || vd == Verdict::GoesOn)) { bool prot = false; if (tv->m_pDriver && (tv->m_pDriver == Cj() || ProtectedPed(tv->m_pDriver))) prot = true; for (auto* pp : tv->m_apPassengers) if (pp && (pp == Cj() || ProtectedPed(pp))) prot = true; if (!prot) { d.act = true; d.row = &kCarDmg; d.rowIdx = -31; d.cond = c; d.args = *a2; d.op = op; return d; } } }
             if (op == 0x04C5 && !photoSpent && !std::getenv("NOTSA_MDRIVER_NOPHOTO")) { auto a2 = ResolveArgs(kPho, *c); if (a2) { s_photoAns[c->p]++; d.act = true; d.row = &kPho; d.rowIdx = -6; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (op == 0x06EE && !std::getenv("NOTSA_MDRIVER_NOJOINGROUP")) { auto a2 = ResolveArgs(kGrp, *c); if (a2 && a2->size() == 2 && CPools::GetPed((int)(*a2)[0].n) && CPools::GetPed((int)(*a2)[0].n) != Cj()) { d.act = true; d.row = &kGrp; d.rowIdx = -8; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (op == 0x02EE && !std::getenv("NOTSA_MDRIVER_NOPROJ")) { auto a2 = ResolveArgs(kPrj, *c); if (a2 && a2->size() == 6) { d.act = true; d.row = &kPrj; d.rowIdx = -12; d.cond = c; d.args = *a2; d.op = op; d.reason = "";
@@ -1176,6 +1179,10 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
             acts.push_back("emit mdsmash:" + F(F_(k)) + ":" + F(F_(k + 1)) + ":" + F(F_(k + 2)) + ":" + F(F_(k + 3)) + ":" + std::to_string(I_(k + 4)) + ":" + std::to_string(I_(k + 5)) + ":" + std::to_string(I_(k + 6)));
         }
         QueueActions(acts, row.settle); return; }
+    if (v == "cardmg" && !d.args.empty()) { // CR43: see Decide (kCarDmg): CJ shoots the car: the car's last damager is CJ and its health drops to 255 (a mission that reads the health for the wreck: 62's helicopter crashes below 260)
+        if (auto* tv = CPools::GetVehicle((int)d.args[0].n); tv && c) { tv->m_pLastDamageEntity = c; if (tv->m_fHealth > 255.f) tv->m_fHealth = 255.f; notsa::standalone::Fixups::Log("[mdriver] cardmg: car %d model %d health %.0f damaged by CJ", (int)d.args[0].n, (int)tv->m_nModelIndex, (double)tv->m_fHealth); }
+        QueueActions({}, row.settle); return;
+    }
     if (v == "killset") { // CR43: see Decide (flagkill): every listed ped dies, every listed car is wrecked
         std::vector<std::string> acts; for (auto& a : d.args) { const int h = (int)a.n; if (h < 0) acts.push_back("emit mdkillcar:" + std::to_string(-h)); else if (auto* p = CPools::GetPed(h); p && p != c) acts.push_back("emit mdkillped:" + std::to_string(h)); }
         QueueActions(acts, row.settle); if (!acts.empty()) { g_killFrame = GFrame(); g_killSettle = row.settle; if (!std::getenv("NOTSA_MDRIVER_NOFLAGKILLFAST")) g_nextStall = 40; /* the script clears the flag at the FIRST live member of its loop: the next one shows in the next pass */ } return;
@@ -1575,6 +1582,9 @@ void TickGeneric() {
     if (d.row->action == "kill" && !d.args.empty()) if (auto* kp = CPools::GetPed((int)d.args[0].n)) notsa::standalone::Fixups::Log("[mdriver] kill target h=%d model %d type %d hp %.0f pos %.0f,%.0f,%.0f (CJ %.0f,%.0f)", (int)d.args[0].n, (int)kp->m_nModelIndex, (int)kp->m_nPedType, kp->m_fHealth, kp->GetPosition().x, kp->GetPosition().y, kp->GetPosition().z, Cj() ? Cj()->GetPosition().x : 0.f, Cj() ? Cj()->GetPosition().y : 0.f); // CR27 debug log
     if ((d.row->action == "entercar" || d.row->action == "vehwarp") && !d.args.empty() && d.cond && !d.cond->args.empty()) { const int ch = (int)(int32_t)d.cond->args[0].bits; if (CPools::GetVehicle(ch)) g_usedCars.insert(ch); } // CR27: the car of an entercar / `LOCATE_CAR` vehwarp answer
     DispatchRow(d);
+    if (d.row->action == "warpto_handle" && g_nextStall == 0 && !d.args.empty() && !std::getenv("NOTSA_MDRIVER_NOCARLEASHFAST")) { // CR43 (62 TORENO'S LAST FLIGHT: the answer warped CJ to the helicopter the pass holds a `NOT locate CJ car 100 100 50` leash on; the helicopter lands, takes off and is out of the box 300 frames later, the next decision is 600 frames away): the next decision after 60 frames (CJ is at the leash car)
+        const int th = (int)d.args[0].n; for (auto& r : g_recsBig) { const int rop = r->raw & 0x7FFF; if (r->waitSeq < g_waitSeq - 3 || !(r->raw & 0x8000) || rop < 0x0202 || rop > 0x0207) continue; const auto h1 = ArgInt(*r, 1); if (h1 && (int)*h1 == th) { g_nextStall = 60; break; } }
+    }
     if (d.row->action == "key" && d.op == 0x00E1 && !g_auxAnswered && !earlyAux && !std::getenv("NOTSA_MDRIVER_NOFASTKEY") && g_attemptsAt[ipPtr] >= 3 && g_nextStall == 0) { g_fastDec = d; g_fastIp = ipPtr; g_fastLeft = 20; g_fastNext = true; g_nextStall = 45; } // CR30 (25): a button poll answered after the key deferral: repeat the press every 30 frames while the thread stays at the wake ip (20 repeats at most)
     if (g_auxAnswered) { g_auxAnswered = false; if (g_nextStall == 0 && !std::getenv("NOTSA_MDRIVER_NOAUXFAST")) { g_nextStall = 90; g_auxEarly = true; } } // CR27: a menu has several steps: the next decision after 90 frames, not 600
 }

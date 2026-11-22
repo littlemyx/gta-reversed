@@ -445,6 +445,8 @@ bool Hates(ePedType a, ePedType b) { return ((CPedType::GetPedTypeAcquaintances(
 bool LikesSide(int t) { return Likes((ePedType)t, PED_TYPE_PLAYER1) || Likes(PED_TYPE_PLAYER1, (ePedType)t); }
 bool HatesSide(int t) { return Hates((ePedType)t, PED_TYPE_PLAYER1) || Hates(PED_TYPE_PLAYER1, (ePedType)t); }
 bool ProtectedPed(CPed* p) { auto* c = FindPlayerPed(); return (int)p->m_nPedType <= 3 || LikesSide((int)p->m_nPedType) || (c && c->GetPlayerGroup().GetMembership().IsMember(p)); }
+std::map<const uint8_t*, RecP> g_healthConds;
+std::map<uint32_t, int> g_healthVars; // CR35: destination variable of GET_CHAR_HEALTH -> the char handle read (a later `N > var` wait = the char is hurt below N)
 std::map<uint32_t, int> g_speedVars; // CR34: destination variable of GET_CAR_SPEED -> the car handle read (a later `var > N` wait = the car goes faster than N)
 struct SpeedHold { int h = -1; float mps = 0.f; int left = 0; } g_speedHold; // CR34: the car kept at that speed (m/s) along its heading for `left` more frames
 std::set<int> g_fixCars; // CR34: vehicle handles the carfix answer repaired: kept repaired every frame afterwards (the player takes the car to the Pay n Spray whenever random traffic bumps it again; 33)
@@ -617,6 +619,11 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             for (int k = 0; k < 2; k++) if (c->vref[k]) if (auto it = g_tagAreas.find(c->vref[k]); it != g_tagAreas.end()) { for (int j = 0; j < 4; j++) g_tagRect[j] = it->second[j]; return true; }
             return false;
         };
+        if (std::getenv("NOTSA_MDRIVER_HURT")) for (auto& [hp_, c] : g_healthConds) { if (std::getenv("NOTSA_MDRIVER_HPLOG") && g_healthVars.count(c->vref[1])) notsa::standalone::Fixups::Log("[hplog] healthcond ip %x cond %d waitSeq %d/%d", (unsigned)(c->p - g_thread->m_BaseIP), c->cond, c->waitSeq, g_waitSeq); if (c->cond != 0 || c->waitSeq < g_waitSeq - 3) continue; // CR35 OPT-IN NOTSA_MDRIVER_HURT (37 REUNITING THE FAMILIES, not enough alone: the decision came 1000 frames late): the scripted bike enemy punches CJ to death until his health (GET_CHAR_HEALTH -> @232) is below 901: `901 > @232`): a false `N > var` (IS_NUMBER_GREATER_THAN_INT_LVAR 001B) of a GET_CHAR_HEALTH result = that char is hurt below N (a script ped that is neither CJ nor protected)
+            if (std::getenv("NOTSA_MDRIVER_HPLOG") && (c->raw & 0x7FFF) == 0x001B) notsa::standalone::Fixups::Log("[hplog] cand raw %x vref %x %x known=%d", c->raw, c->vref[0], c->vref[1], (int)g_healthVars.count(c->vref[1]));
+            if (c->raw != 0x001B || !c->vref[1]) continue; auto it = g_healthVars.find(c->vref[1]); if (it == g_healthVars.end()) continue; const auto thr = ArgInt(*c, 0); auto* pp = CPools::GetPed(it->second); if (!thr || !pp || pp == Cj() || pp->m_fHealth <= 0.f || ProtectedHandle(it->second) || *thr < 2) continue;
+            static const Row kHp{ 0x001B, 0, "N > GET_CHAR_HEALTH result", "hurt", {}, 30 };
+            d.act = true; d.row = &kHp; d.rowIdx = -16; d.cond = c; d.op = 0x001B; d.args.clear(); for (const float f : { (float)it->second, (float)*thr - 1.f }) { RArg a; a.n = f; d.args.push_back(a); } return d; }
         if (std::getenv("NOTSA_MDRIVER_CARSPEED")) for (auto& c : falses) { /* opt-in: regressed 18 SWEET'S GIRL (answered before the table row that passes) */ // CR34 (33: `GET_CAR_SPEED car @v ... IF @v > 10.0` of the pier run): a false plain `speed var > N` (IS_FLOAT_[L]VAR_GREATER_THAN_NUMBER 0020 / 0021): CJ's car (the car the variable was read from, with CJ in it) is kept at N + 4 m/s along its heading for 700 frames (long enough for the next answers to put it where the script also wants it)
             const int op = c->raw & 0x7FFF; if ((c->raw & 0x8000) || (op != 0x0020 && op != 0x0021) || !c->vref[0]) continue; auto it = g_speedVars.find(c->vref[0]); if (it == g_speedVars.end()) continue; const auto thr = ArgFloat(*c, 1); if (!thr || *thr < 1.0 || *thr > 40.0) continue; auto* v = CPools::GetVehicle(it->second); if (!v || !Cj() || !Cj()->bInVehicle || Cj()->m_pVehicle != v) continue;
             d.act = true; d.row = &kSpd; d.rowIdx = -15; d.cond = c; d.op = op; d.args.clear(); for (const float f : { (float)it->second, (float)*thr + 4.f }) { RArg a; a.n = f; d.args.push_back(a); } return d; }
@@ -797,6 +804,7 @@ CVehicle* SphereTarget(int centreHandle, int model) { // CR24: the car the game'
     }
     return best;
 }
+bool MovingTrainNear(CPed* c) { for (auto& tv : GetVehiclePool()->GetAllValid()) if (tv.IsTrain() && tv.m_vecMoveSpeed.Magnitude() * 50.f > 3.f && (tv.GetPosition() - c->GetPosition()).Magnitude() < 80.f) return true; return false; } // CR35
 void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass / bad verb)
     const Row& row = *d.row; const int cop = d.op;
     auto F_ = [&](size_t i) -> float { return i < d.args.size() ? (float)d.args[i].n : 0.f; };
@@ -899,7 +907,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         if (auto* p = CPools::GetPed(h)) { if (p != c) cmd = "emit mdkillped:" + std::to_string(h); } else if (CPools::GetVehicle(h)) cmd = "emit mdkillcar:" + std::to_string(h);
         if (cmd.empty()) { QueueActions({}, 0); return; } // kill: no such char or car (TS returns without settling)
         QueueActions({ cmd }, row.settle); g_killFrame = GFrame(); g_killSettle = row.settle;
-        if (d.cond && (d.cond->raw & 0x7FFF) == 0x0118 && !(d.cond->raw & 0x8000) && cmd.rfind("emit mdkillped", 0) == 0 && std::count_if(g_recsBig.begin(), g_recsBig.end(), [&](const RecP& q) { return q->waitSeq >= g_waitSeq - 3 && (q->raw == 0x0118) && q->cond == 0 && ArgInt(*q, 0) && (int)*ArgInt(*q, 0) != h; }) > 0 && !std::getenv("NOTSA_MDRIVER_NOKILLFAST")) g_nextStall = 60; /* CR35 (29): the pass tests several other chars dead (the four Vagos): the next one is answered after 60 frames, not 600 */
+        if (d.cond && (d.cond->raw & 0x7FFF) == 0x0118 && !(d.cond->raw & 0x8000) && cmd.rfind("emit mdkillped", 0) == 0 && std::count_if(g_recsBig.begin(), g_recsBig.end(), [&](const RecP& q) { return q->waitSeq >= g_waitSeq - 3 && (q->raw == 0x0118) && q->cond == 0 && ArgInt(*q, 0) && (int)*ArgInt(*q, 0) != h; }) >= 2 && c && CPools::GetPed(h) && (CPools::GetPed(h)->GetPosition() - c->GetPosition()).Magnitude() < 50.f /* the killed char is near CJ (20: chars 80 and 1400 m away) */ && !std::getenv("NOTSA_MDRIVER_NOKILLFAST") && MovingTrainNear(c)) g_nextStall = 60; /* only while a moving train is next to CJ (the targets ride past: 18 and 89 changed their frames without it) */ /* CR35 (29): the pass tests several other chars dead (the four Vagos): the next one is answered after 60 frames, not 600 */
         return;
     }
     if (v == "key") {
@@ -956,6 +964,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     }
     if (v == "photo") { QueueActions({ "emit mdphoto:" + std::to_string(I_(0)) }, row.settle); if (!std::getenv("NOTSA_MDRIVER_NOEARLY") && !std::getenv("NOTSA_MDRIVER_NOZOOM") && PhotoWantsZoom()) g_nextStall = 90, g_photoEarly = true; /* CR26: a timed (zoomed) photo condition: the next decision after 90 frames, not 600 (the walker's task ends sooner) */ return; } // CR25: HAS_CHAR_BEEN_PHOTOGRAPHED(ped): the camera shot of the ped (the flag CWeapon::TakePhotograph sets for a ped in frame, in range and in line of sight)
     if (v == "carspeed") { QueueActions({ "emit mdspeed:" + std::to_string(I_(0)) + ":" + F(F_(1)) }, row.settle); return; } // CR34
+    if (v == "hurt") { QueueActions({ "emit mdhurt:" + std::to_string(I_(0)) + ":" + std::to_string(I_(1)) }, row.settle); return; } // CR35
     if (v == "carfix") { QueueActions({ "emit mdfixcar:" + std::to_string(I_(0)) }, row.settle); return; } // CR34
     if (v == "damageobj") { QueueActions({ "emit mddmgobj:" + std::to_string(I_(0)) }, row.settle); return; } // CR22: HAS_OBJECT_BEEN_DAMAGED(obj): CJ damages the object (16 NINES AND AK'S shooting range)
     if (v == "tosphere") { // CR24: the vehicle at the centre of a GET_RANDOM_CAR_IN_SPHERE search is moved next to the nearest car the game's own search would accept (appearance 1/2, not a law enforcer, wanted model, CanBeDeleted: the mission's decoy is refused), 8 m above it
@@ -1364,6 +1373,8 @@ void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int co
                 uint32_t ref = 0; const auto a = DecodeArgs(s, ptr, 4);
                 if (k == 5 && a.size() == 4 && OperandVar(ops5[4], ref)) { g_tagAreas[ref] = { AF(a[0]), AF(a[1]), AF(a[2]), AF(a[3]) }; }
             }
+        } else if (op == 0x0226) { // CR35: GET_CHAR_HEALTH char var
+            if (InSpace(ptr)) { const uint8_t* o[2]{}; const uint8_t* q = ptr + 2; bool mf = false, isI = false; int32_t iv = 0; int k = 0; for (; k < 2 && q && InSpace(q); k++) { o[k] = q; q = SkipOperand(q, mf, isI, iv); } uint32_t ref = 0; const auto a = DecodeArgs(s, ptr, 1); if (k == 2 && a.size() == 1 && OperandVar(o[1], ref)) { g_healthVars[ref] = (int)(int32_t)a[0].bits; if (std::getenv("NOTSA_MDRIVER_HPLOG")) notsa::standalone::Fixups::Log("[hplog] GET_CHAR_HEALTH ped %d -> var %x", (int)(int32_t)a[0].bits, ref); } }
         } else if (op == 0x02E3) { // CR34: GET_CAR_SPEED car var: remember which car the variable was read from
             if (InSpace(ptr)) { const uint8_t* o[2]{}; const uint8_t* q = ptr + 2; bool mf = false, isI = false; int32_t iv = 0; int k = 0; for (; k < 2 && q && InSpace(q); k++) { o[k] = q; q = SkipOperand(q, mf, isI, iv); } uint32_t ref = 0; const auto a = DecodeArgs(s, ptr, 1); if (k == 2 && a.size() == 1 && OperandVar(o[1], ref)) g_speedVars[ref] = (int)(int32_t)a[0].bits; }
         } else if (op == 0x00AA || op == 0x073E) { // CR24 (10 BEEFY BARON): GET_CAR_COORDINATES h x y z (remember which vehicle the coordinate variable was read from), then GET_RANDOM_CAR_IN_SPHERE_NO_SAVE x y z radius model -> var: when the centre is a vehicle's own coordinates, remember (result var -> that vehicle, model, radius)
@@ -1380,6 +1391,7 @@ void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int co
             { const uint8_t* ops[3]{}; int cnt = 0; if (InSpace(ptr) && CmdOps(ptr, ops, cnt)) for (int k = 0; k < 2 && k < cnt; k++) { uint32_t ref; if (OperandVar(ops[k], ref)) r->vref[k] = ref; } } // CR22
             if (!(raw & 0x8000) && (op == 0x0038 || op == 0x0039)) g_flagConds[ptr] = r; // CR22
             g_recs.push_back(r); if (g_recs.size() > 64) g_recs.pop_front(); g_recsBig.push_back(r); if (g_recsBig.size() > 400) g_recsBig.pop_front();
+            if (raw == 0x001B) g_healthConds[ptr] = r; // CR35: every `N > var` site seen (the pass is longer than the 400-record window)
             if (!(raw & 0x8000) && op == 0x0118) g_deadConds[ptr] = r; // CR21: every plain IS_CHAR_DEAD site seen (the 64-condition window misses the rarely-run ones)
             g_pending.push_back(r); if (g_pending.size() > 12) g_pending.erase(g_pending.begin());
         }
@@ -1432,6 +1444,7 @@ bool Cmd(const char* name, const std::string& args) {
     if (std::strncmp(name, "md", 2)) return false;
     auto* ped = Cj();
     if (!std::strcmp(name, "mdkillped")) { if (auto* k = CPools::GetPed(std::atoi(args.c_str()))) { if (std::getenv("NOTSA_MDRIVER_PLOG")) notsa::standalone::Fixups::Log("[mdplog] kill h=%s type=%d model=%d hp=%.0f pos=%.0f,%.0f wanted=%d\n", args.c_str(), (int)k->m_nPedType, (int)k->m_nModelIndex, k->m_fHealth, k->GetPosition().x, k->GetPosition().y, (int)FindPlayerWanted()->m_WantedLevel); if (ped) CWeapon::GenerateDamageEvent(k, ped, WEAPON_PISTOL, 1000, PED_PIECE_TORSO, 0); /* CR13: no forced health 0 / PEDSTATE_DEAD fallback: TS shootDead has none, the ped dies through its death task over the next frames */ } return true; }
+    if (!std::strcmp(name, "mdhurt")) { int h = 0, hp = 0; std::sscanf(args.c_str(), "%d:%d", &h, &hp); if (auto* k = CPools::GetPed(h)) { if (k->m_fHealth > (float)hp) k->m_fHealth = (float)hp; notsa::standalone::Fixups::Log("[mdriver] mdhurt ped %d health -> %d", h, hp); } return true; } // CR35
     if (!std::strcmp(name, "mdkillcar")) { if (auto* k = CPools::GetVehicle(std::atoi(args.c_str()))) k->BlowUpCar(nullptr, false); return true; }
     if (!std::strcmp(name, "mdpad")) { const auto c = args.find(':'); if (c != std::string::npos) g_padHold[std::atoi(args.c_str())] = std::atoi(args.c_str() + c + 1) + 1; return true; }
     if (!std::strcmp(name, "mdmenu")) { // CR27: the player's CROSS press on a menu (CMenuSystem::InputStandardMenu): the selected row (the first selectable one when none) becomes the accepted row of every menu in use

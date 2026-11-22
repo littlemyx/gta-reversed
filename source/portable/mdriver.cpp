@@ -478,7 +478,7 @@ const std::set<int>& Guarded() {
     for (auto& [site, r] : g_deadConds) {
         if ((r->raw & 0x8000) || ((r->raw & 0x7FFF) != 0x0118 && (r->raw & 0x7FFF) != 0x0119)) continue; // CR27: IS_CAR_DEAD sites too (26: the mission's truck)
         auto& ce = cache[site]; const size_t gen = g_flagConds.size() + g_deadConds.size();
-        if (ce.first != gen + 1) { g_walkRet = false; { const bool vg = VerdictOf(g_thread, *r) == Verdict::Guard; ce = { gen + 1, vg && !(g_walkRet && !std::getenv("NOTSA_MDRIVER_NOSUBRET")) }; } if (std::getenv("NOTSA_MDRIVER_PLOG") && ce.second) notsa::standalone::Fixups::Log("[mdplog] guard site ip=%x flagconds=%zu", (unsigned)(site - g_thread->m_BaseIP), g_flagConds.size()); }
+        if (ce.first != gen + 1) { g_walkRet = false; { const bool vg = VerdictOf(g_thread, *r) == Verdict::Guard; ce = { gen + 1, vg && !(g_walkRet && (r->raw & 0x7FFF) == 0x0119 && !std::getenv("NOTSA_MDRIVER_NOSUBRET")) }; } if (std::getenv("NOTSA_MDRIVER_PLOG") && ce.second) notsa::standalone::Fixups::Log("[mdplog] guard site ip=%x flagconds=%zu", (unsigned)(site - g_thread->m_BaseIP), g_flagConds.size()); }
         if (!ce.second) continue; const auto da = DecodeArgs(g_thread, site, 1); if (!da.empty()) out.insert((int)da[0].bits);
     }
     return out;

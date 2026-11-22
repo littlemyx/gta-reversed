@@ -28,6 +28,7 @@
 #include "CarEnterExit.h"
 #include "TagManager.h"
 #include "CarCtrl.h"
+#include "VehicleRecording.h"
 #include "Streaming.h"
 #include "Camera.h"
 #include "Game.h"
@@ -927,6 +928,17 @@ CVehicle* SphereTarget(int centreHandle, int model) { // CR24: the car the game'
     return best;
 }
 bool MovingTrainNear(CPed* c) { for (auto& tv : GetVehiclePool()->GetAllValid()) if (tv.IsTrain() && tv.m_vecMoveSpeed.Magnitude() * 50.f > 3.f && (tv.GetPosition() - c->GetPosition()).Magnitude() < 80.f) return true; return false; } // CR35
+// CR41 (62 TORENO'S LAST FLIGHT: `NOT locate CJ within R of the heli / its pilot`; the answers to the far destination locate and to the stage's pickup warped CJ 1.4..2 km from the heli = "Too late!"): a warp of CJ to (x, y) that lands outside 0.9 R of the ped (00F2..00F4 / 0104..0106, R >= 150) or car (0202..0207, R >= 30) the pass holds a `NOT locate CJ within R of it` leash on is not made: the target flies on, CJ stays with it (leashkeep)
+bool LeashBlocksWarp(const Dec& d, CPed* c, float x, float y) {
+    if (!c || std::getenv("NOTSA_MDRIVER_NOPEDLEASHWARP")) return false;
+    const CVector wp{ x, y, 0.f };
+    for (auto& r : g_recsBig) { const int rop = r->raw & 0x7FFF; if (r->waitSeq < g_waitSeq - 3 || !(r->raw & 0x8000) || !((rop >= 0x00F2 && rop <= 0x00F4) || (rop >= 0x0104 && rop <= 0x0106) || (rop >= 0x0202 && rop <= 0x0207))) continue;
+        const bool carL = rop >= 0x0202; const auto h0 = ArgInt(*r, 0), h1 = ArgInt(*r, 1), rr = ArgFloat(*r, 2); if (!h0 || !h1 || !rr || *rr < (carL ? 30.0 : 150.0) || (CEntity*)CPools::GetPed((int)*h0) != (CEntity*)c) continue;
+        CPhysical* lp = carL ? (CPhysical*)CPools::GetVehicle((int)*h1) : (CPhysical*)CPools::GetPed((int)*h1); if (!lp || lp == (CPhysical*)c || (carL ? ((CVehicle*)lp)->m_fHealth : ((CPed*)lp)->m_fHealth) <= 0.f || (c->bInVehicle && c->m_pVehicle == (CVehicle*)lp)) continue;
+        if ((lp->GetPosition() - wp).Magnitude2D() > 0.9 * *rr) { notsa::standalone::Fixups::Log("[mdriver] leashwarp: the warp to %.0f,%.0f lands %.0f m from the leash target %d (R %.0f): not made", (double)x, (double)y, (double)(lp->GetPosition() - wp).Magnitude2D(), (int)*h1, *rr); { static std::map<std::string, int> s_lw; const auto key = std::to_string(g_stopIp) + ":" + std::to_string(d.rowIdx) + ":" + RKey(d.args); if (++s_lw[key] <= 60) --g_noProgress[key]; /* a blocked answer is no futile answer: the 8-answer stop does not count it (the chase goes on, leashkeep) */ } return true; }
+    }
+    return false;
+}
 void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass / bad verb)
     const Row& row = *d.row; const int cop = d.op;
     auto F_ = [&](size_t i) -> float { return i < d.args.size() ? (float)d.args[i].n : 0.f; };
@@ -942,11 +954,13 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     if (v == "wait") { QueueActions({}, row.settle); return; }
     if (v == "pedwarp" || v == "vehwarp") {
         if (d.cond) { const auto o = LocatedOther(*d.cond); if (!o.empty()) {
+            if (!o.compare(0, 2, "1:") && !std::getenv("NOTSA_MDRIVER_NOPLAYBACKWAIT")) if (auto* pv = CPools::GetVehicle(std::atoi(o.c_str() + 2)); pv && !pv->IsTrain() && pv->m_fHealth > 0.f && pv != (c ? c->m_pVehicle : nullptr) && CVehicleRecording::IsPlaybackGoingOnForCar(pv)) { // CR41 (62 TORENO'S LAST FLIGHT: `LOCATE_CAR_3D(heli, landing pad)` of the helicopter that flies a recorded path (the script's own playback): the warp put it at the pad, the playback went on from there and the pilot left; CJ cannot keep up): a car in a recorded playback is waited for (it reaches the place by itself)
+                static std::map<int, int> s_pbWait; if (++s_pbWait[std::atoi(o.c_str() + 2)] <= 40) { notsa::standalone::Fixups::Log("[mdriver] playbackwait: the located car %s is in a recorded playback: waited for, not warped", o.c_str()); QueueActions({}, row.settle); return; } }
             if (!o.compare(0, 2, "1:") && !std::getenv("NOTSA_MDRIVER_NOTRAINWAIT")) if (auto* tv = CPools::GetVehicle(std::atoi(o.c_str() + 2)); tv && tv->IsTrain()) { notsa::standalone::Fixups::Log("[mdriver] trainwait: the locate is about a train (%s): it runs to the place on its tracks, not warped", o.c_str()); QueueActions({}, row.settle); return; } // CR31 (29 WRONG SIDE OF THE TRACKS: `LOCATE_CAR_2D(train, ..)` was answered by warping the train 2 km along its line = derailed, mission failed): a train is waited for
             std::vector<std::string> acts{ "emit mdwother:" + o + ":" + F(F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) };
             if (!o.compare(0, 2, "1:") && c && !std::getenv("NOTSA_MDRIVER_NOLEASHJOIN")) { // CR30 (23 GRAY IMPORTS, chase): the car that is moved to the place carries a ped the pass keeps in a `ped near CJ` leash locate (00F2..00F4 / 0104..0106, plain or NOT, either operand order): CJ rides along, the leash (the script fails the mission when CJ is far from the dealer) stays true
                 auto* mv = CPools::GetVehicle(std::atoi(o.c_str() + 2)); bool leash = false;
-                if (mv) for (auto& r : g_recsBig) { const int rop = r->raw & 0x7FFF; if (r->waitSeq < g_waitSeq - 3 || !((rop >= 0x00F2 && rop <= 0x00F4) || (rop >= 0x0104 && rop <= 0x0106))) continue; const auto h0 = ArgInt(*r, 0), h1 = ArgInt(*r, 1); if (!h0 || !h1) continue; const bool cjSecond = EntityOfHandle((int)*h1, rop) == (CEntity*)c; if (!cjSecond && EntityOfHandle((int)*h0, rop) != (CEntity*)c) continue; auto* lp = CPools::GetPed((int)(cjSecond ? *h0 : *h1)); if (lp && lp != c && lp->bInVehicle && lp->m_pVehicle == mv) { leash = true; break; } }
+                if (mv) for (auto& r : g_recsBig) { const int rop = r->raw & 0x7FFF; if (r->waitSeq < g_waitSeq - 3 || !((rop >= 0x00F2 && rop <= 0x00F4) || (rop >= 0x0104 && rop <= 0x0106) || (rop >= 0x0202 && rop <= 0x0207 && !std::getenv("NOTSA_MDRIVER_NOCARLEASHJOIN")))) continue; const auto h0 = ArgInt(*r, 0), h1 = ArgInt(*r, 1); if (!h0 || !h1) continue; if (rop >= 0x0202) { if ((CEntity*)CPools::GetPed((int)*h0) == (CEntity*)c && CPools::GetVehicle((int)*h1) == mv) { leash = true; break; } continue; } /* CR41 (62 TORENO'S LAST FLIGHT: `LOCATE_CHAR_ANY_MEANS_CAR_3D CJ heli` about the very car that is moved, in either form): CJ rides along */ const bool cjSecond = EntityOfHandle((int)*h1, rop) == (CEntity*)c; if (!cjSecond && EntityOfHandle((int)*h0, rop) != (CEntity*)c) continue; auto* lp = CPools::GetPed((int)(cjSecond ? *h0 : *h1)); if (lp && lp != c && lp->bInVehicle && lp->m_pVehicle == mv) { leash = true; break; } }
                 if (leash) acts.push_back("emit mdwveh:" + F(F_(0) + 6.f) + ":" + F(F_(1)) + ":" + F(F_(2)));
             }
             if (!o.compare(0, 2, "0:") && c && !std::getenv("NOTSA_MDRIVER_NOPEDJOIN")) { // CR30 (22 BURNING DESIRE: Denise is led home, the stage also tests `20 > distance(CJ, Denise)`): the pass holds a float compare of a value equal to the distance between CJ and the ped that is moved (the var of a GET_DISTANCE_BETWEEN_COORDS): CJ joins the ped at the place, so the distance test stays true
@@ -966,6 +980,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
             const int wm = ModelWantedAfterLocate(d.cond->p); auto* mcar = wm >= 0 ? NearestCarOfModel(c, wm, 600.f) : nullptr;
             if (mcar) { std::vector<std::string> acts; if (!(c->bInVehicle && c->m_pVehicle == mcar)) acts = EnterCarActions(mcar); acts.push_back("emit mdwveh:" + F(F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2))); QueueActions(acts, row.settle); return; }
         }
+        if (c && (v == "pedwarp" || v == "vehwarp") && LeashBlocksWarp(d, c, F_(0), F_(1))) { QueueActions({}, row.settle); return; } // CR41 (62 TORENO'S LAST FLIGHT)
         if (v == "pedwarp" && c && c->bInVehicle) { // CR10: actions.ts pedwarp on an ON_FOOT locate while CJ is in a vehicle: get out first (Enter, up to 300 frames; getOnFoot), then warp him (mission 77: 8x mdwveh on LOCATE_CHAR_ON_FOOT_3D)
             static const std::set<int> onFoot = { 0xE4, 0xE7, 0xEA, 0xED, 0xF0, 0xF3, 0xF6, 0xF9, 0xFC, 0xFF, 0x102, 0x105, 0x197, 0x19A, 0x19C, 0x19F, 0x1A1, 0x1A4, 0x1A6, 0x1A9, 0x1FD, 0x200, 0x203, 0x206, 0x27C, 0x27F, 0x282, 0x285, 0x288 };
             if (onFoot.count(cop & 0x7FFF)) { QueueActions({ "key down return", "wait 1", "key up return", "waituntil invehicle == 0 300", "emit mdwveh:" + F(F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) }, row.settle); return; } // CR11: after a 300-frame timeout CJ may still be in the vehicle: TS warp() then moves the CAR; mdwveh does that (ped warp when he is out)
@@ -982,7 +997,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     if (v == "pickupgo") { // CR26: HAS_PICKUP_BEEN_COLLECTED(pickup) is false: the player walks onto the pickup (on foot, at its position)
         const int pi = CPickups::GetActualPickupIndex(tPickupReference{ I_(0) });
         if (pi < 0) { QueueActions({}, row.settle); return; }
-        const CVector pp = CPickups::aPickUps[pi].GetPosn(); one(warp(pp.x, pp.y, pp.z, false)); return;
+        const CVector pp = CPickups::aPickUps[pi].GetPosn(); if (LeashBlocksWarp(d, Cj(), pp.x, pp.y)) { QueueActions({}, row.settle); return; } one(warp(pp.x, pp.y, pp.z, false)); return;
     }
     if (v == "weaponpickup") { // CR28: HAS_CHAR_GOT_WEAPON(cj, w) is false: the player walks onto the nearest live pickup whose model is the weapon's
         const auto mdl = CPickups::ModelForWeapon((eWeaponType)I_(0)); const auto* me = Cj(); const CPickup* best = nullptr; float bd = 1e9f;
@@ -1086,8 +1101,9 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         }
         const auto pos = e->GetPosition();
         if (!std::getenv("NOTSA_MDRIVER_NOLEASHWARP") && c && e != (CEntity*)c) { // CR35 (29 WRONG SIDE OF THE TRACKS: the stage tests `ped near the front carriage` (165 m) while a guard `NOT locate CJ within 200 m of the train` ends the mission; the answer warped CJ to the front carriage 360 m from the train = failed): a warp of CJ that lands outside 0.9 R of a car the pass holds a NOT-locate leash on (CJ the first operand, a car 0202..0207, R >= 30) is not made
-            for (auto& r : g_recsBig) { const int rop = r->raw & 0x7FFF; if (r->waitSeq < g_waitSeq - 3 || !(r->raw & 0x8000) || rop < 0x0202 || rop > 0x0207) continue; const auto h0 = ArgInt(*r, 0), h1 = ArgInt(*r, 1), rr = ArgFloat(*r, 2); if (!h0 || !h1 || !rr || *rr < 30.0 || (CEntity*)CPools::GetPed((int)*h0) != (CEntity*)c) continue;
-                auto* lv = CPools::GetVehicle((int)*h1); if (!lv || lv == (CVehicle*)e || lv->m_fHealth <= 0.f) continue; if ((lv->GetPosition() - pos).Magnitude2D() > 0.9 * *rr) { notsa::standalone::Fixups::Log("[mdriver] leashwarp: the warp onto handle %d lands %.0f m from the leash car %d (R %.0f): not made", h, (double)(lv->GetPosition() - pos).Magnitude2D(), (int)*h1, *rr); QueueActions({}, row.settle); return; } }
+            for (auto& r : g_recsBig) { const int rop = r->raw & 0x7FFF; const bool pedL = ((rop >= 0x00F2 && rop <= 0x00F4) || (rop >= 0x0104 && rop <= 0x0106)) && !std::getenv("NOTSA_MDRIVER_NOPEDLEASHWARP"); /* CR41 (62 TORENO'S LAST FLIGHT: `NOT locate CJ within R of Toreno's helicopter pilot` (R >= 150); the answer to the far destination locate warped CJ 2 km from the heli = "Too late!") */ if (r->waitSeq < g_waitSeq - 3 || !(r->raw & 0x8000) || ((rop < 0x0202 || rop > 0x0207) && !pedL)) continue; const auto h0 = ArgInt(*r, 0), h1 = ArgInt(*r, 1), rr = ArgFloat(*r, 2); if (!h0 || !h1 || !rr || *rr < (pedL ? 150.0 : 30.0) || (CEntity*)CPools::GetPed((int)*h0) != (CEntity*)c) continue;
+                auto* lped = pedL ? CPools::GetPed((int)*h1) : nullptr; auto* lv = pedL ? (lped && lped != c ? (lped->bInVehicle && lped->m_pVehicle ? lped->m_pVehicle : nullptr) : nullptr) : CPools::GetVehicle((int)*h1); if (pedL && lped && lped != c && !lv && lped->m_fHealth > 0.f) { if ((lped->GetPosition() - pos).Magnitude2D() > 0.9 * *rr) { notsa::standalone::Fixups::Log("[mdriver] leashwarp: the warp onto handle %d lands %.0f m from the leash ped %d (R %.0f): not made", h, (double)(lped->GetPosition() - pos).Magnitude2D(), (int)*h1, *rr); QueueActions({}, row.settle); return; } continue; }
+                if (!lv || lv == (CVehicle*)e || lv->m_fHealth <= 0.f) continue; if ((lv->GetPosition() - pos).Magnitude2D() > 0.9 * *rr) { notsa::standalone::Fixups::Log("[mdriver] leashwarp: the warp onto handle %d lands %.0f m from the leash car %d (R %.0f): not made", h, (double)(lv->GetPosition() - pos).Magnitude2D(), (int)*h1, *rr); QueueActions({}, row.settle); return; } }
         }
         if (auto* o = CPools::GetObject(h); o && o->objectFlags.bIsLiftable && c && !c->GetEntityThatThisPedIsHolding()) { // CR4: default on (was AD3-only): stand 1.5 m before a liftable object and press the pick-up key
             QueueActions({ "standobj " + std::to_string(h) + " 1.5", "wait 10", "key down return", "wait 1", "key up return", "wait 90" }, row.settle); return;

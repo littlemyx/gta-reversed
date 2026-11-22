@@ -245,7 +245,7 @@ CEntryExit* g_enterEx = nullptr; // CR27: the entry exit the `enterarea` verb go
 bool g_auxMode = false; // CR27: Decide() over an aux (streamed script) thread answers only with warps / key presses (no kills of the streamed script's peds)
 std::map<const uint8_t*, RecP> g_deadConds; // CR21
 std::map<const uint8_t*, RecP> g_flagConds; // CR22: every plain `var == number` condition seen (IS_INT_VAR/LVAR_EQUAL_TO_NUMBER): the flag tests of the fail-flag guard
-std::set<uint32_t> g_areaVars; int g_enterArea = -1; // CR23: variables written by GET_AREA_VISIBLE (077E); the interior id a compare of one of them asks for
+std::set<uint32_t> g_timerVars; std::set<uint32_t> g_areaVars; int g_enterArea = -1; // CR23: variables written by GET_AREA_VISIBLE (077E); the interior id a compare of one of them asks for
 std::map<uint32_t, int> g_coordVeh; struct SphSearch { int veh; int model; float radius; }; std::map<uint32_t, SphSearch> g_sphSearch; SphSearch g_sphCur{}; // CR24: GET_CAR_COORDINATES x var -> vehicle handle; GET_RANDOM_CAR_IN_SPHERE (073E) result var -> {the vehicle whose coordinates are the centre, model, radius}
 std::map<uint32_t, std::array<float, 4>> g_tagAreas; float g_tagRect[4]{}; // CR22: destination variable -> area of the last GET_PERCENTAGE_TAGGED_IN_AREA (0702) that wrote it; the area of the picked decision
 std::deque<RecP>         g_recsBig;          // CR26: the last 400 conditional commands (the 64-condition window is too short for a pass of ~100 conditions)
@@ -342,13 +342,14 @@ const uint8_t* SkipOperand(const uint8_t* p, bool& mfail, bool& isInt, int32_t& 
     }
 }
 const bool g_oldWalkFail = std::getenv("NOTSA_MDRIVER_OLDWALKFAIL") != nullptr; // CR25 off-switch: restores the walk past following conditions
+bool g_walkRet = false; // CR39: the last WalkFail ended in a RETURN of the walked level (a site inside a GOSUB'd subroutine returns to its caller, that is no mission failure)
 bool WalkFail(const CRunningScript* s, const uint8_t* p, int hops, bool sub, std::set<const uint8_t*>& seen) {
     for (int n = 0; n < 200 && InSpace(p); n++) {
         const int op = *(const uint16_t*)p & 0x7FFF;
         if (!seen.insert(p).second) return false;
         if (op == 0x0001) return false;
         if ((op == 0x00D6 || op == 0x004D) && !g_oldWalkFail) return false; // CR25: the true branch ends at its first condition / GOTO_IF_FALSE (14: the dealers IS_CHAR_DEAD waits continue into later IF chains that reach an M_FAIL print further on)
-        if (op == 0x0051) return !sub;
+        if (op == 0x0051) { if (!sub) g_walkRet = true; return !sub; }
         const uint8_t* q = p + 2; bool mf = false, isI = false, firstInt = false; int32_t iv = 0, first = 0; const int want = Arity(op); int count = 0;
         for (;;) {
             if (want >= 0 && count >= want) break;
@@ -461,7 +462,7 @@ bool ProtectedHandle(int h) { // actions.ts protectedHandle
     if (auto* p = CPools::GetPed(h)) return p == Cj() || ProtectedPed(p);
     auto* v = CPools::GetVehicle(h); if (!v) return false;
     std::vector<CPed*> occ; if (v->m_pDriver) occ.push_back(v->m_pDriver); for (auto* pp : v->m_apPassengers) if (pp) occ.push_back(pp);
-    for (auto* o : occ) { if (o == Cj() || ProtectedPed(o) || (o->m_fHealth > 0.f && !HatesSide((int)o->m_nPedType))) return true; }
+    for (auto* o : occ) { if (o == Cj() || ProtectedPed(o) || (o->m_fHealth > 0.f && !HatesSide((int)o->m_nPedType) && !((int)o->m_nPedType == (int)PED_TYPE_MISSION1 && !std::getenv("NOTSA_MDRIVER_NOMISSION1FOE")))) return true; } // CR39 (47: the chopper pilot, type 24 model 283, is the mission's own enemy)
     return false;
 }
 bool IsPlayerGuard(const Rec& r) {
@@ -477,7 +478,7 @@ const std::set<int>& Guarded() {
     for (auto& [site, r] : g_deadConds) {
         if ((r->raw & 0x8000) || ((r->raw & 0x7FFF) != 0x0118 && (r->raw & 0x7FFF) != 0x0119)) continue; // CR27: IS_CAR_DEAD sites too (26: the mission's truck)
         auto& ce = cache[site]; const size_t gen = g_flagConds.size() + g_deadConds.size();
-        if (ce.first != gen + 1) { ce = { gen + 1, VerdictOf(g_thread, *r) == Verdict::Guard }; if (std::getenv("NOTSA_MDRIVER_PLOG") && ce.second) notsa::standalone::Fixups::Log("[mdplog] guard site ip=%x flagconds=%zu", (unsigned)(site - g_thread->m_BaseIP), g_flagConds.size()); }
+        if (ce.first != gen + 1) { g_walkRet = false; { const bool vg = VerdictOf(g_thread, *r) == Verdict::Guard; ce = { gen + 1, vg && !(g_walkRet && !std::getenv("NOTSA_MDRIVER_NOSUBRET")) }; } if (std::getenv("NOTSA_MDRIVER_PLOG") && ce.second) notsa::standalone::Fixups::Log("[mdplog] guard site ip=%x flagconds=%zu", (unsigned)(site - g_thread->m_BaseIP), g_flagConds.size()); }
         if (!ce.second) continue; const auto da = DecodeArgs(g_thread, site, 1); if (!da.empty()) out.insert((int)da[0].bits);
     }
     return out;
@@ -627,6 +628,8 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
                 const float dx = (float)*lx - pd.GetPosition().x, dy = (float)*ly - pd.GetPosition().y; if (std::sqrt(dx * dx + dy * dy) > 0.9f * lim) { notsa::standalone::Fixups::Log("[mdriver] leashlocate: the locate at %.0f,%.0f is %.0f m from ped %d (leash %.0f): not a candidate", *lx, *ly, (double)std::sqrt(dx * dx + dy * dy), CPools::GetPedRef(&pd), (double)lim); return true; } } }
         return false; };
     for (size_t k = loop.size(); k-- > 0;) { const auto& r = loop[k]; if (r->cond == 0 && !AnyGuard(*r) && !satisfied.count(r->p) && !sentinelLocate(*r) && !trainLocate(*r) && !leashLocate(*r)) falses.push_back(r); }
+    if (falses.size() > 1 && !std::getenv("NOTSA_MDRIVER_NOTIMERVAR")) { const auto tz = [&](const RecP& r) { return (r->raw & 0x7FFF) == 0x0038 && !(r->raw & 0x8000) && g_timerVars.count(r->vref[0]) && ArgInt(*r, 1) && *ArgInt(*r, 1) == 0; }; if (std::any_of(falses.begin(), falses.end(), [&](const RecP& r) { return !tz(r); })) falses.erase(std::remove_if(falses.begin(), falses.end(), tz), falses.end()); } // CR39 (47)
+    if (std::getenv("NOTSA_MDRIVER_FALSELOG")) { std::string fs; for (auto& f : falses) { char b[24]; std::snprintf(b, sizeof b, "%x ", (unsigned)f->raw); fs += b; } for (auto& r : loop) if (r->cond == 0 && (r->raw & 0x7FFF) == 0x0119) { char b[48]; std::snprintf(b, sizeof b, "[119 h=%d guard=%d] ", ArgInt(*r, 0) ? (int)*ArgInt(*r, 0) : -1, (int)AnyGuard(*r) * 1000 + (int)IsPlayerGuard(*r) * 100 + (int)KillRefusal(g_thread, *r) * 10 + (int)NotInCarGuard(g_thread, *r) + (int)VerdictOf(g_thread, *r) * 10000 + (int)Guarded().count(ArgInt(*r, 0) ? (int)*ArgInt(*r, 0) : -1) * 100000 + (int)ProtectedHandle(ArgInt(*r, 0) ? (int)*ArgInt(*r, 0) : -1) * 1000000); fs += b; } notsa::standalone::Fixups::Log("[mdriver] falses: %s loop=%zu", fs.c_str(), loop.size()); }
     if (falses.empty() && blockers.empty()) { d.reason = "no condition evaluated false in the loop (the guards left out)"; return d; }
     // CR22: built-in verbs for opcodes the TS table has no row for (proposed rows: see C:/gta-scratch/cr22/FINDINGS.txt FOR TS). They come before every table row (a wait row of another false condition of the pass must not shadow them).
     static const Row kDmg{ 0x0366, 1, "HAS_OBJECT_BEEN_DAMAGED", "damageobj", { "$0" }, 30 };
@@ -1461,6 +1464,8 @@ void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int co
             for (auto& r : g_pending) { r->hasBranch = true; r->jumped = jumped; r->fall = ptr + 7; r->target = jumped ? s->m_IP : ptr + 7; }
             if (!jumped) { g_group = g_pending; g_fallPending = true; }
             g_pending.clear();
+        } else if ((op == 0x014E || op == 0x03C3) && !std::getenv("NOTSA_MDRIVER_NOTIMERVAR")) { // CR39 (47 ARE YOU GOING TO SAN FIERRO?): DISPLAY_ONSCREEN_TIMER[_WITH_STRING] var: remember the variable (the `var == 0` time-up check of a countdown is not a blocker while another condition of the pass is false)
+            if (InSpace(ptr)) { uint32_t ref = 0; if (OperandVar(ptr + 2, ref)) g_timerVars.insert(ref); }
         } else if (op == 0x077E || (op == 0x09E8 && !std::getenv("NOTSA_MDRIVER_NOCHARAREA"))) { // CR23: GET_AREA_VISIBLE var: remember the destination variable (a later `var == N` wait = be in interior N). CR27 (22 BURNING DESIRE): GET_CHAR_AREA_VISIBLE char var too (the helper sub of the mission reads the player's area with it)
             if (InSpace(ptr)) { uint32_t ref = 0; const uint8_t* q = ptr + 2; bool mf = false, isI = false; int32_t iv = 0; if (op == 0x09E8) q = SkipOperand(q, mf, isI, iv); if (q && OperandVar(q, ref)) g_areaVars.insert(ref); }
         } else if (op == 0x0702) { // CR22: GET_PERCENTAGE_TAGGED_IN_AREA x1 y1 x2 y2 -> var: remember the area and the destination variable (a later `var == 100` wait = spray these tags)

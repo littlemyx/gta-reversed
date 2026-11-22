@@ -445,6 +445,8 @@ bool Hates(ePedType a, ePedType b) { return ((CPedType::GetPedTypeAcquaintances(
 bool LikesSide(int t) { return Likes((ePedType)t, PED_TYPE_PLAYER1) || Likes(PED_TYPE_PLAYER1, (ePedType)t); }
 bool HatesSide(int t) { return Hates((ePedType)t, PED_TYPE_PLAYER1) || Hates(PED_TYPE_PLAYER1, (ePedType)t); }
 bool ProtectedPed(CPed* p) { auto* c = FindPlayerPed(); return (int)p->m_nPedType <= 3 || LikesSide((int)p->m_nPedType) || (c && c->GetPlayerGroup().GetMembership().IsMember(p)); }
+std::map<uint32_t, int> g_speedVars; // CR34: destination variable of GET_CAR_SPEED -> the car handle read (a later `var > N` wait = the car goes faster than N)
+struct SpeedHold { int h = -1; float mps = 0.f; int left = 0; } g_speedHold; // CR34: the car kept at that speed (m/s) along its heading for `left` more frames
 std::set<int> g_fixCars; // CR34: vehicle handles the carfix answer repaired: kept repaired every frame afterwards (the player takes the car to the Pay n Spray whenever random traffic bumps it again; 33)
 std::set<int> g_usedCars; // CR27: vehicle handles the driver itself entered / drove to a place (the mission car): never wrecked by a kill answer
 bool ProtectedHandle(int h) { // actions.ts protectedHandle
@@ -602,6 +604,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
     static const Row kPho{ 0x04C5, 1, "HAS_CHAR_BEEN_PHOTOGRAPHED", "photo", { "$0" }, 30 }; // CR25 (58 PHOTO OPPORTUNITY)
     static const Row kTag{ 0x0038, 0, "int compare of the GET_PERCENTAGE_TAGGED_IN_AREA result", "tagarea", {}, 60 };
     static const Row kFix{ 0x03C9, 0, "NOT IS_CAR_VISIBLY_DAMAGED", "carfix", { "$0" }, 30 }; // CR34 (33 MANAGEMENT ISSUES)
+    static const Row kSpd{ 0x0021, 0, "var > N of a GET_CAR_SPEED result", "carspeed", {}, 30 }; // CR34 (33 MANAGEMENT ISSUES)
     static const Row kPrj{ 0x02EE, 1, "IS_PROJECTILE_IN_AREA", "projectile", { "$0", "$1", "$2", "$3", "$4", "$5" }, 40 }; // CR26 (22 BURNING DESIRE)
     static const Row kGrp{ 0x06EE, 1, "IS_GROUP_MEMBER", "joingroup", { "$0", "$1" }, 30 }; // CR26 (20 LOS SEPULCROS)
     if (!std::getenv("NOTSA_MDRIVER_NOBUILTIN")) {
@@ -610,6 +613,9 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             for (int k = 0; k < 2; k++) if (c->vref[k]) if (auto it = g_tagAreas.find(c->vref[k]); it != g_tagAreas.end()) { for (int j = 0; j < 4; j++) g_tagRect[j] = it->second[j]; return true; }
             return false;
         };
+        if (!std::getenv("NOTSA_MDRIVER_NOCARSPEED")) for (auto& c : falses) { // CR34 (33: `GET_CAR_SPEED car @v ... IF @v > 10.0` of the pier run): a false plain `speed var > N` (IS_FLOAT_[L]VAR_GREATER_THAN_NUMBER 0020 / 0021): CJ's car (the car the variable was read from, with CJ in it) is kept at N + 4 m/s along its heading for 700 frames (long enough for the next answers to put it where the script also wants it)
+            const int op = c->raw & 0x7FFF; if ((c->raw & 0x8000) || (op != 0x0020 && op != 0x0021) || !c->vref[0]) continue; auto it = g_speedVars.find(c->vref[0]); if (it == g_speedVars.end()) continue; const auto thr = ArgFloat(*c, 1); if (!thr || *thr < 1.0 || *thr > 40.0) continue; auto* v = CPools::GetVehicle(it->second); if (!v || !Cj() || !Cj()->bInVehicle || Cj()->m_pVehicle != v) continue;
+            d.act = true; d.row = &kSpd; d.rowIdx = -15; d.cond = c; d.op = op; d.args.clear(); for (const float f : { (float)it->second, (float)*thr + 4.f }) { RArg a; a.n = f; d.args.push_back(a); } return d; }
         if (!std::getenv("NOTSA_MDRIVER_NOCARFIX")) for (auto& c : falses) { // CR34 (33 MANAGEMENT ISSUES: random traffic bumped the mission car on its way, the stage waits for `NOT IS_CAR_VISIBLY_DAMAGED car` (+ the car health), the Pay n Spray cannot do it, SET_CAN_RESPRAY_CAR 0): a false NOT-form IS_CAR_VISIBLY_DAMAGED is answered by repairing that car (CVehicle::Fix: the Pay n Spray outcome)
             if (c->raw != 0x83C9) continue; auto a2 = ResolveArgs(kFix, *c); if (!a2 || a2->empty() || !CPools::GetVehicle((int)(*a2)[0].n)) continue;
             d.act = true; d.row = &kFix; d.rowIdx = -14; d.cond = c; d.args = *a2; d.op = 0x03C9; return d; }
@@ -930,6 +936,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         one(warp(pos.x + 0.5f, pos.y, pos.z, false)); return;
     }
     if (v == "photo") { QueueActions({ "emit mdphoto:" + std::to_string(I_(0)) }, row.settle); if (!std::getenv("NOTSA_MDRIVER_NOEARLY") && !std::getenv("NOTSA_MDRIVER_NOZOOM") && PhotoWantsZoom()) g_nextStall = 90, g_photoEarly = true; /* CR26: a timed (zoomed) photo condition: the next decision after 90 frames, not 600 (the walker's task ends sooner) */ return; } // CR25: HAS_CHAR_BEEN_PHOTOGRAPHED(ped): the camera shot of the ped (the flag CWeapon::TakePhotograph sets for a ped in frame, in range and in line of sight)
+    if (v == "carspeed") { QueueActions({ "emit mdspeed:" + std::to_string(I_(0)) + ":" + F(F_(1)) }, row.settle); return; } // CR34
     if (v == "carfix") { QueueActions({ "emit mdfixcar:" + std::to_string(I_(0)) }, row.settle); return; } // CR34
     if (v == "damageobj") { QueueActions({ "emit mddmgobj:" + std::to_string(I_(0)) }, row.settle); return; } // CR22: HAS_OBJECT_BEEN_DAMAGED(obj): CJ damages the object (16 NINES AND AK'S shooting range)
     if (v == "tosphere") { // CR24: the vehicle at the centre of a GET_RANDOM_CAR_IN_SPHERE search is moved next to the nearest car the game's own search would accept (appearance 1/2, not a law enforcer, wanted model, CanBeDeleted: the mission's decoy is refused), 8 m above it
@@ -1029,6 +1036,7 @@ void TickGeneric() {
     auto* root = notsa::scmtrace::Root();
     if (!g_started) { if (!root) return; g_started = true; StaticScan(root); if (!std::getenv("NOTSA_MDRIVER_NOCITY")) CStats::SetStatValue(STAT_CITY_UNLOCKED, 2.f); /* CR10: a mission started cold stands where the story would have opened the cities: SF/LV closed = 4 stars on arrival (SetPlayerWantedLevelForForbiddenTerritories), cops attack */ g_passStat0 = CStats::GetStatValue(STAT_MISSIONS_PASSED); g_thread = root; g_frame0 = CTimer::GetFrameCounter(); g_sameCount = 0; g_lastIp = nullptr; }
     const int fr = GFrame();
+    if (g_speedHold.left > 0) { g_speedHold.left--; if (auto* v = CPools::GetVehicle(g_speedHold.h); v && v->m_fHealth > 0.f) { const CVector f = v->GetForward(); v->m_vecMoveSpeed.x = f.x * g_speedHold.mps / 50.f; v->m_vecMoveSpeed.y = f.y * g_speedHold.mps / 50.f; } else g_speedHold.left = 0; }
     if (!g_fixCars.empty()) for (const int h : g_fixCars) if (auto* v = CPools::GetVehicle(h); v && v->vehicleFlags.bIsDamaged && v->m_fHealth > 0.f && !std::getenv("NOTSA_MDRIVER_NOKEEPFIX")) { v->Fix(); v->m_fHealth = 1000.f; }
     if (root) { char n[9]{}; std::memcpy(n, root->m_szName, 8); g_name = n; }
     if (!root) { // the thread ended (TS: !alive(script)): PASSED / FAILED, or STOP when a kill of the driver was just before it
@@ -1330,6 +1338,8 @@ void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int co
                 uint32_t ref = 0; const auto a = DecodeArgs(s, ptr, 4);
                 if (k == 5 && a.size() == 4 && OperandVar(ops5[4], ref)) { g_tagAreas[ref] = { AF(a[0]), AF(a[1]), AF(a[2]), AF(a[3]) }; }
             }
+        } else if (op == 0x02E3) { // CR34: GET_CAR_SPEED car var: remember which car the variable was read from
+            if (InSpace(ptr)) { const uint8_t* o[2]{}; const uint8_t* q = ptr + 2; bool mf = false, isI = false; int32_t iv = 0; int k = 0; for (; k < 2 && q && InSpace(q); k++) { o[k] = q; q = SkipOperand(q, mf, isI, iv); } uint32_t ref = 0; const auto a = DecodeArgs(s, ptr, 1); if (k == 2 && a.size() == 1 && OperandVar(o[1], ref)) g_speedVars[ref] = (int)(int32_t)a[0].bits; }
         } else if (op == 0x00AA || op == 0x073E) { // CR24 (10 BEEFY BARON): GET_CAR_COORDINATES h x y z (remember which vehicle the coordinate variable was read from), then GET_RANDOM_CAR_IN_SPHERE_NO_SAVE x y z radius model -> var: when the centre is a vehicle's own coordinates, remember (result var -> that vehicle, model, radius)
             if (InSpace(ptr)) {
                 const int nops = op == 0x00AA ? 2 : 6; const uint8_t* o[6]{}; const uint8_t* q = ptr + 2; bool mf = false, isI = false; int32_t iv = 0; int k = 0;
@@ -1486,6 +1496,9 @@ bool Cmd(const char* name, const std::string& args) {
         if (auto* o = CPools::GetObject(h)) { const CVector old = o->GetPosition(); CWorld::Remove(o); o->SetPosn(CVector{ w[0], w[1], w[2] <= -100.f ? old.z : w[2] }); o->m_vecMoveSpeed = CVector{}; o->m_vecTurnSpeed = CVector{}; CWorld::Add(o); notsa::standalone::Fixups::Log("[mdriver] mdwobj gf=%u obj %d model %d %.2f,%.2f,%.2f -> %.2f,%.2f,%.2f", (unsigned)CTimer::GetFrameCounter(), h, (int)o->m_nModelIndex, old.x, old.y, old.z, w[0], w[1], w[2]); }
         return true;
     }
+    if (!std::strcmp(name, "mdspeed")) { // CR34: hold the car at the speed
+        int h = -1; float m = 0.f; std::sscanf(args.c_str(), "%d:%f", &h, &m); g_speedHold = { h, m, 700 }; notsa::standalone::Fixups::Log("[mdriver] mdspeed car %d held at %.1f m/s", h, (double)m);
+        return true; }
     if (!std::strcmp(name, "mdfixcar")) { // CR34: CVehicle::Fix + full health (what the script command FIX_CAR does)
         if (auto* v = CPools::GetVehicle(std::atoi(args.c_str()))) { g_fixCars.insert(std::atoi(args.c_str())); v->Fix(); v->m_fHealth = 1000.f; notsa::standalone::Fixups::Log("[mdriver] mdfixcar %d model %d", std::atoi(args.c_str()), (int)v->m_nModelIndex); }
         return true; }

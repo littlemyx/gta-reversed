@@ -626,6 +626,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
     // CR22: built-in verbs for opcodes the TS table has no row for (proposed rows: see C:/gta-scratch/cr22/FINDINGS.txt FOR TS). They come before every table row (a wait row of another false condition of the pass must not shadow them).
     static const Row kDmg{ 0x0366, 1, "HAS_OBJECT_BEEN_DAMAGED", "damageobj", { "$0" }, 30 };
     static const Row kExp{ 0x0356, 1, "IS_EXPLOSION_IN_AREA", "explode", { "$0", "$1", "$2", "$3", "$4", "$5", "$6" }, 60 }; // CR36 (42 SMALL TOWN BANK: the vault wall waits for an explosion in a 2 m box)
+    static const Row kAtt{ 0x07AB, 1, "IS_TRAILER_ATTACHED_TO_CAB", "attachtrailer", { "$0", "$1" }, 60 }; // CR37 (43 TANKER COMMANDER: the trailer has to be hitched to the cab)
     static const Row kPho{ 0x04C5, 1, "HAS_CHAR_BEEN_PHOTOGRAPHED", "photo", { "$0" }, 30 }; // CR25 (58 PHOTO OPPORTUNITY)
     static const Row kTag{ 0x0038, 0, "int compare of the GET_PERCENTAGE_TAGGED_IN_AREA result", "tagarea", {}, 60 };
     static const Row kFix{ 0x03C9, 0, "NOT IS_CAR_VISIBLY_DAMAGED", "carfix", { "$0" }, 30 }; // CR34 (33 MANAGEMENT ISSUES)
@@ -660,6 +661,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
                 for (auto& q : falses) if (q != c && (q->raw & 0x7FFF) == 0x02EE && !(q->raw & 0x8000)) if (auto a3 = ResolveArgs(kPrj, *q); a3 && a3->size() == 6) for (auto& x : *a3) d.args.push_back(x);
                 return d; } }
             if (op == 0x0356 && !std::getenv("NOTSA_MDRIVER_NOEXPLODE")) { auto a2 = ResolveArgs(kExp, *c); if (a2 && a2->size() == 7) { d.act = true; d.row = &kExp; d.rowIdx = -16; d.cond = c; d.args = *a2; d.op = op; return d; } } // CR36: IS_EXPLOSION_IN_AREA(type, box) is false: an explosion of that type at the box centre
+            if (op == 0x07AB && !std::getenv("NOTSA_MDRIVER_NOATTACH")) { auto a2 = ResolveArgs(kAtt, *c); if (a2 && a2->size() == 2) { d.act = true; d.row = &kAtt; d.rowIdx = -17; d.cond = c; d.args = *a2; d.op = op; return d; } } // CR37: IS_TRAILER_ATTACHED_TO_CAB(trailer, cab) is false: the cab is put at the trailer hitch, the trailer scans for it
             if (op == 0x0366) { auto a2 = ResolveArgs(kDmg, *c); if (a2 && wide && (a2->empty() || !CPools::GetObject((int)(*a2)[0].n))) continue; /* CR23: a record of an older pass: the object may be gone */ if (a2) { d.act = true; d.row = &kDmg; d.rowIdx = -2; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (tagCond(c)) { d.act = true; d.row = &kTag; d.rowIdx = -3; d.cond = c; d.op = op; return d; }
         }
@@ -886,6 +888,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         std::string a; for (size_t i = 0; i + 5 < d.args.size(); i += 6) { if (!a.empty()) a += "|"; a += F(0.5f * (F_(i) + F_(i + 3))) + "," + F(0.5f * (F_(i + 1) + F_(i + 4))) + "," + F(0.5f * (F_(i + 2) + F_(i + 5))); }
         QueueActions({ "emit mdproj:" + a }, row.settle); return;
     }
+    if (v == "attachtrailer") { QueueActions({ "emit mdattach:" + std::to_string(I_(0)) + ":" + std::to_string(I_(1)) }, row.settle); return; } // CR37
     if (v == "explode") { // CR36: the script command ADD_EXPLOSION at the centre of the tested box (type -1 = any: a grenade)
         QueueActions({ "emit mdexplode:" + std::to_string((int)F_(0)) + ":" + F(0.5f * (F_(1) + F_(4))) + ":" + F(0.5f * (F_(2) + F_(5))) + ":" + F(0.5f * (F_(3) + F_(6))) }, row.settle); return;
     }
@@ -1569,6 +1572,22 @@ bool Cmd(const char* name, const std::string& args) {
     if (!std::strcmp(name, "mdfixcar")) { // CR34: CVehicle::Fix + full health (what the script command FIX_CAR does)
         if (auto* v = CPools::GetVehicle(std::atoi(args.c_str()))) { g_fixCars.insert(std::atoi(args.c_str())); v->Fix(); v->m_fHealth = 1000.f; notsa::standalone::Fixups::Log("[mdriver] mdfixcar %d model %d", std::atoi(args.c_str()), (int)v->m_nModelIndex); }
         return true; }
+    if (!std::strcmp(name, "mdattach")) { // CR37: the cab goes to the trailer's hitch (same heading, tow bar on the hitch); CTrailer::ProcessAI -> ScanForTowLink (exe 0x6CF030) then hitches it by itself
+        int th = 0, ch = 0; std::sscanf(args.c_str(), "%d:%d", &th, &ch);
+        auto* tr = CPools::GetVehicle(th); auto* cab = CPools::GetVehicle(ch);
+        if (tr && cab && tr != cab && !(tr->m_pTowingVehicle == cab)) {
+            CWorld::Remove(cab);
+            auto& m = cab->GetMatrix(); const auto& tm = tr->GetMatrix();
+            m.GetRight() = tm.GetRight(); m.GetForward() = tm.GetForward(); m.GetUp() = tm.GetUp();
+            CVector hitch{}, bar{};
+            const bool ok = tr->GetTowHitchPos(hitch, false, tr) && cab->GetTowBarPos(bar, false, tr);
+            if (ok) cab->SetPosn(cab->GetPosition() + (hitch - bar));
+            cab->m_vecMoveSpeed = CVector{}; cab->m_vecTurnSpeed = CVector{}; tr->m_vecMoveSpeed = CVector{}; tr->m_vecTurnSpeed = CVector{};
+            CWorld::Add(cab);
+            notsa::standalone::Fixups::Log("[mdriver] mdattach gf=%u trailer %d cab %d ok=%d hitch %.2f,%.2f,%.2f bar %.2f,%.2f,%.2f trailer status %d", (unsigned)CTimer::GetFrameCounter(), th, ch, (int)ok, hitch.x, hitch.y, hitch.z, bar.x, bar.y, bar.z, (int)tr->GetStatus());
+        }
+        return true;
+    }
     if (!std::strcmp(name, "mdexplode")) { // CR36: CExplosion::AddExplosion as the script command ADD_EXPLOSION does (no creator, sound, no camera shake)
         int t = -1; float x = 0, y = 0, z = 0; std::sscanf(args.c_str(), "%d:%f:%f:%f", &t, &x, &y, &z);
         if (!std::getenv("NOTSA_MDRIVER_NOEXPLOSIONPROOF")) for (auto& pd : GetPedPool()->GetAllValid()) { // the player throws the grenade from a distance in the game: the peds near the box (CJ, the buddy) are explosion proof, the explosion only has to be SEEN by the script's area test

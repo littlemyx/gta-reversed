@@ -399,16 +399,22 @@ void FlagSets(const CRunningScript* s, const uint8_t* p, int hops, std::vector<s
         p = e;
     }
 }
+bool RetFlagProgress(const CRunningScript* s, const Rec& r) { // CR44 (66 MIKE TORENO: `IS_CHAR_DEAD @52 -> REMOVE_BLIP, @94 = 1, RETURN`; `@94 == 1` is a stage-progress test, its true branch no fail): a guard that comes only from a RETURN is none when the branch sets a flag and a `flag == value` test of the mission goes on
+    if (!r.fall || g_flagConds.empty() || std::getenv("NOTSA_MDRIVER_NORETFLAG")) return false;
+    std::vector<std::pair<uint32_t, int32_t>> sets; std::set<const uint8_t*> seen; FlagSets(s, r.fall, 0, sets, seen);
+    for (auto& [ref, val] : sets) { if (ref == 0xFFFFFFFFu) continue; for (auto& [pp, f] : g_flagConds) { if (!f->vref[0] || f->vref[0] != ref || !f->hasBranch || (f->raw & 0x8000)) continue; const auto v = ArgInt(*f, 1); if (!v || (int32_t)*v != val) continue; std::set<const uint8_t*> sn; if (!WalkFail(s, f->fall, 0, false, sn)) return true; } }
+    return false;
+}
 bool FlagGuard(const CRunningScript* s, const Rec& r) {
     if (!r.fall || g_flagConds.empty() || std::getenv("NOTSA_MDRIVER_NOFLAGGUARD")) return false;
     std::vector<std::pair<uint32_t, int32_t>> sets; std::set<const uint8_t*> seen; FlagSets(s, r.fall, 0, sets, seen);
-    if (!std::getenv("NOTSA_MDRIVER_FLAGNOPRINT") && std::none_of(sets.begin(), sets.end(), [](auto& q) { return q.first == 0xFFFFFFFFu; })) return false; // CR24: the flag guard is the `fail text + flag` shape: without a print on the true branch the flag is an ordinary state variable (14: `@43 = 1` after the dealers die)
+    const bool noPrint = std::none_of(sets.begin(), sets.end(), [](auto& q) { return q.first == 0xFFFFFFFFu; }); if (noPrint && (std::getenv("NOTSA_MDRIVER_FLAGPRINTONLY") || std::getenv("NOTSA_MDRIVER_FLAGNOPRINT") == nullptr && false)) return false; /* CR44 (65 T-Bone: `IS_CAR_DEAD car[i] AND flag -> @158 = 1`, the flag test `@158 == 1` itself prints the fail text and goes to the fail label): without a print on the dead-site branch the flag counts when its own true branch walks to the fail */ // CR24: the flag guard is the `fail text + flag` shape: without a print on the true branch the flag is an ordinary state variable (14: `@43 = 1` after the dealers die)
     for (auto& [ref, val] : sets) for (auto& [pp, f] : g_flagConds) {
         if (!f->vref[0] || f->vref[0] != ref || !f->hasBranch) continue;
         const auto v = ArgInt(*f, 1); if (!v || (int32_t)*v != val) continue;
         std::set<const uint8_t*> sn; if (WalkFail(s, f->fall, 0, false, sn)) return true;
     }
-    if (!std::getenv("NOTSA_MDRIVER_NOLOOPFLAG")) // CR27 (26 ROBBING UNCLE SAM: `IS_CHAR_DEAD $528 -> @37 = 1, print`; the main loop is `WHILE @37 == 0`, its exit reaches the fail): the flag test is `var == W` with W != the value set, and its FALSE branch (the GOTO_IF_FALSE after it) reaches the M_FAIL print
+    if (!noPrint && !std::getenv("NOTSA_MDRIVER_NOLOOPFLAG")) // CR27 (26 ROBBING UNCLE SAM: `IS_CHAR_DEAD $528 -> @37 = 1, print`; the main loop is `WHILE @37 == 0`, its exit reaches the fail): the flag test is `var == W` with W != the value set, and its FALSE branch (the GOTO_IF_FALSE after it) reaches the M_FAIL print
         for (auto& [ref, val] : sets) for (auto& [pp, f] : g_flagConds) {
             if (!f->vref[0] || f->vref[0] != ref || ref == 0xFFFFFFFFu) continue;
             const auto v = ArgInt(*f, 1); if (!v || (int32_t)*v == val) continue;
@@ -486,7 +492,7 @@ const std::set<int>& Guarded() {
     for (auto& [site, r] : g_deadConds) {
         if ((r->raw & 0x8000) || ((r->raw & 0x7FFF) != 0x0118 && (r->raw & 0x7FFF) != 0x0119)) continue; // CR27: IS_CAR_DEAD sites too (26: the mission's truck)
         auto& ce = cache[site]; const size_t gen = g_flagConds.size() + g_deadConds.size();
-        if (ce.first != gen + 1) { g_walkRet = false; { const bool vg = VerdictOf(g_thread, *r) == Verdict::Guard; ce = { gen + 1, vg && !(g_walkRet && (((r->raw & 0x7FFF) == 0x0119 && !std::getenv("NOTSA_MDRIVER_NOSUBRET")) || ((r->raw & 0x7FFF) == 0x0118 && !std::getenv("NOTSA_MDRIVER_NOSUBRETCHAR") && CreatesCharBeforeReturn(g_thread, r->fall)))) /* CR43 (64 PIER 69: `IS_CHAR_DEAD @48` of the respawn subroutine: CREATE_CHAR, RETURN: no failure; the roof gunman was never killed) */ }; } if (std::getenv("NOTSA_MDRIVER_PLOG") && ce.second) notsa::standalone::Fixups::Log("[mdplog] guard site ip=%x flagconds=%zu", (unsigned)(site - g_thread->m_BaseIP), g_flagConds.size()); }
+        if (ce.first != gen + 1) { g_walkRet = false; { const bool vg = VerdictOf(g_thread, *r) == Verdict::Guard; ce = { gen + 1, vg && !(g_walkRet && (((r->raw & 0x7FFF) == 0x0119 && !std::getenv("NOTSA_MDRIVER_NOSUBRET")) || ((r->raw & 0x7FFF) == 0x0118 && !std::getenv("NOTSA_MDRIVER_NOSUBRETCHAR") && (CreatesCharBeforeReturn(g_thread, r->fall) || RetFlagProgress(g_thread, *r))))) /* CR43 (64 PIER 69: `IS_CHAR_DEAD @48` of the respawn subroutine: CREATE_CHAR, RETURN: no failure; the roof gunman was never killed) */ }; } if (std::getenv("NOTSA_MDRIVER_PLOG") && ce.second) notsa::standalone::Fixups::Log("[mdplog] guard site ip=%x flagconds=%zu", (unsigned)(site - g_thread->m_BaseIP), g_flagConds.size()); }
         if (ce.second && std::getenv("NOTSA_MDRIVER_GUARDLOG")) { std::set<const uint8_t*> sn; const bool wf = WalkFail(g_thread, r->fall, 0, false, sn); notsa::standalone::Fixups::Log("[guardlog] site %x guard: walkfail=%d flagguard=%d waitSeq=%d/%d", (unsigned)(site - g_thread->m_BaseIP), (int)wf, (int)FlagGuard(g_thread, *r), r->waitSeq, g_waitSeq); }
         if (!ce.second) continue; if (r->waitSeq > 0 && r->waitSeq < g_waitSeq - 600 && !std::getenv("NOTSA_MDRIVER_NOSTALEGUARD")) continue; /* CR42 (52 SNAIL TRAIL: IS_CHAR_DEAD @78 is a fail site of the escort stage (the reporter must live) and the kill target of the sniper stage; the old stage's site has not run for 600+ waits) */ const auto da = DecodeArgs(g_thread, site, 1); if (!da.empty()) out.insert((int)da[0].bits);
     }
@@ -818,6 +824,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             for (auto& q : falses) { if (!Matches(row, *q)) continue; auto a = ResolveArgs(row, *q); if (seen.insert(RKey(a)).second) opts.push_back({ q, a }); }
             auto& pick = opts[(size_t)attempt % opts.size()];
             if ((row.action == "warpto_handle" || row.action == "pedwarp" || row.action == "vehwarp") && pass == 0 && !g_auxMode && pick.args && !std::getenv("NOTSA_MDRIVER_NOSPENTWARP")) { const auto sk = g_noProgress.find(std::to_string(g_stopIp) + ":" + std::to_string((int)i) + ":" + RKey(pick.args.value())); if ((sk != g_noProgress.end() && sk->second >= 3) || CoordLeashLive()) { bool other = false; for (auto& q : falses) if (q != pick.c && (q->raw & 0x7FFF) == 0x0118 && !(q->raw & 0x8000) && !AnyGuard(*q)) other = true; /* the later row is a plain IS_CHAR_DEAD kill (11 / 37 / 23 regressed with any other condition) */ if (other) break; } } // CR41 (59 JIZZY: the chase stage's `CJ near the driver` throttle IF, answered by warps that cannot keep up with the moving car, shadowed the plain `IS_CHAR_DEAD driver` kill row 98 until the 8-answer stop): a warp row answered 3 times with the same arguments at this wake ip without progress is spent while another false condition of the pass is left for the later rows
+            if (row.action == "key" && row.op == 0x00E1 && pass == 0 && !std::getenv("NOTSA_MDRIVER_NOKEYKILLFIRST")) { bool killLeft = false; for (auto& q : falses) if (q != pick.c && (q->raw & 0x7FFF) == 0x0118 && !(q->raw & 0x8000) && !AnyGuard(*q)) killLeft = true; if (killLeft) break; } // CR44 (63 YAY KA-BOOM-BOOM: the key row 97 (the skip-cutscene button of an AND group that can not become true) shadowed the plain IS_CHAR_DEAD kill row 98 after the warps were spent): a plain false kill test of the pass goes before a button poll
             if (row.action == "key" && row.op == 0x00E1 && attempt < 3 && !std::getenv("NOTSA_MDRIVER_NOKEYDEFER")) { // CR22 (10 BEEFY BARON): a button poll whose failing jump leads on to ANOTHER false condition of the pass that only a wait row answers (a world event: here `NOT IS_CAR_DEAD(@36)`, the Topfun van the script searches for after the button test) is not what the script waits for: it waits for that event first. The button is pressed only after 3 stalls.
                 size_t at = 0; while (at < loop.size() && loop[at] != pick.c) at++;
                 bool eventAfter = false;
@@ -1457,7 +1464,8 @@ void TickGeneric() {
         const auto& ck = CUserDisplay::OnscnTimer.m_Clock;
         urgentTimer = ck.m_nVarId != 0 && !CUserDisplay::OnscnTimer.m_bPaused && ck.m_nTimerDirection == eTimerDirection::DECREASE;
     }
-    if (g_nextStall > 0 ? g_sameCount < g_nextStall : g_sameCount < (fr < g_dangerUntil ? std::min(g_stall, 90) : urgentTimer ? std::min(g_stall, 150) : g_stall)) return;
+    bool chaseNear = false; if (g_nextStall == 0 && g_sameCount >= 150 && !std::getenv("NOTSA_MDRIVER_NOCHASEFAST")) for (auto& r : g_recs) { const int rop = r->raw & 0x7FFF; if (r->waitSeq >= g_waitSeq - 3 && r->cond == 0 && !(r->raw & 0x8000) && ((rop >= 0x00F2 && rop <= 0x00F4) || (rop >= 0x0104 && rop <= 0x0106))) { chaseNear = true; break; } } // CR44 (67 ZEROING IN: the chase stage's `CJ near the car's driver` locate is false while the blip fades, the script fails after ~500 frames, the first stall is 600): a false CJ-near-char locate decides after 200 frames
+    if (g_nextStall > 0 ? g_sameCount < g_nextStall : g_sameCount < (fr < g_dangerUntil ? std::min(g_stall, 90) : urgentTimer ? std::min(g_stall, 150) : chaseNear ? std::min(g_stall, 200) : g_stall)) return;
     const uint8_t* ipPtrEarly = root->m_IP;
     const bool earlyAux = g_auxEarly; g_auxEarly = false; // CR27: the early re-decision after an aux answer answers the aux thread only
     const bool earlyPhoto = g_photoEarly; g_photoEarly = false; // CR26: the early re-decision after a zoomed photo answers a photo condition only (no wait / kill escalation of a half-evaluated pass)

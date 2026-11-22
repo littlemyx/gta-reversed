@@ -565,7 +565,7 @@ std::optional<std::vector<RArg>> ResolveArgs(const Row& row, const Rec& rec) {
     for (auto& a : row.args) {
         RArg r;
         if (a.size() > 1 && a[0] == '$' && std::all_of(a.begin() + 1, a.end(), [](char c) { return std::isdigit((unsigned char)c); })) {
-            const size_t ai = (size_t)std::atoi(a.c_str() + 1); const auto v = (fl || (row.action == "explode" && ai >= 1)) ? ArgFloat(rec, ai) : ArgInt(rec, ai); // CR36: explode = (type int, 6 floats)
+            const size_t ai = (size_t)std::atoi(a.c_str() + 1); const auto v = (fl || (row.action == "explode" && ai >= 1) || (row.action == "smashobj" && ai <= 3)) ? ArgFloat(rec, ai) : ArgInt(rec, ai); // CR36: explode = (type int, 6 floats)
             if (!v || !std::isfinite(*v)) return std::nullopt;
             r.n = *v;
         } else if (IsNum(a)) r.n = std::atof(a.c_str());
@@ -630,6 +630,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
     static const Row kDmg{ 0x0366, 1, "HAS_OBJECT_BEEN_DAMAGED", "damageobj", { "$0" }, 30 };
     static const Row kExp{ 0x0356, 1, "IS_EXPLOSION_IN_AREA", "explode", { "$0", "$1", "$2", "$3", "$4", "$5", "$6" }, 60 }; // CR36 (42 SMALL TOWN BANK: the vault wall waits for an explosion in a 2 m box)
     static const Row kAtt{ 0x07AB, 1, "IS_TRAILER_ATTACHED_TO_CAB", "attachtrailer", { "$0", "$1" }, 60 }; // CR37 (43 TANKER COMMANDER: the trailer has to be hitched to the cab)
+    static const Row kSmash{ 0x0716, 1, "IS_CLOSEST_OBJECT_OF_TYPE_SMASHED_OR_DAMAGED", "smashobj", { "$0", "$1", "$2", "$3", "$4", "$5", "$6" }, 30 }; // CR38 (47 ARE YOU GOING TO SAN FIERRO?: the three pot plants have to be damaged)
     static const Row kPho{ 0x04C5, 1, "HAS_CHAR_BEEN_PHOTOGRAPHED", "photo", { "$0" }, 30 }; // CR25 (58 PHOTO OPPORTUNITY)
     static const Row kTag{ 0x0038, 0, "int compare of the GET_PERCENTAGE_TAGGED_IN_AREA result", "tagarea", {}, 60 };
     static const Row kFix{ 0x03C9, 0, "NOT IS_CAR_VISIBLY_DAMAGED", "carfix", { "$0" }, 30 }; // CR34 (33 MANAGEMENT ISSUES)
@@ -667,6 +668,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             if (op == 0x07AB && !std::getenv("NOTSA_MDRIVER_NOATTACH")) { auto a2 = ResolveArgs(kAtt, *c); if (a2 && a2->size() == 2) { d.act = true; d.row = &kAtt; d.rowIdx = -17; d.cond = c; d.args = *a2; d.op = op; return d; } } // CR37: IS_TRAILER_ATTACHED_TO_CAB(trailer, cab) is false: the cab is put at the trailer hitch, the trailer scans for it
             if (op == 0x001B && !(c->raw & 0x8000) && c->vref[1] && !std::getenv("NOTSA_MDRIVER_NOOBJHP") && ArgInt(*c, 0) && *ArgInt(*c, 0) <= 1) { // CR38: only `1 > health` (the object has to be destroyed; 26 ROBBING UNCLE SAM reads `5 > health` of a crate that is not to be shot, the damage answer shadowed the real one) // CR37 (42 SMALL TOWN BANK: `IF 1 > health` of the vault wall's second object, read with GET_OBJECT_HEALTH): the object is damaged as by a bullet (CJ the damager), like HAS_OBJECT_BEEN_DAMAGED
                 if (auto it = g_objHealthVars.find(c->vref[1]); it != g_objHealthVars.end() && CPools::GetObject(it->second)) { d.act = true; d.row = &kDmg; d.rowIdx = -2; d.cond = c; d.op = op; d.args = { RArg{ false, (double)it->second, {} } }; return d; } }
+            if (op == 0x0716 && !std::getenv("NOTSA_MDRIVER_NOSMASH")) { auto a2 = ResolveArgs(kSmash, *c); if (a2 && a2->size() == 7) { d.act = true; d.row = &kSmash; d.rowIdx = -18; d.cond = c; d.args = *a2; d.op = op; /* every other distinct false object test of the pass too (47: ~44 pot plants, the mission is timed: one 630-frame round per plant arrests the Truth) */ std::set<std::string> seen; seen.insert(std::to_string((*a2)[0].n) + "," + std::to_string((*a2)[1].n)); if (!std::getenv("NOTSA_MDRIVER_NOSMASHALL")) for (auto& q : falses) if (q != c && (q->raw & 0x7FFF) == 0x0716 && !(q->raw & 0x8000)) if (auto a3 = ResolveArgs(kSmash, *q); a3 && a3->size() == 7 && seen.insert(std::to_string((*a3)[0].n) + "," + std::to_string((*a3)[1].n)).second) for (auto& x : *a3) d.args.push_back(x); return d; } } // CR38: IS_CLOSEST_OBJECT_OF_TYPE_SMASHED_OR_DAMAGED is false: CJ damages / breaks the object the test finds
             if (op == 0x0366) { auto a2 = ResolveArgs(kDmg, *c); if (a2 && wide && (a2->empty() || !CPools::GetObject((int)(*a2)[0].n))) continue; /* CR23: a record of an older pass: the object may be gone */ if (a2) { d.act = true; d.row = &kDmg; d.rowIdx = -2; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (tagCond(c)) { d.act = true; d.row = &kTag; d.rowIdx = -3; d.cond = c; d.op = op; return d; }
         }
@@ -1003,6 +1005,13 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     if (v == "carspeed") { QueueActions({ "emit mdspeed:" + std::to_string(I_(0)) + ":" + F(F_(1)) }, row.settle); return; } // CR34
     if (v == "hurt") { QueueActions({ "emit mdhurt:" + std::to_string(I_(0)) + ":" + std::to_string(I_(1)) }, row.settle); return; } // CR35
     if (v == "carfix") { QueueActions({ "emit mdfixcar:" + std::to_string(I_(0)) }, row.settle); return; } // CR34
+    if (v == "smashobj") { // CR38: for each (x, y, z, radius, model, smashed, damaged) set: CJ is warped to the object (an IPL dummy far from him is no CObject yet; the load scene streams it in), then the object is damaged
+        std::vector<std::string> acts;
+        for (size_t k = 0; k + 7 <= d.args.size(); k += 7) {
+            const auto w = warp(F_(k), F_(k + 1), F_(k + 2), false); if (!w.empty()) acts.push_back(w);
+            acts.push_back("emit mdsmash:" + F(F_(k)) + ":" + F(F_(k + 1)) + ":" + F(F_(k + 2)) + ":" + F(F_(k + 3)) + ":" + std::to_string(I_(k + 4)) + ":" + std::to_string(I_(k + 5)) + ":" + std::to_string(I_(k + 6)));
+        }
+        QueueActions(acts, row.settle); return; }
     if (v == "damageobj") { QueueActions({ "emit mddmgobj:" + std::to_string(I_(0)) }, row.settle); return; } // CR22: HAS_OBJECT_BEEN_DAMAGED(obj): CJ damages the object (16 NINES AND AK'S shooting range)
     if (v == "tosphere") { // CR24: the vehicle at the centre of a GET_RANDOM_CAR_IN_SPHERE search is moved next to the nearest car the game's own search would accept (appearance 1/2, not a law enforcer, wanted model, CanBeDeleted: the mission's decoy is refused), 8 m above it
         CVehicle* best = SphereTarget(g_sphCur.veh, g_sphCur.model);
@@ -1603,6 +1612,16 @@ bool Cmd(const char* name, const std::string& args) {
             if (pd.m_fHealth > 0.f && (pd.GetPosition() - CVector{ x, y, z }).Magnitude() < 25.f) pd.physicalFlags.bExplosionProof = true; }
         CExplosion::AddExplosion(nullptr, nullptr, t < 0 ? EXPLOSION_GRENADE : (eExplosionType)t, CVector{ x, y, z }, 0, true, -1.0f, false);
         notsa::standalone::Fixups::Log("[mdriver] mdexplode gf=%u type %d at %.2f,%.2f,%.2f", (unsigned)CTimer::GetFrameCounter(), t, x, y, z);
+        return true;
+    }
+    if (!std::strcmp(name, "mdsmash")) { // CR38: the object IS_CLOSEST_OBJECT_OF_TYPE_SMASHED_OR_DAMAGED (0x46D56F) finds is damaged as by a bullet (CJ the damager); `smashed` also marks it broken
+        float x = 0, y = 0, z = 0, r = 0; int m = 0, sm = 0, dm = 0; std::sscanf(args.c_str(), "%f:%f:%f:%f:%d:%d:%d", &x, &y, &z, &r, &m, &sm, &dm);
+        const int model = m < 0 ? (int)CTheScripts::UsedObjectArray[-m].nModelIndex : m; const CVector pos{ x, y, z <= -100.f ? CWorld::FindGroundZForCoord(x, y) : z };
+        CEntity* e = CWorld::FindNearestObjectOfType(model, pos, r, false, false, false, false, true, true);
+        if (e && e->GetType() == ENTITY_TYPE_OBJECT) { auto* o = static_cast<CObject*>(e); const CVector op = o->GetPosition(); CVector dir = op - ped->GetPosition(); dir.Normalise(); o->ObjectDamage(1000.f, &op, &dir, ped, WEAPON_PISTOL);
+            if (sm && !o->objectFlags.bIsBroken) o->objectFlags.bIsBroken = true;
+            notsa::standalone::Fixups::Log("[mdriver] mdsmash model %d at %.1f,%.1f,%.1f: renderDamaged=%d visible=%d broken=%d", model, op.x, op.y, op.z, (int)o->m_bRenderDamaged, (int)o->m_bIsVisible, (int)o->objectFlags.bIsBroken); }
+        else notsa::standalone::Fixups::Log("[mdriver] mdsmash model %d at %.1f,%.1f,%.1f: no object found", model, x, y, z);
         return true;
     }
     if (!std::strcmp(name, "mddmgobj")) { // CR22: CObject::ObjectDamage, CJ the damager, pistol (the port's object damage path of a bullet hit)

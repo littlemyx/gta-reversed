@@ -598,6 +598,7 @@ bool Matches(const Row& w, const Rec& r) { return w.op == (r.raw & 0x7FFF) && (w
 struct Dec { bool act = false; const Row* row = nullptr; int rowIdx = -1; RecP cond; std::vector<RArg> args; int op = -1; std::string reason; };
 CEntity* EntityOfHandle(int h, int op);
 std::string LocatedOther(const Rec& r);
+bool g_bigCall = false; // CR45: Decide() runs over the big window
 Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
     Dec d;
     // CR19: the wait group. The last condition group of the pass fell straight into a WAIT and is an OR (00D6 21..27: `WHILE OR(NOT a, NOT b, ...)`): the thread waits until EVERY member is false. The NOT-form members that are
@@ -655,11 +656,12 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             std::stable_partition(falses.begin(), falses.end(), [&](const RecP& r) { return !nearGuard(r); });
         }
     }
-    // CR45 (53 MOUNTAIN CLOUD BOYS: the ambush stage spawns six gunmen; the pass has six plain false IS_CHAR_DEAD tests, but the tail-most false of the pass is the trigger area of the ambush (CJ in area AND in a car), so the answer was a vehicle warp into the area and Woozie was shot in the car): with three or more plain false IS_CHAR_DEAD tests of live peds left in the window they go before every other false condition of the window
-    if (falses.size() > 3 && !wide && !std::getenv("NOTSA_MDRIVER_NOKILLSET1")) {
-        const auto isKill = [](const RecP& r) { if ((r->raw & 0xFFFF) != 0x0118) return false; const auto h = ArgInt(*r, 0); auto* pe = h ? CPools::GetPed((int)*h) : nullptr; return pe && pe != Cj() && pe->m_fHealth > 0.f; };
-        if (blockers.empty() && std::count_if(falses.begin(), falses.end(), isKill) >= 3) for (size_t ri = 0; ri < g_rows.size(); ri++) { const auto& kr = g_rows[ri]; if (kr.op != 0x0118 || kr.match != 1 || kr.action != "kill") continue;
-            std::vector<RecP> ks; for (auto& c : falses) if (isKill(c)) ks.push_back(c); const auto& c = ks[(size_t)attempt % ks.size()]; const auto a = ResolveArgs(kr, *c); if (!a || a->empty()) break;
+    // CR45 (53 MOUNTAIN CLOUD BOYS: the ambush stage spawns six gunmen; the pass has six plain false IS_CHAR_DEAD tests, but the tail-most false of the pass is the trigger area of the ambush (CJ in area AND in a car), so the answer was a vehicle warp into the area and Woozie was shot in the car): with five or more plain false IS_CHAR_DEAD tests of live peds from ONE site (an array loop) left in the window they go before every other false condition of the window
+    if (falses.size() > 4 && !wide && !g_bigCall && !std::getenv("NOTSA_MDRIVER_NOKILLSET1")) {
+        const auto isKill = [](const RecP& r) { if ((r->raw & 0xFFFF) != 0x0118) return false; const auto h = ArgInt(*r, 0); auto* pe = h ? CPools::GetPed((int)*h) : nullptr; return pe && pe != Cj() && pe->m_fHealth > 0.f && (int)pe->GetActiveWeapon().m_Type >= 22 && (int)pe->GetActiveWeapon().m_Type <= 34 /* an armed (firearm) gunman */; };
+        std::map<const uint8_t*, int> siteN; { std::set<std::pair<const uint8_t*, int>> seenSH; for (auto& c : falses) if (isKill(c) && seenSH.insert({ c->p, (int)*ArgInt(*c, 0) }).second) siteN[c->p]++; } /* distinct handles per site */ const bool loopKills = std::any_of(siteN.begin(), siteN.end(), [](auto& kv) { return kv.second >= 5; }); /* one site tested over an array of peds (a loop), not separate tests */
+        if (blockers.empty() && loopKills) for (size_t ri = 0; ri < g_rows.size(); ri++) { const auto& kr = g_rows[ri]; if (kr.op != 0x0118 || kr.match != 1 || kr.action != "kill") continue;
+            std::vector<RecP> ks; for (auto& c : falses) if (isKill(c) && siteN[c->p] >= 5) ks.push_back(c); const auto& c = ks[(size_t)attempt % ks.size()]; const auto a = ResolveArgs(kr, *c); if (!a || a->empty()) break;
             d.act = true; d.row = &kr; d.rowIdx = (int)ri; d.cond = c; d.args = *a; d.op = 0x0118; return d; }
     }
     if (falses.size() > 1 && !std::getenv("NOTSA_MDRIVER_NOTIMERVAR")) { const auto tz = [&](const RecP& r) { return (r->raw & 0x7FFF) == 0x0038 && !(r->raw & 0x8000) && g_timerVars.count(r->vref[0]) && ArgInt(*r, 1) && *ArgInt(*r, 1) == 0; }; if (std::any_of(falses.begin(), falses.end(), [&](const RecP& r) { return !tz(r); })) falses.erase(std::remove_if(falses.begin(), falses.end(), tz), falses.end()); } // CR39 (47)
@@ -1541,7 +1543,7 @@ void TickGeneric() {
     }
     if (d.act && d.row->action == "wait" && g_attemptsAt[ipPtr] >= 2 && !std::getenv("NOTSA_MDRIVER_NOBIGWIN") && g_recsBig.size() > g_recs.size()) { // CR26 (20 LOS SEPULCROS: a pass of ~100 conditions, the 64-condition window holds only its last third; the stage test `IS_CHAR_SITTING_IN_CAR` / the three IS_CHAR_DEAD of the pass' first half are outside it): the wait row answered this wake ip twice and the thread still stands: decide again over the whole last 3 passes (up to 400 conditions); a non-wait answer wins
         std::vector<RecP> big; for (auto& r : g_recsBig) if (r->waitSeq >= g_waitSeq - 3) big.push_back(r);
-        Dec d3 = Decide(big, g_attemptsAt[ipPtr]);
+        g_bigCall = true; Dec d3 = Decide(big, g_attemptsAt[ipPtr]); g_bigCall = false;
         if (d3.act && d3.row->action != "wait") { notsa::standalone::Fixups::Log("[mdriver] frame %d big window (%zu -> %zu records): %s", fr, loop.size(), big.size(), d3.row->name.c_str()); d = d3; }
     }
     if (d.act && d.row->action == "wait" && d.cond && (d.cond->raw & 0x8000) && d.cond->cond == 0 && g_attemptsAt[ipPtr] >= 2 && Cj() && !std::getenv("NOTSA_MDRIVER_NOLEAVELOC")) { // CR45 (68 TEST DRIVE: `NOT LOCATE_CHAR_ANY_MEANS_3D CJ (-1656,1210,12) 7 7 7`, the stage waits for CJ to step out of the start place): a NOT place locate of CJ that is false twice (CJ stands inside) is answered by moving CJ just outside the box
@@ -1553,7 +1555,7 @@ void TickGeneric() {
     if (d.act && d.row->action == "nearest_car" && d.cond && g_attemptsAt[ipPtr] == 0 && g_recsBig.size() > loop.size() && !std::getenv("NOTSA_MDRIVER_NONEARCARBIG")) { // CR45 (68 TEST DRIVE: the tail of a >150-condition pass holds `IS_CHAR_IN_ANY_CAR buddy` of a dialogue IF; the real blocker, a locate of CJ at the mission's blip, lies outside the 64-condition window): a car answer about ANOTHER char is no first answer: look at the last 3 passes; a non-car answer wins
         const auto hh = ArgInt(*d.cond, 0); auto* oth = hh ? CPools::GetPed((int)*hh) : nullptr;
         if (oth && oth != Cj()) { std::vector<RecP> big; for (auto& r : g_recsBig) if (r->waitSeq >= g_waitSeq - 3) big.push_back(r);
-            Dec d3 = Decide(big, g_attemptsAt[ipPtr]); if (d3.act && d3.row->action != "wait" && d3.row->action != "nearest_car") { notsa::standalone::Fixups::Log("[mdriver] frame %d nearest_car of another char: big window (%zu -> %zu records): %s", fr, loop.size(), big.size(), d3.row->name.c_str()); d = d3; } }
+            g_bigCall = true; Dec d3 = Decide(big, g_attemptsAt[ipPtr]); g_bigCall = false; if (d3.act && d3.row->action != "wait" && d3.row->action != "nearest_car") { notsa::standalone::Fixups::Log("[mdriver] frame %d nearest_car of another char: big window (%zu -> %zu records): %s", fr, loop.size(), big.size(), d3.row->name.c_str()); d = d3; } }
     }
     if (d.act && !std::getenv("NOTSA_MDRIVER_NOAUX")) { // CR27: see AuxState: the root's wait compares a global that a streamed script thread writes: answer THAT thread's conditions (locate / button of the menu) with the same rows; a non-wait answer wins. Once such a thread was answered it goes first (the root's own warps would pull CJ away from it); when the root's pass no longer compares a global of it, it is done (g_auxDone)
         std::set<uint16_t> gl; for (auto& r : g_recsBig) { if (r->waitSeq < g_waitSeq - 3 || !IntCompareOp(r->raw & 0x7FFF)) continue; for (int k = 0; k < 2; k++) if ((r->vref[k] >> 16) == 2) gl.insert((uint16_t)(r->vref[k] & 0xFFFF)); }

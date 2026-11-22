@@ -58,6 +58,8 @@
 #include <array>
 
 extern std::array<CMenuSystem::Menu*, 2> MenuNumber; // MenuSystem.cpp
+struct NotsaInjectMissionInfo { int32 offset; uint8 bytes[16]; };
+extern int32 NotsaLastInjectedMission; bool NotsaInjectStartMission(int32 missionId, NotsaInjectMissionInfo* info); // MissionDebugModule.cpp (CR33)
 namespace notsa::mdriver {
 namespace {
 bool Generic();
@@ -252,7 +254,7 @@ std::map<int, int>       g_arity;            // opcode -> operand count (tools/s
 uint32_t                 g_frame0 = 0;
 std::string              g_name = "?", g_stopReason, g_failText, g_lastLabel;
 int                      g_stopOp = -1; uint32_t g_stopIp = 0;
-bool                     g_pass = false, g_fail = false, g_endedFail = false;
+bool                     g_pass = false, g_fail = false, g_endedFail = false, g_relaunched = false; int g_relaunchWait = 0;
 int                      g_passFrame = -1, g_failFrame = -1, g_endFrame = -1, g_killFrame = -1000000, g_killSettle = 0;
 int                      g_maxFrames = 30000, g_fightClock = 0, g_fightKills = 0;
 std::set<int>            g_enemyTypes;       // ped types shot for going after CJ himself (TS enemyTypes)
@@ -1025,6 +1027,16 @@ void TickGeneric() {
         g_endFrame = fr;
         if (!g_pass && CStats::GetStatValue(STAT_MISSIONS_PASSED) > g_passStat0) { g_pass = true; g_passFrame = fr; } // CR6: TS checks the stat at thread end too (87 78: cutscene-only, the stat rises in the thread's last command)
         if (!g_pass && fr - g_killFrame <= g_killSettle + 5) { g_stopReason = "driver stop: killed a guard"; g_stopOp = -1; }
+        else if (!g_pass && !g_fail && !g_relaunched && NotsaLastInjectedMission >= 0 && !std::getenv("NOTSA_MDRIVER_NORELAUNCH")) { // CR33 (34 HOUSE PARTY: the first visit plays the intro cutscene, prints the hint and ENDS without M_PASS / M_FAIL, setting a global ($7756) that the second visit reads): a mission that ended with neither M_PASS nor M_FAIL is a staged mission, the player starts it again (once; the globals stay)
+            if (g_relaunchWait++ < 300 && (CTheScripts::IsPlayerOnAMission() || CTheScripts::FailCurrentMission != 0)) return;
+            if (!CTheScripts::IsPlayerOnAMission() && CTheScripts::FailCurrentMission == 0) {
+                g_relaunched = true; g_relaunchWait = 0; notsa::standalone::Fixups::Log("[mdriver] relaunch frame %d: mission %d ended without M_PASS / M_FAIL: started again", fr, (int)NotsaLastInjectedMission);
+                NotsaInjectMissionInfo mi{}; NotsaInjectStartMission(NotsaLastInjectedMission, &mi);
+                g_started = false; g_thread = nullptr; g_recs.clear(); g_recsBig.clear(); g_attemptsAt.clear(); g_queue.clear(); g_qpos = 0; g_wait = 0; g_untilLeft = 0; g_sameCount = 0; g_lastIp = nullptr; g_endFrame = -1; g_lastLabel.clear();
+                return;
+            }
+            g_endedFail = true;
+        }
         else if (!g_pass) g_endedFail = true;
         notsa::standalone::Fixups::Log("[mdriver] STAT_MISSIONS_PASSED %.1f at start %.1f", CStats::GetStatValue(STAT_MISSIONS_PASSED), g_passStat0); std::fprintf(stderr, "[mdriver] mission thread ended at frame %d (pass=%d fail=%d)\n", fr, (int)g_pass, (int)g_fail); g_quitIn = 50; return;
     }
@@ -1143,10 +1155,10 @@ void TickGeneric() {
     std::vector<RecP> loop; for (auto& r : g_recs) if (r->waitSeq >= g_waitSeq - 3) loop.push_back(r);
     if (std::getenv("NOTSA_MDRIVER_BIKELOG")) { std::string o; for (auto& r : loop) if (r->cond == 0) { o += " " + std::to_string((unsigned)(r->p - root->m_BaseIP)) + "/" + std::to_string(r->raw & 0x7FFF); } notsa::standalone::Fixups::Log("[decide] frame %d attempt %d loop %zu falses:%s", fr, g_attemptsAt[ipPtr], loop.size(), o.c_str()); }
     Dec dn; bool nearRec = false; int nearH = -1;
-    if (g_attemptsAt[ipPtr] >= (g_nearCnt.empty() ? 4 : 1) && std::getenv("NOTSA_MDRIVER_NEARPED") != nullptr) for (size_t k = g_recsBig.size(); k-- > 0;) { const auto& c = g_recsBig[k]; const int op = c->raw & 0x7FFF; if (c->cond != 0 || (c->raw & 0x8000) || !((op >= 0x00F2 && op <= 0x00F4) || (op >= 0x0104 && op <= 0x0106)) || c->waitSeq < g_waitSeq - 3) continue; // CR32 (27 OG LOC): a plain false `CJ near ped X` (CJ the first operand; the stage waits for the player to catch up with X, here a recorded-path car that parks at the end of its leg): after the first answer failed, CJ joins X (X is not moved: it belongs to the script's path)
+    if (g_attemptsAt[ipPtr] >= (g_nearCnt.empty() ? 4 : 1) && !std::getenv("NOTSA_MDRIVER_NONEARPED")) for (size_t k = g_recsBig.size(); k-- > 0;) { const auto& c = g_recsBig[k]; const int op = c->raw & 0x7FFF; if (c->cond != 0 || (c->raw & 0x8000) || !((op >= 0x00F2 && op <= 0x00F4) || (op >= 0x0104 && op <= 0x0106)) || c->waitSeq < g_waitSeq - 3) continue; // CR32 (27 OG LOC): a plain false `CJ near ped X` (CJ the first operand; the stage waits for the player to catch up with X, here a recorded-path car that parks at the end of its leg): after the first answer failed, CJ joins X (X is not moved: it belongs to the script's path)
                 const auto h0 = ArgInt(*c, 0), h1 = ArgInt(*c, 1);
-                if (h0 && h1 && CPools::GetPed((int)*h0) == Cj()) if (auto* x = CPools::GetPed((int)*h1); x && x != Cj() && x->m_fHealth > 0.f && (!g_nearCnt.empty() || (x->bInVehicle && x->m_pVehicle && x->m_pVehicle->m_vecMoveSpeed.Magnitude() < 0.02f && (!Cj()->bInVehicle || Cj()->m_pVehicle != x->m_pVehicle)))) { static Row kNear{ op, 0, "LOCATE_CHAR_CHAR (CJ near ped)", "zonego", {}, 60 }, kFetch{ op, 0, "LOCATE_CHAR_CHAR (ped to CJ)", "nearfetch", {}, 60 }; const CVector xp = x->GetRealPosition(); const int nc = g_nearCnt[(int)*h1]; nearH = (int)*h1; // the 1st answer: CJ joins the ped (a script-driven car that parks); the later ones: the ped joins CJ (a buddy that must come along to the place the other conditions ask for)
-                    dn.act = true; dn.row = nc == 0 ? &kNear : &kFetch; dn.rowIdx = -13; dn.cond = c; dn.op = op; dn.args.clear(); if (nc == 0) for (const float f : { xp.x + 5.f, xp.y, -100.f }) { RArg ra; ra.n = f; dn.args.push_back(ra); } else { const CVector cp = Cj()->GetPosition(); for (const float f : { (float)*h1, cp.x + 3.f, cp.y, -100.f }) { RArg ra; ra.n = f; dn.args.push_back(ra); } }
+                if (h0 && h1 && CPools::GetPed((int)*h0) == Cj()) if (auto* x = CPools::GetPed((int)*h1); x && x != Cj() && x->m_fHealth > 0.f && (!g_nearCnt.empty() || (x->bInVehicle && x->m_pVehicle && x->m_pVehicle->m_vecMoveSpeed.Magnitude() < 0.02f && (!Cj()->bInVehicle || Cj()->m_pVehicle != x->m_pVehicle)))) { static Row kNear{ op, 0, "LOCATE_CHAR_CHAR (CJ near ped)", "zonego", {}, 60 }, kFetch{ op, 0, "LOCATE_CHAR_CHAR (ped to CJ)", "nearfetch", {}, 60 }; const CVector xp = x->GetRealPosition(); const int nc = g_nearCnt.count((int)*h1) ? g_nearCnt[(int)*h1] : 0; /* CR33: operator[] created the entry, so g_nearCnt was never empty and every later answer was replaced */ nearH = (int)*h1; const bool nz = !std::getenv("NOTSA_MDRIVER_NONEARZ"); /* CR33: the ped's own height, not the ground under it (11: the ground z there is the freeway bridge above the ped) */ // the 1st answer: CJ joins the ped (a script-driven car that parks); the later ones: the ped joins CJ (a buddy that must come along to the place the other conditions ask for)
+                    dn.act = true; dn.row = nc == 0 ? &kNear : &kFetch; dn.rowIdx = -13; dn.cond = c; dn.op = op; dn.args.clear(); if (nc == 0) for (const float f : { xp.x + 5.f, xp.y, nz ? xp.z : -100.f }) { RArg ra; ra.n = f; dn.args.push_back(ra); } else { const CVector cp = Cj()->GetPosition(); for (const float f : { (float)*h1, cp.x + 3.f, cp.y, nz ? cp.z - 1.f : -100.f }) { RArg ra; ra.n = f; dn.args.push_back(ra); } }
                     notsa::standalone::Fixups::Log("[mdriver] nearped: CJ joins ped %d at %.0f,%.0f", (int)*h1, (double)xp.x, (double)xp.y); nearRec = true; break; } }
     Dec d = Decide(loop, g_attemptsAt[ipPtr]);
     if ((!d.act || d.row->action == "wait") && g_attemptsAt[ipPtr] >= 0 && !std::getenv("NOTSA_MDRIVER_NOCLOCKSKIP")) for (auto& r : g_recsBig) { // CR32 (33 MANAGEMENT ISSUES: `WAIT UNTIL hour > 21`, the hour copied by GET_TIME_OF_DAY into a local; the idle player is arrested long before the game clock gets there): a false `local > N` whose local holds the current game hour is answered by the clock moving to N+1:00 (the player waits for the night, or sleeps)

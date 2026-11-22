@@ -167,8 +167,10 @@ void InitializeAndStartNewScript() {
 }
 
 struct NotsaInjectMissionInfo { int32 offset; uint8 bytes[16]; };
+int32 NotsaLastInjectedMission = -1; // CR33: read by the mission auto-driver (restart of a staged mission)
 // Test injector (`mission:N` in NOTSA_STANDALONE_INPUT, SDLWrapper.cpp): the "free start" path of `StartMission` without the ImGui window (no mission pack, the player is not on a mission)
 bool NotsaInjectStartMission(int32 missionId, NotsaInjectMissionInfo* info) {
+    NotsaLastInjectedMission = missionId;
     CTheScripts::bPlayerIsOffTheMap = false;
     CGame::currArea                 = AREA_CODE_NORMAL_WORLD;
     FindPlayerPed()->SetAreaCode(AREA_CODE_NORMAL_WORLD);

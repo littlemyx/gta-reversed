@@ -637,6 +637,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
     static const Row kAtt{ 0x07AB, 1, "IS_TRAILER_ATTACHED_TO_CAB", "attachtrailer", { "$0", "$1" }, 60 }; // CR37 (43 TANKER COMMANDER: the trailer has to be hitched to the cab)
     static const Row kSmash{ 0x0716, 1, "IS_CLOSEST_OBJECT_OF_TYPE_SMASHED_OR_DAMAGED", "smashobj", { "$0", "$1", "$2", "$3", "$4", "$5", "$6" }, 30 }; // CR38 (47 ARE YOU GOING TO SAN FIERRO?: the three pot plants have to be damaged)
     static const Row kObjLoc{ 0x04E6, 1, "LOCATE_OBJECT_3D", "objto", { "$0", "$1", "$2", "$3" }, 60 }; // CR39 (50 DECONSTRUCTION: the toilet object has to be pushed into the pit: the locate box is 2.9 x 5 m)
+    static const Row kHorn{ 0x0122, 1, "IS_PLAYER_PRESSING_HORN", "horn", {}, 60 }; // CR39 (49 WEAR FLOWERS IN YOUR HAIR: the hydraulics stage waits for the horn)
     static const Row kPho{ 0x04C5, 1, "HAS_CHAR_BEEN_PHOTOGRAPHED", "photo", { "$0" }, 30 }; // CR25 (58 PHOTO OPPORTUNITY)
     static const Row kTag{ 0x0038, 0, "int compare of the GET_PERCENTAGE_TAGGED_IN_AREA result", "tagarea", {}, 60 };
     static const Row kFix{ 0x03C9, 0, "NOT IS_CAR_VISIBLY_DAMAGED", "carfix", { "$0" }, 30 }; // CR34 (33 MANAGEMENT ISSUES)
@@ -673,6 +674,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             if (op == 0x0356 && !std::getenv("NOTSA_MDRIVER_NOEXPLODE")) { auto a2 = ResolveArgs(kExp, *c); if (a2 && a2->size() == 7) { d.act = true; d.row = &kExp; d.rowIdx = -16; d.cond = c; d.args = *a2; d.op = op; return d; } } // CR36: IS_EXPLOSION_IN_AREA(type, box) is false: an explosion of that type at the box centre
             if (op == 0x04E6 && !std::getenv("NOTSA_MDRIVER_NOOBJTO")) { auto a2 = ResolveArgs(kObjLoc, *c); if (a2 && a2->size() == 4 && CPools::GetObject((int)(*a2)[0].n)) { d.act = true; d.row = &kObjLoc; d.rowIdx = -19; d.cond = c; d.args = *a2; d.op = op; return d; } } // CR39: LOCATE_OBJECT_3D(obj, box) is false: the object is put at the centre of the box (a stand-in for the push)
             if (op == 0x00DD && !std::getenv("NOTSA_MDRIVER_NOINMODEL") && c->args.size() >= 2 && ArgInt(*c, 1)) { auto* cj = Cj(); const auto h0 = ArgInt(*c, 0); if (cj && h0 && CPools::GetPed((int)*h0) == cj && NearestCarOfModel(cj, (int)*ArgInt(*c, 1), 600.f)) { static const Row kInModel{ 0x00DD, 1, "IS_CHAR_IN_MODEL", "entermodel", { "$1" }, 60 }; auto a2 = ResolveArgs(kInModel, *c); if (a2 && a2->size() == 1) { d.act = true; d.row = &kInModel; d.rowIdx = -20; d.cond = c; d.args = *a2; d.op = op; return d; } } } // CR39 (50 DECONSTRUCTION: CJ has to sit in the cement truck, model 524): IS_CHAR_IN_MODEL(CJ, model) is false: CJ goes into the nearest free car of that model
+            if (op == 0x0122 && !std::getenv("NOTSA_MDRIVER_NOHORN")) { d.act = true; d.row = &kHorn; d.rowIdx = -21; d.cond = c; d.args.clear(); d.op = op; return d; } // CR39: IS_PLAYER_PRESSING_HORN is false: the horn is held for 30 frames
             if (op == 0x07AB && !std::getenv("NOTSA_MDRIVER_NOATTACH")) { auto a2 = ResolveArgs(kAtt, *c); if (a2 && a2->size() == 2) { d.act = true; d.row = &kAtt; d.rowIdx = -17; d.cond = c; d.args = *a2; d.op = op; return d; } } // CR37: IS_TRAILER_ATTACHED_TO_CAB(trailer, cab) is false: the cab is put at the trailer hitch, the trailer scans for it
             if (op == 0x001B && !(c->raw & 0x8000) && c->vref[1] && !std::getenv("NOTSA_MDRIVER_NOOBJHP") && ArgInt(*c, 0) && *ArgInt(*c, 0) <= 1) { // CR38: only `1 > health` (the object has to be destroyed; 26 ROBBING UNCLE SAM reads `5 > health` of a crate that is not to be shot, the damage answer shadowed the real one) // CR37 (42 SMALL TOWN BANK: `IF 1 > health` of the vault wall's second object, read with GET_OBJECT_HEALTH): the object is damaged as by a bullet (CJ the damager), like HAS_OBJECT_BEEN_DAMAGED
                 if (auto it = g_objHealthVars.find(c->vref[1]); it != g_objHealthVars.end() && CPools::GetObject(it->second)) { d.act = true; d.row = &kDmg; d.rowIdx = -2; d.cond = c; d.op = op; d.args = { RArg{ false, (double)it->second, {} } }; return d; } }
@@ -790,6 +792,10 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             auto a = ResolveArgs(row, *c); if (!a) continue;
             d.act = true; d.row = &row; d.rowIdx = (int)i; d.cond = c; d.args = *a; d.op = c->raw & 0x7FFF; return d;
         }
+    }
+    if (!std::getenv("NOTSA_MDRIVER_NOAUDWAIT")) { // CR39 (49 WEAR FLOWERS IN YOUR HAIR: `WHILE NOT HAS_MISSION_AUDIO_FINISHED` of a spoken line): the line ends by itself (3 s on the game clock), the driver waits instead of stopping
+        static const Row kAud{ 0x03D2, 1, "HAS_MISSION_AUDIO_FINISHED", "wait", {}, 30 };
+        for (size_t k = loop.size(); k-- > 0;) { const auto& r = loop[k]; const int rop = r->raw & 0x7FFF; if (rop == 0x03D2 || rop == 0x03D0) { d.act = true; d.row = &kAud; d.rowIdx = -22; d.cond = r; d.op = rop; d.args.clear(); return d; } }
     }
     if (falses.empty()) { d.reason = "no condition evaluated false in the loop (the guards left out)"; return d; }
     const auto& last = *falses[0]; d.op = last.raw & 0x7FFF;
@@ -1064,6 +1070,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         }
         QueueActions(acts, row.settle); return; }
     if (v == "entermodel") { auto* car = c ? NearestCarOfModel(c, I_(0), 600.f) : nullptr; if (!car) { QueueActions({}, 0); return; } QueueActions(EnterCarActions(car), row.settle); return; } // CR39
+    if (v == "horn") { QueueActions({ "emit mdpad:-100:30", "wait 30" }, row.settle); return; } // CR39
     if (v == "objto") { QueueActions({ "emit mdobjto:" + std::to_string(I_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) + ":" + F(F_(3)) }, row.settle); return; } // CR39
     if (v == "damageobj") { QueueActions({ "emit mddmgobj:" + std::to_string(I_(0)) }, row.settle); return; } // CR22: HAS_OBJECT_BEEN_DAMAGED(obj): CJ damages the object (16 NINES AND AK'S shooting range)
     if (v == "tosphere") { // CR24: the vehicle at the centre of a GET_RANDOM_CAR_IN_SPHERE search is moved next to the nearest car the game's own search would accept (appearance 1/2, not a law enforcer, wanted model, CanBeDeleted: the mission's decoy is refused), 8 m above it

@@ -10,6 +10,9 @@
 #include "Ropes.h"
 
 #include <RunningScript.h>
+#ifdef NOTSA_MDRIVER
+#include "portable/mdriver.h"
+#endif
 
 using namespace notsa::script;
 
@@ -170,7 +173,11 @@ int32 GetPlayerChar(CPlayerPed& player) {
 
 /// IS_PLAYER_PRESSING_HORN(0122)
 bool IsPlayerPressingHorn(uint32 playerIdx) {
-    return FindPlayerPed(playerIdx)->GetPedState() == PEDSTATE_DRIVING && CPad::GetPad(playerIdx)->GetHorn();
+    return FindPlayerPed(playerIdx)->GetPedState() == PEDSTATE_DRIVING && (
+#ifdef NOTSA_MDRIVER
+        notsa::mdriver::PadHeld(-100) || // CR39 harness: the horn the driver holds (49 WEAR FLOWERS IN YOUR HAIR)
+#endif
+        CPad::GetPad(playerIdx)->GetHorn());
 }
 
 /// SET_PLAYER_CONTROL(01B4)

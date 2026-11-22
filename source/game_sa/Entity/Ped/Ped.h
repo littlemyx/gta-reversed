@@ -511,6 +511,7 @@ public:
     void GiveWeaponAtStartOfFight();
     void GiveWeaponWhenJoiningGang();
     bool GetPedTalking();
+    bool GetPedTalkingForScript() { return m_pedSpeech.GetPedTalkingForScript(); } // NOTSA
     void DisablePedSpeech(int16 stopCurrentSpeech); // the exe compares the whole word (0x4E56DA cmp word ptr [esp+4], 0)
     void EnablePedSpeech();
     void DisablePedSpeechForScriptSpeech(int16 stopCurrentSpeech);

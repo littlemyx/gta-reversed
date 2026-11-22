@@ -559,7 +559,7 @@ OpcodeResult GetPositionOfEntryExitCharUsed(CRunningScript& S) {
 
 //! 2381 IS_CHAR_TALKING (case @0x4776C3): char => compare flag `CPed::GetPedTalking()` (0x5EFF50)
 bool IsCharTalking(CPed& ped) {
-    return ped.GetPedTalking();
+    return ped.GetPedTalkingForScript();
 }
 
 //! 2384 SET_UP_SKIP (case @0x47776C): x, y, z, angle => `CGameLogic::SetUpSkip(pos, angle, false, nullptr, false)` (0x4423C0)

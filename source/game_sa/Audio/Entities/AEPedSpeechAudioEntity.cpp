@@ -8,6 +8,13 @@
 #include <Audio/Enums/eSoundBankSlot.h>
 
 #include "PedSpeechAudioEntityLUTs.inc.h"
+#include "portable/statehash.h"
+#include <unordered_map>
+
+// RR harness (NOTSA_RR_NOAUDIO + NOTSA_RR_AUDIOSTUBS): the audio engine is never serviced, so a started speech is never finished by CAESound -> UpdateParameters(-1) and
+// m_IsPlayingSpeech stays true forever. Script IS_CHAR_TALKING then reads the speech as ended kNoAudioSpeechMs after it started (game clock), like the mission line stub in AEScriptAudioEntity.
+static std::unordered_map<const CAEPedSpeechAudioEntity*, uint32> s_noAudioSpeechEnd;
+static constexpr uint32 kNoAudioSpeechMs = 3000;
 
 void CAEPedSpeechAudioEntity::InjectHooks() {
     RH_ScopedVirtualClass(CAEPedSpeechAudioEntity, 0x85F310, 8);
@@ -1102,6 +1109,17 @@ bool CAEPedSpeechAudioEntity::GetPedTalking() const {
     return m_IsInitialized && m_IsPlayingSpeech;
 }
 
+bool CAEPedSpeechAudioEntity::GetPedTalkingForScript() const {
+    if (!GetPedTalking()) {
+        return false;
+    }
+    if (notsa::rr::AudioStubs()) {
+        const auto it = s_noAudioSpeechEnd.find(this);
+        return it != s_noAudioSpeechEnd.end() && CTimer::GetTimeInMS() < it->second;
+    }
+    return true;
+}
+
 // 0x4E4170
 bool CAEPedSpeechAudioEntity::GetVoiceAndTypeForSpecialPed(uint32 modelNameHash) {
     const auto idx = notsa::indexof(gSpecialPedVoiceNameLookup, modelNameHash);
@@ -1177,6 +1195,7 @@ void CAEPedSpeechAudioEntity::AddScriptSayEvent(eAudioEvents audioEvent, eAudioE
     }
 
     m_IsPlayingSpeech = true;
+    if (notsa::rr::AudioStubs()) { s_noAudioSpeechEnd[this] = CTimer::GetTimeInMS() + kNoAudioSpeechMs; }
     if (m_PedAudioType == PED_TYPE_PLAYER) {
         s_bAPlayerSpeaking = true;
     }
@@ -1454,6 +1473,7 @@ int16 CAEPedSpeechAudioEntity::I_AddSayEvent(const CEntity* posEntity, eAudioEve
     }
 
     m_IsPlayingSpeech = true;
+    if (notsa::rr::AudioStubs()) { s_noAudioSpeechEnd[this] = CTimer::GetTimeInMS() + kNoAudioSpeechMs; }
     if constexpr (!IsPedless) {
         if (m_PedAudioType == PED_TYPE_PLAYER) {
             s_bAPlayerSpeaking = true;

@@ -210,6 +210,7 @@ public:
     int32 GetNumSlotsPlayingContext(eGlobalSpeechContext gCtx);
 
     bool              GetPedTalking() const;
+    bool              GetPedTalkingForScript() const; // NOTSA: IS_CHAR_TALKING (RR harness: speech ends on the game clock when the audio engine is not serviced)
     ePainSpeechVoices GetPainVoice() const;
 
     void                       UpdateParameters(CAESound* sound, int16 playTime) override { return I_UpdateParameters<false>(sound, playTime); }

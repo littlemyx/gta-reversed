@@ -406,10 +406,10 @@ bool RetFlagProgress(const CRunningScript* s, const Rec& r) { // CR44 (66 MIKE T
     for (auto& [ref, val] : sets) { if (ref == 0xFFFFFFFFu) continue; for (auto& [pp, f] : g_flagConds) { if (!f->vref[0] || f->vref[0] != ref || !f->hasBranch || (f->raw & 0x8000)) continue; const auto v = ArgInt(*f, 1); if (!v || (int32_t)*v != val) continue; std::set<const uint8_t*> sn; if (!WalkFail(s, f->fall, 0, false, sn)) return true; } }
     return false;
 }
-bool FlagGuard(const CRunningScript* s, const Rec& r) {
+bool FlagGuard(const CRunningScript* s, const Rec& r, bool noPrint = false) {
     if (!r.fall || g_flagConds.empty() || std::getenv("NOTSA_MDRIVER_NOFLAGGUARD")) return false;
     std::vector<std::pair<uint32_t, int32_t>> sets; std::set<const uint8_t*> seen; FlagSets(s, r.fall, 0, sets, seen);
-    if (!std::getenv("NOTSA_MDRIVER_FLAGNOPRINT") && std::none_of(sets.begin(), sets.end(), [](auto& q) { return q.first == 0xFFFFFFFFu; })) return false; /* CR44: the no-print variant (65 T-Bone) broke 52 / 23: opt-in via NOTSA_MDRIVER_FLAGNOPRINT */ // CR24: the flag guard is the `fail text + flag` shape: without a print on the true branch the flag is an ordinary state variable (14: `@43 = 1` after the dealers die)
+    if (!noPrint && !std::getenv("NOTSA_MDRIVER_FLAGNOPRINT") && std::none_of(sets.begin(), sets.end(), [](auto& q) { return q.first == 0xFFFFFFFFu; })) return false; /* CR44: the no-print variant (65 T-Bone) broke 52 / 23: opt-in via NOTSA_MDRIVER_FLAGNOPRINT */ // CR24: the flag guard is the `fail text + flag` shape: without a print on the true branch the flag is an ordinary state variable (14: `@43 = 1` after the dealers die)
     for (auto& [ref, val] : sets) for (auto& [pp, f] : g_flagConds) {
         if (!f->vref[0] || f->vref[0] != ref || !f->hasBranch) continue;
         const auto v = ArgInt(*f, 1); if (!v || (int32_t)*v != val) continue;
@@ -536,6 +536,7 @@ bool LocateGuard(const CRunningScript* s, const Rec& r) { // CR28 (24 HOME INVAS
     if ((r.raw & 0x8000) || !s || std::getenv("NOTSA_MDRIVER_NOLOCATEGUARD")) return false;
     bool warp = false; for (auto& row : g_rows) if (row.match != 2 && row.op == (r.raw & 0x7FFF) && (row.action == "pedwarp" || row.action == "vehwarp" || row.action == "midpoint" || row.action == "warpto_handle")) { warp = true; break; }
     if (!warp) return false;
+    { const int lop = r.raw & 0x7FFF; if ((lop == 0x01AD || lop == 0x01AF) && !std::getenv("NOTSA_MDRIVER_NOCARLOCFLAG") && FlagGuard(s, r, true)) return true; } // CR46 (76 HIGHJACK: `LOCATE_CAR_2D truck, -1914.6 -1187.7, 5` while the stage is below 3 sets the stage to 6 = the truck got away, the ladder fails the mission; the vehicle-warp answer put the truck on that spot four times): a car locate whose true branch sets a flag that leads to the failure is never answered (without the print the CR24 flag guard requires)
     if (r.fall && !std::getenv("NOTSA_MDRIVER_NOTRAPGUARD")) for (auto& o : g_recs) if (o->fall == r.fall && o->waitSeq == r.waitSeq && o->raw == 0x051A) return true; // the same OR group also holds HAS_CHAR_BEEN_DAMAGED_BY_CHAR: a wake-up trap (the owner wakes when he is hit OR CJ comes within 1 m), its true branch is an alarm state machine the fail walk does not follow
     return false;
 }

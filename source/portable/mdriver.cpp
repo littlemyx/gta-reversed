@@ -468,6 +468,7 @@ std::map<uint32_t, int> g_carHealthVars; // CR44: destination variable of GET_CA
 std::map<uint32_t, int> g_objHealthVars; // CR37: destination variable of GET_OBJECT_HEALTH (071E) -> the object handle
 std::map<uint32_t, int> g_healthVars; // CR35: destination variable of GET_CHAR_HEALTH -> the char handle read (a later `N > var` wait = the char is hurt below N)
 std::map<uint32_t, int> g_speedVars; // CR34: destination variable of GET_CAR_SPEED -> the car handle read (a later `var > N` wait = the car goes faster than N)
+struct FollowHold { int tgt = -1; CVector off; int left = 0; } g_follow; // CR47 (76 HIGHJACK: the stage wants the bike inside a 3 x 4 m box behind the moving truck for 3.5 s): CJ's vehicle keeps its place relative to a moving vehicle for `left` frames
 struct SpeedHold { int h = -1; float mps = 0.f; int left = 0; } g_speedHold; // CR34: the car kept at that speed (m/s) along its heading for `left` more frames
 std::set<int> g_fixCars; // CR34: vehicle handles the carfix answer repaired: kept repaired every frame afterwards (the player takes the car to the Pay n Spray whenever random traffic bumps it again; 33)
 std::set<int> g_usedCars; // CR27: vehicle handles the driver itself entered / drove to a place (the mission car): never wrecked by a kill answer
@@ -860,8 +861,9 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             break; }
     }
     // CR46 (70 PUNCTURE WOUNDS: the chase stage tests `IS_CHAR_IN_CAR cj, @39` (plain, false: CJ walked away from his car) next to a speed-governor locate `LOCATE_CHAR_ANY_MEANS_CAR_2D cj, chased car`; table order answered the locate 7 times (CJ on foot to the moving car) and never the car): a prerequisite condition of CJ sitting in a named live car, with CJ on foot, is answered before every position / proximity row
-    if (!wide && !g_auxMode && blockers.empty() && Cj() && !Cj()->bInVehicle && !std::getenv("NOTSA_MDRIVER_NOENTERFIRST") && std::any_of(falses.begin(), falses.end(), [](const RecP& q) { const int o = q->raw & 0x7FFF; return !(q->raw & 0x8000) && o >= 0x0202 && o <= 0x0207; }) /* only against a car locate (23 regressed with the char locate 00F2 in the pass) */) {
-        for (auto& c : falses) { if ((c->raw & 0xFFFF) != 0x00DB) continue; const auto h0 = ArgInt(*c, 0), h1 = ArgInt(*c, 1); if (!h0 || !h1 || EntityOfHandle((int)*h0, 0x00DB) != (CEntity*)Cj()) continue; auto* ve = CPools::GetVehicle((int)*h1); if (!ve || ve->m_fHealth <= 0.f || Guarded().count((int)*h1)) continue;
+    const bool areaFalse = !std::getenv("NOTSA_MDRIVER_NOENTERAREA") && std::any_of(falses.begin(), falses.end(), [](const RecP& q) { const int o = q->raw & 0x7FFF; return !(q->raw & 0x8000) && o >= 0x05FC && o <= 0x0601; }); // CR47 (76 HIGHJACK: CJ sits on the bike, the stage's `IS_CHAR_IN_CAR cj, truck` is false and an angled area of the next group was answered first: it skipped the route's ambushes)
+    if (!wide && !g_auxMode && blockers.empty() && Cj() && ((!Cj()->bInVehicle && !std::getenv("NOTSA_MDRIVER_NOENTERFIRST") && std::any_of(falses.begin(), falses.end(), [](const RecP& q) { const int o = q->raw & 0x7FFF; return !(q->raw & 0x8000) && o >= 0x0202 && o <= 0x0207; }) /* only against a car locate (23 regressed with the char locate 00F2 in the pass) */) || areaFalse)) {
+        for (auto& c : falses) { if ((c->raw & 0xFFFF) != 0x00DB) continue; const auto h0 = ArgInt(*c, 0), h1 = ArgInt(*c, 1); if (!h0 || !h1 || EntityOfHandle((int)*h0, 0x00DB) != (CEntity*)Cj()) continue; auto* ve = CPools::GetVehicle((int)*h1); if (!ve || ve->m_fHealth <= 0.f || (Guarded().count((int)*h1) && !areaFalse) || (Cj()->bInVehicle && ve == Cj()->m_pVehicle)) continue;
             for (size_t ri = 0; ri < g_rows.size(); ri++) { const auto& kr = g_rows[ri]; if (kr.op != 0x00DB || kr.match != 1 || kr.action != "entercar") continue; const auto a = ResolveArgs(kr, *c); if (!a) break; d.act = true; d.row = &kr; d.rowIdx = (int)ri; d.cond = c; d.args = *a; d.op = 0x00DB; return d; } }
     }
     for (int pass = 0; pass < 2; pass++) {
@@ -874,6 +876,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             if (!Matches(row, *c)) continue;
             struct Opt { RecP c; std::optional<std::vector<RArg>> args; }; std::vector<Opt> opts; std::set<std::string> seen;
             for (auto& q : falses) { if (!Matches(row, *q)) continue; auto a = ResolveArgs(row, *q); if (seen.insert(RKey(a)).second) opts.push_back({ q, a }); }
+            if (row.action == "midpoint" && opts.size() > 1 && row.op >= 0x05FC && row.op <= 0x0601 && !std::getenv("NOTSA_MDRIVER_NOAREAORDER")) std::reverse(opts.begin(), opts.end()); // CR47 (76 HIGHJACK: four angled areas are the checkpoints of the truck's route in script order, the last one (`@75 < 2`) is the end of the route and sets the stage to 3; the first answer went to that last one and skipped the ambushes of the other three): several distinct false angled areas are answered in script order (falses holds the pass last to first)
             auto& pick = opts[(size_t)attempt % opts.size()];
             if ((row.action == "warpto_handle" || row.action == "pedwarp" || row.action == "vehwarp") && pass == 0 && !g_auxMode && pick.args && !std::getenv("NOTSA_MDRIVER_NOSPENTWARP")) { const auto sk = g_noProgress.find(std::to_string(g_stopIp) + ":" + std::to_string((int)i) + ":" + RKey(pick.args.value())); if ((sk != g_noProgress.end() && sk->second >= 3) || CoordLeashLive()) { bool other = false; for (auto& q : falses) if (q != pick.c && (q->raw & 0x7FFF) == 0x0118 && !(q->raw & 0x8000) && !AnyGuard(*q)) other = true; /* the later row is a plain IS_CHAR_DEAD kill (11 / 37 / 23 regressed with any other condition) */ if (other) break; } } // CR41 (59 JIZZY: the chase stage's `CJ near the driver` throttle IF, answered by warps that cannot keep up with the moving car, shadowed the plain `IS_CHAR_DEAD driver` kill row 98 until the 8-answer stop): a warp row answered 3 times with the same arguments at this wake ip without progress is spent while another false condition of the pass is left for the later rows
             if (row.action == "vehwarp" && pass == 0 && !g_auxMode && (attempt % 2) == 0 && !std::getenv("NOTSA_MDRIVER_NOKEYBEFOREWARP") && std::any_of(falses.begin(), falses.end(), [](const RecP& q) { return (q->raw & 0xFFFF) == 0x00E1 && !AnyGuard(*q); }) && std::any_of(g_rows.begin(), g_rows.end(), [](const Row& w) { return w.action == "key" && w.op == 0x00E1; })) break; // CR46 (73 SUPPLY LINES: the stage's `IS_BUTTON_PRESSED 16` (start the RC plane) is a plain false test of the pass; the vehicle-warp rows of the enemy-car proximity tests came first and dragged the hostile cars onto the parked plane): on every even attempt the button row is tried before a vehicle warp
@@ -1142,6 +1145,10 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
             static const std::set<int> charArea = { 0x00A3, 0x00A4, 0x01A1, 0x01A2, 0x01A3, 0x01A4, 0x01A5, 0x01A6, 0x01A7, 0x01A8, 0x01A9, 0x01AA, 0x05F6, 0x05F7, 0x05F8, 0x05F9, 0x05FA, 0x05FB, 0x05FC, 0x05FD, 0x05FE, 0x05FF, 0x0600, 0x0601 };
             if (charArea.count(cop & 0x7FFF)) if (const auto h = ArgInt(*d.cond, 0)) if (auto* oth = CPools::GetPed((int)*h); oth && oth != c) { QueueActions({ "emit mdwother:0:" + std::to_string((int)*h) + ":" + F(x) + ":" + F(y) + ":" + F(z) }, row.settle); return; }
         }
+        if (d.args.size() == 6 && d.cond && cop >= 0x05FC && cop <= 0x0601 && c && c->bInVehicle && c->m_pVehicle && !std::getenv("NOTSA_MDRIVER_NOFOLLOWAREA")) { // CR47 (76 HIGHJACK: `IS_CHAR_IN_ANGLED_AREA_IN_CAR_3D` of a box behind the moving truck, held for 3.5 s): the box moves with a vehicle (a moving vehicle of the area's centre, not CJ's own): CJ's vehicle follows it for 200 frames after the warp
+            CVehicle* best = nullptr; float bd = 20.f; for (auto& vv : GetVehiclePool()->GetAllValid()) { if (&vv == c->m_pVehicle || vv.m_fHealth <= 0.f || vv.m_vecMoveSpeed.Magnitude() * 50.f < 3.f) continue; const float dd = std::hypot(vv.GetPosition().x - x, vv.GetPosition().y - y); if (dd < bd) { bd = dd; best = &vv; } }
+            if (best) { QueueActions({ warp(x, y, z, false), "emit mdfollow:" + std::to_string(GetVehiclePool()->GetRef(best)) + ":200" }, row.settle); return; }
+        }
         one(warp(x, y, z, false)); return;
     }
     if (v == "entercar" || v == "nearest_car") {
@@ -1370,6 +1377,11 @@ void TickGeneric() {
     auto* root = notsa::scmtrace::Root();
     if (!g_started) { if (!root) return; g_started = true; StaticScan(root); if (!std::getenv("NOTSA_MDRIVER_NOCITY")) CStats::SetStatValue(STAT_CITY_UNLOCKED, 2.f); /* CR10: a mission started cold stands where the story would have opened the cities: SF/LV closed = 4 stars on arrival (SetPlayerWantedLevelForForbiddenTerritories), cops attack */ g_passStat0 = CStats::GetStatValue(STAT_MISSIONS_PASSED); g_thread = root; g_frame0 = CTimer::GetFrameCounter(); g_sameCount = 0; g_lastIp = nullptr; }
     const int fr = GFrame();
+    if (g_follow.left > 0) { // CR47
+        auto* me = Cj(); auto* tv = CPools::GetVehicle(g_follow.tgt); CVehicle* mv = me && me->bInVehicle ? me->m_pVehicle : nullptr;
+        if (!tv || !mv || tv->m_fHealth <= 0.f || mv->m_pAttachedTo || tv == mv) g_follow.left = 0;
+        else { g_follow.left--; const CVector q = tv->GetPosition() + tv->GetRight() * g_follow.off.x + tv->GetForward() * g_follow.off.y + tv->GetUp() * g_follow.off.z; mv->SetPosn(q); mv->m_vecMoveSpeed = tv->m_vecMoveSpeed; mv->m_vecTurnSpeed = CVector{}; }
+    }
     if (g_speedHold.left > 0) { g_speedHold.left--; if (auto* v = CPools::GetVehicle(g_speedHold.h); v && v->m_fHealth > 0.f) { const CVector f = v->GetForward(); v->m_vecMoveSpeed.x = f.x * g_speedHold.mps / 50.f; v->m_vecMoveSpeed.y = f.y * g_speedHold.mps / 50.f; } else g_speedHold.left = 0; }
     if (!g_fixCars.empty()) for (const int h : g_fixCars) if (auto* v = CPools::GetVehicle(h); v && v->vehicleFlags.bIsDamaged && v->m_fHealth > 0.f && !std::getenv("NOTSA_MDRIVER_NOKEEPFIX")) { v->Fix(); v->m_fHealth = 1000.f; }
     if (root) { char n[9]{}; std::memcpy(n, root->m_szName, 8); g_name = n; }
@@ -1397,6 +1409,13 @@ void TickGeneric() {
     if (!g_pass && (fr - g_killFrame <= 900 || fr - g_wantedClrFrame <= 900) && !std::getenv("NOTSA_MDRIVER_KEEPKILLWANTED") && fr - g_scriptWantedFrame > 120) if (auto* w = FindPlayerWanted()) if (w->m_WantedLevel != eWantedLevel::WANTED_CLEAN) w->SetWantedLevel(eWantedLevel::WANTED_CLEAN); // CR25 (15 DRIVE-THRU): the driver's own `kill` (a stand-in for shooting the hostile peds) is reported as a murder by witnesses: the one star got CJ, who stood still in his car, ARRESTED 250 frames later (HAS_DEATHARREST_BEEN_EXECUTED -> the script's fail path). The star the kill raised is cleared for 900 frames
     if (g_hurtNow.h) { auto* pp = CPools::GetPed(g_hurtNow.h); if (pp && pp != Cj() && pp->m_fHealth > (float)g_hurtNow.hp && !ProtectedHandle(g_hurtNow.h)) Emit("mdhurt:" + std::to_string(g_hurtNow.h) + ":" + std::to_string(g_hurtNow.hp)); g_hurtNow = {}; } // CR37
     if (!std::getenv("NOTSA_MDRIVER_NOFIGHT") && ++g_fightClock % 3 == 0 && !CCutsceneMgr::IsCutsceneProcessing() && Cj()) ShootDead();
+    if (static const char* clog = std::getenv("NOTSA_MDRIVER_CARLOG"); clog && Cj() && fr % 100 == 0) { // CR47 debug (off by default): NOTSA_MDRIVER_CARLOG=h1,h2: position / speed / heading of those vehicles (or peds, h tried as a vehicle first)
+        std::string l = clog; size_t i = 0; auto* me = Cj(); const auto cp = me->GetPosition();
+        while (i < l.size()) { const size_t j = l.find(',', i); const int h = std::atoi(l.substr(i, j == std::string::npos ? std::string::npos : j - i).c_str()); i = j == std::string::npos ? l.size() : j + 1;
+            if (auto* v = CPools::GetVehicle(h)) notsa::standalone::Fixups::Log("[mdcar] f%d veh %d model %d pos %.0f,%.0f,%.0f spd %.1f hp %.0f dist-to-CJ %.0f driver %d", fr, h, (int)v->m_nModelIndex, v->GetPosition().x, v->GetPosition().y, v->GetPosition().z, v->m_vecMoveSpeed.Magnitude() * 50.f, v->m_fHealth, (v->GetPosition() - cp).Magnitude(), v->m_pDriver ? 1 : 0);
+            else if (auto* pd = CPools::GetPed(h)) notsa::standalone::Fixups::Log("[mdcar] f%d ped %d model %d pos %.0f,%.0f,%.0f hp %.0f dist-to-CJ %.0f inveh %d", fr, h, (int)pd->m_nModelIndex, pd->GetPosition().x, pd->GetPosition().y, pd->GetPosition().z, pd->m_fHealth, (pd->GetPosition() - cp).Magnitude(), pd->bInVehicle ? 1 : 0);
+            else notsa::standalone::Fixups::Log("[mdcar] f%d h %d gone", fr, h); }
+    }
     if (static const bool plog = std::getenv("NOTSA_MDRIVER_PLOG") != nullptr; plog && Cj() && fr % 50 == 0) { // CR8: CJ state every 50 frames (debug)
         auto* me = Cj(); const auto pp = me->GetPosition(); auto* v = me->bInVehicle ? me->m_pVehicle : nullptr; auto* w = FindPlayerWanted();
         notsa::standalone::Fixups::Log("[mdplog] f%d cj=%.1f,%.1f,%.1f hp=%.0f st=%d inv=%d veh=%d(%.0f hp, st %d, drown %d) wanted=%d lastDmg=%d wpn=%d\n", fr, pp.x, pp.y, pp.z, me->m_fHealth, (int)me->m_nPedState, (int)me->bInVehicle,
@@ -1686,7 +1705,7 @@ void TickGeneric() {
     DispatchRow(d);
     if (d.row->action == "midpoint" && g_nextStall == 0 && d.cond && !std::getenv("NOTSA_MDRIVER_NOAREAFAST")) { // CR46 (76 HIGHJACK: four angled areas (CJ in a car) are the checkpoints of a truck's route and the truck finishes its route 4000 frames after the stage start; each answer was followed by 660 idle frames): when the pass holds two or more distinct plain false angled-area conditions, the next one is decided after 90 frames
         std::set<const uint8_t*> ar; for (auto& r : g_recsBig) { const int rop = r->raw & 0x7FFF; if (r->waitSeq < g_waitSeq - 3 || r->cond != 0 || (r->raw & 0x8000) || rop < 0x05FC || rop > 0x0601) continue; ar.insert(r->p); }
-        if (ar.size() >= 2) g_nextStall = 90; }
+        if (ar.size() >= 2) g_nextStall = std::getenv("NOTSA_MDRIVER_AREAFAST") ? std::atoi(std::getenv("NOTSA_MDRIVER_AREAFAST")) : 90; }
     if (d.row->action == "warpto_handle" && g_nextStall == 0 && !d.args.empty() && !std::getenv("NOTSA_MDRIVER_NOCARLEASHFAST")) { // CR43 (62 TORENO'S LAST FLIGHT: the answer warped CJ to the helicopter the pass holds a `NOT locate CJ car 100 100 50` leash on; the helicopter lands, takes off and is out of the box 300 frames later, the next decision is 600 frames away): the next decision after 60 frames (CJ is at the leash car)
         const int th = (int)d.args[0].n; const bool movingCar = !std::getenv("NOTSA_MDRIVER_NOMOVINGFAST") && CPools::GetVehicle(th) && CPools::GetVehicle(th)->m_vecMoveSpeed.Magnitude() > 0.03f; /* CR46 (76 HIGHJACK: CJ was warped to the moving truck every 660 frames; the truck is 800 m away 90 frames later): a plain locate of a MOVING car is re-decided after 60 frames too */ for (auto& r : g_recsBig) { const int rop = r->raw & 0x7FFF; if (r->waitSeq < g_waitSeq - 3 || (!(r->raw & 0x8000) && !movingCar) || rop < 0x0202 || rop > 0x0207) continue; const auto h1 = ArgInt(*r, 1); if (h1 && (int)*h1 == th) { g_nextStall = 60; break; } }
     }
@@ -1888,6 +1907,10 @@ bool Cmd(const char* name, const std::string& args) {
         if (auto* o = CPools::GetObject(h)) { const CVector old = o->GetPosition(); CWorld::Remove(o); o->SetPosn(CVector{ w[0], w[1], w[2] <= -100.f ? old.z : w[2] }); o->m_vecMoveSpeed = CVector{}; o->m_vecTurnSpeed = CVector{}; CWorld::Add(o); notsa::standalone::Fixups::Log("[mdriver] mdwobj gf=%u obj %d model %d %.2f,%.2f,%.2f -> %.2f,%.2f,%.2f", (unsigned)CTimer::GetFrameCounter(), h, (int)o->m_nModelIndex, old.x, old.y, old.z, w[0], w[1], w[2]); }
         return true;
     }
+    if (!std::strcmp(name, "mdfollow")) { // CR47: mdfollow:<vehicle handle>:<frames>
+        int h = -1, n = 0; std::sscanf(args.c_str(), "%d:%d", &h, &n); auto* tv = CPools::GetVehicle(h); auto* me = Cj();
+        if (tv && me && me->bInVehicle && me->m_pVehicle && me->m_pVehicle != tv) { const CVector df = me->m_pVehicle->GetPosition() - tv->GetPosition(); g_follow = { h, CVector{ DotProduct(df, tv->GetRight()), DotProduct(df, tv->GetForward()), DotProduct(df, tv->GetUp()) }, n }; notsa::standalone::Fixups::Log("[mdriver] mdfollow: CJ's vehicle follows vehicle %d at %.1f,%.1f,%.1f for %d frames", h, (double)g_follow.off.x, (double)g_follow.off.y, (double)g_follow.off.z, n); }
+        return true; }
     if (!std::strcmp(name, "mdspeed")) { // CR34: hold the car at the speed
         int h = -1; float m = 0.f; std::sscanf(args.c_str(), "%d:%f", &h, &m); g_speedHold = { h, m, 700 }; notsa::standalone::Fixups::Log("[mdriver] mdspeed car %d held at %.1f m/s", h, (double)m);
         return true; }

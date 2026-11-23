@@ -1196,7 +1196,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         const int h = I_(0);
         if (ProtectedHandle(h)) { Stop("driver action failed: driver would kill a buddy (kill " + std::to_string(h) + ")", cop, 0); return; }
         std::string cmd;
-        if (auto* p = CPools::GetPed(h); p && p != c && c && (p->GetPosition() - c->GetPosition()).Magnitude() > 400.f && p->bInVehicle && !std::getenv("NOTSA_MDRIVER_NOKILLFAR")) { QueueActions({}, 30); return; } // CR47 (70 PUNCTURE WOUNDS: the chased car's driver, 1300 m away and in his car, was killed at the first stall; the strip tests on him need him alive): the driver of a car out of reach is not killed
+        if (auto* p = CPools::GetPed(h); p && p != c && c && (p->GetPosition() - c->GetPosition()).Magnitude() > 400.f && p->bInVehicle && p->m_pVehicle && p->m_pVehicle->IsMissionVehicle() && p->m_pVehicle->m_vecMoveSpeed.Magnitude() * 50.f > 3.f && !std::getenv("NOTSA_MDRIVER_NOKILLFAR")) { QueueActions({}, 30); return; } // CR47 (70 PUNCTURE WOUNDS: the chased car's driver, 1300 m away and in his car, was killed at the first stall; the strip tests on him need him alive): the driver of a car out of reach is not killed
         if (auto* p = CPools::GetPed(h)) { if (p != c) cmd = "emit mdkillped:" + std::to_string(h); } else if (CPools::GetVehicle(h)) cmd = "emit mdkillcar:" + std::to_string(h);
         if (cmd.empty()) { QueueActions({}, 0); return; } // kill: no such char or car (TS returns without settling)
         std::vector<std::string> kacts{ cmd };
@@ -1222,8 +1222,9 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         }
     }
     if (v == "key") {
-        std::string kk = d.args.empty() ? "" : d.args[0].str ? d.args[0].s : std::to_string((int)d.args[0].n); const int n = d.args.size() > 1 && !d.args[1].str ? (int)d.args[1].n : 8;
-        const std::string nm = KeyName(kk);
+        std::string kk = d.args.empty() ? "" : d.args[0].str ? d.args[0].s : std::to_string((int)d.args[0].n); const int n0 = d.args.size() > 1 && !d.args[1].str ? (int)d.args[1].n : 8;
+        std::string nm = KeyName(kk); int n = n0;
+        if (kk == "16" && !std::getenv("NOTSA_MDRIVER_NOACCELKEY") && ((c && c->bInVehicle) || (FindPlayerInfo().m_pRemoteVehicle != nullptr))) { nm = "w"; if (std::getenv("NOTSA_MDRIVER_ACCELHOLD")) n = std::atoi(std::getenv("NOTSA_MDRIVER_ACCELHOLD")); } // CR47 (73 SUPPLY LINES: IS_BUTTON_PRESSED 16 = the cross button; in a vehicle / in remote mode that is VEHICLE_ACCELERATE (W), the RC plane's throttle; the space key is the handbrake): the real key follows the driving binding
         if (nm.empty() && !kk.empty() && std::isdigit((unsigned char)kk[0]) && !std::getenv("NOTSA_MDRIVER_NOPADONLY")) { QueueActions({ "emit mdpad:" + kk + ":" + std::to_string(n), "wait " + std::to_string(n) }, row.settle); return; } // CR27: a pad button without a keyboard binding (13 = SELECT): the pad state alone (IS_BUTTON_PRESSED reads it)
         if (nm.empty()) { Stop("unmapped-key " + kk, cop, 0); return; }
         if (!kk.empty() && std::isdigit((unsigned char)kk[0])) { QueueActions({ "emit mdpad:" + kk + ":" + std::to_string(n), (kk == "16" && (CMenuSystem::MenuInUse[0] || CMenuSystem::MenuInUse[1]) && !std::getenv("NOTSA_MDRIVER_NOMENUACCEPT")) ? "emit mdmenu:0" : "wait 0", "key down " + nm, "wait " + std::to_string(n), "key up " + nm }, row.settle); return; } // CR4: numeric pad button: the pad state itself, as TS (PadInput.joy[field] = 255)
@@ -1619,6 +1620,7 @@ void TickGeneric() {
         if (kr && d.row == kr) break;
         if (kr) for (size_t k = loop.size(); k-- > 0;) {
             const auto& r = loop[k]; if (r->raw != (0x8000 | kop) || r->cond != 1 || AnyGuard(*r)) continue;
+            if (kop == 0x0118 && !(r->waitAfter && !r->jumped) && std::getenv("NOTSA_MDRIVER_PEDWAITONLY")) continue; // CR47 (84 FENDER KETCHUP: the escalation killed the guard of the stunt car; opt-in: see FINDINGS)
             if (kop == 0x0119 && !(r->waitAfter && !r->jumped)) continue; // the car form only when the TRUE branch IS the WAIT of its group (`WHILE NOT IS_CAR_DEAD(x)`, 16): elsewhere `NOT IS_CAR_DEAD` is a plain if (10: the RC plane @34 whose death fails the mission)
             const auto a2 = ResolveArgs(*kr, *r); if (!a2 || a2->empty()) continue;
             const int h = (int)(*a2)[0].n;

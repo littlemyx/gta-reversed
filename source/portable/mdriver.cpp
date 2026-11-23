@@ -238,7 +238,7 @@ struct Arg { uint32_t bits = 0; int kind = 0; };
 struct Row { uint16_t op; int match; /*0 any 1 plain 2 not*/ std::string name, action; std::vector<std::string> args; int settle; };
 std::vector<Row>         g_rows;
 // a conditional command of the root thread as the TS StallSink records it (opcode, NOT form, state, decoded operands, the WAIT count, where the following GOTO_IF_FALSE led)
-struct Rec { const uint8_t* p; uint16_t raw; int cond; int waitSeq; std::vector<Arg> args; bool hasBranch = false, jumped = false, waitAfter = false; const uint8_t *target = nullptr, *fall = nullptr; uint32_t vref[2] = { 0, 0 }; /* CR22: identity of operand 0 / 1 when it is a variable: (type << 16) | offset-or-index, else 0 */ };
+struct Rec { const uint8_t* p; uint16_t raw; int cond; int waitSeq; std::vector<Arg> args; bool hasBranch = false, jumped = false, waitAfter = false, orSite = false; const uint8_t *target = nullptr, *fall = nullptr; uint32_t vref[2] = { 0, 0 }; /* CR22: identity of operand 0 / 1 when it is a variable: (type << 16) | offset-or-index, else 0 */ };
 using RecP = std::shared_ptr<Rec>;
 static const size_t g_bigCap = std::getenv("NOTSA_MDRIVER_BIGCAP") ? (size_t)std::atoi(std::getenv("NOTSA_MDRIVER_BIGCAP")) : 400; // CR39: the window of the last conditional commands
 CVehicle* NearestCarOfModel(CPed* c, int model, float best); // CR39
@@ -350,6 +350,7 @@ const uint8_t* SkipOperand(const uint8_t* p, bool& mfail, bool& isInt, int32_t& 
     default: return nullptr;
     }
 }
+static bool g_walkThrough = false; // CR49: the walk of an OR-group guard site follows the nested IF chain of its true branch
 const bool g_oldWalkFail = std::getenv("NOTSA_MDRIVER_OLDWALKFAIL") != nullptr; // CR25 off-switch: restores the walk past following conditions
 bool g_walkRet = false; // CR39: the last WalkFail ended in a RETURN of the walked level (a site inside a GOSUB'd subroutine returns to its caller, that is no mission failure)
 bool WalkFail(const CRunningScript* s, const uint8_t* p, int hops, bool sub, std::set<const uint8_t*>& seen) {
@@ -357,7 +358,7 @@ bool WalkFail(const CRunningScript* s, const uint8_t* p, int hops, bool sub, std
         const int op = *(const uint16_t*)p & 0x7FFF;
         if (!seen.insert(p).second) return false;
         if (op == 0x0001) return false;
-        if ((op == 0x00D6 || op == 0x004D) && !g_oldWalkFail) return false; // CR25: the true branch ends at its first condition / GOTO_IF_FALSE (14: the dealers IS_CHAR_DEAD waits continue into later IF chains that reach an M_FAIL print further on)
+        if ((op == 0x00D6 || op == 0x004D) && !g_oldWalkFail && !g_walkThrough) return false; // CR25: the true branch ends at its first condition / GOTO_IF_FALSE (14: the dealers IS_CHAR_DEAD waits continue into later IF chains that reach an M_FAIL print further on)
         if (op == 0x0051) { if (!sub) g_walkRet = true; return !sub; }
         const uint8_t* q = p + 2; bool mf = false, isI = false, firstInt = false; int32_t iv = 0, first = 0; const int want = Arity(op); int count = 0;
         for (;;) {
@@ -454,7 +455,7 @@ enum class Verdict { Wait, GoesOn, Guard, Unknown };
 Verdict VerdictOf(const CRunningScript* s, const Rec& r) {
     if (!r.hasBranch) return Verdict::Unknown;
     if (r.jumped && r.target < r.p) return Verdict::Wait;
-    std::set<const uint8_t*> seen; if (WalkFail(s, r.fall, 0, false, seen)) return Verdict::Guard;
+    std::set<const uint8_t*> seen; if (r.orSite) g_walkThrough = true; const bool wfv = WalkFail(s, r.fall, 0, false, seen); g_walkThrough = false; if (wfv) return Verdict::Guard;
     return FlagGuard(s, r) ? Verdict::Guard : Verdict::GoesOn; // CR22
 }
 
@@ -463,14 +464,16 @@ Verdict VerdictOf(const CRunningScript* s, const Rec& r) {
 void StaticScan(const CRunningScript* s) {
     if (std::getenv("NOTSA_MDRIVER_NOSTATICSCAN")) return;
     const uint8_t* p = s->m_BaseIP; RecP pend; bool single = false; int n = 0, nd = 0, nf = 0;
+    std::vector<RecP> orPend; bool inOr = false; // CR49 (88 DON PEYOTE: `IS_CHAR_DEAD girl1 OR IS_CHAR_DEAD girl2` -> fail print): the plain IS_CHAR_DEAD members of an OR group are guard sites too (any member true takes the fall-through)
     while (InSpace(p) && n++ < 60000) {
         const uint16_t w = *(const uint16_t*)p; const int op = w & 0x7FFF; if (op > 0x0AFF) break;
         const uint8_t* ops[3]{}; int cnt = 0; const uint8_t* e = CmdOps(p, ops, cnt); if (!e) break;
         if (Arity(op) < 0 && InSpace(e) && *e == 0) e++; // variadic: the END operand
-        if (op == 0x004D) { if (pend) { pend->hasBranch = true; pend->jumped = false; pend->fall = p + 7; pend->target = p + 7; if ((pend->raw & 0x7FFF) == 0x0118 || (pend->raw & 0x7FFF) == 0x0119) { g_deadConds[pend->p] = pend; nd++; } else { g_flagConds[pend->p] = pend; nf++; } } pend.reset(); single = false; p = e; continue; }
+        if (op == 0x004D) { if (inOr && !std::getenv("NOTSA_MDRIVER_NOORGUARD")) { for (auto& q : orPend) { q->hasBranch = true; q->jumped = false; q->fall = p + 7; q->target = p + 7; q->orSite = true; g_deadConds[q->p] = q; nd++; } } orPend.clear(); inOr = false; if (pend) { pend->hasBranch = true; pend->jumped = false; pend->fall = p + 7; pend->target = p + 7; if ((pend->raw & 0x7FFF) == 0x0118 || (pend->raw & 0x7FFF) == 0x0119) { g_deadConds[pend->p] = pend; nd++; } else { g_flagConds[pend->p] = pend; nf++; } } pend.reset(); single = false; p = e; continue; }
         if ((op == 0x08F9 || op == 0x05AD) && cnt >= 2 && ops[1] && InSpace(ops[1]) && *ops[1] == 0x0E && ops[1][1] > 0 && ops[1][1] <= 8) g_enexNames.insert(std::string((const char*)ops[1] + 2, strnlen((const char*)ops[1] + 2, ops[1][1]))); // CR27
         if (op == 0x0652 && cnt >= 1 && ops[0]) { int32_t sv = 0; if (OperandInt(ops[0], sv) && sv == STAT_LUNG_CAPACITY && !std::getenv("NOTSA_MDRIVER_NOLUNG")) CStats::SetStatValue(STAT_LUNG_CAPACITY, 100.f); } // CR39 (56 AMPHIBIOUS ASSAULT: the mission ends at once with \"you need more practice underwater\" unless GET_INT_STAT 225 > 50): the player has trained his lungs
-        if (op == 0x00D6) { int32_t v; single = cnt >= 1 && OperandInt(ops[0], v) && v == 0; pend.reset(); p = e; continue; }
+        if (op == 0x00D6) { int32_t v; single = cnt >= 1 && OperandInt(ops[0], v) && v == 0; inOr = cnt >= 1 && OperandInt(ops[0], v) && v >= 21 && v <= 28; orPend.clear(); pend.reset(); p = e; continue; }
+        if (inOr && !(w & 0x8000) && (op == 0x0118 || (op == 0x0119 && !std::getenv("NOTSA_MDRIVER_NOCARGUARD")))) { auto r = std::make_shared<Rec>(); r->p = p; r->raw = w; r->cond = -1; r->waitSeq = 0; r->args = DecodeArgs(s, p, 1); for (int k = 0; k < 2 && k < cnt; k++) { uint32_t ref; if (OperandVar(ops[k], ref)) r->vref[k] = ref; } orPend.push_back(r); p = e; continue; }
         if (single && !(w & 0x8000) && (op == 0x0118 || op == 0x0038 || op == 0x0039 || (op == 0x0119 && !std::getenv("NOTSA_MDRIVER_NOCARGUARD")))) {
             auto r = std::make_shared<Rec>(); r->p = p; r->raw = w; r->cond = -1; r->waitSeq = 0; r->args = DecodeArgs(s, p, op == 0x0118 ? 1 : 2);
             for (int k = 0; k < 2 && k < cnt; k++) { uint32_t ref; if (OperandVar(ops[k], ref)) r->vref[k] = ref; }
@@ -1129,6 +1132,11 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
             if (!o.compare(0, 2, "1:") && std::getenv("NOTSA_MDRIVER_LOCLOG")) if (auto* sv = CPools::GetVehicle(std::atoi(o.c_str() + 2))) { auto* dr = sv->m_pDriver; std::string tk; if (dr) { auto& tm = dr->GetIntelligence()->m_TaskMgr; for (int k = 0; k < 5; k++) for (CTask* t = tm.m_aPrimaryTasks[k]; t; t = t->GetSubTask()) tk += std::to_string((int)t->GetTaskType()) + (t->GetSubTask() ? ">" : "") + ","; } notsa::standalone::Fixups::Log("[mdriver] locatedcar %s at %.0f,%.0f,%.0f spd %.3f st %d mission %d driver %d (cj %d) tasks %s", o.c_str(), sv->GetPosition().x, sv->GetPosition().y, sv->GetPosition().z, sv->m_vecMoveSpeed.Magnitude(), (int)sv->GetStatus(), (int)sv->m_autoPilot.m_nCarMission, dr ? (int)dr->m_nModelIndex : -1, (int)(dr == c), tk.c_str()); } // CR42 debug
             if (!o.compare(0, 2, "1:") && !std::getenv("NOTSA_MDRIVER_NOSELFDRIVEWAIT")) if (auto* sv = CPools::GetVehicle(std::atoi(o.c_str() + 2)); sv && sv->m_pDriver && sv->m_pDriver != c && sv->m_pDriver->m_fHealth > 0.f && sv != (c ? c->m_pVehicle : nullptr) && !CVehicleRecording::IsPlaybackGoingOnForCar(sv) && sv->m_pDriver->GetIntelligence()->m_TaskMgr.GetTaskPrimary(TASK_PRIMARY_PRIMARY)) { // CR42 (51 555 WE TIP: the escorted ped drives the car to the place by his own script task sequence (pause, drive, leave car); the vehwarp of the located car teleported it mid sequence): a located car with a living AI driver on a primary task is waited for (3 answers per car)
                 static std::map<int, int> s_sd; if (++s_sd[std::atoi(o.c_str() + 2)] <= 3) { notsa::standalone::Fixups::Log("[mdriver] selfdrivewait: the located car %s has an AI driver on a task: waited for, not warped", o.c_str()); { static std::map<std::string, int> s_sd2; const auto key = std::to_string(g_stopIp) + ":" + std::to_string(d.rowIdx) + ":" + RKey(d.args); if (++s_sd2[key] <= 60) --g_noProgress[key]; } QueueActions({}, row.settle); return; } }
+            if (c && !o.compare(0, 2, "0:") && (cop & 0x7FFF) == 0x00FE && !std::getenv("NOTSA_MDRIVER_NOGROUPLOC")) { // CR49 (88 DON PEYOTE: `LOCATE CJ box AND LOCATE girl1 box AND LOCATE girl2 box`, one answer per 660-frame round moved one of them and the girls walked off again): every false 00FE of the pass about the same box is answered at once: the other peds are moved there, CJ (with his car) last
+                std::set<std::string> others; bool cjIn = false;
+                for (auto& r : g_recsBig) { if (r->waitSeq < g_waitSeq - 3 || r->raw != 0x00FE || r->cond != 0) continue; const auto x = ArgFloat(*r, 1), y = ArgFloat(*r, 2), z = ArgFloat(*r, 3), h0 = ArgInt(*r, 0); if (!x || !y || !z || !h0) continue; if (std::fabs(*x - F_(0)) > 1.0 || std::fabs(*y - F_(1)) > 1.0 || std::fabs(*z - F_(2)) > 3.0) continue; auto* pp = CPools::GetPed((int)*h0); if (!pp || pp->m_fHealth <= 0.f) continue; if (pp == c) cjIn = true; else others.insert(std::to_string((int)*h0)); }
+                if (others.size() >= 2 || (others.size() >= 1 && cjIn)) { std::vector<std::string> ga; for (auto& h : others) ga.push_back("emit mdwother:0:" + h + ":" + F(F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2))); if (cjIn) ga.push_back("emit mdwveh:" + F(F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2))); notsa::standalone::Fixups::Log("[mdriver] grouploc: %zu peds%s are moved into the same locate box at once", others.size(), cjIn ? " and CJ" : ""); QueueActions(ga, row.settle); return; }
+            }
             std::vector<std::string> acts{ "emit mdwother:" + o + ":" + F(F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) };
             if (!o.compare(0, 2, "1:") && c && !std::getenv("NOTSA_MDRIVER_NOLEASHJOIN")) { // CR30 (23 GRAY IMPORTS, chase): the car that is moved to the place carries a ped the pass keeps in a `ped near CJ` leash locate (00F2..00F4 / 0104..0106, plain or NOT, either operand order): CJ rides along, the leash (the script fails the mission when CJ is far from the dealer) stays true
                 auto* mv = CPools::GetVehicle(std::atoi(o.c_str() + 2)); bool leash = false;
@@ -1142,7 +1150,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
             }
             if (c && !std::getenv("NOTSA_MDRIVER_NOWARPJOIN")) { // CR35 (39 BADLANDS: the snitch's drive to its next way point was answered by warping him 370 m away, the stage fails when CJ lost him for 30 s): a ped or car that was within 400 m of CJ and lands more than 15 m from him is followed by CJ (the chase the player's side of the warp amounts to)
                 const bool isPedO = !o.compare(0, 2, "0:"); const int ho = std::atoi(o.c_str() + 2); CPhysical* mo = isPedO ? (CPhysical*)CPools::GetPed(ho) : (CPhysical*)CPools::GetVehicle(ho);
-                if (mo && mo != (CPhysical*)c && isPedO && ((CPed*)mo)->bInVehicle && (int)((CPed*)mo)->m_nPedType < 24 /* a driving civilian-type ped target only (a mission buddy of type 24+ is moved without CJ: 11): a ped on foot or a bare car that is moved stays moved (11 14 20 23 28 passed with other frames) */ && !(c->bInVehicle && c->m_pVehicle == (CVehicle*)mo) && !(!isPedO && ((CVehicle*)mo)->IsTrain())) {
+                if (mo && mo != (CPhysical*)c && isPedO && ((CPed*)mo)->bInVehicle && (int)((CPed*)mo)->m_nPedType < 24 /* a driving civilian-type ped target only (a mission buddy of type 24+ is moved without CJ: 11): a ped on foot or a bare car that is moved stays moved (11 14 20 23 28 passed with other frames) */ && !(c->bInVehicle && c->m_pVehicle == (CVehicle*)mo) && !(!isPedO && ((CVehicle*)mo)->IsTrain()) && (std::getenv("NOTSA_MDRIVER_NOJOINSELF") || !(c->bInVehicle && ((CPed*)mo)->m_pVehicle == c->m_pVehicle) /* CR49 (88 DON PEYOTE: the girl rides in CJ's own car; the warp moved it all, the join moved CJ and the girls 36 m off again) */)) {
                     const CVector mp = mo->GetPosition(), tp{ F_(0), F_(1), mo->GetPosition().z };
                     if ((mp - c->GetPosition()).Magnitude() < 400.f && (tp - c->GetPosition()).Magnitude2D() > 15.f && std::none_of(acts.begin() + 1, acts.end(), [](const std::string& a) { return a.rfind("emit mdwveh:", 0) == 0; })) { acts.push_back("emit mdwveh:" + F(F_(0) + (std::getenv("NOTSA_MDRIVER_JOINOFF") ? (float)std::atof(std::getenv("NOTSA_MDRIVER_JOINOFF")) : 36.f /* CR42 (52 SNAIL TRAIL: the guard that spawns 12 m from the place spots CJ within 30 m): 5 -> 36 */)) + ":" + F(F_(1)) + ":" + F(F_(2))); if (!std::getenv("NOTSA_MDRIVER_NOWARPFAST")) g_nextStall = 90; /* the chase goes on: the next way point is checked after 90 frames, not 600 */ notsa::standalone::Fixups::Log("[mdriver] warpjoin: CJ follows the moved %s %s", isPedO ? "ped" : "car", o.c_str()); }
                 }
@@ -1594,6 +1602,7 @@ void TickGeneric() {
         if (me->bInVehicle && me->m_pVehicle) me->m_pVehicle->physicalFlags.bInvulnerable = true;
     }
     if (fr % 30 == 0 && std::getenv("NOTSA_MDRIVER_CJLOG")) if (auto* me9 = Cj()) notsa::standalone::Fixups::Log("[cjlog] frame %d hp %.0f pos %.1f %.1f %.1f veh=%d anim state %d inv=%d lastdmg ent=%d type=%d model=%d wpn=%d fire=%d vmodel=%d vhp=%.0f vinv=%d", fr, (double)me9->m_fHealth, (double)me9->GetPosition().x, (double)me9->GetPosition().y, (double)me9->GetPosition().z, (int)me9->bInVehicle, (int)me9->m_nPedState, (int)me9->physicalFlags.bInvulnerable, me9->m_pLastEntityDamage ? 1 : 0, me9->m_pLastEntityDamage ? (int)me9->m_pLastEntityDamage->GetType() : -1, me9->m_pLastEntityDamage ? (int)me9->m_pLastEntityDamage->m_nModelIndex : -1, (int)me9->m_nLastWeaponDamage, (int)(me9->m_pFire != nullptr), me9->bInVehicle && me9->m_pVehicle ? (int)me9->m_pVehicle->m_nModelIndex : -1, me9->bInVehicle && me9->m_pVehicle ? (double)me9->m_pVehicle->m_fHealth : -1.0, me9->bInVehicle && me9->m_pVehicle ? (int)me9->m_pVehicle->physicalFlags.bInvulnerable : -1); // CR49 debug
+    if (fr % 90 == 0 && std::getenv("NOTSA_MDRIVER_CJLOG") && std::getenv("NOTSA_MDRIVER_PEDSLOG")) if (auto* me8 = Cj()) for (auto& pp : GetPedPool()->GetAllValid()) { if (&pp == me8 || (pp.GetPosition() - me8->GetPosition()).Magnitude() > 150.f) continue; notsa::standalone::Fixups::Log("[pedslog] frame %d ped %d model %d type %d hp %.0f pos %.1f %.1f %.1f inveh=%d sameveh=%d dist %.0f", fr, CPools::GetPedRef(&pp), (int)pp.m_nModelIndex, (int)pp.m_nPedType, (double)pp.m_fHealth, (double)pp.GetPosition().x, (double)pp.GetPosition().y, (double)pp.GetPosition().z, (int)pp.bInVehicle, (int)(pp.bInVehicle && pp.m_pVehicle == me8->m_pVehicle), (double)(pp.GetPosition() - me8->GetPosition()).Magnitude()); } // CR49 debug
     if (fr % 30 == 0 && !std::getenv("NOTSA_MDRIVER_NOURGENT")) { // CR31 (26 ROBBING UNCLE SAM: army fire on the truck CJ sits in): the vehicle of CJ lost >= 45 health in each of 3 consecutive 30-frame windows = danger for 120 frames (shorter patience, CJ drives to the destination blip)
         auto* me2 = Cj(); auto* v2 = me2 && me2->bInVehicle ? me2->m_pVehicle : nullptr;
         if (!v2) { g_vhpVeh = nullptr; g_vhpPrev = -1; g_dropWin = 0; }

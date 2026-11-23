@@ -413,6 +413,20 @@ bool RetFlagProgress(const CRunningScript* s, const Rec& r) { // CR44 (66 MIKE T
     for (auto& [ref, val] : sets) { if (ref == 0xFFFFFFFFu) continue; for (auto& [pp, f] : g_flagConds) { if (!f->vref[0] || f->vref[0] != ref || !f->hasBranch || (f->raw & 0x8000)) continue; const auto v = ArgInt(*f, 1); if (!v || (int32_t)*v != val) continue; std::set<const uint8_t*> sn; if (!WalkFail(s, f->fall, 0, false, sn)) return true; } }
     return false;
 }
+bool RetCounterProgress(const CRunningScript* s, const Rec& r) { // CR49 (92 SAINT MARK'S BISTRO: `IS_CHAR_DEAD @93 -> ADD_VAL_TO_INT_LVAR @152 1, @94 = 1, RETURN`, the main loop is `WHILE @152 != 19`): a guard that comes only from a RETURN is none when the branch counts (ADD_VAL_TO_INT_*) and prints nothing
+    if (!r.fall || std::getenv("NOTSA_MDRIVER_NORETCOUNT")) return false;
+    bool add = false;
+    for (const uint8_t* p = r.fall; InSpace(p);) {
+        const int op = *(const uint16_t*)p & 0x7FFF;
+        if (op == 0x0051) break; if (op == 0x0001 || op == 0x0050 || op == 0x00D6 || op == 0x004D) break;
+        if (op >= 0x00BA && op <= 0x00BF) return false; // a text on the branch: a fail print
+        const uint8_t* ops[3]{}; int cnt = 0; const uint8_t* e = CmdOps(p, ops, cnt); if (!e) return false;
+        if ((op == 0x0008 || op == 0x000A) && cnt >= 2) { int32_t v; if (OperandInt(ops[1], v) && v > 0) add = true; }
+        if (op == 0x0002) { if (cnt < 1 || !ops[0]) return false; int32_t off; if (!OperandInt(ops[0], off)) return false; p = Resolve(s, off); continue; }
+        p = e;
+    }
+    return add;
+}
 bool OneShotWarning(const CRunningScript* s, const Rec& r) { // CR48 (79 N.O.E.: `IF IS_CHAR_IN_AREA_2D(Area 51) AND IN_ANY_PLANE AND NOT message displayed -> PRINT_NOW AREA51, @180 = 1`; the flag is only ever tested `== 0`): the true branch prints a text and sets flags that no `flag == value` test reads = a one-shot warning, no stage step
     if (!r.hasBranch || !r.fall) return false;
     std::vector<std::pair<uint32_t, int32_t>> sets; // the straight-line fall-through of the true branch through the following conditions (`IN_ANY_PLANE OR HELI`, `NOT IS_MESSAGE_BEING_DISPLAYED`) up to the first wait / goto / call / return
@@ -517,23 +531,25 @@ bool CreatesCharBeforeReturn(const CRunningScript* s, const uint8_t* p) { // CR4
     for (int n = 0; n < 40 && InSpace(p); n++) { const int op = *(const uint16_t*)p & 0x7FFF; if (op == 0x0051) return false; if (op == 0x009A || op == 0x0129 || op == 0x01C8) return true; const uint8_t* ops[3]{}; int cnt = 0; const uint8_t* e = CmdOps(p, ops, cnt); if (!e) return false; p = e; }
     return false;
 }
+static std::set<int> g_guardedPed, g_guardedCar; // CR49 (92 SAINT MARK'S BISTRO: the IS_CAR_DEAD guard of the old stage car 8194 protected the ped with the same number 8194 from the kill answer): ped and vehicle handles are numbers of different pools
 const std::set<int>& Guarded() {
     static std::set<int> out; static int lastFr = -1; static std::map<const uint8_t*, std::pair<size_t, bool>> cache;
-    const int fr = (int)CTimer::GetFrameCounter(); if (fr == lastFr) return out; lastFr = fr; out.clear();
+    const int fr = (int)CTimer::GetFrameCounter(); if (fr == lastFr) return out; lastFr = fr; out.clear(); g_guardedPed.clear(); g_guardedCar.clear();
     if (std::getenv("NOTSA_MDRIVER_NOGUARDPROTECT") || !g_thread) return out;
     for (auto& [site, r] : g_deadConds) {
         if ((r->raw & 0x8000) || ((r->raw & 0x7FFF) != 0x0118 && (r->raw & 0x7FFF) != 0x0119)) continue; // CR27: IS_CAR_DEAD sites too (26: the mission's truck)
         auto& ce = cache[site]; const size_t gen = g_flagConds.size() + g_deadConds.size();
-        if (ce.first != gen + 1) { g_walkRet = false; { const bool vg = VerdictOf(g_thread, *r) == Verdict::Guard; ce = { gen + 1, vg && !(g_walkRet && (((r->raw & 0x7FFF) == 0x0119 && !std::getenv("NOTSA_MDRIVER_NOSUBRET")) || ((r->raw & 0x7FFF) == 0x0118 && !std::getenv("NOTSA_MDRIVER_NOSUBRETCHAR") && (CreatesCharBeforeReturn(g_thread, r->fall) || RetFlagProgress(g_thread, *r))))) /* CR43 (64 PIER 69: `IS_CHAR_DEAD @48` of the respawn subroutine: CREATE_CHAR, RETURN: no failure; the roof gunman was never killed) */ }; } if (std::getenv("NOTSA_MDRIVER_PLOG") && ce.second) notsa::standalone::Fixups::Log("[mdplog] guard site ip=%x flagconds=%zu", (unsigned)(site - g_thread->m_BaseIP), g_flagConds.size()); }
+        if (ce.first != gen + 1) { g_walkRet = false; { const bool vg = VerdictOf(g_thread, *r) == Verdict::Guard; ce = { gen + 1, vg && !(g_walkRet && (((r->raw & 0x7FFF) == 0x0119 && !std::getenv("NOTSA_MDRIVER_NOSUBRET")) || ((r->raw & 0x7FFF) == 0x0118 && !std::getenv("NOTSA_MDRIVER_NOSUBRETCHAR") && (CreatesCharBeforeReturn(g_thread, r->fall) || RetFlagProgress(g_thread, *r) || RetCounterProgress(g_thread, *r))))) /* CR43 (64 PIER 69: `IS_CHAR_DEAD @48` of the respawn subroutine: CREATE_CHAR, RETURN: no failure; the roof gunman was never killed) */ }; } if (std::getenv("NOTSA_MDRIVER_PLOG") && ce.second) notsa::standalone::Fixups::Log("[mdplog] guard site ip=%x flagconds=%zu h=%d", (unsigned)(site - g_thread->m_BaseIP), g_flagConds.size(), [&] { const auto da_ = DecodeArgs(g_thread, site, 1); return da_.empty() ? -1 : (int)da_[0].bits; }()); }
         if (ce.second && std::getenv("NOTSA_MDRIVER_GUARDLOG")) { std::set<const uint8_t*> sn; const bool wf = WalkFail(g_thread, r->fall, 0, false, sn); notsa::standalone::Fixups::Log("[guardlog] site %x guard: walkfail=%d flagguard=%d waitSeq=%d/%d", (unsigned)(site - g_thread->m_BaseIP), (int)wf, (int)FlagGuard(g_thread, *r), r->waitSeq, g_waitSeq); }
-        if (!ce.second) continue; if (r->waitSeq > 0 && r->waitSeq < g_waitSeq - 600 && !std::getenv("NOTSA_MDRIVER_NOSTALEGUARD")) continue; /* CR42 (52 SNAIL TRAIL: IS_CHAR_DEAD @78 is a fail site of the escort stage (the reporter must live) and the kill target of the sniper stage; the old stage's site has not run for 600+ waits) */ const auto da = DecodeArgs(g_thread, site, 1); if (!da.empty()) out.insert((int)da[0].bits);
+        if (!ce.second) continue; if (r->waitSeq > 0 && r->waitSeq < g_waitSeq - 600 && !std::getenv("NOTSA_MDRIVER_NOSTALEGUARD")) continue; /* CR42 (52 SNAIL TRAIL: IS_CHAR_DEAD @78 is a fail site of the escort stage (the reporter must live) and the kill target of the sniper stage; the old stage's site has not run for 600+ waits) */ const auto da = DecodeArgs(g_thread, site, 1); if (!da.empty()) { out.insert((int)da[0].bits); ((r->raw & 0x7FFF) == 0x0119 ? g_guardedCar : g_guardedPed).insert((int)da[0].bits); if (std::getenv("NOTSA_MDRIVER_PLOG")) { static std::set<std::pair<const uint8_t*, int>> logged; if (logged.insert({ site, (int)da[0].bits }).second) notsa::standalone::Fixups::Log("[mdplog] guarded handle %d by site ip=%x", (int)da[0].bits, (unsigned)(site - g_thread->m_BaseIP)); } }
     }
     return out;
 }
+const std::set<int>& GuardedOf(bool car) { Guarded(); return (car && !std::getenv("NOTSA_MDRIVER_MIXGUARD")) ? g_guardedCar : (!car && !std::getenv("NOTSA_MDRIVER_MIXGUARD")) ? g_guardedPed : Guarded(); }
 bool KillRefusal(const CRunningScript* s, const Rec& r) { // true = the driver must not kill for this condition
     const int op = r.raw & 0x7FFF; if ((op != 0x0118 && op != 0x0119) || (r.raw & 0x8000)) return false;
     const auto h = ArgInt(r, 0); if (!h) return false;
-    if (ProtectedHandle((int)*h) || Guarded().count((int)*h)) return true;
+    if (ProtectedHandle((int)*h) || GuardedOf(op == 0x0119).count((int)*h)) return true;
     if (op == 0x0119 && g_usedCars.count((int)*h) && !std::getenv("NOTSA_MDRIVER_NOUSEDCAR")) return true; // CR27 (26): a PLAIN false IS_CAR_DEAD of a car the driver entered / moved is no kill order (the escalation of a wait group still may wreck it: 89)
     const auto v = VerdictOf(s, r); return !(v == Verdict::Wait || v == Verdict::GoesOn);
 }
@@ -753,8 +769,8 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
                 std::vector<std::pair<uint32_t, int32_t>> sets; std::set<const uint8_t*> seen; FlagSets(g_thread, q->fall, 0, sets, seen);
                 bool clears = false; for (auto& [ref, val] : sets) if (ref != 0xFFFFFFFFu && val == 0 && want.count(ref)) clears = true;
                 if (!clears) continue;
-                if (q->raw == 0x8118) { auto* pe = CPools::GetPed(hh); if (!pe || pe == Cj() || pe->m_fHealth <= 0.f || ProtectedPed(pe) || Guarded().count(hh)) continue; seenH.insert(hh); hs.push_back(hh); }
-                else { auto* ve = CPools::GetVehicle(hh); if (!ve || ve->m_fHealth <= 0.f) continue; bool prot = false; std::vector<CPed*> occ; if (ve->m_pDriver) occ.push_back(ve->m_pDriver); for (auto* pp : ve->m_apPassengers) if (pp) occ.push_back(pp); for (auto* o : occ) if (o == Cj() || ProtectedPed(o) || (o->m_fHealth > 0.f && !HatesSide((int)o->m_nPedType) && (int)o->m_nPedType != (int)PED_TYPE_MISSION1)) prot = true; if (prot || Guarded().count(hh)) continue; seenH.insert(-hh); hs.push_back(-hh); } /* a car handle is passed negated (a ped and a car may share a pool ref) */
+                if (q->raw == 0x8118) { auto* pe = CPools::GetPed(hh); if (!pe || pe == Cj() || pe->m_fHealth <= 0.f || ProtectedPed(pe) || GuardedOf(false).count(hh)) continue; seenH.insert(hh); hs.push_back(hh); }
+                else { auto* ve = CPools::GetVehicle(hh); if (!ve || ve->m_fHealth <= 0.f) continue; bool prot = false; std::vector<CPed*> occ; if (ve->m_pDriver) occ.push_back(ve->m_pDriver); for (auto* pp : ve->m_apPassengers) if (pp) occ.push_back(pp); for (auto* o : occ) if (o == Cj() || ProtectedPed(o) || (o->m_fHealth > 0.f && !HatesSide((int)o->m_nPedType) && (int)o->m_nPedType != (int)PED_TYPE_MISSION1)) prot = true; if (prot || GuardedOf(false).count(hh)) continue; seenH.insert(-hh); hs.push_back(-hh); } /* a car handle is passed negated (a ped and a car may share a pool ref) */
             }
             if (!hs.empty()) {
                 static const Row kKs{ 0x8118, 2, "NOT IS_CHAR_DEAD / IS_CAR_DEAD true: a flag the script clears while the char / car lives", "killset", {}, 30 };
@@ -901,7 +917,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
     if (!blockers.empty() && !std::getenv("NOTSA_MDRIVER_NOKILLFIRST") && std::any_of(falses.begin(), falses.end(), [](const RecP& c) { return !(c->raw & 0x8000) && !LocatedOther(*c).empty(); })) { // CR25 (15 DRIVE-THRU: `WHILE OR(NOT dead @89, NOT dead @90)` waits for the Ballas in the Voodoo to die; the false `LOCATE_CAR_3D(Voodoo, spot)` of the body was answered by warping the Voodoo to the spot, which the script takes as the escape and fails): before ANOTHER entity is warped to a place, the live hostile NOT-dead blockers of the wait group are killed
         for (size_t i = 0; i < g_rows.size(); i++) { const auto& kr = g_rows[i]; if (kr.op != 0x0118 || kr.match != 1 || kr.action != "kill") continue;
             for (auto& b : blockers) { if (b->raw != 0x8118) continue; const auto a = ResolveArgs(kr, *b); if (!a || a->empty()) continue; const int h = (int)(*a)[0].n; auto* pp = CPools::GetPed(h);
-                if (!pp || pp == Cj() || pp->m_fHealth <= 0.f || ProtectedHandle(h) || Guarded().count(h)) continue;
+                if (!pp || pp == Cj() || pp->m_fHealth <= 0.f || ProtectedHandle(h) || GuardedOf(false).count(h)) continue;
                 if (!pp->bInVehicle && !std::getenv("NOTSA_MDRIVER_NOKILLFIRSTFOOT")) continue; // CR47 (70: the chased driver stands beside his stopped car, the stage wants CJ on foot next to it; the rule shot him): the kill-first rule is for the occupants of a car
                 if (Cj() && (pp->GetPosition() - Cj()->GetPosition()).Magnitude() > KillFarM() && !std::getenv("NOTSA_MDRIVER_NOKILLFAR")) { notsa::standalone::Fixups::Log("[mdriver] killfar(first) refused h=%d dist=%.0f", h, (pp->GetPosition() - Cj()->GetPosition()).Magnitude()); continue; } // CR47 (70 PUNCTURE WOUNDS: the chased car's driver 1300 m away was killed by this rule at the first stall; the strip tests on him need him alive): a victim far out of reach is no part of the kill-first rule
                 d.act = true; d.row = &kr; d.rowIdx = (int)i; d.cond = b; d.args = *a; d.op = 0x0118; return d; }
@@ -910,7 +926,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
     // CR46 (70 PUNCTURE WOUNDS: the chase stage tests `IS_CHAR_IN_CAR cj, @39` (plain, false: CJ walked away from his car) next to a speed-governor locate `LOCATE_CHAR_ANY_MEANS_CAR_2D cj, chased car`; table order answered the locate 7 times (CJ on foot to the moving car) and never the car): a prerequisite condition of CJ sitting in a named live car, with CJ on foot, is answered before every position / proximity row
     const bool areaFalse = !std::getenv("NOTSA_MDRIVER_NOENTERAREA") && std::any_of(falses.begin(), falses.end(), [](const RecP& q) { const int o = q->raw & 0x7FFF; return !(q->raw & 0x8000) && o >= 0x05FC && o <= 0x0601; }); // CR47 (76 HIGHJACK: CJ sits on the bike, the stage's `IS_CHAR_IN_CAR cj, truck` is false and an angled area of the next group was answered first: it skipped the route's ambushes)
     if (!wide && !g_auxMode && blockers.empty() && Cj() && ((!Cj()->bInVehicle && !std::getenv("NOTSA_MDRIVER_NOENTERFIRST") && std::any_of(falses.begin(), falses.end(), [](const RecP& q) { const int o = q->raw & 0x7FFF; return !(q->raw & 0x8000) && o >= 0x0202 && o <= 0x0207; }) /* only against a car locate (23 regressed with the char locate 00F2 in the pass) */) || areaFalse)) {
-        for (auto& c : falses) { if ((c->raw & 0xFFFF) != 0x00DB) continue; const auto h0 = ArgInt(*c, 0), h1 = ArgInt(*c, 1); if (!h0 || !h1 || EntityOfHandle((int)*h0, 0x00DB) != (CEntity*)Cj()) continue; auto* ve = CPools::GetVehicle((int)*h1); if (!ve || ve->m_fHealth <= 0.f || (Guarded().count((int)*h1) && !areaFalse) || (Cj()->bInVehicle && ve == Cj()->m_pVehicle)) continue;
+        for (auto& c : falses) { if ((c->raw & 0xFFFF) != 0x00DB) continue; const auto h0 = ArgInt(*c, 0), h1 = ArgInt(*c, 1); if (!h0 || !h1 || EntityOfHandle((int)*h0, 0x00DB) != (CEntity*)Cj()) continue; auto* ve = CPools::GetVehicle((int)*h1); if (!ve || ve->m_fHealth <= 0.f || (GuardedOf(true).count((int)*h1) && !areaFalse) || (Cj()->bInVehicle && ve == Cj()->m_pVehicle)) continue;
             for (size_t ri = 0; ri < g_rows.size(); ri++) { const auto& kr = g_rows[ri]; if (kr.op != 0x00DB || kr.match != 1 || kr.action != "entercar") continue; const auto a = ResolveArgs(kr, *c); if (!a) break; d.act = true; d.row = &kr; d.rowIdx = (int)ri; d.cond = c; d.args = *a; d.op = 0x00DB; return d; } }
     }
     for (int pass = 0; pass < 2; pass++) {
@@ -1265,9 +1281,9 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         kacts.insert(kacts.begin(), "emit mdwother:0:" + std::to_string(h) + ":" + F(bestx) + ":" + F(besty) + ":" + F(bestz)); } } // CR40
         if (d.cond && (d.cond->raw & 0x7FFF) == 0x0118 && !(d.cond->raw & 0x8000) && cmd.rfind("emit mdkillped", 0) == 0 && c && !std::getenv("NOTSA_MDRIVER_NOKILLGROUP")) { // CR36 (41 LOCAL LIQUOR STORE: `AND(dead robber1, dead robber2, dead robber3)` of the stage; the robbers flee in cars, one answer per 600-frame stall lets the third one drive out of the 300 m the script allows): the false IS_CHAR_DEAD tests of the SAME condition group (the same fall-through) are answered in the same action when the first target is out of CJ's reach (> 100 m)
             auto* t0 = CPools::GetPed(h); if (t0 && (t0->GetPosition() - c->GetPosition()).Magnitude() > 100.f) { std::set<int> done{ h };
-                for (auto& q : g_recsBig) { if (q->waitSeq < g_waitSeq - 3 || q->raw != 0x0118 || q->cond != 0 || q->fall != d.cond->fall || !ArgInt(*q, 0)) continue; const int h2 = (int)*ArgInt(*q, 0); if (!done.insert(h2).second) continue; auto* p2 = CPools::GetPed(h2); if (!p2 || p2 == c || p2->m_fHealth <= 0.f || ProtectedHandle(h2) || Guarded().count(h2)) continue; kacts.push_back("emit mdkillped:" + std::to_string(h2)); notsa::standalone::Fixups::Log("[mdriver] killgroup: also ped %d", h2); } } }
+                for (auto& q : g_recsBig) { if (q->waitSeq < g_waitSeq - 3 || q->raw != 0x0118 || q->cond != 0 || q->fall != d.cond->fall || !ArgInt(*q, 0)) continue; const int h2 = (int)*ArgInt(*q, 0); if (!done.insert(h2).second) continue; auto* p2 = CPools::GetPed(h2); if (!p2 || p2 == c || p2->m_fHealth <= 0.f || ProtectedHandle(h2) || GuardedOf(false).count(h2)) continue; kacts.push_back("emit mdkillped:" + std::to_string(h2)); notsa::standalone::Fixups::Log("[mdriver] killgroup: also ped %d", h2); } } }
         if (d.cond && (d.cond->raw & 0x7FFF) == 0x0118 && !(d.cond->raw & 0x8000) && cmd.rfind("emit mdkillped", 0) == 0 && c && std::getenv("NOTSA_MDRIVER_KILLALL")) { // CR43 (64 PIER 69: the roof gunmen @48..@50 have to die within the script's 40 s clock (two 600-frame stalls); the kill answer picked another false IS_CHAR_DEAD of the pass and the clock ran out): opt-in: every other distinct false plain IS_CHAR_DEAD of the last passes (never a guard / buddy; the true branch no fail) dies in the same answer
-            std::set<int> done{ h }; for (auto& q : g_recsBig) { if (q->waitSeq < g_waitSeq - 3 || q->raw != 0x0118 || q->cond != 0 || !ArgInt(*q, 0)) continue; const int h2 = (int)*ArgInt(*q, 0); if (!done.insert(h2).second) continue; auto* p2 = CPools::GetPed(h2); if (!p2 || p2 == c || p2->m_fHealth <= 0.f || ProtectedHandle(h2) || Guarded().count(h2)) continue; const auto vq = VerdictOf(g_thread, *q); if (vq != Verdict::Wait && vq != Verdict::GoesOn) continue; kacts.push_back("emit mdkillped:" + std::to_string(h2)); notsa::standalone::Fixups::Log("[mdriver] killall: also ped %d", h2); } }
+            std::set<int> done{ h }; for (auto& q : g_recsBig) { if (q->waitSeq < g_waitSeq - 3 || q->raw != 0x0118 || q->cond != 0 || !ArgInt(*q, 0)) continue; const int h2 = (int)*ArgInt(*q, 0); if (!done.insert(h2).second) continue; auto* p2 = CPools::GetPed(h2); if (!p2 || p2 == c || p2->m_fHealth <= 0.f || ProtectedHandle(h2) || GuardedOf(false).count(h2)) continue; const auto vq = VerdictOf(g_thread, *q); if (vq != Verdict::Wait && vq != Verdict::GoesOn) continue; kacts.push_back("emit mdkillped:" + std::to_string(h2)); notsa::standalone::Fixups::Log("[mdriver] killall: also ped %d", h2); } }
         QueueActions(kacts, row.settle); g_killFrame = GFrame(); g_killSettle = row.settle;
         if (d.cond && (d.cond->raw & 0x7FFF) == 0x0118 && !(d.cond->raw & 0x8000) && cmd.rfind("emit mdkillped", 0) == 0 && std::count_if(g_recsBig.begin(), g_recsBig.end(), [&](const RecP& q) { return q->waitSeq >= g_waitSeq - 3 && (q->raw == 0x0118) && q->cond == 0 && ArgInt(*q, 0) && (int)*ArgInt(*q, 0) != h; }) >= 2 && c && CPools::GetPed(h) && (CPools::GetPed(h)->GetPosition() - c->GetPosition()).Magnitude() < 50.f /* the killed char is near CJ (20: chars 80 and 1400 m away) */ && !std::getenv("NOTSA_MDRIVER_NOKILLFAST") && MovingTrainNear(c)) g_nextStall = 60; /* only while a moving train is next to CJ (the targets ride past: 18 and 89 changed their frames without it) */ /* CR35 (29): the pass tests several other chars dead (the four Vagos): the next one is answered after 60 frames, not 600 */
         return;
@@ -1426,7 +1442,7 @@ bool IsBuddyTarget(CPed* target, CPed* attacker, CPed* me) {
 void ShootDead() { // actions.ts shootAttackers: every ped (not a buddy type) whose kill task targets CJ / a buddy is shot dead (max 60)
     if (g_fightKills >= 60) return; auto* me = Cj(); if (!me) return;
     std::vector<int> victims;
-    const std::set<int>& guarded = Guarded();
+    const std::set<int>& guarded = GuardedOf(false);
     for (auto& p : GetPedPool()->GetAllValid()) {
         if (&p == me || p.m_fHealth <= 0.f || ProtectedPed(&p) || guarded.count(CPools::GetPedRef(&p))) continue;
         auto* tg = KillTarget(&p); if (!tg || !IsBuddyTarget(tg, &p, me) || LikesSide((int)p.m_nPedType)) continue;
@@ -1700,7 +1716,7 @@ void TickGeneric() {
             const auto a2 = ResolveArgs(*kr, *r); if (!a2 || a2->empty()) continue;
             const int h = (int)(*a2)[0].n;
             if (kop == 0x0118 && !std::getenv("NOTSA_MDRIVER_NOPHOTO") && std::any_of(g_recs.begin(), g_recs.end(), [&](const RecP& q) { const auto qh = ArgInt(*q, 0); return (q->raw & 0x7FFF) == 0x04C5 && qh && (int)*qh == h; })) continue; // CR25 (58): a ped the script wants PHOTOGRAPHED is no wait-until-dead (`NOT IS_CHAR_DEAD(x) AND HAS_CHAR_BEEN_PHOTOGRAPHED(x)`)
-            if (kop == 0x0118) { auto* pp = CPools::GetPed(h); if (!pp || pp == Cj() || pp->m_fHealth <= 0.f || ProtectedHandle(h) || Guarded().count(h)) continue; }
+            if (kop == 0x0118) { auto* pp = CPools::GetPed(h); if (!pp || pp == Cj() || pp->m_fHealth <= 0.f || ProtectedHandle(h) || GuardedOf(false).count(h)) continue; }
             else { auto* vv = CPools::GetVehicle(h); if (!vv || vv->m_fHealth <= 0.f || ProtectedHandle(h) || (Cj() && Cj()->m_pVehicle == vv)) continue; }
             d.row = kr; d.rowIdx = kri; d.cond = r; d.args = *a2; d.op = kop; break;
         }
@@ -1729,7 +1745,7 @@ void TickGeneric() {
             if (kr) for (size_t k = tk.size(); k-- > 0;) {
                 const auto& r = tk[k]; if (r->raw != 0x0118 || r->cond != 0) continue;
                 const auto a2 = ResolveArgs(*kr, *r); if (!a2 || a2->empty()) continue;
-                const int h = (int)(*a2)[0].n; auto* pp = CPools::GetPed(h); if (!pp || pp == Cj() || pp->m_fHealth <= 0.f || ProtectedHandle(h) || Guarded().count(h)) continue;
+                const int h = (int)(*a2)[0].n; auto* pp = CPools::GetPed(h); if (!pp || pp == Cj() || pp->m_fHealth <= 0.f || ProtectedHandle(h) || GuardedOf(false).count(h)) continue;
                 notsa::standalone::Fixups::Log("[mdriver] timerkill frame %d: a countdown runs, ped %d: plain IS_CHAR_DEAD is false", fr, h);
                 d.row = kr; d.rowIdx = kri; d.cond = r; d.args = *a2; d.op = 0x0118; break; }
         }

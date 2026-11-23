@@ -541,7 +541,7 @@ bool LocateGuard(const CRunningScript* s, const Rec& r) { // CR28 (24 HOME INVAS
     return false;
 }
 bool TrackerOnly(const Rec& r) { // CR46 (69 CUSTOMS FAST TRACK: `@39 == 4 AND IS_CHAR_IN_ANY_CAR cj AND NOT IS_CAR_DEAD @82` of a shared subroutine only stores the car CJ sits in; the nearest_car answer teleported CJ out of the crane cab): a plain false CJ-in-car test whose TRUE branch is nothing but STORE_CAR_CHAR_IS_IN / variable assignments up to the next jump is a passive tracker, never answered
-    const int rop = r.raw & 0x7FFF; if ((r.raw & 0x8000) || (rop != 0x00DB && rop != 0x00DF) || !g_thread || !r.hasBranch || !r.fall || std::getenv("NOTSA_MDRIVER_NOTRACKER")) return false;
+    const int rop = r.raw & 0x7FFF; if ((r.raw & 0x8000) || (rop != 0x00DB && rop != 0x00DF) || !g_thread || !r.hasBranch || !r.fall || !std::getenv("NOTSA_MDRIVER_TRACKER")) return false; // opt-in: on by default it turned 56's nearest_car answer into a wait (56 regressed); 69 does not pass either way
     int n = 0;
     for (const uint8_t* p = r.fall; InSpace(p);) {
         const int op = *(const uint16_t*)p & 0x7FFF;
@@ -859,7 +859,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             break; }
     }
     // CR46 (70 PUNCTURE WOUNDS: the chase stage tests `IS_CHAR_IN_CAR cj, @39` (plain, false: CJ walked away from his car) next to a speed-governor locate `LOCATE_CHAR_ANY_MEANS_CAR_2D cj, chased car`; table order answered the locate 7 times (CJ on foot to the moving car) and never the car): a prerequisite condition of CJ sitting in a named live car, with CJ on foot, is answered before every position / proximity row
-    if (!wide && !g_auxMode && blockers.empty() && Cj() && !Cj()->bInVehicle && !std::getenv("NOTSA_MDRIVER_NOENTERFIRST")) {
+    if (!wide && !g_auxMode && blockers.empty() && Cj() && !Cj()->bInVehicle && !std::getenv("NOTSA_MDRIVER_NOENTERFIRST") && std::any_of(falses.begin(), falses.end(), [](const RecP& q) { const int o = q->raw & 0x7FFF; return !(q->raw & 0x8000) && o >= 0x0202 && o <= 0x0207; }) /* only against a car locate (23 regressed with the char locate 00F2 in the pass) */) {
         for (auto& c : falses) { if ((c->raw & 0xFFFF) != 0x00DB) continue; const auto h0 = ArgInt(*c, 0), h1 = ArgInt(*c, 1); if (!h0 || !h1 || EntityOfHandle((int)*h0, 0x00DB) != (CEntity*)Cj()) continue; auto* ve = CPools::GetVehicle((int)*h1); if (!ve || ve->m_fHealth <= 0.f || Guarded().count((int)*h1)) continue;
             for (size_t ri = 0; ri < g_rows.size(); ri++) { const auto& kr = g_rows[ri]; if (kr.op != 0x00DB || kr.match != 1 || kr.action != "entercar") continue; const auto a = ResolveArgs(kr, *c); if (!a) break; d.act = true; d.row = &kr; d.rowIdx = (int)ri; d.cond = c; d.args = *a; d.op = 0x00DB; return d; } }
     }
@@ -1517,7 +1517,7 @@ void TickGeneric() {
     g_queue.clear(); g_qpos = 0;
     if (CCutsceneMgr::IsCutsceneProcessing()) g_sameCount = 0;
     else if (root->m_IP == g_lastIp) { g_sameCount++; g_ipSeen[root->m_IP] = fr; }
-    else if (g_lastIp && g_ipSeen.count(root->m_IP) && fr - g_ipSeen[root->m_IP] < g_stall && !std::getenv("NOTSA_MDRIVER_NOIPRING")) { g_sameCount++; g_lastIp = root->m_IP; g_ipSeen[root->m_IP] = fr; } // CR46 (72 AIR RAID: the wake ip alternated 158e / 104 / 797 / 14d9 for 6500 frames and the stall counter never reached 600): a wake ip seen within the last stall window is the same loop
+    else if (g_lastIp && g_ipSeen.count(root->m_IP) && fr - g_ipSeen[root->m_IP] < g_stall && std::getenv("NOTSA_MDRIVER_IPRING")) { g_sameCount++; g_lastIp = root->m_IP; g_ipSeen[root->m_IP] = fr; } // CR46 (72 AIR RAID: the wake ip alternated 158e / 104 / 797 / 14d9 for 6500 frames and the stall counter never reached 600): a wake ip seen within the last stall window is the same loop
     else { g_ipSeen[root->m_IP] = fr; g_sameCount = 0; g_lastIp = root->m_IP; if (g_fastLeft > 0 && g_fastIp != root->m_IP) { g_fastLeft = 0; if (g_fastNext) g_nextStall = 0; g_fastNext = false; } }
     if (g_sameCount >= g_stall) for (auto& r : g_recs) if (r->waitSeq >= g_waitSeq - 3 && (r->raw & 0x7FFF) == 0x010F && r->cond == 0) { if (auto* w = FindPlayerWanted()) if (w->m_WantedLevel != eWantedLevel::WANTED_CLEAN) { w->SetWantedLevel(eWantedLevel::WANTED_CLEAN); g_sameCount = 0; return; } break; } // CR11: as drive.ts:309 (at the stall threshold, then no decide this round; level only): // CR9: the thread waits for the wanted level to drop (SWEET4 ip 0x45e7 after the second pay n spray stage; the exe decays above 1 star only in the countryside, a real player drives into the pay n spray = ClearWantedLevelAndGoOnParole 0x44AC16): clear it, as the TS port does implicitly
     bool urgentTimer = false; // CR31 (25 CATALYST: the 90 s script timer runs while the driver waits 600 frames at every decision): a countdown clock on the screen shortens the patience to 150 frames; a vehicle of CJ that keeps losing health (army fire, 26) to 90 (NOTSA_MDRIVER_NOURGENT)

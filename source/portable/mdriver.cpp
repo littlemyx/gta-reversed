@@ -1357,6 +1357,18 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
                 }
             }
         }
+        if (c && c->bInVehicle && c->m_pVehicle && e->GetIsTypePed() && !std::getenv("NOTSA_MDRIVER_NOPEDCLEAR")) { // CR50 (88 DON PEYOTE: the warp of CJ's car +0.5 m beside a PED (the girl on foot among the enemy cars) overlapped other cars: the car lost 690 health in 60 frames and burnt): when the old +0.5 m spot is not clear for the car, the first clear spot around the ped (behind / left / right / ahead of CJ's car heading, 6 m) is used
+            auto* ocm = c->m_pVehicle->GetColModel();
+            if (ocm) {
+                const auto ob = ocm->GetBoundingBox(); const float ol = (ob.m_vecMax.y - ob.m_vecMin.y) * 0.5f, ow = (ob.m_vecMax.x - ob.m_vecMin.x) * 0.5f, rad = std::max(ol, ow) + 0.5f;
+                const auto Clear = [&](const CVector& q) { return !CWorld::TestSphereAgainstWorld(CVector{ q.x, q.y, q.z + 0.6f }, rad, c->m_pVehicle, false, true, false, true, false, false) && !CWorld::TestSphereAgainstWorld(CVector{ q.x, q.y, q.z + 1.4f }, 1.0f, c->m_pVehicle, true, false, false, false, false, false); };
+                if (!Clear(CVector{ pos.x + 0.5f, pos.y, pos.z })) {
+                    const CVector fw = c->m_pVehicle->GetForward(), rt = c->m_pVehicle->GetRight(); const float dl = ol + 1.5f, dw = ow + 1.5f;
+                    const CVector cand[8] = { pos - fw * dl, pos - rt * dw, pos + rt * dw, pos + fw * dl, pos - fw * (dl + 4.f), pos - rt * (dw + 4.f), pos + rt * (dw + 4.f), pos + fw * (dl + 4.f) };
+                    for (const auto& q : cand) { if (!Clear(q)) continue; notsa::standalone::Fixups::Log("[mdriver] warpto_handle: clear spot beside ped %d (%.2f,%.2f) -> (%.2f,%.2f)", h, pos.x, pos.y, q.x, q.y); one(warp(q.x, q.y, q.z, false)); return; }
+                }
+            }
+        }
         notsa::standalone::Fixups::Log("[mdriver] warpto_handle: no clear spot, +0.5 m");
         one(warp(pos.x + 0.5f, pos.y, pos.z, false)); return;
     }
@@ -1433,7 +1445,8 @@ CPed* KillTarget(CPed* ped) { // actions.ts killTarget: a kill-ped-on-foot task 
             case TASK_COMPLEX_KILL_PED_ON_FOOT_ARMED: tg = static_cast<CTaskComplexKillPedOnFootArmed*>(t)->m_target; break;
             case TASK_COMPLEX_KILL_PED_ON_FOOT_STEALTH: tg = static_cast<CTaskComplexKillPedOnFootStealth*>(t)->m_target; break; // CR11: actions.ts KILL_TASKS also lists TIMED / STAND_STILL / WHILE_DUCKING / STEALTH
             case TASK_COMPLEX_KILL_PED_ON_FOOT_TIMED: case TASK_COMPLEX_KILL_PED_ON_FOOT_STAND_STILL: case TASK_KILL_PED_ON_FOOT_WHILE_DUCKING: tg = static_cast<CTaskComplexKillPedOnFoot*>(t)->m_target; break;
-            case TASK_SIMPLE_GANG_DRIVEBY: if (!std::getenv("NOTSA_MDRIVER_NODRIVEBYKILL") && (std::getenv("NOTSA_MDRIVER_DRIVEBYALWAYS") || (Cj() && Cj()->m_fHealth < 70.f /* only when the shooting hurts CJ: 11 BIG SMOKE lets the Ballas of the first drive-by live */))) { auto* te = static_cast<CTaskSimpleGangDriveBy*>(t)->m_pTargetEntity; if (te && te->GetIsTypePed()) tg = static_cast<CPed*>(te); else if (std::getenv("NOTSA_MDRIVER_DRIVEBYVEH") && te && te->GetIsTypeVehicle() && static_cast<CVehicle*>(te)->m_pDriver) tg = static_cast<CVehicle*>(te)->m_pDriver; /* (opt-in: 11 BIG SMOKE failed when the gunmen of cars that shoot at a car were shot dead) */ } break; // CR49 (86 YOU'VE HAD YOUR CHIPS: the Admiral's passengers drive-by CJ with TASK_DRIVE_BY; the kill-ped tasks were the only attackers the driver shot dead)
+            case TASK_SIMPLE_GANG_DRIVEBY: if (std::getenv("NOTSA_MDRIVER_DBLOG")) { static uint32_t s_lastDb = 0; if (CTimer::GetFrameCounter() - s_lastDb > 90) { s_lastDb = CTimer::GetFrameCounter(); auto* te0 = static_cast<CTaskSimpleGangDriveBy*>(t)->m_pTargetEntity; notsa::standalone::Fixups::Log("[dblog] frame %u attacker h=%d model %d type %d inveh=%d vmodel %d | target %s h=%d model %d type %d | CJ hp %.0f vhp %.0f", (unsigned)CTimer::GetFrameCounter(), CPools::GetPedRef(ped), (int)ped->m_nModelIndex, (int)ped->m_nPedType, (int)ped->bInVehicle, ped->bInVehicle && ped->m_pVehicle ? (int)ped->m_pVehicle->m_nModelIndex : -1, te0 ? (te0->GetIsTypePed() ? "ped" : "veh/other") : "none", te0 && te0->GetIsTypePed() ? CPools::GetPedRef(static_cast<CPed*>(te0)) : -1, te0 ? (int)te0->m_nModelIndex : -1, te0 && te0->GetIsTypePed() ? (int)static_cast<CPed*>(te0)->m_nPedType : -1, Cj() ? (double)Cj()->m_fHealth : -1.0, Cj() && Cj()->bInVehicle && Cj()->m_pVehicle ? (double)Cj()->m_pVehicle->m_fHealth : -1.0); } } /* CR50 debug */
+            if (!std::getenv("NOTSA_MDRIVER_NODRIVEBYKILL") && (std::getenv("NOTSA_MDRIVER_DRIVEBYALWAYS") || (Cj() && Cj()->m_fHealth < 70.f /* only when the shooting hurts CJ: 11 BIG SMOKE lets the Ballas of the first drive-by live */))) { auto* te = static_cast<CTaskSimpleGangDriveBy*>(t)->m_pTargetEntity; if (te && te->GetIsTypePed()) tg = static_cast<CPed*>(te); else if (std::getenv("NOTSA_MDRIVER_DRIVEBYVEH") && te && te->GetIsTypeVehicle() && static_cast<CVehicle*>(te)->m_pDriver) tg = static_cast<CVehicle*>(te)->m_pDriver; /* (opt-in: 11 BIG SMOKE failed when the gunmen of cars that shoot at a car were shot dead) */ } break; // CR49 (86 YOU'VE HAD YOUR CHIPS: the Admiral's passengers drive-by CJ with TASK_DRIVE_BY; the kill-ped tasks were the only attackers the driver shot dead)
             default: break;
             }
             if (tg) return tg;

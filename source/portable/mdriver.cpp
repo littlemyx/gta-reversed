@@ -247,6 +247,7 @@ std::set<std::string> g_enexNames; // CR27: text literals the mission compares a
 CEntryExit* g_enterEx = nullptr; // CR27: the entry exit the `enterarea` verb goes through (an interior blip's), instead of searching by area
 bool g_auxMode = false; // CR27: Decide() over an aux (streamed script) thread answers only with warps / key presses (no kills of the streamed script's peds)
 std::map<const uint8_t*, RecP> g_deadConds; // CR21
+CVector g_lastBlipPos; bool g_haveLastBlip = false; // CR48: the position of the last ADD_BLIP_FOR_COORD the root script ran (the radar slot counters do not order blips of different slots)
 std::map<const uint8_t*, RecP> g_flagConds; // CR22: every plain `var == number` condition seen (IS_INT_VAR/LVAR_EQUAL_TO_NUMBER): the flag tests of the fail-flag guard
 std::set<uint32_t> g_timerVars; std::set<uint32_t> g_areaVars; int g_enterArea = -1; // CR23: variables written by GET_AREA_VISIBLE (077E); the interior id a compare of one of them asks for
 std::map<uint32_t, int> g_coordVeh; struct SphSearch { int veh; int model; float radius; }; std::map<uint32_t, SphSearch> g_sphSearch; SphSearch g_sphCur{}; // CR24: GET_CAR_COORDINATES x var -> vehicle handle; GET_RANDOM_CAR_IN_SPHERE (073E) result var -> {the vehicle whose coordinates are the centre, model, radius}
@@ -408,6 +409,25 @@ bool RetFlagProgress(const CRunningScript* s, const Rec& r) { // CR44 (66 MIKE T
     if (!std::getenv("NOTSA_MDRIVER_NORETPRINT") && std::any_of(sets.begin(), sets.end(), [](auto& q) { return q.first == 0xFFFFFFFFu; })) return false; // CR47 (72 AIR RAID: `IS_CHAR_DEAD @55 (Zero) -> @148 = 0, @150 = 1, PRINT_NOW ZER1_25, RETURN`; the caller's `@150 == 1` goes to M_FAIL, but another `@150 == 1` test is no failure and made this a progress flag; the kill answer killed the ally): a fail text on the branch (the CR24 print shape) is never a progress flag
     for (auto& [ref, val] : sets) { if (ref == 0xFFFFFFFFu) continue; for (auto& [pp, f] : g_flagConds) { if (!f->vref[0] || f->vref[0] != ref || !f->hasBranch || (f->raw & 0x8000)) continue; const auto v = ArgInt(*f, 1); if (!v || (int32_t)*v != val) continue; std::set<const uint8_t*> sn; if (!WalkFail(s, f->fall, 0, false, sn)) return true; } }
     return false;
+}
+bool OneShotWarning(const CRunningScript* s, const Rec& r) { // CR48 (79 N.O.E.: `IF IS_CHAR_IN_AREA_2D(Area 51) AND IN_ANY_PLANE AND NOT message displayed -> PRINT_NOW AREA51, @180 = 1`; the flag is only ever tested `== 0`): the true branch prints a text and sets flags that no `flag == value` test reads = a one-shot warning, no stage step
+    if (!r.hasBranch || !r.fall) return false;
+    std::vector<std::pair<uint32_t, int32_t>> sets; // the straight-line fall-through of the true branch through the following conditions (`IN_ANY_PLANE OR HELI`, `NOT IS_MESSAGE_BEING_DISPLAYED`) up to the first wait / goto / call / return
+    for (const uint8_t* p = r.fall; InSpace(p) && sets.size() < 8;) {
+        const int op = *(const uint16_t*)p & 0x7FFF;
+        if (op == 0x0001 || op == 0x0002 || op == 0x0050 || op == 0x0051) break;
+        const uint8_t* ops[3]{}; int cnt = 0; const uint8_t* e = CmdOps(p, ops, cnt); if (!e) break;
+        if ((op == 0x0004 || op == 0x0006) && cnt >= 2) { uint32_t ref; int32_t v; if (OperandVar(ops[0], ref) && OperandInt(ops[1], v)) sets.push_back({ ref, v }); }
+        if (op >= 0x00BA && op <= 0x00BD) sets.push_back({ 0xFFFFFFFFu, 0x7FFFFFFF });
+        p = e; }
+    if (std::none_of(sets.begin(), sets.end(), [](auto& q) { return q.first == 0xFFFFFFFFu; })) return false;
+    bool any = false;
+    for (auto& [ref, val] : sets) { if (ref == 0xFFFFFFFFu) continue; if (val == 0) return false; bool guard = false;
+        for (auto& [pp, f] : g_flagConds) { if (f->vref[0] != ref) continue; const auto v = ArgInt(*f, 1); if (!v) continue;
+            if ((int32_t)*v == 0 && f->p < r.p && r.p - f->p <= 0x60) guard = true; // the `flag == 0` guard right before the area test
+            if ((int32_t)*v == val && f->p >= r.fall && f->p - r.fall < 0x400) return false; } // the flag is consumed right after: a stage step
+        if (!guard) return false; any = true; }
+    return any;
 }
 bool FlagGuard(const CRunningScript* s, const Rec& r, bool noPrint = false) {
     if (!r.fall || g_flagConds.empty() || std::getenv("NOTSA_MDRIVER_NOFLAGGUARD")) return false;
@@ -1594,6 +1614,16 @@ void TickGeneric() {
                     dn.act = true; dn.row = nc == 0 ? &kNear : &kFetch; dn.rowIdx = -13; dn.cond = c; dn.op = op; dn.args.clear(); if (nc == 0) for (const float f : { xp.x + 5.f, xp.y, nz ? xp.z : -100.f }) { RArg ra; ra.n = f; dn.args.push_back(ra); } else { const CVector cp = Cj()->GetPosition(); for (const float f : { (float)*h1, cp.x + 3.f, cp.y, nz ? cp.z - 1.f : -100.f }) { RArg ra; ra.n = f; dn.args.push_back(ra); } }
                     notsa::standalone::Fixups::Log("[mdriver] nearped: CJ joins ped %d at %.0f,%.0f", (int)*h1, (double)xp.x, (double)xp.y); nearRec = true; break; } }
     Dec d = Decide(loop, g_attemptsAt[ipPtr]);
+    if (d.act && d.row->action == "midpoint" && d.cond && (d.cond->raw & 0x7FFF) == 0x00A3 && g_haveLastBlip && d.args.size() == 4 && g_thread && OneShotWarning(g_thread, *d.cond) && !std::getenv("NOTSA_MDRIVER_NOWARNAREA")) { // CR48: the answer would put CJ's plane into a warning area (Area 51: SAMs): the destination blip of the script is the answer when it lies outside the box
+        const float bx0 = std::min((float)d.args[0].n, (float)d.args[2].n), bx1 = std::max((float)d.args[0].n, (float)d.args[2].n), by0 = std::min((float)d.args[1].n, (float)d.args[3].n), by1 = std::max((float)d.args[1].n, (float)d.args[3].n);
+        bool blipLive = false; for (auto& t : CRadar::ms_RadarTrace) if (t.m_nBlipType == BLIP_COORD && !t.HasSprite() && (t.m_vPosition - g_lastBlipPos).Magnitude2D() < 2.f) blipLive = true; // the blip still exists (the stage removes it when it is done)
+        if (blipLive && (g_lastBlipPos.x < bx0 || g_lastBlipPos.x > bx1 || g_lastBlipPos.y < by0 || g_lastBlipPos.y > by1)) {
+            static Row kWarn{ 0, 0, "destination blip (the area answer is a one-shot warning)", "blipgo", {}, 120 };
+            notsa::standalone::Fixups::Log("[mdriver] warnarea frame %d: the area test is a one-shot warning, CJ goes to the script's last blip %.0f,%.0f", fr, g_lastBlipPos.x, g_lastBlipPos.y);
+            d.row = &kWarn; d.rowIdx = -7; d.cond = nullptr; d.op = 0; d.args.clear();
+            for (const float f : { g_lastBlipPos.x, g_lastBlipPos.y, std::fabs(g_lastBlipPos.z) < 0.5f ? -100.f : g_lastBlipPos.z }) { RArg ra; ra.n = f; d.args.push_back(ra); }
+        }
+    }
     if ((!d.act || d.row->action == "wait") && g_attemptsAt[ipPtr] >= 0 && !std::getenv("NOTSA_MDRIVER_NOCLOCKSKIP")) for (auto& r : g_recsBig) { // CR32 (33 MANAGEMENT ISSUES: `WAIT UNTIL hour > 21`, the hour copied by GET_TIME_OF_DAY into a local; the idle player is arrested long before the game clock gets there): a false `local > N` whose local holds the current game hour is answered by the clock moving to N+1:00 (the player waits for the night, or sleeps)
         if (r->waitSeq < g_waitSeq - 3 || (r->raw & 0x7FFF) != 0x0019 || (r->raw & 0x8000) || r->cond != 0) continue;
         if (!std::getenv("NOTSA_MDRIVER_CLOCKGUARD") && VerdictOf(g_thread, *r) == Verdict::Guard) continue; /* CR34 (33: `IF hour > 21` jumps FORWARD when false and its true branch is the mission's failure (a time limit): moving the clock made the mission fail at f5553) */
@@ -1632,6 +1662,19 @@ void TickGeneric() {
             d.row = kr; d.rowIdx = kri; d.cond = r; d.args = *a2; d.op = kop; break;
         }
         if (d.row == kr) break;
+        }
+    }
+    if (d.act && d.row->action != "kill" && d.row->action != "wait" && g_attemptsAt[ipPtr] >= 1 && !std::getenv("NOTSA_MDRIVER_NOTIMERKILL")) { // CR48 (85 EXPLOSIVE SITUATION: the stage loop fails at `timer <= 1.8 s AND NOT IS_CHAR_DEAD(phone ped)`; the answers are warps to twelve locates, the timer runs out): a decreasing on-screen timer, the answer did not move the script and the retained passes (400 records, the narrow window misses it) hold a plain false IS_CHAR_DEAD(x) of a live non-buddy char: he dies (the stage fails when the timer ends)
+        const auto& ck = CUserDisplay::OnscnTimer.m_Clock;
+        if (ck.m_nVarId != 0 && !CUserDisplay::OnscnTimer.m_bPaused && ck.m_nTimerDirection == eTimerDirection::DECREASE) {
+            const Row* kr = nullptr; int kri = -1; for (size_t i = 0; i < g_rows.size(); i++) if (g_rows[i].op == 0x0118 && g_rows[i].match == 1 && g_rows[i].action == "kill") { kr = &g_rows[i]; kri = (int)i; break; }
+            std::vector<RecP> tk; for (auto& r : g_recsBig) if (r->waitSeq >= g_waitSeq - 3) tk.push_back(r);
+            if (kr) for (size_t k = tk.size(); k-- > 0;) {
+                const auto& r = tk[k]; if (r->raw != 0x0118 || r->cond != 0) continue;
+                const auto a2 = ResolveArgs(*kr, *r); if (!a2 || a2->empty()) continue;
+                const int h = (int)(*a2)[0].n; auto* pp = CPools::GetPed(h); if (!pp || pp == Cj() || pp->m_fHealth <= 0.f || ProtectedHandle(h) || Guarded().count(h)) continue;
+                notsa::standalone::Fixups::Log("[mdriver] timerkill frame %d: a countdown runs, ped %d: plain IS_CHAR_DEAD is false", fr, h);
+                d.row = kr; d.rowIdx = kri; d.cond = r; d.args = *a2; d.op = 0x0118; break; }
         }
     }
     if (d.act && d.row->action == "wait" && g_attemptsAt[ipPtr] >= 2 && !std::getenv("NOTSA_MDRIVER_NOBIGWIN") && g_recsBig.size() > g_recs.size()) { // CR26 (20 LOS SEPULCROS: a pass of ~100 conditions, the 64-condition window holds only its last third; the stage test `IS_CHAR_SITTING_IN_CAR` / the three IS_CHAR_DEAD of the pass' first half are outside it): the wait row answered this wake ip twice and the thread still stands: decide again over the whole last 3 passes (up to 400 conditions); a non-wait answer wins
@@ -1699,6 +1742,7 @@ void TickGeneric() {
     if (d.act && d.row->action == "wait" && g_attemptsAt[ipPtr] >= 2 && !std::getenv("NOTSA_MDRIVER_NOBLIPGO")) { // CR26 (19 CESAR VIALPANDO: stage 19 waits for a flag the mod-shop script sets once the garage opens; the only open task is the destination blip): the wait row answered this wake ip twice and the thread still stands: CJ (with his car) goes to the mission's coordinate blip (the newest BLIP_COORD of the radar)
         const tRadarTrace* best = nullptr;
         for (auto& t : CRadar::ms_RadarTrace) if (t.m_nBlipType == BLIP_COORD && !t.HasSprite() && (!best || t.m_nCounter >= best->m_nCounter)) best = &t;
+        if (g_haveLastBlip && !std::getenv("NOTSA_MDRIVER_NOLASTBLIP")) for (auto& t : CRadar::ms_RadarTrace) if (t.m_nBlipType == BLIP_COORD && !t.HasSprite() && (t.m_vPosition - g_lastBlipPos).Magnitude2D() < 2.f && std::fabs(t.m_vPosition.z - g_lastBlipPos.z) < 50.f) { best = &t; break; } // CR48: the blip the script created last
         auto* me = Cj();
         if (best && me && (me->GetPosition() - best->m_vPosition).Magnitude2D() > 6.f) {
             static Row kBlip{ 0, 0, "destination blip (no condition of the pass is answerable)", "blipgo", {}, 120 };
@@ -1751,6 +1795,7 @@ void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int co
     if (s != notsa::scmtrace::Root() && g_started) AuxTree(const_cast<CRunningScript*>(s), ptr, raw, cond);
     if (s == notsa::scmtrace::Root()) { // the StallSink: conditions with their state + operands, WAIT count, where the GOTO_IF_FALSE after them led
         const int op = raw & 0x7FFF;
+        if (op == 0x018A && InSpace(ptr) && !std::getenv("NOTSA_MDRIVER_NOLASTBLIP")) { const auto a = DecodeArgs(s, ptr, 3); if (a.size() == 3) { g_lastBlipPos = CVector{ AF(a[0]), AF(a[1]), AF(a[2]) }; g_haveLastBlip = true; } } // CR48 (79 N.O.E.: the blip of the landing box was not the one with the highest slot counter)
         if ((op == 0x010D || op == 0x010E) && !std::getenv("NOTSA_MDRIVER_NOSCRIPTWANTED")) g_scriptWantedFrame = GFrame(); // CR47 (66 MIKE TORENO: the stage's own ALTER_WANTED_LEVEL_NO_DROP 3 was cleared the next frame by the CR25 window of the driver's earlier kill, so the chase machine (`wanted > 0` then `wanted == 0`) never saw a star): a wanted level the SCRIPT raises stays for 120 frames (NOTSA_MDRIVER_NOSCRIPTWANTED=1: off)
         if (g_fallPending) { if (op == 0x0001) for (auto& r : g_group) r->waitAfter = true; g_fallPending = false; g_group.clear(); } // CR19: a group that fell through straight into a WAIT
         if (op == 0x0001) g_waitSeq++;

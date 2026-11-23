@@ -39,6 +39,7 @@
 #include "PedGroups.h"
 #include "Tasks/TaskTypes/TaskComplexKillPedOnFoot.h"
 #include "Tasks/TaskTypes/TaskComplexKillPedOnFootMelee.h"
+#include "Tasks/TaskTypes/TaskSimpleGangDriveBy.h"
 #include "Tasks/TaskTypes/TaskComplexKillPedOnFootArmed.h"
 #include "Tasks/TaskTypes/TaskComplexKillPedOnFootStealth.h"
 #include "Tasks/TaskTypes/TaskSimpleCarSetPedInAsDriver.h"
@@ -1372,6 +1373,7 @@ CPed* KillTarget(CPed* ped) { // actions.ts killTarget: a kill-ped-on-foot task 
             case TASK_COMPLEX_KILL_PED_ON_FOOT_ARMED: tg = static_cast<CTaskComplexKillPedOnFootArmed*>(t)->m_target; break;
             case TASK_COMPLEX_KILL_PED_ON_FOOT_STEALTH: tg = static_cast<CTaskComplexKillPedOnFootStealth*>(t)->m_target; break; // CR11: actions.ts KILL_TASKS also lists TIMED / STAND_STILL / WHILE_DUCKING / STEALTH
             case TASK_COMPLEX_KILL_PED_ON_FOOT_TIMED: case TASK_COMPLEX_KILL_PED_ON_FOOT_STAND_STILL: case TASK_KILL_PED_ON_FOOT_WHILE_DUCKING: tg = static_cast<CTaskComplexKillPedOnFoot*>(t)->m_target; break;
+            case TASK_SIMPLE_GANG_DRIVEBY: if (!std::getenv("NOTSA_MDRIVER_NODRIVEBYKILL")) { auto* te = static_cast<CTaskSimpleGangDriveBy*>(t)->m_pTargetEntity; if (te && te->GetIsTypePed()) tg = static_cast<CPed*>(te); else if (te && te->GetIsTypeVehicle() && static_cast<CVehicle*>(te)->m_pDriver) tg = static_cast<CVehicle*>(te)->m_pDriver; } break; // CR49 (86 YOU'VE HAD YOUR CHIPS: the Admiral's passengers drive-by CJ with TASK_DRIVE_BY; the kill-ped tasks were the only attackers the driver shot dead)
             default: break;
             }
             if (tg) return tg;
@@ -1571,6 +1573,7 @@ void TickGeneric() {
         me->physicalFlags.bInvulnerable = true;
         if (me->bInVehicle && me->m_pVehicle) me->m_pVehicle->physicalFlags.bInvulnerable = true;
     }
+    if (fr % 30 == 0 && std::getenv("NOTSA_MDRIVER_CJLOG")) if (auto* me9 = Cj()) notsa::standalone::Fixups::Log("[cjlog] frame %d hp %.0f pos %.1f %.1f %.1f veh=%d anim state %d inv=%d lastdmg ent=%d type=%d model=%d wpn=%d fire=%d", fr, (double)me9->m_fHealth, (double)me9->GetPosition().x, (double)me9->GetPosition().y, (double)me9->GetPosition().z, (int)me9->bInVehicle, (int)me9->m_nPedState, (int)me9->physicalFlags.bInvulnerable, me9->m_pLastEntityDamage ? 1 : 0, me9->m_pLastEntityDamage ? (int)me9->m_pLastEntityDamage->GetType() : -1, me9->m_pLastEntityDamage ? (int)me9->m_pLastEntityDamage->m_nModelIndex : -1, (int)me9->m_nLastWeaponDamage, (int)(me9->m_pFire != nullptr)); // CR49 debug
     if (fr % 30 == 0 && !std::getenv("NOTSA_MDRIVER_NOURGENT")) { // CR31 (26 ROBBING UNCLE SAM: army fire on the truck CJ sits in): the vehicle of CJ lost >= 45 health in each of 3 consecutive 30-frame windows = danger for 120 frames (shorter patience, CJ drives to the destination blip)
         auto* me2 = Cj(); auto* v2 = me2 && me2->bInVehicle ? me2->m_pVehicle : nullptr;
         if (!v2) { g_vhpVeh = nullptr; g_vhpPrev = -1; g_dropWin = 0; }

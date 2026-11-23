@@ -496,6 +496,7 @@ std::map<uint32_t, int> g_objHealthVars; // CR37: destination variable of GET_OB
 std::map<uint32_t, int> g_healthVars; // CR35: destination variable of GET_CHAR_HEALTH -> the char handle read (a later `N > var` wait = the char is hurt below N)
 std::map<uint32_t, int> g_speedVars; // CR34: destination variable of GET_CAR_SPEED -> the car handle read (a later `var > N` wait = the car goes faster than N)
 struct FollowHold { int tgt = -1; CVector off; int left = 0; } g_follow; // CR47 (76 HIGHJACK: the stage wants the bike inside a 3 x 4 m box behind the moving truck for 3.5 s): CJ's vehicle keeps its place relative to a moving vehicle for `left` frames
+struct AirHold { int h = -1; float z = 0.f; int left = 0; float vx = 0.f, vy = 0.f; } g_airHold; // CR49 (91 FREEFALL: the Dodo warped to the plane that flies 200 m up fell into the sea): an aircraft the driver warped into the air keeps its altitude (vertical speed zeroed, z reset) for `left` frames
 struct SpeedHold { int h = -1; float mps = 0.f; int left = 0; } g_speedHold; // CR34: the car kept at that speed (m/s) along its heading for `left` more frames
 std::set<int> g_fixCars; // CR34: vehicle handles the carfix answer repaired: kept repaired every frame afterwards (the player takes the car to the Pay n Spray whenever random traffic bumps it again; 33)
 std::set<int> g_usedCars; // CR27: vehicle handles the driver itself entered / drove to a place (the mission car): never wrecked by a kill answer
@@ -1156,6 +1157,11 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
                 }
             }
             QueueActions(acts, row.settle); return; } } // LOCATE_CAR_3D(car 2049, ...) is satisfied by moving THAT car
+        if (v == "vehwarp" && c && c->bInVehicle && c->m_pVehicle && c->m_pVehicle->IsSubPlane() && d.cond && (cop & 0x7FFF) == 0x0100 && !std::getenv("NOTSA_MDRIVER_NOAIRLEAD")) { // CR49 (91 FREEFALL: the in-car locate is a checkpoint that flies away with the target plane, 1.7 units per frame): the plane arrives at the box with the box's own velocity (taken from the last two passes of the same test) and the heading of that velocity
+            const Rec* prev = nullptr; for (size_t k = g_recsBig.size(); k-- > 0;) { const auto& r = g_recsBig[k]; if (r->p == d.cond->p && r->waitSeq < d.cond->waitSeq - 1 && r->waitSeq >= d.cond->waitSeq - 12) { prev = r.get(); break; } }
+            if (prev) { const auto x1 = ArgFloat(*prev, 1), y1 = ArgFloat(*prev, 2), x2 = ArgFloat(*d.cond, 1), y2 = ArgFloat(*d.cond, 2); const double dt = (double)(d.cond->waitSeq - prev->waitSeq);
+                if (x1 && y1 && x2 && y2 && dt > 0.0) { const float vx = (float)((*x2 - *x1) / dt), vy = (float)((*y2 - *y1) / dt); if (std::hypot(vx, vy) > 0.2f && std::hypot(vx, vy) < 3.f) { const float hd = std::atan2(-vx, vy); notsa::standalone::Fixups::Log("[mdriver] airlead: the box moves %.2f,%.2f per frame: the plane arrives with that velocity, heading %.2f", (double)vx, (double)vy, (double)hd); QueueActions({ "emit mdwveh:" + F(F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) + ":" + F(vx) + ":" + F(vy) + ":0:" + F(hd) }, row.settle); return; } } }
+        }
         if (v == "vehwarp" && c && d.cond && (cop & 0x7FFF) == 0x0100 && ArgInt(*d.cond, 0) && CPools::GetPed((int)*ArgInt(*d.cond, 0)) == c && !std::getenv("NOTSA_MDRIVER_NOINMODEL2")) { // CR49: LOCATE_CHAR_IN_CAR_3D followed by IS_CHAR_IN_MODEL(CJ, m) (one or an OR group): CJ gets into the nearest car of one of those models first, then the car is put at the locate point
             const auto wms = ModelsWantedAfterCarLocate(d.cond->p);
             if (!wms.empty() && !(c->bInVehicle && c->m_pVehicle && std::find(wms.begin(), wms.end(), (int)c->m_pVehicle->m_nModelIndex) != wms.end())) {
@@ -1359,6 +1365,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     if (v == "horn") { QueueActions({ "emit mdpad:-100:30", "wait 30" }, row.settle); return; } // CR39
     if (v == "swimgo") { std::vector<std::string> acts; if (c && c->bInVehicle) { acts = { "key down return", "wait 1", "key up return", "waituntil invehicle == 0 300" }; } if (!c || !c->bInVehicle) acts.push_back("emit mdswim:" + F(F_(0)) + ":" + F(F_(1))); QueueActions(acts, row.settle); return; } // CR39 (CJ leaves the boat in the water: he swims)
     if (v == "objto") { QueueActions({ "emit mdobjto:" + std::to_string(I_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) + ":" + F(F_(3)) }, row.settle); return; } // CR39
+    if (v == "planeland") { QueueActions({ "emit mdwland:" + F(F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) }, row.settle); return; } // CR49 (91 FREEFALL: `IS_CAR_STOPPED_IN_AREA_3D plane box OR IS_CHAR_IN_AREA_3D CJ box`: land the plane)
     if (v == "damageobjw") { std::vector<std::string> acts; for (size_t k = 0; k + 2 <= d.args.size(); k += 2) acts.push_back("emit mddmgobj:" + std::to_string((int)d.args[k].n) + ":" + std::to_string((int)d.args[k + 1].n)); QueueActions(acts, row.settle); return; } // CR49
     if (v == "damageobj") { QueueActions({ "emit mddmgobj:" + std::to_string(I_(0)) }, row.settle); return; } // CR22: HAS_OBJECT_BEEN_DAMAGED(obj): CJ damages the object (16 NINES AND AK'S shooting range)
     if (v == "tosphere") { // CR24: the vehicle at the centre of a GET_RANDOM_CAR_IN_SPHERE search is moved next to the nearest car the game's own search would accept (appearance 1/2, not a law enforcer, wanted model, CanBeDeleted: the mission's decoy is refused), 8 m above it
@@ -1464,6 +1471,7 @@ void TickGeneric() {
         if (!tv || !mv || tv->m_fHealth <= 0.f || mv->m_pAttachedTo || tv == mv) g_follow.left = 0;
         else { g_follow.left--; const CVector q = tv->GetPosition() + tv->GetRight() * g_follow.off.x + tv->GetForward() * g_follow.off.y + tv->GetUp() * g_follow.off.z; mv->SetPosn(q); mv->m_vecMoveSpeed = tv->m_vecMoveSpeed; mv->m_vecTurnSpeed = CVector{}; }
     }
+    if (g_airHold.left > 0) { g_airHold.left--; if (auto* v = CPools::GetVehicle(g_airHold.h); v && v->m_fHealth > 0.f && Cj() && Cj()->bInVehicle && Cj()->m_pVehicle == v) { v->m_vecMoveSpeed.z = 0.f; if (g_airHold.vx != 0.f || g_airHold.vy != 0.f) { v->m_vecMoveSpeed.x = g_airHold.vx; v->m_vecMoveSpeed.y = g_airHold.vy; } v->m_vecTurnSpeed = CVector{}; CVector pp = v->GetPosition(); pp.z = g_airHold.z; v->SetPosn(pp); } else g_airHold.left = 0; }
     if (g_speedHold.left > 0) { g_speedHold.left--; if (auto* v = CPools::GetVehicle(g_speedHold.h); v && v->m_fHealth > 0.f) { const CVector f = v->GetForward(); v->m_vecMoveSpeed.x = f.x * g_speedHold.mps / 50.f; v->m_vecMoveSpeed.y = f.y * g_speedHold.mps / 50.f; } else g_speedHold.left = 0; }
     if (!g_fixCars.empty()) for (const int h : g_fixCars) if (auto* v = CPools::GetVehicle(h); v && v->vehicleFlags.bIsDamaged && v->m_fHealth > 0.f && !std::getenv("NOTSA_MDRIVER_NOKEEPFIX")) { v->Fix(); v->m_fHealth = 1000.f; }
     if (root) { char n[9]{}; std::memcpy(n, root->m_szName, 8); g_name = n; }
@@ -1698,6 +1706,10 @@ void TickGeneric() {
         }
         if (d.row == kr) break;
         }
+    }
+    if (d.act && d.row->action == "midpoint" && d.args.size() == 6 && Cj() && Cj()->bInVehicle && Cj()->m_pVehicle && Cj()->m_pVehicle->IsSubPlane() && !std::getenv("NOTSA_MDRIVER_NOPLANELOW")) { // CR49 (91 FREEFALL: `IS_CHAR_IN_AREA_3D` of a low box (z 7..14) over the ground while CJ is in a flying plane: the midpoint warp put the plane on the ground and wrecked it): no warp, the flight goes on
+        const float zc = (float)((d.args[2].n + d.args[5].n) * 0.5), xc = (float)((d.args[0].n + d.args[3].n) * 0.5), yc = (float)((d.args[1].n + d.args[4].n) * 0.5);
+        if (zc - CWorld::FindGroundZForCoord(xc, yc) < 20.f) { static Row kPlaneLow{ 0, 0, "low area box while flying: the plane lands there", "planeland", {}, 60 }; d.row = &kPlaneLow; d.rowIdx = -42; d.args.clear(); for (const float f : { xc, yc, -100.f }) { RArg ra; ra.n = f; d.args.push_back(ra); } notsa::standalone::Fixups::Log("[mdriver] planelow: the low box is a landing: the plane is put down there, wheels down"); }
     }
     if (d.act && d.row->action == "pedwarp" && g_attemptsAt[ipPtr] >= 1 && Cj() && !std::getenv("NOTSA_MDRIVER_NOINMODEL2")) { // CR49 (85 EXPLOSIVE SITUATION, crate stage: the pass also holds `LOCATE_CHAR_IN_CAR_3D CJ crate / IS_CHAR_IN_MODEL CJ 406 OR 486` and the on-foot locates answered first never move the script): a plain false LOCATE_CHAR_IN_CAR_3D of CJ whose condition group wants a car model CJ is not in is answered by the vehicle row (CJ gets into that car, the car goes to the crate)
         const Row* vr = nullptr; int vri = -1; for (size_t i = 0; i < g_rows.size(); i++) if (g_rows[i].op == 0x0100 && g_rows[i].match == 1 && g_rows[i].action == "vehwarp") { vr = &g_rows[i]; vri = (int)i; break; }
@@ -1965,10 +1977,19 @@ bool Cmd(const char* name, const std::string& args) {
         CStreaming::LoadScene(CVector{ w[0], w[1], 0.f }); CStreaming::LoadSceneCollision(CVector{ w[0], w[1], 0.f });
         const float gz = w[2] <= -100.f ? CWorld::FindGroundZForCoord(w[0], w[1]) : w[2];
         CVehicle* veh = nullptr; if (isPed) { auto* pd = static_cast<CPed*>(tgt); if (pd->bInVehicle) veh = pd->m_pVehicle; } else veh = static_cast<CVehicle*>(tgt);
-        if (veh) { CCarCtrl::SetCoordsOfScriptCar(veh, w[0], w[1], gz, 0, 1); veh->m_vecMoveSpeed = CVector{}; veh->m_vecTurnSpeed = CVector{}; if (nw >= 7) { veh->SetHeading(w[6]); veh->m_vecMoveSpeed = CVector{ w[3], w[4], w[5] }; } if (std::getenv("NOTSA_MDRIVER_ENTERLOG")) g_watchVeh = GetVehiclePool()->GetRef(veh); }
+        if (veh) { CCarCtrl::SetCoordsOfScriptCar(veh, w[0], w[1], gz, 0, 1); veh->m_vecMoveSpeed = CVector{}; veh->m_vecTurnSpeed = CVector{}; if ((veh->IsSubPlane() || veh->IsSubHeli()) && !std::getenv("NOTSA_MDRIVER_NOAIRHOLD") && ped->bInVehicle && ped->m_pVehicle == veh) { const float gnd = CWorld::FindGroundZForCoord(w[0], w[1]); if (gz - gnd > 30.f || (veh->IsSubPlane() && gz - gnd > 0.5f && !std::getenv("NOTSA_MDRIVER_NOLOWHOLD"))) { g_airHold.h = GetVehiclePool()->GetRef(veh); g_airHold.z = gz; g_airHold.left = gz - gnd > 30.f ? 1500 : 240; g_airHold.vx = nw >= 7 ? w[3] : 0.f; g_airHold.vy = nw >= 7 ? w[4] : 0.f; notsa::standalone::Fixups::Log("[mdriver] airhold: the aircraft is held at z %.0f for 1500 frames", gz); } } /* CR49 */ if (nw >= 7) { veh->SetHeading(w[6]); veh->m_vecMoveSpeed = CVector{ w[3], w[4], w[5] }; } if (std::getenv("NOTSA_MDRIVER_ENTERLOG")) g_watchVeh = GetVehiclePool()->GetRef(veh); }
         else { CWorld::Remove(tgt); tgt->SetPosn(CVector{ w[0], w[1], gz + 1.1f }); CWorld::Add(tgt); }
         CStreaming::LoadScene(CVector{ w[0], w[1], gz }); CStreaming::LoadSceneCollision(CVector{ w[0], w[1], gz });
         notsa::standalone::Fixups::Log("[mdriver] %s gf=%u -> %.2f,%.2f,%.2f", name, (unsigned)CTimer::GetFrameCounter(), w[0], w[1], gz);
+        return true;
+    }
+    if (!std::strcmp(name, "mdwland")) { // CR49: the plane CJ flies is put on the ground of the box, wheels down, at rest, and kept repaired
+        float w[3]{}; std::sscanf(args.c_str(), "%f:%f:%f", w, w + 1, w + 2);
+        if (ped->bInVehicle && ped->m_pVehicle && ped->m_pVehicle->IsSubPlane()) { auto* pl = static_cast<CPlane*>(ped->m_pVehicle);
+            CStreaming::LoadScene(CVector{ w[0], w[1], 0.f }); CStreaming::LoadSceneCollision(CVector{ w[0], w[1], 0.f });
+            const float gz = (w[2] <= -100.f ? CWorld::FindGroundZForCoord(w[0], w[1]) : w[2]) + 1.0f;
+            g_airHold.left = 0; CCarCtrl::SetCoordsOfScriptCar(pl, w[0], w[1], gz, 0, 1); pl->m_vecMoveSpeed = CVector{}; pl->m_vecTurnSpeed = CVector{}; pl->SetGearDown(); pl->Fix(); pl->m_fHealth = 1000.f; g_fixCars.insert(GetVehiclePool()->GetRef(pl));
+            notsa::standalone::Fixups::Log("[mdriver] mdwland gf=%u -> %.2f,%.2f,%.2f", (unsigned)CTimer::GetFrameCounter(), w[0], w[1], gz); }
         return true;
     }
     if (!std::strcmp(name, "mdwarpin")) { // tryEnterCar fallback: the Enter key did not get him in -> the script's own WARP_CHAR_INTO_CAR

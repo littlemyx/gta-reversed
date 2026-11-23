@@ -1409,6 +1409,13 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         const auto h = ArgInt(*d.cond, 0); const bool d3 = cop == 0x04E6; const auto x = ArgFloat(*d.cond, 1), y = ArgFloat(*d.cond, 2), z = d3 ? ArgFloat(*d.cond, 3) : std::optional<double>(-100.0);
         if (h && x && y && z && CPools::GetObject((int)*h)) { QueueActions({ "emit mdwobj:" + std::to_string((int)*h) + ":" + F((float)*x) + ":" + F((float)*y) + ":" + F((float)*z) }, 60); return; }
     }
+    if (v == "failclass" && d.cond && (cop == 0x04A9 || cop == 0x04AB) && !(d.cond->raw & 0x8000) && c && !std::getenv("NOTSA_MDRIVER_NOANYKIND")) { // CR49 (93 MISAPPROPRIATION: `IS_CHAR_IN_ANY_HELI CJ`): CJ gets into the nearest helicopter (plane) in the world, or a new one is put under him
+        const bool heli = cop == 0x04A9; CVehicle* best = nullptr; float bd = 2500.f;
+        for (auto& vv : GetVehiclePool()->GetAllValid()) { if (vv.m_fHealth <= 0.f || (vv.m_pDriver && vv.m_pDriver != c) || (heli ? !vv.IsSubHeli() : !vv.IsSubPlane())) continue; const float dd = (vv.GetPosition() - c->GetPosition()).Magnitude(); if (dd < bd) { bd = dd; best = &vv; } }
+        static int s_spawnedKind = 0;
+        if (best) { if (!(c->bInVehicle && c->m_pVehicle == best)) { notsa::standalone::Fixups::Log("[mdriver] anykind: CJ is put into the nearest %s (model %d, %.0f m)", heli ? "helicopter" : "plane", (int)best->m_nModelIndex, (double)bd); QueueActions({ "emit mdwarpin:" + std::to_string(GetVehiclePool()->GetRef(best)) }, row.settle); return; } }
+        else if (s_spawnedKind < 2) { ++s_spawnedKind; notsa::standalone::Fixups::Log("[mdriver] anykind: no %s anywhere: a new one is put under CJ", heli ? "helicopter" : "plane"); QueueActions({ "emit mdlaunch:" + std::string(heli ? "487" : "513") }, row.settle); return; }
+    }
     if (v == "failclass") { Stop("by nature: " + (d.args.empty() ? std::string("failclass") : d.args[0].s), cop, 0); return; }
     Stop("badverb " + v, cop, 0);
 }

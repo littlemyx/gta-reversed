@@ -242,6 +242,7 @@ struct Rec { const uint8_t* p; uint16_t raw; int cond; int waitSeq; std::vector<
 using RecP = std::shared_ptr<Rec>;
 static const size_t g_bigCap = std::getenv("NOTSA_MDRIVER_BIGCAP") ? (size_t)std::atoi(std::getenv("NOTSA_MDRIVER_BIGCAP")) : 400; // CR39: the window of the last conditional commands
 CVehicle* NearestCarOfModel(CPed* c, int model, float best); // CR39
+std::vector<int> ModelsWantedAfterCarLocate(const uint8_t* p); // CR49
 bool CoordLeashLive(); // CR42
 bool PeekFootLocateXY(const uint8_t* p, float& x, float& y);
 std::set<std::string> g_enexNames; // CR27: text literals the mission compares an entry exit name with (IS_VAR_TEXT_LABEL16_EQUAL_TO_TEXT_LABEL after GET_NAME_OF_ENTRY_EXIT_CHAR_USED): the entrance the stage wants
@@ -1004,6 +1005,18 @@ int ModelWantedAfterLocate(const uint8_t* p) {
     }
     return -1;
 }
+// CR49 (85 EXPLOSIVE SITUATION: `LOCATE_CHAR_IN_CAR_3D CJ crate / .. / IS_CHAR_IN_MODEL CJ 406 OR IS_CHAR_IN_MODEL CJ 486`: the crates are smashed with a Dumper / Dozer): every model of an IS_CHAR_IN_MODEL (00DD) within 14 commands after the LOCATE_CHAR_IN_CAR_3D (0100) at p
+std::vector<int> ModelsWantedAfterCarLocate(const uint8_t* p) {
+    std::vector<int> out; if (!p || !InSpace(p) || (*(const uint16_t*)p & 0x7FFF) != 0x0100) return out;
+    const uint8_t* q = p;
+    for (int k = 0; k < 14 && q && InSpace(q); k++) {
+        const int op = *(const uint16_t*)q & 0x7FFF; const uint8_t* ops[3]{}; int cnt = 0; const uint8_t* e = CmdOps(q, ops, cnt); if (!e) break;
+        if (k > 0 && (op == 0x0100 || op == 0x00FE || op == 0x0002)) break; // the next test of another kind / a jump ends the group
+        if (op == 0x00DD && cnt >= 2 && ops[1]) { const uint8_t* sc = ops[1]; int v = -1; if (*sc == 1) v = *(const int32_t*)(sc + 1); else if (*sc == 5) v = *(const int16_t*)(sc + 1); else if (*sc == 4) v = *(const int8_t*)(sc + 1); if (v >= 0) out.push_back(v); }
+        q = e;
+    }
+    return out;
+}
 // CR40 (51 555 WE TIP: `WHILE NOT IS_CHAR_DEAD guard / GET_DEAD_CHAR_PICKUP_COORDS guard @x @y @z / AND(@x > a, @y > b, @z > c, d > @x, e > @y, f > @z)`, else the mission fails): the centre x, y of the box the dead ped's pickup coordinates must lie in, found within 16 commands after the IS_CHAR_DEAD at p
 bool PeekDeadBox(const uint8_t* p, float* box /* x0 x1 y0 y1 z0 z1 (z: -1e9 / 1e9 when the script gives none) */) {
     if (!p || !InSpace(p) || (*(const uint16_t*)p & 0x7FFF) != 0x0118) return false;
@@ -1135,6 +1148,13 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
                 }
             }
             QueueActions(acts, row.settle); return; } } // LOCATE_CAR_3D(car 2049, ...) is satisfied by moving THAT car
+        if (v == "vehwarp" && c && d.cond && (cop & 0x7FFF) == 0x0100 && ArgInt(*d.cond, 0) && CPools::GetPed((int)*ArgInt(*d.cond, 0)) == c && !std::getenv("NOTSA_MDRIVER_NOINMODEL2")) { // CR49: LOCATE_CHAR_IN_CAR_3D followed by IS_CHAR_IN_MODEL(CJ, m) (one or an OR group): CJ gets into the nearest car of one of those models first, then the car is put at the locate point
+            const auto wms = ModelsWantedAfterCarLocate(d.cond->p);
+            if (!wms.empty() && !(c->bInVehicle && c->m_pVehicle && std::find(wms.begin(), wms.end(), (int)c->m_pVehicle->m_nModelIndex) != wms.end())) {
+                CVehicle* mcar = nullptr; float bd = 1.0e9f; for (const int wm : wms) if (auto* cand = NearestCarOfModel(c, wm, 1000.f)) { const float dd = (cand->GetPosition() - c->GetPosition()).Magnitude(); if (dd < bd) { bd = dd; mcar = cand; } }
+                if (mcar) { std::vector<std::string> acts; acts = EnterCarActions(mcar); acts.push_back("emit mdwveh:" + F(F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2))); notsa::standalone::Fixups::Log("[mdriver] inmodel2: CJ gets into a car of model %d first", (int)mcar->m_nModelIndex); QueueActions(acts, row.settle); return; }
+            }
+        }
         if (v == "pedwarp" && c && d.cond && (cop & 0x7FFF) == 0x00FE && ArgInt(*d.cond, 0) && CPools::GetPed((int)*ArgInt(*d.cond, 0)) == c && !std::getenv("NOTSA_MDRIVER_NOINMODEL")) { // CR39: the locate is followed by IS_CHAR_IN_MODEL(CJ, model): CJ gets into the nearest free car of that model first, then the car is put at the locate point
             const int wm = ModelWantedAfterLocate(d.cond->p); auto* mcar = wm >= 0 ? NearestCarOfModel(c, wm, 600.f) : nullptr;
             if (mcar) { std::vector<std::string> acts; if (!(c->bInVehicle && c->m_pVehicle == mcar)) acts = EnterCarActions(mcar); acts.push_back("emit mdwveh:" + F(F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2))); QueueActions(acts, row.settle); return; }
@@ -1573,7 +1593,7 @@ void TickGeneric() {
         me->physicalFlags.bInvulnerable = true;
         if (me->bInVehicle && me->m_pVehicle) me->m_pVehicle->physicalFlags.bInvulnerable = true;
     }
-    if (fr % 30 == 0 && std::getenv("NOTSA_MDRIVER_CJLOG")) if (auto* me9 = Cj()) notsa::standalone::Fixups::Log("[cjlog] frame %d hp %.0f pos %.1f %.1f %.1f veh=%d anim state %d inv=%d lastdmg ent=%d type=%d model=%d wpn=%d fire=%d", fr, (double)me9->m_fHealth, (double)me9->GetPosition().x, (double)me9->GetPosition().y, (double)me9->GetPosition().z, (int)me9->bInVehicle, (int)me9->m_nPedState, (int)me9->physicalFlags.bInvulnerable, me9->m_pLastEntityDamage ? 1 : 0, me9->m_pLastEntityDamage ? (int)me9->m_pLastEntityDamage->GetType() : -1, me9->m_pLastEntityDamage ? (int)me9->m_pLastEntityDamage->m_nModelIndex : -1, (int)me9->m_nLastWeaponDamage, (int)(me9->m_pFire != nullptr)); // CR49 debug
+    if (fr % 30 == 0 && std::getenv("NOTSA_MDRIVER_CJLOG")) if (auto* me9 = Cj()) notsa::standalone::Fixups::Log("[cjlog] frame %d hp %.0f pos %.1f %.1f %.1f veh=%d anim state %d inv=%d lastdmg ent=%d type=%d model=%d wpn=%d fire=%d vmodel=%d vhp=%.0f vinv=%d", fr, (double)me9->m_fHealth, (double)me9->GetPosition().x, (double)me9->GetPosition().y, (double)me9->GetPosition().z, (int)me9->bInVehicle, (int)me9->m_nPedState, (int)me9->physicalFlags.bInvulnerable, me9->m_pLastEntityDamage ? 1 : 0, me9->m_pLastEntityDamage ? (int)me9->m_pLastEntityDamage->GetType() : -1, me9->m_pLastEntityDamage ? (int)me9->m_pLastEntityDamage->m_nModelIndex : -1, (int)me9->m_nLastWeaponDamage, (int)(me9->m_pFire != nullptr), me9->bInVehicle && me9->m_pVehicle ? (int)me9->m_pVehicle->m_nModelIndex : -1, me9->bInVehicle && me9->m_pVehicle ? (double)me9->m_pVehicle->m_fHealth : -1.0, me9->bInVehicle && me9->m_pVehicle ? (int)me9->m_pVehicle->physicalFlags.bInvulnerable : -1); // CR49 debug
     if (fr % 30 == 0 && !std::getenv("NOTSA_MDRIVER_NOURGENT")) { // CR31 (26 ROBBING UNCLE SAM: army fire on the truck CJ sits in): the vehicle of CJ lost >= 45 health in each of 3 consecutive 30-frame windows = danger for 120 frames (shorter patience, CJ drives to the destination blip)
         auto* me2 = Cj(); auto* v2 = me2 && me2->bInVehicle ? me2->m_pVehicle : nullptr;
         if (!v2) { g_vhpVeh = nullptr; g_vhpPrev = -1; g_dropWin = 0; }
@@ -1669,6 +1689,16 @@ void TickGeneric() {
         }
         if (d.row == kr) break;
         }
+    }
+    if (d.act && d.row->action == "pedwarp" && g_attemptsAt[ipPtr] >= 1 && Cj() && !std::getenv("NOTSA_MDRIVER_NOINMODEL2")) { // CR49 (85 EXPLOSIVE SITUATION, crate stage: the pass also holds `LOCATE_CHAR_IN_CAR_3D CJ crate / IS_CHAR_IN_MODEL CJ 406 OR 486` and the on-foot locates answered first never move the script): a plain false LOCATE_CHAR_IN_CAR_3D of CJ whose condition group wants a car model CJ is not in is answered by the vehicle row (CJ gets into that car, the car goes to the crate)
+        const Row* vr = nullptr; int vri = -1; for (size_t i = 0; i < g_rows.size(); i++) if (g_rows[i].op == 0x0100 && g_rows[i].match == 1 && g_rows[i].action == "vehwarp") { vr = &g_rows[i]; vri = (int)i; break; }
+        if (vr) for (size_t k = g_recsBig.size(); k-- > 0;) { const auto& r = g_recsBig[k]; if (r->waitSeq < g_waitSeq - 3 || r->raw != 0x0100 || r->cond != 0) continue;
+            const auto h0 = ArgInt(*r, 0); if (!h0 || CPools::GetPed((int)*h0) != Cj()) continue;
+            const auto wms = ModelsWantedAfterCarLocate(r->p); if (wms.empty()) continue;
+            const auto a2 = ResolveArgs(*vr, *r); if (!a2 || a2->size() < 3) continue;
+            d.row = vr; d.rowIdx = vri; d.cond = r; d.args = *a2; d.op = 0x0100;
+            if (const auto rx = ArgFloat(*r, 4); rx && *rx >= 2.0 && !std::getenv("NOTSA_MDRIVER_NOEDGEWARP")) d.args[0].n += *rx * (std::getenv("NOTSA_MDRIVER_EDGEF") ? std::atof(std::getenv("NOTSA_MDRIVER_EDGEF")) : 0.75); /* the centre of a crate is inside its collision: the vehicle lands at the edge of the box */
+            break; }
     }
     if (d.act && d.row->action != "kill" && d.row->action != "wait" && g_attemptsAt[ipPtr] >= 1 && !std::getenv("NOTSA_MDRIVER_NOTIMERKILL")) { // CR48 (85 EXPLOSIVE SITUATION: the stage loop fails at `timer <= 1.8 s AND NOT IS_CHAR_DEAD(phone ped)`; the answers are warps to twelve locates, the timer runs out): a decreasing on-screen timer, the answer did not move the script and the retained passes (400 records, the narrow window misses it) hold a plain false IS_CHAR_DEAD(x) of a live non-buddy char: he dies (the stage fails when the timer ends)
         const auto& ck = CUserDisplay::OnscnTimer.m_Clock;

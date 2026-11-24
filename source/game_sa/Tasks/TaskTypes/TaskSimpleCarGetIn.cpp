@@ -44,8 +44,8 @@ CTaskSimpleCarGetIn::~CTaskSimpleCarGetIn() {
 void CTaskSimpleCarGetIn::FinishAnimCarGetInCB(CAnimBlendAssociation* anim, void* data) {
     const auto self = static_cast<CTaskSimpleCarGetIn*>(data);
     self->m_finished = true;
-    if (self->m_anim) { // 0x6467F0-0x646800: the finished anim's play time is pushed to -1000 (the exe does this only in this callback)
-        self->m_anim->m_CurrentTime = -1000.f;
+    if (self->m_anim) { // 0x646801: mov [ecx+0x1C], -1000.0f -> m_BlendDelta (instant blend-out), not m_CurrentTime (+0x20, see SetCurrentTime 0x4CEA8F)
+        self->m_anim->m_BlendDelta = -1000.f;
         self->m_anim = nullptr;
     }
 }

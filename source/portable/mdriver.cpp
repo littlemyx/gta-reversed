@@ -591,7 +591,7 @@ bool DropsObjectBehind(const Rec& r) { // CR47 (70 PUNCTURE WOUNDS: `IF IS_BUTTO
 bool ButtonGuard(const Rec& r) { // CR24 (10 BEEFY BARON): a plain IS_BUTTON_PRESSED whose true branch ends in the mission's failure (directly or through a fail flag) is a guard: the driver never presses that button (here: the RC plane's self-destruct after 4 s of hovering; the mission is passed by surviving the timer)
     if ((r.raw & 0x7FFF) != 0x00E1 || (r.raw & 0x8000) || !g_thread || std::getenv("NOTSA_MDRIVER_NOBUTTONGUARD")) return false;
     if (!r.hasBranch || !r.fall) return false;
-    bool skipSeen = false; int hops = 0;
+    bool skipSeen = false; int hops = 0, relSteps = 0;
     for (const uint8_t* p = r.fall; InSpace(p);) { // the true branch only: the straight-line commands up to the first wait / branch / call / return; a print of M_FAIL on it = the press fails the mission (10: self-destruct). VerdictOf walked through the following conditions and flagged 46's passing press too
         const int op = *(const uint16_t*)p & 0x7FFF;
         if (op == 0x040D || op == 0x0729) skipSeen = true; // CR36 (45 KING IN EXILE): CLEAR_MISSION_AUDIO / TASK_USE_MOBILE_PHONE (put the phone away) on the way
@@ -601,9 +601,27 @@ bool ButtonGuard(const Rec& r) { // CR24 (10 BEEFY BARON): a plain IS_BUTTON_PRE
         if (op == 0x0050 && !(hops > 0 && skipSeen) && !std::getenv("NOTSA_MDRIVER_NOEXITBUTTON")) { // CR46 (71 BACK TO SCHOOL: `IF IS_BUTTON_PRESSED pad 15` = leave the school: GOSUB hud, DO_FADE t,0, ... cleanup): a GOSUB of the true branch is stepped over; a fade-out on the way = an exit button
             const uint8_t* q = p + 2; bool mf = false, isI = false; int32_t iv = 0; const uint8_t* nx = SkipOperand(q, mf, isI, iv); if (!nx) return false; p = nx; continue; }
         if (op == 0x016A && !std::getenv("NOTSA_MDRIVER_NOEXITBUTTON")) { const uint8_t* q = p + 2; bool mf = false, isI = false; int32_t iv = 0; const uint8_t* n1 = SkipOperand(q, mf, isI, iv); if (!n1) return false; bool mf2 = false, i2 = false; int32_t v2 = 1; const uint8_t* n2 = SkipOperand(n1, mf2, i2, v2); if (!n2) return false; if (*n1 == 4) { i2 = true; v2 = *(const int8_t*)(n1 + 1); } else if (*n1 == 5) { i2 = true; v2 = *(const int16_t*)(n1 + 1); } if (i2 && v2 == 0) return true; p = n2; continue; }
+        if (*(const uint16_t*)p == 0x80E1 && hops == 0 && !std::getenv("NOTSA_MDRIVER_NORELEASEBUTTON")) return true; // CR58 (122..127 sub-missions: `IF IS_BUTTON_PRESSED pad 19 / @53 = 1 / ... IF NOT IS_BUTTON_PRESSED pad 19 / PRINT A_CANC`: the press-and-release of the cancel button): a true branch that waits for the RELEASE of a button ends the mission
+        if ((op == 0x00D6 || op == 0x004D) && hops == 0 && ++relSteps <= 8 && !std::getenv("NOTSA_MDRIVER_NORELEASEBUTTON")) { const uint8_t* q = p + 2; bool mf = false, isI = false; int32_t iv = 0; const uint8_t* nx = SkipOperand(q, mf, isI, iv); if (!nx) return false; p = nx; continue; } // CR58: step over the flag test of the release poll
         if (op == 0x0001 || op == 0x0051 || op == 0x004D || op == 0x0050 || op == 0x00D6 || op == 0x0002) return hops > 0 && skipSeen && !std::getenv("NOTSA_MDRIVER_NOSKIPBUTTON"); // CR36 (45 KING IN EXILE: `IF IS_BUTTON_PRESSED pad 15` of the phone call stage: the true branch silences the mission audio, puts the phone away and jumps to the cleanup = the 'hang up' button; the call ends by itself and passes, the press ended the mission thread without a pass): a skip / hang-up button is no answer
         const uint8_t* q = p + 2; bool mf = false, isI = false; int32_t iv = 0; const int want = Arity(op); int count = 0;
         for (;;) { if (want >= 0 && count >= want) break; if (!InSpace(q)) return false; const uint8_t* nx = SkipOperand(q, mf, isI, iv); if (!nx) break; if (mf && op >= 0x00BA && op <= 0x00BD) return true; q = nx; count++; }
+        p = q;
+    }
+    return false;
+}
+bool PrintsFailText(const Rec& r) { // CR58 (122 PARAMEDIC: `IF IS_CHAR_DEAD @77 / PRINT_NOW A_FAIL3 / @79 = 1`): the true branch prints a text label that contains FAIL within its first commands: the death fails the level, the timer-kill never answers it
+    if (!r.hasBranch || !r.fall || std::getenv("NOTSA_MDRIVER_NOFAILTEXT")) return false;
+    const uint8_t* p = r.fall;
+    for (int n = 0; n < 4 && InSpace(p); n++) {
+        const int op = *(const uint16_t*)p & 0x7FFF;
+        if (op == 0x0002 || op == 0x004D || op == 0x00D6 || op == 0x0001 || op == 0x0050 || op == 0x0051) return false;
+        const uint8_t* q = p + 2; bool mf = false, isI = false; int32_t iv = 0; const int want = Arity(op); int count = 0;
+        for (;;) {
+            if (want >= 0 && count >= want) break; if (!InSpace(q)) return false;
+            if (op >= 0x00BA && op <= 0x00BD && *q == 9) { char t[9]{}; std::memcpy(t, q + 1, 8); if (std::strstr(t, "FAIL")) return true; }
+            const uint8_t* nx = SkipOperand(q, mf, isI, iv); if (!nx) break; q = nx; count++;
+        }
         p = q;
     }
     return false;
@@ -1925,7 +1943,7 @@ void TickGeneric() {
             if (kr) for (size_t k = tk.size(); k-- > 0;) {
                 const auto& r = tk[k]; if (r->raw != 0x0118 || r->cond != 0) continue;
                 const auto a2 = ResolveArgs(*kr, *r); if (!a2 || a2->empty()) continue;
-                const int h = (int)(*a2)[0].n; auto* pp = CPools::GetPed(h); if (!pp || pp == Cj() || pp->m_fHealth <= 0.f || ProtectedHandle(h) || GuardedOf(false).count(h)) continue;
+                const int h = (int)(*a2)[0].n; auto* pp = CPools::GetPed(h); if (!pp || pp == Cj() || pp->m_fHealth <= 0.f || ProtectedHandle(h) || GuardedOf(false).count(h) || PrintsFailText(*r)) continue;
                 notsa::standalone::Fixups::Log("[mdriver] timerkill frame %d: a countdown runs, ped %d: plain IS_CHAR_DEAD is false", fr, h);
                 d.row = kr; d.rowIdx = kri; d.cond = r; d.args = *a2; d.op = 0x0118; break; }
         }

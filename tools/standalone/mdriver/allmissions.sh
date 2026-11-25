@@ -46,7 +46,14 @@ for IDX in $LIST; do
   # AD4 launch context (TS launch.ts): 36/48 CESAR1 in a car (492), 132 MTBIKER (510), 133 STUNT (481): CJ at the wheel; 71 DSKOOL: area 4
   LAUNCHPOST=""; LAUNCH="# no launch context"; case "$IDX" in 36|48) [ -z "${NOLAUNCH:-}" ] && LAUNCH=$'cmd:mdlaunch:492\nwait:400';; 132) LAUNCH=$'cmd:mdlaunch:510\nwait:400';; 133) LAUNCH=$'cmd:mdlaunch:481\nwait:400';; 71) LAUNCH=$'cmd:mdarea:4\nwait:100';;
     # CR58: side missions whose script exits when CJ is not in its interior / vehicle (launch contexts)
+    121) LAUNCH=$'cmd:mdlaunch:420
+wait:400';; 122) LAUNCH=$'cmd:mdlaunch:416
+wait:400';; 123) LAUNCH=$'cmd:mdlaunch:407
+wait:400';; 124) LAUNCH=$'cmd:mdlaunch:596
+wait:400';; 127) LAUNCH=$'cmd:mdlaunch:575
+wait:400';;
     114) LAUNCHPOST=$'cmd:mdarea:5';; 115) LAUNCHPOST=$'cmd:mdarea:6';; 116) LAUNCHPOST=$'cmd:mdarea:7';; esac
+  [ -n "${XPRE:-}" ] && LAUNCH=$(printf '%b' "$XPRE"); [ -n "${XPOST:-}" ] && LAUNCHPOST=$(printf '%b' "$XPOST") # CR58: experiments: XPRE / XPOST = route lines before / after the mission start (\n separated)
   printf '%s\n%s\nmission:%s\n%s\nwait:3600000\ncmd:quit\n' "$HEAD" "$LAUNCH" "$IDX" "${LAUNCHPOST:-# no post-start launch context}" > "$W/route.in"; expand "$W/route.in" > "$W/route.txt"
   own_kill_in_dir gta_reversed "$DATA"
   rm -rf "$UD"/* logs standalone*.log; rm -f gta_reversed.exe; cp "$EXE" gta_reversed.exe

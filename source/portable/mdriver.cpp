@@ -1026,6 +1026,21 @@ int ModelWantedAfterLocate(const uint8_t* p) {
     }
     return -1;
 }
+// CR52 (85 EXPLOSIVE SITUATION, the crate's `LOCATE_CHAR_ANY_MEANS_3D CJ crate 1.5 m` / `@80 = 0` / `IS_CHAR_IN_MODEL CJ 406 OR IS_CHAR_IN_MODEL CJ 486 -> @80 = 1` / `IF @80 == 0 -> the crate breaks`): the model test is used negated through a flag: the locate is answered with CJ on foot (in no such car)
+bool NegatedModelFlagAfterLocate(const uint8_t* p) {
+    if (!p || !InSpace(p) || (*(const uint16_t*)p & 0x7FFF) != 0x00FE) return false;
+    const uint8_t* q = p; uint32_t f0 = 0; bool haveF = false, seenModel = false, set1 = false;
+    for (int k = 0; k < 14 && q && InSpace(q); k++) {
+        const int op = *(const uint16_t*)q & 0x7FFF; const uint8_t* ops[3]{}; int cnt = 0; const uint8_t* e = CmdOps(q, ops, cnt); if (!e) return false;
+        if (k > 0 && (op == 0x00FE || op == 0x0002)) return false;
+        uint32_t v = 0; int32_t n = 0;
+        if (op == 0x0006 && cnt >= 2 && ops[0] && ops[1] && OperandVar(ops[0], v) && OperandInt(ops[1], n)) { if (n == 0 && !haveF) { f0 = v; haveF = true; } else if (n == 1 && haveF && v == f0 && seenModel) set1 = true; }
+        else if (op == 0x00DD) seenModel = true;
+        else if (op == 0x0039 && cnt >= 2 && ops[0] && ops[1] && OperandVar(ops[0], v) && OperandInt(ops[1], n) && haveF && v == f0 && n == 0 && set1) return true;
+        q = e;
+    }
+    return false;
+}
 // CR49 (85 EXPLOSIVE SITUATION: `LOCATE_CHAR_IN_CAR_3D CJ crate / .. / IS_CHAR_IN_MODEL CJ 406 OR IS_CHAR_IN_MODEL CJ 486`: the crates are smashed with a Dumper / Dozer): every model of an IS_CHAR_IN_MODEL (00DD) within 14 commands after the LOCATE_CHAR_IN_CAR_3D (0100) at p
 std::vector<int> ModelsWantedAfterCarLocate(const uint8_t* p) {
     std::vector<int> out; if (!p || !InSpace(p) || (*(const uint16_t*)p & 0x7FFF) != 0x0100) return out;
@@ -1196,7 +1211,8 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         if (v == "pedwarp" && c && c->bInVehicle) { // CR10: actions.ts pedwarp on an ON_FOOT locate while CJ is in a vehicle: get out first (Enter, up to 300 frames; getOnFoot), then warp him (mission 77: 8x mdwveh on LOCATE_CHAR_ON_FOOT_3D)
             static const std::set<int> onFoot = { 0xE4, 0xE7, 0xEA, 0xED, 0xF0, 0xF3, 0xF6, 0xF9, 0xFC, 0xFF, 0x102, 0x105, 0x197, 0x19A, 0x19C, 0x19F, 0x1A1, 0x1A4, 0x1A6, 0x1A9, 0x1FD, 0x200, 0x203, 0x206, 0x27C, 0x27F, 0x282, 0x285, 0x288 };
             bool notInCarSib = false; if (!onFoot.count(cop & 0x7FFF) && d.cond && !std::getenv("NOTSA_MDRIVER_NONOTINCARSIB")) for (auto& r : g_recsBig) if (r->raw == 0x80DF && r->fall == d.cond->fall && r->waitSeq >= g_waitSeq - 3 && ArgInt(*r, 0) && CPools::GetPed((int)*ArgInt(*r, 0)) == c) { notInCarSib = true; break; } // CR42 (61 ICE COLD KILLA: the pickup stage is `locate CJ 1.2 m AND NOT IS_CHAR_IN_ANY_CAR CJ` of one condition group; the answer warped CJ with his car, the car rolled down the slope and burned): the locate is answered on foot like an ON_FOOT locate
-            if (onFoot.count(cop & 0x7FFF) || notInCarSib) { QueueActions({ "key down return", "wait 1", "key up return", "waituntil invehicle == 0 300", "emit mdwveh:" + F(F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) }, row.settle); return; } // CR11: after a 300-frame timeout CJ may still be in the vehicle: TS warp() then moves the CAR; mdwveh does that (ped warp when he is out)
+            const bool negModel = (cop & 0x7FFF) == 0x00FE && d.cond && !std::getenv("NOTSA_MDRIVER_NONEGMODEL") && NegatedModelFlagAfterLocate(d.cond->p); // CR52
+            if (onFoot.count(cop & 0x7FFF) || notInCarSib || negModel) { QueueActions({ "key down return", "wait 1", "key up return", "waituntil invehicle == 0 300", "emit mdwveh:" + F(F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) }, row.settle); return; } // CR11: after a 300-frame timeout CJ may still be in the vehicle: TS warp() then moves the CAR; mdwveh does that (ped warp when he is out)
         }
         one(warp(F_(0), F_(1), F_(2), v == "vehwarp")); return;
     }

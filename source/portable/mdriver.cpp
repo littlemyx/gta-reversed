@@ -2212,6 +2212,15 @@ bool Cmd(const char* name, const std::string& args) {
     if (!ped) return true;
     if (!std::strcmp(name, "mdskipcut")) { if (CCutsceneMgr::IsCutsceneProcessing()) CCutsceneMgr::SkipCutscene(); return true; }
     if (!std::strcmp(name, "mdarea")) { const int ar = std::atoi(args.c_str()); CGame::currArea = (eAreaCodes)ar; ped->SetAreaCode((eAreaCodes)ar); CEntryExitManager::SetAreaCodeForVisibleObjects(); notsa::standalone::Fixups::Log("[mdriver] mdarea %d: ped area now %d", ar, (int)ped->GetAreaCode()); return true; } // launch.ts LAUNCH_AREA
+    if (!std::strcmp(name, "mdtrain")) { // CR58 (126 FREIGHT TRAIN: the script needs CJ in a train): `mdtrain:cfg:x:y:z:dir` creates a mission train like CREATE_MISSION_TRAIN (0x06D8) and CJ drives its engine
+        float w[5]{}; std::sscanf(args.c_str(), "%f:%f:%f:%f:%f", w, w + 1, w + 2, w + 3, w + 4);
+        CStreaming::LoadScene(CVector{ w[1], w[2], w[3] }); CStreaming::LoadSceneCollision(CVector{ w[1], w[2], w[3] });
+        for (const int mid : { 537, 538, 569, 570, 590 }) CStreaming::RequestModel(mid, STREAMING_GAME_REQUIRED); CStreaming::LoadAllRequestedModels(false);
+        CTrain* first = nullptr; CTrain::CreateMissionTrain(CVector{ w[1], w[2], w[3] }, w[4] != 0.f, (uint32)w[0], &first, nullptr, -1, -1, true);
+        notsa::standalone::Fixups::Log("[mdriver] mdtrain cfg %d at %.1f,%.1f,%.1f -> first %p model %d", (int)w[0], (double)w[1], (double)w[2], (double)w[3], (void*)first, first ? (int)first->m_nModelIndex : -1);
+        if (first) { CTaskSimpleCarSetPedInAsDriver t(first, true, nullptr); t.ProcessPed(ped); }
+        return true;
+    }
     if (!std::strcmp(name, "mdlaunch")) { // launch.ts LAUNCH_VEHICLE: CJ at the wheel of a car of this model (the main script starts these missions with him in one)
         const int model = std::atoi(args.c_str());
         CStreaming::RequestModel(model, STREAMING_GAME_REQUIRED); CStreaming::LoadAllRequestedModels(false);

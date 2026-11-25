@@ -512,6 +512,20 @@ std::map<uint32_t, int> g_objHealthVars; // CR37: destination variable of GET_OB
 std::map<uint32_t, int> g_healthVars; // CR35: destination variable of GET_CHAR_HEALTH -> the char handle read (a later `N > var` wait = the char is hurt below N)
 std::map<uint32_t, std::pair<int, bool>> g_headVars; // CR54: destination variable of GET_CHAR_HEADING (0172) / GET_CAR_HEADING (0174) -> (handle, is a car): a later heading window test on CJ's vehicle = face the window
 std::map<uint32_t, int> g_speedVars; // CR34: destination variable of GET_CAR_SPEED -> the car handle read (a later `var > N` wait = the car goes faster than N)
+static int g_cbRef = -1, g_cbUntil = 0; // CR56: the ped CHASEBAND keeps CJ behind (handle) and the frame until which that holds
+struct StealthBox { bool v = false; float c[3]{}, r[3]{}; } g_stBox; // CR56: the locate / area box of the last on-foot warp answer (centre, half extents; r <= 0: unbounded on that axis), consumed by the next mdwped of CJ on foot
+// CR56 (100 UP UP AND AWAY, 96 ARCHITECTURAL ESPIONAGE: stealth stages, the box-centre warp landed on the sentry the script creates there and the alarm / the fail followed): a warp of CJ on foot is not made onto a spot that is within 8 m of a living script-made ped that is not a buddy (not liked by CJ's side, not in his group), or inside the sight cone (65 deg half angle, 45 m, 15 m up / down) of one: it is made to the nearest spot of the same box (rings of 4 m, 16 angles) that has neither. NOTSA_MDRIVER_NOSTEALTHWARP=1 off.
+bool StealthDanger(CPed* me, float x, float y, float z, bool coneToo = true) {
+    for (auto& p : GetPedPool()->GetAllValid()) {
+        if (&p == me || p.m_fHealth <= 0.f || !p.IsCreatedByMission() || p.bInVehicle || (int)p.m_nPedType <= 3 || LikesSide((int)p.m_nPedType) || (FindPlayerPed() && FindPlayerPed()->GetPlayerGroup().GetMembership().IsMember(&p))) continue;
+        const CVector pp = p.GetPosition(); const float dx = x - pp.x, dy = y - pp.y, dd = std::hypot(dx, dy);
+        if (dd < 8.f && std::fabs(z - pp.z) < 15.f) return true;
+        if (!coneToo || dd >= 45.f || std::fabs(z - pp.z) > 15.f) continue;
+        const CVector fw = p.GetForward(); const float fl = std::hypot(fw.x, fw.y); if (fl < 1e-3f) continue;
+        if ((dx * fw.x + dy * fw.y) / (dd * fl) > 0.42f) return true;
+    }
+    return false;
+}
 struct FollowHold { int tgt = -1; CVector off; int left = 0; } g_follow; // CR47 (76 HIGHJACK: the stage wants the bike inside a 3 x 4 m box behind the moving truck for 3.5 s): CJ's vehicle keeps its place relative to a moving vehicle for `left` frames
 struct AirHold { int h = -1; float z = 0.f; int left = 0; float vx = 0.f, vy = 0.f; } g_airHold; // CR49 (91 FREEFALL: the Dodo warped to the plane that flies 200 m up fell into the sea): an aircraft the driver warped into the air keeps its altitude (vertical speed zeroed, z reset) for `left` frames
 struct SpeedHold { int h = -1; float mps = 0.f; int left = 0; } g_speedHold; // CR34: the car kept at that speed (m/s) along its heading for `left` more frames
@@ -1254,6 +1268,10 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
             const bool negModel = (cop & 0x7FFF) == 0x00FE && d.cond && !std::getenv("NOTSA_MDRIVER_NONEGMODEL") && NegatedModelFlagAfterLocate(d.cond->p); // CR52
             if (onFoot.count(cop & 0x7FFF) || notInCarSib || negModel) { QueueActions({ "key down return", "wait 1", "key up return", "waituntil invehicle == 0 300", "emit mdwveh:" + F(F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) }, row.settle); return; } // CR11: after a 300-frame timeout CJ may still be in the vehicle: TS warp() then moves the CAR; mdwveh does that (ped warp when he is out)
         }
+        if (v == "pedwarp" && c && !c->bInVehicle && d.cond && d.args.size() >= 3 && !std::getenv("NOTSA_MDRIVER_NOSTEALTHWARP")) { // CR56: the half extents of the located box (handle x y z rx ry rz [flag] (3D), handle x y rx ry [flag] (2D)), for the stealth spot search at the warp
+            const size_t na = d.cond->args.size(); const auto a = [&](size_t i) { const auto q = ArgFloat(*d.cond, i); return q ? (float)std::fabs(*q) : 0.f; };
+            if (na >= 7) g_stBox = { true, { F_(0), F_(1), F_(2) }, { a(4), a(5), a(6) } }; else if (na >= 5) g_stBox = { true, { F_(0), F_(1), F_(2) }, { a(3), a(4), 0.f } };
+        }
         one(warp(F_(0), F_(1), F_(2), v == "vehwarp")); return;
     }
     if (v == "joingroup") {
@@ -1304,6 +1322,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
             CVehicle* best = nullptr; float bd = 20.f; for (auto& vv : GetVehiclePool()->GetAllValid()) { if (&vv == c->m_pVehicle || vv.m_fHealth <= 0.f || vv.m_vecMoveSpeed.Magnitude() * 50.f < 3.f) continue; const float dd = std::hypot(vv.GetPosition().x - x, vv.GetPosition().y - y); if (dd < bd) { bd = dd; best = &vv; } }
             if (best) { QueueActions({ warp(x, y, z, false), "emit mdfollow:" + std::to_string(GetVehiclePool()->GetRef(best)) + ":200" }, row.settle); return; }
         }
+        if (c && !c->bInVehicle && d.args.size() == 6 && !(cop >= 0x05F6 && cop <= 0x0601) && !std::getenv("NOTSA_MDRIVER_NOSTEALTHWARP")) g_stBox = { true, { x, y, z }, { std::fabs(F_(3) - F_(0)) / 2.f, std::fabs(F_(4) - F_(1)) / 2.f, std::fabs(F_(5) - F_(2)) / 2.f } }; // CR56: stealth spot search inside the area
         one(warp(x, y, z, false)); return;
     }
     if (v == "entercar" || v == "nearest_car") {
@@ -1385,6 +1404,8 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     if (v == "warpto_handle") {
         const int h = I_(0); CEntity* e = EntityOfHandle(h, cop);
         if (!e) { QueueActions({}, 0); return; }
+        if (e->GetIsTypePed() && e != (CEntity*)c && g_cbRef >= 0 && h != g_cbRef && GFrame() < g_cbUntil && std::getenv("NOTSA_MDRIVER_CHASEBAND") && !std::getenv("NOTSA_MDRIVER_NOCBHOLD")) { // CR56 (99 COP WHEELS: CHASEBAND keeps CJ behind the target's car; the other `near ped` locates of the stage (other cars of the convoy) were answered by warps onto THEIR cars every 210 frames, 20 km from the target): while the band holds, a warp onto another ped is not made
+            notsa::standalone::Fixups::Log("[mdriver] cbhold: the chase of ped %d holds, the answer for ped %d is not made", g_cbRef, h); { static std::map<std::string, int> s_cbk; const auto key = std::to_string(g_stopIp) + ":" + std::to_string(d.rowIdx) + ":" + RKey(d.args); if (++s_cbk[key] <= 200) --g_noProgress[key]; } QueueActions({}, row.settle); return; }
         if (d.cond && e->GetIsTypePed() && e != (CEntity*)c && !std::getenv("NOTSA_MDRIVER_NOPINGPONG") && !std::getenv("NOTSA_MDRIVER_NOPINGPONGPED")) { // CR54 (97 KEY TO HER HEART, the flat: `locate CJ within 3 m of ped A` and, 40 bytes later, `locate CJ within 3 m of ped B` (two talk triggers 15 m apart, the stage's real exit is a locate further on): each answer undid the other, A B A B for 10000 frames): the CR53 ping-pong rule for warps onto a PED handle: an answer that comes back after one other ped target (A B A) is dropped when its condition stands earlier in the script than the other one's
             struct PH { int h; const void* ip; }; static std::vector<PH> s_ph; static std::set<int> s_hd; const void* ipc = (const void*)d.cond->p; const size_t n = s_ph.size();
             if (s_hd.count(h)) { QueueActions({}, row.settle); return; }
@@ -1744,7 +1765,7 @@ void TickGeneric() {
     }
     if (fr % 15 == 0 && std::getenv("NOTSA_MDRIVER_CHASEBAND")) { // CR54, opt-in NOTSA_MDRIVER_CHASEBAND=1 (94 HIGH NOON: `LOCATE_CHAR_ANY_MEANS_CHAR_2D CJ driver 200` false for 8 s = `the target got away`; the answers come once per 660 frames and the car drives 40 km/h away between them): the leash of a chase: a plain `CJ near ped X` locate (R >= 25) of a living ped X in a moving vehicle: CJ is put R/3 behind X's car whenever he is farther than 0.6 R
         auto* me12 = Cj(); if (me12 && me12->m_fHealth > 0.f) for (auto& r : g_recsBig) { const int rop = r->raw & 0x7FFF; if (r->waitSeq < g_waitSeq - 3 || (r->raw & 0x8000) || !((rop >= 0x00F2 && rop <= 0x00F4) || (rop >= 0x0104 && rop <= 0x0106))) continue; const auto h0 = ArgInt(*r, 0), h1 = ArgInt(*r, 1), rr = ArgFloat(*r, 2); if (!h0 || !h1 || !rr || *rr < 25.0 || (CEntity*)CPools::GetPed((int)*h0) != (CEntity*)me12) continue;
-            auto* x = CPools::GetPed((int)*h1); if (!x || x == me12 || x->m_fHealth <= 0.f || !x->bInVehicle || !x->m_pVehicle || x->m_pVehicle->m_vecMoveSpeed.Magnitude() * 50.f < 3.f || (me12->bInVehicle && me12->m_pVehicle == x->m_pVehicle)) continue; const float dist = (x->GetPosition() - me12->GetPosition()).Magnitude2D(); if (dist <= 0.6f * (float)*rr) break;
+            auto* x = CPools::GetPed((int)*h1); if (!x || x == me12 || x->m_fHealth <= 0.f || !x->bInVehicle || !x->m_pVehicle || x->m_pVehicle->m_vecMoveSpeed.Magnitude() * 50.f < 3.f || (me12->bInVehicle && me12->m_pVehicle == x->m_pVehicle)) continue; const float dist = (x->GetPosition() - me12->GetPosition()).Magnitude2D(); g_cbRef = (int)*h1; g_cbUntil = fr + 150; /* CR56: the chase target; warps of other `near ped` answers wait */ if (dist <= 0.6f * (float)*rr) break;
             CVector dir = x->m_pVehicle->m_vecMoveSpeed; dir.z = 0.f; dir.Normalise(); const CVector q = x->GetPosition() - dir * ((float)*rr / 3.f); static int s_cbN = 0; notsa::standalone::Fixups::Log("[mdriver] chaseband frame %d: CJ is %.0f m from ped %d (R %.0f): put %.0f m behind its car at %.1f %.1f (%d)", fr, dist, (int)*h1, *rr, *rr / 3.0, q.x, q.y, ++s_cbN);
             if (me12->bInVehicle) Emit("mdwveh:" + F(q.x) + ":" + F(q.y) + ":-100:0:0:0:" + F(std::atan2(-dir.x, dir.y))); else Emit("mdwped:" + F(q.x) + ":" + F(q.y) + ":-100"); break; }
     }
@@ -2173,6 +2194,23 @@ bool Cmd(const char* name, const std::string& args) {
         if (!std::strcmp(name, "mdwveh")) { if (ped->bInVehicle && ped->m_pVehicle) tgt = ped->m_pVehicle; else isPed = true; } // CR3: mdwveh = warp the CAR the player is in; tgt stayed the PED and was static_cast to CVehicle (NaN player position -> script wanted 4 + cop flood, missions 24/25/27-31/67/80 crash)
         if (!std::strcmp(name, "mdwother")) { const int kind = std::atoi(rest.c_str()); rest = rest.substr(rest.find(':') + 1); const int h = std::atoi(rest.c_str()); rest = rest.substr(rest.find(':') + 1); isPed = kind == 0; tgt = isPed ? (CEntity*)CPools::GetPed(h) : (CEntity*)CPools::GetVehicle(h); if (!tgt) return true; }
         float w[7]{}; const int nw = std::sscanf(rest.c_str(), "%f:%f:%f:%f:%f:%f:%f", w, w + 1, w + 2, w + 3, w + 4, w + 5, w + 6); // CR35: optional 4..7: the speed (x:y:z, units/frame) and heading the car keeps after the warp (a car that joins a moving train goes on alongside it)
+        if (std::getenv("NOTSA_MDRIVER_STLOG") && isPed && tgt == ped) for (auto& p : GetPedPool()->GetAllValid()) if (&p != ped && (p.GetPosition() - CVector{ w[0], w[1], p.GetPosition().z }).Magnitude2D() < 80.f) notsa::standalone::Fixups::Log("[stlog] ped h=%d model=%d type=%d hp=%.0f mission=%d veh=%d likes=%d d=%.1f box=%d", CPools::GetPedRef(&p), (int)p.m_nModelIndex, (int)p.m_nPedType, p.m_fHealth, (int)p.IsCreatedByMission(), (int)p.bInVehicle, (int)LikesSide((int)p.m_nPedType), (double)(p.GetPosition() - CVector{ w[0], w[1], p.GetPosition().z }).Magnitude2D(), (int)g_stBox.v); // CR56 debug
+        if (g_stBox.v) { const StealthBox sb = g_stBox; g_stBox.v = false; // CR56
+            // CR56 (100: `LOCATE_CHAR_ANY_MEANS_3D CJ centre 200 200 200` gates the creation of the base; the script creates the gate sentry AT the centre when CJ arrives, so a centre warp lands on it): a locate box with half extents >= 100 m on both axes is an approach test, any spot of it will do: CJ is put 0.6 R from the centre on the side he comes from (NOTSA_MDRIVER_NOBIGBOXEDGE=1 off)
+            if (isPed && tgt == ped && !ped->bInVehicle && sb.r[0] >= 100.f && sb.r[1] >= 100.f && std::fabs(w[0] - sb.c[0]) < 0.05f && std::fabs(w[1] - sb.c[1]) < 0.05f && !std::getenv("NOTSA_MDRIVER_NOBIGBOXEDGE") && !std::getenv("NOTSA_MDRIVER_NOSTEALTHWARP")) {
+                const CVector cp = ped->GetPosition(); float ex = cp.x - sb.c[0], ey = cp.y - sb.c[1]; const float el = std::hypot(ex, ey); if (el > 1.f) { ex /= el; ey /= el; const float rr = 0.6f * std::min(sb.r[0], sb.r[1]); notsa::standalone::Fixups::Log("[mdriver] bigboxedge: the box (half extents %.0f x %.0f) is an approach test: CJ lands %.0f m from its centre", (double)sb.r[0], (double)sb.r[1], (double)rr); w[0] = sb.c[0] + ex * rr; w[1] = sb.c[1] + ey * rr; w[2] = -100.f; } }
+            if (isPed && tgt == ped && !ped->bInVehicle && std::fabs(w[0] - sb.c[0]) < 0.05f && std::fabs(w[1] - sb.c[1]) < 0.05f && !std::getenv("NOTSA_MDRIVER_NOSTEALTHWARP") && StealthDanger(ped, w[0], w[1], w[2] <= -100.f ? sb.c[2] : w[2])) {
+                const float rmax = std::min(150.f, 0.9f * std::max(sb.r[0] > 0.f ? sb.r[0] : 150.f, sb.r[1] > 0.f ? sb.r[1] : 150.f)); bool done = false; int loads = 0;
+                for (float rr = 4.f; rr <= rmax && !done && loads < 8; rr += 4.f) for (int k = 0; k < 16 && !done && loads < 8; k++) {
+                    const float a = k * 6.2831853f / 16.f, qx = sb.c[0] + rr * std::cos(a), qy = sb.c[1] + rr * std::sin(a);
+                    if ((sb.r[0] > 0.f && std::fabs(qx - sb.c[0]) > 0.9f * sb.r[0]) || (sb.r[1] > 0.f && std::fabs(qy - sb.c[1]) > 0.9f * sb.r[1])) continue;
+                    if (StealthDanger(ped, qx, qy, sb.c[2])) continue;
+                    CStreaming::LoadScene(CVector{ qx, qy, 0.f }); CStreaming::LoadSceneCollision(CVector{ qx, qy, 0.f }); loads++;
+                    const float qz = CWorld::FindGroundZForCoord(qx, qy); if (qz < -50.f || (sb.r[2] > 0.f && std::fabs(qz - sb.c[2]) > 0.9f * sb.r[2])) continue;
+                    notsa::standalone::Fixups::Log("[mdriver] stealthwarp: the box centre %.1f,%.1f is within 8 m / in the sight of a script ped: CJ lands at %.1f,%.1f instead", (double)w[0], (double)w[1], (double)qx, (double)qy);
+                    w[0] = qx; w[1] = qy; w[2] = -100.f; done = true; }
+                if (!done) notsa::standalone::Fixups::Log("[mdriver] stealthwarp: no safe spot in the box, the centre is used");
+            } }
         CStreaming::LoadScene(CVector{ w[0], w[1], 0.f }); CStreaming::LoadSceneCollision(CVector{ w[0], w[1], 0.f });
         float gz = w[2] <= -100.f ? CWorld::FindGroundZForCoord(w[0], w[1]) : w[2];
         if (w[2] <= -100.f && tgt == ped && !ped->bInVehicle && ped->GetPosition().z > 800.f && CGame::currArea != 0 && std::hypot(w[0] - ped->GetPosition().x, w[1] - ped->GetPosition().y) < 80.f && !std::getenv("NOTSA_MDRIVER_NOINTERIORZ")) { // CR53 (90 THE MEAT BUSINESS: the abattoir's `IS_CHAR_IN_AREA_2D` boxes are 2D, the interior lies at z 1000+ over the same x,y; the ground warp put CJ on the street outside, the interior peds were not processed and never died): a ground warp inside an interior stays on the interior floor

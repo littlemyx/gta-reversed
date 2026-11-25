@@ -1403,6 +1403,13 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
                 }
             }
         }
+        if (c && !c->bInVehicle && e->GetIsTypePed() && static_cast<CPed*>(e)->bInVehicle && static_cast<CPed*>(e)->m_pVehicle && !std::getenv("NOTSA_MDRIVER_NOFOOTBESIDE")) { // CR53 (97 KEY TO HER HEART: `locate CJ near the passenger of the escorted car`; the +0.5 m warp put CJ into the car and the stage's `CJ touching the car` fail fired 3 frames later): CJ on foot goes to the clear spot beside the ped's vehicle (door side, then the other side, behind, ahead)
+            auto* tv = static_cast<CPed*>(e)->m_pVehicle; if (auto* tcm = tv->GetColModel()) {
+                const auto tb = tcm->GetBoundingBox(); const float tl = (tb.m_vecMax.y - tb.m_vecMin.y) * 0.5f, tw = (tb.m_vecMax.x - tb.m_vecMin.x) * 0.5f; const CVector fw = tv->GetForward(), rt = tv->GetRight(), vp = tv->GetPosition();
+                const CVector cand[8] = { vp + rt * (tw + 1.2f), vp - rt * (tw + 1.2f), vp - fw * (tl + 1.2f), vp + fw * (tl + 1.2f), vp + rt * (tw + 2.5f), vp - rt * (tw + 2.5f), vp - fw * (tl + 2.5f), vp + fw * (tl + 2.5f) };
+                for (const auto& q0 : cand) { CVector q = q0; q.z = pos.z; if (CWorld::TestSphereAgainstWorld(CVector{ q.x, q.y, q.z + 0.2f }, 0.9f, c, false, true, false, true, false, false)) continue; notsa::standalone::Fixups::Log("[mdriver] warpto_handle: CJ on foot beside the vehicle of ped %d -> (%.2f,%.2f)", h, q.x, q.y); one(warp(q.x, q.y, q.z, false)); return; }
+            }
+        }
         notsa::standalone::Fixups::Log("[mdriver] warpto_handle: no clear spot, +0.5 m");
         one(warp(pos.x + 0.5f, pos.y, pos.z, false)); return;
     }

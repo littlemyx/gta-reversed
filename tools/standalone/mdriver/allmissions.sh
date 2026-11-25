@@ -52,6 +52,9 @@ wait:400';; 123) LAUNCH=$'cmd:mdlaunch:407
 wait:400';; 124) LAUNCH=$'cmd:mdlaunch:596
 wait:400';; 127) LAUNCH=$'cmd:mdlaunch:575
 wait:400';;
+    125) LAUNCH=$'cmd:time:23:0
+cmd:mdlaunch:498
+wait:400';; # burglary: night only (the script ends at once by day), CJ in the burglary van (Boxville 498)
     114) LAUNCHPOST=$'cmd:mdarea:5';; 115) LAUNCHPOST=$'cmd:mdarea:6';; 116) LAUNCHPOST=$'cmd:mdarea:7';; esac
   [ -n "${XPRE:-}" ] && LAUNCH=$(printf '%b' "$XPRE"); [ -n "${XPOST:-}" ] && LAUNCHPOST=$(printf '%b' "$XPOST") # CR58: experiments: XPRE / XPOST = route lines before / after the mission start (\n separated)
   printf '%s\n%s\nmission:%s\n%s\nwait:3600000\ncmd:quit\n' "$HEAD" "$LAUNCH" "$IDX" "${LAUNCHPOST:-# no post-start launch context}" > "$W/route.in"; expand "$W/route.in" > "$W/route.txt"

@@ -57,6 +57,8 @@ cmd:mdlaunch:498
 wait:400';; # burglary: night only (the script ends at once by day), CJ in the burglary van (Boxville 498)
     126) LAUNCH=$'cmd:mdtrain:11:1725.55:-1953.28:12.5:0
 wait:400';; # freight train: CJ drives a mission train (CREATE_MISSION_TRAIN 11 at the Unity line, as the main script does)
+    131) LAUNCH=$'cmd:mdlaunch:586
+wait:400';; # courier: on a bike (the pickup model)
     114) LAUNCHPOST=$'cmd:mdarea:5';; 115) LAUNCHPOST=$'cmd:mdarea:6';; 116) LAUNCHPOST=$'cmd:mdarea:7';; esac
   [ -n "${XPRE:-}" ] && LAUNCH=$(printf '%b' "$XPRE"); [ -n "${XPOST:-}" ] && LAUNCHPOST=$(printf '%b' "$XPOST") # CR58: experiments: XPRE / XPOST = route lines before / after the mission start (\n separated)
   printf '%s\n%s\nmission:%s\n%s\nwait:3600000\ncmd:quit\n' "$HEAD" "$LAUNCH" "$IDX" "${LAUNCHPOST:-# no post-start launch context}" > "$W/route.in"; expand "$W/route.in" > "$W/route.txt"

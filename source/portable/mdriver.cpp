@@ -7,6 +7,7 @@
 #include "ProjectileInfo.h"
 #include "Pickups.h"
 #include "Explosion.h"
+#include "TaskSimpleCarSetPedOut.h"
 #include "GangWars.h"
 #include "TheZones.h"
 #include "PedGroup.h"
@@ -1901,6 +1902,11 @@ void TickGeneric() {
     const int n = ++g_noProgress[key];
     g_stopIp = at; g_stopOp = d.op; // the last answered condition (reported when the mission ends without a driver stop)
     if (d.row->action == "failclass") { DispatchRow(d); return; }
+    if (n > 8 && d.row->action == "wait" && !g_auxMode && Cj() && !std::getenv("NOTSA_MDRIVER_NOSENDAWAY")) { // CR52 (90 THE MEAT BUSINESS: the stage wants `CJ at the abattoir AND NOT LOCATE_CHAR_ANY_MEANS_CHAR_2D CJ, buddy, 30` (the buddy must not be with CJ), the buddy sits in CJ's car; the driver only waited): last resort before the stop, the ped of a NOT char-near-char locate that is false (CJ is near him) is put out of CJ's car and moved r + 25 m behind CJ, once per ped
+        static std::set<int> sent; int who = -1; float rad = 30.f;
+        for (auto& r : g_recsBig) { const int rop = r->raw & 0x7FFF; if (r->waitSeq < g_waitSeq - 3 || !(r->raw & 0x8000) || r->cond != 0 || !((rop >= 0x00F2 && rop <= 0x00F4) || (rop >= 0x0104 && rop <= 0x0106)) || r->args.size() < 3) continue; const auto h0 = ArgInt(*r, 0), h1 = ArgInt(*r, 1), rr = ArgFloat(*r, 2); if (!h0 || !h1 || !rr || (CEntity*)CPools::GetPed((int)*h0) != (CEntity*)Cj() || sent.count((int)*h1)) continue; auto* xp = CPools::GetPed((int)*h1); if (!xp || xp == Cj() || xp->m_fHealth <= 0.f) continue; who = (int)*h1; rad = (float)*rr; break; }
+        if (who >= 0) { sent.insert(who); const CVector cp = Cj()->GetPosition(); const CVector fw = Cj()->bInVehicle && Cj()->m_pVehicle ? Cj()->m_pVehicle->GetForward() : Cj()->GetForward(); const CVector q = cp - fw * (rad + 25.f); notsa::standalone::Fixups::Log("[mdriver] sendaway: ped %d is within %.0f m of CJ where the script wants NOT: put out of the car and moved to %.1f %.1f", who, rad, q.x, q.y); QueueActions({ "emit mdejectped:" + std::to_string(who), "wait 20", "emit mdwother:0:" + std::to_string(who) + ":" + F(q.x) + ":" + F(q.y) + ":-100" }, 120); return; }
+    }
     if (n > 8 && d.row->action == "wait" && !g_auxMode && !std::getenv("NOTSA_MDRIVER_NOALIVEKILL")) { // CR52 (93 MISAPPROPRIATION: the stage keeps a current target index and tests `i == target AND NOT IS_CHAR_DEAD arr[i]` (true: the fleeing FBI agent is alive, 1 km away in a car) while the nine other agents are dead; no condition of the pass is a false IS_CHAR_DEAD, so the driver only waited): last resort before the stop, a living ped that a TRUE `NOT IS_CHAR_DEAD` test of the pass names (not CJ, not in CJ's car, not in his group) is killed, once per ped
         static std::set<int> tried; int victim = -1;
         for (auto& r : g_recsBig) { if (r->waitSeq < g_waitSeq - 3 || r->raw != 0x8118 || r->cond != 1) continue; const auto h0 = ArgInt(*r, 0); if (!h0 || tried.count((int)*h0)) continue; auto* vp = CPools::GetPed((int)*h0); if (!vp || vp == Cj() || vp->m_fHealth <= 0.f || vp->IsPlayer() || (Cj() && Cj()->bInVehicle && vp->bInVehicle && vp->m_pVehicle == Cj()->m_pVehicle)) continue; bool ally = false; for (int gi = 0; gi < 8; gi++) if (CPedGroups::ms_activeGroups[gi] && CPedGroups::ms_groups[gi].GetMembership().IsFollower(vp)) ally = true; if (ally) continue; victim = (int)*h0; break; }
@@ -2028,6 +2034,10 @@ bool Cmd(const char* name, const std::string& args) {
     auto* ped = Cj();
     if (!std::strcmp(name, "mdkillped")) { if (auto* k = CPools::GetPed(std::atoi(args.c_str()))) { if (std::getenv("NOTSA_MDRIVER_PLOG")) notsa::standalone::Fixups::Log("[mdplog] kill h=%s type=%d model=%d hp=%.0f pos=%.0f,%.0f wanted=%d\n", args.c_str(), (int)k->m_nPedType, (int)k->m_nModelIndex, k->m_fHealth, k->GetPosition().x, k->GetPosition().y, (int)FindPlayerWanted()->m_WantedLevel); if (ped) CWeapon::GenerateDamageEvent(k, ped, WEAPON_PISTOL, 1000, PED_PIECE_TORSO, 0); /* CR13: no forced health 0 / PEDSTATE_DEAD fallback: TS shootDead has none, the ped dies through its death task over the next frames */ } return true; }
     if (!std::strcmp(name, "mdhurt")) { int h = 0, hp = 0; std::sscanf(args.c_str(), "%d:%d", &h, &hp); if (auto* k = CPools::GetPed(h)) { if (k->m_fHealth > (float)hp) k->m_fHealth = (float)hp; notsa::standalone::Fixups::Log("[mdriver] mdhurt ped %d health -> %d type %d model %d", h, hp, (int)k->m_nPedType, (int)k->m_nModelIndex); } return true; } // CR35
+    if (!std::strcmp(name, "mdejectped")) { // CR52: a ped in a car is put out of it (the door of his seat)
+        if (auto* pd = CPools::GetPed(std::atoi(args.c_str())); pd && pd->bInVehicle && pd->m_pVehicle) { auto* ev = pd->m_pVehicle; pd->GetIntelligence()->FlushImmediately(false); CTaskSimpleCarSetPedOut t(ev, ev->m_pDriver == pd ? TARGET_DOOR_FRONT_LEFT : TARGET_DOOR_FRONT_RIGHT, true, true); t.ProcessPed(pd); notsa::standalone::Fixups::Log("[mdriver] mdejectped %s: inveh=%d", args.c_str(), (int)pd->bInVehicle); }
+        return true;
+    }
     if (!std::strcmp(name, "mdkillcar")) { if (auto* k = CPools::GetVehicle(std::atoi(args.c_str()))) { if (std::getenv("NOTSA_MDRIVER_KILLLOG")) notsa::standalone::Fixups::Log("[mdriver] mdkillcar %s model %d hp %.0f status %d canBeDamaged %d fixed %d type %d", args.c_str(), (int)k->m_nModelIndex, k->m_fHealth, (int)k->GetStatus(), (int)k->vehicleFlags.bCanBeDamaged, (int)k->physicalFlags.bDisableCollisionForce, (int)k->GetType()); k->BlowUpCar(nullptr, false); if (std::getenv("NOTSA_MDRIVER_KILLLOG")) notsa::standalone::Fixups::Log("[mdriver]   after: hp %.0f status %d", k->m_fHealth, (int)k->GetStatus()); } return true; }
     if (!std::strcmp(name, "mdpad")) { const auto c = args.find(':'); if (c != std::string::npos) g_padHold[std::atoi(args.c_str())] = std::atoi(args.c_str() + c + 1) + 1; return true; }
     if (!std::strcmp(name, "mdmenu")) { // CR27: the player's CROSS press on a menu (CMenuSystem::InputStandardMenu): the selected row (the first selectable one when none) becomes the accepted row of every menu in use

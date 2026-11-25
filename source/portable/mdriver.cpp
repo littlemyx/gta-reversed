@@ -1233,7 +1233,9 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     if (v == "pickupgo") { // CR26: HAS_PICKUP_BEEN_COLLECTED(pickup) is false: the player walks onto the pickup (on foot, at its position)
         const int pi = CPickups::GetActualPickupIndex(tPickupReference{ I_(0) });
         if (pi < 0) { QueueActions({}, row.settle); return; }
-        const CVector pp = CPickups::aPickUps[pi].GetPosn(); if (LeashBlocksWarp(d, Cj(), pp.x, pp.y)) { QueueActions({}, row.settle); return; } one(warp(pp.x, pp.y, pp.z, false)); return;
+        const CVector pp = CPickups::aPickUps[pi].GetPosn(); if (LeashBlocksWarp(d, Cj(), pp.x, pp.y)) { QueueActions({}, row.settle); return; }
+        if (c && c->bInVehicle && !std::getenv("NOTSA_MDRIVER_NOPICKUPFOOT")) { QueueActions({ "key down return", "wait 1", "key up return", "waituntil invehicle == 0 300", "emit mdwveh:" + F(pp.x) + ":" + F(pp.y) + ":" + F(pp.z) }, row.settle); return; } // CR53 (93 MISAPPROPRIATION: the briefcase pickup (CPickup::Update, exe: `!vehicle && IsAlive` and 2D < 1.34 m) is collected by the ped on foot only; the vehicle warp put the Maverick on it for ever): CJ gets out first, then is moved onto the pickup
+        one(warp(pp.x, pp.y, pp.z, false)); return;
     }
     if (v == "weaponpickup") { // CR28: HAS_CHAR_GOT_WEAPON(cj, w) is false: the player walks onto the nearest live pickup whose model is the weapon's
         const auto mdl = CPickups::ModelForWeapon((eWeaponType)I_(0)); const auto* me = Cj(); const CPickup* best = nullptr; float bd = 1e9f;

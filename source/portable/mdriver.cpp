@@ -72,6 +72,7 @@ std::vector<Step>        g_steps;
 std::string              g_script;           // thread name
 std::map<int, int>       g_nearCnt; /* CR32 */
 int                      g_watchVeh = -1, g_buddyRef = -1, g_stall = 600, g_maxAnswers = 12; int g_nextStall = 0; int g_dangerUntil = 0, g_vhpPrev = -1, g_dropWin = 0; const void* g_vhpVeh = nullptr; /* CR31 urgency */ int g_photoPed = -1, g_photoHold = 0; bool g_photoEarly = false;
+struct FaceHold { CVector pos; int left = 0; } g_faceHold; // CR51: see mdwother (camera on a far warped car)
 bool                     g_loaded = false, g_started = false, g_done = false, g_failed = false;
 std::FILE*               g_out = nullptr;
 void                   (*g_push)(const char*, bool) = nullptr;
@@ -2022,6 +2023,10 @@ bool Cmd(const char* name, const std::string& args) {
         CVehicle* veh = nullptr; if (isPed) { auto* pd = static_cast<CPed*>(tgt); if (pd->bInVehicle) veh = pd->m_pVehicle; } else veh = static_cast<CVehicle*>(tgt);
         if (veh) { if (GetVehiclePool()->GetRef(veh) == g_airHold.h) g_airHold.left = 0; /* CR50: a new warp of the held aircraft ends the old hold */ CCarCtrl::SetCoordsOfScriptCar(veh, w[0], w[1], gz, 0, 1); veh->m_vecMoveSpeed = CVector{}; veh->m_vecTurnSpeed = CVector{}; if ((veh->IsSubPlane() || veh->IsSubHeli()) && !std::getenv("NOTSA_MDRIVER_NOAIRHOLD") && ped->bInVehicle && ped->m_pVehicle == veh) { const float gnd = CWorld::FindGroundZForCoord(w[0], w[1]); if (gz - gnd > 30.f || (veh->IsSubPlane() && gz - gnd > 0.5f && !std::getenv("NOTSA_MDRIVER_NOLOWHOLD"))) { g_airHold.h = GetVehiclePool()->GetRef(veh); g_airHold.z = gz; g_airHold.left = gz - gnd > 30.f ? 1500 : 240; g_airHold.vx = nw >= 7 ? w[3] : 0.f; g_airHold.vy = nw >= 7 ? w[4] : 0.f; notsa::standalone::Fixups::Log("[mdriver] airhold: the aircraft is held at z %.0f for 1500 frames", gz); } } /* CR49 */ if (nw >= 7) { veh->SetHeading(w[6]); veh->m_vecMoveSpeed = CVector{ w[3], w[4], w[5] }; } if (std::getenv("NOTSA_MDRIVER_ENTERLOG")) g_watchVeh = GetVehiclePool()->GetRef(veh); }
         else { CWorld::Remove(tgt); tgt->SetPosn(CVector{ w[0], w[1], gz + 1.1f }); CWorld::Add(tgt); }
+        if (veh && !(ped->bInVehicle && ped->m_pVehicle == veh) && !std::getenv("NOTSA_MDRIVER_NOFACEWARP") && (veh->GetPosition() - ped->GetPosition()).Magnitude() > 60.f) { // CR51 (11 BIG SMOKE: `NOT LOCATE_CAR_2D(car, CJ, 50) AND NOT IS_CAR_ON_SCREEN(car)` puts the chasing car 40 m behind CJ at the next pass: the warp of that car (or its driver) to the stage's far locate was undone at once): when the script tests IS_CAR_ON_SCREEN (02CA) on the warped car, the camera looks at the warp place for a while (a player would have it on screen)
+            const int vref = GetVehiclePool()->GetRef(veh); const bool tested = std::any_of(g_recsBig.begin(), g_recsBig.end(), [&](const RecP& r) { if ((r->raw & 0x7FFF) != 0x02CA || r->waitSeq < g_waitSeq - 3) return false; const auto h0 = ArgInt(*r, 0); return h0 && (int)*h0 == vref; });
+            if (tested) { const CVector vp = veh->GetPosition(); const CVector src = vp - veh->GetForward() * 14.f + CVector{ 0.f, 0.f, 6.f }; TheCamera.SetCamPositionForFixedMode(src, CVector{ 0.f, 0.f, 0.f }); TheCamera.TakeControlNoEntity(vp, eSwitchType::JUMPCUT, 1); g_faceHold = { vp, 150 }; notsa::standalone::Fixups::Log("[mdriver] facewarp: camera on the warped car %d for 150 frames", vref); }
+        }
         CStreaming::LoadScene(CVector{ w[0], w[1], gz }); CStreaming::LoadSceneCollision(CVector{ w[0], w[1], gz });
         notsa::standalone::Fixups::Log("[mdriver] %s gf=%u -> %.2f,%.2f,%.2f", name, (unsigned)CTimer::GetFrameCounter(), w[0], w[1], gz);
         return true;
@@ -2184,6 +2189,7 @@ bool Cmd(const char* name, const std::string& args) {
 void Tick(uint64_t clockMs) {
     if (!Enabled() || g_done) return;
     g_clock = clockMs;
+    if (g_faceHold.left > 0 && --g_faceHold.left == 0) { TheCamera.RestoreWithJumpCut(); notsa::standalone::Fixups::Log("[mdriver] facewarp ended"); } // CR51
     if (g_photoHold > 0) { g_photoHold--; if (auto* k = CPools::GetPed(g_photoPed)) { k->bHasBeenPhotographed = true; TheCamera.GetActiveCam().m_fFOV = 15.f; if (g_photoHold == 0) notsa::standalone::Fixups::Log("[mdriver] photo hold ended"); } else g_photoHold = 0; } // CR26: see mdphoto
     if (Generic()) { TickGeneric(); return; }
     if (!g_loaded) { Load(std::getenv("NOTSA_MDRIVER")); if (const char* o = std::getenv("NOTSA_MDRIVER_OUT")) g_out = std::fopen(o, "w"); }

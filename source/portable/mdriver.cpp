@@ -840,6 +840,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
     static const Row kHorn{ 0x0122, 1, "IS_PLAYER_PRESSING_HORN", "horn", {}, 60 }; // CR39 (49 WEAR FLOWERS IN YOUR HAIR: the hydraulics stage waits for the horn)
     static const Row kWater{ 0x04AD, 1, "IS_CHAR_IN_WATER", "swimgo", {}, 90 }; // CR39 (56 AMPHIBIOUS ASSAULT: CJ has to swim to the dock)
     static const Row kCarDmg{ 0x051C, 1, "HAS_CAR_BEEN_DAMAGED_BY_CHAR", "cardmg", { "$0", "$1" }, 30 }; // CR43 (62 TORENO'S LAST FLIGHT: the landed helicopter has to be damaged by CJ)
+    static const Row kExt{ 0x02D0, 0, "IS_SCRIPT_FIRE_EXTINGUISHED", "extinguish", { "$0" }, 30 }; // CR58 (123 FIREFIGHTER: the stage waits for the script fires to go out; the truck's water is gameplay)
     static const Row kPho{ 0x04C5, 1, "HAS_CHAR_BEEN_PHOTOGRAPHED", "photo", { "$0" }, 30 }; // CR25 (58 PHOTO OPPORTUNITY)
     static const Row kTag{ 0x0038, 0, "int compare of the GET_PERCENTAGE_TAGGED_IN_AREA result", "tagarea", {}, 60 };
     static const Row kFix{ 0x03C9, 0, "NOT IS_CAR_VISIBLY_DAMAGED", "carfix", { "$0" }, 30 }; // CR34 (33 MANAGEMENT ISSUES)
@@ -879,6 +880,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
                 if (lim && *lim <= 1 && tv && (tv->IsSubHeli() || tv->IsSubPlane()) && tv->m_fHealth > 260.f) { bool prot = false; if (tv->m_pDriver && (tv->m_pDriver == Cj() || ProtectedPed(tv->m_pDriver))) prot = true; for (auto* pp : tv->m_apPassengers) if (pp && (pp == Cj() || ProtectedPed(pp))) prot = true; if (!prot) { d.act = true; d.row = &kCarDmg; d.rowIdx = -31; d.cond = c; d.op = op; d.args = { RArg{ false, (double)hv->second, {} } }; return d; } } }
             if (op == 0x051C && !std::getenv("NOTSA_MDRIVER_NOCARDMG")) { auto a2 = ResolveArgs(kCarDmg, *c); const auto ch = ArgInt(*c, 1); auto* tv = a2 && a2->size() == 2 ? CPools::GetVehicle((int)(*a2)[0].n) : nullptr; const auto vd = VerdictOf(g_thread, *c); // the char is CJ (or any: -1), the car lives and has no buddy in it, the true branch is no fail
                 if (tv && (tv->IsSubHeli() || tv->IsSubPlane()) /* aircraft only: the gunfire answer changed 59 / 52 / 30 / 89 */ && tv->m_fHealth > 0.f && ch && (*ch == -1 || CPools::GetPed((int)*ch) == Cj()) && (vd == Verdict::Wait || vd == Verdict::GoesOn)) { bool prot = false; if (tv->m_pDriver && (tv->m_pDriver == Cj() || ProtectedPed(tv->m_pDriver))) prot = true; for (auto* pp : tv->m_apPassengers) if (pp && (pp == Cj() || ProtectedPed(pp))) prot = true; if (!prot) { d.act = true; d.row = &kCarDmg; d.rowIdx = -31; d.cond = c; d.args = *a2; d.op = op; return d; } } }
+            if (op == 0x02D0 && !(c->raw & 0x8000) && !std::getenv("NOTSA_MDRIVER_NOEXTINGUISH")) { auto a2 = ResolveArgs(kExt, *c); if (a2 && a2->size() == 1) { d.act = true; d.row = &kExt; d.rowIdx = -61; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (op == 0x04C5 && !photoSpent && !std::getenv("NOTSA_MDRIVER_NOPHOTO")) { auto a2 = ResolveArgs(kPho, *c); if (a2) { s_photoAns[c->p]++; d.act = true; d.row = &kPho; d.rowIdx = -6; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (op == 0x06EE && !std::getenv("NOTSA_MDRIVER_NOJOINGROUP")) { auto a2 = ResolveArgs(kGrp, *c); if (a2 && a2->size() == 2 && CPools::GetPed((int)(*a2)[0].n) && CPools::GetPed((int)(*a2)[0].n) != Cj()) { d.act = true; d.row = &kGrp; d.rowIdx = -8; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (op == 0x02EE && !std::getenv("NOTSA_MDRIVER_NOPROJ")) { auto a2 = ResolveArgs(kPrj, *c); if (a2 && a2->size() == 6) { d.act = true; d.row = &kPrj; d.rowIdx = -12; d.cond = c; d.args = *a2; d.op = op; d.reason = "";
@@ -1490,6 +1492,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         notsa::standalone::Fixups::Log("[mdriver] warpto_handle: no clear spot, +0.5 m");
         one(warp(pos.x + 0.5f, pos.y, pos.z, false)); return;
     }
+    if (v == "extinguish") { QueueActions({ "emit mdextinguish:" + std::to_string(I_(0)) }, row.settle); return; } // CR58
     if (v == "photo") { QueueActions({ "emit mdphoto:" + std::to_string(I_(0)) }, row.settle); if (!std::getenv("NOTSA_MDRIVER_NOEARLY") && !std::getenv("NOTSA_MDRIVER_NOZOOM") && PhotoWantsZoom()) g_nextStall = 90, g_photoEarly = true; /* CR26: a timed (zoomed) photo condition: the next decision after 90 frames, not 600 (the walker's task ends sooner) */ return; } // CR25: HAS_CHAR_BEEN_PHOTOGRAPHED(ped): the camera shot of the ped (the flag CWeapon::TakePhotograph sets for a ped in frame, in range and in line of sight)
     if (v == "carspeed") { QueueActions({ "emit mdspeed:" + std::to_string(I_(0)) + ":" + F(F_(1)) }, row.settle); return; } // CR34
     if (v == "hurt") { QueueActions({ "emit mdhurt:" + std::to_string(I_(0)) + ":" + std::to_string(I_(1)) }, row.settle); return; } // CR35
@@ -1515,7 +1518,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
     if (v == "objto") { QueueActions({ "emit mdobjto:" + std::to_string(I_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) + ":" + F(F_(3)) }, row.settle); return; } // CR39
     if (v == "planeland") { QueueActions({ "emit mdwland:" + F(F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) }, row.settle); return; } // CR49 (91 FREEFALL: `IS_CAR_STOPPED_IN_AREA_3D plane box OR IS_CHAR_IN_AREA_3D CJ box`: land the plane)
     if (v == "damageobjw") { std::vector<std::string> acts; for (size_t k = 0; k + 2 <= d.args.size(); k += 2) acts.push_back("emit mddmgobj:" + std::to_string((int)d.args[k].n) + ":" + std::to_string((int)d.args[k + 1].n)); QueueActions(acts, row.settle); return; } // CR49
-    if (v == "damageobj") { QueueActions({ "emit mddmgobj:" + std::to_string(I_(0)) }, row.settle); return; } // CR22: HAS_OBJECT_BEEN_DAMAGED(obj): CJ damages the object (16 NINES AND AK'S shooting range)
+    if (v == "damageobj") { QueueActions({ "emit mddmgobj:" + std::to_string(I_(0)) }, row.settle); if (!std::getenv("NOTSA_MDRIVER_NOFASTDMG")) g_nextStall = 60; /* CR58 (113 SHOOTING RANGE: 100+ targets, one answer per 630 frames used the 30000-frame budget): the next target is asked for after 60 frames */ return; } // CR22: HAS_OBJECT_BEEN_DAMAGED(obj): CJ damages the object (16 NINES AND AK'S shooting range)
     if (v == "tosphere") { // CR24: the vehicle at the centre of a GET_RANDOM_CAR_IN_SPHERE search is moved next to the nearest car the game's own search would accept (appearance 1/2, not a law enforcer, wanted model, CanBeDeleted: the mission's decoy is refused), 8 m above it
         CVehicle* best = SphereTarget(g_sphCur.veh, g_sphCur.model);
         if (!best) { QueueActions({}, row.settle); return; }
@@ -2064,7 +2067,8 @@ void TickGeneric() {
         for (auto& r : g_recsBig) { if (r->waitSeq < g_waitSeq - 3 || r->raw != 0x8118 || r->cond != 1) continue; const auto h0 = ArgInt(*r, 0); if (!h0 || tried.count((int)*h0)) continue; auto* vp = CPools::GetPed((int)*h0); if (!vp || vp == Cj() || vp->m_fHealth <= 0.f || vp->IsPlayer() || (Cj() && Cj()->bInVehicle && vp->bInVehicle && vp->m_pVehicle == Cj()->m_pVehicle)) continue; bool ally = false; for (int gi = 0; gi < 8; gi++) if (CPedGroups::ms_activeGroups[gi] && CPedGroups::ms_groups[gi].GetMembership().IsFollower(vp)) ally = true; if (ally) continue; victim = (int)*h0; break; }
         if (victim >= 0) { tried.insert(victim); notsa::standalone::Fixups::Log("[mdriver] alivekill: the pass tests NOT IS_CHAR_DEAD of living ped %d: killed (last resort before the stop)", victim); QueueActions({ "emit mdkillped:" + std::to_string(victim) }, 90); return; }
     }
-    if (n > 8) { char b[16]; std::snprintf(b, sizeof b, "%04X", d.op); Stop("the driver acted " + std::to_string(n - 1) + " times (" + d.row->action + ") and the condition stays false: " + b + " " + d.row->name, d.op, at); return; }
+    static const int kMaxActs = std::getenv("NOTSA_MDRIVER_WAITMAX") ? std::atoi(std::getenv("NOTSA_MDRIVER_WAITMAX")) : 8; // CR58: experiment: how many identical wait answers before the stop (TS: 8)
+    if (n > (d.row->action == "wait" ? kMaxActs : 8)) { char b[16]; std::snprintf(b, sizeof b, "%04X", d.op); Stop("the driver acted " + std::to_string(n - 1) + " times (" + d.row->action + ") and the condition stays false: " + b + " " + d.row->name, d.op, at); return; }
     std::fprintf(stderr, "[mdriver] frame %d ip %x row %d %04X %s -> %s\n", fr, at, d.rowIdx, d.op, d.row->name.c_str(), d.row->action.c_str());
     if (nearRec && d.act && ((d.row->action == "kill" && !d.args.empty() && (int)d.args[0].n == nearH) || (!g_nearCnt.empty() && d.row->action != "wait"))) { g_nearCnt[nearH]++; d = dn; } // only over a kill answer that did not help (the near-ped locate is in the pass, the ped is alive)
     if (std::getenv("NOTSA_MDRIVER_WLOG")) { auto* w = FindPlayerWanted(); notsa::standalone::Fixups::Log("[mdwlog] frame %d wanted %d chaos %d maxWanted %d maxChaos %d policeBackOff %d everybodyBackOff %d", fr, w ? (int)w->GetWantedLevel() : -1, w ? (int)w->m_ChaosLevel : -1, (int)CWanted::MaximumWantedLevel, (int)CWanted::MaximumChaosLevel, w ? (int)w->m_bPoliceBackOff : -1, w ? (int)w->m_bEverybodyBackOff : -1); } // CR47 debug (off by default)
@@ -2213,6 +2217,11 @@ bool Cmd(const char* name, const std::string& args) {
     if (!ped) return true;
     if (!std::strcmp(name, "mdskipcut")) { if (CCutsceneMgr::IsCutsceneProcessing()) CCutsceneMgr::SkipCutscene(); return true; }
     if (!std::strcmp(name, "mdarea")) { const int ar = std::atoi(args.c_str()); CGame::currArea = (eAreaCodes)ar; ped->SetAreaCode((eAreaCodes)ar); CEntryExitManager::SetAreaCodeForVisibleObjects(); notsa::standalone::Fixups::Log("[mdriver] mdarea %d: ped area now %d", ar, (int)ped->GetAreaCode()); return true; } // launch.ts LAUNCH_AREA
+    if (!std::strcmp(name, "mdextinguish")) { // CR58: a script fire (the handle of START_SCRIPT_FIRE) goes out
+        const int idx = CTheScripts::GetActualScriptThingIndex(std::atoi(args.c_str()), SCRIPT_THING_FIRE);
+        if (idx >= 0 && idx < 60) { gFireManager.Get((int16)idx).Extinguish(); notsa::standalone::Fixups::Log("[mdriver] extinguish script fire %d (slot %d)", std::atoi(args.c_str()), idx); }
+        return true;
+    }
     if (!std::strcmp(name, "mdtrain")) { // CR58 (126 FREIGHT TRAIN: the script needs CJ in a train): `mdtrain:cfg:x:y:z:dir` creates a mission train like CREATE_MISSION_TRAIN (0x06D8) and CJ drives its engine
         float w[5]{}; std::sscanf(args.c_str(), "%f:%f:%f:%f:%f", w, w + 1, w + 2, w + 3, w + 4);
         CStreaming::LoadScene(CVector{ w[1], w[2], w[3] }); CStreaming::LoadSceneCollision(CVector{ w[1], w[2], w[3] });

@@ -80,7 +80,7 @@ void                   (*g_push)(const char*, bool) = nullptr;
 void                   (*g_run)(const std::string&) = nullptr;
 CRunningScript*          g_thread = nullptr;
 int                      g_sameCount = 0;
-const uint8*             g_lastIp = nullptr; std::map<const uint8*, int> g_ipSeen; // CR46: frame each wake ip was last seen (a loop over a few wait sites is one stall)
+const uint8*             g_lastIp = nullptr; std::map<const uint8*, int> g_ipSeen; int g_ringHops = 0; /* CR57: wake-ip ring hops counted into the stall since the last decision */ // CR46: frame each wake ip was last seen (a loop over a few wait sites is one stall)
 std::map<int, int>       g_answers;
 std::vector<std::string> g_queue;            // actions of the running step
 size_t                   g_qpos = 0;
@@ -240,7 +240,7 @@ struct Arg { uint32_t bits = 0; int kind = 0; };
 struct Row { uint16_t op; int match; /*0 any 1 plain 2 not*/ std::string name, action; std::vector<std::string> args; int settle; };
 std::vector<Row>         g_rows;
 // a conditional command of the root thread as the TS StallSink records it (opcode, NOT form, state, decoded operands, the WAIT count, where the following GOTO_IF_FALSE led)
-struct Rec { const uint8_t* p; uint16_t raw; int cond; int waitSeq; std::vector<Arg> args; bool hasBranch = false, jumped = false, waitAfter = false, orSite = false; const uint8_t *target = nullptr, *fall = nullptr; uint32_t vref[2] = { 0, 0 }; /* CR22: identity of operand 0 / 1 when it is a variable: (type << 16) | offset-or-index, else 0 */ };
+struct Rec { const uint8_t* p; uint16_t raw; int cond; int waitSeq; std::vector<Arg> args; bool hasBranch = false, jumped = false, waitAfter = false, orSite = false; uint64_t seq = 0; /* CR57 */ const uint8_t *target = nullptr, *fall = nullptr; uint32_t vref[2] = { 0, 0 }; /* CR22: identity of operand 0 / 1 when it is a variable: (type << 16) | offset-or-index, else 0 */ };
 using RecP = std::shared_ptr<Rec>;
 static const size_t g_bigCap = std::getenv("NOTSA_MDRIVER_BIGCAP") ? (size_t)std::atoi(std::getenv("NOTSA_MDRIVER_BIGCAP")) : 400; // CR39: the window of the last conditional commands
 CVehicle* NearestCarOfModel(CPed* c, int model, float best); // CR39
@@ -258,6 +258,7 @@ std::map<uint32_t, int> g_coordVeh; struct SphSearch { int veh; int model; float
 std::map<uint32_t, std::array<float, 4>> g_tagAreas; float g_tagRect[4]{}; // CR22: destination variable -> area of the last GET_PERCENTAGE_TAGGED_IN_AREA (0702) that wrote it; the area of the picked decision
 std::deque<RecP>         g_recsBig;          // CR26: the last 400 conditional commands (the 64-condition window is too short for a pass of ~100 conditions)
 std::deque<RecP>         g_recs;             // the last 64 conditional commands (KEEP)
+uint64_t g_recSeq = 0; std::map<const uint8_t*, RecP> g_siteLast; /* CR57: newest record of every condition site (the 400-record window holds ~6 frames of a 60-condition soldier loop) */
 std::vector<RecP>        g_group; bool g_fallPending = false; // CR19: the conditions of the last GOTO_IF_FALSE, and whether it fell through (the next command decides waitAfter)
 std::vector<RecP>        g_pending;          // the conditions since the last GOTO_IF_FALSE (max 12)
 int                      g_waitSeq = 0;
@@ -1268,7 +1269,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
             const bool negModel = (cop & 0x7FFF) == 0x00FE && d.cond && !std::getenv("NOTSA_MDRIVER_NONEGMODEL") && NegatedModelFlagAfterLocate(d.cond->p); // CR52
             if (onFoot.count(cop & 0x7FFF) || notInCarSib || negModel) { QueueActions({ "key down return", "wait 1", "key up return", "waituntil invehicle == 0 300", "emit mdwveh:" + F(F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) }, row.settle); return; } // CR11: after a 300-frame timeout CJ may still be in the vehicle: TS warp() then moves the CAR; mdwveh does that (ped warp when he is out)
         }
-        if (v == "pedwarp" && c && !c->bInVehicle && d.cond && d.args.size() >= 3 && !std::getenv("NOTSA_MDRIVER_NOSTEALTHWARP")) { // CR56: the half extents of the located box (handle x y z rx ry rz [flag] (3D), handle x y rx ry [flag] (2D)), for the stealth spot search at the warp
+        if (v == "pedwarp" && c && !c->bInVehicle && d.cond && d.args.size() >= 3 && std::getenv("NOTSA_MDRIVER_STEALTHWARP")) { // CR56: the half extents of the located box (handle x y z rx ry rz [flag] (3D), handle x y rx ry [flag] (2D)), for the stealth spot search at the warp
             const size_t na = d.cond->args.size(); const auto a = [&](size_t i) { const auto q = ArgFloat(*d.cond, i); return q ? (float)std::fabs(*q) : 0.f; };
             if (na >= 7) g_stBox = { true, { F_(0), F_(1), F_(2) }, { a(4), a(5), a(6) } }; else if (na >= 5) g_stBox = { true, { F_(0), F_(1), F_(2) }, { a(3), a(4), 0.f } };
         }
@@ -1322,7 +1323,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
             CVehicle* best = nullptr; float bd = 20.f; for (auto& vv : GetVehiclePool()->GetAllValid()) { if (&vv == c->m_pVehicle || vv.m_fHealth <= 0.f || vv.m_vecMoveSpeed.Magnitude() * 50.f < 3.f) continue; const float dd = std::hypot(vv.GetPosition().x - x, vv.GetPosition().y - y); if (dd < bd) { bd = dd; best = &vv; } }
             if (best) { QueueActions({ warp(x, y, z, false), "emit mdfollow:" + std::to_string(GetVehiclePool()->GetRef(best)) + ":200" }, row.settle); return; }
         }
-        if (c && !c->bInVehicle && d.args.size() == 6 && !(cop >= 0x05F6 && cop <= 0x0601) && !std::getenv("NOTSA_MDRIVER_NOSTEALTHWARP")) g_stBox = { true, { x, y, z }, { std::fabs(F_(3) - F_(0)) / 2.f, std::fabs(F_(4) - F_(1)) / 2.f, std::fabs(F_(5) - F_(2)) / 2.f } }; // CR56: stealth spot search inside the area
+        if (c && !c->bInVehicle && d.args.size() == 6 && !(cop >= 0x05F6 && cop <= 0x0601) && std::getenv("NOTSA_MDRIVER_STEALTHWARP")) g_stBox = { true, { x, y, z }, { std::fabs(F_(3) - F_(0)) / 2.f, std::fabs(F_(4) - F_(1)) / 2.f, std::fabs(F_(5) - F_(2)) / 2.f } }; // CR56: stealth spot search inside the area
         one(warp(x, y, z, false)); return;
     }
     if (v == "entercar" || v == "nearest_car") {
@@ -1628,7 +1629,7 @@ void TickGeneric() {
             if (!CTheScripts::IsPlayerOnAMission() && CTheScripts::FailCurrentMission == 0) {
                 g_relaunched = true; g_relaunchWait = 0; notsa::standalone::Fixups::Log("[mdriver] relaunch frame %d: mission %d ended without M_PASS / M_FAIL: started again", fr, (int)NotsaLastInjectedMission);
                 NotsaInjectMissionInfo mi{}; NotsaInjectStartMission(NotsaLastInjectedMission, &mi);
-                g_started = false; g_thread = nullptr; g_recs.clear(); g_recsBig.clear(); g_attemptsAt.clear(); g_queue.clear(); g_qpos = 0; g_wait = 0; g_untilLeft = 0; g_sameCount = 0; g_lastIp = nullptr; g_ipSeen.clear(); g_endFrame = -1; g_lastLabel.clear();
+                g_started = false; g_thread = nullptr; g_recs.clear(); g_recsBig.clear(); g_siteLast.clear(); g_attemptsAt.clear(); g_queue.clear(); g_qpos = 0; g_wait = 0; g_untilLeft = 0; g_sameCount = 0; g_lastIp = nullptr; g_ipSeen.clear(); g_endFrame = -1; g_lastLabel.clear();
                 return;
             }
             g_endedFail = true;
@@ -1810,10 +1811,10 @@ void TickGeneric() {
         if (!line.compare(0, 5, "emit ")) Emit(line.substr(5)); else Dispatch(line);
     }
     g_queue.clear(); g_qpos = 0;
-    if (CCutsceneMgr::IsCutsceneProcessing()) g_sameCount = 0;
+    if (CCutsceneMgr::IsCutsceneProcessing()) { g_sameCount = 0; g_ringHops = 0; }
     else if (root->m_IP == g_lastIp) { g_sameCount++; g_ipSeen[root->m_IP] = fr; }
-    else if (g_lastIp && g_ipSeen.count(root->m_IP) && fr - g_ipSeen[root->m_IP] < g_stall && std::getenv("NOTSA_MDRIVER_IPRING")) { g_sameCount++; g_lastIp = root->m_IP; g_ipSeen[root->m_IP] = fr; } // CR46 (72 AIR RAID: the wake ip alternated 158e / 104 / 797 / 14d9 for 6500 frames and the stall counter never reached 600): a wake ip seen within the last stall window is the same loop
-    else { g_ipSeen[root->m_IP] = fr; g_sameCount = 0; g_lastIp = root->m_IP; if (g_fastLeft > 0 && g_fastIp != root->m_IP) { g_fastLeft = 0; if (g_fastNext) g_nextStall = 0; g_fastNext = false; } }
+    else if (g_lastIp && g_ipSeen.count(root->m_IP) && fr - g_ipSeen[root->m_IP] < g_stall && (!std::getenv("NOTSA_MDRIVER_NOIPRING"))) { g_sameCount++; g_ringHops++; g_lastIp = root->m_IP; g_ipSeen[root->m_IP] = fr; } /* CR57: default (NOIPRING=1 off; CR46 had it opt-in, 50 and 59 regressed then and pass now) */ // CR46 (72 AIR RAID: the wake ip alternated 158e / 104 / 797 / 14d9 for 6500 frames and the stall counter never reached 600): a wake ip seen within the last stall window is the same loop
+    else { g_ipSeen[root->m_IP] = fr; g_sameCount = 0; g_ringHops = 0; g_lastIp = root->m_IP; if (g_fastLeft > 0 && g_fastIp != root->m_IP) { g_fastLeft = 0; if (g_fastNext) g_nextStall = 0; g_fastNext = false; } }
     if (g_sameCount >= g_stall) for (auto& r : g_recs) if (r->waitSeq >= g_waitSeq - 3 && (r->raw & 0x7FFF) == 0x010F && r->cond == 0) { if (auto* w = FindPlayerWanted()) if (w->m_WantedLevel != eWantedLevel::WANTED_CLEAN) { w->SetWantedLevel(eWantedLevel::WANTED_CLEAN); g_sameCount = 0; return; } break; } // CR11: as drive.ts:309 (at the stall threshold, then no decide this round; level only): // CR9: the thread waits for the wanted level to drop (SWEET4 ip 0x45e7 after the second pay n spray stage; the exe decays above 1 star only in the countryside, a real player drives into the pay n spray = ClearWantedLevelAndGoOnParole 0x44AC16): clear it, as the TS port does implicitly
     bool urgentTimer = false; // CR31 (25 CATALYST: the 90 s script timer runs while the driver waits 600 frames at every decision): a countdown clock on the screen shortens the patience to 150 frames; a vehicle of CJ that keeps losing health (army fire, 26) to 90 (NOTSA_MDRIVER_NOURGENT)
     if (!std::getenv("NOTSA_MDRIVER_NOTIMERURGENT")) { // CR55: default (NOTIMERURGENT=1 off; the escalation counters are time-scaled, g_paceW) - was opt-in in CR54 (re-measured over the 59 passing missions: default-on breaks 47 ARE YOU GOING TO SAN FIERRO? (the five smashobj answers of the stage are used up in 3 decisions instead of 5: the answer rotation counts decisions, not time) and moves 20 23 28 41 50 59 61 66 70 74 (all still pass))
@@ -1826,6 +1827,7 @@ void TickGeneric() {
     g_paceScale = (g_nextStall == 0 && urgentTimer && !(fr < g_dangerUntil || fr < g_pedDangerUntil) && !std::getenv("NOTSA_MDRIVER_NOPACESCALE")) ? 2 : 1; // CR55: a decision under the countdown patience (150) can come much sooner than at the normal pace (660 frames = 600 stall + settle): every escalation counter (answer rotation, attempts, the no-progress stop) then advances by (frames since the last decision) / 660 per decision, so it counts time like at the normal pace (47 ARE YOU GOING TO SAN FIERRO?: the five smashobj answers were used up 4x too fast; 20 LOS SEPULCROS: the answers queue 550 frames of their own, the gap stays 700 and nothing may be scaled there)
     if (g_nextStall > 0 ? g_sameCount < g_nextStall : g_sameCount < (fr < g_dangerUntil || fr < g_pedDangerUntil ? std::min(g_stall, 90) : urgentTimer ? std::min(g_stall, 150) : fr < g_pbNearUntil ? std::min(g_stall, 60) : chaseNear ? std::min(g_stall, 200) : g_stall)) return;
     const uint8_t* ipPtrEarly = root->m_IP;
+    const int ringHops = g_ringHops; g_ringHops = 0;
     const bool earlyAux = g_auxEarly; g_auxEarly = false; // CR27: the early re-decision after an aux answer answers the aux thread only
     const bool earlyPhoto = g_photoEarly; g_photoEarly = false; // CR26: the early re-decision after a zoomed photo answers a photo condition only (no wait / kill escalation of a half-evaluated pass)
     const bool fastRep = g_fastLeft > 0 && g_fastIp == ipPtrEarly && g_fastNext; g_fastNext = false;
@@ -1858,6 +1860,13 @@ void TickGeneric() {
         if (!std::getenv("NOTSA_MDRIVER_CLOCKGUARD") && VerdictOf(g_thread, *r) == Verdict::Guard) continue; /* CR34 (33: `IF hour > 21` jumps FORWARD when false and its true branch is the mission's failure (a time limit): moving the clock made the mission fail at f5553) */
         const auto v = ArgInt(*r, 0), n = ArgInt(*r, 1); if (!v || !n || *v != (int)CClock::GetGameClockHours() || *n < *v || *n > 22) continue;
         notsa::standalone::Fixups::Log("[mdriver] clockskip frame %d: the wait is for hour > %d (now %d): the game clock goes to %d:00", fr, (int)*n, (int)*v, (int)*n + 1); CClock::SetGameClock((uint8)(*n + 1), 0, CClock::GetGameClockDays()); QueueActions({}, 60); return; }
+    if ((!d.act || d.row->action == "wait") && !std::getenv("NOTSA_MDRIVER_NORINGWIDE")) { // CR57 (100 UP UP AND AWAY: the stage runs a 7-wait soldier sub per frame and its own conditions (IS_BUTTON_PRESSED, the locates) once per revolution: the 64-record / last-3-waits window at a stall frame holds only the soldier tests): a stall counted over a ring of wake ips looks at the newest record of every condition site seen in the last 48 waits
+        std::vector<RecP> rw; for (auto& kv : g_siteLast) if (kv.second->waitSeq >= g_waitSeq - 48) rw.push_back(kv.second);
+        std::sort(rw.begin(), rw.end(), [](const RecP& a, const RecP& b) { return a->seq < b->seq; });
+        if (std::getenv("NOTSA_MDRIVER_RINGLOG")) notsa::standalone::Fixups::Log("[ringlog0] frame %d loop %zu rw %zu", fr, loop.size(), rw.size());
+        std::set<const uint8_t*> inLoop; for (auto& q : loop) inLoop.insert(q->p); const bool extraSites = std::any_of(rw.begin(), rw.end(), [&](const RecP& q) { return !inLoop.count(q->p); });
+        if (extraSites) { Dec d3 = Decide(rw, g_attemptsAt[ipPtr], true); if (std::getenv("NOTSA_MDRIVER_RINGLOG")) notsa::standalone::Fixups::Log("[ringlog] frame %d act %d row %s (%zu records)", fr, (int)d3.act, d3.act ? d3.row->name.c_str() : d3.reason.c_str(), rw.size()); if (d3.act && d3.row->action != "wait") { notsa::standalone::Fixups::Log("[mdriver] ringwide frame %d (%zu hops, %zu -> %zu records): %s", fr, (size_t)ringHops, loop.size(), rw.size(), d3.row->name.c_str()); d = d3; } }
+    }
     if ((!d.act || d.row->action == "wait") && !std::getenv("NOTSA_MDRIVER_NOWIDE") && g_recs.size() > loop.size()) { // CR23 (16 NINES AND AK'S): the loop window (the last 3 passes) is one frame of a script that tests ONE array element per pass (@42 = 0..4, 5 passes per revolution) and the stall frame is phase-locked to the slot of an object that no longer exists: the answer is the plain `wait` of the end-of-stage locate, the target that can be shot is only in older passes. Rule: when the narrow window gives only `wait` (or nothing), look at every retained pass of the stalled loop (the 64 records, all from the stall period) and take a non-wait answer from there.
         const std::vector<RecP> wide(g_recs.begin(), g_recs.end());
         Dec d2 = Decide(wide, g_attemptsAt[ipPtr], true);
@@ -2108,7 +2117,7 @@ void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int co
             const int n = Arity(op); r->args = DecodeArgs(s, ptr, n >= 0 ? n : 10);
             { const uint8_t* ops[3]{}; int cnt = 0; if (InSpace(ptr) && CmdOps(ptr, ops, cnt)) for (int k = 0; k < 2 && k < cnt; k++) { uint32_t ref; if (OperandVar(ops[k], ref)) r->vref[k] = ref; } } // CR22
             if (!(raw & 0x8000) && (op == 0x0038 || op == 0x0039)) g_flagConds[ptr] = r; // CR22
-            g_recs.push_back(r); if (g_recs.size() > 64) g_recs.pop_front(); g_recsBig.push_back(r); if (g_recsBig.size() > g_bigCap) g_recsBig.pop_front();
+            r->seq = ++g_recSeq; g_siteLast[ptr] = r; g_recs.push_back(r); if (g_recs.size() > 64) g_recs.pop_front(); g_recsBig.push_back(r); if (g_recsBig.size() > g_bigCap) g_recsBig.pop_front();
             if (raw == 0x001B) g_healthConds[ptr] = r; if (raw == 0x001B && cond == 0 && r->vref[1] && !std::getenv("NOTSA_MDRIVER_NOHURT") && !std::getenv("NOTSA_MDRIVER_NOHURTNOW")) { const auto it = g_healthVars.find(r->vref[1]); const auto thr = ArgInt(*r, 0); auto* hp0 = it != g_healthVars.end() ? CPools::GetPed(it->second) : nullptr; if (it != g_healthVars.end() && thr && *thr >= 2 && hp0 && HostileScriptPed(hp0)) g_hurtNow = { it->second, (int)*thr - 1 }; } // CR37 // CR35: every `N > var` site seen (the pass is longer than the 400-record window)
             if (!(raw & 0x8000) && op == 0x0118) g_deadConds[ptr] = r; // CR21: every plain IS_CHAR_DEAD site seen (the 64-condition window misses the rarely-run ones)
             g_pending.push_back(r); if (g_pending.size() > 12) g_pending.erase(g_pending.begin());
@@ -2196,10 +2205,10 @@ bool Cmd(const char* name, const std::string& args) {
         float w[7]{}; const int nw = std::sscanf(rest.c_str(), "%f:%f:%f:%f:%f:%f:%f", w, w + 1, w + 2, w + 3, w + 4, w + 5, w + 6); // CR35: optional 4..7: the speed (x:y:z, units/frame) and heading the car keeps after the warp (a car that joins a moving train goes on alongside it)
         if (std::getenv("NOTSA_MDRIVER_STLOG") && isPed && tgt == ped) for (auto& p : GetPedPool()->GetAllValid()) if (&p != ped && (p.GetPosition() - CVector{ w[0], w[1], p.GetPosition().z }).Magnitude2D() < 80.f) notsa::standalone::Fixups::Log("[stlog] ped h=%d model=%d type=%d hp=%.0f mission=%d veh=%d likes=%d d=%.1f box=%d", CPools::GetPedRef(&p), (int)p.m_nModelIndex, (int)p.m_nPedType, p.m_fHealth, (int)p.IsCreatedByMission(), (int)p.bInVehicle, (int)LikesSide((int)p.m_nPedType), (double)(p.GetPosition() - CVector{ w[0], w[1], p.GetPosition().z }).Magnitude2D(), (int)g_stBox.v); // CR56 debug
         if (g_stBox.v) { const StealthBox sb = g_stBox; g_stBox.v = false; // CR56
-            // CR56 (100: `LOCATE_CHAR_ANY_MEANS_3D CJ centre 200 200 200` gates the creation of the base; the script creates the gate sentry AT the centre when CJ arrives, so a centre warp lands on it): a locate box with half extents >= 150 m on both axes (100 breaks 39 BADLANDS) is an approach test, any spot of it will do: CJ is put 0.6 R from the centre on the side he comes from (NOTSA_MDRIVER_NOBIGBOXEDGE=1 off)
-            if (isPed && tgt == ped && !ped->bInVehicle && sb.r[0] >= 150.f && sb.r[1] >= 150.f && std::fabs(w[0] - sb.c[0]) < 0.05f && std::fabs(w[1] - sb.c[1]) < 0.05f && !std::getenv("NOTSA_MDRIVER_NOBIGBOXEDGE") && !std::getenv("NOTSA_MDRIVER_NOSTEALTHWARP")) {
+            // CR56 (100: `LOCATE_CHAR_ANY_MEANS_3D CJ centre 200 200 200` gates the creation of the base; the script creates the gate sentry AT the centre when CJ arrives, so a centre warp lands on it): a locate box with half extents >= 150 m on both axes (100 breaks 39 BADLANDS) is an approach test, any spot of it will do: CJ is put 0.6 R from the centre on the side he comes from (CR57: opt-in, NOTSA_MDRIVER_BIGBOXEDGE=1; it gained no pass, CR57 target 3)
+            if (isPed && tgt == ped && !ped->bInVehicle && sb.r[0] >= 150.f && sb.r[1] >= 150.f && std::fabs(w[0] - sb.c[0]) < 0.05f && std::fabs(w[1] - sb.c[1]) < 0.05f && std::getenv("NOTSA_MDRIVER_BIGBOXEDGE")) {
                 const CVector cp = ped->GetPosition(); float ex = cp.x - sb.c[0], ey = cp.y - sb.c[1]; const float el = std::hypot(ex, ey); if (el > 1.f) { ex /= el; ey /= el; const float rr = 0.6f * std::min(sb.r[0], sb.r[1]); notsa::standalone::Fixups::Log("[mdriver] bigboxedge: the box (half extents %.0f x %.0f) is an approach test: CJ lands %.0f m from its centre", (double)sb.r[0], (double)sb.r[1], (double)rr); w[0] = sb.c[0] + ex * rr; w[1] = sb.c[1] + ey * rr; w[2] = -100.f; } }
-            if (isPed && tgt == ped && !ped->bInVehicle && std::fabs(w[0] - sb.c[0]) < 0.05f && std::fabs(w[1] - sb.c[1]) < 0.05f && !std::getenv("NOTSA_MDRIVER_NOSTEALTHWARP") && StealthDanger(ped, w[0], w[1], w[2] <= -100.f ? sb.c[2] : w[2])) {
+            if (isPed && tgt == ped && !ped->bInVehicle && std::fabs(w[0] - sb.c[0]) < 0.05f && std::fabs(w[1] - sb.c[1]) < 0.05f && std::getenv("NOTSA_MDRIVER_STEALTHWARP") && StealthDanger(ped, w[0], w[1], w[2] <= -100.f ? sb.c[2] : w[2])) {
                 const float rmax = std::min(150.f, 0.9f * std::max(sb.r[0] > 0.f ? sb.r[0] : 150.f, sb.r[1] > 0.f ? sb.r[1] : 150.f)); bool done = false; int loads = 0;
                 for (float rr = 4.f; rr <= rmax && !done && loads < 8; rr += 4.f) for (int k = 0; k < 16 && !done && loads < 8; k++) {
                     const float a = k * 6.2831853f / 16.f, qx = sb.c[0] + rr * std::cos(a), qy = sb.c[1] + rr * std::sin(a);

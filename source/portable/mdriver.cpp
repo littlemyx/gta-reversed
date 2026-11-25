@@ -1252,6 +1252,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         QueueActions({ "emit mdexplode:" + std::to_string((int)F_(0)) + ":" + F(0.5f * (F_(1) + F_(4))) + ":" + F(0.5f * (F_(2) + F_(5))) + ":" + F(0.5f * (F_(3) + F_(6))) }, row.settle); return;
     }
     if (v == "blipgo") { one(warp(F_(0), F_(1), F_(2), false)); return; } // CR26
+    if (v == "blipfoot") { QueueActions({ "key down return", "wait 1", "key up return", "waituntil invehicle == 0 300", "emit mdwveh:" + F(F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) }, row.settle); return; } // CR53
     if (v == "midpoint") {
         float x, y, z = -100.f;
         if (d.args.size() >= 6) { x = (F_(0) + F_(3)) / 2; y = (F_(1) + F_(4)) / 2; z = (F_(2) + F_(5)) / 2; } else { x = (F_(0) + F_(2)) / 2; y = (F_(1) + F_(3)) / 2; }
@@ -1883,6 +1884,13 @@ void TickGeneric() {
             static Row kBlip{ 0, 0, "destination blip (no condition of the pass is answerable)", "blipgo", {}, 120 };
             d.row = &kBlip; d.rowIdx = -7; d.cond = nullptr; d.op = 0; d.args.clear();
             for (const float f : { best->m_vPosition.x, best->m_vPosition.y, std::fabs(best->m_vPosition.z) < 0.5f ? -100.f : best->m_vPosition.z }) { RArg a; a.n = f; d.args.push_back(a); }
+        } else if (best && me && me->bInVehicle && !std::getenv("NOTSA_MDRIVER_NOBLIPFOOT")) { // CR53 (90 THE MEAT BUSINESS: CJ sits in his car 3.5 m from the abattoir's entry marker, the dialogue is over, the only open task is the blip; an entry exit takes a ped on foot): once per blip CJ gets out and is put on the blip
+            static std::set<std::pair<int, int>> s_done; const auto key = std::make_pair((int)best->m_vPosition.x, (int)best->m_vPosition.y);
+            if (s_done.insert(key).second) {
+                static Row kBlipF{ 0, 0, "destination blip, CJ in a vehicle (no condition of the pass is answerable)", "blipfoot", {}, 120 };
+                d.row = &kBlipF; d.rowIdx = -14; d.cond = nullptr; d.op = 0; d.args.clear();
+                for (const float f : { best->m_vPosition.x, best->m_vPosition.y, std::fabs(best->m_vPosition.z) < 0.5f ? -100.f : best->m_vPosition.z }) { RArg a; a.n = f; d.args.push_back(a); }
+            }
         }
     }
     if (g_auxDone && !CMenuSystem::MenuInUse[0] && !CMenuSystem::MenuInUse[1]) g_auxDone = false;
@@ -2072,7 +2080,9 @@ bool Cmd(const char* name, const std::string& args) {
         if (!std::strcmp(name, "mdwother")) { const int kind = std::atoi(rest.c_str()); rest = rest.substr(rest.find(':') + 1); const int h = std::atoi(rest.c_str()); rest = rest.substr(rest.find(':') + 1); isPed = kind == 0; tgt = isPed ? (CEntity*)CPools::GetPed(h) : (CEntity*)CPools::GetVehicle(h); if (!tgt) return true; }
         float w[7]{}; const int nw = std::sscanf(rest.c_str(), "%f:%f:%f:%f:%f:%f:%f", w, w + 1, w + 2, w + 3, w + 4, w + 5, w + 6); // CR35: optional 4..7: the speed (x:y:z, units/frame) and heading the car keeps after the warp (a car that joins a moving train goes on alongside it)
         CStreaming::LoadScene(CVector{ w[0], w[1], 0.f }); CStreaming::LoadSceneCollision(CVector{ w[0], w[1], 0.f });
-        const float gz = w[2] <= -100.f ? CWorld::FindGroundZForCoord(w[0], w[1]) : w[2];
+        float gz = w[2] <= -100.f ? CWorld::FindGroundZForCoord(w[0], w[1]) : w[2];
+        if (w[2] <= -100.f && tgt == ped && !ped->bInVehicle && ped->GetPosition().z > 800.f && CGame::currArea != 0 && std::hypot(w[0] - ped->GetPosition().x, w[1] - ped->GetPosition().y) < 80.f && !std::getenv("NOTSA_MDRIVER_NOINTERIORZ")) { // CR53 (90 THE MEAT BUSINESS: the abattoir's `IS_CHAR_IN_AREA_2D` boxes are 2D, the interior lies at z 1000+ over the same x,y; the ground warp put CJ on the street outside, the interior peds were not processed and never died): a ground warp inside an interior stays on the interior floor
+            bool ok = false; const float fz = CWorld::FindGroundZFor3DCoord(CVector{ w[0], w[1], ped->GetPosition().z + 1.f }, &ok, nullptr); gz = ok ? fz : ped->GetPosition().z - 1.1f; notsa::standalone::Fixups::Log("[mdriver] interiorz: ground warp inside the interior stays at z %.2f", gz); }
         CVehicle* veh = nullptr; if (isPed) { auto* pd = static_cast<CPed*>(tgt); if (pd->bInVehicle) veh = pd->m_pVehicle; } else veh = static_cast<CVehicle*>(tgt);
         if (veh && ped->bInVehicle && ped->m_pVehicle == veh) g_warpFixLeft = 900; // CR52
         if (veh) { if (GetVehiclePool()->GetRef(veh) == g_airHold.h) g_airHold.left = 0; /* CR50: a new warp of the held aircraft ends the old hold */ CCarCtrl::SetCoordsOfScriptCar(veh, w[0], w[1], gz, 0, 1); veh->m_vecMoveSpeed = CVector{}; veh->m_vecTurnSpeed = CVector{}; if ((veh->IsSubPlane() || veh->IsSubHeli()) && !std::getenv("NOTSA_MDRIVER_NOAIRHOLD") && ped->bInVehicle && ped->m_pVehicle == veh) { const float gnd = CWorld::FindGroundZForCoord(w[0], w[1]); if (gz - gnd > 30.f || (veh->IsSubPlane() && gz - gnd > 0.5f && !std::getenv("NOTSA_MDRIVER_NOLOWHOLD"))) { g_airHold.h = GetVehiclePool()->GetRef(veh); g_airHold.z = gz; g_airHold.left = gz - gnd > 30.f ? 1500 : 240; g_airHold.vx = nw >= 7 ? w[3] : 0.f; g_airHold.vy = nw >= 7 ? w[4] : 0.f; notsa::standalone::Fixups::Log("[mdriver] airhold: the aircraft is held at z %.0f for 1500 frames", gz); } } /* CR49 */ if (nw >= 7) { veh->SetHeading(w[6]); veh->m_vecMoveSpeed = CVector{ w[3], w[4], w[5] }; } if (std::getenv("NOTSA_MDRIVER_ENTERLOG")) g_watchVeh = GetVehiclePool()->GetRef(veh); }

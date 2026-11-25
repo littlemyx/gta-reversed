@@ -1363,6 +1363,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         std::string kk = d.args.empty() ? "" : d.args[0].str ? d.args[0].s : std::to_string((int)d.args[0].n); const int n0 = d.args.size() > 1 && !d.args[1].str ? (int)d.args[1].n : 8;
         std::string nm = KeyName(kk); int n = n0;
         if (kk == "16" && !std::getenv("NOTSA_MDRIVER_NOACCELKEY") && ((c && c->bInVehicle) || (FindPlayerInfo().m_pRemoteVehicle != nullptr))) { nm = "w"; if (std::getenv("NOTSA_MDRIVER_ACCELHOLD")) n = std::atoi(std::getenv("NOTSA_MDRIVER_ACCELHOLD")); } // CR47 (73 SUPPLY LINES: IS_BUTTON_PRESSED 16 = the cross button; in a vehicle / in remote mode that is VEHICLE_ACCELERATE (W), the RC plane's throttle; the space key is the handbrake): the real key follows the driving binding
+        if (kk == "3" && c && c->bInVehicle && c->m_pVehicle && c->m_pVehicle->m_nModelIndex == MODEL_FORKLIFT && !std::getenv("NOTSA_MDRIVER_NOFORKLIFT")) { n = 450; QueueActions({ "emit mdpad:3:" + std::to_string(n), "emit mdfork:" + std::to_string(n), "wait " + std::to_string(n) }, row.settle); return; } // CR55 (101 BREAKING THE BANK: the stage polls IS_BUTTON_PRESSED 0 3 and the fork offset of the forklift; the pad-only press did not move the forks, they follow CPad::GetCarGunUpDown = the right stick Y, negative = up): in a forklift the press also holds the lift input (stick Y -128) for 450 frames (the forks need about 2500 / 10 per frame)
         if (nm.empty() && !kk.empty() && std::isdigit((unsigned char)kk[0]) && !std::getenv("NOTSA_MDRIVER_NOPADONLY")) { QueueActions({ "emit mdpad:" + kk + ":" + std::to_string(n), "wait " + std::to_string(n) }, row.settle); return; } // CR27: a pad button without a keyboard binding (13 = SELECT): the pad state alone (IS_BUTTON_PRESSED reads it)
         if (nm.empty()) { Stop("unmapped-key " + kk, cop, 0); return; }
         if (!kk.empty() && std::isdigit((unsigned char)kk[0])) { QueueActions({ "emit mdpad:" + kk + ":" + std::to_string(n), (kk == "16" && (CMenuSystem::MenuInUse[0] || CMenuSystem::MenuInUse[1]) && !std::getenv("NOTSA_MDRIVER_NOMENUACCEPT")) ? "emit mdmenu:0" : "wait 0", "key down " + nm, "wait " + std::to_string(n), "key up " + nm }, row.settle); return; } // CR4: numeric pad button: the pad state itself, as TS (PadInput.joy[field] = 255)
@@ -1564,6 +1565,7 @@ bool WritesGlobal(const CRunningScript* t, uint16_t off) { // a command of the t
     return st.writes[off] = w;
 }
 static float g_passStat0 = 0.f;
+static int g_forkHold = 0; // CR55: frames the forklift lift input (right stick Y -128 = forks up) is held
 static std::map<int,int> g_padHold; // CR4: button -> frames left
 static std::string ShooterDesc(CEntity* e) { // CR18: debug: model, vehicle (model, driver or passenger), distance to CJ, active weapon of the last damager of CJ's car
     if (!e || e->GetType() != ENTITY_TYPE_PED) return "-"; auto* p = static_cast<CPed*>(e); char b[160]; auto* me = Cj();
@@ -1572,6 +1574,7 @@ static std::string ShooterDesc(CEntity* e) { // CR18: debug: model, vehicle (mod
     return o;
 }
 void TickGeneric() {
+    if (g_forkHold > 0) { --g_forkHold; CPad::GetPad(0)->PCTempKeyState.RightStickY = -128; } // CR55
     for (auto it = g_padHold.begin(); it != g_padHold.end();) { if (it->second > 0) --it->second; it = it->second > 0 ? std::next(it) : g_padHold.erase(it); }
     if (!g_loaded) { LoadTable(std::getenv("NOTSA_MDRIVER_TABLE")); LoadArity(); if (const char* o = std::getenv("NOTSA_MDRIVER_OUT")) g_out = std::fopen(o, "w"); if (const char* m = std::getenv("NOTSA_MDRIVER_MAXFRAMES")) g_maxFrames = std::atoi(m); }
     if (static const char* st = std::getenv("NOTSA_MDRIVER_STALL")) g_stall = std::atoi(st); // CR16: per-run override of the stall threshold (TS stallFrames = 600 frames of 33.33 ms = 20 s; 1000 frames of the 20 ms RR step are the same game time; allmissions.sh sets it for mission 46)
@@ -2141,6 +2144,7 @@ bool Cmd(const char* name, const std::string& args) {
         return true;
     }
     if (!std::strcmp(name, "mdkillcar")) { if (auto* k = CPools::GetVehicle(std::atoi(args.c_str()))) { if (std::getenv("NOTSA_MDRIVER_KILLLOG")) notsa::standalone::Fixups::Log("[mdriver] mdkillcar %s model %d hp %.0f status %d canBeDamaged %d fixed %d type %d", args.c_str(), (int)k->m_nModelIndex, k->m_fHealth, (int)k->GetStatus(), (int)k->vehicleFlags.bCanBeDamaged, (int)k->physicalFlags.bDisableCollisionForce, (int)k->GetType()); k->BlowUpCar(nullptr, false); if (std::getenv("NOTSA_MDRIVER_KILLLOG")) notsa::standalone::Fixups::Log("[mdriver]   after: hp %.0f status %d", k->m_fHealth, (int)k->GetStatus()); } return true; }
+    if (!std::strcmp(name, "mdfork")) { g_forkHold = std::atoi(args.c_str()) + 1; return true; } // CR55
     if (!std::strcmp(name, "mdpad")) { const auto c = args.find(':'); if (c != std::string::npos) g_padHold[std::atoi(args.c_str())] = std::atoi(args.c_str() + c + 1) + 1; return true; }
     if (!std::strcmp(name, "mdmenu")) { // CR27: the player's CROSS press on a menu (CMenuSystem::InputStandardMenu): the selected row (the first selectable one when none) becomes the accepted row of every menu in use
         for (int id = 0; id < CMenuSystem::MENU_COUNT; id++) {

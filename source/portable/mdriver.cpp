@@ -1897,6 +1897,10 @@ void TickGeneric() {
             if (bt && d.args.size() >= 2 && !d.args[0].str && !d.args[1].str && far2d(bt->m_vPosition, (float)d.args[0].n, (float)d.args[1].n) && far2d(bt->m_pEntryExit->GetPosition(), (float)d.args[0].n, (float)d.args[1].n)) { static Row kEnter2{ 0, 0, "interior blip: through its entry exit", "enterarea", {}, 200 }; if (CGame::currArea != 0) { g_enterArea = 0; g_enterEx = nullptr; } else g_enterEx = bt->m_pEntryExit; d.row = &kEnter2; d.rowIdx = -13; d.cond = nullptr; d.op = 0; d.args.clear(); }
         }
     }
+    if (d.act && d.row->action == "pedwarp" && d.args.size() >= 3 && !d.args[0].str && !d.args[1].str && !d.args[2].str && d.args[2].n > 800.0 && CGame::currArea == 0 && Cj() && !Cj()->bInVehicle && !std::getenv("NOTSA_MDRIVER_NOINTERIORENTER")) { // CR52 (101 BREAKING THE BANK AT CALIGULA'S: the stage's locate is inside the casino (z 1089), the warp put CJ at the interior coordinates while the game was still in the exterior area and the mission failed 40 frames later): a warp to interior coordinates (z > 800) from the exterior goes through the entry exit whose interior position is within 40 m of the target (the same `enterarea` verb as the blip rule)
+        CEntryExit* bestEx = nullptr; float bd = 40.f; for (auto& e : CEntryExitManager::GetPool()->GetAllValid()) { if ((int)e.m_nArea == 0) continue; const float dd = std::hypot(e.m_vecExitPos.x - (float)d.args[0].n, e.m_vecExitPos.y - (float)d.args[1].n); if (dd < bd && std::fabs(e.m_vecExitPos.z - (float)d.args[2].n) < 40.f) { bd = dd; bestEx = &e; } }
+        if (bestEx) { static Row kEnter3{ 0, 0, "interior locate: through its entry exit", "enterarea", {}, 200 }; g_enterEx = bestEx; d.row = &kEnter3; d.rowIdx = -14; d.cond = nullptr; d.op = 0; d.args.clear(); notsa::standalone::Fixups::Log("[mdriver] interiorenter: the warp target is inside an interior: through the entry exit at %.1f %.1f", bestEx->GetPosition().x, bestEx->GetPosition().y); }
+    }
     g_attemptsAt[ipPtr]++;
     const std::string key = std::to_string(at) + ":" + std::to_string(d.rowIdx) + ":" + RKey(d.args) + g_auxTag; g_auxTag.clear();
     const int n = ++g_noProgress[key];

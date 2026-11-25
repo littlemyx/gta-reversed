@@ -1659,6 +1659,12 @@ void TickGeneric() {
         auto* me2 = Cj(); auto* v2 = me2 && me2->bInVehicle ? me2->m_pVehicle : nullptr;
         if (!v2) { g_vhpVeh = nullptr; g_vhpPrev = -1; g_dropWin = 0; }
         else { const int h2 = (int)v2->m_fHealth; if (g_vhpVeh == v2 && g_vhpPrev >= 0 && h2 <= g_vhpPrev - 45) g_dropWin++; else g_dropWin = 0; g_vhpVeh = v2; g_vhpPrev = h2; if (g_dropWin >= 3) { if (fr >= g_dangerUntil) notsa::standalone::Fixups::Log("[mdriver] danger frame %d: the vehicle keeps losing health (%d)", fr, h2); g_dangerUntil = fr + 120; } }
+        { // CR51 (26: the Patriots hurt the Mule in bursts, about 1000 hp per 570 frames with empty 30-frame windows between, so 3 consecutive windows of 45 may never hold): the health lost over the last 10 windows (300 frames) >= 300 is danger as well (opt-in: NOTSA_MDRIVER_DANGERSUM=1; default OFF because with it 26 triggers 60 frames earlier and STOPs 20772: the Mule warp to the blip at that moment sends the script back to the forklift stage, so 26 passes only by the timing of the old rule)
+            static int s_hist[10], s_hn = 0, s_hp = -1; static const void* s_hv = nullptr; const int hcur = v2 ? (int)v2->m_fHealth : -1;
+            if (!v2 || s_hv != v2) { s_hn = 0; for (int& q : s_hist) q = 0; s_hv = v2; } else if (s_hp >= 0) { s_hist[s_hn++ % 10] = std::max(0, s_hp - hcur); int sum = 0; for (int q : s_hist) sum += q; if (sum >= 300 && s_hn >= 10 && std::getenv("NOTSA_MDRIVER_DANGERSUM")) { if (fr >= g_dangerUntil) notsa::standalone::Fixups::Log("[mdriver] danger frame %d: the vehicle lost %d health in 300 frames (%d)", fr, sum, hcur); g_dangerUntil = fr + 120; } }
+            s_hp = hcur;
+        }
+
     }
     for (;;) {
         if (g_wait > 0) { g_wait--; return; }

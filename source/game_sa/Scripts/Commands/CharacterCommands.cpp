@@ -411,10 +411,16 @@ auto AttachFxSystemToCharBone(tScriptEffectSystem& fx, CPed& ped, eBoneTag bone)
  * 
  * @returns {Vector} 
  */
-auto GetDeadCharCoordinates(CPed& ped) {
-    return ped.IsInVehicle()
-        ? ped.m_pVehicle->GetPosition()
-        : ped.GetBonePosition(BONE_PELVIS);
+auto GetDeadCharCoordinates(CPed* ped) {
+    // exe 0x471D7A (ProcessCommands2100To2199 case 0x889): CPedPool::GetAtRef(handle) and then [ped + 0x46C] is read without a null test, so a handle that is not a live
+    // ped (e.g. 0: 103 VERTICAL BIRD loops over a status array whose 6th handle the script never fills, IS_CHAR_DEAD(0) is true and the dead branch asks for its coordinates)
+    // faults in the exe too. Return the zero vector instead of crashing the port (no exe behaviour to keep: the exe has no result there).
+    if (!ped) {
+        return CVector{};
+    }
+    return ped->IsInVehicle()
+        ? ped->m_pVehicle->GetPosition()
+        : ped->GetBonePosition(BONE_PELVIS);
 }
 
 /*

@@ -3,6 +3,7 @@
 
 #ifdef NOTSA_SCMTRACE
 #include "scmtrace.h"
+#include "standalone/Fixups.h"
 #include "Scripts/RunningScript.h"
 #include "Scripts/TheScripts.h"
 #ifdef NOTSA_MDRIVER
@@ -203,8 +204,33 @@ void Begin(CRunningScript* s) {
     }
 }
 
+// CR59: NOTSA_ARITYCHECK=1: after every traced command compare where the interpreter left the IP with the end of the instruction decoded from the SCM operand count
+// (argcounts.tsv): a handler that takes fewer operands than the command has desyncs the script (CAN_CHAR_SEE_DEAD_CHAR took 1 of 2: 103 read the second operand as an opcode).
+// Jumps / calls / terminators are skipped; every other mismatch is logged once per opcode.
+static void ArityCheck(CRunningScript* s) {
+    static const bool on = std::getenv("NOTSA_ARITYCHECK") != nullptr;
+    if (!on) return;
+    static std::unordered_map<unsigned, int> tab; static std::unordered_map<unsigned, bool> seen; static bool loaded = false;
+    if (!loaded) { loaded = true; const char* p = std::getenv("NOTSA_MDRIVER_ARGCOUNTS"); FILE* f = std::fopen(p ? p : "tools/standalone/scmscan/argcounts.tsv", "r"); char line[256]; while (f && std::fgets(line, sizeof line, f)) { unsigned op; int n; if (std::sscanf(line, "0x%x	%d", &op, &n) == 2) tab[op] = n; } if (f) std::fclose(f); }
+    const unsigned op = g_curRaw & 0x7FFF;
+    switch (op) { case 0x0002: case 0x004C: case 0x004D: case 0x004E: case 0x0050: case 0x0051: case 0x0871: case 0x0872: case 0x0873: return; default: break; }
+    const auto it = tab.find(op); if (it == tab.end() || seen.count(op)) return;
+    static const int kSz[0x14] = { 0, 4, 2, 2, 1, 2, 4, 6, 6, 8, 2, 2, 6, 6, 0, 16, 2, 2, 6, 6 };
+    const uint8_t* q = g_curPtr + 2; int n = it->second;
+    for (int i = 0; n < 0 || i < n; i++) {
+        const uint8_t t = *q;
+        if (n < 0 && t == 0) { q++; break; }
+        if (t == 0 || t > 0x13) return; // not a plain operand: give up on this opcode
+        q += (t == 0xE) ? 2 + q[1] : 1 + kSz[t];
+    }
+    if (s->m_IP == q) return;
+    seen[op] = true;
+    notsa::standalone::Fixups::Log("[arity] op %04x %s at %s ip %x: the handler left the IP %d byte(s) %s the end of the instruction", op, std::string{ notsa::script::GetScriptCommandName((eScriptCommands)op) }.c_str(), g_curBase, g_curIp, (int)std::abs((long long)(s->m_IP - q)), s->m_IP < q ? "before" : "after");
+}
+
 void End(CRunningScript* s) {
     const uint32_t id = g_curInfo->id, fr = Frame();
+    ArityCheck(s);
 #ifdef NOTSA_MDRIVER
     notsa::mdriver::OnCommand(s, g_curPtr, g_curRaw, g_cond);
 #endif

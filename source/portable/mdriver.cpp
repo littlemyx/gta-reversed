@@ -482,12 +482,13 @@ bool g_fireGuard = false; // CR59: the mission script counts fires (GET_NUMBER_O
 void StaticScan(const CRunningScript* s) {
     if (std::getenv("NOTSA_MDRIVER_NOSTATICSCAN")) return;
     const uint8_t* p = s->m_BaseIP; RecP pend; bool single = false; int n = 0, nd = 0, nf = 0;
+    int64_t missionEndOff = INT64_MAX; { const int64_t baseOff = (int64_t)(s->m_BaseIP - CTheScripts::ScriptSpace.data()); for (size_t i = 0; i < (size_t)CTheScripts::NumberOfMissionScripts && i < CTheScripts::MultiScriptArray.size(); i++) { const int64_t o = CTheScripts::MultiScriptArray[i]; if (o > baseOff && o < missionEndOff) missionEndOff = o; } } // CR59
     std::vector<RecP> orPend; bool inOr = false; // CR49 (88 DON PEYOTE: `IS_CHAR_DEAD girl1 OR IS_CHAR_DEAD girl2` -> fail print): the plain IS_CHAR_DEAD members of an OR group are guard sites too (any member true takes the fall-through)
     while (InSpace(p) && n++ < 60000) {
         const uint16_t w = *(const uint16_t*)p; const int op = w & 0x7FFF; if (op > 0x0AFF) break;
         const uint8_t* ops[3]{}; int cnt = 0; const uint8_t* e = CmdOps(p, ops, cnt); if (!e) break;
         if (Arity(op) < 0 && InSpace(e) && *e == 0) e++; // variadic: the END operand
-        if (op == 0x0786) g_fireGuard = true;
+        if (op == 0x0786 && (int64_t)(p - CTheScripts::ScriptSpace.data()) < missionEndOff) g_fireGuard = true; // (only this mission's own code: the scan runs on into the next missions)
         if (op == 0x004D) { if (inOr && !std::getenv("NOTSA_MDRIVER_NOORGUARD")) { for (auto& q : orPend) { q->hasBranch = true; q->jumped = false; q->fall = p + 7; q->target = p + 7; q->orSite = true; g_deadConds[q->p] = q; nd++; } } orPend.clear(); inOr = false; if (pend) { pend->hasBranch = true; pend->jumped = false; pend->fall = p + 7; pend->target = p + 7; if ((pend->raw & 0x7FFF) == 0x0118 || (pend->raw & 0x7FFF) == 0x0119) { g_deadConds[pend->p] = pend; nd++; } else { g_flagConds[pend->p] = pend; nf++; } } pend.reset(); single = false; p = e; continue; }
         if ((op == 0x08F9 || op == 0x05AD) && cnt >= 2 && ops[1] && InSpace(ops[1]) && *ops[1] == 0x0E && ops[1][1] > 0 && ops[1][1] <= 8) g_enexNames.insert(std::string((const char*)ops[1] + 2, strnlen((const char*)ops[1] + 2, ops[1][1]))); // CR27
         if (op == 0x0652 && cnt >= 1 && ops[0]) { int32_t sv = 0; if (OperandInt(ops[0], sv) && sv == STAT_LUNG_CAPACITY && !std::getenv("NOTSA_MDRIVER_NOLUNG")) CStats::SetStatValue(STAT_LUNG_CAPACITY, 100.f); } // CR39 (56 AMPHIBIOUS ASSAULT: the mission ends at once with \"you need more practice underwater\" unless GET_INT_STAT 225 > 50): the player has trained his lungs

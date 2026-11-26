@@ -1509,6 +1509,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
             }
         }
         notsa::standalone::Fixups::Log("[mdriver] warpto_handle: no clear spot, +0.5 m");
+        if (std::getenv("NOTSA_CR60LOG") && c && e->GetIsTypePed()) { auto* pe = static_cast<CPed*>(e); auto* cv = c->m_pVehicle; const CVector pp = pe->GetPosition(); auto* tk = pe->GetTaskManager().GetActiveTask(); notsa::standalone::Fixups::Log("[cr60] patient %d model %d hp %.0f inveh %d state %d pos %.1f %.1f %.1f task %d | cj veh %p dist %.1f pass %d/%d up.z %.2f status %d hp %.0f speed %.2f", h, (int)pe->m_nModelIndex, pe->m_fHealth, (int)pe->bInVehicle, (int)pe->m_nPedState, pp.x, pp.y, pp.z, tk ? (int)tk->GetTaskType() : -1, (void*)cv, cv ? (cv->GetPosition() - pp).Magnitude() : -1.f, cv ? (int)cv->m_nNumPassengers : -1, cv ? (int)cv->m_nMaxPassengers : -1, cv ? cv->GetUp().z : 0.f, cv ? (int)cv->GetStatus() : -1, cv ? cv->m_fHealth : 0.f, cv ? cv->m_vecMoveSpeed.Magnitude() : 0.f); } // CR60 TEMP
         one(warp(pos.x + 0.5f, pos.y, pos.z, false)); return;
     }
     if (v == "groupfill") { QueueActions({ "emit mdgroupfill:" + std::to_string(I_(0)) + ":" + std::to_string(I_(1)) }, row.settle); return; } // CR59
@@ -2085,7 +2086,10 @@ void TickGeneric() {
             for (const float f : { best->m_vPosition.x, best->m_vPosition.y, std::fabs(best->m_vPosition.z) < 0.5f ? -100.f : best->m_vPosition.z }) { RArg a; a.n = f; d.args.push_back(a); }
         } else if (best && me && me->bInVehicle && !std::getenv("NOTSA_MDRIVER_NOBLIPFOOT")) { // CR53 (90 THE MEAT BUSINESS: CJ sits in his car 3.5 m from the abattoir's entry marker, the dialogue is over, the only open task is the blip; an entry exit takes a ped on foot): once per blip CJ gets out and is put on the blip
             static std::set<std::pair<int, int>> s_done; const auto key = std::make_pair((int)best->m_vPosition.x, (int)best->m_vPosition.y);
-            if (s_done.insert(key).second) {
+            bool carGuard = false; // CR60 (122 PARAMEDIC: the main loop tests `NOT IS_CHAR_IN_MODEL CJ 416` every frame and ends the mission with 'get back in the ambulance' when CJ is on foot): CJ stays in a vehicle whose model a NOT IS_CHAR_IN_MODEL test of the script names (NOTSA_MDRIVER_NOVEHKEEP=1 off)
+            if (me->m_pVehicle && !std::getenv("NOTSA_MDRIVER_NOVEHKEEP")) for (auto& o : g_recs) if (o->raw == (0x00DD | 0x8000)) { const auto ci = ArgInt(*o, 0), mi = ArgInt(*o, 1); if (ci && mi && CPools::GetPed((int)*ci) == me && *mi == (int)me->m_pVehicle->m_nModelIndex) { carGuard = true; break; } }
+            if (carGuard) notsa::standalone::Fixups::Log("[mdriver] blipfoot skipped: the script tests NOT IS_CHAR_IN_MODEL CJ %d", (int)me->m_pVehicle->m_nModelIndex);
+            else if (s_done.insert(key).second) {
                 static Row kBlipF{ 0, 0, "destination blip, CJ in a vehicle (no condition of the pass is answerable)", "blipfoot", {}, 120 };
                 d.row = &kBlipF; d.rowIdx = -14; d.cond = nullptr; d.op = 0; d.args.clear();
                 for (const float f : { best->m_vPosition.x, best->m_vPosition.y, std::fabs(best->m_vPosition.z) < 0.5f ? -100.f : best->m_vPosition.z }) { RArg a; a.n = f; d.args.push_back(a); }

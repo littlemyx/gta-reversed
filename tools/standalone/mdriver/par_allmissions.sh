@@ -4,6 +4,7 @@
 # It takes the GPU lock ONCE for the whole batch (gpu_locked.sh --acquire/--release, EXIT trap), splits the list over N slots (longest first by the frame counts of $WEIGHTS = a
 # regression summary: idx name result frame ..., greedy LPT), and runs allmissions.sh once per slot with its own OUT (<outdir>/s<k>), DATA (<outdir>/d<k>) and UD (<outdir>/u<k>).
 # Output: <outdir>/summary.tsv (the allmissions.sh row format, idx order of the list) + <outdir>/par.log (per slot wall time). Per-mission artifacts stay in <outdir>/s<k>.
+# NOTSA_LOCK_FILE: each slot gets its own single-instance mutex name (the exe refuses a second instance otherwise: instant exit, no result).
 # env: WEIGHTS (default C:/gta-scratch/cr60/regression.final.txt), MAXF/WALL/RR_SEED/TABLE/... pass through to allmissions.sh, GPU_OWNER_TXT (lock owner text), NOLOCK=1 (skip the lock: only when the caller holds it)
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -26,7 +27,7 @@ T0=$(date +%s); PIDS=""
 for i in $(seq 1 "$N"); do
   L="$(tr '\n' ' ' < "$OUT/list.$i")"; [ -z "${L// /}" ] && continue
   rm -f "$OUT/s$i/summary.tsv"
-  ( t=$(date +%s); DATA="$OUT/d$i" UD="$OUT/u$i" "$HERE/allmissions.sh" "$OUT/s$i" $L > "$OUT/slot$i.out" 2>&1; echo "slot $i missions=$(echo $L | wc -w) wall=$(( $(date +%s) - t ))s" >> "$OUT/par.log" ) &
+  ( t=$(date +%s); NOTSA_LOCK_FILE="par_$$_$i" DATA="$OUT/d$i" UD="$OUT/u$i" "$HERE/allmissions.sh" "$OUT/s$i" $L > "$OUT/slot$i.out" 2>&1; echo "slot $i missions=$(echo $L | wc -w) wall=$(( $(date +%s) - t ))s" >> "$OUT/par.log" ) &
   PIDS="$PIDS $!"
 done
 trap 'for p in $PIDS; do own_kill_pid $p; done; for i in $(seq 1 "$N"); do own_kill_in_dir gta_reversed "$OUT/d$i"; done; [ -z "${NOLOCK:-}" ] && "$HERE/../gpu_locked.sh" --release $$' EXIT

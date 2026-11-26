@@ -18,7 +18,7 @@ LIST="${*:-}"
 EXE="$(hp "${EXE:-$REPO/build/PortableWin64RR/bin/gta_reversed.exe}")"
 DATA="$(hp "${DATA:-C:/gta-scratch/statehash/d3}")"; GAME_SRC="$(hp "${GAME_SRC:-$DEF_GAME_SRC}")"
 TABLE="$(cygpath -w "${TABLE:-C:/Users/littl/github/gta-reversed/.claude/worktrees/web-ts-port-51e1e0/web/docs/driver-classes.tsv}")"
-UD="$(hp C:/gta-scratch/statehash/ud3)"; SFX="${TAG_SUFFIX:-}"; WALL="${WALL:-3000}"; MAXF="${MAXF:-30000}"
+UD="$(hp C:/gta-scratch/statehash/ud3)"; SFX="${TAG_SUFFIX:-}"; WALL="${WALL:-3000}"; MAXF_SET="${MAXF:-}"; MAXF="${MAXF:-30000}"
 mkdir -p "$OUT" "$DATA" "$UD"
 [ -f "$TABLE" ] || { echo "no table $TABLE"; exit 2; }
 if [ -z "$LIST" ]; then
@@ -41,6 +41,8 @@ done
 [ -f "$OUT/summary.tsv" ] || printf 'idx\tname\tresult\tframe\tthread\tip\topcode\treason\n' > "$OUT/summary.tsv"
 cd "$DATA" || exit 2
 for IDX in $LIST; do
+  # CR60: 122 PARAMEDIC needs 12 levels of 3-9k frames each (PASSED at 52701 frames): its frame budget is 90000 unless MAXF is set
+  MAXF_M="$MAXF"; [ "$IDX" = 122 ] && [ -z "${MAXF_SET:-}" ] && MAXF_M=90000
   awk -F'\t' -v i="$IDX" '$1==i{f=1} END{exit !f}' "$OUT/summary.tsv" && { echo "skip $IDX (done)"; continue; }
   MN="$(mname "$IDX")"; W="$OUT/w$IDX"; mkdir -p "$W"
   # AD4 launch context (TS launch.ts): 36/48 CESAR1 in a car (492), 132 MTBIKER (510), 133 STUNT (481): CJ at the wheel; 71 DSKOOL: area 4
@@ -76,7 +78,7 @@ wait:400';; # courier: on a bike (the pickup model)
     export NOTSA_RR=1 NOTSA_RR_NOAUDIO=1 NOTSA_RR_AUDIOSTUBS=1 NOTSA_RR_SEED="${RR_SEED:-12345}" NOTSA_RR_STEP_MS="${RR_STEP_MS:-33}" NOTSA_RR_SCREEN=1280x720 NOTSA_AUDIO=null NOTSA_RR_GAMEPLAY_RAND=1
     export NOTSA_RR_TRACE="$(cygpath -w "$W/m.rr.trace")" NOTSA_SH_FILE="$(cygpath -w "$W/m.sh")" NOTSA_SH_RANDLOG="$(cygpath -w "$W/m.rand")"
     export NOTSA_SCMTRACE="$(cygpath -w "$W/m.scmtrace")" NOTSA_SCMTRACE_COMMIT="$(git -C "$REPO" rev-parse --short HEAD)"
-    export NOTSA_MDRIVER_ARGCOUNTS="$(cygpath -w "$REPO/tools/standalone/scmscan/argcounts.tsv")" NOTSA_MDRIVER_TABLE="$TABLE" NOTSA_MDRIVER_OUT="$(cygpath -w "$W/m.driver")" NOTSA_MDRIVER_RESULT="$(cygpath -w "$W/res")" NOTSA_MDRIVER_MAXFRAMES="$MAXF"
+    export NOTSA_MDRIVER_ARGCOUNTS="$(cygpath -w "$REPO/tools/standalone/scmscan/argcounts.tsv")" NOTSA_MDRIVER_TABLE="$TABLE" NOTSA_MDRIVER_OUT="$(cygpath -w "$W/m.driver")" NOTSA_MDRIVER_RESULT="$(cygpath -w "$W/res")" NOTSA_MDRIVER_MAXFRAMES="$MAXF_M"
     [ -n "${HC_OUT:-}" ] && export NOTSA_HITCOUNT_FILE="$(cygpath -w "$W/hc.txt")"
     case "$IDX" in 121) [ -z "${NOMDPOP:-}" ] && [ -z "${NOTSA_MDRIVER_POP:-}" ] && export NOTSA_MDRIVER_POP=200;; esac # CR59: the taxi looks for a fare around the drop-off every fare: keep pedestrians around CJ
     ./gta_reversed.exe > "$W/m.out" 2>&1 &

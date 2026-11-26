@@ -1553,6 +1553,12 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         if (best) { if (!(c->bInVehicle && c->m_pVehicle == best)) { notsa::standalone::Fixups::Log("[mdriver] anykind: CJ is put into the nearest %s (model %d, %.0f m)", heli ? "helicopter" : "plane", (int)best->m_nModelIndex, (double)bd); QueueActions({ "emit mdwarpin:" + std::to_string(GetVehiclePool()->GetRef(best)) }, row.settle); return; } }
         else if (s_spawnedKind < 2) { ++s_spawnedKind; notsa::standalone::Fixups::Log("[mdriver] anykind: no %s anywhere: a new one is put under CJ", heli ? "helicopter" : "plane"); QueueActions({ "emit mdlaunch:" + std::string(heli ? "487" : "513") }, row.settle); return; }
     }
+    if (v == "failclass" && c && d.cond && (d.cond->raw & 0x7FFF) == 0x00DD && !d.args.empty() && d.args[0].s == "needs-car-of-model" && ArgInt(*d.cond, 0) && CPools::GetPed((int)*ArgInt(*d.cond, 0)) == c && ArgInt(*d.cond, 1) && !std::getenv("NOTSA_MDRIVER_NOMODELCLASS")) { // CR59 (103 VERTICAL BIRD: `IS_CHAR_IN_MODEL CJ 520` waits for the pilot to sit in the Hydra the script made): CJ is put into the nearest free car of that model (a player walks to it and enters), or a new one when none exists
+        const int wm = (int)*ArgInt(*d.cond, 1); static int s_spawnedModel = 0;
+        if (c->bInVehicle && c->m_pVehicle && (int)(int16_t)c->m_pVehicle->m_nModelIndex == wm) { QueueActions({}, row.settle); return; }
+        if (auto* car = NearestCarOfModel(c, wm, 3000.f)) { notsa::standalone::Fixups::Log("[mdriver] inmodel: CJ is put into the nearest car of model %d (%.0f m)", wm, (double)(car->GetPosition() - c->GetPosition()).Magnitude()); QueueActions({ "emit mdwarpin:" + std::to_string(CPools::GetVehicleRef(car)) }, row.settle); return; }
+        if (s_spawnedModel < 2) { ++s_spawnedModel; notsa::standalone::Fixups::Log("[mdriver] inmodel: no free car of model %d: a new one is put under CJ", wm); QueueActions({ "emit mdlaunch:" + std::to_string(wm) }, row.settle); return; }
+    }
     if (v == "failclass") { Stop("by nature: " + (d.args.empty() ? std::string("failclass") : d.args[0].s), cop, 0); return; }
     Stop("badverb " + v, cop, 0);
 }

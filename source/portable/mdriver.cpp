@@ -510,6 +510,7 @@ bool ProtectedPed(CPed* p) { auto* c = FindPlayerPed(); return (int)p->m_nPedTyp
 std::map<const uint8_t*, RecP> g_healthConds;
 std::map<uint32_t, int> g_carHealthVars; // CR44: destination variable of GET_CAR_HEALTH (0227) -> the car handle
 std::map<uint32_t, int> g_objHealthVars; // CR37: destination variable of GET_OBJECT_HEALTH (071E) -> the object handle
+std::map<uint32_t, int> g_groupSizeVars; // CR59: destination variable (operand 2) of GET_GROUP_SIZE (07F6) -> the group handle (operand 0): a later `var > N` wait = the group needs more members
 std::map<uint32_t, int> g_healthVars; // CR35: destination variable of GET_CHAR_HEALTH -> the char handle read (a later `N > var` wait = the char is hurt below N)
 std::map<uint32_t, std::pair<int, bool>> g_headVars; // CR54: destination variable of GET_CHAR_HEADING (0172) / GET_CAR_HEADING (0174) -> (handle, is a car): a later heading window test on CJ's vehicle = face the window
 std::map<uint32_t, int> g_speedVars; // CR34: destination variable of GET_CAR_SPEED -> the car handle read (a later `var > N` wait = the car goes faster than N)
@@ -872,6 +873,11 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
         if (!std::getenv("NOTSA_MDRIVER_NOEXTINGUISH")) for (auto& b : g_recsBig) { // CR59 (123 FIREFIGHTER: the level loop tests `NOT IS_SCRIPT_FIRE_EXTINGUISHED @fire` (TRUE while the fire burns) every frame): the fire goes out
             if (b->raw != 0x82D0 || b->cond != 1 || b->waitSeq < g_waitSeq - 3) continue; auto a2 = ResolveArgs(kExt, *b); if (!a2 || a2->size() != 1) continue;
             d.act = true; d.row = &kExt; d.rowIdx = -61; d.cond = b; d.args = *a2; d.op = 0x02D0; return d; }
+        if (!std::getenv("NOTSA_MDRIVER_NOGROUPSIZE")) for (auto& c : falses) { // CR59 (109 LOS DESPERADOS: `GET_GROUP_SIZE G44 ... @177` then `IF @177 > 2`: CJ's group needs a third member, the script waits for the player to recruit a homie): a false plain `var > N` of a GET_GROUP_SIZE result gets friendly gang members (Grove, put near CJ) into that group
+            if ((c->raw & 0x7FFF) != 0x0019 || (c->raw & 0x8000) || !c->vref[0]) continue; auto it = g_groupSizeVars.find(c->vref[0]); if (it == g_groupSizeVars.end()) continue;
+            const auto thr = ArgInt(*c, 1); const int gh = it->second; const int gi = CTheScripts::GetActualScriptThingIndex(gh, SCRIPT_THING_PED_GROUP); if (!thr || gi < 0 || gi >= 8 || !Cj() || *thr > 6) continue;
+            static int s_groupTry = 0; if (++s_groupTry > 6) continue; static const Row kGs{ 0x0019, 0, "var > N of a GET_GROUP_SIZE result", "groupfill", {}, 60 };
+            d.act = true; d.row = &kGs; d.rowIdx = -18; d.cond = c; d.op = 0x0019; d.args.clear(); for (const float f : { (float)gh, (float)*thr }) { RArg a; a.n = f; d.args.push_back(a); } return d; }
         if (!std::getenv("NOTSA_MDRIVER_NOCARFIX")) for (auto& c : falses) { // CR34 (33 MANAGEMENT ISSUES: random traffic bumped the mission car on its way, the stage waits for `NOT IS_CAR_VISIBLY_DAMAGED car` (+ the car health), the Pay n Spray cannot do it, SET_CAN_RESPRAY_CAR 0): a false NOT-form IS_CAR_VISIBLY_DAMAGED is answered by repairing that car (CVehicle::Fix: the Pay n Spray outcome)
             if (c->raw != 0x83C9) continue; auto a2 = ResolveArgs(kFix, *c); if (!a2 || a2->empty() || !CPools::GetVehicle((int)(*a2)[0].n)) continue;
             d.act = true; d.row = &kFix; d.rowIdx = -14; d.cond = c; d.args = *a2; d.op = 0x03C9; return d; }
@@ -1496,6 +1502,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         notsa::standalone::Fixups::Log("[mdriver] warpto_handle: no clear spot, +0.5 m");
         one(warp(pos.x + 0.5f, pos.y, pos.z, false)); return;
     }
+    if (v == "groupfill") { QueueActions({ "emit mdgroupfill:" + std::to_string(I_(0)) + ":" + std::to_string(I_(1)) }, row.settle); return; } // CR59
     if (v == "extinguish") { QueueActions({ "emit mdextinguish:" + std::to_string(I_(0)) }, row.settle); return; } // CR58
     if (v == "photo") { QueueActions({ "emit mdphoto:" + std::to_string(I_(0)) }, row.settle); if (!std::getenv("NOTSA_MDRIVER_NOEARLY") && !std::getenv("NOTSA_MDRIVER_NOZOOM") && PhotoWantsZoom()) g_nextStall = 90, g_photoEarly = true; /* CR26: a timed (zoomed) photo condition: the next decision after 90 frames, not 600 (the walker's task ends sooner) */ return; } // CR25: HAS_CHAR_BEEN_PHOTOGRAPHED(ped): the camera shot of the ped (the flag CWeapon::TakePhotograph sets for a ped in frame, in range and in line of sight)
     if (v == "carspeed") { QueueActions({ "emit mdspeed:" + std::to_string(I_(0)) + ":" + F(F_(1)) }, row.settle); return; } // CR34
@@ -2122,7 +2129,7 @@ void TickGeneric() {
     }
     notsa::standalone::Fixups::Log("[mdriver] decide frame %d ip %x row %d %04X %s -> %s args %s cond-args %zu a0=%d cj=%d cond=%x@%x", fr, at, d.rowIdx, d.op, d.row->name.c_str(), d.row->action.c_str(), RKey(d.args).c_str(), d.cond ? d.cond->args.size() : (size_t)0, (d.cond && !d.cond->args.empty()) ? (int)d.cond->args[0].bits : -1, Cj() ? CPools::GetPedRef(Cj()) : -1, d.cond ? (unsigned)d.cond->raw : 0u, d.cond ? (unsigned)(d.cond->p - g_thread->m_BaseIP) : 0u); // CR16
     if (std::getenv("NOTSA_MDRIVER_POSLOG") && Cj()) { const auto cp = Cj()->GetPosition(); notsa::standalone::Fixups::Log("[mdriver] poslog CJ %.1f,%.1f,%.1f area %d veh %d (%.1f,%.1f,%.1f)", (double)cp.x, (double)cp.y, (double)cp.z, (int)Cj()->GetAreaCode(), Cj()->bInVehicle ? (int)Cj()->m_pVehicle->m_nModelIndex : -1, Cj()->bInVehicle ? (double)Cj()->m_pVehicle->GetPosition().x : 0., Cj()->bInVehicle ? (double)Cj()->m_pVehicle->GetPosition().y : 0., Cj()->bInVehicle ? (double)Cj()->m_pVehicle->GetPosition().z : 0.); } // CR58 debug
-    if (d.row->action == "kill" && !d.args.empty()) if (auto* kp = CPools::GetPed((int)d.args[0].n)) notsa::standalone::Fixups::Log("[mdriver] kill target h=%d model %d type %d hp %.0f pos %.0f,%.0f,%.0f (CJ %.0f,%.0f)", (int)d.args[0].n, (int)kp->m_nModelIndex, (int)kp->m_nPedType, kp->m_fHealth, kp->GetPosition().x, kp->GetPosition().y, kp->GetPosition().z, Cj() ? Cj()->GetPosition().x : 0.f, Cj() ? Cj()->GetPosition().y : 0.f); // CR27 debug log
+    if (d.row->action == "kill" && !d.args.empty()) if (auto* kp = CPools::GetPed((int)d.args[0].n)) notsa::standalone::Fixups::Log("[mdriver] kill target h=%d model %d type %d hp %.0f pos %.0f,%.0f,%.0f (CJ %.0f,%.0f) invul %d bullet %d inveh %d state %d", (int)d.args[0].n, (int)kp->m_nModelIndex, (int)kp->m_nPedType, kp->m_fHealth, kp->GetPosition().x, kp->GetPosition().y, kp->GetPosition().z, Cj() ? Cj()->GetPosition().x : 0.f, Cj() ? Cj()->GetPosition().y : 0.f, (int)kp->physicalFlags.bInvulnerable, (int)kp->physicalFlags.bBulletProof, (int)kp->bInVehicle, (int)kp->m_nPedState); // CR27 debug log
     if ((d.row->action == "entercar" || d.row->action == "vehwarp") && !d.args.empty() && d.cond && !d.cond->args.empty()) { const int ch = (int)(int32_t)d.cond->args[0].bits; if (CPools::GetVehicle(ch)) g_usedCars.insert(ch); } // CR27: the car of an entercar / `LOCATE_CAR` vehwarp answer
     if (d.cond && (d.row->action == "enterarea" || d.row->action == "entercar") && !std::getenv("NOTSA_MDRIVER_NOPINGPONG3")) { // CR54 (101 BREAKING THE BANK: `IF G31764 == 0` (a sprint / radar-zoom toggle of the main loop, no wait) was answered by walking out of the casino, then `IS_CHAR_IN_CAR CJ forklift` by entering the forklift again, A B A B until the 240 s timer ran out): an enter-area answer that comes back after an enter-car answer (A B A) from a condition EARLIER in the script is dropped, the condition is no candidate any more
         struct AH { std::string key; const void* ip; }; static std::vector<AH> s_ah; const bool area = d.row->action == "enterarea"; const std::string key = area ? "area:" + std::to_string(g_enterArea) : "car:" + RKey(d.args); const void* ipc = (const void*)d.cond->p; const size_t n = s_ah.size();
@@ -2168,6 +2175,8 @@ void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int co
                 uint32_t ref = 0; const auto a = DecodeArgs(s, ptr, 4);
                 if (k == 5 && a.size() == 4 && OperandVar(ops5[4], ref)) { g_tagAreas[ref] = { AF(a[0]), AF(a[1]), AF(a[2]), AF(a[3]) }; }
             }
+        } else if (op == 0x07F6) { // CR59: GET_GROUP_SIZE group, first-member var, size var
+            if (InSpace(ptr)) { const uint8_t* o[3]{}; const uint8_t* q = ptr + 2; bool mf = false, isI = false; int32_t iv = 0; int k = 0; for (; k < 3 && q && InSpace(q); k++) { o[k] = q; q = SkipOperand(q, mf, isI, iv); } uint32_t ref = 0; const auto a = DecodeArgs(s, ptr, 1); if (k == 3 && a.size() == 1 && OperandVar(o[2], ref)) g_groupSizeVars[ref] = (int)(int32_t)a[0].bits; }
         } else if (op == 0x0226) { // CR35: GET_CHAR_HEALTH char var
             if (InSpace(ptr)) { const uint8_t* o[2]{}; const uint8_t* q = ptr + 2; bool mf = false, isI = false; int32_t iv = 0; int k = 0; for (; k < 2 && q && InSpace(q); k++) { o[k] = q; q = SkipOperand(q, mf, isI, iv); } uint32_t ref = 0; const auto a = DecodeArgs(s, ptr, 1); if (k == 2 && a.size() == 1 && OperandVar(o[1], ref)) { g_healthVars[ref] = (int)(int32_t)a[0].bits; if (std::getenv("NOTSA_MDRIVER_HPLOG")) notsa::standalone::Fixups::Log("[hplog] GET_CHAR_HEALTH ped %d -> var %x", (int)(int32_t)a[0].bits, ref); } }
         } else if (op == 0x0227) { // CR44: GET_CAR_HEALTH car var
@@ -2244,7 +2253,7 @@ void SetCmdRunner(void (*fn)(const std::string&)) { g_run = fn; }
 bool Cmd(const char* name, const std::string& args) {
     if (std::strncmp(name, "md", 2)) return false;
     auto* ped = Cj();
-    if (!std::strcmp(name, "mdkillped")) { if (auto* k = CPools::GetPed(std::atoi(args.c_str()))) { if (std::getenv("NOTSA_MDRIVER_PLOG")) notsa::standalone::Fixups::Log("[mdplog] kill h=%s type=%d model=%d hp=%.0f pos=%.0f,%.0f wanted=%d\n", args.c_str(), (int)k->m_nPedType, (int)k->m_nModelIndex, k->m_fHealth, k->GetPosition().x, k->GetPosition().y, (int)FindPlayerWanted()->m_WantedLevel); if (ped) CWeapon::GenerateDamageEvent(k, ped, WEAPON_PISTOL, 1000, PED_PIECE_TORSO, 0); /* CR13: no forced health 0 / PEDSTATE_DEAD fallback: TS shootDead has none, the ped dies through its death task over the next frames */ } return true; }
+    if (!std::strcmp(name, "mdkillped")) { if (auto* k = CPools::GetPed(std::atoi(args.c_str()))) { if (std::getenv("NOTSA_MDRIVER_PLOG")) notsa::standalone::Fixups::Log("[mdplog] kill h=%s type=%d model=%d hp=%.0f pos=%.0f,%.0f wanted=%d\n", args.c_str(), (int)k->m_nPedType, (int)k->m_nModelIndex, k->m_fHealth, k->GetPosition().x, k->GetPosition().y, (int)FindPlayerWanted()->m_WantedLevel); if (ped) CWeapon::GenerateDamageEvent(k, ped, k->physicalFlags.bBulletProof && !std::getenv("NOTSA_MDRIVER_NOMELEEKILL") ? WEAPON_UNARMED : WEAPON_PISTOL, 1000, PED_PIECE_TORSO, 0); /* CR59 (109 LOS DESPERADOS: the last wave has SET_CHAR_PROOFS bullet proof, a pistol hit does nothing: a bullet proof ped is killed by a melee hit) */ /* CR13: no forced health 0 / PEDSTATE_DEAD fallback: TS shootDead has none, the ped dies through its death task over the next frames */ } return true; }
     if (!std::strcmp(name, "mdhurt")) { int h = 0, hp = 0; std::sscanf(args.c_str(), "%d:%d", &h, &hp); if (auto* k = CPools::GetPed(h)) { if (k->m_fHealth > (float)hp) k->m_fHealth = (float)hp; notsa::standalone::Fixups::Log("[mdriver] mdhurt ped %d health -> %d type %d model %d", h, hp, (int)k->m_nPedType, (int)k->m_nModelIndex); } return true; } // CR35
     if (!std::strcmp(name, "mdejectped")) { // CR52: a ped in a car is put out of it (the door of his seat)
         if (auto* pd = CPools::GetPed(std::atoi(args.c_str())); pd && pd->bInVehicle && pd->m_pVehicle) { auto* ev = pd->m_pVehicle; pd->GetIntelligence()->FlushImmediately(false); CTaskSimpleCarSetPedOut t(ev, ev->m_pDriver == pd ? TARGET_DOOR_FRONT_LEFT : TARGET_DOOR_FRONT_RIGHT, true, true); t.ProcessPed(pd); notsa::standalone::Fixups::Log("[mdriver] mdejectped %s: inveh=%d", args.c_str(), (int)pd->bInVehicle); }
@@ -2366,6 +2375,20 @@ bool Cmd(const char* name, const std::string& args) {
     if (!std::strcmp(name, "mdproj")) { // CR26: a molotov (CProjectileInfo::AddProjectile, CJ the creator) at each given point
         std::string a = args; size_t pos = 0;
         while (pos < a.size()) { size_t e = a.find('|', pos); if (e == std::string::npos) e = a.size(); float x = 0, y = 0, z = 0; if (std::sscanf(a.substr(pos, e - pos).c_str(), "%f,%f,%f", &x, &y, &z) == 3) { const bool ok = CProjectileInfo::AddProjectile(ped, WEAPON_MOLOTOV, CVector{ x, y, z }, 0.f, nullptr, nullptr); notsa::standalone::Fixups::Log("[mdriver] mdproj molotov at %.1f,%.1f,%.1f -> %d", x, y, z, (int)ok); } pos = e + 1; }
+        return true;
+    }
+    if (!std::strcmp(name, "mdgroupfill")) { // CR59: `mdgroupfill:group:N`: Grove gang peds (type GANG2) stand next to CJ and join the script group until it has more than N members
+        const int gh = std::atoi(args.c_str()); const int thr = std::atoi(args.c_str() + args.find(':') + 1); auto* cj = Cj(); const int gi = CTheScripts::GetActualScriptThingIndex(gh, SCRIPT_THING_PED_GROUP);
+        if (!cj || gi < 0 || gi >= 8) return true;
+        static const eModelID kGang[] = { (eModelID)105, (eModelID)106, (eModelID)107 };
+        for (auto m : kGang) CStreaming::RequestModel(m, STREAMING_GAME_REQUIRED);
+        CStreaming::LoadAllRequestedModels(false);
+        auto& mem = CPedGroups::ms_groups[gi].GetMembership(); int need = thr + 1 - (int)mem.CountMembersExcludingLeader(), made = 0; /* GET_GROUP_SIZE counts the followers, not the leader */
+        for (int i = 0; i < need && i < 6; i++) {
+            const float a = 2.1f * (float)i, px = cj->GetPosition().x + std::cos(a) * 3.f, py = cj->GetPosition().y + std::sin(a) * 3.f; bool found = false; const float gz = CWorld::FindGroundZFor3DCoord(CVector{ px, py, cj->GetPosition().z + 2.f }, &found, nullptr); if (!found) continue;
+            if (auto* np = CPopulation::AddPed(PED_TYPE_GANG2, kGang[i % 3], CVector{ px, py, gz + 1.f }, false)) { Cmd("mdjoingrp", std::to_string(CPools::GetPedRef(np)) + ":" + std::to_string(gh)); made++; }
+        }
+        notsa::standalone::Fixups::Log("[mdriver] mdgroupfill group %d: %d gang members placed (need %d)", gh, made, need);
         return true;
     }
     if (!std::strcmp(name, "mdjoingrp")) { // CR26: SET_GROUP_MEMBER(group, ped) without the car part: be-in-group task event, AddFollower, group.Process()

@@ -1815,7 +1815,7 @@ OpcodeResult CRunningScript::ProcessOneCommand() {
         return std::invoke(handler, this);
     } else {
 #ifdef NOTSA_GLOBALS_DETACHED // The exe's per-group handlers (ProcessCommands0to99 ...) are not part of the detached build: every command needs a ported handler
-        notsa::standalone::Fixups::Fatal("script command %u (%s) has no ported handler", (unsigned)op.Command, std::string{ notsa::script::GetScriptCommandName((eScriptCommands)(op.Command)) }.c_str());
+        notsa::standalone::Fixups::Fatal("script command %u (%s) has no ported handler (thread %.8s ip 0x%x)", (unsigned)op.Command, std::string{ notsa::script::GetScriptCommandName((eScriptCommands)(op.Command)) }.c_str(), m_szName, (unsigned)(m_IP - m_BaseIP));
 #else
         return std::invoke(s_OriginalCommandHandlerTable[(size_t)op.Command / 100], this, (eScriptCommands)(op.Command));
 #endif

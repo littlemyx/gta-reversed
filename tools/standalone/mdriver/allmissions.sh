@@ -4,7 +4,7 @@
 # build: tools/standalone/statehash/shbuild.sh -> build/PortableWin64RR/bin/gta_reversed.exe (64-bit SSE RR reference build: STATEHASH + SCMTRACE + MDRIVER + portable math)
 # AD4: the dispatch mirrors the TS driver (README in the output dir); env NOTSA_MDRIVER_AD3=1 re-enables the AD3-only warp area / crate pickup.
 # RR_STEP_MS (default 33 = the TS autodrive 30 fps step, so the driver stall of 600 frames is the same 20 s of game time as in TS; 20 = the old step)
-# env: TABLE (driver-classes.tsv path; default the private TS worktree, read only, never copied into this repo), EXE, DATA (short path with the game data), GAME_SRC, RR_SEED (12345),
+# env: UD (user dir, default C:/gta-scratch/statehash/ud3; par_allmissions.sh gives each slot its own), TABLE (driver-classes.tsv path; default the private TS worktree, read only, never copied into this repo), EXE, DATA (short path with the game data), GAME_SRC, RR_SEED (12345),
 #      MAXF (driver frame limit per mission, default 30000), WALL (wall seconds per mission, default 3000), TAG_SUFFIX (appended to the output file names, e.g. "_b" for a determinism rerun)
 # outputs in <outdir> (default C:/gta-scratch/scmtrace/out/allmissions): summary.tsv (idx name result frame thread ip opcode reason; PASSED | FAILED (reason = the last text label before M_FAIL) | STOP),
 #   <idx>_<thread>.scmtrace.gz  <idx>_<thread>.sh.gz (statehash per-frame file)  <idx>_<thread>.rand.gz (rand log, NOTSA_RR_GAMEPLAY_RAND=1)  <idx>_<thread>.driver (the actions as injector route lines)  <idx>_<thread>.log
@@ -18,7 +18,7 @@ LIST="${*:-}"
 EXE="$(hp "${EXE:-$REPO/build/PortableWin64RR/bin/gta_reversed.exe}")"
 DATA="$(hp "${DATA:-C:/gta-scratch/statehash/d3}")"; GAME_SRC="$(hp "${GAME_SRC:-$DEF_GAME_SRC}")"
 TABLE="$(cygpath -w "${TABLE:-C:/Users/littl/github/gta-reversed/.claude/worktrees/web-ts-port-51e1e0/web/docs/driver-classes.tsv}")"
-UD="$(hp C:/gta-scratch/statehash/ud3)"; SFX="${TAG_SUFFIX:-}"; WALL="${WALL:-3000}"; MAXF_SET="${MAXF:-}"; MAXF="${MAXF:-30000}"
+UD="$(hp "${UD:-C:/gta-scratch/statehash/ud3}")"; SFX="${TAG_SUFFIX:-}"; WALL="${WALL:-3000}"; MAXF_SET="${MAXF:-}"; MAXF="${MAXF:-30000}"
 mkdir -p "$OUT" "$DATA" "$UD"
 [ -f "$TABLE" ] || { echo "no table $TABLE"; exit 2; }
 if [ -z "$LIST" ]; then

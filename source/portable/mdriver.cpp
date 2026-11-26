@@ -834,7 +834,7 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
         }
     }
     if (falses.empty() && blockers.empty()) { d.reason = "no condition evaluated false in the loop (the guards left out)"; return d; }
-    // CR22: built-in verbs for opcodes the TS table has no row for (proposed rows: see C:/gta-scratch/cr22/FINDINGS.txt FOR TS). They come before every table row (a wait row of another false condition of the pass must not shadow them).
+    // CR22: built-in verbs for opcodes the TS table has no row for (proposed rows: the CR22 FOR TS notes). They come before every table row (a wait row of another false condition of the pass must not shadow them).
     static const Row kDmg{ 0x0366, 1, "HAS_OBJECT_BEEN_DAMAGED", "damageobj", { "$0" }, 30 };
     static const Row kDmgW{ 0x08FF, 1, "HAS_OBJECT_BEEN_DAMAGED_BY_WEAPON", "damageobjw", { "$0", "$1" }, 30 }; // CR49 (86 YOU'VE HAD YOUR CHIPS: the nine shooting-gallery objects have to be hit by a shotgun)
     static const Row kExp{ 0x0356, 1, "IS_EXPLOSION_IN_AREA", "explode", { "$0", "$1", "$2", "$3", "$4", "$5", "$6" }, 60 }; // CR36 (42 SMALL TOWN BANK: the vault wall waits for an explosion in a 2 m box)

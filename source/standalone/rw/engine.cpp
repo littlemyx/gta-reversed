@@ -150,8 +150,14 @@ void WindowedEmuPlaceWindow(int w, int h) {
     for (int pass = 0; pass < 2; pass++) {
         MONITORINFO mi{ sizeof(mi) };
         GetMonitorInfo(MonitorFromPoint(POINT{ 0, 0 }, MONITOR_DEFAULTTOPRIMARY), &mi);
-        const int x = (int)mi.rcWork.left + (int)(std::max)(0L, (mi.rcWork.right - mi.rcWork.left - ow) / 2);
-        const int y = (int)mi.rcWork.top + (int)(std::max)(0L, (mi.rcWork.bottom - mi.rcWork.top - oh) / 2);
+        int x = (int)mi.rcWork.left + (int)(std::max)(0L, (mi.rcWork.right - mi.rcWork.left - ow) / 2);
+        int y = (int)mi.rcWork.top + (int)(std::max)(0L, (mi.rcWork.bottom - mi.rcWork.top - oh) / 2);
+        // NOTSA_STANDALONE_WINDOWED_OFFSCREEN=1: put the window to the right of the whole virtual desktop, so automated runs never cover the user's windows; the size (client area = back buffer) is unchanged
+        static const bool s_Offscreen = std::getenv("NOTSA_STANDALONE_WINDOWED_OFFSCREEN") != nullptr && std::getenv("NOTSA_STANDALONE_WINDOWED_OFFSCREEN")[0] == '1';
+        if (s_Offscreen) {
+            x = GetSystemMetrics(SM_XVIRTUALSCREEN) + GetSystemMetrics(SM_CXVIRTUALSCREEN) + 64;
+            y = GetSystemMetrics(SM_YVIRTUALSCREEN);
+        }
         SetWindowLong(wnd, GWL_STYLE, (LONG)style);
         SetWindowPos(wnd, HWND_NOTOPMOST, x, y, ow, oh, SWP_FRAMECHANGED | SWP_NOACTIVATE);
         RECT c{};

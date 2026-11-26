@@ -409,9 +409,20 @@ void psMouseSetVisibility(bool visible) {
 // 0x7453F0
 void psMouseSetPos(RwV2d* pos) {
 #ifndef NOTSA_PORTABLE
-    POINT point = { .x = LONG(pos->x), .y = LONG(pos->y) };
-    ::ClientToScreen(PSGLOBAL(window), &point);
-    ::SetCursorPos(point.x, point.y);
+#ifdef NOTSA_STANDALONE_RUN
+    // NOTSA_STANDALONE_WINDOWED_OFFSCREEN=1 (headless runs, engine.cpp WindowedEmuPlaceWindow): the window is off the desktop, so SetCursorPos would only drag the user's cursor to the screen edge
+    // and the WM_MOUSEMOVE would not reach the game. Store what that message stores instead (__MainWndProc WM_MOUSEMOVE 0x748323: m_nMousePosWinX/Y = client coordinates)
+    static const bool s_Offscreen = std::getenv("NOTSA_STANDALONE_WINDOWED_OFFSCREEN") != nullptr && std::getenv("NOTSA_STANDALONE_WINDOWED_OFFSCREEN")[0] == '1';
+    if (s_Offscreen) {
+        FrontEndMenuManager.m_nMousePosWinX = NOTSA_FTOL(int32, pos->x);
+        FrontEndMenuManager.m_nMousePosWinY = NOTSA_FTOL(int32, pos->y);
+    } else
+#endif
+    {
+        POINT point = { .x = LONG(pos->x), .y = LONG(pos->y) };
+        ::ClientToScreen(PSGLOBAL(window), &point);
+        ::SetCursorPos(point.x, point.y);
+    }
 #endif
 #ifdef NOTSA_USE_SDL3
     // The exe's SetCursorPos produces a WM_MOUSEMOVE (__MainWndProc WM_MOUSEMOVE 0x748323: m_nMousePosWinX/Y = lParam), which is how CentreMousePointer centred the menu cursor.

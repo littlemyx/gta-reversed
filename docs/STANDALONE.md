@@ -99,6 +99,7 @@ Environment variables (all optional, run build only):
   not by an exclusive flip chain; the frame-time distribution therefore differs slightly from the exclusive run. Consequence for MEASUREMENTS: compare ours vs the original exe in the SAME mode - the original has no
   windowed switch, so WIN_FPS / `fps_run.sh` / `startup_probe.py` runs of both exes are exclusive fullscreen (do not export `NOTSA_STANDALONE_WINDOWED` in the shell that starts them); if a windowed number of ours is
   quoted, say so. `soak.sh` and `census.py` set `960x600` by default on the Windows host (the size `soak_route.txt`'s mouse coordinates assume; `NOTSA_STANDALONE_WINDOWED=0` or empty opts out; not set on the Wine hosts).
+  `NOTSA_STANDALONE_WINDOWED_OFFSCREEN=1` places that window to the right of the whole virtual desktop (same size, still not activated), so headless runs (the `NOTSA_STANDALONE_NOPRESENT=1` scripts: allmissions.sh, scmtrace_run.sh, statehash/sh1_run.sh and sh2_run.sh, _p4c1_run.sh export it) never cover the user's windows; not for runs that drive the mouse (soak.sh, gameplay_regress.sh).
   Listed in `tools/standalone/standalone_deviations.tsv` and `STANDALONE_FIDELITY.md`.
 * `NOTSA_STANDALONE_MEMLOG=1` - log CRT heap / committed memory every 100 frames (leak hunting).
 * `NOTSA_STANDALONE_ALLOCTRACE=<min bytes>` - log the caller of every 200th allocation >= min bytes.

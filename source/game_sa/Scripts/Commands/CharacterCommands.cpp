@@ -1921,7 +1921,7 @@ auto GetCurrentCharWeapon(CPed& ped) {
  * @param {Char} self
  * @param {PedType} pedType
  */
-auto CanCharSeeDeadChar(CPed& ped) {
+auto CanCharSeeDeadChar(CPed& ped, int32 pedType /* read (CollectParameters(2), exe 0x48ABDA) but not used */) {
     for (auto& nearbyPed : ped.GetIntelligence()->GetPedScanner().GetEntities<CPed>()) {
         if (!nearbyPed.IsAlive() && CPedGeometryAnalyser::CanPedTargetPed(ped, nearbyPed, true)) {
             return true;

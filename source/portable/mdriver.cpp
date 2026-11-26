@@ -1559,6 +1559,10 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         if (auto* car = NearestCarOfModel(c, wm, 3000.f)) { notsa::standalone::Fixups::Log("[mdriver] inmodel: CJ is put into the nearest car of model %d (%.0f m)", wm, (double)(car->GetPosition() - c->GetPosition()).Magnitude()); QueueActions({ "emit mdwarpin:" + std::to_string(CPools::GetVehicleRef(car)) }, row.settle); return; }
         if (s_spawnedModel < 2) { ++s_spawnedModel; notsa::standalone::Fixups::Log("[mdriver] inmodel: no free car of model %d: a new one is put under CJ", wm); QueueActions({ "emit mdlaunch:" + std::to_string(wm) }, row.settle); return; }
     }
+    if (v == "failclass" && c && d.cond && (d.cond->raw & 0x7FFF) == 0x0154 && !d.args.empty() && d.args[0].s == "zone-by-name" && ArgInt(*d.cond, 0) && CPools::GetPed((int)*ArgInt(*d.cond, 0)) == c && !std::getenv("NOTSA_MDRIVER_NOZONENAME")) { // CR59 (121 TAXI: the fare's destination is `IS_CHAR_IN_ZONE CJ <name>`): CJ (and his vehicle) is warped to the centre of the navigation zone of that name
+        const uint8_t* q = d.cond->p + 2; q += (*q == 4) ? 2 : (*q == 1) ? 5 : 3; // operand 0 (a variable or constant), then the 8 byte text label
+        if (*q == 9) { char nm[9]{}; std::memcpy(nm, q + 1, 8); const int16 zi = CTheZones::FindZoneByLabel(nm, ZONE_TYPE_NAVI); if (auto* z = zi >= 0 ? CTheZones::GetNavigationZone((uint16)zi) : nullptr) { const auto rc = z->GetRect(); const float zx = (rc.left + rc.right) / 2.f, zy = (rc.bottom + rc.top) / 2.f; notsa::standalone::Fixups::Log("[mdriver] zonename: CJ is put in the centre %.0f,%.0f of zone %s", (double)zx, (double)zy, nm); one(warp(zx, zy, -100.f, false)); return; } }
+    }
     if (v == "failclass") { Stop("by nature: " + (d.args.empty() ? std::string("failclass") : d.args[0].s), cop, 0); return; }
     Stop("badverb " + v, cop, 0);
 }
@@ -1627,6 +1631,32 @@ static std::string ShooterDesc(CEntity* e) { // CR18: debug: model, vehicle (mod
     std::string o = b; o += " pedtype=" + std::to_string((int)p->m_nPedType) + " wanted=" + std::to_string(FindPlayerWanted() ? (int)FindPlayerWanted()->m_WantedLevel : -1); auto& tm = p->GetIntelligence()->m_TaskMgr; for (int ti = 0; ti < 5; ti++) if (auto* t = tm.GetTaskPrimary(ti)) { o += " P" + std::to_string(ti) + ":"; for (auto* tt = t; tt; tt = tt->GetSubTask()) o += std::to_string((int)tt->GetTaskType()) + ">"; } // CR34: tasks of the shooter
     return o;
 }
+// CR59: `mdpop` / NOTSA_MDRIVER_POP: n game pedestrians on the ground in a ring of radius r around CJ (the harness has no ambient pedestrians; a player always has some).
+int PopulateAroundCj(int n, float r) {
+    auto* cj = Cj(); if (!cj) return 0;
+    static const eModelID kModels[] = { (eModelID)9, (eModelID)10, (eModelID)11, (eModelID)12, (eModelID)13, (eModelID)14 };
+    for (auto m : kModels) CStreaming::RequestModel(m, STREAMING_GAME_REQUIRED);
+    CStreaming::LoadAllRequestedModels(false);
+    int made = 0;
+    for (int i = 0; i < n; i++) {
+        const float a = 6.2831853f * (float)i / (float)std::max(n, 1), px = cj->GetPosition().x + std::cos(a) * r, py = cj->GetPosition().y + std::sin(a) * r;
+        bool found = false; const float gz = CWorld::FindGroundZFor3DCoord(CVector{ px, py, cj->GetPosition().z + 2.f }, &found, nullptr);
+        if (!found) continue;
+        if (CPopulation::AddPed(PED_TYPE_CIVMALE, kModels[i % 6], CVector{ px, py, gz + 1.f }, false)) made++;
+    }
+    return made;
+}
+int CiviliansNearCj(float r) {
+    auto* cj = Cj(); if (!cj) return 0; int k = 0;
+    for (auto& pp : GetPedPool()->GetAllValid()) { // the peds a GET_RANDOM_CHAR_IN_ZONE (civilian) would accept: game created, on foot, alive, no group, within 5 m of CJ's height, no roof above
+        if (&pp == cj || !pp.IsCreatedBy(PED_GAME) || pp.IsInVehicle() || pp.IsStateDeadForScript() || pp.m_bRemoveFromWorld || pp.bFadeOut || pp.GetGroup()) continue;
+        if (pp.m_nPedType != PED_TYPE_CIVMALE && pp.m_nPedType != PED_TYPE_CIVFEMALE) continue;
+        const auto pos = pp.GetPosition(); if ((pos - cj->GetPosition()).Magnitude() >= r || std::fabs(pos.z - cj->GetPosition().z) > 5.f) continue;
+        bool roof = false; (void)CWorld::FindRoofZFor3DCoord(pos.x, pos.y, pos.z, &roof); if (roof) continue;
+        k++;
+    }
+    return k;
+}
 void TickGeneric() {
     if (g_forkHold > 0) { --g_forkHold; CPad::GetPad(0)->PCTempKeyState.RightStickY = -128; } // CR55
     for (auto it = g_padHold.begin(); it != g_padHold.end();) { if (it->second > 0) --it->second; it = it->second > 0 ? std::next(it) : g_padHold.erase(it); }
@@ -1636,6 +1666,9 @@ void TickGeneric() {
     auto* root = notsa::scmtrace::Root();
     if (!g_started) { if (!root) return; g_started = true; StaticScan(root); if (!std::getenv("NOTSA_MDRIVER_NOCITY")) CStats::SetStatValue(STAT_CITY_UNLOCKED, 2.f); /* CR10: a mission started cold stands where the story would have opened the cities: SF/LV closed = 4 stars on arrival (SetPlayerWantedLevelForForbiddenTerritories), cops attack */ g_passStat0 = CStats::GetStatValue(STAT_MISSIONS_PASSED); g_thread = root; g_frame0 = CTimer::GetFrameCounter(); g_sameCount = 0; g_lastIp = nullptr; }
     const int fr = GFrame();
+    if (static const int popEvery = std::getenv("NOTSA_MDRIVER_POP") ? std::atoi(std::getenv("NOTSA_MDRIVER_POP")) : 0; popEvery > 0 && fr > 0 && fr % popEvery == 0 && CiviliansNearCj(60.f) < 2) { // CR59 (121 TAXI: the next fare must be found around the drop-off): keep pedestrians around CJ for the odd jobs that look for a random ped
+        const int made = PopulateAroundCj(4, 18.f); notsa::standalone::Fixups::Log("[mdriver] pop: %d pedestrians put around CJ at frame %d", made, fr);
+    }
     if (g_follow.left > 0) { // CR47
         auto* me = Cj(); auto* tv = CPools::GetVehicle(g_follow.tgt); CVehicle* mv = me && me->bInVehicle ? me->m_pVehicle : nullptr;
         if (!tv || !mv || tv->m_fHealth <= 0.f || mv->m_pAttachedTo || tv == mv) g_follow.left = 0;
@@ -2079,6 +2112,11 @@ void TickGeneric() {
     std::fprintf(stderr, "[mdriver] frame %d ip %x row %d %04X %s -> %s\n", fr, at, d.rowIdx, d.op, d.row->name.c_str(), d.row->action.c_str());
     if (nearRec && d.act && ((d.row->action == "kill" && !d.args.empty() && (int)d.args[0].n == nearH) || (!g_nearCnt.empty() && d.row->action != "wait"))) { g_nearCnt[nearH]++; d = dn; } // only over a kill answer that did not help (the near-ped locate is in the pass, the ped is alive)
     if (std::getenv("NOTSA_MDRIVER_WLOG")) { auto* w = FindPlayerWanted(); notsa::standalone::Fixups::Log("[mdwlog] frame %d wanted %d chaos %d maxWanted %d maxChaos %d policeBackOff %d everybodyBackOff %d", fr, w ? (int)w->GetWantedLevel() : -1, w ? (int)w->m_ChaosLevel : -1, (int)CWanted::MaximumWantedLevel, (int)CWanted::MaximumChaosLevel, w ? (int)w->m_bPoliceBackOff : -1, w ? (int)w->m_bEverybodyBackOff : -1); } // CR47 debug (off by default)
+    if (std::getenv("NOTSA_MDRIVER_PEDLOG")) { // CR59: who a GET_RANDOM_CHAR_IN_ZONE could find around CJ
+        int total = 0, game = 0, foot = 0, ok = 0; float nearest = 1.0e9f; const auto cjp = FindPlayerCoors();
+        for (auto& pp : GetPedPool()->GetAllValid()) { total++; if (!pp.IsCreatedBy(PED_GAME)) continue; game++; if (pp.IsInVehicle() || pp.IsStateDeadForScript() || pp.m_bRemoveFromWorld || pp.bFadeOut) continue; foot++; if (pp.m_nPedType != PED_TYPE_CIVMALE && pp.m_nPedType != PED_TYPE_CIVFEMALE) continue; ok++; const float dd = (float)(pp.GetPosition() - cjp).Magnitude(); if (dd < nearest) nearest = dd; }
+        notsa::standalone::Fixups::Log("[mdriver] pedlog peds %d game %d onfoot %d civilian %d nearest %.0f m", total, game, foot, ok, (double)nearest);
+    }
     notsa::standalone::Fixups::Log("[mdriver] decide frame %d ip %x row %d %04X %s -> %s args %s cond-args %zu a0=%d cj=%d cond=%x@%x", fr, at, d.rowIdx, d.op, d.row->name.c_str(), d.row->action.c_str(), RKey(d.args).c_str(), d.cond ? d.cond->args.size() : (size_t)0, (d.cond && !d.cond->args.empty()) ? (int)d.cond->args[0].bits : -1, Cj() ? CPools::GetPedRef(Cj()) : -1, d.cond ? (unsigned)d.cond->raw : 0u, d.cond ? (unsigned)(d.cond->p - g_thread->m_BaseIP) : 0u); // CR16
     if (std::getenv("NOTSA_MDRIVER_POSLOG") && Cj()) { const auto cp = Cj()->GetPosition(); notsa::standalone::Fixups::Log("[mdriver] poslog CJ %.1f,%.1f,%.1f area %d veh %d (%.1f,%.1f,%.1f)", (double)cp.x, (double)cp.y, (double)cp.z, (int)Cj()->GetAreaCode(), Cj()->bInVehicle ? (int)Cj()->m_pVehicle->m_nModelIndex : -1, Cj()->bInVehicle ? (double)Cj()->m_pVehicle->GetPosition().x : 0., Cj()->bInVehicle ? (double)Cj()->m_pVehicle->GetPosition().y : 0., Cj()->bInVehicle ? (double)Cj()->m_pVehicle->GetPosition().z : 0.); } // CR58 debug
     if (d.row->action == "kill" && !d.args.empty()) if (auto* kp = CPools::GetPed((int)d.args[0].n)) notsa::standalone::Fixups::Log("[mdriver] kill target h=%d model %d type %d hp %.0f pos %.0f,%.0f,%.0f (CJ %.0f,%.0f)", (int)d.args[0].n, (int)kp->m_nModelIndex, (int)kp->m_nPedType, kp->m_fHealth, kp->GetPosition().x, kp->GetPosition().y, kp->GetPosition().z, Cj() ? Cj()->GetPosition().x : 0.f, Cj() ? Cj()->GetPosition().y : 0.f); // CR27 debug log
@@ -2224,6 +2262,11 @@ bool Cmd(const char* name, const std::string& args) {
     if (!ped) return true;
     if (!std::strcmp(name, "mdskipcut")) { if (CCutsceneMgr::IsCutsceneProcessing()) CCutsceneMgr::SkipCutscene(); return true; }
     if (!std::strcmp(name, "mdarea")) { const int ar = std::atoi(args.c_str()); CGame::currArea = (eAreaCodes)ar; ped->SetAreaCode((eAreaCodes)ar); CEntryExitManager::SetAreaCodeForVisibleObjects(); notsa::standalone::Fixups::Log("[mdriver] mdarea %d: ped area now %d", ar, (int)ped->GetAreaCode()); return true; } // launch.ts LAUNCH_AREA
+    if (!std::strcmp(name, "mdpop")) { // CR59 (121 TAXI: GET_RANDOM_CHAR_IN_ZONE finds nobody, the harness population has 1-3 peds, none a pedestrian): `mdpop:n[:r]`
+        int n = 3; float r = 15.f; { int a = 0; float b = 0.f; const int k = std::sscanf(args.c_str(), "%d:%f", &a, &b); if (k >= 1) n = a; if (k == 2) r = b; }
+        const int made = PopulateAroundCj(n, r); notsa::standalone::Fixups::Log("[mdriver] mdpop: %d of %d pedestrians placed around CJ (r %.0f)", made, n, (double)r);
+        return true;
+    }
     if (!std::strcmp(name, "mdextinguish")) { // CR58: a script fire (the handle of START_SCRIPT_FIRE) goes out
         const int idx = CTheScripts::GetActualScriptThingIndex(std::atoi(args.c_str()), SCRIPT_THING_FIRE);
         if (idx >= 0 && idx < 60) { gFireManager.Get((int16)idx).Extinguish(); notsa::standalone::Fixups::Log("[mdriver] extinguish script fire %d (slot %d)", std::atoi(args.c_str()), idx); }

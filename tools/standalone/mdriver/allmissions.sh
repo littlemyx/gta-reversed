@@ -47,7 +47,11 @@ for IDX in $LIST; do
   LAUNCHPOST=""; LAUNCH="# no launch context"; case "$IDX" in 36|48) [ -z "${NOLAUNCH:-}" ] && LAUNCH=$'cmd:mdlaunch:492\nwait:400';; 132) LAUNCH=$'cmd:mdlaunch:510\nwait:400';; 133) LAUNCH=$'cmd:mdlaunch:481\nwait:400';; 71) LAUNCH=$'cmd:mdarea:4\nwait:100';;
     # CR58: side missions whose script exits when CJ is not in its interior / vehicle (launch contexts)
     121) LAUNCH=$'cmd:mdlaunch:420
-wait:400';; 122) LAUNCH=$'cmd:mdlaunch:416
+wait:400
+cmd:mdpop:6
+wait:100'; [ -n "${NOMDPOP:-}" ] && LAUNCH=$'cmd:mdlaunch:420
+wait:400';; # CR59: the harness has no pedestrians (1-3 peds, none on foot): the taxi never finds a fare
+    122) LAUNCH=$'cmd:mdlaunch:416
 wait:400';; 123) LAUNCH=$'cmd:mdlaunch:407
 wait:400';; 124) LAUNCH=$'cmd:mdlaunch:596
 wait:400';; 127) LAUNCH=$'cmd:mdlaunch:575
@@ -74,6 +78,7 @@ wait:400';; # courier: on a bike (the pickup model)
     export NOTSA_SCMTRACE="$(cygpath -w "$W/m.scmtrace")" NOTSA_SCMTRACE_COMMIT="$(git -C "$REPO" rev-parse --short HEAD)"
     export NOTSA_MDRIVER_ARGCOUNTS="$(cygpath -w "$REPO/tools/standalone/scmscan/argcounts.tsv")" NOTSA_MDRIVER_TABLE="$TABLE" NOTSA_MDRIVER_OUT="$(cygpath -w "$W/m.driver")" NOTSA_MDRIVER_RESULT="$(cygpath -w "$W/res")" NOTSA_MDRIVER_MAXFRAMES="$MAXF"
     [ -n "${HC_OUT:-}" ] && export NOTSA_HITCOUNT_FILE="$(cygpath -w "$W/hc.txt")"
+    case "$IDX" in 121) [ -z "${NOMDPOP:-}" ] && [ -z "${NOTSA_MDRIVER_POP:-}" ] && export NOTSA_MDRIVER_POP=200;; esac # CR59: the taxi looks for a fare around the drop-off every fare: keep pedestrians around CJ
     ./gta_reversed.exe > "$W/m.out" 2>&1 &
     echo $! > "$W/pid"
     wait $! ; echo $? > "$W/rc"

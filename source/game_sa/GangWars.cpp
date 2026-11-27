@@ -212,6 +212,12 @@ void CGangWars::ClearTheStreets() {
 }
 
 // 0x444810
+#ifdef NOTSA_STATEHASH
+// CR63 diagnostic (off unless NOTSA_GW_LOG is set): why CreateAttackWave returned false, once per 300 frames
+#define GW_WHY(msg) do { static const bool on = std::getenv("NOTSA_GW_LOG") != nullptr; static uint32 last = 0; if (on && CTimer::GetFrameCounter() - last >= 300) { last = CTimer::GetFrameCounter(); std::fprintf(stderr, "[gw] wave %d ferocity %d: false: %s (area %d gangs %d,%d)\n", waveID, warFerocity, msg, (int)CGame::currArea, (int)Gang1, (int)Gang2); } } while (0)
+#else
+#define GW_WHY(msg) ((void)0)
+#endif
 bool CGangWars::CreateAttackWave(int32 warFerocity, int32 waveID) {
     const auto playerPos = FindPlayerCoors(-1);
     auto* const playerPed = FindPlayerPed(-1);
@@ -220,6 +226,7 @@ bool CGangWars::CreateAttackWave(int32 warFerocity, int32 waveID) {
         || playerPos.z > 950.0f
         || !ThePaths.AreNodesLoadedForArea(playerPos.x - 20.0f, playerPos.x + 20.0f, playerPos.y - 20.0f, playerPos.y + 20.0f)
     ) {
+        GW_WHY("area / z / nodes not loaded");
         return false;
     }
 
@@ -244,6 +251,7 @@ bool CGangWars::CreateAttackWave(int32 warFerocity, int32 waveID) {
         // BUG: the original used uninitialized values here (and indexed the streaming info array with a pointer)
         // NOTSA: ... except during the training mission, where the switch below fully overwrites them (so the original works there)
         if (!bTrainingMission) {
+            GW_WHY("ferocity out of range");
             return false;
         }
         break;
@@ -259,10 +267,12 @@ bool CGangWars::CreateAttackWave(int32 warFerocity, int32 waveID) {
     if (!CStreaming::GetInfo(modelA).IsLoaded() || !CStreaming::GetInfo(modelB).IsLoaded()) {
         CStreaming::RequestModel(modelA, STREAMING_DEFAULT);
         CStreaming::RequestModel(modelB, STREAMING_DEFAULT);
+        GW_WHY("weapon models not loaded");
         return false;
     }
 
     if (!PedStreamedInForThisGang(Gang1) || !PedStreamedInForThisGang((eGangID)Gang2)) {
+        GW_WHY("gang ped models not streamed in");
         return false;
     }
 
@@ -395,6 +405,7 @@ bool CGangWars::CreateAttackWave(int32 warFerocity, int32 waveID) {
     }
 
     if (!pedsCreated) {
+        GW_WHY("no peds created (no spot found / no streamed ped to pick)");
         return false;
     }
 

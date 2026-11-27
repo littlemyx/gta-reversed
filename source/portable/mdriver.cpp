@@ -157,6 +157,11 @@ void Emit(const std::string& cmd) { // run an action through the replay path and
     char name[32]{}; std::sscanf(cmd.c_str(), "%31[^:]", name);
     if (!Cmd(name, cmd.size() > std::strlen(name) ? cmd.substr(std::strlen(name) + 1) : "") && g_run) g_run(cmd);
 }
+void VSet(CVehicle* v, int mask, std::initializer_list<float> fs) { // PARITY: emit the vehicle state a hold computed as one recorded absolute command (Cmd mdvset)
+    std::string c = "mdvset:" + std::to_string(GetVehiclePool()->GetRef(v)) + ":" + std::to_string(mask); char b[40];
+    for (float f : fs) { std::snprintf(b, sizeof b, ":%.9g", (double)f); c += b; }
+    Emit(c);
+}
 std::string F(double v) { char b[40]; std::snprintf(b, sizeof b, "%.9g", (double)(float)v); return b; }
 // the ped put at (x,y,z) with heading h (the player walked there)
 std::string AreaSuffix(float x, float y, float z, int forced = -1) { // generic mode: ":<area>" when the warp changes the player's area (recorded in the route line: replay needs no table)
@@ -1749,17 +1754,17 @@ void TickGeneric() {
     if (g_follow.left > 0) { // CR47
         auto* me = Cj(); auto* tv = CPools::GetVehicle(g_follow.tgt); CVehicle* mv = me && me->bInVehicle ? me->m_pVehicle : nullptr;
         if (!tv || !mv || tv->m_fHealth <= 0.f || mv->m_pAttachedTo || tv == mv) g_follow.left = 0;
-        else { g_follow.left--; const CVector q = tv->GetPosition() + tv->GetRight() * g_follow.off.x + tv->GetForward() * g_follow.off.y + tv->GetUp() * g_follow.off.z; mv->SetPosn(q); mv->m_vecMoveSpeed = tv->m_vecMoveSpeed; mv->m_vecTurnSpeed = CVector{}; }
+        else { g_follow.left--; const CVector q = tv->GetPosition() + tv->GetRight() * g_follow.off.x + tv->GetForward() * g_follow.off.y + tv->GetUp() * g_follow.off.z; VSet(mv, 2 | 4 | 32, { q.x, q.y, q.z, tv->m_vecMoveSpeed.x, tv->m_vecMoveSpeed.y, tv->m_vecMoveSpeed.z }); }
     }
-    if (g_airHold.left > 0) { g_airHold.left--; if (auto* v = CPools::GetVehicle(g_airHold.h); v && v->m_fHealth > 0.f && Cj() && Cj()->bInVehicle && Cj()->m_pVehicle == v) { v->m_vecMoveSpeed.z = 0.f; if (g_airHold.vx != 0.f || g_airHold.vy != 0.f) { v->m_vecMoveSpeed.x = g_airHold.vx; v->m_vecMoveSpeed.y = g_airHold.vy; } v->m_vecTurnSpeed = CVector{}; CVector pp = v->GetPosition(); pp.z = g_airHold.z; v->SetPosn(pp); } else g_airHold.left = 0; }
+    if (g_airHold.left > 0) { g_airHold.left--; if (auto* v = CPools::GetVehicle(g_airHold.h); v && v->m_fHealth > 0.f && Cj() && Cj()->bInVehicle && Cj()->m_pVehicle == v) { const bool vxy = g_airHold.vx != 0.f || g_airHold.vy != 0.f; const CVector pp = v->GetPosition(); if (vxy) VSet(v, 2 | 8 | 16 | 32, { pp.x, pp.y, g_airHold.z, g_airHold.vx, g_airHold.vy, 0.f }); else VSet(v, 2 | 16 | 32, { pp.x, pp.y, g_airHold.z, 0.f }); } else g_airHold.left = 0; }
     // CR50 (92 SAINT MARK'S BISTRO: after the recorded-car cutscene the script puts the Shamal at z 200 with speed 30 and gives CJ the stick; nobody flies, the plane fell into the sea in 400 frames, before the 600-frame driver round answered the landing area): a plane that CJ sits in, that flies >30 m above the ground, falls and has no recorded-car playback is held at the current altitude for 1500 frames (the driver does not fly).
     if (g_airHold.left <= 0 && !std::getenv("NOTSA_MDRIVER_NOFALLHOLD")) if (auto* me7 = Cj(); me7 && me7->bInVehicle && me7->m_pVehicle && me7->m_pVehicle->IsSubPlane() && me7->m_pVehicle->m_fHealth > 0.f && !CVehicleRecording::IsPlaybackGoingOnForCar(me7->m_pVehicle) && me7->m_pVehicle->m_vecMoveSpeed.z < -0.02f) { auto* v7 = me7->m_pVehicle; const float z7 = v7->GetPosition().z; if (z7 - CWorld::FindGroundZForCoord(v7->GetPosition().x, v7->GetPosition().y) > 30.f) { g_airHold.h = GetVehiclePool()->GetRef(v7); g_airHold.z = z7; g_airHold.left = 1500; g_airHold.vx = g_airHold.vy = 0.f; notsa::standalone::Fixups::Log("[mdriver] fallhold: the falling plane is held at z %.0f", (double)z7); } }
-    if (g_speedHold.left > 0) { g_speedHold.left--; if (auto* v = CPools::GetVehicle(g_speedHold.h); v && v->m_fHealth > 0.f) { const CVector f = v->GetForward(); v->m_vecMoveSpeed.x = f.x * g_speedHold.mps / 50.f; v->m_vecMoveSpeed.y = f.y * g_speedHold.mps / 50.f; } else g_speedHold.left = 0; }
+    if (g_speedHold.left > 0) { g_speedHold.left--; if (auto* v = CPools::GetVehicle(g_speedHold.h); v && v->m_fHealth > 0.f) { const CVector f = v->GetForward(); const float sx = f.x * g_speedHold.mps / 50.f, sy = f.y * g_speedHold.mps / 50.f; VSet(v, 8, { sx, sy }); } else g_speedHold.left = 0; }
     if (!std::getenv("NOTSA_MDRIVER_NOUNFLIP")) if (auto* me6 = Cj(); me6 && me6->bInVehicle && me6->m_pVehicle && me6->m_pVehicle->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE && me6->m_pVehicle->m_fHealth > 0.f && me6->m_pVehicle->GetMatrix().GetUp().z < 0.0f) { // CR50 (85 EXPLOSIVE SITUATION: the Dumper put at the crate stage lands upside down; the game's ProcessUpsideDownVehicle (PlayerInfo.cpp, > 6 frames) sets its health to 249 and it burns out, 1000 -> 249 every 30 frames even when repaired): the vehicle CJ sits in that is upside down is put on its wheels at once (the driver does not flip cars by hand)
-        auto* v6 = me6->m_pVehicle; CVector pp = v6->GetPosition(); const float hd = v6->GetHeading(); v6->SetHeading(hd); pp.z += 1.0f; v6->SetPosn(pp); v6->m_vecTurnSpeed = CVector{}; v6->m_vecMoveSpeed = CVector{};
+        auto* v6 = me6->m_pVehicle; CVector pp = v6->GetPosition(); const float hd = v6->GetHeading(); pp.z += 1.0f; VSet(v6, 1 | 2 | 4 | 32, { hd, pp.x, pp.y, pp.z, 0.f, 0.f, 0.f });
         notsa::standalone::Fixups::Log("[mdriver] unflip: the vehicle (model %d) CJ sits in was upside down at %.1f %.1f %.1f: put on its wheels", (int)v6->m_nModelIndex, (double)pp.x, (double)pp.y, (double)pp.z); }
-    if (g_warpFixLeft > 0 && !std::getenv("NOTSA_MDRIVER_NOWARPREPAIR")) { g_warpFixLeft--; if (auto* cj5 = Cj(); cj5 && cj5->bInVehicle && cj5->m_pVehicle && cj5->m_pVehicle->m_fHealth > 0.f && cj5->m_pVehicle->m_fHealth < 350.f && cj5->m_fHealth > 0.f) { cj5->m_pVehicle->Fix(); cj5->m_pVehicle->m_fHealth = 1000.f; notsa::standalone::Fixups::Log("[mdriver] warprepair: CJ's vehicle fell below 350 hp after a warp into the place: repaired"); } } // CR52 (93 MISAPPROPRIATION: the Maverick warped to the ambush loses 1000 hp in 130 frames to the agents around it before the kill answers of the 150 frame cadence come; a player would have fought on in a repaired vehicle)
-    if (!g_fixCars.empty()) for (const int h : g_fixCars) if (auto* v = CPools::GetVehicle(h); v && v->vehicleFlags.bIsDamaged && v->m_fHealth > 0.f && !std::getenv("NOTSA_MDRIVER_NOKEEPFIX")) { v->Fix(); v->m_fHealth = 1000.f; }
+    if (g_warpFixLeft > 0 && !std::getenv("NOTSA_MDRIVER_NOWARPREPAIR")) { g_warpFixLeft--; if (auto* cj5 = Cj(); cj5 && cj5->bInVehicle && cj5->m_pVehicle && cj5->m_pVehicle->m_fHealth > 0.f && cj5->m_pVehicle->m_fHealth < 350.f && cj5->m_fHealth > 0.f) { Emit("mdrepair:" + std::to_string(GetVehiclePool()->GetRef(cj5->m_pVehicle))); notsa::standalone::Fixups::Log("[mdriver] warprepair: CJ's vehicle fell below 350 hp after a warp into the place: repaired"); } } // CR52 (93 MISAPPROPRIATION: the Maverick warped to the ambush loses 1000 hp in 130 frames to the agents around it before the kill answers of the 150 frame cadence come; a player would have fought on in a repaired vehicle)
+    if (!g_fixCars.empty()) for (const int h : g_fixCars) if (auto* v = CPools::GetVehicle(h); v && v->vehicleFlags.bIsDamaged && v->m_fHealth > 0.f && !std::getenv("NOTSA_MDRIVER_NOKEEPFIX")) { Emit("mdrepair:" + std::to_string(h)); }
     if (root) { char n[9]{}; std::memcpy(n, root->m_szName, 8); g_name = n; }
     if (!root) { // the thread ended (TS: !alive(script)): PASSED / FAILED, or STOP when a kill of the driver was just before it
         g_endFrame = fr;
@@ -2020,7 +2025,7 @@ void TickGeneric() {
         if (r->waitSeq < g_waitSeq - 3 || (r->raw & 0x7FFF) != 0x0019 || (r->raw & 0x8000) || r->cond != 0) continue;
         if (!std::getenv("NOTSA_MDRIVER_CLOCKGUARD") && VerdictOf(g_thread, *r) == Verdict::Guard) continue; /* CR34 (33: `IF hour > 21` jumps FORWARD when false and its true branch is the mission's failure (a time limit): moving the clock made the mission fail at f5553) */
         const auto v = ArgInt(*r, 0), n = ArgInt(*r, 1); if (!v || !n || *v != (int)CClock::GetGameClockHours() || *n < *v || *n > 22) continue;
-        notsa::standalone::Fixups::Log("[mdriver] clockskip frame %d: the wait is for hour > %d (now %d): the game clock goes to %d:00", fr, (int)*n, (int)*v, (int)*n + 1); CClock::SetGameClock((uint8)(*n + 1), 0, CClock::GetGameClockDays()); QueueActions({}, 60); return; }
+        notsa::standalone::Fixups::Log("[mdriver] clockskip frame %d: the wait is for hour > %d (now %d): the game clock goes to %d:00", fr, (int)*n, (int)*v, (int)*n + 1); Emit("mdclock:" + std::to_string((int)(uint8)(*n + 1)) + ":0:" + std::to_string((int)CClock::GetGameClockDays())); QueueActions({}, 60); return; }
     if ((!d.act || d.row->action == "wait") && ringHops > 0 && !std::getenv("NOTSA_MDRIVER_NORINGWIDE")) { // CR57 (100 UP UP AND AWAY: the stage runs a 7-wait soldier sub per frame and its own conditions (IS_BUTTON_PRESSED, the locates) once per revolution: the 64-record / last-3-waits window at a stall frame holds only the soldier tests): a stall counted over a ring of wake ips looks at the newest record of every condition site seen in the last 48 waits
         std::vector<RecP> rw; for (auto& kv : g_siteLast) if (kv.second->waitSeq >= g_waitSeq - 48) rw.push_back(kv.second);
         std::sort(rw.begin(), rw.end(), [](const RecP& a, const RecP& b) { return a->seq < b->seq; });
@@ -2375,6 +2380,21 @@ bool Cmd(const char* name, const std::string& args) {
     }
     if (!std::strcmp(name, "mdkillcar")) { if (auto* k = CPools::GetVehicle(std::atoi(args.c_str()))) { if (std::getenv("NOTSA_MDRIVER_KILLLOG")) notsa::standalone::Fixups::Log("[mdriver] mdkillcar %s model %d hp %.0f status %d canBeDamaged %d fixed %d type %d", args.c_str(), (int)k->m_nModelIndex, k->m_fHealth, (int)k->GetStatus(), (int)k->vehicleFlags.bCanBeDamaged, (int)k->physicalFlags.bDisableCollisionForce, (int)k->GetType()); if (g_fireGuard && !std::getenv("NOTSA_MDRIVER_NOQUIETKILL")) { k->m_fHealth = 0.f; k->SetStatus(STATUS_WRECKED); notsa::standalone::Fixups::Log("[mdriver] mdkillcar %s: quiet (the script counts fires): status wrecked", args.c_str()); } else k->BlowUpCar(nullptr, false); if (std::getenv("NOTSA_MDRIVER_KILLLOG")) notsa::standalone::Fixups::Log("[mdriver]   after: hp %.0f status %d", k->m_fHealth, (int)k->GetStatus()); } return true; }
     if (!std::strcmp(name, "mdfork")) { g_forkHold = std::atoi(args.c_str()) + 1; return true; } // CR55
+    if (!std::strcmp(name, "mdvset")) { // PARITY: the per-frame vehicle holds (follow / air / fall / speed / unflip) as one recorded absolute command: H:mask:floats in mask order (1 heading, 2 pos x y z, 4 move x y z, 8 move x y, 16 move z, 32 turn speed zero)
+        int h = 0, mask = 0, n = 0; if (std::sscanf(args.c_str(), "%d:%d%n", &h, &mask, &n) < 2) return true; const char* q = args.c_str() + n; float f[8]{}; int nf = 0;
+        for (int b : { 1, 2, 4, 8, 16 }) if (mask & b) { const int k = b == 1 || b == 16 ? 1 : b == 8 ? 2 : 3; for (int i = 0; i < k; i++) { if (*q == ':') q++; char* e = nullptr; f[nf++] = std::strtof(q, &e); q = e; } }
+        auto* v = CPools::GetVehicle(h); if (!v) return true; int i = 0;
+        if (mask & 1) v->SetHeading(f[i++]);
+        if (mask & 2) { v->SetPosn(CVector{ f[i], f[i + 1], f[i + 2] }); i += 3; }
+        if (mask & 4) { v->m_vecMoveSpeed = CVector{ f[i], f[i + 1], f[i + 2] }; i += 3; }
+        if (mask & 8) { v->m_vecMoveSpeed.x = f[i]; v->m_vecMoveSpeed.y = f[i + 1]; i += 2; }
+        if (mask & 16) { v->m_vecMoveSpeed.z = f[i++]; }
+        if (mask & 32) v->m_vecTurnSpeed = CVector{};
+        return true; }
+    if (!std::strcmp(name, "mdrepair")) { if (auto* v = CPools::GetVehicle(std::atoi(args.c_str()))) { v->Fix(); v->m_fHealth = 1000.f; } return true; } // PARITY: the driver's repair of a vehicle
+    if (!std::strcmp(name, "mdclock")) { int h = 0, m = 0, d = 0; if (std::sscanf(args.c_str(), "%d:%d:%d", &h, &m, &d) == 3) CClock::SetGameClock((uint8)h, (uint8)m, (uint8)d); return true; } // PARITY: the clockskip
+    if (!std::strcmp(name, "mdcamrestore")) { TheCamera.RestoreWithJumpCut(); return true; } // PARITY: the end of the facewarp camera hold
+    if (!std::strcmp(name, "mdphotohold")) { if (auto* k = CPools::GetPed(std::atoi(args.c_str()))) { k->bHasBeenPhotographed = true; TheCamera.GetActiveCam().m_fFOV = 15.f; } return true; } // PARITY: one frame of the photo hold
     if (!std::strcmp(name, "mdstat")) { int id = 0; float v = 0.f; if (std::sscanf(args.c_str(), "%d:%f", &id, &v) == 2) CStats::SetStatValue((eStats)id, v); return true; } // PARITY: SET_STAT-like stand command
     if (!std::strcmp(name, "mdcardmg")) { if (auto* tv = CPools::GetVehicle(std::atoi(args.c_str())); tv && ped) { tv->m_pLastDamageEntity = ped; if (tv->m_fHealth > 255.f) tv->m_fHealth = 255.f; } return true; } // PARITY: the cardmg verb (CJ damaged the car)
     if (!std::strcmp(name, "mdwanted")) { if (auto* w = FindPlayerWanted()) w->SetWantedLevel((eWantedLevel)std::atoi(args.c_str())); return true; } // PARITY: the driver's wanted-level set / clear
@@ -2632,8 +2652,8 @@ bool Cmd(const char* name, const std::string& args) {
 void Tick(uint64_t clockMs) {
     if (!Enabled() || g_done) return;
     g_clock = clockMs;
-    if (g_faceHold.left > 0 && --g_faceHold.left == 0) { TheCamera.RestoreWithJumpCut(); notsa::standalone::Fixups::Log("[mdriver] facewarp ended"); } // CR51
-    if (g_photoHold > 0) { g_photoHold--; if (auto* k = CPools::GetPed(g_photoPed)) { k->bHasBeenPhotographed = true; TheCamera.GetActiveCam().m_fFOV = 15.f; if (g_photoHold == 0) notsa::standalone::Fixups::Log("[mdriver] photo hold ended"); } else g_photoHold = 0; } // CR26: see mdphoto
+    if (g_faceHold.left > 0 && --g_faceHold.left == 0) { Emit("mdcamrestore"); notsa::standalone::Fixups::Log("[mdriver] facewarp ended"); } // CR51
+    if (g_photoHold > 0) { g_photoHold--; if (auto* k = CPools::GetPed(g_photoPed)) { Emit("mdphotohold:" + std::to_string(g_photoPed)); if (g_photoHold == 0) notsa::standalone::Fixups::Log("[mdriver] photo hold ended"); } else g_photoHold = 0; } // CR26: see mdphoto
     if (Generic()) { TickGeneric(); return; }
     if (!g_loaded) { Load(std::getenv("NOTSA_MDRIVER")); if (const char* o = std::getenv("NOTSA_MDRIVER_OUT")) g_out = std::fopen(o, "w"); }
     if (g_quitIn >= 0) {

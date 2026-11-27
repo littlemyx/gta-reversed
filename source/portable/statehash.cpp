@@ -482,7 +482,8 @@ void Record() {
         for (uint32_t o = 8; o + 4 <= nvar; o += 4) { uint32_t w; std::memcpy(&w, CTheScripts::ScriptSpace.data() + o, 4); s.U("g", w); }
         for (CRunningScript* t = CTheScripts::pActiveScripts; t; t = t->m_pNext) {
             uint32_t nm[2]; std::memcpy(nm, t->m_szName, 8); s.U("name0", nm[0]); s.U("name1", nm[1]);
-            { const uint8_t* sp = CTheScripts::ScriptSpace.data(); const bool in = t->m_IP >= sp && t->m_IP < sp + CTheScripts::ScriptSpace.size(); s.U("ip", (uint32_t)(in ? t->m_IP - sp : t->m_IP - t->m_BaseIP)); } // offset in script space (main.scm / mission block: the global SCM offset), streamed script: from its own base s.U("depth", t->m_StackDepth); s.I("wake", t->m_WakeTime);
+            { const uint8_t* sp = CTheScripts::ScriptSpace.data(); const bool in = t->m_IP >= sp && t->m_IP < sp + CTheScripts::ScriptSpace.size(); s.U("ip", (uint32_t)(in ? t->m_IP - sp : t->m_IP - t->m_BaseIP)); } // offset in script space (main.scm / mission block: the global SCM offset), streamed script: from its own base
+            s.U("depth", t->m_StackDepth); s.I("wake", t->m_WakeTime);
             s.U("flags", (t->m_IsActive ? 1u : 0u) | (t->m_CondResult ? 2u : 0u) | (t->m_UsesMissionCleanup ? 4u : 0u) | (t->m_NotFlag ? 8u : 0u) | (t->m_ThisMustBeTheOnlyMissionRunning ? 16u : 0u));
             s.U("andor", t->m_AndOrState);
             for (size_t i = 0; i < t->m_LocalVars.size(); i++) { s.U("lv", (t->m_ThisMustBeTheOnlyMissionRunning ? CTheScripts::LocalVariablesForCurrentMission[i] : t->m_LocalVars[i]).uParam); }

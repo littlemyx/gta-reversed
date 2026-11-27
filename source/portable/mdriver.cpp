@@ -2030,7 +2030,11 @@ void TickGeneric() {
         if (d2.act && d2.row->action != "wait") { std::fprintf(stderr, "[mdriver] frame %d widened window (%zu -> %zu records): %s\n", fr, loop.size(), wide.size(), d2.row->name.c_str()); d = d2; }
     }
     if (earlyPhoto && !(d.act && d.row->action == "photo")) return;
-    if (!d.act) { Stop(d.reason, d.op, at); return; }
+    static int s_skipTries = 0; const auto skipStall = [&]() -> bool { // CR62 (102 A HOME IN THE HILLS: a phone call inside SKIP_CUTSCENE_START..END waits for a dialogue slot that never finishes, nothing is false): before the give-up STOP a thread that stands inside a skippable cutscene (m_SceneSkipIP != 0) gets the skip button pressed, as a player would (3 presses per run, NOTSA_MDRIVER_NOSKIPSTALL=1: off)
+        if (!g_thread || g_thread->m_SceneSkipIP == 0 || s_skipTries >= 3 || std::getenv("NOTSA_MDRIVER_NOSKIPSTALL")) return false;
+        s_skipTries++; notsa::standalone::Fixups::Log("[mdriver] skipstall: frame %d ip %x inside a skippable cutscene (skip target %x): the skip button is pressed (%d)", fr, at, (unsigned)g_thread->m_SceneSkipIP, s_skipTries);
+        QueueActions({ "key down return", "wait 2", "key up return" }, 120); return true; };
+    if (!d.act) { if (skipStall()) return; Stop(d.reason, d.op, at); return; }
     if (d.act && fr < g_dangerUntil && d.row->action != "blipgo" && !std::getenv("NOTSA_MDRIVER_NOFLEE")) { // CR31 (26): CJ is driving a vehicle that is being shot to pieces: whatever the pass asks, a player drives off to the destination blip (the newest coordinate blip of the radar) -- the vehicle is moved there
         auto* me3 = Cj(); const tRadarTrace* bb = nullptr;
         for (auto& t : CRadar::ms_RadarTrace) if (t.m_nBlipType == BLIP_COORD && !t.HasSprite() && (!bb || t.m_nCounter >= bb->m_nCounter)) bb = &t;
@@ -2205,7 +2209,7 @@ void TickGeneric() {
         if (victim >= 0) { tried.insert(victim); notsa::standalone::Fixups::Log("[mdriver] alivekill: the pass tests NOT IS_CHAR_DEAD of living ped %d: killed (last resort before the stop)", victim); QueueActions({ "emit mdkillped:" + std::to_string(victim) }, 90); return; }
     }
     static const int kMaxActs = std::getenv("NOTSA_MDRIVER_WAITMAX") ? std::atoi(std::getenv("NOTSA_MDRIVER_WAITMAX")) : 8; // CR58: experiment: how many identical wait answers before the stop (TS: 8)
-    if (n > (d.row->action == "wait" ? kMaxActs : 8)) { char b[16]; std::snprintf(b, sizeof b, "%04X", d.op); Stop("the driver acted " + std::to_string(n - 1) + " times (" + d.row->action + ") and the condition stays false: " + b + " " + d.row->name, d.op, at); return; }
+    if (n > (d.row->action == "wait" ? kMaxActs : 8)) { if (skipStall()) { g_noProgress[key] = 0; return; } char b[16]; std::snprintf(b, sizeof b, "%04X", d.op); Stop("the driver acted " + std::to_string(n - 1) + " times (" + d.row->action + ") and the condition stays false: " + b + " " + d.row->name, d.op, at); return; }
     std::fprintf(stderr, "[mdriver] frame %d ip %x row %d %04X %s -> %s\n", fr, at, d.rowIdx, d.op, d.row->name.c_str(), d.row->action.c_str());
     if (nearRec && d.act && ((d.row->action == "kill" && !d.args.empty() && (int)d.args[0].n == nearH) || (!g_nearCnt.empty() && d.row->action != "wait"))) { g_nearCnt[nearH]++; d = dn; } // only over a kill answer that did not help (the near-ped locate is in the pass, the ped is alive)
     if (std::getenv("NOTSA_MDRIVER_WLOG")) { auto* w = FindPlayerWanted(); notsa::standalone::Fixups::Log("[mdwlog] frame %d wanted %d chaos %d maxWanted %d maxChaos %d policeBackOff %d everybodyBackOff %d", fr, w ? (int)w->GetWantedLevel() : -1, w ? (int)w->m_ChaosLevel : -1, (int)CWanted::MaximumWantedLevel, (int)CWanted::MaximumChaosLevel, w ? (int)w->m_bPoliceBackOff : -1, w ? (int)w->m_bEverybodyBackOff : -1); } // CR47 debug (off by default)

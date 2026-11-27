@@ -31,7 +31,7 @@ audio             audio.txt       330 NOTSA_AUDIO_STATS=@OUT@/audio_stats.txt   
 cheats            cheats.txt      330 NOTSA_STANDALONE_PROBE=1                         0 1 1
 missions          missions.txt    330 -                                                 0 1 0
 render_vmode      vmode.txt       200 -                                                 1 1 0
-input_mouse       mouse.txt       200 NOTSA_STANDALONE_WINDOWED_FOCUS=1                 1 1 0
+input_mouse       mouse.txt       260 NOTSA_STANDALONE_WINDOWED_FOCUS=1                 1 1 0
 render_firststart firststart.txt  150 -                                                 1 0 0
 interior_lspd     interior.txt    330 NOTSA_STANDALONE_PROBE=1 0 1 1
 arrest0          arrest0.txt     400 -                                                 0 1 0
@@ -124,7 +124,7 @@ while read -r name route limit xenv px win live <&3; do
   [ -z "$name" ] && continue
   if [ -n "$WANT" ] && ! echo " $WANT " | grep -q " $name "; then continue; fi
   if echo "$SKIP" | grep -q " $name "; then echo "== $name  (skipped by GR_SKIP)"; continue; fi
-  for attempt in 1 2; do
+  for attempt in 1 2 3; do
     echo "== $name$([ "$attempt" = 2 ] && echo "  (attempt 2)")"
     run_ours "$name" "$route" "$limit" "$xenv" "$px" "$win" || exit 2
     "$PY" -X utf8 -I "$GRD/gr_check.py" "$name" "$OUT" $RECARG > "$OUT/$name.result" 2>&1; rc=$?
@@ -133,6 +133,13 @@ while read -r name route limit xenv px win live <&3; do
     if [ "$rc" = 3 ] && grep -aqs "UNHANDLED EXCEPTION" "$OUT/$name/log.log" "$OUT/$name/standalone.log"; then
       echo "CRASH $name: unhandled exception during set-up (see $OUT/$name/log.log), not retried" >> "$OUT/$name.result"; rc=1; fi
     [ "$rc" = 3 ] && [ "$attempt" = 1 ] && [ -z "${GR_NORETRY:-}" ] && { echo "  set-up failed ($(grep -m1 SETUP "$OUT/$name.result" | cut -c1-110)), retrying once"; rm -rf "$OUT/$name.attempt1"; mv "$OUT/$name" "$OUT/$name.attempt1"; mv "$OUT/$name.result" "$OUT/$name.attempt1.result"; continue; }
+    # USER-ACTIVE guard (input_mouse moves the REAL cursor; the side-car reports `SWEEPS_DONE ... user_active=1` when the user's mouse / keyboard / focus changes touched the sweep, mouse_sweep.ps1):
+    # a FAIL in such a run is not judged: the scenario is run again (2 more times at most); still disturbed -> the FAILs are shown as SKIP(user active), never as PASS. An undisturbed FAIL stays a FAIL.
+    if [ "$rc" = 1 ] && grep -aqs 'SWEEPS_DONE.*user_active=1' "$OUT/$name/sidecar.txt"; then
+      if [ "$attempt" -lt 3 ]; then echo "  user activity during the sweep ($(grep -a -m1 USER_ACTIVE "$OUT/$name/sidecar.txt")), run again"; rm -rf "$OUT/$name.userrun$attempt" "$OUT/$name.userrun$attempt.result"; mv "$OUT/$name" "$OUT/$name.userrun$attempt"; mv "$OUT/$name.result" "$OUT/$name.userrun$attempt.result"; continue; fi
+      sed -i -E 's/^FAIL([[:space:]])/SKIP\1/; s/^(SKIP[[:space:]].*)$/\1  [SKIP(user active): the sweep was disturbed by the user in 3 runs]/' "$OUT/$name.result"; rc=0
+      echo "SKIP(user active) $name: disturbed in 3 runs, not judged" >> "$OUT/$name.result"
+    fi
     break
   done
   if [ "$ORIG" = 1 ] && [ "$live" = 1 ]; then

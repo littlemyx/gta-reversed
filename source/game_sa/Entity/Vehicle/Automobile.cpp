@@ -3899,7 +3899,7 @@ bool CAutomobile::UpdateMovingCollision(float angle) {
                 rotMatrix.SetRotateX((float)m_wMiscComponentAngle * CAutomobile::PACKER_COL_ANGLE_MULT);
         }
 
-        CVector componentPos;
+        CVector componentPos{ 0.f, 0.f, 0.f }; // exe 0x6A18A2..0x6A18C2: the forklift branch (model 0x212) stores a zero vector here (the port left it uninitialised: stack garbage moved the forks' vertices, 85 EXPLOSIVE SITUATION was bimodal)
         if (carNodeMisc && !ModelIndices::IsForklift(m_nModelIndex))
             componentPos = RwFrameGetMatrix(carNodeMisc)->pos;
 

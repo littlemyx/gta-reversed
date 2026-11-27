@@ -63,6 +63,10 @@ cmd:mdlaunch:498
 wait:400';; # burglary: night only (the script ends at once by day), CJ in the burglary van (Boxville 498)
     126) LAUNCH=$'cmd:mdtrain:11:1725.55:-1953.28:12.5:0
 wait:400';; # freight train: CJ drives a mission train (CREATE_MISSION_TRAIN 11 at the Unity line, as the main script does)
+    130) [ -z "${NOLAUNCHSETS:-}" ] && LAUNCH=$'cmd:mdwped:2135.43:-67.96:-100
+wait:100
+cmd:mdsetg:7248:2
+wait:20';; # CR62: what main.scm does before LOAD_AND_LAUNCH_MISSION 130 (0x13e7b..0x13eb9): G7248 = 2 with CJ in the (2135.43,-67.96,20.8) box; REGISTER_ODDJOB_MISSION_PASSED needs G7248 == 2 (NOLAUNCHSETS=1: off)
     131) LAUNCH=$'cmd:mdlaunch:586
 wait:400';; # courier: on a bike (the pickup model)
     114) LAUNCHPOST=$'cmd:mdarea:5';; 115) LAUNCHPOST=$'cmd:mdarea:6';; 116) LAUNCHPOST=$'cmd:mdarea:7';; esac

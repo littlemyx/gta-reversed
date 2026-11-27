@@ -12,7 +12,7 @@ MODE="${1:?record|replay}"; TAG="${2:?tag}"; OUT="$(hp "${3:-C:/gta-scratch/stat
 EXE="$(hp "${EXE:-$REPO/build/PortableWin64RR/bin/gta_reversed.exe}")"
 DATA="$(hp "${DATA:-C:/gta-scratch/statehash/d2}")"; GAME_SRC="$(hp "${GAME_SRC:-$DEF_GAME_SRC}")"
 STEPS="$(cygpath -w "${STEPS:-$REPO/tools/standalone/mdriver/ryder1.steps}")"
-UD="$(hp C:/gta-scratch/statehash/ud2)"
+UD="$(hp "${UD:-C:/gta-scratch/statehash/ud2}")"
 mkdir -p "$OUT" "$DATA" "$UD"
 HEAD="# SH2 base route: New Game, a fixed 600 ms wait (no extra spawns: they shift the pool handles), game clock 06:30, rr_start, injected start of mission index 24 (GUNS1 = RYDER_1)
 #include header

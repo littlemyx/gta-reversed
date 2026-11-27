@@ -246,7 +246,7 @@ else()
     if (${RE_PROJECT}_STATEHASH)
         # RR-3: the state-hash harness is the one source/portable/ TU that also builds into the Win32 StandaloneRelease variant (the portable-only parts of it are #ifdef NOTSA_PORTABLE).
         # Nothing is added when the option is OFF.
-        list(APPEND SOURCE_FILES_WITHOUT_MODULES_LIST portable/statehash.cpp)
+        list(APPEND SOURCE_FILES_WITHOUT_MODULES_LIST portable/statehash.cpp portable/parity.cpp)
         if (${RE_PROJECT}_SCMTRACE)
             list(APPEND SOURCE_FILES_WITHOUT_MODULES_LIST portable/scmtrace.cpp)
         endif()

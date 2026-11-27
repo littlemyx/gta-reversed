@@ -3,6 +3,9 @@
 
 #ifdef NOTSA_STATEHASH
 #include "statehash.h"
+#include "parity.h"
+#include "Scripts/TheScripts.h"
+#include "Scripts/RunningScript.h"
 #include "fakerw.h"
 #ifdef NOTSA_PORTABLE // RR-3: this file also builds into the Win32 StandaloneRelease variant (-DGTASA_STATEHASH=ON); the portable-only parts are marked
 #include <src/gl/rwgl3impl.h>
@@ -157,11 +160,13 @@ struct ShConfig {
     std::set<uint32_t>          dumpFrames;
     std::set<std::string>       dumpSubsys;
     bool                        dumpAll = false;
+    bool                        parity = false;
 };
 const ShConfig& ShCfg() {
     static const ShConfig c = [] {
         ShConfig c;
         if (const char* e = std::getenv("NOTSA_SH_FILE")) { c.file = e; }
+        if (const char* e = std::getenv("NOTSA_PARITY_HASH")) { c.file = e; c.parity = true; } // PARITY: alias of NOTSA_SH_FILE + the `sc` column
         if (const char* e = std::getenv("NOTSA_SH_DUMP_FILE")) { c.dumpFile = e; }
         if (const char* e = std::getenv("NOTSA_SH_DUMP")) { for (const char* p = e; *p;) { char* end; const auto v = std::strtoul(p, &end, 0); if (end == p) break; c.dumpFrames.insert((uint32_t)v); p = *end ? end + 1 : end; } }
         if (const char* e = std::getenv("NOTSA_SH_DUMP_SUBSYS")) { std::string t = e; for (size_t a = 0; a <= t.size();) { size_t b = t.find(',', a); if (b == std::string::npos) b = t.size(); const auto n = t.substr(a, b - a); if (n == "all") c.dumpAll = true; else if (!n.empty()) c.dumpSubsys.insert(n); a = b + 1; } }
@@ -469,6 +474,21 @@ void Record() {
     const auto vehs = HashPool(GetVehiclePool(), "veh", detail, g_frame, &ents, VehicleFields, "vh", DumpSel("vh") ? &dumpRows : nullptr);
     const auto objs = HashPool(GetObjectPool(), "obj", detail, g_frame, &ents, ObjectFields, "ob", DumpSel("ob") ? &dumpRows : nullptr);
 
+    // PARITY `sc` (scripts; only with NOTSA_PARITY_HASH, NOT part of `all`): the global variable space words, then every script in the active list (m_pNext order)
+    Acc sc;
+    if (sh.parity) {
+        Sink s; Setup(s, "sc");
+        const uint32_t nvar = CTheScripts::GetSizeOfVariableSpace();
+        for (uint32_t o = 8; o + 4 <= nvar; o += 4) { uint32_t w; std::memcpy(&w, CTheScripts::ScriptSpace.data() + o, 4); s.U("g", w); }
+        for (CRunningScript* t = CTheScripts::pActiveScripts; t; t = t->m_pNext) {
+            uint32_t nm[2]; std::memcpy(nm, t->m_szName, 8); s.U("name0", nm[0]); s.U("name1", nm[1]);
+            { const uint8_t* sp = CTheScripts::ScriptSpace.data(); const bool in = t->m_IP >= sp && t->m_IP < sp + CTheScripts::ScriptSpace.size(); s.U("ip", (uint32_t)(in ? t->m_IP - sp : t->m_IP - t->m_BaseIP)); } // offset in script space (main.scm / mission block: the global SCM offset), streamed script: from its own base s.U("depth", t->m_StackDepth); s.I("wake", t->m_WakeTime);
+            s.U("flags", (t->m_IsActive ? 1u : 0u) | (t->m_CondResult ? 2u : 0u) | (t->m_UsesMissionCleanup ? 4u : 0u) | (t->m_NotFlag ? 8u : 0u) | (t->m_ThisMustBeTheOnlyMissionRunning ? 16u : 0u));
+            s.U("andor", t->m_AndOrState);
+            for (size_t i = 0; i < t->m_LocalVars.size(); i++) { s.U("lv", (t->m_ThisMustBeTheOnlyMissionRunning ? CTheScripts::LocalVariablesForCurrentMission[i] : t->m_LocalVars[i]).uParam); }
+        }
+        sc = s.acc;
+    }
     Acc all;
     Acc rngA;
     { Sink s; Setup(s, "rng"); s.det = nullptr; s.U("state", rng); rngA = s.acc; }
@@ -487,8 +507,10 @@ void Record() {
     out += " ob=" + std::to_string(objs.n) + ":" + HQ(objs.acc);
     out += " all=" + HQ(all) + "\n";
     if (g_sh) { // SH1 per-frame hash file: frame randCount h_tm h_ck h_rng h_pop h_pl h_cam h_pd h_vh h_ob h_all (e hashes)
-        std::fprintf(g_sh, "%u %llu %s %s %s %s %s %s %s %s %s %s\n", g_frame, (unsigned long long)RandCount(), HE(tm).c_str(), HE(ck).c_str(), HE(rngA).c_str(), HE(pop).c_str(), HE(pl).c_str(), HE(cam).c_str(),
+        std::fprintf(g_sh, "%u %llu %s %s %s %s %s %s %s %s %s %s", g_frame, (unsigned long long)RandCount(), HE(tm).c_str(), HE(ck).c_str(), HE(rngA).c_str(), HE(pop).c_str(), HE(pl).c_str(), HE(cam).c_str(),
             HE(peds.acc).c_str(), HE(vehs.acc).c_str(), HE(objs.acc).c_str(), HE(all).c_str());
+        if (sh.parity) { std::fprintf(g_sh, " %s", HE(sc).c_str()); }
+        std::fputc('\n', g_sh);
         std::fflush(g_sh);
     }
     PedModelRows(g_frame); // SH7 NOTSA_SH_PEDMODELLOG
@@ -513,7 +535,7 @@ void StartRecording(uint32_t seed) {
     RngSeed(seed);
     if (!ShCfg().file.empty()) {
         g_sh = std::fopen(ShCfg().file.c_str(), "w");
-        if (g_sh) { std::fprintf(g_sh, "#SH 1 build=%s seed=%u gprand=%d subsys=tm,ck,rng,pop,pl,cam,pd,vh,ob,all\n", Cfg().tag.empty() ? "unset" : Cfg().tag.c_str(), seed, GpRand() ? 1 : 0); std::fflush(g_sh); }
+        if (g_sh) { std::fprintf(g_sh, "#SH 1 build=%s seed=%u gprand=%d subsys=tm,ck,rng,pop,pl,cam,pd,vh,ob,all%s\n", Cfg().tag.empty() ? "unset" : Cfg().tag.c_str(), seed, GpRand() ? 1 : 0, ShCfg().parity ? ",sc" : ""); std::fflush(g_sh); }
         else { NOTSA_LOG_ERR("rr_start: cannot open NOTSA_SH_FILE '{}'", ShCfg().file); }
     }
     BootLogRow('S'); // SH5 NOTSA_SH_BOOTLOG: the state at the rr_start pump
@@ -1277,6 +1299,7 @@ void OnFrame() {
     }
     if (!g_recording || !g_f) return;
     Record();
+    notsa::parity::OnFrameEnd(g_frame);
     g_frame++;
     if (Cfg().maxFrames && g_frame >= Cfg().maxFrames) {
         NOTSA_LOG_INFO("rr: {} frames recorded, stopping", g_frame);

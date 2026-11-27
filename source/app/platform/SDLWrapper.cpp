@@ -75,6 +75,7 @@ namespace notsa::portable { bool AudioCmd(const char* name, const std::string& a
 #endif
 #ifdef NOTSA_STATEHASH
 #include "portable/statehash.h" // RR-1: virtual script clock + cmd:rr_*
+#include "portable/parity.h" // PARITY: frame-indexed input record / play
 #ifdef NOTSA_MDRIVER
 #include "portable/mdriver.h" // MDRIVER-1
 #endif
@@ -577,6 +578,24 @@ static void InjRunCmd(const std::string& c) {
 static void MdPushKey(const char* n, bool down) { SDL_Event e{}; e.type = down ? SDL_EVENT_KEY_DOWN : SDL_EVENT_KEY_UP; e.key.key = InjKey(n); e.key.down = down; e.key.scancode = SDL_GetScancodeFromKey(e.key.key, nullptr); SDL_PushEvent(&e); }
 static void MdRunCmd(const std::string& c) { InjRunCmd(c); }
 #endif
+// like the "Missions Starter" window: a running mission is failed first (its code lives in the shared MissionBlock), the new one starts once FailCurrentMission is back to 0; false = retry on a later pump
+static bool InjMissionTry(int id) {
+    if (CTheScripts::IsPlayerOnAMission() && CTheScripts::FailCurrentMission == 0) {
+        if (CCutsceneMgr::HasLoaded()) {
+            CCutsceneMgr::DeleteCutsceneData();
+        }
+        CTheScripts::FailCurrentMission = 2;
+        NOTSA_INJ_LOG("[mission] a mission is running: failing it first");
+    }
+    if (CTheScripts::FailCurrentMission > 0 || CTheScripts::IsPlayerOnAMission()) {
+        return false;
+    }
+    NotsaInjectMissionInfo mi{};
+    const bool ok = NotsaInjectStartMission(id, &mi);
+    NOTSA_INJ_LOG("[mission] start %d: %s (script offset %d, first bytes %02x %02x %02x %02x %02x %02x %02x %02x)", id, ok ? "ok" : "failed", mi.offset, mi.bytes[0], mi.bytes[1], mi.bytes[2], mi.bytes[3], mi.bytes[4], mi.bytes[5], mi.bytes[6], mi.bytes[7]);
+    return true;
+}
+
 void InjPump() {
     if (!s_InjInit) InjInit();
 #ifdef NOTSA_STANDALONE_RUN
@@ -613,6 +632,9 @@ void InjPump() {
             const std::string c = ev.cmd;
             s_InjNext++;
 #ifdef NOTSA_STANDALONE_RUN
+#ifdef NOTSA_STATEHASH
+            notsa::parity::RecCmd(c);
+#endif
             InjRunCmd(c);
 #endif
             continue;
@@ -664,21 +686,14 @@ void InjPump() {
             continue;
         }
         if (ev.mission >= 0) {
-            // like the "Missions Starter" window: a running mission is failed first (its code lives in the shared MissionBlock), the new one starts once FailCurrentMission is back to 0
-            if (CTheScripts::IsPlayerOnAMission() && CTheScripts::FailCurrentMission == 0) {
-                if (CCutsceneMgr::HasLoaded()) {
-                    CCutsceneMgr::DeleteCutsceneData();
-                }
-                CTheScripts::FailCurrentMission = 2;
-                NOTSA_INJ_LOG("[mission] a mission is running: failing it first");
-            }
-            if (CTheScripts::FailCurrentMission > 0 || CTheScripts::IsPlayerOnAMission()) {
+#ifdef NOTSA_STATEHASH
+            static size_t s_RecMissionAt = SIZE_MAX; // PARITY: recorded once, at the pump that first processes the event (the fail-first of a running mission is part of that frame)
+            if (s_RecMissionAt != s_InjNext) { s_RecMissionAt = s_InjNext; notsa::parity::RecCmd("mission:" + std::to_string(ev.mission)); }
+#endif
+            if (!InjMissionTry(ev.mission)) {
                 break; // retry on a later pump
             }
             s_InjNext++;
-            NotsaInjectMissionInfo mi{};
-            const bool ok = NotsaInjectStartMission(ev.mission, &mi);
-            NOTSA_INJ_LOG("[mission] start %d: %s (script offset %d, first bytes %02x %02x %02x %02x %02x %02x %02x %02x)", ev.mission, ok ? "ok" : "failed", mi.offset, mi.bytes[0], mi.bytes[1], mi.bytes[2], mi.bytes[3], mi.bytes[4], mi.bytes[5], mi.bytes[6], mi.bytes[7]);
             continue;
         }
         if (ev.mark.empty() && ev.mx < 0 && ev.vmode < 0 && ev.aa < 0 && ev.key != 0) {
@@ -723,6 +738,12 @@ void InjPump() {
         SDL_PushEvent(&e);
         NOTSA_INJ_LOG("injected key %d %s at %u ms", (int)ev.key, ev.down ? "down" : "up", (unsigned)now);
     }
+#ifdef NOTSA_STATEHASH
+    notsa::parity::PlayPump([](const std::string& c) -> bool { // PARITY play: the recorded stand commands of the frames up to the current one, in file order, before the frame's Idle; false = retry on the next pump (mission start waits for the fail-first)
+        if (!c.compare(0, 8, "mission:")) { return InjMissionTry(std::atoi(c.c_str() + 8)); }
+        InjRunCmd(c); return true;
+    });
+#endif
 #ifdef NOTSA_MDRIVER
     notsa::mdriver::SetKeyPusher(MdPushKey); notsa::mdriver::SetCmdRunner(MdRunCmd); // also in the replay (no NOTSA_MDRIVER): the recorded cmd:mdkey must push the key
     if (notsa::mdriver::Enabled() && !s_InjHolding) {

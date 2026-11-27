@@ -19,6 +19,9 @@
 #include <SDLWrapper.hpp>
 #ifdef NOTSA_PORTABLE
 #include "portable/app_pad.h"
+#ifdef NOTSA_STATEHASH
+#include "portable/parity.h"
+#endif
 #endif
 #endif
 
@@ -196,6 +199,9 @@ void CPad::Update(int32 pad) {
     // Writes directly into NewState
     ReconcileTwoControllersInput(NewState, PCTempKeyState, PCTempJoyState);
     ReconcileTwoControllersInput(NewState, PCTempMouseState, NewState);
+#ifdef NOTSA_STATEHASH
+    if (pad == 0) { notsa::parity::PadHook(*this); } // PARITY record / play of the pad state as CPad reads it
+#endif
 
     PCTempJoyState.Clear();
     PCTempKeyState.Clear();
@@ -227,6 +233,9 @@ void CPad::UpdatePads() {
 
     if (!isDebugUIActive) {
         GetPad(0)->UpdateMouse();
+#ifdef NOTSA_STATEHASH
+        notsa::parity::MouseHook(*GetPad(0));
+#endif
     }
 
     ProcessPad(PAD1);
@@ -241,6 +250,9 @@ void CPad::UpdatePads() {
     }
 
     OldKeyState = std::exchange(NewKeyState, TempKeyState);
+#ifdef NOTSA_STATEHASH
+    notsa::parity::KeysHook(*GetPad(0));
+#endif
 }
 
 // 0x746ED0

@@ -232,6 +232,13 @@ RwCamera* RwCameraShowRaster(RwCamera* camera, void* /*pDev*/, RwUInt32 flags) {
     }
     DumpBackBuffer();
     if (EnvOn("NOTSA_STANDALONE_NOPRESENT")) { // diagnostics: skip the swap
+        // MEMPROBE: without a swap nothing paces the GL driver, so its user-mode command queue grows without bound while the GPU is shared by several game processes
+        // (4 parallel mission-driver games: 1.7 -> 6.8 GB of private commit per process, 32 MB blocks, working set 250 MB). glFinish() once a frame bounds the queue;
+        // it changes no game state. NOTSA_STANDALONE_NOPRESENT_NOFINISH=1 restores the unthrottled skip.
+        static const bool s_NoFinish = EnvOn("NOTSA_STANDALONE_NOPRESENT_NOFINISH");
+        if (!s_NoFinish) {
+            glFinish();
+        }
         return camera;
     }
     // NOTSA_STANDALONE_NOVSYNC=1 (off by default): present with swap interval 0 even when the game asks for rwRASTERFLIPWAITVSYNC (menu "frame limiter"

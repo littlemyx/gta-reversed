@@ -213,8 +213,9 @@ void CGangWars::ClearTheStreets() {
 
 // 0x444810
 #ifdef NOTSA_STATEHASH
+#include "standalone/Fixups.h"
 // CR63 diagnostic (off unless NOTSA_GW_LOG is set): why CreateAttackWave returned false, once per 300 frames
-#define GW_WHY(msg) do { static const bool on = std::getenv("NOTSA_GW_LOG") != nullptr; static uint32 last = 0; if (on && CTimer::GetFrameCounter() - last >= 300) { last = CTimer::GetFrameCounter(); std::fprintf(stderr, "[gw] wave %d ferocity %d: false: %s (area %d gangs %d,%d)\n", waveID, warFerocity, msg, (int)CGame::currArea, (int)Gang1, (int)Gang2); } } while (0)
+#define GW_WHY(msg) do { static const bool on = std::getenv("NOTSA_GW_LOG") != nullptr; static uint32 last = 0; if (on && CTimer::GetFrameCounter() - last >= 300) { last = CTimer::GetFrameCounter(); notsa::standalone::Fixups::Log("[gw] wave %d ferocity %d: false: %s (area %d gangs %d,%d)\n", waveID, warFerocity, msg, (int)CGame::currArea, (int)Gang1, (int)Gang2); } } while (0)
 #else
 #define GW_WHY(msg) ((void)0)
 #endif
@@ -278,6 +279,7 @@ bool CGangWars::CreateAttackWave(int32 warFerocity, int32 waveID) {
 
     CVector prevBestPos{ 999999.9f, 999999.9f, 999999.9f };
     bool    pedsCreated = false;
+    int     dbgNoSpot = 0, dbgNoPick = 0, dbgCar = 0; (void)dbgNoSpot; (void)dbgNoPick; (void)dbgCar;
     int32   gang        = Gang1;
     for (int32 wave = 0; wave < 2; wave++) {
         gang = wave == 0 ? (int32)Gang1 : (int32)Gang2;
@@ -291,6 +293,7 @@ bool CGangWars::CreateAttackWave(int32 warFerocity, int32 waveID) {
             float        unused;
             CVector      candidate;
             if (!CCarCtrl::GenerateCarCreationCoors2(playerPos, 1.0f, 0.0f, -1.0f, true, 50.0f, 50.0f, &candidate, &node1, &node2, &unused, false, true)) {
+                dbgCar++;
                 continue;
             }
             if (!TheCamera.IsSphereVisible(candidate, 7.0f)) {
@@ -306,6 +309,7 @@ bool CGangWars::CreateAttackWave(int32 warFerocity, int32 waveID) {
             }
         }
         if (!found && !accepted) {
+            dbgNoSpot++;
             continue;
         }
 
@@ -342,6 +346,7 @@ bool CGangWars::CreateAttackWave(int32 warFerocity, int32 waveID) {
 
                 int32 pedModel;
                 if (!PickStreamedInPedForThisGang((eGangID)gang, pedModel)) {
+                    dbgNoPick++;
                     continue;
                 }
 
@@ -406,6 +411,9 @@ bool CGangWars::CreateAttackWave(int32 warFerocity, int32 waveID) {
 
     if (!pedsCreated) {
         GW_WHY("no peds created (no spot found / no streamed ped to pick)");
+#ifdef NOTSA_STATEHASH
+        if (std::getenv("NOTSA_GW_LOG") && CTimer::GetFrameCounter() % 300 < 3) { notsa::standalone::Fixups::Log("[gw]   no peds: spot-less waves %d, creation-coors failures %d of 40 attempts, ped pick failures %d; player %.1f %.1f %.1f", dbgNoSpot, dbgCar, dbgNoPick, (double)playerPos.x, (double)playerPos.y, (double)playerPos.z); }
+#endif
         return false;
     }
 

@@ -930,7 +930,8 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             float zx = 0, zy = 0, zx1 = 0, zy1 = 0, zx2 = 0, zy2 = 0; bool zf = false; for (auto& z : CTheZones::GetNavigationZones()) if (std::strncmp(z.m_InfoLabel, tv->second.first.c_str(), 8) == 0) { zx1 = (float)z.m_fX1; zx2 = (float)z.m_fX2; zy1 = (float)z.m_fY1; zy2 = (float)z.m_fY2; zx = (zx1 + zx2) / 2.f; zy = (zy1 + zy2) / 2.f; zf = true; break; }
             if (!zf) continue; const CVector cp = Cj()->GetPosition(); const bool inZ = cp.x >= zx1 && cp.x <= zx2 && cp.y >= zy1 && cp.y <= zy2;
             int alive = 0; for (auto& pp : GetPedPool()->GetAllValid()) if (pp.bPartOfAttackWave && !pp.IsStateDying() && pp.m_fHealth > 0.f) alive++;
-            const int mode = !inZ ? 0 : (CGangWars::State != NOT_IN_WAR ? (alive > 0 ? 2 : 3) : (CGangWars::bGangWarsActive && CGangWars::Provocation <= 2.1f ? 1 : 3));
+            static int s_street = 0; const bool noWave = inZ && CGangWars::State == PRE_FIRST_WAVE && CTimer::GetTimeInMS() > CGangWars::TimeStarted + 14000 && s_street < 3 && !std::getenv("NOTSA_MDRIVER_NOTURFSTREET"); /* CR63 (107: the zone's ground probe put CJ on a roof at z 47; CreateAttackWave needs a car-path spot near the player (GenerateCarCreationCoors2 failed 40 of 40, the wave never came)): the war is armed but the first wave is 4 s late = CJ stands where no road node is in reach: he goes to the nearest road (mode 4, 3 times per run). NOTSA_MDRIVER_NOTURFSTREET=1: off */ if (noWave) s_street++;
+            const int mode = noWave ? 4 : !inZ ? 0 : (CGangWars::State != NOT_IN_WAR ? (alive > 0 ? 2 : 3) : (CGangWars::bGangWarsActive && CGangWars::Provocation <= 2.1f ? 1 : 3));
             static Row kTurf{ 0x0039, 0, "var == 0 of a GET_ZONE_GANG_STRENGTH result: win the gang war of the zone", "turfwin", {}, 20 };
             d.act = true; d.row = &kTurf; d.rowIdx = -62; d.cond = c; d.op = cop; d.args.clear(); for (const float f : { zx, zy, -100.f, (float)mode, (float)(GFrame() / 400) }) { RArg a; a.n = f; d.args.push_back(a); }
             notsa::standalone::Fixups::Log("[mdriver] turfwin %s: mode %d war state %d active %d provocation %.1f specificZones %d alive wave peds %d CJ in zone %d", tv->second.first.c_str(), mode, (int)CGangWars::State, (int)CGangWars::bGangWarsActive, (double)CGangWars::Provocation, (int)CGangWars::NumSpecificZones, alive, (int)inZ);
@@ -1356,6 +1357,7 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         g_nextStall = 60; const int mode = (int)F_(3);
         if (mode == 0) { one(warp(F_(0), F_(1), F_(2), false)); return; }
         if (mode == 1) { QueueActions({ "emit mdprovoke:3" }, row.settle); return; }
+        if (mode == 4) { const auto na = ThePaths.FindNodeClosestToCoors(CVector{ F_(0), F_(1), 0.f }, PATH_TYPE_VEH, 80.f); if (auto* nd = na.IsValid() ? ThePaths.GetPathNode(na) : nullptr) { const CVector np = nd->GetPosition(); notsa::standalone::Fixups::Log("[mdriver] turfwin street: CJ goes to the road node at %.1f %.1f %.1f", (double)np.x, (double)np.y, (double)np.z); one(warp(np.x, np.y, np.z + 0.5f, false)); } else QueueActions({}, row.settle); return; }
         if (mode == 2) { std::vector<std::string> acts; for (auto& pp : GetPedPool()->GetAllValid()) if (pp.bPartOfAttackWave && !pp.IsStateDying() && pp.m_fHealth > 0.f && acts.size() < 12) acts.push_back("emit mdkillped:" + std::to_string(CPools::GetPedRef(&pp))); QueueActions(acts, row.settle); return; }
         QueueActions({}, row.settle); return;
     }

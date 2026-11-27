@@ -20,6 +20,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <climits>
 #include <cstring>
 #include <cctype>
 #include <cstdarg>
@@ -138,6 +139,16 @@ void WindowedEmuInit() {
 
 // Sizes the game window so its CLIENT area is w x h (caption, no sizing border: the back buffer size is fixed), centred on the primary monitor's work area,
 // not topmost, not activated. Called before the device exists (RwEngineSetVideoMode) and on every live mode change (ApplyModeToDevice).
+// NOTSA_STANDALONE_WINDOWED_OFFSCREEN: union of all monitor rects (the virtual desktop). GetSystemMetrics(SM_*VIRTUALSCREEN) is not available here: winincl.h defines NOSYSMETRICS
+static BOOL CALLBACK OffscreenUnionMonitor(HMONITOR, HDC, LPRECT rc, LPARAM p) {
+    auto* u = reinterpret_cast<RECT*>(p);
+    u->left = (std::min)(u->left, rc->left);
+    u->top = (std::min)(u->top, rc->top);
+    u->right = (std::max)(u->right, rc->right);
+    u->bottom = (std::max)(u->bottom, rc->bottom);
+    return TRUE;
+}
+
 void WindowedEmuPlaceWindow(int w, int h) {
     HWND wnd = d3d9Globals.window;
     if (!wnd) {
@@ -155,8 +166,12 @@ void WindowedEmuPlaceWindow(int w, int h) {
         // NOTSA_STANDALONE_WINDOWED_OFFSCREEN=1: put the window to the right of the whole virtual desktop, so automated runs never cover the user's windows; the size (client area = back buffer) is unchanged
         static const bool s_Offscreen = std::getenv("NOTSA_STANDALONE_WINDOWED_OFFSCREEN") != nullptr && std::getenv("NOTSA_STANDALONE_WINDOWED_OFFSCREEN")[0] == '1';
         if (s_Offscreen) {
-            x = GetSystemMetrics(SM_XVIRTUALSCREEN) + GetSystemMetrics(SM_CXVIRTUALSCREEN) + 64;
-            y = GetSystemMetrics(SM_YVIRTUALSCREEN);
+            RECT u{ LONG_MAX, LONG_MAX, LONG_MIN, LONG_MIN };
+            EnumDisplayMonitors(nullptr, nullptr, OffscreenUnionMonitor, reinterpret_cast<LPARAM>(&u));
+            if (u.right > u.left) {
+                x = (int)u.right + 64;
+                y = (int)u.top;
+            }
         }
         SetWindowLong(wnd, GWL_STYLE, (LONG)style);
         SetWindowPos(wnd, HWND_NOTOPMOST, x, y, ow, oh, SWP_FRAMECHANGED | SWP_NOACTIVATE);

@@ -1689,7 +1689,7 @@ static float g_passStat0 = 0.f;
 static bool g_noReg = false; static int g_passOp = 0; static uint16_t g_prevRootOp = 0; static int g_passOpFrame = -1;
 static bool ScriptHasRegister(const CRunningScript* s) {
     const uint8_t* b = s->m_BaseIP; const uint8_t* sp = CTheScripts::ScriptSpace.data(); const uint8_t* e = sp + CTheScripts::ScriptSpace.size();
-    { const int64_t baseOff = (int64_t)(b - sp); int64_t endOff = INT64_MAX; for (size_t i = 0; i < (size_t)CTheScripts::NumberOfMissionScripts && i < CTheScripts::MultiScriptArray.size(); i++) { const int64_t o = CTheScripts::MultiScriptArray[i]; if (o > baseOff && o < endOff) endOff = o; } if (endOff != INT64_MAX) e = sp + endOff; }
+    if (b >= sp + CTheScripts::MainScriptSize && CTheScripts::LargestMissionScriptSize > 0 && b + CTheScripts::LargestMissionScriptSize < e) e = b + CTheScripts::LargestMissionScriptSize; // a mission script is loaded at MissionBlock (ScriptSpace + MainScriptSize) and is at most LargestMissionScriptSize long
     if (b < sp || b >= e) return true;
     for (const uint8_t* q = b; q + 1 < e; q++) if ((q[0] == 0x18 && q[1] == 0x03) || (q[0] == 0x95 && q[1] == 0x05)) return true;
     return false;

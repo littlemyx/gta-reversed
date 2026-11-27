@@ -1689,7 +1689,9 @@ static float g_passStat0 = 0.f;
 static bool g_noReg = false; static int g_passOp = 0; static uint16_t g_prevRootOp = 0; static int g_passOpFrame = -1;
 static bool ScriptHasRegister(const CRunningScript* s) {
     const uint8_t* b = s->m_BaseIP; const uint8_t* sp = CTheScripts::ScriptSpace.data(); const uint8_t* e = sp + CTheScripts::ScriptSpace.size();
-    if (b >= sp + CTheScripts::MainScriptSize && CTheScripts::LargestMissionScriptSize > 0 && b + CTheScripts::LargestMissionScriptSize < e) e = b + CTheScripts::LargestMissionScriptSize; // a mission script is loaded at MissionBlock (ScriptSpace + MainScriptSize) and is at most LargestMissionScriptSize long
+    if (NotsaLastInjectedMission >= 0 && (size_t)NotsaLastInjectedMission < CTheScripts::MultiScriptArray.size()) { // the block holds MISSION_SCRIPT_SIZE bytes of main.scm from the mission offset: the script ends where the next mission starts
+        const int64_t own = CTheScripts::MultiScriptArray[NotsaLastInjectedMission]; int64_t nxt = INT64_MAX; for (size_t k = 0; k < (size_t)CTheScripts::NumberOfMissionScripts && k < CTheScripts::MultiScriptArray.size(); k++) { const int64_t o = CTheScripts::MultiScriptArray[k]; if (o > own && o < nxt) nxt = o; }
+        if (nxt != INT64_MAX && b + (nxt - own) < e) e = b + (nxt - own); }
     if (b < sp || b >= e) return true;
     for (const uint8_t* q = b; q + 1 < e; q++) if ((q[0] == 0x18 && q[1] == 0x03) || (q[0] == 0x95 && q[1] == 0x05)) return true;
     return false;

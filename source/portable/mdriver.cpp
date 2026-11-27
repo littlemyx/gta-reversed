@@ -88,6 +88,15 @@ int                      g_wait = 0;         // frames left of a `wait`
 std::string              g_until; int g_untilLeft = 0; // `waituntil` condition / frames left
 int                      g_quitIn = -1;
 uint64_t                 g_clock = 0;
+// BYHAND (NOTSA_MDRIVER_ACTLOG=1): counts of every action of the driver that a player could not take; written at exit to <NOTSA_MDRIVER_OUT>.actlog. Off: no effect on the game.
+std::map<std::string, long> g_actCnt;
+bool ActOn() { static const bool g = std::getenv("NOTSA_MDRIVER_ACTLOG") != nullptr; return g; }
+void Act(const char* k, long n = 1) { if (ActOn()) g_actCnt[k] += n; }
+void ActCmd(const char* name, const std::string& args) { // one count per run command (Cmd), by name; mdwother split into ped / car
+    if (!ActOn()) return; const std::string n = name;
+    if (n == "mdwother") { g_actCnt[args.rfind("0:", 0) == 0 ? "cmd.mdwother_ped" : "cmd.mdwother_car"]++; return; }
+    g_actCnt["cmd." + n]++;
+}
 
 uint32 Loc(int n) { return CTheScripts::LocalVariablesForCurrentMission[n].uParam; }
 float  LocF(int n) { return CTheScripts::LocalVariablesForCurrentMission[n].fParam; }
@@ -492,7 +501,7 @@ void StaticScan(const CRunningScript* s) {
         if (op == 0x0786 && (int64_t)(p - CTheScripts::ScriptSpace.data()) < missionEndOff) { g_fireGuard = true; notsa::standalone::Fixups::Log("[mdriver] fireguard: GET_NUMBER_OF_FIRES_IN_AREA at ScriptSpace+%lld, mission base +%lld, next mission +%lld (n=%d)", (long long)(p - CTheScripts::ScriptSpace.data()), (long long)(s->m_BaseIP - CTheScripts::ScriptSpace.data()), (long long)missionEndOff, n); } // (only this mission's own code: the scan runs on into the next missions)
         if (op == 0x004D) { if (inOr && !std::getenv("NOTSA_MDRIVER_NOORGUARD")) { for (auto& q : orPend) { q->hasBranch = true; q->jumped = false; q->fall = p + 7; q->target = p + 7; q->orSite = true; g_deadConds[q->p] = q; nd++; } } orPend.clear(); inOr = false; if (pend) { pend->hasBranch = true; pend->jumped = false; pend->fall = p + 7; pend->target = p + 7; if ((pend->raw & 0x7FFF) == 0x0118 || (pend->raw & 0x7FFF) == 0x0119) { g_deadConds[pend->p] = pend; nd++; } else { g_flagConds[pend->p] = pend; nf++; } } pend.reset(); single = false; p = e; continue; }
         if ((op == 0x08F9 || op == 0x05AD) && cnt >= 2 && ops[1] && InSpace(ops[1]) && *ops[1] == 0x0E && ops[1][1] > 0 && ops[1][1] <= 8) g_enexNames.insert(std::string((const char*)ops[1] + 2, strnlen((const char*)ops[1] + 2, ops[1][1]))); // CR27
-        if (op == 0x0652 && cnt >= 1 && ops[0]) { int32_t sv = 0; if (OperandInt(ops[0], sv) && sv == STAT_LUNG_CAPACITY && !std::getenv("NOTSA_MDRIVER_NOLUNG")) CStats::SetStatValue(STAT_LUNG_CAPACITY, 100.f); } // CR39 (56 AMPHIBIOUS ASSAULT: the mission ends at once with \"you need more practice underwater\" unless GET_INT_STAT 225 > 50): the player has trained his lungs
+        if (op == 0x0652 && cnt >= 1 && ops[0]) { int32_t sv = 0; if (OperandInt(ops[0], sv) && sv == STAT_LUNG_CAPACITY && !std::getenv("NOTSA_MDRIVER_NOLUNG")) (Act("direct.stat_lung"), CStats::SetStatValue(STAT_LUNG_CAPACITY, 100.f)); } // CR39 (56 AMPHIBIOUS ASSAULT: the mission ends at once with \"you need more practice underwater\" unless GET_INT_STAT 225 > 50): the player has trained his lungs
         if (op == 0x00D6) { int32_t v; single = cnt >= 1 && OperandInt(ops[0], v) && v == 0; inOr = cnt >= 1 && OperandInt(ops[0], v) && v >= 21 && v <= 28; orPend.clear(); pend.reset(); p = e; continue; }
         if (inOr && !(w & 0x8000) && (op == 0x0118 || (op == 0x0119 && !std::getenv("NOTSA_MDRIVER_NOCARGUARD")))) { auto r = std::make_shared<Rec>(); r->p = p; r->raw = w; r->cond = -1; r->waitSeq = 0; r->args = DecodeArgs(s, p, 1); for (int k = 0; k < 2 && k < cnt; k++) { uint32_t ref; if (OperandVar(ops[k], ref)) r->vref[k] = ref; } orPend.push_back(r); p = e; continue; }
         if (single && !(w & 0x8000) && (op == 0x0118 || op == 0x0038 || op == 0x0039 || (op == 0x0119 && !std::getenv("NOTSA_MDRIVER_NOCARGUARD")))) {
@@ -701,7 +710,14 @@ void LoadTable(const char* path) {
     }
     g_loaded = true;
 }
+void WriteActLog() {
+    if (!ActOn()) return; const char* o = std::getenv("NOTSA_MDRIVER_OUT"); if (!o) return;
+    std::FILE* f = std::fopen((std::string(o) + ".actlog").c_str(), "w"); if (!f) return;
+    for (auto& kv : g_actCnt) std::fprintf(f, "%s\t%ld\n", kv.first.c_str(), kv.second);
+    std::fclose(f);
+}
 void WriteResult() {
+    WriteActLog();
     const char* rp = std::getenv("NOTSA_MDRIVER_RESULT"); if (!rp) return;
     std::FILE* f = std::fopen(rp, "w"); if (!f) return;
     const bool failed = !g_pass && (g_fail || g_endedFail) && g_stopReason.empty();
@@ -1536,14 +1552,14 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         }
         QueueActions(acts, row.settle); return; }
     if (v == "cardmg" && !d.args.empty()) { // CR43: see Decide (kCarDmg): CJ shoots the car: the car's last damager is CJ and its health drops to 255 (a mission that reads the health for the wreck: 62's helicopter crashes below 260)
-        if (auto* tv = CPools::GetVehicle((int)d.args[0].n); tv && c) { tv->m_pLastDamageEntity = c; if (tv->m_fHealth > 255.f) tv->m_fHealth = 255.f; notsa::standalone::Fixups::Log("[mdriver] cardmg: car %d model %d health %.0f damaged by CJ", (int)d.args[0].n, (int)tv->m_nModelIndex, (double)tv->m_fHealth); }
+        if (auto* tv = CPools::GetVehicle((int)d.args[0].n); tv && c) { Act("direct.cardmg"); tv->m_pLastDamageEntity = c; if (tv->m_fHealth > 255.f) tv->m_fHealth = 255.f; notsa::standalone::Fixups::Log("[mdriver] cardmg: car %d model %d health %.0f damaged by CJ", (int)d.args[0].n, (int)tv->m_nModelIndex, (double)tv->m_fHealth); }
         QueueActions({}, row.settle); return;
     }
     if (v == "killset") { // CR43: see Decide (flagkill): every listed ped dies, every listed car is wrecked
         std::vector<std::string> acts; for (auto& a : d.args) { const int h = (int)a.n; if (h < 0) acts.push_back("emit mdkillcar:" + std::to_string(-h)); else if (auto* p = CPools::GetPed(h); p && p != c) acts.push_back("emit mdkillped:" + std::to_string(h)); }
         QueueActions(acts, row.settle); if (!acts.empty()) { g_killFrame = GFrame(); g_killSettle = row.settle; if (!std::getenv("NOTSA_MDRIVER_NOFLAGKILLFAST")) g_nextStall = 40; /* the script clears the flag at the FIRST live member of its loop: the next one shows in the next pass */ } return;
     }
-    if (v == "setwanted") { if (auto* w = FindPlayerWanted()) { w->SetWantedLevel((eWantedLevel)std::clamp(I_(0), 1, 6)); } QueueActions({ "wait 30" }, row.settle); return; } // CR46
+    if (v == "setwanted") { if (auto* w = FindPlayerWanted()) { Act("direct.setwanted"); w->SetWantedLevel((eWantedLevel)std::clamp(I_(0), 1, 6)); } QueueActions({ "wait 30" }, row.settle); return; } // CR46
     if (v == "horn") { QueueActions({ "emit mdpad:-100:30", "wait 30" }, row.settle); return; } // CR39
     if (v == "swimgo") { std::vector<std::string> acts; if (c && c->bInVehicle) { acts = { "key down return", "wait 1", "key up return", "waituntil invehicle == 0 300" }; } if (!c || !c->bInVehicle) acts.push_back("emit mdswim:" + F(F_(0)) + ":" + F(F_(1))); QueueActions(acts, row.settle); return; } // CR39 (CJ leaves the boat in the water: he swims)
     if (v == "objto") { QueueActions({ "emit mdobjto:" + std::to_string(I_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) + ":" + F(F_(3)) }, row.settle); return; } // CR39
@@ -1634,7 +1650,7 @@ void ShootDead() { // actions.ts shootAttackers: every ped (not a buddy type) wh
         if (std::getenv("NOTSA_MDRIVER_PLOG")) notsa::standalone::Fixups::Log("[mdplog] shootdead: attacker h=%d type=%d model=%d target h=%d type=%d model=%d hp=%.0f tgtkill=%p", CPools::GetPedRef(&p), (int)p.m_nPedType, (int)p.m_nModelIndex, CPools::GetPedRef(tg), (int)tg->m_nPedType, (int)tg->m_nModelIndex, tg->m_fHealth, (void*)KillTarget(tg));
         victims.push_back(CPools::GetPedRef(&p)); if (tg == me) g_enemyTypes.insert((int)p.m_nPedType); g_fightKills++;
     }
-    for (int h : victims) Emit("mdkillped:" + std::to_string(h));
+    for (int h : victims) { Act("src.shootdead"); Emit("mdkillped:" + std::to_string(h)); }
 }
 // CR27 (12 RYDER, 19 CESAR VIALPANDO): the awaited global is written by a STREAMED script thread (barber.scm: the chair + haircut menu, carmod1.scm: the mod-shop menu), whose locate / button conditions nobody answers. Every streamed-script thread's conditions are recorded
 // like the root's (AuxBegin/AuxEnd, called from scmtrace::Run for threads outside the traced tree); when the root wait stands (the wait row answered twice) and such a thread writes a global the root's pass compares, Decide() runs over THAT thread's last passes.
@@ -1694,25 +1710,25 @@ void TickGeneric() {
     if (static const char* st = std::getenv("NOTSA_MDRIVER_STALL")) g_stall = std::atoi(st); // CR16: per-run override of the stall threshold (TS stallFrames = 600 frames of 33.33 ms = 20 s; 1000 frames of the 20 ms RR step are the same game time; allmissions.sh sets it for mission 46)
     if (g_quitIn >= 0) { if (g_quitIn-- == 0) { WriteResult(); Emit("quit"); if (g_out) { std::fclose(g_out); g_out = nullptr; } g_done = true; } return; }
     auto* root = notsa::scmtrace::Root();
-    if (!g_started) { if (!root) return; g_started = true; StaticScan(root); if (!std::getenv("NOTSA_MDRIVER_NOCITY")) CStats::SetStatValue(STAT_CITY_UNLOCKED, 2.f); /* CR10: a mission started cold stands where the story would have opened the cities: SF/LV closed = 4 stars on arrival (SetPlayerWantedLevelForForbiddenTerritories), cops attack */ g_passStat0 = CStats::GetStatValue(STAT_MISSIONS_PASSED); g_thread = root; g_frame0 = CTimer::GetFrameCounter(); g_sameCount = 0; g_lastIp = nullptr; }
+    if (!g_started) { if (!root) return; g_started = true; StaticScan(root); if (!std::getenv("NOTSA_MDRIVER_NOCITY")) Act("direct.stat_city_unlocked"), CStats::SetStatValue(STAT_CITY_UNLOCKED, 2.f); /* CR10: a mission started cold stands where the story would have opened the cities: SF/LV closed = 4 stars on arrival (SetPlayerWantedLevelForForbiddenTerritories), cops attack */ g_passStat0 = CStats::GetStatValue(STAT_MISSIONS_PASSED); g_thread = root; g_frame0 = CTimer::GetFrameCounter(); g_sameCount = 0; g_lastIp = nullptr; }
     const int fr = GFrame();
     if (static const int popEvery = std::getenv("NOTSA_MDRIVER_POP") ? std::atoi(std::getenv("NOTSA_MDRIVER_POP")) : 0; popEvery > 0 && fr > 0 && fr % popEvery == 0 && CiviliansNearCj(60.f) < 2) { // CR59 (121 TAXI: the next fare must be found around the drop-off): keep pedestrians around CJ for the odd jobs that look for a random ped
-        const int made = PopulateAroundCj(4, 18.f); notsa::standalone::Fixups::Log("[mdriver] pop: %d pedestrians put around CJ at frame %d", made, fr);
+        const int made = PopulateAroundCj(4, 18.f); Act("tick.pop_spawn_peds", made); notsa::standalone::Fixups::Log("[mdriver] pop: %d pedestrians put around CJ at frame %d", made, fr);
     }
-    if (g_follow.left > 0) { // CR47
+    if (g_follow.left > 0) { Act("tick.follow_car"); // CR47
         auto* me = Cj(); auto* tv = CPools::GetVehicle(g_follow.tgt); CVehicle* mv = me && me->bInVehicle ? me->m_pVehicle : nullptr;
         if (!tv || !mv || tv->m_fHealth <= 0.f || mv->m_pAttachedTo || tv == mv) g_follow.left = 0;
         else { g_follow.left--; const CVector q = tv->GetPosition() + tv->GetRight() * g_follow.off.x + tv->GetForward() * g_follow.off.y + tv->GetUp() * g_follow.off.z; mv->SetPosn(q); mv->m_vecMoveSpeed = tv->m_vecMoveSpeed; mv->m_vecTurnSpeed = CVector{}; }
     }
-    if (g_airHold.left > 0) { g_airHold.left--; if (auto* v = CPools::GetVehicle(g_airHold.h); v && v->m_fHealth > 0.f && Cj() && Cj()->bInVehicle && Cj()->m_pVehicle == v) { v->m_vecMoveSpeed.z = 0.f; if (g_airHold.vx != 0.f || g_airHold.vy != 0.f) { v->m_vecMoveSpeed.x = g_airHold.vx; v->m_vecMoveSpeed.y = g_airHold.vy; } v->m_vecTurnSpeed = CVector{}; CVector pp = v->GetPosition(); pp.z = g_airHold.z; v->SetPosn(pp); } else g_airHold.left = 0; }
+    if (g_airHold.left > 0) { Act("tick.air_hold"); g_airHold.left--; if (auto* v = CPools::GetVehicle(g_airHold.h); v && v->m_fHealth > 0.f && Cj() && Cj()->bInVehicle && Cj()->m_pVehicle == v) { v->m_vecMoveSpeed.z = 0.f; if (g_airHold.vx != 0.f || g_airHold.vy != 0.f) { v->m_vecMoveSpeed.x = g_airHold.vx; v->m_vecMoveSpeed.y = g_airHold.vy; } v->m_vecTurnSpeed = CVector{}; CVector pp = v->GetPosition(); pp.z = g_airHold.z; v->SetPosn(pp); } else g_airHold.left = 0; }
     // CR50 (92 SAINT MARK'S BISTRO: after the recorded-car cutscene the script puts the Shamal at z 200 with speed 30 and gives CJ the stick; nobody flies, the plane fell into the sea in 400 frames, before the 600-frame driver round answered the landing area): a plane that CJ sits in, that flies >30 m above the ground, falls and has no recorded-car playback is held at the current altitude for 1500 frames (the driver does not fly).
     if (g_airHold.left <= 0 && !std::getenv("NOTSA_MDRIVER_NOFALLHOLD")) if (auto* me7 = Cj(); me7 && me7->bInVehicle && me7->m_pVehicle && me7->m_pVehicle->IsSubPlane() && me7->m_pVehicle->m_fHealth > 0.f && !CVehicleRecording::IsPlaybackGoingOnForCar(me7->m_pVehicle) && me7->m_pVehicle->m_vecMoveSpeed.z < -0.02f) { auto* v7 = me7->m_pVehicle; const float z7 = v7->GetPosition().z; if (z7 - CWorld::FindGroundZForCoord(v7->GetPosition().x, v7->GetPosition().y) > 30.f) { g_airHold.h = GetVehiclePool()->GetRef(v7); g_airHold.z = z7; g_airHold.left = 1500; g_airHold.vx = g_airHold.vy = 0.f; notsa::standalone::Fixups::Log("[mdriver] fallhold: the falling plane is held at z %.0f", (double)z7); } }
-    if (g_speedHold.left > 0) { g_speedHold.left--; if (auto* v = CPools::GetVehicle(g_speedHold.h); v && v->m_fHealth > 0.f) { const CVector f = v->GetForward(); v->m_vecMoveSpeed.x = f.x * g_speedHold.mps / 50.f; v->m_vecMoveSpeed.y = f.y * g_speedHold.mps / 50.f; } else g_speedHold.left = 0; }
+    if (g_speedHold.left > 0) { Act("tick.speed_hold"); g_speedHold.left--; if (auto* v = CPools::GetVehicle(g_speedHold.h); v && v->m_fHealth > 0.f) { const CVector f = v->GetForward(); v->m_vecMoveSpeed.x = f.x * g_speedHold.mps / 50.f; v->m_vecMoveSpeed.y = f.y * g_speedHold.mps / 50.f; } else g_speedHold.left = 0; }
     if (!std::getenv("NOTSA_MDRIVER_NOUNFLIP")) if (auto* me6 = Cj(); me6 && me6->bInVehicle && me6->m_pVehicle && me6->m_pVehicle->m_nVehicleType == VEHICLE_TYPE_AUTOMOBILE && me6->m_pVehicle->m_fHealth > 0.f && me6->m_pVehicle->GetMatrix().GetUp().z < 0.0f) { // CR50 (85 EXPLOSIVE SITUATION: the Dumper put at the crate stage lands upside down; the game's ProcessUpsideDownVehicle (PlayerInfo.cpp, > 6 frames) sets its health to 249 and it burns out, 1000 -> 249 every 30 frames even when repaired): the vehicle CJ sits in that is upside down is put on its wheels at once (the driver does not flip cars by hand)
-        auto* v6 = me6->m_pVehicle; CVector pp = v6->GetPosition(); const float hd = v6->GetHeading(); v6->SetHeading(hd); pp.z += 1.0f; v6->SetPosn(pp); v6->m_vecTurnSpeed = CVector{}; v6->m_vecMoveSpeed = CVector{};
+        auto* v6 = me6->m_pVehicle; Act("tick.unflip_car"); CVector pp = v6->GetPosition(); const float hd = v6->GetHeading(); v6->SetHeading(hd); pp.z += 1.0f; v6->SetPosn(pp); v6->m_vecTurnSpeed = CVector{}; v6->m_vecMoveSpeed = CVector{};
         notsa::standalone::Fixups::Log("[mdriver] unflip: the vehicle (model %d) CJ sits in was upside down at %.1f %.1f %.1f: put on its wheels", (int)v6->m_nModelIndex, (double)pp.x, (double)pp.y, (double)pp.z); }
-    if (g_warpFixLeft > 0 && !std::getenv("NOTSA_MDRIVER_NOWARPREPAIR")) { g_warpFixLeft--; if (auto* cj5 = Cj(); cj5 && cj5->bInVehicle && cj5->m_pVehicle && cj5->m_pVehicle->m_fHealth > 0.f && cj5->m_pVehicle->m_fHealth < 350.f && cj5->m_fHealth > 0.f) { cj5->m_pVehicle->Fix(); cj5->m_pVehicle->m_fHealth = 1000.f; notsa::standalone::Fixups::Log("[mdriver] warprepair: CJ's vehicle fell below 350 hp after a warp into the place: repaired"); } } // CR52 (93 MISAPPROPRIATION: the Maverick warped to the ambush loses 1000 hp in 130 frames to the agents around it before the kill answers of the 150 frame cadence come; a player would have fought on in a repaired vehicle)
-    if (!g_fixCars.empty()) for (const int h : g_fixCars) if (auto* v = CPools::GetVehicle(h); v && v->vehicleFlags.bIsDamaged && v->m_fHealth > 0.f && !std::getenv("NOTSA_MDRIVER_NOKEEPFIX")) { v->Fix(); v->m_fHealth = 1000.f; }
+    if (g_warpFixLeft > 0 && !std::getenv("NOTSA_MDRIVER_NOWARPREPAIR")) { g_warpFixLeft--; if (auto* cj5 = Cj(); cj5 && cj5->bInVehicle && cj5->m_pVehicle && cj5->m_pVehicle->m_fHealth > 0.f && cj5->m_pVehicle->m_fHealth < 350.f && cj5->m_fHealth > 0.f) { Act("tick.warprepair_car"); cj5->m_pVehicle->Fix(); cj5->m_pVehicle->m_fHealth = 1000.f; notsa::standalone::Fixups::Log("[mdriver] warprepair: CJ's vehicle fell below 350 hp after a warp into the place: repaired"); } } // CR52 (93 MISAPPROPRIATION: the Maverick warped to the ambush loses 1000 hp in 130 frames to the agents around it before the kill answers of the 150 frame cadence come; a player would have fought on in a repaired vehicle)
+    if (!g_fixCars.empty()) for (const int h : g_fixCars) if (auto* v = CPools::GetVehicle(h); v && v->vehicleFlags.bIsDamaged && v->m_fHealth > 0.f && !std::getenv("NOTSA_MDRIVER_NOKEEPFIX")) { Act("tick.keepfix_car"); v->Fix(); v->m_fHealth = 1000.f; }
     if (root) { char n[9]{}; std::memcpy(n, root->m_szName, 8); g_name = n; }
     if (!root) { // the thread ended (TS: !alive(script)): PASSED / FAILED, or STOP when a kill of the driver was just before it
         g_endFrame = fr;
@@ -1722,7 +1738,7 @@ void TickGeneric() {
             if (g_relaunchWait++ < 300 && (CTheScripts::IsPlayerOnAMission() || CTheScripts::FailCurrentMission != 0)) return;
             if (!CTheScripts::IsPlayerOnAMission() && CTheScripts::FailCurrentMission == 0) {
                 g_relaunched = true; g_relaunchWait = 0; notsa::standalone::Fixups::Log("[mdriver] relaunch frame %d: mission %d ended without M_PASS / M_FAIL: started again", fr, (int)NotsaLastInjectedMission);
-                NotsaInjectMissionInfo mi{}; NotsaInjectStartMission(NotsaLastInjectedMission, &mi);
+                NotsaInjectMissionInfo mi{}; Act("direct.relaunch_inject"); NotsaInjectStartMission(NotsaLastInjectedMission, &mi);
                 g_started = false; g_thread = nullptr; g_recs.clear(); g_recsBig.clear(); g_siteLast.clear(); g_attemptsAt.clear(); g_queue.clear(); g_qpos = 0; g_wait = 0; g_untilLeft = 0; g_sameCount = 0; g_lastIp = nullptr; g_ipSeen.clear(); g_endFrame = -1; g_lastLabel.clear();
                 return;
             }
@@ -1735,8 +1751,8 @@ void TickGeneric() {
     if (g_fail && fr - g_failFrame > 600) { g_quitIn = 0; return; }
     if (fr >= g_maxFrames) { Stop("budget: " + std::to_string(g_maxFrames) + " frames", -1, (uint32_t)(root->m_IP - root->m_BaseIP)); return; }
     if (!g_pass && CStats::GetStatValue(STAT_MISSIONS_PASSED) > g_passStat0) { g_pass = true; g_passFrame = fr; } // CR4: TS drive.ts: PASSED = STAT_MISSIONS_PASSED rose (0x0318 SET_LATEST_MISSION_PASSED; missions 87 78 print no M_PASS)
-    if (!g_pass && (fr - g_killFrame <= 900 || fr - g_wantedClrFrame <= 900) && !std::getenv("NOTSA_MDRIVER_KEEPKILLWANTED") && fr - g_scriptWantedFrame > 120) if (auto* w = FindPlayerWanted()) if (w->m_WantedLevel != eWantedLevel::WANTED_CLEAN) w->SetWantedLevel(eWantedLevel::WANTED_CLEAN); // CR25 (15 DRIVE-THRU): the driver's own `kill` (a stand-in for shooting the hostile peds) is reported as a murder by witnesses: the one star got CJ, who stood still in his car, ARRESTED 250 frames later (HAS_DEATHARREST_BEEN_EXECUTED -> the script's fail path). The star the kill raised is cleared for 900 frames
-    if (g_hurtNow.h) { auto* pp = CPools::GetPed(g_hurtNow.h); if (pp && pp != Cj() && pp->m_fHealth > (float)g_hurtNow.hp && !ProtectedHandle(g_hurtNow.h)) Emit("mdhurt:" + std::to_string(g_hurtNow.h) + ":" + std::to_string(g_hurtNow.hp)); g_hurtNow = {}; } // CR37
+    if (!g_pass && (fr - g_killFrame <= 900 || fr - g_wantedClrFrame <= 900) && !std::getenv("NOTSA_MDRIVER_KEEPKILLWANTED") && fr - g_scriptWantedFrame > 120) if (auto* w = FindPlayerWanted()) if (w->m_WantedLevel != eWantedLevel::WANTED_CLEAN) Act("direct.wanted_clear_after_kill"), w->SetWantedLevel(eWantedLevel::WANTED_CLEAN); // CR25 (15 DRIVE-THRU): the driver's own `kill` (a stand-in for shooting the hostile peds) is reported as a murder by witnesses: the one star got CJ, who stood still in his car, ARRESTED 250 frames later (HAS_DEATHARREST_BEEN_EXECUTED -> the script's fail path). The star the kill raised is cleared for 900 frames
+    if (g_hurtNow.h) { auto* pp = CPools::GetPed(g_hurtNow.h); if (pp && pp != Cj() && pp->m_fHealth > (float)g_hurtNow.hp && !ProtectedHandle(g_hurtNow.h)) Act("src.hurtnow"), Emit("mdhurt:" + std::to_string(g_hurtNow.h) + ":" + std::to_string(g_hurtNow.hp)); g_hurtNow = {}; } // CR37
     if (!std::getenv("NOTSA_MDRIVER_NOFIGHT") && ++g_fightClock % 3 == 0 && !CCutsceneMgr::IsCutsceneProcessing() && Cj()) ShootDead();
     if (static const char* clog = std::getenv("NOTSA_MDRIVER_CARLOG"); clog && Cj() && fr % 100 == 0) { // CR47 debug (off by default): NOTSA_MDRIVER_CARLOG=h1,h2: position / speed / heading of those vehicles (or peds, h tried as a vehicle first)
         std::string l = clog; size_t i = 0; auto* me = Cj(); const auto cp = me->GetPosition();
@@ -1845,7 +1861,7 @@ void TickGeneric() {
         static std::map<int, int32_t> last; for (const char* c = ag; *c;) { const int off = std::atoi(c); while (*c && *c != ',') c++; if (*c == ',') c++; if (!GlobalOk(off)) continue; int32_t v; std::memcpy(&v, CTheScripts::ScriptSpace.data() + off, 4); auto it = last.find(off); if (it == last.end()) last[off] = v; else if (it->second != v) { notsa::standalone::Fixups::Log("[auxchg] f%d $%d %d -> %d (menus in use %d,%d)", fr, off, it->second, v, (int)CMenuSystem::MenuInUse[0], (int)CMenuSystem::MenuInUse[1]); it->second = v; } }
     }
     if (!std::getenv("NOTSA_MDRIVER_NOGOD")) if (auto* me = Cj()) { // CR4: TS drive.ts driverFrame: CJ and the vehicle he drives are invulnerable every frame (AUTODRIVE_GOD=0 off)
-        me->physicalFlags.bInvulnerable = true;
+        me->physicalFlags.bInvulnerable = true; Act("tick.god_frame");
         if (me->bInVehicle && me->m_pVehicle) me->m_pVehicle->physicalFlags.bInvulnerable = true;
     }
     if (fr % 30 == 0 && std::getenv("NOTSA_MDRIVER_CJLOG")) if (auto* me9 = Cj()) notsa::standalone::Fixups::Log("[cjlog] frame %d hp %.0f pos %.1f %.1f %.1f veh=%d anim state %d inv=%d lastdmg ent=%d type=%d model=%d wpn=%d fire=%d vmodel=%d vhp=%.0f vinv=%d", fr, (double)me9->m_fHealth, (double)me9->GetPosition().x, (double)me9->GetPosition().y, (double)me9->GetPosition().z, (int)me9->bInVehicle, (int)me9->m_nPedState, (int)me9->physicalFlags.bInvulnerable, me9->m_pLastEntityDamage ? 1 : 0, me9->m_pLastEntityDamage ? (int)me9->m_pLastEntityDamage->GetType() : -1, me9->m_pLastEntityDamage ? (int)me9->m_pLastEntityDamage->m_nModelIndex : -1, (int)me9->m_nLastWeaponDamage, (int)(me9->m_pFire != nullptr), me9->bInVehicle && me9->m_pVehicle ? (int)me9->m_pVehicle->m_nModelIndex : -1, me9->bInVehicle && me9->m_pVehicle ? (double)me9->m_pVehicle->m_fHealth : -1.0, me9->bInVehicle && me9->m_pVehicle ? (int)me9->m_pVehicle->physicalFlags.bInvulnerable : -1); // CR49 debug
@@ -1927,7 +1943,7 @@ void TickGeneric() {
     else if (root->m_IP == g_lastIp) { g_sameCount++; g_ipSeen[root->m_IP] = fr; }
     else if (g_lastIp && g_ipSeen.count(root->m_IP) && fr - g_ipSeen[root->m_IP] < g_stall && (!std::getenv("NOTSA_MDRIVER_NOIPRING"))) { g_sameCount++; g_ringHops++; g_lastIp = root->m_IP; g_ipSeen[root->m_IP] = fr; } /* CR57: default (NOIPRING=1 off; CR46 had it opt-in, 50 and 59 regressed then and pass now) */ // CR46 (72 AIR RAID: the wake ip alternated 158e / 104 / 797 / 14d9 for 6500 frames and the stall counter never reached 600): a wake ip seen within the last stall window is the same loop
     else { g_ipSeen[root->m_IP] = fr; g_sameCount = 0; g_ringHops = 0; g_lastIp = root->m_IP; if (g_fastLeft > 0 && g_fastIp != root->m_IP) { g_fastLeft = 0; if (g_fastNext) g_nextStall = 0; g_fastNext = false; } }
-    if (g_sameCount >= g_stall) for (auto& r : g_recs) if (r->waitSeq >= g_waitSeq - 3 && (r->raw & 0x7FFF) == 0x010F && r->cond == 0) { if (auto* w = FindPlayerWanted()) if (w->m_WantedLevel != eWantedLevel::WANTED_CLEAN) { w->SetWantedLevel(eWantedLevel::WANTED_CLEAN); g_sameCount = 0; return; } break; } // CR11: as drive.ts:309 (at the stall threshold, then no decide this round; level only): // CR9: the thread waits for the wanted level to drop (SWEET4 ip 0x45e7 after the second pay n spray stage; the exe decays above 1 star only in the countryside, a real player drives into the pay n spray = ClearWantedLevelAndGoOnParole 0x44AC16): clear it, as the TS port does implicitly
+    if (g_sameCount >= g_stall) for (auto& r : g_recs) if (r->waitSeq >= g_waitSeq - 3 && (r->raw & 0x7FFF) == 0x010F && r->cond == 0) { if (auto* w = FindPlayerWanted()) if (w->m_WantedLevel != eWantedLevel::WANTED_CLEAN) { Act("direct.wanted_clear_paynspray"); w->SetWantedLevel(eWantedLevel::WANTED_CLEAN); g_sameCount = 0; return; } break; } // CR11: as drive.ts:309 (at the stall threshold, then no decide this round; level only): // CR9: the thread waits for the wanted level to drop (SWEET4 ip 0x45e7 after the second pay n spray stage; the exe decays above 1 star only in the countryside, a real player drives into the pay n spray = ClearWantedLevelAndGoOnParole 0x44AC16): clear it, as the TS port does implicitly
     bool urgentTimer = false; // CR31 (25 CATALYST: the 90 s script timer runs while the driver waits 600 frames at every decision): a countdown clock on the screen shortens the patience to 150 frames; a vehicle of CJ that keeps losing health (army fire, 26) to 90 (NOTSA_MDRIVER_NOURGENT)
     if (!std::getenv("NOTSA_MDRIVER_NOTIMERURGENT")) { // CR55: default (NOTIMERURGENT=1 off; the escalation counters are time-scaled, g_paceW) - was opt-in in CR54 (re-measured over the 59 passing missions: default-on breaks 47 ARE YOU GOING TO SAN FIERRO? (the five smashobj answers of the stage are used up in 3 decisions instead of 5: the answer rotation counts decisions, not time) and moves 20 23 28 41 50 59 61 66 70 74 (all still pass))
         const auto& ck = CUserDisplay::OnscnTimer.m_Clock;
@@ -1971,7 +1987,7 @@ void TickGeneric() {
         if (r->waitSeq < g_waitSeq - 3 || (r->raw & 0x7FFF) != 0x0019 || (r->raw & 0x8000) || r->cond != 0) continue;
         if (!std::getenv("NOTSA_MDRIVER_CLOCKGUARD") && VerdictOf(g_thread, *r) == Verdict::Guard) continue; /* CR34 (33: `IF hour > 21` jumps FORWARD when false and its true branch is the mission's failure (a time limit): moving the clock made the mission fail at f5553) */
         const auto v = ArgInt(*r, 0), n = ArgInt(*r, 1); if (!v || !n || *v != (int)CClock::GetGameClockHours() || *n < *v || *n > 22) continue;
-        notsa::standalone::Fixups::Log("[mdriver] clockskip frame %d: the wait is for hour > %d (now %d): the game clock goes to %d:00", fr, (int)*n, (int)*v, (int)*n + 1); CClock::SetGameClock((uint8)(*n + 1), 0, CClock::GetGameClockDays()); QueueActions({}, 60); return; }
+        notsa::standalone::Fixups::Log("[mdriver] clockskip frame %d: the wait is for hour > %d (now %d): the game clock goes to %d:00", fr, (int)*n, (int)*v, (int)*n + 1); Act("direct.clockskip"), CClock::SetGameClock((uint8)(*n + 1), 0, CClock::GetGameClockDays()); QueueActions({}, 60); return; }
     if ((!d.act || d.row->action == "wait") && ringHops > 0 && !std::getenv("NOTSA_MDRIVER_NORINGWIDE")) { // CR57 (100 UP UP AND AWAY: the stage runs a 7-wait soldier sub per frame and its own conditions (IS_BUTTON_PRESSED, the locates) once per revolution: the 64-record / last-3-waits window at a stall frame holds only the soldier tests): a stall counted over a ring of wake ips looks at the newest record of every condition site seen in the last 48 waits
         std::vector<RecP> rw; for (auto& kv : g_siteLast) if (kv.second->waitSeq >= g_waitSeq - 48) rw.push_back(kv.second);
         std::sort(rw.begin(), rw.end(), [](const RecP& a, const RecP& b) { return a->seq < b->seq; });
@@ -2304,6 +2320,7 @@ void SetCmdRunner(void (*fn)(const std::string&)) { g_run = fn; }
 
 bool Cmd(const char* name, const std::string& args) {
     if (std::strncmp(name, "md", 2)) return false;
+    ActCmd(name, args);
     auto* ped = Cj();
     if (!std::strcmp(name, "mdkillped")) { if (auto* k = CPools::GetPed(std::atoi(args.c_str()))) { if (std::getenv("NOTSA_MDRIVER_PLOG")) notsa::standalone::Fixups::Log("[mdplog] kill h=%s type=%d model=%d hp=%.0f pos=%.0f,%.0f wanted=%d\n", args.c_str(), (int)k->m_nPedType, (int)k->m_nModelIndex, k->m_fHealth, k->GetPosition().x, k->GetPosition().y, (int)FindPlayerWanted()->m_WantedLevel); if (ped) CWeapon::GenerateDamageEvent(k, ped, k->physicalFlags.bBulletProof && !std::getenv("NOTSA_MDRIVER_NOMELEEKILL") ? WEAPON_UNARMED : WEAPON_PISTOL, 1000, PED_PIECE_TORSO, 0); /* CR59 (109 LOS DESPERADOS: the last wave has SET_CHAR_PROOFS bullet proof, a pistol hit does nothing: a bullet proof ped is killed by a melee hit) */ /* CR13: no forced health 0 / PEDSTATE_DEAD fallback: TS shootDead has none, the ped dies through its death task over the next frames */ } return true; }
     if (!std::strcmp(name, "mdhurt")) { int h = 0, hp = 0; std::sscanf(args.c_str(), "%d:%d", &h, &hp); if (auto* k = CPools::GetPed(h)) { if (k->m_fHealth > (float)hp) k->m_fHealth = (float)hp; notsa::standalone::Fixups::Log("[mdriver] mdhurt ped %d health -> %d type %d model %d", h, hp, (int)k->m_nPedType, (int)k->m_nModelIndex); } return true; } // CR35
@@ -2563,7 +2580,7 @@ void Tick(uint64_t clockMs) {
     if (!Enabled() || g_done) return;
     g_clock = clockMs;
     if (g_faceHold.left > 0 && --g_faceHold.left == 0) { TheCamera.RestoreWithJumpCut(); notsa::standalone::Fixups::Log("[mdriver] facewarp ended"); } // CR51
-    if (g_photoHold > 0) { g_photoHold--; if (auto* k = CPools::GetPed(g_photoPed)) { k->bHasBeenPhotographed = true; TheCamera.GetActiveCam().m_fFOV = 15.f; if (g_photoHold == 0) notsa::standalone::Fixups::Log("[mdriver] photo hold ended"); } else g_photoHold = 0; } // CR26: see mdphoto
+    if (g_photoHold > 0) { Act("tick.photo_flag_hold"); g_photoHold--; if (auto* k = CPools::GetPed(g_photoPed)) { k->bHasBeenPhotographed = true; TheCamera.GetActiveCam().m_fFOV = 15.f; if (g_photoHold == 0) notsa::standalone::Fixups::Log("[mdriver] photo hold ended"); } else g_photoHold = 0; } // CR26: see mdphoto
     if (Generic()) { TickGeneric(); return; }
     if (!g_loaded) { Load(std::getenv("NOTSA_MDRIVER")); if (const char* o = std::getenv("NOTSA_MDRIVER_OUT")) g_out = std::fopen(o, "w"); }
     if (g_quitIn >= 0) {

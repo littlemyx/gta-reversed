@@ -100,7 +100,7 @@ wait:400';; # courier: on a bike (the pickup model)
   B="$OUT/${IDX}_${TH}${SFX}"
   if [ -n "${HC_OUT:-}" ]; then mkdir -p "$HC_OUT"; [ -f "$W/hc.txt" ] && cp "$W/hc.txt" "$HC_OUT/$IDX.hc.txt"; else
   for x in scmtrace sh rand rr.trace; do [ -f "$W/m.$x" ] && { gzip -c "$W/m.$x" > "$B.$x.gz" 2>/dev/null; }; done
-  rm -f "$B.driver.gz"; [ -f "$W/m.driver" ] && cp "$W/m.driver" "$B.driver"; rm -f "$B.log.gz"; [ -f "$W/m.log" ] && cp "$W/m.log" "$B.log"
+  rm -f "$B.driver.gz"; [ -f "$W/m.driver" ] && cp "$W/m.driver" "$B.driver"; [ -f "$W/m.driver.actlog" ] && cp "$W/m.driver.actlog" "$B.actlog"; rm -f "$B.log.gz"; [ -f "$W/m.log" ] && cp "$W/m.log" "$B.log"
   fi
   [ -z "$SFX" ] && printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$IDX" "${MN:-?}" "$RES" "$FR" "$TH" "$IP" "$OP" "$RSN" >> "$OUT/summary.tsv"
   echo "[$IDX] ${MN:-?}: $RES frame=$FR $RSN ($(( $(date +%s) - t0 ))s)"

@@ -514,6 +514,7 @@ bool ProtectedPed(CPed* p) { auto* c = FindPlayerPed(); return (int)p->m_nPedTyp
 std::map<const uint8_t*, RecP> g_healthConds;
 std::map<uint32_t, int> g_carHealthVars; // CR44: destination variable of GET_CAR_HEALTH (0227) -> the car handle
 std::map<uint32_t, int> g_objHealthVars; // CR37: destination variable of GET_OBJECT_HEALTH (071E) -> the object handle
+std::map<uint32_t, std::pair<std::string, int>> g_turfVars; // CR62: destination variable of GET_ZONE_GANG_STRENGTH (076D) -> (zone label, gang): a later `var == 0` wait = win the gang war in that zone
 std::map<uint32_t, int> g_groupSizeVars; // CR59: destination variable (operand 2) of GET_GROUP_SIZE (07F6) -> the group handle (operand 0): a later `var > N` wait = the group needs more members
 std::map<uint32_t, int> g_healthVars; // CR35: destination variable of GET_CHAR_HEALTH -> the char handle read (a later `N > var` wait = the char is hurt below N)
 std::map<uint32_t, std::pair<int, bool>> g_headVars; // CR54: destination variable of GET_CHAR_HEADING (0172) / GET_CAR_HEADING (0174) -> (handle, is a car): a later heading window test on CJ's vehicle = face the window
@@ -913,6 +914,18 @@ Dec Decide(const std::vector<RecP>& loop, int attempt, bool wide = false) {
             if (op == 0x08FF && !std::getenv("NOTSA_MDRIVER_NOOBJWEAP")) { auto a2 = ResolveArgs(kDmgW, *c); if (a2 && a2->size() == 2 && (*a2)[1].n >= 22.0 && (*a2)[1].n <= 34.0 /* a hand firearm: 50 DECONSTRUCTION tests rocket (35) and satchel (39) damage and passes without an answer */ && CPools::GetObject((int)(*a2)[0].n)) { d.act = true; d.row = &kDmgW; d.rowIdx = -41; d.cond = c; d.args = *a2; d.op = op; /* every other distinct false object test of the pass too (86: nine targets, one pass) */ std::set<int> seen; seen.insert((int)(*a2)[0].n); for (auto& q : falses) if (q != c && (q->raw & 0x7FFF) == 0x08FF && !(q->raw & 0x8000)) if (auto a3 = ResolveArgs(kDmgW, *q); a3 && a3->size() == 2 && CPools::GetObject((int)(*a3)[0].n) && seen.insert((int)(*a3)[0].n).second) for (auto& x : *a3) d.args.push_back(x); return d; } } // CR49: HAS_OBJECT_BEEN_DAMAGED_BY_WEAPON(obj, weapon) is false: CJ damages the object with that weapon
             if (op == 0x0366) { auto a2 = ResolveArgs(kDmg, *c); if (a2 && wide && (a2->empty() || !CPools::GetObject((int)(*a2)[0].n))) continue; /* CR23: a record of an older pass: the object may be gone */ if (a2) { d.act = true; d.row = &kDmg; d.rowIdx = -2; d.cond = c; d.args = *a2; d.op = op; return d; } }
             if (tagCond(c)) { d.act = true; d.row = &kTag; d.rowIdx = -3; d.cond = c; d.op = op; return d; }
+        }
+        if (!std::getenv("NOTSA_MDRIVER_NOTURFWIN") && !g_turfVars.empty()) for (auto& c : g_recsBig) { // CR62 (104 HOME COMING, 106 BEAT DOWN ON B DUP, 107 GROVE 4 LIFE: the stage exits on GET_ZONE_GANG_STRENGTH (076D) of the zone == 0 = the gang war of that zone is won; the driver only provoked wars): a false plain `var == 0` of a 076D result variable: CJ goes to the zone (mode 0), provokes the war (1), kills the attack wave (2), or waits for the next wave (3)
+            const int cop = c->raw & 0x7FFF; if ((c->raw & 0x8000) || c->cond != 0 || c->waitSeq < g_waitSeq - 3 || (cop != 0x0038 && cop != 0x0039) || !c->vref[0]) continue;
+            const auto tv = g_turfVars.find(c->vref[0]); const auto thr = ArgInt(*c, 1); if (tv == g_turfVars.end() || !thr || *thr != 0 || !Cj()) continue;
+            float zx = 0, zy = 0, zx1 = 0, zy1 = 0, zx2 = 0, zy2 = 0; bool zf = false; for (auto& z : CTheZones::GetNavigationZones()) if (std::strncmp(z.m_InfoLabel, tv->second.first.c_str(), 8) == 0) { zx1 = (float)z.m_fX1; zx2 = (float)z.m_fX2; zy1 = (float)z.m_fY1; zy2 = (float)z.m_fY2; zx = (zx1 + zx2) / 2.f; zy = (zy1 + zy2) / 2.f; zf = true; break; }
+            if (!zf) continue; const CVector cp = Cj()->GetPosition(); const bool inZ = cp.x >= zx1 && cp.x <= zx2 && cp.y >= zy1 && cp.y <= zy2;
+            int alive = 0; for (auto& pp : GetPedPool()->GetAllValid()) if (pp.bPartOfAttackWave && !pp.IsStateDying() && pp.m_fHealth > 0.f) alive++;
+            const int mode = !inZ ? 0 : (CGangWars::State != NOT_IN_WAR ? (alive > 0 ? 2 : 3) : (CGangWars::bGangWarsActive && CGangWars::Provocation <= 2.1f ? 1 : 3));
+            static Row kTurf{ 0x0039, 0, "var == 0 of a GET_ZONE_GANG_STRENGTH result: win the gang war of the zone", "turfwin", {}, 20 };
+            d.act = true; d.row = &kTurf; d.rowIdx = -62; d.cond = c; d.op = cop; d.args.clear(); for (const float f : { zx, zy, -100.f, (float)mode, (float)(GFrame() / 400) }) { RArg a; a.n = f; d.args.push_back(a); }
+            notsa::standalone::Fixups::Log("[mdriver] turfwin %s: mode %d war state %d active %d provocation %.1f specificZones %d alive wave peds %d CJ in zone %d", tv->second.first.c_str(), mode, (int)CGangWars::State, (int)CGangWars::bGangWarsActive, (double)CGangWars::Provocation, (int)CGangWars::NumSpecificZones, alive, (int)inZ);
+            return d;
         }
         if (!std::getenv("NOTSA_MDRIVER_NOZONEGO")) for (size_t k = loop.size(); k-- > 0;) { // CR26 (21 DOBERMAN): the stage waits for the player to be in an info zone (a plain false IS_PLAYER_IN_INFO_ZONE, or its TRUE NOT form straight before a WAIT): the player (with his car) goes to the zone's centre
             const auto& r = loop[k]; if ((r->raw & 0x7FFF) != 0x0583 || AnyGuard(*r)) continue;
@@ -1325,6 +1338,13 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         if (auto* jp = CPools::GetPed(I_(0)); jp && c && jp != c && !std::getenv("NOTSA_MDRIVER_NOJOINFETCH") && (jp->GetPosition() - c->GetPosition()).Magnitude() > 10.f) { const CVector cp = c->GetPosition(); const CVector fw = c->bInVehicle && c->m_pVehicle ? c->m_pVehicle->GetForward() : c->GetForward(); const CVector q = cp - fw * 2.f; jacts.push_back("emit mdwother:0:" + std::to_string(I_(0)) + ":" + F(q.x) + ":" + F(q.y) + ":" + F(cp.z)); }
         jacts.push_back("emit mdjoingrp:" + std::to_string(I_(0)) + ":" + std::to_string(I_(1))); QueueActions(jacts, row.settle); return; } // CR26: IS_GROUP_MEMBER(ped, group) is false: the ped joins the group (what SET_GROUP_MEMBER does for a recruit)
     if (v == "nearfetch") { QueueActions({ "emit mdwother:0:" + std::to_string((int)F_(0)) + ":" + F(F_(1)) + ":" + F(F_(2)) + ":" + F(F_(3)) }, row.settle); return; } // CR32
+    if (v == "turfwin") { // CR62: mode F_(3): 0 CJ goes to the zone, 1 the kills that provoke the war, 2 the living attack wave peds are killed, 3 nothing (the next wave / the script arms the war)
+        g_nextStall = 60; const int mode = (int)F_(3);
+        if (mode == 0) { one(warp(F_(0), F_(1), F_(2), false)); return; }
+        if (mode == 1) { QueueActions({ "emit mdprovoke:3" }, row.settle); return; }
+        if (mode == 2) { std::vector<std::string> acts; for (auto& pp : GetPedPool()->GetAllValid()) if (pp.bPartOfAttackWave && !pp.IsStateDying() && pp.m_fHealth > 0.f && acts.size() < 12) acts.push_back("emit mdkillped:" + std::to_string(CPools::GetPedRef(&pp))); QueueActions(acts, row.settle); return; }
+        QueueActions({}, row.settle); return;
+    }
     if (v == "zonego") { one(warp(F_(0), F_(1), F_(2), false)); return; } // CR26
     if (v == "gangwar") { QueueActions({ "emit mdprovoke:3" }, row.settle); return; } // CR26
     if (v == "pickupgo") { // CR26: HAS_PICKUP_BEEN_COLLECTED(pickup) is false: the player walks onto the pickup (on foot, at its position)
@@ -1652,6 +1672,17 @@ bool WritesGlobal(const CRunningScript* t, uint16_t off) { // a command of the t
     return st.writes[off] = w;
 }
 static float g_passStat0 = 0.f;
+// CR62 (111 END OF THE LINE 2, 113 SHOOTING RANGE, 125 BURGLARY: scripts with no REGISTER_MISSION_PASSED / REGISTER_ODDJOB_MISSION_PASSED never raise STAT_MISSIONS_PASSED): when the mission script contains neither command (a byte scan of its span: a false hit only switches the rule off), an EXPLICIT success op the root thread executes counts as PASSED, the same signal a player gets:
+// PLAYER_MADE_PROGRESS with a positive value (0x030C), PLAY_MISSION_PASSED_TUNE (0x0394), or the script's own pass sub = CLEAR_WANTED_LEVEL (0x0110) straight followed by ADD_VAL_TO_INT_VAR global += 1 (0x0008). Never the end of the thread, never a script that just stops. NOTSA_MDRIVER_NOTUNEPASS=1 = off.
+static bool g_noReg = false; static int g_passOp = 0; static uint16_t g_prevRootOp = 0; static int g_passOpFrame = -1;
+static bool ScriptHasRegister(const CRunningScript* s) {
+    const uint8_t* b = s->m_BaseIP; const uint8_t* sp = CTheScripts::ScriptSpace.data(); const uint8_t* e = sp + CTheScripts::ScriptSpace.size();
+    { const int64_t baseOff = (int64_t)(b - sp); int64_t endOff = INT64_MAX; for (size_t i = 0; i < (size_t)CTheScripts::NumberOfMissionScripts && i < CTheScripts::MultiScriptArray.size(); i++) { const int64_t o = CTheScripts::MultiScriptArray[i]; if (o > baseOff && o < endOff) endOff = o; } if (endOff != INT64_MAX) e = sp + endOff; }
+    if (b < sp || b >= e) return true;
+    for (const uint8_t* q = b; q + 1 < e; q++) if ((q[0] == 0x18 && q[1] == 0x03) || (q[0] == 0x95 && q[1] == 0x05)) return true;
+    return false;
+}
+
 static int g_paceScale = 1, g_cdStart = -1; static double g_paceW = 1.0; // CR55
 static int g_forkHold = 0; // CR55: frames the forklift lift input (right stick Y -128 = forks up) is held
 static std::map<int,int> g_padHold; // CR4: button -> frames left
@@ -1694,7 +1725,7 @@ void TickGeneric() {
     if (static const char* st = std::getenv("NOTSA_MDRIVER_STALL")) g_stall = std::atoi(st); // CR16: per-run override of the stall threshold (TS stallFrames = 600 frames of 33.33 ms = 20 s; 1000 frames of the 20 ms RR step are the same game time; allmissions.sh sets it for mission 46)
     if (g_quitIn >= 0) { if (g_quitIn-- == 0) { WriteResult(); Emit("quit"); if (g_out) { std::fclose(g_out); g_out = nullptr; } g_done = true; } return; }
     auto* root = notsa::scmtrace::Root();
-    if (!g_started) { if (!root) return; g_started = true; StaticScan(root); if (!std::getenv("NOTSA_MDRIVER_NOCITY")) CStats::SetStatValue(STAT_CITY_UNLOCKED, 2.f); /* CR10: a mission started cold stands where the story would have opened the cities: SF/LV closed = 4 stars on arrival (SetPlayerWantedLevelForForbiddenTerritories), cops attack */ g_passStat0 = CStats::GetStatValue(STAT_MISSIONS_PASSED); g_thread = root; g_frame0 = CTimer::GetFrameCounter(); g_sameCount = 0; g_lastIp = nullptr; }
+    if (!g_started) { if (!root) return; g_started = true; StaticScan(root); if (!std::getenv("NOTSA_MDRIVER_NOCITY")) CStats::SetStatValue(STAT_CITY_UNLOCKED, 2.f); /* CR10: a mission started cold stands where the story would have opened the cities: SF/LV closed = 4 stars on arrival (SetPlayerWantedLevelForForbiddenTerritories), cops attack */ g_passStat0 = CStats::GetStatValue(STAT_MISSIONS_PASSED); g_noReg = !std::getenv("NOTSA_MDRIVER_NOTUNEPASS") && ScriptHasRegister(root) == false; g_passOp = 0; g_prevRootOp = 0; if (g_noReg) notsa::standalone::Fixups::Log("[mdriver] tunepass: the mission script has no REGISTER_MISSION_PASSED / REGISTER_ODDJOB_MISSION_PASSED: an explicit pass op (progress / passed tune / pass sub) counts as PASSED"); g_thread = root; g_frame0 = CTimer::GetFrameCounter(); g_sameCount = 0; g_lastIp = nullptr; }
     const int fr = GFrame();
     if (static const int popEvery = std::getenv("NOTSA_MDRIVER_POP") ? std::atoi(std::getenv("NOTSA_MDRIVER_POP")) : 0; popEvery > 0 && fr > 0 && fr % popEvery == 0 && CiviliansNearCj(60.f) < 2) { // CR59 (121 TAXI: the next fare must be found around the drop-off): keep pedestrians around CJ for the odd jobs that look for a random ped
         const int made = PopulateAroundCj(4, 18.f); notsa::standalone::Fixups::Log("[mdriver] pop: %d pedestrians put around CJ at frame %d", made, fr);
@@ -1716,6 +1747,7 @@ void TickGeneric() {
     if (root) { char n[9]{}; std::memcpy(n, root->m_szName, 8); g_name = n; }
     if (!root) { // the thread ended (TS: !alive(script)): PASSED / FAILED, or STOP when a kill of the driver was just before it
         g_endFrame = fr;
+        if (!g_pass && g_noReg && g_passOp && !g_fail) { g_pass = true; g_passFrame = g_passOpFrame >= 0 ? g_passOpFrame : fr; notsa::standalone::Fixups::Log("[mdriver] tunepass: PASSED by pass op %d at frame %d", g_passOp, g_passFrame); }
         if (!g_pass && CStats::GetStatValue(STAT_MISSIONS_PASSED) > g_passStat0) { g_pass = true; g_passFrame = fr; } // CR6: TS checks the stat at thread end too (87 78: cutscene-only, the stat rises in the thread's last command)
         if (!g_pass && fr - g_killFrame <= g_killSettle + 5) { g_stopReason = "driver stop: killed a guard"; g_stopOp = -1; }
         else if (!g_pass && !g_fail && !g_relaunched && NotsaLastInjectedMission >= 0 && !std::getenv("NOTSA_MDRIVER_NORELAUNCH")) { // CR33 (34 HOUSE PARTY: the first visit plays the intro cutscene, prints the hint and ENDS without M_PASS / M_FAIL, setting a global ($7756) that the second visit reads): a mission that ended with neither M_PASS nor M_FAIL is a staged mission, the player starts it again (once; the globals stay)
@@ -1734,6 +1766,7 @@ void TickGeneric() {
     if (g_pass && fr - g_passFrame > 1500) { g_quitIn = 0; return; }
     if (g_fail && fr - g_failFrame > 600) { g_quitIn = 0; return; }
     if (fr >= g_maxFrames) { Stop("budget: " + std::to_string(g_maxFrames) + " frames", -1, (uint32_t)(root->m_IP - root->m_BaseIP)); return; }
+    if (!g_pass && g_noReg && g_passOp && !g_fail) { g_pass = true; g_passFrame = g_passOpFrame >= 0 ? g_passOpFrame : fr; notsa::standalone::Fixups::Log("[mdriver] tunepass: PASSED by pass op %d at frame %d", g_passOp, g_passFrame); }
     if (!g_pass && CStats::GetStatValue(STAT_MISSIONS_PASSED) > g_passStat0) { g_pass = true; g_passFrame = fr; } // CR4: TS drive.ts: PASSED = STAT_MISSIONS_PASSED rose (0x0318 SET_LATEST_MISSION_PASSED; missions 87 78 print no M_PASS)
     if (!g_pass && (fr - g_killFrame <= 900 || fr - g_wantedClrFrame <= 900) && !std::getenv("NOTSA_MDRIVER_KEEPKILLWANTED") && fr - g_scriptWantedFrame > 120) if (auto* w = FindPlayerWanted()) if (w->m_WantedLevel != eWantedLevel::WANTED_CLEAN) w->SetWantedLevel(eWantedLevel::WANTED_CLEAN); // CR25 (15 DRIVE-THRU): the driver's own `kill` (a stand-in for shooting the hostile peds) is reported as a murder by witnesses: the one star got CJ, who stood still in his car, ARRESTED 250 frames later (HAS_DEATHARREST_BEEN_EXECUTED -> the script's fail path). The star the kill raised is cleared for 900 frames
     if (g_hurtNow.h) { auto* pp = CPools::GetPed(g_hurtNow.h); if (pp && pp != Cj() && pp->m_fHealth > (float)g_hurtNow.hp && !ProtectedHandle(g_hurtNow.h)) Emit("mdhurt:" + std::to_string(g_hurtNow.h) + ":" + std::to_string(g_hurtNow.hp)); g_hurtNow = {}; } // CR37
@@ -2197,6 +2230,13 @@ void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int co
     if (s != notsa::scmtrace::Root() && g_started) AuxTree(const_cast<CRunningScript*>(s), ptr, raw, cond);
     if (s == notsa::scmtrace::Root()) { // the StallSink: conditions with their state + operands, WAIT count, where the GOTO_IF_FALSE after them led
         const int op = raw & 0x7FFF;
+        if (g_noReg && g_passOp == 0 && !(raw & 0x8000) && InSpace(ptr)) { // CR62: the explicit pass ops of a script without a REGISTER command
+            if (op == 0x0394) g_passOp = 2;
+            else if (op == 0x030C && ((ptr[2] == 4 && (int8_t)ptr[3] > 0) || (ptr[2] == 1 && *(const int32_t*)(ptr + 3) > 0) || (ptr[2] == 5 && *(const int16_t*)(ptr + 3) > 0))) g_passOp = 3;
+            else if (op == 0x0008 && g_prevRootOp == 0x0110 && ptr[2] == 2 && ((ptr[5] == 4 && ptr[6] == 1) || (ptr[5] == 1 && *(const int32_t*)(ptr + 6) == 1))) g_passOp = 1;
+            if (g_passOp) g_passOpFrame = GFrame();
+            g_prevRootOp = (uint16_t)op;
+        }
         if (op == 0x018A && InSpace(ptr) && !std::getenv("NOTSA_MDRIVER_NOLASTBLIP")) { const auto a = DecodeArgs(s, ptr, 3); if (a.size() == 3) { g_lastBlipPos = CVector{ AF(a[0]), AF(a[1]), AF(a[2]) }; g_haveLastBlip = true; } } // CR48 (79 N.O.E.: the blip of the landing box was not the one with the highest slot counter)
         if ((op == 0x010D || op == 0x010E) && !std::getenv("NOTSA_MDRIVER_NOSCRIPTWANTED")) g_scriptWantedFrame = GFrame(); // CR47 (66 MIKE TORENO: the stage's own ALTER_WANTED_LEVEL_NO_DROP 3 was cleared the next frame by the CR25 window of the driver's earlier kill, so the chase machine (`wanted > 0` then `wanted == 0`) never saw a star): a wanted level the SCRIPT raises stays for 120 frames (NOTSA_MDRIVER_NOSCRIPTWANTED=1: off)
         if (g_fallPending) { if (op == 0x0001) for (auto& r : g_group) r->waitAfter = true; g_fallPending = false; g_group.clear(); } // CR19: a group that fell through straight into a WAIT
@@ -2217,6 +2257,8 @@ void OnCommand(const CRunningScript* s, const uint8_t* ptr, uint16_t raw, int co
                 uint32_t ref = 0; const auto a = DecodeArgs(s, ptr, 4);
                 if (k == 5 && a.size() == 4 && OperandVar(ops5[4], ref)) { g_tagAreas[ref] = { AF(a[0]), AF(a[1]), AF(a[2]), AF(a[3]) }; }
             }
+        } else if (op == 0x076D && !std::getenv("NOTSA_MDRIVER_NOTURFWIN")) { // CR62: GET_ZONE_GANG_STRENGTH 'zone' gang var: remember the variable, the zone label and the gang
+            if (InSpace(ptr)) { const uint8_t* q = ptr + 2; if (*q == 9) { char nm[9]{}; std::memcpy(nm, q + 1, 8); q += 9; const uint8_t* o1 = q; bool mf = false, isI = false; int32_t iv = 0; const uint8_t* o2 = InSpace(q) ? SkipOperand(q, mf, isI, iv) : nullptr; uint32_t ref = 0; if (o2 && InSpace(o2) && OperandVar(o2, ref)) g_turfVars[ref] = { std::string(nm), *o1 == 1 ? (int)*(const int32_t*)(o1 + 1) : (*o1 == 4 ? (int)(int8_t)o1[1] : (*o1 == 5 ? (int)*(const int16_t*)(o1 + 1) : -1)) }; } }
         } else if (op == 0x07F6) { // CR59: GET_GROUP_SIZE group, first-member var, size var
             if (InSpace(ptr)) { const uint8_t* o[3]{}; const uint8_t* q = ptr + 2; bool mf = false, isI = false; int32_t iv = 0; int k = 0; for (; k < 3 && q && InSpace(q); k++) { o[k] = q; q = SkipOperand(q, mf, isI, iv); } uint32_t ref = 0; const auto a = DecodeArgs(s, ptr, 1); if (k == 3 && a.size() == 1 && OperandVar(o[2], ref)) g_groupSizeVars[ref] = (int)(int32_t)a[0].bits; }
         } else if (op == 0x0226) { // CR35: GET_CHAR_HEALTH char var

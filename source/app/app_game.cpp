@@ -331,6 +331,9 @@ void Idle(void* param) {
 
     SH10_MARK("Idle:CTimer::Update");
     CTimer::Update();
+#ifdef NOTSA_STATEHASH
+    notsa::rr::BootLogMain("Idle0");
+#endif
     SH10_MARK("Idle:CSprite2d/CFont/CPointLights");
     CSprite2d::InitPerFrame();
     CFont::InitPerFrame();
@@ -339,6 +342,7 @@ void Idle(void* param) {
     CGame::Process();
     SH10_MARK("Idle:AudioEngine.Service");
 #ifdef NOTSA_STATEHASH
+    notsa::rr::BootLogMain("AfterGameProcess");
     if (notsa::rr::AudioStubs()) { AECutsceneTrackManager.ServiceNoAudio(); } // harness stub: beat/cutscene track state machine on the game clock
     if (!notsa::rr::NoAudio()) // NOTSA_RR_NOAUDIO=1: the audio engine is not serviced at all (the cross-build comparison does not depend on how a DirectSound device is emulated)
     { notsa::rr::RandIsolate iso; // NOTSA_RR_GAMEPLAY_RAND=1: audio-time rand() draws do not touch the gameplay stream
@@ -354,6 +358,9 @@ void Idle(void* param) {
 #endif
     SetLightsWithTimeOfDayColour(Scene.m_pRpWorld);
     if (!param) {
+#ifdef NOTSA_STATEHASH
+        notsa::rr::BootLogMain("RenderSkip_noparam");
+#endif
         RD_NOTE("skip: param false");
         return;
     }
@@ -378,6 +385,9 @@ void Idle(void* param) {
         }
 #endif
 
+#ifdef NOTSA_STATEHASH
+        notsa::rr::BootLogMain("RenderBranch");
+#endif
         CRenderer::ConstructRenderList();
         CRenderer::PreRender();
         CWorld::ProcessPedsAfterPreRender();
@@ -419,6 +429,9 @@ void Idle(void* param) {
         Render2dStuff();
     }
 
+#ifdef NOTSA_STATEHASH
+    notsa::rr::BootLogMain("RenderTail");
+#endif
     RenderMenus();
     RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RWRSTATE(NULL));
     DoFade();

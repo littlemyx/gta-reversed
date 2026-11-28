@@ -7,6 +7,7 @@
 #include "StdInc.h"
 
 #include "oswrapper.h"
+#include "portable/statehash.h"
 #include "platform.h"
 #ifdef NOTSA_STANDALONE_RUN
 #include "standalone/Lockstep.h"
@@ -253,4 +254,7 @@ void CTimer::Update() {
 
     UpdateVariables(fTimeDelta);
     m_FrameCounter++;
+#ifdef NOTSA_STATEHASH
+    notsa::rr::BootLogTimer();
+#endif
 }

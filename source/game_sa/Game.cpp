@@ -1,4 +1,5 @@
 #include "StdInc.h"
+#include "portable/statehash.h"
 #include "portable/sh10log.h" // SH10 debug logs (NOTSA_STATEHASH only)
 #include "portable/sh20log.h" // SH20 debug logs (NOTSA_STATEHASH only)
 #include "portable/sh13log.h" // SH13 debug logs (NOTSA_STATEHASH only)
@@ -746,6 +747,9 @@ void CGame::InitialiseWhenRestarting() {
 void CGame::Process() {
     ZoneScoped;
 
+#ifdef NOTSA_STATEHASH
+    notsa::rr::BootLogMain("GameProcessEntry");
+#endif
     SH10_MARK("CPad::UpdatePads");
     CPad::UpdatePads();
     SH20_PAD("afterUpdatePads"); SH20_BMX("frameStart");
@@ -849,6 +853,9 @@ void CGame::Process() {
         SH10_MARK("CReplay::Update");
         CReplay::Update();
         SH10_MARK("CWorld::Process");
+#ifdef NOTSA_STATEHASH
+        notsa::rr::BootLogMain("CallWorldProcess");
+#endif
         CWorld::Process();
         SH13_PED("afterWorldProcess"); SH13_VEHDUMP("afterWorldProcess");
 #ifdef NOTSA_PORTABLE

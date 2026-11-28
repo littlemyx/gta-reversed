@@ -435,6 +435,7 @@ bool CStreaming::HasVehicleUpgradeLoaded(int32 modelId) {
 bool CStreaming::ConvertBufferToObject(uint8* fileBuffer, int32 modelId) {
 #ifdef NOTSA_STATEHASH
     if (modelId < 11339) notsa::rr::BootLogLs2('V', modelId, 0);
+    notsa::rr::BootLogMod('V', modelId, 0);
 #endif
     NOTSA_LOADLOG("CONVERT id=%d size=%u", modelId, (unsigned)GetInfo(modelId).GetCdSize());
     CStreamingInfo* pStartLoadedListStreamingInfo = ms_startLoadedList; // todo: useless var?
@@ -1271,6 +1272,9 @@ void CStreaming::LoadInitialWeapons() {
 
 // 0x40EB70
 void CStreaming::LoadScene(const CVector& point) {
+#ifdef NOTSA_STATEHASH
+    notsa::rr::BootLogLsPool("entry");
+#endif
     ms_bLoadingScene = true;
 
     // exe 0x40EB70: (0,0,0) unless Players[0] has a ped, then FindPlayerCoors(-1) (the focus player)
@@ -1404,6 +1408,7 @@ void CStreaming::RequestModel(int32 modelId, int32 streamingFlags) {
 #ifdef NOTSA_STATEHASH
     if (modelId >= 11339) notsa::rr::BootLogStream(modelId, streamingFlags);
     if (modelId < 11339) notsa::rr::BootLogLs2('Q', modelId, streamingFlags);
+    notsa::rr::BootLogMod('Q', modelId, streamingFlags);
 #endif
     CStreamingInfo& info = GetInfo(modelId);
     if (SH12_ON()) { char nm[96], stk[200]; notsa::rr::Sh12Name(modelId, nm, sizeof nm); notsa::rr::Sh12Stack(stk, sizeof stk, 0); SH12_ROW("Q id=%d %s img=%d cdpos=%u size=%u flags=%#x state=%d caller=%s", modelId, nm, (int)info.m_ImgID, (unsigned)info.GetCdPosn().Offset, (unsigned)info.GetCdSize(), streamingFlags, (int)info.m_LoadState, stk); }
@@ -2424,6 +2429,9 @@ bool CStreaming::RemoveLoadedZoneModel() {
 
 // 0x4089A0
 void CStreaming::RemoveModel(int32 modelId) {
+#ifdef NOTSA_STATEHASH
+    notsa::rr::BootLogMod('X', modelId, 0);
+#endif
     CStreamingInfo& streamingInfo = GetInfo(modelId);
     if (streamingInfo.m_LoadState == LOADSTATE_NOT_LOADED)
         return;

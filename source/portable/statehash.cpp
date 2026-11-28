@@ -1098,6 +1098,61 @@ void BootLogLs2(char kind, int id, int flags) {
         std::fflush(h);
     }
 }
+// BOOTLOG4 (NOTSA_BOOTLOG_MOD=<file>): X/Q/V rows = RemoveModel / RequestModel / ConvertBufferToObject of ids 1315 20645 21237 in fc 289-477 (load state, ms_memoryUsedBytes, ms_numModelsRequested, caller chain); T rows = their load state at each OnFrame;
+// E rows = timed-enex srand seed + pool slots (fc 470-480); L rows = building pool state at CStreaming::LoadScene entry (fc 470-480); M rows = main-loop marks (fade alpha / fade status / pauses, fc 384-390). Log only.
+static void BootStack(char* buf, size_t n, int skip) { // like Sh12Stack, but up to 14 frames
+    static const uintptr_t base = (uintptr_t)&StableId;
+    buf[0] = 0; size_t o = 0;
+#ifdef _WIN32
+    void* bt[20] = {}; const USHORT c = RtlCaptureStackBackTrace((DWORD)skip + 1, 14, bt, nullptr);
+    for (USHORT i = 0; i < c && o + 20 < n; i++) o += (size_t)std::snprintf(buf + o, n - o, "%s%llx", i ? "," : "", (unsigned long long)((uintptr_t)bt[i] - base));
+#endif
+}
+static FILE* BootModFile(uint32_t lo, uint32_t hi) { static FILE* f = nullptr; static bool init = false; FILE* h = BootLogFile("NOTSA_BOOTLOG_MOD", f, init); return h && BootWin(lo, hi) ? h : nullptr; }
+static bool BootModId(int id) { return id == 1315 || id == 20645 || id == 21237; }
+void BootLogMod(char kind, int id, int flags) {
+    if (!BootModId(id)) return;
+    if (FILE* h = BootModFile(289, 477)) {
+        char stk[400]; BootStack(stk, sizeof stk, 1);
+        std::fprintf(h, "%c fc=%u rand=%llu id=%d state=%d flags=%#x memUsedBytes=%u numModelsRequested=%d caller=%s\n", kind, CTimer::GetFrameCounter(), (unsigned long long)RandCount(), id, (int)CStreaming::GetInfo(id).m_LoadState, flags, (unsigned)CStreaming::ms_memoryUsedBytes, (int)CStreaming::ms_numModelsRequested, stk);
+        std::fflush(h);
+    }
+}
+void BootLogLsPool(const char* tag) {
+    if (FILE* h = BootModFile(470, 480)) {
+        auto* bp = GetBuildingPool(); int first = -1; for (int i = 0; i < (int)bp->GetSize(); i++) if (bp->IsFreeSlotAtIndex(i)) { first = i; break; }
+        std::fprintf(h, "L %s fc=%u rand=%llu bldSize=%d bldUsed=%d bldFirstFree=%d dummyUsed=%d objUsed=%d loadingScene=%d\n", tag, CTimer::GetFrameCounter(), (unsigned long long)RandCount(), (int)bp->GetSize(), (int)bp->GetNoOfUsedSpaces(), first, (int)GetDummyPool()->GetNoOfUsedSpaces(), (int)GetObjectPool()->GetNoOfUsedSpaces(), (int)CStreaming::ms_bLoadingScene);
+        std::fflush(h);
+    }
+}
+void BootLogEnex(const void* entity, uint32_t seed) { // CEntity::CreateEffects, just before srand of a timed enex
+    if (FILE* h = BootModFile(470, 480)) {
+        auto* e = static_cast<const CEntity*>(entity);
+        auto* bp = GetBuildingPool(); auto* dp = GetDummyPool(); auto* op = GetObjectPool();
+        const int bs = bp->IsPtrFromPool(static_cast<const CBuilding*>(e)) ? (int)bp->GetIndex(static_cast<const CBuilding*>(e)) : -1;
+        const int ds = dp->IsPtrFromPool(static_cast<const CDummy*>(e)) ? (int)dp->GetIndex(static_cast<const CDummy*>(e)) : -1;
+        const int os = op->IsPtrFromPool(static_cast<const CObject*>(e)) ? (int)op->GetIndex(static_cast<const CObject*>(e)) : -1;
+        std::fprintf(h, "E fc=%u rand=%llu seed=%u type=%d model=%d bldSlot=%d dummySlot=%d objSlot=%d loadingScene=%d\n", CTimer::GetFrameCounter(), (unsigned long long)RandCount(), (unsigned)seed, (int)e->GetType(), (int)e->m_nModelIndex, bs, ds, os, (int)CStreaming::ms_bLoadingScene);
+        std::fflush(h);
+    }
+}
+void BootLogModFrame() { // OnFrame: load state of the three ids
+    if (FILE* h = BootModFile(289, 477)) {
+        std::fprintf(h, "T fc=%u rand=%llu", CTimer::GetFrameCounter(), (unsigned long long)RandCount());
+        for (int id : { 1315, 20645, 21237 }) std::fprintf(h, " %d:state=%d", id, (int)CStreaming::GetInfo(id).m_LoadState);
+        std::fprintf(h, " memUsedBytes=%u numModelsRequested=%d\n", (unsigned)CStreaming::ms_memoryUsedBytes, (int)CStreaming::ms_numModelsRequested);
+        std::fflush(h);
+    }
+}
+void BootLogMain(const char* tag) { // main-loop marks (Idle / CGame::Process / CWorld::Process), fc 384-390
+    if (FILE* h = BootModFile(384, 390)) {
+        std::fprintf(h, "M %s fc=%u rand=%llu fadeAlpha=%.9g fadeFlag=%d fadeStatus=%d userPause=%d codePause=%d menuActive=%d skipProcess=%d csRunning=%d csProcessing=%d\n", tag, CTimer::GetFrameCounter(), (unsigned long long)RandCount(), TheCamera.m_fFadeAlpha, (int)TheCamera.m_nFadeInOutFlag, (int)TheCamera.GetScreenFadeStatus(), (int)CTimer::GetIsUserPaused(), (int)CTimer::GetIsCodePaused(), (int)FrontEndMenuManager.m_bMenuActive, (int)CTimer::bSkipProcessThisFrame, (int)CCutsceneMgr::ms_running, (int)CCutsceneMgr::ms_cutsceneProcessing);
+        std::fflush(h);
+    }
+}
+void BootLogTimer() { // CTimer::Update after the frame counter increment: who advances the counter (fc 384-390)
+    if (FILE* h = BootModFile(384, 390)) { char stk[400]; BootStack(stk, sizeof stk, 1); std::fprintf(h, "M TimerUpdate fc=%u rand=%llu caller=%s\n", CTimer::GetFrameCounter(), (unsigned long long)RandCount(), stk); std::fflush(h); }
+}
 static FILE* BootLogCar() { // CCarCtrl::GenerateCarCreationCoors2 entry: the file when the rand count is inside the window (a C row = frame counter + camera is written first)
     static FILE* f = nullptr; static bool init = false; static uint64_t lo = 118000, hi = 121000;
     const bool first = !init; FILE* h = BootLogFile("NOTSA_BOOTLOG_GCCC2", f, init);
@@ -1319,6 +1374,7 @@ void OnFrame() {
     BootLogRow('F'); // SH5 NOTSA_SH_BOOTLOG
     BootLogFrame(); // BOOTLOG camera row of the boot frames
     BootLogCam2(); // BOOTLOG2
+    BootLogModFrame(); // BOOTLOG4
     g_idleFrames++;
     static const uint32_t s_LogFrames = [] { const char* e = std::getenv("NOTSA_RR_LOG_FRAMES"); return e ? (uint32_t)std::strtoul(e, nullptr, 0) : 0u; }();
     if (g_idleFrames <= s_LogFrames) { // bisecting a pre-record divergence: one line per frame with the cheap global state words (compare two runs with diff)

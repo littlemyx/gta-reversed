@@ -2186,6 +2186,9 @@ void CWorld::TriggerExplosionSectorList(PtrListType& ptrList, const CVector& poi
 // 0x5684A0
 void CWorld::Process() {
     ZoneScoped;
+#ifdef NOTSA_STATEHASH
+    notsa::rr::BootLogMain("WorldProcessEntry");
+#endif
 
     constexpr float WORLD_PLAYER_SHIFT_DAMPING = 0.707f; // 0x8CDEEC (the float 0.707, not sqrt(2) / 2)
 

@@ -5,6 +5,7 @@
     Do not delete this comment block. Respect others' work!
 */
 #include "StdInc.h"
+#include "portable/statehash.h"
 
 #include "Entity.h"
 #include "DbgDangling.h"
@@ -1087,6 +1088,9 @@ void CEntity::CreateEffects() {
                 if (effect->enEx.m_nTimeOn > effect->enEx.m_nTimeOff && CClock::ms_nGameClockHours < effect->enEx.m_nTimeOff) {
                     ucDays--;
                 }
+#ifdef NOTSA_STATEHASH
+                notsa::rr::BootLogEnex(this, NOTSA_PTR_ID32(this) + ucDays);
+#endif
                 srand(NOTSA_PTR_ID32(this) + ucDays);
             }
 

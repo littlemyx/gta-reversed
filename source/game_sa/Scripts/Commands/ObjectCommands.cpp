@@ -177,8 +177,11 @@ void SetObjectAnimSpeed(CObject& obj, const char* animName, float speed) {
 }
 
 bool IsObjectPlayingAnim(CObject& obj, const char* animName) {
-    auto* const clump = RwObjectGetType(obj.GetRwObject()) == rpCLUMP 
-        ? obj.GetRpClump() 
+    // exe 0x470BC1..0x470BCD (ProcessCommands2100To2199 case 0x837): `mov eax,[obj+0x18]; test eax,eax; je false; cmp byte [eax],2 (rpCLUMP); jne false`:
+    // an object without an RwObject (not streamed in / invisible parachute prop) is `false`, never a null dereference
+    auto* const rwObj = obj.GetRwObject();
+    auto* const clump = rwObj && RwObjectGetType(rwObj) == rpCLUMP
+        ? obj.GetRpClump()
         : nullptr;
     return clump != nullptr
         && RpAnimBlendClumpIsInitialized(clump)

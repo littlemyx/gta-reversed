@@ -69,7 +69,17 @@ cmd:mdsetg:7248:2
 wait:20';; # CR62: what main.scm does before LOAD_AND_LAUNCH_MISSION 130 (0x13e7b..0x13eb9): G7248 = 2 with CJ in the (2135.43,-67.96,20.8) box; REGISTER_ODDJOB_MISSION_PASSED needs G7248 == 2 (NOLAUNCHSETS=1: off)
     131) LAUNCH=$'cmd:mdlaunch:586
 wait:400';; # courier: on a bike (the pickup model)
-    114) LAUNCHPOST=$'cmd:mdarea:5';; 115) LAUNCHPOST=$'cmd:mdarea:6';; 116) LAUNCHPOST=$'cmd:mdarea:7';; esac
+    114) LAUNCHPOST=$'cmd:mdarea:5'; [ -z "${NOGYMPRE:-}" ] && LAUNCH=$'cmd:mdwped:760.86:11.06:1000.16
+wait:60
+cmd:mdarea:5
+wait:200';; # CR65: the gym fight schools: CJ stands inside the gym (area 5/6/7) BEFORE the mission starts; from the street the interior collision is not loaded when the script creates the trainer and the two fighters, and they fall through the floor to z 52 and die (NOGYMPRE=1: off)
+    115) LAUNCHPOST=$'cmd:mdarea:6'; [ -z "${NOGYMPRE:-}" ] && LAUNCH=$'cmd:mdwped:769.79:-42.11:999.69
+wait:60
+cmd:mdarea:6
+wait:200';; 116) LAUNCHPOST=$'cmd:mdarea:7'; [ -z "${NOGYMPRE:-}" ] && LAUNCH=$'cmd:mdwped:763.36:-76.76:999.66
+wait:60
+cmd:mdarea:7
+wait:200';; esac
   [ -n "${XPRE:-}" ] && LAUNCH=$(printf '%b' "$XPRE"); [ -n "${XPOST:-}" ] && LAUNCHPOST=$(printf '%b' "$XPOST") # CR58: experiments: XPRE / XPOST = route lines before / after the mission start (\n separated)
   printf '%s\n%s\nmission:%s\n%s\nwait:3600000\ncmd:quit\n' "$HEAD" "$LAUNCH" "$IDX" "${LAUNCHPOST:-# no post-start launch context}" > "$W/route.in"; expand "$W/route.in" > "$W/route.txt"
   own_kill_in_dir gta_reversed "$DATA"

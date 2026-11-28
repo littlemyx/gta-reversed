@@ -5,6 +5,9 @@
     Do not delete this comment block. Respect others' work!
 */
 #include "StdInc.h"
+#ifdef NOTSA_STATEHASH
+#include "portable/statehash.h"
+#endif
 
 #include <optional>
 #ifdef NOTSA_STATEHASH
@@ -449,6 +452,9 @@ void* CVehicle::operator new(size_t size) {
 }
 
 void CVehicle::operator delete(void* data) {
+#ifdef NOTSA_STATEHASH
+    notsa::rr::BootLogPoolDel('V', data);
+#endif
     GetVehiclePool()->Delete(static_cast<CVehicle*>(data));
 }
 
@@ -460,6 +466,9 @@ void* CVehicle::operator new(size_t size, int32 poolRef) {
 }
 
 void CVehicle::operator delete(void* data, int32 poolRef) {
+#ifdef NOTSA_STATEHASH
+    notsa::rr::BootLogPoolDel('V', data);
+#endif
     GetVehiclePool()->Delete(static_cast<CVehicle*>(data));
 }
 

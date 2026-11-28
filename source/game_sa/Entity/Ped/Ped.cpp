@@ -5,6 +5,9 @@
     Do not delete this comment block. Respect others' work!
 */
 #include "StdInc.h"
+#ifdef NOTSA_STATEHASH
+#include "portable/statehash.h"
+#endif
 #include "portable/sh27log.h"
 
 #include "Ped.h"
@@ -412,11 +415,17 @@ void* CPed::operator new(size_t size, int32 poolRef) {
 * @addr 0x5E4760
 */
 void CPed::operator delete(void* data) {
+#ifdef NOTSA_STATEHASH
+    notsa::rr::BootLogPoolDel('P', data);
+#endif
     GetPedPool()->Delete((CPed*)data);
 }
 
 // NOTSA
 void CPed::operator delete(void* data, int poolRef) {
+#ifdef NOTSA_STATEHASH
+    notsa::rr::BootLogPoolDel('P', data);
+#endif
     GetPedPool()->Delete((CPed*)data);
 }
 

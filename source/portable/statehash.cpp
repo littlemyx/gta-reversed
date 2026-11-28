@@ -1196,6 +1196,61 @@ void BootLogCarGroup(char kind, const void* group, int model) {
     BootGrpList(h, "app", CPopulation::m_AppropriateLoadedCars); BootGrpList(h, "inapp", CPopulation::m_InAppropriateLoadedCars);
     std::fputc(10, h); std::fflush(h);
 }
+// BOOTLOG7 (NOTSA_BOOTLOG_SMOKE=<file>, boot fc 700-720). Log only: queries are pure (pool index, task lookup, IsLooking), rand draws are only observed through the RandCount delta.
+static FILE* BootSmokeFile() { static FILE* f = nullptr; static bool init = false; FILE* h = BootLogFile("NOTSA_BOOTLOG_SMOKE", f, init); return h && BootWin(700, 720) ? h : nullptr; }
+static int BootPedSlot(const void* p) { return p ? (int)GetPedPool()->GetIndex(static_cast<CPed*>(const_cast<void*>(p))) : -1; }
+static int BootVehSlot(const void* v) { return v ? (int)GetVehiclePool()->GetIndex(static_cast<CVehicle*>(const_cast<void*>(v))) : -1; }
+SmokeScope::SmokeScope(const void* ped, const void* task) : m_ped(ped), m_task(task) { m_on = BootSmokeFile() != nullptr; if (m_on) m_rc0 = RandCount(); }
+void SmokeScope::Block(const void* held, int heldModel, bool looking, bool smokeModel) { m_block = true; m_held = held; m_heldModel = heldModel; m_looking = looking; m_smoke = smokeModel; }
+SmokeScope::~SmokeScope() {
+    if (!m_on) return;
+    FILE* h = BootSmokeFile(); if (!h) return;
+    const auto* ped = static_cast<const CPed*>(m_ped); const auto* task = static_cast<const CTaskSimpleCarDrive*>(m_task);
+    const uint64_t rc1 = RandCount(); const bool rolled = rc1 > m_rc0; // other draws in the same ProcessPed also count, so the delta is printed too
+    const char* stop = rolled ? "rolled" : !m_block ? "block_not_reached" : !m_held ? "no_held_entity" : !m_smoke ? "held_not_smoke_model" : m_looking ? "ik_looking" : "roll_not_drawn(?)";
+    const auto* holdTask = const_cast<CPed*>(ped)->GetHoldingTask();
+    std::fprintf(h, "P fc=%u rand0=%llu rand1=%llu delta=%llu pedSlot=%d pedModel=%d inVeh=%d pedVeh=%d taskVeh=%d task=%p holdTask=%d heldPtr=%p heldModel=%d smokeModel=%d ikLooking=%d blockReached=%d stop=%s\n",
+        CTimer::GetFrameCounter(), (unsigned long long)m_rc0, (unsigned long long)rc1, (unsigned long long)(rc1 - m_rc0), BootPedSlot(ped), (int)ped->m_nModelIndex, (int)ped->bInVehicle,
+        BootVehSlot(ped->m_pVehicle), BootVehSlot(task->m_pVehicle), m_task, holdTask ? 1 : 0, m_held, m_heldModel, (int)m_smoke, (int)m_looking, (int)m_block, stop);
+    std::fflush(h);
+}
+void BootLogSmokeFrame() { // OnFrame: pool used counts
+    if (FILE* h = BootSmokeFile()) { std::fprintf(h, "F fc=%u rand=%llu pedUsed=%d vehUsed=%d\n", CTimer::GetFrameCounter(), (unsigned long long)RandCount(), (int)GetPedPool()->GetNoOfUsedSpaces(), (int)GetVehiclePool()->GetNoOfUsedSpaces()); std::fflush(h); }
+}
+void BootLogPoolDel(char kind, const void* entity) {
+    if (FILE* h = BootSmokeFile()) {
+        char stk[400]; BootStack(stk, sizeof stk, 1);
+        const auto* e = static_cast<const CEntity*>(entity);
+        std::fprintf(h, "D%c fc=%u rand=%llu slot=%d model=%d pedUsed=%d vehUsed=%d caller=%s\n", kind, CTimer::GetFrameCounter(), (unsigned long long)RandCount(), kind == 'P' ? BootPedSlot(entity) : BootVehSlot(entity), (int)e->m_nModelIndex, (int)GetPedPool()->GetNoOfUsedSpaces(), (int)GetVehiclePool()->GetNoOfUsedSpaces(), stk);
+        std::fflush(h);
+    }
+}
+void BootLogDriveTask(char kind, const void* task, const void* ped, int priority) {
+    if (FILE* h = BootSmokeFile()) {
+        char stk[400]; BootStack(stk, sizeof stk, 1);
+        std::fprintf(h, "T%c fc=%u rand=%llu task=%p pedSlot=%d priority=%d caller=%s\n", kind, CTimer::GetFrameCounter(), (unsigned long long)RandCount(), task, BootPedSlot(ped), priority, stk);
+        std::fflush(h);
+    }
+}
+// BOOTLOG7 busy window (NOTSA_BOOTLOG_BUSY=<file>, fc 290-800): state accumulated by the hooks during one CStreaming::Update and written by BootBusyRow.
+static FILE* BootBusyFile() { static FILE* f = nullptr; static bool init = false; FILE* h = BootLogFile("NOTSA_BOOTLOG_BUSY", f, init); return h && BootWin(290, 800) ? h : nullptr; }
+static struct { bool counterSeen = false; int before = 0, loaded = 0, desired = 0; bool zone = false, fire350 = false; int oneNew = 0; char stk[3][160] = {}; } g_busy;
+void BootBusyCounter(int framesBefore, int loadedCars, int desiredCars, bool haveZone) { if (!BootBusyFile()) return; g_busy.counterSeen = true; g_busy.before = framesBefore; g_busy.loaded = loadedCars; g_busy.desired = desiredCars; g_busy.zone = haveZone; }
+void BootBusyFire350() { if (BootBusyFile()) g_busy.fire350 = true; }
+void BootBusyOneNewCar() { if (!BootBusyFile()) return; if (g_busy.oneNew < 3) BootStack(g_busy.stk[g_busy.oneNew], sizeof g_busy.stk[0], 1); g_busy.oneNew++; }
+void BootBusyRow(bool disabled, bool cutscene, bool seeOutside, bool replayPlayback, float camAbove, bool veryBusy, int loadPrio, int numReq, bool alwaysRan, bool vpRan) {
+    if (FILE* h = BootBusyFile()) {
+        const bool camLow = camAbove < 50.0f;
+        const char* gate = disabled ? "streaming_disabled" : cutscene ? "cutscene_processing" : !seeOutside ? "cant_see_outside" : replayPlayback ? "replay_playback" : !camLow ? "camera_height_ge_50" : "open";
+        const char* vp = vpRan ? "ran" : !alwaysRan ? gate : "very_busy";
+        std::fprintf(h, "B fc=%u rand=%llu always=%d vp=%d gate=%s vpReason=%s disabled=%d cutscene=%d seeOutside=%d replay=%d camAboveGround=%.9g veryBusy=%d loadingPriority=%d numModelsRequested=%d counter=%s%d loadedCars=%d desired=%d zone=%d fired350=%d oneNewCar=%d",
+            CTimer::GetFrameCounter(), (unsigned long long)RandCount(), (int)alwaysRan, (int)vpRan, gate, vp, (int)disabled, (int)cutscene, (int)seeOutside, (int)replayPlayback, camAbove, (int)veryBusy, loadPrio, numReq,
+            g_busy.counterSeen ? "" : "na:", g_busy.counterSeen ? g_busy.before : 0, g_busy.loaded, g_busy.desired, (int)g_busy.zone, (int)g_busy.fire350, g_busy.oneNew);
+        for (int i = 0; i < g_busy.oneNew && i < 3; i++) std::fprintf(h, " caller%d=%s", i, g_busy.stk[i]);
+        std::fputc(10, h); std::fflush(h);
+        g_busy = {};
+    }
+}
 FILE* WalkLogFile() {
     static FILE* f = nullptr; static std::set<int> frames; static bool init = false;
     if (!init) {
@@ -1409,6 +1464,7 @@ void OnFrame() {
     BootLogFrame(); // BOOTLOG camera row of the boot frames
     BootLogCam2(); // BOOTLOG2
     BootLogModFrame(); // BOOTLOG4
+    BootLogSmokeFrame(); // BOOTLOG7
     g_idleFrames++;
     static const uint32_t s_LogFrames = [] { const char* e = std::getenv("NOTSA_RR_LOG_FRAMES"); return e ? (uint32_t)std::strtoul(e, nullptr, 0) : 0u; }();
     if (g_idleFrames <= s_LogFrames) { // bisecting a pre-record divergence: one line per frame with the cheap global state words (compare two runs with diff)

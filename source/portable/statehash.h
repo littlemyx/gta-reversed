@@ -85,6 +85,20 @@ void BootLogTimer();
 //! BOOTLOG6: PickRandomCar window (file or null), loaded-car-group change row (kind A add, R remove, K clear, C reclassify)
 FILE* BootLogPick();
 void BootLogCarGroup(char kind, const void* group, int model);
+//! BOOTLOG7 (NOTSA_BOOTLOG_SMOKE=<file>, boot fc 700-720): CTaskSimpleCarDrive::ProcessPed row (smoke-anim roll or why not), per-frame pool counts, ped/vehicle pool removals, car-drive task aborts. Log only.
+struct SmokeScope {
+    SmokeScope(const void* ped, const void* task); ~SmokeScope(); SmokeScope(const SmokeScope&) = delete;
+    void Block(const void* held, int heldModel, bool looking, bool smokeModel); //!< reached the smoke block: the values its condition reads
+    bool m_on = false, m_block = false; const void* m_ped; const void* m_task; uint64_t m_rc0 = 0; const void* m_held = nullptr; int m_heldModel = -1; bool m_looking = false, m_smoke = false;
+};
+void BootLogSmokeFrame();
+//! BOOTLOG7 (NOTSA_BOOTLOG_BUSY=<file>, boot fc 290-800): one row per CStreaming::Update that reaches the vehicle/ped streaming gate. Log only.
+void BootBusyCounter(int framesBefore, int loadedCars, int desiredCars, bool haveZone); //!< StreamVehiclesAndPeds: the 350-frame counter before this frame's decrement / fire
+void BootBusyFire350();
+void BootBusyOneNewCar(); //!< every StreamOneNewCar entry (with this frame's caller chain)
+void BootBusyRow(bool disabled, bool cutscene, bool seeOutside, bool replayPlayback, float camAboveGround, bool veryBusy, int loadPrio, int numReq, bool alwaysRan, bool vpRan);
+void BootLogPoolDel(char kind, const void* entity); //!< P = ped, V = vehicle (operator delete), called before the pool slot is freed
+void BootLogDriveTask(char kind, const void* task, const void* ped, int priority); //!< A = MakeAbortable, X = destructor
 //! RAII scope for NOTSA_RR_GAMEPLAY_RAND=1 (.notes/STATEHASH_SPEC.md sections 6, 8): rand state restored at scope exit, calls inside are not counted / logged
 struct RandIsolate { RandIsolate(); ~RandIsolate(); RandIsolate(const RandIsolate&) = delete; bool m_on = false; uint32_t m_saved = 0; };
 } // namespace notsa::rr

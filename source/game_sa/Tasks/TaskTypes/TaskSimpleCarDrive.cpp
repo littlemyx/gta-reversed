@@ -24,6 +24,9 @@
 #include "TaskComplexSequence.h"
 #include "TaskComplexLeaveCar.h"
 #include "TaskComplexDriveWander.h"
+#ifdef NOTSA_STATEHASH
+#include "portable/statehash.h"
+#endif
 
 void CTaskSimpleCarDrive::InjectHooks() {
     RH_ScopedVirtualClass(CTaskSimpleCarDrive, 0x86E904, 9);
@@ -79,6 +82,9 @@ CTaskSimpleCarDrive::CTaskSimpleCarDrive(CVehicle* vehicle, CTaskUtilityLineUpPe
 
 // 0x63C460
 CTaskSimpleCarDrive::~CTaskSimpleCarDrive() {
+#ifdef NOTSA_STATEHASH
+    notsa::rr::BootLogDriveTask('X', this, nullptr, -1);
+#endif
     CEntity::SafeCleanUpRef(m_pVehicle);
 
     if (m_pTaskUtilityLineUpPedWithCar) {
@@ -442,6 +448,9 @@ CTask* CTaskSimpleCarDrive::Clone() const {
 
 // 0x63C670
 bool CTaskSimpleCarDrive::MakeAbortable(CPed* ped, eAbortPriority priority, CEvent const* event) {
+#ifdef NOTSA_STATEHASH
+    notsa::rr::BootLogDriveTask('A', this, ped, (int)priority);
+#endif
     if (priority != ABORT_PRIORITY_IMMEDIATE) {
         m_b08 = true;
         return !m_bClosingDoor;
@@ -466,6 +475,9 @@ bool CTaskSimpleCarDrive::MakeAbortable(CPed* ped, eAbortPriority priority, CEve
 
 // 0x644470
 bool CTaskSimpleCarDrive::ProcessPed(CPed* ped) {
+#ifdef NOTSA_STATEHASH
+    notsa::rr::SmokeScope bootSmoke{ped, this};
+#endif
     const auto radioRetuneJustStarted = AudioEngine.HasRadioRetuneJustStarted();
 
     // Update the vehicle pointer if needed
@@ -614,6 +626,12 @@ bool CTaskSimpleCarDrive::ProcessPed(CPed* ped) {
     }
 
     // Smoke anim
+#ifdef NOTSA_STATEHASH
+    {
+        const auto bh = ped->GetEntityThatThisPedIsHolding();
+        bootSmoke.Block(bh, bh ? (int)bh->m_nModelIndex : -1, g_ikChainMan.IsLooking(ped), bh && bh->m_nModelIndex == ModelIndices::MI_GANG_SMOKE);
+    }
+#endif
     if (const auto held = ped->GetEntityThatThisPedIsHolding()) {
         if (held->m_nModelIndex == ModelIndices::MI_GANG_SMOKE && !g_ikChainMan.IsLooking(ped) && CGeneral::GetRandomNumberInRange(0, 60) == 15) {
             if (const auto holdTask = ped->GetTaskManager().Find<CTaskSimpleHoldEntity>()) {

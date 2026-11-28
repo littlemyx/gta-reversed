@@ -3246,6 +3246,9 @@ bool CStreaming::StreamFireEngineAndFireman(bool bStreamForFire) {
 
 // 0x40B4F0
 void CStreaming::StreamOneNewCar() {
+#ifdef NOTSA_STATEHASH
+    notsa::rr::BootBusyOneNewCar();
+#endif
     if (!CPopCycle::m_pCurrZoneInfo)
         return;
 
@@ -3494,10 +3497,16 @@ void CStreaming::StreamVehiclesAndPeds() {
     }
 
     NOTSA_GLOBAL_LOCAL(framesBeforeStreamingNextNewCar, 0x965530, (int32), {}); // 0
+#ifdef NOTSA_STATEHASH
+    notsa::rr::BootBusyCounter(framesBeforeStreamingNextNewCar, (int)ms_vehiclesLoaded.CountMembers(), (int)desiredNumVehiclesLoaded, CPopCycle::m_pCurrZoneInfo != nullptr);
+#endif
     if (framesBeforeStreamingNextNewCar >= 0) {
         --framesBeforeStreamingNextNewCar;
     }
     else if (ms_vehiclesLoaded.CountMembers() <= desiredNumVehiclesLoaded && CPopCycle::m_pCurrZoneInfo) {
+#ifdef NOTSA_STATEHASH
+        notsa::rr::BootBusyFire350();
+#endif
         StreamOneNewCar();
         framesBeforeStreamingNextNewCar = 350;
     }
@@ -3791,18 +3800,30 @@ void CStreaming::Update() {
     }
 
     const CVector& playerPos = FindPlayerCoors();
+#ifdef NOTSA_STATEHASH
+    bool bootAlways = false, bootVp = false;
+#endif
     if (!ms_disableStreaming
         && !CCutsceneMgr::IsCutsceneProcessing()
         && CGame::CanSeeOutSideFromCurrArea()
         && CReplay::Mode != MODE_PLAYBACK
         && fCamDistanceToGroundZ < 50.0f
     ) {
+#ifdef NOTSA_STATEHASH
+        bootAlways = true;
+#endif
         StreamVehiclesAndPeds_Always(playerPos);
         if (!IsVeryBusy()) {
+#ifdef NOTSA_STATEHASH
+            bootVp = true;
+#endif
             StreamVehiclesAndPeds();
             StreamZoneModels(playerPos);
         }
     }
+#ifdef NOTSA_STATEHASH
+    notsa::rr::BootBusyRow(ms_disableStreaming, CCutsceneMgr::IsCutsceneProcessing(), CGame::CanSeeOutSideFromCurrArea(), CReplay::Mode == MODE_PLAYBACK, fCamDistanceToGroundZ, CRenderer::m_loadingPriority || ms_numModelsRequested > 5, (int)CRenderer::m_loadingPriority, (int)ms_numModelsRequested, bootAlways, bootVp);
+#endif
     LoadRequestedModels();
 
     if (CVehicle* remoteVehicle = FindPlayerInfo(0).m_pRemoteVehicle) {

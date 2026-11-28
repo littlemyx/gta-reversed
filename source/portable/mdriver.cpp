@@ -488,6 +488,7 @@ Verdict VerdictOf(const CRunningScript* s, const Rec& r) {
 // IS_CHAR_DEAD(@65) guard at ip 4cc6 ran). Linear decode of the code from the base ip (stops at the first undecodable command); the handle operand is re-read from the variable when a site is used.
 bool g_fireGuard = false; // CR59: the mission script counts fires (GET_NUMBER_OF_FIRES_IN_AREA, 0786: 103 VERTICAL BIRD fails with MAN2_43 when any burns): car kills of the driver are quiet (status wrecked, no explosion)
 static std::vector<std::pair<int, float>> g_statGates; // CR68
+static bool MapEdge(float x, float y) { const float ax = std::fabs(x), ay = std::fabs(y); return (ax > 3000.f || ay > 3000.f) && ax <= 4000.f && ay <= 4000.f; } // CR68: just beyond the map edge (a real map point shifted by a script penalty); far off-map targets (cutscene / special spots) are legitimate
 void StaticScan(const CRunningScript* s) {
     if (std::getenv("NOTSA_MDRIVER_NOSTATICSCAN")) return;
     const uint8_t* p = s->m_BaseIP; RecP pend; bool single = false; int n = 0, nd = 0, nf = 0;
@@ -506,7 +507,7 @@ void StaticScan(const CRunningScript* s) {
                 const bool gt = op == 0x0018 || op == 0x0019 || op == 0x0020 || op == 0x0021, ge = op == 0x0028 || op == 0x0029 || op == 0x0030 || op == 0x0031;
                 if ((gt || ge) && cnt >= 2 && ops[0] && ops[1] && sgVar && *ops[0] == *sgVar && !std::memcmp(ops[0] + 1, sgVar + 1, 2)) {
                     double thr = 0; bool ok = true; if (*ops[1] == 6) thr = *(const float*)(ops[1] + 1); else { int32_t iv = 0; ok = OperandInt(ops[1], iv); thr = iv; }
-                    if (ok && sgId >= 0) { const double want = gt ? thr + 1.0 : thr; if (want < 10000.0) g_statGates.push_back({ sgId, (float)want }); }
+                    if (ok && sgId >= 0 && sgId != (int)STAT_FAT) { const double want = gt ? thr + 1.0 : thr; if (want < 10000.0) g_statGates.push_back({ sgId, (float)want }); }
                     sgLeft = 0;
                 }
             }
@@ -1306,12 +1307,12 @@ void DispatchRow(const Dec& d) { // run one table action (Stop() on a failclass 
         g_exactZ = (cop >= 0x00F5 && cop <= 0x0106) || cop == 0x01AF || cop == 0x01B0 || (cop >= 0x01FF && cop <= 0x0201) || (cop >= 0x0205 && cop <= 0x0207) || (cop >= 0x0474 && cop <= 0x0476) || cop == 0x04E6; // CR58
         const bool inCar = c && c->bInVehicle;
         if (vehOnly && !inCar) return "";
-        if ((std::fabs(x) > 3000.f || std::fabs(y) > 3000.f) && !std::getenv("NOTSA_MDRIVER_NOMAPEDGE")) { notsa::standalone::Fixups::Log("[mdriver] mapedge: target %.1f,%.1f,%.1f is outside the map (|x| or |y| > 3000): no warp, the target is read again next round", (double)x, (double)y, (double)z); return ""; } // CR68 (130: while CJ is off his bike the script adds 1000.0 to the y of his current checkpoint; a warp onto it put CJ under the world at y 3014 and he never got back on the bike, so the script's own restore (SUB 1000, 0x4247) never ran): a player cannot go there
+        if (MapEdge(x, y) && !std::getenv("NOTSA_MDRIVER_NOMAPEDGE")) { notsa::standalone::Fixups::Log("[mdriver] mapedge: target %.1f,%.1f,%.1f is outside the map (|x| or |y| > 3000): no warp, the target is read again next round", (double)x, (double)y, (double)z); return ""; } // CR68 (130: while CJ is off his bike the script adds 1000.0 to the y of his current checkpoint; a warp onto it put CJ under the world at y 3014 and he never got back on the bike, so the script's own restore (SUB 1000, 0x4247) never ran): a player cannot go there
         return std::string(inCar ? "emit mdwveh:" : "emit mdwped:") + F(x) + ":" + F(y) + ":" + F(z) + (inCar || !Ad3() ? "" : AreaSuffix(x, y, z));
     };
     const auto one = [&](const std::string& a) { QueueActions(a.empty() ? std::vector<std::string>{} : std::vector<std::string>{ a }, row.settle); };
     if (v == "wait") { QueueActions({}, row.settle); return; }
-    if ((v == "pedwarp" || v == "vehwarp") && d.args.size() >= 2 && (std::fabs(F_(0)) > 3000.f || std::fabs(F_(1)) > 3000.f) && !std::getenv("NOTSA_MDRIVER_NOMAPEDGE")) { notsa::standalone::Fixups::Log("[mdriver] mapedge: %s target %.1f,%.1f is outside the map: no warp, read again next round", v.c_str(), (double)F_(0), (double)F_(1)); QueueActions({}, row.settle); return; } // CR68: see warp()
+    if ((v == "pedwarp" || v == "vehwarp") && d.args.size() >= 2 && MapEdge(F_(0), F_(1)) && !std::getenv("NOTSA_MDRIVER_NOMAPEDGE")) { notsa::standalone::Fixups::Log("[mdriver] mapedge: %s target %.1f,%.1f is outside the map: no warp, read again next round", v.c_str(), (double)F_(0), (double)F_(1)); QueueActions({}, row.settle); return; } // CR68: see warp()
     if ((v == "pedwarp" || v == "vehwarp") && c && !c->bInVehicle && !std::getenv("NOTSA_MDRIVER_NOGUARDCAR")) { // CR65 (130 BEAT THE COCK: the bike leg has a guard `IF NOT IS_CHAR_IN_CAR(CJ, bike)` that starts a 25 s countdown and fails the mission with RACES20; every answer warped CJ on foot from checkpoint to checkpoint and the countdown ran out): the script's own guard says CJ must be in that vehicle. A guard test seen true in the last wait rounds (CJ is outside a live vehicle without a driver) is answered like a player would: CJ gets into that vehicle first, the locate answers then move the vehicle
         CVehicle* gcar = nullptr;
         for (auto& r : g_recsBig) { if (r->waitSeq < g_waitSeq - 3 || r->raw != 0x80DB || r->cond == 0) continue; const auto h0 = ArgInt(*r, 0), h1 = ArgInt(*r, 1); if (!h0 || !h1) continue; if (CPools::GetPed((int)*h0) != c) continue; auto* gv = CPools::GetVehicle((int)*h1); if (!gv || gv->m_fHealth <= 0.f || gv->m_pDriver) continue; gcar = gv; }

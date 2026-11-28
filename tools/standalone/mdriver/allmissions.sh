@@ -41,8 +41,8 @@ done
 [ -f "$OUT/summary.tsv" ] || printf 'idx\tname\tresult\tframe\tthread\tip\topcode\treason\n' > "$OUT/summary.tsv"
 cd "$DATA" || exit 2
 for IDX in $LIST; do
-  # CR60: 122 PARAMEDIC needs 12 levels of 3-9k frames each (PASSED at 52701 frames): its frame budget is 90000 unless MAXF is set
-  MAXF_M="$MAXF"; [ "$IDX" = 122 ] && [ -z "${MAXF_SET:-}" ] && MAXF_M=90000
+  # CR60: 122 PARAMEDIC needs 12 levels of 3-9k frames each (PASSED at 52701 frames): its frame budget is 90000 unless MAXF is set CR67: 102 A HOME IN THE HILLS needs ~33000 frames (Triad waves in the mansion, PASSED at 32722): its budget is 90000 too.
+  MAXF_M="$MAXF"; { [ "$IDX" = 122 ] || [ "$IDX" = 102 ]; } && [ -z "${MAXF_SET:-}" ] && MAXF_M=90000
   awk -F'\t' -v i="$IDX" '$1==i{f=1} END{exit !f}' "$OUT/summary.tsv" && { echo "skip $IDX (done)"; continue; }
   MN="$(mname "$IDX")"; W="$OUT/w$IDX"; mkdir -p "$W"
   # AD4 launch context (TS launch.ts): 36/48 CESAR1 in a car (492), 132 MTBIKER (510), 133 STUNT (481): CJ at the wheel; 71 DSKOOL: area 4

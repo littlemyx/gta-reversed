@@ -1037,6 +1037,33 @@ void Sh13PopPoll(const char* where, bool stack) {
 }
 
 void Sh13PopPollMark(const char* w) { if (Sh13PopCntLog()) Sh13PopPoll(w, false); }
+// BOOTLOG (NOTSA_BOOTLOG_CAM=<file>, NOTSA_BOOTLOG_GCCC2=<file>, NOTSA_BOOTLOG_RAND=lo-hi): boot-time (before rr_start) camera and car-creation rows, log only
+static void BootCamRow(FILE* f, const char* tag) {
+    const auto& c = TheCamera; const auto pos = c.GetPosition(); const auto fwd = c.GetForward();
+    float m[16]; std::memcpy(m, &c.m_mMatInverse, sizeof m); // CMatrix: right,pad,forward,pad,up,pad,pos,pad (16 floats at offset 0)
+    std::fprintf(f, "%s fc=%u rand=%llu pos=%.9g,%.9g,%.9g front=%.9g,%.9g,%.9g inv=", tag, CTimer::GetFrameCounter(), (unsigned long long)RandCount(), pos.x, pos.y, pos.z, fwd.x, fwd.y, fwd.z);
+    for (int i = 0; i < 16; i++) std::fprintf(f, "%s%.9g", i ? "," : "", m[i]);
+    std::fprintf(f, " near=%.9g far=%.9g fov=%.9g aspect=%.9g mirror=%d norms=", CDraw::GetNearClipZ(), CDraw::GetFarClipZ(), CDraw::GetFOV(), CDraw::GetAspectRatio(), (int)c.m_bMirrorActive);
+    for (int i = 0; i < 4; i++) std::fprintf(f, "%s%.9g,%.9g,%.9g", i ? ";" : "", c.m_avecFrustumNormals[i].x, c.m_avecFrustumNormals[i].y, c.m_avecFrustumNormals[i].z);
+    std::fputc(10, f); std::fflush(f);
+}
+static FILE* BootLogFile(const char* env, FILE*& f, bool& init) {
+    if (!init) { init = true; const char* p = std::getenv(env); if (p && p[0]) f = std::fopen(p, "w"); }
+    return (f && !g_recording && std::this_thread::get_id() == ::notsa::msvc_crt::MainThreadId()) ? f : nullptr;
+}
+void BootLogFrame() { // OnFrame: one row per boot frame (end of the simulation part)
+    static FILE* f = nullptr; static bool init = false;
+    if (FILE* h = BootLogFile("NOTSA_BOOTLOG_CAM", f, init)) BootCamRow(h, "F");
+}
+static FILE* BootLogCar() { // CCarCtrl::GenerateCarCreationCoors2 entry: the file when the rand count is inside the window (a C row = frame counter + camera is written first)
+    static FILE* f = nullptr; static bool init = false; static uint64_t lo = 118000, hi = 121000;
+    const bool first = !init; FILE* h = BootLogFile("NOTSA_BOOTLOG_GCCC2", f, init);
+    if (first) { if (const char* e = std::getenv("NOTSA_BOOTLOG_RAND")) { unsigned long long a = lo, b = hi; std::sscanf(e, "%llu-%llu", &a, &b); lo = a; hi = b; } }
+    if (!h) return nullptr;
+    const uint64_t rc = RandCount(); if (rc < lo || rc > hi) return nullptr;
+    BootCamRow(h, "C");
+    return h;
+}
 FILE* WalkLogFile() {
     static FILE* f = nullptr; static std::set<int> frames; static bool init = false;
     if (!init) {
@@ -1052,6 +1079,7 @@ FILE* WalkLogFile() {
             while (i < str.size()) { size_t j = str.find(',', i); if (j == std::string::npos) j = str.size(); const std::string t = str.substr(i, j - i); i = j + 1; const size_t d = t.find('-'); const int a = std::atoi(t.c_str()), b = d == std::string::npos ? a : std::atoi(t.c_str() + d + 1); for (int k = a; k <= b && k - a < 100000; k++) frames.insert(k); }
         }
     }
+    if (!g_recording) { if (FILE* b = BootLogCar()) return b; } // BOOTLOG: boot-time calls (before rr_start), only when NOTSA_BOOTLOG_GCCC2 is set
     return (f && g_recording && frames.count((int)g_frame) && std::this_thread::get_id() == ::notsa::msvc_crt::MainThreadId()) ? f : nullptr;
 }
 
@@ -1246,6 +1274,7 @@ void AdvanceClock() {
 
 void OnFrame() {
     BootLogRow('F'); // SH5 NOTSA_SH_BOOTLOG
+    BootLogFrame(); // BOOTLOG camera row of the boot frames
     g_idleFrames++;
     static const uint32_t s_LogFrames = [] { const char* e = std::getenv("NOTSA_RR_LOG_FRAMES"); return e ? (uint32_t)std::strtoul(e, nullptr, 0) : 0u; }();
     if (g_idleFrames <= s_LogFrames) { // bisecting a pre-record divergence: one line per frame with the cheap global state words (compare two runs with diff)

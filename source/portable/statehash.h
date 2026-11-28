@@ -67,6 +67,8 @@ void VehLogPrv(const void* veh, const std::string& kv);
 std::FILE* WalkLogFile();
 //! SH5 NOTSA_SH_BOOTLOG row ('F' per frame / 'S' at rr_start)
 void BootLogRow(char kind);
+//! BOOTLOG NOTSA_BOOTLOG_CAM: camera row of one boot frame (before rr_start)
+void BootLogFrame();
 //! RAII scope for NOTSA_RR_GAMEPLAY_RAND=1 (.notes/STATEHASH_SPEC.md sections 6, 8): rand state restored at scope exit, calls inside are not counted / logged
 struct RandIsolate { RandIsolate(); ~RandIsolate(); RandIsolate(const RandIsolate&) = delete; bool m_on = false; uint32_t m_saved = 0; };
 } // namespace notsa::rr

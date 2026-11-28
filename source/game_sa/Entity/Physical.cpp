@@ -7,6 +7,7 @@
 #include "StdInc.h"
 
 #include "Physical.h"
+#include "portable/statehash.h"
 #include "portable/sh20log.h" // SH21 debug logs (NOTSA_STATEHASH only)
 #include "CarCtrl.h"
 #include "Glass.h"
@@ -171,6 +172,9 @@ void CPhysical::InjectHooks()
 // 0x542260
 CPhysical::CPhysical() : CEntity()
 {
+#ifdef NOTSA_STATEHASH
+    notsa::rr::BootLogLs2('Y', -1, 0);
+#endif
     m_pCollisionList.m_node = nullptr;
 
     CPlaceable::AllocateStaticMatrix();

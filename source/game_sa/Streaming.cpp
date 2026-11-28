@@ -433,6 +433,9 @@ bool CStreaming::HasVehicleUpgradeLoaded(int32 modelId) {
 
 // 0x40C6B0
 bool CStreaming::ConvertBufferToObject(uint8* fileBuffer, int32 modelId) {
+#ifdef NOTSA_STATEHASH
+    if (modelId < 11339) notsa::rr::BootLogLs2('V', modelId, 0);
+#endif
     NOTSA_LOADLOG("CONVERT id=%d size=%u", modelId, (unsigned)GetInfo(modelId).GetCdSize());
     CStreamingInfo* pStartLoadedListStreamingInfo = ms_startLoadedList; // todo: useless var?
     CBaseModelInfo* mi = CModelInfo::GetModelInfo(modelId);
@@ -1400,6 +1403,7 @@ void CStreaming::RequestFilesInChannel(int32 chIdx) {
 void CStreaming::RequestModel(int32 modelId, int32 streamingFlags) {
 #ifdef NOTSA_STATEHASH
     if (modelId >= 11339) notsa::rr::BootLogStream(modelId, streamingFlags);
+    if (modelId < 11339) notsa::rr::BootLogLs2('Q', modelId, streamingFlags);
 #endif
     CStreamingInfo& info = GetInfo(modelId);
     if (SH12_ON()) { char nm[96], stk[200]; notsa::rr::Sh12Name(modelId, nm, sizeof nm); notsa::rr::Sh12Stack(stk, sizeof stk, 0); SH12_ROW("Q id=%d %s img=%d cdpos=%u size=%u flags=%#x state=%d caller=%s", modelId, nm, (int)info.m_ImgID, (unsigned)info.GetCdPosn().Offset, (unsigned)info.GetCdSize(), streamingFlags, (int)info.m_LoadState, stk); }

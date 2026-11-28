@@ -1089,6 +1089,15 @@ void BootLogStream(int modelId, int flags) { // CStreaming::RequestModel of a SF
         std::fflush(h);
     }
 }
+// BOOTLOG3 (NOTSA_BOOTLOG_LS2=<file>, fc 475-480): every CPhysical construction (Y rows) and every RequestModel / ConvertBufferToObject of an id < 11339 (Q / V rows), with a caller chain (RVAs relative to StableId) and the rand callidx. Log only.
+void BootLogLs2(char kind, int id, int flags) {
+    static FILE* f = nullptr; static bool init = false;
+    if (FILE* h = BootLog2File("NOTSA_BOOTLOG_LS2", f, init, 475, 480)) {
+        char stk[300]; Sh12Stack(stk, sizeof stk, 1); // skip this function: chain starts at the hooked function's caller
+        std::fprintf(h, "%c fc=%u rand=%llu id=%d flags=%#x caller=%s\n", kind, CTimer::GetFrameCounter(), (unsigned long long)RandCount(), id, flags, stk);
+        std::fflush(h);
+    }
+}
 static FILE* BootLogCar() { // CCarCtrl::GenerateCarCreationCoors2 entry: the file when the rand count is inside the window (a C row = frame counter + camera is written first)
     static FILE* f = nullptr; static bool init = false; static uint64_t lo = 118000, hi = 121000;
     const bool first = !init; FILE* h = BootLogFile("NOTSA_BOOTLOG_GCCC2", f, init);

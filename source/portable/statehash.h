@@ -73,6 +73,8 @@ void BootLogFrame();
 void BootLogWorld();
 void BootLogProc(const void* entity);
 void BootLogStream(int modelId, int flags);
+//! BOOTLOG3 (NOTSA_BOOTLOG_LS2): kind Y = CPhysical ctor, Q = RequestModel, V = ConvertBufferToObject
+void BootLogLs2(char kind, int id, int flags);
 //! RAII scope for NOTSA_RR_GAMEPLAY_RAND=1 (.notes/STATEHASH_SPEC.md sections 6, 8): rand state restored at scope exit, calls inside are not counted / logged
 struct RandIsolate { RandIsolate(); ~RandIsolate(); RandIsolate(const RandIsolate&) = delete; bool m_on = false; uint32_t m_saved = 0; };
 } // namespace notsa::rr

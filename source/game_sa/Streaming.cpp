@@ -2147,6 +2147,9 @@ void CStreaming::ReclassifyLoadedCars() {
     }
     CPopulation::m_AppropriateLoadedCars = appropriate;
     CPopulation::m_InAppropriateLoadedCars = inAppropriate;
+#ifdef NOTSA_STATEHASH
+    notsa::rr::BootLogCarGroup('C', &appropriate, -1);
+#endif
 }
 
 // 0x40CF80

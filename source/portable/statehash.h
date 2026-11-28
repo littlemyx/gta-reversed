@@ -82,6 +82,9 @@ void BootLogEnex(const void* entity, uint32_t seed);
 void BootLogModFrame();
 void BootLogMain(const char* tag);
 void BootLogTimer();
+//! BOOTLOG6: PickRandomCar window (file or null), loaded-car-group change row (kind A add, R remove, K clear, C reclassify)
+FILE* BootLogPick();
+void BootLogCarGroup(char kind, const void* group, int model);
 //! RAII scope for NOTSA_RR_GAMEPLAY_RAND=1 (.notes/STATEHASH_SPEC.md sections 6, 8): rand state restored at scope exit, calls inside are not counted / logged
 struct RandIsolate { RandIsolate(); ~RandIsolate(); RandIsolate(const RandIsolate&) = delete; bool m_on = false; uint32_t m_saved = 0; };
 } // namespace notsa::rr

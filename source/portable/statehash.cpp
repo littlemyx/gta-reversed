@@ -1162,6 +1162,40 @@ static FILE* BootLogCar() { // CCarCtrl::GenerateCarCreationCoors2 entry: the fi
     BootCamRow(h, "C");
     return h;
 }
+// BOOTLOG6 (NOTSA_BOOTLOG_PICK=<file>, NOTSA_BOOTLOG_PICKRAND=lo-hi default 132560-132615: CLoadedCarGroup::PickRandomCar entered inside that rand window; NOTSA_BOOTLOG_CARGROUP=<file>:
+// every change of a named loaded-car group (AddMember / RemoveMember / Clear / ReclassifyLoadedCars) in boot fc 290-485 with a caller chain and the Appropriate / InAppropriate lists). Log only, boot only.
+FILE* BootLogPick() {
+    static FILE* f = nullptr; static bool init = false; static uint64_t lo = 132560, hi = 132615;
+    const bool first = !init; FILE* h = BootLogFile("NOTSA_BOOTLOG_PICK", f, init);
+    if (first) { if (const char* e = std::getenv("NOTSA_BOOTLOG_PICKRAND")) { unsigned long long a = lo, b = hi; std::sscanf(e, "%llu-%llu", &a, &b); lo = a; hi = b; } }
+    if (!h) return nullptr;
+    const uint64_t rc = RandCount(); if (rc < lo || rc > hi) return nullptr;
+    std::fprintf(h, "B fc=%u rand=%llu\n", CTimer::GetFrameCounter(), (unsigned long long)rc);
+    return h;
+}
+static void BootGrpList(FILE* h, const char* nm, CLoadedCarGroup& g) {
+    std::fprintf(h, " %s=", nm);
+    for (uint32 i = 0; i < g.CountMembers(); i++) {
+        const int m = (int)g.GetMember(i); const auto mi = CModelInfo::GetVehicleModelInfo(m);
+        std::fprintf(h, "%s%d:%d:%d:%d:%d", i ? "," : "", m, (int)(int16)mi->m_nFrq, (int)(int8)mi->m_nVehicleClass, (int)(int16)mi->m_nRefCount, (int)(int8)mi->m_nTimesUsed);
+    }
+}
+void BootLogCarGroup(char kind, const void* group, int model) {
+    static FILE* f = nullptr; static bool init = false;
+    FILE* h = BootLogFile("NOTSA_BOOTLOG_CARGROUP", f, init);
+    if (!h || !BootWin(290, 485)) return;
+    const char* nm = "Other"; static char buf[16];
+    if (group == &CPopulation::m_AppropriateLoadedCars) nm = "Appropriate";
+    else if (group == &CPopulation::m_InAppropriateLoadedCars) nm = "InAppropriate";
+    else if (group == &CPopulation::m_LoadedBoats) nm = "Boats";
+    else if (group == &CStreaming::ms_vehiclesLoaded) nm = "StreamingVehiclesLoaded";
+    else for (size_t i = 0; i < CPopulation::m_LoadedGangCars.size(); i++) if (group == &CPopulation::m_LoadedGangCars[i]) { std::snprintf(buf, sizeof buf, "Gang%zu", i); nm = buf; }
+    if (kind != 'C' && !std::strcmp(nm, "Other")) return; // locals (ReclassifyLoadedCars copies) are logged by the 'C' row
+    char stk[400]; BootStack(stk, sizeof stk, 1);
+    std::fprintf(h, "%c fc=%u rand=%llu group=%s model=%d caller=%s", kind, CTimer::GetFrameCounter(), (unsigned long long)RandCount(), nm, model, stk);
+    BootGrpList(h, "app", CPopulation::m_AppropriateLoadedCars); BootGrpList(h, "inapp", CPopulation::m_InAppropriateLoadedCars);
+    std::fputc(10, h); std::fflush(h);
+}
 FILE* WalkLogFile() {
     static FILE* f = nullptr; static std::set<int> frames; static bool init = false;
     if (!init) {

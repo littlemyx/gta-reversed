@@ -11,6 +11,7 @@
 #include "portable/attrlog.h"
 #ifdef NOTSA_STATEHASH
 #include <intrin.h>
+#include "portable/statehash.h"
 #endif
 
 constexpr auto SENTINEL_VALUE_OF_UNUSED = (int16)(MODEL_INVALID);
@@ -58,6 +59,9 @@ void CLoadedCarGroup::RemoveMember(eModelID modelIndex) {
     if (notsa::remove_first(m_models, (int16)(modelIndex))) {
         m_models.back() = SENTINEL_VALUE_OF_UNUSED;
     }
+#ifdef NOTSA_STATEHASH
+    notsa::rr::BootLogCarGroup('R', this, (int)modelIndex);
+#endif
 }
 
 #ifdef NOTSA_STATEHASH
@@ -85,10 +89,10 @@ static void SH26DumpGroup(FILE* f, const char* name, CLoadedCarGroup& g) {
         std::fprintf(f, "%d %llu GM %s idx=%u model=%d frq=%d class=%d ref=%d used=%d loadstate=%d loaded=%d\n", fr, (unsigned long long)notsa::rr::RandCountNow(), name, i, m, (int)(int16)mi->m_nFrq, (int)(int8)mi->m_nVehicleClass, (int)(int16)mi->m_nRefCount, (int)(int8)mi->m_nTimesUsed, (int)CStreaming::GetInfo(m).m_LoadState, (int)CStreaming::IsModelLoaded(m));
     }
 }
-static void SH26DumpAllGroups(FILE* f) {
+static void SH26DumpAllGroups(FILE* f, bool force = false) {
     static int s_lastFrame = -1;
     const int fr = notsa::rr::LoadLogRecFrame();
-    if (fr == s_lastFrame) return;
+    if (fr == s_lastFrame && !force) return;
     s_lastFrame = fr;
     SH26DumpGroup(f, "Appropriate", CPopulation::m_AppropriateLoadedCars);
     SH26DumpGroup(f, "InAppropriate", CPopulation::m_InAppropriateLoadedCars);
@@ -109,10 +113,11 @@ eModelID CLoadedCarGroup::PickRandomCar(bool bNotTooManyInTheWorld, bool bOnlyPi
     // subtracting frq until `pick <= frq(candidate)`.
 #ifdef NOTSA_STATEHASH
     static int s_pickCalls = 0;
-    FILE* const pkLog = notsa::rr::PickCarLog();
+    FILE* pkLog = notsa::rr::PickCarLog();
+    const bool pkBoot = !pkLog && (pkLog = notsa::rr::BootLogPick()) != nullptr; // BOOTLOG6: boot window by rand count
     const int   pkCall = pkLog ? s_pickCalls++ : -1;
     if (pkLog) {
-        SH26DumpAllGroups(pkLog);
+        SH26DumpAllGroups(pkLog, pkBoot);
         std::fprintf(pkLog, "%d %llu K %d PickRandomCar gname=%s caller=%p group=%p nmodels=%u notTooMany=%d onlyNormal=%d\n", notsa::rr::LoadLogRecFrame(), (unsigned long long)notsa::rr::RandCountNow(), pkCall, SH26GroupName(this), _ReturnAddress(), (const void*)this, CountMembers(), (int)bNotTooManyInTheWorld, (int)bOnlyPickNormalCars);
         std::fflush(pkLog);
     }
@@ -274,6 +279,9 @@ bool CLoadedCarGroup::Empty() const {
 // 0x611B90
 void CLoadedCarGroup::Clear() {
     rng::fill(m_models, SENTINEL_VALUE_OF_UNUSED);
+#ifdef NOTSA_STATEHASH
+    notsa::rr::BootLogCarGroup('K', this, -1);
+#endif
 }
 
 // 0x611BB0
@@ -284,4 +292,7 @@ void CLoadedCarGroup::AddMember(eModelID member) {
     } else {
         NOTSA_LOG_DEBUG("Failed to add model to group [Out of memory]");
     }
+#ifdef NOTSA_STATEHASH
+    notsa::rr::BootLogCarGroup('A', this, (int)member);
+#endif
 }

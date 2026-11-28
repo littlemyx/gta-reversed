@@ -1,6 +1,9 @@
 #include "StdInc.h"
 #include "portable/sh14log.h" // SH14 debug logs (NOTSA_STATEHASH only)
 #include "portable/loadlog.h"
+#ifdef NOTSA_STATEHASH
+#include "portable/statehash.h"
+#endif
 #include "portable/sh12log.h"
 
 #include "Streaming.h"
@@ -1395,6 +1398,9 @@ void CStreaming::RequestFilesInChannel(int32 chIdx) {
 // Request a given model to be loaded.
 // Can be called on an already requested model to add `PRIORITY_REQUEST` flag
 void CStreaming::RequestModel(int32 modelId, int32 streamingFlags) {
+#ifdef NOTSA_STATEHASH
+    if (modelId >= 11339) notsa::rr::BootLogStream(modelId, streamingFlags);
+#endif
     CStreamingInfo& info = GetInfo(modelId);
     if (SH12_ON()) { char nm[96], stk[200]; notsa::rr::Sh12Name(modelId, nm, sizeof nm); notsa::rr::Sh12Stack(stk, sizeof stk, 0); SH12_ROW("Q id=%d %s img=%d cdpos=%u size=%u flags=%#x state=%d caller=%s", modelId, nm, (int)info.m_ImgID, (unsigned)info.GetCdPosn().Offset, (unsigned)info.GetCdSize(), streamingFlags, (int)info.m_LoadState, stk); }
     if (info.m_LoadState == eStreamingLoadState::LOADSTATE_NOT_LOADED || info.m_LoadState == eStreamingLoadState::LOADSTATE_LOADED) { NOTSA_LOADLOG("REQ id=%d flags=%#x state=%d", modelId, streamingFlags, (int)info.m_LoadState); }

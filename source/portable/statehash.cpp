@@ -1055,6 +1055,40 @@ void BootLogFrame() { // OnFrame: one row per boot frame (end of the simulation 
     static FILE* f = nullptr; static bool init = false;
     if (FILE* h = BootLogFile("NOTSA_BOOTLOG_CAM", f, init)) BootCamRow(h, "F");
 }
+// BOOTLOG2 (NOTSA_BOOTLOG_CUT=<file> fc 380-400, NOTSA_BOOTLOG_CAM2=<file> fc 380-480): cutscene flags, pool counts, ProcessControl list, camera + area, SF LOD streaming requests. Log only.
+static bool BootWin(uint32_t lo, uint32_t hi) { const uint32_t fc = CTimer::GetFrameCounter(); return fc >= lo && fc <= hi; }
+static FILE* BootLog2File(const char* env, FILE*& f, bool& init, uint32_t lo, uint32_t hi) { FILE* h = BootLogFile(env, f, init); return h && BootWin(lo, hi) ? h : nullptr; }
+void BootLogWorld() { // CWorld::Process entry
+    static FILE* f = nullptr; static bool init = false;
+    if (FILE* h = BootLog2File("NOTSA_BOOTLOG_CUT", f, init, 380, 400)) {
+        std::fprintf(h, "W fc=%u rand=%llu csOnly=%d csRunning=%d csProcessing=%d peds=%d vehs=%d cutObjs=%d\n", CTimer::GetFrameCounter(), (unsigned long long)RandCount(), (int)CWorld::bProcessCutsceneOnly, (int)CCutsceneMgr::ms_running, (int)CCutsceneMgr::ms_cutsceneProcessing, (int)GetPedPool()->GetNoOfUsedSpaces(), (int)GetVehiclePool()->GetNoOfUsedSpaces(), (int)std::count_if(CCutsceneMgr::ms_pCutsceneObjects.begin(), CCutsceneMgr::ms_pCutsceneObjects.end(), [](auto* o) { return o != nullptr; }));
+        std::fflush(h);
+    }
+}
+void BootLogProc(const void* e) { // CWorld::Process: before ProcessControl of a moving entity
+    static FILE* f = nullptr; static bool init = false;
+    if (FILE* h = BootLog2File("NOTSA_BOOTLOG_CUT", f, init, 380, 400)) {
+        const auto* en = static_cast<const CEntity*>(e);
+        const int slot = en->GetIsTypePed() ? (int)GetPedPool()->GetIndex(const_cast<CPed*>(en->AsPed())) : en->GetIsTypeVehicle() ? (int)GetVehiclePool()->GetIndex(const_cast<CVehicle*>(en->AsVehicle())) : -1;
+        std::fprintf(h, "P fc=%u rand=%llu %s slot=%d model=%d\n", CTimer::GetFrameCounter(), (unsigned long long)RandCount(), en->GetIsTypePed() ? "ped" : en->GetIsTypeVehicle() ? "veh" : "other", slot, (int)en->m_nModelIndex);
+    }
+}
+void BootLogCam2() { // OnFrame
+    static FILE* f = nullptr; static bool init = false;
+    if (FILE* h = BootLog2File("NOTSA_BOOTLOG_CAM2", f, init, 380, 480)) {
+        const auto pos = TheCamera.GetPosition(); const auto fwd = TheCamera.GetForward();
+        std::fprintf(h, "C fc=%u rand=%llu pos=%.9g,%.9g,%.9g front=%.9g,%.9g,%.9g currArea=%d\n", CTimer::GetFrameCounter(), (unsigned long long)RandCount(), pos.x, pos.y, pos.z, fwd.x, fwd.y, fwd.z, (int)CGame::currArea);
+        std::fflush(h);
+    }
+}
+void BootLogStream(int modelId, int flags) { // CStreaming::RequestModel of a SF LOD id
+    static FILE* f = nullptr; static bool init = false;
+    if (FILE* h = BootLog2File("NOTSA_BOOTLOG_CAM2", f, init, 380, 480)) {
+        char stk[200]; Sh12Stack(stk, sizeof stk, 0);
+        std::fprintf(h, "R fc=%u rand=%llu id=%d flags=%#x area=%d caller=%s\n", CTimer::GetFrameCounter(), (unsigned long long)RandCount(), modelId, flags, (int)CGame::currArea, stk);
+        std::fflush(h);
+    }
+}
 static FILE* BootLogCar() { // CCarCtrl::GenerateCarCreationCoors2 entry: the file when the rand count is inside the window (a C row = frame counter + camera is written first)
     static FILE* f = nullptr; static bool init = false; static uint64_t lo = 118000, hi = 121000;
     const bool first = !init; FILE* h = BootLogFile("NOTSA_BOOTLOG_GCCC2", f, init);
@@ -1275,6 +1309,7 @@ void AdvanceClock() {
 void OnFrame() {
     BootLogRow('F'); // SH5 NOTSA_SH_BOOTLOG
     BootLogFrame(); // BOOTLOG camera row of the boot frames
+    BootLogCam2(); // BOOTLOG2
     g_idleFrames++;
     static const uint32_t s_LogFrames = [] { const char* e = std::getenv("NOTSA_RR_LOG_FRAMES"); return e ? (uint32_t)std::strtoul(e, nullptr, 0) : 0u; }();
     if (g_idleFrames <= s_LogFrames) { // bisecting a pre-record divergence: one line per frame with the cheap global state words (compare two runs with diff)

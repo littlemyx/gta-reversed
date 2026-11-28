@@ -2216,6 +2216,9 @@ void CWorld::Process() {
         CReferences::PruneAllReferencesInWorld();
     }
 
+#ifdef NOTSA_STATEHASH
+    notsa::rr::BootLogWorld();
+#endif
     if (bProcessCutsceneOnly && CCutsceneMgr::ms_running) {
         for (auto* obj : CCutsceneMgr::ms_pCutsceneObjects) {
             if (obj && !obj->m_pCollisionList.IsEmpty()) {
@@ -2253,6 +2256,9 @@ void CWorld::Process() {
                 }
             } else {
                 {
+#ifdef NOTSA_STATEHASH
+                    notsa::rr::BootLogProc(entity);
+#endif
                     SH_VMX("pre_processcontrol", "post_processcontrol", entity);
                     entity->ProcessControl();
                 }

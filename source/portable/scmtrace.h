@@ -16,6 +16,8 @@ bool Enabled();
 void ArmRoot(int32_t missionId);
 //! a script was started (CTheScripts::StartNewScript); traced when armed or when started by a traced thread
 void OnStart(CRunningScript* s);
+//! CR66 debug: trace an already running script that was not started by a traced thread (a streamed helper such as the player parachute); no-op before the root exists
+void Adopt(CRunningScript* s);
 //! a script ends (CRunningScript::ShutdownThisScript)
 void OnEnd(CRunningScript* s);
 //! the executing command evaluated a condition: `state` is the value after the NOT bit (CRunningScript::UpdateCompareFlag)

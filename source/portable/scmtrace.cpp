@@ -174,6 +174,15 @@ void OnStart(CRunningScript* s) {
     g_threads.emplace(s, std::move(info));
 }
 
+void Adopt(CRunningScript* s) {
+    if (!Enabled() || !g_haveFrame0 || g_threads.find(s) != g_threads.end()) return;
+    Info info; info.id = g_nextId++; info.loc.assign(1024, 0);
+    const char* base; uint32_t ip; Locate(s, base, ip);
+    char b[200]; std::snprintf(b, sizeof b, "S\t%u\t%u\t%s\t%s\t%x\t-\n", Frame(), info.id, Name(s).c_str(), base, ip);
+    Line(b);
+    g_threads.emplace(s, std::move(info));
+}
+
 void OnEnd(CRunningScript* s) {
     if (!g_f) return;
     auto it = g_threads.find(s);
